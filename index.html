@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#1b1410" />
+    <title>검투사 프로토타입</title>
+    <style>
+      :root {
+        --ink: #f3e9d8;
+        --dim: #b8a88e;
+        --panel: rgba(24, 18, 14, 0.88);
+        --line: rgba(243, 233, 216, 0.18);
+        --accent: #d9a441;
+        --red: #b3261e;
+        --blue: #3f6fb5;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body {
+        margin: 0; height: 100%; overflow: hidden; background: #1b1410; color: var(--ink);
+        font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+        touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none;
+      }
+      #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+      #game.pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+      /* HUD */
+      #hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: none; gap: 110px; pointer-events: none; }
+      #hud.show { display: flex; }
+      .bar { flex: 1; }
+      .bar .name { font-size: 12px; letter-spacing: .08em; color: var(--dim); margin-bottom: 3px; }
+      .bar.right { text-align: right; }
+      .track { height: 10px; background: rgba(0,0,0,.45); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+      .fill { height: 100%; width: 100%; transition: width .15s; }
+      .bar.left .fill { background: var(--blue); }
+      .bar.right .fill { background: var(--red); margin-left: auto; }
+      .track.bal { height: 4px; margin-top: 3px; }
+      .track.bal .fill { background: var(--accent); }
+
+      #topButtons { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
+      #topButtons.show { display: flex; }
+      .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; }
+
+      #toast { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: clamp(28px, 7vw, 64px); font-weight: 800; letter-spacing: .06em; text-shadow: 0 3px 0 #000; pointer-events: none; opacity: 0; transition: opacity .3s; }
+      #toast.show { opacity: 1; }
+
+      #hint { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--dim); background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; pointer-events: none; display: none; text-align: center; max-width: calc(100% - 32px); }
+      #hint.show { display: block; }
+
+      /* 센서가 없을 때 쓰는 이동 버튼 */
+      #moveButtons { position: fixed; left: 16px; bottom: max(16px, env(safe-area-inset-bottom)); display: none; gap: 10px; }
+      #moveButtons.show { display: flex; }
+      #moveButtons button { width: 64px; height: 64px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 24px; touch-action: none; }
+
+      /* 메뉴 */
+      .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(ellipse at center, rgba(27,20,16,.55), rgba(27,20,16,.92)); }
+      .overlay.show { display: flex; }
+      .card { width: min(460px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; touch-action: pan-y; }
+      h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: .04em; }
+      h2 { margin: 0 0 12px; font-size: 22px; }
+      .sub { color: var(--dim); font-size: 13px; margin: 0 0 16px; line-height: 1.5; }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+      .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+      .seg button { background: transparent; color: var(--dim); border: 0; padding: 6px 10px; font-size: 13px; }
+      .seg button.on { background: var(--accent); color: #1b1410; font-weight: 700; }
+      .toggle { width: 44px; height: 24px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,.4); position: relative; }
+      .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--dim); transition: left .15s; }
+      .toggle.on { background: var(--accent); }
+      .toggle.on::after { left: 22px; background: #1b1410; }
+      .primary { width: 100%; margin-top: 16px; padding: 14px; font-size: 17px; font-weight: 800; border: 0; border-radius: 8px; background: var(--accent); color: #1b1410; }
+      .secondary { width: 100%; margin-top: 8px; padding: 11px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); }
+      .howto { font-size: 13px; color: var(--dim); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
+
+      /* 가로로 든 폰처럼 화면 높이가 낮을 때는 메뉴를 촘촘하게 */
+      @media (max-height: 500px) {
+        .card { padding: 12px 16px; width: min(560px, 100%); }
+        h1 { font-size: 20px; }
+        .sub { margin-bottom: 8px; }
+        .row { padding: 4px 0; font-size: 13px; }
+        .primary { margin-top: 10px; padding: 10px; font-size: 16px; }
+        .secondary { padding: 8px; }
+        .howto { display: none; }
+      }
+      #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; background: #1b1410; font-size: 18px; padding: 24px; z-index: 10; }
+      @media (orientation: portrait) and (pointer: coarse) { #rotate.enabled { display: flex; } }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="hud">
+      <div class="bar left">
+        <div class="name">나</div>
+        <div class="track"><div class="fill" id="hpP"></div></div>
+        <div class="track bal"><div class="fill" id="balP"></div></div>
+      </div>
+      <div class="bar right">
+        <div class="name">상대</div>
+        <div class="track"><div class="fill" id="hpE"></div></div>
+        <div class="track bal"><div class="fill" id="balE"></div></div>
+      </div>
+    </div>
+    <div id="topButtons">
+      <button class="iconBtn" id="btnPause" aria-label="일시정지">Ⅱ</button>
+      <button class="iconBtn" id="btnCalib" aria-label="기울기 영점 맞추기">◎</button>
+    </div>
+    <div id="toast"></div>
+    <div id="hint"></div>
+    <div id="moveButtons">
+      <button id="btnLeft" aria-label="왼쪽으로">◀</button>
+      <button id="btnRight" aria-label="오른쪽으로">▶</button>
+    </div>
+
+    <div class="overlay show" id="menu">
+      <div class="card">
+        <h1 id="menuTitle">검투사 프로토타입</h1>
+        <p class="sub" id="menuSub">무거운 칼, 물리로 움직이는 몸. 상대를 쓰러뜨려라.</p>
+        <div class="row"><span>상대 난이도</span>
+          <div class="seg" data-setting="difficulty">
+            <button data-v="easy">쉬움</button><button data-v="normal">보통</button><button data-v="hard">어려움</button>
+          </div>
+        </div>
+        <div class="row"><span>픽셀 모드 (실험)</span><button class="toggle" data-setting="pixel" aria-label="픽셀 모드"></button></div>
+        <div class="row"><span>피 표현</span><button class="toggle" data-setting="blood" aria-label="피 표현"></button></div>
+        <div class="row"><span>소리</span><button class="toggle" data-setting="sound" aria-label="소리"></button></div>
+        <div class="row"><span>기울기 방향 반대로</span><button class="toggle" data-setting="invertTilt" aria-label="기울기 반전"></button></div>
+        <button class="primary" id="btnStart">싸움 시작</button>
+        <button class="secondary" id="btnResume" style="display:none">계속하기</button>
+        <ul class="howto" id="howto"></ul>
+      </div>
+    </div>
+
+    <div id="rotate">📱↻<br />폰을 가로로 돌려주세요</div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
