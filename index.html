@@ -52,6 +52,7 @@
       /* 센서가 없을 때 쓰는 이동 조이스틱 */
       #moveStick { position: fixed; left: max(20px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
       #moveStick.show { display: block; }
+      body:not(.touch) .touchOnly, body.moveStick .tiltOnly { display: none; }
       #moveKnob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
 
       /* 메뉴 */
@@ -122,7 +123,12 @@
         <div class="row"><span>픽셀 모드 (실험)</span><button class="toggle" data-setting="pixel" aria-label="픽셀 모드"></button></div>
         <div class="row"><span>피 표현</span><button class="toggle" data-setting="blood" aria-label="피 표현"></button></div>
         <div class="row"><span>소리</span><button class="toggle" data-setting="sound" aria-label="소리"></button></div>
-        <div class="row"><span>기울기 방향 반대로</span><button class="toggle" data-setting="invertTilt" aria-label="기울기 반전"></button></div>
+        <div class="row touchOnly"><span>이동 방식</span>
+          <div class="seg" data-setting="moveMode">
+            <button data-v="stick">조이스틱</button><button data-v="tilt">기울기</button>
+          </div>
+        </div>
+        <div class="row touchOnly tiltOnly"><span>기울기 방향 반대로</span><button class="toggle" data-setting="invertTilt" aria-label="기울기 반전"></button></div>
         <button class="primary" id="btnStart">싸움 시작</button>
         <button class="secondary" id="btnResume" style="display:none">계속하기</button>
         <ul class="howto" id="howto"></ul>

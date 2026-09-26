@@ -15,6 +15,7 @@ export class Input {
     this.stickMove = { x: 0, y: 0 }; // 화면 조이스틱(센서가 없을 때 대체용)
     this.tiltMove = { x: 0, y: 0 };
     this.tiltActive = false;
+    this.useTilt = false; // 설정에서 '기울기' 이동을 골랐을 때만 true
     this.tiltBaseline = null; // { roll, pitch }
     this.tiltRaw = { roll: 0, pitch: 0 };
     this.invertTilt = false;
@@ -90,7 +91,7 @@ export class Input {
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) y -= 1;
     x += this.stickMove.x;
     y += this.stickMove.y;
-    if (this.tiltActive) {
+    if (this.useTilt && this.tiltActive) {
       x += this.tiltMove.x;
       y += this.tiltMove.y;
     }
@@ -165,6 +166,7 @@ export class Input {
 export function attachStick(input, pad, knob) {
   let id = null;
   const R = 40;
+  const DEAD = 0.15; // 가운데 근처 살짝 건드린 건 무시
   const update = (e) => {
     const r = pad.getBoundingClientRect();
     let dx = e.clientX - (r.left + r.width / 2);
@@ -175,7 +177,11 @@ export function attachStick(input, pad, knob) {
       dy = (dy / len) * R;
     }
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
-    input.stickMove = { x: dx / R, y: -dy / R };
+    let x = dx / R;
+    let y = -dy / R;
+    const m = Math.hypot(x, y);
+    const k = m < DEAD ? 0 : (m - DEAD) / (1 - DEAD) / m;
+    input.stickMove = { x: x * k, y: y * k };
   };
   pad.addEventListener('pointerdown', (e) => {
     e.stopPropagation();

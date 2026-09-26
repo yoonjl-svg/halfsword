@@ -31,7 +31,9 @@ export const BODY = {
   supportDamping: 260,
   uprightStiffness: 900, // 몸을 똑바로 세우는 회전 힘
   uprightDamping: 90,
-  moveSpeed: 1.9, // 걷는 최고 속도 (m/s)
+  moveSpeed: 1.5, // 걷는 최고 속도 (m/s)
+  stepLength: 0.42, // 한 걸음 보폭(m). 다리 흔드는 속도가 이동 거리와 딱 맞게 계산된다.
+  turnSpeed: 2.4, // 상대 쪽으로 몸을 돌리는 최고 속도 (라디안/초)
   moveAccel: 9, // 걷기 가속 정도
   fallTiltDeg: 55, // 몸이 이 각도 이상 기울면 넘어진다
   fallDuration: 2.2, // 넘어진 뒤 일어나기 시작할 때까지 (초)

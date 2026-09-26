@@ -14,7 +14,7 @@ import { Particles, Sound } from './effects.js';
 await RAPIER.init();
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick' };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -275,7 +275,6 @@ const hud = $('hud');
 const topButtons = $('topButtons');
 const toast = $('toast');
 const hint = $('hint');
-const moveButtons = $('moveStick');
 attachStick(input, $('moveStick'), $('moveKnob'));
 let state = 'menu'; // menu | fight | paused
 let roundOver = false;
@@ -297,6 +296,10 @@ function refreshSettingsUI() {
   particles.bloodOn = settings.blood;
   sound.on = settings.sound;
   input.invertTilt = settings.invertTilt;
+  input.useTilt = settings.moveMode === 'tilt';
+  document.body.classList.toggle('touch', input.isTouchDevice);
+  document.body.classList.toggle('moveStick', settings.moveMode !== 'tilt');
+  applyMoveMode();
 }
 document.querySelectorAll('[data-setting]').forEach((el) => {
   const key = el.dataset.setting;
@@ -327,6 +330,15 @@ function showToast(text, ms = 1200) {
   if (ms) showToast.t = setTimeout(() => toast.classList.remove('show'), ms);
 }
 
+// 이동 방식에 맞게 조이스틱 / 영점 버튼을 보이거나 숨긴다
+function applyMoveMode() {
+  const touch = input.isTouchDevice;
+  const tilt = settings.moveMode === 'tilt';
+  $('moveStick').classList.toggle('show', touch && !tilt && state !== 'menu');
+  $('btnCalib').style.display = touch && tilt ? '' : 'none';
+  if (touch && tilt && state !== 'menu' && !input.tiltActive) input.enableTilt();
+}
+
 function showHint(text, ms = 3500) {
   hint.textContent = text;
   hint.classList.add('show');
@@ -344,26 +356,36 @@ async function startFight() {
     } catch {
       /* 무시 */
     }
-    const ok = await input.enableTilt();
-    setTimeout(() => {
-      if (!ok || !input.tiltActive) {
-        moveButtons.classList.add('show');
-        showHint('기울기 센서를 쓸 수 없어서 왼쪽 아래 조이스틱을 켰어요.');
-      } else {
-        input.calibrateTilt();
-      }
-    }, 800);
+    if (settings.moveMode === 'tilt') {
+      const ok = await input.enableTilt();
+      setTimeout(() => {
+        if (!ok || !input.tiltActive) {
+          settings.moveMode = 'stick';
+          saveSettings();
+          refreshSettingsUI();
+          showHint('기울기 센서를 쓸 수 없어서 조이스틱으로 바꿨어요.');
+        } else {
+          input.calibrateTilt();
+        }
+      }, 800);
+    }
   }
   $('rotate').classList.add('enabled');
   menu.classList.remove('show');
   hud.classList.add('show');
   topButtons.classList.add('show');
-  $('btnCalib').style.display = input.isTouchDevice ? '' : 'none';
   input.enabled = true;
   newRound();
   state = 'fight';
+  applyMoveMode();
   showToast('싸워라!');
-  showHint(input.isTouchDevice ? '끌어서 칼 휘두르기 · 앞뒤/좌우로 기울여서 걷기' : '클릭해서 마우스 잠금 · WASD 이동');
+  showHint(
+    !input.isTouchDevice
+      ? '클릭해서 마우스 잠금 · WASD 이동'
+      : settings.moveMode === 'tilt'
+        ? '끌어서 칼 휘두르기 · 앞뒤/좌우로 기울여서 걷기'
+        : '왼쪽 아래 조이스틱으로 걷기 · 나머지 화면을 끌어서 칼 휘두르기',
+  );
 }
 
 function pause() {
@@ -440,7 +462,7 @@ const camLook = new THREE.Vector3();
 const camDir = new THREE.Vector3(1, 0, 0);
 const _cd = new THREE.Vector3();
 function updateCamera(dt) {
-  if (!player) return;
+  if (!player || window.game?.freeCam) return; // freeCam: 디버그용으로 카메라를 직접 조종
   const a = player.pelvisPos;
   const b = enemy.pelvisPos;
   // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지)
@@ -543,6 +565,9 @@ window.game = {
   },
   stats,
   config: CONFIG,
+  THREE,
+  camera,
+  freeCam: false,
   AI,
   settings,
 };

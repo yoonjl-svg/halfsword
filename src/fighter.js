@@ -36,19 +36,21 @@ function partDefs(s) {
   ];
 }
 
-// 관절 정의: [부모, 자식, 관절 위치, 근육 강도, 감쇠, 최대 회전력]
+// 관절 정의: [부모, 자식, 관절 위치, 근육 강도(ω, 초당 라디안)]
+//  근육은 물리 엔진의 "관절 모터"로 구현한다. 엔진이 충돌·관절과 함께 한꺼번에 풀기 때문에
+//  아무리 세게 해도 떨리거나 폭주하지 않는다. ω가 클수록 목표 자세로 빨리 돌아간다.
 function jointDefs(s) {
   return [
-    ['pelvis', 'chest', [0, 1.08, 0], 500, 35, 400],
-    ['chest', 'head', [0, 1.53, 0], 60, 4, 60],
-    ['chest', 'uarmS', [0, 1.44, s * 0.25], 12, 1.2, 30],
-    ['uarmS', 'farmS', [0, 1.14, s * 0.25], 6, 0.6, 20],
-    ['chest', 'uarmO', [0, 1.44, -s * 0.25], 40, 3, 60],
-    ['uarmO', 'farmO', [0, 1.14, -s * 0.25], 20, 1.5, 30],
-    ['pelvis', 'thighF', [0, 0.88, s * 0.11], 400, 30, 400],
-    ['thighF', 'shinF', [0, 0.46, s * 0.11], 200, 15, 250],
-    ['pelvis', 'thighB', [0, 0.88, -s * 0.11], 400, 30, 400],
-    ['thighB', 'shinB', [0, 0.46, -s * 0.11], 200, 15, 250],
+    ['pelvis', 'chest', [0, 1.08, 0], 45],
+    ['chest', 'head', [0, 1.53, 0], 30],
+    ['chest', 'uarmS', [0, 1.44, s * 0.25], 6],
+    ['uarmS', 'farmS', [0, 1.14, s * 0.25], 6],
+    ['chest', 'uarmO', [0, 1.44, -s * 0.25], 25],
+    ['uarmO', 'farmO', [0, 1.14, -s * 0.25], 25],
+    ['pelvis', 'thighF', [0, 0.88, s * 0.11], 110],
+    ['thighF', 'shinF', [0, 0.46, s * 0.11], 110],
+    ['pelvis', 'thighB', [0, 0.88, -s * 0.11], 110],
+    ['thighB', 'shinB', [0, 0.46, -s * 0.11], 110],
   ];
 }
 
@@ -56,8 +58,6 @@ const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
 const _q1 = new THREE.Quaternion();
-const _q2 = new THREE.Quaternion();
-const _q3 = new THREE.Quaternion();
 const UP = new THREE.Vector3(0, 1, 0);
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
@@ -100,6 +100,10 @@ export class Fighter {
     this.move = new THREE.Vector2(); // x: 옆걸음(+오른쪽), y: 앞(+)/뒤(-). 각각 -1 ~ 1
     this.strength = o.strength ?? 1;
     this.gaitPhase = 0;
+    this.gaitWeight = 0; // 0 = 서 있음, 1 = 걷는 중 (부드럽게 바뀜)
+    this.stanceDrop = 0; // 딛는 다리가 기울어진 만큼 골반을 낮춰 발이 땅에 닿게 한다
+    this.gaitDir = new THREE.Vector2(1, 0); // 몸 기준 이동 방향 (x 앞, y 오른쪽)
+    this.localVel = new THREE.Vector2();
     this.hitCooldowns = new Map();
     this.onHurt = null;
 
@@ -145,8 +149,11 @@ export class Fighter {
       const mesh = dressPart(group, d, o.look);
 
       if (d.foot) {
-        const fd = RAPIER.ColliderDesc.cuboid(0.1, 0.03, 0.05)
-          .setTranslation(0.05, -0.185, 0)
+        // 발바닥은 둥근 캡슐(앞뒤로 누운 막대) → 걸을 때 발끝/뒤꿈치가 땅에 걸리지 않고 굴러간다
+        const footRot = new THREE.Quaternion().setFromAxisAngle(Z_AXIS, Math.PI / 2);
+        const fd = RAPIER.ColliderDesc.capsule(0.07, 0.033)
+          .setTranslation(0.05, -0.187, 0)
+          .setRotation(vecQ(footRot))
           .setMass(0.8)
           .setFriction(0.8)
           .setCollisionGroups(bodyGroups);
@@ -164,22 +171,30 @@ export class Fighter {
     }
 
     // 관절(구형 관절) 생성 + 근육(PD 제어) 정보 저장
-    for (const [pa, ch, p, k, dmp, maxT] of jointDefs(this.side)) {
+    for (const [pa, ch, p, omega] of jointDefs(this.side)) {
       const P = new THREE.Vector3(...p);
       const a1 = P.clone().sub(this.localPos[pa]);
       const a2 = P.clone().sub(this.localPos[ch]);
-      world.createImpulseJoint(RAPIER.JointData.spherical(vecArg(a1), vecArg(a2)), this.bodies[pa], this.bodies[ch], true);
-      this.joints.push({
-        parent: this.bodies[pa],
-        child: this.bodies[ch],
-        name: ch,
-        k,
-        d: dmp,
-        maxT,
-        target: new THREE.Quaternion(),
-      });
+      const joint = world.createImpulseJoint(RAPIER.JointData.spherical(vecArg(a1), vecArg(a2)), this.bodies[pa], this.bodies[ch], true);
+      for (const ax of MOTOR_AXES) joint.rawSet.jointConfigureMotorModel(joint.handle, ax, 0); // 0 = 질량과 무관한 가속도 기준
+      this.joints.push({ joint, name: ch, omega, target: new THREE.Quaternion() });
     }
     this.jointByName = Object.fromEntries(this.joints.map((j) => [j.name, j]));
+
+    // ── 똑바로 서기: 보이지 않는 "기준 막대"(운동학 물체)에 골반을 회전 모터로 묶는다 ──
+    //  위치는 자유(골반을 끌고 다니지 않음), 회전만 모터로 맞춘다. 엔진이 한꺼번에 풀어서 떨리지 않는다.
+    const pp = this.bodies.pelvis.translation();
+    this.anchor = world.createRigidBody(
+      RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pp.x, pp.y, pp.z).setRotation(vecQ(yaw)),
+    );
+    this.uprightJoint = world.createImpulseJoint(
+      RAPIER.JointData.generic({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 0),
+      this.anchor,
+      this.bodies.pelvis,
+      true,
+    );
+    for (const ax of MOTOR_AXES) this.uprightJoint.rawSet.jointConfigureMotorModel(this.uprightJoint.handle, ax, 1); // 1 = 힘(N·m) 기준
+
 
     // ── 무기: 롱소드 ──
     const L = WEAPON.length;
@@ -269,7 +284,7 @@ export class Fighter {
         const want = Math.atan2(-(this.faceTarget.z - p.z), this.faceTarget.x - p.x);
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        const maxTurn = 3.2 * this.muscle * dt;
+        const maxTurn = BODY.turnSpeed * this.muscle * dt;
         this.heading += THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
       }
     } else {
@@ -353,7 +368,7 @@ export class Fighter {
 
     // 1) 높이 유지 (보이지 않는 다리 스프링)
     if (mus > 0.1) {
-      const h = BODY.standHeight - (1 - this.legHealth) * 0.08;
+      const h = BODY.standHeight - (1 - this.legHealth) * 0.08 - this.stanceDrop;
       let fy = M * g * BODY.support * this.legHealth + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * v.y;
       fy = THREE.MathUtils.clamp(fy * mus, 0, M * g * 2.5);
       // 너무 높이 떠 있으면(점프한 것처럼) 받치지 않는다
@@ -375,39 +390,76 @@ export class Fighter {
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     pelvis.addForce({ x: fx, y: 0, z: fz }, true);
 
-    // 3) 똑바로 서기 (골반과 가슴을 목표 방향으로 회전)
+    // 3) 똑바로 서기: 기준 막대를 골반 위치 + 바라보는 방향으로 옮기고, 회전 모터 세기를 근육에 맞춘다
+    const vFwd = v.x * fwd.x + v.z * fwd.z;
+    this.localVel.set(vFwd, v.x * rgt.x + v.z * rgt.z);
+    this.anchor.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z });
+    this.anchor.setNextKinematicRotation(vecQ(this.yaw));
     const k = BODY.uprightStiffness * mus;
     const d = BODY.uprightDamping * mus;
-    const vFwd = v.x * fwd.x + v.z * fwd.z;
-    this.speedFwd = vFwd;
-    this.speedH = Math.hypot(v.x, v.z);
-    const lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.06, -0.15, 0.15) : 0;
-    _q2.setFromAxisAngle(Z_AXIS, lean).premultiply(this.yaw); // 이동 방향으로 살짝 숙임
-    uprightTorque(pelvis, this.yaw, k, d, 600);
-    uprightTorque(chest, _q2, k * 0.8, d * 0.8, 500);
-
-    // 걷기 위상 (뒤로 걸으면 거꾸로)
-    this.gaitPhase += this.speedH * dt * 5.2 * (vFwd < -0.2 ? -1 : 1);
+    const raw = this.uprightJoint.rawSet;
+    for (const ax of MOTOR_AXES) raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, k, d);
+    // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
+    this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.06, -0.12, 0.12) : 0;
   }
 
   // 관절 목표 자세 정하기 (걷기 사이클, 방패 없는 손 가드)
-  applyPose() {
+  //
+  // 걷기: 다리 흔드는 속도를 "실제로 이동한 거리"에 묶는다.
+  //  - 보폭(stepLength)만큼 이동할 때마다 발이 한 번씩 번갈아 나간다 → 발이 미끄러지지 않는다.
+  //  - 다리는 실제 이동 방향(앞/뒤/옆/대각선)으로 흔든다.
+  //  - 멈추면 부드럽게 원래 서 있는 자세로 돌아온다.
+  applyPose(dt = 0) {
     const J = this.jointByName;
-    const amp = Math.min(1, (this.speedH || 0) / BODY.moveSpeed) * 0.5;
-    const ph = this.gaitPhase;
+    const lv = this.localVel;
+    const speed = lv.length();
+    const moving = this.state === 'stand' && speed > 0.12 ? 1 : 0;
+    this.gaitWeight += (moving - this.gaitWeight) * Math.min(1, dt * 6);
+    if (speed > 0.12) this.gaitDir.lerp(_v2d.set(lv.x / speed, lv.y / speed), Math.min(1, dt * 8)).normalize();
+    // 한 주기(왼발+오른발) = 보폭 2개
+    this.gaitPhase += (speed / (2 * BODY.stepLength)) * Math.PI * 2 * dt;
+
+    const w = this.gaitWeight;
+    const d = this.gaitDir;
+    // (0,-1,0)으로 늘어진 다리를 방향 d(몸 기준 x=앞, z=오른쪽)로 보내는 회전축
+    _axis.set(-d.y, 0, d.x);
+    // 실제 걸음처럼: 한 주기의 60%는 발이 땅을 딛고(몸이 앞으로 가는 만큼 발이 뒤로 일정하게 밀림),
+    // 나머지 40%는 발을 들어 앞으로 빠르게 가져온다. 딛는 동안 몸은 보폭의 1.2배를 가므로 발도 그만큼 쓸어준다.
+    const STANCE = 0.6;
+    const reach = 0.6 * BODY.stepLength; // 발이 몸 중심에서 앞뒤로 나가는 최대 거리
+    let drop = 0;
+    const legPose = (thigh, shin, phase, stanceHip, stanceKnee) => {
+      const u = (((phase / (Math.PI * 2)) % 1) + 1) % 1;
+      let x; // 몸 기준 발의 앞뒤 위치(m)
+      let lift = 0;
+      if (u < STANCE) {
+        x = reach - 2 * reach * (u / STANCE);
+      } else {
+        const t = (u - STANCE) / (1 - STANCE);
+        x = -reach + 2 * reach * (0.5 - 0.5 * Math.cos(Math.PI * t));
+        lift = Math.sin(Math.PI * t);
+      }
+      // 무릎을 굽히면 발이 몸 뒤쪽으로 빠지므로, 그만큼 허벅지를 더 앞으로 보내 상쇄한다
+      const knee = 0.08 + 1.0 * lift;
+      const hip = Math.atan2(x + 0.42 * Math.sin(knee) * d.x, 0.85) * w;
+      const base = _qa.setFromAxisAngle(Z_AXIS, stanceHip * (1 - w));
+      J[thigh].target.setFromAxisAngle(_axis, hip).multiply(base);
+      J[shin].target.setFromAxisAngle(Z_AXIS, stanceKnee * (1 - w) - w * knee);
+      // 딛고 있는 다리: 비스듬할수록 엉덩이가 낮아진다 (다리 길이 0.85m)
+      if (u < STANCE) drop = Math.max(drop, 0.85 * (1 - Math.cos(hip)) + 0.02 * w);
+    };
+    // 가만히 있을 때는 펜싱 자세(앞발/뒷발), 걸을 때는 번갈아 걷기
+    legPose('thighF', 'shinF', this.gaitPhase, 0.24, -0.22);
+    legPose('thighB', 'shinB', this.gaitPhase + Math.PI, -0.18, -0.14);
+    this.stanceDrop += (drop - this.stanceDrop) * Math.min(1, dt * 20);
     const setZ = (name, a) => J[name].target.setFromAxisAngle(Z_AXIS, a);
-    // 앞다리/뒷다리: 펜싱 자세처럼 벌리고, 걸을 때 번갈아 흔든다
-    setZ('thighF', 0.28 + amp * Math.sin(ph));
-    setZ('thighB', -0.22 + amp * Math.sin(ph + Math.PI));
-    setZ('shinF', -0.25 - amp * 1.1 * Math.max(0, Math.sin(ph + Math.PI / 2)));
-    setZ('shinB', -0.15 - amp * 1.1 * Math.max(0, Math.sin(ph + Math.PI * 1.5)));
     // 빈 손은 앞으로 들어 균형을 잡는다
     setZ('uarmO', 0.5);
     setZ('farmO', 1.0);
     setZ('uarmS', 0.4);
     setZ('farmS', 0.6);
     setZ('head', 0);
-    setZ('chest', 0);
+    setZ('chest', this.lean || 0);
   }
 
   driveJoints() {
@@ -415,7 +467,13 @@ export class Fighter {
     for (const j of this.joints) {
       const isLeg = j.name.startsWith('thigh') || j.name.startsWith('shin');
       const mus = isLeg ? legsMus * (0.6 + 0.4 * this.legHealth) : Math.max(0.1, this.muscle);
-      pdJoint(j.parent, j.child, j.target, j.k * mus, j.d * Math.max(0.3, mus), j.maxT);
+      // 목표 회전 → 축별 각도(회전 벡터). ω²가 강도, 2ω가 감쇠(딱 알맞게 멈추는 값)
+      const w = j.omega * Math.sqrt(mus);
+      toRotVec(j.target, _rv);
+      const raw = j.joint.rawSet;
+      raw.jointConfigureMotorPosition(j.joint.handle, MOTOR_AXES[0], _rv.x, w * w, 2 * w);
+      raw.jointConfigureMotorPosition(j.joint.handle, MOTOR_AXES[1], _rv.y, w * w, 2 * w);
+      raw.jointConfigureMotorPosition(j.joint.handle, MOTOR_AXES[2], _rv.z, w * w, 2 * w);
     }
   }
 
@@ -645,43 +703,18 @@ function dressPart(group, d, look) {
   }
 }
 
-/** 쿼터니언 오차 → (회전축 * 각도) 벡터 */
-function rotationError(qTarget, qCur, out) {
-  _q3.copy(qCur).invert().premultiply(qTarget); // qTarget * qCur^-1
-  if (_q3.w < 0) _q3.set(-_q3.x, -_q3.y, -_q3.z, -_q3.w);
-  const s = Math.sqrt(1 - Math.min(1, _q3.w * _q3.w));
-  const angle = 2 * Math.acos(Math.min(1, _q3.w));
-  if (s < 1e-5) return out.set(0, 0, 0);
-  return out.set(_q3.x / s, _q3.y / s, _q3.z / s).multiplyScalar(angle);
-}
+const _rv = new THREE.Vector3();
+const MOTOR_AXES = [3, 4, 5]; // 회전 x, y, z (RawJointAxis.AngX/AngY/AngZ)
 
-const _e = new THREE.Vector3();
-const _w1 = new THREE.Vector3();
-const _w2 = new THREE.Vector3();
-const _qc = new THREE.Quaternion();
-const _qp = new THREE.Quaternion();
-const _qd = new THREE.Quaternion();
-
-// 한 몸체를 월드 기준 목표 방향으로 돌리는 힘
-function uprightTorque(rb, qTarget, k, d, maxT) {
-  rot(rb, _qc);
-  rotationError(qTarget, _qc, _e);
-  angvel(rb, _w1);
-  const t = _e.multiplyScalar(k).addScaledVector(_w1, -d);
-  if (t.length() > maxT) t.setLength(maxT);
-  rb.addTorque(vecArg(t), true);
+/** 쿼터니언 → 회전 벡터(축 * 각도) */
+function toRotVec(q, out) {
+  const w = Math.min(1, Math.abs(q.w));
+  const sgn = q.w < 0 ? -1 : 1;
+  const s = Math.sqrt(1 - w * w);
+  if (s < 1e-6) return out.set(0, 0, 0);
+  const angle = 2 * Math.acos(w);
+  return out.set(q.x, q.y, q.z).multiplyScalar((sgn * angle) / s);
 }
-
-// 관절 근육: 자식 몸체를 (부모 기준) 목표 자세로 돌린다. 부모에는 반작용.
-function pdJoint(parent, child, qRel, k, d, maxT) {
-  rot(parent, _qp);
-  rot(child, _qc);
-  _qd.copy(_qp).multiply(qRel);
-  rotationError(_qd, _qc, _e);
-  angvel(child, _w1);
-  angvel(parent, _w2);
-  const t = _e.multiplyScalar(k).addScaledVector(_w1.sub(_w2), -d);
-  if (t.length() > maxT) t.setLength(maxT);
-  child.addTorque(vecArg(t), true);
-  parent.addTorque({ x: -t.x, y: -t.y, z: -t.z }, true);
-}
+const _qa = new THREE.Quaternion();
+const _axis = new THREE.Vector3();
+const _v2d = new THREE.Vector2();
