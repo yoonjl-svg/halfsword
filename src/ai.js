@@ -138,8 +138,8 @@ export class AI {
     this.sense.record(dt);
     const L = this.level;
 
-    // 넘어졌거나 일어나는 중: 칼을 머리 위로 들어 가리고, 일어서면 먼저 물러난다
-    if (me.state !== 'stand') {
+    // 완전히 쓰러졌다: 칼을 머리 위로 들어 가리기만 한다 (팔에도 힘이 거의 없다)
+    if (me.state === 'down') {
       me.move.set(0, 0);
       this.mode = 'withdraw';
       this.phase = 'ready';
@@ -152,6 +152,9 @@ export class AI {
       this.moveHand(dt);
       return;
     }
+    // 무릎 꿇었거나 일어나는 중: 다리는 못 놀리지만 칼은 쥘 수 있다 → 가만히 가리고만 있지 않고,
+    //  사정거리 안까지 다가온 적은 아래에서도 위협하거나 짧게 친다 (발놀림은 아래에서 0으로 막는다)
+    const kneeling = me.state !== 'stand';
 
     // 칼을 놓쳤다: 빈손으로는 칠 수 없다 → 하던 공격을 거두고 간격 밖으로 물러난다 (좀비처럼 맨손으로 달려들지 않는다)
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
@@ -198,13 +201,32 @@ export class AI {
     const th = this.threat(s, c, r, d);
     this.noThreat = th ? 0 : this.noThreat + dt;
 
-    if (this.mode === 'watch') this.watch(dt, s, d, th);
+    if (kneeling) {
+      // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
+      //  이따금 짧게 찌른다 (watch()의 적극적인 빈틈 찾기는 쓰지 않는다 — 일어나는 중엔 너무 무모하다)
+      if (th && this.mode !== 'attack' && this.noticedThreat(th)) this.respond(th, d);
+      else if (this.mode === 'attack') this.attack(dt, s, d, th);
+      else {
+        this.decideTimer -= dt;
+        if (this.decideTimer <= 0) {
+          this.decideTimer = rand(0.3, 0.6);
+          const canPoke = d < MEASURE.contact + 0.15 && this.foe.alive && this.foe.state === 'stand' && !th;
+          if (canPoke && Math.random() < 0.5 * L.read) {
+            this.startAttack(this.pickTech(s, 'stepin'), 'stepin', { noFeint: true, fastChamber: true, skipChamber: true });
+          } else {
+            this.hand.set(G.langort[0], G.langort[1]); // 칼끝을 겨눠 위협만 한다
+            this.handSpeed = 1.0;
+          }
+        }
+      }
+    } else if (this.mode === 'watch') this.watch(dt, s, d, th);
     else if (this.mode === 'attack') this.attack(dt, s, d, th);
     else if (this.mode === 'defend') this.defend(dt, s, d, th);
     else this.withdraw(dt, s, d, th);
 
     this.moveHand(dt);
     this.moveFeet(dt, d);
+    if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
   }
 
   // ───────────────────────── 간 보기 ─────────────────────────
@@ -937,7 +959,7 @@ export class AI {
   /** 새 다리(gait.js)가 있으면 베는 걸음을 부탁한다 (없으면 조이스틱 내딛기로 충분) */
   gaitStep() {
     const g = this.me.gait;
-    if (this.requestedStep || !g?.requestStep || !g.active) return;
+    if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
     this.requestedStep = true;
     g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 });
   }
