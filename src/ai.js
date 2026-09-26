@@ -556,8 +556,10 @@ export class AI {
     const L = this.level;
     if (this.hitLanded) this.stats.landed++;
     if (this.bound && !this.hitLanded) this.foeParried++; // 칼로 막혔다 → 다음엔 속임수가 통한다
-    const canChain = this.chain < 2 && d < MEASURE.reach + 0.1 && d > MEASURE.clinch + 0.1 && this.foe.alive;
-    const want = this.hitLanded || this.bound ? L.followUp : L.followUp * 0.3;
+    // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
+    //  간격 끝(clinch 근처)에서도 짧게 이어 칠 수 있어야 몰아치는 상대에게 계속 밀리지 않는다
+    const canChain = this.chain < 2 && d < MEASURE.reach + 0.1 && d > MEASURE.clinch - 0.5 && this.foe.alive;
+    const want = this.hitLanded || this.bound ? L.followUp : L.followUp * 0.4;
     if (canChain && Math.random() < want) {
       // 지금 손 위치에서 바로 이어지는 기술 (다시 크게 들지 않는다)
       const hand = [this.me.handOffset.x, this.me.handOffset.y];
