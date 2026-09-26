@@ -55,7 +55,9 @@ export const BODY = {
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
 export const GAIT = {
   assist: 0.3, // 보이지 않는 힘이 받쳐 주는 몸무게 비율 (나머지는 다리 관절 → 발 → 땅). 0이면 다리가 전부
-  handover: 0.6, // 일어선 직후 보조 힘을 100%에서 assist로 줄이는 시간(초)
+  handover: 0.6,
+  handoverMax: 2.5, // 발을 다 고쳐 딛지 못해도 이 시간(초)이 지나면 넘겨받는다
+  handoverSlow: 0.6, // 넘겨받는 동안 걷는 속도를 이 비율만큼 줄인다 // 일어선 직후 보조 힘을 100%에서 assist로 줄이는 시간(초)
   walkMin: 0.2, // 이 속도(m/s)보다 빨리 가려 하면 걷는다 (아니면 제자리에서 자세만 고친다)
   cadence0: 1.9, // 걸음 박자(초당 걸음 수) 기준: 1 m/s일 때
   cadenceK: 0.5, // 1 m/s보다 1 m/s 빠를 때마다 늘어나는 박자

@@ -99,6 +99,7 @@ export class Gait {
     this.active = false;
     this.lev = 0; // 넘겨받는 중 더하는 보조 힘 비율 (1 = 예전 방식 그대로, 0 = 다리가 GAIT.assist 몫 빼고 전부)
     this.h = BODY.standHeight; // 골반 높이 목표
+    this.hNom = BODY.standHeight;
     this.hv = 0;
     this.sinceTD = 1; // 마지막으로 발을 디딘 뒤 지난 시간
     this.lastTD = 'B'; // 마지막으로 디딘 발
@@ -112,6 +113,7 @@ export class Gait {
     this.settles = 0; // 멈춘 뒤 고쳐 딛은 횟수
     this.prevHead = fighter.heading;
     this.headRate = 0; // 몸을 돌리는 빠르기(rad/s)
+    this.sinceEnter = 0;
   }
 
   /** 지금 이 걸음 방식이 몸을 맡고 있나 */
@@ -130,6 +132,7 @@ export class Gait {
       L.tLand = 1;
     }
     this.lev = 1;
+    this.sinceEnter = 0;
     const p = this.f.bodies.pelvis.translation();
     this.h = p.y;
     this.hv = 0;
@@ -222,11 +225,16 @@ export class Gait {
     const f = this.f;
     if (!this.active) this.enter();
     else this.sense();
-    this.lev = Math.max(0, this.lev - dt / GAIT.handover);
+    // 넘겨받기: 일어선 직후엔 발을 펜싱 자세로 고쳐 딛을 때까지 보조 힘을 유지한다
+    //  (무릎 꿇었던 자리 그대로 한 발로 서면 골반이 주저앉는다)
+    this.sinceEnter += dt;
+    const settled = !this.walking && this.legs.F.stance && this.legs.B.stance && this.sinceTD > 0.15 && !this.settleLeg(true);
+    const walkedIn = this.walking && this.walkT > 0.8;
+    if (this.sinceEnter > GAIT.handoverMax || settled || walkedIn) this.lev = Math.max(0, this.lev - dt / GAIT.handover);
     // 붙잡기 반사: 골반이 크게 주저앉거나 몸이 많이 기울면(세게 맞음) 보조 힘을 되살린다 → 예전 방식처럼 버틴다.
     //  보조가 커지면 딛은 발의 정지 마찰(pinFeet)도 약해져서 발이 끌려가며 버틴다
     {
-      const sag = this.h - f.bodies.pelvis.translation().y;
+      const sag = Math.max(this.h, this.hNom - 0.04) - f.bodies.pelvis.translation().y;
       const need = Math.max(
         clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
         clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
@@ -237,6 +245,8 @@ export class Gait {
     const dHead = wrap(f.heading - this.prevHead);
     this.prevHead = f.heading;
     this.headRate += (dHead / dt - this.headRate) * Math.min(1, dt * 10);
+    // 일어선 직후(보조 힘을 넘겨받는 중)엔 천천히 걷는다
+    if (this.lev > 0) want.multiplyScalar(1 - GAIT.handoverSlow * this.lev);
     const speed = Math.hypot(want.x, want.z);
     const walkNow = speed > GAIT.walkMin;
     if (walkNow !== this.walking) {
@@ -293,7 +303,7 @@ export class Gait {
     }
 
     // ③ 새 걸음 시작
-    if (!swing && this.sinceTD >= Tds && f.muscle > 0.5) {
+    if (!swing && this.sinceTD >= Tds && f.muscle > 0.15) {
       let next = null;
       let kind = 'walk';
       let Tstep = Tsw;
@@ -387,12 +397,14 @@ export class Gait {
       // 두 발로 딛을 땐 더 높이 받칠 수 있는 다리 기준 (뒷발은 뒤꿈치를 들어 따라온다)
       hGeo = hGeo === Infinity ? hy : Math.max(hGeo, hy);
     }
-    const hT = clamp(Math.min(hNom, hGeo), hNom - GAIT.maxDip, hNom);
+    this.hNom = hNom;
+    // 보조 힘이 많이 받칠 땐(넘겨받는 중·붙잡기 반사) 다리가 닿지 않아도 골반을 제 높이에 둔다
+    const hT = THREE.MathUtils.lerp(clamp(Math.min(hNom, hGeo), hNom - GAIT.maxDip, hNom), hNom, this.lev);
     // 딱 멈추는 2차 필터 (내려갈 땐 빨리: 다리가 닿지 않는 높이로 끌어올리지 않게)
     const w = hT < this.h ? GAIT.hDown : GAIT.hUp;
     this.hv += (w * w * (hT - this.h) - 2 * w * this.hv) * dt;
     this.h += this.hv * dt;
-    if (this.h > hGeo + 0.01) this.h = Math.max(hGeo + 0.01, hNom - GAIT.maxDip);
+    if (this.h > hGeo + 0.01 + this.lev) this.h = Math.max(hGeo + 0.01 + this.lev, hNom - GAIT.maxDip);
   }
 
   /** 멈춘 뒤 펜싱 자세에서 가장 벗어난 발 (고쳐 딛을 발). 괜찮으면 null */
