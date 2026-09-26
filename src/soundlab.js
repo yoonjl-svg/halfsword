@@ -6,6 +6,13 @@
 import { Sound } from './sound.js';
 import { SOUND } from './config.js';
 
+// 아이폰: 무음 스위치를 켜 둬도 소리가 나게 ("재생" 용도로 알린다, iOS 17+)
+try {
+  if (navigator.audioSession) navigator.audioSession.type = 'playback';
+} catch {
+  /* 지원하지 않는 브라우저 */
+}
+
 // ── 예전 소리 (비교용): 사인파 3개짜리 쇳소리, 짧은 잡음 베기 소리 (c092081 까지 쓰던 방식 그대로) ──
 class OldSound {
   constructor() {

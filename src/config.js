@@ -188,6 +188,8 @@ export const SKILL = {
 export const SKILL_BODY = {
   pelvis: 34,
   chest: 26,
+  holdAmount: 1, // 베지 않고 자세만 고칠 때 몸을 트는 정도 (벨 때 = 1). 줄이면 손이 몸통 대신 멀리 뻗어야 해서 오히려 흔들린다
+  holdSpeed: 0.3, // 그때 몸이 따라가는 빠르기 비율 (느긋하게)
 };
 
 // 상대 AI (ai.js). 사람 검객처럼 간격을 지키며 빈틈을 노린다

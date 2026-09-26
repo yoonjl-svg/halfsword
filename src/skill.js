@@ -32,6 +32,7 @@ export class Skill {
     this.quiet = 1; // 손이 느리게 움직인 시간 (새 휘두르기 시작 판단용)
     this.lunge = 0; // 내딛는 중 남은 시간
     this.swings = 0;
+    this.activity = 0; // 휘두르는 중인 정도 (0~1)
     this.autoGuard = false; // 플레이어만 true (main.js)
     this.cutPending = false; // 베기를 했고 아직 자세로 돌아가지 않음
     this.idle = 0; // 손가락(마우스)이 움직이지 않은 시간
@@ -55,6 +56,8 @@ export class Skill {
     this.vel.y += (ry - this.vel.y) * k;
     const sp = this.vel.length();
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
+    // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐)
+    this.activity += ((swinging ? 1 : 0) - this.activity) * Math.min(1, dt / (swinging ? 0.04 : 0.4));
 
     // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
     if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L);

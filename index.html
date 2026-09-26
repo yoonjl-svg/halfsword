@@ -40,8 +40,11 @@
 
       #hint { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--dim); background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; pointer-events: none; display: none; text-align: center; max-width: calc(100% - 32px); }
       #hint.show { display: block; }
-      #guardName { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 700; color: #f3e6c8; text-shadow: 0 2px 0 #000; pointer-events: none; opacity: 0; transition: opacity .25s; }
-      #guardName.show { opacity: .9; }
+      /* 지금 검술 자세: 오른쪽 위 구석 (가운데 일시정지 버튼과 겹치지 않게) */
+      #guardName { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); max-width: 42vw; text-align: right; pointer-events: none; opacity: 0; transition: opacity .25s; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.6); }
+      #guardName b { display: block; font-size: 15px; font-weight: 800; color: #f3e6c8; }
+      #guardName span { display: block; font-size: 11.5px; color: #e4d8bf; opacity: .85; margin-top: 1px; }
+      #guardName.show { opacity: .92; }
 
       /* 센서가 없을 때 쓰는 이동 조이스틱 */
       #moveStick { position: fixed; left: max(20px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
@@ -111,6 +114,8 @@
             <button data-v="0">끔</button><button data-v="0.4">약</button><button data-v="0.7">보통</button><button data-v="1">강</button>
           </div>
         </div>
+        <div class="row"><span>조작 흔적 보기</span><button class="toggle" data-setting="trail" aria-label="조작 흔적 보기"></button></div>
+        <div class="row"><span>자세 이름 보기</span><button class="toggle" data-setting="guardNames" aria-label="자세 이름 보기"></button></div>
         <div class="row"><span>픽셀 모드 (실험)</span><button class="toggle" data-setting="pixel" aria-label="픽셀 모드"></button></div>
         <div class="row"><span>피 표현</span><button class="toggle" data-setting="blood" aria-label="피 표현"></button></div>
         <div class="row"><span>소리 <a class="minor" href="sounds.html" target="_blank" rel="noopener">들어보기</a></span><button class="toggle" data-setting="sound" aria-label="소리"></button></div>

@@ -500,11 +500,15 @@ export class Fighter {
       bv[key] += (w * w * (target - bp[key]) - 2 * w * bv[key]) * dt;
       bp[key] += bv[key] * dt;
     };
+    // 벨 때는 온몸을 크게, 자세만 고칠 때는 팔 위주로 (몸통을 조금만, 느리게 튼다) → 자세를 옮길 때마다 몸이 춤추지 않게
+    const act = sk.activity;
+    const amp = SKILL_BODY.holdAmount + (1 - SKILL_BODY.holdAmount) * act;
+    const spd = SKILL_BODY.holdSpeed + (1 - SKILL_BODY.holdSpeed) * act;
     // 골반은 아직 발 위치를 바꾸지 못해서(발 딛기 방향 전환 전) 교본 값의 절반만 튼다
-    follow('pelvisYaw', -G.pelvisYaw * 0.5 * gw, SKILL_BODY.pelvis);
-    follow('chestYaw', -G.chestYaw * gw, SKILL_BODY.chest);
-    follow('pitch', G.pitch * gw, SKILL_BODY.chest);
-    follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis);
+    follow('pelvisYaw', -G.pelvisYaw * 0.5 * gw * amp, SKILL_BODY.pelvis * spd);
+    follow('chestYaw', -G.chestYaw * gw * amp, SKILL_BODY.chest * spd);
+    follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
+    follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
     this.pelvisYawOffset = bp.pelvisYaw;
     this.pelvisDropOffset = bp.drop;
   }

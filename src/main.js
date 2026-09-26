@@ -7,6 +7,7 @@ import * as CONFIG from './config.js';
 import { PHYSICS, ARENA, CAMERA } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { GUARDS } from './guards.js';
+import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
@@ -18,7 +19,7 @@ import { buildArena } from './arena.js';
 await RAPIER.init();
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7' };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -83,6 +84,8 @@ resize();
 const particles = new Particles(scene);
 const sound = new Sound();
 const input = new Input(canvas);
+const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
+input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 const fighterMeshes = [];
@@ -540,13 +543,19 @@ const guardName = $('guardName');
 let guardShown = -1;
 let guardTimer = 0;
 function updateGuardName(dt) {
-  const g = player.guardWeight() > 0.5 && player.alive ? player.guardPose.nearest : -1;
+  const g = settings.guardNames && player.guardWeight() > 0.5 && player.alive ? player.guardPose.nearest : -1;
   if (g !== guardShown && g >= 0) {
     guardShown = g;
-    guardName.textContent = GUARDS[g].name;
+    guardName.innerHTML = '';
+    const b = document.createElement('b');
+    b.textContent = GUARDS[g].name;
+    const d = document.createElement('span');
+    d.textContent = GUARDS[g].desc;
+    guardName.append(b, d);
     guardName.classList.add('show');
-    guardTimer = 1.2;
+    guardTimer = 1.6;
   }
+  if (g < 0) guardShown = -1;
   guardTimer -= dt;
   if (guardTimer <= 0) guardName.classList.remove('show');
 }
@@ -575,6 +584,9 @@ function frame(now) {
     const m = input.move;
     player.move.set(player.alive ? m.x : 0, player.alive ? m.y : 0);
     updateGuardName(dt);
+    // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다
+    const mouseMode = !input.isTouchDevice;
+    if (mouseMode && player.alive) trail.addPad(player.skill.aim.x, player.skill.aim.y, now / 1000);
 
     // 타격 순간 살짝 멈칫 + 판이 끝나면 슬로모션
     let scale = 1;
@@ -621,6 +633,8 @@ function frame(now) {
   } else muteWhoosh();
   updateCamera(dt);
   renderer.render(scene, camera);
+  trail.enabled = settings.trail && state === 'fight';
+  trail.draw(now / 1000, !input.isTouchDevice);
 }
 
 // 메뉴 뒤 배경으로 보일 첫 판을 미리 만들어 둔다
@@ -646,6 +660,7 @@ window.game = {
   get combat() {
     return combat;
   },
+  trail,
   stats,
   config: CONFIG,
   THREE,

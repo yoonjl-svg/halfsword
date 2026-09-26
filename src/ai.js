@@ -62,7 +62,7 @@ export class AI {
       aggr: rand(0.85, 1.2), // 공격 성향
       circleDir: Math.random() < 0.5 ? -1 : 1, // 즐겨 도는 방향
       circleRate: rand(0.15, 0.4), // 옆걸음 빠르기 (천천히: 빙빙 도는 춤이 되지 않게)
-      rhythm: rand(1.2, 3.0), // 자세를 바꾸는 박자 (초)
+      rhythm: rand(2.4, 4.5), // 자세를 바꾸는 박자 (초). 검객은 한 자세를 차분히 지킨다 (자주 바꾸면 춤추는 것처럼 보인다)
       vor: rand(0.15, 0.6), // 달려드는 상대를 맞받아 베는 쪽(1)인가, 물러나 헛치게 하는 쪽(0)인가
       patienceTime: rand(7, 12), // 인내심이 바닥나는 데 걸리는 시간 (초)
       guardPref,
@@ -221,7 +221,7 @@ export class AI {
       this.guard = this.pickGuard(s);
     }
     this.hand.set(this.guard.pad[0], this.guard.pad[1]);
-    this.handSpeed = 1.25; // 천천히: 휘두르기로 보이지 않게 (검술 층의 자동 내딛기가 걸리지 않는다)
+    this.handSpeed = 0.9; // 천천히 차분하게: 휘두르기로 보이지 않게 (검술 층의 자동 내딛기가 걸리지 않는다)
 
     // 기회를 본다 (사람처럼 가끔씩 판단)
     this.decideTimer -= dt;
@@ -277,6 +277,8 @@ export class AI {
       // 인내심이 떨어지면 가장 믿는 기술(분노의 베기)을 준비하는 자세
       const ready = g.name === 'tagR' || g.name === 'ochsR' || g.name === 'tag';
       if (ready) w *= 1 + (1 - this.patience) * 0.8 + this.foeAggro * 2.5 * L.read;
+      // 가까운 자세로 옮기는 것을 좋아한다 (칼을 크게 휘저으며 자세를 바꾸지 않는다)
+      if (this.guard) w /= 1 + 2.5 * Math.hypot(g.pad[0] - this.guard.pad[0], g.pad[1] - this.guard.pad[1]);
       w *= rand(0.5, 1.5);
       if (w > bestW) {
         bestW = w;

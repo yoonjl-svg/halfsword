@@ -573,6 +573,15 @@ export class Sound {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!ctx && !AC) return;
+      // 아이폰: 무음 스위치를 켜 두면 웹 소리(Web Audio)가 통째로 꺼진다. 음악 앱처럼 "재생" 용도로 알리면
+      // 무음 모드에서도 소리가 난다 (Safari 17 / iOS 17부터 되는 Audio Session API)
+      if (!ctx) {
+        try {
+          if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+        } catch {
+          /* 지원하지 않는 브라우저 */
+        }
+      }
       this.ctx = ctx || new AC();
       this.build();
       if (!this.ctx.startRendering) this.prepareSoon(); // (분석용 OfflineAudioContext 는 prepareAll 로 한꺼번에)
@@ -581,6 +590,19 @@ export class Sound {
     // 폰이 전화·잠금 등으로 소리를 멈췄으면 다시 켠다 (아이폰은 'interrupted'). 분석용 OfflineAudioContext 는 빼고
     const st = this.ctx.state;
     if ((st === 'suspended' || st === 'interrupted') && !this.ctx.startRendering) this.ctx.resume().catch(() => {});
+    // 아이폰: 손가락을 댄 그 순간에 아주 짧은 무음을 한 번 재생해 두어야 소리 장치가 확실히 켜진다
+    if (!this.primed && !this.ctx.startRendering) {
+      this.primed = true;
+      try {
+        const b = this.ctx.createBuffer(1, 1, 22050);
+        const src = this.ctx.createBufferSource();
+        src.buffer = b;
+        src.connect(this.ctx.destination);
+        src.start(0);
+      } catch {
+        this.primed = false;
+      }
+    }
   }
 
   /** 경기장 울림 세기 바꾸기 (0 = 끔) */

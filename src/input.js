@@ -25,6 +25,7 @@ export class Input {
     this.lastX = 0;
     this.lastY = 0;
     this.isTouchDevice = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    this.trail = null; // 조작 흔적 (main.js가 넣어 준다)
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     window.addEventListener('pointermove', (e) => this.onMove(e));
@@ -52,6 +53,7 @@ export class Input {
     this.activeTouch = e.pointerId;
     this.lastX = e.clientX;
     this.lastY = e.clientY;
+    if (e.pointerType !== 'mouse') this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
   }
 
   onMove(e) {
@@ -69,10 +71,14 @@ export class Input {
     this.handDY -= (e.clientY - this.lastY) * scale;
     this.lastX = e.clientX;
     this.lastY = e.clientY;
+    this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
   }
 
   onUp(e) {
-    if (e.pointerId === this.activeTouch) this.activeTouch = null;
+    if (e.pointerId === this.activeTouch) {
+      this.activeTouch = null;
+      this.trail?.lift();
+    }
     flushHaptic(); // 아이폰: 손가락을 떼는 순간에만 진동이 허락된다
   }
 
