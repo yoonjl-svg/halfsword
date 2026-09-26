@@ -36,7 +36,7 @@ export function hybridJointDefs(defs) {
   return defs;
 }
 
-const ANKLE_H = 0.07; // 발바닥이 땅에 평평하게 닿았을 때 발목 높이
+const ANKLE_H = 0.062; // 발바닥이 땅에 평평하게 닿았을 때 발목 높이 (발 0.07 − 체중에 눌려 땅에 파묻히는 몫 약 0.008: 물리 엔진의 부드러운 접촉)
 const SOLE_C = new THREE.Vector3(0, -0.035, 0); // 발 몸체 기준 발바닥 가운데
 const SOLE_T = new THREE.Vector3(0.1, -0.035, 0); // 발끝 쪽 (뒤꿈치를 들면 여기로 버틴다)
 const TOE_X = 0.15; // 발목에서 발끝(뒤꿈치를 들 때 축이 되는 곳)까지 앞으로
