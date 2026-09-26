@@ -721,7 +721,9 @@ export class Sound {
           const res = await fetch(new URL(`sfx/${f}.mp3`, document.baseURI));
           if (!res.ok) continue;
           const ab = await res.arrayBuffer();
-          const buf = await new Promise((ok, bad) => c.decodeAudioData(ab, ok, bad)); // 옛 사파리는 콜백 방식만 된다
+          // 옛 사파리는 콜백 방식만 된다. 요즘 브라우저는 promise 도 함께 돌려주는데, 못 읽으면 그 promise 도
+          // 실패해서 "처리 안 된 오류"가 콘솔에 뜬다 → promise 쪽 결과도 같은 곳(ok/bad)으로 받는다 (두 번 불려도 한 번만 처리됨)
+          const buf = await new Promise((ok, bad) => c.decodeAudioData(ab, ok, bad)?.then?.(ok, bad));
           (this.samples[name] = this.samples[name] || []).push(trimStart(c, buf));
         } catch {
           /* 못 읽으면 합성 소리만 쓴다 */

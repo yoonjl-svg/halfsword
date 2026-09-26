@@ -432,6 +432,14 @@ window.addEventListener('keydown', (e) => {
   if (state === 'fight') pause();
   else if (state === 'paused' && !roundOver) resume();
 });
+// 싸우는 도중 전화·잠금·다른 앱 때문에 소리가 멈췄으면(아이폰은 'interrupted'), 다음에 화면을 만질 때 다시 켠다.
+// (일시정지 → 계속하기를 누르지 않아도 되게. 시작 버튼을 누르기 전에는 소리 장치를 만들지 않는다: sound.ctx 가 있을 때만)
+for (const ev of ['touchend', 'pointerup', 'keydown']) {
+  window.addEventListener(ev, () => sound.ctx && sound.unlock(), { passive: true });
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
+});
 // 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
 function updateHud() {
   const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
