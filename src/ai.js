@@ -86,6 +86,8 @@ export class AI {
     this.circleTimer = rand(0.5, 1.5);
     this.threatId = 0; // 상대 공격 번호 (한 공격에 한 번만 판단)
     this.threatSeen = -1;
+    this.readRollId = -1; // '위험을 알아챘나' 판단도 한 공격에 한 번만 굴린다 (매 스텝 다시 굴리면 사실상 항상 알아채게 된다)
+    this.readRollOk = false;
     this.preArmed = true; // "치려는 낌새"에 새로 반응할 수 있나 (한 번 몰아칠 때 한 번만 판단)
     this.preOff = 1;
     this.noThreat = 1; // 위험이 없던 시간
@@ -136,8 +138,8 @@ export class AI {
     this.sense.record(dt);
     const L = this.level;
 
-    // 넘어졌거나 일어나는 중: 칼을 머리 위로 들어 가리고, 일어서면 먼저 물러난다
-    if (me.state !== 'stand') {
+    // 완전히 쓰러졌다: 칼을 머리 위로 들어 가리기만 한다 (팔에도 힘이 거의 없다)
+    if (me.state === 'down') {
       me.move.set(0, 0);
       this.mode = 'withdraw';
       this.phase = 'ready';
@@ -150,6 +152,9 @@ export class AI {
       this.moveHand(dt);
       return;
     }
+    // 무릎 꿇었거나 일어나는 중: 다리는 못 놀리지만 칼은 쥘 수 있다 → 가만히 가리고만 있지 않고,
+    //  사정거리 안까지 다가온 적은 아래에서도 위협하거나 짧게 친다 (발놀림은 아래에서 0으로 막는다)
+    const kneeling = me.state !== 'stand';
 
     // 칼을 놓쳤다: 빈손으로는 칠 수 없다 → 하던 공격을 거두고 간격 밖으로 물러난다 (좀비처럼 맨손으로 달려들지 않는다)
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
@@ -196,13 +201,32 @@ export class AI {
     const th = this.threat(s, c, r, d);
     this.noThreat = th ? 0 : this.noThreat + dt;
 
-    if (this.mode === 'watch') this.watch(dt, s, d, th);
+    if (kneeling) {
+      // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
+      //  이따금 짧게 찌른다 (watch()의 적극적인 빈틈 찾기는 쓰지 않는다 — 일어나는 중엔 너무 무모하다)
+      if (th && this.mode !== 'attack' && this.noticedThreat(th)) this.respond(th, d);
+      else if (this.mode === 'attack') this.attack(dt, s, d, th);
+      else {
+        this.decideTimer -= dt;
+        if (this.decideTimer <= 0) {
+          this.decideTimer = rand(0.3, 0.6);
+          const canPoke = d < MEASURE.contact + 0.15 && this.foe.alive && this.foe.state === 'stand' && !th;
+          if (canPoke && Math.random() < 0.5 * L.read) {
+            this.startAttack(this.pickTech(s, 'stepin'), 'stepin', { noFeint: true, fastChamber: true, skipChamber: true });
+          } else {
+            this.hand.set(G.langort[0], G.langort[1]); // 칼끝을 겨눠 위협만 한다
+            this.handSpeed = 1.0;
+          }
+        }
+      }
+    } else if (this.mode === 'watch') this.watch(dt, s, d, th);
     else if (this.mode === 'attack') this.attack(dt, s, d, th);
     else if (this.mode === 'defend') this.defend(dt, s, d, th);
     else this.withdraw(dt, s, d, th);
 
     this.moveHand(dt);
     this.moveFeet(dt, d);
+    if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
   }
 
   // ───────────────────────── 간 보기 ─────────────────────────
@@ -416,7 +440,6 @@ export class AI {
     this.attackT = 0;
     this.stepT = 0;
     this.path.length = 0;
-    this.fastChamber = !!opt.fastChamber;
     this.pointBlocked = false;
     if (!opt.chain) this.stats.attacks++;
     // 속임수: 먼저 다른 곳을 치는 척하다가 바꾼다 (상대가 잘 막을수록 자주)
@@ -436,6 +459,9 @@ export class AI {
     const cd = padDist(hand, this.tech.from);
     this.phase = cd > 0.06 && !opt.skipChamber ? 'windup' : 'approach';
     this.quick = why !== 'patience' && why !== 'open' && why !== 'weak' && why !== 'offbalance';
+    // 빈틈을 잡아 순간적으로 치는 공격(recover/stepin/press/counter/stop 등)은 준비 자세로 옮기는 손도
+    //  빠르게 움직여야 한다. 느린 chamberSpeed로 챔버하면 정작 순간을 놓친다
+    this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? L.windup * 0.15 : 0;
     return true;
   }
@@ -450,7 +476,7 @@ export class AI {
       this.hand.set(t.from[0], t.from[1]);
       this.handSpeed = this.fastChamber ? L.parrySpeed : L.chamberSpeed;
       // 준비하는 동안 상대 칼이 들어오면: 숙련자는 공격을 거두고 막는다
-      if (th && Math.random() < L.read && this.respond(th, d)) return;
+      if (th && this.noticedThreat(th) && this.respond(th, d)) return;
       if (padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
         this.phase = 'approach';
         this.timer = this.quick ? 0 : L.windup * 0.25; // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
@@ -469,7 +495,7 @@ export class AI {
         return;
       }
 
-      if (th && Math.random() < L.read && this.respond(th, d)) return;
+      if (th && this.noticedThreat(th) && this.respond(th, d)) return;
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
       if (this.attackT > (this.chasing ? 3 : 1.4) || d > this.holdDist() + (this.chasing ? 1.4 : 0.8)) this.abortAttack();
     } else if (this.phase === 'strike') {
@@ -552,8 +578,10 @@ export class AI {
     const L = this.level;
     if (this.hitLanded) this.stats.landed++;
     if (this.bound && !this.hitLanded) this.foeParried++; // 칼로 막혔다 → 다음엔 속임수가 통한다
-    const canChain = this.chain < 2 && d < MEASURE.reach + 0.1 && d > MEASURE.clinch + 0.1 && this.foe.alive;
-    const want = this.hitLanded || this.bound ? L.followUp : L.followUp * 0.3;
+    // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
+    //  간격 끝(clinch 근처)에서도 짧게 이어 칠 수 있어야 몰아치는 상대에게 계속 밀리지 않는다
+    const canChain = this.chain < 2 && d < MEASURE.reach + 0.1 && d > MEASURE.clinch - 0.5 && this.foe.alive;
+    const want = this.hitLanded || this.bound ? L.followUp : L.followUp * 0.4;
     if (canChain && Math.random() < want) {
       // 지금 손 위치에서 바로 이어지는 기술 (다시 크게 들지 않는다)
       const hand = [this.me.handOffset.x, this.me.handOffset.y];
@@ -624,6 +652,18 @@ export class AI {
     }
     if (s.hy < -0.2) return s.hx >= 0 ? PARRY.lowL : PARRY.lowR;
     return G.langort; // 가운데: 칼끝으로 겨누고 있는다
+  }
+
+  /**
+   * 공격 중에 상대 칼이 들어오는 걸 알아챘나: 같은 공격(threat id) 동안엔 한 번만 굴린다.
+   * (매 물리 스텝마다 다시 굴리면 0.3초쯤 되는 베기 동안 수십 번 굴리는 셈이라 사실상 항상 알아채게 된다)
+   */
+  noticedThreat(th) {
+    if (th.id !== this.readRollId) {
+      this.readRollId = th.id;
+      this.readRollOk = Math.random() < this.level.read;
+    }
+    return this.readRollOk;
   }
 
   // ───────────────────────── 막기 ─────────────────────────
@@ -766,7 +806,10 @@ export class AI {
     // 달려드는 상대: 성격에 따라 들어오는 순간을 맞받아 베거나(Vor), 한 걸음 물러나 헛치게 한 뒤 친다(Nach).
     //  (물리로 재 보면 둘이 비슷하다: 맞받으면 서로 베일 때가 많고, 물러나면 첫 칼은 피하지만 붙은 싸움이 된다)
     // 제자리에서 칼을 드는 상대는 한 걸음 물러나 헛치게 하거나, 드는 순간을 먼저 친다
-    const strike = charging ? Math.random() < this.pers.vor : d < MEASURE.reach + 0.3 && Math.random() < L.counter + 0.15;
+    // 계속 몰아치는 상대(foeAggro가 쌓여 있을수록)일수록 물러나기보다 맞받아치는 쪽으로 기운다 —
+    //  성격은 그대로 두되, 지금 상대가 얼마나 몰아치는지를 보고 판단을 조금 더 얹는다
+    const stopBias = Math.max(this.pers.vor, this.foeAggro * 0.75);
+    const strike = charging ? Math.random() < stopBias : d < MEASURE.reach + 0.3 && Math.random() < L.counter + 0.15;
     if (strike) {
       const t = this.pickTech(s, charging ? 'stop' : 'windup');
       if (t && this.startAttack(t, charging ? 'stop' : 'windup', { noFeint: true, fastChamber: true })) {
@@ -808,8 +851,9 @@ export class AI {
       off.set(tx, ty);
       if (striking) {
         this.path.shift();
-        // 속임수의 가짜 부분이 끝났다 → 칼이 가짜 쪽으로 움직이는 것이 보이도록 잠깐 두었다가 진짜 길로 간다
-        if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = 0.14;
+        // 속임수의 가짜 부분이 끝났다 → 칼이 가짜 쪽으로 움직이는 것이 보이도록 잠깐 두었다가 진짜 길로 간다.
+        //  너무 오래 멈추면 진짜 칼이 나가기까지 전체 시간이 늘어져 오히려 읽히기 쉽다. 숙련될수록 더 빨리 다시 챔버한다
+        if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = clamp(0.16 - 0.08 * this.level.read, 0.06, 0.16);
       }
     }
     if (off.length() > 0.62) off.setLength(0.62);
@@ -915,7 +959,7 @@ export class AI {
   /** 새 다리(gait.js)가 있으면 베는 걸음을 부탁한다 (없으면 조이스틱 내딛기로 충분) */
   gaitStep() {
     const g = this.me.gait;
-    if (this.requestedStep || !g?.requestStep || !g.active) return;
+    if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
     this.requestedStep = true;
     g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 });
   }
