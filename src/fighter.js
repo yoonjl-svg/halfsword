@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL } from './config.js';
 import { Skill } from './skill.js';
 import { guardAt } from './guards.js';
 
@@ -183,6 +183,12 @@ export class Fighter {
     this.localVel = new THREE.Vector2();
     this.hitCooldowns = new Map();
     this.onHurt = null;
+    // 칼끼리 닿은 느낌 (combat.js가 매 스텝 채운다). 검술의 "느끼기(Fühlen)": 바인드에서 상대가 세게 미는지 약하게 미는지
+    //  touching: 지금 칼끼리 닿아 있나, force: 상대 칼이 내 칼을 미는 힘(N), normal: 그 방향(월드), time: 맞댄 채 이어진 시간(초)
+    //  impact: 마지막으로 새로 부딪힌 충격량(N·s), impactSpeed: 그때 부딪히는 속도(m/s)
+    this.feel = { touching: false, force: 0, normal: new THREE.Vector3(), point: new THREE.Vector3(), time: 0, impact: 0, impactSpeed: 0 };
+    // 칼이 세게 막히거나 딱딱한 곳을 친 충격 (0~1, RECOIL.joltTime 동안 사라진다). takeJolt 참고
+    this.jolt = 0;
 
     // 손 목표: 몸 앞 평면에서 (좌우, 위아래) 오프셋(m). 입력/AI가 이 값을 바꾼다.
     // 앞뒤 깊이는 자동: 가운데로 모을수록 팔을 앞으로 뻗는다.
@@ -348,17 +354,22 @@ export class Fighter {
     ];
     const group = new THREE.Group();
     this.bladeColliders = [];
+    this.swordColliders = []; // 칼 전체(칼날+칼자루). 칼끼리 붙어 있는 동안 반발을 끄고 켠다 (combat.js)
     for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade] of parts) {
       const cd = shapeDesc(RAPIER, shape)
         .setTranslation(0, y, 0)
         .setMassProperties(pm * ms, { x: 0, y: pc, z: 0 }, { x: pIe * ms, y: pIt * ms, z: pIe * ms }, { x: 0, y: 0, z: 0, w: 1 })
         .setFriction(0.4)
+        // 강철: 칼끼리 부딪히면 튕긴다. 곱하기 규칙이라 반발이 0인 몸·땅과는 그대로 0 (칼이 살에 튕기지 않는다)
+        .setRestitution(STEEL.restitution)
+        .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Multiply)
         .setCollisionGroups(weaponGroups)
         .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
         .setContactForceEventThreshold(1)
         // 칼날만: 충돌 직전에 combat.js가 "가르고 지나갈지"를 정할 수 있게 한다
         .setActiveHooks(isBlade ? RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS : RAPIER.ActiveHooks.NONE);
       const col = world.createCollider(cd, sword);
+      this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
       const mesh = shapeMesh(shape, color, isBlade ? { metalness: 0.9, roughness: 0.25 } : null);
       mesh.position.y = y;
@@ -552,6 +563,7 @@ export class Fighter {
     this.muscle += (targetMuscle - this.muscle) * Math.min(1, dt * (targetMuscle > this.muscle ? 4 : 12));
 
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
+    this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
 
     this.updateHeading(dt);
     this.skill.update(dt);
@@ -742,6 +754,34 @@ export class Fighter {
     this.world.removeImpulseJoint(this.gripJoint, true);
   }
 
+  /**
+   * 칼이 세게 막히거나 딱딱한 곳을 쳤다 (combat.js가 충격량 J(N·s)로 부른다).
+   * 충격 자체는 물리 엔진이 칼 → 손목 → 팔 → 가슴으로 전한다. 여기선 "방금 크게 부딪혔다"는 신호만 남긴다
+   * (uprightRelax가 쓰고, 연출·AI도 읽을 수 있다).
+   */
+  takeJolt(J) {
+    this.jolt = Math.max(this.jolt, Math.min(1, J / RECOIL.joltImpulse));
+  }
+
+  /**
+   * (실험, RECOIL.anchorRelax) 기준 막대(똑바로 서기 보조)가 몸을 붙잡는 힘의 비율. 모터 축 3 = 옆으로 기울기,
+   * 4 = 앞뒤로 숙이기, 5 = 몸통 비틀기. 칼을 휘두르거나 부딪히는 동안 숙이기·비틀기를 덜 붙잡아서
+   * 휘두르는 반작용과 충격이 골반·몸통으로 전해진다 (다리가 받아낸다).
+   */
+  uprightRelax(ax) {
+    if (!RECOIL.anchorRelax || ax === MOTOR_AXES[0] || this.state !== 'stand') return 1;
+    let swing = 0;
+    if (this.armed) {
+      const w = this.sword.angvel();
+      const b = _ur.set(0, 1, 0).applyQuaternion(rot(this.sword, _urq));
+      const wd = w.x * b.x + w.y * b.y + w.z * b.z; // 칼날 축으로 도는 몫(비틀기)은 뺀다
+      swing = Math.sqrt(Math.max(0, w.x * w.x + w.y * w.y + w.z * w.z - wd * wd));
+    }
+    const effort = Math.max(THREE.MathUtils.smoothstep(swing, 4, 10), this.jolt);
+    const min = ax === MOTOR_AXES[2] ? RECOIL.anchorYaw : RECOIL.anchorPitch;
+    return 1 - (1 - min) * effort;
+  }
+
   /** 몸통이 "의도한 자세"(가속할 때 숙인 것 포함)에서 벗어난 각도 */
   tiltDeg() {
     rot(this.bodies.chest, _q1);
@@ -851,7 +891,10 @@ export class Fighter {
     const hold = THREE.MathUtils.clamp(1 - this.offBalance / BALANCE.fallRange, 0.15, 1);
     const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, loadSum));
     const raw = this.uprightJoint.rawSet;
-    for (const ax of MOTOR_AXES) raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist, BODY.uprightDamping * assist);
+    for (const ax of MOTOR_AXES) {
+      const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
+      raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * r);
+    }
     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
     this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.05, -0.12, 0.12) : 0;
   }
@@ -1624,6 +1667,8 @@ const _bloodColor = new THREE.Color(0x5a0808);
 const _paleColor = new THREE.Color(0xb8b4a8);
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
+const _ur = new THREE.Vector3();
+const _urq = new THREE.Quaternion();
 const _axis2 = new THREE.Vector3();
 const _qt = new THREE.Quaternion();
 const _c1 = new THREE.Vector3();

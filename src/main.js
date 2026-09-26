@@ -220,19 +220,29 @@ function onWound(att, vic, r, point, pr) {
 
 function onClash(point, speed, touch) {
   // 소리: 새로 부딪힌 순간(또는 맞댄 채 다시 세게 친 순간)에만 "쨍". 맞댄 채 미끄러지는 동안은 긁히는 소리(updateBindSound)
-  //  touch.vn = 부딪히는 속도, touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeTouch)
+  //  touch.vn = 부딪히기 직전 맞닿는 방향 속도(부딪히는 세기), touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeClash)
   if (touch && (touch.fresh || touch.vn > 3)) sound.clash(touch.vn, touch.vt);
-  if (speed < 2.5 || clashCooldown > 0) return;
+  // 연출의 세기는 "부딪히기 직전" 속도로 정한다 (부딪힌 뒤 속도엔 튕겨 나온 몫이 섞여 있다)
+  const impact = touch ? (touch.fresh || touch.vn > 3 ? touch.vn : 0) : speed;
+  if (clashCooldown > 0) return;
+  if (impact < 2.5) {
+    // 세게 부딪히진 않았지만 칼날을 따라 빠르게 긁으면 불꽃만 조금
+    if (touch && touch.vt > 5) {
+      clashCooldown = 0.12;
+      particles.sparks(point, touch.vt * 0.4);
+    }
+    return;
+  }
   clashCooldown = 0.09;
   stats.clashes++;
-  particles.sparks(point, speed);
+  particles.sparks(point, impact);
   // 세게 부딪힐 때만 잠깐 멈칫 (칼끼리 맞대고 밀 때마다 멈추면 끊겨 보인다)
-  if (speed > 6 && clashStopCooldown <= 0) {
-    hitStop = Math.max(hitStop, Math.min(0.08, speed / 200));
+  if (impact > 6 && clashStopCooldown <= 0) {
+    hitStop = Math.max(hitStop, Math.min(0.08, impact / 200));
     clashStopCooldown = 0.5;
   }
-  kickCamera(new THREE.Vector3((Math.random() - 0.5), 0.3, (Math.random() - 0.5)).normalize(), Math.min(0.6, speed / 25));
-  haptic(Math.min(1, speed / 15));
+  kickCamera(new THREE.Vector3((Math.random() - 0.5), 0.3, (Math.random() - 0.5)).normalize(), Math.min(0.6, impact / 25));
+  haptic(Math.min(1, impact / 15));
 }
 
 // 칼을 휘두르면 바람 소리 (칼마다 하나씩 계속 돌면서 칼끝 속도를 따라간다)
