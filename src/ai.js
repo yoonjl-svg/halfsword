@@ -403,6 +403,7 @@ export class AI {
     this.stepT = 0;
     this.path.length = 0;
     this.fastChamber = !!opt.fastChamber;
+    this.pointBlocked = false;
     if (!opt.chain) this.stats.attacks++;
     // 속임수: 먼저 다른 곳을 치는 척하다가 바꾼다 (상대가 잘 막을수록 자주)
     this.feint = null;
@@ -448,9 +449,12 @@ export class AI {
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = MEASURE.contact + t.reach + 0.05 + (this.why === 'stop' ? 0.2 : 0);
       if (this.timer <= 0 && this.contactDist() <= this.need) {
+        // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
+        this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
         this.startStrike();
         return;
       }
+
       if (th && Math.random() < L.read && this.respond(th, d)) return;
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
       if (this.attackT > 1.4 || d > this.holdDist() + 0.8) this.abortAttack();
@@ -506,6 +510,7 @@ export class AI {
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */
   stepTime() {
     if (this.why === 'stop') return 0; // 상대가 달려오고 있다: 내가 들어갈 필요가 없다 (옆으로 비켜 선다)
+    if (this.pointBlocked) return 0; // 칼끝부터 쳐서 비킨다. 들어가는 것은 그다음 칼(이어 치기)에서
     const short = this.contactDist() - MEASURE.contact - this.tech.reach;
     return clamp(short * 0.8, 0, 0.3);
   }
@@ -754,7 +759,7 @@ export class AI {
       const t = this.pickTech(s, charging ? 'stop' : 'windup');
       if (t) {
         this.stats.preempts++;
-        return this.startAttack(t, 'stop', { noFeint: true, fastChamber: true });
+        return this.startAttack(t, charging ? 'stop' : 'windup', { noFeint: true, fastChamber: true });
       }
     }
     this.stats.voids++;
@@ -809,27 +814,32 @@ export class AI {
     const toStick = (v) => (v >= 0 ? v / speed : v / (speed * 0.75));
     if (this.mode === 'attack') {
       if (this.phase === 'windup') {
-        // 준비하는 동안 간격 끝까지 다가간다 (이미 가까우면 멈춤)
+        // 준비하는 동안 간격 끝까지 다가간다 (이미 가까우면 제자리).
+        //  제자리일 때는 뒤로 살짝 당긴다: 칼을 빠르게 드는 것을 검술 층(skill.js)이 휘두르기로 보고
+        //  저절로 앞으로 내딛지 않게 (AI는 발을 스스로 정한다)
         const want = MEASURE.reach + 0.2;
-        fwd = d > want ? clamp((d - want) * 1.5, 0.25, 0.8) : 0;
+        fwd = d > want && this.foeClosing < 0.5 ? clamp((d - want) * 1.5, 0.25, 0.8) : -0.21;
       } else if (this.phase === 'approach') {
         // 성큼성큼이 아니라 미끄러지듯 (빨리 달려들면 베는 동안 멈추지 못하고 상대 몸에 부딪친다).
         //  상대가 다가오고 있으면 제자리에서 기다린다 (뒤로 살짝 당겨 검술 층의 자동 내딛기도 막는다)
         const gap = this.contactDist() - (this.need ?? MEASURE.contact);
-        fwd = this.foeClosing > 0.5 ? -0.21 : gap > 0 ? clamp(gap * 3, 0.25, 0.45) : 0;
+        fwd = this.foeClosing > 0.5 || gap <= 0 ? -0.21 : clamp(gap * 3, 0.25, 0.45);
       } else {
         // 손이 먼저, 발이 뒤따른다. 이미 가까우면 내딛지 않는다 (몸이 부딪친다)
+        let stepping = false;
         if (this.stepDelay > 0) this.stepDelay -= dt;
         else if (this.stepT > 0) {
           this.stepT -= dt;
-          if (d > MEASURE.contact - 0.1) {
-            fwd = 1;
-            this.gaitStep();
-          }
+          stepping = d > MEASURE.contact - 0.1;
         }
-        // 내디딜 필요가 없으면 멈춰 선다 (다가오던 관성으로 상대 몸에 부딪치지 않게).
-        //  뒤로 살짝 당기면 검술 층의 자동 내딛기(skill.js)도 걸리지 않는다
-        if (this.stepT <= 0 && this.stepDelay <= 0) fwd = d < MEASURE.contact ? -0.5 : -0.21;
+        if (stepping) {
+          fwd = 1;
+          this.gaitStep();
+        } else {
+          // 내디디지 않을 때는 발을 멈춰 세운다 (다가오던 관성으로 상대 몸에 부딪치지 않게).
+          //  뒤로 살짝 당기면 검술 층의 자동 내딛기(skill.js)도 걸리지 않는다
+          fwd = d < MEASURE.contact ? -0.5 : -0.21;
+        }
         if (d < MEASURE.clinch) fwd = -0.7; // 너무 붙으면 베며 물러난다
         // 달려드는 상대를 맞받아 벨 때는 옆으로 비켜 선다 (상대 칼이 지나가는 줄에서 벗어난다)
         if (this.why === 'stop') side = this.pers.circleDir * 0.6;
