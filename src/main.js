@@ -4,12 +4,13 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
-import { PHYSICS, ARENA, DAMAGE, CAMERA } from './config.js';
+import { PHYSICS, ARENA, CAMERA } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
-import { Particles, Sound } from './effects.js';
+import { Particles, Sound, haptic, addWoundMark } from './effects.js';
+import { Combat } from './combat.js';
 
 await RAPIER.init();
 
@@ -125,7 +126,7 @@ const particles = new Particles(scene);
 const sound = new Sound();
 const input = new Input(canvas);
 
-let world, eventQueue, colliderInfo, player, enemy, ai;
+let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 const fighterMeshes = [];
 
 function newRound() {
@@ -177,96 +178,87 @@ function newRound() {
   });
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   ai = new AI(enemy, player, settings.difficulty);
+  combat = new Combat(colliderInfo, { onWound, onClash });
   roundOver = false;
   roundOverTime = 0;
   hitStop = 0;
 }
 
-// ── 타격 판정 ──
-let hitStop = 0; // 큰 타격 때 아주 잠깐 느려지는 연출
+// ── 타격감 ──
+let hitStop = 0; // 큰 타격 때 아주 잠깐 멈칫하는 연출
 let shake = 0;
 let clashCooldown = 0;
-const _p = new THREE.Vector3();
-
-function contactPoint(h1, h2, fallback) {
-  const c1 = world.getCollider(h1);
-  const c2 = world.getCollider(h2);
-  let found = null;
-  world.contactPair(c1, c2, (manifold) => {
-    if (!found && manifold.numSolverContacts() > 0) {
-      const p = manifold.solverContactPoint(0);
-      if (p) found = new THREE.Vector3(p.x, p.y, p.z);
-    }
-  });
-  return found || fallback;
-}
+let slowMo = 0; // 결정타 슬로모션 남은 시간
 
 // 디버그용 통계 (브라우저 콘솔에서 game.stats 로 확인)
-const stats = { events: 0, bodyContacts: 0, maxSpeed: 0, hits: [], clashes: 0, simTime: 0 };
-function processContacts() {
-  eventQueue.drainContactForceEvents((e) => {
-    stats.events++;
-    const h1 = e.collider1();
-    const h2 = e.collider2();
-    const a = colliderInfo.get(h1);
-    const b = colliderInfo.get(h2);
-    if (!a || !b || a.fighter === b.fighter) return;
+const stats = { hits: [], clashes: 0, simTime: 0, passes: 0 };
 
-    if (a.kind === 'weapon' && b.kind === 'weapon') {
-      // 칼과 칼이 부딪힘 → 불꽃 + 쇳소리
-      const rel = a.fighter.hitPointVel.distanceTo(b.fighter.hitPointVel);
-      if (rel > 2.5 && clashCooldown <= 0) {
-        clashCooldown = 0.09;
-        stats.clashes++;
-        const p = contactPoint(h1, h2, a.fighter.bladePoint(0.6));
-        particles.sparks(p, rel);
-        sound.clash(rel);
-      }
-      return;
-    }
-    const weapon = a.kind === 'weapon' ? a : b.kind === 'weapon' ? b : null;
-    const victim = weapon === a ? b : a;
-    if (!weapon || victim.kind === 'weapon') return;
-    const attacker = weapon.fighter;
-    const target = victim.fighter;
-    if (target.hitCooldowns.has(victim.part)) return;
-
-    const point = contactPoint(h1, h2, toVec(victim.body.translation()));
-    // 칼날의 어느 지점에 맞았는지 → 그 지점의 속도 추정
-    const grip = toVec(attacker.sword.translation());
-    const tip = attacker.bladePoint(1, _p);
-    const along = THREE.MathUtils.clamp(point.clone().sub(grip).dot(tip.clone().sub(grip).normalize()) / 1.2, 0, 1);
-    const bladeVel = attacker.hitPointVel.clone().multiplyScalar(along / 0.7).lerp(attacker.tipVel, Math.max(0, along - 0.7) / 0.3);
-    const pv = victim.body.linvel();
-    const rel = bladeVel.clone().sub(new THREE.Vector3(pv.x, pv.y, pv.z));
-    const speed = rel.length();
-    stats.bodyContacts++;
-    stats.maxSpeed = Math.max(stats.maxSpeed, speed);
-    if (speed < DAMAGE.minSpeed) return;
-
-    let dmg = (speed - DAMAGE.minSpeed) * DAMAGE.perSpeed * (DAMAGE.parts[victim.kind] ?? 1);
-    if (weapon.part !== 'blade') dmg *= 0.4; // 칼자루/손잡이로 친 경우
-    const bladeDir = tip.clone().sub(grip).normalize();
-    if (rel.clone().normalize().dot(bladeDir) > 0.7) dmg *= DAMAGE.stabBonus; // 찌르기
-    if (dmg < 1) return;
-
-    target.hitCooldowns.set(victim.part, DAMAGE.hitCooldown);
-    const dealt = target.takeHit(victim.kind, dmg);
-    stats.hits.push(`${attacker.name}->${victim.part} ${dealt.toFixed(1)}`);
-    // 맞은 부위를 칼이 움직이던 방향으로 밀어준다
-    const imp = rel.clone().normalize().multiplyScalar(Math.min(25, dealt * 0.5));
-    victim.body.applyImpulse({ x: imp.x, y: imp.y, z: imp.z }, true);
-
-    particles.blood(point, rel, dealt);
-    sound.hit(dealt);
-    if (dealt > 18) {
-      hitStop = 0.07;
-      shake = Math.min(0.25, dealt / 150);
-    }
-  });
+/** combat.js가 상처를 만들 때마다 부른다: 피, 자국, 소리, 진동, 멈칫 */
+function onWound(att, vic, r, point, pr) {
+  const tag = `${att.name}->${r.zone}:${r.type}${r.pass ? '(관통)' : ''} ${r.energy.toFixed(0)}J 심각도${r.severity.toFixed(2)}`;
+  stats.hits.push(tag);
+  if (r.pass) stats.passes++;
+  const e = r.energy;
+  const opened = r.type !== 'blunt' && r.severity > 0;
+  // 피: 벤 방향으로 흩뿌림
+  if (opened) particles.blood(point, r.dir, 6 + r.severity * 40, r.speed);
+  // 상처 자국 (부위에 붙어서 같이 움직인다)
+  const group = vic.groups[pr.v.part];
+  if (group) {
+    const q = new THREE.Quaternion();
+    const rr = pr.v.body.rotation();
+    q.set(rr.x, rr.y, rr.z, rr.w).invert();
+    const bladeLocal = r.bladeAxis.clone().applyQuaternion(q);
+    addWoundMark(group, r.local, bladeLocal, r.type, r.type === 'blunt' ? e / 150 : r.severity, settings.blood);
+  }
+  // 소리
+  if (r.helmet) sound.clash(Math.min(20, e / 6));
+  if (r.type === 'cut') sound.cut(e, r.pass);
+  else if (r.type === 'stab') sound.stab(e);
+  else sound.blunt(e);
+  if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet) sound.bone(e);
+  // 멈칫 + 흔들림 (에너지에 비례)
+  hitStop = Math.max(hitStop, Math.min(0.12, e / 900));
+  shake = Math.max(shake, Math.min(0.35, e / 400));
+  if (att === player || vic === player) haptic(e / 120);
+  if (!vic.alive) slowMo = 1.6;
 }
 
-const toVec = (v) => new THREE.Vector3(v.x, v.y, v.z);
+function onClash(point, speed) {
+  if (speed < 2.5 || clashCooldown > 0) return;
+  clashCooldown = 0.09;
+  stats.clashes++;
+  particles.sparks(point, speed);
+  sound.clash(speed);
+  shake = Math.max(shake, Math.min(0.15, speed / 80));
+  haptic(Math.min(1, speed / 15));
+}
+
+// 칼을 빠르게 휘두르면 바람 소리
+const whooshState = new Map();
+function updateWhoosh(f, dt) {
+  const st = whooshState.get(f) || { cd: 0, prev: 0 };
+  const sp = f.tipVel.length();
+  st.cd -= dt;
+  if (sp > 9 && st.prev <= 9 && st.cd <= 0) {
+    sound.whoosh(sp);
+    st.cd = 0.3;
+  }
+  st.prev = sp;
+  whooshState.set(f, st);
+}
+
+// 상처에서 떨어지는 핏방울
+const _wp = new THREE.Vector3();
+function updateDrips(f, dt) {
+  for (const w of f.wounds) {
+    if (w.bleed < 0.001) continue;
+    if (Math.random() < w.bleed * dt * 900) {
+      const g = f.groups[w.part];
+      if (g) particles.drip(g.localToWorld(_wp.copy(w.local)));
+    }
+  }
+}
 
 // ── UI ──
 const $ = (id) => document.getElementById(id);
@@ -425,11 +417,13 @@ window.addEventListener('keydown', (e) => {
   if (state === 'fight') pause();
   else if (state === 'paused' && !roundOver) resume();
 });
+// 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
 function updateHud() {
-  $('hpP').style.width = `${player.hp}%`;
-  $('hpE').style.width = `${enemy.hp}%`;
-  $('balP').style.width = `${Math.max(0, player.balance)}%`;
-  $('balE').style.width = `${Math.max(0, enemy.balance)}%`;
+  const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
+  const pulse = player.bleed > 0.002 ? 0.15 * (0.5 + 0.5 * Math.sin(performance.now() / 180)) : 0;
+  const v = Math.min(1, lost * 0.85 + Math.min(1, player.pain) * 0.35 + pulse);
+  $('vignette').style.opacity = v.toFixed(3);
+  $('vignette').style.filter = player.consciousness < 0.6 ? `blur(${(0.6 - player.consciousness) * 6}px)` : '';
 }
 
 function checkRoundEnd(dt) {
@@ -448,8 +442,10 @@ function checkRoundEnd(dt) {
     document.exitPointerLock?.();
     toast.classList.remove('show');
     const win = !enemy.alive;
+    const loser = win ? enemy : player;
+    const cause = { 목: '목을 베였다', 머리: '머리에 치명상', 출혈: '과다 출혈', 기절: '기절' }[loser.causeOfDeath] || '쓰러졌다';
     $('menuTitle').textContent = win ? '승리!' : '패배...';
-    $('menuSub').textContent = win ? '상대를 쓰러뜨렸어요. 난이도를 올려볼까요?' : '다시 도전해 보세요. 칼을 크게, 빠르게!';
+    $('menuSub').textContent = `${win ? '상대' : '나'}: ${cause}. ` + (win ? '난이도를 올려볼까요?' : '칼날을 세워 크게 휘둘러 보세요.');
     $('btnStart').textContent = '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
@@ -514,9 +510,12 @@ function frame(now) {
     let scale = 1;
     if (hitStop > 0) {
       hitStop -= dt;
-      scale = 0.15;
+      scale = 0.12;
     }
-    if (roundOver) scale = Math.min(scale, 0.35);
+    if (slowMo > 0) {
+      slowMo -= dt;
+      scale = Math.min(scale, 0.25); // 결정타 슬로모션
+    } else if (roundOver) scale = Math.min(scale, 0.5);
     acc += dt * scale;
     let steps = 0;
     while (acc >= PHYSICS.timestep && steps < PHYSICS.maxStepsPerFrame) {
@@ -525,8 +524,10 @@ function frame(now) {
       ai.update(PHYSICS.timestep);
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);
-      world.step(eventQueue);
-      processContacts();
+      player.cacheState();
+      enemy.cacheState();
+      world.step(eventQueue, combat.physicsHooks);
+      combat.afterStep(world, eventQueue);
       clashCooldown -= PHYSICS.timestep;
       stats.simTime += PHYSICS.timestep;
       acc -= PHYSICS.timestep;
@@ -535,6 +536,10 @@ function frame(now) {
     if (steps === PHYSICS.maxStepsPerFrame) acc = 0;
     player.syncMeshes();
     enemy.syncMeshes();
+    for (const f of [player, enemy]) {
+      updateWhoosh(f, dt * scale);
+      updateDrips(f, dt * scale);
+    }
     particles.update(dt * scale);
     updateHud();
     checkRoundEnd(dt);
@@ -549,7 +554,7 @@ player.syncMeshes();
 enemy.syncMeshes();
 requestAnimationFrame(frame);
 
-// 디버그/튜닝용: 브라우저 콘솔에서 game.player.hp = 100 처럼 만져볼 수 있다
+// 디버그/튜닝용: 브라우저 콘솔에서 game.player.blood, game.config.WEAPON.mass = 3 처럼 만져볼 수 있다
 window.game = {
   get player() {
     return player;
@@ -562,6 +567,9 @@ window.game = {
   },
   get ai() {
     return ai;
+  },
+  get combat() {
+    return combat;
   },
   stats,
   config: CONFIG,

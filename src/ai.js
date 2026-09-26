@@ -16,7 +16,7 @@ const ATTACKS = [
   { name: 'thrust', windup: [0.45, -0.25], strike: [0.0, 0.05] }, // 찌르기 (가운데로 모으면 팔이 뻗는다)
 ];
 const GUARD = [0.05, 0.4];
-const READY = [0.15, 0.0];
+const READY = [0.15, -0.1]; // 칼끝이 상대 가슴을 겨누는 기본 자세
 
 export class AI {
   constructor(me, foe, levelName = 'normal') {
@@ -24,7 +24,7 @@ export class AI {
     this.foe = foe;
     this.setLevel(levelName);
     this.phase = 'ready'; // ready | windup | strike | recover | guard
-    this.timer = 1.0;
+    this.timer = 2.2 + Math.random() * 0.8; // 시작하자마자 달려들지 않고 잠깐 간을 본다
     this.attack = ATTACKS[0];
     this.target = new THREE.Vector2(...READY);
     this.shuffle = 0;
@@ -86,7 +86,7 @@ export class AI {
     switch (this.phase) {
       case 'ready':
         this.target.set(...READY);
-        if (this.timer <= 0 && dist < 1.85 && foe.alive) {
+        if (this.timer <= 0 && dist < 2.2 && foe.alive) {
           this.attack = this.chooseAttack();
           this.phase = 'windup';
           this.timer = L.windup * (0.8 + Math.random() * 0.4);
@@ -152,8 +152,8 @@ export class AI {
       this.circle = Math.random() < 0.6 ? (Math.random() < 0.5 ? -0.7 : 0.7) : 0; // 옆걸음
     }
     let fwd = 0;
-    // 칼끝 쪽(가장 빠른 부분)이 닿는 거리를 유지한다
-    const want = this.phase === 'strike' ? 1.4 : 1.6;
+    // 평소엔 상대 칼끝이 닿지 않는 거리(간격 밖)에서 기다리고, 칠 때만 한 걸음 들어간다
+    const want = this.phase === 'strike' || this.phase === 'windup' ? 1.35 : 1.95;
     if (dist > want + 0.15) fwd = 1;
     else if (dist < want - 0.35) fwd = -0.7;
     else fwd = this.shuffle;

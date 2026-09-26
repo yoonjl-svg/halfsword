@@ -26,20 +26,12 @@
       #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
       #game.pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
 
-      /* HUD */
-      #hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: none; gap: 110px; pointer-events: none; }
-      #hud.show { display: flex; }
-      .bar { flex: 1; }
-      .bar .name { font-size: 12px; letter-spacing: .08em; color: var(--dim); margin-bottom: 3px; }
-      .bar.right { text-align: right; }
-      .track { height: 10px; background: rgba(0,0,0,.45); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
-      .fill { height: 100%; width: 100%; transition: width .15s; }
-      .bar.left .fill { background: var(--blue); }
-      .bar.right .fill { background: var(--red); margin-left: auto; }
-      .track.bal { height: 4px; margin-top: 3px; }
-      .track.bal .fill { background: var(--accent); }
-
-      #topButtons { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
+      /* HUD: 붉은 테두리(출혈/통증) */
+      #hud { position: fixed; inset: 0; display: none; pointer-events: none; }
+      #hud.show { display: block; }
+      #vignette { position: absolute; inset: 0; opacity: 0; transition: opacity .2s;
+        background: radial-gradient(ellipse at center, rgba(120,0,0,0) 45%, rgba(120,0,0,.55) 78%, rgba(60,0,0,.9) 100%); }
+      #topButtons { position: fixed; top: max(8px, env(safe-area-inset-top)); z-index: 2; left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
       #topButtons.show { display: flex; }
       .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; }
 
@@ -91,18 +83,8 @@
   <body>
     <canvas id="game"></canvas>
 
-    <div id="hud">
-      <div class="bar left">
-        <div class="name">나</div>
-        <div class="track"><div class="fill" id="hpP"></div></div>
-        <div class="track bal"><div class="fill" id="balP"></div></div>
-      </div>
-      <div class="bar right">
-        <div class="name">상대</div>
-        <div class="track"><div class="fill" id="hpE"></div></div>
-        <div class="track bal"><div class="fill" id="balE"></div></div>
-      </div>
-    </div>
+    <!-- 체력 게이지 없음: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 -->
+    <div id="hud"><div id="vignette"></div></div>
     <div id="topButtons">
       <button class="iconBtn" id="btnPause" aria-label="일시정지">Ⅱ</button>
       <button class="iconBtn" id="btnCalib" aria-label="기울기 영점 맞추기">◎</button>

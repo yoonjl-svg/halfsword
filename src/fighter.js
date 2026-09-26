@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, DAMAGE } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE } from './config.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 const BIT = { ground: 1 };
@@ -90,13 +90,23 @@ export class Fighter {
     this.heading = o.heading ?? 0;
     this.faceTarget = null; // 바라볼 지점(보통 상대 골반). main이 매 스텝 넣어준다.
 
-    this.hp = 100;
-    this.balance = 100;
+    // ── 몸 상태 (체력 게이지 대신) ──
+    this.blood = 1; // 남은 피 (1 = 100%)
+    this.bleed = 0; // 초당 출혈량 (전체 피 대비 비율)
+    this.consciousness = 1; // 의식. 0이 되면 기절(패배)
+    this.pain = 0; // 통증: 크게 맞으면 잠깐 힘이 빠진다
+    this.limbs = { armS: 1, armO: 1, legF: 1, legB: 1 }; // 팔다리 기능 (1 = 멀쩡)
+    this.wounds = []; // { part, type, severity, bleed, local(몸 기준 위치) }
+    this.causeOfDeath = null;
+    this.hasHelmet = o.look.helmet === 'kettle';
+    this.armed = true;
+    this.balance = 100; // 휘청임 게이지: 세게 맞으면 줄고, 바닥나면 넘어진다
+    this.offBalance = 0; // 무게중심이 발 밖으로 벗어난 거리 (m)
+    this.offBalanceTime = 0;
+    this.stumble = new THREE.Vector2(); // 균형을 잡으려고 자동으로 딛는 걸음 (몸 기준)
     this.state = 'stand'; // stand | down | getup | dead
     this.stateTime = 0;
     this.muscle = 1; // 근육 힘 비율 (넘어지면 0 근처로)
-    this.armHealth = 1; // 칼 든 팔 상태
-    this.legHealth = 1;
     this.move = new THREE.Vector2(); // x: 옆걸음(+오른쪽), y: 앞(+)/뒤(-). 각각 -1 ~ 1
     this.strength = o.strength ?? 1;
     this.gaitPhase = 0;
@@ -112,6 +122,7 @@ export class Fighter {
     this.handOffset = new THREE.Vector2(0.15, 0.0);
 
     this.bodies = {};
+    this.groups = {}; // 부위 이름 → 화면용 그룹 (상처 자국을 붙인다)
     this.meshes = [];
     this.joints = [];
     this.totalMass = 0;
@@ -146,6 +157,7 @@ export class Fighter {
       colliderInfo.set(col.handle, { fighter: this, kind: d.kind, part: d.name, body: rb });
 
       const group = new THREE.Group();
+      this.groups[d.name] = group;
       const mesh = dressPart(group, d, o.look);
 
       if (d.foot) {
@@ -200,10 +212,12 @@ export class Fighter {
     const L = WEAPON.length;
     const wristLocal = new THREE.Vector3(0, 0.865, this.side * 0.25);
     const wp = toWorld(wristLocal.toArray());
+    // 처음부터 준비 자세(칼끝이 앞을 향함)로 만든다. 세워서 만들면 시작하자마자 칼이 앞으로 쓰러지며 내리친다.
+    const swordRot = yaw.clone().multiply(new THREE.Quaternion().setFromAxisAngle(Z_AXIS, -1.45));
     const sword = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(wp.x, wp.y, wp.z)
-        .setRotation(vecQ(yaw))
+        .setRotation(vecQ(swordRot))
         .setAngularDamping(0.3)
         .setCcdEnabled(true),
     );
@@ -224,7 +238,9 @@ export class Fighter {
         .setFriction(0.4)
         .setCollisionGroups(weaponGroups)
         .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
-        .setContactForceEventThreshold(1);
+        .setContactForceEventThreshold(1)
+        // 칼날만: 충돌 직전에 combat.js가 "가르고 지나갈지"를 정할 수 있게 한다
+        .setActiveHooks(isBlade ? RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS : RAPIER.ActiveHooks.NONE);
       const col = world.createCollider(cd, sword);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
       const mesh = shapeMesh(shape, color, isBlade ? { metalness: 0.9, roughness: 0.25 } : null);
@@ -235,12 +251,13 @@ export class Fighter {
     scene.add(group);
     this.meshes.push({ rb: sword, group, kind: 'weapon' });
     this.sword = sword;
-    world.createImpulseJoint(
+    this.gripJoint = world.createImpulseJoint(
       RAPIER.JointData.spherical({ x: 0, y: -0.135, z: 0 }, { x: 0, y: 0, z: 0 }),
       this.bodies.farmS,
       sword,
       true,
     );
+    this.swordGroup = group;
     this.swordMass = m;
     this.handTarget = new THREE.Vector3();
     this.tipPrev = null;
@@ -253,6 +270,22 @@ export class Fighter {
 
   get alive() {
     return this.state !== 'dead';
+  }
+
+  /** 다리 기능 (두 다리 평균) */
+  get legHealth() {
+    return (this.limbs.legF + this.limbs.legB) / 2;
+  }
+
+  /** 칼 든 팔 기능 */
+  get armHealth() {
+    return this.limbs.armS;
+  }
+
+  /** 피가 모자라거나 아프면 힘이 빠진다 (0~1) */
+  get vigor() {
+    const b = THREE.MathUtils.clamp((this.blood - VITALS.collapseBlood) / (VITALS.weakBlood - VITALS.collapseBlood), 0, 1);
+    return Math.min(1, 0.35 + 0.65 * b) * (1 - 0.4 * Math.min(1, this.pain));
   }
 
   get pelvisPos() {
@@ -306,6 +339,7 @@ export class Fighter {
     if (this.state === 'down') targetMuscle = 0.08;
     else if (this.state === 'dead') targetMuscle = 0.02;
     else if (this.state === 'getup') targetMuscle = Math.min(1, this.stateTime / BODY.getUpDuration);
+    if (this.state !== 'dead') targetMuscle *= this.vigor;
     this.muscle += (targetMuscle - this.muscle) * Math.min(1, dt * (targetMuscle > this.muscle ? 4 : 12));
 
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
@@ -324,17 +358,21 @@ export class Fighter {
   }
 
   updateState(dt) {
+    this.updateVitals(dt);
     if (this.state === 'dead') return;
     const tilt = this.tiltDeg();
     if (this.state === 'stand') {
-      this.balance = Math.min(100, this.balance + DAMAGE.balanceRegen * dt);
-      if (tilt > BODY.fallTiltDeg || this.balance <= 0) this.knockDown();
+      this.balance = Math.min(100, this.balance + VITALS.balanceRegen * dt);
+      const lostFooting = this.offBalanceTime > BALANCE.fallDelay;
+      if (tilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting || this.legHealth < 0.12) this.knockDown();
     } else if (this.state === 'down') {
-      if (this.stateTime > BODY.fallDuration) this.setState('getup');
+      // 다리를 크게 다쳤으면 일어나지 못한다
+      if (this.stateTime > BODY.fallDuration && this.legHealth >= 0.12) this.setState('getup');
     } else if (this.state === 'getup') {
       if (this.stateTime > BODY.getUpDuration + 0.4) {
         this.setState('stand');
         this.balance = 60;
+        this.offBalanceTime = 0;
       }
     }
   }
@@ -348,6 +386,75 @@ export class Fighter {
     if (this.state === 'dead' || this.state === 'down') return;
     this.setState('down');
     this.balance = 0;
+  }
+
+  die(cause) {
+    if (this.state === 'dead') return;
+    this.causeOfDeath = cause;
+    this.setState('dead');
+  }
+
+  // ── 출혈·의식·통증 ──
+  updateVitals(dt) {
+    if (this.bleed > 0) {
+      this.blood = Math.max(0, this.blood - this.bleed * dt);
+      // 피가 굳으며 출혈이 줄어든다 (큰 상처일수록 느리게)
+      this.bleed = Math.max(0, this.bleed - this.bleed * VITALS.clotting * dt);
+      for (const w of this.wounds) w.bleed *= 1 - VITALS.clotting * dt;
+    }
+    this.pain = Math.max(0, this.pain - dt * 0.6);
+    if (this.state === 'dead') return;
+    this.consciousness = Math.min(1, this.consciousness + dt * 0.03); // 정신이 천천히 돌아온다
+    if (this.blood < VITALS.collapseBlood) this.die('출혈');
+    else if (this.consciousness <= 0) this.die('기절');
+  }
+
+  /**
+   * 상처 입기. combat.js가 칼이 닿은 순간을 분석해서 부른다.
+   * @param {object} h { part, zone('head'|'neck'|'chest'|'pelvis'|'arm'|'leg'), type('cut'|'stab'|'blunt'),
+   *                     severity(0~), energy(J), local(부위 기준 위치), helmet(bool) }
+   */
+  applyWound(h) {
+    if (this.state === 'dead') return;
+    const sev = h.severity;
+    const Z = h.zone;
+    // 통증과 휘청임 (에너지가 클수록)
+    this.pain = Math.min(2, this.pain + sev * 0.8 + h.energy / 150);
+    this.balance -= h.energy * VITALS.staggerPerJoule;
+
+    if (h.type === 'blunt') {
+      if (Z === 'head' || Z === 'neck') {
+        const k = h.helmet ? 0.4 : 1;
+        this.consciousness -= h.energy * VITALS.concussionPerJoule * k;
+        if (h.energy * k > 45) this.knockDown(); // 머리를 세게 맞으면 휘청 쓰러진다
+      }
+      return;
+    }
+
+    // 베기/찌르기 → 상처 + 출혈
+    const bleedPerSev = h.bleedPerSev;
+    const bleed = sev * bleedPerSev * (h.type === 'stab' ? 1.6 : 1);
+    this.bleed += bleed;
+    this.wounds.push({ part: h.part, type: h.type, severity: sev, bleed, local: h.local.clone() });
+
+    // 치명상
+    if (Z === 'neck' && sev > 0.35) this.die('목');
+    else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
+    else if (Z === 'chest' && h.type === 'stab' && sev > 1.1) this.bleed += 0.25; // 심장·폐: 몇 초 안에 쓰러진다
+
+    // 팔다리 기능
+    const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', thighB: 'legB', shinB: 'legB' }[h.part];
+    if (limb) {
+      this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * 0.7);
+      if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
+    }
+    if (Z === 'head' && h.type === 'cut') this.consciousness -= sev * 0.5;
+  }
+
+  dropSword() {
+    if (!this.armed) return;
+    this.armed = false;
+    this.world.removeImpulseJoint(this.gripJoint, true);
   }
 
   tiltDeg() {
@@ -380,7 +487,10 @@ export class Fighter {
     const fwd = this.forward(_v1);
     const rgt = this.right(_v2);
     const speed = BODY.moveSpeed * (0.5 + 0.5 * this.legHealth);
-    const mv = this.state === 'stand' ? this.move : { x: 0, y: 0 };
+    this.updateFooting(dt, fwd, rgt);
+    // 균형을 잃으면 입력보다 "넘어지지 않으려는 발걸음"이 우선한다
+    const st = this.stumble;
+    const mv = this.state === 'stand' ? { x: this.move.x * (1 - st.length()) + st.x, y: this.move.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
     const along = mv.y * speed * (mv.y < 0 ? 0.75 : 1);
     const side = mv.x * speed * 0.8;
     const dvx = fwd.x * along + rgt.x * side - v.x;
@@ -395,12 +505,76 @@ export class Fighter {
     this.localVel.set(vFwd, v.x * rgt.x + v.z * rgt.z);
     this.anchor.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z });
     this.anchor.setNextKinematicRotation(vecQ(this.yaw));
-    const k = BODY.uprightStiffness * mus;
-    const d = BODY.uprightDamping * mus;
+    // 무게중심이 발 밖으로 벗어날수록 몸을 세우는 힘이 약해진다 → 실제로 기울며 넘어진다
+    const hold = THREE.MathUtils.clamp(1 - this.offBalance / BALANCE.fallRange, 0.15, 1);
+    const k = BODY.uprightStiffness * mus * hold;
+    const d = BODY.uprightDamping * mus * hold;
     const raw = this.uprightJoint.rawSet;
     for (const ax of MOTOR_AXES) raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, k, d);
     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
     this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.06, -0.12, 0.12) : 0;
+  }
+
+  // ── 진짜 균형 ──
+  // 무게중심(CoM)의 속도까지 고려한 "캡처 포인트"(= 지금 속도로 몸이 멈추려면 발을 디뎌야 할 곳)를 구해서,
+  // 그 점이 발 주변을 벗어나면 그쪽으로 발을 딛게 하고, 너무 멀면 넘어지게 한다.
+  updateFooting(dt, fwd, rgt) {
+    let M = 0;
+    const com = _c1.set(0, 0, 0);
+    const vel = _c2.set(0, 0, 0);
+    for (const name in this.bodies) {
+      const b = this.bodies[name];
+      const m = b.mass();
+      const c = b.worldCom();
+      const v = b.linvel();
+      com.x += c.x * m;
+      com.y += c.y * m;
+      com.z += c.z * m;
+      vel.x += v.x * m;
+      vel.z += v.z * m;
+      M += m;
+    }
+    com.multiplyScalar(1 / M);
+    vel.multiplyScalar(1 / M);
+    this.com = this.com || new THREE.Vector3();
+    this.com.copy(com);
+    const w0 = Math.sqrt(9.81 / Math.max(0.5, com.y));
+    const cpx = com.x + vel.x / w0;
+    const cpz = com.z + vel.z / w0;
+    // 발바닥 위치 (땅에 닿은 발만)
+    const a = this.solePoint('shinF', _c3);
+    const b = this.solePoint('shinB', _c4);
+    const ga = a.y < 0.09;
+    const gb = b.y < 0.09;
+    let off;
+    if (ga && gb) off = distToSegment2D(cpx, cpz, a.x, a.z, b.x, b.z);
+    else if (ga || gb) {
+      const f = ga ? a : b;
+      off = Math.hypot(cpx - f.x, cpz - f.z);
+    } else {
+      // 두 발 모두 떠 있으면 (걷는 중 잠깐) 골반 아래를 기준으로
+      const p = this.bodies.pelvis.translation();
+      off = Math.hypot(cpx - p.x, cpz - p.z) + 0.05;
+    }
+    this.offBalance = this.state === 'stand' ? Math.max(0, off - BALANCE.footMargin) : 0;
+    if (this.offBalance > BALANCE.fallRange) this.offBalanceTime += dt;
+    else this.offBalanceTime = Math.max(0, this.offBalanceTime - dt * 2);
+    // 넘어지지 않으려고 캡처 포인트 쪽으로 딛는 걸음 (몸 기준 방향으로 변환)
+    const s = THREE.MathUtils.clamp(this.offBalance / BALANCE.stumbleRange, 0, 1);
+    if (s > 0) {
+      const p = this.bodies.pelvis.translation();
+      const dx = cpx - p.x;
+      const dz = cpz - p.z;
+      const len = Math.hypot(dx, dz) || 1;
+      this.stumble.set(((dx * rgt.x + dz * rgt.z) / len) * s, ((dx * fwd.x + dz * fwd.z) / len) * s);
+    } else this.stumble.set(0, 0);
+  }
+
+  /** 발바닥 한가운데의 월드 좌표 */
+  solePoint(shin, out) {
+    const t = this.bodies[shin].translation();
+    rot(this.bodies[shin], _q1);
+    return out.set(0.05, -0.22, 0).applyQuaternion(_q1).add(_v3.set(t.x, t.y, t.z));
   }
 
   // 관절 목표 자세 정하기 (걷기 사이클, 방패 없는 손 가드)
@@ -482,14 +656,15 @@ export class Fighter {
     const sword = this.sword;
     const chest = this.bodies.chest;
     const mus = this.muscle;
-    if (mus < 0.12) return; // 쓰러지면 칼을 놓친 듯 힘이 빠진다
+    if (mus < 0.12 || !this.armed) return; // 쓰러지거나 칼을 놓치면 힘을 쓰지 않는다
 
     // 손 목표 위치: 가슴 앞 평면의 (좌우, 위아래) + 자동 깊이
     const off = this.handOffset;
     const R = WEAPON.reach;
     const len = off.length();
     if (len > R) off.multiplyScalar(R / len);
-    const depth = 0.2 + 0.35 * Math.sqrt(Math.max(0, 1 - (off.x * off.x + off.y * off.y) / (R * R)));
+    // 가운데로 모을수록 팔을 앞으로 뻗는다 (찌르기는 가장자리→가운데로 옮기면 약 0.5m 내지른다)
+    const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (off.x * off.x + off.y * off.y) / (R * R)));
     const handLocal = _v2.set(depth, 0.16 + off.y, 0.1 + off.x);
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
@@ -516,10 +691,10 @@ export class Fighter {
     sword.addForce(vecArg(f), true);
     chest.addForce({ x: -f.x * 0.7, y: -f.y * 0.7, z: -f.z * 0.7 }, true); // 반작용: 휘두르면 몸도 끌려간다
 
-    // 칼끝 방향: 가슴 아래 뒤쪽의 한 점(지렛대 받침)에서 손을 잇는 방향 + 앞쪽으로 살짝.
-    // → 손을 올리면 칼이 서고, 오른쪽으로 빼면 칼이 오른쪽으로 눕고, 가운데면 상대를 겨눈다.
+    // 칼끝 방향: 가슴 뒤쪽 한 점(지렛대 받침, 어깨 높이쯤)에서 손을 잇는 방향.
+    // → 손을 올리면 칼이 서고, 오른쪽으로 빼면 칼이 오른쪽으로 눕고, 가슴 높이면 칼이 수평으로 상대를 겨눈다.
     //  (손은 몸 중심보다 0.1m 오른쪽에 있으니, 칼끝은 살짝 안쪽으로 모아 상대 중심선을 겨눈다)
-    const aim = _v3.set(handLocal.x + 0.45, handLocal.y + 0.2, off.x - 0.08);
+    const aim = _v3.set(handLocal.x + 0.45, handLocal.y - 0.2, off.x - 0.08);
     aim.normalize().applyQuaternion(this.yaw);
     rot(sword, _q1);
     const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1);
@@ -531,7 +706,9 @@ export class Fighter {
     // 칼날(날 선 쪽)이 휘두르는 방향을 향하도록 비틀림 유지.
     // 칼이 거의 멈춰 있으면 칼 면이 몸 오른쪽을 보게 둔다.
     const flat = new THREE.Vector3(0, 0, 1).applyQuaternion(_q1);
-    const edgeDir = new THREE.Vector3(gv.x, gv.y, gv.z).addScaledVector(blade, -(gv.x * blade.x + gv.y * blade.y + gv.z * blade.z));
+    // 칼날 가운데쯤이 실제로 움직이는 방향 (손잡이 속도와 다르다: 칼은 손을 축으로 돈다)
+    const bv = this.hitPointVel;
+    const edgeDir = new THREE.Vector3(bv.x, bv.y, bv.z).addScaledVector(blade, -bv.dot(blade));
     let flatTarget;
     if (edgeDir.length() > 1) {
       flatTarget = new THREE.Vector3().crossVectors(blade, edgeDir).normalize();
@@ -550,7 +727,8 @@ export class Fighter {
     torque.addScaledVector(wSwing, -WEAPON.aimDamping);
     const maxT = WEAPON.maxAimTorque * str;
     if (torque.length() > maxT) torque.setLength(maxT);
-    const twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(1.2);
+    // 날 세우기(손목 비틀기). 칼날 축 관성이 매우 작아 안정 한계(≈5) 안에서 최대한 세게
+    const twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4);
     twist.addScaledVector(wTwist, -0.12);
     torque.add(twist);
     sword.addTorque(vecArg(torque), true);
@@ -569,25 +747,24 @@ export class Fighter {
     this.hitPointPrev = mid;
   }
 
-  /** 피해 받기. 반환값: 실제 피해량 */
-  takeHit(kind, amount) {
-    if (this.state === 'dead') return 0;
-    this.hp -= amount;
-    this.balance -= amount * DAMAGE.balanceLossPerDamage;
-    if (kind === 'arm') this.armHealth = Math.max(0, this.armHealth - amount / 45);
-    if (kind === 'leg') this.legHealth = Math.max(0.2, this.legHealth - amount / 50);
-    if (kind === 'head' && amount > 22) this.knockDown();
-    // 맞은 만큼 몸이 붉어진다(피 대신 멍 느낌)
-    for (const m of this.meshes) {
-      if (m.kind === kind && m.mesh) m.mesh.material.color.lerp(new THREE.Color(0x7a0a0a), Math.min(0.5, amount / 60));
-    }
-    if (this.hp <= 0) {
-      this.hp = 0;
-      this.setState('dead');
-    } else if (this.balance <= 0 && this.state === 'stand') {
-      this.knockDown();
-    }
-    return amount;
+  /** 물리 스텝 직전의 상태를 JS 쪽에 복사해 둔다 (충돌 훅이 엔진을 건드리지 않고 계산하도록) */
+  cacheState() {
+    const c = (this.cache = this.cache || { parts: {} });
+    const put = (b, o = {}) => {
+      const t = b.translation();
+      const r = b.rotation();
+      const com = b.worldCom();
+      const v = b.linvel();
+      const w = b.angvel();
+      o.p = (o.p || new THREE.Vector3()).set(t.x, t.y, t.z);
+      o.q = (o.q || new THREE.Quaternion()).set(r.x, r.y, r.z, r.w);
+      o.com = (o.com || new THREE.Vector3()).set(com.x, com.y, com.z);
+      o.v = (o.v || new THREE.Vector3()).set(v.x, v.y, v.z);
+      o.w = (o.w || new THREE.Vector3()).set(w.x, w.y, w.z);
+      return o;
+    };
+    c.sword = put(this.sword, c.sword);
+    for (const name in this.bodies) c.parts[name] = put(this.bodies[name], c.parts[name]);
   }
 
   syncMeshes() {
@@ -716,5 +893,18 @@ function toRotVec(q, out) {
   return out.set(q.x, q.y, q.z).multiplyScalar((sgn * angle) / s);
 }
 const _qa = new THREE.Quaternion();
+const _c1 = new THREE.Vector3();
+const _c2 = new THREE.Vector3();
+const _c3 = new THREE.Vector3();
+const _c4 = new THREE.Vector3();
+
+/** 점 (px,pz) 에서 선분 (ax,az)-(bx,bz) 까지 거리 (수평면) */
+function distToSegment2D(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const l2 = dx * dx + dz * dz || 1e-9;
+  const t = THREE.MathUtils.clamp(((px - ax) * dx + (pz - az) * dz) / l2, 0, 1);
+  return Math.hypot(px - (ax + t * dx), pz - (az + t * dz));
+}
 const _axis = new THREE.Vector3();
 const _v2d = new THREE.Vector2();
