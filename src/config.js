@@ -161,7 +161,7 @@ export const SKILL_BODY = {
 export const AI_LEVELS = {
   easy: { reaction: 0.38, windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 7.5, parrySpeed: 3.5, guardChance: 0.35, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.8, aggression: 0.6, skill: 0.4 },
   normal: { reaction: 0.26, windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
-  hard: { reaction: 0.17, windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 14, parrySpeed: 5.5, guardChance: 0.85, predict: 1, counter: 0.45, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.15, aggression: 1.0, skill: 1.0 },
+  hard: { reaction: 0.17, windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.85, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.15, aggression: 1.0, skill: 0.85 },
 };
 
 export const INPUT = {
