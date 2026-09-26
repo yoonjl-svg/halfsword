@@ -16,7 +16,7 @@ import { buildArena } from './arena.js';
 await RAPIER.init();
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick' };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7' };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -134,6 +134,7 @@ function newRound() {
   });
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   ai = new AI(enemy, player, settings.difficulty);
+  player.skill.level = +settings.skill;
   combat = new Combat(colliderInfo, { onWound, onClash });
   roundOver = false;
   roundOverTime = 0;
@@ -289,6 +290,7 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
       b.addEventListener('click', () => {
         settings[key] = b.dataset.v;
         if (key === 'difficulty' && ai) ai.setLevel(settings.difficulty);
+        if (key === 'skill' && player) player.skill.level = +settings.skill;
         saveSettings();
         refreshSettingsUI();
       }),
@@ -522,6 +524,8 @@ function frame(now) {
     acc += dt * scale;
     let steps = 0;
     while (acc >= PHYSICS.timestep && steps < PHYSICS.maxStepsPerFrame) {
+      player.foe = enemy;
+      enemy.foe = player;
       player.faceTarget = enemy.bodies.pelvis.translation();
       enemy.faceTarget = player.bodies.pelvis.translation();
       ai.update(PHYSICS.timestep);

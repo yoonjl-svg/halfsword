@@ -260,7 +260,7 @@ export class Combat {
       const dv = r.speed - newSpeed;
       const J = r.dir.clone().multiplyScalar(r.mEff * dv);
       pr.w.body.applyImpulseAtPoint({ x: -J.x, y: -J.y, z: -J.z }, vp(point), true);
-      pr.v.body.applyImpulseAtPoint({ x: J.x * 0.8, y: J.y * 0.8, z: J.z * 0.8 }, vp(point), true);
+      pr.v.body.applyImpulseAtPoint({ x: J.x * 0.8, y: J.y * 0.8, z: J.z * 0.8 }, vp(onBone(pr.v, point)), true);
       r.stuck = remain <= 0; // 에너지가 모자라 칼이 박힘
     }
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
@@ -271,6 +271,19 @@ export class Combat {
 }
 
 // ── 도우미 ──
+/**
+ * 팔다리는 겉(살)이 아니라 뼈(길이 방향 중심선)로 힘을 받는다.
+ * 가느다란 팔다리 겉면에 충격을 주면 길이 방향으로 팽이처럼 돌기 때문.
+ */
+function onBone(info, point) {
+  if (info.kind !== 'arm' && info.kind !== 'leg') return point;
+  const b = info.body;
+  const c = b.worldCom();
+  const axis = new THREE.Vector3(info.part === 'uarmS' || info.part === 'farmS' ? 1 : 0, info.part === 'uarmS' || info.part === 'farmS' ? 0 : 1, 0).applyQuaternion(rotQ(b));
+  const r = new THREE.Vector3(point.x - c.x, point.y - c.y, point.z - c.z);
+  return axis.multiplyScalar(r.dot(axis)).add(new THREE.Vector3(c.x, c.y, c.z));
+}
+
 function tv(v) {
   return new THREE.Vector3(v.x, v.y, v.z);
 }

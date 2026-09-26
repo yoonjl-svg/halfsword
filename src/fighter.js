@@ -11,11 +11,14 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { BODY, WEAPON, VITALS, BALANCE } from './config.js';
+import { Skill } from './skill.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 const BIT = { ground: 1 };
 const bodyBit = (i) => (i === 0 ? 2 : 8);
 const weaponBit = (i) => (i === 0 ? 4 : 16);
+// 발은 따로: 상대 발·다리와는 부딪히지 않는다 (서로 발을 밟고 마찰로 엉겨 붙는 것을 막는다)
+const footBit = (i) => (i === 0 ? 64 : 128);
 const groups = (member, filter) => (member << 16) | filter;
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
@@ -97,6 +100,18 @@ const angvel = (b, out) => {
 };
 const vecArg = (v) => ({ x: v.x, y: v.y, z: v.z });
 
+/**
+ * 손 목표(몸 앞 평면의 좌우 x, 위아래 y) → 칼끝 방향 (몸 기준: x 앞, y 위, z 칼 든 쪽)
+ */
+function guardDir(x, y) {
+  // 들어 올릴수록 칼이 선다: 가슴 높이(0.1) 수평, 머리 위(0.6)에서 약 95°(살짝 뒤로)
+  const el = y <= 0.1 ? Math.max(-0.6, (y - 0.1) * 1.1) : Math.min(1.75, ((y - 0.1) / 0.5) * 1.65);
+  // 옆으로 뺄수록 칼이 그쪽으로 눕는다 (칼 든 쪽은 더 크게 뺄 수 있다)
+  const az = THREE.MathUtils.clamp((x - 0.05) * 1.7, -1.1, 1.3);
+  const c = Math.cos(el);
+  return [c * Math.cos(az), Math.sin(el), c * Math.sin(az)];
+}
+
 export class Fighter {
   /**
    * @param {object} o
@@ -155,6 +170,7 @@ export class Fighter {
     // 손 목표: 몸 앞 평면에서 (좌우, 위아래) 오프셋(m). 입력/AI가 이 값을 바꾼다.
     // 앞뒤 깊이는 자동: 가운데로 모을수록 팔을 앞으로 뻗는다.
     this.handOffset = new THREE.Vector2(0.15, 0.0);
+    this.skill = new Skill(this); // 검술 층: 손 목표·허리·발에 익힌 몸놀림을 보탠다
 
     this.bodies = {};
     this.groups = {}; // 부위 이름 → 화면용 그룹
@@ -172,7 +188,8 @@ export class Fighter {
     const otherBody = bodyBit(1 - this.index);
     const otherWeapon = weaponBit(1 - this.index);
     const bodyGroups = groups(myBody, BIT.ground | otherBody | otherWeapon);
-    const weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon);
+    const footGroups = groups(footBit(this.index), BIT.ground | otherWeapon);
+    const weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index));
 
     const defs = partDefs(this.side);
     this.localPos = {};
@@ -192,9 +209,15 @@ export class Fighter {
       const cd = shapeDesc(RAPIER, d.shape)
         .setRotation(vecQ(d.alongX ? ALONG_X : IDENTITY_Q))
         .setMass(d.mass)
-        .setFriction(d.foot ? 0.9 : 0.6)
-        .setCollisionGroups(bodyGroups);
+        // 옷·살끼리는 잘 미끄러진다 (마찰이 크면 팔이 상대 몸에 걸려 같이 끌려간다)
+        .setFriction(d.foot ? 0.9 : 0.25)
+        .setCollisionGroups(d.foot ? footGroups : bodyGroups);
       const col = world.createCollider(cd, rb);
+      if (d.alongX) {
+        // 팔을 길이 방향으로 비트는 관성: 가느다란 캡슐만으로는 실제 팔(근육·뼈·손)보다 훨씬 작아서
+        // 조금만 비틀어도 팽이처럼 돈다. 실제 팔 수준(약 0.004 kg·m²)을 더해 준다.
+        rb.setAdditionalMassProperties(0, { x: 0, y: 0, z: 0 }, { x: 0.004, y: 0, z: 0 }, vecQ(IDENTITY_Q), true);
+      }
       colliderInfo.set(col.handle, { fighter: this, kind: d.kind, part: d.name, body: rb });
 
       const group = new THREE.Group();
@@ -389,6 +412,45 @@ export class Fighter {
     this.yaw.setFromAxisAngle(UP, this.heading);
   }
 
+  /** 상대 가슴까지의 수평 거리 (상대가 없으면 Infinity) */
+  foeDistance() {
+    const f = this.foe;
+    if (!f) return Infinity;
+    const a = this.bodies.chest.translation();
+    const b = f.bodies.chest.translation();
+    return Math.hypot(b.x - a.x, b.z - a.z);
+  }
+
+  /** 바짝 붙었을 때 손을 상대 몸 속으로 뻗지 않는다 (팔을 접어 칼자루를 몸 가까이 당긴다) */
+  closeReach() {
+    return Math.max(0.12, this.foeDistance() - 0.3);
+  }
+
+  /**
+   * 밀쳐내기: 바짝 붙은 채 뒤로 물러나려 하면 빈손(과 칼자루)으로 상대 가슴을 민다.
+   * 같은 크기, 반대 방향의 힘을 내 가슴에도 건다 (작용·반작용) → 둘 다 밀려 떨어진다.
+   * 아주 가까우면(몸이 닿으면) 물러날 생각이 없어도 조금은 밀어낸다.
+   */
+  shove() {
+    const f = this.foe;
+    if (!f || !f.alive || this.muscle < 0.5) return;
+    if (this.state !== 'stand' && this.state !== 'kneel') return;
+    const d = this.foeDistance();
+    if (d > 0.75) return;
+    const back = Math.max(0, -this.move.y); // 조이스틱을 뒤로 당긴 정도
+    const touch = THREE.MathUtils.clamp((0.55 - d) / 0.2, 0, 1); // 몸이 닿을수록
+    const amt = Math.max(back, 0.35 * touch);
+    if (amt <= 0) return;
+    const a = this.bodies.chest.translation();
+    const b = f.bodies.chest.translation();
+    const dir = _v1.set(b.x - a.x, 0, b.z - a.z);
+    if (dir.lengthSq() < 1e-6) return;
+    dir.normalize();
+    const F = BODY.shoveForce * amt * this.muscle * this.strength * (0.4 + 0.6 * this.limbs.armO);
+    f.bodies.chest.addForce({ x: dir.x * F, y: 0, z: dir.z * F }, true);
+    this.bodies.chest.addForce({ x: -dir.x * F, y: 0, z: -dir.z * F }, true);
+  }
+
   // ── 매 물리 스텝마다 호출: 근육을 움직인다 ──
   step(dt) {
     this.lastDt = dt;
@@ -406,8 +468,10 @@ export class Fighter {
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
 
     this.updateHeading(dt);
+    this.skill.update(dt);
     this.driveBalance(dt);
     this.applyPose(dt);
+    this.shove();
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
     this.driveJoints(); // 모든 관절 근육을 움직인다
     this.trackBlade(dt);
@@ -861,8 +925,10 @@ export class Fighter {
     // 척추: 걷는 방향으로 살짝 숙이고, 몸통을 다치면 웅크리고, 칼 든 손 쪽으로 허리를 튼다
     this.daze = Math.max(0, (this.daze || 0) - dt * 0.12);
     const gut = this.wounds.reduce((a, wd) => a + (wd.part === 'chest' || wd.part === 'abdomen' || wd.part === 'pelvis' ? wd.severity : 0), 0);
-    const bend = (this.lean || 0) - Math.min(0.45, gut * 0.3) - 0.2 * kn;
-    const twist = THREE.MathUtils.clamp(-this.handOffset.x * 0.7, -0.6, 0.6); // 손이 왼쪽이면 몸통도 왼쪽으로
+    const sk = this.skill;
+    const bend = (this.lean || 0) - Math.min(0.45, gut * 0.3) - 0.2 * kn + sk.bend;
+    // 손이 왼쪽이면 몸통도 왼쪽으로 + 휘두를 때는 허리가 먼저 돈다(검술 층)
+    const twist = THREE.MathUtils.clamp(-sk.aim.x * 0.7 + sk.twist, -0.8, 0.8);
     const spine = (name, pitch, yaw) => J[name].target.setFromEuler(_eu.set(0, yaw, pitch, 'YXZ'));
     spine('abdomen', bend * 0.5, twist * 0.45);
     spine('chest', bend * 0.5, twist * 0.55);
@@ -938,7 +1004,7 @@ export class Fighter {
     if (_mT.length() > maxT) _mT.setLength(maxT);
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
-    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTw * 25 - wTw * 0.4, -20, 20));
+    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTw * 25 - wTw * 0.8, -12, 12));
     j.child.addTorque(vecArg(_mT), true);
     j.parent.addTorque({ x: -_mT.x, y: -_mT.y, z: -_mT.z }, true);
   }
@@ -952,13 +1018,11 @@ export class Fighter {
     const mus = this.muscle;
 
     // 손 목표 위치: 가슴 앞 평면의 (좌우, 위아래) + 자동 깊이 (몸이 바라보는 방향 기준)
-    const off = this.handOffset;
+    const off = this.skill.aim; // 손 목표 (입력 + 검술 층의 이어 베기)
     const R = WEAPON.reach;
-    const len = off.length();
-    if (len > R) off.multiplyScalar(R / len);
     // 가운데로 모을수록 팔을 앞으로 뻗는다 (찌르기는 가장자리→가운데로 옮기면 약 0.5m 내지른다)
     const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (off.x * off.x + off.y * off.y) / (R * R)));
-    const handLocal = _v2.set(depth, 0.1 + off.y, 0.1 + off.x);
+    const handLocal = _v2.set(Math.min(depth, this.closeReach()), 0.1 + off.y, 0.1 + off.x);
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
@@ -966,11 +1030,14 @@ export class Fighter {
     const str = this.strength * mus * (0.35 + 0.65 * this.armHealth);
     const forearm = this.bodies.farmS;
 
-    // 칼끝 방향: 가슴 뒤쪽 한 점(지렛대 받침, 어깨 높이쯤)에서 손을 잇는 방향.
-    // → 손을 올리면 칼이 서고, 오른쪽으로 빼면 칼이 오른쪽으로 눕고, 가슴 높이면 칼이 수평으로 상대를 겨눈다.
-    //  (손은 몸 중심보다 0.1m 오른쪽에 있으니, 칼끝은 살짝 안쪽으로 모아 상대 중심선을 겨눈다)
-    const aim = _v3.set(handLocal.x + 0.45, handLocal.y - 0.2, off.x - 0.08);
-    aim.normalize().applyQuaternion(this.yaw);
+    // 칼끝 방향: 손 위치가 곧 검술의 자세(가드)다.
+    //  가슴 높이 가운데 → 칼끝이 상대를 겨눔(찌르기 자세)
+    //  머리 위로 올리면 → 칼이 서고 조금 뒤로 누움(위에서 내려베기 준비, "지붕 자세")
+    //  옆으로 빼면     → 칼이 그쪽으로 누움(가로베기 준비)
+    //  허리 아래로     → 칼끝이 내려감(아래 자세)
+    // 자세에서 자세로 손을 옮기면 칼이 크게(최대 100° 넘게) 돌며 베기가 된다.
+    const aim = _v3.set(...guardDir(off.x, off.y));
+    aim.applyQuaternion(this.yaw);
     rot(sword, _q1);
     const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1);
     const axis = new THREE.Vector3().crossVectors(blade, aim);
@@ -1007,8 +1074,14 @@ export class Fighter {
     twist.addScaledVector(wTwist, -0.12);
     torque.add(twist);
     sword.addTorque(vecArg(torque), true);
-    // 손목 근육의 반작용은 아래팔로 간다 (칼을 비틀면 팔도 같이 비틀린다)
-    forearm.addTorque({ x: -torque.x, y: -torque.y, z: -torque.z }, true);
+    // 손목 근육의 반작용은 아래팔로 간다. 단, 아래팔 길이 방향으로 비트는 몫은
+    // 아래팔이 너무 가늘어(관성이 작아) 받으면 팽이처럼 돈다 → 팔뚝 뼈(요골·척골)가 그러듯
+    // 팔을 따라 몸통으로 넘긴다. 전체 반작용의 합은 그대로다.
+    rot(forearm, _q2);
+    const fa = _v4.set(1, 0, 0).applyQuaternion(_q2);
+    const along = torque.dot(fa);
+    forearm.addTorque({ x: -(torque.x - fa.x * along), y: -(torque.y - fa.y * along), z: -(torque.z - fa.z * along) }, true);
+    chest.addTorque({ x: -fa.x * along, y: -fa.y * along, z: -fa.z * along }, true);
   }
 
   /**

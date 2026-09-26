@@ -45,6 +45,7 @@ export const BODY = {
   fallTiltDeg: 55, // 몸이 이 각도 이상 기울면 넘어진다
   fallDuration: 2.2, // 넘어진 뒤 일어나기 시작할 때까지 (초)
   getUpDuration: 1.2, // 일어나는 데 걸리는 시간 (초)
+  shoveForce: 320, // 바짝 붙었을 때 빈손으로 상대를 밀쳐내는 힘(N). 같은 힘이 나에게도 반대로 걸린다
 };
 
 export const WEAPON = {
@@ -103,10 +104,25 @@ export const BALANCE = {
   fallDelay: 0.25, // 이 시간(초) 동안 계속 벗어나 있으면 넘어짐
 };
 
+// 검술 층(skill.js): 캐릭터가 이미 익힌 몸놀림을 얼마나 보태줄지
+export const SKILL = {
+  level: 0.7, // 플레이어 기본 숙련도 (0 = 날것의 물리 조작, 1 = 숙련된 검사). 메뉴의 "검술 보정"
+  swingSpeed: 1.5, // 손 목표가 이보다 빠르게(m/s) 움직이면 "휘두르기"로 본다
+  followGain: 0.6, // 이어 베기: 휘두르는 속도에 비례해 목표를 더 밀어주는 정도
+  followMax: 0.35, // 이어 베기로 더해지는 최대 거리(m)
+  followDecay: 0.3, // 이어 베기가 사라지는 시간(초)
+  twistGain: 0.12, // 손 좌우 속도(m/s)당 허리 비틀기(rad)
+  bendGain: 0.08, // 손 위아래 속도(m/s)당 허리 숙이기(rad). 내려벨 때 체중을 싣는다
+  lungeMin: 1.3, // 이 거리(m)보다 멀고
+  lungeMax: 2.4, // 이 거리보다 가까우면 휘두르며 한 걸음 내딛는다
+  lungeTime: 0.3, // 내딛는 시간(초)
+  lungeMove: 0.9, // 내딛는 세기 (조이스틱 앞으로 민 정도와 같은 단위)
+};
+
 export const AI_LEVELS = {
-  easy: { reaction: 0.55, windup: 0.9, strikeSpeed: 9, guardChance: 0.25, strength: 0.8, aggression: 0.6 },
-  normal: { reaction: 0.35, windup: 0.6, strikeSpeed: 13, guardChance: 0.5, strength: 1.0, aggression: 0.8 },
-  hard: { reaction: 0.2, windup: 0.4, strikeSpeed: 18, guardChance: 0.75, strength: 1.15, aggression: 1.0 },
+  easy: { reaction: 0.55, windup: 0.9, strikeSpeed: 9, guardChance: 0.25, strength: 0.8, aggression: 0.6, skill: 0.4 },
+  normal: { reaction: 0.35, windup: 0.6, strikeSpeed: 13, guardChance: 0.5, strength: 1.0, aggression: 0.8, skill: 0.7 },
+  hard: { reaction: 0.2, windup: 0.4, strikeSpeed: 18, guardChance: 0.75, strength: 1.15, aggression: 1.0, skill: 1.0 },
 };
 
 export const INPUT = {

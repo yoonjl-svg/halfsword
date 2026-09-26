@@ -35,6 +35,7 @@ export class AI {
   setLevel(name) {
     this.level = AI_LEVELS[name] || AI_LEVELS.normal;
     this.me.strength = this.level.strength;
+    this.me.skill.level = this.level.skill;
   }
 
   // 상대 칼이 높이 있으면 아래를, 낮으면 위를 노린다 (가끔은 무작위)
@@ -158,9 +159,18 @@ export class AI {
     // 멀면 성큼성큼, 3m 안쪽(상대 칼 간격 근처)에선 조심스럽게 조금씩
     const lunge = this.phase === 'windup' || this.phase === 'strike'; // 칠 때는 크게 내딛는다
     if (dist > want + 0.15) fwd = THREE.MathUtils.clamp((dist - want) * 1.5, 0.2, dist > 3 || lunge ? 1 : 0.45);
-    else if (dist < want - 0.3) fwd = -THREE.MathUtils.clamp((want - dist) * 1.5, 0.3, 0.8);
+    else if (dist < want - 0.3) fwd = -THREE.MathUtils.clamp((want - dist) * 1.5, 0.3, dist < 1 ? 1 : 0.8);
     else fwd = this.shuffle;
     let side = dist < 2.5 && this.phase !== 'strike' ? this.circle || 0 : 0;
+    // 몸이 붙으면: 뒤로 빠지면서(= 빈손으로 밀쳐내며, fighter.shove) 옆으로 비켜 선다
+    if (dist < 0.9 && this.phase !== 'strike') side = this.circle || 0.7;
+    // 울타리에 몰리면 경기장 가운데 쪽으로 옆걸음 친다 (구석에 갇혀 밀리지 않게)
+    const rA = Math.hypot(a.x, a.z);
+    if (rA > 4.8 && this.phase !== 'strike') {
+      const r = me.right(new THREE.Vector3());
+      const toCenter = -(a.x * r.x + a.z * r.z) / rA; // 가운데가 내 오른쪽(+)인지 왼쪽(-)인지
+      side = Math.sign(toCenter || 1) * THREE.MathUtils.clamp((rA - 4.8) * 1.5, 0.5, 1);
+    }
     if (!foe.alive) fwd = side = 0;
     me.move.set(THREE.MathUtils.clamp(side, -1, 1), THREE.MathUtils.clamp(fwd, -1, 1));
   }
