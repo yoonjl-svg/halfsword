@@ -105,6 +105,9 @@ export const GAIT = {
   slipReset: 0.1, // 딛은 발이 이만큼(m) 끌려가면 그 자리에서 다시 딛는다 (세게 맞음)
   stanceGain: 2, // 딛은 다리 관절 근육 강도 배율 (체중을 받치며 자세를 지킨다)
   swingGain: 1, // 내딛는 다리
+  catchSag: 0.05, // 골반이 목표보다 이만큼(m) 넘게 주저앉으면 보조 힘을 되살린다 (붙잡기 반사)
+  catchTilt: 35, // 몸이 이 각도(도) 넘게 기울어도
+  requestSteps: true, // 기술 걸음(requestStep)을 받는다
   pinK: 20000, // 발바닥 정지 마찰 스프링(N/m). 0 = 끔 (물리 엔진 마찰만)
   pinD: 250,
   pinYawK: 300, // 발이 땅 위에서 도는 것을 붙잡는 힘 (N·m/rad)

@@ -185,7 +185,9 @@ export class Gait {
    * fwd: 몸 기준 앞으로(m), side: 오른쪽으로(m), duration: 발이 떠 있는 시간(초)
    */
   requestStep(o = {}) {
-    if (!this.active || this.f.state !== 'stand') return false;
+    if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
+    // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다)
+    if (this.f.move.y < -0.1) return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0 };
     return true;
   }
@@ -221,6 +223,17 @@ export class Gait {
     if (!this.active) this.enter();
     else this.sense();
     this.lev = Math.max(0, this.lev - dt / GAIT.handover);
+    // 붙잡기 반사: 골반이 크게 주저앉거나 몸이 많이 기울면(세게 맞음) 보조 힘을 되살린다 → 예전 방식처럼 버틴다.
+    //  보조가 커지면 딛은 발의 정지 마찰(pinFeet)도 약해져서 발이 끌려가며 버틴다
+    {
+      const sag = this.h - f.bodies.pelvis.translation().y;
+      const need = Math.max(
+        clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
+        clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
+        clamp((f.offBalance - 0.15) / 0.25, 0, 1),
+      );
+      if (need > this.lev) this.lev += (need - this.lev) * Math.min(1, dt * 30);
+    }
     const dHead = wrap(f.heading - this.prevHead);
     this.prevHead = f.heading;
     this.headRate += (dHead / dt - this.headRate) * Math.min(1, dt * 10);
@@ -326,6 +339,8 @@ export class Gait {
       if (this.req.age > 1) this.req = null;
     }
 
+    // 기술 걸음 동안엔 몸도 그만큼 따라 나간다
+    if (swing && swing.kind === 'req' && this.req) want.addScaledVector(fwd, (this.req.fwd * 0.8) / (swing.T + 0.15));
     // ④ 좌우 무게 옮기기: 한 발로 서는 동안 무게중심을 딛은 발 쪽으로 (want에 속도로 더한다)
     this.sway.set(0, 0, 0);
     if (swing && swing.kind !== 'catch') {
@@ -451,12 +466,12 @@ export class Gait {
       this.guardSpot(l, out);
       l.yaw1 = this.guardYaw(l);
     } else if (l.kind === 'req' && this.req) {
-      // 기술 걸음: 앞발 기준으로 앞으로 fwd만큼
-      const a = other.plant;
+      // 기술 걸음. lunge: 앞발을 fwd만큼 내딛는다. pass: 뒷발이 앞발을 지나 그 앞에 딛는다 (앞뒤 발이 바뀐다)
       const r = this.req;
-      const x = r.kind === 'lunge' ? r.fwd : r.fwd * 0.5 + 0.25;
-      out.set(l.p0.x + fwd.x * r.fwd + rgt.x * r.side, ANKLE_H, l.p0.z + fwd.z * r.fwd + rgt.z * r.side);
-      if (r.kind === 'pass') out.set(a.x + fwd.x * x + rgt.x * (r.side + l.side * GAIT.width), ANKLE_H, a.z + fwd.z * x + rgt.z * (r.side + l.side * GAIT.width));
+      const base = r.kind === 'lunge' ? l.p0 : other.plant;
+      const x = r.kind === 'lunge' ? r.fwd : Math.max(0.3, r.fwd - 0.1);
+      const z = r.side + (r.kind === 'pass' ? l.side * GAIT.guardWidth : 0);
+      out.set(base.x + fwd.x * x + rgt.x * z, ANKLE_H, base.z + fwd.z * x + rgt.z * z);
       l.yaw1 = this.headAhead();
     } else {
       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
@@ -508,7 +523,7 @@ export class Gait {
     const J = f.jointByName;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
-      const g = l.stance ? GAIT.stanceGain : GAIT.swingGain;
+      const g = l.stance ? 1 + (GAIT.stanceGain - 1) * (1 - this.lev) : GAIT.swingGain;
       J[l.thigh].gain = g;
       J[l.shin].gain = g;
       J[l.foot].gain = g;
