@@ -349,11 +349,13 @@ export class Combat {
       vn = Math.max(0, r.dot(nrm));
       vt = Math.sqrt(Math.max(0, r.lengthSq() - r.dot(nrm) ** 2));
     }
+    const fresh = this.stepNo - this.bladeLast > STEEL.rearmSteps; // 떨어져 있다가 새로 부딪힘
+    this.bladeLast = this.stepNo;
+    // 새로 부딪혀 튕긴 순간: 칼이 손 안에서 길이 축으로 팽이처럼 도는 몫은 손아귀가 잡는다 (gripTwist)
+    if (fresh) for (const f of [A.fighter, B.fighter]) gripTwist(f);
     const va = A.body.velocityAtPoint(point);
     const vb = B.body.velocityAtPoint(point);
     const sp = Math.hypot(va.x - vb.x, va.y - vb.y, va.z - vb.z); // 스텝 뒤 상대 속도 (튕기고 남은 속도)
-    const fresh = this.stepNo - this.bladeLast > STEEL.rearmSteps; // 떨어져 있다가 새로 부딪힘
-    this.bladeLast = this.stepNo;
     const force = J / this.dt;
     // 싸움꾼마다: 상대 칼이 내 칼을 미는 힘(바인드의 "느낌"), 새로 부딪힌 충격
     for (const [f, sgn] of [[A.fighter, -1], [B.fighter, 1]]) {
@@ -506,6 +508,24 @@ function gripMass(props, S, point, n, handMass) {
   const k = rn.x * rn.x * _Ic.elements[0] + rn.y * rn.y * _Ic.elements[4] + rn.z * rn.z * _Ic.elements[8] + 2 * (rn.x * rn.y * _Ic.elements[3] + rn.x * rn.z * _Ic.elements[6] + rn.y * rn.z * _Ic.elements[7]);
   return 1 / (1 / M + k);
 }
+/**
+ * 손아귀가 칼자루를 잡는다. 칼 혼자의 길이 축 관성은 아주 작아서(대부분 코등이), 칼끼리 새로 부딪힐 때
+ * 코등이 끝이나 날 모서리(칼 축에서 몇 cm)에 걸린 충격이 튕기면서 칼을 길이 축으로 팽이처럼 돌린다
+ * (한 스텝에 날이 50~90° 휙 돌아간다). 실제로는 꽉 쥔 손·아래팔이 함께 돌아야 해서 그렇게 빨리 돌지 못한다.
+ * 부딪히기 전보다 빨라진 축 회전 중 STEEL.gripTwistMax(rad/s)를 넘는 몫을 손아귀 마찰이 받아 없앤다.
+ */
+function gripTwist(f) {
+  if (!f.armed || !f.cache?.sword) return;
+  const sw = f.sword;
+  const ax = _gt.set(0, 1, 0).applyQuaternion(rotQ(sw)); // 칼 길이 축 (월드)
+  const w = sw.angvel();
+  const wAx = w.x * ax.x + w.y * ax.y + w.z * ax.z;
+  const lim = Math.max(Math.abs(f.cache.sword.w.dot(ax)), STEEL.gripTwistMax);
+  if (Math.abs(wAx) <= lim) return;
+  const dw = wAx - Math.sign(wAx) * lim; // 손아귀가 받아 없애는 축 각속도
+  sw.setAngvel({ x: w.x - ax.x * dw, y: w.y - ax.y * dw, z: w.z - ax.z * dw }, true);
+}
+const _gt = new THREE.Vector3();
 /**
  * 팔다리는 겉(살)이 아니라 뼈(길이 방향 중심선)로 힘을 받는다.
  * 가느다란 팔다리 겉면에 충격을 주면 길이 방향으로 팽이처럼 돌기 때문.
