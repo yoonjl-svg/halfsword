@@ -71,9 +71,9 @@ function jointDefs(s) {
     { p: 'chest', c: 'head', at: [0, 1.5, 0], type: 'ball', k: 280, d: 16, max: 80, lim: { x: [-0.5, 0.5], y: [-1.0, 1.0], z: [-0.7, 0.5] } },
     // 칼 든 어깨: 뼈가 x축을 따라 누워 있어서 x = 팔 비틀기, y = 좌우로 휘두르기, z = 위아래
     //  (칼 든 어깨는 머리 위~등 뒤까지 크게 돌아서, 엔진 모터 대신 직접 계산한 근육 힘을 쓴다: manual)
-    { p: 'chest', c: 'uarmS', at: [0, 1.43, s * 0.2], type: 'ball', manual: true, k: 320, d: 26, max: 110 },
+    { p: 'chest', c: 'uarmS', at: [0, 1.43, s * 0.2], type: 'ball', manual: true, k: 320, d: 26, max: 80 }, // 사람 어깨 굽힘 힘 69~90N·m
     // 칼 든 팔꿈치: 팔이 앞으로 뻗은 자세 기준이라 어깨에서 위팔 길이(0.3m)만큼 앞. 칼 무게가 실려 감쇠를 넉넉히
-    { p: 'uarmS', c: 'farmS', at: [0.3, 1.43, s * 0.2], type: 'hinge', k: 400, d: 38, max: 160, lim: [0, 2.5] },
+    { p: 'uarmS', c: 'farmS', at: [0.3, 1.43, s * 0.2], type: 'hinge', k: 400, d: 38, max: 80, lim: [0, 2.5] }, // 사람 팔꿈치 굽힘 힘 50~75N·m
     { p: 'chest', c: 'uarmO', at: [0, 1.43, -s * 0.2], type: 'ball', k: 400, d: 36, max: 140, lim: { x: [-2.4, 2.4], y: [-1.5, 1.5], z: [-1.0, 2.9] } },
     { p: 'uarmO', c: 'farmO', at: [0, 1.13, -s * 0.2], type: 'hinge', k: 240, d: 20, max: 100, lim: [0, 2.5] },
     { p: 'pelvis', c: 'thighF', at: [0, 0.93, s * 0.095], type: 'ball', k: 1800, d: 160, max: 560, lim: { x: [-0.6, 0.6], y: [-0.6, 0.6], z: [-0.5, 2.0] } },
@@ -103,6 +103,19 @@ const angvel = (b, out) => {
   return out.set(v.x, v.y, v.z);
 };
 const vecArg = (v) => ({ x: v.x, y: v.y, z: v.z });
+
+/**
+ * 근육의 힘-속도 관계 (Hill): 빨리 줄어들수록(당기는 방향으로 빨리 움직일수록) 낼 수 있는 힘이 준다.
+ *  v = 힘을 내는 방향으로 움직이는 각속도 (음수 = 버티며 늘어남 → 오히려 조금 더 버틴다)
+ *  vmax에서 힘은 0. a는 곡선의 휨 정도(사람 근육 약 0.25). ecc = 버틸 때 최대 배율
+ */
+function hill(v, vmax, a = 0.25, ecc = 1.4) {
+  const r = v / vmax;
+  if (r >= 1) return 0;
+  if (r >= 0) return (1 - r) / (1 + r / a);
+  const e = Math.min(1, -r / 0.3);
+  return 1 + (ecc - 1) * (1 - (1 - e) * (1 - e));
+}
 
 /**
  * 손 목표(몸 앞 평면의 좌우 x, 위아래 y) → 칼끝 방향 (몸 기준: x 앞, y 위, z 칼 든 쪽)
@@ -181,6 +194,8 @@ export class Fighter {
     this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
     this.pelvisYawOffset = 0; // 골반을 트는 각도 (라디안, + = 왼쪽으로)
     this.pelvisDropOffset = 0; // 자세에 따라 골반을 더 낮추는 정도 (m)
+    this.aimDirW = new THREE.Vector3(1, 0, 0); // 칼끝이 향해야 할 방향 (월드)
+    this.debug = { aim: new THREE.Vector3(), wristTorque: new THREE.Vector3(), wristCap: 0 };
 
     this.bodies = {};
     this.groups = {}; // 부위 이름 → 화면용 그룹
@@ -314,22 +329,29 @@ export class Fighter {
         .setTranslation(wp.x, wp.y, wp.z)
         .setRotation(vecQ(swordRot))
         .setAngularDamping(0.3)
-        .setCcdEnabled(true),
+        // 부드러운 충돌 예측(soft CCD): 빠른 칼이 몸을 뚫고 지나가지 않게 하면서도, "베고 지나가기" 판정(combat.js의
+        // 충돌 훅)을 거친다. 딱딱한 CCD는 이 판정을 무시하고 칼을 한 순간에 멈춰 세웠다 (칼끝 18 → 0.1 m/s)
+        .setSoftCcdPrediction(0.2),
     );
-    const m = WEAPON.mass;
+    // 실제 롱소드의 질량 분포 (Albion Liechtenauer 1.58kg·무게중심 9.8cm, Le Chevalier가 잰 Albion Crécy의 회전 관성 참고).
+    // 칼날은 끝으로 갈수록 얇고 좁아져서 무게중심이 칼날 길이의 34% 지점(코등이 쪽)에 있다.
+    // → 전체 1.6kg, 무게중심은 코등이에서 약 11cm, 손 기준 회전 관성 약 0.27kg·m² (예전 균일한 막대: 0.59)
+    const ms = WEAPON.mass / 1.6;
+    const bladeCom = (0.344 - 0.5) * L; // 칼날 상자 가운데에서 무게중심까지 (m)
+    const bladeI = 0.842 * (0.253 * L) ** 2; // 칼날 자체의 휘두르는 축 관성 (회전 반경 = 길이의 25.3%)
     const parts = [
-      // [모양, 위치y, 질량비, 색, 칼날인가]
-      [['box', 0.018, 0.1, 0.018], 0, 0.1, o.look.grip, false],
-      [['ball', 0.03], -0.12, 0.1, o.look.hilt, false],
-      [['box', 0.11, 0.015, 0.022], 0.115, 0.18, o.look.hilt, false],
-      [['box', 0.024, L / 2, 0.008], 0.13 + L / 2, 0.62, 0xd8dde3, true],
+      // [모양, 위치y, [질량, 무게중심y, 휘두르는 축 관성, 칼날 축 관성], 색, 칼날인가]
+      [['box', 0.018, 0.1, 0.018], 0, [0.16, 0, (0.16 * (0.036 ** 2 + 0.2 ** 2)) / 12, (0.16 * 2 * 0.036 ** 2) / 12], o.look.grip, false],
+      [['ball', 0.03], -0.12, [0.418, 0, 0.4 * 0.418 * 0.03 ** 2, 0.4 * 0.418 * 0.03 ** 2], o.look.hilt, false], // 무거운 폼멜이 균형을 잡는다
+      [['box', 0.11, 0.015, 0.022], 0.115, [0.18, 0, (0.18 * (0.22 ** 2 + 0.03 ** 2)) / 12, (0.18 * (0.22 ** 2 + 0.044 ** 2)) / 12], o.look.hilt, false],
+      [['box', 0.024, L / 2, 0.008], 0.13 + L / 2, [0.842, bladeCom, bladeI, 0.0000736], 0xd8dde3, true],
     ];
     const group = new THREE.Group();
     this.bladeColliders = [];
-    for (const [shape, y, frac, color, isBlade] of parts) {
+    for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade] of parts) {
       const cd = shapeDesc(RAPIER, shape)
         .setTranslation(0, y, 0)
-        .setMass(m * frac)
+        .setMassProperties(pm * ms, { x: 0, y: pc, z: 0 }, { x: pIe * ms, y: pIt * ms, z: pIe * ms }, { x: 0, y: 0, z: 0, w: 1 })
         .setFriction(0.4)
         .setCollisionGroups(weaponGroups)
         .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
@@ -356,7 +378,14 @@ export class Fighter {
       true,
     );
     this.swordGroup = group;
-    this.swordMass = m;
+    this.swordMass = sword.mass();
+    // 타격 계산용: 칼의 질량·주관성 모멘트(몸체 기준)와 손 기준 회전 관성
+    const pI = sword.principalInertia();
+    const pF = sword.principalInertiaLocalFrame();
+    const lc = sword.localCom();
+    this.swordProps = { m: sword.mass(), I: { x: pI.x, y: pI.y, z: pI.z }, frame: new THREE.Quaternion(pF.x, pF.y, pF.z, pF.w) };
+    this.swordIhand = Math.max(pI.x, pI.z) + sword.mass() * lc.y * lc.y;
+    this.swordCom = lc.y; // 손(칼 원점)에서 무게중심까지 (m)
     this.handTarget = new THREE.Vector3();
     this.tipPrev = null;
     this.tipVel = new THREE.Vector3();
@@ -425,6 +454,19 @@ export class Fighter {
       if (Math.hypot(f.x, f.z) > 0.3) this.heading = Math.atan2(-f.z, f.x);
     }
     this.yaw.setFromAxisAngle(UP, this.heading);
+  }
+
+  /**
+   * 칼의 한 지점(칼날 길이 비율 t)을 쳤을 때 손이 받는 충격의 비율 (0 = 타격 중심, 손이 울리지 않음).
+   * 손(칼자루)을 축으로 도는 강체: 1 − a·b/k² (a = 손~무게중심, b = 무게중심~맞은 점, k = 무게중심 기준 회전 반경)
+   */
+  swordSting(t) {
+    const p = this.swordProps;
+    if (!p) return 0.5;
+    const a = this.swordCom;
+    const b = 0.13 + t * WEAPON.length - a;
+    const k2 = Math.max(p.I.x, p.I.z) / p.m;
+    return Math.min(1.3, Math.abs(1 - (a * b) / k2));
   }
 
   /** 검술 자세 지도를 얼마나 따를지 (검술 보정 0 → 0, 약 0.4 → 0.64, 보통 이상 → 1) */
@@ -1018,7 +1060,17 @@ export class Fighter {
       const prev = j.prevRV || (j.prevRV = _rv.clone());
       const raw = j.joint.rawSet;
       if (j.type === 'hinge') {
-        const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -maxErr, maxErr);
+        let mErr = maxErr;
+        if (n === 'farmS') {
+          // 칼 든 팔꿈치: 빨리 펴거나 굽힐수록 힘이 빠진다 (힘-속도 관계). 엔진 모터의 "강도" 몫만 제한된다
+          rot(j.parent, _qg);
+          const ax = _gA.set(0, 0, 1).applyQuaternion(_qg);
+          const wc = j.child.angvel();
+          const wp = j.parent.angvel();
+          const wRel = (wc.x - wp.x) * ax.x + (wc.y - wp.y) * ax.y + (wc.z - wp.z) * ax.z;
+          mErr *= hill(Math.sign(_rv.z - _cur.z || 1) * wRel, WEAPON.elbowVmax);
+        }
+        const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -mErr, mErr);
         const vz = THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
         raw.jointConfigureMotor(j.joint.handle, HINGE_AXIS, tz, vz, k, d);
       } else {
@@ -1082,6 +1134,7 @@ export class Fighter {
     const boneAxis = _mA.set(1, 0, 0).applyQuaternion(_qc); // 위팔 뼈 방향 (x)
     const eTw = _mE.dot(boneAxis);
     const wTw = _mW.dot(boneAxis);
+    const wSw = _mS.copy(_mW).addScaledVector(boneAxis, -wTw); // 휘두르는 방향의 실제 각속도 (힘-속도 관계용)
     // 목표 자세가 움직이는 속도 (가슴 기준 → 월드). 감쇠는 "멈춤"이 아니라 이 속도를 향한다
     //  → 감쇠를 넉넉히 줘도 휘두르는 속도가 줄지 않는다
     const wT = _mV.set(0, 0, 0);
@@ -1101,7 +1154,10 @@ export class Fighter {
     //  (되먹임이 아닌 고정 보정이라 비틀기 축이 가벼워도 불안정해지지 않는다)
     const twistFF = THREE.MathUtils.clamp(_mG.dot(boneAxis), -10, 10);
     _mT.add(_mG.addScaledVector(boneAxis, -_mG.dot(boneAxis)));
-    if (_mT.length() > maxT) _mT.setLength(maxT);
+    // 힘-속도 관계: 팔을 빨리 휘두를수록 어깨 힘이 빠진다
+    const tlen = _mT.length();
+    const cap = maxT * hill(tlen > 1e-6 ? wSw.dot(_mT) / tlen : 0, WEAPON.shoulderVmax);
+    if (tlen > cap) _mT.setLength(cap);
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
     _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTw * 25 - wTw * 0.8, -20, 20) + twistFF);
@@ -1156,6 +1212,7 @@ export class Fighter {
       if (wAim.length() > 25) wAim.setLength(25);
     }
     (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
+    this.aimDirW.copy(aim); // 빈손이 칼자루를 어디로 밀고 당길지 (offHand)
     rot(sword, _q1);
     const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1);
     const axis = new THREE.Vector3().crossVectors(blade, aim);
@@ -1191,12 +1248,41 @@ export class Fighter {
     const wTwist = blade.clone().multiplyScalar(w.dot(blade));
     const wSwing = w.clone().sub(wTwist);
     wAim.addScaledVector(blade, -wAim.dot(blade));
-    torque.addScaledVector(wSwing.sub(wAim), -WEAPON.aimDamping);
-    // 칼 무게를 손목이 미리 버틴다 (칼끝이 처지지 않게)
+    // 손목(두 손)의 힘은 사람 수준으로 제한된다 → 칼을 순식간에 돌리지 못하고, 칼의 무게와 관성이 느껴진다
+    let cap = WEAPON.maxAimTorque * str;
+    // 놓아주기: 칼이 목표를 향해 날아가는 동안엔 붙잡지 않는다(관성으로 간다). 남은 각도가 "멈출 수 있는 거리"
+    //  (각속도² / (2 × 최대 제동 각가속도)) 안으로 들어오면 그때부터 제동한다. 한 번 제동을 시작하면 이어 간다.
+    let damp = WEAPON.aimDamping;
+    if (sinA > 1e-5) {
+      const toward = wSwing.dot(axis) / sinA; // 목표 쪽으로 도는 빠르기 (rad/s)
+      const tgtSp = wAim.dot(axis) / sinA;
+      if (this.wristBrake && (toward < 1 || angle > this.wristBrakeAng + 0.35)) this.wristBrake = false;
+      if (!this.wristBrake && toward > 3 && toward > tgtSp && angle > 0.25) {
+        const brakeAcc = (cap * WEAPON.brakeEcc) / this.swordIhand;
+        const stopAngle = (toward * toward) / (2 * brakeAcc);
+        if (angle > stopAngle * WEAPON.releaseMargin) damp = WEAPON.releaseDamping;
+        else {
+          this.wristBrake = true;
+          this.wristBrakeAng = angle;
+        }
+      }
+    }
+    torque.addScaledVector(wSwing.sub(wAim), -damp);
+    // 칼 무게도 같은 힘 안에서 버틴다 (칼끝이 처지지 않게)
     this.gravityTorque([sword], forearm, 0.13, _mG).multiplyScalar(-Math.min(1, str));
     torque.add(_mG);
-    const maxT = WEAPON.maxAimTorque * str;
-    if (torque.length() > maxT) torque.setLength(maxT);
+    // 힘-속도 관계: 손목이 빨리 돌수록 힘이 빠진다 (근육 활성화 지연 30ms로 부드럽게)
+    const fw = forearm.angvel();
+    const tl = torque.length();
+    const vAlong = tl > 1e-6 ? ((w.x - fw.x) * torque.x + (w.y - fw.y) * torque.y + (w.z - fw.z) * torque.z) / tl : 0;
+    const h = hill(vAlong, WEAPON.wristVmax, 0.25, WEAPON.brakeEcc);
+    this.wristHill = (this.wristHill ?? h) + (h - (this.wristHill ?? h)) * Math.min(1, (this.lastDt || 1 / 120) / 0.03);
+    cap *= this.wristHill;
+    if (tl > cap) torque.setLength(cap);
+    // 측정용 (테스트 도구가 읽는다)
+    this.debug.aim.copy(aim);
+    this.debug.wristTorque.copy(torque);
+    this.debug.wristCap = cap;
     // 날 세우기(손목 비틀기). 칼날 축 관성이 매우 작아 안정 한계(≈5) 안에서 최대한 세게
     const twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4);
     twist.addScaledVector(wTwist, -0.12);
@@ -1264,7 +1350,10 @@ export class Fighter {
     rot(sword, _q1);
     const st = sword.translation();
     const pommel = _gp.set(0, GRIP.along, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z));
-    this.offArmIK(pommel);
+    // 빈손은 칼자루가 "있어야 할 곳"(칼끝이 향해야 할 방향 기준)을 향해 뻗는다 → 두 손이 칼자루를 밀고 당겨
+    //  (손 사이 약 0.14m의 지렛대) 칼을 돌린다. 손목 힘이 사람 수준이라도 칼끝이 흔들리지 않는 이유
+    const gripAim = _gw.copy(this.aimDirW).multiplyScalar(GRIP.along).add(_v7.set(st.x, st.y, st.z));
+    this.offArmIK(gripAim);
     // 빈손 위치 (아래팔 끝)
     const fo = this.bodies.farmO;
     rot(fo, _q2);
@@ -1489,6 +1578,7 @@ const _q2 = new THREE.Quaternion();
 const _qt3 = new THREE.Quaternion();
 const _qt5 = new THREE.Quaternion();
 const _gp = new THREE.Vector3();
+const _gw = new THREE.Vector3();
 const _gh = new THREE.Vector3();
 const _gf = new THREE.Vector3();
 const _v7 = new THREE.Vector3();
@@ -1514,6 +1604,7 @@ const _mE = new THREE.Vector3();
 const _mW = new THREE.Vector3();
 const _mA = new THREE.Vector3();
 const _mT = new THREE.Vector3();
+const _mS = new THREE.Vector3();
 const IDENTITY_Q = new THREE.Quaternion();
 const ALONG_X = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2); // 세로(y) 뼈 → 앞(x)으로 눕힘
 

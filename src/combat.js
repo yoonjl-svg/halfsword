@@ -8,7 +8,11 @@
 //       - 칼 면이나 손잡이로 닿으면 → 둔기(타박)
 //  3) 운동 에너지(J) = ½ × 유효질량 × 속도²  를 부위별 문턱값과 비교해서 상처를 만든다.
 //  4) 에너지가 충분하면 칼이 살을 가르고 "지나간다". (충돌 훅으로 튕겨내는 힘을 끄고,
-//     몸이 흡수한 만큼만 칼을 느리게 한다.) 모자라면 박히거나 튕긴다.
+//     칼이 몸 속을 지나는 동안 매 순간 저항(끌림)을 받아 몸이 흡수한 만큼 느려진다.) 모자라면 박히거나 튕긴다.
+//
+//  유효 질량: 칼은 손을 축으로 도는 강체라서, 칼끝에 닿으면 칼 전체 무게가 실리지 않는다.
+//   맞은 점에서 칼이 "밀려나는 정도"로 실제 유효 질량을 계산한다 (강체 역학: 1/m + (r×n)·I⁻¹·(r×n)).
+//   실제 롱소드의 칼끝 쪽 유효 질량은 0.3kg 안팎이다. 여기에 팔·몸이 함께 밀어주는 몫을 조금 더한다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { WEAPON, STRIKE, ANATOMY } from './config.js';
@@ -105,8 +109,8 @@ export class Combat {
     const rel = vBlade.sub(vBody);
     const speed = rel.length();
     if (speed < 0.5) return null;
-    // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 빠르면 물리 계산이 튄 것이니 무시한다
-    if (speed > 22) return null;
+    // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다
+    if (speed > 30) return null;
     const dir = rel.clone().divideScalar(speed);
 
     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
@@ -116,9 +120,13 @@ export class Combat {
     const t = THREE.MathUtils.clamp((local.y - BLADE_START) / WEAPON.length, 0, 1);
     const isBlade = pr.w.part === 'blade' && local.y > BLADE_START - 0.01;
 
-    // 유효 질량: 칼끝으로 칠수록 가볍게(회전 중심에서 멀수록 실어 보내는 질량이 줄어든다) + 팔·몸의 도움
-    const mEff = WEAPON.mass * (0.35 + 0.45 * (1 - t)) + STRIKE.armAssist;
-    const energy = 0.5 * mEff * speed * speed;
+    // 유효 질량: 맞은 점에서의 강체 칼의 실제 유효 질량 + 팔·몸의 도움
+    const mFree = freeMass(pr.w.fighter.swordProps, S, point, dir);
+    const mEff = mFree + STRIKE.armAssist;
+    const ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
+    // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
+    // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
+    const energy = ephys * STRIKE.energyScale;
 
     let type = 'blunt';
     let quality = 1;
@@ -172,6 +180,8 @@ export class Combat {
       type,
       zone,
       energy,
+      ephys,
+      mFree,
       severity,
       pass,
       absorb: A.absorb ?? 100,
@@ -191,13 +201,13 @@ export class Combat {
   /** 매 물리 스텝 직후: 가르고 있는 칼 처리 + 일반 충돌(튕김) 처리 */
   afterStep(world, eventQueue) {
     this.stepNo++;
-    // 1) 가르고 지나가는 칼
+    // 1) 가르고 지나가는 칼: 몸 속을 지나는 동안 매 순간 저항을 받는다
+    const dt = world.timestep;
     for (const [key, c] of this.cutting) {
-      if (this.stepNo - c.seen > 2) {
+      if (this.stepNo - c.seen > 2 && !(c.stuckT > 0)) {
         this.cutting.delete(key); // 더 이상 겹치지 않음
         continue;
       }
-      if (c.applied) continue;
       const col1 = world.getCollider(c.wc);
       const col2 = world.getCollider(c.vc);
       let point = null;
@@ -210,9 +220,50 @@ export class Combat {
           }
         }
       });
-      if (!point) continue; // 아직 실제로 닿지 않음 (가까이만 옴)
-      c.applied = true;
-      this.strike(c.pr, point, true);
+      const sw = c.pr.w.body;
+      const vb = c.pr.v.body;
+      if (!c.applied) {
+        if (!point) continue; // 아직 실제로 닿지 않음 (가까이만 옴)
+        c.applied = true;
+        const r = this.strike(c.pr, point, true); // 상처는 처음 닿는 순간에 한 번
+        // 몸이 흡수할 실제 에너지 (판정용 보정 전 값)
+        c.Eleft = r ? Math.min(r.energy, r.absorb) / STRIKE.energyScale : 0;
+        c.stuck = r ? r.stuck : false;
+        c.mFree = r ? r.mFree : 0.3;
+        c.stuckT = 0;
+        c.localPt = point.clone().sub(tv(sw.translation())).applyQuaternion(rotQ(sw).invert());
+      }
+      // 박힌 칼은 닿은 자리에 붙잡아 둔다
+      if (!point && c.stuckT > 0) point = c.localPt.clone().applyQuaternion(rotQ(sw)).add(tv(sw.translation()));
+      if (!point) continue;
+      const va = sw.velocityAtPoint(vp(point));
+      const vv = vb.velocityAtPoint(vp(point));
+      const rel = _e.set(va.x - vv.x, va.y - vv.y, va.z - vv.z);
+      const s = rel.length();
+      if (s < 1e-3) continue;
+      const dir = rel.divideScalar(s);
+      let J = 0;
+      if (c.Eleft > 0) {
+        // 끌림: 이번 순간에 흡수하는 에너지 = min(남은 에너지, c·속도²·dt). 한 순간에 속도를 크게 꺾지는 않는다
+        const Estep = Math.min(c.Eleft, STRIKE.dragC * s * s * dt);
+        J = Math.min(Estep / s, STRIKE.dragCap * c.mFree * s);
+        c.Eleft -= J * s;
+        if (c.Eleft <= 1e-3 && c.stuck) c.stuckT = STRIKE.stuckTime;
+      } else if (c.stuckT > 0) {
+        // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다)
+        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + STRIKE.armAssist) * s);
+        c.stuckT -= dt;
+        c.seen = this.stepNo;
+      }
+      if (J > 0) {
+        // 칼에는 칼날 중심선 위에 건다 (날 끝에 걸면 칼이 길이 방향으로 팽이처럼 돈다)
+        const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
+        const o = tv(sw.translation());
+        const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
+        sw.applyImpulseAtPoint({ x: -dir.x * J, y: -dir.y * J, z: -dir.z * J }, vp(pA), true);
+        const pv = onBone(c.pr.v, point);
+        vb.applyImpulseAtPoint({ x: dir.x * J * 0.8, y: dir.y * J * 0.8, z: dir.z * J * 0.8 }, vp(pv), true);
+      }
     }
 
     // 2) 튕긴 충돌 (칼끼리, 칼 면/손잡이, 문턱 못 넘은 베기)
@@ -244,33 +295,39 @@ export class Combat {
     const att = pr.w.fighter;
     const vic = pr.v.fighter;
     const key = `${att.index}:${pr.v.part}`;
-    if (vic.hitCooldowns.has(key)) return;
     // 속도는 스텝 "직전" 값을 쓴다. 튕긴 충돌은 스텝 뒤엔 이미 속도가 꺾여 있어서 에너지가 작게 나온다.
     const S = att.cache?.sword || liveState(pr.w.body);
     const P = vic.cache?.parts[pr.v.part] || liveState(pr.v.body);
-    const r = this.analyze(pr, point, S, P);
-    if (!r || r.energy < STRIKE.minEnergy) return;
-    vic.hitCooldowns.set(key, STRIKE.hitCooldown);
-
-    if (passing) {
-      // 몸이 흡수한 에너지만큼 칼을 늦추고, 그 운동량을 몸에 전달한다
-      const absorbed = Math.min(r.energy, r.absorb);
-      const remain = r.energy - absorbed;
-      const newSpeed = Math.sqrt((2 * remain) / r.mEff);
-      const dv = r.speed - newSpeed;
-      const J = r.dir.clone().multiplyScalar(r.mEff * dv);
-      pr.w.body.applyImpulseAtPoint({ x: -J.x, y: -J.y, z: -J.z }, vp(point), true);
-      pr.v.body.applyImpulseAtPoint({ x: J.x * 0.8, y: J.y * 0.8, z: J.z * 0.8 }, vp(onBone(pr.v, point)), true);
-      r.stuck = remain <= 0; // 에너지가 모자라 칼이 박힘
+    if (vic.hitCooldowns.has(key)) {
+      // 같은 부위에 방금 상처가 났으면 새 상처는 없지만, 가르고 지나가는 칼은 여전히 저항을 받는다
+      if (!passing) return null;
+      const r = this.analyze(pr, point, S, P);
+      if (r) r.stuck = r.energy <= r.absorb;
+      return r;
     }
+    const r = this.analyze(pr, point, S, P);
+    if (!r || r.energy < STRIKE.minEnergy) return null;
+    vic.hitCooldowns.set(key, STRIKE.hitCooldown);
+    if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part });
     }
     this.hooks.onWound?.(att, vic, r, point, pr);
+    return r;
   }
 }
 
 // ── 도우미 ──
+const _fq = new THREE.Quaternion();
+const _fr = new THREE.Vector3();
+/** 강체 칼의 한 점에서 방향 n으로 민 유효 질량: 1 / (1/m + Σ (r×n)ᵢ² / Iᵢ) (주축 좌표) */
+function freeMass(props, S, point, n) {
+  if (!props) return 0.5;
+  const { m, I, frame } = props;
+  _fq.copy(S.q).multiply(frame).invert();
+  const rn = _fr.copy(point).sub(S.com).cross(n).applyQuaternion(_fq);
+  return 1 / (1 / m + (rn.x * rn.x) / I.x + (rn.y * rn.y) / Math.max(I.y, 1e-6) + (rn.z * rn.z) / I.z);
+}
 /**
  * 팔다리는 겉(살)이 아니라 뼈(길이 방향 중심선)로 힘을 받는다.
  * 가느다란 팔다리 겉면에 충격을 주면 길이 방향으로 팽이처럼 돌기 때문.

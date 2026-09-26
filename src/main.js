@@ -146,6 +146,7 @@ function newRound() {
 // ── 타격감 ──
 let hitStop = 0; // 큰 타격 때 아주 잠깐 멈칫하는 연출
 let clashCooldown = 0;
+let clashStopCooldown = 0; // 칼끼리 부딪혀 멈칫한 뒤 다시 멈칫하기까지 (초)
 let slowMo = 0; // 결정타 슬로모션 남은 시간
 
 // 디버그용 통계 (브라우저 콘솔에서 game.stats 로 확인)
@@ -200,11 +201,17 @@ function onWound(att, vic, r, point, pr) {
   else if (r.type === 'stab') sound.stab(e);
   else sound.blunt(e);
   if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet) sound.bone(e);
-  // 멈칫 + 흔들림 (에너지에 비례)
-  hitStop = Math.max(hitStop, Math.min(0.12, e / 900));
-  // 카메라가 칼이 지나간 방향으로 밀린다 (내가 맞으면 더 크게)
-  kickCamera(r.dir, Math.min(1.6, e / 120) * (vic === player ? 1.4 : 0.6));
-  if (att === player || vic === player) haptic(e / 120);
+  // 멈칫: 재질에 따라. 살을 깨끗이 가르면 짧게, 박히거나 뼈·투구에 걸리면 길게 (최대 0.1초 — 조작이 늦게 느껴지지 않게)
+  const bone = e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg');
+  const stopT = r.pass ? Math.min(0.06, e / 2000) : r.stuck || bone || r.helmet ? Math.min(0.1, e / 900) : Math.min(0.08, e / 1200);
+  hitStop = Math.max(hitStop, stopT);
+  // 손맛: 칼의 타격 중심(스위트 스팟, 코등이에서 약 58cm)에 맞으면 손이 울리지 않고, 칼끝·칼 밑동에 맞으면 손이 찌릿하다
+  //  (손을 축으로 도는 강체에서 한 점을 치면 축(손)이 받는 충격 = 1 − a·b/k²)
+  const sting = att.swordSting(r.t);
+  // 카메라가 칼이 지나간 방향으로 밀린다 (내가 맞으면 더 크게, 내가 칠 땐 손이 받은 충격만큼)
+  kickCamera(r.dir, Math.min(1.6, e / 120) * (vic === player ? 1.4 : 0.4 + 0.4 * sting));
+  if (vic === player) haptic(e / 120);
+  else if (att === player) haptic((e / 120) * (0.4 + 0.6 * sting));
   if (!vic.alive) slowMo = 1.6;
   arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 관중이 들썩인다
 }
@@ -215,22 +222,27 @@ function onClash(point, speed) {
   stats.clashes++;
   particles.sparks(point, speed);
   sound.clash(speed);
+  // 세게 부딪힐 때만 잠깐 멈칫 (칼끼리 맞대고 밀 때마다 멈추면 끊겨 보인다)
+  if (speed > 6 && clashStopCooldown <= 0) {
+    hitStop = Math.max(hitStop, Math.min(0.08, speed / 200));
+    clashStopCooldown = 0.5;
+  }
   kickCamera(new THREE.Vector3((Math.random() - 0.5), 0.3, (Math.random() - 0.5)).normalize(), Math.min(0.6, speed / 25));
   haptic(Math.min(1, speed / 15));
 }
 
-// 칼을 빠르게 휘두르면 바람 소리
+// 칼을 휘두르면 바람 소리 (칼마다 하나씩 계속 돌면서 칼끝 속도를 따라간다)
 const whooshState = new Map();
 function updateWhoosh(f, dt) {
-  const st = whooshState.get(f) || { cd: 0, prev: 0 };
-  const sp = f.tipVel.length();
-  st.cd -= dt;
-  if (sp > 9 && st.prev <= 9 && st.cd <= 0) {
-    sound.whoosh(sp);
-    st.cd = 0.3;
-  }
-  st.prev = sp;
-  whooshState.set(f, st);
+  // 판이 바뀌어도 같은 소리 고리를 다시 쓴다 (나/상대 한 개씩)
+  let st = whooshState.get(f.index);
+  if (!st) whooshState.set(f.index, (st = { loop: null }));
+  if (!st.loop) st.loop = sound.whooshLoop();
+  st.loop?.set(f.armed ? f.tipVel.length() : 0);
+}
+/** 싸움 화면이 아닐 때(메뉴·일시정지)는 바람 소리를 끈다 */
+function muteWhoosh() {
+  for (const st of whooshState.values()) st.loop?.set(0);
 }
 
 // 상처에서 떨어지는 핏방울
@@ -521,9 +533,11 @@ function frame(now) {
   if (state === 'fight' && player) {
     // 손 목표 갱신 (입력 → 플레이어)
     const d = input.consumeHandDelta();
+    // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
+    const inScale = hitStop > 0 ? 0.25 : 1;
     if (player.alive) {
-      player.handOffset.x += d.x;
-      player.handOffset.y += d.y;
+      player.handOffset.x += d.x * inScale;
+      player.handOffset.y += d.y * inScale;
     }
     const m = input.move;
     player.move.set(player.alive ? m.x : 0, player.alive ? m.y : 0);
@@ -554,6 +568,7 @@ function frame(now) {
       world.step(eventQueue, combat.physicsHooks);
       combat.afterStep(world, eventQueue);
       clashCooldown -= PHYSICS.timestep;
+      clashStopCooldown -= PHYSICS.timestep;
       stats.simTime += PHYSICS.timestep;
       acc -= PHYSICS.timestep;
       steps++;
@@ -569,7 +584,7 @@ function frame(now) {
     arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
-  }
+  } else muteWhoosh();
   updateCamera(dt);
   renderer.render(scene, camera);
 }

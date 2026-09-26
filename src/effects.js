@@ -219,7 +219,37 @@ export class Sound {
     this.noiseBurst({ type: 'bandpass', freq: 1200, q: 4, vol: Math.min(0.3, energy / 300), decay: 0.06, delay: 0.01 });
   }
 
-  /** 휘두르는 바람 소리 (칼끝 속도에 따라) */
+  /**
+   * 칼마다 하나씩 계속 도는 바람 소리. 칼끝 속도에 따라 커지고 높아진다 → 칼이 가속·감속하는 게 들린다.
+   * 음량 곡선은 아래로 볼록 (Blade & Sorcery의 긴 칼 바람 소리 곡선 모양: 느릴 땐 거의 안 들리다가 빨라지면 확 커진다)
+   */
+  whooshLoop() {
+    if (!this.ctx) return null;
+    const c = this.ctx;
+    const src = c.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    const f = c.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 1.6;
+    f.frequency.value = 300;
+    const g = c.createGain();
+    g.gain.value = 0;
+    src.connect(f).connect(g).connect(c.destination);
+    src.start();
+    const self = this;
+    return {
+      set(speed) {
+        const x = Math.min(1, Math.max(0, (speed - 4) / 16)); // 칼끝 4 → 20 m/s
+        const vol = self.on ? 0.6 * Math.pow(x, 2.2) * 0.5 : 0; // (0,0) (0.66, ≈0.25) (1, 0.6) × 전체 음량
+        const t = c.currentTime;
+        g.gain.setTargetAtTime(vol, t, 0.03);
+        f.frequency.setTargetAtTime(250 + 1150 * x, t, 0.03);
+      },
+    };
+  }
+
+  /** 휘두르는 바람 소리 한 번 (예전 방식, 지금은 whooshLoop를 쓴다) */
   whoosh(speed) {
     if (!this.on || !this.ctx) return;
     const e = Math.min(1, (speed - 8) / 12);
