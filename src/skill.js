@@ -23,7 +23,9 @@ export class Skill {
     this.prev = fighter.handOffset.clone();
     this.vel = new THREE.Vector2(); // 손 목표가 움직이는 속도 (m/s, 몸 앞 평면)
     this.follow = new THREE.Vector2(); // 이어 베기로 더해지는 손 목표
-    this.aim = fighter.handOffset.clone(); // 실제로 근육이 따라갈 손 목표
+    this.aim = fighter.handOffset.clone(); // 실제로 근육이 따라갈 손 목표 (부드럽게 걸러진 값)
+    this.aimRaw = fighter.handOffset.clone(); // 거르기 전 목표 (입력 + 이어 베기)
+    this.aimVel = new THREE.Vector2(); // 걸러진 목표가 움직이는 속도
     this.twist = 0; // 허리 비틀기 보정 (라디안)
     this.bend = 0; // 허리 숙이기 보정 (라디안, 음수 = 앞으로)
     this.quiet = 1; // 손이 느리게 움직인 시간 (새 휘두르기 시작 판단용)
@@ -54,8 +56,20 @@ export class Skill {
     this.follow.multiplyScalar(Math.exp(-dt / SKILL.followDecay));
     const fm = SKILL.followMax * L;
     if (this.follow.length() > fm) this.follow.setLength(fm);
-    this.aim.copy(off).add(this.follow);
-    if (this.aim.length() > R) this.aim.setLength(R);
+    this.aimRaw.copy(off).add(this.follow);
+    if (this.aimRaw.length() > R) this.aimRaw.setLength(R);
+    // 손 목표를 "딱 멈추는"(임계 감쇠) 2차 필터로 거른다: 목표가 순간이동해도 손은 가속·감속하며 간다.
+    //  (사람의 손도 순간적으로 속도를 바꾸지 못한다. 목표가 튀면 근육이 그 충격을 몸통에 그대로 전해 출렁인다)
+    // 휘두르는 순간엔 근육을 긴장시켜(공동 수축) 더 빠르고 단단하게 따라간다
+    const wT = swinging ? SKILL.aimFilterStrike : SKILL.aimFilter;
+    this.filterW = (this.filterW ?? wT) + (wT - (this.filterW ?? wT)) * Math.min(1, dt * 30);
+    const w = this.filterW;
+    const ax = w * w * (this.aimRaw.x - this.aim.x) - 2 * w * this.aimVel.x;
+    const ay = w * w * (this.aimRaw.y - this.aim.y) - 2 * w * this.aimVel.y;
+    this.aimVel.x += ax * dt;
+    this.aimVel.y += ay * dt;
+    this.aim.x += this.aimVel.x * dt;
+    this.aim.y += this.aimVel.y * dt;
 
     // 2) 몸으로 베기: 손이 가는 방향으로 허리를 먼저 튼다 (몸통 회전이 칼에 속도를 더한다)
     const twistT = swinging ? THREE.MathUtils.clamp(-this.vel.x * SKILL.twistGain, -0.5, 0.5) * L : 0;

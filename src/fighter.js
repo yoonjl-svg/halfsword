@@ -57,27 +57,30 @@ function partDefs(s) {
 //  관절 = 뼈 연결 + 근육
 //   ball  : 공 관절(엉덩이·어깨·척추·목) — 세 방향으로 돌지만 각도 제한이 있다
 //   hinge : 경첩 관절(무릎·팔꿈치·발목) — 한 방향으로만 접힌다
-//   k: 근육 강도(N·m/rad), d: 감쇠, max: 낼 수 있는 최대 회전력(N·m, 사람 근력 수준)
+//   k: 근육 강도(N·m/rad), d: 감쇠(N·m·s/rad), max: 낼 수 있는 최대 회전력(N·m)
+//   (물리 엔진 모터가 실제로 내는 값 그대로다. 예전엔 엔진이 각도를 절반으로 잰다고 잘못 알고
+//    코드에서 2배를 곱했는데, 실험해 보니 온각도로 잰다. 그래서 표의 숫자를 실제 작동값으로 바꿨다.)
 //   lim: 각도 제한(라디안). 회전축 x = 옆으로 벌리기, y = 비틀기, z = 앞뒤로 굽히기(+ 앞)
 //        (척추·목은 z가 + 일 때 뒤로 젖혀진다)
 // ─────────────────────────────────────────────────────────────
 function jointDefs(s) {
   return [
-    { p: 'pelvis', c: 'abdomen', at: [0, 1.06, 0], type: 'ball', k: 900, d: 90, max: 250, lim: { x: [-0.35, 0.35], y: [-0.5, 0.5], z: [-0.7, 0.3] } },
-    { p: 'abdomen', c: 'chest', at: [0, 1.2, 0], type: 'ball', k: 800, d: 80, max: 220, lim: { x: [-0.3, 0.3], y: [-0.6, 0.6], z: [-0.5, 0.25] } },
-    { p: 'chest', c: 'head', at: [0, 1.5, 0], type: 'ball', k: 140, d: 8, max: 40, lim: { x: [-0.5, 0.5], y: [-1.0, 1.0], z: [-0.7, 0.5] } },
+    { p: 'pelvis', c: 'abdomen', at: [0, 1.06, 0], type: 'ball', k: 1800, d: 180, max: 500, lim: { x: [-0.35, 0.35], y: [-0.5, 0.5], z: [-0.7, 0.3] } },
+    { p: 'abdomen', c: 'chest', at: [0, 1.2, 0], type: 'ball', k: 1600, d: 160, max: 440, lim: { x: [-0.3, 0.3], y: [-0.6, 0.6], z: [-0.5, 0.25] } },
+    { p: 'chest', c: 'head', at: [0, 1.5, 0], type: 'ball', k: 280, d: 16, max: 80, lim: { x: [-0.5, 0.5], y: [-1.0, 1.0], z: [-0.7, 0.5] } },
     // 칼 든 어깨: 뼈가 x축을 따라 누워 있어서 x = 팔 비틀기, y = 좌우로 휘두르기, z = 위아래
     //  (칼 든 어깨는 머리 위~등 뒤까지 크게 돌아서, 엔진 모터 대신 직접 계산한 근육 힘을 쓴다: manual)
     { p: 'chest', c: 'uarmS', at: [0, 1.43, s * 0.2], type: 'ball', manual: true, k: 320, d: 26, max: 110 },
-    { p: 'uarmS', c: 'farmS', at: [0, 1.13, s * 0.2], type: 'hinge', k: 200, d: 12, max: 80, lim: [0, 2.5] },
-    { p: 'chest', c: 'uarmO', at: [0, 1.43, -s * 0.2], type: 'ball', k: 200, d: 18, max: 70, lim: { x: [-2.4, 2.4], y: [-1.5, 1.5], z: [-1.0, 2.9] } },
-    { p: 'uarmO', c: 'farmO', at: [0, 1.13, -s * 0.2], type: 'hinge', k: 120, d: 10, max: 50, lim: [0, 2.5] },
-    { p: 'pelvis', c: 'thighF', at: [0, 0.93, s * 0.095], type: 'ball', k: 900, d: 80, max: 280, lim: { x: [-0.6, 0.6], y: [-0.6, 0.6], z: [-0.5, 2.0] } },
-    { p: 'thighF', c: 'shinF', at: [0, 0.5, s * 0.095], type: 'hinge', k: 800, d: 50, max: 250, lim: [-2.5, 0.02] },
-    { p: 'shinF', c: 'footF', at: [0, 0.08, s * 0.095], type: 'hinge', k: 350, d: 12, max: 120, lim: [-0.6, 0.8] },
-    { p: 'pelvis', c: 'thighB', at: [0, 0.93, -s * 0.095], type: 'ball', k: 900, d: 80, max: 280, lim: { x: [-0.6, 0.6], y: [-0.6, 0.6], z: [-0.5, 2.0] } },
-    { p: 'thighB', c: 'shinB', at: [0, 0.5, -s * 0.095], type: 'hinge', k: 800, d: 50, max: 250, lim: [-2.5, 0.02] },
-    { p: 'shinB', c: 'footB', at: [0, 0.08, -s * 0.095], type: 'hinge', k: 350, d: 12, max: 120, lim: [-0.6, 0.8] },
+    // 칼 든 팔꿈치: 팔이 앞으로 뻗은 자세 기준이라 어깨에서 위팔 길이(0.3m)만큼 앞. 칼 무게가 실려 감쇠를 넉넉히
+    { p: 'uarmS', c: 'farmS', at: [0.3, 1.43, s * 0.2], type: 'hinge', k: 400, d: 38, max: 160, lim: [0, 2.5] },
+    { p: 'chest', c: 'uarmO', at: [0, 1.43, -s * 0.2], type: 'ball', k: 400, d: 36, max: 140, lim: { x: [-2.4, 2.4], y: [-1.5, 1.5], z: [-1.0, 2.9] } },
+    { p: 'uarmO', c: 'farmO', at: [0, 1.13, -s * 0.2], type: 'hinge', k: 240, d: 20, max: 100, lim: [0, 2.5] },
+    { p: 'pelvis', c: 'thighF', at: [0, 0.93, s * 0.095], type: 'ball', k: 1800, d: 160, max: 560, lim: { x: [-0.6, 0.6], y: [-0.6, 0.6], z: [-0.5, 2.0] } },
+    { p: 'thighF', c: 'shinF', at: [0, 0.5, s * 0.095], type: 'hinge', k: 1600, d: 100, max: 500, lim: [-2.5, 0.02] },
+    { p: 'shinF', c: 'footF', at: [0, 0.08, s * 0.095], type: 'hinge', k: 700, d: 24, max: 240, lim: [-0.6, 0.8] },
+    { p: 'pelvis', c: 'thighB', at: [0, 0.93, -s * 0.095], type: 'ball', k: 1800, d: 160, max: 560, lim: { x: [-0.6, 0.6], y: [-0.6, 0.6], z: [-0.5, 2.0] } },
+    { p: 'thighB', c: 'shinB', at: [0, 0.5, -s * 0.095], type: 'hinge', k: 1600, d: 100, max: 500, lim: [-2.5, 0.02] },
+    { p: 'shinB', c: 'footB', at: [0, 0.08, -s * 0.095], type: 'hinge', k: 700, d: 24, max: 240, lim: [-0.6, 0.8] },
   ];
 }
 
@@ -213,6 +216,11 @@ export class Fighter {
         .setFriction(d.foot ? 0.9 : 0.25)
         .setCollisionGroups(d.foot ? footGroups : bodyGroups);
       const col = world.createCollider(cd, rb);
+      if (d.name === 'abdomen') {
+        // 배는 가볍고(10kg) 무거운 골반과 상체(30kg) 사이에 끼어 있어서, 엔진의 반복 계산(6회)으로는
+        // 허리 근육 힘이 15%밖에 전달되지 않는다(허리가 흐물흐물). 회전 관성을 더해 계산이 수렴하게 한다.
+        rb.setAdditionalMassProperties(0, { x: 0, y: 0, z: 0 }, { x: 0.4, y: 0.4, z: 0.4 }, vecQ(IDENTITY_Q), true);
+      }
       if (d.alongX) {
         // 팔을 길이 방향으로 비트는 관성: 가느다란 캡슐만으로는 실제 팔(근육·뼈·손)보다 훨씬 작아서
         // 조금만 비틀어도 팽이처럼 돈다. 실제 팔 수준(약 0.004 kg·m²)을 더해 준다.
@@ -474,6 +482,7 @@ export class Fighter {
     this.shove();
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
     this.driveJoints(); // 모든 관절 근육을 움직인다
+    this.elbowGravity();
     this.trackBlade(dt);
 
     for (const [k, t] of this.hitCooldowns) {
@@ -928,7 +937,7 @@ export class Fighter {
     const sk = this.skill;
     const bend = (this.lean || 0) - Math.min(0.45, gut * 0.3) - 0.2 * kn + sk.bend;
     // 손이 왼쪽이면 몸통도 왼쪽으로 + 휘두를 때는 허리가 먼저 돈다(검술 층)
-    const twist = THREE.MathUtils.clamp(-sk.aim.x * 0.7 + sk.twist, -0.8, 0.8);
+    const twist = THREE.MathUtils.clamp(-sk.aim.x * 0.35 + sk.twist, -0.8, 0.8);
     const spine = (name, pitch, yaw) => J[name].target.setFromEuler(_eu.set(0, yaw, pitch, 'YXZ'));
     spine('abdomen', bend * 0.5, twist * 0.45);
     spine('chest', bend * 0.5, twist * 0.55);
@@ -952,9 +961,6 @@ export class Fighter {
       const k = j.k * mus;
       const d = j.d * Math.sqrt(Math.max(0.05, mus));
       const maxErr = (j.max * mus) / Math.max(1, k); // 이 이상 벌어진 목표는 근력으로 못 따라간다
-      // 물리 엔진은 관절 각도 오차를 "반각의 사인"(≈ 각도/2)으로 계산한다 → 강도·감쇠를 2배로 넘겨야 설계대로 작동한다
-      const kE = 2 * k;
-      const dE = 2 * d;
       if (j.manual) {
         this.manualMuscle(j, k, d, j.max * mus);
         continue;
@@ -970,16 +976,50 @@ export class Fighter {
       if (j.type === 'hinge') {
         const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -maxErr, maxErr);
         const vz = THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
-        raw.jointConfigureMotor(j.joint.handle, HINGE_AXIS, tz, vz, kE, dE);
+        raw.jointConfigureMotor(j.joint.handle, HINGE_AXIS, tz, vz, k, d);
       } else {
         for (const [i, ax] of [[0, 'x'], [1, 'y'], [2, 'z']]) {
           const t = _cur[ax] + THREE.MathUtils.clamp(_rv[ax] - _cur[ax], -maxErr, maxErr);
           const v = THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
-          raw.jointConfigureMotor(j.joint.handle, MOTOR_AXES[i], t, v, kE, dE);
+          raw.jointConfigureMotor(j.joint.handle, MOTOR_AXES[i], t, v, k, d);
         }
       }
       prev.copy(_rv);
     }
+  }
+
+  /**
+   * bodies의 무게가 한 점(pivotBody의 로컬 x = localX 지점) 둘레에 만드는 회전력 (월드). out에 담아 돌려준다.
+   */
+  gravityTorque(bodies, pivotBody, localX, out) {
+    const t = pivotBody.translation();
+    rot(pivotBody, _qg);
+    const A = _gA.set(localX, 0, 0).applyQuaternion(_qg).add(_gB.set(t.x, t.y, t.z));
+    out.set(0, 0, 0);
+    for (const b of bodies) {
+      if (!b) continue;
+      const c = b.worldCom();
+      const m = b.mass();
+      // (c − A) × (0, −m·g, 0)
+      const rx = c.x - A.x;
+      const rz = c.z - A.z;
+      out.x += rz * m * 9.81;
+      out.z += -rx * m * 9.81;
+    }
+    return out;
+  }
+
+  /** 팔꿈치 중력 보상: 아래팔과 칼의 무게를 팔꿈치 근육이 미리 버틴다 (엔진 모터는 목표 각도만 쫓으므로 따로 건다) */
+  elbowGravity() {
+    if (this.muscle < 0.12 || this.state === 'dead') return;
+    const up = this.bodies.uarmS;
+    this.gravityTorque([this.bodies.farmS, this.armed ? this.sword : null], up, 0.15, _mG);
+    rot(up, _qg);
+    const axis = _gA.set(0, 0, 1).applyQuaternion(_qg); // 팔꿈치 경첩 축
+    const mus = Math.min(1, Math.max(0.1, this.muscle) * (0.3 + 0.7 * this.limbs.armS) * this.strength);
+    const t = -_mG.dot(axis) * mus;
+    this.bodies.farmS.addTorque({ x: axis.x * t, y: axis.y * t, z: axis.z * t }, true);
+    up.addTorque({ x: -axis.x * t, y: -axis.y * t, z: -axis.z * t }, true);
   }
 
   /**
@@ -998,9 +1038,22 @@ export class Fighter {
     const boneAxis = _mA.set(1, 0, 0).applyQuaternion(_qc); // 위팔 뼈 방향 (x)
     const eTw = _mE.dot(boneAxis);
     const wTw = _mW.dot(boneAxis);
+    // 목표 자세가 움직이는 속도 (가슴 기준 → 월드). 감쇠는 "멈춤"이 아니라 이 속도를 향한다
+    //  → 감쇠를 넉넉히 줘도 휘두르는 속도가 줄지 않는다
+    const wT = _mV.set(0, 0, 0);
+    if (j.prevTarget && this.lastDt > 0) {
+      toRotVec(_qt3.copy(j.target).multiply(_qt4.copy(j.prevTarget).invert()), wT).multiplyScalar(1 / this.lastDt).applyQuaternion(_qp);
+      if (wT.length() > 20) wT.setLength(20);
+    }
+    (j.prevTarget || (j.prevTarget = new THREE.Quaternion())).copy(j.target);
     // 휘두르는 방향(뼈에 수직)
     _mT.copy(_mE).addScaledVector(boneAxis, -eTw).multiplyScalar(k);
-    _mT.addScaledVector(_mW.clone().addScaledVector(boneAxis, -wTw), -d);
+    const wErr = _mW.sub(wT);
+    _mT.addScaledVector(wErr.addScaledVector(boneAxis, -wErr.dot(boneAxis)), -d);
+    // 중력 보상: 팔과 칼의 무게를 미리 알고 버틴다 (사람도 무게를 예상하고 힘을 준다 → 처지지 않는다)
+    const mus = k / j.k;
+    this.gravityTorque([this.bodies.uarmS, this.bodies.farmS, this.armed ? this.sword : null], j.child, -0.15, _mG).multiplyScalar(-mus);
+    _mT.add(_mG.addScaledVector(boneAxis, -_mG.dot(boneAxis)));
     if (_mT.length() > maxT) _mT.setLength(maxT);
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
@@ -1038,6 +1091,13 @@ export class Fighter {
     // 자세에서 자세로 손을 옮기면 칼이 크게(최대 100° 넘게) 돌며 베기가 된다.
     const aim = _v3.set(...guardDir(off.x, off.y));
     aim.applyQuaternion(this.yaw);
+    // 목표 방향이 도는 속도: 손목 감쇠는 이 속도를 향한다 (멈추려는 게 아니라 목표를 따라가는 감쇠)
+    const wAim = _v5.set(0, 0, 0);
+    if (this.prevAim && this.lastDt > 0) {
+      wAim.crossVectors(this.prevAim, aim).multiplyScalar(1 / this.lastDt);
+      if (wAim.length() > 25) wAim.setLength(25);
+    }
+    (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
     rot(sword, _q1);
     const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1);
     const axis = new THREE.Vector3().crossVectors(blade, aim);
@@ -1066,7 +1126,11 @@ export class Fighter {
     const w = angvel(sword, new THREE.Vector3());
     const wTwist = blade.clone().multiplyScalar(w.dot(blade));
     const wSwing = w.clone().sub(wTwist);
-    torque.addScaledVector(wSwing, -WEAPON.aimDamping);
+    wAim.addScaledVector(blade, -wAim.dot(blade));
+    torque.addScaledVector(wSwing.sub(wAim), -WEAPON.aimDamping);
+    // 칼 무게를 손목이 미리 버틴다 (칼끝이 처지지 않게)
+    this.gravityTorque([sword], forearm, 0.13, _mG).multiplyScalar(-Math.min(1, str));
+    torque.add(_mG);
     const maxT = WEAPON.maxAimTorque * str;
     if (torque.length() > maxT) torque.setLength(maxT);
     // 날 세우기(손목 비틀기). 칼날 축 관성이 매우 작아 안정 한계(≈5) 안에서 최대한 세게
@@ -1287,6 +1351,13 @@ const MOTOR_AXES = [3, 4, 5]; // 회전 x, y, z (RawJointAxis.AngX/AngY/AngZ)
 const HINGE_AXIS = 3; // 경첩 관절의 회전축은 엔진 안에서 첫 번째 회전축(AngX)으로 다룬다
 const _cur = new THREE.Vector3();
 const _q2 = new THREE.Quaternion();
+const _qt3 = new THREE.Quaternion();
+const _qt4 = new THREE.Quaternion();
+const _qg = new THREE.Quaternion();
+const _gA = new THREE.Vector3();
+const _gB = new THREE.Vector3();
+const _mG = new THREE.Vector3();
+const _mV = new THREE.Vector3();
 const _ik1 = new THREE.Vector3();
 const _ik2 = new THREE.Vector3();
 const _ik3 = new THREE.Vector3();

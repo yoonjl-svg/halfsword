@@ -51,8 +51,8 @@ export const BODY = {
 export const WEAPON = {
   mass: 1.8, // 롱소드 무게(kg). 올리면 묵직하고 느려진다.
   length: 1.05, // 칼날 길이
-  aimStiffness: 45, // 칼끝 방향을 맞추는 회전 힘 (손목 힘). 낮을수록 칼이 관성대로 따라온다
-  aimDamping: 3.5,
+  aimStiffness: 60, // 칼끝 방향을 맞추는 회전 힘 (손목 힘). 낮을수록 칼이 관성대로 따라온다
+  aimDamping: 11, // 칼이 흔들리지 않고 딱 서는 값 (감쇠비 ≈ 0.9)
   maxAimTorque: 60,
   reach: 0.62, // 어깨에서 손까지 최대 거리
 };
@@ -107,6 +107,8 @@ export const BALANCE = {
 // 검술 층(skill.js): 캐릭터가 이미 익힌 몸놀림을 얼마나 보태줄지
 export const SKILL = {
   level: 0.7, // 플레이어 기본 숙련도 (0 = 날것의 물리 조작, 1 = 숙련된 검사). 메뉴의 "검술 보정"
+  aimFilter: 14, // 손 목표를 따라가는 빠르기(rad/s). 클수록 날렵하지만 몸이 출렁인다
+  aimFilterStrike: 24, // 휘두르는 동안의 빠르기 (근육을 긴장시켜 날카롭게)
   swingSpeed: 1.5, // 손 목표가 이보다 빠르게(m/s) 움직이면 "휘두르기"로 본다
   followGain: 0.6, // 이어 베기: 휘두르는 속도에 비례해 목표를 더 밀어주는 정도
   followMax: 0.35, // 이어 베기로 더해지는 최대 거리(m)
