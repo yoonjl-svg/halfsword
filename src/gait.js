@@ -41,6 +41,9 @@ const SOLE_C = new THREE.Vector3(0, -0.035, 0); // 발 몸체 기준 발바닥 �
 const SOLE_T = new THREE.Vector3(0.1, -0.035, 0); // 발끝 쪽 (뒤꿈치를 들면 여기로 버틴다)
 const TOE_X = 0.15; // 발목에서 발끝(뒤꿈치를 들 때 축이 되는 곳)까지 앞으로
 const SOLE_Y = 0.07; // 발목에서 발바닥까지 아래로
+// 뒤꿈치를 약 0.35라디안 들었을 때 발목이 올라가는 높이·앞으로 가는 거리 (골반 높이를 정할 때 쓴다)
+const HEEL_DY = TOE_X * Math.sin(0.35) + SOLE_Y * (Math.cos(0.35) - 1);
+const HEEL_DX = TOE_X * (1 - Math.cos(0.35)) + SOLE_Y * Math.sin(0.35);
 const HIP_DROP = 0.04; // 골반 중심에서 엉덩이 관절까지 (아래로)
 const UP = new THREE.Vector3(0, 1, 0);
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -393,7 +396,14 @@ export class Gait {
       const Ls = legLen(l.phi);
       const hx = l.hip.x - l.plant.x;
       const hz = l.hip.z - l.plant.z;
-      const hy = ANKLE_H + Math.sqrt(Math.max(0.04, Ls * Ls - hx * hx - hz * hz)) + HIP_DROP;
+      let hy = ANKLE_H + Math.sqrt(Math.max(0.04, Ls * Ls - hx * hx - hz * hz)) + HIP_DROP;
+      // 뒤로 빠진 발은 뒤꿈치를 들어(발끝으로 서서) 더 높이 받칠 수 있다
+      const back = hx * fwd.x + hz * fwd.z; // + = 발이 엉덩이 뒤에
+      if (back > 0) {
+        const r = Math.hypot(hx, hz);
+        const r2 = Math.max(0, r - HEEL_DX);
+        hy = Math.max(hy, ANKLE_H + HEEL_DY + Math.sqrt(Math.max(0.04, Ls * Ls - r2 * r2)) + HIP_DROP);
+      }
       // 두 발로 딛을 땐 더 높이 받칠 수 있는 다리 기준 (뒷발은 뒤꿈치를 들어 따라온다)
       hGeo = hGeo === Infinity ? hy : Math.max(hGeo, hy);
     }
