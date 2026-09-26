@@ -37,13 +37,13 @@ const saveSettings = () => {
 
 // ── 상대 캐릭터 고르기 (테스트/데모용 최소 기능. 정식 선택 UI는 나중에) ──
 //  ?foe=<id>     : characters.js의 특정 캐릭터로 고정
-//  ?foe=random   : 판마다 무작위로 다른 캐릭터
-//  아무것도 없으면 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" 그대로
-const foeParam = new URLSearchParams(location.search).get('foe');
+//  ?foe=random   : 판마다 무작위로 다른 캐릭터 (아무것도 없을 때의 기본값)
+//  ?foe=default  : 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" (메뉴의 난이도 설정을 따른다)
+const foeParam = new URLSearchParams(location.search).get('foe') || 'random';
 const foeRandomEachRound = foeParam === 'random';
 let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
 function pickFoe() {
-  if (foeRandomEachRound) return randomCharacter();
+  if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
   if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
   return currentFoe; // 고정 지정이 없으면 같은 상대를 계속 쓴다
 }
@@ -360,6 +360,21 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
 });
 refreshSettingsUI();
 
+// 이번 상대 소개 (이름 · 별명 · 한마디). 큰 글씨 알림(toast)과 따로, 작게 잠깐 보여 준다
+function showFoeIntro(ch) {
+  const el = $('foeIntro');
+  clearTimeout(showFoeIntro.t);
+  if (!ch) return el.classList.remove('show');
+  el.querySelector('b').textContent = ch.name;
+  el.querySelector('i').textContent = ch.epithet;
+  el.querySelector('span').textContent = `“${ch.taunt}”`;
+  // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
+  showFoeIntro.t = setTimeout(() => {
+    el.classList.add('show');
+    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3500);
+  }, 1300);
+}
+
 function showToast(text, ms = 1200) {
   toast.textContent = text;
   toast.classList.add('show');
@@ -415,7 +430,8 @@ async function startFight() {
   newRound();
   state = 'fight';
   applyMoveMode();
-  showToast(currentFoe ? `${currentFoe.name} "${currentFoe.epithet}" — ${currentFoe.taunt}` : '싸워라!', 2600);
+  showToast('싸워라!');
+  showFoeIntro(currentFoe);
   showHint(
     !input.isTouchDevice
       ? '클릭해서 마우스 잠금 · WASD 이동'

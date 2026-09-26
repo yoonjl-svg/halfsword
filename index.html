@@ -45,6 +45,12 @@
       #guardName b { display: block; font-size: 15px; font-weight: 800; color: #f3e6c8; }
       #guardName span { display: block; font-size: 11.5px; color: #e4d8bf; opacity: .85; margin-top: 1px; }
       #guardName.show { opacity: .92; }
+      /* 이번 상대 소개: 가운데 위 (일시정지 버튼 아래), 작게 */
+      #foeIntro { position: fixed; left: 50%; top: calc(max(12px, env(safe-area-inset-top)) + 52px); transform: translateX(-50%); max-width: min(70vw, 520px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,.7); }
+      #foeIntro b { display: block; font-size: 20px; font-weight: 800; color: #f3e6c8; }
+      #foeIntro i { display: block; font-size: 12.5px; font-style: normal; color: #d9c9a6; margin-top: 1px; }
+      #foeIntro span { display: block; font-size: 13.5px; color: #efe3c8; margin-top: 4px; }
+      #foeIntro.show { opacity: .95; }
 
       /* 센서가 없을 때 쓰는 이동 조이스틱 */
       #moveStick { position: fixed; left: max(20px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
@@ -97,6 +103,7 @@
     </div>
     <div id="toast"></div>
     <div id="hint"></div>
+    <div id="foeIntro"><b></b><i></i><span></span></div>
     <div id="guardName"></div>
     <div id="moveStick" aria-label="이동 조이스틱"><div id="moveKnob"></div></div>
 
