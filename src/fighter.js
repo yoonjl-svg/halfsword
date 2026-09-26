@@ -462,7 +462,10 @@ export class Fighter {
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
         const maxTurn = BODY.turnSpeed * this.muscle * dt;
-        this.heading += THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
+        let turn = THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
+        // 다리가 체중을 싣는 걸음: 딛은 발은 땅에 붙어 있어서, 엉덩이가 비틀 수 있는 만큼만 몸을 돌린다 (그 다음은 발을 돌려 딛는다)
+        if (this.gait?.active && this.state === 'stand') turn = this.gait.limitTurn(turn);
+        this.heading += turn;
       }
     } else {
       // 쓰러져 있는 동안에는 골반이 실제로 향한 방향을 따라간다 (일어날 때 몸이 비틀리지 않게)
@@ -878,6 +881,7 @@ export class Fighter {
     }
 
     // 2) 걷기: 딛고 있는 발로 땅을 밀어서 나아간다 (발이 떠 있으면 못 민다, 미끄러우면 미끄러진다)
+    this.wantDbg = (this.wantDbg || new THREE.Vector3()).copy(want);
     const dvx = want.x - v.x;
     const dvz = want.z - v.z;
     const grip = Math.min(1, loadSum * 1.5);

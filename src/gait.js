@@ -80,6 +80,8 @@ function mkLeg(k, side) {
     heel: 0, // 뒤꿈치를 든 각도
     hFrac: 1,
     y0: 0, // 걸음을 바꿀 때 이미 들려 있던 높이
+    rel: new THREE.Vector3(), // 엉덩이에 대한 내딛는 발목 목표
+    relOk: false,
     des: new THREE.Vector3(), // 내딛는 발목 목표 (측정용)
     v0: new THREE.Vector3(), // 발을 뗄 때 발의 출발 속도
     fq: new THREE.Quaternion(), // 발 자세 (월드)
@@ -186,6 +188,21 @@ export class Gait {
     if (!this.active || this.f.state !== 'stand') return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0 };
     return true;
+  }
+
+  /** 몸을 turn(라디안)만큼 돌리려 할 때, 딛은 발에 대해 엉덩이가 비틀 수 있는 만큼으로 줄인다 */
+  limitTurn(turn) {
+    if (!turn) return turn;
+    const f = this.f;
+    const pel = f.heading + (f.pelvisYawOffset || 0);
+    let lim = Infinity;
+    for (const k of ['F', 'B']) {
+      const l = this.legs[k];
+      if (!l.stance) continue;
+      const tw = wrap(pel - l.yaw) * Math.sign(turn); // 도는 쪽으로 이미 비튼 만큼
+      lim = Math.min(lim, Math.max(0, GAIT.maxTwist - tw));
+    }
+    return Math.sign(turn) * Math.min(Math.abs(turn), lim);
   }
 
   /** 앞발(몸 기준 앞에 있는 발) */
@@ -410,6 +427,7 @@ export class Gait {
     l.stance = false;
     l.heel = 0;
     l.y0 = 0;
+    l.relOk = false;
     l.kind = kind;
     l.t = 0;
     l.T = T;
@@ -419,7 +437,7 @@ export class Gait {
     l.yaw0 = l.footYaw;
     l.lift = kind === 'settle' ? GAIT.liftSettle : GAIT.lift;
     // 걷는 중엔 발을 든 시간 내내 옮긴다 (일찍 도착하면 몸이 따라올 때까지 발이 몸 앞 멀리 떠 있어야 한다)
-    l.hFrac = kind === 'walk' ? 1 : GAIT.hFrac;
+    l.hFrac = kind === 'settle' ? GAIT.hFrac : 1;
     if (kind === 'req') this.reqLeg = l.k;
   }
 
@@ -439,7 +457,7 @@ export class Gait {
       const x = r.kind === 'lunge' ? r.fwd : r.fwd * 0.5 + 0.25;
       out.set(l.p0.x + fwd.x * r.fwd + rgt.x * r.side, ANKLE_H, l.p0.z + fwd.z * r.fwd + rgt.z * r.side);
       if (r.kind === 'pass') out.set(a.x + fwd.x * x + rgt.x * (r.side + l.side * GAIT.width), ANKLE_H, a.z + fwd.z * x + rgt.z * (r.side + l.side * GAIT.width));
-      l.yaw1 = f.heading;
+      l.yaw1 = this.headAhead();
     } else {
       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
       const v = this.vf;
@@ -450,7 +468,7 @@ export class Gait {
       const oz = want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
       const wd = GAIT.width;
       out.set(px + ox + rgt.x * l.side * wd, ANKLE_H, pz + oz + rgt.z * l.side * wd);
-      l.yaw1 = f.heading;
+      l.yaw1 = this.headAhead();
       // 너무 멀리 뻗지 않게
       const dx = out.x - px;
       const dz = out.z - pz;
@@ -525,6 +543,19 @@ export class Gait {
         const up = THREE.MathUtils.smoothstep(u, 0, 0.3) * (1 - THREE.MathUtils.smoothstep(u, Math.min(0.75, l.hFrac - 0.15), 1));
         _a.y = ANKLE_H + Math.max(l.lift * up, l.y0 * (1 - THREE.MathUtils.smoothstep(u, 0, 0.5))) - late;
         const yaw = l.yaw0 + wrap(l.yaw1 - l.yaw0) * s;
+        // 엉덩이에 대한 발의 속도를 제한한다 (다리를 채찍처럼 휘두르면 그 반동이 몸을 떠민다)
+        _d.subVectors(_a, l.hip);
+        if (l.relOk) {
+          const mv = GAIT.swingVmax * f.lastDt;
+          _c.subVectors(_d, l.rel);
+          if (_c.lengthSq() > mv * mv) {
+            _c.setLength(mv);
+            _d.copy(l.rel).add(_c);
+            _a.addVectors(l.hip, _d);
+          }
+        }
+        l.rel.copy(_d);
+        l.relOk = true;
         l.des.copy(_a);
         this.legIK(l, l.hip, _a, yaw, GAIT.toeUp * Math.sin(Math.PI * u));
       }
