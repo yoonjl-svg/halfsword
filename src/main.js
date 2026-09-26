@@ -10,7 +10,8 @@ import { GUARDS } from './guards.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
-import { Particles, Sound, haptic, stickDecal, rebuildDecal } from './effects.js';
+import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
+import { Sound } from './sound.js';
 import { Combat } from './combat.js';
 import { buildArena } from './arena.js';
 
@@ -196,7 +197,7 @@ function onWound(att, vic, r, point, pr) {
   }
   if (opened) att.bloodyBlade(0.08 + r.severity * 0.15);
   // 소리
-  if (r.helmet) sound.clash(Math.min(20, e / 6));
+  if (r.helmet) sound.helmet(e);
   if (r.type === 'cut') sound.cut(e, r.pass);
   else if (r.type === 'stab') sound.stab(e);
   else sound.blunt(e);
@@ -216,12 +217,14 @@ function onWound(att, vic, r, point, pr) {
   arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 관중이 들썩인다
 }
 
-function onClash(point, speed) {
+function onClash(point, speed, touch) {
+  // 소리: 새로 부딪힌 순간(또는 맞댄 채 다시 세게 친 순간)에만 "쨍". 맞댄 채 미끄러지는 동안은 긁히는 소리(updateBindSound)
+  //  touch.vn = 부딪히는 속도, touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeTouch)
+  if (touch && (touch.fresh || touch.vn > 3)) sound.clash(touch.vn, touch.vt);
   if (speed < 2.5 || clashCooldown > 0) return;
   clashCooldown = 0.09;
   stats.clashes++;
   particles.sparks(point, speed);
-  sound.clash(speed);
   // 세게 부딪힐 때만 잠깐 멈칫 (칼끼리 맞대고 밀 때마다 멈추면 끊겨 보인다)
   if (speed > 6 && clashStopCooldown <= 0) {
     hitStop = Math.max(hitStop, Math.min(0.08, speed / 200));
@@ -240,9 +243,16 @@ function updateWhoosh(f, dt) {
   if (!st.loop) st.loop = sound.whooshLoop();
   st.loop?.set(f.armed ? f.tipVel.length() : 0);
 }
-/** 싸움 화면이 아닐 때(메뉴·일시정지)는 바람 소리를 끈다 */
+/** 싸움 화면이 아닐 때(메뉴·일시정지)는 바람 소리·긁는 소리를 끈다 */
 function muteWhoosh() {
   for (const st of whooshState.values()) st.loop?.set(0);
+  sound.scrape(0, 0);
+}
+// 칼끼리 맞대고 밀며 미끄러지는 동안 계속 나는 "지이익" (바인드)
+function updateBindSound() {
+  const b = combat.bladeContact;
+  if (combat.binding) sound.scrape(b.slide, b.press);
+  else sound.scrape(0, 0);
 }
 
 // 상처에서 떨어지는 핏방울
@@ -403,6 +413,7 @@ function showMenu() {
 }
 
 function resume() {
+  sound.unlock(); // 폰이 전화·잠금 등으로 소리를 멈췄으면 다시 켠다
   menu.classList.remove('show');
   state = 'fight';
   input.enabled = true;
@@ -580,6 +591,7 @@ function frame(now) {
       updateWhoosh(f, dt * scale);
       updateDrips(f, dt * scale);
     }
+    updateBindSound();
     particles.update(dt * scale);
     arena.update(dt);
     updateHud();
@@ -620,4 +632,5 @@ window.game = {
   renderInfo: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
   AI,
   settings,
+  sound, // 예: game.sound.clash(8) 로 소리 확인, game.sound.stats
 };

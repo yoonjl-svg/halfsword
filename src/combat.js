@@ -42,13 +42,16 @@ function zoneOf(info, local) {
 
 export class Combat {
   /**
-   * @param {object} hooks  { onWound(attacker, victim, result, point), onClash(point, speed), onBlocked(...) }
+   * @param {object} hooks  { onWound(attacker, victim, result, point), onClash(point, speed, touch), onBlocked(...) }
    */
   constructor(colliderInfo, hooks) {
     this.info = colliderInfo;
     this.hooks = hooks;
     this.cutting = new Map(); // "칼콜라이더:몸콜라이더" → { seen, applied, until }
     this.stepNo = 0;
+    // 칼끼리 닿아 있는 상태 (소리용): 처음 부딪히는 순간 = "쨍", 맞댄 채 미끄러지는 동안 = 긁히는 소리
+    //  last/start = 마지막으로·처음으로 닿은 스텝, slide = 미끄러지는 속도(m/s), press = 누르는 힘(N)
+    this.bladeContact = { last: -1e9, start: 0, slide: 0, press: 0 };
     // Rapier 물리 훅: 칼과 상대 몸이 부딪히려 할 때마다(매 스텝) 불린다.
     // 여기서는 엔진 함수를 부르면 안 되므로, 스텝 직전에 저장해 둔 값(cacheState)만 쓴다.
     this.physicsHooks = {
@@ -278,7 +281,7 @@ export class Combat {
         const rel = a.body.velocityAtPoint(p);
         const rel2 = b.body.velocityAtPoint(p);
         const sp = Math.hypot(rel.x - rel2.x, rel.y - rel2.y, rel.z - rel2.z);
-        this.hooks.onClash?.(p, sp);
+        this.hooks.onClash?.(p, sp, this.bladeTouch(e, a, b, p, sp));
         return;
       }
       const pr = this.pairOf(h1, h2);
@@ -288,6 +291,41 @@ export class Combat {
       if (!p) return;
       this.strike(pr, p, false);
     });
+  }
+
+  /**
+   * 칼끼리 닿은 순간을 소리용으로 나눈다.
+   *  - 부딪히는 세기(vn): 스텝 "직전" 속도에서 맞닿는 방향 성분. (스텝 뒤엔 엔진이 이미 튕겨 내서 0에 가깝다)
+   *  - 미끄러짐(vt): 칼날을 따라 스치는 성분. 크면 "스치듯 긁고 지나간" 타격
+   *  - fresh: 50ms 넘게 떨어져 있다가 새로 닿았는가 (아니면 맞댄 채 계속 닿아 있는 것 = 바인드)
+   * 한 스텝에 칼의 여러 조각(칼날·코등이·손잡이)이 각각 닿아 여러 번 불릴 수 있다 → 첫 번째만 fresh
+   */
+  bladeTouch(e, a, b, p, sp) {
+    const bc = this.bladeContact;
+    const fresh = this.stepNo - bc.last > 6;
+    if (fresh) bc.start = this.stepNo;
+    const n = e.maxForceDirection();
+    const Sa = a.fighter.cache?.sword;
+    const Sb = b.fighter.cache?.sword;
+    let vn = sp;
+    let vt = 0;
+    if (Sa && Sb) {
+      const r = velAt(Sa, p, _c).sub(velAt(Sb, p, _d));
+      vn = Math.abs(r.x * n.x + r.y * n.y + r.z * n.z);
+      vt = Math.sqrt(Math.max(0, r.lengthSq() - vn * vn));
+    }
+    const force = e.totalForceMagnitude();
+    if (bc.last !== this.stepNo) bc.press = 0;
+    bc.press = Math.max(bc.press, force);
+    bc.slide = sp; // 스텝 뒤 상대 속도 = 튕긴 뒤 남은 미끄러짐
+    bc.last = this.stepNo;
+    return { fresh, vn, vt, force };
+  }
+
+  /** 소리용: 지금 칼끼리 맞대고 있는가 (처음 닿은 뒤 40ms 넘게 계속 닿아 있음) */
+  get binding() {
+    const bc = this.bladeContact;
+    return this.stepNo - bc.last <= 3 && bc.last - bc.start >= 5;
   }
 
   /** 실제 접촉점에서 다시 정확히 분석하고 상처/에너지 전달을 적용 */

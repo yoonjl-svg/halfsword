@@ -161,3 +161,11 @@ export const INPUT = {
   tiltFullDeg: 22, // 이 각도만큼 기울이면 최고 속도
   tiltDeadDeg: 4, // 이 각도 이하 기울임은 무시
 };
+
+// 소리 (sound.js). 소리마다 들어보기: 메뉴의 "소리 들어보기"
+export const SOUND = {
+  volume: 0.8, // 전체 음량
+  reverb: 0.35, // 경기장 울림 (0 = 끔). 쇳소리가 관중석에 되울리는 정도 (원래 소리 대비 울림 에너지 비율의 제곱근)
+  samples: true, // 녹음된 소리(public/sfx, Kenney.nl CC0)를 합성 소리에 섞기
+  maxVoices: 12, // 동시에 울리는 소리 개수 한도 (넘으면 가장 오래된 소리를 끈다 → 폰 부담 줄이기)
+};
