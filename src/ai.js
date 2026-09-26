@@ -6,17 +6,17 @@
 import * as THREE from 'three';
 import { AI_LEVELS } from './config.js';
 
-// 공격 패턴: 몸 앞 평면의 손 위치 [좌우(+오른쪽), 위아래] 미터
-//  준비(windup) 자세에서 공격 끝(strike) 자세로 손을 빠르게 옮긴다.
+// 공격 패턴: 패드 위치 [좌우(+칼 든 쪽), 위아래] 미터. guards.js의 검술 자세 지도로 실제 자세가 된다.
+//  준비(windup) 자세에서 공격 끝(strike) 자세로 손을 빠르게 옮기면 그 사이 자세들을 지나며 베기가 된다.
 const ATTACKS = [
-  { name: 'overhead', windup: [0.1, 0.6], strike: [0.0, -0.25] }, // 내려치기
-  { name: 'diagR', windup: [0.5, 0.45], strike: [-0.35, -0.2] }, // 오른쪽 위 → 왼쪽 아래 사선
-  { name: 'diagL', windup: [-0.35, 0.45], strike: [0.45, -0.15] }, // 왼쪽 위 → 오른쪽 아래 사선
-  { name: 'horizontal', windup: [0.6, 0.1], strike: [-0.5, 0.05] }, // 가로베기
-  { name: 'thrust', windup: [0.45, -0.25], strike: [0.0, 0.05] }, // 찌르기 (가운데로 모으면 팔이 뻗는다)
+  { name: 'zornhau', windup: [0.3, 0.42], strike: [-0.4, -0.42] }, // 분노의 베기: 오른쪽 위 → 긴 자세 → 왼쪽 아래
+  { name: 'oberhau', windup: [0.02, 0.52], strike: [0.0, -0.45] }, // 위에서 내려베기: 지붕 → 긴 자세 → 바보
+  { name: 'zwerch', windup: [0.52, 0.06], strike: [-0.5, 0.06] }, // 가로베기: 옆 자세 → 왼쪽 옆
+  { name: 'unterhau', windup: [0.38, -0.44], strike: [-0.3, 0.26] }, // 올려베기: 바꿈 → 왼쪽 황소
+  { name: 'stich', windup: [0.18, -0.28], strike: [0.0, 0.03] }, // 찌르기: 쟁기 → 긴 자세 (팔을 쭉 뻗는다)
 ];
-const GUARD = [0.05, 0.4];
-const READY = [0.15, -0.1]; // 칼끝이 상대 가슴을 겨누는 기본 자세
+const GUARD = [0.05, 0.45]; // 막기: 칼을 들어 머리를 가린다
+const READY = [0.12, -0.18]; // 기본: 긴 자세와 쟁기 사이, 칼끝이 상대를 겨눈다
 
 export class AI {
   constructor(me, foe, levelName = 'normal') {
@@ -48,8 +48,8 @@ export class AI {
       return ATTACKS.find((a) => a.name === name);
     };
     if (Math.random() < 0.3) return ATTACKS[Math.floor(Math.random() * ATTACKS.length)];
-    if (tipY > headY) return pick(['horizontal', 'thrust', 'diagL']);
-    return pick(['overhead', 'diagR', 'diagL']);
+    if (tipY > headY) return pick(['zwerch', 'stich', 'unterhau']);
+    return pick(['zornhau', 'oberhau', 'unterhau']);
   }
 
   update(dt) {

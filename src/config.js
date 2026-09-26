@@ -104,7 +104,17 @@ export const BALANCE = {
   fallDelay: 0.25, // 이 시간(초) 동안 계속 벗어나 있으면 넘어짐
 };
 
-// 검술 층(skill.js): 캐릭터가 이미 익힌 몸놀림을 얼마나 보태줄지
+// 두 손 잡기: 빈손이 칼자루 끝을 쥐는 부드러운 스프링
+export const GRIP = {
+  on: true,
+  along: -0.1, // 칼자루에서 빈손이 쥐는 곳 (칼 든 손 기준 칼끝 반대쪽으로 m)
+  reach: 0.25, // 손이 이만큼(m) 안으로 들어오면 쥐기 시작
+  k: 1500, // 쥐는 힘의 강도 (N/m)
+  d: 50, // 감쇠 (딱 멈추는 값 근처)
+  maxForce: 250, // 손아귀 힘 한계 (N). 넘으면 손이 미끄러진다
+};
+
+// 검술 층(skill.js): 캐릭터가 이미 익힌 몸놀림을 얼마나 보태줄지 (자세 지도는 guards.js)
 export const SKILL = {
   level: 0.7, // 플레이어 기본 숙련도 (0 = 날것의 물리 조작, 1 = 숙련된 검사). 메뉴의 "검술 보정"
   aimFilter: 14, // 손 목표를 따라가는 빠르기(rad/s). 클수록 날렵하지만 몸이 출렁인다
@@ -113,12 +123,17 @@ export const SKILL = {
   followGain: 0.6, // 이어 베기: 휘두르는 속도에 비례해 목표를 더 밀어주는 정도
   followMax: 0.35, // 이어 베기로 더해지는 최대 거리(m)
   followDecay: 0.3, // 이어 베기가 사라지는 시간(초)
-  twistGain: 0.12, // 손 좌우 속도(m/s)당 허리 비틀기(rad)
-  bendGain: 0.08, // 손 위아래 속도(m/s)당 허리 숙이기(rad). 내려벨 때 체중을 싣는다
   lungeMin: 1.3, // 이 거리(m)보다 멀고
   lungeMax: 2.4, // 이 거리보다 가까우면 휘두르며 한 걸음 내딛는다
   lungeTime: 0.3, // 내딛는 시간(초)
   lungeMove: 0.9, // 내딛는 세기 (조이스틱 앞으로 민 정도와 같은 단위)
+};
+
+// 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라
+// 베기를 시작하면 허리가 먼저 돌고 팔과 칼이 뒤따른다
+export const SKILL_BODY = {
+  pelvis: 30,
+  chest: 22,
 };
 
 export const AI_LEVELS = {

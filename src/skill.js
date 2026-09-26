@@ -8,7 +8,8 @@
 //  실제 움직임은 언제나 근육(힘의 한계)과 물리가 만든다 → 맞으면 흐트러지고, 칼은 여전히 무겁다.
 //
 //   1) 이어 베기(follow-through): 짧고 빠르게 그어도 칼이 그 방향으로 끝까지 지나간다
-//   2) 몸으로 베기: 휘두르는 방향으로 허리를 틀고, 내려벨 때 상체를 숙여 체중을 싣는다
+//   2) 검술 자세(guards.js): 손가락 위치를 실제 롱소드 자세로 바꾼다. 몸(골반·가슴)은 손보다 먼저
+//      자세를 따라가서, 베기를 시작하면 허리 → 가슴 → 팔 → 칼 순서로 힘이 이어진다 (fighter.updateBodyPose)
 //   3) 내딛기: 알맞은 간격에서 휘두르기 시작하면 앞발을 내딛으며 벤다
 //
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
@@ -26,8 +27,6 @@ export class Skill {
     this.aim = fighter.handOffset.clone(); // 실제로 근육이 따라갈 손 목표 (부드럽게 걸러진 값)
     this.aimRaw = fighter.handOffset.clone(); // 거르기 전 목표 (입력 + 이어 베기)
     this.aimVel = new THREE.Vector2(); // 걸러진 목표가 움직이는 속도
-    this.twist = 0; // 허리 비틀기 보정 (라디안)
-    this.bend = 0; // 허리 숙이기 보정 (라디안, 음수 = 앞으로)
     this.quiet = 1; // 손이 느리게 움직인 시간 (새 휘두르기 시작 판단용)
     this.lunge = 0; // 내딛는 중 남은 시간
     this.swings = 0;
@@ -70,13 +69,6 @@ export class Skill {
     this.aimVel.y += ay * dt;
     this.aim.x += this.aimVel.x * dt;
     this.aim.y += this.aimVel.y * dt;
-
-    // 2) 몸으로 베기: 손이 가는 방향으로 허리를 먼저 튼다 (몸통 회전이 칼에 속도를 더한다)
-    const twistT = swinging ? THREE.MathUtils.clamp(-this.vel.x * SKILL.twistGain, -0.5, 0.5) * L : 0;
-    const bendT = swinging ? THREE.MathUtils.clamp(this.vel.y * SKILL.bendGain, -0.4, 0.1) * L : 0;
-    const kb = 1 - Math.exp(-dt * 14);
-    this.twist += (twistT - this.twist) * kb;
-    this.bend += (bendT - this.bend) * kb;
 
     // 3) 내딛기: 잠깐 멈췄다가 새로 휘두르기 시작할 때, 상대가 한 걸음 거리에 있으면
     if (swinging && this.quiet > 0.2 && f.state === 'stand') {

@@ -6,6 +6,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
 import { PHYSICS, ARENA, CAMERA } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
+import { GUARDS } from './guards.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
@@ -492,6 +493,22 @@ function updateCamera(dt) {
   sun.target.position.set(a.x, 0, a.z);
 }
 
+// ── 지금 검술 자세 이름 (자세가 바뀌면 잠깐 보여 준다) ──
+const guardName = $('guardName');
+let guardShown = -1;
+let guardTimer = 0;
+function updateGuardName(dt) {
+  const g = player.guardWeight() > 0.5 && player.alive ? player.guardPose.nearest : -1;
+  if (g !== guardShown && g >= 0) {
+    guardShown = g;
+    guardName.textContent = GUARDS[g].name;
+    guardName.classList.add('show');
+    guardTimer = 1.2;
+  }
+  guardTimer -= dt;
+  if (guardTimer <= 0) guardName.classList.remove('show');
+}
+
 // ── 게임 루프 ──
 let last = performance.now();
 let acc = 0;
@@ -510,6 +527,7 @@ function frame(now) {
     }
     const m = input.move;
     player.move.set(player.alive ? m.x : 0, player.alive ? m.y : 0);
+    updateGuardName(dt);
 
     // 타격 순간 살짝 멈칫 + 판이 끝나면 슬로모션
     let scale = 1;

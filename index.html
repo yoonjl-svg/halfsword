@@ -40,6 +40,8 @@
 
       #hint { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--dim); background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; pointer-events: none; display: none; text-align: center; max-width: calc(100% - 32px); }
       #hint.show { display: block; }
+      #guardName { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 700; color: #f3e6c8; text-shadow: 0 2px 0 #000; pointer-events: none; opacity: 0; transition: opacity .25s; }
+      #guardName.show { opacity: .9; }
 
       /* 센서가 없을 때 쓰는 이동 조이스틱 */
       #moveStick { position: fixed; left: max(20px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
@@ -91,6 +93,7 @@
     </div>
     <div id="toast"></div>
     <div id="hint"></div>
+    <div id="guardName"></div>
     <div id="moveStick" aria-label="이동 조이스틱"><div id="moveKnob"></div></div>
 
     <div class="overlay show" id="menu">
