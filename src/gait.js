@@ -108,6 +108,8 @@ export class Gait {
     this.sway = new THREE.Vector3(); // 좌우로 무게를 옮기는 속도 (want에 더한다)
     this.req = null; // 기술이 부탁한 걸음 (requestStep)
     this.settles = 0; // 멈춘 뒤 고쳐 딛은 횟수
+    this.prevHead = fighter.heading;
+    this.headRate = 0; // 몸을 돌리는 빠르기(rad/s)
   }
 
   /** 지금 이 걸음 방식이 몸을 맡고 있나 */
@@ -134,6 +136,8 @@ export class Gait {
     this.idleT = 0;
     this.req = null;
     this.settles = 0;
+    this.prevHead = this.f.heading;
+    this.headRate = 0;
     this.resetRates();
   }
 
@@ -200,6 +204,9 @@ export class Gait {
     if (!this.active) this.enter();
     else this.sense();
     this.lev = Math.max(0, this.lev - dt / GAIT.handover);
+    const dHead = wrap(f.heading - this.prevHead);
+    this.prevHead = f.heading;
+    this.headRate += (dHead / dt - this.headRate) * Math.min(1, dt * 10);
     const speed = Math.hypot(want.x, want.z);
     const walkNow = speed > GAIT.walkMin;
     if (walkNow !== this.walking) {
@@ -280,8 +287,9 @@ export class Gait {
           next = df > 0 ? 'B' : 'F';
         }
       } else if (next) kind = 'catch';
-      else if (this.idleT > GAIT.settleDelay && this.settles < GAIT.settleMax) {
-        next = this.settleLeg(fwd, rgt);
+      else if (this.idleT > GAIT.settleDelay) {
+        // 자리 고치기는 settleMax번까지, 몸을 돌려 발이 틀어진 것은 언제든 (발을 돌려 딛는다)
+        next = this.settleLeg(this.settles < GAIT.settleMax);
         if (next) {
           kind = 'settle';
           this.settles++;
@@ -356,18 +364,18 @@ export class Gait {
   }
 
   /** 멈춘 뒤 펜싱 자세에서 가장 벗어난 발 (고쳐 딛을 발). 괜찮으면 null */
-  settleLeg(fwd, rgt) {
+  settleLeg(posOk) {
     const c = this.f.com;
     if (!c) return null;
     let worst = null;
     let worstE = 0;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
-      this.guardSpot(l, fwd, rgt, _s3);
+      this.guardSpot(l, _s3);
       const e = Math.hypot(l.plant.x - _s3.x, l.plant.z - _s3.z);
       const ye = Math.abs(wrap(l.yaw - this.guardYaw(l)));
       const tol = this.settles === 0 ? GAIT.settleTol : GAIT.settleTol * 1.6;
-      const score = Math.max(e / tol, ye / GAIT.yawTol);
+      const score = Math.max(posOk ? e / tol : 0, ye / GAIT.yawTol);
       if (score > 1 && score > worstE) {
         worstE = score;
         worst = k;
@@ -377,15 +385,25 @@ export class Gait {
   }
 
   /** 펜싱 자세에서 이 발이 설 자리 (무게중심 기준) */
-  guardSpot(l, fwd, rgt, out) {
+  guardSpot(l, out) {
     const c = this.f.com;
+    // 몸을 돌리는 중이면 돌아갈 방향을 미리 본다
+    const h = this.headAhead();
+    const fx = Math.cos(h);
+    const fz = -Math.sin(h);
     const x = l.k === 'F' ? GAIT.guardLength * (1 - GAIT.weightFront) : -GAIT.guardLength * GAIT.weightFront;
     const z = l.side * GAIT.guardWidth * 0.5;
-    return out.set(c.x + fwd.x * x + rgt.x * z, ANKLE_H, c.z + fwd.z * x + rgt.z * z);
+    // 오른쪽 = (-fz, 0, fx)
+    return out.set(c.x + fx * x - fz * z, ANKLE_H, c.z + fz * x + fx * z);
+  }
+
+  /** 몸이 곧 바라볼 방향 (지금 도는 빠르기로 조금 앞질러) */
+  headAhead() {
+    return this.f.heading + clamp(this.headRate * GAIT.turnLead, -0.5, 0.5);
   }
 
   guardYaw(l) {
-    return this.f.heading + (l.k === 'B' ? -l.side * GAIT.rearToe : 0);
+    return this.headAhead() + (l.k === 'B' ? -l.side * GAIT.rearToe : 0);
   }
 
   begin(l, kind, T) {
@@ -412,7 +430,7 @@ export class Gait {
     const p = f.bodies.pelvis.translation();
     const out = l.p1;
     if (l.kind === 'settle') {
-      this.guardSpot(l, fwd, rgt, out);
+      this.guardSpot(l, out);
       l.yaw1 = this.guardYaw(l);
     } else if (l.kind === 'req' && this.req) {
       // 기술 걸음: 앞발 기준으로 앞으로 fwd만큼
