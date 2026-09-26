@@ -11,6 +11,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
+import { CHARACTERS_BY_ID, randomCharacter } from './characters.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound } from './sound.js';
 import { Combat } from './combat.js';
@@ -33,6 +34,19 @@ const saveSettings = () => {
     /* 무시 */
   }
 };
+
+// ── 상대 캐릭터 고르기 (테스트/데모용 최소 기능. 정식 선택 UI는 나중에) ──
+//  ?foe=<id>     : characters.js의 특정 캐릭터로 고정
+//  ?foe=random   : 판마다 무작위로 다른 캐릭터
+//  아무것도 없으면 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" 그대로
+const foeParam = new URLSearchParams(location.search).get('foe');
+const foeRandomEachRound = foeParam === 'random';
+let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
+function pickFoe() {
+  if (foeRandomEachRound) return randomCharacter();
+  if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
+  return currentFoe; // 고정 지정이 없으면 같은 상대를 계속 쓴다
+}
 
 // ── 화면(Three.js) ──
 const canvas = document.getElementById('game');
@@ -122,6 +136,7 @@ function newRound() {
     );
   }
 
+  currentFoe = pickFoe();
   const before = new Set(scene.children);
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
@@ -132,13 +147,15 @@ function newRound() {
   });
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 1,
-    name: '상대',
+    name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
     heading: Math.PI,
-    look: LOOKS.enemy,
+    look: currentFoe ? currentFoe.look : LOOKS.enemy,
   });
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
-  ai = new AI(enemy, player, settings.difficulty);
+  // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
+  //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
+  ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, currentFoe.ai.persona) : new AI(enemy, player, settings.difficulty);
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
@@ -326,7 +343,7 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
     el.querySelectorAll('button').forEach((b) =>
       b.addEventListener('click', () => {
         settings[key] = b.dataset.v;
-        if (key === 'difficulty' && ai) ai.setLevel(settings.difficulty);
+        if (key === 'difficulty' && ai && !currentFoe) ai.setLevel(settings.difficulty); // 캐릭터를 골랐으면 그 캐릭터의 난이도를 따로 지킨다
         if (key === 'skill' && player) player.skill.level = +settings.skill;
         saveSettings();
         refreshSettingsUI();
@@ -398,7 +415,7 @@ async function startFight() {
   newRound();
   state = 'fight';
   applyMoveMode();
-  showToast('싸워라!');
+  showToast(currentFoe ? `${currentFoe.name} "${currentFoe.epithet}" — ${currentFoe.taunt}` : '싸워라!', 2600);
   showHint(
     !input.isTouchDevice
       ? '클릭해서 마우스 잠금 · WASD 이동'

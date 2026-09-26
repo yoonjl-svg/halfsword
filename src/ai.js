@@ -47,24 +47,37 @@ const PARRY = {
 };
 
 export class AI {
-  constructor(me, foe, levelName = 'normal') {
+  /**
+   * persona: 캐릭터마다 다른 개성을 주입한다 (characters.js). 안 주면(undefined) 예전과 똑같은
+   * 무작위 성격의 "기본 AI"가 된다 (fights12.mjs 회귀 기준이 그대로 재현되도록, 값을 주지 않은
+   * 항목은 전부 예전과 같은 rand() 호출로 채운다).
+   *  persona.level: AI_LEVELS(난이도) 위에 덮어씌우는 값 (reaction·guardChance·counter·feint·read·strength 등)
+   *  persona.pers:  성격(this.pers) 위에 덮어씌우는 값. guardPref/techPref는 자세·기술 이름별로 부분 지정 가능
+   */
+  constructor(me, foe, levelName = 'normal', persona = null) {
     this.me = me;
     this.foe = foe;
     this.sense = new Senses(me, foe);
+    this.persona = persona || {};
     this.setLevel(levelName);
-    // 성격: 사람마다 다르다 (같은 난이도라도 판마다 다른 검객)
+    // 성격: 사람마다 다르다 (같은 난이도라도 판마다 다른 검객). persona가 정해 둔 값이 있으면 그대로 쓴다
+    const P = this.persona.pers || {};
     const guardPref = {};
-    for (const g of WATCH_GUARDS) guardPref[g.name] = rand(0.4, 1.6);
+    for (const g of WATCH_GUARDS) guardPref[g.name] = P.guardPref && g.name in P.guardPref ? P.guardPref[g.name] : rand(0.4, 1.6);
     const techPref = {};
-    for (const t of TECH) techPref[t.name] = rand(0.6, 1.4);
+    for (const t of TECH) techPref[t.name] = P.techPref && t.name in P.techPref ? P.techPref[t.name] : rand(0.6, 1.4);
     this.pers = {
-      margin: rand(0.2, 0.5), // 간격 밖에 얼마나 여유를 두고 서는지 (m)
-      aggr: rand(0.85, 1.2), // 공격 성향
-      circleDir: Math.random() < 0.5 ? -1 : 1, // 즐겨 도는 방향
-      circleRate: rand(0.15, 0.4), // 옆걸음 빠르기 (천천히: 빙빙 도는 춤이 되지 않게)
-      rhythm: rand(2.4, 4.5), // 자세를 바꾸는 박자 (초). 검객은 한 자세를 차분히 지킨다 (자주 바꾸면 춤추는 것처럼 보인다)
-      vor: rand(0.15, 0.6), // 달려드는 상대를 맞받아 베는 쪽(1)인가, 물러나 헛치게 하는 쪽(0)인가
-      patienceTime: rand(7, 12), // 인내심이 바닥나는 데 걸리는 시간 (초)
+      margin: P.margin ?? rand(0.2, 0.5), // 간격 밖에 얼마나 여유를 두고 서는지 (m)
+      aggr: P.aggr ?? rand(0.85, 1.2), // 공격 성향
+      circleDir: P.circleDir ?? (Math.random() < 0.5 ? -1 : 1), // 즐겨 도는 방향
+      circleRate: P.circleRate ?? rand(0.15, 0.4), // 옆걸음 빠르기 (천천히: 빙빙 도는 춤이 되지 않게)
+      rhythm: P.rhythm ?? rand(2.4, 4.5), // 자세를 바꾸는 박자 (초). 검객은 한 자세를 차분히 지킨다 (자주 바꾸면 춤추는 것처럼 보인다)
+      vor: P.vor ?? rand(0.15, 0.6), // 달려드는 상대를 맞받아 베는 쪽(1)인가, 물러나 헛치게 하는 쪽(0)인가
+      patienceTime: P.patienceTime ?? rand(7, 12), // 인내심이 바닥나는 데 걸리는 시간 (초)
+      // 자세 옮기기 버릇: 새 자세가 지금 자세에서 멀수록 이 값만큼 무겁게 깎인다.
+      //  크면(예: 5) 가까운 자세만 고집하는 신중한 검객, 작으면(예: 0.5) 먼 자세로도 서슴없이 뛰는 변덕스러운 검객
+      guardStick: P.guardStick ?? 2.5,
+      guardSpeed: P.guardSpeed ?? 0.9, // 간 보는 동안 자세를 잡는 손 빠르기 (m/s): 크면 자세를 휙휙 바꾸는 사람, 작으면 느긋한 사람
       guardPref,
       techPref,
     };
@@ -116,7 +129,10 @@ export class AI {
 
   setLevel(name) {
     this.levelName = AI_LEVELS[name] ? name : 'normal';
-    this.level = AI_LEVELS[this.levelName];
+    const base = AI_LEVELS[this.levelName];
+    // persona.level: 반응 시간·막기 확률·읽는 눈·힘 같은 "실력 숫자"를 난이도 기본값 위에 캐릭터별로 덮어쓴다
+    const PL = this.persona?.level;
+    this.level = PL ? { ...base, ...PL } : base;
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
   }
@@ -245,7 +261,7 @@ export class AI {
       this.guard = this.pickGuard(s);
     }
     this.hand.set(this.guard.pad[0], this.guard.pad[1]);
-    this.handSpeed = 0.9; // 천천히 차분하게: 휘두르기로 보이지 않게 (검술 층의 자동 내딛기가 걸리지 않는다)
+    this.handSpeed = this.pers.guardSpeed; // 천천히 차분하게: 휘두르기로 보이지 않게 (검술 층의 자동 내딛기가 걸리지 않는다)
 
     // 기회를 본다 (사람처럼 가끔씩 판단)
     this.decideTimer -= dt;
@@ -301,8 +317,8 @@ export class AI {
       // 인내심이 떨어지면 가장 믿는 기술(분노의 베기)을 준비하는 자세
       const ready = g.name === 'tagR' || g.name === 'ochsR' || g.name === 'tag';
       if (ready) w *= 1 + (1 - this.patience) * 0.8 + this.foeAggro * 2.5 * L.read;
-      // 가까운 자세로 옮기는 것을 좋아한다 (칼을 크게 휘저으며 자세를 바꾸지 않는다)
-      if (this.guard) w /= 1 + 2.5 * Math.hypot(g.pad[0] - this.guard.pad[0], g.pad[1] - this.guard.pad[1]);
+      // 가까운 자세로 옮기는 것을 좋아한다 (칼을 크게 휘저으며 자세를 바꾸지 않는다). guardStick이 클수록 이 버릇이 강하다
+      if (this.guard) w /= 1 + this.pers.guardStick * Math.hypot(g.pad[0] - this.guard.pad[0], g.pad[1] - this.guard.pad[1]);
       w *= rand(0.5, 1.5);
       if (w > bestW) {
         bestW = w;
