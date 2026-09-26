@@ -143,11 +143,21 @@ export class Combat {
     // 투구: 머리 윗부분(눈썹 위)만 덮는다
     const helmet = zone === 'head' && vic.hasHelmet && vicLocal.y > -0.01;
     const A = helmet ? { ...ANATOMY.head, ...ANATOMY.helmet } : ANATOMY[zone];
+    // 막아주는 정도: 투구는 찌그러질수록, 옷은 찢어질수록 약해진다
+    let guard = 1;
+    let helmetBlunt = 1;
+    if (helmet) {
+      const hi = vic.helmetIntegrity;
+      guard = 0.25 + 0.75 * hi;
+      helmetBlunt = ANATOMY.helmet.blunt + (1 - ANATOMY.helmet.blunt) * (1 - hi);
+    } else if (zone !== 'head' && zone !== 'neck') {
+      guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
+    }
 
     let severity = 0;
     let pass = false;
     if (type === 'cut' || type === 'stab') {
-      const thr = type === 'cut' ? A.cut : A.stab;
+      const thr = (type === 'cut' ? A.cut : A.stab) * guard;
       const eff = energy * quality;
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
@@ -171,6 +181,7 @@ export class Combat {
       mEff,
       t,
       helmet,
+      helmetBlunt,
       bladeAxis: axis.clone(),
     };
   }

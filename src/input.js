@@ -5,6 +5,7 @@
 //   - PC: 화면 클릭 → 마우스 잠금. 마우스를 움직이면 칼, WASD(방향키)로 이동.
 // ─────────────────────────────────────────────────────────────
 import { INPUT } from './config.js';
+import { flushHaptic } from './effects.js';
 
 export class Input {
   constructor(canvas) {
@@ -72,6 +73,7 @@ export class Input {
 
   onUp(e) {
     if (e.pointerId === this.activeTouch) this.activeTouch = null;
+    flushHaptic(); // 아이폰: 손가락을 떼는 순간에만 진동이 허락된다
   }
 
   consumeHandDelta() {

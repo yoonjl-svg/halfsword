@@ -2,6 +2,7 @@
 //  타격감 연출: 피/불꽃 입자, 효과음(파일 없이 코드로 합성)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
 
 const MAX = 500;
 
@@ -256,61 +257,190 @@ export class Sound {
 // ─────────────────────────────────────────────────────────────
 let iosLabel = null;
 let lastHaptic = 0;
+let pending = null; // 아이폰: 다음 손가락 떼는 순간 울릴 진동
+
+function iosTap() {
+  if (!iosLabel) {
+    iosLabel = document.createElement('label');
+    iosLabel.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    iosLabel.appendChild(input);
+    document.body.appendChild(iosLabel);
+  }
+  iosLabel.click();
+}
+
 export function haptic(strength = 1) {
   const now = performance.now();
-  if (now - lastHaptic < 60) return; // 너무 잦으면 무시
-  lastHaptic = now;
   try {
     if (navigator.vibrate) {
+      if (now - lastHaptic < 60) return;
+      lastHaptic = now;
       navigator.vibrate(Math.round(10 + 30 * Math.min(1, strength)));
       return;
     }
-    if (!iosLabel) {
-      iosLabel = document.createElement('label');
-      iosLabel.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.setAttribute('switch', '');
-      iosLabel.appendChild(input);
-      document.body.appendChild(iosLabel);
-    }
-    iosLabel.click();
-    // 세게 맞으면 한 번 더 톡
-    if (strength > 0.7) setTimeout(() => iosLabel.click(), 70);
+    // 아이폰 사파리는 손가락이 화면을 누르거나 뗀 "그 순간"에만 진동을 허락한다.
+    // 그래서 예약해 두었다가 곧 손가락을 뗄 때 울린다 (flushHaptic).
+    pending = { strength: Math.max(pending?.strength || 0, strength), until: now + 600 };
   } catch {
     /* 지원 안 하면 조용히 넘어감 */
   }
 }
 
+/** 손가락을 뗄 때(input.js가 부른다) 예약된 진동을 울린다 */
+export function flushHaptic() {
+  if (!pending) return;
+  const p = pending;
+  pending = null;
+  if (performance.now() > p.until) return;
+  try {
+    iosTap();
+    if (p.strength > 0.7) setTimeout(iosTap, 70);
+  } catch {
+    /* 무시 */
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
-//  상처 자국: 맞은 부위에 붙는 핏자국. 부위가 움직이면 같이 움직인다.
+//  흔적(데칼): 상처, 옷 찢김, 번지는 핏자국, 멍, 투구 긁힘/찌그러짐.
+//  그림을 몸 표면에 "투사"해서 붙인다 → 곡면·모서리를 따라 딱 붙고, 부위와 함께 움직인다.
+//  그림은 파일 없이 캔버스에 코드로 그린다.
 // ─────────────────────────────────────────────────────────────
-const woundMat = new THREE.MeshStandardMaterial({ color: 0x5a0606, roughness: 0.4, metalness: 0 });
-const woundMatDark = new THREE.MeshStandardMaterial({ color: 0x2a0303, roughness: 0.6 });
-const bruiseMat = new THREE.MeshStandardMaterial({ color: 0x4a2a44, roughness: 1, transparent: true, opacity: 0.55 });
+const texCache = {};
+function rand(seed) {
+  let x = seed;
+  return () => ((x = (x * 16807) % 2147483647) / 2147483647);
+}
+function texture(kind) {
+  if (texCache[kind]) return texCache[kind];
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const r = rand(kind.length * 977 + 13);
+  const blob = (x, y, rad, color) => {
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, color);
+    gr.addColorStop(1, color.replace(/[\d.]+\)$/, '0)'));
+    g.fillStyle = gr;
+    g.beginPath();
+    g.arc(x, y, rad, 0, Math.PI * 2);
+    g.fill();
+  };
+  if (kind === 'soak') {
+    for (let i = 0; i < 18; i++) blob(64 + (r() - 0.5) * 50, 64 + (r() - 0.5) * 50, 14 + r() * 26, 'rgba(70,4,4,0.55)');
+    blob(64, 64, 34, 'rgba(60,2,2,0.8)');
+  } else if (kind === 'cut' || kind === 'tear') {
+    // 가운데 벌어진 틈(어두움) + 붉은 속살 + 가장자리 번짐
+    for (let i = 0; i < 10; i++) blob(64 + (r() - 0.5) * 16, 10 + i * 11, 12 + r() * 8, 'rgba(90,6,6,0.35)');
+    g.strokeStyle = 'rgba(25,4,4,0.95)';
+    g.lineWidth = kind === 'tear' ? 14 : 8;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(64, 8);
+    for (let y = 8; y <= 120; y += 8) g.lineTo(64 + (r() - 0.5) * 6, y);
+    g.stroke();
+    g.strokeStyle = 'rgba(150,20,15,0.95)';
+    g.lineWidth = kind === 'tear' ? 6 : 3;
+    g.beginPath();
+    g.moveTo(64, 14);
+    g.lineTo(64, 114);
+    g.stroke();
+  } else if (kind === 'stab') {
+    blob(64, 64, 40, 'rgba(90,6,6,0.5)');
+    blob(64, 64, 14, 'rgba(20,2,2,1)');
+  } else if (kind === 'bruise') {
+    for (let i = 0; i < 6; i++) blob(64 + (r() - 0.5) * 30, 64 + (r() - 0.5) * 30, 20 + r() * 18, 'rgba(70,35,70,0.35)');
+  } else if (kind === 'scratch') {
+    g.strokeStyle = 'rgba(245,248,250,0.95)';
+    g.lineWidth = 3;
+    for (let k = 0; k < 3; k++) {
+      g.beginPath();
+      g.moveTo(58 + k * 5 + (r() - 0.5) * 4, 6);
+      g.lineTo(60 + k * 4 + (r() - 0.5) * 4, 122);
+      g.stroke();
+    }
+  } else if (kind === 'dent') {
+    blob(64, 64, 50, 'rgba(20,22,25,0.75)');
+    blob(52, 52, 16, 'rgba(230,235,240,0.5)');
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  texCache[kind] = t;
+  return t;
+}
+function decalMaterial(kind) {
+  const metal = kind === 'scratch' || kind === 'dent';
+  return new THREE.MeshStandardMaterial({
+    map: texture(kind),
+    transparent: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    roughness: metal ? 0.2 : 0.7,
+    metalness: metal ? 0.9 : 0,
+  });
+}
+
+/** 표면 방향(법선) 어림: 상자는 가장 가까운 면, 캡슐은 옆면, 구는 바깥쪽 */
+function surfaceNormal(mesh, p) {
+  const t = mesh.geometry.type;
+  const P = mesh.geometry.parameters || {};
+  if (t === 'BoxGeometry') {
+    const rx = Math.abs(p.x) / (P.width / 2);
+    const ry = Math.abs(p.y) / (P.height / 2);
+    const rz = Math.abs(p.z) / (P.depth / 2);
+    if (rx >= ry && rx >= rz) return new THREE.Vector3(Math.sign(p.x) || 1, 0, 0);
+    if (ry >= rz) return new THREE.Vector3(0, Math.sign(p.y) || 1, 0);
+    return new THREE.Vector3(0, 0, Math.sign(p.z) || 1);
+  }
+  if (t === 'CapsuleGeometry') {
+    const half = (P.height || 0) / 2;
+    if (Math.abs(p.y) > half) return new THREE.Vector3(p.x, p.y - Math.sign(p.y) * half, p.z).normalize();
+    const n = new THREE.Vector3(p.x, 0, p.z);
+    return n.lengthSq() > 1e-8 ? n.normalize() : new THREE.Vector3(1, 0, 0);
+  }
+  const n = p.clone();
+  return n.lengthSq() > 1e-8 ? n.normalize() : new THREE.Vector3(1, 0, 0);
+}
+
+const _Z = new THREE.Vector3(0, 0, 1);
+const _mw = new THREE.Matrix4();
 
 /**
- * @param {THREE.Group} group 부위 그룹
- * @param {THREE.Vector3} local 부위 기준 접촉점
- * @param {THREE.Vector3} bladeLocal 부위 기준 칼날 방향(베인 자국이 이 방향으로 길게 남는다)
+ * 메쉬 표면에 흔적을 붙인다.
+ * @param {THREE.Mesh} mesh 대상(부위의 옷/피부 메쉬)
+ * @param {THREE.Vector3} p  메쉬 기준 위치
+ * @param {THREE.Vector3|null} along 메쉬 기준 방향 — 베인 자국이 이 방향으로 길게 남는다
+ * @param {number} w,h 크기(m)
  */
-export function addWoundMark(group, local, bladeLocal, type, severity, bloodOn = true) {
-  let mesh;
-  if (type === 'blunt') {
-    if (severity < 0.01) return;
-    mesh = new THREE.Mesh(new THREE.SphereGeometry(0.025 + severity * 0.02, 8, 6), bruiseMat);
-    mesh.scale.set(1, 1, 0.3);
-  } else if (type === 'stab') {
-    mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.01, 10), bloodOn ? woundMatDark : bruiseMat);
-    mesh.rotation.x = Math.PI / 2;
-  } else {
-    const len = Math.min(0.2, 0.05 + severity * 0.12);
-    mesh = new THREE.Mesh(new THREE.BoxGeometry(0.008 + Math.min(0.012, severity * 0.01), len, 0.012), bloodOn ? woundMat : bruiseMat);
-    // 칼날 방향으로 길게
-    const d = bladeLocal.clone().normalize();
-    if (d.lengthSq() > 0.5) mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d);
+export function stickDecal(mesh, p, along, kind, w, h) {
+  const n = surfaceNormal(mesh, p);
+  const q = new THREE.Quaternion().setFromUnitVectors(_Z, n);
+  if (along) {
+    const xA = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    const yA = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+    const b = along.clone().addScaledVector(n, -along.dot(n));
+    if (b.lengthSq() > 1e-6) q.multiply(new THREE.Quaternion().setFromAxisAngle(_Z, Math.atan2(-b.dot(xA), b.dot(yA))));
   }
-  // 옷/피부 겉면으로 살짝 띄운다 (충돌 모양보다 옷이 약간 두껍다)
-  mesh.position.copy(local).addScaledVector(local.clone().normalize(), 0.012);
-  group.add(mesh);
+  const decal = new THREE.Mesh(new THREE.BufferGeometry(), decalMaterial(kind));
+  decal.userData = { mesh, p: p.clone(), rot: new THREE.Euler().setFromQuaternion(q), kind, w, h };
+  rebuildDecal(decal, w, h);
+  mesh.add(decal);
+  return decal;
+}
+
+/** 크기를 바꿔 다시 투사 (핏자국이 번질 때) */
+export function rebuildDecal(decal, w, h) {
+  const { mesh, p, rot } = decal.userData;
+  // 메쉬 자기 좌표계에서 투사하려고 잠깐 월드 행렬을 단위행렬로 바꾼다
+  _mw.copy(mesh.matrixWorld);
+  mesh.matrixWorld.identity();
+  const geo = new DecalGeometry(mesh, p, rot, new THREE.Vector3(w, h, Math.max(w, h) * 1.5 + 0.05));
+  mesh.matrixWorld.copy(_mw);
+  decal.geometry.dispose();
+  decal.geometry = geo;
+  decal.userData.w = w;
+  decal.userData.h = h;
 }

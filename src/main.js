@@ -9,7 +9,7 @@ import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
-import { Particles, Sound, haptic, addWoundMark } from './effects.js';
+import { Particles, Sound, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Combat } from './combat.js';
 
 await RAPIER.init();
@@ -181,12 +181,12 @@ function newRound() {
   combat = new Combat(colliderInfo, { onWound, onClash });
   roundOver = false;
   roundOverTime = 0;
+  camFollow.copy(player.pelvisPos);
   hitStop = 0;
 }
 
 // ── 타격감 ──
 let hitStop = 0; // 큰 타격 때 아주 잠깐 멈칫하는 연출
-let shake = 0;
 let clashCooldown = 0;
 let slowMo = 0; // 결정타 슬로모션 남은 시간
 
@@ -202,15 +202,35 @@ function onWound(att, vic, r, point, pr) {
   const opened = r.type !== 'blunt' && r.severity > 0;
   // 피: 벤 방향으로 흩뿌림
   if (opened) particles.blood(point, r.dir, 6 + r.severity * 40, r.speed);
-  // 상처 자국 (부위에 붙어서 같이 움직인다)
-  const group = vic.groups[pr.v.part];
-  if (group) {
+  // 흔적 (몸 표면에 붙어서 같이 움직인다)
+  const mesh = vic.partMesh[pr.v.part];
+  if (mesh) {
     const q = new THREE.Quaternion();
     const rr = pr.v.body.rotation();
     q.set(rr.x, rr.y, rr.z, rr.w).invert();
     const bladeLocal = r.bladeAxis.clone().applyQuaternion(q);
-    addWoundMark(group, r.local, bladeLocal, r.type, r.type === 'blunt' ? e / 150 : r.severity, settings.blood);
+    const clothed = r.zone !== 'head' && r.zone !== 'neck';
+    const sev = r.severity;
+    if (r.helmet && vic.helmetGroup) {
+      // 투구: 긁힘, 세면 찌그러짐 (벗겨지면 투구와 함께 날아간다)
+      const dome = vic.helmetGroup.children[0];
+      const p = r.local.clone().sub(dome.position);
+      stickDecal(dome, p, bladeLocal, 'scratch', 0.03, Math.min(0.16, 0.04 + e / 1200));
+      if (e > 60) stickDecal(dome, p, null, 'dent', 0.03 + Math.min(0.05, e / 4000), 0.03 + Math.min(0.05, e / 4000));
+    } else if (!opened) {
+      if (e > 15) stickDecal(mesh, r.local, null, 'bruise', 0.05 + Math.min(0.08, e / 1500), 0.05 + Math.min(0.08, e / 1500));
+    } else if (settings.blood) {
+      const len = Math.min(0.24, 0.06 + sev * 0.14);
+      if (r.type === 'stab') stickDecal(mesh, r.local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
+      else stickDecal(mesh, r.local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len);
+      // 피가 옷에 번진다 (상처에서 계속 흐르는 만큼)
+      const wound = vic.wounds[vic.wounds.length - 1];
+      if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, r.local, null, 'soak', 0.04, 0.04);
+    } else {
+      stickDecal(mesh, r.local, bladeLocal, 'bruise', 0.03, 0.08);
+    }
   }
+  if (opened) att.bloodyBlade(0.08 + r.severity * 0.15);
   // 소리
   if (r.helmet) sound.clash(Math.min(20, e / 6));
   if (r.type === 'cut') sound.cut(e, r.pass);
@@ -219,7 +239,8 @@ function onWound(att, vic, r, point, pr) {
   if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet) sound.bone(e);
   // 멈칫 + 흔들림 (에너지에 비례)
   hitStop = Math.max(hitStop, Math.min(0.12, e / 900));
-  shake = Math.max(shake, Math.min(0.35, e / 400));
+  // 카메라가 칼이 지나간 방향으로 밀린다 (내가 맞으면 더 크게)
+  kickCamera(r.dir, Math.min(1.6, e / 120) * (vic === player ? 1.4 : 0.6));
   if (att === player || vic === player) haptic(e / 120);
   if (!vic.alive) slowMo = 1.6;
 }
@@ -230,7 +251,7 @@ function onClash(point, speed) {
   stats.clashes++;
   particles.sparks(point, speed);
   sound.clash(speed);
-  shake = Math.max(shake, Math.min(0.15, speed / 80));
+  kickCamera(new THREE.Vector3((Math.random() - 0.5), 0.3, (Math.random() - 0.5)).normalize(), Math.min(0.6, speed / 25));
   haptic(Math.min(1, speed / 15));
 }
 
@@ -252,6 +273,12 @@ function updateWhoosh(f, dt) {
 const _wp = new THREE.Vector3();
 function updateDrips(f, dt) {
   for (const w of f.wounds) {
+    // 옷에 번지는 핏자국: 흘린 피만큼 커진다 (가끔씩 다시 투사)
+    if (w.soak) {
+      w.soaked = (w.soaked || 0) + w.bleed * dt;
+      const size = Math.min(0.26, 0.04 + Math.sqrt(w.soaked) * 0.9);
+      if (size > w.soak.userData.w * 1.12) rebuildDecal(w.soak, size, size * 1.3);
+    }
     if (w.bleed < 0.001) continue;
     if (Math.random() < w.bleed * dt * 900) {
       const g = f.groups[w.part];
@@ -453,14 +480,22 @@ function checkRoundEnd(dt) {
 }
 
 // ── 카메라: 내 캐릭터 오른쪽 어깨 너머에서 상대를 바라본다 ──
+//  흔들림은 "스프링에 매단 카메라"로 계산한다: 충격이 오면 그 방향으로 밀렸다가 부드럽게 제자리로.
+//  (예전처럼 매 프레임 무작위로 떨지 않는다)
+const camShake = { o: new THREE.Vector3(), v: new THREE.Vector3() };
+function kickCamera(dir, strength) {
+  camShake.v.addScaledVector(dir, strength);
+}
 const camTarget = new THREE.Vector3();
+const camFollow = new THREE.Vector3();
 const camLook = new THREE.Vector3();
 const camDir = new THREE.Vector3(1, 0, 0);
 const _cd = new THREE.Vector3();
 function updateCamera(dt) {
   if (!player || window.game?.freeCam) return; // freeCam: 디버그용으로 카메라를 직접 조종
-  const a = player.pelvisPos;
-  const b = enemy.pelvisPos;
+  // 흔들리는 골반 대신 몸 전체 무게중심을 부드럽게 따라간다
+  const a = camFollow.lerp(player.com || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
+  const b = enemy.com || enemy.pelvisPos;
   // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지)
   _cd.set(b.x - a.x, 0, b.z - a.z);
   if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
@@ -477,12 +512,18 @@ function updateCamera(dt) {
   camera.position.lerp(camTarget, k);
   const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1);
   camLook.lerp(look, k);
-  if (shake > 0) {
-    camera.position.x += (Math.random() - 0.5) * shake;
-    camera.position.y += (Math.random() - 0.5) * shake;
-    shake = Math.max(0, shake - dt * 1.5);
+  // 발걸음: 디딜 때 살짝 내려앉음
+  if (player.footstep > 0) {
+    camShake.v.y -= CAMERA.stepBob * 12 * player.footstep;
+    player.footstep = 0;
   }
+  // 스프링 흔들림 적분 (단단함 170, 감쇠 13)
+  const h = Math.min(dt, 1 / 30);
+  camShake.v.addScaledVector(camShake.o, -170 * h).multiplyScalar(Math.max(0, 1 - 13 * h));
+  camShake.o.addScaledVector(camShake.v, h);
+  camera.position.add(camShake.o);
   camera.lookAt(camLook);
+  camera.position.sub(camShake.o); // 다음 프레임 따라가기는 흔들림 없는 위치 기준
   sun.position.set(a.x + 4, 9, a.z + 3);
   sun.target.position.set(a.x, 0, a.z);
 }

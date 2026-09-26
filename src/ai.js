@@ -152,10 +152,11 @@ export class AI {
       this.circle = Math.random() < 0.6 ? (Math.random() < 0.5 ? -0.7 : 0.7) : 0; // 옆걸음
     }
     let fwd = 0;
+    // 거리에 비례해 다가가고 물러난다 (빨리 달려들다 상대 칼끝에 찔리지 않게)
     // 평소엔 상대 칼끝이 닿지 않는 거리(간격 밖)에서 기다리고, 칠 때만 한 걸음 들어간다
     const want = this.phase === 'strike' || this.phase === 'windup' ? 1.35 : 1.95;
-    if (dist > want + 0.15) fwd = 1;
-    else if (dist < want - 0.35) fwd = -0.7;
+    if (dist > want + 0.15) fwd = THREE.MathUtils.clamp((dist - want) * 1.2, 0.25, 1);
+    else if (dist < want - 0.3) fwd = -THREE.MathUtils.clamp((want - dist) * 1.5, 0.3, 0.8);
     else fwd = this.shuffle;
     let side = dist < 2.5 && this.phase !== 'strike' ? this.circle || 0 : 0;
     if (!foe.alive) fwd = side = 0;

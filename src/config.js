@@ -21,6 +21,8 @@ export const CAMERA = {
   height: 2.3, // 카메라 높이
   shoulder: 0.9, // 오른쪽 어깨 너머로 비켜선 정도 → 내 캐릭터는 화면 왼쪽, 상대는 가운데
   fov: 55,
+  follow: 5, // 따라가는 빠르기. 작을수록 부드럽게(흔들리는 골반을 그대로 따라가지 않는다)
+  stepBob: 0.012, // 발을 디딜 때 카메라가 살짝 내려앉는 정도(m)
   lookAhead: 2.2, // 내 앞쪽 얼마나 먼 곳을 화면 가운데로 볼지
 };
 
@@ -29,27 +31,32 @@ export const BODY = {
   support: 1.0, // 골반을 떠받치는 힘(중력 대비 배수)
   supportStiffness: 2600, // 골반 높이 스프링 강도
   supportDamping: 260,
-  uprightStiffness: 900, // 몸을 똑바로 세우는 회전 힘
-  uprightDamping: 90,
-  moveSpeed: 1.5, // 걷는 최고 속도 (m/s)
-  stepLength: 0.42, // 한 걸음 보폭(m). 다리 흔드는 속도가 이동 거리와 딱 맞게 계산된다.
+  uprightStiffness: 2500, // 몸을 똑바로 세우는 힘 (평형감각, N·m/rad)
+  uprightDamping: 330, // 감쇠: 출렁이지 않고 딱 멈추는 값(감쇠비 ≈ 1)
+  uprightAssist: 1.0, // 위 보조 힘의 비율
+  footReaction: 0, // 체중·추진력의 반작용을 발에 싣는 비율 (실험 중: 1이면 걷다 넘어진다)
+  accelLean: 0.6, // 가속할 때 앞으로 숙이는 정도 (1 = 물리적으로 딱 맞는 각도)
+  moveSpeed: 2.5, // 걷는 최고 속도 (m/s). 보폭이 커서 빨라진다 (발 빠르기는 그대로)
+  stepLength: 0.68, // 한 걸음 보폭(m). 성큼성큼. 다리 흔드는 속도가 이동 거리와 딱 맞게 계산된다.
   turnSpeed: 2.4, // 상대 쪽으로 몸을 돌리는 최고 속도 (라디안/초)
-  moveAccel: 9, // 걷기 가속 정도
+  moveAccel: 11, // 걷기 가속 정도 (클수록 발놀림이 민첩)
+  maxAccel: 4.5, // 발로 땅을 밀어 낼 수 있는 최대 가속(m/s²). 사람은 대략 중력의 0.4~0.5배
   fallTiltDeg: 55, // 몸이 이 각도 이상 기울면 넘어진다
   fallDuration: 2.2, // 넘어진 뒤 일어나기 시작할 때까지 (초)
   getUpDuration: 1.2, // 일어나는 데 걸리는 시간 (초)
 };
 
 export const WEAPON = {
-  mass: 1.6, // 롱소드 무게(kg). 올리면 묵직하고 느려진다.
+  mass: 1.8, // 롱소드 무게(kg). 올리면 묵직하고 느려진다.
   length: 1.05, // 칼날 길이
   handStiffness: 1200, // 손이 목표 위치를 따라가는 스프링 강도
   handDamping: 60,
-  maxHandForce: 480, // 팔 힘의 한계. 낮추면 무기가 더 무겁게 느껴진다.
-  maxHandSpeed: 8, // 손이 낼 수 있는 최고 속도(m/s). 사람 손은 대략 8~10.
-  aimStiffness: 70, // 칼끝 방향을 맞추는 회전 힘 (손목 힘). 낮을수록 칼이 관성대로 따라온다
-  aimDamping: 5,
-  maxAimTorque: 90,
+  maxHandForce: 400, // 팔 힘의 한계. 낮추면 무기가 더 무겁게 느껴진다.
+  maxHandSpeed: 7.5, // 손이 낼 수 있는 최고 속도(m/s). 사람 손은 대략 8~10.
+  aimStiffness: 45, // 칼끝 방향을 맞추는 회전 힘 (손목 힘). 낮을수록 칼이 관성대로 따라온다
+  aimDamping: 3.5,
+  maxAimTorque: 60,
+  bodyReaction: 1.0, // 휘두르는 힘의 반작용이 몸통에 전해지는 비율 (1 = 물리 그대로)
   reach: 0.62, // 어깨에서 손까지 최대 거리
 };
 
@@ -72,7 +79,7 @@ export const STRIKE = {
 //  bleed:    상처 심각도 1당 초당 출혈량(전체 피의 비율)
 export const ANATOMY = {
   head: { cut: 30, stab: 20, absorb: 140, bleed: 0.03 },
-  neck: { cut: 12, stab: 10, absorb: 45, bleed: 0.2 },
+  neck: { cut: 24, stab: 16, absorb: 45, bleed: 0.2 }, // 누비 상의 깃이 조금 막아준다
   chest: { cut: 45, stab: 25, absorb: 110, bleed: 0.025 },
   pelvis: { cut: 40, stab: 22, absorb: 100, bleed: 0.02 },
   arm: { cut: 22, stab: 18, absorb: 45, bleed: 0.012 },
@@ -84,7 +91,7 @@ export const VITALS = {
   collapseBlood: 0.45, // 피가 이 비율 아래로 떨어지면 쓰러져 죽는다
   weakBlood: 0.8, // 이 아래부터 힘이 빠지기 시작
   clotting: 0.12, // 출혈이 초당 이만큼(비율) 줄어든다 (피가 굳음)
-  concussionPerJoule: 1 / 80, // 머리 둔기 충격 1J당 의식 감소
+  concussionPerJoule: 1 / 140, // 머리 둔기 충격 1J당 의식 감소
   dropSwordArm: 0.15, // 칼 든 팔 기능이 이 아래면 칼을 놓친다
   staggerPerJoule: 0.5, // 맞은 에너지 1J당 균형 게이지 감소
   balanceRegen: 22, // 초당 균형 게이지 회복
