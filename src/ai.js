@@ -86,6 +86,8 @@ export class AI {
     this.circleTimer = rand(0.5, 1.5);
     this.threatId = 0; // 상대 공격 번호 (한 공격에 한 번만 판단)
     this.threatSeen = -1;
+    this.readRollId = -1; // '위험을 알아챘나' 판단도 한 공격에 한 번만 굴린다 (매 스텝 다시 굴리면 사실상 항상 알아채게 된다)
+    this.readRollOk = false;
     this.preArmed = true; // "치려는 낌새"에 새로 반응할 수 있나 (한 번 몰아칠 때 한 번만 판단)
     this.preOff = 1;
     this.noThreat = 1; // 위험이 없던 시간
@@ -450,7 +452,7 @@ export class AI {
       this.hand.set(t.from[0], t.from[1]);
       this.handSpeed = this.fastChamber ? L.parrySpeed : L.chamberSpeed;
       // 준비하는 동안 상대 칼이 들어오면: 숙련자는 공격을 거두고 막는다
-      if (th && Math.random() < L.read && this.respond(th, d)) return;
+      if (th && this.noticedThreat(th) && this.respond(th, d)) return;
       if (padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
         this.phase = 'approach';
         this.timer = this.quick ? 0 : L.windup * 0.25; // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
@@ -469,7 +471,7 @@ export class AI {
         return;
       }
 
-      if (th && Math.random() < L.read && this.respond(th, d)) return;
+      if (th && this.noticedThreat(th) && this.respond(th, d)) return;
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
       if (this.attackT > (this.chasing ? 3 : 1.4) || d > this.holdDist() + (this.chasing ? 1.4 : 0.8)) this.abortAttack();
     } else if (this.phase === 'strike') {
@@ -624,6 +626,18 @@ export class AI {
     }
     if (s.hy < -0.2) return s.hx >= 0 ? PARRY.lowL : PARRY.lowR;
     return G.langort; // 가운데: 칼끝으로 겨누고 있는다
+  }
+
+  /**
+   * 공격 중에 상대 칼이 들어오는 걸 알아챘나: 같은 공격(threat id) 동안엔 한 번만 굴린다.
+   * (매 물리 스텝마다 다시 굴리면 0.3초쯤 되는 베기 동안 수십 번 굴리는 셈이라 사실상 항상 알아채게 된다)
+   */
+  noticedThreat(th) {
+    if (th.id !== this.readRollId) {
+      this.readRollId = th.id;
+      this.readRollOk = Math.random() < this.level.read;
+    }
+    return this.readRollOk;
   }
 
   // ───────────────────────── 막기 ─────────────────────────
