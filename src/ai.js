@@ -826,8 +826,9 @@ export class AI {
       off.set(tx, ty);
       if (striking) {
         this.path.shift();
-        // 속임수의 가짜 부분이 끝났다 → 칼이 가짜 쪽으로 움직이는 것이 보이도록 잠깐 두었다가 진짜 길로 간다
-        if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = 0.14;
+        // 속임수의 가짜 부분이 끝났다 → 칼이 가짜 쪽으로 움직이는 것이 보이도록 잠깐 두었다가 진짜 길로 간다.
+        //  너무 오래 멈추면 진짜 칼이 나가기까지 전체 시간이 늘어져 오히려 읽히기 쉽다. 숙련될수록 더 빨리 다시 챔버한다
+        if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = clamp(0.16 - 0.08 * this.level.read, 0.06, 0.16);
       }
     }
     if (off.length() > 0.62) off.setLength(0.62);
