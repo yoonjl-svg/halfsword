@@ -78,10 +78,10 @@ export const TECH = [
 //  상대가 가짜에 칼을 들어 막으려 하면, 그 사이 비워진 곳으로 들어간다.
 export const FEINTS = [
   // 정수리를 치는 척 → 칼을 오른쪽 아래로 틀어 다리를 벤다
-  { name: '위→다리', fake: 'oberhau', at: 0.4, then: [[0.22, -0.1], G.wechselR], open: 'LL' },
+  { name: '위→다리', fake: 'oberhau', at: 0.55, then: [[0.22, -0.1], G.wechselR], open: 'LL' },
   // 분노의 베기를 하는 척 → 칼을 머리 위로 넘겨(Umschlagen) 반대쪽 어깨에서 벤다
-  { name: '오른쪽→왼쪽', fake: 'zornhau', at: 0.35, then: [[-0.12, 0.5], G.tagL, [-0.1, 0.14], G.wechselR], open: 'UR' },
-  { name: '왼쪽→오른쪽', fake: 'zornhauL', at: 0.35, then: [[0.12, 0.5], G.tagR, [0.12, 0.14], G.wechselL], open: 'UL' },
+  { name: '오른쪽→왼쪽', fake: 'zornhau', at: 0.45, then: [[-0.12, 0.5], G.tagL, [-0.1, 0.14], G.wechselR], open: 'UR' },
+  { name: '왼쪽→오른쪽', fake: 'zornhauL', at: 0.45, then: [[0.12, 0.5], G.tagR, [0.12, 0.14], G.wechselL], open: 'UL' },
   // 얼굴을 찌르는 척 → 칼을 오른쪽 어깨로 당겨 분노의 베기
   { name: '찌르기→베기', fake: 'stichPflug', at: 0.6, then: [G.tagR, [0.12, 0.14], G.wechselL], open: 'UL' },
 ];

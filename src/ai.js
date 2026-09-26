@@ -61,8 +61,9 @@ export class AI {
       margin: rand(0.2, 0.5), // 간격 밖에 얼마나 여유를 두고 서는지 (m)
       aggr: rand(0.85, 1.2), // 공격 성향
       circleDir: Math.random() < 0.5 ? -1 : 1, // 즐겨 도는 방향
-      circleRate: rand(0.25, 0.6),
+      circleRate: rand(0.15, 0.4), // 옆걸음 빠르기 (천천히: 빙빙 도는 춤이 되지 않게)
       rhythm: rand(1.2, 3.0), // 자세를 바꾸는 박자 (초)
+      vor: rand(0.15, 0.6), // 달려드는 상대를 맞받아 베는 쪽(1)인가, 물러나 헛치게 하는 쪽(0)인가
       patienceTime: rand(7, 12), // 인내심이 바닥나는 데 걸리는 시간 (초)
       guardPref,
       techPref,
@@ -94,6 +95,7 @@ export class AI {
     this.bound = false;
     this.feint = null;
     this.feintPts = 0;
+    this.feintHold = 0;
     this.chain = 0;
     this.stepT = 0; // 베며 내딛는 남은 시간
     this.stepDelay = 0;
@@ -369,10 +371,11 @@ export class AI {
       if (cls.online) fit *= t.presses ? 1.5 : t.kind === 'thrust' ? 0.5 : 0.9;
       if (why === 'finish') fit *= up ? 1.5 : 0.6; // 쓰러진 상대: 위에서 내려친다
       if (why === 'windup' || why === 'stepin') fit *= t.fast ? 1.6 : 1; // 짧은 순간: 빠른 기술
+      if (why === 'stop') fit *= t.presses ? 2 : t.kind === 'thrust' ? 0.3 : 1; // 달려드는 몸을 맞받는다: 무거운 베기
       w *= Math.pow(fit, 0.3 + 0.7 * L.read);
       // 준비 자세가 멀면 크게 들어 올려야 한다 (속내가 드러나고 늦다) → 짧은 기회일수록 지금 자세에서 바로 친다
       const cd = padDist(hand, t.from);
-      const quick = why === 'recover' || why === 'stepin' || why === 'windup' || why === 'riposte';
+      const quick = why === 'recover' || why === 'stepin' || why === 'windup' || why === 'riposte' || why === 'stop';
       w *= Math.exp(-cd / ((quick ? 0.3 : 0.55) + 0.4 * (1 - L.read)));
       const noise = 0.2 + 0.5 * (1 - L.read);
       w *= rand(1 - noise, 1 + noise);
@@ -442,7 +445,8 @@ export class AI {
       this.hand.set(t.from[0], t.from[1]);
       this.timer -= dt;
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
-      this.need = MEASURE.contact + t.reach + 0.05;
+      // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
+      this.need = MEASURE.contact + t.reach + 0.05 + (this.why === 'stop' ? 0.2 : 0);
       if (this.timer <= 0 && this.contactDist() <= this.need) {
         this.startStrike();
         return;
@@ -461,7 +465,8 @@ export class AI {
     } else if (this.phase === 'follow') {
       this.timer -= dt;
       this.checkBind();
-      if (this.timer <= 0) this.afterStrike(d);
+      // 칼이 다 지나가고(칼끝이 느려지고) 나서 다음을 정한다
+      if ((this.timer <= 0 && me.tipVel.length() < 6) || this.timer < -0.2) this.afterStrike(d);
     }
   }
 
@@ -500,6 +505,7 @@ export class AI {
 
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */
   stepTime() {
+    if (this.why === 'stop') return 0; // 상대가 달려오고 있다: 내가 들어갈 필요가 없다 (옆으로 비켜 선다)
     const short = this.contactDist() - MEASURE.contact - this.tech.reach;
     return clamp(short * 0.8, 0, 0.3);
   }
@@ -630,7 +636,7 @@ export class AI {
     this.defVoid = Math.random() < (edge || th.thrust ? 0.8 : 0.3);
     if (this.defVoid) this.stats.voids++;
     else this.stats.parries++;
-    this.timer = 0.55;
+    this.timer = 0.65;
     return true;
   }
 
@@ -642,8 +648,9 @@ export class AI {
     this.hand.set(p[0], p[1]);
     this.handSpeed = this.defVoid ? L.parrySpeed * 0.6 : L.parrySpeed;
     this.checkBind();
-    // 공격이 지나갔다 → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
-    if ((this.noThreat > 0.12 && this.timer < 0.35) || this.timer <= 0) {
+    // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
+    const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
+    if ((swingOver && this.timer < 0.35) || this.timer <= 0) {
       if (d < MEASURE.reach + 0.25 && d > MEASURE.clinch + 0.1 && this.foe.alive && Math.random() < L.followUp) {
         this.startAttack(this.pickTech(s, 'recover'), 'riposte', { noFeint: true });
       } else this.startWithdraw(0.6);
@@ -707,8 +714,15 @@ export class AI {
     const thrust = along > 0.75;
     let line;
     if (thrust) line = 'thrust';
-    else if (hit.hy > -0.1) line = lat > 0.12 ? 'highR' : lat < -0.12 ? 'highL' : 'highC';
-    else line = lat >= 0 ? 'lowR' : 'lowL';
+    else {
+      // 베기가 어느 쪽에서 올지는 칼끝을 내다보는 것보다 "어디서 칼을 들었었나"(준비 자세)가 더 확실하다.
+      //  상대가 칼을 자기 오른쪽 위에 들었다가 휘두르면 내 왼쪽 위로 온다
+      const ch = this.sense.seen(this.level.reaction + 0.15);
+      if (ch.hy > 0.15) line = ch.hx > 0.15 ? 'highL' : ch.hx < -0.15 ? 'highR' : 'highC';
+      else if (ch.hy < -0.2) line = ch.hx >= 0 ? 'lowL' : 'lowR';
+      else if (hit.hy > -0.1) line = lat > 0.12 ? 'highR' : lat < -0.12 ? 'highL' : 'highC';
+      else line = lat >= 0 ? 'lowR' : 'lowL';
+    }
     return { id: this.threatId, line, thrust };
   }
 
@@ -730,12 +744,14 @@ export class AI {
     this.preOff = 0;
     if (!this.preArmed) return false;
     this.preArmed = false; // 한 번 몰아칠 때 한 번만 판단한다
-    if (Math.random() > L.guardChance) return false; // 못 읽었다
-    // 달려드는 상대는 물러나도 따라잡힌다 (뒷걸음이 더 느리다) → 들어오는 순간을 맞받아 벤다 (Vor).
+    // 달려드는 것은 누구나 알아본다. 제자리에서 칼을 드는 낌새는 숙련될수록 잘 읽는다
+    if (Math.random() > (charging ? Math.max(0.9, L.guardChance) : L.guardChance)) return false;
+    // 달려드는 상대: 성격에 따라 들어오는 순간을 맞받아 베거나(Vor), 한 걸음 물러나 헛치게 한 뒤 친다(Nach).
+    //  (물리로 재 보면 둘이 비슷하다: 맞받으면 서로 베일 때가 많고, 물러나면 첫 칼은 피하지만 붙은 싸움이 된다)
     // 제자리에서 칼을 드는 상대는 한 걸음 물러나 헛치게 하거나, 드는 순간을 먼저 친다
-    const strike = charging ? Math.random() < 0.45 + 0.5 * L.read : d < MEASURE.reach + 0.3 && Math.random() < L.counter + 0.15;
+    const strike = charging ? Math.random() < this.pers.vor : d < MEASURE.reach + 0.3 && Math.random() < L.counter + 0.15;
     if (strike) {
-      const t = this.pickTech(s, 'stepin');
+      const t = this.pickTech(s, charging ? 'stop' : 'windup');
       if (t) {
         this.stats.preempts++;
         return this.startAttack(t, 'stop', { noFeint: true, fastChamber: true });
@@ -750,6 +766,11 @@ export class AI {
   /** 손을 목표 쪽으로 제한 속도로 옮긴다 (AI가 순간적으로 칼을 옮기지 못하게) */
   moveHand(dt) {
     const off = this.me.handOffset;
+    if (this.feintHold > 0) {
+      this.feintHold -= dt;
+      if (this.feintHold <= 0) this.stepT = this.stepTime(); // 이제 진짜로 내디디며 친다
+      return;
+    }
     const striking = this.mode === 'attack' && this.phase === 'strike' && this.path.length > 0;
     let tx = this.hand.x;
     let ty = this.hand.y;
@@ -770,8 +791,8 @@ export class AI {
       off.set(tx, ty);
       if (striking) {
         this.path.shift();
-        // 속임수의 가짜 부분이 끝났다 → 이제 진짜로 내디디며 친다
-        if (this.feintPts > 0 && --this.feintPts === 0) this.stepT = this.stepTime();
+        // 속임수의 가짜 부분이 끝났다 → 칼이 가짜 쪽으로 움직이는 것이 보이도록 잠깐 두었다가 진짜 길로 간다
+        if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = 0.14;
       }
     }
     if (off.length() > 0.62) off.setLength(0.62);
@@ -841,7 +862,7 @@ export class AI {
       if (this.circleTimer <= 0) {
         this.circleTimer = rand(0.8, 2.2);
         const x = Math.random();
-        this.circle = x < 0.3 ? 0 : (x < 0.8 ? this.pers.circleDir : -this.pers.circleDir) * this.pers.circleRate;
+        this.circle = x < 0.45 ? 0 : (x < 0.85 ? this.pers.circleDir : -this.pers.circleDir) * this.pers.circleRate;
       }
       if (d < hold + 0.6) side = this.circle;
     }
