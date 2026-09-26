@@ -140,6 +140,9 @@ export const SKILL = {
   lungeMax: 2.4, // 이 거리보다 가까우면 휘두르며 한 걸음 내딛는다
   lungeTime: 0.3, // 내딛는 시간(초)
   lungeMove: 0.9, // 내딛는 세기 (조이스틱 앞으로 민 정도와 같은 단위)
+  homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
+  recoverDelay: 0.25, // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
+  recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)
 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

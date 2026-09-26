@@ -11,6 +11,8 @@
 //   2) 검술 자세(guards.js): 손가락 위치를 실제 롱소드 자세로 바꾼다. 몸(골반·가슴)은 손보다 먼저
 //      자세를 따라가서, 베기를 시작하면 허리 → 가슴 → 팔 → 칼 순서로 힘이 이어진다 (fighter.updateBodyPose)
 //   3) 내딛기: 알맞은 간격에서 휘두르기 시작하면 앞발을 내딛으며 벤다
+//   4) 자세로 돌아가기: 베기를 마치고 손가락을 떼면(마우스는 잠깐 멈추면) 교본의 기본 자세(쟁기)로 칼을 되돌린다.
+//      숙련된 검사는 베고 나서 칼을 아무 데나 두지 않고 곧바로 자세를 잡는다. (플레이어만. AI는 스스로 자세를 고른다)
 //
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
@@ -30,6 +32,10 @@ export class Skill {
     this.quiet = 1; // 손이 느리게 움직인 시간 (새 휘두르기 시작 판단용)
     this.lunge = 0; // 내딛는 중 남은 시간
     this.swings = 0;
+    this.autoGuard = false; // 플레이어만 true (main.js)
+    this.cutPending = false; // 베기를 했고 아직 자세로 돌아가지 않음
+    this.idle = 0; // 손가락(마우스)이 움직이지 않은 시간
+    this.recovering = false;
   }
 
   update(dt) {
@@ -77,6 +83,35 @@ export class Skill {
       if (d > SKILL.lungeMin && d < SKILL.lungeMax) this.lunge = SKILL.lungeTime;
     }
     this.quiet = swinging ? 0 : this.quiet + dt;
+
+    // 4) 자세로 돌아가기
+    if (swinging) {
+      this.cutPending = true;
+      this.recovering = false;
+    }
+    this.idle = f.inputActive ? 0 : this.idle + dt;
+    const canRecover = this.autoGuard && L >= 0.35 && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel');
+    if (canRecover && this.cutPending && !swinging && !f.handHeld && this.idle > SKILL.recoverDelay) {
+      this.recovering = true;
+      this.cutPending = false;
+    }
+    if (this.recovering) {
+      if (f.inputActive || !canRecover) this.recovering = false; // 다시 조작하면 바로 조작이 우선
+      else {
+        const hx = SKILL.homeGuard[0] - off.x;
+        const hy = SKILL.homeGuard[1] - off.y;
+        const d = Math.hypot(hx, hy);
+        // 휘두르기로 오인되지 않게 휘두르기 기준 속도보다 느리게 옮긴다
+        const step = SKILL.recoverSpeed * dt;
+        if (d <= step) {
+          off.set(SKILL.homeGuard[0], SKILL.homeGuard[1]);
+          this.recovering = false;
+        } else {
+          off.x += (hx / d) * step;
+          off.y += (hy / d) * step;
+        }
+      }
+    }
     if (this.lunge > 0) {
       this.lunge -= dt;
       // 물러나려는 중이면 내딛지 않는다 (조작이 우선)

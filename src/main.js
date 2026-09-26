@@ -136,6 +136,7 @@ function newRound() {
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   ai = new AI(enemy, player, settings.difficulty);
   player.skill.level = +settings.skill;
+  player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
   roundOver = false;
   roundOverTime = 0;
@@ -539,6 +540,9 @@ function frame(now) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
+    // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
+    player.handHeld = input.activeTouch !== null;
+    player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
     const m = input.move;
     player.move.set(player.alive ? m.x : 0, player.alive ? m.y : 0);
     updateGuardName(dt);
