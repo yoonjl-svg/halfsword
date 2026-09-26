@@ -7,6 +7,10 @@
 //  훈련된 사람이 저절로 하는 몸놀림을 덧붙인다. 단, 여기서 바꾸는 것은 "목표"뿐이다.
 //  실제 움직임은 언제나 근육(힘의 한계)과 물리가 만든다 → 맞으면 흐트러지고, 칼은 여전히 무겁다.
 //
+//   0) 입력 쪽 관성("가죽끈", SKILL.handDynamicsOn): 손가락 목표 앞에 반지름 작은 원(anchor)을 둔다.
+//      손가락이 그 안에서 떨리는 동안은 anchor가 안 움직이고, 반경을 넘어야 그만큼만 끌려간다.
+//      → 잘게 떠는 손가락이 자세 경계(guards.js RBF 블렌드)를 스치며 칼끝·몸통을 흔드는 것을 원천에서 막는다.
+//      진짜 베기·자세 이동처럼 큰 움직임은 anchor가 거의 즉시 팽팽해져 그대로 전해진다 → 반응은 그대로.
 //   1) 이어 베기(follow-through): 짧고 빠르게 그어도 칼이 그 방향으로 끝까지 지나간다
 //   2) 검술 자세(guards.js): 손가락 위치를 실제 롱소드 자세로 바꾼다. 몸(골반·가슴)은 손보다 먼저
 //      자세를 따라가서, 베기를 시작하면 허리 → 가슴 → 팔 → 칼 순서로 힘이 이어진다 (fighter.updateBodyPose)
@@ -27,7 +31,8 @@ export class Skill {
     this.vel = new THREE.Vector2(); // 손 목표가 움직이는 속도 (m/s, 몸 앞 평면)
     this.follow = new THREE.Vector2(); // 이어 베기로 더해지는 손 목표
     this.aim = fighter.handOffset.clone(); // 실제로 근육이 따라갈 손 목표 (부드럽게 걸러진 값)
-    this.aimRaw = fighter.handOffset.clone(); // 거르기 전 목표 (입력 + 이어 베기)
+    this.anchor = fighter.handOffset.clone(); // 입력 쪽 관성의 "가죽끈" 중심 (0번 단계)
+    this.aimRaw = fighter.handOffset.clone(); // 거르기 전 목표 (가죽끈으로 거른 입력 + 이어 베기)
     this.aimVel = new THREE.Vector2(); // 걸러진 목표가 움직이는 속도
     this.quiet = 1; // 손이 느리게 움직인 시간 (새 휘두르기 시작 판단용)
     this.lunge = 0; // 내딛는 중 남은 시간
@@ -59,12 +64,29 @@ export class Skill {
     // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐)
     this.activity += ((swinging ? 1 : 0) - this.activity) * Math.min(1, dt / (swinging ? 0.04 : 0.4));
 
+    // 0) 가죽끈: anchor는 손가락(off)이 반경(inputDeadRadius)을 넘어야 그만큼만 끌려간다.
+    //  반경 안의 떨림은 anchor를 전혀 움직이지 못한다 — 어디서 떨든(자세 경계라도) 걸러진다.
+    //  큰 움직임(진짜 베기)은 반경이 순식간에 다 채워져 손가락과 거의 같이 움직인다(지연 ≈ 반경/속도).
+    if (SKILL.handDynamicsOn) {
+      const adx = off.x - this.anchor.x;
+      const ady = off.y - this.anchor.y;
+      const ad = Math.hypot(adx, ady);
+      const dead = SKILL.inputDeadRadius;
+      if (ad > dead) {
+        const k = (ad - dead) / ad;
+        this.anchor.x += adx * k;
+        this.anchor.y += ady * k;
+      }
+    } else {
+      this.anchor.copy(off);
+    }
+
     // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
     if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L);
     this.follow.multiplyScalar(Math.exp(-dt / SKILL.followDecay));
     const fm = SKILL.followMax * L;
     if (this.follow.length() > fm) this.follow.setLength(fm);
-    this.aimRaw.copy(off).add(this.follow);
+    this.aimRaw.copy(this.anchor).add(this.follow);
     if (this.aimRaw.length() > R) this.aimRaw.setLength(R);
     // 손 목표를 "딱 멈추는"(임계 감쇠) 2차 필터로 거른다: 목표가 순간이동해도 손은 가속·감속하며 간다.
     //  (사람의 손도 순간적으로 속도를 바꾸지 못한다. 목표가 튀면 근육이 그 충격을 몸통에 그대로 전해 출렁인다)
