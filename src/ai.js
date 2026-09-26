@@ -86,7 +86,7 @@ export class AI {
     switch (this.phase) {
       case 'ready':
         this.target.set(...READY);
-        if (this.timer <= 0 && dist < 2.2 && foe.alive) {
+        if (this.timer <= 0 && dist < 2.3 && foe.alive) {
           this.attack = this.chooseAttack();
           this.phase = 'windup';
           this.timer = L.windup * (0.8 + Math.random() * 0.4);
@@ -153,9 +153,11 @@ export class AI {
     }
     let fwd = 0;
     // 거리에 비례해 다가가고 물러난다 (빨리 달려들다 상대 칼끝에 찔리지 않게)
-    // 평소엔 상대 칼끝이 닿지 않는 거리(간격 밖)에서 기다리고, 칠 때만 한 걸음 들어간다
-    const want = this.phase === 'strike' || this.phase === 'windup' ? 1.35 : 1.95;
-    if (dist > want + 0.15) fwd = THREE.MathUtils.clamp((dist - want) * 1.2, 0.25, 1);
+    // 평소엔 상대 칼끝이 닿지 않는 거리(간격 밖)에서 간을 보고, 칠 때만 크게 한 걸음 들어갔다가 빠진다
+    const want = this.phase === 'strike' || this.phase === 'windup' ? 1.35 : this.phase === 'recover' ? 2.3 : 2.05;
+    // 멀면 성큼성큼, 3m 안쪽(상대 칼 간격 근처)에선 조심스럽게 조금씩
+    const lunge = this.phase === 'windup' || this.phase === 'strike'; // 칠 때는 크게 내딛는다
+    if (dist > want + 0.15) fwd = THREE.MathUtils.clamp((dist - want) * 1.5, 0.2, dist > 3 || lunge ? 1 : 0.45);
     else if (dist < want - 0.3) fwd = -THREE.MathUtils.clamp((want - dist) * 1.5, 0.3, 0.8);
     else fwd = this.shuffle;
     let side = dist < 2.5 && this.phase !== 'strike' ? this.circle || 0 : 0;

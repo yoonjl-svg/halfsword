@@ -32,7 +32,7 @@ function velAt(st, point, out) {
 /** 부위 이름 + 부위 기준 위치 → 해부학적 구역 */
 function zoneOf(info, local) {
   if (info.kind === 'head') return local.y < -0.05 ? 'neck' : 'head';
-  if (info.kind === 'chest') return local.y > 0.15 ? 'neck' : 'chest';
+  if (info.kind === 'chest') return local.y > 0.11 ? 'neck' : 'chest';
   return info.kind; // pelvis | arm | leg
 }
 
@@ -105,6 +105,8 @@ export class Combat {
     const rel = vBlade.sub(vBody);
     const speed = rel.length();
     if (speed < 0.5) return null;
+    // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 빠르면 물리 계산이 튄 것이니 무시한다
+    if (speed > 22) return null;
     const dir = rel.clone().divideScalar(speed);
 
     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
@@ -115,7 +117,7 @@ export class Combat {
     const isBlade = pr.w.part === 'blade' && local.y > BLADE_START - 0.01;
 
     // 유효 질량: 칼끝으로 칠수록 가볍게(회전 중심에서 멀수록 실어 보내는 질량이 줄어든다) + 팔·몸의 도움
-    const mEff = WEAPON.mass * (0.45 + 0.55 * (1 - t)) + STRIKE.armAssist;
+    const mEff = WEAPON.mass * (0.35 + 0.45 * (1 - t)) + STRIKE.armAssist;
     const energy = 0.5 * mEff * speed * speed;
 
     let type = 'blunt';

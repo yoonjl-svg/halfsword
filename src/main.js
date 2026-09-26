@@ -11,6 +11,7 @@ import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
 import { Particles, Sound, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Combat } from './combat.js';
+import { buildArena } from './arena.js';
 
 await RAPIER.init();
 
@@ -52,52 +53,7 @@ sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 25 });
 scene.add(sun, sun.target);
 
-buildArena(scene);
-
-function buildArena(scene) {
-  // 모래 바닥
-  const sand = new THREE.Mesh(
-    new THREE.CircleGeometry(16, 64),
-    new THREE.MeshStandardMaterial({ color: 0xc9ae84, roughness: 1 }),
-  );
-  sand.rotation.x = -Math.PI / 2;
-  sand.receiveShadow = true;
-  scene.add(sand);
-
-  // 나무 울타리 (실제 벽 위치와 같음)
-  const wood = new THREE.MeshStandardMaterial({ color: 0x9a7650, roughness: 0.9 });
-  const R = ARENA.radius + 0.15;
-  const posts = 32;
-  for (let i = 0; i < posts; i++) {
-    const a = (i / posts) * Math.PI * 2;
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.15, 0.12), wood);
-    post.position.set(Math.cos(a) * R, 0.575, Math.sin(a) * R);
-    post.castShadow = true;
-    scene.add(post);
-    // 가로대 두 줄 (다음 기둥까지)
-    const a2 = ((i + 1) / posts) * Math.PI * 2;
-    const len = 2 * R * Math.sin(Math.PI / posts);
-    for (const y of [0.55, 1.0]) {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.08, 0.06), wood);
-      rail.position.set(((Math.cos(a) + Math.cos(a2)) / 2) * R, y, ((Math.sin(a) + Math.sin(a2)) / 2) * R);
-      rail.rotation.y = -(a + a2) / 2 + Math.PI / 2;
-      scene.add(rail);
-    }
-  }
-
-  // 바깥 돌벽
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd8cfbf, roughness: 0.95 });
-  const segs = 36;
-  const WR = 12;
-  for (let i = 0; i < segs; i++) {
-    const a = (i / segs) * Math.PI * 2;
-    const block = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.2 + (i % 3) * 0.2, 0.8), wallMat);
-    block.position.set(Math.cos(a) * WR, 1.6, Math.sin(a) * WR);
-    block.lookAt(0, 1.6, 0);
-    block.receiveShadow = true;
-    scene.add(block);
-  }
-}
+const arena = buildArena(scene); // 중세 마상시합장 (arena.js)
 
 // ── 화면 크기 / 픽셀 모드 ──
 function resize() {
@@ -204,30 +160,35 @@ function onWound(att, vic, r, point, pr) {
   if (opened) particles.blood(point, r.dir, 6 + r.severity * 40, r.speed);
   // 흔적 (몸 표면에 붙어서 같이 움직인다)
   const mesh = vic.partMesh[pr.v.part];
-  if (mesh) {
+  const group = vic.groups[pr.v.part];
+  if (mesh && group) {
+    // 몸 기준 좌표 → 겉면 메쉬 기준 좌표 (팔처럼 겉모습이 따로 돌려진 부위가 있다)
+    group.updateMatrixWorld(true);
+    const toMesh = new THREE.Matrix4().copy(mesh.matrixWorld).invert().multiply(group.matrixWorld);
+    const local = r.local.clone().applyMatrix4(toMesh);
     const q = new THREE.Quaternion();
     const rr = pr.v.body.rotation();
     q.set(rr.x, rr.y, rr.z, rr.w).invert();
-    const bladeLocal = r.bladeAxis.clone().applyQuaternion(q);
+    const bladeLocal = r.bladeAxis.clone().applyQuaternion(q).transformDirection(toMesh);
     const clothed = r.zone !== 'head' && r.zone !== 'neck';
     const sev = r.severity;
     if (r.helmet && vic.helmetGroup) {
       // 투구: 긁힘, 세면 찌그러짐 (벗겨지면 투구와 함께 날아간다)
       const dome = vic.helmetGroup.children[0];
-      const p = r.local.clone().sub(dome.position);
+      const p = r.local.clone().applyMatrix4(new THREE.Matrix4().copy(dome.matrixWorld).invert().multiply(group.matrixWorld));
       stickDecal(dome, p, bladeLocal, 'scratch', 0.03, Math.min(0.16, 0.04 + e / 1200));
       if (e > 60) stickDecal(dome, p, null, 'dent', 0.03 + Math.min(0.05, e / 4000), 0.03 + Math.min(0.05, e / 4000));
     } else if (!opened) {
-      if (e > 15) stickDecal(mesh, r.local, null, 'bruise', 0.05 + Math.min(0.08, e / 1500), 0.05 + Math.min(0.08, e / 1500));
+      if (e > 15) stickDecal(mesh, local, null, 'bruise', 0.05 + Math.min(0.08, e / 1500), 0.05 + Math.min(0.08, e / 1500));
     } else if (settings.blood) {
       const len = Math.min(0.24, 0.06 + sev * 0.14);
-      if (r.type === 'stab') stickDecal(mesh, r.local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
-      else stickDecal(mesh, r.local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len);
+      if (r.type === 'stab') stickDecal(mesh, local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
+      else stickDecal(mesh, local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len);
       // 피가 옷에 번진다 (상처에서 계속 흐르는 만큼)
       const wound = vic.wounds[vic.wounds.length - 1];
-      if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, r.local, null, 'soak', 0.04, 0.04);
+      if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, local, null, 'soak', 0.04, 0.04);
     } else {
-      stickDecal(mesh, r.local, bladeLocal, 'bruise', 0.03, 0.08);
+      stickDecal(mesh, local, bladeLocal, 'bruise', 0.03, 0.08);
     }
   }
   if (opened) att.bloodyBlade(0.08 + r.severity * 0.15);
@@ -243,6 +204,7 @@ function onWound(att, vic, r, point, pr) {
   kickCamera(r.dir, Math.min(1.6, e / 120) * (vic === player ? 1.4 : 0.6));
   if (att === player || vic === player) haptic(e / 120);
   if (!vic.alive) slowMo = 1.6;
+  arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 관중이 들썩인다
 }
 
 function onClash(point, speed) {
@@ -582,6 +544,7 @@ function frame(now) {
       updateDrips(f, dt * scale);
     }
     particles.update(dt * scale);
+    arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
   }
@@ -617,6 +580,7 @@ window.game = {
   THREE,
   camera,
   freeCam: false,
+  renderInfo: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
   AI,
   settings,
 };

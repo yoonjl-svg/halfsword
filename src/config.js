@@ -13,7 +13,7 @@ export const PHYSICS = {
 
 export const ARENA = {
   radius: 6.5, // 원형 경기장 반지름 (울타리 위치)
-  startGap: 2.4, // 시작할 때 두 검투사 사이 거리
+  startGap: 4.2, // 시작할 때 두 검투사 사이 거리 (서로 칼이 닿지 않는 간격 밖에서 시작)
 };
 
 export const CAMERA = {
@@ -27,7 +27,7 @@ export const CAMERA = {
 };
 
 export const BODY = {
-  standHeight: 0.93, // 서 있을 때 골반 높이
+  standHeight: 0.95, // 서 있을 때 골반 높이
   support: 1.0, // 골반을 떠받치는 힘(중력 대비 배수)
   supportStiffness: 2600, // 골반 높이 스프링 강도
   supportDamping: 260,
@@ -35,7 +35,8 @@ export const BODY = {
   uprightDamping: 330, // 감쇠: 출렁이지 않고 딱 멈추는 값(감쇠비 ≈ 1)
   uprightAssist: 1.0, // 위 보조 힘의 비율
   footReaction: 0, // 체중·추진력의 반작용을 발에 싣는 비율 (실험 중: 1이면 걷다 넘어진다)
-  accelLean: 0.6, // 가속할 때 앞으로 숙이는 정도 (1 = 물리적으로 딱 맞는 각도)
+  upperShare: 0.15, // 걸을 때 미는 힘 중 가슴 쪽에 주는 비율 (크면 상체가 앞으로 꺾인다)
+  accelLean: 0, // 가속할 때 몸 전체를 앞으로 숙이는 정도 (허리 근육이 대신 버틴다)
   moveSpeed: 2.5, // 걷는 최고 속도 (m/s). 보폭이 커서 빨라진다 (발 빠르기는 그대로)
   stepLength: 0.68, // 한 걸음 보폭(m). 성큼성큼. 다리 흔드는 속도가 이동 거리와 딱 맞게 계산된다.
   turnSpeed: 2.4, // 상대 쪽으로 몸을 돌리는 최고 속도 (라디안/초)
@@ -49,14 +50,9 @@ export const BODY = {
 export const WEAPON = {
   mass: 1.8, // 롱소드 무게(kg). 올리면 묵직하고 느려진다.
   length: 1.05, // 칼날 길이
-  handStiffness: 1200, // 손이 목표 위치를 따라가는 스프링 강도
-  handDamping: 60,
-  maxHandForce: 400, // 팔 힘의 한계. 낮추면 무기가 더 무겁게 느껴진다.
-  maxHandSpeed: 7.5, // 손이 낼 수 있는 최고 속도(m/s). 사람 손은 대략 8~10.
   aimStiffness: 45, // 칼끝 방향을 맞추는 회전 힘 (손목 힘). 낮을수록 칼이 관성대로 따라온다
   aimDamping: 3.5,
   maxAimTorque: 60,
-  bodyReaction: 1.0, // 휘두르는 힘의 반작용이 몸통에 전해지는 비율 (1 = 물리 그대로)
   reach: 0.62, // 어깨에서 손까지 최대 거리
 };
 
@@ -66,7 +62,7 @@ export const WEAPON = {
 //  참고: 실제 롱소드 베기는 대략 60~130 J.
 // ─────────────────────────────────────────────────────────────
 export const STRIKE = {
-  armAssist: 1.0, // 휘두를 때 칼 뒤에서 함께 밀어주는 팔·몸의 유효 질량(kg)
+  armAssist: 0.5, // 휘두를 때 칼 뒤에서 함께 밀어주는 팔·몸의 유효 질량(kg)
   edgeAlign: 0.6, // 칼날(날 선 쪽)이 움직이는 방향과 이만큼(cos) 맞아야 "베기". 아니면 칼 면으로 때린 것
   stabAlign: 0.75, // 칼끝 방향으로 이만큼 움직이면 "찌르기"
   minEnergy: 6, // 이보다 약한 접촉은 무시 (J)
@@ -81,6 +77,7 @@ export const ANATOMY = {
   head: { cut: 30, stab: 20, absorb: 140, bleed: 0.03 },
   neck: { cut: 24, stab: 16, absorb: 45, bleed: 0.2 }, // 누비 상의 깃이 조금 막아준다
   chest: { cut: 45, stab: 25, absorb: 110, bleed: 0.025 },
+  abdomen: { cut: 40, stab: 18, absorb: 90, bleed: 0.03 }, // 배: 뼈가 없어 찌르기에 약하다
   pelvis: { cut: 40, stab: 22, absorb: 100, bleed: 0.02 },
   arm: { cut: 22, stab: 18, absorb: 45, bleed: 0.012 },
   leg: { cut: 28, stab: 20, absorb: 60, bleed: 0.015 },
@@ -107,9 +104,9 @@ export const BALANCE = {
 };
 
 export const AI_LEVELS = {
-  easy: { reaction: 0.55, windup: 0.9, strikeSpeed: 5, guardChance: 0.25, strength: 0.8, aggression: 0.6 },
-  normal: { reaction: 0.35, windup: 0.6, strikeSpeed: 7, guardChance: 0.5, strength: 1.0, aggression: 0.8 },
-  hard: { reaction: 0.2, windup: 0.4, strikeSpeed: 9, guardChance: 0.75, strength: 1.15, aggression: 1.0 },
+  easy: { reaction: 0.55, windup: 0.9, strikeSpeed: 9, guardChance: 0.25, strength: 0.8, aggression: 0.6 },
+  normal: { reaction: 0.35, windup: 0.6, strikeSpeed: 13, guardChance: 0.5, strength: 1.0, aggression: 0.8 },
+  hard: { reaction: 0.2, windup: 0.4, strikeSpeed: 18, guardChance: 0.75, strength: 1.15, aggression: 1.0 },
 };
 
 export const INPUT = {
