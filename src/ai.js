@@ -784,7 +784,10 @@ export class AI {
     // 달려드는 상대: 성격에 따라 들어오는 순간을 맞받아 베거나(Vor), 한 걸음 물러나 헛치게 한 뒤 친다(Nach).
     //  (물리로 재 보면 둘이 비슷하다: 맞받으면 서로 베일 때가 많고, 물러나면 첫 칼은 피하지만 붙은 싸움이 된다)
     // 제자리에서 칼을 드는 상대는 한 걸음 물러나 헛치게 하거나, 드는 순간을 먼저 친다
-    const strike = charging ? Math.random() < this.pers.vor : d < MEASURE.reach + 0.3 && Math.random() < L.counter + 0.15;
+    // 계속 몰아치는 상대(foeAggro가 쌓여 있을수록)일수록 물러나기보다 맞받아치는 쪽으로 기운다 —
+    //  성격은 그대로 두되, 지금 상대가 얼마나 몰아치는지를 보고 판단을 조금 더 얹는다
+    const stopBias = Math.max(this.pers.vor, this.foeAggro * 0.75);
+    const strike = charging ? Math.random() < stopBias : d < MEASURE.reach + 0.3 && Math.random() < L.counter + 0.15;
     if (strike) {
       const t = this.pickTech(s, charging ? 'stop' : 'windup');
       if (t && this.startAttack(t, charging ? 'stop' : 'windup', { noFeint: true, fastChamber: true })) {
