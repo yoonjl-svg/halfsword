@@ -887,8 +887,10 @@ export class Sound {
   /** 둔기(칼 면, 손잡이, 막힌 베기): "퍽" + 칼 면이 몸을 때리는 둔한 쇳소리 */
   blunt(energy) {
     if (!this._on || !this.ctx) return;
+    // 칼끝이 스치는 약한 접촉(10J 안팎)은 싸움 중 1초에 한 번꼴로 난다 → 아주 약하게 (15J 넘어야 제대로 "퍽")
+    if (energy < 5) return;
     const e = clamp01(energy / 120);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.3 + 0.7 * e ** 0.8, prio: 1.5 });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.1 + 0.9 * e ** 0.8, prio: 1.5 });
     this.body(ev, 1);
     // 세게 맞으면(칼 면으로 후려침) 칼도 둔하게 울린다
     if (e > 0.2) this.layer(ev, this.pick('clashSoft'), { gain: 0.25 * e, rate: between(Math.random, 0.8, 0.9), delay: 0.003 });
@@ -966,7 +968,8 @@ export class Sound {
     return {
       set(speed) {
         const x = Math.min(1, Math.max(0, (speed - 4) / 16)); // 칼끝 4 → 20 m/s
-        const vol = self._on ? 0.6 * Math.pow(x, 2.2) * 0.5 : 0; // (0,0) (0.66, ≈0.25) (1, 0.6) × 전체 음량
+        // (0,0) (0.66, ≈0.25) (1, 0.6) × 전체 음량. 타격음이 무거워진 만큼 바람 소리도 조금 키웠다 (+4dB)
+        const vol = self._on ? 0.6 * Math.pow(x, 2.2) * 0.8 : 0;
         const t = c.currentTime;
         g.gain.setTargetAtTime(vol, t, 0.03);
         f.frequency.setTargetAtTime(250 + 1150 * x, t, 0.03);
