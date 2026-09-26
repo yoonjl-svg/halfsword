@@ -418,7 +418,6 @@ export class AI {
     this.attackT = 0;
     this.stepT = 0;
     this.path.length = 0;
-    this.fastChamber = !!opt.fastChamber;
     this.pointBlocked = false;
     if (!opt.chain) this.stats.attacks++;
     // 속임수: 먼저 다른 곳을 치는 척하다가 바꾼다 (상대가 잘 막을수록 자주)
@@ -438,6 +437,9 @@ export class AI {
     const cd = padDist(hand, this.tech.from);
     this.phase = cd > 0.06 && !opt.skipChamber ? 'windup' : 'approach';
     this.quick = why !== 'patience' && why !== 'open' && why !== 'weak' && why !== 'offbalance';
+    // 빈틈을 잡아 순간적으로 치는 공격(recover/stepin/press/counter/stop 등)은 준비 자세로 옮기는 손도
+    //  빠르게 움직여야 한다. 느린 chamberSpeed로 챔버하면 정작 순간을 놓친다
+    this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? L.windup * 0.15 : 0;
     return true;
   }
