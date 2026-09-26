@@ -132,8 +132,8 @@ export const SKILL = {
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라
 // 베기를 시작하면 허리가 먼저 돌고 팔과 칼이 뒤따른다
 export const SKILL_BODY = {
-  pelvis: 30,
-  chest: 22,
+  pelvis: 34,
+  chest: 26,
 };
 
 export const AI_LEVELS = {

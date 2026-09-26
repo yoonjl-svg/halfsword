@@ -178,6 +178,7 @@ export class Fighter {
     this.guardPose = {}; // 손이 따라가는 자세 (걸러진 손 목표 기준)
     this.bodyGuard = {}; // 몸이 따라가는 자세 (거르기 전 입력 기준)
     this.bodyPose = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
+    this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
     this.pelvisYawOffset = 0; // 골반을 트는 각도 (라디안, + = 왼쪽으로)
     this.pelvisDropOffset = 0; // 자세에 따라 골반을 더 낮추는 정도 (m)
 
@@ -440,12 +441,17 @@ export class Fighter {
     const gw = this.guardWeight();
     const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard);
     const bp = this.bodyPose;
-    const k = (w) => 1 - Math.exp(-dt * w);
+    const bv = this.bodyPoseVel;
+    // 딱 멈추는(임계 감쇠) 2차 필터: 출발도 멈춤도 매끄럽다 (1차 필터는 출발 순간 속도가 튄다)
+    const follow = (key, target, w) => {
+      bv[key] += (w * w * (target - bp[key]) - 2 * w * bv[key]) * dt;
+      bp[key] += bv[key] * dt;
+    };
     // 골반은 아직 발 위치를 바꾸지 못해서(발 딛기 방향 전환 전) 교본 값의 절반만 튼다
-    bp.pelvisYaw += (-G.pelvisYaw * 0.5 * gw - bp.pelvisYaw) * k(SKILL_BODY.pelvis);
-    bp.chestYaw += (-G.chestYaw * gw - bp.chestYaw) * k(SKILL_BODY.chest);
-    bp.pitch += (G.pitch * gw - bp.pitch) * k(SKILL_BODY.chest);
-    bp.drop += ((G.drop - 0.06) * gw - bp.drop) * k(SKILL_BODY.pelvis);
+    follow('pelvisYaw', -G.pelvisYaw * 0.5 * gw, SKILL_BODY.pelvis);
+    follow('chestYaw', -G.chestYaw * gw, SKILL_BODY.chest);
+    follow('pitch', G.pitch * gw, SKILL_BODY.chest);
+    follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis);
     this.pelvisYawOffset = bp.pelvisYaw;
     this.pelvisDropOffset = bp.drop;
   }
@@ -1163,14 +1169,20 @@ export class Fighter {
     // 칼날 가운데쯤이 실제로 움직이는 방향 (손잡이 속도와 다르다: 칼은 손을 축으로 돈다)
     const bv = this.hitPointVel;
     const edgeDir = new THREE.Vector3(bv.x, bv.y, bv.z).addScaledVector(blade, -bv.dot(blade));
-    let flatTarget;
-    if (edgeDir.length() > 1) {
-      flatTarget = new THREE.Vector3().crossVectors(blade, edgeDir).normalize();
-      if (flatTarget.dot(flat) < 0) flatTarget.negate();
-    } else {
-      flatTarget = RIGHT_LOCAL.clone().applyQuaternion(this.yaw);
-      flatTarget.addScaledVector(blade, -flatTarget.dot(blade));
-      if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(flat);
+    // 가만히 있을 때: 칼 면이 몸 오른쪽을 본다 / 움직일 때: 날이 움직이는 쪽을 향한다.
+    // 속도에 따라 둘을 부드럽게 섞는다 (딱 잘라 바꾸면 경계 속도에서 칼이 매 순간 90°씩 비틀리며 떤다)
+    const flatTarget = RIGHT_LOCAL.clone().applyQuaternion(this.yaw);
+    flatTarget.addScaledVector(blade, -flatTarget.dot(blade));
+    if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(flat);
+    flatTarget.normalize();
+    if (flatTarget.dot(flat) < 0) flatTarget.negate();
+    const ev = edgeDir.length();
+    const moving = THREE.MathUtils.smoothstep(ev, 0.5, 2.5);
+    if (moving > 0) {
+      const mf = edgeDir.crossVectors(blade, edgeDir).normalize();
+      if (mf.dot(flat) < 0) mf.negate();
+      flatTarget.lerp(mf, moving);
+      if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
       flatTarget.normalize();
     }
     // 칼날 축(길쭉한 방향)으로 도는 회전은 관성이 아주 작아서, 큰 힘을 주면

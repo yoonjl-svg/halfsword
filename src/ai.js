@@ -9,7 +9,7 @@ import { AI_LEVELS } from './config.js';
 // 공격 패턴: 패드 위치 [좌우(+칼 든 쪽), 위아래] 미터. guards.js의 검술 자세 지도로 실제 자세가 된다.
 //  준비(windup) 자세에서 공격 끝(strike) 자세로 손을 빠르게 옮기면 그 사이 자세들을 지나며 베기가 된다.
 const ATTACKS = [
-  { name: 'zornhau', windup: [0.3, 0.42], strike: [-0.4, -0.42] }, // 분노의 베기: 오른쪽 위 → 긴 자세 → 왼쪽 아래
+  { name: 'zornhau', windup: [0.42, 0.42], strike: [-0.4, -0.42] }, // 분노의 베기: 오른쪽 위 → 긴 자세 → 왼쪽 아래
   { name: 'oberhau', windup: [0.02, 0.52], strike: [0.0, -0.45] }, // 위에서 내려베기: 지붕 → 긴 자세 → 바보
   { name: 'zwerch', windup: [0.52, 0.06], strike: [-0.5, 0.06] }, // 가로베기: 옆 자세 → 왼쪽 옆
   { name: 'unterhau', windup: [0.38, -0.44], strike: [-0.3, 0.26] }, // 올려베기: 바꿈 → 왼쪽 황소
