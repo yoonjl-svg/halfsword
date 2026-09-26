@@ -152,10 +152,19 @@ export const SKILL_BODY = {
   chest: 26,
 };
 
+// 상대 AI (ai.js). 사람 검객처럼 간격을 지키며 빈틈을 노린다
+//  reaction: 상대를 보고 알아차리기까지 걸리는 시간(초). AI는 이만큼 늦게 본다
+//  windup: 준비 자세에서 멈칫하는 정도 (클수록 속내가 드러난다)
+//  chamberSpeed/strikeSpeed/parrySpeed: 준비·베기·막기 때 손(패드)을 옮기는 빠르기(m/s)
+//  guardChance: 상대 공격을 알아채고 대응할 확률, counter: 막는 대신 같은 순간에 맞받아 벨 확률(Indes)
+//  feint: 속임수를 쓸 확률, followUp: 막히거나 맞힌 뒤 이어 칠 확률(Nachschlag)
+//  predict: 상대 몸의 움직임을 앞질러 내다보는 정도 (0~1), read: 상대 자세의 빈틈을 읽는 눈 (0~1)
+//  discipline: 간격을 지키는 정도 (0~1)
+//  aggression: 인내심이 줄어드는 빠르기·공격 성향, skill: 검술 보정(자세 지도를 따르는 정도)
 export const AI_LEVELS = {
-  easy: { reaction: 0.55, windup: 0.9, strikeSpeed: 9, guardChance: 0.25, strength: 0.8, aggression: 0.6, skill: 0.4 },
-  normal: { reaction: 0.35, windup: 0.6, strikeSpeed: 13, guardChance: 0.5, strength: 1.0, aggression: 0.8, skill: 0.7 },
-  hard: { reaction: 0.2, windup: 0.4, strikeSpeed: 18, guardChance: 0.75, strength: 1.15, aggression: 1.0, skill: 1.0 },
+  easy: { reaction: 0.38, windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 7.5, parrySpeed: 3.5, guardChance: 0.35, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.8, aggression: 0.6, skill: 0.4 },
+  normal: { reaction: 0.26, windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
+  hard: { reaction: 0.17, windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.85, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.15, aggression: 1.0, skill: 0.85 },
 };
 
 export const INPUT = {
