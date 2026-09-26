@@ -12,8 +12,16 @@ export const PHYSICS = {
 };
 
 export const ARENA = {
-  halfLength: 7, // 경기장 좌우 끝 (x = ±7)
+  radius: 6.5, // 원형 경기장 반지름 (울타리 위치)
   startGap: 2.4, // 시작할 때 두 검투사 사이 거리
+};
+
+export const CAMERA = {
+  back: 2.9, // 내 캐릭터 뒤로 얼마나 떨어질지
+  height: 2.3, // 카메라 높이
+  shoulder: 0.9, // 오른쪽 어깨 너머로 비켜선 정도 → 내 캐릭터는 화면 왼쪽, 상대는 가운데
+  fov: 55,
+  lookAhead: 2.2, // 내 앞쪽 얼마나 먼 곳을 화면 가운데로 볼지
 };
 
 export const BODY = {

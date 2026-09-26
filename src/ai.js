@@ -6,15 +6,17 @@
 import * as THREE from 'three';
 import { AI_LEVELS } from './config.js';
 
-// 공격 패턴: [준비 자세(손 위치), 공격 끝 자세] — (앞쪽, 위쪽) 미터
+// 공격 패턴: 몸 앞 평면의 손 위치 [좌우(+오른쪽), 위아래] 미터
+//  준비(windup) 자세에서 공격 끝(strike) 자세로 손을 빠르게 옮긴다.
 const ATTACKS = [
-  { name: 'overhead', windup: [-0.05, 0.58], strike: [0.55, -0.1] },
-  { name: 'high', windup: [-0.25, 0.4], strike: [0.6, 0.2] },
-  { name: 'low', windup: [0.05, 0.5], strike: [0.5, -0.4] },
-  { name: 'thrust', windup: [0.0, 0.12], strike: [0.62, 0.08] },
+  { name: 'overhead', windup: [0.1, 0.6], strike: [0.0, -0.25] }, // 내려치기
+  { name: 'diagR', windup: [0.5, 0.45], strike: [-0.35, -0.2] }, // 오른쪽 위 → 왼쪽 아래 사선
+  { name: 'diagL', windup: [-0.35, 0.45], strike: [0.45, -0.15] }, // 왼쪽 위 → 오른쪽 아래 사선
+  { name: 'horizontal', windup: [0.6, 0.1], strike: [-0.5, 0.05] }, // 가로베기
+  { name: 'thrust', windup: [0.45, -0.25], strike: [0.0, 0.05] }, // 찌르기 (가운데로 모으면 팔이 뻗는다)
 ];
-const GUARD = [0.3, 0.45];
-const READY = [0.38, 0.02];
+const GUARD = [0.05, 0.4];
+const READY = [0.15, 0.0];
 
 export class AI {
   constructor(me, foe, levelName = 'normal') {
@@ -39,30 +41,29 @@ export class AI {
   chooseAttack() {
     const foe = this.foe;
     const tipY = foe.bladePoint(1).y;
-    const headY = foe.bodies.head.translation().y;
+    const headY = foe.bodies.head.translation().y + 0.1;
     const pick = (names) => {
       const name = names[Math.floor(Math.random() * names.length)];
       return ATTACKS.find((a) => a.name === name);
     };
     if (Math.random() < 0.3) return ATTACKS[Math.floor(Math.random() * ATTACKS.length)];
-    if (tipY > headY + 0.1) return pick(['low', 'thrust']);
-    return pick(['overhead', 'high']);
+    if (tipY > headY) return pick(['horizontal', 'thrust', 'diagL']);
+    return pick(['overhead', 'diagR', 'diagL']);
   }
 
   update(dt) {
     const me = this.me;
     const foe = this.foe;
     if (me.state !== 'stand') {
-      me.moveInput = 0;
+      me.move.set(0, 0);
       this.phase = 'ready';
       this.timer = 0.6;
       return;
     }
     const L = this.level;
-    const myX = me.bodies.pelvis.translation().x;
-    const foeX = foe.bodies.pelvis.translation().x;
-    const dist = Math.abs(foeX - myX);
-    const toward = Math.sign(foeX - myX) || 1;
+    const a = me.bodies.pelvis.translation();
+    const b = foe.bodies.pelvis.translation();
+    const dist = Math.hypot(b.x - a.x, b.z - a.z);
     this.timer -= dt;
 
     // ── 막기: 플레이어 칼이 빠르게 내 머리 쪽으로 오면 ──
@@ -72,7 +73,7 @@ export class AI {
       this.guardDecided = true;
       const head = me.bodies.head.translation();
       const tip = foe.bladePoint(1);
-      const close = Math.hypot(tip.x - head.x, tip.y - head.y) < 1.4;
+      const close = Math.hypot(tip.x - head.x, tip.y - head.y, tip.z - head.z) < 1.4;
       if (close && Math.random() < L.guardChance) {
         this.phase = 'guard';
         this.timer = 0.35 + L.reaction;
@@ -85,7 +86,7 @@ export class AI {
     switch (this.phase) {
       case 'ready':
         this.target.set(...READY);
-        if (this.timer <= 0 && dist < 1.75 && foe.alive) {
+        if (this.timer <= 0 && dist < 1.85 && foe.alive) {
           this.attack = this.chooseAttack();
           this.phase = 'windup';
           this.timer = L.windup * (0.8 + Math.random() * 0.4);
@@ -98,14 +99,21 @@ export class AI {
           this.timer = 0.45;
         }
         break;
-      case 'strike':
+      case 'strike': {
         this.target.set(...this.attack.strike);
+        // 상대가 옆으로 비껴 있으면 그만큼 손을 옮겨 겨눈다
+        const h = foe.bodies.head.translation();
+        const c = me.bodies.chest.translation();
+        const r = me.right(new THREE.Vector3());
+        const lat = (h.x - c.x) * r.x + (h.z - c.z) * r.z;
+        this.target.x = THREE.MathUtils.clamp(this.target.x + lat * 0.6, -0.6, 0.6);
         handSpeed = L.strikeSpeed;
         if (this.timer <= 0) {
           this.phase = 'recover';
           this.timer = 0.5;
         }
         break;
+      }
       case 'recover':
         this.target.set(...READY);
         if (this.timer <= 0) {
@@ -136,18 +144,21 @@ export class AI {
       off.set(this.target.x, this.target.y);
     }
 
-    // ── 거리 조절 ──
+    // ── 거리 조절 + 옆으로 돌기 ──
     this.shuffleTimer -= dt;
     if (this.shuffleTimer <= 0) {
-      this.shuffleTimer = 0.4 + Math.random() * 0.8;
-      this.shuffle = (Math.random() - 0.5) * 0.8;
+      this.shuffleTimer = 0.6 + Math.random() * 1.2;
+      this.shuffle = (Math.random() - 0.5) * 0.6; // 앞뒤 잔걸음
+      this.circle = Math.random() < 0.6 ? (Math.random() < 0.5 ? -0.7 : 0.7) : 0; // 옆걸음
     }
-    let move = 0;
-    const want = this.phase === 'strike' ? 1.1 : 1.45;
-    if (dist > want + 0.15) move = 1;
-    else if (dist < want - 0.35) move = -0.7;
-    else move = this.shuffle;
-    if (!foe.alive) move = 0;
-    me.moveInput = THREE.MathUtils.clamp(move, -1, 1) * toward;
+    let fwd = 0;
+    // 칼끝 쪽(가장 빠른 부분)이 닿는 거리를 유지한다
+    const want = this.phase === 'strike' ? 1.4 : 1.6;
+    if (dist > want + 0.15) fwd = 1;
+    else if (dist < want - 0.35) fwd = -0.7;
+    else fwd = this.shuffle;
+    let side = dist < 2.5 && this.phase !== 'strike' ? this.circle || 0 : 0;
+    if (!foe.alive) fwd = side = 0;
+    me.move.set(THREE.MathUtils.clamp(side, -1, 1), THREE.MathUtils.clamp(fwd, -1, 1));
   }
 }

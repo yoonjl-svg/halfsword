@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  입력 처리
 //   - 스마트폰: 화면을 손가락으로 끌면 손(칼자루)이 그만큼 움직인다(상대 이동).
-//              폰을 운전대처럼 좌우로 기울이면 걷는다.
-//   - PC: 화면 클릭 → 마우스 잠금. 마우스를 움직이면 칼, A/D(←/→)로 이동.
+//              폰을 앞뒤로 기울이면 전진/후퇴, 좌우로 기울이면 옆걸음.
+//   - PC: 화면 클릭 → 마우스 잠금. 마우스를 움직이면 칼, WASD(방향키)로 이동.
 // ─────────────────────────────────────────────────────────────
 import { INPUT } from './config.js';
 
@@ -12,11 +12,11 @@ export class Input {
     this.handDX = 0; // 누적된 손 이동량(m). +x = 화면 오른쪽
     this.handDY = 0; // +y = 위
     this.keys = new Set();
-    this.buttonMove = 0; // 화면 이동 버튼(센서가 없을 때 대체용)
-    this.tiltMove = 0;
+    this.stickMove = { x: 0, y: 0 }; // 화면 조이스틱(센서가 없을 때 대체용)
+    this.tiltMove = { x: 0, y: 0 };
     this.tiltActive = false;
-    this.tiltBaseline = null;
-    this.tiltRaw = 0;
+    this.tiltBaseline = null; // { roll, pitch }
+    this.tiltRaw = { roll: 0, pitch: 0 };
     this.invertTilt = false;
     this.enabled = false;
     this.activeTouch = null;
@@ -80,14 +80,26 @@ export class Input {
     return d;
   }
 
-  /** -1(왼쪽) ~ 1(오른쪽) */
+  /** { x: 옆걸음 -1(왼)~1(오른), y: -1(뒤)~1(앞) } */
   get move() {
-    let m = 0;
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) m -= 1;
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) m += 1;
-    m += this.buttonMove;
-    if (this.tiltActive) m += this.tiltMove;
-    return Math.max(-1, Math.min(1, m));
+    let x = 0;
+    let y = 0;
+    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) x -= 1;
+    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) x += 1;
+    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) y += 1;
+    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) y -= 1;
+    x += this.stickMove.x;
+    y += this.stickMove.y;
+    if (this.tiltActive) {
+      x += this.tiltMove.x;
+      y += this.tiltMove.y;
+    }
+    const len = Math.hypot(x, y);
+    if (len > 1) {
+      x /= len;
+      y /= len;
+    }
+    return { x, y };
   }
 
   // ── 기울기(틸트) ──
@@ -113,17 +125,25 @@ export class Input {
         // 기기 좌표 → 화면 좌표로 회전
         const sx = g.x * Math.cos(a) - g.y * Math.sin(a);
         const sy = g.x * Math.sin(a) + g.y * Math.cos(a);
-        // 운전대처럼 돌린 각도
+        const sz = g.z;
+        // roll: 운전대처럼 좌우로 돌린 각도 / pitch: 화면 윗부분을 앞으로 넘긴 각도
         const roll = (Math.atan2(sign * sx, sign * sy) * 180) / Math.PI;
-        this.tiltRaw = roll;
-        if (this.tiltBaseline === null) this.tiltBaseline = roll;
+        const pitch = (Math.atan2(sign * sz, sign * sy) * 180) / Math.PI;
+        this.tiltRaw = { roll, pitch };
+        if (this.tiltBaseline === null) this.tiltBaseline = { roll, pitch };
         this.tiltActive = true;
-        let d = roll - this.tiltBaseline;
-        if (d > 180) d -= 360;
-        if (d < -180) d += 360;
-        if (this.invertTilt) d = -d;
-        const mag = Math.max(0, Math.abs(d) - INPUT.tiltDeadDeg) / (INPUT.tiltFullDeg - INPUT.tiltDeadDeg);
-        this.tiltMove = Math.sign(d) * Math.min(1, mag);
+        const axis = (v) => {
+          let d = v;
+          if (d > 180) d -= 360;
+          if (d < -180) d += 360;
+          const mag = Math.max(0, Math.abs(d) - INPUT.tiltDeadDeg) / (INPUT.tiltFullDeg - INPUT.tiltDeadDeg);
+          return Math.sign(d) * Math.min(1, mag);
+        };
+        const inv = this.invertTilt ? -1 : 1;
+        this.tiltMove = {
+          x: inv * axis(roll - this.tiltBaseline.roll),
+          y: inv * axis(pitch - this.tiltBaseline.pitch),
+        };
       };
       window.addEventListener('devicemotion', this._motionHandler);
     }
@@ -132,7 +152,44 @@ export class Input {
 
   /** 지금 폰 각도를 "똑바로"로 삼는다 */
   calibrateTilt() {
-    this.tiltBaseline = this.tiltActive ? this.tiltRaw : null;
-    this.tiltMove = 0;
+    this.tiltBaseline = this.tiltActive ? { ...this.tiltRaw } : null;
+    this.tiltMove = { x: 0, y: 0 };
   }
+}
+
+/**
+ * 화면 왼쪽 아래 가상 조이스틱 (기울기 센서가 없을 때만 보인다)
+ * @param {HTMLElement} pad  바깥 원
+ * @param {HTMLElement} knob 안쪽 손잡이
+ */
+export function attachStick(input, pad, knob) {
+  let id = null;
+  const R = 40;
+  const update = (e) => {
+    const r = pad.getBoundingClientRect();
+    let dx = e.clientX - (r.left + r.width / 2);
+    let dy = e.clientY - (r.top + r.height / 2);
+    const len = Math.hypot(dx, dy);
+    if (len > R) {
+      dx = (dx / len) * R;
+      dy = (dy / len) * R;
+    }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    input.stickMove = { x: dx / R, y: -dy / R };
+  };
+  pad.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    id = e.pointerId;
+    pad.setPointerCapture(id);
+    update(e);
+  });
+  pad.addEventListener('pointermove', (e) => e.pointerId === id && update(e));
+  const end = (e) => {
+    if (e.pointerId !== id) return;
+    id = null;
+    knob.style.transform = '';
+    input.stickMove = { x: 0, y: 0 };
+  };
+  pad.addEventListener('pointerup', end);
+  pad.addEventListener('pointercancel', end);
 }

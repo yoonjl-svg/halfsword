@@ -4,9 +4,10 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
-import { PHYSICS, ARENA, DAMAGE } from './config.js';
+import { PHYSICS, ARENA, DAMAGE, CAMERA } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
-import { Input } from './input.js';
+import { Input, attachStick } from './input.js';
+import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
 import { Particles, Sound } from './effects.js';
 
@@ -36,18 +37,18 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x2a1f18);
-scene.fog = new THREE.Fog(0x2a1f18, 9, 26);
+scene.background = new THREE.Color(0xb8c9d9);
+scene.fog = new THREE.Fog(0xb8c9d9, 16, 40);
 
-const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-camera.position.set(0, 1.5, 5.5);
+const camera = new THREE.PerspectiveCamera(CAMERA.fov, 1, 0.1, 100);
+camera.position.set(-3.5, CAMERA.height, 0.5);
 
-scene.add(new THREE.HemisphereLight(0xffe8c4, 0x3a2a1e, 0.9));
-const sun = new THREE.DirectionalLight(0xfff0d8, 1.8);
-sun.position.set(3, 8, 5);
+scene.add(new THREE.HemisphereLight(0xfff2dc, 0x6a5540, 1.1));
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.0);
+sun.position.set(4, 9, 3);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
-Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -2, near: 1, far: 20 });
+Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 25 });
 scene.add(sun, sun.target);
 
 buildArena(scene);
@@ -55,30 +56,45 @@ buildArena(scene);
 function buildArena(scene) {
   // 모래 바닥
   const sand = new THREE.Mesh(
-    new THREE.CircleGeometry(12, 48),
-    new THREE.MeshStandardMaterial({ color: 0xb89a6e, roughness: 1 }),
+    new THREE.CircleGeometry(16, 64),
+    new THREE.MeshStandardMaterial({ color: 0xc9ae84, roughness: 1 }),
   );
   sand.rotation.x = -Math.PI / 2;
   sand.receiveShadow = true;
   scene.add(sand);
-  // 경기장 벽(뒤쪽 반원)
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x6b5a48, roughness: 0.9 });
-  for (let i = 0; i <= 16; i++) {
-    const a = Math.PI + (i / 16) * Math.PI;
-    const r = 9;
-    const block = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.6 + (i % 2) * 0.3, 0.6), wallMat);
-    block.position.set(Math.cos(a) * r, 0.8, Math.sin(a) * r);
-    block.lookAt(0, 0.8, 0);
+
+  // 나무 울타리 (실제 벽 위치와 같음)
+  const wood = new THREE.MeshStandardMaterial({ color: 0x9a7650, roughness: 0.9 });
+  const R = ARENA.radius + 0.15;
+  const posts = 32;
+  for (let i = 0; i < posts; i++) {
+    const a = (i / posts) * Math.PI * 2;
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.15, 0.12), wood);
+    post.position.set(Math.cos(a) * R, 0.575, Math.sin(a) * R);
+    post.castShadow = true;
+    scene.add(post);
+    // 가로대 두 줄 (다음 기둥까지)
+    const a2 = ((i + 1) / posts) * Math.PI * 2;
+    const len = 2 * R * Math.sin(Math.PI / posts);
+    for (const y of [0.55, 1.0]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.08, 0.06), wood);
+      rail.position.set(((Math.cos(a) + Math.cos(a2)) / 2) * R, y, ((Math.sin(a) + Math.sin(a2)) / 2) * R);
+      rail.rotation.y = -(a + a2) / 2 + Math.PI / 2;
+      scene.add(rail);
+    }
+  }
+
+  // 바깥 돌벽
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd8cfbf, roughness: 0.95 });
+  const segs = 36;
+  const WR = 12;
+  for (let i = 0; i < segs; i++) {
+    const a = (i / segs) * Math.PI * 2;
+    const block = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.2 + (i % 3) * 0.2, 0.8), wallMat);
+    block.position.set(Math.cos(a) * WR, 1.6, Math.sin(a) * WR);
+    block.lookAt(0, 1.6, 0);
     block.receiveShadow = true;
     scene.add(block);
-  }
-  // 좌우 끝 기둥
-  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x8a7760, roughness: 0.8 });
-  for (const x of [-ARENA.halfLength - 0.4, ARENA.halfLength + 0.4]) {
-    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 2.6, 12), pillarMat);
-    p.position.set(x, 1.3, -0.6);
-    p.castShadow = true;
-    scene.add(p);
   }
 }
 
@@ -98,7 +114,7 @@ function resize() {
     canvas.classList.remove('pixel');
   }
   camera.aspect = w / h;
-  camera.fov = w / h < 1.2 ? 55 : 40;
+  camera.fov = w / h < 1.2 ? CAMERA.fov + 15 : CAMERA.fov;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
@@ -126,12 +142,20 @@ function newRound() {
   eventQueue = new RAPIER.EventQueue(true);
   colliderInfo = new Map();
 
-  // 바닥 + 좌우 보이지 않는 벽
+  // 바닥 + 원형 울타리 벽
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
-  for (const s of [-1, 1]) {
+  const n = 32;
+  const R = ARENA.radius + 0.25;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const half = R * Math.tan(Math.PI / n) + 0.05;
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -a);
     world.createCollider(
-      RAPIER.ColliderDesc.cuboid(0.2, 3, 3).setTranslation(s * (ARENA.halfLength + 0.2), 3, 0).setCollisionGroups(GROUND_GROUPS),
+      RAPIER.ColliderDesc.cuboid(0.2, 0.6, half)
+        .setTranslation(Math.cos(a) * R, 0.6, Math.sin(a) * R)
+        .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
+        .setCollisionGroups(GROUND_GROUPS),
       ground,
     );
   }
@@ -141,15 +165,15 @@ function newRound() {
     index: 0,
     name: '나',
     x: -ARENA.startGap / 2,
-    facing: 1,
-    colors: { cloth: 0x2f4f7f, limb: 0x3b3f47, skin: 0xd6a57c, metal: 0x9aa3ad, boot: 0x3a2618, grip: 0x4a2e1a },
+    heading: 0,
+    look: LOOKS.player,
   });
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 1,
     name: '상대',
     x: ARENA.startGap / 2,
-    facing: -1,
-    colors: { cloth: 0x7f2a22, limb: 0x47403b, skin: 0xc79470, metal: 0x6f6a62, boot: 0x2a1a10, grip: 0x2a1a10 },
+    heading: Math.PI,
+    look: LOOKS.enemy,
   });
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   ai = new AI(enemy, player, settings.difficulty);
@@ -251,14 +275,15 @@ const hud = $('hud');
 const topButtons = $('topButtons');
 const toast = $('toast');
 const hint = $('hint');
-const moveButtons = $('moveButtons');
+const moveButtons = $('moveStick');
+attachStick(input, $('moveStick'), $('moveKnob'));
 let state = 'menu'; // menu | fight | paused
 let roundOver = false;
 let roundOverTime = 0;
 
 $('howto').innerHTML = input.isTouchDevice
-  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요.</li><li>폰을 운전대처럼 좌우로 기울이면 걸어요.</li><li>◎ 버튼: 지금 각도를 "똑바로"로 다시 맞춰요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>'
-  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>A / D (또는 ← / →) 로 이동해요.</li><li>Esc 로 마우스 잠금 해제, P 로 일시정지.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>';
+  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>폰을 앞뒤로 기울이면 전진·후퇴, 좌우로 기울이면 옆걸음.</li><li>◎ 버튼: 지금 각도를 "똑바로"로 다시 맞춰요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>'
+  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>W A S D (또는 방향키) 로 걸어요.</li><li>Esc 로 마우스 잠금 해제, P 로 일시정지.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>';
 
 function refreshSettingsUI() {
   document.querySelectorAll('[data-setting]').forEach((el) => {
@@ -323,7 +348,7 @@ async function startFight() {
     setTimeout(() => {
       if (!ok || !input.tiltActive) {
         moveButtons.classList.add('show');
-        showHint('기울기 센서를 쓸 수 없어서 이동 버튼을 켰어요.');
+        showHint('기울기 센서를 쓸 수 없어서 왼쪽 아래 조이스틱을 켰어요.');
       } else {
         input.calibrateTilt();
       }
@@ -338,7 +363,7 @@ async function startFight() {
   newRound();
   state = 'fight';
   showToast('싸워라!');
-  showHint(input.isTouchDevice ? '끌어서 칼 휘두르기 · 기울여서 걷기' : '클릭해서 마우스 잠금 · A/D 이동');
+  showHint(input.isTouchDevice ? '끌어서 칼 휘두르기 · 앞뒤/좌우로 기울여서 걷기' : '클릭해서 마우스 잠금 · WASD 이동');
 }
 
 function pause() {
@@ -378,21 +403,6 @@ window.addEventListener('keydown', (e) => {
   if (state === 'fight') pause();
   else if (state === 'paused' && !roundOver) resume();
 });
-for (const [id, dir] of [
-  ['btnLeft', -1],
-  ['btnRight', 1],
-]) {
-  const b = $(id);
-  b.addEventListener('pointerdown', (e) => {
-    e.stopPropagation();
-    input.buttonMove = dir;
-  });
-  const stop = () => (input.buttonMove = 0);
-  b.addEventListener('pointerup', stop);
-  b.addEventListener('pointercancel', stop);
-  b.addEventListener('pointerleave', stop);
-}
-
 function updateHud() {
   $('hpP').style.width = `${player.hp}%`;
   $('hpE').style.width = `${enemy.hp}%`;
@@ -424,29 +434,39 @@ function checkRoundEnd(dt) {
   }
 }
 
-// ── 카메라: 두 사람 사이를 비추고 거리에 맞춰 줌 ──
+// ── 카메라: 내 캐릭터 오른쪽 어깨 너머에서 상대를 바라본다 ──
 const camTarget = new THREE.Vector3();
+const camLook = new THREE.Vector3();
+const camDir = new THREE.Vector3(1, 0, 0);
+const _cd = new THREE.Vector3();
 function updateCamera(dt) {
   if (!player) return;
   const a = player.pelvisPos;
   const b = enemy.pelvisPos;
-  const midX = (a.x + b.x) / 2;
-  const gap = Math.abs(a.x - b.x);
-  const portrait = camera.aspect < 1.2;
-  const dist = (portrait ? 6.5 : 4.4) + gap * 0.55;
-  camTarget.set(midX, 1.0, 0);
-  const k = 1 - Math.exp(-dt * 4);
-  camera.position.x += (midX - camera.position.x) * k;
-  camera.position.y += (1.65 - camera.position.y) * k;
-  camera.position.z += (dist - camera.position.z) * k;
+  // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지)
+  _cd.set(b.x - a.x, 0, b.z - a.z);
+  if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
+  const right = _cd.set(-camDir.z, 0, camDir.x);
+  camTarget
+    .copy(a)
+    .addScaledVector(camDir, -CAMERA.back)
+    .addScaledVector(right, CAMERA.shoulder)
+    .setY(CAMERA.height);
+  // 경기장 바깥 돌벽을 뚫고 나가지 않게
+  const r = Math.hypot(camTarget.x, camTarget.z);
+  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(CAMERA.height);
+  const k = 1 - Math.exp(-dt * 6);
+  camera.position.lerp(camTarget, k);
+  const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1);
+  camLook.lerp(look, k);
   if (shake > 0) {
     camera.position.x += (Math.random() - 0.5) * shake;
     camera.position.y += (Math.random() - 0.5) * shake;
     shake = Math.max(0, shake - dt * 1.5);
   }
-  camera.lookAt(camTarget);
-  sun.position.set(midX + 3, 8, 5);
-  sun.target.position.set(midX, 0, 0);
+  camera.lookAt(camLook);
+  sun.position.set(a.x + 4, 9, a.z + 3);
+  sun.target.position.set(a.x, 0, a.z);
 }
 
 // ── 게임 루프 ──
@@ -462,10 +482,11 @@ function frame(now) {
     // 손 목표 갱신 (입력 → 플레이어)
     const d = input.consumeHandDelta();
     if (player.alive) {
-      player.handOffset.x += d.x * player.facing;
+      player.handOffset.x += d.x;
       player.handOffset.y += d.y;
     }
-    player.moveInput = player.alive ? input.move : 0;
+    const m = input.move;
+    player.move.set(player.alive ? m.x : 0, player.alive ? m.y : 0);
 
     // 타격 순간 살짝 멈칫 + 판이 끝나면 슬로모션
     let scale = 1;
@@ -477,6 +498,8 @@ function frame(now) {
     acc += dt * scale;
     let steps = 0;
     while (acc >= PHYSICS.timestep && steps < PHYSICS.maxStepsPerFrame) {
+      player.faceTarget = enemy.bodies.pelvis.translation();
+      enemy.faceTarget = player.bodies.pelvis.translation();
       ai.update(PHYSICS.timestep);
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);

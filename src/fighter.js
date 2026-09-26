@@ -6,8 +6,8 @@
 //  서 있게 하고 걷게 하고 칼을 휘두르게 한다. 그래서 맞으면 비틀거리고
 //  힘이 빠지면 인형처럼 쓰러진다. 이것이 하프 소드 느낌의 핵심이다.
 //
-//  좌표 약속: 싸움은 x축 위에서 벌어진다. 카메라는 +z 쪽에서 바라본다.
-//  facing = +1 이면 오른쪽(+x)을 보고, -1 이면 왼쪽을 본다.
+//  좌표 약속: 몸 기준(로컬)으로 +x가 앞, +y가 위, +z가 오른쪽이다.
+//  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { BODY, WEAPON, DAMAGE } from './config.js';
@@ -19,7 +19,7 @@ const weaponBit = (i) => (i === 0 ? 4 : 16);
 const groups = (member, filter) => (member << 16) | filter;
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
-// 부위 정의. 오른쪽(+x)을 보고 서 있는 자세 기준 좌표. s = 칼 든 팔 쪽 z 부호.
+// 부위 정의. 앞(+x)을 보고 서 있는 자세 기준 좌표. s = 칼 든 팔 쪽 z 부호(+1 = 오른손).
 function partDefs(s) {
   return [
     { name: 'pelvis', kind: 'pelvis', shape: ['box', 0.1, 0.09, 0.15], pos: [0, 0.95, 0], mass: 12 },
@@ -62,6 +62,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 const toV = (v) => _v3.set(v.x, v.y, v.z);
+const RIGHT_LOCAL = new THREE.Vector3(0, 0, 1);
 const rot = (b, out) => {
   const r = b.rotation();
   return out.set(r.x, r.y, r.z, r.w);
@@ -76,18 +77,18 @@ export class Fighter {
   /**
    * @param {object} o
    * @param {number} o.index  0 = 플레이어, 1 = 상대
-   * @param {number} o.x      시작 x 위치
-   * @param {number} o.facing +1 오른쪽을 봄 / -1 왼쪽을 봄
-   * @param {object} o.colors { cloth, skin, metal }
+   * @param {number} o.x       시작 x 위치
+   * @param {number} o.heading 처음 바라보는 방향(라디안). 0 = +x
+   * @param {object} o.look    겉모습(색, 투구 등) — looks.js 참고
    */
   constructor(RAPIER, world, scene, colliderInfo, o) {
     this.R = RAPIER;
     this.world = world;
     this.index = o.index;
-    this.facing = o.facing;
     this.name = o.name;
-    // 칼 든 팔이 항상 카메라 쪽(+z)에 오도록, 왼쪽을 보는 쪽은 부위를 반대로 놓는다.
-    this.side = o.facing === 1 ? 1 : -1;
+    this.side = 1; // 오른손잡이
+    this.heading = o.heading ?? 0;
+    this.faceTarget = null; // 바라볼 지점(보통 상대 골반). main이 매 스텝 넣어준다.
 
     this.hp = 100;
     this.balance = 100;
@@ -96,21 +97,22 @@ export class Fighter {
     this.muscle = 1; // 근육 힘 비율 (넘어지면 0 근처로)
     this.armHealth = 1; // 칼 든 팔 상태
     this.legHealth = 1;
-    this.moveInput = 0; // -1(뒤) ~ 1(앞) 이 아니라 화면 기준 -1(왼쪽) ~ 1(오른쪽)
+    this.move = new THREE.Vector2(); // x: 옆걸음(+오른쪽), y: 앞(+)/뒤(-). 각각 -1 ~ 1
     this.strength = o.strength ?? 1;
     this.gaitPhase = 0;
     this.hitCooldowns = new Map();
     this.onHurt = null;
 
-    // 손 목표: 어깨 기준 (앞쪽, 위쪽) 오프셋. 입력/AI가 이 값을 바꾼다.
-    this.handOffset = new THREE.Vector2(0.38, 0.02);
+    // 손 목표: 몸 앞 평면에서 (좌우, 위아래) 오프셋(m). 입력/AI가 이 값을 바꾼다.
+    // 앞뒤 깊이는 자동: 가운데로 모을수록 팔을 앞으로 뻗는다.
+    this.handOffset = new THREE.Vector2(0.15, 0.0);
 
     this.bodies = {};
     this.meshes = [];
     this.joints = [];
     this.totalMass = 0;
 
-    const yaw = new THREE.Quaternion().setFromAxisAngle(UP, o.facing === 1 ? 0 : Math.PI);
+    const yaw = new THREE.Quaternion().setFromAxisAngle(UP, this.heading);
     this.yaw = yaw;
     const origin = new THREE.Vector3(o.x, 0, 0);
     const toWorld = (p) => new THREE.Vector3(...p).applyQuaternion(yaw).add(origin);
@@ -139,10 +141,8 @@ export class Fighter {
       const col = world.createCollider(cd, rb);
       colliderInfo.set(col.handle, { fighter: this, kind: d.kind, part: d.name, body: rb });
 
-      const color = d.kind === 'head' ? o.colors.skin : d.kind === 'chest' || d.kind === 'pelvis' ? o.colors.cloth : o.colors.limb;
       const group = new THREE.Group();
-      const mesh = shapeMesh(d.shape, color);
-      group.add(mesh);
+      const mesh = dressPart(group, d, o.look);
 
       if (d.foot) {
         const fd = RAPIER.ColliderDesc.cuboid(0.1, 0.03, 0.05)
@@ -152,28 +152,12 @@ export class Fighter {
           .setCollisionGroups(bodyGroups);
         const fc = world.createCollider(fd, rb);
         colliderInfo.set(fc.handle, { fighter: this, kind: 'leg', part: d.name, body: rb });
-        const fm = shapeMesh(['box', 0.1, 0.03, 0.05], o.colors.boot);
+        const fm = shapeMesh(['box', 0.1, 0.035, 0.055], o.look.shoes);
         fm.position.set(0.05, -0.185, 0);
         group.add(fm);
       }
-      if (d.kind === 'head') {
-        // 투구 흉내: 머리 위에 금속 반구
-        const helm = new THREE.Mesh(
-          new THREE.SphereGeometry(0.118, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55),
-          new THREE.MeshStandardMaterial({ color: o.colors.metal, metalness: 0.7, roughness: 0.35 }),
-        );
-        helm.castShadow = true;
-        group.add(helm);
-        // 눈 방향 표시 (+x가 앞)
-        const visor = new THREE.Mesh(
-          new THREE.BoxGeometry(0.02, 0.02, 0.14),
-          new THREE.MeshBasicMaterial({ color: 0x111111 }),
-        );
-        visor.position.set(0.105, 0.01, 0);
-        group.add(visor);
-      }
       scene.add(group);
-      this.meshes.push({ rb, group, baseColor: new THREE.Color(color), kind: d.kind, mesh });
+      this.meshes.push({ rb, group, kind: d.kind, mesh });
       this.bodies[d.name] = rb;
       this.localPos[d.name] = new THREE.Vector3(...d.pos);
       this.totalMass += d.mass + (d.foot ? 0.8 : 0);
@@ -211,9 +195,9 @@ export class Fighter {
     const m = WEAPON.mass;
     const parts = [
       // [모양, 위치y, 질량비, 색, 칼날인가]
-      [['box', 0.018, 0.1, 0.018], 0, 0.1, o.colors.grip, false],
-      [['ball', 0.03], -0.12, 0.1, o.colors.metal, false],
-      [['box', 0.11, 0.015, 0.022], 0.115, 0.18, o.colors.metal, false],
+      [['box', 0.018, 0.1, 0.018], 0, 0.1, o.look.grip, false],
+      [['ball', 0.03], -0.12, 0.1, o.look.hilt, false],
+      [['box', 0.11, 0.015, 0.022], 0.115, 0.18, o.look.hilt, false],
       [['box', 0.024, L / 2, 0.008], 0.13 + L / 2, 0.62, 0xd8dde3, true],
     ];
     const group = new THREE.Group();
@@ -243,7 +227,6 @@ export class Fighter {
       true,
     );
     this.swordMass = m;
-    this.shoulderLocal = new THREE.Vector3(0, 1.44 - 1.28, this.side * 0.25); // chest 기준
     this.handTarget = new THREE.Vector3();
     this.tipPrev = null;
     this.tipVel = new THREE.Vector3();
@@ -268,10 +251,34 @@ export class Fighter {
     return out.set(0, 0.13 + WEAPON.length * t, 0).applyQuaternion(_q1).add(_v1.set(p.x, p.y, p.z));
   }
 
-  shoulderWorld(out = new THREE.Vector3()) {
-    const c = this.bodies.chest.translation();
-    rot(this.bodies.chest, _q1);
-    return out.copy(this.shoulderLocal).applyQuaternion(_q1).add(_v1.set(c.x, c.y, c.z));
+  /** 몸 기준 앞 방향(수평) */
+  forward(out = new THREE.Vector3()) {
+    return out.set(Math.cos(this.heading), 0, -Math.sin(this.heading));
+  }
+
+  /** 몸 기준 오른쪽 방향(수평) */
+  right(out = new THREE.Vector3()) {
+    return out.set(Math.sin(this.heading), 0, Math.cos(this.heading));
+  }
+
+  // 상대 쪽으로 몸을 천천히 돌린다 (한 번에 휙 돌지 못하게 회전 속도 제한)
+  updateHeading(dt) {
+    if (this.state === 'stand' || this.state === 'getup') {
+      if (this.faceTarget) {
+        const p = this.bodies.pelvis.translation();
+        const want = Math.atan2(-(this.faceTarget.z - p.z), this.faceTarget.x - p.x);
+        let diff = want - this.heading;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        const maxTurn = 3.2 * this.muscle * dt;
+        this.heading += THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
+      }
+    } else {
+      // 쓰러져 있는 동안에는 골반이 실제로 향한 방향을 따라간다 (일어날 때 몸이 비틀리지 않게)
+      rot(this.bodies.pelvis, _q1);
+      const f = _v1.set(1, 0, 0).applyQuaternion(_q1);
+      if (Math.hypot(f.x, f.z) > 0.3) this.heading = Math.atan2(-f.z, f.x);
+    }
+    this.yaw.setFromAxisAngle(UP, this.heading);
   }
 
   // ── 매 물리 스텝마다 호출: 근육을 움직인다 ──
@@ -288,6 +295,7 @@ export class Fighter {
 
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
 
+    this.updateHeading(dt);
     this.driveBalance(dt);
     this.applyPose(dt);
     this.driveJoints();
@@ -353,31 +361,39 @@ export class Fighter {
       pelvis.addForce({ x: 0, y: fy, z: 0 }, true);
     }
 
-    // 2) 좌우 이동 + 앞뒤(z) 흔들림 억제
+    // 2) 걷기: 앞뒤 + 옆걸음 (옆/뒤로는 조금 느리게)
+    const fwd = this.forward(_v1);
+    const rgt = this.right(_v2);
     const speed = BODY.moveSpeed * (0.5 + 0.5 * this.legHealth);
-    const desired = this.state === 'stand' ? this.moveInput * speed : 0;
-    let fx = M * BODY.moveAccel * (desired - v.x);
-    fx = THREE.MathUtils.clamp(fx, -M * 12, M * 12) * mus;
-    const fz = M * (-25 * p.z - 8 * v.z) * mus;
+    const mv = this.state === 'stand' ? this.move : { x: 0, y: 0 };
+    const along = mv.y * speed * (mv.y < 0 ? 0.75 : 1);
+    const side = mv.x * speed * 0.8;
+    const dvx = fwd.x * along + rgt.x * side - v.x;
+    const dvz = fwd.z * along + rgt.z * side - v.z;
+    const lim = M * 12;
+    const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
+    const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     pelvis.addForce({ x: fx, y: 0, z: fz }, true);
 
     // 3) 똑바로 서기 (골반과 가슴을 목표 방향으로 회전)
     const k = BODY.uprightStiffness * mus;
     const d = BODY.uprightDamping * mus;
-    const lean = this.state === 'stand' ? THREE.MathUtils.clamp(-v.x * this.facing * 0.06, -0.15, 0.15) : 0;
+    const vFwd = v.x * fwd.x + v.z * fwd.z;
+    this.speedFwd = vFwd;
+    this.speedH = Math.hypot(v.x, v.z);
+    const lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.06, -0.15, 0.15) : 0;
     _q2.setFromAxisAngle(Z_AXIS, lean).premultiply(this.yaw); // 이동 방향으로 살짝 숙임
     uprightTorque(pelvis, this.yaw, k, d, 600);
     uprightTorque(chest, _q2, k * 0.8, d * 0.8, 500);
 
-    // 걷기 위상
-    this.gaitPhase += Math.abs(v.x) * dt * 5.2;
+    // 걷기 위상 (뒤로 걸으면 거꾸로)
+    this.gaitPhase += this.speedH * dt * 5.2 * (vFwd < -0.2 ? -1 : 1);
   }
 
   // 관절 목표 자세 정하기 (걷기 사이클, 방패 없는 손 가드)
   applyPose() {
     const J = this.jointByName;
-    const v = this.bodies.pelvis ? this.bodies.pelvis.linvel().x : 0;
-    const amp = Math.min(1, Math.abs(v) / BODY.moveSpeed) * 0.5;
+    const amp = Math.min(1, (this.speedH || 0) / BODY.moveSpeed) * 0.5;
     const ph = this.gaitPhase;
     const setZ = (name, a) => J[name].target.setFromAxisAngle(Z_AXIS, a);
     // 앞다리/뒷다리: 펜싱 자세처럼 벌리고, 걸을 때 번갈아 흔든다
@@ -410,12 +426,15 @@ export class Fighter {
     const mus = this.muscle;
     if (mus < 0.12) return; // 쓰러지면 칼을 놓친 듯 힘이 빠진다
 
-    // 손 목표 위치 (어깨 + 오프셋), 팔 길이 이내로 제한
+    // 손 목표 위치: 가슴 앞 평면의 (좌우, 위아래) + 자동 깊이
     const off = this.handOffset;
+    const R = WEAPON.reach;
     const len = off.length();
-    if (len > WEAPON.reach) off.multiplyScalar(WEAPON.reach / len);
-    const shoulder = this.shoulderWorld(_v2);
-    const target = this.handTarget.set(shoulder.x + off.x * this.facing, shoulder.y + off.y, shoulder.z + 0.08);
+    if (len > R) off.multiplyScalar(R / len);
+    const depth = 0.2 + 0.35 * Math.sqrt(Math.max(0, 1 - (off.x * off.x + off.y * off.y) / (R * R)));
+    const handLocal = _v2.set(depth, 0.16 + off.y, 0.1 + off.x);
+    const c = chest.translation();
+    const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
 
     const grip = sword.translation();
     const gv = sword.linvel();
@@ -439,11 +458,11 @@ export class Fighter {
     sword.addForce(vecArg(f), true);
     chest.addForce({ x: -f.x * 0.7, y: -f.y * 0.7, z: -f.z * 0.7 }, true); // 반작용: 휘두르면 몸도 끌려간다
 
-    // 칼끝 방향: 어깨→손 방향에 약간 위쪽을 더하고, 칼끝이 몸 중심선(z=0)을 향하게 기울인다.
-    // (손은 몸 옆에 있으니, 칼을 안쪽으로 기울여야 상대 몸통과 머리에 닿는다)
-    const aim = _v3.set(off.x * this.facing, off.y + 0.28, -target.z * 0.9);
-    if (aim.lengthSq() < 1e-4) aim.set(0, 1, 0);
-    aim.normalize();
+    // 칼끝 방향: 가슴 아래 뒤쪽의 한 점(지렛대 받침)에서 손을 잇는 방향 + 앞쪽으로 살짝.
+    // → 손을 올리면 칼이 서고, 오른쪽으로 빼면 칼이 오른쪽으로 눕고, 가운데면 상대를 겨눈다.
+    //  (손은 몸 중심보다 0.1m 오른쪽에 있으니, 칼끝은 살짝 안쪽으로 모아 상대 중심선을 겨눈다)
+    const aim = _v3.set(handLocal.x + 0.45, handLocal.y + 0.2, off.x - 0.08);
+    aim.normalize().applyQuaternion(this.yaw);
     rot(sword, _q1);
     const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1);
     const axis = new THREE.Vector3().crossVectors(blade, aim);
@@ -451,9 +470,20 @@ export class Fighter {
     const angle = Math.atan2(sinA, blade.dot(aim));
     const torque = new THREE.Vector3();
     if (sinA > 1e-5) torque.copy(axis).multiplyScalar((WEAPON.aimStiffness * angle) / sinA);
-    // 칼날 면이 카메라를 향하도록(날이 휘두르는 방향으로 서도록) 비틀림 유지
+    // 칼날(날 선 쪽)이 휘두르는 방향을 향하도록 비틀림 유지.
+    // 칼이 거의 멈춰 있으면 칼 면이 몸 오른쪽을 보게 둔다.
     const flat = new THREE.Vector3(0, 0, 1).applyQuaternion(_q1);
-    const flatTarget = Z_AXIS.clone().addScaledVector(blade, -blade.z).normalize();
+    const edgeDir = new THREE.Vector3(gv.x, gv.y, gv.z).addScaledVector(blade, -(gv.x * blade.x + gv.y * blade.y + gv.z * blade.z));
+    let flatTarget;
+    if (edgeDir.length() > 1) {
+      flatTarget = new THREE.Vector3().crossVectors(blade, edgeDir).normalize();
+      if (flatTarget.dot(flat) < 0) flatTarget.negate();
+    } else {
+      flatTarget = RIGHT_LOCAL.clone().applyQuaternion(this.yaw);
+      flatTarget.addScaledVector(blade, -flatTarget.dot(blade));
+      if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(flat);
+      flatTarget.normalize();
+    }
     // 칼날 축(길쭉한 방향)으로 도는 회전은 관성이 아주 작아서, 큰 힘을 주면
     // 계산이 폭주해 칼이 팽이처럼 돈다. 그래서 비틀림은 아주 약하게 따로 다룬다.
     const w = angvel(sword, new THREE.Vector3());
@@ -533,6 +563,86 @@ function shapeMesh(s, color, matOpts) {
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   return mesh;
+}
+
+function mat(color, opts) {
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0.02, ...(opts || {}) });
+}
+
+function addMesh(group, geo, material, pos, rotEuler) {
+  const m = new THREE.Mesh(geo, material);
+  if (pos) m.position.set(...pos);
+  if (rotEuler) m.rotation.set(...rotEuler);
+  m.castShadow = true;
+  group.add(m);
+  return m;
+}
+
+/**
+ * 부위 하나에 옷을 입힌다. 반환값은 "맞으면 붉어지는" 대표 메쉬.
+ * 모든 좌표는 그 부위 몸체 기준 (+x 앞, +y 위, +z 오른쪽).
+ */
+function dressPart(group, d, look) {
+  const s = d.shape;
+  switch (d.name) {
+    case 'pelvis': {
+      const main = addMesh(group, new THREE.BoxGeometry(0.21, 0.19, 0.31), mat(look.tunic));
+      // 상의 치마 자락 (허벅지 위를 덮음)
+      addMesh(group, new THREE.CylinderGeometry(0.17, 0.215, 0.26, 14, 1, true), mat(look.tunic, { side: THREE.DoubleSide }), [0, -0.12, 0]);
+      addMesh(group, new THREE.BoxGeometry(0.225, 0.04, 0.325), mat(look.belt), [0, 0.07, 0]);
+      return main;
+    }
+    case 'chest': {
+      const main = addMesh(group, new THREE.BoxGeometry(0.24, 0.42, 0.37), mat(look.tunic));
+      // 누빔 줄무늬 (앞/뒤)
+      for (const x of [0.121, -0.121]) {
+        for (const z of [-0.11, 0, 0.11]) addMesh(group, new THREE.BoxGeometry(0.004, 0.4, 0.012), mat(look.quilt), [x, 0, z]);
+      }
+      // 옷깃
+      addMesh(group, new THREE.CylinderGeometry(0.075, 0.09, 0.05, 12), mat(look.quilt), [0, 0.22, 0]);
+      // 가죽 끈 X자 (앞/뒤)
+      if (look.straps) {
+        for (const x of [0.126, -0.126]) {
+          for (const a of [0.62, -0.62]) addMesh(group, new THREE.BoxGeometry(0.006, 0.5, 0.035), mat(look.straps), [x, 0, 0], [a, 0, 0]);
+        }
+      }
+      return main;
+    }
+    case 'head': {
+      const face = addMesh(group, new THREE.SphereGeometry(s[1], 18, 14), mat(look.skin));
+      const dark = new THREE.MeshBasicMaterial({ color: 0x1a1210 });
+      for (const z of [-0.038, 0.038]) addMesh(group, new THREE.BoxGeometry(0.012, 0.016, 0.022), dark, [0.102, 0.018, z]);
+      addMesh(group, new THREE.BoxGeometry(0.03, 0.035, 0.022), mat(look.skin), [0.112, -0.012, 0]);
+      if (look.hair) {
+        // 머리카락: 뒤통수와 정수리를 덮는 반구
+        addMesh(group, new THREE.SphereGeometry(0.117, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), mat(look.hair, { roughness: 1 }), [-0.012, 0.004, 0], [0, 0, 0.35]);
+      }
+      if (look.headband) addMesh(group, new THREE.CylinderGeometry(0.118, 0.118, 0.028, 18, 1, true), mat(look.headband), [0, 0.03, 0], [0, 0, 0.15]);
+      if (look.helmet === 'kettle') {
+        const steel = mat(look.metal, { metalness: 0.75, roughness: 0.3 });
+        addMesh(group, new THREE.SphereGeometry(0.128, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), steel, [0, 0.02, 0]);
+        // 넓은 챙 (아래로 살짝 퍼짐)
+        addMesh(group, new THREE.CylinderGeometry(0.135, 0.235, 0.05, 28, 1, true), new THREE.MeshStandardMaterial({ color: look.metal, metalness: 0.75, roughness: 0.3, side: THREE.DoubleSide }), [0, 0.0, 0]);
+        // 정수리 능선
+        addMesh(group, new THREE.BoxGeometry(0.2, 0.025, 0.012), steel, [0, 0.14, 0], [0, 0, 0]);
+      }
+      return face;
+    }
+    case 'uarmS':
+    case 'uarmO':
+      return addMesh(group, new THREE.CapsuleGeometry(s[2] + 0.008, s[1] * 2, 4, 10), mat(look.sleeve));
+    case 'farmS':
+    case 'farmO': {
+      const m = addMesh(group, new THREE.CapsuleGeometry(s[2] + 0.004, s[1] * 2, 4, 10), mat(look.sleeve));
+      addMesh(group, new THREE.SphereGeometry(0.042, 12, 8), mat(look.hands), [0, -0.135, 0]);
+      return m;
+    }
+    case 'thighF':
+    case 'thighB':
+      return addMesh(group, new THREE.CapsuleGeometry(s[2], s[1] * 2, 4, 10), mat(look.hoseUpper));
+    default:
+      return addMesh(group, new THREE.CapsuleGeometry(s[2], s[1] * 2, 4, 10), mat(look.hoseLower));
+  }
 }
 
 /** 쿼터니언 오차 → (회전축 * 각도) 벡터 */
