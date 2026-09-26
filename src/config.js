@@ -77,6 +77,7 @@ export const GAIT = {
   guardHeight: 0.9, // 펜싱 자세 골반 높이(m): 무릎을 살짝 굽힌다
   walkHeight: 0.965, // 걸을 때 골반 높이 상한(m)
   walkHeightFast: 0.02, // 빨리(1.6 m/s) 걸을 때 이만큼 낮춘다
+  heightRate: 0.15, // 걷기·서기 골반 높이를 바꾸는 최고 빠르기(m/s)
   maxDip: 0.12, // 발이 넓게 벌어져도 골반을 이 이상 낮추지 않는다(m)
   kneeBase: 0.1, // 딛은 다리 무릎 기본 굽힘(라디안)
   loadKnee: 0.06, // 발을 디딘 순간 무게를 받으며 더 굽히는 정도(라디안)
@@ -99,6 +100,7 @@ export const GAIT = {
   liftCarry: 0.7, // 발을 뗄 때 몸 속도의 이 비율로 발이 출발한다 (뒤에 끌리지 않게)
   toeUp: 0.2,
   swingVmax: 4.5, // 내딛는 발목이 엉덩이에 대해 움직이는 최고 속도(m/s) // 발을 든 동안 발끝을 드는 각도(라디안)
+  maxAccel: 3.2, // 발로 땅을 밀어 낼 수 있는 최대 가속(m/s²). 예전 방식(BODY.maxAccel 4.5)보다 무겁게
   sideFactor: 0.45, // 옆걸음 최고 속도 = moveSpeed × 이 값 (발이 서로 지나가지 못해 옆으로는 빨리 못 간다)
   backFactor: 0.65, // 뒷걸음
   sideStride: 0.5, // 옆걸음에서 한 발이 한 번에 옮기는 최대 거리(m). 넘으면 박자가 빨라진다

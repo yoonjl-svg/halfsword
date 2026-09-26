@@ -885,7 +885,7 @@ export class Fighter {
     const dvx = want.x - v.x;
     const dvz = want.z - v.z;
     const grip = Math.min(1, loadSum * 1.5);
-    const lim = M * BODY.maxAccel * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다
+    const lim = M * (hybrid ? GAIT.maxAccel : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     push(fx, 0, fz);

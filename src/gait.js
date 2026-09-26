@@ -38,8 +38,8 @@ export function hybridJointDefs(defs) {
 
 const ANKLE_H = 0.062; // 발바닥이 땅에 평평하게 닿았을 때 발목 높이 (발 0.07 − 체중에 눌려 땅에 파묻히는 몫 약 0.008: 물리 엔진의 부드러운 접촉)
 const SOLE_C = new THREE.Vector3(0, -0.035, 0); // 발 몸체 기준 발바닥 가운데
-const SOLE_T = new THREE.Vector3(0.1, -0.035, 0); // 발끝 쪽 (뒤꿈치를 들면 여기로 버틴다)
-const TOE_X = 0.15; // 발목에서 발끝(뒤꿈치를 들 때 축이 되는 곳)까지 앞으로
+const SOLE_T = new THREE.Vector3(0.12, -0.035, 0); // 발끝 쪽 (뒤꿈치를 들면 여기로 버틴다)
+const TOE_X = 0.17; // 발목에서 발끝(뒤꿈치를 들 때 축이 되는 곳)까지 앞으로
 const SOLE_Y = 0.07; // 발목에서 발바닥까지 아래로
 // 뒤꿈치를 약 0.35라디안 들었을 때 발목이 올라가는 높이·앞으로 가는 거리 (골반 높이를 정할 때 쓴다)
 const HEEL_DY = TOE_X * Math.sin(0.35) + SOLE_Y * (Math.cos(0.35) - 1);
@@ -136,6 +136,7 @@ export class Gait {
     }
     this.lev = 1;
     this.sinceEnter = 0;
+    this.hNomF = undefined;
     const p = this.f.bodies.pelvis.translation();
     this.h = p.y;
     this.hv = 0;
@@ -290,8 +291,8 @@ export class Gait {
       swing.y0 = Math.max(0, swing.des.y - ANKLE_H);
       swing.p0.y = ANKLE_H;
       swing.v0.set(0, 0, 0);
+      swing.T = clamp(swing.T - swing.t, 0.2, Tsw * 0.8); // 이미 오래 들고 있었으면 빨리 딛는다
       swing.t = 0;
-      swing.T = Math.max(0.22, Tsw * 0.8);
       swing.kind = 'walk';
       swing.hFrac = 1;
     }
@@ -386,7 +387,11 @@ export class Gait {
     const hurt = (1 - f.legHealth) * 0.1;
     // 빨리 걸을수록 무릎을 조금 더 굽힌 채 걷는다 (보폭이 길어도 골반이 크게 출렁이지 않게)
     const walkH = GAIT.walkHeight - GAIT.walkHeightFast * clamp((speed - 0.8) / 0.8, 0, 1);
-    let hNom = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop);
+    // 걷기 ↔ 서기 높이는 천천히 바꾼다 (한 번에 낮추면 다리를 오므려 두 발이 땅에서 뜬다)
+    const hNomT = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop);
+    const hr = GAIT.heightRate * dt;
+    this.hNomF = this.hNomF === undefined ? hNomT : this.hNomF + clamp(hNomT - this.hNomF, -hr, hr);
+    const hNom = this.hNomF;
     let hGeo = Infinity;
     for (const k of ['F', 'B']) {
       const l = L[k];
