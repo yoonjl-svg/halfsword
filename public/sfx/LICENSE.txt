@@ -1,0 +1,9 @@
+Sound effects in this folder come from Kenney (www.kenney.nl), released under
+Creative Commons Zero (CC0): http://creativecommons.org/publicdomain/zero/1.0/
+They were trimmed, high-passed, peak-normalized and converted to mono MP3.
+
+  punch1-5.mp3  <- "Impact Sounds" (1.0): impactPunch_heavy_000-004.ogg
+  crack1.mp3    <- "RPG Audio": chop.ogg        (used as a bone-crack layer)
+  slide1-2.mp3  <- "RPG Audio": knifeSlice.ogg, knifeSlice2.ogg (blade glance layer)
+
+Thank you, Kenney!

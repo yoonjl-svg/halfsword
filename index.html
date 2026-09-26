@@ -67,6 +67,7 @@
       .primary { width: 100%; margin-top: 16px; padding: 14px; font-size: 17px; font-weight: 800; border: 0; border-radius: 8px; background: var(--accent); color: #1b1410; }
       .secondary { width: 100%; margin-top: 8px; padding: 11px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); }
       .howto { font-size: 13px; color: var(--dim); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
+      .minor { color: var(--accent); font-size: 12px; margin-left: 6px; }
 
       /* 가로로 든 폰처럼 화면 높이가 낮을 때는 메뉴를 촘촘하게 */
       @media (max-height: 500px) {
@@ -112,7 +113,7 @@
         </div>
         <div class="row"><span>픽셀 모드 (실험)</span><button class="toggle" data-setting="pixel" aria-label="픽셀 모드"></button></div>
         <div class="row"><span>피 표현</span><button class="toggle" data-setting="blood" aria-label="피 표현"></button></div>
-        <div class="row"><span>소리</span><button class="toggle" data-setting="sound" aria-label="소리"></button></div>
+        <div class="row"><span>소리 <a class="minor" href="sounds.html">들어보기</a></span><button class="toggle" data-setting="sound" aria-label="소리"></button></div>
         <div class="row touchOnly"><span>이동 방식</span>
           <div class="seg" data-setting="moveMode">
             <button data-v="stick">조이스틱</button><button data-v="tilt">기울기</button>
