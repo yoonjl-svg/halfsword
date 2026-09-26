@@ -79,6 +79,7 @@ function mkLeg(k, side) {
     phi: 0, // 지금 목표 무릎 굽힘
     heel: 0, // 뒤꿈치를 든 각도
     hFrac: 1,
+    y0: 0, // 걸음을 바꿀 때 이미 들려 있던 높이
     des: new THREE.Vector3(), // 내딛는 발목 목표 (측정용)
     v0: new THREE.Vector3(), // 발을 뗄 때 발의 출발 속도
     fq: new THREE.Quaternion(), // 발 자세 (월드)
@@ -228,6 +229,17 @@ export class Gait {
     }
 
     // ② 내딛는 발
+    // 자세를 고쳐 딛던 중에 다시 걷기 시작하면: 지금 발 위치에서 걷는 걸음으로 바꾼다
+    if (swing && walkNow && swing.kind === 'settle') {
+      swing.p0.copy(swing.des);
+      swing.y0 = Math.max(0, swing.des.y - ANKLE_H);
+      swing.p0.y = ANKLE_H;
+      swing.v0.set(0, 0, 0);
+      swing.t = 0;
+      swing.T = Math.max(0.22, Tsw * 0.8);
+      swing.kind = 'walk';
+      swing.hFrac = 1;
+    }
     if (swing) {
       swing.t += dt;
       const u = swing.t / swing.T;
@@ -333,7 +345,7 @@ export class Gait {
     const w = hT < this.h ? GAIT.hDown : GAIT.hUp;
     this.hv += (w * w * (hT - this.h) - 2 * w * this.hv) * dt;
     this.h += this.hv * dt;
-    if (this.h > hGeo + 0.01) this.h = hGeo + 0.01;
+    if (this.h > hGeo + 0.01) this.h = Math.max(hGeo + 0.01, hNom - GAIT.maxDip);
   }
 
   /** 멈춘 뒤 펜싱 자세에서 가장 벗어난 발 (고쳐 딛을 발). 괜찮으면 null */
@@ -372,6 +384,7 @@ export class Gait {
   begin(l, kind, T) {
     l.stance = false;
     l.heel = 0;
+    l.y0 = 0;
     l.kind = kind;
     l.t = 0;
     l.T = T;
@@ -477,7 +490,7 @@ export class Gait {
         const late = l.t > l.T ? Math.min(0.02, (l.t - l.T) * 0.3) : 0;
         // 발은 일찍 들고(발끝이 걸리지 않게) 늦게 내린다. 들린 동안 발끝을 살짝 든다
         const up = THREE.MathUtils.smoothstep(u, 0, 0.3) * (1 - THREE.MathUtils.smoothstep(u, Math.min(0.75, l.hFrac - 0.15), 1));
-        _a.y = ANKLE_H + l.lift * up - late;
+        _a.y = ANKLE_H + Math.max(l.lift * up, l.y0 * (1 - THREE.MathUtils.smoothstep(u, 0, 0.5))) - late;
         const yaw = l.yaw0 + wrap(l.yaw1 - l.yaw0) * s;
         l.des.copy(_a);
         this.legIK(l, l.hip, _a, yaw, GAIT.toeUp * Math.sin(Math.PI * u));
