@@ -37,6 +37,8 @@ export function hybridJointDefs(defs) {
 }
 
 const ANKLE_H = 0.07; // 발바닥이 땅에 평평하게 닿았을 때 발목 높이
+const SOLE_C = new THREE.Vector3(0, -0.035, 0); // 발 몸체 기준 발바닥 가운데
+const SOLE_T = new THREE.Vector3(0.1, -0.035, 0); // 발끝 쪽 (뒤꿈치를 들면 여기로 버틴다)
 const TOE_X = 0.15; // 발목에서 발끝(뒤꿈치를 들 때 축이 되는 곳)까지 앞으로
 const SOLE_Y = 0.07; // 발목에서 발바닥까지 아래로
 const HIP_DROP = 0.04; // 골반 중심에서 엉덩이 관절까지 (아래로)
@@ -76,6 +78,13 @@ function mkLeg(k, side) {
     kind: 'walk',
     phi: 0, // 지금 목표 무릎 굽힘
     heel: 0, // 뒤꿈치를 든 각도
+    hFrac: 1,
+    des: new THREE.Vector3(), // 내딛는 발목 목표 (측정용)
+    v0: new THREE.Vector3(), // 발을 뗄 때 발의 출발 속도
+    fq: new THREE.Quaternion(), // 발 자세 (월드)
+    fp: new THREE.Vector3(), // 발 위치 (월드)
+    pinC: new THREE.Vector3(), // 딛을 때 발바닥 가운데가 닿은 곳 (월드)
+    pinT: new THREE.Vector3(), // 발끝이 닿은 곳
   };
 }
 
@@ -112,8 +121,7 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const L = this.legs[k];
       L.stance = true;
-      L.plant.set(L.ankle.x, ANKLE_H, L.ankle.z);
-      L.yaw = L.footYaw;
+      this.plantAt(L);
       L.tLand = 1;
     }
     this.lev = 1;
@@ -148,6 +156,8 @@ export class Gait {
       _qF.set(fr.x, fr.y, fr.z, fr.w);
       const ft = fb.translation();
       _s1.set(ft.x, ft.y, ft.z);
+      L.fq.copy(_qF);
+      L.fp.copy(_s1);
       L.ankle.set(-0.05, 0.035, 0).applyQuaternion(_qF).add(_s1);
       L.soleY = _s2.set(0, -0.035, 0).applyQuaternion(_qF).add(_s1).y;
       const fx = _s2.set(1, 0, 0).applyQuaternion(_qF);
@@ -213,8 +223,7 @@ export class Gait {
       const dx = l.ankle.x - l.plant.x;
       const dz = l.ankle.z - l.plant.z;
       if (dx * dx + dz * dz > GAIT.slipReset * GAIT.slipReset || l.soleY > 0.12) {
-        l.plant.set(l.ankle.x, ANKLE_H, l.ankle.z);
-        l.yaw = l.footYaw;
+        this.plantAt(l);
       }
     }
 
@@ -262,9 +271,12 @@ export class Gait {
         }
       }
       if (next) {
-        this.begin(L[next], kind, Tstep);
-        this.target(L[next], want, fwd, rgt, Tstep);
-        swing = L[next];
+        const l = L[next];
+        this.begin(l, kind, Tstep);
+        this.target(l, want, fwd, rgt, Tstep);
+        // 자세 고치기: 멀리 옮길수록 천천히 (휙 옮기면 딛을 때 미끄러진다)
+        if (kind === 'settle') l.T = clamp(GAIT.settleT + 0.5 * l.p0.distanceTo(l.p1), GAIT.settleT, 0.6);
+        swing = l;
       }
     }
     if (this.req) {
@@ -365,8 +377,11 @@ export class Gait {
     l.T = T;
     l.p0.set(l.ankle.x, ANKLE_H, l.ankle.z);
     l.p1.copy(l.p0);
+    l.v0.set(this.vf.x * GAIT.liftCarry, 0, this.vf.z * GAIT.liftCarry);
     l.yaw0 = l.footYaw;
     l.lift = kind === 'settle' ? GAIT.liftSettle : GAIT.lift;
+    // 걷는 중엔 발을 든 시간 내내 옮긴다 (일찍 도착하면 몸이 따라올 때까지 발이 몸 앞 멀리 떠 있어야 한다)
+    l.hFrac = kind === 'walk' ? 1 : GAIT.hFrac;
     if (kind === 'req') this.reqLeg = l.k;
   }
 
@@ -415,13 +430,20 @@ export class Gait {
 
   touchdown(l, speed) {
     l.stance = true;
-    l.plant.set(l.ankle.x, ANKLE_H, l.ankle.z);
-    l.yaw = l.footYaw;
+    this.plantAt(l);
     l.tLand = 0;
     this.sinceTD = 0;
     this.lastTD = l.k;
     if (l.kind === 'req') this.req = null;
     this.f.footstep = Math.max(this.f.footstep, clamp(speed / BODY.moveSpeed, 0.15, 1));
+  }
+
+  /** 지금 발 자리를 딛은 자리로 기억한다 (발바닥 가운데·발끝이 땅에 붙은 곳도) */
+  plantAt(l) {
+    l.plant.set(l.ankle.x, ANKLE_H, l.ankle.z);
+    l.yaw = l.footYaw;
+    l.pinC.copy(SOLE_C).applyQuaternion(l.fq).add(l.fp);
+    l.pinT.copy(SOLE_T).applyQuaternion(l.fq).add(l.fp);
   }
 
   /** 다리 관절 목표 (applyPose가 부른다) */
@@ -445,13 +467,19 @@ export class Gait {
         this.legIK(l, _h, _a, l.yaw, -l.heel);
       } else {
         const u = clamp(l.t / l.T, 0, 1);
-        const s = minJerk(u);
-        _a.lerpVectors(l.p0, l.p1, s);
+        // 앞뒤·옆으로는 발을 든 시간의 앞쪽 hFrac 동안 옮기고, 나머지 동안 거의 제자리에서 내려 딛는다
+        //  (움직이는 채로 땅에 닿으면 미끄러진다)
+        const uh = Math.min(1, u / l.hFrac);
+        const s = minJerk(uh);
+        // 5차 곡선: 발을 떼는 순간엔 몸과 함께 앞으로 나가기 시작하고(뒤에 끌리지 않게), 딛는 순간엔 땅에 대해 멈춘다
+        const h1 = uh - 6 * uh * uh * uh + 8 * uh * uh * uh * uh - 3 * uh * uh * uh * uh * uh;
+        _a.lerpVectors(l.p0, l.p1, s).addScaledVector(l.v0, h1 * l.T * l.hFrac);
         const late = l.t > l.T ? Math.min(0.02, (l.t - l.T) * 0.3) : 0;
         // 발은 일찍 들고(발끝이 걸리지 않게) 늦게 내린다. 들린 동안 발끝을 살짝 든다
-        const b = Math.sin(Math.PI * Math.pow(u, 0.75));
-        _a.y = ANKLE_H + l.lift * b * b - late;
+        const up = THREE.MathUtils.smoothstep(u, 0, 0.3) * (1 - THREE.MathUtils.smoothstep(u, Math.min(0.75, l.hFrac - 0.15), 1));
+        _a.y = ANKLE_H + l.lift * up - late;
         const yaw = l.yaw0 + wrap(l.yaw1 - l.yaw0) * s;
+        l.des.copy(_a);
         this.legIK(l, l.hip, _a, yaw, GAIT.toeUp * Math.sin(Math.PI * u));
       }
     }
@@ -534,17 +562,30 @@ export class Gait {
   pinFeet() {
     const f = this.f;
     if (!GAIT.pinK) return;
-    const W = f.totalMass * 9.81 * (1 - GAIT.assist) * (1 - this.lev);
+    const W = f.totalMass * 9.81 * (1 - GAIT.assist) * (1 - this.lev) * f.muscle;
     const nSt = (this.legs.F.stance ? 1 : 0) + (this.legs.B.stance ? 1 : 0);
-    if (!nSt) return;
+    if (!nSt || W <= 0) return;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
       if (!l.stance || l.soleY > 0.03) continue;
       const fb = f.bodies[l.foot];
+      // 붙잡는 곳: 발바닥 가운데 (뒤꿈치를 들었으면 발끝)
+      const toe = l.heel > 0.05;
+      const pin = toe ? l.pinT : l.pinC;
+      const pt = _s1.copy(toe ? SOLE_T : SOLE_C).applyQuaternion(l.fq).add(l.fp);
       const v = fb.linvel();
-      let fx = GAIT.pinK * (l.plant.x - l.ankle.x) - GAIT.pinD * v.x;
-      let fz = GAIT.pinK * (l.plant.z - l.ankle.z) - GAIT.pinD * v.z;
-      const lim = GAIT.pinMu * (W / nSt) * f.muscle;
+      const w = fb.angvel();
+      const c = fb.worldCom();
+      const rx = pt.x - c.x;
+      const ry = pt.y - c.y;
+      const rz = pt.z - c.z;
+      // 그 점의 속도 = v + ω × r
+      const vx = v.x + w.y * rz - w.z * ry;
+      const vz = v.z + w.x * ry - w.y * rx;
+      let fx = GAIT.pinK * (pin.x - pt.x) - GAIT.pinD * vx;
+      let fz = GAIT.pinK * (pin.z - pt.z) - GAIT.pinD * vz;
+      const N = W / nSt;
+      const lim = GAIT.pinMu * N;
       const fl = Math.hypot(fx, fz);
       if (fl > lim) {
         fx *= lim / fl;
@@ -553,9 +594,19 @@ export class Gait {
       _f.x = fx;
       _f.y = 0;
       _f.z = fz;
-      fb.addForce(_f, true);
+      _p.x = pt.x;
+      _p.y = pt.y;
+      _p.z = pt.z;
+      fb.addForceAtPoint(_f, _p, true);
+      // 발이 땅 위에서 도는 것도 마찰이 붙잡는다 (한계 = 마찰 × 무게 × 발바닥 크기)
+      const lt = GAIT.pinMu * N * 0.05;
+      _f.x = 0;
+      _f.y = clamp(GAIT.pinYawK * wrap(l.yaw - l.footYaw) - GAIT.pinYawD * w.y, -lt, lt);
+      _f.z = 0;
+      fb.addTorque(_f, true);
     }
   }
+
 
   /** 관절 목표 속도 기록(driveJoints의 prevRV)을 지운다 → 목표가 한 번에 바뀌어도 모터가 튀지 않는다 */
   resetRates() {
@@ -591,3 +642,4 @@ const _qS = new THREE.Quaternion();
 const _qK = new THREE.Quaternion();
 const _qW = new THREE.Quaternion();
 const _f = { x: 0, y: 0, z: 0 };
+const _p = { x: 0, y: 0, z: 0 };
