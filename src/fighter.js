@@ -881,7 +881,6 @@ export class Fighter {
     }
 
     // 2) 걷기: 딛고 있는 발로 땅을 밀어서 나아간다 (발이 떠 있으면 못 민다, 미끄러우면 미끄러진다)
-    this.wantDbg = (this.wantDbg || new THREE.Vector3()).copy(want);
     const dvx = want.x - v.x;
     const dvz = want.z - v.z;
     const grip = Math.min(1, loadSum * 1.5);

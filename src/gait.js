@@ -77,7 +77,7 @@ function mkLeg(k, side) {
     p1: new THREE.Vector3(),
     yaw0: 0,
     yaw1: 0,
-    lift: 0.07,
+    lift: 0,
     kind: 'walk',
     phi: 0, // 지금 목표 무릎 굽힘
     heel: 0, // 뒤꿈치를 든 각도
@@ -117,11 +117,6 @@ export class Gait {
     this.prevHead = fighter.heading;
     this.headRate = 0; // 몸을 돌리는 빠르기(rad/s)
     this.sinceEnter = 0;
-  }
-
-  /** 지금 이 걸음 방식이 몸을 맡고 있나 */
-  get on() {
-    return this.active;
   }
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
@@ -480,7 +475,6 @@ export class Gait {
     l.lift = kind === 'settle' ? GAIT.liftSettle : GAIT.lift;
     // 걷는 중엔 발을 든 시간 내내 옮긴다 (일찍 도착하면 몸이 따라올 때까지 발이 몸 앞 멀리 떠 있어야 한다)
     l.hFrac = kind === 'settle' ? GAIT.hFrac : 1;
-    if (kind === 'req') this.reqLeg = l.k;
   }
 
   /** 내딛을 자리 정하기 (remain: 발이 땅에 닿기까지 남은 시간) */
@@ -533,7 +527,7 @@ export class Gait {
     this.sinceTD = 0;
     this.lastTD = l.k;
     if (l.kind === 'req') this.req = null;
-    this.f.footstep = Math.max(this.f.footstep, clamp(speed / BODY.moveSpeed, 0.15, 1));
+    this.f.footstep = Math.max(this.f.footstep, clamp(speed / GAIT.moveSpeed, 0.15, 1));
   }
 
   /** 지금 발 자리를 딛은 자리로 기억한다 (발바닥 가운데·발끝이 땅에 붙은 곳도) */
@@ -638,7 +632,7 @@ export class Gait {
 
   /**
    * 다리 역운동학: 엉덩이(hip) → 발목(ankle)까지 다리를 뻗고, 발은 yaw 방향을 보며 땅과 나란하게.
-   * 무릎·발목은 경첩이라 다리가 옆으로 기울면 발도 조금 기운다.
+   * 무릎은 경첩, 발목은 공 관절이라 다리가 옆으로 기울어도 발바닥은 평평하다.
    */
   legIK(l, hip, ankle, yaw, pitch) {
     const f = this.f;
@@ -726,7 +720,6 @@ export class Gait {
     }
   }
 
-
   /** 관절 목표 속도 기록(driveJoints의 prevRV)을 지운다 → 목표가 한 번에 바뀌어도 모터가 튀지 않는다 */
   resetRates() {
     const J = this.f.jointByName;
@@ -753,8 +746,6 @@ const _m = new THREE.Vector3();
 const _ut = new THREE.Vector3();
 const _x = new THREE.Vector3();
 const _y = new THREE.Vector3();
-const _ks = new THREE.Vector3();
-const _fx = new THREE.Vector3();
 const _c = new THREE.Vector3();
 const _hp = new THREE.Vector3();
 const _qS = new THREE.Quaternion();
