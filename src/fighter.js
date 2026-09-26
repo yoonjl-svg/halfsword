@@ -1111,8 +1111,9 @@ export class Fighter {
       if (n === 'uarmS' || n === 'farmS') mus *= (0.3 + 0.7 * this.limbs.armS) * this.strength;
       if (n.endsWith('F') && isLeg) mus *= 0.4 + 0.6 * this.limbs.legF;
       if (n.endsWith('B') && isLeg) mus *= 0.4 + 0.6 * this.limbs.legB;
-      const k = j.k * mus;
-      const d = j.d * Math.sqrt(Math.max(0.05, mus));
+      // gain: 다리가 체중을 싣는 걸음에서 딛은 다리는 근육을 더 단단히 쓴다 (gait.js)
+      const k = j.k * mus * (j.gain || 1);
+      const d = j.d * Math.sqrt(Math.max(0.05, mus)) * (j.gain || 1);
       const maxErr = (j.max * mus) / Math.max(1, k); // 이 이상 벌어진 목표는 근력으로 못 따라간다
       if (j.manual) {
         this.manualMuscle(j, k, d, j.max * mus);

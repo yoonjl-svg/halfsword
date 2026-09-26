@@ -139,6 +139,11 @@ export class Gait {
 
   exit() {
     this.active = false;
+    const J = this.f.jointByName;
+    for (const k of ['F', 'B']) {
+      const l = this.legs[k];
+      J[l.thigh].gain = J[l.shin].gain = J[l.foot].gain = 1;
+    }
     this.req = null;
   }
 
@@ -326,7 +331,9 @@ export class Gait {
     // ⑥ 골반 높이: 딛은 다리가 닿는 높이 (무릎을 조금 굽힌 채)
     const drop = f.pelvisDropOffset || 0;
     const hurt = (1 - f.legHealth) * 0.1;
-    let hNom = (walkNow ? GAIT.walkHeight : GAIT.guardHeight) - hurt - Math.max(0, drop);
+    // 빨리 걸을수록 무릎을 조금 더 굽힌 채 걷는다 (보폭이 길어도 골반이 크게 출렁이지 않게)
+    const walkH = GAIT.walkHeight - GAIT.walkHeightFast * clamp((speed - 0.8) / 0.8, 0, 1);
+    let hNom = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop);
     let hGeo = Infinity;
     for (const k of ['F', 'B']) {
       const l = L[k];
@@ -462,6 +469,14 @@ export class Gait {
   /** 다리 관절 목표 (applyPose가 부른다) */
   poseLegs() {
     const f = this.f;
+    const J = f.jointByName;
+    for (const k of ['F', 'B']) {
+      const l = this.legs[k];
+      const g = l.stance ? GAIT.stanceGain : GAIT.swingGain;
+      J[l.thigh].gain = g;
+      J[l.shin].gain = g;
+      J[l.foot].gain = g;
+    }
     const p = f.bodies.pelvis.translation();
     // 딛은 다리는 골반을 목표 높이로 밀어 올린다. 골반이 목표보다 높을 때 다리를 오므리면 (몸을 끌어내리지 못하고)
     // 발만 들리므로 조금만 오므린다
