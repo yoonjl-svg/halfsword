@@ -13,9 +13,16 @@
 //  유효 질량: 칼은 손을 축으로 도는 강체라서, 칼끝에 닿으면 칼 전체 무게가 실리지 않는다.
 //   맞은 점에서 칼이 "밀려나는 정도"로 실제 유효 질량을 계산한다 (강체 역학: 1/m + (r×n)·I⁻¹·(r×n)).
 //   실제 롱소드의 칼끝 쪽 유효 질량은 0.3kg 안팎이다. 여기에 팔·몸이 함께 밀어주는 몫을 조금 더한다.
+//
+//  반작용 (작용·반작용, 운동량 보존)
+//   - 칼끼리: 강철 재질(반발 계수, 마찰)로 물리 엔진이 부딪힘을 푼다. 두 칼이 주고받는 충격량은 같은 크기
+//     반대 방향이고, 손목 관절을 타고 팔 → 가슴으로 전해진다. 떨어져 있다가 새로 부딪힐 때만 튕기고,
+//     맞댄 채 누르는 동안(바인드)엔 튕기지 않는다(떨림 방지). 누르는 힘은 fighter.feel로 알린다.
+//   - 투구·뼈: 날이 들지 못한 타격은 칼이 되튄다. 접촉점의 반발 계수 식으로 필요한 충격량을 계산해
+//     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { WEAPON, STRIKE, ANATOMY } from './config.js';
+import { WEAPON, STRIKE, ANATOMY, STEEL } from './config.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -42,13 +49,20 @@ function zoneOf(info, local) {
 
 export class Combat {
   /**
-   * @param {object} hooks  { onWound(attacker, victim, result, point), onClash(point, speed), onBlocked(...) }
+   * @param {object} hooks  { onWound(attacker, victim, result, point), onClash(point, speed, info), onBlocked(...) }
+   *   onClash의 info = { fresh(떨어져 있다가 새로 부딪힘), vn(부딪히기 직전 맞닿는 방향 속도 m/s), vt(칼날을 따라 스치던 속도),
+   *                      force(누르는 힘 N), impulse(이번 스텝 충격량 N·s), normal(앞 싸움꾼 칼 → 뒤 칼) }
    */
   constructor(colliderInfo, hooks) {
     this.info = colliderInfo;
     this.hooks = hooks;
     this.cutting = new Map(); // "칼콜라이더:몸콜라이더" → { seen, applied, until }
     this.stepNo = 0;
+    // 칼끼리 닿은 마지막 스텝. 떨어진 지 STEEL.rearmSteps가 지나야 다시 튕길 수 있다
+    this.bladeLast = -1e9;
+    this.steelArmed = true; // 지금 칼 재질에 반발이 켜져 있는가
+    this.touching = new Map(); // "칼콜라이더:몸콜라이더" → 마지막으로 닿은 스텝 (투구·뼈 되튐을 한 번만)
+    this.fighters = [...new Set([...colliderInfo.values()].map((i) => i.fighter))];
     // Rapier 물리 훅: 칼과 상대 몸이 부딪히려 할 때마다(매 스텝) 불린다.
     // 여기서는 엔진 함수를 부르면 안 되므로, 스텝 직전에 저장해 둔 값(cacheState)만 쓴다.
     this.physicsHooks = {
@@ -203,6 +217,7 @@ export class Combat {
     this.stepNo++;
     // 1) 가르고 지나가는 칼: 몸 속을 지나는 동안 매 순간 저항을 받는다
     const dt = world.timestep;
+    this.dt = dt;
     for (const [key, c] of this.cutting) {
       if (this.stepNo - c.seen > 2 && !(c.stuckT > 0)) {
         this.cutting.delete(key); // 더 이상 겹치지 않음
@@ -267,6 +282,7 @@ export class Combat {
     }
 
     // 2) 튕긴 충돌 (칼끼리, 칼 면/손잡이, 문턱 못 넘은 베기)
+    const bladePairs = [];
     eventQueue.drainContactForceEvents((e) => {
       const h1 = e.collider1();
       const h2 = e.collider2();
@@ -274,20 +290,146 @@ export class Combat {
       const b = this.info.get(h2);
       if (!a || !b || a.fighter === b.fighter) return;
       if (a.kind === 'weapon' && b.kind === 'weapon') {
-        const p = contactPointOf(world, h1, h2) || a.fighter.bladePoint(0.6);
-        const rel = a.body.velocityAtPoint(p);
-        const rel2 = b.body.velocityAtPoint(p);
-        const sp = Math.hypot(rel.x - rel2.x, rel.y - rel2.y, rel.z - rel2.z);
-        this.hooks.onClash?.(p, sp);
+        // 칼끼리는 모아서 한 번에 (칼날-칼날, 칼날-코등이… 여러 쌍이 한 스텝에 함께 닿는다)
+        bladePairs.push(a.fighter.index < b.fighter.index ? [h1, h2] : [h2, h1]);
         return;
       }
       const pr = this.pairOf(h1, h2);
       if (!pr) return;
       if (this.cutting.has(`${pr.wc}:${pr.vc}`)) return;
-      const p = contactPointOf(world, h1, h2);
-      if (!p) return;
-      this.strike(pr, p, false);
+      const c = contactOf(world, pr.wc, pr.vc);
+      if (!c) return;
+      this.strike(pr, c.p, false);
+      this.rebound(pr, c.p, c.n);
     });
+    this.bladeClash(world, bladePairs);
+    this.armSteel();
+  }
+
+  /**
+   * 칼끼리 부딪힘: 이번 스텝에 두 칼이 주고받은 충격량을 모아서 싸움꾼에게 알리고(fighter.feel: 누르는 힘,
+   * 새로 부딪힘), 소리·불꽃 훅을 부른다. 튕김 자체는 물리 엔진이 강철 재질(반발 계수)로 계산했다.
+   */
+  bladeClash(world, pairs) {
+    if (!pairs.length) {
+      for (const f of this.fighters) if (f.feel) (f.feel.touching = false), (f.feel.force = 0);
+      return;
+    }
+    let J = 0;
+    let point = null;
+    const n = _c.set(0, 0, 0);
+    for (const [h1, h2] of pairs) {
+      world.contactPair(world.getCollider(h1), world.getCollider(h2), (m, flipped) => {
+        let s = 0;
+        for (let i = 0; i < m.numContacts(); i++) s += m.contactImpulse(i);
+        if (s <= 0) return;
+        // 법선: 앞 칼(번호가 작은 싸움꾼) → 뒤 칼 방향. 엔진 쪽 순서가 뒤집혀 있으면 부호를 바꾼다
+        const nn = m.normal();
+        const sg = flipped ? -s : s;
+        n.x += nn.x * sg;
+        n.y += nn.y * sg;
+        n.z += nn.z * sg;
+        J += s;
+        if (!point && m.numSolverContacts() > 0) point = tv(m.solverContactPoint(0));
+      });
+    }
+    const A = this.info.get(pairs[0][0]);
+    const B = this.info.get(pairs[0][1]);
+    if (!point) point = A.fighter.bladePoint(0.6);
+    if (J > 0) n.normalize();
+    const nrm = n.clone();
+    // 부딪히기 직전 상대 속도 (스텝 전 저장값) — 부딪힌 뒤엔 엔진이 이미 속도를 꺾어 놓았다
+    //  vn = 맞닿는 방향으로 다가오던 빠르기(부딪히는 세기), vt = 칼날을 따라 스치던 빠르기
+    const SA = A.fighter.cache?.sword;
+    const SB = B.fighter.cache?.sword;
+    let vn = 0;
+    let vt = 0;
+    if (SA && SB && J > 0) {
+      const r = velAt(SA, point, _a).sub(velAt(SB, point, _b));
+      vn = Math.max(0, r.dot(nrm));
+      vt = Math.sqrt(Math.max(0, r.lengthSq() - r.dot(nrm) ** 2));
+    }
+    const va = A.body.velocityAtPoint(point);
+    const vb = B.body.velocityAtPoint(point);
+    const sp = Math.hypot(va.x - vb.x, va.y - vb.y, va.z - vb.z); // 스텝 뒤 상대 속도 (튕기고 남은 속도)
+    const fresh = this.stepNo - this.bladeLast > STEEL.rearmSteps; // 떨어져 있다가 새로 부딪힘
+    this.bladeLast = this.stepNo;
+    const force = J / this.dt;
+    // 싸움꾼마다: 상대 칼이 내 칼을 미는 힘(바인드의 "느낌"), 새로 부딪힌 충격
+    for (const [f, sgn] of [[A.fighter, -1], [B.fighter, 1]]) {
+      const fe = f.feel;
+      if (!fe) continue;
+      fe.touching = true;
+      fe.force = force;
+      fe.normal.copy(nrm).multiplyScalar(sgn); // 상대 칼이 내 칼을 미는 방향
+      fe.point.copy(point);
+      fe.time = fresh ? 0 : fe.time + this.dt;
+      if (fresh) {
+        fe.impact = J;
+        fe.impactSpeed = vn;
+        f.takeJolt?.(J);
+      }
+    }
+    this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
+  }
+
+  /** 칼끼리 맞댄 채(바인드)엔 반발을 끈다: 누를 때마다 접촉점이 새로 생기며 튕겨 떨리지 않게 */
+  armSteel() {
+    const armed = this.stepNo - this.bladeLast > STEEL.rearmSteps;
+    if (armed === this.steelArmed) return;
+    this.steelArmed = armed;
+    const e = armed ? STEEL.restitution : 0;
+    for (const f of this.fighters) for (const c of f.swordColliders || []) c.setRestitution(e);
+  }
+
+  /**
+   * 딱딱한 곳(투구·두개골·뼈)을 쳤는데 날이 들지 못했으면 칼이 되튄다.
+   * 반발 계수 e: 부딪힌 뒤 떨어지는 속도 = e × 부딪히기 전 다가오던 속도 (접촉점, 법선 방향).
+   * 엔진은 이 접촉을 반발 0으로 풀었으니(칼과 살), 모자란 만큼의 충격량
+   *   ΔJ = (지금 법선 속도 − 목표 속도) ÷ (1/칼 유효질량 + 1/부위 유효질량)
+   * 을 칼과 맞은 부위에 같은 크기, 반대 방향으로 준다 → 운동량은 그대로 보존된다.
+   */
+  rebound(pr, point, n) {
+    const key = `${pr.wc}:${pr.vc}`;
+    const last = this.touching.get(key);
+    this.touching.set(key, this.stepNo);
+    if (last !== undefined && this.stepNo - last <= STEEL.rearmSteps) return; // 이어서 닿아 있는 중: 한 번만 튕긴다
+    if (this.touching.size > 64) for (const [k, s] of this.touching) if (this.stepNo - s > 120) this.touching.delete(k);
+    const att = pr.w.fighter;
+    const vic = pr.v.fighter;
+    const S = att.cache?.sword;
+    const P = vic.cache?.parts[pr.v.part];
+    if (!S || !P || !att.swordProps) return;
+    // 부위의 단단함
+    const vicLocal = _d.copy(point).sub(P.p).applyQuaternion(_q.copy(P.q).invert());
+    const zone = zoneOf(pr.v, vicLocal);
+    let e = 0;
+    if (zone === 'head') e = vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.helmet : STEEL.skull;
+    else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone;
+    if (e <= 0) return;
+    const vPre = velAt(S, point, _a).sub(velAt(P, point, _b)).dot(n); // + = 다가옴
+    if (vPre < STEEL.reboundMinSpeed) return;
+    const sw = pr.w.body;
+    const vb = pr.v.body;
+    const va = sw.velocityAtPoint(point);
+    const vv = vb.velocityAtPoint(point);
+    const vPost = (va.x - vv.x) * n.x + (va.y - vv.y) * n.y + (va.z - vv.z) * n.z;
+    const want = -e * vPre;
+    if (vPost <= want) return; // 이미 그만큼 떨어지고 있다
+    // 칼에는 칼날 중심선 위에 건다 (날 끝에 걸면 칼이 길이 방향으로 팽이처럼 돈다) → 유효 질량도 그 점에서.
+    //  몸은 뼈(중심선)로 받는다
+    const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
+    const o = tv(sw.translation());
+    const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
+    const pV = onBone(pr.v, point);
+    const mB = gripMass(att.swordProps, liveState(sw), pA, n, STEEL.handMass);
+    const mV = bodyMass(vb, pV, n);
+    const J = (vPost - want) / (1 / mB + 1 / mV);
+    sw.applyImpulseAtPoint({ x: -n.x * J, y: -n.y * J, z: -n.z * J }, vp(pA), true);
+    vb.applyImpulseAtPoint({ x: n.x * J, y: n.y * J, z: n.z * J }, vp(pV), true);
+    // 칼을 쥔 팔도 충격을 받는다: 멈추는 충격량(≈ 유효 질량 × 다가오던 속도) + 되튀는 몫
+    att.takeJolt?.(mB * vPre + J);
+    this.lastRebound = { zone, e, vPre, vPost, J, mB, mV, step: this.stepNo };
   }
 
   /** 실제 접촉점에서 다시 정확히 분석하고 상처/에너지 전달을 적용 */
@@ -328,6 +470,42 @@ function freeMass(props, S, point, n) {
   const rn = _fr.copy(point).sub(S.com).cross(n).applyQuaternion(_fq);
   return 1 / (1 / m + (rn.x * rn.x) / I.x + (rn.y * rn.y) / Math.max(I.y, 1e-6) + (rn.z * rn.z) / I.z);
 }
+const _Ic = new THREE.Matrix3();
+const _Im = new THREE.Matrix3();
+const _R = new THREE.Matrix3();
+const _M4 = new THREE.Matrix4();
+const _gc = new THREE.Vector3();
+const _gd = new THREE.Vector3();
+/**
+ * 손에 쥔 칼의 유효 질량: 칼 + 손(칼자루 원점에 붙은 점 질량 handMass). 손목은 공 관절이라 칼은 손을 축으로 자유롭게 돌지만,
+ * 순간 충격에는 손(과 팔의 일부)도 함께 밀려야 한다. 칼끝을 치면 칼 혼자일 때(약 0.19kg)보다 조금 무겁고(약 0.27kg),
+ * 칼자루 쪽을 칠수록 손의 무게가 많이 실린다.  1/m = 1/(칼+손) + (r×n)·I⁻¹·(r×n)  (합친 무게중심 기준)
+ */
+function gripMass(props, S, point, n, handMass) {
+  if (!props) return 0.5;
+  const { m, I, frame } = props;
+  const M = m + handMass;
+  // 합친 무게중심 (손 = 칼 원점)
+  const c = _gc.copy(S.com).multiplyScalar(m).addScaledVector(S.p, handMass).divideScalar(M);
+  // 칼의 관성(주축) → 월드: R·diag(I)·Rᵀ
+  _M4.makeRotationFromQuaternion(_fq.copy(S.q).multiply(frame));
+  _R.setFromMatrix4(_M4);
+  _Ic.set(I.x, 0, 0, 0, Math.max(I.y, 1e-6), 0, 0, 0, I.z);
+  _Ic.premultiply(_R).multiply(_Im.copy(_R).transpose());
+  // 평행축 정리: 칼 무게중심·손을 합친 무게중심 기준으로 옮긴다  m(|d|²E − d dᵀ)
+  const shift = (d, mass) => {
+    const e = _Ic.elements;
+    const dd = d.x * d.x + d.y * d.y + d.z * d.z;
+    const a = [d.x, d.y, d.z];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) e[j * 3 + i] += mass * ((i === j ? dd : 0) - a[i] * a[j]);
+  };
+  shift(_gd.copy(S.com).sub(c), m);
+  shift(_gd.copy(S.p).sub(c), handMass);
+  _Ic.invert();
+  const rn = _gd.copy(point).sub(c).cross(n);
+  const k = rn.x * rn.x * _Ic.elements[0] + rn.y * rn.y * _Ic.elements[4] + rn.z * rn.z * _Ic.elements[8] + 2 * (rn.x * rn.y * _Ic.elements[3] + rn.x * rn.z * _Ic.elements[6] + rn.y * rn.z * _Ic.elements[7]);
+  return 1 / (1 / M + k);
+}
 /**
  * 팔다리는 겉(살)이 아니라 뼈(길이 방향 중심선)로 힘을 받는다.
  * 가느다란 팔다리 겉면에 충격을 주면 길이 방향으로 팽이처럼 돌기 때문.
@@ -365,12 +543,26 @@ function liveState(b) {
     w: new THREE.Vector3(w.x, w.y, w.z),
   };
 }
-function contactPointOf(world, h1, h2) {
+/** 몸 부위(강체)의 한 점에서 방향 n으로 민 유효 질량 (freeMass와 같은 식, 부위의 질량·주관성 모멘트로) */
+function bodyMass(b, point, n) {
+  const I = b.principalInertia();
+  const f = b.principalInertiaLocalFrame();
+  const r = b.rotation();
+  const c = b.worldCom();
+  _fq.set(r.x, r.y, r.z, r.w).multiply(_fq2.set(f.x, f.y, f.z, f.w)).invert();
+  const rn = _fr.set(point.x - c.x, point.y - c.y, point.z - c.z).cross(n).applyQuaternion(_fq);
+  return 1 / (1 / b.mass() + (rn.x * rn.x) / Math.max(I.x, 1e-6) + (rn.y * rn.y) / Math.max(I.y, 1e-6) + (rn.z * rn.z) / Math.max(I.z, 1e-6));
+}
+const _fq2 = new THREE.Quaternion();
+/** 칼(h1)과 몸(h2)의 접촉점과 법선(h1 → h2 방향) */
+function contactOf(world, h1, h2) {
   let found = null;
-  world.contactPair(world.getCollider(h1), world.getCollider(h2), (m) => {
+  world.contactPair(world.getCollider(h1), world.getCollider(h2), (m, flipped) => {
     if (!found && m.numSolverContacts() > 0) {
       const p = m.solverContactPoint(0);
-      if (p) found = new THREE.Vector3(p.x, p.y, p.z);
+      const nn = m.normal();
+      const s = flipped ? -1 : 1;
+      if (p) found = { p: new THREE.Vector3(p.x, p.y, p.z), n: new THREE.Vector3(nn.x * s, nn.y * s, nn.z * s) };
     }
   });
   return found;
