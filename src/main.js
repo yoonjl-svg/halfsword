@@ -9,7 +9,7 @@ import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { GUARDS } from './guards.js';
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
-import { LOOKS } from './looks.js';
+import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
@@ -52,11 +52,26 @@ const saveSettings = () => {
   }
 };
 
+// ── 겉모습 미리보기 (모델링 PM 라운드): 마음에 안 들어도 지우지 않고 archive에 쌓아 둔 옛 버전들을
+//  주소창에서 바로 볼 수 있게 한다. 플레이어 외형에는 적용하지 않는다(감독 지시: 주인공은 그대로).
+//  ?look=margarethe:v0  : 그 캐릭터를 상대로 고정하고 그 버전을 입힌다 (버전 생략 시 지금 버전)
+//  ?lookv=0              : 이번에 고른 상대가 누구든 그 버전을 입힌다 (?foe=와 함께 써도 됨)
+let lookPreviewId = null;
+let lookPreviewVersion = null;
+const lookParam = params.get('look');
+if (lookParam) {
+  const [id, ver] = lookParam.split(':');
+  lookPreviewId = id;
+  lookPreviewVersion = ver ? (ver.startsWith('v') ? ver : `v${ver}`) : null;
+}
+const lookvParam = params.get('lookv');
+const lookvVersion = lookvParam != null ? (lookvParam.startsWith('v') ? lookvParam : `v${lookvParam}`) : null;
+
 // ── 상대 캐릭터 고르기 (테스트/데모용 최소 기능. 정식 선택 UI는 나중에) ──
 //  ?foe=<id>     : characters.js의 특정 캐릭터로 고정
 //  ?foe=random   : 판마다 무작위로 다른 캐릭터 (아무것도 없을 때의 기본값)
 //  ?foe=default  : 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" (메뉴의 난이도 설정을 따른다)
-const foeParam = new URLSearchParams(location.search).get('foe') || 'random';
+const foeParam = params.get('foe') || lookPreviewId || 'random';
 const foeRandomEachRound = foeParam === 'random';
 let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
 let auras = []; // 진짜 엑스칼리버의 일렁임·빛 (aura.js)
@@ -170,12 +185,17 @@ function newRound() {
     look: LOOKS.player,
     weapon: playerWeapon,
   });
+  let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
+  if (currentFoe) {
+    const overrideVersion = (lookPreviewId === currentFoe.id && lookPreviewVersion) || lookvVersion;
+    if (overrideVersion) enemyLook = getLook(currentFoe.id, overrideVersion) || enemyLook;
+  }
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 1,
     name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
     heading: Math.PI,
-    look: currentFoe ? currentFoe.look : LOOKS.enemy,
+    look: enemyLook,
     // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브란은 10% 확률로 주워 온 커먼 칼)
     weapon: foeWeapon,
   });

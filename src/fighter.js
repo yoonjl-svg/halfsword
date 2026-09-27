@@ -16,6 +16,7 @@ import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON } from './weapons.js';
+import { decorateOutfit } from './outfits.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -273,6 +274,9 @@ export class Fighter {
         group.add(dressTo);
       }
       const mesh = dressPart(dressTo, d, o.look);
+      // 장식 레이어(outfits.js): 갑옷판·머리모양 등을 얹는다. 무기 겉모습과 같은 이유로 전용 난수를
+      // 써서(isolatedVisual) 기존 시드 기준 시뮬(fights12 등)의 결과를 건드리지 않는다.
+      isolatedVisual(() => decorateOutfit(dressTo, d, o.look), 0);
       this.partMesh[d.name] = mesh; // 흔적(데칼)을 붙일 겉면
       if (group.userData.helmet) this.helmetGroup = group.userData.helmet;
       if (d.kind === 'head') {
