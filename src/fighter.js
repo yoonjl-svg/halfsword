@@ -351,8 +351,9 @@ export class Fighter {
       ignoreArmor: spec.ignoreArmor,
       twoHand: spec.twoHand,
     };
-    this.weaponDurability = spec.breakImpulse; // 무기가 부러지기까지 남은 충격량 예산 (N·s, Infinity면 안 부러짐)
     this.weaponBroken = false;
+    // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다)
+    this._breakSeed = (0x9e3779b9 ^ ((o.index + 1) * 0x85ebca6b)) >>> 0;
     const L = spec.bladeLength;
     const wristLocal = new THREE.Vector3(0.565, 1.43, this.side * 0.2); // 앞으로 뻗은 팔 끝
     const wp = toWorld(wristLocal.toArray());
@@ -804,13 +805,16 @@ export class Fighter {
   }
 
   /**
-   * 무기가 세게 부딪힌 만큼(J, N·s) 내구도를 깎는다. 강철 무기는 내구도가 무한이라 아무 일도
-   * 없지만, 나뭇가지·냉동 참치처럼 breakImpulse가 정해진 무기는 다 닳으면 부러진다.
+   * 무기가 세게 부딪힐 때마다(J, N·s) 부러질지 굴린다. 확률은 weapons.js breakChance(J): 등급 내구가 낮고 무게가 실린
+   * 충돌일수록 높다. 강철 레전드·고무·플라스마는 확률 0이라 아무 일도 없다 (weapons.js 파손 규칙 참고).
    */
   absorbWeaponImpact(J) {
-    if (!this.armed || this.weaponBroken || !isFinite(this.weaponDurability)) return;
-    this.weaponDurability -= J;
-    if (this.weaponDurability <= 0) this.breakWeapon();
+    if (!this.armed || this.weaponBroken || !this.weapon.fragile) return;
+    const p = this.weapon.breakChance(J);
+    if (p <= 0) return;
+    // 파이터별 LCG (결정적, Math.random 과 무관)
+    this._breakSeed = (Math.imul(this._breakSeed, 1664525) + 1013904223) >>> 0;
+    if (this._breakSeed / 4294967296 < p) this.breakWeapon();
   }
 
   /** 무기가 부러진다: 날이 죽어 뭉툭한 몽둥이가 된다 (combat.js analyze()가 isBlade를 꺼서 처리) */
