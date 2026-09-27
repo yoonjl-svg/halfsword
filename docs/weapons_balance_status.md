@@ -1,6 +1,6 @@
 # 무기 밸런스·비주얼 PM 상태 (7라운드 — 쓰러진 상대 마무리 · 탭 찌르기 · 찌르기 무기)
 
-감독 확인용 상태 파일. (브랜치: `claude/pm-weapons-balance`, 디렉터 브랜치 d44a3ce까지 병합)
+감독 확인용 상태 파일. (브랜치: `claude/pm-weapons-balance`, 디렉터 브랜치 dfeeb6e까지 병합 — 병합 뒤 live_battery 비트 동일·fights12 9/12·hybrid 10/12·브라우저 에러 0 다시 확인)
 
 ## A. 쓰러진 상대에게 칼이 안 들어가던 문제 (오너 "반드시 고쳐라")
 
