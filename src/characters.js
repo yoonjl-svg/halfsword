@@ -35,11 +35,11 @@ export const CHARACTERS = [
       '간격 개념이 없어 상대에게 바짝 붙어 서고, 자세도 박자 없이 아무 때나(약 1.6초마다) 바꾼다 — 가까운 자세 고집이 거의 없어(guardStick 낮음) ' +
       '지붕에서 곧장 바보 자세로 건너뛰는 식의 "먼 자세 점프"가 잦다. 속임수는 쓸 줄 모른다(feint 0). 달려드는 것을 두려워하지 않는다(vor 높음).',
     weaknesses: '준비 동작이 크고 느려 낌새를 미리 읽기 쉽다. 막기 판단이 늦고 부정확하며, 자세 전환이 무작위라 다음 수를 읽긴 어렵지만 정작 방어는 허술하다. 속임수에 매우 잘 속는다.',
-    weapon: 'branch',
+    weapon: 'tree_branch', // 쓰레기 등급: 날이 없어 찌르기 불가, 세게 부딪히면 부러진다
     ai: {
       level: 'easy',
       persona: {
-        school: 'longsword',
+        school: 'tree_branch',
         level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 0.58, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 },
         pers: {
           precision: 0.4, // 아무 데나 후려친다 — 팔·다리에 걸리고 칼 면으로 때린다
@@ -188,10 +188,10 @@ export const CHARACTERS = [
     ai: {
       level: 'normal',
       persona: {
-        school: 'longsword',
-        level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 0.95, aggression: 1.05, windup: 0.5, skill: 0.75 },
+        school: 'jian',
+        level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 1.1, aggression: 1.05, windup: 0.5, strikeSpeed: 13, skill: 0.75 },
         pers: {
-          precision: 0.75,
+          precision: 0.85, // 가벼운 검이라 정확해야 통한다
           guardStick: 0.9,
           fearful: 0.15, // 맞아도 표정 하나 안 바꾼다
           angry: 0.3,
@@ -204,6 +204,8 @@ export const CHARACTERS = [
           patienceTime: 8,
           circleRate: 0.3,
           guardPref: { wechselR: 1.6, wechselL: 1.5, nebenR: 1.4, alber: 1.3, ochsL: 1.2 },
+          // 검(劍)의 장기는 찌르기: 얼굴·가슴을 찌르는 기술을 즐겨 쓴다
+          techPref: { stichPflug: 1.6, stichOchs: 1.5, stichAlber: 1.4, stichPflugL: 1.3, stichOchsL: 1.2, zornhau: 1.0 },
         },
       },
     },
@@ -264,7 +266,7 @@ export const CHARACTERS = [
     ai: {
       level: 'normal',
       persona: {
-        school: 'longsword',
+        school: 'excalibur_replica',
         level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.1, aggression: 1.15, windup: 0.45, skill: 0.82 },
         pers: {
           precision: 0.85,

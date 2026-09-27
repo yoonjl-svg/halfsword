@@ -49,6 +49,38 @@ export const SCHOOLS = {
   },
 };
 
+// 무기별 measure는 무기 담당의 실측(docs/weapons.md, tools/sim/weapon_measure.mjs: 혼자 분노의 베기를 휘둘러
+//  칼날 70% 지점이 머리 높이를 지나는 거리, 롱소드 1.62 기준 보정). 자세·기술은 자세 지도(guards.js)가 롱소드
+//  기준이라 그대로 쓰고, 무기 성질에 맞지 않는 기술만 뺀다.
+const L = SCHOOLS.longsword;
+const noThrust = TECH.filter((t) => t.kind !== 'thrust');
+const noThrustFeints = FEINTS.filter((f) => TECH_BY_NAME[f.fake].kind !== 'thrust');
+
+// 나뭇가지 (쓰레기 등급): 날이 없어 찌르기가 안 된다 → 찌르기 기술·찌르기 속임수 제거. 가볍고 짧아 간격이 좁다
+SCHOOLS.tree_branch = {
+  ...L,
+  id: 'tree_branch',
+  weapon: 'tree_branch',
+  measure: { contact: 1.41, reach: 1.63, clinch: 1.09, cutTime: 0.36 },
+  tech: noThrust,
+  techByName: Object.fromEntries(noThrust.map((t) => [t.name, t])),
+  feints: noThrustFeints,
+};
+
+// 검(劍, 한손 양날검): 가볍고 짧아 간격이 좁고, 찌르기가 강하다(무기 스펙 mThrust 1.15) → 찌르기 기술을 더 믿는다
+const jianTech = TECH.map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * 1.5 } : t));
+SCHOOLS.jian = {
+  ...L,
+  id: 'jian',
+  weapon: 'jian',
+  measure: { contact: 1.32, reach: 1.55, clinch: 1.02, cutTime: 0.38 },
+  tech: jianTech,
+  techByName: Object.fromEntries(jianTech.map((t) => [t.name, t])),
+};
+
+// 엑스칼리버 복제품: 물리가 롱소드와 100% 같다 → 롱소드 꾸러미 그대로 (id만 다르다)
+SCHOOLS.excalibur_replica = { ...L, id: 'excalibur_replica', weapon: 'excalibur_replica' };
+
 export const DEFAULT_SCHOOL = 'longsword';
 
 /** id가 없거나 모르는 유파면 기본(롱소드) 꾸러미 */

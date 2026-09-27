@@ -4,7 +4,8 @@
 import { newRound, DT } from './harness_m.mjs';
 import { CHARACTERS } from '../../src/characters.js';
 
-const [seedsArg = '6', durArg = '60'] = process.argv.slice(2);
+const [seedsArg = '6', durArg = '60', onlyArg = ''] = process.argv.slice(2);
+const ONLY = onlyArg ? onlyArg.split(',') : null;
 const SEEDS = +seedsArg, DUR = +durArg;
 const GUARDS = { langort: [0, 0.03], pflug: [0.18, -0.28], ochs: [0.22, 0.26], tag: [0.02, 0.52], ready: [0.12, -0.18] };
 const GN = Object.keys(GUARDS);
@@ -14,9 +15,10 @@ const f1 = (x) => x.toFixed(1), f2 = (x) => x.toFixed(2);
 
 console.log('id, 맞힘/분, 유효타/분, 평균J, 최고J, 머리목%, 팔다리%, 관통(pass)%, 심각도평균, 처치판, 평균TTK');
 for (const ch of CHARACTERS) {
+  if (ONLY && !ONLY.includes(ch.id)) continue;
   const W = []; let kills = 0; const ttk = []; let totalT = 0;
   for (let s = 1; s <= SEEDS; s++) {
-    const G = newRound({ seed: s, difficulty: ch.ai.level, persona: ch.ai.persona });
+    const G = newRound({ seed: s, difficulty: ch.ai.level, persona: ch.ai.persona, weapon2: ch.weapon });
     const { player: dummy, enemy: me } = G;
     const g = GUARDS[GN[s % GN.length]];
     G.before = () => { dummy.move.set(0, 0); slow(dummy.handOffset, g, 1.0); };
