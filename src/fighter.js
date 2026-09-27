@@ -394,15 +394,17 @@ export class Fighter {
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
-      // 부품 콜라이더는 늘 상자·공 모양이지만(물리 판정은 그대로), 보이는 모양은 무기별로 곡도·외날
-      // 단면·휘어진 몸통 등을 쓸 수 있게 spec.partMesh(idx, ...)가 있으면 그걸 부른다 (없으면 예전처럼
-      // 콜라이더와 똑같은 상자·공 그대로) — 콜라이더 치수와 겉보기 치수는 ~1cm 안에서만 다르게 한다
-      // (약속: docs/weapon_shots 참고).
+      // 부품 콜라이더는 늘 상자·공 모양이지만(물리 판정은 그대로), 보이는 모양은 두 가지 방식으로 바꿀 수 있다:
+      //  · spec.partMesh(idx, ...)가 있으면 그 부품만 곡도·외날 단면·휘어진 몸통 등으로 그린다 (없으면 상자·공 그대로)
+      //  · 색이 null 이면 물리 파트만 두고 아예 그리지 않는다 — decorate 가 진짜 모양(곡도·반달칼)을 그리고
+      //    group.userData.bladeMesh 로 알려 준다 (연구 세션 세이버·팔쉬온 방식)
+      //  어느 쪽이든 콜라이더 치수와 겉보기 치수는 ~1cm 안 (약속: docs/weapon_shots 참고).
       // 등급 마감(finishTier): 겉면이 등급대로 읽히게 한다. 엑스칼리버 복제품만 finishTier를 따로 정해
       // 진품(레전드)과 똑같은 마감을 받는다 — 눈으로 구분이 안 돼야 해서.
       const finish = spec.finishTier ?? spec.tier;
-      const mesh = spec.partMesh?.(partIdx, isBlade, shape, color, weaponMatOpts(spec.material, isBlade, finish), o.look) ?? shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade, finish));
+      const mesh = spec.partMesh?.(partIdx, isBlade, shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish), o.look) ?? shapeMesh(shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish));
       mesh.position.y = y;
+      mesh.visible = color != null; // 색이 null 이면 물리 파트만 두고 그리지 않는다 (decorate 가 곡도·반달칼 같은 진짜 모양을 그린다)
       group.add(mesh);
       partIdx++;
       if (isBlade) {
@@ -412,6 +414,10 @@ export class Fighter {
       }
     }
     spec.decorate?.(group, o.look);
+    if (group.userData.bladeMesh) {
+      this.bladeMesh = group.userData.bladeMesh; // decorate 가 칼날을 따로 그렸으면 피는 거기에 묻는다
+      this.bladeBaseColor = this.bladeMesh.material.color.clone();
+    }
     scene.add(group);
     this.meshes.push({ rb: sword, group, kind: 'weapon' });
     this.sword = sword;

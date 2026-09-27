@@ -21,7 +21,7 @@ import { buildArena } from './arena.js';
 
 await RAPIER.init();
 
-// 테스트용 URL 파라미터: ?weapon=katana&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
+// 테스트용 URL 파라미터: ?weapon=monohoshizao&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
 const params = new URLSearchParams(location.search);
 // 주인공은 판마다 무기를 무작위로 받는다 (주소에 ?weapon=을 적으면 그 무기로 고정).
