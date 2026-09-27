@@ -9,7 +9,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { ARENA } from './config.js';
-import { rng, h3, Kit, box, cyl, canvasTex } from './stage_kit.js';
+import { rng, h3, Kit, box, cyl, limb, canvasTex } from './stage_kit.js';
 
 const C = {
   stone: 0xcfc7b6, // 석회암 (질감에 곱해짐)
@@ -615,6 +615,115 @@ export function buildCathedral(scene, lights = {}) {
     K.put('ivy', new THREE.ConeGeometry(0.18, 0.35, 4), 0x56703a, [x, 0.15, z], [0, r() * 3, 0], 1, { vary: 0.3 }); // 판석 틈 풀
   }
 
+  // ── 북쪽(+z) 한쪽을 뒤덮은 담쟁이와 장미 덩굴 ──
+  //  가는 줄기를 벽을 따라 구불구불 올리고(또는 무너진 윗선에서 늘어뜨리고), 줄기를 따라
+  //  잎(인스턴싱 마름모)과 장미(인스턴싱 꽃송이)를 단다. 기둥에는 나선으로 감아 오른다.
+  {
+    const vr = rng(404);
+    const LEAF = [0x2f4a24, 0x3a5a2a, 0x46662f, 0x2a4020, 0x557236];
+    const ROSE = [0x9e1624, 0xb81e2e, 0xc8455a, 0xd9788a, 0x7a0e1a, 0xead2d2];
+    const leaves = [];
+    const roses = [];
+    const Z = new THREE.Vector3(0, 0, 1);
+    const tq = new THREE.Quaternion();
+    const tq2 = new THREE.Quaternion();
+    const te = new THREE.Euler();
+    const tc = new THREE.Color();
+    const leaf = (p, nrm, dark) => {
+      tq.setFromUnitVectors(Z, nrm).multiply(tq2.setFromEuler(te.set((vr() - 0.5) * 1.0, (vr() - 0.5) * 1.0, vr() * 6.28)));
+      const s = 1.4 + vr() * 1.1;
+      leaves.push([new THREE.Matrix4().compose(p.clone(), tq.clone(), new THREE.Vector3(s, s, s)), tc.set(LEAF[Math.floor(vr() * LEAF.length)]).multiplyScalar(dark * (0.85 + vr() * 0.3)).clone()]);
+    };
+    const rose = (p, dark) => {
+      const s = 1.2 + vr() * 0.8;
+      tq.setFromEuler(te.set(vr() * 6, vr() * 6, vr() * 6));
+      roses.push([new THREE.Matrix4().compose(p.clone(), tq.clone(), new THREE.Vector3(s, s * 0.8, s)), tc.set(ROSE[Math.floor(vr() * ROSE.length)]).multiplyScalar(dark).clone()]);
+    };
+    /** 덩굴 한 가닥: start 에서 dir 쪽으로 자라며 옆(side)으로 구불거린다. nrm: 벽에서 방 쪽으로 향한 방향 */
+    const vine = (start, dir, side, nrm, len, hasRoses, dark, branch = true) => {
+      const p = start.clone();
+      let wob = vr() * 6;
+      let prev = p.clone();
+      const n = Math.floor(len / 0.2);
+      for (let i = 1; i <= n; i++) {
+        wob += (vr() - 0.5) * 0.9;
+        p.addScaledVector(dir, 0.2).addScaledVector(side, Math.sin(wob) * 0.12);
+        if (i % 2 === 0) {
+          limb(K, 'vine', prev.toArray(), p.toArray(), 0.022, 0.018, 0x4a3a26, { vary: 0.2 }, 4);
+          prev = p.clone();
+        }
+        // 아래쪽일수록 잎이 무성하다
+        const lush = 3 + Math.round(3 * (1 - i / n));
+        for (let k = 0; k < lush; k++) leaf(p.clone().addScaledVector(side, (vr() - 0.5) * (0.5 + 0.5 * (1 - i / n))).addScaledVector(dir, (vr() - 0.5) * 0.25).addScaledVector(nrm, 0.02 + vr() * 0.12), nrm, dark);
+        if (hasRoses && vr() < 0.28) rose(p.clone().addScaledVector(side, (vr() - 0.5) * 0.4).addScaledVector(nrm, 0.08 + vr() * 0.06), dark);
+        if (branch && vr() < 0.05) vine(p.clone(), dir.clone().addScaledVector(side, vr() < 0.5 ? -1.2 : 1.2).normalize(), side, nrm, 0.8 + vr() * 1.6, hasRoses, dark, false);
+      }
+    };
+    const up = new THREE.Vector3(0, 1, 0);
+    const down = new THREE.Vector3(0, -1, 0);
+    const sideX = new THREE.Vector3(1, 0, 0);
+    const toRoom = new THREE.Vector3(0, 0, -1);
+    // 옆 복도 바깥벽 (+z) 안쪽 면: 바닥에서 타고 오르는 덩굴, 서쪽일수록 빽빽하다
+    for (let x = WX + 1.5; x < EX - 1; x += 0.9 + vr() * 1.2 + Math.max(0, x + 10) * 0.03) {
+      const len = 4 + vr() * 8.5;
+      vine(new THREE.Vector3(x, 0.05, AZ - 0.6), up, sideX, toRoom, len, vr() < 0.45, 0.72);
+    }
+    // 벽 밑의 장미 덤불
+    for (let x = WX + 2; x < EX - 2; x += 1.3 + vr() * 1.8) {
+      const bz = AZ - 1.1 - vr() * 0.4;
+      const s = 0.5 + vr() * 0.4;
+      K.put('ivy', new THREE.SphereGeometry(1, 7, 5), 0x2c4422, [x, s * 0.45, bz], [0, vr() * 3, 0], [s * 1.3, s, s], { vary: 0.2, noise: 0.2, rough: 0.12 });
+      for (let k = 0; k < 9; k++) {
+        // 덤불(타원체) 겉면 위에 꽃을 얹는다
+        const a = vr() * 6.28;
+        const h = 0.2 + vr() * 0.75;
+        const k2 = Math.sqrt(1 - h * h) + 0.08;
+        rose(new THREE.Vector3(x + Math.cos(a) * s * 1.3 * k2, s * 0.45 + h * s + 0.04, bz + Math.sin(a) * s * k2), 0.85);
+      }
+    }
+    // 아케이드 벽(+z) 신랑 쪽 면: 무너진 윗선·창턱에서 늘어진 덩굴
+    for (const [xa, xb] of bays) {
+      for (let k = 0; k < 3; k++) {
+        const x = xa + 0.8 + vr() * (xb - xa - 1.6);
+        vine(new THREE.Vector3(x, 15 + vr() * 5, NZ - 0.66), down, sideX, toRoom, 2.5 + vr() * 5, vr() < 0.5, 1);
+      }
+    }
+    // +z 줄 기둥을 나선으로 감아 오르는 덩굴
+    for (const px of PX) {
+      if (Math.hypot(px, NZ) < 12.4) continue;
+      let prev = null;
+      const turns = 2 + vr() * 1.5;
+      const top = 5 + vr() * 3;
+      const a0 = vr() * 6.28;
+      for (let i = 0; i <= 60; i++) {
+        const u = i / 60;
+        const a = a0 + u * turns * Math.PI * 2;
+        const nrm = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+        const p = new THREE.Vector3(px, 0.3 + u * top, NZ).addScaledVector(nrm, 1.16);
+        if (prev && i % 2 === 0) limb(K, 'vine', prev.toArray(), p.toArray(), 0.022, 0.02, 0x4a3a26, { vary: 0.2 }, 4);
+        if (i % 2 === 0) prev = p.clone();
+        for (let k = 0; k < 4; k++) leaf(p.clone().add(new THREE.Vector3((vr() - 0.5) * 0.3, (vr() - 0.5) * 0.2, (vr() - 0.5) * 0.3)).addScaledVector(nrm, 0.05), nrm, 0.95);
+        if (vr() < 0.2) rose(p.clone().addScaledVector(nrm, 0.1), 0.95);
+      }
+    }
+    // 인스턴싱
+    const leafGeo = new THREE.BufferGeometry();
+    leafGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.1, 0, -0.065, 0, 0, 0, -0.07, 0, 0.065, 0, 0], 3));
+    leafGeo.setIndex([0, 1, 2, 0, 2, 3]);
+    leafGeo.computeVertexNormals();
+    const inst = (geo, mat, list) => {
+      const m = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach(([mm, cc], i) => {
+        m.setMatrixAt(i, mm);
+        m.setColorAt(i, cc);
+      });
+      scene.add(m);
+    };
+    inst(leafGeo, new THREE.MeshStandardMaterial({ roughness: 0.8, side: THREE.DoubleSide }), leaves);
+    const roseGeo = new THREE.IcosahedronGeometry(0.075, 0);
+    inst(roseGeo, new THREE.MeshStandardMaterial({ roughness: 0.6, flatShading: true }), roses);
+  }
+
   // ── 재질 ──
   const std = (p) => new THREE.MeshStandardMaterial({ vertexColors: true, ...p });
   const stoneMat = std({ map: ashlarTexture(), roughness: 0.92 });
@@ -631,6 +740,7 @@ export function buildCathedral(scene, lights = {}) {
     K.mesh('wood', std({ roughness: 0.9 }), { light: shade }),
     K.mesh('iron', std({ roughness: 0.5, metalness: 0.6 })),
     K.mesh('ivy', std({ roughness: 1, flatShading: true }), { light: shade }),
+    K.mesh('vine', std({ roughness: 1 }), { light: shade }),
     K.mesh('candle', std({ roughness: 0.6, emissive: 0x3a2a10, emissiveIntensity: 0.6 })),
     K.mesh('glow', new THREE.MeshBasicMaterial({ vertexColors: true, fog: false })),
   ];
