@@ -4,6 +4,85 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 13 — 오너 피드백: 랴오 "v3 꽁지머리 유지 + 뾰족한 부분을 양옆으로 흘러내리는 중단발 컬로"
+
+- **랴오 v5**(`liao_gi_wavy`, v4 보관): v3 부채꼴 꽁지머리 그대로, 삐친 원뿔 가닥 제거, 얼굴 양옆을 따라 물결치며
+  턱~어깨 길이로 내려와 끝이 말리는 가닥(한쪽 셋) + 이마 양옆 앞머리. 안대·머리띠·흰 속깃·맨살 V넥 유지.
+  `CHARACTER_LOOK_VERSION.liao = 'v5'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+
+## round 12 — 오너 피드백: 랴오 머리 "너무 뾰족해, 컬과 볼륨" + V넥 안쪽 흰 깃
+
+- **랴오 v4**(`liao_gi_curly`, v3 보관): 뾰족한 원뿔 대신 둥근 곱슬 뭉치로 머리 전체에 볼륨, 곱슬
+  꽁지머리 두 줄(좌우로 굽이침), 앞머리도 곱슬. V자 파란 깃 안쪽에 흰 속깃이 살짝 겹치고 그 안으로 맨살.
+  `CHARACTER_LOOK_VERSION.liao = 'v4'`. 난수 없이 황금각 나선으로 곱슬 자리를 정함.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+
+## round 11 — 오너 요청: 랴오 풍성한 꽁지머리 산발 + V넥 맨살
+
+- **랴오 v3**(`liao_gi_wild`, v2 보관): 뒤통수 높이 묶은 굵은 꽁지머리가 다섯 가닥으로 부채처럼 뻗고,
+  정수리·옆·앞머리에 삐친 가닥(산발). 흰 속옷 대신 V자 깃 사이로 맨살. 안대·머리띠·도복 v2 그대로.
+  `CHARACTER_LOOK_VERSION.liao = 'v3'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `liao_v3.jpg`, `liao_v3_head_{front,side,back}.jpg` 등.
+
+## round 10 — 오너 요청: 랴오 푸른 무도가 도복 (하오마루 같은 옷)
+
+- **랴오 v2**(`liao_gi`, v1 보관): V자로 여민 푸른 도복 윗도리 + 흰 속옷, 넓은 소매, 흰 새끼줄 허리띠 매듭,
+  발목까지 넓은 남색 하카마(다리마다 따로라 걸음이 읽힘), 짚신 색 신. 장발·안대 유지, X자 끈 제거.
+  특정 캐릭터 의상을 베끼지 않고 떠돌이 무도가 실루엣만 참고. `CHARACTER_LOOK_VERSION.liao = 'v2'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `liao_v2.jpg`, `liao_v2_default_far.jpg`, `liao_v2_side.jpg`, `liao_v2_back.jpg`, `liao_v2_down.jpg`.
+- 설정집 차이(캐릭터 PM용): 설정집은 "짙은 녹색 옷·검은 하의" → v2는 푸른 도복·남색 하카마.
+
+## round 9 — 오너 요청: 이졸데 허리까지 오는 긴 머리
+
+- **이졸데 v2**(`isolde_longhair`, v1 보관): 검은 긴 생머리가 허리(벨트)까지. 고개를 돌려도 긴 머리가 몸을
+  뚫고 휘둘리지 않게 머리·가슴·배 세 도막으로 나눠 각 부위에 붙였다. `CHARACTER_LOOK_VERSION.isolde = 'v2'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `isolde_v2.jpg`, `isolde_v2_back.jpg`, `isolde_v2_side.jpg`, `isolde_v2_down.jpg`.
+
+## round 8 — 오너 지적: "하인리히 갑옷이 은색이 아닌 거 같다"
+
+- 원인 1(렌더 버그): 장면에 반사 환경이 없어서 금속성 높은 판이 거의 검게 나왔다. `outfits.js`의 모든
+  금속판 재질(`STEEL_OPTS`·하인리히 판·금띠·마르그레테 판·투구)에 무기와 같은 `weaponEnv()` 반사 환경을
+  붙였다. 텍스처는 처음 쓰일 때(isolatedVisual 안) 만들어져 전역 난수에 영향 없음.
+- 원인 2(디자인): 판이 몸 일부에만 있었다. **하인리히 v2**(`heinrich_full_plate`, v1 보관): 위팔·아래팔
+  통판, 허벅지 판+무릎 덮개, 쇠신, 허리 쇠치마 추가, 판 밑 옷도 밝은 강철 회색.
+  `CHARACTER_LOOK_VERSION.heinrich = 'v2'`.
+- **디렉터 참고**: 하인리히 판금 방어 부위가 9 → 13개로 늘었다(`thighF·thighB·footF·footB` 추가).
+  `userData.armor`·금·`setPlateWear` 모두 붙어 있다. 켤 때 `look.armor: 'plate'`는 v2 look에.
+- 검증: 시뮬 3종 바이트 동일, 콘솔 에러 0. 마르그레테는 먹색 그대로에 은은한 쇠 광택만 더해짐.
+  스크린샷 `heinrich_v2.jpg`, `heinrich_{front,threeq,side,default,down}.jpg` 갱신.
+
+## round 7 — 오너 답: "둘 다 그렇게 해"
+
+1. **찌르기와 판금**: 판금도 투구와 같은 규칙 — 에스톡·레이피어 찌르기는 `gap`의 절반만큼 파고든다,
+   `ignoreArmor` 무기는 완전히 무시한다. (디렉터가 임시로 정한 방향이 그대로 확정.)
+2. **마르그레테 몸통 판금도 방어**: 가슴판·배갑옷·갑주 치마(pelvis)·양 견갑이 하인리히 판금과 같이
+   막고, 닳고, 완전히 부서지면 그 부위 판금이 사라진다.
+
+외형 쪽 반영(`outfits.js`만): 마르그레테 세트에 `armorParts`(chest·abdomen·pelvis·uarmS·uarmO)를 달아
+`userData.armor` 표시·금 메쉬·`setPlateWear`가 하인리히와 똑같이 동작한다(v1·v2·v3 모두 같은 세트를
+펼쳐 쓴다). look에 `armor: 'plate'`를 켜는 것은 디렉터 전투 커밋에서 한 줄로.
+- 금 색 수정: 먹색 판에 검은 금은 거의 안 보여서, 짙은 판에는 안쪽 쇠가 드러난 밝은 금으로 바꿨다
+  (투구 금도 같이). 은빛 판(하인리히)은 그대로 짙은 금.
+- 검증: 시뮬 3종 바이트 동일, 콘솔 에러 0, 0.1에서 금 5개 표시·1로 되돌리면 숨겨짐.
+  스크린샷 `docs/character_looks/margarethe_plate_wear{1,04,01}.jpg`, 투구 `margarethe_v3_wear*.jpg` 갱신.
+
+## round 6 — 디렉터 분담: 하인리히 판금 파손 겉모습 (trig_0161tXEHz9cTGUBarJ6HHkzW)
+
+디렉터 브랜치(d8ae47f)를 충돌 없이 병합하고, 시뮬 기준선을 새로 잡은 뒤 작업했다.
+- `outfits.js` export `setPlateWear(group, wear01)`: `group` = `fighter.groups[part]`(칼 든 팔은 안쪽 자식
+  그룹에 표시가 있어도 알아서 찾는다). 투구와 같은 단계: 0.5 아래 찌그러짐·긁힘(판이 눌리고 조각마다
+  반대로 틀어지며 거칠고 희끗해짐, 금띠도 흐려짐), 0.2 아래 금. 난수 없음·결정적·1로 되돌려짐.
+- 금 메쉬: 판금 9개 부위마다 하나씩 캐릭터를 만들 때 미리 만들어 숨겨 둔다(싸우는 도중에 메쉬를 새로
+  만들면 전역 난수가 소비된다). `userData.armor` 목록에도 넣어 두어, 완전 파손 때 판금을 숨기면 금도
+  같이 숨는다. 판금이 이미 숨겨졌으면 `setPlateWear`는 금을 다시 켜지 않는다.
+- look 값(`armor: 'plate'`)은 요청대로 넣지 않았다 — 디렉터 전투 커밋에서 같이 켠다.
+- 검증: 병합 뒤 새 기준선 대비 시뮬 3종 바이트 동일, 콘솔 에러 0, 0.1에서 금 9개 표시·1로 되돌리면
+  숨겨짐. 스크린샷 `docs/character_looks/heinrich_plate_wear{1,04,01}.jpg`.
+
 ## round 5 — 디렉터 분담: 마르그레테 투구 방어의 외형 쪽 (trig_017J3e7VxfosvZkFXoh4BBqe)
 
 디렉터 브랜치(1d49abb)를 병합했다(`982c220`). 충돌은 `outfits.js`·이 문서 두 곳뿐. 디렉터 쪽 파일은

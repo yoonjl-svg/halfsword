@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { weaponEnv } from './weapon_looks.js';
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -46,14 +47,19 @@ const cone = (r, h, segs, pos, rot) => bake(new THREE.ConeGeometry(r, h, segs), 
 function addMerged(parent, pieces, color, matOpts) {
   if (!pieces.length) return null;
   const geo = mergeGeometries(pieces, false);
-  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.06, ...(matOpts || {}) });
+  // 금속판은 무기와 같은 반사 환경(하늘·바다·모래)을 비춘다 — 장면에 반사 환경이 없어서, 금속성이 높은
+  // 판은 비출 게 없어 거의 검게 보였다(하인리히 은빛 갑옷이 짙은 회색으로 나오던 원인).
+  // 환경 텍스처는 여기서(isolatedVisual 안) 처음 만들어져 전역 난수를 건드리지 않는다
+  const { steel, ...opts } = matOpts || {};
+  if (steel) Object.assign(opts, { envMap: weaponEnv(), envMapIntensity: steel });
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.06, ...opts });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   parent.add(mesh);
   return mesh;
 }
 
-const STEEL_OPTS = { metalness: 0.7, roughness: 0.35 };
+const STEEL_OPTS = { metalness: 0.7, roughness: 0.35, steel: 1 };
 
 // ═══════════════════════════════════ 오소리 브란: 화전민 농부 ═══════════════════════════════════
 const APRON = 0xcdbb92;
@@ -100,6 +106,44 @@ const ISOLDE_SABER = {
   },
 };
 
+// 이졸데 v2(오너 요청): 허리까지 오는 긴 생머리. 머리 하나에 긴 머리를 통째로 붙이면 고개를 돌릴 때마다
+// 허리까지 오는 판이 몸을 뚫고 휘둘려서, 세 도막으로 나눠 따라가는 부위에 붙인다 —
+// 머리(뒤통수~목덜미, 얼굴 옆 머리) / 가슴(등을 덮는 머리) / 배(허리까지 내려와 끝이 둥글게 모이는 머리).
+// 가만히 선 자세에서 세 도막이 이어져 보이게 위치를 맞췄다(목덜미 ≈ 가슴 위쪽, 등 아래 ≈ 배 위쪽).
+const ISOLDE_LONGHAIR = {
+  ...ISOLDE_SABER,
+  head(g, look) {
+    addMerged(
+      g,
+      [
+        box(0.04, 0.17, 0.17, [-0.092, -0.075, 0]), // 뒤통수에서 목덜미까지
+        box(0.022, 0.15, 0.018, [0.025, -0.06, 0.1]), // 얼굴 옆으로 흘러내린 머리
+        box(0.022, 0.15, 0.018, [0.025, -0.06, -0.1]),
+      ],
+      look.hair,
+      { roughness: 1 },
+    );
+  },
+  chest(g, look) {
+    ISOLDE_SABER.chest(g, look);
+    // 등을 덮는 머리 (어깨 너비보다 조금 좁게)
+    addMerged(g, [box(0.03, 0.3, 0.2, [-0.137, 0.0, 0])], look.hair, { roughness: 1 });
+  },
+  abdomen(g, look) {
+    ISOLDE_SABER.abdomen(g, look);
+    // 허리까지: 아래로 갈수록 좁아지고 끝이 둥글게 모인다
+    addMerged(
+      g,
+      [
+        box(0.028, 0.1, 0.18, [-0.128, 0.03, 0]),
+        bake(new THREE.CylinderGeometry(0.09, 0.03, 0.09, 8, 1, false), [-0.128, -0.065, 0], null, [0.16, 1, 1]),
+      ],
+      look.hair,
+      { roughness: 1 },
+    );
+  },
+};
+
 // ═══════════════════════════════════ 랴오 쓰위엔: 방랑 낭인 ═══════════════════════════════════
 const LIAO_RONIN = {
   head(g) {
@@ -119,11 +163,203 @@ const LIAO_RONIN = {
   },
 };
 
+// 랴오 v2(오너 요청): "동양 무도가 같은 푸른색 도복, 하오마루 같이 생긴 옷". 사무라이 쇼다운 계열의
+// 떠돌이 무도가 실루엣만 참고한 새 디자인 — 가슴에서 V자로 여미는 푸른 도복 윗도리(속에 흰 속옷이
+// 보인다), 팔꿈치 쪽으로 넓어지는 소매, 흰 새끼줄 허리띠 매듭, 발목까지 내려오는 넓은 남색 통바지(하카마).
+// 장발·안대(머리)는 v1 그대로. 넓은 소매·바지는 팔·다리 부위마다 따로 붙어 래그돌을 따라간다.
+const GI_BLUE = 0x3a5f9e;
+const GI_LAPEL = 0x27447a;
+const GI_WHITE = 0xe8e2d0;
+const HAKAMA = 0x1e2a44;
+const giSleeve = (g) => addMerged(g, [cyl(0.062, 0.1, 0.2, 12, true, [0, -0.02, 0])], GI_BLUE, { side: THREE.DoubleSide });
+const hakamaLeg = (g, rt, rb, h, y) => addMerged(g, [cyl(rt, rb, h, 12, true, [0, y, 0])], HAKAMA, { side: THREE.DoubleSide });
+const LIAO_GI = {
+  ...LIAO_RONIN,
+  chest(g) {
+    // 흰 속옷 + V자로 여민 깃(짙은 파랑)
+    addMerged(g, [box(0.004, 0.1, 0.07, [0.121, 0.075, 0])], GI_WHITE);
+    addMerged(
+      g,
+      [box(0.007, 0.24, 0.04, [0.124, 0.03, 0.045], [0.42, 0, 0]), box(0.007, 0.24, 0.04, [0.124, 0.03, -0.045], [-0.42, 0, 0])],
+      GI_LAPEL,
+    );
+  },
+  abdomen(g) {
+    // 새끼줄 허리띠 매듭과 늘어진 두 끝자락
+    addMerged(
+      g,
+      [box(0.03, 0.045, 0.05, [0.125, -0.05, 0.06]), box(0.01, 0.1, 0.018, [0.127, -0.11, 0.05], [0.15, 0, 0]), box(0.01, 0.085, 0.018, [0.127, -0.105, 0.075], [-0.2, 0, 0])],
+      GI_WHITE,
+    );
+  },
+  uarmS: giSleeve,
+  uarmO: giSleeve,
+  // 넓은 소매가 아래팔 위쪽까지 덮는다
+  farmS(g) {
+    addMerged(g, [cyl(0.1, 0.09, 0.09, 12, true, [0, 0.06, 0])], GI_BLUE, { side: THREE.DoubleSide });
+  },
+  farmO(g) {
+    addMerged(g, [cyl(0.1, 0.09, 0.09, 12, true, [0, 0.06, 0])], GI_BLUE, { side: THREE.DoubleSide });
+  },
+  // 하카마: 허벅지부터 발목까지 통이 넓다 (다리마다 따로라 걸음이 읽힌다)
+  thighF: (g) => hakamaLeg(g, 0.09, 0.12, 0.34, 0),
+  thighB: (g) => hakamaLeg(g, 0.09, 0.12, 0.34, 0),
+  shinF: (g) => hakamaLeg(g, 0.115, 0.125, 0.3, 0.03),
+  shinB: (g) => hakamaLeg(g, 0.115, 0.125, 0.3, 0.03),
+};
+
+// 랴오 v3(오너 요청): "좀 더 풍성한 꽁지머리 산발, V넥 위로 살색이 보여 V넥 강조".
+//  · 머리: 뒤통수 높이 묶은 굵은 꽁지머리가 여러 가닥으로 부채처럼 뻗고, 정수리·옆·앞머리에 삐친
+//    가닥을 달아 산발로. 안대·머리띠는 그대로.
+//  · 가슴: 흰 속옷을 빼고 V자 깃 사이로 맨살(피부색 삼각형)이 보이게.
+const LIAO_TUFTS = [
+  // [위치, 회전] — 머리 둘레에서 바깥으로 삐친 짧은 가닥
+  [[-0.02, 0.1, 0.05], [0.5, 0, 0.3]],
+  [[-0.02, 0.1, -0.05], [-0.5, 0, 0.3]],
+  [[-0.06, 0.08, 0.0], [0, 0, 0.9]],
+  [[0.02, 0.11, 0.0], [0, 0, -0.2]],
+  [[-0.04, 0.03, 0.095], [1.3, 0, 0.4]],
+  [[-0.04, 0.03, -0.095], [-1.3, 0, 0.4]],
+  [[0.03, 0.07, 0.08], [0.9, 0, -0.3]],
+  [[0.03, 0.07, -0.08], [-0.9, 0, -0.3]],
+];
+const LIAO_TAIL = [
+  // 묶은 자리에서 뒤·아래로 부채처럼 퍼지는 꽁지머리 가닥들 (굵기는 끝으로 갈수록 가늘게)
+  [[-0.1, 0.07, 0], [-0.17, 0.05, 0], [-0.22, -0.04, 0], [-0.24, -0.16, 0]],
+  [[-0.1, 0.07, 0.01], [-0.16, 0.06, 0.04], [-0.21, -0.02, 0.07], [-0.23, -0.12, 0.09]],
+  [[-0.1, 0.07, -0.01], [-0.16, 0.06, -0.04], [-0.21, -0.02, -0.07], [-0.23, -0.12, -0.09]],
+  [[-0.1, 0.075, 0], [-0.18, 0.1, 0.02], [-0.25, 0.06, 0.03], [-0.29, -0.02, 0.02]],
+  [[-0.1, 0.07, 0], [-0.15, 0.03, 0.02], [-0.17, -0.08, 0.03], [-0.17, -0.19, 0.04]],
+];
+const LIAO_GI_WILD = {
+  ...LIAO_GI,
+  head(g, look) {
+    const hair = [
+      new THREE.SphereGeometry(0.035, 8, 6).translate(-0.095, 0.07, 0), // 묶은 자리 (굵은 뭉치)
+      ...LIAO_TUFTS.map(([p, r]) => bake(new THREE.ConeGeometry(0.028, 0.075, 5), p, r)),
+      // 앞머리: 이마 위로 흩어진 짧은 가닥 셋 (눈·안대는 가리지 않게 머리띠 위쪽)
+      bake(new THREE.ConeGeometry(0.018, 0.05, 4), [0.085, 0.075, 0.03], [0.4, 0, -1.0]),
+      bake(new THREE.ConeGeometry(0.018, 0.05, 4), [0.088, 0.075, -0.015], [-0.3, 0, -1.1]),
+      bake(new THREE.ConeGeometry(0.016, 0.045, 4), [0.075, 0.09, 0.055], [0.6, 0, -0.8]),
+      ...LIAO_TAIL.map((pts, i) => taperedTube(pts, [0.03 - i * 0.002, 0.026, 0.016, 0.003], 10, 6)),
+    ];
+    addMerged(g, hair, look.hair, { roughness: 1 });
+    // 안대: v1과 같은 자리·크기
+    const patch = [
+      ball(0.02, 10, 8, [0.096, 0.016, -0.035], [0, 0.3, 0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, 0.04, -0.06], [0, 0, 1.0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, -0.01, -0.06], [0, 0, -1.0]),
+    ];
+    addMerged(g, patch, 0x1a1a1a, { roughness: 0.9 });
+  },
+  chest(g, look) {
+    // V자로 파인 깃 사이의 맨살 (삼각형, 가슴판 앞면에 붙인다)
+    const tri = new THREE.Shape([new THREE.Vector2(-0.085, 0.145), new THREE.Vector2(0.085, 0.145), new THREE.Vector2(0, -0.035)]);
+    addMerged(g, [new THREE.ShapeGeometry(tri).rotateY(Math.PI / 2).translate(0.1235, 0, 0)], look.skin, { roughness: 0.8 });
+    addMerged(
+      g,
+      [box(0.008, 0.24, 0.04, [0.125, 0.03, 0.045], [0.42, 0, 0]), box(0.008, 0.24, 0.04, [0.125, 0.03, -0.045], [-0.42, 0, 0])],
+      GI_LAPEL,
+    );
+  },
+};
+
+// 랴오 v4(오너 피드백 "너무 뾰족해, 컬과 볼륨이 있는 머리"): v3의 뾰족한 원뿔 대신 둥근 곱슬 뭉치로
+// 머리 전체를 부풀리고, 꽁지머리도 좌우로 굽이치는 곱슬 덩어리로 흘러내리게 한다. 가슴은 V자 깃 안쪽에
+// 흰 속깃이 살짝 겹쳐 보이고 그 안으로 맨살. 난수 없이 황금각 나선으로 곱슬 자리를 골고루 정한다.
+const LIAO_CURLS = (() => {
+  const out = [];
+  const n = 70;
+  for (let i = 0; i < n; i++) {
+    const y = 1 - ((i + 0.5) / n) * 2;
+    const r = Math.sqrt(1 - y * y);
+    const a = i * 2.39996;
+    const d = [Math.cos(a) * r, y, Math.sin(a) * r]; // 머리 중심에서 본 방향
+    if (d[1] < -0.15) continue; // 턱 아래는 없다
+    if (d[0] > 0.45 && d[1] < 0.6) continue; // 얼굴은 비운다
+    if (d[1] < 0.15 && d[0] > -0.2) continue; // 귀 아래 옆얼굴도 비운다
+    const size = 0.03 + (i % 3) * 0.005;
+    out.push([[-0.01 + d[0] * 0.1, 0.01 + d[1] * 0.1, d[2] * 0.1], size]);
+  }
+  return out;
+})();
+// 꽁지머리: 묶은 자리에서 뒤·아래로, 좌우로 번갈아 굽이치며 점점 작아지는 곱슬 덩어리
+const LIAO_CURLY_TAIL = Array.from({ length: 10 }, (_, i) => {
+  const t = i / 9;
+  return [[-0.11 - t * 0.12, 0.07 - t * 0.28, (i % 2 ? 1 : -1) * 0.025 * (1 - t * 0.5)], 0.042 - t * 0.02];
+});
+const LIAO_GI_CURLY = {
+  ...LIAO_GI_WILD,
+  head(g, look) {
+    const lump = ([p, r]) => bake(new THREE.SphereGeometry(r, 7, 5), p, null, [1, 0.9, 1]);
+    const hair = [
+      ...LIAO_CURLS.map(lump),
+      new THREE.SphereGeometry(0.04, 8, 6).translate(-0.1, 0.07, 0), // 묶은 자리
+      ...LIAO_CURLY_TAIL.map(lump),
+      // 곁가지로 한 줄 더 — 꽁지머리에 볼륨
+      ...LIAO_CURLY_TAIL.slice(1, 7).map(([[x, y, z], r]) => lump([[x + 0.015, y + 0.01, -z * 1.6], r * 0.8])),
+      // 앞머리: 머리띠 위로 둥글게 넘친 곱슬 셋 (눈·안대는 가리지 않는다)
+      lump([[0.075, 0.068, 0.035], 0.026]),
+      lump([[0.08, 0.072, -0.005], 0.026]),
+      lump([[0.07, 0.078, -0.045], 0.024]),
+    ];
+    addMerged(g, hair, look.hair, { roughness: 1 });
+    const patch = [
+      ball(0.02, 10, 8, [0.096, 0.016, -0.035], [0, 0.3, 0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, 0.04, -0.06], [0, 0, 1.0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, -0.01, -0.06], [0, 0, -1.0]),
+    ];
+    addMerged(g, patch, 0x1a1a1a, { roughness: 0.9 });
+  },
+  chest(g, look) {
+    LIAO_GI_WILD.chest(g, look);
+    // 흰 속깃: 파란 깃 바로 안쪽에 나란히, 살짝 겹쳐 보이게 (파란 깃보다 한 겹 뒤, 맨살보다 한 겹 앞)
+    addMerged(
+      g,
+      [box(0.003, 0.22, 0.02, [0.1245, 0.035, 0.022], [0.42, 0, 0]), box(0.003, 0.22, 0.02, [0.1245, 0.035, -0.022], [-0.42, 0, 0])],
+      GI_WHITE,
+    );
+  },
+};
+
+// 랴오 v5(오너 피드백: "v3 꽁지머리는 그대로, 스파이크 같은 뾰족한 부분을 양옆으로 자연스럽게 흘러내리는
+// 중단발 컬로"): v3의 부채꼴 꽁지머리·묶은 자리는 그대로 두고, 삐친 원뿔 가닥을 모두 빼는 대신 관자놀이에서
+// 얼굴 옆을 따라 물결치며 턱~어깨 길이로 내려와 끝이 안으로 말리는 가닥(한쪽 셋)을 단다. 앞머리는 이마 양옆으로
+// 넘어가는 부드러운 가닥 하나씩(눈·안대는 가리지 않는다). 가슴은 v4(흰 속깃 + 맨살) 그대로.
+const LIAO_SIDE_LOCKS = [
+  // 오른쪽(+z) 기준 — 왼쪽은 z를 뒤집어 쓴다. 굵기는 LIAO_LOCK_R
+  [[0.04, 0.07, 0.085], [0.05, 0.02, 0.113], [0.045, -0.04, 0.113], [0.03, -0.09, 0.12], [0.042, -0.125, 0.1]],
+  [[-0.01, 0.085, 0.09], [-0.01, 0.02, 0.12], [-0.015, -0.05, 0.124], [-0.03, -0.1, 0.127], [-0.015, -0.135, 0.108]],
+  [[-0.06, 0.075, 0.075], [-0.072, 0.01, 0.1], [-0.078, -0.05, 0.106], [-0.085, -0.1, 0.112], [-0.068, -0.135, 0.096]],
+];
+const LIAO_LOCK_R = [0.02, 0.024, 0.021, 0.015, 0.005];
+const LIAO_BANG = [[0.05, 0.095, 0.0], [0.085, 0.075, 0.035], [0.1, 0.05, 0.065], [0.095, 0.035, 0.085]];
+const LIAO_GI_WAVY = {
+  ...LIAO_GI_CURLY,
+  head(g, look) {
+    const flip = (pts) => pts.map(([x, y, z]) => [x, y, -z]);
+    const hair = [
+      new THREE.SphereGeometry(0.035, 8, 6).translate(-0.095, 0.07, 0), // 묶은 자리 (v3와 같다)
+      ...LIAO_TAIL.map((pts, i) => taperedTube(pts, [0.03 - i * 0.002, 0.026, 0.016, 0.003], 10, 6)), // v3 꽁지머리
+      ...LIAO_SIDE_LOCKS.flatMap((pts) => [taperedTube(pts, LIAO_LOCK_R, 12, 6), taperedTube(flip(pts), LIAO_LOCK_R, 12, 6)]),
+      taperedTube(LIAO_BANG, [0.016, 0.018, 0.013, 0.004], 8, 5),
+      taperedTube(flip(LIAO_BANG), [0.016, 0.018, 0.013, 0.004], 8, 5),
+    ];
+    addMerged(g, hair, look.hair, { roughness: 1 });
+    const patch = [
+      ball(0.02, 10, 8, [0.096, 0.016, -0.035], [0, 0.3, 0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, 0.04, -0.06], [0, 0, 1.0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, -0.01, -0.06], [0, 0, -1.0]),
+    ];
+    addMerged(g, patch, 0x1a1a1a, { roughness: 0.9 });
+  },
+};
+
 // ═══════════════════════════════════ 하인리히 도른: 은빛 중갑 기사 ═══════════════════════════════════
 // 설정집: "화려한 배색"의 자칭 왕의 기사 — 은빛 판금이라도 수수하게 죽이지 않는다. 실전 갑옷보다
 // 훨씬 반들반들하게 닦아(금속성↑·거칠기↓) 과시욕을 드러내고, 예전 금빛 복제 엑스칼리버·금장 취향을
 // 잇는 금색 트림을 얇게 둘러 "자칭 왕"다운 허영을 남긴다
-const HEINRICH_STEEL = { metalness: 0.85, roughness: 0.16 };
+const HEINRICH_STEEL = { metalness: 0.85, roughness: 0.16, steel: 1.2 };
 const HEINRICH_GOLD = 0xd8b23a;
 const HEINRICH_KNIGHT = {
   // 판금 방어구가 붙는 부위 (수염이 붙는 head는 빠진다)
@@ -131,7 +367,7 @@ const HEINRICH_KNIGHT = {
   chest(g) {
     // 가슴 판금 (기존 누빔 상의 겉에 한 겹) + 과시용 금테
     addMerged(g, [box(0.255, 0.24, 0.32, [0.005, 0.02, 0])], 0xc7cdd3, HEINRICH_STEEL);
-    addMerged(g, [box(0.01, 0.22, 0.01, [0.135, 0.02, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2 });
+    addMerged(g, [box(0.01, 0.22, 0.01, [0.135, 0.02, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2, steel: 1.2 });
     // 어깨 견갑(팔 없는 쪽, uarmO는 몸통에서 늘어져 있어 어깨 캡을 chest에서 겹쳐 그린다)
   },
   abdomen(g) {
@@ -146,11 +382,11 @@ const HEINRICH_KNIGHT = {
   //  "+y = 몸통 쪽"인 규칙이 같이 적용된다(위 주석 참고). 테두리에 금띠를 둘러 과시욕을 더한다
   uarmS(g) {
     addMerged(g, [ball(0.075, 12, 8, [0, 0.09, 0], null, [0, Math.PI * 2, 0, Math.PI * 0.55])], 0xc7cdd3, HEINRICH_STEEL);
-    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2 });
+    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2, steel: 1.2 });
   },
   uarmO(g) {
     addMerged(g, [ball(0.075, 12, 8, [0, 0.09, 0], null, [0, Math.PI * 2, 0, Math.PI * 0.55])], 0xc7cdd3, HEINRICH_STEEL);
-    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2 });
+    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2, steel: 1.2 });
   },
   // 손목 보호대(가운틀릿 커프): -y(손 쪽) 끝
   farmS(g) {
@@ -172,6 +408,55 @@ const HEINRICH_KNIGHT = {
   },
 };
 
+// 하인리히 v2: v1은 가슴·어깨·손목·정강이에만 판이 있어서, 대결 거리에서는 짙은 옷(팔·허벅지·허리
+// 치마·발)이 대부분을 차지해 "은빛 중갑 기사"가 아니라 검은 옷을 입은 사람으로 보였다. 팔 전체(위팔·
+// 아래팔 통판), 허벅지(퀴스)와 무릎 덮개, 쇠신, 허리 쇠치마를 더해 몸 대부분을 은빛 판으로 덮는다.
+const HEINRICH_FULL_PLATE = {
+  ...HEINRICH_KNIGHT,
+  armorParts: new Set([...HEINRICH_KNIGHT.armorParts, 'thighF', 'thighB', 'footF', 'footB']),
+  pelvis(g) {
+    // 허리 쇠치마 (기본 천 치마를 겉에서 덮는다) + v1의 앞 자락 두 장
+    addMerged(
+      g,
+      [
+        cyl(0.178, 0.224, 0.26, 16, true, [0, -0.12, 0]),
+        box(0.08, 0.16, 0.02, [0.2, -0.2, 0.09], [0, 0, 0.2]),
+        box(0.08, 0.16, 0.02, [0.2, -0.2, -0.09], [0, 0, 0.2]),
+      ],
+      0xc7cdd3,
+      { ...HEINRICH_STEEL, side: THREE.DoubleSide },
+    );
+  },
+  uarmS(g) {
+    HEINRICH_KNIGHT.uarmS(g);
+    addMerged(g, [cyl(0.059, 0.057, 0.17, 12, true, [0, -0.01, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  uarmO(g) {
+    HEINRICH_KNIGHT.uarmO(g);
+    addMerged(g, [cyl(0.059, 0.057, 0.17, 12, true, [0, -0.01, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  farmS(g) {
+    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0]), cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  farmO(g) {
+    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0]), cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  // 허벅지 판(퀴스) + 무릎 덮개
+  thighF(g) {
+    addMerged(g, [cyl(0.073, 0.067, 0.24, 12, true, [0.004, 0.01, 0]), ball(0.045, 10, 6, [0.03, -0.155, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  thighB(g) {
+    addMerged(g, [cyl(0.073, 0.067, 0.24, 12, true, [0.004, 0.01, 0]), ball(0.045, 10, 6, [0.03, -0.155, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  // 쇠신(사바톤): 신발 상자를 한 겹 덮는다
+  footF(g) {
+    addMerged(g, [box(0.262, 0.05, 0.12, [0, 0.016, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  footB(g) {
+    addMerged(g, [box(0.262, 0.05, 0.12, [0, 0.016, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+};
+
 // ═══════════════════════════════════ 마르그레테 슈바르츠: 먹색 판금 · 용기사 ═══════════════════════════════════
 // 설정집: "수수하고 차분한 배색", 칼자루에도 장식이 없는 인물 — 판금으로 바뀌어도 그 절제는 그대로
 // 지킨다. 화려한 색 포인트(원래 있던 와인레드 트림)는 빼고, 무채색 안에서 짙고 옅은 판(2톤)만으로
@@ -180,6 +465,9 @@ const HEINRICH_KNIGHT = {
 const MG_PLATE = 0x2c2c32;
 const MG_PLATE_DARK = 0x1c1c20;
 const MARGARETHE_DRAGON = {
+  // 판금 방어구가 붙는 부위 (오너 결정: 몸통 판금도 막고, 닳고, 완전히 부서지면 사라진다).
+  // v2·v3 세트도 이 세트를 펼쳐 쓰므로 같이 적용된다
+  armorParts: new Set(['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO']),
   chest(g) {
     addMerged(g, [box(0.26, 0.25, 0.34, [0, 0.01, 0])], MG_PLATE, STEEL_OPTS);
     // 이음매 자국(세로줄) — 색 대신 같은 계열의 더 짙은 판이라 눈에 안 띄고 만듦새만 드러낸다
@@ -327,7 +615,7 @@ function helmPiece(helm, name, geos, color, opts, pivot) {
 function helmCrack(pg, pts) {
   const pv = pg.position;
   const geo = onHelm(taperedTube(pts, [0.0035, 0.003, 0.0025], 8, 4)).translate(-pv.x, -pv.y, -pv.z);
-  const m = addMerged(pg, [geo], 0x050505, { roughness: 1 });
+  const m = addMerged(pg, [geo], crackColor(pg.children[0].material.color), { roughness: 1 });
   m.visible = false;
   return m;
 }
@@ -462,8 +750,14 @@ export function setHelmetWear(helm, wear01) {
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
+  isolde_longhair: ISOLDE_LONGHAIR,
   liao_ronin: LIAO_RONIN,
+  liao_gi: LIAO_GI,
+  liao_gi_wild: LIAO_GI_WILD,
+  liao_gi_curly: LIAO_GI_CURLY,
+  liao_gi_wavy: LIAO_GI_WAVY,
   heinrich_knight: HEINRICH_KNIGHT,
+  heinrich_full_plate: HEINRICH_FULL_PLATE,
   margarethe_dragon: MARGARETHE_DRAGON,
   margarethe_dragon_helm: MARGARETHE_DRAGON_HELM,
   margarethe_dragon_horned: MARGARETHE_DRAGON_HORNED,
@@ -479,5 +773,65 @@ export function decorateOutfit(dressTo, d, look) {
   // 방어구 부위: 이 부위에 얹은 판금 메쉬들을 userData.armor로 알려 둔다. 오너 결정("판금도 피해를
   // 줄여 주고, 닳고, 완전히 부서지면 사라진다")을 전투 쪽이 켜면 그 부위 내구도가 0일 때 이 메쉬들만
   // 숨기면 된다. 지금은 표시만 하고 아무 동작도 하지 않는다
-  if (set.armorParts?.has(d.name)) dressTo.userData.armor = dressTo.children.slice(before);
+  if (set.armorParts?.has(d.name)) {
+    const armor = dressTo.children.slice(before);
+    for (const m of armor) m.userData.base = { color: m.material.color.getHex(), roughness: m.material.roughness };
+    const crack = plateCrack(dressTo, armor[0]);
+    // 금 메쉬도 armor 목록에 넣어, 판금이 완전히 부서져 숨길 때 같이 숨겨지게 한다
+    dressTo.userData.armor = [...armor, crack];
+    dressTo.userData.armorCracks = [crack];
+  }
+}
+
+/**
+ * 판금 부위 하나의 금: 첫 판금 메쉬의 앞면(+x)을 세로로 가로지르는 짙은 지그재그 선.
+ * 캐릭터를 만들 때(isolatedVisual 안) 미리 만들어 숨겨 둔다 — 싸우는 도중에 메쉬를 새로 만들면
+ * three.js가 전역 난수를 써서 시드 시뮬 결과가 바뀌기 때문이다.
+ */
+function plateCrack(parent, mesh) {
+  const geo = mesh.geometry;
+  if (!geo.boundingBox) geo.computeBoundingBox();
+  const b = geo.boundingBox;
+  const x = b.max.x + 0.002;
+  const yc = (b.max.y + b.min.y) / 2;
+  const h = (b.max.y - b.min.y) * 0.35;
+  const zc = (b.max.z + b.min.z) / 2;
+  const pts = [-1, -0.5, 0, 0.5, 1].map((t, i) => [x, yc + t * h, zc + (i % 2 ? 0.012 : -0.006)]);
+  const m = addMerged(parent, [taperedTube(pts, [0.003, 0.0026, 0.002], 8, 4)], crackColor(mesh.material.color), { roughness: 1 });
+  m.visible = false;
+  return m;
+}
+
+// 금 색: 밝은 판(하인리히 은빛)에는 짙은 선, 짙은 판(마르그레테 먹색)에는 안쪽 쇠가 드러난 밝은 선 —
+// 먹색 판에 검은 금은 거의 안 보였다
+function crackColor(c) {
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b < 0.1 ? 0xa4a4ac : 0x050505;
+}
+
+// 판금이 닳은 정도를 겉모습에 반영한다 (전투 쪽이 this.plate[part]가 바뀔 때마다 부른다).
+//  group: fighter.groups[part] (칼 든 팔은 그 안의 자식 그룹에 표시가 있어도 알아서 찾는다)
+//  wear01: 1 = 멀쩡, 0 = 완전 파손 직전. 투구(setHelmetWear)와 같은 단계, 난수 없이 결정적이고 되돌려진다.
+//  · 0.5 아래: 찌그러짐·긁힘 — 판이 살짝 눌리고 틀어지며, 거칠고 희끗해진다(금띠도 긁혀 흐려진다)
+//  · 0.2 아래: 금이 보인다
+//  판금 표시(userData.armor)가 없는 부위에는 아무 일도 하지 않는다. 완전 파손 때 숨기는 것은 전투 쪽 몫.
+export function setPlateWear(group, wear01) {
+  const holder = group?.userData?.armor ? group : group?.children?.find((c) => c.userData?.armor);
+  if (!holder) return;
+  const w = Math.min(1, Math.max(0, wear01));
+  const dent = w < 0.5 ? (0.5 - w) / 0.5 : 0;
+  const broken = w < 0.2;
+  const plates = holder.userData.armor.filter((m) => m.userData.base);
+  plates.forEach((m, i) => {
+    const sgn = i % 2 ? -1 : 1; // 조각마다 반대로 틀어지게 (결정적)
+    m.rotation.set(0.05 * dent * sgn, 0, -0.04 * dent * sgn);
+    m.scale.set(1 + 0.03 * dent, 1 - 0.05 * dent, 1 + 0.02 * dent);
+    m.material.color.setHex(m.userData.base.color).lerp(_scratch, 0.35 * dent);
+    m.material.roughness = Math.min(1, m.userData.base.roughness + 0.45 * dent);
+  });
+  const shown = plates.length && plates[0].visible;
+  for (const c of holder.userData.armorCracks || []) {
+    c.visible = broken && shown;
+    c.rotation.copy(plates[0].rotation);
+    c.scale.copy(plates[0].scale);
+  }
 }

@@ -137,6 +137,14 @@ input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 let bodySounds = [];
+let playerLook = null;
+let foeLook = null;
+// 판금을 두른 부위 (outfits.js 의 강철 판). 전투 판정은 아직 판금을 모르지만(투구만 안다), 그 부위를 치면 쇳소리를 겹친다
+const PLATE_PARTS = {
+  heinrich_knight: ['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO', 'farmS', 'farmO', 'shinF', 'shinB'],
+  heinrich_full_plate: ['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO', 'farmS', 'farmO', 'thighF', 'thighB', 'shinF', 'shinB', 'footF', 'footB'],
+  margarethe_dragon: ['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO'],
+};
 const fighterMeshes = [];
 
 function newRound() {
@@ -182,7 +190,7 @@ function newRound() {
     name: '나',
     x: -ARENA.startGap / 2,
     heading: 0,
-    look: LOOKS.player,
+    look: (playerLook = LOOKS.player),
     weapon: playerWeapon,
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
@@ -195,7 +203,7 @@ function newRound() {
     name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
     heading: Math.PI,
-    look: enemyLook,
+    look: (foeLook = enemyLook),
     // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브란은 10% 확률로 주워 온 커먼 칼)
     weapon: foeWeapon,
   });
@@ -287,6 +295,8 @@ function onWound(att, vic, r, point, pr) {
   if (opened) att.bloodyBlade(0.08 + r.severity * 0.15);
   // 소리
   if (r.helmet) sound.helmet(e);
+  const outfit = (vic === player ? playerLook : foeLook)?.outfit;
+  if (!r.helmet && PLATE_PARTS[outfit]?.includes(pr.v.part)) sound.impact({ a: att.weapon?.material || 'steel', b: 'armor', energy: e * 0.8 });
   if (r.type === 'cut') sound.cut(e, r.pass);
   else if (r.type === 'stab') sound.stab(e);
   else sound.blunt(e);
