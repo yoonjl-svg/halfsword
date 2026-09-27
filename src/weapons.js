@@ -854,11 +854,13 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
   nameKo: '고무 닭', nameEn: 'Rubber Chicken',
   grip: 'one-hand', material: 'rubber',
   tier: 'trash', fragility: 0.95, // 감독 확정: 장난 무기는 쓰레기 등급(power 0.7), 파손도 나뭇가지와 똑같이 — 충돌이 가벼워 계수는 더 높다 (60초 경합 76%)
-  hiltLength: 0.1, bladeLength: 0.35,
+  // 길이는 흔한 고무 닭 크기(다리까지 약 55cm). 10라운드: hybrid 롱소드 상대가 0%라(사장님 원칙: 0·100% 금지)
+  //  칼날 0.35 → 0.45m, mBlunt 2.6 → 4 로 올렸다 → 192판 23% (쓰레기 목표 15~35%). 짧아서 머리까지 못 닿는 것이 첫째 원인이었다
+  hiltLength: 0.1, bladeLength: 0.45,
   // 날이 없는 무기는 몸통·팔다리를 때려도 판정상 아무 효과가 없다(fighter.applyWound: 머리·목만
   // 기절 효과가 있다) → 고무 닭이 이길 수 있는 유일한 길은 머리를 맞히는 것뿐이라, mBlunt를
   // 크게 올려도 몸통 타격은 여전히 무해하고 "머리에 제대로 맞으면 그래도 어질하다"만 세진다.
-  edged: false, mBlunt: 2.6,
+  edged: false, mBlunt: 4,
   controlOverrides: { aimStiffness: 34 }, // 물렁해서 정확히 겨누기 어렵다 (토크는 양손 가정으로 22)
   // 겉모습: 두 다리를 쥐고 휘두르는 고무 닭 — 주먹 아래 발가락, 위로 오동통한 몸통·주름진 긴 목·벌린 부리의
   //  머리(칼끝 쪽). 부품마다 따로 그리지 않고 decorate 가 한 덩어리로 그린다 (weapon_looks.js drawRubberChicken)
@@ -875,7 +877,11 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
     ];
   },
   decorate(group) {
-    drawRubberChicken(group);
+    // 그림(weapon_looks.js)은 다리까지 0.45m 로 그렸다 → 실제 길이(자루 + 칼날)에 맞춰 통째로 키운다
+    const g = new THREE.Group();
+    drawRubberChicken(g);
+    g.scale.setScalar((this.hiltLength + this.bladeLength) / 0.45);
+    group.add(g);
   },
 });
 
@@ -888,7 +894,8 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
-  edged: false, mBlunt: 2.2, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
+  // mBlunt 2.2 → 4.6 (10라운드: hybrid 롱소드 상대 12%로 모든 무기 목표 15~85% 아래 → 192판 23%, 장난 무기 목표 15~35%)
+  edged: false, mBlunt: 4.6, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
   // 겉모습: 꼬리자루를 쥔 참치 — 주먹 아래 초승달 꼬리, 칼끝 쪽 머리. 역그늘 색·노란 토막지느러미·서리와 얼음막.

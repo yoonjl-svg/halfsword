@@ -57,7 +57,7 @@ export const MEASURED = {
   excalibur_replica: [1.55, 1.83, 1.2, 0.4],
   lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
   tree_branch: [1.46, 1.61, 1.13, 0.29],
-  rubber_chicken: [0.88, 1.24, 0.68, 0.18],
+  rubber_chicken: [1.05, 1.22, 0.81, 0.22], // 칼날 0.45m (10라운드 쓰레기 등급 맞추기)
   frozen_tuna: [1.36, 1.63, 1.05, 0.44],
 };
 const LS_MEASURED = MEASURED.longsword;
