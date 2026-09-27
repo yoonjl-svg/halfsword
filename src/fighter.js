@@ -13,8 +13,12 @@ import * as THREE from 'three';
 import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL } from './config.js';
 import { Skill } from './skill.js';
 import { guardAt } from './guards.js';
+import { getWeapon, MATERIALS, weaponMatOpts } from './weapons.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
+// 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
+// 생성자의 twistScale 계산 기준 (weapons.js의 롱소드 spec과 같은 수치가 나와야 한다).
+const TWIST_I_BASE = 0.0010137;
 const BIT = { ground: 1 };
 const bodyBit = (i) => (i === 0 ? 2 : 8);
 const weaponBit = (i) => (i === 0 ? 4 : 16);
@@ -324,8 +328,28 @@ export class Fighter {
     for (const ax of MOTOR_AXES) this.uprightJoint.rawSet.jointConfigureMotorModel(this.uprightJoint.handle, ax, 1); // 1 = 힘(N·m) 기준
 
 
-    // ── 무기: 롱소드 ──
-    const L = WEAPON.length;
+    // ── 무기: 데이터 중심 무기고(weapons.js)에서 무기 하나를 골라 만든다 ──
+    //  기본값(o.weapon 없음)은 그대로 롱소드라서 기존 시뮬 결과가 바뀌지 않는다.
+    const spec = getWeapon(o.weapon || 'longsword');
+    this.weapon = spec;
+    // 이 무기를 쥔 이 싸움꾼만의 손목·팔 힘 한계 (config.js WEAPON 기본값 + 무기별 보정).
+    // 칼 길이도 여기 담아서, 서로 다른 무기를 쥔 두 싸움꾼이 동시에 존재할 수 있게 한다.
+    this.weaponCfg = {
+      ...WEAPON,
+      ...spec.controlOverrides,
+      bladeLength: spec.bladeLength,
+      hiltLength: spec.hiltLength,
+      gripAlong: spec.gripAlong,
+      edged: spec.edged,
+      mCut: spec.mCut,
+      mThrust: spec.mThrust,
+      mBlunt: spec.mBlunt,
+      ignoreArmor: spec.ignoreArmor,
+      twoHand: spec.twoHand,
+    };
+    this.weaponDurability = spec.durability; // 무기가 부러지기까지 남은 충격량 예산 (N·s, Infinity면 안 부러짐)
+    this.weaponBroken = false;
+    const L = spec.bladeLength;
     const wristLocal = new THREE.Vector3(0.565, 1.43, this.side * 0.2); // 앞으로 뻗은 팔 끝
     const wp = toWorld(wristLocal.toArray());
     // 처음부터 준비 자세(칼끝이 앞을 향함)로 만든다. 세워서 만들면 시작하자마자 칼이 앞으로 쓰러지며 내리친다.
@@ -339,29 +363,19 @@ export class Fighter {
         // 충돌 훅)을 거친다. 딱딱한 CCD는 이 판정을 무시하고 칼을 한 순간에 멈춰 세웠다 (칼끝 18 → 0.1 m/s)
         .setSoftCcdPrediction(0.2),
     );
-    // 실제 롱소드의 질량 분포 (Albion Liechtenauer 1.58kg·무게중심 9.8cm, Le Chevalier가 잰 Albion Crécy의 회전 관성 참고).
-    // 칼날은 끝으로 갈수록 얇고 좁아져서 무게중심이 칼날 길이의 34% 지점(코등이 쪽)에 있다.
-    // → 전체 1.6kg, 무게중심은 코등이에서 약 11cm, 손 기준 회전 관성 약 0.27kg·m² (예전 균일한 막대: 0.59)
-    const ms = WEAPON.mass / 1.6;
-    const bladeCom = (0.344 - 0.5) * L; // 칼날 상자 가운데에서 무게중심까지 (m)
-    const bladeI = 0.842 * (0.253 * L) ** 2; // 칼날 자체의 휘두르는 축 관성 (회전 반경 = 길이의 25.3%)
-    const parts = [
-      // [모양, 위치y, [질량, 무게중심y, 휘두르는 축 관성, 칼날 축 관성], 색, 칼날인가]
-      [['box', 0.018, 0.1, 0.018], 0, [0.16, 0, (0.16 * (0.036 ** 2 + 0.2 ** 2)) / 12, (0.16 * 2 * 0.036 ** 2) / 12], o.look.grip, false],
-      [['ball', 0.03], -0.12, [0.418, 0, 0.4 * 0.418 * 0.03 ** 2, 0.4 * 0.418 * 0.03 ** 2], o.look.hilt, false], // 무거운 폼멜이 균형을 잡는다
-      [['box', 0.11, 0.015, 0.022], 0.115, [0.18, 0, (0.18 * (0.22 ** 2 + 0.03 ** 2)) / 12, (0.18 * (0.22 ** 2 + 0.044 ** 2)) / 12], o.look.hilt, false],
-      [['box', 0.024, L / 2, 0.008], 0.13 + L / 2, [0.842, bladeCom, bladeI, 0.0000736], 0xd8dde3, true],
-    ];
+    const parts = spec.buildParts(o.look); // [모양, 위치y, [질량, 무게중심y, 휘두르는 축 관성, 칼날 축 관성], 색, 칼날인가]
+    const restitution = MATERIALS[spec.material]?.restitution ?? STEEL.restitution;
+    this.restitution = restitution; // combat.js armSteel()이 바인드 풀린 뒤 되돌릴 때 이 무기 재질 값을 쓴다
     const group = new THREE.Group();
     this.bladeColliders = [];
     this.swordColliders = []; // 칼 전체(칼날+칼자루). 칼끼리 붙어 있는 동안 반발을 끄고 켠다 (combat.js)
     for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade] of parts) {
       const cd = shapeDesc(RAPIER, shape)
         .setTranslation(0, y, 0)
-        .setMassProperties(pm * ms, { x: 0, y: pc, z: 0 }, { x: pIe * ms, y: pIt * ms, z: pIe * ms }, { x: 0, y: 0, z: 0, w: 1 })
+        .setMassProperties(pm, { x: 0, y: pc, z: 0 }, { x: pIe, y: pIt, z: pIe }, { x: 0, y: 0, z: 0, w: 1 })
         .setFriction(0.4)
-        // 강철: 칼끼리 부딪히면 튕긴다. 곱하기 규칙이라 반발이 0인 몸·땅과는 그대로 0 (칼이 살에 튕기지 않는다)
-        .setRestitution(STEEL.restitution)
+        // 재질별 반발 계수. 곱하기 규칙이라 반발이 0인 몸·땅과는 그대로 0 (칼이 살에 튕기지 않는다)
+        .setRestitution(restitution)
         .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Multiply)
         .setCollisionGroups(weaponGroups)
         .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
@@ -371,7 +385,7 @@ export class Fighter {
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
-      const mesh = shapeMesh(shape, color, isBlade ? { metalness: 0.9, roughness: 0.25 } : null);
+      const mesh = shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade));
       mesh.position.y = y;
       group.add(mesh);
       if (isBlade) {
@@ -379,6 +393,7 @@ export class Fighter {
         this.bladeMesh = mesh; // 벨수록 피가 묻는다
       }
     }
+    spec.decorate?.(group, o.look);
     scene.add(group);
     this.meshes.push({ rb: sword, group, kind: 'weapon' });
     this.sword = sword;
@@ -397,6 +412,16 @@ export class Fighter {
     this.swordProps = { m: sword.mass(), I: { x: pI.x, y: pI.y, z: pI.z }, frame: new THREE.Quaternion(pF.x, pF.y, pF.z, pF.w) };
     this.swordIhand = Math.max(pI.x, pI.z) + sword.mass() * lc.y * lc.y;
     this.swordCom = lc.y; // 손(칼 원점)에서 무게중심까지 (m)
+    // 칼날 축(길이 방향, 비트는 축) 관성. driveSword()의 "날 세우기" 힘 세기는 롱소드
+    // (코등이가 넓어 이 축 관성이 크다)를 기준으로 맞춰져 있어서, 코등이가 좁거나 칼날이
+    // 얇은 무기(세이버·라이트세이버 등)는 그대로 쓰면 축이 팽이처럼 돈다. 실제 관성 비율만큼
+    // 그 힘도 줄이거나 늘려 안정성을 맞춘다. 기본 롱소드는 그대로 1(원래 동작과 완전히 같음) —
+    // TWIST_I_BASE는 반올림한 참고값이라 부동소수점이 완전히 같지 않을 수 있어 예외로 둔다.
+    // 비율 그대로 쓰면 롱소드와 똑같은 반응(고유진동수·감쇠비)이 나와 안정적이다. 다만 무기에
+    // 따라 이 비율이 너무 작으면(예: 카타나) 날을 세우는 힘이 약해져 짧은 휘두르기 동안 날이
+    // 미처 정렬되지 못하는 경우가 있어, 그런 무기는 weapons.js의 controlOverrides.twistScale로
+    // 개별 조정할 수 있게 한다 (없으면 실제 관성 비율 그대로).
+    this.twistScale = spec.id === 'longsword' ? 1 : (this.weaponCfg.twistScale ?? pI.y / TWIST_I_BASE);
     this.handTarget = new THREE.Vector3();
     this.tipPrev = null;
     this.tipVel = new THREE.Vector3();
@@ -434,7 +459,7 @@ export class Fighter {
   bladePoint(t, out = new THREE.Vector3()) {
     const p = this.sword.translation();
     rot(this.sword, _q1);
-    return out.set(0, 0.13 + WEAPON.length * t, 0).applyQuaternion(_q1).add(_v1.set(p.x, p.y, p.z));
+    return out.set(0, this.weaponCfg.hiltLength + this.weaponCfg.bladeLength * t, 0).applyQuaternion(_q1).add(_v1.set(p.x, p.y, p.z));
   }
 
   /** 몸 기준 앞 방향(수평) */
@@ -475,7 +500,7 @@ export class Fighter {
     const p = this.swordProps;
     if (!p) return 0.5;
     const a = this.swordCom;
-    const b = 0.13 + t * WEAPON.length - a;
+    const b = this.weaponCfg.hiltLength + t * this.weaponCfg.bladeLength - a;
     const k2 = Math.max(p.I.x, p.I.z) / p.m;
     return Math.min(1.3, Math.abs(1 - (a * b) / k2));
   }
@@ -765,6 +790,21 @@ export class Fighter {
    */
   takeJolt(J) {
     this.jolt = Math.max(this.jolt, Math.min(1, J / RECOIL.joltImpulse));
+  }
+
+  /**
+   * 무기가 세게 부딪힌 만큼(J, N·s) 내구도를 깎는다. 강철 무기는 내구도가 무한이라 아무 일도
+   * 없지만, 나뭇가지·냉동 참치처럼 durability가 정해진 무기는 다 닳으면 부러진다.
+   */
+  absorbWeaponImpact(J) {
+    if (!this.armed || this.weaponBroken || !isFinite(this.weaponDurability)) return;
+    this.weaponDurability -= J;
+    if (this.weaponDurability <= 0) this.breakWeapon();
+  }
+
+  /** 무기가 부러진다: 날이 죽어 뭉툭한 몽둥이가 된다 (combat.js analyze()가 isBlade를 꺼서 처리) */
+  breakWeapon() {
+    this.weaponBroken = true;
   }
 
   /**
@@ -1115,7 +1155,7 @@ export class Fighter {
           const wc = j.child.angvel();
           const wp = j.parent.angvel();
           const wRel = (wc.x - wp.x) * ax.x + (wc.y - wp.y) * ax.y + (wc.z - wp.z) * ax.z;
-          mErr *= hill(Math.sign(_rv.z - _cur.z || 1) * wRel, WEAPON.elbowVmax);
+          mErr *= hill(Math.sign(_rv.z - _cur.z || 1) * wRel, this.weaponCfg.elbowVmax);
         }
         const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -mErr, mErr);
         const vz = THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
@@ -1203,7 +1243,7 @@ export class Fighter {
     _mT.add(_mG.addScaledVector(boneAxis, -_mG.dot(boneAxis)));
     // 힘-속도 관계: 팔을 빨리 휘두를수록 어깨 힘이 빠진다
     const tlen = _mT.length();
-    const cap = maxT * hill(tlen > 1e-6 ? wSw.dot(_mT) / tlen : 0, WEAPON.shoulderVmax);
+    const cap = maxT * hill(tlen > 1e-6 ? wSw.dot(_mT) / tlen : 0, this.weaponCfg.shoulderVmax);
     if (tlen > cap) _mT.setLength(cap);
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
@@ -1266,7 +1306,7 @@ export class Fighter {
     const sinA = axis.length();
     const angle = Math.atan2(sinA, blade.dot(aim));
     const torque = new THREE.Vector3();
-    if (sinA > 1e-5) torque.copy(axis).multiplyScalar((WEAPON.aimStiffness * angle) / sinA);
+    if (sinA > 1e-5) torque.copy(axis).multiplyScalar((this.weaponCfg.aimStiffness * angle) / sinA);
     // 칼날(날 선 쪽)이 휘두르는 방향을 향하도록 비틀림 유지.
     // 칼이 거의 멈춰 있으면 칼 면이 몸 오른쪽을 보게 둔다.
     const flat = new THREE.Vector3(0, 0, 1).applyQuaternion(_q1);
@@ -1296,18 +1336,18 @@ export class Fighter {
     const wSwing = w.clone().sub(wTwist);
     wAim.addScaledVector(blade, -wAim.dot(blade));
     // 손목(두 손)의 힘은 사람 수준으로 제한된다 → 칼을 순식간에 돌리지 못하고, 칼의 무게와 관성이 느껴진다
-    let cap = WEAPON.maxAimTorque * str;
+    let cap = this.weaponCfg.maxAimTorque * str;
     // 놓아주기: 칼이 목표를 향해 날아가는 동안엔 붙잡지 않는다(관성으로 간다). 남은 각도가 "멈출 수 있는 거리"
     //  (각속도² / (2 × 최대 제동 각가속도)) 안으로 들어오면 그때부터 제동한다. 한 번 제동을 시작하면 이어 간다.
-    let damp = WEAPON.aimDamping;
+    let damp = this.weaponCfg.aimDamping;
     if (sinA > 1e-5) {
       const toward = wSwing.dot(axis) / sinA; // 목표 쪽으로 도는 빠르기 (rad/s)
       const tgtSp = wAim.dot(axis) / sinA;
       if (this.wristBrake && (toward < 1 || angle > this.wristBrakeAng + 0.35)) this.wristBrake = false;
       if (!this.wristBrake && toward > 3 && toward > tgtSp && angle > 0.25) {
-        const brakeAcc = (cap * WEAPON.brakeEcc) / this.swordIhand;
+        const brakeAcc = (cap * this.weaponCfg.brakeEcc) / this.swordIhand;
         const stopAngle = (toward * toward) / (2 * brakeAcc);
-        if (angle > stopAngle * WEAPON.releaseMargin) damp = WEAPON.releaseDamping;
+        if (angle > stopAngle * this.weaponCfg.releaseMargin) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
           this.wristBrakeAng = angle;
@@ -1322,7 +1362,7 @@ export class Fighter {
     const fw = forearm.angvel();
     const tl = torque.length();
     const vAlong = tl > 1e-6 ? ((w.x - fw.x) * torque.x + (w.y - fw.y) * torque.y + (w.z - fw.z) * torque.z) / tl : 0;
-    const h = hill(vAlong, WEAPON.wristVmax, 0.25, WEAPON.brakeEcc);
+    const h = hill(vAlong, this.weaponCfg.wristVmax, 0.25, this.weaponCfg.brakeEcc);
     this.wristHill = (this.wristHill ?? h) + (h - (this.wristHill ?? h)) * Math.min(1, (this.lastDt || 1 / 120) / 0.03);
     cap *= this.wristHill;
     if (tl > cap) torque.setLength(cap);
@@ -1330,9 +1370,11 @@ export class Fighter {
     this.debug.aim.copy(aim);
     this.debug.wristTorque.copy(torque);
     this.debug.wristCap = cap;
-    // 날 세우기(손목 비틀기). 칼날 축 관성이 매우 작아 안정 한계(≈5) 안에서 최대한 세게
-    const twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4);
-    twist.addScaledVector(wTwist, -0.12);
+    // 날 세우기(손목 비틀기). 칼날 축 관성이 매우 작아 안정 한계(≈5) 안에서 최대한 세게.
+    // 이 축 관성이 롱소드보다 작은/큰 무기는 twistScale만큼 힘도 같이 줄이거나 늘려서
+    // (관성이 작을수록 같은 힘에도 더 빨리 도니까) 안정성을 맞춘다.
+    const twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * this.twistScale);
+    twist.addScaledVector(wTwist, -0.12 * this.twistScale);
     torque.add(twist);
     sword.addTorque(vecArg(torque), true);
     // 손목 근육의 반작용은 아래팔로 간다. 단, 아래팔 길이 방향으로 비트는 몫은
@@ -1390,16 +1432,22 @@ export class Fighter {
    */
   offHand() {
     const want =
-      this.armed && (this.state === 'stand' || this.state === 'kneel' || this.state === 'getup') && this.muscle > 0.3 && this.limbs.armO > 0.3 && GRIP.on;
+      this.armed &&
+      this.weaponCfg.twoHand && // 한손무기는 빈손이 칼자루를 잡지 않는다 (applyPose의 기본 손 자세를 그대로 쓴다)
+      (this.state === 'stand' || this.state === 'kneel' || this.state === 'getup') &&
+      this.muscle > 0.3 &&
+      this.limbs.armO > 0.3 &&
+      GRIP.on;
     this.gripping = false;
     if (!want) return;
+    const along = this.weaponCfg.gripAlong;
     const sword = this.sword;
     rot(sword, _q1);
     const st = sword.translation();
-    const pommel = _gp.set(0, GRIP.along, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z));
+    const pommel = _gp.set(0, along, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z));
     // 빈손은 칼자루가 "있어야 할 곳"(칼끝이 향해야 할 방향 기준)을 향해 뻗는다 → 두 손이 칼자루를 밀고 당겨
-    //  (손 사이 약 0.14m의 지렛대) 칼을 돌린다. 손목 힘이 사람 수준이라도 칼끝이 흔들리지 않는 이유
-    const gripAim = _gw.copy(this.aimDirW).multiplyScalar(GRIP.along).add(_v7.set(st.x, st.y, st.z));
+    //  (손 사이 지렛대) 칼을 돌린다. 손목 힘이 사람 수준이라도 칼끝이 흔들리지 않는 이유
+    const gripAim = _gw.copy(this.aimDirW).multiplyScalar(along).add(_v7.set(st.x, st.y, st.z));
     this.offArmIK(gripAim);
     // 빈손 위치 (아래팔 끝)
     const fo = this.bodies.farmO;

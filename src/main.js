@@ -18,6 +18,12 @@ import { buildArena } from './arena.js';
 
 await RAPIER.init();
 
+// 테스트용 URL 파라미터: ?weapon=katana&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
+//  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
+const params = new URLSearchParams(location.search);
+const playerWeapon = params.get('weapon') || 'longsword';
+const foeWeapon = params.get('foeWeapon') || params.get('weapon') || 'longsword';
+
 // ── 설정 (브라우저에 저장) ──
 const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
 const settings = { ...DEFAULTS };
@@ -129,6 +135,7 @@ function newRound() {
     x: -ARENA.startGap / 2,
     heading: 0,
     look: LOOKS.player,
+    weapon: playerWeapon,
   });
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 1,
@@ -136,7 +143,12 @@ function newRound() {
     x: ARENA.startGap / 2,
     heading: Math.PI,
     look: LOOKS.enemy,
+    weapon: foeWeapon,
   });
+  // 테스트용 무기 파라미터를 썼으면 화면에 잠깐 알려 준다
+  if (playerWeapon !== 'longsword' || foeWeapon !== 'longsword') {
+    showToast(`나: ${player.weapon.nameKo} · 상대: ${enemy.weapon.nameKo}`, 2200);
+  }
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   ai = new AI(enemy, player, settings.difficulty);
   player.skill.level = +settings.skill;

@@ -1,4 +1,7 @@
 // jelly_harness: deterministic Node replica of main.js newRound()+step loop (no rendering).
+// NOTE: newRound() only puts an AI on `enemy` by default — `player` sits still (no input) unless
+// you pass opts.AI2Class (usually AI, imported from here). AI-vs-AI scripts that forget this end up
+// benchmarking "AI vs. a passive dummy holding a sword", not a real fight (bit us once — weapon_balance.mjs).
 import RAPIER from '../../node_modules/@dimforge/rapier3d-compat/rapier.mjs';
 import * as THREE from '../../node_modules/three/build/three.module.js';
 import * as CONFIG from '../../src/config.js';
@@ -46,8 +49,8 @@ export function newRound(opts = {}) {
   }
   const scene = new THREE.Scene();
   const gap = opts.gap ?? ARENA.startGap;
-  const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: LOOKS.player });
-  const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: opts.sameLook ? LOOKS.player : LOOKS.enemy });
+  const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: LOOKS.player, weapon: opts.weapon });
+  const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: opts.sameLook ? LOOKS.player : LOOKS.enemy, weapon: opts.weapon2 ?? opts.weapon });
   if (opts.onFighter) { opts.onFighter(player, world, RAPIER); opts.onFighter(enemy, world, RAPIER); }
   const AIC = opts.AIClass || AI;
   const ai = new AIC(enemy, player, opts.difficulty ?? 'normal');

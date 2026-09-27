@@ -1,0 +1,61 @@
+// 무기 밸런스 검증: 각 무기 vs 롱소드, AI 대 AI, 양쪽 자리를 바꿔가며 여러 판.
+// 사용법: node tools/sim/weapon_balance.mjs [라운드당 반복 수] [무기 id...]
+import { newRound, DT, AI } from './harness_m.mjs';
+import { WEAPONS } from '../../src/weapons.js';
+
+const ROUNDS = +(process.argv[2] || 20);
+const ROUND_SECONDS = 40;
+const ids = process.argv.slice(3).length ? process.argv.slice(3) : Object.keys(WEAPONS).filter((id) => id !== 'longsword');
+
+function playOne(weaponA, weaponB, seed) {
+  // AI2Class를 안 주면 player(A)는 AI 없이 가만히 서 있는 인형이 된다 — 반드시 양쪽 다 AI를 준다
+  const G = newRound({ walls: true, weapon: weaponA, weapon2: weaponB, seed, AI2Class: AI });
+  let nan = false;
+  let tDead = null;
+  let deadWho = null; // 'P' | 'E' | null(무승부/시간초과)
+  for (let i = 0; i < ROUND_SECONDS / DT; i++) {
+    G.step();
+    const sv = G.player.sword.linvel();
+    if (![sv.x, sv.y, sv.z].every(Number.isFinite)) { nan = true; break; }
+    if (G.player.state === 'dead' || G.enemy.state === 'dead') {
+      tDead = +G.t.toFixed(1);
+      deadWho = G.player.state === 'dead' && G.enemy.state === 'dead' ? 'both' : G.player.state === 'dead' ? 'P' : 'E';
+      break;
+    }
+  }
+  return { nan, tDead, deadWho, brokeA: G.player.weaponBroken, brokeB: G.enemy.weaponBroken };
+}
+
+function fmtPct(x) {
+  return `${(x * 100).toFixed(0)}%`;
+}
+
+const report = [];
+for (const id of ids) {
+  const rowsA = []; // A(무기 id) vs B(롱소드), A가 player 자리
+  const rowsB = []; // 자리를 바꿔서
+  for (let s = 1; s <= ROUNDS; s++) {
+    rowsA.push(playOne(id, 'longsword', 1000 + s));
+    rowsB.push(playOne('longsword', id, 2000 + s));
+  }
+  const winsAsP = rowsA.filter((r) => r.deadWho === 'E').length; // P(무기)가 이김
+  const winsAsE = rowsB.filter((r) => r.deadWho === 'P').length; // E(무기)가 이김 (B라운드에서 무기는 자리 E)
+  const totalWeaponWins = winsAsP + winsAsE;
+  const totalRounds = rowsA.length + rowsB.length;
+  const winRate = totalWeaponWins / totalRounds;
+  const ttk = [...rowsA, ...rowsB].map((r) => r.tDead).filter((t) => t != null);
+  const meanTTK = ttk.length ? ttk.reduce((a, b) => a + b, 0) / ttk.length : NaN;
+  const draws = [...rowsA, ...rowsB].filter((r) => r.tDead == null).length;
+  const nans = [...rowsA, ...rowsB].filter((r) => r.nan).length;
+  const broke = [...rowsA, ...rowsB].filter((r) => r.brokeA || r.brokeB).length;
+  report.push({ id, winRate, meanTTK, draws, nans, broke, totalRounds });
+  console.log(
+    `${id.padEnd(16)} winRate=${fmtPct(winRate).padStart(5)}  meanTTK=${isNaN(meanTTK) ? '-' : meanTTK.toFixed(1) + 's'}  draws=${draws}/${totalRounds}  NaN=${nans}  broke=${broke}`,
+  );
+}
+
+console.log('\n--- 요약 (95%/5% 밖이면 확인 필요) ---');
+for (const r of report) {
+  const flag = r.winRate >= 0.95 || r.winRate <= 0.05 ? '  ⚠️ 극단적' : '';
+  console.log(`${r.id.padEnd(16)} ${fmtPct(r.winRate)}${flag}`);
+}
