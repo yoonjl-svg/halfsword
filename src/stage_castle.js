@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { ARENA } from './config.js';
 import { rng, h3, _c, _v, Kit, box, cyl, limb, canvasTex, pointGlow } from './stage_kit.js';
+import { weaponEnv } from './weapon_looks.js';
 
 const C = {
   stone: 0xb0aea9, // 성벽 돌 (질감에 곱해짐)
@@ -221,13 +222,15 @@ export function buildCastle(scene, lights = {}) {
     ground.receiveShadow = true;
     scene.add(ground);
     // 눈 더미: 벽 밑에 쌓인 눈
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 70; i++) {
       const side = i % 4;
       const t = (r() - 0.5) * 2 * (IN - 2);
       const x = side === 0 ? -IN + 0.6 : side === 1 ? IN - 0.6 : t;
       const z = side === 2 ? -IN + 0.6 : side === 3 ? IN - 0.6 : t;
       if (side === 1 && Math.abs(z) < 8) continue; // 본성 계단 앞은 비운다
       if (side === 0 && Math.abs(z) < 3.2) continue; // 성문 앞도
+      if (side === 3 && Math.abs(x) < 10) continue; // 헛간(마구간) 안
+      if (side === 2 && Math.abs(x) < 3.5) continue; // 종탑 밑
       K.put('snow', new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), C.snow, [x, -0.05, z], [0, r() * 3, 0], [1.2 + r() * 1.4, 0.35 + r() * 0.35, 1 + r() * 1.2], { vary: 0.04, noise: 0.03 });
     }
   }
@@ -382,6 +385,63 @@ export function buildCastle(scene, lights = {}) {
     for (let j = 0; j < 3; j++) K.put('iron', box(0.04, 0.08, 1.5), C.iron, [fx - 0.03, doorY + 0.5 + j * 0.9, 0.3]);
   }
 
+  /**
+   * 말 한 마리 (기본 도형으로 만든 모습). 머리가 +z(벽)를 보고 선다. 등에 천을 덮고, 굴레에서 벽 가로대로 밧줄.
+   * pose 0: 고개를 들고 조금 돌렸다, 1: 고개를 숙여 건초를 먹는다
+   */
+  function horse(x, z, coat, mane, blanket, pose) {
+    K.push([x, 0, z], -Math.PI / 2, 1.18); // 건물 기준 +x 가 머리 쪽, 조금 크게
+    const o = { vary: 0.05, noise: 0.06 };
+    const sph = (p, s, c = coat) => K.put('horse', new THREE.SphereGeometry(1, 12, 8), c, p, [0, 0, 0], s, o);
+    sph([0, 1.2, 0], [0.84, 0.43, 0.38]); // 몸통 (통통하게)
+    sph([-0.58, 1.26, 0], [0.46, 0.43, 0.39]); // 엉덩이
+    sph([0.6, 1.22, 0], [0.42, 0.43, 0.37]); // 가슴
+    const nb = [0.78, 1.35, 0];
+    const hd = pose ? [1.12, 1.25, 0.05] : [1.1, 1.9, 0.12];
+    const mz = pose ? [1.35, 0.7, 0.08] : [1.55, 1.55, 0.22];
+    limb(K, 'horse', nb, hd, 0.27, 0.16, coat, o, 10); // 목
+    limb(K, 'horse', [nb[0] - 0.05, nb[1] + 0.2, 0], [hd[0] - 0.05, hd[1] + 0.12, hd[2]], 0.05, 0.04, mane, o, 5); // 갈기
+    sph(hd, [0.19, 0.17, 0.15]);
+    limb(K, 'horse', hd, mz, 0.15, 0.1, coat, o, 10); // 머리 (얼굴)
+    sph(mz, [0.12, 0.11, 0.11], coat);
+    for (const s of [-1, 1]) {
+      K.put('horse', new THREE.ConeGeometry(0.04, 0.14, 5), coat, [hd[0] - 0.03, hd[1] + 0.16, hd[2] + s * 0.07], [0, 0, 0.2], 1, o); // 귀
+      K.put('horse', new THREE.SphereGeometry(0.025, 6, 4), 0x0a0808, [hd[0] + 0.12 + (mz[0] - hd[0]) * 0.15, hd[1] + (mz[1] - hd[1]) * 0.15 + 0.04, hd[2] + s * 0.1]); // 눈
+    }
+    // 굴레(검은 띠)와 밧줄
+    K.put('horse', new THREE.TorusGeometry(0.11, 0.015, 4, 10), 0x1a1410, [mz[0] - 0.08, mz[1] + 0.03, mz[2]], [0, 0, Math.atan2(mz[1] - hd[1], mz[0] - hd[0]) + Math.PI / 2]);
+    limb(K, 'wood', [mz[0] - 0.08, mz[1] - 0.08, mz[2]], [1.78, 1.15, (pose ? -0.1 : 0.1)], 0.012, 0.012, C.rope, {}, 3);
+    // 다리 (앞다리 곧게, 뒷다리는 뒤꿈치가 꺾인다)
+    for (const s of [-1, 1]) {
+      const fz = s * 0.19;
+      const legs = [
+        [
+          [0.55, 1.0, fz],
+          [0.58, 0.52, fz],
+          [0.56, 0.1, fz],
+        ],
+        [
+          [-0.62, 1.05, fz],
+          [-0.76, 0.56, fz],
+          [-0.64, 0.1, fz],
+        ],
+      ];
+      for (const [a, b, c] of legs) {
+        limb(K, 'horse', a, b, 0.12, 0.07, coat, o, 7);
+        limb(K, 'horse', b, c, 0.065, 0.05, coat, o, 7);
+        sph(b, [0.075, 0.075, 0.075]); // 무릎 (위아래 다리 이음매를 덮는다)
+        K.put('horse', cyl(0.07, 0.085, 0.12, 8), 0x1a1612, [c[0], 0.06, c[2]]); // 발굽
+      }
+    }
+    // 꼬리
+    limb(K, 'horse', [-0.95, 1.35, 0], [-1.1, 1.0, 0.04], 0.07, 0.06, mane, o, 6);
+    limb(K, 'horse', [-1.1, 1.0, 0.04], [-1.12, 0.55, 0.1], 0.06, 0.03, mane, o, 6);
+    // 등 덮개 (천)
+    K.put('horse', box(0.95, 0.04, 0.8), blanket, [-0.05, 1.64, 0], [0, 0, 0], 1, o);
+    for (const s of [-1, 1]) K.put('horse', box(0.95, 0.45, 0.03), blanket, [-0.05, 1.44, s * 0.4], [s * 0.18, 0, 0], 1, o);
+    K.pop();
+  }
+
   // ── 북쪽: 성벽에 기댄 헛간 (건초·통·나무상자) ──
   {
     const z0 = IN;
@@ -398,7 +458,7 @@ export function buildCastle(scene, lights = {}) {
     K.put('snow', box(18.9, 0.22, rl - 0.1), C.snow, [0, 4.17, (z0 + z1) / 2 - 0.3], [-slope, 0, 0], 1, { vary: 0.02, noise: 0.03, rough: 0.06 });
     // 건초 더미
     for (let i = 0; i < 7; i++)
-      K.put('straw', box(1.2, 0.6, 0.7, 2, 1, 1), C.straw, [-8 + (i % 4) * 1.3 + (i > 3 ? 0.6 : 0), 0.3 + (i > 3 ? 0.6 : 0), IN - 1.2], [0, (r() - 0.5) * 0.2, 0], 1, { vary: 0.15, rough: 0.05, noise: 0.15 });
+      K.put('straw', box(1.2, 0.6, 0.7, 2, 1, 1), C.straw, [-9.1 + (i % 4) * 1.3 + (i > 3 ? 0.6 : 0), 0.3 + (i > 3 ? 0.6 : 0), IN - 1.2], [0, (r() - 0.5) * 0.2, 0], 1, { vary: 0.15, rough: 0.05, noise: 0.15 });
     // 통
     const barrel = (x, z, up = true) => {
       const g = new THREE.CylinderGeometry(0.34, 0.34, 0.9, 12, 3);
@@ -414,9 +474,9 @@ export function buildCastle(scene, lights = {}) {
       for (const hy of [-0.3, 0.3])
         K.put('iron', new THREE.TorusGeometry(0.37, 0.02, 4, 14), C.iron, up ? [x, 0.45 + hy, z] : [x, 0.38, z], up ? [Math.PI / 2, 0, 0] : [0, 0, 0], 1);
     };
-    barrel(2, IN - 1.0);
-    barrel(2.8, IN - 1.3);
-    barrel(2.3, IN - 2.0);
+    barrel(3.4, IN - 1.0);
+    barrel(4.2, IN - 1.3);
+    barrel(3.7, IN - 2.0);
     barrel(5.5, IN - 2.6, false);
     for (const [x, z, s] of [
       [7, IN - 1.1, 0.9],
@@ -425,8 +485,19 @@ export function buildCastle(scene, lights = {}) {
     ])
       K.put('wood', box(s, s, s), C.woodLight, [x, s / 2 + (s < 0.7 ? 0.9 : 0), z], [0, r() * 0.5, 0], 1, { vary: 0.2, snow: 0.9 });
     // 물통 (구유)
-    K.put('wood', box(2.4, 0.6, 0.8), C.woodDark, [-2.5, 0.3, IN - 4.9], [0, 0, 0], 1, { snow: 0.7 });
-    K.put('ice', box(2.2, 0.05, 0.6), 0xaec4d6, [-2.5, 0.56, IN - 4.9]);
+    K.put('wood', box(2.4, 0.6, 0.8), C.woodDark, [-6.6, 0.3, IN - 3.1], [0, 0, 0], 1, { snow: 0.3 });
+    K.put('ice', box(2.2, 0.05, 0.6), 0xaec4d6, [-6.6, 0.56, IN - 3.1]);
+
+    // 마구간 칸막이 + 벽에 붙은 말 매는 가로대 + 묶여 있는 말 둘
+    for (const x of [-3.4, -0.75, 1.95]) {
+      K.put('wood', box(0.08, 1.3, 2.8), C.woodLight, [x, 0.75, IN - 1.5], [0, 0, 0], 1, { vary: 0.15 });
+      K.put('wood', box(0.14, 1.6, 0.14), C.wood, [x, 0.8, IN - 2.9]);
+    }
+    K.put('wood', box(5.6, 0.1, 0.1), C.woodDark, [-0.7, 1.15, IN - 0.3]);
+    for (const x of [-3.2, 1.7]) K.put('wood', box(0.1, 0.5, 0.25), C.woodDark, [x, 1.15, IN - 0.15]);
+    horse(-2.1, IN - 2.4, 0x6b4127, 0x1e1510, 0x7a1a1a, 0);
+    horse(0.6, IN - 2.4, 0x9a948c, 0x3a3634, 0x2a3f6a, 1);
+    K.put('straw', new THREE.CylinderGeometry(0.9, 1.1, 0.25, 10), C.straw, [0.6, 0.12, IN - 0.9], [0, 0, 0], [0.7, 1, 0.6], { rough: 0.1, noise: 0.2 });
   }
 
   // ── 남쪽: 우물 · 훈련장(허수아비·말뚝) · 창 걸이 · 장작더미 ──
@@ -464,6 +535,23 @@ export function buildCastle(scene, lights = {}) {
     for (let j = 0; j < 4; j++)
       for (let i = 0; i < 9 - j; i++)
         K.put('wood', cyl(0.12, 0.12, 1.1, 7), j % 2 ? C.woodLight : C.wood, [-13 + i * 0.25 + j * 0.12, 0.12 + j * 0.22, -IN + 0.8], [Math.PI / 2, 0, 0], 1, { vary: 0.25, snow: j === 3 ? 0.9 : 0.3 });
+  }
+
+  // ── 남쪽 성벽 가운데의 종탑 (네모난 탑 위 트인 종루, 눈 덮인 뾰족 지붕) ──
+  const BELL = { x: 0, y: 22.1, z: -(IN + WT / 2) };
+  {
+    const bx = 0;
+    const bz = BELL.z;
+    const S = 6;
+    K.put('stone', box(S, 18, S, 3, 9, 3), C.stone, [bx, 9, bz], [0, 0, 0], 1, { ...st, ...snowy });
+    K.put('stone', box(S + 0.5, 0.6, S + 0.5), C.stoneDark, [bx, 18.3, bz], [0, 0, 0], 1, { ...st, snow: 0.95 });
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) K.put('stone', box(1.1, 4.6, 1.1), C.stone, [bx + sx * (S / 2 - 0.55), 20.9, bz + sz * (S / 2 - 0.55)], [0, 0, 0], 1, st);
+    K.put('stone', box(S + 0.6, 0.7, S + 0.6), C.stoneDark, [bx, 23.55, bz], [0, 0, 0], 1, { ...st, snow: 0.95 });
+    K.put('slate', new THREE.ConeGeometry(S * 0.78, 7, 4, 3), C.slate, [bx, 23.9 + 3.5, bz], [0, Math.PI / 4, 0], 1, { snow: 0.6 });
+    K.put('iron', cyl(0.05, 0.07, 1.6, 5), C.iron, [bx, 23.9 + 7 + 0.7, bz]);
+    K.put('wood', box(S - 1.4, 0.3, 0.3), C.woodDark, [bx, 22.5, bz]); // 종을 매단 들보
+    // 안뜰 쪽 화살 구멍과 아치 창
+    for (const hy of [6, 11, 15]) K.put('dark', box(0.25, 1.5, 0.2), C.dark, [bx, hy, bz + S / 2 + 0.01]);
   }
 
   // ── 화로와 횃불 받침 ──
@@ -531,6 +619,7 @@ export function buildCastle(scene, lights = {}) {
     K.mesh('slate', std({ roughness: 0.7, flatShading: true }), { light: warm }),
     K.mesh('wood', std({ roughness: 0.9 }), { light: warm, cast: true }),
     K.mesh('straw', std({ roughness: 1, flatShading: true }), { light: warm }),
+    K.mesh('horse', std({ roughness: 0.75 }), { light: warm }),
     K.mesh('iron', std({ roughness: 0.5, metalness: 0.6 }), { light: warm }),
     K.mesh('snow', std({ roughness: 0.9 }), { light: warm }),
     K.mesh('ice', std({ roughness: 0.15, metalness: 0.2 })),
@@ -539,6 +628,30 @@ export function buildCastle(scene, lights = {}) {
     K.mesh('embers', new THREE.MeshBasicMaterial({ vertexColors: true })),
   ];
   for (const m of meshes) if (m) scene.add(m);
+
+  // 종: 따로 매달아 흔든다 (큰 타격이 나오면 크게 울린다)
+  const bellPivot = new THREE.Group();
+  bellPivot.position.set(BELL.x, BELL.y, BELL.z);
+  bellPivot.scale.setScalar(1.45);
+  {
+    const pts = [
+      [0.02, 0],
+      [0.4, 0.02],
+      [0.46, -0.12],
+      [0.5, -0.6],
+      [0.62, -1.15],
+      [0.72, -1.35],
+      [0.66, -1.36],
+    ].map(([a, b]) => new THREE.Vector2(a, b));
+    // 오래된 청동: 은은한 광택 (반사 환경맵은 약하게), 해 질 녘에도 형태가 보일 만큼만 아주 약하게 스스로 빛난다
+    const bellMat = new THREE.MeshStandardMaterial({ color: 0xaa8c4d, roughness: 0.35, metalness: 0.88, envMap: weaponEnv(), envMapIntensity: 1.15, emissive: 0x432d0e, emissiveIntensity: 0.35, side: THREE.DoubleSide });
+    const bell = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), bellMat);
+    const clapper = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), bell.material);
+    clapper.position.y = -1.15;
+    bellPivot.add(bell, clapper);
+  }
+  scene.add(bellPivot);
+  let bellAmp = 0.08;
 
   // ── 불꽃 (화로 셋씩, 횃불 둘씩): 인스턴싱 원뿔, 매 프레임 일렁인다 ──
   const flames = [];
@@ -558,7 +671,7 @@ export function buildCastle(scene, lights = {}) {
   scene.add(flameMesh);
 
   // ── 눈송이 ──
-  const FLAKES = 1400;
+  const FLAKES = 3200;
   const fr = rng(88);
   const fpos = new Float32Array(FLAKES * 3);
   const fsp = new Float32Array(FLAKES);
@@ -571,7 +684,7 @@ export function buildCastle(scene, lights = {}) {
   }
   const flakeGeo = new THREE.BufferGeometry();
   flakeGeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3));
-  const flakes = new THREE.Points(flakeGeo, new THREE.PointsMaterial({ size: 0.075, map: flakeTexture(), transparent: true, depthWrite: false, color: 0xf2f5ff }));
+  const flakes = new THREE.Points(flakeGeo, new THREE.PointsMaterial({ size: 0.085, map: flakeTexture(), transparent: true, depthWrite: false, color: 0xf2f5ff }));
   flakes.frustumCulled = false;
   scene.add(flakes);
 
@@ -615,10 +728,13 @@ export function buildCastle(scene, lights = {}) {
     /** 큰 타격: 눈보라가 휘몰아치고 불꽃이 크게 일렁인다 */
     excite(amount) {
       gust = Math.min(1, gust + amount * 0.5);
+      bellAmp = Math.min(0.55, bellAmp + amount * 0.4);
     },
     update(dt) {
       t += dt;
       gust = Math.max(0, gust - dt * 0.45);
+      bellAmp = Math.max(0.05, bellAmp - dt * 0.08); // 바람에 늘 살짝 흔들린다
+      bellPivot.rotation.x = bellAmp * Math.sin(t * 2.1);
       step(dt);
     },
   };

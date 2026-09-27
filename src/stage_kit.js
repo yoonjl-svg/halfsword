@@ -100,9 +100,9 @@ export class Kit {
     this.stack = [];
     this.n = 0;
   }
-  push(pos, rotY = 0) {
+  push(pos, rotY = 0, scale = 1) {
     this.stack.push(this.frame.clone());
-    this.frame.multiply(new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion().setFromAxisAngle(UP, rotY), new THREE.Vector3(1, 1, 1)));
+    this.frame.multiply(new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion().setFromAxisAngle(UP, rotY), new THREE.Vector3(scale, scale, scale)));
   }
   pop() {
     this.frame = this.stack.pop();
