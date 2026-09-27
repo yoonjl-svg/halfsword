@@ -4,7 +4,6 @@
 // 캐릭터 PM 의 schools.js 에 무기별 꾸러미가 다 생기면 이 표는 필요 없어진다.
 export const WEAPON_MEASURES = {
   longsword: { contact: 1.62, reach: 2.0, clinch: 1.25, cutTime: 0.3 }, // 기본 AI 값 그대로 (회귀 기준)
-  arming_sword: { contact: 1.33, reach: 1.57, clinch: 1.03, cutTime: 0.35 },
   zweihander: { contact: 1.66, reach: 2.08, clinch: 1.28, cutTime: 0.49 },
   estoc: { contact: 1.66, reach: 2.04, clinch: 1.28, cutTime: 0.46 },
   sabre: { contact: 1.4, reach: 1.67, clinch: 1.08, cutTime: 0.38 },

@@ -188,29 +188,7 @@ const longsword = finalizeSpec('longsword', {
 // (옛 1b '롱소드(실전용)' — Albion Crécy 1.39kg·칼날 0.90m — 는 감독 결정으로 기본 롱소드와 하나로 합쳤다. 제원은
 //  docs/weapons_research.md §1 에 남아 있고, 'longsword_sharp'·'sharp' 는 별칭으로 롱소드를 가리킨다.)
 
-// ═════════════════════════════════════════════════════════════
-//  2) 암소드 — Albion Squire (13세기풍) 1.13kg·칼날 78.7cm·균형점 12.1cm [M]
-// ═════════════════════════════════════════════════════════════
-const armingSword = finalizeSpec('arming_sword', {
-  nameKo: '암소드 (한손검)', nameEn: 'Arming Sword',
-  grip: 'one-hand', material: 'steel',
-  hiltLength: 0.1, bladeLength: 0.72,
-  mCut: 1.0, mThrust: 1.0,
-  buildParts(look) {
-    const L = this.bladeLength;
-    const grip = boxInertia(0.11, 0.017, 0.06, 0.017);
-    const pommel = sphereInertia(0.19, 0.026);
-    const cross = boxInertia(0.1, 0.085, 0.012, 0.018);
-    const blade = bladeInertia(0.73, L, 0.36, 0.25, 0.045, 0.012);
-    return [
-      partTuple(['box', 0.017, 0.06, 0.017], 0, 0.11, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.026], -0.1, 0.19, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.085, 0.012, 0.018], 0.095, 0.1, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.0225, L / 2, 0.006], 0.1 + L / 2, 0.73, blade.comY, blade.Ie, blade.It, 0xd4dae0, true),
-    ];
-  },
-});
-
+// (옛 2 '암소드' 는 감독 결정으로 삭제 — 버클러 없이는 짧은 롱소드일 뿐이었다. 'arming_sword'·'arming' 은 별칭으로 롱소드를 가리킨다.)
 // (옛 3 '메서' 는 감독 결정으로 삭제 — 암소드·팔쉬온과 변별성이 없었다. 'messer' 는 별칭으로 팔쉬온을 가리킨다.)
 
 // ═════════════════════════════════════════════════════════════
@@ -619,7 +597,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 });
 
 export const WEAPONS = {
-  longsword, arming_sword: armingSword, zweihander, estoc, sabre, rapier, falchion,
+  longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
 };
@@ -632,7 +610,8 @@ export const WEAPON_ALIASES = {
   katana: 'monohoshizao', // 옛 id (카타나 → 모노호시자오 에픽, 감독 결정)
   longsword_sharp: 'longsword', sharp: 'longsword', // 실전용 롱소드는 기본 롱소드와 합침 (감독 결정)
   messer: 'falchion', hwandudaedo: 'longsword', // 삭제된 무기 (감독 결정) — 옛 id 로 죽지 않게
-  replica: 'excalibur_replica', arming: 'arming_sword', saber: 'lightsaber',
+  arming_sword: 'longsword', arming: 'longsword', // 삭제된 무기 (감독 결정)
+  replica: 'excalibur_replica', saber: 'lightsaber',
 };
 
 // 아무 무기도 지정하지 않았을 때(o.weapon 없음) 쓰는 기본 무기.
