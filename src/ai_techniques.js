@@ -88,6 +88,9 @@ export const FEINTS = [
 
 export const TECH_BY_NAME = Object.fromEntries(TECH.map((t) => [t.name, t]));
 
+// 높은 자세 (10라운드 6-7 모노호시자오 한 칼 자세): 상단·팔상처럼 칼을 미리 높이 들고 기다린다 — 느린 칼이 가속할 시간을 번다
+export const HIGH_GUARDS = WATCH_GUARDS.filter((g) => g.high >= 0.6);
+
 /** 두 패드 위치 사이 거리 */
 export const padDist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 

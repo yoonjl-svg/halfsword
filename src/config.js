@@ -340,6 +340,14 @@ export const SKILL = {
   flowChain: 1, // AI 가 한 번에 이어 흐르는 베기 수 (처음 베기 빼고). 3이면 풍차처럼 부딪히기만 해 판이 안 끝났다(96판 사망 32, 1이면 63)
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
+
+  // ── 들어가며 막기 (10라운드 R3, 짧은 한손 칼 — weapons.js enterParry) ──
+  //  상대가 휘두른 칼을 내 칼로 받아 낸 순간(칼끼리 새로 부딪혀 fighter.jolt 가 enterJolt 넘음) 한 걸음(enterStep m) 들어간다.
+  //  긴 칼은 닿고 짧은 칼은 못 닿는 띠를 막은 칼로 덮은 채 건너 안쪽으로 간다. 내가 휘두르던 중이면 아니다
+  enterJolt: 0.25,
+  enterStep: 0.45,
+  enterMin: 1.1, // 이미 이보다 가까우면 들어가지 않는다 (m)
+  enterCool: 1.0, // 한 번 들어간 뒤 다시 들어가기까지 (초)
 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

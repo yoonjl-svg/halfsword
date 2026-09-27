@@ -284,6 +284,25 @@ export class Skill {
     }
   }
 
+  /**
+   * 들어가며 막기(R3 — 짧은 한손 칼, weapons.js enterParry): 상대가 휘두른 칼을 내 칼로 받아 낸 순간 한 걸음 앞으로 들어간다.
+   *  긴 칼이 닿고 짧은 칼은 못 닿는 띠를 막은 칼로 덮은 채 건너, 긴 칼이 옹색한 안쪽으로 간다 (AI 는 거기서 되받아 친다).
+   *  내가 휘두르던 중(내 공격이 막힌 것)이면 아니다
+   */
+  enterParry(dt) {
+    const f = this.f;
+    const foe = f.foe;
+    this.enterCool = Math.max(0, (this.enterCool ?? 0) - dt);
+    if (this.enterCool > 0 || f.jolt < SKILL.enterJolt || f.state !== 'stand' || !foe?.alive) return;
+    if (this.activity > 0.5 || (foe.skill?.activity ?? 0) < 0.5) return;
+    const d = f.foeDistance();
+    if (d < SKILL.enterMin || d > SKILL.lungeMax) return;
+    this.enterCool = SKILL.enterCool;
+    this.enters = (this.enters ?? 0) + 1;
+    if (f.gait?.active) f.gait.requestStep({ kind: 'pass', fwd: SKILL.enterStep, duration: 0.3 });
+    else this.lunge = SKILL.lungeTime;
+  }
+
   update(dt) {
     if (dt <= 0) return;
     const f = this.f;
@@ -323,6 +342,8 @@ export class Skill {
 
     // 흐름(SKILL.flow, 시제품): 멈추지 않고 휘어 이어지는 끌기를 흐름으로 본다 (끄면 아무 일도 없다 — flowing 은 늘 false)
     if (SKILL.flow) this.updateFlow(dt, swinging);
+    // 들어가며 막기 (짧은 한손 칼만 — 다른 무기는 아무 일도 없다)
+    if (f.weapon?.enterParry) this.enterParry(dt);
     const fk = this.flowing ? SKILL.flowFollow : 1; // 흐르는 동안은 이어 베기를 더 밀어 칼이 멈추지 않고 돌아 나가게
 
     // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
