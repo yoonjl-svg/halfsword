@@ -11,6 +11,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
+import { CHARACTERS_BY_ID, randomCharacter } from './characters.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound } from './sound.js';
 import { Combat } from './combat.js';
@@ -22,10 +23,10 @@ await RAPIER.init();
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
 const params = new URLSearchParams(location.search);
 const playerWeapon = params.get('weapon') || 'longsword';
-const foeWeapon = params.get('foeWeapon') || params.get('weapon') || 'longsword';
+const foeWeaponParam = params.get('foeWeapon'); // 없으면 newRound()에서 고른 캐릭터의 무기 → 내 무기 순으로 정한다
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -39,6 +40,19 @@ const saveSettings = () => {
     /* 무시 */
   }
 };
+
+// ── 상대 캐릭터 고르기 (테스트/데모용 최소 기능. 정식 선택 UI는 나중에) ──
+//  ?foe=<id>     : characters.js의 특정 캐릭터로 고정
+//  ?foe=random   : 판마다 무작위로 다른 캐릭터 (아무것도 없을 때의 기본값)
+//  ?foe=default  : 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" (메뉴의 난이도 설정을 따른다)
+const foeParam = new URLSearchParams(location.search).get('foe') || 'random';
+const foeRandomEachRound = foeParam === 'random';
+let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
+function pickFoe() {
+  if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
+  if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
+  return currentFoe; // 고정 지정이 없으면 같은 상대를 계속 쓴다
+}
 
 // ── 화면(Three.js) ──
 const canvas = document.getElementById('game');
@@ -97,6 +111,8 @@ let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 const fighterMeshes = [];
 
 function newRound() {
+  // 다리로 체중 받치기 (시험): 켜면 gait.js 걸음(다리가 체중 대부분을 받친다), 끄면 예전처럼 골반을 띄워 받친다. 다음 판부터 적용
+  CONFIG.BODY.weightMode = settings.legWeight ? 'hybrid' : 'levitate';
   // 이전 판 정리
   for (const g of fighterMeshes) scene.remove(g);
   fighterMeshes.length = 0;
@@ -128,6 +144,7 @@ function newRound() {
     );
   }
 
+  currentFoe = pickFoe();
   const before = new Set(scene.children);
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
@@ -137,20 +154,24 @@ function newRound() {
     look: LOOKS.player,
     weapon: playerWeapon,
   });
+  // 상대 무기: URL로 지정했으면 그것, 아니면 고른 캐릭터의 무기(characters.js), 그도 없으면 내 무기와 같은 것
+  const foeWeaponId = foeWeaponParam || currentFoe?.weapon || playerWeapon;
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 1,
-    name: '상대',
+    name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
     heading: Math.PI,
-    look: LOOKS.enemy,
-    weapon: foeWeapon,
+    look: currentFoe ? currentFoe.look : LOOKS.enemy,
+    weapon: foeWeaponId,
   });
   // 테스트용 무기 파라미터를 썼으면 화면에 잠깐 알려 준다
-  if (playerWeapon !== 'longsword' || foeWeapon !== 'longsword') {
+  if (playerWeapon !== 'longsword' || (foeWeaponParam && foeWeaponParam !== 'longsword')) {
     showToast(`나: ${player.weapon.nameKo} · 상대: ${enemy.weapon.nameKo}`, 2200);
   }
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
-  ai = new AI(enemy, player, settings.difficulty);
+  // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
+  //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
+  ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, currentFoe.ai.persona) : new AI(enemy, player, settings.difficulty);
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
@@ -338,7 +359,7 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
     el.querySelectorAll('button').forEach((b) =>
       b.addEventListener('click', () => {
         settings[key] = b.dataset.v;
-        if (key === 'difficulty' && ai) ai.setLevel(settings.difficulty);
+        if (key === 'difficulty' && ai && !currentFoe) ai.setLevel(settings.difficulty); // 캐릭터를 골랐으면 그 캐릭터의 난이도를 따로 지킨다
         if (key === 'skill' && player) player.skill.level = +settings.skill;
         saveSettings();
         refreshSettingsUI();
@@ -354,6 +375,21 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
   }
 });
 refreshSettingsUI();
+
+// 이번 상대 소개 (이름 · 별명 · 한마디). 큰 글씨 알림(toast)과 따로, 작게 잠깐 보여 준다
+function showFoeIntro(ch) {
+  const el = $('foeIntro');
+  clearTimeout(showFoeIntro.t);
+  if (!ch) return el.classList.remove('show');
+  el.querySelector('b').textContent = ch.name;
+  el.querySelector('i').textContent = ch.epithet;
+  el.querySelector('span').textContent = `“${ch.taunt}”`;
+  // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
+  showFoeIntro.t = setTimeout(() => {
+    el.classList.add('show');
+    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3500);
+  }, 1300);
+}
 
 function showToast(text, ms = 1200) {
   toast.textContent = text;
@@ -411,6 +447,7 @@ async function startFight() {
   state = 'fight';
   applyMoveMode();
   showToast('싸워라!');
+  showFoeIntro(currentFoe);
   showHint(
     !input.isTouchDevice
       ? '클릭해서 마우스 잠금 · WASD 이동'

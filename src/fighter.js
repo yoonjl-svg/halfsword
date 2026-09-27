@@ -10,8 +10,9 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT } from './config.js';
 import { Skill } from './skill.js';
+import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
 import { getWeapon, MATERIALS, weaponMatOpts } from './weapons.js';
 
@@ -284,7 +285,9 @@ export class Fighter {
     }
 
     // 관절 생성 + 근육(관절 모터) + 각도 제한
-    for (const jd of jointDefs(this.side)) {
+    const jdefs = jointDefs(this.side);
+    if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
+    for (const jd of jdefs) {
       const P = new THREE.Vector3(...jd.at);
       const rp = this.localRot[jd.p];
       const rc = this.localRot[jd.c];
@@ -428,6 +431,9 @@ export class Fighter {
     this.hitPointPrev = null;
     this.hitPointVel = new THREE.Vector3();
 
+    // 다리가 체중을 싣는 걸음 (BODY.weightMode 'hybrid'). 'levitate'면 없음 → 예전 방식 그대로
+    this.gait = BODY.weightMode === 'hybrid' ? new Gait(this) : null;
+
     this.applyPose(0);
   }
 
@@ -481,7 +487,10 @@ export class Fighter {
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
         const maxTurn = BODY.turnSpeed * this.muscle * dt;
-        this.heading += THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
+        let turn = THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
+        // 다리가 체중을 싣는 걸음: 딛은 발은 땅에 붙어 있어서, 엉덩이가 비틀 수 있는 만큼만 몸을 돌린다 (그 다음은 발을 돌려 딛는다)
+        if (this.gait?.active && this.state === 'stand') turn = this.gait.limitTurn(turn);
+        this.heading += turn;
       }
     } else {
       // 쓰러져 있는 동안에는 골반이 실제로 향한 방향을 따라간다 (일어날 때 몸이 비틀리지 않게)
@@ -598,6 +607,7 @@ export class Fighter {
     this.skill.update(dt);
     this.updateBodyPose(dt);
     this.driveBalance(dt);
+    if (this.gait?.active) this.gait.pinFeet();
     this.applyPose(dt);
     this.shove();
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
@@ -845,7 +855,10 @@ export class Fighter {
     const fwd = this.forward(_v1);
     const rgt = this.right(_v2);
     // 내가 가려는 속도 (입력 + 균형 잡으려는 발걸음)
-    const speed = BODY.moveSpeed * (0.45 + 0.55 * this.legHealth);
+    // 다리가 체중을 싣는 걸음: 서 있는 동안만 (쓰러짐·일어남·무릎 꿇기는 예전 방식)
+    const G = this.gait;
+    const hybrid = !!G && this.state === 'stand';
+    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth);
     const st = this.stumble;
     const mv = this.state === 'stand' ? { x: this.move.x * (1 - st.length()) + st.x, y: this.move.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
     if (this.state === 'stand' && this.daze > 0.2) {
@@ -853,13 +866,16 @@ export class Fighter {
       mv.x += Math.sin(this.stateTime * 3.1) * this.daze * 0.5;
       mv.y += Math.sin(this.stateTime * 2.3 + 1) * this.daze * 0.4;
     }
-    const along = mv.y * speed * (mv.y < 0 ? 0.75 : 1);
-    const side = mv.x * speed * 0.8;
+    const along = mv.y * speed * (mv.y < 0 ? (hybrid ? GAIT.backFactor : 0.75) : 1);
+    const side = mv.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
     const want = _v4.set(fwd.x * along + rgt.x * side, 0, fwd.z * along + rgt.z * side);
     this.updateFooting(dt, fwd, rgt, want);
+    if (hybrid) G.update(dt, want, fwd, rgt);
+    else if (G?.active) G.exit();
     // 두 발이 체중을 얼마나 받는지 (땅에 닿고 몸 아래에 있을수록 1).
     // 걷는 중엔 들어 올리는 발(스윙)에는 체중을 싣지 않는다 → 발을 뗄 수 있다
     const stanceOf = (thigh) => {
+      if (hybrid) return G.legs[thigh === 'thighF' ? 'F' : 'B'].stance ? 1 : 0.05;
       if (this.gaitWeight < 0.3) return 1;
       const u = this.prevU[thigh] ?? 0;
       return u < 0.6 ? 1 : 0.05;
@@ -893,8 +909,10 @@ export class Fighter {
 
     // 1) 체중 받치기 (다리를 펴는 힘)
     if (mus > 0.1 && loadSum > 0) {
-      const h = BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
-      let fy = M * g * BODY.support + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * v.y;
+      const h = hybrid ? G.h : BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
+      // hybrid: 보조 힘은 몸무게의 GAIT.assist만 (일어선 직후엔 100%에서 천천히 줄인다). 나머지는 다리 관절이 받친다
+      const share = hybrid ? GAIT.assist + (1 - GAIT.assist) * G.lev : BODY.support;
+      let fy = M * g * share + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * v.y;
       // 다친 다리는 힘을 못 쓴다 → 체중을 버틸 수 있는 한계
       const legPower = (load.F * this.limbs.legF + load.B * this.limbs.legB) / loadSum;
       fy = THREE.MathUtils.clamp(fy * mus, 0, M * g * (1.2 + 1.3 * legPower) * Math.min(1, loadSum * 1.5));
@@ -906,7 +924,7 @@ export class Fighter {
     const dvx = want.x - v.x;
     const dvz = want.z - v.z;
     const grip = Math.min(1, loadSum * 1.5);
-    const lim = M * BODY.maxAccel * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다
+    const lim = M * (hybrid ? GAIT.maxAccel : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     push(fx, 0, fz);
@@ -1075,13 +1093,18 @@ export class Fighter {
       // 딛고 있는 다리: 비스듬할수록 엉덩이가 낮아진다 (다리 길이 0.85m)
       if (u < STANCE) drop = Math.max(drop, 0.85 * (1 - Math.cos(hip)) + 0.02 * w);
     };
-    // 가만히 있을 때는 펜싱 자세(앞발/뒷발), 걸을 때는 번갈아 걷기
-    legPose('thighF', 'shinF', 'footF', this.gaitPhase, 0.24, -0.22);
-    legPose('thighB', 'shinB', 'footB', this.gaitPhase + Math.PI, -0.18, -0.14);
-    // 절뚝거림: 다친 다리로 디딜 때 골반이 더 내려앉는다
-    const uF = this.prevU.thighF ?? 0;
-    const bad = uF < STANCE ? 1 - this.limbs.legF : 1 - this.limbs.legB;
-    drop += bad * 0.08 * w;
+    if (this.gait?.active && this.state === 'stand') {
+      // 다리가 체중을 싣는 걸음: 딛은 발은 제자리, 내딛는 발은 딛을 자리로 (gait.js)
+      this.gait.poseLegs();
+    } else {
+      // 가만히 있을 때는 펜싱 자세(앞발/뒷발), 걸을 때는 번갈아 걷기
+      legPose('thighF', 'shinF', 'footF', this.gaitPhase, 0.24, -0.22);
+      legPose('thighB', 'shinB', 'footB', this.gaitPhase + Math.PI, -0.18, -0.14);
+      // 절뚝거림: 다친 다리로 디딜 때 골반이 더 내려앉는다
+      const uF = this.prevU.thighF ?? 0;
+      const bad = uF < STANCE ? 1 - this.limbs.legF : 1 - this.limbs.legB;
+      drop += bad * 0.08 * w;
+    }
     this.stanceDrop += (drop - this.stanceDrop) * Math.min(1, dt * 20);
     // 무릎 꿇기 자세 (앞다리는 세워 발을 딛고, 뒷다리는 무릎을 땅에)
     const kn = this.kneelAmount;
@@ -1131,8 +1154,9 @@ export class Fighter {
       if (n === 'uarmS' || n === 'farmS') mus *= (0.3 + 0.7 * this.limbs.armS) * this.strength;
       if (n.endsWith('F') && isLeg) mus *= 0.4 + 0.6 * this.limbs.legF;
       if (n.endsWith('B') && isLeg) mus *= 0.4 + 0.6 * this.limbs.legB;
-      const k = j.k * mus;
-      const d = j.d * Math.sqrt(Math.max(0.05, mus));
+      // gain: 다리가 체중을 싣는 걸음에서 딛은 다리는 근육을 더 단단히 쓴다 (gait.js)
+      const k = j.k * mus * (j.gain || 1);
+      const d = j.d * Math.sqrt(Math.max(0.05, mus)) * (j.gain || 1);
       const maxErr = (j.max * mus) / Math.max(1, k); // 이 이상 벌어진 목표는 근력으로 못 따라간다
       if (j.manual) {
         this.manualMuscle(j, k, d, j.max * mus);

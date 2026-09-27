@@ -53,12 +53,12 @@ export function newRound(opts = {}) {
   const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: opts.sameLook ? LOOKS.player : LOOKS.enemy, weapon: opts.weapon2 ?? opts.weapon });
   if (opts.onFighter) { opts.onFighter(player, world, RAPIER); opts.onFighter(enemy, world, RAPIER); }
   const AIC = opts.AIClass || AI;
-  const ai = new AIC(enemy, player, opts.difficulty ?? 'normal');
+  const ai = new AIC(enemy, player, opts.difficulty ?? 'normal', opts.persona ?? null);
   player.skill.level = opts.skill ?? 0.7;
   const hits = [];
   const combat = new Combat(colliderInfo, { onWound: (att, vic, r) => { hits.push(`${att.name}->${r.zone}:${r.type} ${r.energy.toFixed(0)}J`); G.wounds.push({ t: G.t, att, vic, zone: r.zone, type: r.type, energy: r.energy, severity: r.severity }); G.onWound?.(att, vic, r); }, onClash: () => { G && G.clashes++; } });
   const G = { world, eventQueue, player, enemy, ai, combat, hits, t: 0, ai2: null, parkEnemy: false, clashes: 0, wounds: [] };
-  if (opts.AI2Class) G.ai2 = new opts.AI2Class(player, enemy, opts.difficulty2 ?? opts.difficulty ?? 'normal');
+  if (opts.AI2Class) G.ai2 = new opts.AI2Class(player, enemy, opts.difficulty2 ?? opts.difficulty ?? 'normal', opts.persona2 ?? null);
   G.step = () => {
     player.foe = G.parkEnemy ? null : enemy;
     enemy.foe = G.parkEnemy ? null : player;
