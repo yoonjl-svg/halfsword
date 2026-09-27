@@ -28,11 +28,13 @@ export function weaponEnv() {
   const data = new Uint8Array(W * H * 4);
   const hex = (h) => [(h >> 16) & 255, (h >> 8) & 255, h & 255];
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
-  const skyTop = hex(0x7ea5cf);
-  const skyLow = hex(0xe2eaf0);
-  const wall = hex(0x5e4b3a);
-  const sandNear = hex(0xa39a8c); // 모래를 그대로(누렇게) 비추면 칼날 면이 나무판처럼 보여서, 반사용은 회갈색으로 낮춘다
-  const sandFar = hex(0x5f5a52);
+  // 폐허 신전 배경에 맞춘 반사: 흐린 하늘, 지평선의 푸른 회색 바다, 회색 모래 (예전 경기장의 나무 벽·파란 하늘 대신)
+  const skyTop = hex(0x8b97a1);
+  const skyLow = hex(0xc3c5c2);
+  const sea = hex(0x5b6c75);
+  const seaFar = hex(0x87949b);
+  const sandNear = hex(0x9d9a94);
+  const sandFar = hex(0x6a6863);
   const sun = new THREE.Vector3(4, 9, 3).normalize();
   const d = new THREE.Vector3();
   for (let j = 0; j < H; j++) {
@@ -43,7 +45,7 @@ export function weaponEnv() {
       let c;
       if (el >= 0) {
         c = mix(skyLow, skyTop, Math.min(1, el / 1.2) ** 0.8);
-        if (el < 0.2) c = mix(wall, c, (el / 0.2) ** 2.5); // 경기장 둘레 나무 벽·관중석
+        if (el < 0.2) c = mix(mix(sea, seaFar, el / 0.2), c, (el / 0.2) ** 2.5); // 지평선의 바다
         const s = d.dot(sun);
         if (s > 0.9) c = mix(c, [255, 250, 236], Math.min(1, (s - 0.9) / 0.08) ** 2); // 해와 햇무리
       } else {

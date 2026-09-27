@@ -74,21 +74,22 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xb8c9d9);
-scene.fog = new THREE.Fog(0xb8c9d9, 16, 40);
+// 흐린 늦은 오후의 바닷가: 옅은 잿빛 안개 (싸우는 곳엔 거의 안 끼고 먼 바다만 흐려진다)
+scene.background = new THREE.Color(0xc4c8c6);
+scene.fog = new THREE.Fog(0xc4c8c6, 20, 480);
 
-const camera = new THREE.PerspectiveCamera(CAMERA.fov, 1, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(CAMERA.fov, 1, 0.1, 700); // 먼 바다·하늘까지 보이게
 camera.position.set(-3.5, CAMERA.height, 0.5);
 
-scene.add(new THREE.HemisphereLight(0xfff2dc, 0x6a5540, 1.1));
-const sun = new THREE.DirectionalLight(0xfff0d8, 2.0);
+scene.add(new THREE.HemisphereLight(0xe3e6e8, 0x716c63, 1.2)); // 구름 낀 하늘빛 + 모래에 되비친 빛
+const sun = new THREE.DirectionalLight(0xffe7cb, 1.7); // 구름 사이로 드는 누그러진 해
 sun.position.set(4, 9, 3);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 25 });
 scene.add(sun, sun.target);
 
-const arena = buildArena(scene); // 중세 마상시합장 (arena.js)
+const arena = buildArena(scene); // 바닷가 절벽 위 무너진 포세이돈 신전 (arena.js)
 
 // ── 화면 크기 / 픽셀 모드 ──
 function resize() {
@@ -139,7 +140,7 @@ function newRound() {
   eventQueue = new RAPIER.EventQueue(true);
   colliderInfo = new Map();
 
-  // 바닥 + 원형 울타리 벽
+  // 바닥 + 원형 경계 벽 (보이지 않는 벽: 눈에 보이는 건 대리석 테두리)
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
   const n = 32;
@@ -282,7 +283,7 @@ function onWound(att, vic, r, point, pr) {
   if (vic === player) haptic(e / 120);
   else if (att === player) haptic((e / 120) * (0.4 + 0.6 * sting));
   if (!vic.alive) slowMo = 1.6;
-  arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 관중이 들썩인다
+  arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 떠다니던 먼지가 흩날린다
 }
 
 function onClash(point, speed, touch) {
@@ -490,6 +491,7 @@ function showHint(text, ms = 3500) {
 
 async function startFight() {
   sound.unlock();
+  sound.ambience(); // 멀리서 들리는 파도·바람 (아주 작게, 처음 한 번만 켜진다)
   // 폰이면 전체화면 + 가로 고정 시도 (지원 안 하면 조용히 넘어감)
   if (input.isTouchDevice) {
     try {
