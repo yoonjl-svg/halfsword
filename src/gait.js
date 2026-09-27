@@ -85,7 +85,8 @@ function mkLeg(k, side) {
     y0: 0, // 걸음을 바꿀 때 이미 들려 있던 높이
     rel: new THREE.Vector3(), // 엉덩이에 대한 내딛는 발목 목표
     relOk: false,
-    des: new THREE.Vector3(), // 내딛는 발목 목표 (측정용)
+    des: new THREE.Vector3(), // 내딛는 발목 목표
+    desV: new THREE.Vector3(), // 그 목표가 움직이는 속도
     v0: new THREE.Vector3(), // 발을 뗄 때 발의 출발 속도
     fq: new THREE.Quaternion(), // 발 자세 (월드)
     fp: new THREE.Vector3(), // 발 위치 (월드)
@@ -117,6 +118,7 @@ export class Gait {
     this.prevHead = fighter.heading;
     this.headRate = 0; // 몸을 돌리는 빠르기(rad/s)
     this.sinceEnter = 0;
+    this.speedF = 0;
   }
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
@@ -129,7 +131,9 @@ export class Gait {
       this.plantAt(L);
       L.tLand = 1;
     }
-    this.lev = 1;
+    // 라운드 시작: 이미 두 발로 서 있으니 바로 다리가 받친다. 일어선 직후: 보조 힘 100%에서 천천히 넘겨받는다
+    this.lev = this.started ? 1 : 0;
+    this.started = true;
     this.sinceEnter = 0;
     this.hNomF = undefined;
     const p = this.f.bodies.pelvis.translation();
@@ -137,6 +141,7 @@ export class Gait {
     this.hv = 0;
     this.sinceTD = 0;
     this.walking = false;
+    this.speedF = 0;
     this.idleT = 0;
     this.req = null;
     this.settles = 0;
@@ -247,7 +252,10 @@ export class Gait {
     // 일어선 직후(보조 힘을 넘겨받는 중)엔 천천히 걷는다
     if (this.lev > 0) want.multiplyScalar(1 - GAIT.handoverSlow * this.lev);
     const speed = Math.hypot(want.x, want.z);
-    const walkNow = speed > GAIT.walkMin;
+    // 걷기 시작·멈추기 판단은 걸러진 속도로, 조금 여유를 두고 (균형 잡는 발걸음(stumble)이 매 스텝 들쭉날쭉해서
+    //  걷기 ↔ 서기가 번갈아 바뀌면 발이 헛디딘다)
+    this.speedF += (speed - this.speedF) * Math.min(1, dt * GAIT.walkFilter);
+    const walkNow = this.walking ? this.speedF > GAIT.walkMin * 0.6 : this.speedF > GAIT.walkMin || speed > GAIT.walkMin * 2;
     if (walkNow !== this.walking) {
       this.walking = walkNow;
       this.walkT = 0;
@@ -286,7 +294,7 @@ export class Gait {
       swing.y0 = Math.max(0, swing.des.y - ANKLE_H);
       swing.p0.y = ANKLE_H;
       swing.v0.set(0, 0, 0);
-      swing.T = clamp(swing.T - swing.t, 0.2, Tsw * 0.8); // 이미 오래 들고 있었으면 빨리 딛는다
+      swing.T = clamp(swing.T - swing.t, GAIT.convertMinT, Math.max(GAIT.convertMinT, Tsw * 0.8)); // 이미 오래 들고 있었으면 조금 빨리 딛는다 (너무 서두르면 발이 땅을 긁는다)
       swing.t = 0;
       swing.kind = 'walk';
       swing.hFrac = 1;
@@ -591,11 +599,45 @@ export class Gait {
           }
         }
         l.rel.copy(_d);
+        // 내딛는 발을 목표로 이끄는 엉덩이·허벅지 근육 (발과 골반 사이에 서로 반대로 거는 힘 → 몸 전체로는 힘이 생기지 않는다).
+        //  관절 모터만으로는 빠르게 휘두르는 다리가 목표를 지나쳐 땅에 미끄러지며 닿는다
+        if (l.relOk && GAIT.swingK) this.swingPull(l, _a);
+        else l.desV.set(0, 0, 0);
         l.relOk = true;
         l.des.copy(_a);
         this.legIK(l, l.hip, _a, yaw, GAIT.toeUp * Math.sin(Math.PI * u));
       }
     }
+  }
+
+  /** 내딛는 발목을 목표(a)로 당기는 힘 (발 ↔ 골반, 서로 반대) */
+  swingPull(l, a) {
+    const f = this.f;
+    const dt = f.lastDt || 1 / 120;
+    // 목표의 속도 (걸러서)
+    _c.subVectors(a, l.des).multiplyScalar(1 / dt);
+    l.desV.lerp(_c, 0.5);
+    const fb = f.bodies[l.foot];
+    const v = fb.linvel();
+    const K = GAIT.swingK;
+    const D = GAIT.swingD;
+    _c.set(K * (a.x - l.ankle.x) + D * (l.desV.x - v.x), K * (a.y - l.ankle.y) + D * (l.desV.y - v.y), K * (a.z - l.ankle.z) + D * (l.desV.z - v.z));
+    const m = _c.length();
+    if (m > GAIT.swingFmax) _c.multiplyScalar(GAIT.swingFmax / m);
+    _f.x = _c.x;
+    _f.y = _c.y;
+    _f.z = _c.z;
+    _p.x = l.ankle.x;
+    _p.y = l.ankle.y;
+    _p.z = l.ankle.z;
+    fb.addForceAtPoint(_f, _p, true);
+    _f.x = -_c.x;
+    _f.y = -_c.y;
+    _f.z = -_c.z;
+    _p.x = l.hip.x;
+    _p.y = l.hip.y;
+    _p.z = l.hip.z;
+    f.bodies.pelvis.addForceAtPoint(_f, _p, true);
   }
 
   /** 딛은 발 발목이 엉덩이에서 Ls보다 멀면, 발끝을 축으로 뒤꿈치를 몇 라디안 들어야 닿는지 */
@@ -671,21 +713,38 @@ export class Gait {
     J[l.foot].target.copy(_qS).multiply(_qW);
   }
 
-  /** 발바닥 정지 마찰: 딛은 발을 디딘 자리에 붙잡는다 (한계 = 마찰계수 × 실린 무게, 넘으면 미끄러진다) */
+  /** 이 발이 지난 물리 스텝에 땅에서 받은 수직 힘(N): 물리 엔진의 접촉 충격량 ÷ 시간 */
+  groundForce(l) {
+    const f = this.f;
+    const w = f.world;
+    const col = l.col || (l.col = f.bodies[l.foot].collider(0));
+    _gf.imp = 0;
+    _gf.col = col;
+    _gf.w = w;
+    w.contactPairsWith(col, _gfPair);
+    return f.lastDt > 0 ? _gf.imp / f.lastDt : 0;
+  }
+
+  /**
+   * 발바닥 정지 마찰: 딛은 발을 디딘 자리에 붙잡는다.
+   * 한계 = 마찰계수 × 그 발이 실제로 땅을 누르는 힘 (물리 엔진 접촉에서 잰다) → 발에 무게가 없으면 붙잡지 못한다.
+   * 한계를 넘으면 발이 미끄러지고, 붙잡는 자리도 발과 함께 옮겨 간다 (쿨롱 마찰: 미끄러진 발을 원래 자리로 끌어오지 않는다).
+   */
   pinFeet() {
     const f = this.f;
     if (!GAIT.pinK) return;
-    const W = f.totalMass * 9.81 * (1 - GAIT.assist) * (1 - this.lev) * f.muscle;
-    const nSt = (this.legs.F.stance ? 1 : 0) + (this.legs.B.stance ? 1 : 0);
-    if (!nSt || W <= 0) return;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
-      if (!l.stance || l.soleY > 0.03) continue;
-      const fb = f.bodies[l.foot];
+      l.N = 0;
+      if (!l.stance) continue;
       // 붙잡는 곳: 발바닥 가운데 (뒤꿈치를 들었으면 발끝)
       const toe = l.heel > 0.05;
       const pin = toe ? l.pinT : l.pinC;
       const pt = _s1.copy(toe ? SOLE_T : SOLE_C).applyQuaternion(l.fq).add(l.fp);
+      if (pt.y > 0.03) continue;
+      const N = this.groundForce(l) * f.muscle;
+      l.N = N;
+      const fb = f.bodies[l.foot];
       const v = fb.linvel();
       const w = fb.angvel();
       const c = fb.worldCom();
@@ -695,14 +754,31 @@ export class Gait {
       // 그 점의 속도 = v + ω × r
       const vx = v.x + w.y * rz - w.z * ry;
       const vz = v.z + w.x * ry - w.y * rx;
+      const lim = GAIT.pinMu * N;
+      // 붙잡는 자리가 한계보다 멀면 (미끄러짐) 자리를 발 쪽으로 옮긴다. 딛은 자리(다리 IK 목표)도 같이
+      const ex = pin.x - pt.x;
+      const ez = pin.z - pt.z;
+      const e = Math.hypot(ex, ez);
+      const eMax = lim / GAIT.pinK;
+      if (e > eMax) {
+        const s = 1 - eMax / e;
+        const mx = ex * s;
+        const mz = ez * s;
+        l.pinC.x -= mx;
+        l.pinC.z -= mz;
+        l.pinT.x -= mx;
+        l.pinT.z -= mz;
+        l.plant.x -= mx;
+        l.plant.z -= mz;
+      }
       let fx = GAIT.pinK * (pin.x - pt.x) - GAIT.pinD * vx;
       let fz = GAIT.pinK * (pin.z - pt.z) - GAIT.pinD * vz;
-      const N = W / nSt;
-      const lim = GAIT.pinMu * N;
       const fl = Math.hypot(fx, fz);
+      l.pinF = fl;
+      l.pinLim = lim;
       if (fl > lim) {
-        fx *= lim / fl;
-        fz *= lim / fl;
+        fx *= lim / (fl + 1e-9);
+        fz *= lim / (fl + 1e-9);
       }
       _f.x = fx;
       _f.y = 0;
@@ -711,10 +787,16 @@ export class Gait {
       _p.y = pt.y;
       _p.z = pt.z;
       fb.addForceAtPoint(_f, _p, true);
-      // 발이 땅 위에서 도는 것도 마찰이 붙잡는다 (한계 = 마찰 × 무게 × 발바닥 크기)
+      // 발이 땅 위에서 도는 것도 마찰이 붙잡는다 (한계 = 마찰 × 무게 × 발바닥 크기). 넘으면 딛은 방향도 따라 돈다
       const lt = GAIT.pinMu * N * 0.05;
+      let ye = wrap(l.yaw - l.footYaw);
+      const yMax = lt / GAIT.pinYawK;
+      if (Math.abs(ye) > yMax) {
+        l.yaw = l.footYaw + Math.sign(ye) * yMax;
+        ye = Math.sign(ye) * yMax;
+      }
       _f.x = 0;
-      _f.y = clamp(GAIT.pinYawK * wrap(l.yaw - l.footYaw) - GAIT.pinYawD * w.y, -lt, lt);
+      _f.y = clamp(GAIT.pinYawK * ye - GAIT.pinYawD * w.y, -lt, lt);
       _f.z = 0;
       fb.addTorque(_f, true);
     }
@@ -752,4 +834,13 @@ const _qS = new THREE.Quaternion();
 const _qK = new THREE.Quaternion();
 const _qW = new THREE.Quaternion();
 const _f = { x: 0, y: 0, z: 0 };
+// groundForce용 (매 스텝 함수를 새로 만들지 않게)
+const _gf = { imp: 0, col: null, w: null };
+const _gfSum = (m) => {
+  for (let i = 0, n = m.numContacts(); i < n; i++) _gf.imp += m.contactImpulse(i);
+};
+const _gfPair = (other) => {
+  const b = other.parent();
+  if (b && b.isFixed()) _gf.w.contactPair(_gf.col, other, _gfSum);
+};
 const _p = { x: 0, y: 0, z: 0 };
