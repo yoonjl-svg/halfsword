@@ -766,11 +766,44 @@ const treeBranch = finalizeSpec('tree_branch', {
       partTuple(['box', 0.018, L / 2, 0.015], 0.15 + L / 2, 0.25, blade.comY, blade.Ie, blade.It, 0x6b4423, false),
     ];
   },
-  // 옹이 몇 개를 붙여 매끈한 상자가 아니라 진짜 나뭇가지처럼 보이게 한다
+  // 옹이 + 옆으로 뻗은 잔가지 두어 개 + 끝에 달린 잎(새싹) — 실제로 나무에서 꺾어 온 가지처럼
+  // 보이게 한다(참고: 젤다 시리즈의 "데쿠 나무막대"는 원줄기에 짧은 옹이 가지 몇 개와 잎 하나만
+  // 달아도 "주워 온 나뭇가지"로 뚜렷이 읽힌다 — 그 어법을 따른다).
   decorate(group) {
     const L = this.bladeLength;
     const bark = new THREE.MeshStandardMaterial({ color: 0x4d3820, roughness: 1 });
     for (const t of [0.25, 0.5, 0.8]) addMesh(group, new THREE.SphereGeometry(0.02 + 0.01 * Math.random(), 6, 5), bark, [0.012, 0.15 + L * t, 0.01]);
+
+    // 옆으로 삐죽 뻗은 잔가지 두 개 (원래 나무에서 갈라져 나온 가지의 밑동만 남은 흔적)
+    const twigMat = new THREE.MeshStandardMaterial({ color: 0x4a3418, roughness: 0.95 });
+    const twigs = [
+      { t: 0.36, side: 1, len: 0.1, bend: 0.9 },
+      { t: 0.66, side: -1, len: 0.08, bend: 1.15 },
+    ];
+    for (const { t, side, len, bend } of twigs) {
+      const y = 0.15 + L * t;
+      const twig = addMesh(group, new THREE.ConeGeometry(0.009, len, 5), twigMat, [side * 0.018, y, side * 0.012]);
+      twig.rotation.z = side * bend; // 원줄기에서 바깥·위쪽으로 비스듬히
+      twig.rotation.x = 0.25 * side;
+      twig.castShadow = true;
+    }
+
+    // 칼끝 쪽: 여린 새잎 몇 장 + 작은 새싹 — 갓 꺾은 가지 티가 나게 초록빛으로.
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x5f8f3d, roughness: 0.8, side: THREE.DoubleSide });
+    const budMat = new THREE.MeshStandardMaterial({ color: 0x7a5a34, roughness: 0.9 });
+    const tipY = 0.15 + L * 0.97;
+    const leaves = [
+      [0.022, tipY - 0.035, 0.005, 0.3, 0.4],
+      [-0.02, tipY - 0.01, 0.014, -0.4, 1.9],
+      [0.012, tipY + 0.022, -0.016, 0.5, -1.1],
+    ];
+    for (const [x, y, z, rx, ry] of leaves) {
+      const leaf = addMesh(group, new THREE.SphereGeometry(0.024, 7, 5), leafMat, [x, y, z]);
+      leaf.scale.set(1, 0.32, 2.4); // 둥근 공을 납작하고 길게 눌러 잎 모양으로
+      leaf.rotation.set(rx, ry, 0.3);
+      leaf.castShadow = true;
+    }
+    addMesh(group, new THREE.SphereGeometry(0.011, 6, 5), budMat, [0, tipY + 0.045, 0]).castShadow = true;
   },
 });
 
