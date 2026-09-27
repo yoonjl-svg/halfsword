@@ -4,7 +4,7 @@
 //   stand  : 가만히 선 상대 (칼을 바보 자세로 내림 = 길이 열림, 또는 쟁기 자세로 겨눔)
 //   down   : 쓰러진 상대 (내려찍기 겨눔 자세에서 탭 → 아래로 찌르기)
 //   duel   : AI 와 대결하며 간격에 들어오면 톡 친다 (스크립트 플레이어)
-//  사용법: node tools/sim/tap_thrust.mjs [stand|down|duel|all] [판 수] [무기 id] [--seed=첫 시드 번호] [--str=0.85] [--emo=off] [--emoP=anger:1] …
+//  사용법: node tools/sim/tap_thrust.mjs [stand|down|duel|all] [판 수] [무기 id] [--seed=첫 시드 번호] [--cool=탭 간격 초(duel, 기본 0.9)] [--str=0.85] [--emo=off] [--emoP=anger:1] …
 //   시드: stand 300+11s+간격×10, down 500+17s+거리×100, duel 40+s (s = 첫 번호부터 판 수만큼, 기본 1)
 //   근력·감정 옵션은 str_emo.mjs 참고 (찌르는 쪽 = 플레이어)
 import { newRound, DT, THREE, V, AI } from './harness_m.mjs';
@@ -162,7 +162,7 @@ export function downTrial({ dist, seed, weapon, before }) {
 }
 
 /** AI 와 대결: 스크립트 플레이어가 쟁기 자세로 간격을 재다가 닿을 거리면 톡 친다 */
-export function duelTrial({ seed, weapon, secs = 30, before }) {
+export function duelTrial({ seed, weapon, secs = 30, before, gap = 0.9 }) {
   const G = newRound({ walls: true, gap: 3, seed, weapon, weapon2: 'longsword' });
   before?.(G);
   const P = G.player;
@@ -178,8 +178,8 @@ export function duelTrial({ seed, weapon, secs = 30, before }) {
     P.move.set(0, P.state === 'stand' ? THREE.MathUtils.clamp((d - 1.65) * 2, -0.6, 0.6) : 0);
     cool -= DT;
     if (!open && cool <= 0 && d < 1.95 && P.state === 'stand' && P.skill.thrust()) {
-      open = { t0: G.t, w0: G.wounds.length, d0: d, tr: tapTrack(P, E) };
-      cool = 0.9;
+      open = { t0: G.t, w0: G.wounds.length, d0: d, tr: tapTrack(P, E), bound: !!P.skill.tap?.bound };
+      cool = gap; // 다음 탭까지 (기본 0.9초 = 탭 연타, --cool=1.6 이면 한 번씩 숨 고르고 찌르기)
     }
     G.step();
     open?.tr.update();
@@ -189,7 +189,7 @@ export function duelTrial({ seed, weapon, secs = 30, before }) {
       const ws = myWounds(G, P, open.w0);
       const inWin = (t) => t >= open.t0 && t < open.t0 + 0.6;
       const clashed = W.clashes.some((t) => inWin(t) && (!first || t < first.t));
-      taps.push({ d0: open.d0, first, wound: ws.length > 0, sev: maxSev(ws), stabSev: maxSev(ws.filter((w) => w.type === 'stab')), clashed, anyClash: W.clashes.some(inWin), stab: hits.some((h) => h.type === 'stab'), ...open.tr.result() });
+      taps.push({ d0: open.d0, first, wound: ws.length > 0, sev: maxSev(ws), stabSev: maxSev(ws.filter((w) => w.type === 'stab')), clashed, anyClash: W.clashes.some(inWin), stab: hits.some((h) => h.type === 'stab'), bound: open.bound, ...open.tr.result() });
       open = null;
     }
   }
@@ -214,6 +214,9 @@ function summary(label, rs) {
   const types = {};
   for (const r of touched) types[`${r.first.type}:${r.first.zone}`] = (types[`${r.first.type}:${r.first.zone}`] || 0) + 1;
   console.log(`   첫 접촉 종류: ${JSON.stringify(types)}`);
+  // 칼 길 잡기(R6)가 걸린 탭과 아닌 탭의 상처율
+  const bd = rs.filter((r) => r.bound);
+  if (bd.length) console.log(`   칼 길 잡은 탭 ${bd.length}/${n} · 상처율 잡은 탭 ${Math.round((100 * bd.filter((r) => r.wound).length) / bd.length)}% · 안 잡은 탭 ${Math.round((100 * rs.filter((r) => !r.bound && r.wound).length) / Math.max(1, n - bd.length))}%`);
   // 디렉터 10라운드 C: 탭 하나의 결과를 네 갈래로 (상처 / 상대 칼에 걸렸고 상처 없음 / 몸에 닿았지만 상처 없음 / 아무것도 못 닿음)
   const pc = (k) => `${k} (${Math.round((100 * k) / Math.max(1, n))}%)`;
   const caught = rs.filter((r) => !r.wound && r.anyClash);
@@ -234,6 +237,7 @@ if (isMain(import.meta.url)) {
   const mode = pos[0] || 'all';
   const N = +(pos[1] || 3);
   const S0 = +(process.argv.find((a) => a.startsWith('--seed='))?.split('=')[1] ?? 1); // --seed=첫 시드 번호 (기본 1: 예전과 같은 판)
+  const COOL = +(process.argv.find((a) => a.startsWith('--cool='))?.split('=')[1] ?? 0.9); // duel: 탭 사이 간격(초)
   const weapon = pos[2] || undefined;
   const SE = strEmoOpts(args);
   const before = (G) => applyStrEmo(G, SE);
@@ -261,7 +265,7 @@ if (isMain(import.meta.url)) {
     const taps = [];
     const res = { W: 0, L: 0, D: 0 };
     for (let s = S0; s < S0 + N; s++) {
-      const r = duelTrial({ seed: 40 + s, weapon, before });
+      const r = duelTrial({ seed: 40 + s, weapon, before, gap: COOL });
       taps.push(...r.taps);
       res[r.enemyAlive === r.playerAlive ? 'D' : r.enemyAlive ? 'L' : 'W']++;
     }

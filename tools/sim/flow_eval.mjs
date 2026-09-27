@@ -19,8 +19,22 @@ export function flowRound(wX, wY, seed, xFirst) {
   const G = newRound({ walls: true, seed, weapon: P, weapon2: E, difficulty: 'normal', persona: { school: E }, AI2Class: AI, difficulty2: 'normal', persona2: { school: P } });
   const X = xFirst ? G.player : G.enemy;
   let first = null; // 'X' | 'Y'
+  let tFirst = null;
+  const sev = []; // 상처 깊이 (베기·찌르기, severity > 0)
   G.onWound = (att, vic, r) => {
-    if (!first && (r.type === 'cut' || r.type === 'stab') && r.severity > 0) first = att === X ? 'X' : 'Y';
+    if ((r.type === 'cut' || r.type === 'stab') && r.severity > 0) {
+      sev.push(r.severity);
+      if (!first) {
+        first = att === X ? 'X' : 'Y';
+        tFirst = G.t;
+      }
+    }
+  };
+  let clashes = 0; // 칼끼리 새로 부딪힌 횟수
+  const oc = G.combat.hooks.onClash;
+  G.combat.hooks.onClash = (point, sp, info) => {
+    if (info?.fresh) clashes++;
+    return oc?.(point, sp, info);
   };
   let res = 'D';
   let tEnd = null;
@@ -41,7 +55,7 @@ export function flowRound(wX, wY, seed, xFirst) {
   }
   const st = [G.ai.stats, G.ai2.stats];
   const sum = (k) => st.reduce((a, s) => a + (s[k] ?? 0), 0);
-  return { res, first, tEnd, inReach: inReach / steps, attacks: sum('attacks'), followUps: sum('followUps'), flows: sum('flows'), landed: sum('landed') };
+  return { res, first, tFirst, tEnd, inReach: inReach / steps, attacks: sum('attacks'), followUps: sum('followUps'), flows: sum('flows'), landed: sum('landed'), wounds: sev.length, sevMean: sev.length ? sev.reduce((a, b) => a + b, 0) / sev.length : 0, heavy: sev.filter((v) => v >= 0.5).length, clashes };
 }
 
 export function flowEval(wX, wY, N, S0) {
@@ -71,6 +85,8 @@ export function report(rows) {
     lines.push(`  ${lab.padEnd(6)} ${String(g.filter((r) => r.res === 'W').length).padStart(3)} / ${String(g.filter((r) => r.res === 'L').length).padStart(3)} / ${String(g.filter((r) => r.res === 'D').length).padStart(3)}`);
   }
   lines.push(`판당 (둘 합): 공격 ${mean(rows.map((r) => r.attacks)).toFixed(1)} · 이어 치기 ${mean(rows.map((r) => r.followUps)).toFixed(1)} · 흐름 ${mean(rows.map((r) => r.flows)).toFixed(1)} · 닿음 ${mean(rows.map((r) => r.landed)).toFixed(1)} · 간격 안 ${pc(mean(rows.map((r) => r.inReach)), 1)}`);
+  const ws = rows.filter((r) => r.wounds);
+  lines.push(`판당 (둘 합): 상처 ${mean(rows.map((r) => r.wounds)).toFixed(1)} · 깊은 상처(깊이 0.5 이상) ${mean(rows.map((r) => r.heavy)).toFixed(2)} · 상처 깊이 평균 ${mean(ws.map((r) => r.sevMean)).toFixed(2)} · 칼끼리 부딪힘 ${mean(rows.map((r) => r.clashes)).toFixed(1)} · 첫 상처까지 ${mean(rows.filter((r) => r.tFirst != null).map((r) => r.tFirst)).toFixed(1)}s`);
   return lines.join('\n');
 }
 

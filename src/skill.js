@@ -84,6 +84,7 @@ export class Skill {
     // 5) 탭 찌르기: 진행 중인 찌르기(tap)와 자세 지도 위에 덧씌우는 자세(thrustPose, guards.js guardAt 이 w 만큼 섞는다)
     this.tap = null;
     this.thrusts = 0;
+    this.sinceThrust = Infinity; // 바로 앞 찌르기가 끝난 뒤 지난 시간 (탭 연타 억제 — THRUST.bindRest)
     this.thrustPush = false; // 지금 칼끝을 뻗는 구간인가 (겨눈 뒤 ~ 뻗고 버티기 끝). combat.js 가 팔 유효 질량을 이때만 싣는다
     this.flowing = false; // 흐름(SKILL.flow) 중인가 — 끄면 늘 false
     const b = THRUST.body;
@@ -114,7 +115,8 @@ export class Skill {
       K.extend *= THRUST.downExtend;
     }
     this.tap = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], down, head: !down && this.aimRaw.y > THRUST.headPad, K };
-    this.tap.bound = down ? null : this.boundAxis(); // 칼 길 잡기(R6): 칼이 맞닿았으면 그 칼 선 (아니면 null)
+    // 칼 길 잡기(R6): 칼이 맞닿았으면 그 칼 선 (아니면 null). 바로 앞 찌르기가 끝나고 bindRest 초 안의 탭(연타)은 잡지 않는다
+    this.tap.bound = down || this.sinceThrust < THRUST.bindRest ? null : this.boundAxis();
     this.thrusts++;
     // 한 걸음 내딛으며 찌른다. 쓰러진 상대는 누운 몸이 한 팔 넘게 떨어져 있을 때만 (가까우면 마무리 자세가 거리를 맞춘다)
     const T = f.finish.target;
@@ -154,7 +156,18 @@ export class Skill {
     const q = f.sword.rotation();
     _sq.set(q.x, q.y, q.z, q.w);
     _yawInv.copy(f.yaw).invert();
-    return _u.set(0, 1, 0).applyQuaternion(_sq).applyQuaternion(_yawInv).toArray();
+    const ax = _u.set(0, 1, 0).applyQuaternion(_sq).applyQuaternion(_yawInv).toArray();
+    // 칼끝이 이미 목표 줄에 있을 때만(목표 방향과 bindAim 도 안) 맞댄 채 민다 — 아니면 몸을 비껴간다
+    //  (측정: 숨 고르고 찌른 탭에서는 칼 길을 잡은 탭의 상처율이 오히려 낮았다. 효과는 앞 찌르기로 칼이 줄에 놓인 연타에서만 났다)
+    if (THRUST.bindAim < 180) {
+      const c = f.bodies.chest.translation();
+      _c.set(c.x, c.y, c.z);
+      const P = this.thrustTarget(_p);
+      const h0 = this.tap.h0;
+      _b.set(P.x - h0[0], P.y - h0[1], P.z - h0[2]).normalize();
+      if (_b.x * ax[0] + _b.y * ax[1] + _b.z * ax[2] < Math.cos(THRUST.bindAim * D2R)) return null;
+    }
+    return ax;
   }
 
   /** 매 스텝: 찌르기 자세(thrustPose) 갱신 */
@@ -307,6 +320,7 @@ export class Skill {
     if (dt <= 0) return;
     const f = this.f;
     const L = this.level;
+    this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     const off = f.handOffset;
     const R = WEAPON.reach;
     if (off.length() > R) off.setLength(R);

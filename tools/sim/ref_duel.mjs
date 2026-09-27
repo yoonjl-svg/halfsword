@@ -40,7 +40,7 @@ function rng(seed) {
 }
 
 /** 한 판: x = X 쪽 {weapon, level, persona}, y = 상대 쪽. xFirst 면 X 가 player 자리 */
-function playOne(x, y, seed, xFirst) {
+export function playOne(x, y, seed, xFirst) {
   const P = xFirst ? x : y;
   const E = xFirst ? y : x;
   const G = newRound({ walls: true, seed, weapon: P.weapon, weapon2: E.weapon, difficulty: E.level, persona: E.persona, AI2Class: AI, difficulty2: P.level, persona2: P.persona });
