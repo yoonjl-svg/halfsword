@@ -15,6 +15,64 @@
 - 재는 도구: `tools/sim/weapon_league.mjs` (새). 무기 14종을 서로 다 붙인다(91짝, 짝마다 96판, hybrid). 두 쪽 다 주인공 대리가 쥐어 캐릭터 성격을 뺀다.
 - 롱소드 상대 폭(짧은 칼 35~55 등)은 참고로만 적는다.
 
+## 리그전 1회차 결과 (사장님 기준) — 보류: 온몸 타격 업데이트 뒤 손본다 (사장님 지시)
+사장님: "일단 이대로 기억해둬. 몸 전체 타격 업데이트 후 손보자." → 아래는 기록만 하고 아직 아무것도 고치지 않았다.
+- 데이터: `docs/league/r10_hybrid.jsonl` (91짝 × 96판, hybrid, 주인공 대리끼리). 다시 보기: `node tools/sim/weapon_league.mjs report docs/league/r10_hybrid.jsonl`
+- 앞 30짝은 bind 0.12, 뒤 61짝은 bind 0으로 쟀다(AI 찌르기 무기 영향은 잡음 수준).
+- 판정
+  1. 0%인 짝: 없음 (가장 낮은 짝: 고무 닭 대 라이트세이버·엑스칼리버 2%)
+  2. 상성: 라이트세이버는 지는 상대가 없고(13승 0패), 고무 닭은 이기는 상대가 없다(0승 13패). 나머지 12종은 둘 다 있다
+  3. 의외성: 약한 쪽 승률 중앙값 30%
+  4. 등급 평균: 쓰레기 28 < 커먼 46 < 레어 47 < 에픽 48 < 레전드 70. 순서는 맞지만 커먼·레어·에픽이 잡음 폭 안이고, 에픽 평균은 라이트세이버(75) 한 자루가 끌어올렸다. 청강검 40·모노호시자오 30은 커먼 평균보다 낮다. 나뭇가지(46)는 커먼과 겹친다
+- 손볼 차례가 오면: ① 청강검·모노호시자오를 올린다(에픽 1순위, 디렉터 지시) ② 라이트세이버를 조금 내린다 ③ 나뭇가지를 조금 내리는 것을 검토한다. 고무 닭은 사장님 기준(0%만 아니면)이라 그대로 둔다. 온몸 타격 뒤에 리그전을 다시 돌려 그 결과로 정한다.
+
+```
+승률 표 (행이 열을 이긴 %, 짝마다 96판)
+             longs zweih estoc sabre rapie falch monoh qingg excal excal light tree_ rubbe froze
+longsword        -    45    56    57    42    54    66    49    31    39    22    69    83    80   | 평균  53%
+zweihander      29     -    30    47    32    35    50    33    25    29    23    42    52    47   | 평균  37%
+estoc           38    33     -    46    45    41    54    46    28    25    27    51    65    75   | 평균  44%
+sabre           32    32    44     -    30    40    40    54    19    34    30    44    74    54   | 평균  41%
+rapier          53    39    48    67     -    64    66    76    43    41    36    61    91    75   | 평균  58%
+falchion        38    36    50    58    36     -    57    55    24    43    32    47    89    60   | 평균  48%
+monohoshiza     18    20    26    39    22    33     -    34    18    18     9    30    74    50   | 평균  30%
+qinggang        41    36    44    42    24    45    49     -    17    27    21    43    85    51   | 평균  40%
+excalibur       61    67    69    80    55    73    78    83     -    51    40    74    96    83   | 평균  70%
+excalibur_r     49    48    63    59    54    55    75    69    46     -    31    66    90    76   | 평균  60%
+lightsaber      76    76    73    70    64    68    91    79    60    69     -    67    98    82   | 평균  75%
+tree_branch     28    28    44    56    38    53    60    57    25    32    33     -    88    60   | 평균  46%
+rubber_chic      8     8    17    21     8     8    16    15     2     8     2    13     -     5   | 평균  10%
+frozen_tuna     10    18    19    45    21    36    32    44    17    21    18    40    95     -   | 평균  32%
+
+등급 평균 (그 등급 무기들의 리그 평균 승률의 평균) — 사장님 기준: 쓰레기 < 커먼 < 레어 < 에픽 < 레전드
+  쓰레기   28%  (tree_branch 46, rubber_chicken 10)
+  커먼    46%  (longsword 53, estoc 44, sabre 41, falchion 48, excalibur_replica 60, frozen_tuna 32)
+  레어    47%  (zweihander 37, rapier 58)
+  에픽    48%  (monohoshizao 30, qinggang 40, lightsaber 75)
+  레전드   70%  (excalibur 70)
+  → 순서 맞음
+
+상성 (상대보다 20%p 넘게 이기면 "이김", 20%p 넘게 지면 "짐")
+  longsword          이김 5 · 짐 2
+  zweihander         이김 3 · 짐 2
+  estoc              이김 3 · 짐 3
+  sabre              이김 1 · 짐 5
+  rapier             이김 7 · 짐 1
+  falchion           이김 3 · 짐 3
+  monohoshizao       이김 1 · 짐 9
+  qinggang           이김 1 · 짐 4
+  excalibur          이김 10 · 짐 1
+  excalibur_replica  이김 7 · 짐 1
+  lightsaber         이김 13 · 짐 0  ← 지는 상대 없음
+  tree_branch        이김 3 · 짐 5
+  rubber_chicken     이김 0 · 짐 13  ← 이기는 상대 없음
+  frozen_tuna        이김 1 · 짐 9
+
+의외성 (짝마다 약한 쪽 승률): 0%인 짝 0개
+  가장 낮은 짝: rubber_chicken 대 lightsaber 2% [1~7] · rubber_chicken 대 excalibur 2% [1~7] · rubber_chicken 대 frozen_tuna 5% [2~12] · rubber_chicken 대 longsword 8% [4~16] · rubber_chicken 대 zweihander 8% [4~16] · rubber_chicken 대 excalibur_replica 8% [4~16] · rubber_chicken 대 rapier 8% [4~16] · rubber_chicken 대 falchion 8% [4~16]
+  약한 쪽 승률 중앙값 30%
+```
+
 ## 10라운드 C-R6 뒤: 탭 연타 억제 (디렉터 16:42 — main 은 `THRUST.bind = 0`으로 병합됨)
 - 넣은 것: `THRUST.bindRest` 0.7초 — 바로 앞 찌르기가 끝나고 0.7초 안에 다시 탭하면 칼 길을 잡지 않는다(디렉터 제안 1번). `bind` 기본값은 main과 같이 0으로 두었다.
 - 측정 (hybrid, 롱소드, 대본 탭 대결 24판; 연타 = 0.9초마다 탭, 숨 고른 탭 = 1.6초마다)
