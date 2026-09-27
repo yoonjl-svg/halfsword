@@ -1,6 +1,20 @@
-# 무기 밸런스·비주얼 PM 상태 (10라운드 — 탭 찌르기 검토 수정·짧은 칼 마무리 / 9라운드 — 무기 밸런스 검토·재조정 제안 / 8라운드 — 참치 색·에픽 광도)
+# 무기 밸런스·비주얼 PM 상태 (10라운드 — 탭 찌르기 검토 수정·짧은 칼 마무리·사장님 토의 보고 / 9라운드 — 무기 밸런스 검토·재조정 제안 / 8라운드 — 참치 색·에픽 광도)
 
 감독 확인용 상태 파일. (브랜치: `claude/pm-weapons-balance`, 디렉터 브랜치 7d235ab(다리 1.5)까지 병합)
+
+## 10라운드 c: 결정 트리거 잠정 — 사장님 토의 보고 (디렉터 10:20, 사장님 지시)
+- 디렉터의 '9라운드 결정'(10:17)과 '근력·온몸 타격 결정'(10:19)은 잠정안이 됐다.
+  - 전부터 승인된 a(탭 찌르기 검토 수정)와 b(짧은 칼 마무리)만 했다.
+  - c~f(R1~R6·흐름)와 ①(판정 보정)은 시작하지 않았다. ② 설계 메모도 쓰지 않았다.
+- 사장님 토의 기록과 결정 트리거 대조는 `docs/owner_discussion_weapons.md`에 있다.
+  - 시간순 사장님 원문, 무기 PM의 답
+  - 항목별 대조(같음 / 다름 / 언급 안 함)
+  - 결정 트리거에 빠진 것
+  - 확신 없는 측정과 다시 재는 법(명령·시드)
+- b단계 관문 추가: characters_eval rr(시드 1~5)
+  - levitate는 고치기 전(66b7adf)과 출력이 같다.
+  - hybrid는 브란–랴오 한 칸만 50 → 40%다(10판 중 1판).
+  - 0%·100% 칸은 나뭇가지 브란의 행·열뿐이다.
 
 ## 10라운드 b: 짧은 칼도 쓰러진 상대를 마무리한다 (감독 승인 08:46)
 원인(9라운드 8-5): 누운 몸은 어깨보다 약 1.2m 아래라 칼이 짧을수록 수평으로 닿는 거리가 훨씬 짧다.
@@ -15,8 +29,8 @@ AI는 서 있는 상대와 같은 간격에서 내려베고, 마무리 거리·�
   - AI가 쓰러진 상대에게 다가서는 거리(`need`)와 베며 물러나는 거리(`clinch`)
 - **ai.js 조각 (3곳, 코드 이동·재정렬 없음)**
   1. `const MEASURED` → `export const MEASURED` (+ 주석 한 줄)
-  2. startAttack의 `this.need = …` 바로 다음 줄: `if (this.foe.state === 'down') this.need *= this.me.finish?.k ?? 1;`
-  3. 베는 단계의 `if (d < this.M.clinch) fwd = -0.7;` → `if (d < this.M.clinch * (this.foe.state === 'down' ? (this.me.finish?.k ?? 1) : 1)) fwd = -0.7;`
+  2. `attack()`의 `this.need = …` 바로 다음 줄: `if (this.foe.state === 'down') this.need *= this.me.finish?.k ?? 1;`
+  3. `moveFeet()` 베는 단계의 `if (d < this.M.clinch) fwd = -0.7;` → `if (d < this.M.clinch * (this.foe.state === 'down' ? (this.me.finish?.k ?? 1) : 1)) fwd = -0.7;`
   - (AI는 finish.js를 import하지 않는다. 배율은 파이터의 `finish.k`로 읽는다 → 순환 import 없음)
 
 ### 결과 (고치기 전 = 66b7adf, 같은 판)
