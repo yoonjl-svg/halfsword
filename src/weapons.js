@@ -199,6 +199,7 @@ const longsword = finalizeSpec('longsword', {
 const zweihander = finalizeSpec('zweihander', {
   nameKo: '츠바이핸더 (대형 양손검)', nameEn: 'Zweihänder',
   grip: 'two-hand', material: 'steel',
+  tier: 'rare', // 감독 확정: 레어 — 도펠죌트너(정예 용병)만 다루던 특수 대검. power 1.05, 파손 계수 0.032
   hiltLength: 0.19, bladeLength: 1.17, gripAlong: -0.18,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
   // 자루가 길어(0.16m 반경) 손 사이 지렛대가 롱소드보다 커서, 같은 손 힘으로도 더 큰 돌림힘을
@@ -293,6 +294,7 @@ const sabre = finalizeSpec('sabre', {
 const rapier = finalizeSpec('rapier', {
   nameKo: '레이피어', nameEn: 'Rapier',
   grip: 'one-hand', material: 'steel',
+  tier: 'rare', // 감독 확정: 레어 — 르네상스 결투검, 로스터 유일의 찌르기 전용. power 1.05, 파손 계수 0.032
   hiltLength: 0.1, bladeLength: 0.95,
   mCut: 0.5, mThrust: 1.3, mBlunt: 0.7,
   buildParts(look) {
