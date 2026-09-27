@@ -126,6 +126,8 @@ const LIAO_RONIN = {
 const HEINRICH_STEEL = { metalness: 0.85, roughness: 0.16 };
 const HEINRICH_GOLD = 0xd8b23a;
 const HEINRICH_KNIGHT = {
+  // 판금 방어구가 붙는 부위 (수염이 붙는 head는 빠진다)
+  armorParts: new Set(['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO', 'farmS', 'farmO', 'shinF', 'shinB']),
   chest(g) {
     // 가슴 판금 (기존 누빔 상의 겉에 한 겹) + 과시용 금테
     addMerged(g, [box(0.255, 0.24, 0.32, [0.005, 0.02, 0])], 0xc7cdd3, HEINRICH_STEEL);
@@ -313,7 +315,13 @@ const MARGARETHE_DRAGON_HORNED = {
       taperedTube(MG3_HORN_R, MG3_HORN_RADII, 10, 6), // 뿔(오른쪽)
       taperedTube(mirrorZ(MG3_HORN_R), MG3_HORN_RADII, 10, 6), // 뿔(왼쪽)
     ];
-    addMerged(g, plate.map(onHelm), MG_PLATE, MG3_PLATE);
+    // 투구 조각(판·볏·술)은 한 그룹으로 묶어 group.userData.helmet으로 넘긴다 — 오너 결정("실제로 막고,
+    // 닳고, 완전히 부서지면 사라진다")을 전투 쪽이 켜면 fighter.js의 knockOffHelmet이 이 그룹을 통째로
+    // 떼어 낸다. 방어 판정(hasHelmet)이 꺼져 있는 지금은 아무 일도 하지 않는다. 붉은 머리는 머리에 남는다
+    const helm = new THREE.Group();
+    g.add(helm);
+    g.userData.helmet = helm;
+    addMerged(helm, plate.map(onHelm), MG_PLATE, MG3_PLATE);
     // 이마의 세 갈래 볏 (가운데가 높고 양옆은 벌어진다) + 첨탑 끝 꼭지 — 짙은 판으로 도드라지게
     const crest = [
       bake(new THREE.ConeGeometry(0.03, 0.12, 4), [0.118, 0.075, 0], [0, 0, 0.18], [0.35, 1, 1]),
@@ -321,7 +329,7 @@ const MARGARETHE_DRAGON_HORNED = {
       bake(new THREE.ConeGeometry(0.022, 0.08, 4), [0.112, 0.055, -0.035], [-0.35, 0, 0.18], [0.35, 1, 1]),
       new THREE.SphereGeometry(0.016, 6, 4).translate(0, 0.172, 0),
     ];
-    addMerged(g, crest.map(onHelm), MG_PLATE_DARK, MG3_PLATE);
+    addMerged(helm, crest.map(onHelm), MG_PLATE_DARK, MG3_PLATE);
     // 첨탑 끝의 술 뭉치 + 뒤로 흘러내리는 굵은 술. 양옆 두 가닥이 폭을 더해 뒤에서 봐도 갈고리가
     // 아니라 술 다발로 읽히고, 끝으로 갈수록 가운데로 모인다
     const side = (s) => MG3_PLUME.map(([x, y], i) => [x * 0.94, y - 0.01, s * 0.03 * (1 - 0.6 * (i / (MG3_PLUME.length - 1)))]);
@@ -331,7 +339,7 @@ const MARGARETHE_DRAGON_HORNED = {
       taperedTube(side(1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
       taperedTube(side(-1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
     ];
-    addMerged(g, plume.map(onHelm), look.plume ?? look.hair, { roughness: 0.95 });
+    addMerged(helm, plume.map(onHelm), look.plume ?? look.hair, { roughness: 0.95 });
     // 붉은 머리는 v2와 같다: 얼굴 양옆 옆머리 + 목가리개 밑으로 땋아 내린 머리
     const hair = [box(0.03, 0.13, 0.016, [0.03, -0.045, 0.099]), box(0.03, 0.13, 0.016, [0.03, -0.045, -0.099])];
     for (let i = 0; i < 5; i++) {
@@ -356,5 +364,11 @@ export const OUTFITS = {
 export function decorateOutfit(dressTo, d, look) {
   const set = look?.outfit && OUTFITS[look.outfit];
   const fn = set && set[d.name];
-  if (fn) fn(dressTo, look, d);
+  if (!fn) return;
+  const before = dressTo.children.length;
+  fn(dressTo, look, d);
+  // 방어구 부위: 이 부위에 얹은 판금 메쉬들을 userData.armor로 알려 둔다. 오너 결정("판금도 피해를
+  // 줄여 주고, 닳고, 완전히 부서지면 사라진다")을 전투 쪽이 켜면 그 부위 내구도가 0일 때 이 메쉬들만
+  // 숨기면 된다. 지금은 표시만 하고 아무 동작도 하지 않는다
+  if (set.armorParts?.has(d.name)) dressTo.userData.armor = dressTo.children.slice(before);
 }
