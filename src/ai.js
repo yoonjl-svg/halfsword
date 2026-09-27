@@ -252,6 +252,16 @@ export class AI {
     // 칼을 놓쳤다: 빈손으로는 칠 수 없다 → 하던 공격을 거두고 간격 밖으로 물러난다 (좀비처럼 맨손으로 달려들지 않는다)
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
 
+    // 쓰러진 상대: 서 있는 상대의 간격 대신 누운 몸을 내려칠 간격(finish.js FINISH.ai × 무기 배율, 파이터의 finish.gap)을 쓴다
+    const downGap = foe.state === 'down' && me.finish?.gap;
+    if (downGap && !this.Mup) {
+      this.Mup = this.M; // 서 있는 상대의 간격 (상대가 일어나면 되돌린다)
+      this.M = { ...this.M, ...downGap };
+    } else if (!downGap && this.Mup) {
+      this.M = this.Mup;
+      this.Mup = null;
+    }
+
     // ── 보기 (반응 시간만큼 늦게) ──
     const s = this.sense.seen(L.reaction + 0.04 * this.anger); // 화나면 눈이 조금 늦다
     const c = me.bodies.chest.translation();
@@ -703,8 +713,6 @@ export class AI {
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
-      // 쓰러진 상대: 누운 몸까지 닿는 거리는 칼이 짧을수록 훨씬 짧다(아래로 뻗느라) → 무기 배율(finish.js downReachK)만큼 더 다가선다
-      if (this.foe.state === 'down') this.need *= this.me.finish?.k ?? 1;
       if (this.timer <= 0 && this.contactDist() <= this.need) {
         // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
         this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
@@ -1157,7 +1165,7 @@ export class AI {
           //  뒤로 살짝 당기면 검술 층의 자동 내딛기(skill.js)도 걸리지 않는다
           fwd = d < this.M.contact ? -0.5 : -0.21;
         }
-        if (d < this.M.clinch * (this.foe.state === 'down' ? (this.me.finish?.k ?? 1) : 1)) fwd = -0.7; // 너무 붙으면 베며 물러난다 (쓰러진 상대는 무기 배율만큼 더 붙어도 된다)
+        if (d < this.M.clinch) fwd = -0.7; // 너무 붙으면 베며 물러난다
         // 달려드는 상대를 맞받아 벨 때는 옆으로 비켜 선다 (상대 칼이 지나가는 줄에서 벗어난다)
         if (this.why === 'stop') side = this.pers.circleDir * 0.6;
       }
