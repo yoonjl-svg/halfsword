@@ -3,7 +3,7 @@
 오너 요청: "캐릭터 모델링을 개선하고 싶다." 5인의 상대 캐릭터에 갑옷판·머리모양·수염·안대 같은
 장식 레이어(`src/outfits.js`)를 새로 얹고, 예전 겉모습은 지우지 않고 `src/looks.js`의
 `LOOK_ARCHIVE`에 `v0`로 남겨 두었다. 지금 게임이 쓰는 버전은 `CHARACTER_LOOK_VERSION`이
-가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 나머지는 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
+가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 랴오 `v2`, 브란만 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
 
 플레이어(케틀햇+갬비슨)의 겉모습은 요청대로 건드리지 않았다.
 
@@ -103,13 +103,20 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 ## 랴오 쓰위엔 (`liao`) — 방랑 낭인
 
 **v0(예전)**: 짙은 초록 방랑 검객 — 검은 머리, 붉은 머리띠.
-**v1(지금, `outfit: 'liao_ronin'`)**: 장발(뒤로 묶어 등까지 늘어뜨림) + 한쪽 눈 안대(작은 판 +
+**v1(보관, `outfit: 'liao_ronin'`)**: 장발(뒤로 묶어 등까지 늘어뜨림) + 한쪽 눈 안대(작은 판 +
 짧은 끈). 사무라이 쇼다운의 방랑 검객(무사시·하오마루 계열) 분위기만 참고했고, 특정 캐릭터의
 디자인을 그대로 베끼지 않았다.
 
-| v0 | v1 |
-| --- | --- |
-| ![liao v0](character_looks/liao_v0.jpg) | ![liao v1](character_looks/liao_v1.jpg) |
+**v2(지금, `outfit: 'liao_gi'`)**: 오너 요청 "동양 무도가 같은 푸른색 도복, 하오마루 같이 생긴 옷". 떠돌이
+무도가 실루엣만 참고한 새 디자인 — V자로 여민 푸른 도복 윗도리(흰 속옷이 보임), 팔꿈치 쪽으로 넓어지는
+소매, 흰 새끼줄 허리띠 매듭, 발목까지 오는 넓은 남색 하카마, 짚신 색 신. X자 가죽끈은 뺐고 장발·안대는 그대로.
+
+| v0 | v1 | v2 (지금) |
+| --- | --- | --- |
+| ![liao v0](character_looks/liao_v0.jpg) | ![liao v1](character_looks/liao_v1.jpg) | ![liao v2](character_looks/liao_v2.jpg) |
+
+v2 추가 컷: [대결 거리](character_looks/liao_v2_default_far.jpg) · [옆](character_looks/liao_v2_side.jpg) ·
+[뒤](character_looks/liao_v2_back.jpg) · [쓰러짐](character_looks/liao_v2_down.jpg)
 
 추가 컷: [3/4](character_looks/liao_threeq.jpg) · [옆](character_looks/liao_side.jpg) ·
 [기본 대결 화면](character_looks/liao_default.jpg) · [쓰러짐](character_looks/liao_down.jpg)

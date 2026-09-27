@@ -163,6 +163,51 @@ const LIAO_RONIN = {
   },
 };
 
+// 랴오 v2(오너 요청): "동양 무도가 같은 푸른색 도복, 하오마루 같이 생긴 옷". 사무라이 쇼다운 계열의
+// 떠돌이 무도가 실루엣만 참고한 새 디자인 — 가슴에서 V자로 여미는 푸른 도복 윗도리(속에 흰 속옷이
+// 보인다), 팔꿈치 쪽으로 넓어지는 소매, 흰 새끼줄 허리띠 매듭, 발목까지 내려오는 넓은 남색 통바지(하카마).
+// 장발·안대(머리)는 v1 그대로. 넓은 소매·바지는 팔·다리 부위마다 따로 붙어 래그돌을 따라간다.
+const GI_BLUE = 0x3a5f9e;
+const GI_LAPEL = 0x27447a;
+const GI_WHITE = 0xe8e2d0;
+const HAKAMA = 0x1e2a44;
+const giSleeve = (g) => addMerged(g, [cyl(0.062, 0.1, 0.2, 12, true, [0, -0.02, 0])], GI_BLUE, { side: THREE.DoubleSide });
+const hakamaLeg = (g, rt, rb, h, y) => addMerged(g, [cyl(rt, rb, h, 12, true, [0, y, 0])], HAKAMA, { side: THREE.DoubleSide });
+const LIAO_GI = {
+  ...LIAO_RONIN,
+  chest(g) {
+    // 흰 속옷 + V자로 여민 깃(짙은 파랑)
+    addMerged(g, [box(0.004, 0.1, 0.07, [0.121, 0.075, 0])], GI_WHITE);
+    addMerged(
+      g,
+      [box(0.007, 0.24, 0.04, [0.124, 0.03, 0.045], [0.42, 0, 0]), box(0.007, 0.24, 0.04, [0.124, 0.03, -0.045], [-0.42, 0, 0])],
+      GI_LAPEL,
+    );
+  },
+  abdomen(g) {
+    // 새끼줄 허리띠 매듭과 늘어진 두 끝자락
+    addMerged(
+      g,
+      [box(0.03, 0.045, 0.05, [0.125, -0.05, 0.06]), box(0.01, 0.1, 0.018, [0.127, -0.11, 0.05], [0.15, 0, 0]), box(0.01, 0.085, 0.018, [0.127, -0.105, 0.075], [-0.2, 0, 0])],
+      GI_WHITE,
+    );
+  },
+  uarmS: giSleeve,
+  uarmO: giSleeve,
+  // 넓은 소매가 아래팔 위쪽까지 덮는다
+  farmS(g) {
+    addMerged(g, [cyl(0.1, 0.09, 0.09, 12, true, [0, 0.06, 0])], GI_BLUE, { side: THREE.DoubleSide });
+  },
+  farmO(g) {
+    addMerged(g, [cyl(0.1, 0.09, 0.09, 12, true, [0, 0.06, 0])], GI_BLUE, { side: THREE.DoubleSide });
+  },
+  // 하카마: 허벅지부터 발목까지 통이 넓다 (다리마다 따로라 걸음이 읽힌다)
+  thighF: (g) => hakamaLeg(g, 0.09, 0.12, 0.34, 0),
+  thighB: (g) => hakamaLeg(g, 0.09, 0.12, 0.34, 0),
+  shinF: (g) => hakamaLeg(g, 0.115, 0.125, 0.3, 0.03),
+  shinB: (g) => hakamaLeg(g, 0.115, 0.125, 0.3, 0.03),
+};
+
 // ═══════════════════════════════════ 하인리히 도른: 은빛 중갑 기사 ═══════════════════════════════════
 // 설정집: "화려한 배색"의 자칭 왕의 기사 — 은빛 판금이라도 수수하게 죽이지 않는다. 실전 갑옷보다
 // 훨씬 반들반들하게 닦아(금속성↑·거칠기↓) 과시욕을 드러내고, 예전 금빛 복제 엑스칼리버·금장 취향을
@@ -560,6 +605,7 @@ export const OUTFITS = {
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,
   liao_ronin: LIAO_RONIN,
+  liao_gi: LIAO_GI,
   heinrich_knight: HEINRICH_KNIGHT,
   heinrich_full_plate: HEINRICH_FULL_PLATE,
   margarethe_dragon: MARGARETHE_DRAGON,

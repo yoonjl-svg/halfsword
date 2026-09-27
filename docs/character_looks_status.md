@@ -4,6 +4,15 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 10 — 오너 요청: 랴오 푸른 무도가 도복 (하오마루 같은 옷)
+
+- **랴오 v2**(`liao_gi`, v1 보관): V자로 여민 푸른 도복 윗도리 + 흰 속옷, 넓은 소매, 흰 새끼줄 허리띠 매듭,
+  발목까지 넓은 남색 하카마(다리마다 따로라 걸음이 읽힘), 짚신 색 신. 장발·안대 유지, X자 끈 제거.
+  특정 캐릭터 의상을 베끼지 않고 떠돌이 무도가 실루엣만 참고. `CHARACTER_LOOK_VERSION.liao = 'v2'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `liao_v2.jpg`, `liao_v2_default_far.jpg`, `liao_v2_side.jpg`, `liao_v2_back.jpg`, `liao_v2_down.jpg`.
+- 설정집 차이(캐릭터 PM용): 설정집은 "짙은 녹색 옷·검은 하의" → v2는 푸른 도복·남색 하카마.
+
 ## round 9 — 오너 요청: 이졸데 허리까지 오는 긴 머리
 
 - **이졸데 v2**(`isolde_longhair`, v1 보관): 검은 긴 생머리가 허리(벨트)까지. 고개를 돌려도 긴 머리가 몸을
