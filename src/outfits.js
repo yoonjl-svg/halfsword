@@ -207,12 +207,52 @@ const MARGARETHE_DRAGON = {
   },
 };
 
+// 마르그레테 v2: v1 갑옷 그대로 + 투구(오너 요청). 얼굴이 읽혀야 해서 얼굴을 막지 않는 코가리개
+// 투구로 했다 — 돔을 앞쪽은 들고 뒤쪽은 내리게 기울여(이마 테가 눈 위에 걸린다) 뒤통수·목덜미를
+// 덮는다. 볏이나 문장 대신 정수리에 낮은 능선 하나만(짙은 판) 둘러 절제를 지킨다.
+// 붉은 머리는 투구 밑으로 삐져나온 옆머리(정면에서 보임)와 뒷머리(뒤에서 보임)로 드러난다.
+// 순수 장식이라 세게 맞아도 벗겨지지 않는다(케틀햇과 달리 hasHelmet과 무관).
+const MG_HELM_C = [-0.005, 0.015, 0];
+const MG_HELM_TILT = [0, 0, 0.3];
+const MG_HELM_DOME = [1, 1.12, 1]; // 살짝 뾰족하게
+function mgHelmPiece(geo, dy) {
+  if (dy) geo.translate(0, dy, 0); // 투구 자체 좌표에서 먼저 옮긴 뒤 같이 기울인다
+  return bake(geo, MG_HELM_C, MG_HELM_TILT);
+}
+const MARGARETHE_DRAGON_HELM = {
+  ...MARGARETHE_DRAGON,
+  head(g, look) {
+    addMerged(
+      g,
+      [
+        bake(new THREE.SphereGeometry(0.118, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), MG_HELM_C, MG_HELM_TILT, MG_HELM_DOME), // 돔
+        mgHelmPiece(new THREE.CylinderGeometry(0.121, 0.121, 0.022, 18, 1, true)), // 이마 테
+        mgHelmPiece(new THREE.CylinderGeometry(0.12, 0.136, 0.045, 10, 1, true, Math.PI, Math.PI), -0.03), // 목가리개(뒤쪽 절반)
+        box(0.01, 0.075, 0.018, [0.122, 0.012, 0]), // 코가리개
+      ],
+      MG_PLATE,
+      STEEL_OPTS,
+    );
+    // 정수리 능선: 돔을 따라 앞에서 뒤로 휘는 낮은 둥근 띠
+    addMerged(g, [bake(new THREE.TorusGeometry(0.119, 0.008, 4, 14, Math.PI), MG_HELM_C, MG_HELM_TILT, MG_HELM_DOME)], MG_PLATE_DARK, STEEL_OPTS);
+    // 투구 밑으로 나온 붉은 머리: 얼굴 양옆으로 늘어진 옆머리 + 목가리개 밑으로 땋아 내린 머리 한 가닥
+    // (흐트러진 머리보다 단정하게 땋은 머리가 "침묵의 벽"에 맞는다)
+    const hair = [box(0.03, 0.13, 0.016, [0.03, -0.045, 0.099]), box(0.03, 0.13, 0.016, [0.03, -0.045, -0.099])];
+    for (let i = 0; i < 5; i++) {
+      const r = 0.03 - i * 0.0025;
+      hair.push(bake(new THREE.SphereGeometry(r, 8, 6), [-0.118 - i * 0.008, -0.06 - i * 0.034, 0], null, [1, 1.35, 1]));
+    }
+    addMerged(g, hair, look.hair, { roughness: 1 });
+  },
+};
+
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   liao_ronin: LIAO_RONIN,
   heinrich_knight: HEINRICH_KNIGHT,
   margarethe_dragon: MARGARETHE_DRAGON,
+  margarethe_dragon_helm: MARGARETHE_DRAGON_HELM,
 };
 
 /** dressPart가 부위 하나를 다 그린 뒤 불린다. look.outfit이 가리키는 세트에 그 부위용 함수가 있으면 얹는다. */

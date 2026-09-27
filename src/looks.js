@@ -253,6 +253,26 @@ export const LOOK_ARCHIVE = {
       accent: 0x6a1520,
       outfit: 'margarethe_dragon',
     },
+    // v2(오너 요청): v1에 투구를 씌우고 머리를 더 붉게(적갈색). 투구는 outfits.js의 순수 장식이라
+    // helmet은 null 그대로 — 'kettle'이 아니므로 hasHelmet(머리 방어)은 켜지지 않는다
+    v2: {
+      tunic: 0x1b1b20,
+      quilt: 0x131316,
+      sleeve: 0x1b1b20,
+      straps: 0x101012,
+      belt: 0x101012,
+      hoseUpper: 0x1e1e22,
+      hoseLower: 0x24242a,
+      shoes: 0x101012,
+      skin: 0xc9a074,
+      hands: 0xc9a074,
+      helmet: null,
+      metal: 0x2c2c32,
+      hair: 0x8a2e1a,
+      grip: 0x101012,
+      hilt: 0x54545c,
+      outfit: 'margarethe_dragon_helm',
+    },
   },
 };
 
@@ -262,7 +282,7 @@ export const CHARACTER_LOOK_VERSION = {
   isolde: 'v1',
   liao: 'v1',
   heinrich: 'v1',
-  margarethe: 'v1',
+  margarethe: 'v2',
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

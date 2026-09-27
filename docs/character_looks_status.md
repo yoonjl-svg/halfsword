@@ -1,8 +1,27 @@
-# 캐릭터 모델링 PM 보고 — round 1 (+ round 2 추가분)
+# 캐릭터 모델링 PM 보고 — round 1 (+ round 2·3 추가분)
 
 브랜치: `claude/pm-character-looks` (base `claude/first-game-development-2q36ha` @ `a085d9d`), 최신
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
+
+## round 3 — 오너 요청: 마르그레테 투구 + 더 붉은 머리
+
+- **v2 추가**(v1은 그대로 보관, `?look=margarethe:v1`): v1 먹색 판금에 코가리개 투구(얼굴은
+  가리지 않음, 앞은 들리고 뒤통수·목덜미는 덮음, 볏·문장 없이 낮은 능선만)와 적갈색 머리
+  (`0x8a2e1a`). 붉은 머리는 정면에선 얼굴 양옆 옆머리, 뒤에선 목가리개 밑으로 땋아 내린 머리로
+  보인다. `CHARACTER_LOOK_VERSION.margarethe = 'v2'`.
+- 파일: `src/looks.js`(v2 항목)·`src/outfits.js`(`margarethe_dragon_helm`)만. `characters.js`·
+  `fighter.js`·`main.js`는 안 건드렸다.
+- **투구는 순수 장식**: `look.helmet = null` 그대로 → `hasHelmet` 꺼짐, 안 벗겨짐. 그 결과 강철
+  투구를 쓰고도 머리를 맞으면 맨머리처럼 피가 난다 — 막게 할지 오너에게 물어 둠
+  (`character_looks.md` "오너가 정할 것" 1번). 막게 하면 가장 어려운 상대가 더 어려워지는
+  밸런스 변경이라 디렉터·캐릭터 PM 확인도 필요.
+- 설정집 차이 추가: 설정집은 "투구 없음·은발" → v2는 투구·적갈색. `character_looks.md` 대조 절에 적음.
+- 비용: 적 하나 기준 v0 대비 메쉬 +10·삼각형 +1,080 (v1은 +7·+236). 다섯 중 가장 무겁지만
+  모바일 예산 안. 무거우면 땋은 머리 구슬부터 줄이면 된다.
+- 검증: `live_battery`·`fights12`·`characters_eval both 2` 바이트 단위 동일, 콘솔 에러 0,
+  쓰러진 자세에서도 투구·머리가 머리를 따라감(`margarethe_down.jpg`). 스크린샷:
+  `margarethe_v2.jpg`, `margarethe_v2_head_front.jpg`, `margarethe_v2_head_back.jpg`, 그 밖의 v2 컷.
 
 ## round 2 — 디렉터 지시 두 가지 처리 결과 (trig_01MaBXiXT848RkS954T6twNE)
 
