@@ -925,7 +925,7 @@ const SAMPLES = {
   soft: nums('hit/soft', 5), // 누비옷 너머로 몸통 덩어리가 받는 둔한 "쿵" (Kenney impactSoft_heavy)
   woodHit: nums('hit/wood', 5), // 나무 몽둥이 (Kenney impactWood_medium)
   woodHeavy: nums('hit/wood_heavy', 3), // (Kenney impactWood_heavy)
-  step: nums('step/boot', 9), // 가죽 장화 발소리 (Kenney RPG Audio footstep)
+  step: nums('step/sand', 8), // 모래 위 무거운 발걸음: 둔한 뒤꿈치 "쿵"(Kenney footstep_carpet) + 눌리는 크런치(footstep_snow), 음을 낮추고 고음을 깎음
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
 };
@@ -1466,7 +1466,8 @@ export class Sound {
   footstep(speed, pos) {
     if (!this._on || !this.ctx) return;
     const x = clamp01((speed - 0.3) / 1.8);
-    // FPS 게임처럼 녹음된 장화 발소리(9가지, 같은 것이 연달아 안 나오게). 크게 디디면 합성 "쿵"을 조금 깔아 무게를 더한다
+    // 녹음된 발소리(8가지, 같은 것이 연달아 안 나오게). 예전 장화 소리는 딱딱한 바닥의 "또각"과 방 울림이 있어 회랑처럼 들렸다.
+    // 크게 디디면 합성 "쿵"을 조금 깔아 무게를 더한다
     const rec = this.pickSample('step');
     const ev = this.event({ bus: this.fleshBus, gain: rec ? 0.22 + 0.45 * x : 0.1 + 0.4 * x, bright: rec ? 0 : 1800 + 3500 * x, prio: 0.3, pos });
     if (rec) {
