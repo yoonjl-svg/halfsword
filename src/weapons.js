@@ -30,13 +30,13 @@ export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', 
 
 // 감독이 정한 무기 등급 (docs/characters.md, 캐릭터 PM 계약) — 다섯 단계:
 //   쓰레기(trash) < 커먼(common) < 레어(rare) < 에픽(epic) < 레전드(legend)
-// 등급마다 power(타격 에너지 배율, 감독 확정: 0.65/1.0/1.05/1.1/1.2)와 durability(내구 0~1, docs/characters.md 53da1bb:
+// 등급마다 power(타격 에너지 배율, 감독 확정: 0.7/1.0/1.05/1.1/1.2)와 durability(내구 0~1, docs/characters.md 53da1bb:
 // 0.4/0.8/0.85/0.95/1.0)가 다르다. 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급 기본값을 받는다.
 // power는 combat.js가 실제로 에너지에 곱한다. durability는 계약 수치이고 실제 파손 확률은 아래 TIER_FRAGILITY 표가 정한다.
 // 부서지는 연출·그 뒤 흐름(맨손·주운 무기)은 감독이 붙인다.
 export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend'];
 export const TIER_DEFAULTS = {
-  trash: { power: 0.65, durability: 0.4 },
+  trash: { power: 0.7, durability: 0.4 },
   common: { power: 1.0, durability: 0.8 },
   rare: { power: 1.05, durability: 0.85 },
   epic: { power: 1.1, durability: 0.95 },
@@ -53,14 +53,16 @@ export const TIER_DEFAULTS = {
 //    직접 주셨고(아래), (1−d)^k 한 식으로는 네 등급 목표를 동시에 못 맞춘다(등급 간 비가 7.2 : 1.7 : 3.1 로 고르지 않다).
 //    표는 tools/sim/weapon_break_rate.mjs 의 표준 측정 — "죽지 않는 60초 경합, 롱소드 상대, 양쪽 자리 25판씩" — 에서
 //    충돌 하나하나의 J 분포로 맞춘 값이다(승패까지 돌리면 판이 평균 17초에 끝나 노출이 판마다 달라진다 — 감독 지적).
-//      감독 목표(60초 경합 한 판 파손률): 쓰레기·참치 60% / 커먼 강철 15% / 레어 9% / 에픽 3% / 레전드·라이트세이버 0
+//      감독 1차 목표(60초 경합 한 판 파손률): 쓰레기 60% / 커먼 강철 15% / 레어 9% / 에픽 3% / 레전드·라이트세이버 0 → 그 뒤 2배
 //    레어·에픽은 실물이 롱소드 물리라고 보고 맞췄다(청강검처럼 가벼운 칼은 충돌이 적어 같은 표로 조금 덜 부러진다: 에픽 2.2%).
-//  · 참치는 커먼이지만 얼린 생선이라 fragility 를 따로 준다(쓰레기와 같은 60% 목표). 실제 승패까지 가는 판(평균 17초)에서는
-//    모든 값이 이보다 낮게 나온다 — 그게 정상이다.
+//  · 참치는 감독 지시로 안 부러진다(fragility 0). 실제 승패까지 가는 판(평균 17초)에서는 모든 값이 60초 경합보다 낮다.
 //  굴리는 난수는 fighter.js의 파이터별 전용 난수(Math.random 과 분리)라, 부러지지 않는 한 기존 시뮬 결과가 바뀌지 않는다.
 export const BREAK = { jRef: 6, k: 2 };
-export const TIER_FRAGILITY = { trash: 0.2, common: 0.028, rare: 0.016, epic: 0.0052, legend: 0 };
-export const MATERIAL_TOUGHNESS = { steel: 1, wood: 1, frozen: 1, rubber: Infinity, plasma: Infinity };
+// 감독 지시(2차): 실제 승패 판(평균 17초)에서는 60초 경합보다 훨씬 덜 부러지니 표 전체를 2배로 올린다.
+//  (60초 경합 기준 맞춤값의 2배: trash 0.20→0.40, common 0.028→0.056, rare 0.016→0.032, epic 0.0052→0.0104)
+export const TIER_FRAGILITY = { trash: 0.4, common: 0.056, rare: 0.032, epic: 0.0104, legend: 0 };
+// 재질: 플라스마 칼날만 부러질 것이 없다. 고무 닭은 감독 지시로 쓰레기와 똑같이 부서지고(등급표 그대로), 참치는 안 부서진다(fragility 0).
+export const MATERIAL_TOUGHNESS = { steel: 1, wood: 1, frozen: 1, rubber: 1, plasma: Infinity };
 /** fragility·재질의 무기가 충격량 J(N·s)짜리 충돌 한 번에 부러질 확률 (0~1) */
 export function breakChance(J, fragility, material) {
   const t = MATERIAL_TOUGHNESS[material] ?? 1;
@@ -183,32 +185,8 @@ const longsword = finalizeSpec('longsword', {
   },
 });
 
-// ═════════════════════════════════════════════════════════════
-//  1b) 롱소드(실전용 보정판) — 기본 롱소드 수치는 Albion Liechtenauer *훈련용* 페더(1.58kg,
-//      균형점 9.8cm)에서 왔다(docs/weapons_research.md, docs/weapon_leads.md 확인). 진짜 날 선
-//      롱소드는 더 가볍다: Albion Crécy 전체 113.7cm·1.39kg·균형점 10.16cm [M, 제조사 공개 치수].
-//      하이런 길이 0.13·칼날 0.90m로 두고 부품 질량을 (총질량 1.390, 균형점 10.16cm, 칼날 무게중심
-//      0.344L 유지) 조건으로 풀어서 넣었다 [D]. 기본 롱소드는 절대 바꾸지 않고 별도 id로 둔다 —
-//      DEFAULT_WEAPON 을 'longsword_sharp'로 바꾸면 전체 기본값이 이걸로 바뀐다(설정 스위치).
-// ═════════════════════════════════════════════════════════════
-const longswordSharp = finalizeSpec('longsword_sharp', {
-  nameKo: '롱소드 (실전용)', nameEn: 'Longsword (sharp)',
-  grip: 'two-hand', material: 'steel',
-  hiltLength: 0.13, bladeLength: 0.9, gripAlong: -0.14,
-  buildParts(look) {
-    const L = this.bladeLength;
-    const grip = boxInertia(0.139, 0.018, 0.1, 0.018);
-    const pommel = sphereInertia(0.3168, 0.03);
-    const cross = boxInertia(0.1564, 0.11, 0.015, 0.022);
-    const blade = bladeInertia(0.7779, L, 0.344, 0.253, 0.048, 0.016);
-    return [
-      partTuple(['box', 0.018, 0.1, 0.018], 0, 0.139, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.03], -0.12, 0.3168, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.11, 0.015, 0.022], 0.115, 0.1564, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.024, L / 2, 0.008], 0.13 + L / 2, 0.7779, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
-    ];
-  },
-});
+// (옛 1b '롱소드(실전용)' — Albion Crécy 1.39kg·칼날 0.90m — 는 감독 결정으로 기본 롱소드와 하나로 합쳤다. 제원은
+//  docs/weapons_research.md §1 에 남아 있고, 'longsword_sharp'·'sharp' 는 별칭으로 롱소드를 가리킨다.)
 
 // ═════════════════════════════════════════════════════════════
 //  2) 암소드 — Albion Squire (13세기풍) 1.13kg·칼날 78.7cm·균형점 12.1cm [M]
@@ -233,29 +211,7 @@ const armingSword = finalizeSpec('arming_sword', {
   },
 });
 
-// ═════════════════════════════════════════════════════════════
-//  3) 메서 (langes messer) — Albion Soldat 0.955kg·칼날 61.6cm·균형점 10.2cm,
-//     회전반경(conjugate-point 계산) 28.3% [M]/[D]. 외날, 단순한 코등이(나겔 생략)
-// ═════════════════════════════════════════════════════════════
-const messer = finalizeSpec('messer', {
-  nameKo: '메서 (긴 칼)', nameEn: 'Langes Messer',
-  grip: 'one-hand', material: 'steel',
-  hiltLength: 0.11, bladeLength: 0.6,
-  mCut: 1.05, mThrust: 0.9,
-  buildParts(look) {
-    const L = this.bladeLength;
-    const grip = boxInertia(0.09, 0.017, 0.065, 0.017);
-    const pommel = sphereInertia(0.17, 0.024);
-    const cross = boxInertia(0.06, 0.05, 0.01, 0.015);
-    const blade = bladeInertia(0.635, L, 0.38, 0.283, 0.039, 0.011);
-    return [
-      partTuple(['box', 0.017, 0.065, 0.017], 0, 0.09, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.024], -0.075, 0.17, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.05, 0.01, 0.015], 0.1, 0.06, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.0195, L / 2, 0.0055], 0.11 + L / 2, 0.635, blade.comY, blade.Ie, blade.It, 0xcfd6dc, true),
-    ];
-  },
-});
+// (옛 3 '메서' 는 감독 결정으로 삭제 — 암소드·팔쉬온과 변별성이 없었다. 'messer' 는 별칭으로 팔쉬온을 가리킨다.)
 
 // ═════════════════════════════════════════════════════════════
 //  4) 츠바이핸더 (Great Sword / Montante) — 전체 무게 2.4~4kg대, Albion "The Wallace"
@@ -318,7 +274,10 @@ const sabre = finalizeSpec('sabre', {
   nameKo: '세이버 (기병도)', nameEn: 'Cavalry Sabre',
   grip: 'one-hand', material: 'steel',
   hiltLength: 0.11, bladeLength: 0.83,
-  mCut: 1.25, mThrust: 0.85, mBlunt: 0.9, // 굽은 날의 베기 효율은 물리 모델이 다 담지 못해 보정
+  // 감독 확정 컨셉: 가장 가볍고 빠른 곡도, 베기 전용 — 찌르기는 약하고(0.7) 손목이 조금 더 빨리 돈다(34).
+  //  굽은 날의 베기 효율은 물리 모델이 다 담지 못해 mCut 으로 보정. 팔쉬온(무거운 반달칼)과 확실히 갈린다.
+  mCut: 1.25, mThrust: 0.7, mBlunt: 0.9,
+  controlOverrides: { wristVmax: 34 },
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.11, 0.017, 0.06, 0.017);
@@ -329,8 +288,23 @@ const sabre = finalizeSpec('sabre', {
       partTuple(['box', 0.017, 0.06, 0.017], 0, 0.11, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.02], -0.08, 0.16, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.04, 0.01, 0.013], 0.09, 0.05, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.016, L / 2, 0.0045], 0.11 + L / 2, 0.63, blade.comY, blade.Ie, blade.It, 0xd2d8dd, true),
+      partTuple(['box', 0.016, L / 2, 0.0045], 0.11 + L / 2, 0.63, blade.comY, blade.Ie, blade.It, null, true), // 물리 파트만, 모양은 decorate
     ];
+  },
+  decorate(group, look) {
+    // 굽은 날: 자루에서 칼끝으로 갈수록 앞(+z)으로 휘는 곡선(끝에서 8cm), 납작한 타원 단면. 손등 가리개(나크본) 고리.
+    const HL = this.hiltLength, L = this.bladeLength;
+    const curve = new THREE.CubicBezierCurve3(new THREE.Vector3(0, HL, 0), new THREE.Vector3(0, HL + L * 0.45, 0.005), new THREE.Vector3(0, HL + L * 0.85, 0.05), new THREE.Vector3(0, HL + L, 0.08));
+    const steel = new THREE.MeshStandardMaterial({ color: 0xd2d8dd, metalness: 0.9, roughness: 0.25 });
+    const blade = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.015, 8, false), steel);
+    blade.scale.z = 0.3; // 납작하게
+    blade.castShadow = true;
+    group.add(blade);
+    group.userData.bladeMesh = blade;
+    const guard = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.005, 6, 16, Math.PI), new THREE.MeshStandardMaterial({ color: look?.hilt ?? 0x8a7a5a, metalness: 0.7, roughness: 0.4 }));
+    guard.position.set(0, 0.035, 0.02);
+    guard.rotation.set(0, Math.PI / 2, Math.PI / 2);
+    group.add(guard);
   },
 });
 
@@ -366,7 +340,9 @@ const falchion = finalizeSpec('falchion', {
   nameKo: '팔쉬온 (반달칼)', nameEn: 'Falchion',
   grip: 'one-hand', material: 'steel',
   hiltLength: 0.1, bladeLength: 0.8,
-  mCut: 1.3, mThrust: 0.6, mBlunt: 1.1,
+  // 감독 확정 컨셉: 앞이 무거운 반달칼, "도끼 같은 칼" — 횟수는 적어도 한 방이 무겁고 투구 위로도 충격(mBlunt 1.4),
+  //  베기 효율은 세이버보다 낮게(1.15), 찌르기는 거의 없다(0.6). 세이버(빠른 곡도)와 확실히 갈린다.
+  mCut: 1.15, mThrust: 0.6, mBlunt: 1.4,
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.08, 0.018, 0.06, 0.018);
@@ -377,32 +353,50 @@ const falchion = finalizeSpec('falchion', {
       partTuple(['box', 0.018, 0.06, 0.018], 0, 0.08, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.022], -0.08, 0.16, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.06, 0.012, 0.016], 0.09, 0.05, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.03, L / 2, 0.005], 0.1 + L / 2, 0.614, blade.comY, blade.Ie, blade.It, 0xd4dae0, true),
+      partTuple(['box', 0.03, L / 2, 0.005], 0.1 + L / 2, 0.614, blade.comY, blade.Ie, blade.It, null, true), // 물리 파트만, 모양은 decorate
     ];
+  },
+  decorate(group) {
+    // 넓은 앞날: 자루 쪽 3.5cm 에서 끝 쪽 8cm 로 넓어지다가 비스듬히 잘린 반달 끝. x = 날 폭, y = 길이, z 로 두께 0.7cm 압출.
+    const HL = this.hiltLength, L = this.bladeLength;
+    const sh = new THREE.Shape();
+    sh.moveTo(-0.0175, HL); sh.lineTo(0.0175, HL); sh.lineTo(0.02, HL + L * 0.55); sh.lineTo(0.04, HL + L * 0.9);
+    sh.quadraticCurveTo(0.03, HL + L, -0.02, HL + L); sh.lineTo(-0.03, HL + L * 0.9); sh.lineTo(-0.0175, HL + L * 0.55); sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.007, bevelEnabled: false });
+    geo.translate(0, 0, -0.0035);
+    const blade = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xd4dae0, metalness: 0.9, roughness: 0.25 }));
+    blade.castShadow = true;
+    group.add(blade);
+    group.userData.bladeMesh = blade;
   },
 });
 
 // ═════════════════════════════════════════════════════════════
-//  9) 카타나 — 나가사(칼날) 통상 70~74cm, 전체 무게 1.0~1.3kg, 균형점(츠바 기준)
-//     통상 ~14cm가 자주 인용됨 [I]-leaning(제작자·수련자 통설, 박물관 실측 원본 특정 못함)
+//  9) 모노호시자오 (物干し竿, '빨랫줄 장대', 옛 id 'katana') — 사사키 코지로의 칼. 감독 결정으로 카타나를 에픽 등급의
+//     긴 노다치로 바꿨다: 칼날 3척(약 90cm) 넘는 장검이라는 전승 [I]-leaning. 제원은 카타나 자료(나가사 70~74cm,
+//     1.0~1.3kg)에서 칼날을 0.90m 로 늘리고 총질량 1.15kg(칼날 0.85)으로 잡았다 [D] — 0.95kg 칼날로는 롱소드 상대 4~8%라
+//     가볍게 잡고 손목 속도 34 를 줬다(18%). 두손·긴 자루(츠카 25cm).
+//     에픽(power 1.1)이 곱해지므로 mCut 은 1.85 → 1.5 로 내려 실효 베기 배율 ≈ 1.65 (옛 카타나 1.85 보다 조금 낮다).
+//     코지로의 '츠바메가에시'는 칼 이름이 아니라 기술 이름.
 // ═════════════════════════════════════════════════════════════
-const katana = finalizeSpec('katana', {
-  nameKo: '카타나', nameEn: 'Katana',
+const monohoshizao = finalizeSpec('monohoshizao', {
+  nameKo: '모노호시자오', nameEn: 'Monohoshizao',
   grip: 'two-hand', material: 'steel',
-  hiltLength: 0.25, bladeLength: 0.72, gripAlong: -0.22,
-  mCut: 1.85, mThrust: 0.85, mBlunt: 0.95,
-  controlOverrides: { wristVmax: 38, aimStiffness: 70 }, // 짧고 가벼워 손목을 더 빨리 돌릴 수 있다
+  tier: 'epic',
+  hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
+  mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)
+  controlOverrides: { aimStiffness: 70, wristVmax: 34 },
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.2, 0.014, 0.14, 0.017); // 츠카: 길고 타원 단면
     const pommel = sphereInertia(0.06, 0.014); // 카시라(자루끝 마개), 가볍다
     const cross = boxInertia(0.04, 0.04, 0.005, 0.04); // 츠바: 얇고 넓은 원반
-    const blade = bladeInertia(0.9, L, 0.4, 0.25, 0.03, 0.007);
+    const blade = bladeInertia(0.85, L, 0.42, 0.25, 0.03, 0.007);
     return [
       partTuple(['box', 0.014, 0.14, 0.017], 0, 0.2, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.014], -0.2, 0.06, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.04, 0.005, 0.04], 0.24, 0.04, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.9, blade.comY, blade.Ie, blade.It, 0xdadfe3, true),
+      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.85, blade.comY, blade.Ie, blade.It, 0xdadfe3, true),
     ];
   },
 });
@@ -439,30 +433,7 @@ const qinggang = finalizeSpec('qinggang', {
   },
 });
 
-// ═════════════════════════════════════════════════════════════
-//  11) 환두대도 (고리자루 큰칼, 삼국시대) — 조선 환도 계열 참고치(1.0~1.3kg, 전체
-//      ~1m, 칼날 ~68cm) [M]/[D] mixed, 이름이 가리키는 고대 대도는 실측을 못 찾아
-//      비슷한 크기의 환도 자료로 대신한다(§14 참고)
-// ═════════════════════════════════════════════════════════════
-const hwandudaedo = finalizeSpec('hwandudaedo', {
-  nameKo: '환두대도', nameEn: 'Hwandudaedo (Ring-Pommel Sword)',
-  grip: 'hand-and-half', material: 'steel',
-  hiltLength: 0.12, bladeLength: 0.68, gripAlong: -0.11,
-  mCut: 1.25, mThrust: 0.9,
-  buildParts(look) {
-    const L = this.bladeLength;
-    const grip = boxInertia(0.12, 0.017, 0.1, 0.017);
-    const pommel = sphereInertia(0.16, 0.022); // 고리자루(환두)
-    const cross = boxInertia(0.05, 0.04, 0.01, 0.03);
-    const blade = bladeInertia(0.97, L, 0.4, 0.25, 0.03, 0.009);
-    return [
-      partTuple(['box', 0.017, 0.1, 0.017], 0, 0.12, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.022], -0.09, 0.16, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.04, 0.01, 0.03], 0.11, 0.05, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.015, L / 2, 0.0045], 0.12 + L / 2, 0.97, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
-    ];
-  },
-});
+// (옛 11 '환두대도' 는 감독 결정으로 삭제 — 세이버·팔쉬온과 겹쳤다. 'hwandudaedo' 는 별칭으로 롱소드를 가리킨다.)
 
 // ═════════════════════════════════════════════════════════════
 //  12) 엑스칼리버 — 전설의 검. 롱소드 가문의 비율을 그대로 쓰되(완벽한 균형이라는
@@ -562,8 +533,8 @@ const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
   grip: 'one-hand', material: 'wood',
   hiltLength: 0.15, bladeLength: 0.8,
-  tier: 'trash', // 감독 등급: 쓰레기 → power 0.65·durability 0.4·fragility 0.2 (60초 경합에 60% 부러진다)
-  edged: false, // 날이 없어 항상 둔기 판정 (총 타격 배율은 power 0.65)
+  tier: 'trash', // 감독 등급: 쓰레기 → power 0.7·durability 0.4·fragility 0.2 (60초 경합에 60% 부러진다)
+  edged: false, // 날이 없어 항상 둔기 판정 (총 타격 배율은 power 0.7)
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.08, 0.018);
@@ -590,6 +561,7 @@ const treeBranch = finalizeSpec('tree_branch', {
 const rubberChicken = finalizeSpec('rubber_chicken', {
   nameKo: '고무 닭', nameEn: 'Rubber Chicken',
   grip: 'one-hand', material: 'rubber',
+  tier: 'trash', fragility: 0.95, // 감독 확정: 장난 무기는 쓰레기 등급(power 0.7), 파손도 나뭇가지와 똑같이 — 충돌이 가벼워 계수는 더 높다 (60초 경합 76%)
   hiltLength: 0.1, bladeLength: 0.35,
   // 날이 없는 무기는 몸통·팔다리를 때려도 판정상 아무 효과가 없다(fighter.applyWound: 머리·목만
   // 기절 효과가 있다) → 고무 닭이 이길 수 있는 유일한 길은 머리를 맞히는 것뿐이라, mBlunt를
@@ -631,7 +603,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
-  edged: false, mBlunt: 2.2, fragility: 0.117, // 커먼이지만 얼린 생선이라 파손은 쓰레기급(60초 경합 60% 목표): 세게 맞부딪히면 쩍 갈라진다
+  edged: false, mBlunt: 2.2, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다
   buildParts(look) {
     const L = this.bladeLength;
@@ -647,8 +619,8 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 });
 
 export const WEAPONS = {
-  longsword, longsword_sharp: longswordSharp, arming_sword: armingSword, messer, zweihander, estoc, sabre, rapier, falchion,
-  katana, qinggang, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
+  longsword, arming_sword: armingSword, zweihander, estoc, sabre, rapier, falchion,
+  monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
 };
 
@@ -657,12 +629,13 @@ export const WEAPON_ALIASES = {
   branch: 'tree_branch', stick: 'tree_branch',
   jian: 'qinggang', // 옛 id (지안 → 청강검, 감독 결정)
   chicken: 'rubber_chicken', tuna: 'frozen_tuna',
-  sharp: 'longsword_sharp', replica: 'excalibur_replica',
-  arming: 'arming_sword', saber: 'lightsaber',
+  katana: 'monohoshizao', // 옛 id (카타나 → 모노호시자오 에픽, 감독 결정)
+  longsword_sharp: 'longsword', sharp: 'longsword', // 실전용 롱소드는 기본 롱소드와 합침 (감독 결정)
+  messer: 'falchion', hwandudaedo: 'longsword', // 삭제된 무기 (감독 결정) — 옛 id 로 죽지 않게
+  replica: 'excalibur_replica', arming: 'arming_sword', saber: 'lightsaber',
 };
 
-// 아무 무기도 지정하지 않았을 때(o.weapon 없음) 쓰는 기본 무기. 'longsword_sharp'로 바꾸면
-// 실전용 롱소드 보정이 전체에 적용된다 — 기존 시뮬 수치가 바뀌므로 감독 결정 후에만 바꿀 것.
+// 아무 무기도 지정하지 않았을 때(o.weapon 없음) 쓰는 기본 무기.
 export const DEFAULT_WEAPON = 'longsword';
 
 export const WEAPON_LIST = Object.values(WEAPONS);

@@ -393,8 +393,9 @@ export class Fighter {
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
-      const mesh = shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade));
+      const mesh = shapeMesh(shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade));
       mesh.position.y = y;
+      mesh.visible = color != null; // 색이 null 이면 물리 파트만 두고 그리지 않는다 (decorate 가 곡도·반달칼 같은 진짜 모양을 그린다)
       group.add(mesh);
       if (isBlade) {
         this.bladeColliders.push(col);
@@ -402,6 +403,7 @@ export class Fighter {
       }
     }
     spec.decorate?.(group, o.look);
+    if (group.userData.bladeMesh) this.bladeMesh = group.userData.bladeMesh; // decorate 가 칼날을 따로 그렸으면 피는 거기에 묻는다
     scene.add(group);
     this.meshes.push({ rb: sword, group, kind: 'weapon' });
     this.sword = sword;
