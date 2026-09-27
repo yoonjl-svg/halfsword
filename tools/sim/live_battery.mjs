@@ -168,7 +168,7 @@ export function hit(name, gap, sp = 13) {
 // ───────── AI vs AI fights + CCD-jam / explosion detector ─────────
 export function fight(secs = 30, seed = 1) {
   seedRand(seed);
-  const G = newRound({ walls: true }); const P = G.player, E = G.enemy; P.skill.level = 0.7;
+  const G = newRound({ walls: true, seed }); const P = G.player, E = G.enemy; P.skill.level = 0.7; // seed = 무기 파손 굴림 씨앗
   G.ai2 = new AI(P, E, 'normal');
   const hits = []; G.combat.hooks.onWound = (att, vic, r) => hits.push(r);
   let jam = 0, tipMax = 0, wMax = 0, nan = false; const be = [];

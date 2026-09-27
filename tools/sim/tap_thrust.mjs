@@ -4,7 +4,8 @@
 //   stand  : 가만히 선 상대 (칼을 바보 자세로 내림 = 길이 열림, 또는 쟁기 자세로 겨눔)
 //   down   : 쓰러진 상대 (내려찍기 겨눔 자세에서 탭 → 아래로 찌르기)
 //   duel   : AI 와 대결하며 간격에 들어오면 톡 친다 (스크립트 플레이어)
-//  사용법: node tools/sim/tap_thrust.mjs [stand|down|duel|all] [판 수] [무기 id] [--str=0.85] [--emo=off] [--emoP=anger:1] …
+//  사용법: node tools/sim/tap_thrust.mjs [stand|down|duel|all] [판 수] [무기 id] [--seed=첫 시드 번호] [--str=0.85] [--emo=off] [--emoP=anger:1] …
+//   시드: stand 300+11s+간격×10, down 500+17s+거리×100, duel 40+s (s = 첫 번호부터 판 수만큼, 기본 1)
 //   근력·감정 옵션은 str_emo.mjs 참고 (찌르는 쪽 = 플레이어)
 import { newRound, DT, THREE, V, AI } from './harness_m.mjs';
 import { torsoDist } from './down_hits.mjs';
@@ -184,6 +185,7 @@ if (isMain(import.meta.url)) {
   const pos = args.filter((a) => !a.startsWith('--'));
   const mode = pos[0] || 'all';
   const N = +(pos[1] || 3);
+  const S0 = +(process.argv.find((a) => a.startsWith('--seed='))?.split('=')[1] ?? 1); // --seed=첫 시드 번호 (기본 1: 예전과 같은 판)
   const weapon = pos[2] || undefined;
   const SE = strEmoOpts(args);
   const before = (G) => applyStrEmo(G, SE);
@@ -196,20 +198,20 @@ if (isMain(import.meta.url)) {
       [G_PAD.pflug, G_PAD.pflug, '쟁기→ 쟁기로 겨눈 상대'],
     ]) {
       const rs = [];
-      for (const gap of [1.5, 1.7, 1.9, 2.1, 2.3]) for (let s = 1; s <= N; s++) rs.push(standTrial({ gap, pad, foePad, seed: 300 + s * 11 + Math.round(gap * 10), weapon, before }));
+      for (const gap of [1.5, 1.7, 1.9, 2.1, 2.3]) for (let s = S0; s < S0 + N; s++) rs.push(standTrial({ gap, pad, foePad, seed: 300 + s * 11 + Math.round(gap * 10), weapon, before }));
       summary(label, rs);
       out[label] = rs.map((r) => ({ d0: +r.d0.toFixed(2), type: r.first?.type ?? null, wound: r.wound, sev: +r.sev.toFixed(2), clashed: r.clashed }));
     }
   }
   if (mode === 'down' || mode === 'all') {
     const rs = [];
-    for (const dist of [0.55, 0.75, 0.95, 1.15, 1.3]) for (let s = 1; s <= N; s++) rs.push(downTrial({ dist, seed: 500 + s * 17 + Math.round(dist * 100), weapon, before }));
+    for (const dist of [0.55, 0.75, 0.95, 1.15, 1.3]) for (let s = S0; s < S0 + N; s++) rs.push(downTrial({ dist, seed: 500 + s * 17 + Math.round(dist * 100), weapon, before }));
     summary('쓰러진 상대 (아래로 찌르기)', rs);
     out.down = rs.map((r) => ({ d0: +r.d0.toFixed(2), type: r.first?.type ?? null, wound: r.wound, sev: +r.sev.toFixed(2) }));
   }
   if (mode === 'duel' || mode === 'all') {
     const taps = [];
-    for (let s = 1; s <= N; s++) taps.push(...duelTrial({ seed: 40 + s, weapon, before }).taps);
+    for (let s = S0; s < S0 + N; s++) taps.push(...duelTrial({ seed: 40 + s, weapon, before }).taps);
     summary('AI 와 대결 중', taps);
     out.duel = taps.map((r) => ({ d0: +r.d0.toFixed(2), type: r.first?.type ?? null, wound: r.wound, sev: +r.sev.toFixed(2), clashed: r.clashed }));
   }
