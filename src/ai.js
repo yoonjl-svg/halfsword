@@ -63,9 +63,14 @@ export class AI {
       //  크면(예: 5) 가까운 자세만 고집하는 신중한 검객, 작으면(예: 0.5) 먼 자세로도 서슴없이 뛰는 변덕스러운 검객
       guardStick: P.guardStick ?? 2.5,
       guardSpeed: P.guardSpeed ?? 0.9, // 간 보는 동안 자세를 잡는 손 빠르기 (m/s): 크면 자세를 휙휙 바꾸는 사람, 작으면 느긋한 사람
+      // 감정 문턱값: 이 인물이 공포에 얼마나 잘 빠지는가 (0 = 전혀, 1 = 한 번 베이면 바로 겁먹는다).
+      //  0이면 감정층이 아예 꺼진 것과 같다 (기본 AI는 0 → 예전과 완전히 같이 움직인다)
+      fearful: P.fearful ?? 0,
       guardPref,
       techPref,
     };
+    // 감정 (지배 감정 하나 + 세기 0~1 + 시간 감쇠). 지금은 공포 하나뿐이다 — 자세히는 emote() 참고
+    this.fear = 0;
     this.mode = 'watch'; // watch(간 보기) | attack | defend | withdraw(물러나기)
     this.phase = 'ready'; // attack 안의 단계: windup(준비 자세) | approach(다가감) | strike | follow
     this.hand = new THREE.Vector2(0.12, -0.18); // 손 목표 (패드)
@@ -201,6 +206,7 @@ export class AI {
     // 상대 칼이 내 몸 쪽으로 오나
     const th = this.threat(s, c, r, d);
     this.noThreat = th ? 0 : this.noThreat + dt;
+    this.emote(dt, hurt, !!th && d < this.M.clinch + 0.4);
 
     if (kneeling) {
       // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
@@ -253,7 +259,9 @@ export class AI {
     if (this.decideTimer > 0) return;
     this.decideTimer = rand(0.06, 0.14);
     const opp = this.opportunity(s, d);
-    const need = 1 - 0.3 * (this.pers.aggr * L.aggression - 0.8);
+    let need = 1 - 0.3 * (this.pers.aggr * L.aggression - 0.8);
+    // 겁먹으면 확실한 순간(헛친 뒤·쓰러진 상대)에만 들어간다
+    if (opp.kind !== 'recover' && opp.kind !== 'finish') need += this.fear * 0.7;
     const reachOut = this.chasing ? 1.0 : 0.4; // 빈손 상대는 조금 멀어도 뛰어들며 친다
     if (opp.score >= need && d < this.holdDist() + reachOut) this.startAttack(this.pickTech(s, opp.kind), opp.kind);
   }
@@ -264,10 +272,31 @@ export class AI {
     let m = this.pers.margin * (0.3 + 0.7 * this.patience) * (0.6 + 0.4 * L.discipline);
     if (this.guard?.name === 'alber') m -= 0.12; // 바보 자세: 머리를 비워 두고 조금 더 다가가 유인한다
     if (this.cautious) m += 0.2;
+    m += this.fear * 0.35; // 겁먹으면 상대 칼에서 더 멀찍이 선다
     m += (1 - this.me.vigor) * 0.3; // 다쳐서 힘이 빠지면 더 조심스럽게 선다
     if (!this.me.armed) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
     return (this.chasing ? this.M.contact : this.foeReach) + Math.max(0.08, m);
+  }
+
+  /**
+   * 감정층 (지금은 공포 하나). 눈에 보이는 사건으로만 켜지고, 시간이 지나면 가라앉는다:
+   *  베였다(hurt) → 크게, 피가 계속 난다(bleed) → 조금씩, 상대 칼이 코앞까지 왔다(nearMiss) → 조금.
+   *  세기(this.fear, 0~1)는 pers.fearful(이 인물이 겁을 얼마나 잘 먹는가)로 곱해진다.
+   *  공포가 검술로 드러나는 곳: holdDist(간격을 더 둔다), pickGuard(칼끝으로 겨누는 자세만 잡는다),
+   *  watch(헛친 상대·쓰러진 상대 말고는 안 들어간다), respond(막기보다 물러나 피하고, 맞받아치지 않는다),
+   *  preThreat(달려드는 상대를 맞받지 않고 물러난다), moveFeet(잔걸음이 뒷걸음으로 기운다).
+   *  fearful이 0이면 this.fear가 늘 0이라 위 모든 곳이 예전과 똑같이 계산된다.
+   */
+  emote(dt, hurt, nearMiss) {
+    const f = this.pers.fearful;
+    if (f <= 0) return;
+    let up = 0;
+    if (hurt) up += 0.4;
+    if (this.me.bleed > 0.01) up += dt * 0.12;
+    if (nearMiss) up += dt * 0.3;
+    this.fear = clamp(this.fear + up * f - (this.fear * dt) / 9, 0, 1); // 9초쯤이면 반으로 가라앉는다
+    if (this.fear > (this.stats.fearPeak ?? 0)) this.stats.fearPeak = +this.fear.toFixed(2);
   }
 
   /** 급한 정도: 내가 피를 더 흘리면 서두르고(>1), 상대가 더 흘리면 기다린다(<1) */
@@ -303,6 +332,8 @@ export class AI {
       // 인내심이 떨어지면 가장 믿는 기술(분노의 베기)을 준비하는 자세
       const ready = g.name === 'tagR' || g.name === 'ochsR' || g.name === 'tag';
       if (ready) w *= 1 + (1 - this.patience) * 0.8 + this.foeAggro * 2.5 * L.read;
+      // 겁먹으면 칼끝으로 겨누는 자세(쟁기·긴 자세·황소)만 잡는다: 들어오지 못하게 막대기를 세워 두는 셈
+      w *= 1 + this.fear * 2 * g.threat;
       // 가까운 자세로 옮기는 것을 좋아한다 (칼을 크게 휘저으며 자세를 바꾸지 않는다). guardStick이 클수록 이 버릇이 강하다
       if (this.guard) w /= 1 + this.pers.guardStick * Math.hypot(g.pad[0] - this.guard.pad[0], g.pad[1] - this.guard.pad[1]);
       w *= rand(0.5, 1.5);
@@ -682,8 +713,8 @@ export class AI {
     this.threatSeen = th.id;
     if (Math.random() > L.guardChance) return false; // 못 봤거나 늦었다
     this.defLine = th.line;
-    // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다
-    if (Math.random() < L.counter && d < this.M.reach + 0.3 && d > this.M.clinch + 0.1) {
+    // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다 (겁먹으면 엄두를 못 낸다)
+    if (Math.random() < L.counter * (1 - 0.8 * this.fear) && d < this.M.reach + 0.3 && d > this.M.clinch + 0.1) {
       const t = this.counterTech(th);
       if (t && this.startAttack(t, 'counter', { noFeint: true, skipChamber: true })) {
         this.stats.counters++;
@@ -696,7 +727,9 @@ export class AI {
     this.stepT = 0;
     // 2) 간격 끝에서 오는 공격, 찌르기는 물러나 헛치게 한다 (피하기). 가까우면 칼로 막는다
     const edge = d > this.foeReach - 0.35;
-    this.defVoid = !this.me.armed || Math.random() < (edge || th.thrust ? 0.8 : 0.3); // 칼이 없으면 막을 수 없으니 물러난다
+    const pVoid = edge || th.thrust ? 0.8 : 0.3;
+    // 칼이 없으면 막을 수 없으니 물러난다. 겁먹었을 때도 칼로 받기보다 물러나 피한다
+    this.defVoid = !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8;
     if (this.defVoid) this.stats.voids++;
     else this.stats.parries++;
     this.timer = 0.65;
@@ -814,8 +847,9 @@ export class AI {
     // 제자리에서 칼을 드는 상대는 한 걸음 물러나 헛치게 하거나, 드는 순간을 먼저 친다
     // 계속 몰아치는 상대(foeAggro가 쌓여 있을수록)일수록 물러나기보다 맞받아치는 쪽으로 기운다 —
     //  성격은 그대로 두되, 지금 상대가 얼마나 몰아치는지를 보고 판단을 조금 더 얹는다
-    const stopBias = Math.max(this.pers.vor, this.foeAggro * 0.75);
-    const strike = charging ? Math.random() < stopBias : d < this.M.reach + 0.3 && Math.random() < L.counter + 0.15;
+    const brave = 1 - 0.8 * this.fear; // 겁먹으면 맞받아치지 않고 물러난다
+    const stopBias = Math.max(this.pers.vor, this.foeAggro * 0.75) * brave;
+    const strike = charging ? Math.random() < stopBias : d < this.M.reach + 0.3 && Math.random() < (L.counter + 0.15) * brave;
     if (strike) {
       const t = this.pickTech(s, charging ? 'stop' : 'windup');
       if (t && this.startAttack(t, charging ? 'stop' : 'windup', { noFeint: true, fastChamber: true })) {
@@ -926,7 +960,7 @@ export class AI {
         this.shuffleTimer -= dt;
         if (this.shuffleTimer <= 0) {
           this.shuffleTimer = rand(0.5, 1.2);
-          this.shuffle = Math.random() < 0.5 ? 0 : rand(-0.3, 0.18);
+          this.shuffle = Math.random() < 0.5 ? 0 : rand(-0.3 - 0.3 * this.fear, 0.18 * (1 - this.fear)); // 겁먹으면 잔걸음이 뒷걸음으로 기운다
         }
         v = this.shuffle;
       }
