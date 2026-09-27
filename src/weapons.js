@@ -32,7 +32,7 @@ export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', 
 //   쓰레기(trash) < 커먼(common) < 레어(rare) < 에픽(epic) < 레전드(legend)
 // 등급마다 power(타격 에너지 배율, 감독 확정: 0.65/1.0/1.05/1.1/1.2)와 durability(내구 0~1, docs/characters.md 53da1bb:
 // 0.4/0.8/0.85/0.95/1.0)가 다르다. 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급 기본값을 받는다.
-// power는 combat.js가 실제로 에너지에 곱한다. durability는 아래 breakChance()로 "부딪힐 때마다 부러질 확률"이 된다.
+// power는 combat.js가 실제로 에너지에 곱한다. durability는 계약 수치이고 실제 파손 확률은 아래 TIER_FRAGILITY 표가 정한다.
 // 부서지는 연출·그 뒤 흐름(맨손·주운 무기)은 감독이 붙인다.
 export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend'];
 export const TIER_DEFAULTS = {
@@ -46,23 +46,26 @@ export const TIER_DEFAULTS = {
 // ── 파손 판정 규칙: 확률식 (감독 지시 — "예산을 넘으면 부러진다"는 너무 필연적이라 버렸다) ──
 //  무기가 "칼끼리 세게 부딪힌 충격"이나 "투구·뼈를 치고 되튄 충격"(combat.js → fighter.absorbWeaponImpact, 충격량 J N·s)을
 //  받을 때마다, 그 충돌 하나가 무기를 부러뜨릴 확률을 굴린다:
-//      p(J) = BREAK.A × (1 − d)^BREAK.fragilityPow × min(1, J / BREAK.jRef)^BREAK.k ÷ 재질계수
-//  · (1 − d)^4 (감독 지시로 지수 4): 내구 d가 1이면 0(레전드는 절대 안 부러짐). 쓰레기(0.4) 0.13 → 커먼(0.8) 0.0016 →
-//    레어 0.0005 → 에픽 0.000006 으로 등급 사이가 크게 벌어진다.
-//  · min(1, J/6)^2 : 얼마나 무게가 실린 충돌인가. 6 N·s(AI 대 AI 한 판의 상위 1% 충돌쯤)면 온전히, 가벼운 스침(중앙값 0.5~0.9)은
-//    그 제곱 비율만큼만 센다 — 살짝 닿은 충돌로는 사실상 안 부러지고 크게 맞부딪힌 한 방이 위험하다.
-//  · A = 12, 지수 4 실측(AI 대 AI 롱소드 상대 50판): 나뭇가지 70%, 참치 70%, 커먼 롱소드 한 자루당 약 4%, 에픽 청강검 0%
-//    (docs/weapons.md §3a 표). 나뭇가지를 감독 목표 60%에 맞추려면 A 를 9쯤으로 내리면 된다.
-//  · 재질계수: 얼린 참치는 강철보다 훨씬 잘 갈라지고(0.35, 내구도 0.6으로 따로 낮춤), 고무·플라스마 칼날은 부러질 것이 없다(무한 → 확률 0).
+//      p(J) = fragility(등급) × min(1, J / BREAK.jRef)^BREAK.k        (재질이 고무·플라스마면 0)
+//  · min(1, J/6)^2 : 얼마나 무게가 실린 충돌인가. 6 N·s(한 판 상위 1% 충돌쯤)면 온전히, 가벼운 스침(중앙값 0.5~0.8)은 그 제곱
+//    비율만큼만 센다 — 살짝 닿아서는 사실상 안 부러지고 크게 맞부딪힌 한 방이 위험하다.
+//  · fragility 는 등급표 TIER_FRAGILITY 로 정한다. 내구 d 로 식을 세우는 대신 표를 쓰는 이유: 감독이 등급별 파손률 목표를
+//    직접 주셨고(아래), (1−d)^k 한 식으로는 네 등급 목표를 동시에 못 맞춘다(등급 간 비가 7.2 : 1.7 : 3.1 로 고르지 않다).
+//    표는 tools/sim/weapon_break_rate.mjs 의 표준 측정 — "죽지 않는 60초 경합, 롱소드 상대, 양쪽 자리 25판씩" — 에서
+//    충돌 하나하나의 J 분포로 맞춘 값이다(승패까지 돌리면 판이 평균 17초에 끝나 노출이 판마다 달라진다 — 감독 지적).
+//      감독 목표(60초 경합 한 판 파손률): 쓰레기·참치 60% / 커먼 강철 15% / 레어 9% / 에픽 3% / 레전드·라이트세이버 0
+//    레어·에픽은 실물이 롱소드 물리라고 보고 맞췄다(청강검처럼 가벼운 칼은 충돌이 적어 같은 표로 조금 덜 부러진다: 에픽 2.2%).
+//  · 참치는 커먼이지만 얼린 생선이라 fragility 를 따로 준다(쓰레기와 같은 60% 목표). 실제 승패까지 가는 판(평균 17초)에서는
+//    모든 값이 이보다 낮게 나온다 — 그게 정상이다.
 //  굴리는 난수는 fighter.js의 파이터별 전용 난수(Math.random 과 분리)라, 부러지지 않는 한 기존 시뮬 결과가 바뀌지 않는다.
-export const BREAK = { A: 12, jRef: 6, k: 2, fragilityPow: 4 };
-export const MATERIAL_TOUGHNESS = { steel: 1, wood: 1, frozen: 0.35, rubber: Infinity, plasma: Infinity };
-/** 내구 d·재질의 무기가 충격량 J(N·s)짜리 충돌 한 번에 부러질 확률 (0~1) */
-export function breakChance(J, durability, material) {
+export const BREAK = { jRef: 6, k: 2 };
+export const TIER_FRAGILITY = { trash: 0.2, common: 0.028, rare: 0.016, epic: 0.0052, legend: 0 };
+export const MATERIAL_TOUGHNESS = { steel: 1, wood: 1, frozen: 1, rubber: Infinity, plasma: Infinity };
+/** fragility·재질의 무기가 충격량 J(N·s)짜리 충돌 한 번에 부러질 확률 (0~1) */
+export function breakChance(J, fragility, material) {
   const t = MATERIAL_TOUGHNESS[material] ?? 1;
-  if (durability >= 1 || !Number.isFinite(t) || !(J > 0)) return 0;
-  const fragility = (BREAK.A * (1 - durability) ** BREAK.fragilityPow) / t;
-  return Math.min(1, fragility * Math.min(1, J / BREAK.jRef) ** BREAK.k);
+  if (!(fragility > 0) || !Number.isFinite(t) || !(J > 0)) return 0;
+  return Math.min(1, (fragility / t) * Math.min(1, J / BREAK.jRef) ** BREAK.k);
 }
 
 
@@ -146,8 +149,9 @@ function finalizeSpec(id, s) {
     power: s.power ?? TIER_DEFAULTS[s.tier ?? 'common'].power, // 등급 공격력 배율 (mCut/mThrust/mBlunt 위에 한 번 더 곱한다)
     durability: s.durability ?? TIER_DEFAULTS[s.tier ?? 'common'].durability, // 등급 내구 (0~1, 감독이 쓸 계약 수치)
     // 충돌 한 번(충격량 J)에 부러질 확률. 재질상 안 부러지는 무기(고무·플라스마)와 레전드는 늘 0.
-    breakChance(J) { return breakChance(J, this.durability, this.material); },
-    fragile: breakChance(BREAK.jRef, s.durability ?? TIER_DEFAULTS[s.tier ?? 'common'].durability, s.material) > 0, // 부러질 수 있는 무기인가
+    fragility: s.fragility ?? TIER_FRAGILITY[s.tier ?? 'common'], // 등급표 값 (무기가 직접 적으면 그 값)
+    breakChance(J) { return breakChance(J, this.fragility, this.material); },
+    fragile: breakChance(BREAK.jRef, s.fragility ?? TIER_FRAGILITY[s.tier ?? 'common'], s.material) > 0, // 부러질 수 있는 무기인가
     ignoreArmor: !!s.ignoreArmor,
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
@@ -558,7 +562,7 @@ const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
   grip: 'one-hand', material: 'wood',
   hiltLength: 0.15, bladeLength: 0.8,
-  tier: 'trash', // 감독 등급: 쓰레기 → power 0.65·durability 0.4 (한 판에 약 60% 확률로 부러진다)
+  tier: 'trash', // 감독 등급: 쓰레기 → power 0.65·durability 0.4·fragility 0.2 (60초 경합에 60% 부러진다)
   edged: false, // 날이 없어 항상 둔기 판정 (총 타격 배율은 power 0.65)
   buildParts(look) {
     const L = this.bladeLength;
@@ -627,7 +631,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
-  edged: false, mBlunt: 2.2, durability: 0.6, // 커먼이지만 얼린 생선이라 내구 0.6·재질 frozen(0.35): 세게 맞부딪히면 쩍 갈라진다
+  edged: false, mBlunt: 2.2, fragility: 0.117, // 커먼이지만 얼린 생선이라 파손은 쓰레기급(60초 경합 60% 목표): 세게 맞부딪히면 쩍 갈라진다
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다
   buildParts(look) {
     const L = this.bladeLength;
