@@ -322,6 +322,39 @@ const LIAO_GI_CURLY = {
   },
 };
 
+// 랴오 v5(오너 피드백: "v3 꽁지머리는 그대로, 스파이크 같은 뾰족한 부분을 양옆으로 자연스럽게 흘러내리는
+// 중단발 컬로"): v3의 부채꼴 꽁지머리·묶은 자리는 그대로 두고, 삐친 원뿔 가닥을 모두 빼는 대신 관자놀이에서
+// 얼굴 옆을 따라 물결치며 턱~어깨 길이로 내려와 끝이 안으로 말리는 가닥(한쪽 셋)을 단다. 앞머리는 이마 양옆으로
+// 넘어가는 부드러운 가닥 하나씩(눈·안대는 가리지 않는다). 가슴은 v4(흰 속깃 + 맨살) 그대로.
+const LIAO_SIDE_LOCKS = [
+  // 오른쪽(+z) 기준 — 왼쪽은 z를 뒤집어 쓴다. 굵기는 LIAO_LOCK_R
+  [[0.04, 0.07, 0.085], [0.05, 0.02, 0.113], [0.045, -0.04, 0.113], [0.03, -0.09, 0.12], [0.042, -0.125, 0.1]],
+  [[-0.01, 0.085, 0.09], [-0.01, 0.02, 0.12], [-0.015, -0.05, 0.124], [-0.03, -0.1, 0.127], [-0.015, -0.135, 0.108]],
+  [[-0.06, 0.075, 0.075], [-0.072, 0.01, 0.1], [-0.078, -0.05, 0.106], [-0.085, -0.1, 0.112], [-0.068, -0.135, 0.096]],
+];
+const LIAO_LOCK_R = [0.02, 0.024, 0.021, 0.015, 0.005];
+const LIAO_BANG = [[0.05, 0.095, 0.0], [0.085, 0.075, 0.035], [0.1, 0.05, 0.065], [0.095, 0.035, 0.085]];
+const LIAO_GI_WAVY = {
+  ...LIAO_GI_CURLY,
+  head(g, look) {
+    const flip = (pts) => pts.map(([x, y, z]) => [x, y, -z]);
+    const hair = [
+      new THREE.SphereGeometry(0.035, 8, 6).translate(-0.095, 0.07, 0), // 묶은 자리 (v3와 같다)
+      ...LIAO_TAIL.map((pts, i) => taperedTube(pts, [0.03 - i * 0.002, 0.026, 0.016, 0.003], 10, 6)), // v3 꽁지머리
+      ...LIAO_SIDE_LOCKS.flatMap((pts) => [taperedTube(pts, LIAO_LOCK_R, 12, 6), taperedTube(flip(pts), LIAO_LOCK_R, 12, 6)]),
+      taperedTube(LIAO_BANG, [0.016, 0.018, 0.013, 0.004], 8, 5),
+      taperedTube(flip(LIAO_BANG), [0.016, 0.018, 0.013, 0.004], 8, 5),
+    ];
+    addMerged(g, hair, look.hair, { roughness: 1 });
+    const patch = [
+      ball(0.02, 10, 8, [0.096, 0.016, -0.035], [0, 0.3, 0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, 0.04, -0.06], [0, 0, 1.0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, -0.01, -0.06], [0, 0, -1.0]),
+    ];
+    addMerged(g, patch, 0x1a1a1a, { roughness: 0.9 });
+  },
+};
+
 // ═══════════════════════════════════ 하인리히 도른: 은빛 중갑 기사 ═══════════════════════════════════
 // 설정집: "화려한 배색"의 자칭 왕의 기사 — 은빛 판금이라도 수수하게 죽이지 않는다. 실전 갑옷보다
 // 훨씬 반들반들하게 닦아(금속성↑·거칠기↓) 과시욕을 드러내고, 예전 금빛 복제 엑스칼리버·금장 취향을
@@ -722,6 +755,7 @@ export const OUTFITS = {
   liao_gi: LIAO_GI,
   liao_gi_wild: LIAO_GI_WILD,
   liao_gi_curly: LIAO_GI_CURLY,
+  liao_gi_wavy: LIAO_GI_WAVY,
   heinrich_knight: HEINRICH_KNIGHT,
   heinrich_full_plate: HEINRICH_FULL_PLATE,
   margarethe_dragon: MARGARETHE_DRAGON,

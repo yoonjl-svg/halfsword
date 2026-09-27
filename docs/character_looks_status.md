@@ -4,6 +4,13 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 13 — 오너 피드백: 랴오 "v3 꽁지머리 유지 + 뾰족한 부분을 양옆으로 흘러내리는 중단발 컬로"
+
+- **랴오 v5**(`liao_gi_wavy`, v4 보관): v3 부채꼴 꽁지머리 그대로, 삐친 원뿔 가닥 제거, 얼굴 양옆을 따라 물결치며
+  턱~어깨 길이로 내려와 끝이 말리는 가닥(한쪽 셋) + 이마 양옆 앞머리. 안대·머리띠·흰 속깃·맨살 V넥 유지.
+  `CHARACTER_LOOK_VERSION.liao = 'v5'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+
 ## round 12 — 오너 피드백: 랴오 머리 "너무 뾰족해, 컬과 볼륨" + V넥 안쪽 흰 깃
 
 - **랴오 v4**(`liao_gi_curly`, v3 보관): 뾰족한 원뿔 대신 둥근 곱슬 뭉치로 머리 전체에 볼륨, 곱슬
