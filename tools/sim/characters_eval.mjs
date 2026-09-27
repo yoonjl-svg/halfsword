@@ -148,7 +148,7 @@ async function main() {
       console.log(`${id}: fearful=${CHARACTERS.find((c) => c.id === id).ai.persona.pers.fearful ?? 0}, mean ${fmt(mean(f.mean))}, peak ${fmt(mean(f.peak))}, 겁먹은 판 ${fmt((100 * f.peak.filter((p) => p > 0.3).length) / f.peak.length)}%`);
     }
     console.log('');
-    console.log('[감정층·세 감정] 캐릭터별: 판% = 그 감정이 0.3을 넘은 판 비율 / 지배% = 지배한 시간 비율 / 횟수 = 한 판에 지배 감정으로 켜진 평균 횟수 / 초 = 한 번 켜지면 평균 지속(초) — 효과는 공포만 붙어 있음');
+    console.log('[감정층·세 감정] 캐릭터별: 판% = 그 감정이 0.3을 넘은 판 비율 / 지배% = 지배한 시간 비율 / 횟수 = 한 판에 지배 감정으로 켜진 평균 횟수 / 초 = 한 번 켜지면 평균 지속(초) — 효과는 공포·분노(지배 시)만 붙어 있음');
     console.log('id,' + EMOS.map((e) => `${e}:판%/지배%/횟수/초`).join(','));
     for (const id of ids) {
       const runs = emoOf[id];
