@@ -2,6 +2,56 @@
 
 감독 확인용 상태 파일. (브랜치: `claude/pm-weapons-balance`, main ae6cd25(A1~A5 배포·온몸 타격 설계서·마르가레테 투구)까지 병합)
 
+## 10라운드 D: 흐름(연속 동작) 시제품 — 스위치 `SKILL.flow`, 기본 꺼짐
+**넣은 것**
+- **플레이어** (`skill.js` updateFlow): 멈추지 않고 휘어 이어지는 끌기(방향이 `flowTurn` 2.2rad 넘게 돔)를 흐름으로 본다.
+  - 흐르는 동안 반 바퀴(새 베기)마다 한 걸음 내딛는다. 이어 베기를 `flowFollow` 1.6배 더 밀어 준다.
+  - 안전장치: 칼이 세게 막히면(`fighter.jolt` > 0.5) 흐름이 끊기고 `flowBreak` 0.4초 동안 다시 흐르지 못한다. 손을 멈추면(0.08초) 예전처럼 자세에서 선다.
+- **AI** (`ai.js`)
+  - 베기가 끝났을 때 칼이 막히지 않았으면(안전장치: `this.bound`) 멈춰 서지 않는다. 손이 옆으로 한 바퀴 돌아 다음 내려베기의 준비 자세를 지나 곧장 벤다(8자: 분노의 베기 → 왼쪽 분노의 베기). 한 번에 `flowChain` 1번.
+  - 막기 → 반격 흐름(`flowParry`): 막는 중 칼끼리 맞닿으면 받은 칼이 그대로 되받아 벤다.
+- **ai.js 조각** (기존 줄은 옮기거나 바꾸지 않았다)
+  1. import 줄: `{ AI_LEVELS, BODY }` → `{ AI_LEVELS, BODY, SKILL }`
+  2. attack() strike 단계, `if (!this.path.length) {` 바로 안: `if (SKILL.flow && this.flowOn(d)) return;` (주석 한 줄)
+  3. defend() `this.checkBind();` 바로 다음: `if (SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;` (주석 한 줄)
+  4. afterStrike() 바로 뒤에 새 메서드 넷: flowTech · flowInto · flowOn · flowRiposte
+- 끈 상태: live_battery · fights12 · hybrid fights12 바이트 동일.
+
+**켠 상태 결과** (`flow_eval.mjs 48`, hybrid, 롱소드끼리 주인공 대리, 96판)
+
+| | 끔 | 켬 (flowChain 1, 기본) | 켬 (flowChain 3) | 켬 (3) + 손목 제동 풀기 실험 |
+|---|---|---|---|---|
+| 사망 판 | 87 | 63 | 32 | 53 |
+| 무승부 | 9 | 33 | 64 | 43 |
+| 평균 종료 | 19.3초 | 23.4초 | 25.3초 | 25.0초 |
+| **첫 상처를 낸 쪽이 이김** | **67%** | **43%** | 20% | 35% |
+| 판당 공격 (둘 합) | 20.5 | 32.7 | 37.1 | 31.9 |
+| 판당 흐름 | 0 | 24.9 | 71.6 | 61.0 |
+| 판당 닿음 | 6.0 | 10.3 | 17.4 | 15.7 |
+| 간격 안 머문 시간 | 53% | 62% | 65% | 66% |
+
+첫 상처 × 결과 교차표 (행 = 첫 상처, 열 = X 이김 / Y 이김 / 무)
+- 끔: X 먼저 28 / 14 / 6 · Y 먼저 9 / 36 / 3
+- 켬(1): X 먼저 24 / 11 / 14 · Y 먼저 11 / 17 / 19
+
+- fights12 켬: levitate 3/12, hybrid 4/12 (관문 6~10 아래). 끈 기본은 9/12 · 8/12 그대로다.
+- 읽기
+  - 켜면 공격·닿음이 늘고 간격 안에 오래 머문다. 한 번 맞붙으면 주고받는다.
+  - 그런데 이어진 베기가 약해 죽음이 줄고 무승부가 는다. 흐름이 길면(3) 서로 풍차처럼 부딪히기만 한다(사망 32/96).
+  - 손목 제동을 흐를 때 풀면(아래 fighter.js 조각을 로컬에서만 넣어 재고 되돌림) 사망이 32 → 53으로 절반쯤 돌아온다. 몸통이 따라 도는 ②가 들어가야 제대로 나온다는 디렉터 판단과 맞다.
+  - 받아 치기 흐름은 판당 0.8번으로 드물다. 막는 중 칼끼리 0.07m 안으로 맞닿는 순간이 적다.
+- 플레이어 흐름 (스크래치 도구: 패드에 8자, 초당 1바퀴, 가만히 선 상대, 4판 × 6초, hybrid)
+  - 흐름으로 본 시간 74%, 칼끝 최고 19.1 → 21.6m/s, 골반 이동 0.71 → 2.28m(내딛음).
+  - 닿음 96 → 61, 평균 E 30 → 27J, 상처 36 → 16. 걸음이 상대에게 너무 붙여 칼 밑동으로 맞는다.
+- **fighter.js 조각 (넣지 않았다 — 디렉터가 온몸 타격과 함께 넣는다)**: driveSword 손목 제동 두 줄
+  - 전: `if (this.wristBrake && (toward < 1 || angle > this.wristBrakeAng + 0.35)) this.wristBrake = false;`
+  - 후: `if (this.wristBrake && (toward < 1 || angle > this.wristBrakeAng + 0.35 || this.skill.flowing)) this.wristBrake = false;`
+  - 전: `if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;`
+  - 후: `if (this.skill.flowing || angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;`
+  - AI 는 흐를 때 손 목표가 쉬지 않고 휘어 돌아 검술 층이 `skill.flowing` 을 켠다. 그래서 이 조각이 AI 흐름에도 걸린다.
+- 켜기 전에 필요한 것: ① 손목 제동 풀기(위 조각), ② 이어진 베기의 세기(몸통이 따라 도는 운동 사슬), ③ 흐름에 맞서는 AI 막기, ④ 흐를 때 걸음 거리(너무 붙지 않게).
+- 도구: `tools/sim/flow_eval.mjs` (새, README).
+
 ## 10라운드 C: R6 칼 길 잡고 찌르기 (디렉터 승인, hybrid에서 잼)
 **먼저 잰 것: hybrid에서 탭이 왜 안 들어가나** (`hybrid.mjs tap_thrust.mjs duel 12 longsword`: 스크립트 플레이어가 1.65m를 지키며 1.95m 안이면 톡, 상대 기본 AI 롱소드, 30초 × 12판)
 

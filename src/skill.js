@@ -85,6 +85,7 @@ export class Skill {
     this.tap = null;
     this.thrusts = 0;
     this.thrustPush = false; // 지금 칼끝을 뻗는 구간인가 (겨눈 뒤 ~ 뻗고 버티기 끝). combat.js 가 팔 유효 질량을 이때만 싣는다
+    this.flowing = false; // 흐름(SKILL.flow) 중인가 — 끄면 늘 false
     const b = THRUST.body;
     this.thrustPose = { w: 0, hand: [0, 0, 0], dir: [1, 0, 0], pelvisYaw: b.pelvisYaw * D2R, chestYaw: b.chestYaw * D2R, pitch: b.pitch * D2R, drop: b.drop };
   }
@@ -236,6 +237,53 @@ export class Skill {
     pose.drop = b.drop;
   }
 
+  /**
+   * 흐름 판단(SKILL.flow): 휘두르기가 멈추지 않은 채 끌기 방향이 flowTurn(rad) 넘게 휘어 돌면 흐름(this.flowing)이다.
+   *  - 흐르는 동안 반 바퀴(새 베기)마다 한 걸음 내딛는다 (상대가 한 걸음 거리일 때)
+   *  - 안전장치: 칼이 세게 막히면(fighter.jolt) 흐름이 끊기고 flowBreak 초 동안 다시 흐르지 못한다
+   *  - 손을 멈추면(0.08초) 흐름이 끝나 예전처럼 자세에서 선다
+   *  손목 제동을 풀어 칼이 관성으로 돌아 나가게 하는 것은 fighter.js 몫이다(this.flowing 을 읽으면 된다 — 디렉터가 넣는다)
+   */
+  updateFlow(dt, swinging) {
+    const f = this.f;
+    this.flowLock = Math.max(0, (this.flowLock ?? 0) - dt);
+    if (f.jolt > 0.5) {
+      this.flowing = false;
+      this.flowTurn = 0;
+      this.flowLock = SKILL.flowBreak;
+    }
+    if (!swinging) {
+      this.flowQuiet = (this.flowQuiet ?? 0) + dt;
+      if (this.flowQuiet > 0.08) {
+        this.flowing = false;
+        this.flowTurn = 0;
+        this.flowDir = null;
+      }
+      return;
+    }
+    this.flowQuiet = 0;
+    const a = Math.atan2(this.vel.y, this.vel.x);
+    if (this.flowDir != null) {
+      const da = Math.abs(Math.atan2(Math.sin(a - this.flowDir), Math.cos(a - this.flowDir)));
+      this.flowTurn = (this.flowTurn ?? 0) + da;
+      this.flowStepTurn = (this.flowStepTurn ?? 0) + da;
+    }
+    this.flowDir = a;
+    if (!this.flowing && this.flowLock <= 0 && this.flowTurn > SKILL.flowTurn) {
+      this.flowing = true;
+      this.flows = (this.flows ?? 0) + 1;
+      this.flowStepTurn = Math.PI; // 흐르기 시작하는 베기부터 내딛는다
+    }
+    if (this.flowing && this.flowStepTurn >= Math.PI && f.state === 'stand') {
+      this.flowStepTurn = 0;
+      const d = f.foeDistance();
+      if (d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) {
+        if (f.gait?.active) f.gait.requestStep({ kind: 'pass', fwd: 0.3, duration: 0.3 });
+        else this.lunge = SKILL.lungeTime;
+      }
+    }
+  }
+
   update(dt) {
     if (dt <= 0) return;
     const f = this.f;
@@ -273,10 +321,14 @@ export class Skill {
       this.anchor.copy(off);
     }
 
+    // 흐름(SKILL.flow, 시제품): 멈추지 않고 휘어 이어지는 끌기를 흐름으로 본다 (끄면 아무 일도 없다 — flowing 은 늘 false)
+    if (SKILL.flow) this.updateFlow(dt, swinging);
+    const fk = this.flowing ? SKILL.flowFollow : 1; // 흐르는 동안은 이어 베기를 더 밀어 칼이 멈추지 않고 돌아 나가게
+
     // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
-    if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L);
+    if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L * fk);
     this.follow.multiplyScalar(Math.exp(-dt / SKILL.followDecay));
-    const fm = SKILL.followMax * L;
+    const fm = SKILL.followMax * L * fk;
     if (this.follow.length() > fm) this.follow.setLength(fm);
     this.aimRaw.copy(this.anchor).add(this.follow);
     if (this.aimRaw.length() > R) this.aimRaw.setLength(R);
