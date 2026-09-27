@@ -44,7 +44,7 @@ export const CHARACTERS = [
       level: 'easy',
       persona: {
         school: 'tree_branch',
-        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 1.15, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 }, // 힘은 장사 — 가벼운 나뭇가지라도 머리를 때리면 기절시킨다. 대신 정확도가 낮다
+        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 1.3, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 }, // 힘은 장사 — 가벼운 나뭇가지라도 머리를 때리면 기절시킨다. 대신 정확도가 낮다
         pers: {
           precision: 0.4, // 아무 데나 후려친다 — 팔·다리에 걸리고 칼 면으로 때린다
           guardStick: 0.6,
@@ -81,15 +81,15 @@ export const CHARACTERS = [
       grip: 0x3a2a1a,
       hilt: 0x6b5a3a,
     },
-    taunt: '이 나뭇가지도 아프거든?!',
+    taunt: '젠장! 이런 막대기 뿐이라니.',
     // 상황별 대사 (docs/character_lore.md). 화면에 어떻게 띄울지는 UI 설계 몫
     lines: {
-      intro: ['이 나뭇가지도 아프거든?!', '은화 열 닢! 열 닢이라고 했지?', '자세? 그게 뭔데. 그냥 치면 되지.'],
+      intro: ['젠장! 이런 막대기 뿐이라니.', '은화 열 닢! 열 닢이라고 했지?', '자세? 힘이 최고야.'],
       attack: ['받아라아!', '이거나 먹어!', '장작이다, 장작!'],
       hurt: ['아야… 아야! 이거 진짜 칼이잖아!', '피… 피 난다…', '야, 야, 잠깐만—'],
       winning: ['하하! 봤지? 봤냐고!', '검객이라며! 검객이라며!'],
       losing: ['그, 그만… 은화는 됐어…', '오지 마. 오지 말라고.', '엄마…'],
-      win: ['은화! 은화 어딨어!', '…내가 이겼나? 내가 이겼다!'],
+      win: ['은화! 은화 어딨어!', '…내가 이겼나? 내가 이겼다!', '장작패기보다 쉽구나, 널 패는 게.'],
       lose: ['…장작이나 팰걸.', '회초리… 부러졌나…'],
     },
   },
@@ -163,7 +163,7 @@ export const CHARACTERS = [
       hurt: ['…거리를 잘못 쟀어.', '괜찮아. 배운 대로.', '한 번 더.'],
       winning: ['서두르지 말자. 서두르지 말자.', '…보고 계셨으면.'],
       losing: ['물러나… 물러나서 다시.', '교본엔 이런 게 없었는데.', '선배들 말이… 아니야, 아직.'],
-      win: ['…감사합니다.', '사범님, 이제 이르지 않죠?'],
+      win: ['…감사합니다.', '사범님, 이제 이르지 않죠?', '교본대로였어요. 그것뿐이에요.'],
       lose: ['아직… 이르네요.', '다음엔 정확하게.'],
     },
   },
@@ -238,7 +238,7 @@ export const CHARACTERS = [
       hurt: ['…음.', '괜찮은 칼이군.', '한 번은 봐준다.'],
       winning: ['두 번 걸렸어. 이제 재미있어졌네.', '서두르지 마. 나도 안 서두르니까.'],
       losing: ['…이 철검, 생각보다 무겁군.', '거리. 거리를 다시.', '오늘은 여기까지인가.'],
-      win: ['…검이 다 똑같지.', '여비는 됐다. 다음 마을.'],
+      win: ['…검이 다 똑같지.', '여비는 됐다. 다음 마을.', '젓가락이라더니… 잘도 들어가는군.'],
       lose: ['…통하긴 하는군. 반쯤.', '다음엔 더 가는 검을 가져오지.'],
     },
   },
@@ -271,7 +271,7 @@ export const CHARACTERS = [
       level: 'normal',
       persona: {
         school: 'excalibur_replica',
-        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.2, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
+        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.15, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
         pers: {
           precision: 0.9,
           guardStick: 0.8,
@@ -309,15 +309,15 @@ export const CHARACTERS = [
       grip: 0x2a1a10,
       hilt: 0xd8c060,
     },
-    taunt: '박수는 나중에! 지금은 피를 보자고!',
+    taunt: '무릎 꿇어라. 왕의 검 앞이다.', // 안하무인의 광인 (감독 지시로 대사 전부 교체)
     lines: {
-      intro: ['박수는 나중에! 지금은 피를 보자고!', '신사 숙녀 여러분 — 엑스칼리버입니다. 진품이죠. 아마도.', '마이어 검술관 출신, 하인리히 도른. 학관에는 비밀로.'],
-      attack: ['이건 관중석 셋째 줄까지 보이게!', '자, 여기 봐 — 아니, 여기!', '앙코르!'],
-      hurt: ['하하! 좋아, 좋아, 이래야지!', '피? 관중이 좋아하겠군.', '…그건 좀 아팠다.'],
-      winning: ['박수! 박수 어디 갔어!', '이쯤에서 하나 더 보여 드리지.'],
-      losing: ['…잠깐, 관중이 조용하네.', '이건 각본에 없었는데.', '엑스칼리버가… 아니, 됐어.'],
-      win: ['박수! 이제 박수!', '학관 사범들, 이 소문 들었으면 좋겠군.'],
-      lose: ['…환불은 안 됩니다.', '다음 공연은 더 좋을 겁니다. 아마도.'],
+      intro: ['무릎 꿇어라. 왕의 검 앞이다.', '베인다! 베인다! 하하하!', '이름 따위 필요 없다. 넌 곧 잊힌다.'],
+      attack: ['죽어라!', '더! 더 피를 내놔라!', '하하하! 도망쳐 봐라!'],
+      hurt: ['감히… 감히 나를?!', '이 피는 내 것이 아니다. 아니야!', '하찮은 것이…!'],
+      winning: ['봐라! 이게 나다!', '기어라. 기어서 살려 달라 해라!'],
+      losing: ['말도 안 돼… 내가?', '가짜? 가짜라고?! 닥쳐!', '아직이다. 나는 아직 서 있다.'],
+      win: ['흔한 버러지였구나.', '기어서 살려 달라 하랬지. …아, 이제 못 기는군.', '너 같은 놈들을 수도 없이 봐 왔지.'], // 감독 확정
+      lose: ['…거짓말이야. 내가…', '나는… 쓰러지지 않아…'],
     },
   },
 
@@ -347,7 +347,7 @@ export const CHARACTERS = [
       level: 'hard',
       persona: {
         school: 'longsword',
-        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.2, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
+        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.1, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
         pers: {
           precision: 1, // 머리·목을 정확히 벤다
           guardStick: 6.2,
@@ -391,7 +391,7 @@ export const CHARACTERS = [
       hurt: ['…좋은 칼.', '내가 서둘렀군.', '다시.'],
       winning: ['기다려. 올 거다.', '…아직.'],
       losing: ['…망설이지 않는군. 그건 가르칠 수 없지.', '그래. 이것도 다른 근육이야.'],
-      win: ['거기서 서둘렀다. 그게 전부야.', '…콘라트, 오늘은 서두르지 않았어.'],
+      win: ['거기서 서둘렀다. 그게 전부야.', '…콘라트, 오늘은 서두르지 않았어.', '가르치는 근육도 아직 벨 줄 아는군.'],
       lose: ['…서둘렀나. 제자들에게 말해야겠군.', '좋은 검객이었다. 서두르지 마라.'],
     },
   },
@@ -411,6 +411,16 @@ export function pickCharacterWeapon(char, rnd = Math.random) {
     if (pool.length) return pool.reduce((a, b) => (b.bladeLength < a.bladeLength ? b : a)).id;
   }
   return alt.pick in WEAPONS ? alt.pick : char.weapon;
+}
+
+/**
+ * 캐릭터 대사 한 줄을 무작위로 (감독 지시: 시작할 때와 이길 때 3종씩 랜덤, 죽으면 말이 없다).
+ *  key: 'intro' | 'win' (그 밖의 키도 lines에 있으면 쓴다). 없으면 taunt, 그것도 없으면 ''
+ */
+export function randomLine(char, key) {
+  const arr = char?.lines?.[key];
+  if (Array.isArray(arr) && arr.length) return arr[Math.floor(Math.random() * arr.length)];
+  return char?.taunt || '';
 }
 
 /** id가 없거나 목록에 없으면 무작위 캐릭터 (excludeId가 있으면 그 캐릭터는 뺀다) */

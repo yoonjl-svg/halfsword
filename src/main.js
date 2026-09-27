@@ -11,7 +11,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST } from './weapons.js';
 import { attachAura } from './aura.js';
@@ -425,6 +425,21 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
 });
 refreshSettingsUI();
 
+let lastFoeLine = ''; // 이번 판 끝에 상대가 한 말 (결과 화면에도 적는다)
+/** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 */
+function showFoeLine(ch, line) {
+  lastFoeLine = line;
+  if (!line) return;
+  const el = $('foeIntro');
+  clearTimeout(showFoeIntro.t);
+  el.querySelector('b').textContent = ch.name;
+  el.querySelector('i').textContent = '';
+  el.querySelector('span').textContent = `“${line}”`;
+  el.querySelector('em').textContent = '';
+  el.classList.add('show');
+  showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3400);
+}
+
 // 이번 상대 소개 (이름 · 별명 · 한마디). 큰 글씨 알림(toast)과 따로, 작게 잠깐 보여 준다
 function showFoeIntro(ch) {
   const el = $('foeIntro');
@@ -432,7 +447,7 @@ function showFoeIntro(ch) {
   if (!ch) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
-  el.querySelector('span').textContent = `“${ch.taunt}”`;
+  el.querySelector('span').textContent = `“${randomLine(ch, 'intro')}”`; // 시작 대사 3종 중 하나
   const em = el.querySelector('em');
   em.textContent = '';
   // 판이 열리자마자 바로 띄우고 무기 룰렛을 돌린다. 룰렛이 멈추기 전까지는 두 무기를 감춰 둔다
@@ -688,6 +703,8 @@ function checkRoundEnd(dt) {
       roundOver = true;
       const win = !enemy.alive;
       showToast(win ? '승리' : '패배', 0);
+      if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
+      else lastFoeLine = '';
     }
     return;
   }
@@ -704,7 +721,8 @@ function checkRoundEnd(dt) {
       ? { 목: '목을 베었다', 머리: '머리를 쳤다', 출혈: '출혈로 쓰러뜨렸다', 기절: '기절시켰다' }[loser.causeOfDeath] || '쓰러뜨렸다'
       : { 목: '목을 베였다', 머리: '머리를 맞았다', 출혈: '피를 너무 흘렸다', 기절: '기절했다' }[loser.causeOfDeath] || '쓰러졌다';
     $('menuTitle').textContent = win ? '승리' : '패배';
-    $('menuSub').textContent = cause;
+    // 졌으면 상대의 승리 대사를 한 줄 덧붙인다 (사장님 확정)
+    $('menuSub').textContent = !win && lastFoeLine ? `${cause} · ${currentFoe.name}: “${lastFoeLine}”` : cause;
     $('btnStart').textContent = '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
