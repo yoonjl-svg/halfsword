@@ -381,7 +381,11 @@ const jian = finalizeSpec('jian', {
   nameKo: '지안 (중국검)', nameEn: 'Jian',
   grip: 'one-hand', material: 'steel',
   hiltLength: 0.12, bladeLength: 0.74,
-  mCut: 1.0, mThrust: 1.15, mBlunt: 0.95, // 캐릭터 PM 계약: 가볍고 빠름·찌르기 강함·누르는 힘 약함(한손 12N·m)
+  // 캐릭터 PM 계약: 가볍고 빠름·찌르기 강함·누르는 힘 약함(한손 12N·m). 0.85kg 한손검이라 물리 에너지가
+  // 롱소드의 2/3쯤(유효타 평균 53J vs 78J)이어서 mCut 1.0이면 커먼 등급 중간 실력이 안 나왔다(승률 10%).
+  // mCut 은 상처 깊이(severity)에만 곱하고 표시되는 타격 J는 안 바꾼다. 목표 "롱소드 대비 상처 80~90%"는
+  // 1.3에서 32%(승률 14%), 1.5에서 87%(승률 22%, 판당 severity 1.42 vs 1.64)라 1.5로 둔다 — 카타나(1.85)보다 낮다.
+  mCut: 1.5, mThrust: 1.15, mBlunt: 0.95,
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.1, 0.015, 0.09, 0.015);
