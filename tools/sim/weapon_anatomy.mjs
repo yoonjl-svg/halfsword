@@ -3,7 +3,8 @@
 //  문턱 대비 비율(eff/thr — combat.analyze 와 같은 식), 칼끝 속도, 유효 질량, 칼날 위치를 모은다.
 //  duel  : 무기 X(AI) 대 롱소드(AI), 자리를 바꿔 가며 (weapon_balance.mjs 와 같은 판 구성) — 양쪽을 따로 센다
 //  dummy : 기본 AI 가 무기 X 로 가만히 칼을 겨눈 더미를 친다 (막는 상대가 없을 때 이 무기의 공격력)
-// 사용법: node tools/sim/weapon_anatomy.mjs [duel|dummy] [판 수] [무기id...]
+// 사용법: node tools/sim/weapon_anatomy.mjs [duel|dummy] [판 수] [무기id...] [--seed=첫 시드 번호]
+//   시드: duel 1000+s / 2000+s, dummy 60+s (s = 첫 번호부터 판 수만큼, 기본 1)
 import { newRound, DT, AI, THREE } from './harness_m.mjs';
 import { WEAPONS, getWeapon } from '../../src/weapons.js';
 import { applyWeaponMeasure } from './weapon_measures.mjs';
@@ -183,7 +184,8 @@ function line(label, s, mins, extra = '') {
 }
 
 if (isMain(import.meta.url)) {
-  const args = process.argv.slice(2);
+  const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+  const S0 = +(process.argv.find((a) => a.startsWith('--seed='))?.split('=')[1] ?? 1); // --seed=첫 시드 번호 (기본 1: 예전과 같은 판)
   const mode = args[0] || 'duel';
   const N = +(args[1] || 6);
   const ids = args.slice(2).length ? args.slice(2) : Object.keys(WEAPONS);
@@ -201,7 +203,7 @@ if (isMain(import.meta.url)) {
       let clashes = 0;
       const band = { out: 0, longOnly: 0, both: 0 };
       let cMe = 0;
-      for (let s = 1; s <= N; s++) {
+      for (let s = S0; s < S0 + N; s++) {
         for (const swap of [false, true]) {
           const r = swap ? duel('longsword', id, 2000 + s, ROUND_SECONDS) : duel(id, 'longsword', 1000 + s, ROUND_SECONDS);
           const mine = swap ? r.G.enemy : r.G.player;
@@ -235,7 +237,7 @@ if (isMain(import.meta.url)) {
       let kills = 0;
       let attacks = 0;
       const ttk = [];
-      for (let s = 1; s <= N; s++) {
+      for (let s = S0; s < S0 + N; s++) {
         const r = dummyRun(id, 60 + s, ROUND_SECONDS);
         merge(acc, r.side);
         mins += r.t / 60;

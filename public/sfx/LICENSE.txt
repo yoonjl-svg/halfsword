@@ -20,12 +20,7 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       generic_bleed1.mp3  <- yell3.wav
       heinrich_ko1.mp3    <- 2yell1.wav        heinrich_ko2.mp3 <- 2yell10.wav
       heinrich_bleed1.mp3 <- 2yell6.wav
-
-  CC0 (public domain) — "Female screams" collection, OpenGameArt
-    https://opengameart.org/content/female-screams
-      isolde_ko1.mp3      <- 1.ogg  (tcrocker68, freesound.org/people/tcrocker68/sounds/235595/)
-      margarethe_ko1.mp3  <- 2.ogg  (tcrocker68, freesound.org/people/tcrocker68/sounds/235592/)
-      isolde_bleed1.mp3   <- 4.ogg  (Archeos,    freesound.org/people/Archeos/sounds/261419/)
+      liao_bleed1.mp3     <- yell6.wav         liao_bleed2.mp3  <- 2yell9.wav
 
   CC-BY 3.0 — Michel Baradari, "11 male human pain/death sounds"
     https://opengameart.org/content/11-male-human-paindeath-sounds

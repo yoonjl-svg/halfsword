@@ -49,8 +49,8 @@ export function newRound(opts = {}) {
   }
   const scene = new THREE.Scene();
   const gap = opts.gap ?? ARENA.startGap;
-  const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: LOOKS.player, weapon: opts.weapon });
-  const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: opts.sameLook ? LOOKS.player : LOOKS.enemy, weapon: opts.weapon2 ?? opts.weapon });
+  const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: LOOKS.player, weapon: opts.weapon, breakSeed: opts.seed });
+  const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: opts.sameLook ? LOOKS.player : LOOKS.enemy, weapon: opts.weapon2 ?? opts.weapon, breakSeed: opts.seed });
   if (opts.onFighter) { opts.onFighter(player, world, RAPIER); opts.onFighter(enemy, world, RAPIER); }
   const AIC = opts.AIClass || AI;
   const ai = new AIC(enemy, player, opts.difficulty ?? 'normal', opts.persona ?? null);
