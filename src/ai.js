@@ -81,6 +81,7 @@ export class AI {
     //  지금 검술에 효과를 내는 것은 공포뿐이고(this.fear), 분노·집념은 판정만 하며 세기와 지배 시간을 잰다
     this.emo = { fear: 0, anger: 0, obsession: 0 };
     this.anger = 0; // 검술에 실제로 걸리는 분노 세기 (분노가 지배 감정일 때만 > 0)
+    this.obsession = 0; // 검술에 실제로 걸리는 집념 세기 (집념이 지배 감정일 때만 > 0)
     this.emotion = null; // 지배 감정 이름 (없으면 null)
     this.fear = 0; // 검술에 실제로 쓰는 공포 세기 (다른 감정이 지배하면 0)
     this.emoT = 0;
@@ -296,6 +297,7 @@ export class AI {
     if (this.guard?.name === 'alber') m -= 0.12; // 바보 자세: 머리를 비워 두고 조금 더 다가가 유인한다
     if (this.cautious) m += 0.2;
     m += this.fear * 0.35; // 겁먹으면 상대 칼에서 더 멀찍이 선다
+    m -= this.obsession * 0.15; // 물고 늘어질 땐 간격 끝보다 조금 더 안쪽에 선다
     m += (1 - this.me.vigor) * 0.3; // 다쳐서 힘이 빠지면 더 조심스럽게 선다
     if (!this.me.armed) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
@@ -320,8 +322,9 @@ export class AI {
    *  분노: 켜지는 순간 인내심 0.2로 + 주고받은 뒤 인내심이 덜 돌아온다(afterStrike), 속임수 안 씀(startAttack),
    *   무거운 베기 ×1.6(pickTech), 이어치기 +0.2(afterStrike), 규율 ×0.7(holdDist·moveFeet: 덜 물러난다),
    *   반응 +0.04s(step), 지붕 자세 선호(pickGuard).
-   * 집념은 판정만 하며 세기·지배 시간·켜진 횟수를 stats에 잰다.
-   * 문턱값이 전부 0이면 this.fear·this.anger가 늘 0이라 모든 곳이 예전과 똑같이 계산된다.
+   *  집념(this.obsession — 집념이 지배할 때만): 이어치기 최대 2→3, 물러남 0.9→0.5s(afterStrike), 접근 포기 문턱
+   *   ×1.5(attack), 간격 −0.15m(holdDist). 막기·피하기(respond)는 그대로 — 방어는 유지한다.
+   * 문턱값이 전부 0이면 this.fear·this.anger·this.obsession이 늘 0이라 모든 곳이 예전과 똑같이 계산된다.
    */
   emote(dt, hurt, nearMiss) {
     const P = this.pers;
@@ -373,6 +376,7 @@ export class AI {
     }
     this.fear = this.emotion === 'fear' || this.emotion === null ? E.fear : 0;
     this.anger = this.emotion === 'anger' ? E.anger : 0;
+    this.obsession = this.emotion === 'obsession' ? E.obsession : 0;
     if (this.emotion === 'anger' && cur !== 'anger') this.patience = Math.min(this.patience, 0.2); // 발끈한 순간: 참을성이 바닥난다
 
     // 관찰용 통계: 감정별 최고 세기, 지배한 시간, 지배 감정으로 켜진 횟수
@@ -623,7 +627,8 @@ export class AI {
 
       if (th && this.noticedThreat(th) && this.respond(th, d)) return;
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
-      if (this.attackT > (this.chasing ? 3 : 1.4) || d > this.holdDist() + (this.chasing ? 1.4 : 0.8)) this.abortAttack();
+      const keep = 1 + 0.5 * this.obsession; // 물고 늘어질 땐 접근을 쉽게 포기하지 않는다
+      if (this.attackT > (this.chasing ? 3 : 1.4) * keep || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep) this.abortAttack();
     } else if (this.phase === 'strike') {
       this.handSpeed = L.strikeSpeed;
       this.checkBind();
@@ -722,7 +727,8 @@ export class AI {
     }
     // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
     //  간격 끝(clinch 근처)에서도 짧게 이어 칠 수 있어야 몰아치는 상대에게 계속 밀리지 않는다
-    const canChain = this.chain < 2 && d < this.M.reach + 0.1 && d > this.M.clinch - 0.5 && this.foe.alive;
+    const maxChain = this.obsession > 0.5 ? 3 : 2; // 물고 늘어질 땐 한 번 더 이어 친다
+    const canChain = this.chain < maxChain && d < this.M.reach + 0.1 && d > this.M.clinch - 0.5 && this.foe.alive;
     const want = (this.hitLanded || this.bound ? L.followUp : L.followUp * 0.4) + 0.2 * this.anger; // 화나면 더 이어 친다
     if (canChain && Math.random() < want) {
       // 지금 손 위치에서 바로 이어지는 기술 (다시 크게 들지 않는다)
@@ -746,7 +752,7 @@ export class AI {
     }
     // 한 번 주고받았으니 다시 간을 본다 (인내심이 조금 돌아온다)
     this.patience = Math.max(this.patience, rand(0.45, 0.75) * (1 - 0.7 * this.anger)); // 화나면 간을 볼 참을성이 안 돌아온다
-    this.startWithdraw(0.9);
+    this.startWithdraw(0.9 - 0.4 * this.obsession); // 물고 늘어질 땐 짧게만 물러난다 (막기는 그대로)
   }
 
   // ───────────────────────── 물러나기 ─────────────────────────
