@@ -149,6 +149,7 @@ function dummyRun(weapon, seed, secs) {
     if (i % 4 === 0 && G.enemy.state === 'stand') sides.get(G.enemy).tip.push(tipSpeed(G.enemy));
     if (!P.alive) break;
   }
+  for (const k of AI_KEYS) sides.get(G.enemy).ai[k] = G.ai.stats[k] ?? 0;
   return { G, side: sides.get(G.enemy), t, killed: !P.alive, attacks: G.ai.stats.attacks };
 }
 
