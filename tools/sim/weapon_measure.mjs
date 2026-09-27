@@ -1,105 +1,104 @@
-// 무기별 간격 상수(measure: contact/reach/clinch/cutTime) 실측 도구.
-// 캐릭터 PM의 유파 꾸러미 계약(docs/school_contract.md, claude/pm-characters)에 맞춰,
-// AI 없이 "가만히 선 상대"에게 정수리 베기(oberhau, ai_techniques.js)를 반복해서 재 본다.
-//   - contact: 제자리에서(내딛지 않고) 벤 정수리 베기가 머리·목에 실제로 "베기"(cut) 판정으로
-//     닿는 최대 거리. 이분 탐색으로 찾는다.
-//   - reach: 같은 베기에 한 걸음 내딛기(move.y=1)를 더했을 때 닿는 최대 거리.
-//   - clinch: 실측하지 않고, 롱소드 기준(clinch/contact = 1.25/1.62)의 비율로 contact에서 유도한다
-//     ("너무 붙어 칼을 못 쓰는 거리"는 이분 탐색으로 정의하기 애매해 기존 비율을 그대로 옮긴다).
-//   - cutTime: 손이 준비 자세를 벗어나기 시작해서 실제로 닿기까지 걸린 시간(그 거리에서).
+// 무기별 간격 상수(measure: contact/reach/clinch/cutTime) 실측 도구, 2차 버전.
+// 캐릭터 PM의 유파 꾸러미 계약(docs/school_contract.md, claude/pm-characters)에 맞춰 잰다.
+//
+// 1차 시도(상대에게 실제로 맞혀서 이분 탐색)는 몸이 손 목표를 따라가며 흔들리는 탓에 거리에
+// 비례해 깔끔히 명중/불명중이 갈리지 않아 버렸다(같은 파일의 git 기록 참고). 이번엔 상대를
+// 아예 치우고(park()) 혼자 휘두르는 궤적만 본다:
+//   - 정수리를 노리는 분노의 베기(zornhau — 코드 주석에 "가장 잘 통함"이라고 되어 있다)를
+//     스크립트로 한 번 휘두르면서, 칼날 70% 지점이 "머리 높이"(y 1.45~1.75m)를 지나는 순간의
+//     내 가슴 기준 앞쪽 거리를 매 스텝 기록한다. 그 최댓값이 "이 무기+이 몸이 닿을 수 있는
+//     최대 거리"의 kinematic 대응치다 — 상대 몸과의 충돌 판정이 전혀 없어 거리를 몰라도 한 번만
+//     돌리면 되고(이분 탐색 불필요), 노이즈도 없다.
+//   - 다만 이 값 자체가 원래 개발자가 롱소드를 재서 얻은 contact(1.62m)와 그대로 맞아떨어지진
+//     않는다(측정한 롱소드 raw 값은 ~1.41m) — 정확히 같은 기술·타이밍으로 쟀다는 보장이 없어서
+//     생기는 체계적 오차로 보고, 롱소드 raw 값이 1.62가 되도록 하는 배율(CALIBRATION)을 모든
+//     무기에 똑같이 곱해 보정한다. (상대적인 무기별 차이는 그대로 살아 있다고 본다.)
+//   - reach는 같은 스윙에 한 걸음 내딛기(move.y=1)를 더해서 잰다. clinch는 이번에도 실측하지
+//     않고 롱소드 비율(0.7716 = clinch/contact)로 유도한다.
+//   - cutTime은 그 최대 도달 순간까지 걸린 시간을 그대로 쓴다(거리 보정과 무관하니 배율 없음).
+//
 // 사용법: node tools/sim/weapon_measure.mjs [무기id...] (생략 시 전체)
 import { newRound, DT } from './harness_m.mjs';
 import { WEAPONS } from '../../src/weapons.js';
-import { G, TECH_BY_NAME } from '../../src/ai_techniques.js';
+import { TECH_BY_NAME } from '../../src/ai_techniques.js';
 
-const TECH = TECH_BY_NAME.oberhau; // 정수리 베기: tag(지붕) → [0,0.14] → alber(바보). 곧게 내려베어 머리·목을 노린다
-const CHAMBER_TIME = 0.5; // 준비 자세로 먼저 가라앉히는 시간
-const SWING_TIME = 0.35; // 손이 path를 따라 움직이는 시간 (AI_LEVELS.normal.strikeSpeed 언저리)
+const TECH = TECH_BY_NAME.zornhau;
+const CHAMBER_TIME = 0.5;
+const SWING_TIME = 0.35; // 이 값에서 롱소드 raw contact가 가장 크게(가장 "제대로 휘두른") 나왔다
+const HEAD_Y_LO = 1.45;
+const HEAD_Y_HI = 1.75;
+const CLINCH_RATIO = 1.25 / 1.62; // 롱소드 기준값의 비율을 그대로 물려받는다 (clinch는 따로 안 잰다)
 
-/** attacker가 정지한 target(챔피언 자세 그대로)에게 oberhau를 한 번 치는 시뮬. dist=가슴 간 시작 거리(m) */
-function trySwing(weaponId, dist, { lunge = false } = {}) {
-  const G_ = newRound({ walls: false, weapon: weaponId, weapon2: weaponId, gap: dist });
-  const att = G_.player;
-  const tgt = G_.enemy;
-  att.faceTarget = tgt.bodies.pelvis.translation();
-  tgt.faceTarget = att.bodies.pelvis.translation();
-  tgt.handOffset.set(G.alber[0], G.alber[1]); // 정말로 "가만히 선" 상대: 칼을 아래로 늘어뜨려 머리를 가리지 않는다
-  let hitT = null;
-  let hitInfo = null;
-  let swingStarted = false;
-  let swingStartT = 0;
-  G_.combat.hooks.onWound = (a, v, r) => {
-    // 준비 자세로 가라앉는 동안(손을 처음 그 자리로 홱 옮기는 순간)의 우발적 접촉은 무시한다
-    if (a === att && v === tgt && swingStarted && hitT == null) {
-      hitT = G_.t - swingStartT;
-      hitInfo = r;
-    }
-  };
+function lerp(a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+}
+
+/** weaponId로 혼자 zornhau를 한 번 휘두르며 칼날 70% 지점이 머리 높이를 지나는 순간의
+ * 최대 전방 거리(가슴 기준)와 그때까지 걸린 시간을 잰다. lunge=true면 내딛기를 더한다. */
+function measureSwing(weaponId, { lunge = false } = {}) {
+  const G = newRound({ weapon: weaponId, weapon2: weaponId, seed: 1 });
+  G.park();
+  const att = G.player;
+  const path = [TECH.from, ...TECH.path];
   let phase = 'chamber';
   let phaseT = 0;
-  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-  const path = [G.tag, ...TECH.path];
-  for (let i = 0; i < 4 / DT; i++) {
-    const dt = DT;
-    phaseT += dt;
-    tgt.move.set(0, 0);
+  let maxFwd = -Infinity;
+  let atT = 0;
+  let startChest = null;
+  let startFwd = null;
+  for (let i = 0; i < 3 / DT; i++) {
+    phaseT += DT;
     if (phase === 'chamber') {
-      att.handOffset.set(G.tag[0], G.tag[1]);
+      att.handOffset.set(TECH.from[0], TECH.from[1]);
       att.move.set(0, 0);
       if (phaseT > CHAMBER_TIME) {
         phase = 'swing';
         phaseT = 0;
-        swingStarted = true;
-        swingStartT = G_.t;
+        // "닿는 거리"는 스윙을 시작하는 순간의 가슴 위치·방향 기준이다 — 내딛기(lunge)로
+        // 몸이 앞으로 나가는 동안 계속 기준을 다시 잡으면(현재 가슴 기준) 그 전진분이
+        // 사라져 버려서, 스윙 시작 시점에 고정해 둔다.
+        startChest = att.bodies.chest.translation();
+        startChest = { x: startChest.x, y: startChest.y, z: startChest.z };
+        startFwd = att.forward();
+        startFwd = { x: startFwd.x, y: startFwd.y, z: startFwd.z };
       }
     } else if (phase === 'swing') {
       const u = Math.min(1, phaseT / SWING_TIME);
-      // path: [tag, mid, alber] 세 점을 두 구간으로 선형 보간
       const seg = u < 0.5 ? [path[0], path[1], u * 2] : [path[1], path[2], (u - 0.5) * 2];
       const [x, y] = lerp(seg[0], seg[1], seg[2]);
       att.handOffset.set(x, y);
       att.move.set(0, lunge ? 1 : 0);
-      if (phaseT > SWING_TIME + 0.5) phase = 'done';
     }
-    att.foe = tgt;
-    tgt.foe = att;
-    G_.step();
-    if (hitT != null && G_.t - swingStartT - hitT > 0.15) break; // 맞은 뒤 충분히 지나가면 그만
-    if (phase === 'done' && G_.t > CHAMBER_TIME + SWING_TIME + 1) break;
+    G.step();
+    if (phase === 'swing') {
+      const p = att.bladePoint(0.7);
+      if (p.y > HEAD_Y_LO && p.y < HEAD_Y_HI) {
+        const forwardDist = (p.x - startChest.x) * startFwd.x + (p.z - startChest.z) * startFwd.z;
+        if (forwardDist > maxFwd) {
+          maxFwd = forwardDist;
+          atT = phaseT;
+        }
+      }
+    }
   }
-  const landed = hitInfo && (hitInfo.type === 'cut' || hitInfo.type === 'stab') && hitInfo.severity > 0 && (hitInfo.zone === 'head' || hitInfo.zone === 'neck');
-  return { landed, hitT, hitInfo };
+  return { raw: maxFwd, cutTime: atT };
 }
 
-// 여러 거리로 직접 훑어 보니(zornhau·oberhau 둘 다) "닿는가"가 거리에 비례해 깔끔히
-// 줄어들지 않는다 — 1.6m에서는 닿고 1.7~1.8m에서는 빗나가다가 1.9~2.1m에서 다시 크게
-// 닿는 식으로 들쭉날쭉하다. 몸이 손 목표를 따라가며 미세하게 흔들리는(자연스러운 체중 이동)
-// 탓으로 보이는데, 그 결과 아래 이분 탐색은 "거리가 가까울수록 반드시 닿는다"는 전제가
-// 깨져 있어 완전히 믿을 수는 없다. docs/weapons.md에도 이 한계를 그대로 적어 두었다.
-/** 이분 탐색으로 "닿는 최대 거리"를 찾는다 (lo=반드시 닿음, hi=반드시 안 닿음에서 시작) */
-function bisectMaxDist(weaponId, opts) {
-  let lo = 0.9;
-  let hi = 2.6;
-  // hi에서 안 닿는지, lo에서 닿는지 먼저 확인 (범위를 벗어나면 늘림/줄임)
-  for (let i = 0; i < 8; i++) {
-    const mid = (lo + hi) / 2;
-    const r = trySwing(weaponId, mid, opts);
-    if (r.landed) lo = mid;
-    else hi = mid;
-  }
-  return { dist: lo, ...trySwing(weaponId, lo, opts) };
-}
+// 보정 배율: 롱소드의 raw contact가 정확히 1.62가 되도록 맞춘다
+const longswordRaw = measureSwing('longsword', { lunge: false }).raw;
+const CALIBRATION = 1.62 / longswordRaw;
 
 const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(WEAPONS);
 const rows = [];
+console.log(`보정 배율(롱소드 raw ${longswordRaw.toFixed(3)}m → 1.62m 기준): ${CALIBRATION.toFixed(4)}\n`);
 for (const id of ids) {
-  const contactR = bisectMaxDist(id, { lunge: false });
-  const reachR = bisectMaxDist(id, { lunge: true });
-  const contact = +contactR.dist.toFixed(2);
-  const reach = +reachR.dist.toFixed(2);
-  const clinch = +(contact * (1.25 / 1.62)).toFixed(2); // 롱소드 비율로 유도 (실측 아님)
-  const cutTime = contactR.hitT != null ? +contactR.hitT.toFixed(2) : null;
+  const c = measureSwing(id, { lunge: false });
+  const r = measureSwing(id, { lunge: true });
+  const contact = +(c.raw * CALIBRATION).toFixed(2);
+  const reach = +(r.raw * CALIBRATION).toFixed(2);
+  const clinch = +(contact * CLINCH_RATIO).toFixed(2);
+  const cutTime = +c.cutTime.toFixed(2);
   rows.push({ id, contact, reach, clinch, cutTime });
-  console.log(`${id.padEnd(16)} contact=${contact}  reach=${reach}  clinch=${clinch}  cutTime=${cutTime ?? '-'}`);
+  console.log(`${id.padEnd(16)} contact=${contact}  reach=${reach}  clinch=${clinch}  cutTime=${cutTime}`);
 }
 console.log('\n' + JSON.stringify(rows, null, 1));
