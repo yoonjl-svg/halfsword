@@ -66,12 +66,13 @@ console.log(`${variant}: jitter bladeW_rms ${rms(bladeW).toFixed(2)} chestW_rms 
   console.log(`${variant}: guard-hold error  bladeDir ${(Math.max(...devDir)).toFixed(1)}°(최대) ${rms(devDir).toFixed(1)}°(rms)  chestYaw ${(Math.max(...devYaw)).toFixed(1)}°(최대) ${rms(devYaw).toFixed(1)}°(rms)`);
 }
 
-// ── 홱 움직임 → 베기 시작 지연(flick-to-cut latency): 팔/칼끝 목표(aim)는 입력 쪽 관성을 안 거치므로
-//    handDynamicsOn을 켜고 꺼도 onset(칼이 움직이기 시작하는 시각)·b10_90(칼이 다 돌아가는 시간)은 그대로여야 한다 ──
+// ── 홱 움직임 → 베기 시작 지연(flick-to-cut latency): 팔/칼끝 목표(aim)도 가죽끈(anchor)을 거치지만,
+//    베기처럼 큰 움직임에서는 끈이 곧바로 팽팽해지므로 handDynamicsOn을 켜고 꺼도
+//    onset(칼이 움직이기 시작하는 시각)·b10_90(칼이 다 돌아가는 시간)은 거의 그대로여야 한다 ──
 {
   const was = CONFIG.SKILL.handDynamicsOn;
   CONFIG.SKILL.handDynamicsOn = false; const off = liveCuts(13).avg3;
   CONFIG.SKILL.handDynamicsOn = true; const on = liveCuts(13).avg3;
   CONFIG.SKILL.handDynamicsOn = was;
-  console.log(`${variant}: flick-to-cut  onset ${off.onset}→${on.onset}ms  b10_90 ${off.b10_90}→${on.b10_90}ms  tip ${off.tip}→${on.tip}m/s (handDynamicsOn 꺼짐→켜짐, 팔 목표는 안 거치므로 거의 그대로여야 한다)`);
+  console.log(`${variant}: flick-to-cut  onset ${off.onset}→${on.onset}ms  b10_90 ${off.b10_90}→${on.b10_90}ms  tip ${off.tip}→${on.tip}m/s (handDynamicsOn 꺼짐→켜짐, 거의 그대로여야 한다)`);
 }
