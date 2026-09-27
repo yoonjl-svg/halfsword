@@ -32,8 +32,8 @@ const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // 감정이 풀린 뒤 같은 감정이 다시 지배할 수 있기까지의 텀(초)과, 어떤 감정이든 다시 켜질 수 있기까지의 텀(초)
-const EMO_REST = 6;
-const EMO_REST_ALL = 2;
+const EMO_REST = 9;
+const EMO_REST_ALL = 6;
 export class AI {
   /**
    * persona: 캐릭터마다 다른 개성을 주입한다 (characters.js). 안 주면(undefined) 예전과 똑같은
@@ -318,8 +318,8 @@ export class AI {
    * (자포자기는 공포와 겹치고 교활함은 감정보다 성격·격투 스타일에 가까워 뺐다 — 교활함은 feint·alber 취향으로,
    *  자포자기는 hurry()의 desperate로 이미 표현된다)
    * 지배 감정은 하나: 0.3을 넘은 것 중 생존 우선(공포 > 분노 > 집념). 지배 감정이 바뀌려면 새 감정이 0.15 이상
-   * 더 세야 한다(왔다 갔다 하지 않게). 지배 감정이 0.15 아래로 가라앉으면 물러난다. 풀리거나 자리를 뺏긴 감정은 EMO_REST(6초)
-   * 동안 다시 지배하지 못하고, 어떤 감정이든 직전 감정이 풀린 뒤 EMO_REST_ALL(2초)은 쉰다 — 연달아 켜지지 않게 하는 텀.
+   * 더 세야 한다(왔다 갔다 하지 않게). 지배 감정이 0.15 아래로 가라앉으면 물러난다. 풀리거나 자리를 뺏긴 감정은 EMO_REST(9초)
+   * 동안 다시 지배하지 못하고, 어떤 감정이든 직전 감정이 풀린 뒤 EMO_REST_ALL(6초)은 쉰다 — 연달아 켜지지 않게 하는 텀.
    *
    * 검술에 효과를 내는 것은 공포(this.fear — 다른 감정이 지배하면 0)와 분노(this.anger — 분노가 지배할 때만)다.
    *  공포: holdDist(간격을 더 둔다), pickGuard(칼끝으로 겨누는 자세만 잡는다), watch(헛친 상대·쓰러진 상대 말고는
