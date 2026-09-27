@@ -3,7 +3,7 @@
 오너 요청: "캐릭터 모델링을 개선하고 싶다." 5인의 상대 캐릭터에 갑옷판·머리모양·수염·안대 같은
 장식 레이어(`src/outfits.js`)를 새로 얹고, 예전 겉모습은 지우지 않고 `src/looks.js`의
 `LOOK_ARCHIVE`에 `v0`로 남겨 두었다. 지금 게임이 쓰는 버전은 `CHARACTER_LOOK_VERSION`이
-가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 랴오 `v3`, 브란만 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
+가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 랴오 `v4`, 브란만 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
 
 플레이어(케틀햇+갬비슨)의 겉모습은 요청대로 건드리지 않았다.
 
@@ -111,13 +111,20 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 무도가 실루엣만 참고한 새 디자인 — V자로 여민 푸른 도복 윗도리(흰 속옷이 보임), 팔꿈치 쪽으로 넓어지는
 소매, 흰 새끼줄 허리띠 매듭, 발목까지 오는 넓은 남색 하카마, 짚신 색 신. X자 가죽끈은 뺐고 장발·안대는 그대로.
 
-**v3(지금, `outfit: 'liao_gi_wild'`)**: 오너 요청 "좀 더 풍성한 꽁지머리 산발, V넥 위로 살색이 보여 V넥 강조".
+**v3(보관, `outfit: 'liao_gi_wild'`)**: 오너 요청 "좀 더 풍성한 꽁지머리 산발, V넥 위로 살색이 보여 V넥 강조".
 뒤통수 높이 묶은 굵은 꽁지머리가 다섯 가닥으로 부채처럼 뻗고, 정수리·옆·앞머리에 삐친 가닥을 달아
 산발로(안대·머리띠 유지). 흰 속옷을 빼고 V자 깃 사이로 맨살이 보이게 했다. 옷·색은 v2 그대로.
 근접: [정면](character_looks/liao_v3_head_front.jpg) · [옆(꽁지머리)](character_looks/liao_v3_head_side.jpg) ·
 [뒤](character_looks/liao_v3_head_back.jpg) · [전신](character_looks/liao_v3.jpg)
 
-| v0 | v1 | v2 (지금은 v3) |
+**v4(지금, `outfit: 'liao_gi_curly'`)**: 오너 피드백 "너무 뾰족해, 컬과 볼륨이 있는 머리, V넥 안쪽으로 살짝
+흰 깃이 겹치게". v3의 뾰족한 원뿔 가닥을 모두 둥근 곱슬 뭉치로 바꿔 머리 전체에 볼륨을 주고(황금각 나선으로
+골고루, 얼굴은 비움), 꽁지머리도 좌우로 굽이치는 곱슬 덩어리 두 줄로. 파란 깃 바로 안쪽에 흰 속깃이 겹치고
+그 안으로 맨살. 근접: [정면](character_looks/liao_v4_head_front.jpg) ·
+[옆(곱슬 꽁지머리)](character_looks/liao_v4_head_side.jpg) · [뒤](character_looks/liao_v4_head_back.jpg) ·
+[전신](character_looks/liao_v4.jpg)
+
+| v0 | v1 | v2 (지금은 v4) |
 | --- | --- | --- |
 | ![liao v0](character_looks/liao_v0.jpg) | ![liao v1](character_looks/liao_v1.jpg) | ![liao v2](character_looks/liao_v2.jpg) |
 

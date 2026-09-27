@@ -264,6 +264,64 @@ const LIAO_GI_WILD = {
   },
 };
 
+// 랴오 v4(오너 피드백 "너무 뾰족해, 컬과 볼륨이 있는 머리"): v3의 뾰족한 원뿔 대신 둥근 곱슬 뭉치로
+// 머리 전체를 부풀리고, 꽁지머리도 좌우로 굽이치는 곱슬 덩어리로 흘러내리게 한다. 가슴은 V자 깃 안쪽에
+// 흰 속깃이 살짝 겹쳐 보이고 그 안으로 맨살. 난수 없이 황금각 나선으로 곱슬 자리를 골고루 정한다.
+const LIAO_CURLS = (() => {
+  const out = [];
+  const n = 70;
+  for (let i = 0; i < n; i++) {
+    const y = 1 - ((i + 0.5) / n) * 2;
+    const r = Math.sqrt(1 - y * y);
+    const a = i * 2.39996;
+    const d = [Math.cos(a) * r, y, Math.sin(a) * r]; // 머리 중심에서 본 방향
+    if (d[1] < -0.15) continue; // 턱 아래는 없다
+    if (d[0] > 0.45 && d[1] < 0.6) continue; // 얼굴은 비운다
+    if (d[1] < 0.15 && d[0] > -0.2) continue; // 귀 아래 옆얼굴도 비운다
+    const size = 0.03 + (i % 3) * 0.005;
+    out.push([[-0.01 + d[0] * 0.1, 0.01 + d[1] * 0.1, d[2] * 0.1], size]);
+  }
+  return out;
+})();
+// 꽁지머리: 묶은 자리에서 뒤·아래로, 좌우로 번갈아 굽이치며 점점 작아지는 곱슬 덩어리
+const LIAO_CURLY_TAIL = Array.from({ length: 10 }, (_, i) => {
+  const t = i / 9;
+  return [[-0.11 - t * 0.12, 0.07 - t * 0.28, (i % 2 ? 1 : -1) * 0.025 * (1 - t * 0.5)], 0.042 - t * 0.02];
+});
+const LIAO_GI_CURLY = {
+  ...LIAO_GI_WILD,
+  head(g, look) {
+    const lump = ([p, r]) => bake(new THREE.SphereGeometry(r, 7, 5), p, null, [1, 0.9, 1]);
+    const hair = [
+      ...LIAO_CURLS.map(lump),
+      new THREE.SphereGeometry(0.04, 8, 6).translate(-0.1, 0.07, 0), // 묶은 자리
+      ...LIAO_CURLY_TAIL.map(lump),
+      // 곁가지로 한 줄 더 — 꽁지머리에 볼륨
+      ...LIAO_CURLY_TAIL.slice(1, 7).map(([[x, y, z], r]) => lump([[x + 0.015, y + 0.01, -z * 1.6], r * 0.8])),
+      // 앞머리: 머리띠 위로 둥글게 넘친 곱슬 셋 (눈·안대는 가리지 않는다)
+      lump([[0.075, 0.068, 0.035], 0.026]),
+      lump([[0.08, 0.072, -0.005], 0.026]),
+      lump([[0.07, 0.078, -0.045], 0.024]),
+    ];
+    addMerged(g, hair, look.hair, { roughness: 1 });
+    const patch = [
+      ball(0.02, 10, 8, [0.096, 0.016, -0.035], [0, 0.3, 0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, 0.04, -0.06], [0, 0, 1.0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, -0.01, -0.06], [0, 0, -1.0]),
+    ];
+    addMerged(g, patch, 0x1a1a1a, { roughness: 0.9 });
+  },
+  chest(g, look) {
+    LIAO_GI_WILD.chest(g, look);
+    // 흰 속깃: 파란 깃 바로 안쪽에 나란히, 살짝 겹쳐 보이게 (파란 깃보다 한 겹 뒤, 맨살보다 한 겹 앞)
+    addMerged(
+      g,
+      [box(0.003, 0.22, 0.02, [0.1245, 0.035, 0.022], [0.42, 0, 0]), box(0.003, 0.22, 0.02, [0.1245, 0.035, -0.022], [-0.42, 0, 0])],
+      GI_WHITE,
+    );
+  },
+};
+
 // ═══════════════════════════════════ 하인리히 도른: 은빛 중갑 기사 ═══════════════════════════════════
 // 설정집: "화려한 배색"의 자칭 왕의 기사 — 은빛 판금이라도 수수하게 죽이지 않는다. 실전 갑옷보다
 // 훨씬 반들반들하게 닦아(금속성↑·거칠기↓) 과시욕을 드러내고, 예전 금빛 복제 엑스칼리버·금장 취향을
@@ -663,6 +721,7 @@ export const OUTFITS = {
   liao_ronin: LIAO_RONIN,
   liao_gi: LIAO_GI,
   liao_gi_wild: LIAO_GI_WILD,
+  liao_gi_curly: LIAO_GI_CURLY,
   heinrich_knight: HEINRICH_KNIGHT,
   heinrich_full_plate: HEINRICH_FULL_PLATE,
   margarethe_dragon: MARGARETHE_DRAGON,
