@@ -22,6 +22,7 @@
 //   pose     그 밖의 고정 손 위치: cover(쓰러졌을 때 머리 위로 가리기), point(칼끝으로 겨누기)
 // ─────────────────────────────────────────────────────────────
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS } from './ai_techniques.js';
+import { HIGH_GUARDS } from './ai_techniques.js'; // 10라운드 6-7 덧붙이기 (아래 끝)
 
 export const SCHOOLS = {
   // 독일식 롱소드 (리히테나워 전통). 값은 모두 예전 ai.js 의 MEASURE·PARRY·counterTech()·startWithdraw() 그대로
@@ -122,6 +123,10 @@ for (const [id, [contact, reach, clinch, cutTime]] of Object.entries(MEASURES)) 
 // 날이 없는 것(고무 닭·참치)은 찌르기 없음. 곡도·반달칼은 찌르기를 덜 믿는다
 for (const id of ['rubber_chicken', 'frozen_tuna']) SCHOOLS[id] = { ...SCHOOLS[id], tech: noThrust, techByName: byName(noThrust), feints: noThrustFeints };
 for (const id of ['sabre', 'falchion']) { const t = weakThrust(TECH, 0.5); SCHOOLS[id] = { ...SCHOOLS[id], tech: t, techByName: byName(t) }; }
+
+// 10라운드 6-7 (무기 PM, 디렉터 승인 — 덧붙이기만, 위 값은 그대로): 모노호시자오 한 칼 자세 —
+//  높은 자세(HIGH_GUARDS: 지붕·어깨 지붕·황소)에서 칼을 미리 들고 기다렸다가 들어오는 순간 벤다. 물러날 때도 높은 자세로
+SCHOOLS.monohoshizao = { ...SCHOOLS.monohoshizao, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] } };
 
 export const DEFAULT_SCHOOL = 'longsword';
 
