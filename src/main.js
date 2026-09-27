@@ -20,6 +20,9 @@ import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { buildArena } from './arena.js';
 import { buildTemple } from './stage_temple.js';
+import { buildCastle } from './stage_castle.js';
+import { buildCathedral } from './stage_cathedral.js';
+import { buildDarkHall } from './stage_darkhall.js';
 import { PerfMeter } from './perfmeter.js';
 
 await RAPIER.init();
@@ -109,7 +112,10 @@ scene.add(sun, sun.target);
 
 // 배경 고르기 (미리보기용. 정식 선택 방식은 나중에): 기본은 바닷가 절벽 위 무너진 포세이돈 신전 (arena.js)
 //  ?stage=temple : 한국의 산 속 절 (stage_temple.js)
-const STAGES = { temple: buildTemple };
+//  ?stage=castle : 눈 내리는 중세 성의 안뜰, 해 질 녘 (stage_castle.js)
+//  ?stage=cathedral : 무너진 고딕 대성당의 안 (stage_cathedral.js)
+//  ?stage=darkhall : 어두운 성의 큰 홀, 밤 (stage_darkhall.js)
+const STAGES = { temple: buildTemple, castle: buildCastle, cathedral: buildCathedral, darkhall: buildDarkHall };
 const stageBuild = STAGES[params.get('stage')];
 const arena = stageBuild ? stageBuild(scene, { hemi, sun }) : buildArena(scene);
 const SUN_OFF = arena.sunOffset ?? { x: 4, y: 9, z: 3 }; // 해가 싸우는 자리를 따라다닐 때의 방향

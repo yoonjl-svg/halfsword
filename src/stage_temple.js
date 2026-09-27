@@ -9,35 +9,9 @@
 //  난수는 자체 rng 만 쓴다 (전역 Math.random 을 건드리지 않음).
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ARENA } from './config.js';
+import { rng, h3, roughen, UP, _c, _v, Kit, box, cyl, limb, canvasTex } from './stage_kit.js';
 
-function rng(seed) {
-  let x = seed;
-  return () => ((x = (x * 16807) % 2147483647) / 2147483647);
-}
-function h3(x, y, z, s) {
-  const n = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + s * 4.581) * 43758.5453;
-  return n - Math.floor(n);
-}
-/** 꼭짓점을 제 위치로 정해지는 만큼 흔든다 (같은 자리의 꼭짓점은 같이 움직여 틈이 안 생긴다) */
-function roughen(g, amt, seed) {
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = Math.round(p.getX(i) * 1e4) / 1e4;
-    const y = Math.round(p.getY(i) * 1e4) / 1e4;
-    const z = Math.round(p.getZ(i) * 1e4) / 1e4;
-    p.setXYZ(i, x + (h3(x, y, z, seed) - 0.5) * amt, y + (h3(y, z, x, seed + 1) - 0.5) * amt, z + (h3(z, x, y, seed + 2) - 0.5) * amt);
-  }
-}
-
-const UP = new THREE.Vector3(0, 1, 0);
-const _c = new THREE.Color();
-const _m = new THREE.Matrix4();
-const _q = new THREE.Quaternion();
-const _e = new THREE.Euler();
-const _v = new THREE.Vector3();
-const _s = new THREE.Vector3();
 
 // ── 색 ──
 const C = {
@@ -63,93 +37,6 @@ const C = {
   wall: 0x9d9282, // 돌담
 };
 
-/**
- * 재질별로 조각을 모았다가 한 메쉬로 합친다. 조각마다 꼭짓점 색(밝기 흔들림 + 자리 무늬)을 칠한다.
- * push/pop 으로 "지금 짓는 건물의 자리·방향"을 쌓아 두면 그 안에서는 건물 기준 좌표로 놓으면 된다.
- */
-class Kit {
-  constructor(seed) {
-    this.bins = {};
-    this.r = rng(seed);
-    this.frame = new THREE.Matrix4();
-    this.stack = [];
-    this.n = 0;
-  }
-  push(pos, rotY = 0) {
-    this.stack.push(this.frame.clone());
-    this.frame.multiply(new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion().setFromAxisAngle(UP, rotY), new THREE.Vector3(1, 1, 1)));
-  }
-  pop() {
-    this.frame = this.stack.pop();
-  }
-  /** rot: [x, y, z] (YXZ 순서), scale: 숫자나 [x,y,z]. opt.rough: 모서리 깨짐(m) · opt.vary: 조각마다 밝기 차 · opt.noise: 자리 얼룩 */
-  put(bin, geo, color, pos = [0, 0, 0], rot = [0, 0, 0], scale = 1, opt = {}) {
-    typeof scale === 'number' ? _s.setScalar(scale) : _s.set(...scale);
-    _m.compose(_v.set(...pos), _q.setFromEuler(_e.set(rot[0], rot[1], rot[2], 'YXZ')), _s);
-    return this.putM(bin, geo, color, _m, opt);
-  }
-  putM(bin, geo, color, m, opt = {}) {
-    const g = geo.index ? geo.toNonIndexed() : geo.clone();
-    g.clearGroups();
-    for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
-    if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-    if (!g.attributes.normal) g.computeVertexNormals();
-    g.applyMatrix4(m);
-    g.applyMatrix4(this.frame);
-    if (opt.rough) {
-      roughen(g, opt.rough, 11 + this.n * 7);
-      g.computeVertexNormals();
-    }
-    _c.set(color);
-    const j = 1 + (this.r() - 0.5) * (opt.vary ?? 0.1);
-    const na = opt.noise ?? 0.06;
-    const p = g.attributes.position;
-    const col = new Float32Array(p.count * 3);
-    for (let i = 0; i < p.count; i++) {
-      const k = j * (1 + (h3(p.getX(i) * 2.3, p.getY(i) * 2.3, p.getZ(i) * 2.3, 5) - 0.5) * 2 * na);
-      col[i * 3] = _c.r * k;
-      col[i * 3 + 1] = _c.g * k;
-      col[i * 3 + 2] = _c.b * k;
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    (this.bins[bin] ??= []).push(g);
-    this.n++;
-    return g;
-  }
-  mesh(bin, mat, { cast = false, receive = true } = {}) {
-    if (!this.bins[bin]) return null;
-    const m = new THREE.Mesh(mergeGeometries(this.bins[bin], false), mat);
-    m.castShadow = cast;
-    m.receiveShadow = receive;
-    return m;
-  }
-}
-
-const box = (w, h, d, sx = 1, sy = 1, sz = 1) => new THREE.BoxGeometry(w, h, d, sx, sy, sz);
-const cyl = (rt, rb, h, seg = 8, open = false) => new THREE.CylinderGeometry(rt, rb, h, seg, 1, open);
-
-/** a → b 로 뻗은 원뿔대 (가지·밧줄·마루) */
-function limb(K, bin, a, b, r0, r1, color, opt = {}, seg = 7) {
-  const A = new THREE.Vector3(...a);
-  const B = new THREE.Vector3(...b);
-  const dir = B.clone().sub(A);
-  const len = dir.length();
-  const m = new THREE.Matrix4().compose(A.add(B).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(UP, dir.normalize()), new THREE.Vector3(1, 1, 1));
-  K.putM(bin, cyl(r1, r0, len, seg, true), color, m, opt);
-}
-
-// ── 질감 (캔버스) ──
-function canvasTex(w, h, draw) {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  draw(c.getContext('2d'), w, h);
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
-  return t;
-}
 /** 기와: 가로(u) 한 장 = 볼록한 수키와 한 줄 + 오목한 암키와 골, 세로(v) 한 장 = 기와 한 장 길이 */
 function tileTexture() {
   return canvasTex(64, 64, (x, w, h) => {
