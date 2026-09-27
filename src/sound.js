@@ -175,6 +175,22 @@ function gritBurst(out, sr, r, { t0 = 0, span = 0.04, count = 10, amp = 1, fLo =
     noiseHit(out, sr, r, { t0: t, amp: amp * between(r, 0.3, 1), attack: 0.0002, tau: between(r, 0.0015, 0.004), type: 'bandpass', f, q: between(r, 0.8, 2) });
   }
 }
+/** 냄비 대역 깎기: 원래 소리에서 f 근처(대역 통과) 성분을 빼서 그 대역만 움푹 낮춘다 (amount 0.6 ≈ −8dB) */
+function potCut(a, sr, f = 550, amount = 0.6, q = 0.7) {
+  const bp = new Filt('bandpass', f, q, sr);
+  for (let i = 0; i < a.length; i++) a[i] -= amount * bp.run(a[i]);
+  return a;
+}
+/**
+ * 쇠가 찢어지듯 갈라지는 "짝-치직": 아주 짧고 높은(2.5kHz 위) 딸깍이 몇 ms 사이에 연달아 터진다 (금이 번져 나가는 파열).
+ * 첫 딸깍이 가장 크고 뒤로 갈수록 작아진다
+ */
+function crackBurst(out, sr, r, { t0 = 0.001, count = 4, span = 0.012, amp = 1, f = 2800 }) {
+  for (let k = 0; k < count; k++) {
+    const t = t0 + (k ? span * (k / count) * between(r, 0.6, 1.3) : 0);
+    noiseHit(out, sr, r, { t0: t, amp: amp * (k ? between(r, 0.25, 0.6) : 1), attack: 0.00005, tau: between(r, 0.0004, 0.0012), type: 'highpass', f: f * between(r, 0.9, 1.4), q: 0.8, len: 6 });
+  }
+}
 /** 낮은 주파수 잡음(흔들림)을 하나 만든다: 0 근처에서 천천히 움직이는 값 */
 function wobble(r, sr, rate) {
   let v = 0;
@@ -204,13 +220,17 @@ const beta = (n) => (n <= 5 ? BETA[n - 1] : ((2 * n + 1) * Math.PI) / 2);
  * at: 맞은 자리(칼날 길이 비율). 모드의 "마디" 근처를 맞으면 그 모드는 약하게 울린다
  * edge: 날끼리(폭 방향 굽힘) 맞은 정도 0~1, 나머지는 칼 면 방향 굽힘
  */
-function swordModes(r, { f1 = 22, at = 0.6, edge = 0.6, damp = 1, fmax = 9500 }) {
+function swordModes(r, { f1 = 22, at = 0.6, edge = 0.6, damp = 1, fmax = 9500, even = false }) {
   const modes = [];
+  // even: 긁기·스치기처럼 계속 이어지는 소리용 고른 음색 (부딪힘처럼 날카롭게 올리면 오래 들을 때 귀가 아프다)
+  const tiltEven = (f) => (0.3 + 0.9 * Math.exp(-(Math.log2(f / 650) ** 2) / (2 * 0.7 ** 2)) + 0.9 * Math.exp(-(Math.log2(f / 3000) ** 2) / (2 * 0.8 ** 2))) * (f > 6500 ? (6500 / f) ** 1.5 : 1);
   const tilt = (f) => {
-    // 소리 설계용 음색 곡선: 250~800Hz "몸통"(무게감)을 키우고, 2~3kHz "쨍"은 확 줄인다(실로폰처럼 안 들리게), 7kHz 위는 줄인다
-    const body = 2.1 * Math.exp(-(Math.log2(f / 380) ** 2) / (2 * 0.7 ** 2));
-    const ring = 0.22 + 0.12 * Math.exp(-(Math.log2(f / 2600) ** 2) / (2 * 0.8 ** 2));
-    return (body + ring) * (f > 6500 ? (6500 / f) ** 1.5 : 1);
+    if (even) return tiltEven(f);
+    // 소리 설계용 음색 곡선. 300~900Hz를 키우면 폰 스피커(200Hz 아래는 거의 안 나온다)에서 "냄비 두드리는 퉁"만 남는다
+    //  → 그 대역은 낮추고, 쇠가 찢어지듯 날카로운 3~5kHz를 올린다 (무게감은 따로 넣는 200Hz 아래 "쿵"이 맡는다)
+    const body = 0.45 * Math.exp(-(Math.log2(f / 450) ** 2) / (2 * 0.7 ** 2));
+    const bite = 1.3 * Math.exp(-(Math.log2(f / 3800) ** 2) / (2 * 0.7 ** 2));
+    return (0.25 + body + bite) * (f > 7500 ? (7500 / f) ** 1.5 : 1);
   };
   const decay = (f) => {
     // 손이 쥐고 있어서 낮은 진동은 금방 죽고, 예전엔 1~5kHz 울림이 0.8초까지 남아 종처럼 울렸다 →
@@ -399,17 +419,16 @@ export const SYNTH = {
     const modes = [
       ...swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.35, 0.9), edge, damp: hard ? 1 : 0.55 }),
       ...swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.35, 0.9), edge, damp: hard ? 1 : 0.55 }),
-      ...guardModes(r, hard ? 0.3 : 0.2),
+      ...guardModes(r, hard ? 0.12 : 0.08), // 코등이 "깡"(700~980Hz)은 냄비 소리의 주범이라 아주 조금만
     ];
     resonate(x, out, sr, modes, Math.ceil(xEnd * sr) + 2);
     normalize(out, 1);
-    // "딱": 쇠끼리 맞은 순간의 넓은 대역 잡음
-    noiseHit(out, sr, r, { t0: 0.001, amp: hard ? 0.55 : 0.25, tau: hard ? 0.0025 : 0.004, f: hard ? 1200 : 700 });
-    // 세게 부딪히면 저역이 실린 딱딱한 "크랙" 한 겹을 더한다 (500Hz 대역, 아주 짧게) → 쨍그렁이 아니라 뻐근하게 무겁다
-    if (hard) noiseHit(out, sr, r, { t0: 0.0008, amp: 0.5, attack: 0.0002, tau: 0.0035, type: 'lowpass', f: 480, q: 0.9 });
-    // "쿵": 두 손과 팔이 충격을 받는 낮은 소리 (찌그러뜨리면 폰 스피커에서 들리는 배음이 생긴다). 세게 칠수록 더 낮고 크게
-    thumpTone(out, sr, { t0: 0.001, f0: between(r, hard ? 65 : 100, hard ? 95 : 140), drop: 0.65, dropTau: 0.012, tau: hard ? 0.032 : 0.026, amp: hard ? 0.68 : 0.42 });
-    saturate(out, hard ? 2.8 : 1.8);
+    potCut(out, sr, 560, 0.75);
+    // 쇠가 찢어지는 "짝-치직": 맞은 순간 높은 딸깍이 연달아 (세게 칠수록 많이, 크게)
+    crackBurst(out, sr, r, { t0: 0.001, count: hard ? 6 : 3, span: hard ? 0.014 : 0.008, amp: hard ? 1.1 : 0.55, f: hard ? 3000 : 2400 });
+    saturate(out, hard ? 2.2 : 1.6);
+    // "쿵": 두 손과 팔이 받는 충격. 찌그러뜨린 뒤에 깨끗한 저음으로 더한다 (찌그러뜨리면 300~600Hz 배음 = 냄비 소리가 생긴다)
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, hard ? 60 : 85, hard ? 85 : 120), drop: 0.65, dropTau: 0.012, tau: hard ? 0.03 : 0.024, amp: hard ? 0.55 : 0.35 });
     return fadeOut(normalize(out, 0.9), sr, hard ? 0.06 : 0.08);
   },
 
@@ -426,25 +445,26 @@ export const SYNTH = {
     pulse(x, sr, 0.001, tc, 1);
     if (r() < 0.5) pulse(x, sr, 0.001 + between(r, 0.003, 0.012), tc * 1.5, between(r, -0.4, 0.4));
     const modes = [];
-    // 사발 모양 껍데기: 모드가 고르게 촘촘하지만 아주 짧게 죽는다 (종이 아니라 두꺼운 냄비를 친 느낌)
+    // 사발 모양 껍데기: 모드가 촘촘하고 아주 짧게 죽는다. 300~900Hz(냄비 소리)는 약하게, 2~5kHz(쇠가 찢기는 소리)를 세게
     for (let i = 0; i < 30; i++) {
-      const f = Math.exp(between(r, Math.log(280), Math.log(4000)));
-      const a = (f < 1100 ? 1 : (1100 / f) ** 0.7) * between(r, 0.25, 0.85) * (r() < 0.5 ? -1 : 1);
-      modes.push({ f, a, t60: between(r, 0.008, 0.022) * (f < 700 ? 1.3 : 1) });
+      const f = Math.exp(between(r, Math.log(600), Math.log(6000)));
+      const a = (f < 1500 ? 0.35 : f < 5000 ? 1 : 0.6) * between(r, 0.25, 0.85) * (r() < 0.5 ? -1 : 1);
+      modes.push({ f, a, t60: between(r, 0.008, 0.022) });
     }
-    // 비조화 금속 "틱" 두세 개, 아주 짧게만 (긴 종소리 대신)
-    for (let i = 0; i < 3; i++) modes.push({ f: between(r, 900, 2600), a: between(r, 0.3, 0.55), t60: between(r, 0.012, 0.025) });
+    // 비조화 금속 "칭" 두세 개, 아주 짧게만 (긴 종소리 대신)
+    for (let i = 0; i < 3; i++) modes.push({ f: between(r, 2200, 5000), a: between(r, 0.35, 0.6), t60: between(r, 0.015, 0.03) });
     // 칼도 아주 조금, 아주 짧게 울린다
     const blade = swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.4, 0.9), edge: 0.8, damp: 0.3 });
     for (const m of blade) m.a *= 0.28;
     resonate(x, out, sr, [...modes, ...blade], Math.ceil(0.012 * sr));
     normalize(out, 1);
-    // 찌그러짐·긁힘 그릿("우두둑"): 투구가 우그러들 때 나는 거친 잔가루 소리
-    gritBurst(out, sr, r, { t0: 0.001, span: heavy ? 0.045 : 0.025, count: heavy ? 16 : 9, amp: heavy ? 0.6 : 0.38, fLo: 450, fHi: heavy ? 3000 : 2200 });
-    noiseHit(out, sr, r, { t0: 0.001, amp: heavy ? 0.55 : 0.4, tau: 0.0022, f: 850 });
-    // "퍽": 머리 무게가 받는 낮은 몸통 충격 (40~150Hz). 세게 맞을수록 더 낮고 크게 — 짧게 끊어서 뭉툭하게
-    thumpTone(out, sr, { t0: 0.001, f0: between(r, heavy ? 45 : 68, heavy ? 65 : 95), drop: 0.75, dropTau: 0.015, tau: heavy ? 0.021 : 0.015, amp: heavy ? 0.9 : 0.58 });
-    saturate(out, heavy ? 3.6 : 2.9);
+    potCut(out, sr, 560, 0.75);
+    // 쇠판이 우그러지며 갈라지는 "까각": 연쇄 파열 + 거친 잔가루(그릿)
+    crackBurst(out, sr, r, { t0: 0.001, count: heavy ? 6 : 4, span: heavy ? 0.02 : 0.012, amp: heavy ? 1 : 0.7, f: 2600 });
+    gritBurst(out, sr, r, { t0: 0.002, span: heavy ? 0.045 : 0.025, count: heavy ? 16 : 9, amp: heavy ? 0.45 : 0.3, fLo: 1200, fHi: 5000 });
+    saturate(out, heavy ? 2.6 : 2.2);
+    // "퍽": 머리 무게가 받는 낮은 몸통 충격 (40~100Hz). 찌그러뜨린 뒤에 깨끗하게 더한다 (배음이 냄비 소리를 만들지 않게)
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, heavy ? 45 : 60, heavy ? 65 : 85), drop: 0.75, dropTau: 0.015, tau: heavy ? 0.021 : 0.015, amp: heavy ? 0.8 : 0.5 });
     return fadeOut(normalize(out, 0.9), sr, heavy ? 0.045 : 0.035);
   },
 
@@ -470,7 +490,7 @@ export const SYNTH = {
       for (let k = 0, tt = t; k < 12 && tt < L; k++, tt += Math.round(between(r, 0.0003, 0.002) * sr)) x[tt] += between(r, -1, 1) * 0.5;
     }
     for (let i = 0; i < L; i++) x[i] += 0.02 * (r() * 2 - 1); // 마찰 잡음
-    const modes = [...swordModes(r, { f1: 22, at: 0.5, edge: 0.9, damp: 0.22, fmax: 9800 }), ...swordModes(r, { f1: 23.5, at: 0.7, edge: 0.9, damp: 0.22 })];
+    const modes = [...swordModes(r, { f1: 22, at: 0.5, edge: 0.9, damp: 0.22, fmax: 9800, even: true }), ...swordModes(r, { f1: 23.5, at: 0.7, edge: 0.9, damp: 0.22, even: true })];
     // 낮은 모드는 빼고(쥔 손이 죽인다), 종처럼 안 울리게 나머지도 짧게 눌러 거친 "지이익"에 가깝게 만든다
     for (const m of modes) {
       if (m.f < 600) m.a *= 0.3;
@@ -503,7 +523,7 @@ export const SYNTH = {
       const env = Math.min(1, t / (0.006 * sr)) * (1 - u) ** 1.5;
       if (t < L) x[t] += Math.exp(0.6 * gauss(r)) * (r() < 0.5 ? -1 : 1) * env * 0.15;
     }
-    const modes = [...swordModes(r, { f1: between(r, 20, 24), at: between(r, 0.4, 0.9), edge: 1, damp: 0.7 }), ...guardModes(r, 0.15)];
+    const modes = [...swordModes(r, { f1: between(r, 20, 24), at: between(r, 0.4, 0.9), edge: 1, damp: 0.7, even: true }), ...guardModes(r, 0.15)];
     for (const m of modes) if (m.f < 700) m.a *= 0.35;
     resonate(x, out, sr, modes, L);
     const bp = new Filt('bandpass', 6000, 0.8, sr);
@@ -704,14 +724,20 @@ export const SYNTH = {
    * heavy = 비틀거리며 크게 디딘 발 (더 낮고 길게, 모래를 더 많이 흩뜨린다)
    */
   footstep(sr, r, heavy = false) {
-    const n = Math.round(0.22 * sr);
+    // "저-벅": 뒤꿈치가 먼저 닿고(저) 50~90ms 뒤 발바닥·앞꿈치가 눌린다(벅). 둘 다 낮고 굵은 자갈 크런치
+    const n = Math.round(0.3 * sr);
     const out = new Float32Array(n);
-    thumpTone(out, sr, { t0: 0.002, f0: between(r, 55, 80), drop: 0.5, dropTau: 0.01, attack: 0.003, tau: heavy ? 0.022 : 0.016, amp: heavy ? 0.9 : 0.6 });
-    noiseHit(out, sr, r, { t0: 0.003, amp: 0.55, attack: 0.004, tau: heavy ? 0.03 : 0.022, type: 'lowpass', f: between(r, 500, 800), q: 0.7 });
-    gritBurst(out, sr, r, { t0: 0.006, span: heavy ? 0.08 : 0.06, count: heavy ? 22 : 14, amp: 0.22, fLo: 1800, fHi: 6500 });
-    noiseHit(out, sr, r, { t0: between(r, 0.035, 0.06), amp: 0.3, attack: 0.003, tau: 0.015, type: 'bandpass', f: between(r, 700, 1400), q: 0.8 });
-    saturate(out, 1.5);
-    return fadeOut(normalize(out, 0.9), sr, 0.04);
+    const t2 = between(r, 0.05, 0.09);
+    for (const [t0, k] of [[0.002, 1], [t2, 0.75]]) {
+      noiseHit(out, sr, r, { t0, amp: 0.5 * k, attack: 0.005, tau: heavy ? 0.035 : 0.025, type: 'lowpass', f: between(r, 280, 420), q: 0.8 });
+      gritBurst(out, sr, r, { t0: t0 + 0.003, span: heavy ? 0.06 : 0.045, count: heavy ? 18 : 12, amp: 0.26 * k, fLo: 220, fHi: 1000 });
+    }
+    gritBurst(out, sr, r, { t0: 0.006, span: 0.1, count: 4, amp: 0.06, fLo: 2000, fHi: 5000 }); // 튀는 잔모래 아주 조금 (밝기)
+    saturate(out, 1.6);
+    // 몸무게가 실리는 낮은 "쿵" 두 번 (찌그러뜨린 뒤에 더해 깨끗하게)
+    thumpTone(out, sr, { t0: 0.002, f0: between(r, 42, 58), drop: 0.4, dropTau: 0.01, attack: 0.004, tau: heavy ? 0.03 : 0.024, amp: heavy ? 1.3 : 1.05 });
+    thumpTone(out, sr, { t0: t2, f0: between(r, 45, 60), drop: 0.3, dropTau: 0.01, attack: 0.006, tau: 0.022, amp: heavy ? 0.9 : 0.7 });
+    return fadeOut(normalize(out, 0.9), sr, 0.05);
   },
 
   /**
@@ -1406,7 +1432,7 @@ export class Sound {
   footstep(speed, pos) {
     if (!this._on || !this.ctx) return;
     const x = clamp01((speed - 0.3) / 1.8);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.1 + 0.4 * x, bright: 2500 + 6000 * x, prio: 0.3, pos });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.1 + 0.4 * x, bright: 1800 + 3500 * x, prio: 0.3, pos });
     this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) });
   }
 
