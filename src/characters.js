@@ -271,7 +271,7 @@ export const CHARACTERS = [
       level: 'normal',
       persona: {
         school: 'excalibur_replica',
-        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.2, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
+        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.15, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
         pers: {
           precision: 0.9,
           guardStick: 0.8,
@@ -347,7 +347,7 @@ export const CHARACTERS = [
       level: 'hard',
       persona: {
         school: 'longsword',
-        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.2, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
+        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.1, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
         pers: {
           precision: 1, // 머리·목을 정확히 벤다
           guardStick: 6.2,
