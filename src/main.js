@@ -11,7 +11,8 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon } from './characters.js';
+import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST } from './weapons.js';
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
@@ -158,6 +159,7 @@ function newRound() {
   currentFoe = pickFoe();
   playerWeapon = pickPlayerWeapon();
   const before = new Set(scene.children);
+  const foeWeapon = params.get('foeWeapon') || params.get('weapon') || (currentFoe ? pickCharacterWeapon(currentFoe) : 'longsword');
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
     name: '나',
@@ -172,8 +174,8 @@ function newRound() {
     x: ARENA.startGap / 2,
     heading: Math.PI,
     look: currentFoe ? currentFoe.look : LOOKS.enemy,
-    // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기
-    weapon: params.get('foeWeapon') || params.get('weapon') || currentFoe?.weapon || 'longsword',
+    // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브란은 10% 확률로 주워 온 커먼 칼)
+    weapon: foeWeapon,
   });
   // 진짜 엑스칼리버의 기운 (보여 주기만)
   for (const a of auras) a.dispose();
@@ -181,7 +183,15 @@ function newRound() {
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
-  ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, currentFoe.ai.persona) : new AI(enemy, player, settings.difficulty);
+  //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
+  const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...currentFoe.ai.persona, school: foeWeapon } : currentFoe?.ai.persona;
+  ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, persona) : new AI(enemy, player, settings.difficulty);
+  // 플레이어 감정 (emotions.js): 상대 AI와 같은 규칙으로 겁먹고 화내고 물고 늘어진다. ?emo=0 이면 끔, ?emo=0.5 면 문턱값 셋 다 0.5
+  const emoParam = params.get('emo');
+  const emoTh = emoParam === '0' ? 0 : emoParam ? +emoParam || 0.3 : 0.3;
+  playerEmo = new Emotions({ fearful: emoTh, angry: emoTh, dogged: emoTh });
+  playerEv = { hurt: false, parried: false, landed: false };
+  player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
@@ -193,6 +203,9 @@ function newRound() {
 
 // ── 타격감 ──
 let hitStop = 0; // 큰 타격 때 아주 잠깐 멈칫하는 연출
+let playerEmo = null; // 플레이어 감정 판정 (emotions.js)
+let playerEv = { hurt: false, parried: false, landed: false }; // 이번 프레임에 플레이어에게 일어난 사건
+const playerTremor = { x: 0, y: 0, ax: 0, ay: 0, t: 0 }; // 공포 손 떨림 (지금 얹혀 있는 값·시계)
 let clashCooldown = 0;
 let clashStopCooldown = 0; // 칼끼리 부딪혀 멈칫한 뒤 다시 멈칫하기까지 (초)
 let slowMo = 0; // 결정타 슬로모션 남은 시간
@@ -202,6 +215,8 @@ const stats = { hits: [], clashes: 0, simTime: 0, passes: 0 };
 
 /** combat.js가 상처를 만들 때마다 부른다: 피, 자국, 소리, 진동, 멈칫 */
 function onWound(att, vic, r, point, pr) {
+  if (vic === player) playerEv.hurt = true; // 감정 사건: 베였다
+  if (att === player) playerEv.landed = true; // 감정 사건: 맞혔다
   const tag = `${att.name}->${r.zone}:${r.type}${r.pass ? '(관통)' : ''} ${r.energy.toFixed(0)}J 심각도${r.severity.toFixed(2)}`;
   stats.hits.push(tag);
   if (r.pass) stats.passes++;
@@ -265,6 +280,7 @@ function onWound(att, vic, r, point, pr) {
 }
 
 function onClash(point, speed, touch) {
+  if (touch?.fresh && touch.vn > 3 && player?.alive && player.tipVel.length() > 6) playerEv.parried = true; // 감정 사건: 내 베기가 막혔다
   // 소리: 새로 부딪힌 순간(또는 맞댄 채 다시 세게 친 순간)에만 "쨍". 맞댄 채 미끄러지는 동안은 긁히는 소리(updateBindSound)
   //  touch.vn = 부딪히기 직전 맞닿는 방향 속도(부딪히는 세기), touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeClash)
   if (touch && (touch.fresh || touch.vn > 3)) sound.clash(touch.vn, touch.vt);
@@ -514,6 +530,48 @@ for (const ev of ['touchend', 'pointerup', 'keydown']) {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
+/** 플레이어 감정: 이번 프레임의 사건을 모아 판정하고, 배율표를 파이터에 얹고, 공포면 손을 떨고, 화면 가장자리에 색을 입힌다 */
+function updatePlayerEmotion(dt) {
+  if (!playerEmo || !player || !enemy) return;
+  const ev = playerEv;
+  ev.bleeding = player.bleed > 0.01;
+  ev.foeBleeding = enemy.bleed > 0.01;
+  ev.winning = enemy.blood < player.blood;
+  ev.weaponBroken = player.weaponBroken;
+  ev.disarmed = !player.armed;
+  ev.foeBroke = enemy.weaponBroken;
+  // 상대 칼이 코앞: 상대가 베는 중이고 붙어 있다 / 상대가 진품 엑스칼리버를 들고 사정거리 근처
+  const d = ai?.d ?? 3;
+  ev.nearMiss = ai?.mode === 'attack' && ai.phase === 'strike' && d < 1.65;
+  ev.foeLegendNear = enemy.armed && enemy.weapon?.tier === 'legend' && d < 2.5;
+  if (player.alive) playerEmo.update(dt, ev);
+  ev.hurt = ev.parried = ev.landed = false;
+  player.emoMods = playerEmo.mods;
+  // 공포 손 떨림: AI 와 같은 방식 — 0.06~0.1초마다 새 방향, 크기는 배율표의 tremor. 지금 얹혀 있는 값과의 차이만 더한다
+  const T = playerTremor;
+  const amp = player.emoMods.tremor;
+  if (amp > 0 && player.alive) {
+    T.t -= dt;
+    if (T.t <= 0) {
+      T.t = 0.06 + Math.random() * 0.04;
+      const a = Math.random() * Math.PI * 2;
+      const r = amp * (0.5 + Math.random() * 0.5);
+      T.x = Math.cos(a) * r;
+      T.y = Math.sin(a) * r;
+    }
+  } else T.x = T.y = 0;
+  player.handOffset.x += T.x - T.ax;
+  player.handOffset.y += T.y - T.ay;
+  T.ax = T.x;
+  T.ay = T.y;
+  // 화면: 감정별 색이 세기만큼 (공포 푸른 회색·분노 붉음·집념 금빛)
+  const el = $('emotion');
+  if (el) {
+    el.dataset.emotion = playerEmo.emotion || '';
+    el.style.opacity = (playerEmo.emotion && EMO_ABILITY.enabled ? 0.25 + 0.5 * playerEmo.intensity : playerEmo.emotion ? 0.15 : 0).toFixed(3);
+  }
+}
+
 // 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
 function updateHud() {
   const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
@@ -641,8 +699,10 @@ function frame(now) {
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
     player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
+    updatePlayerEmotion(dt);
     const m = input.move;
-    player.move.set(player.alive ? m.x : 0, player.alive ? m.y : 0);
+    const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
+    player.move.set(player.alive ? m.x * emv : 0, player.alive ? m.y * emv : 0);
     updateGuardName(dt);
     // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다
     const mouseMode = !input.isTouchDevice;

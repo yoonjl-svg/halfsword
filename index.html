@@ -31,6 +31,11 @@
       #hud.show { display: block; }
       #vignette { position: absolute; inset: 0; opacity: 0; transition: opacity .2s;
         background: radial-gradient(ellipse at center, rgba(120,0,0,0) 45%, rgba(120,0,0,.55) 78%, rgba(60,0,0,.9) 100%); }
+      /* 플레이어 감정(emotions.js): 지배 감정에 따라 가장자리 색이 다르다 — 공포 푸른 회색, 분노 붉음, 집념 금빛 */
+      #emotion { position: absolute; inset: 0; opacity: 0; transition: opacity .4s; }
+      #emotion[data-emotion="fear"] { background: radial-gradient(ellipse at center, rgba(60,80,110,0) 50%, rgba(60,80,110,.5) 85%, rgba(20,30,50,.8) 100%); }
+      #emotion[data-emotion="anger"] { background: radial-gradient(ellipse at center, rgba(200,30,0,0) 55%, rgba(200,30,0,.45) 88%, rgba(120,0,0,.8) 100%); }
+      #emotion[data-emotion="obsession"] { background: radial-gradient(ellipse at center, rgba(220,170,40,0) 55%, rgba(220,170,40,.4) 88%, rgba(140,90,0,.75) 100%); }
       #topButtons { position: fixed; top: max(8px, env(safe-area-inset-top)); z-index: 2; left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
       #topButtons.show { display: flex; }
       .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; }
@@ -97,7 +102,7 @@
     <canvas id="game"></canvas>
 
     <!-- 체력 게이지 없음: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 -->
-    <div id="hud"><div id="vignette"></div></div>
+    <div id="hud"><div id="vignette"></div><div id="emotion"></div></div>
     <div id="topButtons">
       <button class="iconBtn" id="btnPause" aria-label="일시정지">Ⅱ</button>
       <button class="iconBtn" id="btnCalib" aria-label="기울기 영점 맞추기">◎</button>
