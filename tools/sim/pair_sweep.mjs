@@ -26,7 +26,10 @@ function duel(seed, personaA, aOnEnemy) {
 }
 console.log(`${idA} 대 ${idB}: ${idA}.pers.${key} 스윕, ${SEEDS}시드 × 두 자리, ${DUR}초`);
 for (const v of vals) {
-  const persona = { ...A_.ai.persona, pers: { ...A_.ai.persona.pers, [key]: v } };
+  // key 가 'level.xxx' 면 난이도 값(level)을, 아니면 성격(pers)을 바꾼다
+  const persona = key.startsWith('level.')
+    ? { ...A_.ai.persona, level: { ...A_.ai.persona.level, [key.slice(6)]: v } }
+    : { ...A_.ai.persona, pers: { ...A_.ai.persona.pers, [key]: v } };
   let wa = 0, wb = 0;
   for (let s = 1; s <= SEEDS; s++) { wa += duel(s, persona, true); wb += duel(s, persona, false); }
   console.log(`${key}=${v}: ${idA} 대칭 승률 ${(50 * (wa + wb) / SEEDS).toFixed(1)}% (A자리 ${(100 * wa / SEEDS).toFixed(0)} / B자리 ${(100 * wb / SEEDS).toFixed(0)})`);
