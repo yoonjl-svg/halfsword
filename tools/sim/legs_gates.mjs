@@ -5,6 +5,7 @@
 //     walk [N]       G1·G2·G3·G8 8방향 × 조이스틱 1/0.6/0.4: 서기 → 5초 걷기 → 3초 멈춤 → 걷기·멈춤 4번. 몸무게·미끄러짐·넘어짐·출렁임·흔들림·걸음 빠르기
 //     circle [N]     G2 가만히 선 상대 둘레를 1.5/1.8/2.1 m 에서 돈다 (양쪽 발 미끄러짐)
 //     turn [N]       G5 제자리 돌기 ±45~180°(홀수 판은 돈 뒤 1.2초 앞으로 걷기): 딛은 발 비틀림·미끄러짐
+//     turnR [N]      G5 무작위: 처음 방향·각도·쉬는 시간을 시드로 섞은 제자리 돌기 16판 (turn 은 난수를 안 써서 SOFF 로 시드를 바꿔도 같다)
 //     mash [N] [초]  G4 조이스틱 마구 흔들기 (8방향 / 상대 앞 / 아날로그 세 가지): 선 채 분당 넘어짐
 //     getup [N]      G6 넘어뜨리고(무겁게·가볍게·밀기 셋) 일어선 뒤 골반 처짐, 3초 안 다시 넘어짐. 판 시작 처짐
 //     push [N]       (참고) 서서·걸으며 가슴을 60/90/120 N·s 로 밀 때 넘어짐
@@ -37,7 +38,9 @@ const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
 // ── 판 차리기: 판마다 설정을 처음 값으로 되돌린다 (with_config 로 바꾼 값은 처음 값에 들어 있다) ──
 const DEFAULTS = {};
 for (const [k, v] of Object.entries(CONFIG)) if (v && typeof v === 'object') DEFAULTS[k] = JSON.parse(JSON.stringify(v));
+const SOFF = +(process.env.SOFF || 0); // 모든 시드에 더한다 (다른 시드 묶음으로 다시 잰다. 0 = 예전과 같다)
 function seedRandom(seed) {
+  seed += SOFF;
   let s = (seed * 7919 + 13) % 2147483647;
   if (s <= 0) s += 2147483646;
   Math.random = () => ((s = (s * 48271) % 2147483647) - 1) / 2147483646;
@@ -406,9 +409,13 @@ if (want('walk')) {
   const nSeeds = SUB === 'walk' && NARG ? NARG : 1;
   const DIRS = { F: [0, 1], FR: [0.7071, 0.7071], R: [1, 0], BR: [0.7071, -0.7071], B: [0, -1], BL: [-0.7071, -0.7071], L: [-1, 0], FL: [-0.7071, 0.7071] };
   const agg = { kd: 0, n: 0, over2: 0, contacts: 0, worst: 0, feet: [], sfeet: [], rows: [] };
-  for (const mag of [1, 0.6, 0.4])
+  // WDIRS=FR,FL · WMAGS=1 로 방향·세기를 골라 잴 수 있다 (없으면 전부)
+  const wd = process.env.WDIRS ? process.env.WDIRS.split(',') : null;
+  const wm = process.env.WMAGS ? process.env.WMAGS.split(',').map(Number) : [1, 0.6, 0.4];
+  for (const mag of wm)
     for (const [dn, d] of Object.entries(DIRS))
       for (let s = 0; s < nSeeds; s++) {
+        if (wd && !wd.includes(dn)) continue;
         const seed = 100 + s * 17 + Math.round(mag * 10) + Object.keys(DIRS).indexOf(dn) * 3;
         const V = mk({ seed, noWalls: true, mode: 'solo' });
         const P = V.P;
@@ -515,6 +522,49 @@ if (want('turn')) {
   const g = { contacts: c, over2: o, over2Pct: r2((100 * o) / Math.max(1, c)), slipMax: Math.max(...rows.map((r) => r.slipMax)), slipP90Avg: r2(mean(rows.map((r) => r.slipP90))), yawMax: Math.max(...rows.map((r) => r.yawMaxDeg)), kd: rows.reduce((a, r) => a + r.kd, 0) };
   out.gates.turn = g;
   log('SUMMARY turn (G5)', JSON.stringify(g));
+}
+
+// ── G5 (무작위) 제자리 돌기: 처음 방향·돌 각도·쉬는 시간·걷기를 시드로 섞는다 (위 turn 은 난수를 안 써서 시드를 바꿔도 같은 판이다) ──
+//  TRACE=<판>:<시작초>:<끝초> 면 그 판의 두 발 상태(딛음/듦, 걸음 종류, 뒤꿈치, 실린 무게, 디딜 때 방향에서 돈 각)를 0.025초마다 찍는다
+if (want('turnR')) {
+  const nSeeds = SUB === 'turnR' && NARG ? NARG : 16;
+  const ANG = [180, -180, 90, -90, 135, -135, 45, -45, 160, -120];
+  const TR = process.env.TRACE ? process.env.TRACE.split(':').map(Number) : null;
+  const rows = [];
+  for (let s = 0; s < nSeeds; s++) {
+    if (TR && TR[0] !== s) continue;
+    const V = mk({ seed: 8100 + s * 19, noWalls: true, mode: 'solo' });
+    const P = V.P;
+    const rnd = Math.random;
+    if (TR) {
+      const wr = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+      V.hooks.push(() => {
+        const tt = V.t - (V._T0 || 0);
+        if (!P.gait || tt < TR[1] || tt > TR[2] || Math.round(tt * 120) % 3) return;
+        const g = P.gait;
+        const row = ['F', 'B'].map((k) => { const l = g.legs[k]; return `${k}:${l.stance ? 'st' : 'sw'}/${l.kind}/heel=${(l.heel || 0).toFixed(2)}/N=${((l.N || 0) / g.Mg).toFixed(2)}/yaw-yawTD=${(57.3 * wr((l.footYaw ?? 0) - (l.yawTD ?? 0))).toFixed(1)}`; }).join(' '); // prettier-ignore
+        log(`t=${tt.toFixed(3)} walk=${g.walking} mv=${P.move.y.toFixed(1)} head=${(57.3 * P.heading).toFixed(0)} lev=${g.lev.toFixed(2)} off=${P.offBalance.toFixed(2)} tilt=${P.tiltDeg().toFixed(0)} h=${g.h.toFixed(3)} py=${P.bodies.pelvis.translation().y.toFixed(3)} ${row}`);
+      });
+    }
+    V.faceAng = (rnd() - 0.5) * 2 * Math.PI;
+    V.runT(3 + rnd() * 0.5, () => P.move.set(0, 0));
+    const T = V.track(P);
+    V._T0 = T.t0;
+    for (let k = 0; k < 6; k++) {
+      V.faceAng += (ANG[Math.floor(rnd() * ANG.length)] * Math.PI) / 180;
+      V.runT(2.0 + rnd() * 1.0, () => P.move.set(0, 0), [T]);
+      if (s % 2) V.runT(0.6 + rnd() * 0.9, () => P.move.set(0, 1), [T]); // 돈 뒤 앞으로 걷기
+    }
+    const S = V.summary(T, 0);
+    rows.push(S);
+    log(`s${s} slip max=${S.slipMax} p90=${S.slipP90} >2:${S.over2}/${S.contacts} yaw=${S.yawMaxDeg} ${JSON.stringify(S.yawWorst)} feet=${S.feetW} kd=${S.kd}`);
+  }
+  const c = rows.reduce((a, r) => a + r.contacts, 0);
+  const o = rows.reduce((a, r) => a + r.over2, 0);
+  const yaws = rows.map((r) => r.yawMaxDeg).sort((a, b) => a - b);
+  const g = { contacts: c, over2: o, over2Pct: r2((100 * o) / Math.max(1, c)), slipMax: Math.max(...rows.map((r) => r.slipMax)), slipP90Avg: r2(mean(rows.map((r) => r.slipP90))), slipMeanAvg: r2(mean(rows.map((r) => r.slipMean))), yawMax: Math.max(...rows.map((r) => r.yawMaxDeg)), yawRunMaxes: yaws, runsYawOver10: rows.filter((r) => r.yawMaxDeg > 10).length, feetW: r3(mean(rows.map((r) => r.feetW))), kd: rows.reduce((a, r) => a + r.kd, 0) }; // prettier-ignore
+  out.gates.turnR = g;
+  log('SUMMARY turnR (G5 무작위)', JSON.stringify(g));
 }
 
 // ── G4 조이스틱 마구 흔들기 ──

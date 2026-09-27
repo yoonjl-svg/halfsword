@@ -1189,17 +1189,31 @@ if (SUB === 'aistep') {
   const N = NARG ?? 8;
   const recs = [];
   const ctls = [];
+  const lost = {};
   let asked = 0;
   let strikes = 0;
   let kd = 0;
   let secs = 0;
   const along = (a, b, fw) => (a.x - b.x) * fw.x + (a.z - b.z) * fw.z;
-  for (let seed = 1; seed <= N; seed++) {
+  for (let seed = +(process.env.AISEED || 1); seed <= N; seed++) {
     let hooked = false;
     const live = [];
     const hook = (G, f) => {
       const g = f.gait;
       if (!g) return;
+      // 딛지 못한 부탁의 까닭: 발을 들기 전에 물러남(wait) / 든 발을 걷는 걸음으로 바꿈(air) / 1초 안에 못 시작함(expired)
+      const oup = g.update.bind(g);
+      g.update = (...a) => {
+        const r0 = g.req;
+        const ph0 = ['F', 'B'].some((k) => !g.legs[k].stance && g.legs[k].kind === 'req') ? 'air' : null;
+        const res = oup(...a);
+        const landed = ['F', 'B'].some((k) => g.legs[k].kind === 'req' && g.legs[k].stance && g.legs[k].tLand === 0); // 이번 스텝에 부탁한 걸음으로 딛음
+        if (r0 && !g.req && !landed) {
+          const why = r0.age > 1 ? 'expired' : ph0 === 'air' ? 'air' : 'wait';
+          lost[why] = (lost[why] || 0) + 1;
+        }
+        return res;
+      };
       const orq = g.requestStep.bind(g);
       g.requestStep = (o) => {
         asked++;
@@ -1207,10 +1221,20 @@ if (SUB === 'aistep') {
         if (ok) {
           // 한 번 받은 부탁 = 걸음 하나. 아직 딛지 못한 앞 부탁은 딛지 못한 채로 남긴다 (새 부탁이 덮어썼다)
           const fw = f.forward(new THREE.Vector3());
-          live.push({ seed, who: f.name, f, t: G.t, kind: o.kind, fwd: o.fwd, dur: o.duration ?? 0.4, fw, s0: { F: f.solePoint('footF', new THREE.Vector3()), B: f.solePoint('footB', new THREE.Vector3()) }, com0: f.com.clone(), lead: g.frontLeg(fw), tTD: null, done: false });
+          const pv = f.bodies.pelvis.linvel();
+          live.push({ seed, who: f.name, f, t: G.t, kind: o.kind, fwd: o.fwd, dur: o.duration ?? 0.4, fw, vReq: r2(pv.x * fw.x + pv.z * fw.z), levReq: r2(g.lev), tiltReq: r1(f.tiltDeg()), offReq: r2(f.offBalance), swingReq: ['F', 'B'].map((k) => (g.legs[k].stance ? '' : g.legs[k].kind + k)).join('') || null, stanceReq: r3(Math.abs((g.legs.F.plant.x - g.legs.B.plant.x) * fw.x + (g.legs.F.plant.z - g.legs.B.plant.z) * fw.z)), s0: { F: f.solePoint('footF', new THREE.Vector3()), B: f.solePoint('footB', new THREE.Vector3()) }, com0: f.com.clone(), lead: g.frontLeg(fw), tTD: null, done: false });
         }
         return ok;
       };
+      // AITRACE=1: 기술 걸음으로 딛은 발을 곧 붙잡기 걸음으로 다시 들 때, 그 까닭(엉덩이에서 먼 거리 / 발바닥 높이 / 실린 무게)을 남긴다
+      if (process.env.AITRACE) {
+        const ob = g.begin.bind(g);
+        g.begin = (l, kind, T) => {
+          const r = kind === 'catch' || kind === 'settle' ? live.findLast((x) => x.f === f && !x.ctl && x.tTD != null && x.foot === l.k && G.t - x.tTD < 0.6) : null;
+          if (r && !r.why2) r.why2 = { kind, age: r3(G.t - r.tTD), reach: r3(Math.hypot(l.hip.x - l.plant.x, l.hip.z - l.plant.z)), soleY: r3(l.soleY), toeY: r3(l.toeY), N: r2((l.N || 0) / g.Mg), lev: r2(g.lev), h: r3(g.h), py: r3(f.bodies.pelvis.translation().y), mv: r2(f.move.y), walking: g.walking };
+          return ob(l, kind, T);
+        };
+      }
       const otd = g.touchdown.bind(g);
       g.touchdown = (l, sp) => {
         const kind = l.kind;
@@ -1224,10 +1248,16 @@ if (SUB === 'aistep') {
         if (r) {
           r.tTD = G.t;
           r.foot = l.k;
+          if (!r.ctl) r.stanceTD = r3(Math.abs((g.legs.F.plant.x - g.legs.B.plant.x) * r.fw.x + (g.legs.F.plant.z - g.legs.B.plant.z) * r.fw.z));
           r.sTD = f.solePoint(l.k === 'F' ? 'footF' : 'footB', new THREE.Vector3());
           if (!r.ctl) {
             r.moved = along(r.sTD, r.s0[l.k], r.fw);
             r.comTD = f.com.clone().sub(r.com0).dot(r.fw);
+            // 딛을 때 발바닥 높이(m, 땅에 닿지 못한 채 딛은 것으로 쳐졌나)와 엉덩이에서 발까지 수평 거리(m), 골반 높이
+            const L = g.legs[l.k];
+            r.soleTD = r3(L.soleY);
+            r.reachTD = r3(Math.hypot(L.hip.x - L.ankle.x, L.hip.z - L.ankle.z));
+            r.pyTD = r3(f.bodies.pelvis.translation().y);
           }
           r.pin = { C: g.legs[l.k].pinC.clone(), T: g.legs[l.k].pinT.clone() };
           r.pinL = null; // 발에 몸무게 0.1 W 넘게 처음 실린 때의 자리 (G2 와 같은 잣대: 실린 동안만 잰다)
@@ -1240,11 +1270,19 @@ if (SUB === 'aistep') {
         return out;
       };
     };
+    const TW = process.env.AITRACE_T ? process.env.AITRACE_T.split(':') : null; // <판>:<P|E>:<시작초>:<끝초> 그 싸움꾼 상태를 0.025초마다 찍는다
     const res = aiFight(seed, 40, {
       onStep: (G) => {
         if (!hooked) {
           hooked = true;
           for (const f of [G.player, G.enemy]) hook(G, f);
+        }
+        if (TW && +TW[0] === seed && G.t >= +TW[2] && G.t <= +TW[3] && Math.round(G.t / DT) % 3 === 0) {
+          const f = TW[1] === 'P' ? G.player : G.enemy;
+          const g = f.gait;
+          const ai = [G.ai, G.ai2].find((x) => x?.me === f);
+          const legs = ['F', 'B'].map((k) => { const l = g.legs[k]; return `${k}:${l.stance ? 'st' : 'sw'}/${l.kind}/N${r2((l.N || 0) / g.Mg)}/sole${r3(l.soleY)}/heel${r2(l.heel || 0)}`; }).join(' '); // prettier-ignore
+          console.log(`t=${r3(G.t)} ${f.state} ${ai?.mode}/${ai?.phase} mv=${r2(f.move.x)},${r2(f.move.y)} lev=${r2(g.lev)} levC=${r2(g.levC)} off=${r2(f.offBalance)} tilt=${r1(f.tiltDeg())} py=${r3(f.bodies.pelvis.translation().y)} h=${r3(g.h)} d=${r2(f.foeDistance())} ${legs}`);
         }
         for (const r of live) {
           if (r.done) continue;
@@ -1262,8 +1300,24 @@ if (SUB === 'aistep') {
           const o = r.foot === 'F' ? 'B' : 'F';
           if (!g.legs[o].stance && !r.lifted) r.other = true;
           if (!g.legs[r.foot].stance) {
-            if (!r.lifted) r.restep = !r.other;
+            if (!r.lifted) {
+              r.restep = !r.other;
+              // 같은 발이 다시 뜬 때: 딛은 뒤 시간, 걸음 종류, 조이스틱, AI 모드 (감독 합격선: 0.3초 안에 같은 발이 다시 뜸 = 더듬기)
+              if (r.restep) {
+                const ai = [G.ai, G.ai2].find((x) => x?.me === f);
+                r.lift = { age: r3(age), kind: g.legs[r.foot].kind, mv: r2(f.move.y), side: r2(f.move.x), mode: ai ? `${ai.mode}${ai.mode === 'attack' ? '/' + ai.phase : ''}` : '?' };
+              }
+            }
             r.lifted = true;
+          }
+          // 내디딘 발에 실린 몸무게 (딛은 뒤 0.1~0.3초 평균, W. 다시 뜨면 0으로 친다)
+          if (!r.ctl && age >= 0.1 && age <= 0.3) {
+            r.loadS = (r.loadS || 0) + (r.lifted ? 0 : (g.legs[r.foot].N || 0) / g.Mg);
+            r.loadN = (r.loadN || 0) + 1;
+          }
+          if (process.env.AITRACE && !r.ctl && !r.lifted && Math.round(age / DT) % 6 === 0) {
+            const L = g.legs[r.foot];
+            (r.tl ||= []).push(`${r3(age)} mv${r2(f.move.y)} ${g.walking ? 'W' : 's'} N${r2((L.N || 0) / g.Mg)} sole${r3(L.soleY)} py${r3(f.bodies.pelvis.translation().y)}/h${r3(g.h)} com${r3(f.com.clone().sub(r.com0).dot(r.fw))}`);
           }
           if (!r.lifted) {
             r.drift = Math.max(r.drift, pinSlip(f, r.foot, r.pin));
@@ -1272,6 +1326,11 @@ if (SUB === 'aistep') {
               if (!r.pinL) r.pinL = { C: L.pinC.clone(), T: L.pinT.clone() };
               r.driftL = Math.max(r.driftL, pinSlip(f, r.foot, r.pinL));
             }
+          }
+          // 이 걸음 동안 내가 상처를 냈으면: 그때 내디딘 발이 딛고 몸무게를 받고 있었나 (칼 뒤에 몸무게)
+          if (!r.ctl && r.woundLoad == null) {
+            const w = (G.woundsAI || []).find((x) => x.att === f && x.t >= r.tTD - 0.3 && x.t <= G.t);
+            if (w) r.woundLoad = g.legs[r.foot].stance && !r.lifted ? r2((g.legs[r.foot].Nf || 0) / g.Mg) : -1; // (발바닥 정지 마찰이 쓰는 걸러진 무게)
           }
           // 부딪힘: 이 걸음 동안 칼끼리 부딪히거나 맞았다
           if (!r.bump) r.bump = G.clashT.some((c) => c.t >= r.tTD - 0.2 && c.t <= G.t) || (G.woundsAI || []).some((w) => w.vic === f && w.t >= r.tTD - 0.2 && w.t <= G.t);
@@ -1292,6 +1351,7 @@ if (SUB === 'aistep') {
   out.strikes = strikes;
   out.acceptPerStrike = r2(recs.length / Math.max(1, strikes));
   out.landedAsReq = `${got.length}/${recs.length}`;
+  out.notLanded = lost; // 물러나 발을 들기 전에 그만둠(wait) · 든 발을 걷는 걸음으로 바꿔 딛음(air) · 1초 안에 못 시작(expired)
   out.kinds = recs.reduce((a, r) => ((a[`${r.kind}${r.fwd}`] = (a[`${r.kind}${r.fwd}`] || 0) + 1), a), {});
   out.footIsLead_pct = pct(got.filter((r) => (r.kind === 'lunge') === (r.foot === r.lead)).length, got.length);
   out.moved_m = { med: r3(med(got.map((r) => r.moved))), p10: r3(q(got.map((r) => r.moved), 0.1)), p90: r3(q(got.map((r) => r.moved), 0.9)) };
@@ -1313,11 +1373,28 @@ if (SUB === 'aistep') {
   out.restep_pct = pct(got.filter((r) => r.restep).length, got.length); // 같은 발이 다른 발보다 먼저 0.5초 안에 뜸 (걷기 차례 포함)
   // 다시 딛기 (좁은 뜻): 그 다음 걸음이 같은 발의 붙잡기·자세 고치기 걸음 = 딛은 자리가 나빠 고쳐 딛었다
   out.restepFix_pct = pct(got.filter((r) => r.restep && /^(catch|settle)/.test(r.next || '')).length, got.length);
+  // 더듬기 (감독 합격선, R1 고침부터): 기술 걸음으로 딛은 발이 0.3초 안에 (다른 발보다 먼저) 다시 뜸. ≤ 5%
+  const stut = got.filter((r) => r.restep && r.lift && r.lift.age < 0.3);
+  out.stutter_pct = pct(stut.length, got.length);
+  out.stutterBy = stut.reduce((a, r) => ((a[`${r.lift.kind}|${r.lift.mode}|mv${r.lift.mv < -0.1 ? '<0' : r.lift.mv > 0.1 ? '>0' : '0'}`] = (a[`${r.lift.kind}|${r.lift.mode}|mv${r.lift.mv < -0.1 ? '<0' : r.lift.mv > 0.1 ? '>0' : '0'}`] || 0) + 1), a), {});
+  out.stutterCalm_pct = pct(stut.filter((r) => !r.bump && !r.kd).length, got.filter((r) => !r.bump && !r.kd).length); // 부딪힘·넘어짐 없는 걸음만
+  // 같은 발이 다시 뜬 때 (딛은 뒤 초) 나눔: 0.3초 안 / 0.3~0.5초
+  const la = got.filter((r) => r.lift).map((r) => r.lift.age);
+  out.sameFootLift = { n: la.length, lt0_3: la.filter((a) => a < 0.3).length, med: r3(med(la)), p10: r3(q(la, 0.1)) };
+  // 딛은 뒤 0.1~0.3초 동안 내디딘 발에 실린 몸무게 평균 (W): 가운데, 10%, 0.3 W 넘게 실린 비율
+  const lm = got.filter((r) => r.loadN).map((r) => r.loadS / r.loadN);
+  out.lungeLoad = { med: r2(med(lm)), p10: r2(q(lm, 0.1)), over0_3_pct: pct(lm.filter((x) => x > 0.3).length, lm.length) };
+  // 내딛는 동안 낸 상처: 그때 내디딘 발이 딛고 있었나 (-1 = 이미 다시 뜸), 실린 몸무게
+  const wl = got.filter((r) => r.woundLoad != null).map((r) => r.woundLoad);
+  out.woundWhileLunge = { n: wl.length, planted_pct: pct(wl.filter((x) => x >= 0).length, wl.length), loadMed: r2(med(wl.filter((x) => x >= 0))) };
+  // 땅에 닿지 못한 채 딛은 것으로 쳐진 걸음 (딛을 때 발바닥이 2 cm 넘게 떠 있음): 그 뒤 붙잡기 걸음·끌림의 까닭
+  out.airLanding_pct = pct(got.filter((r) => r.soleTD > 0.02).length, got.length);
   out.kdAfter_pct = pct(recs.filter((r) => r.kd).length, recs.length);
   out.kdPerFight = r2(kd / N);
   out.fightSecs = r1(secs);
+  if (process.env.AITRACE) for (const r of got.filter((r) => r.restep && /^(catch|settle)/.test(r.next || '')).slice(0, 12)) console.log(`다시 딛기 ${r.who} ${r.next} 까닭 ${JSON.stringify(r.why2)}\n   ${(r.tl || []).join(' | ')}`);
   out.recs = recs.map(({ f, fw, s0, com0, sTD, pin, pinL, ...r }) => ({ ...r, moved: r3(r.moved), comTD: r3(r.comTD), drift: r3(r.drift), driftL: r3(r.driftL), t: r3(r.t), tTD: r3(r.tTD) }));
-  for (const k of ['accepted', 'askedCalls', 'strikes', 'acceptPerStrike', 'landedAsReq', 'kinds', 'footIsLead_pct', 'moved_m', 'comAtTD_m', 'tdT_s', 'driftCm', 'driftLoadedCm', 'driftCalmCm', 'control', 'restep_pct', 'restepFix_pct', 'kdAfter_pct', 'kdPerFight', 'fightSecs']) line(k, out[k]);
+  for (const k of ['accepted', 'askedCalls', 'strikes', 'acceptPerStrike', 'landedAsReq', 'notLanded', 'kinds', 'footIsLead_pct', 'moved_m', 'comAtTD_m', 'tdT_s', 'driftCm', 'driftLoadedCm', 'driftCalmCm', 'control', 'restep_pct', 'restepFix_pct', 'stutter_pct', 'stutterBy', 'stutterCalm_pct', 'sameFootLift', 'lungeLoad', 'woundWhileLunge', 'airLanding_pct', 'kdAfter_pct', 'kdPerFight', 'fightSecs']) line(k, out[k]);
 }
 
 if (SUB === 'tapstep') {

@@ -17,8 +17,10 @@ const { PHYSICS, ARENA } = CONFIG;
 export const DT = PHYSICS.timestep;
 
 // 결정적 난수 (같은 seed → 같은 판). Math.random 을 바꿔치기한다
+//  SOFF=<n>: 모든 시드에 n 을 더한다 (도구를 고치지 않고 다른 시드 묶음으로 다시 잰다. 없으면 예전과 같다)
+const SOFF = +(process.env.SOFF || 0);
 export function seedRandom(seed) {
-  let a = seed >>> 0;
+  let a = (seed + SOFF) >>> 0;
   Math.random = () => {
     a = (a + 0x6d2b79f5) >>> 0;
     let t = a;

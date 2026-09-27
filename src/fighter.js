@@ -1006,7 +1006,9 @@ export class Fighter {
       raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * r);
     }
     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
-    this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.05, -0.12, 0.12) : 0;
+    //  (다리 걸음(hybrid)에서 걸음 방향 버그를 고친 뒤엔 GAIT.leanFix: 다리 1.5 가 맞춰진 크기. 0.05 를 그대로 쓰면 빨리 걸을 때 7°쯤 숙여
+    //   비스듬히 걷기가 느려지고 멈출 때 붙잡기 반사가 더 걸린다)
+    this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * (hybrid && GAIT.fwdFix ? GAIT.leanFix : 0.05), -0.12, 0.12) : 0;
   }
 
   // ── 진짜 균형 ──

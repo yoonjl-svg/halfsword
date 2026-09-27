@@ -125,6 +125,7 @@ export class Gait {
     this.vf = new THREE.Vector3(); // 골반 수평 속도 (걸러진 값)
     this.sway = new THREE.Vector3(); // 좌우로 무게를 옮기는 속도 (want에 더한다)
     this.req = null; // 기술이 부탁한 걸음 (requestStep)
+    this.holdT = 0; // 부탁한 걸음을 딛은 뒤 버티는 남은 시간 (그동안 자세 고치기 걸음을 하지 않는다, 부탁의 hold. GAIT.fwdFix)
     this.settles = 0; // 멈춘 뒤 고쳐 딛은 횟수
     this.prevHead = fighter.heading;
     this.headRate = 0; // 몸을 돌리는 빠르기(rad/s)
@@ -161,6 +162,7 @@ export class Gait {
     this.speedF = 0;
     this.idleT = 0;
     this.req = null;
+    this.holdT = 0;
     this.settles = 0;
     this.prevHead = this.f.heading;
     this.headRate = 0;
@@ -208,13 +210,25 @@ export class Gait {
 
   /**
    * 기술이 걸음을 부탁한다 (AI의 베며 내딛기). kind: 'pass'(뒷발이 앞으로 나간다) | 'lunge'(앞발을 내딛는다)
-   * fwd: 몸 기준 앞으로(m), side: 오른쪽으로(m), duration: 발이 떠 있는 시간(초)
+   * fwd: 몸 기준 앞으로(m), side: 오른쪽으로(m), duration: 발이 떠 있는 시간(초),
+   * hold: 딛은 뒤 자세 고치기 걸음을 쉬는 시간(초, 걸음 방향 버그를 고친 뒤(GAIT.fwdFix)에만 쓴다)
    */
   requestStep(o = {}) {
     if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다)
     if (this.f.move.y < -0.1) return false;
-    this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0 };
+    this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), hold: o.hold ?? 0, age: 0 };
+    return true;
+  }
+
+  /**
+   * 아직 발을 들지 않은 부탁한 걸음을 거둔다 (AI 가 급히 물러나야 할 때: 너무 붙음·크게 뛰어 비키기).
+   *  requestStep 이 물러나는 중에 받지 않는 것과 같은 까닭이다. 발이 이미 떠 있으면 거두지 않는다 (false)
+   */
+  cancelStep() {
+    if (!this.req) return false;
+    for (const k of ['F', 'B']) if (!this.legs[k].stance && this.legs[k].kind === 'req') return false;
+    this.req = null;
     return true;
   }
 
@@ -401,7 +415,7 @@ export class Gait {
           next = df > 0 ? 'B' : 'F';
         }
       } else if (next) kind = 'catch';
-      else if (this.idleT > GAIT.settleDelay) {
+      else if (this.idleT > GAIT.settleDelay && !(this.holdT > 0)) {
         // 자리 고치기는 settleMax번까지, 몸을 돌려 발이 틀어진 것은 언제든 (발을 돌려 딛는다)
         next = this.settleLeg(this.settles < GAIT.settleMax);
         if (next) {
@@ -435,6 +449,7 @@ export class Gait {
       this.req.age += dt;
       if (this.req.age > 1) this.req = null;
     }
+    if (this.holdT > 0) this.holdT -= dt;
 
     // 한 발로 서 있는데 몸이 그 발에서 너무 멀어지면(다리가 곧 닿지 않는다) 내딛는 발이 닿을 때까지 덜 나간다
     //  (계속 밀고 나가면 뒤에 남은 발이 발끝으로 끌린다)
@@ -513,7 +528,7 @@ export class Gait {
         const r = Math.hypot(hx, hz);
         const r2 = Math.max(0, r - HEEL_DX);
         const hyHeel = ANKLE_H + HEEL_DY + Math.sqrt(Math.max(0.04, Ls * Ls - r2 * r2)) + HIP_DROP;
-        if (hyHeel > hy) hy += (hyHeel - hy) * clamp(back / GAIT.heelBlend, 0, 1);
+        if (hyHeel > hy) hy += (hyHeel - hy) * clamp(back / (GAIT.fwdFix ? GAIT.heelBlendFix : GAIT.heelBlend), 0, 1);
       }
       // 두 발로 딛을 땐 더 높이 받칠 수 있는 다리 기준 (뒷발은 뒤꿈치를 들어 따라온다)
       hGeo = hGeo === Infinity ? hy : Math.max(hGeo, hy);
@@ -712,6 +727,9 @@ export class Gait {
     this.lastTD = l.k;
     // 고리에 알릴 걸음 종류: 기술이 부탁한 걸음은 부탁한 종류(lunge·pass·gather, 온몸 베기 L3의 'strike')
     const kind = l.kind === 'req' ? (this.req?.kind ?? 'req') : l.kind;
+    // 딛은 뒤 버티기 (부탁의 hold초, GAIT.fwdFix): 그동안 자세 고치기 걸음을 하지 않는다. 기술 걸음 동안엔 조이스틱을 놓고 있어
+    //  멈춘 것으로 쳐지므로(idleT), 버티지 않으면 딛자마자(0.07초) 방금 내디딘 발을 펜싱 자세 자리로 물려 딛는다 (AI 내딛기의 13~25%)
+    if (l.kind === 'req' && GAIT.fwdFix) this.holdT = this.req?.hold ?? 0;
     if (l.kind === 'req') this.req = null;
     const strength = clamp(speed / GAIT.moveSpeed, 0.15, 1);
     this.f.footstep = Math.max(this.f.footstep, strength);

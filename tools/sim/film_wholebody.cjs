@@ -10,7 +10,7 @@
 //         oberhau-stand (곧게 내려베기) · zwerch-stand (가로베기) · unterhau-stand (올려베기) · guard-change (황소 ↔ 왼쪽 황소)
 //         miss (헛친 사선 베기, 상대 3.2 m, 1.2초 10칸) · camera-presets (사선 베기를 CAMERA.preset 마다, 카메라 구도 층이 생기기 전엔 지금 카메라 하나)
 //         walk-<F|FR|R|BR|B|BL|L|FL> (조이스틱 끝까지 1.2초 걷고 놓는다, 상대 4 m: 걷기 시작·멈춤 8칸) · tap-thrust (탭 찌르기, 상대 1.9 m)
-//         ai-step (AI 가 기술 걸음을 부탁한 순간부터 8칸, 찍히는 쪽 = AI. 플레이어는 가만히 선 더미, 상대 2.4 m)
+//         ai-step (AI 가 기술 걸음을 부탁한 순간부터 0.9초 동안 8칸, 찍히는 쪽 = AI. 플레이어는 가만히 선 더미, 상대 2.4 m)
 //   --off: 설정 '온몸 베기'를 끈다 (전·후 비교의 '전'). 같은 시드·같은 입력
 //   --fixoff: GAIT.fwdFix 를 끈다 (R1 걸음 방향 버그 고침의 '전')
 //   주소: 기본 http://localhost:5174/ (이 작업 폴더의 개발 서버). 새 서버를 띄우지 않는다
@@ -46,7 +46,8 @@ const SCENES = {
   miss: CUT(PAD.ShR, PAD.WechselL, 3.2, { long: true }),
   'camera-presets': CUT(PAD.ShR, PAD.WechselL, 1.55, { presets: true }),
   'tap-thrust': { type: 'tap', dist: 1.9 },
-  'ai-step': { type: 'ai', dist: 2.4 },
+  // (내디딘 발이 닿아 몸무게를 받는 것까지 보이게 0.9초까지 찍는다)
+  'ai-step': { type: 'ai', dist: 2.4, shots: [0, 100, 200, 300, 400, 550, 700, 900] },
 };
 // 걷기 8방향: 조이스틱 (옆, 앞)
 const DIRS = { F: [0, 1], FR: [0.707, 0.707], R: [1, 0], BR: [0.707, -0.707], B: [0, -1], BL: [-0.707, -0.707], L: [-1, 0], FL: [-0.707, 0.707] };

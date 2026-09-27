@@ -45,6 +45,7 @@ export class Skill {
     this.aimVel = new THREE.Vector2(); // 걸러진 목표가 움직이는 속도
     this.quiet = 1; // 손이 느리게 움직인 시간 (새 휘두르기 시작 판단용)
     this.lunge = 0; // 내딛는 중 남은 시간
+    this.holdFeet = false; // AI 가 기술 걸음을 딛는 동안 true: 위 내딛기를 걸지 않는다 (ai.js moveFeet, GAIT.fwdFix)
     this.swings = 0;
     this.activity = 0; // 휘두르는 중인 정도 (0~1)
     this.autoGuard = false; // 플레이어만 true (main.js)
@@ -276,8 +277,8 @@ export class Skill {
     }
     if (this.lunge > 0) {
       this.lunge -= dt;
-      // 물러나려는 중이면 내딛지 않는다 (조작이 우선)
-      if (f.move.y > -0.2 && f.foeDistance() > SKILL.lungeMin) f.move.y = Math.max(f.move.y, SKILL.lungeMove * L);
+      // 물러나려는 중이면 내딛지 않는다 (조작이 우선). AI 가 기술 걸음을 딛는 중(holdFeet, ai.js moveFeet)에도
+      if (f.move.y > -0.2 && !this.holdFeet && f.foeDistance() > SKILL.lungeMin) f.move.y = Math.max(f.move.y, SKILL.lungeMove * L);
     }
 
     // 5) 탭 찌르기

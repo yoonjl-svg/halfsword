@@ -29,6 +29,12 @@ import { EMO_REST, EMO_REST_ALL, emoMods } from './emotions.js';
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
+// 기술 걸음을 딛은 뒤 버티기 (GAIT.fwdFix, moveFeet·stepPhase): 딛은 뒤 이 시간(초)이 지나고 그 발에 몸무게의 이 몫이 실릴 때까지
+//  (길어도 STEP_HOLD_MAX초) 발을 그 걸음에 맡긴다. 칼이 닿을 때 몸무게가 내디딘 앞발 위에 있어야 한다
+const STEP_HOLD = 0.3;
+const STEP_LOAD = 0.3;
+const STEP_HOLD_MAX = 0.6;
+const STEP_LEV = 0.2; // 붙잡기 반사(gait.lev)가 이보다 크면 기술 걸음을 부탁하지 않는다 (gaitStep)
 
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -1125,6 +1131,11 @@ export class AI {
     const L = this.level;
     let fwd = 0;
     let side = 0;
+    // 기술 걸음을 다리 걸음(gait.js)에 맡길 수 있나 (걸음 방향 버그를 고친 뒤에만: 끄면 예전과 같다). 맡겼으면 그 걸음의 단계
+    const fixStep = GAIT.fwdFix && !!me.gait?.active && me.state === 'stand';
+    const stepPh = fixStep ? this.stepPhase() : null;
+    let wantStep = false;
+    let urgent = false; // 급히 물러나야 한다 (너무 붙음·크게 뛰어 비키기): 기술 걸음 중에도 뒤로 당긴다
     const speed = BODY.moveSpeed;
     // 원하는 "다가가는 빠르기"(m/s, + = 다가감) → 조이스틱 값 (뒤로는 75% 빠르기)
     const toStick = (v) => (v >= 0 ? v / speed : v / (speed * 0.75));
@@ -1151,13 +1162,22 @@ export class AI {
         }
         if (stepping) {
           fwd = 1;
-          this.gaitStep();
+          // 걸음 방향 버그를 고친 뒤(GAIT.fwdFix): 다리 걸음이 있으면 조이스틱으로 걷지 않고 기술 걸음(앞발 내딛기) 하나로 들어간다.
+          //  조이스틱을 밀면 걷는 발이 먼저 떠서 내딛기가 그 발이 딛은 뒤(0.5초쯤)에야 시작되고, 그때는 이미 뒤로 당기고 있어
+          //  내딛은 발이 몸 앞에 홀로 남아 끌리다 다시 딛었다 (docs/whole_body_baseline_r1.md 4장)
+          if (fixStep) {
+            fwd = 0;
+            wantStep = true;
+          } else this.gaitStep();
         } else {
           // 내디디지 않을 때는 발을 멈춰 세운다 (다가오던 관성으로 상대 몸에 부딪치지 않게).
           //  뒤로 살짝 당기면 검술 층의 자동 내딛기(skill.js)도 걸리지 않는다
           fwd = d < this.M.contact ? -0.5 : -0.21;
         }
-        if (d < this.M.clinch * (this.foe.state === 'down' ? (this.me.finish?.k ?? 1) : 1)) fwd = -0.7; // 너무 붙으면 베며 물러난다 (쓰러진 상대는 무기 배율만큼 더 붙어도 된다)
+        if (d < this.M.clinch * (this.foe.state === 'down' ? (this.me.finish?.k ?? 1) : 1)) {
+          fwd = -0.7; // 너무 붙으면 베며 물러난다 (쓰러진 상대는 무기 배율만큼 더 붙어도 된다)
+          urgent = true;
+        }
         // 달려드는 상대를 맞받아 벨 때는 옆으로 비켜 선다 (상대 칼이 지나가는 줄에서 벗어난다)
         if (this.why === 'stop') side = this.pers.circleDir * 0.6;
       }
@@ -1167,6 +1187,7 @@ export class AI {
       fwd = Math.min(-0.25, toStick(clamp((d - this.holdDist() - 0.05) * 3, -1.9, -0.3)));
     } else if (this.mode === 'defend') {
       fwd = this.defVoid ? -1 : -0.3; // 막을 때도 살짝 물러선다 (앞으로 쏠리지 않게)
+      urgent = this.defVoid;
     } else {
       // 간 보기: 상대 칼이 닿는 거리 바로 밖을 지킨다
       const hold = this.holdDist();
@@ -1198,6 +1219,7 @@ export class AI {
     if (d < this.M.clinch && this.mode !== 'attack') {
       fwd = -1;
       side = side || this.pers.circleDir * 0.5;
+      urgent = true;
     }
     // 울타리에 몰리면 옆으로 빠져 가운데로 (구석에 갇히지 않게)
     const a = me.bodies.pelvis.translation();
@@ -1212,21 +1234,66 @@ export class AI {
       side = side * (1 - k) + Math.sign(toCenter || 1) * k;
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * 0.15 * k); // 몰렸으면 먼저 친다
     }
+    // 부탁한 기술 걸음(앞발 내딛기)이 딛고 몸무게를 받을 때까지는 발을 그 걸음에 맡긴다 (GAIT.fwdFix): 뒤로 당기지도, 옆으로 걷지도 않는다.
+    //  치기가 끝나 물러나기·막기·간 보기로 바뀌어도 그렇다. 부탁은 앞 걸음이 딛기를 기다려 0.5초쯤 늦게 시작할 수 있는데, 그사이
+    //  조이스틱을 뒤로 당기면 몸은 뒤로 가고 발만 앞으로 나가 몸 앞에 홀로 떨어진 발이 딛자마자 다시 떴다 (검증: 다시 딛기 15~21%)
+    //  급할 때(너무 붙음·크게 뛰어 비키기)는 아직 발을 들지 않은 부탁을 거두고 당긴다. 발을 든 뒤와 딛은 뒤 STEP_HOLD초 동안은
+    //  급해도 발을 맡긴다 (그때 당기면 막 내디딘 발부터 다시 떠 더듬는다. 칼로 막는 것은 그대로 한다)
+    if (stepPh) {
+      if (urgent && stepPh === 'wait' && fwd < -0.1) me.gait.cancelStep();
+      else if (!urgent || stepPh === 'air' || this.stepHeld() < STEP_HOLD) {
+        fwd = Math.max(fwd, 0);
+        side = 0;
+      }
+    }
     if (!this.foe.alive) fwd = side = 0;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
     const lim = Math.max(1, mv);
     me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -lim, lim));
+    if (GAIT.fwdFix) {
+      // 조이스틱을 이번 프레임 값으로 정한 뒤에 부탁한다 (지난 프레임의 뒤로 당긴 값 때문에 거절되지 않게)
+      if (wantStep) this.gaitStep();
+      // 기술 걸음을 딛는 동안엔 검술 층의 자동 내딛기(조이스틱 앞으로)도 걸지 않는다: 걷는 발이 먼저 떠 두 번 내딛는다
+      me.skill.holdFeet = fixStep && !!this.stepPhase();
+    }
+  }
+
+  /**
+   * 부탁한 기술 걸음의 단계 (GAIT.fwdFix, 다리 걸음이 있을 때): null(없음) | 'wait'(앞 걸음이 딛기를 기다림) | 'air'(내딛는 발이 떠 있음)
+   *  | 'hold'(딛은 뒤 버팀: STEP_HOLD초가 지나고 그 발에 몸무게가 STEP_LOAD 넘게 실릴 때까지, 길어도 STEP_HOLD_MAX초)
+   */
+  stepPhase() {
+    const g = this.me.gait;
+    const L = g.legs;
+    if (g.req) return (!L.F.stance && L.F.kind === 'req') || (!L.B.stance && L.B.kind === 'req') ? 'air' : 'wait';
+    const t = this.stepHeld();
+    if (!(t < STEP_HOLD_MAX)) return null;
+    //  (실린 몸무게는 발바닥 정지 마찰이 쓰는 걸러진 값: 딛는 순간 튀는 힘은 천천히 빠진다)
+    return t < STEP_HOLD || (L[g.lastTD].Nf || 0) < STEP_LOAD * g.Mg ? 'hold' : null;
+  }
+
+  /** 기술 걸음으로 딛은 발이 딛은 지 몇 초 (마지막으로 딛은 발이 기술 걸음 발일 때만, 아니면 Infinity) */
+  stepHeld() {
+    const g = this.me.gait;
+    const l = g.legs[g.lastTD];
+    return l && l.stance && l.kind === 'req' ? l.tLand : Infinity;
   }
 
   /** 새 다리(gait.js)가 있으면 베는 걸음을 부탁한다 (없으면 조이스틱 내딛기로 충분) */
   gaitStep() {
     const g = this.me.gait;
     if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
+    // 앞 기술 걸음이 아직 딛지 않았거나 딛고 버티는 중이면 기다린다 (막 내디딘 발을 곧바로 다시 들면 더듬는다, GAIT.fwdFix)
+    if (GAIT.fwdFix && this.stepPhase()) return;
+    // 균형을 잃어 붙잡기 반사가 몸무게를 받치는 중이면 (세게 숙였거나 골반이 주저앉음) 되찾을 때까지 기다린다 (GAIT.fwdFix):
+    //  그대로 내디디면 보조 힘이 몸을 들고 있어 내디딘 발에 몸무게가 실리지 않고, 정지 마찰도 약해 발이 끌린다
+    //  (걷다가 곧바로 쳐서 뒷발이 멀리 뒤에 남은 채 앞발을 또 내디딜 때. docs/whole_body_baseline_r1.md 0-1장: 3 cm 넘게 밀린 걸음 모두)
+    if (GAIT.fwdFix && g.lev > STEP_LEV) return;
     // 이번 프레임의 조이스틱(me.move)은 아직 지난 프레임 값(발을 멈추려고 뒤로 살짝 당긴 값)일 수 있어서 거절될 수 있다
-    //  → 받아 줄 때까지 다음 프레임에 다시 부탁한다
+    //  → 받아 줄 때까지 다음 프레임에 다시 부탁한다 (GAIT.fwdFix 에선 moveFeet 가 조이스틱을 정한 뒤에 부른다)
     //  걸음 방향 버그를 고친 뒤(GAIT.fwdFix)에는 베기·찌르기 모두 앞발 내딛기 0.25 m / 0.3초: 지나 딛기는 몸 밀기 없이는 몸보다 너무 앞에
     //  떨어져 42~63 cm 미끄러지고 다시 딛는다. 앞발 내딛기 0.25 m는 닿을 때 몸 전진 약 0.12 m, 미끄러짐 약 1 cm (docs/whole_body_strike.md R1)
-    const req = GAIT.fwdFix ? { kind: 'lunge', fwd: 0.25, duration: 0.3, hold: 0.3 } : { kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 };
+    const req = GAIT.fwdFix ? { kind: 'lunge', fwd: 0.25, duration: 0.3, hold: STEP_HOLD } : { kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 };
     if (g.requestStep(req)) this.requestedStep = true;
   }
 }
