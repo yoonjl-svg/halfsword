@@ -105,7 +105,8 @@ export class Skill {
     if (swinging && this.quiet > 0.2 && f.state === 'stand') {
       this.swings++;
       const d = f.foeDistance();
-      if (d > SKILL.lungeMin && d < SKILL.lungeMax) this.lunge = SKILL.lungeTime;
+      // 쓰러진 상대를 내려찍을 때(finish.js)는 내딛지 않는다: 마무리 자세가 거리를 맞추고, 내딛으면 칼이 누운 몸을 지나 발밑에 떨어진다
+      if (d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) this.lunge = SKILL.lungeTime;
     }
     this.quiet = swinging ? 0 : this.quiet + dt;
 
