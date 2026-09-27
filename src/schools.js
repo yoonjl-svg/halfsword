@@ -84,6 +84,9 @@ SCHOOLS.jian = {
   techByName: byName(jianTech),
 };
 
+// 청강검(에픽): 물리·measure가 지안과 같다 → 지안 꾸러미 그대로 (id만 다르다)
+SCHOOLS.qinggang = { ...SCHOOLS.jian, id: 'qinggang', weapon: 'qinggang' };
+
 // 엑스칼리버 복제품: 황동 장식에 칼날이 두껍고 무거워(1.50kg·1.00m) 롱소드보다 간격이 아주 조금 좁다. 자세·기술은 롱소드 그대로
 const replicaTech = withReach(TECH, { zornhau: 0, unterhau: -0.04, zornhauL: -0.03, unterhauL: -0.07, stichPflug: 0.08, stichPflugL: 0.08, stichOchs: 0.08, stichOchsL: 0.08, stichAlber: 0.03 });
 SCHOOLS.excalibur_replica = {

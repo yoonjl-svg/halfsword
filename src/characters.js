@@ -184,11 +184,11 @@ export const CHARACTERS = [
       '자세를 아주 자주(1.5~2초마다), 그것도 먼 자세로 거리낌 없이 건너뛴다(guardStick 낮음) — 다음 자세를 종잡을 수 없는 것이 이 사람의 정체성이다. ' +
       '속임수를 즐겨 쓰고(feint 높음), 맞히거나 막히면 반드시 이어 붙인다(followUp 높음).',
     weaknesses: '정석 간격 관리를 안 배워 규율(discipline)이 낮다 — 덤벼들 때 살짝 과하게 들어오는 버릇이 있어, 그 순간을 미리 알고 맞받아치면(Vor) 잡을 수 있다. 힘 자체는 평범해 묵직한 반격 한 방에 균형이 잘 무너진다.',
-    weapon: 'jian', // → 로스터에 'qinggang'(청강검, 에픽)이 생기면 바꾼다. 감독 결정: 지안 → 청강검
+    weapon: 'qinggang', // 청강검 (에픽 등급): 물리는 지안, 이름값대로 잘 벤다. 진품이냐 물으면 대답하지 않는다
     ai: {
       level: 'normal',
       persona: {
-        school: 'jian',
+        school: 'qinggang',
         level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 1.1, aggression: 1.05, windup: 0.5, strikeSpeed: 13, skill: 0.75 },
         pers: {
           precision: 0.85, // 가벼운 검이라 정확해야 통한다
