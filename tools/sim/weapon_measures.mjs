@@ -4,23 +4,20 @@
 // 캐릭터 PM 의 schools.js 에 무기별 꾸러미가 다 생기면 이 표는 필요 없어진다.
 export const WEAPON_MEASURES = {
   longsword: { contact: 1.62, reach: 2.0, clinch: 1.25, cutTime: 0.3 }, // 기본 AI 값 그대로 (회귀 기준)
-  longsword_sharp: { contact: 1.51, reach: 1.77, clinch: 1.17, cutTime: 0.4 },
-  arming_sword: { contact: 1.25, reach: 1.5, clinch: 0.96, cutTime: 0.38 },
-  messer: { contact: 1.23, reach: 1.46, clinch: 0.95, cutTime: 0.37 },
-  zweihander: { contact: 1.62, reach: 2.05, clinch: 1.25, cutTime: 0.48 },
-  estoc: { contact: 1.65, reach: 2.0, clinch: 1.27, cutTime: 0.44 },
-  sabre: { contact: 1.29, reach: 1.58, clinch: 1.0, cutTime: 0.38 },
-  rapier: { contact: 1.48, reach: 1.72, clinch: 1.14, cutTime: 0.36 },
-  falchion: { contact: 1.29, reach: 1.55, clinch: 1.0, cutTime: 0.38 },
-  katana: { contact: 1.44, reach: 1.77, clinch: 1.11, cutTime: 0.44 },
-  qinggang: { contact: 1.32, reach: 1.55, clinch: 1.02, cutTime: 0.38 },
-  hwandudaedo: { contact: 1.29, reach: 1.55, clinch: 1.0, cutTime: 0.42 },
-  excalibur: { contact: 1.61, reach: 1.87, clinch: 1.24, cutTime: 0.39 },
+  arming_sword: { contact: 1.33, reach: 1.57, clinch: 1.03, cutTime: 0.35 },
+  zweihander: { contact: 1.66, reach: 2.08, clinch: 1.28, cutTime: 0.49 },
+  estoc: { contact: 1.66, reach: 2.04, clinch: 1.28, cutTime: 0.46 },
+  sabre: { contact: 1.4, reach: 1.67, clinch: 1.08, cutTime: 0.38 },
+  rapier: { contact: 1.52, reach: 1.73, clinch: 1.17, cutTime: 0.29 },
+  falchion: { contact: 1.4, reach: 1.62, clinch: 1.08, cutTime: 0.36 },
+  monohoshizao: { contact: 1.51, reach: 2.01, clinch: 1.17, cutTime: 0.44 },
+  qinggang: { contact: 1.37, reach: 1.61, clinch: 1.06, cutTime: 0.36 },
+  excalibur: { contact: 1.61, reach: 1.86, clinch: 1.24, cutTime: 0.41 },
   excalibur_replica: { contact: 1.59, reach: 1.86, clinch: 1.23, cutTime: 0.42 },
-  lightsaber: { contact: 1.56, reach: 1.72, clinch: 1.2, cutTime: 0.29 },
-  tree_branch: { contact: 1.41, reach: 1.63, clinch: 1.09, cutTime: 0.36 },
-  rubber_chicken: { contact: 1.07, reach: 1.21, clinch: 0.83, cutTime: 0.26 },
-  frozen_tuna: { contact: 1.32, reach: 1.64, clinch: 1.02, cutTime: 0.43 },
+  lightsaber: { contact: 1.54, reach: 1.73, clinch: 1.19, cutTime: 0.25 },
+  tree_branch: { contact: 1.44, reach: 1.64, clinch: 1.11, cutTime: 0.33 },
+  rubber_chicken: { contact: 1.07, reach: 1.21, clinch: 0.83, cutTime: 0.27 },
+  frozen_tuna: { contact: 1.34, reach: 1.69, clinch: 1.03, cutTime: 0.46 },
 };
 
 /** AI 하나의 유파 간격을 그 무기 실측치로 바꿔 끼운다 (롱소드는 그대로 두어 기본 AI 회귀를 지킨다) */
