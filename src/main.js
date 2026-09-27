@@ -11,7 +11,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST } from './weapons.js';
 import { attachAura } from './aura.js';
@@ -402,6 +402,21 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
 });
 refreshSettingsUI();
 
+let lastFoeLine = ''; // 이번 판 끝에 상대가 한 말 (결과 화면에도 적는다)
+/** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 */
+function showFoeLine(ch, line) {
+  lastFoeLine = line;
+  if (!line) return;
+  const el = $('foeIntro');
+  clearTimeout(showFoeIntro.t);
+  el.querySelector('b').textContent = ch.name;
+  el.querySelector('i').textContent = '';
+  el.querySelector('span').textContent = `“${line}”`;
+  el.querySelector('em').textContent = '';
+  el.classList.add('show');
+  showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3400);
+}
+
 // 이번 상대 소개 (이름 · 별명 · 한마디). 큰 글씨 알림(toast)과 따로, 작게 잠깐 보여 준다
 function showFoeIntro(ch) {
   const el = $('foeIntro');
@@ -409,7 +424,7 @@ function showFoeIntro(ch) {
   if (!ch) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
-  el.querySelector('span').textContent = `“${ch.taunt}”`;
+  el.querySelector('span').textContent = `“${randomLine(ch, 'intro')}”`; // 시작 대사 3종 중 하나 (감독 지시)
   el.querySelector('em').textContent = `내 무기: ${player.weapon.nameKo} · 상대 무기: ${enemy.weapon.nameKo}`;
   // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
   showFoeIntro.t = setTimeout(() => {
@@ -587,6 +602,8 @@ function checkRoundEnd(dt) {
       roundOver = true;
       const win = !enemy.alive;
       showToast(win ? '승리!' : '패배...', 0);
+      if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
+      else lastFoeLine = '';
     }
     return;
   }
@@ -600,7 +617,7 @@ function checkRoundEnd(dt) {
     const loser = win ? enemy : player;
     const cause = { 목: '목을 베였다', 머리: '머리에 치명상', 출혈: '과다 출혈', 기절: '기절' }[loser.causeOfDeath] || '쓰러졌다';
     $('menuTitle').textContent = win ? '승리!' : '패배...';
-    $('menuSub').textContent = `${win ? '상대' : '나'}: ${cause}. ` + (win ? '난이도를 올려볼까요?' : '칼날을 세워 크게 휘둘러 보세요.');
+    $('menuSub').textContent = `${win ? '상대' : '나'}: ${cause}. ` + (win ? '난이도를 올려볼까요?' : lastFoeLine ? `${currentFoe.name}: “${lastFoeLine}”` : '칼날을 세워 크게 휘둘러 보세요.');
     $('btnStart').textContent = '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
