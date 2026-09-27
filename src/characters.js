@@ -122,7 +122,7 @@ export const CHARACTERS = [
           guardStick: 4.2,
           fearful: 0.3, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다
           angry: 0.2,
-          dogged: 0.2,
+          dogged: 0.3, // 감독 지시: 0.2 → 0.3 (집념을 조금 더 자주)
           guardSpeed: 0.58,
           rhythm: 5.2,
           margin: 0.4,

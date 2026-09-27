@@ -31,6 +31,9 @@ const FEAR_TREMOR = 0.03;
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
 
+// 감정이 풀린 뒤 같은 감정이 다시 지배할 수 있기까지의 텀(초)과, 어떤 감정이든 다시 켜질 수 있기까지의 텀(초)
+const EMO_REST = 6;
+const EMO_REST_ALL = 2;
 export class AI {
   /**
    * persona: 캐릭터마다 다른 개성을 주입한다 (characters.js). 안 주면(undefined) 예전과 똑같은
@@ -86,6 +89,8 @@ export class AI {
     this.fear = 0; // 검술에 실제로 쓰는 공포 세기 (다른 감정이 지배하면 0)
     this.emoT = 0;
     this.parryTimes = []; // 최근 막힌 시각들 (분노 판정: 10초 안에 두 번)
+    this.emoRest = { fear: -1, anger: -1, obsession: -1 }; // 감정별로 다시 지배할 수 있는 시각 (풀린 뒤 텀)
+    this.emoRestAll = -1; // 어떤 감정이든 다시 켜질 수 있는 시각
     this.evParried = false; // 이번 스텝에 생긴 사건들 (afterStrike가 켜고 emote가 끈다)
     this.evLanded = false;
     // 무기 사건은 한 번만 공포로 센다 (무기·검술 담당 추가, emote() 참고)
@@ -313,7 +318,8 @@ export class AI {
    * (자포자기는 공포와 겹치고 교활함은 감정보다 성격·격투 스타일에 가까워 뺐다 — 교활함은 feint·alber 취향으로,
    *  자포자기는 hurry()의 desperate로 이미 표현된다)
    * 지배 감정은 하나: 0.3을 넘은 것 중 생존 우선(공포 > 분노 > 집념). 지배 감정이 바뀌려면 새 감정이 0.15 이상
-   * 더 세야 한다(왔다 갔다 하지 않게). 지배 감정이 0.15 아래로 가라앉으면 물러난다.
+   * 더 세야 한다(왔다 갔다 하지 않게). 지배 감정이 0.15 아래로 가라앉으면 물러난다. 풀리거나 자리를 뺏긴 감정은 EMO_REST(6초)
+   * 동안 다시 지배하지 못하고, 어떤 감정이든 직전 감정이 풀린 뒤 EMO_REST_ALL(2초)은 쉰다 — 연달아 켜지지 않게 하는 텀.
    *
    * 검술에 효과를 내는 것은 공포(this.fear — 다른 감정이 지배하면 0)와 분노(this.anger — 분노가 지배할 때만)다.
    *  공포: holdDist(간격을 더 둔다), pickGuard(칼끝으로 겨누는 자세만 잡는다), watch(헛친 상대·쓰러진 상대 말고는
@@ -365,14 +371,27 @@ export class AI {
     // 지배 감정 고르기
     const order = ['fear', 'anger', 'obsession'];
     const cur = this.emotion;
-    if (cur && E[cur] < 0.15) this.emotion = null;
-    const cand = order.find((k) => E[k] > 0.3 && k !== this.emotion);
+    const t = this.emoT;
+    // 풀린 감정은 한동안(EMO_REST 초) 다시 지배하지 못하고, 어떤 감정이든 직전 감정이 풀린 뒤 EMO_REST_ALL 초는 쉰다
+    //  — 같은 감정이 연달아 켜지거나 감정이 쉴 새 없이 바뀌지 않게 하는 텀. 세기 자체는 계속 쌓이고 줄어든다
+    const release = (k) => {
+      this.emoRest[k] = t + EMO_REST;
+      this.emoRestAll = t + EMO_REST_ALL;
+    };
+    if (cur && E[cur] < 0.15) {
+      this.emotion = null;
+      release(cur);
+    }
+    const cand = t >= this.emoRestAll ? order.find((k) => E[k] > 0.3 && k !== this.emotion && t >= this.emoRest[k]) : null;
     if (cand) {
       const c = this.emotion;
       // 우선순위가 높은 감정은 지금 지배 감정보다 0.15 이상 약하지만 않으면 넘겨받고, 낮은 감정은 0.15 이상 세야
       //  넘겨받는다 (두 조건이 동시에 참일 수 없어 매 스텝 왔다 갔다 하지 않는다)
       const higher = c && order.indexOf(cand) < order.indexOf(c);
-      if (!c || (higher ? E[cand] > E[c] - 0.15 : E[cand] > E[c] + 0.15)) this.emotion = cand;
+      if (!c || (higher ? E[cand] > E[c] - 0.15 : E[cand] > E[c] + 0.15)) {
+        if (c) release(c); // 자리를 뺏긴 감정도 텀을 쉰다
+        this.emotion = cand;
+      }
     }
     this.fear = this.emotion === 'fear' || this.emotion === null ? E.fear : 0;
     this.anger = this.emotion === 'anger' ? E.anger : 0;
