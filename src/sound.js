@@ -1410,6 +1410,32 @@ export class Sound {
     this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) });
   }
 
+  /**
+   * 무기 뽑기 룰렛의 "딸깍" (화면 소리, 위치 없음). 아주 짧은 사각파 한 번 → 폰 부담 거의 없음.
+   * final = 멈춘 순간: 조금 낮고 길게, grand = 전설급이 뽑혔을 때 한 옥타브 위 울림을 더한다
+   */
+  tick(final = false, grand = false) {
+    if (!this._on || !this.ctx || !this.master) return;
+    const c = this.ctx;
+    const t = c.currentTime;
+    const blip = (freq, dur, vol, type = 'square') => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(this.master);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    };
+    if (!final) blip(1800 + Math.random() * 300, 0.025, 0.05);
+    else {
+      blip(660, 0.16, 0.08, 'triangle');
+      if (grand) blip(1320, 0.5, 0.05, 'sine');
+    }
+  }
+
   /** 몸이 땅에 부딪힘. speed = 몸통이 떨어지던 속도 (m/s). light = 무릎이 꺾여 주저앉음 */
   bodyFall(speed, { light = false, pos } = {}) {
     if (!this._on || !this.ctx) return;

@@ -400,12 +400,46 @@ function showFoeIntro(ch) {
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
   el.querySelector('span').textContent = `“${ch.taunt}”`;
-  el.querySelector('em').textContent = `내 무기: ${player.weapon.nameKo} · 상대 무기: ${enemy.weapon.nameKo}`;
+  const em = el.querySelector('em');
+  em.textContent = '';
   // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
   showFoeIntro.t = setTimeout(() => {
     el.classList.add('show');
-    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3500);
+    spinWeapon(em, () => {
+      showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3000);
+    });
   }, 1300);
+}
+
+// 무기 뽑기 룰렛: "내 무기" 이름이 빠르게 돌다가 점점 느려지며 이번 판 무기에서 멈춘다 (약 1.3초).
+//  글자와 짧은 딸깍 소리만 쓴다. 전설급(진짜 엑스칼리버)이 뽑히면 금빛으로 번쩍인다
+const GRAND_WEAPONS = new Set(['excalibur']);
+function spinWeapon(em, done) {
+  clearTimeout(spinWeapon.t);
+  const names = PLAYER_WEAPON_POOL.map((id) => WEAPON_LIST.find((w) => w.id === id)?.nameKo).filter(Boolean);
+  const finalName = player.weapon.nameKo;
+  const foeLine = ` · 상대 무기: ${enemy.weapon.nameKo}`;
+  const grand = GRAND_WEAPONS.has(player.weapon.id);
+  em.classList.remove('picked', 'grand');
+  let i = Math.floor(Math.random() * names.length);
+  let delay = 45; // 첫 간격(ms). 매번 조금씩 늘려 감속
+  const step = () => {
+    if (delay > 260) {
+      em.innerHTML = `내 무기: <b>${finalName}</b>${foeLine}`;
+      em.classList.add('picked');
+      if (grand) em.classList.add('grand');
+      sound.tick(true, grand);
+      haptic(grand ? 1 : 0.3);
+      done?.();
+      return;
+    }
+    i = (i + 1) % names.length;
+    em.innerHTML = `내 무기: <b>${names[i]}</b>${foeLine}`;
+    sound.tick(false);
+    delay *= 1.16;
+    spinWeapon.t = setTimeout(step, delay);
+  };
+  step();
 }
 
 function showToast(text, ms = 1200) {
