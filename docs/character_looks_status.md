@@ -4,6 +4,37 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 5 — 디렉터 분담: 마르그레테 투구 방어의 외형 쪽 (trig_017J3e7VxfosvZkFXoh4BBqe)
+
+디렉터 브랜치(1d49abb)를 병합했다(`982c220`). 충돌은 `outfits.js`·이 문서 두 곳뿐. 디렉터 쪽 파일은
+3dac8a4와 같아서 이 브랜치의 뒤 커밋(07021c7) 쪽으로 풀었다. 병합 뒤 시뮬 기준선을 새로 잡고 아래
+작업을 했다.
+
+1. **투구 한 그룹**: v3 투구 전체를 `group.userData.helmet`(=`fighter.helmetGroup`) 한 그룹으로 넘긴다.
+   붉은 옆머리·땋은 머리는 그룹 밖(머리에 직접)이라 투구가 사라져도 남는다.
+2. **투구 종류**: v3 look에 `helmet: 'horned'`. 지금 fighter.js는 `=== 'kettle'`만 보므로 아무 변화 없음.
+   전투 쪽이 `!!look.helmet`으로 바꾸면 켜진다.
+3. **파손 단계 함수**: `outfits.js`에서 `export function setHelmetWear(helm, wear01)` (1 = 멀쩡 → 0).
+   - 0.5 아래: 찌그러짐·긁힘. 첨탑이 기울고, 사발이 눌리고, 뿔·볏·목가리개가 틀어진다. 판은 긁혀
+     거칠고 희끗해진다(단계적으로 커짐).
+   - 0.2 아래: 사발·첨탑에 금(짙은 지그재그 선)이 보이고, 깃털 술이 꺾여 늘어진다.
+   - 난수 없이 결정적이다. 같은 값을 다시 불러도 같은 모습이고, 1로 되돌리면 원래대로 돌아온다
+     (브라우저에서 확인). `pieces`가 없는 투구(케틀햇)에는 아무 일도 안 한다.
+   - 전투 쪽은 `helmetIntegrity`가 바뀔 때 `setHelmetWear(this.helmetGroup, this.helmetIntegrity)`를 부르면 된다.
+4. **흩어질 조각**: 그룹 안을 큰 조각 7개로 나눠 두었다. `helm.userData.pieces` =
+   `{ bowl, nape, spire, crest, hornR, hornL, plume }`. 각각이 피벗 그룹(회전 중심 = 그 조각이 붙은 자리)이고,
+   안에 합친 메쉬가 하나씩 있다. 사발 = 이마 테 + 사발 + 이마 뾰족 장식, 첨탑 = 첨탑 + 꼭지.
+   금 메쉬 2개는 `helm.userData.cracks`에 있고, 각각 사발·첨탑 피벗 안에 들어 있어 같이 흩어진다.
+   조각을 흩뜨릴 때는 각 피벗 그룹을 월드로 떼어 내면 된다(`getWorldPosition`/`Quaternion` 후 scene에 add).
+5. **검증**: 병합 뒤 새 기준선 대비 `live_battery`·`fights12`·`characters_eval both 2` 바이트 동일,
+   콘솔 에러 0, `hasHelmet false`(아직 방어 꺼짐), 조각 7개 + 금 2개 확인.
+   파손 단계 스크린샷: `docs/character_looks/margarethe_v3_wear{1,04,01}_{front,back}.jpg`.
+
+하인리히 판금: 디렉터 메시지는 "사장님이 따로 정할 때까지 하지 않는다"였지만, 그 메시지가 쓰인 뒤
+사장님이 "하인리히의 판금 갑옷에도 적용해"라고 정했다(아래 "추가 오너 결정", 12:46 트리거로 보고함).
+외형 쪽 준비(부위별 `userData.armor` 표시)는 이미 되어 있고, 판금 파손 단계 겉모습도 같은 방식으로
+만들 수 있다 — 디렉터가 판정 쪽 방향을 정하면 바로 붙인다.
+
 ## ★ 오너 결정 (디렉터 조치 요청): 마르그레테 투구는 실제로 막아야 한다
 
 오너 원문: "실제로 막는 기능이 있어야 해. 피해를 경감해주는 대신 파손되거나 완전 파손될 경우

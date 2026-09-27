@@ -302,45 +302,120 @@ const MG3_PLUME = [
   [-0.23, 0.04, 0],
 ];
 const MG3_PLUME_RADII = [0.03, 0.042, 0.037, 0.025, 0.008];
+// 투구 자체 좌표 → 머리 좌표 변환 (onHelm과 같은 것). 조각마다 회전 중심(피벗)을 머리 좌표로 옮길 때 쓴다
+const MG3_M = new THREE.Matrix4().compose(
+  new THREE.Vector3(...MG3_C),
+  new THREE.Quaternion().setFromEuler(new THREE.Euler(...MG3_TILT)),
+  new THREE.Vector3(1, 1, 1),
+);
+/**
+ * 투구 조각 하나: 피벗 그룹(조각이 꺾이고 흩어지는 중심) 안에 합친 메쉬 하나.
+ * geos는 투구 자체 좌표, pivot도 투구 자체 좌표로 준다.
+ */
+function helmPiece(helm, name, geos, color, opts, pivot) {
+  const pv = new THREE.Vector3(...pivot).applyMatrix4(MG3_M);
+  const pg = new THREE.Group();
+  pg.name = name;
+  pg.position.copy(pv);
+  helm.add(pg);
+  const mesh = addMerged(pg, geos.map((geo) => onHelm(geo).translate(-pv.x, -pv.y, -pv.z)), color, opts);
+  mesh.userData.base = { color: mesh.material.color.getHex(), roughness: mesh.material.roughness };
+  helm.userData.pieces[name] = pg;
+  return pg;
+}
+/** 금(균열): 조각 표면을 따라 지그재그로 가는 짙은 선. 처음엔 숨겨 두고 많이 부서지면 보인다 */
+function helmCrack(pg, pts) {
+  const pv = pg.position;
+  const geo = onHelm(taperedTube(pts, [0.0035, 0.003, 0.0025], 8, 4)).translate(-pv.x, -pv.y, -pv.z);
+  const m = addMerged(pg, [geo], 0x050505, { roughness: 1 });
+  m.visible = false;
+  return m;
+}
+// 표면 위의 점: 투구 축 둘레 각도 a(정면 +x에서 +z 쪽으로), 높이 y, 반지름 r(+ 표면에서 살짝 띄움)
+const onSurf = (a, y, r) => [Math.cos(a) * (r + 0.003), y, Math.sin(a) * (r + 0.003)];
+const bowlR = (y) => (y < 0.016 ? 0.124 : 0.124 - ((y - 0.016) / 0.05) * 0.02);
+const spireR = (y) => 0.104 * (1 - (y - 0.066) / 0.105);
+
 const MARGARETHE_DRAGON_HORNED = {
   ...MARGARETHE_DRAGON,
   head(g, look) {
-    const plate = [
-      oct(new THREE.CylinderGeometry(0.124, 0.124, 0.032, 8, 1, true)), // 이마 테
-      oct(new THREE.CylinderGeometry(0.104, 0.124, 0.05, 8, 1, true)).translate(0, 0.041, 0), // 사발
-      oct(new THREE.ConeGeometry(0.104, 0.105, 8)).translate(0, 0.1185, 0), // 첨탑
-      new THREE.CylinderGeometry(0.124, 0.142, 0.034, 8, 1, true, Math.PI, Math.PI).translate(0, -0.032, 0), // 목가리개 1
-      new THREE.CylinderGeometry(0.14, 0.16, 0.034, 8, 1, true, Math.PI, Math.PI).translate(0, -0.062, 0), // 목가리개 2
-      bake(new THREE.ConeGeometry(0.02, 0.034, 3), [0.124, -0.026, 0], [Math.PI, 0, 0], [0.4, 1, 1]), // 이마 가운데 뾰족 장식
-      taperedTube(MG3_HORN_R, MG3_HORN_RADII, 10, 6), // 뿔(오른쪽)
-      taperedTube(mirrorZ(MG3_HORN_R), MG3_HORN_RADII, 10, 6), // 뿔(왼쪽)
-    ];
-    // 투구 조각(판·볏·술)은 한 그룹으로 묶어 group.userData.helmet으로 넘긴다 — 오너 결정("실제로 막고,
-    // 닳고, 완전히 부서지면 사라진다")을 전투 쪽이 켜면 fighter.js의 knockOffHelmet이 이 그룹을 통째로
-    // 떼어 낸다. 방어 판정(hasHelmet)이 꺼져 있는 지금은 아무 일도 하지 않는다. 붉은 머리는 머리에 남는다
+    // 투구는 한 그룹(group.userData.helmet)으로 넘긴다. 오너 결정("실제로 막고, 닳고, 완전히 부서지면
+    // 사라진다")에 따라 전투 쪽이 fighter.js에서 이 그룹을 떼어 내거나 조각내 흩뜨린다. 흩뜨릴 수 있게
+    // 전부 하나로 합치지 않고 큰 조각 7개(사발·목가리개·첨탑·볏·뿔 둘·깃털 술)로 나눠 둔다 —
+    // helm.userData.pieces[이름] = 피벗 그룹. 붉은 옆머리·땋은 머리는 그룹 밖(머리에 직접)이라 남는다.
     const helm = new THREE.Group();
+    helm.name = 'helmet';
+    helm.userData.pieces = {};
     g.add(helm);
     g.userData.helmet = helm;
-    addMerged(helm, plate.map(onHelm), MG_PLATE, MG3_PLATE);
-    // 이마의 세 갈래 볏 (가운데가 높고 양옆은 벌어진다) + 첨탑 끝 꼭지 — 짙은 판으로 도드라지게
-    const crest = [
-      bake(new THREE.ConeGeometry(0.03, 0.12, 4), [0.118, 0.075, 0], [0, 0, 0.18], [0.35, 1, 1]),
-      bake(new THREE.ConeGeometry(0.022, 0.08, 4), [0.112, 0.055, 0.035], [0.35, 0, 0.18], [0.35, 1, 1]),
-      bake(new THREE.ConeGeometry(0.022, 0.08, 4), [0.112, 0.055, -0.035], [-0.35, 0, 0.18], [0.35, 1, 1]),
-      new THREE.SphereGeometry(0.016, 6, 4).translate(0, 0.172, 0),
-    ];
-    addMerged(helm, crest.map(onHelm), MG_PLATE_DARK, MG3_PLATE);
+    const bowl = helmPiece(
+      helm,
+      'bowl',
+      [
+        oct(new THREE.CylinderGeometry(0.124, 0.124, 0.032, 8, 1, true)), // 이마 테
+        oct(new THREE.CylinderGeometry(0.104, 0.124, 0.05, 8, 1, true)).translate(0, 0.041, 0), // 사발
+        bake(new THREE.ConeGeometry(0.02, 0.034, 3), [0.124, -0.026, 0], [Math.PI, 0, 0], [0.4, 1, 1]), // 이마 가운데 뾰족 장식
+      ],
+      MG_PLATE,
+      MG3_PLATE,
+      [0, 0, 0],
+    );
+    helmPiece(
+      helm,
+      'nape',
+      [
+        new THREE.CylinderGeometry(0.124, 0.142, 0.034, 8, 1, true, Math.PI, Math.PI).translate(0, -0.032, 0), // 목가리개 1
+        new THREE.CylinderGeometry(0.14, 0.16, 0.034, 8, 1, true, Math.PI, Math.PI).translate(0, -0.062, 0), // 목가리개 2
+      ],
+      MG_PLATE,
+      MG3_PLATE,
+      [-0.124, -0.016, 0],
+    );
+    const spire = helmPiece(
+      helm,
+      'spire',
+      [oct(new THREE.ConeGeometry(0.104, 0.105, 8)).translate(0, 0.1185, 0), new THREE.SphereGeometry(0.016, 6, 4).translate(0, 0.172, 0)],
+      MG_PLATE,
+      MG3_PLATE,
+      [0, 0.066, 0],
+    );
+    // 이마의 세 갈래 볏 (가운데가 높고 양옆은 벌어진다) — 짙은 판으로 도드라지게
+    helmPiece(
+      helm,
+      'crest',
+      [
+        bake(new THREE.ConeGeometry(0.03, 0.12, 4), [0.118, 0.075, 0], [0, 0, 0.18], [0.35, 1, 1]),
+        bake(new THREE.ConeGeometry(0.022, 0.08, 4), [0.112, 0.055, 0.035], [0.35, 0, 0.18], [0.35, 1, 1]),
+        bake(new THREE.ConeGeometry(0.022, 0.08, 4), [0.112, 0.055, -0.035], [-0.35, 0, 0.18], [0.35, 1, 1]),
+      ],
+      MG_PLATE_DARK,
+      MG3_PLATE,
+      [0.118, 0.016, 0],
+    );
+    helmPiece(helm, 'hornR', [taperedTube(MG3_HORN_R, MG3_HORN_RADII, 10, 6)], MG_PLATE, MG3_PLATE, MG3_HORN_R[0]);
+    helmPiece(helm, 'hornL', [taperedTube(mirrorZ(MG3_HORN_R), MG3_HORN_RADII, 10, 6)], MG_PLATE, MG3_PLATE, mirrorZ(MG3_HORN_R)[0]);
     // 첨탑 끝의 술 뭉치 + 뒤로 흘러내리는 굵은 술. 양옆 두 가닥이 폭을 더해 뒤에서 봐도 갈고리가
     // 아니라 술 다발로 읽히고, 끝으로 갈수록 가운데로 모인다
     const side = (s) => MG3_PLUME.map(([x, y], i) => [x * 0.94, y - 0.01, s * 0.03 * (1 - 0.6 * (i / (MG3_PLUME.length - 1)))]);
-    const plume = [
-      new THREE.SphereGeometry(0.032, 8, 6).translate(0, 0.178, 0),
-      taperedTube(MG3_PLUME, MG3_PLUME_RADII, 14, 7),
-      taperedTube(side(1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
-      taperedTube(side(-1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
+    helmPiece(
+      helm,
+      'plume',
+      [
+        new THREE.SphereGeometry(0.032, 8, 6).translate(0, 0.178, 0),
+        taperedTube(MG3_PLUME, MG3_PLUME_RADII, 14, 7),
+        taperedTube(side(1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
+        taperedTube(side(-1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
+      ],
+      look.plume ?? look.hair,
+      { roughness: 0.95 },
+      [0, 0.172, 0],
+    );
+    // 금: 사발 오른쪽 앞과 첨탑 왼쪽에 하나씩 (setHelmetWear가 많이 부서졌을 때만 켠다)
+    helm.userData.cracks = [
+      helmCrack(bowl, [0.062, 0.045, 0.03, 0.012, -0.004].map((y, i) => onSurf(0.6 + (i % 2 ? 0.07 : -0.02), y, bowlR(y)))),
+      helmCrack(spire, [0.07, 0.085, 0.1, 0.115, 0.128].map((y, i) => onSurf(-0.5 + (i % 2 ? 0.08 : -0.03), y, spireR(y)))),
     ];
-    addMerged(helm, plume.map(onHelm), look.plume ?? look.hair, { roughness: 0.95 });
-    // 붉은 머리는 v2와 같다: 얼굴 양옆 옆머리 + 목가리개 밑으로 땋아 내린 머리
+    // 붉은 머리는 v2와 같다: 얼굴 양옆 옆머리 + 목가리개 밑으로 땋아 내린 머리 (투구 그룹 밖)
     const hair = [box(0.03, 0.13, 0.016, [0.03, -0.045, 0.099]), box(0.03, 0.13, 0.016, [0.03, -0.045, -0.099])];
     for (let i = 0; i < 5; i++) {
       const r = 0.03 - i * 0.0025;
@@ -349,6 +424,40 @@ const MARGARETHE_DRAGON_HORNED = {
     addMerged(g, hair, look.hair, { roughness: 1 });
   },
 };
+
+// 투구가 닳은 정도를 겉모습에 반영한다 (전투 쪽이 helmetIntegrity가 바뀔 때마다 부른다).
+//  wear01: 1 = 멀쩡, 0 = 완전 파손 직전. 난수 없이 결정적이고, 같은 값을 여러 번 불러도 같은 모습이다.
+//  · 0.5 아래: 찌그러짐·긁힘 — 첨탑이 기울고 사발이 눌리고 뿔·볏이 틀어지며, 판이 긁혀 거칠고 희끗해진다
+//  · 0.2 아래: 금이 보이고 깃털 술이 꺾여 늘어진다
+//  pieces가 없는 투구(플레이어 케틀햇 등)에는 아무 일도 하지 않는다.
+const _scratch = new THREE.Color(0x6a6a72);
+export function setHelmetWear(helm, wear01) {
+  const P = helm?.userData?.pieces;
+  if (!P) return;
+  const w = Math.min(1, Math.max(0, wear01));
+  const dent = w < 0.5 ? (0.5 - w) / 0.5 : 0; // 0.5에서 0 → 0에서 1
+  const broken = w < 0.2;
+  const set = (pg, rx, ry, rz, sx = 1, sy = 1, sz = 1) => {
+    if (!pg) return;
+    pg.rotation.set(rx, ry, rz);
+    pg.scale.set(sx, sy, sz);
+  };
+  set(P.bowl, 0, 0, 0, 1 + 0.04 * dent, 1 - 0.07 * dent, 1 + 0.03 * dent);
+  set(P.spire, 0.12 * dent, 0, -0.22 * dent - (broken ? 0.12 : 0));
+  set(P.crest, 0.18 * dent, 0, -0.1 * dent);
+  set(P.hornR, 0.28 * dent, 0, 0);
+  set(P.hornL, -0.12 * dent, 0, -0.2 * dent);
+  set(P.nape, 0, 0, 0.1 * dent);
+  set(P.plume, 0, broken ? 0.35 : 0, broken ? 0.95 : 0.2 * dent);
+  for (const name in P) {
+    const m = P[name].children[0];
+    const b = m?.userData?.base;
+    if (!b || name === 'plume') continue;
+    m.material.color.setHex(b.color).lerp(_scratch, 0.35 * dent);
+    m.material.roughness = Math.min(1, b.roughness + 0.45 * dent);
+  }
+  for (const c of helm.userData.cracks || []) c.visible = broken;
+}
 
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
