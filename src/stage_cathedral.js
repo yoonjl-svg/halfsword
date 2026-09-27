@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { ARENA } from './config.js';
 import { rng, h3, Kit, box, cyl, limb, canvasTex } from './stage_kit.js';
+import { weaponEnv } from './weapon_looks.js';
 
 const C = {
   stone: 0xcfc7b6, // 석회암 (질감에 곱해짐)
@@ -621,7 +622,7 @@ export function buildCathedral(scene, lights = {}) {
   {
     const vr = rng(404);
     const LEAF = [0x2f4a24, 0x3a5a2a, 0x46662f, 0x2a4020, 0x557236];
-    const ROSE = [0x9e1624, 0xb81e2e, 0xc8455a, 0xd9788a, 0x7a0e1a, 0xead2d2];
+    const ROSE = [0x9e1624, 0xb01a2a, 0x8a1020, 0xa3172a, 0x7a0e1a]; // 붉은 장미 한 가지 (짙기만 조금씩 다르게)
     const leaves = [];
     const roses = [];
     const Z = new THREE.Vector3(0, 0, 1);
@@ -730,6 +731,83 @@ export function buildCathedral(scene, lights = {}) {
         }
       }
     }
+    // ── 오래 안치된 유해와 바닥에 꽂힌 칼 (장미 구석, 북쪽 옆 복도) ──
+    //  낮은 돌 관대 위에 누운 백골: 두 손을 가슴에 모았고, 바랜 천이 다리를 덮었다. 머리맡에는 녹슨 투구.
+    //  관대 앞 판석 틈에는 장식 없는 롱소드 한 자루가 꽂힌 채 녹슬었고, 장미 덩굴이 코등이를 감았다.
+    {
+      const tx = -22.75; // 가운데 결투 자리에서 아케이드 아치 사이로 보이는 칸
+      const tz = AZ - 4.2;
+      const bone = 0xd6cbb0;
+      const bh = 0.42; // 관대 높이 (낮게: 누운 유해가 보이게)
+      K.put('stone', box(2.6, bh - 0.1, 1.15), C.stoneDark, [tx, (bh - 0.1) / 2, tz], [0, 0, 0], 1, { ...st, rough: 0.02 });
+      K.put('stone', box(2.75, 0.1, 1.3), C.stone, [tx, bh - 0.05, tz], [0, 0, 0], 1, { ...st, rough: 0.015 });
+      K.put('stone', box(0.4, 0.12, 0.5), C.stone, [tx - 1.05, bh + 0.06, tz], [0, 0, 0.08], 1, st); // 돌 베개
+      const y = bh + 0.07;
+      const B = (g, pos, rot = [0, 0, 0], sc = 1) => K.put('bone', g, bone, pos, rot, sc, { vary: 0.08, noise: 0.12 });
+      // 머리 (+x 가 발쪽, 머리는 −x)
+      const hx = tx - 1.02;
+      B(new THREE.SphereGeometry(0.125, 10, 8), [hx, y + 0.17, tz], [0, 0, 0], [1, 1.05, 0.9]);
+      B(box(0.09, 0.05, 0.08), [hx + 0.07, y + 0.1, tz], [0, 0, -0.5]); // 턱
+      for (const s of [-1, 1]) K.put('dark', new THREE.SphereGeometry(0.024, 6, 4), 0x100c0a, [hx + 0.06, y + 0.24, tz + s * 0.035]); // 눈구멍
+      K.put('dark', box(0.02, 0.025, 0.02), 0x100c0a, [hx + 0.09, y + 0.2, tz]); // 코구멍
+      // 척추·갈비뼈·골반
+      for (let i = 0; i < 9; i++) B(box(0.065, 0.06, 0.07), [hx + 0.18 + i * 0.065, y + 0.04, tz]);
+      for (let i = 0; i < 6; i++) {
+        const x = hx + 0.26 + i * 0.07;
+        const w = 0.13 - Math.abs(i - 2) * 0.012;
+        B(new THREE.TorusGeometry(w * 1.15, 0.017, 4, 10, Math.PI), [x, y + 0.03, tz], [Math.PI / 2, Math.PI / 2, 0], [1, 0.75, 1]);
+      }
+      B(new THREE.TorusGeometry(0.1, 0.03, 5, 10), [hx + 0.86, y + 0.04, tz], [Math.PI / 2, 0, 0], [1, 1.3, 1]); // 골반
+      // 팔: 가슴 위로 모은 두 손
+      for (const s of [-1, 1]) {
+        B(cyl(0.028, 0.028, 0.3, 5), [hx + 0.33, y + 0.05, tz + s * 0.17], [0, 0, Math.PI / 2]);
+        limb(K, 'bone', [hx + 0.48, y + 0.05, tz + s * 0.17], [hx + 0.55, y + 0.12, tz + s * 0.04], 0.025, 0.022, bone, {}, 5);
+        for (let f = 0; f < 4; f++) B(box(0.05, 0.012, 0.012), [hx + 0.57 + f * 0.012, y + 0.14, tz + s * 0.01 + (f - 1.5) * 0.018]);
+      }
+      // 바랜 천이 다리를 덮었다 (다리뼈는 발목 아래만 보인다)
+      K.put('cloth', box(0.95, 0.12, 0.5, 6, 1, 3), 0x5a3a36, [hx + 1.35, y + 0.05, tz], [0, 0, 0], 1, { rough: 0.06, noise: 0.2 });
+      for (const s of [-1, 1]) {
+        B(cyl(0.03, 0.026, 0.22, 5), [hx + 1.9, y + 0.03, tz + s * 0.09], [0, 0, Math.PI / 2]);
+        B(box(0.12, 0.03, 0.06), [hx + 2.03, y + 0.06, tz + s * 0.09], [0, 0, 0.9]); // 발뼈
+      }
+      // 머리맡의 녹슨 투구
+      K.put('rust', new THREE.SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0x6a4a36, [tx - 1.55, bh + 0.02, tz + 0.35], [0.9, 0.4, 0.2], 1, { vary: 0.1, noise: 0.25 });
+      // 관대 둘레로 기어오른 장미
+      for (let k = 0; k < 6; k++) {
+        const along = (k < 3 ? -1 : 1) * (0.95 + vr() * 0.3); // 관대 양 끝에만
+        const p = new THREE.Vector3(tx + along, 0.1 + vr() * (bh - 0.1), tz - 0.62);
+        leaf(p.clone(), toRoom, 0.8);
+        leaf(p.clone().add(new THREE.Vector3(0.1, 0.05, 0)), toRoom, 0.8);
+        if (vr() < 0.5) rose(p.clone().addScaledVector(toRoom, 0.07), 0.85);
+      }
+      // 판석 틈에 꽂힌 칼: 장식 없는 롱소드, 조금 기울었다
+      const sx = tx + 0.5;
+      const sz = tz - 1.9;
+      K.push([sx, 0, sz], 0.35);
+      const tilt = [0.1, 0, -0.07];
+      const steel = 0x8a857c;
+      const at = (h) => [Math.sin(-tilt[2]) * h, Math.cos(tilt[0]) * h, Math.sin(tilt[0]) * h];
+      K.put('sword', box(0.065, 1.02, 0.016), steel, at(0.51), tilt, 1, { vary: 0.04, noise: 0.18 }); // 드러난 칼날
+      K.put('sword', box(0.024, 1.0, 0.018), 0x6e6960, at(0.51), tilt, 1, { vary: 0 }); // 피 홈
+      K.put('sword', box(0.36, 0.045, 0.045), 0x5a5048, at(1.04), tilt, 1, { vary: 0.05 }); // 코등이
+      K.put('rust', cyl(0.024, 0.027, 0.28, 7), 0x3a2a20, at(1.2), tilt); // 손잡이 (가죽이 삭았다)
+      K.put('sword', new THREE.SphereGeometry(0.048, 8, 6), 0x5a5048, at(1.37), tilt); // 폼멜
+      K.pop();
+      // 칼이 박힌 자리의 깨진 판석 조각
+      for (let k = 0; k < 6; k++) {
+        const a = vr() * 6.28;
+        const d = 0.08 + vr() * 0.25;
+        K.put('stone', box(0.12 + vr() * 0.1, 0.03, 0.1), C.floor, [sx + Math.cos(a) * d, 0.015, sz + Math.sin(a) * d], [vr() * 0.3, vr() * 3, 0], 1, { rough: 0.02 });
+      }
+      // 코등이를 감은 장미 덩굴
+      for (let k = 0; k < 4; k++) {
+        const a = k * 1.3;
+        const p = new THREE.Vector3(sx + Math.cos(a) * 0.07, 0.08 + k * 0.12, sz + Math.sin(a) * 0.07);
+        leaf(p, new THREE.Vector3(Math.cos(a), 0.3, Math.sin(a)).normalize(), 0.9);
+      }
+      rose(new THREE.Vector3(sx + 0.06, 0.4, sz - 0.05), 0.9); // 칼날 밑동에 한 송이
+    }
+
     // 인스턴싱
     const leafGeo = new THREE.BufferGeometry();
     leafGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.1, 0, -0.065, 0, 0, 0, -0.07, 0, 0.065, 0, 0], 3));
@@ -765,6 +843,11 @@ export function buildCathedral(scene, lights = {}) {
     K.mesh('iron', std({ roughness: 0.5, metalness: 0.6 })),
     K.mesh('ivy', std({ roughness: 1, flatShading: true }), { light: shade }),
     K.mesh('vine', std({ roughness: 1 }), { light: shade }),
+    K.mesh('bone', std({ roughness: 0.85 }), { light: shade }),
+    K.mesh('cloth', std({ roughness: 1, flatShading: true }), { light: shade }),
+    K.mesh('dark', std({ roughness: 1 })),
+    K.mesh('rust', std({ roughness: 0.9, metalness: 0.3 }), { light: shade }),
+    K.mesh('sword', std({ roughness: 0.45, metalness: 0.85, envMap: weaponEnv(), envMapIntensity: 0.9 }), { light: shade }),
     K.mesh('candle', std({ roughness: 0.6, emissive: 0x3a2a10, emissiveIntensity: 0.6 })),
     K.mesh('glow', new THREE.MeshBasicMaterial({ vertexColors: true, fog: false })),
   ];
