@@ -184,6 +184,7 @@ export class Fighter {
     this.prevU = {};
     this.footLoad = { F: 1, B: 1 };
     this.crouch = 0; // 무릎 꿇기 등으로 낮춘 높이(m)
+    this.hunch = 0; // 상처·자세로 일부러 앞으로 숙인 각도(라디안)
     this.footstep = 0; // 발을 디딘 순간의 세기 (main이 읽고 0으로 되돌린다)
     this.gaitDir = new THREE.Vector2(1, 0); // 몸 기준 이동 방향 (x 앞, y 오른쪽)
     this.localVel = new THREE.Vector2();
@@ -667,7 +668,9 @@ export class Fighter {
     if (this.state === 'stand') {
       this.balance = Math.min(100, this.balance + VITALS.balanceRegen * dt);
       const lostFooting = this.offBalanceTime > BALANCE.fallDelay;
-      if (tilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(tilt > BODY.fallTiltDeg + 15);
+      // 기울기는 일부러 숙인 만큼(배를 다쳐 웅크림·자세)을 빼고 잰다: 웅크린 채 일어서자마자 넘어졌다고 다시 쓰러지기를 되풀이하지 않게
+      const fallTilt = tilt - THREE.MathUtils.radToDeg(this.hunch);
+      if (fallTilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(fallTilt > BODY.fallTiltDeg + 15);
       else if (this.legHealth < 0.25) this.knockDown(false); // 다리가 버티지 못해 주저앉는다
     } else if (this.state === 'down') {
       if (this.stateTime > this.downTime && this.consciousness > 0.3) this.setState('getup');
@@ -946,7 +949,7 @@ export class Fighter {
     if (mus > 0.1 && loadSum > 0) {
       const h = hybrid ? G.h : BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
       // hybrid: 보조 힘은 몸무게의 GAIT.assist만 (일어선 직후엔 100%에서 천천히 줄인다). 나머지는 다리 관절이 받친다
-      const share = hybrid ? GAIT.assist + (1 - GAIT.assist) * G.lev : BODY.support;
+      const share = hybrid ? G.supportShare(M * g) : BODY.support;
       let fy = M * g * share + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * v.y;
       // 다친 다리는 힘을 못 쓴다 → 체중을 버틸 수 있는 한계
       const legPower = (load.F * this.limbs.legF + load.B * this.limbs.legB) / loadSum;
@@ -1003,9 +1006,12 @@ export class Fighter {
     let M = 0;
     const com = _c1.set(0, 0, 0);
     const vel = _c2.set(0, 0, 0);
+    // hybrid: 딛은 발에 더한 무게(GAIT.footExtra)는 땅이 바로 받치는 몫이라 무게중심 계산에서 뺀다
+    //  (발을 들고 디딜 때마다 무게중심이 튀지 않게). 발 몸체의 무게 = 발 콜라이더 무게
+    const G = this.gait;
     for (const name in this.bodies) {
       const b = this.bodies[name];
-      const m = b.mass();
+      const m = G && (name === 'footF' || name === 'footB') ? b.collider(0).mass() : b.mass();
       const c = b.worldCom();
       const v = b.linvel();
       com.x += c.x * m;
@@ -1165,6 +1171,7 @@ export class Fighter {
     const bp = this.bodyPose;
     const gw = this.guardWeight();
     const bend = (this.lean || 0) - Math.min(0.45, gut * 0.3) - 0.2 * kn - bp.pitch;
+    this.hunch = Math.max(0, -bend); // 일부러 앞으로 숙인 각도(라디안): 넘어짐 판정에서 뺀다
     // 가슴을 트는 각도(정면 기준): 검술 자세 지도 + (보정이 약할수록) 손이 있는 쪽으로.
     // 허리(척추)는 그중 골반이 이미 튼 만큼을 뺀 나머지만 튼다
     const chestYaw = bp.chestYaw + (1 - gw) * -sk.aim.x * 0.35;
