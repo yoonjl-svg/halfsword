@@ -19,7 +19,7 @@
 import { SOUND } from './config.js';
 
 // 무기 재질 쌍 API(Sound.impact)가 알아듣는 재질 이름들. 다른 무기를 추가하는 쪽에서 이 목록을 참고한다
-export const MATERIALS = ['steel', 'armor', 'flesh', 'wood', 'plasma', 'rubber'];
+export const MATERIALS = ['steel', 'armor', 'flesh', 'wood', 'plasma', 'rubber', 'frozen'];
 
 // ── 난수: 같은 씨앗이면 같은 소리 (시험할 때 똑같이 다시 만들 수 있게) ──
 export function makeRng(seed) {
@@ -247,6 +247,120 @@ function swordModes(r, { f1 = 22, at = 0.6, edge = 0.6, damp = 1, fmax = 9500 })
 function guardModes(r, amp = 0.35) {
   const f0 = between(r, 700, 980);
   return [1, 2.756, 5.404].map((k, i) => ({ f: f0 * k * (1 + 0.02 * gauss(r)), a: amp * (i === 0 ? 1 : 0.6) * between(r, 0.6, 1.1), t60: between(r, 0.2, 0.5) }));
+}
+
+// ─────────────────────────────────────────────────────────────
+//  목소리: 모음별 입안 공명대(포먼트) [F1~F4 (Hz), 대역폭 B1~B4 (Hz)] — 성인 남성 기준 (Peterson & Barney 1952 평균값 근처)
+// ─────────────────────────────────────────────────────────────
+const VOWELS = {
+  a: [730, 1090, 2440, 3400, 90, 110, 160, 250],
+  ʌ: [640, 1190, 2390, 3400, 80, 100, 150, 250],
+  u: [300, 870, 2240, 3300, 60, 90, 150, 250],
+  o: [570, 840, 2410, 3400, 70, 90, 150, 250],
+  e: [530, 1840, 2480, 3500, 70, 110, 160, 250],
+  ə: [500, 1500, 2500, 3500, 80, 110, 160, 250],
+};
+
+/**
+ * 캐릭터별 목소리 (characters.js 의 id 로 찾는다. 없으면 generic).
+ *  f0: 평소 목소리 높이(Hz), tract: 입안 공명대 배율(성도가 짧을수록 큼 — 여성 약 1.15),
+ *  breath: 숨 섞인 정도, rough: 목 긁힘(보컬 프라이), style: 죽을 때의 버릇 (voiceScript)
+ *  rec: 녹음된 목소리 (public/sfx/voice/<id>_<ko|bleed><번호>.mp3, 출처는 public/sfx/LICENSE.txt).
+ *       ko·bleed = 파일 개수(0이면 그 죽음은 합성 목소리), rate = 재생 속도(목소리 높이), gain = 음량
+ *       녹음은 들어 보지 않고 음높이·길이 분석으로 골랐다 — 귀로 듣고 바꾸려면 파일만 갈아 끼우면 된다
+ */
+export const VOICES = {
+  player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 3번 목소리
+  generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 첫 목소리 + VoiceBosch
+  bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + VoiceBosch. 굵고 거친 목
+  isolde: { f0: 225, tract: 1.17, breath: 0.45, rough: 0.08, style: 'gasp', rec: { ko: 1, bleed: 1, gain: 0.75 } }, // 여성 비명(짧은 것만), 작게
+  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 0, gain: 0.6, rate: 0.95 } }, // 짧은 신음 하나, 피 흘려 죽을 땐 합성 한숨
+  heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침) + VoiceBosch
+  margarethe: { f0: 168, tract: 1.12, breath: 0.6, rough: 0.3, style: 'exhale', rec: { ko: 1, bleed: 0, gain: 0.7, rate: 0.85 } }, // 낮춘 여성 신음 하나, 출혈사는 합성 날숨
+};
+
+/**
+ * 죽을 때 목소리의 "대본": 조각(모음·길이·음높이·세기·성대 울림 정도·바람 소리)을 시간 순서로 늘어놓는다.
+ * kind 'ko' = 머리를 맞아 정신을 잃음(짧게 뚝 끊김), 'bleed' = 피가 빠져 숨이 잦아듦(길게)
+ */
+function voiceScript(r, prof, kind) {
+  const F = prof.f0 * between(r, 0.95, 1.05);
+  const S = [];
+  let t = 0.005;
+  const add = (dur, vowel, a, b, amp, voice, air = 0, attack = 0.012, release = 0.05, gap = 0) => {
+    S.push({ t, dur, vowel, f0a: F * a, f0b: F * b, amp, voice, air, attack, release });
+    t += dur + gap;
+  };
+  const inhale = (dur, amp) => add(dur, 'a', 1, 1, amp, 0, 1, dur * 0.4, dur * 0.3, 0.02); // 들숨: 성대 안 울리고 바람만
+  const exhale = (dur, amp, vowel = 'ə') => add(dur, vowel, 0.9, 0.7, amp, 0.12, 0.9, 0.02, dur * 0.6); // 날숨: 끝이 스르르
+  const ko = kind === 'ko';
+  switch (prof.style) {
+    case 'sob':
+      if (ko) {
+        add(0.14, 'a', 1.5, 1.15, 1, 1, 0.2, 0.006, 0.02);
+        add(0.06, 'ʌ', 1.1, 0.9, 0.6, 0.8, 0.1, 0.005, 0.012);
+        exhale(0.3, 0.25);
+      } else {
+        for (let i = 0; i < 3; i++) {
+          inhale(0.12, 0.25);
+          add(0.18 + 0.05 * i, 'u', 1.35 - 0.05 * i, 1.05, 0.7 - 0.15 * i, 0.85, 0.25, 0.02, 0.06, 0.05);
+        }
+        exhale(0.6, 0.3, 'ʌ');
+      }
+      break;
+    case 'gasp':
+      if (ko) {
+        inhale(0.11, 0.6);
+        add(0.05, 'ə', 1, 0.95, 0.25, 0.6, 0.3, 0.004, 0.01);
+      } else {
+        inhale(0.2, 0.45);
+        add(0.35, 'e', 1.1, 0.85, 0.35, 0.55, 0.4, 0.03, 0.15, 0.25);
+        inhale(0.14, 0.25);
+        exhale(0.7, 0.25);
+      }
+      break;
+    case 'sigh':
+      if (ko) {
+        add(0.07, 'ʌ', 1, 0.9, 0.5, 0.8, 0.2, 0.004, 0.02);
+        exhale(0.25, 0.2);
+      } else {
+        exhale(0.9, 0.35);
+        add(0.25, 'ə', 0.75, 0.6, 0.25, 0.5, 0.3, 0.05, 0.15);
+      }
+      break;
+    case 'laugh':
+      if (ko) {
+        add(0.12, 'a', 1.35, 1.1, 1, 1, 0.15, 0.005, 0.02);
+        exhale(0.25, 0.2);
+      } else {
+        for (let i = 0; i < 4; i++) {
+          add(0.035, 'a', 1, 1, 0.35, 0, 1, 0.005, 0.01); // "ㅎ"
+          add(0.09, 'a', 1.25 - 0.06 * i, 1.15 - 0.06 * i, 0.75 - 0.12 * i, 0.9, 0.2, 0.008, 0.03, 0.06);
+        }
+        add(0.4, 'ʌ', 0.85, 0.7, 0.5, 0.8, 0.3, 0.03, 0.2, 0.05);
+        exhale(0.5, 0.2);
+      }
+      break;
+    case 'exhale':
+      if (ko) {
+        add(0.09, 'ʌ', 0.95, 0.85, 0.55, 0.75, 0.3, 0.006, 0.03);
+        exhale(0.3, 0.2);
+      } else {
+        inhale(0.25, 0.2);
+        add(1.1, 'o', 0.95, 0.7, 0.4, 0.4, 0.6, 0.08, 0.6);
+      }
+      break;
+    default:
+      if (ko) {
+        add(0.16, 'ʌ', 1.3, 0.9, 1, 0.95, 0.15, 0.006, 0.03);
+        exhale(0.3, 0.22);
+      } else {
+        inhale(0.22, 0.35);
+        add(0.45, 'ʌ', 1.05, 0.75, 0.6, 0.7, 0.3, 0.03, 0.2, 0.2);
+        exhale(0.6, 0.28);
+      }
+  }
+  return S;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -585,6 +699,123 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.85), sr, 0.05);
   },
 
+  /**
+   * 모래 위 발소리: 뒤꿈치의 낮은 "툭" + 모래가 눌리는 "사각" + 알갱이 부서지는 잔소리 + 앞꿈치 "사박".
+   * heavy = 비틀거리며 크게 디딘 발 (더 낮고 길게, 모래를 더 많이 흩뜨린다)
+   */
+  footstep(sr, r, heavy = false) {
+    const n = Math.round(0.22 * sr);
+    const out = new Float32Array(n);
+    thumpTone(out, sr, { t0: 0.002, f0: between(r, 55, 80), drop: 0.5, dropTau: 0.01, attack: 0.003, tau: heavy ? 0.022 : 0.016, amp: heavy ? 0.9 : 0.6 });
+    noiseHit(out, sr, r, { t0: 0.003, amp: 0.55, attack: 0.004, tau: heavy ? 0.03 : 0.022, type: 'lowpass', f: between(r, 500, 800), q: 0.7 });
+    gritBurst(out, sr, r, { t0: 0.006, span: heavy ? 0.08 : 0.06, count: heavy ? 22 : 14, amp: 0.22, fLo: 1800, fHi: 6500 });
+    noiseHit(out, sr, r, { t0: between(r, 0.035, 0.06), amp: 0.3, attack: 0.003, tau: 0.015, type: 'bandpass', f: between(r, 700, 1400), q: 0.8 });
+    saturate(out, 1.5);
+    return fadeOut(normalize(out, 0.9), sr, 0.04);
+  },
+
+  /**
+   * 사람이 모래 위로 쓰러짐: 몸통 무게의 낮은 "쿵"이 부위마다 몇십 ms 차이로 겹치고(골반 → 어깨 → 팔),
+   * 모래가 튀어 흩어지는 "촤르르", 누비옷이 부딪히는 "퍽". heavy = 통나무처럼 그대로 넘어짐
+   */
+  bodyFall(sr, r, heavy = true) {
+    const n = Math.round(0.6 * sr);
+    const out = new Float32Array(n);
+    const parts = heavy ? 3 : 2;
+    for (let k = 0; k < parts; k++) {
+      const t0 = 0.002 + (k ? between(r, 0.025, 0.08) * k : 0);
+      thumpTone(out, sr, { t0, f0: between(r, 45, 70), drop: 0.6, dropTau: 0.015, attack: 0.004, tau: between(r, 0.035, 0.05), amp: k ? between(r, 0.35, 0.6) : 1 });
+      noiseHit(out, sr, r, { t0, amp: k ? 0.35 : 0.6, attack: 0.004, tau: 0.03, type: 'lowpass', f: between(r, 350, 600), q: 0.7 });
+    }
+    const n0 = Math.round(0.006 * sr);
+    const bp = new Filt('bandpass', 3500, 0.6, sr);
+    const wb = wobble(r, sr, 40);
+    for (let i = 0; i < Math.round(0.25 * sr) && n0 + i < n; i++) {
+      const t = i / sr;
+      out[n0 + i] += 0.18 * bp.run(r() * 2 - 1) * Math.min(1, t / 0.01) * Math.exp(-t / 0.07) * (0.3 + 0.7 * Math.abs(wb()));
+    }
+    gritBurst(out, sr, r, { t0: 0.004, span: 0.15, count: heavy ? 30 : 18, amp: 0.18, fLo: 1500, fHi: 6000 });
+    noiseHit(out, sr, r, { t0: 0.004, amp: 0.3, attack: 0.001, tau: 0.008, type: 'bandpass', f: 1300, q: 1 });
+    saturate(out, 2.4, 0.15);
+    return fadeOut(normalize(out, 0.9), sr, 0.1);
+  },
+
+  /**
+   * 무기가 부러짐. wood(나뭇가지): 섬유가 연달아 끊기는 "우지끈" + 둔한 "딱".
+   * frozen(언 참치): 얼음이 쩍 갈라지는 날카롭고 짧은 금속성 "쩍" + 잔금 + 물컹한 살덩이의 둔한 "퍽"
+   */
+  weaponBreak(sr, r, material = 'wood') {
+    const frozen = material === 'frozen';
+    const n = Math.round(0.5 * sr);
+    const x = new Float32Array(n);
+    const out = new Float32Array(n);
+    const cracks = [0.001];
+    const k = Math.round(between(r, 3, 6));
+    for (let i = 0; i < k; i++) cracks.push(0.001 + (between(r, 0.004, frozen ? 0.03 : 0.07) * (i + 1)) / k);
+    for (const [i, t] of cracks.entries()) pulse(x, sr, t, frozen ? 0.0001 : 0.0002, (i === 0 ? 1 : between(r, 0.25, 0.7)) * (r() < 0.5 ? -1 : 1));
+    const modes = [];
+    for (let i = 0; i < 9; i++) {
+      const f = Math.exp(between(r, Math.log(frozen ? 1800 : 300), Math.log(frozen ? 7000 : 2500)));
+      modes.push({ f, a: between(r, 0.4, 1) * (r() < 0.5 ? -1 : 1), t60: between(r, 0.02, frozen ? 0.06 : 0.07) });
+    }
+    resonate(x, out, sr, modes, Math.ceil(0.09 * sr));
+    normalize(out, 1);
+    for (const t of cracks) noiseHit(out, sr, r, { t0: t, amp: between(r, 0.3, 0.6), tau: 0.0015, f: frozen ? 3000 : 1500 });
+    gritBurst(out, sr, r, { t0: 0.002, span: 0.12, count: 40, amp: 0.3, fLo: frozen ? 2500 : 900, fHi: frozen ? 9000 : 5000 });
+    thumpTone(out, sr, { t0: 0.001, f0: frozen ? between(r, 75, 95) : between(r, 100, 130), drop: 0.5, tau: 0.03, amp: 0.5 });
+    saturate(out, 2.5);
+    return fadeOut(normalize(out, 0.9), sr, 0.06);
+  },
+
+  /**
+   * 목소리 (성대 + 입안 공명을 흉내 낸 합성). 녹음이 없을 때 쓰는 죽음 소리.
+   *  - 성대: 로젠버그 성문 파형(열렸다 닫히는 공기 흐름)의 변화량. 주기마다 음높이·세기가 조금씩 흔들린다(지터·시머)
+   *  - 거친 목(rough): 주기마다 세기를 번갈아 바꿔 "끄륵" 하는 목 긁힘(보컬 프라이)을 만든다
+   *  - 숨(breath): 성대가 열릴 때 새는 바람 소리 + 순수한 날숨
+   *  - 입안: 모음마다 다른 공명대(포먼트) 4개. 성도 길이(tract)가 짧을수록(여성·젊음) 공명대가 높다
+   * @param prof VOICES 항목, kind: 'ko'(머리를 맞아 뚝 끊김) | 'bleed'(피가 빠져 숨이 잦아듦)
+   */
+  voice(sr, r, prof, kind = 'ko') {
+    const segs = voiceScript(r, prof, kind);
+    const total = segs.reduce((m, s) => Math.max(m, s.t + s.dur), 0) + 0.15;
+    const n = Math.round(total * sr);
+    const out = new Float32Array(n);
+    const F = [0, 1, 2, 3].map(() => new Filt('bandpass', 500, 5, sr));
+    const FG = [1, 0.55, 0.28, 0.14];
+    const rough = prof.rough;
+    for (const s of segs) {
+      const V = VOWELS[s.vowel] || VOWELS['ə'];
+      F.forEach((fl, i) => fl.set(V[i] * prof.tract, (V[i] * prof.tract) / (V[4 + i] * (s.voice > 0.3 ? 1 : 1.8))));
+      const n0 = Math.round(s.t * sr);
+      const len = Math.round(s.dur * sr);
+      let ph = 0;
+      let per = 0;
+      let pAmp = 1;
+      let pF = s.f0a;
+      let g1 = 0;
+      for (let i = 0; i < len && n0 + i < n; i++) {
+        const u = i / len;
+        const f0 = (s.f0a + (s.f0b - s.f0a) * u) * (per % 2 && rough > 0.2 ? 1 + 0.04 * rough : 1);
+        ph += pF / sr;
+        if (ph >= 1) {
+          ph -= 1;
+          per++;
+          pF = f0 * (1 + 0.012 * gauss(r));
+          pAmp = (1 + 0.08 * gauss(r)) * (per % 2 ? 1 - 0.55 * rough : 1);
+        }
+        const g = ph < 0.4 ? 0.5 * (1 - Math.cos((Math.PI * ph) / 0.4)) : ph < 0.62 ? Math.cos((Math.PI / 2) * ((ph - 0.4) / 0.22)) : 0;
+        const exc = (g - g1) * 18 * pAmp * s.voice + (r() * 2 - 1) * (prof.breath * 0.35 * (0.3 + g) * s.voice + s.air * 0.5);
+        g1 = g;
+        const env = Math.min(1, i / (s.attack * sr)) * Math.min(1, (len - i) / (s.release * sr));
+        let y = 0;
+        for (let k = 0; k < 4; k++) y += FG[k] * F[k].run(exc);
+        out[n0 + i] += s.amp * env * y;
+      }
+    }
+    saturate(out, 1.3, 0.05);
+    return fadeOut(normalize(out, 0.9), sr, 0.08);
+  },
+
   /** 경기장 울림(잔향)용 충격 응답: 관중석에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오) */
   reverbIR(sr, r) {
     const dur = 0.9;
@@ -639,10 +870,25 @@ const BANK = [
   ['plasmaZap', 2, SYNTH.plasmaZap],
   ['plasmaSizzle', 2, SYNTH.plasmaSizzle],
   ['rubberHonk', 2, SYNTH.rubberHonk],
+  ['step', 6, (sr, r) => SYNTH.footstep(sr, r, false)],
+  ['stepHeavy', 3, (sr, r) => SYNTH.footstep(sr, r, true)],
+  ['fall', 3, (sr, r) => SYNTH.bodyFall(sr, r, true)],
+  ['fallLight', 2, (sr, r) => SYNTH.bodyFall(sr, r, false)],
+  ['breakWood', 2, (sr, r) => SYNTH.weaponBreak(sr, r, 'wood')],
+  ['breakFrozen', 2, (sr, r) => SYNTH.weaponBreak(sr, r, 'frozen')],
 ];
+// 목소리 조각은 이름이 "voice:캐릭터id:ko|bleed" 이고, 이번 판에 나오는 캐릭터 것만 만든다 (prepareVoices)
+const VOICE_COUNT = 2;
+function bankEntry(name) {
+  if (name.startsWith('voice:')) {
+    const [, id, kind] = name.split(':');
+    return [name, VOICE_COUNT, (sr, r) => SYNTH.voice(sr, r, VOICES[id] || VOICES.generic, kind)];
+  }
+  return BANK.find((b) => b[0] === name);
+}
 /** 소리 조각 하나 만들기 (일꾼 스레드 soundgen.js 에서도 부른다) */
 export function makeBankSound(name, sr, seed) {
-  return BANK.find((b) => b[0] === name)[2](sr, makeRng(seed));
+  return bankEntry(name)[2](sr, makeRng(seed));
 }
 
 // 녹음된 소리 (Kenney.nl, CC0). 없거나 못 읽어도 합성 소리만으로 동작한다
@@ -745,7 +991,12 @@ export class Sound {
     clip.curve = curve;
     const pre = c.createGain();
     pre.gain.value = 0.5; // 곡선의 입력 범위(−1~1)에 ±2 를 담으려고 반으로 줄인다 (곡선 값은 원래 크기)
-    this.master.connect(lim).connect(pre).connect(clip).connect(c.destination);
+    // 먹먹함 필터: 평소엔 활짝 열려 있다가 내가 쓰러지면 닫혀서 소리가 물속처럼 멀어진다 (setMuffle)
+    this.muffle = c.createBiquadFilter();
+    this.muffle.type = 'lowpass';
+    this.muffle.frequency.value = 20000;
+    this.muffle.Q.value = 0.5;
+    this.master.connect(this.muffle).connect(lim).connect(pre).connect(clip).connect(c.destination);
     this.metalBus = c.createGain();
     this.fleshBus = c.createGain();
     this.metalBus.connect(this.master);
@@ -784,6 +1035,24 @@ export class Sound {
   prepareSoon() {
     const jobs = [];
     for (const [name, count] of BANK) for (let i = 0; i < count; i++) jobs.push({ name, seed: this.seedFor(name, i) });
+    this.runJobs(jobs);
+  }
+  /**
+   * 이번 판에 나오는 캐릭터들의 죽음 목소리를 미리 만든다 (판을 시작할 때 main.js 가 부른다).
+   * 다른 캐릭터 목소리는 버려서 메모리를 아낀다 (한 벌에 약 0.3MB)
+   */
+  prepareVoices(ids) {
+    if (!this.ctx) return;
+    const keep = new Set();
+    for (const id of ids) for (const kind of ['ko', 'bleed']) keep.add(`voice:${id}:${kind}`);
+    for (const name of Object.keys(this.bank)) if (name.startsWith('voice:') && !keep.has(name)) delete this.bank[name];
+    const jobs = [];
+    for (const name of keep) for (let i = this.bank[name]?.length || 0; i < VOICE_COUNT; i++) jobs.push({ name, seed: this.seedFor(name, i) });
+    if (jobs.length) this.runJobs(jobs);
+    this.voicesReady = this.useSamples ? this.loadVoiceSamples(ids) : Promise.resolve();
+  }
+  runJobs(jobs) {
+    if (this.ctx.startRendering) return this.prepareOnMain(jobs); // 분석용 OfflineAudioContext
     try {
       const w = new Worker(new URL('./soundgen.js', import.meta.url), { type: 'module' });
       let left = jobs.length;
@@ -815,10 +1084,12 @@ export class Sound {
     for (const [name] of BANK) while (this.need(name)) this.makeOne(name);
   }
   seedFor(name, i) {
-    return this.seed + name.charCodeAt(0) * 7919 + name.length * 131 + i * 104729;
+    let h = 0;
+    if (name.startsWith('voice:')) for (let k = 0; k < name.length; k++) h = (Math.imul(h, 31) + name.charCodeAt(k)) | 0;
+    return this.seed + name.charCodeAt(0) * 7919 + name.length * 131 + i * 104729 + h;
   }
   need(name) {
-    return (this.bank[name]?.length || 0) < BANK.find((b) => b[0] === name)[1];
+    return (this.bank[name]?.length || 0) < bankEntry(name)[1];
   }
   addBuffer(name, data) {
     if (!this.need(name)) return null; // (일꾼이 만든 것과 급히 만든 것이 겹치면 버린다)
@@ -848,20 +1119,33 @@ export class Sound {
 
   /** 녹음된 소리 읽기 (첫 화면 터치 뒤에, 뒤에서 천천히) */
   async loadSamples() {
+    for (const [name, files] of Object.entries(SAMPLES)) for (const f of files) await this.loadSample(name, f);
+  }
+  async loadSample(name, f) {
     const c = this.ctx;
-    for (const [name, files] of Object.entries(SAMPLES)) {
-      for (const f of files) {
-        try {
-          const res = await fetch(new URL(`sfx/${f}.mp3`, document.baseURI));
-          if (!res.ok) continue;
-          const ab = await res.arrayBuffer();
-          // 옛 사파리는 콜백 방식만 된다. 요즘 브라우저는 promise 도 함께 돌려주는데, 못 읽으면 그 promise 도
-          // 실패해서 "처리 안 된 오류"가 콘솔에 뜬다 → promise 쪽 결과도 같은 곳(ok/bad)으로 받는다 (두 번 불려도 한 번만 처리됨)
-          const buf = await new Promise((ok, bad) => c.decodeAudioData(ab, ok, bad)?.then?.(ok, bad));
-          (this.samples[name] = this.samples[name] || []).push(trimStart(c, buf));
-        } catch {
-          /* 못 읽으면 합성 소리만 쓴다 */
-        }
+    try {
+      const res = await fetch(new URL(`sfx/${f}.mp3`, document.baseURI));
+      if (!res.ok) return;
+      const ab = await res.arrayBuffer();
+      // 옛 사파리는 콜백 방식만 된다. 요즘 브라우저는 promise 도 함께 돌려주는데, 못 읽으면 그 promise 도
+      // 실패해서 "처리 안 된 오류"가 콘솔에 뜬다 → promise 쪽 결과도 같은 곳(ok/bad)으로 받는다 (두 번 불려도 한 번만 처리됨)
+      const buf = await new Promise((ok, bad) => c.decodeAudioData(ab, ok, bad)?.then?.(ok, bad));
+      (this.samples[name] = this.samples[name] || []).push(trimStart(c, buf));
+    } catch {
+      /* 못 읽으면 합성 소리만 쓴다 */
+    }
+  }
+  /** 이번 판 캐릭터들의 녹음된 죽음 목소리 읽기 (public/sfx/voice/<id>_<ko|bleed><번호>.mp3). 다른 캐릭터 것은 버린다 */
+  async loadVoiceSamples(ids) {
+    for (const name of Object.keys(this.samples)) if (name.startsWith('voice:') && !ids.includes(name.split(':')[1])) delete this.samples[name];
+    for (const id of ids) {
+      const rec = VOICES[id]?.rec;
+      if (!rec) continue;
+      for (const kind of ['ko', 'bleed']) {
+        const name = `voice:${id}:${kind}`;
+        if (this.samples[name]) continue;
+        this.samples[name] = [];
+        for (let n = 1; n <= (rec[kind] || 0); n++) await this.loadSample(name, `voice/${id}_${kind}${n}`);
       }
     }
   }
@@ -1057,6 +1341,7 @@ export class Sound {
     if (has('flesh')) return this._impactFleshDull(e, pos);
     if (has('armor')) return this._impactArmor(e, a === 'armor' && b === 'armor', pos);
     if (has('wood')) return this._impactWood(e, pos);
+    if (has('frozen')) return this._impactFrozen(e, pos);
     return this._impactSteel(e, pos);
   }
   /** steel+steel (또는 알 수 없는 재질): 기존 칼끼리 부딪힘과 같은 소리, 에너지를 세기로 바꿔서 쓴다 */
@@ -1103,6 +1388,91 @@ export class Sound {
     const e = clamp01(energy / 60);
     const ev = this.event({ bus: this.fleshBus, gain: 0.4 + 0.6 * e ** 0.6, prio: 1.5, pos });
     this.layer(ev, this.pick('rubberHonk'), { rate: between(Math.random, 0.95, 1.15) });
+  }
+
+  /** *+frozen (언 참치): 속까지 언 살덩이의 둔하고 딱딱한 "텅" — 나무보다 낮고 무겁게 */
+  _impactFrozen(energy, pos) {
+    const e = clamp01(energy / 90);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.3 + 0.7 * e ** 0.8, prio: 1.5, pos });
+    this.layer(ev, this.pick('wood'), { rate: between(Math.random, 0.7, 0.8) });
+    this.layer(ev, this.pick('thump'), { gain: 0.5, rate: between(Math.random, 0.85, 1) });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  몸 소리: 발소리, 쓰러짐, 무기 부러짐, 죽음 (BodySounds 가 몸 상태를 보고 부른다)
+  // ─────────────────────────────────────────────────────────────
+
+  /** 모래 위 발소리. speed = 발이 내려오던 속도 (m/s, AI 대결에서 중간값 1, 상위 10% 1.6 — 크게 내딛거나 비틀거림) */
+  footstep(speed, pos) {
+    if (!this._on || !this.ctx) return;
+    const x = clamp01((speed - 0.3) / 1.8);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.1 + 0.4 * x, bright: 2500 + 6000 * x, prio: 0.3, pos });
+    this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) });
+  }
+
+  /** 몸이 땅에 부딪힘. speed = 몸통이 떨어지던 속도 (m/s). light = 무릎이 꺾여 주저앉음 */
+  bodyFall(speed, { light = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const x = clamp01((speed - 0.5) / 3);
+    const ev = this.event({ bus: this.fleshBus, gain: (light ? 0.25 : 0.35) + 0.65 * x, prio: 2, pos });
+    this.layer(ev, this.pick(light || x < 0.3 ? 'fallLight' : 'fall'), { rate: between(Math.random, 0.88, 1.02) * (1 - 0.08 * x) });
+    // 녹음된 "퍽"을 느리게 깔아 무게를 더한다 (이어폰에서 저역이 산다)
+    const rec = this.pickSample('punch');
+    if (rec) this.layer(ev, rec, { gain: 0.35 + 0.3 * x, rate: between(Math.random, 0.6, 0.7), delay: 0.004 });
+  }
+
+  /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
+  weaponBreak(material = 'wood', pos) {
+    if (!this._on || !this.ctx) return;
+    const ev = this.event({ bus: this.metalBus, gain: 1, prio: 3, pos });
+    this.layer(ev, this.pick(material === 'frozen' ? 'breakFrozen' : 'breakWood'), { rate: between(Math.random, 0.92, 1.06) });
+    const rec = this.pickSample('crack');
+    if (rec && material !== 'frozen') this.layer(ev, rec, { gain: 0.55, rate: between(Math.random, 0.85, 1), delay: 0.002 });
+  }
+
+  /**
+   * 죽음. voice = VOICES 의 id (캐릭터 id, 플레이어는 'player'), cause = fighter.causeOfDeath
+   *  '기절'·'머리' → 짧게 뚝 끊기는 소리, '출혈'·'목' → 숨이 잦아드는 긴 소리 ('목'은 피 끓는 소리가 섞인다)
+   *  me = 플레이어 자신이 죽음: 목소리 대신 귀가 멍해지고(삐—) 온 소리가 먹먹해진다
+   */
+  death(voice, cause, { me = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const kind = cause === '출혈' || cause === '목' ? 'bleed' : 'ko';
+    const id = voice in VOICES ? voice : 'generic';
+    const ev = this.event({ bus: this.fleshBus, gain: me ? 0.7 : 0.9, prio: 3, pos });
+    // 녹음이 있으면 녹음(캐릭터에 맞게 재생 속도로 목소리 높이를 조금 바꾼다), 없으면 합성 목소리
+    const rec = this.pickSample(`voice:${id}:${kind}`);
+    const R = VOICES[id].rec;
+    if (rec) this.layer(ev, rec, { gain: R.gain ?? 1, rate: (R.rate ?? 1) * between(Math.random, 0.97, 1.03) });
+    else this.layer(ev, this.pick(`voice:${id}:${kind}`), { rate: between(Math.random, 0.97, 1.03) });
+    if (cause === '목') this.layer(ev, this.pick('wetHeavy'), { gain: 0.5, rate: between(Math.random, 0.55, 0.65), delay: 0.08 });
+    if (me) this.fadeOutWorld();
+  }
+
+  /** 내가 쓰러짐: 이명(삐—)이 울리고, 온 소리가 몇 초에 걸쳐 먹먹해진다 */
+  fadeOutWorld() {
+    const c = this.ctx;
+    const t = c.currentTime;
+    this.muffle.frequency.cancelScheduledValues(t);
+    this.muffle.frequency.setValueAtTime(this.muffle.frequency.value, t);
+    this.muffle.frequency.exponentialRampToValueAtTime(420, t + 1.8);
+    const o = c.createOscillator();
+    o.frequency.value = between(Math.random, 3600, 4200);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.05, t + 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0005, t + 3.5);
+    o.connect(g).connect(this.ctx.destination); // (먹먹함 필터를 거치지 않게 바로 스피커로)
+    o.start(t);
+    o.stop(t + 3.6);
+  }
+
+  /** 새 판: 먹먹함을 푼다 */
+  resetRound() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.muffle.frequency.cancelScheduledValues(t);
+    this.muffle.frequency.setTargetAtTime(20000, t, 0.1);
   }
 
   /** 뼈 부딪히는/부러지는 소리 */
@@ -1224,6 +1594,73 @@ export class Sound {
         }
       },
     };
+  }
+}
+
+/**
+ * 파이터 한 명의 몸 소리 감지기: 매 화면(프레임)마다 몸 상태를 읽고 알맞은 소리를 부른다.
+ * fighter.js 를 고치지 않고 밖에서 보기만 한다 (state, causeOfDeath, weaponBroken, 몸 조각의 높이·속도).
+ *  - 발소리: 발이 들렸다가(9cm 위) 다시 땅(6cm 아래)에 닿는 순간. 세기 = 내려오던 속도
+ *  - 쓰러짐: 서 있지 않을 때 골반·가슴이 떨어지다(초속 1m 넘게) 땅 근처에서 멈춘 순간 → 슬로모션에도 박자가 맞는다
+ *  - 무릎 꺾임(서 있다 → 일어나는 중), 무기 부러짐, 죽음은 상태가 바뀌는 순간
+ */
+export class BodySounds {
+  constructor(sound, fighter, voice, me = false) {
+    this.s = sound;
+    this.f = fighter;
+    this.voice = voice;
+    this.me = me;
+    this.state = fighter.state;
+    this.broken = !!fighter.weaponBroken;
+    this.feet = { footF: { up: false, vy: 0, t: 0 }, footB: { up: false, vy: 0, t: 0 } };
+    this.fallV = { pelvis: 0, chest: 0 };
+    this.lastFall = -1;
+    this.t = 0;
+  }
+
+  update(dt) {
+    const f = this.f;
+    const s = this.s;
+    this.t += dt;
+    if (f.state !== this.state) {
+      if (f.state === 'dead') s.death(this.voice, f.causeOfDeath, { me: this.me });
+      else if (f.state === 'getup' && this.state === 'stand') s.bodyFall(1.2, { light: true }); // 무릎이 꺾여 주저앉음
+      this.state = f.state;
+    }
+    if (f.weaponBroken && !this.broken) s.weaponBreak(f.weapon?.material);
+    this.broken = !!f.weaponBroken;
+
+    if (f.state === 'stand' || f.state === 'getup') {
+      for (const k of ['footF', 'footB']) {
+        const b = f.bodies[k];
+        const ft = this.feet[k];
+        const y = b.translation().y;
+        const vy = b.linvel().y;
+        if (y > 0.09) {
+          ft.up = true;
+          ft.vy = Math.min(ft.vy, vy);
+        } else if (ft.up && y < 0.06) {
+          ft.up = false;
+          if (this.t - ft.t > 0.12) s.footstep(Math.max(-ft.vy, -vy));
+          ft.t = this.t;
+          ft.vy = 0;
+        }
+      }
+    }
+    if (f.state !== 'stand') {
+      for (const k of ['pelvis', 'chest']) {
+        const b = f.bodies[k];
+        const y = b.translation().y;
+        const vy = b.linvel().y;
+        const v0 = this.fallV[k];
+        if (v0 < -1 && vy > v0 * 0.35 && y < 0.45) {
+          // 떨어지던 몸이 땅에서 멈췄다. 골반·가슴이 잇달아 닿으면 한 번만 크게
+          if (this.t - this.lastFall > 0.25) s.bodyFall(-v0);
+          this.lastFall = this.t;
+          this.fallV[k] = 0;
+        } else this.fallV[k] = vy < 0 ? Math.min(v0, vy) : 0;
+      }
+    }
   }
 }
 

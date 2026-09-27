@@ -15,7 +15,7 @@ import { CHARACTERS_BY_ID, randomCharacter } from './characters.js';
 import { WEAPON_LIST } from './weapons.js';
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
-import { Sound } from './sound.js';
+import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { buildArena } from './arena.js';
 
@@ -119,6 +119,7 @@ const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
+let bodySounds = [];
 const fighterMeshes = [];
 
 function newRound() {
@@ -185,6 +186,11 @@ function newRound() {
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
+  // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
+  const foeVoice = currentFoe?.id || 'generic';
+  bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
+  sound.prepareVoices(['player', foeVoice]);
+  sound.resetRound();
   roundOver = false;
   roundOverTime = 0;
   camFollow.copy(player.pelvisPos);
@@ -686,6 +692,7 @@ function frame(now) {
       updateDrips(f, dt * scale);
     }
     updateBindSound();
+    for (const b of bodySounds) b.update(dt * scale);
     particles.update(dt * scale);
     for (const a of auras) a.update(now / 1000);
     arena.update(dt);
