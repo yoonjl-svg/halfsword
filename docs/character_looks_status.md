@@ -4,6 +4,21 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 7 — 오너 답: "둘 다 그렇게 해"
+
+1. **찌르기와 판금**: 판금도 투구와 같은 규칙 — 에스톡·레이피어 찌르기는 `gap`의 절반만큼 파고든다,
+   `ignoreArmor` 무기는 완전히 무시한다. (디렉터가 임시로 정한 방향이 그대로 확정.)
+2. **마르그레테 몸통 판금도 방어**: 가슴판·배갑옷·갑주 치마(pelvis)·양 견갑이 하인리히 판금과 같이
+   막고, 닳고, 완전히 부서지면 그 부위 판금이 사라진다.
+
+외형 쪽 반영(`outfits.js`만): 마르그레테 세트에 `armorParts`(chest·abdomen·pelvis·uarmS·uarmO)를 달아
+`userData.armor` 표시·금 메쉬·`setPlateWear`가 하인리히와 똑같이 동작한다(v1·v2·v3 모두 같은 세트를
+펼쳐 쓴다). look에 `armor: 'plate'`를 켜는 것은 디렉터 전투 커밋에서 한 줄로.
+- 금 색 수정: 먹색 판에 검은 금은 거의 안 보여서, 짙은 판에는 안쪽 쇠가 드러난 밝은 금으로 바꿨다
+  (투구 금도 같이). 은빛 판(하인리히)은 그대로 짙은 금.
+- 검증: 시뮬 3종 바이트 동일, 콘솔 에러 0, 0.1에서 금 5개 표시·1로 되돌리면 숨겨짐.
+  스크린샷 `docs/character_looks/margarethe_plate_wear{1,04,01}.jpg`, 투구 `margarethe_v3_wear*.jpg` 갱신.
+
 ## round 6 — 디렉터 분담: 하인리히 판금 파손 겉모습 (trig_0161tXEHz9cTGUBarJ6HHkzW)
 
 디렉터 브랜치(d8ae47f)를 충돌 없이 병합하고, 시뮬 기준선을 새로 잡은 뒤 작업했다.

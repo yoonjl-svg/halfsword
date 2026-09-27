@@ -180,6 +180,9 @@ const HEINRICH_KNIGHT = {
 const MG_PLATE = 0x2c2c32;
 const MG_PLATE_DARK = 0x1c1c20;
 const MARGARETHE_DRAGON = {
+  // 판금 방어구가 붙는 부위 (오너 결정: 몸통 판금도 막고, 닳고, 완전히 부서지면 사라진다).
+  // v2·v3 세트도 이 세트를 펼쳐 쓰므로 같이 적용된다
+  armorParts: new Set(['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO']),
   chest(g) {
     addMerged(g, [box(0.26, 0.25, 0.34, [0, 0.01, 0])], MG_PLATE, STEEL_OPTS);
     // 이음매 자국(세로줄) — 색 대신 같은 계열의 더 짙은 판이라 눈에 안 띄고 만듦새만 드러낸다
@@ -327,7 +330,7 @@ function helmPiece(helm, name, geos, color, opts, pivot) {
 function helmCrack(pg, pts) {
   const pv = pg.position;
   const geo = onHelm(taperedTube(pts, [0.0035, 0.003, 0.0025], 8, 4)).translate(-pv.x, -pv.y, -pv.z);
-  const m = addMerged(pg, [geo], 0x050505, { roughness: 1 });
+  const m = addMerged(pg, [geo], crackColor(pg.children[0].material.color), { roughness: 1 });
   m.visible = false;
   return m;
 }
@@ -503,9 +506,15 @@ function plateCrack(parent, mesh) {
   const h = (b.max.y - b.min.y) * 0.35;
   const zc = (b.max.z + b.min.z) / 2;
   const pts = [-1, -0.5, 0, 0.5, 1].map((t, i) => [x, yc + t * h, zc + (i % 2 ? 0.012 : -0.006)]);
-  const m = addMerged(parent, [taperedTube(pts, [0.003, 0.0026, 0.002], 8, 4)], 0x050505, { roughness: 1 });
+  const m = addMerged(parent, [taperedTube(pts, [0.003, 0.0026, 0.002], 8, 4)], crackColor(mesh.material.color), { roughness: 1 });
   m.visible = false;
   return m;
+}
+
+// 금 색: 밝은 판(하인리히 은빛)에는 짙은 선, 짙은 판(마르그레테 먹색)에는 안쪽 쇠가 드러난 밝은 선 —
+// 먹색 판에 검은 금은 거의 안 보였다
+function crackColor(c) {
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b < 0.1 ? 0xa4a4ac : 0x050505;
 }
 
 // 판금이 닳은 정도를 겉모습에 반영한다 (전투 쪽이 this.plate[part]가 바뀔 때마다 부른다).
