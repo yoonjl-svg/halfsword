@@ -23,6 +23,7 @@ import { buildTemple } from './stage_temple.js';
 import { buildCastle } from './stage_castle.js';
 import { buildCathedral } from './stage_cathedral.js';
 import { buildDarkHall } from './stage_darkhall.js';
+import { PerfMeter } from './perfmeter.js';
 
 await RAPIER.init();
 
@@ -844,13 +845,17 @@ function updateGuardName(dt) {
 }
 
 // ── 게임 루프 ──
+// 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다
+const perf = params.get('fps') ? new PerfMeter(renderer) : null;
 let last = performance.now();
 let acc = 0;
 
 function frame(now) {
   requestAnimationFrame(frame);
-  let dt = Math.min(0.1, (now - last) / 1000);
+  const frameMs = now - last;
+  let dt = Math.min(0.1, frameMs / 1000);
   last = now;
+  let physMs = 0, physSteps = 0, capped = false, simWant = 0, simGot = 0; // 성능 측정 표시(?fps=1)용
 
   if (state === 'fight' && player) {
     // 손 목표 갱신 (입력 → 플레이어)
@@ -887,6 +892,8 @@ function frame(now) {
       scale = Math.min(scale, 0.25); // 결정타 슬로모션
     } else if (roundOver) scale = Math.min(scale, 0.5);
     acc += dt * scale;
+    simWant = (frameMs / 1000) * scale;
+    const physT0 = perf ? performance.now() : 0;
     let steps = 0;
     while (acc >= PHYSICS.timestep && steps < PHYSICS.maxStepsPerFrame) {
       player.foe = enemy;
@@ -907,6 +914,12 @@ function frame(now) {
       steps++;
     }
     if (steps === PHYSICS.maxStepsPerFrame) acc = 0;
+    if (perf) {
+      physMs = performance.now() - physT0;
+      physSteps = steps;
+      capped = steps === PHYSICS.maxStepsPerFrame;
+      simGot = steps * PHYSICS.timestep;
+    }
     player.syncMeshes();
     enemy.syncMeshes();
     for (const f of [player, enemy]) {
@@ -922,7 +935,9 @@ function frame(now) {
     checkRoundEnd(dt);
   } else muteWhoosh();
   updateCamera(dt);
+  const renderT0 = perf ? performance.now() : 0;
   renderer.render(scene, camera);
+  if (perf) perf.frame(now, frameMs, physMs, performance.now() - renderT0, physSteps, capped, simWant, simGot);
   trail.enabled = settings.trail && state === 'fight';
   trail.draw(now / 1000, !input.isTouchDevice);
 }
