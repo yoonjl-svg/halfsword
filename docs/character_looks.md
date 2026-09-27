@@ -124,12 +124,25 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 [옆(곱슬 꽁지머리)](character_looks/liao_v4_head_side.jpg) · [뒤](character_looks/liao_v4_head_back.jpg) ·
 [전신](character_looks/liao_v4.jpg)
 
-**v5(지금, `outfit: 'liao_gi_wavy'`)**: 오너 피드백 "v3 같은 꽁지머리는 유지하고, 스파이크 같은 뾰족한 부분을
+**v5(보관, `outfit: 'liao_gi_wavy'`)**: 오너 피드백 "v3 같은 꽁지머리는 유지하고, 스파이크 같은 뾰족한 부분을
 양옆으로 자연스럽게 흘러내리는 중단발 컬로". v3의 부채꼴 꽁지머리는 그대로, 삐친 원뿔 가닥은 모두 빼고
 관자놀이에서 얼굴 옆을 따라 물결치며 턱~어깨 길이로 내려와 끝이 안으로 말리는 가닥(한쪽 셋)과 이마 양옆으로
 넘어가는 부드러운 앞머리를 달았다. 안대·머리띠, v4의 흰 속깃·맨살 V넥 유지.
 근접: [정면](character_looks/liao_v5_head_front.jpg) · [옆](character_looks/liao_v5_head_side.jpg) ·
 [뒤](character_looks/liao_v5_head_back.jpg) · [전신](character_looks/liao_v5.jpg)
+
+**v6~v8 (시안 셋, 오너 선택 대기; 지금 기본값은 v6)**: 오너 요청 "양옆으로 내려오는 느낌 말고 다른 중단발 컬도
+보여줘, 입에 풀을 물고 있도록". 셋 다 v3 부채꼴 꽁지머리·안대·머리띠·v4 흰 속깃 V넥을 유지하고, 입꼬리에서
+오른쪽 앞으로 비스듬히 뻗은 풀줄기(가는 테이퍼 튜브 + 끝의 작은 이삭, 풀색 `0x6f8f3a`)를 물렸다.
+- **v6 `liao_gi_swept`(넘긴 물결)**: 앞 이마선에서 정수리를 넘어 뒷목까지 뒤로 빗어 넘긴 굵은 물결 가닥 다섯.
+  [정면](character_looks/liao_v6_head_front.jpg) · [옆](character_looks/liao_v6_head_side.jpg) ·
+  [뒤](character_looks/liao_v6_head_back.jpg)
+- **v7 `liao_gi_halfup`(반묶음)**: 윗머리는 꽁지로 묶고, 뒷머리 다섯 가닥이 뒷목까지 내려와 안으로 말림 +
+  귀 뒤로 넘긴 가닥 둘. 얼굴 옆은 깔끔. [정면](character_looks/liao_v7_head_front.jpg) ·
+  [옆](character_looks/liao_v7_head_side.jpg) · [뒤](character_looks/liao_v7_head_back.jpg)
+- **v8 `liao_gi_tousled`(바람에 헝클어진)**: 머리 둘레 여덟 가닥이 뒤쪽·한쪽으로 쓸려 흩날리고, 이마에
+  비스듬한 앞머리 한 줄기. [정면](character_looks/liao_v8_head_front.jpg) ·
+  [옆](character_looks/liao_v8_head_side.jpg) · [뒤](character_looks/liao_v8_head_back.jpg)
 
 | v0 | v1 | v2 (지금은 v5) |
 | --- | --- | --- |
