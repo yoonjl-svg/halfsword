@@ -274,8 +274,11 @@ export const LOOK_ARCHIVE = {
       outfit: 'margarethe_dragon_helm',
     },
     // v3(오너 요청): "동그랗지 않게 더 장식적인 투구, 삼국지 마초나 용기사처럼" — 팔각 첨탑 투구에
-    // 뒤로 휘는 두 뿔·이마의 세 갈래 볏·붉은 깃털 술. 투구 말고는 v2와 같다(여전히 순수 장식,
-    // helmet: null). plume은 outfits.js에서만 쓰는 깃털 술 색 — 머리보다 한 톤 짙은 진홍
+    // 뒤로 휘는 두 뿔·이마의 세 갈래 볏·붉은 깃털 술. 투구 말고는 v2와 같다. plume은 outfits.js에서만
+    // 쓰는 깃털 술 색 — 머리보다 한 톤 짙은 진홍.
+    // helmet: 'horned' — 오너 결정(투구는 실제로 막고, 닳고, 완전히 부서지면 사라진다)에 따라 투구 종류를
+    // 적어 둔다. 플레이어 케틀햇('kettle')과 구분되고, 전투 쪽이 !!look.helmet으로 방어를 켠다
+    // (그 전까지 fighter.js는 'kettle'만 보므로 아무 일도 없다)
     v3: {
       tunic: 0x1b1b20,
       quilt: 0x131316,
@@ -287,7 +290,7 @@ export const LOOK_ARCHIVE = {
       shoes: 0x101012,
       skin: 0xc9a074,
       hands: 0xc9a074,
-      helmet: null,
+      helmet: 'horned',
       metal: 0x2c2c32,
       hair: 0x8a2e1a,
       plume: 0x8e1a1a,
