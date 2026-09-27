@@ -293,7 +293,7 @@ export const VOICES = {
   player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 3번 목소리
   generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 첫 목소리 + VoiceBosch
   bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + VoiceBosch. 굵고 거친 목
-  isolde: { f0: 225, tract: 1.17, breath: 0.45, rough: 0.08, style: 'gasp', rec: { ko: 1, bleed: 1, gain: 0.75 } }, // 여성 비명(짧은 것만), 작게
+  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp' }, // 녹음 없이 숨소리만: 여성 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
   liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 0, gain: 0.6, rate: 0.95 } }, // 짧은 신음 하나, 피 흘려 죽을 땐 합성 한숨
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침) + VoiceBosch
   margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale' }, // 녹음 없이 숨소리만: 여성 비명을 낮춰 썼더니 익룡처럼 들렸다 (차분한 노장에 비명 자체가 안 맞음)
@@ -329,14 +329,16 @@ function voiceScript(r, prof, kind) {
       }
       break;
     case 'gasp':
+      // 비명 없이: 짧게 "헉" 하고 숨을 들이켜고, 목에서 작게 걸린 뒤 조용히 잦아든다
       if (ko) {
-        inhale(0.11, 0.6);
-        add(0.05, 'ə', 1, 0.95, 0.25, 0.6, 0.3, 0.004, 0.01);
+        inhale(0.1, 0.5);
+        add(0.06, 'ə', 1, 0.9, 0.25, 0.35, 0.7, 0.004, 0.02, 0.03);
+        exhale(0.35, 0.18);
       } else {
-        inhale(0.2, 0.45);
-        add(0.35, 'e', 1.1, 0.85, 0.35, 0.55, 0.4, 0.03, 0.15, 0.25);
-        inhale(0.14, 0.25);
-        exhale(0.7, 0.25);
+        inhale(0.18, 0.35);
+        add(0.3, 'e', 1.05, 0.85, 0.28, 0.35, 0.7, 0.03, 0.15, 0.2);
+        inhale(0.12, 0.2);
+        exhale(0.7, 0.2);
       }
       break;
     case 'sigh':
