@@ -41,8 +41,14 @@
       #topButtons.show { display: flex; }
       .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; }
 
-      #toast { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: clamp(28px, 7vw, 64px); font-weight: 800; letter-spacing: .06em; text-shadow: 0 3px 0 #000; pointer-events: none; opacity: 0; transition: opacity .3s; }
+      #toast { position: fixed; left: 50%; top: 58%; transform: translate(-50%, -50%); font-size: clamp(28px, 7vw, 64px); font-weight: 800; letter-spacing: .06em; text-shadow: 0 3px 0 #000; pointer-events: none; opacity: 0; transition: opacity .3s; }
       #toast.show { opacity: 1; }
+      /* 감정이 켜지는 순간의 한 줄 알림: 화면 아래쪽 가운데, 감정 색 */
+      #emoMsg { position: fixed; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 44px); transform: translateX(-50%); font-size: 16px; font-weight: 700; letter-spacing: .02em; pointer-events: none; opacity: 0; transition: opacity .35s; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,.7); white-space: nowrap; }
+      #emoMsg.show { opacity: .95; }
+      #emoMsg[data-emotion="fear"] { color: #b9c8de; }
+      #emoMsg[data-emotion="anger"] { color: #ff7a5c; }
+      #emoMsg[data-emotion="obsession"] { color: #f2c75a; }
 
       #hint { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--dim); background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; pointer-events: none; display: none; text-align: center; max-width: calc(100% - 32px); }
       #hint.show { display: block; }
@@ -115,6 +121,7 @@
       <button class="iconBtn" id="btnCalib" aria-label="기울기 영점 맞추기">◎</button>
     </div>
     <div id="toast"></div>
+    <div id="emoMsg"></div>
     <div id="hint"></div>
     <div id="foeIntro"><b></b><i></i><span></span><em></em></div>
     <div id="guardName"></div>

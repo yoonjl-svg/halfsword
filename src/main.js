@@ -418,18 +418,23 @@ function showFoeIntro(ch) {
   el.querySelector('span').textContent = `“${ch.taunt}”`;
   const em = el.querySelector('em');
   em.textContent = '';
-  // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
-  showFoeIntro.t = setTimeout(() => {
-    el.classList.add('show');
-    spinWeapon(em, () => {
-      showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3000);
-    });
-  }, 1300);
+  // 판이 열리자마자 바로 띄우고 무기 룰렛을 돌린다. 룰렛이 멈추기 전까지는 두 무기를 감춰 둔다
+  //  (칼이 이미 손에 보이면 뽑기의 의미가 없다). 멈추면 무기가 나타나고 "Battle"
+  el.classList.add('show');
+  setWeaponsVisible(false);
+  spinWeapon(em, () => {
+    setWeaponsVisible(true);
+    showToast('Battle', 900);
+    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 2600);
+  });
 }
 
-// 무기 뽑기 룰렛: "내 무기" 이름이 빠르게 돌다가 점점 느려지며 이번 판 무기에서 멈춘다 (약 1.3초).
+// 무기 뽑기 룰렛: "내 무기" 이름이 빠르게 돌다가 점점 느려지며 이번 판 무기에서 멈춘다 (약 0.6초).
 //  글자와 짧은 딸깍 소리만 쓴다. 멈추는 순간 등급 색으로 번쩍인다 (쓰레기 회색 · 레어 파랑 · 에픽 보라 · 레전드 금빛)
 const GRAND_WEAPONS = new Set(['excalibur']);
+function setWeaponsVisible(v) {
+  for (const f of [player, enemy]) for (const m of f?.meshes || []) if (m.kind === 'weapon') m.group.visible = v;
+}
 function spinWeapon(em, done) {
   clearTimeout(spinWeapon.t);
   const names = PLAYER_WEAPON_POOL.map((id) => WEAPON_LIST.find((w) => w.id === id)?.nameKo).filter(Boolean);
@@ -439,9 +444,9 @@ function spinWeapon(em, done) {
   em.classList.remove('picked', 'grand');
   em.dataset.tier = '';
   let i = Math.floor(Math.random() * names.length);
-  let delay = 45; // 첫 간격(ms). 매번 조금씩 늘려 감속
+  let delay = 28; // 첫 간격(ms). 매번 늘려 감속 → 모두 합쳐 약 0.6초
   const step = () => {
-    if (delay > 260) {
+    if (delay > 170) {
       em.innerHTML = `내 무기: <b>${finalName}</b>${foeLine}`;
       em.classList.add('picked');
       em.dataset.tier = player.weapon.tier || 'common';
@@ -454,7 +459,7 @@ function spinWeapon(em, done) {
     i = (i + 1) % names.length;
     em.innerHTML = `내 무기: <b>${names[i]}</b>${foeLine}`;
     sound.tick(false);
-    delay *= 1.16;
+    delay *= 1.25;
     spinWeapon.t = setTimeout(step, delay);
   };
   step();
@@ -515,8 +520,8 @@ async function startFight() {
   newRound();
   state = 'fight';
   applyMoveMode();
-  showToast('싸워라!');
-  showFoeIntro(currentFoe);
+  showFoeIntro(currentFoe); // 무기 룰렛이 먼저 빠르게 돌고, 멈추면 "Battle"
+  if (!currentFoe) showToast('Battle');
   showHint(
     !input.isTouchDevice
       ? '클릭해서 마우스 잠금 · WASD 이동'
@@ -572,6 +577,42 @@ for (const ev of ['touchend', 'pointerup', 'keydown']) {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
+// ── 감정이 켜지는 순간 한 줄 알림 ──
+//  상대: "오소리 브란이 공포에 잠식되었다" / 주인공: 주어 없이 "공포에 잠식되었다"
+const EMO_TEXT = {
+  fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식되었다',
+  obsession: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '집념을 보인다',
+  anger: (who) => (who ? `${who}의 ` : '') + '분노가 폭발한다',
+};
+/** 받침이 있으면 a(이), 없으면 b(가) */
+function josa(word, a, b) {
+  const c = word.charCodeAt(word.length - 1);
+  if (c < 0xac00 || c > 0xd7a3) return a;
+  return (c - 0xac00) % 28 ? a : b;
+}
+const emoSeen = { player: null, enemy: null };
+function watchEmotions() {
+  const pairs = [
+    ['player', playerEmo?.emotion ?? null, null],
+    ['enemy', ai?.emotion ?? null, currentFoe?.name || '상대'],
+  ];
+  for (const [k, emo, who] of pairs) {
+    if (emo !== emoSeen[k]) {
+      emoSeen[k] = emo;
+      if (emo && EMO_TEXT[emo] && state === 'fight' && !roundOver) showEmoMsg(EMO_TEXT[emo](who), emo);
+    }
+  }
+}
+function showEmoMsg(text, emo) {
+  const el = $('emoMsg');
+  if (!el) return;
+  el.textContent = text;
+  el.dataset.emotion = emo;
+  el.classList.add('show');
+  clearTimeout(showEmoMsg.t);
+  showEmoMsg.t = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
 /** 플레이어 감정: 이번 프레임의 사건을 모아 판정하고, 배율표를 파이터에 얹고, 공포면 손을 떨고, 화면 가장자리에 색을 입힌다 */
 function updatePlayerEmotion(dt) {
   if (!playerEmo || !player || !enemy) return;
@@ -628,7 +669,7 @@ function checkRoundEnd(dt) {
     if (!enemy.alive || !player.alive) {
       roundOver = true;
       const win = !enemy.alive;
-      showToast(win ? '승리!' : '패배...', 0);
+      showToast(win ? '승리' : '패배', 0);
     }
     return;
   }
@@ -640,9 +681,12 @@ function checkRoundEnd(dt) {
     toast.classList.remove('show');
     const win = !enemy.alive;
     const loser = win ? enemy : player;
-    const cause = { 목: '목을 베였다', 머리: '머리에 치명상', 출혈: '과다 출혈', 기절: '기절' }[loser.causeOfDeath] || '쓰러졌다';
-    $('menuTitle').textContent = win ? '승리!' : '패배...';
-    $('menuSub').textContent = `${win ? '상대' : '나'}: ${cause}. ` + (win ? '난이도를 올려볼까요?' : '칼날을 세워 크게 휘둘러 보세요.');
+    // 한 줄로 짧게: 이겼으면 내가 한 일(베었다), 졌으면 내가 당한 일(베였다)
+    const cause = win
+      ? { 목: '목을 베었다', 머리: '머리를 쳤다', 출혈: '출혈로 쓰러뜨렸다', 기절: '기절시켰다' }[loser.causeOfDeath] || '쓰러뜨렸다'
+      : { 목: '목을 베였다', 머리: '머리를 맞았다', 출혈: '피를 너무 흘렸다', 기절: '기절했다' }[loser.causeOfDeath] || '쓰러졌다';
+    $('menuTitle').textContent = win ? '승리' : '패배';
+    $('menuSub').textContent = cause;
     $('btnStart').textContent = '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
@@ -742,6 +786,7 @@ function frame(now) {
     player.handHeld = input.activeTouch !== null;
     player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
     updatePlayerEmotion(dt);
+    watchEmotions();
     const m = input.move;
     const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
     player.move.set(player.alive ? m.x * emv : 0, player.alive ? m.y * emv : 0);
