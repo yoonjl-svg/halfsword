@@ -48,7 +48,9 @@ step/ and hit/  — CC0 (public domain), Kenney (www.kenney.nl), fetched from th
 open-game-sfx-index mirror (github.com/Mcamento8/open-game-sfx-index, SHA-256
 checked against its catalog). Trimmed, peak-normalized, mono MP3.
 
-  step/boot1-9.mp3        <- "RPG Audio": footstep00-04, 06-09.ogg (leather boots)
+  step/sand1-8.mp3        <- "Impact Sounds": footstep_carpet_000-004.ogg (heel) mixed with
+                             footstep_snow_000-004.ogg (crunch, -6 dB, +12 ms), pitched down
+                             ~10%, low-passed at 2.2 kHz, faded by 200 ms
   hit/punch_med1-5.mp3    <- "Impact Sounds": impactPunch_medium_000-004.ogg
   hit/soft1-5.mp3         <- "Impact Sounds": impactSoft_heavy_000-004.ogg
   hit/wood1-5.mp3         <- "Impact Sounds": impactWood_medium_000-004.ogg
