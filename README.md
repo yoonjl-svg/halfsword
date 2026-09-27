@@ -55,6 +55,7 @@ npm run build    # 배포용 파일을 dist/ 에 만들기
 index.html        화면 틀, 메뉴, 부상 화면 효과 (HTML/CSS)
 sounds.html       소리 들어보기 페이지 (메뉴의 "소리 들어보기")
 public/sfx/       녹음된 효과음 몇 개 (Kenney.nl, CC0)
+public/ui/weapons/ 무기 뽑기 카드의 작은 무기 그림 (tools/browser/weapon_thumbs.mjs 가 게임 속 무기 모델을 찍어 만든다)
 src/
   config.js       ★ 밸런스/조작감/카메라 숫자 모음. 튜닝은 여기서부터!
   looks.js        검투사 겉모습 (옷 색, 투구, 머리카락)
