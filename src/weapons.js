@@ -578,7 +578,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
       partTuple(['box', 0.014, 0.14, 0.017], 0, 0.3, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.014], -0.2, 0.09, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.04, 0.005, 0.04], 0.24, 0.04, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.72, blade.comY, blade.Ie, blade.It, 0xc9cfd5, true), // 하몬이 드러나게 칼몸은 조금 어둡게
+      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.72, blade.comY, blade.Ie, blade.It, 0xc1d3db, true), // 같은 에픽 청강검과 광도를 맞춘 강철색 (하몬은 꼭짓점 색으로 더 밝다)
     ];
   },
   // 에픽 명검의 세공 (전부 물리 무관, 콜라이더에서 ~1cm 안):
@@ -658,7 +658,7 @@ const qinggang = finalizeSpec('qinggang', {
       partTuple(['box', 0.015, 0.09, 0.015], 0, 0.1, 0, grip.Ie, grip.It, QINGGANG_LOOK.grip),
       partTuple(['ball', 0.02], -0.09, 0.1, 0, pommel.Ie, pommel.It, QINGGANG_LOOK.hilt),
       partTuple(['box', 0.035, 0.008, 0.012], 0.11, 0.04, 0, cross.Ie, cross.It, QINGGANG_LOOK.hilt),
-      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xbfe3ea, true),
+      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xc4dbe1, true), // 푸른 강철(청강) — 같은 에픽 모노호시자오와 광도를 맞춤
     ];
   },
   // 청강검 장식 (전부 물리 무관, 콜라이더에서 ~1cm 안): 중국 명검의 어법으로 "곱되 요란하지 않게".
