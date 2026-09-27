@@ -95,7 +95,10 @@ export class AI {
     // TECH[].reach(기술마다 다른 "이 기술은 기본 간격보다 얼마나 더/덜 닿는가" 보정)도 롱소드로 잰
     // 값이라, 짧은 칼은 이 보정을 그대로 더하면 실제보다 더 닿는다고 착각한다(무기 PM 인수인계 문서
     // docs/weapons.md §5에 남아 있던 미해결 항목) — M.contact와 같은 비율로 같이 줄인다.
-    this.reachScale = !me.weapon || me.weapon.id === 'longsword' ? 1 : this.M.contact / baseM.contact;
+    // 무기 스펙에 techReachScale을 직접 정해 뒀으면 그 값을 그대로 쓴다 — 팔쉬온처럼 이 비율 그대로
+    // 줄이면 다가서는 시간 계산이 너무 빡빡해져(공격을 걸다가 자꾸 시간 안에 못 붙어 물러서기만
+    // 반복하는) 무기가 있어, 그런 무기만 따로 눅여 줄 수 있게 한다(무기 밸런스 시뮬로 확인).
+    this.reachScale = !me.weapon || me.weapon.id === 'longsword' ? 1 : (me.weapon.techReachScale ?? this.M.contact / baseM.contact);
     this.setLevel(levelName);
     // 성격: 사람마다 다르다 (같은 난이도라도 판마다 다른 검객). persona가 정해 둔 값이 있으면 그대로 쓴다
     const P = this.persona.pers || {};
