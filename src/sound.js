@@ -886,6 +886,67 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.95), sr, 0.05);
   },
 
+  /**
+   * 판금이 부서짐: 금이 연달아 번지는 "짝-짝-짝" + 리벳이 튕겨 나가는 짧은 "틱-틱" + 가죽끈이 끊기는 "탁"
+   * + 판이 짧게 우는 "깡"(투구보다 조금 길게) + 묵직한 "쿵". 조각이 떨어지는 소리는 plateDebris 가 따로 낸다
+   */
+  plateBreak(sr, r) {
+    const n = Math.round(0.5 * sr);
+    const out = new Float32Array(n);
+    const x = new Float32Array(n);
+    const ring = new Float32Array(n);
+    pulse(x, sr, 0.001, 0.0002, 1);
+    const modes = [];
+    for (let i = 0; i < 24; i++) {
+      const f = Math.exp(between(r, Math.log(700), Math.log(6500)));
+      modes.push({ f, a: (f < 1500 ? 0.4 : 1) * between(r, 0.3, 1) * (r() < 0.5 ? -1 : 1), t60: between(r, 0.02, 0.05) });
+    }
+    resonate(x, ring, sr, modes, Math.ceil(0.004 * sr));
+    normalize(ring, 1);
+    potCut(ring, sr, 560, 0.75);
+    for (let i = 0; i < n; i++) out[i] += 0.6 * ring[i];
+    crackBurst(out, sr, r, { t0: 0.001, count: 8, span: 0.03, amp: 1.2, f: 2500 });
+    // 리벳이 튕겨 나가는 "틱": 작고 높은 쇳조각 울림이 20~140ms 사이에 몇 번
+    const pops = Math.round(between(r, 3, 5));
+    for (let k = 0; k < pops; k++) {
+      const t0 = between(r, 0.02, 0.14);
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      pulse(px, sr, t0, 0.0001, 1);
+      resonate(px, py, sr, [0, 1, 2].map(() => ({ f: between(r, 2500, 7000), a: between(r, 0.5, 1), t60: between(r, 0.02, 0.04) })), Math.ceil((t0 + 0.002) * sr));
+      const a = between(r, 0.15, 0.35) / (peakOf(py) || 1);
+      for (let i = 0; i < n; i++) out[i] += a * py[i];
+    }
+    noiseHit(out, sr, r, { t0: between(r, 0.03, 0.06), amp: 0.4, attack: 0.0005, tau: 0.006, type: 'bandpass', f: between(r, 1200, 1800), q: 1 }); // 가죽끈 "탁"
+    gritBurst(out, sr, r, { t0: 0.002, span: 0.08, count: 20, amp: 0.3, fLo: 1200, fHi: 6000 });
+    saturate(out, 2.4);
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, 55, 75), drop: 0.7, dropTau: 0.012, tau: 0.035, amp: 0.8 });
+    return fadeOut(normalize(out, 0.95), sr, 0.08);
+  },
+
+  /** 부서진 판금 조각이 모래에 떨어짐: 2~4개가 차례로 "철-퍽" (모래가 받아서 울림 없이 둔하게 멎는다) */
+  plateDebris(sr, r) {
+    const n = Math.round(0.8 * sr);
+    const out = new Float32Array(n);
+    const k = Math.round(between(r, 2, 4));
+    let t = between(r, 0.0, 0.05);
+    for (let i = 0; i < k; i++) {
+      const amp = i ? between(r, 0.35, 0.7) : 1;
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      pulse(px, sr, t, 0.0003, 1);
+      resonate(px, py, sr, [0, 1, 2, 3].map(() => ({ f: between(r, 1500, 6000), a: between(r, 0.4, 1), t60: between(r, 0.015, 0.035) })), Math.ceil((t + 0.002) * sr));
+      const a = (0.45 * amp) / (peakOf(py) || 1);
+      for (let j = 0; j < n; j++) out[j] += a * py[j];
+      noiseHit(out, sr, r, { t0: t, amp: 0.6 * amp, attack: 0.002, tau: 0.018, type: 'lowpass', f: between(r, 250, 400), q: 0.7 }); // 모래에 박히는 "퍽"
+      gritBurst(out, sr, r, { t0: t + 0.002, span: 0.03, count: 6, amp: 0.12 * amp, fLo: 1500, fHi: 5000 }); // 튀는 모래
+      t += between(r, 0.07, 0.22);
+      if (t > 0.65) break;
+    }
+    saturate(out, 1.6);
+    return fadeOut(normalize(out, 0.9), sr, 0.06);
+  },
+
   /** 경기장 울림(잔향)용 충격 응답: 관중석에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오) */
   reverbIR(sr, r) {
     const dur = 0.9;
@@ -950,6 +1011,8 @@ const BANK = [
   ['hitStab', 2, (sr, r) => SYNTH.hitSlash(sr, r, 'stab')],
   ['hitBlunt', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'blunt')],
   ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
+  ['plateBreak', 2, SYNTH.plateBreak],
+  ['plateDebris', 2, SYNTH.plateDebris],
 ];
 // 목소리 조각은 이름이 "voice:캐릭터id:ko|bleed" 이고, 이번 판에 나오는 캐릭터 것만 만든다 (prepareVoices)
 const VOICE_COUNT = 2;
@@ -1688,6 +1751,23 @@ export class Sound {
     const t = this.ctx.currentTime;
     this.muffle.frequency.cancelScheduledValues(t);
     this.muffle.frequency.setTargetAtTime(20000, t, 0.1);
+  }
+
+  /**
+   * 판금이 타격을 막음 (전투 판정이 "판금이 막았다"고 알려 줄 때). 무기 재질에 맞는 갑옷 충돌음 — 투구와 같은 "챡-징-크덕"
+   * @param energy 막은 타격의 세기 (J), material 때린 무기 재질 (기본 강철)
+   */
+  plateBlock(energy, { material = 'steel', pos } = {}) {
+    this.impact({ a: material, b: 'armor', energy, pos });
+  }
+
+  /** 판금이 완전히 부서짐: 금이 번지며 깨지는 소리 → 0.12~0.2초 뒤 조각이 모래에 떨어지는 소리 */
+  plateBreak(energy = 100, { pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const e = clamp01(energy / 120);
+    const ev = this.event({ bus: this.metalBus, gain: 0.7 + 0.3 * e, prio: 3, pos });
+    this.layer(ev, this.pick('plateBreak'), { rate: between(Math.random, 0.94, 1.04) });
+    this.layer(ev, this.pick('plateDebris'), { gain: 0.6, rate: between(Math.random, 0.92, 1.08), delay: between(Math.random, 0.12, 0.2) });
   }
 
   /** 뼈 부딪히는/부러지는 소리 */
