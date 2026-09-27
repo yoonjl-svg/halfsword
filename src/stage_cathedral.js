@@ -737,39 +737,75 @@ export function buildCathedral(scene, lights = {}) {
     {
       const tx = -22.75; // 가운데 결투 자리에서 아케이드 아치 사이로 보이는 칸
       const tz = AZ - 4.2;
-      const bone = 0xd6cbb0;
+      const bone = 0xf1ebdc; // 바닥보다 확실히 흰 뼈
       const bh = 0.42; // 관대 높이 (낮게: 누운 유해가 보이게)
       K.put('stone', box(2.6, bh - 0.1, 1.15), C.stoneDark, [tx, (bh - 0.1) / 2, tz], [0, 0, 0], 1, { ...st, rough: 0.02 });
       K.put('stone', box(2.75, 0.1, 1.3), C.stone, [tx, bh - 0.05, tz], [0, 0, 0], 1, { ...st, rough: 0.015 });
       K.put('stone', box(0.4, 0.12, 0.5), C.stone, [tx - 1.05, bh + 0.06, tz], [0, 0, 0.08], 1, st); // 돌 베개
       const y = bh + 0.07;
       const B = (g, pos, rot = [0, 0, 0], sc = 1) => K.put('bone', g, bone, pos, rot, sc, { vary: 0.08, noise: 0.12 });
-      // 머리 (+x 가 발쪽, 머리는 −x)
-      const hx = tx - 1.02;
-      B(new THREE.SphereGeometry(0.125, 10, 8), [hx, y + 0.17, tz], [0, 0, 0], [1, 1.05, 0.9]);
-      B(box(0.09, 0.05, 0.08), [hx + 0.07, y + 0.1, tz], [0, 0, -0.5]); // 턱
-      for (const s of [-1, 1]) K.put('dark', new THREE.SphereGeometry(0.024, 6, 4), 0x100c0a, [hx + 0.06, y + 0.24, tz + s * 0.035]); // 눈구멍
-      K.put('dark', box(0.02, 0.025, 0.02), 0x100c0a, [hx + 0.09, y + 0.2, tz]); // 코구멍
-      // 척추·갈비뼈·골반
-      for (let i = 0; i < 9; i++) B(box(0.065, 0.06, 0.07), [hx + 0.18 + i * 0.065, y + 0.04, tz]);
-      for (let i = 0; i < 6; i++) {
-        const x = hx + 0.26 + i * 0.07;
-        const w = 0.13 - Math.abs(i - 2) * 0.012;
-        B(new THREE.TorusGeometry(w * 1.15, 0.017, 4, 10, Math.PI), [x, y + 0.03, tz], [Math.PI / 2, Math.PI / 2, 0], [1, 0.75, 1]);
+      // 반듯이 누운 사람 뼈대 (머리 −x, 발 +x). 얼굴·가슴이 위(+y)를 본다
+      const hx = tx - 1.0;
+      const tube = (pts, r) => B(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((q) => new THREE.Vector3(...q))), 10, r, 5, false));
+      // 머리뼈: 둥근 머리 + 턱뼈 + 이 + 눈구멍·코구멍
+      B(new THREE.SphereGeometry(0.11, 12, 9), [hx, y + 0.11, tz], [0, 0, 0], [1.12, 1, 0.92]);
+      B(new THREE.SphereGeometry(0.07, 10, 6), [hx + 0.09, y + 0.07, tz], [0, 0, 0], [0.8, 0.75, 1]); // 광대·위턱
+      B(box(0.07, 0.035, 0.1), [hx + 0.15, y + 0.035, tz], [0, 0, -0.35]); // 아래턱
+      for (let k = -3; k <= 3; k++) B(box(0.012, 0.02, 0.011), [hx + 0.155, y + 0.07, tz + k * 0.013]); // 이
+      for (const sd of [-1, 1]) K.put('dark', new THREE.SphereGeometry(0.024, 8, 6), 0x0c0908, [hx + 0.07, y + 0.185, tz + sd * 0.04], [0, 0, 0], [1, 0.8, 1]); // 눈구멍
+      K.put('dark', new THREE.ConeGeometry(0.016, 0.03, 3), 0x0c0908, [hx + 0.12, y + 0.16, tz], [0, 0, -Math.PI / 2]); // 코구멍
+      // 등뼈 (목~허리)
+      for (let i = 0; i < 13; i++) B(box(0.04, 0.045, 0.05 + (i > 2 ? 0.01 : 0)), [hx + 0.17 + i * 0.047, y + 0.025, tz]);
+      // 갈비뼈 7쌍: 등뼈에서 옆으로 둥글게 돌아 가슴 위 복장뼈로 모인다 (조금씩 발 쪽으로 기울었다)
+      for (let i = 0; i < 7; i++) {
+        const x = hx + 0.27 + i * 0.052;
+        const w = 0.1 + Math.min(i, 4) * 0.012 - Math.max(0, i - 4) * 0.01;
+        const top = 0.17 + Math.min(i, 3) * 0.012;
+        for (const sd of [-1, 1])
+          tube(
+            [
+              [x, y + 0.04, tz + sd * 0.03],
+              [x + 0.02, y + 0.06, tz + sd * (w * 0.85)],
+              [x + 0.04, y + top * 0.65, tz + sd * w],
+              [x + 0.06, y + top, tz + sd * (w * 0.55)],
+              [x + 0.07, y + top + 0.02, tz + sd * 0.03],
+            ],
+            0.011,
+          );
       }
-      B(new THREE.TorusGeometry(0.1, 0.03, 5, 10), [hx + 0.86, y + 0.04, tz], [Math.PI / 2, 0, 0], [1, 1.3, 1]); // 골반
-      // 팔: 가슴 위로 모은 두 손
-      for (const s of [-1, 1]) {
-        B(cyl(0.028, 0.028, 0.3, 5), [hx + 0.33, y + 0.05, tz + s * 0.17], [0, 0, Math.PI / 2]);
-        limb(K, 'bone', [hx + 0.48, y + 0.05, tz + s * 0.17], [hx + 0.55, y + 0.12, tz + s * 0.04], 0.025, 0.022, bone, {}, 5);
-        for (let f = 0; f < 4; f++) B(box(0.05, 0.012, 0.012), [hx + 0.57 + f * 0.012, y + 0.14, tz + s * 0.01 + (f - 1.5) * 0.018]);
+      B(box(0.26, 0.018, 0.04), [hx + 0.44, y + 0.205, tz], [0, 0, -0.08]); // 복장뼈
+      // 빗장뼈·어깨뼈
+      for (const sd of [-1, 1]) {
+        tube([[hx + 0.26, y + 0.19, tz + sd * 0.03], [hx + 0.24, y + 0.17, tz + sd * 0.11], [hx + 0.22, y + 0.12, tz + sd * 0.19]], 0.012);
+        B(box(0.14, 0.01, 0.08), [hx + 0.3, y + 0.03, tz + sd * 0.14], [0, sd * 0.3, 0]);
       }
-      // 바랜 천이 다리를 덮었다 (다리뼈는 발목 아래만 보인다)
-      K.put('cloth', box(0.95, 0.12, 0.5, 6, 1, 3), 0x5a3a36, [hx + 1.35, y + 0.05, tz], [0, 0, 0], 1, { rough: 0.06, noise: 0.2 });
-      for (const s of [-1, 1]) {
-        B(cyl(0.03, 0.026, 0.22, 5), [hx + 1.9, y + 0.03, tz + s * 0.09], [0, 0, Math.PI / 2]);
-        B(box(0.12, 0.03, 0.06), [hx + 2.03, y + 0.06, tz + s * 0.09], [0, 0, 0.9]); // 발뼈
+      // 팔: 위팔뼈는 몸 옆, 아래팔은 배 위로 모여 두 손을 포갰다
+      for (const sd of [-1, 1]) {
+        const sh = [hx + 0.24, y + 0.08, tz + sd * 0.21];
+        const el = [hx + 0.55, y + 0.06, tz + sd * 0.22];
+        const wr = [hx + 0.72, y + 0.19, tz + sd * 0.05];
+        limb(K, 'bone', sh, el, 0.024, 0.02, bone, {}, 6);
+        B(new THREE.SphereGeometry(0.03, 6, 5), el);
+        limb(K, 'bone', el, wr, 0.016, 0.015, bone, {}, 5);
+        limb(K, 'bone', [el[0], el[1] + 0.015, el[2] - sd * 0.02], [wr[0], wr[1] + 0.012, wr[2] - sd * 0.02], 0.012, 0.011, bone, {}, 5);
+        for (let f = 0; f < 4; f++) B(box(0.07, 0.012, 0.012), [wr[0] + 0.05, wr[1] + 0.01, tz + sd * (0.035 - f * 0.018)], [0, sd * 0.3, 0]);
       }
+      // 골반
+      for (const sd of [-1, 1]) B(new THREE.SphereGeometry(0.08, 8, 6), [hx + 0.82, y + 0.05, tz + sd * 0.09], [0, sd * 0.4, 0], [0.9, 0.55, 0.45]);
+      B(box(0.1, 0.03, 0.08), [hx + 0.8, y + 0.03, tz]); // 엉치뼈
+      // 다리: 넙다리뼈·무릎·정강이뼈·발 (발끝이 위로)
+      for (const sd of [-1, 1]) {
+        const hip = [hx + 0.88, y + 0.05, tz + sd * 0.1];
+        const kn = [hx + 1.32, y + 0.05, tz + sd * 0.085];
+        const an = [hx + 1.74, y + 0.04, tz + sd * 0.08];
+        limb(K, 'bone', hip, kn, 0.027, 0.024, bone, {}, 6);
+        B(new THREE.SphereGeometry(0.035, 6, 5), kn);
+        limb(K, 'bone', kn, an, 0.022, 0.019, bone, {}, 6);
+        limb(K, 'bone', [kn[0], kn[1], kn[2] + sd * 0.025], [an[0], an[1], an[2] + sd * 0.022], 0.011, 0.01, bone, {}, 4);
+        B(box(0.05, 0.14, 0.07), [an[0] + 0.04, y + 0.09, an[2]], [0, 0, -0.25]); // 발
+      }
+      // 바랜 천 조각: 한쪽 정강이 위에만 걸쳐 있다
+      K.put('cloth', box(0.45, 0.02, 0.26, 4, 1, 2), 0x5a3a36, [hx + 1.48, y + 0.08, tz + 0.1], [0.15, 0.3, 0], 1, { rough: 0.03, noise: 0.25 });
       // 머리맡의 녹슨 투구
       K.put('rust', new THREE.SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0x6a4a36, [tx - 1.55, bh + 0.02, tz + 0.35], [0.9, 0.4, 0.2], 1, { vary: 0.1, noise: 0.25 });
       // 관대 둘레로 기어오른 장미
@@ -785,13 +821,13 @@ export function buildCathedral(scene, lights = {}) {
       const sz = tz - 1.9;
       K.push([sx, 0, sz], 0.35);
       const tilt = [0.1, 0, -0.07];
-      const steel = 0x8a857c;
+      const steel = 0xd2d5da;
       const at = (h) => [Math.sin(-tilt[2]) * h, Math.cos(tilt[0]) * h, Math.sin(tilt[0]) * h];
       K.put('sword', box(0.065, 1.02, 0.016), steel, at(0.51), tilt, 1, { vary: 0.04, noise: 0.18 }); // 드러난 칼날
-      K.put('sword', box(0.024, 1.0, 0.018), 0x6e6960, at(0.51), tilt, 1, { vary: 0 }); // 피 홈
-      K.put('sword', box(0.36, 0.045, 0.045), 0x5a5048, at(1.04), tilt, 1, { vary: 0.05 }); // 코등이
+      K.put('sword', box(0.024, 1.0, 0.018), 0xa9adb3, at(0.51), tilt, 1, { vary: 0 }); // 피 홈
+      K.put('sword', box(0.36, 0.045, 0.045), 0x9a958c, at(1.04), tilt, 1, { vary: 0.05 }); // 코등이
       K.put('rust', cyl(0.024, 0.027, 0.28, 7), 0x3a2a20, at(1.2), tilt); // 손잡이 (가죽이 삭았다)
-      K.put('sword', new THREE.SphereGeometry(0.048, 8, 6), 0x5a5048, at(1.37), tilt); // 폼멜
+      K.put('sword', new THREE.SphereGeometry(0.048, 8, 6), 0x9a958c, at(1.37), tilt); // 폼멜
       K.pop();
       // 칼이 박힌 자리의 깨진 판석 조각
       for (let k = 0; k < 6; k++) {
@@ -843,11 +879,11 @@ export function buildCathedral(scene, lights = {}) {
     K.mesh('iron', std({ roughness: 0.5, metalness: 0.6 })),
     K.mesh('ivy', std({ roughness: 1, flatShading: true }), { light: shade }),
     K.mesh('vine', std({ roughness: 1 }), { light: shade }),
-    K.mesh('bone', std({ roughness: 0.85 }), { light: shade }),
+    K.mesh('bone', std({ roughness: 0.7, emissive: 0x2a2622, emissiveIntensity: 0.5 })), // 그늘을 굽지 않고 살짝 밝혀 희게 보이게
     K.mesh('cloth', std({ roughness: 1, flatShading: true }), { light: shade }),
     K.mesh('dark', std({ roughness: 1 })),
     K.mesh('rust', std({ roughness: 0.9, metalness: 0.3 }), { light: shade }),
-    K.mesh('sword', std({ roughness: 0.45, metalness: 0.85, envMap: weaponEnv(), envMapIntensity: 0.9 }), { light: shade }),
+    K.mesh('sword', std({ roughness: 0.18, metalness: 0.95, envMap: weaponEnv(), envMapIntensity: 2.2, emissive: 0x1c2026, emissiveIntensity: 0.6 })), // 어둑한 복도에서도 칼날이 빛나게
     K.mesh('candle', std({ roughness: 0.6, emissive: 0x3a2a10, emissiveIntensity: 0.6 })),
     K.mesh('glow', new THREE.MeshBasicMaterial({ vertexColors: true, fog: false })),
   ];
