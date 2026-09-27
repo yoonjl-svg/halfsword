@@ -65,7 +65,7 @@ SCHOOLS.tree_branch = {
   ...L,
   id: 'tree_branch',
   weapon: 'tree_branch',
-  measure: { contact: 1.41, reach: 1.63, clinch: 1.09, cutTime: 0.36 },
+  measure: { contact: 1.44, reach: 1.64, clinch: 1.11, cutTime: 0.33 }, // 양손 가정(토크 22) 뒤 무기 담당 재실측 (전 1.41/1.63/1.09/0.36)
   tech: branchTech,
   techByName: byName(branchTech),
   feints: noThrustFeints,
@@ -84,8 +84,8 @@ SCHOOLS.jian = {
   techByName: byName(jianTech),
 };
 
-// 청강검(에픽): 물리·measure가 지안과 같다 → 지안 꾸러미 그대로 (id만 다르다)
-SCHOOLS.qinggang = { ...SCHOOLS.jian, id: 'qinggang', weapon: 'qinggang' };
+// 청강검(에픽): 물리는 지안이지만 양손 가정(토크 22) 뒤 무기 담당이 다시 잰 measure (전 1.32/1.55/1.02/0.38)
+SCHOOLS.qinggang = { ...SCHOOLS.jian, id: 'qinggang', weapon: 'qinggang', measure: { contact: 1.37, reach: 1.61, clinch: 1.06, cutTime: 0.36 } };
 
 // 엑스칼리버 복제품: 황동 장식에 칼날이 두껍고 무거워(1.50kg·1.00m) 롱소드보다 간격이 아주 조금 좁다. 자세·기술은 롱소드 그대로
 const replicaTech = withReach(TECH, { zornhau: 0, unterhau: -0.04, zornhauL: -0.03, unterhauL: -0.07, stichPflug: 0.08, stichPflugL: 0.08, stichOchs: 0.08, stichOchsL: 0.08, stichAlber: 0.03 });
@@ -97,6 +97,29 @@ SCHOOLS.excalibur_replica = {
   tech: replicaTech,
   techByName: byName(replicaTech),
 };
+
+// 그 밖의 무기: 자세·기술은 롱소드 그대로, 간격(measure)만 무기 담당 실측(양손 가정 뒤, docs/weapons.md §2)으로 바꾼 꾸러미.
+//  브란이 주워 온 커먼 단검(10%, 지금은 팔쉬온), ?foeWeapon= 으로 들려 준 무기가 롱소드 간격으로 헛베지 않게 한다. (암소드는 감독 확정으로 삭제) 기술별 reach 보정은 자료가 없어 롱소드 값.
+//  찌르기가 약한 무기(팔쉬온·세이버)는 찌르기 기술의 기본 가중치를 낮춘다
+const MEASURES = {
+  zweihander: [1.66, 2.08, 1.28, 0.49],
+  estoc: [1.66, 2.04, 1.28, 0.46],
+  sabre: [1.4, 1.67, 1.08, 0.38],
+  rapier: [1.52, 1.73, 1.17, 0.29],
+  falchion: [1.4, 1.62, 1.08, 0.36],
+  monohoshizao: [1.51, 2.01, 1.17, 0.44],
+  excalibur: [1.61, 1.86, 1.24, 0.41],
+  lightsaber: [1.54, 1.73, 1.19, 0.25],
+  rubber_chicken: [1.07, 1.21, 0.83, 0.27],
+  frozen_tuna: [1.34, 1.69, 1.03, 0.46],
+};
+const weakThrust = (tech, k) => tech.map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * k } : t));
+for (const [id, [contact, reach, clinch, cutTime]] of Object.entries(MEASURES)) {
+  SCHOOLS[id] = { ...L, id, weapon: id, measure: { contact, reach, clinch, cutTime } };
+}
+// 날이 없는 것(고무 닭·참치)은 찌르기 없음. 곡도·반달칼은 찌르기를 덜 믿는다
+for (const id of ['rubber_chicken', 'frozen_tuna']) SCHOOLS[id] = { ...SCHOOLS[id], tech: noThrust, techByName: byName(noThrust), feints: noThrustFeints };
+for (const id of ['sabre', 'falchion']) { const t = weakThrust(TECH, 0.5); SCHOOLS[id] = { ...SCHOOLS[id], tech: t, techByName: byName(t) }; }
 
 export const DEFAULT_SCHOOL = 'longsword';
 

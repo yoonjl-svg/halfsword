@@ -11,11 +11,12 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon } from './characters.js';
+import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST } from './weapons.js';
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
-import { Sound } from './sound.js';
+import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { buildArena } from './arena.js';
 
@@ -119,6 +120,7 @@ const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
+let bodySounds = [];
 const fighterMeshes = [];
 
 function newRound() {
@@ -158,6 +160,7 @@ function newRound() {
   currentFoe = pickFoe();
   playerWeapon = pickPlayerWeapon();
   const before = new Set(scene.children);
+  const foeWeapon = params.get('foeWeapon') || params.get('weapon') || (currentFoe ? pickCharacterWeapon(currentFoe) : 'longsword');
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
     name: '나',
@@ -172,8 +175,8 @@ function newRound() {
     x: ARENA.startGap / 2,
     heading: Math.PI,
     look: currentFoe ? currentFoe.look : LOOKS.enemy,
-    // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기
-    weapon: params.get('foeWeapon') || params.get('weapon') || currentFoe?.weapon || 'longsword',
+    // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브란은 10% 확률로 주워 온 커먼 칼)
+    weapon: foeWeapon,
   });
   // 진짜 엑스칼리버의 기운 (보여 주기만)
   for (const a of auras) a.dispose();
@@ -181,10 +184,23 @@ function newRound() {
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
-  ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, currentFoe.ai.persona) : new AI(enemy, player, settings.difficulty);
+  //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
+  const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...currentFoe.ai.persona, school: foeWeapon } : currentFoe?.ai.persona;
+  ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, persona) : new AI(enemy, player, settings.difficulty);
+  // 플레이어 감정 (emotions.js): 상대 AI와 같은 규칙으로 겁먹고 화내고 물고 늘어진다. ?emo=0 이면 끔, ?emo=0.5 면 문턱값 셋 다 0.5
+  const emoParam = params.get('emo');
+  const emoTh = emoParam === '0' ? 0 : emoParam ? +emoParam || 0.3 : 0.3;
+  playerEmo = new Emotions({ fearful: emoTh, angry: emoTh, dogged: emoTh });
+  playerEv = { hurt: false, parried: false, landed: false };
+  player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
+  // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
+  const foeVoice = currentFoe?.id || 'generic';
+  bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
+  sound.prepareVoices(['player', foeVoice]);
+  sound.resetRound();
   roundOver = false;
   roundOverTime = 0;
   camFollow.copy(player.pelvisPos);
@@ -193,6 +209,9 @@ function newRound() {
 
 // ── 타격감 ──
 let hitStop = 0; // 큰 타격 때 아주 잠깐 멈칫하는 연출
+let playerEmo = null; // 플레이어 감정 판정 (emotions.js)
+let playerEv = { hurt: false, parried: false, landed: false }; // 이번 프레임에 플레이어에게 일어난 사건
+const playerTremor = { x: 0, y: 0, ax: 0, ay: 0, t: 0 }; // 공포 손 떨림 (지금 얹혀 있는 값·시계)
 let clashCooldown = 0;
 let clashStopCooldown = 0; // 칼끼리 부딪혀 멈칫한 뒤 다시 멈칫하기까지 (초)
 let slowMo = 0; // 결정타 슬로모션 남은 시간
@@ -202,6 +221,8 @@ const stats = { hits: [], clashes: 0, simTime: 0, passes: 0 };
 
 /** combat.js가 상처를 만들 때마다 부른다: 피, 자국, 소리, 진동, 멈칫 */
 function onWound(att, vic, r, point, pr) {
+  if (vic === player) playerEv.hurt = true; // 감정 사건: 베였다
+  if (att === player) playerEv.landed = true; // 감정 사건: 맞혔다
   const tag = `${att.name}->${r.zone}:${r.type}${r.pass ? '(관통)' : ''} ${r.energy.toFixed(0)}J 심각도${r.severity.toFixed(2)}`;
   stats.hits.push(tag);
   if (r.pass) stats.passes++;
@@ -265,6 +286,7 @@ function onWound(att, vic, r, point, pr) {
 }
 
 function onClash(point, speed, touch) {
+  if (touch?.fresh && touch.vn > 3 && player?.alive && player.tipVel.length() > 6) playerEv.parried = true; // 감정 사건: 내 베기가 막혔다
   // 소리: 새로 부딪힌 순간(또는 맞댄 채 다시 세게 친 순간)에만 "쨍". 맞댄 채 미끄러지는 동안은 긁히는 소리(updateBindSound)
   //  touch.vn = 부딪히기 직전 맞닿는 방향 속도(부딪히는 세기), touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeClash)
   if (touch && (touch.fresh || touch.vn > 3)) sound.clash(touch.vn, touch.vt);
@@ -394,12 +416,53 @@ function showFoeIntro(ch) {
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
   el.querySelector('span').textContent = `“${ch.taunt}”`;
-  el.querySelector('em').textContent = `내 무기: ${player.weapon.nameKo} · 상대 무기: ${enemy.weapon.nameKo}`;
-  // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
-  showFoeIntro.t = setTimeout(() => {
-    el.classList.add('show');
-    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3500);
-  }, 1300);
+  const em = el.querySelector('em');
+  em.textContent = '';
+  // 판이 열리자마자 바로 띄우고 무기 룰렛을 돌린다. 룰렛이 멈추기 전까지는 두 무기를 감춰 둔다
+  //  (칼이 이미 손에 보이면 뽑기의 의미가 없다). 멈추면 무기가 나타나고 "Battle"
+  el.classList.add('show');
+  setWeaponsVisible(false);
+  spinWeapon(em, () => {
+    setWeaponsVisible(true);
+    showToast('Battle', 900);
+    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 2600);
+  });
+}
+
+// 무기 뽑기 룰렛: "내 무기" 이름이 빠르게 돌다가 점점 느려지며 이번 판 무기에서 멈춘다 (약 0.6초).
+//  글자와 짧은 딸깍 소리만 쓴다. 멈추는 순간 등급 색으로 번쩍인다 (쓰레기 회색 · 레어 파랑 · 에픽 보라 · 레전드 금빛)
+const GRAND_WEAPONS = new Set(['excalibur']);
+function setWeaponsVisible(v) {
+  for (const f of [player, enemy]) for (const m of f?.meshes || []) if (m.kind === 'weapon') m.group.visible = v;
+}
+function spinWeapon(em, done) {
+  clearTimeout(spinWeapon.t);
+  const names = PLAYER_WEAPON_POOL.map((id) => WEAPON_LIST.find((w) => w.id === id)?.nameKo).filter(Boolean);
+  const finalName = player.weapon.nameKo;
+  const foeLine = ` · 상대 무기: ${enemy.weapon.nameKo}`;
+  const grand = GRAND_WEAPONS.has(player.weapon.id);
+  em.classList.remove('picked', 'grand');
+  em.dataset.tier = '';
+  let i = Math.floor(Math.random() * names.length);
+  let delay = 28; // 첫 간격(ms). 매번 늘려 감속 → 모두 합쳐 약 0.6초
+  const step = () => {
+    if (delay > 170) {
+      em.innerHTML = `내 무기: <b>${finalName}</b>${foeLine}`;
+      em.classList.add('picked');
+      em.dataset.tier = player.weapon.tier || 'common';
+      if (grand) em.classList.add('grand');
+      sound.tick(true, grand);
+      haptic(grand ? 1 : 0.3);
+      done?.();
+      return;
+    }
+    i = (i + 1) % names.length;
+    em.innerHTML = `내 무기: <b>${names[i]}</b>${foeLine}`;
+    sound.tick(false);
+    delay *= 1.25;
+    spinWeapon.t = setTimeout(step, delay);
+  };
+  step();
 }
 
 function showToast(text, ms = 1200) {
@@ -457,8 +520,8 @@ async function startFight() {
   newRound();
   state = 'fight';
   applyMoveMode();
-  showToast('싸워라!');
-  showFoeIntro(currentFoe);
+  showFoeIntro(currentFoe); // 무기 룰렛이 먼저 빠르게 돌고, 멈추면 "Battle"
+  if (!currentFoe) showToast('Battle');
   showHint(
     !input.isTouchDevice
       ? '클릭해서 마우스 잠금 · WASD 이동'
@@ -514,6 +577,84 @@ for (const ev of ['touchend', 'pointerup', 'keydown']) {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
+// ── 감정이 켜지는 순간 한 줄 알림 ──
+//  상대: "오소리 브란이 공포에 잠식되었다" / 주인공: 주어 없이 "공포에 잠식되었다" (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
+const EMO_TEXT = {
+  fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식되었다',
+  obsession: (who) => (who ? '집념을 보인다' : '집념이 생긴다'), // 사장님 결정: 주어 없이 — 상대는 "집념을 보인다", 주인공은 "집념이 생긴다"
+  anger: (who) => (who ? `${who}의 ` : '') + '분노가 폭발한다',
+};
+/** 받침이 있으면 a(이), 없으면 b(가) */
+function josa(word, a, b) {
+  const c = word.charCodeAt(word.length - 1);
+  if (c < 0xac00 || c > 0xd7a3) return a;
+  return (c - 0xac00) % 28 ? a : b;
+}
+const emoSeen = { player: null, enemy: null };
+function watchEmotions() {
+  const pairs = [
+    ['player', playerEmo?.emotion ?? null, null],
+    ['enemy', ai?.emotion ?? null, currentFoe?.name || '상대'],
+  ];
+  for (const [k, emo, who] of pairs) {
+    if (emo !== emoSeen[k]) {
+      emoSeen[k] = emo;
+      if (emo && EMO_TEXT[emo] && state === 'fight' && !roundOver) showEmoMsg(EMO_TEXT[emo](who), emo);
+    }
+  }
+}
+function showEmoMsg(text, emo) {
+  const el = $('emoMsg');
+  if (!el) return;
+  el.textContent = text;
+  el.dataset.emotion = emo;
+  el.classList.add('show');
+  clearTimeout(showEmoMsg.t);
+  showEmoMsg.t = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+/** 플레이어 감정: 이번 프레임의 사건을 모아 판정하고, 배율표를 파이터에 얹고, 공포면 손을 떨고, 화면 가장자리에 색을 입힌다 */
+function updatePlayerEmotion(dt) {
+  if (!playerEmo || !player || !enemy) return;
+  const ev = playerEv;
+  ev.bleeding = player.bleed > 0.01;
+  ev.foeBleeding = enemy.bleed > 0.01;
+  ev.winning = enemy.blood < player.blood;
+  ev.weaponBroken = player.weaponBroken;
+  ev.disarmed = !player.armed;
+  ev.foeBroke = enemy.weaponBroken;
+  // 상대 칼이 코앞: 상대가 베는 중이고 붙어 있다 / 상대가 진품 엑스칼리버를 들고 사정거리 근처
+  const d = ai?.d ?? 3;
+  ev.nearMiss = ai?.mode === 'attack' && ai.phase === 'strike' && d < 1.65;
+  ev.foeLegendNear = enemy.armed && enemy.weapon?.tier === 'legend' && d < 2.5;
+  if (player.alive) playerEmo.update(dt, ev);
+  ev.hurt = ev.parried = ev.landed = false;
+  player.emoMods = playerEmo.mods;
+  // 공포 손 떨림: AI 와 같은 방식 — 0.06~0.1초마다 새 방향, 크기는 배율표의 tremor. 지금 얹혀 있는 값과의 차이만 더한다
+  const T = playerTremor;
+  const amp = player.emoMods.tremor;
+  if (amp > 0 && player.alive) {
+    T.t -= dt;
+    if (T.t <= 0) {
+      T.t = 0.06 + Math.random() * 0.04;
+      const a = Math.random() * Math.PI * 2;
+      const r = amp * (0.5 + Math.random() * 0.5);
+      T.x = Math.cos(a) * r;
+      T.y = Math.sin(a) * r;
+    }
+  } else T.x = T.y = 0;
+  player.handOffset.x += T.x - T.ax;
+  player.handOffset.y += T.y - T.ay;
+  T.ax = T.x;
+  T.ay = T.y;
+  // 화면: 감정별 색이 세기만큼 (공포 푸른 회색·분노 붉음·집념 금빛)
+  const el = $('emotion');
+  if (el) {
+    el.dataset.emotion = playerEmo.emotion || '';
+    el.style.opacity = (playerEmo.emotion && EMO_ABILITY.enabled ? 0.25 + 0.5 * playerEmo.intensity : playerEmo.emotion ? 0.15 : 0).toFixed(3);
+  }
+}
+
 // 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
 function updateHud() {
   const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
@@ -528,7 +669,7 @@ function checkRoundEnd(dt) {
     if (!enemy.alive || !player.alive) {
       roundOver = true;
       const win = !enemy.alive;
-      showToast(win ? '승리!' : '패배...', 0);
+      showToast(win ? '승리' : '패배', 0);
     }
     return;
   }
@@ -540,9 +681,12 @@ function checkRoundEnd(dt) {
     toast.classList.remove('show');
     const win = !enemy.alive;
     const loser = win ? enemy : player;
-    const cause = { 목: '목을 베였다', 머리: '머리에 치명상', 출혈: '과다 출혈', 기절: '기절' }[loser.causeOfDeath] || '쓰러졌다';
-    $('menuTitle').textContent = win ? '승리!' : '패배...';
-    $('menuSub').textContent = `${win ? '상대' : '나'}: ${cause}. ` + (win ? '난이도를 올려볼까요?' : '칼날을 세워 크게 휘둘러 보세요.');
+    // 한 줄로 짧게: 이겼으면 내가 한 일(베었다), 졌으면 내가 당한 일(베였다)
+    const cause = win
+      ? { 목: '목을 베었다', 머리: '머리를 쳤다', 출혈: '출혈로 쓰러뜨렸다', 기절: '기절시켰다' }[loser.causeOfDeath] || '쓰러뜨렸다'
+      : { 목: '목을 베였다', 머리: '머리를 맞았다', 출혈: '피를 너무 흘렸다', 기절: '기절했다' }[loser.causeOfDeath] || '쓰러졌다';
+    $('menuTitle').textContent = win ? '승리' : '패배';
+    $('menuSub').textContent = cause;
     $('btnStart').textContent = '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
@@ -641,8 +785,11 @@ function frame(now) {
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
     player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
+    updatePlayerEmotion(dt);
+    watchEmotions();
     const m = input.move;
-    player.move.set(player.alive ? m.x : 0, player.alive ? m.y : 0);
+    const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
+    player.move.set(player.alive ? m.x * emv : 0, player.alive ? m.y * emv : 0);
     updateGuardName(dt);
     // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다
     const mouseMode = !input.isTouchDevice;
@@ -686,6 +833,7 @@ function frame(now) {
       updateDrips(f, dt * scale);
     }
     updateBindSound();
+    for (const b of bodySounds) b.update(dt * scale);
     particles.update(dt * scale);
     for (const a of auras) a.update(now / 1000);
     arena.update(dt);

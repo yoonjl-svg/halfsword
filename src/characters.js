@@ -12,6 +12,8 @@
 //        생김새는 글로 묘사만 하고(문서 참고), fighter.js의 몸 크기 자체는 아직 캐릭터마다 다르게 만들 수 없다.
 // ─────────────────────────────────────────────────────────────
 
+import { WEAPONS, WEAPON_LIST } from './weapons.js';
+
 export const CHARACTERS = [
   // ───────────────────────────────────────────── 1. 쉬움 : 촌뜨기 난동꾼 ─────────────────────────────────────────────
   {
@@ -36,6 +38,8 @@ export const CHARACTERS = [
       '지붕에서 곧장 바보 자세로 건너뛰는 식의 "먼 자세 점프"가 잦다. 속임수는 쓸 줄 모른다(feint 0). 달려드는 것을 두려워하지 않는다(vor 높음).',
     weaknesses: '준비 동작이 크고 느려 낌새를 미리 읽기 쉽다. 막기 판단이 늦고 부정확하며, 자세 전환이 무작위라 다음 수를 읽긴 어렵지만 정작 방어는 허술하다. 속임수에 매우 잘 속는다.',
     weapon: 'tree_branch', // 쓰레기 등급: 날이 없어 찌르기 불가, 세게 부딪히면 부러진다
+    // 감독 지시: 10% 확률로 커먼 등급 중 가장 짧은 칼을 들고 나온다 (어디서 주워 온 진짜 칼). 그때는 유파도 그 칼의 꾸러미를 쓴다
+    weaponAlt: { chance: 0.1, pick: 'shortest_common' },
     ai: {
       level: 'easy',
       persona: {
@@ -120,7 +124,7 @@ export const CHARACTERS = [
         pers: {
           precision: 0.7, // 교본대로 정확하지만 힘이 실리지 않는다
           guardStick: 4.2,
-          fearful: 0.3, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다
+          fearful: 0.35, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다 (감독 지시: 0.3 → 0.35, 설정상 랴오보다 세면 안 된다)
           angry: 0.2,
           dogged: 0.25, // 감독 지시: 0.2 → 0.3은 너무 잦아(판당 38%) 중간 0.25로
           guardSpeed: 0.58,
@@ -242,7 +246,7 @@ export const CHARACTERS = [
   // ───────────────────────────────────────────── 4. 보통~어려움 : 화려한 흥행 검객 ─────────────────────────────────────────────
   {
     id: 'heinrich',
-    name: '하인리히 폰 도른',
+    name: '하인리히 도른',
     epithet: '미치광이',
     age: 29,
     origin: '마이어 검술관 출신, 지금은 떠돌이 흥행 검객',
@@ -307,7 +311,7 @@ export const CHARACTERS = [
     },
     taunt: '박수는 나중에! 지금은 피를 보자고!',
     lines: {
-      intro: ['박수는 나중에! 지금은 피를 보자고!', '신사 숙녀 여러분 — 엑스칼리버입니다. 진품이죠. 아마도.', '마이어 검술관 출신, 하인리히 폰 도른. 학관에는 비밀로.'],
+      intro: ['박수는 나중에! 지금은 피를 보자고!', '신사 숙녀 여러분 — 엑스칼리버입니다. 진품이죠. 아마도.', '마이어 검술관 출신, 하인리히 도른. 학관에는 비밀로.'],
       attack: ['이건 관중석 셋째 줄까지 보이게!', '자, 여기 봐 — 아니, 여기!', '앙코르!'],
       hurt: ['하하! 좋아, 좋아, 이래야지!', '피? 관중이 좋아하겠군.', '…그건 좀 아팠다.'],
       winning: ['박수! 박수 어디 갔어!', '이쯤에서 하나 더 보여 드리지.'],
@@ -394,6 +398,20 @@ export const CHARACTERS = [
 ];
 
 export const CHARACTERS_BY_ID = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));
+
+/**
+ * 이번 판에 캐릭터가 실제로 드는 무기 id. weaponAlt 가 있으면 그 확률로 대체 무기를 고른다.
+ *  pick 'shortest_common': 커먼 등급·날 있는 무기 중 칼날이 가장 짧은 것 (무기 로스터가 바뀌어도 그때그때 고른다)
+ */
+export function pickCharacterWeapon(char, rnd = Math.random) {
+  const alt = char.weaponAlt;
+  if (!alt || rnd() >= alt.chance) return char.weapon;
+  if (alt.pick === 'shortest_common') {
+    const pool = WEAPON_LIST.filter((w) => w.tier === 'common' && w.edged);
+    if (pool.length) return pool.reduce((a, b) => (b.bladeLength < a.bladeLength ? b : a)).id;
+  }
+  return alt.pick in WEAPONS ? alt.pick : char.weapon;
+}
 
 /** id가 없거나 목록에 없으면 무작위 캐릭터 (excludeId가 있으면 그 캐릭터는 뺀다) */
 export function randomCharacter(excludeId) {

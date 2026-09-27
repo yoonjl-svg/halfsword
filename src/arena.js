@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  배경: 중세 마상시합장
-//   흰 회반죽 + 나무 뼈대 벽, 나무 발코니 관중석과 관중, 문장 깃발, 모래 바닥, 울타리, 소품
+//   흰 회반죽 + 나무 뼈대 벽, 나무 발코니 관중석과 관중, 문장 깃발, 회색 모래 바닥, 울타리, 소품
 //  폰에서도 가볍게: 같은 재질끼리 하나로 합치고(merge), 관중은 인스턴싱으로 한 번에 그린다.
 //  그림(질감)은 전부 캔버스에 코드로 그린다 → 파일 없음.
 // ─────────────────────────────────────────────────────────────
@@ -26,18 +26,18 @@ function canvasTex(w, h, draw, repeat = [1, 1]) {
   return t;
 }
 
-// 모래: 얼룩, 발자국, 자갈
+// 바닥: 회색 모래 (얼룩, 발자국, 자갈). 누런 모래에서 회색으로 바꿈 (사장님 결정)
 function sandTexture() {
   const r = rng(7);
   return canvasTex(
     512,
     512,
     (g, w, h) => {
-      g.fillStyle = '#cdb58c';
+      g.fillStyle = '#9d9a94';
       g.fillRect(0, 0, w, h);
       for (let i = 0; i < 2500; i++) {
-        const v = Math.floor(170 + r() * 60);
-        g.fillStyle = `rgba(${v},${v - 18},${v - 50},${0.25 + r() * 0.3})`;
+        const v = Math.floor(130 + r() * 60);
+        g.fillStyle = `rgba(${v},${v - 2},${v - 6},${0.25 + r() * 0.3})`;
         g.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 3);
       }
       // 발자국/긁힌 자국
@@ -47,15 +47,15 @@ function sandTexture() {
         g.save();
         g.translate(x, y);
         g.rotate(r() * Math.PI);
-        g.fillStyle = 'rgba(120,95,60,0.18)';
+        g.fillStyle = 'rgba(70,68,64,0.18)';
         g.beginPath();
         g.ellipse(0, 0, 5 + r() * 4, 11 + r() * 6, 0, 0, Math.PI * 2);
         g.fill();
         g.restore();
       }
       for (let i = 0; i < 180; i++) {
-        const v = Math.floor(110 + r() * 70);
-        g.fillStyle = `rgb(${v},${v - 5},${v - 15})`;
+        const v = Math.floor(90 + r() * 70);
+        g.fillStyle = `rgb(${v},${v - 2},${v - 5})`;
         g.beginPath();
         g.arc(r() * w, r() * h, 1 + r() * 2.5, 0, Math.PI * 2);
         g.fill();
@@ -90,8 +90,8 @@ function plasterTexture() {
       }
       // 아래쪽 흙 튄 자국
       const gr = g.createLinearGradient(0, h * 0.75, 0, h);
-      gr.addColorStop(0, 'rgba(150,120,80,0)');
-      gr.addColorStop(1, 'rgba(150,120,80,0.45)');
+      gr.addColorStop(0, 'rgba(120,118,112,0)');
+      gr.addColorStop(1, 'rgba(120,118,112,0.45)');
       g.fillStyle = gr;
       g.fillRect(0, h * 0.75, w, h * 0.25);
     },
@@ -214,7 +214,7 @@ export function buildArena(scene) {
   sand.receiveShadow = true;
   scene.add(sand);
   // 자갈
-  const pebbles = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.03, 0), new THREE.MeshStandardMaterial({ color: 0x8c8374, roughness: 1 }), 220);
+  const pebbles = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.03, 0), new THREE.MeshStandardMaterial({ color: 0x75736e, roughness: 1 }), 220);
   const m4 = new THREE.Matrix4();
   for (let i = 0; i < 220; i++) {
     const a = r() * Math.PI * 2;

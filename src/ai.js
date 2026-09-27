@@ -25,6 +25,7 @@ import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
+import { EMO_REST, EMO_REST_ALL, emoMods } from './emotions.js';
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -59,9 +60,7 @@ const MEASURED = {
 };
 const LS_MEASURED = MEASURED.longsword;
 
-// 감정이 풀린 뒤 같은 감정이 다시 지배할 수 있기까지의 텀(초)과, 어떤 감정이든 다시 켜질 수 있기까지의 텀(초)
-const EMO_REST = 9;
-const EMO_REST_ALL = 6;
+// 감정 텀 상수와 고유 능력 배율표는 emotions.js 에 (플레이어와 같은 값을 쓴다)
 export class AI {
   /**
    * persona: 캐릭터마다 다른 개성을 주입한다 (characters.js). 안 주면(undefined) 예전과 똑같은
@@ -454,6 +453,8 @@ export class AI {
     this.fear = this.emotion === 'fear' || this.emotion === null ? E.fear : 0;
     this.anger = this.emotion === 'anger' ? E.anger : 0;
     this.obsession = this.emotion === 'obsession' ? E.obsession : 0;
+    // 고유 능력(emotions.js 배율표): 상처 판정(combat.js)과 발놀림(moveFeet)이 읽는다. 감정이 없으면 전부 1
+    this.me.emoMods = emoMods(this.emotion, this.emotion ? E[this.emotion] : 0);
     if (this.emotion === 'anger' && cur !== 'anger') this.patience = Math.min(this.patience, 0.2); // 발끈한 순간: 참을성이 바닥난다
 
     // 관찰용 통계: 감정별 최고 세기, 지배한 시간, 지배 감정으로 켜진 횟수
@@ -1205,7 +1206,9 @@ export class AI {
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * 0.15 * k); // 몰렸으면 먼저 친다
     }
     if (!this.foe.alive) fwd = side = 0;
-    me.move.set(clamp(side, -1, 1), clamp(fwd, -1, 1));
+    const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
+    const lim = Math.max(1, mv);
+    me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -lim, lim));
   }
 
   /** 새 다리(gait.js)가 있으면 베는 걸음을 부탁한다 (없으면 조이스틱 내딛기로 충분) */

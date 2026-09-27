@@ -29,7 +29,7 @@ export class Particles {
    */
   blood(point, dir, amount, speed = 4) {
     const n = Math.min(60, Math.round(4 + amount));
-    const color = this.bloodOn ? 0x8a0000 : 0xcfc3a6;
+    const color = this.bloodOn ? 0x8a0000 : 0xb3b0a9; // 피 끄기면 회색 모래 먼지
     for (let i = 0; i < n; i++) {
       const k = 0.15 + Math.random() * 0.45;
       const v = new THREE.Vector3(

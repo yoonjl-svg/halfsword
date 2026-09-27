@@ -155,9 +155,41 @@ const MATERIAL_ROWS = [
   ['재질: 플라즈마 × 강철', '에너지 20 / 45 / 70', [20, 45, 70], 'plasma', 'steel'],
   ['재질: 플라즈마 × 살', '에너지 25 / 60 / 100', [25, 60, 100], 'plasma', 'flesh'],
   ['재질: 고무 닭', '에너지 15 / 35 / 60 (무엇에 맞든 삑삑이가 튄다)', [15, 35, 60], 'rubber', 'steel'],
+  ['재질: 언 참치 × 강철', '에너지 20 / 50 / 90', [20, 50, 90], 'frozen', 'steel'],
 ];
 for (const [name, desc, vals, a, b] of MATERIAL_ROWS) {
   ROWS.push([name, desc, vals, (s, v) => (s.impact ? s.impact({ a, b, energy: v }) : s.clash(v / 10))]);
+}
+
+// ── 몸 소리: 발소리·쓰러짐·무기 부러짐 (게임에선 BodySounds 가 몸 상태를 보고 부른다) ──
+ROWS.push(
+  ['발소리 (모래)', '발이 내려오는 속도 0.6 / 1.0 / 1.8 m/s (걸음 · 보통 · 크게 내딛음)', [0.6, 1, 1.8], (s, v) => s.footstep?.(v)],
+  ['쓰러짐', '몸통이 떨어지는 속도 1.2(무릎이 꺾임) / 2 / 3 m/s', [1.2, 2, 3], (s, v) => s.bodyFall?.(v, { light: v < 1.5 })],
+  ['무기 부러짐', '나뭇가지 / 언 참치 / 둘 다', ['wood', 'frozen', 'both'], (s, v) => (v === 'both' ? (s.weaponBreak?.('wood'), s.weaponBreak?.('frozen')) : s.weaponBreak?.(v)), ['나무', '참치', '둘']],
+);
+
+// ── 캐릭터별 죽음: 머리를 맞아 기절 / 피가 빠짐 / 목을 베임. 0.7초 뒤 몸이 쓰러지는 소리가 따라온다 ──
+const DEATH_ROWS = [
+  ['player', '나 (주인공)', '목소리 대신 이명(삐—)과 먹먹해짐. 4초 뒤 돌아온다'],
+  ['bran', '오소리 브란', '굵고 거친 목, 흐느끼며'],
+  ['isolde', '이졸데', '짧게 숨을 들이켜고 조용히'],
+  ['liao', '랴오 쓰위엔', '거의 소리 없이 한숨'],
+  ['heinrich', '하인리히', '쉰 웃음이 신음으로 끊김'],
+  ['margarethe', '마르그레테', '낮고 긴 날숨 하나'],
+];
+for (const [id, name, desc] of DEATH_ROWS) {
+  ROWS.push([
+    `죽음: ${name}`,
+    desc + ' · "녹음 소리 섞기"를 끄면 합성 목소리',
+    ['기절', '출혈', '목'],
+    (s, cause) => {
+      if (!s.death) return s.blunt(90);
+      s.death(id, cause, { me: id === 'player' });
+      setTimeout(() => s.bodyFall(2.4), 700);
+      if (id === 'player') setTimeout(() => s.resetRound(), 4000);
+    },
+    ['기절', '출혈', '목'],
+  ]);
 }
 
 const $ = (id) => document.getElementById(id);
@@ -167,6 +199,7 @@ function engine() {
   if (!engines[which]) {
     engines[which] = which === 'new' ? new Sound() : new OldSound();
     engines[which].unlock(); // 새 소리: 소리 조각은 일꾼 스레드가 뒤에서 만든다
+    engines[which].prepareVoices?.(DEATH_ROWS.map((d) => d[0])); // 모든 캐릭터의 죽음 목소리(녹음·합성)
   }
   engines[which].unlock(); // 폰이 잠깐 소리를 멈췄으면 다시 켠다
   return engines[which];
@@ -175,13 +208,13 @@ function engine() {
 // ── 화면 만들기 ──
 function buildUI() {
   const list = $('rows');
-  for (const [name, desc, vals, fn] of ROWS) {
+  for (const [name, desc, vals, fn, labels = ['약', '중', '강']] of ROWS) {
     const row = document.createElement('div');
     row.className = 'row';
     row.innerHTML = `<div><b>${name}</b><small>${desc}</small></div>`;
     const btns = document.createElement('div');
     btns.className = 'btns';
-    ['약', '중', '강'].forEach((label, i) => {
+    labels.forEach((label, i) => {
       const b = document.createElement('button');
       b.textContent = label;
       b.addEventListener('click', () => {

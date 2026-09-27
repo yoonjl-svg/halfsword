@@ -7,3 +7,38 @@ They were trimmed, high-passed, peak-normalized and converted to mono MP3.
   slide1-2.mp3  <- "RPG Audio": knifeSlice.ogg, knifeSlice2.ogg (blade glance layer)
 
 Thank you, Kenney!
+
+-------------------------------------------------------------------------------
+voice/  — death vocals, one small set per character (trimmed, high-passed at
+70 Hz, peak-normalized to -1 dBFS, converted to mono MP3). Sources and licences:
+
+  CC0 (public domain) — HaelDB, "Male Grunt/Yelling sounds"
+    https://opengameart.org/content/male-gruntyelling-sounds
+      player_ko1.mp3      <- 3grunt3.wav       player_ko2.mp3   <- 3grunt5.wav
+      player_bleed1.mp3   <- 3yell10.wav       player_bleed2.mp3 <- 3yell13.wav
+      generic_ko1.mp3     <- yell12.wav        generic_ko2.mp3  <- yell13.wav
+      generic_bleed1.mp3  <- yell3.wav
+      heinrich_ko1.mp3    <- 2yell1.wav        heinrich_ko2.mp3 <- 2yell10.wav
+      heinrich_bleed1.mp3 <- 2yell6.wav
+
+  CC0 (public domain) — "Female screams" collection, OpenGameArt
+    https://opengameart.org/content/female-screams
+      isolde_ko1.mp3      <- 1.ogg  (tcrocker68, freesound.org/people/tcrocker68/sounds/235595/)
+      margarethe_ko1.mp3  <- 2.ogg  (tcrocker68, freesound.org/people/tcrocker68/sounds/235592/)
+      isolde_bleed1.mp3   <- 4.ogg  (Archeos,    freesound.org/people/Archeos/sounds/261419/)
+
+  CC-BY 3.0 — Michel Baradari, "11 male human pain/death sounds"
+    https://opengameart.org/content/11-male-human-paindeath-sounds
+    http://creativecommons.org/licenses/by/3.0/
+      bran_ko1.mp3 <- die1.wav   bran_ko2.mp3 <- deathh.wav   bran_bleed1.mp3 <- die2.wav
+      liao_ko1.mp3 <- painh.wav
+
+  CC-BY-SA 4.0 — VoiceBosch, "DEATH SOUNDS (Male) - Audio Pack"
+    https://opengameart.org/content/death-sounds-male-audio-pack
+    https://creativecommons.org/licenses/by-sa/4.0/
+    (These three edited files are themselves shared under CC-BY-SA 4.0.)
+      generic_bleed2.mp3  <- 09. Death Groan (Male).wav
+      bran_bleed2.mp3     <- 06. Death Groan (Male).wav
+      heinrich_bleed2.mp3 <- 02. Death Groan (Male).wav
+
+Thank you, HaelDB, tcrocker68, Archeos, Michel Baradari and VoiceBosch!
