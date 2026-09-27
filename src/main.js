@@ -245,6 +245,7 @@ function newRound() {
   bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
   sound.prepareVoices(['player', foeVoice]);
   sound.resetRound();
+  sound.roundStart(); // 대성당: 판이 시작될 때 파이프 오르간이 한 번 울린다
   roundOver = false;
   roundOverTime = 0;
   camFollow.copy(player.pelvisPos);

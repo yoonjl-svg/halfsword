@@ -62,3 +62,9 @@ Fetched from the open-game-sfx-index mirror (SHA-256 checked against its catalog
                          https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud
   stage/leaves1-2.mp3 <- same OpenGameArt pack, leaves01.ogg / leaves02.ogg
                          (band-limited 300 Hz-7 kHz, peak-normalized)
+
+step/snow1-8.mp3 and step/stone1-8.mp3 — CC0 (public domain), Kenney "Impact Sounds" via the same mirror.
+  step/snow1-8.mp3    <- footstep_carpet_000-004.ogg (heel) + footstep_snow_000-004.ogg (crunch, -2 dB,
+                         +6-16 ms, pitched down 5-15%), low-passed at 3 kHz, faded by 200 ms
+  step/stone1-8.mp3   <- footstep_carpet_000-004.ogg (heel) + footstep_concrete_000-004.ogg (-4 dB,
+                         +6-16 ms, pitched down 10-20%), low-passed at 2.4 kHz, faded by 200 ms
