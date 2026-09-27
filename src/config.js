@@ -49,7 +49,8 @@ export const BODY = {
   // 몸무게를 누가 받치나 (gait.js 머리말 참고)
   //  'hybrid'  : 다리 관절이 몸무게의 대부분을 땅까지 전한다. 딛은 발은 제자리에 붙어 있다 (보조 힘은 GAIT.assist만큼)
   //  'levitate': 예전 방식. 보이지 않는 힘이 골반을 거의 전부 떠받치고 다리는 걷는 흉내만 낸다
-  weightMode: 'hybrid',
+  //  기본은 'levitate': 'hybrid'가 아직 모든 기준(서서 칼 자세 바꿀 때·돌 때 발 미끄러짐, 일어설 때 골반 처짐, 성능)을 넘지 못했다
+  weightMode: 'levitate',
 };
 
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
