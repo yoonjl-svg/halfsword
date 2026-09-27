@@ -4,6 +4,10 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 15 — 오너 결정: 랴오 v6 확정
+
+- 오너 "v6으로 하자". `CHARACTER_LOOK_VERSION.liao = 'v6'`(이미 기본값이라 코드 변경 없음). v5·v7·v8은 보관.
+
 ## round 14 — 오너 요청: 랴오 "양옆으로 내려오는 것 말고 다른 중단발 컬 시안 + 입에 풀"
 
 - **랴오 v6/v7/v8** 시안 셋(v5 보관): v6 `liao_gi_swept` 뒤로 넘긴 물결, v7 `liao_gi_halfup` 반묶음(뒷목까지
