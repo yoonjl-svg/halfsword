@@ -44,7 +44,7 @@ export const CHARACTERS = [
       level: 'easy',
       persona: {
         school: 'tree_branch',
-        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 1.15, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 }, // 힘은 장사 — 가벼운 나뭇가지라도 머리를 때리면 기절시킨다. 대신 정확도가 낮다
+        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 1.3, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 }, // 힘은 장사 — 가벼운 나뭇가지라도 머리를 때리면 기절시킨다. 대신 정확도가 낮다
         pers: {
           precision: 0.4, // 아무 데나 후려친다 — 팔·다리에 걸리고 칼 면으로 때린다
           guardStick: 0.6,
@@ -84,7 +84,7 @@ export const CHARACTERS = [
     taunt: '젠장! 이런 막대기 뿐이라니.',
     // 상황별 대사 (docs/character_lore.md). 화면에 어떻게 띄울지는 UI 설계 몫
     lines: {
-      intro: ['젠장! 이런 막대기 뿐이라니.', '은화 열 닢! 열 닢이라고 했지?', '자세? 그게 뭔데. 그냥 치면 되지.'],
+      intro: ['젠장! 이런 막대기 뿐이라니.', '은화 열 닢! 열 닢이라고 했지?', '자세? 힘이 최고야.'],
       attack: ['받아라아!', '이거나 먹어!', '장작이다, 장작!'],
       hurt: ['아야… 아야! 이거 진짜 칼이잖아!', '피… 피 난다…', '야, 야, 잠깐만—'],
       winning: ['하하! 봤지? 봤냐고!', '검객이라며! 검객이라며!'],
