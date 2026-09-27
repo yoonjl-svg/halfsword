@@ -25,6 +25,9 @@ import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
 
+// 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
+const FEAR_TREMOR = 0.03;
+
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
 // school.measure의 간격 상수를 잴 때 쓴 롱소드 칼 길이(칼자루+칼날, m) — measured 표에 없는
@@ -47,6 +50,7 @@ const MEASURED = {
   falchion: [1.29, 1.55, 1.0],
   katana: [1.44, 1.77, 1.11],
   jian: [1.32, 1.55, 1.02],
+  qinggang: [1.32, 1.55, 1.02], // 청강검: 물리 치수가 지안과 같다 (id만 다름)
   hwandudaedo: [1.29, 1.55, 1.0],
   excalibur: [1.61, 1.87, 1.24],
   excalibur_replica: [1.61, 1.87, 1.24],
@@ -77,12 +81,16 @@ export class AI {
     // 정작 닿지도 못하고 상대 롱소드에만 맞는다 (무기 밸런스 시뮬로 확인한 근본 원인).
     const baseM = this.school.measure;
     // 실측 표에 있으면 축마다 다른 실측 비율을, 없으면(미래에 무기가 늘어날 때 대비) 칼 길이 비율로
-    // 대충이라도 스케일한다 — 어느 쪽도 롱소드 자신은 정확히 1배(그대로)가 되게 한다.
+    // 대충이라도 스케일한다. 기준은 "이 유파 measure를 잰 무기"(school.weapon, 대부분 롱소드) — 캐릭터
+    // 유파 꾸러미(청강검·나뭇가지·복제품)는 measure가 이미 그 무기 실측이라, 롱소드 기준으로 또 줄이면
+    // 두 번 줄어든다(병합 때 확인한 회귀). 같은 무기면 정확히 1배(그대로)가 되게 한다.
+    const schoolWid = this.school.weapon ?? 'longsword';
+    const schoolM = MEASURED[schoolWid] ?? LS_MEASURED;
     const scaledM = (w) => {
-      if (!w || w.id === 'longsword') return baseM;
+      if (!w || w.id === schoolWid) return baseM;
       const m = MEASURED[w.id];
       if (m) {
-        return { ...baseM, contact: baseM.contact * (m[0] / LS_MEASURED[0]), reach: baseM.reach * (m[1] / LS_MEASURED[1]), clinch: baseM.clinch * (m[2] / LS_MEASURED[2]) };
+        return { ...baseM, contact: baseM.contact * (m[0] / schoolM[0]), reach: baseM.reach * (m[1] / schoolM[1]), clinch: baseM.clinch * (m[2] / schoolM[2]) };
       }
       const s = (w.bladeLength + w.hiltLength) / WEAPON_BASELINE;
       return { ...baseM, contact: baseM.contact * s, reach: baseM.reach * s, clinch: baseM.clinch * s };
@@ -138,6 +146,13 @@ export class AI {
     this.parryTimes = []; // 최근 막힌 시각들 (분노 판정: 10초 안에 두 번)
     this.evParried = false; // 이번 스텝에 생긴 사건들 (afterStrike가 켜고 emote가 끈다)
     this.evLanded = false;
+    // 무기 사건은 한 번만 공포로 센다 (무기·검술 담당 추가, emote() 참고)
+    this.sawBroken = false; // 내 무기가 부러진 것을 알아챘나
+    this.sawDisarmed = false; // 칼을 놓친 것을 알아챘나
+    this.sawFoeBroken = false; // 상대 무기가 부러진 것을 봤나
+    this.tremor = new THREE.Vector2(); // 공포 떨림: 손 위치에 얹는 잔떨림 (보이는 신호)
+    this.tremorApplied = new THREE.Vector2(); // 지금 손 위치에 실제로 얹혀 있는 떨림 (누적되지 않게 차이만 더한다)
+    this.tremorT = 0;
     this.mode = 'watch'; // watch(간 보기) | attack | defend | withdraw(물러나기)
     this.phase = 'ready'; // attack 안의 단계: windup(준비 자세) | approach(다가감) | strike | follow
     this.hand = new THREE.Vector2(0.12, -0.18); // 손 목표 (패드)
@@ -375,7 +390,15 @@ export class AI {
     if (hurt) up += 0.4;
     if (me.bleed > 0.01) up += dt * 0.12;
     if (nearMiss) up += dt * 0.3;
-    E.fear = clamp(decay(E.fear, 9) + up * P.fearful, 0, 1);
+    // 무기 사건 (무기·검술 담당 추가): 내 무기가 부러졌다(+0.5), 칼을 놓쳤다(+0.4) — 각각 한 번만. 상대가 레전드 무기
+    //  (진품 엑스칼리버 — 겉으로 빛나 누구나 알아본다)를 들고 사정거리 근처에 있으면 위압(+0.08/s). 상대 무기가 부러지면
+    //  한숨 돌린다(공포 −0.2, 한 번만) — 그리고 집념이 +0.3 (아래).
+    if (me.weaponBroken && !this.sawBroken) { this.sawBroken = true; up += 0.5; }
+    if (!me.armed) { if (!this.sawDisarmed) { this.sawDisarmed = true; up += 0.4; } } else this.sawDisarmed = false;
+    if (foe.armed && foe.weapon?.tier === 'legend' && this.d < this.M.reach + 0.5) up += dt * 0.08;
+    const foeBrokeNow = foe.weaponBroken && !this.sawFoeBroken;
+    if (foeBrokeNow) this.sawFoeBroken = true;
+    E.fear = clamp(decay(E.fear, 9) + (up - (foeBrokeNow ? 0.2 : 0)) * P.fearful, 0, 1);
     up = 0;
     if (this.evParried) {
       this.parryTimes.push(this.emoT);
@@ -387,6 +410,7 @@ export class AI {
     up = 0;
     if (foe.bleed > 0.01) up += dt * 0.2;
     if (this.evLanded) up += 0.3;
+    if (foeBrokeNow) up += 0.3; // 상대 무기가 부러졌다: 지금이 기회다
     E.obsession = clamp(decay(E.obsession, 8) + up * P.dogged, 0, 1);
     this.evParried = this.evLanded = false;
 
@@ -1036,6 +1060,21 @@ export class AI {
         if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = clamp(0.16 - 0.08 * this.level.read, 0.06, 0.16);
       }
     }
+    // 공포 떨림 (플레이어 눈에 보이는 신호, 무기·검술 담당 추가): 겁먹으면 간 보는 동안 칼끝이 잔잔히 떨린다 —
+    //  손 속도 제한과 무관하게 손 위치에 직접 얹는다(0.06~0.1초마다 새 방향, 크기는 공포 세기 × 최대 3cm).
+    //  누적되지 않도록 "지금 얹혀 있는 떨림"과의 차이만 더한다. 베는 중엔 안 떨고, 공포가 없으면 난수도 안 굴려 예전과 같다.
+    if (this.fear > 0.15 && !striking) {
+      this.tremorT -= dt;
+      if (this.tremorT <= 0) {
+        this.tremorT = 0.06 + Math.random() * 0.04;
+        const a = Math.random() * Math.PI * 2;
+        const r = this.fear * FEAR_TREMOR * (0.5 + Math.random() * 0.5);
+        this.tremor.set(Math.cos(a) * r, Math.sin(a) * r);
+      }
+    } else this.tremor.set(0, 0);
+    off.x += this.tremor.x - this.tremorApplied.x;
+    off.y += this.tremor.y - this.tremorApplied.y;
+    this.tremorApplied.copy(this.tremor);
     if (off.length() > 0.62) off.setLength(0.62);
   }
 

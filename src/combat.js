@@ -189,7 +189,7 @@ export class Combat {
     let severity = 0;
     let pass = false;
     if (type === 'cut' || type === 'stab') {
-      const wMult = type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust;
+      const wMult = att.weaponCfg.power * (type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust); // 등급 배율 × 무기별 베기/찌르기 배율
       const thr = (type === 'cut' ? A.cut : A.stab) * guard;
       const eff = energy * quality * wMult;
       if (eff > thr) {
@@ -199,7 +199,7 @@ export class Combat {
         type = 'blunt'; // 날이 들지 못했으면 멍만 든다
       }
     }
-    if (type === 'blunt') energy *= att.weaponCfg.mBlunt;
+    if (type === 'blunt') energy *= att.weaponCfg.power * att.weaponCfg.mBlunt;
     return {
       type,
       zone,

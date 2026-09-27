@@ -23,6 +23,49 @@ export const MATERIALS = {
   frozen: { restitution: 0.2 }, // 얼린 생선: 물컹하지 않고 딱딱하지만 다시 튕기진 않는다
 };
 
+// 소리 담당의 재질 쌍 API(sound.impact({a,b,energy})) 가 아는 이름은 sound.js MATERIALS =
+// ['steel','armor','flesh','wood','plasma','rubber'] 뿐이다. 물리 재질(위 표)과 소리 재질이
+// 다른 것은 여기서 옮긴다 — 얼린 참치는 딱딱한 통나무 소리(wood)가 제일 가깝다.
+export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', rubber: 'rubber', frozen: 'wood' };
+
+// 감독이 정한 무기 등급 (docs/characters.md, 캐릭터 PM 계약) — 다섯 단계:
+//   쓰레기(trash) < 커먼(common) < 레어(rare) < 에픽(epic) < 레전드(legend)
+// 등급마다 power(타격 에너지 배율, 감독 확정: 0.65/1.0/1.05/1.1/1.2)와 durability(내구 0~1, docs/characters.md 53da1bb:
+// 0.4/0.8/0.85/0.95/1.0)가 다르다. 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급 기본값을 받는다.
+// power는 combat.js가 실제로 에너지에 곱한다. durability는 아래 breakChance()로 "부딪힐 때마다 부러질 확률"이 된다.
+// 부서지는 연출·그 뒤 흐름(맨손·주운 무기)은 감독이 붙인다.
+export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend'];
+export const TIER_DEFAULTS = {
+  trash: { power: 0.65, durability: 0.4 },
+  common: { power: 1.0, durability: 0.8 },
+  rare: { power: 1.05, durability: 0.85 },
+  epic: { power: 1.1, durability: 0.95 },
+  legend: { power: 1.2, durability: 1.0 },
+};
+
+// ── 파손 판정 규칙: 확률식 (감독 지시 — "예산을 넘으면 부러진다"는 너무 필연적이라 버렸다) ──
+//  무기가 "칼끼리 세게 부딪힌 충격"이나 "투구·뼈를 치고 되튄 충격"(combat.js → fighter.absorbWeaponImpact, 충격량 J N·s)을
+//  받을 때마다, 그 충돌 하나가 무기를 부러뜨릴 확률을 굴린다:
+//      p(J) = BREAK.A × (1 − d)^BREAK.fragilityPow × min(1, J / BREAK.jRef)^BREAK.k ÷ 재질계수
+//  · (1 − d)^4 (감독 지시로 지수 4): 내구 d가 1이면 0(레전드는 절대 안 부러짐). 쓰레기(0.4) 0.13 → 커먼(0.8) 0.0016 →
+//    레어 0.0005 → 에픽 0.000006 으로 등급 사이가 크게 벌어진다.
+//  · min(1, J/6)^2 : 얼마나 무게가 실린 충돌인가. 6 N·s(AI 대 AI 한 판의 상위 1% 충돌쯤)면 온전히, 가벼운 스침(중앙값 0.5~0.9)은
+//    그 제곱 비율만큼만 센다 — 살짝 닿은 충돌로는 사실상 안 부러지고 크게 맞부딪힌 한 방이 위험하다.
+//  · A = 12, 지수 4 실측(AI 대 AI 롱소드 상대 50판): 나뭇가지 70%, 참치 70%, 커먼 롱소드 한 자루당 약 4%, 에픽 청강검 0%
+//    (docs/weapons.md §3a 표). 나뭇가지를 감독 목표 60%에 맞추려면 A 를 9쯤으로 내리면 된다.
+//  · 재질계수: 얼린 참치는 강철보다 훨씬 잘 갈라지고(0.35, 내구도 0.6으로 따로 낮춤), 고무·플라스마 칼날은 부러질 것이 없다(무한 → 확률 0).
+//  굴리는 난수는 fighter.js의 파이터별 전용 난수(Math.random 과 분리)라, 부러지지 않는 한 기존 시뮬 결과가 바뀌지 않는다.
+export const BREAK = { A: 12, jRef: 6, k: 2, fragilityPow: 4 };
+export const MATERIAL_TOUGHNESS = { steel: 1, wood: 1, frozen: 0.35, rubber: Infinity, plasma: Infinity };
+/** 내구 d·재질의 무기가 충격량 J(N·s)짜리 충돌 한 번에 부러질 확률 (0~1) */
+export function breakChance(J, durability, material) {
+  const t = MATERIAL_TOUGHNESS[material] ?? 1;
+  if (durability >= 1 || !Number.isFinite(t) || !(J > 0)) return 0;
+  const fragility = (BREAK.A * (1 - durability) ** BREAK.fragilityPow) / t;
+  return Math.min(1, fragility * Math.min(1, J / BREAK.jRef) ** BREAK.k);
+}
+
+
 // ── 관성 계산 도우미 (fighter.js 원래 롱소드 계산과 같은 식) ──
 // 상자 모양 부품의 휘두르는 축(Ie, x·z 성분에 함께 쓴다)·비트는 축(It, y=칼 길이 방향) 관성.
 function boxInertia(m, hx, hy, hz) {
@@ -221,39 +264,6 @@ function bentBody(build) {
     return m;
   };
 }
-/**
- * 칼날 둘레에 은은히 일렁이는 빛 오라를 두른다 (물리·판정에는 전혀 영향 없는 장식용 메쉬).
- * three.js가 매 프레임 자동으로 불러 주는 Object3D.onBeforeRender를 이용해서, fighter.js나
- * main.js를 전혀 건드리지 않고도 스스로 밝기·크기가 흔들리게 한다.
- */
-function addBladeAura(group, hiltLength, bladeLength, color = 0xfff2c0) {
-  const L = bladeLength;
-  const y = hiltLength + L / 2;
-  // 두 겹: 칼날에 바짝 붙은 밝은 속(inner) + 그보다 크고 옅은 바깥 안개(outer) — 층이 있어야
-  // 정지 화면에서도 "빛나는 테두리"로 뚜렷이 읽힌다(하나만 쓰면 얇아서 잘 안 보였다).
-  const layers = [
-    { r: 0.032, opacity: 0.55 },
-    { r: 0.06, opacity: 0.28 },
-  ];
-  const meshes = layers.map(({ r, opacity }) => {
-    const glow = new THREE.Mesh(
-      new THREE.CylinderGeometry(r, r * 0.85, L + 0.1, 10, 1, true),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }),
-    );
-    glow.position.y = y;
-    group.add(glow);
-    return glow;
-  });
-  const phase = Math.random() * Math.PI * 2;
-  meshes[0].onBeforeRender = () => {
-    const t = performance.now() / 1000 + phase;
-    const flick = 1 + 0.22 * Math.sin(t * 3.1) + 0.1 * Math.sin(t * 7.7);
-    meshes[0].material.opacity = layers[0].opacity * flick;
-    meshes[1].material.opacity = layers[1].opacity * flick;
-    const s = 1 + 0.05 * Math.sin(t * 4.3);
-    for (const m of meshes) m.scale.set(s, 1, s);
-  };
-}
 
 /** 무기 재질에 따라 칼 부품 겉면 재질을 다르게 (fighter.js가 그대로 shapeMesh에 넘긴다) */
 export function weaponMatOpts(material, isBlade) {
@@ -273,7 +283,10 @@ export function weaponMatOpts(material, isBlade) {
 
 // ── 무기마다 손을 잡는 방식에 따른 손목 힘 한계 (config.js WEAPON.maxAimTorque=22의 기본값은
 //  "두 손목"을 가정한 값. 한 손이면 그 절반 남짓, 한 손 반이면 그 중간) ──
-const GRIP_TORQUE = { 'one-hand': 12, 'hand-and-half': 17, 'two-hand': 22 };
+// 감독 확정: 한손 무기도 "양손으로 잡고 휘두른다"고 가정한다(현실의 한손검 이점 — 가벼운 몸놀림·빠른 자세 전환 — 을 지금 다
+//  구현할 수 없으니 그 대신). 그래픽·grip 표시는 그대로 두고 손목·팔 힘 한계만 두손 값(22 N·m)으로 통일. 한손 값 12 는
+//  Delp 1996 손목 굴곡 토크 실측(평균 12.2 N·m)이었고, 22 는 양손·팔 전체 기여 추정치 [D].
+const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 22 };
 
 function finalizeSpec(id, s) {
   // ...s를 먼저 펼치고 계산된 필드를 뒤에 둔다 (뒤에 적은 값이 이긴다) →
@@ -285,10 +298,16 @@ function finalizeSpec(id, s) {
     mCut: s.mCut ?? 1,
     mThrust: s.mThrust ?? 1,
     mBlunt: s.mBlunt ?? 1,
-    durability: s.durability ?? Infinity,
+    tier: s.tier ?? 'common', // 등급 안 적으면 커먼
+    power: s.power ?? TIER_DEFAULTS[s.tier ?? 'common'].power, // 등급 공격력 배율 (mCut/mThrust/mBlunt 위에 한 번 더 곱한다)
+    durability: s.durability ?? TIER_DEFAULTS[s.tier ?? 'common'].durability, // 등급 내구 (0~1, 감독이 쓸 계약 수치)
+    // 충돌 한 번(충격량 J)에 부러질 확률. 재질상 안 부러지는 무기(고무·플라스마)와 레전드는 늘 0.
+    breakChance(J) { return breakChance(J, this.durability, this.material); },
+    fragile: breakChance(BREAK.jRef, s.durability ?? TIER_DEFAULTS[s.tier ?? 'common'].durability, s.material) > 0, // 부러질 수 있는 무기인가
     ignoreArmor: !!s.ignoreArmor,
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
+    soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
   };
 }
@@ -312,6 +331,33 @@ const longsword = finalizeSpec('longsword', {
       partTuple(['ball', 0.03], -0.12, 0.418, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.11, 0.015, 0.022], 0.115, 0.18, 0, cross.Ie, cross.It, look.hilt),
       partTuple(['box', 0.024, L / 2, 0.008], 0.13 + L / 2, 0.842, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
+    ];
+  },
+});
+
+// ═════════════════════════════════════════════════════════════
+//  1b) 롱소드(실전용 보정판) — 기본 롱소드 수치는 Albion Liechtenauer *훈련용* 페더(1.58kg,
+//      균형점 9.8cm)에서 왔다(docs/weapons_research.md, docs/weapon_leads.md 확인). 진짜 날 선
+//      롱소드는 더 가볍다: Albion Crécy 전체 113.7cm·1.39kg·균형점 10.16cm [M, 제조사 공개 치수].
+//      하이런 길이 0.13·칼날 0.90m로 두고 부품 질량을 (총질량 1.390, 균형점 10.16cm, 칼날 무게중심
+//      0.344L 유지) 조건으로 풀어서 넣었다 [D]. 기본 롱소드는 절대 바꾸지 않고 별도 id로 둔다 —
+//      DEFAULT_WEAPON 을 'longsword_sharp'로 바꾸면 전체 기본값이 이걸로 바뀐다(설정 스위치).
+// ═════════════════════════════════════════════════════════════
+const longswordSharp = finalizeSpec('longsword_sharp', {
+  nameKo: '롱소드 (실전용)', nameEn: 'Longsword (sharp)',
+  grip: 'two-hand', material: 'steel',
+  hiltLength: 0.13, bladeLength: 0.9, gripAlong: -0.14,
+  buildParts(look) {
+    const L = this.bladeLength;
+    const grip = boxInertia(0.139, 0.018, 0.1, 0.018);
+    const pommel = sphereInertia(0.3168, 0.03);
+    const cross = boxInertia(0.1564, 0.11, 0.015, 0.022);
+    const blade = bladeInertia(0.7779, L, 0.344, 0.253, 0.048, 0.016);
+    return [
+      partTuple(['box', 0.018, 0.1, 0.018], 0, 0.139, 0, grip.Ie, grip.It, look.grip),
+      partTuple(['ball', 0.03], -0.12, 0.3168, 0, pommel.Ie, pommel.It, look.hilt),
+      partTuple(['box', 0.11, 0.015, 0.022], 0.115, 0.1564, 0, cross.Ie, cross.It, look.hilt),
+      partTuple(['box', 0.024, L / 2, 0.008], 0.13 + L / 2, 0.7779, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];
   },
 });
@@ -567,14 +613,22 @@ const katana = finalizeSpec('katana', {
 });
 
 // ═════════════════════════════════════════════════════════════
-//  10) 지안 (중국 검) — 0.8~0.9kg, 칼날 대개 70~80cm. 균형점 자료가 서로 어긋나
-//      (한쪽은 ~20cm, 다른 쪽은 ~10cm) [I]-leaning, 절충값으로 잡는다
+//  10) 청강검 (靑鋼劍, qinggang, 옛 id 'jian') — 랴오의 검. 감독 결정으로 지안(중국 검)을 에픽 등급 "청강검"으로
+//      바꿨다(삼국지 조조의 보검 — "쇠도 진흙처럼 벤다"). 물리는 지안 자료 그대로: 0.8~0.9kg, 칼날 대개 70~80cm,
+//      균형점 자료가 서로 어긋나(~10cm vs ~20cm) 절충 [I]-leaning. 한손이라 누르는 힘이 약하다(12N·m).
+//      캐릭터 PM 계약: 가볍고 빠름·찌르기 강함(mThrust 1.15)·전설대로 잘 벰(mCut 1.35, 세이버·팔쉬온급).
+//      등급 epic(power 1.1·내구 0.95)이라 실제 베기 배율은 1.35×1.1 ≈ 1.49 —
+//      mCut 1.5로 잰 결과(롱소드 상대 승률 22%, 판당 severity 롱소드의 87%)와 같은 급이다.
+//      mCut 은 상처 깊이(severity)에만 곱하고 표시되는 타격 J(물리값, 롱소드의 2/3쯤)는 안 바꾼다.
+//      겉모습은 푸른 강철 칼날에 검은 자루 [I] 창작. 'jian' 은 별칭으로 남긴다.
 // ═════════════════════════════════════════════════════════════
-const jian = finalizeSpec('jian', {
-  nameKo: '지안 (중국검)', nameEn: 'Jian',
+const QINGGANG_LOOK = { grip: 0x1c1c24, hilt: 0x2f6f7a };
+const qinggang = finalizeSpec('qinggang', {
+  nameKo: '청강검', nameEn: 'Qinggang Sword',
   grip: 'one-hand', material: 'steel',
+  tier: 'epic',
   hiltLength: 0.12, bladeLength: 0.74,
-  mCut: 1.0, mThrust: 1.05, mBlunt: 0.95,
+  mCut: 1.35, mThrust: 1.15, mBlunt: 0.95, // 감독 확정치 (mCut 1.35)
   // 양날 + 가운데 등마루(지안 특유의 곧은 검등 능선).
   partMesh: curvedBlade((hx, hy, hz) => diamondBladeGeometry(hx, hy, hz, 0.3)),
   buildParts(look) {
@@ -584,10 +638,10 @@ const jian = finalizeSpec('jian', {
     const cross = boxInertia(0.04, 0.035, 0.008, 0.012);
     const blade = bladeInertia(0.61, L, 0.36, 0.25, 0.028, 0.009);
     return [
-      partTuple(['box', 0.015, 0.09, 0.015], 0, 0.1, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.02], -0.09, 0.1, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.035, 0.008, 0.012], 0.11, 0.04, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
+      partTuple(['box', 0.015, 0.09, 0.015], 0, 0.1, 0, grip.Ie, grip.It, QINGGANG_LOOK.grip),
+      partTuple(['ball', 0.02], -0.09, 0.1, 0, pommel.Ie, pommel.It, QINGGANG_LOOK.hilt),
+      partTuple(['box', 0.035, 0.008, 0.012], 0.11, 0.04, 0, cross.Ie, cross.It, QINGGANG_LOOK.hilt),
+      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xbfe3ea, true),
     ];
   },
   // 폼멜 끝에 매다는 붉은 술(劍穗) + 마름모꼴 호심(護心) 코등이 테두리.
@@ -680,22 +734,23 @@ function excaliburGems(group) {
 const excalibur = finalizeSpec('excalibur', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur',
   grip: 'two-hand', material: 'steel',
+  tier: 'legend', // 감독 등급: 레전드 → power 1.2·durability 1.0. 진품은 플레이어 전용(docs/characters.md)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
   mCut: 1.2, mThrust: 1.2, mBlunt: 1.1,
   partMesh: excaliburPartMesh,
   buildParts: excaliburParts,
-  // 진품만 칼날 둘레에 은은히 일렁이는 금빛 오라가 돈다 — 복제품과 구분되는 유일한 표식.
-  decorate(group) {
-    excaliburGems(group);
-    addBladeAura(group, this.hiltLength, this.bladeLength, 0xfff2c0);
-  },
+  decorate: excaliburGems, // 진품·복제품 겉모습은 완전히 같다 — 진품의 오라는 aura.js(attachAura)가 main.js에서 붙인다
 });
 
-// 엑스칼리버 복제품 — 하인리히가 드는 가짜. 겉모습은 진품과 완전히 똑같다(플레이어가 눈으로
-// 구분할 수 없어야 한다는 요청) — 오직 전설의 힘(배율 없음)과 칼날 오라가 없다는 점만 다르다.
+// ═════════════════════════════════════════════════════════════
+//  12b) 엑스칼리버 복제품 — 하인리히(characters.js)가 "진품"이라 우기며 드는 가짜. 겉모습은
+//      진품과 완전히 똑같다(플레이어가 눈으로 구분할 수 없어야 한다는 요청) — 오직 전설의
+//      힘(power 배율 없음)과 aura.js 오라가 없다는 점만 다르다. 등급은 커먼.
+// ═════════════════════════════════════════════════════════════
 const excaliburReplica = finalizeSpec('excalibur_replica', {
   nameKo: '엑스칼리버 복제품', nameEn: 'Excalibur (replica)',
   grip: 'two-hand', material: 'steel',
+  tier: 'common', // 제원·등급은 커먼 (power 1.0)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
   partMesh: excaliburPartMesh,
   buildParts: excaliburParts,
@@ -709,8 +764,9 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 //      질량·관성만으로 밸런스를 만든다는 것이 설계 의도 [I] 창작
 // ═════════════════════════════════════════════════════════════
 const lightsaber = finalizeSpec('lightsaber', {
-  nameKo: '라이트세이버', nameEn: 'Lightsaber',
+  nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
   grip: 'one-hand', material: 'plasma',
+  tier: 'epic', // power 1.1 · 내구 0.95 (플라스마 칼날이라 어차피 안 부러진다)
   hiltLength: 0.15, bladeLength: 0.9,
   edged: true, ignoreArmor: true, mCut: 1.35, mThrust: 1.3,
   controlOverrides: { wristVmax: 36, aimDamping: 9 }, // 가볍고 매끄러운 이미터: 손목이 더 빨리 돌아간다
@@ -745,13 +801,14 @@ const lightsaber = finalizeSpec('lightsaber', {
 
 // ═════════════════════════════════════════════════════════════
 //  14) 나뭇가지 — 아무 자료도 없다. 주워 든 막대기라는 설정대로 대충 만든 값 [I] 창작.
-//      날이 없고(edged:false → 항상 둔기 판정), 세게 부딪히면 부러진다(durability)
+//      날이 없고(edged:false → 항상 둔기 판정), 세게 부딪히면 부러진다(breakChance 확률)
 // ═════════════════════════════════════════════════════════════
 const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
   grip: 'one-hand', material: 'wood',
   hiltLength: 0.15, bladeLength: 0.8,
-  edged: false, mBlunt: 0.85, durability: 9, // 몇 번 세게 맞부딪히면 부러진다
+  tier: 'trash', // 감독 등급: 쓰레기 → power 0.65·durability 0.4 (한 판에 약 60% 확률로 부러진다)
+  edged: false, mBlunt: 0.85, // 날이 없어 항상 둔기 판정 (총 타격 배율은 power 0.65 × mBlunt)
   // 몸통을 곧은 상자 대신 한쪽으로 완만히 휘어지며 끝으로 갈수록 가늘어지는 옹이진 막대로 —
   // 콜라이더는 그대로 상자라 판정엔 영향 없다(휘는 양은 ~1cm 안).
   partMesh: bentBody((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 6, bend: (t) => [0.012 * t * t, 0.006 * Math.sin(t * 3)], taper: (t) => 1.15 - 0.4 * t })),
@@ -819,7 +876,7 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
   // 기절 효과가 있다) → 고무 닭이 이길 수 있는 유일한 길은 머리를 맞히는 것뿐이라, mBlunt를
   // 크게 올려도 몸통 타격은 여전히 무해하고 "머리에 제대로 맞으면 그래도 어질하다"만 세진다.
   edged: false, mBlunt: 2.6,
-  controlOverrides: { aimStiffness: 34, maxAimTorque: 11 }, // 물렁하고 가벼워 조준이 흐물흐물하다
+  controlOverrides: { aimStiffness: 34 }, // 물렁해서 정확히 겨누기 어렵다 (토크는 양손 가정으로 22)
   // 목 부분(자루 쪽)은 가늘고, 몸통(머리 쪽)으로 갈수록 굵어지며 옆으로 축 늘어지는 "흐물흐물한
   // 목" — 콜라이더는 그대로 곧은 상자.
   partMesh: bentBody((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 8, bend: (t) => [0.016 * Math.sin(t * 1.8), 0], taper: (t) => 0.5 + 0.75 * t })),
@@ -860,7 +917,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
-  edged: false, mBlunt: 2.2, durability: 14, // 세게 맞부딪히면 쩍 갈라진다
+  edged: false, mBlunt: 2.2, durability: 0.6, // 커먼이지만 얼린 생선이라 내구 0.6·재질 frozen(0.35): 세게 맞부딪히면 쩍 갈라진다
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다
   // 몸통을 곧은 상자 대신 가운데가 굵고 양끝(꼬리·머리)이 가늘어지는 물고기 몸매로.
   partMesh: bentBody((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 8, taper: (t) => 0.5 + 1.1 * Math.sin(t * Math.PI) })),
@@ -898,16 +955,35 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 });
 
 export const WEAPONS = {
-  longsword, arming_sword: armingSword, messer, zweihander, estoc, sabre, rapier, falchion,
-  katana, jian, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
+  longsword, longsword_sharp: longswordSharp, arming_sword: armingSword, messer, zweihander, estoc, sabre, rapier, falchion,
+  katana, qinggang, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
 };
 
+// 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
+export const WEAPON_ALIASES = {
+  branch: 'tree_branch', stick: 'tree_branch',
+  jian: 'qinggang', // 옛 id (지안 → 청강검, 감독 결정)
+  chicken: 'rubber_chicken', tuna: 'frozen_tuna',
+  sharp: 'longsword_sharp', replica: 'excalibur_replica',
+  arming: 'arming_sword', saber: 'lightsaber',
+};
+
+// 아무 무기도 지정하지 않았을 때(o.weapon 없음) 쓰는 기본 무기. 'longsword_sharp'로 바꾸면
+// 실전용 롱소드 보정이 전체에 적용된다 — 기존 시뮬 수치가 바뀌므로 감독 결정 후에만 바꿀 것.
+export const DEFAULT_WEAPON = 'longsword';
+
 export const WEAPON_LIST = Object.values(WEAPONS);
 
-// 다른 곳(캐릭터 설정 등)에서 쓰는 별칭
-const ALIASES = { branch: 'tree_branch', chicken: 'rubber_chicken', tuna: 'frozen_tuna' };
-
+/** id(또는 별칭)로 무기 사양을 찾는다. 모르는 id면 기본 무기(경고 한 번). */
+const warned = new Set();
 export function getWeapon(id) {
-  return WEAPONS[id] || WEAPONS[ALIASES[id]] || WEAPONS.longsword;
+  const key = WEAPON_ALIASES[id] ?? id;
+  const spec = WEAPONS[key];
+  if (spec) return spec;
+  if (id != null && !warned.has(id)) {
+    warned.add(id);
+    console.warn(`[weapons] 모르는 무기 id '${id}' → ${DEFAULT_WEAPON} 로 대신합니다`);
+  }
+  return WEAPONS[DEFAULT_WEAPON];
 }

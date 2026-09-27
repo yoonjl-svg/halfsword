@@ -213,8 +213,12 @@ src/
 실제 무기부터, 엑스칼리버·라이트세이버·나뭇가지·고무 닭·냉동 참치 같은 창작 무기까지.
 
 URL 파라미터로 골라서 테스트할 수 있어요: `?weapon=katana&foeWeapon=chicken` (내 무기/상대 무기, 무기
-id는 `WEAPONS` 객체의 키). `foeWeapon`을 생략하면 `weapon`과 같은 걸 든다. 헤드리스 시뮬 쪽은
-`tools/sim/weapon_smoke.mjs`(안정성 훑기), `tools/sim/weapon_balance.mjs`(승률 재기) 참고.
+id는 `WEAPONS` 객체의 키. `branch`·`chicken`·`tuna`·`sharp`·`replica` 같은 짧은 별칭도 된다).
+`foeWeapon`을 생략하면 `weapon`과 같은 것, 둘 다 없으면 고른 캐릭터의 무기를 든다. 기본 롱소드는
+훈련검(페더) 무게라서 진짜 날 선 롱소드(`longsword_sharp`, Albion Crécy 치수)를 따로 두었고,
+`excalibur_replica`는 롱소드 물리에 엑스칼리버 겉모습만 씌운 소품이다. 헤드리스 시뮬 쪽은
+`tools/sim/weapon_smoke.mjs`(안정성 훑기), `tools/sim/weapon_balance.mjs`(승률 재기),
+`tools/sim/weapon_measure.mjs`(유파용 간격 실측) 참고.
 
 ### 상대 AI (ai.js)
 좀비처럼 달려들지 않고 검객처럼 싸워요.
