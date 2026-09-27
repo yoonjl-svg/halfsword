@@ -83,7 +83,7 @@ function runDuel(chA, chB, seed, durS = 45) {
     if (!A.alive || !B.alive) break;
   }
   const dur = n * DT;
-  const emoOf = (x) => ({ peak: x.stats.emoPeak ?? {}, time: x.stats.emoTime ?? {}, dur });
+  const emoOf = (x) => ({ peak: x.stats.emoPeak ?? {}, time: x.stats.emoTime ?? {}, count: x.stats.emoCount ?? {}, dur });
   const fear = { A: fearA / n, B: fearB / n, peakA: ai.stats.fearPeak ?? 0, peakB: ai2.stats.fearPeak ?? 0, emoA: emoOf(ai), emoB: emoOf(ai2) };
   if (!A.alive && !B.alive) return { r: 'draw', fear };
   if (!A.alive) return { r: 'B', fear }; // B(플레이어 자리) 승
@@ -122,7 +122,7 @@ async function main() {
     const ids = CHARACTERS.map((c) => c.id);
     const raw = {}; // raw[A][B] = A가 자리 A(enemy)일 때 B를 이긴 비율(%)
     const fearOf = {}; // 캐릭터별 공포: 판 평균 세기들, 판 최고 세기들
-    const EMOS = ['fear', 'anger', 'obsession', 'despair', 'cunning'];
+    const EMOS = ['fear', 'anger', 'obsession'];
     const emoOf = {}; // 캐릭터별 감정: 판마다 {peak, time, dur}
     for (const id of ids) { fearOf[id] = { mean: [], peak: [] }; emoOf[id] = []; }
     for (const chA of CHARACTERS) {
@@ -146,14 +146,16 @@ async function main() {
       console.log(`${id}: fearful=${CHARACTERS.find((c) => c.id === id).ai.persona.pers.fearful ?? 0}, mean ${fmt(mean(f.mean))}, peak ${fmt(mean(f.peak))}, 겁먹은 판 ${fmt((100 * f.peak.filter((p) => p > 0.3).length) / f.peak.length)}%`);
     }
     console.log('');
-    console.log('[감정층·다섯 감정] 캐릭터별: 감정이 0.3을 넘은 판 비율(%) / 그 감정이 지배한 시간 비율(%) — 효과는 공포만 붙어 있음');
-    console.log('id,' + EMOS.map((e) => `${e}:판%/지배%`).join(','));
+    console.log('[감정층·세 감정] 캐릭터별: 판% = 그 감정이 0.3을 넘은 판 비율 / 지배% = 지배한 시간 비율 / 횟수 = 한 판에 지배 감정으로 켜진 평균 횟수 / 초 = 한 번 켜지면 평균 지속(초) — 효과는 공포만 붙어 있음');
+    console.log('id,' + EMOS.map((e) => `${e}:판%/지배%/횟수/초`).join(','));
     for (const id of ids) {
       const runs = emoOf[id];
       const cells = EMOS.map((e) => {
         const fired = (100 * runs.filter((r) => (r.peak[e] ?? 0) > 0.3).length) / runs.length;
-        const share = (100 * runs.reduce((s, r) => s + (r.time[e] ?? 0), 0)) / runs.reduce((s, r) => s + r.dur, 0);
-        return `${fired.toFixed(0)}/${share.toFixed(0)}`;
+        const totalT = runs.reduce((s, r) => s + r.dur, 0);
+        const onT = runs.reduce((s, r) => s + (r.time[e] ?? 0), 0);
+        const cnt = runs.reduce((s, r) => s + (r.count[e] ?? 0), 0);
+        return `${fired.toFixed(0)}/${((100 * onT) / totalT).toFixed(0)}/${(cnt / runs.length).toFixed(1)}/${cnt ? (onT / cnt).toFixed(1) : '-'}`;
       });
       console.log(`${id},${cells.join(',')}`);
     }

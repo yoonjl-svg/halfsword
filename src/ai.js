@@ -71,21 +71,18 @@ export class AI {
       fearful: P.fearful ?? 0,
       angry: P.angry ?? 0, // 분노에 얼마나 잘 빠지는가 (연달아 막히면, 이기다 맞으면)
       dogged: P.dogged ?? 0, // 집념 (상대가 피 흘리면, 방금 맞혔으면 물고 늘어진다)
-      despairing: P.despairing ?? 0, // 자포자기 (피가 바닥나고 지고 있으면, 칼 놓치고 몰리면)
-      cunning: P.cunning ?? 0, // 교활함 (상대가 몰아치면, 속임수가 통하면)
       guardPref,
       techPref,
     };
-    // 감정 (지배 감정 하나 + 세기 0~1 + 시간 감쇠) — 자세히는 emote() 참고.
-    //  지금 검술에 효과를 내는 것은 공포뿐이고(this.fear), 나머지 넷은 판정만 하며 세기와 지배 시간을 잰다
-    this.emo = { fear: 0, anger: 0, obsession: 0, despair: 0, cunning: 0 };
+    // 감정 셋 (공포·분노·집념): 지배 감정 하나 + 세기 0~1 + 시간 감쇠 — 자세히는 emote() 참고.
+    //  지금 검술에 효과를 내는 것은 공포뿐이고(this.fear), 분노·집념은 판정만 하며 세기와 지배 시간을 잰다
+    this.emo = { fear: 0, anger: 0, obsession: 0 };
     this.emotion = null; // 지배 감정 이름 (없으면 null)
     this.fear = 0; // 검술에 실제로 쓰는 공포 세기 (다른 감정이 지배하면 0)
     this.emoT = 0;
     this.parryTimes = []; // 최근 막힌 시각들 (분노 판정: 10초 안에 두 번)
     this.evParried = false; // 이번 스텝에 생긴 사건들 (afterStrike가 켜고 emote가 끈다)
     this.evLanded = false;
-    this.evFeintLanded = false;
     this.mode = 'watch'; // watch(간 보기) | attack | defend | withdraw(물러나기)
     this.phase = 'ready'; // attack 안의 단계: windup(준비 자세) | approach(다가감) | strike | follow
     this.hand = new THREE.Vector2(0.12, -0.18); // 손 목표 (패드)
@@ -295,20 +292,20 @@ export class AI {
   }
 
   /**
-   * 감정층. 눈에 보이는 사건으로만 켜지고, 시간이 지나면 가라앉는다. 세기(0~1)는 저마다의 문턱값
-   * (pers.fearful·angry·dogged·despairing·cunning: 이 인물이 그 감정에 얼마나 잘 빠지는가)로 곱해진다.
-   *  공포:   베였다(+0.4), 피가 계속 난다(+0.12/s), 상대 칼이 코앞까지 왔다(+0.3/s). 9초 감쇠
-   *  분노:   10초 안에 두 번 이상 막혔다(+0.35), 이기고 있는데 맞았다(+0.3). 12초 감쇠
-   *  집념:   상대가 피 흘린다(+0.2/s), 방금 맞혔다(+0.3). 8초 감쇠
-   *  자포자기: 쌓이지 않고 상태로 정해진다 — 피 < 0.6이고 지고 있거나, 칼 놓치고 몰렸으면 (1 − 피). 6초 감쇠
-   *  교활함: 상대가 몰아친다(foeAggro > 0.5, +0.25/s), 상대가 속임수에 걸렸다(+0.4). 10초 감쇠
-   * 지배 감정은 하나: 0.3을 넘은 것 중 생존 우선(자포자기 > 공포 > 분노 > 교활 > 집념). 지배 감정이 바뀌려면
-   * 새 감정이 0.15 이상 더 세야 한다(왔다 갔다 하지 않게). 지배 감정이 0.15 아래로 가라앉으면 물러난다.
+   * 감정층 (공포·분노·집념). 눈에 보이는 사건으로만 켜지고, 시간이 지나면 가라앉는다. 세기(0~1)는 저마다의
+   * 문턱값(pers.fearful·angry·dogged: 이 인물이 그 감정에 얼마나 잘 빠지는가)로 곱해진다.
+   *  공포: 베였다(+0.4), 피가 계속 난다(+0.12/s), 상대 칼이 코앞까지 왔다(+0.3/s). 9초 감쇠
+   *  분노: 10초 안에 두 번 이상 막혔다(+0.35), 이기고 있는데 맞았다(+0.3). 12초 감쇠
+   *  집념: 상대가 피 흘린다(+0.2/s), 방금 맞혔다(+0.3). 8초 감쇠
+   * (자포자기는 공포와 겹치고 교활함은 감정보다 성격·격투 스타일에 가까워 뺐다 — 교활함은 feint·alber 취향으로,
+   *  자포자기는 hurry()의 desperate로 이미 표현된다)
+   * 지배 감정은 하나: 0.3을 넘은 것 중 생존 우선(공포 > 분노 > 집념). 지배 감정이 바뀌려면 새 감정이 0.15 이상
+   * 더 세야 한다(왔다 갔다 하지 않게). 지배 감정이 0.15 아래로 가라앉으면 물러난다.
    *
    * 검술에 효과를 내는 것은 아직 공포뿐이다(this.fear — 다른 감정이 지배하면 0): holdDist(간격을 더 둔다),
    * pickGuard(칼끝으로 겨누는 자세만 잡는다), watch(헛친 상대·쓰러진 상대 말고는 안 들어간다),
    * respond(막기보다 물러나 피하고, 맞받아치지 않는다), preThreat(달려드는 상대를 맞받지 않고 물러난다),
-   * moveFeet(잔걸음이 뒷걸음으로 기운다). 나머지 넷은 판정만 하며 세기·지배 시간을 stats에 잰다.
+   * moveFeet(잔걸음이 뒷걸음으로 기운다). 분노·집념은 판정만 하며 세기·지배 시간·켜진 횟수를 stats에 잰다.
    * 문턱값이 전부 0이면 this.fear가 늘 0이라 모든 곳이 예전과 똑같이 계산된다.
    */
   emote(dt, hurt, nearMiss) {
@@ -317,7 +314,7 @@ export class AI {
     const me = this.me;
     const foe = this.foe;
     this.emoT += dt;
-    if (P.fearful <= 0 && P.angry <= 0 && P.dogged <= 0 && P.despairing <= 0 && P.cunning <= 0) return;
+    if (P.fearful <= 0 && P.angry <= 0 && P.dogged <= 0) return;
     const decay = (v, tau) => v - (v * dt) / tau;
     let up = 0;
     if (hurt) up += 0.4;
@@ -336,19 +333,10 @@ export class AI {
     if (foe.bleed > 0.01) up += dt * 0.2;
     if (this.evLanded) up += 0.3;
     E.obsession = clamp(decay(E.obsession, 8) + up * P.dogged, 0, 1);
-    const myLoss = 1 - me.blood + me.bleed * 8;
-    const foeLoss = 1 - foe.blood + foe.bleed * 8;
-    const cornered = !me.armed && this.d < this.M.reach;
-    const want = (me.blood < 0.6 && myLoss > foeLoss) || cornered ? (1 - me.blood) * P.despairing : 0;
-    E.despair = clamp(Math.max(decay(E.despair, 6), want), 0, 1);
-    up = 0;
-    if (this.foeAggro > 0.5) up += dt * 0.25;
-    if (this.evFeintLanded) up += 0.4;
-    E.cunning = clamp(decay(E.cunning, 10) + up * P.cunning, 0, 1);
-    this.evParried = this.evLanded = this.evFeintLanded = false;
+    this.evParried = this.evLanded = false;
 
     // 지배 감정 고르기
-    const order = ['despair', 'fear', 'anger', 'cunning', 'obsession'];
+    const order = ['fear', 'anger', 'obsession'];
     const cur = this.emotion;
     if (cur && E[cur] < 0.15) this.emotion = null;
     const cand = order.find((k) => E[k] > 0.3 && k !== this.emotion);
@@ -358,14 +346,16 @@ export class AI {
     }
     this.fear = this.emotion === 'fear' || this.emotion === null ? E.fear : 0;
 
-    // 관찰용 통계: 감정별 최고 세기, 지배한 시간
+    // 관찰용 통계: 감정별 최고 세기, 지배한 시간, 지배 감정으로 켜진 횟수
     const S = this.stats;
     if (!S.emoPeak) {
-      S.emoPeak = { fear: 0, anger: 0, obsession: 0, despair: 0, cunning: 0 };
-      S.emoTime = { fear: 0, anger: 0, obsession: 0, despair: 0, cunning: 0 };
+      S.emoPeak = { fear: 0, anger: 0, obsession: 0 };
+      S.emoTime = { fear: 0, anger: 0, obsession: 0 };
+      S.emoCount = { fear: 0, anger: 0, obsession: 0 };
     }
     for (const k of order) if (E[k] > S.emoPeak[k]) S.emoPeak[k] = +E[k].toFixed(2);
     if (this.emotion) S.emoTime[this.emotion] += dt;
+    if (this.emotion && this.emotion !== cur) S.emoCount[this.emotion]++;
     S.fearPeak = S.emoPeak.fear;
   }
 
@@ -692,8 +682,7 @@ export class AI {
     const L = this.level;
     if (this.hitLanded) {
       this.stats.landed++;
-      this.evLanded = true; // 감정층 사건: 맞혔다 (속임수로 맞혔으면 교활함도)
-      if (this.feint) this.evFeintLanded = true;
+      this.evLanded = true; // 감정층 사건: 맞혔다
     }
     if (this.bound && !this.hitLanded) {
       this.foeParried++; // 칼로 막혔다 → 다음엔 속임수가 통한다
