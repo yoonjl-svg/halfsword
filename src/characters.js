@@ -267,9 +267,9 @@ export const CHARACTERS = [
       level: 'normal',
       persona: {
         school: 'excalibur_replica',
-        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.1, aggression: 1.15, windup: 0.45, skill: 0.82 },
+        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.2, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
         pers: {
-          precision: 0.85,
+          precision: 0.9,
           guardStick: 0.8,
           fearful: 0.08, // 아프면 오히려 웃으며 더 달려든다
           angry: 0.6,
@@ -282,6 +282,8 @@ export const CHARACTERS = [
           patienceTime: 6,
           circleRate: 0.35,
           guardPref: { tag: 1.6, tagR: 1.6, sideR: 1.5, sideL: 1.4, ochsR: 1.2 },
+          // 보여주기 좋은 큰 베기(분노의 베기·정수리 베기)를 즐긴다 — 마이어식 크고 무거운 동작
+          techPref: { zornhau: 1.5, zornhauL: 1.4, oberhau: 1.3, zwerch: 1.2, unterhau: 0.7, unterhauL: 0.7 },
         },
       },
     },
