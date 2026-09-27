@@ -372,6 +372,7 @@ export class Fighter {
     const group = new THREE.Group();
     this.bladeColliders = [];
     this.swordColliders = []; // 칼 전체(칼날+칼자루). 칼끼리 붙어 있는 동안 반발을 끄고 켠다 (combat.js)
+    let partIdx = 0;
     for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade] of parts) {
       const cd = shapeDesc(RAPIER, shape)
         .setTranslation(0, y, 0)
@@ -388,12 +389,18 @@ export class Fighter {
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
-      const mesh = shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade));
+      // 부품 콜라이더는 늘 상자·공 모양이지만(물리 판정은 그대로), 보이는 모양은 무기별로 곡도·외날
+      // 단면·휘어진 몸통 등을 쓸 수 있게 spec.partMesh(idx, ...)가 있으면 그걸 부른다 (없으면 예전처럼
+      // 콜라이더와 똑같은 상자·공 그대로) — 콜라이더 치수와 겉보기 치수는 ~1cm 안에서만 다르게 한다
+      // (약속: docs/weapon_shots 참고).
+      const mesh = spec.partMesh?.(partIdx, isBlade, shape, color, weaponMatOpts(spec.material, isBlade), o.look) ?? shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade));
       mesh.position.y = y;
       group.add(mesh);
+      partIdx++;
       if (isBlade) {
         this.bladeColliders.push(col);
         this.bladeMesh = mesh; // 벨수록 피가 묻는다
+        this.bladeBaseColor = mesh.material.color.clone(); // 무기마다 다른 밑색 — bloodyBlade가 여기서부터 피 색으로 섞는다
       }
     }
     spec.decorate?.(group, o.look);
@@ -784,7 +791,7 @@ export class Fighter {
   bloodyBlade(amount) {
     if (!this.bladeMesh) return;
     this.bladeBlood = Math.min(0.65, (this.bladeBlood || 0) + amount);
-    this.bladeMesh.material.color.set(0xd8dde3).lerp(_bloodColor, this.bladeBlood);
+    this.bladeMesh.material.color.copy(this.bladeBaseColor).lerp(_bloodColor, this.bladeBlood);
   }
 
   dropSword() {

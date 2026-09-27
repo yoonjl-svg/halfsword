@@ -27,6 +27,35 @@ import { schoolOf } from './schools.js';
 
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
+// school.measure의 간격 상수를 잴 때 쓴 롱소드 칼 길이(칼자루+칼날, m) — measured 표에 없는
+// 무기(미래에 추가될 무기)에 대한 안전장치 비율 계산에만 쓴다.
+const WEAPON_BASELINE = 0.13 + 1.05;
+// 무기 PM의 실측(tools/sim/weapon_measure.mjs, docs/weapons.md §2 — 혼자 zornhau 한 번을 휘두르며
+// 칼날 70% 지점이 머리 높이를 지나는 순간의 실제 간격을 잰 값)을 롱소드 기준(같은 표의 롱소드 raw
+// 값)으로 나눈 비율. 칼날+자루 길이만 단순 비례하는 것보다 훨씬 정확하다 — 실제 팔·몸 뻗음까지
+// 담겨 있어서, 짧은 칼(환두대도 등)이 순수 길이비보다 실제로는 덜 불리하다는 게 이 표로 드러났다.
+// excalibur_replica는 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 비율을 쓴다.
+const MEASURED = {
+  // id: [contact, reach, clinch] raw (m), docs/weapons.md 표 그대로
+  longsword: [1.62, 1.91, 1.25],
+  arming_sword: [1.25, 1.5, 0.96],
+  messer: [1.23, 1.46, 0.95],
+  zweihander: [1.62, 2.05, 1.25],
+  estoc: [1.65, 2.0, 1.27],
+  sabre: [1.29, 1.58, 1.0],
+  rapier: [1.48, 1.72, 1.14],
+  falchion: [1.29, 1.55, 1.0],
+  katana: [1.44, 1.77, 1.11],
+  jian: [1.32, 1.55, 1.02],
+  hwandudaedo: [1.29, 1.55, 1.0],
+  excalibur: [1.61, 1.87, 1.24],
+  excalibur_replica: [1.61, 1.87, 1.24],
+  lightsaber: [1.56, 1.72, 1.2],
+  tree_branch: [1.41, 1.63, 1.09],
+  rubber_chicken: [1.07, 1.21, 0.83],
+  frozen_tuna: [1.32, 1.64, 1.02],
+};
+const LS_MEASURED = MEASURED.longsword;
 
 export class AI {
   /**
@@ -43,7 +72,30 @@ export class AI {
     this.sense = new Senses(me, foe);
     this.persona = persona || {};
     this.school = schoolOf(this.persona.school);
-    this.M = this.school.measure; // 간격 상수 (가슴과 가슴 사이 수평 거리, m)
+    // 간격 상수 (가슴과 가슴 사이 수평 거리, m). school.measure는 롱소드로 잰 값이라, 칼이 그보다 짧거나
+    // 길면 그 비율만큼 줄이거나 늘린다 — 안 그러면 짧은 칼을 쥔 쪽이 롱소드 간격에서 공격을 걸었다가
+    // 정작 닿지도 못하고 상대 롱소드에만 맞는다 (무기 밸런스 시뮬로 확인한 근본 원인).
+    const baseM = this.school.measure;
+    // 실측 표에 있으면 축마다 다른 실측 비율을, 없으면(미래에 무기가 늘어날 때 대비) 칼 길이 비율로
+    // 대충이라도 스케일한다 — 어느 쪽도 롱소드 자신은 정확히 1배(그대로)가 되게 한다.
+    const scaledM = (w) => {
+      if (!w || w.id === 'longsword') return baseM;
+      const m = MEASURED[w.id];
+      if (m) {
+        return { ...baseM, contact: baseM.contact * (m[0] / LS_MEASURED[0]), reach: baseM.reach * (m[1] / LS_MEASURED[1]), clinch: baseM.clinch * (m[2] / LS_MEASURED[2]) };
+      }
+      const s = (w.bladeLength + w.hiltLength) / WEAPON_BASELINE;
+      return { ...baseM, contact: baseM.contact * s, reach: baseM.reach * s, clinch: baseM.clinch * s };
+    };
+    this.M = scaledM(me.weapon);
+    // 상대 칼 길이로도 따로 잰다: foeReach(아래)는 "내가 아니라 상대가" 닿는 거리를 어림하는 값이라, 내
+    // 무기가 아니라 상대 무기 기준으로 스케일해야 한다 (짧은 칼을 든 쪽이 상대의 롱소드 간격을 실제보다
+    // 가깝게 어림해 그대로 걸어 들어가는 일을 막는다)
+    this.foeM = scaledM(foe.weapon);
+    // TECH[].reach(기술마다 다른 "이 기술은 기본 간격보다 얼마나 더/덜 닿는가" 보정)도 롱소드로 잰
+    // 값이라, 짧은 칼은 이 보정을 그대로 더하면 실제보다 더 닿는다고 착각한다(무기 PM 인수인계 문서
+    // docs/weapons.md §5에 남아 있던 미해결 항목) — M.contact와 같은 비율로 같이 줄인다.
+    this.reachScale = !me.weapon || me.weapon.id === 'longsword' ? 1 : this.M.contact / baseM.contact;
     this.setLevel(levelName);
     // 성격: 사람마다 다르다 (같은 난이도라도 판마다 다른 검객). persona가 정해 둔 값이 있으면 그대로 쓴다
     const P = this.persona.pers || {};
@@ -91,7 +143,7 @@ export class AI {
     this.guard = null; // 간 볼 때의 자세
     this.guardTimer = rand(0.3, 1.0);
     this.patience = rand(0.55, 0.85); // 처음엔 조금 간을 보다가 들어간다
-    this.foeReach = this.M.reach + 0.05; // 상대 칼이 닿는 거리 추정 (생각보다 멀리서 맞으면 늘린다)
+    this.foeReach = this.foeM.reach + 0.05; // 상대 칼이 닿는 거리 추정 (생각보다 멀리서 맞으면 늘린다)
     this.decideTimer = 0;
     this.timer = 0;
     this.attackT = 0;
@@ -206,10 +258,10 @@ export class AI {
     this.prevMyPain = me.pain;
     if (hurt) {
       // 생각보다 멀리서 맞았으면 상대 칼이 더 멀리 닿는다고 고쳐 생각한다
-      if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.M.reach, 2.5);
+      if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.foeM.reach, 2.5);
       if (this.mode !== 'attack' || this.phase !== 'strike') this.startWithdraw(0.8);
     }
-    this.foeReach += (this.M.reach + 0.05 - this.foeReach) * dt * 0.03; // 천천히 원래 생각으로
+    this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * 0.03; // 천천히 원래 생각으로
 
     // 인내심: 시간이 지나면 줄어든다 → 판이 늘어지지 않는다
     const hurry = this.hurry();
@@ -488,10 +540,16 @@ export class AI {
     const L = this.level;
     const cls = this.foeClass(s);
     const hand = [this.me.handOffset.x, this.me.handOffset.y];
+    // 기술 목록(school.tech)은 롱소드(찌르기·베기 모두 배율 1)를 기준으로 짜여 있다. 찌르기 전용에
+    // 가까운 무기(에스톡·레이피어 등)는 실제로 찌르기가 훨씬 잘 먹히는데 기술을 고를 때 이걸 몰라
+    // 베기만 골라 쓰다 지는 일이 있었다 — 무기의 mThrust/mCut 배율 그대로 찌르기 기술 선호도에 곱한다.
+    const cfg = this.me.weaponCfg;
+    const thrustBias = cfg ? cfg.mThrust / cfg.mCut : 1;
     let best = null;
     let bestW = -1;
     for (const t of this.school.tech) {
       let w = this.pers.techPref[t.name] * t.base;
+      if (t.kind === 'thrust') w *= thrustBias;
       // 빈틈: 상대 칼이 높으면 아래·찌르기, 낮으면 위, 한쪽으로 치우치면 반대쪽
       const o = t.open;
       const up = o === 'UL' || o === 'UR' || o === 'H';
@@ -584,7 +642,7 @@ export class AI {
       this.timer -= dt;
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
-      this.need = this.M.contact + t.reach + 0.05 + (this.why === 'stop' ? 0.2 : 0);
+      this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
       if (this.timer <= 0 && this.contactDist() <= this.need) {
         // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
         this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
@@ -658,7 +716,7 @@ export class AI {
   stepTime() {
     if (this.why === 'stop') return 0; // 상대가 달려오고 있다: 내가 들어갈 필요가 없다 (옆으로 비켜 선다)
     if (this.pointBlocked) return 0; // 칼끝부터 쳐서 비킨다. 들어가는 것은 그다음 칼(이어 치기)에서
-    const short = this.contactDist() - this.M.contact - this.tech.reach;
+    const short = this.contactDist() - this.M.contact - this.tech.reach * this.reachScale;
     return clamp(short * 0.8, 0, 0.3);
   }
 
