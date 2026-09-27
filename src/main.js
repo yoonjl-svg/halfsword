@@ -19,6 +19,7 @@ import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { buildArena } from './arena.js';
+import { buildTemple } from './stage_temple.js';
 
 await RAPIER.init();
 
@@ -96,7 +97,8 @@ scene.fog = new THREE.Fog(0xc4c8c6, 20, 480);
 const camera = new THREE.PerspectiveCamera(CAMERA.fov, 1, 0.1, 700); // 먼 바다·하늘까지 보이게
 camera.position.set(-3.5, CAMERA.height, 0.5);
 
-scene.add(new THREE.HemisphereLight(0xe3e6e8, 0x716c63, 1.2)); // 구름 낀 하늘빛 + 모래에 되비친 빛
+const hemi = new THREE.HemisphereLight(0xe3e6e8, 0x716c63, 1.2); // 구름 낀 하늘빛 + 모래에 되비친 빛
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffe7cb, 1.7); // 구름 사이로 드는 누그러진 해
 sun.position.set(4, 9, 3);
 sun.castShadow = true;
@@ -104,7 +106,12 @@ sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 25 });
 scene.add(sun, sun.target);
 
-const arena = buildArena(scene); // 바닷가 절벽 위 무너진 포세이돈 신전 (arena.js)
+// 배경 고르기 (미리보기용. 정식 선택 방식은 나중에): 기본은 바닷가 절벽 위 무너진 포세이돈 신전 (arena.js)
+//  ?stage=temple : 한국의 산 속 절 (stage_temple.js)
+const STAGES = { temple: buildTemple };
+const stageBuild = STAGES[params.get('stage')];
+const arena = stageBuild ? stageBuild(scene, { hemi, sun }) : buildArena(scene);
+const SUN_OFF = arena.sunOffset ?? { x: 4, y: 9, z: 3 }; // 해가 싸우는 자리를 따라다닐 때의 방향
 
 // ── 화면 크기 / 픽셀 모드 ──
 function resize() {
@@ -804,7 +811,7 @@ function updateCamera(dt) {
   camera.position.add(camShake.o);
   camera.lookAt(camLook);
   camera.position.sub(camShake.o); // 다음 프레임 따라가기는 흔들림 없는 위치 기준
-  sun.position.set(a.x + 4, 9, a.z + 3);
+  sun.position.set(a.x + SUN_OFF.x, SUN_OFF.y, a.z + SUN_OFF.z);
   sun.target.position.set(a.x, 0, a.z);
 }
 
