@@ -112,7 +112,7 @@ function skyTexture(sunAz) {
  *  hip=false 면 맞배지붕, gable>0 이면 팔작지붕(위쪽이 합각 벽), gable=0 이면 우진각.
  *  반환: top(기와면, uv 있음) · under(처마 밑) · skirt(처마 끝 두께) · at(x0, z0, yOff) · Yf · Zg · Hg
  */
-function roofGeo({ Ax, Az, H, lift = 0.8, flare = 0.07, t = 0.3, gable = 0.5, hip = true, step = 0.42 }) {
+function roofGeo({ Ax, Az, H, lift = 0.8, flare = 0.07, t = 0.3, gable = 0.5, hip = true, step = 0.32 }) {
   const P = 1.45;
   const Yf = (d) => H * Math.pow(THREE.MathUtils.clamp(d / Ax, 0, 1), P);
   const dzg = gable * Ax;
@@ -163,23 +163,7 @@ function roofGeo({ Ax, Az, H, lift = 0.8, flare = 0.07, t = 0.3, gable = 0.5, hi
       const a = i * nz + k;
       const b = (i + 1) * nz + k;
       idxTop.push(a, a + 1, b, b, a + 1, b + 1);
-    }
-  // 처마 밑면은 밑에서 올려다볼 때만 보이니 두 칸씩 건너뛰어 성기게 (삼각형 1/4)
-  const every2 = (n) => {
-    const out = [];
-    for (let i = 0; i < n; i += 2) out.push(i);
-    if (out[out.length - 1] !== n - 1) out.push(n - 1);
-    return out;
-  };
-  const bi = every2(nx);
-  const bk = every2(nz);
-  for (let ii = 0; ii < bi.length - 1; ii++)
-    for (let kk = 0; kk < bk.length - 1; kk++) {
-      const a = bi[ii] * nz + bk[kk];
-      const b = bi[ii + 1] * nz + bk[kk];
-      const a1 = bi[ii] * nz + bk[kk + 1];
-      const b1 = bi[ii + 1] * nz + bk[kk + 1];
-      idxBot.push(a, b, a1, b, b1, a1);
+      idxBot.push(a, b, a + 1, b, b + 1, a + 1);
     }
   const mk = (pos, idx, uvs) => {
     const g = new THREE.BufferGeometry();
@@ -356,12 +340,14 @@ function building(K, pos, rotY, o) {
     // 평방
     K.put('paint', box(0.38, 0.2, len + 0.5), C.greenDeep, [x - 0.02, y0 + 0.1, 0]);
     // 공포 (다포): 기둥 위와 사이마다 층층이 내민 받침
-    const nb = Math.max(2, Math.round(len / (o.bracketGap ?? 1.25)));
+    const nb = Math.max(2, Math.round(len / (o.bracketGap ?? 1.0)));
     for (let i = 0; i <= nb; i++) {
       const z = f.cols[0] + (len * i) / nb;
       K.put('paint', box(0.34, 0.16, 0.34), C.green, [x, y0 + 0.28, z]);
-      K.put('paint', box(0.24, 0.3, 0.9), C.greenDeep, [x - 0.08, y0 + 0.51, z]); // 옆으로 뻗은 첨차 (두 단을 한 덩이로)
-      K.put('paint', box(0.62, 0.14, 0.22), C.green, [x - 0.22, y0 + 0.43, z]); // 앞으로 내민 살미 두 단
+      K.put('paint', box(0.24, 0.14, 0.8), C.greenDeep, [x - 0.02, y0 + 0.43, z]);
+      K.put('paint', box(0.62, 0.14, 0.22), C.green, [x - 0.22, y0 + 0.43, z]);
+      K.put('paint', box(0.06, 0.12, 0.2), C.red, [x - 0.54, y0 + 0.43, z]);
+      K.put('paint', box(0.24, 0.14, 1.05), C.greenDeep, [x - 0.14, y0 + 0.59, z]);
       K.put('paint', box(0.95, 0.14, 0.22), C.green, [x - 0.4, y0 + 0.59, z]);
       K.put('paint', box(0.06, 0.12, 0.2), C.red, [x - 0.88, y0 + 0.59, z]);
     }
@@ -384,17 +370,20 @@ function building(K, pos, rotY, o) {
           const dw = bw / nd;
           const dh = top - (lo + 0.16);
           const frame = o.doors === 'red' ? C.red : C.lattice;
-          // 창호지·궁창·문 윗틀·가로살은 칸 하나에 한 장씩 (문 짝마다 따로 두면 삼각형만 늘어난다)
-          const yc = lo + 0.16 + dh / 2;
-          const ly0 = lo + 0.16 + dh * 0.24;
-          const lh = dh * 0.76 - 0.06;
-          K.put('plaster', box(0.04, dh - 0.08, bw - 0.08), C.paper, [x + 0.1, yc, zc]); // 창호지
-          K.put('wood', box(0.08, dh * 0.24, bw - 0.04), frame, [x + 0.07, lo + 0.16 + dh * 0.12, zc]); // 궁창 (아래 널)
-          K.put('wood', box(0.1, 0.06, bw), frame, [x + 0.06, lo + 0.16 + dh - 0.03, zc]); // 문 윗틀
-          for (let hN = 1; hN <= 6; hN++) K.put('wood', box(0.05, 0.03, bw - 0.08), frame, [x + 0.06, ly0 + (lh * hN) / 7, zc]); // 가로살
-          for (let d = 0; d <= nd; d++) K.put('wood', box(0.1, dh, 0.06), frame, [x + 0.06, yc, z0 + dw * d + (d === 0 ? 0.03 : d === nd ? -0.03 : 0)]); // 문짝 사이 선대
-          for (let d = 0; d < nd; d++)
-            for (let v = 1; v <= 3; v++) K.put('wood', box(0.05, lh, 0.03), frame, [x + 0.06, ly0 + lh / 2, z0 + dw * d + (dw * v) / 4]); // 세로살
+          for (let d = 0; d < nd; d++) {
+            const dz = z0 + dw * (d + 0.5);
+            const yc = lo + 0.16 + dh / 2;
+            K.put('plaster', box(0.04, dh - 0.08, dw - 0.08), C.paper, [x + 0.1, yc, dz]); // 창호지
+            K.put('wood', box(0.08, dh * 0.24, dw - 0.08), frame, [x + 0.07, lo + 0.16 + dh * 0.12, dz]); // 궁창 (아래 널)
+            // 문틀
+            for (const s of [-1, 1]) K.put('wood', box(0.1, dh, 0.06), frame, [x + 0.06, yc, dz + s * (dw / 2 - 0.03)]);
+            K.put('wood', box(0.1, 0.06, dw), frame, [x + 0.06, lo + 0.16 + dh - 0.03, dz]);
+            // 살: 세로 3 + 가로 6 (띠살)
+            const ly0 = lo + 0.16 + dh * 0.24;
+            const lh = dh * 0.76 - 0.06;
+            for (let v = 1; v <= 3; v++) K.put('wood', box(0.05, lh, 0.03), frame, [x + 0.06, ly0 + lh / 2, dz - dw / 2 + (dw * v) / 4]);
+            for (let hN = 1; hN <= 6; hN++) K.put('wood', box(0.05, 0.03, dw - 0.08), frame, [x + 0.06, ly0 + (lh * hN) / 7, dz]);
+          }
         } else {
           // 흰 회벽 + 가운데 중인방 (나무)
           const hgt = y0 - 0.36 - (lo + 0.16);
@@ -411,7 +400,7 @@ function building(K, pos, rotY, o) {
         const z = f.cols[0] + (len * i) / n;
         const ly = y0 - 0.9 - (i % 2) * 0.2;
         const lx = x - 1.05;
-        K.put('lamp', new THREE.SphereGeometry(0.21, 8, 5), cols[i % cols.length], [lx, ly, z], [0, 0, 0], [1, 0.85, 1], { vary: 0.05, noise: 0.1 });
+        K.put('lamp', new THREE.IcosahedronGeometry(0.21, 1), cols[i % cols.length], [lx, ly, z], [0, 0, 0], [1, 0.85, 1], { vary: 0.05, noise: 0.1 });
         K.put('lamp', cyl(0.05, 0.02, 0.18, 5), 0xf0ece0, [lx, ly - 0.26, z]);
         limb(K, 'wood', [lx, ly + 0.17, z], [lx, y0 + 0.66, z], 0.008, 0.008, 0x2b2622, {}, 3);
       }
@@ -458,7 +447,7 @@ function pagoda(K, x, y, z) {
   K.push([x, y, z], 0.0);
   let h = 0;
   const b = (w, hh, c = C.granite, rough = 0.018) => {
-    K.put('stone', box(w, hh, w), c, [0, h + hh / 2, 0], [0, 0, 0], 1, { rough, vary: 0.07 });
+    K.put('stone', box(w, hh, w, 2, 1, 2), c, [0, h + hh / 2, 0], [0, 0, 0], 1, { rough, vary: 0.07 });
     h += hh;
   };
   b(3.5, 0.25, C.graniteDark);
@@ -479,7 +468,7 @@ function pagoda(K, x, y, z) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) K.put('stone', box(0.12, bhh, 0.12), C.granite, [(sx * bw) / 2, y1 + bhh / 2, (sz * bw) / 2], [0, 0, 0], 1, { vary: 0.03 });
     // 층급받침 4단
     for (let s = 0; s < 4; s++) b(bw + 0.1 + (s * (rw - bw - 0.3)) / 3, 0.055, C.granite, 0.008);
-    const R = roofGeo({ Ax: rw / 2, Az: rw / 2, H: rw * 0.17, t: 0.13, lift: 0.1, flare: 0.05, gable: 0, step: 0.3 });
+    const R = roofGeo({ Ax: rw / 2, Az: rw / 2, H: rw * 0.17, t: 0.13, lift: 0.1, flare: 0.05, gable: 0, step: 0.12 });
     for (const g of [R.top, R.under, R.skirt]) K.put('stone', g, C.granite, [0, h + 0.13, 0], [0, 0, 0], 1, { vary: 0.03 });
     h += 0.13 + rw * 0.17 * 0.45;
   }
@@ -561,9 +550,6 @@ function bell(K, x, yTop, z) {
   }
 }
 
-/** 나뭇잎 뭉치 한 덩이 (면 36: 흔들어 놓으면 둥근 덩어리로 보이고, 폰에서도 가볍다) */
-const CLUMP = new THREE.SphereGeometry(1, 6, 4);
-
 /** 소나무: 붉은 줄기가 비스듬히 굽고, 층층이 납작한 솔잎 뭉치 */
 function pine(K, r, x, gy, z, h) {
   const la = r() * Math.PI * 2;
@@ -577,7 +563,7 @@ function pine(K, r, x, gy, z, h) {
   const r0 = 0.12 + h * 0.022;
   for (let k = 0; k < 4; k++) limb(K, 'bark', pts[k], pts[k + 1], r0 * (1 - k * 0.2), r0 * (1 - (k + 1) * 0.2) + 0.02, C.bark, { vary: 0.1, noise: 0.15 });
   const clump = (p, s) => {
-    K.put('foliage', CLUMP, C.pine, p, [0, r() * 3, 0], [1.5 * s, 0.5 * s, 1.3 * s], { vary: 0.16, noise: 0.14, rough: 0.25 * s });
+    K.put('foliage', new THREE.IcosahedronGeometry(1, 1), C.pine, p, [0, r() * 3, 0], [1.5 * s, 0.5 * s, 1.3 * s], { vary: 0.16, noise: 0.14, rough: 0.25 * s });
   };
   clump([pts[4][0], pts[4][1] + 0.2, pts[4][2]], 1.1 + r() * 0.5);
   const nb = 2 + Math.floor(r() * 3);
@@ -608,7 +594,7 @@ function maple(K, r, x, gy, z, h) {
     const s = 0.9 + r() * 0.6;
     const p = [top[0] + Math.cos(a) * d, top[1] + 0.5 + r() * 1.0, top[2] + Math.sin(a) * d];
     if (i > 0) limb(K, 'bark', top, p, 0.07, 0.04, 0x4a3a30);
-    K.put('foliage', CLUMP, c, p, [0, r() * 3, 0], [s, s * 0.8, s], { vary: 0.2, noise: 0.18, rough: 0.2 * s });
+    K.put('foliage', new THREE.IcosahedronGeometry(1, 1), c, p, [0, r() * 3, 0], [s, s * 0.8, s], { vary: 0.2, noise: 0.18, rough: 0.2 * s });
   }
 }
 
@@ -637,7 +623,7 @@ export function buildTemple(scene, lights = {}) {
   // ── 하늘 ──
   scene.add(
     new THREE.Mesh(
-      new THREE.SphereGeometry(600, 32, 16),
+      new THREE.SphereGeometry(600, 48, 24),
       new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, map: skyTexture(Math.atan2(sunOffset.z, sunOffset.x)) }),
     ),
   );
@@ -656,7 +642,7 @@ export function buildTemple(scene, lights = {}) {
   };
   {
     const RR = [0, 1.5, 3, 4.5, 6, 7.5, 9, 11, 13, 15, 17, 19, 21, 23, 25.5, 28, 31, 34, 38, 42, 47, 52, 58, 64, 71, 78, 86];
-    const NA = 96;
+    const NA = 160;
     const pos = [0, 0, 0];
     const uv = [0, 0];
     const col = [];
@@ -730,7 +716,7 @@ export function buildTemple(scene, lights = {}) {
         while (z < 1.05) {
           const w = 0.5 + r() * 0.35;
           const ww = Math.min(w, 1.1 - z);
-          K.put('nearStone', box(len - 0.05, 0.1, ww - 0.05), C.granite, [x + len / 2, -0.03 + r() * 0.02, z + ww / 2], [0, (r() - 0.5) * 0.06, 0], 1, { rough: 0.03, vary: 0.18 });
+          K.put('nearStone', box(len - 0.05, 0.1, ww - 0.05, 2, 1, 2), C.granite, [x + len / 2, -0.03 + r() * 0.02, z + ww / 2], [0, (r() - 0.5) * 0.06, 0], 1, { rough: 0.03, vary: 0.18 });
           z += ww;
         }
         x += len;
@@ -854,7 +840,7 @@ export function buildTemple(scene, lights = {}) {
     const dz = z2 - z1;
     const L = Math.hypot(dx, dz);
     K.push([(x1 + x2) / 2, 0, (z1 + z2) / 2], Math.atan2(-dz, dx));
-    K.put('stone', box(L, 1.45, 0.56, Math.ceil(L / 0.8), 2, 1), C.wall, [0, 0.72, 0], [0, 0, 0], 1, { rough: 0.14, vary: 0.05, noise: 0.22 });
+    K.put('stone', box(L, 1.45, 0.56, Math.ceil(L / 0.45), 4, 1), C.wall, [0, 0.72, 0], [0, 0, 0], 1, { rough: 0.14, vary: 0.05, noise: 0.22 });
     const sh = new THREE.Shape();
     sh.moveTo(-0.52, 0);
     sh.lineTo(0.52, 0);
@@ -880,8 +866,8 @@ export function buildTemple(scene, lights = {}) {
   maple(K, r, -15, 0, 19.5, 4.0);
   maple(K, r, -13.5, 0, -19.4, 4.4);
   maple(K, r, 24, 0, 18.8, 5);
-  for (let i = 0; i < 22; i++) {
-    const a = (i / 22) * Math.PI * 2 + (r() - 0.5) * 0.12;
+  for (let i = 0; i < 28; i++) {
+    const a = (i / 28) * Math.PI * 2 + (r() - 0.5) * 0.12;
     const d = 30 + r() * 12;
     const x = Math.cos(a) * d * 1.15 + 3;
     const z = Math.sin(a) * d;
@@ -908,13 +894,13 @@ export function buildTemple(scene, lights = {}) {
   for (const m of meshes) if (m) scene.add(m);
 
   // ── 산비탈 숲 (인스턴싱: 둥근 나무 뭉치, 가을이라 드문드문 단풍) ──
-  //  가까운 띠는 조금 둥글게(면 36), 먼 띠는 안개에 묻히니 거칠게(면 20) — 폰에서 삼각형 수를 아낀다
+  //  가까운 띠는 조금 둥글게(면 80), 먼 띠는 안개에 묻히니 거칠게(면 20) — 폰에서 삼각형 수를 아낀다
   {
     const greens = [0x2d452f, 0x344e33, 0x3e5a3a, 0x283f2c, 0x46603d];
     const autumn = [0x8e3a24, 0xa0562a, 0x8c7432];
     const rf = rng(99);
     const band = (N, d0, d1, detail) => {
-      const geo = detail ? new THREE.SphereGeometry(1, 6, 4) : new THREE.IcosahedronGeometry(1, 0);
+      const geo = new THREE.IcosahedronGeometry(1, detail);
       roughen(geo, detail ? 0.35 : 0.2, 21 + detail);
       geo.computeVertexNormals();
       const inst = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), N);
@@ -939,8 +925,8 @@ export function buildTemple(scene, lights = {}) {
       inst.count = n;
       scene.add(inst);
     };
-    band(230, 23, 46, 1);
-    band(320, 44, 86, 0);
+    band(330, 23, 46, 1);
+    band(520, 44, 86, 0);
   }
 
   // ── 겹겹의 산등성이 (산수화처럼 멀수록 옅게, 골짜기는 안개로 흐리게) ──
@@ -954,7 +940,7 @@ export function buildTemple(scene, lights = {}) {
     ];
     const fogC = new THREE.Color(FOG);
     for (const L of layers) {
-      const NA = 160;
+      const NA = 220;
       const rr = rng(L.seed * 131);
       const ph = [rr() * 6, rr() * 6, rr() * 6, rr() * 6];
       const pos = [];
