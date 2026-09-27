@@ -4,6 +4,37 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 13 — 오너 피드백: 랴오 "v3 꽁지머리 유지 + 뾰족한 부분을 양옆으로 흘러내리는 중단발 컬로"
+
+- **랴오 v5**(`liao_gi_wavy`, v4 보관): v3 부채꼴 꽁지머리 그대로, 삐친 원뿔 가닥 제거, 얼굴 양옆을 따라 물결치며
+  턱~어깨 길이로 내려와 끝이 말리는 가닥(한쪽 셋) + 이마 양옆 앞머리. 안대·머리띠·흰 속깃·맨살 V넥 유지.
+  `CHARACTER_LOOK_VERSION.liao = 'v5'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+
+## round 12 — 오너 피드백: 랴오 머리 "너무 뾰족해, 컬과 볼륨" + V넥 안쪽 흰 깃
+
+- **랴오 v4**(`liao_gi_curly`, v3 보관): 뾰족한 원뿔 대신 둥근 곱슬 뭉치로 머리 전체에 볼륨, 곱슬
+  꽁지머리 두 줄(좌우로 굽이침), 앞머리도 곱슬. V자 파란 깃 안쪽에 흰 속깃이 살짝 겹치고 그 안으로 맨살.
+  `CHARACTER_LOOK_VERSION.liao = 'v4'`. 난수 없이 황금각 나선으로 곱슬 자리를 정함.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+
+## round 11 — 오너 요청: 랴오 풍성한 꽁지머리 산발 + V넥 맨살
+
+- **랴오 v3**(`liao_gi_wild`, v2 보관): 뒤통수 높이 묶은 굵은 꽁지머리가 다섯 가닥으로 부채처럼 뻗고,
+  정수리·옆·앞머리에 삐친 가닥(산발). 흰 속옷 대신 V자 깃 사이로 맨살. 안대·머리띠·도복 v2 그대로.
+  `CHARACTER_LOOK_VERSION.liao = 'v3'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `liao_v3.jpg`, `liao_v3_head_{front,side,back}.jpg` 등.
+
+## round 10 — 오너 요청: 랴오 푸른 무도가 도복 (하오마루 같은 옷)
+
+- **랴오 v2**(`liao_gi`, v1 보관): V자로 여민 푸른 도복 윗도리 + 흰 속옷, 넓은 소매, 흰 새끼줄 허리띠 매듭,
+  발목까지 넓은 남색 하카마(다리마다 따로라 걸음이 읽힘), 짚신 색 신. 장발·안대 유지, X자 끈 제거.
+  특정 캐릭터 의상을 베끼지 않고 떠돌이 무도가 실루엣만 참고. `CHARACTER_LOOK_VERSION.liao = 'v2'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `liao_v2.jpg`, `liao_v2_default_far.jpg`, `liao_v2_side.jpg`, `liao_v2_back.jpg`, `liao_v2_down.jpg`.
+- 설정집 차이(캐릭터 PM용): 설정집은 "짙은 녹색 옷·검은 하의" → v2는 푸른 도복·남색 하카마.
+
 ## round 9 — 오너 요청: 이졸데 허리까지 오는 긴 머리
 
 - **이졸데 v2**(`isolde_longhair`, v1 보관): 검은 긴 생머리가 허리(벨트)까지. 고개를 돌려도 긴 머리가 몸을

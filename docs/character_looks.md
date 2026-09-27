@@ -3,7 +3,7 @@
 오너 요청: "캐릭터 모델링을 개선하고 싶다." 5인의 상대 캐릭터에 갑옷판·머리모양·수염·안대 같은
 장식 레이어(`src/outfits.js`)를 새로 얹고, 예전 겉모습은 지우지 않고 `src/looks.js`의
 `LOOK_ARCHIVE`에 `v0`로 남겨 두었다. 지금 게임이 쓰는 버전은 `CHARACTER_LOOK_VERSION`이
-가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 나머지는 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
+가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 랴오 `v5`, 브란만 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
 
 플레이어(케틀햇+갬비슨)의 겉모습은 요청대로 건드리지 않았다.
 
@@ -103,13 +103,40 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 ## 랴오 쓰위엔 (`liao`) — 방랑 낭인
 
 **v0(예전)**: 짙은 초록 방랑 검객 — 검은 머리, 붉은 머리띠.
-**v1(지금, `outfit: 'liao_ronin'`)**: 장발(뒤로 묶어 등까지 늘어뜨림) + 한쪽 눈 안대(작은 판 +
+**v1(보관, `outfit: 'liao_ronin'`)**: 장발(뒤로 묶어 등까지 늘어뜨림) + 한쪽 눈 안대(작은 판 +
 짧은 끈). 사무라이 쇼다운의 방랑 검객(무사시·하오마루 계열) 분위기만 참고했고, 특정 캐릭터의
 디자인을 그대로 베끼지 않았다.
 
-| v0 | v1 |
-| --- | --- |
-| ![liao v0](character_looks/liao_v0.jpg) | ![liao v1](character_looks/liao_v1.jpg) |
+**v2(보관, `outfit: 'liao_gi'`)**: 오너 요청 "동양 무도가 같은 푸른색 도복, 하오마루 같이 생긴 옷". 떠돌이
+무도가 실루엣만 참고한 새 디자인 — V자로 여민 푸른 도복 윗도리(흰 속옷이 보임), 팔꿈치 쪽으로 넓어지는
+소매, 흰 새끼줄 허리띠 매듭, 발목까지 오는 넓은 남색 하카마, 짚신 색 신. X자 가죽끈은 뺐고 장발·안대는 그대로.
+
+**v3(보관, `outfit: 'liao_gi_wild'`)**: 오너 요청 "좀 더 풍성한 꽁지머리 산발, V넥 위로 살색이 보여 V넥 강조".
+뒤통수 높이 묶은 굵은 꽁지머리가 다섯 가닥으로 부채처럼 뻗고, 정수리·옆·앞머리에 삐친 가닥을 달아
+산발로(안대·머리띠 유지). 흰 속옷을 빼고 V자 깃 사이로 맨살이 보이게 했다. 옷·색은 v2 그대로.
+근접: [정면](character_looks/liao_v3_head_front.jpg) · [옆(꽁지머리)](character_looks/liao_v3_head_side.jpg) ·
+[뒤](character_looks/liao_v3_head_back.jpg) · [전신](character_looks/liao_v3.jpg)
+
+**v4(보관, `outfit: 'liao_gi_curly'`)**: 오너 피드백 "너무 뾰족해, 컬과 볼륨이 있는 머리, V넥 안쪽으로 살짝
+흰 깃이 겹치게". v3의 뾰족한 원뿔 가닥을 모두 둥근 곱슬 뭉치로 바꿔 머리 전체에 볼륨을 주고(황금각 나선으로
+골고루, 얼굴은 비움), 꽁지머리도 좌우로 굽이치는 곱슬 덩어리 두 줄로. 파란 깃 바로 안쪽에 흰 속깃이 겹치고
+그 안으로 맨살. 근접: [정면](character_looks/liao_v4_head_front.jpg) ·
+[옆(곱슬 꽁지머리)](character_looks/liao_v4_head_side.jpg) · [뒤](character_looks/liao_v4_head_back.jpg) ·
+[전신](character_looks/liao_v4.jpg)
+
+**v5(지금, `outfit: 'liao_gi_wavy'`)**: 오너 피드백 "v3 같은 꽁지머리는 유지하고, 스파이크 같은 뾰족한 부분을
+양옆으로 자연스럽게 흘러내리는 중단발 컬로". v3의 부채꼴 꽁지머리는 그대로, 삐친 원뿔 가닥은 모두 빼고
+관자놀이에서 얼굴 옆을 따라 물결치며 턱~어깨 길이로 내려와 끝이 안으로 말리는 가닥(한쪽 셋)과 이마 양옆으로
+넘어가는 부드러운 앞머리를 달았다. 안대·머리띠, v4의 흰 속깃·맨살 V넥 유지.
+근접: [정면](character_looks/liao_v5_head_front.jpg) · [옆](character_looks/liao_v5_head_side.jpg) ·
+[뒤](character_looks/liao_v5_head_back.jpg) · [전신](character_looks/liao_v5.jpg)
+
+| v0 | v1 | v2 (지금은 v5) |
+| --- | --- | --- |
+| ![liao v0](character_looks/liao_v0.jpg) | ![liao v1](character_looks/liao_v1.jpg) | ![liao v2](character_looks/liao_v2.jpg) |
+
+v2 추가 컷: [대결 거리](character_looks/liao_v2_default_far.jpg) · [옆](character_looks/liao_v2_side.jpg) ·
+[뒤](character_looks/liao_v2_back.jpg) · [쓰러짐](character_looks/liao_v2_down.jpg)
 
 추가 컷: [3/4](character_looks/liao_threeq.jpg) · [옆](character_looks/liao_side.jpg) ·
 [기본 대결 화면](character_looks/liao_default.jpg) · [쓰러짐](character_looks/liao_down.jpg)
