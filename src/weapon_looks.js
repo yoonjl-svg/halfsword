@@ -1054,12 +1054,13 @@ export function drawFrozenTuna(group) {
     [1, 0.004],
   ]);
   const sOp = (vert) => 0.845 + 0.022 * vert * vert; // 아가미 뚜껑 뒷선 (위아래로 갈수록 꼬리 쪽으로 휜다)
-  const DORSAL = lin(0x14213b);
-  const FLANK = lin(0x5b7187);
-  const BELLY = lin(0xd6dee3);
+  // 참다랑어처럼 등은 짙은 쇠파랑, 옆구리는 푸른 은빛 (오너 지시 "더 파랗게": 예전 남색·회청색은 흐린 하늘 아래서 잿빛으로 보였다)
+  const DORSAL = lin(0x0f2f6e);
+  const FLANK = lin(0x3f6fae);
+  const BELLY = lin(0xd0deec);
   const GOLD = lin(0xc9a13c);
   const DARK = lin(0x0f1626);
-  const FROST = lin(0xe9f2f6);
+  const FROST = lin(0xd8eafb); // 서리도 얼음빛(푸르스름)
   const radius = (t, a) => {
     const s = t;
     const vert = -Math.cos(a);
@@ -1087,8 +1088,8 @@ export function drawFrozenTuna(group) {
     if (s > 0.955) c = mixc(c, DARK, 0.8 * Math.exp(-(((vert + 0.1) / 0.09) ** 2))); // 입 선
     // 서리: 몸 여기저기 흰 얼룩(등의 남색은 살린다) + 등마루에 가는 흰 서리 한 줄
     const fr = smooth(0.7, 0.95, 0.5 + 0.5 * Math.sin(13 * a + 71 * s + 1) * Math.sin(7 * a - 43 * s + 2));
-    c = mixc(c, FROST, 0.48 * fr + 0.55 * smooth(0.965, 0.995, vert));
-    return mixc(c, lin(0x8fa4b4), 0.05); // 얼어서 살짝 바랜 빛
+    c = mixc(c, FROST, 0.34 * fr + 0.5 * smooth(0.965, 0.995, vert));
+    return mixc(c, lin(0x86aee0), 0.05); // 얼어서 살짝 바랜 얼음빛
   };
   const geo = organicBody({
     y0,
@@ -1104,12 +1105,12 @@ export function drawFrozenTuna(group) {
   const env = weaponEnv();
   group.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.2, envMap: env, envMapIntensity: 0.6 })));
   // 얇은 얼음막: 같은 몸을 아주 조금 부풀려 투명하게 덮는다 — 빛이 번들거려 "꽁꽁 언" 느낌
-  const glaze = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xdff3ff, transparent: true, opacity: 0.12, roughness: 0.06, metalness: 0.1, envMap: env, envMapIntensity: 1.2, depthWrite: false }));
+  const glaze = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xc9e4ff, transparent: true, opacity: 0.12, roughness: 0.06, metalness: 0.1, envMap: env, envMapIntensity: 1.2, depthWrite: false }));
   glaze.scale.set(1.018, 1, 1.024);
   group.add(glaze);
 
   const finMat = (color, rough = 0.5) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.3, envMap: env, envMapIntensity: 0.6, side: THREE.DoubleSide });
-  const navy = finMat(0x24334d);
+  const navy = finMat(0x1a3566);
   const yellow = finMat(0xd9ae38, 0.45);
   const back = (s) => -rxP(s) * 0.96 + 0.0015; // 등 표면 x (지느러미 뿌리를 살짝 묻는다)
   const belly = (s) => rxP(s) - 0.0015;
@@ -1191,7 +1192,7 @@ export function drawFrozenTuna(group) {
   const eyeZ = rzP(sE) + 0.0005;
   const iris = new THREE.MeshStandardMaterial({ color: 0xb8a468, roughness: 0.25, metalness: 0.8, envMap: env });
   const pupil = new THREE.MeshStandardMaterial({ color: 0x0b0d12, roughness: 0.1, metalness: 0.2, envMap: env });
-  const cloud = new THREE.MeshStandardMaterial({ color: 0xe6eef2, transparent: true, opacity: 0.38, roughness: 0.2, envMap: env, depthWrite: false });
+  const cloud = new THREE.MeshStandardMaterial({ color: 0xdde9f5, transparent: true, opacity: 0.38, roughness: 0.2, envMap: env, depthWrite: false });
   const rim = finMat(0x0f1626);
   for (const sz of [-1, 1]) {
     const e = addTo(group, new THREE.SphereGeometry(1, 20, 14), iris, [-0.006, 0.842, sz * (eyeZ - 0.001)]);
@@ -1203,7 +1204,7 @@ export function drawFrozenTuna(group) {
     addTo(group, new THREE.TorusGeometry(0.0108, 0.0012, 6, 24), rim, [-0.006, 0.842, sz * (eyeZ + 0.0002)]);
   }
   // 서리 결정·얼음 조각: 등 쪽과 지느러미 가장자리에 반짝이는 흰 알갱이, 옆구리에 붙은 투명한 얼음 덩이
-  const crystal = new THREE.MeshStandardMaterial({ color: 0xf4fbff, roughness: 0.15, metalness: 0.05, envMap: env, envMapIntensity: 1.2 });
+  const crystal = new THREE.MeshStandardMaterial({ color: 0xe3f1ff, roughness: 0.15, metalness: 0.05, envMap: env, envMapIntensity: 1.2 });
   for (let i = 0; i < 22; i++) {
     const s = 0.22 + 0.68 * frac(i * 0.618034);
     const a = Math.PI + (frac(i * 0.381966 + 0.17) - 0.5) * 1.9;
@@ -1213,7 +1214,7 @@ export function drawFrozenTuna(group) {
     const c = addTo(group, new THREE.OctahedronGeometry(r, 0), crystal, [Math.cos(a) * rx * 0.98, Y(s), Math.sin(a) * rz * 0.98]);
     c.rotation.set(i * 0.7, i * 1.3, i * 0.4);
   }
-  const ice = new THREE.MeshStandardMaterial({ color: 0xe4f6ff, transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.05, envMap: env, envMapIntensity: 1.6, depthWrite: false });
+  const ice = new THREE.MeshStandardMaterial({ color: 0xd3eaff, transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.05, envMap: env, envMapIntensity: 1.6, depthWrite: false });
   for (const [s, a, sx, sy, sz] of [
     [0.52, 0.9, 0.014, 0.022, 0.008],
     [0.33, -1.1, 0.01, 0.016, 0.007],

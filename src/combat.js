@@ -148,6 +148,7 @@ export class Combat {
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
     let energy = ephys * STRIKE.energyScale;
+    let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 
     let type = 'blunt';
     let quality = 1;
@@ -157,10 +158,12 @@ export class Combat {
     if (isBlade) {
       if (along > STRIKE.stabAlign - win && t > 0.8 - win) {
         type = 'stab';
-        // 칼끝 찌르기 동작(skill.js thrust: 탭 찌르기, 찌르기 무기 AI 의 찌르기 기술) 중에는 팔을 곧게 뻗어 칼 축으로 민다
-        //  → 팔·어깨 무게가 칼끝 뒤에 함께 실린다 (자세로 돌아오는 동안은 아니다). 그 밖의 칼 축 방향 접촉
-        //  (자세 지도를 따라 칼을 돌리다 닿은 것)은 예전 그대로
-        if (att.skill?.thrustPose.w > 0.5) {
+        // 칼끝 찌르기 동작(skill.js thrust: 탭 찌르기, 찌르기 무기 AI 의 찌르기 기술)에서 칼끝을 뻗는 구간(thrustPush:
+        //  겨눈 뒤 ~ 뻗고 버티기 끝)에는 팔을 곧게 뻗어 칼 축으로 민다 → 팔·어깨 무게가 칼끝 뒤에 함께 실린다.
+        //  겨누며 당기는 동안·자세로 돌아오는 동안·넘어진 뒤는 아니다. 그 밖의 칼 축 방향 접촉(자세 지도를 따라 칼을 돌리다
+        //  닿은 것)은 예전 그대로. 칼끝이 들어가지 못해 멍으로 바뀌면 이 몫을 빼고 원래 에너지로 돌린다(아래)
+        if (att.skill?.thrustPush && (att.state === 'stand' || att.state === 'kneel')) {
+          assisted = { mEff, ephys, energy };
           mEff = mFree + STRIKE.thrustAssist;
           ephys = 0.5 * mEff * speed * speed;
           energy = ephys * STRIKE.energyScale;
@@ -220,6 +223,8 @@ export class Combat {
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
       } else if (!predicting) {
         type = 'blunt'; // 날이 들지 못했으면 멍만 든다
+        // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
+        if (assisted) ({ mEff, ephys, energy } = assisted);
       }
     }
     if (type === 'blunt') energy *= att.weaponCfg.power * att.weaponCfg.mBlunt * emoDealt * emoTaken;

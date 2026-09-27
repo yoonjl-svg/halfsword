@@ -8,14 +8,16 @@
 //  (보조가 조금 남아 있어서 예전만큼 잘 넘어지지 않는다). 몸을 앞으로 보내는 힘·똑바로 세우는 힘도 예전 그대로다.
 //
 //   1) 딛은 발: 발을 디딘 자리(월드 좌표)를 기억하고, 다리 역운동학(IK)으로 엉덩이 → 그 자리까지 다리를 뻗는다.
-//      골반이 움직여도 발은 그 자리에 붙어 있다 (미끄러지지 않는다). 발바닥은 정지 마찰처럼 붙잡는다(한계 = 마찰계수 × 실린 무게).
+//      골반이 움직여도 발은 그 자리에 붙어 있다 (미끄러지지 않는다). 발바닥은 정지 마찰처럼 붙잡는다(한계 = 마찰계수 × 실린 무게,
+//      실린 무게는 걸러서 쓴다: 접촉 힘이 순간 작게 잡힐 때마다 붙잡는 자리가 끌려가면 가만히 선 발이 조금씩 밀려난다).
 //   2) 골반 높이: 딛은 다리가 닿을 수 있는 높이 (뒤집힌 진자) → 두 발을 딛을 때 낮아지고 한 발 위를 지날 때 높아진다.
-//      발을 막 디딘 순간 무릎이 살짝 굽으며 무게를 받는다 (하중 반응).
-//   3) 걸음: 시간으로 박자를 맞추고(빠를수록 조금 잦게, 보폭은 길게), 내딛는 발은 "몸이 갈 곳"(속도 기반, Raibert)에 놓는다.
-//      한 발로 설 때마다 무게중심이 딛은 발 쪽으로 옮겨 간다 (좌우 흔들림).
-//   4) 멈추면 펜싱 자세(칼 든 쪽 발이 앞, 무릎을 살짝 굽힘)로 발을 고쳐 딛는다. 몸을 돌리면 발도 돌려 딛는다.
+//      발을 막 디딘 순간 무릎이 살짝 굽으며 무게를 받는다 (하중 반응). 옆걸음·천천히 걷기엔 골반을 조금 더 출렁인다.
+//   3) 걸음: 시간으로 박자를 맞추고(빠를수록 잦게, 보폭은 길게), 내딛는 발은 "몸이 갈 곳"(속도 기반, Raibert)에 놓는다.
+//      한 발로 설 때마다 무게중심이 딛은 발 쪽으로 옮겨 간다 (좌우 흔들림). 아주 빠르면 무릎을 굽힌 채 종종 뛴다.
+//   4) 멈추면 펜싱 자세(칼 든 쪽 발이 앞, 무릎을 살짝 굽힘)로 발을 고쳐 딛는다. 몸을 돌리면 발도 돌려 딛는다
+//      (돌아서는 방향을 미리 보고 짧고 빠른 걸음으로. 돌면서 걸을 땐 방향을 틀 수 있는 만큼만 빨리 간다).
 //   5) 세게 맞아 발이 끌리거나, 넘어지거나, 쓰러진 뒤에는 예전 방식(보조 힘 100%)으로 돌아갔다가,
-//      일어서면 보조 힘을 천천히 줄이며 다리로 넘겨준다.
+//      일어서면 보조 힘을 부드럽게 줄이며 다리로 넘겨준다 (다리가 이미 받치는 만큼은 보조를 덜 쓴다).
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { BODY, GAIT } from './config.js';
@@ -25,6 +27,7 @@ const B_LEN = 0.42; // 정강이 (무릎 → 발목)
 /**
  * 'hybrid'일 때 다리 관절을 조금 바꾼다 (몸이 만들어질 때 한 번):
  *  발목을 공 관절로 → 다리가 옆으로 기울어도 발바닥이 땅에 평평하게 닿는다 (경첩이면 발 모서리로 선다)
+ *  엉덩이를 조금 더 비틀 수 있게 → 딛은 발 위에서 몸을 돌릴 수 있다
  */
 export function hybridJointDefs(defs) {
   for (const jd of defs) {
@@ -32,6 +35,8 @@ export function hybridJointDefs(defs) {
       jd.type = 'ball';
       jd.lim = { x: [-0.4, 0.4], y: [-0.3, 0.3], z: [-0.6, 0.8] }; // 옆으로 기울기, 비틀기, 앞뒤 굽히기
     }
+    // 엉덩이 비틀기(안쪽·바깥쪽 돌리기)를 사람만큼 (약 45도): 딛은 발 위에서 몸을 돌릴 때 관절 한계에 걸려 발을 비틀지 않게
+    if ((jd.c === 'thighF' || jd.c === 'thighB') && GAIT.hipTwist) jd.lim = { ...jd.lim, y: [-GAIT.hipTwist, GAIT.hipTwist] };
   }
   return defs;
 }
@@ -65,11 +70,13 @@ function mkLeg(k, side) {
     stance: true,
     plant: new THREE.Vector3(), // 딛은 자리 (발목, 월드)
     yaw: 0, // 딛은 발의 방향 (월드)
+    yawTD: 0, // 디딜 때의 발 방향
     tLand: 1, // 디딘 뒤 지난 시간
     hip: new THREE.Vector3(), // 엉덩이 관절 (월드, 실제)
     ankle: new THREE.Vector3(), // 발목 (월드, 실제)
     footYaw: 0,
     soleY: 0,
+    toeY: 0,
     // 내딛는 중
     t: 0,
     T: 0.4,
@@ -81,6 +88,7 @@ function mkLeg(k, side) {
     kind: 'walk',
     phi: 0, // 지금 목표 무릎 굽힘
     heel: 0, // 뒤꿈치를 든 각도
+    phiTD: 0, // 디딜 때의 무릎 굽힘
     hFrac: 1,
     y0: 0, // 걸음을 바꿀 때 이미 들려 있던 높이
     rel: new THREE.Vector3(), // 엉덩이에 대한 내딛는 발목 목표
@@ -102,6 +110,9 @@ export class Gait {
     this.legs = { F: mkLeg('F', s), B: mkLeg('B', -s) };
     this.active = false;
     this.lev = 0; // 넘겨받는 중 더하는 보조 힘 비율 (1 = 예전 방식 그대로, 0 = 다리가 GAIT.assist 몫 빼고 전부)
+    this.levH = 0; // 그중 일어선 직후 넘겨받기 몫 (골반 높이는 다리가 닿는 만큼만)
+    this.levC = 0; // 그중 붙잡기 반사 몫 (다리가 닿지 않아도 골반을 제 높이에 둔다)
+    this.handU = 1; // 넘겨받기 진행 (0 → 1)
     this.h = BODY.standHeight; // 골반 높이 목표
     this.hNom = BODY.standHeight;
     this.hv = 0;
@@ -119,6 +130,7 @@ export class Gait {
     this.headRate = 0; // 몸을 돌리는 빠르기(rad/s)
     this.sinceEnter = 0;
     this.speedF = 0;
+    this.runW = 0;
   }
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
@@ -129,16 +141,21 @@ export class Gait {
       const L = this.legs[k];
       L.stance = true;
       this.plantAt(L);
+      this.footMass(L, true);
       L.tLand = 1;
     }
     // 라운드 시작: 이미 두 발로 서 있으니 바로 다리가 받친다. 일어선 직후: 보조 힘 100%에서 천천히 넘겨받는다
-    this.lev = this.started ? 1 : 0;
+    this.levH = this.started ? 1 : 0;
+    this.handU = this.started ? 0 : 1;
+    this.levC = 0;
+    this.lev = this.levH;
     this.started = true;
     this.sinceEnter = 0;
-    this.hNomF = undefined;
     const p = this.f.bodies.pelvis.translation();
+    // 일어선 직후: 골반 높이 목표는 지금 높이에서 출발해 천천히 자세 높이로 간다 (한 번에 바꾸면 솟았다가 주저앉는다)
+    this.hNomF = this.levH ? clamp(p.y, GAIT.guardHeight - 0.03, GAIT.walkHeight) : undefined;
     this.h = p.y;
-    this.hv = 0;
+    this.hv = this.levH ? clamp(this.f.bodies.pelvis.linvel().y, -0.3, 0.3) : 0;
     this.sinceTD = 0;
     this.walking = false;
     this.speedF = 0;
@@ -156,6 +173,7 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
       J[l.thigh].gain = J[l.shin].gain = J[l.foot].gain = 1;
+      this.footMass(l, false);
     }
     this.req = null;
   }
@@ -179,6 +197,7 @@ export class Gait {
       L.fp.copy(_s1);
       L.ankle.set(-0.05, 0.035, 0).applyQuaternion(_qF).add(_s1);
       L.soleY = _s2.set(0, -0.035, 0).applyQuaternion(_qF).add(_s1).y;
+      L.toeY = _s2.copy(SOLE_T).applyQuaternion(_qF).add(_s1).y;
       const fx = _s2.set(1, 0, 0).applyQuaternion(_qF);
       L.footYaw = Math.atan2(-fx.z, fx.x);
     }
@@ -208,7 +227,8 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
       if (!l.stance) continue;
-      const tw = wrap(pel - l.yaw) * Math.sign(turn); // 도는 쪽으로 이미 비튼 만큼
+      // 도는 쪽으로 이미 비튼 만큼 (디딜 때의 발 방향 기준: 발이 비틀려 끌려가도 한계가 따라 늘지 않게)
+      const tw = wrap(pel - l.yawTD) * Math.sign(turn);
       lim = Math.min(lim, Math.max(0, GAIT.maxTwist - tw));
     }
     return Math.sign(turn) * Math.min(Math.abs(turn), lim);
@@ -234,7 +254,12 @@ export class Gait {
     this.sinceEnter += dt;
     const settled = !this.walking && this.legs.F.stance && this.legs.B.stance && this.sinceTD > 0.15 && !this.settleLeg(true);
     const walkedIn = this.walking && this.walkT > 0.8;
-    if (this.sinceEnter > GAIT.handoverMax || settled || walkedIn) this.lev = Math.max(0, this.lev - dt / GAIT.handover);
+    if (this.sinceEnter > GAIT.handoverMax || settled || walkedIn) {
+      // 넘겨받기는 부드럽게 (처음과 끝이 느리게: 끝에서 한 번에 다리로 넘기면 골반이 처진다)
+      this.handU = Math.min(1, this.handU + dt / GAIT.handover);
+      this.levH = 1 - minJerk(this.handU);
+      this.levC = Math.max(0, this.levC - dt / GAIT.handover);
+    }
     // 붙잡기 반사: 골반이 크게 주저앉거나 몸이 많이 기울면(세게 맞음) 보조 힘을 되살린다 → 예전 방식처럼 버틴다.
     //  보조가 커지면 딛은 발의 정지 마찰(pinFeet)도 약해져서 발이 끌려가며 버틴다
     {
@@ -242,16 +267,35 @@ export class Gait {
       const need = Math.max(
         clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
         clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
-        clamp((f.offBalance - 0.15) / 0.25, 0, 1),
+        clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1),
       );
-      if (need > this.lev) this.lev += (need - this.lev) * Math.min(1, dt * 30);
+      if (need > this.levC) this.levC += (need - this.levC) * Math.min(1, dt * 30);
+      this.lev = Math.max(this.levH, this.levC);
     }
+    // 다리가 실제로 땅을 누르는 힘 (지난 스텝, 걸러서): 넘겨받는 동안 보조 힘을 그만큼 덜 쓴다
+    this.Mg = this.Mg || f.totalMass * 9.81;
+    //  (딛은 발에 더한 무게(footExtra)는 땅이 바로 받치는 몫이라 뺀다)
+    const Nn = Math.max(0, (this.legs.F.N || 0) + (this.legs.B.N || 0) - 9.81 * ((this.legs.F.N > 0 ? this.legs.F.extra || 0 : 0) + (this.legs.B.N > 0 ? this.legs.B.extra || 0 : 0)));
+    this.Nsum = (this.Nsum ?? Nn) + (Nn - (this.Nsum ?? Nn)) * Math.min(1, dt * 20);
     const dHead = wrap(f.heading - this.prevHead);
     this.prevHead = f.heading;
     this.headRate += (dHead / dt - this.headRate) * Math.min(1, dt * 10);
     // 일어선 직후(보조 힘을 넘겨받는 중)엔 천천히 걷는다
-    if (this.lev > 0) want.multiplyScalar(1 - GAIT.handoverSlow * this.lev);
+    //  (보조가 다 빠진 뒤에도 조금 더 천천히 빨라진다: 한 번에 빨라지면 첫 걸음에 골반이 처진다)
+    this.slow = Math.max(this.lev, (this.slow || 0) - dt / GAIT.handoverRamp);
+    if (this.slow > 0) want.multiplyScalar(1 - GAIT.handoverSlow * minJerk(this.slow));
+    // 돌면서 걸을 땐 (속도 × 도는 빠르기 = 방향을 트는 가속)이 발로 낼 수 있는 만큼만 빨리 간다
+    //  (빠르게 걸으며 휙 돌면 몸이 옆으로 흘러 뒤에 남은 발이 닿지 않고 끌린다)
+    if (GAIT.turnAccel > 0) {
+      const vMax = GAIT.turnAccel / Math.max(0.1, Math.abs(this.headRate));
+      const sp = Math.hypot(want.x, want.z);
+      if (sp > vMax) want.multiplyScalar(vMax / sp);
+    }
     const speed = Math.hypot(want.x, want.z);
+    // 가려는 쪽의 앞뒤 몫 (+1 = 앞으로, −1 = 뒤로): 조종 입력으로 (want에는 균형 잡는 발걸음 등이 섞여 들쭉날쭉하다)
+    const mv = f.move;
+    const foreFrac = mv && mv.lengthSq() > 1e-6 ? mv.y / mv.length() : 0;
+    const backness = clamp((-foreFrac - GAIT.backFrom) / GAIT.backFull, 0, 1); // 뒤로 가는 정도 (0 ~ 1, 비스듬히 물러나는 것도)
     // 걷기 시작·멈추기 판단은 걸러진 속도로, 조금 여유를 두고 (균형 잡는 발걸음(stumble)이 매 스텝 들쭉날쭉해서
     //  걷기 ↔ 서기가 번갈아 바뀌면 발이 헛디딘다)
     this.speedF += (speed - this.speedF) * Math.min(1, dt * GAIT.walkFilter);
@@ -265,7 +309,9 @@ export class Gait {
     if (walkNow) this.settles = 0;
     // 걸음 박자: 느리면 한 걸음 약 0.55초, 빠를수록 잦아지고 보폭이 길어진다
     const vLat = Math.abs(want.x * rgt.x + want.z * rgt.z);
-    const cad = Math.max(GAIT.cadence0 + GAIT.cadenceK * Math.max(0, speed - 1), speed / GAIT.maxStride, (2 * vLat) / GAIT.sideStride, GAIT.cadence0 * 0.9);
+    //  (비스듬히 물러날 땐 옆으로 옮기는 보폭을 줄인다: 뒤에 남는 발이 옆으로 멀어져 다리가 벌어진 채 골반이 주저앉는다)
+    const sideStride = GAIT.sideStride * (1 - GAIT.backSideCut * backness);
+    const cad = Math.max(GAIT.cadence0 + GAIT.cadenceK * Math.max(0, speed - 1), speed / GAIT.maxStride, (2 * vLat) / sideStride, GAIT.cadence0 * 0.9);
     const T = walkNow ? 1 / cad : GAIT.settleT / (1 - GAIT.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
     const Tds = this.stepT * GAIT.dsFrac;
@@ -289,7 +335,13 @@ export class Gait {
 
     // ② 내딛는 발
     // 자세를 고쳐 딛던 중에 다시 걷기 시작하면: 지금 발 위치에서 걷는 걸음으로 바꾼다
-    if (swing && walkNow && swing.kind === 'settle') {
+    //  (이미 거의 딛었으면 그대로 딛는다: 무게가 실린 발을 다시 들어 옮기면 땅을 긁는다)
+    //  (반 넘게 옮긴 발은 마저 딛는다: 땅 가까이 내려오는 발을 새 자리로 휙 옮기면 땅을 긁는다)
+    if (swing && walkNow && swing.kind === 'settle' && swing.t > swing.T * 0.6 && swing.soleY < GAIT.convertLand) {
+      this.touchdown(swing, 0);
+      swing = null;
+    }
+    if (swing && walkNow && swing.kind === 'settle' && swing.t < swing.T * GAIT.convertMax) {
       swing.p0.copy(swing.des);
       swing.y0 = Math.max(0, swing.des.y - ANKLE_H);
       swing.p0.y = ANKLE_H;
@@ -299,11 +351,21 @@ export class Gait {
       swing.kind = 'walk';
       swing.hFrac = 1;
     }
+    // 세게 밀려 균형을 잃으면 내딛는 발을 서둘러 딛는다 (한 발로 오래 버티면 딛은 발이 들려 몸이 넘어간다)
+    //  (걷기 시작·멈출 때 조금 기우는 정도(offBalance ≈ 0.3)에선 서두르지 않는다: 발이 움직이는 채로 닿아 미끄러진다)
+    let hurry = GAIT.catchHurry * clamp((f.offBalance - GAIT.hurryFrom) / 0.2, 0, 1);
+    // 딛은 발이 뒤로 빠져 뒤꿈치를 거의 끝까지 들었으면(다리가 곧 닿지 않는다) 내딛는 발을 서둘러 딛는다
+    //  (빨리 나가기 시작할 때·뛸 때: 몸이 먼저 나가 뒤에 남은 발이 발끝으로 끌린다. 제자리에서 돌 땐 서두르지 않는다: 돌려 딛는 발이 돌아가는 채로 닿는다)
+    if (swing && swing.kind === 'walk' && speed > GAIT.hurrySpeed && Math.abs(this.headRate) < 1) {
+      const st = swing === L.F ? L.B : L.F;
+      if (st.stance) hurry = Math.max(hurry, GAIT.reachHurry * clamp((st.heel - GAIT.heelHurry) / 0.12, 0, 1));
+    }
     if (swing) {
-      swing.t += dt;
+      swing.t += dt * (swing.kind === 'req' ? 1 : 1 + hurry);
       const u = swing.t / swing.T;
       if (u < GAIT.retarget) this.target(swing, want, fwd, rgt, Math.max(0, swing.T - swing.t));
-      if ((u >= 1 && swing.soleY < 0.02) || u >= 1 + GAIT.lateMax / swing.T || (u > 0.8 && swing.soleY < 0.004)) {
+      if ((u >= 1 && swing.soleY < 0.02) || u >= 1 + GAIT.lateMax / swing.T || (u > 0.8 && swing.soleY < 0.004) || (u > GAIT.earlyTD && this.groundForce(swing) > GAIT.earlyLoad * this.Mg)) {
+        // (발을 든 동안 발이 땅에 닿아 무게가 실리면(몸이 내려앉음) 그 자리에서 딛는다: 무게 실린 발을 끌고 가면 미끄러진다)
         this.touchdown(swing, speed);
         swing = null;
       }
@@ -319,7 +381,10 @@ export class Gait {
         const l = L[k];
         const hx = l.hip.x - l.plant.x;
         const hz = l.hip.z - l.plant.z;
-        if (hx * hx + hz * hz > GAIT.reachMax * GAIT.reachMax) next = next || k;
+        //  (일어선 직후처럼 "딛은" 발이 실제로는 떠 있으면 그 발부터 딛는다: 다른 발을 들면 두 발 다 떠 버린다)
+        //  (서 있는 중에도 딛은 발이 발끝까지 땅에서 떠 무게가 없으면 (골반이 들려 다리가 닿지 않음) 그 발을 다시 딛는다: 공중에 뜬 채 끌려가지 않게)
+        const air = l.soleY > GAIT.airFoot && (this.levH > 0 || (l.toeY > GAIT.airFoot * 0.75 && (l.N || 0) < 0.05 * this.Mg));
+        if (hx * hx + hz * hz > GAIT.reachMax * GAIT.reachMax || air) next = next || k;
       }
       if (this.req && !next) {
         const front = this.frontLeg(fwd);
@@ -328,7 +393,9 @@ export class Gait {
         Tstep = this.req.duration;
       } else if (walkNow && !next) {
         // 걷기 시작: 가려는 쪽에서 뒤에 있는 발부터 (앞발부터 내딛으면 몸이 달아난다). 걷는 중: 번갈아
-        if (this.walkT > this.stepT * 1.2 || this.sinceTD < this.stepT) next = this.lastTD === 'F' ? 'B' : 'F';
+        //  (앞뒤로 걷기 시작할 땐 방금 디딘 발이라도 뒤에 있는 발부터: 앞발부터 내딛으면 뒷발이 닿지 않을 만큼 멀어진다)
+        const fore = Math.abs(want.x * fwd.x + want.z * fwd.z) > vLat;
+        if (this.walkT > this.stepT * 1.2 || (this.sinceTD < this.stepT && !(GAIT.startRear && fore))) next = this.lastTD === 'F' ? 'B' : 'F';
         else {
           const df = (L.F.plant.x - L.B.plant.x) * want.x + (L.F.plant.z - L.B.plant.z) * want.z;
           next = df > 0 ? 'B' : 'F';
@@ -342,20 +409,46 @@ export class Gait {
           this.settles++;
         }
       }
+      // 걷는 걸음은 다른 발이 몸무게를 넘겨받은 뒤에 뗀다 (막 디딘 발이 아직 덜 실렸는데 떼면, 무게가 실린 발을 끌며 든다)
+      //  (옆걸음은 빼고: 옆으로 벌려 딛은 발은 무게가 늦게 실려 기다리는 동안 다리가 벌어진다)
+      if (next && kind === 'walk' && GAIT.liftLoad > 0 && vLat < 0.6 * speed && this.sinceTD < Tds + GAIT.liftWait) {
+        const o = L[next === 'F' ? 'B' : 'F'];
+        //  (보조 힘이 많이 받칠 땐(일어선 직후 등) 다리에 실리는 무게도 그만큼 적다)
+        //  (뗄 발에 이미 무게가 거의 없으면(뒤로 빠져 떠 있음) 기다리지 않는다: 뛰듯 갈 땐 기다리는 동안 딛은 발이 끌린다)
+        const need = GAIT.liftLoad * this.Mg * (1 - this.lev);
+        if ((L[next].N || 0) > GAIT.liftOwn * need && (!o.stance || (o.N || 0) < need)) next = null;
+      }
       if (next) {
         const l = L[next];
+        if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
         this.target(l, want, fwd, rgt, Tstep);
         // 자세 고치기: 멀리 옮길수록 천천히 (휙 옮기면 딛을 때 미끄러진다)
-        if (kind === 'settle') l.T = clamp(GAIT.settleT + 0.5 * l.p0.distanceTo(l.p1), GAIT.settleT, 0.6);
+        //  몸을 돌리느라 발을 돌려 딛는 걸음은 짧고 빠르게 (돌아서는 동안 몸이 발을 기다리지 않게)
+        if (kind === 'settle') l.T = this.settleTurn ? GAIT.turnStepT : clamp(GAIT.settleT + 0.5 * l.p0.distanceTo(l.p1), GAIT.settleT, 0.6);
         swing = l;
       }
     }
+    // 발을 뗀 뒤 땅에서 떨어지면 원래 무게로 (땅에 닿은 채 가벼워지면 다리 힘에 발이 휙 끌려 땅을 긁는다)
+    if (swing && swing.extra && (swing.soleY > 0.015 || swing.t > 0.12)) this.footMass(swing, false);
     if (this.req) {
       this.req.age += dt;
       if (this.req.age > 1) this.req = null;
     }
 
+    // 한 발로 서 있는데 몸이 그 발에서 너무 멀어지면(다리가 곧 닿지 않는다) 내딛는 발이 닿을 때까지 덜 나간다
+    //  (계속 밀고 나가면 뒤에 남은 발이 발끝으로 끌린다)
+    if (swing && swing.kind !== 'req' && GAIT.reachSlow > 0) {
+      const st = swing === L.F ? L.B : L.F;
+      const hx = st.hip.x - st.plant.x;
+      const hz = st.hip.z - st.plant.z;
+      const sp = Math.hypot(want.x, want.z);
+      if (sp > 1e-3) {
+        const ahead = (hx * want.x + hz * want.z) / sp; // 가려는 쪽으로 엉덩이가 발보다 앞선 거리
+        const k = clamp(1 - (ahead - GAIT.reachSlow) / GAIT.reachSlowW, GAIT.reachSlowMin, 1);
+        if (k < 1) want.multiplyScalar(k);
+      }
+    }
     // 기술 걸음 동안엔 몸도 그만큼 따라 나간다
     if (swing && swing.kind === 'req' && this.req) want.addScaledVector(fwd, (this.req.fwd * 0.8) / (swing.T + 0.15));
     // ④ 좌우 무게 옮기기: 한 발로 서는 동안 무게중심을 딛은 발 쪽으로 (want에 속도로 더한다)
@@ -389,13 +482,21 @@ export class Gait {
     const drop = f.pelvisDropOffset || 0;
     const hurt = (1 - f.legHealth) * 0.1;
     // 빨리 걸을수록 무릎을 조금 더 굽힌 채 걷는다 (보폭이 길어도 골반이 크게 출렁이지 않게)
-    const walkH = GAIT.walkHeight - GAIT.walkHeightFast * clamp((speed - 0.8) / 0.8, 0, 1);
+    //  뛰듯이 빨리 갈 땐 무릎을 더 굽혀 몸을 낮춘다
+    //  옆걸음(옆으로 가는 몫이 절반 넘을 때)은 무릎을 조금 굽힌 채 (펜싱 발놀림처럼): 발을 옆으로 벌려 딛으면 어차피 골반이 내려간다
+    this.runW = walkNow ? clamp((speed - GAIT.runFrom) / 0.5, 0, 1) : 0; // 뛰듯 가는 정도 (0 ~ 1)
+    const walkH =
+      GAIT.walkHeight -
+      GAIT.walkHeightFast * clamp((speed - 0.8) / 0.8, 0, 1) -
+      GAIT.runDrop * this.runW -
+      GAIT.sideLow * clamp((speed > 1e-3 ? vLat / speed : 0) * 2 - 1, 0, 1);
     // 걷기 ↔ 서기 높이는 천천히 바꾼다 (한 번에 낮추면 다리를 오므려 두 발이 땅에서 뜬다)
     const hNomT = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop);
     const hr = GAIT.heightRate * dt;
     this.hNomF = this.hNomF === undefined ? hNomT : this.hNomF + clamp(hNomT - this.hNomF, -hr, hr);
     const hNom = this.hNomF;
     let hGeo = Infinity;
+    let hLow = Infinity;
     for (const k of ['F', 'B']) {
       const l = L[k];
       if (!l.stance) continue;
@@ -406,23 +507,76 @@ export class Gait {
       const hz = l.hip.z - l.plant.z;
       let hy = ANKLE_H + Math.sqrt(Math.max(0.04, Ls * Ls - hx * hx - hz * hz)) + HIP_DROP;
       // 뒤로 빠진 발은 뒤꿈치를 들어(발끝으로 서서) 더 높이 받칠 수 있다
+      //  (발이 엉덩이 옆을 지나 뒤로 빠지는 동안 조금씩 더한다: 한 번에 켜고 끄면 골반 높이 목표가 한 스텝에 몇 cm씩 뛴다)
       const back = hx * fwd.x + hz * fwd.z; // + = 발이 엉덩이 뒤에
       if (back > 0) {
         const r = Math.hypot(hx, hz);
         const r2 = Math.max(0, r - HEEL_DX);
-        hy = Math.max(hy, ANKLE_H + HEEL_DY + Math.sqrt(Math.max(0.04, Ls * Ls - r2 * r2)) + HIP_DROP);
+        const hyHeel = ANKLE_H + HEEL_DY + Math.sqrt(Math.max(0.04, Ls * Ls - r2 * r2)) + HIP_DROP;
+        if (hyHeel > hy) hy += (hyHeel - hy) * clamp(back / GAIT.heelBlend, 0, 1);
       }
       // 두 발로 딛을 땐 더 높이 받칠 수 있는 다리 기준 (뒷발은 뒤꿈치를 들어 따라온다)
       hGeo = hGeo === Infinity ? hy : Math.max(hGeo, hy);
+      hLow = Math.min(hLow, hy);
+    }
+    // 천천히 걸을 땐 두 발로 딛는 동안 낮은 쪽 다리 높이 쪽으로 내려앉는다 (뒷다리는 떼기 전에 무릎을 굽힌다):
+    //  보폭이 짧아 골반이 거의 출렁이지 않는 것을 보탠다. 앞다리 무릎을 더 꺾지 않고 골반을 내린다
+    //  (앞으로 걸을 때만: 옆걸음·뒷걸음은 따로 디딜 때 골반을 내린다)
+    //  (걷기 시작 직후엔 조금씩 켠다: 두 발로 딛고 선 채 출발할 때 한꺼번에 내려앉으면 두 발이 다 뜨고, 뒷발이 세게 다시 딛으며 미끄러진다)
+    if (walkNow && hLow < hGeo && GAIT.dsLow > 0 && speed > 1e-3) {
+      const fore = clamp((foreFrac - 0.3) / 0.4, 0, 1);
+      const easeIn = clamp(this.walkT / GAIT.dsLowIn, 0, 1);
+      hGeo -= (hGeo - hLow) * GAIT.dsLow * fore * easeIn * Math.max(GAIT.dsLowFast, clamp((GAIT.bobUntil - speed) / 0.5, 0, 1));
     }
     this.hNom = hNom;
     // 보조 힘이 많이 받칠 땐(넘겨받는 중·붙잡기 반사) 다리가 닿지 않아도 골반을 제 높이에 둔다
-    const hT = THREE.MathUtils.lerp(clamp(Math.min(hNom, hGeo), hNom - GAIT.maxDip, hNom), hNom, this.lev);
+    //  (일어선 직후 넘겨받는 몫은 다리가 닿는 높이를 지킨다: 보조가 빠질 때 골반이 내려앉지 않게)
+    //  넘겨받는 동안엔 그 몫의 일부(handH)만큼은 자세 높이 쪽으로 (발이 아직 제자리에 없어도 골반이 주저앉지 않게)
+    const levT = Math.max(this.levC, this.levH * GAIT.handH);
+    let hT = THREE.MathUtils.lerp(clamp(Math.min(hNom, hGeo), hNom - GAIT.maxDip, hNom), hNom, levT);
+    // 천천히 걸을 땐 보폭이 짧아 골반이 거의 출렁이지 않는다 → 두 발로 딛는 동안 살짝 내려앉았다가 한 발로 설 때 올라온다
+    if (walkNow && GAIT.bobAdd > 0) {
+      const up = swing && swing.kind !== 'settle' ? Math.sin(Math.PI * clamp(swing.t / swing.T, 0, 1)) : 0;
+      hT -= GAIT.bobAdd * (1 - up) * clamp((GAIT.bobUntil - speed) / 0.5, 0, 1);
+    }
+    // 옆걸음·뒷걸음: 발을 디딜 때마다 골반을 살짝 내려 무릎이 무게를 받게 한다
+    //  (옆걸음은 다리를 벌린 채, 뒷걸음은 발끝부터 디뎌 뒤꿈치를 든 채 무게를 받아서 저절로는 무릎이 굽지 않는다)
+    if (walkNow && GAIT.sideDip > 0 && speed > 1e-3) {
+      let bump = 0;
+      for (const k of ['F', 'B']) {
+        const l = L[k];
+        if (l.stance && l.tLand < GAIT.loadTime) bump = Math.max(bump, Math.sin((Math.PI * l.tLand) / GAIT.loadTime));
+      }
+      //  (앞뒤로 비스듬히 갈 땐 내리지 않는다: 앞으로 내딛는 다리는 저절로 무릎이 굽는다)
+      const side = clamp((vLat / speed - GAIT.sideDipFrom) / (1 - GAIT.sideDipFrom), 0, 1);
+      const back = backness * clamp(speed / 0.9, 0.4, 1); // 천천히 물러날 땐 덜
+      hT -= Math.max(GAIT.sideDip * side, GAIT.backDip * back) * bump;
+    }
     // 딱 멈추는 2차 필터 (내려갈 땐 빨리: 다리가 닿지 않는 높이로 끌어올리지 않게)
     const w = hT < this.h ? GAIT.hDown : GAIT.hUp;
     this.hv += (w * w * (hT - this.h) - 2 * w * this.hv) * dt;
+    // 올라가는 빠르기는 hUpMax(m/s)까지 (낮게 내려앉았던 골반을 한 번에 밀어 올리면 몸이 떠서 딛은 발이 미끄러진다)
+    if (this.hv > GAIT.hUpMax) this.hv = GAIT.hUpMax;
     this.h += this.hv * dt;
-    if (this.h > hGeo + 0.01 + this.lev) this.h = Math.max(hGeo + 0.01 + this.lev, hNom - GAIT.maxDip);
+    // 다리가 닿는 높이보다 높으면 내린다. 한 번에 내리지 않고 capRate(m/s)로 (디딘 발이 엉덩이 옆을 지날 때처럼 닿는 높이가
+    //  갑자기 줄면, 한 스텝에 골반 목표를 몇 cm 떨어뜨려 두 발이 다 들렸다가 다음 발이 몸무게의 두 배 가까이 받으며 미끄러진다)
+    const cap = Math.max(hGeo + 0.01 + levT, hNom - GAIT.maxDip);
+    if (this.h > cap) {
+      this.h = Math.max(cap, this.h - GAIT.capRate * dt);
+      this.hv = Math.min(this.hv, 0);
+    }
+  }
+
+  /**
+   * 몸무게를 받치는 보조 힘의 비율 (driveBalance가 쓴다). 넘겨받는 중엔 다리가 이미 받치는 만큼 덜 받친다
+   * (보조 힘 100% + 다리가 미는 힘이 겹치면 골반이 솟았다가, 보조가 빠질 때 주저앉는다)
+   */
+  supportShare(Mg) {
+    const share = GAIT.assist + (1 - GAIT.assist) * this.lev;
+    if (!(this.levH > 0) || this.levC >= this.levH) return share;
+    const legs = clamp((this.Nsum || 0) / Mg, 0, 1); // 다리가 받치는 몫 (실측)
+    const over = Math.max(0, share + legs - 1); // 넘치는 몫
+    return Math.max(GAIT.assist, share - over * this.levH);
   }
 
   /** 멈춘 뒤 펜싱 자세에서 가장 벗어난 발 (고쳐 딛을 발). 괜찮으면 null */
@@ -441,6 +595,7 @@ export class Gait {
       if (score > 1 && score > worstE) {
         worstE = score;
         worst = k;
+        this.settleTurn = ye / GAIT.yawTol >= (posOk ? e / tol : 0); // 몸을 돌려서 고쳐 딛는 발
       }
     }
     return worst;
@@ -461,7 +616,15 @@ export class Gait {
 
   /** 몸이 곧 바라볼 방향 (지금 도는 빠르기로 조금 앞질러) */
   headAhead() {
-    return this.f.heading + clamp(this.headRate * GAIT.turnLead, -0.5, 0.5);
+    const f = this.f;
+    let lead = clamp(this.headRate * GAIT.turnLead, -0.5, 0.5);
+    // 돌아서려는 방향(바라볼 곳)을 알면 그쪽을 미리 본다 (한 걸음에 발을 더 많이 돌려 딛는다)
+    if (GAIT.turnAhead > 0 && f.faceTarget) {
+      const p = f.bodies.pelvis.translation();
+      const d = wrap(Math.atan2(-(f.faceTarget.z - p.z), f.faceTarget.x - p.x) - f.heading);
+      if (Math.abs(d) > Math.abs(lead)) lead = clamp(d, -GAIT.turnAhead, GAIT.turnAhead);
+    }
+    return f.heading + lead;
   }
 
   guardYaw(l) {
@@ -482,7 +645,8 @@ export class Gait {
     l.yaw0 = l.footYaw;
     l.lift = kind === 'settle' ? GAIT.liftSettle : GAIT.lift;
     // 걷는 중엔 발을 든 시간 내내 옮긴다 (일찍 도착하면 몸이 따라올 때까지 발이 몸 앞 멀리 떠 있어야 한다)
-    l.hFrac = kind === 'settle' ? GAIT.hFrac : 1;
+    //  (다리가 닿지 않아 크게 옮기는 발(catch)은 조금 일찍 도착해 제자리에서 내려 딛는다: 움직이는 채로 닿으면 미끄러진다)
+    l.hFrac = kind === 'settle' ? GAIT.hFrac : kind === 'catch' ? GAIT.hFracCatch : 1;
   }
 
   /** 내딛을 자리 정하기 (remain: 발이 땅에 닿기까지 남은 시간) */
@@ -522,6 +686,11 @@ export class Gait {
         out.z = pz + (dz / d) * GAIT.maxReach;
       }
     }
+    // 발을 돌려 딛는 각도는 엉덩이·발목이 비틀 수 있는 만큼만 (더 돌려 디디면 디딘 뒤 다리가 발을 되돌려 비틀어 미끄러진다)
+    if (GAIT.swingTwist > 0) {
+      const pel = f.heading + (f.pelvisYawOffset || 0);
+      l.yaw1 = pel + clamp(wrap(l.yaw1 - pel), -GAIT.swingTwist, GAIT.swingTwist);
+    }
     // 다리가 꼬이지 않게: 딛은 발에서 자기 쪽으로 최소 간격
     const lat = (out.x - other.plant.x) * rgt.x + (out.z - other.plant.z) * rgt.z;
     const need = GAIT.minWidth - lat * l.side;
@@ -530,7 +699,14 @@ export class Gait {
 
   touchdown(l, speed) {
     l.stance = true;
+    // 디딜 때의 무릎 굽힘 (허벅지와 정강이 사이 각도)
+    const bt = this.f.bodies[l.thigh].rotation();
+    const bs = this.f.bodies[l.shin].rotation();
+    _s2.set(0, 1, 0).applyQuaternion(_qT.set(bt.x, bt.y, bt.z, bt.w));
+    _s3.set(0, 1, 0).applyQuaternion(_qT.set(bs.x, bs.y, bs.z, bs.w));
+    l.phiTD = Math.acos(clamp(_s2.dot(_s3), -1, 1));
     this.plantAt(l);
+    this.footMass(l, true);
     l.tLand = 0;
     this.sinceTD = 0;
     this.lastTD = l.k;
@@ -538,12 +714,37 @@ export class Gait {
     this.f.footstep = Math.max(this.f.footstep, clamp(speed / GAIT.moveSpeed, 0.15, 1));
   }
 
+  /**
+   * 딛은 발만 조금 무겁게 한다 (신발·쇠 발싸개 몫, GAIT.footExtra kg).
+   *  몸무게 대부분이 1kg 남짓한 발 하나에 실리면 물리 엔진의 반복 계산이 다 수렴하지 못해, 가만히 딛은 발이
+   *  제자리에서 조금씩 움직이는 것처럼 계산된다 (발에 걸린 계산 오차가 발 무게에 반비례한다).
+   *  내딛는 발은 땅에서 떨어지면 원래 무게로 (무거운 발을 휘두르면 그 반동에 몸이 흔들려 잘 넘어진다).
+   *  발을 떼고 디디는 순간엔 발이 거의 멈춰 있어서 무게를 바꿔도 몸의 움직임은 거의 바뀌지 않는다
+   */
+  footMass(l, on) {
+    const m = on ? GAIT.footExtra : 0;
+    if (l.extra === m) return;
+    l.extra = m;
+    this.f.bodies[l.foot].setAdditionalMass(m, true);
+  }
+
   /** 지금 발 자리를 딛은 자리로 기억한다 (발바닥 가운데·발끝이 땅에 붙은 곳도) */
   plantAt(l) {
     l.plant.set(l.ankle.x, ANKLE_H, l.ankle.z);
     l.yaw = l.footYaw;
+    l.yawTD = l.footYaw;
     l.pinC.copy(SOLE_C).applyQuaternion(l.fq).add(l.fp);
     l.pinT.copy(SOLE_T).applyQuaternion(l.fq).add(l.fp);
+    // 뒤꿈치를 든 채(발끝으로) 디뎠으면: 발끝 자리를 기준으로 발을 평평히 내렸을 때의 발목·발바닥 가운데 자리를 기억한다
+    //  (들린 발 그대로 기억하면 뒤꿈치가 내려앉을 때 붙잡는 자리와 발이 어긋나 발이 끌린다)
+    const fx = _s2.set(1, 0, 0).applyQuaternion(l.fq);
+    if (fx.y < -GAIT.heelTD) {
+      const cx = Math.cos(l.yaw);
+      const cz = -Math.sin(l.yaw);
+      l.pinT.y = 0;
+      l.pinC.set(l.pinT.x - cx * (SOLE_T.x - SOLE_C.x), 0, l.pinT.z - cz * (SOLE_T.x - SOLE_C.x));
+      l.plant.set(l.pinT.x - cx * TOE_X, ANKLE_H, l.pinT.z - cz * TOE_X);
+    }
   }
 
   /** 다리 관절 목표 (applyPose가 부른다) */
@@ -560,7 +761,7 @@ export class Gait {
     const p = f.bodies.pelvis.translation();
     // 딛은 다리는 골반을 목표 높이로 밀어 올린다. 골반이 목표보다 높을 때 다리를 오므리면 (몸을 끌어내리지 못하고)
     // 발만 들리므로 조금만 오므린다
-    const dh = clamp(this.h - p.y, -0.02, 0.05);
+    const dh = clamp(this.h - p.y, -GAIT.dhDown, 0.05);
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
       if (l.stance) {
@@ -569,10 +770,15 @@ export class Gait {
         _h.y += dh;
         _a.copy(l.plant);
         // 다리가 닿지 않으면 발끝을 축으로 뒤꿈치를 든다 (뒤로 빠진 발이 땅을 끌지 않게)
-        const heel = this.heelOff(l, _h, _a, legLen(l.phi));
+        //  (조금만 모자랄 땐 들지 않는다: 들락날락하면 발이 떨린다)
+        const heel = Math.max(0, this.heelOff(l, _h, _a, legLen(l.phi)) - GAIT.heelDead);
         l.heel += (heel - l.heel) * 0.3;
         if (l.heel > 0.01) this.toePivot(l, _a, l.heel);
-        this.legIK(l, _h, _a, l.yaw, -l.heel);
+        //  (디딜 때 이미 굽어 있던 만큼(phiTD)에서 더 굽히는 몫만 제한한다: 무릎을 굽힌 채 뛰듯 걸을 땐 그 굽힘부터)
+        //  (걷는 중 디딘 직후(무게를 받는 동안)만: 서 있을 땐 자세대로 무릎을 굽힌다)
+        const capK = GAIT.stanceKneeMax > 0 && this.walking && l.kind !== 'settle' && l.tLand < GAIT.loadTime * 1.5;
+        //  (뛰듯 빨리 갈 땐 발을 디딜 때 부딪는 힘이 커서 무릎이 목표보다 더 꺾이므로 덜 굽히게 한다)
+        this.legIK(l, _h, _a, l.yaw, -l.heel, capK ? legLen(Math.max(l.phi, l.phiTD) + GAIT.stanceKneeMax * (1 - GAIT.runKneeCut * this.runW)) : 0);
       } else {
         const u = clamp(l.t / l.T, 0, 1);
         // 앞뒤·옆으로는 발을 든 시간의 앞쪽 hFrac 동안 옮기고, 나머지 동안 거의 제자리에서 내려 딛는다
@@ -676,14 +882,15 @@ export class Gait {
    * 다리 역운동학: 엉덩이(hip) → 발목(ankle)까지 다리를 뻗고, 발은 yaw 방향을 보며 땅과 나란하게.
    * 무릎은 경첩, 발목은 공 관절이라 다리가 옆으로 기울어도 발바닥은 평평하다.
    */
-  legIK(l, hip, ankle, yaw, pitch) {
+  legIK(l, hip, ankle, yaw, pitch, minLen = 0) {
     const f = this.f;
     const J = f.jointByName;
     const d = _d.subVectors(ankle, hip);
     let len = d.length();
     if (len < 1e-4) return;
     d.multiplyScalar(1 / len);
-    len = clamp(len, 0.42, legLen(GAIT.kneeMin));
+    // minLen: 딛은 다리는 무릎을 이 이상 굽히지 않고 버틴다 (몸무게를 받으며 무릎이 너무 꺾이지 않게: 다리가 골반을 밀어 올린다)
+    len = clamp(len, Math.max(0.42, minLen), legLen(GAIT.kneeMin));
     const fwd = _fw.set(Math.cos(yaw), 0, -Math.sin(yaw));
     // 무릎 축: 발이 보는 방향의 오른쪽 축을, 다리 방향에 수직이 되게 고친다
     const kx = _kx.set(-fwd.z, 0, fwd.x);
@@ -736,7 +943,10 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
       l.N = 0;
-      if (!l.stance) continue;
+      if (!l.stance) {
+        l.Nf = 0;
+        continue;
+      }
       // 붙잡는 곳: 발바닥 가운데 (뒤꿈치를 들었으면 발끝)
       const toe = l.heel > 0.05;
       const pin = toe ? l.pinT : l.pinC;
@@ -754,7 +964,9 @@ export class Gait {
       // 그 점의 속도 = v + ω × r
       const vx = v.x + w.y * rz - w.z * ry;
       const vz = v.z + w.x * ry - w.y * rx;
-      const lim = GAIT.pinMu * N;
+      // 한계는 걸러진 무게로 (접촉 힘은 스텝마다 들쭉날쭉해서, 순간적으로 작게 잡히면 붙잡는 자리가 조금씩 끌려간다)
+      l.Nf = Math.max(N, (l.Nf || 0) * (1 - GAIT.pinHold * (f.lastDt || 1 / 120)));
+      const lim = GAIT.pinMu * l.Nf;
       // 붙잡는 자리가 한계보다 멀면 (미끄러짐) 자리를 발 쪽으로 옮긴다. 딛은 자리(다리 IK 목표)도 같이
       const ex = pin.x - pt.x;
       const ez = pin.z - pt.z;
@@ -788,7 +1000,7 @@ export class Gait {
       _p.z = pt.z;
       fb.addForceAtPoint(_f, _p, true);
       // 발이 땅 위에서 도는 것도 마찰이 붙잡는다 (한계 = 마찰 × 무게 × 발바닥 크기). 넘으면 딛은 방향도 따라 돈다
-      const lt = GAIT.pinMu * N * 0.05;
+      const lt = GAIT.pinMu * l.Nf * 0.05;
       let ye = wrap(l.yaw - l.footYaw);
       const yMax = lt / GAIT.pinYawK;
       if (Math.abs(ye) > yMax) {

@@ -61,7 +61,8 @@ export class Input {
     this.lastY = e.clientY;
     const mouse = e.pointerType === 'mouse';
     // 시간은 이벤트가 생긴 시각(e.timeStamp)으로 잰다: 한 프레임이 길면 핸들러가 늦게 돌아 누른 시간이 부풀려진다
-    this.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !mouse || lockedBefore };
+    // 마우스는 왼쪽(주) 버튼 클릭만 찌르기 (오른쪽·가운데 버튼은 아니다)
+    this.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !mouse || (lockedBefore && e.button === 0) };
     if (!mouse) this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
   }
 
