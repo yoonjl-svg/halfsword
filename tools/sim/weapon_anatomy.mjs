@@ -8,6 +8,7 @@ import { newRound, DT, AI, THREE } from './harness_m.mjs';
 import { WEAPONS, getWeapon } from '../../src/weapons.js';
 import { applyWeaponMeasure } from './weapon_measures.mjs';
 import { ANATOMY, STRIKE } from '../../src/config.js';
+import { isMain } from './is_main.mjs';
 
 const X = new THREE.Vector3(1, 0, 0);
 const ROUND_SECONDS = 40;
@@ -181,7 +182,7 @@ function line(label, s, mins, extra = '') {
     (Object.keys(s.ai).length ? `\n${''.padEnd(26)} AI 분당: 공격 ${pm(s.ai.attacks)} · 속임 ${pm(s.ai.feints)} · 막기 ${pm(s.ai.parries)} · 피하기 ${pm(s.ai.voids)} · 맞받아치기 ${pm(s.ai.counters)} · 명중 ${pm(s.ai.landed)} · 공격 포기 ${pm(s.ai.aborted)}` : '');
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const mode = args[0] || 'duel';
   const N = +(args[1] || 6);

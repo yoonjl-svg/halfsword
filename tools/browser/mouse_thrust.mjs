@@ -1,4 +1,4 @@
-// 마우스: 잠금을 거는 첫 클릭은 찌르기 아님, 잠긴 뒤 끌지 않은 클릭 = 찌르기, 끌면서 클릭 = 찌르기 아님
+// 마우스: 잠금을 거는 첫 클릭은 찌르기 아님, 잠긴 뒤 끌지 않은 (왼쪽 버튼) 클릭 = 찌르기, 오른쪽 버튼 클릭·끌면서 클릭 = 찌르기 아님
 //  실행: vite 개발 서버를 띄운 뒤 (npm run dev) playwright 가 설치된 곳에서
 //    node tools/browser/mouse_thrust.mjs http://127.0.0.1:5173
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
@@ -26,6 +26,10 @@ await idle(); n0 = await th();
 await page.mouse.down(); await page.waitForTimeout(60); await page.mouse.up();
 try { await page.waitForFunction((n) => window.game.player.skill.thrusts > n, n0, { timeout: 4000 }); } catch {}
 r.push(`잠긴 뒤 클릭: 찌르기 ${(await th()) - n0}회 (기대 1, 잠김=${await locked()})`);
+await idle(); n0 = await th();
+await page.mouse.down({ button: 'right' }); await page.waitForTimeout(60); await page.mouse.up({ button: 'right' });
+await page.waitForTimeout(1500);
+r.push(`오른쪽 버튼 클릭: 찌르기 ${(await th()) - n0}회 (기대 0, 잠김=${await locked()})`);
 await idle(); n0 = await th();
 await page.mouse.down();
 for (let i = 1; i <= 8; i++) { await page.mouse.move(X + 15 * i, Y - 6 * i); await page.waitForTimeout(15); }

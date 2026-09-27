@@ -9,6 +9,7 @@
 import { newRound, DT, THREE, V, AI } from './harness_m.mjs';
 import { torsoDist } from './down_hits.mjs';
 import { strEmoOpts, applyStrEmo, strEmoLabel } from './str_emo.mjs';
+import { isMain } from './is_main.mjs';
 
 const G_PAD = { pflug: [0.18, -0.28], ochs: [0.22, 0.26], langort: [0.0, 0.03] };
 
@@ -178,7 +179,7 @@ function summary(label, rs) {
   console.log(`   첫 접촉 종류: ${JSON.stringify(types)}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const pos = args.filter((a) => !a.startsWith('--'));
   const mode = pos[0] || 'all';

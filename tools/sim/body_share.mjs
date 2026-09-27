@@ -12,6 +12,7 @@ import { Fighter } from '../../src/fighter.js';
 import { SKILL_BODY } from '../../src/config.js';
 import { guardAt } from '../../src/guards.js';
 import { STRIKE } from '../../src/config.js';
+import { isMain } from './is_main.mjs';
 
 const PAIRS = {
   '어깨↔왼바꿈': [[0.42, 0.42], [-0.4, -0.42]],
@@ -101,7 +102,7 @@ function run(id, pair, T) {
   return { v: m('v'), share: m('share'), pelvis: m('pelvis') };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['longsword', 'qinggang', 'zweihander'];
   console.log('칸 = 칼날 70% 최고 속도 m/s (그 순간 가슴이 만든 몫 %, 골반이 만든 몫 %) · 판정 에너지 비 = (v / 기본 v)²');
   for (const id of ids) {

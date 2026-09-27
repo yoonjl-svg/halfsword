@@ -6,6 +6,7 @@
 // 사용법: node tools/sim/chain_mass.mjs [무기id...]
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { STRIKE } from '../../src/config.js';
+import { isMain } from './is_main.mjs';
 
 function setup(id) {
   const G = newRound({ walls: false, weapon: id, weapon2: 'longsword', seed: 7 });
@@ -31,7 +32,7 @@ const velAt = (f, lp) => {
   return new THREE.Vector3(v.x, v.y, v.z);
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['longsword', 'zweihander', 'qinggang', 'rapier', 'sabre', 'monohoshizao'];
   console.log(`칼날 70% 지점, 날 방향 · 한 스텝 ${(DT * 1000).toFixed(1)}ms`);
   for (const id of ids) {

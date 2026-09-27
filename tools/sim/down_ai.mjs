@@ -8,6 +8,7 @@
 import { newRound, DT } from './harness_m.mjs';
 import { strEmoOpts, applyStrEmo, strEmoLabel } from './str_emo.mjs';
 import { CHARACTERS } from '../../src/characters.js';
+import { isMain } from './is_main.mjs';
 
 const FALLS = { toward: 0, away: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 }; // 플레이어 기준 (적 쪽 = 앞)
 
@@ -39,7 +40,7 @@ export function aiTrial({ fall, seed, weapon2, secs = 8, gap = 2.2, before, ch =
   return { fall, first, swings, wounds: cuts.length, sev: cuts.reduce((a, w) => a + w.severity, 0), blunt: ws.filter((w) => w.type === 'blunt').length, dead: P.state === 'dead', emoT };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const pos = args.filter((a) => !a.startsWith('--'));
   const N = +(pos[0] || 4);

@@ -11,6 +11,7 @@
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { WEAPONS } from '../../src/weapons.js';
 import { STRIKE } from '../../src/config.js';
+import { isMain } from './is_main.mjs';
 
 const PAIRS = {
   '지붕↔바보': [[0.02, 0.52], [0.0, -0.5]],
@@ -107,7 +108,7 @@ export function tempoRun(id, pair, T) {
   return { v, eCut, nan: !Number.isFinite(v) };
 }
 
-if (import.meta.url === `file://${process.argv[1]}` && process.argv.includes('--loop')) {
+if (isMain(import.meta.url) && process.argv.includes('--loop')) {
   const ids = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   console.log(`물레 베기(타원을 멈추지 않고 돈다) · 반 바퀴 T = ${PERIODS.join(' / ')}초 · 칸 = 칼날 70% 최고 속도 m/s · 베기 실효 J`);
   for (const id of ids.length ? ids : Object.keys(WEAPONS)) {
@@ -117,7 +118,7 @@ if (import.meta.url === `file://${process.argv[1]}` && process.argv.includes('--
     for (let i = 0; i < PERIODS.length; i++) if (rs[i].eCut >= 0.8 * e0) sustain = PERIODS[i];
     console.log(`${id.padEnd(18)} 물레      ${rs.map((r) => `${r.v.toFixed(1)}·${r.eCut.toFixed(0)}`).join('  ')}  | 지속 템포 T=${sustain}s (초당 ${(1 / sustain).toFixed(1)}번)`);
   }
-} else if (import.meta.url === `file://${process.argv[1]}`) {
+} else if (isMain(import.meta.url)) {
   const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(WEAPONS);
   console.log(`손 목표 ${SP}m/s 왕복 · 반 주기 T = ${PERIODS.join(' / ')}초 · 칸 = 칼날 70% 최고 속도 m/s · 베기 실효 J (날 없는 무기는 mBlunt)`);
   const out = [];

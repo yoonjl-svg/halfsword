@@ -772,7 +772,8 @@ export class AI {
     this.requestedStep = false;
     // 찌르기 무기(weapons.js THRUST_STYLE: 에스톡·레이피어)는 찌르기 기술을 플레이어의 탭 찌르기와 같은 칼끝 찌르기로 한다
     //  (칼끝을 상대 가슴·머리로 맞추고 칼 선을 따라 뻗는다 — skill.js thrust). 다른 무기는 예전처럼 자세 지도의 길을 따라간다
-    if (t.kind === 'thrust' && !this.feint && this.me.weaponCfg.thrustStyle) this.me.skill.thrust();
+    //  내딛기는 AI 가 정한다(stepTime·gaitStep) — 검술 층이 따로 내딛지 않게 step: false
+    if (t.kind === 'thrust' && !this.feint && this.me.weaponCfg.thrustStyle) this.me.skill.thrust({ step: false });
   }
 
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */
