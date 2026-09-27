@@ -644,7 +644,7 @@ export function buildCastle(scene, lights = {}) {
       [0.66, -1.36],
     ].map(([a, b]) => new THREE.Vector2(a, b));
     // 오래된 청동: 은은한 광택 (반사 환경맵은 약하게), 해 질 녘에도 형태가 보일 만큼만 아주 약하게 스스로 빛난다
-    const bellMat = new THREE.MeshStandardMaterial({ color: 0x7c6c4c, roughness: 0.5, metalness: 0.8, envMap: weaponEnv(), envMapIntensity: 0.55, emissive: 0x1c160c, emissiveIntensity: 0.25, side: THREE.DoubleSide });
+    const bellMat = new THREE.MeshStandardMaterial({ color: 0xaa8c4d, roughness: 0.35, metalness: 0.88, envMap: weaponEnv(), envMapIntensity: 1.15, emissive: 0x432d0e, emissiveIntensity: 0.35, side: THREE.DoubleSide });
     const bell = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), bellMat);
     const clapper = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), bell.material);
     clapper.position.y = -1.15;
