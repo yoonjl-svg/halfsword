@@ -40,8 +40,9 @@ export const CHARACTERS = [
       level: 'easy',
       persona: {
         school: 'longsword',
-        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 0.68, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, skill: 0.28 },
+        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 0.55, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 },
         pers: {
+          precision: 0.35, // 아무 데나 후려친다 — 팔·다리에 걸리고 칼 면으로 때린다
           guardStick: 0.6,
           fearful: 0.45, // 베이면 당황한다 — 많이 다치면 주춤주춤 물러나는 성격
           angry: 0.7, // 막히면 발끈한다
@@ -56,6 +57,8 @@ export const CHARACTERS = [
           patienceTime: 8,
           circleRate: 0.1,
           guardPref: { tag: 1.6, tagR: 1.7, alber: 1.5, wechselR: 1.3 },
+          // 크게 감아 치는 가로베기·올려베기를 좋아한다 (힘이 안 실리는 기술). 찌르기는 나뭇가지로는 못 한다
+          techPref: { zwerch: 1.6, zwerchL: 1.4, unterhau: 1.3, oberhau: 1.2, zornhau: 0.8, stichPflug: 0.1, stichPflugL: 0.1, stichOchs: 0.1, stichOchsL: 0.1, stichAlber: 0.1 },
         },
       },
     },
@@ -117,6 +120,7 @@ export const CHARACTERS = [
         school: 'longsword',
         level: { reaction: 0.31, guardChance: 0.6, counter: 0.12, feint: 0.05, followUp: 0.28, read: 0.62, discipline: 0.95, strength: 0.85, aggression: 0.68, windup: 0.82, skill: 0.56 },
         pers: {
+          precision: 0.7, // 교본대로 정확하지만 힘이 실리지 않는다
           guardStick: 4.2,
           fearful: 0.3, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다
           angry: 0.2,
@@ -191,6 +195,7 @@ export const CHARACTERS = [
         school: 'longsword',
         level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 0.95, aggression: 1.05, windup: 0.5, skill: 0.75 },
         pers: {
+          precision: 0.75,
           guardStick: 0.9,
           fearful: 0.15, // 맞아도 표정 하나 안 바꾼다
           angry: 0.3,
@@ -266,8 +271,9 @@ export const CHARACTERS = [
       level: 'normal',
       persona: {
         school: 'longsword',
-        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.05, aggression: 1.15, windup: 0.45, skill: 0.82 },
+        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.1, aggression: 1.15, windup: 0.45, skill: 0.82 },
         pers: {
+          precision: 0.85,
           guardStick: 0.8,
           fearful: 0.08, // 아프면 오히려 웃으며 더 달려든다
           angry: 0.6,
@@ -341,8 +347,9 @@ export const CHARACTERS = [
       level: 'hard',
       persona: {
         school: 'longsword',
-        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.22, aggression: 1.0, windup: 0.28, skill: 0.97 },
+        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.3, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
         pers: {
+          precision: 1, // 머리·목을 정확히 벤다
           guardStick: 6.2,
           fearful: 0, // 한없이 차분하다 — 겁은 먹지 않는다
           angry: 0.1,
@@ -357,6 +364,8 @@ export const CHARACTERS = [
           patienceTime: 8,
           circleRate: 0.18,
           guardPref: { ochsR: 1.7, pflugL: 1.65, langort: 1.2, alber: 0.2, tag: 0.4 },
+          // 머리·목을 노리는 무거운 베기(분노의 베기·정수리 베기)만 쓴다. 올려베기·가로베기처럼 힘이 안 실리는 기술은 안 쓴다
+          techPref: { zornhau: 1.6, oberhau: 1.4, zornhauL: 1.3, unterhau: 0.4, unterhauL: 0.4, zwerch: 0.5, zwerchL: 0.5 },
         },
       },
     },

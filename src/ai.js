@@ -63,6 +63,9 @@ export class AI {
       //  크면(예: 5) 가까운 자세만 고집하는 신중한 검객, 작으면(예: 0.5) 먼 자세로도 서슴없이 뛰는 변덕스러운 검객
       guardStick: P.guardStick ?? 2.5,
       guardSpeed: P.guardSpeed ?? 0.9, // 간 보는 동안 자세를 잡는 손 빠르기 (m/s): 크면 자세를 휙휙 바꾸는 사람, 작으면 느긋한 사람
+      // 베기의 정확도 (0~1): 1이면 기술의 길을 그대로 긋는다(머리·목에 닿는다). 낮을수록 한 번 벨 때마다 손이 옆·위아래로
+      //  빗나가(최대 ±0.2·(1−정확도) m) 팔·다리에 걸리거나 칼 면으로 때린다 — "절대 실력" 축
+      precision: P.precision ?? 1,
       // 감정 문턱값: 이 인물이 공포에 얼마나 잘 빠지는가 (0 = 전혀, 1 = 한 번 베이면 바로 겁먹는다).
       //  0이면 감정층이 아예 꺼진 것과 같다 (기본 AI는 0 → 예전과 완전히 같이 움직인다)
       fearful: P.fearful ?? 0,
@@ -639,6 +642,16 @@ export class AI {
       for (const p of t.path) this.path.push(p.slice());
       this.feintPts = 0;
       this.stepT = this.stepTime();
+    }
+    // 서툰 검객은 벨 때마다 손이 조금씩 빗나간다 (정확도 1이면 난수도 안 뽑아 예전과 같다)
+    const prec = this.pers.precision;
+    if (prec < 1) {
+      const ex = rand(-1, 1) * 0.2 * (1 - prec);
+      const ey = rand(-1, 1) * 0.15 * (1 - prec);
+      for (const q of this.path) {
+        q[0] = clamp(q[0] + ex, -0.6, 0.6);
+        q[1] = clamp(q[1] + ey, -0.6, 0.6);
+      }
     }
     // 베기가 끝나면 손은 끝 자세에 머문다 (이어 베기는 칼의 관성과 검술 층이 만든다)
     const end = this.path[this.path.length - 1];
