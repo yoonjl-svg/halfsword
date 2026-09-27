@@ -12,6 +12,8 @@ import { Input, attachStick } from './input.js';
 import { LOOKS } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter } from './characters.js';
+import { WEAPON_LIST } from './weapons.js';
+import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound } from './sound.js';
 import { Combat } from './combat.js';
@@ -22,7 +24,16 @@ await RAPIER.init();
 // 테스트용 URL 파라미터: ?weapon=katana&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
 const params = new URLSearchParams(location.search);
-const playerWeapon = params.get('weapon') || 'longsword';
+// 주인공은 판마다 무기를 무작위로 받는다 (주소에 ?weapon=을 적으면 그 무기로 고정).
+//  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
+const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica');
+let playerWeapon = 'longsword';
+function pickPlayerWeapon() {
+  const fixed = params.get('weapon');
+  if (fixed) return fixed;
+  const pool = PLAYER_WEAPON_POOL.filter((id) => id !== playerWeapon); // 같은 무기가 두 번 연속 나오지 않게
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 // ── 설정 (브라우저에 저장) ──
 const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true };
@@ -47,6 +58,7 @@ const saveSettings = () => {
 const foeParam = new URLSearchParams(location.search).get('foe') || 'random';
 const foeRandomEachRound = foeParam === 'random';
 let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
+let auras = []; // 진짜 엑스칼리버의 일렁임·빛 (aura.js)
 function pickFoe() {
   if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
   if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
@@ -144,6 +156,7 @@ function newRound() {
   }
 
   currentFoe = pickFoe();
+  playerWeapon = pickPlayerWeapon();
   const before = new Set(scene.children);
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
@@ -162,10 +175,9 @@ function newRound() {
     // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기
     weapon: params.get('foeWeapon') || params.get('weapon') || currentFoe?.weapon || 'longsword',
   });
-  // 테스트용 무기 파라미터를 썼으면 화면에 잠깐 알려 준다
-  if (playerWeapon !== 'longsword' || enemy.weapon.id !== 'longsword') {
-    showToast(`나: ${player.weapon.nameKo} · 상대: ${enemy.weapon.nameKo}`, 2200);
-  }
+  // 진짜 엑스칼리버의 기운 (보여 주기만)
+  for (const a of auras) a.dispose();
+  auras = [player, enemy].map(attachAura).filter(Boolean);
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
@@ -382,6 +394,7 @@ function showFoeIntro(ch) {
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
   el.querySelector('span').textContent = `“${ch.taunt}”`;
+  el.querySelector('em').textContent = `내 무기: ${player.weapon.nameKo} · 상대 무기: ${enemy.weapon.nameKo}`;
   // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
   showFoeIntro.t = setTimeout(() => {
     el.classList.add('show');
@@ -674,6 +687,7 @@ function frame(now) {
     }
     updateBindSound();
     particles.update(dt * scale);
+    for (const a of auras) a.update(now / 1000);
     arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
