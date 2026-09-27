@@ -71,6 +71,11 @@ function trySwing(weaponId, dist, { lunge = false } = {}) {
   return { landed, hitT, hitInfo };
 }
 
+// 여러 거리로 직접 훑어 보니(zornhau·oberhau 둘 다) "닿는가"가 거리에 비례해 깔끔히
+// 줄어들지 않는다 — 1.6m에서는 닿고 1.7~1.8m에서는 빗나가다가 1.9~2.1m에서 다시 크게
+// 닿는 식으로 들쭉날쭉하다. 몸이 손 목표를 따라가며 미세하게 흔들리는(자연스러운 체중 이동)
+// 탓으로 보이는데, 그 결과 아래 이분 탐색은 "거리가 가까울수록 반드시 닿는다"는 전제가
+// 깨져 있어 완전히 믿을 수는 없다. docs/weapons.md에도 이 한계를 그대로 적어 두었다.
 /** 이분 탐색으로 "닿는 최대 거리"를 찾는다 (lo=반드시 닿음, hi=반드시 안 닿음에서 시작) */
 function bisectMaxDist(weaponId, opts) {
   let lo = 0.9;
