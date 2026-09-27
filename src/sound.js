@@ -294,7 +294,7 @@ export const VOICES = {
   generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 첫 목소리 + VoiceBosch
   bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + VoiceBosch. 굵고 거친 목
   isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp' }, // 녹음 없이 숨소리만: 여성 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
-  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 0, gain: 0.6, rate: 0.95 } }, // 짧은 신음 하나, 피 흘려 죽을 땐 합성 한숨
+  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 2, gain: 0.6, rate: 0.95 } }, // 짧은 신음 + 낮고 짧은 신음 녹음(HaelDB). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침) + VoiceBosch
   margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale' }, // 녹음 없이 숨소리만: 여성 비명을 낮춰 썼더니 익룡처럼 들렸다 (차분한 노장에 비명 자체가 안 맞음)
 };
@@ -338,7 +338,7 @@ function voiceScript(r, prof, kind) {
         inhale(0.18, 0.35);
         add(0.3, 'e', 1.05, 0.85, 0.28, 0.35, 0.7, 0.03, 0.15, 0.2);
         inhale(0.12, 0.2);
-        exhale(0.7, 0.2);
+        exhale(0.5, 0.2);
       }
       break;
     case 'sigh':
@@ -370,7 +370,7 @@ function voiceScript(r, prof, kind) {
         exhale(0.5, 0.22, 'o');
       } else {
         inhale(0.25, 0.18);
-        add(1.1, 'o', 0.9, 0.7, 0.35, 0.3, 0.8, 0.08, 0.6);
+        add(0.7, 'o', 0.9, 0.75, 0.35, 0.35, 0.8, 0.06, 0.4);
       }
       break;
     default:
@@ -812,6 +812,12 @@ export const SYNTH = {
     const F = [0, 1, 2, 3].map(() => new Filt('bandpass', 500, 5, sr));
     const FG = [1, 0.55, 0.28, 0.14];
     const rough = prof.rough;
+    // 숨(바람) 잡음은 입안 공명대에 통과시키지 않고 따로 어둡게 거른다: 공명대(2~4kHz)를 지나면 증기가 새는 "치이익"이 되어
+    // 기차 소리처럼 들렸다 (합성 목소리의 2~8kHz 쉿 비중 19~25% vs 사람 녹음 3~6%). 진짜 숨은 대부분 2kHz 아래의 "하—"
+    const airLp1 = new Filt('lowpass', 1100, 0.6, sr);
+    const airLp2 = new Filt('lowpass', 1900, 0.6, sr);
+    const airHp = new Filt('highpass', 140, 0.6, sr);
+    const turb = wobble(r, sr, 25);
     for (const s of segs) {
       const V = VOWELS[s.vowel] || VOWELS['ə'];
       F.forEach((fl, i) => fl.set(V[i] * prof.tract, (V[i] * prof.tract) / (V[4 + i] * (s.voice > 0.3 ? 1 : 1.8))));
@@ -833,15 +839,18 @@ export const SYNTH = {
           pAmp = (1 + 0.08 * gauss(r)) * (per % 2 ? 1 - 0.55 * rough : 1);
         }
         const g = ph < 0.4 ? 0.5 * (1 - Math.cos((Math.PI * ph) / 0.4)) : ph < 0.62 ? Math.cos((Math.PI / 2) * ((ph - 0.4) / 0.22)) : 0;
-        const exc = (g - g1) * 18 * pAmp * s.voice + (r() * 2 - 1) * (prof.breath * 0.35 * (0.3 + g) * s.voice + s.air * 0.5);
+        const exc = (g - g1) * 18 * pAmp * s.voice + (r() * 2 - 1) * prof.breath * 0.2 * (0.3 + g) * s.voice;
         g1 = g;
         const env = Math.min(1, i / (s.attack * sr)) * Math.min(1, (len - i) / (s.release * sr));
         let y = 0;
         for (let k = 0; k < 4; k++) y += FG[k] * F[k].run(exc);
-        out[n0 + i] += s.amp * env * y;
+        const air = airHp.run(airLp2.run(airLp1.run(r() * 2 - 1))) * (0.75 + 0.25 * turb());
+        out[n0 + i] += s.amp * env * (y + air * s.air * 1.6);
       }
     }
     saturate(out, 1.3, 0.05);
+    const lp = new Filt('lowpass', 6500, 0.7, sr); // 남은 쉿 소리를 한 번 더 누른다 (사람 녹음 수준 3~6%)
+    for (let i = 0; i < n; i++) out[i] = lp.run(out[i]);
     return fadeOut(normalize(out, 0.9), sr, 0.08);
   },
 

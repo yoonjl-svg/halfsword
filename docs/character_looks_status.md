@@ -4,6 +4,17 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 15 — 오너 결정: 랴오 v6 확정
+
+- 오너 "v6으로 하자". `CHARACTER_LOOK_VERSION.liao = 'v6'`(이미 기본값이라 코드 변경 없음). v5·v7·v8은 보관.
+
+## round 14 — 오너 요청: 랴오 "양옆으로 내려오는 것 말고 다른 중단발 컬 시안 + 입에 풀"
+
+- **랴오 v6/v7/v8** 시안 셋(v5 보관): v6 `liao_gi_swept` 뒤로 넘긴 물결, v7 `liao_gi_halfup` 반묶음(뒷목까지
+  말린 뒷머리), v8 `liao_gi_tousled` 바람에 헝클어진 머리. 셋 다 v3 꽁지머리·안대·머리띠·흰 속깃 V넥 유지 +
+  입꼬리에 문 풀줄기. 오너 선택 전까지 `CHARACTER_LOOK_VERSION.liao = 'v6'`. `?look=liao:v7` 등으로 비교 가능.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0(세 시안 모두).
+
 ## round 13 — 오너 피드백: 랴오 "v3 꽁지머리 유지 + 뾰족한 부분을 양옆으로 흘러내리는 중단발 컬로"
 
 - **랴오 v5**(`liao_gi_wavy`, v4 보관): v3 부채꼴 꽁지머리 그대로, 삐친 원뿔 가닥 제거, 얼굴 양옆을 따라 물결치며

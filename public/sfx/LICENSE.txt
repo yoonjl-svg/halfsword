@@ -20,6 +20,7 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       generic_bleed1.mp3  <- yell3.wav
       heinrich_ko1.mp3    <- 2yell1.wav        heinrich_ko2.mp3 <- 2yell10.wav
       heinrich_bleed1.mp3 <- 2yell6.wav
+      liao_bleed1.mp3     <- yell6.wav         liao_bleed2.mp3  <- 2yell9.wav
 
   CC-BY 3.0 — Michel Baradari, "11 male human pain/death sounds"
     https://opengameart.org/content/11-male-human-paindeath-sounds
