@@ -36,7 +36,7 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       bran_bleed2.mp3     <- 06. Death Groan (Male).wav
       heinrich_bleed2.mp3 <- 02. Death Groan (Male).wav
 
-Thank you, HaelDB, tcrocker68, Archeos, Michel Baradari and VoiceBosch!
+Thank you, HaelDB, Michel Baradari and VoiceBosch!
 
 -------------------------------------------------------------------------------
 step/ and hit/  — CC0 (public domain), Kenney (www.kenney.nl), fetched from the
@@ -50,3 +50,15 @@ checked against its catalog). Trimmed, peak-normalized, mono MP3.
   hit/soft1-5.mp3         <- "Impact Sounds": impactSoft_heavy_000-004.ogg
   hit/wood1-5.mp3         <- "Impact Sounds": impactWood_medium_000-004.ogg
   hit/wood_heavy1-3.mp3   <- "Impact Sounds": impactWood_heavy_000-002.ogg
+
+-------------------------------------------------------------------------------
+step/gravel1-8.mp3 and stage/leaves1-2.mp3 — CC0 (public domain).
+Fetched from the open-game-sfx-index mirror (SHA-256 checked against its catalog).
+
+  step/gravel1-8.mp3  <- Kenney "Impact Sounds" footstep_carpet_000-004.ogg (heel), mixed with
+                         "Different steps on wood, stone, leaves, gravel and mud" (OpenGameArt,
+                         CC0) gravel.ogg (crunch, -5 dB, +8-20 ms, pitched down 5-22%),
+                         low-passed at 2.6 kHz, faded by 200 ms
+                         https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud
+  stage/leaves1-2.mp3 <- same OpenGameArt pack, leaves01.ogg / leaves02.ogg
+                         (band-limited 300 Hz-7 kHz, peak-normalized)
