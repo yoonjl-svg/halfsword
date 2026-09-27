@@ -16,7 +16,7 @@ export const WEAPON_MEASURES = {
   excalibur_replica: { contact: 1.55, reach: 1.83, clinch: 1.2, cutTime: 0.4 },
   lightsaber: { contact: 1.46, reach: 1.65, clinch: 1.13, cutTime: 0.24 }, // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
   tree_branch: { contact: 1.46, reach: 1.61, clinch: 1.13, cutTime: 0.29 },
-  rubber_chicken: { contact: 1.05, reach: 1.22, clinch: 0.81, cutTime: 0.22 }, // 칼날 0.45m (10라운드 쓰레기 등급 맞추기)
+  rubber_chicken: { contact: 0.88, reach: 1.24, clinch: 0.68, cutTime: 0.18 },
   frozen_tuna: { contact: 1.36, reach: 1.63, clinch: 1.05, cutTime: 0.44 },
 };
 

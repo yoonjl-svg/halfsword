@@ -49,19 +49,53 @@ function watch(G) {
   return { log, clashes };
 }
 
+/**
+ * 못 닿은 까닭을 가르는 추적 (디렉터 10라운드 C): 찌르는 동안 칼끝이 겨눈 몸(가슴·머리)에 가장 가까웠던 순간에
+ *  - fwdGap: 내가 보는 방향으로 칼끝이 몸 앞면(중심에서 0.12m)까지 남긴 거리 (+ 면 거리가 모자람 = 짧다, − 면 깊이는 닿았는데 옆으로 빗나감)
+ *  - step: 그동안 골반이 앞으로 나간 최대 거리 (내딛기)
+ */
+function tapTrack(P, E) {
+  const tgt = P.skill.tap?.head ? 'head' : 'chest';
+  const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(P.yaw);
+  const p0 = P.bodies.pelvis.translation();
+  const pel0 = new THREE.Vector3(p0.x, p0.y, p0.z);
+  const tip = new THREE.Vector3();
+  const tv = new THREE.Vector3();
+  let best = Infinity;
+  let fwdGap = null;
+  let step = 0;
+  return {
+    update() {
+      P.bladePoint(1, tip);
+      const t = E.bodies[tgt].translation();
+      tv.set(t.x, t.y, t.z);
+      const d = tip.distanceTo(tv);
+      if (d < best) {
+        best = d;
+        fwdGap = tv.clone().sub(tip).dot(fwd) - 0.12;
+      }
+      const p = P.bodies.pelvis.translation();
+      step = Math.max(step, (p.x - pel0.x) * fwd.x + (p.z - pel0.z) * fwd.z);
+    },
+    result: () => ({ tipMin: best, fwdGap, step }),
+  };
+}
+
 /** 톡 친 뒤 0.6초 동안 본다 → 처음 몸에 닿은 판정 */
 function afterTap(G, W, t0, extra) {
   const P = G.player;
   const w0 = G.wounds.length;
+  const tr = tapTrack(P, G.enemy);
   for (let i = 0; i < 0.6 / DT; i++) {
     extra?.();
     G.step();
+    tr.update();
   }
   const hits = W.log.filter((l) => l.t >= t0);
   const first = hits[0] ?? null;
   const ws = myWounds(G, P, w0);
   const clashed = W.clashes.some((t) => t >= t0 && (!first || t < first.t));
-  return { first, wound: ws.length > 0, sev: maxSev(ws), stabSev: maxSev(ws.filter((w) => w.type === 'stab')), clashed, stab: hits.some((h) => h.type === 'stab') };
+  return { first, wound: ws.length > 0, sev: maxSev(ws), stabSev: maxSev(ws.filter((w) => w.type === 'stab')), clashed, anyClash: W.clashes.some((t) => t >= t0), stab: hits.some((h) => h.type === 'stab'), ...tr.result() };
 }
 
 /** w0 뒤로 P 가 낸 베기·찌르기 상처 */
@@ -144,16 +178,18 @@ export function duelTrial({ seed, weapon, secs = 30, before }) {
     P.move.set(0, P.state === 'stand' ? THREE.MathUtils.clamp((d - 1.65) * 2, -0.6, 0.6) : 0);
     cool -= DT;
     if (!open && cool <= 0 && d < 1.95 && P.state === 'stand' && P.skill.thrust()) {
-      open = { t0: G.t, w0: G.wounds.length, d0: d };
+      open = { t0: G.t, w0: G.wounds.length, d0: d, tr: tapTrack(P, E) };
       cool = 0.9;
     }
     G.step();
+    open?.tr.update();
     if (open && G.t - open.t0 > 0.6) {
       const hits = W.log.filter((l) => l.t >= open.t0 && l.t < open.t0 + 0.6);
       const first = hits.find((h) => h.part !== undefined) ?? null;
       const ws = myWounds(G, P, open.w0);
-      const clashed = W.clashes.some((t) => t >= open.t0 && t < open.t0 + 0.6 && (!first || t < first.t));
-      taps.push({ d0: open.d0, first, wound: ws.length > 0, sev: maxSev(ws), stabSev: maxSev(ws.filter((w) => w.type === 'stab')), clashed, stab: hits.some((h) => h.type === 'stab') });
+      const inWin = (t) => t >= open.t0 && t < open.t0 + 0.6;
+      const clashed = W.clashes.some((t) => inWin(t) && (!first || t < first.t));
+      taps.push({ d0: open.d0, first, wound: ws.length > 0, sev: maxSev(ws), stabSev: maxSev(ws.filter((w) => w.type === 'stab')), clashed, anyClash: W.clashes.some(inWin), stab: hits.some((h) => h.type === 'stab'), ...open.tr.result() });
       open = null;
     }
   }
@@ -178,6 +214,18 @@ function summary(label, rs) {
   const types = {};
   for (const r of touched) types[`${r.first.type}:${r.first.zone}`] = (types[`${r.first.type}:${r.first.zone}`] || 0) + 1;
   console.log(`   첫 접촉 종류: ${JSON.stringify(types)}`);
+  // 디렉터 10라운드 C: 탭 하나의 결과를 네 갈래로 (상처 / 상대 칼에 걸렸고 상처 없음 / 몸에 닿았지만 상처 없음 / 아무것도 못 닿음)
+  const pc = (k) => `${k} (${Math.round((100 * k) / Math.max(1, n))}%)`;
+  const caught = rs.filter((r) => !r.wound && r.anyClash);
+  const bruise = rs.filter((r) => !r.wound && !r.anyClash && r.first);
+  const none = rs.filter((r) => !r.wound && !r.anyClash && !r.first);
+  console.log(`   네 갈래: 상처 ${pc(wound)} · 칼에 걸렸고 상처 없음 ${pc(caught.length)} · 몸에 닿았지만 상처 없음 ${pc(bruise.length)} · 아무것도 못 닿음 ${pc(none.length)}`);
+  // 못 닿은 탭: 칼끝이 몸 앞면까지 모자랐나(거리) / 깊이는 닿았는데 옆으로 빗나갔나(겨눔). 모자란 탭 중 내딛은 거리가 0.1m 안 된 것
+  if (none.length) {
+    const short = none.filter((r) => r.fwdGap > 0);
+    const noStep = short.filter((r) => r.step < 0.1);
+    console.log(`   못 닿은 ${none.length}번: 거리 모자람 ${short.length} (평균 ${mean(short.map((r) => r.fwdGap))}m, 시작 거리 ${mean(short.map((r) => r.d0))}m, 내딛음 ${mean(short.map((r) => r.step))}m · 0.1m 못 내딛음 ${noStep.length}) · 옆으로 빗나감 ${none.length - short.length}`);
+  }
 }
 
 if (isMain(import.meta.url)) {
@@ -211,8 +259,14 @@ if (isMain(import.meta.url)) {
   }
   if (mode === 'duel' || mode === 'all') {
     const taps = [];
-    for (let s = S0; s < S0 + N; s++) taps.push(...duelTrial({ seed: 40 + s, weapon, before }).taps);
+    const res = { W: 0, L: 0, D: 0 };
+    for (let s = S0; s < S0 + N; s++) {
+      const r = duelTrial({ seed: 40 + s, weapon, before });
+      taps.push(...r.taps);
+      res[r.enemyAlive === r.playerAlive ? 'D' : r.enemyAlive ? 'L' : 'W']++;
+    }
     summary('AI 와 대결 중', taps);
+    console.log(`   탭 연타 대결 (30초): 이김 ${res.W} · 짐 ${res.L} · 무 ${res.D} / ${N}`);
     out.duel = taps.map((r) => ({ d0: +r.d0.toFixed(2), type: r.first?.type ?? null, wound: r.wound, sev: +r.sev.toFixed(2), clashed: r.clashed }));
   }
   console.log(JSON.stringify(out));

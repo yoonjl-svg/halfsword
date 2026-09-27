@@ -20,7 +20,7 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, BODY } from './config.js';
+import { AI_LEVELS, BODY, SKILL } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
@@ -57,7 +57,7 @@ export const MEASURED = {
   excalibur_replica: [1.55, 1.83, 1.2, 0.4],
   lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
   tree_branch: [1.46, 1.61, 1.13, 0.29],
-  rubber_chicken: [1.05, 1.22, 0.81, 0.22], // 칼날 0.45m (10라운드 쓰레기 등급 맞추기)
+  rubber_chicken: [0.88, 1.24, 0.68, 0.18],
   frozen_tuna: [1.36, 1.63, 1.05, 0.44],
 };
 const LS_MEASURED = MEASURED.longsword;
@@ -729,6 +729,8 @@ export class AI {
       this.handSpeed = L.strikeSpeed;
       this.checkBind();
       if (!this.path.length) {
+        // 흐름(SKILL.flow, 시제품): 칼이 막히지 않았으면 멈춰 서지 않고 지금 손에서 이어지는 베기로 곧장 흐른다
+        if (SKILL.flow && this.flowOn(d)) return;
         // 손은 끝 자세에 닿았지만 무거운 칼은 아직 날아가는 중이다 → 칼이 지나갈 때까지 버틴다
         this.phase = 'follow';
         this.timer = 0.3;
@@ -855,6 +857,65 @@ export class AI {
     this.startWithdraw(0.9 - 0.4 * this.obsession); // 물고 늘어질 땐 짧게만 물러난다 (막기는 그대로)
   }
 
+  // ───────────────────────── 흐름 (SKILL.flow 시제품, 디렉터 10라운드 D) ─────────────────────────
+  /**
+   * 흐름으로 이을 베기 하나: 내려베기(presses: 분노의 베기·정수리 베기)를 먼저 찾는다 — 끝 자세(아래)에서 곧장 올려베면 약하다.
+   *  준비 자세가 지금 손에서 멀수록 덜 고른다(flowReach m 을 한 바퀴 돌아가는 거리의 기준으로). 찌르기·방금 친 기술은 빼고
+   */
+  flowTech() {
+    const hand = [this.me.handOffset.x, this.me.handOffset.y];
+    let best = null;
+    let bestW = 0;
+    for (const t of this.school.tech) {
+      if (t === this.tech || t.kind === 'thrust') continue;
+      const cd = padDist(hand, t.from);
+      const w = this.pers.techPref[t.name] * t.base * (t.presses ? 3 : 1) * Math.exp(-cd / (2 * SKILL.flowReach));
+      if (w > bestW) {
+        bestW = w;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * 기술 t 로 흐른다: 멈춰 서서 자세를 잡지 않고, 손이 옆으로 한 바퀴 돌아(물레) 준비 자세를 지나 그대로 벤다.
+   *  칼이 쉬지 않고 돌아 나가니 다음 베기도 제 무게를 싣는다 (8자: 분노의 베기 → 왼쪽 분노의 베기 → …)
+   */
+  flowInto(t, why, chain) {
+    const hand = [this.me.handOffset.x, this.me.handOffset.y];
+    if (!this.startAttack(t, why, { chain, noFeint: true, skipChamber: true })) return false;
+    this.stats.flows = (this.stats.flows ?? 0) + 1;
+    this.startStrike();
+    const mx = (hand[0] + t.from[0]) / 2;
+    this.path.unshift([clamp(mx + Math.sign(mx || hand[0] || 1) * 0.12, -0.6, 0.6), (hand[1] + t.from[1]) / 2], t.from.slice());
+    return true;
+  }
+
+  /** 베기가 끝났다: 칼이 막히지 않았고(안전장치) 상대가 간격 안이면 멈추지 않고 다음 베기로 흐른다 */
+  flowOn(d) {
+    if (this.bound || this.chain >= SKILL.flowChain || !this.foe.alive || d > this.M.reach + 0.1 || d < this.M.clinch - 0.5) return false;
+    const t = this.flowTech();
+    if (!t) return false;
+    if (this.hitLanded) {
+      this.stats.landed++; // afterStrike 를 건너뛰니 맞힌 것을 여기서 센다
+      this.evLanded = true;
+    }
+    return this.flowInto(t, 'flow', this.chain + 1);
+  }
+
+  /** 막는 중: 칼끼리 지금 맞닿았으면(받아 냄) 받은 칼이 멈추지 않고 곧장 되받아 벤다 (예전엔 공격이 지나가길 기다렸다가 자세에서 다시 쳤다) */
+  flowRiposte(d) {
+    const me = this.me;
+    const foe = this.foe;
+    if (!me.tipPrev || !foe.tipPrev || !foe.alive || d > this.M.reach + 0.25 || d < this.M.clinch + 0.1) return false;
+    me.bladePoint(0.1, _a0);
+    foe.bladePoint(0.1, _b0);
+    if (segDist(_a0, me.tipPrev, _b0, foe.tipPrev) > 0.07) return false;
+    const t = this.flowTech();
+    return !!t && this.flowInto(t, 'riposte', 0);
+  }
+
   // ───────────────────────── 물러나기 ─────────────────────────
   startWithdraw(time) {
     this.mode = 'withdraw';
@@ -958,6 +1019,8 @@ export class AI {
     this.hand.set(p[0], p[1]);
     this.handSpeed = this.defVoid ? L.parrySpeed * 0.6 : L.parrySpeed;
     this.checkBind();
+    // 흐름(SKILL.flow): 칼로 받아 낸 순간(칼끼리 맞닿음) 받은 칼이 멈추지 않고 그대로 되받아 벤다
+    if (SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
     const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
     if ((swingOver && this.timer < 0.35) || this.timer <= 0) {

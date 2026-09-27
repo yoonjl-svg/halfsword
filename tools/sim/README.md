@@ -11,6 +11,7 @@
 | `node tools/sim/eval_m.mjs passive\|aiai\|aggro` | AI 평가: 가만히 있는 상대·AI끼리·돌진형 상대 (ai_old.mjs = 옛 AI 기준선) |
 | `node tools/sim/weapon_smoke.mjs` | 무기고(src/weapons.js) 전체를 롱소드 상대로 6초씩 돌려 예외·NaN(물리 발산)만 훑는다 |
 | `node tools/sim/ref_duel.mjs [vs\|field] [판수(자리마다)] [무기id...] [--seed=첫번호] [--levitate] [--proxy=ls] [--hero] [--json]` | **기준 하니스**(디렉터 10라운드 A6, 기본 hybrid). vs = 무기 X 대 롱소드(캐릭터 무기는 그 캐릭터가, 나머지는 주인공 대리가 쥔다. `--hero`면 캐릭터 무기도 주인공 대리가), field = 주인공 대리가 X로 캐릭터 다섯을 상대. 승·패·무, 윌슨 95% 구간, 파손. 간격은 게임 그대로(applyWeaponMeasure 안 씀) |
+| `node tools/sim/flow_eval.mjs [판수(자리마다)] [무기X] [무기Y] [--flow] [--levitate] [--seed=첫번호] [--json]` | 흐름(SKILL.flow) 판정(디렉터 10라운드 D, 기본 hybrid): AI 대 AI(주인공 대리 둘) 승·패·무, 첫 상처 × 결과 교차표(첫 상처를 낸 쪽이 몇 % 이기나), 판당 공격·이어 치기·흐름·닿음, 간격 안 머문 비율 |
 | `node tools/sim/weapon_balance.mjs [판수] [무기id...] [--seed=첫번호]` | 무기별 vs 롱소드 승률·평균 종료 시간·파손 판 수를 잰다 (시드 1000+s·2000+s, `--seed`로 다른 판 묶음) (`newRound({weapon, weapon2})`로 서로 다른 무기를 쥐여주고, `weapon_measures.mjs`의 실측 간격을 AI에 끼워 짧은 칼도 제 간격에서 싸우게 한다). 무기id 생략 시 롱소드를 뺀 전체 |
 | `node tools/sim/weapon_measure.mjs [무기id...]` | 무기별 유파 간격(`measure`: contact/reach/clinch/cutTime)을 혼자 휘두르는 베기로 잰다 — 롱소드가 1.62가 되는 배율을 전체에 곱해 schools.js에 그대로 넣을 수 있는 값을 찍는다 |
 | `node tools/sim/weapon_break_rate.mjs [무기id...]` | 무기 파손률 표준 측정: 죽지 않는 60초 경합(롱소드 상대, 양쪽 자리 25판씩)에서 한 판에 부러진 비율. `TIER=rare`로 등급 강제, `DUMP=1`로 충돌 충격량 목록 |
@@ -19,7 +20,7 @@
 | `node tools/sim/down_hits.mjs [판수] [무기id] [--stand]` | 쓰러진 상대에게 스크립트로 내려베기·사선 베기·아래로 찌르기 → 닿는 거리(0.45~1.35m)별 상처율과 안 들어간 이유(미접촉·문턱 미달·칼 면·칼자루). `--stand` = 서 있는 상대 대조 실험 |
 | `node tools/sim/down_ai.mjs [판수] [적 무기id]` | AI가 쓰러진 플레이어를 마무리하는가: 상처 낸 판·첫 상처까지 시간·휘두름당 상처·상처 깊이 (쓰러뜨린 뒤 2.5초 + 주어진 초까지 잰다) |
 | `node tools/sim/down_diag.mjs [판수] [적 무기id] [초] [방향...] [--v]` | down_ai 와 같은 판에서 왜 못 끝내나: AI 가 보는 거리 분포·AI 단계 분포·휘두를 때 거리와 칼날~몸통 최소 거리·상처 난 순간의 거리·발 디딤. `--downM=닿는,사거리,붙음` 은 실험용(간격 표를 바꿔 끼움) |
-| `node tools/sim/tap_thrust.mjs [stand\|down\|duel\|all] [판수] [무기id] [--seed=첫번호]` | 탭 찌르기(skill.thrust) 검증: 처음 닿은 판정이 찌르기인지, 상처·상처 깊이, 상대 칼에 먼저 막혔는지 |
+| `node tools/sim/tap_thrust.mjs [stand\|down\|duel\|all] [판수] [무기id] [--seed=첫번호]` | 탭 찌르기(skill.thrust) 검증: 처음 닿은 판정이 찌르기인지, 상처·상처 깊이, 상대 칼에 먼저 막혔는지. 탭 결과 네 갈래(상처 / 칼에 걸렸고 상처 없음 / 몸에만 닿음 / 아무것도 못 닿음), 못 닿은 탭의 까닭(거리 모자람·내딛은 거리 / 옆으로 빗나감), duel 은 탭 연타 판 결과(이김·짐·무)도 |
 | 위 세 도구 공통: `--str=0.85` `--foeStr=1.3` `--emo=off` `--emoP=anger:1` `--emoE=fear:1` | 플레이어·상대 근력, 감정 능력 끄기(게임의 `?emo=0`), 플레이어·상대 감정 고정(감정:세기). `str_emo.mjs` 참고 |
 | `node tools/sim/ai_thrust_pref.mjs [판수] [무기id...]` | AI가 찌르기 무기로 찌르기 기술을 더 고르는지 (고른 기술 비율, 찌르기 판정 수) |
 | `node tools/sim/with_config.mjs STRIKE.thrustAssist=2.5 <스크립트> [인자...]` | 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 |
