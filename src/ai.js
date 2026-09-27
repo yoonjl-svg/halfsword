@@ -342,7 +342,10 @@ export class AI {
     const cand = order.find((k) => E[k] > 0.3 && k !== this.emotion);
     if (cand) {
       const c = this.emotion;
-      if (!c || order.indexOf(cand) < order.indexOf(c) || E[cand] > E[c] + 0.15) this.emotion = cand;
+      // 우선순위가 높은 감정은 지금 지배 감정보다 0.15 이상 약하지만 않으면 넘겨받고, 낮은 감정은 0.15 이상 세야
+      //  넘겨받는다 (두 조건이 동시에 참일 수 없어 매 스텝 왔다 갔다 하지 않는다)
+      const higher = c && order.indexOf(cand) < order.indexOf(c);
+      if (!c || (higher ? E[cand] > E[c] - 0.15 : E[cand] > E[c] + 0.15)) this.emotion = cand;
     }
     this.fear = this.emotion === 'fear' || this.emotion === null ? E.fear : 0;
 
