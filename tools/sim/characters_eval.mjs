@@ -74,16 +74,21 @@ function runDuel(chA, chB, seed, durS = 45) {
     persona2: chB.ai.persona,
   };
   const G = newRound(opts);
-  const { player: B, enemy: A } = G;
+  const { player: B, enemy: A, ai, ai2 } = G;
   const steps = Math.round(durS / DT);
+  let fearA = 0, fearB = 0, n = 0; // 감정층 관찰: 판 동안의 평균 공포 세기
   for (let i = 0; i < steps; i++) {
     G.step();
+    fearA += ai.fear; fearB += ai2.fear; n++;
     if (!A.alive || !B.alive) break;
   }
-  if (!A.alive && !B.alive) return 'draw';
-  if (!A.alive) return 'B'; // B(플레이어 자리) 승
-  if (!B.alive) return 'A'; // A(적 자리) 승
-  return A.blood === B.blood ? 'draw' : A.blood > B.blood ? 'A' : 'B';
+  const dur = n * DT;
+  const emoOf = (x) => ({ peak: x.stats.emoPeak ?? {}, time: x.stats.emoTime ?? {}, count: x.stats.emoCount ?? {}, dur });
+  const fear = { A: fearA / n, B: fearB / n, peakA: ai.stats.fearPeak ?? 0, peakB: ai2.stats.fearPeak ?? 0, emoA: emoOf(ai), emoB: emoOf(ai2) };
+  if (!A.alive && !B.alive) return { r: 'draw', fear };
+  if (!A.alive) return { r: 'B', fear }; // B(플레이어 자리) 승
+  if (!B.alive) return { r: 'A', fear }; // A(적 자리) 승
+  return { r: A.blood === B.blood ? 'draw' : A.blood > B.blood ? 'A' : 'B', fear };
 }
 
 function fmt(x) { return (Math.round(x * 100) / 100).toFixed(2); }
@@ -116,18 +121,45 @@ async function main() {
     //  보인다). 그래서 각 조합을 두 자리 배치 모두 돌려 평균 낸 "대칭 승률"을 진짜 실력 비교로 쓴다.
     const ids = CHARACTERS.map((c) => c.id);
     const raw = {}; // raw[A][B] = A가 자리 A(enemy)일 때 B를 이긴 비율(%)
+    const fearOf = {}; // 캐릭터별 공포: 판 평균 세기들, 판 최고 세기들
+    const EMOS = ['fear', 'anger', 'obsession'];
+    const emoOf = {}; // 캐릭터별 감정: 판마다 {peak, time, dur}
+    for (const id of ids) { fearOf[id] = { mean: [], peak: [] }; emoOf[id] = []; }
     for (const chA of CHARACTERS) {
       raw[chA.id] = {};
       for (const chB of CHARACTERS) {
         if (chA.id === chB.id) continue;
         let aWins = 0, bWins = 0, draws = 0;
         for (let s = 1; s <= SEEDS; s++) {
-          const r = runDuel(chA, chB, s);
+          const { r, fear } = runDuel(chA, chB, s);
           if (r === 'A') aWins++; else if (r === 'B') bWins++; else draws++;
+          fearOf[chA.id].mean.push(fear.A); fearOf[chA.id].peak.push(fear.peakA);
+          fearOf[chB.id].mean.push(fear.B); fearOf[chB.id].peak.push(fear.peakB);
+          emoOf[chA.id].push(fear.emoA); emoOf[chB.id].push(fear.emoB);
         }
         raw[chA.id][chB.id] = (aWins / SEEDS) * 100;
       }
     }
+    console.log('[감정층] 캐릭터별 공포: 판 평균 세기 / 판 최고 세기의 평균 / 공포가 0.3을 넘은 판 비율');
+    for (const id of ids) {
+      const f = fearOf[id];
+      console.log(`${id}: fearful=${CHARACTERS.find((c) => c.id === id).ai.persona.pers.fearful ?? 0}, mean ${fmt(mean(f.mean))}, peak ${fmt(mean(f.peak))}, 겁먹은 판 ${fmt((100 * f.peak.filter((p) => p > 0.3).length) / f.peak.length)}%`);
+    }
+    console.log('');
+    console.log('[감정층·세 감정] 캐릭터별: 판% = 그 감정이 0.3을 넘은 판 비율 / 지배% = 지배한 시간 비율 / 횟수 = 한 판에 지배 감정으로 켜진 평균 횟수 / 초 = 한 번 켜지면 평균 지속(초) — 효과는 공포만 붙어 있음');
+    console.log('id,' + EMOS.map((e) => `${e}:판%/지배%/횟수/초`).join(','));
+    for (const id of ids) {
+      const runs = emoOf[id];
+      const cells = EMOS.map((e) => {
+        const fired = (100 * runs.filter((r) => (r.peak[e] ?? 0) > 0.3).length) / runs.length;
+        const totalT = runs.reduce((s, r) => s + r.dur, 0);
+        const onT = runs.reduce((s, r) => s + (r.time[e] ?? 0), 0);
+        const cnt = runs.reduce((s, r) => s + (r.count[e] ?? 0), 0);
+        return `${fired.toFixed(0)}/${((100 * onT) / totalT).toFixed(0)}/${(cnt / runs.length).toFixed(1)}/${cnt ? (onT / cnt).toFixed(1) : '-'}`;
+      });
+      console.log(`${id},${cells.join(',')}`);
+    }
+    console.log('');
     console.log('[참고] 자리 그대로: 행 = A(enemy 자리), 열 = B(player 자리). 셀 = A가 B를 이긴 비율(%)');
     console.log('A\\B,' + ids.join(','));
     for (const a of ids) console.log(a + ',' + ids.map((b) => (a === b ? '-' : fmt(raw[a][b]))).join(','));
