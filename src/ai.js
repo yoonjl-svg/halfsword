@@ -80,6 +80,7 @@ export class AI {
     // 감정 셋 (공포·분노·집념): 지배 감정 하나 + 세기 0~1 + 시간 감쇠 — 자세히는 emote() 참고.
     //  지금 검술에 효과를 내는 것은 공포뿐이고(this.fear), 분노·집념은 판정만 하며 세기와 지배 시간을 잰다
     this.emo = { fear: 0, anger: 0, obsession: 0 };
+    this.anger = 0; // 검술에 실제로 걸리는 분노 세기 (분노가 지배 감정일 때만 > 0)
     this.emotion = null; // 지배 감정 이름 (없으면 null)
     this.fear = 0; // 검술에 실제로 쓰는 공포 세기 (다른 감정이 지배하면 0)
     this.emoT = 0;
@@ -188,7 +189,7 @@ export class AI {
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
 
     // ── 보기 (반응 시간만큼 늦게) ──
-    const s = this.sense.seen(L.reaction);
+    const s = this.sense.seen(L.reaction + 0.04 * this.anger); // 화나면 눈이 조금 늦다
     const c = me.bodies.chest.translation();
     // 몸의 움직임은 사람도 앞질러 내다본다 (걸어오는 사람이 지금 어디쯤인지): 본 위치 + 속도 × 반응 시간.
     //  칼을 휘두르기 시작하는 것처럼 갑자기 바뀌는 움직임은 내다볼 수 없다 → 그건 늦게 본다
@@ -291,7 +292,7 @@ export class AI {
   /** 간을 볼 거리: 상대 칼이 닿는 거리 + 여유. 인내심이 줄수록 여유를 줄여 간격 끝에 선다 */
   holdDist() {
     const L = this.level;
-    let m = this.pers.margin * (0.3 + 0.7 * this.patience) * (0.6 + 0.4 * L.discipline);
+    let m = this.pers.margin * (0.3 + 0.7 * this.patience) * (0.6 + 0.4 * L.discipline * (1 - 0.3 * this.anger)); // 화나면 규율이 흐트러진다
     if (this.guard?.name === 'alber') m -= 0.12; // 바보 자세: 머리를 비워 두고 조금 더 다가가 유인한다
     if (this.cautious) m += 0.2;
     m += this.fear * 0.35; // 겁먹으면 상대 칼에서 더 멀찍이 선다
@@ -312,11 +313,15 @@ export class AI {
    * 지배 감정은 하나: 0.3을 넘은 것 중 생존 우선(공포 > 분노 > 집념). 지배 감정이 바뀌려면 새 감정이 0.15 이상
    * 더 세야 한다(왔다 갔다 하지 않게). 지배 감정이 0.15 아래로 가라앉으면 물러난다.
    *
-   * 검술에 효과를 내는 것은 아직 공포뿐이다(this.fear — 다른 감정이 지배하면 0): holdDist(간격을 더 둔다),
-   * pickGuard(칼끝으로 겨누는 자세만 잡는다), watch(헛친 상대·쓰러진 상대 말고는 안 들어간다),
-   * respond(막기보다 물러나 피하고, 맞받아치지 않는다), preThreat(달려드는 상대를 맞받지 않고 물러난다),
-   * moveFeet(잔걸음이 뒷걸음으로 기운다). 분노·집념은 판정만 하며 세기·지배 시간·켜진 횟수를 stats에 잰다.
-   * 문턱값이 전부 0이면 this.fear가 늘 0이라 모든 곳이 예전과 똑같이 계산된다.
+   * 검술에 효과를 내는 것은 공포(this.fear — 다른 감정이 지배하면 0)와 분노(this.anger — 분노가 지배할 때만)다.
+   *  공포: holdDist(간격을 더 둔다), pickGuard(칼끝으로 겨누는 자세만 잡는다), watch(헛친 상대·쓰러진 상대 말고는
+   *   안 들어간다), respond(막기보다 물러나 피하고, 맞받아치지 않는다), preThreat(달려드는 상대를 맞받지 않고
+   *   물러난다), moveFeet(잔걸음이 뒷걸음으로 기운다).
+   *  분노: 켜지는 순간 인내심 0.2로 + 주고받은 뒤 인내심이 덜 돌아온다(afterStrike), 속임수 안 씀(startAttack),
+   *   무거운 베기 ×1.6(pickTech), 이어치기 +0.2(afterStrike), 규율 ×0.7(holdDist·moveFeet: 덜 물러난다),
+   *   반응 +0.04s(step), 지붕 자세 선호(pickGuard).
+   * 집념은 판정만 하며 세기·지배 시간·켜진 횟수를 stats에 잰다.
+   * 문턱값이 전부 0이면 this.fear·this.anger가 늘 0이라 모든 곳이 예전과 똑같이 계산된다.
    */
   emote(dt, hurt, nearMiss) {
     const P = this.pers;
@@ -367,6 +372,8 @@ export class AI {
       if (!c || (higher ? E[cand] > E[c] - 0.15 : E[cand] > E[c] + 0.15)) this.emotion = cand;
     }
     this.fear = this.emotion === 'fear' || this.emotion === null ? E.fear : 0;
+    this.anger = this.emotion === 'anger' ? E.anger : 0;
+    if (this.emotion === 'anger' && cur !== 'anger') this.patience = Math.min(this.patience, 0.2); // 발끈한 순간: 참을성이 바닥난다
 
     // 관찰용 통계: 감정별 최고 세기, 지배한 시간, 지배 감정으로 켜진 횟수
     const S = this.stats;
@@ -416,6 +423,8 @@ export class AI {
       if (ready) w *= 1 + (1 - this.patience) * 0.8 + this.foeAggro * 2.5 * L.read;
       // 겁먹으면 칼끝으로 겨누는 자세(쟁기·긴 자세·황소)만 잡는다: 들어오지 못하게 막대기를 세워 두는 셈
       w *= 1 + this.fear * 2 * g.threat;
+      // 화나면 지붕 자세(내려칠 준비)로 간다
+      if (g.name === 'tag' || g.name === 'tagR') w *= 1 + this.anger * 1.5;
       // 가까운 자세로 옮기는 것을 좋아한다 (칼을 크게 휘저으며 자세를 바꾸지 않는다). guardStick이 클수록 이 버릇이 강하다
       if (this.guard) w /= 1 + this.pers.guardStick * Math.hypot(g.pad[0] - this.guard.pad[0], g.pad[1] - this.guard.pad[1]);
       w *= rand(0.5, 1.5);
@@ -525,6 +534,7 @@ export class AI {
       if (why === 'finish') fit *= up ? 1.5 : 0.6; // 쓰러진 상대: 위에서 내려친다
       if (why === 'windup' || why === 'stepin') fit *= t.fast ? 1.6 : 1; // 짧은 순간: 빠른 기술
       if (why === 'stop') fit *= t.presses ? 2 : t.kind === 'thrust' ? 0.3 : 1; // 달려드는 몸을 맞받는다: 무거운 베기
+      if (t.presses) fit *= 1 + 0.6 * this.anger; // 화나면 무거운 베기(분노의 베기·내려베기)만 찾는다
       w *= Math.pow(fit, 0.3 + 0.7 * L.read);
       // 준비 자세가 멀면 크게 들어 올려야 한다 (속내가 드러나고 늦다) → 짧은 기회일수록 지금 자세에서 바로 친다
       const cd = padDist(hand, t.from);
@@ -561,7 +571,7 @@ export class AI {
     this.feint = null;
     if (!opt.noFeint && (why === 'patience' || why === 'open' || why === 'weak')) {
       const want = L.feint * (1 + Math.min(2, this.foeParried * 0.4));
-      if (Math.random() < want) {
+      if (Math.random() < want * (1 - this.anger)) { // 화나면 속임수를 안 쓴다 (곧장 친다)
         const byName = this.school.techByName;
         const cands = this.school.feints.filter((f) => padDist(hand, byName[f.fake].from) < 0.45);
         if (cands.length) {
@@ -713,7 +723,7 @@ export class AI {
     // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
     //  간격 끝(clinch 근처)에서도 짧게 이어 칠 수 있어야 몰아치는 상대에게 계속 밀리지 않는다
     const canChain = this.chain < 2 && d < this.M.reach + 0.1 && d > this.M.clinch - 0.5 && this.foe.alive;
-    const want = this.hitLanded || this.bound ? L.followUp : L.followUp * 0.4;
+    const want = (this.hitLanded || this.bound ? L.followUp : L.followUp * 0.4) + 0.2 * this.anger; // 화나면 더 이어 친다
     if (canChain && Math.random() < want) {
       // 지금 손 위치에서 바로 이어지는 기술 (다시 크게 들지 않는다)
       const hand = [this.me.handOffset.x, this.me.handOffset.y];
@@ -735,7 +745,7 @@ export class AI {
       }
     }
     // 한 번 주고받았으니 다시 간을 본다 (인내심이 조금 돌아온다)
-    this.patience = Math.max(this.patience, rand(0.45, 0.75));
+    this.patience = Math.max(this.patience, rand(0.45, 0.75) * (1 - 0.7 * this.anger)); // 화나면 간을 볼 참을성이 안 돌아온다
     this.startWithdraw(0.9);
   }
 
@@ -1067,7 +1077,7 @@ export class AI {
       // 멀면 걸어서 다가가고, 간격 가까이에선 발끝으로 조금씩 파고든다 (성큼 들어가면 상대 칼에 걸린다)
       let v = clamp(err * 1.6, -1.9, d > hold + 0.5 ? 1.2 : 0.18);
       if (this.chasing && err > 0) v = speed; // 빈손 상대는 뛰어서 쫓는다
-      v -= Math.max(0, this.foeClosing) * L.discipline; // 상대가 다가오면 그만큼 물러난다
+      v -= Math.max(0, this.foeClosing) * L.discipline * (1 - 0.3 * this.anger); // 상대가 다가오면 그만큼 물러난다 (화나면 덜 물러난다)
       if (Math.abs(err) < 0.12 && Math.abs(this.foeClosing) < 0.3) {
         // 제자리: 잔걸음으로 들어갔다 빠졌다 (리듬)
         this.shuffleTimer -= dt;
