@@ -13,6 +13,7 @@
 //  (main.js 처럼 매 스텝 걷기 입력을 0으로 되돌린다 — 검술 층의 내딛기(lunge)는 그 스텝 안에서만 덮어쓴다)
 import { newRound, DT, THREE, V, Q } from './harness_m.mjs';
 import { strEmoOpts, applyStrEmo, strEmoLabel } from './str_emo.mjs';
+import { isMain } from './is_main.mjs';
 
 // 패드 좌표(몸 앞 평면, m) 출발 → 도착, 손 목표 빠르기(패드 m/s)
 export const DOWN_ATTACKS = {
@@ -217,7 +218,7 @@ export function trial({ dist, fall = 'toward', attack, seed, weapon, stand = fal
 }
 
 // ── 실행 ──
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const stand = args.includes('--stand');
   const opt = (k) => args.find((a) => a.startsWith(`--${k}=`))?.split('=')[1];

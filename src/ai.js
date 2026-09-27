@@ -40,8 +40,9 @@ const WEAPON_BASELINE = 0.13 + 1.05;
 // 값)으로 나눈 비율. 칼날+자루 길이만 단순 비례하는 것보다 훨씬 정확하다 — 실제 팔·몸 뻗음까지
 // 담겨 있어서, 짧은 칼(환두대도 등)이 순수 길이비보다 실제로는 덜 불리하다는 게 이 표로 드러났다.
 // excalibur_replica는 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 비율을 쓴다.
-const MEASURED = {
+export const MEASURED = {
   // id: [contact, reach, clinch, cutTime] raw — tools/sim/weapon_measures.mjs 와 같은 값 (감독 확정 14종 로스터).
+  //  (finish.js 도 읽는다: 쓰러진 상대까지 닿는 거리 배율 downReachK)
   //  cutTime 은 보정 없는 raw(롱소드 0.43)라 비율로만 쓴다.
   longsword: [1.62, 1.91, 1.25, 0.43],
   zweihander: [1.66, 2.08, 1.28, 0.49],
@@ -702,6 +703,8 @@ export class AI {
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
+      // 쓰러진 상대: 누운 몸까지 닿는 거리는 칼이 짧을수록 훨씬 짧다(아래로 뻗느라) → 무기 배율(finish.js downReachK)만큼 더 다가선다
+      if (this.foe.state === 'down') this.need *= this.me.finish?.k ?? 1;
       if (this.timer <= 0 && this.contactDist() <= this.need) {
         // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
         this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
@@ -772,7 +775,8 @@ export class AI {
     this.requestedStep = false;
     // 찌르기 무기(weapons.js THRUST_STYLE: 에스톡·레이피어)는 찌르기 기술을 플레이어의 탭 찌르기와 같은 칼끝 찌르기로 한다
     //  (칼끝을 상대 가슴·머리로 맞추고 칼 선을 따라 뻗는다 — skill.js thrust). 다른 무기는 예전처럼 자세 지도의 길을 따라간다
-    if (t.kind === 'thrust' && !this.feint && this.me.weaponCfg.thrustStyle) this.me.skill.thrust();
+    //  내딛기는 AI 가 정한다(stepTime·gaitStep) — 검술 층이 따로 내딛지 않게 step: false
+    if (t.kind === 'thrust' && !this.feint && this.me.weaponCfg.thrustStyle) this.me.skill.thrust({ step: false });
   }
 
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */
@@ -1153,7 +1157,7 @@ export class AI {
           //  뒤로 살짝 당기면 검술 층의 자동 내딛기(skill.js)도 걸리지 않는다
           fwd = d < this.M.contact ? -0.5 : -0.21;
         }
-        if (d < this.M.clinch) fwd = -0.7; // 너무 붙으면 베며 물러난다
+        if (d < this.M.clinch * (this.foe.state === 'down' ? (this.me.finish?.k ?? 1) : 1)) fwd = -0.7; // 너무 붙으면 베며 물러난다 (쓰러진 상대는 무기 배율만큼 더 붙어도 된다)
         // 달려드는 상대를 맞받아 벨 때는 옆으로 비켜 선다 (상대 칼이 지나가는 줄에서 벗어난다)
         if (this.why === 'stop') side = this.pers.circleDir * 0.6;
       }

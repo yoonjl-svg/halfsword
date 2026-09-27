@@ -4,6 +4,7 @@
 //  사용법: node tools/sim/thrust_strength.mjs [판 수] [무기id...] [--emo=off] [--secs=40]
 import { newRound, DT } from './harness_m.mjs';
 import { strEmoOpts, strEmoLabel } from './str_emo.mjs';
+import { isMain } from './is_main.mjs';
 
 const GUARD = [0.12, -0.18]; // characters_eval.mjs 더미와 같은 자세
 
@@ -29,7 +30,7 @@ function run(weapon, str, seed, secs) {
   return { stab: of('stab'), cut: of('cut'), blunt: ws.filter((w) => w.type === 'blunt').length, tDead, dur: tDead ?? secs, attacks: G.ai.stats.attacks };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const pos = args.filter((a) => !a.startsWith('--'));
   const N = +(pos[0] || 4);

@@ -1335,8 +1335,16 @@ export class Fighter {
     // ② 검술 자세 지도: 손가락 위치 → 실제 롱소드 자세의 손 위치(앞뒤 깊이 포함)와 칼끝 방향
     //  검술 보정이 셀수록 ②를 따른다 (끔 = ①만)
     const gw = this.guardWeight();
-    const G = guardAt(off.x, off.y, this.guardPose, this.finish, this.skill.thrustPose);
+    const G = guardAt(off.x, off.y, this.guardPose, this.finish);
     if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
+    // 탭 찌르기(skill.thrustPose)는 보정이 아니라 명령이라 검술 보정 세기(gw)와 무관하게 덧씌운다 — 보정 0 에서도 찌른다.
+    //  찌르기는 지금 손 목표(handBase, 덧씌우기 전)에서 뻗어 나간다 (skill.thrust)
+    const hb = (this.handBase ||= [0, 0, 0]);
+    hb[0] = handLocal.x;
+    hb[1] = handLocal.y;
+    hb[2] = handLocal.z;
+    const th = this.skill.thrustPose;
+    if (th.w > 0) handLocal.lerp(_v6.set(th.hand[0], th.hand[1], th.hand[2]), th.w);
     handLocal.x = Math.min(handLocal.x, this.closeReach());
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
@@ -1355,6 +1363,11 @@ export class Fighter {
     if (gw > 0) {
       aim.lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), gw);
       if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
+      aim.normalize();
+    }
+    if (th.w > 0) {
+      aim.lerp(_v6.set(th.dir[0], th.dir[1], th.dir[2]), th.w);
+      if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);
       aim.normalize();
     }
     aim.applyQuaternion(this.yaw);
