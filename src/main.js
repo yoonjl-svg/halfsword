@@ -290,7 +290,13 @@ function onClash(point, speed, touch) {
   if (touch?.fresh && touch.vn > 3 && player?.alive && player.tipVel.length() > 6) playerEv.parried = true; // 감정 사건: 내 베기가 막혔다
   // 소리: 새로 부딪힌 순간(또는 맞댄 채 다시 세게 친 순간)에만 "쨍". 맞댄 채 미끄러지는 동안은 긁히는 소리(updateBindSound)
   //  touch.vn = 부딪히기 직전 맞닿는 방향 속도(부딪히는 세기), touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeClash)
-  if (touch && (touch.fresh || touch.vn > 3)) sound.clash(touch.vn, touch.vt);
+  if (touch && (touch.fresh || touch.vn > 3)) {
+    // 두 무기의 재질이 둘 다 강철이면 칼끼리 "쨍", 아니면 재질에 맞는 소리 (나뭇가지 "딱", 광검 "파직", 고무 닭 "삑", 언 참치 "텅")
+    const ma = player?.weapon?.material || 'steel';
+    const mb = enemy?.weapon?.material || 'steel';
+    if (ma === 'steel' && mb === 'steel') sound.clash(touch.vn, touch.vt);
+    else sound.impact({ a: ma, b: mb, energy: 12 * touch.vn });
+  }
   // 연출의 세기는 "부딪히기 직전" 속도로 정한다 (부딪힌 뒤 속도엔 튕겨 나온 몫이 섞여 있다)
   const impact = touch ? (touch.fresh || touch.vn > 3 ? touch.vn : 0) : speed;
   if (clashCooldown > 0) return;
@@ -320,7 +326,16 @@ function updateWhoosh(f, dt) {
   // 판이 바뀌어도 같은 소리 고리를 다시 쓴다 (나/상대 한 개씩)
   let st = whooshState.get(f.index);
   if (!st) whooshState.set(f.index, (st = { loop: null }));
-  if (!st.loop) st.loop = sound.whooshLoop();
+  // 판마다 무기가 바뀐다: 재질이 달라지면 고리를 새로 만든다 (광검은 늘 "웅" 소리가 함께 돈다)
+  const mat = f.weapon?.material || 'steel';
+  if (st.loop && st.mat !== mat) {
+    st.loop.stop?.();
+    st.loop = null;
+  }
+  if (!st.loop) {
+    st.loop = sound.whooshLoop(mat);
+    st.mat = mat;
+  }
   st.loop?.set(f.armed ? f.tipVel.length() : 0);
 }
 /** 싸움 화면이 아닐 때(메뉴·일시정지)는 바람 소리·긁는 소리를 끈다 */
@@ -331,7 +346,8 @@ function muteWhoosh() {
 // 칼끼리 맞대고 밀며 미끄러지는 동안 계속 나는 "지이익" (바인드)
 function updateBindSound() {
   const b = combat.bladeContact;
-  if (combat.binding) sound.scrape(b.slide, b.press);
+  const steel = (player?.weapon?.material || 'steel') === 'steel' && (enemy?.weapon?.material || 'steel') === 'steel';
+  if (combat.binding && steel) sound.scrape(b.slide, b.press); // 쇠끼리 긁히는 "지이익"은 강철끼리만
   else sound.scrape(0, 0);
 }
 

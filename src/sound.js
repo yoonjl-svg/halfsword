@@ -266,7 +266,7 @@ function swordModes(r, { f1 = 22, at = 0.6, edge = 0.6, damp = 1, fmax = 9500, e
 /** 코등이(가로막대 25cm): 830Hz 근처의 "깡" — 너무 크면 종소리처럼 깨끗해져서 조금만 */
 function guardModes(r, amp = 0.35) {
   const f0 = between(r, 700, 980);
-  return [1, 2.756, 5.404].map((k, i) => ({ f: f0 * k * (1 + 0.02 * gauss(r)), a: amp * (i === 0 ? 1 : 0.6) * between(r, 0.6, 1.1), t60: between(r, 0.2, 0.5) }));
+  return [1, 2.756, 5.404].map((k, i) => ({ f: f0 * k * (1 + 0.02 * gauss(r)), a: amp * (i === 0 ? 1 : 0.6) * between(r, 0.6, 1.1), t60: between(r, 0.03, 0.06) })); // 길게 울리면 종·마림바 같은 "통"이 된다
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -417,13 +417,16 @@ export const SYNTH = {
     xEnd = Math.max(xEnd, 20 / sr + gTau * 5);
     const edge = between(r, 0.3, 1);
     const modes = [
-      ...swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.35, 0.9), edge, damp: hard ? 1 : 0.55 }),
-      ...swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.35, 0.9), edge, damp: hard ? 1 : 0.55 }),
+      ...swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.35, 0.9), edge, damp: hard ? 0.6 : 0.35 }),
+      ...swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.35, 0.9), edge, damp: hard ? 0.6 : 0.35 }),
       ...guardModes(r, hard ? 0.12 : 0.08), // 코등이 "깡"(700~980Hz)은 냄비 소리의 주범이라 아주 조금만
     ];
     resonate(x, out, sr, modes, Math.ceil(xEnd * sr) + 2);
     normalize(out, 1);
     potCut(out, sr, 560, 0.75);
+    // 울림(음정)이 앞에 나서면 마림바처럼 "통" 한다 → 울림을 줄이고 칼날끼리 긁히며 부서지는 거친 알갱이를 덮는다
+    for (let i = 0; i < n; i++) out[i] *= hard ? 0.7 : 0.55;
+    gritBurst(out, sr, r, { t0: 0.001, span: hard ? 0.025 : 0.015, count: hard ? 16 : 10, amp: hard ? 0.4 : 0.35, fLo: 1500, fHi: 7000 });
     // 쇠가 찢어지는 "짝-치직": 맞은 순간 높은 딸깍이 연달아 (세게 칠수록 많이, 크게)
     crackBurst(out, sr, r, { t0: 0.001, count: hard ? 6 : 3, span: hard ? 0.014 : 0.008, amp: hard ? 1.1 : 0.55, f: hard ? 3000 : 2400 });
     saturate(out, hard ? 2.2 : 1.6);
@@ -603,18 +606,15 @@ export const SYNTH = {
   /** 몸통을 치는 둔탁한 "퍽". 세게 찌그러뜨려 폰 스피커에서도 들리는 200~600Hz 배음을 만든다 */
   thump(sr, r) {
     const n = Math.round(0.3 * sr);
-    const x = new Float32Array(n);
     const out = new Float32Array(n);
-    // 살과 근육 덩어리가 출렁이는 둔한 울림 (180~500Hz, 금방 죽는다): 부드러운 접촉(1.5ms)으로 두드린다
-    pulse(x, sr, 0.001, between(r, 0.0012, 0.002), 1);
-    const modes = [];
-    for (let i = 0; i < 7; i++) modes.push({ f: Math.exp(between(r, Math.log(170), Math.log(560))), a: between(r, 0.5, 1) * (r() < 0.5 ? -1 : 1), t60: between(r, 0.06, 0.14) });
-    resonate(x, out, sr, modes, Math.ceil(0.004 * sr));
-    normalize(out, 1);
-    thumpTone(out, sr, { f0: between(r, 70, 90), drop: 0.9, dropTau: 0.012, tau: between(r, 0.03, 0.04), amp: 0.6 });
-    noiseHit(out, sr, r, { amp: 0.5, attack: 0.001, tau: 0.012, type: 'lowpass', f: 700, q: 0.8 });
-    noiseHit(out, sr, r, { amp: 0.25, attack: 0.0005, tau: 0.004, type: 'bandpass', f: 1300, q: 1 }); // 살 "철썩"
-    saturate(out, 3.5, 0.2);
+    // 살덩이는 울리지 않는다: 예전엔 170~560Hz 사인파 울림을 넣었더니 마림바 건반처럼 "통" 하고 음정이 났다 →
+    // 음정 없는 잡음 뭉치(살이 눌리는 "퍽") + 누비옷 "철썩" + 아주 낮은 몸통 "쿵"(찌그러뜨린 뒤에 깨끗하게)만 쓴다
+    noiseHit(out, sr, r, { amp: 0.8, attack: 0.0015, tau: between(r, 0.014, 0.02), type: 'lowpass', f: between(r, 350, 500), q: 0.6 });
+    noiseHit(out, sr, r, { amp: 0.45, attack: 0.001, tau: 0.01, type: 'lowpass', f: 900, q: 0.6 });
+    noiseHit(out, sr, r, { amp: 0.28, attack: 0.0005, tau: 0.004, type: 'bandpass', f: between(r, 1100, 1600), q: 0.9 }); // 누비옷 "철썩"
+    gritBurst(out, sr, r, { t0: 0.001, span: 0.02, count: 6, amp: 0.12, fLo: 400, fHi: 1500 });
+    saturate(out, 2.5, 0.15);
+    thumpTone(out, sr, { f0: between(r, 55, 75), drop: 0.8, dropTau: 0.012, tau: between(r, 0.025, 0.035), amp: 0.7 });
     return fadeOut(normalize(out, 0.9), sr, 0.05);
   },
 
@@ -643,7 +643,7 @@ export const SYNTH = {
     const out = new Float32Array(n);
     pulse(x, sr, 0.001, between(r, 0.0006, 0.0012), 1);
     const modes = [];
-    for (let i = 0; i < 6; i++) modes.push({ f: Math.exp(between(r, Math.log(140), Math.log(900))), a: between(r, 0.5, 1) * (r() < 0.5 ? -1 : 1), t60: between(r, 0.05, 0.11) });
+    for (let i = 0; i < 10; i++) modes.push({ f: Math.exp(between(r, Math.log(180), Math.log(2500))), a: between(r, 0.4, 1) * (r() < 0.5 ? -1 : 1), t60: between(r, 0.012, 0.03) }); // 짧게: 길면 마림바(나무 건반)가 된다
     resonate(x, out, sr, modes, Math.ceil(0.01 * sr));
     normalize(out, 1);
     noiseHit(out, sr, r, { t0: 0.001, amp: 0.5, attack: 0.0004, tau: 0.006, type: 'bandpass', f: 900, q: 1 });
@@ -918,8 +918,14 @@ export function makeBankSound(name, sr, seed) {
 }
 
 // 녹음된 소리 (Kenney.nl, CC0). 없거나 못 읽어도 합성 소리만으로 동작한다
+const nums = (base, k) => Array.from({ length: k }, (_, i) => `${base}${i + 1}`);
 const SAMPLES = {
-  punch: ['punch1', 'punch2', 'punch3', 'punch4', 'punch5'], // 몸통을 치는 "퍽"
+  punch: ['punch1', 'punch2', 'punch3', 'punch4', 'punch5'], // 몸통을 세게 치는 "퍽" (Kenney impactPunch_heavy)
+  punchMed: nums('hit/punch_med', 5), // 가볍게 치는 "퍽" (Kenney impactPunch_medium)
+  soft: nums('hit/soft', 5), // 누비옷 너머로 몸통 덩어리가 받는 둔한 "쿵" (Kenney impactSoft_heavy)
+  woodHit: nums('hit/wood', 5), // 나무 몽둥이 (Kenney impactWood_medium)
+  woodHeavy: nums('hit/wood_heavy', 3), // (Kenney impactWood_heavy)
+  step: nums('step/boot', 9), // 가죽 장화 발소리 (Kenney RPG Audio footstep)
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
 };
@@ -1140,12 +1146,34 @@ export class Sound {
   pickSample(name) {
     if (!this.useSamples) return null;
     const list = this.samples[name];
-    return list && list.length ? list[(Math.random() * list.length) | 0] : null;
+    if (!list || !list.length) return null;
+    // 바로 앞에 쓴 것은 피한다 (발소리처럼 자주 나는 소리가 똑같이 두 번 연달아 나면 기계처럼 들린다)
+    this._lastPick = this._lastPick || {};
+    let i = (Math.random() * list.length) | 0;
+    if (list.length > 1 && i === this._lastPick[name]) i = (i + 1 + ((Math.random() * (list.length - 1)) | 0)) % list.length;
+    this._lastPick[name] = i;
+    return list[i];
   }
 
   /** 녹음된 소리 읽기 (첫 화면 터치 뒤에, 뒤에서 천천히) */
   async loadSamples() {
-    for (const [name, files] of Object.entries(SAMPLES)) for (const f of files) await this.loadSample(name, f);
+    // 한꺼번에 받는다 (하나씩 받으면 발소리처럼 판 시작부터 필요한 소리가 몇 초 늦는다). 순서는 목록 순서로 맞춘다
+    const jobs = [];
+    for (const [name, files] of Object.entries(SAMPLES)) files.forEach((f, i) => jobs.push(this.decodeSample(f).then((buf) => buf && (((this.samples[name] = this.samples[name] || [])[i] = buf)))));
+    await Promise.all(jobs);
+    for (const name of Object.keys(SAMPLES)) if (this.samples[name]) this.samples[name] = this.samples[name].filter(Boolean);
+  }
+  async decodeSample(f) {
+    const c = this.ctx;
+    try {
+      const res = await fetch(new URL(`sfx/${f}.mp3`, document.baseURI));
+      if (!res.ok) return null;
+      const ab = await res.arrayBuffer();
+      const buf = await new Promise((ok, bad) => c.decodeAudioData(ab, ok, bad)?.then?.(ok, bad));
+      return trimStart(c, buf);
+    } catch {
+      return null; // 못 읽으면 합성 소리만 쓴다
+    }
   }
   async loadSample(name, f) {
     const c = this.ctx;
@@ -1280,7 +1308,7 @@ export class Sound {
     this._lastClash = { t: now, x };
     const vol = 0.18 + 0.82 * x ** 0.7; // 약 −15dB ~ 0dB
     // 세게 칠수록 두 칼이 맞닿는 시간이 짧아져서 높은 소리까지 울린다 (거의 최대면 필터 없이)
-    const bright = 2200 + 14000 * x ** 1.3;
+    const bright = 5000 + 11000 * x ** 1.3; // (하한이 낮으면 약한 타격의 날카로운 성분이 잘려 가운데 울림만 "통" 하고 남는다)
     const ev = this.event({ bus: this.metalBus, gain: vol, bright: bright < 12000 ? bright : 0, prio: 1 + x });
     // 세기에 따라 층을 고른다 (녹음 효과음의 "세기 층" 방식): 약하게 = 둔탁한 "텅", 세게 = "쨍그렁".
     // 0.15~0.55 사이에서는 센 층이 나올 확률이 점점 커진다
@@ -1313,9 +1341,12 @@ export class Sound {
 
   /** 몸통 "퍽" 한 겹 (녹음된 소리가 있으면 둘 다 섞는다) */
   body(ev, gain, rate = 1) {
-    const rec = this.pickSample('punch');
-    this.layer(ev, this.pick('thump'), { gain: rec ? gain * 0.9 : gain, rate: rate * between(Math.random, 0.9, 1.1) });
-    if (rec) this.layer(ev, rec, { gain: gain * 0.55, rate: rate * between(Math.random, 0.9, 1.08) }); // 녹음된 "퍽"은 저음이 많아 이어폰에서 무게를 더한다
+    // 녹음된 주먹 "퍽"(세면 heavy) + 누비옷 너머 몸통 덩어리의 "쿵". 합성 "퍽"은 녹음이 있으면 살짝만 (없으면 이것만)
+    const rec = this.pickSample(gain >= 0.8 ? 'punch' : 'punchMed') || this.pickSample('punch');
+    const soft = this.pickSample('soft');
+    this.layer(ev, this.pick('thump'), { gain: rec ? gain * 0.35 : gain, rate: rate * between(Math.random, 0.9, 1.1) });
+    if (rec) this.layer(ev, rec, { gain: gain * 0.8, rate: rate * between(Math.random, 0.92, 1.06) });
+    if (soft) this.layer(ev, soft, { gain: gain * 0.5, rate: rate * between(Math.random, 0.9, 1.05) });
   }
 
   /** 베기: 천이 찢기고 살을 가르는 "쉭-지직" + 젖은 소리 + 몸통 "퍽". through = 베고 지나감 */
@@ -1388,7 +1419,9 @@ export class Sound {
   _impactWood(energy, pos) {
     const e = clamp01(energy / 80);
     const ev = this.event({ bus: this.fleshBus, gain: 0.3 + 0.7 * e ** 0.8, prio: 1.5, pos });
-    this.layer(ev, this.pick('wood'), { rate: between(Math.random, 0.9, 1.08) * (1 - 0.05 * e) });
+    const rec = this.pickSample(e > 0.6 ? 'woodHeavy' : 'woodHit');
+    this.layer(ev, this.pick('wood'), { gain: rec ? 0.35 : 1, rate: between(Math.random, 0.9, 1.08) * (1 - 0.05 * e) });
+    if (rec) this.layer(ev, rec, { gain: 0.9, rate: between(Math.random, 0.92, 1.06) });
   }
   /** *+flesh (강철·투구·나무 대 살): 자르지 않는 뭉툭한 접촉이므로 몸통 "퍽"만 */
   _impactFleshDull(energy, pos) {
@@ -1420,8 +1453,9 @@ export class Sound {
   _impactFrozen(energy, pos) {
     const e = clamp01(energy / 90);
     const ev = this.event({ bus: this.fleshBus, gain: 0.3 + 0.7 * e ** 0.8, prio: 1.5, pos });
-    this.layer(ev, this.pick('wood'), { rate: between(Math.random, 0.7, 0.8) });
-    this.layer(ev, this.pick('thump'), { gain: 0.5, rate: between(Math.random, 0.85, 1) });
+    const rec = this.pickSample('woodHeavy');
+    this.layer(ev, rec || this.pick('wood'), { rate: between(Math.random, 0.7, 0.8) });
+    this.layer(ev, this.pickSample('soft') || this.pick('thump'), { gain: 0.5, rate: between(Math.random, 0.85, 1) });
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1432,8 +1466,13 @@ export class Sound {
   footstep(speed, pos) {
     if (!this._on || !this.ctx) return;
     const x = clamp01((speed - 0.3) / 1.8);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.1 + 0.4 * x, bright: 1800 + 3500 * x, prio: 0.3, pos });
-    this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) });
+    // FPS 게임처럼 녹음된 장화 발소리(9가지, 같은 것이 연달아 안 나오게). 크게 디디면 합성 "쿵"을 조금 깔아 무게를 더한다
+    const rec = this.pickSample('step');
+    const ev = this.event({ bus: this.fleshBus, gain: rec ? 0.22 + 0.45 * x : 0.1 + 0.4 * x, bright: rec ? 0 : 1800 + 3500 * x, prio: 0.3, pos });
+    if (rec) {
+      this.layer(ev, rec, { rate: between(Math.random, 0.9, 1.02) });
+      if (x > 0.65) this.layer(ev, this.pick('stepHeavy'), { gain: 0.35 * x, rate: between(Math.random, 0.9, 1.05) });
+    } else this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) });
   }
 
   /**
@@ -1471,6 +1510,8 @@ export class Sound {
     // 녹음된 "퍽"을 느리게 깔아 무게를 더한다 (이어폰에서 저역이 산다)
     const rec = this.pickSample('punch');
     if (rec) this.layer(ev, rec, { gain: 0.35 + 0.3 * x, rate: between(Math.random, 0.6, 0.7), delay: 0.004 });
+    const soft = this.pickSample('soft'); // 몸통 덩어리가 모래에 부딪히는 둔한 "쿵"
+    if (soft) this.layer(ev, soft, { gain: 0.5 + 0.4 * x, rate: between(Math.random, 0.8, 0.95), delay: 0.002 });
   }
 
   /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
@@ -1672,6 +1713,16 @@ export class Sound {
         f.frequency.setTargetAtTime(250 + 1150 * x, t, 0.03);
         hum?.set(x);
       },
+      /** 무기가 바뀌어 이 고리를 버릴 때 */
+      stop() {
+        try {
+          src.stop();
+        } catch {
+          /* 이미 멈춤 */
+        }
+        g.disconnect();
+        hum?.stop();
+      },
     };
   }
   /** 플라즈마 날의 상시 "웅" 훔: 가만히 있어도 낮게 울리고, 휘두르면 커지며 이따금 "파직" 끼어든다 */
@@ -1697,6 +1748,11 @@ export class Sound {
     const self = this;
     let crackleAt = 0;
     return {
+      stop() {
+        o1.stop();
+        o2.stop();
+        g.disconnect();
+      },
       set(x) {
         const t = c.currentTime;
         const base = 0.05; // 가만히 있어도 들리는 대기 훔
