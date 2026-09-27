@@ -68,7 +68,16 @@ export class Skill {
     if (this.tap || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
     const g = f.guardPose.hand; // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽])
     const down = f.finish.amt > 0.5; // 쓰러진 상대: 누운 몸을 내리찌른다 (finish.js 가 겨눈 곳)
-    this.tap = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], down, head: !down && this.aimRaw.y > THRUST.headPad };
+    // 찌르기 무기(weapons.js THRUST_STYLE)는 더 멀리 찌르고 더 빨리 자세로 돌아온다.
+    //  (겨누기·뻗기까지 빠르게 하면 팔이 손 목표를 따라가지 못해 오히려 덜 뻗는다 — 측정: 레이피어 탭 상처 60% → 20%)
+    const ts = f.weaponCfg.thrustStyle;
+    const K = { aim: THRUST.aim, extend: THRUST.extend, hold: THRUST.hold, recover: THRUST.recover * (ts?.recover ?? 1), reach: THRUST.reach + (ts?.reach ?? 0) };
+    // 누운 몸을 내리찌를 때는 팔이 아래로 느리게 내려와(측정: 칼끝이 몸에 못 미친 판이 있었다) 더 길게, 더 오래 뻗는다
+    if (down) {
+      K.reach += THRUST.downReach;
+      K.extend *= THRUST.downExtend;
+    }
+    this.tap = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], down, head: !down && this.aimRaw.y > THRUST.headPad, K };
     this.thrusts++;
     // 한 걸음 내딛으며 찌른다. 쓰러진 상대는 누운 몸이 한 팔 넘게 떨어져 있을 때만 (가까우면 마무리 자세가 거리를 맞춘다)
     const T = f.finish.target;
@@ -102,17 +111,18 @@ export class Skill {
     const pose = this.thrustPose;
     const f = this.f;
     const T = THRUST;
-    const end = T.aim + T.extend + T.hold;
+    const K = tp?.K; // 이번 찌르기의 시간·뻗는 거리 (무기의 찌르기 장점 반영)
     if (tp) tp.t += dt;
-    if (!tp || tp.t >= end + T.recover || !f.alive || !f.armed || !f.foe || (tp.down && !f.finish.on)) {
+    if (!tp || tp.t >= K.aim + K.extend + K.hold + K.recover || !f.alive || !f.armed || !f.foe || (tp.down && !f.finish.on)) {
       this.tap = null;
       pose.w = 0;
       return;
     }
     const t = tp.t;
-    if (tp.step && t < T.aim + T.extend && f.move.y > -0.2) f.move.y = Math.max(f.move.y, SKILL.lungeMove * this.level);
+    const end = K.aim + K.extend + K.hold;
+    if (tp.step && t < K.aim + K.extend && f.move.y > -0.2) f.move.y = Math.max(f.move.y, SKILL.lungeMove * this.level);
     // 덧씌우는 정도: 겨누며 빠르게 1로, 뻗은 뒤 자세로 돌아오며 0으로
-    pose.w = t < T.aim ? t / T.aim : t < end ? 1 : 1 - (t - end) / T.recover;
+    pose.w = t < K.aim ? t / K.aim : t < end ? 1 : 1 - (t - end) / K.recover;
     const c = f.bodies.chest.translation();
     _c.set(c.x, c.y, c.z);
     _yawInv.copy(f.yaw).invert();
@@ -121,17 +131,19 @@ export class Skill {
     //  뻗어서 손이 속도를 붙일 거리를 번다
     const h0 = tp.h0;
     _q.set(P.x - h0[0], P.y - h0[1], P.z - h0[2]).normalize();
+    //  팔이 이미 굽어 있으면(황소처럼 손이 머리 옆) 당길 필요가 없다 — 어깨에서 손까지 거리로 가늠한다.
     //  (쓰러진 상대는 겨눔 자세가 이미 칼끝을 몸 위로 띄워 두어 당기지 않는다)
-    const ch = tp.down ? 0 : T.chamber;
-    const a = THREE.MathUtils.clamp(t / T.aim, 0, 1);
-    const s = THREE.MathUtils.clamp((t - T.aim) / T.extend, 0, 1);
-    const e = -ch * a * a * (3 - 2 * a) + (ch + T.reach) * s * s * (3 - 2 * s);
+    const ext = Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2); // 어깨(가슴 기준 [0, 0.1, 0.2])에서 손까지
+    const ch = tp.down ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1);
+    const a = THREE.MathUtils.clamp(t / K.aim, 0, 1);
+    const s = THREE.MathUtils.clamp((t - K.aim) / K.extend, 0, 1);
+    const e = -ch * a * a * (3 - 2 * a) + (ch + K.reach) * s * s * (3 - 2 * s);
     for (let k = 0; k < 3; k++) pose.hand[k] = h0[k] + _q.getComponent(k) * e;
     // 칼끝: 겨누는 동안은 지금 손(칼자루)에서 목표점 너머 past 의 점을 향해 돌리고, 뻗기 시작하면 그 방향을 붙잡는다.
     //  뻗는 동안 손은 거의 칼 축 방향으로 가는데(측정 0.96), 방향을 계속 고쳐 잡으면 손목이 5~9° 늦게 따라 돌며
     //  칼끝이 옆으로 쓸려 칼 축 방향 성분이 0.7까지 떨어졌다 → 붙잡아 두면 칼끝은 손과 함께 칼 축을 따라 나간다
     //  (쓰러진 상대를 내리찌를 때는 칼이 거의 수직이라 손이 칼 선에서 벗어나는 만큼을 계속 고쳐 잡는 편이 낫다 — 측정)
-    if (t < T.aim || !tp.dir || tp.down) {
+    if (t < K.aim || !tp.dir || tp.down) {
       const sp = f.sword.translation();
       P.addScaledVector(_q, T.past);
       _q.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv);
@@ -139,7 +151,7 @@ export class Skill {
       pose.dir[0] = P.x;
       pose.dir[1] = P.y;
       pose.dir[2] = P.z;
-      if (t >= T.aim && !tp.down) tp.dir = [P.x, P.y, P.z];
+      if (t >= K.aim && !tp.down) tp.dir = [P.x, P.y, P.z];
     }
     const b = tp.down ? FINISH.strike : T.body;
     pose.pelvisYaw = b.pelvisYaw * D2R;

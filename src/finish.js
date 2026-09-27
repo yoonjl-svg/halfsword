@@ -72,8 +72,10 @@ export function updateFinish(f, dt) {
     const c = f.bodies.chest.translation();
     _c.set(c.x, c.y, c.z);
     _yawInv.copy(f.yaw).invert();
-    const p0 = foe.bodies.pelvis.translation();
-    const p1 = foe.bodies.chest.translation();
+    // 날 없는 무기(나뭇가지·고무 닭·참치)나 부러진 칼은 머리를 내려찍는다: 둔기로 몸통을 치면 멍만 들고, 머리 충격만 기절시킨다
+    const blunt = !f.weaponCfg.edged || f.weaponBroken;
+    const p0 = foe.bodies[blunt ? 'head' : 'pelvis'].translation();
+    const p1 = foe.bodies[blunt ? 'head' : 'chest'].translation();
     _a.set(p0.x, p0.y, p0.z).sub(_c).applyQuaternion(_yawInv);
     _b.set(p1.x, p1.y, p1.z).sub(_c).applyQuaternion(_yawInv);
     // 몸통 선(골반 → 가슴) 위에서 내 앞 ideal 거리의 점에 가장 가까운 곳 (수평면에서)

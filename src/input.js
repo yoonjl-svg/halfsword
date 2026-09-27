@@ -60,7 +60,8 @@ export class Input {
     this.lastX = e.clientX;
     this.lastY = e.clientY;
     const mouse = e.pointerType === 'mouse';
-    this.press = { id: e.pointerId, t: performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !mouse || lockedBefore };
+    // 시간은 이벤트가 생긴 시각(e.timeStamp)으로 잰다: 한 프레임이 길면 핸들러가 늦게 돌아 누른 시간이 부풀려진다
+    this.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !mouse || lockedBefore };
     if (!mouse) this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
   }
 
@@ -88,7 +89,7 @@ export class Input {
     const p = this.press;
     if (p && e.pointerId === p.id) {
       // 짧게 톡 쳤다(끌지도, 누르고 있지도 않았다) → 찌르기
-      const dur = performance.now() - p.t;
+      const dur = (e.timeStamp || performance.now()) - p.t;
       const tap = p.mouse ? dur < INPUT.clickMs && p.moved < INPUT.clickPx : dur < INPUT.tapMs && p.moved < INPUT.tapPx;
       if (tap && p.ok && e.type === 'pointerup' && this.enabled) this.taps++;
       this.press = null;

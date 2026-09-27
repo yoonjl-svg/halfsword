@@ -243,6 +243,18 @@ export function weaponMatOpts(material, isBlade, tier) {
 //  Delp 1996 손목 굴곡 토크 실측(평균 12.2 N·m)이었고, 22 는 양손·팔 전체 기여 추정치 [D].
 const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 22 };
 
+// ── 찌르기 무기의 찌르기 장점 (감독 확정 수치 mCut·mThrust·power 와 별개의 장치) ──
+//  베기가 약한(mThrust > mCut) 에스톡·레이피어는 "톡 쳐서 찌르기"가 자연스러운 싸움법이 되도록 찌를 때만 이점을 준다.
+//   recover: 탭 찌르기 뒤 자세로 돌아오는 시간 배율 (skill.js). 겨누기·뻗기는 팔 힘의 한계라 빠르게 하지 않는다
+//   reach  : 탭 찌르기에서 손을 더 뻗는 거리 (m, skill.js)
+//   gap    : 찌르기가 옷·투구의 틈을 파고드는 정도 — 막아주는 몫의 이 비율을 무시한다 (combat.js)
+//   window : 칼끝 판정 폭 — 찌르기로 치는 칼날 위치(t > 0.8)와 칼축 방향(> 0.75) 기준을 이만큼 낮춘다 (combat.js)
+//  에스톡: 판금 틈을 노리던 찌르기검 → 틈 파고들기가 가장 크다. 레이피어: 가볍고 빠른 결투검 → 가장 빠르고 판정 폭이 넓다
+export const THRUST_STYLE = {
+  estoc: { recover: 0.7, reach: 0.12, gap: 0.5, window: 0.1 },
+  rapier: { recover: 0.6, reach: 0.1, gap: 0.3, window: 0.12 },
+};
+
 function finalizeSpec(id, s) {
   // ...s를 먼저 펼치고 계산된 필드를 뒤에 둔다 (뒤에 적은 값이 이긴다) →
   //  controlOverrides처럼 "기본값과 병합"해야 하는 필드가 s의 원본 값에 덮어써지지 않는다.
@@ -261,6 +273,7 @@ function finalizeSpec(id, s) {
     breakChance(J) { return breakChance(J, this.fragility, this.material); },
     fragile: breakChance(BREAK.jRef, s.fragility ?? TIER_FRAGILITY[s.tier ?? 'common'], s.material) > 0, // 부러질 수 있는 무기인가
     ignoreArmor: !!s.ignoreArmor,
+    thrustStyle: s.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (아래 THRUST_STYLE). 없으면 null
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
     soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
@@ -369,6 +382,7 @@ const estoc = finalizeSpec('estoc', {
   grip: 'hand-and-half', material: 'steel',
   hiltLength: 0.14, bladeLength: 1.15, gripAlong: -0.15,
   mCut: 0.55, mThrust: 1.35, mBlunt: 0.9, // 날이 거의 없어 베기는 약하고, 갑옷 틈을 노리는 찌르기는 뛰어나다
+  thrustStyle: THRUST_STYLE.estoc,
   // 각진(사각/육각) 뻣뻣한 단면 — 실제 에스톡처럼 날이 아니라 뻣뻣한 각진 봉 느낌으로.
   partMesh: swordKit({
     blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0085, bevel: 0, tip: 'needle', tipLen: 0.14 },
@@ -448,6 +462,7 @@ const rapier = finalizeSpec('rapier', {
   tier: 'rare', // 감독 확정: 레어 — 르네상스 결투검, 로스터 유일의 찌르기 전용. power 1.05, 파손 계수 0.032
   hiltLength: 0.1, bladeLength: 0.95,
   mCut: 0.5, mThrust: 1.3, mBlunt: 0.7,
+  thrustStyle: THRUST_STYLE.rapier,
   // 가늘고 뻣뻣한 다이아몬드(마름모) 단면 — 찌르기 전용 칼답게 폭이 좁고 끝으로 갈수록 더 가늘어진다.
   partMesh: swordKit({
     blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0045, bevel: 0.0015, tip: 'needle', tipLen: 0.12 },
