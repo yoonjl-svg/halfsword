@@ -23,6 +23,16 @@ export const MATERIALS = {
   frozen: { restitution: 0.2 }, // 얼린 생선: 물컹하지 않고 딱딱하지만 다시 튕기진 않는다
 };
 
+// 소리 담당의 재질 쌍 API(sound.impact({a,b,energy})) 가 아는 이름은 sound.js MATERIALS =
+// ['steel','armor','flesh','wood','plasma','rubber'] 뿐이다. 물리 재질(위 표)과 소리 재질이
+// 다른 것은 여기서 옮긴다 — 얼린 참치는 딱딱한 통나무 소리(wood)가 제일 가깝다.
+export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', rubber: 'rubber', frozen: 'wood' };
+
+// 감독이 정한 무기 등급 (docs/characters.md): 쓰레기(trash) / 커먼(common) / 레전드(legend).
+// 부러짐 규칙은 감독이 뒤에 붙인다 — 여기서는 꼬리표만 단다.
+export const GRADES = ['trash', 'common', 'legend'];
+
+
 // ── 관성 계산 도우미 (fighter.js 원래 롱소드 계산과 같은 식) ──
 // 상자 모양 부품의 휘두르는 축(Ie, x·z 성분에 함께 쓴다)·비트는 축(It, y=칼 길이 방향) 관성.
 function boxInertia(m, hx, hy, hz) {
@@ -100,6 +110,8 @@ function finalizeSpec(id, s) {
     ignoreArmor: !!s.ignoreArmor,
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
+    grade: s.grade ?? 'common', // 등급 안 적으면 커먼
+    soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
   };
 }
@@ -123,6 +135,33 @@ const longsword = finalizeSpec('longsword', {
       partTuple(['ball', 0.03], -0.12, 0.418, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.11, 0.015, 0.022], 0.115, 0.18, 0, cross.Ie, cross.It, look.hilt),
       partTuple(['box', 0.024, L / 2, 0.008], 0.13 + L / 2, 0.842, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
+    ];
+  },
+});
+
+// ═════════════════════════════════════════════════════════════
+//  1b) 롱소드(실전용 보정판) — 기본 롱소드 수치는 Albion Liechtenauer *훈련용* 페더(1.58kg,
+//      균형점 9.8cm)에서 왔다(docs/weapons_research.md, docs/weapon_leads.md 확인). 진짜 날 선
+//      롱소드는 더 가볍다: Albion Crécy 전체 113.7cm·1.39kg·균형점 10.16cm [M, 제조사 공개 치수].
+//      하이런 길이 0.13·칼날 0.90m로 두고 부품 질량을 (총질량 1.390, 균형점 10.16cm, 칼날 무게중심
+//      0.344L 유지) 조건으로 풀어서 넣었다 [D]. 기본 롱소드는 절대 바꾸지 않고 별도 id로 둔다 —
+//      DEFAULT_WEAPON 을 'longsword_sharp'로 바꾸면 전체 기본값이 이걸로 바뀐다(설정 스위치).
+// ═════════════════════════════════════════════════════════════
+const longswordSharp = finalizeSpec('longsword_sharp', {
+  nameKo: '롱소드 (실전용)', nameEn: 'Longsword (sharp)',
+  grip: 'two-hand', material: 'steel',
+  hiltLength: 0.13, bladeLength: 0.9, gripAlong: -0.14,
+  buildParts(look) {
+    const L = this.bladeLength;
+    const grip = boxInertia(0.139, 0.018, 0.1, 0.018);
+    const pommel = sphereInertia(0.3168, 0.03);
+    const cross = boxInertia(0.1564, 0.11, 0.015, 0.022);
+    const blade = bladeInertia(0.7779, L, 0.344, 0.253, 0.048, 0.016);
+    return [
+      partTuple(['box', 0.018, 0.1, 0.018], 0, 0.139, 0, grip.Ie, grip.It, look.grip),
+      partTuple(['ball', 0.03], -0.12, 0.3168, 0, pommel.Ie, pommel.It, look.hilt),
+      partTuple(['box', 0.11, 0.015, 0.022], 0.115, 0.1564, 0, cross.Ie, cross.It, look.hilt),
+      partTuple(['box', 0.024, L / 2, 0.008], 0.13 + L / 2, 0.7779, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];
   },
 });
@@ -380,6 +419,7 @@ const hwandudaedo = finalizeSpec('hwandudaedo', {
 const excalibur = finalizeSpec('excalibur', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur',
   grip: 'two-hand', material: 'steel',
+  grade: 'legend', // 감독 등급: 레전드. 진품은 플레이어 전용(docs/characters.md)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
   mCut: 1.2, mThrust: 1.2, mBlunt: 1.1,
   buildParts(look) {
@@ -394,6 +434,28 @@ const excalibur = finalizeSpec('excalibur', {
       partTuple(['box', 0.115, 0.016, 0.024], 0.115, 0.15, 0, cross.Ie, cross.It, 0xf2c94c),
       partTuple(['box', 0.025, L / 2, 0.008], 0.13 + L / 2, 0.7, blade.comY, blade.Ie, blade.It, 0xeef3f8, true),
     ];
+  },
+});
+
+// ═════════════════════════════════════════════════════════════
+//  12b) 엑스칼리버 복제품 — 하인리히(characters.js)가 "진품"이라 우기며 드는 싸구려 소품.
+//      물리·판정은 기본 롱소드와 완전히 같고(부품 질량·관성·길이·비틀림 보정까지 동일) 겉모습만
+//      엑스칼리버 금색. 등급은 커먼. 캐릭터 담당 계약(docs/school_contract.md)상 AI는 이 무기를
+//      longsword 유파로 다루면 된다 (measure 값도 롱소드와 같다).
+// ═════════════════════════════════════════════════════════════
+const EXCALIBUR_LOOK = { grip: 0x2a2440, hilt: 0xf2c94c, blade: 0xeef3f8 };
+const excaliburReplica = finalizeSpec('excalibur_replica', {
+  nameKo: '엑스칼리버 (복제품)', nameEn: 'Excalibur (replica)',
+  grip: 'two-hand', material: 'steel',
+  grade: 'common',
+  hiltLength: 0.13, bladeLength: 1.05, gripAlong: -0.14,
+  controlOverrides: { twistScale: 1 }, // 롱소드와 똑같은 손목 비틀기 힘 (fighter.js가 롱소드에 강제하는 값)
+  buildParts() {
+    // 롱소드 부품 그대로 만들고 색만 바꾼다 (부품 순서·질량·관성 동일)
+    return longsword.buildParts(EXCALIBUR_LOOK).map((part) => {
+      const [shape, y, mass, , isBlade] = part;
+      return [shape, y, mass, isBlade ? EXCALIBUR_LOOK.blade : part[3], isBlade];
+    });
   },
 });
 
@@ -444,6 +506,7 @@ const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
   grip: 'one-hand', material: 'wood',
   hiltLength: 0.15, bladeLength: 0.8,
+  grade: 'trash', // 감독 등급: 쓰레기
   edged: false, mBlunt: 0.85, durability: 9, // 몇 번 세게 맞부딪히면 부러진다
   buildParts(look) {
     const L = this.bladeLength;
@@ -528,13 +591,34 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 });
 
 export const WEAPONS = {
-  longsword, arming_sword: armingSword, messer, zweihander, estoc, sabre, rapier, falchion,
-  katana, jian, hwandudaedo, excalibur, lightsaber, tree_branch: treeBranch,
+  longsword, longsword_sharp: longswordSharp, arming_sword: armingSword, messer, zweihander, estoc, sabre, rapier, falchion,
+  katana, jian, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
 };
 
+// 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
+export const WEAPON_ALIASES = {
+  branch: 'tree_branch', stick: 'tree_branch',
+  chicken: 'rubber_chicken', tuna: 'frozen_tuna',
+  sharp: 'longsword_sharp', replica: 'excalibur_replica',
+  arming: 'arming_sword', saber: 'lightsaber',
+};
+
+// 아무 무기도 지정하지 않았을 때(o.weapon 없음) 쓰는 기본 무기. 'longsword_sharp'로 바꾸면
+// 실전용 롱소드 보정이 전체에 적용된다 — 기존 시뮬 수치가 바뀌므로 감독 결정 후에만 바꿀 것.
+export const DEFAULT_WEAPON = 'longsword';
+
 export const WEAPON_LIST = Object.values(WEAPONS);
 
+/** id(또는 별칭)로 무기 사양을 찾는다. 모르는 id면 기본 무기(경고 한 번). */
+const warned = new Set();
 export function getWeapon(id) {
-  return WEAPONS[id] || WEAPONS.longsword;
+  const key = WEAPON_ALIASES[id] ?? id;
+  const spec = WEAPONS[key];
+  if (spec) return spec;
+  if (id != null && !warned.has(id)) {
+    warned.add(id);
+    console.warn(`[weapons] 모르는 무기 id '${id}' → ${DEFAULT_WEAPON} 로 대신합니다`);
+  }
+  return WEAPONS[DEFAULT_WEAPON];
 }

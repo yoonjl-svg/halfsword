@@ -14,7 +14,7 @@ import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT } 
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
-import { getWeapon, MATERIALS, weaponMatOpts } from './weapons.js';
+import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON } from './weapons.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -333,7 +333,7 @@ export class Fighter {
 
     // ── 무기: 데이터 중심 무기고(weapons.js)에서 무기 하나를 골라 만든다 ──
     //  기본값(o.weapon 없음)은 그대로 롱소드라서 기존 시뮬 결과가 바뀌지 않는다.
-    const spec = getWeapon(o.weapon || 'longsword');
+    const spec = getWeapon(o.weapon || DEFAULT_WEAPON);
     this.weapon = spec;
     // 이 무기를 쥔 이 싸움꾼만의 손목·팔 힘 한계 (config.js WEAPON 기본값 + 무기별 보정).
     // 칼 길이도 여기 담아서, 서로 다른 무기를 쥔 두 싸움꾼이 동시에 존재할 수 있게 한다.
