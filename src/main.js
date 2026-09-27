@@ -24,6 +24,7 @@ import { buildCastle } from './stage_castle.js';
 import { buildCathedral } from './stage_cathedral.js';
 import { buildDarkHall } from './stage_darkhall.js';
 import { PerfMeter } from './perfmeter.js';
+import { createFighterLight } from './fighter_light.js';
 
 await RAPIER.init();
 
@@ -126,6 +127,9 @@ const STAGES = { temple: buildTemple, castle: buildCastle, cathedral: buildCathe
 const stageBuild = STAGES[params.get('stage')];
 const arena = stageBuild ? stageBuild(scene, { hemi, sun }) : buildArena(scene);
 const SUN_OFF = arena.sunOffset ?? { x: 4, y: 9, z: 3 }; // 해가 싸우는 자리를 따라다닐 때의 방향
+// 캐릭터 전용 조명: 스테이지 빛이 모자라면(밤) 카메라 쪽 보조광·바탕빛·테두리광·윤곽 빛을 캐릭터 재질에만 채운다.
+//  스테이지는 fighterLight 로 색만 물들이고 더 밝게 할 수 있을 뿐 끌 수 없다 (fighter_light.js, docs/stages.md 조명 약속)
+const fighterLight = createFighterLight({ hemi, sun }, arena);
 
 // ── 화면 크기 / 픽셀 모드 ──
 function resize() {
@@ -1133,6 +1137,7 @@ function frame(now) {
     }
   }
   updateCamera(dt);
+  fighterLight.update(fighterMeshes);
   const renderT0 = perf ? performance.now() : 0;
   renderer.render(scene, camera);
   if (perf) perf.frame(now, frameMs, physMs, performance.now() - renderT0, physSteps, capped, simWant, simGot);
@@ -1176,4 +1181,5 @@ window.game = {
   AI,
   settings,
   sound, // 예: game.sound.clash(8) 로 소리 확인, game.sound.stats
+  fighterLight, // 예: game.fighterLight.enabled = false 로 캐릭터 조명을 끄고 비교
 };
