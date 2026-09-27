@@ -30,17 +30,18 @@ export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', 
 
 // 감독이 정한 무기 등급 (docs/characters.md, 캐릭터 PM 계약) — 다섯 단계:
 //   쓰레기(trash) < 커먼(common) < 레어(rare) < 에픽(epic) < 레전드(legend)
-// 등급마다 power(타격 에너지 배율, common=1.0)와 durability(내구 0~1, 감독 확정치: 0.4/0.8/0.85/0.95/1.0)가 다르다.
-// 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급 기본값을 받는다. (rare·epic의 power는 감독이 안 정해서
-// common 과 legend 사이를 나눈 제안값 [I] — 바뀔 수 있다.)
+// 등급마다 power(타격 에너지 배율, common=1.0, 감독 확정: 0.85/1.0/1.05/1.1/1.2)와 durability(내구 0~1, 감독 확정치
+// docs/characters.md 53da1bb: 0.4/0.8/0.85/0.95/1.0)가 다르다. 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급
+// 기본값을 받는다. (캐릭터 PM 메시지에는 rare 0.7·epic 0.85·common 0.6 이라는 다른 내구가 적혀 있었다 — 더 나중에
+// 감독 확정으로 기록된 문서 값을 따르고 확인을 요청해 두었다.)
 // power는 combat.js가 실제로 에너지에 곱한다. durability는 아래 breakBudget()으로 "부러지기까지의 충격량 예산"이 되며,
 // 부서지는 연출·그 뒤 흐름(맨손·주운 무기)은 감독이 붙인다.
 export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend'];
 export const TIER_DEFAULTS = {
   trash: { power: 0.85, durability: 0.4 },
   common: { power: 1.0, durability: 0.8 },
-  rare: { power: 1.08, durability: 0.85 },
-  epic: { power: 1.15, durability: 0.95 },
+  rare: { power: 1.05, durability: 0.85 },
+  epic: { power: 1.1, durability: 0.95 },
   legend: { power: 1.2, durability: 1.0 },
 };
 
@@ -396,51 +397,34 @@ const katana = finalizeSpec('katana', {
 });
 
 // ═════════════════════════════════════════════════════════════
-//  10) 지안 (중국 검) — 0.8~0.9kg, 칼날 대개 70~80cm. 균형점 자료가 서로 어긋나
-//      (한쪽은 ~20cm, 다른 쪽은 ~10cm) [I]-leaning, 절충값으로 잡는다
+//  10) 청강검 (靑鋼劍, qinggang, 옛 id 'jian') — 랴오의 검. 감독 결정으로 지안(중국 검)을 에픽 등급 "청강검"으로
+//      바꿨다(삼국지 조조의 보검 — "쇠도 진흙처럼 벤다"). 물리는 지안 자료 그대로: 0.8~0.9kg, 칼날 대개 70~80cm,
+//      균형점 자료가 서로 어긋나(~10cm vs ~20cm) 절충 [I]-leaning. 한손이라 누르는 힘이 약하다(12N·m).
+//      캐릭터 PM 계약: 가볍고 빠름·찌르기 강함(mThrust 1.15)·전설대로 잘 벰(mCut 1.35, 세이버·팔쉬온급).
+//      등급 epic(power 1.1·내구 0.95 → 파손 예산 228 N·s)이라 실제 베기 배율은 1.35×1.1 ≈ 1.49 —
+//      mCut 1.5로 잰 결과(롱소드 상대 승률 22%, 판당 severity 롱소드의 87%)와 같은 급이다.
+//      mCut 은 상처 깊이(severity)에만 곱하고 표시되는 타격 J(물리값, 롱소드의 2/3쯤)는 안 바꾼다.
+//      겉모습은 푸른 강철 칼날에 검은 자루 [I] 창작. 'jian' 은 별칭으로 남긴다.
 // ═════════════════════════════════════════════════════════════
-const jian = finalizeSpec('jian', {
-  nameKo: '지안 (중국검)', nameEn: 'Jian',
+const QINGGANG_LOOK = { grip: 0x1c1c24, hilt: 0x2f6f7a };
+const qinggang = finalizeSpec('qinggang', {
+  nameKo: '청강검', nameEn: 'Qinggang Sword',
   grip: 'one-hand', material: 'steel',
+  tier: 'epic',
   hiltLength: 0.12, bladeLength: 0.74,
-  // 캐릭터 PM 계약: 가볍고 빠름·찌르기 강함·누르는 힘 약함(한손 12N·m). 0.85kg 한손검이라 물리 에너지가
-  // 롱소드의 2/3쯤(유효타 평균 53J vs 78J)이어서 mCut 1.0이면 커먼 등급 중간 실력이 안 나왔다(승률 10%).
-  // mCut 은 상처 깊이(severity)에만 곱하고 표시되는 타격 J는 안 바꾼다. 목표 "롱소드 대비 상처 80~90%"는
-  // 1.3에서 32%(승률 14%), 1.5에서 87%(승률 22%, 판당 severity 1.42 vs 1.64)라 1.5로 둔다 — 카타나(1.85)보다 낮다.
-  mCut: 1.5, mThrust: 1.15, mBlunt: 0.95,
-  buildParts(look) {
+  mCut: 1.35, mThrust: 1.15, mBlunt: 0.95,
+  buildParts() {
     const L = this.bladeLength;
     const grip = boxInertia(0.1, 0.015, 0.09, 0.015);
     const pommel = sphereInertia(0.1, 0.02);
     const cross = boxInertia(0.04, 0.035, 0.008, 0.012);
     const blade = bladeInertia(0.61, L, 0.36, 0.25, 0.028, 0.009);
     return [
-      partTuple(['box', 0.015, 0.09, 0.015], 0, 0.1, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.02], -0.09, 0.1, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.035, 0.008, 0.012], 0.11, 0.04, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
+      partTuple(['box', 0.015, 0.09, 0.015], 0, 0.1, 0, grip.Ie, grip.It, QINGGANG_LOOK.grip),
+      partTuple(['ball', 0.02], -0.09, 0.1, 0, pommel.Ie, pommel.It, QINGGANG_LOOK.hilt),
+      partTuple(['box', 0.035, 0.008, 0.012], 0.11, 0.04, 0, cross.Ie, cross.It, QINGGANG_LOOK.hilt),
+      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xbfe3ea, true),
     ];
-  },
-});
-
-// ═════════════════════════════════════════════════════════════
-//  10b) 청강검 (靑鋼劍, qinggang) — 랴오의 검. 감독 결정으로 지안을 에픽 등급 "청강검"으로 격상.
-//      물리·기술 배율은 지안 그대로(가볍고 빠름, 찌르기 강함), 등급만 epic(power 1.15·내구 0.95 → 파손 예산 228 N·s)
-//      이고 겉모습은 푸른 강철 칼날에 검은 자루 [I] 창작. 지안(커먼)은 다른 캐릭터·플레이어용으로 남겨 둔다.
-// ═════════════════════════════════════════════════════════════
-const QINGGANG_LOOK = { grip: 0x1c1c24, hilt: 0x2f6f7a };
-const qinggang = finalizeSpec('qinggang', {
-  nameKo: '청강검', nameEn: 'Qinggang Jian',
-  grip: 'one-hand', material: 'steel',
-  tier: 'epic',
-  hiltLength: 0.12, bladeLength: 0.74,
-  mCut: 1.5, mThrust: 1.15, mBlunt: 0.95,
-  buildParts() {
-    // 지안 부품 그대로, 색만 청강(푸른 강철)으로
-    return jian.buildParts(QINGGANG_LOOK).map((part) => {
-      const [shape, y, mass, , isBlade] = part;
-      return [shape, y, mass, isBlade ? 0xbfe3ea : part[3], isBlade];
-    });
   },
 });
 
@@ -652,13 +636,14 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 
 export const WEAPONS = {
   longsword, longsword_sharp: longswordSharp, arming_sword: armingSword, messer, zweihander, estoc, sabre, rapier, falchion,
-  katana, jian, qinggang, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
+  katana, qinggang, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
 export const WEAPON_ALIASES = {
   branch: 'tree_branch', stick: 'tree_branch',
+  jian: 'qinggang', // 옛 id (지안 → 청강검, 감독 결정)
   chicken: 'rubber_chicken', tuna: 'frozen_tuna',
   sharp: 'longsword_sharp', replica: 'excalibur_replica',
   arming: 'arming_sword', saber: 'lightsaber',
