@@ -70,8 +70,9 @@ const SIGMA2 = 0.15 * 0.15;
  * 패드 위치 (x, y) → 섞인 자세. out을 채워서 돌려준다.
  * out = { hand:[3], dir:[3], pelvisYaw, chestYaw, pitch, drop, nearest }
  * fin: 쓰러진 상대 마무리 (finish.js 의 fighter.finish). fin.amt 가 0 이면 예전 계산 그대로다
+ * th: 탭 찌르기 (skill.js 의 thrustPose). 섞은 자세 위에 th.w 만큼 덧씌운다. w 가 0 이면 예전 계산 그대로다
  */
-export function guardAt(x, y, out, fin = null) {
+export function guardAt(x, y, out, fin = null, th = null) {
   let wSum = 0;
   let best = -1;
   let bestW = -1;
@@ -146,5 +147,24 @@ export function guardAt(x, y, out, fin = null) {
     d[2] *= s;
   }
   out.nearest = best;
+  if (th && th.w > 0) overlay(out, th);
   return out;
+}
+
+/** 섞은 자세 위에 찌르기 자세를 w 만큼 덧씌운다 (손·몸은 선형으로, 칼끝 방향은 섞은 뒤 다시 단위 벡터로) */
+function overlay(out, th) {
+  const w = th.w;
+  const h = out.hand;
+  const d = out.dir;
+  for (let k = 0; k < 3; k++) {
+    h[k] += (th.hand[k] - h[k]) * w;
+    d[k] += (th.dir[k] - d[k]) * w;
+  }
+  const n = Math.hypot(d[0], d[1], d[2]);
+  if (n < 1e-3) for (let k = 0; k < 3; k++) d[k] = th.dir[k];
+  else for (let k = 0; k < 3; k++) d[k] /= n;
+  out.pelvisYaw += (th.pelvisYaw - out.pelvisYaw) * w;
+  out.chestYaw += (th.chestYaw - out.chestYaw) * w;
+  out.pitch += (th.pitch - out.pitch) * w;
+  out.drop += (th.drop - out.drop) * w;
 }

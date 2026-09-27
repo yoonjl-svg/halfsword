@@ -17,11 +17,20 @@
 //   3) 내딛기: 알맞은 간격에서 휘두르기 시작하면 앞발을 내딛으며 벤다
 //   4) 자세로 돌아가기: 베기를 마치고 손가락을 떼면(마우스는 잠깐 멈추면) 교본의 기본 자세(쟁기)로 칼을 되돌린다.
 //      숙련된 검사는 베고 나서 칼을 아무 데나 두지 않고 곧바로 자세를 잡는다. (플레이어만. AI는 스스로 자세를 고른다)
+//   5) 탭 찌르기(thrust): 화면을 톡 치면 칼끝을 상대 몸통(칼이 높으면 머리, 쓰러졌으면 누운 몸)으로 맞추고 칼 선을 따라
+//      손을 뻗은 뒤 자세로 돌아온다 (약 0.45초, 한 걸음 내딛으며). 자세 지도 위에 덧씌우는 자세(thrustPose)로 한다.
 //
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON } from './config.js';
+import { SKILL, WEAPON, THRUST } from './config.js';
+import { FINISH } from './finish.js';
+
+const D2R = Math.PI / 180;
+const _yawInv = new THREE.Quaternion();
+const _c = new THREE.Vector3();
+const _p = new THREE.Vector3();
+const _q = new THREE.Vector3();
 
 export class Skill {
   constructor(fighter, level = SKILL.level) {
@@ -42,6 +51,101 @@ export class Skill {
     this.cutPending = false; // 베기를 했고 아직 자세로 돌아가지 않음
     this.idle = 0; // 손가락(마우스)이 움직이지 않은 시간
     this.recovering = false;
+    // 5) 탭 찌르기: 진행 중인 찌르기(tap)와 자세 지도 위에 덧씌우는 자세(thrustPose, guards.js guardAt 이 w 만큼 섞는다)
+    this.tap = null;
+    this.thrusts = 0;
+    const b = THRUST.body;
+    this.thrustPose = { w: 0, hand: [0, 0, 0], dir: [1, 0, 0], pelvisYaw: b.pelvisYaw * D2R, chestYaw: b.chestYaw * D2R, pitch: b.pitch * D2R, drop: b.drop };
+  }
+
+  /**
+   * 탭 찌르기 시작. 칼끝을 상대 몸통으로 (칼이 이미 높은 자세면 머리로, 상대가 쓰러져 있으면 누운 몸으로) 맞추고
+   * 칼 선을 따라 손을 뻗었다가 자세로 돌아온다. 찌르는 중엔 다시 받지 않는다.
+   * @returns 시작했으면 true
+   */
+  thrust() {
+    const f = this.f;
+    if (this.tap || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
+    const g = f.guardPose.hand; // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽])
+    const down = f.finish.amt > 0.5; // 쓰러진 상대: 누운 몸을 내리찌른다 (finish.js 가 겨눈 곳)
+    this.tap = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], down, head: !down && this.aimRaw.y > THRUST.headPad };
+    this.thrusts++;
+    // 한 걸음 내딛으며 찌른다. 쓰러진 상대는 누운 몸이 한 팔 넘게 떨어져 있을 때만 (가까우면 마무리 자세가 거리를 맞춘다)
+    const T = f.finish.target;
+    if (f.state === 'stand' && (!down || Math.hypot(T[0], T[2]) > THRUST.downStepFrom)) {
+      if (f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
+      else if (!down) this.lunge = SKILL.lungeTime;
+      else this.tap.step = true; // 누운 몸은 가슴끼리 거리가 짧아 기존 내딛기 조건에 안 걸린다 → 찌르는 동안 직접 내딛는다
+    }
+    return true;
+  }
+
+  /**
+   * 찌르기 목표점 (몸 기준): 쓰러진 상대의 누운 몸 / 머리 / 가슴.
+   * 몸통은 가슴을 겨눈다 — 배 쪽은 칼자루를 쥔 상대의 두 팔뚝이 앞을 가려 칼끝이 팔에 먼저 걸린다 (측정: 첫 접촉의 3/4이 팔)
+   */
+  thrustTarget(out) {
+    const f = this.f;
+    const tp = this.tap;
+    if (tp.down) {
+      const T = f.finish.target;
+      return out.set(T[0], T[1], T[2]);
+    }
+    const foe = f.foe;
+    out.copy(foe.bodies[tp.head ? 'head' : 'chest'].translation());
+    return out.sub(_c).applyQuaternion(_yawInv);
+  }
+
+  /** 매 스텝: 찌르기 자세(thrustPose) 갱신 */
+  updateThrust(dt) {
+    const tp = this.tap;
+    const pose = this.thrustPose;
+    const f = this.f;
+    const T = THRUST;
+    const end = T.aim + T.extend + T.hold;
+    if (tp) tp.t += dt;
+    if (!tp || tp.t >= end + T.recover || !f.alive || !f.armed || !f.foe || (tp.down && !f.finish.on)) {
+      this.tap = null;
+      pose.w = 0;
+      return;
+    }
+    const t = tp.t;
+    if (tp.step && t < T.aim + T.extend && f.move.y > -0.2) f.move.y = Math.max(f.move.y, SKILL.lungeMove * this.level);
+    // 덧씌우는 정도: 겨누며 빠르게 1로, 뻗은 뒤 자세로 돌아오며 0으로
+    pose.w = t < T.aim ? t / T.aim : t < end ? 1 : 1 - (t - end) / T.recover;
+    const c = f.bodies.chest.translation();
+    _c.set(c.x, c.y, c.z);
+    _yawInv.copy(f.yaw).invert();
+    const P = this.thrustTarget(_p);
+    // 손: 찌르기 시작 때의 손 목표에서 목표점 쪽으로 칼 선을 따라 뻗는다. 겨누는 동안 칼 선 뒤로 조금 당겼다가(준비)
+    //  뻗어서 손이 속도를 붙일 거리를 번다
+    const h0 = tp.h0;
+    _q.set(P.x - h0[0], P.y - h0[1], P.z - h0[2]).normalize();
+    //  (쓰러진 상대는 겨눔 자세가 이미 칼끝을 몸 위로 띄워 두어 당기지 않는다)
+    const ch = tp.down ? 0 : T.chamber;
+    const a = THREE.MathUtils.clamp(t / T.aim, 0, 1);
+    const s = THREE.MathUtils.clamp((t - T.aim) / T.extend, 0, 1);
+    const e = -ch * a * a * (3 - 2 * a) + (ch + T.reach) * s * s * (3 - 2 * s);
+    for (let k = 0; k < 3; k++) pose.hand[k] = h0[k] + _q.getComponent(k) * e;
+    // 칼끝: 겨누는 동안은 지금 손(칼자루)에서 목표점 너머 past 의 점을 향해 돌리고, 뻗기 시작하면 그 방향을 붙잡는다.
+    //  뻗는 동안 손은 거의 칼 축 방향으로 가는데(측정 0.96), 방향을 계속 고쳐 잡으면 손목이 5~9° 늦게 따라 돌며
+    //  칼끝이 옆으로 쓸려 칼 축 방향 성분이 0.7까지 떨어졌다 → 붙잡아 두면 칼끝은 손과 함께 칼 축을 따라 나간다
+    //  (쓰러진 상대를 내리찌를 때는 칼이 거의 수직이라 손이 칼 선에서 벗어나는 만큼을 계속 고쳐 잡는 편이 낫다 — 측정)
+    if (t < T.aim || !tp.dir || tp.down) {
+      const sp = f.sword.translation();
+      P.addScaledVector(_q, T.past);
+      _q.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv);
+      P.sub(_q).normalize();
+      pose.dir[0] = P.x;
+      pose.dir[1] = P.y;
+      pose.dir[2] = P.z;
+      if (t >= T.aim && !tp.down) tp.dir = [P.x, P.y, P.z];
+    }
+    const b = tp.down ? FINISH.strike : T.body;
+    pose.pelvisYaw = b.pelvisYaw * D2R;
+    pose.chestYaw = b.chestYaw * D2R;
+    pose.pitch = b.pitch * D2R;
+    pose.drop = b.drop;
   }
 
   update(dt) {
@@ -142,6 +246,12 @@ export class Skill {
       this.lunge -= dt;
       // 물러나려는 중이면 내딛지 않는다 (조작이 우선)
       if (f.move.y > -0.2 && f.foeDistance() > SKILL.lungeMin) f.move.y = Math.max(f.move.y, SKILL.lungeMove * L);
+    }
+
+    // 5) 탭 찌르기
+    if (this.tap) {
+      this.updateThrust(dt);
+      this.activity = Math.max(this.activity, this.thrustPose.w); // 찌르는 동안엔 몸도 벨 때처럼 빠르게 따라온다
     }
   }
 }

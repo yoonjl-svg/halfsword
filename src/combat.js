@@ -143,8 +143,8 @@ export class Combat {
 
     // 유효 질량: 맞은 점에서의 강체 칼의 실제 유효 질량 + 팔·몸의 도움
     const mFree = freeMass(pr.w.fighter.swordProps, S, point, dir);
-    const mEff = mFree + STRIKE.armAssist;
-    const ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
+    let mEff = mFree + STRIKE.armAssist;
+    let ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
     let energy = ephys * STRIKE.energyScale;
@@ -153,8 +153,13 @@ export class Combat {
     let quality = 1;
     const along = rel.dot(axis) / speed;
     if (isBlade) {
-      if (along > STRIKE.stabAlign && t > 0.8) type = 'stab';
-      else {
+      if (along > STRIKE.stabAlign && t > 0.8) {
+        type = 'stab';
+        // 찌르기는 팔을 곧게 뻗어 칼 축으로 민다 → 팔·어깨 무게가 칼끝 뒤에 함께 실린다 (베기는 손목에서 칼이 돌아 칼 무게만)
+        mEff = mFree + STRIKE.thrustAssist;
+        ephys = 0.5 * mEff * speed * speed;
+        energy = ephys * STRIKE.energyScale;
+      } else {
         const perp = rel.clone().addScaledVector(axis, -rel.dot(axis));
         const pl = perp.length();
         const edgeAlign = pl > 1e-3 ? Math.abs(perp.dot(edge)) / pl : 0;

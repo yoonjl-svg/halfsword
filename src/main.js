@@ -526,10 +526,10 @@ async function startFight() {
   if (!currentFoe) showToast('Battle');
   showHint(
     !input.isTouchDevice
-      ? '클릭해서 마우스 잠금 · WASD 이동'
+      ? '클릭해서 마우스 잠금 · WASD 이동 · 클릭하면 찌르기'
       : settings.moveMode === 'tilt'
-        ? '끌어서 칼 휘두르기 · 앞뒤/좌우로 기울여서 걷기'
-        : '왼쪽 아래 조이스틱으로 걷기 · 나머지 화면을 끌어서 칼 휘두르기',
+        ? '끌어서 칼 휘두르기 · 톡 치면 찌르기 · 앞뒤/좌우로 기울여서 걷기'
+        : '왼쪽 아래 조이스틱으로 걷기 · 나머지 화면을 끌어서 휘두르고 톡 쳐서 찌르기',
   );
 }
 
@@ -787,6 +787,8 @@ function frame(now) {
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
     player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
+    // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust)
+    if (input.consumeTaps() > 0 && player.alive) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();
     const m = input.move;

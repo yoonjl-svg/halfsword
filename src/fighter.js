@@ -553,7 +553,7 @@ export class Fighter {
   updateBodyPose(dt) {
     const sk = this.skill;
     const gw = this.guardWeight();
-    const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard, this.finish);
+    const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard, this.finish, sk.thrustPose);
     const bp = this.bodyPose;
     const bv = this.bodyPoseVel;
     // 딱 멈추는(임계 감쇠) 2차 필터: 출발도 멈춤도 매끄럽다 (1차 필터는 출발 순간 속도가 튄다)
@@ -1327,7 +1327,7 @@ export class Fighter {
     // ② 검술 자세 지도: 손가락 위치 → 실제 롱소드 자세의 손 위치(앞뒤 깊이 포함)와 칼끝 방향
     //  검술 보정이 셀수록 ②를 따른다 (끔 = ①만)
     const gw = this.guardWeight();
-    const G = guardAt(off.x, off.y, this.guardPose, this.finish);
+    const G = guardAt(off.x, off.y, this.guardPose, this.finish, this.skill.thrustPose);
     if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     handLocal.x = Math.min(handLocal.x, this.closeReach());
     const c = chest.translation();
