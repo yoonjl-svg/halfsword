@@ -71,10 +71,12 @@ export const LOOK_ARCHIVE = {
       hilt: 0x6b5a3a,
     },
     v1: {
-      tunic: 0xb59a63,
-      quilt: 0x8f7847,
-      sleeve: 0xb59a63,
-      straps: null,
+      // 설정집(character_lore.md) "흙빛 튜닉에 낡은 가죽끈" 반영: 베이지~갈색 안에서 좀 더
+      // 흙빛으로, 가죽끈은 새것처럼 반짝이지 않게 낡은 색으로 되살렸다
+      tunic: 0xa08757,
+      quilt: 0x7c6740,
+      sleeve: 0xa08757,
+      straps: 0x5a4630,
       belt: 0x7a6135,
       hoseUpper: 0x5c4830,
       hoseLower: 0x4a3a26,
