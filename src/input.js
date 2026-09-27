@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  입력 처리
-//   - 스마트폰: 화면을 손가락으로 끌면 손(칼자루)이 그만큼 움직인다(상대 이동).
+//   - 스마트폰: 화면을 손가락으로 끌면 손(칼자루)이 그만큼 움직인다(상대 이동). 짧게 톡 치면 찌른다(탭 = 찌르기).
 //              폰을 앞뒤로 기울이면 전진/후퇴, 좌우로 기울이면 옆걸음.
-//   - PC: 화면 클릭 → 마우스 잠금. 마우스를 움직이면 칼, WASD(방향키)로 이동.
+//   - PC: 화면 클릭 → 마우스 잠금. 마우스를 움직이면 칼, 끌지 않고 클릭하면 찌르기, WASD(방향키)로 이동.
 // ─────────────────────────────────────────────────────────────
 import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
@@ -26,6 +26,10 @@ export class Input {
     this.lastY = 0;
     this.isTouchDevice = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     this.trail = null; // 조작 흔적 (main.js가 넣어 준다)
+    // 탭 = 찌르기: 칼 쪽 화면을 짧게 톡 친 횟수 (main.js 가 consumeTaps 로 가져간다)
+    //  press = 지금 누르고 있는 손가락(마우스) { id, t(누른 시각 ms), x, y, moved(움직인 거리 px), mouse, ok }
+    this.taps = 0;
+    this.press = null;
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     window.addEventListener('pointermove', (e) => this.onMove(e));
@@ -38,6 +42,8 @@ export class Input {
 
   onDown(e) {
     if (!this.enabled) return;
+    // 마우스 잠금을 거는 첫 클릭은 찌르기로 치지 않는다 (잠금을 못 거는 브라우저는 클릭 그대로)
+    const lockedBefore = document.pointerLockElement === this.canvas || !this.canvas.requestPointerLock;
     if (e.pointerType === 'mouse') {
       // PC: 마우스를 화면에 잠가서 하프 소드처럼 마우스 움직임 = 칼 움직임
       if (document.pointerLockElement !== this.canvas && this.canvas.requestPointerLock) {
@@ -53,7 +59,10 @@ export class Input {
     this.activeTouch = e.pointerId;
     this.lastX = e.clientX;
     this.lastY = e.clientY;
-    if (e.pointerType !== 'mouse') this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
+    const mouse = e.pointerType === 'mouse';
+    // 시간은 이벤트가 생긴 시각(e.timeStamp)으로 잰다: 한 프레임이 길면 핸들러가 늦게 돌아 누른 시간이 부풀려진다
+    this.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !mouse || lockedBefore };
+    if (!mouse) this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
   }
 
   onMove(e) {
@@ -63,9 +72,11 @@ export class Input {
       if (Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
       this.handDX += e.movementX * INPUT.mouseSensitivity;
       this.handDY -= e.movementY * INPUT.mouseSensitivity;
+      if (this.press?.mouse) this.press.moved += Math.hypot(e.movementX, e.movementY);
       return;
     }
     if (e.pointerId !== this.activeTouch) return;
+    if (this.press?.id === e.pointerId) this.press.moved = Math.max(this.press.moved, Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y));
     const scale = INPUT.touchSensitivity / Math.max(320, window.innerHeight);
     this.handDX += (e.clientX - this.lastX) * scale;
     this.handDY -= (e.clientY - this.lastY) * scale;
@@ -75,11 +86,26 @@ export class Input {
   }
 
   onUp(e) {
+    const p = this.press;
+    if (p && e.pointerId === p.id) {
+      // 짧게 톡 쳤다(끌지도, 누르고 있지도 않았다) → 찌르기
+      const dur = (e.timeStamp || performance.now()) - p.t;
+      const tap = p.mouse ? dur < INPUT.clickMs && p.moved < INPUT.clickPx : dur < INPUT.tapMs && p.moved < INPUT.tapPx;
+      if (tap && p.ok && e.type === 'pointerup' && this.enabled) this.taps++;
+      this.press = null;
+    }
     if (e.pointerId === this.activeTouch) {
       this.activeTouch = null;
       this.trail?.lift();
     }
     flushHaptic(); // 아이폰: 손가락을 떼는 순간에만 진동이 허락된다
+  }
+
+  /** 지난번 이후 톡 친 횟수 (찌르기) */
+  consumeTaps() {
+    const n = this.taps;
+    this.taps = 0;
+    return n;
   }
 
   consumeHandDelta() {

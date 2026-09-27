@@ -14,6 +14,7 @@ import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT } 
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
+import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON } from './weapons.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
@@ -201,6 +202,7 @@ export class Fighter {
     this.skill = new Skill(this); // 검술 층: 손 목표·허리·발에 익힌 몸놀림을 보탠다
     this.guardPose = {}; // 손이 따라가는 자세 (걸러진 손 목표 기준)
     this.bodyGuard = {}; // 몸이 따라가는 자세 (거르기 전 입력 기준)
+    this.finish = newFinish(); // 쓰러진 상대 마무리(내려찍기) 자세 (finish.js)
     this.bodyPose = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
     this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
     this.pelvisYawOffset = 0; // 골반을 트는 각도 (라디안, + = 왼쪽으로)
@@ -350,6 +352,7 @@ export class Fighter {
       power: spec.power, // 등급 공격력 배율 (롱소드=1)
       ignoreArmor: spec.ignoreArmor,
       twoHand: spec.twoHand,
+      thrustStyle: spec.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
     };
     this.weaponBroken = false;
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
@@ -551,7 +554,7 @@ export class Fighter {
   updateBodyPose(dt) {
     const sk = this.skill;
     const gw = this.guardWeight();
-    const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard);
+    const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard, this.finish, sk.thrustPose);
     const bp = this.bodyPose;
     const bv = this.bodyPoseVel;
     // 딱 멈추는(임계 감쇠) 2차 필터: 출발도 멈춤도 매끄럽다 (1차 필터는 출발 순간 속도가 튄다)
@@ -583,7 +586,10 @@ export class Fighter {
 
   /** 바짝 붙었을 때 손을 상대 몸 속으로 뻗지 않는다 (팔을 접어 칼자루를 몸 가까이 당긴다) */
   closeReach() {
-    return Math.max(0.12, this.foeDistance() - 0.3);
+    const r = Math.max(0.12, this.foeDistance() - 0.3);
+    // 쓰러진 상대는 발밑에 누워 있어 가슴끼리 가까워도 손을 앞으로 뻗어 내려찍을 수 있다 (finish.js)
+    const fa = this.finish.amt;
+    return fa > 0 ? r + Math.max(0, 0.6 - r) * fa : r;
   }
 
   /**
@@ -629,6 +635,7 @@ export class Fighter {
     this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
 
     this.updateHeading(dt);
+    updateFinish(this, dt); // 상대가 쓰러져 있으면 아래쪽 자세를 내려찍기로 (finish.js)
     this.skill.update(dt);
     this.updateBodyPose(dt);
     this.driveBalance(dt);
@@ -1321,7 +1328,7 @@ export class Fighter {
     // ② 검술 자세 지도: 손가락 위치 → 실제 롱소드 자세의 손 위치(앞뒤 깊이 포함)와 칼끝 방향
     //  검술 보정이 셀수록 ②를 따른다 (끔 = ①만)
     const gw = this.guardWeight();
-    const G = guardAt(off.x, off.y, this.guardPose);
+    const G = guardAt(off.x, off.y, this.guardPose, this.finish, this.skill.thrustPose);
     if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     handLocal.x = Math.min(handLocal.x, this.closeReach());
     const c = chest.translation();
@@ -1399,7 +1406,9 @@ export class Fighter {
       if (!this.wristBrake && toward > 3 && toward > tgtSp && angle > 0.25) {
         const brakeAcc = (cap * this.weaponCfg.brakeEcc) / this.swordIhand;
         const stopAngle = (toward * toward) / (2 * brakeAcc);
-        if (angle > stopAngle * this.weaponCfg.releaseMargin) damp = this.weaponCfg.releaseDamping;
+        // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js)
+        const fr = this.finish.amt > 0 && aim.y < blade.y ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
+        if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
           this.wristBrakeAng = angle;

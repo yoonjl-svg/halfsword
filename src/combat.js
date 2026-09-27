@@ -143,8 +143,8 @@ export class Combat {
 
     // 유효 질량: 맞은 점에서의 강체 칼의 실제 유효 질량 + 팔·몸의 도움
     const mFree = freeMass(pr.w.fighter.swordProps, S, point, dir);
-    const mEff = mFree + STRIKE.armAssist;
-    const ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
+    let mEff = mFree + STRIKE.armAssist;
+    let ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
     let energy = ephys * STRIKE.energyScale;
@@ -152,9 +152,20 @@ export class Combat {
     let type = 'blunt';
     let quality = 1;
     const along = rel.dot(axis) / speed;
+    const ts = att.weaponCfg.thrustStyle; // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
+    const win = ts ? ts.window : 0; // 칼끝 판정 폭
     if (isBlade) {
-      if (along > STRIKE.stabAlign && t > 0.8) type = 'stab';
-      else {
+      if (along > STRIKE.stabAlign - win && t > 0.8 - win) {
+        type = 'stab';
+        // 칼끝 찌르기 동작(skill.js thrust: 탭 찌르기, 찌르기 무기 AI 의 찌르기 기술) 중에는 팔을 곧게 뻗어 칼 축으로 민다
+        //  → 팔·어깨 무게가 칼끝 뒤에 함께 실린다 (자세로 돌아오는 동안은 아니다). 그 밖의 칼 축 방향 접촉
+        //  (자세 지도를 따라 칼을 돌리다 닿은 것)은 예전 그대로
+        if (att.skill?.thrustPose.w > 0.5) {
+          mEff = mFree + STRIKE.thrustAssist;
+          ephys = 0.5 * mEff * speed * speed;
+          energy = ephys * STRIKE.energyScale;
+        }
+      } else {
         const perp = rel.clone().addScaledVector(axis, -rel.dot(axis));
         const pl = perp.length();
         const edgeAlign = pl > 1e-3 ? Math.abs(perp.dot(edge)) / pl : 0;
@@ -185,6 +196,11 @@ export class Combat {
       guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
     }
     if (att.weaponCfg.ignoreArmor) guard = 1; // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
+    // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구는 gap 의 절반을 무시한다
+    else if (type === 'stab' && ts?.gap) {
+      if (helmet) guard *= 1 - 0.5 * ts.gap;
+      else if (zone !== 'head' && zone !== 'neck') guard -= ts.gap * Math.max(0, guard - 0.55);
+    }
 
     // 감정 고유 능력(emotions.js 배율표, fighter.emoMods): 주는 쪽의 dealt, 받는 쪽의 taken, 관통 문턱은 둘의 pass 합.
     //  감정이 없으면 전부 1·0 이라 예전과 같다
