@@ -42,22 +42,23 @@ const WEAPON_BASELINE = 0.13 + 1.05;
 // excalibur_replica는 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 비율을 쓴다.
 export const MEASURED = {
   // id: [contact, reach, clinch, cutTime] raw — tools/sim/weapon_measures.mjs 와 같은 값 (감독 확정 14종 로스터).
+  //  10라운드 B: 한손 뻗기(guards.js) 뒤 hybrid(게임 기본)로 다시 잰 값 (tools/sim/hybrid.mjs weapon_measure.mjs). 에스톡은 유효 간격(× 0.914)
   //  (finish.js 도 읽는다: 쓰러진 상대까지 닿는 거리 배율 downReachK)
-  //  cutTime 은 보정 없는 raw(롱소드 0.43)라 비율로만 쓴다.
-  longsword: [1.62, 1.91, 1.25, 0.43],
-  zweihander: [1.66, 2.08, 1.28, 0.49],
-  estoc: [1.6, 2.05, 1.24, 0.42],
-  sabre: [1.4, 1.67, 1.08, 0.38],
-  rapier: [1.52, 1.73, 1.17, 0.29],
-  falchion: [1.4, 1.62, 1.08, 0.36],
-  monohoshizao: [1.58, 1.92, 1.22, 0.46],
-  qinggang: [1.37, 1.61, 1.06, 0.36],
-  excalibur: [1.61, 1.86, 1.24, 0.41],
-  excalibur_replica: [1.59, 1.86, 1.23, 0.42],
-  lightsaber: [1.54, 1.73, 1.19, 0.25],
-  tree_branch: [1.44, 1.64, 1.11, 0.33],
-  rubber_chicken: [1.07, 1.21, 0.83, 0.27],
-  frozen_tuna: [1.34, 1.69, 1.03, 0.46],
+  //  cutTime 은 보정 없는 raw(롱소드 0.41)라 비율로만 쓴다.
+  longsword: [1.62, 1.9, 1.25, 0.41],
+  zweihander: [1.71, 2.08, 1.32, 0.48],
+  estoc: [1.57, 1.99, 1.22, 0.42],
+  sabre: [1.39, 1.58, 1.07, 0.36],
+  rapier: [1.54, 1.68, 1.19, 0.29],
+  falchion: [1.37, 1.56, 1.06, 0.33],
+  monohoshizao: [1.58, 1.87, 1.22, 0.47],
+  qinggang: [1.35, 1.52, 1.04, 0.33],
+  excalibur: [1.55, 1.83, 1.2, 0.4],
+  excalibur_replica: [1.55, 1.83, 1.2, 0.4],
+  lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
+  tree_branch: [1.46, 1.61, 1.13, 0.29],
+  rubber_chicken: [1.05, 1.22, 0.81, 0.22], // 칼날 0.45m (10라운드 쓰레기 등급 맞추기)
+  frozen_tuna: [1.36, 1.63, 1.05, 0.44],
 };
 const LS_MEASURED = MEASURED.longsword;
 

@@ -64,6 +64,21 @@ const NBASE = BASE.length;
 // GUARDS 뒤쪽 두 개는 마무리 자세 (자세 이름 표시·nearest 용. 평소 섞기에는 들어가지 않는다)
 export const GUARDS = [...BASE, ...FINISH_GUARDS.map((g) => ({ ...g, pad: g.pads[0], hand: [0, 0, 0], dir: [1, 0, 0], pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 }))];
 
+// 한손 무기(weapons.js oneHandStance: 세이버·팔쉬온·청강검·레이피어·나뭇가지·고무 닭. 라이트세이버는 뺀다)의 자세 — 한손 뻗기(디렉터 10라운드 B, R2)
+//  한 손으로 쥐면 빈손이 칼자루를 잡지 않으니 팔을 끝까지 뻗고, 칼 든 어깨를 앞으로 내밀어 몸을 옆으로 세운다
+//  (세이버의 걸친 막기, 레이피어의 3번 자세, 검의 칼끝 앞세우기). 칼끝으로 겨누는 자세만 손을 앞으로 내고 몸을 튼다.
+//  yaw 가 − 이면 칼 든 어깨가 앞으로 나온다(도). 칼끝 방향은 교본 자세 그대로. 손은 팔 길이(어깨에서 0.565m) 안이다
+const ONE_HAND = {
+  '긴 자세 (Langort)': { hand: [0.68, 0.08, 0.1], pelvisYaw: -35, chestYaw: -45, pitch: 10 },
+  '쟁기 (Pflug)': { hand: [0.4, -0.22, 0.13], pelvisYaw: -10, chestYaw: -25 },
+  '황소 (Ochs)': { hand: [0.36, 0.26, 0.17], pelvisYaw: 0, chestYaw: -15 },
+  '바보 (Alber)': { hand: [0.5, -0.3, 0.05], pelvisYaw: -25, chestYaw: -25 },
+};
+const BASE_ONE = BASE.map((g) => {
+  const o = ONE_HAND[g.name];
+  return o ? { ...g, hand: o.hand, pelvisYaw: o.pelvisYaw * D2R, chestYaw: o.chestYaw * D2R, pitch: o.pitch != null ? o.pitch * D2R : g.pitch } : g;
+});
+
 const SIGMA2 = 0.15 * 0.15;
 
 /**
@@ -81,8 +96,9 @@ export function guardAt(x, y, out, fin = null, th = null) {
   h[0] = h[1] = h[2] = d[0] = d[1] = d[2] = 0;
   out.pelvisYaw = out.chestYaw = out.pitch = out.drop = 0;
   const fa = fin ? fin.amt : 0;
+  const T = out.oneHand ? BASE_ONE : GUARDS; // 한손 무기면 한손 자세표 (fighter 가 무기의 oneHandStance 로 out.oneHand 를 켠다)
   for (let i = 0; i < NBASE; i++) {
-    const g = GUARDS[i];
+    const g = T[i];
     const dx = x - g.pad[0];
     const dy = y - g.pad[1];
     let w = Math.exp(-(dx * dx + dy * dy) / SIGMA2);
@@ -134,7 +150,7 @@ export function guardAt(x, y, out, fin = null, th = null) {
   // 칼끝 방향: 가중 평균을 정규화. 거의 반대 방향끼리 섞여 상쇄되면 가장 가까운 자세의 방향을 쓴다
   let len = Math.hypot(d[0], d[1], d[2]) * inv;
   if (len < 0.35) {
-    const g = GUARDS[best];
+    const g = best < NBASE ? T[best] : GUARDS[best];
     const gd = g.finish ? fin[g.finish].dir : g.dir;
     d[0] = gd[0];
     d[1] = gd[1];

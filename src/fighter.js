@@ -360,6 +360,7 @@ export class Fighter {
       thrustStyle: spec.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
     };
     this.weaponBroken = false;
+    this.guardPose.oneHand = this.bodyGuard.oneHand = !!spec.oneHandStance; // 한손 무기는 한손 자세표 (guards.js: 칼 든 어깨를 앞으로, 손을 더 뻗는다. weapons.js oneHandStance)
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
     //  씨앗은 판 시드(o.breakSeed, 시뮬 하니스가 넘긴다) — 몇 번째로 돌리든 같은 시드면 같은 굴림이 나온다.
     //  시드가 없으면(실제 게임) "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림.
