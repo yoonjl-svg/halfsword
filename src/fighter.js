@@ -398,7 +398,10 @@ export class Fighter {
       // 단면·휘어진 몸통 등을 쓸 수 있게 spec.partMesh(idx, ...)가 있으면 그걸 부른다 (없으면 예전처럼
       // 콜라이더와 똑같은 상자·공 그대로) — 콜라이더 치수와 겉보기 치수는 ~1cm 안에서만 다르게 한다
       // (약속: docs/weapon_shots 참고).
-      const mesh = spec.partMesh?.(partIdx, isBlade, shape, color, weaponMatOpts(spec.material, isBlade), o.look) ?? shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade));
+      // 등급 마감(finishTier): 겉면이 등급대로 읽히게 한다. 엑스칼리버 복제품만 finishTier를 따로 정해
+      // 진품(레전드)과 똑같은 마감을 받는다 — 눈으로 구분이 안 돼야 해서.
+      const finish = spec.finishTier ?? spec.tier;
+      const mesh = spec.partMesh?.(partIdx, isBlade, shape, color, weaponMatOpts(spec.material, isBlade, finish), o.look) ?? shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade, finish));
       mesh.position.y = y;
       group.add(mesh);
       partIdx++;
