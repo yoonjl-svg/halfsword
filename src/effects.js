@@ -140,6 +140,19 @@ export function haptic(strength = 1) {
   }
 }
 
+/** 아주 짧은 진동 한 번 (ms). 안드로이드만: 아이폰은 손가락을 누르거나 뗀 순간에만 울릴 수 있어 여기선 건너뛴다 (결심 확정 신호) */
+export function hapticPulse(ms) {
+  try {
+    if (!navigator.vibrate) return;
+    const now = performance.now();
+    if (now - lastHaptic < 60) return;
+    lastHaptic = now;
+    navigator.vibrate(ms);
+  } catch {
+    /* 지원 안 하면 조용히 넘어감 */
+  }
+}
+
 /** 손가락을 뗄 때(input.js가 부른다) 예약된 진동을 울린다 */
 export function flushHaptic() {
   if (!pending) return;

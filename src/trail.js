@@ -19,6 +19,8 @@ export class InputTrail {
     this.touch = []; // { x, y, t, v } (null = 손가락을 뗀 자리: 선을 끊는다)
     this.pad = []; // { x, y, t } (패드 좌표, m)
     this.enabled = true;
+    this.goldT = -1; // 결심 확정 신호: 이 시각(초)까지 흔적이 금색으로 밝아지고 굵어진다
+    this.goldLen = 0.3;
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -53,6 +55,12 @@ export class InputTrail {
     this.pad.push({ x, y, t });
   }
 
+  /** 결심 베기 확정 (온몸 베기 L1): 지금 보이는 흔적을 dur 초 동안 금색으로 밝고 굵게 */
+  confirm(t, dur = 0.3) {
+    this.goldT = t + dur;
+    this.goldLen = dur;
+  }
+
   clear() {
     this.touch.length = 0;
     this.pad.length = 0;
@@ -71,6 +79,8 @@ export class InputTrail {
     while (this.touch.length && (this.touch[0] === null || now - this.touch[0].t > LIFE)) this.touch.shift();
     while (this.pad.length > 1 && now - this.pad[0].t > LIFE) this.pad.shift();
 
+    // 결심 확정 신호: 금색으로 밝고 굵게 (확정 순간 1 → 끝에 0)
+    const gold = this.goldT > now ? Math.min(1, (this.goldT - now) / this.goldLen) : 0;
     // 손가락 흔적: 어두운 테두리 위에 밝은 선 (모래·하늘 어디서든 보이게). 처음엔 또렷하다가 끝에 빨리 사라진다
     for (const pass of [0, 1]) {
       for (let i = 1; i < this.touch.length; i++) {
@@ -81,10 +91,13 @@ export class InputTrail {
         if (age >= 1) continue;
         const fade = 1 - age * age;
         const s = Math.min(1, b.v / SWING_PX); // 빠르기 0~1
-        const w = 3 + 11 * s;
+        const w = (3 + 11 * s) * (1 + 0.6 * gold);
         if (pass === 0) {
           g.strokeStyle = `rgba(20, 12, 6, ${fade * 0.35})`;
           g.lineWidth = w + 4;
+        } else if (gold > 0) {
+          g.strokeStyle = `rgba(255, ${Math.round(214 - 20 * s)}, ${Math.round(90 - 60 * s)}, ${Math.min(1, fade * (0.55 + 0.4 * s) + 0.35 * gold)})`;
+          g.lineWidth = w;
         } else {
           g.strokeStyle = `rgba(255, ${Math.round(240 - 100 * s)}, ${Math.round(210 - 160 * s)}, ${fade * (0.55 + 0.4 * s)})`;
           g.lineWidth = w;
@@ -116,8 +129,8 @@ export class InputTrail {
         const age = (now - b.t) / LIFE;
         const dt = Math.max(1e-3, b.t - a.t);
         const s = Math.min(1, Math.hypot(b.x - a.x, b.y - a.y) / dt / 3); // 손 위치가 3 m/s면 최대
-        g.strokeStyle = `rgba(255, ${Math.round(236 - 90 * s)}, ${Math.round(200 - 150 * s)}, ${Math.max(0, 1 - age) * (0.3 + 0.5 * s)})`;
-        g.lineWidth = 1.5 + 5 * s;
+        g.strokeStyle = gold > 0 ? `rgba(255, 210, 70, ${Math.min(1, Math.max(0, 1 - age) * (0.3 + 0.5 * s) + 0.4 * gold)})` : `rgba(255, ${Math.round(236 - 90 * s)}, ${Math.round(200 - 150 * s)}, ${Math.max(0, 1 - age) * (0.3 + 0.5 * s)})`;
+        g.lineWidth = (1.5 + 5 * s) * (1 + 0.6 * gold);
         g.beginPath();
         g.moveTo(toX(a.x), toY(a.y));
         g.lineTo(toX(b.x), toY(b.y));

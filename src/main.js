@@ -15,7 +15,7 @@ import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } fr
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST } from './weapons.js';
 import { attachAura } from './aura.js';
-import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
+import { Particles, haptic, hapticPulse, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { buildArena } from './arena.js';
@@ -37,7 +37,7 @@ function pickPlayerWeapon() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true, wholeBody: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true, wholeBody: true, autoChamber: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -144,6 +144,8 @@ function newRound() {
   CONFIG.BODY.weightMode = settings.legWeight ? 'hybrid' : 'levitate';
   // 온몸 베기 (docs/whole_body_strike.md): 끄면 온몸 베기 이전과 똑같이 움직인다. 다음 판부터 적용
   CONFIG.WHOLE.on = !!settings.wholeBody;
+  // 자동 감기 (온몸 베기 L1): 켜면 쟁기(기본 자세)에서 크게 그어도 칼을 먼저 들어 올렸다가 크게 벤다. 끄면 쟁기에서는 결심 베기가 안 된다
+  CONFIG.COMMIT.autoChamber = settings.autoChamber !== false;
   // 이전 판 정리
   for (const g of fighterMeshes) scene.remove(g);
   fighterMeshes.length = 0;
@@ -218,6 +220,16 @@ function newRound() {
   player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
+  // 결심 베기 (온몸 베기 L1): 플레이어만 손가락 원래 궤적으로 결심을 판정한다. 지난 판의 궤적은 읽지 않는다
+  input.fingerTrace.clear();
+  player.skill.detect = true;
+  player.skill.trace = input.fingerTrace;
+  // 확정 신호 (모든 기기): 입력 자취가 금색으로 밝아지고 굵어진다. 안드로이드는 짧은 진동을 더한다 (숨소리는 소리 담당, R3 고리)
+  player.onCommit = (stage) => {
+    if (stage !== 'B') return;
+    trail.confirm(last / 1000, CONFIG.COMMIT.signal); // (자취를 그리는 시계와 같은 시계: 이번 프레임 시각)
+    hapticPulse(8);
+  };
   combat = new Combat(colliderInfo, { onWound, onClash });
   // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
   const foeVoice = currentFoe?.id || 'generic';

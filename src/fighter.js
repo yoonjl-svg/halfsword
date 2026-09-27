@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, WHOLE, SUPPORT } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, WHOLE, SUPPORT, COMMIT } from './config.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
@@ -214,6 +214,7 @@ export class Fighter {
     this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
     this.pelvisYawOffset = 0; // 골반을 트는 각도 (라디안, + = 왼쪽으로)
     this.pelvisDropOffset = 0; // 자세에 따라 골반을 더 낮추는 정도 (m)
+    this.pelvisTgt = 0; // 골반 비틀기 목표 (결심 베기 중엔 초당 COMMIT.pelvisRate 로만 바꾼다)
     this.aimDirW = new THREE.Vector3(1, 0, 0); // 칼끝이 향해야 할 방향 (월드)
     this.debug = { aim: new THREE.Vector3(), wristTorque: new THREE.Vector3(), wristCap: 0 };
 
@@ -576,11 +577,33 @@ export class Fighter {
     const act = sk.activity;
     const amp = SKILL_BODY.holdAmount + (1 - SKILL_BODY.holdAmount) * act;
     const spd = SKILL_BODY.holdSpeed + (1 - SKILL_BODY.holdSpeed) * act;
-    // 골반은 아직 발 위치를 바꾸지 못해서(발 딛기 방향 전환 전) 교본 값의 절반만 튼다
-    follow('pelvisYaw', -G.pelvisYaw * 0.5 * gw * amp, SKILL_BODY.pelvis * spd);
-    follow('chestYaw', -G.chestYaw * gw * amp, SKILL_BODY.chest * spd);
-    follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
-    follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
+    // 골반은 아직 발 위치를 바꾸지 못해서(발 딛기 방향 전환 전) 교본 값의 절반만 튼다.
+    //  온몸 베기(L1)를 켜면 플레이어(skill.detect)의 모든 휘두르기는 휘두르는 만큼 조금 더 (0.5 → 0.65): 팔 베기도 작아 보이지 않게
+    const pf = sk.detect && WHOLE.on && WHOLE.commit ? 0.5 + COMMIT.allSwingPelvis * act : 0.5;
+    const pT = -G.pelvisYaw * pf * gw * amp;
+    const cp = sk.cutPose;
+    if (cp.wBody > 0) {
+      // 결심 베기 (L1): 몸 목표를 획 프로그램(cutPose) 값으로 wBody 만큼 섞고, 더 빠르게 따라간다.
+      //  골반 목표는 초당 pelvisRate 넘게 바꾸지 않는다 (한 번에 크게 틀면 딛은 발이 비틀린다)
+      const w = cp.wBody;
+      const sP = SKILL_BODY.pelvis * spd + (COMMIT.bodyFollow - SKILL_BODY.pelvis * spd) * w;
+      const sC = SKILL_BODY.chest * spd + (COMMIT.bodyFollow - SKILL_BODY.chest * spd) * w;
+      const lim = COMMIT.pelvisRate * (Math.PI / 180) * dt;
+      this.pelvisTgt += THREE.MathUtils.clamp(pT + (cp.pelvisYaw - pT) * w - this.pelvisTgt, -lim, lim);
+      follow('pelvisYaw', this.pelvisTgt, sP);
+      const cT = -G.chestYaw * gw * amp;
+      follow('chestYaw', cT + (cp.chestYaw - cT) * w, sC);
+      const tT = G.pitch * gw;
+      follow('pitch', tT + (cp.pitch - tT) * w, sC);
+      const dT = (G.drop - 0.06) * gw;
+      follow('drop', dT + (cp.drop - dT) * w, sP);
+    } else {
+      this.pelvisTgt = pT;
+      follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd);
+      follow('chestYaw', -G.chestYaw * gw * amp, SKILL_BODY.chest * spd);
+      follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
+      follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
+    }
     this.pelvisYawOffset = bp.pelvisYaw;
     this.pelvisDropOffset = bp.drop;
   }
@@ -1392,6 +1415,13 @@ export class Fighter {
     hb[2] = handLocal.z;
     const th = this.skill.thrustPose;
     if (th.w > 0) handLocal.lerp(_v6.set(th.hand[0], th.hand[1], th.hand[2]), th.w);
+    // 결심 베기 (L1): 획 프로그램의 손 더함 (감기 → 끝까지 뻗기 → 끝 너머)
+    const cp = this.skill.cutPose;
+    if (cp.w > 0) {
+      handLocal.x += cp.hand[0] * cp.w;
+      handLocal.y += cp.hand[1] * cp.w;
+      handLocal.z += cp.hand[2] * cp.w;
+    }
     handLocal.x = Math.min(handLocal.x, this.closeReach());
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
@@ -1417,6 +1447,7 @@ export class Fighter {
       if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);
       aim.normalize();
     }
+    if (cp.w > 0) this.cutAim(aim, cp);
     aim.applyQuaternion(this.yaw);
     // 목표 방향이 도는 속도: 손목 감쇠는 이 속도를 향한다 (멈추려는 게 아니라 목표를 따라가는 감쇠)
     const wAim = _v5.set(0, 0, 0);
@@ -1475,7 +1506,9 @@ export class Fighter {
         const stopAngle = (toward * toward) / (2 * brakeAcc);
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js)
         const fr = this.finish.amt > 0 && aim.y < blade.y ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
-        if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
+        // 결심 베기 (L1) 닿기 앞뒤(cutPose.rel)에는 제동을 늦게 건다: 끝 자세에서 칼을 세우지 않고 지나가게
+        const rm = cp.w > 0 && cp.rel ? this.weaponCfg.releaseMargin * (COMMIT.releaseMargin / WEAPON.releaseMargin) : this.weaponCfg.releaseMargin;
+        if (angle > stopAngle * rm * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
           this.wristBrakeAng = angle;
@@ -1515,6 +1548,21 @@ export class Fighter {
     const along = torque.dot(fa);
     forearm.addTorque({ x: -(torque.x - fa.x * along), y: -(torque.y - fa.y * along), z: -(torque.z - fa.z * along) }, true);
     chest.addTorque({ x: -fa.x * along, y: -fa.y * along, z: -fa.z * along }, true);
+  }
+
+  /**
+   * 결심 베기 (L1)의 칼끝 방향 덧씌움 (몸 기준 aim 을 돌린다): 칼 젖히기(손목 감기: 올려본 각·옆 각)와
+   * 지나가기(끝 자세 너머로 휘두르는 면 안에서 더 돌리기). 각은 cutPose 가 u 에 따라 정하고 w 만큼 쓴다
+   */
+  cutAim(aim, cp) {
+    const w = cp.w;
+    if (cp.cockEl) {
+      // 올려본 각: 칼끝 방향과 위 방향에 수직인 수평 축으로 (+ = 칼끝을 든다)
+      const ax = _v7.crossVectors(aim, UP);
+      if (ax.lengthSq() > 1e-6) aim.applyAxisAngle(ax.normalize(), cp.cockEl * w);
+    }
+    if (cp.cockAz) aim.applyAxisAngle(UP, -cp.cockAz * w); // 옆 각 (+ = 칼 든 쪽)
+    if (cp.over) aim.applyAxisAngle(_v7.set(cp.n[0], cp.n[1], cp.n[2]), cp.over * w);
   }
 
   /**

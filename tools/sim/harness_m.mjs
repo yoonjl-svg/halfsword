@@ -143,6 +143,7 @@ export function inputPump(G, { hz = 60, f = G.player } = {}) {
   const input = withBrowser(() => new Input({ addEventListener() {} }));
   input.enabled = true;
   f.skill.detect = true; // 결심 판정은 플레이어만 (main.js 와 같게)
+  f.skill.trace = input.fingerTrace; // 결심 판정이 읽는 손가락 원래 궤적 (main.js 와 같게)
   f.skill.autoGuard = true;
   const ppm = SCREEN_H / CONFIG.INPUT.touchSensitivity; // 패드 m → px (input.js 가 쓰는 배율의 거꾸로)
   // stick: 조이스틱 {x, y}. main.js 처럼 프레임마다 f.move 에 넣는다 (검술 층의 내딛기가 올려 둔 move 도 다음 프레임에 되돌아간다).

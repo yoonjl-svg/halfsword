@@ -317,6 +317,9 @@ export class Combat {
         J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + STRIKE.armAssist) * s);
         c.stuckT -= dt;
         c.seen = this.stepNo;
+        // 결심 베기 (L1): 칼이 박힌 동안 획 시간을 늦춘다 (skill.updateCut)
+        const cm = c.pr.w.fighter.commit;
+        if (cm?.on) cm.stuckT = Math.max(cm.stuckT, 2 * dt);
       }
       if (J > 0) {
         // 칼에는 칼날 중심선 위에 건다 (날 끝에 걸면 칼이 길이 방향으로 팽이처럼 돈다)
@@ -428,6 +431,8 @@ export class Combat {
         f.absorbWeaponImpact?.(J); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다
       }
     }
+    // 결심 베기 (L1): 새로 부딪힌 칼은 결과로 적는다 (막힘 / 약하게 스친 것은 스침). 막힘을 더 가르는 것은 L4
+    if (fresh) for (const f of [A.fighter, B.fighter]) if (f.commit?.on) f.skill.strikeResult(vn >= 2 ? 'blocked' : 'glance', { vn, impulse: J });
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
   }
 
@@ -522,6 +527,8 @@ export class Combat {
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part });
     }
+    // 결심 베기 (L1): 결과 기록 (가르고 지나갔으면 'through', 아니면 'hit' — 맞히면 지나가기를 줄인다)
+    if (att.commit?.on) att.skill.strikeResult(r.pass ? 'through' : 'hit', r);
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
   }

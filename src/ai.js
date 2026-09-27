@@ -80,6 +80,7 @@ export class AI {
   constructor(me, foe, levelName = 'normal', persona = null) {
     this.me = me;
     this.foe = foe;
+    me.ai = this; // 상대(플레이어)의 결심 판정이 "AI가 치는 중"인지 읽는다 (skill.js threatened. 읽기만)
     this.sense = new Senses(me, foe);
     this.persona = persona || {};
     this.school = schoolOf(this.persona.school);
