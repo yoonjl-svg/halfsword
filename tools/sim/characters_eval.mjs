@@ -82,7 +82,9 @@ function runDuel(chA, chB, seed, durS = 45) {
     fearA += ai.fear; fearB += ai2.fear; n++;
     if (!A.alive || !B.alive) break;
   }
-  const fear = { A: fearA / n, B: fearB / n, peakA: ai.stats.fearPeak ?? 0, peakB: ai2.stats.fearPeak ?? 0 };
+  const dur = n * DT;
+  const emoOf = (x) => ({ peak: x.stats.emoPeak ?? {}, time: x.stats.emoTime ?? {}, dur });
+  const fear = { A: fearA / n, B: fearB / n, peakA: ai.stats.fearPeak ?? 0, peakB: ai2.stats.fearPeak ?? 0, emoA: emoOf(ai), emoB: emoOf(ai2) };
   if (!A.alive && !B.alive) return { r: 'draw', fear };
   if (!A.alive) return { r: 'B', fear }; // B(플레이어 자리) 승
   if (!B.alive) return { r: 'A', fear }; // A(적 자리) 승
@@ -120,7 +122,9 @@ async function main() {
     const ids = CHARACTERS.map((c) => c.id);
     const raw = {}; // raw[A][B] = A가 자리 A(enemy)일 때 B를 이긴 비율(%)
     const fearOf = {}; // 캐릭터별 공포: 판 평균 세기들, 판 최고 세기들
-    for (const id of ids) fearOf[id] = { mean: [], peak: [] };
+    const EMOS = ['fear', 'anger', 'obsession', 'despair', 'cunning'];
+    const emoOf = {}; // 캐릭터별 감정: 판마다 {peak, time, dur}
+    for (const id of ids) { fearOf[id] = { mean: [], peak: [] }; emoOf[id] = []; }
     for (const chA of CHARACTERS) {
       raw[chA.id] = {};
       for (const chB of CHARACTERS) {
@@ -131,6 +135,7 @@ async function main() {
           if (r === 'A') aWins++; else if (r === 'B') bWins++; else draws++;
           fearOf[chA.id].mean.push(fear.A); fearOf[chA.id].peak.push(fear.peakA);
           fearOf[chB.id].mean.push(fear.B); fearOf[chB.id].peak.push(fear.peakB);
+          emoOf[chA.id].push(fear.emoA); emoOf[chB.id].push(fear.emoB);
         }
         raw[chA.id][chB.id] = (aWins / SEEDS) * 100;
       }
@@ -139,6 +144,18 @@ async function main() {
     for (const id of ids) {
       const f = fearOf[id];
       console.log(`${id}: fearful=${CHARACTERS.find((c) => c.id === id).ai.persona.pers.fearful ?? 0}, mean ${fmt(mean(f.mean))}, peak ${fmt(mean(f.peak))}, 겁먹은 판 ${fmt((100 * f.peak.filter((p) => p > 0.3).length) / f.peak.length)}%`);
+    }
+    console.log('');
+    console.log('[감정층·다섯 감정] 캐릭터별: 감정이 0.3을 넘은 판 비율(%) / 그 감정이 지배한 시간 비율(%) — 효과는 공포만 붙어 있음');
+    console.log('id,' + EMOS.map((e) => `${e}:판%/지배%`).join(','));
+    for (const id of ids) {
+      const runs = emoOf[id];
+      const cells = EMOS.map((e) => {
+        const fired = (100 * runs.filter((r) => (r.peak[e] ?? 0) > 0.3).length) / runs.length;
+        const share = (100 * runs.reduce((s, r) => s + (r.time[e] ?? 0), 0)) / runs.reduce((s, r) => s + r.dur, 0);
+        return `${fired.toFixed(0)}/${share.toFixed(0)}`;
+      });
+      console.log(`${id},${cells.join(',')}`);
     }
     console.log('');
     console.log('[참고] 자리 그대로: 행 = A(enemy 자리), 열 = B(player 자리). 셀 = A가 B를 이긴 비율(%)');

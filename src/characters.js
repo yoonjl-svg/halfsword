@@ -44,6 +44,10 @@ export const CHARACTERS = [
         pers: {
           guardStick: 0.6,
           fearful: 0.45, // 베이면 당황한다 — 많이 다치면 주춤주춤 물러나는 성격
+          angry: 0.7, // 막히면 발끈한다
+          dogged: 0.3,
+          despairing: 0.8, // 피가 바닥나면 마구잡이로 달려든다
+          cunning: 0,
           guardSpeed: 1.6,
           rhythm: 1.6,
           margin: 0.22,
@@ -115,6 +119,10 @@ export const CHARACTERS = [
         pers: {
           guardStick: 4.2,
           fearful: 0.3, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다
+          angry: 0.2,
+          dogged: 0.2,
+          despairing: 0.3,
+          cunning: 0.1,
           guardSpeed: 0.58,
           rhythm: 5.2,
           margin: 0.4,
@@ -185,6 +193,10 @@ export const CHARACTERS = [
         pers: {
           guardStick: 0.9,
           fearful: 0.15, // 맞아도 표정 하나 안 바꾼다
+          angry: 0.3,
+          dogged: 0.5,
+          despairing: 0.3,
+          cunning: 0.8, // 주 감정: 몰아치는 상대를 유인해 되받는다
           guardSpeed: 1.3,
           rhythm: 1.8,
           margin: 0.28,
@@ -258,6 +270,10 @@ export const CHARACTERS = [
         pers: {
           guardStick: 0.8,
           fearful: 0.08, // 아프면 오히려 웃으며 더 달려든다
+          angry: 0.6,
+          dogged: 0.7, // 주 감정: 피 냄새를 맡으면 물고 늘어진다
+          despairing: 0.5,
+          cunning: 0.5,
           guardSpeed: 1.7,
           rhythm: 1.3,
           margin: 0.2,
@@ -328,7 +344,11 @@ export const CHARACTERS = [
         level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.22, aggression: 1.0, windup: 0.28, skill: 0.97 },
         pers: {
           guardStick: 6.2,
-          fearful: 0, // 한없이 차분하다 — 감정층이 꺼져 있는 것과 같다
+          fearful: 0, // 한없이 차분하다 — 겁은 먹지 않는다
+          angry: 0.1,
+          dogged: 0.4,
+          despairing: 0.1,
+          cunning: 0.6, // 주 감정: 몰아치는 상대에겐 물러났다 되받는다
           guardSpeed: 0.5,
           rhythm: 6,
           margin: 0.34,
