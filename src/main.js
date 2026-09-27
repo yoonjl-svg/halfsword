@@ -16,7 +16,7 @@ import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST } from './weapons.js';
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
-import { Sound } from './sound.js';
+import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { buildArena } from './arena.js';
 
@@ -74,21 +74,22 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xb8c9d9);
-scene.fog = new THREE.Fog(0xb8c9d9, 16, 40);
+// 흐린 늦은 오후의 바닷가: 옅은 잿빛 안개 (싸우는 곳엔 거의 안 끼고 먼 바다만 흐려진다)
+scene.background = new THREE.Color(0xc4c8c6);
+scene.fog = new THREE.Fog(0xc4c8c6, 20, 480);
 
-const camera = new THREE.PerspectiveCamera(CAMERA.fov, 1, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(CAMERA.fov, 1, 0.1, 700); // 먼 바다·하늘까지 보이게
 camera.position.set(-3.5, CAMERA.height, 0.5);
 
-scene.add(new THREE.HemisphereLight(0xfff2dc, 0x6a5540, 1.1));
-const sun = new THREE.DirectionalLight(0xfff0d8, 2.0);
+scene.add(new THREE.HemisphereLight(0xe3e6e8, 0x716c63, 1.2)); // 구름 낀 하늘빛 + 모래에 되비친 빛
+const sun = new THREE.DirectionalLight(0xffe7cb, 1.7); // 구름 사이로 드는 누그러진 해
 sun.position.set(4, 9, 3);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 25 });
 scene.add(sun, sun.target);
 
-const arena = buildArena(scene); // 중세 마상시합장 (arena.js)
+const arena = buildArena(scene); // 바닷가 절벽 위 무너진 포세이돈 신전 (arena.js)
 
 // ── 화면 크기 / 픽셀 모드 ──
 function resize() {
@@ -120,6 +121,7 @@ const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
+let bodySounds = [];
 const fighterMeshes = [];
 
 function newRound() {
@@ -138,7 +140,7 @@ function newRound() {
   eventQueue = new RAPIER.EventQueue(true);
   colliderInfo = new Map();
 
-  // 바닥 + 원형 울타리 벽
+  // 바닥 + 원형 경계 벽 (보이지 않는 벽: 눈에 보이는 건 대리석 테두리)
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
   const n = 32;
@@ -195,6 +197,11 @@ function newRound() {
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
+  // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
+  const foeVoice = currentFoe?.id || 'generic';
+  bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
+  sound.prepareVoices(['player', foeVoice]);
+  sound.resetRound();
   roundOver = false;
   roundOverTime = 0;
   camFollow.copy(player.pelvisPos);
@@ -276,14 +283,20 @@ function onWound(att, vic, r, point, pr) {
   if (vic === player) haptic(e / 120);
   else if (att === player) haptic((e / 120) * (0.4 + 0.6 * sting));
   if (!vic.alive) slowMo = 1.6;
-  arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 관중이 들썩인다
+  arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 떠다니던 먼지가 흩날린다
 }
 
 function onClash(point, speed, touch) {
   if (touch?.fresh && touch.vn > 3 && player?.alive && player.tipVel.length() > 6) playerEv.parried = true; // 감정 사건: 내 베기가 막혔다
   // 소리: 새로 부딪힌 순간(또는 맞댄 채 다시 세게 친 순간)에만 "쨍". 맞댄 채 미끄러지는 동안은 긁히는 소리(updateBindSound)
   //  touch.vn = 부딪히기 직전 맞닿는 방향 속도(부딪히는 세기), touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeClash)
-  if (touch && (touch.fresh || touch.vn > 3)) sound.clash(touch.vn, touch.vt);
+  if (touch && (touch.fresh || touch.vn > 3)) {
+    // 두 무기의 재질이 둘 다 강철이면 칼끼리 "쨍", 아니면 재질에 맞는 소리 (나뭇가지 "딱", 광검 "파직", 고무 닭 "삑", 언 참치 "텅")
+    const ma = player?.weapon?.material || 'steel';
+    const mb = enemy?.weapon?.material || 'steel';
+    if (ma === 'steel' && mb === 'steel') sound.clash(touch.vn, touch.vt);
+    else sound.impact({ a: ma, b: mb, energy: 12 * touch.vn });
+  }
   // 연출의 세기는 "부딪히기 직전" 속도로 정한다 (부딪힌 뒤 속도엔 튕겨 나온 몫이 섞여 있다)
   const impact = touch ? (touch.fresh || touch.vn > 3 ? touch.vn : 0) : speed;
   if (clashCooldown > 0) return;
@@ -313,7 +326,16 @@ function updateWhoosh(f, dt) {
   // 판이 바뀌어도 같은 소리 고리를 다시 쓴다 (나/상대 한 개씩)
   let st = whooshState.get(f.index);
   if (!st) whooshState.set(f.index, (st = { loop: null }));
-  if (!st.loop) st.loop = sound.whooshLoop();
+  // 판마다 무기가 바뀐다: 재질이 달라지면 고리를 새로 만든다 (광검은 늘 "웅" 소리가 함께 돈다)
+  const mat = f.weapon?.material || 'steel';
+  if (st.loop && st.mat !== mat) {
+    st.loop.stop?.();
+    st.loop = null;
+  }
+  if (!st.loop) {
+    st.loop = sound.whooshLoop(mat);
+    st.mat = mat;
+  }
   st.loop?.set(f.armed ? f.tipVel.length() : 0);
 }
 /** 싸움 화면이 아닐 때(메뉴·일시정지)는 바람 소리·긁는 소리를 끈다 */
@@ -324,7 +346,8 @@ function muteWhoosh() {
 // 칼끼리 맞대고 밀며 미끄러지는 동안 계속 나는 "지이익" (바인드)
 function updateBindSound() {
   const b = combat.bladeContact;
-  if (combat.binding) sound.scrape(b.slide, b.press);
+  const steel = (player?.weapon?.material || 'steel') === 'steel' && (enemy?.weapon?.material || 'steel') === 'steel';
+  if (combat.binding && steel) sound.scrape(b.slide, b.press); // 쇠끼리 긁히는 "지이익"은 강철끼리만
   else sound.scrape(0, 0);
 }
 
@@ -424,13 +447,54 @@ function showFoeIntro(ch) {
   if (!ch) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
-  el.querySelector('span').textContent = `“${randomLine(ch, 'intro')}”`; // 시작 대사 3종 중 하나 (감독 지시)
-  el.querySelector('em').textContent = `내 무기: ${player.weapon.nameKo} · 상대 무기: ${enemy.weapon.nameKo}`;
-  // "싸워라!"가 사라진 다음에 띄운다 (같은 자리에 겹치지 않게)
-  showFoeIntro.t = setTimeout(() => {
-    el.classList.add('show');
-    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3500);
-  }, 1300);
+  el.querySelector('span').textContent = `“${randomLine(ch, 'intro')}”`; // 시작 대사 3종 중 하나
+  const em = el.querySelector('em');
+  em.textContent = '';
+  // 판이 열리자마자 바로 띄우고 무기 룰렛을 돌린다. 룰렛이 멈추기 전까지는 두 무기를 감춰 둔다
+  //  (칼이 이미 손에 보이면 뽑기의 의미가 없다). 멈추면 무기가 나타나고 "Battle"
+  el.classList.add('show');
+  setWeaponsVisible(false);
+  spinWeapon(em, () => {
+    setWeaponsVisible(true);
+    showToast('Battle', 900);
+    showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 2600);
+  });
+}
+
+// 무기 뽑기 룰렛: "내 무기" 이름이 빠르게 돌다가 점점 느려지며 이번 판 무기에서 멈춘다 (약 0.6초).
+//  글자와 짧은 딸깍 소리만 쓴다. 멈추는 순간 등급 색으로 번쩍인다 (쓰레기 회색 · 레어 파랑 · 에픽 보라 · 레전드 금빛)
+const GRAND_WEAPONS = new Set(['excalibur']);
+function setWeaponsVisible(v) {
+  for (const f of [player, enemy]) for (const m of f?.meshes || []) if (m.kind === 'weapon') m.group.visible = v;
+}
+function spinWeapon(em, done) {
+  clearTimeout(spinWeapon.t);
+  const names = PLAYER_WEAPON_POOL.map((id) => WEAPON_LIST.find((w) => w.id === id)?.nameKo).filter(Boolean);
+  const finalName = player.weapon.nameKo;
+  const foeLine = ` · 상대 무기: ${enemy.weapon.nameKo}`;
+  const grand = GRAND_WEAPONS.has(player.weapon.id);
+  em.classList.remove('picked', 'grand');
+  em.dataset.tier = '';
+  let i = Math.floor(Math.random() * names.length);
+  let delay = 28; // 첫 간격(ms). 매번 늘려 감속 → 모두 합쳐 약 0.6초
+  const step = () => {
+    if (delay > 170) {
+      em.innerHTML = `내 무기: <b>${finalName}</b>${foeLine}`;
+      em.classList.add('picked');
+      em.dataset.tier = player.weapon.tier || 'common';
+      if (grand) em.classList.add('grand');
+      sound.tick(true, grand);
+      haptic(grand ? 1 : 0.3);
+      done?.();
+      return;
+    }
+    i = (i + 1) % names.length;
+    em.innerHTML = `내 무기: <b>${names[i]}</b>${foeLine}`;
+    sound.tick(false);
+    delay *= 1.25;
+    spinWeapon.t = setTimeout(step, delay);
+  };
+  step();
 }
 
 function showToast(text, ms = 1200) {
@@ -458,6 +522,7 @@ function showHint(text, ms = 3500) {
 
 async function startFight() {
   sound.unlock();
+  sound.ambience(); // 멀리서 들리는 파도·바람 (아주 작게, 처음 한 번만 켜진다)
   // 폰이면 전체화면 + 가로 고정 시도 (지원 안 하면 조용히 넘어감)
   if (input.isTouchDevice) {
     try {
@@ -488,8 +553,8 @@ async function startFight() {
   newRound();
   state = 'fight';
   applyMoveMode();
-  showToast('싸워라!');
-  showFoeIntro(currentFoe);
+  showFoeIntro(currentFoe); // 무기 룰렛이 먼저 빠르게 돌고, 멈추면 "Battle"
+  if (!currentFoe) showToast('Battle');
   showHint(
     !input.isTouchDevice
       ? '클릭해서 마우스 잠금 · WASD 이동'
@@ -545,6 +610,42 @@ for (const ev of ['touchend', 'pointerup', 'keydown']) {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
+// ── 감정이 켜지는 순간 한 줄 알림 ──
+//  상대: "오소리 브란이 공포에 잠식되었다" / 주인공: 주어 없이 "공포에 잠식되었다" (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
+const EMO_TEXT = {
+  fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식되었다',
+  obsession: (who) => (who ? '집념을 보인다' : '집념이 생긴다'), // 사장님 결정: 주어 없이 — 상대는 "집념을 보인다", 주인공은 "집념이 생긴다"
+  anger: (who) => (who ? `${who}의 ` : '') + '분노가 폭발한다',
+};
+/** 받침이 있으면 a(이), 없으면 b(가) */
+function josa(word, a, b) {
+  const c = word.charCodeAt(word.length - 1);
+  if (c < 0xac00 || c > 0xd7a3) return a;
+  return (c - 0xac00) % 28 ? a : b;
+}
+const emoSeen = { player: null, enemy: null };
+function watchEmotions() {
+  const pairs = [
+    ['player', playerEmo?.emotion ?? null, null],
+    ['enemy', ai?.emotion ?? null, currentFoe?.name || '상대'],
+  ];
+  for (const [k, emo, who] of pairs) {
+    if (emo !== emoSeen[k]) {
+      emoSeen[k] = emo;
+      if (emo && EMO_TEXT[emo] && state === 'fight' && !roundOver) showEmoMsg(EMO_TEXT[emo](who), emo);
+    }
+  }
+}
+function showEmoMsg(text, emo) {
+  const el = $('emoMsg');
+  if (!el) return;
+  el.textContent = text;
+  el.dataset.emotion = emo;
+  el.classList.add('show');
+  clearTimeout(showEmoMsg.t);
+  showEmoMsg.t = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
 /** 플레이어 감정: 이번 프레임의 사건을 모아 판정하고, 배율표를 파이터에 얹고, 공포면 손을 떨고, 화면 가장자리에 색을 입힌다 */
 function updatePlayerEmotion(dt) {
   if (!playerEmo || !player || !enemy) return;
@@ -601,7 +702,7 @@ function checkRoundEnd(dt) {
     if (!enemy.alive || !player.alive) {
       roundOver = true;
       const win = !enemy.alive;
-      showToast(win ? '승리!' : '패배...', 0);
+      showToast(win ? '승리' : '패배', 0);
       if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
       else lastFoeLine = '';
     }
@@ -615,9 +716,13 @@ function checkRoundEnd(dt) {
     toast.classList.remove('show');
     const win = !enemy.alive;
     const loser = win ? enemy : player;
-    const cause = { 목: '목을 베였다', 머리: '머리에 치명상', 출혈: '과다 출혈', 기절: '기절' }[loser.causeOfDeath] || '쓰러졌다';
-    $('menuTitle').textContent = win ? '승리!' : '패배...';
-    $('menuSub').textContent = `${win ? '상대' : '나'}: ${cause}. ` + (win ? '난이도를 올려볼까요?' : lastFoeLine ? `${currentFoe.name}: “${lastFoeLine}”` : '칼날을 세워 크게 휘둘러 보세요.');
+    // 한 줄로 짧게: 이겼으면 내가 한 일(베었다), 졌으면 내가 당한 일(베였다)
+    const cause = win
+      ? { 목: '목을 베었다', 머리: '머리를 쳤다', 출혈: '출혈로 쓰러뜨렸다', 기절: '기절시켰다' }[loser.causeOfDeath] || '쓰러뜨렸다'
+      : { 목: '목을 베였다', 머리: '머리를 맞았다', 출혈: '피를 너무 흘렸다', 기절: '기절했다' }[loser.causeOfDeath] || '쓰러졌다';
+    $('menuTitle').textContent = win ? '승리' : '패배';
+    // 졌으면 상대의 승리 대사를 한 줄 덧붙인다 (사장님 확정)
+    $('menuSub').textContent = !win && lastFoeLine ? `${cause} · ${currentFoe.name}: “${lastFoeLine}”` : cause;
     $('btnStart').textContent = '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
@@ -717,6 +822,7 @@ function frame(now) {
     player.handHeld = input.activeTouch !== null;
     player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
     updatePlayerEmotion(dt);
+    watchEmotions();
     const m = input.move;
     const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
     player.move.set(player.alive ? m.x * emv : 0, player.alive ? m.y * emv : 0);
@@ -763,6 +869,7 @@ function frame(now) {
       updateDrips(f, dt * scale);
     }
     updateBindSound();
+    for (const b of bodySounds) b.update(dt * scale);
     particles.update(dt * scale);
     for (const a of auras) a.update(now / 1000);
     arena.update(dt);
