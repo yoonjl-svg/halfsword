@@ -578,10 +578,10 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
 // ── 감정이 켜지는 순간 한 줄 알림 ──
-//  상대: "오소리 브란이 공포에 잠식되었다" / 주인공: 주어 없이 "공포에 잠식되었다"
+//  상대: "오소리 브란이 공포에 잠식되었다" / 주인공: 주어 없이 "공포에 잠식되었다" (집념은 누구든 주어 없이)
 const EMO_TEXT = {
   fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식되었다',
-  obsession: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '집념을 보인다',
+  obsession: () => '집념을 보인다', // 사장님 결정: 집념은 상대·주인공 모두 주어 없이
   anger: (who) => (who ? `${who}의 ` : '') + '분노가 폭발한다',
 };
 /** 받침이 있으면 a(이), 없으면 b(가) */
