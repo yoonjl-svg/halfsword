@@ -32,7 +32,7 @@ export const EMO_ABILITY = {
   // 집념: 더 깊이 베고 더 자주 가른다(크리티컬) — 대신 발이 묶인다
   obsession: { dealt: 0.3, pass: 0.15, move: -0.25 },
   // 분노: 힘이 오른다 — 대신 받는 상처도 깊어진다(크리티컬 피격)
-  anger: { dealt: 0.2, taken: 0.3, pass: 0 },
+  anger: { dealt: 0.2, taken: 0.2, pass: 0 }, // 감독 지시: 받는 상처 0.3 → 0.2 (단독 검증에서 조금 불리했다)
   // 공포: 발이 빨라진다 — 대신 힘이 빠지고 손이 떨린다
   fear: { move: 0.2, dealt: -0.25, tremor: 0.03 },
 };
