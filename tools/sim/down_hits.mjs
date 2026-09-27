@@ -8,8 +8,11 @@
 //  사용법: node tools/sim/down_hits.mjs [판 수(칸마다)] [무기 id] [--stand] [--attacks=a,b] [--falls=a,b] [--dists=0.5,0.9]
 //   --stand : 상대를 쓰러뜨리지 않고 서 있는 채로 같은 공격 (서 있을 때 결과가 바뀌지 않았는지 확인용)
 //   출력 마지막 줄의 JSON 은 사람이 아니라 비교 스크립트용이다
+//   근력·감정: --str=0.85 --emo=off --emoP=anger:1 --emoE=fear:1 (str_emo.mjs — 베는 쪽 = 플레이어, 누운 쪽 = 상대.
+//   상대 AI 는 이 도구에서 멈춰 있어 --emoE 가 판 끝까지 유지된다)
 //  (main.js 처럼 매 스텝 걷기 입력을 0으로 되돌린다 — 검술 층의 내딛기(lunge)는 그 스텝 안에서만 덮어쓴다)
 import { newRound, DT, THREE, V, Q } from './harness_m.mjs';
+import { strEmoOpts, applyStrEmo, strEmoLabel } from './str_emo.mjs';
 
 // 패드 좌표(몸 앞 평면, m) 출발 → 도착, 손 목표 빠르기(패드 m/s)
 export const DOWN_ATTACKS = {
@@ -224,18 +227,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const attacks = opt('attacks')?.split(',') ?? Object.keys(DOWN_ATTACKS);
   const falls = stand ? ['toward'] : (opt('falls')?.split(',') ?? Object.keys(FALLS));
   const dists = opt('dists')?.split(',').map(Number) ?? DISTS;
+  const SE = strEmoOpts(args);
+  const before = (G) => applyStrEmo(G, SE);
   const rows = [];
   for (const attack of attacks) {
     for (const fall of falls) {
       for (const dist of dists) {
-        for (let s = 1; s <= N; s++) rows.push(trial({ dist, fall, attack, seed: 700 + s * 13 + Math.round(dist * 100) + fall.length * 1000, weapon, stand }));
+        for (let s = 1; s <= N; s++) rows.push(trial({ dist, fall, attack, seed: 700 + s * 13 + Math.round(dist * 100) + fall.length * 1000, weapon, stand, before }));
       }
     }
   }
   const f2 = (x) => (x == null || !Number.isFinite(x) ? '-' : x.toFixed(2));
   const pct = (rs) => (rs.length ? `${((rs.filter((r) => r.wound).length / rs.length) * 100).toFixed(0).padStart(3)}%` : '  - ');
   const frac = (rs) => `${rs.filter((r) => r.wound).length}/${rs.length}`;
-  console.log(`무기 ${weapon ?? 'longsword'} · 상대 ${stand ? '서 있음' : '쓰러짐'} · 칸마다 ${N}판`);
+  console.log(`무기 ${weapon ?? 'longsword'} · 상대 ${stand ? '서 있음' : '쓰러짐'} · 칸마다 ${N}판 · ${strEmoLabel(SE)}`);
   // 실제로 공격을 시작한 거리로 나눈다 (내 가슴 ~ 상대 몸통)
   const BINS = [[0, 0.45, '발밑 <0.45'], [0.45, 0.75, '0.45~0.75'], [0.75, 1.05, '0.75~1.05'], [1.05, 1.35, '1.05~1.35'], [1.35, 9, '>1.35']];
   const inBin = (r, b) => r.d0 >= b[0] && r.d0 < b[1];
@@ -264,5 +269,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const hit = rows.filter((r) => r.wound).length;
   const reach = reachOf(rows);
   console.log(`\n전체 상처율 ${((hit / rows.length) * 100).toFixed(0)}% (${hit}/${rows.length}) · 닿는 거리(시작 거리 0.45~1.35m) ${pct(reach)} (${frac(reach)})`);
+  // 상처 깊이(severity): 상처 낸 판의 가장 깊은 상처 평균 (공격별)
+  const deep = (rs) => {
+    const d = rs.filter((r) => r.wound).map((r) => Math.max(...r.wounds.map((w) => w.sev)));
+    return d.length ? d.reduce((a, x) => a + x, 0) / d.length : null;
+  };
+  console.log(`상처 깊이 평균 (닿는 거리 안, 상처 낸 판): ${attacks.map((a) => `${a} ${f2(deep(reachOf(rows.filter((r) => r.attack === a))))}`).join(' · ')}`);
   console.log(JSON.stringify({ weapon: weapon ?? 'longsword', stand, rate: hit / rows.length, reachRate: reach.filter((r) => r.wound).length / Math.max(1, reach.length), rows: rows.map(({ contacts, ...r }) => r) }));
 }
