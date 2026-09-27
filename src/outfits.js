@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { weaponEnv } from './weapon_looks.js';
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -46,14 +47,19 @@ const cone = (r, h, segs, pos, rot) => bake(new THREE.ConeGeometry(r, h, segs), 
 function addMerged(parent, pieces, color, matOpts) {
   if (!pieces.length) return null;
   const geo = mergeGeometries(pieces, false);
-  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.06, ...(matOpts || {}) });
+  // 금속판은 무기와 같은 반사 환경(하늘·바다·모래)을 비춘다 — 장면에 반사 환경이 없어서, 금속성이 높은
+  // 판은 비출 게 없어 거의 검게 보였다(하인리히 은빛 갑옷이 짙은 회색으로 나오던 원인).
+  // 환경 텍스처는 여기서(isolatedVisual 안) 처음 만들어져 전역 난수를 건드리지 않는다
+  const { steel, ...opts } = matOpts || {};
+  if (steel) Object.assign(opts, { envMap: weaponEnv(), envMapIntensity: steel });
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.06, ...opts });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   parent.add(mesh);
   return mesh;
 }
 
-const STEEL_OPTS = { metalness: 0.7, roughness: 0.35 };
+const STEEL_OPTS = { metalness: 0.7, roughness: 0.35, steel: 1 };
 
 // ═══════════════════════════════════ 오소리 브란: 화전민 농부 ═══════════════════════════════════
 const APRON = 0xcdbb92;
@@ -123,7 +129,7 @@ const LIAO_RONIN = {
 // 설정집: "화려한 배색"의 자칭 왕의 기사 — 은빛 판금이라도 수수하게 죽이지 않는다. 실전 갑옷보다
 // 훨씬 반들반들하게 닦아(금속성↑·거칠기↓) 과시욕을 드러내고, 예전 금빛 복제 엑스칼리버·금장 취향을
 // 잇는 금색 트림을 얇게 둘러 "자칭 왕"다운 허영을 남긴다
-const HEINRICH_STEEL = { metalness: 0.85, roughness: 0.16 };
+const HEINRICH_STEEL = { metalness: 0.85, roughness: 0.16, steel: 1.2 };
 const HEINRICH_GOLD = 0xd8b23a;
 const HEINRICH_KNIGHT = {
   // 판금 방어구가 붙는 부위 (수염이 붙는 head는 빠진다)
@@ -131,7 +137,7 @@ const HEINRICH_KNIGHT = {
   chest(g) {
     // 가슴 판금 (기존 누빔 상의 겉에 한 겹) + 과시용 금테
     addMerged(g, [box(0.255, 0.24, 0.32, [0.005, 0.02, 0])], 0xc7cdd3, HEINRICH_STEEL);
-    addMerged(g, [box(0.01, 0.22, 0.01, [0.135, 0.02, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2 });
+    addMerged(g, [box(0.01, 0.22, 0.01, [0.135, 0.02, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2, steel: 1.2 });
     // 어깨 견갑(팔 없는 쪽, uarmO는 몸통에서 늘어져 있어 어깨 캡을 chest에서 겹쳐 그린다)
   },
   abdomen(g) {
@@ -146,11 +152,11 @@ const HEINRICH_KNIGHT = {
   //  "+y = 몸통 쪽"인 규칙이 같이 적용된다(위 주석 참고). 테두리에 금띠를 둘러 과시욕을 더한다
   uarmS(g) {
     addMerged(g, [ball(0.075, 12, 8, [0, 0.09, 0], null, [0, Math.PI * 2, 0, Math.PI * 0.55])], 0xc7cdd3, HEINRICH_STEEL);
-    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2 });
+    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2, steel: 1.2 });
   },
   uarmO(g) {
     addMerged(g, [ball(0.075, 12, 8, [0, 0.09, 0], null, [0, Math.PI * 2, 0, Math.PI * 0.55])], 0xc7cdd3, HEINRICH_STEEL);
-    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2 });
+    addMerged(g, [cyl(0.076, 0.076, 0.012, 12, true, [0, 0.05, 0])], HEINRICH_GOLD, { metalness: 0.9, roughness: 0.2, steel: 1.2 });
   },
   // 손목 보호대(가운틀릿 커프): -y(손 쪽) 끝
   farmS(g) {
@@ -169,6 +175,55 @@ const HEINRICH_KNIGHT = {
   // 짧은 은수염
   head(g) {
     addMerged(g, [cone(0.045, 0.075, 10, [0.075, -0.075, 0], [0, 0, Math.PI])], 0xcfd3d6, { roughness: 0.95 });
+  },
+};
+
+// 하인리히 v2: v1은 가슴·어깨·손목·정강이에만 판이 있어서, 대결 거리에서는 짙은 옷(팔·허벅지·허리
+// 치마·발)이 대부분을 차지해 "은빛 중갑 기사"가 아니라 검은 옷을 입은 사람으로 보였다. 팔 전체(위팔·
+// 아래팔 통판), 허벅지(퀴스)와 무릎 덮개, 쇠신, 허리 쇠치마를 더해 몸 대부분을 은빛 판으로 덮는다.
+const HEINRICH_FULL_PLATE = {
+  ...HEINRICH_KNIGHT,
+  armorParts: new Set([...HEINRICH_KNIGHT.armorParts, 'thighF', 'thighB', 'footF', 'footB']),
+  pelvis(g) {
+    // 허리 쇠치마 (기본 천 치마를 겉에서 덮는다) + v1의 앞 자락 두 장
+    addMerged(
+      g,
+      [
+        cyl(0.178, 0.224, 0.26, 16, true, [0, -0.12, 0]),
+        box(0.08, 0.16, 0.02, [0.2, -0.2, 0.09], [0, 0, 0.2]),
+        box(0.08, 0.16, 0.02, [0.2, -0.2, -0.09], [0, 0, 0.2]),
+      ],
+      0xc7cdd3,
+      { ...HEINRICH_STEEL, side: THREE.DoubleSide },
+    );
+  },
+  uarmS(g) {
+    HEINRICH_KNIGHT.uarmS(g);
+    addMerged(g, [cyl(0.059, 0.057, 0.17, 12, true, [0, -0.01, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  uarmO(g) {
+    HEINRICH_KNIGHT.uarmO(g);
+    addMerged(g, [cyl(0.059, 0.057, 0.17, 12, true, [0, -0.01, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  farmS(g) {
+    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0]), cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  farmO(g) {
+    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0]), cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  // 허벅지 판(퀴스) + 무릎 덮개
+  thighF(g) {
+    addMerged(g, [cyl(0.073, 0.067, 0.24, 12, true, [0.004, 0.01, 0]), ball(0.045, 10, 6, [0.03, -0.155, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  thighB(g) {
+    addMerged(g, [cyl(0.073, 0.067, 0.24, 12, true, [0.004, 0.01, 0]), ball(0.045, 10, 6, [0.03, -0.155, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  // 쇠신(사바톤): 신발 상자를 한 겹 덮는다
+  footF(g) {
+    addMerged(g, [box(0.262, 0.05, 0.12, [0, 0.016, 0])], 0xc7cdd3, HEINRICH_STEEL);
+  },
+  footB(g) {
+    addMerged(g, [box(0.262, 0.05, 0.12, [0, 0.016, 0])], 0xc7cdd3, HEINRICH_STEEL);
   },
 };
 
@@ -467,6 +522,7 @@ export const OUTFITS = {
   isolde_saber: ISOLDE_SABER,
   liao_ronin: LIAO_RONIN,
   heinrich_knight: HEINRICH_KNIGHT,
+  heinrich_full_plate: HEINRICH_FULL_PLATE,
   margarethe_dragon: MARGARETHE_DRAGON,
   margarethe_dragon_helm: MARGARETHE_DRAGON_HELM,
   margarethe_dragon_horned: MARGARETHE_DRAGON_HORNED,

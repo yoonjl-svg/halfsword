@@ -3,7 +3,7 @@
 오너 요청: "캐릭터 모델링을 개선하고 싶다." 5인의 상대 캐릭터에 갑옷판·머리모양·수염·안대 같은
 장식 레이어(`src/outfits.js`)를 새로 얹고, 예전 겉모습은 지우지 않고 `src/looks.js`의
 `LOOK_ARCHIVE`에 `v0`로 남겨 두었다. 지금 게임이 쓰는 버전은 `CHARACTER_LOOK_VERSION`이
-가리킨다(마르그레테만 `v3`, 나머지는 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
+가리킨다(마르그레테 `v3`, 하인리히 `v2`, 나머지는 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
 
 플레이어(케틀햇+갬비슨)의 겉모습은 요청대로 건드리지 않았다.
 
@@ -79,16 +79,23 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 ## 하인리히 도른 (`heinrich`) — 은빛 중갑 기사
 
 **v0(예전)**: 붉은 금장 흥행 검객 — 빨간 더블릿, 금발.
-**v1(지금, `outfit: 'heinrich_knight'`)**: 은빛(bright silver) 판금 가슴갑옷·배갑옷·허벅지
+**v1(보관, `outfit: 'heinrich_knight'`)**: 은빛(bright silver) 판금 가슴갑옷·배갑옷·허벅지
 자락(tasset)·정강이받이(그리브)·손목 보호대(가운틀릿 커프)·둥근 견갑, 은발 + 짧은 은수염.
 투구는 얹지 않았다(오너 요청에 투구 언급 없음, `hasHelmet` 관련 절 참고). **설정집 반영**:
 설정집은 그를 "화려한 배색"의 자칭 왕의 기사로 쓴다 — 은빛으로 바뀌어도 그 허영은 남겨야 해서,
 갑옷을 실전 갑옷보다 훨씬 반들반들하게(금속성 0.85·거칠기 0.16) 닦고, 예전 금빛 복제
 엑스칼리버·금장 취향을 잇는 가는 금띠를 가슴 이음매와 양쪽 견갑 테두리에 둘렀다.
 
-| v0 | v1 |
-| --- | --- |
-| ![heinrich v0](character_looks/heinrich_v0.jpg) | ![heinrich v1](character_looks/heinrich_v1.jpg) |
+**v2(지금, `outfit: 'heinrich_full_plate'`)**: 오너 지적 "하인리히 갑옷이 은색이 아닌 거 같다". 원인이 둘이었다.
+- 장면에 반사 환경이 없어서 금속성이 높은 판은 비출 게 없어 거의 검게 나왔다. 무기와 같은 반사 환경
+  (`weaponEnv`, 하늘·바다·모래)을 모든 금속판 재질에 붙였다(렌더 버그 수정이라 모든 버전에 적용).
+- 판이 가슴·어깨·손목·정강이에만 있어 대결 거리에서는 짙은 옷(팔·허벅지·허리 치마·발)이 대부분이었다.
+  v2는 위팔·아래팔 통판, 허벅지 판과 무릎 덮개, 쇠신, 허리 쇠치마를 더하고, 판 밑 옷도 밝은 강철
+  회색으로 올려 몸 대부분이 은빛 판으로 보이게 했다. 새로 덮은 허벅지·발도 방어 부위(`armorParts`)에 넣었다.
+
+| v0 | v1 | v2 (지금) |
+| --- | --- | --- |
+| ![heinrich v0](character_looks/heinrich_v0.jpg) | ![heinrich v1](character_looks/heinrich_v1.jpg) | ![heinrich v2](character_looks/heinrich_v2.jpg) |
 
 추가 컷: [3/4](character_looks/heinrich_threeq.jpg) · [옆](character_looks/heinrich_side.jpg) ·
 [기본 대결 화면](character_looks/heinrich_default.jpg) · [쓰러짐](character_looks/heinrich_down.jpg)

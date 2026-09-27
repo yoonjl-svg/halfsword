@@ -4,6 +4,19 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 8 — 오너 지적: "하인리히 갑옷이 은색이 아닌 거 같다"
+
+- 원인 1(렌더 버그): 장면에 반사 환경이 없어서 금속성 높은 판이 거의 검게 나왔다. `outfits.js`의 모든
+  금속판 재질(`STEEL_OPTS`·하인리히 판·금띠·마르그레테 판·투구)에 무기와 같은 `weaponEnv()` 반사 환경을
+  붙였다. 텍스처는 처음 쓰일 때(isolatedVisual 안) 만들어져 전역 난수에 영향 없음.
+- 원인 2(디자인): 판이 몸 일부에만 있었다. **하인리히 v2**(`heinrich_full_plate`, v1 보관): 위팔·아래팔
+  통판, 허벅지 판+무릎 덮개, 쇠신, 허리 쇠치마 추가, 판 밑 옷도 밝은 강철 회색.
+  `CHARACTER_LOOK_VERSION.heinrich = 'v2'`.
+- **디렉터 참고**: 하인리히 판금 방어 부위가 9 → 13개로 늘었다(`thighF·thighB·footF·footB` 추가).
+  `userData.armor`·금·`setPlateWear` 모두 붙어 있다. 켤 때 `look.armor: 'plate'`는 v2 look에.
+- 검증: 시뮬 3종 바이트 동일, 콘솔 에러 0. 마르그레테는 먹색 그대로에 은은한 쇠 광택만 더해짐.
+  스크린샷 `heinrich_v2.jpg`, `heinrich_{front,threeq,side,default,down}.jpg` 갱신.
+
 ## round 7 — 오너 답: "둘 다 그렇게 해"
 
 1. **찌르기와 판금**: 판금도 투구와 같은 규칙 — 에스톡·레이피어 찌르기는 `gap`의 절반만큼 파고든다,

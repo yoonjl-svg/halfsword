@@ -213,6 +213,28 @@ export const LOOK_ARCHIVE = {
       hilt: 0xd0d3d6,
       outfit: 'heinrich_knight',
     },
+    // v2: v1은 판이 가슴·어깨·손목·정강이에만 있어 대결 거리에서 짙은 옷이 대부분을 차지해 은빛으로
+    // 읽히지 않았다(오너 지적 "은색이 아닌 거 같다"). 팔·허벅지·무릎·발·허리 치마까지 은빛 판으로 덮고,
+    // 판 밑 옷도 짙은 남색에서 밝은 강철 회색으로 올렸다
+    v2: {
+      tunic: 0x6e747b,
+      quilt: 0x5c6168,
+      sleeve: 0x6e747b,
+      straps: 0x1c1c1c,
+      belt: 0x1c1c1c,
+      hoseUpper: 0x5c6168,
+      hoseLower: 0x5c6168,
+      shoes: 0x1c1c1c,
+      skin: 0xe0b08a,
+      hands: 0xe0b08a,
+      helmet: null,
+      metal: 0xc7cdd3,
+      hair: 0xcfd3d6,
+      headband: null,
+      grip: 0x2a1a10,
+      hilt: 0xd0d3d6,
+      outfit: 'heinrich_full_plate',
+    },
   },
 
   // ── 5. 마르그레테 슈바르츠: v0(회색 수수한 노장) → v1(먹색 판금 + 갈색 머리, 용기사 실루엣) ──
@@ -306,7 +328,7 @@ export const CHARACTER_LOOK_VERSION = {
   bran: 'v1',
   isolde: 'v1',
   liao: 'v1',
-  heinrich: 'v1',
+  heinrich: 'v2',
   margarethe: 'v3',
 };
 
