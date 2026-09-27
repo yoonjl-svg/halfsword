@@ -663,47 +663,71 @@ export function buildCathedral(scene, lights = {}) {
     const down = new THREE.Vector3(0, -1, 0);
     const sideX = new THREE.Vector3(1, 0, 0);
     const toRoom = new THREE.Vector3(0, 0, -1);
-    // 옆 복도 바깥벽 (+z) 안쪽 면: 바닥에서 타고 오르는 덩굴, 서쪽일수록 빽빽하다
-    for (let x = WX + 1.5; x < EX - 1; x += 0.9 + vr() * 1.2 + Math.max(0, x + 10) * 0.03) {
-      const len = 4 + vr() * 8.5;
-      vine(new THREE.Vector3(x, 0.05, AZ - 0.6), up, sideX, toRoom, len, vr() < 0.45, 0.72);
+    // 덩굴은 북서쪽 구석(서쪽 정면 × 북쪽 옆 복도)에 몰려 있다: 구석에서 멀어질수록 성기다가 x = ZE 쯤에서 끊긴다
+    const ZE = -16;
+    const wX = (x) => THREE.MathUtils.clamp((ZE - x) / (ZE - WX), 0, 1);
+    const toEast = new THREE.Vector3(1, 0, 0);
+    const sideZ = new THREE.Vector3(0, 0, 1);
+    // 옆 복도 바깥벽(+z) 안쪽 면: 바닥에서 타고 오른다
+    for (let x = WX + 1; x < ZE + 4; ) {
+      const w = wX(x);
+      if (w > 0 || vr() < 0.35) vine(new THREE.Vector3(x, 0.05, AZ - 0.6), up, sideX, toRoom, 2 + w * 10.5 + vr() * 2, vr() < 0.3 + 0.45 * w, 0.72);
+      x += 0.45 + (1 - w) * 2.6 + vr() * 0.5;
     }
-    // 벽 밑의 장미 덤불
-    for (let x = WX + 2; x < EX - 2; x += 1.3 + vr() * 1.8) {
-      const bz = AZ - 1.1 - vr() * 0.4;
-      const s = 0.5 + vr() * 0.4;
-      K.put('ivy', new THREE.SphereGeometry(1, 7, 5), 0x2c4422, [x, s * 0.45, bz], [0, vr() * 3, 0], [s * 1.3, s, s], { vary: 0.2, noise: 0.2, rough: 0.12 });
-      for (let k = 0; k < 9; k++) {
+    // 서쪽 정면 안쪽 면(북쪽 절반): 구석으로 갈수록 높이 덮는다
+    for (let z = 3.8; z < AZ - 0.8; ) {
+      const w = THREE.MathUtils.clamp((z - 3) / (AZ - 5), 0, 1);
+      vine(new THREE.Vector3(WX + 0.85, 0.05, z), up, sideZ, toEast, 2.5 + w * 11 + vr() * 2, vr() < 0.35 + 0.4 * w, 0.8);
+      z += 0.45 + (1 - w) * 1.6 + vr() * 0.5;
+    }
+    // 구석의 장미 덤불: 두 벽을 따라 겹겹이
+    const bush = (x, bz, s) => {
+      K.put('ivy', new THREE.SphereGeometry(1, 7, 5), 0x2c4422, [x, s * 0.45, bz], [0, vr() * 3, 0], [s * 1.3, s, s * 1.1], { vary: 0.2, noise: 0.2, rough: 0.12 });
+      for (let k = 0; k < 12; k++) {
         // 덤불(타원체) 겉면 위에 꽃을 얹는다
         const a = vr() * 6.28;
         const h = 0.2 + vr() * 0.75;
         const k2 = Math.sqrt(1 - h * h) + 0.08;
-        rose(new THREE.Vector3(x + Math.cos(a) * s * 1.3 * k2, s * 0.45 + h * s + 0.04, bz + Math.sin(a) * s * k2), 0.85);
+        rose(new THREE.Vector3(x + Math.cos(a) * s * 1.3 * k2, s * 0.45 + h * s + 0.04, bz + Math.sin(a) * s * 1.1 * k2), 0.85);
       }
-    }
-    // 아케이드 벽(+z) 신랑 쪽 면: 무너진 윗선·창턱에서 늘어진 덩굴
+    };
+    for (let x = WX + 1.6; x < ZE; x += 0.9 + (1 - wX(x)) * 2.2 + vr() * 0.6) bush(x, AZ - 1.1 - vr() * 0.5, 0.5 + wX(x) * 0.5 + vr() * 0.25);
+    for (let z = 6; z < AZ - 1.5; z += 1.0 + vr() * 0.8) bush(WX + 1.5 + vr() * 0.4, z, 0.5 + vr() * 0.35);
+    // 아케이드 벽(+z) 신랑 쪽 면: 구석 쪽 칸의 무너진 윗선에서 늘어진 덩굴
     for (const [xa, xb] of bays) {
-      for (let k = 0; k < 3; k++) {
+      const w = wX((xa + xb) / 2);
+      if (w <= 0) continue;
+      const n = 1 + Math.round(w * 4);
+      for (let k = 0; k < n; k++) {
         const x = xa + 0.8 + vr() * (xb - xa - 1.6);
-        vine(new THREE.Vector3(x, 15 + vr() * 5, NZ - 0.66), down, sideX, toRoom, 2.5 + vr() * 5, vr() < 0.5, 1);
+        vine(new THREE.Vector3(x, 15 + vr() * 5, NZ - 0.66), down, sideX, toRoom, 2 + w * 6 + vr() * 2, vr() < 0.5, 1);
       }
     }
-    // +z 줄 기둥을 나선으로 감아 오르는 덩굴
+    // 구석 쪽 기둥을 감아 오르는 덩굴: 도는 빠르기·오르는 빠르기가 들쭉날쭉하고, 가다가 방향을 틀기도 한다
     for (const px of PX) {
-      if (Math.hypot(px, NZ) < 12.4) continue;
-      let prev = null;
-      const turns = 2 + vr() * 1.5;
-      const top = 5 + vr() * 3;
-      const a0 = vr() * 6.28;
-      for (let i = 0; i <= 60; i++) {
-        const u = i / 60;
-        const a = a0 + u * turns * Math.PI * 2;
-        const nrm = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
-        const p = new THREE.Vector3(px, 0.3 + u * top, NZ).addScaledVector(nrm, 1.16);
-        if (prev && i % 2 === 0) limb(K, 'vine', prev.toArray(), p.toArray(), 0.022, 0.02, 0x4a3a26, { vary: 0.2 }, 4);
-        if (i % 2 === 0) prev = p.clone();
-        for (let k = 0; k < 4; k++) leaf(p.clone().add(new THREE.Vector3((vr() - 0.5) * 0.3, (vr() - 0.5) * 0.2, (vr() - 0.5) * 0.3)).addScaledVector(nrm, 0.05), nrm, 0.95);
-        if (vr() < 0.2) rose(p.clone().addScaledVector(nrm, 0.1), 0.95);
+      const w = wX(px);
+      if (w <= 0.1) continue;
+      const strands = w > 0.6 ? 2 : 1;
+      for (let sN = 0; sN < strands; sN++) {
+        let a = vr() * 6.28;
+        let y = 0.15 + sN * vr() * 2;
+        let turn = vr() < 0.5 ? -1 : 1;
+        const top = y + 1.5 + w * 6 * (0.5 + vr() * 0.5);
+        let prev = null;
+        let i = 0;
+        while (y < top) {
+          a += turn * (0.04 + vr() * 0.34);
+          y += 0.03 + vr() * 0.14;
+          if (vr() < 0.05) turn = -turn;
+          const nrm = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+          const p = new THREE.Vector3(px, y, NZ).addScaledVector(nrm, 1.12 + (vr() - 0.5) * 0.08);
+          if (prev && i % 2 === 0) limb(K, 'vine', prev.toArray(), p.toArray(), 0.022, 0.02, 0x4a3a26, { vary: 0.2 }, 4);
+          if (i % 2 === 0) prev = p.clone();
+          const lush = vr() < 0.15 ? 7 : 2 + Math.floor(vr() * 3); // 가끔 잎이 뭉쳐 있다
+          for (let k = 0; k < lush; k++) leaf(p.clone().add(new THREE.Vector3((vr() - 0.5) * 0.35, (vr() - 0.5) * 0.25, (vr() - 0.5) * 0.35)).addScaledVector(nrm, 0.05), nrm, 0.95);
+          if (vr() < 0.12 * w) rose(p.clone().addScaledVector(nrm, 0.1), 0.95);
+          i++;
+        }
       }
     }
     // 인스턴싱
