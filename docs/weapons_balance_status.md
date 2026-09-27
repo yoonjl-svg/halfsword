@@ -2,7 +2,35 @@
 
 감독 확인용 상태 파일. (브랜치: `claude/pm-weapons-balance`, 디렉터 브랜치 0b1d3a3(10라운드 최종 지시·옷 장식)까지 병합)
 
-## 10라운드 e: 사장님 질문 "가속도 개념이 필요할까? … 칼로 상대를 건드리는 느낌" + "두 가지 제안도 적용하고 싶어" (검토만, 디렉터 피드백 대기)
+## 10라운드 최종 지시 A1~A5: 측정 기반 고치기 (디렉터 `docs/handoff/weapons_pm_round10.md`)
+디렉터 최종 지시(0b1d3a3)를 병합했다(3d44f18). ①·②·타격감은 디렉터의 '온몸 타격' 묶음이 맡는다. 무기 PM은 A~D를 한다.
+- 병합 때 주의한 점: 자동 병합이 b단계의 ai.js 두 줄(need × k, clinch × k)을 되살려서, 이 브랜치 쪽(921f983의 간격 바꿔 끼우기)으로 되돌렸다.
+
+**A1 파손 난수를 판 시드로** (fighter.js 생성자 두 줄 — 다리·걸음 밖)
+- 전: `Fighter._breakCount = (Fighter._breakCount ?? 0) + 1;` 그리고 `this._breakSeed = (Math.imul(0x9e3779b9, Fighter._breakCount) ^ …) >>> 0;`
+- 후: `const breakSeed = o.breakSeed ?? (Fighter._breakCount = (Fighter._breakCount ?? 0) + 1);` 그리고 `this._breakSeed = (Math.imul(0x9e3779b9, breakSeed) ^ …) >>> 0;`
+- 시뮬 하니스(harness_m·jelly_harness)가 판 시드를 `breakSeed`로 넘긴다. fights12·live_battery의 대결 부분도 시드를 넘긴다.
+- 실제 게임(main.js)은 시드를 넘기지 않아 예전처럼 판마다 다른 굴림이다. main.js는 안 건드렸다.
+- 순서 의존이 없어졌다. hybrid 고무 닭은 고치기 전 혼자 돌리면 파손 4회, 전체 목록 안에서 7회였다. 고친 뒤에는 둘 다 5회로 같다.
+- 시드 시뮬 기준 변화 (전 → 후)
+  - live_battery: 바이트 동일
+  - fights12: 8/12 → **9/12** (4·8·10번 판. 롱소드가 부러지는 판이 달라짐)
+  - hybrid fights12: 6/12 → **8/12** (2·5번 판)
+  - weapon_balance 12, levitate: 츠바이핸더 17 → 21, 에스톡 46 → 50, 세이버 46 → 42, 복제품 58 → 50, 라이트세이버 54 → 58. 나머지 같다.
+  - weapon_balance 12, hybrid: 팔쉬온 38 → 42만 바뀌었다(고무 닭은 0% 그대로).
+
+**A2 시드 인자**: weapon_balance·tactic_probe·weapon_anatomy·tap_thrust에 `--seed=첫 번호`를 달았다. 주지 않으면 예전 판 그대로다.
+
+**A3 weapon_measures.mjs의 foeReach 줄**: `ai.foeReach = M.reach + 0.05`를 지웠다. 이 줄은 AI의 '상대 칼이 닿는 거리' 어림을 내 칼 사거리로 덮어썼다. 이제 게임처럼 AI 생성자가 상대 무기로 정한 값을 쓴다(짧은 칼 AI가 롱소드 사거리를 1.66m가 아니라 1.96m로 본다). 승률 변화는 A6 재측정에 들어간다.
+
+**A4 weapon_tempo**: 에너지 열 이름을 '베기 에너지 지표(상한)'로 바꿨다(최고 속도, 칼날 70%, 날 세움 1). 최고 속도 순간의 평균 날 세움을 곱한 '×날 세움' 열을 더했다.
+- 롱소드·츠바이핸더는 거의 그대로다. 츠바이핸더 빠른 왕복 19 → 13J, 물레 170 → 165J.
+- 모노호시자오 물레는 138~151 → 66~97J, 청강검은 빠른 템포에서 절반 가까이로 떨어진다.
+- 제안서 §2-2 표 머리말에 적었다.
+
+**A5 제안서 §9**: "게임 기본은 hybrid(main.js `legWeight: true`)이고, config의 levitate 기본값은 시뮬 도구의 기본값"으로 고쳤다.
+
+## 10라운드 e: 사장님 질문 "가속도 개념이 필요할까? … 칼로 상대를 건드리는 느낌" + "두 가지 제안도 적용하고 싶어" (검토만 — 디렉터 최종 지시로 ①·②·타격감은 디렉터가 맡음)
 - 전문은 `docs/weapons_rebalance_proposal.md` §10에 있다. 새 도구 `tools/sim/hit_phase.mjs`를 썼다.
 - 몸에 닿는 판정의 2/3가 멍(스침)이다: 최고 속도의 절반, 3~5.5m/s, 10~15J.
 - 상처는 칼끝(칼날 91~99%)에서 난다. 41~71%는 이미 느려지는 중이고 50~69%는 손목이 제동 중이다.

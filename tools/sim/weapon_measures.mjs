@@ -30,5 +30,6 @@ export function applyWeaponMeasure(ai, weaponId) {
   const M = { ...m, cutTime: WEAPON_MEASURES.longsword.cutTime * (m.cutTime / LONGSWORD_RAW_CUT) };
   ai.school = { ...ai.school, measure: M };
   ai.M = M;
-  ai.foeReach = M.reach + 0.05;
+  // foeReach(상대 칼이 닿는 거리 어림)는 건드리지 않는다: 게임처럼 AI 생성자가 상대 무기로 정한 값(ai.foeM.reach + 0.05)을 쓴다.
+  //  (예전엔 여기서 내 무기 사거리로 덮어써서, 짧은 칼 AI 가 롱소드 사거리를 짧게 어림하고 너무 가까이 서 있었다)
 }
