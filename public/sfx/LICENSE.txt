@@ -24,7 +24,6 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
   CC0 (public domain) — "Female screams" collection, OpenGameArt
     https://opengameart.org/content/female-screams
       isolde_ko1.mp3      <- 1.ogg  (tcrocker68, freesound.org/people/tcrocker68/sounds/235595/)
-      margarethe_ko1.mp3  <- 2.ogg  (tcrocker68, freesound.org/people/tcrocker68/sounds/235592/)
       isolde_bleed1.mp3   <- 4.ogg  (Archeos,    freesound.org/people/Archeos/sounds/261419/)
 
   CC-BY 3.0 — Michel Baradari, "11 male human pain/death sounds"

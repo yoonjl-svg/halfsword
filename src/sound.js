@@ -296,7 +296,7 @@ export const VOICES = {
   isolde: { f0: 225, tract: 1.17, breath: 0.45, rough: 0.08, style: 'gasp', rec: { ko: 1, bleed: 1, gain: 0.75 } }, // 여성 비명(짧은 것만), 작게
   liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 0, gain: 0.6, rate: 0.95 } }, // 짧은 신음 하나, 피 흘려 죽을 땐 합성 한숨
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침) + VoiceBosch
-  margarethe: { f0: 168, tract: 1.12, breath: 0.6, rough: 0.3, style: 'exhale', rec: { ko: 1, bleed: 0, gain: 0.7, rate: 0.85 } }, // 낮춘 여성 신음 하나, 출혈사는 합성 날숨
+  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale' }, // 녹음 없이 숨소리만: 여성 비명을 낮춰 썼더니 익룡처럼 들렸다 (차분한 노장에 비명 자체가 안 맞음)
 };
 
 /**
@@ -362,12 +362,13 @@ function voiceScript(r, prof, kind) {
       }
       break;
     case 'exhale':
+      // 비명·신음 없이 숨으로만: 맞는 순간 짧고 낮게 "흡" 하고 막히고, 숨이 한 번 새어 나간다
       if (ko) {
-        add(0.09, 'ʌ', 0.95, 0.85, 0.55, 0.75, 0.3, 0.006, 0.03);
-        exhale(0.3, 0.2);
+        add(0.07, 'ʌ', 0.9, 0.8, 0.45, 0.35, 0.8, 0.004, 0.025, 0.03);
+        exhale(0.5, 0.22, 'o');
       } else {
-        inhale(0.25, 0.2);
-        add(1.1, 'o', 0.95, 0.7, 0.4, 0.4, 0.6, 0.08, 0.6);
+        inhale(0.25, 0.18);
+        add(1.1, 'o', 0.9, 0.7, 0.35, 0.3, 0.8, 0.08, 0.6);
       }
       break;
     default:
@@ -842,6 +843,47 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.9), sr, 0.08);
   },
 
+  /**
+   * 대전 게임식 칼 피격음 (사무라이 쇼다운처럼 짧고 크고 또렷하게). 네 겹을 쌓고 세게 눌러 붙인다:
+   *  1) "챡": 맞는 순간의 아주 짧고 높은 파열   2) "촤악": 베는 방향으로 쓸어내리는 칼바람 (높은음 → 낮은음)
+   *  3) "징": 칼날이 짧게 우는 3~7kHz 금속 광택   4) "퍽": 묵직한 저음 펀치 (찌그러뜨린 뒤에 깨끗하게)
+   * kind: 'cut'(베기) | 'stab'(찌르기: 칼바람 짧게) | 'blunt'(칼 면·손잡이: 칼바람 없이 "퍽!") | 'armor'(판금·투구: "징"을 크게)
+   */
+  hitSlash(sr, r, kind = 'cut') {
+    const n = Math.round(0.35 * sr);
+    const out = new Float32Array(n);
+    const cut = kind === 'cut';
+    const blunt = kind === 'blunt';
+    const armor = kind === 'armor';
+    noiseHit(out, sr, r, { t0: 0.001, amp: 1.2, attack: 0.0001, tau: blunt ? 0.004 : 0.0035, type: 'highpass', f: blunt ? 1500 : 2500, q: 0.7 });
+    // 10ms 남짓 밝게 튀는 "챡"(베기·찌르기) / "팍"(칼 면) — 너무 짧으면 무거운 "퍽"에 묻힌다
+    noiseHit(out, sr, r, { t0: 0.001, amp: blunt ? 0.8 : 0.7, attack: 0.0003, tau: blunt ? 0.006 : 0.008, type: 'bandpass', f: blunt ? 2000 : 4000, q: 0.8 });
+    crackBurst(out, sr, r, { t0: 0.001, count: armor ? 6 : 3, span: 0.01, amp: armor ? 0.9 : 0.5, f: 3000 });
+    if (!blunt) {
+      const L = Math.round((cut ? between(r, 0.16, 0.22) : armor ? 0.06 : 0.09) * sr);
+      const bp = new Filt('bandpass', 7000, 1.1, sr);
+      const end = cut ? 1400 : 2500;
+      for (let i = 0; i < L && i < n; i++) {
+        const u = i / L;
+        if (i % 32 === 0) bp.set(7000 * Math.pow(end / 7000, u), 1.1);
+        out[i] += (cut ? 0.7 : 0.45) * bp.run(r() * 2 - 1) * Math.min(1, i / (0.002 * sr)) * (1 - u) ** 1.6;
+      }
+    }
+    const sheen = [];
+    for (let i = 0; i < 6; i++) sheen.push({ f: between(r, 3000, 7500), a: between(r, 0.4, 1), t60: between(r, 0.06, armor ? 0.18 : 0.11) });
+    const x = new Float32Array(n);
+    const ring = new Float32Array(n);
+    pulse(x, sr, 0.001, 0.00012, 1);
+    resonate(x, ring, sr, sheen, Math.ceil(0.002 * sr));
+    normalize(ring, 1);
+    const sk = armor ? 0.55 : blunt ? 0.08 : 0.28;
+    for (let i = 0; i < n; i++) out[i] += sk * ring[i];
+    saturate(out, 2.6);
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, blunt ? 60 : 70, blunt ? 80 : 95), drop: 0.8, dropTau: 0.01, attack: 0.001, tau: blunt ? 0.045 : 0.035, amp: blunt ? 1.1 : 0.85 });
+    noiseHit(out, sr, r, { t0: 0.001, amp: 0.5, attack: 0.001, tau: 0.012, type: 'lowpass', f: 450, q: 0.7 });
+    return fadeOut(normalize(out, 0.95), sr, 0.05);
+  },
+
   /** 경기장 울림(잔향)용 충격 응답: 관중석에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오) */
   reverbIR(sr, r) {
     const dur = 0.9;
@@ -902,6 +944,10 @@ const BANK = [
   ['fallLight', 2, (sr, r) => SYNTH.bodyFall(sr, r, false)],
   ['breakWood', 2, (sr, r) => SYNTH.weaponBreak(sr, r, 'wood')],
   ['breakFrozen', 2, (sr, r) => SYNTH.weaponBreak(sr, r, 'frozen')],
+  ['hitCut', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'cut')],
+  ['hitStab', 2, (sr, r) => SYNTH.hitSlash(sr, r, 'stab')],
+  ['hitBlunt', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'blunt')],
+  ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
 ];
 // 목소리 조각은 이름이 "voice:캐릭터id:ko|bleed" 이고, 이번 판에 나오는 캐릭터 것만 만든다 (prepareVoices)
 const VOICE_COUNT = 2;
@@ -1332,11 +1378,13 @@ export class Sound {
   helmet(energy) {
     if (!this._on || !this.ctx) return;
     const e = clamp01(energy / 110);
-    const ev = this.event({ bus: this.metalBus, gain: 0.3 + 0.7 * e ** 0.8, bright: 1800 + 6000 * e, prio: 2 });
+    const ev = this.event({ bus: this.metalBus, gain: 0.35 + 0.65 * e ** 0.8, bright: e > 0.4 ? 0 : 5000 + 12000 * e, prio: 2 });
     // 세기에 따라 층을 고른다: 약하게 = 가벼운 "깡", 세게(찌그러짐) = 저역이 실린 "퍽-크덕"
     const heavyP = clamp01((e - 0.35) / 0.4);
     const buf = Math.random() < heavyP ? this.pick('helmetHeavy') : this.pick('helmet');
     this.layer(ev, buf, { rate: between(Math.random, 0.92, 1.04) * (1 - 0.06 * e) });
+    // 대전 게임식 "챡-징!": 맞은 순간을 또렷하게 (세게 맞을수록 크게)
+    this.layer(ev, this.pick('hitArmor'), { gain: 0.45 + 0.4 * e, rate: between(Math.random, 0.94, 1.06) });
   }
 
   /** 몸통 "퍽" 한 겹 (녹음된 소리가 있으면 둘 다 섞는다) */
@@ -1353,11 +1401,14 @@ export class Sound {
   cut(energy, through) {
     if (!this._on || !this.ctx) return;
     const e = clamp01(energy / 140);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.35 + 0.65 * e ** 0.8, prio: 2 });
-    // 베고 지나가면 가르는 소리가 길고(느리게 틀기), 몸통 충격은 작다 (칼이 멈추지 않았으니까)
-    this.layer(ev, this.pick('slice'), { gain: 0.5 + 0.3 * e, rate: through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1) });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.45 + 0.6 * e ** 0.8, prio: 2 });
+    // 대전 게임식 "챡-촤악-징 퍽": 맞은 순간이 또렷하게 튀어나와야 한다 (예전엔 누비옷 너머 둔한 "쿵" 위주라 흐릿했다)
+    // 베고 지나가면 칼바람 꼬리를 길게(느리게 틀기)
+    this.layer(ev, this.pick('hitCut'), { gain: 1, rate: through ? between(Math.random, 0.85, 0.92) : between(Math.random, 0.96, 1.06) });
+    // 천이 찢기며 살을 가르는 "지직"은 뒤에 작게
+    this.layer(ev, this.pick('slice'), { gain: 0.3 + 0.2 * e, rate: through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1), delay: 0.01 });
     // 깊이 베인 큰 상처(e 높음)는 물컹한 크런치가 섞인 "젖은" 소리로
-    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: 0.35 + 0.5 * e, rate: between(Math.random, 0.85, 1.15), delay: 0.012 });
+    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: 0.3 + 0.4 * e, rate: between(Math.random, 0.85, 1.15), delay: 0.015 });
     this.body(ev, through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e);
   }
 
@@ -1365,8 +1416,9 @@ export class Sound {
   stab(energy) {
     if (!this._on || !this.ctx) return;
     const e = clamp01(energy / 100);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.4 + 0.6 * e ** 0.8, prio: 2 });
-    this.body(ev, 0.9, 0.85);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.45 + 0.6 * e ** 0.8, prio: 2 });
+    this.layer(ev, this.pick('hitStab'), { gain: 1, rate: between(Math.random, 0.95, 1.05) }); // 대전 게임식 "챡-푹"
+    this.body(ev, 0.85, 0.85);
     this.layer(ev, this.pick('wet'), { gain: 0.5 + 0.4 * e, rate: between(Math.random, 0.7, 0.85), delay: 0.008 });
     this.layer(ev, this.pick('slice'), { gain: 0.3, rate: 1.3, delay: 0.004 }); // 천을 뚫는 짧은 "틱"
   }
@@ -1377,10 +1429,12 @@ export class Sound {
     // 칼끝이 스치는 약한 접촉(10J 안팎)은 싸움 중 1초에 한 번꼴로 난다 → 아주 약하게 (15J 넘어야 제대로 "퍽")
     if (energy < 5) return;
     const e = clamp01(energy / 120);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.1 + 0.9 * e ** 0.8, prio: 1.5 });
-    this.body(ev, 1);
-    // 세게 맞으면(칼 면으로 후려침) 칼도 둔하게 울린다
-    if (e > 0.2) this.layer(ev, this.pick('clashSoft'), { gain: 0.25 * e, rate: between(Math.random, 0.8, 0.9), delay: 0.003 });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.12 + 0.95 * e ** 0.8, prio: 1.5 });
+    // 대전 게임식 "퍽!": 짧게 터지는 때림 + 묵직한 저음 (칼끝이 스치는 약한 접촉은 작게만)
+    this.layer(ev, this.pick('hitBlunt'), { gain: 0.5 + 0.6 * e, rate: between(Math.random, 0.94, 1.06) });
+    this.body(ev, 0.85);
+    // 세게 맞으면(칼 면으로 후려침) 칼도 짧게 울린다
+    if (e > 0.2) this.layer(ev, this.pick('clashSoft'), { gain: 0.2 * e, rate: between(Math.random, 0.9, 1), delay: 0.003 });
   }
 
   /**
@@ -1411,9 +1465,10 @@ export class Sound {
   /** steel/wood+armor 또는 armor+armor: 투구·판금이 우그러지는 "퍽-크덕" */
   _impactArmor(energy, plateOnPlate, pos) {
     const e = clamp01(energy / 110);
-    const ev = this.event({ bus: this.metalBus, gain: 0.3 + 0.7 * e ** 0.8, bright: 1800 + 6000 * e, prio: 2, pos });
+    const ev = this.event({ bus: this.metalBus, gain: 0.35 + 0.65 * e ** 0.8, bright: e > 0.4 ? 0 : 5000 + 12000 * e, prio: 2, pos });
     const buf = Math.random() < clamp01((e - 0.35) / 0.4) ? this.pick('helmetHeavy') : this.pick('helmet');
     this.layer(ev, buf, { gain: plateOnPlate ? 0.9 : 1, rate: between(Math.random, 0.92, 1.04) * (1 - 0.06 * e) });
+    this.layer(ev, this.pick('hitArmor'), { gain: 0.45 + 0.4 * e, rate: between(Math.random, 0.94, 1.06) });
   }
   /** *+wood: 방패·목재 둔기의 "퍽-톡" */
   _impactWood(energy, pos) {
