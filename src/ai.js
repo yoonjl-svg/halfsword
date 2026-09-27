@@ -976,8 +976,9 @@ export class AI {
   gaitStep() {
     const g = this.me.gait;
     if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
-    this.requestedStep = true;
-    g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 });
+    // 이번 프레임의 조이스틱(me.move)은 아직 지난 프레임 값(발을 멈추려고 뒤로 살짝 당긴 값)일 수 있어서 거절될 수 있다
+    //  → 받아 줄 때까지 다음 프레임에 다시 부탁한다
+    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 })) this.requestedStep = true;
   }
 }
 

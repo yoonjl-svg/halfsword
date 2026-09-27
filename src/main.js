@@ -20,7 +20,7 @@ import { buildArena } from './arena.js';
 await RAPIER.init();
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -105,6 +105,8 @@ let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 const fighterMeshes = [];
 
 function newRound() {
+  // 다리로 체중 받치기 (시험): 켜면 gait.js 걸음(다리가 체중 대부분을 받친다), 끄면 예전처럼 골반을 띄워 받친다. 다음 판부터 적용
+  CONFIG.BODY.weightMode = settings.legWeight ? 'hybrid' : 'levitate';
   // 이전 판 정리
   for (const g of fighterMeshes) scene.remove(g);
   fighterMeshes.length = 0;
