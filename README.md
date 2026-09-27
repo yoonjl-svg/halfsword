@@ -206,6 +206,20 @@ src/
 
 브라우저 개발자 도구 콘솔에서 `game.config.WEAPON.mass = 3` 처럼 실행 중에 바꿔볼 수도 있어요.
 
+### 무기 바꿔보기 (src/weapons.js)
+
+기본은 롱소드지만, 실제 자료(가능한 곳은 박물관·제작사 실측, 부족한 곳은 물리적 추정)로 채운 무기고가
+`src/weapons.js`에 있어요: 암소드·메서·츠바이핸더·에스톡·세이버·레이피어·팔쉬온·카타나·지안·환두대도 같은
+실제 무기부터, 엑스칼리버·라이트세이버·나뭇가지·고무 닭·냉동 참치 같은 창작 무기까지.
+
+URL 파라미터로 골라서 테스트할 수 있어요: `?weapon=katana&foeWeapon=chicken` (내 무기/상대 무기, 무기
+id는 `WEAPONS` 객체의 키. `branch`·`chicken`·`tuna`·`sharp`·`replica` 같은 짧은 별칭도 된다).
+`foeWeapon`을 생략하면 고른 캐릭터의 무기, 그것도 없으면 `weapon`과 같은 걸 든다. 기본 롱소드는
+훈련검(페더) 무게라서 진짜 날 선 롱소드(`longsword_sharp`, Albion Crécy 치수)를 따로 두었고,
+`excalibur_replica`는 롱소드 물리에 엑스칼리버 겉모습만 씌운 소품이다. 헤드리스 시뮬 쪽은
+`tools/sim/weapon_smoke.mjs`(안정성 훑기), `tools/sim/weapon_balance.mjs`(승률 재기),
+`tools/sim/weapon_measure.mjs`(유파용 간격 실측) 참고.
+
 ### 상대 AI (ai.js)
 좀비처럼 달려들지 않고 검객처럼 싸워요.
 - **간격 재기**: 상대의 칼이 닿지 않는 거리(가슴과 가슴 사이 약 2.1~2.6m)에서 조금씩 들락날락하고 옆으로 돌며

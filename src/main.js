@@ -19,8 +19,14 @@ import { buildArena } from './arena.js';
 
 await RAPIER.init();
 
+// 테스트용 URL 파라미터: ?weapon=katana&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
+//  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
+const params = new URLSearchParams(location.search);
+const playerWeapon = params.get('weapon') || 'longsword';
+const foeWeaponParam = params.get('foeWeapon'); // 없으면 newRound()에서 고른 캐릭터의 무기 → 내 무기 순으로 정한다
+
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -105,6 +111,8 @@ let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 const fighterMeshes = [];
 
 function newRound() {
+  // 다리로 체중 받치기 (시험): 켜면 gait.js 걸음(다리가 체중 대부분을 받친다), 끄면 예전처럼 골반을 띄워 받친다. 다음 판부터 적용
+  CONFIG.BODY.weightMode = settings.legWeight ? 'hybrid' : 'levitate';
   // 이전 판 정리
   for (const g of fighterMeshes) scene.remove(g);
   fighterMeshes.length = 0;
@@ -144,14 +152,22 @@ function newRound() {
     x: -ARENA.startGap / 2,
     heading: 0,
     look: LOOKS.player,
+    weapon: playerWeapon,
   });
+  // 상대 무기: URL로 지정했으면 그것, 아니면 고른 캐릭터의 무기(characters.js), 그도 없으면 내 무기와 같은 것
+  const foeWeaponId = foeWeaponParam || currentFoe?.weapon || playerWeapon;
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 1,
     name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
     heading: Math.PI,
     look: currentFoe ? currentFoe.look : LOOKS.enemy,
+    weapon: foeWeaponId,
   });
+  // 테스트용 무기 파라미터를 썼으면 화면에 잠깐 알려 준다
+  if (playerWeapon !== 'longsword' || (foeWeaponParam && foeWeaponParam !== 'longsword')) {
+    showToast(`나: ${player.weapon.nameKo} · 상대: ${enemy.weapon.nameKo}`, 2200);
+  }
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다

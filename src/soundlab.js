@@ -146,6 +146,20 @@ const ROWS = [
   ['뼈 (머리·팔·다리 베기)', '베기 + 뼈 80 / 130 / 200 J', [80, 130, 200], (s, v) => (s.cut(v, false), s.bone(v))],
 ];
 
+// ── 재질 쌍 API(Sound.impact) 들어보기: 앞으로 다른 무기들이 쓸 sound.impact({a,b,energy}) ──
+const MATERIAL_ROWS = [
+  ['재질: 강철 × 강철', '에너지 20 / 50 / 90', [20, 50, 90], 'steel', 'steel'],
+  ['재질: 강철 × 투구·판금', '에너지 30 / 70 / 120', [30, 70, 120], 'steel', 'armor'],
+  ['재질: 강철 × 나무', '에너지 20 / 45 / 80', [20, 45, 80], 'steel', 'wood'],
+  ['재질: 강철 × 살', '에너지 20 / 55 / 100', [20, 55, 100], 'steel', 'flesh'],
+  ['재질: 플라즈마 × 강철', '에너지 20 / 45 / 70', [20, 45, 70], 'plasma', 'steel'],
+  ['재질: 플라즈마 × 살', '에너지 25 / 60 / 100', [25, 60, 100], 'plasma', 'flesh'],
+  ['재질: 고무 닭', '에너지 15 / 35 / 60 (무엇에 맞든 삑삑이가 튄다)', [15, 35, 60], 'rubber', 'steel'],
+];
+for (const [name, desc, vals, a, b] of MATERIAL_ROWS) {
+  ROWS.push([name, desc, vals, (s, v) => (s.impact ? s.impact({ a, b, energy: v }) : s.clash(v / 10))]);
+}
+
 const $ = (id) => document.getElementById(id);
 const engines = { new: null, old: null };
 let which = 'new';
@@ -179,12 +193,13 @@ function buildUI() {
     row.appendChild(btns);
     list.appendChild(row);
   }
-  // 누르고 있는 동안: 칼 맞대고 긁기(바인드), 휘두르기
+  // 누르고 있는 동안: 칼 맞대고 긁기(바인드), 휘두르기(강철 / 플라즈마)
   const holds = [
     ['칼 맞대고 밀며 긁기 (누르고 있기)', '미끄러짐 1 / 2.5 / 4.5 m/s', [1, 2.5, 4.5], 'bind'],
     ['휘두르는 바람 소리 (누르고 있기)', '칼끝 10 / 15 / 20 m/s', [10, 15, 20], 'whoosh'],
+    ['플라즈마 날 훔+바람 (누르고 있기)', '칼끝 10 / 15 / 20 m/s', [10, 15, 20], 'whoosh', 'plasma'],
   ];
-  for (const [name, desc, vals, kind] of holds) {
+  for (const [name, desc, vals, kind, material] of holds) {
     const row = document.createElement('div');
     row.className = 'row';
     row.innerHTML = `<div><b>${name}</b><small>${desc}</small></div>`;
@@ -195,7 +210,7 @@ function buildUI() {
       b.textContent = label;
       const down = (e) => {
         e.preventDefault();
-        startHold(kind, vals[i]);
+        startHold(kind, vals[i], material);
       };
       b.addEventListener('pointerdown', down);
       for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, stopHold);
@@ -231,21 +246,22 @@ function buildUI() {
 
 // ── 누르고 있는 동안 도는 소리 ──
 let hold = null;
-function startHold(kind, v) {
+function startHold(kind, v, material = 'steel') {
   stopHold();
   const s = engine();
   const t0 = performance.now();
   if (kind === 'whoosh') {
-    const loop = (engines[which + 'Whoosh'] = engines[which + 'Whoosh'] || s.whooshLoop());
+    const key = which + 'Whoosh' + material;
+    const loop = (engines[key] = engines[key] || s.whooshLoop(material));
     // 한 번 휘두르기 = 0.45초 동안 빨라졌다 느려짐, 누르고 있으면 되풀이
-    hold = setInterval(() => {
+    const id = setInterval(() => {
       const u = ((performance.now() - t0) / 450) % 1;
       loop.set(v * Math.sin(Math.PI * u) ** 1.5);
     }, 16);
-    hold.stop = () => loop.set(0);
+    hold = { id, stop: () => loop.set(0) };
   } else {
     let lastTick = 0;
-    hold = setInterval(() => {
+    const id = setInterval(() => {
       const t = (performance.now() - t0) / 1000;
       // 미끄러지는 속도가 조금씩 흔들린다 (사람이 밀고 당기니까)
       const slide = v * (0.75 + 0.25 * Math.sin(t * 7.3) + 0.1 * Math.sin(t * 19));
@@ -257,12 +273,12 @@ function startHold(kind, v) {
         lastTick = t;
       }
     }, 16);
-    hold.stop = () => s instanceof Sound && s.scrape(0, 0);
+    hold = { id, stop: () => s instanceof Sound && s.scrape(0, 0) };
   }
 }
 function stopHold() {
   if (!hold) return;
-  clearInterval(hold);
+  clearInterval(hold.id);
   hold.stop();
   hold = null;
 }

@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { WEAPON, STRIKE, ANATOMY, STEEL } from './config.js';
+import { STRIKE, ANATOMY, STEEL } from './config.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -32,8 +32,6 @@ const _c = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _e = new THREE.Vector3();
 const _q = new THREE.Quaternion();
-
-const BLADE_START = 0.13; // 칼자루 중심에서 칼날이 시작하는 거리
 
 /** 강체 상태(p, q, com, v, w)에서 한 점의 속도 */
 function velAt(st, point, out) {
@@ -110,8 +108,9 @@ export class Combat {
     if (!att.cache || !vic.cache) return null;
     const S = att.cache.sword;
     const P = vic.cache.parts[pr.v.part];
-    const a = _a.set(0, BLADE_START, 0).applyQuaternion(S.q).add(S.p);
-    const b = _b.set(0, BLADE_START + WEAPON.length, 0).applyQuaternion(S.q).add(S.p);
+    const HL = att.weaponCfg.hiltLength;
+    const a = _a.set(0, HL, 0).applyQuaternion(S.q).add(S.p);
+    const b = _b.set(0, HL + att.weaponCfg.bladeLength, 0).applyQuaternion(S.q).add(S.p);
     const ab = _c.subVectors(b, a);
     const t = THREE.MathUtils.clamp(_d.subVectors(P.com, a).dot(ab) / ab.lengthSq(), 0, 1);
     const point = _e.copy(a).addScaledVector(ab, t);
@@ -123,6 +122,7 @@ export class Combat {
    * @returns {{type, zone, energy, severity, pass, absorb, local, dir, t, helmet, speed}}
    */
   analyze(pr, point, S, P, predicting = false) {
+    const att = pr.w.fighter;
     const vBlade = velAt(S, point, new THREE.Vector3());
     const vBody = velAt(P, point, new THREE.Vector3());
     const rel = vBlade.sub(vBody);
@@ -135,9 +135,11 @@ export class Combat {
     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
     const axis = _a.copy(Y).applyQuaternion(S.q);
     const edge = _b.copy(X).applyQuaternion(S.q);
+    const HL = att.weaponCfg.hiltLength;
     const local = point.clone().sub(S.p).applyQuaternion(_q.copy(S.q).invert());
-    const t = THREE.MathUtils.clamp((local.y - BLADE_START) / WEAPON.length, 0, 1);
-    const isBlade = pr.w.part === 'blade' && local.y > BLADE_START - 0.01;
+    const t = THREE.MathUtils.clamp((local.y - HL) / att.weaponCfg.bladeLength, 0, 1);
+    // 날이 없는 무기(나뭇가지·고무 닭 등)나 부러진 무기는 베기·찌르기 판정 없이 늘 둔기로 친다
+    const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.edged && !att.weaponBroken;
 
     // 유효 질량: 맞은 점에서의 강체 칼의 실제 유효 질량 + 팔·몸의 도움
     const mFree = freeMass(pr.w.fighter.swordProps, S, point, dir);
@@ -145,7 +147,7 @@ export class Combat {
     const ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
-    const energy = ephys * STRIKE.energyScale;
+    let energy = ephys * STRIKE.energyScale;
 
     let type = 'blunt';
     let quality = 1;
@@ -182,12 +184,14 @@ export class Combat {
     } else if (zone !== 'head' && zone !== 'neck') {
       guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
     }
+    if (att.weaponCfg.ignoreArmor) guard = 1; // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
 
     let severity = 0;
     let pass = false;
     if (type === 'cut' || type === 'stab') {
+      const wMult = att.weaponCfg.power * (type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust); // 등급 배율 × 무기별 베기/찌르기 배율
       const thr = (type === 'cut' ? A.cut : A.stab) * guard;
-      const eff = energy * quality;
+      const eff = energy * quality * wMult;
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * 1.25; // 확실히 파고들 때만 튕기지 않고 가르고 들어간다
@@ -195,6 +199,7 @@ export class Combat {
         type = 'blunt'; // 날이 들지 못했으면 멍만 든다
       }
     }
+    if (type === 'blunt') energy *= att.weaponCfg.power * att.weaponCfg.mBlunt;
     return {
       type,
       zone,
@@ -382,6 +387,7 @@ export class Combat {
         fe.impact = J;
         fe.impactSpeed = vn;
         f.takeJolt?.(J);
+        f.absorbWeaponImpact?.(J); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다
       }
     }
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
@@ -392,8 +398,11 @@ export class Combat {
     const armed = this.stepNo - this.bladeLast > STEEL.rearmSteps;
     if (armed === this.steelArmed) return;
     this.steelArmed = armed;
-    const e = armed ? STEEL.restitution : 0;
-    for (const f of this.fighters) for (const c of f.swordColliders || []) c.setRestitution(e);
+    // 무기마다 재질이 다를 수 있어(강철/나무/고무…) 되돌릴 때도 각자 자기 재질 반발값을 쓴다
+    for (const f of this.fighters) {
+      const e = armed ? (f.restitution ?? STEEL.restitution) : 0;
+      for (const c of f.swordColliders || []) c.setRestitution(e);
+    }
   }
 
   /**
@@ -443,6 +452,7 @@ export class Combat {
     vb.applyImpulseAtPoint({ x: n.x * J, y: n.y * J, z: n.z * J }, vp(pV), true);
     // 칼을 쥔 팔도 충격을 받는다: 멈추는 충격량(≈ 유효 질량 × 다가오던 속도) + 되튀는 몫
     att.takeJolt?.(mB * vPre + J);
+    att.absorbWeaponImpact?.(mB * vPre + J); // 투구·뼈를 세게 쳤다가 되튄 충격도 무기 내구도를 깎는다
     this.lastRebound = { zone, e, vPre, vPost, J, mB, mV, step: this.stepNo };
   }
 

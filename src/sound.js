@@ -18,6 +18,9 @@
 // ─────────────────────────────────────────────────────────────
 import { SOUND } from './config.js';
 
+// 무기 재질 쌍 API(Sound.impact)가 알아듣는 재질 이름들. 다른 무기를 추가하는 쪽에서 이 목록을 참고한다
+export const MATERIALS = ['steel', 'armor', 'flesh', 'wood', 'plasma', 'rubber'];
+
 // ── 난수: 같은 씨앗이면 같은 소리 (시험할 때 똑같이 다시 만들 수 있게) ──
 export function makeRng(seed) {
   let s = seed | 0;
@@ -164,6 +167,14 @@ function fadeOut(a, sr, dur = 0.03) {
   for (let i = 0; i < n; i++) a[a.length - 1 - i] *= i / n;
   return a;
 }
+/** 우그러들거나 긁히는 "우두둑" 그릿: 짧은 대역 잡음 조각을 무작위 시간에 흩뿌린다 (투구 찌그러짐, 나무 쪼개짐 등) */
+function gritBurst(out, sr, r, { t0 = 0, span = 0.04, count = 10, amp = 1, fLo = 500, fHi = 3000 }) {
+  for (let k = 0; k < count; k++) {
+    const t = t0 + r() * span;
+    const f = Math.exp(between(r, Math.log(fLo), Math.log(fHi)));
+    noiseHit(out, sr, r, { t0: t, amp: amp * between(r, 0.3, 1), attack: 0.0002, tau: between(r, 0.0015, 0.004), type: 'bandpass', f, q: between(r, 0.8, 2) });
+  }
+}
 /** 낮은 주파수 잡음(흔들림)을 하나 만든다: 0 근처에서 천천히 움직이는 값 */
 function wobble(r, sr, rate) {
   let v = 0;
@@ -196,15 +207,16 @@ const beta = (n) => (n <= 5 ? BETA[n - 1] : ((2 * n + 1) * Math.PI) / 2);
 function swordModes(r, { f1 = 22, at = 0.6, edge = 0.6, damp = 1, fmax = 9500 }) {
   const modes = [];
   const tilt = (f) => {
-    // 소리 설계용 음색 곡선: 250~800Hz "몸통"을 키우고(무게감), 2~4kHz "쨍"은 적당히, 7kHz 위는 줄인다
-    const body = 1.6 * Math.exp(-(Math.log2(f / 430) ** 2) / (2 * 0.75 ** 2));
-    const ring = 0.5 + 0.3 * Math.exp(-(Math.log2(f / 2800) ** 2) / (2 * 0.8 ** 2));
+    // 소리 설계용 음색 곡선: 250~800Hz "몸통"(무게감)을 키우고, 2~3kHz "쨍"은 확 줄인다(실로폰처럼 안 들리게), 7kHz 위는 줄인다
+    const body = 2.1 * Math.exp(-(Math.log2(f / 380) ** 2) / (2 * 0.7 ** 2));
+    const ring = 0.22 + 0.12 * Math.exp(-(Math.log2(f / 2600) ** 2) / (2 * 0.8 ** 2));
     return (body + ring) * (f > 6500 ? (6500 / f) ** 1.5 : 1);
   };
   const decay = (f) => {
-    // 손이 쥐고 있어서 낮은 진동은 금방 죽고, 1~5kHz 울림이 가장 오래 간다 (초)
-    const t = f < 350 ? 0.07 + (0.2 * (f - 150)) / 200 : f < 1400 ? 0.27 + (0.5 * (f - 350)) / 1050 : f < 5000 ? 0.8 : 0.8 - (0.35 * (f - 5000)) / 4500;
-    return Math.max(0.05, t) * damp * between(r, 0.65, 1.3);
+    // 손이 쥐고 있어서 낮은 진동은 금방 죽고, 예전엔 1~5kHz 울림이 0.8초까지 남아 종처럼 울렸다 →
+    // 전 대역을 확 줄여서(약 1/5) "쟁그렁"은 남기되 "댕~"하고 우는 꼬리는 없앤다
+    const t = f < 350 ? 0.03 + (0.045 * (f - 150)) / 200 : f < 1400 ? 0.075 + (0.08 * (f - 350)) / 1050 : f < 5000 ? 0.13 : 0.13 - (0.07 * (f - 5000)) / 4500;
+    return Math.max(0.018, t) * damp * between(r, 0.7, 1.15);
   };
   const add = (f, a) => {
     if (f < 140 || f > fmax) return;
@@ -245,7 +257,7 @@ export const SYNTH = {
    * 칼끼리 부딪힘. hard = 세게(짧은 접촉 → 밝고 긴 울림), 아니면 약하게(둔탁한 "텅")
    */
   clash(sr, r, hard) {
-    const dur = hard ? 1.25 : 0.75;
+    const dur = hard ? 0.4 : 0.32; // 울림을 확 줄였으니 조각 길이도 짧게 (메모리·CPU 절약)
     const n = Math.round(dur * sr);
     const x = new Float32Array(n);
     const out = new Float32Array(n);
@@ -279,39 +291,47 @@ export const SYNTH = {
     normalize(out, 1);
     // "딱": 쇠끼리 맞은 순간의 넓은 대역 잡음
     noiseHit(out, sr, r, { t0: 0.001, amp: hard ? 0.55 : 0.25, tau: hard ? 0.0025 : 0.004, f: hard ? 1200 : 700 });
-    // "쿵": 두 손과 팔이 충격을 받는 낮은 소리 (찌그러뜨리면 폰 스피커에서 들리는 배음이 생긴다)
-    thumpTone(out, sr, { t0: 0.001, f0: between(r, 110, 150), drop: 0.6, tau: hard ? 0.03 : 0.04, amp: hard ? 0.4 : 0.35 });
-    saturate(out, hard ? 2.2 : 1.6);
-    return fadeOut(normalize(out, 0.9), sr, 0.1);
+    // 세게 부딪히면 저역이 실린 딱딱한 "크랙" 한 겹을 더한다 (500Hz 대역, 아주 짧게) → 쨍그렁이 아니라 뻐근하게 무겁다
+    if (hard) noiseHit(out, sr, r, { t0: 0.0008, amp: 0.5, attack: 0.0002, tau: 0.0035, type: 'lowpass', f: 480, q: 0.9 });
+    // "쿵": 두 손과 팔이 충격을 받는 낮은 소리 (찌그러뜨리면 폰 스피커에서 들리는 배음이 생긴다). 세게 칠수록 더 낮고 크게
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, hard ? 65 : 100, hard ? 95 : 140), drop: 0.65, dropTau: 0.012, tau: hard ? 0.032 : 0.026, amp: hard ? 0.68 : 0.42 });
+    saturate(out, hard ? 2.8 : 1.8);
+    return fadeOut(normalize(out, 0.9), sr, hard ? 0.06 : 0.08);
   },
 
-  /** 투구: 두꺼운 강철 사발 + 안쪽 누비 + 머리 무게 → 짧고 둔탁한 "깡-" (투구 몸체 모드가 촘촘하고 금방 죽는다) */
-  helmet(sr, r) {
-    const dur = 0.6;
+  /**
+   * 투구: 두꺼운 강철 사발 + 안쪽 누비 + 머리 무게 → 짧고 둔탁한 "퍽-크덕" (종소리 성분을 빼고 그릿·저역 위주로)
+   * heavy = 세게 맞음(찌그러짐이 큼): 저역을 더 밀고 그릿을 더 두껍게 깐다
+   */
+  helmet(sr, r, heavy = false) {
+    const dur = 0.4;
     const n = Math.round(dur * sr);
     const x = new Float32Array(n);
     const out = new Float32Array(n);
-    const tc = between(r, 0.0003, 0.0005);
+    const tc = between(r, 0.0003, 0.0006);
     pulse(x, sr, 0.001, tc, 1);
     if (r() < 0.5) pulse(x, sr, 0.001 + between(r, 0.003, 0.012), tc * 1.5, between(r, -0.4, 0.4));
     const modes = [];
-    // 사발 모양 껍데기: 모드가 고르게 촘촘하다 (300Hz~5kHz)
-    for (let i = 0; i < 40; i++) {
-      const f = Math.exp(between(r, Math.log(300), Math.log(5200)));
-      const a = (f < 1500 ? 1 : (1500 / f) ** 0.6) * between(r, 0.3, 1) * (r() < 0.5 ? -1 : 1);
-      modes.push({ f, a, t60: between(r, 0.06, 0.25) * (f < 900 ? 1.4 : 1) });
+    // 사발 모양 껍데기: 모드가 고르게 촘촘하지만 아주 짧게 죽는다 (종이 아니라 두꺼운 냄비를 친 느낌)
+    for (let i = 0; i < 30; i++) {
+      const f = Math.exp(between(r, Math.log(280), Math.log(4000)));
+      const a = (f < 1100 ? 1 : (1100 / f) ** 0.7) * between(r, 0.25, 0.85) * (r() < 0.5 ? -1 : 1);
+      modes.push({ f, a, t60: between(r, 0.008, 0.022) * (f < 700 ? 1.3 : 1) });
     }
-    // 투구 자체의 "울림" 몇 개 (종처럼 길게, 550~1400Hz)
-    for (let i = 0; i < 4; i++) modes.push({ f: between(r, 550, 1400), a: between(r, 0.6, 1.1), t60: between(r, 0.35, 0.7) });
-    // 칼도 조금 울린다
-    const blade = swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.4, 0.9), edge: 0.8, damp: 0.7 });
-    for (const m of blade) m.a *= 0.35;
-    resonate(x, out, sr, [...modes, ...blade], Math.ceil(0.02 * sr));
+    // 비조화 금속 "틱" 두세 개, 아주 짧게만 (긴 종소리 대신)
+    for (let i = 0; i < 3; i++) modes.push({ f: between(r, 900, 2600), a: between(r, 0.3, 0.55), t60: between(r, 0.012, 0.025) });
+    // 칼도 아주 조금, 아주 짧게 울린다
+    const blade = swordModes(r, { f1: between(r, 19, 25), at: between(r, 0.4, 0.9), edge: 0.8, damp: 0.3 });
+    for (const m of blade) m.a *= 0.28;
+    resonate(x, out, sr, [...modes, ...blade], Math.ceil(0.012 * sr));
     normalize(out, 1);
-    noiseHit(out, sr, r, { t0: 0.001, amp: 0.4, tau: 0.003, f: 900 });
-    thumpTone(out, sr, { t0: 0.001, f0: between(r, 110, 140), drop: 0.7, tau: 0.04, amp: 0.4 });
-    saturate(out, 2.6);
-    return fadeOut(normalize(out, 0.9), sr, 0.08);
+    // 찌그러짐·긁힘 그릿("우두둑"): 투구가 우그러들 때 나는 거친 잔가루 소리
+    gritBurst(out, sr, r, { t0: 0.001, span: heavy ? 0.045 : 0.025, count: heavy ? 16 : 9, amp: heavy ? 0.6 : 0.38, fLo: 450, fHi: heavy ? 3000 : 2200 });
+    noiseHit(out, sr, r, { t0: 0.001, amp: heavy ? 0.55 : 0.4, tau: 0.0022, f: 850 });
+    // "퍽": 머리 무게가 받는 낮은 몸통 충격 (40~150Hz). 세게 맞을수록 더 낮고 크게 — 짧게 끊어서 뭉툭하게
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, heavy ? 45 : 68, heavy ? 65 : 95), drop: 0.75, dropTau: 0.015, tau: heavy ? 0.021 : 0.015, amp: heavy ? 0.9 : 0.58 });
+    saturate(out, heavy ? 3.6 : 2.9);
+    return fadeOut(normalize(out, 0.9), sr, heavy ? 0.045 : 0.035);
   },
 
   /**
@@ -337,10 +357,11 @@ export const SYNTH = {
     }
     for (let i = 0; i < L; i++) x[i] += 0.02 * (r() * 2 - 1); // 마찰 잡음
     const modes = [...swordModes(r, { f1: 22, at: 0.5, edge: 0.9, damp: 0.22, fmax: 9800 }), ...swordModes(r, { f1: 23.5, at: 0.7, edge: 0.9, damp: 0.22 })];
-    // 낮은 모드는 빼고(쥔 손이 죽인다) 몇 개는 길게 남겨 "쉬이잉" 음색을 준다
+    // 낮은 모드는 빼고(쥔 손이 죽인다), 종처럼 안 울리게 나머지도 짧게 눌러 거친 "지이익"에 가깝게 만든다
     for (const m of modes) {
       if (m.f < 600) m.a *= 0.3;
-      if (r() < 0.06 && m.f > 1500) m.t60 = between(r, 0.4, 0.8);
+      m.t60 = Math.min(m.t60, 0.1);
+      if (r() < 0.06 && m.f > 1500) m.t60 = between(r, 0.15, 0.3);
     }
     resonate(x, out, sr, modes, L);
     // 쇠 가루 "쉬익" (높은 잡음)
@@ -382,13 +403,13 @@ export const SYNTH = {
 
   /**
    * 젖은 살: 살·피 속 공기 방울이 터지는 작은 "뽁" 수십 개 (방울 소리 모델: 음이 살짝 올라가며 금방 죽는 사인파)
-   * + 질척한 낮은 잡음
+   * + 질척한 낮은 잡음. heavy = 깊이 베인 큰 상처: 방울을 더 촘촘히, 물컹한 저역 "우두둑" 크런치를 더한다
    */
-  wet(sr, r) {
+  wet(sr, r, heavy = false) {
     const dur = 0.36;
     const n = Math.round(dur * sr);
     const out = new Float32Array(n);
-    const count = Math.round(between(r, 30, 55));
+    const count = Math.round(between(r, heavy ? 55 : 30, heavy ? 90 : 55));
     for (let k = 0; k < count; k++) {
       const t0 = Math.min(0.3, -Math.log(r() + 1e-9) * 0.045);
       const f0 = Math.exp(between(r, Math.log(220), Math.log(1700)));
@@ -413,6 +434,8 @@ export const SYNTH = {
       if (i % 32 === 0) lp.set(750 + 450 * wb(), 2.5);
       out[i] += 0.5 * lp.run(r() * 2 - 1) * Math.min(1, t / 0.004) * Math.exp(-t / 0.07) * (0.3 + 0.7 * Math.abs(am()));
     }
+    // 크게 베였을 때: 물컹한 살·연골이 눌리며 나는 낮은 "우두둑" 크런치 (그릿을 낮은 대역으로)
+    if (heavy) gritBurst(out, sr, r, { t0: 0.002, span: 0.09, count: 14, amp: 0.5, fLo: 150, fHi: 700 });
     return fadeOut(normalize(out, 0.9), sr, 0.05);
   },
 
@@ -479,6 +502,89 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.9), sr, 0.03);
   },
 
+  /** 나무(방패·둔기 자루): 두꺼운 각재를 친 "퍽-톡". 낮은~중간 대역 모드가 금방 죽고, 섬유 쪼개지는 잔가루가 섞인다 */
+  wood(sr, r) {
+    const n = Math.round(0.3 * sr);
+    const x = new Float32Array(n);
+    const out = new Float32Array(n);
+    pulse(x, sr, 0.001, between(r, 0.0006, 0.0012), 1);
+    const modes = [];
+    for (let i = 0; i < 6; i++) modes.push({ f: Math.exp(between(r, Math.log(140), Math.log(900))), a: between(r, 0.5, 1) * (r() < 0.5 ? -1 : 1), t60: between(r, 0.05, 0.11) });
+    resonate(x, out, sr, modes, Math.ceil(0.01 * sr));
+    normalize(out, 1);
+    noiseHit(out, sr, r, { t0: 0.001, amp: 0.5, attack: 0.0004, tau: 0.006, type: 'bandpass', f: 900, q: 1 });
+    gritBurst(out, sr, r, { t0: 0.001, span: 0.02, count: 6, amp: 0.35, fLo: 1200, fHi: 4500 });
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, 90, 130), drop: 0.6, dropTau: 0.02, tau: 0.045, amp: 0.5 });
+    saturate(out, 2.2);
+    return fadeOut(normalize(out, 0.9), sr, 0.06);
+  },
+
+  /** 플라즈마 날이 다른 것과 부딪힘: 지지직 튀는 전기 스파크 + 짧게 부풀었다 죽는 "웅" 훔 (SF 무기용) */
+  plasmaZap(sr, r) {
+    const n = Math.round(0.3 * sr);
+    const out = new Float32Array(n);
+    let t = 0;
+    while (t < n) {
+      t += Math.max(1, Math.round((-Math.log(r() + 1e-9) / 900) * sr));
+      if (t < n) noiseHit(out, sr, r, { t0: t / sr, amp: between(r, 0.2, 0.7), attack: 0.0001, tau: between(r, 0.0008, 0.003), type: 'highpass', f: between(r, 2500, 7000), q: between(r, 0.6, 1.3) });
+    }
+    const f0 = between(r, 85, 130);
+    const dur = 0.09;
+    for (let i = 0; i < n; i++) {
+      const tt = i / sr;
+      if (tt > dur) break;
+      let s = 0;
+      for (let h = 1; h <= 5; h++) s += (Math.sin(TAU * f0 * h * tt) / h) * (1 + 0.02 * Math.sin(TAU * 7 * tt));
+      out[i] += 0.22 * s * Math.min(1, tt / 0.006) * Math.exp(-tt / 0.05);
+    }
+    saturate(out, 2.0);
+    return fadeOut(normalize(out, 0.85), sr, 0.05);
+  },
+
+  /** 플라즈마가 살을 지지는 "치이익": 기름 튀듯 잔 크랙이 촘촘하고, 위로 김 새듯 잡음이 스민다 */
+  plasmaSizzle(sr, r) {
+    const dur = 0.4;
+    const n = Math.round(dur * sr);
+    const out = new Float32Array(n);
+    let t = 0;
+    while (t < n) {
+      t += Math.max(1, Math.round((-Math.log(r() + 1e-9) / 2600) * sr));
+      if (t < n) noiseHit(out, sr, r, { t0: t / sr, amp: between(r, 0.15, 0.5), attack: 0.0001, tau: between(r, 0.0006, 0.002), type: 'bandpass', f: between(r, 2000, 6500), q: between(r, 1, 2.2) });
+    }
+    const hp = new Filt('highpass', 3200, 0.7, sr);
+    const wb = wobble(r, sr, 18);
+    for (let i = 0; i < n; i++) {
+      const tt = i / sr;
+      out[i] += 0.3 * hp.run(r() * 2 - 1) * Math.min(1, tt / 0.01) * Math.exp(-tt / 0.3) * (0.4 + 0.6 * Math.abs(wb()));
+    }
+    return fadeOut(normalize(out, 0.85), sr, 0.08);
+  },
+
+  /** 고무 닭(코미디 무기): 삑삑이 "끽" + 짧은 경적 "빵" — 진지한 재질들 사이에서 일부러 튀는 소리 */
+  rubberHonk(sr, r) {
+    const n = Math.round(0.35 * sr);
+    const out = new Float32Array(n);
+    const f0 = between(r, 900, 1500);
+    let ph = 0;
+    const len1 = Math.round(0.09 * sr);
+    for (let i = 0; i < len1; i++) {
+      const t = i / sr;
+      const f = f0 * (1 - (0.3 * t) / 0.09) * (1 + 0.05 * Math.sin(TAU * 40 * t));
+      ph += (TAU * f) / sr;
+      out[i] += 0.35 * Math.sign(Math.sin(ph)) * Math.exp(-t / 0.05) * Math.min(1, i / (0.002 * sr));
+    }
+    const f1 = between(r, 210, 260);
+    const start = Math.round(0.05 * sr);
+    const len2 = Math.round(0.22 * sr);
+    for (let i = 0; i < len2 && start + i < n; i++) {
+      const t = i / sr;
+      const v = Math.sign(Math.sin(TAU * f1 * t)) * 0.5 + Math.sign(Math.sin(TAU * f1 * 1.5 * t)) * 0.3;
+      out[start + i] += 0.4 * v * Math.min(1, i / (0.004 * sr)) * Math.exp(-t / 0.11);
+    }
+    saturate(out, 1.4, 0);
+    return fadeOut(normalize(out, 0.85), sr, 0.05);
+  },
+
   /** 경기장 울림(잔향)용 충격 응답: 관중석에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오) */
   reverbIR(sr, r) {
     const dur = 0.9;
@@ -522,11 +628,17 @@ const BANK = [
   ['clashHard', 5, (sr, r) => SYNTH.clash(sr, r, true)],
   ['thump', 3, SYNTH.thump],
   ['slice', 3, SYNTH.slice],
-  ['wet', 3, SYNTH.wet],
+  ['wet', 3, (sr, r) => SYNTH.wet(sr, r, false)],
   ['shing', 3, SYNTH.shing],
   ['scrape', 1, SYNTH.scrape],
-  ['helmet', 3, SYNTH.helmet],
+  ['helmet', 3, (sr, r) => SYNTH.helmet(sr, r, false)],
   ['bone', 3, SYNTH.bone],
+  ['helmetHeavy', 2, (sr, r) => SYNTH.helmet(sr, r, true)],
+  ['wetHeavy', 2, (sr, r) => SYNTH.wet(sr, r, true)],
+  ['wood', 2, SYNTH.wood],
+  ['plasmaZap', 2, SYNTH.plasmaZap],
+  ['plasmaSizzle', 2, SYNTH.plasmaSizzle],
+  ['rubberHonk', 2, SYNTH.rubberHonk],
 ];
 /** 소리 조각 하나 만들기 (일꾼 스레드 soundgen.js 에서도 부른다) */
 export function makeBankSound(name, sr, seed) {
@@ -757,7 +869,7 @@ export class Sound {
   // ── 소리 하나(이벤트) 틀기 ──
   // 소리 조각 여러 겹 → 각자 음량 → (밝기 필터) → 이벤트 음량 → 묶음(bus)
   // 동시에 너무 많이 울리면 가장 오래된 소리를 빨리 줄여서 끈다 (폰 부담)
-  event({ bus, gain = 1, bright = 0, prio = 1 }) {
+  event({ bus, gain = 1, bright = 0, prio = 1, pos = null }) {
     const c = this.ctx;
     const now = c.currentTime;
     this.voices = this.voices.filter((v) => v.end > now);
@@ -787,7 +899,15 @@ export class Sound {
       input = f;
       nodes++;
     }
-    out.connect(bus);
+    // 자리(pos.x, 왼쪽/오른쪽)를 주면 살짝 팬 (무기 시스템에서 부딪힌 위치를 알려줄 때)
+    if (pos && typeof pos.x === 'number' && c.createStereoPanner) {
+      const pan = c.createStereoPanner();
+      pan.pan.value = Math.max(-1, Math.min(1, pos.x / 4));
+      out.connect(pan).connect(bus);
+      nodes++;
+    } else {
+      out.connect(bus);
+    }
     const ev = { out, input, srcs: [], end: now, start: now, prio };
     this.voices.push(ev);
     this.stats.events++;
@@ -870,12 +990,15 @@ export class Sound {
     if (rec) this.layer(ev, rec, { gain: 0.5 * amount, rate: rate * between(Math.random, 0.8, 0.95), delay: 0.006 });
   }
 
-  /** 투구를 친 소리: 둔탁한 "깡" (머리가 받는 "쿵"은 조각 안에 들어 있고, 몸통 소리는 main.js 가 blunt 로 따로 낸다) */
+  /** 투구를 친 소리: 짧고 뭉툭한 "퍽-크덕" (머리가 받는 "쿵"은 조각 안에 들어 있고, 몸통 소리는 main.js 가 blunt 로 따로 낸다) */
   helmet(energy) {
     if (!this._on || !this.ctx) return;
     const e = clamp01(energy / 110);
-    const ev = this.event({ bus: this.metalBus, gain: 0.3 + 0.7 * e ** 0.8, bright: 2500 + 12000 * e, prio: 2 });
-    this.layer(ev, this.pick('helmet'), { rate: between(Math.random, 0.9, 1.06) });
+    const ev = this.event({ bus: this.metalBus, gain: 0.3 + 0.7 * e ** 0.8, bright: 1800 + 6000 * e, prio: 2 });
+    // 세기에 따라 층을 고른다: 약하게 = 가벼운 "깡", 세게(찌그러짐) = 저역이 실린 "퍽-크덕"
+    const heavyP = clamp01((e - 0.35) / 0.4);
+    const buf = Math.random() < heavyP ? this.pick('helmetHeavy') : this.pick('helmet');
+    this.layer(ev, buf, { rate: between(Math.random, 0.92, 1.04) * (1 - 0.06 * e) });
   }
 
   /** 몸통 "퍽" 한 겹 (녹음된 소리가 있으면 둘 다 섞는다) */
@@ -892,7 +1015,8 @@ export class Sound {
     const ev = this.event({ bus: this.fleshBus, gain: 0.35 + 0.65 * e ** 0.8, prio: 2 });
     // 베고 지나가면 가르는 소리가 길고(느리게 틀기), 몸통 충격은 작다 (칼이 멈추지 않았으니까)
     this.layer(ev, this.pick('slice'), { gain: 0.5 + 0.3 * e, rate: through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1) });
-    this.layer(ev, this.pick('wet'), { gain: 0.35 + 0.5 * e, rate: between(Math.random, 0.85, 1.15), delay: 0.012 });
+    // 깊이 베인 큰 상처(e 높음)는 물컹한 크런치가 섞인 "젖은" 소리로
+    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: 0.35 + 0.5 * e, rate: between(Math.random, 0.85, 1.15), delay: 0.012 });
     this.body(ev, through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e);
   }
 
@@ -916,6 +1040,69 @@ export class Sound {
     this.body(ev, 1);
     // 세게 맞으면(칼 면으로 후려침) 칼도 둔하게 울린다
     if (e > 0.2) this.layer(ev, this.pick('clashSoft'), { gain: 0.25 * e, rate: between(Math.random, 0.8, 0.9), delay: 0.003 });
+  }
+
+  /**
+   * 재질 쌍 충돌음 (여러 무기를 다루는 무기 시스템 공용 API).
+   * @param a,b     'steel' | 'armor'(투구·판금) | 'flesh' | 'wood' | 'plasma'(SF 광검) | 'rubber'(코미디 무기). 순서 상관없음
+   * @param energy  충돌 세기 (대략 기존 helmet/cut 등과 같은 J 스케일)
+   * @param pos     {x} 를 주면 부딪힌 자리로 살짝 좌우 팬 (없어도 된다)
+   */
+  impact({ a = 'steel', b = 'steel', energy = 40, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const e = Math.max(0, energy);
+    const has = (m) => a === m || b === m;
+    if (has('rubber')) return this._impactRubber(e, pos);
+    if (has('plasma')) return has('flesh') ? this._impactPlasmaFlesh(e, pos) : this._impactPlasmaSteel(e, pos);
+    if (has('flesh')) return this._impactFleshDull(e, pos);
+    if (has('armor')) return this._impactArmor(e, a === 'armor' && b === 'armor', pos);
+    if (has('wood')) return this._impactWood(e, pos);
+    return this._impactSteel(e, pos);
+  }
+  /** steel+steel (또는 알 수 없는 재질): 기존 칼끼리 부딪힘과 같은 소리, 에너지를 세기로 바꿔서 쓴다 */
+  _impactSteel(energy, pos) {
+    const e = clamp01(energy / 90);
+    const ev = this.event({ bus: this.metalBus, gain: 0.2 + 0.8 * e ** 0.7, bright: e > 0.75 ? 0 : 2400 + 11000 * e, prio: 1 + e, pos });
+    const buf = Math.random() < clamp01((e - 0.15) / 0.4) ? this.pick('clashHard') : this.pick('clashSoft');
+    this.layer(ev, buf, { rate: between(Math.random, 0.93, 1.05) * (1 - 0.05 * e), dur: 0.35 + 1.1 * e });
+  }
+  /** steel/wood+armor 또는 armor+armor: 투구·판금이 우그러지는 "퍽-크덕" */
+  _impactArmor(energy, plateOnPlate, pos) {
+    const e = clamp01(energy / 110);
+    const ev = this.event({ bus: this.metalBus, gain: 0.3 + 0.7 * e ** 0.8, bright: 1800 + 6000 * e, prio: 2, pos });
+    const buf = Math.random() < clamp01((e - 0.35) / 0.4) ? this.pick('helmetHeavy') : this.pick('helmet');
+    this.layer(ev, buf, { gain: plateOnPlate ? 0.9 : 1, rate: between(Math.random, 0.92, 1.04) * (1 - 0.06 * e) });
+  }
+  /** *+wood: 방패·목재 둔기의 "퍽-톡" */
+  _impactWood(energy, pos) {
+    const e = clamp01(energy / 80);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.3 + 0.7 * e ** 0.8, prio: 1.5, pos });
+    this.layer(ev, this.pick('wood'), { rate: between(Math.random, 0.9, 1.08) * (1 - 0.05 * e) });
+  }
+  /** *+flesh (강철·투구·나무 대 살): 자르지 않는 뭉툭한 접촉이므로 몸통 "퍽"만 */
+  _impactFleshDull(energy, pos) {
+    const e = clamp01(energy / 100);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.15 + 0.85 * e ** 0.8, prio: 1.5, pos });
+    this.body(ev, 1);
+  }
+  /** *+plasma (살 제외): 전기 아크가 튀는 "파직" + 짧은 "웅" 훔 */
+  _impactPlasmaSteel(energy, pos) {
+    const e = clamp01(energy / 70);
+    const ev = this.event({ bus: this.metalBus, gain: 0.3 + 0.7 * e ** 0.7, prio: 1.5 + e, pos });
+    this.layer(ev, this.pick('plasmaZap'), { gain: 0.8 + 0.4 * e, rate: between(Math.random, 0.95, 1.08) });
+  }
+  /** 플라즈마 대 살: 지지는 "치이익" */
+  _impactPlasmaFlesh(energy, pos) {
+    const e = clamp01(energy / 100);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.35 + 0.65 * e ** 0.7, prio: 2, pos });
+    this.layer(ev, this.pick('plasmaSizzle'), { gain: 0.8 + 0.3 * e, rate: between(Math.random, 0.9, 1.1) });
+    this.body(ev, 0.25 + 0.2 * e); // 살짝 둔한 충격도 섞는다 (에너지 덩어리가 닿긴 닿았으니)
+  }
+  /** 고무 닭(코미디 무기): 무엇에 맞든 삑삑이+경적이 먼저 튄다 */
+  _impactRubber(energy, pos) {
+    const e = clamp01(energy / 60);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.4 + 0.6 * e ** 0.6, prio: 1.5, pos });
+    this.layer(ev, this.pick('rubberHonk'), { rate: between(Math.random, 0.95, 1.15) });
   }
 
   /** 뼈 부딪히는/부러지는 소리 */
@@ -971,8 +1158,9 @@ export class Sound {
   /**
    * 칼마다 하나씩 계속 도는 바람 소리. 칼끝 속도에 따라 커지고 높아진다 → 칼이 가속·감속하는 게 들린다.
    * 음량 곡선은 아래로 볼록 (Blade & Sorcery의 긴 칼 바람 소리 곡선 모양: 느릴 땐 거의 안 들리다가 빨라지면 확 커진다)
+   * @param material 'steel'(기본, 바람 소리만) | 'plasma'(광검: 항상 켜진 낮은 "웅" 훔이 함께 돈다)
    */
-  whooshLoop() {
+  whooshLoop(material = 'steel') {
     if (!this.ctx) return null;
     const c = this.ctx;
     const src = c.createBufferSource();
@@ -986,6 +1174,7 @@ export class Sound {
     g.gain.value = 0;
     src.connect(f).connect(g).connect(this.master);
     src.start();
+    const hum = material === 'plasma' ? this._plasmaHum() : null;
     const self = this;
     return {
       set(speed) {
@@ -995,6 +1184,44 @@ export class Sound {
         const t = c.currentTime;
         g.gain.setTargetAtTime(vol, t, 0.03);
         f.frequency.setTargetAtTime(250 + 1150 * x, t, 0.03);
+        hum?.set(x);
+      },
+    };
+  }
+  /** 플라즈마 날의 상시 "웅" 훔: 가만히 있어도 낮게 울리고, 휘두르면 커지며 이따금 "파직" 끼어든다 */
+  _plasmaHum() {
+    const c = this.ctx;
+    const o1 = c.createOscillator();
+    const o2 = c.createOscillator();
+    o1.type = 'sawtooth';
+    o2.type = 'sawtooth';
+    o1.frequency.value = 58;
+    o2.frequency.value = 58 * 1.503; // 완전5도 위, 순정과 살짝 어긋나게(SF스러운 맥놀이)
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    lp.Q.value = 0.6;
+    const g = c.createGain();
+    g.gain.value = 0;
+    o1.connect(lp);
+    o2.connect(lp);
+    lp.connect(g).connect(this.master);
+    o1.start();
+    o2.start();
+    const self = this;
+    let crackleAt = 0;
+    return {
+      set(x) {
+        const t = c.currentTime;
+        const base = 0.05; // 가만히 있어도 들리는 대기 훔
+        g.gain.setTargetAtTime(self._on ? base + 0.22 * x : 0, t, 0.05);
+        lp.frequency.setTargetAtTime(700 + 2200 * x, t, 0.05);
+        // 빨리 휘두를수록 "파직" 스파크가 더 자주 낀다
+        if (self._on && t > crackleAt) {
+          crackleAt = t + between(Math.random, 0.15, 0.6) / (0.15 + x);
+          const ev = self.event({ bus: self.master, gain: 0.12 + 0.25 * x, prio: 0.5 });
+          self.layer(ev, self.pick('plasmaZap'), { gain: 0.35, rate: between(Math.random, 1.1, 1.4) });
+        }
       },
     };
   }
