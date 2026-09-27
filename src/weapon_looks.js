@@ -479,3 +479,746 @@ export function swordKit(o) {
     return undefined;
   };
 }
+
+// ═════════════════════════════════════════════════════════════
+//  날 없는 무기 (나뭇가지·고무 닭·냉동 참치): 콜라이더 부품(자루·폼멜·몸통 상자)은 그대로 두고, 겉모습은
+//  decorate 가 "한 덩어리의 매끈한 몸"으로 통째로 그린다 — 부품마다 따로 그리면 사이가 떠서 조각나 보였다.
+// ═════════════════════════════════════════════════════════════
+
+/** partMesh: 부품마다 아무것도 그리지 않는다 (겉모습은 decorate 가 통째로) */
+export const hiddenParts = () => new THREE.Group();
+
+// 꼭짓점 색은 선형 공간이라 sRGB 16진수를 변환해서 쓴다
+const _lc = new THREE.Color();
+const lin = (hex) => {
+  _lc.setHex(hex);
+  return [_lc.r, _lc.g, _lc.b];
+};
+const mixc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const smooth = (e0, e1, x) => {
+  const t = clamp01((x - e0) / (e1 - e0));
+  return t * t * (3 - 2 * t);
+};
+const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+const frac = (x) => x - Math.floor(x);
+const Y_UP = new THREE.Vector3(0, 1, 0);
+
+/** 표본점 [[s, 값], ...] 사이를 부드럽게 잇는 1차원 곡선 (Catmull-Rom) */
+function profile(points) {
+  const n = points.length;
+  return (s) => {
+    if (s <= points[0][0]) return points[0][1];
+    if (s >= points[n - 1][0]) return points[n - 1][1];
+    let i = 0;
+    while (s > points[i + 1][0]) i++;
+    const [s0, v0] = points[Math.max(0, i - 1)];
+    const [s1, v1] = points[i];
+    const [s2, v2] = points[i + 1];
+    const [s3, v3] = points[Math.min(n - 1, i + 2)];
+    const h = s2 - s1;
+    const t = (s - s1) / h;
+    const m1 = ((v2 - v0) / (s2 - s0)) * h;
+    const m2 = ((v3 - v1) / (s3 - s1)) * h;
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return (2 * t3 - 3 * t2 + 1) * v1 + (t3 - 2 * t2 + t) * m1 + (-2 * t3 + 3 * t2) * v2 + (t3 - t2) * m2;
+  };
+}
+
+/**
+ * y 축을 따라 뻗은 매끈한 몸통 (나뭇가지 줄기·잔가지·물고기·닭 몸). 인덱스 지오메트리라 음영이 부드럽다.
+ *  o.y0, o.y1       시작·끝 y,  o.segs / o.radial  길이·둘레 분할
+ *  o.radius(t,a,y)  → r 또는 [rx, rz]  (a: 둘레 각도, x = cos a·rx, z = sin a·rz)
+ *  o.center(t,y)    → [x, z] 축 오프셋 (휨)
+ *  o.color(t,a,y)   → 선형 RGB 꼭짓점 색
+ *  o.yShift(t,a)    → 고리의 y 를 들쭉날쭉하게 (꺾인 단면의 가시)
+ *  o.cap0 / o.cap1  { color, rim, depth } — 끝 막음. 가장자리 꼭짓점을 따로 두어 단면 색이 또렷하다
+ */
+export function organicBody(o) {
+  const segs = o.segs ?? 40;
+  const radial = o.radial ?? 12;
+  const pos = [];
+  const col = [];
+  const idx = [];
+  const rings = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    const y = o.y0 + (o.y1 - o.y0) * t;
+    const [cx, cz] = o.center ? o.center(t, y) : [0, 0];
+    const row = [];
+    for (let k = 0; k < radial; k++) {
+      const a = (k / radial) * Math.PI * 2;
+      const r = o.radius(t, a, y);
+      const rx = typeof r === 'number' ? r : r[0];
+      const rz = typeof r === 'number' ? r : r[1];
+      row.push(pos.length / 3);
+      pos.push(cx + Math.cos(a) * rx, y + (o.yShift ? o.yShift(t, a) : 0), cz + Math.sin(a) * rz);
+      col.push(...(o.color ? o.color(t, a, y) : [1, 1, 1]));
+    }
+    rings.push(row);
+  }
+  for (let i = 0; i < segs; i++) {
+    for (let k = 0; k < radial; k++) {
+      const k2 = (k + 1) % radial;
+      const a = rings[i][k];
+      const b = rings[i][k2];
+      const c = rings[i + 1][k];
+      const d = rings[i + 1][k2];
+      idx.push(a, c, b, b, c, d);
+    }
+  }
+  const cap = (row, co, bottom) => {
+    if (!co) return;
+    const start = pos.length / 3;
+    let sx = 0;
+    let sy = 0;
+    let sz = 0;
+    for (const v of row) {
+      sx += pos[v * 3];
+      sy += pos[v * 3 + 1];
+      sz += pos[v * 3 + 2];
+    }
+    const n = row.length;
+    for (const v of row) {
+      pos.push(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]);
+      col.push(...(co.rim ?? co.color));
+    }
+    const ci = pos.length / 3;
+    pos.push(sx / n, sy / n + (bottom ? -1 : 1) * (co.depth ?? 0), sz / n);
+    col.push(...co.color);
+    for (let k = 0; k < n; k++) {
+      const k2 = (k + 1) % n;
+      if (bottom) idx.push(ci, start + k, start + k2);
+      else idx.push(ci, start + k2, start + k);
+    }
+  };
+  cap(rings[0], o.cap0, true);
+  cap(rings[segs], o.cap1, false);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** 잎 한 장: 끝이 뾰족한 타원 윤곽, 가운데 잎맥을 따라 V 자로 살짝 접히고 끝으로 갈수록 휜다 (밑동이 원점, +y 로 뻗음) */
+function leafGeometry(len, w, curl = 0.25) {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  s.bezierCurveTo(w * 0.95, len * 0.16, w * 0.8, len * 0.72, 0, len);
+  s.bezierCurveTo(-w * 0.8, len * 0.72, -w * 0.95, len * 0.16, 0, 0);
+  const geo = new THREE.ShapeGeometry(s, 12);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i);
+    const y = p.getY(i);
+    p.setZ(i, curl * len * (y / len) ** 2 + 0.3 * Math.abs(x));
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** 지느러미·납작한 장식: [x, y] 점들을 이은 평면 도형 (z=0 평면, 옆에서 보면 윤곽이 그대로 보인다) */
+function flatShape(pts, curveSegs = 8) {
+  const s = new THREE.Shape();
+  s.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i];
+    if (p.length === 4) s.quadraticCurveTo(p[0], p[1], p[2], p[3]);
+    else s.lineTo(p[0], p[1]);
+  }
+  return new THREE.ShapeGeometry(s, curveSegs);
+}
+
+const castAll = (obj) => {
+  obj.traverse((c) => {
+    if (c.isMesh && !c.material.transparent) c.castShadow = true;
+  });
+  return obj;
+};
+
+// ─────────────────────────────────────────────────────────────
+//  나뭇가지 (쓰레기 등급): 나무에서 꺾어 온 마른 가지. 한 줄기로 이어진 몸통에 껍질 골·잿빛으로 바랜 껍질·
+//  이끼 얼룩·옹이·껍질이 벗겨진 자리, 찢겨 꺾인 밑동(속살·가시), 헝겊을 감은 손잡이, 살아 있는 잔가지 하나와
+//  부러진 잔가지 그루터기, 끝의 잎 몇 장(하나는 누렇게 시듦). 콜라이더: 자루(y −0.03~0.13)·밑동 공(y −0.1)·
+//  몸통 상자(y 0.15~0.95) 를 한 줄기로 잇는다. 줄기 반지름 1~1.8cm·휨 ±1cm 라 상자 안팎 ~0.6cm 이내,
+//  잔가지(6~7cm)와 끝 잎(몸통 끝에서 ~5cm)은 장식이라 콜라이더 밖으로 나온다.
+// ─────────────────────────────────────────────────────────────
+export function drawTreeBranch(group) {
+  const yB = -0.112;
+  const yT = 0.952;
+  const span = yT - yB;
+  const BARK_D = lin(0x35251a);
+  const BARK_L = lin(0x94764f);
+  const BARK_G = lin(0x9b9384);
+  const LICHEN = lin(0xa9b784);
+  const WOOD = lin(0xd8bc8f);
+  const PITH = lin(0x7c5b38);
+  const KNOT = lin(0x22170d);
+  const knots = [
+    { y: 0.3, a: 0.5, s: 1 },
+    { y: 0.54, a: 3.5, s: 0.8 },
+    { y: 0.82, a: 2.0, s: 0.7 },
+    { y: 0.19, a: 4.4, s: 0.6 },
+  ];
+  const twigA = { y: 0.43, a: 0.15, s: 1 };
+  const twigB = { y: 0.68, a: Math.PI + 0.35, s: 1 };
+  const baseR = (y) => 0.0176 - 0.0079 * clamp01((y - yB) / span) ** 1.1;
+  const furrow = (a, y) => 0.085 * Math.sin(6 * a + 9 * y) + 0.05 * Math.sin(11 * a - 21 * y + 1.3) + 0.025 * Math.sin(19 * a + 43 * y);
+  const bump = (a, y, list, amp, sy, sa) => {
+    let b = 0;
+    for (const k of list) b += k.s * amp * Math.exp(-(((y - k.y) / sy) ** 2) - (angDiff(a, k.a) / sa) ** 2);
+    return b;
+  };
+  const center = (y) => {
+    const u = clamp01((y - yB) / span);
+    return [0.005 * Math.sin(4.1 * y + 0.3) + 0.0025 * Math.sin(11.3 * y + 1.7) + 0.006 * u * u, 0.0035 * Math.sin(3.3 * y + 1.1)];
+  };
+  const radiusAt = (a, y) => {
+    const r = baseR(y) * (1 + furrow(a, y));
+    const b = bump(a, y, knots, 0.0045, 0.016, 0.5) + bump(a, y, [twigA, twigB], 0.004, 0.02, 0.6);
+    return [r + b, r * 0.92 + b];
+  };
+  const colorAt = (a, y) => {
+    let c = mixc(BARK_D, BARK_L, clamp01(0.5 + furrow(a, y) * 3.6)); // 골은 짙고 등은 밝다
+    c = mixc(c, BARK_G, 0.5 * smooth(0.25, 0.85, 0.5 + 0.5 * Math.sin(1.7 * a + 5.3 * y + 0.4) * Math.sin(2.9 * y + 1.1))); // 볕에 바랜 잿빛
+    if (y > 0.16) c = mixc(c, LICHEN, 0.85 * smooth(0.68, 0.9, 0.5 + 0.5 * Math.sin(3 * a + 17 * y) * Math.sin(5 * a - 11 * y + 2))); // 이끼 얼룩
+    c = mixc(c, WOOD, smooth(0.35, 0.6, Math.exp(-(((y - 0.61) / 0.022) ** 2) - (angDiff(a, 4.6) / 0.35) ** 2))); // 껍질 벗겨진 자리
+    for (const k of knots) {
+      const d = Math.sqrt(((y - k.y) / 0.016) ** 2 + (angDiff(a, k.a) / 0.5) ** 2);
+      c = mixc(c, KNOT, (1 - smooth(0.15, 0.75, d)) * 0.9); // 옹이
+    }
+    return mixc(c, WOOD, 1 - smooth(yB + 0.002, yB + 0.013, y)); // 꺾인 밑동: 껍질이 찢겨 속살
+  };
+  const bark = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
+  group.add(
+    new THREE.Mesh(
+      organicBody({
+        y0: yB,
+        y1: yT,
+        segs: 72,
+        radial: 14,
+        center: (t, y) => center(y),
+        radius: (t, a, y) => radiusAt(a, y),
+        color: (t, a, y) => colorAt(a, y),
+        // 꺾인 밑동: 단면 가장자리가 가시처럼 들쭉날쭉 (섬유가 찢겨 나간 자리)
+        yShift: (t, a) => (t === 0 ? -(0.011 * Math.max(0, Math.sin(3 * a + 0.7)) ** 3 + 0.006 * Math.max(0, Math.sin(7 * a + 2.1)) ** 2 + 0.002) : 0),
+        cap0: { color: PITH, rim: WOOD, depth: -0.004 },
+        cap1: { color: BARK_L, depth: 0.004 },
+      }),
+      bark,
+    ),
+  );
+
+  // 잔가지: 줄기 겉에서 비스듬히 뻗는다. broken 이면 끝이 찢겨 꺾인 그루터기
+  const twig = ({ y, a, theta, len, r0, r1, broken }) => {
+    const c = center(y);
+    const [rx, rz] = radiusAt(a, y);
+    const P = new THREE.Vector3(c[0] + Math.cos(a) * rx * 0.75, y, c[1] + Math.sin(a) * rz * 0.75);
+    const D = new THREE.Vector3(Math.cos(a) * Math.sin(theta), Math.cos(theta), Math.sin(a) * Math.sin(theta)).normalize();
+    const bend = broken ? 0 : 0.12 * len;
+    const m = new THREE.Mesh(
+      organicBody({
+        y0: 0,
+        y1: len,
+        segs: 12,
+        radial: 8,
+        center: (t) => [bend * t * t, 0],
+        radius: (t, aa) => (r0 + (r1 - r0) * t) * (1 + 0.07 * Math.sin(5 * aa + 30 * t)),
+        color: (t, aa) => mixc(BARK_D, BARK_L, 0.45 + 0.35 * Math.sin(5 * aa + 30 * t)),
+        yShift: broken ? (t, aa) => (t === 1 ? 0.004 * Math.max(0, Math.sin(3 * aa + 1)) ** 2 : 0) : undefined,
+        cap1: broken ? { color: PITH, rim: WOOD, depth: -0.001 } : { color: BARK_L, depth: r1 },
+      }),
+      bark,
+    );
+    m.position.copy(P);
+    m.quaternion.setFromUnitVectors(Y_UP, D);
+    group.add(m);
+    return P.clone().add(new THREE.Vector3(bend, len, 0).applyQuaternion(m.quaternion));
+  };
+  const tipA = twig({ ...twigA, theta: 0.75, len: 0.07, r0: 0.0055, r1: 0.0022 });
+  twig({ ...twigB, theta: 0.95, len: 0.026, r0: 0.0062, r1: 0.005, broken: true });
+
+  // 줄기 끝: 가늘어진 우듬지 + 잎 몇 장과 눈(싹)
+  const ct = center(yT);
+  const tipBase = new THREE.Vector3(ct[0], yT - 0.004, ct[1]);
+  const topD = new THREE.Vector3(0.22, 1, 0.08).normalize();
+  const top = new THREE.Mesh(
+    organicBody({
+      y0: 0,
+      y1: 0.05,
+      segs: 10,
+      radial: 8,
+      center: (t) => [0.006 * t * t, 0],
+      radius: (t) => 0.0088 - 0.0062 * t,
+      color: (t, aa) => mixc(BARK_D, BARK_L, 0.5 + 0.3 * Math.sin(5 * aa + 20 * t)),
+      cap1: { color: BARK_L, depth: 0.002 },
+    }),
+    bark,
+  );
+  top.position.copy(tipBase);
+  top.quaternion.setFromUnitVectors(Y_UP, topD);
+  group.add(top);
+  const tipT = tipBase.clone().add(new THREE.Vector3(0.006, 0.05, 0).applyQuaternion(top.quaternion));
+  const bud = addTo(group, new THREE.SphereGeometry(1, 10, 8), new THREE.MeshStandardMaterial({ color: 0x6f5a2e, roughness: 0.8 }), tipT);
+  bud.scale.set(0.0035, 0.008, 0.0035);
+  bud.quaternion.copy(top.quaternion);
+
+  const leafMats = [0x5a8a38, 0x6b9442, 0xa08d3c].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.62, side: THREE.DoubleSide }));
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x4f4a26, roughness: 0.8 });
+  const leaf = (at, rz, rx, len, w, mat) => {
+    const g = new THREE.Group();
+    g.position.copy(at);
+    g.rotation.set(rx, 0, rz, 'ZXY');
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0008, 0.0011, 0.01, 5), stemMat);
+    stem.position.y = 0.005;
+    g.add(stem);
+    const l = new THREE.Mesh(leafGeometry(len, w), mat);
+    l.position.y = 0.009;
+    g.add(l);
+    group.add(g);
+  };
+  leaf(tipT, -0.5, 0.35, 0.05, 0.017, leafMats[0]);
+  leaf(tipT, 0.7, -0.3, 0.045, 0.015, leafMats[1]);
+  leaf(tipT.clone().add(new THREE.Vector3(-0.004, -0.02, 0)), 1.5, 0.25, 0.04, 0.014, leafMats[2]); // 누렇게 시든 잎
+  leaf(tipA, -0.35, 0.3, 0.038, 0.013, leafMats[1]);
+  leaf(tipA, -1.3, -0.35, 0.034, 0.012, leafMats[0]);
+
+  // 손잡이: 때 묻은 헝겊을 나선으로 감고(겹칠수록 한 겹씩 바깥으로), 끝을 한 번 묶어 자투리가 늘어진다
+  const LINEN = lin(0xb4a384);
+  const STAIN = lin(0x6c5a40);
+  const y0w = -0.032;
+  const y1w = 0.112;
+  const pitch = 0.0105;
+  const width = 0.0145;
+  const turns = (y1w - y0w) / pitch;
+  const N = Math.ceil(turns * 40);
+  const wpos = [];
+  const wcol = [];
+  const widx = [];
+  for (let i = 0; i <= N; i++) {
+    const u = i / N;
+    const phi = u * turns * Math.PI * 2;
+    const y = y0w + (y1w - y0w) * u;
+    const c = center(y);
+    const [rx, rz] = radiusAt(phi, y);
+    const lift = 0.0016 + 0.0004 * u * turns;
+    const stain = smooth(0.55, 0.9, 0.5 + 0.5 * Math.sin(phi * 1.3 + 2) * Math.sin(u * 23));
+    const col = mixc(LINEN, STAIN, 0.7 * stain);
+    for (const e of [-0.5, 0.5]) {
+      wpos.push(c[0] + Math.cos(phi) * (rx + lift), y + e * width, c[1] + Math.sin(phi) * (rz + lift));
+      wcol.push(...mixc(col, STAIN, 0.18)); // 가장자리는 해져서 조금 짙다
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    const a = 2 * i;
+    widx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+  }
+  const wgeo = new THREE.BufferGeometry();
+  wgeo.setAttribute('position', new THREE.Float32BufferAttribute(wpos, 3));
+  wgeo.setAttribute('color', new THREE.Float32BufferAttribute(wcol, 3));
+  wgeo.setIndex(widx);
+  wgeo.computeVertexNormals();
+  group.add(new THREE.Mesh(wgeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide })));
+  const rag = new THREE.MeshStandardMaterial({ color: 0xa89878, roughness: 1, side: THREE.DoubleSide });
+  const cK = center(y1w);
+  const knot = addTo(group, new THREE.SphereGeometry(1, 10, 8), rag, [cK[0] + 0.017, y1w + 0.004, cK[1] + 0.004]);
+  knot.scale.set(0.0055, 0.0045, 0.0055);
+  for (const [dz, len, tilt] of [
+    [0.004, 0.034, 0.25],
+    [-0.003, 0.026, 0.45],
+  ]) {
+    const tail = addTo(group, new THREE.PlaneGeometry(0.009, len, 1, 4), rag, [cK[0] + 0.021, y1w - len * 0.42, cK[1] + dz]);
+    tail.rotation.set(0, Math.PI / 2 - 0.3, tilt);
+  }
+  castAll(group);
+}
+
+function addTo(group, geo, mat, pos) {
+  const m = new THREE.Mesh(geo, mat);
+  if (pos) (pos.isVector3 ? m.position.copy(pos) : m.position.set(...pos));
+  group.add(m);
+  return m;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  고무 닭 (쓰레기 등급 장난감): 두 다리를 한데 쥐고 휘두른다 — 주먹 아래로 발가락이 삐져나오고, 주먹 위로
+//  털 뽑힌 오동통한 몸통 → 주름진 긴 목 → 머리(칼끝 쪽). 머리엔 비명 지르듯 벌린 부리·붉은 볏과 턱볏·만화 눈.
+//  고무 표면(닭살 돌기·약한 광택), 낡은 장난감답게 때 묻은 얼룩과 찢어진 데를 X 자로 붙인 청테이프.
+//  콜라이더: 자루 상자(y 0~0.1)=두 다리, 폼멜 공(y −0.08)=발, 몸통 상자(y 0.1~0.45, ±3.5×3cm)=몸통·목·머리.
+//  몸통·목은 상자 안, 부리(~1.3cm)·볏(~1.5cm)·발가락은 조금 밖으로 나온다(말랑한 장식).
+//  등 = −x, 가슴 = +x, 좌우 = ±z (칼날 면을 보는 카메라에서 옆모습이 보인다).
+// ─────────────────────────────────────────────────────────────
+export function drawRubberChicken(group) {
+  const SKIN = lin(0xf3d15a);
+  const SKIN_D = lin(0xd7b244);
+  const SKIN_L = lin(0xf7e39a);
+  const DIRT = lin(0x9d8f68);
+  const ORANGE = lin(0xef8a2a);
+  const ORANGE_D = lin(0xbf6418);
+  const env = { envMap: weaponEnv(), envMapIntensity: 0.35 };
+  const rubberV = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0, ...env });
+  const rubber = (color, rough = 0.5) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, ...env });
+
+  // 몸통 + 목 (한 덩어리): 뒤꽁무니(y 0.085, 주먹 쪽)에서 부풀었다가 좁아져 긴 목으로
+  const yR = 0.085;
+  const yN = 0.41;
+  const rBody = (y) => 0.034 * Math.sqrt(Math.max(0, 1 - ((y - 0.168) / 0.083) ** 2));
+  const rAt = (y, a) => {
+    const neck = 0.0088 * smooth(0.2, 0.26, y) * (1 + 0.07 * Math.sin(y * 560)); // 목 주름
+    const base = (rBody(y) ** 4 + neck ** 4) ** 0.25;
+    const goose = y < 0.26 ? 1 + 0.02 * Math.sin(41 * a + 3) * Math.sin(260 * y) : 1; // 닭살 돌기
+    return base * goose;
+  };
+  const cAt = (y) => [-0.008 * (1 - smooth(yR, 0.13, y)) + 0.007 * Math.sin(clamp01((y - 0.25) / (yN - 0.25)) * Math.PI), 0];
+  group.add(
+    new THREE.Mesh(
+      organicBody({
+        y0: yR,
+        y1: yN,
+        segs: 90,
+        radial: 20,
+        center: (t, y) => cAt(y),
+        radius: (t, a, y) => {
+          const r = rAt(y, a);
+          return [r, r * 0.9];
+        },
+        color: (t, a, y) => {
+          const vert = -Math.cos(a); // +1 = 등
+          let c = vert > 0 ? mixc(SKIN, SKIN_D, 0.45 * vert) : mixc(SKIN, SKIN_L, -0.5 * vert);
+          if (y < 0.26 && Math.sin(29 * a + 7) * Math.sin(193 * y + 1) > 0.9) c = mixc(c, SKIN_D, 0.35); // 모공 점
+          c = mixc(c, DIRT, 0.55 * smooth(0.72, 0.92, 0.5 + 0.5 * Math.sin(2.3 * a + 23 * y + 1) * Math.sin(4.1 * a - 17 * y))); // 때 얼룩
+          if (y > 0.25) c = mixc(c, SKIN_D, 0.25 * (0.5 + 0.5 * Math.sin(y * 560 + 1.4))); // 목 주름 골
+          return c;
+        },
+        cap0: { color: SKIN_D, depth: 0.001 },
+        cap1: { color: SKIN, depth: 0.004 },
+      }),
+      rubberV,
+    ),
+  );
+
+  // 꽁지 (뒤꽁무니의 짧은 뿔)
+  const tail = addTo(group, new THREE.ConeGeometry(0.0075, 0.022, 12), rubber(0xf3d15a), [-0.012, 0.086, 0]);
+  tail.quaternion.setFromUnitVectors(Y_UP, new THREE.Vector3(-0.6, -0.8, 0).normalize());
+
+  // 날개: 털 뽑힌 작은 날개가 옆구리에 접혀 꽁무니 쪽을 향한다 (날갯죽지 + 날개 끝 두 마디)
+  const skinM = rubber(0xefcc55);
+  for (const s of [-1, 1]) {
+    const w1 = addTo(group, new THREE.SphereGeometry(1, 16, 12), skinM, [-0.003, 0.172, s * 0.0285]);
+    w1.scale.set(0.012, 0.03, 0.0055);
+    w1.rotation.set(s * 0.18, 0, 0.18);
+    const w2 = addTo(group, new THREE.SphereGeometry(1, 12, 10), skinM, [-0.006, 0.138, s * 0.031]);
+    w2.scale.set(0.008, 0.017, 0.004);
+    w2.rotation.set(s * 0.3, 0, 0.35);
+  }
+
+  // 다리: 발목 쪽은 비늘 마디가 진 주황색 정강이, 위로 갈수록 굵어지며 노란 넓적다리가 되어 몸통에 파묻힌다
+  const legV = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0, ...env });
+  const legs = [-1, 1].map((s) => {
+    const m = new THREE.Mesh(
+      organicBody({
+        y0: -0.056,
+        y1: 0.132,
+        segs: 40,
+        radial: 12,
+        center: () => [0.006, s * 0.0085],
+        radius: (t, a, y) => 0.0062 + 0.0052 * smooth(0.05, 0.115, y),
+        color: (t, a, y) => {
+          const scale = mixc(ORANGE, ORANGE_D, 0.55 * smooth(0.6, 0.95, Math.sin(y * 1050)));
+          return mixc(scale, SKIN, smooth(0.06, 0.1, y));
+        },
+        cap0: { color: ORANGE_D, depth: 0.002 },
+        cap1: { color: SKIN, depth: 0.003 },
+      }),
+      legV,
+    );
+    group.add(m);
+    return s;
+  });
+
+  // 발: 주먹 아래로 앞발가락 셋이 부채꼴로 벌어지고 뒷발가락 하나, 발끝마다 작은 발톱
+  const toeM = rubber(0xef8a2a, 0.45);
+  const clawM = rubber(0x4a3b2c, 0.35);
+  for (const s of legs) {
+    const foot = new THREE.Vector3(0.006, -0.058, s * 0.0085);
+    addTo(group, new THREE.SphereGeometry(0.0068, 12, 10), toeM, foot);
+    const toes = [
+      [0.55, -0.35, 0.021],
+      [0.35, 0, 0.024],
+      [0.55, 0.35, 0.021],
+      [-0.6, 0, 0.012],
+    ];
+    for (const [fx, fz, len] of toes) {
+      const d = new THREE.Vector3(fx, -1, fz + s * 0.12).normalize();
+      const toe = addTo(group, new THREE.CapsuleGeometry(0.0027, len, 4, 8), toeM, foot.clone().addScaledVector(d, len / 2 + 0.003));
+      toe.quaternion.setFromUnitVectors(Y_UP, d);
+      const claw = addTo(group, new THREE.ConeGeometry(0.0019, 0.006, 8), clawM, foot.clone().addScaledVector(d, len + 0.0075));
+      claw.quaternion.setFromUnitVectors(Y_UP, d);
+    }
+  }
+
+  // 머리
+  const H = new THREE.Vector3(0.003, 0.4185, 0);
+  const head = addTo(group, new THREE.SphereGeometry(0.0235, 28, 20), rubber(0xf3d15a), H);
+  head.scale.set(1.08, 1.12, 0.92);
+  // 눈: 흰자 + 까만 눈동자 + 반짝이는 점 (장난감 페인트 눈)
+  const white = rubber(0xf6f4ee, 0.3);
+  const black = rubber(0x141414, 0.2);
+  const glint = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (const s of [-1, 1]) {
+    addTo(group, new THREE.SphereGeometry(0.0062, 16, 12), white, [0.009, 0.426, s * 0.0176]);
+    addTo(group, new THREE.SphereGeometry(0.0036, 12, 10), black, [0.0105, 0.4262, s * 0.0222]);
+    addTo(group, new THREE.SphereGeometry(0.0011, 6, 5), glint, [0.0118, 0.4275, s * 0.0254]);
+  }
+  // 부리: 비명 지르듯 크게 벌린 위·아래 부리, 입안은 붉고 혀가 보인다
+  const beakM = rubber(0xf29e22, 0.4);
+  const up = addTo(group, new THREE.ConeGeometry(0.0078, 0.024, 16), beakM, [0.036, 0.4262, 0]);
+  up.quaternion.setFromUnitVectors(Y_UP, new THREE.Vector3(Math.cos(0.3), Math.sin(0.3), 0));
+  const low = addTo(group, new THREE.ConeGeometry(0.0058, 0.018, 16), beakM, [0.0335, 0.4118, 0]);
+  low.quaternion.setFromUnitVectors(Y_UP, new THREE.Vector3(Math.cos(-0.38), Math.sin(-0.38), 0));
+  addTo(group, new THREE.SphereGeometry(0.0062, 12, 10), rubber(0x7a1418, 0.4), [0.0295, 0.419, 0]);
+  const tongue = addTo(group, new THREE.SphereGeometry(1, 10, 8), rubber(0xe2677a, 0.4), [0.0345, 0.4165, 0]);
+  tongue.scale.set(0.0045, 0.0015, 0.003);
+  // 볏: 정수리를 따라 둥근 봉우리 다섯, 턱 밑엔 늘어진 턱볏 둘
+  const combM = rubber(0xd6302a, 0.35);
+  const lobes = [
+    [0.013, 0.4455, 0.0056],
+    [0.0065, 0.4508, 0.0068],
+    [-0.0005, 0.4528, 0.0074],
+    [-0.0078, 0.4508, 0.0067],
+    [-0.0145, 0.4455, 0.0054],
+  ];
+  for (const [x, y, r] of lobes) {
+    const lobe = addTo(group, new THREE.SphereGeometry(1, 14, 10), combM, [x, y, 0]);
+    lobe.scale.set(r, r * 1.3, r * 0.5);
+  }
+  for (const s of [-1, 1]) {
+    const w = addTo(group, new THREE.SphereGeometry(1, 12, 10), combM, [0.0235, 0.4005, s * 0.0042]);
+    w.scale.set(0.0055, 0.0105, 0.0035);
+    w.rotation.z = 0.35;
+  }
+
+  // 청테이프: 찢어진 옆구리를 X 자로 붙인 자국 (몸통 곡면을 따라 감긴 띠 두 장)
+  const tapeM = new THREE.MeshStandardMaterial({ color: 0x8e9195, roughness: 0.42, metalness: 0.3, envMap: weaponEnv(), envMapIntensity: 0.6, side: THREE.DoubleSide });
+  const R = rBody(0.19) * 1.022 + 0.0006;
+  for (const tilt of [-0.45, 0.45]) {
+    const tape = addTo(group, new THREE.CylinderGeometry(R, R, 0.0085, 18, 1, true, -0.42, 0.84), tapeM, [0, 0.19, 0]);
+    tape.scale.z = 0.9;
+    tape.rotation.z = tilt;
+  }
+  castAll(group);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  냉동 참치 (장난 무기, 커먼): 꼬리자루(가는 꼬리 쪽 몸)를 쥐고 휘두른다 — 초승달 꼬리지느러미는 주먹 아래,
+//  머리는 칼끝 쪽. 방추형 몸, 등은 짙은 남색 금속빛·배는 은백색(참치의 역그늘), 옆구리의 금빛 줄,
+//  배 쪽의 희미한 세로 점무늬, 노란 두 번째 등지느러미·뒷지느러미와 그 뒤로 늘어선 노란 토막지느러미,
+//  꼬리자루 양옆의 용골, 아가미 뚜껑 선, 얼어서 뿌옇게 흐린 큰 눈. 통째로 얼어 서리가 끼고 얇은 얼음막이 덮여
+//  반짝인다. 콜라이더: 폼멜 공(y −0.15)=꼬리지느러미 뿌리, 자루 상자(y ±0.12, ±2.5cm)=꼬리자루,
+//  몸통 상자(y 0.15~0.9, ±5×4.5cm)=몸통·머리. 몸은 상자에서 ~0.7cm 이내, 지느러미(얇은 장식)는 밖으로 나온다
+//  (꼬리지느러미 끝 ±7.5cm). 등 = −x, 배 = +x, 좌우 = ±z.
+// ─────────────────────────────────────────────────────────────
+export function drawFrozenTuna(group) {
+  const y0 = -0.125;
+  const y1 = 0.905;
+  const S = (y) => (y - y0) / (y1 - y0);
+  const Y = (s) => y0 + (y1 - y0) * s;
+  // 몸 높이(rx)·너비(rz) 반값: 꼬리자루는 가늘고, 머리 쪽 40% 지점이 가장 두툼한 방추형
+  const rxP = profile([
+    [0, 0.01],
+    [0.08, 0.011],
+    [0.2, 0.017],
+    [0.3, 0.031],
+    [0.45, 0.05],
+    [0.6, 0.0565],
+    [0.75, 0.0515],
+    [0.86, 0.04],
+    [0.94, 0.024],
+    [1, 0.004],
+  ]);
+  const rzP = profile([
+    [0, 0.008],
+    [0.08, 0.0095],
+    [0.2, 0.014],
+    [0.3, 0.025],
+    [0.45, 0.041],
+    [0.6, 0.0475],
+    [0.75, 0.0445],
+    [0.86, 0.036],
+    [0.94, 0.022],
+    [1, 0.004],
+  ]);
+  const sOp = (vert) => 0.845 + 0.022 * vert * vert; // 아가미 뚜껑 뒷선 (위아래로 갈수록 꼬리 쪽으로 휜다)
+  const DORSAL = lin(0x14213b);
+  const FLANK = lin(0x5b7187);
+  const BELLY = lin(0xd6dee3);
+  const GOLD = lin(0xc9a13c);
+  const DARK = lin(0x0f1626);
+  const FROST = lin(0xe9f2f6);
+  const radius = (t, a) => {
+    const s = t;
+    const vert = -Math.cos(a);
+    let rx = rxP(s) * (vert < 0 ? 0.96 : 1); // 배는 조금 납작
+    let rz = rzP(s);
+    // 꼬리자루 양옆 용골 (가로로 도드라진 능선)
+    const keel = 0.0045 * smooth(0.02, 0.07, s) * (1 - smooth(0.17, 0.24, s));
+    rz += keel * Math.exp(-((Math.abs(Math.cos(a)) / 0.22) ** 2));
+    // 아가미 뚜껑 가장자리: 살짝 솟은 턱
+    const op = 0.0014 * Math.exp(-(((s - sOp(vert)) / 0.006) ** 2));
+    return [rx + op, rz + op];
+  };
+  const color = (t, a) => {
+    const s = t;
+    const vert = -Math.cos(a);
+    let c = vert > 0.05 ? mixc(FLANK, DORSAL, smooth(0.05, 0.4, vert)) : mixc(BELLY, FLANK, smooth(-0.5, 0.05, vert));
+    if (s > 0.28 && s < 0.88) c = mixc(c, GOLD, 0.75 * Math.exp(-(((vert - 0.02) / 0.075) ** 2)) * smooth(0.28, 0.4, s)); // 옆구리 금빛 줄
+    if (vert < -0.02 && vert > -0.65 && s > 0.3 && s < 0.8) {
+      const dots = smooth(0.82, 0.97, Math.sin(s * 95)) * smooth(0.5, 0.9, Math.sin(vert * 38 + 1));
+      c = mixc(c, lin(0xf2f6f8), 0.55 * dots); // 배 쪽 세로 점무늬
+    }
+    const keelD = s < 0.24 ? Math.exp(-((Math.abs(Math.cos(a)) / 0.25) ** 2)) * (1 - smooth(0.17, 0.24, s)) : 0;
+    c = mixc(c, DARK, 0.6 * keelD);
+    c = mixc(c, DARK, 0.75 * Math.exp(-(((s - sOp(vert)) / 0.0045) ** 2))); // 아가미 뚜껑 선
+    if (s > 0.955) c = mixc(c, DARK, 0.8 * Math.exp(-(((vert + 0.1) / 0.09) ** 2))); // 입 선
+    // 서리: 몸 여기저기 흰 얼룩(등의 남색은 살린다) + 등마루에 가는 흰 서리 한 줄
+    const fr = smooth(0.7, 0.95, 0.5 + 0.5 * Math.sin(13 * a + 71 * s + 1) * Math.sin(7 * a - 43 * s + 2));
+    c = mixc(c, FROST, 0.48 * fr + 0.55 * smooth(0.965, 0.995, vert));
+    return mixc(c, lin(0x8fa4b4), 0.05); // 얼어서 살짝 바랜 빛
+  };
+  const geo = organicBody({
+    y0,
+    y1,
+    segs: 90,
+    radial: 20,
+    center: (t) => [0.004 * smooth(0.9, 1, t), 0], // 주둥이가 살짝 아래(배 쪽)로
+    radius,
+    color,
+    cap0: { color: DARK, depth: 0.001 },
+    cap1: { color: FLANK, depth: 0.002 },
+  });
+  const env = weaponEnv();
+  group.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.2, envMap: env, envMapIntensity: 0.6 })));
+  // 얇은 얼음막: 같은 몸을 아주 조금 부풀려 투명하게 덮는다 — 빛이 번들거려 "꽁꽁 언" 느낌
+  const glaze = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xdff3ff, transparent: true, opacity: 0.12, roughness: 0.06, metalness: 0.1, envMap: env, envMapIntensity: 1.2, depthWrite: false }));
+  glaze.scale.set(1.018, 1, 1.024);
+  group.add(glaze);
+
+  const finMat = (color, rough = 0.5) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.3, envMap: env, envMapIntensity: 0.6, side: THREE.DoubleSide });
+  const navy = finMat(0x24334d);
+  const yellow = finMat(0xd9ae38, 0.45);
+  const back = (s) => -rxP(s) * 0.96 + 0.0015; // 등 표면 x (지느러미 뿌리를 살짝 묻는다)
+  const belly = (s) => rxP(s) - 0.0015;
+  const fin = (pts, mat) => group.add(new THREE.Mesh(flatShape(pts), mat));
+
+  // 꼬리지느러미: 초승달 (주먹 아래, 폼멜 공 자리)
+  fin(
+    [
+      [-0.012, -0.118],
+      [-0.03, -0.14, -0.08, -0.207],
+      [-0.052, -0.19, -0.012, -0.172],
+      [0, -0.164, 0.012, -0.172],
+      [0.052, -0.19, 0.08, -0.207],
+      [0.03, -0.14, 0.012, -0.118],
+    ],
+    navy,
+  );
+  // 두 번째 등지느러미·뒷지느러미: 꼬리 쪽으로 휜 노란 낫 모양
+  const sD = S(0.3);
+  const sD2 = S(0.365);
+  fin(
+    [
+      [back(sD2), 0.365],
+      [back(sD) - 0.02, 0.3, back(0.4) - 0.036, 0.232],
+      [back(sD) - 0.008, 0.28, back(sD), 0.3],
+    ],
+    yellow,
+  );
+  fin(
+    [
+      [belly(S(0.345)), 0.345],
+      [belly(S(0.285)) + 0.018, 0.285, belly(0.4) + 0.032, 0.222],
+      [belly(S(0.28)) + 0.007, 0.265, belly(S(0.285)), 0.285],
+    ],
+    yellow,
+  );
+  // 첫 번째 등지느러미: 등 홈에 반쯤 접힌 낮은 가시지느러미
+  fin(
+    [
+      [back(S(0.555)), 0.555],
+      [back(S(0.52)) - 0.017, 0.52, back(S(0.44)) - 0.008, 0.415],
+      [back(S(0.415)), 0.415],
+    ],
+    navy,
+  );
+  // 토막지느러미: 등·배를 따라 꼬리자루까지 늘어선 작은 노란 삼각형들 (참치의 표지)
+  for (let i = 0; i < 7; i++) {
+    const y = 0.255 - i * 0.024;
+    const s = S(y);
+    const h = 0.0085 - i * 0.0005;
+    fin([[back(s), y + 0.006], [back(s) - h, y - 0.006], [back(s), y - 0.004]], yellow);
+    fin([[belly(s), y + 0.006], [belly(s) + h, y - 0.006], [belly(s), y - 0.004]], yellow);
+  }
+  // 가슴지느러미 (좌우): 몸 옆에 붙어 꼬리 쪽으로 길게 뻗는다
+  const sP = S(0.74);
+  for (const sz of [-1, 1]) {
+    const g = flatShape(
+      [
+        [0, 0.012],
+        [-0.004, -0.02, -0.012, -0.085],
+        [0.002, -0.03, 0.008, 0.002],
+      ],
+      8,
+    );
+    const m = new THREE.Mesh(g, navy);
+    m.position.set(-0.006, 0.74, sz * (rzP(sP) + 0.001));
+    m.rotation.set(-sz * 0.22, sz * 0.2, 0); // 끝이 몸에서 살짝 벌어지게
+    group.add(m);
+  }
+  // 배지느러미: 배 쪽 작은 한 쌍
+  for (const sz of [-1, 1]) {
+    const m = new THREE.Mesh(flatShape([[0, 0.008], [0.014, -0.022], [0.004, -0.004]]), navy);
+    m.position.set(belly(S(0.705)) - 0.004, 0.705, sz * 0.01);
+    m.rotation.y = sz * 0.35;
+    group.add(m);
+  }
+  // 눈: 금속빛 홍채 + 까만 눈동자, 얼어서 뿌옇게 흐린 막
+  const sE = S(0.842);
+  const eyeZ = rzP(sE) + 0.0005;
+  const iris = new THREE.MeshStandardMaterial({ color: 0xb8a468, roughness: 0.25, metalness: 0.8, envMap: env });
+  const pupil = new THREE.MeshStandardMaterial({ color: 0x0b0d12, roughness: 0.1, metalness: 0.2, envMap: env });
+  const cloud = new THREE.MeshStandardMaterial({ color: 0xe6eef2, transparent: true, opacity: 0.38, roughness: 0.2, envMap: env, depthWrite: false });
+  const rim = finMat(0x0f1626);
+  for (const sz of [-1, 1]) {
+    const e = addTo(group, new THREE.SphereGeometry(1, 20, 14), iris, [-0.006, 0.842, sz * (eyeZ - 0.001)]);
+    e.scale.set(0.0105, 0.0105, 0.0035);
+    const p = addTo(group, new THREE.SphereGeometry(1, 16, 12), pupil, [-0.006, 0.842, sz * (eyeZ + 0.0014)]);
+    p.scale.set(0.0058, 0.0058, 0.0025);
+    const cl = addTo(group, new THREE.SphereGeometry(1, 16, 12), cloud, [-0.006, 0.842, sz * (eyeZ + 0.0022)]);
+    cl.scale.set(0.0085, 0.0085, 0.0022);
+    addTo(group, new THREE.TorusGeometry(0.0108, 0.0012, 6, 24), rim, [-0.006, 0.842, sz * (eyeZ + 0.0002)]);
+  }
+  // 서리 결정·얼음 조각: 등 쪽과 지느러미 가장자리에 반짝이는 흰 알갱이, 옆구리에 붙은 투명한 얼음 덩이
+  const crystal = new THREE.MeshStandardMaterial({ color: 0xf4fbff, roughness: 0.15, metalness: 0.05, envMap: env, envMapIntensity: 1.2 });
+  for (let i = 0; i < 22; i++) {
+    const s = 0.22 + 0.68 * frac(i * 0.618034);
+    const a = Math.PI + (frac(i * 0.381966 + 0.17) - 0.5) * 1.9;
+    const rx = rxP(s);
+    const rz = rzP(s);
+    const r = 0.0018 + 0.0018 * frac(i * 0.7548);
+    const c = addTo(group, new THREE.OctahedronGeometry(r, 0), crystal, [Math.cos(a) * rx * 0.98, Y(s), Math.sin(a) * rz * 0.98]);
+    c.rotation.set(i * 0.7, i * 1.3, i * 0.4);
+  }
+  const ice = new THREE.MeshStandardMaterial({ color: 0xe4f6ff, transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.05, envMap: env, envMapIntensity: 1.6, depthWrite: false });
+  for (const [s, a, sx, sy, sz] of [
+    [0.52, 0.9, 0.014, 0.022, 0.008],
+    [0.33, -1.1, 0.01, 0.016, 0.007],
+    [0.68, 2.6, 0.012, 0.018, 0.006],
+  ]) {
+    const chunk = addTo(group, new THREE.BoxGeometry(sx, sy, sz), ice, [Math.cos(a) * rxP(s) * 0.97, Y(s), Math.sin(a) * rzP(s) * 0.97]);
+    chunk.rotation.set(a, 0.4, 0.3);
+  }
+  castAll(group);
+}

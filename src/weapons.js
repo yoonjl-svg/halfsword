@@ -12,7 +12,7 @@
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { swordKit, metalMat, weaponEnv } from './weapon_looks.js';
+import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna } from './weapon_looks.js';
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -122,11 +122,11 @@ function steelMatOpts(isBlade) {
 
 // ── 곡도·외날 등 곡면 칼날/몸통 메쉬 (물리 콜라이더는 그대로 상자꼴 — 겉보기만 다르다) ──
 // fighter.js가 spec.partMesh(idx, isBlade, shape, color, matOpts, look, tier)를 부를 수 있으면 그걸 쓴다 — 칼은 대부분
-//  weapon_looks.js swordKit() 으로 조합하고, 여기 남은 것은 날 없는 무기 몸통(나뭇가지·고무 닭·참치)·플라스마 막대용이다.
+//  weapon_looks.js swordKit() 으로 조합하고, 날 없는 무기(나뭇가지·고무 닭·참치)는 weapon_looks.js 가 통째로 그린다.
+//  여기 남은 것은 라이트세이버 플라스마 막대용이다.
 
 /**
- * 단면이 각진 다각형(대충 둥근) 막대 지오메트리 — 나뭇가지·고무 닭 목·냉동 참치 몸통처럼
- * "칼날이 아닌" 부품을 밋밋한 상자 대신 자연스러운 몸통으로 보이게 한다. bend(t)는 [x,z] 오프셋
+ * 단면이 다각형인 막대 지오메트리 (라이트세이버 플라스마 칼날). bend(t)는 [x,z] 오프셋
  * (t=0 자루 쪽 ~ t=1 끝), taper(t)는 그 위치의 단면 배율(1이면 hx/hz 그대로).
  */
 function rodGeometry(hx, hy, hz, { bend, taper, sides = 10, segs = 14 } = {}) {
@@ -179,21 +179,6 @@ function curvedBlade(build) {
     const [, hx, hy, hz] = shape;
     const geo = build(hx, hy, hz, look);
     const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0.05, side: THREE.DoubleSide, ...(matOpts || {}) }));
-    m.castShadow = true;
-    return m;
-  };
-}
-
-/**
- * 날이 없는 무기(나뭇가지·고무 닭·냉동 참치)의 "몸통" 부품(둘 다 idx=2, 세 부품짜리 구성의
- * 마지막)만 밋밋한 상자 대신 자연스레 휘거나 가늘어지는 막대로 바꾼다.
- */
-function bentBody(build) {
-  return (idx, isBlade, shape, color, matOpts, look) => {
-    if (idx !== 2 || shape[0] !== 'box') return undefined;
-    const [, hx, hy, hz] = shape;
-    const geo = build(hx, hy, hz, look);
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0.05, side: THREE.DoubleSide, ...(matOpts || {}) }));
     m.castShadow = true;
     return m;
   };
@@ -822,9 +807,9 @@ const treeBranch = finalizeSpec('tree_branch', {
   hiltLength: 0.15, bladeLength: 0.8,
   tier: 'trash', // 감독 등급: 쓰레기 → power 0.7·durability 0.4·fragility 0.2 (60초 경합에 60% 부러진다)
   edged: false, // 날이 없어 항상 둔기 판정 (총 타격 배율은 power 0.7)
-  // 몸통을 곧은 상자 대신 한쪽으로 완만히 휘어지며 끝으로 갈수록 가늘어지는 옹이진 막대로 —
-  // 콜라이더는 그대로 상자라 판정엔 영향 없다(휘는 양은 ~1cm 안).
-  partMesh: bentBody((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 6, bend: (t) => [0.012 * t * t, 0.006 * Math.sin(t * 3)], taper: (t) => 1.15 - 0.4 * t })),
+  // 겉모습은 부품(자루·밑동·몸통 상자)마다 따로 그리지 않고 decorate 가 한 줄기로 통째로 그린다 — 따로 그리면
+  //  사이가 떠서 세 토막으로 보였다. 껍질 골·이끼·옹이·꺾인 밑동·헝겊 손잡이·잔가지·잎 (weapon_looks.js drawTreeBranch)
+  partMesh: hiddenParts,
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.08, 0.018);
@@ -836,44 +821,8 @@ const treeBranch = finalizeSpec('tree_branch', {
       partTuple(['box', 0.018, L / 2, 0.015], 0.15 + L / 2, 0.25, blade.comY, blade.Ie, blade.It, 0x6b4423, false),
     ];
   },
-  // 옹이 + 옆으로 뻗은 잔가지 두어 개 + 끝에 달린 잎(새싹) — 실제로 나무에서 꺾어 온 가지처럼
-  // 보이게 한다(참고: 젤다 시리즈의 "데쿠 나무막대"는 원줄기에 짧은 옹이 가지 몇 개와 잎 하나만
-  // 달아도 "주워 온 나뭇가지"로 뚜렷이 읽힌다 — 그 어법을 따른다).
   decorate(group) {
-    const L = this.bladeLength;
-    const bark = new THREE.MeshStandardMaterial({ color: 0x4d3820, roughness: 1 });
-    for (const t of [0.25, 0.5, 0.8]) addMesh(group, new THREE.SphereGeometry(0.02 + 0.01 * Math.random(), 6, 5), bark, [0.012, 0.15 + L * t, 0.01]);
-
-    // 옆으로 삐죽 뻗은 잔가지 두 개 (원래 나무에서 갈라져 나온 가지의 밑동만 남은 흔적)
-    const twigMat = new THREE.MeshStandardMaterial({ color: 0x4a3418, roughness: 0.95 });
-    const twigs = [
-      { t: 0.36, side: 1, len: 0.1, bend: 0.9 },
-      { t: 0.66, side: -1, len: 0.08, bend: 1.15 },
-    ];
-    for (const { t, side, len, bend } of twigs) {
-      const y = 0.15 + L * t;
-      const twig = addMesh(group, new THREE.ConeGeometry(0.009, len, 5), twigMat, [side * 0.018, y, side * 0.012]);
-      twig.rotation.z = side * bend; // 원줄기에서 바깥·위쪽으로 비스듬히
-      twig.rotation.x = 0.25 * side;
-      twig.castShadow = true;
-    }
-
-    // 칼끝 쪽: 여린 새잎 몇 장 + 작은 새싹 — 갓 꺾은 가지 티가 나게 초록빛으로.
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x5f8f3d, roughness: 0.8, side: THREE.DoubleSide });
-    const budMat = new THREE.MeshStandardMaterial({ color: 0x7a5a34, roughness: 0.9 });
-    const tipY = 0.15 + L * 0.97;
-    const leaves = [
-      [0.022, tipY - 0.035, 0.005, 0.3, 0.4],
-      [-0.02, tipY - 0.01, 0.014, -0.4, 1.9],
-      [0.012, tipY + 0.022, -0.016, 0.5, -1.1],
-    ];
-    for (const [x, y, z, rx, ry] of leaves) {
-      const leaf = addMesh(group, new THREE.SphereGeometry(0.024, 7, 5), leafMat, [x, y, z]);
-      leaf.scale.set(1, 0.32, 2.4); // 둥근 공을 납작하고 길게 눌러 잎 모양으로
-      leaf.rotation.set(rx, ry, 0.3);
-      leaf.castShadow = true;
-    }
-    addMesh(group, new THREE.SphereGeometry(0.011, 6, 5), budMat, [0, tipY + 0.045, 0]).castShadow = true;
+    drawTreeBranch(group);
   },
 });
 
@@ -891,9 +840,9 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
   // 크게 올려도 몸통 타격은 여전히 무해하고 "머리에 제대로 맞으면 그래도 어질하다"만 세진다.
   edged: false, mBlunt: 2.6,
   controlOverrides: { aimStiffness: 34 }, // 물렁해서 정확히 겨누기 어렵다 (토크는 양손 가정으로 22)
-  // 목 부분(자루 쪽)은 가늘고, 몸통(머리 쪽)으로 갈수록 굵어지며 옆으로 축 늘어지는 "흐물흐물한
-  // 목" — 콜라이더는 그대로 곧은 상자.
-  partMesh: bentBody((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 8, bend: (t) => [0.016 * Math.sin(t * 1.8), 0], taper: (t) => 0.5 + 0.75 * t })),
+  // 겉모습: 두 다리를 쥐고 휘두르는 고무 닭 — 주먹 아래 발가락, 위로 오동통한 몸통·주름진 긴 목·벌린 부리의
+  //  머리(칼끝 쪽). 부품마다 따로 그리지 않고 decorate 가 한 덩어리로 그린다 (weapon_looks.js drawRubberChicken)
+  partMesh: hiddenParts,
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.05, 0.02); // 목 부분을 쥔다
@@ -905,20 +854,8 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
       partTuple(['box', 0.035, L / 2, 0.03], 0.1 + L / 2, 0.12, blade.comY, blade.Ie, blade.It, 0xf7d84a, false),
     ];
   },
-  // 부리·볏·눈을 붙여 누가 봐도 "고무 닭"으로 보이게 한다 (물리에는 영향 없음)
   decorate(group) {
-    const L = this.bladeLength;
-    const headY = 0.1 + L; // 칼끝 = 닭 머리 쪽
-    const skin = new THREE.MeshStandardMaterial({ color: 0xf7d84a, roughness: 0.95 });
-    const beak = new THREE.MeshStandardMaterial({ color: 0xe0a020, roughness: 0.8 });
-    const comb = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.8 });
-    const eye = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4 });
-    addMesh(group, new THREE.SphereGeometry(0.04, 12, 10), skin, [0, headY, 0]);
-    addMesh(group, new THREE.ConeGeometry(0.014, 0.035, 8), beak, [0, headY, 0.045]).rotation.set(Math.PI / 2, 0, 0);
-    addMesh(group, new THREE.ConeGeometry(0.01, 0.03, 6), comb, [0, headY + 0.035, 0]);
-    for (const s of [-1, 1]) addMesh(group, new THREE.SphereGeometry(0.008, 8, 6), eye, [s * 0.022, headY + 0.008, 0.03]);
-    // 다리 두 개 (아래로 늘어진 채)
-    for (const s of [-1, 1]) addMesh(group, new THREE.CylinderGeometry(0.006, 0.006, 0.09, 6), beak, [s * 0.02, -0.08, 0]);
+    drawRubberChicken(group);
   },
 });
 
@@ -934,8 +871,9 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   edged: false, mBlunt: 2.2, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
-  // 몸통을 곧은 상자 대신 가운데가 굵고 양끝(꼬리·머리)이 가늘어지는 물고기 몸매로.
-  partMesh: bentBody((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 8, taper: (t) => 0.5 + 1.1 * Math.sin(t * Math.PI) })),
+  // 겉모습: 꼬리자루를 쥔 참치 — 주먹 아래 초승달 꼬리, 칼끝 쪽 머리. 역그늘 색·노란 토막지느러미·서리와 얼음막.
+  //  부품마다 따로 그리지 않고 decorate 가 한 덩어리로 그린다 (weapon_looks.js drawFrozenTuna)
+  partMesh: hiddenParts,
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.15, 0.025, 0.12, 0.025); // 꼬리 쪽을 쥔다
@@ -947,25 +885,8 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
       partTuple(['box', 0.05, L / 2, 0.045], 0.15 + L / 2, 1.25, blade.comY, blade.Ie, blade.It, 0xc3d8de, false),
     ];
   },
-  // 등지느러미·가슴지느러미·꼬리지느러미 + 서리 반점 — 진짜 얼린 생선처럼.
   decorate(group) {
-    const L = this.bladeLength;
-    const finMat = new THREE.MeshStandardMaterial({ color: 0x5f7680, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide });
-    const frostMat = new THREE.MeshStandardMaterial({ color: 0xf2f9fc, roughness: 0.9, transparent: true, opacity: 0.8 });
-    const dorsal = addMesh(group, new THREE.ConeGeometry(0.09, 0.03, 3), finMat, [0, 0.15 + L * 0.45, 0.07]);
-    dorsal.rotation.set(Math.PI / 2, 0, Math.PI / 2);
-    dorsal.castShadow = true;
-    for (const s of [-1, 1]) {
-      const pec = addMesh(group, new THREE.ConeGeometry(0.06, 0.02, 3), finMat, [s * 0.05, 0.15 + L * 0.35, 0]);
-      pec.rotation.z = s * 0.9;
-      pec.castShadow = true;
-    }
-    const tailFin = addMesh(group, new THREE.ConeGeometry(0.06, 0.05, 4), finMat, [0, 0.15 + L * 0.98, 0]);
-    tailFin.rotation.x = Math.PI;
-    tailFin.scale.set(1.6, 1, 0.3);
-    tailFin.castShadow = true;
-    // 서리: 몸통을 따라 작은 흰 반점 몇 개
-    for (const t of [0.15, 0.35, 0.55, 0.75]) addMesh(group, new THREE.SphereGeometry(0.012, 6, 5), frostMat, [0.03, 0.15 + L * t, 0.02]);
+    drawFrozenTuna(group);
   },
 });
 
