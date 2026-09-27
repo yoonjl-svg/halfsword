@@ -214,7 +214,7 @@ src/
 
 URL 파라미터로 골라서 테스트할 수 있어요: `?weapon=katana&foeWeapon=chicken` (내 무기/상대 무기, 무기
 id는 `WEAPONS` 객체의 키. `branch`·`chicken`·`tuna`·`sharp`·`replica` 같은 짧은 별칭도 된다).
-`foeWeapon`을 생략하면 고른 캐릭터의 무기, 그것도 없으면 `weapon`과 같은 걸 든다. 기본 롱소드는
+`foeWeapon`을 생략하면 `weapon`과 같은 것, 둘 다 없으면 고른 캐릭터의 무기를 든다. 기본 롱소드는
 훈련검(페더) 무게라서 진짜 날 선 롱소드(`longsword_sharp`, Albion Crécy 치수)를 따로 두었고,
 `excalibur_replica`는 롱소드 물리에 엑스칼리버 겉모습만 씌운 소품이다. 헤드리스 시뮬 쪽은
 `tools/sim/weapon_smoke.mjs`(안정성 훑기), `tools/sim/weapon_balance.mjs`(승률 재기),

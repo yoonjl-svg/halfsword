@@ -448,23 +448,27 @@ const excalibur = finalizeSpec('excalibur', {
 
 // ═════════════════════════════════════════════════════════════
 //  12b) 엑스칼리버 복제품 — 하인리히(characters.js)가 "진품"이라 우기며 드는 싸구려 소품.
-//      물리·판정은 기본 롱소드와 완전히 같고(부품 질량·관성·길이·비틀림 보정까지 동일) 겉모습만
-//      엑스칼리버 금색. 등급은 커먼. 캐릭터 담당 계약(docs/school_contract.md)상 AI는 이 무기를
-//      longsword 유파로 다루면 된다 (measure 값도 롱소드와 같다).
+//      감독 확정판(main 1f6d079): 모양은 비슷하지만 전설의 힘(power 배율)은 없고, 싸구려 황동
+//      장식에 칼날도 조금 더 두껍고 무겁다 (진품은 플레이어 몫) [I] 창작. 등급은 커먼.
+//      물리가 롱소드와 살짝 다르므로 measure 는 따로 실측해 docs/weapons.md 에 적는다.
 // ═════════════════════════════════════════════════════════════
-const EXCALIBUR_LOOK = { grip: 0x2a2440, hilt: 0xf2c94c, blade: 0xeef3f8 };
 const excaliburReplica = finalizeSpec('excalibur_replica', {
-  nameKo: '엑스칼리버 (복제품)', nameEn: 'Excalibur (replica)',
+  nameKo: '엑스칼리버 복제품', nameEn: 'Excalibur (replica)',
   grip: 'two-hand', material: 'steel',
-  tier: 'common', // 제원·등급은 롱소드(커먼)
-  hiltLength: 0.13, bladeLength: 1.05, gripAlong: -0.14,
-  controlOverrides: { twistScale: 1 }, // 롱소드와 똑같은 손목 비틀기 힘 (fighter.js가 롱소드에 강제하는 값)
-  buildParts() {
-    // 롱소드 부품 그대로 만들고 색만 바꾼다 (부품 순서·질량·관성 동일)
-    return longsword.buildParts(EXCALIBUR_LOOK).map((part) => {
-      const [shape, y, mass, , isBlade] = part;
-      return [shape, y, mass, isBlade ? EXCALIBUR_LOOK.blade : part[3], isBlade];
-    });
+  tier: 'common', // 제원·등급은 커먼 (power 1.0)
+  hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
+  buildParts(look) {
+    const L = this.bladeLength;
+    const grip = boxInertia(0.15, 0.019, 0.1, 0.019);
+    const pommel = sphereInertia(0.38, 0.032);
+    const cross = boxInertia(0.17, 0.115, 0.016, 0.024);
+    const blade = bladeInertia(0.8, L, 0.34, 0.253, 0.05, 0.018);
+    return [
+      partTuple(['box', 0.019, 0.1, 0.019], 0, 0.15, 0, grip.Ie, grip.It, 0x3a2c22),
+      partTuple(['ball', 0.032], -0.13, 0.38, 0, pommel.Ie, pommel.It, 0xb08d4a),
+      partTuple(['box', 0.115, 0.016, 0.024], 0.115, 0.17, 0, cross.Ie, cross.It, 0xb08d4a),
+      partTuple(['box', 0.025, L / 2, 0.009], 0.13 + L / 2, 0.8, blade.comY, blade.Ie, blade.It, 0xc9ced3, true),
+    ];
   },
 });
 
