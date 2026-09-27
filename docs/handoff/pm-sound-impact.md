@@ -204,17 +204,17 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 |---|---|---|
 | 산바람 (솔바람 "쏴아" + 골짜기의 낮은 "우우") | 늘 아주 작게 (포세이돈보다 조금 조용) | 잡음 필터 합성, 노드 몇 개 |
 | 풍경 "댕-그랑" | 9~26초마다 저절로, 센 타격에도 | 작은 청동 종 배음 합성, 1~3번 흔들림, 좌우 무작위 |
-| 범종 "우웅—" | 판이 시작될 때 (30초에 한 번까지) | 68Hz 허밍 + 배음 5쌍, 맥놀이, 멀리(1.4kHz 저역 통과), 왼쪽 뒤 |
+| 먼 산새 (작은 산새 "찌찌찟" 65%, 휘파람새 "호오— 호케쿄" 35%) | 14~40초마다 저절로 | 사인파 높이를 움직인 합성 + 먼 거리(4.5kHz 저역 통과, 산 울림). 한 벌 만드는 데 약 25ms, `birdSong` 3벌·`birdWarbler` 2벌 |
 | 마사토 발소리 "자박" | 발을 디딜 때 | `step/gravel1-8` (Kenney 뒤꿈치 + OGA 자갈, CC0) |
 | 쓰러질 때 자갈 "자르륵" | 쓰러짐에 한 겹 더 | 마사토 발소리를 느리게 |
 | 낙엽 바스락 + 솔바람 세짐 | 큰 타격 (`arena.excite`와 같은 세기) | `stage/leaves1-2` (OGA, CC0) |
 
 - API:
   - `sound.setStage('temple' | 'poseidon')`: 배경 소리가 돌고 있으면 3초에 걸쳐 바꾼다.
-  - `sound.roundStart()`, `sound.gust(amount)`, `sound.templeBell()`, `sound.windChime(k)`.
-- main.js: `new Sound()` 바로 뒤에 `setStage`, `newRound`에서 `roundStart`, `onWound`의 `arena.excite` 옆에서 `gust`를 부른다.
+  - `sound.gust(amount)`, `sound.windChime(k)`, `sound.bird(kind)`.
+- main.js: `new Sound()` 바로 뒤에 `setStage`, `onWound`의 `arena.excite` 옆에서 `gust`를 부른다.
+- 오너 결정: 판 시작 범종은 뺐다. 산새는 합성 후보 다섯(작은 산새·산비둘기·까치·휘파람새·딱따구리) 중 작은 산새와 휘파람새를 골랐다.
 - 측정 (오프라인 렌더):
   - 마사토 발소리의 중심 주파수 831Hz (모래 578Hz), 200Hz 아래 비중 47%로 여전히 무겁다.
   - 산사 배경의 2~8kHz 비중 5.5% (솔바람 위를 1.9kHz에서 닫음).
-  - 범종 피크는 68 / 179 / 326 / 509 / 717Hz.
 - 추가 용량 약 44KB. 포세이돈 배경은 그대로다.
