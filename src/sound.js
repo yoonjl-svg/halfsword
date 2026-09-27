@@ -1000,6 +1000,12 @@ export class Sound {
     for (const s of this.sends || []) s.g.gain.setTargetAtTime(s.amt * amount, this.ctx.currentTime, 0.02);
   }
 
+  /**
+   * 온몸 베기 고리 (docs/whole_body_strike.md 4-7, 14장): 게임 시간이 느려질 때(멈칫·결정타 슬로) 그 배율 k(1 = 보통).
+   *  지금은 빈 함수다. 소리 담당이 슬로 동안 새 소리를 낮고 느리게 내는 것을 여기에 붙인다 (멈칫 때문에 소리를 늦추지는 않는다)
+   */
+  setTimeScale(k) {}
+
   /** 소리 길: 소리들 → (쇳소리 / 살 소리 묶음) → 전체 음량 → 리미터(찢어지지 않게) → 스피커. 묶음마다 울림을 조금씩 보낸다 */
   build() {
     const c = this.ctx;

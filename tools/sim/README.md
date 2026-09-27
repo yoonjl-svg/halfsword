@@ -20,7 +20,7 @@
 | `node tools/sim/tap_thrust.mjs [stand\|down\|duel\|all] [판수] [무기id]` | 탭 찌르기(skill.thrust) 검증: 처음 닿은 판정이 찌르기인지, 상처·상처 깊이, 상대 칼에 먼저 막혔는지 |
 | 위 세 도구 공통: `--str=0.85` `--foeStr=1.3` `--emo=off` `--emoP=anger:1` `--emoE=fear:1` | 플레이어·상대 근력, 감정 능력 끄기(게임의 `?emo=0`), 플레이어·상대 감정 고정(감정:세기). `str_emo.mjs` 참고 |
 | `node tools/sim/ai_thrust_pref.mjs [판수] [무기id...]` | AI가 찌르기 무기로 찌르기 기술을 더 고르는지 (고른 기술 비율, 찌르기 판정 수) |
-| `node tools/sim/with_config.mjs STRIKE.thrustAssist=2.5 <스크립트> [인자...]` | 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 |
+| `node tools/sim/with_config.mjs STRIKE.thrustAssist=2.5 <스크립트> [인자...]` | 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 (`true`/`false`는 불리언: `WHOLE.on=false`) |
 | `node tools/sim/with_weapon.mjs estoc characters_eval.mjs both 3` | 모든 캐릭터에게 같은 무기를 쥐여 주고 다른 시뮬 스크립트를 돌린다 (근력·성격은 그대로, 브란의 대체 무기는 끔) |
 | `node tools/sim/thrust_strength.mjs [판수] [무기id...]` | 기본 AI 근력만 0.85 / 1.0 / 1.3 으로 바꿔 가만히 겨눈 더미를 상대로 낸 찌르기·베기 상처(분당 수·깊이·에너지)와 처치 시간 |
 | `node tools/sim/weapon_anatomy.mjs [duel\|dummy] [판수] [무기id...]` | 무기가 왜 이기고 지나: 몸 접촉마다 판정 전·후(상처 / 문턱 미달 / 칼 면), 문턱 대비 비율, 칼끝 속도, 유효 질량, 닿은 간격, 간격 띠별 시간, 첫 상처, AI 통계. `dummy` = 막지 않는 더미 상대 공격력 |
@@ -30,6 +30,11 @@
 | `node tools/sim/body_share.mjs [무기id...]` | 칼끝 속도 중 몸통(가슴·골반)이 만든 몫. 몸통 비틀기를 끄거나 크게 했을 때 칼 속도·에너지 변화 |
 | `node tools/sim/chain_mass.mjs [무기id...]` | 칼 뒤에 실제로 실리는 질량: 물리 사슬(칼+손+팔+몸)의 유효 질량을 톡 밀어 재고 판정식(칼+0.3kg)과 견준다 |
 | `node tools/sim/thrust_review.mjs [skill\|step\|down\|assist\|demote\|snap\|all] [--hybrid]` | 탭 찌르기 검토 지적 수정 전·후: 검술 보정별 찌르기, AI 두 번 내딛기, 찌르다 넘어짐, 팔 질량 싣는 구간·멍으로 바뀐 찌르기 에너지, 내리찌르기 끊김 |
+| `node tools/sim/hybrid.mjs wholebody.mjs <부분> [N]` | 온몸 베기 측정 묶음 (docs/whole_body_strike.md L0·7장): `support` `cuts` `detect` `react` `combo` `sweep` `trunkoff` `strength` `power` `stand` `miss` `block` `react_body` `ai` `duel` `defend` `hitstop` `feedcheck`. 플레이어 입력은 모두 손가락 궤적 길(`harness_m.mjs` `feedTrace`: input.js → handOffset → skill.update, 60/90/120 Hz는 `HZ=`)로 넣는다. 층 끄기: `with_config.mjs WHOLE.chain=false hybrid.mjs wholebody.mjs cuts`. 결과 JSON은 `OUTDIR=`/`OUT=` |
+| `node tools/sim/hybrid.mjs legs_gates.mjs <stand\|walk\|circle\|turn\|mash\|getup\|push\|fight\|step\|all> [N]` | 다리 1.5 합격선 G1~G8·G10 (발이 받친 몸무게, 딛은 발 미끄러짐, 걷기·마구 흔들기 넘어짐, 제자리 돌기, 일어서기, AI 대결 넘어짐/선 채 분, requestStep 발 이동·밀림). `MODE=levitate`로 견줌 |
+| `node --expose-gc tools/sim/hybrid.mjs perf_ab.mjs [블록=10] [스텝=2000]` | G9 성능: 온몸 베기 켬/끔(`SWITCH=WHOLE.commit` 처럼 층 하나도)을 한 프로세스에서 번갈아 — 스텝 시간 비 평균·95% 구간, THREE 생성 수 차이, 힙 할당 차이(끔 두 벌끼리 잡음 바닥과 함께) |
+| `node tools/sim/film_wholebody.cjs <장면> [hybrid\|levitate] [--off] [--size=844x390] [--out=폴더]` | 온몸 베기 연속 사진 (8장): 떠 있는 개발 서버(기본 5174)의 실제 게임을 수동 프레임 시계로, 손가락 궤적을 터치 이벤트로 넣는다. 폰 카메라·옆·앞 비스듬히 × 8칸, 칼끝·손·무게중심·발 자취와 칸별 수치. `--off` = 설정 '온몸 베기' 끔(전) |
+| `SEED0=13 node tools/sim/fights12.mjs` | fights12 시드 묶음 바꾸기 (13~24판). 온몸 베기 합격선은 1/13/25/37/49 다섯 묶음 |
 | (공용) `tools/sim/is_main.mjs` | 측정 도구의 "직접 실행" 확인 `isMain(import.meta.url)`과 감싸는 스크립트용 `simPath()` — with_config·hybrid·with_weapon·with_spec 로 감싸도 결과가 찍힌다 |
 
 `jelly_harness.mjs` / `harness_m.mjs` 는 공용 무대(두 파이터 + 전투 판정)를 만든다.

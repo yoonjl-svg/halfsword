@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, WHOLE, SUPPORT } from './config.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
@@ -174,6 +174,10 @@ export class Fighter {
     this.offBalance = 0; // 무게중심이 발 밖으로 벗어난 거리 (m)
     this.offBalanceTime = 0;
     this.stumble = new THREE.Vector2(); // 균형을 잡으려고 자동으로 딛는 걸음 (몸 기준)
+    this.comVel = new THREE.Vector3(); // 무게중심 수평 속도 (updateFooting이 매 스텝 남긴다, y = 0)
+    // 지탱도 s (0~1, config.js SUPPORT): 다리가 몸무게를 얼마나 단단히 받치나. 가만히 두 발로 서면 1 (updateSupport, 읽기만)
+    this.support = 1;
+    this.supportRaw = 1; // 거르기 전 값
     this.state = 'stand'; // stand | down | getup | dead
     this.stateTime = 0;
     this.muscle = 1; // 근육 힘 비율 (넘어지면 0 근처로)
@@ -912,6 +916,7 @@ export class Fighter {
     const side = mv.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
     const want = _v4.set(fwd.x * along + rgt.x * side, 0, fwd.z * along + rgt.z * side);
     this.updateFooting(dt, fwd, rgt, want);
+    if (WHOLE.on) this.updateSupport(dt); // 지탱도 s (읽기만: 몸을 움직이는 데 쓰지 않는다)
     if (hybrid) G.update(dt, want, fwd, rgt);
     else if (G?.active) G.exit();
     // 두 발이 체중을 얼마나 받는지 (땅에 닿고 몸 아래에 있을수록 1).
@@ -1029,6 +1034,7 @@ export class Fighter {
     vel.multiplyScalar(1 / M);
     this.com = this.com || new THREE.Vector3();
     this.com.copy(com);
+    this.comVel.copy(vel); // 수평 속도만 모았다 (y = 0). 지탱도 s가 읽는다
     const w0 = Math.sqrt(9.81 / Math.max(0.5, com.y));
     const cpx = com.x + vel.x / w0;
     const cpz = com.z + vel.z / w0;
@@ -1075,6 +1081,40 @@ export class Fighter {
       this.stumble.set(((dx * rgt.x + dz * rgt.z) / len) * s, ((dx * fwd.x + dz * fwd.z) / len) * s);
     } else this.stumble.set(0, 0);
   }
+
+  /**
+   * 지탱도 s (config.js SUPPORT, 사장님 체중 원칙): 가만히 두 발로 서면 1, 걸음을 떼거나 빨리 움직이거나
+   * 무게중심이 발 밖으로 나가면 낮아진다. 두 발 다 떠 있거나 서 있지 않으면 0.
+   * 떨어질 땐 빨리(fallTau), 오를 땐 천천히(riseTau) 따라간다: 다시 디디면 0.3~0.5초에 100%로 돌아온다.
+   * 읽기만 한다 (몸을 움직이는 데 쓰지 않는다). updateFooting 바로 다음에 부른다 (comVel·offBalance가 이번 스텝 값).
+   * 딛음: hybrid 는 걸음(gait)의 딛은 발, levitate 는 발에 실린 무게(footLoad > 0.5)
+   */
+  updateSupport(dt) {
+    const S = SUPPORT;
+    const G = this.gait;
+    let raw = 0;
+    if (this.state === 'stand') {
+      const onF = G?.active ? G.legs.F.stance : this.footLoad.F > 0.5;
+      const onB = G?.active ? G.legs.B.stance : this.footLoad.B > 0.5;
+      if (onF || onB) {
+        const v = Math.hypot(this.comVel.x, this.comVel.z);
+        raw = 1 - S.vW * THREE.MathUtils.clamp((v - S.v0) / S.vSpan, 0, 1);
+        if (!(onF && onB)) raw -= S.singleW;
+        raw -= S.offW * THREE.MathUtils.clamp(this.offBalance / 0.35, 0, 1);
+        raw = THREE.MathUtils.clamp(raw, 0, 1);
+      }
+    }
+    this.supportRaw = raw;
+    const tau = raw < this.support ? S.fallTau : S.riseTau;
+    this.support += (raw - this.support) * (1 - Math.exp(-dt / tau));
+  }
+
+  // ── 온몸 베기 고리 (docs/whole_body_strike.md 4-7). 지금은 빈 함수다 ──
+  //  연출(L6a: 확정 신호·소리·진동)이 이 자리에 붙는다. 결심(L1)·쏠림(L4)이 생기면 저절로 불린다
+  /** 결심 베기 단계가 바뀔 때: stage 'A'(감기 시작) | 'B'(확정), c = 결심 세기(0.3~1), fam = 베기 무리 */
+  onCommit(stage, c, fam) {}
+  /** 결심 베기의 결과: kind 'hit' | 'miss' | 'blocked' | 'glance' | 'through', info = 그때의 값들 */
+  onStrikeResult(kind, info) {}
 
   /** 발바닥 한가운데의 월드 좌표 */
   solePoint(foot, out) {

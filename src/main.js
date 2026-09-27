@@ -37,7 +37,7 @@ function pickPlayerWeapon() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true, wholeBody: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -142,6 +142,8 @@ const fighterMeshes = [];
 function newRound() {
   // 다리로 체중 받치기 (시험): 켜면 gait.js 걸음(다리가 체중 대부분을 받친다), 끄면 예전처럼 골반을 띄워 받친다. 다음 판부터 적용
   CONFIG.BODY.weightMode = settings.legWeight ? 'hybrid' : 'levitate';
+  // 온몸 베기 (docs/whole_body_strike.md): 끄면 온몸 베기 이전과 똑같이 움직인다. 다음 판부터 적용
+  CONFIG.WHOLE.on = !!settings.wholeBody;
   // 이전 판 정리
   for (const g of fighterMeshes) scene.remove(g);
   fighterMeshes.length = 0;
@@ -937,4 +939,5 @@ window.game = {
   AI,
   settings,
   sound, // 예: game.sound.clash(8) 로 소리 확인, game.sound.stats
+  input, // 측정 도구(tools/sim/film_wholebody.cjs)가 손가락 궤적을 게임과 같은 길로 넣는다. input.fingerTrace = 손가락 원래 궤적
 };

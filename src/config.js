@@ -387,6 +387,31 @@ export const THRUST = {
   body: { pelvisYaw: -20, chestYaw: -20, pitch: 8, drop: 0.07 }, // 찌를 때 몸 (긴 자세처럼 칼 든 어깨를 앞으로, 도·m)
 };
 
+// ─────────────────────────────────────────────────────────────
+//  온몸 베기 (docs/whole_body_strike.md). 층마다 스위치가 있고, 각 층 코드는 WHOLE.on && WHOLE.<층> 으로 감싼다.
+//  on 이 false 면 온몸 베기 이전과 결과가 바이트 단위로 같다. 층 하나를 끄면 그 층을 켜기 전과 같다.
+//  게임에서는 설정 '온몸 베기'(settings.wholeBody)가 판을 시작할 때 on 을 정한다 (main.js newRound)
+// ─────────────────────────────────────────────────────────────
+export const WHOLE = {
+  on: true, // 전체. 게임 설정 '온몸 베기'
+  commit: true, // L1 결심과 큰 획
+  chain: true, // L2 운동 사슬
+  step: true, // L3 내딛기
+  momentum: true, // L4 관성의 대가
+  bodyMass: true, // L5 판정
+  feel: true, // L6a 연출 (물리 무관)
+  feelBody: true, // L6b 맞은 몸 반응·막힌 손 되튐 (물리)
+  camera: true, // L7 카메라 구도 (구도 고르기는 CAMERA.preset)
+  ai: true, // L8 AI
+};
+
+// 지탱도 s (fighter.support, 0~1): 다리가 몸무게를 얼마나 단단히 받치고 있나 (사장님 체중 원칙, docs/weight_momentum.md)
+//  가만히 두 발로 서면 1. 빨리 움직이거나, 한 발로 딛거나, 무게중심이 발 밖으로 나가면 낮아진다. 두 발 다 떠 있으면 0
+//  s_raw = 1 − vW·clamp((|v| − v0) / vSpan, 0, 1) − singleW·[한 발만 디딤] − offW·clamp(offBalance / 0.35, 0, 1)
+//   (v: 무게중심 수평 속도 fighter.comVel). 떨어질 땐 fallTau, 오를 땐 riseTau(초) 시정수로 따라간다 (다시 디디면 0.3~0.5초에 돌아온다)
+//  계산만 하고 몸을 움직이는 데는 쓰지 않는다. L4(관성의 대가)·L5(판정)가 읽는다
+export const SUPPORT = { v0: 0.15, vSpan: 1.2, vW: 0.5, singleW: 0.25, offW: 0.6, fallTau: 0.03, riseTau: 0.35 };
+
 // 소리 (sound.js). 소리마다 들어보기: 메뉴의 "소리 들어보기"
 export const SOUND = {
   volume: 0.8, // 전체 음량

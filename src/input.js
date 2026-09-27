@@ -7,6 +7,51 @@
 import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
 
+// 손가락 궤적 조각의 표시 (FingerTrace.flag)
+export const TRACE_REPLAY = 1; // 멈칫 동안 모았다가 흘려 넣은 조각 (결심 판정은 건너뛴다. 연출 층 L6a가 단다)
+export const TRACE_LIFT = 2; // 손가락을 뗀 순간 (dx = dy = 0)
+
+/**
+ * 손가락 원래 궤적 (온몸 베기 docs/whole_body_strike.md 4-5): 칼 쪽 손가락(PC는 잠긴 마우스)의 움직임을
+ * (시각 ms, dx, dy, 표시) 조각으로 고리 버퍼에 쌓는다. 시각은 이벤트가 생긴 벽시계 시각(e.timeStamp),
+ * dx·dy는 handOffset에 더하는 것과 같은 배율의 패드 m (+x 오른쪽, +y 위)이고 자르지 않는다.
+ * 결심 판정(L1)이 걸러진 skill.vel이나 잘린 handOffset 대신 이것을 읽는다: 폰 새로고침 빠르기(60/90/120 Hz)와
+ * 상관없이 긋기 시작과 빠르기를 같게 본다. 미리 만든 배열만 쓴다 (조각마다 새로 만들지 않는다)
+ */
+export class FingerTrace {
+  constructor(n = 64) {
+    this.n = n;
+    this.t = new Float64Array(n);
+    this.dx = new Float64Array(n);
+    this.dy = new Float64Array(n);
+    this.flag = new Uint8Array(n);
+    this.head = 0; // 다음에 쓸 자리
+    this.count = 0; // 들어 있는 조각 수 (최대 n)
+    this.total = 0; // 지금까지 넣은 조각 수 (읽는 쪽이 새 조각이 몇 개인지 알 수 있게)
+  }
+
+  push(t, dx, dy, flag = 0) {
+    const i = this.head;
+    this.t[i] = t;
+    this.dx[i] = dx;
+    this.dy[i] = dy;
+    this.flag[i] = flag;
+    this.head = (i + 1) % this.n;
+    if (this.count < this.n) this.count++;
+    this.total++;
+  }
+
+  /** k번째로 최근 조각의 배열 자리 (0 = 가장 최근). 없으면 -1 */
+  idx(k) {
+    return k >= 0 && k < this.count ? (this.head - 1 - k + this.n) % this.n : -1;
+  }
+
+  clear() {
+    this.head = 0;
+    this.count = 0;
+  }
+}
+
 export class Input {
   constructor(canvas) {
     this.canvas = canvas;
@@ -30,6 +75,7 @@ export class Input {
     //  press = 지금 누르고 있는 손가락(마우스) { id, t(누른 시각 ms), x, y, moved(움직인 거리 px), mouse, ok }
     this.taps = 0;
     this.press = null;
+    this.fingerTrace = new FingerTrace(); // 칼 쪽 손가락 원래 궤적 (온몸 베기 결심 판정이 읽는다)
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     window.addEventListener('pointermove', (e) => this.onMove(e));
@@ -71,16 +117,22 @@ export class Input {
     if (e.pointerType === 'mouse' && document.pointerLockElement === this.canvas) {
       // 일부 브라우저는 잠금 직후 엉뚱하게 큰 값을 한 번 보낸다 → 무시
       if (Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
-      this.handDX += e.movementX * INPUT.mouseSensitivity;
-      this.handDY -= e.movementY * INPUT.mouseSensitivity;
+      const mdx = e.movementX * INPUT.mouseSensitivity;
+      const mdy = e.movementY * INPUT.mouseSensitivity;
+      this.handDX += mdx;
+      this.handDY -= mdy;
+      this.fingerTrace.push(e.timeStamp || performance.now(), mdx, -mdy);
       if (this.press?.mouse) this.press.moved += Math.hypot(e.movementX, e.movementY);
       return;
     }
     if (e.pointerId !== this.activeTouch) return;
     if (this.press?.id === e.pointerId) this.press.moved = Math.max(this.press.moved, Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y));
     const scale = INPUT.touchSensitivity / Math.max(320, window.innerHeight);
-    this.handDX += (e.clientX - this.lastX) * scale;
-    this.handDY -= (e.clientY - this.lastY) * scale;
+    const tdx = (e.clientX - this.lastX) * scale;
+    const tdy = (e.clientY - this.lastY) * scale;
+    this.handDX += tdx;
+    this.handDY -= tdy;
+    this.fingerTrace.push(e.timeStamp || performance.now(), tdx, -tdy);
     this.lastX = e.clientX;
     this.lastY = e.clientY;
     this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
@@ -98,6 +150,7 @@ export class Input {
     if (e.pointerId === this.activeTouch) {
       this.activeTouch = null;
       this.trail?.lift();
+      this.fingerTrace.push(e.timeStamp || performance.now(), 0, 0, TRACE_LIFT); // 끊어 긋기 판정에 쓴다
     }
     flushHaptic(); // 아이폰: 손가락을 떼는 순간에만 진동이 허락된다
   }

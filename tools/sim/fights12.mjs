@@ -2,8 +2,10 @@ import { newRound, THREE, DT, AI, CONFIG } from './jelly_harness.mjs';
 const es = +(process.argv[2] || CONFIG.STRIKE.energyScale);
 CONFIG.STRIKE.energyScale = es;
 const seedRand = (seed) => { let s = seed * 9301 + 49297; Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
+// 시드 묶음: SEED0=13 이면 13~24판 (기본 1 → 1~12판, 예전과 같은 출력). 온몸 베기 합격선은 1/13/25/37/49 다섯 묶음을 본다
+const SEED0 = +(process.env.SEED0 || 1);
 const out = [];
-for (let seed = 1; seed <= 12; seed++) {
+for (let seed = SEED0; seed < SEED0 + 12; seed++) {
   seedRand(seed);
   const G = newRound({ walls: true }); const P = G.player, E = G.enemy; P.skill.level = 0.7;
   G.ai2 = new AI(P, E, 'normal');

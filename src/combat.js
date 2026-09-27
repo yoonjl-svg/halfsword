@@ -72,6 +72,12 @@ export class Combat {
     };
   }
 
+  /**
+   * 온몸 베기 고리 (docs/whole_body_strike.md 4-7): 몸에 박혔던 칼이 빠진 순간. 지금은 빈 함수다.
+   *  att = 칼 주인, vic = 박혔던 몸, zone = 박혔던 부위 (head·chest·arm…). 연출(L6a)이 빼내는 긁힘 소리를 붙인다
+   */
+  onUnstick(att, vic, zone) {}
+
   pairOf(c1, c2) {
     const a = this.info.get(c1);
     const b = this.info.get(c2);
@@ -259,6 +265,7 @@ export class Combat {
     for (const [key, c] of this.cutting) {
       if (this.stepNo - c.seen > 2 && !(c.stuckT > 0)) {
         this.cutting.delete(key); // 더 이상 겹치지 않음
+        if (c.held) this.onUnstick(c.pr.w.fighter, c.pr.v.fighter, c.pr.v.kind); // 박혔던 칼이 빠졌다
         continue;
       }
       const col1 = world.getCollider(c.wc);
@@ -301,7 +308,10 @@ export class Combat {
         const Estep = Math.min(c.Eleft, STRIKE.dragC * s * s * dt);
         J = Math.min(Estep / s, STRIKE.dragCap * c.mFree * s);
         c.Eleft -= J * s;
-        if (c.Eleft <= 1e-3 && c.stuck) c.stuckT = STRIKE.stuckTime;
+        if (c.Eleft <= 1e-3 && c.stuck) {
+          c.stuckT = STRIKE.stuckTime;
+          c.held = true; // 빠질 때 onUnstick 을 부른다
+        }
       } else if (c.stuckT > 0) {
         // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다)
         J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + STRIKE.armAssist) * s);

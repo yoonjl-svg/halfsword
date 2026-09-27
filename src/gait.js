@@ -710,9 +710,20 @@ export class Gait {
     l.tLand = 0;
     this.sinceTD = 0;
     this.lastTD = l.k;
+    // 고리에 알릴 걸음 종류: 기술이 부탁한 걸음은 부탁한 종류(lunge·pass·gather, 온몸 베기 L3의 'strike')
+    const kind = l.kind === 'req' ? (this.req?.kind ?? 'req') : l.kind;
     if (l.kind === 'req') this.req = null;
-    this.f.footstep = Math.max(this.f.footstep, clamp(speed / GAIT.moveSpeed, 0.15, 1));
+    const strength = clamp(speed / GAIT.moveSpeed, 0.15, 1);
+    this.f.footstep = Math.max(this.f.footstep, strength);
+    this.onTouchdown(l.k, strength, kind);
   }
+
+  /**
+   * 온몸 베기 고리 (docs/whole_body_strike.md 4-7): 발을 디딘 순간. 지금은 빈 함수다.
+   *  foot 'F' | 'B', strength 0.15~1 (카메라 내려앉음과 같은 세기), kind 'walk' | 'settle' | 'catch' | 부탁한 걸음 종류
+   *  연출(L6a)이 결심 베기 디딤('strike')에 무거운 발 구름·화면 내려앉음을 붙인다
+   */
+  onTouchdown(foot, strength, kind) {}
 
   /**
    * 딛은 발만 조금 무겁게 한다 (신발·쇠 발싸개 몫, GAIT.footExtra kg).
