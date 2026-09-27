@@ -39,9 +39,14 @@ export const CHARACTERS = [
     ai: {
       level: 'easy',
       persona: {
-        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 0.68, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, skill: 0.28 },
+        school: 'longsword',
+        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 0.58, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 },
         pers: {
+          precision: 0.4, // 아무 데나 후려친다 — 팔·다리에 걸리고 칼 면으로 때린다
           guardStick: 0.6,
+          fearful: 0.45, // 베이면 당황한다 — 많이 다치면 주춤주춤 물러나는 성격
+          angry: 0.7, // 막히면 발끈한다
+          dogged: 0.3,
           guardSpeed: 1.6,
           rhythm: 1.6,
           margin: 0.22,
@@ -50,6 +55,8 @@ export const CHARACTERS = [
           patienceTime: 8,
           circleRate: 0.1,
           guardPref: { tag: 1.6, tagR: 1.7, alber: 1.5, wechselR: 1.3 },
+          // 크게 감아 치는 가로베기·올려베기를 좋아한다 (힘이 안 실리는 기술). 찌르기는 나뭇가지로는 못 한다
+          techPref: { zwerch: 1.6, zwerchL: 1.4, unterhau: 1.3, oberhau: 1.2, zornhau: 0.8, stichPflug: 0.1, stichPflugL: 0.1, stichOchs: 0.1, stichOchsL: 0.1, stichAlber: 0.1 },
         },
       },
     },
@@ -71,6 +78,16 @@ export const CHARACTERS = [
       hilt: 0x6b5a3a,
     },
     taunt: '이 나뭇가지도 아프거든?!',
+    // 상황별 대사 (docs/character_lore.md). 화면에 어떻게 띄울지는 UI 설계 몫
+    lines: {
+      intro: ['이 나뭇가지도 아프거든?!', '은화 열 닢! 열 닢이라고 했지?', '자세? 그게 뭔데. 그냥 치면 되지.'],
+      attack: ['받아라아!', '이거나 먹어!', '장작이다, 장작!'],
+      hurt: ['아야… 아야! 이거 진짜 칼이잖아!', '피… 피 난다…', '야, 야, 잠깐만—'],
+      winning: ['하하! 봤지? 봤냐고!', '검객이라며! 검객이라며!'],
+      losing: ['그, 그만… 은화는 됐어…', '오지 마. 오지 말라고.', '엄마…'],
+      win: ['은화! 은화 어딨어!', '…내가 이겼나? 내가 이겼다!'],
+      lose: ['…장작이나 팰걸.', '회초리… 부러졌나…'],
+    },
   },
 
   // ───────────────────────────────────────────── 2. 쉬움~보통 : 성실한 신입 검사 ─────────────────────────────────────────────
@@ -91,16 +108,21 @@ export const CHARACTERS = [
       '침착하고 신중하다. 맞아도 동요하지 않고 배운 대로 물러나 다시 거리를 잰다(패닉하지 않음). 다만 상대가 교본에 없는 방식으로 나오면 판단이 한 박자 늦다. ' +
       '이기고 있어도 서두르지 않는다 — 사범의 가르침("승부를 서두르는 자가 먼저 벤다") 때문에 오히려 과할 만큼 참는다.',
     movementNotes:
-      '자세를 거의 안 바꾼다(guardStick 매우 높음, 박자도 5초 이상으로 느긋함) — 늘 같은 두세 자세 사이만 오가는 예측 가능한 검객. ' +
-      '간격을 아주 넉넉히 두고(margin 큼) 절대 먼저 붙지 않는다. 속임수는 배우지 않았다(feint 거의 0).',
+      '자세를 거의 안 바꾼다(guardStick 매우 높음, 박자도 5초쯤으로 느긋함) — 늘 같은 두세 자세 사이만 오가는 예측 가능한 검객. ' +
+      '간격을 넉넉히 두고(margin 큼) 먼저 잘 붙지 않는다. 속임수는 거의 배우지 않았다(feint 거의 0).',
     weaknesses: '패턴이 매우 일정해 몇 합만 겪으면 다음 자세를 짐작할 수 있다. 달려드는 상대를 맞받아치기보다 무조건 물러나려 해서(vor 낮음), 집요하게 몰아붙이면 구석으로 밀린다. 이어 치기가 약하다(followUp 낮음) — 한 번 맞히면 그걸로 끝인 경우가 많다.',
     weapon: 'longsword',
     ai: {
       level: 'easy',
       persona: {
+        school: 'longsword',
         level: { reaction: 0.31, guardChance: 0.6, counter: 0.12, feint: 0.05, followUp: 0.28, read: 0.62, discipline: 0.95, strength: 0.85, aggression: 0.68, windup: 0.82, skill: 0.56 },
         pers: {
+          precision: 0.7, // 교본대로 정확하지만 힘이 실리지 않는다
           guardStick: 4.2,
+          fearful: 0.3, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다
+          angry: 0.2,
+          dogged: 0.2,
           guardSpeed: 0.58,
           rhythm: 5.2,
           margin: 0.4,
@@ -131,6 +153,15 @@ export const CHARACTERS = [
       hilt: 0x9aa3ad,
     },
     taunt: '사범님… 보고 계신가요. 정확하게 갈게요.',
+    lines: {
+      intro: ['사범님… 보고 계신가요. 정확하게 갈게요.', '브루게 검술 길드, 이졸데 반 아커러입니다.', '잘 부탁드립니다. …정말로요.'],
+      attack: ['하압!', '여기!', '지금—'],
+      hurt: ['…거리를 잘못 쟀어.', '괜찮아. 배운 대로.', '한 번 더.'],
+      winning: ['서두르지 말자. 서두르지 말자.', '…보고 계셨으면.'],
+      losing: ['물러나… 물러나서 다시.', '교본엔 이런 게 없었는데.', '선배들 말이… 아니야, 아직.'],
+      win: ['…감사합니다.', '사범님, 이제 이르지 않죠?'],
+      lose: ['아직… 이르네요.', '다음엔 정확하게.'],
+    },
   },
 
   // ───────────────────────────────────────────── 3. 보통 : 떠돌이 이류검객 ─────────────────────────────────────────────
@@ -157,9 +188,14 @@ export const CHARACTERS = [
     ai: {
       level: 'normal',
       persona: {
+        school: 'longsword',
         level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 0.95, aggression: 1.05, windup: 0.5, skill: 0.75 },
         pers: {
+          precision: 0.75,
           guardStick: 0.9,
+          fearful: 0.15, // 맞아도 표정 하나 안 바꾼다
+          angry: 0.3,
+          dogged: 0.5,
           guardSpeed: 1.3,
           rhythm: 1.8,
           margin: 0.28,
@@ -190,6 +226,15 @@ export const CHARACTERS = [
       hilt: 0x5a4630,
     },
     taunt: '검이 다 똑같지, 뭘 그리 재나.',
+    lines: {
+      intro: ['검이 다 똑같지, 뭘 그리 재나.', '여비만 벌면 간다.', '…젓가락이라 했나. 와서 집어 봐.'],
+      attack: ['—핫.', '거기.', '느려.'],
+      hurt: ['…음.', '괜찮은 칼이군.', '한 번은 봐준다.'],
+      winning: ['두 번 걸렸어. 이제 재미있어졌네.', '서두르지 마. 나도 안 서두르니까.'],
+      losing: ['…이 철검, 생각보다 무겁군.', '거리. 거리를 다시.', '오늘은 여기까지인가.'],
+      win: ['…검이 다 똑같지.', '여비는 됐다. 다음 마을.'],
+      lose: ['…통하긴 하는군. 반쯤.', '다음엔 더 가는 검을 가져오지.'],
+    },
   },
 
   // ───────────────────────────────────────────── 4. 보통~어려움 : 화려한 흥행 검객 ─────────────────────────────────────────────
@@ -213,13 +258,20 @@ export const CHARACTERS = [
       '자세를 매우 자주(1.3초 안팎) 바꾸고, 먼 자세로도 서슴없이 건너뛴다(guardStick 낮음) — 그런데 브란이나 랴오와 달리 이건 계산된 눈속임이다(feint·followUp이 모두 높다). ' +
       '간격을 바짝 좁혀 상대를 압박하고(margin 작음), 달려드는 상대를 물러나지 않고 맞받는다(vor 높음).',
     weaknesses: '인내심이 짧아(patienceTime 짧음) 판이 길어지면 먼저 무리하게 들어온다. 화려함에 자신이 있어 같은 유인책(가짜 공격)에 두 번 걸리면 오히려 더 큰 동작으로 반응해 큰 빈틈을 남긴다.',
-    weapon: 'excalibur', // 진품이라 우기는 싸구려 복제 명검 — 흥행을 위한 소품
+    // 진짜 엑스칼리버는 이 세계에 있고 플레이어 몫이다. AI 하인리히에겐 겉모습만 같은 복제품(제원 = 롱소드)을
+    //  준다 — 밸런스 때문. 로스터에 'excalibur_replica'(외형 excalibur, 제원 longsword)를 부탁해 둔다
+    weapon: 'excalibur_replica',
     ai: {
       level: 'normal',
       persona: {
-        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.05, aggression: 1.15, windup: 0.45, skill: 0.82 },
+        school: 'longsword',
+        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.1, aggression: 1.15, windup: 0.45, skill: 0.82 },
         pers: {
+          precision: 0.85,
           guardStick: 0.8,
+          fearful: 0.08, // 아프면 오히려 웃으며 더 달려든다
+          angry: 0.6,
+          dogged: 0.7, // 주 감정: 피 냄새를 맡으면 물고 늘어진다
           guardSpeed: 1.7,
           rhythm: 1.3,
           margin: 0.2,
@@ -250,6 +302,15 @@ export const CHARACTERS = [
       hilt: 0xd8c060,
     },
     taunt: '박수는 나중에! 지금은 피를 보자고!',
+    lines: {
+      intro: ['박수는 나중에! 지금은 피를 보자고!', '신사 숙녀 여러분 — 엑스칼리버입니다. 진품이죠. 아마도.', '마이어 검술관 출신, 하인리히 폰 도른. 학관에는 비밀로.'],
+      attack: ['이건 관중석 셋째 줄까지 보이게!', '자, 여기 봐 — 아니, 여기!', '앙코르!'],
+      hurt: ['하하! 좋아, 좋아, 이래야지!', '피? 관중이 좋아하겠군.', '…그건 좀 아팠다.'],
+      winning: ['박수! 박수 어디 갔어!', '이쯤에서 하나 더 보여 드리지.'],
+      losing: ['…잠깐, 관중이 조용하네.', '이건 각본에 없었는데.', '엑스칼리버가… 아니, 됐어.'],
+      win: ['박수! 이제 박수!', '학관 사범들, 이 소문 들었으면 좋겠군.'],
+      lose: ['…환불은 안 됩니다.', '다음 공연은 더 좋을 겁니다. 아마도.'],
+    },
   },
 
   // ───────────────────────────────────────────── 5. 어려움 : 진짜 고수 ─────────────────────────────────────────────
@@ -270,16 +331,21 @@ export const CHARACTERS = [
       '한없이 차분하다. 맞아도 흔들리지 않고(패닉 없음), 이기고 있어도 전혀 서두르지 않는다 — 오히려 상대가 조급해질 때까지 몇 초고 기다린다. ' +
       '그 침묵과 미동 없음 자체가 상대를 조급하게 만드는 무기다.',
     movementNotes:
-      '자세를 거의 바꾸지 않고(guardStick 매우 높음, 박자 8초 이상) 손도 느긋하게 움직인다 — 그런데 위협도(threat)가 가장 높은 자세만 골라 지키므로 얕보고 들어오면 바로 베인다. ' +
+      '자세를 거의 바꾸지 않고(guardStick 매우 높음, 박자 6초) 손도 느긋하게 움직인다 — 그런데 위협도(threat)가 가장 높은 자세만 골라 지키므로 얕보고 들어오면 바로 베인다. ' +
       '무리해서 먼저 뛰어들지 않고(vor 낮은 편) 상대의 실수를 기다리는 정통 나흐(Nach) 검객.',
-    weaknesses: '스스로 먼저 판을 깨지 않는다 — 인내심이 거의 무한에 가까워(patienceTime 매우 김) 상대가 절대 먼저 들어오지 않고 완벽하게 간격만 지키면 좀처럼 기회를 만들지 못한다(물론 그러면 판이 매우 길어진다). 화려한 잔기술은 거의 안 쓴다(feint 낮음).',
+    weaknesses: '스스로 먼저 판을 깨지 않는다 — 상대가 절대 먼저 들어오지 않고 완벽하게 간격만 지키면 좀처럼 기회를 만들지 못한다(물론 그러면 판이 길어진다). 화려한 잔기술은 거의 안 쓴다(feint 낮음). 쉬지 않고 밀어붙이는 저돌형 앞에서는 "물러나 되받기" 성격이 맞받기로 덮어씌워져 서로 베이기 쉽다.',
     weapon: 'longsword',
     ai: {
       level: 'hard',
       persona: {
-        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.22, aggression: 1.0, windup: 0.28, skill: 0.97 },
+        school: 'longsword',
+        level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.2, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
         pers: {
+          precision: 1, // 머리·목을 정확히 벤다
           guardStick: 6.2,
+          fearful: 0, // 한없이 차분하다 — 겁은 먹지 않는다
+          angry: 0.1,
+          dogged: 0.4,
           guardSpeed: 0.5,
           rhythm: 6,
           margin: 0.34,
@@ -288,6 +354,8 @@ export const CHARACTERS = [
           patienceTime: 8,
           circleRate: 0.18,
           guardPref: { ochsR: 1.7, pflugL: 1.65, langort: 1.2, alber: 0.2, tag: 0.4 },
+          // 머리·목을 노리는 무거운 베기(분노의 베기·정수리 베기)만 쓴다. 올려베기·가로베기처럼 힘이 안 실리는 기술은 안 쓴다
+          techPref: { zornhau: 1.6, oberhau: 1.4, zornhauL: 1.3, unterhau: 0.4, unterhauL: 0.4, zwerch: 0.5, zwerchL: 0.5 },
         },
       },
     },
@@ -309,6 +377,15 @@ export const CHARACTERS = [
       hilt: 0x8a8a8a,
     },
     taunt: '서두르는 쪽이 먼저 벤다.',
+    lines: {
+      intro: ['서두르는 쪽이 먼저 벤다.', '…시작하지.', '가르치는 것과 베는 것은 다른 근육이야. 확인하러 왔다.'],
+      attack: ['지금.', '거기서 서둘렀다.'],
+      hurt: ['…좋은 칼.', '내가 서둘렀군.', '다시.'],
+      winning: ['기다려. 올 거다.', '…아직.'],
+      losing: ['…망설이지 않는군. 그건 가르칠 수 없지.', '그래. 이것도 다른 근육이야.'],
+      win: ['거기서 서둘렀다. 그게 전부야.', '…콘라트, 오늘은 서두르지 않았어.'],
+      lose: ['…서둘렀나. 제자들에게 말해야겠군.', '좋은 검객이었다. 서두르지 마라.'],
+    },
   },
 ];
 

@@ -23,7 +23,6 @@ await RAPIER.init();
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
 const params = new URLSearchParams(location.search);
 const playerWeapon = params.get('weapon') || 'longsword';
-const foeWeaponParam = params.get('foeWeapon'); // 없으면 newRound()에서 고른 캐릭터의 무기 → 내 무기 순으로 정한다
 
 // ── 설정 (브라우저에 저장) ──
 const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true };
@@ -154,18 +153,17 @@ function newRound() {
     look: LOOKS.player,
     weapon: playerWeapon,
   });
-  // 상대 무기: URL로 지정했으면 그것, 아니면 고른 캐릭터의 무기(characters.js), 그도 없으면 내 무기와 같은 것
-  const foeWeaponId = foeWeaponParam || currentFoe?.weapon || playerWeapon;
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 1,
     name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
     heading: Math.PI,
     look: currentFoe ? currentFoe.look : LOOKS.enemy,
-    weapon: foeWeaponId,
+    // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기
+    weapon: params.get('foeWeapon') || params.get('weapon') || currentFoe?.weapon || 'longsword',
   });
   // 테스트용 무기 파라미터를 썼으면 화면에 잠깐 알려 준다
-  if (playerWeapon !== 'longsword' || (foeWeaponParam && foeWeaponParam !== 'longsword')) {
+  if (playerWeapon !== 'longsword' || enemy.weapon.id !== 'longsword') {
     showToast(`나: ${player.weapon.nameKo} · 상대: ${enemy.weapon.nameKo}`, 2200);
   }
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
