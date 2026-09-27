@@ -12,6 +12,7 @@
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { swordKit, metalMat, weaponEnv } from './weapon_looks.js';
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -120,80 +121,8 @@ function steelMatOpts(isBlade) {
 }
 
 // ── 곡도·외날 등 곡면 칼날/몸통 메쉬 (물리 콜라이더는 그대로 상자꼴 — 겉보기만 다르다) ──
-// fighter.js가 spec.partMesh(idx, shape, color, matOpts, look)를 부를 수 있으면 그걸 쓴다.
-
-/**
- * 단면이 쐐기꼴(등 쪽 두껍고 날 쪽은 거의 0두께)인 외날 칼날 지오메트리. curve>0이면 칼끝으로
- * 갈수록 등 방향(-x)으로 살짝 휘어 사브르·카타나 같은 곡도가 된다. hx/hy/hz는 콜라이더 상자의
- * 반너비·반길이·반두께(그대로 물려받는다) — 곡률은 ~1cm 안에서만 준다(콜라이더와 겉보기 약속).
- */
-function edgedBladeGeometry(hx, hy, hz, curve = 0, segs = 16) {
-  const ringAt = (t) => {
-    const y = -hy + 2 * hy * t;
-    const bend = -curve * t * t; // 자루 쪽은 그대로, 칼끝 쪽으로 갈수록 휜다
-    return [
-      [hx + bend, y, 0], // 날(얇은 쪽)
-      [-hx + bend, y, hz], // 등 한쪽 모서리
-      [-hx + bend, y, -hz], // 등 다른쪽 모서리
-    ];
-  };
-  const verts = [];
-  const quad = (p0, p1, p2, p3) => verts.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
-  let prev = ringAt(0);
-  for (let i = 1; i <= segs; i++) {
-    const cur = ringAt(i / segs);
-    quad(prev[0], cur[0], cur[1], prev[1]); // 날 → 등1
-    quad(prev[2], cur[2], cur[0], prev[0]); // 등2 → 날
-    quad(prev[1], cur[1], cur[2], prev[2]); // 등1 → 등2 (칼등 면)
-    prev = cur;
-  }
-  const base = ringAt(0);
-  const tip = ringAt(1);
-  verts.push(...base[0], ...base[2], ...base[1]); // 자루 쪽 마개
-  verts.push(...tip[0], ...tip[1], ...tip[2]); // 칼끝 쪽 마개
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  geo.computeVertexNormals();
-  return geo;
-}
-
-/**
- * 단면이 마름모(양날 — 가운데 등마루가 두껍고 양옆 날로 갈수록 얇아짐)인 양날 칼날 지오메트리.
- * 롱소드 계열 곧은 검(암소드·츠바이핸더·지안·레이피어·엑스칼리버 등)에 쓴다. tipTaper>0이면
- * 칼끝으로 갈수록 폭이 좁아진다. hx/hy/hz는 콜라이더 상자의 반너비·반길이·반두께 그대로.
- */
-function diamondBladeGeometry(hx, hy, hz, tipTaper = 0.3, segs = 16) {
-  const ringAt = (t) => {
-    const y = -hy + 2 * hy * t;
-    const w = hx * (1 - tipTaper * t);
-    const th = hz * (1 - tipTaper * 0.5 * t);
-    return [
-      [w, y, 0], // 오른쪽 날
-      [0, y, th], // 등마루 앞
-      [-w, y, 0], // 왼쪽 날
-      [0, y, -th], // 등마루 뒤
-    ];
-  };
-  const verts = [];
-  const quad = (p0, p1, p2, p3) => verts.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
-  let prev = ringAt(0);
-  for (let i = 1; i <= segs; i++) {
-    const cur = ringAt(i / segs);
-    for (let k = 0; k < 4; k++) {
-      const k2 = (k + 1) % 4;
-      quad(prev[k], cur[k], cur[k2], prev[k2]);
-    }
-    prev = cur;
-  }
-  const base = ringAt(0);
-  const tip = ringAt(1);
-  verts.push(...base[0], ...base[1], ...base[2], ...base[0], ...base[2], ...base[3]); // 자루 쪽 마개
-  verts.push(...tip[0], ...tip[3], ...tip[2], ...tip[0], ...tip[2], ...tip[1]); // 칼끝 쪽 마개(반대 감김)
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  geo.computeVertexNormals();
-  return geo;
-}
+// fighter.js가 spec.partMesh(idx, isBlade, shape, color, matOpts, look, tier)를 부를 수 있으면 그걸 쓴다 — 칼은 대부분
+//  weapon_looks.js swordKit() 으로 조합하고, 여기 남은 것은 날 없는 무기 몸통(나뭇가지·고무 닭·참치)·플라스마 막대용이다.
 
 /**
  * 단면이 각진 다각형(대충 둥근) 막대 지오메트리 — 나뭇가지·고무 닭 목·냉동 참치 몸통처럼
@@ -362,6 +291,14 @@ const longsword = finalizeSpec('longsword', {
   nameKo: '롱소드', nameEn: 'Longsword',
   grip: 'two-hand', material: 'steel',
   hiltLength: 0.13, bladeLength: 1.05, gripAlong: -0.14,
+  // 겉모습만 (물리·질량은 위 실측 그대로, 한 글자도 안 바뀐다): 양날 마름모 단면 + 날 세움 면, 칼몸 절반까지 피홈,
+  //  끝으로 좁아져 창끝처럼 뾰족한 칼끝. 끈 감은 가죽 자루, 바퀴형 폼멜, 끝 장식 곧은 코등이.
+  partMesh: swordKit({
+    blade: { edge: 'double', width: (t) => 1 - 0.42 * t, thick: 0.0036, tip: 'spear', tipLen: 0.1, fuller: { to: 0.5, width: 0.22, depth: 0.5 } },
+    grip: { style: 'cord' },
+    pommel: { style: 'wheel' },
+    guard: { style: 'bar' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.16, 0.018, 0.1, 0.018);
@@ -397,8 +334,13 @@ const zweihander = finalizeSpec('zweihander', {
   // 자루가 길어(0.16m 반경) 손 사이 지렛대가 롱소드보다 커서, 같은 손 힘으로도 더 큰 돌림힘을
   // 낼 수 있다 (안 그러면 2.9kg 칼이 22N·m 한도 그대로라 너무 굼떠서 전혀 못 이긴다 — 시뮬로 확인)
   controlOverrides: { maxAimTorque: 28 },
-  // 양날: 두꺼운 등마루 + 양옆 날.
-  partMesh: curvedBlade((hx, hy, hz) => diamondBladeGeometry(hx, hy, hz, 0.28)),
+  // 양날 대검: 넓은 칼몸, 긴 피홈, 창끝 칼끝. 배 모양 폼멜, 긴 곧은 코등이 (리카소·갈고리는 decorate)
+  partMesh: swordKit({
+    blade: { edge: 'double', width: (t) => 1 - 0.3 * t, thick: 0.0045, tip: 'spear', tipLen: 0.12, fuller: { to: 0.45, width: 0.2, depth: 0.5 } },
+    grip: { style: 'cord' },
+    pommel: { style: 'pear' },
+    guard: { style: 'bar' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.26, 0.02, 0.16, 0.02);
@@ -416,10 +358,10 @@ const zweihander = finalizeSpec('zweihander', {
   //  - 파리어하켄(parrying hook): 칼날 밑동(리카소)에서 코등이와 같은 평면(x축)으로 뻗은 작은 갈고리.
   //    예전엔 z축(칼날 면 방향)으로 뻗어 칼날 면을 보는 시점에서 카메라를 향해 숨어 버렸다.
   //  - 리카소 가죽 감개: 갈고리 아래 칼날 밑동을 감싸 두 번째 손잡이로 쓰던 자리
-  //  - 풀러(피홈): 칼날 양면 가운데를 따라 길게 파인 어두운 홈 — "잘 만든 칼" 표식
+  //  (풀러(피홈)는 칼날 지오메트리에 새겨져 있다 — weapon_looks.js)
   decorate(group, look) {
-    const mat = new THREE.MeshStandardMaterial({ color: look.hilt, roughness: 0.45, metalness: 0.5 });
-    const L = this.bladeLength, base = this.hiltLength;
+    const mat = metalMat(look.hilt, { rough: 0.34 });
+    const base = this.hiltLength;
     const ricY = base + 0.02;
     const leather = new THREE.MeshStandardMaterial({ color: 0x4a2f1c, roughness: 0.9 });
     const wrap = addMesh(group, new THREE.BoxGeometry(0.06, 0.1, 0.022), leather, [0, ricY + 0.06, 0]);
@@ -429,8 +371,6 @@ const zweihander = finalizeSpec('zweihander', {
       hook.rotation.z = -s * 0.9; // 코등이 평면(x) 바깥으로, 칼끝 쪽으로 비스듬히
       hook.castShadow = true;
     }
-    const fullerMat = new THREE.MeshStandardMaterial({ color: 0x6f7780, roughness: 0.35, metalness: 0.4 });
-    for (const s of [-1, 1]) addMesh(group, new THREE.BoxGeometry(0.01, L * 0.55, 0.0006), fullerMat, [0, base + 0.16 + L * 0.275, s * 0.0093]);
   },
 });
 
@@ -445,7 +385,12 @@ const estoc = finalizeSpec('estoc', {
   hiltLength: 0.14, bladeLength: 1.15, gripAlong: -0.15,
   mCut: 0.55, mThrust: 1.35, mBlunt: 0.9, // 날이 거의 없어 베기는 약하고, 갑옷 틈을 노리는 찌르기는 뛰어나다
   // 각진(사각/육각) 뻣뻣한 단면 — 실제 에스톡처럼 날이 아니라 뻣뻣한 각진 봉 느낌으로.
-  partMesh: curvedBlade((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 6, taper: (t) => 1 - 0.18 * t })),
+  partMesh: swordKit({
+    blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0085, bevel: 0, tip: 'needle', tipLen: 0.14 },
+    grip: { style: 'cord' },
+    pommel: { style: 'scent' },
+    guard: { style: 'bar' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.14, 0.019, 0.12, 0.019);
@@ -479,7 +424,12 @@ const sabre = finalizeSpec('sabre', {
   // 기병도 특유의 곡도 + 외날 쐐기 단면 — 연구 세션의 튜브 곡날(끝이 콜라이더보다 8cm 앞으로 휘고,
   // metalness 0.9 라 envMap 없는 이 장면에서 새까만 막대로 보이는 문제)을 화면 확인 후 "콜라이더 ~1cm 안"
   // 약속에 맞는 곡날 메쉬로 되돌렸다. 손등 가리개(나크본) 고리는 연구 세션 디자인 그대로 유지.
-  partMesh: curvedBlade((hx, hy, hz) => edgedBladeGeometry(hx, hy, hz, 0.012)),
+  partMesh: swordKit({
+    blade: { edge: 'single', width: (t) => 1 - 0.18 * t, thick: 0.0038, curve: 0.012, tip: 'clip', tipLen: 0.12, overshoot: 0.008 },
+    grip: { style: 'wire' },
+    pommel: { style: 'cap' },
+    guard: { style: 'block' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.11, 0.017, 0.06, 0.017);
@@ -495,7 +445,7 @@ const sabre = finalizeSpec('sabre', {
   },
   decorate(group, look) {
     // 손등 가리개(나크본) 고리 (연구 세션 디자인, 물리 무관)
-    const guard = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.005, 6, 16, Math.PI), new THREE.MeshStandardMaterial({ color: look?.hilt ?? 0x8a7a5a, metalness: 0.7, roughness: 0.4 }));
+    const guard = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.005, 8, 20, Math.PI), metalMat(look?.hilt ?? 0x8a7a5a, { rough: 0.4 }));
     guard.position.set(0, 0.035, 0.02);
     guard.rotation.set(0, Math.PI / 2, Math.PI / 2);
     guard.castShadow = true;
@@ -514,7 +464,12 @@ const rapier = finalizeSpec('rapier', {
   hiltLength: 0.1, bladeLength: 0.95,
   mCut: 0.5, mThrust: 1.3, mBlunt: 0.7,
   // 가늘고 뻣뻣한 다이아몬드(마름모) 단면 — 찌르기 전용 칼답게 폭이 좁고 끝으로 갈수록 더 가늘어진다.
-  partMesh: curvedBlade((hx, hy, hz) => diamondBladeGeometry(hx, hy, hz, 0.4)),
+  partMesh: swordKit({
+    blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0045, bevel: 0.0015, tip: 'needle', tipLen: 0.12 },
+    grip: { style: 'wire' },
+    pommel: { style: 'pear' },
+    guard: { style: 'cup' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.08, 0.014, 0.055, 0.014);
@@ -530,10 +485,7 @@ const rapier = finalizeSpec('rapier', {
   },
   // 컵 힐트 위에 스웹트 힐트(swept-hilt) 느낌의 가는 고리들을 더해 손을 감싸는 바구니 모양으로.
   decorate(group, look) {
-    const mat = new THREE.MeshStandardMaterial({ color: look.hilt, roughness: 0.55, metalness: 0.45 });
-    const rim = addMesh(group, new THREE.TorusGeometry(0.052, 0.004, 6, 20), mat, [0, 0.06, 0]);
-    rim.rotation.x = Math.PI / 2;
-    rim.castShadow = true;
+    const mat = metalMat(look.hilt, { rough: 0.34 });
     for (const a of [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2]) {
       const bar = addMesh(group, new THREE.TorusGeometry(0.05, 0.0035, 6, 12, Math.PI * 0.6), mat, [0, -0.02, 0]);
       bar.rotation.y = a;
@@ -557,6 +509,23 @@ const falchion = finalizeSpec('falchion', {
   // 기술 간격(TECH[].reach) 자동 보정을 이 무기만 끈다 — 다가서는 시간 계산이 빡빡해져 공격을 걸다
   // 물러서기를 반복하는 회귀(2라운드에서 확인, src/ai.js reachScale 주석).
   techReachScale: 1,
+  // 넓은 앞날 반달칼: 등은 곧고, 날은 자루 쪽 3.7cm 폭에서 칼끝 쪽 7cm 폭까지 불룩하게 넓어지다가 반달 호를
+  //  그리며 등 쪽 꼭짓점으로 올라간다(연구 세션 decorate 윤곽을 따름). 두께가 있는 쐐기 단면 + 날 세움 면이라
+  //  예전 압출 평판보다 칼답게 빛난다. 날 쪽이 콜라이더(±3cm)를 최대 ~1cm 넘는다.
+  partMesh: swordKit({
+    blade: {
+      edge: 'single',
+      backX: () => -0.022,
+      edgeX: (t) => -0.022 + 0.037 + 0.035 * t ** 1.4,
+      thick: 0.0036,
+      tip: 'kissaki',
+      apex: -0.8,
+      tipLen: 0.17,
+    },
+    grip: { style: 'leather' },
+    pommel: { style: 'disc' },
+    guard: { style: 'bar' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.08, 0.018, 0.06, 0.018);
@@ -567,22 +536,8 @@ const falchion = finalizeSpec('falchion', {
       partTuple(['box', 0.018, 0.06, 0.018], 0, 0.08, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.022], -0.08, 0.16, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.06, 0.012, 0.016], 0.09, 0.05, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.03, L / 2, 0.005], 0.1 + L / 2, 0.614, blade.comY, blade.Ie, blade.It, null, true), // 물리 파트만, 모양은 decorate
+      partTuple(['box', 0.03, L / 2, 0.005], 0.1 + L / 2, 0.614, blade.comY, blade.Ie, blade.It, 0xd4dae0, true),
     ];
-  },
-  decorate(group) {
-    // 넓은 앞날: 자루 쪽 3.5cm 에서 끝 쪽 8cm 로 넓어지다가 비스듬히 잘린 반달 끝. x = 날 폭, y = 길이, z 로 두께 0.7cm 압출.
-    const HL = this.hiltLength, L = this.bladeLength;
-    const sh = new THREE.Shape();
-    sh.moveTo(-0.0175, HL); sh.lineTo(0.0175, HL); sh.lineTo(0.02, HL + L * 0.55); sh.lineTo(0.04, HL + L * 0.9);
-    sh.quadraticCurveTo(0.03, HL + L, -0.02, HL + L); sh.lineTo(-0.03, HL + L * 0.9); sh.lineTo(-0.0175, HL + L * 0.55); sh.closePath();
-    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.007, bevelEnabled: false });
-    geo.translate(0, 0, -0.0035);
-    // metalness 0.9 는 envMap 없는 이 장면에서 새까맣게 보인다(steelMatOpts 주석) — 강철 표준값으로.
-    const blade = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xd4dae0, metalness: 0.35, roughness: 0.3 }));
-    blade.castShadow = true;
-    group.add(blade);
-    group.userData.bladeMesh = blade;
   },
 });
 
@@ -601,8 +556,14 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
   mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)
   controlOverrides: { aimStiffness: 70, wristVmax: 34 },
-  // 노다치 특유의 긴 곡도(살짝만 휨) + 외날 쐐기 단면 — 콜라이더는 그대로 상자.
-  partMesh: curvedBlade((hx, hy, hz) => edgedBladeGeometry(hx, hy, hz, 0.008)),
+  // 노다치: 살짝 휜 긴 곡도, 등마루(시노기)가 등 쪽에 선 단면, 날 쪽의 흰 물결 담금질 무늬(하몬), 둥글게 올라가는
+  //  키사키 칼끝. 흰 상어가죽 츠카(비단 끈은 decorate), 쇠 츠바, 카시라.
+  partMesh: swordKit({
+    blade: { edge: 'single', width: (t) => 1 - 0.28 * t, thick: 0.0035, ridge: 0.3, hamon: true, curve: 0.008, tip: 'kissaki', tipLen: 0.055, overshoot: 0.008 },
+    grip: { style: 'plain', color: 0xe8e2d0 },
+    pommel: { style: 'cap', color: 0x2b2e33 },
+    guard: { style: 'disc', color: 0x2b2e33 },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     // 균형 재분배 (밸런스 시뮬로 확인한 근본 원인 — 3라운드 카타나와 같은 처방): 칼날 0.85kg(총중량의 74%)이
@@ -617,35 +578,47 @@ const monohoshizao = finalizeSpec('monohoshizao', {
       partTuple(['box', 0.014, 0.14, 0.017], 0, 0.3, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.014], -0.2, 0.09, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.04, 0.005, 0.04], 0.24, 0.04, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.72, blade.comY, blade.Ie, blade.It, 0xdadfe3, true),
+      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.72, blade.comY, blade.Ie, blade.It, 0xc9cfd5, true), // 하몬이 드러나게 칼몸은 조금 어둡게
     ];
   },
   // 에픽 명검의 세공 (전부 물리 무관, 콜라이더에서 ~1cm 안):
   //  - 둥근 츠바(철) + 가는 금 테두리, 칼날 밑동의 금빛 하바키(목띠)
-  //  - 츠카: 검은 비단 끈(츠카이토)을 감은 마디 + 그 사이로 드러난 흰 상어가죽(사메) 마름모 — 긴 츠카가 노다치답게 읽힌다
+  //  - 츠카: 검은 비단 끈(츠카이토)을 X 자로 엇갈려 감고 그 사이로 흰 상어가죽(사메) 마름모 — 긴 츠카가 노다치답게 읽힌다
+  //  - 츠카는 콜라이더(±0.14m)보다 츠바 쪽 9cm·카시라 쪽 5cm 더 길게 그린다: 콜라이더대로만 그리면 자루와
+  //    츠바·카시라 사이가 비어 부품이 공중에 떠 보였다(자루 부분이라 판정 영향 없음). 츠바 쪽 끝에 쇠 테(후치).
   decorate(group) {
-    const iron = new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.6, metalness: 0.4 });
-    const gold = new THREE.MeshStandardMaterial({ color: 0xb8913e, roughness: 0.35, metalness: 0.6 });
-    const tsuba = addMesh(group, new THREE.CylinderGeometry(0.045, 0.045, 0.008, 18), iron, [0, 0.24, 0]); // 원기둥 축=y(칼 길이 방향)
-    tsuba.castShadow = true;
-    const rim = addMesh(group, new THREE.TorusGeometry(0.045, 0.0022, 6, 24), gold, [0, 0.24, 0]);
+    const iron = metalMat(0x2b2e33, { rough: 0.45 });
+    const gold = metalMat(0xc9a14a, { rough: 0.22 });
+    const rim = addMesh(group, new THREE.TorusGeometry(0.0455, 0.0026, 8, 32), gold, [0, 0.24, 0]);
     rim.rotation.x = Math.PI / 2;
-    const habaki = addMesh(group, new THREE.BoxGeometry(0.034, 0.03, 0.011), gold, [0, 0.265, 0]); // 칼날(0.03×0.007) 밑동을 감싼다
+    const habaki = addMesh(group, new THREE.BoxGeometry(0.034, 0.03, 0.011), gold, [0, 0.262, 0]); // 칼날 밑동을 감싼다
     habaki.castShadow = true;
     const silk = new THREE.MeshStandardMaterial({ color: 0x1b1d2e, roughness: 0.85 });
     const same = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.7 });
-    for (let y = -0.12; y <= 0.121; y += 0.04) {
-      const band = addMesh(group, new THREE.TorusGeometry(0.0165, 0.0035, 6, 12), silk, [0, y, 0]);
-      band.rotation.x = Math.PI / 2;
-      band.scale.set(1, 1.15, 1);
-      if (y < 0.12) {
-        for (const s of [-1, 1]) {
-          const d = addMesh(group, new THREE.OctahedronGeometry(0.008, 0), same, [0, y + 0.02, s * 0.0165]);
-          d.scale.set(0.9, 1.3, 0.25);
+    for (const [yc, h] of [[0.186, 0.092], [-0.168, 0.056]]) {
+      const ext = addMesh(group, new THREE.CylinderGeometry(0.0132, 0.0132, h, 14), same, [0, yc, 0]); // 츠카 연장 (츠바 쪽·카시라 쪽)
+      ext.scale.z = 1.2;
+      ext.castShadow = true;
+    }
+    const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.231, 0]);
+    fuchi.scale.z = 1.2;
+    // 츠카이토: 납작한 비단 끈이 앞뒤 면에서 X 자로 엇갈려 감기고, 엇갈린 사이사이로 흰 사메가 마름모꼴로 드러난다
+    //  (고리 모양으로 감으면 장난감처럼 보였다). 옆면에서는 끈이 꺾여 넘어가는 매듭이 보인다.
+    const step = 0.034;
+    const strip = new THREE.BoxGeometry(0.0062, step * 0.78, 0.0022);
+    for (let y = -0.178; y <= 0.205; y += step) {
+      for (const sz of [-1, 1]) {
+        for (const lean of [-1, 1]) {
+          const st = addMesh(group, strip, silk, [0, y, sz * 0.0162]);
+          st.rotation.z = lean * 0.72;
+          st.castShadow = true;
         }
       }
+      for (const sx of [-1, 1]) {
+        const knot = addMesh(group, new THREE.BoxGeometry(0.0026, 0.007, 0.022), silk, [sx * 0.0133, y + step / 2, 0]);
+        knot.castShadow = true;
+      }
     }
-    addMesh(group, new THREE.SphereGeometry(0.016, 10, 8), iron, [0, -0.2, 0]).scale.set(1, 0.6, 1.1); // 카시라(자루 끝 쇠마개)
   },
 });
 
@@ -667,8 +640,14 @@ const qinggang = finalizeSpec('qinggang', {
   tier: 'epic',
   hiltLength: 0.12, bladeLength: 0.74,
   mCut: 1.35, mThrust: 1.15, mBlunt: 0.95, // 감독 확정치 (mCut 1.35)
-  // 양날 + 가운데 등마루(지안 특유의 곧은 검등 능선).
-  partMesh: curvedBlade((hx, hy, hz) => diamondBladeGeometry(hx, hy, hz, 0.3)),
+  // 곧은 양날에 가운데 등마루(지안 특유의 검등 능선), 칼몸은 거의 평행하다가 짧은 창끝으로 모인다.
+  //  옻칠 자루(끈 감기), 청동 원반 폼멜. 코등이는 decorate 의 마름모 호심.
+  partMesh: swordKit({
+    blade: { edge: 'double', width: (t) => 1 - 0.25 * t, thick: 0.0034, tip: 'spear', tipLen: 0.075 },
+    grip: { style: 'cord' },
+    pommel: { style: 'disc' },
+    guard: { style: 'none' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.1, 0.015, 0.09, 0.015);
@@ -687,7 +666,7 @@ const qinggang = finalizeSpec('qinggang', {
   //  - 옻칠 자루에 가는 청동 선(꼰 줄) 두 가닥
   //  - 폼멜 원반 + 붉은 검수(劍穗)는 그대로 (지안의 상징)
   decorate(group, look) {
-    const bronze = new THREE.MeshStandardMaterial({ color: QINGGANG_LOOK.hilt, roughness: 0.35, metalness: 0.6 });
+    const bronze = metalMat(QINGGANG_LOOK.hilt, { rough: 0.28 });
     // 호심 코등이: 납작 마름모 (물리 콜라이더는 그대로 상자)
     const flourish = addMesh(group, new THREE.OctahedronGeometry(0.03, 0), bronze, [0, 0.11, 0]);
     flourish.scale.set(1, 0.32, 0.55);
@@ -732,16 +711,28 @@ function excaliburParts(look) {
     partTuple(['box', 0.025, L / 2, 0.008], 0.13 + L / 2, 0.7, blade.comY, blade.Ie, blade.It, 0xeef3f8, true),
   ];
 }
-const excaliburPartMesh = curvedBlade((hx, hy, hz) => diamondBladeGeometry(hx, hy, hz, 0.25));
+// 넓은 양날에 긴 피홈, 창끝 칼끝. 보랏빛 가죽 자루, 금 바퀴형 폼멜, 끝이 칼날 쪽으로 굽은 금 코등이.
+const excaliburPartMesh = swordKit({
+  blade: { edge: 'double', width: (t) => 1 - 0.38 * t, thick: 0.0045, tip: 'spear', tipLen: 0.11, fuller: { to: 0.62, width: 0.2, depth: 0.5 } },
+  grip: { style: 'cord' },
+  pommel: { style: 'wheel' },
+  guard: { style: 'curved' },
+  metal: 0xf2c94c,
+});
 // 보석 박힌 황금 코등이·폼멜 — 작은 보석 알을 몇 개 박아 "전설의 검"답게 (둘 다 똑같이 박혀 있다).
+//  보석은 바퀴형 폼멜의 두 면·코등이 두 팔의 앞뒤 면에 반쯤 박힌다 (예전 위치는 새 폼멜·코등이 속에 묻히거나 떠 있었다).
 function excaliburGems(group) {
   const gems = [
-    { color: 0xd63b3b, pos: [0, -0.13, 0.033] }, // 폼멜 정면
-    { color: 0x2f6fd6, pos: [0.06, 0.115, 0] }, // 코등이 한쪽
-    { color: 0x2fa85a, pos: [-0.06, 0.115, 0] }, // 코등이 반대쪽
+    { color: 0xd63b3b, pos: [0, -0.13, 0.0165], r: 0.011 }, // 폼멜 앞면
+    { color: 0xd63b3b, pos: [0, -0.13, -0.0165], r: 0.011 }, // 폼멜 뒷면
+    { color: 0x2f6fd6, pos: [0.055, 0.115, 0.019], r: 0.008 }, // 코등이 오른팔 앞
+    { color: 0x2fa85a, pos: [-0.055, 0.115, 0.019], r: 0.008 }, // 코등이 왼팔 앞
+    { color: 0x2f6fd6, pos: [0.055, 0.115, -0.019], r: 0.008 }, // 뒷면
+    { color: 0x2fa85a, pos: [-0.055, 0.115, -0.019], r: 0.008 },
   ];
-  for (const { color, pos } of gems) {
-    const gem = addMesh(group, new THREE.OctahedronGeometry(0.011, 0), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5, roughness: 0.15, metalness: 0.1 }), pos);
+  for (const { color, pos, r } of gems) {
+    const gem = addMesh(group, new THREE.OctahedronGeometry(r, 0), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35, roughness: 0.08, metalness: 0.1, envMap: weaponEnv(), envMapIntensity: 1.2 }), pos);
+    gem.scale.z = 0.55;
     gem.castShadow = true;
   }
 }
@@ -786,8 +777,14 @@ const lightsaber = finalizeSpec('lightsaber', {
   hiltLength: 0.15, bladeLength: 0.9,
   edged: true, ignoreArmor: true, mCut: 1.35, mThrust: 1.3,
   controlOverrides: { wristVmax: 36, aimDamping: 9 }, // 가볍고 매끄러운 이미터: 손목이 더 빨리 돌아간다
-  // 플라스마 칼날은 각진 막대가 아니라 매끄러운 원기둥이어야 "에너지 칼날"답다.
-  partMesh: curvedBlade((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 14 })),
+  // 플라스마 칼날은 각진 막대가 아니라 매끄러운 원기둥이어야 "에너지 칼날"답다. 자루는 홈이 파인 금속 원통,
+  //  끝마개·이미터(칼날이 나오는 쇠 머리)는 어두운 금속.
+  partMesh: swordKit({
+    bladeMesh: (shape, color, matOpts) => curvedBlade((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 18 }))(3, true, shape, color, matOpts),
+    grip: { style: 'metal' },
+    pommel: { style: 'cap' },
+    guard: { style: 'block' },
+  }),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.25, 0.016, 0.11, 0.016);
@@ -936,7 +933,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
   edged: false, mBlunt: 2.2, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
-  controlOverrides: { aimStiffness: 46 }, // 미끄러워 정확히 겨누기 어렵다 (토크는 "전부 22 N·m" 양손 가정에 맞춰 개별 토크 16 제거 — 13% → 17% 실측)
+  controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
   // 몸통을 곧은 상자 대신 가운데가 굵고 양끝(꼬리·머리)이 가늘어지는 물고기 몸매로.
   partMesh: bentBody((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 8, taper: (t) => 0.5 + 1.1 * Math.sin(t * Math.PI) })),
   buildParts(look) {

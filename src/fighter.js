@@ -402,7 +402,11 @@ export class Fighter {
       // 등급 마감(finishTier): 겉면이 등급대로 읽히게 한다. 엑스칼리버 복제품만 finishTier를 따로 정해
       // 진품(레전드)과 똑같은 마감을 받는다 — 눈으로 구분이 안 돼야 해서.
       const finish = spec.finishTier ?? spec.tier;
-      const mesh = spec.partMesh?.(partIdx, isBlade, shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish), o.look) ?? shapeMesh(shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish));
+      const pi = partIdx;
+      const mesh = isolatedVisual(
+        () => spec.partMesh?.(pi, isBlade, shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish), o.look, finish) ?? shapeMesh(shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish)),
+        VISUAL_DRAWS_PER_PART,
+      );
       mesh.position.y = y;
       mesh.visible = color != null; // 색이 null 이면 물리 파트만 두고 그리지 않는다 (decorate 가 곡도·반달칼 같은 진짜 모양을 그린다)
       group.add(mesh);
@@ -413,7 +417,7 @@ export class Fighter {
         this.bladeBaseColor = mesh.material.color.clone(); // 무기마다 다른 밑색 — bloodyBlade가 여기서부터 피 색으로 섞는다
       }
     }
-    spec.decorate?.(group, o.look);
+    isolatedVisual(() => spec.decorate?.(group, o.look), 0);
     if (group.userData.bladeMesh) {
       this.bladeMesh = group.userData.bladeMesh; // decorate 가 칼날을 따로 그렸으면 피는 거기에 묻는다
       this.bladeBaseColor = this.bladeMesh.material.color.clone();
@@ -1608,6 +1612,27 @@ function shapeDesc(RAPIER, s) {
   if (s[0] === 'box') return RAPIER.ColliderDesc.cuboid(s[1], s[2], s[3]);
   if (s[0] === 'ball') return RAPIER.ColliderDesc.ball(s[1]);
   return RAPIER.ColliderDesc.capsule(s[1], s[2]);
+}
+
+// 무기 겉모습은 전역 난수(Math.random)를 건드리지 않는다. three.js 는 지오메트리·재질·메쉬를 만들 때마다 UUID 를 위해
+//  Math.random 을 4번 부르는데, 시드를 고정한 시뮬(fights12·무기 배터리)은 그 난수 흐름에 결과가 걸려 있어 칼 장식 하나만
+//  늘려도 결과가 바뀌었다(물리는 그대로인데). 겉모습을 만드는 동안만 따로 된 난수를 쓰고, 전역 난수는 옛 "부품당 상자
+//  메쉬 하나"(지오메트리·재질·메쉬 UUID 3개 = 12번)만큼만 소비해 기존 시드 기준선을 그대로 지킨다. decorate 는 소비 0.
+const VISUAL_DRAWS_PER_PART = 12;
+let _visualSeed = 0x2545f491;
+function visualRandom() {
+  _visualSeed = (Math.imul(_visualSeed, 1664525) + 1013904223) >>> 0;
+  return _visualSeed / 4294967296;
+}
+function isolatedVisual(build, globalDraws) {
+  const real = Math.random;
+  Math.random = visualRandom;
+  try {
+    return build();
+  } finally {
+    Math.random = real;
+    for (let i = 0; i < globalDraws; i++) real();
+  }
 }
 
 function shapeMesh(s, color, matOpts) {
