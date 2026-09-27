@@ -127,7 +127,10 @@ export function weaponMatOpts(material, isBlade) {
 
 // ── 무기마다 손을 잡는 방식에 따른 손목 힘 한계 (config.js WEAPON.maxAimTorque=22의 기본값은
 //  "두 손목"을 가정한 값. 한 손이면 그 절반 남짓, 한 손 반이면 그 중간) ──
-const GRIP_TORQUE = { 'one-hand': 12, 'hand-and-half': 17, 'two-hand': 22 };
+// 감독 확정: 한손 무기도 "양손으로 잡고 휘두른다"고 가정한다(현실의 한손검 이점 — 가벼운 몸놀림·빠른 자세 전환 — 을 지금 다
+//  구현할 수 없으니 그 대신). 그래픽·grip 표시는 그대로 두고 손목·팔 힘 한계만 두손 값(22 N·m)으로 통일. 한손 값 12 는
+//  Delp 1996 손목 굴곡 토크 실측(평균 12.2 N·m)이었고, 22 는 양손·팔 전체 기여 추정치 [D].
+const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 22 };
 
 function finalizeSpec(id, s) {
   // ...s를 먼저 펼치고 계산된 필드를 뒤에 둔다 (뒤에 적은 값이 이긴다) →
@@ -514,9 +517,7 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 //      질량·관성만으로 밸런스를 만든다는 것이 설계 의도 [I] 창작
 // ═════════════════════════════════════════════════════════════
 const lightsaber = finalizeSpec('lightsaber', {
-  // 감독 지시: 에픽 등급, 고유 이름. 아나킨→루크→레이로 이어진 "스카이워커 라이트세이버"(그라플렉스 손전등 소품, 푸른 날)에서
-  // 따온 이름 — 상표·저작권이 있는 고유명사라 공개 배포 전엔 감독이 이름을 다시 정할 수 있게 여기 한 줄만 바꾸면 된다.
-  nameKo: '스카이워커 세이버', nameEn: 'Skywalker Saber',
+  nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
   grip: 'one-hand', material: 'plasma',
   tier: 'epic', // power 1.1 · 내구 0.95 (플라스마 칼날이라 어차피 안 부러진다)
   hiltLength: 0.15, bladeLength: 0.9,
@@ -590,7 +591,7 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
   // 기절 효과가 있다) → 고무 닭이 이길 수 있는 유일한 길은 머리를 맞히는 것뿐이라, mBlunt를
   // 크게 올려도 몸통 타격은 여전히 무해하고 "머리에 제대로 맞으면 그래도 어질하다"만 세진다.
   edged: false, mBlunt: 2.6,
-  controlOverrides: { aimStiffness: 34, maxAimTorque: 11 }, // 물렁하고 가벼워 조준이 흐물흐물하다
+  controlOverrides: { aimStiffness: 34 }, // 물렁해서 정확히 겨누기 어렵다 (토크는 양손 가정으로 22)
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.05, 0.02); // 목 부분을 쥔다
