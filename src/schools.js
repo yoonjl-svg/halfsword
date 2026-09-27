@@ -65,7 +65,7 @@ SCHOOLS.tree_branch = {
   ...L,
   id: 'tree_branch',
   weapon: 'tree_branch',
-  measure: { contact: 1.44, reach: 1.64, clinch: 1.11, cutTime: 0.33 }, // 양손 가정(토크 22) 뒤 무기 담당 재실측 (전 1.41/1.63/1.09/0.36)
+  measure: { contact: 1.46, reach: 1.61, clinch: 1.13, cutTime: 0.21 }, // 10라운드 hybrid 재실측, 베는 시간은 롱소드 0.30 기준 비율 (전 1.44/1.64/1.11/0.33)
   tech: branchTech,
   techByName: byName(branchTech),
   feints: noThrustFeints,
@@ -79,13 +79,13 @@ SCHOOLS.jian = {
   ...L,
   id: 'jian',
   weapon: 'jian',
-  measure: { contact: 1.32, reach: 1.55, clinch: 1.02, cutTime: 0.38 },
+  measure: { contact: 1.35, reach: 1.52, clinch: 1.04, cutTime: 0.24 }, // 청강검과 같은 칼 — 10라운드 hybrid 재실측 (전 1.32/1.55/1.02/0.38)
   tech: jianTech,
   techByName: byName(jianTech),
 };
 
 // 청강검(에픽): 물리는 지안이지만 양손 가정(토크 22) 뒤 무기 담당이 다시 잰 measure (전 1.32/1.55/1.02/0.38)
-SCHOOLS.qinggang = { ...SCHOOLS.jian, id: 'qinggang', weapon: 'qinggang', measure: { contact: 1.37, reach: 1.61, clinch: 1.06, cutTime: 0.36 } };
+SCHOOLS.qinggang = { ...SCHOOLS.jian, id: 'qinggang', weapon: 'qinggang', measure: { contact: 1.35, reach: 1.52, clinch: 1.04, cutTime: 0.24 } }; // 10라운드 hybrid 재실측 (전 1.37/1.61/1.06/0.36)
 
 // 엑스칼리버 복제품: 황동 장식에 칼날이 두껍고 무거워(1.50kg·1.00m) 롱소드보다 간격이 아주 조금 좁다. 자세·기술은 롱소드 그대로
 const replicaTech = withReach(TECH, { zornhau: 0, unterhau: -0.04, zornhauL: -0.03, unterhauL: -0.07, stichPflug: 0.08, stichPflugL: 0.08, stichOchs: 0.08, stichOchsL: 0.08, stichAlber: 0.03 });
@@ -93,7 +93,7 @@ SCHOOLS.excalibur_replica = {
   ...L,
   id: 'excalibur_replica',
   weapon: 'excalibur_replica',
-  measure: { contact: 1.59, reach: 1.86, clinch: 1.23, cutTime: 0.42 },
+  measure: { contact: 1.55, reach: 1.83, clinch: 1.2, cutTime: 0.29 }, // 10라운드 hybrid 재실측 (전 1.59/1.86/1.23/0.42)
   tech: replicaTech,
   techByName: byName(replicaTech),
 };
@@ -101,17 +101,19 @@ SCHOOLS.excalibur_replica = {
 // 그 밖의 무기: 자세·기술은 롱소드 그대로, 간격(measure)만 무기 담당 실측(양손 가정 뒤, docs/weapons.md §2)으로 바꾼 꾸러미.
 //  브란이 주워 온 커먼 단검(10%, 지금은 팔쉬온), ?foeWeapon= 으로 들려 준 무기가 롱소드 간격으로 헛베지 않게 한다. (암소드는 감독 확정으로 삭제) 기술별 reach 보정은 자료가 없어 롱소드 값.
 //  찌르기가 약한 무기(팔쉬온·세이버)는 찌르기 기술의 기본 가중치를 낮춘다
+//  10라운드: 게임 기본(hybrid)으로 다시 잰 값(ai.js MEASURED 와 같은 거리). 베는 시간은 raw 가 아니라 롱소드 0.30 기준 비율
+//  (0.30 × 무기 raw ÷ 롱소드 raw 0.41 — ai.js scaledM 이 롱소드 유파에 다른 무기를 쥐여 줄 때와 같은 기준)
 const MEASURES = {
-  zweihander: [1.66, 2.08, 1.28, 0.49],
-  estoc: [1.66, 2.04, 1.28, 0.46],
-  sabre: [1.4, 1.67, 1.08, 0.38],
-  rapier: [1.52, 1.73, 1.17, 0.29],
-  falchion: [1.4, 1.62, 1.08, 0.36],
-  monohoshizao: [1.51, 2.01, 1.17, 0.44],
-  excalibur: [1.61, 1.86, 1.24, 0.41],
-  lightsaber: [1.54, 1.73, 1.19, 0.25],
-  rubber_chicken: [1.07, 1.21, 0.83, 0.27],
-  frozen_tuna: [1.34, 1.69, 1.03, 0.46],
+  zweihander: [1.71, 2.08, 1.32, 0.35],
+  estoc: [1.57, 1.99, 1.22, 0.31],
+  sabre: [1.39, 1.58, 1.07, 0.26],
+  rapier: [1.54, 1.68, 1.19, 0.21],
+  falchion: [1.37, 1.56, 1.06, 0.24],
+  monohoshizao: [1.58, 1.87, 1.22, 0.34],
+  excalibur: [1.55, 1.83, 1.2, 0.29],
+  lightsaber: [1.46, 1.65, 1.13, 0.18],
+  rubber_chicken: [0.88, 1.24, 0.68, 0.13],
+  frozen_tuna: [1.36, 1.63, 1.05, 0.32],
 };
 const weakThrust = (tech, k) => tech.map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * k } : t));
 for (const [id, [contact, reach, clinch, cutTime]] of Object.entries(MEASURES)) {
