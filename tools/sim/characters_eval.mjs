@@ -22,7 +22,7 @@ const mean = (a) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length);
 
 /** 캐릭터 하나를 가만히 서 있는 더미 앞에 세우고 재는 시나리오 */
 function runPassive(ch, seed, durS = 60) {
-  const opts = { seed, difficulty: ch.ai.level, persona: ch.ai.persona };
+  const opts = { seed, difficulty: ch.ai.level, persona: ch.ai.persona, weapon2: ch.weapon };
   const G = newRound(opts);
   const { player: dummy, enemy: fighter, ai } = G;
   G.before = () => { dummy.move.set(0, 0); slow(dummy.handOffset, GUARDS_READY, 1.0); };
@@ -69,9 +69,11 @@ function runDuel(chA, chB, seed, durS = 45) {
     seed,
     difficulty: chA.ai.level,
     persona: chA.ai.persona,
+    weapon2: chA.weapon,
     AI2Class: AI,
     difficulty2: chB.ai.level,
     persona2: chB.ai.persona,
+    weapon: chB.weapon,
   };
   const G = newRound(opts);
   const { player: B, enemy: A, ai, ai2 } = G;
@@ -146,7 +148,7 @@ async function main() {
       console.log(`${id}: fearful=${CHARACTERS.find((c) => c.id === id).ai.persona.pers.fearful ?? 0}, mean ${fmt(mean(f.mean))}, peak ${fmt(mean(f.peak))}, 겁먹은 판 ${fmt((100 * f.peak.filter((p) => p > 0.3).length) / f.peak.length)}%`);
     }
     console.log('');
-    console.log('[감정층·세 감정] 캐릭터별: 판% = 그 감정이 0.3을 넘은 판 비율 / 지배% = 지배한 시간 비율 / 횟수 = 한 판에 지배 감정으로 켜진 평균 횟수 / 초 = 한 번 켜지면 평균 지속(초) — 효과는 공포만 붙어 있음');
+    console.log('[감정층·세 감정] 캐릭터별: 판% = 그 감정이 0.3을 넘은 판 비율 / 지배% = 지배한 시간 비율 / 횟수 = 한 판에 지배 감정으로 켜진 평균 횟수 / 초 = 한 번 켜지면 평균 지속(초) — 세 감정 모두 효과가 붙어 있음(지배 감정만)');
     console.log('id,' + EMOS.map((e) => `${e}:판%/지배%/횟수/초`).join(','));
     for (const id of ids) {
       const runs = emoOf[id];

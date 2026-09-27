@@ -186,20 +186,27 @@ export class Combat {
     }
     if (att.weaponCfg.ignoreArmor) guard = 1; // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
 
+    // 감정 고유 능력(emotions.js 배율표, fighter.emoMods): 주는 쪽의 dealt, 받는 쪽의 taken, 관통 문턱은 둘의 pass 합.
+    //  감정이 없으면 전부 1·0 이라 예전과 같다
+    const am = att.emoMods;
+    const vm = pr.v.fighter?.emoMods;
+    const emoDealt = am?.dealt ?? 1;
+    const emoTaken = vm?.taken ?? 1;
+    const emoPass = (am?.pass ?? 0) + (vm?.pass ?? 0);
     let severity = 0;
     let pass = false;
     if (type === 'cut' || type === 'stab') {
-      const wMult = type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust;
+      const wMult = att.weaponCfg.power * (type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust); // 등급 배율 × 무기별 베기/찌르기 배율
       const thr = (type === 'cut' ? A.cut : A.stab) * guard;
-      const eff = energy * quality * wMult;
+      const eff = energy * quality * wMult * emoDealt * emoTaken;
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
-        pass = eff > thr * 1.25; // 확실히 파고들 때만 튕기지 않고 가르고 들어간다
+        pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
       } else if (!predicting) {
         type = 'blunt'; // 날이 들지 못했으면 멍만 든다
       }
     }
-    if (type === 'blunt') energy *= att.weaponCfg.mBlunt;
+    if (type === 'blunt') energy *= att.weaponCfg.power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
     return {
       type,
       zone,

@@ -14,7 +14,7 @@ import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT } 
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
-import { getWeapon, MATERIALS, weaponMatOpts } from './weapons.js';
+import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON } from './weapons.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -333,7 +333,7 @@ export class Fighter {
 
     // ── 무기: 데이터 중심 무기고(weapons.js)에서 무기 하나를 골라 만든다 ──
     //  기본값(o.weapon 없음)은 그대로 롱소드라서 기존 시뮬 결과가 바뀌지 않는다.
-    const spec = getWeapon(o.weapon || 'longsword');
+    const spec = getWeapon(o.weapon || DEFAULT_WEAPON);
     this.weapon = spec;
     // 이 무기를 쥔 이 싸움꾼만의 손목·팔 힘 한계 (config.js WEAPON 기본값 + 무기별 보정).
     // 칼 길이도 여기 담아서, 서로 다른 무기를 쥔 두 싸움꾼이 동시에 존재할 수 있게 한다.
@@ -347,11 +347,16 @@ export class Fighter {
       mCut: spec.mCut,
       mThrust: spec.mThrust,
       mBlunt: spec.mBlunt,
+      power: spec.power, // 등급 공격력 배율 (롱소드=1)
       ignoreArmor: spec.ignoreArmor,
       twoHand: spec.twoHand,
     };
-    this.weaponDurability = spec.durability; // 무기가 부러지기까지 남은 충격량 예산 (N·s, Infinity면 안 부러짐)
     this.weaponBroken = false;
+    // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
+    //  씨앗은 "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림이 나오되 같은 순서로 돌리면 재현된다.
+    //  (자리 번호만으로 씨앗을 잡으면 매 판 같은 굴림이 나와 한쪽 자리만 계속 부러지거나 안 부러지는 편향이 생겼다)
+    Fighter._breakCount = (Fighter._breakCount ?? 0) + 1;
+    this._breakSeed = (Math.imul(0x9e3779b9, Fighter._breakCount) ^ ((o.index + 1) * 0x85ebca6b)) >>> 0;
     const L = spec.bladeLength;
     const wristLocal = new THREE.Vector3(0.565, 1.43, this.side * 0.2); // 앞으로 뻗은 팔 끝
     const wp = toWorld(wristLocal.toArray());
@@ -372,6 +377,7 @@ export class Fighter {
     const group = new THREE.Group();
     this.bladeColliders = [];
     this.swordColliders = []; // 칼 전체(칼날+칼자루). 칼끼리 붙어 있는 동안 반발을 끄고 켠다 (combat.js)
+    let partIdx = 0;
     for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade] of parts) {
       const cd = shapeDesc(RAPIER, shape)
         .setTranslation(0, y, 0)
@@ -388,15 +394,30 @@ export class Fighter {
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
-      const mesh = shapeMesh(shape, color, weaponMatOpts(spec.material, isBlade));
+      // 부품 콜라이더는 늘 상자·공 모양이지만(물리 판정은 그대로), 보이는 모양은 두 가지 방식으로 바꿀 수 있다:
+      //  · spec.partMesh(idx, ...)가 있으면 그 부품만 곡도·외날 단면·휘어진 몸통 등으로 그린다 (없으면 상자·공 그대로)
+      //  · 색이 null 이면 물리 파트만 두고 아예 그리지 않는다 — decorate 가 진짜 모양(곡도·반달칼)을 그리고
+      //    group.userData.bladeMesh 로 알려 준다 (연구 세션 세이버·팔쉬온 방식)
+      //  어느 쪽이든 콜라이더 치수와 겉보기 치수는 ~1cm 안 (약속: docs/weapon_shots 참고).
+      // 등급 마감(finishTier): 겉면이 등급대로 읽히게 한다. 엑스칼리버 복제품만 finishTier를 따로 정해
+      // 진품(레전드)과 똑같은 마감을 받는다 — 눈으로 구분이 안 돼야 해서.
+      const finish = spec.finishTier ?? spec.tier;
+      const mesh = spec.partMesh?.(partIdx, isBlade, shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish), o.look) ?? shapeMesh(shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish));
       mesh.position.y = y;
+      mesh.visible = color != null; // 색이 null 이면 물리 파트만 두고 그리지 않는다 (decorate 가 곡도·반달칼 같은 진짜 모양을 그린다)
       group.add(mesh);
+      partIdx++;
       if (isBlade) {
         this.bladeColliders.push(col);
         this.bladeMesh = mesh; // 벨수록 피가 묻는다
+        this.bladeBaseColor = mesh.material.color.clone(); // 무기마다 다른 밑색 — bloodyBlade가 여기서부터 피 색으로 섞는다
       }
     }
     spec.decorate?.(group, o.look);
+    if (group.userData.bladeMesh) {
+      this.bladeMesh = group.userData.bladeMesh; // decorate 가 칼날을 따로 그렸으면 피는 거기에 묻는다
+      this.bladeBaseColor = this.bladeMesh.material.color.clone();
+    }
     scene.add(group);
     this.meshes.push({ rb: sword, group, kind: 'weapon' });
     this.sword = sword;
@@ -784,7 +805,7 @@ export class Fighter {
   bloodyBlade(amount) {
     if (!this.bladeMesh) return;
     this.bladeBlood = Math.min(0.65, (this.bladeBlood || 0) + amount);
-    this.bladeMesh.material.color.set(0xd8dde3).lerp(_bloodColor, this.bladeBlood);
+    this.bladeMesh.material.color.copy(this.bladeBaseColor).lerp(_bloodColor, this.bladeBlood);
   }
 
   dropSword() {
@@ -803,13 +824,16 @@ export class Fighter {
   }
 
   /**
-   * 무기가 세게 부딪힌 만큼(J, N·s) 내구도를 깎는다. 강철 무기는 내구도가 무한이라 아무 일도
-   * 없지만, 나뭇가지·냉동 참치처럼 durability가 정해진 무기는 다 닳으면 부러진다.
+   * 무기가 세게 부딪힐 때마다(J, N·s) 부러질지 굴린다. 확률은 weapons.js breakChance(J): 등급 내구가 낮고 무게가 실린
+   * 충돌일수록 높다. 강철 레전드·고무·플라스마는 확률 0이라 아무 일도 없다 (weapons.js 파손 규칙 참고).
    */
   absorbWeaponImpact(J) {
-    if (!this.armed || this.weaponBroken || !isFinite(this.weaponDurability)) return;
-    this.weaponDurability -= J;
-    if (this.weaponDurability <= 0) this.breakWeapon();
+    if (!this.armed || this.weaponBroken || !this.weapon.fragile) return;
+    const p = this.weapon.breakChance(J);
+    if (p <= 0) return;
+    // 파이터별 LCG (결정적, Math.random 과 무관)
+    this._breakSeed = (Math.imul(this._breakSeed, 1664525) + 1013904223) >>> 0;
+    if (this._breakSeed / 4294967296 < p) this.breakWeapon();
   }
 
   /** 무기가 부러진다: 날이 죽어 뭉툭한 몽둥이가 된다 (combat.js analyze()가 isBlade를 꺼서 처리) */

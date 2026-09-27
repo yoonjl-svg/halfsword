@@ -1,7 +1,8 @@
 // 무기 밸런스 검증: 각 무기 vs 롱소드, AI 대 AI, 양쪽 자리를 바꿔가며 여러 판.
 // 사용법: node tools/sim/weapon_balance.mjs [라운드당 반복 수] [무기 id...]
 import { newRound, DT, AI } from './harness_m.mjs';
-import { WEAPONS } from '../../src/weapons.js';
+import { WEAPONS, getWeapon } from '../../src/weapons.js';
+import { applyWeaponMeasure } from './weapon_measures.mjs';
 
 const ROUNDS = +(process.argv[2] || 20);
 const ROUND_SECONDS = 40;
@@ -10,6 +11,9 @@ const ids = process.argv.slice(3).length ? process.argv.slice(3) : Object.keys(W
 function playOne(weaponA, weaponB, seed) {
   // AI2Class를 안 주면 player(A)는 AI 없이 가만히 서 있는 인형이 된다 — 반드시 양쪽 다 AI를 준다
   const G = newRound({ walls: true, weapon: weaponA, weapon2: weaponB, seed, AI2Class: AI });
+  // AI 가 제 무기 길이에 맞는 간격으로 싸우게 (짧은 칼을 롱소드 간격에서 휘두르면 헛친다)
+  applyWeaponMeasure(G.ai2, getWeapon(weaponA).id);
+  applyWeaponMeasure(G.ai, getWeapon(weaponB).id);
   let nan = false;
   let tDead = null;
   let deadWho = null; // 'P' | 'E' | null(무승부/시간초과)

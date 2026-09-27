@@ -12,6 +12,8 @@
 //        생김새는 글로 묘사만 하고(문서 참고), fighter.js의 몸 크기 자체는 아직 캐릭터마다 다르게 만들 수 없다.
 // ─────────────────────────────────────────────────────────────
 
+import { WEAPONS, WEAPON_LIST } from './weapons.js';
+
 export const CHARACTERS = [
   // ───────────────────────────────────────────── 1. 쉬움 : 촌뜨기 난동꾼 ─────────────────────────────────────────────
   {
@@ -35,12 +37,14 @@ export const CHARACTERS = [
       '간격 개념이 없어 상대에게 바짝 붙어 서고, 자세도 박자 없이 아무 때나(약 1.6초마다) 바꾼다 — 가까운 자세 고집이 거의 없어(guardStick 낮음) ' +
       '지붕에서 곧장 바보 자세로 건너뛰는 식의 "먼 자세 점프"가 잦다. 속임수는 쓸 줄 모른다(feint 0). 달려드는 것을 두려워하지 않는다(vor 높음).',
     weaknesses: '준비 동작이 크고 느려 낌새를 미리 읽기 쉽다. 막기 판단이 늦고 부정확하며, 자세 전환이 무작위라 다음 수를 읽긴 어렵지만 정작 방어는 허술하다. 속임수에 매우 잘 속는다.',
-    weapon: 'branch',
+    weapon: 'tree_branch', // 쓰레기 등급: 날이 없어 찌르기 불가, 세게 부딪히면 부러진다
+    // 감독 지시: 10% 확률로 커먼 등급 중 가장 짧은 칼을 들고 나온다 (어디서 주워 온 진짜 칼). 그때는 유파도 그 칼의 꾸러미를 쓴다
+    weaponAlt: { chance: 0.1, pick: 'shortest_common' },
     ai: {
       level: 'easy',
       persona: {
-        school: 'longsword',
-        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 0.58, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 },
+        school: 'tree_branch',
+        level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 1.15, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 }, // 힘은 장사 — 가벼운 나뭇가지라도 머리를 때리면 기절시킨다. 대신 정확도가 낮다
         pers: {
           precision: 0.4, // 아무 데나 후려친다 — 팔·다리에 걸리고 칼 면으로 때린다
           guardStick: 0.6,
@@ -106,7 +110,7 @@ export const CHARACTERS = [
     favoriteGuards: '쟁기(오른쪽)와 긴 자세를 거의 벗어나지 않는다. 교본에 없는 자세(바꿈·옆 지킴)는 거의 쓰지 않는다.',
     temperament:
       '침착하고 신중하다. 맞아도 동요하지 않고 배운 대로 물러나 다시 거리를 잰다(패닉하지 않음). 다만 상대가 교본에 없는 방식으로 나오면 판단이 한 박자 늦다. ' +
-      '이기고 있어도 서두르지 않는다 — 사범의 가르침("승부를 서두르는 자가 먼저 벤다") 때문에 오히려 과할 만큼 참는다.',
+      '이기고 있어도 서두르지 않는다 — 사범의 가르침("승부를 서두르는 자가 먼저 베인다") 때문에 오히려 과할 만큼 참는다.',
     movementNotes:
       '자세를 거의 안 바꾼다(guardStick 매우 높음, 박자도 5초쯤으로 느긋함) — 늘 같은 두세 자세 사이만 오가는 예측 가능한 검객. ' +
       '간격을 넉넉히 두고(margin 큼) 먼저 잘 붙지 않는다. 속임수는 거의 배우지 않았다(feint 거의 0).',
@@ -120,9 +124,9 @@ export const CHARACTERS = [
         pers: {
           precision: 0.7, // 교본대로 정확하지만 힘이 실리지 않는다
           guardStick: 4.2,
-          fearful: 0.3, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다
+          fearful: 0.35, // 침착하지만 실전 경험이 없다 — 베이면 교본대로 물러나 거리를 다시 잰다 (감독 지시: 0.3 → 0.35, 설정상 랴오보다 세면 안 된다)
           angry: 0.2,
-          dogged: 0.2,
+          dogged: 0.25, // 감독 지시: 0.2 → 0.3은 너무 잦아(판당 38%) 중간 0.25로
           guardSpeed: 0.58,
           rhythm: 5.2,
           margin: 0.4,
@@ -184,14 +188,14 @@ export const CHARACTERS = [
       '자세를 아주 자주(1.5~2초마다), 그것도 먼 자세로 거리낌 없이 건너뛴다(guardStick 낮음) — 다음 자세를 종잡을 수 없는 것이 이 사람의 정체성이다. ' +
       '속임수를 즐겨 쓰고(feint 높음), 맞히거나 막히면 반드시 이어 붙인다(followUp 높음).',
     weaknesses: '정석 간격 관리를 안 배워 규율(discipline)이 낮다 — 덤벼들 때 살짝 과하게 들어오는 버릇이 있어, 그 순간을 미리 알고 맞받아치면(Vor) 잡을 수 있다. 힘 자체는 평범해 묵직한 반격 한 방에 균형이 잘 무너진다.',
-    weapon: 'jian',
+    weapon: 'qinggang', // 청강검 (에픽 등급): 물리는 지안, 이름값대로 잘 벤다. 진품이냐 물으면 대답하지 않는다
     ai: {
       level: 'normal',
       persona: {
-        school: 'longsword',
-        level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 0.95, aggression: 1.05, windup: 0.5, skill: 0.75 },
+        school: 'qinggang',
+        level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 1.1, aggression: 1.05, windup: 0.5, strikeSpeed: 13, skill: 0.75 },
         pers: {
-          precision: 0.75,
+          precision: 0.85, // 가벼운 검이라 정확해야 통한다
           guardStick: 0.9,
           fearful: 0.15, // 맞아도 표정 하나 안 바꾼다
           angry: 0.3,
@@ -204,6 +208,8 @@ export const CHARACTERS = [
           patienceTime: 8,
           circleRate: 0.3,
           guardPref: { wechselR: 1.6, wechselL: 1.5, nebenR: 1.4, alber: 1.3, ochsL: 1.2 },
+          // 검(劍)의 장기는 찌르기: 얼굴·가슴을 찌르는 기술을 즐겨 쓴다
+          techPref: { stichPflug: 1.6, stichOchs: 1.5, stichAlber: 1.4, stichPflugL: 1.3, stichOchsL: 1.2, zornhau: 1.0 },
         },
       },
     },
@@ -264,10 +270,10 @@ export const CHARACTERS = [
     ai: {
       level: 'normal',
       persona: {
-        school: 'longsword',
-        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.1, aggression: 1.15, windup: 0.45, skill: 0.82 },
+        school: 'excalibur_replica',
+        level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.2, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
         pers: {
-          precision: 0.85,
+          precision: 0.9,
           guardStick: 0.8,
           fearful: 0.08, // 아프면 오히려 웃으며 더 달려든다
           angry: 0.6,
@@ -280,6 +286,8 @@ export const CHARACTERS = [
           patienceTime: 6,
           circleRate: 0.35,
           guardPref: { tag: 1.6, tagR: 1.6, sideR: 1.5, sideL: 1.4, ochsR: 1.2 },
+          // 보여주기 좋은 큰 베기(분노의 베기·정수리 베기)를 즐긴다 — 마이어식 크고 무거운 동작
+          techPref: { zornhau: 1.5, zornhauL: 1.4, oberhau: 1.3, zwerch: 1.2, unterhau: 0.7, unterhauL: 0.7 },
         },
       },
     },
@@ -376,9 +384,9 @@ export const CHARACTERS = [
       grip: 0x1a1a1a,
       hilt: 0x8a8a8a,
     },
-    taunt: '서두르는 쪽이 먼저 벤다.',
+    taunt: '서두르는 쪽이 먼저 베인다.',
     lines: {
-      intro: ['서두르는 쪽이 먼저 벤다.', '…시작하지.', '가르치는 것과 베는 것은 다른 근육이야. 확인하러 왔다.'],
+      intro: ['서두르는 쪽이 먼저 베인다.', '…시작하지.', '가르치는 것과 베는 것은 다른 근육이야. 확인하러 왔다.'],
       attack: ['지금.', '거기서 서둘렀다.'],
       hurt: ['…좋은 칼.', '내가 서둘렀군.', '다시.'],
       winning: ['기다려. 올 거다.', '…아직.'],
@@ -390,6 +398,20 @@ export const CHARACTERS = [
 ];
 
 export const CHARACTERS_BY_ID = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));
+
+/**
+ * 이번 판에 캐릭터가 실제로 드는 무기 id. weaponAlt 가 있으면 그 확률로 대체 무기를 고른다.
+ *  pick 'shortest_common': 커먼 등급·날 있는 무기 중 칼날이 가장 짧은 것 (무기 로스터가 바뀌어도 그때그때 고른다)
+ */
+export function pickCharacterWeapon(char, rnd = Math.random) {
+  const alt = char.weaponAlt;
+  if (!alt || rnd() >= alt.chance) return char.weapon;
+  if (alt.pick === 'shortest_common') {
+    const pool = WEAPON_LIST.filter((w) => w.tier === 'common' && w.edged);
+    if (pool.length) return pool.reduce((a, b) => (b.bladeLength < a.bladeLength ? b : a)).id;
+  }
+  return alt.pick in WEAPONS ? alt.pick : char.weapon;
+}
 
 /** id가 없거나 목록에 없으면 무작위 캐릭터 (excludeId가 있으면 그 캐릭터는 뺀다) */
 export function randomCharacter(excludeId) {
