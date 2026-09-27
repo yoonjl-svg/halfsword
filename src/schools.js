@@ -53,33 +53,47 @@ export const SCHOOLS = {
 //  칼날 70% 지점이 머리 높이를 지나는 거리, 롱소드 1.62 기준 보정). 자세·기술은 자세 지도(guards.js)가 롱소드
 //  기준이라 그대로 쓰고, 무기 성질에 맞지 않는 기술만 뺀다.
 const L = SCHOOLS.longsword;
+/** 기술 목록을 복사하면서 기술별 reach(닿는 거리 보정, m)를 무기에 맞게 바꾼다 (표에 없는 기술은 롱소드 값 그대로) */
+const withReach = (tech, reach) => tech.map((t) => (t.name in reach ? { ...t, reach: reach[t.name] } : t));
+const byName = (tech) => Object.fromEntries(tech.map((t) => [t.name, t]));
 const noThrust = TECH.filter((t) => t.kind !== 'thrust');
 const noThrustFeints = FEINTS.filter((f) => TECH_BY_NAME[f.fake].kind !== 'thrust');
 
 // 나뭇가지 (쓰레기 등급): 날이 없어 찌르기가 안 된다 → 찌르기 기술·찌르기 속임수 제거. 가볍고 짧아 간격이 좁다
+const branchTech = withReach(noThrust, { zornhau: 0, unterhau: -0.06, zornhauL: 0.01, unterhauL: 0.09 });
 SCHOOLS.tree_branch = {
   ...L,
   id: 'tree_branch',
   weapon: 'tree_branch',
   measure: { contact: 1.41, reach: 1.63, clinch: 1.09, cutTime: 0.36 },
-  tech: noThrust,
-  techByName: Object.fromEntries(noThrust.map((t) => [t.name, t])),
+  tech: branchTech,
+  techByName: byName(branchTech),
   feints: noThrustFeints,
 };
 
-// 검(劍, 한손 양날검): 가볍고 짧아 간격이 좁고, 찌르기가 강하다(무기 스펙 mThrust 1.15) → 찌르기 기술을 더 믿는다
-const jianTech = TECH.map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * 1.5 } : t));
+// 검(劍, 한손 양날검): 가볍고 짧아 간격이 좁고, 찌르기가 강하다(무기 스펙 mThrust 1.15) → 찌르기 기술을 더 믿는다.
+//  아래에서 올려 베는 unterhauL이 롱소드보다 0.2m 더 멀리 닿는다 (한손·가벼운 칼이 낮은 궤적에서 더 뻗는다)
+const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, unterhauL: 0.19, stichPflug: 0.04, stichPflugL: 0.02, stichOchs: 0.04, stichOchsL: 0, stichAlber: -0.01 })
+  .map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * 1.5 } : t));
 SCHOOLS.jian = {
   ...L,
   id: 'jian',
   weapon: 'jian',
   measure: { contact: 1.32, reach: 1.55, clinch: 1.02, cutTime: 0.38 },
   tech: jianTech,
-  techByName: Object.fromEntries(jianTech.map((t) => [t.name, t])),
+  techByName: byName(jianTech),
 };
 
-// 엑스칼리버 복제품: 물리가 롱소드와 100% 같다 → 롱소드 꾸러미 그대로 (id만 다르다)
-SCHOOLS.excalibur_replica = { ...L, id: 'excalibur_replica', weapon: 'excalibur_replica' };
+// 엑스칼리버 복제품: 황동 장식에 칼날이 두껍고 무거워(1.50kg·1.00m) 롱소드보다 간격이 아주 조금 좁다. 자세·기술은 롱소드 그대로
+const replicaTech = withReach(TECH, { zornhau: 0, unterhau: -0.04, zornhauL: -0.03, unterhauL: -0.07, stichPflug: 0.08, stichPflugL: 0.08, stichOchs: 0.08, stichOchsL: 0.08, stichAlber: 0.03 });
+SCHOOLS.excalibur_replica = {
+  ...L,
+  id: 'excalibur_replica',
+  weapon: 'excalibur_replica',
+  measure: { contact: 1.59, reach: 1.86, clinch: 1.23, cutTime: 0.42 },
+  tech: replicaTech,
+  techByName: byName(replicaTech),
+};
 
 export const DEFAULT_SCHOOL = 'longsword';
 
