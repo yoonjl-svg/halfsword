@@ -479,5 +479,59 @@ export function decorateOutfit(dressTo, d, look) {
   // 방어구 부위: 이 부위에 얹은 판금 메쉬들을 userData.armor로 알려 둔다. 오너 결정("판금도 피해를
   // 줄여 주고, 닳고, 완전히 부서지면 사라진다")을 전투 쪽이 켜면 그 부위 내구도가 0일 때 이 메쉬들만
   // 숨기면 된다. 지금은 표시만 하고 아무 동작도 하지 않는다
-  if (set.armorParts?.has(d.name)) dressTo.userData.armor = dressTo.children.slice(before);
+  if (set.armorParts?.has(d.name)) {
+    const armor = dressTo.children.slice(before);
+    for (const m of armor) m.userData.base = { color: m.material.color.getHex(), roughness: m.material.roughness };
+    const crack = plateCrack(dressTo, armor[0]);
+    // 금 메쉬도 armor 목록에 넣어, 판금이 완전히 부서져 숨길 때 같이 숨겨지게 한다
+    dressTo.userData.armor = [...armor, crack];
+    dressTo.userData.armorCracks = [crack];
+  }
+}
+
+/**
+ * 판금 부위 하나의 금: 첫 판금 메쉬의 앞면(+x)을 세로로 가로지르는 짙은 지그재그 선.
+ * 캐릭터를 만들 때(isolatedVisual 안) 미리 만들어 숨겨 둔다 — 싸우는 도중에 메쉬를 새로 만들면
+ * three.js가 전역 난수를 써서 시드 시뮬 결과가 바뀌기 때문이다.
+ */
+function plateCrack(parent, mesh) {
+  const geo = mesh.geometry;
+  if (!geo.boundingBox) geo.computeBoundingBox();
+  const b = geo.boundingBox;
+  const x = b.max.x + 0.002;
+  const yc = (b.max.y + b.min.y) / 2;
+  const h = (b.max.y - b.min.y) * 0.35;
+  const zc = (b.max.z + b.min.z) / 2;
+  const pts = [-1, -0.5, 0, 0.5, 1].map((t, i) => [x, yc + t * h, zc + (i % 2 ? 0.012 : -0.006)]);
+  const m = addMerged(parent, [taperedTube(pts, [0.003, 0.0026, 0.002], 8, 4)], 0x050505, { roughness: 1 });
+  m.visible = false;
+  return m;
+}
+
+// 판금이 닳은 정도를 겉모습에 반영한다 (전투 쪽이 this.plate[part]가 바뀔 때마다 부른다).
+//  group: fighter.groups[part] (칼 든 팔은 그 안의 자식 그룹에 표시가 있어도 알아서 찾는다)
+//  wear01: 1 = 멀쩡, 0 = 완전 파손 직전. 투구(setHelmetWear)와 같은 단계, 난수 없이 결정적이고 되돌려진다.
+//  · 0.5 아래: 찌그러짐·긁힘 — 판이 살짝 눌리고 틀어지며, 거칠고 희끗해진다(금띠도 긁혀 흐려진다)
+//  · 0.2 아래: 금이 보인다
+//  판금 표시(userData.armor)가 없는 부위에는 아무 일도 하지 않는다. 완전 파손 때 숨기는 것은 전투 쪽 몫.
+export function setPlateWear(group, wear01) {
+  const holder = group?.userData?.armor ? group : group?.children?.find((c) => c.userData?.armor);
+  if (!holder) return;
+  const w = Math.min(1, Math.max(0, wear01));
+  const dent = w < 0.5 ? (0.5 - w) / 0.5 : 0;
+  const broken = w < 0.2;
+  const plates = holder.userData.armor.filter((m) => m.userData.base);
+  plates.forEach((m, i) => {
+    const sgn = i % 2 ? -1 : 1; // 조각마다 반대로 틀어지게 (결정적)
+    m.rotation.set(0.05 * dent * sgn, 0, -0.04 * dent * sgn);
+    m.scale.set(1 + 0.03 * dent, 1 - 0.05 * dent, 1 + 0.02 * dent);
+    m.material.color.setHex(m.userData.base.color).lerp(_scratch, 0.35 * dent);
+    m.material.roughness = Math.min(1, m.userData.base.roughness + 0.45 * dent);
+  });
+  const shown = plates.length && plates[0].visible;
+  for (const c of holder.userData.armorCracks || []) {
+    c.visible = broken && shown;
+    c.rotation.copy(plates[0].rotation);
+    c.scale.copy(plates[0].scale);
+  }
 }

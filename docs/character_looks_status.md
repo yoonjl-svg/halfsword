@@ -4,6 +4,19 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 6 — 디렉터 분담: 하인리히 판금 파손 겉모습 (trig_0161tXEHz9cTGUBarJ6HHkzW)
+
+디렉터 브랜치(d8ae47f)를 충돌 없이 병합하고, 시뮬 기준선을 새로 잡은 뒤 작업했다.
+- `outfits.js` export `setPlateWear(group, wear01)`: `group` = `fighter.groups[part]`(칼 든 팔은 안쪽 자식
+  그룹에 표시가 있어도 알아서 찾는다). 투구와 같은 단계: 0.5 아래 찌그러짐·긁힘(판이 눌리고 조각마다
+  반대로 틀어지며 거칠고 희끗해짐, 금띠도 흐려짐), 0.2 아래 금. 난수 없음·결정적·1로 되돌려짐.
+- 금 메쉬: 판금 9개 부위마다 하나씩 캐릭터를 만들 때 미리 만들어 숨겨 둔다(싸우는 도중에 메쉬를 새로
+  만들면 전역 난수가 소비된다). `userData.armor` 목록에도 넣어 두어, 완전 파손 때 판금을 숨기면 금도
+  같이 숨는다. 판금이 이미 숨겨졌으면 `setPlateWear`는 금을 다시 켜지 않는다.
+- look 값(`armor: 'plate'`)은 요청대로 넣지 않았다 — 디렉터 전투 커밋에서 같이 켠다.
+- 검증: 병합 뒤 새 기준선 대비 시뮬 3종 바이트 동일, 콘솔 에러 0, 0.1에서 금 9개 표시·1로 되돌리면
+  숨겨짐. 스크린샷 `docs/character_looks/heinrich_plate_wear{1,04,01}.jpg`.
+
 ## round 5 — 디렉터 분담: 마르그레테 투구 방어의 외형 쪽 (trig_017J3e7VxfosvZkFXoh4BBqe)
 
 디렉터 브랜치(1d49abb)를 병합했다(`982c220`). 충돌은 `outfits.js`·이 문서 두 곳뿐. 디렉터 쪽 파일은
