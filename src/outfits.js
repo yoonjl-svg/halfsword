@@ -106,6 +106,44 @@ const ISOLDE_SABER = {
   },
 };
 
+// 이졸데 v2(오너 요청): 허리까지 오는 긴 생머리. 머리 하나에 긴 머리를 통째로 붙이면 고개를 돌릴 때마다
+// 허리까지 오는 판이 몸을 뚫고 휘둘려서, 세 도막으로 나눠 따라가는 부위에 붙인다 —
+// 머리(뒤통수~목덜미, 얼굴 옆 머리) / 가슴(등을 덮는 머리) / 배(허리까지 내려와 끝이 둥글게 모이는 머리).
+// 가만히 선 자세에서 세 도막이 이어져 보이게 위치를 맞췄다(목덜미 ≈ 가슴 위쪽, 등 아래 ≈ 배 위쪽).
+const ISOLDE_LONGHAIR = {
+  ...ISOLDE_SABER,
+  head(g, look) {
+    addMerged(
+      g,
+      [
+        box(0.04, 0.17, 0.17, [-0.092, -0.075, 0]), // 뒤통수에서 목덜미까지
+        box(0.022, 0.15, 0.018, [0.025, -0.06, 0.1]), // 얼굴 옆으로 흘러내린 머리
+        box(0.022, 0.15, 0.018, [0.025, -0.06, -0.1]),
+      ],
+      look.hair,
+      { roughness: 1 },
+    );
+  },
+  chest(g, look) {
+    ISOLDE_SABER.chest(g, look);
+    // 등을 덮는 머리 (어깨 너비보다 조금 좁게)
+    addMerged(g, [box(0.03, 0.3, 0.2, [-0.137, 0.0, 0])], look.hair, { roughness: 1 });
+  },
+  abdomen(g, look) {
+    ISOLDE_SABER.abdomen(g, look);
+    // 허리까지: 아래로 갈수록 좁아지고 끝이 둥글게 모인다
+    addMerged(
+      g,
+      [
+        box(0.028, 0.1, 0.18, [-0.128, 0.03, 0]),
+        bake(new THREE.CylinderGeometry(0.09, 0.03, 0.09, 8, 1, false), [-0.128, -0.065, 0], null, [0.16, 1, 1]),
+      ],
+      look.hair,
+      { roughness: 1 },
+    );
+  },
+};
+
 // ═══════════════════════════════════ 랴오 쓰위엔: 방랑 낭인 ═══════════════════════════════════
 const LIAO_RONIN = {
   head(g) {
@@ -520,6 +558,7 @@ export function setHelmetWear(helm, wear01) {
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
+  isolde_longhair: ISOLDE_LONGHAIR,
   liao_ronin: LIAO_RONIN,
   heinrich_knight: HEINRICH_KNIGHT,
   heinrich_full_plate: HEINRICH_FULL_PLATE,

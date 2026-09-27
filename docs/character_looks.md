@@ -3,7 +3,7 @@
 오너 요청: "캐릭터 모델링을 개선하고 싶다." 5인의 상대 캐릭터에 갑옷판·머리모양·수염·안대 같은
 장식 레이어(`src/outfits.js`)를 새로 얹고, 예전 겉모습은 지우지 않고 `src/looks.js`의
 `LOOK_ARCHIVE`에 `v0`로 남겨 두었다. 지금 게임이 쓰는 버전은 `CHARACTER_LOOK_VERSION`이
-가리킨다(마르그레테 `v3`, 하인리히 `v2`, 나머지는 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
+가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 나머지는 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
 
 플레이어(케틀햇+갬비슨)의 겉모습은 요청대로 건드리지 않았다.
 
@@ -117,7 +117,7 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 ## 이졸데 반 아커러 (`isolde`) — 평상복
 
 **v0(예전)**: 보랏빛 견습생 복장 — 보라 상의, 보라 머리띠.
-**v1(지금, `outfit: 'isolde_saber'`)**: 평범한 사복 — 크림색 블라우스, 어두운 남색 긴 치마,
+**v1(보관, `outfit: 'isolde_saber'`)**: 평범한 사복 — 크림색 블라우스, 어두운 남색 긴 치마,
 검은 머리. Fate 세이버의 사복 분위기만 참고했다. 치마는 넓적다리(thighF·thighB) 각각에 따로
 붙여서, 래그돌이 다리를 벌려도 다리가 서로 다른 부위임이 읽히게 했다("다리가 읽혀야 한다"는
 지시 반영).
@@ -128,9 +128,16 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 > 그렇게 약하거나 가냘프게 그릴 필요가 없다. 위 디자인은 애초에 "수수한 평상복을 입은 세이버"
 > 컨셉이라 이 정정과 방향이 맞는다 — 얌전한 옷차림이지 여려 보이는 옷차림이 아니다.
 
-| v0 | v1 |
-| --- | --- |
-| ![isolde v0](character_looks/isolde_v0.jpg) | ![isolde v1](character_looks/isolde_v1.jpg) |
+**v2(지금, `outfit: 'isolde_longhair'`)**: 오너 요청 "허리까지 오는 긴 머리". 옷·색은 v1 그대로에 검은 긴
+생머리. 머리 하나에 긴 머리를 통째로 붙이면 고개를 돌릴 때마다 몸을 뚫고 휘둘려서, 세 도막으로 나눠
+따라가는 부위에 붙였다 — 머리(뒤통수~목덜미·얼굴 옆 머리), 가슴(등), 배(허리까지, 끝이 둥글게 모임).
+몸을 숙여도 머리가 등에 붙어 따라간다([쓰러짐](character_looks/isolde_v2_down.jpg)).
+
+| v0 | v1 | v2 (지금) |
+| --- | --- | --- |
+| ![isolde v0](character_looks/isolde_v0.jpg) | ![isolde v1](character_looks/isolde_v1.jpg) | ![isolde v2](character_looks/isolde_v2.jpg) |
+
+v2 추가 컷: [뒤(허리까지 오는 머리)](character_looks/isolde_v2_back.jpg) · [옆](character_looks/isolde_v2_side.jpg)
 
 추가 컷: [3/4](character_looks/isolde_threeq.jpg) · [옆](character_looks/isolde_side.jpg) ·
 [기본 대결 화면](character_looks/isolde_default.jpg) · [쓰러짐](character_looks/isolde_down.jpg)

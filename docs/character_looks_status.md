@@ -4,6 +4,13 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 9 — 오너 요청: 이졸데 허리까지 오는 긴 머리
+
+- **이졸데 v2**(`isolde_longhair`, v1 보관): 검은 긴 생머리가 허리(벨트)까지. 고개를 돌려도 긴 머리가 몸을
+  뚫고 휘둘리지 않게 머리·가슴·배 세 도막으로 나눠 각 부위에 붙였다. `CHARACTER_LOOK_VERSION.isolde = 'v2'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `isolde_v2.jpg`, `isolde_v2_back.jpg`, `isolde_v2_side.jpg`, `isolde_v2_down.jpg`.
+
 ## round 8 — 오너 지적: "하인리히 갑옷이 은색이 아닌 거 같다"
 
 - 원인 1(렌더 버그): 장면에 반사 환경이 없어서 금속성 높은 판이 거의 검게 나왔다. `outfits.js`의 모든

@@ -131,6 +131,26 @@ export const LOOK_ARCHIVE = {
       hilt: 0x9aa3ad,
       outfit: 'isolde_saber',
     },
+    // v2(오너 요청): 허리까지 오는 긴 생머리. 옷·색은 v1 그대로
+    v2: {
+      tunic: 0xe6ded0,
+      quilt: 0xd8cdb8,
+      sleeve: 0xe6ded0,
+      straps: null,
+      belt: 0x4a3c33,
+      hoseUpper: 0x33363f,
+      hoseLower: 0x2b2e36,
+      shoes: 0x3a2f28,
+      skin: 0xe3b98f,
+      hands: 0xe3b98f,
+      helmet: null,
+      metal: 0x9aa3ad,
+      hair: 0x14110f,
+      headband: null,
+      grip: 0x2e1c12,
+      hilt: 0x9aa3ad,
+      outfit: 'isolde_longhair',
+    },
   },
 
   // ── 3. 랴오 쓰위엔: v0(어두운 방랑 검객) → v1(방랑 낭인 — 장발+안대) ──
@@ -326,7 +346,7 @@ export const LOOK_ARCHIVE = {
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
   bran: 'v1',
-  isolde: 'v1',
+  isolde: 'v2',
   liao: 'v1',
   heinrich: 'v2',
   margarethe: 'v3',
