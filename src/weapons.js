@@ -276,6 +276,8 @@ function finalizeSpec(id, s) {
     thrustStyle: s.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (아래 THRUST_STYLE). 없으면 null
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
+    // 한손 자세표(guards.js ONE_HAND: 칼 든 어깨를 앞으로, 손을 더 뻗는다)를 쓰나. 한손 무기는 기본으로 쓴다
+    oneHandStance: s.oneHandStance ?? s.grip === 'one-hand',
     soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
   };
@@ -773,6 +775,9 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 const lightsaber = finalizeSpec('lightsaber', {
   nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
   grip: 'one-hand', material: 'plasma',
+  // 한손 자세표(칼 든 어깨를 앞으로)는 쓰지 않는다: 길고 가벼운 칼날이라 닿는 거리가 짧은 칼의 5배(+11cm 대 +2cm) 늘어
+  //  롱소드 상대 승률이 55 → 75%로 에픽 목표(45~65%)를 넘었다 (10라운드 B, ref_duel). 영화처럼 두 손 자세로 겨눈다
+  oneHandStance: false,
   tier: 'epic', // power 1.1 · 내구 0.95 (플라스마 칼날이라 어차피 안 부러진다)
   hiltLength: 0.15, bladeLength: 0.9,
   edged: true, ignoreArmor: true, mCut: 1.35, mThrust: 1.3,

@@ -10,7 +10,8 @@
 //  찍는 것: 승·패·무(시간 끝·둘 다 죽음 = 무), 승률(무는 승이 아님)과 윌슨 95% 구간, 평균 종료 시간, 파손 판
 //  --proxy=ls : 주인공 대리를 롱소드 유파(persona 없음)로 몬다. 간격은 게임의 scaledM(ai.js MEASURED 비율, 베는 시간도 비율)으로 정해진다.
 //               기본(유파 꾸러미)은 schools.js 의 무기별 measure 를 그대로 쓰는데, 그 표의 cutTime 은 보정 없는 raw 라서 비교용으로 둔다
-// 사용법: node tools/sim/ref_duel.mjs [vs|field] [판 수(자리마다)] [무기id...] [--seed=첫 번호] [--levitate] [--proxy=ls] [--json]
+//  --hero     : vs 에서 캐릭터 무기도 주인공 대리가 쥔다 (무기 탓인지 캐릭터 성격 탓인지 가르는 비교용)
+// 사용법: node tools/sim/ref_duel.mjs [vs|field] [판 수(자리마다)] [무기id...] [--seed=첫 번호] [--levitate] [--proxy=ls] [--hero] [--json]
 //   예: node tools/sim/ref_duel.mjs vs 48 qinggang falchion   (무기마다 96판, hybrid)
 import * as CONFIG from '../../src/config.js';
 import { newRound, DT } from './harness_m.mjs';
@@ -23,6 +24,7 @@ const ROUND_SECONDS = 40;
 // 게임에서 그 무기를 쥐는 캐릭터 (롱소드는 이졸데·마르가레테 둘이라 기준 상대인 주인공 대리가 쥔다)
 const OWNER = Object.fromEntries(CHARACTERS.filter((c) => c.weapon !== 'longsword').map((c) => [c.weapon, c]));
 let PROXY_LS = false; // --proxy=ls
+let HERO_ALL = false; // --hero
 const hero = (w) => (PROXY_LS ? { level: 'normal', persona: null, who: '주인공 대리(롱소드 유파)' } : { level: 'normal', persona: { school: w }, who: '주인공 대리' });
 const charSide = (c, w) => ({ level: c.ai.level, persona: w !== c.weapon ? { ...c.ai.persona, school: w } : c.ai.persona, who: c.id });
 
@@ -88,7 +90,7 @@ export function runWeapon(mode, id, N, S0) {
         x = { weapon: id, ...hero(id) };
         y = { weapon: cw, ...charSide(c, cw) };
       } else {
-        x = OWNER[id] ? { weapon: id, ...charSide(OWNER[id], id) } : { weapon: id, ...hero(id) };
+        x = OWNER[id] && !HERO_ALL ? { weapon: id, ...charSide(OWNER[id], id) } : { weapon: id, ...hero(id) };
         y = { weapon: 'longsword', ...hero('longsword') };
       }
       rows.push({ ...playOne(x, y, seed, xFirst), vs: y.who, xWho: x.who });
@@ -120,6 +122,7 @@ if (isMain(import.meta.url)) {
   const S0 = +(args.find((a) => a.startsWith('--seed='))?.split('=')[1] ?? 1);
   CONFIG.BODY.weightMode = args.includes('--levitate') ? 'levitate' : 'hybrid';
   PROXY_LS = args.includes('--proxy=ls');
+  HERO_ALL = args.includes('--hero');
   console.log(`기준 하니스 · ${mode === 'field' ? '주인공이 쥔 경우(캐릭터 다섯 상대)' : '롱소드 상대'} · ${CONFIG.BODY.weightMode} · 자리마다 ${N}판(시드 ${S0}부터) × 2`);
   for (const id of ids) {
     const r = runWeapon(mode, id, N, S0);
