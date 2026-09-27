@@ -279,6 +279,8 @@ const VOWELS = {
   o: [570, 840, 2410, 3400, 70, 90, 150, 250],
   e: [530, 1840, 2480, 3500, 70, 110, 160, 250],
   ə: [500, 1500, 2500, 3500, 80, 110, 160, 250],
+  // 입을 다문 콧소리 "음": 낮은 공명 하나가 대부분이고 위 공명은 거의 없다 (뒤 4개 = 공명대별 세기)
+  m: [250, 1000, 2200, 3300, 60, 150, 200, 300, 1, 0.12, 0.05, 0.02],
 };
 
 /**
@@ -288,6 +290,7 @@ const VOWELS = {
  *  rec: 녹음된 목소리 (public/sfx/voice/<id>_<ko|bleed><번호>.mp3, 출처는 public/sfx/LICENSE.txt).
  *       ko·bleed = 파일 개수(0이면 그 죽음은 합성 목소리), rate = 재생 속도(목소리 높이), gain = 음량
  *       녹음은 들어 보지 않고 음높이·길이 분석으로 골랐다 — 귀로 듣고 바꾸려면 파일만 갈아 끼우면 된다
+ *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다)
  */
 export const VOICES = {
   player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 3번 목소리
@@ -296,7 +299,7 @@ export const VOICES = {
   isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp' }, // 녹음 없이 숨소리만: 여성 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
   liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 2, gain: 0.6, rate: 0.95 } }, // 짧은 신음 + 낮고 짧은 신음 녹음(HaelDB). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침) + VoiceBosch
-  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale' }, // 녹음 없이 숨소리만: 여성 비명을 낮춰 썼더니 익룡처럼 들렸다 (차분한 노장에 비명 자체가 안 맞음)
+  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', mute: true }, // 목소리 없이 쓰러지는 소리만: 합성 날숨·한숨은 폰에서 뭉개졌고, 여성 녹음을 낮추면 익룡·괴수처럼 들렸다. 알맞은 녹음을 찾으면 rec 로 바꾼다
 };
 
 /**
@@ -361,6 +364,46 @@ function voiceScript(r, prof, kind) {
         }
         add(0.4, 'ʌ', 0.85, 0.7, 0.5, 0.8, 0.3, 0.03, 0.2, 0.05);
         exhale(0.5, 0.2);
+      }
+      break;
+    // 마르그레테 새 목소리 후보 (성대 울림 위주, 바람 소리 적게)
+    case 'sighV': // A. 숨 섞인 "하아…"가 낮게 내려가며 끝난다
+      if (ko) {
+        add(0.05, 'ʌ', 1, 0.9, 0.4, 0.6, 0.3, 0.004, 0.02, 0.02);
+        add(0.45, 'a', 1.05, 0.75, 0.45, 0.75, 0.35, 0.03, 0.3);
+      } else {
+        inhale(0.2, 0.15);
+        add(0.8, 'a', 1.1, 0.7, 0.5, 0.7, 0.4, 0.05, 0.5);
+        add(0.25, 'ə', 0.7, 0.6, 0.15, 0.5, 0.4, 0.03, 0.2);
+      }
+      break;
+    case 'mumble': // B. 입을 거의 닫고 "음… 으음…" 웅얼거리다 잦아든다
+      if (ko) {
+        add(0.12, 'm', 1, 0.95, 0.45, 1, 0, 0.02, 0.03);
+        add(0.18, 'ə', 1, 0.85, 0.4, 0.9, 0.1, 0.02, 0.1);
+      } else {
+        add(0.14, 'm', 1, 0.97, 0.5, 1, 0, 0.02, 0.03);
+        add(0.16, 'ə', 0.97, 0.93, 0.45, 0.9, 0.1, 0.02, 0.05, 0.06);
+        add(0.12, 'm', 0.95, 0.92, 0.4, 1, 0, 0.02, 0.03);
+        add(0.2, 'o', 0.92, 0.85, 0.35, 0.9, 0.1, 0.02, 0.08, 0.1);
+        add(0.35, 'm', 0.85, 0.7, 0.3, 1, 0.05, 0.02, 0.25);
+      }
+      break;
+    case 'groanSigh': // C. 짧고 낮은 "읏…" 뒤에 한숨
+      if (ko) {
+        add(0.1, 'ʌ', 0.95, 0.8, 0.7, 0.85, 0.2, 0.005, 0.03, 0.03);
+        add(0.3, 'ə', 0.85, 0.7, 0.3, 0.6, 0.4, 0.02, 0.2);
+      } else {
+        add(0.15, 'ʌ', 0.95, 0.85, 0.6, 0.85, 0.2, 0.01, 0.05, 0.12);
+        add(0.7, 'a', 1, 0.72, 0.45, 0.65, 0.45, 0.05, 0.45);
+      }
+      break;
+    case 'hum': // D. 입을 다문 채 체념하듯 "흠…"
+      if (ko) {
+        add(0.25, 'm', 1, 0.85, 0.6, 1, 0.05, 0.01, 0.12);
+      } else {
+        add(0.1, 'm', 1.05, 1, 0.5, 1, 0.1, 0.01, 0.02);
+        add(0.9, 'm', 1, 0.72, 0.55, 1, 0.05, 0.03, 0.6);
       }
       break;
     case 'exhale':
@@ -821,6 +864,7 @@ export const SYNTH = {
     for (const s of segs) {
       const V = VOWELS[s.vowel] || VOWELS['ə'];
       F.forEach((fl, i) => fl.set(V[i] * prof.tract, (V[i] * prof.tract) / (V[4 + i] * (s.voice > 0.3 ? 1 : 1.8))));
+      const G = V.length > 8 ? V.slice(8) : FG;
       const n0 = Math.round(s.t * sr);
       const len = Math.round(s.dur * sr);
       let ph = 0;
@@ -843,7 +887,7 @@ export const SYNTH = {
         g1 = g;
         const env = Math.min(1, i / (s.attack * sr)) * Math.min(1, (len - i) / (s.release * sr));
         let y = 0;
-        for (let k = 0; k < 4; k++) y += FG[k] * F[k].run(exc);
+        for (let k = 0; k < 4; k++) y += G[k] * F[k].run(exc);
         const air = airHp.run(airLp2.run(airLp1.run(r() * 2 - 1))) * (0.75 + 0.25 * turb());
         out[n0 + i] += s.amp * env * (y + air * s.air * 1.6);
       }
@@ -1046,6 +1090,8 @@ const SAMPLES = {
   woodHit: nums('hit/wood', 5), // 나무 몽둥이 (Kenney impactWood_medium)
   woodHeavy: nums('hit/wood_heavy', 3), // (Kenney impactWood_heavy)
   step: nums('step/sand', 8), // 모래 위 무거운 발걸음: 둔한 뒤꿈치 "쿵"(Kenney footstep_carpet) + 눌리는 크런치(footstep_snow), 음을 낮추고 고음을 깎음
+  stepGravel: nums('step/gravel', 8), // 산사 마사토 발걸음: 같은 뒤꿈치 "쿵" + 굵은 자갈 "자박"(OGA gravel), 모래보다 알갱이가 또렷하다
+  leaves: nums('stage/leaves', 2), // 산사 낙엽 바스락 (OGA leaves) — 큰 타격에 단풍잎이 흩날릴 때
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
 };
@@ -1064,6 +1110,7 @@ export class Sound {
     this.stats = { events: 0, nodes: 0, stolen: 0, genMs: 0 };
     this._lastClash = { t: -1, x: 0 };
     this.seed = (Math.random() * 1e9) | 0;
+    this.stage = 'poseidon'; // 배경: 'poseidon'(바닷가 절벽) | 'temple'(산사). setStage 로 바꾼다
   }
 
   get on() {
@@ -1196,7 +1243,7 @@ export class Sound {
   prepareVoices(ids) {
     if (!this.ctx) return;
     const keep = new Set();
-    for (const id of ids) for (const kind of ['ko', 'bleed']) keep.add(`voice:${id}:${kind}`);
+    for (const id of ids) if (!VOICES[id]?.mute) for (const kind of ['ko', 'bleed']) keep.add(`voice:${id}:${kind}`);
     for (const name of Object.keys(this.bank)) if (name.startsWith('voice:') && !keep.has(name)) delete this.bank[name];
     const jobs = [];
     for (const name of keep) for (let i = this.bank[name]?.length || 0; i < VOICE_COUNT; i++) jobs.push({ name, seed: this.seedFor(name, i) });
@@ -1597,7 +1644,7 @@ export class Sound {
     const x = clamp01((speed - 0.3) / 1.8);
     // 녹음된 발소리(8가지, 같은 것이 연달아 안 나오게). 예전 장화 소리는 딱딱한 바닥의 "또각"과 방 울림이 있어 회랑처럼 들렸다.
     // 크게 디디면 합성 "쿵"을 조금 깔아 무게를 더한다
-    const rec = this.pickSample('step');
+    const rec = this.pickSample(this.stage === 'temple' ? 'stepGravel' : 'step');
     const ev = this.event({ bus: this.fleshBus, gain: rec ? 0.22 + 0.45 * x : 0.1 + 0.4 * x, bright: rec ? 0 : 1800 + 3500 * x, prio: 0.3, pos });
     if (rec) {
       this.layer(ev, rec, { rate: between(Math.random, 0.9, 1.02) });
@@ -1642,6 +1689,9 @@ export class Sound {
     if (rec) this.layer(ev, rec, { gain: 0.35 + 0.3 * x, rate: between(Math.random, 0.6, 0.7), delay: 0.004 });
     const soft = this.pickSample('soft'); // 몸통 덩어리가 모래에 부딪히는 둔한 "쿵"
     if (soft) this.layer(ev, soft, { gain: 0.5 + 0.4 * x, rate: between(Math.random, 0.8, 0.95), delay: 0.002 });
+    // 산사: 마사토 자갈이 몸에 밀려 "자르륵" 흩어진다 (발소리 녹음을 느리게)
+    const grit = this.stage === 'temple' && !light ? this.pickSample('stepGravel') : null;
+    if (grit) this.layer(ev, grit, { gain: 0.3 + 0.3 * x, rate: between(Math.random, 0.62, 0.72), delay: 0.012 });
   }
 
   /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
@@ -1663,6 +1713,12 @@ export class Sound {
     const kind = cause === '출혈' || cause === '목' ? 'bleed' : 'ko';
     const id = voice in VOICES ? voice : 'generic';
     const ev = this.event({ bus: this.fleshBus, gain: me ? 0.7 : 0.9, prio: 3, pos });
+    if (VOICES[id].mute) {
+      // 목소리 없음 ("쿵"은 몸이 땅에 닿을 때 BodySounds 가 낸다). 목을 베였으면 피 끓는 소리만
+      if (cause === '목') this.layer(ev, this.pick('wetHeavy'), { gain: 0.5, rate: between(Math.random, 0.55, 0.65), delay: 0.08 });
+      if (me) this.fadeOutWorld();
+      return;
+    }
     // 녹음이 있으면 녹음(캐릭터에 맞게 재생 속도로 목소리 높이를 조금 바꾼다), 없으면 합성 목소리
     const rec = this.pickSample(`voice:${id}:${kind}`);
     const R = VOICES[id].rec;
@@ -1693,17 +1749,14 @@ export class Sound {
   /**
    * 바닷가 절벽의 고요: 아주 멀리서 밀려오는 파도 + 옅은 바람. 음악이 아니라 "정적"이라 발소리보다 훨씬 작게(약 -45dB) 깔린다.
    * 처음 한 번만 만들고 계속 돈다 (시작 버튼을 누를 때 main.js 가 부른다). 전체 음량(master)을 거치므로
-   * 소리 끄기·음량 설정·쓰러졌을 때의 먹먹함을 그대로 따른다. 노드 몇 개뿐이라 폰 부담은 거의 없다
+   * 소리 끄기·음량 설정·쓰러졌을 때의 먹먹함을 그대로 따른다. 노드 몇 개뿐이라 폰 부담은 거의 없다.
+   * 산사(setStage('temple'))에서는 _ambTemple 의 산바람·풍경으로 바뀐다
    */
   ambience() {
-    if (this._amb || !this.ctx || this.ctx.startRendering || !this.master) return;
+    if (this._amb || !this.ctx || !this.master) return;
+    if (this.stage === 'temple') return this._ambTemple();
     const c = this.ctx;
-    // 4초짜리 흰 잡음 (22050Hz 로 만들어 메모리를 아낀다. 흰 잡음이라 되풀이 이음매에서 딸깍이지 않는다)
-    const sr = 22050;
-    const buf = c.createBuffer(1, sr * 4, sr);
-    const d = buf.getChannelData(0);
-    const rnd = makeRng(this.seed ^ 0x5eed);
-    for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1;
+    const buf = this._noiseBuf();
     const out = c.createGain();
     out.gain.value = 0;
     out.gain.setTargetAtTime(1, c.currentTime + 0.5, 2.5); // 천천히 스며든다
@@ -1751,7 +1804,239 @@ export class Sound {
     wind.connect(bp).connect(wg).connect(out);
     const t = c.currentTime;
     for (const n of [surf, wind, w1, w2, w3]) n.start(t);
-    this._amb = out;
+    this._amb = { out, nodes: [surf, wind, w1, w2, w3] };
+  }
+
+  /** 배경 흰 잡음 (4초, 22050Hz 로 만들어 메모리를 아낀다. 흰 잡음이라 되풀이 이음매에서 딸깍이지 않는다). 배경마다 같이 쓴다 */
+  _noiseBuf() {
+    if (this._nb) return this._nb;
+    const sr = 22050;
+    const buf = this.ctx.createBuffer(1, sr * 4, sr);
+    const d = buf.getChannelData(0);
+    const rnd = makeRng(this.seed ^ 0x5eed);
+    for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1;
+    return (this._nb = buf);
+  }
+
+  /**
+   * 배경 바꾸기 ('poseidon' | 'temple'). 배경 소리가 이미 돌고 있으면 옛것을 3초에 걸쳐 줄이고 새것을 켠다.
+   * 발소리·쓰러짐의 바닥 소리, 판 시작 범종, 큰 타격의 바람도 배경을 따른다
+   */
+  setStage(id) {
+    const next = id === 'temple' ? 'temple' : 'poseidon';
+    if (next === this.stage) return;
+    this.stage = next;
+    clearTimeout(this._chimeT);
+    const old = this._amb;
+    if (!old) return;
+    this._amb = null;
+    const t = this.ctx.currentTime;
+    old.out.gain.setTargetAtTime(0, t, 0.8);
+    for (const n of old.nodes) n.stop(t + 4);
+    this.ambience();
+  }
+
+  /**
+   * 산사의 고요: 솔숲을 지나는 바람("쏴아", 아주 옅게) + 골짜기의 낮은 바람 + 가끔 처마 끝 풍경 "댕그랑".
+   * 파도 대신 산바람이라 포세이돈보다 조금 더 조용하다. 노드 몇 개와 가끔 울리는 풍경뿐이라 폰 부담은 거의 없다
+   */
+  _ambTemple() {
+    const c = this.ctx;
+    const buf = this._noiseBuf();
+    const out = c.createGain();
+    out.gain.value = 0;
+    out.gain.setTargetAtTime(1, c.currentTime + 0.5, 2.5);
+    out.connect(this.master);
+    const lfo = (hz) => {
+      const o = c.createOscillator();
+      o.frequency.value = hz;
+      return o;
+    };
+    const amt = (src, v, param) => {
+      const g = c.createGain();
+      g.gain.value = v;
+      src.connect(g).connect(param);
+    };
+    const src = (rate) => {
+      const n = c.createBufferSource();
+      n.buffer = buf;
+      n.loop = true;
+      n.playbackRate.value = rate;
+      return n;
+    };
+    // 솔바람: 솔잎을 스치는 넓은 "쏴아". 두 느린 물결(16초, 43초)이 겹쳐 불었다 잦아든다
+    const pine = src(1);
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 900;
+    bp.Q.value = 0.6;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1900; // 치찰음처럼 새지 않게 위를 닫는다
+    const pg = c.createGain();
+    pg.gain.value = 0.007;
+    const w1 = lfo(0.062);
+    const w2 = lfo(0.023);
+    amt(w1, 0.004, pg.gain);
+    amt(w2, 0.003, pg.gain);
+    amt(w1, 300, bp.frequency);
+    pine.connect(bp).connect(lp).connect(pg).connect(out);
+    // 골짜기 바람: 아주 낮은 "우우" (소리의 바닥을 깔아 텅 빈 느낌을 막는다)
+    const low = src(0.79);
+    const vl = c.createBiquadFilter();
+    vl.type = 'lowpass';
+    vl.frequency.value = 220;
+    vl.Q.value = 0.4;
+    const vg = c.createGain();
+    vg.gain.value = 0.022;
+    const w3 = lfo(0.041);
+    amt(w3, 0.01, vg.gain);
+    low.connect(vl).connect(vg).connect(out);
+    const t = c.currentTime;
+    for (const n of [pine, low, w1, w2, w3]) n.start(t);
+    this._amb = { out, nodes: [pine, low, w1, w2, w3], pine: pg };
+    // 풍경: 9~26초마다 한 번 (분석용 OfflineAudioContext 에서는 windChime 을 직접 부른다)
+    if (this.ctx.startRendering) return;
+    const loop = () => {
+      this._chimeT = setTimeout(() => {
+        if (this.stage !== 'temple') return;
+        if (this.ctx.state === 'running') this.windChime();
+        loop();
+      }, between(Math.random, 9000, 26000));
+    };
+    loop();
+  }
+
+  /**
+   * 처마 끝 풍경(작은 청동 종 + 물고기 추): 바람에 추가 흔들려 1~3번 "댕-그랑". 멀리서 아주 작게.
+   * 종마다 높이가 조금씩 달라(처마 네 귀퉁이) 늘 같은 음이 되풀이되지 않는다. 음이 있는 소리지만 높고 멀어 음악처럼 들리지 않는다
+   * @param k 세기 0~1 (큰 바람이면 더 많이·세게 흔들린다)
+   */
+  windChime(k = 0.5) {
+    if (!this._on || !this.ctx || !this.master) return;
+    const c = this.ctx;
+    const f = between(Math.random, 1180, 1520);
+    const out = c.createGain();
+    out.gain.value = 0.018 + 0.02 * k;
+    const pan = c.createStereoPanner?.();
+    if (pan) {
+      pan.pan.value = between(Math.random, -0.6, 0.6);
+      out.connect(pan).connect(this.master);
+    } else out.connect(this.master);
+    // 작은 종의 배음 (종은 배음이 정수배가 아니다) · 세기 · 울림 길이(초)
+    const P = [
+      [1, 1, 1.5],
+      [2.32, 0.45, 0.8],
+      [4.25, 0.22, 0.45],
+      [6.6, 0.1, 0.25],
+    ];
+    const hits = 1 + Math.floor(Math.random() * (1.6 + 1.4 * k));
+    let t = c.currentTime + 0.02;
+    let end = t;
+    for (let h = 0; h < hits; h++) {
+      const a = h === 0 ? 1 : between(Math.random, 0.3, 0.65);
+      for (const [r, g, tau] of P) {
+        const o = c.createOscillator();
+        o.frequency.value = f * r * between(Math.random, 0.998, 1.002);
+        const e = c.createGain();
+        e.gain.setValueAtTime(0, t);
+        e.gain.linearRampToValueAtTime(g * a, t + 0.002);
+        e.gain.setTargetAtTime(0, t + 0.002, tau / 3);
+        o.connect(e).connect(out);
+        o.start(t);
+        o.stop(t + tau * 2.2);
+        end = Math.max(end, t + tau * 2.2);
+      }
+      t += between(Math.random, 0.16, 0.42);
+    }
+    this.stats.nodes += hits * 8;
+  }
+
+  /**
+   * 범종: 종각의 큰 종을 당목으로 한 번 친다 — 판이 시작될 때 산사에서만. 멀리서 "우웅—" 하고 10초 넘게 끌며,
+   * 짝지은 배음이 조금씩 어긋나 소리가 느리게 커졌다 작아진다(맥놀이). 당목은 나무라 쇳소리 없이 둔하게 시작한다.
+   * 30초 안에 다시 부르면 울리지 않는다 (판을 연달아 다시 시작해도 겹치지 않게)
+   */
+  templeBell() {
+    if (!this._on || !this.ctx || !this.master) return;
+    const c = this.ctx;
+    const t = c.currentTime + 0.05;
+    if (this._bellT && t - this._bellT < 30) return;
+    this._bellT = t;
+    const out = c.createGain();
+    out.gain.value = 0.11;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1400; // 멀리서 들려 높은 배음은 먼저 사라진다
+    const pan = c.createStereoPanner?.();
+    if (pan) {
+      pan.pan.value = -0.35; // 종각은 왼쪽 뒤
+      out.connect(lp).connect(pan).connect(this.master);
+    } else out.connect(lp).connect(this.master);
+    // 배음 비율 · 세기 · 울림(초) · 짝 배음과 어긋난 정도(Hz): 한국 범종처럼 낮은 "허밍" 음이 가장 오래 남는다
+    const f0 = 68;
+    const P = [
+      [1, 0.55, 11, 0.35],
+      [2.63, 1, 6.5, 0.8],
+      [4.77, 0.4, 3.5, 1.3],
+      [7.45, 0.2, 2, 2.1],
+      [10.5, 0.1, 1.1, 3],
+    ];
+    for (const [r, g, tau, beat] of P) {
+      for (const d of [0, beat]) {
+        const o = c.createOscillator();
+        o.frequency.value = f0 * r + d;
+        const e = c.createGain();
+        e.gain.setValueAtTime(0, t);
+        e.gain.linearRampToValueAtTime(g * 0.5, t + 0.03);
+        e.gain.setTargetAtTime(0, t + 0.03, tau / 3);
+        o.connect(e).connect(out);
+        o.start(t);
+        o.stop(t + tau * 2.4);
+      }
+    }
+    // 당목이 닿는 둔한 "퉁" (낮게 거른 잡음 짧게)
+    const n = c.createBufferSource();
+    n.buffer = this._noiseBuf();
+    const nf = c.createBiquadFilter();
+    nf.type = 'lowpass';
+    nf.frequency.value = 260;
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(0, t);
+    ng.gain.linearRampToValueAtTime(0.9, t + 0.008);
+    ng.gain.setTargetAtTime(0, t + 0.008, 0.03);
+    n.connect(nf).connect(ng).connect(out);
+    n.start(t);
+    n.stop(t + 0.3);
+    this.stats.nodes += 24;
+  }
+
+  /** 새 판이 시작됨: 산사에서는 범종이 한 번 울린다 */
+  roundStart() {
+    if (this.stage === 'temple') this.templeBell();
+  }
+
+  /**
+   * 큰 타격이 배경을 흔듦 (main.js 가 arena.excite 와 같은 세기로 부른다, 0~1).
+   * 산사: 단풍잎이 흩날리는 "바스락"과 솔바람이 잠깐 세지고, 세게 치면 풍경이 흔들린다. 포세이돈은 아직 없음
+   */
+  gust(amount) {
+    if (!this._on || !this.ctx || this.stage !== 'temple' || amount < 0.15) return;
+    const now = this.ctx.currentTime;
+    if (this._gustT && now - this._gustT < 0.6) return; // 연타에 바스락이 겹겹이 쌓이지 않게
+    this._gustT = now;
+    const rec = this.pickSample('leaves');
+    if (rec) {
+      const ev = this.event({ bus: this.fleshBus, gain: 0.08 + 0.12 * amount, bright: 4200, prio: 0.2 }); // 잎이 마른 종이처럼 쉬익 새지 않게 위를 닫는다
+      this.layer(ev, rec, { rate: between(Math.random, 0.8, 1.0) });
+    }
+    const pg = this._amb?.pine;
+    if (pg) {
+      pg.gain.cancelScheduledValues(now);
+      pg.gain.setTargetAtTime(0.007 + 0.012 * amount, now, 0.15);
+      pg.gain.setTargetAtTime(0.007, now + 0.6, 1.2);
+    }
+    if (amount > 0.5 && Math.random() < amount) this.windChime(amount);
   }
 
   /** 새 판: 먹먹함을 푼다 */
@@ -1935,6 +2220,7 @@ export class BodySounds {
     this.fallV = { pelvis: 0, chest: 0 };
     this.lastFall = -1;
     this.t = 0;
+    this.thudDue = 0; // 목소리 없는 캐릭터가 죽은 뒤 "쿵"을 내야 할 마감 시각 (0 = 없음)
   }
 
   update(dt) {
@@ -1942,7 +2228,10 @@ export class BodySounds {
     const s = this.s;
     this.t += dt;
     if (f.state !== this.state) {
-      if (f.state === 'dead') s.death(this.voice, f.causeOfDeath, { me: this.me });
+      if (f.state === 'dead') {
+        s.death(this.voice, f.causeOfDeath, { me: this.me });
+        if (VOICES[this.voice]?.mute) this.thudDue = this.t + 1.2; // 1.2초 안에 몸이 닿지 않으면(이미 누워 있었음) 그때 낸다
+      }
       else if (f.state === 'getup' && this.state === 'stand') s.bodyFall(1.2, { light: true }); // 무릎이 꺾여 주저앉음
       this.state = f.state;
     }
@@ -1974,11 +2263,18 @@ export class BodySounds {
         const v0 = this.fallV[k];
         if (v0 < -1 && vy > v0 * 0.35 && y < 0.45) {
           // 떨어지던 몸이 땅에서 멈췄다. 골반·가슴이 잇달아 닿으면 한 번만 크게
-          if (this.t - this.lastFall > 0.25) s.bodyFall(-v0);
+          if (this.thudDue) {
+            s.bodyFall(Math.max(-v0, 2.4)); // 목소리 대신이라 늘 무겁게
+            this.thudDue = 0;
+          } else if (this.t - this.lastFall > 0.25) s.bodyFall(-v0);
           this.lastFall = this.t;
           this.fallV[k] = 0;
         } else this.fallV[k] = vy < 0 ? Math.min(v0, vy) : 0;
       }
+    }
+    if (this.thudDue && this.t > this.thudDue) {
+      s.bodyFall(2.4);
+      this.thudDue = 0;
     }
   }
 }

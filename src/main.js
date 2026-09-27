@@ -145,6 +145,7 @@ resize();
 // ── 물리 세계와 등장인물 ──
 const particles = new Particles(scene);
 const sound = new Sound();
+sound.setStage(stageBuild ? params.get('stage') : 'poseidon'); // 배경 소리·바닥 소리·범종이 배경을 따른다
 const input = new Input(canvas);
 const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
@@ -244,6 +245,7 @@ function newRound() {
   bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
   sound.prepareVoices(['player', foeVoice]);
   sound.resetRound();
+  sound.roundStart(); // 산사: 멀리서 범종이 한 번 울린다
   roundOver = false;
   roundOverTime = 0;
   camFollow.copy(player.pelvisPos);
@@ -328,6 +330,7 @@ function onWound(att, vic, r, point, pr) {
   else if (att === player) haptic((e / 120) * (0.4 + 0.6 * sting));
   if (!vic.alive) slowMo = 1.6;
   arena.excite(vic.alive ? Math.min(0.6, e / 250) : 1); // 떠다니던 먼지가 흩날린다
+  sound.gust(vic.alive ? Math.min(0.6, e / 250) : 1); // 산사: 단풍잎 바스락 + 솔바람 + 풍경
 }
 
 function onClash(point, speed, touch) {
@@ -566,7 +569,7 @@ function showHint(text, ms = 3500) {
 
 async function startFight() {
   sound.unlock();
-  sound.ambience(); // 멀리서 들리는 파도·바람 (아주 작게, 처음 한 번만 켜진다)
+  sound.ambience(); // 배경의 고요 (포세이돈: 파도·바람, 산사: 산바람·풍경). 아주 작게, 처음 한 번만 켜진다
   // 폰이면 전체화면 + 가로 고정 시도 (지원 안 하면 조용히 넘어감)
   if (input.isTouchDevice) {
     try {
