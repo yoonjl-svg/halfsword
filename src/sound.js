@@ -1493,6 +1493,70 @@ export class Sound {
     o.stop(t + 3.6);
   }
 
+  /**
+   * 바닷가 절벽의 고요: 아주 멀리서 밀려오는 파도 + 옅은 바람. 음악이 아니라 "정적"이라 발소리보다 훨씬 작게(약 -45dB) 깔린다.
+   * 처음 한 번만 만들고 계속 돈다 (시작 버튼을 누를 때 main.js 가 부른다). 전체 음량(master)을 거치므로
+   * 소리 끄기·음량 설정·쓰러졌을 때의 먹먹함을 그대로 따른다. 노드 몇 개뿐이라 폰 부담은 거의 없다
+   */
+  ambience() {
+    if (this._amb || !this.ctx || this.ctx.startRendering || !this.master) return;
+    const c = this.ctx;
+    // 4초짜리 흰 잡음 (22050Hz 로 만들어 메모리를 아낀다. 흰 잡음이라 되풀이 이음매에서 딸깍이지 않는다)
+    const sr = 22050;
+    const buf = c.createBuffer(1, sr * 4, sr);
+    const d = buf.getChannelData(0);
+    const rnd = makeRng(this.seed ^ 0x5eed);
+    for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1;
+    const out = c.createGain();
+    out.gain.value = 0;
+    out.gain.setTargetAtTime(1, c.currentTime + 0.5, 2.5); // 천천히 스며든다
+    out.connect(this.master);
+    const lfo = (hz) => {
+      const o = c.createOscillator();
+      o.frequency.value = hz;
+      return o;
+    };
+    const amt = (src, v, param) => {
+      const g = c.createGain();
+      g.gain.value = v;
+      src.connect(g).connect(param);
+    };
+    // 파도: 낮게 거른 잡음을 주기가 서로 안 맞는 느린 물결 둘(12초, 7.6초)로 부풀렸다 가라앉힌다
+    const surf = c.createBufferSource();
+    surf.buffer = buf;
+    surf.loop = true;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 500;
+    lp.Q.value = 0.3;
+    const sg = c.createGain();
+    sg.gain.value = 0.03;
+    const w1 = lfo(0.083);
+    const w2 = lfo(0.131);
+    amt(w1, 0.016, sg.gain);
+    amt(w2, 0.009, sg.gain);
+    amt(w1, 160, lp.frequency); // 파도가 부서질 때 조금 밝아진다
+    surf.connect(lp).connect(sg).connect(out);
+    // 바람: 좁게 거른 잡음, 가운데 높이와 세기가 아주 천천히 오르내린다
+    const wind = c.createBufferSource();
+    wind.buffer = buf;
+    wind.loop = true;
+    wind.playbackRate.value = 0.87; // 파도와 같은 잡음이 겹쳐 들리지 않게
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 650;
+    bp.Q.value = 1.2;
+    const wg = c.createGain();
+    wg.gain.value = 0.012;
+    const w3 = lfo(0.047);
+    amt(w3, 220, bp.frequency);
+    amt(w3, 0.008, wg.gain);
+    wind.connect(bp).connect(wg).connect(out);
+    const t = c.currentTime;
+    for (const n of [surf, wind, w1, w2, w3]) n.start(t);
+    this._amb = out;
+  }
+
   /** 새 판: 먹먹함을 푼다 */
   resetRound() {
     if (!this.ctx) return;
