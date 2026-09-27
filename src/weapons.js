@@ -307,7 +307,8 @@ const katana = finalizeSpec('katana', {
   nameKo: '카타나', nameEn: 'Katana',
   grip: 'two-hand', material: 'steel',
   hiltLength: 0.25, bladeLength: 0.72, gripAlong: -0.22,
-  mCut: 1.6, mThrust: 0.85, mBlunt: 0.95,
+  mCut: 1.85, mThrust: 0.85, mBlunt: 0.95,
+  controlOverrides: { wristVmax: 38, aimStiffness: 70 }, // 짧고 가벼워 손목을 더 빨리 돌릴 수 있다
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.2, 0.014, 0.14, 0.017); // 츠카: 길고 타원 단면
@@ -471,8 +472,11 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
   nameKo: '고무 닭', nameEn: 'Rubber Chicken',
   grip: 'one-hand', material: 'rubber',
   hiltLength: 0.1, bladeLength: 0.35,
-  edged: false, mBlunt: 0.4,
-  controlOverrides: { aimStiffness: 34, maxAimTorque: 10 }, // 물렁하고 가벼워 조준이 흐물흐물하다
+  // 날이 없는 무기는 몸통·팔다리를 때려도 판정상 아무 효과가 없다(fighter.applyWound: 머리·목만
+  // 기절 효과가 있다) → 고무 닭이 이길 수 있는 유일한 길은 머리를 맞히는 것뿐이라, mBlunt를
+  // 크게 올려도 몸통 타격은 여전히 무해하고 "머리에 제대로 맞으면 그래도 어질하다"만 세진다.
+  edged: false, mBlunt: 2.6,
+  controlOverrides: { aimStiffness: 34, maxAimTorque: 11 }, // 물렁하고 가벼워 조준이 흐물흐물하다
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.05, 0.02); // 목 부분을 쥔다
@@ -507,8 +511,9 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   nameKo: '냉동 참치', nameEn: 'Frozen Tuna',
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
-  edged: false, mBlunt: 1.3, durability: 14, // 세게 맞부딪히면 쩍 갈라진다
-  controlOverrides: { aimStiffness: 42, maxAimTorque: 14 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다
+  // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
+  edged: false, mBlunt: 2.2, durability: 14, // 세게 맞부딪히면 쩍 갈라진다
+  controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.15, 0.025, 0.12, 0.025); // 꼬리 쪽을 쥔다
