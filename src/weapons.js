@@ -412,15 +412,25 @@ const zweihander = finalizeSpec('zweihander', {
       partTuple(['box', 0.028, L / 2, 0.009], 0.19 + L / 2, 1.7, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];
   },
-  // 파리어하켄(parrying hook): 코등이 바로 위, 칼날이 시작되는 자리에서 양옆으로 뻗은 갈고리 —
-  // 상대 칼을 걸어채거나 손을 보호한다. 물리에는 영향 없는 장식(콜라이더는 그대로 상자 하나).
+  // 레어 등급 마감 (전부 물리 무관, 콜라이더에서 ~1cm 안):
+  //  - 파리어하켄(parrying hook): 칼날 밑동(리카소)에서 코등이와 같은 평면(x축)으로 뻗은 작은 갈고리.
+  //    예전엔 z축(칼날 면 방향)으로 뻗어 칼날 면을 보는 시점에서 카메라를 향해 숨어 버렸다.
+  //  - 리카소 가죽 감개: 갈고리 아래 칼날 밑동을 감싸 두 번째 손잡이로 쓰던 자리
+  //  - 풀러(피홈): 칼날 양면 가운데를 따라 길게 파인 어두운 홈 — "잘 만든 칼" 표식
   decorate(group, look) {
-    const mat = new THREE.MeshStandardMaterial({ color: look.hilt, roughness: 0.6, metalness: 0.4 });
+    const mat = new THREE.MeshStandardMaterial({ color: look.hilt, roughness: 0.45, metalness: 0.5 });
+    const L = this.bladeLength, base = this.hiltLength;
+    const ricY = base + 0.02;
+    const leather = new THREE.MeshStandardMaterial({ color: 0x4a2f1c, roughness: 0.9 });
+    const wrap = addMesh(group, new THREE.BoxGeometry(0.06, 0.1, 0.022), leather, [0, ricY + 0.06, 0]);
+    wrap.castShadow = true;
     for (const s of [-1, 1]) {
-      const hook = addMesh(group, new THREE.ConeGeometry(0.012, 0.09, 8), mat, [0, 0.2, s * 0.03]);
-      hook.rotation.x = s * 1.1; // 칼끝 쪽으로 비스듬히, 바깥으로 벌어지게
+      const hook = addMesh(group, new THREE.ConeGeometry(0.008, 0.04, 8), mat, [s * 0.045, ricY + 0.13, 0]);
+      hook.rotation.z = -s * 0.9; // 코등이 평면(x) 바깥으로, 칼끝 쪽으로 비스듬히
       hook.castShadow = true;
     }
+    const fullerMat = new THREE.MeshStandardMaterial({ color: 0x6f7780, roughness: 0.35, metalness: 0.4 });
+    for (const s of [-1, 1]) addMesh(group, new THREE.BoxGeometry(0.01, L * 0.55, 0.0006), fullerMat, [0, base + 0.16 + L * 0.275, s * 0.0093]);
   },
 });
 
@@ -595,26 +605,47 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   partMesh: curvedBlade((hx, hy, hz) => edgedBladeGeometry(hx, hy, hz, 0.008)),
   buildParts(look) {
     const L = this.bladeLength;
-    const grip = boxInertia(0.2, 0.014, 0.14, 0.017); // 츠카: 길고 타원 단면
-    const pommel = sphereInertia(0.06, 0.014); // 카시라(자루끝 마개), 가볍다
+    // 균형 재분배 (밸런스 시뮬로 확인한 근본 원인 — 3라운드 카타나와 같은 처방): 칼날 0.85kg(총중량의 74%)이
+    //  0.9m 끝까지 실려 손 기준 휘두름 관성이 커서, 긴 칼인데 늦게 돌아 간격 싸움에서 진다(13%).
+    //  총중량(1.15kg)은 그대로 두고 칼날 0.72kg, 긴 츠카(목심+상어가죽+비단 끈, 실물 0.3kg대) 0.3kg,
+    //  카시라 0.09kg 로 손 쪽에 무게를 옮긴다.
+    const grip = boxInertia(0.3, 0.014, 0.14, 0.017); // 츠카: 길고 타원 단면
+    const pommel = sphereInertia(0.09, 0.014); // 카시라(자루끝 마개)
     const cross = boxInertia(0.04, 0.04, 0.005, 0.04); // 츠바: 얇고 넓은 원반
-    const blade = bladeInertia(0.85, L, 0.42, 0.25, 0.03, 0.007);
+    const blade = bladeInertia(0.72, L, 0.42, 0.25, 0.03, 0.007);
     return [
-      partTuple(['box', 0.014, 0.14, 0.017], 0, 0.2, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.014], -0.2, 0.06, 0, pommel.Ie, pommel.It, look.hilt),
+      partTuple(['box', 0.014, 0.14, 0.017], 0, 0.3, 0, grip.Ie, grip.It, look.grip),
+      partTuple(['ball', 0.014], -0.2, 0.09, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.04, 0.005, 0.04], 0.24, 0.04, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.85, blade.comY, blade.Ie, blade.It, 0xdadfe3, true),
+      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.72, blade.comY, blade.Ie, blade.It, 0xdadfe3, true),
     ];
   },
-  // 츠바(둥근 코등이 원반)를 뚜렷하게 — 물리 콜라이더(얇은 사각 원반)는 그대로 두고 겉모습만 덧붙인다.
+  // 에픽 명검의 세공 (전부 물리 무관, 콜라이더에서 ~1cm 안):
+  //  - 둥근 츠바(철) + 가는 금 테두리, 칼날 밑동의 금빛 하바키(목띠)
+  //  - 츠카: 검은 비단 끈(츠카이토)을 감은 마디 + 그 사이로 드러난 흰 상어가죽(사메) 마름모 — 긴 츠카가 노다치답게 읽힌다
   decorate(group) {
-    const tsuba = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.045, 0.045, 0.008, 16),
-      new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.6, metalness: 0.4 }),
-    );
-    tsuba.position.y = 0.24; // 칼이 y축을 따라 뻗어 있으니, 원반 모양 그대로(원기둥 축=y) 꿰어 놓는다
+    const iron = new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.6, metalness: 0.4 });
+    const gold = new THREE.MeshStandardMaterial({ color: 0xb8913e, roughness: 0.35, metalness: 0.6 });
+    const tsuba = addMesh(group, new THREE.CylinderGeometry(0.045, 0.045, 0.008, 18), iron, [0, 0.24, 0]); // 원기둥 축=y(칼 길이 방향)
     tsuba.castShadow = true;
-    group.add(tsuba);
+    const rim = addMesh(group, new THREE.TorusGeometry(0.045, 0.0022, 6, 24), gold, [0, 0.24, 0]);
+    rim.rotation.x = Math.PI / 2;
+    const habaki = addMesh(group, new THREE.BoxGeometry(0.034, 0.03, 0.011), gold, [0, 0.265, 0]); // 칼날(0.03×0.007) 밑동을 감싼다
+    habaki.castShadow = true;
+    const silk = new THREE.MeshStandardMaterial({ color: 0x1b1d2e, roughness: 0.85 });
+    const same = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.7 });
+    for (let y = -0.12; y <= 0.121; y += 0.04) {
+      const band = addMesh(group, new THREE.TorusGeometry(0.0165, 0.0035, 6, 12), silk, [0, y, 0]);
+      band.rotation.x = Math.PI / 2;
+      band.scale.set(1, 1.15, 1);
+      if (y < 0.12) {
+        for (const s of [-1, 1]) {
+          const d = addMesh(group, new THREE.OctahedronGeometry(0.008, 0), same, [0, y + 0.02, s * 0.0165]);
+          d.scale.set(0.9, 1.3, 0.25);
+        }
+      }
+    }
+    addMesh(group, new THREE.SphereGeometry(0.016, 10, 8), iron, [0, -0.2, 0]).scale.set(1, 0.6, 1.1); // 카시라(자루 끝 쇠마개)
   },
 });
 

@@ -40,21 +40,22 @@ const WEAPON_BASELINE = 0.13 + 1.05;
 // 담겨 있어서, 짧은 칼(환두대도 등)이 순수 길이비보다 실제로는 덜 불리하다는 게 이 표로 드러났다.
 // excalibur_replica는 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 비율을 쓴다.
 const MEASURED = {
-  // id: [contact, reach, clinch] (m) — tools/sim/weapon_measures.mjs 와 같은 값 (감독 확정 14종 로스터)
-  longsword: [1.62, 1.91, 1.25],
-  zweihander: [1.66, 2.08, 1.28],
-  estoc: [1.6, 2.05, 1.24],
-  sabre: [1.4, 1.67, 1.08],
-  rapier: [1.52, 1.73, 1.17],
-  falchion: [1.4, 1.62, 1.08],
-  monohoshizao: [1.51, 2.01, 1.17],
-  qinggang: [1.37, 1.61, 1.06],
-  excalibur: [1.61, 1.86, 1.24],
-  excalibur_replica: [1.59, 1.86, 1.23],
-  lightsaber: [1.54, 1.73, 1.19],
-  tree_branch: [1.44, 1.64, 1.11],
-  rubber_chicken: [1.07, 1.21, 0.83],
-  frozen_tuna: [1.34, 1.69, 1.03],
+  // id: [contact, reach, clinch, cutTime] raw — tools/sim/weapon_measures.mjs 와 같은 값 (감독 확정 14종 로스터).
+  //  cutTime 은 보정 없는 raw(롱소드 0.43)라 비율로만 쓴다.
+  longsword: [1.62, 1.91, 1.25, 0.43],
+  zweihander: [1.66, 2.08, 1.28, 0.49],
+  estoc: [1.6, 2.05, 1.24, 0.42],
+  sabre: [1.4, 1.67, 1.08, 0.38],
+  rapier: [1.52, 1.73, 1.17, 0.29],
+  falchion: [1.4, 1.62, 1.08, 0.36],
+  monohoshizao: [1.58, 1.92, 1.22, 0.46],
+  qinggang: [1.37, 1.61, 1.06, 0.36],
+  excalibur: [1.61, 1.86, 1.24, 0.41],
+  excalibur_replica: [1.59, 1.86, 1.23, 0.42],
+  lightsaber: [1.54, 1.73, 1.19, 0.25],
+  tree_branch: [1.44, 1.64, 1.11, 0.33],
+  rubber_chicken: [1.07, 1.21, 0.83, 0.27],
+  frozen_tuna: [1.34, 1.69, 1.03, 0.46],
 };
 const LS_MEASURED = MEASURED.longsword;
 
@@ -90,7 +91,7 @@ export class AI {
       if (!w || w.id === schoolWid) return baseM;
       const m = MEASURED[w.id];
       if (m) {
-        return { ...baseM, contact: baseM.contact * (m[0] / schoolM[0]), reach: baseM.reach * (m[1] / schoolM[1]), clinch: baseM.clinch * (m[2] / schoolM[2]) };
+        return { ...baseM, contact: baseM.contact * (m[0] / schoolM[0]), reach: baseM.reach * (m[1] / schoolM[1]), clinch: baseM.clinch * (m[2] / schoolM[2]), cutTime: baseM.cutTime * (m[3] / schoolM[3]) }; // 베는 시간도 같은 비율로 (전엔 모든 무기가 롱소드 0.3 그대로)
       }
       const s = (w.bladeLength + w.hiltLength) / WEAPON_BASELINE;
       return { ...baseM, contact: baseM.contact * s, reach: baseM.reach * s, clinch: baseM.clinch * s };

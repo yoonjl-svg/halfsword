@@ -9,7 +9,7 @@ export const WEAPON_MEASURES = {
   sabre: { contact: 1.4, reach: 1.67, clinch: 1.08, cutTime: 0.38 },
   rapier: { contact: 1.52, reach: 1.73, clinch: 1.17, cutTime: 0.29 },
   falchion: { contact: 1.4, reach: 1.62, clinch: 1.08, cutTime: 0.36 },
-  monohoshizao: { contact: 1.51, reach: 2.01, clinch: 1.17, cutTime: 0.44 },
+  monohoshizao: { contact: 1.58, reach: 1.92, clinch: 1.22, cutTime: 0.46 }, // 균형 재분배(칼날 0.72·츠카 0.3kg) 후 재실측 — 전엔 칼끝이 무거워 휘두름이 머리 높이에 못 미쳐 1.09 로 나왔다
   qinggang: { contact: 1.37, reach: 1.61, clinch: 1.06, cutTime: 0.36 },
   excalibur: { contact: 1.61, reach: 1.86, clinch: 1.24, cutTime: 0.41 },
   excalibur_replica: { contact: 1.59, reach: 1.86, clinch: 1.23, cutTime: 0.42 },
@@ -20,10 +20,15 @@ export const WEAPON_MEASURES = {
 };
 
 /** AI 하나의 유파 간격을 그 무기 실측치로 바꿔 끼운다 (롱소드는 그대로 두어 기본 AI 회귀를 지킨다) */
+// cutTime 은 weapon_measure.mjs 가 거리와 달리 보정 없이 raw 로 적는다(롱소드 raw 0.43s). 그런데 롱소드 AI 는 0.3 을 쓴다 —
+//  raw 그대로 끼우면 롱소드 말고 모든 무기의 AI 가 "내 베기는 롱소드보다 40% 늦다"고 착각해 너무 멀리서 공격을 걸었다
+//  (3→4라운드 밸런스에서 확인한 근본 원인). 거리와 똑같이 롱소드 기준으로 보정한다: 0.3 × (무기 raw ÷ 롱소드 raw).
+export const LONGSWORD_RAW_CUT = 0.43;
 export function applyWeaponMeasure(ai, weaponId) {
   const m = WEAPON_MEASURES[weaponId];
   if (!ai || !m || weaponId === 'longsword') return;
-  ai.school = { ...ai.school, measure: m };
-  ai.M = m;
-  ai.foeReach = m.reach + 0.05;
+  const M = { ...m, cutTime: WEAPON_MEASURES.longsword.cutTime * (m.cutTime / LONGSWORD_RAW_CUT) };
+  ai.school = { ...ai.school, measure: M };
+  ai.M = M;
+  ai.foeReach = M.reach + 0.05;
 }
