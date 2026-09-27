@@ -444,7 +444,7 @@ const excalibur = finalizeSpec('excalibur', {
 //      물리가 롱소드와 살짝 다르므로 measure 는 따로 실측해 docs/weapons.md 에 적는다.
 // ═════════════════════════════════════════════════════════════
 const excaliburReplica = finalizeSpec('excalibur_replica', {
-  nameKo: '엑스칼리버 복제품', nameEn: 'Excalibur (replica)',
+  nameKo: '엑스칼리버', nameEn: 'Excalibur', // 감독 지시: 화면에는 진품과 같은 이름 — 플레이어는 외관(빛나는 아우라 유무)만 보고 추측한다
   grip: 'two-hand', material: 'steel',
   tier: 'common', // 제원·등급은 커먼 (power 1.0)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,

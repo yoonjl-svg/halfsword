@@ -27,7 +27,7 @@
 | monohoshizao (`katana`) | 모노호시자오 (에픽, 코지로의 노다치) | 두손 | 1.15 | 0.90 | 0.25 | steel — 옛 카타나. 감독 결정으로 에픽·긴 노다치 |
 | qinggang (`jian`) | 청강검 (에픽, 랴오) | 한손 | 0.85 | 0.74 | 0.12 | steel — 옛 지안. 감독 결정으로 이름·등급 변경, `jian`은 별칭 |
 | excalibur | 엑스칼리버 (진품, 플레이어 전용) | 두손 | 1.35 | 1.00 | 0.13 | steel |
-| excalibur_replica | 엑스칼리버 복제품 | 두손 | 1.50 | 1.00 | 0.13 | steel — 감독 확정판(main 1f6d079): 황동 장식, 칼날이 조금 두껍고 무겁다. power 1.0 |
+| excalibur_replica | 엑스칼리버 (복제품 — 화면 이름은 진품과 똑같이 '엑스칼리버') | 두손 | 1.50 | 1.00 | 0.13 | steel — 감독 확정판: 황동 장식, 칼날이 조금 두껍고 무겁다. power 1.0. 플레이어는 아우라 유무로만 추측 |
 | lightsaber | 라이트세이버 | 한손 | 0.77 | 0.90 | 0.15 | plasma |
 | tree_branch | 나뭇가지 | 한손 | 0.32 | 0.80 | 0.15 | wood (edged:false) |
 | rubber_chicken | 고무 닭 | 한손 | 0.20 | 0.35 | 0.10 | rubber (edged:false) |
