@@ -347,10 +347,11 @@ export class Fighter {
       mCut: spec.mCut,
       mThrust: spec.mThrust,
       mBlunt: spec.mBlunt,
+      power: spec.power, // 등급 공격력 배율 (롱소드=1)
       ignoreArmor: spec.ignoreArmor,
       twoHand: spec.twoHand,
     };
-    this.weaponDurability = spec.durability; // 무기가 부러지기까지 남은 충격량 예산 (N·s, Infinity면 안 부러짐)
+    this.weaponDurability = spec.breakImpulse; // 무기가 부러지기까지 남은 충격량 예산 (N·s, Infinity면 안 부러짐)
     this.weaponBroken = false;
     const L = spec.bladeLength;
     const wristLocal = new THREE.Vector3(0.565, 1.43, this.side * 0.2); // 앞으로 뻗은 팔 끝
@@ -804,7 +805,7 @@ export class Fighter {
 
   /**
    * 무기가 세게 부딪힌 만큼(J, N·s) 내구도를 깎는다. 강철 무기는 내구도가 무한이라 아무 일도
-   * 없지만, 나뭇가지·냉동 참치처럼 durability가 정해진 무기는 다 닳으면 부러진다.
+   * 없지만, 나뭇가지·냉동 참치처럼 breakImpulse가 정해진 무기는 다 닳으면 부러진다.
    */
   absorbWeaponImpact(J) {
     if (!this.armed || this.weaponBroken || !isFinite(this.weaponDurability)) return;

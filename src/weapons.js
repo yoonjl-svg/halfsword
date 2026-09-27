@@ -28,9 +28,17 @@ export const MATERIALS = {
 // 다른 것은 여기서 옮긴다 — 얼린 참치는 딱딱한 통나무 소리(wood)가 제일 가깝다.
 export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', rubber: 'rubber', frozen: 'wood' };
 
-// 감독이 정한 무기 등급 (docs/characters.md): 쓰레기(trash) / 커먼(common) / 레전드(legend).
-// 부러짐 규칙은 감독이 뒤에 붙인다 — 여기서는 꼬리표만 단다.
-export const GRADES = ['trash', 'common', 'legend'];
+// 감독이 정한 무기 등급 (docs/characters.md, 캐릭터 PM 계약): 쓰레기(trash) / 커먼(common) / 레전드(legend).
+// 등급마다 power(타격 에너지 배율, common=1.0)와 durability(내구, 0~1)가 다르다. 무기 스펙에 직접 적으면
+// 그 값이 이기고, 안 적으면 등급 기본값을 받는다. 부서지는 연출·규칙은 감독이 붙인다 — 여기서는 수치만.
+// (power는 combat.js가 실제로 에너지에 곱한다. durability는 아직 아무 데서도 안 쓰는 계약 수치이고,
+//  지금 나뭇가지·냉동 참치가 부러지는 건 별도의 breakImpulse(칼끼리 부딪힌 충격량 예산, N·s) 때문이다.)
+export const TIERS = ['trash', 'common', 'legend'];
+export const TIER_DEFAULTS = {
+  trash: { power: 0.85, durability: 0.15 },
+  common: { power: 1.0, durability: 0.6 },
+  legend: { power: 1.2, durability: 1.0 },
+};
 
 
 // ── 관성 계산 도우미 (fighter.js 원래 롱소드 계산과 같은 식) ──
@@ -106,11 +114,13 @@ function finalizeSpec(id, s) {
     mCut: s.mCut ?? 1,
     mThrust: s.mThrust ?? 1,
     mBlunt: s.mBlunt ?? 1,
-    durability: s.durability ?? Infinity,
+    tier: s.tier ?? 'common', // 등급 안 적으면 커먼
+    power: s.power ?? TIER_DEFAULTS[s.tier ?? 'common'].power, // 등급 공격력 배율 (mCut/mThrust/mBlunt 위에 한 번 더 곱한다)
+    durability: s.durability ?? TIER_DEFAULTS[s.tier ?? 'common'].durability, // 등급 내구 (0~1, 감독이 쓸 계약 수치)
+    breakImpulse: s.breakImpulse ?? Infinity, // 부러지기까지의 충격량 예산 (N·s, Infinity면 안 부러짐)
     ignoreArmor: !!s.ignoreArmor,
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
-    grade: s.grade ?? 'common', // 등급 안 적으면 커먼
     soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
   };
@@ -371,7 +381,7 @@ const jian = finalizeSpec('jian', {
   nameKo: '지안 (중국검)', nameEn: 'Jian',
   grip: 'one-hand', material: 'steel',
   hiltLength: 0.12, bladeLength: 0.74,
-  mCut: 1.0, mThrust: 1.05, mBlunt: 0.95,
+  mCut: 1.0, mThrust: 1.15, mBlunt: 0.95, // 캐릭터 PM 계약: 가볍고 빠름·찌르기 강함·누르는 힘 약함(한손 12N·m)
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.1, 0.015, 0.09, 0.015);
@@ -419,9 +429,8 @@ const hwandudaedo = finalizeSpec('hwandudaedo', {
 const excalibur = finalizeSpec('excalibur', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur',
   grip: 'two-hand', material: 'steel',
-  grade: 'legend', // 감독 등급: 레전드. 진품은 플레이어 전용(docs/characters.md)
+  tier: 'legend', // 감독 등급: 레전드 → power 1.2·durability 1.0. 진품은 플레이어 전용(docs/characters.md)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
-  mCut: 1.2, mThrust: 1.2, mBlunt: 1.1,
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.14, 0.019, 0.1, 0.019);
@@ -447,7 +456,7 @@ const EXCALIBUR_LOOK = { grip: 0x2a2440, hilt: 0xf2c94c, blade: 0xeef3f8 };
 const excaliburReplica = finalizeSpec('excalibur_replica', {
   nameKo: '엑스칼리버 (복제품)', nameEn: 'Excalibur (replica)',
   grip: 'two-hand', material: 'steel',
-  grade: 'common',
+  tier: 'common', // 제원·등급은 롱소드(커먼)
   hiltLength: 0.13, bladeLength: 1.05, gripAlong: -0.14,
   controlOverrides: { twistScale: 1 }, // 롱소드와 똑같은 손목 비틀기 힘 (fighter.js가 롱소드에 강제하는 값)
   buildParts() {
@@ -500,14 +509,14 @@ const lightsaber = finalizeSpec('lightsaber', {
 
 // ═════════════════════════════════════════════════════════════
 //  14) 나뭇가지 — 아무 자료도 없다. 주워 든 막대기라는 설정대로 대충 만든 값 [I] 창작.
-//      날이 없고(edged:false → 항상 둔기 판정), 세게 부딪히면 부러진다(durability)
+//      날이 없고(edged:false → 항상 둔기 판정), 세게 부딪히면 부러진다(breakImpulse)
 // ═════════════════════════════════════════════════════════════
 const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
   grip: 'one-hand', material: 'wood',
   hiltLength: 0.15, bladeLength: 0.8,
-  grade: 'trash', // 감독 등급: 쓰레기
-  edged: false, mBlunt: 0.85, durability: 9, // 몇 번 세게 맞부딪히면 부러진다
+  tier: 'trash', // 감독 등급: 쓰레기 → power 0.85(등급 기본값)·durability 0.15
+  edged: false, breakImpulse: 9, // 몇 번 세게 맞부딪히면 부러진다 (총 타격 배율은 power 0.85 그대로)
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.08, 0.018);
@@ -575,7 +584,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
-  edged: false, mBlunt: 2.2, durability: 14, // 세게 맞부딪히면 쩍 갈라진다
+  edged: false, mBlunt: 2.2, breakImpulse: 14, durability: 0.25, // 세게 맞부딪히면 쩍 갈라진다 (커먼이지만 내구는 낮게)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다
   buildParts(look) {
     const L = this.bladeLength;
