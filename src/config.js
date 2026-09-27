@@ -12,7 +12,7 @@ export const PHYSICS = {
 };
 
 export const ARENA = {
-  radius: 6.5, // 원형 경기장 반지름 (울타리 위치)
+  radius: 6.5, // 원형 경기장 반지름 (대리석 경계 테두리 위치)
   startGap: 4.2, // 시작할 때 두 검투사 사이 거리 (서로 칼이 닿지 않는 간격 밖에서 시작)
 };
 

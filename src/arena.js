@@ -314,36 +314,131 @@ function skyTexture() {
     g.fillStyle = gr;
     g.fillRect(0, 0, w, hz);
     const sx = (0.5 - SUN_AZ / (Math.PI * 2)) * w;
-    // 구름 뒤에 숨은 해 (그림자 방향과 맞춘 높이)
-    let rg = g.createRadialGradient(sx, h * 0.16, 0, sx, h * 0.16, 110);
-    rg.addColorStop(0, 'rgba(252,246,232,0.6)');
-    rg.addColorStop(1, 'rgba(252,246,232,0)');
-    g.fillStyle = rg;
-    g.fillRect(sx - 110, 0, 220, h * 0.16 + 110);
-    // 해 쪽 지평선이 조금 더 밝고 따뜻하다
+    // 해 쪽 지평선이 조금 더 밝고 따뜻하다 (구름 뒤에 숨은 해의 번짐은 아래 구름과 함께 그린다)
     g.save();
     g.translate(sx, h * 0.47);
     g.scale(1, 0.18);
-    rg = g.createRadialGradient(0, 0, 0, 0, 0, 170);
+    let rg = g.createRadialGradient(0, 0, 0, 0, 0, 170);
     rg.addColorStop(0, 'rgba(246,236,216,0.45)');
     rg.addColorStop(1, 'rgba(246,236,216,0)');
     g.fillStyle = rg;
     g.fillRect(-170, -170, 340, 340);
     g.restore();
-    // 층구름 (옅은 줄무늬)
-    for (let i = 0; i < 70; i++) {
-      const y = h * (0.12 + Math.pow(r(), 0.7) * 0.36);
+    // 수평선 가까이 멀리 깔린 층구름: 낮게 보이는 먼 구름은 가로로 눌린 옅은 줄로 보인다 (높이 30° 아래만)
+    for (let i = 0; i < 46; i++) {
+      const y = h * (0.34 + Math.pow(r(), 0.6) * 0.14);
       const x = r() * w;
       const rx = 30 + r() * 140;
-      const ry = 2 + r() * 7;
+      const ry = 1.5 + r() * 4.5;
       const light = r() < 0.6;
-      const a = light ? 0.1 + r() * 0.16 : 0.06 + r() * 0.1;
+      const a = (light ? 0.1 + r() * 0.14 : 0.06 + r() * 0.08) * THREE.MathUtils.smoothstep(y / h, 0.33, 0.4);
       for (const dx of [-w, 0, w]) {
         g.fillStyle = light ? `rgba(238,236,230,${a})` : `rgba(140,148,156,${a})`;
         g.beginPath();
         g.ellipse(x + dx, y, rx, ry, 0, 0, Math.PI * 2);
         g.fill();
       }
+    }
+    // 구름 뒤에 숨은 해의 번짐 + 머리 위 층구름: 높이 떠 있는 평평한 구름층에 바람 방향으로 길게 늘어진 옅은 얼룩
+    //  (밝은 구름 + 잿빛 구름 밑면). 칸마다 하늘 방향을 계산해서 그린다 → 해 번짐은 천정 쪽으로 뾰족하게 찌그러지지 않고,
+    //  구름층 무늬는 올려다봐도 천정을 도는 소용돌이가 아니라 한 방향으로 나란한 줄로 보인다.
+    //  수평선 쪽으로 갈수록 무늬가 한 칸보다 잘아지면 그만큼 흐리게 풀어 준다 (깜빡이는 잔무늬 없이 옅은 안개처럼)
+    {
+      const sun = new THREE.Vector3(4, 9, 3).normalize(); // main.js 해 방향
+      const cw = w / 2; // 반 해상도로 계산해 부드럽게 늘려 붙인다 (하늘 한 칸이 원래 흐릿하다)
+      const ch = Math.floor(hz / 2);
+      const cc = document.createElement('canvas');
+      cc.width = cw;
+      cc.height = ch;
+      const cg = cc.getContext('2d');
+      const img = cg.createImageData(cw, ch);
+      const px = img.data;
+      const hash = (ix, iy, s) => {
+        let n = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(s, 982451653)) | 0;
+        n = Math.imul(n ^ (n >>> 13), 1274126177);
+        return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+      };
+      const vnoise = (x, y, s) => {
+        const ix = Math.floor(x);
+        const iy = Math.floor(y);
+        const fx = x - ix;
+        const fy = y - iy;
+        const ux = fx * fx * (3 - 2 * fx);
+        const uy = fy * fy * (3 - 2 * fy);
+        const a = hash(ix, iy, s);
+        const b = hash(ix + 1, iy, s);
+        const c = hash(ix, iy + 1, s);
+        const d = hash(ix + 1, iy + 1, s);
+        return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+      };
+      // 잔무늬가 한 칸(fp: 한 칸이 무늬 몇 주기인지)보다 잘면 평균(0.5)으로 풀어 준 여러 겹 노이즈
+      const fbm = (x, y, fp, s) => {
+        let v = 0.5;
+        let amp = 0.5;
+        let f = 1;
+        for (let o = 0; o < 3; o++) {
+          const keep = THREE.MathUtils.clamp(1.5 - fp * f * 3, 0, 1);
+          if (keep > 0) v += amp * keep * (vnoise(x * f, y * f, s + o) - 0.5);
+          amp *= 0.5;
+          f *= 2.1;
+        }
+        return v;
+      };
+      const WA = Math.atan2(0.35, 1); // 바람 방향 (떠다니는 먼지가 흘러가는 쪽)
+      const FA = 0.8; // 바람 방향 무늬 빈도 (구름층 높이 = 1)
+      const FC = 2.6; // 가로 방향 무늬 빈도 → 바람 방향으로 3배쯤 길쭉한 부드러운 얼룩
+      const dEl = Math.PI / (ch * 2); // 한 칸의 높이각 (천정~수평선 = ch 칸)
+      const dAz = (Math.PI * 2) / cw;
+      for (let y = 0; y < ch; y++) {
+        const el = Math.PI / 2 - (Math.PI * (y + 0.5)) / (ch * 2);
+        const fade = THREE.MathUtils.smoothstep(el, 0.22, 0.55); // 수평선 쪽은 위의 가로 줄구름이 맡는다
+        const k = Math.cos(el) / Math.max(Math.sin(el), 1e-3); // 구름층에서 잰 수평 거리 (높이 = 1)
+        const kr = dEl / (Math.sin(el) * Math.sin(el)); // 한 칸의 앞뒤 폭
+        const kt = k * dAz; // 한 칸의 옆 폭
+        for (let x = 0; x < cw; x++) {
+          const az = Math.PI - (Math.PI * 2 * (x + 0.5)) / cw;
+          const ra = Math.cos(az - WA); // 바라보는 쪽이 바람 방향과 얼마나 나란한지
+          const rc = Math.sin(az - WA);
+          const a = k * ra;
+          const c = k * rc;
+          const fp = Math.max(kr * Math.hypot(FA * ra, FC * rc), kt * Math.hypot(FA * rc, FC * ra));
+          // 해 번짐 (해에서 멀어질수록 옅게)
+          const cosE = Math.cos(el);
+          const ang = Math.acos(THREE.MathUtils.clamp(Math.cos(az) * cosE * sun.x + Math.sin(el) * sun.y + Math.sin(az) * cosE * sun.z, -1, 1));
+          const sa = 0.6 * Math.max(0, 1 - ang / 0.95) ** 1.4;
+          let la = 0;
+          let da = 0;
+          if (fade > 0) {
+            // 노이즈 값(평균 0.5, 퍼짐 약 0.11)을 표준 점수로 바꿔 덮이는 정도를 정한다
+            const z1 = (fbm(a * FA, c * FC, fp, 11) - 0.5) / 0.11;
+            const z2 = (fbm(a * FA * 0.8 + 5.3, c * FC * 0.9 + 2.7, fp, 23) - 0.5) / 0.11;
+            la = THREE.MathUtils.smoothstep(z1, -0.2, 1.8) * 0.34 * fade; // 밝은 구름
+            da = THREE.MathUtils.smoothstep(z2, 0.3, 2.0) * 0.2 * fade; // 잿빛 구름 밑면
+          }
+          // 해 번짐 → 밝은 구름 → 잿빛 구름 순서로 겹쳐 한 장으로 (미리 곱한 색으로 합성)
+          let R = 252 * sa;
+          let G = 246 * sa;
+          let B = 232 * sa;
+          let A = sa;
+          R = 238 * la + R * (1 - la);
+          G = 236 * la + G * (1 - la);
+          B = 230 * la + B * (1 - la);
+          A = la + A * (1 - la);
+          R = 140 * da + R * (1 - da);
+          G = 148 * da + G * (1 - da);
+          B = 156 * da + B * (1 - da);
+          A = da + A * (1 - da);
+          if (A <= 0.002) continue;
+          const i = (y * cw + x) * 4;
+          px[i] = R / A;
+          px[i + 1] = G / A;
+          px[i + 2] = B / A;
+          px[i + 3] = A * 255;
+        }
+      }
+      cg.putImageData(img, 0, 0);
+      g.imageSmoothingEnabled = true;
+      g.drawImage(cc, 0, 0, w, ch * 2);
     }
     // 수평선 아래: 먼 바다 빛 (바다 판 가장자리 색과 같게 → 이음매 없이 수평선까지 바다가 이어진다)
     const sg = g.createLinearGradient(0, hz, 0, h);
@@ -534,9 +629,11 @@ const CAP_TOP = STY + COL_H + 0.42 + 0.32; // 주두(에키누스 + 아바쿠스
 
 /**
  * 기둥 토막(드럼) 하나. y0 = 기둥 안에서 이 토막이 시작하는 높이 (질감 높이·굵기를 맞춘다).
- * jag > 0 이면 윗면이 부러진 모양으로 들쭉날쭉하다
+ * jag > 0 이면 윗면이 부러진 모양으로 들쭉날쭉하다.
+ * seam: 서 있는 기둥의 이음매용. 윗면·밑면(부러진 윗면은 빼고)의 법선을 옆면처럼 바깥쪽으로 눕혀서,
+ *  어긋난 이음매로 살짝 드러나는 면 테두리가 기둥 옆면과 같은 밝기로 보이게 한다 (가는 밝은/어두운 점선이 안 생긴다)
  */
-function drumGeo(y0, h, closed, jag = 0, seed = 1) {
+function drumGeo(y0, h, closed, jag = 0, seed = 1, seam = false) {
   const g = new THREE.CylinderGeometry(colR(y0 + h), colR(y0), h, FLUTES, 1, !closed);
   g.translate(0, h / 2, 0);
   const p = g.attributes.position;
@@ -545,8 +642,15 @@ function drumGeo(y0, h, closed, jag = 0, seed = 1) {
   const dir = seed * 2.39;
   for (let i = 0; i < p.count; i++) {
     const y = p.getY(i);
-    if (Math.abs(n.getY(i)) > 0.9) uv.setXY(i, 0.5 / FLUTES, 0.9); // 윗면·밑면: 홈 한가운데(평평한 곳) 색
+    const cap = Math.abs(n.getY(i)) > 0.9;
+    if (cap) uv.setXY(i, 0.5 / FLUTES, (y0 + y) / COL_H); // 윗면·밑면: 홈 한가운데(평평한 곳) 색, 같은 높이의 옆면 색
     else uv.setY(i, (y0 + y) / COL_H);
+    if (seam && cap && !(jag && n.getY(i) > 0)) {
+      const x = p.getX(i);
+      const z = p.getZ(i);
+      const rr = Math.hypot(x, z);
+      n.setXYZ(i, rr > 1e-4 ? x / rr : 1, 0, rr > 1e-4 ? z / rr : 0);
+    }
     if (jag && y > h - 1e-4) {
       const x = p.getX(i);
       const z = p.getZ(i);
@@ -606,11 +710,21 @@ export function buildArena(scene) {
     edge.push({ a, R: edgeR(a), r0: rectR(a) + 0.9 });
   }
   {
-    // 모래판: 가운데 한 점 + 평평한 안쪽 테 + 내려앉는 바깥 테 4줄. 무늬 크기·위치는 예전 원판(반지름 30)과 같게
+    // 모래판: 가운데 한 점 + 안쪽 고리 3줄(3·6·9m) + 평평한 안쪽 테 + 내려앉는 바깥 테 4줄. 무늬 크기·위치는 예전 원판(반지름 30)과 같게
+    //  (가운데를 고리로 잘게 나눈다: 가운데 점에서 15m 넘게 뻗은 큰 삼각형은 가운데 점이 카메라 뒤로 가면
+    //   일부 그래픽 칩에서 통째로 뭉개져 바닥이 민짜 판처럼 그려진다)
+    const INNER = [3, 6, 9];
     const RING_U = [0, 0.3, 0.55, 0.8, 1];
     const pos = [0, 0, 0];
     const uv = [0.5, 0.5];
     const idx = [];
+    for (const d of INNER)
+      for (let i = 0; i < EN; i++) {
+        const x = Math.cos(edge[i].a) * d;
+        const z = Math.sin(edge[i].a) * d;
+        pos.push(x, 0, z);
+        uv.push(x / 60 + 0.5, -z / 60 + 0.5);
+      }
     for (let k = 0; k < RING_U.length; k++)
       for (let i = 0; i < EN; i++) {
         const { a, R, r0 } = edge[i];
@@ -622,7 +736,7 @@ export function buildArena(scene) {
         uv.push(x / 60 + 0.5, -z / 60 + 0.5);
       }
     for (let i = 0; i < EN; i++) idx.push(0, 1 + ((i + 1) % EN), 1 + i);
-    for (let k = 0; k < RING_U.length - 1; k++)
+    for (let k = 0; k < INNER.length + RING_U.length - 1; k++)
       for (let i = 0; i < EN; i++) {
         const a0 = 1 + k * EN + i;
         const a1 = 1 + k * EN + ((i + 1) % EN);
@@ -764,7 +878,9 @@ export function buildArena(scene) {
         }
       } else nearStone.add(new THREE.BoxGeometry(len, 0.12, w, 3, 1, 1), new THREE.Vector3(Math.cos(a) * rc, top - 0.06, Math.sin(a) * rc), yaw, 0, 0, opt);
     }
-    // 테두리 돌 (0.2~0.4m 솟아 있다. 몇 개는 부러져 낮고, 떨어진 조각이 바깥에 뒹군다)
+    // 테두리 돌 (0.2~0.4m 솟아 있다. 몇 개는 부러져 낮고, 떨어진 조각이 바깥에 뒹군다).
+    //  뒤의 둘째 단·잔해보다 조금 어둡고 푸르스름한 잿빛 → 어느 쪽에서 봐도 경계 줄이 또렷하다
+    const RIM_TINT = [0.84, 0.84, 0.83];
     const nK = 34;
     for (let i = 0; i < nK; i++) {
       const a = ((i + 0.5) / nK) * Math.PI * 2 + (r() - 0.5) * 0.012;
@@ -773,7 +889,7 @@ export function buildArena(scene) {
       const hv = broken ? 0.08 + r() * 0.06 : 0.2 + r() * 0.2;
       const H = hv + 0.35;
       const p = new THREE.Vector3(Math.cos(a) * KC, hv - H / 2, Math.sin(a) * KC);
-      nearStone.add(new THREE.BoxGeometry(len, H, 0.5, 3, 1, 2), p, -a + Math.PI / 2, (r() - 0.5) * 0.07, (r() - 0.5) * 0.05, { rough: 0.06 });
+      nearStone.add(new THREE.BoxGeometry(len, H, 0.5, 3, 1, 2), p, -a + Math.PI / 2, (r() - 0.5) * 0.07, (r() - 0.5) * 0.05, { rough: 0.06, tint: RIM_TINT });
       if (broken) {
         const rr = KC + 0.55 + r() * 0.5;
         const b = a + (r() - 0.5) * 0.08;
@@ -877,7 +993,7 @@ export function buildArena(scene) {
   const columns = [];
   const LONG_P = [2.1, 0.6, 3.4, 0, 1.1, 'F', 'F', 'F', 'F', 'F', 'F']; // +z (기본 화면 오른쪽: 들보가 남은 줄)
   const LONG_N = ['F', 'F', 4.2, 0.9, 0, 2.4, 0.5, 6.1, 0.25, 3.0, 'F']; // −z
-  const SHORT_P = [5.0, 1.8, 0.7, 0.45, 2.6, 'F']; // +x (석상 뒤, 바다 쪽: 가운데가 낮아 바다가 트인다)
+  const SHORT_P = [1.0, 1.8, 0.7, 0.45, 2.6, 'F']; // +x (석상 뒤, 바다 쪽: 가운데가 낮아 바다가 트인다. 석상 바로 뒤는 밑동만 → 석상이 하늘·바다를 등지고 선다)
   const SHORT_N = [1.4, 'F', 'F', 3.6, 0.8, 2.9]; // −x
   longX.forEach((x, k) => columns.push({ x, z: ZH, h: LONG_P[k], out: [0, 1] }));
   longX.forEach((x, k) => columns.push({ x, z: -ZH, h: LONG_N[k], out: [0, -1] }));
@@ -939,7 +1055,8 @@ export function buildArena(scene) {
       const jag = last && !full ? 0.14 + r() * 0.16 : 0;
       off.x += (r() - 0.5) * 0.035; // 지진에 조금씩 어긋난 토막
       off.z += (r() - 0.5) * 0.035;
-      farCol.add(drumGeo(y0, dh, last, jag, seed + y0 * 10), new THREE.Vector3(c.x + off.x, STY + y0, c.z + off.z), yaw + (r() - 0.5) * 0.03, 0, 0, { uv: 'keep', ground: STY, vary: 0.06 });
+      // 토막마다 위아래를 막는다: 어긋난 이음매 틈으로 속이 빈 토막 안(= 하늘)이 비쳐 흰 줄이 반짝이지 않게
+      farCol.add(drumGeo(y0, dh, true, jag, seed + y0 * 10, true), new THREE.Vector3(c.x + off.x, STY + y0, c.z + off.z), yaw + (r() - 0.5) * 0.03, 0, 0, { uv: 'keep', ground: STY, vary: 0.06 });
       y0 += dh;
     }
     if (full) {
@@ -999,33 +1116,40 @@ export function buildArena(scene) {
     farStone.add(new THREE.BoxGeometry(sz * (1 + r()), sz * 0.7, sz * (0.8 + r() * 0.5), 2, 1, 2), new THREE.Vector3(Math.cos(a) * d, sz * 0.25, Math.sin(a) * d), r() * 6, (r() - 0.5) * 0.4, (r() - 0.5) * 0.4, { rough: sz * 0.2 });
   }
 
-  // 박공(페디먼트) 조각: 삼각형 지붕 끝의 한 모서리가 떨어져 기울어진 채 모래에 박혀 있다
+  // 박공(페디먼트) 조각: 박공은 짧은 쪽(−x) 지붕 끝에 있었다. 그 한쪽 모서리가 기단 밖으로 떨어져, 조금 뒤로 기운 채 모래에 묻혀 있다.
+  //  박공 벽면이 경기장 쪽(+x, 해가 드는 쪽)을 보고, 수평 처마와 14° 로 올라가는 비스듬한 처마가 낮은 모서리에서 뾰족하게 만난다.
+  //  높은 쪽 끝은 부러졌다. (그림자를 드리우지 않는 먼 돌이라, 안쪽으로 들어간 박공 벽을 조금 어둡게 칠해 처마 틀과 구별한다)
   {
-    const tym = new THREE.Shape();
-    tym.moveTo(0, 0);
-    tym.lineTo(5.4, 0);
-    tym.lineTo(5.4, 0.35);
-    tym.lineTo(5.15, 0.62);
-    tym.lineTo(5.35, 0.88);
-    tym.lineTo(5.05, 1.12);
-    tym.lineTo(0.1, 0.02);
-    const lip = new THREE.Shape(); // 비스듬한 처마(코니스)
-    lip.moveTo(-0.3, -0.05);
-    lip.lineTo(5.0, 1.18);
-    lip.lineTo(4.85, 1.48);
-    lip.lineTo(-0.42, 0.24);
-    const base = new THREE.Matrix4().compose(new THREE.Vector3(-11.0, 0.15, -ZH - 2.5), _q.setFromEuler(_e.set(-0.8, 0.22, 0.12, 'YXZ')), _s.setScalar(1));
-    const put = (geo, dz) => farStone.addMatrix(geo.translate(0, 0, dz), base, { rough: 0.05 });
-    put(new THREE.ExtrudeGeometry(tym, { depth: 0.8, bevelEnabled: false, curveSegments: 1 }), -0.4);
-    put(new THREE.ExtrudeGeometry(lip, { depth: 1.1, bevelEnabled: false, curveSegments: 1 }), -0.55);
-    // 수평 처마(게이손)
-    put(new THREE.BoxGeometry(5.5, 0.34, 1.2, 3, 1, 1).translate(2.6, -0.17, 0), 0);
-    // 조각이 새겨져 있던 흔적: 부서진 부조 덩어리
-    put(new THREE.BoxGeometry(0.7, 0.45, 0.25, 2, 2, 1).translate(3.3, 0.35, 0.45), 0);
-    put(new THREE.BoxGeometry(0.5, 0.3, 0.22, 2, 2, 1).translate(1.8, 0.15, 0.44), 0);
+    const SL = Math.tan((14 * Math.PI) / 180); // 박공 기울기
+    const L = 6.5; // 남은 길이 (모서리에서 부러진 끝까지)
+    const tym = new THREE.Shape(); // 박공 벽(팀파논)
+    tym.moveTo(0.3, 0);
+    tym.lineTo(L - 0.1, 0);
+    tym.lineTo(L - 0.1, 0.5);
+    tym.lineTo(L - 0.3, 0.85);
+    tym.lineTo(L - 0.12, 1.2);
+    tym.lineTo(L - 0.2, (L + 0.1) * SL + 0.02);
+    tym.lineTo(0.3, 0.6 * SL + 0.02);
+    const rake = new THREE.Shape(); // 비스듬한 처마
+    rake.moveTo(-0.3, 0);
+    rake.lineTo(L - 0.35, (L - 0.05) * SL);
+    rake.lineTo(L - 0.46, 0.36 + (L - 0.2) * SL); // 부러진 끝
+    rake.lineTo(-0.3, 0.36);
+    const base = new THREE.Matrix4().compose(new THREE.Vector3(-XH - 2.72, 0.05, 9.3), _q.setFromEuler(_e.set(-0.3, Math.PI / 2 + 0.18, -0.03, 'YXZ')), _s.setScalar(1));
+    const put = (geo, opt = {}) => farStone.addMatrix(geo, base, { rough: 0.05, ...opt });
+    put(new THREE.ExtrudeGeometry(tym, { depth: 0.45, bevelEnabled: false, curveSegments: 1 }).translate(0, 0, -0.3), { tint: [0.72, 0.71, 0.68] });
+    put(new THREE.ExtrudeGeometry(rake, { depth: 1.02, bevelEnabled: false, curveSegments: 1 }).translate(0, 0, -0.4));
+    // 수평 처마(게이손): 벽보다 앞으로 튀어나와 모서리까지 이어진다
+    put(new THREE.BoxGeometry(L + 0.25, 0.36, 1.02, 5, 1, 1).translate((L - 0.35) / 2, -0.18, 0.11));
+    // 박공에 새겨져 있던 조각의 흔적: 모서리에 비스듬히 누운 인물과 부서진 몸통 덩어리
+    const relief = { rough: 0.03, tint: [0.9, 0.88, 0.84] };
+    put(new THREE.IcosahedronGeometry(1, 1).scale(0.8, 0.15, 0.13).rotateZ(0.2).translate(1.5, 0.23, 0.25), relief);
+    put(new THREE.BoxGeometry(0.6, 0.7, 0.24, 2, 2, 1).translate(4.0, 0.4, 0.26), relief);
+    put(new THREE.BoxGeometry(0.42, 0.3, 0.22, 2, 1, 1).translate(3.0, 0.16, 0.25), relief);
   }
 
   // ── 포세이돈 석상: 금 간 받침 위, 머리 없이 한 팔을 들어 부러진 삼지창을 쥐었다 ──
+  //  기본 화면(석상까지 약 18m)에서 삼지창 끝(약 6.2m)까지 화면 안에 들도록 받침을 낮추고 사람 크기의 1.9배로 했다
   {
     const face = Math.atan2(-SP.x, -SP.z); // 경기장 가운데를 바라본다
     const root = new THREE.Matrix4().compose(SP, new THREE.Quaternion().setFromAxisAngle(UP, face), new THREE.Vector3(1, 1, 1));
@@ -1034,15 +1158,17 @@ export function buildArena(scene) {
       farStone.addMatrix(geo, root.clone().multiply(m), opt);
     };
     const st = { rough: 0.05, tint: [0.97, 0.95, 0.9] };
+    const PT = 1.3; // 받침 윗면 높이 (= 석상 발밑)
     put(new THREE.BoxGeometry(2.4, 0.6, 2.4, 2, 1, 2), 0, 0.1, 0, 0.02, 0, 0, { rough: 0.07 });
     // 가운데가 갈라진 받침돌: 한쪽은 살짝 가라앉아 기울었다
-    put(new THREE.BoxGeometry(1.75, 1.05, 0.85, 2, 2, 1), 0, 0.92, -0.45, 0, 0, 0, st);
-    put(new THREE.BoxGeometry(1.75, 1.05, 0.85, 2, 2, 1), 0.02, 0.9, 0.45, 0.01, 0.015, -0.02, st);
-    put(new THREE.BoxGeometry(1.95, 0.14, 1.95, 2, 1, 2), 0, 1.5, 0, 0.01, 0, 0, st);
+    const bh = PT - 0.52;
+    put(new THREE.BoxGeometry(1.75, bh, 0.85, 2, 2, 1), 0, 0.395 + bh / 2, -0.45, 0, 0, 0, st);
+    put(new THREE.BoxGeometry(1.75, bh, 0.85, 2, 2, 1), 0.02, 0.375 + bh / 2, 0.45, 0.01, 0.015, -0.02, st);
+    put(new THREE.BoxGeometry(1.95, 0.14, 1.95, 2, 1, 2), 0, PT - 0.07, 0, 0.01, 0, 0, st);
     put(new THREE.BoxGeometry(0.55, 0.35, 0.45, 2, 1, 1), 1.55, 0.12, 1.05, 0.7, 0.3, 0.2, { rough: 0.1 }); // 떨어진 모서리
-    // 사람 크기의 2.3배. 발밑(받침 윗면) 기준, +z 쪽을 본다
-    const S = 2.3;
-    const fig = root.clone().multiply(new THREE.Matrix4().compose(new THREE.Vector3(0, 1.57, 0), new THREE.Quaternion(), new THREE.Vector3(S, S, S)));
+    // 사람 크기의 1.9배. 발밑(받침 윗면) 기준, +z 쪽을 본다
+    const S = 1.9;
+    const fig = root.clone().multiply(new THREE.Matrix4().compose(new THREE.Vector3(0, PT, 0), new THREE.Quaternion(), new THREE.Vector3(S, S, S)));
     const V = (x, y, z) => new THREE.Vector3(x, y, z);
     const body = { tint: [0.96, 0.94, 0.89], vary: 0.04, dirt: false };
     const bronze = { tint: [0.4, 0.5, 0.46], vary: 0.04, dirt: false }; // 녹슨 청동 (녹청)
@@ -1061,9 +1187,9 @@ export function buildArena(scene) {
       const m = new THREE.Matrix4().compose(c, _q.setFromEuler(_e.set(rx, ry, rz, 'YXZ')), _s.setScalar(1));
       farStone.addMatrix(new THREE.BoxGeometry(w, h, d), fig.clone().multiply(m), opt);
     };
-    // 허리 아래를 감싼 히마티온(겉옷): 세로 주름이 지고 내디딘 왼무릎 쪽으로 쏠렸다 (멜로스의 포세이돈처럼)
+    // 허리 아래를 발목까지 감싼 히마티온(겉옷): 세로 주름이 지고, 내디딘 왼무릎이 옷 너머로 드러난다 (멜로스의 포세이돈처럼)
     {
-      const g = new THREE.CylinderGeometry(0.2, 0.225, 0.8, 18, 4).translate(0, 0.58, 0);
+      const g = new THREE.CylinderGeometry(0.2, 0.24, 0.9, 18, 5).translate(0, 0.53, 0);
       const p = g.attributes.position;
       for (let i = 0; i < p.count; i++) {
         const x = p.getX(i);
@@ -1071,8 +1197,9 @@ export function buildArena(scene) {
         const z = p.getZ(i);
         const th = Math.atan2(z, x);
         const k = 1 + 0.07 * Math.sin(6 * th + 5 * y) + 0.035 * Math.sin(13 * th - 3 * y);
-        const hem = y < 0.2 ? 0.05 * Math.sin(th + 0.6) : 0; // 들쭉날쭉한 옷단
-        p.setXYZ(i, x * k, y + hem, z * k * 0.85 + 0.07 * (0.98 - y));
+        const hem = y < 0.1 ? 0.03 * Math.sin(2 * th + 0.6) : 0; // 들쭉날쭉한 옷단
+        const knee = Math.max(0, x) * Math.max(0, z) * 1.2 * THREE.MathUtils.smoothstep(0.75 - y, 0, 0.3); // 왼무릎 쪽으로 당겨진 옷
+        p.setXYZ(i, x * k, y + hem, z * k * 0.85 + 0.07 * (0.98 - y) + knee);
       }
       g.computeVertexNormals();
       farStone.addMatrix(g, fig, body);
@@ -1080,15 +1207,14 @@ export function buildArena(scene) {
       const m = new THREE.Matrix4().compose(V(0, 0.99, 0.02), _q.setFromEuler(_e.set(0.05, 0, -0.08, 'YXZ')), _s.set(1, 1, 0.86));
       farStone.addMatrix(new THREE.CylinderGeometry(0.205, 0.215, 0.09, 16), fig.clone().multiply(m), { ...body, rough: 0.012 });
     }
-    // 다리: 오른다리로 체중을 받치고 왼다리를 앞으로 내디뎠다 (옷자락 밑으로 발목과 발만 보인다)
+    // 다리: 오른다리로 체중을 받치고 왼다리를 앞으로 내디뎠다 (옷자락 밑으로 발끝만 보인다)
     limb(V(-0.1, 0.93, 0), V(-0.085, 0.5, 0.015), 0.088, 0.06);
     limb(V(-0.085, 0.5, 0.015), V(-0.085, 0.08, -0.01), 0.056, 0.038);
-    ball(V(-0.085, 0.5, 0.015), 0.058);
-    limb(V(0.1, 0.93, 0), V(0.13, 0.52, 0.17), 0.088, 0.06);
-    limb(V(0.13, 0.52, 0.17), V(0.13, 0.08, 0.21), 0.056, 0.038);
-    ball(V(0.13, 0.52, 0.17), 0.058);
-    box(0.1, 0.07, 0.25, V(-0.085, 0.035, 0.05));
-    box(0.1, 0.07, 0.25, V(0.13, 0.035, 0.27));
+    limb(V(0.1, 0.93, 0), V(0.13, 0.52, 0.15), 0.088, 0.06);
+    limb(V(0.13, 0.52, 0.15), V(0.12, 0.08, 0.17), 0.056, 0.038);
+    ball(V(0.13, 0.52, 0.15), 0.058);
+    box(0.1, 0.07, 0.25, V(-0.085, 0.035, 0.2));
+    box(0.1, 0.07, 0.25, V(0.12, 0.035, 0.3));
     // 몸통 (살짝 비튼 콘트라포스토)
     ball(V(0, 0.95, 0), 0.17, 1.15, 0.72, 0.8);
     {
@@ -1113,19 +1239,60 @@ export function buildArena(scene) {
     limb(V(0.2, 1.42, 0), V(0.27, 1.26, 0.06), 0.056, 0.048, { ...body, rough: 0.012 });
     // 왼어깨 뒤로 넘겨 허리까지 늘어진 옷자락
     box(0.2, 0.5, 0.05, V(0.2, 1.22, -0.13), 0.12, 0, 0.1);
-    // 받침 역할의 돌고래 (오른쪽 뒤, 머리를 땅에 박고 꼬리를 든 모양)
-    limb(V(-0.3, 0.03, -0.1), V(-0.3, 0.3, -0.2), 0.03, 0.075);
-    limb(V(-0.3, 0.3, -0.2), V(-0.25, 0.55, -0.26), 0.075, 0.03);
-    box(0.22, 0.03, 0.09, V(-0.24, 0.57, -0.27), 0.3, 0.4, 0.2);
-    // 삼지창: 자루는 받침에 세웠고, 머리는 한쪽 갈래만 남았다
-    limb(V(-0.37, 0.0, 0.03), V(-0.37, 2.45, 0.03), 0.02, 0.02, bronze, 6);
-    box(0.13, 0.03, 0.03, V(-0.425, 2.45, 0.03), 0, 0, 0.05, bronze);
-    limb(V(-0.37, 2.45, 0.03), V(-0.37, 2.53, 0.03), 0.018, 0.012, bronze, 6);
-    limb(V(-0.48, 2.44, 0.03), V(-0.49, 2.74, 0.03), 0.016, 0.008, bronze, 6);
-    box(0.05, 0.025, 0.02, V(-0.47, 2.66, 0.03), 0, 0, -0.7, bronze);
-    // 떨어진 머리: 받침 발치 모래 속에 반쯤 묻혀 있다
-    const hm = new THREE.Matrix4().compose(V(-1.25, 0.18, 1.3), _q.setFromEuler(_e.set(0.4, 1.2, 1.1, 'YXZ')), _s.set(0.26, 0.3, 0.27));
-    farStone.addMatrix(new THREE.IcosahedronGeometry(1, 1), root.clone().multiply(hm), { rough: 0.25, tint: [0.92, 0.9, 0.86] });
+    // 받침 역할의 돌고래 (오른다리 뒤): 주둥이를 받침에 박고 몸을 활처럼 굽혀 꼬리를 들었다
+    {
+      const P = [V(-0.24, 0.02, -0.02), V(-0.29, 0.13, -0.1), V(-0.34, 0.3, -0.15), V(-0.31, 0.46, -0.15), V(-0.25, 0.56, -0.11)];
+      const R = [0.016, 0.05, 0.078, 0.055, 0.02];
+      for (let k = 0; k < P.length - 1; k++) limb(P[k], P[k + 1], R[k], R[k + 1]);
+      for (let k = 1; k < P.length - 1; k++) ball(P[k], R[k]);
+      box(0.1, 0.09, 0.03, V(-0.41, 0.32, -0.16), 0, 0, 0.5); // 등지느러미 (바깥쪽)
+      for (const s of [-1, 1]) box(0.15, 0.025, 0.07, V(-0.25 + s * 0.065, 0.58, -0.11), 0, 0, s * 0.45); // 꼬리지느러미
+    }
+    // 삼지창 (녹슨 청동): 자루는 받침에 세워 오른손에 쥐었고, 세 갈래 중 바깥 하나는 반쯤에서 부러졌다.
+    //  18m 밖에서도 삼지창으로 읽히게 큼직하게 (가로대 0.56m, 갈래 0.3~0.85m, 굵기 6~7cm). 크기는 실제 m (석상 배율과 따로)
+    {
+      const hand = new THREE.Vector3(-0.37 * S, PT + 1.95 * S, 0.03 * S);
+      const W = (dx, y) => new THREE.Vector3(hand.x + dx, y, hand.z);
+      const rod = (a, b, r0, r1) => {
+        const d = new THREE.Vector3().subVectors(b, a);
+        const len = d.length();
+        const g = new THREE.CylinderGeometry(r1, r0, len, 8, 1).translate(0, len / 2, 0);
+        const m = new THREE.Matrix4().compose(a, new THREE.Quaternion().setFromUnitVectors(UP, d.normalize()), _s.setScalar(1));
+        farStone.addMatrix(g, root.clone().multiply(m), bronze);
+      };
+      const piece = (geo, c, sx = 1, sy = 1, sz = 1) => farStone.addMatrix(geo, root.clone().multiply(new THREE.Matrix4().compose(c, new THREE.Quaternion(), _s.set(sx, sy, sz))), bronze);
+      const YC = hand.y + 0.36; // 가로대 높이
+      rod(W(0, PT), W(0, YC - 0.1), 0.036, 0.034); // 자루
+      piece(new THREE.CylinderGeometry(0.048, 0.042, 0.14, 8), W(0, YC - 0.08)); // 자루 끝 쇠테
+      piece(new THREE.BoxGeometry(0.5, 0.075, 0.07), W(0, YC)); // 가로대
+      // 가운데 갈래 (가장 길다): 잎 모양 촉과 양쪽 미늘
+      rod(W(0, YC), W(0, YC + 0.6), 0.036, 0.026);
+      piece(new THREE.OctahedronGeometry(1), W(0, YC + 0.69), 0.075, 0.16, 0.032);
+      for (const s of [-1, 1]) rod(W(s * 0.02, YC + 0.58), W(s * 0.08, YC + 0.5), 0.016, 0.006);
+      // 바깥 갈래 (−x 쪽, 온전): 가로대 끝에서 휘어 올라간다
+      rod(W(-0.23, YC - 0.02), W(-0.29, YC + 0.14), 0.034, 0.03);
+      rod(W(-0.29, YC + 0.14), W(-0.29, YC + 0.5), 0.03, 0.022);
+      piece(new THREE.OctahedronGeometry(1), W(-0.29, YC + 0.58), 0.06, 0.13, 0.028);
+      rod(W(-0.3, YC + 0.5), W(-0.36, YC + 0.42), 0.015, 0.006);
+      // 바깥 갈래 (+x 쪽): 반쯤에서 부러졌다
+      rod(W(0.23, YC - 0.02), W(0.29, YC + 0.14), 0.034, 0.03);
+      rod(W(0.29, YC + 0.14), W(0.3, YC + 0.3), 0.03, 0.027);
+    }
+    // 떨어진 머리: 받침 발치 모래에 얼굴을 하늘로 향한 채 모로 누웠다 (턱수염·코·눈두덩, 목이 부러진 면)
+    {
+      const Y = new THREE.Vector3(-1, 0, 0); // 정수리 쪽
+      const Z = new THREE.Vector3(0, 0.9, 0.44).normalize(); // 얼굴 쪽: 하늘을 보며 조금 경기장 쪽으로
+      const X = new THREE.Vector3().crossVectors(Y, Z);
+      const hb = root.clone().multiply(new THREE.Matrix4().makeBasis(X, Y, Z).scale(_s.setScalar(S)).setPosition(-1.3, 0.16, 1.35));
+      const hp = (geo, c, rx, sx = 1, sy = 1, sz = 1, opt = {}) =>
+        farStone.addMatrix(geo, hb.clone().multiply(new THREE.Matrix4().compose(c, _q.setFromEuler(_e.set(rx, 0, 0, 'YXZ')), _s.set(sx, sy, sz))), { tint: [0.92, 0.9, 0.86], vary: 0.03, ...opt });
+      hp(new THREE.IcosahedronGeometry(0.115, 1), V(0, 0, 0), 0, 0.92, 1, 0.95); // 머리통
+      hp(new THREE.TorusGeometry(0.1, 0.024, 4, 10), V(0, 0.03, -0.005), Math.PI / 2 + 0.2); // 머리띠처럼 두른 곱슬머리
+      hp(new THREE.IcosahedronGeometry(0.08, 1), V(0, -0.1, 0.06), 0.35, 0.95, 1.25, 0.75); // 턱수염
+      hp(new THREE.BoxGeometry(0.15, 0.028, 0.04), V(0, 0.035, 0.1), 0); // 눈두덩
+      hp(new THREE.BoxGeometry(0.035, 0.06, 0.05), V(0, -0.005, 0.115), -0.25); // 코
+      hp(new THREE.CylinderGeometry(0.06, 0.065, 0.1, 8), V(0, -0.16, -0.03), -0.25); // 부러진 목 (평평한 단면)
+    }
   }
 
   scene.add(nearStone.mesh(marble, true, true));
@@ -1178,7 +1345,7 @@ export function buildArena(scene) {
     bushGeo.computeVertexNormals();
     const nB = 26;
     const bushes = new THREE.InstancedMesh(bushGeo, new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), nB);
-    const greens = [0x5c6250, 0x676a55, 0x505747, 0x6f6c58, 0x5a5e4c];
+    const greens = [0x7c7d74, 0x86857c, 0x72746c, 0x8b887f, 0x787a71]; // 잿빛이 도는 가시덤불 (석회암·대리석 빛에 맞춘 낮은 채도)
     let nb = 0;
     for (let tries = 0; nb < nB && tries < 400; tries++) {
       const a = r() * Math.PI * 2;

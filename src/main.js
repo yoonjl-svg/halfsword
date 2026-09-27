@@ -139,7 +139,7 @@ function newRound() {
   eventQueue = new RAPIER.EventQueue(true);
   colliderInfo = new Map();
 
-  // 바닥 + 원형 울타리 벽
+  // 바닥 + 원형 경계 벽 (보이지 않는 벽: 눈에 보이는 건 대리석 테두리)
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
   const n = 32;
