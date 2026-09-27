@@ -28,17 +28,39 @@ export const MATERIALS = {
 // 다른 것은 여기서 옮긴다 — 얼린 참치는 딱딱한 통나무 소리(wood)가 제일 가깝다.
 export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', rubber: 'rubber', frozen: 'wood' };
 
-// 감독이 정한 무기 등급 (docs/characters.md, 캐릭터 PM 계약): 쓰레기(trash) / 커먼(common) / 레전드(legend).
-// 등급마다 power(타격 에너지 배율, common=1.0)와 durability(내구, 0~1)가 다르다. 무기 스펙에 직접 적으면
-// 그 값이 이기고, 안 적으면 등급 기본값을 받는다. 부서지는 연출·규칙은 감독이 붙인다 — 여기서는 수치만.
-// (power는 combat.js가 실제로 에너지에 곱한다. durability는 아직 아무 데서도 안 쓰는 계약 수치이고,
-//  지금 나뭇가지·냉동 참치가 부러지는 건 별도의 breakImpulse(칼끼리 부딪힌 충격량 예산, N·s) 때문이다.)
-export const TIERS = ['trash', 'common', 'legend'];
+// 감독이 정한 무기 등급 (docs/characters.md, 캐릭터 PM 계약) — 다섯 단계:
+//   쓰레기(trash) < 커먼(common) < 레어(rare) < 에픽(epic) < 레전드(legend)
+// 등급마다 power(타격 에너지 배율, common=1.0)와 durability(내구 0~1, 감독 확정치: 0.4/0.8/0.85/0.95/1.0)가 다르다.
+// 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급 기본값을 받는다. (rare·epic의 power는 감독이 안 정해서
+// common 과 legend 사이를 나눈 제안값 [I] — 바뀔 수 있다.)
+// power는 combat.js가 실제로 에너지에 곱한다. durability는 아래 breakBudget()으로 "부러지기까지의 충격량 예산"이 되며,
+// 부서지는 연출·그 뒤 흐름(맨손·주운 무기)은 감독이 붙인다.
+export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend'];
 export const TIER_DEFAULTS = {
-  trash: { power: 0.85, durability: 0.15 },
-  common: { power: 1.0, durability: 0.6 },
+  trash: { power: 0.85, durability: 0.4 },
+  common: { power: 1.0, durability: 0.8 },
+  rare: { power: 1.08, durability: 0.85 },
+  epic: { power: 1.15, durability: 0.95 },
   legend: { power: 1.2, durability: 1.0 },
 };
+
+// ── 파손 판정 규칙 (감독 위임, 무기 담당 설계) ──
+//  무기는 "칼끼리 세게 부딪힌 충격량"과 "투구·뼈를 치고 되튄 충격량"(combat.js → fighter.absorbWeaponImpact, N·s)을
+//  누적하고, 누적치가 예산 breakImpulse 를 넘는 순간 부러진다(weaponBroken → 그 뒤엔 항상 둔기 판정).
+//  예산은 등급 내구 d 와 재질로 정한다:
+//      breakImpulse = BREAK_K × d / (1 − d) × MATERIAL_TOUGHNESS[material]      (d = 1 → 무한 = 절대 안 부러짐)
+//  d/(1−d) 꼴이라 레전드(1.0)는 식 자체로 무한이 되고, 쓰레기(0.4) 0.67 → 커먼(0.8) 4.0 → 레어(0.85) 5.7 → 에픽(0.95) 19 로
+//  등급 사이가 크게 벌어진다. BREAK_K = 12 N·s 는 "쓰레기 무기(나뭇가지)로 한 판 싸우면 약 60% 확률로 파손"이라는
+//  감독 목표에 맞춘 값: AI 대 AI 25판에서 나뭇가지가 한 판에 받는 충격량 누적의 40% 지점이 8 N·s 였다.
+//  같은 기준으로 강철 커먼(48 N·s)은 75판 중 3%, 레어 1%, 에픽 0%가 부러진다(docs/weapons.md §3a 표).
+//  재질 계수: 얼린 참치는 강철보다 훨씬 잘 갈라지고(0.35), 고무·플라스마 칼날은 부러질 것이 없다(무한).
+export const BREAK_K = 12;
+export const MATERIAL_TOUGHNESS = { steel: 1, wood: 1, frozen: 0.35, rubber: Infinity, plasma: Infinity };
+export function breakBudget(durability, material) {
+  const t = MATERIAL_TOUGHNESS[material] ?? 1;
+  if (durability >= 1 || !Number.isFinite(t)) return Infinity;
+  return (BREAK_K * durability) / (1 - durability) * t;
+}
 
 
 // ── 관성 계산 도우미 (fighter.js 원래 롱소드 계산과 같은 식) ──
@@ -117,7 +139,7 @@ function finalizeSpec(id, s) {
     tier: s.tier ?? 'common', // 등급 안 적으면 커먼
     power: s.power ?? TIER_DEFAULTS[s.tier ?? 'common'].power, // 등급 공격력 배율 (mCut/mThrust/mBlunt 위에 한 번 더 곱한다)
     durability: s.durability ?? TIER_DEFAULTS[s.tier ?? 'common'].durability, // 등급 내구 (0~1, 감독이 쓸 계약 수치)
-    breakImpulse: s.breakImpulse ?? Infinity, // 부러지기까지의 충격량 예산 (N·s, Infinity면 안 부러짐)
+    breakImpulse: s.breakImpulse ?? breakBudget(s.durability ?? TIER_DEFAULTS[s.tier ?? 'common'].durability, s.material), // 부러지기까지의 충격량 예산 (N·s)
     ignoreArmor: !!s.ignoreArmor,
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
@@ -402,6 +424,27 @@ const jian = finalizeSpec('jian', {
 });
 
 // ═════════════════════════════════════════════════════════════
+//  10b) 청강검 (靑鋼劍, qinggang) — 랴오의 검. 감독 결정으로 지안을 에픽 등급 "청강검"으로 격상.
+//      물리·기술 배율은 지안 그대로(가볍고 빠름, 찌르기 강함), 등급만 epic(power 1.15·내구 0.95 → 파손 예산 228 N·s)
+//      이고 겉모습은 푸른 강철 칼날에 검은 자루 [I] 창작. 지안(커먼)은 다른 캐릭터·플레이어용으로 남겨 둔다.
+// ═════════════════════════════════════════════════════════════
+const QINGGANG_LOOK = { grip: 0x1c1c24, hilt: 0x2f6f7a };
+const qinggang = finalizeSpec('qinggang', {
+  nameKo: '청강검', nameEn: 'Qinggang Jian',
+  grip: 'one-hand', material: 'steel',
+  tier: 'epic',
+  hiltLength: 0.12, bladeLength: 0.74,
+  mCut: 1.5, mThrust: 1.15, mBlunt: 0.95,
+  buildParts() {
+    // 지안 부품 그대로, 색만 청강(푸른 강철)으로
+    return jian.buildParts(QINGGANG_LOOK).map((part) => {
+      const [shape, y, mass, , isBlade] = part;
+      return [shape, y, mass, isBlade ? 0xbfe3ea : part[3], isBlade];
+    });
+  },
+});
+
+// ═════════════════════════════════════════════════════════════
 //  11) 환두대도 (고리자루 큰칼, 삼국시대) — 조선 환도 계열 참고치(1.0~1.3kg, 전체
 //      ~1m, 칼날 ~68cm) [M]/[D] mixed, 이름이 가리키는 고대 대도는 실측을 못 찾아
 //      비슷한 크기의 환도 자료로 대신한다(§14 참고)
@@ -523,8 +566,8 @@ const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
   grip: 'one-hand', material: 'wood',
   hiltLength: 0.15, bladeLength: 0.8,
-  tier: 'trash', // 감독 등급: 쓰레기 → power 0.85(등급 기본값)·durability 0.15
-  edged: false, breakImpulse: 9, // 몇 번 세게 맞부딪히면 부러진다 (총 타격 배율은 power 0.85 그대로)
+  tier: 'trash', // 감독 등급: 쓰레기 → power 0.85·durability 0.4 → 파손 예산 8 N·s (한 판에 약 60% 파손)
+  edged: false, // 날이 없어 항상 둔기 판정 (총 타격 배율은 power 0.85)
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.08, 0.018);
@@ -592,7 +635,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
-  edged: false, mBlunt: 2.2, breakImpulse: 14, durability: 0.25, // 세게 맞부딪히면 쩍 갈라진다 (커먼이지만 내구는 낮게)
+  edged: false, mBlunt: 2.2, // 커먼(내구 0.8)이지만 재질 frozen(0.35)이라 파손 예산 16.8 N·s — 세게 맞부딪히면 쩍 갈라진다
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다
   buildParts(look) {
     const L = this.bladeLength;
@@ -609,7 +652,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 
 export const WEAPONS = {
   longsword, longsword_sharp: longswordSharp, arming_sword: armingSword, messer, zweihander, estoc, sabre, rapier, falchion,
-  katana, jian, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
+  katana, jian, qinggang, hwandudaedo, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
 };
 
