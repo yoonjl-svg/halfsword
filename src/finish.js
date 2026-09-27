@@ -17,6 +17,7 @@
 //  플레이어와 AI 가 같은 파이터 코드를 쓰므로 AI 의 내려베기도 그대로 마무리가 된다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { MEASURED } from './ai.js';
 
 export const FINISH = {
   range: 1.7, // 누운 몸통이 내 가슴에서 이 수평 거리(m) 안이면 마무리 자세
@@ -43,6 +44,18 @@ export const FINISH = {
   strike: { pelvisYaw: -5, chestYaw: -5, pitch: 22, drop: 0.13 },
 };
 
+// 칼 길이에 따른 마무리 거리: 누운 몸(어깨 아래 약 1.2m)까지 수평으로 닿는 거리는 칼이 짧을수록 훨씬 짧아진다.
+//  무기 실측 사거리(ai.js MEASURED 의 contact — 칼날 70% 지점이 머리 높이에 닿는 가슴 기준 거리)를 반지름으로 보고
+//  √(contact² − DROP²) 를 롱소드 값으로 나눈 배율을 FINISH.ideal·range, THRUST.downStepFrom, AI 가 다가서는 거리에 곱한다.
+//  롱소드보다 긴 칼은 1 (롱소드에 맞춘 값 그대로). 측정: 청강검은 누운 몸까지 0.7~0.9m 에서만 들어갔다(롱소드 1.35m 넘어서도)
+const DROP = 1.2;
+export function downReachK(id) {
+  const m = MEASURED[id];
+  if (!m || id === 'longsword') return 1;
+  const r = (c) => Math.sqrt(Math.max(0.09, c * c - DROP * DROP));
+  return Math.min(1, r(m[0]) / r(MEASURED.longsword[0]));
+}
+
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
 const _c = new THREE.Vector3();
@@ -57,7 +70,7 @@ function pose(body) {
 
 /** 이 파이터의 마무리 상태 (guards.js guardAt 의 fin) */
 export function newFinish() {
-  return { amt: 0, on: false, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike) };
+  return { amt: 0, on: false, k: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike) };
 }
 
 /**
@@ -67,6 +80,7 @@ export function newFinish() {
 export function updateFinish(f, dt) {
   const fin = f.finish;
   const foe = f.foe;
+  fin.k ??= downReachK(f.weapon?.id); // 무기 배율 (한 판 동안 같다)
   let on = false;
   if (foe && foe.state === 'down' && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
     const c = f.bodies.chest.translation();
@@ -82,10 +96,11 @@ export function updateFinish(f, dt) {
     const ex = _b.x - _a.x;
     const ez = _b.z - _a.z;
     const el2 = ex * ex + ez * ez;
-    const s = el2 > 1e-6 ? THREE.MathUtils.clamp(((FINISH.ideal - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
+    const ideal = FINISH.ideal * fin.k;
+    const s = el2 > 1e-6 ? THREE.MathUtils.clamp(((ideal - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
     _t.copy(_a).lerp(_b, s);
     const hd = Math.hypot(_t.x, _t.z);
-    if (_t.x > FINISH.minFwd && hd < FINISH.range) {
+    if (_t.x > FINISH.minFwd && hd < FINISH.range * fin.k) {
       on = true;
       fin.target[0] = _t.x;
       fin.target[1] = _t.y;
