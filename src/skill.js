@@ -31,6 +31,36 @@ const _yawInv = new THREE.Quaternion();
 const _c = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _q = new THREE.Vector3();
+const _u = new THREE.Vector3();
+const _b = new THREE.Vector3();
+const _sq = new THREE.Quaternion();
+const _d1 = new THREE.Vector3();
+const _d2 = new THREE.Vector3();
+const _r = new THREE.Vector3();
+const clamp01 = (x) => Math.min(1, Math.max(0, x));
+
+/** 두 선분(p1–q1, p2–q2) 사이 가장 가까운 거리 (칼날끼리 맞닿았나 — 칼 길 잡기) */
+function segDist(p1, q1, p2, q2) {
+  _d1.subVectors(q1, p1);
+  _d2.subVectors(q2, p2);
+  _r.subVectors(p1, p2);
+  const a = _d1.dot(_d1);
+  const e = _d2.dot(_d2);
+  const f = _d2.dot(_r);
+  const c = _d1.dot(_r);
+  const b = _d1.dot(_d2);
+  const den = a * e - b * b;
+  let s = den > 1e-9 ? clamp01((b * f - c * e) / den) : 0;
+  let t = (b * s + f) / e;
+  if (t < 0) {
+    t = 0;
+    s = clamp01(-c / a);
+  } else if (t > 1) {
+    t = 1;
+    s = clamp01((b - c) / a);
+  }
+  return _r.copy(p1).addScaledVector(_d1, s).sub(p2).addScaledVector(_d2, -t).length();
+}
 
 export class Skill {
   constructor(fighter, level = SKILL.level) {
@@ -83,6 +113,7 @@ export class Skill {
       K.extend *= THRUST.downExtend;
     }
     this.tap = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], down, head: !down && this.aimRaw.y > THRUST.headPad, K };
+    this.tap.bound = down ? null : this.boundAxis(); // 칼 길 잡기(R6): 칼이 맞닿았으면 그 칼 선 (아니면 null)
     this.thrusts++;
     // 한 걸음 내딛으며 찌른다. 쓰러진 상대는 누운 몸이 한 팔 넘게 떨어져 있을 때만 (가까우면 마무리 자세가 거리를 맞춘다)
     const T = f.finish.target;
@@ -108,6 +139,21 @@ export class Skill {
     const foe = f.foe;
     out.copy(foe.bodies[tp.head ? 'head' : 'chest'].translation());
     return out.sub(_c).applyQuaternion(_yawInv);
+  }
+
+  /**
+   * 칼 길 잡기(R6): 찌르기를 시작할 때 내 칼과 상대 칼이 맞닿아(THRUST.bind m 안) 있으면 지금 내 칼 선(몸 기준 단위 벡터)을,
+   * 아니면 null. 맞닿은 채로 칼끝을 목표로 크게 돌리면 상대 칼을 쓸고 지나가다 걸리므로, 이 선을 거의 그대로 따라 민다(updateThrust)
+   */
+  boundAxis() {
+    const f = this.f;
+    const foe = f.foe;
+    if (!(THRUST.bind > 0) || !foe?.armed || foe.weaponBroken) return null;
+    if (segDist(f.bladePoint(0, _u), f.bladePoint(1, _b), foe.bladePoint(0, _c), foe.bladePoint(1, _p)) > THRUST.bind) return null;
+    const q = f.sword.rotation();
+    _sq.set(q.x, q.y, q.z, q.w);
+    _yawInv.copy(f.yaw).invert();
+    return _u.set(0, 1, 0).applyQuaternion(_sq).applyQuaternion(_yawInv).toArray();
   }
 
   /** 매 스텝: 찌르기 자세(thrustPose) 갱신 */
@@ -151,19 +197,29 @@ export class Skill {
     //  뻗어서 손이 속도를 붙일 거리를 번다
     const h0 = tp.h0;
     _q.set(P.x - h0[0], P.y - h0[1], P.z - h0[2]).normalize();
+    // 칼 길 잡기(R6): 칼이 맞닿은 채 찌르면 지금 칼 선을 bindTurn 만큼만 목표 쪽으로 틀어 그 선으로 민다 (칼끝을 크게 돌리지 않는다)
+    const bd = tp.bound;
+    if (bd) _q.multiplyScalar(THRUST.bindTurn).add(_u.set(bd[0], bd[1], bd[2]).multiplyScalar(1 - THRUST.bindTurn)).normalize();
     //  팔이 이미 굽어 있으면(황소처럼 손이 머리 옆) 당길 필요가 없다 — 어깨에서 손까지 거리로 가늠한다.
-    //  (쓰러진 상대는 겨눔 자세가 이미 칼끝을 몸 위로 띄워 두어 당기지 않는다)
+    //  (쓰러진 상대는 겨눔 자세가 이미 칼끝을 몸 위로 띄워 두어 당기지 않는다. 칼이 맞닿았으면 당기지 않고 곧게 민다)
     const ext = Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2); // 어깨(가슴 기준 [0, 0.1, 0.2])에서 손까지
-    const ch = tp.down ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1);
+    const ch = tp.down || bd ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1);
     const a = THREE.MathUtils.clamp(t / K.aim, 0, 1);
     const s = THREE.MathUtils.clamp((t - K.aim) / K.extend, 0, 1);
     const e = -ch * a * a * (3 - 2 * a) + (ch + K.reach) * s * s * (3 - 2 * s);
     for (let k = 0; k < 3; k++) pose.hand[k] = h0[k] + _q.getComponent(k) * e;
+    if (bd) {
+      // 칼끝은 민 선 그대로 (돌리지 않는다)
+      pose.dir[0] = _q.x;
+      pose.dir[1] = _q.y;
+      pose.dir[2] = _q.z;
+      tp.dir = pose.dir;
+    }
     // 칼끝: 겨누는 동안은 지금 손(칼자루)에서 목표점 너머 past 의 점을 향해 돌리고, 뻗기 시작하면 그 방향을 붙잡는다.
     //  뻗는 동안 손은 거의 칼 축 방향으로 가는데(측정 0.96), 방향을 계속 고쳐 잡으면 손목이 5~9° 늦게 따라 돌며
     //  칼끝이 옆으로 쓸려 칼 축 방향 성분이 0.7까지 떨어졌다 → 붙잡아 두면 칼끝은 손과 함께 칼 축을 따라 나간다
     //  (쓰러진 상대를 내리찌를 때는 칼이 거의 수직이라 손이 칼 선에서 벗어나는 만큼을 계속 고쳐 잡는 편이 낫다 — 측정)
-    if (t < K.aim || !tp.dir || tp.down) {
+    if (!bd && (t < K.aim || !tp.dir || tp.down)) {
       const sp = f.sword.translation();
       P.addScaledVector(_q, T.past);
       _q.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv);
