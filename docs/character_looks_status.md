@@ -4,6 +4,14 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 11 — 오너 요청: 랴오 풍성한 꽁지머리 산발 + V넥 맨살
+
+- **랴오 v3**(`liao_gi_wild`, v2 보관): 뒤통수 높이 묶은 굵은 꽁지머리가 다섯 가닥으로 부채처럼 뻗고,
+  정수리·옆·앞머리에 삐친 가닥(산발). 흰 속옷 대신 V자 깃 사이로 맨살. 안대·머리띠·도복 v2 그대로.
+  `CHARACTER_LOOK_VERSION.liao = 'v3'`.
+- 파일: `looks.js`·`outfits.js`만. 시뮬 3종 바이트 동일, 콘솔 에러 0.
+  스크린샷 `liao_v3.jpg`, `liao_v3_head_{front,side,back}.jpg` 등.
+
 ## round 10 — 오너 요청: 랴오 푸른 무도가 도복 (하오마루 같은 옷)
 
 - **랴오 v2**(`liao_gi`, v1 보관): V자로 여민 푸른 도복 윗도리 + 흰 속옷, 넓은 소매, 흰 새끼줄 허리띠 매듭,

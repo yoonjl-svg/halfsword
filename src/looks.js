@@ -213,6 +213,26 @@ export const LOOK_ARCHIVE = {
       hilt: 0x5a4630,
       outfit: 'liao_gi',
     },
+    // v3(오너 요청): 풍성한 꽁지머리 산발 + V넥 사이로 맨살. 옷·색은 v2 그대로
+    v3: {
+      tunic: 0x3a5f9e,
+      quilt: 0x33558f,
+      sleeve: 0x3a5f9e,
+      straps: null,
+      belt: 0xe8e2d0,
+      hoseUpper: 0x1e2a44,
+      hoseLower: 0x1e2a44,
+      shoes: 0xa88f5c,
+      skin: 0xd8a878,
+      hands: 0xd8a878,
+      helmet: null,
+      metal: 0x8f8a82,
+      hair: 0x111111,
+      headband: 0x3a1414,
+      grip: 0x1a1208,
+      hilt: 0x5a4630,
+      outfit: 'liao_gi_wild',
+    },
   },
 
   // ── 4. 하인리히 도른: v0(붉은 금장 흥행 복장) → v1(은빛 중갑 기사 — 은발+짧은 은수염) ──
@@ -368,7 +388,7 @@ export const LOOK_ARCHIVE = {
 export const CHARACTER_LOOK_VERSION = {
   bran: 'v1',
   isolde: 'v2',
-  liao: 'v2',
+  liao: 'v3',
   heinrich: 'v2',
   margarethe: 'v3',
 };
