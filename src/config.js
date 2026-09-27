@@ -165,6 +165,9 @@ export const GAIT = {
   heelHurry: 0.3,
   hurrySpeed: 1.2, // 그렇게 서두르는 건 이보다 빨리(m/s) 가려 할 때만
   requestSteps: true, // 기술 걸음(requestStep)을 받는다
+  //  온몸 베기 R1: 걸음 방향 버그 고침. tiltDeg()가 driveBalance의 앞 방향 임시 변수를 덮어써서 기술 걸음이 부탁의 약 1/4만,
+  //  몸통 기울기 쪽으로 나갔다. false 면 f32b5d1 과 바이트 동일 (비교용 임시 스위치, 온몸 베기 묶음을 합친 뒤 지운다)
+  fwdFix: true,
   pinK: 20000, // 발바닥 정지 마찰 스프링(N/m). 0 = 끔 (물리 엔진 마찰만)
   pinD: 250,
   pinYawK: 300, // 발이 땅 위에서 도는 것을 붙잡는 힘 (N·m/rad)

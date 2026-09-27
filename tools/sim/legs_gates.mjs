@@ -355,6 +355,7 @@ function harness(g, o) {
       contacts: cs.length, slipMean: r2((100 * nets.reduce((a, b) => a + b, 0)) / Math.max(1, nets.length)), slipP90: r2(100 * q(nets, 0.9)), slipP99: r2(100 * q(nets, 0.99)), slipMax: r2(100 * (nets[nets.length - 1] || 0)),
       over2: cs.filter((c) => c.net > 0.02).length, over3: cs.filter((c) => c.net > 0.03).length,
       yawMaxDeg: r2(57.3 * Math.max(0, ...cs.map((c) => c.yawMax))),
+      yawWorst: cs.length ? (({ k, t0, dur, yawMax, net, peak }) => ({ k, t0: r2(t0 - T.t0), dur: r2(dur), deg: r2(57.3 * yawMax), slipCm: r2(100 * net), peak: r2(peak) }))(cs.reduce((a, c) => (c.yawMax > a.yawMax ? c : a))) : null,
       bobCm: r2(100 * osc(T.comY.slice(skip))), swayCm: r2(100 * osc(T.lat.slice(skip))), cadence: span > 0 ? r2((tdT.length - 1) / span) : 0,
       speed: r2(mean(T.spd.slice(skip))), kd: f._lg.kd.length - T.kd0, kdLog: f._lg.kd.slice(T.kd0), clampHits: f._lg.clampStand - T.clamp0,
       tiltMax: r2(T.tiltMax), pelMin: r3(Math.min(...T.pelY.slice(skip))), tStand: r2(nS * DT), state: f.state,
@@ -507,7 +508,7 @@ if (want('turn')) {
     }
     const S = V.summary(T, 0);
     rows.push(S);
-    log(`s${s} slip max=${S.slipMax} p90=${S.slipP90} >2:${S.over2}/${S.contacts} yaw=${S.yawMaxDeg} feet=${S.feetW} kd=${S.kd}`);
+    log(`s${s} slip max=${S.slipMax} p90=${S.slipP90} >2:${S.over2}/${S.contacts} yaw=${S.yawMaxDeg} ${JSON.stringify(S.yawWorst)} feet=${S.feetW} kd=${S.kd}`);
   }
   const c = rows.reduce((a, r) => a + r.contacts, 0);
   const o = rows.reduce((a, r) => a + r.over2, 0);

@@ -20,7 +20,7 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, BODY } from './config.js';
+import { AI_LEVELS, BODY, GAIT } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
@@ -1224,7 +1224,10 @@ export class AI {
     if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
     // 이번 프레임의 조이스틱(me.move)은 아직 지난 프레임 값(발을 멈추려고 뒤로 살짝 당긴 값)일 수 있어서 거절될 수 있다
     //  → 받아 줄 때까지 다음 프레임에 다시 부탁한다
-    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 })) this.requestedStep = true;
+    //  걸음 방향 버그를 고친 뒤(GAIT.fwdFix)에는 베기·찌르기 모두 앞발 내딛기 0.25 m / 0.3초: 지나 딛기는 몸 밀기 없이는 몸보다 너무 앞에
+    //  떨어져 42~63 cm 미끄러지고 다시 딛는다. 앞발 내딛기 0.25 m는 닿을 때 몸 전진 약 0.12 m, 미끄러짐 약 1 cm (docs/whole_body_strike.md R1)
+    const req = GAIT.fwdFix ? { kind: 'lunge', fwd: 0.25, duration: 0.3, hold: 0.3 } : { kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 };
+    if (g.requestStep(req)) this.requestedStep = true;
   }
 }
 

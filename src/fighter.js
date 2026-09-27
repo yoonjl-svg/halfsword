@@ -96,6 +96,7 @@ const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
 const _q1 = new THREE.Quaternion();
+const _vTilt = new THREE.Vector3(); // tiltDeg 전용: _v1 을 쓰면 driveBalance 가 gait.update 에 넘긴 앞 방향(_v1)이 덮어써진다 (GAIT.fwdFix)
 const UP = new THREE.Vector3(0, 1, 0);
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
@@ -885,7 +886,7 @@ export class Fighter {
   /** 몸통이 "의도한 자세"(가속할 때 숙인 것 포함)에서 벗어난 각도 */
   tiltDeg() {
     rot(this.bodies.chest, _q1);
-    const up = _v1.set(0, 1, 0).applyQuaternion(_q1);
+    const up = (GAIT.fwdFix ? _vTilt : _v1).set(0, 1, 0).applyQuaternion(_q1);
     const ref = this.anchorUp || UP;
     return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.dot(ref), -1, 1)));
   }
