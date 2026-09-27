@@ -1,8 +1,25 @@
-# 캐릭터 모델링 PM 보고 — round 1 (+ round 2·3 추가분)
+# 캐릭터 모델링 PM 보고 — round 1 (+ round 2·3·4 추가분)
 
 브랜치: `claude/pm-character-looks` (base `claude/first-game-development-2q36ha` @ `a085d9d`), 최신
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
+
+## round 4 — 오너 요청: "동그랗지 않게 더 장식적인 투구, 삼국지 마초나 용기사처럼"
+
+- **v3 추가**(v2 둥근 코가리개 투구는 그대로 보관, `?look=margarethe:v2`):
+  - 팔각 사발 위 높은 첨탑(면을 평평하게 칠해 각이 보임), 두 겹 팔각 목가리개.
+  - 마초 계열: 뒤로 휘어 흘러내리는 붉은 깃털 술, 이마의 세 갈래 볏.
+  - 용기사 계열: 위로 솟았다 뒤로 젖혀지는 두 뿔.
+  - 얼굴은 열어 둠(코가리개 대신 이마 가운데 작은 뾰족 장식). 몸·붉은 머리는 v2와 같다.
+  - `CHARACTER_LOOK_VERSION.margarethe = 'v3'`.
+- 뿔·술은 곡선을 따라 굵기가 변하는 매끈한 관(`taperedTube`)으로 만들었다. 처음 원기둥 조각
+  이어 붙이기로는 뿔이 귀처럼, 술이 발톱처럼 보여서 스크린샷 보고 다시 만듦.
+- 파일: `src/looks.js`·`src/outfits.js`만. 여전히 순수 장식(`helmet: null`).
+- 설정집과의 차이가 더 커졌다: 실루엣이 다섯 중 가장 화려해져 "수수하고 차분한 배색"과 가장
+  어긋난다(색은 먹색 + 붉은색 하나로 묶음). `character_looks.md` 대조 절에 캐릭터 PM용으로 적음.
+- 비용: v0 대비 메쉬 +11·삼각형 +1,610(적 한 명 몸 전체 약 8,400). 모바일 예산 안.
+- 검증: 시뮬 3종 바이트 단위 동일, 콘솔 에러 0, 쓰러진 자세에서도 투구·술·땋은 머리가 따라감.
+  스크린샷: `margarethe_v3.jpg`, `margarethe_v3_head_front/side/back.jpg`, 그 밖의 v3 컷.
 
 ## round 3 — 오너 요청: 마르그레테 투구 + 더 붉은 머리
 

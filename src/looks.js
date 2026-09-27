@@ -273,6 +273,28 @@ export const LOOK_ARCHIVE = {
       hilt: 0x54545c,
       outfit: 'margarethe_dragon_helm',
     },
+    // v3(오너 요청): "동그랗지 않게 더 장식적인 투구, 삼국지 마초나 용기사처럼" — 팔각 첨탑 투구에
+    // 뒤로 휘는 두 뿔·이마의 세 갈래 볏·붉은 깃털 술. 투구 말고는 v2와 같다(여전히 순수 장식,
+    // helmet: null). plume은 outfits.js에서만 쓰는 깃털 술 색 — 머리보다 한 톤 짙은 진홍
+    v3: {
+      tunic: 0x1b1b20,
+      quilt: 0x131316,
+      sleeve: 0x1b1b20,
+      straps: 0x101012,
+      belt: 0x101012,
+      hoseUpper: 0x1e1e22,
+      hoseLower: 0x24242a,
+      shoes: 0x101012,
+      skin: 0xc9a074,
+      hands: 0xc9a074,
+      helmet: null,
+      metal: 0x2c2c32,
+      hair: 0x8a2e1a,
+      plume: 0x8e1a1a,
+      grip: 0x101012,
+      hilt: 0x54545c,
+      outfit: 'margarethe_dragon_horned',
+    },
   },
 };
 
@@ -282,7 +304,7 @@ export const CHARACTER_LOOK_VERSION = {
   isolde: 'v1',
   liao: 'v1',
   heinrich: 'v1',
-  margarethe: 'v2',
+  margarethe: 'v3',
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

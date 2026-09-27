@@ -246,6 +246,102 @@ const MARGARETHE_DRAGON_HELM = {
   },
 };
 
+// ── 뿔·깃털 술처럼 휘는 것: 점 여러 개를 지나는 매끈한 곡선을 따라 굵기가 변하는 관을 만든다 ──
+//  (원기둥 조각을 이어 붙이면 이음매마다 꺾이고 틈이 보여서 뿔은 막대기, 술은 발톱처럼 보였다)
+const _tc = new THREE.Vector3();
+const _tv = new THREE.Vector3();
+function taperedTube(pts, radii, tubular = 12, radial = 6) {
+  const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)));
+  const geo = new THREE.TubeGeometry(curve, tubular, 1, radial, false);
+  const pos = geo.attributes.position;
+  const last = radii.length - 1;
+  for (let i = 0; i <= tubular; i++) {
+    const u = i / tubular;
+    const f = u * last;
+    const k0 = Math.min(last - 1, Math.floor(f));
+    const r = radii[k0] + (radii[k0 + 1] - radii[k0]) * (f - k0);
+    curve.getPointAt(u, _tc); // TubeGeometry도 같은 점을 중심으로 반지름 1짜리 고리를 만든다
+    for (let j = 0; j <= radial; j++) {
+      const k = i * (radial + 1) + j;
+      _tv.fromBufferAttribute(pos, k).sub(_tc).multiplyScalar(r).add(_tc);
+      pos.setXYZ(k, _tv.x, _tv.y, _tv.z);
+    }
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+const mirrorZ = (pts) => pts.map(([x, y, z]) => [x, y, -z]);
+
+// 마르그레테 v3: 오너 요청 "동그랗지 않게 더 장식적인 투구, 삼국지 마초나 용기사처럼".
+// 둥근 돔 대신 팔각으로 각진 사발 위에 높은 첨탑을 세우고(면을 평평하게 칠해 각이 보인다),
+// 마초 계열의 긴 붉은 깃털 술과 이마의 세 갈래 볏, 용기사 계열의 뒤로 휘는 두 뿔을 달았다.
+// 특정 게임·작품의 투구를 그대로 베끼지 않고 실루엣 요소만 가져왔다. 얼굴은 여전히 열어 둔다
+// (v2의 코가리개는 빼고 이마 테 가운데에 작은 뾰족 장식만). 색은 먹색 판 + 붉은 술 하나로 절제.
+// 좌표는 "투구 자체 좌표"(y = 투구 축, 테 = y 0)로 잡은 뒤 한꺼번에 머리 위로 옮기고 기울인다.
+const MG3_C = [-0.005, 0.015, 0];
+const MG3_TILT = [0, 0, 0.22];
+const onHelm = (geo) => bake(geo, MG3_C, MG3_TILT);
+const oct = (geo) => geo.rotateY(Math.PI / 8); // 팔각의 평평한 면이 정면을 보게
+const MG3_PLATE = { ...STEEL_OPTS, flatShading: true, side: THREE.DoubleSide };
+// 뿔: 관자놀이 위에서 먼저 위로 솟았다가 뒤로 젖혀진다(옆으로 뻗으면 정면에서 귀처럼 보였다)
+const MG3_HORN_R = [
+  [0.02, 0.06, 0.095],
+  [0.0, 0.115, 0.13],
+  [-0.05, 0.16, 0.14],
+  [-0.125, 0.185, 0.12],
+];
+const MG3_HORN_RADII = [0.025, 0.018, 0.011, 0.002];
+// 깃털 술: 가는 가닥 여러 개는 붉은 발톱처럼 보여서, 굵게 한 덩어리로 부풀었다가 뒤로 흘러내리게
+const MG3_PLUME = [
+  [0, 0.175, 0],
+  [-0.05, 0.215, 0],
+  [-0.13, 0.2, 0],
+  [-0.2, 0.12, 0],
+  [-0.23, 0.04, 0],
+];
+const MG3_PLUME_RADII = [0.03, 0.042, 0.037, 0.025, 0.008];
+const MARGARETHE_DRAGON_HORNED = {
+  ...MARGARETHE_DRAGON,
+  head(g, look) {
+    const plate = [
+      oct(new THREE.CylinderGeometry(0.124, 0.124, 0.032, 8, 1, true)), // 이마 테
+      oct(new THREE.CylinderGeometry(0.104, 0.124, 0.05, 8, 1, true)).translate(0, 0.041, 0), // 사발
+      oct(new THREE.ConeGeometry(0.104, 0.105, 8)).translate(0, 0.1185, 0), // 첨탑
+      new THREE.CylinderGeometry(0.124, 0.142, 0.034, 8, 1, true, Math.PI, Math.PI).translate(0, -0.032, 0), // 목가리개 1
+      new THREE.CylinderGeometry(0.14, 0.16, 0.034, 8, 1, true, Math.PI, Math.PI).translate(0, -0.062, 0), // 목가리개 2
+      bake(new THREE.ConeGeometry(0.02, 0.034, 3), [0.124, -0.026, 0], [Math.PI, 0, 0], [0.4, 1, 1]), // 이마 가운데 뾰족 장식
+      taperedTube(MG3_HORN_R, MG3_HORN_RADII, 10, 6), // 뿔(오른쪽)
+      taperedTube(mirrorZ(MG3_HORN_R), MG3_HORN_RADII, 10, 6), // 뿔(왼쪽)
+    ];
+    addMerged(g, plate.map(onHelm), MG_PLATE, MG3_PLATE);
+    // 이마의 세 갈래 볏 (가운데가 높고 양옆은 벌어진다) + 첨탑 끝 꼭지 — 짙은 판으로 도드라지게
+    const crest = [
+      bake(new THREE.ConeGeometry(0.03, 0.12, 4), [0.118, 0.075, 0], [0, 0, 0.18], [0.35, 1, 1]),
+      bake(new THREE.ConeGeometry(0.022, 0.08, 4), [0.112, 0.055, 0.035], [0.35, 0, 0.18], [0.35, 1, 1]),
+      bake(new THREE.ConeGeometry(0.022, 0.08, 4), [0.112, 0.055, -0.035], [-0.35, 0, 0.18], [0.35, 1, 1]),
+      new THREE.SphereGeometry(0.016, 6, 4).translate(0, 0.172, 0),
+    ];
+    addMerged(g, crest.map(onHelm), MG_PLATE_DARK, MG3_PLATE);
+    // 첨탑 끝의 술 뭉치 + 뒤로 흘러내리는 굵은 술. 양옆 두 가닥이 폭을 더해 뒤에서 봐도 갈고리가
+    // 아니라 술 다발로 읽히고, 끝으로 갈수록 가운데로 모인다
+    const side = (s) => MG3_PLUME.map(([x, y], i) => [x * 0.94, y - 0.01, s * 0.03 * (1 - 0.6 * (i / (MG3_PLUME.length - 1)))]);
+    const plume = [
+      new THREE.SphereGeometry(0.032, 8, 6).translate(0, 0.178, 0),
+      taperedTube(MG3_PLUME, MG3_PLUME_RADII, 14, 7),
+      taperedTube(side(1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
+      taperedTube(side(-1), MG3_PLUME_RADII.map((r) => r * 0.8), 12, 6),
+    ];
+    addMerged(g, plume.map(onHelm), look.plume ?? look.hair, { roughness: 0.95 });
+    // 붉은 머리는 v2와 같다: 얼굴 양옆 옆머리 + 목가리개 밑으로 땋아 내린 머리
+    const hair = [box(0.03, 0.13, 0.016, [0.03, -0.045, 0.099]), box(0.03, 0.13, 0.016, [0.03, -0.045, -0.099])];
+    for (let i = 0; i < 5; i++) {
+      const r = 0.03 - i * 0.0025;
+      hair.push(bake(new THREE.SphereGeometry(r, 8, 6), [-0.118 - i * 0.008, -0.075 - i * 0.034, 0], null, [1, 1.35, 1]));
+    }
+    addMerged(g, hair, look.hair, { roughness: 1 });
+  },
+};
+
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
@@ -253,6 +349,7 @@ export const OUTFITS = {
   heinrich_knight: HEINRICH_KNIGHT,
   margarethe_dragon: MARGARETHE_DRAGON,
   margarethe_dragon_helm: MARGARETHE_DRAGON_HELM,
+  margarethe_dragon_horned: MARGARETHE_DRAGON_HORNED,
 };
 
 /** dressPart가 부위 하나를 다 그린 뒤 불린다. look.outfit이 가리키는 세트에 그 부위용 함수가 있으면 얹는다. */
