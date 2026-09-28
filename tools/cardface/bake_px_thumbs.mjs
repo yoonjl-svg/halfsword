@@ -1,4 +1,4 @@
-// 무기 카드 앞면의 작은 그림을 픽셀 결로 굽는다 (외형 PM, docs/design_language.md §4)
+// (보관 — 채택 안 됨: 사장님이 원래 앞면 유지) 무기 카드 앞면의 작은 그림을 픽셀 결로 굽는다 (외형 PM, docs/design_language.md §4)
 //  public/ui/weapons/<id>.webp (256×256) → public/ui/weapons_px/<id>_32.png · <id>_24.png · <id>_16.png
 //  줄이기(면적 평균) → 알파 문턱(반투명 가장자리를 없앤다) → 색 계단(채널마다 8단) → 한 칸 어두운 외곽선.
 //  카드에서는 한 칸 = --px 로 정수 배 확대해 image-rendering: pixelated 로 그린다 (index.html .wthumb).

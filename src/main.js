@@ -664,7 +664,7 @@ function openDraw() {
     el.classList.toggle('grand', GRAND_WEAPONS.has(w.id));
     el.setAttribute('aria-label', i === FOE_CARD ? '상대 무기 카드 (고를 수 없어요)' : `${i + 1}번 카드`); // 뒤집히면 무기 이름·등급·설명으로 바뀐다 (revealLabel)
     const [, main, sub] = w.nameKo.match(/^(.*?)\s*\((.*)\)\s*$/) || [null, w.nameKo, ''];
-    for (const n of [32, 24, 16]) el.querySelector('.wthumb').style.setProperty(`--th${n}`, `url("ui/weapons_px/${w.id}_${n}.png")`); // 픽셀로 구운 작은 그림 (tools/cardface/bake_px_thumbs.mjs)
+    el.querySelector('.wthumb').style.backgroundImage = `url("ui/weapons/${w.id}.webp"), radial-gradient(closest-side, var(--tg), transparent)`;
     el.querySelector('.wname').textContent = main;
     el.querySelector('.wsub').textContent = sub;
     el.querySelector('.wtier').textContent = TIER_KO[w.tier] || TIER_KO.common;
