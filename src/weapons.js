@@ -994,16 +994,22 @@ const pistol = finalizeSpec('pistol', {
   moveMul: 1.2, // 걷는 최고 속도 ×1.2 (도망 다니며 쏘라고)
   fragility: 0, // 부서지지 않는다
   edged: false, mBlunt: 0, // 근접전 불가: 몸을 쳐도 상처·멍이 없다
-  hiltLength: 0.06, bladeLength: 0.26, // 칼 원점(손)~총구 0.32 m
+  hiltLength: 0.05, bladeLength: 0.15, // 칼 원점(손)~총구 0.20 m (사장님: 머스킷처럼 길어 보여 짧은 권총으로 — 예전 0.32 m)
   partMesh: hiddenParts,
   buildParts(look) {
     const grip = boxInertia(0.35, 0.015, 0.06, 0.013);
-    const frame = boxInertia(0.55, 0.016, 0.13, 0.013);
+    const L = this.bladeLength;
+    // 몸통(기관부·슬라이드) 콜라이더는 보이는 길이 그대로. 다만 손 기준 0.25 m 보다 짧은 몸체는 손목 제어가 너무 가벼운 몸체를
+    //  못 잡아 가만히 있어도 총구가 10° 넘게 떨렸다(짧게 줄인 뒤 잰 값, 0.32 m 일 때 2°) → 회전 관성·무게중심만 0.25 m 몸체 값을 준다
+    //  (무게 0.55 kg 는 그대로. 충돌 모양·보이는 모양은 짧은 권총이다)
+    const IL = Math.max(L, this.inertiaLength ?? 0.2);
+    const frame = boxInertia(0.55, 0.016, IL / 2, 0.013);
+    const comY = (IL - L) / 2; // 긴 몸체였다면 무게중심이 있을 자리 (콜라이더 중심 기준)
     const nub = sphereInertia(0.02, 0.012);
     return [
       partTuple(['box', 0.015, 0.06, 0.013], 0, 0.35, 0, grip.Ie, grip.It, 0x6b4226),
       partTuple(['ball', 0.012], -0.05, 0.02, 0, nub.Ie, nub.It, 0x2c2f35),
-      partTuple(['box', 0.016, 0.13, 0.013], 0.06 + 0.13, 0.55, 0, frame.Ie, frame.It, 0x2c2f35, false),
+      partTuple(['box', 0.016, L / 2, 0.013], this.hiltLength + L / 2, 0.55, comY, frame.Ie, frame.It, 0x2c2f35, false),
     ];
   },
   decorate(group) {
