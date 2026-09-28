@@ -38,9 +38,11 @@
   - `guards.js` guardAt 이 `out.table` 을 읽는 한 줄 (없으면 예전 그대로)
   - `weapons.js` 모노호시자오 `motionSkip` 한 칸 (라이브러리만 읽는다)
   - fights12 · hybrid · live_battery · weapon_smoke 바이트 동일
-- 자루 무기(E): `docs/pole_frame_design.md`. 2.4 m 봉은 지금 물리로 쥘 수 있다(NaN 없음, 뒷손 100%). 칼 AI 로는 롱소드에 0~13%.
-  - 기다림·맞받아 찌르기를 숫자로 흉내 내도 오르지 않는다: 상처 수는 비슷한데 멍이라 판이 끝나지 않는다. 다음 버전에서 봉끝·머리 치기 판정이 먼저다.
-  - 연구 세션에 자루 타격 판정 근거 조사를 맡겼다 (`claude/pm-weapons` `docs/pole_strike_effects.md` 예정).
+- 자루 무기(E): `docs/pole_frame_design.md` §8, 시제품 스펙 `tools/sim/pole_specs.mjs`, 넣는 순서 `docs/handoff/motion_library_integration.md` §8.
+  - 칼 AI 그대로는 0%. 봉끝 탭 찌르기(레이피어식) + 봉 자세표 + 찌르기·머리 내려치기만 주면 **판정을 바꾸지 않고** 봉 39~50%(둔기 3~4) · 창 54%(창날만 날, 앞손 앞 1.5 m) — 리그 평균 봉 48% · 창 54%, 상성 있음.
+  - 연구 세션 조사 둘을 바로 시험: 부위 효과표(`tools/sim/blunt_zones.mjs`, 넣으면 봉 56~65%·참치 23→44%), 찌르기 운동학(봉끝 4.2~8.6 m/s, 조사 범위 안).
+  - 한손 도끼·메이스 시제품(`tools/sim/proto_weapons.mjs`)은 지금 팔 힘 모델로 0~10% — 온몸 타격 뒤 다시.
+  - 분류: 두 손 간격으로 E 를 저절로 판정(`weapon_class.js`, 로스터 분류 그대로).
 - 문서:
   - `docs/weapon_motions.md`: 필요 개수 n, 자세·기술 값과 근거, 48판 비교, 시행착오 규칙 6, 다음 버전 이음 자리, 지금 게임 제안
   - `docs/pole_frame_design.md`: 창·봉 설계
