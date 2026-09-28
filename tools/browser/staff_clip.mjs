@@ -95,7 +95,7 @@ const frames = [];
 for (let k = 0; k < 8; k++) {
   const png = path.join(tmp, `f${k}.png`);
   try {
-    execFileSync(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-ss', (start + 0.3 + ((SECONDS - 0.6) * k) / 7).toFixed(2), '-i', dst, '-frames:v', '1', '-y', png]);
+    execFileSync(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-ss', (start + 0.3 + ((SECONDS - 1.2) * k) / 7).toFixed(2), '-i', dst, '-frames:v', '1', '-y', png]);
     frames.push(fs.readFileSync(png).toString('base64'));
   } catch (e) {
     errors.push(`frame ${k}: ${e.message.split('\n')[0]}`);
