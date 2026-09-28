@@ -1358,15 +1358,16 @@ export function drawPistol(group) {
   // 손잡이 (주먹 안): 나무, 뒤로 살짝 기울고 아래가 조금 넓다
   add(new THREE.BoxGeometry(0.03, 0.12, 0.026), wood, [-0.004, -0.005, 0], [0, 0, 0.12]);
   // 몸통(기관부)과 슬라이드: 손 위쪽에서 총신으로 이어진다
-  add(new THREE.BoxGeometry(0.036, 0.09, 0.03), steel, [0.004, 0.09, 0]);
-  add(new THREE.BoxGeometry(0.03, 0.2, 0.024), steel, [0.006, 0.17, 0]);
-  // 총신 (둥근 막대)과 총구
-  add(new THREE.CylinderGeometry(0.009, 0.009, 0.12, 8), steel, [0.006, 0.26, 0]);
-  add(new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, 8), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 1 }), [0.006, 0.321, 0]);
+  //  (사장님: 머스킷처럼 길어 보여 짧게 — 손에서 총구까지 0.20 m, 슬라이드가 굵고 짧은 권총 비율)
+  add(new THREE.BoxGeometry(0.038, 0.07, 0.03), steel, [0.004, 0.075, 0]);
+  add(new THREE.BoxGeometry(0.034, 0.13, 0.026), steel, [0.007, 0.115, 0]);
+  // 총신 끝 (슬라이드 밖으로 조금 나온 둥근 총구)
+  add(new THREE.CylinderGeometry(0.009, 0.009, 0.03, 8), steel, [0.006, 0.185, 0]);
+  add(new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, 8), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 1 }), [0.006, 0.201, 0]);
   // 가늠쇠 (총구 쪽 등) · 공이치기 (뒤쪽)
-  add(new THREE.BoxGeometry(0.008, 0.012, 0.004), steel, [0.024, 0.3, 0]);
-  add(new THREE.BoxGeometry(0.012, 0.018, 0.008), steel, [0.022, 0.05, 0], [0, 0, -0.5]);
+  add(new THREE.BoxGeometry(0.008, 0.012, 0.004), steel, [0.026, 0.17, 0]);
+  add(new THREE.BoxGeometry(0.012, 0.018, 0.008), steel, [0.024, 0.05, 0], [0, 0, -0.5]);
   // 방아쇠울 (손잡이 앞쪽 고리) · 방아쇠
-  add(new THREE.TorusGeometry(0.018, 0.0035, 5, 10, Math.PI * 1.3), steel, [-0.026, 0.07, 0], [0, 0, Math.PI * 0.35]);
-  add(new THREE.BoxGeometry(0.004, 0.016, 0.004), steel, [-0.022, 0.07, 0], [0, 0, 0.3]);
+  add(new THREE.TorusGeometry(0.018, 0.0035, 5, 10, Math.PI * 1.3), steel, [-0.026, 0.065, 0], [0, 0, Math.PI * 0.35]);
+  add(new THREE.BoxGeometry(0.004, 0.016, 0.004), steel, [-0.022, 0.065, 0], [0, 0, 0.3]);
 }
