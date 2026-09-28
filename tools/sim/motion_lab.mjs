@@ -13,6 +13,8 @@ import { GUARD_BASE } from '../../src/guards.js';
 import { applyMotionLibrary, motionFor, MOTION } from '../../src/motion_library.js';
 for (const k of (process.env.MOTION_SKIP ?? '').split(',').filter(Boolean)) MOTION.skip.add(k);
 if (process.env.USE_PARRY === '1') MOTION.useParry = true;
+if (process.env.COVER_IN) MOTION.coverIn = +process.env.COVER_IN;
+if (process.env.COVER_OUT) MOTION.coverOut = +process.env.COVER_OUT;
 import { TECH } from '../../src/ai_techniques.js';
 import { wilson } from './ref_duel.mjs';
 
@@ -260,8 +262,10 @@ if (mode === 'poses') {
     const rows = [];
     for (let i = 0; i < GUARD_BASE.length; i++) {
       let hit = 0, eSum = 0, clash = 0;
-      for (const gap of [1.45, 1.6]) {
-        const G = newRound({ walls: false, weapon: 'longsword', weapon2: id, seed: 7, gap });
+      const GAPS = process.env.PARRY_WIDE === '1' ? [1.3, 1.45, 1.6, 1.75] : [1.45, 1.6];
+      const SEEDS = process.env.PARRY_WIDE === '1' ? [7, 8, 9] : [7];
+      for (const [gap, seed] of GAPS.flatMap((g) => SEEDS.map((sd) => [g, sd]))) {
+        const G = newRound({ walls: false, weapon: 'longsword', weapon2: id, seed, gap });
         G.ai.update = () => {};
         const A = G.player;
         const D = G.enemy;
@@ -299,7 +303,7 @@ if (mode === 'poses') {
       void g2;
       return P.guardPose.table?.[i]?.name ?? GUARD_BASE[i].name;
     };
-    console.log(`${line} (${tn}): 가장 잘 막은 자세 ${rows.slice(0, 3).map((r) => `${nm(r.i)}[패드 ${GUARD_BASE[r.i].pad}] 맞음 ${r.hit}/2 칼부딪침 ${r.clash}`).join(' · ')}`);
+    console.log(`${line} (${tn}): 가장 잘 막은 자세 ${rows.slice(0, 3).map((r) => `${nm(r.i)}[패드 ${GUARD_BASE[r.i].pad}] 맞음 ${r.hit} 칼부딪침 ${r.clash}`).join(' · ')}`);
   }
   const pick = Object.fromEntries(Object.entries(res).map(([k, rows]) => [k, GUARD_BASE[rows[0].i].pad]));
   console.log(`parry 표 제안 (${id}, 라이브러리 ${lib ? '켬' : '끔'}): ${JSON.stringify(pick)}`);

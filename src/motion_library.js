@@ -18,6 +18,8 @@ import { THRUST, SKILL } from './config.js';
 
 export const MOTION = {
   lib: false, // 게임 기본은 끔. 점검 도구(tools/sim/motion_lab.mjs)가 켠다
+  coverIn: 0.08, // 막기 덧씌우기: 덮는 시간(초)
+  coverOut: 0.15, // 걷는 시간(초)
   useParry: false, // 무기별 막기 자리(LIB_PARRY)를 AI 에 끼울까 — 기본 끔: 바뀐 자세표(막기 자세 포함)로 잰 값이라 지금 표와 맞지 않는다
   skip: new Set(), // 점검용: 이 이름의 자세 자리는 바꾸지 않는다 (어느 자세가 싸움에 해로운지 가려낼 때)
 };
@@ -245,7 +247,7 @@ function installCover(fighter, ai, covers) {
     }
     const want = ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : null;
     if (want) st.last = want;
-    st.w = Math.max(0, Math.min(1, st.w + (want ? dt / 0.08 : -dt / 0.15))); // 0.08초에 덮고 0.15초에 걷는다
+    st.w = Math.max(0, Math.min(1, st.w + (want ? dt / MOTION.coverIn : -dt / MOTION.coverOut))); // 덮는 시간·걷는 시간 (MOTION)
     const c = st.last;
     const pose = sk.thrustPose;
     if (!c || st.w <= 0) {
