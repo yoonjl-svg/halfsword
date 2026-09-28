@@ -101,7 +101,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
 // ④ 롱소드 상대 (봉 쪽 AI 는 롱소드 유파·롱소드 간격 그대로 — 자루 무기 유파가 없다)
 {
   const N = 12;
-  let Wn = 0, Ln = 0, D = 0, nan = 0;
+  let Wn = 0, Ln = 0, D = 0, nan = 0, dealt = 0, taken = 0, clashes = 0;
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
       const seed = (xFirst ? 1000 : 2000) + s;
@@ -122,11 +122,15 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
           break;
         }
       }
+      dealt += G.wounds.filter((w) => w.att === X).length;
+      taken += G.wounds.filter((w) => w.att === Y).length;
+      clashes += G.clashes;
       if (res === 'W') Wn++;
       else if (res === 'L') Ln++;
       else D++;
     }
   }
+  console.log(`  봉이 낸 상처 ${dealt} · 받은 상처 ${taken} · 칼 부딪침 ${clashes} (${2 * N}판 합)`);
   const [lo, hi] = wilson(Wn, 2 * N);
   console.log(`④ 롱소드 상대 ${2 * N}판: 승 ${Wn} 패 ${Ln} 무 ${D} · 승률 ${Math.round((100 * Wn) / (2 * N))}% (95% ${Math.round(100 * lo)}~${Math.round(100 * hi)}%) · NaN ${nan}`);
 }
