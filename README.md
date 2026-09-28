@@ -216,7 +216,9 @@ src/
 
 URL 파라미터로 골라서 테스트할 수 있어요: `?weapon=monohoshizao&foeWeapon=chicken` (내 무기/상대 무기, 무기
 id는 `WEAPONS` 객체의 키. `branch`·`chicken`·`tuna`·`katana`·`jian`·`replica` 같은 짧은 별칭·옛 이름도 된다).
-`foeWeapon`을 생략하면 `weapon`과 같은 것, 둘 다 없으면 고른 캐릭터의 무기를 든다. 헤드리스 시뮬 쪽은
+`foeWeapon`을 생략하면 `weapon`과 같은 것, 둘 다 없으면 고른 캐릭터의 무기를 든다. `weapon`을 적으면 무기 카드 뽑기를
+건너뛴다. 뽑기에서는 왼쪽 두 장이 내 카드, 맨 오른쪽 회색 칸이 상대 무기(내가 고른 뒤 뒤집힌다)이고, `?cards=rapier,lightsaber`로
+내 카드 두 장을 정해 볼 수 있다(카드 뒷면은 main.js `CARD_BACK_DEFAULT`, 그림 파일 뒷면이 생기면 `?back=<id>`로 미리 본다). 헤드리스 시뮬 쪽은
 `tools/sim/weapon_smoke.mjs`(안정성 훑기), `tools/sim/weapon_balance.mjs`(승률 재기),
 `tools/sim/weapon_measure.mjs`(유파용 간격 실측) 참고.
 
