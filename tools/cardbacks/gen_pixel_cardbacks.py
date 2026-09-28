@@ -1,5 +1,6 @@
 # 무기 카드 뒷면 v3: 픽셀 아트 (게임 픽셀 결에 맞춘다)
 #   python3 tools/cardbacks/gen_pixel_cardbacks.py  → public/ui/cardbacks/px_<id>_{tile,frame,center,plaque}.png
+#   그다음 반드시 python3 tools/cardbacks/grey_foe.py 도 돌린다 (상대 칸용 회색 조각 px_<id>_<조각>_foe.png)
 #
 # 카드 크기(비율)는 화면마다 달라서(가로 폰 약 1:1.16, PC 1:1.5, 세로 폰 1:2.1) 한 장짜리 그림은 칸이 찌그러진다.
 # 그래서 조각으로 나눠 CSS 가 정수 배로 키워 붙이게 한다 (image-rendering: pixelated, 한 칸 = --px CSS px):
