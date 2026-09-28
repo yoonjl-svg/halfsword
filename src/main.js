@@ -573,13 +573,22 @@ const DRAW_T = { ready: 0.45, others: 0.35, foe: 0.8, tapGuard: 0.95, build: 1.3
 const drawEl = $('draw');
 const cardEls = [...drawEl.querySelectorAll('.wcard')];
 // ── 카드 뒷면 ──
-//  classic: 가죽 빛 바탕 + 가운데 마름모 칼 문장 (CSS 와 아래 작은 SVG, 그림 파일 없음). 오너가 게임의 픽셀 결에 맞춘 새 뒷면을
-//  고를 때까지 기본 (외형 PM 작업 중). 그림 파일 뒷면은 CARD_BACK_FILES 에 id: 경로 로 더하고 index.html 에 까는 법을 적는다.
-//  주소에 ?back=<id> 로 미리 볼 수 있다 (모르는 값이면 기본)
-const CARD_BACK_FILES = {}; // 예: p_castle: 'ui/cardbacks/p_castle.png'
-const CARD_BACK_DEFAULT = 'classic';
-const CARD_BACK = params.get('back') in CARD_BACK_FILES ? params.get('back') : CARD_BACK_DEFAULT;
-drawEl.dataset.back = CARD_BACK;
+//  오너 결정: 픽셀 아트 뒷면(외형 PM v3, docs/design_language.md). 판마다 그 판 배경의 문양이다 — 포세이돈 신전·성 안뜰·산사·대성당.
+//  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
+//  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
+//  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
+const PX_BACKS = { poseidon: '#1d3037', castle: '#1e2433', temple: '#1a352b', cathedral: '#2b171a' }; // 테마 → 바탕색
+const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
+const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
+let cardBack = 'classic';
+// 조각을 미리 받아 둔다(모두 합쳐 몇 KB): 카드가 뜰 때 뒷면이 비었다가 그려지지 않게
+for (const t in PX_BACKS) for (const p of BACK_PARTS) for (const f of ['', '_foe']) new Image().src = `ui/cardbacks/px_${t}_${p}${f}.png`;
+// 상대 칸 바탕색: CSS grayscale(1) brightness(.55) 와 같은 회색
+const greyOf = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  const v = Math.round((0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) * 0.55);
+  return `rgb(${v},${v},${v})`;
+};
 const CARD_BACK_SVG =
   '<svg viewBox="0 0 60 100" aria-hidden="true"><path d="M30 3 L57 50 L30 97 L3 50 Z" fill="none" stroke="#d9a441" stroke-opacity=".75" stroke-width="2"/>' +
   '<path d="M30 11 L52 50 L30 89 L8 50 Z" fill="none" stroke="#d9a441" stroke-opacity=".35" stroke-width="1"/>' +
@@ -587,20 +596,25 @@ const CARD_BACK_SVG =
   '<rect x="28.3" y="63.6" width="3.4" height="12" fill="#8a5a2b"/><circle cx="30" cy="79" r="3.6" fill="#d9a441"/></svg>';
 // 상대 칸의 칼 문장은 회색으로 (filter 를 쓰지 않는다: 뒤집히는 카드의 뒷면 숨기기가 사파리에서 풀릴 수 있다)
 const CARD_BACK_SVG_FOE = CARD_BACK_SVG.replaceAll('#d9a441', '#86817a').replaceAll('#e8d3a0', '#a9a49c').replaceAll('#8a5a2b', '#55514c');
-if (CARD_BACK_FILES[CARD_BACK]) {
-  drawEl.style.setProperty('--backImg', `url("${CARD_BACK_FILES[CARD_BACK]}")`);
-  // 미리 받아 풀어 둔다: 메뉴가 떠 있는 동안 받아 두면 첫 판에 카드가 뜰 때 뒷면이 비었다가 그려지지 않는다
-  const img = new Image();
-  img.src = CARD_BACK_FILES[CARD_BACK];
-  img.decode?.().catch(() => {});
+/** 판을 열 때: 그 판 배경의 뒷면으로 바꾼다 (카드마다 조각 그림을 --b-* 변수로 넣는다) */
+function setCardBack(stageId) {
+  cardBack = BACK_PIN || (stageId in PX_BACKS ? stageId : 'classic');
+  drawEl.dataset.back = cardBack === 'classic' ? 'classic' : 'px';
+  cardEls.forEach((el, i) => {
+    const foe = i === FOE_CARD;
+    const wb = el.querySelector('.wback');
+    if (cardBack !== 'classic') {
+      for (const p of BACK_PARTS) wb.style.setProperty(`--b-${p}`, `url("ui/cardbacks/px_${cardBack}_${p}${foe ? '_foe' : ''}.png")`);
+      wb.style.setProperty('--b-bg', foe ? greyOf(PX_BACKS[cardBack]) : PX_BACKS[cardBack]);
+    }
+    // 뒷면 배지: 내 카드는 (PC) 누를 키 번호, 상대 칸은 "상대" (폰에서도 보인다)
+    const emblem = cardBack === 'classic' ? (foe ? CARD_BACK_SVG_FOE : CARD_BACK_SVG) : '';
+    wb.innerHTML = emblem + (foe ? '<span class="wkey wfoe">상대</span>' : `<span class="wkey">${i + 1}</span>`);
+  });
 }
 const draw = { stage: null, t: 0, ids: [], pick: -1, others: false, foe: false, built: false, skip: false, hold: false }; // stage: choose → reveal → fly
-cardEls.forEach((el, i) => {
-  // 뒷면 배지: 내 카드는 (PC) 누를 키 번호, 상대 칸은 "상대" (폰에서도 보인다)
-  const emblem = CARD_BACK === 'classic' ? (i === FOE_CARD ? CARD_BACK_SVG_FOE : CARD_BACK_SVG) : '';
-  el.querySelector('.wback').innerHTML = emblem + (i === FOE_CARD ? '<span class="wkey wfoe">상대</span>' : `<span class="wkey">${i + 1}</span>`);
-  el.addEventListener('click', () => pickCard(i));
-});
+setCardBack(stages.id);
+cardEls.forEach((el, i) => el.addEventListener('click', () => pickCard(i)));
 // 결과를 보는 동안 아무 데나 누르면 바로 싸움으로 (상대 카드가 뒤집히기 전의 누름은 치지 않고, 상대 무기가 잠깐 보인 뒤에 사라진다)
 function skipReveal() {
   if (draw.stage === 'reveal' && draw.t >= DRAW_T.tapGuard) draw.skip = true;
@@ -642,6 +656,7 @@ function setWeaponsVisible(v) {
 function openDraw() {
   const foeId = getWeapon(foeWeaponId).id; // 짧은 별칭(chicken 등)도 상대가 실제로 드는 무기 id 로
   Object.assign(draw, { stage: 'choose', t: 0, ids: [...drawCardIds(), foeId], pick: -1, others: false, foe: false, built: false, skip: false });
+  setCardBack(stages.id); // 이번 판 배경의 뒷면
   cardEls.forEach((el, i) => {
     const w = getWeapon(draw.ids[i]);
     el.className = i === FOE_CARD ? 'wcard foe' : 'wcard';
@@ -672,14 +687,20 @@ function layoutDraw() {
   //  여백·그림·글자를 최소로 줄인다 (#draw.low)
   const low = !narrow && row.height < 180;
   const gap = narrow || low ? 10 : 14;
-  const cw = Math.floor(Math.min(230, (row.width - 2 * gap) / 3, low ? row.height * 1.3 : row.height / (narrow ? 1.6 : 1.15)));
-  const ch = Math.floor(Math.min(cw * (narrow ? 2.1 : 1.5), row.height));
+  let cw = Math.floor(Math.min(230, (row.width - 2 * gap) / 3, low ? row.height * 1.3 : row.height / (narrow ? 1.6 : 1.15)));
+  let ch = Math.floor(Math.min(cw * (narrow ? 2.1 : 1.5), row.height));
+  // 픽셀 뒷면의 한 칸 = 게임 픽셀(픽셀 모드와 같은 크기, 큰 화면은 4까지). 카드 크기를 두 칸의 배수로 맞춰 가운데 정렬이 반 칸 어긋나지 않게
+  const px = cw < 130 ? 2 : Math.min(4, Math.max(3, Math.round(window.innerHeight / 180)));
+  if (cardBack !== 'classic') {
+    cw = Math.floor(cw / (2 * px)) * 2 * px;
+    ch = Math.floor(ch / (2 * px)) * 2 * px;
+  }
+  drawEl.style.setProperty('--px', `${px}px`);
   drawEl.style.setProperty('--gap', `${gap}px`);
   drawEl.style.setProperty('--cw', `${cw}px`);
   drawEl.style.setProperty('--ch', `${ch}px`);
-  // 뒷면 그림(200×290)은 비율을 지킨 채 가운데 놓인다: 배지(높이 22px)의 가운데를 그림 아래쪽 홈(그림 아래 끝에서 21)에 맞춘다
-  const s = Math.min(cw / 200, ch / 290);
-  drawEl.style.setProperty('--kb', CARD_BACK === 'classic' ? '10px' : `${Math.max(4, Math.round((ch - 290 * s) / 2 + 21 * s - 11))}px`);
+  // 번호 배지(높이 22px)의 가운데: 픽셀 뒷면은 아래 원판(아래에서 3칸 띄운 10칸 원판)의 가운데, classic 은 아래에서 10px
+  drawEl.style.setProperty('--kb', cardBack === 'classic' ? '10px' : `${Math.max(4, 8 * px - 11)}px`);
   // 글자 크기: 큰 카드(PC)는 크게, 가로로 든 폰은 중간, 좁거나 낮은 카드는 최소(이름 16px·설명 12px)
   const big = cw >= 205 && ch >= 300;
   const mid = cw >= 150 && !low;
