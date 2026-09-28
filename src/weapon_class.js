@@ -64,7 +64,9 @@ export function weaponPhysics(spec) {
 export function classifyFrame(spec, phys = weaponPhysics(spec)) {
   if (spec.frame) return spec.frame;
   if (spec.gun) return 'gun';
-  if (spec.pole || (spec.handGap ?? 0) >= CLASS_RULE.poleGap) return 'pole';
+  // 두 손 간격: handGap 이 없으면 두손 무기의 뒷손 자리(gripAlong, 음수)로 — 로스터 칼은 0.14~0.22 m, 봉·창 시제품은 0.6 m
+  const gap = spec.handGap ?? (spec.grip !== 'one-hand' ? -(spec.gripAlong ?? 0) : 0);
+  if (spec.pole || gap >= CLASS_RULE.poleGap) return 'pole';
   if (spec.grip === 'one-hand') return 'one';
   const R = CLASS_RULE;
   if (phys.I >= R.heavyI || (phys.I >= R.heavyIMid && phys.com >= R.heavyCom)) return 'heavy';

@@ -173,6 +173,11 @@ export const NEW_TECH = {
 
 /** 싸움 방식 × 몸 틀 → AI 기술 목록 (TECH 모양) */
 export function styleTech(style, frame) {
+  // E 자루: 찌르기 + 머리 내려치기(정수리 베기 길) 하나 (docs/pole_frame_design.md §8, 봉 시제품):
+  //  찌르기만 48% · + 머리 치기 65%(96판) · 사선 베기까지 넣으면 27% · 칼 기술 전부 15% — 봉 자세표에서 사선·수평 베기 길은 휜다.
+  //  원전도 같다: 높은 자세에서 머리를 내려치고 찌른다(스웻넘·실버 [원전 2차]). 교차 베기 등은 봉 자세표에 맞춘 새 길로 따로
+  //  싸움 방식(봉은 때리기, 창은 찌르기)과 상관없이 찌르기 우선 가중치(찌르기 방식과 같음)로
+  if (frame === 'pole') return weight(weight(TECH, (x) => x.kind === 'thrust', 1.8), (x) => x.kind === 'cut', 0.7).filter((x) => x.kind === 'thrust' || POLE_STRIKES.has(x.name) || MOTION.poleStrikes.has(x.name));
   let t = TECH;
   if (style === 'cut') t = weight(t, (x) => x.kind === 'thrust', 0.5); // 베기 무기: 찌르기는 덜 믿는다 (schools.js weakThrust 와 같은 뜻)
   if (style === 'thrust') t = weight(weight(t, (x) => x.kind === 'thrust', 1.8), (x) => x.kind === 'cut', 0.7); // 찌르기 무기: 찌르기를 먼저
@@ -181,10 +186,6 @@ export function styleTech(style, frame) {
   if (frame === 'heavy') t = weight(t, (x) => x.presses, 1.4);
   // 손목 베기는 날 있는 한손 칼만: 나뭇가지(때리기)에 넣으면 40% → 19% (가볍고 날이 없어 앞손을 끊지 못하고 틈만 준다)
   const add = (NEW_TECH[frame] ?? []).filter((x) => !(style === 'blunt' && x.name === 'wristCut'));
-  // E 자루: 찌르기 + 머리 내려치기(정수리 베기 길) 하나 (docs/pole_frame_design.md §8, 봉 시제품):
-  //  찌르기만 48% · + 머리 치기 65%(96판) · 사선 베기까지 넣으면 27% · 칼 기술 전부 15% — 봉 자세표에서 사선·수평 베기 길은 휜다.
-  //  원전도 같다: 높은 자세에서 머리를 내려치고 찌른다(스웻넘·실버 [원전 2차]). 교차 베기 등은 봉 자세표에 맞춘 새 길로 따로
-  if (frame === 'pole') return t.filter((x) => x.kind === 'thrust' || POLE_STRIKES.has(x.name) || MOTION.poleStrikes.has(x.name));
   return [...t, ...(style === 'thrust' ? add.filter((x) => x.kind === 'thrust') : add)].filter((x) => x.ai !== false);
 }
 
