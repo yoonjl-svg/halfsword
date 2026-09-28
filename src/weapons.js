@@ -1012,6 +1012,7 @@ const pistol = finalizeSpec('pistol', {
       partTuple(['box', 0.016, L / 2, 0.013], this.hiltLength + L / 2, 0.55, comY, frame.Ie, frame.It, 0x2c2f35, false),
     ];
   },
+  thumbScale: 0.6, // 카드 그림: 권총은 실제로 짧으니 칸을 가득 채우지 않는다 (weapon_thumbs 가 이 비율로 작게 둔다)
   decorate(group) {
     drawPistol(group);
   },
