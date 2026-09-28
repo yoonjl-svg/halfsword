@@ -19,6 +19,7 @@ export const GUN = {
   range: 25, // m: 총알이 닿는 거리
   armorBlunt: 0.25, // 투구·판금이 막으면(그리고 바로 부서지면) 몸에는 세기의 이 비율만 둔하게 전해진다
   laser: true, // 총신 방향으로 탄 길(레이저)을 그린다 (장전 중엔 흐리게)
+  aiFirst: 1.5, // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
   maxWait: 0.6, // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
   recoilBack: 0.5, // N·s: 쏠 때 총을 뒤로 미는 충격
   recoilUp: 0.7, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다 → 총구가 들린다)
@@ -46,6 +47,7 @@ export function gunCanFire(f, { now = false } = {}) {
   const g = state(f);
   if (g.cool > 0 || g.pending >= 0) return false;
   g.pending = now ? GUN.maxWait : 0; // now: 겨누는 동작 없이 다음 스텝에 지금 총신(레이저) 방향으로 쏜다
+  if (now) g.aim = 0; // 사람은 조준 보정 없음 (AI 는 gunAI 가 g.aim 을 난이도대로 정한다)
   return true;
 }
 
@@ -83,6 +85,15 @@ function fire(f, world, combat) {
   const v = new THREE.Vector3().crossVectors(_d, u);
   _d.multiplyScalar(Math.cos(a)).addScaledVector(u, Math.sin(a) * Math.cos(phi)).addScaledVector(v, Math.sin(a) * Math.sin(phi)).normalize();
   f.bladePoint(1, _o); // 총구
+  // AI 조준: 찌르기 동작만으로는 총신이 상대 가슴에서 15~23° 벗어난 채 쏜다(3 m 에서 가슴 폭은 ±4° — 거의 다 빗나갔다, 디렉터 12:38).
+  //  AI 는 난이도 실력(level.skill: 쉬움 0.4 · 보통 0.7 · 어려움 0.85)만큼 총신을 상대 가슴 쪽으로 바로잡아 쏜다: 남는 오차 = (1 − (0.5 + 0.5·skill)).
+  //  사람은 바로잡지 않는다 — 레이저를 보고 제 손으로 겨눈다
+  if (g.aim > 0 && f.foe?.bodies?.chest) {
+    const c = f.foe.bodies.chest.translation();
+    // 가슴 몸체 중심보다 10 cm 아래(명치)를 노린다 — 가슴 중심을 노리면 남은 오차가 위로 튈 때 목·얼굴로 가서 첫 발에 즉사했다
+    const to = new THREE.Vector3(c.x - _o.x, c.y - 0.1 - _o.y, c.z - _o.z).normalize();
+    _d.lerp(to, g.aim).normalize();
+  }
   sound('onShot', f);
   // 반동: 총구를 뒤·위로 차 올린다 (총구에 건 충격 — 손목이 받아 내며 총구가 들린다). 팔에도 충격이 전해진다
   const up = _l.set(0, 1, 0).addScaledVector(_d, -_d.y).normalize(); // 총신에 수직인 위쪽
@@ -94,9 +105,12 @@ function fire(f, world, combat) {
   f.takeJolt?.(GUN.recoilBack + GUN.recoilUp);
   const info = combat.info;
   const hit = castRay(world, _o, _d, (h) => info.get(h)?.fighter !== f);
-  if (!hit) return;
-  const vi = info.get(hit.collider.handle);
-  if (!vi || vi.kind === 'weapon' || !vi.fighter || vi.fighter === f) return; // 칼·땅·벽에 맞았다
+  const vi = hit ? info.get(hit.collider.handle) : null;
+  // 어디에 맞았나 (검사 도구가 읽는다): 허공·땅벽·칼·몸
+  const what = !hit ? 'air' : !vi ? 'world' : vi.kind === 'weapon' ? 'weapon' : 'body';
+  g.what = g.what ?? {};
+  g.what[what] = (g.what[what] ?? 0) + 1;
+  if (what !== 'body' || vi.fighter === f) return; // 칼·땅·벽에 맞았거나 빗나갔다
   bulletHit(f, vi, _o.clone().addScaledVector(_d, hit.toi), _d.clone(), combat);
 }
 
@@ -303,6 +317,8 @@ export function reloadSound(snd, pos) {
  */
 export function gunAI(ai, dt) {
   const me = ai.me;
+  // 판이 열리자마자 쏘지 않는다: 첫 발 전 GUN.aiFirst 초 (예전엔 0.1초에 쏴 판이 시작하자마자 끝나기도 했다)
+  if (ai.gunT == null) state(me).cool = Math.max(state(me).cool, GUN.aiFirst);
   const d = ai.d;
   ai.gunT = (ai.gunT ?? 0) + dt;
   let fwd = d < 3.2 ? -1 : d > 5 ? 0.8 : 0;
@@ -319,5 +335,5 @@ export function gunAI(ai, dt) {
   ai.hand.set(pose[0], pose[1]);
   ai.handSpeed = 1.2;
   ai.moveHand(dt);
-  if (d < 7 && (me.gun?.cool ?? 0) <= 0) me.skill.thrust({ step: false, autoAim: true });
+  if (d < 7 && (me.gun?.cool ?? 0) <= 0 && me.skill.thrust({ step: false, autoAim: true })) state(me).aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7);
 }
