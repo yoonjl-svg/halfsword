@@ -867,7 +867,7 @@ const treeBranch = finalizeSpec('tree_branch', {
 // ═════════════════════════════════════════════════════════════
 const rubberChicken = finalizeSpec('rubber_chicken', {
   nameKo: '고무 닭', nameEn: 'Rubber Chicken',
-  desc: '누르면 삑 소리 나는 고무 닭.\n머리를 노려라, 그게 유일한 길이다.',
+  desc: '누르면 삑 소리 나는 고무 닭.',
   grip: 'one-hand', material: 'rubber',
   tier: 'trash', fragility: 0.95, // 감독 확정: 장난 무기는 쓰레기 등급(power 0.7), 파손도 나뭇가지와 똑같이 — 충돌이 가벼워 계수는 더 높다 (60초 경합 76%)
   hiltLength: 0.1, bladeLength: 0.35,
