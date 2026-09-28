@@ -128,7 +128,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
       const seed = (xFirst ? 1000 : 2000) + s;
-      const x = { weapon: 'staff_proto', persona: { school: LIB ? 'staff_lib' : school } };
+      const x = { weapon: 'staff_proto', persona: { school: LIB ? 'staff_lib' : school, ...(process.env.STAFF_VOR ? { pers: { vor: +process.env.STAFF_VOR }, level: { guardChance: 0.95 } } : {}) } }; // STAFF_VOR: 달려드는 상대를 맞받아 찌르는 성향(Vor)·기다림
       const y = { weapon: 'longsword', persona: { school: 'longsword' } };
       const Pp = xFirst ? x : y;
       const Ee = xFirst ? y : x;
