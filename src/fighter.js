@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT } from './config.js';
 import { Skill } from './skill.js';
-import { Gait, hybridJointDefs } from './gait.js';
+import { Gait, hybridJointDefs, fwdFixOn } from './gait.js';
 import { guardAt } from './guards.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
@@ -1194,7 +1194,7 @@ export class Fighter {
   /** 몸통이 "의도한 자세"(가속할 때 숙인 것 포함)에서 벗어난 각도 */
   tiltDeg() {
     rot(this.bodies.chest, _q1);
-    const up = (GAIT.fwdFix ? _vTilt : _v1).set(0, 1, 0).applyQuaternion(_q1);
+    const up = (fwdFixOn() ? _vTilt : _v1).set(0, 1, 0).applyQuaternion(_q1);
     const ref = this.anchorUp || UP;
     return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.dot(ref), -1, 1)));
   }
@@ -1316,7 +1316,7 @@ export class Fighter {
     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
     //  (다리 걸음(hybrid)에서 걸음 방향 버그를 고친 뒤엔 GAIT.leanFix: 다리 1.5 가 맞춰진 크기. 0.05 를 그대로 쓰면 빨리 걸을 때 7°쯤 숙여
     //   비스듬히 걷기가 느려지고 멈출 때 붙잡기 반사가 더 걸린다)
-    this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * (hybrid && GAIT.fwdFix ? GAIT.leanFix : 0.05), -0.12, 0.12) : 0;
+    this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * (hybrid && fwdFixOn() ? GAIT.leanFix : 0.05), -0.12, 0.12) : 0;
   }
 
   // ── 진짜 균형 ──

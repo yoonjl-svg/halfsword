@@ -20,8 +20,9 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, BODY, GAIT, SKILL } from './config.js';
+import { AI_LEVELS, BODY, SKILL } from './config.js';
 import { Senses } from './ai_sense.js';
+import { fwdFixOn } from './gait.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
@@ -1239,7 +1240,7 @@ export class AI {
     let fwd = 0;
     let side = 0;
     // 기술 걸음을 다리 걸음(gait.js)에 맡길 수 있나 (걸음 방향 버그를 고친 뒤에만: 끄면 예전과 같다). 맡겼으면 그 걸음의 단계
-    const fixStep = GAIT.fwdFix && !!me.gait?.active && me.state === 'stand';
+    const fixStep = fwdFixOn() && !!me.gait?.active && me.state === 'stand';
     const stepPh = fixStep ? this.stepPhase() : null;
     let wantStep = false;
     let urgent = false; // 급히 물러나야 한다 (너무 붙음·크게 뛰어 비키기): 기술 걸음 중에도 뒤로 당긴다
@@ -1357,7 +1358,7 @@ export class AI {
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
     const lim = Math.max(1, mv);
     me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -lim, lim));
-    if (GAIT.fwdFix) {
+    if (fwdFixOn()) {
       // 조이스틱을 이번 프레임 값으로 정한 뒤에 부탁한다 (지난 프레임의 뒤로 당긴 값 때문에 거절되지 않게)
       if (wantStep) this.gaitStep();
       // 기술 걸음을 딛는 동안엔 검술 층의 자동 내딛기(조이스틱 앞으로)도 걸지 않는다: 걷는 발이 먼저 떠 두 번 내딛는다
@@ -1391,16 +1392,16 @@ export class AI {
     const g = this.me.gait;
     if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
     // 앞 기술 걸음이 아직 딛지 않았거나 딛고 버티는 중이면 기다린다 (막 내디딘 발을 곧바로 다시 들면 더듬는다, GAIT.fwdFix)
-    if (GAIT.fwdFix && this.stepPhase()) return;
+    if (fwdFixOn() && this.stepPhase()) return;
     // 균형을 잃어 붙잡기 반사가 몸무게를 받치는 중이면 (세게 숙였거나 골반이 주저앉음) 되찾을 때까지 기다린다 (GAIT.fwdFix):
     //  그대로 내디디면 보조 힘이 몸을 들고 있어 내디딘 발에 몸무게가 실리지 않고, 정지 마찰도 약해 발이 끌린다
     //  (걷다가 곧바로 쳐서 뒷발이 멀리 뒤에 남은 채 앞발을 또 내디딜 때. docs/whole_body_baseline_r1.md 0-1장: 3 cm 넘게 밀린 걸음 모두)
-    if (GAIT.fwdFix && g.lev > STEP_LEV) return;
+    if (fwdFixOn() && g.lev > STEP_LEV) return;
     // 이번 프레임의 조이스틱(me.move)은 아직 지난 프레임 값(발을 멈추려고 뒤로 살짝 당긴 값)일 수 있어서 거절될 수 있다
     //  → 받아 줄 때까지 다음 프레임에 다시 부탁한다 (GAIT.fwdFix 에선 moveFeet 가 조이스틱을 정한 뒤에 부른다)
     //  걸음 방향 버그를 고친 뒤(GAIT.fwdFix)에는 베기·찌르기 모두 앞발 내딛기 0.25 m / 0.3초: 지나 딛기는 몸 밀기 없이는 몸보다 너무 앞에
     //  떨어져 42~63 cm 미끄러지고 다시 딛는다. 앞발 내딛기 0.25 m는 닿을 때 몸 전진 약 0.12 m, 미끄러짐 약 1 cm (docs/whole_body_strike.md R1)
-    const req = GAIT.fwdFix ? { kind: 'lunge', fwd: 0.25, duration: 0.3, hold: STEP_HOLD } : { kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 };
+    const req = fwdFixOn() ? { kind: 'lunge', fwd: 0.25, duration: 0.3, hold: STEP_HOLD } : { kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 };
     if (g.requestStep(req)) this.requestedStep = true;
   }
 }

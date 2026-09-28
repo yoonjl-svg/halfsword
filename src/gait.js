@@ -20,7 +20,13 @@
 //      일어서면 보조 힘을 부드럽게 줄이며 다리로 넘겨준다 (다리가 이미 받치는 만큼은 보조를 덜 쓴다).
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, GAIT } from './config.js';
+import { BODY, GAIT, WHOLE } from './config.js';
+
+/**
+ * 걸음 방향 버그 고침(GAIT.fwdFix, 온몸 베기 R1)을 쓰는가: 온몸 베기(WHOLE.on)를 켰을 때만.
+ *  온몸 베기 미리보기를 끄면(설정 '온몸 베기 (시험)') 걸음도 합치기 전 main 과 바이트까지 같다 (AI 앞발 내딛기 포함)
+ */
+export const fwdFixOn = () => GAIT.fwdFix && WHOLE.on;
 
 const A_LEN = 0.43; // 허벅지 (엉덩이 → 무릎)
 const B_LEN = 0.42; // 정강이 (무릎 → 발목)
@@ -528,7 +534,7 @@ export class Gait {
         const r = Math.hypot(hx, hz);
         const r2 = Math.max(0, r - HEEL_DX);
         const hyHeel = ANKLE_H + HEEL_DY + Math.sqrt(Math.max(0.04, Ls * Ls - r2 * r2)) + HIP_DROP;
-        if (hyHeel > hy) hy += (hyHeel - hy) * clamp(back / (GAIT.fwdFix ? GAIT.heelBlendFix : GAIT.heelBlend), 0, 1);
+        if (hyHeel > hy) hy += (hyHeel - hy) * clamp(back / (fwdFixOn() ? GAIT.heelBlendFix : GAIT.heelBlend), 0, 1);
       }
       // 두 발로 딛을 땐 더 높이 받칠 수 있는 다리 기준 (뒷발은 뒤꿈치를 들어 따라온다)
       hGeo = hGeo === Infinity ? hy : Math.max(hGeo, hy);
@@ -729,7 +735,7 @@ export class Gait {
     const kind = l.kind === 'req' ? (this.req?.kind ?? 'req') : l.kind;
     // 딛은 뒤 버티기 (부탁의 hold초, GAIT.fwdFix): 그동안 자세 고치기 걸음을 하지 않는다. 기술 걸음 동안엔 조이스틱을 놓고 있어
     //  멈춘 것으로 쳐지므로(idleT), 버티지 않으면 딛자마자(0.07초) 방금 내디딘 발을 펜싱 자세 자리로 물려 딛는다 (AI 내딛기의 13~25%)
-    if (l.kind === 'req' && GAIT.fwdFix) this.holdT = this.req?.hold ?? 0;
+    if (l.kind === 'req' && fwdFixOn()) this.holdT = this.req?.hold ?? 0;
     if (l.kind === 'req') this.req = null;
     const strength = clamp(speed / GAIT.moveSpeed, 0.15, 1);
     this.f.footstep = Math.max(this.f.footstep, strength);

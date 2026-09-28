@@ -45,7 +45,10 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, wholeBody: true, autoChamber: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, wholeBody: true, autoChamber: false };
+// 자동 감기 설정을 쓰는가 (온몸 베기 미리보기에서는 거짓: 설정 줄이 없고, 저장된 값이 참이어도 켜지 않는다 — newRound).
+//  다시 열려면 이것을 참으로 하고 index.html 에 '자동 감기' 줄(data-setting="autoChamber")을 되살린다
+const AUTO_CHAMBER_SETTING = false;
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -226,8 +229,9 @@ function newRound(weaponId) {
   CONFIG.BODY.weightMode = 'hybrid';
   // 온몸 베기 (docs/whole_body_strike.md): 끄면 온몸 베기 이전과 똑같이 움직인다. 다음 판부터 적용
   CONFIG.WHOLE.on = !!settings.wholeBody;
-  // 자동 감기 (온몸 베기 L1): 켜면 쟁기(기본 자세)에서 크게 그어도 칼을 먼저 들어 올렸다가 크게 벤다. 끄면 쟁기에서는 결심 베기가 안 된다
-  CONFIG.COMMIT.autoChamber = settings.autoChamber !== false;
+  // 자동 감기 (온몸 베기 L1): 켜면 쟁기(기본 자세)에서 크게 그어도 칼을 먼저 들어 올렸다가 크게 벤다. 끄면 쟁기에서는 결심 베기가 안 된다.
+  //  온몸 베기 미리보기(시험)에서는 늘 끈다 (감독 결정: 걸어 들어가며 그은 자동 감기가 막히고 가벼운 칼 가로베기 칼끝이 넘친다 — 다음 라운드에서 고친다)
+  CONFIG.COMMIT.autoChamber = AUTO_CHAMBER_SETTING && !!settings.autoChamber;
   // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다)
   //  흩어지던 칼·투구·판금 조각과 벗겨진 케틀햇은 캐릭터 그룹 밖(장면)에 있어서 따로 치운다 (두 번 불러도 괜찮다)
   clearFlying();
