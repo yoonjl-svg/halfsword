@@ -12,7 +12,8 @@
 //         miss (헛친 사선 베기, 상대 3.2 m, 1.2초 10칸) · camera-presets (사선 베기를 CAMERA.preset 마다, 카메라 구도 층이 생기기 전엔 지금 카메라 하나)
 //         walk-<F|FR|R|BR|B|BL|L|FL> (조이스틱 끝까지 1.2초 걷고 놓는다, 상대 4 m: 걷기 시작·멈춤 8칸) · tap-thrust (탭 찌르기, 상대 1.9 m)
 //         ai-step (AI 가 기술 걸음을 부탁한 순간부터 0.9초 동안 8칸, 찍히는 쪽 = AI. 플레이어는 가만히 선 더미, 상대 2.4 m)
-//   --off: 설정 '온몸 베기'를 끈다 (전·후 비교의 '전'). 같은 시드·같은 입력. --dist=2.0: 상대 거리 (가슴 사이 m)
+//   --off: 설정 '온몸 베기'를 끈다 (전·후 비교의 '전'). 같은 시드·같은 입력. --dist=2.0: 상대 거리 (가슴 사이 m). --long: 1.2초 10칸
+//   --v=8: 손가락 평균 빠르기 (패드 m/s, 기본 12)
 //   --fixoff: GAIT.fwdFix 를 끈다 (R1 걸음 방향 버그 고침의 '전')
 //   주소: 기본 http://localhost:5174/ (이 작업 폴더의 개발 서버). 새 서버를 띄우지 않는다
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
@@ -30,7 +31,7 @@ const FIXOFF = args.includes('--fixoff');
 const [W, H] = opt('size', '844x390').split('x').map(Number);
 const OUT = opt('out', process.env.OUTDIR || os.tmpdir());
 const URL = opt('url', process.env.URL || 'http://localhost:5174/');
-const TAG = `${SCENE}${opt('dist') ? '_d' + opt('dist') : ''}_${MODE === 'hybrid' ? 'hyb' : 'lev'}_${OFF ? 'off' : 'on'}${FIXOFF ? '_fixoff' : ''}_${W}x${H}`;
+const TAG = `${SCENE}${opt('dist') ? '_d' + opt('dist') : ''}${opt('v') ? '_v' + opt('v') : ''}_${MODE === 'hybrid' ? 'hyb' : 'lev'}_${OFF ? 'off' : 'on'}${FIXOFF ? '_fixoff' : ''}_${W}x${H}`;
 fs.mkdirSync(OUT, { recursive: true });
 
 // 패드 자리 (guards.js 규약, wholebody.mjs 와 같다)
@@ -39,12 +40,13 @@ const CUT = (ch, end, dist, extra = {}) => ({ ch, end, dist, v: 12, ...extra });
 const SCENES = {
   'zornhau-stand': CUT(PAD.ShR, PAD.WechselL, 1.55),
   'zornhau-step': CUT(PAD.ShR, PAD.WechselL, 2.0),
-  'pflug-zornhau': CUT(null, PAD.WechselL, 1.55),
+  // (쟁기에서 그으면 자동 감기: 칼을 들어 올려 준비 자세에 올라온 뒤 벤다 — 닿기가 0.6~0.8초라 1.2초 10칸으로 찍는다)
+  'pflug-zornhau': CUT(null, PAD.WechselL, 1.55, { long: true }),
   'oberhau-stand': CUT(PAD.Tag, PAD.Alber, 1.55),
   'zwerch-stand': CUT(PAD.Side, PAD.SideL, 1.55),
   'unterhau-stand': CUT(PAD.Wechsel, PAD.OchsL, 1.55),
   // 쟁기에서 황소 높이까지 들어 올렸다가 곧바로 왼쪽 아래로 (한 번에 긋기, 다리 사이 두 프레임 머묾)
-  'pflug-hook': CUT(null, null, 1.55, { legs: [[0.04, 0.5], [-0.53, -0.53]] }),
+  'pflug-hook': CUT(null, null, 1.55, { legs: [[0.04, 0.5], [-0.53, -0.53]], long: true }),
   // 자세 바꾸기 (황소 → 왼쪽 황소, 6 m/s): 결심 베기가 되면 안 된다
   'guard-change': CUT(PAD.Ochs, PAD.OchsL, 1.9, { v: 6 }),
   miss: CUT(PAD.ShR, PAD.WechselL, 3.2, { long: true }),
@@ -58,11 +60,12 @@ const DIRS = { F: [0, 1], FR: [0.707, 0.707], R: [1, 0], BR: [0.707, -0.707], B:
 for (const [k, d] of Object.entries(DIRS)) SCENES[`walk-${k}`] = { type: 'walk', stick: d, dist: 4.0, holdMs: 1200, shots: [0, 150, 300, 500, 800, 1100, 1400, 1800] };
 const SC = SCENES[SCENE];
 if (SC && opt('dist')) SC.dist = +opt('dist'); // --dist=2.0: 상대 거리를 바꾼다 (쟁기의 칼끝이 1.55 m 더미에 이미 닿아 있을 때 등)
+if (SC && opt('v')) SC.v = +opt('v'); // --v=8: 손가락 평균 빠르기
 if (!SC) {
   console.error('모르는 장면:', SCENE, '·', Object.keys(SCENES).join(' '));
   process.exit(1);
 }
-const SHOTS = SC.shots || (SC.long ? [0, 120, 240, 360, 480, 600, 720, 840, 1000, 1200] : [0, 60, 120, 180, 240, 300, 400, 550]);
+const SHOTS = SC.shots || (SC.long || args.includes('--long') ? [0, 120, 240, 360, 480, 600, 720, 840, 1000, 1200] : [0, 60, 120, 180, 240, 300, 400, 550]);
 const TYPE = SC.type || 'cut';
 
 (async () => {

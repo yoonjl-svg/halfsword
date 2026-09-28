@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL } from './config.js';
+import { STRIKE, ANATOMY, STEEL, COMMIT } from './config.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -314,12 +314,16 @@ export class Combat {
         }
       } else if (c.stuckT > 0) {
         // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다)
-        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + STRIKE.armAssist) * s);
+        //  결심 베기 (L1, 획·버티기 중): 한 순간에 붙잡는 몫은 칼 자체의 유효 질량까지만 (팔 몫 armAssist 를 더하면 가벼운 칼은 한 스텝에
+        //  칼 빠르기가 거꾸로 뒤집혀, 손목이 조금만 밀어도 칼이 떨며 돌았다 — 라이트세이버 칼끝 30~60 m/s. 결심을 끄면 예전 그대로)
+        const af = c.pr.w.fighter;
+        const cm = af.commit;
+        const held = COMMIT.stuckHoldFree && (cm?.on || af.skill?.rest?.w > 0);
+        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + (held ? 0 : STRIKE.armAssist)) * s);
         c.stuckT -= dt;
         c.seen = this.stepNo;
-        // 결심 베기 (L1): 칼이 박힌 동안 획 시간을 늦춘다 (skill.updateCut)
-        const cm = c.pr.w.fighter.commit;
-        if (cm?.on) cm.stuckT = Math.max(cm.stuckT, 2 * dt);
+        // 결심 베기 (L1): 칼이 박힌 동안 획 시간을 늦추고 끝 너머로 미는 몫을 거둔다 (skill.updateCut). 획이 끝난 뒤 버티는 동안도 (updateRest)
+        if (cm) cm.stuckT = Math.max(cm.stuckT || 0, 2 * dt);
       }
       if (J > 0) {
         // 칼에는 칼날 중심선 위에 건다 (날 끝에 걸면 칼이 길이 방향으로 팽이처럼 돈다)

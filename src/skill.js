@@ -24,6 +24,8 @@
 //      패드·몸·손을 몬다: 몸이 먼저 감고 → 골반 → 가슴 → 팔 → 칼 순서로 풀고 → 팔을 끝까지 뻗고 → 칼이 끝 자세 너머로 지나간다.
 //      손가락 빠르기와 상관없이 같은 크기이되, 세게 그을수록(결심 세기 c) 빠르고 크다. 결과가 나오거나 닿기(u 1)를 지나면
 //      칼을 손가락에 돌려준다. 짧게·천천히 그으면 지금 그대로의 팔 베기다 (docs/whole_body_strike.md L1)
+//      쟁기(집)에서 그으면 자동 감기: 확정 순간 칼을 준비 자세로 들어 올리고, 칼이 실제로 올라온 뒤에 벤다 (무거운 칼일수록 오래 감는다.
+//      힘을 실어 베는 만큼의 지연은 괜찮고, 멈춰 있는 시간과 값을 못 하는 지연은 안 된다 — 사장님 박자 결정)
 //
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
@@ -117,7 +119,7 @@ export class Skill {
       endT: -1e9, // 획이 끝난 시각 (clock)
     };
     // 획 프로그램이 매 스텝 내는 덧씌움 (fighter.updateBodyPose·driveSword 가 w 만큼 쓴다). 몸은 코드 단위(라디안, updateBodyPose 부호)
-    this.cutPose = { w: 0, wBody: 0, yawK: 1, pitch: 0, drop: 0, wLean: 0, over2: 0, n2: [0, 0, 1], plane: 0, pn: [0, 0, 1], hand: [0, 0, 0], cockEl: 0, cockAz: 0, over: 0, n: [0, 0, 1] };
+    this.cutPose = { w: 0, wBody: 0, yawK: 1, pitch: 0, drop: 0, wLean: 0, over2: 0, n2: [0, 0, 1], plane: 0, pn: [0, 0, 1], pg: 0, pc: [0, -1, 0], pk: 0.5, hand: [0, 0, 0], cockEl: 0, cockAz: 0, over: 0, n: [0, 0, 1], lift: 0, liftA: 0, l0: [1, 0, 0], l1: [0, 1, 0] };
     // 결심 판정 상태 (손가락 원래 궤적을 읽은 자리와 지금 긋고 있는 한 획의 후보)
     // 결심 베기가 끝난 뒤 끝 자세 너머에서 버티는 덧씌움 (끝 손 더함·지나가기). 손가락이 움직이면 푼다
     this.rest = { w: 0, free: false, hand: [0, 0, 0], over: 0, n: [0, 0, 1] };
@@ -272,8 +274,12 @@ export class Skill {
     this.vel.y += (ry - this.vel.y) * k;
     const sp = this.vel.length();
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
-    // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐)
-    this.activity += ((swinging ? 1 : 0) - this.activity) * Math.min(1, dt / (swinging ? 0.04 : 0.4));
+    // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐).
+    //  결심 베기의 획 프로그램이 도는 동안(확정 뒤)도 휘두르는 중이다 — 확정 순간 1로 뛰지 않고 휘두를 때와 같은 빠르기로 오른다
+    //  (1로 뛰면 몸이 팔 베기보다 먼저 돌아 칼이 100 ms 늦었다: 걸어 들어가며 벤 왼쪽 사선이 팔 베기가 맞힌 거리에서 비켜 갔다)
+    const prog = cm.on && cm.padOn;
+    const act1 = swinging || (prog && !cm.ended && !cm.fading);
+    this.activity += ((act1 ? 1 : 0) - this.activity) * Math.min(1, dt / (act1 ? 0.04 : 0.4));
 
     // 0) 가죽끈: anchor는 손가락(off)이 반경(inputDeadRadius)을 넘어야 그만큼만 끌려간다.
     //  반경 안의 떨림은 anchor를 전혀 움직이지 못한다 — 어디서 떨든(자세 경계라도) 걸러진다.
@@ -301,6 +307,7 @@ export class Skill {
     // 6) 결심 베기: 획 패드(끝 자세까지 마저 긋는 "획의 손가락")가 손가락 대신 손 목표가 된다. 거르기·이어 베기는 휘두를 때 그대로 —
     //  칼과 몸이 팔 베기처럼 겨눈 선을 따라가고 닿는 때도 같다 (설계서는 이어 베기를 0 으로 두지만, 그러면 칼이 겨눈 선보다 몇 cm
     //  옆으로 지나 1.5 m 더미를 비켜 가는 판이 생겼다). 돌려주기·그만두기 동안엔 손가락 쪽(anchor)과 섞는다
+    if (prog && cm.u >= 0) this.leadPad();
     if (cm.on && cm.padW > 0) {
       const pw = cm.padW;
       this.aimRaw.set(this.anchor.x + (cm.padX - this.anchor.x) * pw + this.follow.x, this.anchor.y + (cm.padY - this.anchor.y) * pw + this.follow.y);
@@ -310,10 +317,11 @@ export class Skill {
     //  (사람의 손도 순간적으로 속도를 바꾸지 못한다. 목표가 튀면 근육이 그 충격을 몸통에 그대로 전해 출렁인다)
     // 휘두르는 순간엔 근육을 긴장시켜(공동 수축) 더 빠르고 단단하게 따라간다. 결심 베기의 획 프로그램이 도는 동안도
     //  (자동 감기는 손가락이 이미 멈춘 뒤에 칼을 감고 벤다)
-    const prog = cm.on && cm.padOn;
     const wT = swinging || (prog && !cm.ended) ? SKILL.aimFilterStrike : SKILL.aimFilter;
     this.filterW = (this.filterW ?? wT) + (wT - (this.filterW ?? wT)) * Math.min(1, dt * 30);
     const w = this.filterW;
+    const ox = this.aim.x;
+    const oy = this.aim.y;
     const ax = w * w * (this.aimRaw.x - this.aim.x) - 2 * w * this.aimVel.x;
     const ay = w * w * (this.aimRaw.y - this.aim.y) - 2 * w * this.aimVel.y;
     this.aimVel.x += ax * dt;
@@ -321,13 +329,13 @@ export class Skill {
     this.aim.x += this.aimVel.x * dt;
     this.aim.y += this.aimVel.y * dt;
     // 자동 감기(u < 0) 동안은 손 목표가 패드를 거르지 않고 따른다 (패드는 이미 최소 저크로 매끄럽다. 거르면 감기 시간(0.1초)
-    //  안에 손 목표가 거의 오르지 못해 칼이 감기지 않았다)
+    //  안에 손 목표가 거의 오르지 못해 칼이 감기지 않았다). 확정 뒤 autoBlend 동안은 팔 베기(걸러서 손가락을 따르던 손 목표)에서
+    //  들어 올리기로 넘어간다 (kIn 0 → 1): 확정 순간 팔 베기로 나가던 손을 한 스텝에 멈추지 않는다
     if (prog && cm.start === 'auto' && cm.u < 0 && !cm.fading) {
-      this.aimVel.set((cm.padX - this.aim.x) / dt, (cm.padY - this.aim.y) / dt);
-      this.aim.set(cm.padX, cm.padY);
+      const k = cm.kIn;
+      this.aim.set(this.aim.x + (cm.padX - this.aim.x) * k, this.aim.y + (cm.padY - this.aim.y) * k);
+      this.aimVel.set((this.aim.x - ox) / dt, (this.aim.y - oy) / dt);
     }
-    // (1단계는 대가가 없다: 획 프로그램이 도는 동안(확정 뒤)만 몸을 벨 때처럼)
-    if (prog && !cm.ended) this.activity = Math.max(this.activity, cm.w);
 
     // 3) 내딛기: 잠깐 멈췄다가 새로 휘두르기 시작할 때, 상대가 한 걸음 거리에 있으면
     if (swinging && this.quiet > 0.2 && f.state === 'stand') {
@@ -694,6 +702,9 @@ export class Skill {
     if (!(WHOLE.on && WHOLE.commit) || !P || !this.canCommit()) return false;
     const C = COMMIT;
     const cm = f.commit;
+    // 앞 획의 덧씌움이 아직 남아 있으면(돌려주는 중·그만두기로 거두는 중) 버티기(rest)로 넘겨 풀리게 한다: 새 1단계가 그 자리에서
+    //  0 으로 끊으면 칼과 몸이 한 스텝에 튄다
+    if (cm.on && cm.padOn && !cm.ended && this.cutPose.w > 0) this.passToRest(cm.fading ? cm.w : 1);
     cm.on = true;
     cm.stage = o.stage ?? 'B';
     cm.fam = o.fam;
@@ -719,6 +730,8 @@ export class Skill {
     cm.padW = 0;
     this.cutPose.w = 0;
     this.cutPose.wBody = 0;
+    this.cutPose.lift = 0;
+    this.cutPose.pg = 0;
     if (cm.stage === 'B') this.startProgram(0, o.v ?? C.cFrom + ((cm.c - C.cMin) * C.cSpan) / (1 - C.cMin));
     return true;
   }
@@ -743,7 +756,6 @@ export class Skill {
     cm.v0t = bp.pitch;
     cm.v0d = bp.drop;
     this.sizeCut();
-    cm.tAuto *= cm.Tc / cm.TcFree; // 획 시간 아래 한도가 걸렸으면 자동 감기도 그만큼 늦춘다 (가벼운 칼이 들어 올릴 때 칼끝이 휘청 튄다)
     cm.u0 = cm.start === 'auto' ? -cm.tAuto / cm.Tc : Math.min(C.fromStageA, stageAT / cm.Tc);
     cm.u = cm.u0;
     // 획 패드 경로: 손가락 자리(가죽끈 anchor)에서 → 끝 자세 (곧게). 자동 감기면 지금 손 목표(aim)에서 먼저 준비 자세 쪽으로
@@ -757,13 +769,52 @@ export class Skill {
     cm.pby = auto ? cm.p0y + (P.ch[1] - cm.p0y) * C.autoFrac : cm.p0y;
     cm.padX = cm.p0x;
     cm.padY = cm.p0y;
+    // 자동 감기는 칼이 준비 자세에 올라온 뒤에 벤다 (updateCut): 그때까지는 베기가 아니다 (닿아도 결과로 치지 않는다)
+    cm.cutting = !auto;
+    // 자동 감기의 베는 면: 칼자루 → 상대(가슴과 머리 사이 pk)를 품고 긋는 방향(몸 기준 [0, 위, 칼 든 쪽])으로 기운 면 (fighter.cutPlane).
+    //  빠르게 들어 올린 팔은 준비 자세에서 그은 팔과 손 자리가 달라(위팔 비틀림이 다른 평형에 머문다) 칼이 겨눈 선 옆·위로 지나갔다
+    const cp = this.cutPose;
+    cp.pg = auto && !P.plane && C.autoPlane ? 1 : 0;
+    if (cp.pg) {
+      const L = Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby) || 1;
+      cp.pc[0] = 0;
+      cp.pc[1] = (cm.ey - cm.pby) / L;
+      cp.pc[2] = (cm.ex - cm.pbx) / L;
+      cp.pk = P.pk ?? C.planeK;
+    }
+    cm.hold = 0;
+    cm.liftA = 0;
+    cm.kIn = auto && C.autoBlend > 0 ? 0 : 1; // 팔 베기에서 들어 올리기로 넘어간 정도 (update)
     // 획 시간 아래 한도가 걸린 무리(가벼운 칼이 너무 빨랐다): 패드가 닿기(u 1)에 끝 자세에 닿는 빠르기보다 빠르지 않게, 손가락도 앞지르지 않는다
     cm.vpk = 0;
+    cm.freeK = 1;
+    // 자동 감기의 베기 패드 빠르기: 쟁기에서 그은 손가락은 방향만 정했다 (그 세기는 c 로 획 시간에 들어갔다). 준비 자세 → 끝 자세를
+    //  Tc × autoPadT 에 긋는 빠르기로 (손가락 빠르기로 그으면 가벼운 한손 칼은 준비 자세에서 끝까지 채찍질해 칼끝이 팔 베기보다 15~29% 빨랐다)
+    if (auto && C.autoPadT > 0) cm.vs = Math.max(C.padMinV * 0.5, Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby) / (C.autoPadT * cm.Tc));
     cm.capped = cm.Tc > cm.TcFree;
     if (cm.capped) cm.vs = Math.min(cm.vs, Math.max(C.padMinV * 0.5, Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby) / Math.max(0.05, (1 - Math.max(0, cm.u0)) * cm.Tc)));
     // 휘두르는 면 (몸 기준): 출발 자리와 끝 자세의 칼끝 방향 둘 다에 수직. 지나가기가 이 축으로 칼끝을 끝 너머로 더 돌린다
     guardAt(cm.pbx, cm.pby, _g);
     _ga.set(_g.dir[0], _g.dir[1], _g.dir[2]);
+    // 자동 감기의 칼끝 방향: 지금 칼 방향에서 준비 자세의 칼끝 방향으로 곧장 (들어 올리기, fighter.cutAim). 자세 지도를 따라가면 쟁기와
+    //  준비 자세 사이의 자세(칼끝이 앞·아래)를 지나 칼끝이 가까운 상대 몸으로 파고들어 칼이 올라오지 못했다
+    if (auto) {
+      const r = f.sword.rotation();
+      _yawInv.copy(f.yaw).invert();
+      _p.set(0, 1, 0).applyQuaternion(_tq.set(r.x, r.y, r.z, r.w)).applyQuaternion(_yawInv);
+      // 칼이 이미 돌고 있으면(팔 베기로 나가던 칼) 들어 올리기 칼끝 목표는 그 돌기를 autoCarryT 만큼 이어받은 방향에서 출발한다
+      //  (그 자리에서 거꾸로 세우면 칼끝이 한동안 제자리에 머물러 첫 반응이 늦었다)
+      const w = f.sword.angvel();
+      _q.set(w.x, w.y, w.z).applyQuaternion(_yawInv);
+      const wl = _q.length();
+      if (wl > 1e-3) _p.applyAxisAngle(_q.multiplyScalar(1 / wl), Math.min(wl * C.autoCarryT, 0.6));
+      cp.l0[0] = _p.x;
+      cp.l0[1] = _p.y;
+      cp.l0[2] = _p.z;
+      cp.l1[0] = _ga.x;
+      cp.l1[1] = _ga.y;
+      cp.l1[2] = _ga.z;
+    }
     guardAt(cm.ex, cm.ey, _g);
     _gb.set(_g.dir[0], _g.dir[1], _g.dir[2]);
     _ga.cross(_gb);
@@ -791,7 +842,7 @@ export class Skill {
     // 획 시간: 세게 그을수록(c)·검술이 좋을수록·힘이 셀수록 빠르고, 칼이 무거울수록·지칠수록 느리다
     cm.Tc = B.Tc0 * (C.powerTc[0] - C.powerTc[1] * c) * (1 + 0.3 * (1 - L)) * Math.pow(f.strength, -0.35) * Math.pow(Ir, 0.25) * (1 + 0.4 * (1 - vig)) * (one ? 0.8 : 1);
     cm.TcFree = cm.Tc;
-    cm.Tc = Math.max(cm.Tc, this.tcFloor[cm.fam] ?? 0); // 앞 획의 칼끝이 너무 빨랐던 무리
+    cm.Tc = Math.max(cm.Tc, this.tcFloor[this.floorKey()] ?? 0); // 앞 획의 칼끝이 너무 빨랐던 무리
     // 크기: 세게 그을수록 크다 (몸·손 더함 모두). 몸 값은 검술 자세 지도를 따르는 정도도 곱한다. 왼쪽 무리는 leftScale
     const amp = (C.powerAmp[0] + C.powerAmp[1] * c) * lv * (0.7 + 0.3 * vig) * cm.k;
     const body = amp * f.guardWeight();
@@ -819,7 +870,10 @@ export class Skill {
     const cw = auto ? lv : 0;
     cm.cockEl = B.cock[0] * D2R * cw;
     cm.cockAz = B.cock[1] * D2R * cw * cm.sgn;
-    cm.over = B.over * D2R * clamp(Math.sqrt(Ir), 0.7, 1.6); // 무거운 칼은 더 지나간다
+    // 무거운 칼은 더 지나간다. 가벼운 칼(I ≤ I롱소드 × overLight[0])은 지나가지 않고 롱소드(overLight[1])까지 차츰 늘린다: 가벼운 칼은
+    //  끝 자세 너머로 앞선 목표에 손목 제동이 늦게 걸려 끝 자세를 지나며 한 번 더 채찍질했다 (라이트세이버 사선 칼끝 팔 베기 26 → 29 m/s)
+    const OL = C.overLight;
+    cm.over = B.over * D2R * clamp(Math.sqrt(Ir), 0.7, 1.6) * clamp((Ir - OL[0]) / (OL[1] - OL[0]), 0, 1);
   }
 
   /**
@@ -852,8 +906,21 @@ export class Skill {
     }
     cm.t += dt;
     const slow = cm.stuckT > 0 ? C.stuckSlow : 1; // 칼이 박힌 동안 획 시간을 늦춘다 (combat.js)
-    if (cm.stuckT > 0) cm.stuckT -= dt;
+    // 칼이 박혔으면 끝 너머로 미는 몫(뻗기·끝 손 더함·지나가기)을 거둔다 (이 획에서는 다시 주지 않는다): 박힌 칼은 지나가지 못한다.
+    //  계속 밀면 손목이 붙잡는 힘(combat.js)과 맞서 가벼운 칼이 떨며 돌았다 (칼끝 40~65 m/s, 떨림에 더미 상처 200 J 넘게)
+    if (cm.stuckT > 0) {
+      cm.stuckT -= dt;
+      cm.freeK = Math.max(0, cm.freeK - dt / C.stuckFree);
+    }
     cm.u += (dt / cm.Tc) * slow;
+    // 자동 감기: 패드가 준비 자세에 닿아도(u 0) 칼이 준비 자세에 올라오기(칼과 칼끝 목표 사이 각 chamberTol 안) 전에는 베기를 시작하지
+    //  않는다 (u 를 0 에 붙잡는다, chamberWait 까지). 패드만 시간표대로 가면 칼이 아직 오르는 동안 몸과 패드가 벌써 풀려, 칼이 늦게
+    //  겨눈 선 옆(머리 옆)으로 내려왔다. 칼이 무거울수록 오래 감는다
+    if (!cm.cutting && cm.u >= 0) {
+      cm.u = 0;
+      cm.hold += dt;
+      if (cm.hold >= C.chamberWait || (f.aimErr < C.chamberTol * D2R && f.tipVel.length() < C.chamberV)) this.beginAutoCut();
+    }
     const u = cm.u;
     // 결과 없이 닿기를 한참 지났다 → 헛침
     if (!cm.result && !cm.fading && u >= C.missU) this.strikeResult('miss', null);
@@ -877,25 +944,33 @@ export class Skill {
       cm.ex = cm.rx0 + (cm.rx1 - cm.rx0) * a;
       cm.ey = cm.ry0 + (cm.ry1 - cm.ry0) * a;
     }
-    // 획 패드: 자동 감기(u < 0) 동안은 준비 자세 쪽으로 최소 저크로, 그 뒤 끝 자세까지 곧게 vs 로
+    // 획 패드: 자동 감기(u < 0) 동안은 준비 자세 쪽으로 들어 올리고 (칼이 올라올 때까지 거기서 기다렸다가), 그 뒤 끝 자세까지 곧게 vs 로
     if (u < 0) {
-      const a = sj((u - cm.u0) / -cm.u0);
+      // 들어 올리기는 확정 순간 곧바로 움직인다: 출발 빠르기 autoKick × 평균 빠르기로 떠나는 5차 곡선 (최소 저크는 처음 30 ms 에 거의
+      //  안 움직여 확정 뒤 손·칼이 멈춘 것처럼 보였다 — 쟁기에서 옆으로 그은 가로베기 첫 반응 92~108 ms).
+      //  확정 뒤 autoBlend 동안은 손 목표·몸·칼끝 목표가 팔 베기(손가락을 따라 이미 나가던 움직임)에서 들어 올리기로 넘어간다 (kIn,
+      //  update·cutAim): 확정 순간 들어 올리기로 바꿔 끼우면 팔 베기로 나가던 손·칼을 한 스텝에 거꾸로 세워, 쟁기에서 옆으로 8 m/s 로
+      //  그은 가로베기의 첫 반응이 팔 베기(83 ms)보다 늦은 92 ms 였다. 그 움직임을 들어 올리기 패드에 이어 붙이는 것(빠르기 이어받기)은
+      //  반응은 맞췄지만 12 m/s 긋기에서 들어 올리는 길이 27 cm 휘어 사선이 1.46~1.78 m 더미를 7/20 비켜 갔다
+      const q = (u - cm.u0) / -cm.u0;
+      const h = q * (1 - q) * (1 - q) * (1 - q) * (1 + 3 * q);
+      const a = sj(q) + C.autoKick * h;
+      if (C.autoBlend > 0) cm.kIn = sj((q * -cm.u0 * cm.Tc) / C.autoBlend);
+      cm.liftA = a;
       cm.padX = cm.p0x + (cm.pbx - cm.p0x) * a;
       cm.padY = cm.p0y + (cm.pby - cm.p0y) * a;
     } else {
-      const Lt = Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby);
-      // 손가락(가죽끈 anchor, 팔 베기의 손 목표 자리)이 획 패드보다 앞서 가면 그것을 따른다 (빠르게 가속하는 긋기는 팔 베기와 같은
-      //  때에 닿는다). 손가락이 멈추거나 떼도 패드는 vs 로 끝까지 간다. 칼이 박힌 동안, 자동 감기(손가락은 감기 전에 이미 끝 쪽에
-      //  있다)에서는 손가락을 따르지 않는다
-      const fo = this.anchor;
-      const pr = Lt > 1e-6 && !(cm.stuckT > 0) && cm.start !== 'auto' && !cm.capped ? ((fo.x - cm.pbx) * (cm.ex - cm.pbx) + (fo.y - cm.pby) * (cm.ey - cm.pby)) / Lt : 0;
-      cm.pa = Math.max(cm.pa + dt * slow * cm.vs, pr);
-      const a = Lt > 1e-6 ? Math.min(1, cm.pa / Lt) : 1;
-      cm.padX = cm.pbx + (cm.ex - cm.pbx) * a;
-      cm.padY = cm.pby + (cm.ey - cm.pby) * a;
+      // 패드 스스로 나아가기(vs)는 손가락이 멈추거나 뗀 뒤에만: 긋는 동안은 손가락(가죽끈)이 곧 패드다. 화면이 60 Hz 면 손가락 조각은 물리
+      //  두 스텝에 한 번 오므로, 그 사이에도 패드가 vs 로 나가면 패드가 손가락보다 앞서 칼이 팔 베기와 다른 길로 갔다 (걸어 들어가며 벤
+      //  왼쪽 사선 12 m/s 헛침 0 → 7/20). 감기를 마치기를 기다리는 동안(자동 감기)은 준비 자세에 있다
+      if (cm.cutting && !this.fingerMoving()) cm.pa += dt * slow * cm.vs;
+      this.leadPad();
+      cm.kIn = 1;
     }
-    cm.padW = cm.fading ? cm.w : 1 - cm.handback;
-    if (!cm.ended && !cm.fading) cm.vpk = Math.max(cm.vpk, f.tipVel.length()); // 이 획의 칼끝 최고 빠르기 (자동 감기부터 끝날 때까지)
+    cm.padW = (cm.fading ? cm.w : 1 - cm.handback) * cm.kIn;
+    // 이 획의 칼끝 최고 빠르기 (베기를 시작한 뒤 획이 끝날 때까지. 무엇에 닿은 뒤의 휘청임·부딪힘 튐은 빼고 — 헛침은 넣는다: 칼끝이 가장
+    //  빠른 때는 닿기 조금 뒤 u 1.1~1.2 다): 획 시간 아래 한도
+    if (cm.cutting && (!cm.result || cm.result === 'miss') && !cm.fading && u < C.endU) cm.vpk = Math.max(cm.vpk, f.tipVel.length());
     // 몸: 비틀기 배율 (닿기 전에는 자세 지도 그대로 — 팔 베기와 같은 선으로 칼이 간다), 숙이기·낮추기 (COMMIT.keyU.lean)
     const E = C.envU;
     const K = C.keyU.lean;
@@ -917,26 +992,74 @@ export class Skill {
     const hold = cm.ended ? this.rest.w : wa;
     // 손 감기·칼 젖히기(자동 감기만): 감기(u0 → 0) 동안 오르고 envU 의 두 점까지 버티다 뺀다
     const au = cm.start === 'auto' && cm.u0 < 0;
-    const eW = au ? env(u, cm.u0, 0, E.wind[0], E.wind[1]) * wa : 0;
-    const eR = envFrom(u, cm.u0, E.reach) * wa;
-    const eE = envFrom(u, cm.u0, E.end) * hold;
+    //  (들어 올리는 동안에만: 들어 올리기 진행 q 로 오르고 버티다 준비 자세에 닿으면(q 1) 다 뺀다. 베기는 준비 자세에서 그은 베기와 같은
+    //  자세에서 시작한다 — 손 감기·칼 젖히기를 베는 동안 남기면 손이 어깨 위·옆으로 벗어나 칼이 칼 든 쪽으로 크게 돌아 머리 위로 지나갔다)
+    const lq = u < 0 ? (u - cm.u0) / -cm.u0 : 1;
+    const eW = au ? env(lq, 0, E.wind[0], E.wind[1], 1) * wa : 0;
+    const eR = envFrom(u, cm.u0, E.reach) * wa * cm.freeK;
+    const eE = envFrom(u, cm.u0, E.end) * hold * cm.freeK;
     cp.hand[0] = cm.hw0 * eW + cm.hr * eR + cm.he0 * eE;
     cp.hand[1] = cm.hw1 * eW + cm.he1 * eE;
     cp.hand[2] = cm.hw2 * eW + cm.he2 * eE;
     // 칼 젖히기 (손목 감기, 자동 감기)와 지나가기
-    const eC = au ? env(u, cm.u0, 0, E.cock[0], E.cock[1]) * wa : 0;
+    const eC = au ? env(lq, 0, E.cock[0], E.cock[1], 1) * wa : 0;
     cp.cockEl = cm.cockEl * eC;
     cp.cockAz = cm.cockAz * eC;
-    cp.over = cm.over * cm.overK * envFrom(u, cm.u0, E.over) * hold;
+    // 들어 올리기 칼끝 방향 (자동 감기): 패드와 같은 진행으로 (확정 뒤 kIn 만큼 팔 베기의 칼끝 목표에서 넘어온다), 베기를 시작하면
+    //  끈다 (그때 패드는 준비 자세라 자세 지도 방향과 같다)
+    cp.lift = au && !cm.cutting ? wa * cm.kIn : 0;
+    cp.liftA = u < 0 ? cm.liftA : 1;
+    cp.over = cm.over * cm.overK * cm.freeK * envFrom(u, cm.u0, E.over) * hold;
     // 손목이 도는 면 (곧게 내려베기처럼 준비 → 끝 칼 방향이 거의 반대인 무리): 칼끝 목표가 면 안에서 베는 쪽으로만 앞서게
     //  (면은 fighter.cutPlane 이 스텝마다 칼자루 → 상대 몸통 방향으로 세운다. pn 은 상대가 없을 때의 면과 베는 쪽)
     const PN = cm.path.plane;
-    if (PN && wa > 0 && u < C.planeTo) {
+    //  (닿은 뒤에는 면으로 끌지 않는다: 몸에 박힌 가벼운 칼을 손목이 면으로 비틀어 칼끝 빠르기가 한 스텝 50~60 m/s 로 튀었다)
+    if ((PN || cp.pg) && wa > 0 && u < C.planeTo && cm.cutting && !cm.result) {
       cp.plane = C.planeLead * D2R;
-      for (let k = 0; k < 3; k++) cp.pn[k] = PN[k] * cm.sgn;
+      if (PN) for (let k = 0; k < 3; k++) cp.pn[k] = PN[k] * cm.sgn;
     }
     cp.w = 1; // (값마다 이미 무게를 곱했다)
     cp.wBody = hold;
+  }
+
+  /**
+   * 획 패드 (u ≥ 0): 끝 자세까지 곧게 간 길이(pa)의 자리. 손가락(가죽끈 anchor, 팔 베기의 손 목표 자리)이 획 패드보다 앞서 가면
+   *  그것을 따른다 (빠르게 가속하는 긋기는 팔 베기와 같은 때에 닿는다). 손가락이 멈추거나 떼도 패드는 vs 로 끝까지 간다. 칼이 박힌
+   *  동안, 자동 감기(손가락은 감기 전에 이미 끝 쪽에 있다)에서는 손가락을 따르지 않는다.
+   *  update 가 이번 스텝의 가죽끈을 옮긴 뒤 한 번 더 부른다: 앞 스텝의 가죽끈만 보면 패드가 손가락보다 한 스텝 늦어 (12 m/s 긋기에서
+   *  0.05~0.1 m) 칼이 팔 베기보다 늦었다
+   */
+  leadPad() {
+    const cm = this.f.commit;
+    const Lt = Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby);
+    const fo = this.anchor;
+    if (Lt > 1e-6 && !(cm.stuckT > 0) && cm.start !== 'auto' && !cm.capped) cm.pa = Math.max(cm.pa, ((fo.x - cm.pbx) * (cm.ex - cm.pbx) + (fo.y - cm.pby) * (cm.ey - cm.pby)) / Lt);
+    const a = Lt > 1e-6 ? Math.min(1, cm.pa / Lt) : 1;
+    cm.padX = cm.pbx + (cm.ex - cm.pbx) * a;
+    cm.padY = cm.pby + (cm.ey - cm.pby) * a;
+  }
+
+  /** 손가락이 아직 긋는 중인가 (마지막 조각에서 한 프레임 반이 안 지났고 떼지 않았다). 자동 감기는 손가락을 따르지 않는다 */
+  fingerMoving() {
+    const d = this.det;
+    return this.detect && !!this.trace && this.f.commit.start !== 'auto' && !d.lifted && d.quiet * 1000 < 1.5 * d.frame;
+  }
+
+  /**
+   * 자동 감기를 마치고 베기를 시작한다. 조이스틱 내딛기(skill.lunge, R4 L3 전까지 팔 베기와 같은 것)도 이때 건다: 쟁기에서 그은 순간
+   *  건 내딛기는 칼을 들어 올리는 동안 끝나 버려, 베는 칼이 팔 베기보다 짧게 닿았다 (1.66~1.78 m 헛침)
+   */
+  beginAutoCut() {
+    const f = this.f;
+    f.commit.cutting = true;
+    const d = f.foeDistance();
+    if (COMMIT.armLunge && f.state === 'stand' && d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) this.lunge = SKILL.lungeTime;
+  }
+
+  /** 획 시간 아래 한도를 적는 자리: 무리 (자동 감기는 무리 + '*') */
+  floorKey() {
+    const cm = this.f.commit;
+    return cm.start === 'auto' ? cm.fam + '*' : cm.fam;
   }
 
   /** 획이 끝났다 (u endU): 회복 시간을 정하고, 끝 더함·지나가기를 버티기(rest)로 넘긴다 */
@@ -947,21 +1070,38 @@ export class Skill {
     cm.ended = true;
     cm.endT = this.clock;
     // 칼끝이 한도를 넘었으면 이 무리의 획 시간 아래 한도를 그만큼 올린다 (다음 획부터. 가벼운 칼)
-    if (cm.vpk > C.tipMax) this.tcFloor[cm.fam] = Math.min(C.tcFloorMax * cm.base.Tc0, cm.Tc * (cm.vpk / C.tipMax));
+    //  (한 번 오른 한도가 계속 쌓이지 않게: 넘지 않은 획이 오면 절반씩 내린다. 자동 감기는 칼끝이 다르게 나와 따로 둔다)
+    const fk = this.floorKey();
+    if (cm.vpk > C.tipMax) this.tcFloor[fk] = Math.min(C.tcFloorMax * cm.base.Tc0, cm.Tc * (cm.vpk / C.tipMax));
+    else if (this.tcFloor[fk]) this.tcFloor[fk] *= 0.5;
     const r = cm.result;
     const rec = r === 'hit' || r === 'through' ? C.recover.hit : r === 'blocked' || r === 'glance' ? C.recover.blocked : C.recover.miss;
     cm.recT = rec * (1 + 0.6 * (1 - clamp(this.level, 0, 1)));
     const rs = this.rest;
     rs.w = 1;
     rs.free = false;
-    rs.hand[0] = cm.he0;
-    rs.hand[1] = cm.he1;
-    rs.hand[2] = cm.he2;
-    rs.over = cm.over * cm.overK;
+    rs.hand[0] = cm.he0 * cm.freeK;
+    rs.hand[1] = cm.he1 * cm.freeK;
+    rs.hand[2] = cm.he2 * cm.freeK;
+    rs.over = cm.over * cm.overK * cm.freeK;
     for (let k = 0; k < 3; k++) rs.n[k] = this.cutPose.n[k];
     rs.yawK = cm.yawK;
     rs.pitch = cm.te;
     rs.drop = cm.de;
+  }
+
+  /** 도는 중인 획의 덧씌움(무게 w)을 버티기로 넘긴다: restRelease 에 걸쳐 풀린다 (새 획이 앞 획을 끊을 때) */
+  passToRest(w) {
+    const cp = this.cutPose;
+    const rs = this.rest;
+    const k = w > 1e-3 ? 1 / w : 0;
+    rs.w = w;
+    rs.free = true;
+    for (let i = 0; i < 3; i++) (rs.hand[i] = cp.hand[i] * k), (rs.n[i] = cp.n[i]);
+    rs.over = cp.over * k;
+    rs.yawK = cp.yawK;
+    rs.pitch = cp.pitch;
+    rs.drop = cp.drop;
   }
 
   /**
@@ -974,6 +1114,11 @@ export class Skill {
     const cm = f.commit;
     const prog = cm.on && cm.padOn;
     if (f.inputActive || this.recovering || this.tap || !f.alive || !f.armed || (f.state !== 'stand' && f.state !== 'kneel') || (prog && !cm.ended)) rs.free = true;
+    // 버티는 동안 칼이 상대 몸에 박혔다 (combat.js): 끝 너머로 미는 버티기를 푼다 (박힌 칼을 손목이 계속 밀면 칼이 떨며 돈다)
+    if (cm.stuckT > 0) {
+      rs.free = true;
+      if (!cm.on) cm.stuckT -= dt;
+    }
     if (rs.free) rs.w = Math.max(0, rs.w - dt / COMMIT.restRelease);
     const cp = this.cutPose;
     const w = rs.w;
@@ -997,6 +1142,7 @@ export class Skill {
     cp.cockEl = cp.cockAz = 0;
     cp.over = rs.over * w;
     cp.over2 = 0;
+    cp.lift = 0;
     cp.plane = 0;
     for (let k = 0; k < 3; k++) cp.n[k] = rs.n[k];
   }
@@ -1023,7 +1169,7 @@ export class Skill {
     const cm = this.f.commit;
     const d = this.det;
     const C = COMMIT;
-    if (d.stopped || !cm.on || cm.fading || cm.hb || cm.u >= C.retargetBefore) return;
+    if (d.stopped || !cm.on || cm.fading || cm.hb || cm.u >= C.retargetBefore || cm.start === 'auto') return; // (자동 감기: 손가락은 쟁기에서 그은 방향만 정했다)
     d.stopped = true;
     const P = cm.path;
     if ((x - P.mid[0]) * P.dir[0] + (y - P.mid[1]) * P.dir[1] <= 0 || Math.hypot(x - P.end[0], y - P.end[1]) > C.retargetR) return;
@@ -1048,6 +1194,8 @@ export class Skill {
     cp.wBody = 0;
     cp.over2 = 0;
     cp.plane = 0;
+    cp.pg = 0;
+    cp.lift = 0;
     this.det.stage = 0;
   }
 
@@ -1062,7 +1210,7 @@ export class Skill {
     }
     // 감는 동안(자동 감기로 칼을 들어 올리는 중 포함)의 닿음은 이 획의 결과가 아니다: 쟁기의 칼끝이 가까운 상대를 건드린 채
     //  시작하면 그 자리에서 돌려주어 칼이 상대에 붙은 채 멈췄다. 획은 그대로 간다
-    if (cm.u < COMMIT.resultFrom) return;
+    if (cm.u < COMMIT.resultFrom || !cm.cutting) return;
     cm.result = kind;
     if (kind === 'hit') cm.overK = COMMIT.hitOvershoot; // 맞히면 덜 지나간다
     f.onStrikeResult(kind, info);

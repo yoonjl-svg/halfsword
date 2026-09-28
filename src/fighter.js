@@ -1467,6 +1467,7 @@ export class Fighter {
     const axis = new THREE.Vector3().crossVectors(blade, aim);
     const sinA = axis.length();
     const angle = Math.atan2(sinA, blade.dot(aim));
+    this.aimErr = angle; // 칼과 칼끝 목표 사이 각 (결심 베기의 자동 감기가 칼이 준비 자세에 올라왔는지 본다)
     const torque = new THREE.Vector3();
     if (sinA > 1e-5) torque.copy(axis).multiplyScalar((this.weaponCfg.aimStiffness * angle) / sinA);
     // 칼날(날 선 쪽)이 휘두르는 방향을 향하도록 비틀림 유지.
@@ -1559,6 +1560,17 @@ export class Fighter {
    */
   cutAim(aim, cp) {
     const w = cp.w;
+    if (cp.lift > 0) {
+      // 자동 감기의 들어 올리기: 칼끝 목표를 확정 순간의 칼 방향(l0)에서 준비 자세의 칼끝 방향(l1)으로 곧장 돌린다 (liftA 만큼, 구면 보간)
+      const a = _la.set(cp.l0[0], cp.l0[1], cp.l0[2]);
+      const b = _lb.set(cp.l1[0], cp.l1[1], cp.l1[2]);
+      const om = Math.acos(THREE.MathUtils.clamp(a.dot(b), -1, 1));
+      const so = Math.sin(om);
+      const t = cp.liftA;
+      if (so > 1e-3) a.multiplyScalar(Math.sin((1 - t) * om) / so).addScaledVector(b, Math.sin(t * om) / so);
+      else a.lerp(b, t);
+      aim.lerp(a.normalize(), cp.lift).normalize();
+    }
     if (cp.cockEl) {
       // 올려본 각: 칼끝 방향과 위 방향에 수직인 수평 축으로 (+ = 칼끝을 든다)
       const ax = _v7.crossVectors(aim, UP);
@@ -1578,12 +1590,24 @@ export class Fighter {
    */
   cutPlane(aim, cp) {
     const n = _pn.set(cp.pn[0], cp.pn[1], cp.pn[2]);
+    if (cp.pg) n.set(1, 0, 0).cross(_pb.set(cp.pc[0], cp.pc[1], cp.pc[2])); // (상대가 없으면 앞 방향과 긋는 방향을 품는 면)
     if (this.foe) {
       const hp = this.sword.translation();
       const tc = this.foe.bodies.chest.translation();
-      const d = _pa.set(tc.x - hp.x, 0, tc.z - hp.z).applyQuaternion(_pq.copy(this.yaw).invert());
-      d.y = 0;
-      if (d.lengthSq() > 1e-6) n.set(0, 1, 0).cross(d.normalize()).multiplyScalar(cp.pn[2] < 0 ? 1 : -1); // 베는 쪽이 + (cp.pn 과 같은 쪽)
+      if (cp.pg) {
+        // 자동 감기 (skill.startProgram): 칼자루 → 상대 겨눈 점(가슴 + (머리 − 가슴) × pk)을 품고 긋는 방향으로 기운 면
+        const th = this.foe.bodies.head.translation();
+        const d = _pa.set(tc.x + (th.x - tc.x) * cp.pk - hp.x, tc.y + (th.y - tc.y) * cp.pk - hp.y, tc.z + (th.z - tc.z) * cp.pk - hp.z).applyQuaternion(_pq.copy(this.yaw).invert());
+        if (d.lengthSq() > 1e-6) n.crossVectors(d.normalize(), _pb.set(cp.pc[0], cp.pc[1], cp.pc[2]));
+      } else {
+        const d = _pa.set(tc.x - hp.x, 0, tc.z - hp.z).applyQuaternion(_pq.copy(this.yaw).invert());
+        d.y = 0;
+        if (d.lengthSq() > 1e-6) n.set(0, 1, 0).cross(d.normalize()).multiplyScalar(cp.pn[2] < 0 ? 1 : -1); // 베는 쪽이 + (cp.pn 과 같은 쪽)
+      }
+    }
+    if (cp.pg) {
+      if (n.lengthSq() < 1e-8) return;
+      n.normalize();
     }
     const b = _pb.set(0, 1, 0).applyQuaternion(rot(this.sword, _pq)).applyQuaternion(_pq.copy(this.yaw).invert());
     const bn = b.dot(n);
@@ -1917,6 +1941,8 @@ const _gf = new THREE.Vector3();
 const _v7 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
 const _pn = new THREE.Vector3(); // 결심 베기 휘두르는 면 (cutPlane)
+const _la = new THREE.Vector3(); // 결심 베기 자동 감기 칼끝 방향 (cutAim)
+const _lb = new THREE.Vector3();
 const _pb = new THREE.Vector3();
 const _pa = new THREE.Vector3();
 const _pc = new THREE.Vector3();
