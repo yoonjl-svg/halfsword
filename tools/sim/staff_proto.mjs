@@ -10,7 +10,43 @@ import { GUARD_BASE } from '../../src/guards.js';
 import { wilson } from './ref_duel.mjs';
 import { applyMotionLibrary, motionFor } from '../../src/motion_library.js';
 import { SCHOOLS } from '../../src/schools.js';
-const LIB = process.env.LIB === '1'; // 자루 무기 자세표(POLE_GUARDS)·찌르기 방식 기술을 입힌다
+const LIB = process.env.LIB === '1';
+// 둔기 부위 효과표 시제품 (ZONES=1) — 연구 세션 claude/pm-weapons docs/pole_strike_effects.md ①-3 [추정 문턱].
+//  봉에 맞는 쪽(Y, 롱소드)의 applyWound 만 감싼다. 게임 코드는 그대로.
+//  찌름(poke) = 둔기 타격 방향이 봉 축과 나란함(|cos| > 0.7). 에너지는 판정 에너지(×2 포함)
+const ZONES = process.env.ZONES === '1';
+const zoneLog = {};
+function zoneEffects(Y, log) {
+  const orig = Y.applyWound.bind(Y);
+  Y._str0 = Y.strength;
+  Y._zoneT = 0;
+  const winded = (k, t) => {
+    Y.strength = Y._str0 * k;
+    Y._zoneT = Math.max(Y._zoneT, t);
+  };
+  Y.applyWound = (h) => {
+    orig(h);
+    if (h.type !== 'blunt' || Y.state === 'dead') return;
+    const E = h.energy;
+    const cos = h.bladeAxis && h.dir ? Math.abs(h.bladeAxis.dot(h.dir)) : 0;
+    const poke = cos > 0.7;
+    const Z = h.zone;
+    if (process.env.ZONE_HIST) { const key = `${Z}${poke ? '·찌름' : ''}`; (log.hist ||= {})[key] = (log.hist[key] ?? 0) + 1; (log.cos ||= [0, 0, 0, 0, 0])[Math.min(4, Math.floor(cos * 5))]++; }
+    let tag = null;
+    if (poke && Z === 'neck' && E >= 25) { winded(0.5, 2.5); Y.consciousness -= E / 200; tag = '목 숨 막힘'; }
+    else if (poke && (Z === 'abdomen' || Z === 'chest') && E >= 30) { winded(0.4, 1.8); Y.balance -= E * 0.02; tag = '명치 숨 멎음'; }
+    else if (poke && Z === 'head' && E >= 20) { Y.daze = Math.min(1, (Y.daze || 0) + E / 200); tag = '얼굴 찌름'; }
+    else if ((h.part === 'uarmS' || h.part === 'farmS') && E >= 15) {
+      Y.limbs.armS = Math.max(0, Y.limbs.armS - 0.15);
+      if (Math.random() < Math.min(1, (E - 15) / 60)) { Y.dropSword(); tag = '손 놓침'; } else tag = '손 저림';
+    } else if (Z === 'leg' && E >= 40) {
+      const L = h.part.endsWith('F') ? 'legF' : 'legB';
+      Y.limbs[L] = Math.max(0, Y.limbs[L] - E / 300);
+      tag = '다리';
+    }
+    if (tag) log[tag] = (log[tag] ?? 0) + 1;
+  }
+} // 자루 무기 자세표(POLE_GUARDS)·찌르기 방식 기술을 입힌다
 
 const along = +(process.argv[2] ?? -0.6);
 const L = 1.2; // 앞손 앞 길이
@@ -136,9 +172,11 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
       const X = xFirst ? G.player : G.enemy;
       const Y = xFirst ? G.enemy : G.player;
       if (LIB) applyMotionLibrary(X);
+      if (ZONES) zoneEffects(Y, zoneLog);
       let res = 'D';
       for (let i = 0; i < 40 / DT; i++) {
         G.step();
+        if (ZONES && Y._zoneT > 0 && (Y._zoneT -= DT) <= 0) Y.strength = Y._str0; // 숨이 돌아온다
         const v = X.sword.linvel();
         if (![v.x, v.y, v.z].every(Number.isFinite)) { nan++; break; }
         if (X.state === 'dead' || Y.state === 'dead') {
@@ -154,6 +192,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
       else D++;
     }
   }
+  if (ZONES) console.log('  부위 효과: ' + (Object.entries(zoneLog).map(([k, v]) => `${k} ${JSON.stringify(v)}`).join(' · ') || '없음'));
   console.log(`  봉이 낸 상처 ${dealt} · 받은 상처 ${taken} · 칼 부딪침 ${clashes} (${2 * N}판 합)`);
   const [lo, hi] = wilson(Wn, 2 * N);
   console.log(`④ 롱소드 상대 ${2 * N}판: 승 ${Wn} 패 ${Ln} 무 ${D} · 승률 ${Math.round((100 * Wn) / (2 * N))}% (95% ${Math.round(100 * lo)}~${Math.round(100 * hi)}%) · NaN ${nan}`);
