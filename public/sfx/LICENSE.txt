@@ -36,7 +36,17 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       bran_bleed2.mp3     <- 06. Death Groan (Male).wav
       heinrich_bleed2.mp3 <- 02. Death Groan (Male).wav
 
-Thank you, HaelDB, Michel Baradari and VoiceBosch!
+  CC0 (public domain) — Freesound (https://freesound.org), preview MP3s, cut, high-passed
+  at 70 Hz, peak-normalized to -1 dBFS, not pitch-shifted:
+      margarethe_ko1.mp3    <- hisoul, "Zisa, Relief, Moan, Tired, Exhale_2.wav"
+      margarethe_bleed1.mp3    (the same clip in both files)
+                               https://freesound.org/people/hisoul/sounds/520276/
+      isolde_ko1.mp3        <- mvVoiceActing, "girl damage" (3.3-4.4 s)
+                               https://freesound.org/people/mvVoiceActing/sounds/855460/
+      isolde_bleed1.mp3     <- mvVoiceActing, "girl damage" (7.8-8.9 s)
+                               https://freesound.org/people/mvVoiceActing/sounds/855460/
+
+Thank you, HaelDB, Michel Baradari, VoiceBosch, hisoul and mvVoiceActing!
 
 -------------------------------------------------------------------------------
 step/ and hit/  — CC0 (public domain), Kenney (www.kenney.nl), fetched from the

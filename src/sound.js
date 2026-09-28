@@ -290,16 +290,16 @@ const VOWELS = {
  *  rec: 녹음된 목소리 (public/sfx/voice/<id>_<ko|bleed><번호>.mp3, 출처는 public/sfx/LICENSE.txt).
  *       ko·bleed = 파일 개수(0이면 그 죽음은 합성 목소리), rate = 재생 속도(목소리 높이), gain = 음량
  *       녹음은 들어 보지 않고 음높이·길이 분석으로 골랐다 — 귀로 듣고 바꾸려면 파일만 갈아 끼우면 된다
- *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다)
+ *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 지금은 쓰는 캐릭터가 없다
  */
 export const VOICES = {
   player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 3번 목소리
   generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 첫 목소리 + VoiceBosch
   bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + VoiceBosch. 굵고 거친 목
-  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp' }, // 녹음 없이 숨소리만: 여성 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
+  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp', rec: { ko: 1, bleed: 1, gain: 1.3 } }, // 짧게 맞는 소리 "흣"·"읏" 녹음(mvVoiceActing, CC0, 사장님 선택). 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
   liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 2, gain: 0.6, rate: 0.95 } }, // 짧은 신음 + 낮고 짧은 신음 녹음(HaelDB). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침) + VoiceBosch
-  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', mute: true }, // 목소리 없이 쓰러지는 소리만: 합성 날숨·한숨은 폰에서 뭉개졌고, 여성 녹음을 낮추면 익룡·괴수처럼 들렸다. 알맞은 녹음을 찾으면 rec 로 바꾼다
+  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', rec: { ko: 1, bleed: 1, gain: 1.1 } }, // 지친 날숨 섞인 낮은 "하아…" 녹음 하나를 두 죽음에 같이 쓴다(hisoul, CC0, 사장님 선택 — 노장이라). 음은 낮추지 않았다: 여성 녹음을 낮추면 익룡·괴수처럼 들렸고, 합성 날숨은 폰에서 뭉개졌다
 };
 
 /**
@@ -1961,7 +1961,7 @@ export class Sound {
 
   /**
    * (예전 무기 뽑기 "딸깍" — 이제 카드는 cardFlip 을 쓴다) 화면 소리, 위치 없음. 아주 짧은 사각파 한 번 → 폰 부담 거의 없음.
-   * final = 고른 카드가 뒤집힐 때: 조금 낮고 길게 (아니면 나머지 두 장이 뒤집힐 때의 짧은 딸깍),
+   * final = 고른 카드가 뒤집힐 때: 조금 낮고 길게 (아니면 나머지 카드가 뒤집힐 때의 짧은 딸깍),
    * grand = 진짜 엑스칼리버를 뽑았을 때 한 옥타브 위 울림을 더한다
    */
   tick(final = false, grand = false) {
@@ -1991,7 +1991,8 @@ export class Sound {
    * 첫 탭에 바로 난다 (잡음은 build 때 만든 0.4초 잡음 this.noise 를 쓴다).
    *  pick = 고른 카드: 두꺼운 카드가 젖혀지는 "촥" + 앞면이 드러나는 순간(0.2초 뒤, 뒤집기 절반) 낮은 "둥"
    *         tier 'epic'·'legend' 는 그 위에 아주 작은 반짝임, grand(진짜 엑스칼리버)는 맑은 울림
-   *  pick 아님 = 나머지 두 장이 함께 뒤집힘: 작은 "촥" 두 번이 30ms 어긋나게
+   *  pick 아님 = 고르지 않은 내 카드 한 장이 뒤집힘: 작은 "촥" 한 번
+   *  (상대 무기 카드는 pick 처럼 부른다: 등급 반짝임·엑스칼리버 울림도 같다)
    */
   cardFlip({ pick = false, tier = 'common', grand = false } = {}) {
     if (!this._on || !this.ctx || !this.master || !this.noise) return;
@@ -2044,10 +2045,8 @@ export class Sound {
       o.stop(t + dur + 0.02);
     };
     if (!pick) {
-      for (const d of [0, 0.03]) {
-        snap(t0 + d, 0.3, between(Math.random, 2200, 3000), 0.014);
-        whoosh(t0 + d, 0.06);
-      }
+      snap(t0, 0.3, between(Math.random, 2200, 3000), 0.014);
+      whoosh(t0, 0.06);
       return;
     }
     snap(t0, 0.5, 2600, 0.02);
