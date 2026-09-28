@@ -21,7 +21,7 @@ export const GUN = {
   cooldown: 4, // 초: 한 발 쏜 뒤 다음 발까지 (장전 소리는 이게 끝날 때). 사장님: 6.5 → 4.5 → 4
   range: 25, // m: 총알이 닿는 거리
   armorBlunt: 0.25, // 투구·판금이 막으면(그리고 바로 부서지면) 몸에는 세기의 이 비율만 둔하게 전해진다
-  laser: false, // 총신 방향으로 탄 길(레이저)을 그린다 (장전 중엔 흐리게). 꺼 둔다: 레이저는 외형 PM 의 gun_fx.js 가 희미하게 그린다 (두 겹으로 그리지 않게, 사장님 '레이저 희미하게')
+  laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
   aiAimTol: 12, // 도: AI 는 총구가 상대 가슴에서 이만큼 안일 때만 쏜다
   aiFirst: 1.5, // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
   maxWait: 0.6, // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
@@ -39,7 +39,7 @@ export const GUN = {
   spread: 1, // 도: 서서 쏠 때 총알이 총신(레이저)에서 벗어나는 최대 각 — 레이저를 믿고 겨눌 수 있게 작게
   spreadMove: 3, // 도: 걷는 최고 속도로 달리며 쏘면 이만큼 더 벗어난다
 };
-/** main.js·효과 모듈이 이어 줄 자리: onShot(fighter, pos), onReload(fighter, pos),
+/** main.js·효과 모듈이 이어 줄 자리: onShot(fighter, pos, dir, dist) — dir: 실제 총알 방향(퍼짐·AI 보정 포함), dist: 닿은 곳까지 거리(빗나가면 GUN.range), onReload(fighter, pos),
  *  onImpact(fighter, point, dir, what) — 총알이 닿은 곳과 날아간 방향(what: 'body' 몸 · 'world' 땅·벽 · 'weapon' 칼).
  *  빗나가 아무 데도 안 닿으면 부르지 않는다. 보여 주기만 (외형 PM gun_fx 의 탄착 먼지·궤적) */
 export const GUN_HOOKS = { onShot: null, onReload: null, onImpact: null };
@@ -181,7 +181,6 @@ function fire(f, world, combat) {
     const to = new THREE.Vector3(c.x - _o.x, c.y - 0.1 - _o.y, c.z - _o.z).normalize();
     _d.lerp(to, g.aim).normalize();
   }
-  sound('onShot', f);
   // 반동: 총구를 뒤·위로 차 올린다 (총구에 건 충격 — 손목이 받아 내며 총구가 들린다). 팔에도 충격이 전해진다
   const up = _l.set(0, 1, 0).addScaledVector(_d, -_d.y).normalize(); // 총신에 수직인 위쪽
   sw.applyImpulseAtPoint(
@@ -192,6 +191,7 @@ function fire(f, world, combat) {
   f.takeJolt?.(GUN.recoilBack + GUN.recoilUp);
   const info = combat.info;
   const hit = castRay(world, _o, _d, (h) => info.get(h)?.fighter !== f);
+  sound('onShot', f, _d.clone(), hit ? hit.toi : GUN.range); // 효과 모듈의 총알 궤적이 실제 총알을 따라가게 방향·거리를 넘긴다
   const vi = hit ? info.get(hit.collider.handle) : null;
   // 어디에 맞았나 (검사 도구가 읽는다): 허공·땅벽·칼·몸
   const what = !hit ? 'air' : !vi ? 'world' : vi.kind === 'weapon' ? 'weapon' : 'body';
@@ -331,10 +331,10 @@ function castRay(world, o, d, pred) {
   return { collider: hit.collider, toi: hit.timeOfImpact ?? hit.toi };
 }
 
-function sound(kind, f) {
+function sound(kind, f, ...more) {
   const p = muzzle(f, new THREE.Vector3());
   const hook = GUN_HOOKS[kind];
-  if (hook) return hook(f, p);
+  if (hook) return hook(f, p, ...more);
   const snd = globalThis.window?.game?.sound;
   if (!snd?.ctx || !snd._on) return;
   (kind === 'onShot' ? gunshotSound : reloadSound)(snd, p);
