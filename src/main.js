@@ -46,10 +46,11 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, legWeight: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
+  delete settings.legWeight; // 없앤 설정 ('다리로 체중 받치기'는 이제 늘 켜짐)
 } catch {
   /* 저장소를 못 쓰면 기본값으로 */
 }
@@ -176,6 +177,7 @@ resize();
 const particles = new Particles(scene);
 const sound = new Sound();
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
+sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
 const input = new Input(canvas);
 const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
@@ -210,8 +212,9 @@ function prepareRound() {
  *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다).
  */
 function newRound(weaponId) {
-  // 다리로 체중 받치기 (시험): 켜면 gait.js 걸음(다리가 체중 대부분을 받친다), 끄면 예전처럼 골반을 띄워 받친다. 다음 판부터 적용
-  CONFIG.BODY.weightMode = settings.legWeight ? 'hybrid' : 'levitate';
+  // 다리로 체중 받치기: 게임은 늘 gait.js 걸음(다리가 체중 대부분을 받친다). 오너 결정으로 설정 토글을 없애고 기본 적용했다.
+  //  CONFIG 의 기본값(levitate, 골반을 띄워 받치기)은 시뮬 도구용이다 (tools/sim/hybrid.mjs 로 감싸면 게임과 같다)
+  CONFIG.BODY.weightMode = 'hybrid';
   // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다)
   for (const g of fighterMeshes) {
     scene.remove(g);
@@ -668,7 +671,7 @@ function pickCard(i) {
   cardEls[i].classList.add('picked', 'flipped');
   revealLabel(i);
   drawEl.classList.replace('choose', 'reveal');
-  sound.tick(true, grand);
+  sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand }); // 두꺼운 카드 "촥" → 앞면이 드러나며 낮은 "둥" (레전드·에픽은 작은 반짝임, 엑스칼리버는 맑은 울림)
   haptic(grand ? 1 : 0.35);
   if (currentFoe) showFoeWeapons(false); // 소개 아랫줄: 이제 상대 무기를 알려 준다 (내 무기는 카드에 보인다)
 }
@@ -699,7 +702,7 @@ function updateDraw(dt) {
         el.classList.add('flipped', 'missed');
         revealLabel(i);
       });
-      sound.tick(false);
+      sound.cardFlip({ pick: false }); // 나머지 두 장이 함께 "촥"
     }
     if (!draw.built && draw.t >= DRAW_T.build) buildPicked();
     if (draw.t >= DRAW_T.look || (draw.skip && draw.t >= DRAW_T.skip)) {

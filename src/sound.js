@@ -1223,6 +1223,49 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.9), sr, 0.1);
   },
   /**
+   * 성 안뜰 종탑의 큰 청동 교회 종: 흔들린 종 안쪽을 추가 쳐서 "댕—". 교회 종의 비조화 배음
+   * (험 = 이름음의 절반, 프라임, 단3도 티어스, 퀸트, 이름음, 그 위 둘)이 각자 다른 빠르기로 사라지고, 낮은 험이 가장 오래(약 8초) 남는다.
+   * 짝 배음이 아주 조금 어긋나 느리게 일렁인다(종이 완전한 원이 아니라서). 추가 닿는 순간의 쇳소리 "짱"은 짧게.
+   * 20m 떨어진 탑 위라 날카로운 위를 깎는다 (성벽 메아리는 성 안뜰 방 울림이 더한다)
+   */
+  castleBell(sr, r) {
+    const n = Math.round(7.5 * sr);
+    const out = new Float32Array(n);
+    const prime = between(r, 500, 540); // 프라임 (이름음은 그 두 배)
+    // [프라임 대비 비율, 세기, 사라지는 시간(초, 60dB), 짝 배음과 어긋난 정도(Hz)]
+    const P = [
+      [0.5, 0.55, 8, 0.4], // 험
+      [1.0, 0.5, 5.5, 0.7], // 프라임
+      [1.2, 0.45, 4, 0.9], // 티어스 (단3도 → 교회 종 특유의 쓸쓸한 빛깔)
+      [1.5, 0.25, 2.8, 1.2], // 퀸트
+      [2.0, 0.6, 3.5, 1.5], // 이름음 (nominal, "댕" 하고 들리는 높이)
+      [2.5, 0.2, 1.8, 2], // 위 3도
+      [3.0, 0.18, 1.4, 2.5], // 슈퍼퀸트
+      [4.0, 0.1, 0.9, 3], // 옥타브 이름음
+    ];
+    for (const [ratio, a, t60, beat] of P) {
+      const f = prime * ratio * between(r, 0.997, 1.003);
+      const k = 6.91 / t60;
+      for (const d of [0, beat]) {
+        const w = (TAU * (f + d)) / sr;
+        const ph = r() * TAU;
+        const g = a * (d ? 0.45 : 1);
+        for (let i = 0; i < n; i++) {
+          const t = i / sr;
+          const e = Math.exp(-k * t) * Math.min(1, t / 0.002);
+          if (t > 0.01 && e < 1e-4) break; // (처음 2ms 는 차오르는 중이라 작다)
+          out[i] += g * e * Math.sin(w * i + ph);
+        }
+      }
+    }
+    noiseHit(out, sr, r, { t0: 0, amp: 0.35, attack: 0.0005, tau: 0.012, type: 'bandpass', f: between(r, 2200, 3200), q: 1.5 }); // 추가 닿는 "짱"
+    thumpTone(out, sr, { t0: 0, f0: prime * 0.25, drop: 0.3, dropTau: 0.01, attack: 0.001, tau: 0.03, amp: 0.3 }); // 청동 몸통이 받는 "퉁"
+    const lp = new Filt('lowpass', 2800, 0.6, sr);
+    for (let i = 0; i < n; i++) out[i] = lp.run(out[i]);
+    return fadeOut(normalize(out, 0.9), sr, 0.4);
+  },
+
+  /**
    * 대성당의 파이프 오르간 (전형적인 성당 오르간 소리). 파이프 한 줄(rank) = 배음이 많은 한 주기 파형을 되풀이해 읽는다(가볍다).
    * 16'·8'·4'·2' 네 줄을 겹치고, 줄마다 아주 조금 음을 어긋나게 해 여러 파이프가 함께 우는 "합창" 느낌을 낸다.
    * 건반을 누를 때 파이프가 "츄" 하고 트는 바람 소리(chiff)와 늘 새는 바람 소리를 조금 섞는다. 울림은 성당 방 울림이 더한다.
@@ -1314,6 +1357,7 @@ const BANK = [
   ['horseSnort', 2, (sr, r) => SYNTH.horse(sr, r, 'snort')], // 성 안뜰 마구간
   ['horseStamp', 2, (sr, r) => SYNTH.horse(sr, r, 'stamp')],
   ['organ', 1, SYNTH.organ], // 대성당 판 시작
+  ['castleBell', 3, SYNTH.castleBell], // 성 안뜰 종탑
 ];
 // 목소리 조각은 이름이 "voice:캐릭터id:ko|bleed" 이고, 이번 판에 나오는 캐릭터 것만 만든다 (prepareVoices)
 const VOICE_COUNT = 2;
@@ -1639,6 +1683,7 @@ export class Sound {
   event({ bus, gain = 1, bright = 0, prio = 1, pos = null }) {
     const c = this.ctx;
     const now = c.currentTime;
+    if (prio >= 0.3) this._roundOpen = false; // 싸움 소리(발소리 이상)가 났다 → 다음 roundStart 는 새 판이다
     this.voices = this.voices.filter((v) => v.end > now);
     while (this.voices.length >= SOUND.maxVoices) {
       this.voices.sort((a, b) => a.prio - b.prio || a.start - b.start);
@@ -1915,7 +1960,7 @@ export class Sound {
   }
 
   /**
-   * 무기 뽑기 카드가 뒤집힐 때의 "딸깍" (화면 소리, 위치 없음). 아주 짧은 사각파 한 번 → 폰 부담 거의 없음.
+   * (예전 무기 뽑기 "딸깍" — 이제 카드는 cardFlip 을 쓴다) 화면 소리, 위치 없음. 아주 짧은 사각파 한 번 → 폰 부담 거의 없음.
    * final = 고른 카드가 뒤집힐 때: 조금 낮고 길게 (아니면 나머지 두 장이 뒤집힐 때의 짧은 딸깍),
    * grand = 진짜 엑스칼리버를 뽑았을 때 한 옥타브 위 울림을 더한다
    */
@@ -1939,6 +1984,90 @@ export class Sound {
       blip(660, 0.16, 0.08, 'triangle');
       if (grand) blip(1320, 0.5, 0.05, 'sine');
     }
+  }
+
+  /**
+   * 무기 뽑기 카드가 뒤집힘 (화면 소리, 위치 없음). 모두 그 자리에서 노드로 만든다 → 소리 조각이 아직 안 만들어졌어도
+   * 첫 탭에 바로 난다 (잡음은 build 때 만든 0.4초 잡음 this.noise 를 쓴다).
+   *  pick = 고른 카드: 두꺼운 카드가 젖혀지는 "촥" + 앞면이 드러나는 순간(0.2초 뒤, 뒤집기 절반) 낮은 "둥"
+   *         tier 'epic'·'legend' 는 그 위에 아주 작은 반짝임, grand(진짜 엑스칼리버)는 맑은 울림
+   *  pick 아님 = 나머지 두 장이 함께 뒤집힘: 작은 "촥" 두 번이 30ms 어긋나게
+   */
+  cardFlip({ pick = false, tier = 'common', grand = false } = {}) {
+    if (!this._on || !this.ctx || !this.master || !this.noise) return;
+    const c = this.ctx;
+    const t0 = c.currentTime + 0.005;
+    const out = c.createGain();
+    out.gain.value = 1;
+    out.connect(this.master);
+    // 두꺼운 카드 "촥": 짧은 잡음 두 번 (종이가 휘었다 튕기는 소리) + 공기가 밀리는 낮은 "훅"
+    const snap = (t, amp, f = 2600, dur = 0.014) => {
+      const n = c.createBufferSource();
+      n.buffer = this.noise;
+      const bp = c.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = f;
+      bp.Q.value = 0.8;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+      n.connect(bp).connect(g).connect(out);
+      n.start(t, Math.random() * 0.3);
+      n.stop(t + dur + 0.02);
+    };
+    const whoosh = (t, amp) => {
+      const n = c.createBufferSource();
+      n.buffer = this.noise;
+      const lp = c.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 500;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
+      n.connect(lp).connect(g).connect(out);
+      n.start(t, Math.random() * 0.3);
+      n.stop(t + 0.09);
+    };
+    const tone = (t, f, amp, dur, type = 'sine', f1 = f) => {
+      const o = c.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f, t);
+      if (f1 !== f) o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.4);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(out);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    };
+    if (!pick) {
+      for (const d of [0, 0.03]) {
+        snap(t0 + d, 0.3, between(Math.random, 2200, 3000), 0.014);
+        whoosh(t0 + d, 0.06);
+      }
+      return;
+    }
+    snap(t0, 0.5, 2600, 0.02);
+    snap(t0 + 0.022, 0.32, 3300, 0.014);
+    whoosh(t0, 0.12);
+    // 앞면이 드러나는 "둥": 음이 빠르게 떨어지는 짧은 낮은 울림 + 둔한 잡음 (음이 오래 남으면 마림바처럼 "통" 하므로 짧게)
+    const tr = t0 + 0.2;
+    tone(tr, 150, 0.26, 0.16, 'sine', 70);
+    whoosh(tr, 0.18);
+    if (grand) {
+      // 진짜 엑스칼리버: 맑은 울림 (유리종처럼 정수배가 아닌 배음, 1.8초)
+      const f = 1047;
+      for (const [r, a, d] of [[1, 0.055, 1.8], [2.76, 0.022, 1.1], [5.4, 0.01, 0.6], [1.002, 0.03, 1.6]]) tone(tr + 0.02, f * r, a, d);
+      [2637, 3136, 3951].forEach((fq, k) => tone(tr + 0.08 + k * 0.05, fq, 0.012, 0.4));
+    } else if (tier === 'legend' || tier === 'epic') {
+      // 레전드·에픽: 아주 작은 반짝임 (높은 음 셋·넷이 빠르게)
+      const notes = tier === 'legend' ? [2637, 3136, 3951, 4699] : [2637, 3520, 4186];
+      notes.forEach((fq, k) => tone(tr + 0.04 + k * 0.045, fq, tier === 'legend' ? 0.03 : 0.02, 0.35));
+    }
+    this.stats.nodes += 12;
   }
 
   /** 몸이 땅에 부딪힘. speed = 몸통이 떨어지던 속도 (m/s). light = 무릎이 꺾여 주저앉음 */
@@ -2024,7 +2153,7 @@ export class Sound {
     const buf = this._noiseBuf();
     const out = c.createGain();
     out.gain.value = 0;
-    out.gain.setTargetAtTime(1, c.currentTime + 0.5, 2.5); // 천천히 스며든다
+    out.gain.setTargetAtTime(1, c.currentTime + 0.5, this._ambTau ?? 2.5); // 천천히 스며든다 (배경이 바뀔 때는 조금 빨리)
     out.connect(this.master);
     const lfo = (hz) => {
       const o = c.createOscillator();
@@ -2094,12 +2223,18 @@ export class Sound {
     for (const t of this._timers) clearTimeout(t);
     this._timers.clear();
     this._applyRoom();
+    this._roundOpen = false; // 새 배경: 오르간이 다시 울릴 수 있다
+    clearTimeout(this._organT);
     const old = this._amb;
     if (!old) return;
     this._amb = null;
     const t = this.ctx.currentTime;
-    old.out.gain.setTargetAtTime(0, t, 0.8);
-    for (const n of old.nodes) n.stop(t + 4);
+    // 옛것이 줄어드는 만큼 새것이 차오르게 (줄 때 1초, 찰 때 0.5초 뒤부터 0.9초) → 가운데가 푹 꺼지지 않는다
+    old.out.gain.setTargetAtTime(0, t + 0.3, 1);
+    for (const n of old.nodes) n.stop(t + 5);
+    this._ambTau = 0.9;
+    // 판마다 배경이 바뀌므로 다 줄어든 옛 배경 소리는 떼어 낸다 (쌓이지 않게)
+    if (!this.ctx.startRendering) setTimeout(() => old.out.disconnect(), 5500);
     this.ambience();
   }
 
@@ -2156,7 +2291,7 @@ export class Sound {
     const buf = this._noiseBuf();
     const out = c.createGain();
     out.gain.value = 0;
-    out.gain.setTargetAtTime(1, c.currentTime + 0.5, 2.5);
+    out.gain.setTargetAtTime(1, c.currentTime + 0.5, this._ambTau ?? 2.5);
     out.connect(this.master);
     const nodes = [];
     const K = {
@@ -2303,7 +2438,7 @@ export class Sound {
     const buf = this._noiseBuf();
     const out = c.createGain();
     out.gain.value = 0;
-    out.gain.setTargetAtTime(1, c.currentTime + 0.5, 2.5);
+    out.gain.setTargetAtTime(1, c.currentTime + 0.5, this._ambTau ?? 2.5);
     out.connect(this.master);
     const lfo = (hz) => {
       const o = c.createOscillator();
@@ -2428,11 +2563,70 @@ export class Sound {
   }
 
   /**
-   * 새 판이 시작됨 (main.js newRound). 대성당: 파이프 오르간이 세 화음을 한 번 울린다.
+   * 배경이 알리는 일 (main.js: arena.onEvent → sound.stageEvent).
+   *  'bell' (성 안뜰): 종탑의 종이 크게 흔들려 추가 칠 때마다 { amp, max, pos }. 세기 = amp / max.
+   *   여운이 길어(약 7초) 겹치므로 동시에 울리는 여운은 3개까지 — 넘으면 가장 오래된 것을 0.3초에 걸쳐 줄인다.
+   *   싸움 소리보다 작게: 가장 세게 쳐도 칼 부딪힘의 약 1/3. 성 안뜰이 아니면 무시한다
+   */
+  stageEvent(name, data = {}) {
+    if (!this._on || !this.ctx || name !== 'bell' || this.stage !== 'castle') return;
+    const c = this.ctx;
+    const x = clamp01((data.amp ?? 0.3) / (data.max ?? 0.55));
+    const t = c.currentTime;
+    this._bells = (this._bells || []).filter((b) => b.end > t);
+    while (this._bells.length >= 3) {
+      const old = this._bells.shift();
+      old.g.gain.cancelScheduledValues(t);
+      old.g.gain.setTargetAtTime(0, t, 0.1);
+      old.s.stop(t + 0.6);
+    }
+    const buf = this.pick('castleBell');
+    const s = c.createBufferSource();
+    s.buffer = buf;
+    s.playbackRate.value = between(Math.random, 0.995, 1.005); // 같은 종이라 높이는 거의 그대로
+    const g = c.createGain();
+    // 멀리서 들리는 쪽이 커지면 이상하므로 거리로도 줄인다 (20m 기준)
+    const { pan, near } = this._where(data.pos);
+    g.gain.value = (0.03 + 0.15 * x ** 1.3) * near;
+    s.connect(g);
+    const p = c.createStereoPanner?.();
+    if (p) {
+      p.pan.value = pan;
+      g.connect(p).connect(this.metalBus); // 쇳소리 길 → 성벽 메아리(방 울림)를 같이 받는다
+    } else g.connect(this.metalBus);
+    s.start(t + 0.01);
+    this._bells.push({ s, g, end: t + buf.duration });
+    this.stats.nodes += 3;
+  }
+
+  /**
+   * 소리 자리 → 좌우(pan, -1~1)와 거리 배율. listener(카메라, main.js 가 넣어 준다)가 있으면 카메라 오른쪽 방향으로,
+   * 없으면 세계 x 로 대충 정한다. 거리 배율은 20m 에서 1, 가까우면 최대 1.5
+   */
+  _where(pos) {
+    if (!pos) return { pan: 0, near: 1 };
+    const cam = this.listener;
+    if (cam?.matrixWorld) {
+      const m = cam.matrixWorld.elements;
+      const dx = pos.x - m[12];
+      const dy = pos.y - m[13];
+      const dz = pos.z - m[14];
+      const d = Math.hypot(dx, dy, dz) || 1;
+      const right = (dx * m[0] + dy * m[1] + dz * m[2]) / d;
+      return { pan: Math.max(-0.8, Math.min(0.8, right * 0.8)), near: Math.min(1.5, 20 / Math.max(8, d)) };
+    }
+    return { pan: Math.max(-0.6, Math.min(0.6, pos.x / 25)), near: 1 };
+  }
+
+  /**
+   * 새 판이 시작됨 (main.js newRound). 대성당: 파이프 오르간 화음이 한 번 울린다.
+   * 무기 뽑기 동안 newRound 가 두 번 불린다(카드를 띄울 때, 고른 무기로 다시 세울 때) → 그 사이에 싸움 소리가 없었으면
+   * 같은 판으로 보고 다시 울리지 않는다 (_roundOpen: event 에서 싸움 소리가 나면, setStage 에서 배경이 바뀌면 풀린다).
    * 첫 판은 소리 조각이 아직 만들어지는 중일 수 있어 2초까지 기다렸다가 울린다 (그래도 없으면 그 자리에서 만든다)
    */
   roundStart() {
-    if (!this._on || !this.ctx || this.stage !== 'cathedral') return;
+    if (!this._on || !this.ctx || this.stage !== 'cathedral' || this._roundOpen) return;
+    this._roundOpen = true;
     clearTimeout(this._organT);
     const stage = this.stage;
     let waited = 0;

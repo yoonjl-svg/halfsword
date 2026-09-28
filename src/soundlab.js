@@ -170,6 +170,15 @@ ROWS.push(
   ['무기 부러짐', '나뭇가지 / 언 참치 / 둘 다', ['wood', 'frozen', 'both'], (s, v) => (v === 'both' ? (s.weaponBreak?.('wood'), s.weaponBreak?.('frozen')) : s.weaponBreak?.(v)), ['나무', '참치', '둘']],
 );
 
+// ── 무기 뽑기 카드 ──
+ROWS.push([
+  '카드 뒤집기',
+  '고른 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 / 엑스칼리버) · 나머지 두 장 "촥촥"',
+  [{ pick: true, tier: 'common' }, { pick: true, tier: 'epic' }, { pick: true, tier: 'legend' }, { pick: true, grand: true }, { pick: false }],
+  (s, v) => s.cardFlip?.(v),
+  ['커먼', '에픽', '레전드', '엑스칼리버', '나머지'],
+]);
+
 // ── 배경(스테이지)별 소리 ── 줄을 누르면 그 배경으로 바뀐다 (발소리·쓰러짐·전투 소리의 울림이 따라 바뀐다)
 const at = (id, fn) => (s, v) => (s.setStage?.(id), fn(s, v));
 ROWS.push(
@@ -182,6 +191,7 @@ ROWS.push(
   ['성 안뜰: 쓰러짐', '눈밭에 쓰러지며 눈이 "푸석"', [1.2, 2.4, 3.4], at('castle', (s, v) => s.bodyFall(v))],
   ['성 안뜰: 칼 부딪힘', '성벽에 짧게 튕기는 메아리', [4, 8, 12], at('castle', (s, v) => s.clash(v, 1))],
   ['성 안뜰: 마구간 말', '콧바람 "푸르르" / 발굽 "쿵 쿵" + 굴레 "찰랑" (평소 50~110초마다 저절로)', ['snort', 'stamp'], at('castle', (s, v) => s.stageCall?.(v)), ['콧바람', '발굽']],
+  ['성 안뜰: 종탑 종', '흔들린 종을 추가 치는 "댕—" 약 / 중 / 강 (게임에서는 큰 타격 뒤 1.5초마다 점점 약하게)', [0.15, 0.33, 0.55], at('castle', (s, v) => s.stageEvent?.('bell', { amp: v, max: 0.55 }))],
   ['성 안뜰: 큰 타격', '눈보라 바람 + 화로 불길 "화르륵"', [0.3, 0.6, 1], at('castle', (s, v) => ((s._gustT = 0), s.gust?.(v)))],
   ['대성당: 돌바닥 발소리', '판석 위 "턱" + 돌 울림. 살살 / 보통 / 비틀', [0.5, 1.2, 2.2], at('cathedral', (s, v) => s.footstep(v)), ['살살', '보통', '비틀']],
   ['대성당: 쓰러짐', '판석에 쓰러지는 "쿵"이 길게 울린다', [1.2, 2.4, 3.4], at('cathedral', (s, v) => s.bodyFall(v))],
