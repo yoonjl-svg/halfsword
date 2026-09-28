@@ -158,6 +158,7 @@ export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
   }
 
   // ── 반쯤 탄 늙은 참나무: 아래는 숯, 위는 죽어 허옇다. 동쪽 가지 하나에만 새잎, 죽은 가지에 까마귀 ──
+  const crowSeats = [];
   {
     const oy = groundY(OAK.x, OAK.z);
     K.push([OAK.x, oy, OAK.z], 0.3);
@@ -191,22 +192,91 @@ export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
         }
       } else perches.push([p1, a]);
     }
-    // 까마귀: 죽은 가지 끝마다 한둘 (몸통·머리·부리·꼬리)
-    const crow = ([x, y, z], face) => {
-      K.push([x, y + 0.02, z], face);
-      const o = { vary: 0.05, noise: 0.04 };
-      K.put('crow', new THREE.SphereGeometry(1, 8, 6), CB.crow, [0, 0.1, 0], [0, 0, 0.25], [0.15, 0.09, 0.09], o);
-      K.put('crow', new THREE.SphereGeometry(1, 7, 5), CB.crow, [0.13, 0.19, 0], [0, 0, 0], [0.06, 0.055, 0.055], o);
-      K.put('crow', new THREE.ConeGeometry(0.018, 0.07, 4), 0x3a3230, [0.2, 0.185, 0], [0, 0, -Math.PI / 2], 1, o);
-      K.put('crow', box(0.14, 0.02, 0.06), CB.crow, [-0.17, 0.09, 0], [0, 0, 0.35], 1, o);
-      K.pop();
-    };
+    // 까마귀 자리: 죽은 가지 끝마다 한둘 (세계 좌표로 바꿔 둔다 — 까마귀는 합치지 않고 따로 만들어 날아오르게 한다)
+    const toWorld = ([x, y, z]) => [OAK.x + Math.cos(0.3) * x + Math.sin(0.3) * z, oy + y, OAK.z - Math.sin(0.3) * x + Math.cos(0.3) * z];
     perches.forEach(([p, a], i) => {
-      crow(p, a + Math.PI + (i % 2 ? 0.6 : -0.4));
-      if (i < 2) crow([p[0] - Math.cos(a) * 0.7, p[1] - 0.32, p[2] - Math.sin(a) * 0.7], a + 0.3);
+      crowSeats.push({ pos: toWorld(p), face: a + Math.PI + (i % 2 ? 0.6 : -0.4) + 0.3 });
+      if (i < 2) crowSeats.push({ pos: toWorld([p[0] - Math.cos(a) * 0.7, p[1] - 0.32, p[2] - Math.sin(a) * 0.7]), face: a + 0.3 + 0.3 });
     });
     K.pop();
   }
+
+  // ── 까마귀 (합치지 않고 따로): 가지에 앉아 있다가 큰 타격이 나오면 놀라 날아올라 참나무 둘레를 한 바퀴 돌고 돌아온다.
+  //    날아오를 때 onEvent('crows') 로 알린다 (소리 PM: 날갯짓·까악, 4초에 한 번 이하) ──
+  const crows = [];
+  {
+    const crowMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 });
+    crowSeats.forEach((seat, i) => {
+      const ck = new Kit(700 + i);
+      const o = { vary: 0.05, noise: 0.04 };
+      ck.put('c', new THREE.SphereGeometry(1, 8, 6), CB.crow, [0, 0.1, 0], [0, 0, 0.25], [0.15, 0.09, 0.09], o); // 몸통
+      ck.put('c', new THREE.SphereGeometry(1, 7, 5), CB.crow, [0.13, 0.19, 0], [0, 0, 0], [0.06, 0.055, 0.055], o); // 머리
+      ck.put('c', new THREE.ConeGeometry(0.018, 0.07, 4), 0x3a3230, [0.2, 0.185, 0], [0, 0, -Math.PI / 2], 1, o); // 부리
+      ck.put('c', box(0.14, 0.02, 0.06), CB.crow, [-0.17, 0.09, 0], [0, 0, 0.35], 1, o); // 꼬리
+      const g = new THREE.Group();
+      g.add(ck.mesh('c', crowMat));
+      // 날개 둘: 어깨에 붙은 납작한 판. 앉아 있을 때는 몸에 붙여 접고, 날 때는 펴서 퍼덕인다
+      const wings = [];
+      for (const s of [-1, 1]) {
+        const w = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.012, 0.2).translate(0, 0, s * 0.1), crowMat.clone());
+        w.material.vertexColors = false;
+        w.material.color.set(CB.crow);
+        w.position.set(0.02, 0.14, s * 0.04);
+        w.rotation.z = -0.25;
+        w.scale.set(1, 1, 0.35); // 접힌 날개
+        g.add(w);
+        wings.push(w);
+      }
+      g.position.set(...seat.pos);
+      g.position.y += 0.02;
+      g.rotation.y = seat.face;
+      scene.add(g);
+      crows.push({ g, wings, home: new THREE.Vector3(...seat.pos).add(new THREE.Vector3(0, 0.02, 0)), face: seat.face, R: 2.6 + i * 0.45, H: 4.5 + (i % 3) * 0.9, dir: i % 2 ? 1 : -1, ph: i * 1.1, T: 5.2 + (i % 3) * 0.6 });
+    });
+  }
+  const oakTop = new THREE.Vector3(OAK.x, groundY(OAK.x, OAK.z) + 6.5, OAK.z);
+  let crowT = -1; // 날아오른 뒤 흐른 시간 (−1 이면 앉아 있다)
+  let crowCool = 0; // 다시 날아오를 수 있을 때까지
+  const _cp = new THREE.Vector3();
+  const _cv = new THREE.Vector3();
+  const crowPath = (c, tau, out) => {
+    // 참나무 꼭대기 둘레를 한 바퀴: 처음 0.9초 동안 자리에서 떠오르고, 마지막 1.1초 동안 자리로 내려앉는다
+    const k = tau / c.T;
+    const th = c.ph + c.dir * (Math.PI * 2 * k + 0.6 * Math.sin(k * 6.3));
+    _cp.set(oakTop.x + Math.cos(th) * c.R, oakTop.y + c.H * (0.55 + 0.45 * Math.sin(k * Math.PI)) - 4.5, oakTop.z + Math.sin(th) * c.R);
+    const s = THREE.MathUtils.smoothstep(tau, 0, 0.9) * (1 - THREE.MathUtils.smoothstep(tau, c.T - 1.1, c.T));
+    out.copy(c.home).lerp(_cp, s);
+    return s;
+  };
+  const stepCrows = (dt) => {
+    crowCool = Math.max(0, crowCool - dt);
+    if (crowT < 0) return;
+    crowT += dt;
+    let anyFlying = false;
+    for (const c of crows) {
+      const tau = crowT - c.ph * 0.12; // 저마다 조금씩 늦게 뜬다
+      if (tau < 0) continue;
+      if (tau >= c.T) {
+        c.g.position.copy(c.home);
+        c.g.rotation.set(0, c.face, 0);
+        for (const w of c.wings) {
+          w.rotation.z = -0.25;
+          w.scale.z = 0.35;
+        }
+        continue;
+      }
+      anyFlying = true;
+      const s = crowPath(c, tau, c.g.position);
+      crowPath(c, tau + 0.05, _cv);
+      _cv.sub(c.g.position);
+      if (_cv.lengthSq() > 1e-6) c.g.rotation.set(0, Math.atan2(-_cv.z, _cv.x), 0);
+      const flap = Math.sin(crowT * 16 + c.ph * 3) * 0.85 * s;
+      c.wings[0].rotation.z = -0.25 * (1 - s) + flap;
+      c.wings[1].rotation.z = -0.25 * (1 - s) - flap;
+      for (const w of c.wings) w.scale.z = 0.35 + 0.65 * s;
+    }
+    if (!anyFlying && crowT > 1) crowT = -1;
+  };
 
   // ── 불더미: 탄 가지 무더기 속에 아직 잉걸불이 남았다. 낮게 깔리는 연기 ──
   const glowPts = [{ x: PYRE.x, y: 0.5, z: PYRE.z, r: 5.5, c: [0.9, 0.35, 0.08] }];
@@ -322,17 +392,25 @@ export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
   };
   stepAll(0);
 
-  return {
+  const api = {
     sunOffset,
+    onEvent: null, // main.js 가 채운다: (name, data) => … (소리)
     fighterLight: { color: 0xffe2b8, rimColor: 0xd9e2e8, rim: 1.4, level: 0.9 },
-    /** 큰 타격: 재가 휘날리고 연기가 눕는다 (비도 휘몰아친다) */
+    /** 큰 타격: 재가 휘날리고 연기가 눕는다 (비도 휘몰아친다). 꽤 큰 타격이면 까마귀들이 놀라 날아오른다 (6초에 한 번 이하) */
     excite(amount) {
       gust = Math.min(1, gust + amount * 0.5);
+      if (amount >= 0.3 && crowT < 0 && crowCool <= 0) {
+        crowT = 0;
+        crowCool = 6;
+        api.onEvent?.('crows', { amp: Math.min(1, amount * 1.5), pos: { x: oakTop.x, y: oakTop.y, z: oakTop.z } });
+      }
     },
     update(dt) {
       t += dt;
       gust = Math.max(0, gust - dt * 0.4);
       stepAll(dt);
+      stepCrows(dt);
     },
   };
+  return api;
 }
