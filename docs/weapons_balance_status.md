@@ -18,7 +18,7 @@
 ## 에픽 특수 능력 (사장님 결정 — 늘 켜짐, 스위치 없음, 카드 설명 끝에 "(별칭: 효과)")
 | 무기 | 카드 표기 | 효과 (코드) |
 |---|---|---|
-| 청강검 | (창천: 무기 절단) | 칼끼리 부딪힐 때 상대 무기가 부러질 확률 ×3 (`breakMult: 3` → fighter.absorbWeaponImpact(J, by), combat.js bladeClash 가 상대를 넘긴다). 레전드·플라스마·참치는 그대로 안 부러진다 |
+| 청강검 | (창천: 무기 절단) | 칼끼리 부딪힐 때 상대 무기가 부러질 확률 ×3 (`breakMult: 3` → fighter.absorbWeaponImpact(J, by), combat.js bladeClash 가 상대를 넘긴다). 레전드·플라스마·참치는 그대로 안 부러진다. 그리고 자기가 부러질 확률 50% 감소 (`fragility` 에픽 0.0104 → 0.0052, 카드 표기 없음 — 사장님) |
 | 모노호시자오 | (제비 베기: 출혈) | 이 칼에 베이고 찔린 상처의 출혈 ×2 (`bleedMult: 2` → combat.js analyze bleedPerSev) |
 | 라이트세이버 | (고온 플라스마: 갑옷 무시) | 원래 있던 ignoreArmor 그대로 (플라스마라 안 부러지는 것도 그대로) |
 
