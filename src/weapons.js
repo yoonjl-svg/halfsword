@@ -63,9 +63,9 @@ export const BREAK = {
   k: 2,
   // 부러지는 자리: 칼날 길이의 이 비율(자루 쪽=0)에서 끊기고 칼끝 쪽이 떨어져 나간다 (무기마다 spec.breakAt 로 바꿀 수 있다)
   at: 0.5,
-  // 남은 토막에 날이 남는가. false(기본) = 부러진 칼은 둔기 (지금 규칙). true = 토막 날로 베기·찌르기를 하되 효율을 깎는다
-  //  (stubCut·stubThrust 를 mCut·mThrust 에 곱한다 — 사장님 결정 대기)
-  stubEdge: false,
+  // 남은 토막에 날이 남는가. true = 토막 날로 베기·찌르기를 하되 효율을 깎는다(stubCut·stubThrust 를 mCut·mThrust 에 곱한다).
+  //  false = 부러진 칼은 둔기. 사장님 결정: 켠다 — 반으로 부러진 칼도 남은 쪽엔 날이 서 있다.
+  stubEdge: true,
   stubCut: 0.6,
   stubThrust: 0.4,
 };
