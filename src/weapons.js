@@ -608,8 +608,8 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   desc: '사사키 코지로의 노다치.\n빨랫줄 장대라 불린 칼, 매섭게 벤다.',
   grip: 'two-hand', material: 'steel',
   tier: 'epic',
-  ability: '명검의 날: 출혈',
-  bleedMult: 2, // 에픽 특수 능력 '명검의 날: 출혈' (사장님 b안): 이 칼에 베이고 찔린 상처의 출혈 ×2 (롱소드 상대 ×1 38% · ×1.5 44% · ×2 50%, 48판씩 — 에픽 폭 45~65% 안)
+  ability: '제비 베기: 출혈',
+  bleedMult: 2, // 에픽 특수 능력 '제비 베기: 출혈' (사장님 b안): 이 칼에 베이고 찔린 상처의 출혈 ×2 (롱소드 상대 ×1 38% · ×1.5 44% · ×2 50%, 48판씩 — 에픽 폭 45~65% 안)
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
   mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)
   controlOverrides: { aimStiffness: 70, wristVmax: 34 },
@@ -842,7 +842,7 @@ const lightsaber = finalizeSpec('lightsaber', {
   oneHandStance: false,
   tier: 'epic', // power 1.1 · 내구 0.95 (플라스마 칼날이라 어차피 안 부러진다)
   hiltLength: 0.15, bladeLength: 0.9,
-  ability: '에너지 파동: 갑옷 무시', // 에픽 특수 능력 (사장님) — ignoreArmor
+  ability: '플라스마 칼날: 갑옷 무시', // 에픽 특수 능력 (사장님) — ignoreArmor
   edged: true, ignoreArmor: true, mCut: 1.35, mThrust: 1.3,
   controlOverrides: { wristVmax: 36, aimDamping: 9 }, // 가볍고 매끄러운 이미터: 손목이 더 빨리 돌아간다
   // 플라스마 칼날은 각진 막대가 아니라 매끄러운 원기둥이어야 "에너지 칼날"답다. 자루는 홈이 파인 금속 원통,
