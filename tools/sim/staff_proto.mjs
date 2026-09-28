@@ -142,7 +142,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
       const G = newRound({ walls: true, seed, weapon: Pp.weapon, weapon2: Ee.weapon, difficulty: 'normal', persona: Ee.persona, AI2Class: AI, difficulty2: 'normal', persona2: Pp.persona });
       const X = xFirst ? G.player : G.enemy;
       const Y = xFirst ? G.enemy : G.player;
-      if (LIB) applyMotionLibrary(X);
+      if (LIB && process.env.STAFF_TABLE !== '0') applyMotionLibrary(X); // STAFF_TABLE=0: 유파(기술)만 라이브러리, 자세표는 롱소드 그대로
       if (ZONES) zoneEffects(Y, zoneLog);
       let res = 'D';
       for (let i = 0; i < 40 / DT; i++) {
