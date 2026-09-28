@@ -1000,6 +1000,27 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.9), sr, 0.06);
   },
 
+  /** 칼이 바닥에 떨어짐: 칼자루와 칼끝이 잇달아 닿는 "철-컥" (모래·돌이 받아서 짧게 멎는다 — 음이 오래 남으면 냄비처럼 들리므로 울림은 0.05초 안) */
+  swordLand(sr, r) {
+    const n = Math.round(0.45 * sr);
+    const out = new Float32Array(n);
+    let t = between(r, 0, 0.01);
+    for (let i = 0; i < 2; i++) {
+      const amp = i ? between(r, 0.45, 0.8) : 1;
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      pulse(px, sr, t, 0.0003, 1);
+      resonate(px, py, sr, [0, 1, 2, 3, 4].map(() => ({ f: between(r, 900, 5200), a: between(r, 0.4, 1), t60: between(r, 0.02, 0.05) })), Math.ceil((t + 0.002) * sr));
+      const a = (0.5 * amp) / (peakOf(py) || 1);
+      for (let j = 0; j < n; j++) out[j] += a * py[j];
+      noiseHit(out, sr, r, { t0: t, amp: 0.5 * amp, attack: 0.002, tau: 0.02, type: 'lowpass', f: between(r, 300, 500), q: 0.7 }); // 바닥에 받히는 "퍽"
+      gritBurst(out, sr, r, { t0: t + 0.002, span: 0.03, count: 5, amp: 0.1 * amp, fLo: 1500, fHi: 5000 }); // 튀는 알갱이
+      t += between(r, 0.04, 0.11);
+    }
+    saturate(out, 1.5);
+    return fadeOut(normalize(out, 0.9), sr, 0.06);
+  },
+
   /**
    * 울림(잔향)용 충격 응답: 벽에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오).
    * 기본값은 경기장. 배경마다 다른 방(STAGE_SOUND.room): dur 길이(초), rt 꼬리가 60dB 줄어드는 시간,
@@ -1348,6 +1369,7 @@ const BANK = [
   ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
   ['plateBreak', 2, SYNTH.plateBreak],
   ['plateDebris', 2, SYNTH.plateDebris],
+  ['swordLand', 3, SYNTH.swordLand],
   ['birdSong', 3, (sr, r) => SYNTH.bird(sr, r, 'song')], // 산사 배경 (맨 뒤: 판 시작 뒤 몇 초 안에만 있으면 된다)
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
@@ -2080,6 +2102,21 @@ export class Sound {
     const gk = STAGE_SOUND[this.stage].grit;
     const grit = gk && !light ? this.pickSample(gk) : null;
     if (grit) this.layer(ev, grit, { gain: 0.3 + 0.3 * x, rate: between(Math.random, 0.62, 0.72), delay: 0.012 });
+  }
+
+  /**
+   * 칼이 바닥에 떨어짐 (놓친 칼, 또는 쥔 채 쓰러진 칼). speed = 떨어지던 속도 (m/s), material = 무기 재질.
+   * 쇠(강철·광검 자루)는 "철-컥", 나무는 "딱", 나머지(고무 닭·언 참치)는 둔한 "툭". 그 바닥의 알갱이 소리를 조금 깐다
+   */
+  swordLand(speed, material = 'steel', { pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const x = clamp01((speed - 1) / 4);
+    const metal = material === 'steel' || material === 'armor' || material === 'plasma';
+    const ev = this.event({ bus: metal ? this.metalBus : this.fleshBus, gain: 0.25 + 0.45 * x, prio: 1, pos });
+    if (metal) this.layer(ev, this.pick('swordLand'), { rate: between(Math.random, 0.9, 1.08) });
+    else this.layer(ev, this.pickSample(material === 'wood' ? 'woodHit' : 'soft') || this.pick('thump'), { gain: 0.6, rate: between(Math.random, 0.85, 1.05) });
+    const grit = this.pickSample(STAGE_SOUND[this.stage].grit || STAGE_SOUND[this.stage].step);
+    if (grit) this.layer(ev, grit, { gain: 0.25 + 0.2 * x, rate: between(Math.random, 0.9, 1.1), delay: 0.004 });
   }
 
   /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
@@ -2856,6 +2893,8 @@ export class BodySounds {
     this.lastFall = -1;
     this.t = 0;
     this.thudDue = 0; // 목소리 없는 캐릭터가 죽은 뒤 "쿵"을 내야 할 마감 시각 (0 = 없음)
+    this.swordVy = 0; // 칼이 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
+    this.lastLand = -9;
   }
 
   update(dt) {
@@ -2911,6 +2950,19 @@ export class BodySounds {
       s.bodyFall(2.4);
       this.thudDue = 0;
     }
+
+    // 칼이 바닥에 떨어짐: 놓친 칼, 또는 쥔 채 쓰러진 칼이 땅에 닿는 순간 (튀어서 다시 닿는 것은 0.5초 안에 한 번만)
+    const sw = f.sword;
+    if (sw && (!f.armed || f.state !== 'stand')) {
+      const y = sw.translation().y;
+      const vy = sw.linvel().y;
+      const v0 = this.swordVy;
+      if (v0 < -1.2 && vy > v0 * 0.35 && y < 0.25) {
+        if (this.t - this.lastLand > 0.5) s.swordLand(-v0, f.weapon?.material);
+        this.lastLand = this.t;
+        this.swordVy = 0;
+      } else this.swordVy = vy < 0 ? Math.min(v0, vy) : 0;
+    } else this.swordVy = 0;
   }
 }
 

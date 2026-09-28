@@ -228,6 +228,15 @@ for (const [id, name, desc] of DEATH_ROWS) {
   ]);
 }
 
+// ── 칼이 바닥에 떨어짐 ──
+ROWS.push([
+  '칼이 바닥에 떨어짐',
+  '놓친 칼, 또는 쥔 채 쓰러진 칼이 땅에 닿는 순간 (지금 배경의 바닥 알갱이가 섞인다)',
+  ['steel', 'wood', 'rubber'],
+  (s, m) => s.swordLand?.(3, m),
+  ['강철', '나무', '고무 닭'],
+]);
+
 const $ = (id) => document.getElementById(id);
 const engines = { new: null, old: null };
 let which = 'new';
