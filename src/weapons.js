@@ -63,9 +63,9 @@ export const BREAK = {
   k: 2,
   // 부러지는 자리: 칼날 길이의 이 비율(자루 쪽=0)에서 끊기고 칼끝 쪽이 떨어져 나간다 (무기마다 spec.breakAt 로 바꿀 수 있다)
   at: 0.5,
-  // 남은 토막에 날이 남는가. false(기본) = 부러진 칼은 둔기 (지금 규칙). true = 토막 날로 베기·찌르기를 하되 효율을 깎는다
-  //  (stubCut·stubThrust 를 mCut·mThrust 에 곱한다 — 사장님 결정 대기)
-  stubEdge: false,
+  // 남은 토막에 날이 남는가. true = 토막 날로 베기·찌르기를 하되 효율을 깎는다(stubCut·stubThrust 를 mCut·mThrust 에 곱한다).
+  //  false = 부러진 칼은 둔기. 사장님 결정: 켠다 — 반으로 부러진 칼도 남은 쪽엔 날이 서 있다.
+  stubEdge: true,
   stubCut: 0.6,
   stubThrust: 0.4,
 };
@@ -763,7 +763,7 @@ function excaliburGems(group) {
 
 const excalibur = finalizeSpec('excalibur', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur',
-  desc: '금빛 기운이 감도는 진짜 왕의 검.\n모든 타격이 한층 무겁게 들어간다.',
+  desc: '금빛 기운이 감도는 진짜 왕의 검.',
   grip: 'two-hand', material: 'steel',
   tier: 'legend', // 감독 등급: 레전드 → power 1.2·durability 1.0. 진품은 플레이어 전용(docs/characters.md)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
@@ -798,7 +798,7 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 // ═════════════════════════════════════════════════════════════
 const lightsaber = finalizeSpec('lightsaber', {
   nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
-  desc: '빛으로 된 칼날, 갑옷도 소용없다.\n가볍지만 무거운 칼에는 밀린다.',
+  desc: '빛의 입자로 된 칼날.\n갑옷이 소용없지만 무거운 칼에는 밀린다.',
   grip: 'one-hand', material: 'plasma',
   // 한손 자세표(칼 든 어깨를 앞으로)는 쓰지 않는다: 길고 가벼운 칼날이라 닿는 거리가 짧은 칼의 5배(+11cm 대 +2cm) 늘어
   //  롱소드 상대 승률이 55 → 75%로 에픽 목표(45~65%)를 넘었다 (10라운드 B, ref_duel). 영화처럼 두 손 자세로 겨눈다
@@ -912,7 +912,7 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
 // ═════════════════════════════════════════════════════════════
 const frozenTuna = finalizeSpec('frozen_tuna', {
   nameKo: '냉동 참치', nameEn: 'Frozen Tuna',
-  desc: '꽁꽁 얼린 참치 한 마리. 안 부러진다.\n묵직하지만 꼬리가 미끄럽다.',
+  desc: '얼어 붙은 참치.\n절대 부서지지 않는다.',
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다

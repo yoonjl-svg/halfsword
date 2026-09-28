@@ -25,7 +25,7 @@
 | 겉모습 | 절단선 위 메쉬는 조각으로, 걸친 메쉬(칼날·가지 몸통·닭 목)는 지오메트리를 둘로 복제해 절단면에 눌러 붙인다. 메쉬 객체는 그대로 둬 피 묻히기 참조가 안 끊긴다. 남는 끝엔 톱니 모양 부러진 면(평면 음영 로우폴리, 재질별 갓 부러진 색: 강철 밝은 은색·나무 밝은 속살·고무 노랑). decorate 로 그린 세이버·나뭇가지·닭도 같은 방법(단면 크기는 그려진 꼭짓점에서 잰다) — 클리핑 평면은 렌더러 설정(main.js)이 필요해 안 썼다. 전역 난수 안 건드림(isolatedVisual) | weapon_looks.js `breakWeaponLook()` |
 | 파편 | 부러질 때 칼 몸체 속도+각속도로 날아가 땅에 튀고 1.6초(마지막 0.5초 흐려짐) 뒤 사라진다. 물리 엔진과 무관한 겉모습만. 브라우저에선 스스로 rAF 로 돈다(게임 루프 안 건드림 — 그래서 일시정지·슬로모와 무관하게 실시간으로 흐른다). 판이 바뀌면(칼 그룹이 장면에서 빠지면) 바로 치운다. 시뮬(노드)에선 띄우지 않는다(`DEBRIS.headless` 로 켤 수 있다). 갑옷 파편과 합치기 쉽게 따로 뒀다 | 새 `src/weapon_debris.js` |
 | AI | 내 칼이 부러지면 내 간격 M(쓰러진 상대용 Mup 포함)·기술 닿는 거리 보정·마무리 간격을, 상대 칼이 부러지면 foeM·foeReach 를 **잃은 칼 길이 dL** 만큼 줄인다: reach − dL, contact − 0.85·dL(실측 표의 칼 길이 차 대 contact 차 비), clinch 는 contact 밑으로 | ai.js 파손 반응 (`brokenLoss`·`shrinkM`) |
-| 날 규칙 | 기본은 지금처럼 부러지면 둔기. 스위치 `BREAK.stubEdge`(기본 false) — 켜면 토막 날로 베고 찌르되 mCut×`stubCut` 0.6, mThrust×`stubThrust` 0.4. **사장님 결정 대기** | weapons.js `BREAK`, combat.js 1줄 |
+| 날 규칙 | 스위치 `BREAK.stubEdge` — 켜면 토막 날로 베고 찌르되 mCut×`stubCut` 0.6, mThrust×`stubThrust` 0.4. 끄면 부러진 칼은 둔기. **사장님 결정: 켬(true)** — 반으로 부러진 칼도 남은 쪽엔 날이 서 있다 | weapons.js `BREAK`, combat.js 1줄 |
 
 **combat.js 바뀐 줄 (전/후)**
 ```js
@@ -57,6 +57,9 @@ const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.ed
 
 - 0%는 아니다(세 무기 다 이긴 판이 있다). 다만 불리함이 크다: 예전엔 파손이 거의 벌이 아니었고(롱소드 −10%p, 나뭇가지 0), 이제는 −30~45%p. 판 시작부터 부러진 최악의 경우라 실제 판(중간에 부러짐)은 덜하다.
 - 더 눅이고 싶으면 손잡이: `breakAt` 을 0.6~0.7 로(덜 짧아짐), 또는 `stubEdge` 켜기. **디렉터 판단 요청** (지금은 지시 그대로 0.5·둔기).
+- (감독 추가 측정, `broken_duel.mjs` 의 `stub` 조건 = 끝 절반 떨어짐 + `stubEdge` 켬, 같은 48판) 롱소드 **10% (5~22)**, 세이버 **4% (1~14)**.
+  둔기로 둘 때보다 아주 조금 덜 불리할 뿐이다. 사장님: "덜 짧게"는 싫다(breakAt 0.5 유지), 토막 날은 살린다(stubEdge 켬).
+  켠 뒤 회귀: live_battery 바이트 동일, hybrid fights12 8/12 그대로, fights12 10→9/12(칼이 부러진 4·8판만 달라짐), weapon_break_check ALL OK.
 
 **제안(소리)**: 조각이 땅에 처음 닿는 순간 작은 쇳조각·나무토막 소리 — weapon_debris.js `tickDebris` 의 `d.landed = true` 자리에 붙이면 된다(sound.swordLand 의 작고 높은 판, 재질별).
 
