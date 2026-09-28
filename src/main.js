@@ -88,6 +88,10 @@ const foeParam = params.get('foe') || lookPreviewId || 'stage';
 const foeRandomEachRound = foeParam === 'random';
 let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
 let auras = []; // 진짜 엑스칼리버의 일렁임·빛 (aura.js)
+/** 캐릭터의 목소리 id: 변형(광기의 하인리히 등, characters.js CHARACTER_VARIANTS)은 원래 캐릭터의 목소리를 쓴다 */
+function voiceOf(ch) {
+  return ch?.variantOf || ch?.id || 'generic';
+}
 function pickFoe() {
   if (foeParam === 'stage') return CHARACTERS_BY_ID[STAGE_FOE[stages.id]] || randomCharacter(currentFoe?.id); // 이번 판 무대의 검객
   if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
@@ -228,7 +232,7 @@ function prepareRound() {
   // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브란은 10% 확률로 주워 온 커먼 칼)
   foeWeaponId = params.get('foeWeapon') || FIXED_WEAPON || (currentFoe ? pickCharacterWeapon(currentFoe) : 'longsword');
   // 이번 판에 나오는 목소리만 미리 만든다 (시작 단추를 누르기 전에는 소리 장치가 없어 그냥 넘어간다)
-  sound.prepareVoices(['player', currentFoe?.id || 'generic']);
+  sound.prepareVoices(['player', voiceOf(currentFoe)]);
 }
 
 /**
@@ -325,7 +329,7 @@ function newRound(weaponId) {
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
   // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
-  const foeVoice = currentFoe?.id || 'generic';
+  const foeVoice = voiceOf(currentFoe);
   bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
   sound.resetRound();
   sound.roundStart(); // 대성당: 판이 시작될 때 파이프 오르간이 한 번 울린다
@@ -1037,7 +1041,7 @@ function showEmoMsg(text, emo, ms = 2000) {
 //  notice: 빛이 다 내려왔다 — "○○가 투지로 다시 일어선다" (감정 알림 자리), 캐릭터 시트에 lines.revive 가 있으면 대사 한 줄도
 reviveFx.onCue = (cue, f) => {
   const ch = f === enemy ? currentFoe : null;
-  const voice = f === enemy ? currentFoe?.id || 'generic' : 'player';
+  const voice = f === enemy ? voiceOf(currentFoe) : 'player';
   if (cue === 'fall') {
     const bs = bodySounds[f === enemy ? 1 : 0];
     if (!bs || bs.t - bs.lastHurt > 0.5) {
