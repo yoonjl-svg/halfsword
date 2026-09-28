@@ -336,6 +336,7 @@ export const CHARACTER_VARIANTS = [
   // 4b. 광기의 하인리히 도른 — 밤의 포세이돈 신전에 다시 나타나는 하인리히 (사장 요청, 디렉터 14:08).
   //  붉은 눈·안광 아우라는 외형 담당 몫이고, 여기서는 eyes 표식만 둔다.
   //  아직 사장 확정 전인 것: 별칭·대사·수치. 대사와 수치는 하인리히 것을 그대로 쓰고, 제안은 docs/character_lore.md §4b에.
+  //  지금 낮의 하인리히와 다른 것은 이름·서사·eyes 표식뿐이다
   {
     ...HEINRICH,
     id: 'heinrich_mad',
@@ -350,16 +351,9 @@ export const CHARACTER_VARIANTS = [
     want: '검이 원하는 것. 그것이 무엇인지는 그도 모른다 — 다만 상대의 목을 내놓으면 검이 잠잠해진다고 믿는다.',
     temperament:
       '웃지 않는다. 소리치지 않는다. 낮의 하인리히에게 남아 있던 사람의 확신은 없고, 검의 방향만 남았다. 맞아도 반응이 늦고, 물러날 줄을 모른다. ' +
-      '집념에 잠긴 채 결투를 시작한다 — 느리게 다가와 한 번 물면 놓지 않는다.',
-    ai: {
-      ...JSON.parse(JSON.stringify(HEINRICH.ai)),
-      persona: {
-        ...JSON.parse(JSON.stringify(HEINRICH.ai.persona)),
-        // 시작 감정 제안: 검에 먹힌 자 = 집념 1.0 (주는 상처 +30%·관통↑ / 이동 −25%: 느리고 집요하고 치명적). 대안: 분노 1.0.
-        //  사장이 플레이해 보고 정한다. 이 한 줄만 지우면 낮의 하인리히와 같아진다
-        startEmotion: { obsession: 1.0 },
-      },
-    },
+      '느리게 다가와 한 번 물면 놓지 않는다.',
+    // 시작 감정은 없다 (사장: "분노나 집념으로 시작하는 건 싫어"). 감정은 하인리히와 같은 보통 규칙을 따른다
+    ai: JSON.parse(JSON.stringify(HEINRICH.ai)),
     lines: JSON.parse(JSON.stringify(HEINRICH.lines)),
     look: HEINRICH.look,
     lookVersion: HEINRICH.lookVersion,
