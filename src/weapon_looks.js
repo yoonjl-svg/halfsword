@@ -1339,3 +1339,34 @@ export function breakWeaponLook(group, cutY, { material = 'steel' } = {}) {
   }
   return { fragment };
 }
+
+// ═════════════════════════════════════════════════════════════
+//  권총 (??? 등급): 칼처럼 쥐므로 총신이 칼 축(+y)을 따라 앞으로 뻗는다 — 손잡이는 주먹 안(자루 자리)에서 살짝 뒤로 기운다.
+//  "빗자루 손잡이" 권총 느낌의 로우폴리: 검은 강철 총신·슬라이드, 나무 손잡이, 방아쇠울, 가늠쇠·공이치기. 난수 없음.
+// ═════════════════════════════════════════════════════════════
+export function drawPistol(group) {
+  const steel = new THREE.MeshStandardMaterial({ color: 0x2c2f35, roughness: 0.45, metalness: 0.6, envMap: weaponEnv(), envMapIntensity: 0.8, flatShading: true });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.85, metalness: 0, flatShading: true });
+  const add = (geo, mat, pos, rot) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(...pos);
+    if (rot) m.rotation.set(...rot);
+    m.castShadow = true;
+    group.add(m);
+    return m;
+  };
+  // 손잡이 (주먹 안): 나무, 뒤로 살짝 기울고 아래가 조금 넓다
+  add(new THREE.BoxGeometry(0.03, 0.12, 0.026), wood, [-0.004, -0.005, 0], [0, 0, 0.12]);
+  // 몸통(기관부)과 슬라이드: 손 위쪽에서 총신으로 이어진다
+  add(new THREE.BoxGeometry(0.036, 0.09, 0.03), steel, [0.004, 0.09, 0]);
+  add(new THREE.BoxGeometry(0.03, 0.2, 0.024), steel, [0.006, 0.17, 0]);
+  // 총신 (둥근 막대)과 총구
+  add(new THREE.CylinderGeometry(0.009, 0.009, 0.12, 8), steel, [0.006, 0.26, 0]);
+  add(new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, 8), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 1 }), [0.006, 0.321, 0]);
+  // 가늠쇠 (총구 쪽 등) · 공이치기 (뒤쪽)
+  add(new THREE.BoxGeometry(0.008, 0.012, 0.004), steel, [0.024, 0.3, 0]);
+  add(new THREE.BoxGeometry(0.012, 0.018, 0.008), steel, [0.022, 0.05, 0], [0, 0, -0.5]);
+  // 방아쇠울 (손잡이 앞쪽 고리) · 방아쇠
+  add(new THREE.TorusGeometry(0.018, 0.0035, 5, 10, Math.PI * 1.3), steel, [-0.026, 0.07, 0], [0, 0, Math.PI * 0.35]);
+  add(new THREE.BoxGeometry(0.004, 0.016, 0.004), steel, [-0.022, 0.07, 0], [0, 0, 0.3]);
+}
