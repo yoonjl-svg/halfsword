@@ -1344,7 +1344,7 @@ export function breakWeaponLook(group, cutY, { material = 'steel' } = {}) {
 //  권총 (??? 등급). 물리는 그대로다: 칼 축(+y)이 총신·발사 방향이고 총구는 손(원점)에서 0.20 m(bladePoint(1)).
 //  겉모습만 권총답게 — 손잡이가 총신에서 약 105° 꺾여 아래로 내려오고(주먹은 손잡이 윗부분을 쥔다), 방아쇠울·공이치기가 보인다.
 //  칼을 겨누는 자세에서 칼 몸체 −x 쪽이 위다(게임 화면으로 확인) → 가늠쇠·공이치기는 −x, 손잡이·방아쇠울은 +x.
-//  두 풍 (사장님이 고른다, docs/handoff/pistol_look_v1.png):
+//  두 풍 (docs/handoff/pistol_look_v1.png) — 사장님 선택: B 리볼버. A 는 보관:
 //   'flintlock' — 세계관에 맞는 부싯돌식: 나무 몸통이 총신 밑을 받치고, 휜 나무 손잡이 끝에 놋쇠 마개, 긴 놋쇠 방아쇠울, 부싯돌 치기쇠
 //   'revolver'  — 어디서 굴러 들어온 현대식 리볼버: 여섯 모 약실, 검은 강철 틀, 검은 고무 손잡이
 //  로우폴리·평면 음영(설계 언어 3D 기본 모드), 난수 없음.
@@ -1352,7 +1352,7 @@ export function breakWeaponLook(group, cutY, { material = 'steel' } = {}) {
 // 손잡이 치수 — 물리(weapons.js pistol buildParts 의 손잡이 콜라이더·무게)와 그림이 같이 쓴다: 칼 몸체 (x, y) = from 에서
 //  총신(+y)과 deg 만큼 꺾인 방향으로 len 만큼 (끝에 마개)
 export const PISTOL_GRIP = { from: [0.018, -0.028], deg: 105, len: 0.105 };
-export const PISTOL_STYLE = { value: 'flintlock' }; // 고른 풍 (시안 비교 도구는 globalThis.__pistolStyle 로 바꿔 본다)
+export const PISTOL_STYLE = { value: 'revolver' }; // 사장님이 고른 풍: B 현대식 리볼버 (A 부싯돌식은 보관 — 시안 비교 도구는 globalThis.__pistolStyle 로 바꿔 본다)
 export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STYLE.value) {
   const flat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0, flatShading: true, ...o });
   const add = (geo, mat, pos, rot) => {
@@ -1389,7 +1389,7 @@ export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STY
     add(new THREE.TorusGeometry(0.015, 0.0028, 5, 10, Math.PI * 1.25), steel, [0.036, 0.01, 0], [0, 0, -Math.PI * 0.05]);
     add(new THREE.BoxGeometry(0.014, 0.004, 0.004), steel, [0.03, 0.006, 0], [0, 0, 0.25]);
     // 손잡이 (검은 고무, 110° — 리볼버는 더 뒤로 젖힌다)
-    const g = grip(PISTOL_GRIP.len, 0.03, 0.026, rubber, PISTOL_GRIP.deg + 3, PISTOL_GRIP.from); // 리볼버는 조금 더 뒤로 젖힌다 (물리는 같은 손잡이)
+    const g = grip(PISTOL_GRIP.len, 0.03, 0.026, rubber, PISTOL_GRIP.deg, PISTOL_GRIP.from); // 손잡이 콜라이더와 같은 각·길이
     add(new THREE.BoxGeometry(0.012, 0.034, 0.028), steel, [g.end[0], g.end[1], 0], [0, 0, Math.atan2(g.dy, g.dx)]); // 밑마개
   } else {
     const iron = flat(0x3a3d44, { roughness: 0.5, metalness: 0.45, envMap: weaponEnv(), envMapIntensity: 0.7 });
