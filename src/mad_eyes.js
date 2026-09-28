@@ -19,7 +19,7 @@ const EYE_X = 0.113; // 머리 기준: 눈 상자(x 0.093)보다 조금 앞
 const EYE_Y = 0.016;
 const EYE_Z = 0.035;
 const CORE_S = 0.052; // 심 크기 (눈 상자 0.02 보다 조금 크게 — 결투 거리에서 붉은 점으로 읽힌다)
-const HALO_S = 0.16; // 무리 크기
+const HALO_S = 0.135; // 무리 크기 (사장님 '전구 같다 · 밝기 조금 줄이자': 0.16 → 0.135)
 const TRAIL_N = 6; // 눈 하나의 잔상 스프라이트 수
 const TRAIL_T = 0.16; // 초: 잔상이 남는 시간
 const TRAIL_V0 = 0.8; // m/s: 눈 자리가 이 속도부터 잔상이 보이기 시작 (머리 중심보다 눈은 고개 돌림만으로도 더 빨리 움직인다)
@@ -31,7 +31,7 @@ function coreTexture() {
   return canvasTex(64, 64, (g, w, h) => {
     const c = w / 2;
     const rg = g.createRadialGradient(c, c, 0, c, c, c);
-    rg.addColorStop(0, 'rgba(255,120,110,1)');
+    rg.addColorStop(0, 'rgba(236,70,70,1)'); // 가운데 밝은 점을 죽여 전구처럼 보이지 않게 (사장님)
     rg.addColorStop(0.14, 'rgba(225,15,30,1)');
     rg.addColorStop(0.5, 'rgba(160,0,20,0.92)');
     rg.addColorStop(1, 'rgba(100,0,12,0)');
@@ -128,9 +128,9 @@ export function attachMadEyes(fighter, on) {
       for (const e of eyes) {
         const fl = flicker(t, e.ph);
         const k = fl * life;
-        e.core.material.opacity = Math.min(1, 0.55 + 0.6 * fl) * life; // 죽으면 심까지 완전히 꺼진다
+        e.core.material.opacity = Math.min(1, 0.42 + 0.5 * fl) * life; // 죽으면 심까지 완전히 꺼진다 (밝기 조금 낮춤: 0.55+0.6fl → 0.42+0.5fl)
         e.core.scale.setScalar(CORE_S * (0.85 + 0.3 * k));
-        e.halo.material.opacity = 0.75 * k;
+        e.halo.material.opacity = 0.5 * k; // 0.75 → 0.5
         e.halo.scale.setScalar(HALO_S * (0.8 + 0.4 * k));
         // 잔상: 눈 자리의 속도(세계 좌표 변화 — 고개 돌림도 잡힌다, 물리 상태는 읽지 않는다)를 따라 뒤로 늘어놓고, 빠를 때만 보여 준다
         e.core.getWorldPosition(_p);
