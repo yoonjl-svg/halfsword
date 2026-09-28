@@ -1,4 +1,4 @@
-// 브라우저 스모크: 한 판 시작 → 8초 진행 → 콘솔 에러 0 확인
+// 브라우저 스모크: 한 판 시작 → 무기 카드 한 장 고르기 → 싸움 8초 진행 → 콘솔 에러 0 확인 (싸움이 실제로 흘렀는지도 본다)
 //  실행: vite 개발 서버를 띄운 뒤 (npm run dev) playwright 가 설치된 곳에서
 //    node tools/browser/smoke.mjs http://127.0.0.1:5173
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
@@ -14,8 +14,16 @@ page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status
 await page.goto(base + '/', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 30000 });
 await page.getByText('싸움 시작').click();
+// 무기 뽑기: 카드가 다 깔리면(0.45초) 첫 장을 누르고, 카드가 사라져 싸움이 시작될 때까지 기다린다
+await page.waitForFunction(() => window.game.state === 'draw' && window.game.draw.stage === 'choose' && window.game.draw.t > 0.6, null, { timeout: 30000 });
+await page.locator('#draw .wcard').first().click();
+await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 30000 });
+const sim0 = await page.evaluate(() => window.game.stats.simTime);
 await page.waitForTimeout(8000);
-const state = await page.evaluate(() => ({ p: window.game.player.state, e: window.game.enemy.state, w: window.game.player.weapon.id, fw: window.game.enemy.weapon.id }));
+const state = await page.evaluate(() => ({ game: window.game.state, sim: +window.game.stats.simTime.toFixed(2), p: window.game.player.state, e: window.game.enemy.state, w: window.game.player.weapon.id, fw: window.game.enemy.weapon.id }));
 console.log('8s state:', JSON.stringify(state));
+const ran = state.sim > sim0; // 싸움(물리)이 실제로 흘렀나
+if (!ran) errors.push(`fight did not run (simTime ${sim0} → ${state.sim}, state ${state.game})`);
 console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'ZERO console errors');
 await browser.close();
+process.exit(errors.length ? 1 : 0);

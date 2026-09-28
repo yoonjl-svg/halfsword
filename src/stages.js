@@ -1,0 +1,160 @@
+// ─────────────────────────────────────────────────────────────
+//  스테이지(배경) 관리: 다섯 배경 중 하나를 짓고, 바꿀 때는 먼저 지은 배경을 깨끗이 치운다
+//   오너 결정: 스테이지는 고르는 화면 없이 판마다 무작위 (바로 전 판과 같은 곳은 안 나온다). 고르기·고정은 main.js
+//   배경을 짓는 함수(arena.js · stage_*.js)는 scene 에 메쉬·입자를 더하고, 같이 쓰는 빛(hemi·sun)의 색·세기·자리와
+//   scene.fog·background 를 바꾼다. 그래서 바꿀 때는
+//    ① 먼저 지은 배경이 더한 것을 떼어 내고 GPU 자원(모양·재질·질감)을 풀고
+//    ② 빛·안개·하늘색을 처음 값(main.js 가 만든 포세이돈 값)으로 되돌린 뒤
+//    ③ 새로 짓는다.
+//   물리와는 상관없다 (바닥·경계 벽은 main.js 가 판마다 따로 만든다. 시뮬은 이 파일을 읽지 않는다)
+// ─────────────────────────────────────────────────────────────
+import { buildArena } from './arena.js';
+import { buildTemple } from './stage_temple.js';
+import { buildCastle } from './stage_castle.js';
+import { buildCathedral } from './stage_cathedral.js';
+import { buildDarkHall } from './stage_darkhall.js';
+import { weaponEnv } from './weapon_looks.js';
+
+// 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
+const BUILDERS = {
+  poseidon: (scene) => buildArena(scene), // 바닷가 절벽 위 무너진 포세이돈 신전 (arena.js). 빛·안개는 main.js 처음 값을 그대로 쓴다
+  temple: buildTemple, // 한국의 산 속 절 (stage_temple.js)
+  castle: buildCastle, // 눈 내리는 중세 성의 안뜰, 해 질 녘 (stage_castle.js)
+  cathedral: buildCathedral, // 무너진 고딕 대성당의 안 (stage_cathedral.js)
+  darkhall: buildDarkHall, // 어두운 성의 큰 홀, 밤 (stage_darkhall.js)
+};
+export const STAGE_IDS = Object.keys(BUILDERS);
+const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
+
+/**
+ * 판마다 배경 뽑기: 다섯 장짜리 패에서 아직 안 나온 것 중 하나를 고르게 뽑는다 (섞은 패에서 한 장씩 넘기는 것과 같다).
+ *  그래서 다섯 판마다 다섯 곳이 한 번씩 다 나오고, 패를 새로 채울 때도 바로 전 판(prev)과 같은 곳은 안 나온다.
+ *  (패 없이 매번 넷 중 하나를 고르면 12판을 해도 한 곳이 한 번도 안 나오는 일이 여섯 번에 한 번쯤 생긴다)
+ */
+export class StageDeck {
+  constructor(rand = Math.random) {
+    this.rand = rand;
+    this.cards = []; // 이번 패에서 아직 안 나온 배경
+  }
+  next(prev = null) {
+    let pool = this.cards.filter((id) => id !== prev);
+    if (!pool.length) {
+      this.cards = [...STAGE_IDS]; // 새 패 다섯 장
+      pool = this.cards.filter((id) => id !== prev);
+    }
+    const id = pool[Math.floor(this.rand() * pool.length)];
+    this.cards.splice(this.cards.indexOf(id), 1);
+    return id;
+  }
+}
+
+const materialsOf = (o) => (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []);
+/** o 가 쓰는 모양·재질·질감을 set 에 모은다 */
+function collect(o, set) {
+  if (o.geometry) set.add(o.geometry);
+  for (const m of materialsOf(o)) {
+    set.add(m);
+    for (const v of Object.values(m)) if (v && v.isTexture) set.add(v);
+  }
+}
+
+export class Stages {
+  /** scene 과 같이 쓰는 빛 { hemi, sun }. 만들 때의 빛·안개·하늘색을 처음 값으로 적어 둔다 (배경을 짓기 전에 만들 것) */
+  constructor(scene, { hemi, sun }) {
+    this.scene = scene;
+    this.hemi = hemi;
+    this.sun = sun;
+    this.base = {
+      background: scene.background?.clone?.() ?? null,
+      fog: scene.fog ? scene.fog.clone() : null,
+      hemiColor: hemi.color.clone(),
+      hemiGround: hemi.groundColor.clone(),
+      hemiIntensity: hemi.intensity,
+      hemiPos: hemi.position.clone(),
+      sunColor: sun.color.clone(),
+      sunIntensity: sun.intensity,
+      sunPos: sun.position.clone(),
+    };
+    this.id = null; // 지금 배경 id
+    this.arena = null; // 지금 배경 { update, excite }
+    this.sunOffset = DEFAULT_SUN_OFFSET; // 해가 싸우는 자리를 따라다닐 때의 방향
+    this.objects = []; // 지금 배경이 scene 에 더한 것 (치울 때 쓴다)
+    this.buildMs = 0; // 방금 짓는 데 걸린 시간 (ms) — ?fps=1 표시와 시험용
+    this.clearMs = 0; // 먼저 지은 배경을 치우는 데 걸린 시간 (ms)
+    this.warmMs = 0; // 새 배경을 GPU 에 미리 올리는 데 걸린 시간 (ms, warm)
+  }
+
+  /** id 배경을 짓는다 (먼저 지은 배경은 치우고, 빛·안개·하늘색은 처음 값으로 되돌린 뒤). 반환: { update, excite, sunOffset } */
+  build(id) {
+    const make = BUILDERS[id];
+    if (!make) throw new Error(`모르는 배경: ${id}`);
+    const t0 = performance.now();
+    this.clear();
+    this.restore();
+    const t1 = performance.now();
+    const before = new Set(this.scene.children);
+    this.arena = make(this.scene, { hemi: this.hemi, sun: this.sun });
+    this.objects = this.scene.children.filter((o) => !before.has(o));
+    this.sunOffset = this.arena.sunOffset ?? DEFAULT_SUN_OFFSET;
+    this.id = id;
+    this.clearMs = t1 - t0;
+    this.buildMs = performance.now() - t1;
+    return this.arena;
+  }
+
+  /**
+   * 새 배경을 GPU 에 미리 올린다: 셰이더(compile, 화면 밖 것까지) · 질감(initTexture) · 모양(한 번 그려 보기).
+   *  안 하면 이 일이 싸움 첫 프레임에 몰려 멈칫한다. 짓자마자 불러서 그 멈칫도 메뉴가 떠 있는 동안 지나가게 한다.
+   *  그래픽 칩은 명령을 나중에 몰아서 처리하므로 끝까지 기다린다(finish). 안 기다리면 그 몫이 결국 첫 프레임에 온다.
+   *  (한 번 그린 그림은 화면에 안 나간다: 같은 프레임 안에서 게임 루프가 다시 그린 뒤에 화면에 나간다)
+   */
+  warm(renderer, camera) {
+    const t0 = performance.now();
+    renderer.compile(this.scene, camera);
+    const res = new Set();
+    for (const o of this.objects) o.traverse((c) => collect(c, res));
+    for (const r of res) if (r.isTexture) renderer.initTexture(r);
+    renderer.render(this.scene, camera);
+    renderer.getContext().finish();
+    this.warmMs = performance.now() - t0;
+  }
+
+  /**
+   * 지금 배경이 더한 것을 scene 에서 떼고 GPU 자원을 푼다.
+   *  남는 것(캐릭터·핏방울·빛 …)이 같이 쓰는 모양·재질·질감과 무기 반사 환경(weaponEnv: 성의 종·대성당의 꽂힌 칼도 쓴다,
+   *  모듈에 한 번 만들어 두고 무기마다 다시 쓴다)은 풀지 않는다
+   */
+  clear() {
+    if (!this.objects.length) return;
+    const mine = new Set(this.objects);
+    const keep = new Set([weaponEnv()]);
+    for (const o of this.scene.children) if (!mine.has(o)) o.traverse((c) => collect(c, keep));
+    const res = new Set();
+    const objs = [];
+    for (const o of this.objects) {
+      this.scene.remove(o);
+      o.traverse((c) => {
+        objs.push(c);
+        collect(c, res);
+      });
+    }
+    for (const r of res) if (!keep.has(r)) r.dispose();
+    for (const c of objs) c.dispose?.(); // 인스턴스 메쉬의 자리·색 버퍼 (그 밖의 물체는 할 일이 없다)
+    this.objects = [];
+    this.arena = null;
+  }
+
+  /** 빛·안개·하늘색을 처음 값으로 */
+  restore() {
+    const b = this.base;
+    this.scene.background = b.background?.clone?.() ?? null;
+    this.scene.fog = b.fog ? b.fog.clone() : null;
+    this.hemi.color.copy(b.hemiColor);
+    this.hemi.groundColor.copy(b.hemiGround);
+    this.hemi.intensity = b.hemiIntensity;
+    this.hemi.position.copy(b.hemiPos);
+    this.sun.color.copy(b.sunColor);
+    this.sun.intensity = b.sunIntensity;
+    this.sun.position.copy(b.sunPos);
+  }
+}
