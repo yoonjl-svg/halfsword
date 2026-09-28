@@ -13,6 +13,9 @@
 import * as THREE from 'three';
 import { ANATOMY, ARENA, WEAPON } from './config.js';
 
+/** 권총을 든 동안 화면에 띄우는 자세 이름 (사장님: "사격 자세 라고 써") — main.js 자세 이름 표시가 GUARDS 대신 쓴다 */
+export const GUN_STANCE = { name: '사격 자세', desc: '팔을 곧게 뻗어 총구로 겨눈 자세 · 탭으로 쏜다' };
+
 export const GUN = {
   energy: 80, // J: 맞으면 늘 이 세기의 찌르기 (사장님: 머리는 한 발에 즉사, 가슴은 두 발 — 투구·판금이 덮은 곳은 막히고 방어구가 부서진다). 가만히 선 상대 실측(tools/sim/gun_dummy.mjs): 머리 55 J 부터 즉사 · 가슴 1발 산다 · 2발 16초 뒤 죽음 · 3발 5초
   cooldown: 4, // 초: 한 발 쏜 뒤 다음 발까지 (장전 소리는 이게 끝날 때). 사장님: 6.5 → 4.5 → 4
