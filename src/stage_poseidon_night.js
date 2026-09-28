@@ -75,13 +75,13 @@ function nightSkyTexture(moonAz, moonEl) {
     }
   });
 }
-/** 보름달: 256×256 에 크게 그린다 — 바다(어두운 얼룩)·크레이터 몇·가장자리 살짝 어둡게·바깥 달무리 */
+/** 보름달: 512×512 에 크게 그린다 — 바다(어두운 얼룩)·크레이터 60여 개·잔얼룩·가장자리 살짝 어둡게·바깥 달무리 */
 function moonTexture() {
   const r = rng(303);
-  return canvasTex(256, 256, (g, w, h) => {
+  return canvasTex(512, 512, (g, w, h) => {
     const cx = w / 2;
     const cy = h / 2;
-    const R = 84;
+    const R = 180;
     // 달무리 (원판 밖으로 옅게)
     let rg = g.createRadialGradient(cx, cy, R * 0.98, cx, cy, w / 2);
     rg.addColorStop(0, 'rgba(210,222,245,0.5)');
@@ -90,62 +90,78 @@ function moonTexture() {
     g.fillStyle = rg;
     g.fillRect(0, 0, w, h);
     // 원판: 가운데 밝고 가장자리로 갈수록 아주 조금 어둡다
-    rg = g.createRadialGradient(cx - 10, cy - 10, 0, cx, cy, R);
-    rg.addColorStop(0, '#f4f5f0');
-    rg.addColorStop(0.75, '#e6e8e2');
-    rg.addColorStop(1, '#c9ccc8');
+    rg = g.createRadialGradient(cx - 20, cy - 20, 0, cx, cy, R);
+    rg.addColorStop(0, '#f5f6f1');
+    rg.addColorStop(0.7, '#e8eae4');
+    rg.addColorStop(0.93, '#d6d8d3');
+    rg.addColorStop(1, '#b9bcb9');
     g.fillStyle = rg;
     g.beginPath();
     g.arc(cx, cy, R, 0, Math.PI * 2);
     g.fill();
-    // 바다 (어두운 얼룩 여럿, 실제 달과 닮았지만 그대로 베끼지는 않는다)
     g.save();
     g.beginPath();
     g.arc(cx, cy, R - 1, 0, Math.PI * 2);
     g.clip();
+    // 바다 (어두운 얼룩 여럿, 가장자리는 잘게 번진다)
     const seas = [
-      [-22, -30, 34, 24, 0.3],
-      [14, -22, 28, 20, -0.4],
-      [-8, 6, 40, 28, 0.15],
-      [26, 14, 20, 16, 0.6],
-      [-34, 24, 18, 13, -0.2],
-      [8, 38, 26, 12, 0.1],
+      [-48, -66, 74, 52, 0.3],
+      [30, -50, 60, 44, -0.4],
+      [-16, 14, 86, 60, 0.15],
+      [58, 30, 44, 34, 0.6],
+      [-74, 52, 40, 28, -0.2],
+      [16, 84, 56, 26, 0.1],
+      [92, -22, 30, 22, 0.9],
     ];
     for (const [dx, dy, rx, ry, rot] of seas) {
-      g.fillStyle = `rgba(150,158,165,${0.45 + r() * 0.2})`;
+      g.fillStyle = `rgba(150,158,165,${0.42 + r() * 0.2})`;
       g.beginPath();
       g.ellipse(cx + dx, cy + dy, rx, ry, rot, 0, Math.PI * 2);
       g.fill();
-      for (let k = 0; k < 5; k++) {
-        g.fillStyle = `rgba(135,143,152,${0.2 + r() * 0.25})`;
+      for (let k = 0; k < 14; k++) {
+        g.fillStyle = `rgba(135,143,152,${0.15 + r() * 0.25})`;
         g.beginPath();
-        g.ellipse(cx + dx + (r() - 0.5) * rx, cy + dy + (r() - 0.5) * ry, 3 + r() * 9, 2 + r() * 7, r() * 3, 0, Math.PI * 2);
+        g.ellipse(cx + dx + (r() - 0.5) * rx * 1.3, cy + dy + (r() - 0.5) * ry * 1.3, 6 + r() * 20, 4 + r() * 14, r() * 3, 0, Math.PI * 2);
         g.fill();
       }
     }
-    // 크레이터: 밝은 테두리와 어두운 안쪽, 몇 개는 빛줄기
-    for (let i = 0; i < 26; i++) {
+    // 잔얼룩: 표면의 미세한 명암
+    for (let i = 0; i < 900; i++) {
       const a = r() * Math.PI * 2;
-      const d = r() * (R - 12);
+      const d = Math.sqrt(r()) * R;
+      const v = r();
+      g.fillStyle = v < 0.5 ? `rgba(120,126,134,${0.05 + r() * 0.1})` : `rgba(255,255,250,${0.05 + r() * 0.12})`;
+      g.beginPath();
+      g.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1 + r() * 4, 0, Math.PI * 2);
+      g.fill();
+    }
+    // 크레이터: 밝은 테두리와 어두운 안쪽, 큰 것 몇 개는 빛줄기
+    for (let i = 0; i < 64; i++) {
+      const a = r() * Math.PI * 2;
+      const d = r() * (R - 16);
       const x = cx + Math.cos(a) * d;
       const y = cy + Math.sin(a) * d;
-      const cr = 2 + r() * (i < 4 ? 9 : 4);
-      g.fillStyle = 'rgba(255,255,252,0.55)';
+      const cr = 3 + r() * (i < 6 ? 18 : 8);
+      g.fillStyle = 'rgba(255,255,252,0.6)';
       g.beginPath();
-      g.arc(x, y, cr + 1.2, 0, Math.PI * 2);
+      g.arc(x, y, cr + 1.6, 0, Math.PI * 2);
       g.fill();
-      g.fillStyle = `rgba(165,170,175,${0.35 + r() * 0.3})`;
+      g.fillStyle = `rgba(160,166,172,${0.35 + r() * 0.3})`;
       g.beginPath();
-      g.arc(x + 0.6, y + 0.6, cr, 0, Math.PI * 2);
+      g.arc(x + 1.2, y + 1.2, cr, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = `rgba(215,219,222,${0.3 + r() * 0.3})`; // 안쪽 바닥
+      g.beginPath();
+      g.arc(x + 0.4, y + 0.4, cr * 0.55, 0, Math.PI * 2);
       g.fill();
       if (i < 3)
-        for (let k = 0; k < 9; k++) {
+        for (let k = 0; k < 14; k++) {
           const b = r() * Math.PI * 2;
-          g.strokeStyle = 'rgba(255,255,250,0.22)';
-          g.lineWidth = 1;
+          g.strokeStyle = 'rgba(255,255,250,0.2)';
+          g.lineWidth = 1.5;
           g.beginPath();
           g.moveTo(x, y);
-          g.lineTo(x + Math.cos(b) * (cr + 10 + r() * 22), y + Math.sin(b) * (cr + 10 + r() * 22));
+          g.lineTo(x + Math.cos(b) * (cr + 20 + r() * 50), y + Math.sin(b) * (cr + 20 + r() * 50));
           g.stroke();
         }
     }
@@ -199,59 +215,67 @@ export function buildPoseidonNight(scene, lights = {}) {
   // 보름달: 고해상도 스프라이트를 달 방향 먼 곳(하늘 구 안쪽)에 띄운다. 각지름 약 3° (실제보다 크게, 그림답게)
   const moonSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonTexture(), transparent: true, depthWrite: false, fog: false }));
   moonSprite.position.copy(moonDir).normalize().multiplyScalar(540);
-  moonSprite.scale.setScalar(62); // 질감 한 장 = 62m (원판은 그중 2/3 ≈ 41m → 540m 에서 약 4.3°, 실제 달보다 크게 — 그림답게)
+  moonSprite.scale.setScalar(100); // 질감 한 장 = 100m (원판은 그중 0.7 ≈ 70m → 540m 에서 약 7.4°, 실제 달보다 훨씬 크게 — 오너: 더 크게)
   moonSprite.renderOrder = 1;
   scene.add(moonSprite);
 
-  // 반짝이는 별: 하늘 구 안쪽(560m)에 점으로 띄우고, 매 프레임 밝기를 저마다 다른 박자로 흔든다.
+  // 별: 하늘 구 안쪽(560m)에 점으로 띄우고 매 프레임 밝기를 저마다 다른 박자로 흔든다.
+  //  두 벌 — 옅은 별무리(작고 또렷한 1.4px 점, 느리게 조금만) 와 밝은 별(부드러운 2.6px 점, 반짝임). 한 벌로 하면 옅은 별이 큰 망점처럼 얼룩져 보인다.
   //  보름달 가까이(약 25° 안)는 달빛에 묻혀 드물고, 멀수록 촘촘하다. 수평선 3° 아래로는 없다
-  const NST = 1300; // 앞 800 은 옅고 작은 별무리(덜 반짝임), 뒤 500 은 밝은 별(반짝임)
-  const stR = rng(505);
-  const stPos = new Float32Array(NST * 3);
-  const stCol = new Float32Array(NST * 3);
-  const stBase = new Float32Array(NST * 3);
-  const stPh = new Float32Array(NST);
-  const stSp = new Float32Array(NST);
   const mdir = moonDir.clone().normalize();
-  let ns = 0;
-  let guard = 0;
-  while (ns < NST && guard++ < NST * 30) {
-    const el = Math.asin(stR()) * (1 - 0.05) + 0.05; // 고도 (천정 쪽이 조금 더 많다)
-    const az = stR() * Math.PI * 2;
-    _v.set(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
-    const dm = Math.acos(THREE.MathUtils.clamp(_v.dot(mdir), -1, 1)); // 달과의 각거리
-    if (dm < 0.44 && stR() > dm / 0.44) continue; // 달 가까이는 드물게
-    stPos[ns * 3] = _v.x * 560;
-    stPos[ns * 3 + 1] = _v.y * 560;
-    stPos[ns * 3 + 2] = _v.z * 560;
-    const dim = ns < 800;
-    const b = dim ? 0.16 + stR() * 0.22 : 0.5 + stR() * 0.5;
-    const warm = stR();
-    stBase[ns * 3] = b * (warm < 0.15 ? 1.0 : 0.88);
-    stBase[ns * 3 + 1] = b * 0.92;
-    stBase[ns * 3 + 2] = b * (warm < 0.15 ? 0.75 : 1.0);
-    stPh[ns] = stR() * 6.3;
-    stSp[ns] = dim ? 0.3 + stR() * 0.8 : 1.2 + stR() * 4;
-    ns++;
-  }
-  const starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute('position', new THREE.BufferAttribute(stPos, 3));
-  starGeo.setAttribute('color', new THREE.BufferAttribute(stCol, 3));
-  const stars = new THREE.Points(
-    starGeo,
-    new THREE.PointsMaterial({ size: 2.4, sizeAttenuation: false, map: dotTexture(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }),
-  );
-  stars.frustumCulled = false;
-  stars.renderOrder = 1;
-  scene.add(stars);
-  const twinkle = (t) => {
-    for (let i = 0; i < ns; i++) {
-      const k = i < 800 ? 0.8 + 0.2 * Math.sin(t * stSp[i] + stPh[i]) : 0.55 + 0.45 * Math.sin(t * stSp[i] + stPh[i]) * Math.sin(t * 0.7 * stSp[i] + stPh[i] * 1.7);
-      stCol[i * 3] = stBase[i * 3] * k;
-      stCol[i * 3 + 1] = stBase[i * 3 + 1] * k;
-      stCol[i * 3 + 2] = stBase[i * 3 + 2] * k;
+  const stR = rng(505);
+  const hardDot = canvasTex(8, 8, (x, w, h) => {
+    x.fillStyle = 'rgba(255,255,255,1)';
+    x.beginPath();
+    x.arc(w / 2, h / 2, 3, 0, Math.PI * 2);
+    x.fill();
+  });
+  const makeStars = (N, dim, size, map) => {
+    const pos = new Float32Array(N * 3);
+    const col = new Float32Array(N * 3);
+    const base = new Float32Array(N * 3);
+    const ph = new Float32Array(N);
+    const sp = new Float32Array(N);
+    let n = 0;
+    let guard = 0;
+    while (n < N && guard++ < N * 30) {
+      const el = Math.asin(stR()) * 0.95 + 0.05; // 고도 (천정 쪽이 조금 더 많다)
+      const az = stR() * Math.PI * 2;
+      _v.set(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
+      const dm = Math.acos(THREE.MathUtils.clamp(_v.dot(mdir), -1, 1)); // 달과의 각거리
+      if (dm < 0.44 && stR() > dm / 0.44) continue; // 달 가까이는 드물게
+      pos[n * 3] = _v.x * 560;
+      pos[n * 3 + 1] = _v.y * 560;
+      pos[n * 3 + 2] = _v.z * 560;
+      const b = dim ? 0.3 + stR() * 0.35 : 0.5 + stR() * 0.5;
+      const warm = stR();
+      base[n * 3] = b * (warm < 0.15 ? 1.0 : 0.88);
+      base[n * 3 + 1] = b * 0.92;
+      base[n * 3 + 2] = b * (warm < 0.15 ? 0.75 : 1.0);
+      ph[n] = stR() * 6.3;
+      sp[n] = dim ? 0.3 + stR() * 0.8 : 1.2 + stR() * 4;
+      n++;
     }
-    starGeo.attributes.color.needsUpdate = true;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size, sizeAttenuation: false, map, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    pts.frustumCulled = false;
+    pts.renderOrder = 1;
+    scene.add(pts);
+    return (t) => {
+      for (let i = 0; i < n; i++) {
+        const k = dim ? 0.8 + 0.2 * Math.sin(t * sp[i] + ph[i]) : 0.55 + 0.45 * Math.sin(t * sp[i] + ph[i]) * Math.sin(t * 0.7 * sp[i] + ph[i] * 1.7);
+        col[i * 3] = base[i * 3] * k;
+        col[i * 3 + 1] = base[i * 3 + 1] * k;
+        col[i * 3 + 2] = base[i * 3 + 2] * k;
+      }
+      geo.attributes.color.needsUpdate = true;
+    };
+  };
+  const starSteps = [makeStars(700, true, 1.4, hardDot), makeStars(500, false, 2.6, dotTexture())];
+  const twinkle = (t) => {
+    for (const f of starSteps) f(t);
   };
   twinkle(0);
 
