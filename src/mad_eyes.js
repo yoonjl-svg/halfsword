@@ -26,15 +26,15 @@ const TRAIL_V0 = 0.8; // m/s: 눈 자리가 이 속도부터 잔상이 보이기
 const TRAIL_V1 = 2.4; // m/s: 이 속도면 잔상이 가장 진하다 (휘두를 때 머리는 1.5~3 m/s)
 const DIE_T = 2.5; // 초: 죽은 뒤 꺼지는 시간
 
-/** 심: 흰빛 노란 중심 → 주홍 → 붉은 가장자리 (보통 섞기라 살색 위에서도 붉은 점으로 보인다) */
+/** 심: 작은 밝은 점 → 진홍 → 검붉은 가장자리 (보통 섞기라 살색 위에서도 붉은 점으로 보인다). 사장님: "더 진한 핏빛으로" — 흰빛·노랑을 뺐다 */
 function coreTexture() {
   return canvasTex(64, 64, (g, w, h) => {
     const c = w / 2;
     const rg = g.createRadialGradient(c, c, 0, c, c, c);
-    rg.addColorStop(0, 'rgba(255,240,200,1)');
-    rg.addColorStop(0.22, 'rgba(255,120,60,1)');
-    rg.addColorStop(0.5, 'rgba(230,30,20,0.85)');
-    rg.addColorStop(1, 'rgba(180,0,10,0)');
+    rg.addColorStop(0, 'rgba(255,120,110,1)');
+    rg.addColorStop(0.14, 'rgba(225,15,30,1)');
+    rg.addColorStop(0.5, 'rgba(160,0,20,0.92)');
+    rg.addColorStop(1, 'rgba(100,0,12,0)');
     g.fillStyle = rg;
     g.fillRect(0, 0, w, h);
   });
@@ -44,9 +44,9 @@ function haloTexture() {
   return canvasTex(64, 64, (g, w, h) => {
     const c = w / 2;
     const rg = g.createRadialGradient(c, c, 0, c, c, c);
-    rg.addColorStop(0, 'rgba(255,60,40,0.9)');
-    rg.addColorStop(0.35, 'rgba(255,30,20,0.4)');
-    rg.addColorStop(1, 'rgba(255,0,0,0)');
+    rg.addColorStop(0, 'rgba(235,15,30,0.9)');
+    rg.addColorStop(0.35, 'rgba(210,0,25,0.4)');
+    rg.addColorStop(1, 'rgba(180,0,20,0)');
     g.fillStyle = rg;
     g.fillRect(0, 0, w, h);
   });
@@ -118,13 +118,13 @@ export function attachMadEyes(fighter, on) {
   return {
     update(t) {
       const dt = last < 0 ? 0 : Math.min(0.05, t - last);
+      const rdt = last < 0 ? 0 : Math.min(0.25, Math.max(1e-3, t - last)); // 실제 프레임 시간 (속도 재기용) — last 를 갱신하기 전에 잰다
       last = t;
       // 죽으면 서서히 꺼진다
       if (fighter.state === 'dead') {
         if (dieT < 0) dieT = t;
         life = Math.max(0, 1 - (t - dieT) / DIE_T);
       }
-      const rdt = last < 0 ? 0 : Math.min(0.25, Math.max(1e-3, t - last)); // 실제 프레임 시간 (속도 재기용)
       for (const e of eyes) {
         const fl = flicker(t, e.ph);
         const k = fl * life;
