@@ -7,7 +7,8 @@ import { newRound, DT, THREE } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { SCHOOLS } from '../../src/schools.js';
-import { STRIKE } from '../../src/config.js';
+import { STRIKE, GAIT } from '../../src/config.js';
+if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
 import { applyMotionLibrary, motionFor, MOTION } from '../../src/motion_library.js';
 for (const k of (process.env.MOTION_SKIP ?? '').split(',').filter(Boolean)) MOTION.skip.add(k);
