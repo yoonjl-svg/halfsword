@@ -88,7 +88,8 @@ export function clearGunFx() {
 
 /**
  * 권총 효과를 설치한다. scene: 장면, sound: main.js 의 Sound (GUN_HOOKS.onShot 이 비어 있을 때 총소리를 내는 데 쓴다).
- *  world·combat (있으면): onShot 이 닿은 거리를 안 넘길 때 궤적 끝을 재는 데 쓴다 (gun.js 와 같은 광선, 판정과 무관한 읽기뿐).
+ *  world·combat 은 안 넘겨도 된다: 검객의 world(f.world)와 window.game.combat 을 그때그때 읽는다 (main.js 는 combat 을 나중에 만든다).
+ *  레이저·궤적 끝을 재는 광선에만 쓴다 (gun.js 와 같은 광선, 판정과 무관한 읽기뿐).
  *  반환 { fire(pos, dir, dist), clear() } — 점검 도구가 직접 터뜨려 볼 때 / 판 바뀜에 치울 때
  */
 export function installGunFx({ scene, sound, world = null, combat = null }) {
@@ -187,11 +188,13 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   };
 
   // 궤적 끝 거리 재기 (onShot 이 dist 를 안 넘길 때): gun.js castRay 와 같은 광선 — 쏜 사람 자신의 콜라이더는 건너뛴다
+  const getCombat = () => combat ?? globalThis.window?.game?.combat ?? null;
   const measure = (f, o, d) => {
-    if (!world?.castRay) return GUN.range;
-    const info = combat?.info;
+    const w = world ?? f.world;
+    if (!w?.castRay) return GUN.range;
+    const info = getCombat()?.info;
     const ray = { origin: { x: o.x, y: o.y, z: o.z }, dir: { x: d.x, y: d.y, z: d.z } };
-    const hit = world.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, (c) => info?.get(c.handle)?.fighter !== f);
+    const hit = w.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, (c) => info?.get(c.handle)?.fighter !== f);
     return hit ? (hit.timeOfImpact ?? hit.toi) : GUN.range;
   };
 
@@ -215,7 +218,7 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   };
   const updateLasers = () => {
     let n = 0;
-    for (const f of combat?.fighters ?? []) {
+    for (const f of getCombat()?.fighters ?? []) {
       if (!f.weapon?.gun || !f.alive || !f.armed) continue;
       const r = f.sword?.rotation?.();
       if (!r) continue;
