@@ -135,7 +135,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
       });
     }
   }
-  let Wn = 0, Ln = 0, D = 0, nan = 0, dealt = 0, taken = 0, clashes = 0;
+  let Wn = 0, Ln = 0, D = 0, nan = 0, dealt = 0, taken = 0, clashes = 0, bandN = 0;
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
       const seed = (xFirst ? 1000 : 2000) + s;
@@ -148,6 +148,18 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
       const Y = xFirst ? G.enemy : G.player;
       if (LIB && process.env.STAFF_TABLE !== '0') applyMotionLibrary(X); // STAFF_TABLE=0: 유파(기술)만 라이브러리, 자세표는 롱소드 그대로
       if (ZONES) zoneEffects(Y, zoneLog);
+      // 거리 띠(STAFF_BANDS=배율): 상대가 봉끝 안(칼잡이 간격 × 배율)으로 들어오면, 간 보는 중일 때 물러난다 (pole_strike_effects.md ③ B띠 "물러나며 찌르기")
+      const XA = xFirst ? G.ai2 : G.ai;
+      if (process.env.STAFF_BANDS && XA) {
+        const k = +process.env.STAFF_BANDS;
+        const up = XA.update.bind(XA);
+        XA.update = (dt) => {
+          const a = X.bodies.chest.translation(), b = Y.bodies.chest.translation();
+          const d = Math.hypot(a.x - b.x, a.z - b.z);
+          if ((XA.mode === 'watch' || (process.env.STAFF_BANDS_ANY && XA.mode === 'defend')) && d < XA.M.contact * k) { XA.startWithdraw(0.5); bandN++; }
+          up(dt);
+        };
+      }
       let res = 'D';
       for (let i = 0; i < 40 / DT; i++) {
         G.step();
@@ -168,6 +180,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
     }
   }
   if (ZONES) console.log('  부위 효과: ' + (Object.entries(zoneLog).map(([k, v]) => `${k} ${JSON.stringify(v)}`).join(' · ') || '없음'));
+  if (process.env.STAFF_BANDS) console.log(`  거리 띠 물러나기 ${bandN}번`);
   console.log(`  봉이 낸 상처 ${dealt} · 받은 상처 ${taken} · 칼 부딪침 ${clashes} (${2 * N}판 합)`);
   const [lo, hi] = wilson(Wn, 2 * N);
   console.log(`④ 롱소드 상대 ${2 * N}판: 승 ${Wn} 패 ${Ln} 무 ${D} · 승률 ${Math.round((100 * Wn) / (2 * N))}% (95% ${Math.round(100 * lo)}~${Math.round(100 * hi)}%) · NaN ${nan}`);
