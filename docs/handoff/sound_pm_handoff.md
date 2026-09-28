@@ -21,6 +21,7 @@
 - **건드리지 않는다**:
   - `src/fighter.js`
   - `PLATE_PARTS`(main.js). 디렉터가 판금 판정 `r.plate`로 바꿀 예정이다.
+    - (방어구 병합에서 반영됨: `PLATE_PARTS`는 없어졌고 `onWound`가 `r.plate`로 `plateBlock`·`plateBreak`를 부른다 — `pm-sound-impact.md` 7차 덧붙임)
 - **브랜치**: `claude/pm-sound-impact`에만 커밋·푸시한다. **main에 직접 푸시하지 않는다.** PR은 요청이 있을 때만 만든다.
   - 디렉터가 병합하면 브랜치를 main에서 다시 시작한다: `git fetch origin && git checkout -B claude/pm-sound-impact origin/main`, 그다음 푸시는 `--force-with-lease`.
 - **커밋 메시지**: 영어로 쓴다. 끝에는 세션이 주는 attribution 줄을 넣는다. 코드·커밋에 모델 이름을 쓰지 않는다.
@@ -153,7 +154,7 @@
 
 1. ~~네트워크 확인~~, ~~슈바르츠·이졸데 죽음 목소리~~: 15차에서 끝냈다. 사이트 접속 결과는 `sound_pm_takeover.md`.
 2. ~~VoiceBosch(CC-BY-SA) 남성 신음 3개 교체~~: 17차에서 A안으로 끝냈다. 이제 CC-BY-SA 음원은 없다.
-3. **판금 소리 연결**: 디렉터가 갑옷 병합을 끝내면 알려 준다. `plateBlock`·`plateBreak`는 이미 있다. 연결 뒤 실제 게임으로 확인한다.
+3. **판금 소리 연결**: 디렉터가 갑옷 병합을 끝내면 알려 준다. `plateBlock`·`plateBreak`는 이미 있다. 연결 뒤 실제 게임으로 확인한다. (연결됨 — 방어구 병합. 실제 게임 확인은 남았다)
 4. (보류, 디렉터 결정) 산새·말 울음·비둘기 녹음 비교. 말 소리는 사장님이 뺀 적이 있다.
 5. ~~내 숨소리~~: 21차에서 끝냈다(C안, 디렉터 규칙, 사장님 확인 "그래 그렇게 해").
    - 참고로 고르지 않은 후보: A craigsmith R15-47(0.55-2.6·3.45-4.75·4.7-6.85초), B sickfin 711359(0.5-1.3·4.95-5.6·10.2-11.1초). 모두 CC0.

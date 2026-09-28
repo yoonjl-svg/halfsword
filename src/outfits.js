@@ -534,11 +534,15 @@ const HEINRICH_FULL_PLATE = {
     HEINRICH_KNIGHT.uarmO(g);
     addMerged(g, [cyl(0.059, 0.057, 0.17, 12, true, [0, -0.01, 0])], 0xc7cdd3, HEINRICH_STEEL);
   },
+  // 아래팔 통판 + 손목 보호대. 둘을 따로 둔다: 방어구가 파손되면(첫 제대로 된 타격) 손목 보호대가 먼저 떨어져 나가고
+  //  통판은 완전 파손 때까지 남는다 (fighter.js wearPlate, config.js ARMOR.plate.trim)
   farmS(g) {
-    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0]), cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
+    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0])], 0xc7cdd3, HEINRICH_STEEL);
+    addMerged(g, [cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
   },
   farmO(g) {
-    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0]), cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
+    addMerged(g, [cyl(0.053, 0.049, 0.15, 12, true, [0, 0, 0])], 0xc7cdd3, HEINRICH_STEEL);
+    addMerged(g, [cyl(0.056, 0.051, 0.05, 10, true, [0, -0.08, 0])], 0xc7cdd3, HEINRICH_STEEL);
   },
   // 허벅지 판(퀴스) + 무릎 덮개
   thighF(g) {
@@ -873,8 +877,8 @@ export function decorateOutfit(dressTo, d, look) {
   const before = dressTo.children.length;
   fn(dressTo, look, d);
   // 방어구 부위: 이 부위에 얹은 판금 메쉬들을 userData.armor로 알려 둔다. 오너 결정("판금도 피해를
-  // 줄여 주고, 닳고, 완전히 부서지면 사라진다")을 전투 쪽이 켜면 그 부위 내구도가 0일 때 이 메쉬들만
-  // 숨기면 된다. 지금은 표시만 하고 아무 동작도 하지 않는다
+  // 줄여 주고, 닳고, 완전히 부서지면 사라진다"): look.armor === 'plate'이고 ARMOR.on이면 fighter.js가 이
+  // 표시가 있는 부위에 판금 내구도를 주고, 파손되면 곁 판을, 0이 되면 남은 메쉬(금 포함)를 떼어 흩뜨린 뒤 없앤다
   if (set.armorParts?.has(d.name)) {
     const armor = dressTo.children.slice(before);
     for (const m of armor) m.userData.base = { color: m.material.color.getHex(), roughness: m.material.roughness };
