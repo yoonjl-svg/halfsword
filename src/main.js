@@ -13,7 +13,7 @@ import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
-import { WEAPON_LIST, getWeapon } from './weapons.js';
+import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL } from './weapons.js';
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
@@ -21,6 +21,7 @@ import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
+import { tickDebris, clearDebris, debrisCount } from './debris.js';
 
 await RAPIER.init();
 
@@ -39,11 +40,8 @@ function drawCardIds() {
   // 모르는 id 는 버리고(getWeapon 이 롱소드로 바꿔 버린다) 서로 다른 두 장일 때만 쓴다
   const forced = (params.get('cards') || '').split(',').filter((id) => id && getWeapon(id).id === id).slice(0, 2);
   if (forced.length === 2 && forced[0] !== forced[1]) return forced;
-  const pool = PLAYER_WEAPON_POOL.filter((id) => id !== lastPlayerWeapon);
-  if (pool.length < 2) pool.push(...PLAYER_WEAPON_POOL.filter((id) => !pool.includes(id)));
-  const out = [];
-  while (out.length < 2) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-  return out;
+  // 등급을 먼저 뽑고 그 등급 안에서 고른다 (사장님 결정: 커먼 40 · 레어 27 · 에픽 16 · 레전드 5 · 쓰레기 7 · ??? 5, weapons.js TIER_DRAW)
+  return drawWeaponCards(PLAYER_WEAPON_POOL, 2, { exclude: lastPlayerWeapon });
 }
 
 // ── 설정 (브라우저에 저장) ──
@@ -135,6 +133,7 @@ const STAGE_PIN = STAGE_IDS.includes(params.get('stage')) ? params.get('stage') 
 let arena = null; // 지금 배경 { update(dt), excite(amount) }
 let SUN_OFF = null; // 해가 싸우는 자리를 따라다닐 때의 방향 (배경마다 다르다)
 let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 다음 배경으로 넘어간다)
+let lastRoundWon = false; // 지난 판을 이겼나 (사장님 결정: 이겨야 다음 무대·다음 상대로, 지면 같은 무대에서 같은 상대와 다시)
 function useStage(id) {
   if (id === stages.id) return false;
   arena = stages.build(id); // 먼저 지은 배경은 치우고(GPU 자원까지), 빛·안개를 처음 값으로 되돌린 뒤 짓는다
@@ -143,9 +142,15 @@ function useStage(id) {
   arena.onEvent = (name, data) => sound.stageEvent?.(name, data); // 배경이 알리는 일(성 안뜰: 종이 흔들려 칠 때 'bell') → 소리
   return true;
 }
-/** 판을 열 때(startFight) 부른다: 지금 배경에서 이미 한 판을 열었으면 순서대로 다음 배경을 짓는다 (첫 판은 메뉴 뒤 배경 그대로) */
+/**
+ * 판을 열 때(startFight) 부른다: 지난 판을 이겼으면 순서대로 다음 배경을 짓는다 (첫 판은 메뉴 뒤 배경 그대로).
+ *  지거나 도중에 "처음부터 다시"를 누르면 같은 배경 — 상대도 배경을 따르니 같은 상대와 다시 싸운다 (사장님 결정)
+ */
 function nextRoundStage() {
-  if (stageFought && useStage(STAGE_PIN || nextStage(stages.id))) {
+  const advance = stageFought && lastRoundWon;
+  lastRoundWon = false;
+  if (advance && useStage(STAGE_PIN || nextStage(stages.id))) {
+    clearFlying(); // 지난 판에 흩어지던 칼·방어구 조각과 벗겨진 투구가 새 배경에 남지 않게
     stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게)
     sound.setStage(stages.id); // 배경 소리가 3초에 걸쳐 바뀐다 (발소리·쓰러짐의 바닥 소리도 배경을 따른다)
   }
@@ -187,14 +192,15 @@ input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 let bodySounds = [];
-let playerLook = null;
-let foeLook = null;
-// 판금을 두른 부위 (outfits.js 의 강철 판). 전투 판정은 아직 판금을 모르지만(투구만 안다), 그 부위를 치면 쇳소리를 겹친다
-const PLATE_PARTS = {
-  heinrich_knight: ['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO', 'farmS', 'farmO', 'shinF', 'shinB'],
-  heinrich_full_plate: ['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO', 'farmS', 'farmO', 'thighF', 'thighB', 'shinF', 'shinB', 'footF', 'footB'],
-  margarethe_dragon: ['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO'],
-};
+/**
+ * 흩어지던 조각(부러진 칼날 끝·투구·판금 — debris.js 한 곳)과 벗겨진 케틀햇(캐릭터 그룹 밖, 장면에 있다)을 치운다:
+ *  새 판(newRound)·배경이 바뀔 때. 여러 번 불러도 괜찮다 (무기 뽑기 때문에 newRound 가 한 판에 두 번 불린다)
+ */
+function clearFlying() {
+  clearDebris();
+  player?.clearLoose();
+  enemy?.clearLoose();
+}
 const fighterMeshes = [];
 let foeWeaponId = 'longsword'; // 이번 판 상대 무기 (prepareRound 가 정한다)
 
@@ -219,6 +225,8 @@ function newRound(weaponId) {
   //  CONFIG 의 기본값(levitate, 골반을 띄워 받치기)은 시뮬 도구용이다 (tools/sim/hybrid.mjs 로 감싸면 게임과 같다)
   CONFIG.BODY.weightMode = 'hybrid';
   // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다)
+  //  흩어지던 칼·투구·판금 조각과 벗겨진 케틀햇은 캐릭터 그룹 밖(장면)에 있어서 따로 치운다 (두 번 불러도 괜찮다)
+  clearFlying();
   for (const g of fighterMeshes) {
     scene.remove(g);
     g.traverse((o) => o.geometry?.dispose());
@@ -259,7 +267,7 @@ function newRound(weaponId) {
     name: '나',
     x: -ARENA.startGap / 2,
     heading: 0,
-    look: (playerLook = LOOKS.player),
+    look: LOOKS.player,
     weapon: weaponId,
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
@@ -272,7 +280,7 @@ function newRound(weaponId) {
     name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
     heading: Math.PI,
-    look: (foeLook = enemyLook),
+    look: enemyLook,
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
   });
   // 진짜 엑스칼리버의 기운 (보여 주기만)
@@ -344,12 +352,13 @@ function onWound(att, vic, r, point, pr) {
     const bladeLocal = r.bladeAxis.clone().applyQuaternion(q).transformDirection(toMesh);
     const clothed = r.zone !== 'head' && r.zone !== 'neck';
     const sev = r.severity;
-    if (r.helmet && vic.helmetGroup) {
-      // 투구: 긁힘, 세면 찌그러짐 (벗겨지면 투구와 함께 날아간다)
-      const dome = vic.helmetGroup.children[0];
-      const p = r.local.clone().applyMatrix4(new THREE.Matrix4().copy(dome.matrixWorld).invert().multiply(group.matrixWorld));
-      stickDecal(dome, p, bladeLocal, 'scratch', 0.03, Math.min(0.16, 0.04 + e / 1200));
-      if (e > 60) stickDecal(dome, p, null, 'dent', 0.03 + Math.min(0.05, e / 4000), 0.03 + Math.min(0.05, e / 4000));
+    // 투구·판금: 긁힘, 세면 찌그러짐 (벗겨지거나 부서지면 조각과 함께 날아간다).
+    //  조각 투구(마르그레테)는 사발 조각 메쉬에, 판금은 그 부위에서 맞은 곳에 가장 가까운 판금 메쉬에 붙인다
+    const steel = r.helmet && vic.helmetGroup ? (vic.helmetGroup.userData.pieces?.bowl ?? vic.helmetGroup).children[0] : r.plate ? vic.plateMeshNear(pr.v.part, r.local) : null;
+    if (steel?.geometry) {
+      const p = r.local.clone().applyMatrix4(new THREE.Matrix4().copy(steel.matrixWorld).invert().multiply(group.matrixWorld));
+      stickDecal(steel, p, bladeLocal, 'scratch', 0.03, Math.min(0.16, 0.04 + e / 1200));
+      if (e > 60) stickDecal(steel, p, null, 'dent', 0.03 + Math.min(0.05, e / 4000), 0.03 + Math.min(0.05, e / 4000));
     } else if (!opened) {
       if (e > 15) stickDecal(mesh, local, null, 'bruise', 0.05 + Math.min(0.08, e / 1500), 0.05 + Math.min(0.08, e / 1500));
     } else if (settings.blood) {
@@ -364,17 +373,28 @@ function onWound(att, vic, r, point, pr) {
     }
   }
   if (opened) att.bloodyBlade(0.08 + r.severity * 0.15);
-  // 소리
+  // 소리: 투구는 투구 소리. 판금은 전투 판정(r.plate — 아직 붙어 있는 판이 덮은 곳을 맞았다)을 따른다:
+  //  날이 들지 못했으면 판금이 막는 소리(때린 무기 재질대로), 판을 뚫고 들어갔으면 강철 소리 한 번 (살 소리는 아래에서 따로)
+  //  불꽃: 막혔으면 더 많고, 판을 뚫고 들어가도 강철을 긁은 불꽃이 조금 튄다 (ARMOR 를 켰을 때만 — 끄면 예전 그대로)
+  const mat = att.weapon?.material || 'steel';
   if (r.helmet) sound.helmet(e);
-  const outfit = (vic === player ? playerLook : foeLook)?.outfit;
-  if (!r.helmet && PLATE_PARTS[outfit]?.includes(pr.v.part)) sound.impact({ a: att.weapon?.material || 'steel', b: 'armor', energy: e * 0.8 });
+  else if (r.plate) {
+    if (opened) sound.impact({ a: mat, b: 'armor', energy: e * 0.8 });
+    else sound.plateBlock(e, { material: mat });
+  }
+  if ((r.helmet || r.plate) && CONFIG.ARMOR.on && e > 30) particles.sparks(point, Math.min(10, e / 20) * (opened ? 0.5 : 1));
+  // 이번 타격에 판금 부위나 투구가 완전히 부서졌으면(fighter.applyWound 가 표시한다) 깨지는 소리를 한 번
+  if (vic.armorBroke) {
+    vic.armorBroke = false;
+    sound.plateBreak(e);
+  }
   if (r.type === 'cut') sound.cut(e, r.pass);
   else if (r.type === 'stab') sound.stab(e);
   else sound.blunt(e);
-  if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet) sound.bone(e);
+  if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet && !r.plate) sound.bone(e);
   // 멈칫: 재질에 따라. 살을 깨끗이 가르면 짧게, 박히거나 뼈·투구에 걸리면 길게 (최대 0.1초 — 조작이 늦게 느껴지지 않게)
   const bone = e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg');
-  const stopT = r.pass ? Math.min(0.06, e / 2000) : r.stuck || bone || r.helmet ? Math.min(0.1, e / 900) : Math.min(0.08, e / 1200);
+  const stopT = r.pass ? Math.min(0.06, e / 2000) : r.stuck || bone || r.helmet || r.plate ? Math.min(0.1, e / 900) : Math.min(0.08, e / 1200);
   hitStop = Math.max(hitStop, stopT);
   // 손맛: 칼의 타격 중심(스위트 스팟, 코등이에서 약 58cm)에 맞으면 손이 울리지 않고, 칼끝·칼 밑동에 맞으면 손이 찌릿하다
   //  (손을 축으로 도는 강체에서 한 점을 치면 축(손)이 받는 충격 = 1 − a·b/k²)
@@ -566,7 +586,7 @@ function showFoeIntro(ch) {
 //  카드 뒤집기·사라지기는 CSS 변환(transform)으로만 움직인다 (매 프레임 JS 로 그리지 않는다).
 // 등급과 별개로 따로 대접하는 무기 카드 (금빛 일렁임·센 떨림). 오너 결정: "엑스칼리버를 등급과 별개로 우대할 필요는 없어" → 비워 둔다
 const GRAND_WEAPONS = new Set();
-const TIER_KO = { trash: '쓰레기', common: '커먼', rare: '레어', epic: '에픽', legend: '레전드' };
+const TIER_KO = TIER_LABEL; // 카드의 등급 글자 (??? 등급 포함, weapons.js)
 const FOE_CARD = 2; // 맨 오른쪽 카드 = 상대 무기 칸
 // 초 (고른 때부터). others: 남은 내 카드가 뒤집힘, foe: 상대 카드가 뒤집힘 (+0.45초면 다 뒤집힌다),
 //  build: 고른 무기로 판을 새로 세움 (상대 카드가 다 뒤집힌 뒤, 아무것도 움직이지 않을 때), look: 사라지기 시작, fly: 사라지는 시간.
@@ -671,7 +691,11 @@ function openDraw() {
     el.querySelector('.wname').textContent = main;
     el.querySelector('.wsub').textContent = sub;
     el.querySelector('.wtier').textContent = TIER_KO[w.tier] || TIER_KO.common;
-    el.querySelector('.wdesc').textContent = w.desc || '';
+    // 에픽 특수 능력은 설명 끝의 "(별칭: 효과)" 를 따로 한 줄로, 등급 색으로 (weapons.js 가 desc 끝에 붙여 준다)
+    const abil = w.ability ? ` (${w.ability})` : '';
+    const desc = w.desc || '';
+    el.querySelector('.wdesc').textContent = abil && desc.endsWith(abil) ? desc.slice(0, -abil.length) : desc;
+    el.querySelector('.wabil').textContent = w.ability ? `(${w.ability})` : '';
   });
   drawEl.className = 'show choose';
   layoutDraw();
@@ -1025,6 +1049,7 @@ function checkRoundEnd(dt) {
     if (!enemy.alive || !player.alive) {
       roundOver = true;
       const win = !enemy.alive;
+      lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
       showToast(win ? '승리' : '패배', 0);
       if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
       else lastFoeLine = '';
@@ -1046,7 +1071,8 @@ function checkRoundEnd(dt) {
     $('menuTitle').textContent = win ? '승리' : '패배';
     // 졌으면 상대의 승리 대사를 한 줄 덧붙인다 (사장님 확정)
     $('menuSub').textContent = !win && lastFoeLine ? `${cause} · ${currentFoe.name}: “${lastFoeLine}”` : cause;
-    $('btnStart').textContent = '다시 싸우기';
+    // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
+    $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 상대' : '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
   }
@@ -1182,6 +1208,7 @@ function frame(now) {
       ai.update(PHYSICS.timestep);
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);
+      tickDebris(PHYSICS.timestep); // 흩어지는 칼·방어구 조각 (겉모습만, 게임 시간 — 멈칫·슬로모션을 따른다)
       player.cacheState();
       enemy.cacheState();
       world.step(eventQueue, combat.physicsHooks);
@@ -1219,6 +1246,8 @@ function frame(now) {
       updateDraw(dt);
       arena.update(dt);
     }
+    // 판이 끝나 메뉴가 뜬 뒤에도 흩어지던 칼·투구·판금 조각은 마저 날아 사라진다 (판 끝 슬로모션 0.5배 그대로. 싸움 중 일시정지면 멈춘 채)
+    if (roundOver) tickDebris(dt * 0.5);
   }
   updateCamera(dt);
   fighterLight.update(fighterMeshes);
@@ -1251,6 +1280,8 @@ window.game = {
   get combat() {
     return combat;
   },
+  // 흩어지는 조각 수 (칼·방어구, debris.js): game.debris.count() 전부, game.debris.count('armor') 방어구만
+  debris: { count: debrisCount },
   draw, // 무기 뽑기 상태 (stage, ids = [내 카드, 내 카드, 상대 무기], pick). 스크린샷용으로 game.draw.hold = true 면 순서가 멈춘다
   get state() {
     return state;
@@ -1267,7 +1298,10 @@ window.game = {
     return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
   },
   setStage(id) {
-    if (useStage(id)) stages.warm(renderer, camera);
+    if (useStage(id)) {
+      clearFlying();
+      stages.warm(renderer, camera);
+    }
     sound.setStage(stages.id);
   },
   AI,

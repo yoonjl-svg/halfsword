@@ -373,6 +373,8 @@ export const LOOK_ARCHIVE = {
       grip: 0x2a1a10,
       hilt: 0xd0d3d6,
       outfit: 'heinrich_knight',
+      // 판금이 실제로 막는다 (오너 결정 "하인리히의 판금 갑옷에도 적용해", config.js ARMOR). 부위는 outfits.js armorParts
+      armor: 'plate',
     },
     // v2: v1은 판이 가슴·어깨·손목·정강이에만 있어 대결 거리에서 짙은 옷이 대부분을 차지해 은빛으로
     // 읽히지 않았다(오너 지적 "은색이 아닌 거 같다"). 팔·허벅지·무릎·발·허리 치마까지 은빛 판으로 덮고,
@@ -395,6 +397,8 @@ export const LOOK_ARCHIVE = {
       grip: 0x2a1a10,
       hilt: 0xd0d3d6,
       outfit: 'heinrich_full_plate',
+      // 판금이 실제로 막는다 (오너 결정 "하인리히의 판금 갑옷에도 적용해", config.js ARMOR). 부위는 outfits.js armorParts
+      armor: 'plate',
     },
   },
 
@@ -461,7 +465,7 @@ export const LOOK_ARCHIVE = {
     // 쓰는 깃털 술 색 — 머리보다 한 톤 짙은 진홍.
     // helmet: 'horned' — 오너 결정(투구는 실제로 막고, 닳고, 완전히 부서지면 사라진다)에 따라 투구 종류를
     // 적어 둔다. 플레이어 케틀햇('kettle')과 구분되고, 전투 쪽이 !!look.helmet으로 방어를 켠다
-    // (그 전까지 fighter.js는 'kettle'만 보므로 아무 일도 없다)
+    // (config.js ARMOR.on 이면 fighter.js 가 막는 투구로 쓰고, 끄면 예전처럼 'kettle'만 본다)
     v3: {
       tunic: 0x1b1b20,
       quilt: 0x131316,
@@ -480,6 +484,9 @@ export const LOOK_ARCHIVE = {
       grip: 0x101012,
       hilt: 0x54545c,
       outfit: 'margarethe_dragon_horned',
+      // 몸통 판금(가슴판·배 판띠·갑주 치마)도 막는다 — 오너: "막았음 좋겠는데 재미 요소이니 너무 과한 어드밴티지는
+      //  아니도록" (config.js ARMOR, 부위는 outfits.js armorParts). v1·v2 는 보관본이라 그대로 둔다
+      armor: 'plate',
     },
   },
 };
