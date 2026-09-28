@@ -57,7 +57,8 @@ if (args[0] === 'report') {
   CONFIG.BODY.weightMode = 'hybrid';
   const all = [];
   for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) all.push([IDS[i], IDS[j]]);
-  for (const [a, b] of all.filter((_, n) => n % K === k)) {
+  const only = process.env.ONLY; // 점검: 이 무기가 낀 짝만 (예: ONLY=rubber_chicken)
+  for (const [a, b] of all.filter((p) => !only || p.includes(only)).filter((_, n) => n % K === k)) {
     let W = 0, L = 0, D = 0;
     for (let s = 1; s <= N; s++)
       for (const aFirst of [true, false]) {
