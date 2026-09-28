@@ -253,6 +253,22 @@ export class AI {
     // 칼을 놓쳤다: 빈손으로는 칠 수 없다 → 하던 공격을 거두고 간격 밖으로 물러난다 (좀비처럼 맨손으로 달려들지 않는다)
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
 
+    // 무기가 부러졌다(칼날 끝쪽이 떨어져 나감): 잃은 칼 길이만큼 간격을 줄인다 (한 번씩, shrinkM).
+    //  내 칼 → 내 간격 M(쓰러진 상대용 원래 간격 Mup 포함)과 기술 닿는 거리 보정, 상대 칼 → 상대 간격 어림 foeM·foeReach.
+    //  마무리 간격(finish.js 가 처음 한 번 정하는 me.finish.gap)도 같은 비율로 — 부러진 뒤에 처음 정해질 수도 있어 매번 본다
+    if (me.weaponBroken && !this.brokeM) {
+      this.brokeM = brokenLoss(me);
+      this.M = shrinkM(this.M, this.brokeM);
+      if (this.Mup) this.Mup = shrinkM(this.Mup, this.brokeM);
+      this.reachScale *= this.M.contact / (this.M.contact + 0.85 * this.brokeM);
+    }
+    if (this.brokeM && me.finish?.gap && !me.finish.gap.broken) me.finish.gap = { ...shrinkM(me.finish.gap, this.brokeM), broken: true };
+    if (foe.weaponBroken && !this.foeBrokeM) {
+      this.foeBrokeM = brokenLoss(foe);
+      this.foeM = shrinkM(this.foeM, this.foeBrokeM);
+      this.foeReach = Math.min(this.foeReach, this.foeM.reach + 0.05);
+    }
+
     // 쓰러진 상대: 서 있는 상대의 간격 대신 누운 몸을 내려칠 간격(finish.js FINISH.ai × 무기 배율, 파이터의 finish.gap)을 쓴다
     const downGap = foe.state === 'down' && me.finish?.gap;
     if (downGap && !this.Mup) {
@@ -1310,6 +1326,20 @@ const _d2 = new THREE.Vector3();
 const _r = new THREE.Vector3();
 
 /** 두 선분(p1-q1, p2-q2) 사이 가장 가까운 거리 */
+/** (파손) 부러져 잃은 칼날 길이 (m). 무기 제원(spec)은 그대로이고 싸움꾼의 weaponCfg.bladeLength 만 줄어든다 */
+function brokenLoss(f) {
+  return Math.max(0, (f.weapon?.bladeLength ?? 0) - f.weaponCfg.bladeLength);
+}
+/**
+ * (파손) 간격 표(가슴~가슴, m)를 잃은 칼 길이 dL 만큼 줄인다. 칼끝이 통째로 없어져 닿는 끝(reach)은 dL 그대로,
+ *  베어 닿는 거리(contact)는 칼날 치는 자리가 끝에서 조금 안쪽이라 0.85·dL (실측 표에서 칼 길이 차와 contact 차의 비 ≈ 0.85).
+ *  붙어 싸우는 거리(clinch)는 contact 보다 멀면 안 되니 그 밑으로 누른다.
+ */
+function shrinkM(M, dL) {
+  const contact = Math.max(0.6, M.contact - 0.85 * dL);
+  return { ...M, contact, reach: Math.max(contact + 0.1, M.reach - dL), clinch: Math.min(M.clinch, contact - 0.12) };
+}
+
 function segDist(p1, q1, p2, q2) {
   _d1.subVectors(q1, p1);
   _d2.subVectors(q2, p2);

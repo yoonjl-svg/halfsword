@@ -1225,3 +1225,117 @@ export function drawFrozenTuna(group) {
   }
   castAll(group);
 }
+
+// ═════════════════════════════════════════════════════════════
+//  무기 파손 겉모습: 칼(무기) 그룹을 칼 축 높이 cutY(칼 원점=손 기준, m)에서 끊는다.
+//   · 절단선 아래 메쉬는 그대로, 위 메쉬는 통째로 떨어지는 조각으로 옮긴다.
+//   · 절단선을 걸친 메쉬(칼날·나뭇가지 몸통·닭 목 등)는 지오메트리를 둘로 복제해 남는 쪽은 위 꼭짓점을, 떨어지는 쪽은
+//     아래 꼭짓점을 절단면으로 눌러 붙인다 (메쉬 객체는 그대로 둬서 피 묻히기(bladeMesh) 참조가 안 끊긴다).
+//   · 남는 끝엔 톱니 모양 "부러진 면"을 얹는다 (평면 음영 로우폴리 — 설계 언어 §3D 기본 모드). 절단면 단면 크기는
+//     실제 그려진 꼭짓점에서 잰다 (decorate 로 그린 세이버·나뭇가지·닭도 같은 방식으로 잘린다).
+//  반환: { fragment: 떨어지는 조각 그룹 (자식 좌표 = 칼 그룹 기준) | null }. 난수는 쓰지 않는다.
+// ═════════════════════════════════════════════════════════════
+const BREAK_FACE = { steel: 0xeef2f5, wood: 0xdcc08a, rubber: 0xf2cf3a, frozen: 0xe6f2f8 }; // 갓 부러진 면 색 (재질별)
+const _bm = new THREE.Matrix4();
+const _bmi = new THREE.Matrix4();
+const _bv = new THREE.Vector3();
+
+function shownIn(o, root) {
+  for (let p = o; p && p !== root; p = p.parent) if (!p.visible) return false;
+  return true;
+}
+
+/** 톱니 절단면: x0~x1 폭, z 두께 dz, 뾰족 높이 h[] (위로). 아래로 0.4cm 겹쳐 칼몸 속으로 들어간다 */
+function jaggedFace(x0, x1, zc, dz, heights) {
+  const n = heights.length;
+  const w = (x1 - x0) / n;
+  const sh = new THREE.Shape();
+  sh.moveTo(x0, -0.004);
+  sh.lineTo(x0, 0);
+  for (let i = 0; i < n; i++) {
+    sh.lineTo(x0 + (i + 0.5) * w, heights[i]);
+    sh.lineTo(x0 + (i + 1) * w, i === n - 1 ? 0 : heights[i] * 0.25);
+  }
+  sh.lineTo(x1, -0.004);
+  sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: dz, bevelEnabled: false });
+  geo.translate(0, 0, zc - dz / 2);
+  return geo;
+}
+
+export function breakWeaponLook(group, cutY, { material = 'steel' } = {}) {
+  group.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(group.matrixWorld).invert();
+  const meshes = [];
+  group.traverse((o) => {
+    if (o.isMesh && o.geometry?.attributes?.position && shownIn(o, group)) meshes.push(o);
+  });
+  const fragment = new THREE.Group();
+  // 절단면 단면 크기 (칼 그룹 기준 x·z 범위): 절단선 ±1.5cm 안의 꼭짓점에서 잰다
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  let faceMat = null;
+  for (const m of meshes) {
+    _bm.multiplyMatrices(inv, m.matrixWorld); // 메쉬 → 칼 그룹 좌표
+    const pos = m.geometry.attributes.position;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const y = _bv.fromBufferAttribute(pos, i).applyMatrix4(_bm).y;
+      lo = Math.min(lo, y);
+      hi = Math.max(hi, y);
+    }
+    if (hi <= cutY) continue; // 절단선 아래: 그대로 남는다
+    const piece = new THREE.Mesh(m.geometry, Array.isArray(m.material) ? m.material.map((x) => x.clone()) : m.material.clone()); // 떨어지는 쪽 (재질은 따로 — 사라질 때 흐리게)
+    piece.castShadow = true;
+    _bm.decompose(piece.position, piece.quaternion, piece.scale);
+    fragment.add(piece);
+    if (lo >= cutY) {
+      m.visible = false; // 통째로 절단선 위: 원래 자리에선 숨긴다 (지오메트리는 조각이 넘겨받는다)
+      continue;
+    }
+    // 걸친 메쉬: 두 벌로 나눠 각자 절단면 쪽 꼭짓점을 절단선에 붙인다
+    _bmi.copy(_bm).invert();
+    const keep = m.geometry.clone();
+    const fall = m.geometry.clone();
+    for (const [geo, up] of [[keep, true], [fall, false]]) {
+      const p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        _bv.fromBufferAttribute(p, i).applyMatrix4(_bm);
+        if (up ? _bv.y > cutY : _bv.y < cutY) {
+          if (up && _bv.y < cutY + 0.02) (x0 = Math.min(x0, _bv.x)), (x1 = Math.max(x1, _bv.x)), (z0 = Math.min(z0, _bv.z)), (z1 = Math.max(z1, _bv.z));
+          _bv.y = cutY;
+          _bv.applyMatrix4(_bmi);
+          p.setXYZ(i, _bv.x, _bv.y, _bv.z);
+        } else if (up && _bv.y > cutY - 0.015) {
+          (x0 = Math.min(x0, _bv.x)), (x1 = Math.max(x1, _bv.x)), (z0 = Math.min(z0, _bv.z)), (z1 = Math.max(z1, _bv.z));
+        }
+      }
+      p.needsUpdate = true;
+      geo.computeBoundingSphere();
+    }
+    m.geometry = keep; // 원래 지오메트리는 버린다 (조각도 새 벌을 쓴다)
+    piece.geometry = fall;
+    faceMat ??= Array.isArray(m.material) ? m.material[0] : m.material;
+  }
+  if (!fragment.children.length) return { fragment: null };
+  // 톱니 절단면 (남는 쪽은 위로, 떨어지는 쪽은 뒤집어 아래로)
+  if (x1 > x0 && z1 >= z0) {
+    const width = x1 - x0;
+    const n = width > 0.045 ? 4 : width > 0.022 ? 3 : 2;
+    const hs = [0.022, 0.012, 0.03, 0.016].slice(0, n).map((h) => h * Math.min(1.3, Math.max(0.6, width / 0.04)));
+    const dz = Math.max(0.006, z1 - z0);
+    const geo = jaggedFace(x0, x1, (z0 + z1) / 2, dz, hs);
+    const fresh = new THREE.Color(BREAK_FACE[material] ?? BREAK_FACE.steel);
+    if (faceMat?.color && material !== 'steel') fresh.lerp(faceMat.color, 0.3);
+    const mat = new THREE.MeshStandardMaterial({ color: fresh, roughness: 0.55, metalness: material === 'steel' ? 0.45 : 0, flatShading: true, side: THREE.DoubleSide });
+    const face = new THREE.Mesh(geo, mat);
+    face.position.y = cutY;
+    face.castShadow = true;
+    face.name = 'breakFace';
+    group.add(face);
+    const back = new THREE.Mesh(geo.clone(), mat.clone());
+    back.position.y = cutY;
+    back.scale.y = -1;
+    fragment.add(back);
+  }
+  return { fragment };
+}
