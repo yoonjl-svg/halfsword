@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  스테이지(배경) 관리: 다섯 배경 중 하나를 짓고, 바꿀 때는 먼저 지은 배경을 깨끗이 치운다
-//   오너 결정: 스테이지는 고르는 화면 없이 판마다 늘 같은 순서 — 포세이돈 신전 → 화전 터 → 성 안뜰 → 산사 → 대성당 (STAGE_ORDER).
+//   오너 결정: 스테이지는 고르는 화면 없이 판마다 늘 같은 순서 — 포세이돈 신전 → 화전 터 → 산사 → 성 안뜰 → 대성당 (STAGE_ORDER).
+//   무대마다 그곳이 고향인 검객이 상대로 나온다 (STAGE_FOE, 오너 결정).
 //   어두운 홀은 쓰지 않는다(오너 결정, 순서에서 뺐다. ?stage=darkhall 로만 볼 수 있다). 언제 바꿀지·고정은 main.js
 //   배경을 짓는 함수(arena.js · stage_*.js)는 scene 에 메쉬·입자를 더하고, 같이 쓰는 빛(hemi·sun)의 색·세기·자리와
 //   scene.fog·background 를 바꾼다. 그래서 바꿀 때는
@@ -32,8 +33,11 @@ const BUILDERS = {
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
 
-// 판마다 나오는 순서 (오너 결정: 하인리히 → 브란 → 이졸데 → 랴오 → (밤의 포세이돈, 나중에) → 마르그레테 의 고향 순). 대성당 다음 판은 다시 포세이돈부터
-export const STAGE_ORDER = ['poseidon', 'clearing', 'castle', 'temple', 'cathedral'];
+// 판마다 나오는 순서 (오너 결정: 하인리히 → 브란 → 랴오 → 이졸데 → (밤의 포세이돈 · 하인리히 재등장, 나중에) → 마르그레테 의 고향 순).
+//  이졸데는 약한 대신 한 번 쓰러져도 투지로 다시 일어선다(오너 결정) — 그래서 랴오 뒤다. 대성당 다음 판은 다시 포세이돈부터
+export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'cathedral'];
+// 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
+export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_b: 'bran', clearing_dry: 'bran', temple: 'liao', castle: 'isolde', cathedral: 'margarethe' };
 
 /** prev 다음 판의 배경. prev 가 순서에 없으면(처음, 또는 순서 밖 배경) 맨 앞(포세이돈)부터 */
 export function nextStage(prev = null) {
