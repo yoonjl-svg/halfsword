@@ -5,7 +5,7 @@
 //   node tools/sim/weapon_break_check.mjs [--weapons=longsword,sabre,...] [--at=3]
 import { newRound, DT, THREE, AI } from './harness_m.mjs';
 import { WEAPON_LIST } from '../../src/weapons.js';
-import { DEBRIS, tickDebris, debrisCount } from '../../src/weapon_debris.js';
+import { DEBRIS, tickDebris, debrisCount } from '../../src/debris.js';
 
 const arg = (k, d) => process.argv.find((a) => a.startsWith(`--${k}=`))?.split('=')[1] ?? d;
 const ids = arg('weapons', WEAPON_LIST.filter((w) => w.fragile).map((w) => w.id).join(',')).split(',');

@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR } from './config.js';
 import { BREAK } from './weapons.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
@@ -186,24 +186,39 @@ export class Combat {
     const vicLocal = point.clone().sub(P.p).applyQuaternion(_q.copy(P.q).invert());
     const zone = zoneOf(pr.v, vicLocal);
     const vic = pr.v.fighter;
-    // 투구: 머리 윗부분(눈썹 위)만 덮는다
+    // 투구: 머리 윗부분(눈썹 위)만 덮는다. 종류별 값은 ARMOR.helmets (케틀햇 = 예전 ANATOMY.helmet 그대로)
     const helmet = zone === 'head' && vic.hasHelmet && vicLocal.y > -0.01;
-    const A = helmet ? { ...ANATOMY.head, ...ANATOMY.helmet } : ANATOMY[zone];
-    // 막아주는 정도: 투구는 찌그러질수록, 옷은 찢어질수록 약해진다
+    const hs = helmet ? vic.helmetSpec || ARMOR.helmets.kettle : null;
+    // ignoreArmor 무기(라이트세이버)는 투구를 무시한다: 맨머리 판정(투구는 베여 닳기만 한다).
+    //  단 플레이어 케틀햇은 예전 그대로(케틀햇 문턱 × 1) — 케틀햇 숫자는 바꾸지 않는다
+    const helmOn = helmet && !(att.weaponCfg.ignoreArmor && vic.helmetType !== 'kettle');
+    const A = helmOn ? { ...ANATOMY.head, ...hs } : ANATOMY[zone];
+    // 판금(ARMOR.on, look.armor === 'plate'): 그 부위 판이 남아 있고 맞은 곳을 판이 덮었으면(팔다리는 판이 붙은 자리만).
+    //  목(가슴 윗부분)은 덮지 않는다
+    const body = zone !== 'head' && zone !== 'neck';
+    const plate = !helmet && body && !!vic.platedAt?.(pr.v.part, vicLocal);
+    // 막아주는 정도: 투구·판금은 찌그러질수록, 옷은 찢어질수록 약해진다
     let guard = 1;
     let helmetBlunt = 1;
-    if (helmet) {
+    let plateGuard = 0; // 판금의 막음 비율 (0 = 판 없음). 문턱은 아래에서 누비옷 문턱과 큰 쪽을 쓴다
+    if (helmOn) {
       const hi = vic.helmetIntegrity;
-      guard = 0.25 + 0.75 * hi;
-      helmetBlunt = ANATOMY.helmet.blunt + (1 - ANATOMY.helmet.blunt) * (1 - hi);
-    } else if (zone !== 'head' && zone !== 'neck') {
+      guard = hs.guardMin + (1 - hs.guardMin) * armorHold(hs, hi);
+      helmetBlunt = hs.blunt + (1 - hs.blunt) * (1 - hi);
+    } else if (body) {
       guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
+      if (plate) plateGuard = ARMOR.plate.guardMin + (1 - ARMOR.plate.guardMin) * armorHold(ARMOR.plate, vic.plate[pr.v.part]);
+      // 팔다리 판(견갑·팔 통판·손목 보호대·허벅지 판·정강이받이·쇠신)은 몸통 판보다 얇다: 문턱 × ARMOR.plate.limb
+      if (plate && (zone === 'arm' || zone === 'leg')) plateGuard *= ARMOR.plate.limb;
     }
-    if (att.weaponCfg.ignoreArmor) guard = 1; // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
-    // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구는 gap 의 절반을 무시한다
+    if (att.weaponCfg.ignoreArmor) (guard = 1), (plateGuard = 0); // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
+    // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구·판금은 gap 의 절반을 무시한다
     else if (type === 'stab' && ts?.gap) {
-      if (helmet) guard *= 1 - 0.5 * ts.gap;
-      else if (zone !== 'head' && zone !== 'neck') guard -= ts.gap * Math.max(0, guard - 0.55);
+      if (helmOn) guard *= 1 - 0.5 * ts.gap;
+      else if (body) {
+        guard -= ts.gap * Math.max(0, guard - 0.55);
+        plateGuard *= 1 - 0.5 * ts.gap;
+      }
     }
 
     // 감정 고유 능력(emotions.js 배율표, fighter.emoMods): 주는 쪽의 dealt, 받는 쪽의 taken, 관통 문턱은 둘의 pass 합.
@@ -215,10 +230,16 @@ export class Combat {
     const emoPass = (am?.pass ?? 0) + (vm?.pass ?? 0);
     let severity = 0;
     let pass = false;
+    let thr = null; // 날이 들기 시작하는 문턱(J) — 측정 도구(weapon_anatomy.mjs, armor_eval.mjs)도 읽는다
+    let eff = null; // 문턱과 견주는 실효 에너지(J)
     if (type === 'cut' || type === 'stab') {
       const wMult = att.weaponCfg.power * (type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust); // 등급 배율 × 무기별 베기/찌르기 배율
-      const thr = (type === 'cut' ? A.cut : A.stab) * guard;
-      const eff = energy * quality * wMult * emoDealt * emoTaken;
+      thr = (type === 'cut' ? A.cut : A.stab) * guard;
+      // 판금: 강철판 문턱 × 판의 막음. 판 밑 누비옷보다 약해지지는 않는다 (큰 쪽)
+      if (plateGuard > 0) thr = Math.max(thr, (type === 'cut' ? ARMOR.plate.cut : ARMOR.plate.stab) * plateGuard);
+      // 투구: 찌그러지고 틈을 파고들어도 맨머리보다 약해지지는 않는다 (케틀햇은 가장 약할 때도 맨머리보다 세서 그대로)
+      if (helmet) thr = Math.max(thr, type === 'cut' ? ANATOMY.head.cut : ANATOMY.head.stab);
+      eff = energy * quality * wMult * emoDealt * emoTaken;
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
@@ -247,6 +268,9 @@ export class Combat {
       t,
       helmet,
       helmetBlunt,
+      plate, // 판금 위를 맞았나 (fighter.applyWound 가 판을 깎고, 겉모습·소리는 강철로)
+      thr,
+      eff,
       bladeAxis: axis.clone(),
     };
   }
@@ -457,6 +481,7 @@ export class Combat {
     const zone = zoneOf(pr.v, vicLocal);
     let e = 0;
     if (zone === 'head') e = vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.helmet : STEEL.skull;
+    else if (zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.plate; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
     else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone;
     if (e <= 0) return;
     const vPre = velAt(S, point, _a).sub(velAt(P, point, _b)).dot(n); // + = 다가옴
@@ -519,6 +544,13 @@ export class Combat {
 }
 
 // ── 도우미 ──
+/**
+ * 방어구가 막는 몫(0~1): 내구도가 spec.fullUntil 까지는 멀쩡할 때처럼 다 막고, 그 아래로 찌그러지고 금이 가며 줄어든다
+ * (outfits.js setHelmetWear 가 0.5 아래부터 찌그러짐을 보인다 — 보이는 대로 약해진다). fullUntil 이 없으면(케틀햇) 예전처럼 내구도 그대로
+ */
+function armorHold(spec, integrity) {
+  return spec.fullUntil ? Math.min(1, integrity / spec.fullUntil) : integrity;
+}
 const _fq = new THREE.Quaternion();
 const _fr = new THREE.Vector3();
 /** 강체 칼의 한 점에서 방향 n으로 민 유효 질량: 1 / (1/m + Σ (r×n)ᵢ² / Iᵢ) (주축 좌표) */
