@@ -83,6 +83,16 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 (쓰러져도 투구·깃털 술·땋은 머리가 머리를 따라간다). 옛 버전은 `?look=margarethe:v1`,
 `?look=margarethe:v2`로 언제든 다시 볼 수 있다.
 
+## 판금 밑의 누비 속옷 (마르그레테·하인리히 공통)
+
+오너(2026-09-28): "갑옷 파괴 시 겹판이 표시되는 그래픽으론 모자란 거 같아. 갑옷 안에 덧대입는 흰색 천 옷이 보여야 해. 좀 너덜너덜한 느낌으로."
+- 판금이 **완전히 부서져 사라지면** 그 자리에 흰 누비 속옷이 드러난다(`outfits.js underCloth`, `setPlateWear`가 내구 0에 켠다). 멀쩡할 때는 숨겨 두어 겉모습은 전과 같다.
+- 가슴: 판보다 조금 작은 흰 조끼(가로 누빔 줄 다섯), 앞가슴에 비스듬히 찢긴 틈 둘(밑의 검은 옷이 보인다), 아랫단에 찢겨 늘어진 조각 일곱(길이·기울기 제각각, 둘은 땀·때가 밴 색). 배: 흰 띠와 찢긴 자락 다섯.
+- 흰 무명 `0xf1ece0`, 누빔 줄 `0xcbc2ae`, 때 밴 조각 `0xb4aa97`. 그늘진 앞면도 흰 천으로 읽히게 아주 약하게 스스로 빛난다(emissive `0x2b2824`).
+- 난수 없이 정해진 자리라 시드 시뮬은 그대로다: ARMOR 끔 fights12·hybrid fights12·live_battery, armor_eval probe 가 main 과 바이트 동일. 캐릭터를 만들 때 미리 만든다.
+- 두 세트(`HEINRICH_KNIGHT`·`MARGARETHE_DRAGON`)에 같은 도우미를 달아 두 판금 검객 모두, 보관본 버전도 같다(부서질 때만 보이므로 멀쩡한 모습은 그대로).
+- 스크린샷(판을 상처 없이 직접 부순 뒤): [마르그레테 앞](character_looks/margarethe_under_broken.png) · [옆](character_looks/margarethe_under_broken_side.png) · [하인리히](character_looks/heinrich_under_broken.png)
+
 ## 하인리히 도른 (`heinrich`) — 은빛 중갑 기사
 
 **v0(예전)**: 붉은 금장 흥행 검객 — 빨간 더블릿, 금발.
