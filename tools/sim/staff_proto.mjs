@@ -32,10 +32,13 @@ WEAPONS.staff_proto = {
   grip: 'two-hand',
   twoHand: true,
   material: 'wood',
-  edged: false,
+  edged: !!process.env.STAFF_EDGED && process.env.STAFF_EDGED !== '0', // 창(STAFF_EDGED=1): 앞끝에 날 — 찌르기는 stab 판정(출혈·치명상 규칙 그대로). 창날 질량은 봉과 같게 둔다(모양만 시험)
+  mThrust: +(process.env.STAFF_MTHRUST ?? 1),
+  mCut: +(process.env.STAFF_MCUT ?? 0.5),
   mBlunt: +(process.env.STAFF_MBLUNT ?? 1.2),
-  hiltLength: 0.0,
-  bladeLength: L,
+  // 창날만 날(STAFF_EDGED=2): 판정에서 '칼날' 은 앞끝 0.25 m 뿐, 자루는 둔기 (combat.js isBlade: local.y > hiltLength). 길이 합은 그대로
+  hiltLength: process.env.STAFF_EDGED === '2' ? L - 0.25 : 0.0,
+  bladeLength: process.env.STAFF_EDGED === '2' ? 0.25 : L,
   gripAlong: along,
   frame: 'pole',
   style: process.env.STAFF_STYLE ?? 'thrust', // 봉끝 찌르기(dart)가 주 공격 [원전 2차] — 날이 없어 판정은 둔기 찌름
