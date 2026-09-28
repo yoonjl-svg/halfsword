@@ -17,6 +17,8 @@ if (process.env.COVER_IN) MOTION.coverIn = +process.env.COVER_IN;
 if (process.env.COVER_OUT) MOTION.coverOut = +process.env.COVER_OUT;
 import { TECH } from '../../src/ai_techniques.js';
 import { wilson } from './ref_duel.mjs';
+import { registerPoleWeapons } from './pole_specs.mjs';
+if (process.env.EXTRA === 'pole') registerPoleWeapons(WEAPONS); // 자루 무기 시제품(proto_staff·proto_spear)도 잰다
 
 const [mode, id = 'longsword', ...rest] = process.argv.slice(2);
 const W = WEAPONS[id];
@@ -214,9 +216,9 @@ if (mode === 'poses') {
 } else if (mode === 'tap') {
   // 탭 찌르기 한 번 (상대는 치움): 칼끝이 내 가슴에서 앞으로 가장 멀리 간 거리, 그때까지 걸린 시간, 칼끝 최고 속도, 몸 낮춤.
   //  자세(패드)마다 한 번씩: 쟁기·긴 자세·황소. 라이브러리 끔/켬(켬이면 무기 방식의 덧씌우기 — 찌르기 방식은 런지)
-  console.log(`${id} (${motionFor(W).frame}·${motionFor(W).style}) — 탭 찌르기: 칼끝 최대 앞 거리 m · 걸린 초 · 칼끝 최고 속도 m/s · 가슴 최대 낮춤 cm`);
-  console.log('| 자세 | 끔: 거리 | 초 | 속도 | 낮춤 | 켬: 거리 | 초 | 속도 | 낮춤 |');
-  console.log('|---|---|---|---|---|---|---|---|---|');
+  console.log(`${id} (${motionFor(W).frame}·${motionFor(W).style}) — 탭 찌르기: 칼끝 최대 앞 거리 m · 걸린 초 · 칼끝 최고 속도 m/s · 가슴 최대 낮춤 cm · 왕복 초(뻗은 거리의 80%를 되돌아오기까지)`);
+  console.log('| 자세 | 끔: 거리 | 초 | 속도 | 낮춤 | 왕복 | 켬: 거리 | 초 | 속도 | 낮춤 | 왕복 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|');
   for (const [nm, pad] of [['쟁기', [0.18, -0.28]], ['긴 자세', [0.0, 0.03]], ['황소', [0.22, 0.26]]]) {
     const cells = [];
     for (const lib of [false, true]) {
@@ -234,18 +236,21 @@ if (mode === 'poses') {
       const fwd = P.forward(new THREE.Vector3());
       const y0 = c0.y;
       P.skill.thrust();
-      let best = 0, tBest = 0, vmax = 0, low = 0;
-      for (let t = 0; t < 0.9; t += DT) {
+      let best = 0, tBest = 0, vmax = 0, low = 0, d0 = null, tBack = null;
+      for (let t = 0; t < 1.5; t += DT) {
         G.step();
         const tip = P.bladePoint(1, new THREE.Vector3());
         const d = tip.clone().sub(new THREE.Vector3(c0.x, c0.y, c0.z)).dot(fwd);
-        if (d > best) (best = d), (tBest = t);
+        if (d0 === null) d0 = d;
+        if (t <= 0.9 && d > best) (best = d), (tBest = t);
+        if (tBack === null && t > tBest && best > d0 + 0.05 && d < best - 0.8 * (best - d0)) tBack = t;
+        if (t > 0.9) continue; // 거리·속도·낮춤은 예전처럼 0.9초 안에서만 (왕복만 1.5초까지 본다)
         const pt = P.bladePoint(1, new THREE.Vector3());
         const u = P.sword.velocityAtPoint(pt);
         vmax = Math.max(vmax, Math.hypot(u.x, u.y, u.z));
         low = Math.max(low, y0 - P.bodies.chest.translation().y);
       }
-      cells.push(`${best.toFixed(2)} | ${tBest.toFixed(2)} | ${vmax.toFixed(1)} | ${(low * 100).toFixed(0)}`);
+      cells.push(`${best.toFixed(2)} | ${tBest.toFixed(2)} | ${vmax.toFixed(1)} | ${(low * 100).toFixed(0)} | ${tBack === null ? '-' : tBack.toFixed(2)}`);
     }
     console.log(`| ${nm} | ${cells[0]} | ${cells[1]} |`);
   }
