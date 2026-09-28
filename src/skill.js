@@ -25,6 +25,7 @@
 import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST } from './config.js';
 import { FINISH } from './finish.js';
+import { gunCanFire } from './gun.js';
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -101,6 +102,11 @@ export class Skill {
   thrust({ step = true } = {}) {
     const f = this.f;
     if (this.tap || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
+    // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 찌르지 않고, 쏠 때는 내딛지 않는다 (총구로 겨누며 팔만 뻗는다 — gun.js)
+    if (f.weapon?.gun) {
+      if (!gunCanFire(f)) return false;
+      step = false;
+    }
     // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽]). 검술 보정이 다 걸려 있으면 자세 지도의 손, 덜 걸려 있으면(보정 약·끔)
     //  날것 손 위치와 섞인 실제 손 목표(fighter.handBase)에서 뻗는다 — 자세 지도의 손에서 뻗으면 실제 손보다 뒤에서 시작해 덜 나갔다
     const g = f.guardWeight() >= 1 || !f.handBase ? f.guardPose.hand : f.handBase;
