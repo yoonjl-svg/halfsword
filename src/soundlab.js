@@ -173,10 +173,10 @@ ROWS.push(
 // ── 무기 뽑기 카드 ──
 ROWS.push([
   '카드 뒤집기',
-  '고른 카드·상대 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 / 엑스칼리버) · 고르지 않은 내 카드 한 장 "촥"',
-  [{ pick: true, tier: 'common' }, { pick: true, tier: 'epic' }, { pick: true, tier: 'legend' }, { pick: true, grand: true }, { pick: false }],
+  '고른 카드·상대 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 — 엑스칼리버도 레전드대로) · 고르지 않은 내 카드 한 장 "촥"',
+  [{ pick: true, tier: 'common' }, { pick: true, tier: 'epic' }, { pick: true, tier: 'legend' }, { pick: false }],
   (s, v) => s.cardFlip?.(v),
-  ['커먼', '에픽', '레전드', '엑스칼리버', '나머지'],
+  ['커먼', '에픽', '레전드', '나머지'],
 ]);
 
 // ── 배경(스테이지)별 소리 ── 줄을 누르면 그 배경으로 바뀐다 (발소리·쓰러짐·전투 소리의 울림이 따라 바뀐다)
@@ -227,6 +227,27 @@ for (const [id, name, desc] of DEATH_ROWS) {
     ['기절', '출혈', '목'],
   ]);
 }
+
+// ── 깊은 상처의 짧은 신음 ──
+ROWS.push([
+  '상처 신음',
+  '깊은 상처에만, 한 사람당 2초에 한 번까지 짧게 "윽". 목소리는 캐릭터마다 죽음 목소리와 같은 배우',
+  DEATH_ROWS.map(([id]) => id),
+  (s, id) => {
+    s.cut?.(80, false);
+    s.hurt?.(id, 0.9, { me: id === 'player' });
+  },
+  ['나', '브란', '이졸데', '랴오', '하인리히', '슈바르츠'],
+]);
+
+// ── 칼이 바닥에 떨어짐 ──
+ROWS.push([
+  '칼이 바닥에 떨어짐',
+  '놓친 칼, 또는 쥔 채 쓰러진 칼이 땅에 닿는 순간 (지금 배경의 바닥 알갱이가 섞인다)',
+  ['steel', 'wood', 'rubber'],
+  (s, m) => s.swordLand?.(3, m),
+  ['강철', '나무', '고무 닭'],
+]);
 
 const $ = (id) => document.getElementById(id);
 const engines = { new: null, old: null };
