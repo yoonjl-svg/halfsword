@@ -137,7 +137,6 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     // 궤적 줄: 총구에서 닿은 곳까지 (onImpact 가 오면 실제 방향·점으로 바로잡는다)
     e.origin.copy(origin);
     aimTrace(e, origin, e.d, dist);
-    return e;
     // 총신에 수직인 두 축
     _u.set(0, 1, 0);
     if (Math.abs(e.d.y) > 0.9) _u.set(1, 0, 0);
@@ -156,6 +155,7 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     e.core.position.copy(e.o).addScaledVector(e.d, 0.02);
     e.flash.visible = e.core.visible = e.smoke.visible = true;
     step(e, 0);
+    return e;
   };
 
   const step = (e, dt) => {
