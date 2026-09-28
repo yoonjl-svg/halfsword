@@ -37,17 +37,24 @@
 | 오른 뒤 아래 (옆 지킴 자리) | **Wechselhut** | 0.00, −0.35, 0.25 | 0.10, −0.15, 0.00 | −25, 150 | 20/10 | [원전 2차] |
 
 - **§5-2 규칙 1(패드는 베기 길의 경유점)을 지킨다:** 막기 자세인 Steurhut 는 베기 길이 덜 지나는 쟁기 자리에 두었다. 다른 막기 동작은 덧씌우기로.
-- 피오레의 창 자세 6가지(Tutta/Mezza Porta di Ferro, Vera Croce, Finestra 좌우, Dente di Zenghiaro) [원전 2차]는 창(날끝 찌르기 위주)용 두 번째 표 후보로 남긴다.
+- 피오레의 창 자세 6가지(Tutta/Mezza Porta di Ferro, Vera Croce, Finestra 좌우, Dente di Zenghiaro) [원전 2차]는 창(날끝 찌르기 위주)용 두 번째 표 후보로 남긴다. 나기나타 가마에 6·호조인류 창술은 연구 세션 문서 ④에 있다.
 
 ## 4. 기술 (AI) — 6가지
 | 기술 | 길 | 종류 | 근거 |
 |---|---|---|---|
 | 미끄러뜨려 찌르기 | Mittelhut → 가운데 앞, 뒷손이 앞손 쪽으로 0.4 m 미끄러짐 + 앞발 0.6 m | 찌르기 | 쿼터스태프 "dart" [원전 2차] |
-| 한손 원거리 찌르기 | Mittelhut → 앞손을 놓고 뒷손만으로 최대로 뻗기 + 런지 0.8 m | 찌르기 (최대 사거리, 되돌리기 느림) | [원전 2차 ▶검증 필요] |
+| 한손 원거리 찌르기 | Mittelhut → 앞손을 놓고 뒷손만으로 최대로 뻗기 + 런지 0.8 m | 찌르기 (최대 사거리, 되돌리기 느림) | 스웻넘 1617 영국 봉(손 간격 1~1.5 ft) [원전 2차]. **마이어의 찌르기는 놓기가 아니라 뒷손을 겨드랑이로 당기는 지렛대(Ruck)** |
 | 봉 내려치기 (Oberhau) | Oberhut → 가운데 → Unterhut | 치기 | [원전 2차] |
-| 교차 베기 (Kreutzhauw) | Oberhut(우) → Unterhut → Oberhut(좌) → Nebenhut … | 이어 치기 (B 물레와 같은 흐름 코드) | [원전 2차] |
+| 교차 베기 (Kreutzhauw) | 8자리를 거친다: Nebenhut → Steurhut → Oberhut(우) → Wechselhut → Unterhut → Mittelhut → Oberhut(좌) → Nebenhut | 이어 치기 (B 물레와 같은 흐름 코드) | [원전 2차 — 연구 세션 pole_motion_research.md 로 순서 고침] |
 | 뒷끝 치기 | 바인드에서 뒷손을 가운데로 0.3 m 미끄러뜨리고, 뒷끝으로 위에서 대각선 | 치기 (근거리) | Norling 해설 [원전 2차] |
 | Steurhut 막기 → 치기 | Unterhut → Steurhut → Oberhau | 막고 치기 | [원전 2차] |
+
+### 4-2. 연구 세션 조사로 고친 것 (`claude/pm-weapons` `docs/pole_motion_research.md`, e4f1a9a)
+- **손 간격은 자세 값이 아니라 무기·유파 칸 값이다:** 영국 봉 0.35 m · 나기나타 0.4 m [원전 2차], 마이어 봉 0.6 m · 창 0.6~0.9 m [추정]. → 스펙 `handGap` 으로.
+- **앞끝 필드가 필요하다:** 폴액스(Le Jeu de la Hache)는 꼬리(queue) 쪽 자세가 기본이다. 꼬리로 치는 것이 머리로 치는 것의 3배 넘는다. 나기나타 상단·협 자세도 석돌(꼬리) 앞이다. → 자세 칸에 `frontEnd: 'head' | 'butt'`.
+- **걸어 당기기**(폴액스 매부리, 가마야리 가로날)는 **임시 조인트**(상대 칼·팔에 걸린 채 당기기)가 필요한 유일한 새 물리다.
+- **창 전술은 기다림이다:** 기다렸다가 앞발을 비켜 디디며 쓸고 되찌른다. 롱소드 AI 를 그대로 쓸 수 없다(§8 봉 0승의 한 까닭). 피오레 창 자세 6 중 칼끝이 선 위에 있는 것은 Finestra 좌우 둘뿐이다.
+- 정정: 마로초 *Opera Nova* 에는 azza 장이 없다(4권은 partigiana·pica·spiedo·ronca). azza 자세 6 은 피오레다.
 
 ## 5. 덧씌우기 3
 1. **쥔 점 미끄러뜨리기**(찌르기 동안): 물리 §1-3.
