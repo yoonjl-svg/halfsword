@@ -723,9 +723,16 @@ export function buildCastle(scene, lights = {}) {
   };
   step(0);
 
-  return {
+  // 종 치기: 크게 흔들리는 동안 흔들림의 양 끝(잠깐 멈추는 때)마다 추가 종을 친다 → onEvent('bell') 로 알린다 (main.js → 소리).
+  //  바람에 살짝 흔들리는 정도(0.05~0.08)로는 치지 않는다
+  const BELL_RING = 0.1; // 이보다 크게 흔들려야 추가 닿는다 (라디안)
+  const bellPos = { x: BELL.x, y: BELL.y - 1.1, z: BELL.z }; // 소리 자리: 종 입 언저리
+  let bellCos = 1;
+
+  const api = {
     sunOffset,
-    /** 큰 타격: 눈보라가 휘몰아치고 불꽃이 크게 일렁인다 */
+    onEvent: null, // main.js 가 채운다: (name, data) => …
+    /** 큰 타격: 눈보라가 휘몰아치고 불꽃이 크게 일렁이고 종이 크게 흔들린다 */
     excite(amount) {
       gust = Math.min(1, gust + amount * 0.5);
       bellAmp = Math.min(0.55, bellAmp + amount * 0.4);
@@ -735,8 +742,12 @@ export function buildCastle(scene, lights = {}) {
       gust = Math.max(0, gust - dt * 0.45);
       bellAmp = Math.max(0.05, bellAmp - dt * 0.08); // 바람에 늘 살짝 흔들린다
       bellPivot.rotation.x = bellAmp * Math.sin(t * 2.1);
+      const c = Math.cos(t * 2.1);
+      if (c > 0 !== bellCos > 0 && bellAmp > BELL_RING) api.onEvent?.('bell', { amp: bellAmp, max: 0.55, pos: bellPos });
+      bellCos = c;
       step(dt);
     },
   };
+  return api;
 }
 

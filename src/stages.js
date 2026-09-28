@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  스테이지(배경) 관리: 다섯 배경 중 하나를 짓고, 바꿀 때는 먼저 지은 배경을 깨끗이 치운다
-//   오너 결정: 스테이지는 고르는 화면 없이 판마다 무작위 (바로 전 판과 같은 곳은 안 나온다). 고르기·고정은 main.js
+//   오너 결정: 스테이지는 고르는 화면 없이 판마다 늘 같은 순서 — 포세이돈 신전 → 성 안뜰 → 산사 → 대성당 (STAGE_ORDER).
+//   어두운 홀은 쓰지 않는다(오너 결정, 순서에서 뺐다. ?stage=darkhall 로만 볼 수 있다). 언제 바꿀지·고정은 main.js
 //   배경을 짓는 함수(arena.js · stage_*.js)는 scene 에 메쉬·입자를 더하고, 같이 쓰는 빛(hemi·sun)의 색·세기·자리와
 //   scene.fog·background 를 바꾼다. 그래서 바꿀 때는
 //    ① 먼저 지은 배경이 더한 것을 떼어 내고 GPU 자원(모양·재질·질감)을 풀고
@@ -21,31 +22,17 @@ const BUILDERS = {
   temple: buildTemple, // 한국의 산 속 절 (stage_temple.js)
   castle: buildCastle, // 눈 내리는 중세 성의 안뜰, 해 질 녘 (stage_castle.js)
   cathedral: buildCathedral, // 무너진 고딕 대성당의 안 (stage_cathedral.js)
-  darkhall: buildDarkHall, // 어두운 성의 큰 홀, 밤 (stage_darkhall.js)
+  darkhall: buildDarkHall, // 어두운 성의 큰 홀, 밤 (stage_darkhall.js) — 쓰지 않는다(오너 결정): 순서에 없고 ?stage=darkhall 로만 본다
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
 
-/**
- * 판마다 배경 뽑기: 다섯 장짜리 패에서 아직 안 나온 것 중 하나를 고르게 뽑는다 (섞은 패에서 한 장씩 넘기는 것과 같다).
- *  그래서 다섯 판마다 다섯 곳이 한 번씩 다 나오고, 패를 새로 채울 때도 바로 전 판(prev)과 같은 곳은 안 나온다.
- *  (패 없이 매번 넷 중 하나를 고르면 12판을 해도 한 곳이 한 번도 안 나오는 일이 여섯 번에 한 번쯤 생긴다)
- */
-export class StageDeck {
-  constructor(rand = Math.random) {
-    this.rand = rand;
-    this.cards = []; // 이번 패에서 아직 안 나온 배경
-  }
-  next(prev = null) {
-    let pool = this.cards.filter((id) => id !== prev);
-    if (!pool.length) {
-      this.cards = [...STAGE_IDS]; // 새 패 다섯 장
-      pool = this.cards.filter((id) => id !== prev);
-    }
-    const id = pool[Math.floor(this.rand() * pool.length)];
-    this.cards.splice(this.cards.indexOf(id), 1);
-    return id;
-  }
+// 판마다 나오는 순서 (오너 결정). 대성당 다음 판은 다시 포세이돈부터
+export const STAGE_ORDER = ['poseidon', 'castle', 'temple', 'cathedral'];
+
+/** prev 다음 판의 배경. prev 가 순서에 없으면(처음, 또는 순서 밖 배경) 맨 앞(포세이돈)부터 */
+export function nextStage(prev = null) {
+  return STAGE_ORDER[(STAGE_ORDER.indexOf(prev) + 1) % STAGE_ORDER.length];
 }
 
 const materialsOf = (o) => (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []);
