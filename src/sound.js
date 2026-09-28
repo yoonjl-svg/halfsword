@@ -1451,6 +1451,7 @@ const SAMPLES = {
 // room: reverbIR 모양 + 쇳소리(metal)·몸 소리(flesh)를 울림으로 보내는 양. 바깥(포세이돈·산사)은 울림 없음
 const STAGE_SOUND = {
   poseidon: { step: 'step' },
+  poseidon_night: { step: 'step', night: true }, // 밤의 포세이돈 (하인리히 재등장): 같은 바다·바람에 네 귀퉁이 화로·횃대의 불을 더하고 바람을 어둡게
   temple: { step: 'stepGravel', grit: 'stepGravel' },
   castle: { step: 'stepSnow', grit: 'stepSnow', room: { dur: 0.8, rt: 0.55, e0: 0.04, e1: 0.11, lp: 4000, metal: 0.22, flesh: 0.08 } }, // 성벽에 짧게 튕기는 메아리
   cathedral: { step: 'stepStone', grit: 'stepStone', room: { dur: 2.8, rt: 2.5, e0: 0.03, e1: 0.14, lp: 3500, metal: 0.4, flesh: 0.16 } }, // 돌 성당의 긴 울림
@@ -2263,8 +2264,16 @@ export class Sound {
    */
   ambience() {
     if (this._amb || !this.ctx || !this.master) return;
-    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
+    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, poseidon_night: this._ambPoseidon, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
     if (amb) return amb.call(this);
+    return this._ambPoseidon();
+  }
+
+  /**
+   * 포세이돈 신전 (위 ambience 참고). night = 밤의 포세이돈: 파도는 그대로, 바람은 더 낮고 어둡게(480Hz, 1.4kHz 위를 닫음), 결투 자리
+   * 네 귀퉁이의 쇠 화로와 석상 앞 횃대의 불 "타닥"을 좌우로 아주 작게 깐다(되풀이 조각 둘). 큰 타격에는 바람이 잠깐 세지고 불길이 "화르륵"(gust)
+   */
+  _ambPoseidon(night = !!STAGE_SOUND[this.stage]?.night) {
     const c = this.ctx;
     const buf = this._noiseBuf();
     const out = c.createGain();
@@ -2304,18 +2313,43 @@ export class Sound {
     wind.playbackRate.value = 0.87; // 파도와 같은 잡음이 겹쳐 들리지 않게
     const bp = c.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.value = 650;
+    bp.frequency.value = night ? 480 : 650;
     bp.Q.value = 1.2;
     const wg = c.createGain();
-    wg.gain.value = 0.012;
+    wg.gain.value = night ? 0.009 : 0.012;
     const w3 = lfo(0.047);
     amt(w3, 220, bp.frequency);
     amt(w3, 0.008, wg.gain);
-    wind.connect(bp).connect(wg).connect(out);
+    if (night) {
+      const nl = c.createBiquadFilter(); // 밤: 바람의 위를 닫아 어둡게
+      nl.type = 'lowpass';
+      nl.frequency.value = 1400;
+      wind.connect(bp).connect(nl).connect(wg).connect(out);
+    } else wind.connect(bp).connect(wg).connect(out);
     const t = c.currentTime;
     for (const n of [surf, wind, w1, w2, w3]) n.start(t);
-    this._amb = { out, nodes: [surf, wind, w1, w2, w3] };
+    const nodes = [surf, wind, w1, w2, w3];
+    if (night) {
+      const fire = this.pick('fireLoop');
+      for (const [pan, rate] of [[-0.6, 0.95], [0.6, 1.06]]) {
+        const n = c.createBufferSource();
+        n.buffer = fire;
+        n.loop = true;
+        n.playbackRate.value = rate;
+        const fg = c.createGain();
+        fg.gain.value = 0.022;
+        const p = c.createStereoPanner?.();
+        if (p) {
+          p.pan.value = pan;
+          n.connect(fg).connect(p).connect(out);
+        } else n.connect(fg).connect(out);
+        n.start(t);
+        nodes.push(n);
+      }
+    }
+    this._amb = { out, nodes, wind: wg, windBase: night ? 0.009 : 0.012 };
   }
+
 
   /** 배경 흰 잡음 (4초, 22050Hz 로 만들어 메모리를 아낀다. 흰 잡음이라 되풀이 이음매에서 딸깍이지 않는다). 배경마다 같이 쓴다 */
   _noiseBuf() {
@@ -2862,6 +2896,7 @@ export class Sound {
       w.gain.setTargetAtTime(b, now + 0.7, 1.2);
     }
     if (this.stage.startsWith('clearing')) return; // 화전 터: 바람만 잠깐 (크게 튀는 소리는 넣지 않는다 — 사장님 컨셉)
+    if (this.stage === 'poseidon_night') return this.stageCall('flare', amount * 0.6); // 밤의 포세이돈: 화로 불길이 잠깐 "화르륵"
     if (this.stage === 'castle') return this.stageCall('flare', amount);
     if (this.stage === 'cathedral') {
       this.stageCall('debris', amount);
