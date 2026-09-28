@@ -51,10 +51,19 @@ await page.waitForFunction(() => window.game.state === 'fight', null, { timeout:
 const foeW = await page.evaluate(() => window.game.enemy?.weapon?.id);
 if (foeW !== 'staff_proto') errors.push(`상대 무기가 봉이 아니다: ${foeW}`);
 await page.addStyleTag({ content: 'body *{visibility:hidden!important} canvas{visibility:visible!important}' });
-// 주인공도 AI 로 (롱소드 유파)
-await page.evaluate(async () => {
+// 주인공도 AI 로 (롱소드 유파). LIB=1 이면 봉 쪽에 동작 라이브러리(E 자루: 봉 자세표·찌르기 + 머리 내려치기)를 입힌다
+await page.evaluate(async (lib) => {
   const { AI } = await import('/src/ai.js');
   const g = window.game;
+  if (lib) {
+    const { applyMotionLibrary, motionFor } = await import('/src/motion_library.js');
+    const { SCHOOLS } = await import('/src/schools.js');
+    const m = motionFor(g.enemy.weapon);
+    SCHOOLS.staff_lib = { ...SCHOOLS.longsword, id: 'staff_lib', tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints, ...(m.counter ? { counter: m.counter } : {}) };
+    const foeAI = new AI(g.enemy, g.player, 'normal', { school: 'staff_lib' });
+    g.ai.update = (dt) => foeAI.update(dt);
+    applyMotionLibrary(g.enemy, { ai: foeAI, cover: false });
+  }
   const me = new AI(g.player, g.enemy, 'normal');
   let last = performance.now();
   const tick = () => {
@@ -81,14 +90,15 @@ await page.evaluate(async () => {
     window.__cam = requestAnimationFrame(cam);
   };
   cam();
-});
+}, process.env.LIB === '1');
 await page.waitForTimeout(800);
 const t0 = Date.now();
 await page.waitForTimeout(SECONDS * 1000);
 await page.evaluate(() => (cancelAnimationFrame(window.__meAI), cancelAnimationFrame(window.__cam)));
 const video = page.video();
 await ctx.close();
-const dst = path.join(outDir, 'staff_fight.webm');
+const LIB = process.env.LIB === '1';
+const dst = path.join(outDir, LIB ? 'staff_fight_lib.webm' : 'staff_fight.webm');
 fs.copyFileSync(await video.path(), dst);
 const start = (t0 - tCtx) / 1000;
 const frames = [];
@@ -102,10 +112,10 @@ for (let k = 0; k < 8; k++) {
   }
 }
 const p2 = await browser.newPage({ viewport: { width: 1320, height: 900 } });
-await p2.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#1b1410;color:#f3e9d8;font:16px system-ui,sans-serif;padding:10px}h2{margin:6px 0;font-size:17px}.row{display:flex;gap:4px;flex-wrap:wrap}img{width:320px;height:148px;object-fit:cover;border-radius:4px}</style></head><body><h2>봉 시제품(2.4 m, 오른쪽) 대 롱소드, 옆에서 — 탭 찌르기로 봉끝을 뻗는다 · 자세는 아직 롱소드 자세표라 지붕에서 봉이 곧게 선다 (${SECONDS}초를 8장으로)</h2><div class="row">${frames.map((f) => `<img src="data:image/png;base64,${f}">`).join('')}</div></body></html>`);
+await p2.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#1b1410;color:#f3e9d8;font:16px system-ui,sans-serif;padding:10px}h2{margin:6px 0;font-size:17px}.row{display:flex;gap:4px;flex-wrap:wrap}img{width:320px;height:148px;object-fit:cover;border-radius:4px}</style></head><body><h2>${LIB ? '봉 시제품(2.4 m, 오른쪽) + 동작 라이브러리 E — 마이어 봉 자세표 · 찌르기 + 머리 내려치기' : '봉 시제품(2.4 m, 오른쪽) 대 롱소드, 옆에서 — 탭 찌르기로 봉끝을 뻗는다 · 자세는 아직 롱소드 자세표라 지붕에서 봉이 곧게 선다'} (${SECONDS}초를 8장으로)</h2><div class="row">${frames.map((f) => `<img src="data:image/png;base64,${f}">`).join('')}</div></body></html>`);
 await p2.waitForTimeout(300);
 const h = await p2.evaluate(() => document.body.scrollHeight);
-fs.writeFileSync(new URL('../../docs/handoff/staff_clip.jpg', import.meta.url), await p2.screenshot({ type: 'jpeg', quality: 70, clip: { x: 0, y: 0, width: 1320, height: h } }));
+fs.writeFileSync(new URL(LIB ? '../../docs/handoff/staff_clip_lib.jpg' : '../../docs/handoff/staff_clip.jpg', import.meta.url), await p2.screenshot({ type: 'jpeg', quality: 70, clip: { x: 0, y: 0, width: 1320, height: h } }));
 console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : `ZERO console errors → ${dst} · docs/handoff/staff_clip.jpg`);
 await browser.close();
 process.exit(errors.length ? 1 : 0);
