@@ -1,5 +1,7 @@
 # 사운드 PM 인수인계 — 몸 소리·죽음 목소리 (claude/pm-sound-impact)
 
+> **지금 상태와 다음 할 일은 [`sound_pm_handoff.md`](sound_pm_handoff.md)를 먼저 읽는다.** 이 문서는 차수별 변경 기록이다(앞부분의 합치기·바뀐 파일은 옛 브랜치 기준).
+
 ## 합치기
 
 - 브랜치 `claude/pm-sound-impact`는 `claude/first-game-development-2q36ha`의 `5c82cae` 위에 쌓였다.
@@ -292,3 +294,59 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - 확인:
   - 실제 게임에서 6번 뽑았다. 매번 고른 카드와 나머지 두 장 소리가 다 났다. 탭에서 소리 호출까지 1ms 아래였고, 오디오 문맥은 running이었다.
   - 콘솔 에러 0. 시뮬 3종은 main과 바이트 동일하다.
+
+## 15차: 슈바르츠·이졸데 죽음 목소리 녹음 (사이트 연결 환경, 사장님 선택)
+
+- 새 환경에서 Freesound·OpenGameArt에 접속되어 CC0 녹음을 직접 찾았다(접속 표는 `sound_pm_takeover.md`).
+- 찾은 방법:
+  - Freesound CC0 거르기 검색 40여 개(한숨·신음·헉·죽음 등)로 여성 목소리 약 800개를 모았다.
+  - 제목으로 71개를 추리고, 목소리 높이(YIN)·유성음 비율·2~8kHz 쉿 비중·잡음 바닥을 쟀다. 스펙트로그램도 눈으로 봤다.
+  - 슈바르츠는 190~250Hz의 낮은 한숨·신음, 이졸데는 비명기 없는 짧은 "헉"·숨을 골랐다.
+- 후보를 게임 엔진(`lab.render`)으로 장면째 그려서 들려드렸다.
+  - 장면: 발소리 → 투구 타격 → 목소리 → 쓰러짐, 그리고 베기 → 목소리 → 쓰러짐.
+  - 슈바르츠는 "지금(목소리 없음)", 이졸데는 "지금(합성 숨)"을 함께 비교했다.
+  - 후보끼리 목소리 크기를 맞추고 +4dB 올렸다.
+- **사장님 선택**:
+  - 이졸데 ← 이졸데 후보 3번(mvVoiceActing "girl damage": 짧게 맞는 소리 두 개).
+  - 슈바르츠 ← 슈바르츠 후보 3번(hisoul: 지친 날숨 섞인 낮은 "하아…", 약 195Hz). 한 녹음을 두 죽음에 같이 쓴다.
+    - 처음에는 이졸데 후보 2번(Reitanna)을 슈바르츠에 고르셨다(커밋 `ce13867`).
+    - 곧 "노장이니까" 후보 3번으로 바꾸셨다.
+  - Reitanna 두 녹음("헉"·긴 한숨)은 "자연스럽고 맘에 들어, 저장했다 다른 데 쓰자"고 하셨다. `docs/sound_reserve/`에 보관한다(배포 안 됨).
+  - 고르지 않은 것: 슈바르츠의 "지금(목소리 없음)"과 후보 1·2·4번(Reitanna 한숨·신음, craigsmith 신음, filmbetrachterin "아아…"), 이졸데의 "지금(합성 숨)"과 후보 1번(Soundjougi).
+- 코드:
+  - `VOICES.margarethe`: `mute`를 지우고 `rec: { ko: 1, bleed: 1, gain: 1.1 }`.
+    - 들려드린 크기 그대로다. 두 파일은 같은 녹음이다.
+    - 이제 죽을 때 목소리가 나고, 쓰러짐은 다른 캐릭터처럼 떨어진 속도대로 난다.
+    - `mute` 기능은 남겨 두었지만 쓰는 캐릭터는 없다.
+  - `VOICES.isolde`: `rec: { ko: 1, bleed: 1, gain: 1.3 }`. 들려드린 크기 그대로이고, 합성 숨은 녹음을 못 읽을 때만 쓴다.
+  - `sounds.html`의 "죽음: 이졸데 / 마르그레테" 줄 설명을 바꿨다.
+  - main.js 변경은 없다.
+- 가공: 잘라 내기, 70Hz 고역 통과, 피크 -1dBFS, 모노 mp3. **음은 낮추지 않았다.** 추가 용량은 4개 37KB다.
+
+| 파일 | 출처 | 라이선스 |
+|---|---|---|
+| `voice/margarethe_ko1.mp3`, `voice/margarethe_bleed1.mp3` (같은 녹음) | hisoul "Zisa, Relief, Moan, Tired, Exhale_2.wav" — freesound.org/people/hisoul/sounds/520276/ | CC0 |
+| `voice/isolde_ko1.mp3` | mvVoiceActing "girl damage" 3.3~4.4초 — freesound.org/people/mvVoiceActing/sounds/855460/ | CC0 |
+| `voice/isolde_bleed1.mp3` | mvVoiceActing "girl damage" 7.8~8.9초 — 같은 파일 | CC0 |
+| (보관) `docs/sound_reserve/reitanna_gasp.mp3`, `reitanna_long_sigh.mp3` | Reitanna 241563, 242690 | CC0 |
+
+- 파일마다 소리 페이지에서 CC0 링크를 확인했다. Freesound 미리듣기 mp3(128kbps)에서 잘랐다.
+- 남은 일: VoiceBosch(CC-BY-SA 4.0) 남성 신음 3개를 CC0로 바꾸는 후보를 사장님께 들려드렸고, 답을 기다린다.
+  - 기본 목소리: A = HaelDB yell8, B = HaelDB yell7(같은 목소리)
+  - 브란: A = kanyonwyvern 736662, B = Under7dude 163442
+  - 하인리히: A = HaelDB 2yell8(같은 목소리), B = Lord_Bennelengtone 867174
+- 확인:
+  - 시뮬 3종(live_battery·fights12·hybrid fights12)이 main `cda3103`와 바이트 동일하다.
+  - 브라우저 스모크 콘솔 에러 0.
+  - 실제 게임(`?foe=margarethe|isolde&weapon=longsword`)에서 `enemy.die('기절'|'출혈')`로 네 경우를 녹음했다.
+    - 두 캐릭터 녹음 파일이 200으로 실리고 목소리가 난 뒤 몸이 닿을 때 "쿵"(세기 2.4~2.6)이 났다. 오류는 0이었다.
+    - 파형과 스펙트럼은 `docs/handoff/death_voices_margarethe_isolde.png`에 있다.
+    - 헤드리스는 물리가 느려서 "쿵"이 3.6~5초 뒤에 난다.
+
+## 16차: 무기 뽑기 v2에 맞춘 카드 소리 (디렉터 알림)
+
+- 무기 뽑기 v2(main `d91af0e`)부터 카드는 내 카드 2장 + 상대 무기 1장이다.
+  - main.js는 고른 카드 `cardFlip({pick:true})`, 약 0.35초 뒤 남은 내 카드 한 장 `cardFlip({pick:false})`, 약 0.8초 뒤 상대 카드 `cardFlip({pick:true, tier, grand})` 순서로 부른다.
+- `pick:false`는 두 장이 함께 뒤집히던 때의 "촥촥"(30ms 어긋난 두 번)이었다. 이제 한 장이라 "촥" 한 번으로 줄였다.
+  - 오프라인 렌더로 소리 덩어리가 1개인 것을 확인했다. 고른 카드 소리는 그대로다.
+- 주석과 `sounds.html` "카드 뒤집기" 줄 설명을 바꿨다. main.js 변경은 없다.

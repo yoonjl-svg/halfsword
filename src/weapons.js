@@ -769,7 +769,7 @@ const excalibur = finalizeSpec('excalibur', {
 // ═════════════════════════════════════════════════════════════
 const excaliburReplica = finalizeSpec('excalibur_replica', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur', // 감독 지시: 화면에는 진품과 같은 이름 — 플레이어는 외관(빛나는 아우라 유무)만 보고 추측한다
-  desc: '왕의 검 엑스칼리버, 라고 한다.\n하인리히는 진품이라고 우긴다.',
+  desc: '일단은 왕의 검 엑스칼리버, 라고 쓰여 있다.',
   grip: 'two-hand', material: 'steel',
   tier: 'common', // 제원·등급은 커먼 (power 1.0)
   finishTier: 'legend', // 겉면 마감만 진품과 동일 (등급 마감으로도 구분되면 안 된다 — 오라가 유일한 표식)

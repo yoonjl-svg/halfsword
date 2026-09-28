@@ -173,7 +173,7 @@ ROWS.push(
 // ── 무기 뽑기 카드 ──
 ROWS.push([
   '카드 뒤집기',
-  '고른 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 / 엑스칼리버) · 나머지 두 장 "촥촥"',
+  '고른 카드·상대 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 / 엑스칼리버) · 고르지 않은 내 카드 한 장 "촥"',
   [{ pick: true, tier: 'common' }, { pick: true, tier: 'epic' }, { pick: true, tier: 'legend' }, { pick: true, grand: true }, { pick: false }],
   (s, v) => s.cardFlip?.(v),
   ['커먼', '에픽', '레전드', '엑스칼리버', '나머지'],
@@ -208,10 +208,10 @@ ROWS.push(
 const DEATH_ROWS = [
   ['player', '나 (주인공)', '목소리 대신 이명(삐—)과 먹먹해짐. 4초 뒤 돌아온다'],
   ['bran', '오소리 브란', '굵고 거친 목, 흐느끼며'],
-  ['isolde', '이졸데', '짧게 숨을 들이켜고 조용히'],
+  ['isolde', '이졸데', '짧게 맞는 소리 "흣"·"읏" (녹음)'],
   ['liao', '랴오 쓰위엔', '거의 소리 없이 한숨'],
   ['heinrich', '하인리히', '쉰 웃음이 신음으로 끊김'],
-  ['margarethe', '마르그레테', '목소리 없이 "쿵" 쓰러지는 소리만 (알맞은 녹음을 찾을 때까지)'],
+  ['margarethe', '마르그레테', '지친 날숨 섞인 낮은 "하아…" (녹음)'],
 ];
 for (const [id, name, desc] of DEATH_ROWS) {
   ROWS.push([
