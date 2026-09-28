@@ -1990,11 +1990,12 @@ export class Sound {
    * 무기 뽑기 카드가 뒤집힘 (화면 소리, 위치 없음). 모두 그 자리에서 노드로 만든다 → 소리 조각이 아직 안 만들어졌어도
    * 첫 탭에 바로 난다 (잡음은 build 때 만든 0.4초 잡음 this.noise 를 쓴다).
    *  pick = 고른 카드: 두꺼운 카드가 젖혀지는 "촥" + 앞면이 드러나는 순간(0.2초 뒤, 뒤집기 절반) 낮은 "둥"
-   *         tier 'epic'·'legend' 는 그 위에 아주 작은 반짝임, grand(진짜 엑스칼리버)는 맑은 울림
+   *         tier 'epic'·'legend' 는 그 위에 아주 작은 반짝임. 진짜 엑스칼리버도 등급(레전드)대로만 낸다
+   *         (사장님: 엑스칼리버를 등급과 별개로 우대하지 않는다. main.js 가 넘기는 grand 는 쓰지 않는다)
    *  pick 아님 = 고르지 않은 내 카드 한 장이 뒤집힘: 작은 "촥" 한 번
-   *  (상대 무기 카드는 pick 처럼 부른다: 등급 반짝임·엑스칼리버 울림도 같다)
+   *  (상대 무기 카드는 pick 처럼 부른다: 등급 반짝임도 같다)
    */
-  cardFlip({ pick = false, tier = 'common', grand = false } = {}) {
+  cardFlip({ pick = false, tier = 'common' } = {}) {
     if (!this._on || !this.ctx || !this.master || !this.noise) return;
     const c = this.ctx;
     const t0 = c.currentTime + 0.005;
@@ -2056,12 +2057,7 @@ export class Sound {
     const tr = t0 + 0.2;
     tone(tr, 150, 0.26, 0.16, 'sine', 70);
     whoosh(tr, 0.18);
-    if (grand) {
-      // 진짜 엑스칼리버: 맑은 울림 (유리종처럼 정수배가 아닌 배음, 1.8초)
-      const f = 1047;
-      for (const [r, a, d] of [[1, 0.055, 1.8], [2.76, 0.022, 1.1], [5.4, 0.01, 0.6], [1.002, 0.03, 1.6]]) tone(tr + 0.02, f * r, a, d);
-      [2637, 3136, 3951].forEach((fq, k) => tone(tr + 0.08 + k * 0.05, fq, 0.012, 0.4));
-    } else if (tier === 'legend' || tier === 'epic') {
+    if (tier === 'legend' || tier === 'epic') {
       // 레전드·에픽: 아주 작은 반짝임 (높은 음 셋·넷이 빠르게)
       const notes = tier === 'legend' ? [2637, 3136, 3951, 4699] : [2637, 3520, 4186];
       notes.forEach((fq, k) => tone(tr + 0.04 + k * 0.045, fq, tier === 'legend' ? 0.03 : 0.02, 0.35));
