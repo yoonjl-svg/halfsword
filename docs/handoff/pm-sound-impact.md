@@ -591,4 +591,4 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - `sounds.html`: "무기 부러짐"에 강철, "판금이 부서짐" 설명.
 - 관문: 시뮬 3종 main `59c10bd`와 바이트 동일(1434B/499B/497B), 스모크 콘솔 에러 0(두 번). 실제 게임(포세이돈, 롱소드): `player.breakWeapon()` → `weaponBreak("steel")` → shard blade·blade·armor, `plateBreak(150)` → shard armor×3(0.12/0.23/0.33초), `bank.plateDebris` 없음, 에러 0.
 - 사장님께 전(나무)→후(강철), 판금 150J·80J 미리듣기를 보냈다.
-
+- 사장님 확인(13:3x): "일단 그렇게 해". 그대로 확정. 크기나 "팅-팅" 겹침이 실제 폰에서 걸리면 `_shard` gain/delay 숫자만 고치면 된다.
