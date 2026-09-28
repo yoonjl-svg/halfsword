@@ -2,7 +2,7 @@
 //  무기 목록에는 넣지 않는다 — 이 도구 안에서만 롱소드 스펙을 베껴 "staff_proto" 를 만든다.
 //   앞손 = 칼 원점, 봉은 앞손 앞으로 1.2 m · 뒤로 1.2 m, 빈손(뒷손)은 gripAlong 만큼 뒤를 쥔다(스프링). 날 없음(둔기).
 //   node tools/sim/hybrid.mjs staff_proto.mjs [gripAlong=-0.6] [AI 유파=longsword]
-//  잰다: ① 자세 14곳을 들고 있을 때 손 오차·칼끝 오차·뒷손이 쥐고 있나(gripping) ② NaN ③ 혼자 휘둘러 봉끝 속도 ④ 롱소드 상대 24판
+//  잰다: ① 자세 14곳을 들고 있을 때 손 오차·칼끝 오차·뒷손이 쥐고 있나(gripping) ② NaN ③ 혼자 휘둘러 봉끝 속도 ④ 롱소드 상대 2N판
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { WEAPONS } from '../../src/weapons.js';
 import { AI } from '../../src/ai.js';
@@ -110,7 +110,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
 }
 // ④ 롱소드 상대 (봉 쪽 AI 는 롱소드 유파·롱소드 간격 그대로 — 자루 무기 유파가 없다)
 {
-  const N = 12;
+  const N = +(process.env.STAFF_N ?? 12); // 자리마다 판 수
   const school = process.argv[3] ?? 'longsword';
   if (LIB) {
     const m = motionFor(WEAPONS.staff_proto);
