@@ -1455,9 +1455,9 @@ const STAGE_SOUND = {
   castle: { step: 'stepSnow', grit: 'stepSnow', room: { dur: 0.8, rt: 0.55, e0: 0.04, e1: 0.11, lp: 4000, metal: 0.22, flesh: 0.08 } }, // 성벽에 짧게 튕기는 메아리
   cathedral: { step: 'stepStone', grit: 'stepStone', room: { dur: 2.8, rt: 2.5, e0: 0.03, e1: 0.14, lp: 3500, metal: 0.4, flesh: 0.16 } }, // 돌 성당의 긴 울림
   darkhall: { step: 'stepStone', room: { dur: 1.6, rt: 1.3, e0: 0.02, e1: 0.08, lp: 3000, metal: 0.28, flesh: 0.12 } }, // 휘장·카펫이 있어 성당보다 짧고 어둡다
-  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 (브란의 고향): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
-  clearing_b: { step: 'stepMud', grit: 'stepMud', rain: true }, // 같은 컨셉의 2안
-  clearing_dry: { step: 'stepMud', grit: 'stepMud', rain: false }, // 비 없는 판: 비만 뺀다
+  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 2안 (브란의 고향, 오너 선택): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
+  clearing_a: { step: 'stepMud', grit: 'stepMud', rain: true }, // 같은 컨셉의 1안 (보관용, ?stage=clearing_a — 오너는 2안을 골랐다)
+  clearing_a_dry: { step: 'stepMud', grit: 'stepMud', rain: false }, // 1안의 비 없는 판: 비만 뺀다
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -2263,7 +2263,7 @@ export class Sound {
    */
   ambience() {
     if (this._amb || !this.ctx || !this.master) return;
-    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, clearing: this._ambClearing, clearing_b: this._ambClearing, clearing_dry: this._ambClearing }[this.stage];
+    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
     if (amb) return amb.call(this);
     const c = this.ctx;
     const buf = this._noiseBuf();
@@ -2612,7 +2612,7 @@ export class Sound {
   /**
    * 화전 터의 이른 아침 (브란의 고향): 잔잔한 봄비가 탄 흙과 솔숲에 내린다. 숲을 지나는 옅은 바람 + 아주 낮은 바닥 + 빗발 두 겹(좌우, 되풀이 속도를
    * 달리해 겹치지 않게) + 20~55초마다 먼 까마귀 한 마리. 사장님 컨셉("적막하고 고독한 대결")대로 가볍고 단순하게, 크게 튀는 소리는 없다.
-   * `clearing_dry`는 비만 뺀다 (STAGE_SOUND.rain). 노드 몇 개와 되풀이 조각 둘뿐이라 폰 부담은 거의 없다
+   * `clearing_a_dry`는 비만 뺀다 (STAGE_SOUND.rain). 노드 몇 개와 되풀이 조각 둘뿐이라 폰 부담은 거의 없다
    */
   _ambClearing() {
     const K = this._ambKit();
