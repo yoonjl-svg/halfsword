@@ -120,6 +120,17 @@ export function frameTable(frame, style = null, skip = []) {
   return table(frame === 'one' || frame === 'gun' ? GUARD_BASE_ONE : GUARD_BASE, o);
 }
 
+// E 자루 무기 자세표 초안 (docs/pole_frame_design.md) — 데이터만. 두 손 간격·뒤로 뻗은 자루·미끄러지는 쥔 점 물리가 먼저라 아무 데서도 읽지 않는다.
+//  hand = 앞손(칼 원점), rear = 뒷손. 마이어 봉 자세 [원전 2차], 수치 [추정]. 몸은 왼발 앞(골반 yaw +)
+export const POLE_GUARDS = {
+  '긴 자세 (Langort)': { name: 'Mittelhut (Gerade Versatzung)', hand: [0.45, -0.05, -0.05], rear: [0.1, -0.25, 0.15], blade: [10, 0], pelvisYaw: 35, chestYaw: 30 },
+  '지붕 (Vom Tag)': { name: 'Oberhut', hand: [0.25, 0.5, 0.05], rear: [0.15, 0.0, 0.05], blade: [85, 0], pelvisYaw: 30, chestYaw: 25 },
+  '바보 (Alber)': { name: 'Unterhut', hand: [0.4, -0.25, 0.0], rear: [0.05, 0.0, 0.2], blade: [-30, 0], pelvisYaw: 35, chestYaw: 30 },
+  '쟁기 (Pflug)': { name: 'Steurhut', hand: [0.25, -0.1, -0.2], rear: [0.3, 0.35, 0.15], blade: [-60, -30], pelvisYaw: 30, chestYaw: 20 },
+  '왼쪽 바꿈': { name: 'Nebenhut', hand: [0.05, -0.3, -0.25], rear: [0.15, -0.1, 0.1], blade: [-20, -150], pelvisYaw: 45, chestYaw: 50 },
+  '옆 지킴 (Nebenhut)': { name: 'Wechselhut', hand: [0.0, -0.35, 0.25], rear: [0.1, -0.15, 0.0], blade: [-25, 150], pelvisYaw: 20, chestYaw: 10 },
+};
+
 // ── 2) 기술 목록 ───────────────────────────────────────────
 const weight = (tech, pred, k) => tech.map((t) => (pred(t) ? { ...t, base: t.base * k } : t));
 

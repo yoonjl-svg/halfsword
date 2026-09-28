@@ -50,7 +50,8 @@ function soloRound(lib) {
   const G = newRound({ walls: false, weapon: id, weapon2: 'longsword', seed: 7 });
   G.park();
   const P = G.player;
-  if (lib) applyMotionLibrary(P, { overlay: process.env.NO_OVERLAY !== '1' });
+  if (lib && process.env.LIB !== '0') applyMotionLibrary(P, { overlay: process.env.NO_OVERLAY !== '1' });
+  if (process.env.TWIST_MUL) P.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율
   return { G, P };
 }
 function setPad(P, x, y) {
@@ -177,6 +178,7 @@ if (mode === 'poses') {
       const X = xFirst ? G.player : G.enemy;
       const Y = xFirst ? G.enemy : G.player;
       const XA = xFirst ? G.ai2 : G.ai;
+      if (process.env.TWIST_MUL) X.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율 (라이브러리와 별개)
       if (useTable) applyMotionLibrary(X, { overlay: process.env.NO_OVERLAY !== '1', flow: process.env.NO_FLOW !== '1', noTwist: process.env.NOTWIST === '1', ai: XA, cover: process.env.COVER === '1' });
       let res = 'D';
       let lastTech = null;
