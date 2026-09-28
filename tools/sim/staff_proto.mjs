@@ -156,7 +156,14 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
         XA.update = (dt) => {
           const a = X.bodies.chest.translation(), b = Y.bodies.chest.translation();
           const d = Math.hypot(a.x - b.x, a.z - b.z);
-          if ((XA.mode === 'watch' || (process.env.STAFF_BANDS_ANY && XA.mode === 'defend')) && d < XA.M.contact * k) { XA.startWithdraw(0.5); bandN++; }
+          if ((XA.mode === 'watch' || (process.env.STAFF_BANDS_ANY && XA.mode === 'defend')) && d < XA.M.contact * k) {
+            // STAFF_BANDS_ACT=thrust: 물러나지 않고 곧장 찌른다(맞찌르기, stop-thrust) — 손에서 가장 가까운 찌르기 기술
+            if (process.env.STAFF_BANDS_ACT === 'thrust') {
+              const hand = [X.handOffset.x, X.handOffset.y];
+              const th = XA.school.tech.filter((t) => t.kind === 'thrust').sort((p, q) => Math.hypot(p.from[0] - hand[0], p.from[1] - hand[1]) - Math.hypot(q.from[0] - hand[0], q.from[1] - hand[1]))[0];
+              if (th && XA.startAttack(th, 'stop', { noFeint: true, fastChamber: true })) bandN++;
+            } else { XA.startWithdraw(0.5); bandN++; }
+          }
           up(dt);
         };
       }
