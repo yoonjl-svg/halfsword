@@ -68,6 +68,11 @@ step/mud1-8.mp3 — the clearing's wet ash and soil. CC0 (public domain):
   the mud layer band-limited 160 Hz-1.8 kHz, -8 dB, +8-16 ms, pitched down 5-15%; the mix
   low-passed at 2.6 kHz, faded by 200 ms, peak-normalized.
 
+stage/chant1.mp3 — a short Gregorian chant phrase for Isolde's revive. CC0 (public domain), Freesound:
+  chant1.mp3 <- Elmer_Tom, "Gregorian Chant in a Church in spain" (13.4-17.8 s, high-passed at
+                90 Hz, faded out over 0.9 s, peak-normalized)
+                https://freesound.org/people/Elmer_Tom/sounds/787598/
+
 stage/crow1-3.mp3 — distant crows for the clearing. CC0 (public domain), Freesound:
   crow1.mp3 <- TheKingOfGeeks360, "Corvids - Fish Crow, Single, One Caw, Distant"
                https://freesound.org/people/TheKingOfGeeks360/sounds/856323/

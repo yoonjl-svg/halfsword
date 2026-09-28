@@ -517,3 +517,21 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - `sounds.html`: "부활: 이졸데"(숨 곁들임 / 숨 없이), "화전 터: 까마귀들이 날아오름".
 - 확인: 시뮬 3종 main `c020968`와 바이트 동일, 스모크 콘솔 에러 0. 실제 게임(`?stage=castle&foe=isolde`)에서 `sound.revive('isolde')`: holy 한 벌이 bank에 있고 숨 녹음이 실렸으며 노드 4개로 났다, 오류 0.
 - 사장님께 부활 A(숨 곁들임)·B(효과음만) 녹음을 보냈다.
+
+### 22차 덧붙임 2: 부활음을 그레고리안 성가 녹음으로 (사장님: "부활음 마음에 안 들어. 짧은 그레고리안 성가 같은 느낌으로")
+
+- 합성 `SYNTH.holy`(반짝임·종·합창 패드)는 지웠다. 합성 사람 목소리·합창은 위험하다는 이전 교훈대로 실제 성가 녹음을 쓴다.
+- `revive()`는 이제 `SAMPLES.chant`(`stage/chant1.mp3`) 한 구절을 gain 0.32로 틀고 0.9초에 숨(1안)을 곁들인다. 엔진 렌더에서 4초 평균 −26.9dB(칼 부딪힘 평균 −24dB 아래).
+- Freesound CC0 검색(gregorian·monks chant·plainchant·kyrie 등 15개 검색어, 107개) → 14개를 받아 유성음 비율·음높이·잡음을 재고 스펙트로그램을 봤다. 후보 6개를 3.5~4.5초 구절로 잘라(90Hz 고역 통과, 끝 0.9초 페이드) 같은 부활 장면으로 들려드렸다:
+
+| 후보 | 출처 (모두 CC0) | 자른 구간 | 메모 |
+|---|---|---|---|
+| A (임시 적용) | Elmer_Tom "Gregorian Chant in a Church in spain" 787598 | 13.4~17.8초 | 진짜 교회 울림, 구절이 끝나며 잦아든다 |
+| B | 같은 녹음 | 3.2~7.6초 | 가운데 구절 |
+| C | carroll27 "Chanting_01" 151924 | 0.35~5.3초 | 남성 단선율, 건조해서 교회 울림(RT 2.2초, 35%)을 입힘 |
+| D | Patrick_Corra "Choir" 500862 | 0~4.3초 | 합창 한 구절 |
+| E | SignatureSoundsOrg "Serbian Orthodox Ambience 9" 869841 | 6.6~11.2초 | 정교회 성가 끝부분 |
+| F | melarancida "Monks Praying" 48299 | 1.8~6.2초 | 수도사 기도 |
+
+- 뺀 것: 오르간이 섞인 로마 녹음(780488), 처리된 드론(adharca), 잡음 많은 것(timothyd4y), 분위기 녹음(zachrau·Vrymaa), "fake monks"(262451).
+- 사장님이 고르면 `stage/chant1.mp3`와 LICENSE.txt만 바꾼다. 스크래치패드의 후보 파일은 `cand3/chantA~F.mp3`.
