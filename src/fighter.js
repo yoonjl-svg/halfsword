@@ -419,10 +419,12 @@ export class Fighter {
     this.bladeColliders = [];
     this.swordColliders = []; // 칼 전체(칼날+칼자루). 칼끼리 붙어 있는 동안 반발을 끄고 켠다 (combat.js)
     let partIdx = 0;
-    for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade] of parts) {
+    for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade, pose] of parts) {
+      // pose(선택): 칼 축에서 비켜 놓거나 기울인 부품 — { x: 옆으로(m), rotZ: z 축 회전(rad), I: {x,y,z} 부품 기준 관성 }.
+      //  권총 손잡이처럼 총신에서 꺾여 내려오는 부품만 쓴다 (없으면 예전 그대로 칼 축 위, 기울임 없음)
       const cd = shapeDesc(RAPIER, shape)
-        .setTranslation(0, y, 0)
-        .setMassProperties(pm, { x: 0, y: pc, z: 0 }, { x: pIe, y: pIt, z: pIe }, { x: 0, y: 0, z: 0, w: 1 })
+        .setTranslation(pose?.x ?? 0, y, 0)
+        .setMassProperties(pm, { x: 0, y: pc, z: 0 }, pose?.I ?? { x: pIe, y: pIt, z: pIe }, { x: 0, y: 0, z: 0, w: 1 })
         .setFriction(0.4)
         // 재질별 반발 계수. 곱하기 규칙이라 반발이 0인 몸·땅과는 그대로 0 (칼이 살에 튕기지 않는다)
         .setRestitution(restitution)
@@ -432,6 +434,7 @@ export class Fighter {
         .setContactForceEventThreshold(1)
         // 칼날만: 충돌 직전에 combat.js가 "가르고 지나갈지"를 정할 수 있게 한다
         .setActiveHooks(isBlade ? RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS : RAPIER.ActiveHooks.NONE);
+      if (pose?.rotZ) cd.setRotation(vecQ(new THREE.Quaternion().setFromAxisAngle(Z_AXIS, pose.rotZ)));
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
@@ -448,7 +451,8 @@ export class Fighter {
         () => spec.partMesh?.(pi, isBlade, shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish), o.look, finish) ?? shapeMesh(shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish)),
         VISUAL_DRAWS_PER_PART,
       );
-      mesh.position.y = y;
+      mesh.position.set(pose?.x ?? 0, y, 0);
+      if (pose?.rotZ) mesh.rotation.z = pose.rotZ;
       mesh.visible = color != null; // 색이 null 이면 물리 파트만 두고 그리지 않는다 (decorate 가 곡도·반달칼 같은 진짜 모양을 그린다)
       group.add(mesh);
       partIdx++;
