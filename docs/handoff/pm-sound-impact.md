@@ -275,3 +275,20 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - 실제 싸움(`?stage=castle&weapon=longsword`)에서 종이 6번 울렸다 (amp 0.47 → 0.15). 파형과 스펙트럼은 `docs/handoff/castle_bell.png`.
 - 시뮬 3종(live_battery·fights12·characters_eval both 2)은 main과 바이트 단위로 같다. 브라우저 오류 0.
 - 어두운 홀 소리는 그대로 뒀다. `?stage=darkhall`로 열면 쓰인다.
+
+## 14차: 무기 뽑기 카드 뒤집기 소리 (디렉터 승인)
+
+- `Sound.cardFlip({ pick, tier, grand })`. 예전 사각파 `tick`은 남겨 두었지만 이제 부르는 곳이 없다.
+  - 고른 카드:
+    - 두꺼운 카드 "촥": 대역 잡음 두 번, 22ms 간격, 그리고 낮은 "훅".
+    - 0.2초 뒤 앞면이 드러나며 낮은 "둥": 150→70Hz로 떨어지는 0.16초 울림과 둔한 잡음. 짧게 해서 마림바처럼 "통" 하지 않게 했다.
+    - 에픽·레전드는 작은 반짝임(높은 음 셋·넷)을 더한다. 진짜 엑스칼리버는 유리종 같은 맑은 울림(1047Hz, 약 1.8초)을 더한다.
+  - 나머지 두 장: 작은 "촥" 두 번이 30ms 어긋나게.
+  - 모두 그 자리에서 노드로 만든다(build 때 만든 0.4초 잡음을 쓴다). 소리 조각이 아직 안 만들어졌어도 첫 탭에 바로 난다.
+- 크기(오프라인 RMS): 촥 0.05, 둥 0.16, 나머지 촥 0.03, 반짝임 에픽 0.016·레전드 0.023, 엑스칼리버 0.046.
+- main.js 두 줄 교체:
+  - `pickCard` 안: `sound.tick(true, grand);` → `sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand });`
+  - `updateDraw`의 나머지 두 장 뒤집기: `sound.tick(false);` → `sound.cardFlip({ pick: false });`
+- 확인:
+  - 실제 게임에서 6번 뽑았다. 매번 고른 카드와 나머지 두 장 소리가 다 났다. 탭에서 소리 호출까지 1ms 아래였고, 오디오 문맥은 running이었다.
+  - 콘솔 에러 0. 시뮬 3종은 main과 바이트 동일하다.

@@ -170,6 +170,15 @@ ROWS.push(
   ['무기 부러짐', '나뭇가지 / 언 참치 / 둘 다', ['wood', 'frozen', 'both'], (s, v) => (v === 'both' ? (s.weaponBreak?.('wood'), s.weaponBreak?.('frozen')) : s.weaponBreak?.(v)), ['나무', '참치', '둘']],
 );
 
+// ── 무기 뽑기 카드 ──
+ROWS.push([
+  '카드 뒤집기',
+  '고른 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 / 엑스칼리버) · 나머지 두 장 "촥촥"',
+  [{ pick: true, tier: 'common' }, { pick: true, tier: 'epic' }, { pick: true, tier: 'legend' }, { pick: true, grand: true }, { pick: false }],
+  (s, v) => s.cardFlip?.(v),
+  ['커먼', '에픽', '레전드', '엑스칼리버', '나머지'],
+]);
+
 // ── 배경(스테이지)별 소리 ── 줄을 누르면 그 배경으로 바뀐다 (발소리·쓰러짐·전투 소리의 울림이 따라 바뀐다)
 const at = (id, fn) => (s, v) => (s.setStage?.(id), fn(s, v));
 ROWS.push(

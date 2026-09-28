@@ -669,7 +669,7 @@ function pickCard(i) {
   cardEls[i].classList.add('picked', 'flipped');
   revealLabel(i);
   drawEl.classList.replace('choose', 'reveal');
-  sound.tick(true, grand);
+  sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand }); // 두꺼운 카드 "촥" → 앞면이 드러나며 낮은 "둥" (레전드·에픽은 작은 반짝임, 엑스칼리버는 맑은 울림)
   haptic(grand ? 1 : 0.35);
   if (currentFoe) showFoeWeapons(false); // 소개 아랫줄: 이제 상대 무기를 알려 준다 (내 무기는 카드에 보인다)
 }
@@ -700,7 +700,7 @@ function updateDraw(dt) {
         el.classList.add('flipped', 'missed');
         revealLabel(i);
       });
-      sound.tick(false);
+      sound.cardFlip({ pick: false }); // 나머지 두 장이 함께 "촥"
     }
     if (!draw.built && draw.t >= DRAW_T.build) buildPicked();
     if (draw.t >= DRAW_T.look || (draw.skip && draw.t >= DRAW_T.skip)) {

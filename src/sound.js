@@ -1960,7 +1960,7 @@ export class Sound {
   }
 
   /**
-   * 무기 뽑기 카드가 뒤집힐 때의 "딸깍" (화면 소리, 위치 없음). 아주 짧은 사각파 한 번 → 폰 부담 거의 없음.
+   * (예전 무기 뽑기 "딸깍" — 이제 카드는 cardFlip 을 쓴다) 화면 소리, 위치 없음. 아주 짧은 사각파 한 번 → 폰 부담 거의 없음.
    * final = 고른 카드가 뒤집힐 때: 조금 낮고 길게 (아니면 나머지 두 장이 뒤집힐 때의 짧은 딸깍),
    * grand = 진짜 엑스칼리버를 뽑았을 때 한 옥타브 위 울림을 더한다
    */
@@ -1984,6 +1984,90 @@ export class Sound {
       blip(660, 0.16, 0.08, 'triangle');
       if (grand) blip(1320, 0.5, 0.05, 'sine');
     }
+  }
+
+  /**
+   * 무기 뽑기 카드가 뒤집힘 (화면 소리, 위치 없음). 모두 그 자리에서 노드로 만든다 → 소리 조각이 아직 안 만들어졌어도
+   * 첫 탭에 바로 난다 (잡음은 build 때 만든 0.4초 잡음 this.noise 를 쓴다).
+   *  pick = 고른 카드: 두꺼운 카드가 젖혀지는 "촥" + 앞면이 드러나는 순간(0.2초 뒤, 뒤집기 절반) 낮은 "둥"
+   *         tier 'epic'·'legend' 는 그 위에 아주 작은 반짝임, grand(진짜 엑스칼리버)는 맑은 울림
+   *  pick 아님 = 나머지 두 장이 함께 뒤집힘: 작은 "촥" 두 번이 30ms 어긋나게
+   */
+  cardFlip({ pick = false, tier = 'common', grand = false } = {}) {
+    if (!this._on || !this.ctx || !this.master || !this.noise) return;
+    const c = this.ctx;
+    const t0 = c.currentTime + 0.005;
+    const out = c.createGain();
+    out.gain.value = 1;
+    out.connect(this.master);
+    // 두꺼운 카드 "촥": 짧은 잡음 두 번 (종이가 휘었다 튕기는 소리) + 공기가 밀리는 낮은 "훅"
+    const snap = (t, amp, f = 2600, dur = 0.014) => {
+      const n = c.createBufferSource();
+      n.buffer = this.noise;
+      const bp = c.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = f;
+      bp.Q.value = 0.8;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+      n.connect(bp).connect(g).connect(out);
+      n.start(t, Math.random() * 0.3);
+      n.stop(t + dur + 0.02);
+    };
+    const whoosh = (t, amp) => {
+      const n = c.createBufferSource();
+      n.buffer = this.noise;
+      const lp = c.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 500;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
+      n.connect(lp).connect(g).connect(out);
+      n.start(t, Math.random() * 0.3);
+      n.stop(t + 0.09);
+    };
+    const tone = (t, f, amp, dur, type = 'sine', f1 = f) => {
+      const o = c.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f, t);
+      if (f1 !== f) o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.4);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(out);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    };
+    if (!pick) {
+      for (const d of [0, 0.03]) {
+        snap(t0 + d, 0.3, between(Math.random, 2200, 3000), 0.014);
+        whoosh(t0 + d, 0.06);
+      }
+      return;
+    }
+    snap(t0, 0.5, 2600, 0.02);
+    snap(t0 + 0.022, 0.32, 3300, 0.014);
+    whoosh(t0, 0.12);
+    // 앞면이 드러나는 "둥": 음이 빠르게 떨어지는 짧은 낮은 울림 + 둔한 잡음 (음이 오래 남으면 마림바처럼 "통" 하므로 짧게)
+    const tr = t0 + 0.2;
+    tone(tr, 150, 0.26, 0.16, 'sine', 70);
+    whoosh(tr, 0.18);
+    if (grand) {
+      // 진짜 엑스칼리버: 맑은 울림 (유리종처럼 정수배가 아닌 배음, 1.8초)
+      const f = 1047;
+      for (const [r, a, d] of [[1, 0.055, 1.8], [2.76, 0.022, 1.1], [5.4, 0.01, 0.6], [1.002, 0.03, 1.6]]) tone(tr + 0.02, f * r, a, d);
+      [2637, 3136, 3951].forEach((fq, k) => tone(tr + 0.08 + k * 0.05, fq, 0.012, 0.4));
+    } else if (tier === 'legend' || tier === 'epic') {
+      // 레전드·에픽: 아주 작은 반짝임 (높은 음 셋·넷이 빠르게)
+      const notes = tier === 'legend' ? [2637, 3136, 3951, 4699] : [2637, 3520, 4186];
+      notes.forEach((fq, k) => tone(tr + 0.04 + k * 0.045, fq, tier === 'legend' ? 0.03 : 0.02, 0.35));
+    }
+    this.stats.nodes += 12;
   }
 
   /** 몸이 땅에 부딪힘. speed = 몸통이 떨어지던 속도 (m/s). light = 무릎이 꺾여 주저앉음 */
