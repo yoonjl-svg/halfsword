@@ -838,7 +838,10 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 const lightsaber = finalizeSpec('lightsaber', {
   nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
   desc: '먼 은하에서 온 빛의 칼.\n무게가 없어 맞대면 밀린다.', // 사장님 확정 문구
-  grip: 'one-hand', material: 'plasma',
+  // 두 손으로 쥔다 (무기 PM 결정, 사장님 "찾아보고 정해"): 영화의 기본 칼놀림(밥 앤더슨 안무 — 에페·검도 바탕)이 긴 자루를 두 손으로 쥐고
+  //  크게 내려치는 쪽이다. 한 손 펜싱(마카시)은 휜 자루를 쓰는 특수한 유파. 자루(폼멜~이미터 0.27 m)도 두 손이 들어간다.
+  //  바꿔도 롱소드 상대 승률은 그대로였다(ability_test 48판: 한 손 63% → 두 손 65%, 95% 구간 48~75 / 50~77)
+  grip: 'two-hand', material: 'plasma',
   // 한손 자세표(칼 든 어깨를 앞으로)는 쓰지 않는다: 길고 가벼운 칼날이라 닿는 거리가 짧은 칼의 5배(+11cm 대 +2cm) 늘어
   //  롱소드 상대 승률이 55 → 75%로 에픽 목표(45~65%)를 넘었다 (10라운드 B, ref_duel). 영화처럼 두 손 자세로 겨눈다
   oneHandStance: false,
