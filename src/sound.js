@@ -1455,7 +1455,7 @@ const STAGE_SOUND = {
   castle: { step: 'stepSnow', grit: 'stepSnow', room: { dur: 0.8, rt: 0.55, e0: 0.04, e1: 0.11, lp: 4000, metal: 0.22, flesh: 0.08 } }, // 성벽에 짧게 튕기는 메아리
   cathedral: { step: 'stepStone', grit: 'stepStone', room: { dur: 2.8, rt: 2.5, e0: 0.03, e1: 0.14, lp: 3500, metal: 0.4, flesh: 0.16 } }, // 돌 성당의 긴 울림
   darkhall: { step: 'stepStone', room: { dur: 1.6, rt: 1.3, e0: 0.02, e1: 0.08, lp: 3000, metal: 0.28, flesh: 0.12 } }, // 휘장·카펫이 있어 성당보다 짧고 어둡다
-  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 (브란의 고향): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
+  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 2안 (브란의 고향, 오너 선택): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
   clearing_a: { step: 'stepMud', grit: 'stepMud', rain: true }, // 같은 컨셉의 1안 (보관용, ?stage=clearing_a — 오너는 2안을 골랐다)
   clearing_a_dry: { step: 'stepMud', grit: 'stepMud', rain: false }, // 1안의 비 없는 판: 비만 뺀다
 };
