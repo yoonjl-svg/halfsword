@@ -21,7 +21,7 @@ import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
-import { DEBRIS, tickDebris, clearDebris, debrisCount } from './debris.js';
+import { tickDebris, clearDebris, debrisCount } from './debris.js';
 
 await RAPIER.init();
 
@@ -186,7 +186,6 @@ const particles = new Particles(scene);
 const sound = new Sound();
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
 sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
-sound.hookDebrisLanding?.(DEBRIS); // 흩어진 칼·방어구 조각이 땅에 닿을 때 → 소리 (debris.js DEBRIS.onLand)
 const input = new Input(canvas);
 const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;

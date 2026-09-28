@@ -2224,31 +2224,6 @@ export class Sound {
     if (grit) this.layer(ev, grit, { gain: 0.25 + 0.2 * x, rate: between(Math.random, 0.9, 1.1), delay: 0.004 });
   }
 
-  /**
-   * 흩어진 조각이 땅에 닿음 (debris.js 가 DEBRIS.onLand 로 알린다 — hookDebrisLanding 으로 잇는다). 부러진 칼날 끝 'blade' 는 얇고 높은 "팅",
-   * 투구·판금 조각 'armor' 는 조금 낮은 "철-컥". 작은 조각이라 칼 떨어짐(swordLand)의 조각을 빠르게 재생해 쓴다. 투구 조각 일곱이 한꺼번에
-   * 떨어지면 소리가 겹쳐 쌓이므로 0.3초 안에 셋까지만 낸다. speed = 닿는 속도 (m/s), pos = 조각 자리(좌우 팬)
-   */
-  debrisLand(kind, speed = 2, { pos } = {}) {
-    if (!this._on || !this.ctx) return;
-    const now = this.ctx.currentTime;
-    this._debrisT = (this._debrisT || []).filter((t) => now - t < 0.3);
-    if (this._debrisT.length >= 3) return;
-    this._debrisT.push(now);
-    const x = clamp01((speed - 0.6) / 4);
-    const armor = kind === 'armor';
-    const ev = this.event({ bus: this.metalBus, gain: (armor ? 0.1 : 0.07) + (armor ? 0.18 : 0.12) * x, prio: 0.8, pos });
-    this.layer(ev, this.pick('swordLand'), { rate: armor ? between(Math.random, 1.15, 1.4) : between(Math.random, 1.5, 1.9) });
-    const grit = this.pickSample(STAGE_SOUND[this.stage].grit || STAGE_SOUND[this.stage].step);
-    if (grit) this.layer(ev, grit, { gain: 0.12 + 0.12 * x, rate: between(Math.random, 1.0, 1.2), delay: 0.003 });
-  }
-
-  /** debris.js 의 알림을 잇는다 (main.js 가 한 번 부른다). 이어지면 plateBreak 는 조각이 떨어지는 소리를 따로 내지 않는다 — 진짜 조각이 낸다 */
-  hookDebrisLanding(D) {
-    D.onLand = (kind, speed, pos) => this.debrisLand(kind, speed, { pos });
-    this._debrisHooked = true;
-  }
-
   /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
   weaponBreak(material = 'wood', pos) {
     if (!this._on || !this.ctx) return;
@@ -2985,13 +2960,13 @@ export class Sound {
     this.impact({ a: material, b: 'armor', energy, pos });
   }
 
-  /** 판금이 완전히 부서짐: 금이 번지며 깨지는 소리 (→ 조각이 떨어지는 소리는 debris.js 의 진짜 조각이 낸다. 안 이어졌으면 0.12~0.2초 뒤 합성 조각 소리) */
+  /** 판금이 완전히 부서짐: 금이 번지며 깨지는 소리 → 0.12~0.2초 뒤 조각이 모래에 떨어지는 소리 */
   plateBreak(energy = 100, { pos } = {}) {
     if (!this._on || !this.ctx) return;
     const e = clamp01(energy / 120);
     const ev = this.event({ bus: this.metalBus, gain: 0.7 + 0.3 * e, prio: 3, pos });
     this.layer(ev, this.pick('plateBreak'), { rate: between(Math.random, 0.94, 1.04) });
-    if (!this._debrisHooked) this.layer(ev, this.pick('plateDebris'), { gain: 0.6, rate: between(Math.random, 0.92, 1.08), delay: between(Math.random, 0.12, 0.2) }); // 조각 착지가 이어져 있으면 진짜 조각이 낸다
+    this.layer(ev, this.pick('plateDebris'), { gain: 0.6, rate: between(Math.random, 0.92, 1.08), delay: between(Math.random, 0.12, 0.2) });
   }
 
   /** 뼈 부딪히는/부러지는 소리 */

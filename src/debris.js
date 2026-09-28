@@ -27,7 +27,6 @@ export const DEBRIS = {
   //  수명의 shrinkFrom 비율부터 끝까지 작아져 사라진다
   armor: { floor: 0.03, groundFriction: 0.6, spinDamp: 0.6, shrinkFrom: 0.45 },
   headless: false, // 브라우저 밖(시뮬)에서도 조각을 띄울까 (검사 도구만 켠다 — 저절로 움직이지 않아 tickDebris 를 직접 부른다)
-  onLand: null, // (소리) 조각이 땅에 닿을 때 부른다: onLand(kind 'blade'|'armor', speed m/s, position). main.js 가 sound.hookDebrisLanding 으로 잇는다
 };
 
 const live = [];
@@ -124,15 +123,11 @@ export function tickDebris(dt) {
     o.position.addScaledVector(d.vel, dt);
     if (o.position.y < d.floor) {
       o.position.y = d.floor;
-      if (d.vel.y < 0) {
-        // 조각이 땅에 떨어지는 소리: 처음 닿을 때와 세게 되튈 때만 (되튄 뒤 잔 접촉은 0.6m/s 아래라 안 부른다)
-        if (d.vel.y < -0.6 && DEBRIS.onLand) DEBRIS.onLand(d.s0 ? 'armor' : 'blade', d.vel.length(), o.position);
-        d.vel.y = -d.vel.y * DEBRIS.bounce;
-      }
+      if (d.vel.y < 0) d.vel.y = -d.vel.y * DEBRIS.bounce;
       d.vel.x *= d.friction;
       d.vel.z *= d.friction;
       d.w.multiplyScalar(d.spinDamp);
-      d.landed = true;
+      d.landed = true; // (제안) 조각이 땅에 떨어지는 소리를 붙일 자리
     }
     const wl = d.w.length();
     if (wl > 1e-6) o.quaternion.premultiply(_q.setFromAxisAngle(_v.copy(d.w).divideScalar(wl), wl * dt));

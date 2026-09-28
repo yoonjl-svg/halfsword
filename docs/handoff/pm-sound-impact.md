@@ -571,16 +571,9 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - 관문: 시뮬 3종 main `e5151ab`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임 `?stage=poseidon_night` 배경 노드 7·타이머 1(천 펄럭임)·오류 0. main.js 변경 없음, 새 파일 없음.
 - 사장님 확인(12:3x): "밤 버전으로 쓰자". 그대로 확정.
 
-## 25차: 흩어진 조각이 땅에 닿는 소리 (사장님: "그것도 만들어서 제출해")
+## 25차: 흩어진 조각이 땅에 닿는 소리 — 만들었다가 뺐다 (사장님: "그럼 하지말자")
 
-- 디렉터가 선택 항목으로 알린 것(debris.js 130행 착지 자리)을 사장님 지시로 넣었다. main `a139981`(`4d9e3ae`)과, 밤의 포세이돈이 합쳐진 main `165d99e`를 병합했다.
-- 연결 방식: 배경 이벤트(`arena.onEvent`)와 같은 콜백 방식이다. sound.js가 debris.js를 import하면 일꾼 스레드(soundgen.js가 sound.js를 그대로 가져온다)에 three.js가 딸려 오므로 하지 않았다.
-  - `src/debris.js`: `DEBRIS.onLand`(기본 null) 자리를 두고, `tickDebris`에서 조각이 바닥 아래로 내려온 순간 되튀기 전에 `d.vel.y < -0.6`이면 `DEBRIS.onLand(kind, 속도, 위치)`를 부른다. kind는 `d.s0`(작아지며 사라지는 방어구 조각)이면 'armor', 아니면 'blade'. 되튄 뒤 잔 접촉은 0.6m/s 아래라 안 부른다(가만히 놓인 조각이 매 틱 부르지 않게). 난수는 쓰지 않는다.
-  - `src/main.js` 한 줄(사운드 호출 줄): 189행 `sound.listener = camera;` 다음에 `sound.hookDebrisLanding?.(DEBRIS);` 추가, 24행 import에 `DEBRIS` 추가.
-    - 전: `import { tickDebris, clearDebris, debrisCount } from './debris.js';` → 후: `import { DEBRIS, tickDebris, clearDebris, debrisCount } from './debris.js';`
-    - 처음엔 `useStage()` 안(143행)에 넣었다가 `const sound`(187행)보다 먼저 불려 초기화 전 접근 오류로 게임이 안 떴다(스모크 시간 초과). 모듈 최상위 189행으로 옮겼다.
-  - `Sound.hookDebrisLanding(D)`: `D.onLand`를 `debrisLand`에 잇고 `_debrisHooked`를 켠다. 켜지면 `plateBreak`는 합성 조각 소리(`plateDebris`, 0.12~0.2초 뒤 "철-퍽")를 내지 않는다 — 진짜 조각이 날아가 닿을 때 낸다(두 번 떨어지는 느낌을 막는다).
-- `Sound.debrisLand(kind, speed, {pos})`: 새 소리 조각 없이 `swordLand` 버퍼를 빠르게 재생한다(칼날 끝 1.5~1.9배, 판금 1.15~1.4배) + 그 바닥 알갱이 녹음. gain은 판금 0.1~0.28, 칼날 0.07~0.19(속도 0.6~4.6m/s). 0.3초 안에 셋까지만 낸다. `pos`로 좌우 팬. 0KB.
-- 측정(오프라인): 판금 조각 −38.9dB, 칼날 끝 −43.5dB (칼 떨어짐 −30.8, 발소리 −28보다 작다 — "작은 소리"). 투구 깨짐+조각 장면 −26.6dB.
-- `sounds.html`: "조각 착지"(칼날 끝 / 판금 조각 셋).
-- 관문: 시뮬 3종 main `165d99e`와 바이트 동일(1434B/499B/497B), 스모크 콘솔 에러 0. 실제 게임(포세이돈, 투구 깨짐): 조각 여섯 → onLand 12번 중 10번 재생(제한에 2번 걸림), 칼날 끝 2번, 에러 0.
+- 디렉터가 선택 항목으로 알린 것(debris.js 130행 착지 자리)을 사장님 지시("그것도 만들어서 제출해")로 만들어 `1361fbc`에 올렸다: debris.js `DEBRIS.onLand` 콜백, main.js 24행 import·189행 `sound.hookDebrisLanding?.(DEBRIS)`, sound.js `debrisLand`(칼날 끝 "팅"·판금 "철컥", 발소리보다 작게, 0.3초에 셋까지), 연결되면 `plateBreak`의 합성 조각 꼬리는 끔.
+- 사장님이 미리듣기(투구 깨짐 → 조각 여섯 → 칼날 끝)를 들으시고 **"그럼 하지말자"** → `1361fbc`를 되돌렸다(되돌리기 커밋, 히스토리 재작성 없음). src/main.js·debris.js·sound.js·soundlab.js는 main과 같아졌다. debris.js 착지 자리는 디렉터 원래 상태(`d.landed = true` + 제안 주석).
+- 디렉터에게 "1361fbc는 병합하지 말라"고 먼저 알렸다(원래 제출 보고 알림은 울리기 전에 지웠다).
+- 배운 것: 조각 착지 소리는 넣지 않는다. 투구가 깨질 때는 `plateBreak` 안의 합성 조각 꼬리("철-퍽")가 그대로 난다. 다시 필요하면 `1361fbc`를 그대로 되살리면 된다(`git revert` 한 번).
