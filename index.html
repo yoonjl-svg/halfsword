@@ -108,6 +108,16 @@
           linear-gradient(160deg, #3d2a1b, #1c130c);
         box-shadow: 0 8px 20px rgba(0,0,0,.5), inset 0 0 0 5px rgba(28,19,12,.9), inset 0 0 0 6px rgba(217,164,65,.42); }
       .wback svg { position: absolute; left: 50%; top: 50%; width: min(44%, 84px); height: auto; transform: translate(-50%, -50%); }
+      /* 픽셀 뒷면 (오너 결정, 외형 PM v3 · docs/design_language.md): 조각 그림을 한 칸 = --px 로 정수 배 확대해 붙인다.
+         조각 주소와 바탕색은 main.js setCardBack 이 카드마다 --b-* 로 넣는다 (상대 칸은 회색 조각). 모서리는 픽셀 결대로 네모 */
+      #draw[data-back="px"] .wback { border: 0 solid transparent; border-radius: 0; box-shadow: 0 8px 20px rgba(0,0,0,.5);
+        border-image: var(--b-frame) 7 / calc(7 * var(--px)) / 0 repeat;
+        background: var(--b-center) center / calc(14 * var(--px)) no-repeat,
+          var(--b-plaque) center bottom calc(3 * var(--px)) / calc(10 * var(--px)) no-repeat,
+          var(--b-plaque) center top calc(3 * var(--px)) / calc(10 * var(--px)) no-repeat,
+          var(--b-tile) center / calc(16 * var(--px)) calc(32 * var(--px)) repeat,
+          var(--b-bg);
+        background-blend-mode: normal; image-rendering: pixelated; image-rendering: crisp-edges; }
       /* 번호 배지 (PC: 누를 키 1·2). 뒷면 그림 아래쪽 홈에 맞춰 main.js 가 --kb 로 높이를 정한다 */
       .wback .wkey { position: absolute; left: 50%; bottom: var(--kb); transform: translateX(-50%); min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; border: 1px solid rgba(217,164,65,.7); background: rgba(20,13,8,.72); color: #e9c47a; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; white-space: nowrap; }
       body.touch .wback .wkey:not(.wfoe) { display: none; }
