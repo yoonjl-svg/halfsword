@@ -569,3 +569,4 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - 측정(오프라인 렌더): night amb quiet (15-17s) -50.5 dB / centroid 456 Hz (day -44.3 dB / 490 Hz) | flap (3.0-4.2s) -42.4 dB | big hit tail with flare+flap (8.0-9.0) -40.6 dB. 밤 배경이 낮보다 6dB 조용하고 어둡다(적막). 천 펄럭임은 배경보다 8dB 위로 작게.
 - `sounds.html`: "밤의 포세이돈: 천 펄럭임".
 - 관문: 시뮬 3종 main `e5151ab`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임 `?stage=poseidon_night` 배경 노드 7·타이머 1(천 펄럭임)·오류 0. main.js 변경 없음, 새 파일 없음.
+- 사장님 확인(12:3x): "밤 버전으로 쓰자". 그대로 확정.
