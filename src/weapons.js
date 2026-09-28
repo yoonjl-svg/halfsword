@@ -842,7 +842,7 @@ const lightsaber = finalizeSpec('lightsaber', {
   oneHandStance: false,
   tier: 'epic', // power 1.1 · 내구 0.95 (플라스마 칼날이라 어차피 안 부러진다)
   hiltLength: 0.15, bladeLength: 0.9,
-  ability: '플라스마 칼날: 갑옷 무시', // 에픽 특수 능력 (사장님) — ignoreArmor
+  ability: '고온 플라스마: 갑옷 무시', // 에픽 특수 능력 (사장님) — ignoreArmor
   edged: true, ignoreArmor: true, mCut: 1.35, mThrust: 1.3,
   controlOverrides: { wristVmax: 36, aimDamping: 9 }, // 가볍고 매끄러운 이미터: 손목이 더 빨리 돌아간다
   // 플라스마 칼날은 각진 막대가 아니라 매끄러운 원기둥이어야 "에너지 칼날"답다. 자루는 홈이 파인 금속 원통,

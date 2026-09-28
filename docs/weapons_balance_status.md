@@ -20,7 +20,7 @@
 |---|---|---|
 | 청강검 | (창천: 무기 절단) | 칼끼리 부딪힐 때 상대 무기가 부러질 확률 ×3 (`breakMult: 3` → fighter.absorbWeaponImpact(J, by), combat.js bladeClash 가 상대를 넘긴다). 레전드·플라스마·참치는 그대로 안 부러진다 |
 | 모노호시자오 | (제비 베기: 출혈) | 이 칼에 베이고 찔린 상처의 출혈 ×2 (`bleedMult: 2` → combat.js analyze bleedPerSev) |
-| 라이트세이버 | (플라스마 칼날: 갑옷 무시) | 원래 있던 ignoreArmor 그대로 (플라스마라 안 부러지는 것도 그대로) |
+| 라이트세이버 | (고온 플라스마: 갑옷 무시) | 원래 있던 ignoreArmor 그대로 (플라스마라 안 부러지는 것도 그대로) |
 
 - 카드 글: weapons.js finalizeSpec 이 `desc` 끝에 한 칸 띄고 `(ability)`를 붙인다 — main.js 는 안 고쳤다. 폰 가로·세로 카드 모두 들어간다(세로는 "(창천: / 무기 절단)"처럼 중간에서 줄이 바뀐다 — 능력을 따로 한 줄로 두려면 main.js·CSS, 디렉터 몫).
 - 이 두 무기가 없는 판은 그대로: fights12 바이트 동일(배율 1 이면 곱해도 같은 값).
