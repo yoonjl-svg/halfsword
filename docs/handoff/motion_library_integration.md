@@ -64,3 +64,21 @@ if (SKILL.flow || (MOTION.lib && this.f.motion?.flow)) this.updateFlow(dt, swing
 4. **§4:** 런지. 다리 걸음 작업과 함께한다.
 5. **§6:** 막기 덧씌우기. AI 판단과 함께한다.
 6. **단계마다:** fights12 · hybrid · live_battery 바이트 동일(스위치 끔)을 확인한다. 켠 상태로 `motion_lab duel <무기> 24 off|on` 48판 비교를 한다.
+
+## 8. 자루 무기(E) 넣기 — 새 무기 봉·창 (다음 버전, 무기 PM · 디렉터)
+측정은 `tools/sim/staff_proto.mjs`, 설계·결과는 `docs/pole_frame_design.md` §8. 게임 코드를 바꾸지 않고 도구 안에서만 쟀다.
+
+**1단계 — 판정은 그대로, 스펙 + 라이브러리만** (봉 39~50% · 창 40%, 롱소드 상대 96/48판)
+- `weapons.js` 스펙: 앞손 = 칼 원점, 자루 앞 1.2 m · 뒤 1.2 m, 뒷손 `gripAlong` −0.6 (두 손 간격, 지금 물리 그대로 된다). 부품 둘(앞 자루는 `blade` 부품, 뒤 자루는 아님).
+- `thrustStyle: THRUST_STYLE.rapier` — AI 의 찌르기 기술이 탭 찌르기(봉끝을 상대 가슴으로 뻗기)가 된다. **이것이 없으면 0%.** 에스톡식은 8%.
+- 봉: `edged: false`, `mBlunt` 3~4. 창: `edged: true`, **`hiltLength` = 창날 앞까지 자루 길이, `bladeLength` 0.25** (판정상 날은 창날만 — 자루로 맞힌 것은 둔기로 남는다).
+- 라이브러리 E: 마이어 봉 자세표(`POLE_GUARDS`) + 기술은 찌르기 + 정수리 내려치기(`POLE_STRIKES`)만. 유파 꾸러미의 `counter`·`feints` 도 찌르기로(`motionFor(...).counter`).
+- `ai.js MEASURED` 에 봉·창 줄이 있어야 한다(없으면 칼 길이 비율로 한 번 더 줄여 붙은 거리에 선다 — 시제품 도끼·메이스에서 확인). `weapon_measure.mjs` 로 잰다.
+
+**2단계 — 둔기 부위 효과표(`poke` 판정)** (`tools/sim/blunt_zones.mjs`, 문턱 [추정])
+- `fighter.applyWound` blunt 분기: 목·명치 찌름 숨 막힘, 얼굴 찌름 멍함, 칼 든 팔 치기 놓침, 정강이. 칼·둔기 공통.
+- 넣으면 봉 56~65% → 둔기 배율을 1.5 안팎으로 낮춘다. 냉동 참치 23 → 44% 도 함께 맞춘다(놓침 확률이 가장 큰 몫).
+
+**3단계 — 봉 전용 AI** (거리 띠 4개, `docs/pole_strike_effects.md` ③ 연구 세션)
+- 규칙 하나 얹기(물러나기·맞찌르기)는 차이가 없거나 나빴다. 뒷손 미끄러뜨리기(짧게 쥐기)·꼬리 치기·앞끝 필드(`frontEnd`)와 함께 만든다.
+- 칼 베기 길(사선·수평)은 봉에 주지 않는다: 섞으면 27%·15%.
