@@ -70,7 +70,7 @@
 
 | 캐릭터 id | 죽음 소리 |
 |---|---|
-| player, generic, bran, heinrich | 녹음 (HaelDB CC0, Baradari CC-BY 3.0, VoiceBosch CC-BY-SA 4.0) |
+| player, generic, bran, heinrich | 녹음 (HaelDB CC0, Baradari CC-BY 3.0, kanyonwyvern CC0). VoiceBosch CC-BY-SA 4.0은 17차에서 뺐다 |
 | liao | 녹음 (HaelDB, 짧은 신음·낮은 신음) |
 | isolde | 녹음 (mvVoiceActing "girl damage" CC0: 짧게 맞는 소리 두 개, `gain: 1.3`). 사장님이 후보 3개 중 고름(15차) |
 | margarethe (슈바르츠) | 녹음 (hisoul CC0: 지친 날숨 섞인 낮은 "하아…", 두 죽음에 같이 씀, `gain: 1.1`). 사장님 선택(15차, "노장이니까"). `mute`는 기능만 남고 쓰는 캐릭터가 없다. 사장님이 아낀 Reitanna 녹음은 `docs/sound_reserve/`에 보관 |
@@ -130,7 +130,7 @@
 ## 5. 남은 일 (우선순위 순)
 
 1. ~~네트워크 확인~~, ~~슈바르츠·이졸데 죽음 목소리~~: 15차에서 끝냈다. 사이트 접속 결과는 `sound_pm_takeover.md`.
-2. **VoiceBosch(CC-BY-SA) 남성 신음 3개 교체**: 후보(전 → A → B)를 사장님께 들려드렸고 답을 기다린다(15차).
+2. ~~VoiceBosch(CC-BY-SA) 남성 신음 3개 교체~~: 17차에서 A안으로 끝냈다. 이제 CC-BY-SA 음원은 없다.
 3. **판금 소리 연결**: 디렉터가 갑옷 병합을 끝내면 알려 준다. `plateBlock`·`plateBreak`는 이미 있다. 연결 뒤 실제 게임으로 확인한다.
 4. (보류, 디렉터 결정) 산새·말 울음·비둘기 녹음 비교. 말 소리는 사장님이 뺀 적이 있다.
 5. (디렉터가 사장님께 여쭘) 피격 신음·기합, 숨소리, 무기 떨어뜨리는 소리, 관중 함성.
