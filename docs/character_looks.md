@@ -3,7 +3,7 @@
 오너 요청: "캐릭터 모델링을 개선하고 싶다." 5인의 상대 캐릭터에 갑옷판·머리모양·수염·안대 같은
 장식 레이어(`src/outfits.js`)를 새로 얹고, 예전 겉모습은 지우지 않고 `src/looks.js`의
 `LOOK_ARCHIVE`에 `v0`로 남겨 두었다. 지금 게임이 쓰는 버전은 `CHARACTER_LOOK_VERSION`이
-가리킨다(마르그레테만 `v3`, 나머지는 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
+가리킨다(마르그레테 `v3`, 하인리히 `v2`, 이졸데 `v2`, 랴오 `v5`, 브란만 `v1`). 새 버전을 만들어도 옛 버전은 그대로 둔다.
 
 플레이어(케틀햇+갬비슨)의 겉모습은 요청대로 건드리지 않았다.
 
@@ -60,6 +60,13 @@
   뿔은 옆으로 뻗은 귀, 술은 붉은 발톱처럼 보였다. 곡선을 따라 굵기가 매끈하게 변하는 관으로 다시
   만들고, 뿔은 위로 솟게, 술은 두툼하고 넓게 바꿨다.
 - 여전히 순수 장식(`helmet: null`).
+- **곁 판 v1** (2026-09-28, 디렉터 지시·사장님 승인): 판금이 실제로 막고 두 단계로 깨지게 되면서(config.js ARMOR), 1단계(내구 0.9
+  아래)에 떨어지는 조각이 가슴 이음매 줄(24×1×0.8cm, 먹색 위 먹색)뿐이라 대결 거리에서 깨지는 게 안 보였다. 막는 힘·판정은 그대로
+  두고 겉모습만: **가슴판 위·아래 가장자리에 밝은 강철 테**(27×2×35cm, 27×2.4×35cm)와 **배 판 아래 겹판 한 장**(28×3.4×28cm,
+  본판의 0.32배)을 덧댔다. 색은 밝은 강철(`0x8d939b`) 하나 — 먹색 2톤에 셋째 톤을 더한 것뿐, 튀는 색은 없다. 이음매 줄은 남겼다.
+  v3 세트(`MARGARETHE_DRAGON_HORNED`)의 chest·abdomen 만 덮어써서 v1·v2 보관본은 그대로다.
+  비교: [margarethe_trim_v1.png](handoff/margarethe_trim_v1.png). 떨어지는 순간: [전](character_looks/margarethe_trim_before.png) ·
+  [순간](character_looks/margarethe_trim_moment.png) · [후](character_looks/margarethe_trim_after.png).
 
 | v0 | v1 | v2 | v3 (지금) |
 | --- | --- | --- | --- |
@@ -76,19 +83,36 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 (쓰러져도 투구·깃털 술·땋은 머리가 머리를 따라간다). 옛 버전은 `?look=margarethe:v1`,
 `?look=margarethe:v2`로 언제든 다시 볼 수 있다.
 
+## 판금 밑의 누비 속옷 (마르그레테·하인리히 공통)
+
+오너(2026-09-28): "갑옷 파괴 시 겹판이 표시되는 그래픽으론 모자란 거 같아. 갑옷 안에 덧대입는 흰색 천 옷이 보여야 해. 좀 너덜너덜한 느낌으로."
+- 판금이 **완전히 부서져 사라지면** 그 자리에 흰 누비 속옷이 드러난다(`outfits.js underCloth`, `setPlateWear`가 내구 0에 켠다). 멀쩡할 때는 숨겨 두어 겉모습은 전과 같다.
+- 가슴: 판보다 조금 작은 흰 조끼(가로 누빔 줄 다섯), 앞가슴에 비스듬히 찢긴 틈 둘(밑의 검은 옷이 보인다), 아랫단에 찢겨 늘어진 조각 일곱(길이·기울기 제각각, 둘은 땀·때가 밴 색). 배: 흰 띠와 찢긴 자락 다섯.
+- 흰 무명 `0xf1ece0`, 누빔 줄 `0xcbc2ae`, 때 밴 조각 `0xb4aa97`. 그늘진 앞면도 흰 천으로 읽히게 아주 약하게 스스로 빛난다(emissive `0x2b2824`).
+- 난수 없이 정해진 자리라 시드 시뮬은 그대로다: ARMOR 끔 fights12·hybrid fights12·live_battery, armor_eval probe 가 main 과 바이트 동일. 캐릭터를 만들 때 미리 만든다.
+- 두 세트(`HEINRICH_KNIGHT`·`MARGARETHE_DRAGON`)에 같은 도우미를 달아 두 판금 검객 모두, 보관본 버전도 같다(부서질 때만 보이므로 멀쩡한 모습은 그대로).
+- 스크린샷(판을 상처 없이 직접 부순 뒤): [마르그레테 앞](character_looks/margarethe_under_broken.png) · [옆](character_looks/margarethe_under_broken_side.png) · [하인리히](character_looks/heinrich_under_broken.png)
+
 ## 하인리히 도른 (`heinrich`) — 은빛 중갑 기사
 
 **v0(예전)**: 붉은 금장 흥행 검객 — 빨간 더블릿, 금발.
-**v1(지금, `outfit: 'heinrich_knight'`)**: 은빛(bright silver) 판금 가슴갑옷·배갑옷·허벅지
+**v1(보관, `outfit: 'heinrich_knight'`)**: 은빛(bright silver) 판금 가슴갑옷·배갑옷·허벅지
 자락(tasset)·정강이받이(그리브)·손목 보호대(가운틀릿 커프)·둥근 견갑, 은발 + 짧은 은수염.
 투구는 얹지 않았다(오너 요청에 투구 언급 없음, `hasHelmet` 관련 절 참고). **설정집 반영**:
 설정집은 그를 "화려한 배색"의 자칭 왕의 기사로 쓴다 — 은빛으로 바뀌어도 그 허영은 남겨야 해서,
 갑옷을 실전 갑옷보다 훨씬 반들반들하게(금속성 0.85·거칠기 0.16) 닦고, 예전 금빛 복제
 엑스칼리버·금장 취향을 잇는 가는 금띠를 가슴 이음매와 양쪽 견갑 테두리에 둘렀다.
 
-| v0 | v1 |
-| --- | --- |
-| ![heinrich v0](character_looks/heinrich_v0.jpg) | ![heinrich v1](character_looks/heinrich_v1.jpg) |
+**v2(지금, `outfit: 'heinrich_full_plate'`)**: 오너 지적 "하인리히 갑옷이 은색이 아닌 거 같다". 원인이 둘이었다.
+- 장면에 반사 환경이 없어서 금속성이 높은 판은 비출 게 없어 거의 검게 나왔다. 무기와 같은 반사 환경
+  (`weaponEnv`, 하늘·바다·모래)을 모든 금속판 재질에 붙였다(렌더 버그 수정이라 모든 버전에 적용).
+- 판이 가슴·어깨·손목·정강이에만 있어 대결 거리에서는 짙은 옷(팔·허벅지·허리 치마·발)이 대부분이었다.
+  v2는 위팔·아래팔 통판, 허벅지 판과 무릎 덮개, 쇠신, 허리 쇠치마를 더하고, 판 밑 옷도 밝은 강철
+  회색으로 올려 몸 대부분이 은빛 판으로 보이게 했다. 새로 덮은 허벅지·발도 방어 부위(`armorParts`)에 넣었다.
+
+| v0 | v1 | v2 (지금) |
+| --- | --- | --- |
+| ![heinrich v0](character_looks/heinrich_v0.jpg) | ![heinrich v1](character_looks/heinrich_v1.jpg) | ![heinrich v2](character_looks/heinrich_v2.jpg) |
 
 추가 컷: [3/4](character_looks/heinrich_threeq.jpg) · [옆](character_looks/heinrich_side.jpg) ·
 [기본 대결 화면](character_looks/heinrich_default.jpg) · [쓰러짐](character_looks/heinrich_down.jpg)
@@ -96,13 +120,53 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 ## 랴오 쓰위엔 (`liao`) — 방랑 낭인
 
 **v0(예전)**: 짙은 초록 방랑 검객 — 검은 머리, 붉은 머리띠.
-**v1(지금, `outfit: 'liao_ronin'`)**: 장발(뒤로 묶어 등까지 늘어뜨림) + 한쪽 눈 안대(작은 판 +
+**v1(보관, `outfit: 'liao_ronin'`)**: 장발(뒤로 묶어 등까지 늘어뜨림) + 한쪽 눈 안대(작은 판 +
 짧은 끈). 사무라이 쇼다운의 방랑 검객(무사시·하오마루 계열) 분위기만 참고했고, 특정 캐릭터의
 디자인을 그대로 베끼지 않았다.
 
-| v0 | v1 |
-| --- | --- |
-| ![liao v0](character_looks/liao_v0.jpg) | ![liao v1](character_looks/liao_v1.jpg) |
+**v2(보관, `outfit: 'liao_gi'`)**: 오너 요청 "동양 무도가 같은 푸른색 도복, 하오마루 같이 생긴 옷". 떠돌이
+무도가 실루엣만 참고한 새 디자인 — V자로 여민 푸른 도복 윗도리(흰 속옷이 보임), 팔꿈치 쪽으로 넓어지는
+소매, 흰 새끼줄 허리띠 매듭, 발목까지 오는 넓은 남색 하카마, 짚신 색 신. X자 가죽끈은 뺐고 장발·안대는 그대로.
+
+**v3(보관, `outfit: 'liao_gi_wild'`)**: 오너 요청 "좀 더 풍성한 꽁지머리 산발, V넥 위로 살색이 보여 V넥 강조".
+뒤통수 높이 묶은 굵은 꽁지머리가 다섯 가닥으로 부채처럼 뻗고, 정수리·옆·앞머리에 삐친 가닥을 달아
+산발로(안대·머리띠 유지). 흰 속옷을 빼고 V자 깃 사이로 맨살이 보이게 했다. 옷·색은 v2 그대로.
+근접: [정면](character_looks/liao_v3_head_front.jpg) · [옆(꽁지머리)](character_looks/liao_v3_head_side.jpg) ·
+[뒤](character_looks/liao_v3_head_back.jpg) · [전신](character_looks/liao_v3.jpg)
+
+**v4(보관, `outfit: 'liao_gi_curly'`)**: 오너 피드백 "너무 뾰족해, 컬과 볼륨이 있는 머리, V넥 안쪽으로 살짝
+흰 깃이 겹치게". v3의 뾰족한 원뿔 가닥을 모두 둥근 곱슬 뭉치로 바꿔 머리 전체에 볼륨을 주고(황금각 나선으로
+골고루, 얼굴은 비움), 꽁지머리도 좌우로 굽이치는 곱슬 덩어리 두 줄로. 파란 깃 바로 안쪽에 흰 속깃이 겹치고
+그 안으로 맨살. 근접: [정면](character_looks/liao_v4_head_front.jpg) ·
+[옆(곱슬 꽁지머리)](character_looks/liao_v4_head_side.jpg) · [뒤](character_looks/liao_v4_head_back.jpg) ·
+[전신](character_looks/liao_v4.jpg)
+
+**v5(보관, `outfit: 'liao_gi_wavy'`)**: 오너 피드백 "v3 같은 꽁지머리는 유지하고, 스파이크 같은 뾰족한 부분을
+양옆으로 자연스럽게 흘러내리는 중단발 컬로". v3의 부채꼴 꽁지머리는 그대로, 삐친 원뿔 가닥은 모두 빼고
+관자놀이에서 얼굴 옆을 따라 물결치며 턱~어깨 길이로 내려와 끝이 안으로 말리는 가닥(한쪽 셋)과 이마 양옆으로
+넘어가는 부드러운 앞머리를 달았다. 안대·머리띠, v4의 흰 속깃·맨살 V넥 유지.
+근접: [정면](character_looks/liao_v5_head_front.jpg) · [옆](character_looks/liao_v5_head_side.jpg) ·
+[뒤](character_looks/liao_v5_head_back.jpg) · [전신](character_looks/liao_v5.jpg)
+
+**v6~v8 (시안 셋 → 오너 선택: v6 확정, v7·v8 보관)**: 오너 요청 "양옆으로 내려오는 느낌 말고 다른 중단발 컬도
+보여줘, 입에 풀을 물고 있도록". 셋 다 v3 부채꼴 꽁지머리·안대·머리띠·v4 흰 속깃 V넥을 유지하고, 입꼬리에서
+오른쪽 앞으로 비스듬히 뻗은 풀줄기(가는 테이퍼 튜브 + 끝의 작은 이삭, 풀색 `0x6f8f3a`)를 물렸다.
+- **v6(지금) `liao_gi_swept`(넘긴 물결)**: 앞 이마선에서 정수리를 넘어 뒷목까지 뒤로 빗어 넘긴 굵은 물결 가닥 다섯.
+  [정면](character_looks/liao_v6_head_front.jpg) · [옆](character_looks/liao_v6_head_side.jpg) ·
+  [뒤](character_looks/liao_v6_head_back.jpg)
+- **v7 `liao_gi_halfup`(반묶음)**: 윗머리는 꽁지로 묶고, 뒷머리 다섯 가닥이 뒷목까지 내려와 안으로 말림 +
+  귀 뒤로 넘긴 가닥 둘. 얼굴 옆은 깔끔. [정면](character_looks/liao_v7_head_front.jpg) ·
+  [옆](character_looks/liao_v7_head_side.jpg) · [뒤](character_looks/liao_v7_head_back.jpg)
+- **v8 `liao_gi_tousled`(바람에 헝클어진)**: 머리 둘레 여덟 가닥이 뒤쪽·한쪽으로 쓸려 흩날리고, 이마에
+  비스듬한 앞머리 한 줄기. [정면](character_looks/liao_v8_head_front.jpg) ·
+  [옆](character_looks/liao_v8_head_side.jpg) · [뒤](character_looks/liao_v8_head_back.jpg)
+
+| v0 | v1 | v2 (지금은 v5) |
+| --- | --- | --- |
+| ![liao v0](character_looks/liao_v0.jpg) | ![liao v1](character_looks/liao_v1.jpg) | ![liao v2](character_looks/liao_v2.jpg) |
+
+v2 추가 컷: [대결 거리](character_looks/liao_v2_default_far.jpg) · [옆](character_looks/liao_v2_side.jpg) ·
+[뒤](character_looks/liao_v2_back.jpg) · [쓰러짐](character_looks/liao_v2_down.jpg)
 
 추가 컷: [3/4](character_looks/liao_threeq.jpg) · [옆](character_looks/liao_side.jpg) ·
 [기본 대결 화면](character_looks/liao_default.jpg) · [쓰러짐](character_looks/liao_down.jpg)
@@ -110,7 +174,7 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 ## 이졸데 반 아커러 (`isolde`) — 평상복
 
 **v0(예전)**: 보랏빛 견습생 복장 — 보라 상의, 보라 머리띠.
-**v1(지금, `outfit: 'isolde_saber'`)**: 평범한 사복 — 크림색 블라우스, 어두운 남색 긴 치마,
+**v1(보관, `outfit: 'isolde_saber'`)**: 평범한 사복 — 크림색 블라우스, 어두운 남색 긴 치마,
 검은 머리. Fate 세이버의 사복 분위기만 참고했다. 치마는 넓적다리(thighF·thighB) 각각에 따로
 붙여서, 래그돌이 다리를 벌려도 다리가 서로 다른 부위임이 읽히게 했다("다리가 읽혀야 한다"는
 지시 반영).
@@ -121,9 +185,16 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 > 그렇게 약하거나 가냘프게 그릴 필요가 없다. 위 디자인은 애초에 "수수한 평상복을 입은 세이버"
 > 컨셉이라 이 정정과 방향이 맞는다 — 얌전한 옷차림이지 여려 보이는 옷차림이 아니다.
 
-| v0 | v1 |
-| --- | --- |
-| ![isolde v0](character_looks/isolde_v0.jpg) | ![isolde v1](character_looks/isolde_v1.jpg) |
+**v2(지금, `outfit: 'isolde_longhair'`)**: 오너 요청 "허리까지 오는 긴 머리". 옷·색은 v1 그대로에 검은 긴
+생머리. 머리 하나에 긴 머리를 통째로 붙이면 고개를 돌릴 때마다 몸을 뚫고 휘둘려서, 세 도막으로 나눠
+따라가는 부위에 붙였다 — 머리(뒤통수~목덜미·얼굴 옆 머리), 가슴(등), 배(허리까지, 끝이 둥글게 모임).
+몸을 숙여도 머리가 등에 붙어 따라간다([쓰러짐](character_looks/isolde_v2_down.jpg)).
+
+| v0 | v1 | v2 (지금) |
+| --- | --- | --- |
+| ![isolde v0](character_looks/isolde_v0.jpg) | ![isolde v1](character_looks/isolde_v1.jpg) | ![isolde v2](character_looks/isolde_v2.jpg) |
+
+v2 추가 컷: [뒤(허리까지 오는 머리)](character_looks/isolde_v2_back.jpg) · [옆](character_looks/isolde_v2_side.jpg)
 
 추가 컷: [3/4](character_looks/isolde_threeq.jpg) · [옆](character_looks/isolde_side.jpg) ·
 [기본 대결 화면](character_looks/isolde_default.jpg) · [쓰러짐](character_looks/isolde_down.jpg)

@@ -7,7 +7,7 @@ const SEED0 = +(process.env.SEED0 || 1);
 const out = [];
 for (let seed = SEED0; seed < SEED0 + 12; seed++) {
   seedRand(seed);
-  const G = newRound({ walls: true }); const P = G.player, E = G.enemy; P.skill.level = 0.7;
+  const G = newRound({ walls: true, seed }); const P = G.player, E = G.enemy; P.skill.level = 0.7; // seed = 무기 파손 굴림 씨앗
   G.ai2 = new AI(P, E, 'normal');
   const hits = []; G.combat.hooks.onWound = (att, vic, r) => hits.push(r);
   let downs = 0; const prev = { P: 'stand', E: 'stand' }; let tDead = null;

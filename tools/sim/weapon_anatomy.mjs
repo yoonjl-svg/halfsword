@@ -3,48 +3,20 @@
 //  문턱 대비 비율(eff/thr — combat.analyze 와 같은 식), 칼끝 속도, 유효 질량, 칼날 위치를 모은다.
 //  duel  : 무기 X(AI) 대 롱소드(AI), 자리를 바꿔 가며 (weapon_balance.mjs 와 같은 판 구성) — 양쪽을 따로 센다
 //  dummy : 기본 AI 가 무기 X 로 가만히 칼을 겨눈 더미를 친다 (막는 상대가 없을 때 이 무기의 공격력)
-// 사용법: node tools/sim/weapon_anatomy.mjs [duel|dummy] [판 수] [무기id...]
+// 사용법: node tools/sim/weapon_anatomy.mjs [duel|dummy] [판 수] [무기id...] [--seed=첫 시드 번호]
+//   시드: duel 1000+s / 2000+s, dummy 60+s (s = 첫 번호부터 판 수만큼, 기본 1)
 import { newRound, DT, AI, THREE } from './harness_m.mjs';
 import { WEAPONS, getWeapon } from '../../src/weapons.js';
 import { applyWeaponMeasure } from './weapon_measures.mjs';
-import { ANATOMY, STRIKE } from '../../src/config.js';
+import { STRIKE } from '../../src/config.js';
 import { isMain } from './is_main.mjs';
 
-const X = new THREE.Vector3(1, 0, 0);
 const ROUND_SECONDS = 40;
 
-/** combat.analyze 와 같은 식으로 문턱 대비 비율을 다시 계산한다 (진단용 복사 — 판정에는 안 쓴다) */
-function effRatio(raw, S, pr) {
-  const att = pr.w.fighter;
-  const vic = pr.v.fighter;
-  const cfg = att.weaponCfg;
-  const type = raw.type;
-  if (type !== 'cut' && type !== 'stab') return null;
-  let quality = 1;
-  if (type === 'cut') {
-    const rel = raw.dir.clone().multiplyScalar(raw.speed);
-    const axis = raw.bladeAxis;
-    const perp = rel.clone().addScaledVector(axis, -rel.dot(axis));
-    const pl = perp.length();
-    const edge = X.clone().applyQuaternion(S.q);
-    const ea = pl > 1e-3 ? Math.abs(perp.dot(edge)) / pl : 0;
-    quality = 0.4 + 0.6 * ((ea - STRIKE.edgeAlign) / (1 - STRIKE.edgeAlign));
-  }
-  const zone = raw.zone;
-  const A = raw.helmet ? { ...ANATOMY.head, ...ANATOMY.helmet } : ANATOMY[zone];
-  let guard = 1;
-  if (raw.helmet) guard = 0.25 + 0.75 * vic.helmetIntegrity;
-  else if (zone !== 'head' && zone !== 'neck') guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
-  const ts = cfg.thrustStyle;
-  if (cfg.ignoreArmor) guard = 1;
-  else if (type === 'stab' && ts?.gap) {
-    if (raw.helmet) guard *= 1 - 0.5 * ts.gap;
-    else if (zone !== 'head' && zone !== 'neck') guard -= ts.gap * Math.max(0, guard - 0.55);
-  }
-  const wMult = cfg.power * (type === 'cut' ? cfg.mCut : cfg.mThrust);
-  const emo = (att.emoMods?.dealt ?? 1) * (vic.emoMods?.taken ?? 1);
-  const thr = (type === 'cut' ? A.cut : A.stab) * guard;
-  return (raw.energy * quality * wMult * emo) / thr;
+/** 문턱 대비 비율: combat.analyze 가 판정에 쓴 실효 에너지 ÷ 문턱 (투구·판금·옷·찌르기 틈이 다 들어간 값, 날이 든 접촉만) */
+function effRatio(raw) {
+  if (raw.type !== 'cut' && raw.type !== 'stab') return null;
+  return raw.eff / raw.thr;
 }
 
 const newSide = () => ({ contacts: 0, edge: 0, cut: 0, stab: 0, wounds: 0, below: 0, flat: 0, hilt: 0, sev: 0, ratios: [], speeds: [], mEff: [], tBlade: [], zones: {}, firstWound: 0, tip: [], dHit: [], ai: {} });
@@ -65,7 +37,7 @@ function instrument(G, sides) {
       else if (raw && (raw.type === 'cut' || raw.type === 'stab')) {
         s.edge++;
         s[raw.type]++;
-        const q = effRatio(raw, S, pr);
+        const q = effRatio(raw);
         if (q != null) s.ratios.push(q);
         s.speeds.push(raw.speed);
         s.mEff.push(raw.mFree + (raw.type === 'stab' && att.skill?.thrustPose.w > 0.5 ? STRIKE.thrustAssist : STRIKE.armAssist));
@@ -183,7 +155,8 @@ function line(label, s, mins, extra = '') {
 }
 
 if (isMain(import.meta.url)) {
-  const args = process.argv.slice(2);
+  const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+  const S0 = +(process.argv.find((a) => a.startsWith('--seed='))?.split('=')[1] ?? 1); // --seed=첫 시드 번호 (기본 1: 예전과 같은 판)
   const mode = args[0] || 'duel';
   const N = +(args[1] || 6);
   const ids = args.slice(2).length ? args.slice(2) : Object.keys(WEAPONS);
@@ -201,7 +174,7 @@ if (isMain(import.meta.url)) {
       let clashes = 0;
       const band = { out: 0, longOnly: 0, both: 0 };
       let cMe = 0;
-      for (let s = 1; s <= N; s++) {
+      for (let s = S0; s < S0 + N; s++) {
         for (const swap of [false, true]) {
           const r = swap ? duel('longsword', id, 2000 + s, ROUND_SECONDS) : duel(id, 'longsword', 1000 + s, ROUND_SECONDS);
           const mine = swap ? r.G.enemy : r.G.player;
@@ -235,7 +208,7 @@ if (isMain(import.meta.url)) {
       let kills = 0;
       let attacks = 0;
       const ttk = [];
-      for (let s = 1; s <= N; s++) {
+      for (let s = S0; s < S0 + N; s++) {
         const r = dummyRun(id, 60 + s, ROUND_SECONDS);
         merge(acc, r.side);
         mins += r.t / 60;

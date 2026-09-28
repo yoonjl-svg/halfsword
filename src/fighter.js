@@ -10,13 +10,16 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, WHOLE, SUPPORT, COMMIT } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT } from './config.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
-import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON } from './weapons.js';
-import { decorateOutfit } from './outfits.js';
+import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
+import { breakWeaponLook } from './weapon_looks.js';
+import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
+// 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
+import { decorateOutfit, setHelmetWear, setPlateWear } from './outfits.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -166,9 +169,27 @@ export class Fighter {
     this.downTime = BODY.fallDuration;
     this.kneelTime = 1.1;
     this.riseTime = 0.9;
-    this.hasHelmet = o.look.helmet === 'kettle';
+    // 투구: ARMOR.on 이면 look.helmet 에 무엇이든 적혀 있으면 막아 주는 투구다(종류별 값은 ARMOR.helmets).
+    //  끄면 예전처럼 플레이어 케틀햇만 막는다
+    const helmType = ARMOR.on ? o.look.helmet || null : o.look.helmet === 'kettle' ? 'kettle' : null;
+    this.hasHelmet = !!helmType;
+    this.helmetType = helmType;
+    this.helmetSpec = helmType ? ARMOR.helmets[helmType] || ARMOR.helmets.kettle : null;
     this.helmetIntegrity = 1; // 투구 상태 (찌그러질수록 덜 막아준다)
     this.cloth = {}; // 부위별 옷(누비 상의) 상태 1 = 멀쩡, 0 = 넝마
+    // 판금 (ARMOR.on 이고 look.armor === 'plate'): 판이 붙은 부위만 내구도 1 = 멀쩡 → 0 = 부서져 사라짐 (그 뒤로는 누비옷 판정)
+    //  판이 붙은 부위는 outfits.js 가 판금 메쉬를 그 부위 그룹의 userData.armor 로 알려 준 곳 (아래 몸 만들기에서 모은다)
+    this.plate = {};
+    this.plateGroups = {}; // 부위 → userData.armor 가 달린 겉모습 그룹 (칼 든 팔은 그 안의 돌려 둔 그룹)
+    // 부위 → { list: [{ box(그 부위 몸 좌표의 상자), mesh }], partial, shed } 아직 붙어 있는 판금 메쉬마다. 가슴판·배 판띠는 몸통을
+    //  감싸서 그 부위 전체를, 나머지(견갑·손목 보호대·정강이받이·골반 아래 자락)는 판이 실제로 덮은 곳만 막는다(손목 보호대가
+    //  아래팔 전체를, 허벅지께에 늘어진 자락이 골반 전체를 막지 않게). 흔적(데칼)은 맞은 곳에서 가장 가까운 판에 붙인다
+    this.plateBoxes = {};
+    // 방어구가 부서진 기록 (측정 도구가 읽는다): 완전히 부서진 판금 부위 수, 파손(곁 조각이 떨어져 나감) 횟수
+    this.platesBroken = 0;
+    this.armorShed = 0;
+    this._helmStage = 0; // 조각 투구의 파손 단계 (ARMOR.helmets[종류].shed 에서 몇 단계까지 떨어져 나갔나)
+    this.armorBroke = false; // 이번 타격에 판금 부위나 투구가 완전히 부서졌다 (main.js onWound 가 깨지는 소리를 한 번 내고 되돌린다)
     this.scene = scene;
     this.armed = true;
     this.balance = 100; // 휘청임 게이지: 세게 맞으면 줄고, 바닥나면 넘어진다
@@ -273,10 +294,10 @@ export class Fighter {
 
       const group = new THREE.Group();
       this.groups[d.name] = group;
-      // 뼈가 앞으로 누운 부위는 겉모습도 같이 눕힌다
+      // 뼈가 앞으로 누운 부위는 겉모습도 같이 눕힌다 (DRESS_ALONG_X: 겉모습의 +y(어깨 쪽)가 몸 −x(어깨), −y(손목 쪽)가 +x(손목))
       const dressTo = d.alongX ? new THREE.Group() : group;
       if (d.alongX) {
-        dressTo.quaternion.copy(ALONG_X);
+        dressTo.quaternion.copy(DRESS_ALONG_X);
         group.add(dressTo);
       }
       const mesh = dressPart(dressTo, d, o.look);
@@ -285,6 +306,10 @@ export class Fighter {
       isolatedVisual(() => decorateOutfit(dressTo, d, o.look), 0);
       this.partMesh[d.name] = mesh; // 흔적(데칼)을 붙일 겉면
       if (group.userData.helmet) this.helmetGroup = group.userData.helmet;
+      if (dressTo.userData.armor?.length) {
+        this.plateGroups[d.name] = dressTo;
+        this.plateBoxes[d.name] = armorBoxes(group, dressTo, d.kind !== 'chest' && d.kind !== 'abdomen');
+      }
       if (d.kind === 'head') {
         this.faceMat = mesh.material;
         this.skinColor = mesh.material.color.clone();
@@ -296,6 +321,7 @@ export class Fighter {
       this.localPos[d.name] = new THREE.Vector3(...d.pos);
       this.totalMass += d.mass;
     }
+    if (ARMOR.on && o.look.armor === 'plate') for (const name in this.plateGroups) this.plate[name] = 1;
 
     // 관절 생성 + 근육(관절 모터) + 각도 제한
     const jdefs = jointDefs(this.side);
@@ -366,11 +392,18 @@ export class Fighter {
       thrustStyle: spec.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
     };
     this.weaponBroken = false;
+    this.guardPose.oneHand = this.bodyGuard.oneHand = !!spec.oneHandStance; // 한손 무기는 한손 자세표 (guards.js: 칼 든 어깨를 앞으로, 손을 더 뻗는다. weapons.js oneHandStance)
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
-    //  씨앗은 "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림이 나오되 같은 순서로 돌리면 재현된다.
+    //  씨앗은 판 시드(o.breakSeed, 시뮬 하니스가 넘긴다) — 몇 번째로 돌리든 같은 시드면 같은 굴림이 나온다.
+    //  시드가 없으면(실제 게임) "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림.
     //  (자리 번호만으로 씨앗을 잡으면 매 판 같은 굴림이 나와 한쪽 자리만 계속 부러지거나 안 부러지는 편향이 생겼다)
-    Fighter._breakCount = (Fighter._breakCount ?? 0) + 1;
-    this._breakSeed = (Math.imul(0x9e3779b9, Fighter._breakCount) ^ ((o.index + 1) * 0x85ebca6b)) >>> 0;
+    const breakSeed = o.breakSeed ?? (Fighter._breakCount = (Fighter._breakCount ?? 0) + 1);
+    this._breakSeed = (Math.imul(0x9e3779b9, breakSeed) ^ ((o.index + 1) * 0x85ebca6b)) >>> 0;
+    // 방어구 연출(벗겨진 케틀햇이 도는 힘, 부서진 투구·판금 조각이 흩어지는 방향·시간)용 전용 난수도 같은 까닭으로 따로 두고,
+    //  씨앗도 같은 것(판 시드, 없으면 몇 번째 파이터인가)에서 다른 수로 섞어 잡는다 — 파손 굴림과 겹치지 않고,
+    //  시뮬에서는 한 프로세스에서 다른 판을 먼저 몇 판 돌렸든 같은 판은 같은 굴림이 나온다
+    const armorKey = (Math.imul(breakSeed | 0, 0x9e3779b1) ^ 0x5bd1e995) >>> 0;
+    this._armorSeed = (Math.imul(0x85ebca6b, armorKey) ^ ((o.index + 1) * 0x27d4eb2f)) >>> 0;
     const L = spec.bladeLength;
     const wristLocal = new THREE.Vector3(0.565, 1.43, this.side * 0.2); // 앞으로 뻗은 팔 끝
     const wp = toWorld(wristLocal.toArray());
@@ -776,7 +809,7 @@ export class Fighter {
   /**
    * 상처 입기. combat.js가 칼이 닿은 순간을 분석해서 부른다.
    * @param {object} h { part, zone('head'|'neck'|'chest'|'pelvis'|'arm'|'leg'), type('cut'|'stab'|'blunt'),
-   *                     severity(0~), energy(J), local(부위 기준 위치), helmet(bool) }
+   *                     severity(0~), energy(J), local(부위 기준 위치), helmet(bool), plate(bool: 남은 판금이 덮은 곳) }
    */
   applyWound(h) {
     if (this.state === 'dead') return;
@@ -786,11 +819,19 @@ export class Fighter {
     this.pain = Math.min(2, this.pain + sev * 0.8 + h.energy / 150);
     this.balance -= h.energy * VITALS.staggerPerJoule;
 
-    // 옷과 투구도 상한다
+    // 옷과 투구·판금도 상한다 (투구·판금이 막은 부위의 옷은 그대로)
     if (h.helmet) {
-      this.helmetIntegrity = Math.max(0, this.helmetIntegrity - h.energy / 450);
-      if (this.helmetIntegrity <= 0 || (h.type === 'blunt' && h.energy > 200)) this.knockOffHelmet(h.dir, h.energy);
+      const hs = this.helmetSpec || ARMOR.helmets.kettle;
+      this.helmetIntegrity = Math.max(0, this.helmetIntegrity - armorWear(hs, h.energy, 'head'));
+      if (this.helmetGroup) {
+        this.shedHelmet(hs, h); // 파손: 문턱을 넘을 때마다 곁 조각(뿔·볏)이 떨어져 날아간다 (조각 투구만)
+        setHelmetWear(this.helmetGroup, this.helmetIntegrity); // 찌그러짐·금 (조각 투구만, 케틀햇은 그대로)
+      }
+      if (this.helmetIntegrity <= 0 || (h.type === 'blunt' && h.energy > hs.knockBlunt)) this.knockOffHelmet(h.dir, h.energy);
+    } else if (h.plate && h.type === 'blunt') {
+      this.wearPlate(h.part, h.energy, h.dir, Z); // 판이 막았다: 판만 닳고 밑의 옷은 그대로
     } else if (Z !== 'head' && Z !== 'neck') {
+      if (h.plate) this.wearPlate(h.part, h.energy, h.dir, Z); // 판을 뚫고 들어왔다: 판도 닳고 옷도 찢어진다
       const c = this.cloth[h.part] ?? 1;
       const tear = h.type === 'blunt' ? h.energy / 800 : 0.25 + sev * 0.5;
       this.cloth[h.part] = Math.max(0, c - tear);
@@ -826,10 +867,17 @@ export class Fighter {
     if (Z === 'head' && h.type === 'cut') this.consciousness -= sev * 0.5;
   }
 
-  /** 투구가 벗겨져 날아간다 (따로 굴러다니는 물체가 된다) */
+  /**
+   * 투구가 벗겨져 날아간다 (따로 굴러다니는 물체가 된다). 조각으로 나뉜 투구(마르그레테 뿔 투구, userData.pieces)는
+   * ARMOR.on 이면 벗겨지는 대신 부서져 흩어진다(shatterHelmet). 어느 쪽이든 그 뒤로는 맨머리다
+   */
   knockOffHelmet(dir, energy) {
     if (!this.hasHelmet || !this.helmetGroup) return;
+    if (ARMOR.on && this.helmetGroup.userData.pieces) return this.shatterHelmet(dir, energy);
     this.hasHelmet = false;
+    // 도는 힘은 방어구 전용 난수로 (Math.random 을 쓰면 시드 시뮬에서 벗겨진 뒤의 AI 난수 흐름이 바뀐다).
+    //  ARMOR 를 끄면 예전처럼 Math.random — 방어구를 넣기 전 기준선과 바이트 단위로 같게
+    const rnd = ARMOR.on ? () => this.armorRandom() : Math.random;
     const R = this.R;
     const head = this.groups.head;
     const wp = new THREE.Vector3();
@@ -847,8 +895,149 @@ export class Fighter {
     );
     const k = Math.min(1, energy / 250);
     rb.applyImpulse({ x: dir.x * 3 * k, y: 1.5 + 1.5 * k, z: dir.z * 3 * k }, true);
-    rb.applyTorqueImpulse({ x: (Math.random() - 0.5) * 0.3, y: (Math.random() - 0.5) * 0.3, z: (Math.random() - 0.5) * 0.3 }, true);
+    rb.applyTorqueImpulse({ x: (rnd() - 0.5) * 0.3, y: (rnd() - 0.5) * 0.3, z: (rnd() - 0.5) * 0.3 }, true);
     this.meshes.push({ rb, group: this.helmetGroup, kind: 'loose' });
+  }
+
+  /**
+   * 이 부위의 이 점(부위 몸 좌표)이 남아 있는 판금 밑인가. 가슴판·배 판띠(몸통을 감싼다)는 부위 전체,
+   * 견갑·손목 보호대·정강이받이·골반 아래 자락은 아직 붙어 있는 판이 덮은 곳(± ARMOR.plate.coverMargin)만.
+   * ARMOR 를 끄면 plate 가 비어 있어 늘 아니다
+   */
+  platedAt(part, local) {
+    if (!((this.plate[part] ?? 0) > 0)) return false;
+    const B = this.plateBoxes[part];
+    if (!B.partial) return true;
+    for (const b of B.list) if (b.box.distanceToPoint(local) <= ARMOR.plate.coverMargin) return true;
+    return false;
+  }
+
+  /** 맞은 점(부위 몸 좌표)에서 가장 가까운 판금 메쉬 (흔적을 붙일 곳) */
+  plateMeshNear(part, local) {
+    let best = null;
+    let bd = Infinity;
+    for (const b of this.plateBoxes[part]?.list ?? []) {
+      const d = b.box.distanceToPoint(local);
+      if (d < bd) (bd = d), (best = b.mesh);
+    }
+    return best;
+  }
+
+  /** 방어구 연출 전용 난수 (파이터별 LCG, 결정적, Math.random 과 무관) */
+  armorRandom() {
+    this._armorSeed = (Math.imul(this._armorSeed, 1664525) + 1013904223) >>> 0;
+    return this._armorSeed / 4294967296;
+  }
+
+  /**
+   * 조각 투구의 파손: 내구도가 ARMOR.helmets[종류].shed 의 문턱 아래로 내려갈 때마다 그 단계의 조각이 떨어져 흩어진다
+   * ('horn' = 맞은 쪽 뿔, 이미 없으면 남은 뿔). 떨어진 조각은 userData.pieces 에서 빼서 setHelmetWear 가 더는 건드리지 않게 한다
+   * (그 함수는 없는 조각을 건너뛴다). 막는 정도는 내구도대로라 그대로다 — 사발은 완전 파손 때까지 남는다
+   */
+  shedHelmet(hs, h) {
+    const P = ARMOR.on && this.hasHelmet ? this.helmetGroup.userData.pieces : null;
+    const stages = hs.shed;
+    if (!P || !stages) return;
+    while (this._helmStage < stages.length && this.helmetIntegrity < stages[this._helmStage][0]) {
+      let n = 0;
+      for (const name of stages[this._helmStage++][1]) {
+        const key = name === 'horn' ? nearHorn(P, h.local) : name;
+        if (!key || !P[key]) continue;
+        this.flingDebris(P[key], h.dir, h.energy);
+        delete P[key];
+        n++;
+      }
+      if (n) this.armorShed++;
+    }
+  }
+
+  /** 조각 투구가 완전히 부서진다: 남은 조각(처음엔 7개: 사발·목가리개·첨탑·볏·뿔 둘·깃털 술)이 머리에서 떨어져 흩어졌다가 작아지며 사라진다 */
+  shatterHelmet(dir, energy) {
+    this.hasHelmet = false;
+    this.armorBroke = true;
+    const helm = this.helmetGroup;
+    const P = helm.userData.pieces;
+    for (const name in P) this.flingDebris(P[name], dir, energy);
+    helm.removeFromParent(); // 빈 그룹. 붉은 옆머리·땋은 머리는 그룹 밖이라 머리에 남는다
+  }
+
+  /**
+   * 판금이 맞아 닳는다 (armorWear: 에너지 ÷ wear + 제대로 맞은 한 번마다 perHit). 겉모습 함수 setPlateWear 가 있으면 닳은 정도를 넘긴다.
+   * 파손(내구도 < ARMOR.plate.shedBelow): 본판(가장 큰 판)만 남고 곁 판(금띠·이음매 판·자락 끝단)이 떨어져 날아간다.
+   * 완전 파손(0): 남은 판금 메쉬들이 떨어져 흩어졌다가 사라진다 — 그 뒤로 그 부위는 누비옷 판정이다.
+   * 떨어진 메쉬는 userData.armor 와 plateBoxes 에서 빼서, 덮은 곳 판정·흔적·setPlateWear 가 붙어 있는 판만 보게 한다
+   */
+  wearPlate(part, energy, dir, zone = 'chest') {
+    if (!((this.plate[part] ?? 0) > 0)) return; // 판이 없거나(ARMOR 끔) 이미 부서졌다
+    const g = this.plateGroups[part];
+    const B = this.plateBoxes[part];
+    const left = Math.max(0, this.plate[part] - armorWear(ARMOR.plate, energy, zone));
+    this.plate[part] = left;
+    if (left > 0 && !B.shed && left < ARMOR.plate.shedBelow && B.list.length > 1) {
+      // 파손: 본판(가장 큰 판)보다 한참 작은 곁 판(ARMOR.plate.trim 배 아래 — 금띠·이음매 판·자락 끝단)만 떨어져 나간다.
+      //  하인리히 v2 견갑처럼 본판에 버금가는 판은 완전 파손 때까지 남는다
+      B.shed = true;
+      let main = B.list[0];
+      for (const b of B.list) if (boxVolume(b.box) > boxVolume(main.box)) main = b;
+      const vMain = boxVolume(main.box);
+      const trim = B.list.filter((b) => b !== main && boxVolume(b.box) < ARMOR.plate.trim * vMain);
+      for (const b of trim) this.dropPlateMesh(g, B, b.mesh, dir, energy);
+      if (trim.length) {
+        B.list = B.list.filter((b) => !trim.includes(b));
+        this.armorShed++;
+      }
+    }
+    setPlateWear(g, left);
+    if (left > 0) return;
+    this.platesBroken++;
+    this.armorBroke = true;
+    for (const b of B.list) this.dropPlateMesh(g, B, b.mesh, dir, energy);
+    B.list = [];
+  }
+
+  /**
+   * 판금 메쉬 하나를 부위에서 떼어 던진다 (userData.armor 에서도 뺀다). 금(outfits.js plateCrack, 첫 판의 앞면에 붙여 숨겨 둔 선)이
+   * 붙은 판이면 금도 그 판에 붙여 같이 날아가게 한다 — 금만 몸에 남거나 따로 날지 않게
+   */
+  dropPlateMesh(g, B, mesh, dir, energy) {
+    const A = g.userData.armor;
+    const i = A.indexOf(mesh);
+    if (i >= 0) A.splice(i, 1);
+    if (mesh === B.host && g.userData.armorCracks?.length) {
+      for (const c of g.userData.armorCracks) {
+        mesh.attach(c);
+        const k = A.indexOf(c);
+        if (k >= 0) A.splice(k, 1);
+      }
+      g.userData.armorCracks = [];
+    }
+    this.flingDebris(mesh, dir, energy);
+  }
+
+  /**
+   * 부서진 조각 하나를 장면으로 떼어 내 던진다 (월드 자세는 그대로). 물리 몸체 없이 겉모습만 날아가고
+   * (debris.js scatterDebris — 칼 조각과 같은 모듈이 움직이고 치운다), ARMOR.debrisLife 초 안에 작아지며 사라진다.
+   * 방향·도는 빠르기·수명은 방어구 전용 난수 — 조각을 띄우지 않는 헤드리스 시뮬에서도 똑같이 굴려서
+   * 뒤따르는 방어구 난수(벗겨진 케틀햇이 도는 힘)가 브라우저와 같다
+   */
+  flingDebris(obj, dir, energy) {
+    const r = () => this.armorRandom();
+    const k = Math.min(1, energy / 250);
+    const dx = dir?.x ?? 0;
+    const dz = dir?.z ?? 0;
+    const v = new THREE.Vector3(dx * (0.8 + 2.2 * k) + (r() - 0.5) * 1.6, 1.0 + 1.6 * r(), dz * (0.8 + 2.2 * k) + (r() - 0.5) * 1.6);
+    const w = new THREE.Vector3((r() - 0.5) * 14, (r() - 0.5) * 14, (r() - 0.5) * 14);
+    const [a, b] = ARMOR.debrisLife;
+    scatterDebris(this.scene, obj, { vel: v, spin: w, life: a + (b - a) * r() });
+  }
+
+  /** 판이 바뀔 때(main.js newRound·배경 바꿈): 벗겨진 케틀햇(장면에 따로 있다)을 치운다. 흩어지던 조각은 debris.js clearDebris 가 치운다 */
+  clearLoose() {
+    // 모양 데이터만 푼다 (main.js newRound 가 캐릭터 그룹을 치우는 법과 같게)
+    for (const m of this.meshes) if (m.kind === 'loose' && m.group.parent) {
+      m.group.removeFromParent();
+      m.group.traverse((o) => o.geometry?.dispose());
+    }
   }
 
   /** 칼날에 피가 묻는다 */
@@ -876,19 +1065,111 @@ export class Fighter {
   /**
    * 무기가 세게 부딪힐 때마다(J, N·s) 부러질지 굴린다. 확률은 weapons.js breakChance(J): 등급 내구가 낮고 무게가 실린
    * 충돌일수록 높다. 강철 레전드·고무·플라스마는 확률 0이라 아무 일도 없다 (weapons.js 파손 규칙 참고).
+   *  칼끼리 부딪힌 경우 combat.js 가 상대 싸움꾼(by)을 넘긴다 — 투구·뼈에 되튄 충격은 by 없음.
    */
-  absorbWeaponImpact(J) {
+  absorbWeaponImpact(J, by = null) {
     if (!this.armed || this.weaponBroken || !this.weapon.fragile) return;
-    const p = this.weapon.breakChance(J);
+    // by: 칼끼리 부딪힌 상대. 그 칼이 무기를 잘 부수는 칼이면(spec.breakMult, 청강검 '창천') 부러질 확률을 그만큼 곱한다
+    const mult = by?.armed && !by.weaponBroken ? (by.weapon?.breakMult ?? 1) : 1;
+    const p = Math.min(1, this.weapon.breakChance(J) * mult);
     if (p <= 0) return;
     // 파이터별 LCG (결정적, Math.random 과 무관)
     this._breakSeed = (Math.imul(this._breakSeed, 1664525) + 1013904223) >>> 0;
     if (this._breakSeed / 4294967296 < p) this.breakWeapon();
   }
 
-  /** 무기가 부러진다: 날이 죽어 뭉툭한 몽둥이가 된다 (combat.js analyze()가 isBlade를 꺼서 처리) */
+  /**
+   * 무기가 부러진다: 칼날 끝쪽(spec.breakAt, 기본 절반 너머)이 떨어져 나가고 남은 토막은 뭉툭한 몽둥이가 된다
+   *  (combat.js analyze()가 isBlade를 꺼서 처리. BREAK.stubEdge 를 켜면 토막 날로 효율을 깎아 벤다).
+   *  물리: 칼날 콜라이더를 그 자리에서 줄인다(핸들이 그대로라 combat.js 의 접촉 기록이 끊기지 않는다) → 질량·관성·칼 길이가 함께 준다.
+   *  겉모습: 절단선 위 메쉬는 조각이 되어 날아가 사라지고(debris.js), 남는 끝엔 톱니 모양 부러진 면을 얹는다.
+   */
   breakWeapon() {
+    if (this.weaponBroken) return; // 한 번만 부러진다
     this.weaponBroken = true;
+    const cfg = this.weaponCfg;
+    const at = THREE.MathUtils.clamp(this.weapon.breakAt ?? BREAK.at, 0.05, 0.95);
+    const cutY = cfg.hiltLength + at * cfg.bladeLength;
+    this.trimSword(cutY);
+    cfg.bladeLength *= at; // 칼끝 계산(bladePoint)·판정(combat.js t)·마무리 간격(finish.js)이 새 길이를 쓴다
+    if (BREAK.stubEdge) {
+      cfg.mCut *= BREAK.stubCut;
+      cfg.mThrust *= BREAK.stubThrust;
+    }
+    // 칼끝 자리가 한순간에 옮겨졌다: 칼끝 속도 추정이 튀지 않게 이전 값을 버린다
+    this.tipPrev = null;
+    this.hitPointPrev = null;
+    this.shatterLook(cutY);
+  }
+
+  /** (파손) 칼 몸체에서 칼 축 높이 cutY(손 기준, m) 너머의 콜라이더를 잘라 내고 질량·관성 값을 다시 잰다 */
+  trimSword(cutY) {
+    const parts = this.weapon.buildParts({}); // 질량 자료만 쓴다 (색은 안 쓴다) — 생성자와 같은 순서라 swordColliders 와 짝이 맞다
+    parts.forEach(([shape, y, [pm, pc, pIe, pIt]], i) => {
+      const col = this.swordColliders[i];
+      if (!col || shape[0] !== 'box') return;
+      const [, hx, hy, hz] = shape;
+      const lo = y - hy;
+      if (y + hy <= cutY) return; // 절단선 아래 부품 (자루·코등이·폼멜)
+      if (lo >= cutY - 0.005) {
+        col.setEnabled(false); // 통째로 떨어져 나간 부품 (지금 무기엔 없다)
+        return;
+      }
+      const f = (cutY - lo) / (2 * hy); // 남는 비율 (길이)
+      const k = linearDensityK(pc / (2 * hy) + 0.5);
+      const whole = barMoments(1, k);
+      const kept = barMoments(f, k);
+      const L = 2 * hy;
+      const m2 = pm * (kept.m / whole.m);
+      // 휘두르는 축 관성: 무기 제원(pIe)과 이 밀도 모델의 비를 그대로 옮긴다 (단면 두께 몫 등이 함께 따라온다)
+      const Ie2 = (pIe / (pm * L * L * whole.var)) * m2 * L * L * kept.var;
+      const hy2 = (f * L) / 2;
+      col.setHalfExtents({ x: hx, y: hy2, z: hz });
+      col.setTranslationWrtParent({ x: 0, y: lo + hy2, z: 0 });
+      col.setMassProperties(m2, { x: 0, y: kept.com * L - hy2, z: 0 }, { x: Ie2, y: pIt * (kept.m / whole.m), z: Ie2 }, { x: 0, y: 0, z: 0, w: 1 });
+    });
+    const sword = this.sword;
+    sword.recomputeMassPropertiesFromColliders();
+    // 생성자와 같은 방식으로 타격·손목 계산용 값을 다시 잰다
+    const oldIt = this.swordProps.I.y;
+    const pI = sword.principalInertia();
+    const pF = sword.principalInertiaLocalFrame();
+    const lc = sword.localCom();
+    this.swordMass = sword.mass();
+    this.swordProps = { m: sword.mass(), I: { x: pI.x, y: pI.y, z: pI.z }, frame: new THREE.Quaternion(pF.x, pF.y, pF.z, pF.w) };
+    this.swordIhand = Math.max(pI.x, pI.z) + sword.mass() * lc.y * lc.y;
+    this.swordCom = lc.y;
+    // 날 세우기 힘은 칼날 축 관성에 비례해 맞춘다 (생성자 twistScale 주석) — 가벼워진 만큼 줄여야 축이 팽이처럼 돌지 않는다
+    if (oldIt > 0) this.twistScale *= pI.y / oldIt;
+  }
+
+  /** (파손) 칼 겉모습을 절단선에서 끊고, 떨어진 조각을 날려 보낸다 (보여 주기만 — 전역 난수를 건드리지 않는다) */
+  shatterLook(cutY) {
+    const group = this.swordGroup;
+    const sword = this.sword;
+    // 그룹 자세는 지난 화면 갱신 값일 수 있어 몸체 자세로 맞춘 뒤 자른다
+    const p = sword.translation();
+    group.position.set(p.x, p.y, p.z);
+    rot(sword, group.quaternion);
+    const out = isolatedVisual(() => breakWeaponLook(group, cutY, { material: this.weapon.material }), 0);
+    if (!out.fragment) return;
+    if (!debrisEnabled()) {
+      out.fragment.traverse((o) => o.geometry?.dispose());
+      return;
+    }
+    const v = sword.linvel();
+    const w = sword.angvel();
+    isolatedVisual(
+      () =>
+        spawnDebris(this.scene, out.fragment, {
+          pos: group.position.clone(),
+          quat: group.quaternion.clone(),
+          vel: new THREE.Vector3(v.x, v.y, v.z),
+          angvel: new THREE.Vector3(w.x, w.y, w.z),
+          owner: group,
+        }),
+      0,
+    );
   }
 
   /**
@@ -932,7 +1213,7 @@ export class Fighter {
     // 다리가 체중을 싣는 걸음: 서 있는 동안만 (쓰러짐·일어남·무릎 꿇기는 예전 방식)
     const G = this.gait;
     const hybrid = !!G && this.state === 'stand';
-    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth);
+    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1); // moveMul: 권총은 발이 빠르다 (weapons.js)
     const st = this.stumble;
     const mv = this.state === 'stand' ? { x: this.move.x * (1 - st.length()) + st.x, y: this.move.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
     if (this.state === 'stand' && this.daze > 0.2) {
@@ -1793,8 +2074,80 @@ export class Fighter {
 
 // ── 도우미 함수들 ──
 
+/**
+ * 제대로 된 타격의 문턱(J): 방어구가 없었으면 그 부위(누비옷·맨머리)가 베였을 에너지 — ARMOR.solidJ(누비옷 가슴 45J)와
+ *  그 부위 베기 문턱(ANATOMY) 가운데 작은 쪽. 가슴 45J · 배·골반 40J · 머리 30J · 다리 28J · 팔 22J.
+ *  (팔다리 판을 가슴 기준 45J 로 재면, 맨팔이면 베였을 22~45J 타격을 판이 닳지도 않고 끝없이 막아 하인리히 v2 처럼 팔다리까지
+ *  덮은 판금이 과한 어드밴티지가 됐다 — tools/sim/armor_eval.mjs)
+ */
+export function solidHitJ(zone) {
+  return Math.min(ARMOR.solidJ, ANATOMY[zone]?.cut ?? ARMOR.solidJ);
+}
+
+/**
+ * 방어구 한 번 맞을 때 닳는 양: 에너지(J) ÷ wear, 그리고 제대로 된 타격(solidHitJ 이상)이면 한 번마다 perHit 더.
+ *  맨몸·누비옷으로도 괜찮았을 가벼운 타격은 거의 닳지 않고, 제대로 된 타격 몇 번에 부서진다 (케틀햇은 perHit 0 → 예전 ÷450 그대로)
+ */
+function armorWear(spec, energy, zone) {
+  const per = spec.perHit ?? 0;
+  return per > 0 && energy >= solidHitJ(zone) ? energy / spec.wear + per : energy / spec.wear;
+}
+
+/**
+ * 판금 메쉬마다 그 부위 몸 좌표(= 겉모습 그룹 좌표, combat.js 가 맞은 점을 재는 좌표)의 상자.
+ *  partial 이면 판은 이 상자(± ARMOR.plate.coverMargin)가 덮은 곳만 막는다 — 견갑·손목 보호대·정강이받이는 팔다리 일부,
+ *  골반 자락(하인리히 앞 자락 두 장, 마르그레테 갑주 치마)은 골반 아래 허벅지께에 늘어져 골반은 아랫단만 덮는다.
+ *  몸통을 감싸는 가슴판·배 판띠는 부위 전체를 덮는 것으로 친다
+ */
+function armorBoxes(group, dressTo, partial) {
+  const list = [];
+  // 금 메쉬(outfits.js plateCrack — 숨겨 두었다가 많이 닳으면 보인다)는 판이 아니다: 덮은 곳·본판 고르기에서 빼고,
+  //  금이 붙은 판(host, 첫 판금 메쉬)이 떨어질 때 같이 떨어지게 한다
+  const cracks = new Set(dressTo.userData.armorCracks || []);
+  for (const mesh of dressTo.userData.armor) {
+    if (cracks.has(mesh)) continue;
+    const M = new THREE.Matrix4();
+    for (let o = mesh; o && o !== group; o = o.parent) {
+      o.updateMatrix();
+      M.premultiply(o.matrix);
+    }
+    if (!mesh.geometry) continue;
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    list.push({ box: mesh.geometry.boundingBox.clone().applyMatrix4(M), mesh });
+  }
+  return { list, partial, shed: false, host: list[0]?.mesh ?? null };
+}
+
+const _bs = new THREE.Vector3();
+/** 상자 부피 (본판 = 부위에서 가장 큰 판금 메쉬를 고를 때) */
+function boxVolume(box) {
+  box.getSize(_bs);
+  return _bs.x * _bs.y * _bs.z;
+}
+
+/** 맞은 쪽 뿔 (머리 몸 좌표 local 의 z 와 같은 쪽). 한쪽만 남았으면 그 뿔, 둘 다 없으면 null */
+function nearHorn(P, local) {
+  if (!P.hornR || !P.hornL) return P.hornR ? 'hornR' : P.hornL ? 'hornL' : null;
+  return (local?.z ?? 0) * P.hornR.position.z >= 0 ? 'hornR' : 'hornL';
+}
+
 function vecQ(q) {
   return { x: q.x, y: q.y, z: q.z, w: q.w };
+}
+
+// (파손) 칼날 질량이 길이를 따라 곧게 변한다고 본 밀도 ρ(u) = 1 + k·u (u: 자루 쪽 0 ~ 칼끝 1) 에서, 무게중심 비율 c 를 맞추는 k.
+//  롱소드처럼 무게가 자루 쪽에 몰린 칼(c≈0.34)은 k<0 이라, 절반이 부러지면 질량은 절반보다 많이 남는다.
+function linearDensityK(c) {
+  const den = 1 / 3 - c / 2;
+  return den > 1e-3 ? THREE.MathUtils.clamp((c - 0.5) / den, -0.95, 6) : 6;
+}
+/** 밀도 1 + k·u 인 막대의 [0, f] 구간: 질량 m, 무게중심 com(칼날 길이 비율), 무게중심 둘레 2차 모멘트 var(길이² 비율, 질량당) */
+function barMoments(f, k) {
+  const m = f + (k * f * f) / 2;
+  const s1 = (f * f) / 2 + (k * f ** 3) / 3;
+  const s2 = f ** 3 / 3 + (k * f ** 4) / 4;
+  const com = s1 / m;
+  return { m, com, var: s2 / m - com * com };
 }
 
 function shapeDesc(RAPIER, s) {
@@ -1971,6 +2324,11 @@ const _mT = new THREE.Vector3();
 const _mS = new THREE.Vector3();
 const IDENTITY_Q = new THREE.Quaternion();
 const ALONG_X = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2); // 세로(y) 뼈 → 앞(x)으로 눕힘
+// 칼 든 팔 겉모습(dressPart·outfits.js)을 눕히는 회전. 겉모습은 "+y = 어깨 쪽, −y = 손목 쪽, +x = 앞"으로 그려지고,
+//  칼 든 팔 뼈는 어깨(몸 −x 쪽)에서 손목(+x 쪽)으로 뻗는다 → 팔을 앞으로 든 것처럼 +90° 돌린다 (−y → +x, 앞 → 위).
+//  콜라이더(ALONG_X, −90°)와 모양은 같고(캡슐은 대칭) 끝이 바뀐다: ALONG_X 를 그대로 쓰면 손 구체·견갑·손목 보호대가
+//  팔꿈치 쪽에 그려졌다. 겉모습 전용이라 물리·시드 시뮬에는 영향이 없다
+const DRESS_ALONG_X = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
 
 /** 쿼터니언 → 회전 벡터(축 * 각도) */
 function toRotVec(q, out) {

@@ -1,4 +1,4 @@
-# 미들 소딩 (Middle Swording)
+# Stillness (적막)
 
 〈하프 소드〉에서 영감을 받은 **물리 기반 중세 결투 게임**을 만들어 보는 첫 게임 프로젝트예요.
 스마트폰 브라우저에서 바로 플레이할 수 있게 만들고 있어요.
@@ -55,6 +55,7 @@ npm run build    # 배포용 파일을 dist/ 에 만들기
 index.html        화면 틀, 메뉴, 부상 화면 효과 (HTML/CSS)
 sounds.html       소리 들어보기 페이지 (메뉴의 "소리 들어보기")
 public/sfx/       녹음된 효과음 몇 개 (Kenney.nl, CC0)
+public/ui/weapons/ 무기 뽑기 카드의 작은 무기 그림 (tools/browser/weapon_thumbs.mjs 가 게임 속 무기 모델을 찍어 만든다)
 src/
   config.js       ★ 밸런스/조작감/카메라 숫자 모음. 튜닝은 여기서부터!
   looks.js        검투사 겉모습 (옷 색, 투구, 머리카락)
@@ -215,7 +216,9 @@ src/
 
 URL 파라미터로 골라서 테스트할 수 있어요: `?weapon=monohoshizao&foeWeapon=chicken` (내 무기/상대 무기, 무기
 id는 `WEAPONS` 객체의 키. `branch`·`chicken`·`tuna`·`katana`·`jian`·`replica` 같은 짧은 별칭·옛 이름도 된다).
-`foeWeapon`을 생략하면 `weapon`과 같은 것, 둘 다 없으면 고른 캐릭터의 무기를 든다. 헤드리스 시뮬 쪽은
+`foeWeapon`을 생략하면 `weapon`과 같은 것, 둘 다 없으면 고른 캐릭터의 무기를 든다. `weapon`을 적으면 무기 카드 뽑기를
+건너뛴다. 뽑기에서는 왼쪽 두 장이 내 카드, 맨 오른쪽 회색 칸이 상대 무기(내가 고른 뒤 뒤집힌다)이고, `?cards=rapier,lightsaber`로
+내 카드 두 장을 정해 볼 수 있다(카드 뒷면은 main.js `CARD_BACK_DEFAULT`, 그림 파일 뒷면이 생기면 `?back=<id>`로 미리 본다). 헤드리스 시뮬 쪽은
 `tools/sim/weapon_smoke.mjs`(안정성 훑기), `tools/sim/weapon_balance.mjs`(승률 재기),
 `tools/sim/weapon_measure.mjs`(유파용 간격 실측) 참고.
 

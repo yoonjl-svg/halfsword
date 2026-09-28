@@ -1,5 +1,6 @@
 // 브라우저 터치 시험: 탭 = 찌르기, 끌기·누르고 있기·짧게 긋기는 예전 그대로(찌르기 안 됨)
 //  hasTouch 모바일 화면에서 page.touchscreen.tap 과 CDP 터치 이벤트로 손가락을 흉내 낸다. 콘솔 에러도 센다
+//  무기 카드 뽑기는 건너뛴다 (?weapon=longsword: 뽑기 없이 롱소드로 바로 싸움)
 //  실행: vite 개발 서버를 띄운 뒤 (npm run dev) playwright 가 설치된 곳에서
 //    node tools/browser/touch_thrust.mjs http://127.0.0.1:5173
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
@@ -12,7 +13,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 page.on('requestfailed', (r) => errors.push('requestfailed: ' + r.url()));
-await page.goto(base + '/', { waitUntil: 'networkidle' });
+await page.goto(base + '/?weapon=longsword', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 30000 });
 await page.getByText('싸움 시작').click();
 await page.waitForTimeout(2500);

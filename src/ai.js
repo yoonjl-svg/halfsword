@@ -20,12 +20,13 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, BODY, GAIT } from './config.js';
+import { AI_LEVELS, BODY, GAIT, SKILL } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
 import { EMO_REST, EMO_REST_ALL, emoMods } from './emotions.js';
+import { gunAI } from './gun.js';
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -48,22 +49,23 @@ const WEAPON_BASELINE = 0.13 + 1.05;
 // excalibur_replica는 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 비율을 쓴다.
 export const MEASURED = {
   // id: [contact, reach, clinch, cutTime] raw — tools/sim/weapon_measures.mjs 와 같은 값 (감독 확정 14종 로스터).
+  //  10라운드 B: 한손 뻗기(guards.js) 뒤 hybrid(게임 기본)로 다시 잰 값 (tools/sim/hybrid.mjs weapon_measure.mjs). 에스톡은 유효 간격(× 0.914)
   //  (finish.js 도 읽는다: 쓰러진 상대까지 닿는 거리 배율 downReachK)
-  //  cutTime 은 보정 없는 raw(롱소드 0.43)라 비율로만 쓴다.
-  longsword: [1.62, 1.91, 1.25, 0.43],
-  zweihander: [1.66, 2.08, 1.28, 0.49],
-  estoc: [1.6, 2.05, 1.24, 0.42],
-  sabre: [1.4, 1.67, 1.08, 0.38],
-  rapier: [1.52, 1.73, 1.17, 0.29],
-  falchion: [1.4, 1.62, 1.08, 0.36],
-  monohoshizao: [1.58, 1.92, 1.22, 0.46],
-  qinggang: [1.37, 1.61, 1.06, 0.36],
-  excalibur: [1.61, 1.86, 1.24, 0.41],
-  excalibur_replica: [1.59, 1.86, 1.23, 0.42],
-  lightsaber: [1.54, 1.73, 1.19, 0.25],
-  tree_branch: [1.44, 1.64, 1.11, 0.33],
-  rubber_chicken: [1.07, 1.21, 0.83, 0.27],
-  frozen_tuna: [1.34, 1.69, 1.03, 0.46],
+  //  cutTime 은 보정 없는 raw(롱소드 0.41)라 비율로만 쓴다.
+  longsword: [1.62, 1.9, 1.25, 0.41],
+  zweihander: [1.71, 2.08, 1.32, 0.48],
+  estoc: [1.57, 1.99, 1.22, 0.42],
+  sabre: [1.39, 1.58, 1.07, 0.36],
+  rapier: [1.54, 1.68, 1.19, 0.29],
+  falchion: [1.37, 1.56, 1.06, 0.33],
+  monohoshizao: [1.58, 1.87, 1.22, 0.47],
+  qinggang: [1.35, 1.52, 1.04, 0.33],
+  excalibur: [1.55, 1.83, 1.2, 0.4],
+  excalibur_replica: [1.55, 1.83, 1.2, 0.4],
+  lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
+  tree_branch: [1.46, 1.61, 1.13, 0.29],
+  rubber_chicken: [0.88, 1.24, 0.68, 0.18],
+  frozen_tuna: [1.36, 1.63, 1.05, 0.44],
 };
 const LS_MEASURED = MEASURED.longsword;
 
@@ -156,6 +158,22 @@ export class AI {
     this.parryTimes = []; // 최근 막힌 시각들 (분노 판정: 10초 안에 두 번)
     this.emoRest = { fear: -1, anger: -1, obsession: -1 }; // 감정별로 다시 지배할 수 있는 시각 (풀린 뒤 텀)
     this.emoRestAll = -1; // 어떤 감정이든 다시 켜질 수 있는 시각
+    // 시작 감정 (캐릭터 시트 persona.startEmotion, 예: { anger: 0.7 }): 서사대로 결투를 그 감정에 잠긴 채 시작한다.
+    //  세기는 그대로 emote()의 감쇠·지배 규칙을 따른다(사건이 없으면 사그라든다). 기본 AI에는 없어 예전과 같다
+    const SE = this.persona.startEmotion;
+    if (SE) {
+      const order = ['fear', 'anger', 'obsession'];
+      for (const k of order) if (SE[k] > 0) this.emo[k] = Math.min(1, SE[k]);
+      const dom = order.find((k) => this.emo[k] > 0.3);
+      if (dom) {
+        this.emotion = dom;
+        this.fear = dom === 'fear' ? this.emo.fear : 0;
+        this.anger = dom === 'anger' ? this.emo.anger : 0;
+        this.obsession = dom === 'obsession' ? this.emo.obsession : 0;
+        this.me.emoMods = emoMods(dom, this.emo[dom]);
+        if (dom === 'anger') this.patience = Math.min(this.patience, 0.2); // 발끈한 채 시작: 참을성이 바닥나 있다
+      }
+    }
     this.evParried = false; // 이번 스텝에 생긴 사건들 (afterStrike가 켜고 emote가 끈다)
     this.evLanded = false;
     // 무기 사건은 한 번만 공포로 센다 (무기·검술 담당 추가, emote() 참고)
@@ -221,9 +239,9 @@ export class AI {
     this.me.skill.level = this.level.skill;
   }
 
-  /** 상대가 칼을 놓쳤다: 간격을 지킬 까닭이 없다 → 쫓아가 끝낸다 (도망치는 빈손 상대를 놓치지 않게) */
+  /** 상대가 칼을 놓쳤다(또는 붙어 싸울 수 없는 권총을 들었다): 간격을 지킬 까닭이 없다 → 쫓아가 끝낸다 (도망치는 상대를 놓치지 않게) */
   get chasing() {
-    return this.foe.alive && !this.foe.armed && this.me.armed;
+    return this.foe.alive && (!this.foe.armed || !!this.foe.weapon?.gun) && this.me.armed;
   }
 
   /** 지금 공격 동작 중인가 (평가·디버그용) */
@@ -259,6 +277,32 @@ export class AI {
     // 칼을 놓쳤다: 빈손으로는 칠 수 없다 → 하던 공격을 거두고 간격 밖으로 물러난다 (좀비처럼 맨손으로 달려들지 않는다)
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
 
+    // 무기가 부러졌다(칼날 끝쪽이 떨어져 나감): 잃은 칼 길이만큼 간격을 줄인다 (한 번씩, shrinkM).
+    //  내 칼 → 내 간격 M(쓰러진 상대용 원래 간격 Mup 포함)과 기술 닿는 거리 보정, 상대 칼 → 상대 간격 어림 foeM·foeReach.
+    //  마무리 간격(finish.js 가 처음 한 번 정하는 me.finish.gap)도 같은 비율로 — 부러진 뒤에 처음 정해질 수도 있어 매번 본다
+    if (me.weaponBroken && !this.brokeM) {
+      this.brokeM = brokenLoss(me);
+      this.M = shrinkM(this.M, this.brokeM);
+      if (this.Mup) this.Mup = shrinkM(this.Mup, this.brokeM);
+      this.reachScale *= this.M.contact / (this.M.contact + 0.85 * this.brokeM);
+    }
+    if (this.brokeM && me.finish?.gap && !me.finish.gap.broken) me.finish.gap = { ...shrinkM(me.finish.gap, this.brokeM), broken: true };
+    if (foe.weaponBroken && !this.foeBrokeM) {
+      this.foeBrokeM = brokenLoss(foe);
+      this.foeM = shrinkM(this.foeM, this.foeBrokeM);
+      this.foeReach = Math.min(this.foeReach, this.foeM.reach + 0.05);
+    }
+
+    // 쓰러진 상대: 서 있는 상대의 간격 대신 누운 몸을 내려칠 간격(finish.js FINISH.ai × 무기 배율, 파이터의 finish.gap)을 쓴다
+    const downGap = foe.state === 'down' && me.finish?.gap;
+    if (downGap && !this.Mup) {
+      this.Mup = this.M; // 서 있는 상대의 간격 (상대가 일어나면 되돌린다)
+      this.M = { ...this.M, ...downGap };
+    } else if (!downGap && this.Mup) {
+      this.M = this.Mup;
+      this.Mup = null;
+    }
+
     // ── 보기 (반응 시간만큼 늦게) ──
     const s = this.sense.seen(L.reaction + 0.04 * this.anger); // 화나면 눈이 조금 늦다
     const c = me.bodies.chest.translation();
@@ -277,6 +321,7 @@ export class AI {
     this.myClosing = mv.x * ux + mv.z * uz; // 내가 상대에게 다가가는 빠르기
     const r = me.right(_v1);
     this.foeLat = dx * r.x + dz * r.z; // 상대가 내 오른쪽으로 비껴 선 정도
+    if (me.weapon?.gun) return gunAI(this, dt); // 권총(??? 등급): 간격을 벌려 도망 다니며 쏜다 (gun.js)
     // 상대가 얼마나 몰아치는가: 다가오며 휘두르는 사람이면 곧장 벨 수 있는 자세(지붕·황소)로 기다린다
     const aggrNow = (this.foeClosing > 0.6 ? 0.6 : 0) + (Math.hypot(s.hvx, s.hvy) > 3 && d < this.foeReach + 0.6 ? 0.6 : 0);
     this.foeAggro += (Math.min(1, aggrNow) - this.foeAggro) * Math.min(1, dt / 2.5);
@@ -710,8 +755,6 @@ export class AI {
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
-      // 쓰러진 상대: 누운 몸까지 닿는 거리는 칼이 짧을수록 훨씬 짧다(아래로 뻗느라) → 무기 배율(finish.js downReachK)만큼 더 다가선다
-      if (this.foe.state === 'down') this.need *= this.me.finish?.k ?? 1;
       if (this.timer <= 0 && this.contactDist() <= this.need) {
         // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
         this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
@@ -727,6 +770,8 @@ export class AI {
       this.handSpeed = L.strikeSpeed;
       this.checkBind();
       if (!this.path.length) {
+        // 흐름(SKILL.flow, 시제품): 칼이 막히지 않았으면 멈춰 서지 않고 지금 손에서 이어지는 베기로 곧장 흐른다
+        if (SKILL.flow && this.flowOn(d)) return;
         // 손은 끝 자세에 닿았지만 무거운 칼은 아직 날아가는 중이다 → 칼이 지나갈 때까지 버틴다
         this.phase = 'follow';
         this.timer = 0.3;
@@ -853,6 +898,65 @@ export class AI {
     this.startWithdraw(0.9 - 0.4 * this.obsession); // 물고 늘어질 땐 짧게만 물러난다 (막기는 그대로)
   }
 
+  // ───────────────────────── 흐름 (SKILL.flow 시제품, 디렉터 10라운드 D) ─────────────────────────
+  /**
+   * 흐름으로 이을 베기 하나: 내려베기(presses: 분노의 베기·정수리 베기)를 먼저 찾는다 — 끝 자세(아래)에서 곧장 올려베면 약하다.
+   *  준비 자세가 지금 손에서 멀수록 덜 고른다(flowReach m 을 한 바퀴 돌아가는 거리의 기준으로). 찌르기·방금 친 기술은 빼고
+   */
+  flowTech() {
+    const hand = [this.me.handOffset.x, this.me.handOffset.y];
+    let best = null;
+    let bestW = 0;
+    for (const t of this.school.tech) {
+      if (t === this.tech || t.kind === 'thrust') continue;
+      const cd = padDist(hand, t.from);
+      const w = this.pers.techPref[t.name] * t.base * (t.presses ? 3 : 1) * Math.exp(-cd / (2 * SKILL.flowReach));
+      if (w > bestW) {
+        bestW = w;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * 기술 t 로 흐른다: 멈춰 서서 자세를 잡지 않고, 손이 옆으로 한 바퀴 돌아(물레) 준비 자세를 지나 그대로 벤다.
+   *  칼이 쉬지 않고 돌아 나가니 다음 베기도 제 무게를 싣는다 (8자: 분노의 베기 → 왼쪽 분노의 베기 → …)
+   */
+  flowInto(t, why, chain) {
+    const hand = [this.me.handOffset.x, this.me.handOffset.y];
+    if (!this.startAttack(t, why, { chain, noFeint: true, skipChamber: true })) return false;
+    this.stats.flows = (this.stats.flows ?? 0) + 1;
+    this.startStrike();
+    const mx = (hand[0] + t.from[0]) / 2;
+    this.path.unshift([clamp(mx + Math.sign(mx || hand[0] || 1) * 0.12, -0.6, 0.6), (hand[1] + t.from[1]) / 2], t.from.slice());
+    return true;
+  }
+
+  /** 베기가 끝났다: 칼이 막히지 않았고(안전장치) 상대가 간격 안이면 멈추지 않고 다음 베기로 흐른다 */
+  flowOn(d) {
+    if (this.bound || this.chain >= SKILL.flowChain || !this.foe.alive || d > this.M.reach + 0.1 || d < this.M.clinch - 0.5) return false;
+    const t = this.flowTech();
+    if (!t) return false;
+    if (this.hitLanded) {
+      this.stats.landed++; // afterStrike 를 건너뛰니 맞힌 것을 여기서 센다
+      this.evLanded = true;
+    }
+    return this.flowInto(t, 'flow', this.chain + 1);
+  }
+
+  /** 막는 중: 칼끼리 지금 맞닿았으면(받아 냄) 받은 칼이 멈추지 않고 곧장 되받아 벤다 (예전엔 공격이 지나가길 기다렸다가 자세에서 다시 쳤다) */
+  flowRiposte(d) {
+    const me = this.me;
+    const foe = this.foe;
+    if (!me.tipPrev || !foe.tipPrev || !foe.alive || d > this.M.reach + 0.25 || d < this.M.clinch + 0.1) return false;
+    me.bladePoint(0.1, _a0);
+    foe.bladePoint(0.1, _b0);
+    if (segDist(_a0, me.tipPrev, _b0, foe.tipPrev) > 0.07) return false;
+    const t = this.flowTech();
+    return !!t && this.flowInto(t, 'riposte', 0);
+  }
+
   // ───────────────────────── 물러나기 ─────────────────────────
   startWithdraw(time) {
     this.mode = 'withdraw';
@@ -956,6 +1060,8 @@ export class AI {
     this.hand.set(p[0], p[1]);
     this.handSpeed = this.defVoid ? L.parrySpeed * 0.6 : L.parrySpeed;
     this.checkBind();
+    // 흐름(SKILL.flow): 칼로 받아 낸 순간(칼끼리 맞닿음) 받은 칼이 멈추지 않고 그대로 되받아 벤다
+    if (SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
     const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
     if ((swingOver && this.timer < 0.35) || this.timer <= 0) {
@@ -1175,8 +1281,8 @@ export class AI {
           //  뒤로 살짝 당기면 검술 층의 자동 내딛기(skill.js)도 걸리지 않는다
           fwd = d < this.M.contact ? -0.5 : -0.21;
         }
-        if (d < this.M.clinch * (this.foe.state === 'down' ? (this.me.finish?.k ?? 1) : 1)) {
-          fwd = -0.7; // 너무 붙으면 베며 물러난다 (쓰러진 상대는 무기 배율만큼 더 붙어도 된다)
+        if (d < this.M.clinch) {
+          fwd = -0.7; // 너무 붙으면 베며 물러난다
           urgent = true;
         }
         // 달려드는 상대를 맞받아 벨 때는 옆으로 비켜 선다 (상대 칼이 지나가는 줄에서 벗어난다)
@@ -1309,6 +1415,20 @@ const _d2 = new THREE.Vector3();
 const _r = new THREE.Vector3();
 
 /** 두 선분(p1-q1, p2-q2) 사이 가장 가까운 거리 */
+/** (파손) 부러져 잃은 칼날 길이 (m). 무기 제원(spec)은 그대로이고 싸움꾼의 weaponCfg.bladeLength 만 줄어든다 */
+function brokenLoss(f) {
+  return Math.max(0, (f.weapon?.bladeLength ?? 0) - f.weaponCfg.bladeLength);
+}
+/**
+ * (파손) 간격 표(가슴~가슴, m)를 잃은 칼 길이 dL 만큼 줄인다. 칼끝이 통째로 없어져 닿는 끝(reach)은 dL 그대로,
+ *  베어 닿는 거리(contact)는 칼날 치는 자리가 끝에서 조금 안쪽이라 0.85·dL (실측 표에서 칼 길이 차와 contact 차의 비 ≈ 0.85).
+ *  붙어 싸우는 거리(clinch)는 contact 보다 멀면 안 되니 그 밑으로 누른다.
+ */
+function shrinkM(M, dL) {
+  const contact = Math.max(0.6, M.contact - 0.85 * dL);
+  return { ...M, contact, reach: Math.max(contact + 0.1, M.reach - dL), clinch: Math.min(M.clinch, contact - 0.12) };
+}
+
 function segDist(p1, q1, p2, q2) {
   _d1.subVectors(q1, p1);
   _d2.subVectors(q2, p2);

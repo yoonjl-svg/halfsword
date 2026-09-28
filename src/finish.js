@@ -42,6 +42,11 @@ export const FINISH = {
   brakeRelief: 0.8,
   hover: { pelvisYaw: 10, chestYaw: 12, pitch: 8, drop: 0.07 }, // 몸 (도, m)
   strike: { pelvisYaw: -5, chestYaw: -5, pitch: 22, drop: 0.13 },
+  // AI 가 쓰러진 상대에게 쓰는 간격 (롱소드 기준 m, 무기 배율 k 를 곱한다. ai.js 가 간격 표 contact·reach·clinch 대신 쓴다).
+  //  서 있는 상대의 간격(칼날이 머리 높이에 닿는 1.6m)으로는 누운 몸이 칼 밑 멀리 있어 허공만 치고 물러난다
+  //  (tools/sim/down_diag.mjs: 롱소드 AI 가 1.5m 안으로 들어가지 않았다). 겨눌 점(ideal 0.85m)보다 조금 멀리서 들어가 내려치고,
+  //  발밑(minFwd)에 가까울 때만 물러난다. 1.0/1.3/0.5 · 1.1/1.4/0.6 · 1.2/1.5/0.6 을 48판씩 견줘 첫 상처가 가장 빠른 값
+  ai: { contact: 1.1, reach: 1.4, clinch: 0.6 },
 };
 
 // 칼 길이에 따른 마무리 거리: 누운 몸(어깨 아래 약 1.2m)까지 수평으로 닿는 거리는 칼이 짧을수록 훨씬 짧아진다.
@@ -70,7 +75,7 @@ function pose(body) {
 
 /** 이 파이터의 마무리 상태 (guards.js guardAt 의 fin) */
 export function newFinish() {
-  return { amt: 0, on: false, k: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike) };
+  return { amt: 0, on: false, k: null, gap: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike) };
 }
 
 /**
@@ -81,6 +86,7 @@ export function updateFinish(f, dt) {
   const fin = f.finish;
   const foe = f.foe;
   fin.k ??= downReachK(f.weapon?.id); // 무기 배율 (한 판 동안 같다)
+  fin.gap ??= { contact: FINISH.ai.contact * fin.k, reach: FINISH.ai.reach * fin.k, clinch: FINISH.ai.clinch * fin.k }; // AI 가 읽는 간격
   let on = false;
   if (foe && foe.state === 'down' && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
     const c = f.bodies.chest.translation();
