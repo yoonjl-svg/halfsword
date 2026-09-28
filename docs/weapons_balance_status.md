@@ -27,6 +27,11 @@
 - 스크린샷: `docs/handoff/pistol_pose_v1.jpg` (겨눔·장전, 기본 카메라 844×390 + 옆), 콘솔 에러 0.
 - 자세 이름 표시: 사장님 결정 **"사격 자세"**. 문구는 gun.js `GUN_STANCE`, main.js `updateGuardName` 에 이음 한 곳(권총이면 GUARDS 대신 GUN_STANCE — 권총이 아니면 전과 같다). 브라우저 확인: 권총 "사격 자세", 롱소드 "긴 자세" 그대로, 콘솔 에러 0. 스크린샷 `docs/handoff/pistol_stance_label.jpg`.
 
+## 권총 레이저·궤적 → 외형 PM gun_fx.js 로 (외형 PM 14:04 요청, 사장님 "레이저는 아주 희미하게")
+- `GUN.laser = false`: 조준 레이저는 gun_fx.js 가 그린다(불투명도 0.13, 두 겹 방지). gun.js 의 updateLaser 는 점검용으로 남김.
+- `GUN_HOOKS.onShot(f, pos, dir, dist)`: 실제 총알 방향(퍼짐·AI 보정 포함)과 닿은 거리(빗나가면 GUN.range)를 넘긴다 — fire() 에서 castRay 뒤로 옮김. 판정·난수 불변.
+- 주의: 레이저 광선(castRay)을 매 프레임 쏘는 것만으로 Rapier 계산이 조금 달라져(겉보기 혼돈), 점검 도구의 권총 판 결과가 바뀐다. gun_check: 레이저 켠 채 새 코드 = 전과 바이트 동일 → 차이는 광선 유무뿐. ability_test 권총 12판 100%(12-0, 41/44) — 앞의 83%와 95% 구간이 겹친다(판 수가 적은 탓). 칼 싸움은 권총 코드를 안 거쳐 영향 없음.
+
 ## 권총 (??? 등급, 사장님 — "재미 삼아 최소 비용으로")
 | 항목 | 내용 |
 |---|---|
