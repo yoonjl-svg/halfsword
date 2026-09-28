@@ -1390,7 +1390,13 @@ export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STY
     add(new THREE.CylinderGeometry(0.0038, 0.0038, 0.09, 6), steel, [0.013, 0.11, 0]);
     add(new THREE.CylinderGeometry(0.005, 0.005, 0.003, 8), bore, [0, 0.2015, 0]);
     // 여섯 모 약실(위 약실이 총신과 한 줄) + 틀
-    group.userData.cylinder = add(new THREE.CylinderGeometry(0.021, 0.021, 0.042, 6), steel, [0.012, 0.047, 0]); // 약실 (장전 표시로 돌릴 수 있게 따로 — 외형 PM)
+    // 약실: 경첩(crane, 약실 밑 모서리의 총신과 나란한 축) 안에 둔다 — 외형 PM gun_fx 가 쏠 때 1/6 돌리고(cylinder 의 y 축),
+    //  장전 동안 경첩을 y 축으로 돌려 옆으로 빼냈다가 장전 끝에 넣는다. 약실 원점 = 약실 가운데, 둘 다 총신 축(+y)과 나란하다
+    const crane = new THREE.Group();
+    crane.position.set(0.033, 0.047, 0);
+    top.add(crane);
+    group.userData.crane = crane;
+    group.userData.cylinder = add(new THREE.CylinderGeometry(0.021, 0.021, 0.042, 6), steel, [-0.021, 0, 0], null, crane);
     add(new THREE.BoxGeometry(0.048, 0.09, 0.02), steel, [0.008, 0.028, 0]);
     // 공이치기 (뒤 위, 뒤로 젖힘) · 방아쇠울 · 방아쇠
     group.userData.hammer = add(new THREE.BoxGeometry(0.02, 0.009, 0.007), steel, [UP * 0.017, -0.02, 0], [0, 0, 0.6]); // 공이치기 (젖힘 표시용으로 따로)

@@ -27,7 +27,8 @@ export const GUN = {
   spreadMove: 3, // 도: 걷는 최고 속도로 달리며 쏘면 이만큼 더 벗어난다
 };
 /** main.js·효과 모듈이 이어 줄 자리: onShot(fighter, pos), onReload(fighter, pos),
- *  onImpact(fighter, point|null, what) — 총알이 멈춘 곳(what: 'air' 빗나감 · 'world' 땅·벽 · 'weapon' 칼 · 'body' 몸). 보여 주기만 (외형 PM gun_fx) */
+ *  onImpact(fighter, point, dir, what) — 총알이 닿은 곳과 날아간 방향(what: 'body' 몸 · 'world' 땅·벽 · 'weapon' 칼).
+ *  빗나가 아무 데도 안 닿으면 부르지 않는다. 보여 주기만 (외형 PM gun_fx 의 탄착 먼지·궤적) */
 export const GUN_HOOKS = { onShot: null, onReload: null, onImpact: null };
 
 const _o = new THREE.Vector3();
@@ -118,7 +119,7 @@ function fire(f, world, combat) {
   const what = !hit ? 'air' : !vi ? 'world' : vi.kind === 'weapon' ? 'weapon' : 'body';
   g.what = g.what ?? {};
   g.what[what] = (g.what[what] ?? 0) + 1;
-  GUN_HOOKS.onImpact?.(f, hit ? _o.clone().addScaledVector(_d, hit.toi) : null, what);
+  if (hit) GUN_HOOKS.onImpact?.(f, _o.clone().addScaledVector(_d, hit.toi), _d.clone(), what);
   if (what !== 'body' || vi.fighter === f) return; // 칼·땅·벽에 맞았거나 빗나갔다
   bulletHit(f, vi, _o.clone().addScaledVector(_d, hit.toi), _d.clone(), combat);
 }
