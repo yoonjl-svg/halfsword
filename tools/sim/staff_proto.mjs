@@ -8,7 +8,8 @@ import { WEAPONS } from '../../src/weapons.js';
 import { AI } from '../../src/ai.js';
 import { GUARD_BASE } from '../../src/guards.js';
 import { wilson } from './ref_duel.mjs';
-import { applyMotionLibrary, motionFor } from '../../src/motion_library.js';
+import { applyMotionLibrary, motionFor, MOTION } from '../../src/motion_library.js';
+for (const k of (process.env.POLE_STRIKES ?? '').split(',').filter(Boolean)) MOTION.poleStrikes.add(k); // 봉에 더 줄 칼 기술 (예: oberhau)
 import { SCHOOLS } from '../../src/schools.js';
 import { zoneEffects, zoneTick } from './blunt_zones.mjs';
 const LIB = process.env.LIB === '1'; // 자루 무기 자세표(POLE_GUARDS)·찌르기 방식 기술을 입힌다

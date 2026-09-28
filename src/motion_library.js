@@ -21,6 +21,7 @@ export const MOTION = {
   coverIn: 0.08, // 막기 덧씌우기: 덮는 시간(초)
   coverOut: 0.15, // 걷는 시간(초)
   useParry: false, // 무기별 막기 자리(LIB_PARRY)를 AI 에 끼울까 — 기본 끔: 바뀐 자세표(막기 자세 포함)로 잰 값이라 지금 표와 맞지 않는다
+  poleStrikes: new Set(), // 점검용: E 자루에 찌르기 말고 더 줄 칼 기술 이름 (봉 치기 새 길이 생기기 전 시험)
   skip: new Set(), // 점검용: 이 이름의 자세 자리는 바꾸지 않는다 (어느 자세가 싸움에 해로운지 가려낼 때)
 };
 
@@ -149,6 +150,8 @@ export const POLE_KREUTZHAUW = ['Nebenhut', 'Steurhut', 'Oberhut(R)', 'Wechselhu
 // 마이어의 찌르기는 앞손을 놓지 않는다: 뒷손을 겨드랑이로 당겨(Ruck) 자루를 앞손 속으로 밀어낸다. 놓고 뻗는 찌르기는 영국 봉(스웻넘)
 export const POLE_THRUST = { meyer: 'ruck', english: 'release' };
 
+const POLE_STRIKES = new Set(['oberhau']); // E 자루가 쓰는 칼 베기 길: 정수리 내려치기만
+
 // ── 2) 기술 목록 ───────────────────────────────────────────
 const weight = (tech, pred, k) => tech.map((t) => (pred(t) ? { ...t, base: t.base * k } : t));
 
@@ -178,9 +181,10 @@ export function styleTech(style, frame) {
   if (frame === 'heavy') t = weight(t, (x) => x.presses, 1.4);
   // 손목 베기는 날 있는 한손 칼만: 나뭇가지(때리기)에 넣으면 40% → 19% (가볍고 날이 없어 앞손을 끊지 못하고 틈만 준다)
   const add = (NEW_TECH[frame] ?? []).filter((x) => !(style === 'blunt' && x.name === 'wristCut'));
-  // E 자루: 찌르기만 (봉 자세표에서 칼 베기 길은 휜다 — 봉 시제품 48판: 찌르기만 48% · 전부 15%, docs/pole_frame_design.md §8).
-  //  봉 치기(머리 치기·교차 베기)는 봉 자세표에 맞춘 새 길로 따로 만든다
-  if (frame === 'pole') return t.filter((x) => x.kind === 'thrust');
+  // E 자루: 찌르기 + 머리 내려치기(정수리 베기 길) 하나 (docs/pole_frame_design.md §8, 봉 시제품):
+  //  찌르기만 48% · + 머리 치기 65%(96판) · 사선 베기까지 넣으면 27% · 칼 기술 전부 15% — 봉 자세표에서 사선·수평 베기 길은 휜다.
+  //  원전도 같다: 높은 자세에서 머리를 내려치고 찌른다(스웻넘·실버 [원전 2차]). 교차 베기 등은 봉 자세표에 맞춘 새 길로 따로
+  if (frame === 'pole') return t.filter((x) => x.kind === 'thrust' || POLE_STRIKES.has(x.name) || MOTION.poleStrikes.has(x.name));
   return [...t, ...(style === 'thrust' ? add.filter((x) => x.kind === 'thrust') : add)].filter((x) => x.ai !== false);
 }
 
