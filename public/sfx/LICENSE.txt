@@ -59,6 +59,12 @@ Thank you, HaelDB, Michel Baradari, kanyonwyvern, hisoul and mvVoiceActing!
 files they replaced: VoiceBosch CC-BY-SA 4.0 groans, removed on 2026-09-28.)
 
 -------------------------------------------------------------------------------
+breath/  — the player's own breathing while bleeding. CC0 (public domain), Freesound:
+  breath1.mp3  <- Sadiquecat, "Catching breath (Genuine)" (0.05-2.35 s, high-passed at 70 Hz,
+                  low-passed at 5 kHz, peak-normalized to -1 dBFS)
+                  https://freesound.org/people/Sadiquecat/sounds/792641/
+
+-------------------------------------------------------------------------------
 step/ and hit/  — CC0 (public domain), Kenney (www.kenney.nl), fetched from the
 open-game-sfx-index mirror (github.com/Mcamento8/open-game-sfx-index, SHA-256
 checked against its catalog). Trimmed, peak-normalized, mono MP3.
