@@ -24,9 +24,9 @@ const BUILDERS = {
   temple: buildTemple, // 한국의 산 속 절 (stage_temple.js)
   castle: buildCastle, // 눈 내리는 중세 성의 안뜰, 해 질 녘 (stage_castle.js)
   cathedral: buildCathedral, // 무너진 고딕 대성당의 안 (stage_cathedral.js)
-  clearing: buildClearing, // 검은숲 변두리의 화전 터, 봄비 내리는 이른 아침 (stage_clearing.js, 1안) — 브란의 고향
-  clearing_dry: (scene, lights) => buildClearing(scene, lights, { rain: false }), // 1안의 비 없는 처음 모습 (보관용: ?stage=clearing_dry)
-  clearing_b: buildClearingB, // 같은 컨셉의 2안 (stage_clearing_b.js): 움막·탄 참나무와 까마귀·불더미·이랑·경계 말뚝 (?stage=clearing_b, 오너가 고르기 전까지 순서 밖)
+  clearing: buildClearingB, // 검은숲 변두리의 화전 터, 봄비 내리는 이른 아침 (stage_clearing_b.js, 오너가 고른 2안) — 브란의 고향
+  clearing_a: buildClearing, // 1안 (stage_clearing.js: 오두막·염소·숯가마·밭돌 결투 자리). 보관용, ?stage=clearing_a 로만 본다
+  clearing_a_dry: (scene, lights) => buildClearing(scene, lights, { rain: false }), // 1안의 비 없는 처음 모습 (보관용: ?stage=clearing_a_dry)
   darkhall: buildDarkHall, // 어두운 성의 큰 홀, 밤 (stage_darkhall.js) — 쓰지 않는다(오너 결정): 순서에 없고 ?stage=darkhall 로만 본다
 };
 export const STAGE_IDS = Object.keys(BUILDERS);

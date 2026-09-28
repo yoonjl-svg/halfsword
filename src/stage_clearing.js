@@ -81,11 +81,11 @@ export function skyTexture(sunAz, rain = false) {
   return canvasTex(512, 256, (x, w, h) => {
     const g = x.createLinearGradient(0, 0, 0, h);
     if (rain) {
-      g.addColorStop(0, '#6a7680');
-      g.addColorStop(0.28, '#8a949b');
-      g.addColorStop(0.44, '#adb3b2');
-      g.addColorStop(0.5, '#b8b7ae');
-      g.addColorStop(1, '#9fa29c');
+      g.addColorStop(0, '#7e8b97');
+      g.addColorStop(0.24, '#9aa4ab');
+      g.addColorStop(0.42, '#bfc3c1');
+      g.addColorStop(0.5, '#cdc8ba');
+      g.addColorStop(1, '#aaaca5');
     } else {
       g.addColorStop(0, '#6f8598');
       g.addColorStop(0.28, '#93a5b1');
@@ -99,18 +99,29 @@ export function skyTexture(sunAz, rain = false) {
     const u = ((((Math.PI - sunAz) / (Math.PI * 2)) % 1) + 1) % 1;
     for (const ux of [u * w, u * w - w, u * w + w]) {
       const rg = x.createRadialGradient(ux, h * 0.5, 0, ux, h * 0.5, w * 0.26);
-      rg.addColorStop(0, rain ? 'rgba(232,214,168,0.55)' : 'rgba(240,214,150,0.9)');
-      rg.addColorStop(0.4, rain ? 'rgba(215,200,160,0.2)' : 'rgba(225,200,150,0.35)');
-      rg.addColorStop(1, 'rgba(210,200,170,0)');
+      // 새벽 놀: 해 쪽 수평선이 복숭아빛으로 물든다 (비가 와도 구름 틈으로 보인다 — 밤이 아니라 아침임을 알리는 표시)
+      rg.addColorStop(0, rain ? 'rgba(244,200,150,0.85)' : 'rgba(240,214,150,0.9)');
+      rg.addColorStop(0.4, rain ? 'rgba(228,178,150,0.38)' : 'rgba(225,200,150,0.35)');
+      rg.addColorStop(1, rain ? 'rgba(215,180,170,0)' : 'rgba(210,200,170,0)');
       x.fillStyle = rg;
       x.fillRect(0, 0, w, h * 0.5);
     }
     // 옅은 층구름과 낮게 깔린 연기 띠 (비가 오면 구름이 더 낮고 짙다)
     for (let i = 0; i < (rain ? 70 : 40); i++) {
-      x.fillStyle = rain ? `rgba(${110 + r() * 40},${116 + r() * 35},${122 + r() * 30},${0.16 + r() * 0.22})` : `rgba(${150 + r() * 40},${155 + r() * 35},${160 + r() * 30},${0.12 + r() * 0.2})`;
+      x.fillStyle = rain ? `rgba(${118 + r() * 40},${124 + r() * 35},${132 + r() * 30},${0.16 + r() * 0.22})` : `rgba(${150 + r() * 40},${155 + r() * 35},${160 + r() * 30},${0.12 + r() * 0.2})`;
       x.beginPath();
-      x.ellipse(r() * w, h * (0.08 + r() * (rain ? 0.36 : 0.3)), 60 + r() * 140, 3 + r() * 9, 0, 0, Math.PI * 2);
+      x.ellipse(r() * w, h * (0.08 + r() * (rain ? 0.34 : 0.3)), 60 + r() * 140, 3 + r() * 9, 0, 0, Math.PI * 2);
       x.fill();
+    }
+    if (rain) {
+      // 해 쪽 구름 밑면이 놀에 물든다
+      for (let i = 0; i < 14; i++) {
+        const cx = (u + (r() - 0.5) * 0.3) * w;
+        x.fillStyle = `rgba(${225 + r() * 25},${165 + r() * 30},${130 + r() * 30},${0.12 + r() * 0.16})`;
+        x.beginPath();
+        x.ellipse(cx, h * (0.34 + r() * 0.12), 50 + r() * 110, 3 + r() * 6, 0, 0, Math.PI * 2);
+        x.fill();
+      }
     }
     for (let i = 0; i < 16; i++) {
       x.fillStyle = `rgba(120,116,110,${0.08 + r() * 0.12})`;
@@ -148,17 +159,17 @@ function rainTexture() {
  *  반환: { FOG, sunOffset }
  */
 export function morning(scene, lights, { rain = true, sunOffset = { x: 8.5, y: 2.9, z: -3.5 } } = {}) {
-  const FOG = rain ? 0xa9b0af : 0xb6bcb9; // 옅은 잿빛 안개 (연기가 섞인 아침 공기)
+  const FOG = rain ? 0xb4bab8 : 0xb6bcb9; // 옅은 잿빛 안개 (연기가 섞인 아침 공기)
   scene.background = new THREE.Color(FOG);
   scene.fog = new THREE.Fog(FOG, rain ? 26 : 30, rain ? 230 : 300);
   if (lights.hemi) {
-    lights.hemi.color.set(rain ? 0xbdc6cb : 0xc4cdd2); // 옅은 아침 하늘
+    lights.hemi.color.set(rain ? 0xc6cdd1 : 0xc4cdd2); // 옅은 아침 하늘
     lights.hemi.groundColor.set(0x56514b); // 검은 땅은 빛을 거의 되비치지 않는다
-    lights.hemi.intensity = rain ? 1.3 : 1.15;
+    lights.hemi.intensity = rain ? 1.45 : 1.15;
   }
   if (lights.sun) {
-    lights.sun.color.set(rain ? 0xf4e6cf : 0xffd9a6); // 낮은 해의 누런 빛 (비구름에 누그러진다)
-    lights.sun.intensity = rain ? 1.2 : 1.5;
+    lights.sun.color.set(rain ? 0xffdcb4 : 0xffd9a6); // 낮은 해의 누런 빛 (비구름에 조금 누그러지지만 새벽 놀의 복숭아빛은 남는다)
+    lights.sun.intensity = rain ? 1.35 : 1.5;
     lights.sun.position.set(sunOffset.x, sunOffset.y, sunOffset.z);
   }
   scene.add(
@@ -167,7 +178,32 @@ export function morning(scene, lights, { rain = true, sunOffset = { x: 8.5, y: 2
       new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, map: skyTexture(Math.atan2(sunOffset.z, sunOffset.x), rain) }),
     ),
   );
+  if (rain) dawnMist(scene);
   return { FOG, sunOffset };
+}
+
+/** 새벽 안개: 숲 가장자리에 낮게 깔린 흰 안개 띠 (원통 한 겹, 위로 갈수록 옅다). 아침임을 알리는 표시 */
+function dawnMist(scene) {
+  const tex = canvasTex(4, 64, (x, w, h) => {
+    const g = x.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, 'rgba(235,238,236,0)');
+    g.addColorStop(0.55, 'rgba(235,238,236,0.55)');
+    g.addColorStop(1, 'rgba(235,238,236,0.85)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, w, h);
+  });
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  for (const [R, H, y, op, sx, sz, rot] of [
+    [23, 3.2, -0.1, 0.22, 1.08, 0.94, 0.4],
+    [30, 5, -0.2, 0.15, 0.96, 1.1, 1.3],
+  ]) {
+    // 위에서 보면 매끈한 고리로 보이지 않게 조금 찌그러뜨린다
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(R, R, H, 40, 1, true), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    m.position.y = y + H / 2;
+    m.scale.set(sx, 1, sz);
+    m.rotation.y = rot;
+    scene.add(m);
+  }
 }
 
 /** 비탈 높이: 결투 자리 둘레(13m)까지는 평평하고, 그 밖은 서쪽(−x)으로 오르고 동쪽(+x)으로 내려간다 */
