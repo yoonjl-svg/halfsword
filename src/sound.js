@@ -2150,7 +2150,7 @@ export class Sound {
   revive(voice, { breath = true } = {}) {
     if (!this._on || !this.ctx) return;
     const id = voice in VOICES ? voice : 'generic';
-    const ev = this.event({ bus: this.fleshBus, gain: 0.32, prio: 3 });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.282, prio: 3 }); // 4초 평균이 칼 부딪힘 평균(−24dB)보다 3dB 아래
     const chant = this.pickSample('chant');
     if (chant) this.layer(ev, chant, { rate: between(Math.random, 0.995, 1.005) });
     const rec = breath ? this.pickSample(`voice:${id}:revive`) : null;
