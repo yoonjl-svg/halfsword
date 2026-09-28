@@ -18,7 +18,7 @@ import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
-import { Stages, nextStage, STAGE_IDS } from './stages.js';
+import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 
@@ -79,14 +79,16 @@ const lookvParam = params.get('lookv');
 const lookvVersion = lookvParam != null ? (lookvParam.startsWith('v') ? lookvParam : `v${lookvParam}`) : null;
 
 // ── 상대 캐릭터 고르기 (테스트/데모용 최소 기능. 정식 선택 UI는 나중에) ──
+//  (없음)        : 무대마다 그곳이 고향인 검객 (stages.js STAGE_FOE, 오너 결정). 짝이 없는 무대는 무작위
 //  ?foe=<id>     : characters.js의 특정 캐릭터로 고정
-//  ?foe=random   : 판마다 무작위로 다른 캐릭터 (아무것도 없을 때의 기본값)
+//  ?foe=random   : 판마다 무작위로 다른 캐릭터
 //  ?foe=default  : 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" (메뉴의 난이도 설정을 따른다)
-const foeParam = params.get('foe') || lookPreviewId || 'random';
+const foeParam = params.get('foe') || lookPreviewId || 'stage';
 const foeRandomEachRound = foeParam === 'random';
 let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
 let auras = []; // 진짜 엑스칼리버의 일렁임·빛 (aura.js)
 function pickFoe() {
+  if (foeParam === 'stage') return CHARACTERS_BY_ID[STAGE_FOE[stages.id]] || randomCharacter(currentFoe?.id); // 이번 판 무대의 검객
   if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
   if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
   return currentFoe; // 고정 지정이 없으면 같은 상대를 계속 쓴다
