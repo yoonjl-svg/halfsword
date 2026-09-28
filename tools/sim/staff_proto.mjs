@@ -79,6 +79,9 @@ WEAPONS.staff_proto = {
   },
 };
 const W = WEAPONS.staff_proto;
+// 봉끝 찌르기 (STAFF_THRUST=estoc|rapier): 찌르기 기술을 탭 찌르기(칼 선을 따라 칼끝을 상대 가슴으로 뻗기, skill.js thrust)로 한다.
+//  뒷손 지렛대(Ruck)는 아직 없다 — 지금 있는 칼끝 찌르기로 봉 축 찌름이 나오는지 먼저 본다
+if (process.env.STAFF_THRUST) W.thrustStyle = WEAPONS[process.env.STAFF_THRUST].thrustStyle;
 console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m · 뒤 ${R} m, 뒷손 gripAlong ${along} m, 질량 1.8 kg`);
 
 // ① 자세
