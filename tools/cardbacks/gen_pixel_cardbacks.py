@@ -288,9 +288,47 @@ def cathedral():
     return pal, t, band, center, 'R'
 
 
+def clearing():
+    # 화전 터(브란): 탄 땅 검정 바탕, 재 잿빛, 새싹 연두, 양골담초 노랑. 문양은 새싹과 밭돌, 가운데는 브란의 회초리(참나무 가지)
+    pal = dict(SHARED, B='#1a1816', A='#5e5c55', L='#8fae3e', Y='#c9a83a', W='#6e665a')
+    t = canvas(TW, TH, 'B')
+    # 흩어진 재 알갱이 (드문 잿빛 점)
+    for y in range(TH // 2):
+        for x in range(TW):
+            if (x * 7 + y * 3) % 13 == 0 and (x + y) % 2 == 0:
+                t[y][x] = 'A'
+    sprout = ['..L..L..', '.LL..LL.', '..L..L..', '...LL...', '...LL...', '....L...', '....L...', '...AAA..']
+    stones = ['........', '..AA.AA.', '.AAAAAAA', 'AAAA.AAA', '.AA..AA.', '........']
+    stamp(t, sprout, 8, 8)
+    stamp(t, stones, 16, 16)
+    stamp(t, stones, 16, 0)
+    sym_tile(t)
+    band = band_rows(['W.W.W.', 'WWWWWW', 'W.W.W.', 'WWWWWW'], 'B')  # 판자 빠진 울타리
+    center = canvas(14, 14, '.')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d <= 7:
+                center[y][x] = 'B'
+            if 6 < d <= 7:
+                center[y][x] = 'Y'
+    # 회초리: 왼쪽 아래에서 오른쪽 위로 뻗은 가지 (두 칸 굵기), 끝에 잎눈 둘
+    for k in range(9):
+        x, y = 3 + k, 10 - k
+        center[y][x] = 'g'
+        if 0 <= y - 1:
+            center[y - 1][x] = 'G'
+    center[3][10] = 'L'
+    center[2][10] = 'L'
+    center[4][8] = 'L'
+    center[4][9] = 'L'
+    return pal, t, band, center, 'L'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('castle', castle), ('temple', temple), ('cathedral', cathedral)]:
+    for name, fn in [('poseidon', poseidon), ('clearing', clearing), ('castle', castle), ('temple', temple), ('cathedral', cathedral)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)
