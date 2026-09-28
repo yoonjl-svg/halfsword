@@ -745,6 +745,21 @@ function layoutDraw() {
   drawEl.style.setProperty('--desc', big ? '14px' : mid ? '12.5px' : '12px');
   drawEl.classList.toggle('wide', big);
   drawEl.classList.toggle('low', low);
+  fitCardText(parseFloat(big ? 14 : mid ? 12.5 : 12));
+}
+
+/** 설명이 긴 카드(건슬링어의 리볼버처럼 인용문이 붙은 것)가 있으면 세 장의 설명 글자를 함께, 그 카드가 들어올 때까지 조금씩 줄인다 (최소 원래의 70%, 세 장 크기는 같게) */
+function fitCardText(base) {
+  const faces = cardEls.map((el) => {
+    const face = el.querySelector('.wface');
+    const abil = el.querySelector('.wabil');
+    const desc = el.querySelector('.wdesc');
+    return { face, last: () => (abil.textContent ? abil : desc) };
+  });
+  // 넘침 = 마지막 글줄의 아래가 카드 안쪽 여백(아래 padding)에서 4px 위(금테에 글자가 물리지 않게)를 넘는다. 앞면은 뒤집혀 있어 화면 좌표 대신 배치 좌표로 잰다
+  const over = ({ face, last }) => last().offsetTop + last().offsetHeight > face.clientHeight - parseFloat(getComputedStyle(face).paddingBottom) - 4;
+  drawEl.style.setProperty('--desc', `${base}px`);
+  for (let k = 1; k <= 5 && faces.some(over); k++) drawEl.style.setProperty('--desc', `${(base * (1 - 0.06 * k)).toFixed(2)}px`);
 }
 
 /** i번째 카드를 고른다 (누르기 · 1/2 키). 상대 칸(맨 오른쪽)은 고를 수 없다: 누르면 살짝 흔들릴 뿐 */

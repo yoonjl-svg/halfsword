@@ -987,8 +987,8 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 //      부서지지 않는다. 칼처럼 쥐어 총신이 칼 축을 따라 앞으로 뻗는다 (겉모습 weapon_looks.js drawPistol)
 // ═════════════════════════════════════════════════════════════
 const pistol = finalizeSpec('pistol', {
-  nameKo: '권총', nameEn: 'Pistol',
-  desc: '어디서 굴러 들어온 권총.\n찌르기로 쏜다. 붙어 싸울 순 없지만 발이 빠르다.',
+  nameKo: '건슬링어의 리볼버', nameEn: "The Gunslinger's Revolver", // 사장님 확정 (스티븐 킹 《다크 타워》의 총잡이 롤랜드 — 총신을 엑스칼리버로 만들었다는 설정)
+  desc: '어느 왕의 검을 녹여 총신을 만들었다.\n“검은 옷의 사내는 사막을 가로질러 달아났고, 총잡이는 그 뒤를 쫓았다.”', // 사장님 확정 문구
   grip: 'one-hand', material: 'steel', soundMaterial: 'steel',
   tier: 'mystery',
   gun: true, // gun.js: 찌르기 = 발사, 장전, AI 는 도망 다니며 쏜다
