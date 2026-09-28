@@ -835,7 +835,7 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 // ═════════════════════════════════════════════════════════════
 const lightsaber = finalizeSpec('lightsaber', {
   nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
-  desc: '빛의 입자로 된 칼날.\n갑옷이 소용없지만 무거운 칼에는 밀린다.',
+  desc: '먼 은하에서 온 빛의 칼.\n무게가 없어 맞대면 밀린다.', // 사장님 확정 문구
   grip: 'one-hand', material: 'plasma',
   // 한손 자세표(칼 든 어깨를 앞으로)는 쓰지 않는다: 길고 가벼운 칼날이라 닿는 거리가 짧은 칼의 5배(+11cm 대 +2cm) 늘어
   //  롱소드 상대 승률이 55 → 75%로 에픽 목표(45~65%)를 넘었다 (10라운드 B, ref_duel). 영화처럼 두 손 자세로 겨눈다
