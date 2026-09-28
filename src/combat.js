@@ -78,6 +78,7 @@ export class Combat {
     const a = this.info.get(c1);
     const b = this.info.get(c2);
     if (!a || !b || a.fighter === b.fighter) return null;
+    if (a.fighter.revival || b.fighter.revival) return null; // 부활하는 동안엔 상처를 주고받지 않는다 (revive.js)
     // 손에서 놓친(땅에 떨어진) 칼은 부딪히기만 하고 상처를 내지 않는다
     if ((a.kind === 'weapon' && !a.fighter.armed) || (b.kind === 'weapon' && !b.fighter.armed)) return null;
     if (a.kind === 'weapon' && b.kind !== 'weapon') return { w: a, v: b, wc: c1, vc: c2 };

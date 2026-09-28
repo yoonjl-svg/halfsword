@@ -987,8 +987,8 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
 //      부서지지 않는다. 칼처럼 쥐어 총신이 칼 축을 따라 앞으로 뻗는다 (겉모습 weapon_looks.js drawPistol)
 // ═════════════════════════════════════════════════════════════
 const pistol = finalizeSpec('pistol', {
-  nameKo: '권총', nameEn: 'Pistol',
-  desc: '어디서 굴러 들어온 권총.\n찌르기로 쏜다. 붙어 싸울 순 없지만 발이 빠르다.',
+  nameKo: '건슬링어의 리볼버', nameEn: "The Gunslinger's Revolver", // 사장님 확정 (스티븐 킹 《다크 타워》의 총잡이 롤랜드 — 총신을 엑스칼리버로 만들었다는 설정)
+  desc: '어느 왕의 검을 녹여 총신을 만들었다.\n“검은 옷의 사내는 사막을 가로질러 달아났고, 총잡이는 그 뒤를 쫓았다.”', // 사장님 확정 문구
   grip: 'one-hand', material: 'steel', soundMaterial: 'steel',
   tier: 'mystery',
   gun: true, // gun.js: 찌르기 = 발사, 장전, AI 는 도망 다니며 쏜다
@@ -996,7 +996,7 @@ const pistol = finalizeSpec('pistol', {
   //  날 세우기 힘이 과해져 몸체가 발산했다(잰 값: 비트는 배율 10.7). 직접 준다 — 총신이 주먹 위로 올라온 지금 몸체에서
   //  가만히 있을 때 떨림(평균·최대): 0.25 → 1.6°·2.8°, 0.42 → 2.9°·13.7°, 0.8 → 19°·46°
   controlOverrides: { twistScale: 0.25 },
-  moveMul: 1.2, // 걷는 최고 속도 ×1.2 (도망 다니며 쏘라고)
+  moveMul: 1.3, // 걷는 최고 속도 ×1.3 (도망 다니며 쏘라고 — 사장님 '칼 들었을 때보다 30% 빠르게')
   fragility: 0, // 부서지지 않는다
   edged: false, mBlunt: 0, // 근접전 불가: 몸을 쳐도 상처·멍이 없다
   hiltLength: 0.05, bladeLength: 0.15, // 칼 원점(손)~총구 0.20 m (사장님: 머스킷처럼 길어 보여 짧은 권총으로 — 예전 0.32 m)
