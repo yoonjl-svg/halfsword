@@ -22,7 +22,8 @@ export function registerPoleWeapons(WEAPONS) {
     ...WEAPONS.longsword,
     grip: 'two-hand', twoHand: true, material: 'wood', gripAlong: -0.6, tier: 'common',
     partMesh: null, decorate: undefined, controlOverrides: WEAPONS.longsword.controlOverrides,
-    thrustStyle: WEAPONS.rapier.thrustStyle, frame: 'pole', style: 'thrust', buildParts: parts,
+    // 탭 찌르기 방식: 레이피어 값. POLE_RECOVER=되돌리기 배율(레이피어 0.6)로 바꿔 본다 (pole_thrust_kinematics.md: 봉 찌르기 되돌리기 0.12~0.3 s)
+    thrustStyle: { ...WEAPONS.rapier.thrustStyle, ...(env('POLE_RECOVER') ? { recover: +env('POLE_RECOVER') } : {}) }, frame: 'pole', style: 'thrust', buildParts: parts,
   };
   WEAPONS.proto_staff = { ...common, id: 'proto_staff', nameKo: '봉 (시제품)', edged: false, mBlunt: 3.5, mCut: 0.5, mThrust: 1, hiltLength: 0, bladeLength: L };
   // 창은 앞을 길게 쥘 수 있다(SPEAR_FRONT=앞손 앞 길이 m, 길이 합 2.4 m 그대로): 봉처럼 가운데를 쥐면 칼과 닿는 거리가 같다
