@@ -302,6 +302,8 @@ function finalizeSpec(id, s) {
   return {
     ...s,
     id,
+    // 특수 능력(에픽, 사장님): 카드 설명 끝에 한 칸 띄고 "(별칭: 효과)"를 붙인다. 능력은 늘 켜져 있다 (스위치 없음)
+    desc: s.ability ? `${s.desc} (${s.ability})` : s.desc,
     edged: s.edged !== false,
     mCut: s.mCut ?? 1,
     mThrust: s.mThrust ?? 1,
@@ -606,6 +608,8 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   desc: '사사키 코지로의 노다치.\n빨랫줄 장대라 불린 칼, 매섭게 벤다.',
   grip: 'two-hand', material: 'steel',
   tier: 'epic',
+  ability: '명검의 날: 출혈',
+  bleedMult: 2, // 에픽 특수 능력 '명검의 날: 출혈' (사장님 b안): 이 칼에 베이고 찔린 상처의 출혈 ×2 (롱소드 상대 ×1 38% · ×1.5 44% · ×2 50%, 48판씩 — 에픽 폭 45~65% 안)
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
   mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)
   controlOverrides: { aimStiffness: 70, wristVmax: 34 },
@@ -693,6 +697,8 @@ const qinggang = finalizeSpec('qinggang', {
   grip: 'one-hand', material: 'steel',
   enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
   tier: 'epic',
+  ability: '창천: 무기 절단',
+  breakMult: 3, // 에픽 특수 능력 '창천: 무기 절단' (사장님): 칼끼리 부딪힐 때 상대 무기가 부러질 확률 ×3 (안 부러지는 무기는 그대로 0)
   hiltLength: 0.12, bladeLength: 0.74,
   mCut: 1.35, mThrust: 1.15, mBlunt: 0.95, // 감독 확정치 (mCut 1.35)
   // 곧은 양날에 가운데 등마루(지안 특유의 검등 능선), 칼몸은 거의 평행하다가 짧은 창끝으로 모인다.
@@ -836,6 +842,7 @@ const lightsaber = finalizeSpec('lightsaber', {
   oneHandStance: false,
   tier: 'epic', // power 1.1 · 내구 0.95 (플라스마 칼날이라 어차피 안 부러진다)
   hiltLength: 0.15, bladeLength: 0.9,
+  ability: '에너지 파동: 갑옷 무시', // 에픽 특수 능력 (사장님) — ignoreArmor
   edged: true, ignoreArmor: true, mCut: 1.35, mThrust: 1.3,
   controlOverrides: { wristVmax: 36, aimDamping: 9 }, // 가볍고 매끄러운 이미터: 손목이 더 빨리 돌아간다
   // 플라스마 칼날은 각진 막대가 아니라 매끄러운 원기둥이어야 "에너지 칼날"답다. 자루는 홈이 파인 금속 원통,
