@@ -238,7 +238,7 @@ export class Combat {
       severity,
       pass,
       absorb: A.absorb ?? 100,
-      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed,
+      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1), // 모노호시자오 '명검의 날': 출혈 배율
       local: vicLocal,
       point: point.clone(),
       dir,
@@ -416,7 +416,7 @@ export class Combat {
         fe.impact = J;
         fe.impactSpeed = vn;
         f.takeJolt?.(J);
-        f.absorbWeaponImpact?.(J); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다
+        f.absorbWeaponImpact?.(J, f === A.fighter ? B.fighter : A.fighter); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다 (상대 칼의 breakMult — 청강검 '창천')
       }
     }
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });

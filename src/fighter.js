@@ -848,10 +848,13 @@ export class Fighter {
   /**
    * 무기가 세게 부딪힐 때마다(J, N·s) 부러질지 굴린다. 확률은 weapons.js breakChance(J): 등급 내구가 낮고 무게가 실린
    * 충돌일수록 높다. 강철 레전드·고무·플라스마는 확률 0이라 아무 일도 없다 (weapons.js 파손 규칙 참고).
+   *  칼끼리 부딪힌 경우 combat.js 가 상대 싸움꾼(by)을 넘긴다 — 투구·뼈에 되튄 충격은 by 없음.
    */
-  absorbWeaponImpact(J) {
+  absorbWeaponImpact(J, by = null) {
     if (!this.armed || this.weaponBroken || !this.weapon.fragile) return;
-    const p = this.weapon.breakChance(J);
+    // by: 칼끼리 부딪힌 상대. 그 칼이 무기를 잘 부수는 칼이면(spec.breakMult, 청강검 '창천') 부러질 확률을 그만큼 곱한다
+    const mult = by?.armed && !by.weaponBroken ? (by.weapon?.breakMult ?? 1) : 1;
+    const p = Math.min(1, this.weapon.breakChance(J) * mult);
     if (p <= 0) return;
     // 파이터별 LCG (결정적, Math.random 과 무관)
     this._breakSeed = (Math.imul(this._breakSeed, 1664525) + 1013904223) >>> 0;
