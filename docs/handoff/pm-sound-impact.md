@@ -535,3 +535,9 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 
 - 뺀 것: 오르간이 섞인 로마 녹음(780488), 처리된 드론(adharca), 잡음 많은 것(timothyd4y), 분위기 녹음(zachrau·Vrymaa), "fake monks"(262451).
 - 사장님이 고르면 `stage/chant1.mp3`와 LICENSE.txt만 바꾼다. 스크래치패드의 후보 파일은 `cand3/chantA~F.mp3`.
+
+## 23차: 갑옷 병합 확인 (디렉터 알림, main `6669659`)
+
+- main을 병합했다(`73dbaee`, 충돌 없음). 디렉터가 판금 소리를 전투 판정에 연결했다: `r.helmet` → `sound.helmet(e)`, `r.plate`이고 뚫리면 `sound.impact({a: 무기 재질, b: 'armor', energy: e·0.8})`, 막으면 `sound.plateBlock(e, {material})`, 판이 완전히 깨지면 `sound.plateBreak(e)`. 뼈 소리는 투구·판금이면 내지 않는다. 7차에 준비한 API 그대로다.
+- 부러진 칼날·갑옷 조각은 `src/debris.js`가 띄우고 치운다. 착지 소리 자리(130행 `d.landed = true`)가 있다. 선택이고 급하지 않다. 넣는다면 `swordLand`처럼 짧은 "틱/철컥"을 재질별로, 조각이 많을 때 겹치지 않게 0.1초에 한 번쯤.
+- 관문: 병합 뒤 시뮬 3종이 main `6669659`와 바이트 동일, 스모크 콘솔 에러 0.
