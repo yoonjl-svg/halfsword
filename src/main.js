@@ -859,6 +859,7 @@ async function startFight() {
 function beginFight() {
   state = 'fight';
   input.enabled = true;
+  emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
   applyMoveMode();
   if (currentFoe) {
     // 소개(이름 · 대사)는 조금 더 두었다가 걷는다 (무기 이름은 적지 않는다: 카드가 이미 보여 줬다)
