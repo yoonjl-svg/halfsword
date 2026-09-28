@@ -76,7 +76,7 @@ export const FRAME_GUARDS = {
   //  그 자리를 지나는 베기 길이 모두 휘어 세이버 35% → 10%, 나뭇가지 40% → 15%. 둘을 빼면 38%·42% 로 돌아온다)
   // D 사격: 사격 자세는 gun.js gunPose 가 따로 덧씌운다 (자세표는 한손 표 그대로)
   gun: {},
-  // E 자루 무기: 로스터에 없다. 손 두 개를 벌려 쥐는 물리가 먼저 필요하다 (docs/weapon_motions.md §E)
+  // E 자루 무기: 로스터에 없다. 아래 POLE_GUARDS(마이어 봉)를 쓴다 — 표를 만들 때 채운다(아래 frameTable). 점검: tools/sim/staff_proto.mjs
   pole: {},
 };
 
@@ -113,7 +113,7 @@ export function frameTableWithCovers(frame, style = null) {
 
 /** 몸 틀(+싸움 방식)의 자세표 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로) */
 export function frameTable(frame, style = null, skip = []) {
-  const o = { ...(FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}) };
+  const o = { ...(frame === 'pole' ? POLE_GUARDS : FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}) };
   for (const k of MOTION.skip) delete o[k];
   for (const k of skip) delete o[k];
   if (!Object.keys(o).length && frame !== 'one') return null;

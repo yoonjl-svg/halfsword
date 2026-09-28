@@ -8,6 +8,9 @@ import { WEAPONS } from '../../src/weapons.js';
 import { AI } from '../../src/ai.js';
 import { GUARD_BASE } from '../../src/guards.js';
 import { wilson } from './ref_duel.mjs';
+import { applyMotionLibrary, motionFor } from '../../src/motion_library.js';
+import { SCHOOLS } from '../../src/schools.js';
+const LIB = process.env.LIB === '1'; // 자루 무기 자세표(POLE_GUARDS)·찌르기 방식 기술을 입힌다
 
 const along = +(process.argv[2] ?? -0.6);
 const L = 1.2; // 앞손 앞 길이
@@ -25,12 +28,12 @@ WEAPONS.staff_proto = {
   twoHand: true,
   material: 'wood',
   edged: false,
-  mBlunt: 1.2,
+  mBlunt: +(process.env.STAFF_MBLUNT ?? 1.2),
   hiltLength: 0.0,
   bladeLength: L,
   gripAlong: along,
   frame: 'pole',
-  style: 'blunt',
+  style: process.env.STAFF_STYLE ?? 'thrust', // 봉끝 찌르기(dart)가 주 공격 [원전 2차] — 날이 없어 판정은 둔기 찌름
   partMesh: null,
   buildParts() {
     return [
@@ -101,17 +104,23 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
 // ④ 롱소드 상대 (봉 쪽 AI 는 롱소드 유파·롱소드 간격 그대로 — 자루 무기 유파가 없다)
 {
   const N = 12;
+  const school = process.argv[3] ?? 'longsword';
+  if (LIB) {
+    const m = motionFor(WEAPONS.staff_proto);
+    SCHOOLS.staff_lib = { ...SCHOOLS[school], id: 'staff_lib', tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints };
+  }
   let Wn = 0, Ln = 0, D = 0, nan = 0, dealt = 0, taken = 0, clashes = 0;
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
       const seed = (xFirst ? 1000 : 2000) + s;
-      const x = { weapon: 'staff_proto', persona: { school: process.argv[3] ?? 'longsword' } };
+      const x = { weapon: 'staff_proto', persona: { school: LIB ? 'staff_lib' : school } };
       const y = { weapon: 'longsword', persona: { school: 'longsword' } };
       const Pp = xFirst ? x : y;
       const Ee = xFirst ? y : x;
       const G = newRound({ walls: true, seed, weapon: Pp.weapon, weapon2: Ee.weapon, difficulty: 'normal', persona: Ee.persona, AI2Class: AI, difficulty2: 'normal', persona2: Pp.persona });
       const X = xFirst ? G.player : G.enemy;
       const Y = xFirst ? G.enemy : G.player;
+      if (LIB) applyMotionLibrary(X);
       let res = 'D';
       for (let i = 0; i < 40 / DT; i++) {
         G.step();
