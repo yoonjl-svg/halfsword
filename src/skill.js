@@ -156,7 +156,8 @@ export class Skill {
     // 결심 판정 상태 (손가락 원래 궤적을 읽은 자리와 지금 긋고 있는 한 획의 후보)
     // 결심 베기가 끝난 뒤 끝 자세 너머에서 버티는 덧씌움 (끝 손 더함·지나가기). 손가락이 움직이면 푼다
     this.rest = { w: 0, free: false, hand: [0, 0, 0], over: 0, n: [0, 0, 1] };
-    // 무리마다 획 시간 아래 한도 (초): 결심 베기의 칼끝이 COMMIT.tipMax 를 넘으면 그 무리의 다음 획부터 늦춘다 (설계서 L1 (b) 획 시간)
+    // 무리마다 획 시간 아래 한도 (초): 결심 베기의 칼끝이 COMMIT.tipMax 를 넘으면 그 무리의 다음 획부터 늦춘다 (설계서 L1 (b) 획 시간.
+    //  COMMIT.tcFloorOn 이 켜져 있을 때만. 미리보기에서는 꺼서 늘 비어 있다)
     this.tcFloor = {};
     this.det = { read: null, t: -1e9, lifted: true, frame: COMMIT.frameGuess, gaps: new Float64Array(8), gi: 0, px: 0, py: 0, sx: 0, sy: 0, st: 0, len: 0, peak: 0, lastSp: 0, dwx: 1e9, dwy: 1e9, dwt0: 0, dwell: 0, sinceSwing: 1e9, fastT: -1e9, stage: 0, lx: 0, ly: 0, tA: 0, quiet: 0, blocked: false, stopped: false };
   }
@@ -1223,8 +1224,9 @@ export class Skill {
     cm.endT = this.clock;
     // 칼끝이 한도를 넘었으면 이 무리의 획 시간 아래 한도를 그만큼 올린다 (다음 획부터. 가벼운 칼)
     //  (한 번 오른 한도가 계속 쌓이지 않게: 넘지 않은 획이 오면 절반씩 내린다. 자동 감기는 칼끝이 다르게 나와 따로 둔다)
+    //  COMMIT.tcFloorOn 이 꺼져 있으면 한도를 올리지 않는다 (미리보기. 한도가 걸린 획이 오히려 빨랐다 — config.js)
     const fk = this.floorKey();
-    if (cm.vpk > C.tipMax) this.tcFloor[fk] = Math.min(C.tcFloorMax * cm.base.Tc0, cm.Tc * (cm.vpk / C.tipMax));
+    if (C.tcFloorOn && cm.vpk > C.tipMax) this.tcFloor[fk] = Math.min(C.tcFloorMax * cm.base.Tc0, cm.Tc * (cm.vpk / C.tipMax));
     else if (this.tcFloor[fk]) this.tcFloor[fk] *= 0.5;
     const r = cm.result;
     const rec = r === 'hit' || r === 'through' ? C.recover.hit : r === 'blocked' || r === 'glance' ? C.recover.blocked : C.recover.miss;
