@@ -11,28 +11,115 @@
 //  매 물리 스텝 combat.js afterStep 이 updateGun 을, skill.js thrust 가 gunCanFire 를, ai.js 가 gunAI 를 부른다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { ANATOMY, ARENA } from './config.js';
+import { ANATOMY, ARENA, WEAPON } from './config.js';
+
+/** 권총을 든 동안 화면에 띄우는 자세 이름 (사장님: "사격 자세 라고 써") — main.js 자세 이름 표시가 GUARDS 대신 쓴다 */
+export const GUN_STANCE = { name: '사격 자세', desc: '팔을 곧게 뻗어 총구로 겨눈 자세 · 탭으로 쏜다' };
 
 export const GUN = {
   energy: 80, // J: 맞으면 늘 이 세기의 찌르기 (사장님: 머리는 한 발에 즉사, 가슴은 두 발 — 투구·판금이 덮은 곳은 막히고 방어구가 부서진다). 가만히 선 상대 실측(tools/sim/gun_dummy.mjs): 머리 55 J 부터 즉사 · 가슴 1발 산다 · 2발 16초 뒤 죽음 · 3발 5초
-  cooldown: 4, // 초: 한 발 쏜 뒤 다음 발까지 (장전 소리는 이게 끝날 때). 사장님: 6.5 → 4.5 → 4
+  cooldown: 3, // 초: 한 발 쏜 뒤 다음 발까지 (장전 소리는 이게 끝날 때). 사장님: 6.5 → 4.5 → 4 → 3
   range: 25, // m: 총알이 닿는 거리
   armorBlunt: 0.25, // 투구·판금이 막으면(그리고 바로 부서지면) 몸에는 세기의 이 비율만 둔하게 전해진다
-  laser: true, // 총신 방향으로 탄 길(레이저)을 그린다 (장전 중엔 흐리게)
+  laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
+  aiAimTol: 12, // 도: AI 는 총구가 상대 가슴에서 이만큼 안일 때만 쏜다
   aiFirst: 1.5, // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
   maxWait: 0.6, // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
-  recoilBack: 0.5, // N·s: 쏠 때 총을 뒤로 미는 충격
-  recoilUp: 0.55, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다 → 총구가 들린다). 손잡이 무게가 제자리에 있는 짧은 권총에서 총구가 약 15° 들렸다 0.5초에 제자리
+  // 사격 자세 (사장님: 한 손 사격 자세) — gunPose. 몸 기준 [앞, 위, 총 든 쪽] (m·도)
+  shoulder: [0, 0.1, 0.2], // 총 든 어깨 (가슴 기준)
+  armLen: 0.55, // 곧게 뻗은 팔: 어깨에서 손까지
+  aimYaw: 30, // 손가락(조준 패드)을 끝까지 옆으로 밀면 총구가 이만큼 돈다 (도) — 가운데면 상대 가슴
+  aimPitch: 25, // 위아래로 밀면 이만큼
+  sideOn: -35, // 몸을 결투 사수처럼 반쯤 옆으로: 가슴을 이만큼 틀어 총 든 어깨를 앞으로 (도, 찌르기 몸 −20 과 같은 쪽)
+  reloadIn: 0.25, // 초: 쏜 뒤 이만큼에 걸쳐 총을 가슴 앞으로 당겨 올리고
+  reloadOut: 0.6, // 초: 장전 끝 이만큼 전부터 다시 뻗는다 (장전이 끝나는 순간엔 이미 겨누고 있게)
+  droop: 0, // 도: 뻗은 팔·총이 무게로 처지는 만큼 겨눔을 위로 올려 준다 (gunPose)
+  recoilBack: 0.875, // N·s: 쏠 때 총을 뒤로 미는 충격 (사장님 '반동 1.5~2배': 0.5 → ×1.75)
+  recoilUp: 0.35, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다). 사장님 '반동 1.5~2배': 0.2 → ×1.75 (0.2 일 때 총구가 약 18° 들렸다 0.8초에 제자리)
   spread: 1, // 도: 서서 쏠 때 총알이 총신(레이저)에서 벗어나는 최대 각 — 레이저를 믿고 겨눌 수 있게 작게
   spreadMove: 3, // 도: 걷는 최고 속도로 달리며 쏘면 이만큼 더 벗어난다
 };
-/** main.js 가 소리를 이어 줄 자리: onShot(fighter, pos), onReload(fighter, pos) */
-export const GUN_HOOKS = { onShot: null, onReload: null };
+/** main.js·효과 모듈이 이어 줄 자리: onShot(fighter, pos, dir, dist) — dir: 실제 총알 방향(퍼짐·AI 보정 포함), dist: 닿은 곳까지 거리(빗나가면 GUN.range), onReload(fighter, pos),
+ *  onImpact(fighter, point, dir, what) — 총알이 닿은 곳과 날아간 방향(what: 'body' 몸 · 'world' 땅·벽 · 'weapon' 칼).
+ *  빗나가 아무 데도 안 닿으면 부르지 않는다. 보여 주기만 (외형 PM gun_fx 의 탄착 먼지·궤적) */
+export const GUN_HOOKS = { onShot: null, onReload: null, onImpact: null };
 
 const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _l = new THREE.Vector3();
+
+const _gp = new THREE.Vector3();
+const _gq = new THREE.Quaternion();
+const _ga = new THREE.Vector3();
+const _gu = new THREE.Vector3(0, 1, 0);
+const D2R = Math.PI / 180;
+/**
+ * 한 손 사격 자세 (사장님 필요, 디렉터 13:37): skill.js 가 찌르기 중이 아니면 매 스텝 부른다 — 찌르기 덧씌우기 자세(thrustPose)를 채우고
+ *  덧씌울 정도(0~1)를 돌려준다. 칼 자세 표(guards.js)는 건드리지 않고 그 위에 얹힌다. 걷기·물러나기는 그대로다.
+ *  · 겨눔: 총 든 팔을 어깨에서 곧게 뻗고, 총구가 상대 가슴을 향한다. 조준 패드(skill.aimRaw)로 그 둘레를 옆 ±aimYaw°·위아래 ±aimPitch°
+ *    옮긴다 — 가운데가 가슴이라 가만히 두면 가슴을 겨누고, 조준은 사람 손 몫이다(레이저를 보고 맞춘다). 몸은 반쯤 옆으로(sideOn).
+ *  · 장전 중: 총을 가슴 앞으로 당겨 올려 총구를 위로 세운다(외형 PM 이 이때 약실을 빼냈다 넣는다). 장전 끝에 다시 뻗는다
+ */
+export function gunPose(f, pose) {
+  const foe = f.foe;
+  if (!f.alive || !f.armed || !foe || (f.state !== 'stand' && f.state !== 'kneel')) return 0;
+  const g = state(f);
+  const S = GUN.shoulder;
+  // 상대 가슴 (몸 기준)
+  const c = f.bodies.chest.translation();
+  const t = foe.bodies.chest.translation();
+  _gq.copy(f.yaw).invert();
+  _ga.set(t.x - c.x, t.y - c.y, t.z - c.z).applyQuaternion(_gq).sub(_gp.set(S[0], S[1], S[2]));
+  if (_ga.lengthSq() < 1e-6) _ga.set(1, 0, 0);
+  _ga.normalize();
+  // 조준 패드: 옆(몸 위 축 둘레)·위아래(옆 축 둘레)로 돌린다
+  const R = WEAPON.reach;
+  const ax = f.skill?.aimRaw ? f.skill.aimRaw.x / R : 0;
+  const ay = f.skill?.aimRaw ? f.skill.aimRaw.y / R : 0;
+  _ga.applyAxisAngle(_gu, -ax * GUN.aimYaw * D2R);
+  const side = _gp.crossVectors(_ga, _gu).normalize();
+  _ga.applyAxisAngle(side, (ay * GUN.aimPitch + GUN.droop) * D2R).normalize();
+  // 장전: 쏜 직후 당겨 올리고, 끝나 갈 때 다시 뻗는다 (0 = 뻗음, 1 = 가슴 앞)
+  let r = 0;
+  if (g.cool > 0) r = Math.min(1, (GUN.cooldown - g.cool) / GUN.reloadIn, g.cool / GUN.reloadOut);
+  r = r * r * (3 - 2 * r);
+  const L = GUN.armLen * (1 - 0.45 * r);
+  for (let k = 0; k < 3; k++) pose.hand[k] = S[k] + _ga.getComponent(k) * L;
+  pose.hand[1] += 0.12 * r; // 가슴 앞으로 올린다
+  pose.hand[2] -= 0.12 * r; // 몸 가운데 쪽으로
+  // 총구 방향: 겨눔 방향 → 장전 중엔 위로 세운다
+  const dx = _ga.x * (1 - r) + 0.25 * r;
+  const dy = _ga.y * (1 - r) + 1 * r;
+  const dz = _ga.z * (1 - r);
+  const n = Math.hypot(dx, dy, dz) || 1;
+  pose.dir[0] = dx / n;
+  pose.dir[1] = dy / n;
+  pose.dir[2] = dz / n;
+  pose.chestYaw = GUN.sideOn * D2R;
+  pose.pelvisYaw = GUN.sideOn * 0.6 * D2R;
+  pose.pitch = 0;
+  pose.drop = 0;
+  return 1;
+}
+
+/** 지금 총신이 상대 가슴에서 벗어난 각 (도) */
+function aimErr(f) {
+  const foe = f.foe;
+  if (!foe) return 180;
+  const r = f.sword.rotation();
+  const ax = _gp.set(0, 1, 0).applyQuaternion(_gq.set(r.x, r.y, r.z, r.w));
+  const o = muzzle(f, new THREE.Vector3());
+  const c = foe.bodies.chest.translation();
+  return (ax.angleTo(new THREE.Vector3(c.x - o.x, c.y - o.y, c.z - o.z)) * 180) / Math.PI;
+}
+
+/** 총구 (월드): 칼 몸체 (spec.muzzleX, 손잡이+칼날 길이, 0) — 총신이 주먹 위로 올라와 있어 칼 축에서 비켜 있다 */
+function muzzle(f, out) {
+  const r = f.sword.rotation();
+  const p = f.sword.translation();
+  return out.set(f.weapon.muzzleX ?? 0, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength, 0).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)).add(new THREE.Vector3(p.x, p.y, p.z));
+}
 
 function state(f) {
   return (f.gun ??= { cool: 0, pending: -1, shots: 0, hits: 0, seed: (0x2545f491 ^ Math.imul(f.index + 1, 0x9e3779b9)) >>> 0 });
@@ -46,8 +133,8 @@ function rand(g) {
 export function gunCanFire(f, { now = false } = {}) {
   const g = state(f);
   if (g.cool > 0 || g.pending >= 0) return false;
-  g.pending = now ? GUN.maxWait : 0; // now: 겨누는 동작 없이 다음 스텝에 지금 총신(레이저) 방향으로 쏜다
-  if (now) g.aim = 0; // 사람은 조준 보정 없음 (AI 는 gunAI 가 g.aim 을 난이도대로 정한다)
+  g.pending = now ? GUN.maxWait : 0; // now: 찌르는 동작 없이 다음 스텝에 지금 총신(레이저) 방향으로 쏜다 (사격 자세가 이미 겨누고 있다)
+  g.aim = 0; // 조준 보정 없음 (AI 는 gunAI 가 쏜 뒤 g.aim 을 난이도대로 정한다)
   return true;
 }
 
@@ -84,7 +171,7 @@ function fire(f, world, combat) {
   const u = _l.set(1, 0, 0).applyQuaternion(_q); // 총신에 수직인 두 축
   const v = new THREE.Vector3().crossVectors(_d, u);
   _d.multiplyScalar(Math.cos(a)).addScaledVector(u, Math.sin(a) * Math.cos(phi)).addScaledVector(v, Math.sin(a) * Math.sin(phi)).normalize();
-  f.bladePoint(1, _o); // 총구
+  muzzle(f, _o); // 총구
   // AI 조준: 찌르기 동작만으로는 총신이 상대 가슴에서 15~23° 벗어난 채 쏜다(3 m 에서 가슴 폭은 ±4° — 거의 다 빗나갔다, 디렉터 12:38).
   //  AI 는 난이도 실력(level.skill: 쉬움 0.4 · 보통 0.7 · 어려움 0.85)만큼 총신을 상대 가슴 쪽으로 바로잡아 쏜다: 남는 오차 = (1 − (0.5 + 0.5·skill)).
   //  사람은 바로잡지 않는다 — 레이저를 보고 제 손으로 겨눈다
@@ -94,7 +181,6 @@ function fire(f, world, combat) {
     const to = new THREE.Vector3(c.x - _o.x, c.y - 0.1 - _o.y, c.z - _o.z).normalize();
     _d.lerp(to, g.aim).normalize();
   }
-  sound('onShot', f);
   // 반동: 총구를 뒤·위로 차 올린다 (총구에 건 충격 — 손목이 받아 내며 총구가 들린다). 팔에도 충격이 전해진다
   const up = _l.set(0, 1, 0).addScaledVector(_d, -_d.y).normalize(); // 총신에 수직인 위쪽
   sw.applyImpulseAtPoint(
@@ -105,11 +191,13 @@ function fire(f, world, combat) {
   f.takeJolt?.(GUN.recoilBack + GUN.recoilUp);
   const info = combat.info;
   const hit = castRay(world, _o, _d, (h) => info.get(h)?.fighter !== f);
+  sound('onShot', f, _d.clone(), hit ? hit.toi : GUN.range); // 효과 모듈의 총알 궤적이 실제 총알을 따라가게 방향·거리를 넘긴다
   const vi = hit ? info.get(hit.collider.handle) : null;
   // 어디에 맞았나 (검사 도구가 읽는다): 허공·땅벽·칼·몸
   const what = !hit ? 'air' : !vi ? 'world' : vi.kind === 'weapon' ? 'weapon' : 'body';
   g.what = g.what ?? {};
   g.what[what] = (g.what[what] ?? 0) + 1;
+  if (hit) GUN_HOOKS.onImpact?.(f, _o.clone().addScaledVector(_d, hit.toi), _d.clone(), what);
   if (what !== 'body' || vi.fighter === f) return; // 칼·땅·벽에 맞았거나 빗나갔다
   bulletHit(f, vi, _o.clone().addScaledVector(_d, hit.toi), _d.clone(), combat);
 }
@@ -222,13 +310,14 @@ function updateLaser(f, g, world, combat) {
   const r = f.sword.rotation();
   _q.set(r.x, r.y, r.z, r.w);
   const dir = _l.set(0, 1, 0).applyQuaternion(_q);
-  const o = f.bladePoint(1, new THREE.Vector3());
+  const o = muzzle(f, new THREE.Vector3());
   const hit = castRay(world, o, dir, (h) => combat.info.get(h)?.fighter !== f);
   const dist = hit ? hit.toi : GUN.range;
   const y0 = f.weaponCfg.hiltLength + f.weaponCfg.bladeLength; // 총구 (칼 기준)
-  L.beam.position.set(0, y0, 0);
+  const mx = f.weapon.muzzleX ?? 0;
+  L.beam.position.set(mx, y0, 0);
   L.beam.scale.set(1, Math.max(0.01, dist), 1);
-  L.dot.position.set(0, y0 + dist, 0);
+  L.dot.position.set(mx, y0 + dist, 0);
   L.dot.visible = !!hit;
   L.mat.opacity = g.cool > 0 ? 0.18 : 0.6;
 }
@@ -242,10 +331,10 @@ function castRay(world, o, d, pred) {
   return { collider: hit.collider, toi: hit.timeOfImpact ?? hit.toi };
 }
 
-function sound(kind, f) {
-  const p = f.bladePoint(1, new THREE.Vector3());
+function sound(kind, f, ...more) {
+  const p = muzzle(f, new THREE.Vector3());
   const hook = GUN_HOOKS[kind];
-  if (hook) return hook(f, p);
+  if (hook) return hook(f, p, ...more);
   const snd = globalThis.window?.game?.sound;
   if (!snd?.ctx || !snd._on) return;
   (kind === 'onShot' ? gunshotSound : reloadSound)(snd, p);
@@ -255,7 +344,7 @@ function sound(kind, f) {
 /** 총소리: 짧고 센 잡음 터짐 + 낮은 "쿵" + 경기장에 울리는 꼬리 */
 export function gunshotSound(snd, pos) {
   const c = snd.ctx;
-  const ev = snd.event({ bus: snd.metalBus, gain: 1.2, prio: 3, pos });
+  const ev = snd.event({ bus: snd.metalBus, gain: 2.2, prio: 3, pos }); // 사장님 '총성도 크게': 1.2 → 2.2 (약 +5 dB)
   const t = c.currentTime;
   const nb = snd._noiseBuf();
   const src = c.createBufferSource();
@@ -317,8 +406,8 @@ export function reloadSound(snd, pos) {
  */
 export function gunAI(ai, dt) {
   const me = ai.me;
-  // 판이 열리자마자 쏘지 않는다: 첫 발 전 GUN.aiFirst 초 (예전엔 0.1초에 쏴 판이 시작하자마자 끝나기도 했다)
-  if (ai.gunT == null) state(me).cool = Math.max(state(me).cool, GUN.aiFirst);
+  // 판이 열리자마자 쏘지 않는다: 첫 발 전 GUN.aiFirst 초 (예전엔 0.1초에 쏴 판이 시작하자마자 끝나기도 했다).
+  //  장전(cool)으로 기다리면 사격 자세가 총을 세워 올렸다가 내리며 쏴서 땅을 쐈다 → 겨눈 채로 따로 센다
   const d = ai.d;
   ai.gunT = (ai.gunT ?? 0) + dt;
   let fwd = d < 3.2 ? -1 : d > 5 ? 0.8 : 0;
@@ -331,9 +420,10 @@ export function gunAI(ai, dt) {
     side = (ai.gunSide ??= Math.sign(ai.foeLat || 1) * -1);
   } else ai.gunSide = null;
   me.move.set(side, fwd);
-  const pose = ai.school.pose.point ?? ai.school.pose.cover;
-  ai.hand.set(pose[0], pose[1]);
+  ai.hand.set(0, 0); // 조준 패드 가운데 = 사격 자세가 상대 가슴을 겨눈다 (gunPose)
   ai.handSpeed = 1.2;
   ai.moveHand(dt);
-  if (d < 7 && (me.gun?.cool ?? 0) <= 0 && me.skill.thrust({ step: false, autoAim: true })) state(me).aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7);
+  // 총구가 상대 가슴에서 aiAimTol° 안으로 들어왔을 때만 쏜다 (팔을 뻗는 중이나 장전 뒤 내려오는 중엔 쏘지 않는다)
+  const aimed = aimErr(me) < GUN.aiAimTol;
+  if (ai.gunT >= GUN.aiFirst && aimed && d < 7 && (me.gun?.cool ?? 0) <= 0 && me.skill.thrust({ step: false })) state(me).aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7);
 }

@@ -23,8 +23,8 @@ const FLASH_T = 0.075; // 초: 섬광이 보이는 시간 (60fps 에서 네댓 �
 const SMOKE_T = 1.2; // 초: 연기가 사라지기까지
 const TRACE_T = 0.11; // 초: 총알 궤적 줄이 사라지기까지 (60fps 에서 예닐곱 프레임 — 한 프레임이면 폰에서 놓친다)
 const NP = 24; // 연기 점 수
-const LASER_A = 0.13; // 조준 레이저 선의 불투명도 — 있는 듯 없는 듯, 눈밭 위에서도 겨우 보이는 정도
-const LASER_DOT_A = 0.3; // 닿은 자리 점 (겨누는 데 쓰는 건 이 점이라 선보다 조금 또렷하게)
+const LASER_A = 0.3; // 조준 레이저 선의 불투명도 (사장님 '조준선 지금보다 밝게': 0.13 → 0.3)
+const LASER_DOT_A = 0.6; // 닿은 자리 점 — 겨누는 데 쓰는 건 이 점이라 선보다 조금 또렷하게 (0.3 → 0.6)
 
 /** 섬광: 네 갈래 별 + 둥근 심 (가운데 흰빛 → 주황 → 투명) */
 function flashTexture() {
@@ -137,7 +137,6 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     // 궤적 줄: 총구에서 닿은 곳까지 (onImpact 가 오면 실제 방향·점으로 바로잡는다)
     e.origin.copy(origin);
     aimTrace(e, origin, e.d, dist);
-    return e;
     // 총신에 수직인 두 축
     _u.set(0, 1, 0);
     if (Math.abs(e.d.y) > 0.9) _u.set(1, 0, 0);
@@ -156,6 +155,7 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     e.core.position.copy(e.o).addScaledVector(e.d, 0.02);
     e.flash.visible = e.core.visible = e.smoke.visible = true;
     step(e, 0);
+    return e;
   };
 
   const step = (e, dt) => {
