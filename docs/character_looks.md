@@ -88,7 +88,7 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 무기 PM의 권총(`src/gun.js`, ??? 등급)은 소리만 있고 불꽃·연기가 없었다. 외형 PM이 겉모습만 얹었다 — 판정·난수 무관.
 - **섬광**: 총구에 additive 스프라이트 두 장(네 갈래 별 + 뜨거운 심)이 0.075초(네댓 프레임) 번쩍이며 커졌다 사라진다.
 - **연기**: 회색 점 24개가 총신 방향으로 뿜어져 느려지며 위로 떠오르고 1.2초 안에 사라진다. 퍼짐은 정해진 표(황금각)라 난수가 없다. 흰 눈밭 앞에서는 옅게, 밤에는 또렷하게 보인다.
-- **이음새**: `gun.js` 의 `GUN_HOOKS.onShot` 을 감싼다(원래 걸린 소리는 그대로, 없으면 `gunshotSound` 를 직접 낸다). 총신 방향은 gun.js `fire` 와 같은 계산(칼 축 +y). 스스로 돈다(requestAnimationFrame, 일시정지 중 멈춤). **main.js 한 줄** `installGunFx({ scene, sound })` 을 디렉터가 넣는다.
+- **이음새**: `gun.js` 의 `GUN_HOOKS.onShot` 을 감싼다(원래 걸린 소리는 그대로, 없으면 `gunshotSound` 를 직접 낸다). 총신 방향은 gun.js `fire` 와 같은 계산(칼 축 +y). 스스로 돈다(requestAnimationFrame, 일시정지 중 멈춤). **main.js 두 줄** `installGunFx({ scene, sound })` 과 판 바뀜 자리(clearDebris 옆)의 `clearGunFx()` 를 디렉터가 넣는다. 디렉터 결정: 총은 현대식 리볼버(무기 PM이 다시 그림), 장전 표시는 실린더 회전·스윙아웃으로 무기 PM과 정한다. 사격 자세는 온몸 타격 작업 뒤 디렉터가 정한다(지금 손대지 않음). 권총은 카드로만 나오므로 권총집 장식은 없다.
 - 효과 두 벌을 미리 만들어 돌려쓴다(두 검객이 거의 동시에 쏠 때). 조명은 만들지 않는다.
 - 스크린샷: [섬광(밤 신전)](handoff/gun_fx_flash.png) · [연기](handoff/gun_fx_smoke.png) · [섬광(성 안뜰)](handoff/gun_fx_flash_castle.png)
 - 사장님이 함께 결정한 것: 사격 자세(팔을 뻗어 겨누는 한 손 자세)는 디렉터·무기 PM 몫. 장전 표시·총알 자국은 방식을 설명하고 결정 대기.

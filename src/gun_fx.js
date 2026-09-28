@@ -4,6 +4,7 @@
 //   · gun.js 의 GUN_HOOKS.onShot 을 감싼다: 원래 걸린 것(소리)은 그대로 부르고, 없으면 gun.js 의 총소리를 직접 낸다 — 판정·난수 무관.
 //   · 총신 방향은 gun.js fire 와 같은 계산(칼 축 +y 를 총 몸체 회전으로). 연기의 퍼짐은 정해진 표(난수 없음).
 //   · 스스로 돈다(requestAnimationFrame): main.js 는 installGunFx({ scene, sound }) 한 줄만 부른다. 일시정지 중에는 멈춘다.
+//   · 판이 바뀔 때는 clearGunFx() (main.js 가 clearDebris() 를 부르는 자리에 한 줄) — 흔적이 쌓이지 않는다.
 //   · 폰에서 가볍게: 효과 두 벌(두 검객이 거의 동시에 쏠 때)만 미리 만들어 돌려쓴다. 조명은 안 만든다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -69,9 +70,15 @@ const _d = new THREE.Vector3();
 const _u = new THREE.Vector3();
 const _v = new THREE.Vector3();
 
+let _clear = null;
+/** 판이 바뀔 때(main.js 가 clearDebris() 를 부르는 자리) 남은 섬광·연기를 바로 거둔다. 효과는 1.2초 안에 스스로 사라지지만 쌓임 없이 깨끗이 (디렉터 조건) */
+export function clearGunFx() {
+  _clear?.();
+}
+
 /**
  * 권총 효과를 설치한다. scene: 장면, sound: main.js 의 Sound (GUN_HOOKS.onShot 이 비어 있을 때 총소리를 내는 데 쓴다).
- *  반환 { fire(pos, dir) } — 점검 도구가 직접 터뜨려 볼 때
+ *  반환 { fire(pos, dir), clear() } — 점검 도구가 직접 터뜨려 볼 때 / 판 바뀜에 치울 때
  */
 export function installGunFx({ scene, sound }) {
   const flashMat = new THREE.SpriteMaterial({ map: flashTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
@@ -172,5 +179,11 @@ export function installGunFx({ scene, sound }) {
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
-  return { fire };
+  _clear = () => {
+    for (const e of pool) {
+      e.t = -1;
+      e.flash.visible = e.core.visible = e.smoke.visible = false;
+    }
+  };
+  return { fire, clear: _clear };
 }
