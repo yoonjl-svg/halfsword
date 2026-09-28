@@ -238,7 +238,7 @@ export class Combat {
       severity,
       pass,
       absorb: A.absorb ?? 100,
-      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1), // 모노호시자오 '명검의 날': 출혈 배율
+      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1), // 모노호시자오 '제비 베기': 출혈 배율
       local: vicLocal,
       point: point.clone(),
       dir,
