@@ -698,6 +698,7 @@ const qinggang = finalizeSpec('qinggang', {
   enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
   tier: 'epic',
   ability: '창천: 무기 절단',
+  fragility: TIER_FRAGILITY.epic * 0.5, // 특수 능력 (사장님, 카드 표기 없음): 자기가 부러질 확률 50% 감소 (에픽 0.0104 → 0.0052)
   breakMult: 3, // 에픽 특수 능력 '창천: 무기 절단' (사장님): 칼끼리 부딪힐 때 상대 무기가 부러질 확률 ×3 (안 부러지는 무기는 그대로 0)
   hiltLength: 0.12, bladeLength: 0.74,
   mCut: 1.35, mThrust: 1.15, mBlunt: 0.95, // 감독 확정치 (mCut 1.35)
