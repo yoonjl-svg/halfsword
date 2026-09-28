@@ -323,7 +323,47 @@ export const CHARACTERS = [
   },
 ];
 
-export const CHARACTERS_BY_ID = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));
+// ───────────────────────────────────────────── 변형 캐릭터 — 여정의 한 자리에만 나온다 ─────────────────────────────────────────────
+//  CHARACTERS(다섯) 밖에 둔다: 기본 회전(randomCharacter)·시뮬 라운드로빈에는 들어가지 않고, id로만 불린다
+//  (stages.js STAGE_FOE 짝·?foe=id). 원본 시트를 복사해 만들며, 원본은 건드리지 않는다.
+const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
+export const CHARACTER_VARIANTS = [
+  // 4b. 광기의 하인리히 도른 — 밤의 포세이돈 신전에 다시 나타나는 하인리히 (사장 요청, 디렉터 14:08).
+  //  붉은 눈·안광 아우라는 외형 담당 몫이고, 여기서는 eyes 표식만 둔다.
+  //  아직 사장 확정 전인 것: 별칭·대사·수치. 대사와 수치는 하인리히 것을 그대로 쓰고, 제안은 docs/character_lore.md §4b에.
+  {
+    ...HEINRICH,
+    id: 'heinrich_mad',
+    variantOf: 'heinrich',
+    name: '광기의 하인리히 도른',
+    epithet: '검에 먹힌 자', // 제안 (원본 별칭 '미치광이'와 겹치지 않게). 다른 후보: '밤의 왕' / '왕의 검'
+    origin: '포세이돈 신전에서 쓰러진 뒤 그 자리를 떠나지 않았다. 밤이 되면 같은 자리에 다시 선다',
+    backstory:
+      '신전에서 베였다. 죽지는 않았다. 바닷물이 밀려와 피를 씻어 가는 동안 그는 칼을 놓지 않았고, 그날 밤부터 신전 기둥 사이에 앉아 칼과 이야기했다. ' +
+      '패배는 그의 믿음을 깨지 못했다 — 안으로 파고들었을 뿐이다. 왕의 검이 졌을 리 없으니 진 것은 자기 손이고, 그러니 손을 검에 내주면 된다. ' +
+      '며칠째 밤이 오면 그의 눈에 붉은 빛이 돈다. 칼이 그렇게 만든 건지 그가 그렇게 된 건지, 본 사람마다 말이 다르다.',
+    want: '검이 원하는 것. 그것이 무엇인지는 그도 모른다 — 다만 상대의 목을 내놓으면 검이 잠잠해진다고 믿는다.',
+    temperament:
+      '웃지 않는다. 소리치지 않는다. 낮의 하인리히에게 남아 있던 사람의 확신은 없고, 검의 방향만 남았다. 맞아도 반응이 늦고, 물러날 줄을 모른다. ' +
+      '집념에 잠긴 채 결투를 시작한다 — 느리게 다가와 한 번 물면 놓지 않는다.',
+    ai: {
+      ...JSON.parse(JSON.stringify(HEINRICH.ai)),
+      persona: {
+        ...JSON.parse(JSON.stringify(HEINRICH.ai.persona)),
+        // 시작 감정 제안: 검에 먹힌 자 = 집념 1.0 (주는 상처 +30%·관통↑ / 이동 −25%: 느리고 집요하고 치명적). 대안: 분노 1.0.
+        //  사장이 플레이해 보고 정한다. 이 한 줄만 지우면 낮의 하인리히와 같아진다
+        startEmotion: { obsession: 1.0 },
+      },
+    },
+    lines: JSON.parse(JSON.stringify(HEINRICH.lines)),
+    look: HEINRICH.look,
+    lookVersion: HEINRICH.lookVersion,
+    eyes: 'madGlow', // 외형 담당과 맞춘 표식: 붉은 눈 + 안광 아우라
+  },
+];
+
+/** id → 시트. 다섯 명과 변형까지 (변형은 여정의 정해진 자리·?foe=id 로만 나온다) */
+export const CHARACTERS_BY_ID = Object.fromEntries([...CHARACTERS, ...CHARACTER_VARIANTS].map((c) => [c.id, c]));
 
 /**
  * 이번 판에 캐릭터가 실제로 드는 무기 id. weaponAlt 가 있으면 그 확률로 대체 무기를 고른다.
