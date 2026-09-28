@@ -89,7 +89,7 @@ await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>
 </style></head><body>${shots.map((s) => `<h2>${s.label}</h2><div class="row">${s.row.map((r) => `<figure><img src="data:image/jpeg;base64,${r.img}"><figcaption>${r.name}</figcaption></figure>`).join('')}</div>`).join('')}</body></html>`);
 await page.waitForTimeout(300);
 const h = await page.evaluate(() => document.body.scrollHeight);
-fs.writeFileSync(out, await page.screenshot({ type: 'jpeg', quality: 80, clip: { x: 0, y: 0, width: 1320, height: h } }));
+fs.writeFileSync(out, await page.screenshot({ type: 'jpeg', quality: 62, clip: { x: 0, y: 0, width: 1320, height: h } }));
 console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : `ZERO console errors → ${out.pathname}`);
 await browser.close();
 process.exit(errors.length ? 1 : 0);

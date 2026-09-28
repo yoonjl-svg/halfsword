@@ -68,7 +68,8 @@ export const FRAME_GUARDS = {
   one: {
     '긴 자세 (Langort)': { name: '3번 자세 (Terza)', desc: '팔을 곧게 뻗어 칼끝으로 겨누고 몸을 옆으로 세운다 · 런지로 찌른다', src: '카포 페로 3번 자세 [해석] — 손 위치는 R2 한손 뻗기 값' },
     '쟁기 (Pflug)': { name: '바깥 막기 (Seconda)', desc: '손을 허리 바깥에, 칼끝은 상대 얼굴 · 바깥 선을 닫는다', src: '[해석] — 손 위치는 R2 값' },
-    '왼쪽 쟁기': { name: '안쪽 막기 (Quarta)', desc: '손바닥을 위로 돌려 안쪽 선에, 칼끝은 상대 얼굴 · 안쪽 선을 닫는다', hand: [0.42, -0.1, 0.05], blade: [15, 8], pelvisYaw: -25, chestYaw: -35, pitch: 5, drop: 0.08, src: '카포 페로 4번 자세 = 손목을 돌린 상태(손바닥 위) [원전 2차] · 세이버 inside guard [원전 2차]' },
+    // 안쪽 막기(Quarta)는 이름만 붙인다: 손·칼끝을 바꾸면(손 [0.42,−0.10,0.05]·칼끝 [15,8]) 청강검이 50% → 31% (값 그대로 두면 44%) — 이 자리도 베기 길이 지난다
+    '왼쪽 쟁기': { name: '안쪽 막기 (Quarta)', desc: '손바닥을 위로 돌려 안쪽 선에, 칼끝은 상대 얼굴 · 안쪽 선을 닫는다', src: '레이피어 4번 자세(quarta) = 손목을 돌린 상태 [원전 2차 카포 페로] — 손 위치는 롱소드 왼쪽 쟁기 그대로' },
   },
 
   //  머리 막기(St. George)·걸친 막기(Hanging)는 표에 넣지 않는다 → 아래 COVERS (측정: 표의 지붕·황소 자리를 이 막기 자세로 바꾸자
@@ -86,7 +87,8 @@ export const STYLE_GUARDS = {
   'one:thrust': {
     '긴 자세 (Langort)': { name: '3번 자세 (Terza)', desc: '몸을 옆으로 세우고 뒷무릎을 굽혀 체중을 뒤에 · 팔은 굽히고 칼끝으로 상대 얼굴 · 런지로 찌른다', hand: [0.5, -0.05, 0.2], blade: [8, -3], pelvisYaw: -55, chestYaw: -65, pitch: -3, drop: 0.12, src: '카포 페로(1610) 9장: 뒷무릎을 굽힌다, 앞다리는 거의 편다 [원전 2차] · 옆으로 선 정도·손 위치 [추정]' },
     '쟁기 (Pflug)': { name: '2번 자세 (Seconda)', desc: '손을 어깨 높이로 뻗고 손바닥을 아래로 · 칼끝은 상대 가슴', hand: [0.5, 0.08, 0.24], blade: [-3, -3], pelvisYaw: -50, chestYaw: -60, pitch: 2, drop: 0.12, src: '카포 페로 2번 자세: 손바닥 아래, 어깨 높이 [원전 2차]' },
-    '황소 (Ochs)': { name: '1번 자세 (Prima)', desc: '칼을 뽑은 자리 — 손을 머리 위로, 칼끝은 상대 가슴으로 내려 겨눈다', hand: [0.32, 0.38, 0.18], blade: [-20, -10], pelvisYaw: -45, chestYaw: -55, pitch: 0, drop: 0.1, src: '카포 페로 1번 자세: 칼을 뽑은 직후, 머리 위 [원전 2차]' },
+    // 1번 자세(Prima: 손을 머리 위로, 칼끝을 내려 겨눔)는 뺐다 — 황소 자리는 찌르기·베기 길의 경유점이라 칼끝을 내리면 길이 휜다
+    //  (측정 48판: 넣으면 15%, 빼면 40%. 한손 막기 자세와 같은 까닭 — COVERS)
   },
 };
 
@@ -110,9 +112,10 @@ export function frameTableWithCovers(frame, style = null) {
 }
 
 /** 몸 틀(+싸움 방식)의 자세표 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로) */
-export function frameTable(frame, style = null) {
+export function frameTable(frame, style = null, skip = []) {
   const o = { ...(FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}) };
   for (const k of MOTION.skip) delete o[k];
+  for (const k of skip) delete o[k];
   if (!Object.keys(o).length && frame !== 'one') return null;
   return table(frame === 'one' || frame === 'gun' ? GUARD_BASE_ONE : GUARD_BASE, o);
 }
@@ -129,7 +132,9 @@ export const NEW_TECH = {
   ],
   // C: 손목으로 칼을 한 바퀴 돌려 되벤다(몰리넬로) · 앞에 나온 상대 손목·아래팔을 끊어 친다
   one: [
-    { name: 'molinello', from: G.langort, path: [[0.25, -0.35], G.nebenR, G.tagR, [0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 0.9, chain: 1, src: '세이버 몰리넬로(moulinet) [해석]' },
+    // 몰리넬로는 사람이 손가락으로 그리는 길로만 둔다(ai: false): AI 가 골라 쓰면 한 판에 70~99번 쓰며 진다
+    //  (측정 48판: 세이버 켬 17% → 몰리넬로 빼면 44%, 나뭇가지 15% → 40%). 원을 돌리는 0.25초 동안 가운데가 비고 첫 베기가 약하다
+    { name: 'molinello', ai: false, from: G.langort, path: [[0.25, -0.35], G.nebenR, G.tagR, [0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 0.9, chain: 1, src: '세이버 몰리넬로(moulinet) [해석]' },
     { name: 'wristCut', from: G.tagR, path: [[0.2, 0.1], [0.05, -0.08]], open: 'UL', kind: 'cut', reach: 0.25, base: 0.7, fast: true, src: '세이버·검의 손목 베기: 어깨에서 짧게 내려 앞손·아래팔을 끊는다(몸통보다 0.3~0.4 m 가깝다). 길이 0.62 — 분노의 베기의 절반 [해석]' },
   ],
 };
@@ -142,8 +147,9 @@ export function styleTech(style, frame) {
   if (style === 'blunt') t = t.filter((x) => x.kind !== 'thrust'); // 때리기: 동작은 베기와 같고 찌르기만 뺀다 (docs/weapon_types.md §4-3)
   // 앞무게: 높은 자세에서 내리치는 베기(분노의 베기=가사베기, 정수리 베기=상단 정면)를 먼저 — 가속할 길이 길다 (10라운드 6-7 과 같은 뜻)
   if (frame === 'heavy') t = weight(t, (x) => x.presses, 1.4);
-  const add = NEW_TECH[frame] ?? [];
-  return [...t, ...(style === 'thrust' ? add.filter((x) => x.kind === 'thrust') : add)];
+  // 손목 베기는 날 있는 한손 칼만: 나뭇가지(때리기)에 넣으면 40% → 19% (가볍고 날이 없어 앞손을 끊지 못하고 틈만 준다)
+  const add = (NEW_TECH[frame] ?? []).filter((x) => !(style === 'blunt' && x.name === 'wristCut'));
+  return [...t, ...(style === 'thrust' ? add.filter((x) => x.kind === 'thrust') : add)].filter((x) => x.ai !== false);
 }
 
 /** 속임수: 찌르기 없는 방식이면 찌르기 속임수를 뺀다 */
@@ -187,9 +193,9 @@ export const OVERLAY = {
 export function motionFor(weapon) {
   const frame = weapon.frame ?? 'two';
   const style = weapon.style ?? 'versatile';
-  return { frame, style, table: frameTable(frame, style), tech: styleTech(style, frame), feints: styleFeints(style), watch: frameWatchGuards(frame), overlay: OVERLAY[style] ?? null, parry: MOTION.useParry ? LIB_PARRY[weapon.id] ?? null : null, noTwist: style === 'blunt', flow: frame === 'heavy' };
+  return { frame, style, table: frameTable(frame, style, weapon.motionSkip ?? []), tech: styleTech(style, frame), feints: styleFeints(style), watch: frameWatchGuards(frame), overlay: OVERLAY[style] ?? null, parry: MOTION.useParry ? LIB_PARRY[weapon.id] ?? null : null, noTwist: style === 'blunt', flow: frame === 'heavy' };
 }
-export function applyMotionLibrary(fighter, { overlay = true, flow = true, noTwist = true } = {}) {
+export function applyMotionLibrary(fighter, { overlay = true, flow = true, noTwist = false, ai = null, cover = true } = {}) {
   const m = motionFor(fighter.weapon ?? {});
   fighter.guardPose.table = fighter.bodyGuard.table = m.table ?? undefined;
   fighter.motion = m;
@@ -197,11 +203,55 @@ export function applyMotionLibrary(fighter, { overlay = true, flow = true, noTwi
   // 날 세우기(손목 비틀기)를 끈다: 날 없는 무기(④ 때리기)는 어느 면으로 맞아도 같다.
   //  비트는 힘도 손목 힘 한도(cap) 안에서 나눠 쓰므로, 끄면 그만큼 휘두르는 데 쓴다 (무기-검술 연구 ② 제안).
   //  잰 값(motion_lab swings): 나뭇가지 +15~30%, 참치는 베기마다 들쭉날쭉. 라이트세이버(연구 ⑥ 제안)는 우리 판정이 날 있는 칼로 보므로
-  //  끄면 날이 안 서 베기 지표가 0 이 된다 — 넣지 않는다
+  //  끄면 날이 안 서 베기 지표가 0 이 된다 — 넣지 않는다.
+  //  기본은 끔(noTwist=false): 실제 싸움에서 참치 23% → 8%, 나뭇가지도 떨어졌다 (비트는 힘이 칼을 붙잡아 주는 몫이 컸다). 기록용으로만 남긴다
   if (overlay && noTwist && m.noTwist) fighter.twistScale = 0;
   // 흐름(SKILL.flow — 멈추지 않고 이어 베기)을 이 검객에게만 켠다: 앞무게(B)는 되돌리지 않고 이어 도는 것이 빠른 길 (몬탄테)
   if (overlay && flow && m.flow) installFlow(fighter);
+  // 막기 덧씌우기(COVERS): AI 가 그 줄을 칼로 막는 동안만 손·칼끝을 막기 자세로 덮는다 (자세표에 넣으면 베기 길이 휜다 — COVERS 주석)
+  if (overlay && cover && ai && COVERS[m.frame]) installCover(fighter, ai, COVERS[m.frame]);
   return m;
+}
+
+/** 막기 덧씌우기 (시제품): 검술 층 update 뒤에 thrustPose(덧씌우기 칸)를 막기 자세로 채운다. 찌르기(tap)·사격 중엔 건드리지 않는다 */
+function installCover(fighter, ai, covers) {
+  const sk = fighter.skill;
+  if (!sk || sk._cover) return;
+  const D = Object.fromEntries(Object.entries(covers).map(([k, o]) => {
+    const el = o.blade[0] * D2R;
+    const az = o.blade[1] * D2R;
+    return [k, { ...o, dir: [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)] }];
+  }));
+  sk._cover = { w: 0, last: null };
+  const upd = sk.update.bind(sk);
+  sk.update = (dt) => {
+    const r = upd(dt);
+    const st = sk._cover;
+    if (sk.tap || fighter.weapon?.gun) {
+      st.w = 0;
+      return r;
+    }
+    const want = ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : null;
+    if (want) st.last = want;
+    st.w = Math.max(0, Math.min(1, st.w + (want ? dt / 0.08 : -dt / 0.15))); // 0.08초에 덮고 0.15초에 걷는다
+    const c = st.last;
+    const pose = sk.thrustPose;
+    if (!c || st.w <= 0) {
+      if (pose.w && !sk.tap) pose.w = 0;
+      return r;
+    }
+    for (let k = 0; k < 3; k++) {
+      pose.hand[k] = c.hand[k];
+      pose.dir[k] = c.dir[k];
+    }
+    pose.pelvisYaw = c.pelvisYaw * D2R;
+    pose.chestYaw = c.chestYaw * D2R;
+    pose.pitch = c.pitch * D2R;
+    pose.drop = c.drop;
+    pose.w = st.w;
+    sk.covers = (sk.covers ?? 0) + (want ? dt : 0);
+    return r;
+  };
 }
 
 function installFlow(fighter) {
