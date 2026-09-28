@@ -24,6 +24,7 @@
 import * as THREE from 'three';
 import { STRIKE, ANATOMY, STEEL, ARMOR } from './config.js';
 import { BREAK } from './weapons.js';
+import { updateGun } from './gun.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -189,9 +190,9 @@ export class Combat {
     // 투구: 머리 윗부분(눈썹 위)만 덮는다. 종류별 값은 ARMOR.helmets (케틀햇 = 예전 ANATOMY.helmet 그대로)
     const helmet = zone === 'head' && vic.hasHelmet && vicLocal.y > -0.01;
     const hs = helmet ? vic.helmetSpec || ARMOR.helmets.kettle : null;
-    // ignoreArmor 무기(라이트세이버)는 투구를 무시한다: 맨머리 판정(투구는 베여 닳기만 한다).
-    //  단 플레이어 케틀햇은 예전 그대로(케틀햇 문턱 × 1) — 케틀햇 숫자는 바꾸지 않는다
-    const helmOn = helmet && !(att.weaponCfg.ignoreArmor && vic.helmetType !== 'kettle');
+    // ignoreArmor 무기(라이트세이버 '고온 플라스마: 갑옷 무시', 사장님 확정)는 모든 투구를 무시한다: 맨머리 판정(투구는 베여 닳기만 한다).
+    //  (예전엔 플레이어 케틀햇만 빼서 라이트세이버가 케틀햇 문턱 200 J 를 그대로 받았다 — 주석 의도와 반대였다. 디렉터 12:38)
+    const helmOn = helmet && !att.weaponCfg.ignoreArmor;
     const A = helmOn ? { ...ANATOMY.head, ...hs } : ANATOMY[zone];
     // 판금(ARMOR.on, look.armor === 'plate'): 그 부위 판이 남아 있고 맞은 곳을 판이 덮었으면(팔다리는 판이 붙은 자리만).
     //  목(가슴 윗부분)은 덮지 않는다
@@ -368,6 +369,7 @@ export class Combat {
     });
     this.bladeClash(world, bladePairs);
     this.armSteel();
+    for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
   }
 
   /**
@@ -480,8 +482,9 @@ export class Combat {
     const vicLocal = _d.copy(point).sub(P.p).applyQuaternion(_q.copy(P.q).invert());
     const zone = zoneOf(pr.v, vicLocal);
     let e = 0;
-    if (zone === 'head') e = vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.helmet : STEEL.skull;
-    else if (zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.plate; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
+    const noArmor = att.weaponCfg.ignoreArmor; // 라이트세이버: 투구·판금에 튕기지 않는다 (맨머리·맨몸처럼)
+    if (zone === 'head') e = !noArmor && vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.helmet : STEEL.skull;
+    else if (!noArmor && zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.plate; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
     else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone;
     if (e <= 0) return;
     const vPre = velAt(S, point, _a).sub(velAt(P, point, _b)).dot(n); // + = 다가옴

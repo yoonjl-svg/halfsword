@@ -12,7 +12,7 @@
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna } from './weapon_looks.js';
+import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, PISTOL_GRIP } from './weapon_looks.js';
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -141,7 +141,8 @@ function bladeInertia(mass, L, comFrac, gyrationFrac, width, thickness) {
   const It = 0.0000736 * (mass / 0.842) * ratio;
   return { comY, Ie, It };
 }
-const partTuple = (shape, y, mass, comY, Ie, It, color, isBlade = false) => [shape, y, [mass, comY, Ie, It], color, !!isBlade];
+// pose(선택): 칼 축에서 비켜 놓거나 기울인 부품 { x, rotZ, I } — fighter.js 가 그대로 콜라이더·겉모습에 쓴다 (권총 손잡이만)
+const partTuple = (shape, y, mass, comY, Ie, It, color, isBlade = false, pose) => (pose ? [shape, y, [mass, comY, Ie, It], color, !!isBlade, pose] : [shape, y, [mass, comY, Ie, It], color, !!isBlade]);
 
 // 물리에는 영향 없는 장식용 메쉬. fighter.js가 칼 콜라이더를 다 만든 뒤
 // spec.decorate?.(group, look)를 한 번 불러 준다 (group에 자유롭게 덧붙이면 된다).
@@ -979,13 +980,67 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  17) 권총 — ??? 등급 (사장님, "재미 삼아 최소 비용으로"). 찌르기(탭)로 쏜다: 탄은 무한, 한 발 사이 4초. 쏘면 총구가 튄다(반동).
+//      총신 방향으로 레이저(탄 길)가 보이고, 사람은 그 방향으로 바로 쏜다(조준은 제 손으로).
+//      맞으면 늘 같은 세기(gun.js GUN.energy)의 찌르기 상처. 투구·판금은 막는 대신 그 자리에서 부서진다. 근접전 불가(날 없음·둔기 배율 0), 대신 발이 빠르다(moveMul).
+//      부서지지 않는다. 칼처럼 쥐어 총신이 칼 축을 따라 앞으로 뻗는다 (겉모습 weapon_looks.js drawPistol)
+// ═════════════════════════════════════════════════════════════
+const pistol = finalizeSpec('pistol', {
+  nameKo: '권총', nameEn: 'Pistol',
+  desc: '어디서 굴러 들어온 권총.\n찌르기로 쏜다. 붙어 싸울 순 없지만 발이 빠르다.',
+  grip: 'one-hand', material: 'steel', soundMaterial: 'steel',
+  tier: 'mystery',
+  gun: true, // gun.js: 찌르기 = 발사, 장전, AI 는 도망 다니며 쏜다
+  // 손잡이가 칼 축에서 비켜 있으면 물리 엔진의 주관성축 순서가 바뀌어 fighter.js 가 칼날 축 관성(pI.y)으로 잡는 값이 25배 커지고
+  //  날 세우기 힘이 과해져 몸체가 발산했다(잰 값: 비트는 배율 10.7). 손잡이를 축 위에 둔 같은 몸체의 값(0.42)을 그대로 준다
+  controlOverrides: { twistScale: 0.42 },
+  moveMul: 1.2, // 걷는 최고 속도 ×1.2 (도망 다니며 쏘라고)
+  fragility: 0, // 부서지지 않는다
+  edged: false, mBlunt: 0, // 근접전 불가: 몸을 쳐도 상처·멍이 없다
+  hiltLength: 0.05, bladeLength: 0.15, // 칼 원점(손)~총구 0.20 m (사장님: 머스킷처럼 길어 보여 짧은 권총으로 — 예전 0.32 m)
+  partMesh: hiddenParts,
+  buildParts(look) {
+    // 손잡이: 총신에서 PISTOL_GRIP.deg(105°) 꺾여 아래(칼 몸체 +x)·뒤로 내려온다 — 그림(weapon_looks.js drawPistol)과 같은 치수.
+    //  사장님: "손잡이를 그려야지 무게중심을 잘 맞추고" → 손잡이도 실제 콜라이더·무게를 가진다 (전엔 칼 축 위 일자 상자였다)
+    const G = PISTOL_GRIP;
+    const a = (G.deg * Math.PI) / 180;
+    const dx = Math.sin(a), dy = Math.cos(a);
+    const hx = G.len / 2, hy = 0.014, hz = 0.012; // 손잡이 상자: 긴 쪽이 부품 x 축
+    const gm = 0.35;
+    // 무게도 손잡이 제자리에 (총 무게중심이 칼 축에서 약 3 cm 손잡이 쪽 아래, 손에서 7 cm 앞 — 권총답게 손 쪽에 무게가 있다)
+    //  손잡이 자체 관성은 방향 없이(가장 큰 축 값으로 고르게) 준다 — 상자 그대로의 관성(긴 축만 작다)이면 가만히 있을 때 떨림이
+    //  평균 2.4° → 4.6° 로 커졌다(잰 값). 무게·무게중심 자리는 그대로다
+    const gIso = (gm * ((2 * hx) ** 2 + (2 * hy) ** 2)) / 12;
+    const gI = { x: gIso, y: gIso, z: gIso };
+    const cap = sphereInertia(0.05, 0.015); // 손잡이 끝 마개
+    const L = this.bladeLength;
+    // 몸통(기관부·총신) 콜라이더는 보이는 길이 그대로. 다만 짧고 가벼운 몸체는 손목 제어가 못 잡아 가만히 있어도 총구가 떨렸다
+    //  → 회전 관성·무게중심만 inertiaLength 몸체 값을 준다 (무게 0.55 kg 는 그대로). 손잡이 무게가 축에서 비켜 있으면 더 떨려서
+    //  (손잡이 제자리 무게: 0.2 → 평균 5.4°, 0.25 → 2.4°) 0.25 로 둔다
+    const IL = Math.max(L, this.inertiaLength ?? 0.25);
+    const frame = boxInertia(0.55, 0.016, IL / 2, 0.013);
+    const comY = (IL - L) / 2;
+    return [
+      partTuple(['box', hx, hy, hz], G.from[1] + dy * hx, gm, 0, 0, 0, 0x6b4226, false, { x: G.from[0] + dx * hx, rotZ: Math.atan2(dy, dx), I: gI }),
+      partTuple(['ball', 0.015], G.from[1] + dy * G.len, 0.05, 0, cap.Ie, cap.It, 0xb08d3c, false, { x: G.from[0] + dx * G.len }),
+      partTuple(['box', 0.016, L / 2, 0.013], this.hiltLength + L / 2, 0.55, comY, frame.Ie, frame.It, 0x2c2f35, false),
+    ];
+  },
+
+  thumbScale: 0.6, // 카드 그림: 권총은 실제로 짧으니 칸을 가득 채우지 않는다 (weapon_thumbs 가 이 비율로 작게 둔다)
+  decorate(group) {
+    drawPistol(group);
+  },
+});
+
 // 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
 //  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
-  rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
+  rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol,
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)

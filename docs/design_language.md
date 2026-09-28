@@ -49,8 +49,9 @@
 ## 3. 카드 뒷면 v3 (픽셀 아트) — 채택
 
 **파일**: `public/ui/cardbacks/px_<테마>_{tile,frame,center,plaque}.png`
-- 테마: `poseidon` · `clearing` · `castle` · `temple` · `cathedral`. 조각 하나가 100~250바이트다.
+- 테마: `poseidon` · `poseidon_night` · `clearing` · `castle` · `temple` · `cathedral`. 조각 하나가 100~250바이트다.
 - 생성기는 `tools/cardbacks/gen_pixel_cardbacks.py`다. 새 테마를 넣으면 `grey_foe.py` 도 다시 돌리고, main.js `PX_BACKS` 에 바탕색을 더한다.
+- `poseidon_night`(밤의 포세이돈, 하인리히 흑화): 포세이돈 안의 밤 변주. 바탕 `#0c1220` + 어두운 물빛 `#2a4d58` · 달빛 `#dfe3d8` · 불꽃 `#e0782a`. 마름모 격자와 삼지창·뇌문 띠는 포세이돈과 같고, 물거품 자리에 이지러진 달과 별, 가운데는 초승달과 불꽃. `docs/handoff/card_back_poseidon_night.png`.
 - `clearing`(화전 터, 브란 — 오너가 고른 2안): 바탕 `#1a1816`(탄 땅) + 잿빛 `#5e5c55` · 새싹 연두 `#8fae3e` · 양골담초 노랑 `#c9a83a` · 바랜 나무 `#6e665a`. 문양은 비스듬한 빗줄기와 새싹, 띠는 둥글게 이어 놓은 탄 통나무의 마구리(나이테), 가운데는 위에서 본 날개 편 까마귀(잿빛 — 옆모습은 180° 돌려 붙이면 덩어리로 보여 위에서 본 모습으로). `docs/handoff/card_back_clearing.png`. 1안 뒷면(새싹·밭돌·울타리·회초리)은 `px_clearing_a_*`로 보관한다(main.js 는 안 쓴다).
 
 **조각으로 나눈 까닭**: 카드 비율이 화면마다 다르다(가로 폰 약 1:1.16, PC 1:1.5, 세로 폰 1:2.1). 그림 한 장을 늘리면 칸이 찌그러진다. 그래서 CSS가 조각을 정수 배로 붙인다.

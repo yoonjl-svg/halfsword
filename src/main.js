@@ -19,6 +19,7 @@ import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
+import { installGunFx, clearGunFx } from './gun_fx.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
@@ -184,6 +185,7 @@ resize();
 // ── 물리 세계와 등장인물 ──
 const particles = new Particles(scene);
 const sound = new Sound();
+installGunFx({ scene, sound }); // 권총(??? 등급) 총구 섬광·연기 (외형 PM, gun_fx.js — 소리는 그대로 두고 GUN_HOOKS.onShot 을 감싼다)
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
 sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
 const input = new Input(canvas);
@@ -198,6 +200,7 @@ let bodySounds = [];
  */
 function clearFlying() {
   clearDebris();
+  clearGunFx(); // 총구 섬광·연기도 새 판에 남지 않게
   player?.clearLoose();
   enemy?.clearLoose();
 }
@@ -600,7 +603,7 @@ const cardEls = [...drawEl.querySelectorAll('.wcard')];
 //  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
 //  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
 //  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
-const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', cathedral: '#2b171a' }; // 테마 → 바탕색
+const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a' }; // 테마 → 바탕색
 const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
 const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
 let cardBack = 'classic';

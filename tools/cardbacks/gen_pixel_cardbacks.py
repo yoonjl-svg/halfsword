@@ -362,9 +362,42 @@ def clearing():
     return pal, t, band, center, 'L'
 
 
+def poseidon_night():
+    # 밤의 포세이돈(하인리히 흑화): 포세이돈 안의 밤 변주 — 짙푸른 바탕에 어두운 물빛 마름모, 삼지창은 그대로, 물거품 자리에 달과 별, 가운데는 초승달과 불꽃
+    pal = dict(SHARED, B='#0c1220', T='#2a4d58', W='#dfe3d8', F='#e0782a')
+    t = canvas(TW, TH, 'B')
+    for y in range(TH // 2):
+        for x in range(TW):
+            if abs(x + 0.5 - 8) + abs(y + 0.5 - 8) == 8:
+                t[y][x] = 'T'
+    trident = ['G.GG.G', 'G.GG.G', 'G.GG.G', 'GGGGGG', '..GG..', '..gg..', '.GGGG.', '..gg..', '..gg..']
+    moon = ['..WW..', '.W..W.', 'W....W', 'W.....', '.W..W.', '..WW..']  # 이지러진 달과 별 하나
+    stamp(t, trident, 8, 8)
+    stamp(t, moon, 16, 16)
+    stamp(t, moon, 16, 0)
+    t[2][14] = 'W'
+    t[13][2] = 'W'
+    sym_tile(t)
+    band = band_rows(['.GGGGG', '.G...G', '.G.G.G', 'GG.GGG'], 'B')  # 그리스 뇌문 (포세이돈과 같다)
+    center = canvas(14, 14, '.')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d <= 7:
+                center[y][x] = 'B'
+            if 6 < d <= 7:
+                center[y][x] = 'G'
+            elif 3.2 < d <= 4.6 and dx < 0.8:  # 초승달 (왼쪽으로 열린 고리)
+                center[y][x] = 'W'
+    flame = ['..F.', '.FF.', 'FFFF', '.FF.']
+    stamp(center, flame, 8.5, 7, wrap=False)
+    return pal, t, band, center, 'T'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)

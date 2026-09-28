@@ -460,7 +460,61 @@ const LIAO_GI_TOUSLED = { ...LIAO_GI_CURLY, head: liaoWavyHead(LIAO_TOUSLED) };
 // 잇는 금색 트림을 얇게 둘러 "자칭 왕"다운 허영을 남긴다
 const HEINRICH_STEEL = { metalness: 0.85, roughness: 0.16, steel: 1.2 };
 const HEINRICH_GOLD = 0xd8b23a;
+
+// ── 판금 밑의 누비 속옷 (오너: "갑옷 파괴 시 갑옷 안에 덧대입는 흰색 천 옷이 보여야 해. 너덜너덜하게") ──
+//  판금이 완전히 부서져 사라지면 그 자리에 드러나는 흰 누비 천. 멀쩡할 때는 숨겨 두어 겉모습이 전과 같다(setPlateWear 가 켠다).
+//  가슴: 판보다 조금 작은 흰 조끼(가로 누빔 줄)에 아랫단이 찢겨 늘어진 조각들과 앞가슴의 찢긴 자국(밑의 검은 옷이 보인다).
+//  배: 흰 띠와 찢긴 자락. 난수 없이 정해진 자리라 시드 시뮬은 그대로다. 캐릭터를 만들 때 미리 만든다(싸우는 중에 메쉬를 새로 만들지 않는다)
+const UNDER = 0xf1ece0; // 누비 천 (흰 무명)
+const UNDER_Q = 0xcbc2ae; // 누빔 줄
+const UNDER_STAIN = 0xb4aa97; // 땀·때가 밴 조각
+const UNDER_TEAR = 0x2a2724; // 찢긴 틈으로 보이는 속
+function underCloth(g, part) {
+  const out = [];
+  const add = (pieces, color) => {
+    // 그늘진 앞면도 흰 천으로 읽히게 살짝 스스로 빛난다 (성 안뜰 해 질 녘에 검은 판처럼 보였다)
+    const m = addMerged(g, pieces, color, { roughness: 0.9, emissive: 0x2b2824 });
+    m.visible = false;
+    out.push(m);
+  };
+  if (part === 'chest') {
+    // 조끼: 앞뒤(x)는 판 안쪽, 위아래·양옆은 기본 몸(0.24×0.28×0.37)보다 살짝 작아 몸의 짙은 테가 남는다
+    add([box(0.25, 0.27, 0.365, [0, 0.01, 0])], UNDER);
+    add([-0.09, -0.045, 0, 0.045, 0.09].map((y) => box(0.252, 0.005, 0.367, [0, 0.01 + y, 0])), UNDER_Q); // 가로 누빔 줄
+    add([box(0.253, 0.006, 0.05, [0, 0.01, 0.06]), box(0.253, 0.006, 0.05, [0, 0.01, -0.07])], UNDER_Q);
+    // 앞가슴 찢긴 자국: 비스듬한 어두운 틈 둘
+    add([box(0.006, 0.11, 0.014, [0.126, 0.02, 0.05], [0, 0, 0.18]), box(0.006, 0.07, 0.012, [0.126, -0.06, -0.08], [0, 0, -0.35])], UNDER_TEAR);
+    // 찢겨 늘어진 아랫단 조각 (앞·양옆): 길이가 다 다르고 조금씩 비뚤다
+    const flaps = [
+      [0.128, 0.12, 0.13, 0.22, 0],
+      [0.128, -0.02, 0.1, -0.15, 0],
+      [0.128, -0.14, 0.15, 0.3, 0],
+      [0.06, 0.183, 0.09, 0, 0.25],
+      [-0.05, 0.183, 0.14, 0, -0.2],
+      [0.02, -0.183, 0.11, 0, 0.3],
+      [-0.09, -0.183, 0.08, 0, -0.15],
+    ];
+    add(flaps.filter((_, i) => i % 3 !== 2).map(([x, z, len, rz, rx]) => box(0.045, len, 0.01, [x, -0.125 - len / 2, z], [rx, Math.abs(x) > 0.1 ? 0 : Math.PI / 2, rz])), UNDER);
+    add(flaps.filter((_, i) => i % 3 === 2).map(([x, z, len, rz, rx]) => box(0.045, len, 0.01, [x, -0.125 - len / 2, z], [rx, Math.abs(x) > 0.1 ? 0 : Math.PI / 2, rz])), UNDER_STAIN);
+  } else if (part === 'abdomen') {
+    add([cyl(0.128, 0.131, 0.14, 14, true, [0, 0.005, 0])], UNDER);
+    add([cyl(0.1295, 0.1305, 0.005, 14, true, [0, 0.03, 0]), cyl(0.1305, 0.1315, 0.005, 14, true, [0, -0.02, 0])], UNDER_Q);
+    add([box(0.006, 0.08, 0.012, [0.128, -0.01, -0.03], [0, 0, 0.3])], UNDER_TEAR);
+    const flaps = [
+      [0.3, 0.11, 0.2],
+      [1.1, 0.07, -0.25],
+      [2.4, 0.13, 0.15],
+      [4.0, 0.09, -0.3],
+      [5.2, 0.12, 0.1],
+    ];
+    add(flaps.filter((_, i) => i !== 3).map(([a, len, rz]) => box(0.05, len, 0.01, [Math.cos(a) * 0.13, -0.065 - len / 2, Math.sin(a) * 0.13], [0, -a + Math.PI / 2, rz])), UNDER);
+    add(flaps.filter((_, i) => i === 3).map(([a, len, rz]) => box(0.05, len, 0.01, [Math.cos(a) * 0.13, -0.065 - len / 2, Math.sin(a) * 0.13], [0, -a + Math.PI / 2, rz])), UNDER_STAIN);
+  }
+  return out;
+}
+
 const HEINRICH_KNIGHT = {
+  underCloth,
   // 판금 방어구가 붙는 부위 (수염이 붙는 head는 빠진다)
   armorParts: new Set(['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO', 'farmS', 'farmO', 'shinF', 'shinB']),
   chest(g) {
@@ -568,6 +622,7 @@ const HEINRICH_FULL_PLATE = {
 const MG_PLATE = 0x2c2c32;
 const MG_PLATE_DARK = 0x1c1c20;
 const MARGARETHE_DRAGON = {
+  underCloth,
   // 판금 방어구가 붙는 부위 (오너 결정: 몸통 판금도 막고, 닳고, 완전히 부서지면 사라진다).
   // v2·v3 세트도 이 세트를 펼쳐 쓰므로 같이 적용된다
   armorParts: new Set(['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO']),
@@ -727,8 +782,26 @@ const onSurf = (a, y, r) => [Math.cos(a) * (r + 0.003), y, Math.sin(a) * (r + 0.
 const bowlR = (y) => (y < 0.016 ? 0.124 : 0.124 - ((y - 0.016) / 0.05) * 0.02);
 const spireR = (y) => 0.104 * (1 - (y - 0.066) / 0.105);
 
+// 마르그레테 v3 곁 판(디렉터 지시, 사장님 승인): 1단계 파손(내구 0.9 아래)에 떨어지는 조각이 가슴 이음매 줄(24×1×0.8cm,
+//  먹색 위 먹색)뿐이라 대결 거리에서 깨지는 게 안 보였다. 막는 힘·판정은 그대로 두고(config.js ARMOR, fighter.js 안 건드림)
+//  본판보다 한참 작은(ARMOR.plate.trim 0.4 배 아래) 밝은 강철 테를 덧대, 떨어지는 순간이 보이게 한다. 조각은 3cm 넘게(armor_eval 의
+//  "보이는 조각" 규칙). 튀는 색 없이 밝은 강철(2톤 안에서 셋째 톤)만 쓴다 — 절제는 그대로.
+const MG3_TRIM = 0x8d939b; // 밝은 강철 테 (먹색 판 0x2c2c32 위에서 또렷이 갈린다)
 const MARGARETHE_DRAGON_HORNED = {
   ...MARGARETHE_DRAGON,
+  chest(g) {
+    addMerged(g, [box(0.26, 0.25, 0.34, [0, 0.01, 0])], MG_PLATE, STEEL_OPTS); // 본판 (v1 그대로)
+    // 곁 판 (1단계에 떨어진다): 가슴판 위·아래 가장자리를 두른 밝은 강철 테 — 위 27×2×35cm, 아래 27×2.4×35cm
+    addMerged(g, [box(0.272, 0.02, 0.352, [0, 0.128, 0])], MG3_TRIM, STEEL_OPTS);
+    addMerged(g, [box(0.272, 0.024, 0.352, [0, -0.108, 0])], MG3_TRIM, STEEL_OPTS);
+    // 이음매 자국(세로줄)은 남긴다 — 같이 떨어지지만 눈에 띄는 조각으로 세지 않는다
+    addMerged(g, [box(0.008, 0.24, 0.01, [0.132, 0.01, 0])], MG_PLATE_DARK, STEEL_OPTS);
+  },
+  abdomen(g) {
+    addMerged(g, [cyl(0.13, 0.135, 0.1, 14, true, [0, 0, 0])], MG_PLATE, STEEL_OPTS); // 본판 (v1 그대로)
+    // 곁 판: 배 판 아래에 겹친 밝은 강철 겹판 한 장(28×3.4×28cm) — 본판의 0.32 배라 1단계에 떨어진다
+    addMerged(g, [cyl(0.138, 0.144, 0.034, 14, true, [0, -0.052, 0])], MG3_TRIM, STEEL_OPTS);
+  },
   head(g, look) {
     // 투구는 한 그룹(group.userData.helmet)으로 넘긴다. 오너 결정("실제로 막고, 닳고, 완전히 부서지면
     // 사라진다")에 따라 전투 쪽이 fighter.js에서 이 그룹을 떼어 내거나 조각내 흩뜨린다. 흩뜨릴 수 있게
@@ -886,6 +959,9 @@ export function decorateOutfit(dressTo, d, look) {
     // 금 메쉬도 armor 목록에 넣어, 판금이 완전히 부서져 숨길 때 같이 숨겨지게 한다
     dressTo.userData.armor = [...armor, crack];
     dressTo.userData.armorCracks = [crack];
+    // 판금 밑의 누비 속옷: armor 목록 밖(판이 아니다). 완전 파손 때 setPlateWear 가 보이게 한다
+    const under = set.underCloth?.(dressTo, d.name);
+    if (under?.length) dressTo.userData.underCloth = under;
   }
 }
 
@@ -940,4 +1016,6 @@ export function setPlateWear(group, wear01) {
     c.rotation.copy(plates[0].rotation);
     c.scale.copy(plates[0].scale);
   }
+  // 완전 파손(내구 0): 판이 떨어져 나간 자리에 찢긴 누비 속옷이 드러난다
+  for (const m of holder.userData.underCloth || []) m.visible = w <= 0;
 }

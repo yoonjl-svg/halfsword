@@ -943,7 +943,7 @@ export const SYNTH = {
 
   /**
    * 판금이 부서짐: 금이 연달아 번지는 "짝-짝-짝" + 리벳이 튕겨 나가는 짧은 "틱-틱" + 가죽끈이 끊기는 "탁"
-   * + 판이 짧게 우는 "깡"(투구보다 조금 길게) + 묵직한 "쿵". 조각이 떨어지는 소리는 plateDebris 가 따로 낸다
+   * + 판이 짧게 우는 "깡"(투구보다 조금 길게) + 묵직한 "쿵". 조각이 떨어지는 소리는 Sound.plateBreak 이 _shard 로 따로 낸다
    */
   plateBreak(sr, r) {
     const n = Math.round(0.5 * sr);
@@ -977,29 +977,6 @@ export const SYNTH = {
     saturate(out, 2.4);
     thumpTone(out, sr, { t0: 0.001, f0: between(r, 55, 75), drop: 0.7, dropTau: 0.012, tau: 0.035, amp: 0.8 });
     return fadeOut(normalize(out, 0.95), sr, 0.08);
-  },
-
-  /** 부서진 판금 조각이 모래에 떨어짐: 2~4개가 차례로 "철-퍽" (모래가 받아서 울림 없이 둔하게 멎는다) */
-  plateDebris(sr, r) {
-    const n = Math.round(0.8 * sr);
-    const out = new Float32Array(n);
-    const k = Math.round(between(r, 2, 4));
-    let t = between(r, 0.0, 0.05);
-    for (let i = 0; i < k; i++) {
-      const amp = i ? between(r, 0.35, 0.7) : 1;
-      const px = new Float32Array(n);
-      const py = new Float32Array(n);
-      pulse(px, sr, t, 0.0003, 1);
-      resonate(px, py, sr, [0, 1, 2, 3].map(() => ({ f: between(r, 1500, 6000), a: between(r, 0.4, 1), t60: between(r, 0.015, 0.035) })), Math.ceil((t + 0.002) * sr));
-      const a = (0.45 * amp) / (peakOf(py) || 1);
-      for (let j = 0; j < n; j++) out[j] += a * py[j];
-      noiseHit(out, sr, r, { t0: t, amp: 0.6 * amp, attack: 0.002, tau: 0.018, type: 'lowpass', f: between(r, 250, 400), q: 0.7 }); // 모래에 박히는 "퍽"
-      gritBurst(out, sr, r, { t0: t + 0.002, span: 0.03, count: 6, amp: 0.12 * amp, fLo: 1500, fHi: 5000 }); // 튀는 모래
-      t += between(r, 0.07, 0.22);
-      if (t > 0.65) break;
-    }
-    saturate(out, 1.6);
-    return fadeOut(normalize(out, 0.9), sr, 0.06);
   },
 
   /** 칼이 바닥에 떨어짐: 칼자루와 칼끝이 잇달아 닿는 "철-컥" (모래·돌이 받아서 짧게 멎는다 — 음이 오래 남으면 냄비처럼 들리므로 울림은 0.05초 안) */
@@ -1052,74 +1029,22 @@ export const SYNTH = {
   },
 
   /**
-   * 이졸데의 부활 (사장님 요청: 하늘에서 성스러운 빛이 홀리한 효과음과 함께 비추고 다시 일어선다 — WoW 부활·신성한 빛처럼).
-   * 4.2초 한 벌, 연출에 맞춘 순서: 빛이 내려오는 0~0.4초에 위로 쓸려 올라가는 반짝임(높은 종소리 열둘과 빛 바람),
-   * 0.4초에 부드러운 종 하나(비조화 배음, 2초 여운), 합창 패드(열린 화음 다섯 음을 세 겹씩 어긋나게, "아" 공명)가 0.5초에 걸쳐 부풀어
-   * 일어서는 동안 머물다 2.4초부터 1.2초에 걸쳐 가라앉는다. 2.4초(선 순간)에 한 옥타브 위 작은 종. 게임이 적막한 결투라 과하지 않게 —
-   * 화음은 움직이지 않고(멜로디 없음) 밝기는 1.6kHz에서 닫는다
+   * 찢어진 검은 천이 바람에 펄럭임 (밤의 포세이돈, 석상 옆 장대 둘): 2~5번 "퍼덕퍼덕" — 천이 꺾이며 공기를 치는 낮은 "퍽"(좁게 거른 잡음)에
+   * 천 끝이 튀는 짧은 "탁"을 얹고, 사이는 점점 느려진다. 위를 2.6kHz에서 닫아 멀리 들리게
    */
-  holy(sr, r) {
-    const n = Math.round(4.2 * sr);
+  clothFlap(sr, r) {
+    const n = Math.round(1.4 * sr);
     const out = new Float32Array(n);
-    // 합창 패드
-    const notes = [146.83, 220, 293.66, 369.99, 440]; // D3 A3 D4 F#4 A4
-    const pad = new Float32Array(n);
-    for (const f of notes) {
-      for (const k of [-1, 0, 1]) {
-        const det = 1 + k * between(r, 0.003, 0.005);
-        let ph = r() * TAU;
-        const vib = between(r, 4.6, 5.6);
-        const vph = r() * TAU;
-        const amp = (f < 200 ? 0.5 : f < 300 ? 0.8 : 1) / 15;
-        let step = 0;
-        for (let i = 0; i < n; i++) {
-          const t = i / sr;
-          const env = t < 0.5 ? (1 - Math.cos((Math.PI * t) / 0.5)) / 2 : t < 2.4 ? 1 : Math.exp(-(t - 2.4) / 0.45);
-          if (i % 32 === 0) step = (TAU * f * det * (1 + 0.003 * Math.sin(TAU * vib * t + vph))) / sr; // 비브라토는 32샘플마다 (일꾼 시간 절약)
-          ph += step;
-          pad[i] += amp * env * (Math.sin(ph) + 0.3 * Math.sin(2 * ph)); // (3배음은 1.6kHz 필터에 거의 잘려 뺐다)
-        }
-      }
+    const k = Math.round(between(r, 2, 5));
+    let t = between(r, 0.02, 0.08);
+    for (let i = 0; i < k && t < 1.2; i++) {
+      noiseHit(out, sr, r, { t0: t, amp: between(r, 0.5, 1), attack: 0.004, tau: between(r, 0.02, 0.04), type: 'bandpass', f: between(r, 350, 900), q: 0.8 });
+      noiseHit(out, sr, r, { t0: t + 0.006, amp: between(r, 0.2, 0.4), attack: 0.002, tau: 0.01, type: 'highpass', f: 1800, q: 0.7 });
+      t += between(r, 0.12, 0.28) * (1 + (0.3 * i) / k);
     }
-    const f1 = new Filt('bandpass', 800, 0.9, sr); // "아" 공명
-    const f2 = new Filt('lowpass', 1600, 0.7, sr);
-    for (let i = 0; i < n; i++) out[i] += 0.55 * f2.run(pad[i] + 0.8 * f1.run(pad[i]));
-    // 빛 바람: 위로 쓸려 올라가는 잡음 (아주 작게)
-    const bw = new Filt('bandpass', 1500, 2.5, sr);
-    for (let i = 0; i < Math.round(0.6 * sr); i++) {
-      const t = i / sr;
-      if (i % 64 === 0) bw.set(1500 * Math.pow(4, t / 0.6), 2.5);
-      const env = Math.sin(Math.PI * t / 0.6) ** 2;
-      out[i] += 0.05 * env * bw.run(r() * 2 - 1);
-    }
-    // 반짝임: 배음열 위를 오르는 짧은 종소리 열둘 (0~1.2초)
-    for (let j = 0; j < 12; j++) {
-      const t0 = 0.05 + j * 0.09 + r() * 0.03;
-      const f = 1760 * Math.pow(2, (j * 2 + (r() < 0.5 ? 0 : 1)) / 12) * (1 + (r() - 0.5) * 0.006);
-      const d = between(r, 0.35, 0.7);
-      let ph = r() * TAU;
-      const n0 = Math.round(t0 * sr);
-      for (let i = 0; i < Math.round(d * 1.2 * sr) && n0 + i < n; i++) {
-        const t = i / sr;
-        ph += (TAU * f) / sr;
-        out[n0 + i] += 0.035 * Math.min(1, t / 0.004) * Math.exp(-t / (d * 0.3)) * Math.sin(ph);
-      }
-    }
-    // 종 둘: 0.4초에 부드러운 종, 2.4초(선 순간)에 한 옥타브 위 작은 종
-    const bell = (t0, f0, amp, dur) => {
-      const n0 = Math.round(t0 * sr);
-      for (const [ratio, a, dk] of [[1, 1, 1], [2.4, 0.45, 0.6], [4.1, 0.2, 0.35], [1.003, 0.5, 1]]) {
-        let ph = r() * TAU;
-        for (let i = 0; n0 + i < n && i < Math.round(dur * 1.5 * sr); i++) {
-          const t = i / sr;
-          ph += (TAU * f0 * ratio) / sr;
-          out[n0 + i] += amp * a * Math.min(1, t / 0.003) * Math.exp(-t / (dur * dk * 0.35)) * Math.sin(ph);
-        }
-      }
-    };
-    bell(0.4, 1174.7, 0.11, 2.0); // D6
-    bell(2.4, 2349.3, 0.06, 1.4); // D7
-    return fadeOut(normalize(out, 0.9), sr, 0.15);
+    const lp = new Filt('lowpass', 2600, 0.7, sr);
+    for (let i = 0; i < n; i++) out[i] = lp.run(out[i]);
+    return fadeOut(normalize(out, 0.9), sr, 0.1);
   },
 
   /**
@@ -1469,13 +1394,12 @@ const BANK = [
   ['hitBlunt', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'blunt')],
   ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
   ['plateBreak', 2, SYNTH.plateBreak],
-  ['plateDebris', 2, SYNTH.plateDebris],
   ['swordLand', 3, SYNTH.swordLand],
   ['birdSong', 3, (sr, r) => SYNTH.bird(sr, r, 'song')], // 산사 배경 (맨 뒤: 판 시작 뒤 몇 초 안에만 있으면 된다)
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
   ['rainLoop', 1, SYNTH.rainLoop], // 화전 터
-  ['holy', 1, SYNTH.holy], // 이졸데 부활 (성 안뜰)
+  ['clothFlap', 2, SYNTH.clothFlap], // 밤의 포세이돈 (찢어진 천)
   ['dove', 2, SYNTH.dove], // 대성당
   ['wings', 2, SYNTH.wings], // 대성당 비둘기·홀 박쥐
   ['debris', 2, SYNTH.debris], // 대성당
@@ -1512,6 +1436,7 @@ const SAMPLES = {
   stepSnow: nums('step/snow', 8), // 성 안뜰 다져진 눈 "뽀득" (Kenney footstep_carpet + footstep_snow)
   stepStone: nums('step/stone', 8), // 대성당·홀 판석 "턱" (Kenney footstep_carpet + footstep_concrete), 또각이지 않게 낮추고 위를 닫음
   stepMud: nums('step/mud', 8), // 화전 터의 젖은 재·흙 "저벅" (Kenney footstep_carpet 뒤꿈치 + BenDrain 진흙, 저음 웅웅거림은 깎음)
+  chant: ['stage/chant1'], // 이졸데 부활: 짧은 그레고리안 성가 한 구절 (녹음, 사장님 요청)
   crow: nums('stage/crow', 3), // 화전 터 먼 까마귀 "까악" (Freesound CC0 셋, 멀리 들리게 위를 닫음)
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
@@ -1522,11 +1447,12 @@ const SAMPLES = {
 // room: reverbIR 모양 + 쇳소리(metal)·몸 소리(flesh)를 울림으로 보내는 양. 바깥(포세이돈·산사)은 울림 없음
 const STAGE_SOUND = {
   poseidon: { step: 'step' },
+  poseidon_night: { step: 'step', night: true }, // 밤의 포세이돈 (하인리히 재등장): 같은 바다·바람에 네 귀퉁이 화로·횃대의 불을 더하고 바람을 어둡게
   temple: { step: 'stepGravel', grit: 'stepGravel' },
   castle: { step: 'stepSnow', grit: 'stepSnow', room: { dur: 0.8, rt: 0.55, e0: 0.04, e1: 0.11, lp: 4000, metal: 0.22, flesh: 0.08 } }, // 성벽에 짧게 튕기는 메아리
   cathedral: { step: 'stepStone', grit: 'stepStone', room: { dur: 2.8, rt: 2.5, e0: 0.03, e1: 0.14, lp: 3500, metal: 0.4, flesh: 0.16 } }, // 돌 성당의 긴 울림
   darkhall: { step: 'stepStone', room: { dur: 1.6, rt: 1.3, e0: 0.02, e1: 0.08, lp: 3000, metal: 0.28, flesh: 0.12 } }, // 휘장·카펫이 있어 성당보다 짧고 어둡다
-  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 (브란의 고향): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
+  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 2안 (브란의 고향, 오너 선택): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
   clearing_a: { step: 'stepMud', grit: 'stepMud', rain: true }, // 같은 컨셉의 1안 (보관용, ?stage=clearing_a — 오너는 2안을 골랐다)
   clearing_a_dry: { step: 'stepMud', grit: 'stepMud', rain: false }, // 1안의 비 없는 판: 비만 뺀다
 };
@@ -2215,14 +2141,15 @@ export class Sound {
 
   /**
    * 부활 (이졸데, 사장님 요청): 하늘에서 성스러운 빛이 내려와 비추고 다시 일어선다. 빛이 내려오기 시작할 때 main.js 가 한 번 부른다(디렉터가 연결).
-   * 성스러운 효과음 한 벌(SYNTH.holy, 4.2초: 올라가는 반짝임 → 종 → 합창 패드 → 선 순간 작은 종)에, 일어서는 0.9초쯤 그 캐릭터의 짧은
-   * 숨 들이켬(rec.revive, 있으면)을 곁들인다. 기합은 없다. 적막한 결투라 칼 부딪힘보다 작게 낸다. 화면 소리에 가까워 좌우 위치 없음
+   * 소리는 짧은 그레고리안 성가 한 구절(녹음 stage/chant1, 약 4초. 사장님: 반짝임·종·합창 패드 합성은 마음에 안 든다 → 성가 느낌으로)에,
+   * 일어서는 0.9초쯤 그 캐릭터의 짧은 숨 들이켬(rec.revive, 있으면)을 곁들인다. 기합은 없다. 적막한 결투라 칼 부딪힘보다 작게 낸다. 좌우 위치 없음
    */
   revive(voice, { breath = true } = {}) {
     if (!this._on || !this.ctx) return;
     const id = voice in VOICES ? voice : 'generic';
-    const ev = this.event({ bus: this.fleshBus, gain: 0.25, prio: 3 }); // 4초 평균이 칼 부딪힘 평균보다 3dB 아래 (튀지 않게)
-    this.layer(ev, this.pick('holy'), { rate: between(Math.random, 0.99, 1.01) });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.282, prio: 3 }); // 4초 평균이 칼 부딪힘 평균(−24dB)보다 3dB 아래
+    const chant = this.pickSample('chant');
+    if (chant) this.layer(ev, chant, { rate: between(Math.random, 0.995, 1.005) });
     const rec = breath ? this.pickSample(`voice:${id}:revive`) : null;
     if (rec) {
       const R = VOICES[id].rec || {};
@@ -2273,10 +2200,30 @@ export class Sound {
     if (grit) this.layer(ev, grit, { gain: 0.25 + 0.2 * x, rate: between(Math.random, 0.9, 1.1), delay: 0.004 });
   }
 
-  /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
+  /**
+   * 쇠 조각 소리: 칼 떨어짐(swordLand) 조각을 빠르게 돌린 짧은 "팅"(kind 'blade', 1.5~1.9배) / "철컥"(kind 'armor', 1.15~1.4배).
+   *  25차에 조각이 땅에 닿을 때 쓰려고 만든 것을 사장님이 좋아하셔서("꽤 좋던데") 부서지는 순간의 소리로 쓴다(26차).
+   *  grit 이면 그 무대 바닥 알갱이 녹음을 살짝 얹는다(조각이 바닥에 떨어진 것). 새 조각 없음(0KB).
+   */
+  _shard(ev, kind, { gain = 1, delay = 0, grit = false } = {}) {
+    this.layer(ev, this.pick('swordLand'), { gain, rate: kind === 'armor' ? between(Math.random, 1.15, 1.4) : between(Math.random, 1.5, 1.9), delay });
+    if (!grit) return;
+    const g = this.pickSample(STAGE_SOUND[this.stage]?.grit || STAGE_SOUND[this.stage]?.step);
+    if (g) this.layer(ev, g, { gain: 0.2 * gain, rate: between(Math.random, 1.0, 1.2), delay: delay + 0.003 });
+  }
+
+  /** 무기가 부러짐 (material: 무기 재질. 강철은 쇠 "팅", 나무는 "우지끈", 언 참치는 "쩍") */
   weaponBreak(material = 'wood', pos) {
     if (!this._on || !this.ctx) return;
     const ev = this.event({ bus: this.metalBus, gain: 1, prio: 3, pos });
+    if (material === 'steel') {
+      // 강철 칼(커먼·레어·에픽은 등급표대로 부러진다): 꺾이는 두 토막이 함께 우는 "팅-팅"(12~20ms 사이, 다른 높이) + 떨어져 나간 끝이 튀는 작은 "철컥".
+      // 조각 하나(-31dB)로는 "내 칼이 부러졌다"가 안 들려서 둘을 겹쳤다(-27dB쯤, 나무 "우지끈" -22dB보다는 여전히 작다)
+      this._shard(ev, 'blade', { gain: 1 });
+      this._shard(ev, 'blade', { gain: 0.7, delay: between(Math.random, 0.012, 0.02) });
+      this._shard(ev, 'armor', { gain: 0.4, delay: between(Math.random, 0.04, 0.07) });
+      return;
+    }
     this.layer(ev, this.pick(material === 'frozen' ? 'breakFrozen' : 'breakWood'), { rate: between(Math.random, 0.92, 1.06) });
     const rec = this.pickSample('crack');
     if (rec && material !== 'frozen') this.layer(ev, rec, { gain: 0.55, rate: between(Math.random, 0.85, 1), delay: 0.002 });
@@ -2333,8 +2280,17 @@ export class Sound {
    */
   ambience() {
     if (this._amb || !this.ctx || !this.master) return;
-    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
+    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, poseidon_night: this._ambPoseidon, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
     if (amb) return amb.call(this);
+    return this._ambPoseidon();
+  }
+
+  /**
+   * 포세이돈 신전 (위 ambience 참고). night = 밤의 포세이돈: 파도는 그대로, 바람은 더 낮고 어둡게(480Hz, 1.4kHz 위를 닫음), 결투 자리
+   * 네 귀퉁이의 쇠 화로와 석상 앞 횃대의 불 "타닥"을 좌우로 아주 작게 깐다(되풀이 조각 둘). 밤바다는 낮보다 낮고 느리다(디렉터).
+   * 15~40초마다 찢어진 검은 천이 바람에 펄럭이고, 큰 타격에는 바람이 잠깐 세지며 불길이 "화르륵", 천도 펄럭인다(gust)
+   */
+  _ambPoseidon(night = !!STAGE_SOUND[this.stage]?.night) {
     const c = this.ctx;
     const buf = this._noiseBuf();
     const out = c.createGain();
@@ -2357,12 +2313,12 @@ export class Sound {
     surf.loop = true;
     const lp = c.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 500;
+    lp.frequency.value = night ? 380 : 500; // 밤바다는 더 낮고
     lp.Q.value = 0.3;
     const sg = c.createGain();
-    sg.gain.value = 0.03;
-    const w1 = lfo(0.083);
-    const w2 = lfo(0.131);
+    sg.gain.value = night ? 0.026 : 0.03;
+    const w1 = lfo(night ? 0.06 : 0.083); // 느리게 밀려온다
+    const w2 = lfo(night ? 0.095 : 0.131);
     amt(w1, 0.016, sg.gain);
     amt(w2, 0.009, sg.gain);
     amt(w1, 160, lp.frequency); // 파도가 부서질 때 조금 밝아진다
@@ -2374,18 +2330,44 @@ export class Sound {
     wind.playbackRate.value = 0.87; // 파도와 같은 잡음이 겹쳐 들리지 않게
     const bp = c.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.value = 650;
+    bp.frequency.value = night ? 480 : 650;
     bp.Q.value = 1.2;
     const wg = c.createGain();
-    wg.gain.value = 0.012;
+    wg.gain.value = night ? 0.009 : 0.012;
     const w3 = lfo(0.047);
     amt(w3, 220, bp.frequency);
     amt(w3, 0.008, wg.gain);
-    wind.connect(bp).connect(wg).connect(out);
+    if (night) {
+      const nl = c.createBiquadFilter(); // 밤: 바람의 위를 닫아 어둡게
+      nl.type = 'lowpass';
+      nl.frequency.value = 1400;
+      wind.connect(bp).connect(nl).connect(wg).connect(out);
+    } else wind.connect(bp).connect(wg).connect(out);
     const t = c.currentTime;
     for (const n of [surf, wind, w1, w2, w3]) n.start(t);
-    this._amb = { out, nodes: [surf, wind, w1, w2, w3] };
+    const nodes = [surf, wind, w1, w2, w3];
+    if (night) {
+      const fire = this.pick('fireLoop');
+      for (const [pan, rate] of [[-0.6, 0.95], [0.6, 1.06]]) {
+        const n = c.createBufferSource();
+        n.buffer = fire;
+        n.loop = true;
+        n.playbackRate.value = rate;
+        const fg = c.createGain();
+        fg.gain.value = 0.022;
+        const p = c.createStereoPanner?.();
+        if (p) {
+          p.pan.value = pan;
+          n.connect(fg).connect(p).connect(out);
+        } else n.connect(fg).connect(out);
+        n.start(t);
+        nodes.push(n);
+      }
+    }
+    this._amb = { out, nodes, wind: wg, windBase: night ? 0.009 : 0.012 };
+    if (night) this._every(15000, 40000, () => this.stageCall('flap', Math.random() * 0.5)); // 가끔 검은 천이 펄럭인다
   }
+
 
   /** 배경 흰 잡음 (4초, 22050Hz 로 만들어 메모리를 아낀다. 흰 잡음이라 되풀이 이음매에서 딸깍이지 않는다). 배경마다 같이 쓴다 */
   _noiseBuf() {
@@ -2610,6 +2592,7 @@ export class Sound {
       snort: ['horseSnort', 0.12, between(Math.random, 0.92, 1.08), 0],
       organ: ['organ', 0.12, 1, 0],
       stamp: ['horseStamp', 0.14, between(Math.random, 0.92, 1.08), 0],
+      flap: ['clothFlap', 0.05 + 0.08 * k, between(Math.random, 0.9, 1.1), 0], // 밤의 포세이돈: 찢어진 천이 바람에 펄럭
     }[kind];
     const ev = this.event({ bus: this.fleshBus, gain, prio: 0.1 });
     this.layer(ev, this.pick(bank), { rate, dur });
@@ -2932,6 +2915,12 @@ export class Sound {
       w.gain.setTargetAtTime(b, now + 0.7, 1.2);
     }
     if (this.stage.startsWith('clearing')) return; // 화전 터: 바람만 잠깐 (크게 튀는 소리는 넣지 않는다 — 사장님 컨셉)
+    if (this.stage === 'poseidon_night') {
+      // 밤의 포세이돈: 화로 불길이 잠깐 "화르륵", 바람에 검은 천이 펄럭
+      this.stageCall('flare', amount * 0.6);
+      if (Math.random() < 0.4 + amount * 0.6) this.stageCall('flap', amount);
+      return;
+    }
     if (this.stage === 'castle') return this.stageCall('flare', amount);
     if (this.stage === 'cathedral') {
       this.stageCall('debris', amount);
@@ -2967,13 +2956,15 @@ export class Sound {
     this.impact({ a: material, b: 'armor', energy, pos });
   }
 
-  /** 판금이 완전히 부서짐: 금이 번지며 깨지는 소리 → 0.12~0.2초 뒤 조각이 모래에 떨어지는 소리 */
+  /** 판금이 완전히 부서짐: 금이 번지며 깨지는 소리 → 0.1~0.35초에 걸쳐 조각 둘~셋이 바닥에 "철컥" 흩어져 떨어짐(_shard) */
   plateBreak(energy = 100, { pos } = {}) {
     if (!this._on || !this.ctx) return;
     const e = clamp01(energy / 120);
     const ev = this.event({ bus: this.metalBus, gain: 0.7 + 0.3 * e, prio: 3, pos });
     this.layer(ev, this.pick('plateBreak'), { rate: between(Math.random, 0.94, 1.04) });
-    this.layer(ev, this.pick('plateDebris'), { gain: 0.6, rate: between(Math.random, 0.92, 1.08), delay: between(Math.random, 0.12, 0.2) });
+    // 조각: 합성 "철-퍽" 대신 25차 조각 착지 소리(사장님: "부서질 때 그걸 가져다 쓰자"). 센 타격이면 셋, 아니면 둘
+    const n = Math.random() < 0.3 + 0.6 * e ? 3 : 2;
+    for (let i = 0; i < n; i++) this._shard(ev, 'armor', { gain: 0.5 - 0.08 * i, delay: 0.1 + 0.09 * i + between(Math.random, 0, 0.05), grit: true });
   }
 
   /** 뼈 부딪히는/부러지는 소리 */

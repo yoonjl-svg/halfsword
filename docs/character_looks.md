@@ -60,6 +60,13 @@
   뿔은 옆으로 뻗은 귀, 술은 붉은 발톱처럼 보였다. 곡선을 따라 굵기가 매끈하게 변하는 관으로 다시
   만들고, 뿔은 위로 솟게, 술은 두툼하고 넓게 바꿨다.
 - 여전히 순수 장식(`helmet: null`).
+- **곁 판 v1** (2026-09-28, 디렉터 지시·사장님 승인): 판금이 실제로 막고 두 단계로 깨지게 되면서(config.js ARMOR), 1단계(내구 0.9
+  아래)에 떨어지는 조각이 가슴 이음매 줄(24×1×0.8cm, 먹색 위 먹색)뿐이라 대결 거리에서 깨지는 게 안 보였다. 막는 힘·판정은 그대로
+  두고 겉모습만: **가슴판 위·아래 가장자리에 밝은 강철 테**(27×2×35cm, 27×2.4×35cm)와 **배 판 아래 겹판 한 장**(28×3.4×28cm,
+  본판의 0.32배)을 덧댔다. 색은 밝은 강철(`0x8d939b`) 하나 — 먹색 2톤에 셋째 톤을 더한 것뿐, 튀는 색은 없다. 이음매 줄은 남겼다.
+  v3 세트(`MARGARETHE_DRAGON_HORNED`)의 chest·abdomen 만 덮어써서 v1·v2 보관본은 그대로다.
+  비교: [margarethe_trim_v1.png](handoff/margarethe_trim_v1.png). 떨어지는 순간: [전](character_looks/margarethe_trim_before.png) ·
+  [순간](character_looks/margarethe_trim_moment.png) · [후](character_looks/margarethe_trim_after.png).
 
 | v0 | v1 | v2 | v3 (지금) |
 | --- | --- | --- | --- |
@@ -75,6 +82,26 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 [기본 대결 화면](character_looks/margarethe_default.jpg) · [쓰러짐](character_looks/margarethe_down.jpg)
 (쓰러져도 투구·깃털 술·땋은 머리가 머리를 따라간다). 옛 버전은 `?look=margarethe:v1`,
 `?look=margarethe:v2`로 언제든 다시 볼 수 있다.
+
+## 권총 겉모습 효과 (`src/gun_fx.js`, 사장님 결정: "총구 섬광·연기 필요")
+
+무기 PM의 권총(`src/gun.js`, ??? 등급)은 소리만 있고 불꽃·연기가 없었다. 외형 PM이 겉모습만 얹었다 — 판정·난수 무관.
+- **섬광**: 총구에 additive 스프라이트 두 장(네 갈래 별 + 뜨거운 심)이 0.075초(네댓 프레임) 번쩍이며 커졌다 사라진다.
+- **연기**: 회색 점 24개가 총신 방향으로 뿜어져 느려지며 위로 떠오르고 1.2초 안에 사라진다. 퍼짐은 정해진 표(황금각)라 난수가 없다. 흰 눈밭 앞에서는 옅게, 밤에는 또렷하게 보인다.
+- **이음새**: `gun.js` 의 `GUN_HOOKS.onShot` 을 감싼다(원래 걸린 소리는 그대로, 없으면 `gunshotSound` 를 직접 낸다). 총신 방향은 gun.js `fire` 와 같은 계산(칼 축 +y). 스스로 돈다(requestAnimationFrame, 일시정지 중 멈춤). **main.js 두 줄** `installGunFx({ scene, sound })` 과 판 바뀜 자리(clearDebris 옆)의 `clearGunFx()` 를 디렉터가 넣는다. 디렉터 결정: 총은 현대식 리볼버(무기 PM이 다시 그림), 장전 표시는 실린더 회전·스윙아웃으로 무기 PM과 정한다. 사격 자세는 온몸 타격 작업 뒤 디렉터가 정한다(지금 손대지 않음). 권총은 카드로만 나오므로 권총집 장식은 없다.
+- 효과 두 벌을 미리 만들어 돌려쓴다(두 검객이 거의 동시에 쏠 때). 조명은 만들지 않는다.
+- 스크린샷: [섬광(밤 신전)](handoff/gun_fx_flash.png) · [연기](handoff/gun_fx_smoke.png) · [섬광(성 안뜰)](handoff/gun_fx_flash_castle.png)
+- 사장님이 함께 결정한 것: 사격 자세(팔을 뻗어 겨누는 한 손 자세)는 디렉터·무기 PM 몫. 장전 표시·총알 자국은 방식을 설명하고 결정 대기.
+
+## 판금 밑의 누비 속옷 (마르그레테·하인리히 공통)
+
+오너(2026-09-28): "갑옷 파괴 시 겹판이 표시되는 그래픽으론 모자란 거 같아. 갑옷 안에 덧대입는 흰색 천 옷이 보여야 해. 좀 너덜너덜한 느낌으로."
+- 판금이 **완전히 부서져 사라지면** 그 자리에 흰 누비 속옷이 드러난다(`outfits.js underCloth`, `setPlateWear`가 내구 0에 켠다). 멀쩡할 때는 숨겨 두어 겉모습은 전과 같다.
+- 가슴: 판보다 조금 작은 흰 조끼(가로 누빔 줄 다섯), 앞가슴에 비스듬히 찢긴 틈 둘(밑의 검은 옷이 보인다), 아랫단에 찢겨 늘어진 조각 일곱(길이·기울기 제각각, 둘은 땀·때가 밴 색). 배: 흰 띠와 찢긴 자락 다섯.
+- 흰 무명 `0xf1ece0`, 누빔 줄 `0xcbc2ae`, 때 밴 조각 `0xb4aa97`. 그늘진 앞면도 흰 천으로 읽히게 아주 약하게 스스로 빛난다(emissive `0x2b2824`).
+- 난수 없이 정해진 자리라 시드 시뮬은 그대로다: ARMOR 끔 fights12·hybrid fights12·live_battery, armor_eval probe 가 main 과 바이트 동일. 캐릭터를 만들 때 미리 만든다.
+- 두 세트(`HEINRICH_KNIGHT`·`MARGARETHE_DRAGON`)에 같은 도우미를 달아 두 판금 검객 모두, 보관본 버전도 같다(부서질 때만 보이므로 멀쩡한 모습은 그대로).
+- 스크린샷(판을 상처 없이 직접 부순 뒤): [마르그레테 앞](character_looks/margarethe_under_broken.png) · [옆](character_looks/margarethe_under_broken_side.png) · [하인리히](character_looks/heinrich_under_broken.png)
 
 ## 하인리히 도른 (`heinrich`) — 은빛 중갑 기사
 
