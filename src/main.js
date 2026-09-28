@@ -18,11 +18,7 @@ import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
-import { buildArena } from './arena.js';
-import { buildTemple } from './stage_temple.js';
-import { buildCastle } from './stage_castle.js';
-import { buildCathedral } from './stage_cathedral.js';
-import { buildDarkHall } from './stage_darkhall.js';
+import { Stages, StageDeck, STAGE_IDS } from './stages.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 
@@ -118,18 +114,41 @@ sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 25 });
 scene.add(sun, sun.target);
 
-// 배경 고르기 (미리보기용. 정식 선택 방식은 나중에): 기본은 바닷가 절벽 위 무너진 포세이돈 신전 (arena.js)
-//  ?stage=temple : 한국의 산 속 절 (stage_temple.js)
-//  ?stage=castle : 눈 내리는 중세 성의 안뜰, 해 질 녘 (stage_castle.js)
-//  ?stage=cathedral : 무너진 고딕 대성당의 안 (stage_cathedral.js)
-//  ?stage=darkhall : 어두운 성의 큰 홀, 밤 (stage_darkhall.js)
-const STAGES = { temple: buildTemple, castle: buildCastle, cathedral: buildCathedral, darkhall: buildDarkHall };
-const stageBuild = STAGES[params.get('stage')];
-const arena = stageBuild ? stageBuild(scene, { hemi, sun }) : buildArena(scene);
-const SUN_OFF = arena.sunOffset ?? { x: 4, y: 9, z: 3 }; // 해가 싸우는 자리를 따라다닐 때의 방향
 // 캐릭터 전용 조명: 스테이지 빛이 모자라면(밤) 카메라 쪽 보조광·바탕빛·테두리광·윤곽 빛을 캐릭터 재질에만 채운다.
 //  스테이지는 fighterLight 로 색만 물들이고 더 밝게 할 수 있을 뿐 끌 수 없다 (fighter_light.js, docs/stages.md 조명 약속)
-const fighterLight = createFighterLight({ hemi, sun }, arena);
+//  배경이 바뀔 때마다 useStage 가 그 배경의 fighterLight 설정으로 바꿔 끼운다
+const fighterLight = createFighterLight({ hemi, sun });
+
+// ── 배경(스테이지): 판마다 다섯 곳 중 무작위 ──────────────────────────────
+//  오너 결정: 고르는 화면 없이 매번 무작위. 바로 전 판과 같은 곳은 안 나오고, 다섯 판마다 다섯 곳이 한 번씩 다 나온다 (섞은 패).
+//  다섯 곳과 짓고 치우는 법은 stages.js, 배경마다 설명은 docs/stages.md
+//   poseidon(바닷가 절벽 위 포세이돈 신전) · temple(산사) · castle(눈 내리는 성 안뜰) · cathedral(무너진 대성당) · darkhall(어두운 성의 큰 홀)
+//  ?stage=<id> : 그 배경으로 고정 (시험용, poseidon 도 된다)
+//  메뉴 뒤에 보이는 배경이 첫 판의 배경이다. 그 다음 판부터는 판을 열 때(startFight → nextRoundStage) 새로 뽑아 짓는다.
+//  짓는 동안의 멈칫(산사·대성당이 가장 길다, 개발 기계에서 0.3초 안팎)은 버튼을 누른 뒤 메뉴가 아직 떠 있는 동안 지나간다
+const stages = new Stages(scene, { hemi, sun }); // 지금의 빛·안개·하늘색(포세이돈)을 처음 값으로 적어 둔다
+const STAGE_PIN = STAGE_IDS.includes(params.get('stage')) ? params.get('stage') : null;
+const stageDeck = new StageDeck();
+let arena = null; // 지금 배경 { update(dt), excite(amount) }
+let SUN_OFF = null; // 해가 싸우는 자리를 따라다닐 때의 방향 (배경마다 다르다)
+let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 새로 뽑는다)
+function useStage(id) {
+  if (id === stages.id) return false;
+  arena = stages.build(id); // 먼저 지은 배경은 치우고(GPU 자원까지), 빛·안개를 처음 값으로 되돌린 뒤 짓는다
+  SUN_OFF = stages.sunOffset;
+  fighterLight.setStage(arena);
+  return true;
+}
+/** 판을 열 때(startFight) 부른다: 지금 배경에서 이미 한 판을 열었으면 새 배경을 뽑아 짓는다 (첫 판은 메뉴 뒤 배경 그대로) */
+function nextRoundStage() {
+  if (stageFought && useStage(STAGE_PIN || stageDeck.next(stages.id))) {
+    stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게)
+    sound.setStage(stages.id); // 배경 소리가 3초에 걸쳐 바뀐다 (발소리·쓰러짐의 바닥 소리도 배경을 따른다)
+  }
+  stageFought = true;
+}
+useStage(STAGE_PIN || stageDeck.next());
+// ── (배경 끝) ─────────────────────────────────────────────────────────────
 
 // ── 화면 크기 / 픽셀 모드 ──
 function resize() {
@@ -156,7 +175,7 @@ resize();
 // ── 물리 세계와 등장인물 ──
 const particles = new Particles(scene);
 const sound = new Sound();
-sound.setStage(stageBuild ? params.get('stage') : 'poseidon'); // 배경 소리·바닥 소리가 배경을 따른다
+sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
 const input = new Input(canvas);
 const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
@@ -756,6 +775,7 @@ async function startFight() {
   topButtons.classList.add('show');
   closeDraw(); // 뽑기 도중에 "처음부터 다시"를 눌렀으면 그 카드는 치운다
   toast.classList.remove('show');
+  nextRoundStage(); // 배경: 첫 판은 메뉴 뒤 그대로, 그 다음 판부터는 판마다 무작위 (짓는 멈칫은 메뉴가 아직 떠 있는 동안)
   prepareRound(); // 이번 상대 · 상대 무기
   showFoeIntro(currentFoe);
   if (FIXED_WEAPON) {
@@ -1041,7 +1061,7 @@ function updateGuardName(dt) {
 
 // ── 게임 루프 ──
 // 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다
-const perf = params.get('fps') ? new PerfMeter(renderer) : null;
+const perf = params.get('fps') ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
 let last = performance.now();
 let acc = 0;
 
@@ -1177,7 +1197,15 @@ window.game = {
   THREE,
   camera,
   freeCam: false,
-  renderInfo: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
+  renderInfo: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
+  // 배경: game.stage 로 지금 배경·짓는 시간 확인, game.setStage('castle') 로 바로 바꿔 보기 (싸우는 중이면 잠깐 멈칫한다)
+  get stage() {
+    return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
+  },
+  setStage(id) {
+    if (useStage(id)) stages.warm(renderer, camera);
+    sound.setStage(stages.id);
+  },
   AI,
   settings,
   sound, // 예: game.sound.clash(8) 로 소리 확인, game.sound.stats

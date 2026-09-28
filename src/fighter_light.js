@@ -117,11 +117,16 @@ function patch(mat) {
  * @param stage  스테이지 build 가 돌려준 객체 (fighterLight 가 있으면 색·세기를 물들인다)
  */
 export function createFighterLight(lights, stage = {}) {
-  const cfg = stage.fighterLight || {};
   const num = (v, d) => (Number.isFinite(v) ? v : d);
-  const cfgKey = cfg.color != null ? hue(new THREE.Color(cfg.color), 0, new THREE.Color()) : null;
-  const cfgRim = cfg.rimColor != null ? hue(new THREE.Color(cfg.rimColor), 0, new THREE.Color()) : null;
-  const rimMul = THREE.MathUtils.clamp(num(cfg.rim, 1), RIM_MIN, 3);
+  // 스테이지가 준 설정 (배경이 바뀌면 setStage 로 바꿔 끼운다)
+  let cfg, cfgKey, cfgRim, rimMul;
+  function configure(st) {
+    cfg = st?.fighterLight || {};
+    cfgKey = cfg.color != null ? hue(new THREE.Color(cfg.color), 0, new THREE.Color()) : null;
+    cfgRim = cfg.rimColor != null ? hue(new THREE.Color(cfg.rimColor), 0, new THREE.Color()) : null;
+    rimMul = THREE.MathUtils.clamp(num(cfg.rim, 1), RIM_MIN, 3);
+  }
+  configure(stage);
   const keyHue = new THREE.Color();
   const rimHue = new THREE.Color();
   const _d = new THREE.Vector3();
@@ -206,6 +211,11 @@ export function createFighterLight(lights, stage = {}) {
     if (e0 != null) m.envMapIntensity = e0 * state.env;
   }
   return Object.assign(state, {
+    /** 배경이 바뀌었다: 그 배경의 fighterLight 설정으로 바꿔 끼운다 (세기는 다음 update 에서 새 빛으로 다시 잰다) */
+    setStage(st) {
+      configure(st);
+      state.level = THREE.MathUtils.clamp(num(cfg.level, LEVEL), LEVEL_MIN, 1);
+    },
     /** 매 프레임(그리기 직전): 세기를 다시 계산하고, 캐릭터에 새로 붙은 재질(상처 자국 등)도 받게 한다 */
     update(roots) {
       updateUniforms();

@@ -4,12 +4,14 @@
 //   물리(한 프레임 동안 물리 계산에 쓴 시간, 스텝 수) · 그리기(렌더 호출에 쓴 시간)
 //   게임 속도: 실제로 흐른 게임 시간 ÷ 흘러야 할 게임 시간. 100% 아래면 폰이 못 따라가서 슬로 모션이 된 것
 //   그리기 호출 수 · 삼각형 수 · 화면 해상도 · 자바스크립트 메모리(크롬만)
+//   extra() 가 주는 한 줄 (main.js: 지금 배경과 그 배경을 짓는 데 걸린 시간 — 배경이 판마다 무작위라 어느 배경의 수치인지 적는다)
 
 const WINDOW = 120; // 느린 5%를 셀 최근 프레임 수
 
 export class PerfMeter {
-  constructor(renderer) {
+  constructor(renderer, extra = null) {
     this.renderer = renderer;
+    this.extra = extra;
     this.el = document.createElement('div');
     Object.assign(this.el.style, {
       position: 'fixed',
@@ -72,7 +74,8 @@ export class PerfMeter {
       `FPS ${(1000 / avg).toFixed(0)} (느린5% ${(1000 / slow).toFixed(0)})  ${avg.toFixed(1)}ms\n` +
       `물리 ${(this.physMs / n).toFixed(1)}ms ×${(this.steps / n).toFixed(1)}스텝  그리기 ${(this.renderMs / n).toFixed(1)}ms\n` +
       `게임 속도 ${speed.toFixed(0)}%${this.capped ? `  밀림 ${this.capped}` : ''}\n` +
-      `호출 ${info.calls}  삼각형 ${(info.triangles / 1000).toFixed(0)}k  ${c.width}×${c.height}  메모리 ${mem}`;
+      `호출 ${info.calls}  삼각형 ${(info.triangles / 1000).toFixed(0)}k  ${c.width}×${c.height}  메모리 ${mem}` +
+      (this.extra ? `\n${this.extra()}` : '');
     this.reset(now);
   }
 }
