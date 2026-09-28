@@ -1390,10 +1390,10 @@ export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STY
     add(new THREE.CylinderGeometry(0.0038, 0.0038, 0.09, 6), steel, [0.013, 0.11, 0]);
     add(new THREE.CylinderGeometry(0.005, 0.005, 0.003, 8), bore, [0, 0.2015, 0]);
     // 여섯 모 약실(위 약실이 총신과 한 줄) + 틀
-    add(new THREE.CylinderGeometry(0.021, 0.021, 0.042, 6), steel, [0.012, 0.047, 0]);
+    group.userData.cylinder = add(new THREE.CylinderGeometry(0.021, 0.021, 0.042, 6), steel, [0.012, 0.047, 0]); // 약실 (장전 표시로 돌릴 수 있게 따로 — 외형 PM)
     add(new THREE.BoxGeometry(0.048, 0.09, 0.02), steel, [0.008, 0.028, 0]);
     // 공이치기 (뒤 위, 뒤로 젖힘) · 방아쇠울 · 방아쇠
-    add(new THREE.BoxGeometry(0.02, 0.009, 0.007), steel, [UP * 0.017, -0.02, 0], [0, 0, 0.6]);
+    group.userData.hammer = add(new THREE.BoxGeometry(0.02, 0.009, 0.007), steel, [UP * 0.017, -0.02, 0], [0, 0, 0.6]); // 공이치기 (젖힘 표시용으로 따로)
     add(new THREE.TorusGeometry(0.015, 0.0028, 5, 10, Math.PI * 1.25), steel, [0.036, 0.034, 0], [0, 0, -Math.PI * 0.05]);
     add(new THREE.BoxGeometry(0.014, 0.004, 0.004), steel, [0.03, 0.03, 0], [0, 0, 0.25]);
     // 손잡이 (검은 고무) — 주먹이 가운데를 쥔다
