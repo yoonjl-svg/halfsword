@@ -13,7 +13,7 @@ import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
-import { WEAPON_LIST, getWeapon } from './weapons.js';
+import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL } from './weapons.js';
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
@@ -39,11 +39,8 @@ function drawCardIds() {
   // 모르는 id 는 버리고(getWeapon 이 롱소드로 바꿔 버린다) 서로 다른 두 장일 때만 쓴다
   const forced = (params.get('cards') || '').split(',').filter((id) => id && getWeapon(id).id === id).slice(0, 2);
   if (forced.length === 2 && forced[0] !== forced[1]) return forced;
-  const pool = PLAYER_WEAPON_POOL.filter((id) => id !== lastPlayerWeapon);
-  if (pool.length < 2) pool.push(...PLAYER_WEAPON_POOL.filter((id) => !pool.includes(id)));
-  const out = [];
-  while (out.length < 2) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-  return out;
+  // 등급을 먼저 뽑고 그 등급 안에서 고른다 (사장님 결정: 커먼 40 · 레어 27 · 에픽 16 · 레전드 5 · 쓰레기 7 · ??? 5, weapons.js TIER_DRAW)
+  return drawWeaponCards(PLAYER_WEAPON_POOL, 2, { exclude: lastPlayerWeapon });
 }
 
 // ── 설정 (브라우저에 저장) ──
@@ -135,6 +132,7 @@ const STAGE_PIN = STAGE_IDS.includes(params.get('stage')) ? params.get('stage') 
 let arena = null; // 지금 배경 { update(dt), excite(amount) }
 let SUN_OFF = null; // 해가 싸우는 자리를 따라다닐 때의 방향 (배경마다 다르다)
 let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 다음 배경으로 넘어간다)
+let lastRoundWon = false; // 지난 판을 이겼나 (사장님 결정: 이겨야 다음 무대·다음 상대로, 지면 같은 무대에서 같은 상대와 다시)
 function useStage(id) {
   if (id === stages.id) return false;
   arena = stages.build(id); // 먼저 지은 배경은 치우고(GPU 자원까지), 빛·안개를 처음 값으로 되돌린 뒤 짓는다
@@ -143,9 +141,14 @@ function useStage(id) {
   arena.onEvent = (name, data) => sound.stageEvent?.(name, data); // 배경이 알리는 일(성 안뜰: 종이 흔들려 칠 때 'bell') → 소리
   return true;
 }
-/** 판을 열 때(startFight) 부른다: 지금 배경에서 이미 한 판을 열었으면 순서대로 다음 배경을 짓는다 (첫 판은 메뉴 뒤 배경 그대로) */
+/**
+ * 판을 열 때(startFight) 부른다: 지난 판을 이겼으면 순서대로 다음 배경을 짓는다 (첫 판은 메뉴 뒤 배경 그대로).
+ *  지거나 도중에 "처음부터 다시"를 누르면 같은 배경 — 상대도 배경을 따르니 같은 상대와 다시 싸운다 (사장님 결정)
+ */
 function nextRoundStage() {
-  if (stageFought && useStage(STAGE_PIN || nextStage(stages.id))) {
+  const advance = stageFought && lastRoundWon;
+  lastRoundWon = false;
+  if (advance && useStage(STAGE_PIN || nextStage(stages.id))) {
     stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게)
     sound.setStage(stages.id); // 배경 소리가 3초에 걸쳐 바뀐다 (발소리·쓰러짐의 바닥 소리도 배경을 따른다)
   }
@@ -566,7 +569,7 @@ function showFoeIntro(ch) {
 //  카드 뒤집기·사라지기는 CSS 변환(transform)으로만 움직인다 (매 프레임 JS 로 그리지 않는다).
 // 등급과 별개로 따로 대접하는 무기 카드 (금빛 일렁임·센 떨림). 오너 결정: "엑스칼리버를 등급과 별개로 우대할 필요는 없어" → 비워 둔다
 const GRAND_WEAPONS = new Set();
-const TIER_KO = { trash: '쓰레기', common: '커먼', rare: '레어', epic: '에픽', legend: '레전드' };
+const TIER_KO = TIER_LABEL; // 카드의 등급 글자 (??? 등급 포함, weapons.js)
 const FOE_CARD = 2; // 맨 오른쪽 카드 = 상대 무기 칸
 // 초 (고른 때부터). others: 남은 내 카드가 뒤집힘, foe: 상대 카드가 뒤집힘 (+0.45초면 다 뒤집힌다),
 //  build: 고른 무기로 판을 새로 세움 (상대 카드가 다 뒤집힌 뒤, 아무것도 움직이지 않을 때), look: 사라지기 시작, fly: 사라지는 시간.
@@ -671,7 +674,11 @@ function openDraw() {
     el.querySelector('.wname').textContent = main;
     el.querySelector('.wsub').textContent = sub;
     el.querySelector('.wtier').textContent = TIER_KO[w.tier] || TIER_KO.common;
-    el.querySelector('.wdesc').textContent = w.desc || '';
+    // 에픽 특수 능력은 설명 끝의 "(별칭: 효과)" 를 따로 한 줄로, 등급 색으로 (weapons.js 가 desc 끝에 붙여 준다)
+    const abil = w.ability ? ` (${w.ability})` : '';
+    const desc = w.desc || '';
+    el.querySelector('.wdesc').textContent = abil && desc.endsWith(abil) ? desc.slice(0, -abil.length) : desc;
+    el.querySelector('.wabil').textContent = w.ability ? `(${w.ability})` : '';
   });
   drawEl.className = 'show choose';
   layoutDraw();
@@ -1025,6 +1032,7 @@ function checkRoundEnd(dt) {
     if (!enemy.alive || !player.alive) {
       roundOver = true;
       const win = !enemy.alive;
+      lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
       showToast(win ? '승리' : '패배', 0);
       if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
       else lastFoeLine = '';
@@ -1046,7 +1054,8 @@ function checkRoundEnd(dt) {
     $('menuTitle').textContent = win ? '승리' : '패배';
     // 졌으면 상대의 승리 대사를 한 줄 덧붙인다 (사장님 확정)
     $('menuSub').textContent = !win && lastFoeLine ? `${cause} · ${currentFoe.name}: “${lastFoeLine}”` : cause;
-    $('btnStart').textContent = '다시 싸우기';
+    // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
+    $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 상대' : '다시 싸우기';
     $('btnResume').style.display = 'none';
     showMenu();
   }
