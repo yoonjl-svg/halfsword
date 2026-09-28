@@ -34,7 +34,7 @@ const mean = (a) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length);
 
 /** 캐릭터 하나를 가만히 서 있는 더미 앞에 세우고 재는 시나리오 */
 function runPassive(ch, seed, durS = 60) {
-  const opts = { seed, difficulty: ch.ai.level, persona: ch.ai.persona, weapon2: ch.weapon, look2: lookOf(ch) };
+  const opts = { seed, difficulty: ch.ai.level, persona: ch.ai.persona, weapon2: ch.weapon, look2: lookOf(ch), revive: ch.revive };
   const G = newRound(opts);
   const { player: dummy, enemy: fighter, ai } = G;
   G.before = () => { dummy.move.set(0, 0); slow(dummy.handOffset, GUARDS_READY, 1.0); };
@@ -88,6 +88,8 @@ function runDuel(chA, chB, seed, durS = 45) {
     weapon: chB.weapon,
     look2: lookOf(chA),
     look: lookOf(chB),
+    revive: chA.revive, // 부활(이졸데): 처음 죽으면 한 번 다시 일어선다
+    revive2: chB.revive,
   };
   const G = newRound(opts);
   const { player: B, enemy: A, ai, ai2 } = G;

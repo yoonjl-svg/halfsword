@@ -25,7 +25,7 @@
 import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST } from './config.js';
 import { FINISH } from './finish.js';
-import { gunCanFire } from './gun.js';
+import { gunCanFire, gunPose } from './gun.js';
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -102,11 +102,8 @@ export class Skill {
   thrust({ step = true } = {}) {
     const f = this.f;
     if (this.tap || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
-    // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 찌르지 않고, 쏠 때는 내딛지 않는다 (총구로 겨누며 팔만 뻗는다 — gun.js)
-    if (f.weapon?.gun) {
-      if (!gunCanFire(f)) return false;
-      step = false;
-    }
+    // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 쏘지 않는다 (gun.js)
+    if (f.weapon?.gun) return gunCanFire(f, { now: true }); // 권총: 찌르는 동작 없이 사격 자세(gunPose)의 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
     // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽]). 검술 보정이 다 걸려 있으면 자세 지도의 손, 덜 걸려 있으면(보정 약·끔)
     //  날것 손 위치와 섞인 실제 손 목표(fighter.handBase)에서 뻗는다 — 자세 지도의 손에서 뻗으면 실제 손보다 뒤에서 시작해 덜 나갔다
     const g = f.guardWeight() >= 1 || !f.handBase ? f.guardPose.hand : f.handBase;
@@ -433,6 +430,6 @@ export class Skill {
     if (this.tap) {
       this.updateThrust(dt);
       this.activity = Math.max(this.activity, this.thrustPose.w); // 찌르는 동안엔 몸도 벨 때처럼 빠르게 따라온다
-    }
+    } else if (this.f.weapon?.gun) this.thrustPose.w = gunPose(this.f, this.thrustPose); // 권총: 한 손 사격 자세를 덧씌운다 (gun.js)
   }
 }

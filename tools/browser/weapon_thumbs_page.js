@@ -94,7 +94,8 @@ for (const id of ids) {
   const box = visibleBox(holder);
   const c = box.getCenter(new THREE.Vector3());
   const sz = box.getSize(new THREE.Vector3());
-  const half = (Math.max(sz.x, sz.y) / 2) * (1 + PAD * 2);
+  // spec.thumbScale: 실제로 짧은 무기(권총)는 칸을 가득 채우지 않고 이 비율로 작게 (틀·여백은 다른 무기와 같다)
+  const half = ((Math.max(sz.x, sz.y) / 2) * (1 + PAD * 2)) / (spec.thumbScale ?? 1);
   const cam = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, 20);
   cam.position.set(c.x, c.y, c.z + 5);
   cam.lookAt(c);

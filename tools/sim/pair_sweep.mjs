@@ -13,8 +13,8 @@ const vals = valsArg.split(',').map(Number);
 function duel(seed, personaA, aOnEnemy) {
   const pA = personaA, pB = B_.ai.persona;
   const opts = aOnEnemy
-    ? { seed, difficulty: A_.ai.level, persona: pA, weapon2: A_.weapon, AI2Class: AI, difficulty2: B_.ai.level, persona2: pB, weapon: B_.weapon }
-    : { seed, difficulty: B_.ai.level, persona: pB, weapon2: B_.weapon, AI2Class: AI, difficulty2: A_.ai.level, persona2: pA, weapon: A_.weapon };
+    ? { seed, difficulty: A_.ai.level, persona: pA, weapon2: A_.weapon, AI2Class: AI, difficulty2: B_.ai.level, persona2: pB, weapon: B_.weapon, revive: A_.revive, revive2: B_.revive }
+    : { seed, difficulty: B_.ai.level, persona: pB, weapon2: B_.weapon, AI2Class: AI, difficulty2: A_.ai.level, persona2: pA, weapon: A_.weapon, revive: B_.revive, revive2: A_.revive };
   const G = newRound(opts);
   const X = aOnEnemy ? G.enemy : G.player; // A 쪽
   const Y = aOnEnemy ? G.player : G.enemy;
