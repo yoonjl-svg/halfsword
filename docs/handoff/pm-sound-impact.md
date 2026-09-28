@@ -541,3 +541,9 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - main을 병합했다(`73dbaee`, 충돌 없음). 디렉터가 판금 소리를 전투 판정에 연결했다: `r.helmet` → `sound.helmet(e)`, `r.plate`이고 뚫리면 `sound.impact({a: 무기 재질, b: 'armor', energy: e·0.8})`, 막으면 `sound.plateBlock(e, {material})`, 판이 완전히 깨지면 `sound.plateBreak(e)`. 뼈 소리는 투구·판금이면 내지 않는다. 7차에 준비한 API 그대로다.
 - 부러진 칼날·갑옷 조각은 `src/debris.js`가 띄우고 치운다. 착지 소리 자리(130행 `d.landed = true`)가 있다. 선택이고 급하지 않다. 넣는다면 `swordLand`처럼 짧은 "틱/철컥"을 재질별로, 조각이 많을 때 겹치지 않게 0.1초에 한 번쯤.
 - 관문: 병합 뒤 시뮬 3종이 main `6669659`와 바이트 동일, 스모크 콘솔 에러 0.
+
+### 22차 덧붙임 3: 사장님 선택 D
+
+- 사장님: "d로 할게". `stage/chant1.mp3`를 D(Patrick_Corra "Choir" 500862, 0~4.3초, CC0)로 바꿨다. LICENSE.txt도 바꿨다.
+- 크기: D는 A보다 1dB 커서 `revive()`의 gain을 0.32 → 0.282로 맞췄다. 엔진 렌더 4초 평균 −26.9dB, 가장 큰 0.3초 −21.5dB(칼 부딪힘 평균 −24dB). 다른 후보 파일은 스크래치패드에만 있다.
+- 관문: 시뮬 3종이 main `6669659`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임(`?stage=castle&foe=isolde`)에서 `revive('isolde')` 오류 0.
