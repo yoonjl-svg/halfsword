@@ -19,6 +19,7 @@ import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
+import { installGunFx, clearGunFx } from './gun_fx.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
@@ -184,6 +185,7 @@ resize();
 // ── 물리 세계와 등장인물 ──
 const particles = new Particles(scene);
 const sound = new Sound();
+installGunFx({ scene, sound }); // 권총(??? 등급) 총구 섬광·연기 (외형 PM, gun_fx.js — 소리는 그대로 두고 GUN_HOOKS.onShot 을 감싼다)
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
 sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
 const input = new Input(canvas);
@@ -198,6 +200,7 @@ let bodySounds = [];
  */
 function clearFlying() {
   clearDebris();
+  clearGunFx(); // 총구 섬광·연기도 새 판에 남지 않게
   player?.clearLoose();
   enemy?.clearLoose();
 }
