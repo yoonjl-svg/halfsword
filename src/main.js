@@ -18,7 +18,7 @@ import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
-import { Stages, StageDeck, STAGE_IDS } from './stages.js';
+import { Stages, nextStage, STAGE_IDS } from './stages.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 
@@ -119,35 +119,35 @@ scene.add(sun, sun.target);
 //  배경이 바뀔 때마다 useStage 가 그 배경의 fighterLight 설정으로 바꿔 끼운다
 const fighterLight = createFighterLight({ hemi, sun });
 
-// ── 배경(스테이지): 판마다 다섯 곳 중 무작위 ──────────────────────────────
-//  오너 결정: 고르는 화면 없이 매번 무작위. 바로 전 판과 같은 곳은 안 나오고, 다섯 판마다 다섯 곳이 한 번씩 다 나온다 (섞은 패).
-//  다섯 곳과 짓고 치우는 법은 stages.js, 배경마다 설명은 docs/stages.md
-//   poseidon(바닷가 절벽 위 포세이돈 신전) · temple(산사) · castle(눈 내리는 성 안뜰) · cathedral(무너진 대성당) · darkhall(어두운 성의 큰 홀)
+// ── 배경(스테이지): 판마다 정해진 순서 ─────────────────────────────────────
+//  오너 결정: 고르는 화면 없이 늘 포세이돈 신전 → 성 안뜰 → 산사 → 대성당 순서. 대성당 다음 판은 다시 포세이돈 (stages.js STAGE_ORDER)
+//  어두운 홀은 쓰지 않는다 (오너 결정. 순서에 없고 ?stage=darkhall 로만 볼 수 있다)
+//  짓고 치우는 법은 stages.js, 배경마다 설명은 docs/stages.md
 //  ?stage=<id> : 그 배경으로 고정 (시험용, poseidon 도 된다)
-//  메뉴 뒤에 보이는 배경이 첫 판의 배경이다. 그 다음 판부터는 판을 열 때(startFight → nextRoundStage) 새로 뽑아 짓는다.
+//  메뉴 뒤에 보이는 배경(포세이돈)이 첫 판의 배경이다. 그 다음 판부터는 판을 열 때(startFight → nextRoundStage) 다음 배경을 짓는다.
 //  짓는 동안의 멈칫(산사·대성당이 가장 길다, 개발 기계에서 0.3초 안팎)은 버튼을 누른 뒤 메뉴가 아직 떠 있는 동안 지나간다
 const stages = new Stages(scene, { hemi, sun }); // 지금의 빛·안개·하늘색(포세이돈)을 처음 값으로 적어 둔다
 const STAGE_PIN = STAGE_IDS.includes(params.get('stage')) ? params.get('stage') : null;
-const stageDeck = new StageDeck();
 let arena = null; // 지금 배경 { update(dt), excite(amount) }
 let SUN_OFF = null; // 해가 싸우는 자리를 따라다닐 때의 방향 (배경마다 다르다)
-let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 새로 뽑는다)
+let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 다음 배경으로 넘어간다)
 function useStage(id) {
   if (id === stages.id) return false;
   arena = stages.build(id); // 먼저 지은 배경은 치우고(GPU 자원까지), 빛·안개를 처음 값으로 되돌린 뒤 짓는다
   SUN_OFF = stages.sunOffset;
   fighterLight.setStage(arena);
+  arena.onEvent = (name, data) => sound.stageEvent?.(name, data); // 배경이 알리는 일(성 안뜰: 종이 흔들려 칠 때 'bell') → 소리
   return true;
 }
-/** 판을 열 때(startFight) 부른다: 지금 배경에서 이미 한 판을 열었으면 새 배경을 뽑아 짓는다 (첫 판은 메뉴 뒤 배경 그대로) */
+/** 판을 열 때(startFight) 부른다: 지금 배경에서 이미 한 판을 열었으면 순서대로 다음 배경을 짓는다 (첫 판은 메뉴 뒤 배경 그대로) */
 function nextRoundStage() {
-  if (stageFought && useStage(STAGE_PIN || stageDeck.next(stages.id))) {
+  if (stageFought && useStage(STAGE_PIN || nextStage(stages.id))) {
     stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게)
     sound.setStage(stages.id); // 배경 소리가 3초에 걸쳐 바뀐다 (발소리·쓰러짐의 바닥 소리도 배경을 따른다)
   }
   stageFought = true;
 }
-useStage(STAGE_PIN || stageDeck.next());
+useStage(STAGE_PIN || nextStage());
 // ── (배경 끝) ─────────────────────────────────────────────────────────────
 
 // ── 화면 크기 / 픽셀 모드 ──
@@ -775,7 +775,7 @@ async function startFight() {
   topButtons.classList.add('show');
   closeDraw(); // 뽑기 도중에 "처음부터 다시"를 눌렀으면 그 카드는 치운다
   toast.classList.remove('show');
-  nextRoundStage(); // 배경: 첫 판은 메뉴 뒤 그대로, 그 다음 판부터는 판마다 무작위 (짓는 멈칫은 메뉴가 아직 떠 있는 동안)
+  nextRoundStage(); // 배경: 첫 판은 메뉴 뒤 그대로, 그 다음 판부터는 정해진 순서로 다음 배경 (짓는 멈칫은 메뉴가 아직 떠 있는 동안)
   prepareRound(); // 이번 상대 · 상대 무기
   showFoeIntro(currentFoe);
   if (FIXED_WEAPON) {
