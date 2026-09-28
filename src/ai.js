@@ -257,6 +257,10 @@ export class AI {
     this.sense.record(dt);
     const L = this.level;
 
+    // 부활하는 동안(revive.js): 싸우지 않고 기다린다. 끝나면 집념으로 다시 싸운다
+    if (me.revival) return this.holdForRevive(dt);
+    if (this.reviving) this.resumeAfterRevive();
+
     // 완전히 쓰러졌다: 칼을 머리 위로 들어 가리기만 한다 (팔에도 힘이 거의 없다)
     if (me.state === 'down') {
       me.move.set(0, 0);
@@ -374,6 +378,72 @@ export class AI {
     this.moveHand(dt);
     this.moveFeet(dt, d);
     if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
+  }
+
+  // ───────────────────────── 부활 (revive.js) ─────────────────────────
+  /** 부활하는 동안: 발을 멈추고 칼을 지금 자세로 든 채 기다린다 (공격하지 않는다). 처음 한 번 감정을 비운다 (떨림도 멎는다) */
+  holdForRevive(dt) {
+    const me = this.me;
+    if (!this.reviving) {
+      this.reviving = true;
+      this.emo.fear = this.emo.anger = this.emo.obsession = 0;
+      this.emotion = null;
+      this.fear = this.anger = this.obsession = 0;
+      me.emoMods = emoMods(null, 0);
+    }
+    me.move.set(0, 0);
+    this.mode = 'watch';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.feint = null;
+    this.feintPts = 0;
+    this.feintHold = 0;
+    this.stepT = 0;
+    this.hand.set(this.guard.pad[0], this.guard.pad[1]);
+    this.handSpeed = this.pers.guardSpeed;
+    this.prevFoePain = this.foe.pain;
+    this.prevMyPain = me.pain;
+    this.moveHand(dt);
+  }
+
+  /**
+   * 부활이 끝났다: 싸움이 끝난 줄 알던 상태를 버리고 집념을 지배 감정으로 다시 싸운다.
+   *  감정 규칙(emote)은 그대로 — 세기(revive.obsession)와 텀(revive.obsessionHold 동안 다른 감정이 밀어내지 못함)만 정해 준다
+   */
+  resumeAfterRevive() {
+    this.reviving = false;
+    const R = this.me.revive || {};
+    this.emo.fear = this.emo.anger = 0;
+    this.emo.obsession = Math.min(1, R.obsession ?? 0.8);
+    this.emotion = 'obsession';
+    this.fear = this.anger = 0;
+    this.obsession = this.emo.obsession;
+    this.emoRestAll = this.emoT + (R.obsessionHold ?? 10);
+    this.emoRest.obsession = -1;
+    this.me.emoMods = emoMods('obsession', this.emo.obsession);
+    // 하던 공격·속임수·이어치기를 버리고 간 보기부터 (물고 늘어지니 참을성은 바닥)
+    this.mode = 'watch';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.chain = 0;
+    this.bound = false;
+    this.feint = null;
+    this.feintPts = 0;
+    this.feintHold = 0;
+    this.stepT = 0;
+    this.hitLanded = false;
+    this.cautious = false;
+    this.desperate = false;
+    this.patience = Math.min(this.patience, 0.2);
+    this.guardTimer = 0;
+    this.decideTimer = 0;
+    this.sawDisarmed = false; // 칼을 다시 쥐었다
+    this.threatSeen = this.threatId;
+    this.noThreat = 1;
+    this.parryTimes.length = 0;
+    this.foeReach = this.foeM.reach + 0.05;
+    this.prevFoePain = this.foe.pain;
+    this.prevMyPain = this.me.pain;
   }
 
   // ───────────────────────── 간 보기 ─────────────────────────

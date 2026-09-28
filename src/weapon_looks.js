@@ -1341,32 +1341,91 @@ export function breakWeaponLook(group, cutY, { material = 'steel' } = {}) {
 }
 
 // ═════════════════════════════════════════════════════════════
-//  권총 (??? 등급): 칼처럼 쥐므로 총신이 칼 축(+y)을 따라 앞으로 뻗는다 — 손잡이는 주먹 안(자루 자리)에서 살짝 뒤로 기운다.
-//  "빗자루 손잡이" 권총 느낌의 로우폴리: 검은 강철 총신·슬라이드, 나무 손잡이, 방아쇠울, 가늠쇠·공이치기. 난수 없음.
+//  권총 (??? 등급). 칼 축(+y)이 발사 방향이다. 주먹(칼 원점)은 손잡이 가운데를 쥐고, 총신·약실·틀은 주먹 위로 완전히 올라온다
+//  (사장님: "손잡이를 잡고 총신은 손 완전히 위로") — 총신 축은 칼 축과 나란히 PISTOL_BORE_X 만큼 위(−x). 총구는 (PISTOL_BORE_X, 0.20 m):
+//  gun.js 가 발사·레이저를 여기서 낸다. 손잡이는 총신에서 105° 꺾여 아래로 내려오고, 방아쇠울·공이치기가 보인다.
+//  칼을 겨누는 자세에서 칼 몸체 −x 쪽이 위다(게임 화면으로 확인) → 가늠쇠·공이치기는 −x, 손잡이·방아쇠울은 +x.
+//  두 풍 (docs/handoff/pistol_look_v1.png) — 사장님 선택: B 리볼버. A 는 보관:
+//   'flintlock' — 세계관에 맞는 부싯돌식: 나무 몸통이 총신 밑을 받치고, 휜 나무 손잡이 끝에 놋쇠 마개, 긴 놋쇠 방아쇠울, 부싯돌 치기쇠
+//   'revolver'  — 어디서 굴러 들어온 현대식 리볼버: 여섯 모 약실, 검은 강철 틀, 검은 고무 손잡이
+//  로우폴리·평면 음영(설계 언어 3D 기본 모드), 난수 없음.
 // ═════════════════════════════════════════════════════════════
-export function drawPistol(group) {
-  const steel = new THREE.MeshStandardMaterial({ color: 0x2c2f35, roughness: 0.45, metalness: 0.6, envMap: weaponEnv(), envMapIntensity: 0.8, flatShading: true });
-  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.85, metalness: 0, flatShading: true });
-  const add = (geo, mat, pos, rot) => {
+// 손잡이 치수 — 물리(weapons.js pistol buildParts 의 손잡이 콜라이더·무게)와 그림이 같이 쓴다: 칼 몸체 (x, y) = from 에서
+//  총신(+y)과 deg 만큼 꺾인 방향으로 len 만큼 (끝에 마개). 가운데가 주먹(원점)이다
+const _ga = (105 * Math.PI) / 180;
+export const PISTOL_GRIP = { deg: 105, len: 0.105, from: [(-Math.sin(_ga) * 0.105) / 2, (-Math.cos(_ga) * 0.105) / 2] };
+// 총신 축이 칼 축에서 떨어진 거리 (−x = 위, m): 약실 밑이 주먹 위로 올라오게
+export const PISTOL_BORE_X = -0.08;
+export const PISTOL_STYLE = { value: 'revolver' }; // 사장님이 고른 풍: B 현대식 리볼버 (A 부싯돌식은 보관 — 시안 비교 도구는 globalThis.__pistolStyle 로 바꿔 본다)
+export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STYLE.value) {
+  const flat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0, flatShading: true, ...o });
+  // 손잡이 말고는 모두 총신 축 기준으로 그린다 (top 을 PISTOL_BORE_X 만큼 위로 올려 둔다)
+  const top = new THREE.Group();
+  top.position.x = PISTOL_BORE_X;
+  group.add(top);
+  const add = (geo, mat, pos, rot, parent = top) => {
     const m = new THREE.Mesh(geo, mat);
     m.position.set(...pos);
     if (rot) m.rotation.set(...rot);
     m.castShadow = true;
-    group.add(m);
+    parent.add(m);
     return m;
   };
-  // 손잡이 (주먹 안): 나무, 뒤로 살짝 기울고 아래가 조금 넓다
-  add(new THREE.BoxGeometry(0.03, 0.12, 0.026), wood, [-0.004, -0.005, 0], [0, 0, 0.12]);
-  // 몸통(기관부)과 슬라이드: 손 위쪽에서 총신으로 이어진다
-  add(new THREE.BoxGeometry(0.036, 0.09, 0.03), steel, [0.004, 0.09, 0]);
-  add(new THREE.BoxGeometry(0.03, 0.2, 0.024), steel, [0.006, 0.17, 0]);
-  // 총신 (둥근 막대)과 총구
-  add(new THREE.CylinderGeometry(0.009, 0.009, 0.12, 8), steel, [0.006, 0.26, 0]);
-  add(new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, 8), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 1 }), [0.006, 0.321, 0]);
-  // 가늠쇠 (총구 쪽 등) · 공이치기 (뒤쪽)
-  add(new THREE.BoxGeometry(0.008, 0.012, 0.004), steel, [0.024, 0.3, 0]);
-  add(new THREE.BoxGeometry(0.012, 0.018, 0.008), steel, [0.022, 0.05, 0], [0, 0, -0.5]);
-  // 방아쇠울 (손잡이 앞쪽 고리) · 방아쇠
-  add(new THREE.TorusGeometry(0.018, 0.0035, 5, 10, Math.PI * 1.3), steel, [-0.026, 0.07, 0], [0, 0, Math.PI * 0.35]);
-  add(new THREE.BoxGeometry(0.004, 0.016, 0.004), steel, [-0.022, 0.07, 0], [0, 0, 0.3]);
+  const UP = -1; // 위쪽 = −x
+  const bore = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 1 });
+  // 손잡이: 원점 근처(주먹)에서 아래(+x)로, 총신과 105~110° 꺾여 조금 뒤(−y)로 내려간다. 긴 축을 x 로 만들고 z 축으로 돌린다
+  const grip = (len, w, t, mat, deg, from) => {
+    const a = (deg * Math.PI) / 180; // 총신(+y)과 이루는 각
+    const dx = Math.sin(a), dy = Math.cos(a);
+    const g = add(new THREE.BoxGeometry(len, w, t), mat, [from[0] + (dx * len) / 2, from[1] + (dy * len) / 2, 0], [0, 0, Math.atan2(dy, dx)], group);
+    return { g, end: [from[0] + dx * len, from[1] + dy * len], dx, dy };
+  };
+  if (style === 'revolver') {
+    const steel = flat(0x3b4048, { roughness: 0.4, metalness: 0.55, envMap: weaponEnv(), envMapIntensity: 0.8 });
+    const rubber = flat(0x1e1e21, { roughness: 0.95 });
+    // 총신 + 윗면 줄(리브) + 가늠쇠, 총신 밑 이젝터 막대
+    add(new THREE.CylinderGeometry(0.0085, 0.0085, 0.13, 8), steel, [0, 0.135, 0]);
+    add(new THREE.BoxGeometry(0.008, 0.13, 0.009), steel, [UP * 0.009, 0.135, 0]);
+    add(new THREE.BoxGeometry(0.009, 0.006, 0.004), steel, [UP * 0.016, 0.193, 0]);
+    add(new THREE.CylinderGeometry(0.0038, 0.0038, 0.09, 6), steel, [0.013, 0.11, 0]);
+    add(new THREE.CylinderGeometry(0.005, 0.005, 0.003, 8), bore, [0, 0.2015, 0]);
+    // 여섯 모 약실(위 약실이 총신과 한 줄) + 틀
+    // 약실: 경첩(crane, 약실 밑 모서리의 총신과 나란한 축) 안에 둔다 — 외형 PM gun_fx 가 쏠 때 1/6 돌리고(cylinder 의 y 축),
+    //  장전 동안 경첩을 y 축으로 돌려 옆으로 빼냈다가 장전 끝에 넣는다. 약실 원점 = 약실 가운데, 둘 다 총신 축(+y)과 나란하다
+    const crane = new THREE.Group();
+    crane.position.set(0.033, 0.047, 0);
+    top.add(crane);
+    group.userData.crane = crane;
+    group.userData.cylinder = add(new THREE.CylinderGeometry(0.021, 0.021, 0.042, 6), steel, [-0.021, 0, 0], null, crane);
+    add(new THREE.BoxGeometry(0.048, 0.09, 0.02), steel, [0.008, 0.028, 0]);
+    // 공이치기 (뒤 위, 뒤로 젖힘) · 방아쇠울 · 방아쇠
+    group.userData.hammer = add(new THREE.BoxGeometry(0.02, 0.009, 0.007), steel, [UP * 0.017, -0.02, 0], [0, 0, 0.6]); // 공이치기 (젖힘 표시용으로 따로)
+    add(new THREE.TorusGeometry(0.015, 0.0028, 5, 10, Math.PI * 1.25), steel, [0.036, 0.034, 0], [0, 0, -Math.PI * 0.05]);
+    add(new THREE.BoxGeometry(0.014, 0.004, 0.004), steel, [0.03, 0.03, 0], [0, 0, 0.25]);
+    // 손잡이 (검은 고무) — 주먹이 가운데를 쥔다
+    const g = grip(PISTOL_GRIP.len, 0.03, 0.026, rubber, PISTOL_GRIP.deg, PISTOL_GRIP.from); // 손잡이 콜라이더와 같은 각·길이
+    add(new THREE.BoxGeometry(0.012, 0.034, 0.028), steel, [g.end[0], g.end[1], 0], [0, 0, Math.atan2(g.dy, g.dx)], group); // 밑마개
+  } else {
+    const iron = flat(0x3a3d44, { roughness: 0.5, metalness: 0.45, envMap: weaponEnv(), envMapIntensity: 0.7 });
+    const wood = flat(0x6b4226, { roughness: 0.85 });
+    const brass = flat(0xb08d3c, { roughness: 0.45, metalness: 0.5, envMap: weaponEnv(), envMapIntensity: 0.8 });
+    // 팔각 총신 (나무 몸통 위에 얹힌다) · 총구
+    add(new THREE.CylinderGeometry(0.0095, 0.011, 0.2, 8), iron, [0, 0.1, 0]);
+    add(new THREE.CylinderGeometry(0.0055, 0.0055, 0.003, 8), bore, [0, 0.2015, 0]);
+    // 나무 몸통: 총신 밑을 총구 가까이까지 받친다 + 놋쇠 앞마개 + 꽂을대
+    add(new THREE.BoxGeometry(0.016, 0.19, 0.02), wood, [0.013, 0.07, 0]);
+    add(new THREE.BoxGeometry(0.018, 0.012, 0.022), brass, [0.013, 0.168, 0]);
+    add(new THREE.CylinderGeometry(0.0025, 0.0025, 0.15, 5), wood, [0.024, 0.08, 0]);
+    // 격발 장치 (옆 판) · 부싯돌 치기쇠(프리즌) · 공이치기(콕, 부싯돌 물림)
+    add(new THREE.BoxGeometry(0.018, 0.05, 0.004), iron, [0.004, 0.005, 0.012]);
+    add(new THREE.BoxGeometry(0.018, 0.007, 0.008), iron, [UP * 0.018, 0.03, 0], [0, 0, -0.25]);
+    add(new THREE.BoxGeometry(0.022, 0.008, 0.006), iron, [UP * 0.016, -0.008, 0], [0, 0, 0.7]);
+    add(new THREE.BoxGeometry(0.006, 0.006, 0.007), flat(0x8a8f96), [UP * 0.026, 0.004, 0]);
+    // 긴 놋쇠 방아쇠울 · 방아쇠
+    add(new THREE.TorusGeometry(0.019, 0.0028, 5, 12, Math.PI * 1.3), brass, [0.037, 0.04, 0], [0, 0, -Math.PI * 0.1]);
+    add(new THREE.BoxGeometry(0.016, 0.004, 0.004), iron, [0.031, 0.034, 0], [0, 0, 0.3]);
+    // 휜 나무 손잡이 (105°) + 놋쇠 밑마개
+    const g = grip(PISTOL_GRIP.len, 0.028, 0.024, wood, PISTOL_GRIP.deg, PISTOL_GRIP.from);
+    add(new THREE.SphereGeometry(0.017, 6, 4), brass, [g.end[0], g.end[1], 0], null, group);
+  }
 }

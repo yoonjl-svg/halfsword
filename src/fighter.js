@@ -20,6 +20,7 @@ import { breakWeaponLook } from './weapon_looks.js';
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
 import { decorateOutfit, setHelmetWear, setPlateWear } from './outfits.js';
+import { reviveOf, tryRevive, reviveTick } from './revive.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -165,6 +166,8 @@ export class Fighter {
     this.limbs = { armS: 1, armO: 1, legF: 1, legB: 1 }; // 팔다리 기능 (1 = 멀쩡)
     this.wounds = []; // { part, type, severity, bleed, local(몸 기준 위치) }
     this.causeOfDeath = null;
+    this.revive = reviveOf(o.revive); // 처음 죽을 때 한 번 더 일어서기 (캐릭터 시트 revive, 없으면 null) — revive.js
+    this.revival = null; // 부활하는 중이면 그 진행 상태 (revive.js)
     this.daze = 0;
     this.downTime = BODY.fallDuration;
     this.kneelTime = 1.1;
@@ -425,10 +428,12 @@ export class Fighter {
     this.bladeColliders = [];
     this.swordColliders = []; // 칼 전체(칼날+칼자루). 칼끼리 붙어 있는 동안 반발을 끄고 켠다 (combat.js)
     let partIdx = 0;
-    for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade] of parts) {
+    for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade, pose] of parts) {
+      // pose(선택): 칼 축에서 비켜 놓거나 기울인 부품 — { x: 옆으로(m), rotZ: z 축 회전(rad), I: {x,y,z} 부품 기준 관성 }.
+      //  권총 손잡이처럼 총신에서 꺾여 내려오는 부품만 쓴다 (없으면 예전 그대로 칼 축 위, 기울임 없음)
       const cd = shapeDesc(RAPIER, shape)
-        .setTranslation(0, y, 0)
-        .setMassProperties(pm, { x: 0, y: pc, z: 0 }, { x: pIe, y: pIt, z: pIe }, { x: 0, y: 0, z: 0, w: 1 })
+        .setTranslation(pose?.x ?? 0, y, 0)
+        .setMassProperties(pm, { x: 0, y: pc, z: 0 }, pose?.I ?? { x: pIe, y: pIt, z: pIe }, { x: 0, y: 0, z: 0, w: 1 })
         .setFriction(0.4)
         // 재질별 반발 계수. 곱하기 규칙이라 반발이 0인 몸·땅과는 그대로 0 (칼이 살에 튕기지 않는다)
         .setRestitution(restitution)
@@ -438,6 +443,7 @@ export class Fighter {
         .setContactForceEventThreshold(1)
         // 칼날만: 충돌 직전에 combat.js가 "가르고 지나갈지"를 정할 수 있게 한다
         .setActiveHooks(isBlade ? RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS : RAPIER.ActiveHooks.NONE);
+      if (pose?.rotZ) cd.setRotation(vecQ(new THREE.Quaternion().setFromAxisAngle(Z_AXIS, pose.rotZ)));
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
@@ -454,7 +460,8 @@ export class Fighter {
         () => spec.partMesh?.(pi, isBlade, shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish), o.look, finish) ?? shapeMesh(shape, color ?? 0x888888, weaponMatOpts(spec.material, isBlade, finish)),
         VISUAL_DRAWS_PER_PART,
       );
-      mesh.position.y = y;
+      mesh.position.set(pose?.x ?? 0, y, 0);
+      if (pose?.rotZ) mesh.rotation.z = pose.rotZ;
       mesh.visible = color != null; // 색이 null 이면 물리 파트만 두고 그리지 않는다 (decorate 가 곡도·반달칼 같은 진짜 모양을 그린다)
       group.add(mesh);
       partIdx++;
@@ -669,7 +676,7 @@ export class Fighter {
    */
   shove() {
     const f = this.foe;
-    if (!f || !f.alive || this.muscle < 0.5) return;
+    if (!f || !f.alive || this.revival || f.revival || this.muscle < 0.5) return; // 부활하는 동안엔 밀지도 밀리지도 않는다
     if (this.state !== 'stand' && this.state !== 'kneel') return;
     const d = this.foeDistance();
     if (d > 0.75) return;
@@ -734,6 +741,7 @@ export class Fighter {
     // 일어나는 데 걸리는 시간: 다리가 다칠수록, 피를 흘릴수록 오래
     this.kneelTime = (1.1 / leg) / Math.max(0.5, this.vigor);
     this.riseTime = (0.9 / leg) / Math.max(0.5, this.vigor);
+    if (this.revival) reviveTick(this, dt); // 부활: 쓰러져 누웠다가 정한 때에 일어난다 (revive.js)
     if (this.state === 'stand') {
       this.balance = Math.min(100, this.balance + VITALS.balanceRegen * dt);
       const lostFooting = this.offBalanceTime > BALANCE.fallDelay;
@@ -787,6 +795,7 @@ export class Fighter {
 
   die(cause) {
     if (this.state === 'dead') return;
+    if (tryRevive(this, cause)) return; // 처음 죽음이면 투지로 다시 일어선다 (revive.js)
     this.causeOfDeath = cause;
     this.setState('dead');
   }
@@ -812,7 +821,7 @@ export class Fighter {
    *                     severity(0~), energy(J), local(부위 기준 위치), helmet(bool), plate(bool: 남은 판금이 덮은 곳) }
    */
   applyWound(h) {
-    if (this.state === 'dead') return;
+    if (this.state === 'dead' || this.revival) return; // 부활하는 동안엔 상처를 받지 않는다
     const sev = h.severity;
     const Z = h.zone;
     // 통증과 휘청임 (에너지가 클수록)

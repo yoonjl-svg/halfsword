@@ -26,6 +26,7 @@
 | `node tools/sim/down_diag.mjs [판수] [적 무기id] [초] [방향...] [--v]` | down_ai 와 같은 판에서 왜 못 끝내나: AI 가 보는 거리 분포·AI 단계 분포·휘두를 때 거리와 칼날~몸통 최소 거리·상처 난 순간의 거리·발 디딤. `--downM=닿는,사거리,붙음` 은 실험용(간격 표를 바꿔 끼움) |
 | `node tools/sim/tap_thrust.mjs [stand\|down\|duel\|all] [판수] [무기id] [--seed=첫번호]` | 탭 찌르기(skill.thrust) 검증: 처음 닿은 판정이 찌르기인지, 상처·상처 깊이, 상대 칼에 먼저 막혔는지. 탭 결과 네 갈래(상처 / 칼에 걸렸고 상처 없음 / 몸에만 닿음 / 아무것도 못 닿음), 못 닿은 탭의 까닭(거리 모자람·내딛은 거리 / 옆으로 빗나감), duel 은 탭 연타 판 결과(이김·짐·무)도 |
 | 위 세 도구 공통: `--str=0.85` `--foeStr=1.3` `--emo=off` `--emoP=anger:1` `--emoE=fear:1` | 플레이어·상대 근력, 감정 능력 끄기(게임의 `?emo=0`), 플레이어·상대 감정 고정(감정:세기). `str_emo.mjs` 참고 |
+| `node tools/sim/revive_check.mjs [판수=16]` | 부활(이졸데, `src/revive.js`) 점검: 이졸데 대 주인공 대리(hybrid). 부활은 한 번만, 4초 안에 칼을 쥐고 다시 선다, 부활 중 상처 0, 다시 싸울 때 집념, 두 번째 죽음은 진짜 죽음, NaN 없음. 갈래: 자연·칼 놓침·칼 부러짐·둘 다(강제), 부활 중 주인공 대리 죽음 |
 | `node tools/sim/ai_thrust_pref.mjs [판수] [무기id...]` | AI가 찌르기 무기로 찌르기 기술을 더 고르는지 (고른 기술 비율, 찌르기 판정 수) |
 | `node tools/sim/with_config.mjs STRIKE.thrustAssist=2.5 <스크립트> [인자...]` | 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 (`true`/`false`는 불리언: `WHOLE.on=false`) |
 | `node tools/sim/with_weapon.mjs estoc characters_eval.mjs both 3` | 모든 캐릭터에게 같은 무기를 쥐여 주고 다른 시뮬 스크립트를 돌린다 (근력·성격은 그대로, 브란의 대체 무기는 끔) |
@@ -61,4 +62,5 @@
 | `node tools/browser/smoke.mjs http://127.0.0.1:5173` | 한 판 시작 → 무기 카드 한 장 고르기 → 싸움 8초 진행 → 콘솔 에러 0 확인 (싸움이 실제로 흐르지 않았거나 에러가 있으면 종료 코드 1) |
 | `node tools/browser/armor_check.mjs http://127.0.0.1:5173 margarethe castle 4 [폴더]` | 방어구 점검: 판을 여러 번 열며(일시정지 → 처음부터 다시, 카드 뽑기) 실제 `combat.strike` 로 투구·판금을 깨 보고, 콘솔 에러 0 · 판마다 장면 물체·모양 수 · 흩어진 조각(부러진 칼날 끝과 방어구 조각, `src/debris.js`)이 판 시작마다 0 이고 새 판·배경 바꾸기·판 끝 메뉴 뒤에서 둘 다 치워지는지, 부러진 칼(토막 날)로 판금을 쳐도 소리가 판정대로인지, 타격마다 판금·투구 소리가 판정대로인지(막음 → `plateBlock`, 뚫림 → 갑옷 쇳소리, 완전 파손 → `plateBreak` 한 번) 본다. 내 카드 두 장 가운데 날 선 무기를 고른다. 견갑 멀쩡/부서지는 순간/부서진 뒤 스크린샷, 배경이 `darkhall` 이면 캐릭터 조명을 받은 판금 스크린샷도 |
 | `node tools/browser/touch_thrust.mjs http://127.0.0.1:5173` · `mouse_thrust.mjs` | 탭·클릭 찌르기 입력 시험. 무기 카드 뽑기는 `?weapon=longsword` 로 건너뛴다 (시험용 주소: 뽑기 없이 그 무기로 바로 싸움) |
+| `node tools/browser/revive_shots.mjs http://127.0.0.1:5173 <출력 폴더> [castle,cathedral,darkhall,clearing,castle_px,defeat]` | 부활 연출 연속 사진(844×390, 가짜 시계로 한 프레임씩): 쓰러짐·빛이 내려옴·알림·일어섬(+옆에서)·빛이 사라짐·다시 싸움·결과. 콘솔 에러 0, 연출 물체·빛이 남지 않는지(장면 자식 수), 두 번째 죽음 → 승리, `defeat` = 부활 중 주인공 죽음 → 패배 |
 | `node tools/browser/weapon_thumbs.mjs http://127.0.0.1:5173 [무기id...]` | 무기 뽑기 카드의 작은 그림을 만든다: 게임 속 무기 모델(`src/weapons.js`)을 대각선으로 눕혀 찍어 `public/ui/weapons/<id>.webp` (256×256, 투명 배경)로 저장. 무기 겉모습을 바꾸거나 무기를 새로 넣으면 다시 돌린다. 찍는 페이지 `tools/browser/weapon_thumbs.html` 을 브라우저로 열면 결과를 눈으로 볼 수 있다 |
