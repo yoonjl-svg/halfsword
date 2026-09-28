@@ -35,14 +35,45 @@ export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', 
 // 0.4/0.8/0.85/0.95/1.0)가 다르다. 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급 기본값을 받는다.
 // power는 combat.js가 실제로 에너지에 곱한다. durability는 계약 수치이고 실제 파손 확률은 아래 TIER_FRAGILITY 표가 정한다.
 // 부서지는 연출·그 뒤 흐름(맨손·주운 무기)은 감독이 붙인다.
-export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend'];
+export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend', 'mystery'];
 export const TIER_DEFAULTS = {
   trash: { power: 0.7, durability: 0.4 },
   common: { power: 1.0, durability: 0.8 },
   rare: { power: 1.05, durability: 0.85 },
   epic: { power: 1.1, durability: 0.95 },
   legend: { power: 1.2, durability: 1.0 },
+  // ??? (사장님 결정): 엉뚱한 무기를 모아 등장만 드물게 한다. 계수·파손·겉면 마감은 모두 커먼과 똑같다 (싸움 판정은 커먼 그대로)
+  mystery: { power: 1.0, durability: 0.8 },
 };
+/** 카드에 쓰는 등급 이름 (main.js TIER_KO 대신 이것을 쓰면 ??? 도 나온다) */
+export const TIER_LABEL = { trash: '쓰레기', common: '커먼', rare: '레어', epic: '에픽', legend: '레전드', mystery: '???' };
+
+// ── 무기 카드 뽑기 확률 (사장님 결정): 등급을 먼저 뽑고, 그 등급 안에서 무기를 고르게 뽑는다 ──
+//  카드 한 장마다의 등급 확률(%). 무기가 늘거나 줄어도 등급 확률은 그대로다. ??? 는 등급 전체가 5%.
+export const TIER_DRAW = { common: 40, rare: 27, epic: 16, legend: 5, trash: 7, mystery: 5 };
+/**
+ * 서로 다른 무기 n장을 뽑는다. pool: 뽑을 수 있는 무기 id 목록, exclude: 되도록 빼는 id(지난 판 무기).
+ *  빈 등급(뽑을 무기가 없는 등급)은 건너뛰고 남은 등급끼리 비율을 다시 맞춘다. rnd: 0~1 난수 (기본 Math.random)
+ */
+export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random } = {}) {
+  let left = pool.filter((id) => id !== exclude);
+  if (left.length < n) left = [...pool];
+  const out = [];
+  while (out.length < n && left.length) {
+    const byTier = {};
+    for (const id of left) (byTier[getWeapon(id).tier] ||= []).push(id);
+    const tiers = Object.keys(byTier).filter((t) => (TIER_DRAW[t] ?? 0) > 0);
+    const total = tiers.reduce((a, t) => a + TIER_DRAW[t], 0);
+    let r = rnd() * total;
+    let t = tiers[tiers.length - 1];
+    for (const k of tiers) if ((r -= TIER_DRAW[k]) < 0) { t = k; break; }
+    const ids = byTier[t] ?? left;
+    const id = ids[Math.floor(rnd() * ids.length)];
+    out.push(id);
+    left = left.filter((x) => x !== id);
+  }
+  return out;
+}
 
 // ── 파손 판정 규칙: 확률식 (감독 지시 — "예산을 넘으면 부러진다"는 너무 필연적이라 버렸다) ──
 //  무기가 "칼끼리 세게 부딪힌 충격"이나 "투구·뼈를 치고 되튄 충격"(combat.js → fighter.absorbWeaponImpact, 충격량 J N·s)을
@@ -71,7 +102,7 @@ export const BREAK = {
 };
 // 감독 지시(2차): 실제 승패 판(평균 17초)에서는 60초 경합보다 훨씬 덜 부러지니 표 전체를 2배로 올린다.
 //  (60초 경합 기준 맞춤값의 2배: trash 0.20→0.40, common 0.028→0.056, rare 0.016→0.032, epic 0.0052→0.0104)
-export const TIER_FRAGILITY = { trash: 0.4, common: 0.056, rare: 0.032, epic: 0.0104, legend: 0 };
+export const TIER_FRAGILITY = { trash: 0.4, common: 0.056, rare: 0.032, epic: 0.0104, legend: 0, mystery: 0.056 }; // ??? = 커먼과 같다
 // 재질: 플라스마 칼날만 부러질 것이 없다. 고무 닭은 감독 지시로 쓰레기와 똑같이 부서지고(등급표 그대로), 참치는 안 부서진다(fragility 0).
 export const MATERIAL_TOUGHNESS = { steel: 1, wood: 1, frozen: 1, rubber: 1, plasma: Infinity };
 /** fragility·재질의 무기가 충격량 J(N·s)짜리 충돌 한 번에 부러질 확률 (0~1) */
@@ -917,6 +948,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
   // mBlunt 2.2 → 2.8 (10라운드: hybrid 롱소드 상대 192판 12% → 17%, 모든 무기 목표 15~85%. 스펙 조정은 최소로)
+  tier: 'mystery', // 사장님 결정: ??? 등급 (계수는 커먼 그대로, 카드에 드물게 나온다 — 등급 전체 5%)
   edged: false, mBlunt: 2.8, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
