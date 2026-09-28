@@ -21,6 +21,8 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       heinrich_ko1.mp3    <- 2yell1.wav        heinrich_ko2.mp3 <- 2yell10.wav
       heinrich_bleed1.mp3 <- 2yell6.wav
       liao_bleed1.mp3     <- yell6.wav         liao_bleed2.mp3  <- 2yell9.wav
+      generic_bleed2.mp3  <- yell8.wav         heinrich_bleed2.mp3 <- 2yell8.wav
+    (the pack page lists both OGA-BY 3.0 and CC0; we use it under CC0)
 
   CC-BY 3.0 — Michel Baradari, "11 male human pain/death sounds"
     https://opengameart.org/content/11-male-human-paindeath-sounds
@@ -28,16 +30,11 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       bran_ko1.mp3 <- die1.wav   bran_ko2.mp3 <- deathh.wav   bran_bleed1.mp3 <- die2.wav
       liao_ko1.mp3 <- painh.wav
 
-  CC-BY-SA 4.0 — VoiceBosch, "DEATH SOUNDS (Male) - Audio Pack"
-    https://opengameart.org/content/death-sounds-male-audio-pack
-    https://creativecommons.org/licenses/by-sa/4.0/
-    (These three edited files are themselves shared under CC-BY-SA 4.0.)
-      generic_bleed2.mp3  <- 09. Death Groan (Male).wav
-      bran_bleed2.mp3     <- 06. Death Groan (Male).wav
-      heinrich_bleed2.mp3 <- 02. Death Groan (Male).wav
-
   CC0 (public domain) — Freesound (https://freesound.org), preview MP3s, cut, high-passed
   at 70 Hz, peak-normalized to -1 dBFS, not pitch-shifted:
+      bran_bleed2.mp3       <- kanyonwyvern, "Male Groan in Exhaustion"
+                               https://freesound.org/people/kanyonwyvern/sounds/736662/
+                               (level lowered ~5 dB to match the file it replaced)
       margarethe_ko1.mp3    <- hisoul, "Zisa, Relief, Moan, Tired, Exhale_2.wav"
       margarethe_bleed1.mp3    (the same clip in both files)
                                https://freesound.org/people/hisoul/sounds/520276/
@@ -46,7 +43,10 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       isolde_bleed1.mp3     <- mvVoiceActing, "girl damage" (7.8-8.9 s)
                                https://freesound.org/people/mvVoiceActing/sounds/855460/
 
-Thank you, HaelDB, Michel Baradari, VoiceBosch, hisoul and mvVoiceActing!
+Thank you, HaelDB, Michel Baradari, kanyonwyvern, hisoul and mvVoiceActing!
+
+(generic_bleed2 and heinrich_bleed2 were raised ~2 dB with a soft limiter to match the
+files they replaced: VoiceBosch CC-BY-SA 4.0 groans, removed on 2026-09-28.)
 
 -------------------------------------------------------------------------------
 step/ and hit/  — CC0 (public domain), Kenney (www.kenney.nl), fetched from the

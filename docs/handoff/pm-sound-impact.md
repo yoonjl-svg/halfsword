@@ -350,3 +350,29 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - `pick:false`는 두 장이 함께 뒤집히던 때의 "촥촥"(30ms 어긋난 두 번)이었다. 이제 한 장이라 "촥" 한 번으로 줄였다.
   - 오프라인 렌더로 소리 덩어리가 1개인 것을 확인했다. 고른 카드 소리는 그대로다.
 - 주석과 `sounds.html` "카드 뒤집기" 줄 설명을 바꿨다. main.js 변경은 없다.
+
+## 17차: VoiceBosch(CC-BY-SA 4.0) 남성 신음 3개를 CC0로 교체 (디렉터 지시, 사장님 승인)
+
+- 까닭:
+  - CC-BY-SA는 고친 파일도 같은 조건으로 공개해야 한다.
+  - 나중에 게임을 팔거나 스토어에 올리거나 저장소를 비공개로 돌릴 때, 이 조건이 어디까지 번지는지 해석이 갈린다.
+  - 사장님은 "다 괜찮다"며 사유를 물으셨다. 설명드리자 "너의 제안에 따를게"라고 하셨고, 권한 A안으로 바꿨다.
+- 비교: 출혈사 장면을 지금 → A → B 순서로 녹음해 들려드렸다. 크기는 지금 파일에 맞췄다.
+
+| 파일 | 전 (VoiceBosch, CC-BY-SA 4.0) | 후 (A안) | 라이선스 |
+|---|---|---|---|
+| `voice/generic_bleed2.mp3` | 09. Death Groan (Male) | HaelDB `yell8.wav`: generic이 이미 쓰는 같은 배우의 낮은 신음 | CC0 |
+| `voice/bran_bleed2.mp3` | 06. Death Groan (Male) | kanyonwyvern "Male Groan in Exhaustion" — freesound.org/people/kanyonwyvern/sounds/736662/ | CC0 |
+| `voice/heinrich_bleed2.mp3` | 02. Death Groan (Male) | HaelDB `2yell8.wav`: 하인리히가 이미 쓰는 같은 배우 | CC0 |
+
+- HaelDB 묶음 페이지에는 OGA-BY 3.0과 CC0가 함께 적혀 있다. 우리는 CC0로 쓴다.
+- 들려드린 크기를 파일에 구웠다.
+  - 브란은 약 5dB 낮췄다.
+  - generic·하인리히는 약 2dB 올리고 부드러운 리미터로 피크를 -1dBFS 아래로 눌렀다.
+  - 게임 엔진으로 목소리만 그려 보면 새 파일은 들려드린 A와 0.7dB 안으로 같다.
+- 코드: `VOICES`의 주석만 바꿨다. 파일 수와 이름이 같아서 `rec`는 그대로다.
+- `LICENSE.txt`에서 VoiceBosch 항목을 지웠다. 이제 음원 라이선스는 CC0와 CC-BY 3.0(Baradari 4개)뿐이다.
+- 렌더 도구 주의:
+  - vite가 파일 변경으로 sound.js를 다시 불러오면 sounds.html은 `sound.js?t=…`라는 새 모듈을 쓴다.
+  - 그래서 `import('/src/sound.js')`로 VOICES를 고치면 다른 모듈을 고치게 된다.
+  - `performance.getEntriesByType('resource')`에서 실제 주소를 찾아 import한다.
