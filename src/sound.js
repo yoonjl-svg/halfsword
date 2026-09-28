@@ -1052,77 +1052,6 @@ export const SYNTH = {
   },
 
   /**
-   * 이졸데의 부활 (사장님 요청: 하늘에서 성스러운 빛이 홀리한 효과음과 함께 비추고 다시 일어선다 — WoW 부활·신성한 빛처럼).
-   * 4.2초 한 벌, 연출에 맞춘 순서: 빛이 내려오는 0~0.4초에 위로 쓸려 올라가는 반짝임(높은 종소리 열둘과 빛 바람),
-   * 0.4초에 부드러운 종 하나(비조화 배음, 2초 여운), 합창 패드(열린 화음 다섯 음을 세 겹씩 어긋나게, "아" 공명)가 0.5초에 걸쳐 부풀어
-   * 일어서는 동안 머물다 2.4초부터 1.2초에 걸쳐 가라앉는다. 2.4초(선 순간)에 한 옥타브 위 작은 종. 게임이 적막한 결투라 과하지 않게 —
-   * 화음은 움직이지 않고(멜로디 없음) 밝기는 1.6kHz에서 닫는다
-   */
-  holy(sr, r) {
-    const n = Math.round(4.2 * sr);
-    const out = new Float32Array(n);
-    // 합창 패드
-    const notes = [146.83, 220, 293.66, 369.99, 440]; // D3 A3 D4 F#4 A4
-    const pad = new Float32Array(n);
-    for (const f of notes) {
-      for (const k of [-1, 0, 1]) {
-        const det = 1 + k * between(r, 0.003, 0.005);
-        let ph = r() * TAU;
-        const vib = between(r, 4.6, 5.6);
-        const vph = r() * TAU;
-        const amp = (f < 200 ? 0.5 : f < 300 ? 0.8 : 1) / 15;
-        let step = 0;
-        for (let i = 0; i < n; i++) {
-          const t = i / sr;
-          const env = t < 0.5 ? (1 - Math.cos((Math.PI * t) / 0.5)) / 2 : t < 2.4 ? 1 : Math.exp(-(t - 2.4) / 0.45);
-          if (i % 32 === 0) step = (TAU * f * det * (1 + 0.003 * Math.sin(TAU * vib * t + vph))) / sr; // 비브라토는 32샘플마다 (일꾼 시간 절약)
-          ph += step;
-          pad[i] += amp * env * (Math.sin(ph) + 0.3 * Math.sin(2 * ph)); // (3배음은 1.6kHz 필터에 거의 잘려 뺐다)
-        }
-      }
-    }
-    const f1 = new Filt('bandpass', 800, 0.9, sr); // "아" 공명
-    const f2 = new Filt('lowpass', 1600, 0.7, sr);
-    for (let i = 0; i < n; i++) out[i] += 0.55 * f2.run(pad[i] + 0.8 * f1.run(pad[i]));
-    // 빛 바람: 위로 쓸려 올라가는 잡음 (아주 작게)
-    const bw = new Filt('bandpass', 1500, 2.5, sr);
-    for (let i = 0; i < Math.round(0.6 * sr); i++) {
-      const t = i / sr;
-      if (i % 64 === 0) bw.set(1500 * Math.pow(4, t / 0.6), 2.5);
-      const env = Math.sin(Math.PI * t / 0.6) ** 2;
-      out[i] += 0.05 * env * bw.run(r() * 2 - 1);
-    }
-    // 반짝임: 배음열 위를 오르는 짧은 종소리 열둘 (0~1.2초)
-    for (let j = 0; j < 12; j++) {
-      const t0 = 0.05 + j * 0.09 + r() * 0.03;
-      const f = 1760 * Math.pow(2, (j * 2 + (r() < 0.5 ? 0 : 1)) / 12) * (1 + (r() - 0.5) * 0.006);
-      const d = between(r, 0.35, 0.7);
-      let ph = r() * TAU;
-      const n0 = Math.round(t0 * sr);
-      for (let i = 0; i < Math.round(d * 1.2 * sr) && n0 + i < n; i++) {
-        const t = i / sr;
-        ph += (TAU * f) / sr;
-        out[n0 + i] += 0.035 * Math.min(1, t / 0.004) * Math.exp(-t / (d * 0.3)) * Math.sin(ph);
-      }
-    }
-    // 종 둘: 0.4초에 부드러운 종, 2.4초(선 순간)에 한 옥타브 위 작은 종
-    const bell = (t0, f0, amp, dur) => {
-      const n0 = Math.round(t0 * sr);
-      for (const [ratio, a, dk] of [[1, 1, 1], [2.4, 0.45, 0.6], [4.1, 0.2, 0.35], [1.003, 0.5, 1]]) {
-        let ph = r() * TAU;
-        for (let i = 0; n0 + i < n && i < Math.round(dur * 1.5 * sr); i++) {
-          const t = i / sr;
-          ph += (TAU * f0 * ratio) / sr;
-          out[n0 + i] += amp * a * Math.min(1, t / 0.003) * Math.exp(-t / (dur * dk * 0.35)) * Math.sin(ph);
-        }
-      }
-    };
-    bell(0.4, 1174.7, 0.11, 2.0); // D6
-    bell(2.4, 2349.3, 0.06, 1.4); // D7
-    return fadeOut(normalize(out, 0.9), sr, 0.15);
-  },
-
-  /**
    * 울림(잔향)용 충격 응답: 벽에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오).
    * 기본값은 경기장. 배경마다 다른 방(STAGE_SOUND.room): dur 길이(초), rt 꼬리가 60dB 줄어드는 시간,
    * e0·e1 초기 반사가 오는 때(벽까지 거리), lp 꼬리의 처음 밝기(Hz)
@@ -1475,7 +1404,6 @@ const BANK = [
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
   ['rainLoop', 1, SYNTH.rainLoop], // 화전 터
-  ['holy', 1, SYNTH.holy], // 이졸데 부활 (성 안뜰)
   ['dove', 2, SYNTH.dove], // 대성당
   ['wings', 2, SYNTH.wings], // 대성당 비둘기·홀 박쥐
   ['debris', 2, SYNTH.debris], // 대성당
@@ -1512,6 +1440,7 @@ const SAMPLES = {
   stepSnow: nums('step/snow', 8), // 성 안뜰 다져진 눈 "뽀득" (Kenney footstep_carpet + footstep_snow)
   stepStone: nums('step/stone', 8), // 대성당·홀 판석 "턱" (Kenney footstep_carpet + footstep_concrete), 또각이지 않게 낮추고 위를 닫음
   stepMud: nums('step/mud', 8), // 화전 터의 젖은 재·흙 "저벅" (Kenney footstep_carpet 뒤꿈치 + BenDrain 진흙, 저음 웅웅거림은 깎음)
+  chant: ['stage/chant1'], // 이졸데 부활: 짧은 그레고리안 성가 한 구절 (녹음, 사장님 요청)
   crow: nums('stage/crow', 3), // 화전 터 먼 까마귀 "까악" (Freesound CC0 셋, 멀리 들리게 위를 닫음)
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
@@ -2215,14 +2144,15 @@ export class Sound {
 
   /**
    * 부활 (이졸데, 사장님 요청): 하늘에서 성스러운 빛이 내려와 비추고 다시 일어선다. 빛이 내려오기 시작할 때 main.js 가 한 번 부른다(디렉터가 연결).
-   * 성스러운 효과음 한 벌(SYNTH.holy, 4.2초: 올라가는 반짝임 → 종 → 합창 패드 → 선 순간 작은 종)에, 일어서는 0.9초쯤 그 캐릭터의 짧은
-   * 숨 들이켬(rec.revive, 있으면)을 곁들인다. 기합은 없다. 적막한 결투라 칼 부딪힘보다 작게 낸다. 화면 소리에 가까워 좌우 위치 없음
+   * 소리는 짧은 그레고리안 성가 한 구절(녹음 stage/chant1, 약 4초. 사장님: 반짝임·종·합창 패드 합성은 마음에 안 든다 → 성가 느낌으로)에,
+   * 일어서는 0.9초쯤 그 캐릭터의 짧은 숨 들이켬(rec.revive, 있으면)을 곁들인다. 기합은 없다. 적막한 결투라 칼 부딪힘보다 작게 낸다. 좌우 위치 없음
    */
   revive(voice, { breath = true } = {}) {
     if (!this._on || !this.ctx) return;
     const id = voice in VOICES ? voice : 'generic';
-    const ev = this.event({ bus: this.fleshBus, gain: 0.25, prio: 3 }); // 4초 평균이 칼 부딪힘 평균보다 3dB 아래 (튀지 않게)
-    this.layer(ev, this.pick('holy'), { rate: between(Math.random, 0.99, 1.01) });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.32, prio: 3 });
+    const chant = this.pickSample('chant');
+    if (chant) this.layer(ev, chant, { rate: between(Math.random, 0.995, 1.005) });
     const rec = breath ? this.pickSample(`voice:${id}:revive`) : null;
     if (rec) {
       const R = VOICES[id].rec || {};
