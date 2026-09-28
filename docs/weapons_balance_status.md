@@ -15,6 +15,18 @@
 - 재는 도구: `tools/sim/weapon_league.mjs` (새). 무기 14종을 서로 다 붙인다(91짝, 짝마다 96판, hybrid). 두 쪽 다 주인공 대리가 쥐어 캐릭터 성격을 뺀다.
 - 롱소드 상대 폭(짧은 칼 35~55 등)은 참고로만 적는다.
 
+## 권총 한 손 사격 자세 (디렉터 13:37, 사장님 "사격 자세가 필요하다") — 사장님 확인 대기
+- 겨눌 때: 총 든 팔을 어깨 높이로 곧게 뻗어 총구가 상대 가슴을 향한다. 몸은 반쯤 옆으로(가슴 −35°, 골반 −21°), 다른 손은 몸 쪽. 걷기는 자유.
+- 장전(4초) 중: 쏜 직후 0.25초에 걸쳐 총을 가슴 앞으로 세워 올리고, 끝나기 0.6초 전부터 다시 겨눈다.
+- 코드: 새 코드는 모두 `gun.js` 의 `gunPose(f, pose)` (skill.thrustPose 덧씌우기) · `aimErr(f)`. skill.js 는 두 줄만:
+  - 전: `if (!autoAim) return gunCanFire(f, { now: true }); … step = false;` (AI 는 찌르며 겨눔) → 후: `if (f.weapon?.gun) return gunCanFire(f, { now: true });` (사람·AI 모두 자세의 총신 방향으로 바로 쏜다)
+  - 전: `}` → 후: `} else if (this.f.weapon?.gun) this.thrustPose.w = gunPose(this.f, this.thrustPose);`
+- AI: 겨눈 지 1.5초 뒤(`aiFirst`), 총신이 가슴에서 12° 안(`aiAimTol`)일 때만 쏜다.
+- 칼 싸움 불변: fights12 · hybrid fights12 · live_battery 모두 전과 바이트 동일. weapon_smoke 는 권총 줄만 달라짐.
+- 권총 수치 (전 → 후): ability_test 권총 12판 승률 100%(12-0, 명중 40/40) → **83%(10-2, 35/37)**. gun_dummy 세기 표 그대로. 반동 약 27°(팔을 뻗어 커짐). 가만히 겨눌 때 총신은 가슴에서 평균 약 10°(대개 아래로 5°) 벗어남. AI 명중: 랴오·이졸데 12/12, 브란(가만한 상대) 4/12.
+- 스크린샷: `docs/handoff/pistol_pose_v1.jpg` (겨눔·장전, 기본 카메라 844×390 + 옆), 콘솔 에러 0.
+- 여쭐 것: 자세 이름 표시 — 숨김 / "사격 자세" (표시 코드는 main.js, 디렉터 몫).
+
 ## 권총 (??? 등급, 사장님 — "재미 삼아 최소 비용으로")
 | 항목 | 내용 |
 |---|---|
