@@ -176,6 +176,7 @@ resize();
 const particles = new Particles(scene);
 const sound = new Sound();
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
+sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
 const input = new Input(canvas);
 const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
