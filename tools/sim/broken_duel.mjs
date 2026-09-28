@@ -3,16 +3,19 @@
 //   intact : 안 부러뜨린다 (기준)
 //   blunt  : 예전 파손 — 날만 죽고 길이는 그대로 (breakWeapon 을 weaponBroken = true 한 줄로 바꿔치기)
 //   short  : 지금 파손 — 칼날 끝쪽 절반이 떨어져 나가 짧은 둔기가 된다
+//   stub   : short 에 BREAK.stubEdge 를 켠다 — 짧아진 토막 날로 약하게 베고 찌른다
 //  자리를 바꿔 가며 붙인다 (시드 1000+s = X 가 player, 2000+s = enemy). 승률은 윌슨 95% 구간과 함께.
 //   node tools/sim/hybrid.mjs broken_duel.mjs <자리마다 판 수> <cond> <무기id...>
 import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { Fighter } from '../../src/fighter.js';
 import { wilson } from './ref_duel.mjs';
+import { BREAK } from '../../src/weapons.js';
 
 const [nArg, cond, ...ids] = process.argv.slice(2);
 const N = +nArg || 24;
 const SECONDS = 60;
+if (cond === 'stub') BREAK.stubEdge = true;
 if (cond === 'blunt') Fighter.prototype.breakWeapon = function () { this.weaponBroken = true; };
 
 for (const id of ids) {
