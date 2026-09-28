@@ -1,5 +1,7 @@
 # 사운드 PM 인수인계 — 몸 소리·죽음 목소리 (claude/pm-sound-impact)
 
+> **지금 상태와 다음 할 일은 [`sound_pm_handoff.md`](sound_pm_handoff.md)를 먼저 읽는다.** 이 문서는 차수별 변경 기록이다(앞부분의 합치기·바뀐 파일은 옛 브랜치 기준).
+
 ## 합치기
 
 - 브랜치 `claude/pm-sound-impact`는 `claude/first-game-development-2q36ha`의 `5c82cae` 위에 쌓였다.
