@@ -774,3 +774,13 @@ AI 대결 승률은 밸런스 참고용일 뿐이라(감독) 브란의 낮은 �
 - **확인 도구**: `node tools/sim/revive_check.mjs [판 수]` (이졸데 대 주인공 대리, hybrid, 자연·칼 놓침·칼 부러짐·둘 다, 부활 중 주인공 죽음),
   `node tools/browser/revive_shots.mjs <주소> <출력 폴더> [castle,cathedral,darkhall,clearing,castle_px,defeat]` (844×390 연속 사진 · 콘솔 에러 · 장면 정리).
   시뮬 하니스 `harness_m.mjs` 는 `opts.revive`(enemy) · `opts.revive2`(player) 로 받고, `characters_eval`·`ref_duel`·`duel_pair`·`pair_sweep` 가 캐릭터의 `revive` 를 넘긴다.
+
+## 광기의 하인리히 도른 — 밤의 포세이돈 변형 (사장 요청, 디렉터 14:08)
+
+- **시트**: `src/characters.js` `CHARACTER_VARIANTS`에 `heinrich_mad` — 하인리히 시트를 복사(ai·lines 깊은 복사, look·lookVersion은 같은 참조)하고
+  이름 '광기의 하인리히 도른', 별칭 제안 '검에 먹힌 자', 서사·기질 문장, `eyes: 'madGlow'`(외형 담당과 맞출 표식), 시작 감정 집념 1.0만 다르다.
+  `CHARACTERS`(다섯)는 그대로라 `randomCharacter`·시뮬 라운드로빈에 안 들어가고, `CHARACTERS_BY_ID`에만 합쳐진다 → `?foe=heinrich_mad`와
+  `STAGE_FOE.poseidon_night = 'heinrich_mad'`(디렉터)로 나온다.
+- **확정 전(제안만, 설정집 §4b)**: 별칭 · 등장/승리 대사 3종씩 · 공포 면역 · 반응 .18/막기 .72/힘 1.20/정확도 .95/실력 .90. 게임에는 아직 낮의 대사·수치.
+- **회귀**: fights12 HEAD = origin/main(59260d9 위 새 기준) 바이트 동일. 라운드로빈에 `heinrich_mad` 없음(확인).
+- 밤의 포세이돈 자리 대사(스테이지 사이 힌트 — 이졸데 "그 사람은 그렇게 쉽게 죽지 않는다")는 여정 대사 시스템 결정 뒤.
