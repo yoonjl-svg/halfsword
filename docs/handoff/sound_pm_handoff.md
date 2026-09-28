@@ -72,8 +72,8 @@
 |---|---|
 | player, generic, bran, heinrich | 녹음 (HaelDB CC0, Baradari CC-BY 3.0, VoiceBosch CC-BY-SA 4.0) |
 | liao | 녹음 (HaelDB, 짧은 신음·낮은 신음) |
-| isolde | 합성 숨소리 'gasp' |
-| margarethe (슈바르츠) | **목소리 없음** (`mute: true`). 몸이 땅에 닿을 때 무거운 "쿵"을 꼭 한 번 낸다(1.2초 안에 안 닿으면 그때). **알맞은 녹음을 찾는 것이 남은 숙제다.** |
+| isolde | 녹음 (mvVoiceActing "girl damage" CC0: 짧게 맞는 소리 두 개, `gain: 1.3`). 사장님이 후보 3개 중 고름(15차) |
+| margarethe (슈바르츠) | 녹음 (Reitanna CC0: 목소리 섞인 "헉" / 긴 한숨). 사장님이 이졸데 후보였던 것을 슈바르츠에 고름(15차). `mute`는 기능만 남고 쓰는 캐릭터가 없다 |
 
 ### 배경(스테이지) — `STAGE_SOUND` 표 + `setStage(id)`
 - 스테이지는 **고정 순서**로 돈다: 포세이돈 → 성 안뜰 → 산사 → 대성당 → 다시 포세이돈 (사장님 결정).
@@ -128,19 +128,11 @@
 
 ## 5. 남은 일 (우선순위 순)
 
-1. **네트워크 확인**:
-   - 오너가 환경 기본값에 opengameart.org, kenney.nl, freesound.org, cdn.freesound.org, archive.org를 허용했다.
-   - 새 세션에서 `curl -sS -o /dev/null -w "%{http_code}" https://freesound.org/`로 확인한다.
-   - 이전 세션에서는 모두 000(차단)이었다. 설정은 세션 시작 때 적용되는 것으로 보인다.
-   - 된다면 freesound는 API 키 없이도 미리듣기 mp3(`cdn.freesound.org/previews/...`)를 받을 수 있는지 확인한다. 라이선스가 CC0인 것만 쓴다.
-2. **슈바르츠(margarethe) 죽음 목소리**:
-   - 차분한 노장 여검사다(characters.js·docs/characters.md 참고). 비명이 아니라 낮은 한숨, 신음, "하아…" 같은 **실제 녹음**(CC0)을 찾는다. 음을 낮추거나 늘리는 가공은 최소로 한다.
-   - 후보 2~4개를 게임 장면(투구 타격 → 목소리 → 쓰러짐)으로 녹음해 오너에게 들려준다.
-   - 고르면 `public/sfx/voice/margarethe_ko1.mp3`·`margarethe_bleed1.mp3` 식으로 넣고, `VOICES.margarethe`의 `mute`를 지우고 `rec: { ko, bleed }`를 준다. `LICENSE.txt`에도 적는다.
-   - 참고로 이전에 쓰다 뺀 CC0 여성 비명 녹음들(tcrocker68 235592/235595, pushkin 241591, Archeos 261419)은 음을 낮추면 괴수처럼 들려서 탈락했다.
-3. **이졸데(isolde)**: 지금은 합성 숨소리다. 녹음을 찾으면 더 자연스러워질 수 있다. 21살 차분한 검사이고, 비명은 어울리지 않았다.
-4. **판금 소리 연결**: 디렉터가 갑옷 병합을 끝내면 알려 준다. `plateBlock`·`plateBreak`는 이미 있다. 연결 뒤 실제 게임으로 확인한다.
-5. (선택) 녹음을 구할 수 있으면 산새·말 울음·비둘기도 합성보다 나은지 비교해 본다. 지금은 모두 합성이다.
+1. ~~네트워크 확인~~, ~~슈바르츠·이졸데 죽음 목소리~~: 15차에서 끝냈다. 사이트 접속 결과는 `sound_pm_takeover.md`.
+2. **VoiceBosch(CC-BY-SA) 남성 신음 3개 교체**: 후보(전 → A → B)를 사장님께 들려드렸고 답을 기다린다(15차).
+3. **판금 소리 연결**: 디렉터가 갑옷 병합을 끝내면 알려 준다. `plateBlock`·`plateBreak`는 이미 있다. 연결 뒤 실제 게임으로 확인한다.
+4. (보류, 디렉터 결정) 산새·말 울음·비둘기 녹음 비교. 말 소리는 사장님이 뺀 적이 있다.
+5. (디렉터가 사장님께 여쭘) 피격 신음·기합, 숨소리, 무기 떨어뜨리는 소리, 관중 함성.
 
 ## 6. 작업 도구와 방법
 

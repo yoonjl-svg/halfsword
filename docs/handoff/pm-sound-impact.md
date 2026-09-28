@@ -294,3 +294,47 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - 확인:
   - 실제 게임에서 6번 뽑았다. 매번 고른 카드와 나머지 두 장 소리가 다 났다. 탭에서 소리 호출까지 1ms 아래였고, 오디오 문맥은 running이었다.
   - 콘솔 에러 0. 시뮬 3종은 main과 바이트 동일하다.
+
+## 15차: 슈바르츠·이졸데 죽음 목소리 녹음 (사이트 연결 환경, 사장님 선택)
+
+- 새 환경에서 Freesound·OpenGameArt에 접속되어 CC0 녹음을 직접 찾았다(접속 표는 `sound_pm_takeover.md`).
+- 찾은 방법:
+  - Freesound CC0 거르기 검색 40여 개(한숨·신음·헉·죽음 등)로 여성 목소리 약 800개를 모았다.
+  - 제목으로 71개를 추리고, 목소리 높이(YIN)·유성음 비율·2~8kHz 쉿 비중·잡음 바닥을 쟀다. 스펙트로그램도 눈으로 봤다.
+  - 슈바르츠는 190~250Hz의 낮은 한숨·신음, 이졸데는 비명기 없는 짧은 "헉"·숨을 골랐다.
+- 후보를 게임 엔진(`lab.render`)으로 장면째 그려서 들려드렸다.
+  - 장면: 발소리 → 투구 타격 → 목소리 → 쓰러짐, 그리고 베기 → 목소리 → 쓰러짐.
+  - 슈바르츠는 "지금(목소리 없음)", 이졸데는 "지금(합성 숨)"을 함께 비교했다.
+  - 후보끼리 목소리 크기를 맞추고 +4dB 올렸다.
+- **사장님 선택**:
+  - 슈바르츠 ← 이졸데 후보 2번(Reitanna: 목소리 섞인 "헉" / 긴 한숨).
+  - 이졸데 ← 이졸데 후보 3번(mvVoiceActing "girl damage": 짧게 맞는 소리 두 개).
+  - 슈바르츠 전용 후보 4개(Reitanna 한숨·신음, craigsmith 신음, hisoul 날숨, filmbetrachterin "아아…")는 고르지 않았다.
+- 코드:
+  - `VOICES.margarethe`: `mute`를 지우고 `rec: { ko: 1, bleed: 1 }`.
+    - 이제 죽을 때 목소리가 나고, 쓰러짐은 다른 캐릭터처럼 떨어진 속도대로 난다.
+    - `mute` 기능은 남겨 두었지만 쓰는 캐릭터는 없다.
+  - `VOICES.isolde`: `rec: { ko: 1, bleed: 1, gain: 1.3 }`. 들려드린 크기 그대로이고, 합성 숨은 녹음을 못 읽을 때만 쓴다.
+  - `sounds.html`의 "죽음: 이졸데 / 마르그레테" 줄 설명을 바꿨다.
+  - main.js 변경은 없다.
+- 가공: 잘라 내기, 70Hz 고역 통과, 피크 -1dBFS, 모노 mp3. **음은 낮추지 않았다.** 추가 용량은 4개 36KB로, `public/sfx`는 이제 548KB다.
+
+| 파일 | 출처 | 라이선스 |
+|---|---|---|
+| `voice/margarethe_ko1.mp3` | Reitanna "gasp.wav" — freesound.org/people/Reitanna/sounds/241563/ | CC0 |
+| `voice/margarethe_bleed1.mp3` | Reitanna "long sigh.wav" — freesound.org/people/Reitanna/sounds/242690/ | CC0 |
+| `voice/isolde_ko1.mp3` | mvVoiceActing "girl damage" 3.3~4.4초 — freesound.org/people/mvVoiceActing/sounds/855460/ | CC0 |
+| `voice/isolde_bleed1.mp3` | mvVoiceActing "girl damage" 7.8~8.9초 — 같은 파일 | CC0 |
+
+- 파일마다 소리 페이지에서 CC0 링크를 확인했다. Freesound 미리듣기 mp3(128kbps)에서 잘랐다.
+- 남은 일: VoiceBosch(CC-BY-SA 4.0) 남성 신음 3개를 CC0로 바꾸는 후보를 사장님께 들려드렸고, 답을 기다린다.
+  - 기본 목소리: A = HaelDB yell8, B = HaelDB yell7(같은 목소리)
+  - 브란: A = kanyonwyvern 736662, B = Under7dude 163442
+  - 하인리히: A = HaelDB 2yell8(같은 목소리), B = Lord_Bennelengtone 867174
+- 확인:
+  - 시뮬 3종(live_battery·fights12·hybrid fights12)이 main `d91af0e`와 바이트 동일하다.
+  - 브라우저 스모크 콘솔 에러 0.
+  - 실제 게임(`?foe=margarethe|isolde&weapon=longsword`)에서 `enemy.die('기절'|'출혈')`로 네 경우를 녹음했다.
+    - 두 캐릭터 녹음 파일이 200으로 실리고 목소리가 난 뒤 몸이 닿을 때 "쿵"(세기 2.5~3.2)이 났다. 오류는 0이었다.
+    - 파형과 스펙트럼은 `docs/handoff/death_voices_margarethe_isolde.png`에 있다.
+    - 헤드리스는 물리가 느려서 "쿵"이 4~5.5초 뒤에 난다.

@@ -290,16 +290,16 @@ const VOWELS = {
  *  rec: 녹음된 목소리 (public/sfx/voice/<id>_<ko|bleed><번호>.mp3, 출처는 public/sfx/LICENSE.txt).
  *       ko·bleed = 파일 개수(0이면 그 죽음은 합성 목소리), rate = 재생 속도(목소리 높이), gain = 음량
  *       녹음은 들어 보지 않고 음높이·길이 분석으로 골랐다 — 귀로 듣고 바꾸려면 파일만 갈아 끼우면 된다
- *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다)
+ *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 지금은 쓰는 캐릭터가 없다
  */
 export const VOICES = {
   player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 3번 목소리
   generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 첫 목소리 + VoiceBosch
   bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + VoiceBosch. 굵고 거친 목
-  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp' }, // 녹음 없이 숨소리만: 여성 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
+  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp', rec: { ko: 1, bleed: 1, gain: 1.3 } }, // 짧게 맞는 소리 "흣"·"읏" 녹음(mvVoiceActing, CC0, 사장님 선택). 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
   liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 2, gain: 0.6, rate: 0.95 } }, // 짧은 신음 + 낮고 짧은 신음 녹음(HaelDB). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침) + VoiceBosch
-  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', mute: true }, // 목소리 없이 쓰러지는 소리만: 합성 날숨·한숨은 폰에서 뭉개졌고, 여성 녹음을 낮추면 익룡·괴수처럼 들렸다. 알맞은 녹음을 찾으면 rec 로 바꾼다
+  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', rec: { ko: 1, bleed: 1 } }, // 목소리 섞인 "헉"과 긴 한숨 녹음(Reitanna, CC0, 사장님 선택). 음은 낮추지 않았다: 여성 녹음을 낮추면 익룡·괴수처럼 들렸고, 합성 날숨은 폰에서 뭉개졌다
 };
 
 /**
