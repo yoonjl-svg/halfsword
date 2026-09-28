@@ -22,7 +22,7 @@ export const GUN = {
   aiFirst: 1.5, // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
   maxWait: 0.6, // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
   recoilBack: 0.5, // N·s: 쏠 때 총을 뒤로 미는 충격
-  recoilUp: 0.55, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다 → 총구가 들린다). 손잡이 무게가 제자리에 있는 짧은 권총에서 총구가 약 15° 들렸다 0.5초에 제자리
+  recoilUp: 0.2, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다). 총신이 주먹 위에 있는 리볼버에서 총구가 약 18° 들렸다 0.8초에 제자리
   spread: 1, // 도: 서서 쏠 때 총알이 총신(레이저)에서 벗어나는 최대 각 — 레이저를 믿고 겨눌 수 있게 작게
   spreadMove: 3, // 도: 걷는 최고 속도로 달리며 쏘면 이만큼 더 벗어난다
 };
@@ -33,6 +33,13 @@ const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _l = new THREE.Vector3();
+
+/** 총구 (월드): 칼 몸체 (spec.muzzleX, 손잡이+칼날 길이, 0) — 총신이 주먹 위로 올라와 있어 칼 축에서 비켜 있다 */
+function muzzle(f, out) {
+  const r = f.sword.rotation();
+  const p = f.sword.translation();
+  return out.set(f.weapon.muzzleX ?? 0, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength, 0).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)).add(new THREE.Vector3(p.x, p.y, p.z));
+}
 
 function state(f) {
   return (f.gun ??= { cool: 0, pending: -1, shots: 0, hits: 0, seed: (0x2545f491 ^ Math.imul(f.index + 1, 0x9e3779b9)) >>> 0 });
@@ -84,7 +91,7 @@ function fire(f, world, combat) {
   const u = _l.set(1, 0, 0).applyQuaternion(_q); // 총신에 수직인 두 축
   const v = new THREE.Vector3().crossVectors(_d, u);
   _d.multiplyScalar(Math.cos(a)).addScaledVector(u, Math.sin(a) * Math.cos(phi)).addScaledVector(v, Math.sin(a) * Math.sin(phi)).normalize();
-  f.bladePoint(1, _o); // 총구
+  muzzle(f, _o); // 총구
   // AI 조준: 찌르기 동작만으로는 총신이 상대 가슴에서 15~23° 벗어난 채 쏜다(3 m 에서 가슴 폭은 ±4° — 거의 다 빗나갔다, 디렉터 12:38).
   //  AI 는 난이도 실력(level.skill: 쉬움 0.4 · 보통 0.7 · 어려움 0.85)만큼 총신을 상대 가슴 쪽으로 바로잡아 쏜다: 남는 오차 = (1 − (0.5 + 0.5·skill)).
   //  사람은 바로잡지 않는다 — 레이저를 보고 제 손으로 겨눈다
@@ -222,13 +229,14 @@ function updateLaser(f, g, world, combat) {
   const r = f.sword.rotation();
   _q.set(r.x, r.y, r.z, r.w);
   const dir = _l.set(0, 1, 0).applyQuaternion(_q);
-  const o = f.bladePoint(1, new THREE.Vector3());
+  const o = muzzle(f, new THREE.Vector3());
   const hit = castRay(world, o, dir, (h) => combat.info.get(h)?.fighter !== f);
   const dist = hit ? hit.toi : GUN.range;
   const y0 = f.weaponCfg.hiltLength + f.weaponCfg.bladeLength; // 총구 (칼 기준)
-  L.beam.position.set(0, y0, 0);
+  const mx = f.weapon.muzzleX ?? 0;
+  L.beam.position.set(mx, y0, 0);
   L.beam.scale.set(1, Math.max(0.01, dist), 1);
-  L.dot.position.set(0, y0 + dist, 0);
+  L.dot.position.set(mx, y0 + dist, 0);
   L.dot.visible = !!hit;
   L.mat.opacity = g.cool > 0 ? 0.18 : 0.6;
 }
@@ -243,7 +251,7 @@ function castRay(world, o, d, pred) {
 }
 
 function sound(kind, f) {
-  const p = f.bladePoint(1, new THREE.Vector3());
+  const p = muzzle(f, new THREE.Vector3());
   const hook = GUN_HOOKS[kind];
   if (hook) return hook(f, p);
   const snd = globalThis.window?.game?.sound;
