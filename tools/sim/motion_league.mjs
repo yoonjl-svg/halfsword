@@ -22,7 +22,7 @@ function libSchool(id) {
   if (!SCHOOLS[key]) {
     const m = motionFor(WEAPONS[id]);
     const base = SCHOOLS[id] ?? SCHOOLS.longsword;
-    SCHOOLS[key] = { ...base, id: key, tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints };
+    SCHOOLS[key] = { ...base, id: key, tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints, ...(m.counter ? { counter: m.counter } : {}) };
   }
   return key;
 }

@@ -178,11 +178,15 @@ export function styleTech(style, frame) {
   if (frame === 'heavy') t = weight(t, (x) => x.presses, 1.4);
   // 손목 베기는 날 있는 한손 칼만: 나뭇가지(때리기)에 넣으면 40% → 19% (가볍고 날이 없어 앞손을 끊지 못하고 틈만 준다)
   const add = (NEW_TECH[frame] ?? []).filter((x) => !(style === 'blunt' && x.name === 'wristCut'));
+  // E 자루: 찌르기만 (봉 자세표에서 칼 베기 길은 휜다 — 봉 시제품 48판: 찌르기만 48% · 전부 15%, docs/pole_frame_design.md §8).
+  //  봉 치기(머리 치기·교차 베기)는 봉 자세표에 맞춘 새 길로 따로 만든다
+  if (frame === 'pole') return t.filter((x) => x.kind === 'thrust');
   return [...t, ...(style === 'thrust' ? add.filter((x) => x.kind === 'thrust') : add)].filter((x) => x.ai !== false);
 }
 
 /** 속임수: 찌르기 없는 방식이면 찌르기 속임수를 뺀다 */
-export function styleFeints(style) {
+export function styleFeints(style, frame = null) {
+  if (frame === 'pole') return FEINTS.filter((f) => TECH_BY_NAME[f.fake].kind === 'thrust'); // 자루: 기술이 찌르기뿐이다
   if (style === 'blunt') return FEINTS.filter((f) => TECH_BY_NAME[f.fake].kind !== 'thrust');
   return FEINTS;
 }
@@ -223,7 +227,7 @@ export const OVERLAY = {
 export function motionFor(weapon) {
   const frame = weapon.frame ?? 'two';
   const style = weapon.style ?? 'versatile';
-  return { frame, style, table: frameTable(frame, style, weapon.motionSkip ?? []), tech: styleTech(style, frame), feints: styleFeints(style), watch: frameWatchGuards(frame), overlay: OVERLAY[style] ?? null, parry: MOTION.useParry ? LIB_PARRY[weapon.id] ?? null : null, noTwist: style === 'blunt', flow: frame === 'heavy' };
+  return { frame, style, table: frameTable(frame, style, weapon.motionSkip ?? []), tech: styleTech(style, frame), feints: styleFeints(style, frame), watch: frameWatchGuards(frame), overlay: OVERLAY[style] ?? null, parry: MOTION.useParry ? LIB_PARRY[weapon.id] ?? null : null, noTwist: style === 'blunt', flow: frame === 'heavy', counter: frame === 'pole' ? { default: styleTech(style, frame).map((t) => t.name) } : null }; // counter: 유파 맞받아치기 목록을 바꿔야 하는 틀(자루)만
 }
 export function applyMotionLibrary(fighter, { overlay = true, flow = true, noTwist = false, ai = null, cover = true } = {}) {
   const m = motionFor(fighter.weapon ?? {});

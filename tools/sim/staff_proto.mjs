@@ -114,7 +114,7 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
   const school = process.argv[3] ?? 'longsword';
   if (LIB) {
     const m = motionFor(WEAPONS.staff_proto);
-    SCHOOLS.staff_lib = { ...SCHOOLS[school], id: 'staff_lib', tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints };
+    SCHOOLS.staff_lib = { ...SCHOOLS[school], id: 'staff_lib', tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints, ...(m.counter ? { counter: m.counter } : {}) };
     // 기다림 전술(STAFF_WAIT=배율): 창·봉은 먼 간격에 서서 들어오는 상대를 맞찌른다 (pole_motion_research.md [원전 2차])
     //  간격을 배율만큼 늘리고, 기술은 찌르기만, 맞받아치기도 찌르기로
     const k = +(process.env.STAFF_WAIT ?? 0);

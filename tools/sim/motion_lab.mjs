@@ -163,7 +163,7 @@ if (mode === 'poses') {
   // AI 유파: 무기 꾸러미(없으면 롱소드)에 라이브러리 기술·속임수를 끼운다 — schools.js 는 건드리지 않는다
   const key = `${id}__lib`;
   const base = SCHOOLS[id] ?? SCHOOLS.longsword;
-  SCHOOLS[key] = { ...base, id: key, tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints, ...(useTable && m.parry && process.env.NO_PARRY !== '1' ? { parry: { ...base.parry, ...m.parry } } : {}) };
+  SCHOOLS[key] = { ...base, id: key, tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints, ...(m.counter ? { counter: m.counter } : {}), ...(useTable && m.parry && process.env.NO_PARRY !== '1' ? { parry: { ...base.parry, ...m.parry } } : {}) };
   const school0 = useTech || !useTable ? null : key; void school0;
   // 기술만: 라이브러리 기술 목록 · 자세표만: 자세표 + 그 표의 막기 자리 · 켬: 둘 다
   if (!useTech && useTable) SCHOOLS[key] = { ...base, id: key, ...(m.parry && process.env.NO_PARRY !== '1' ? { parry: { ...base.parry, ...m.parry } } : {}) };
