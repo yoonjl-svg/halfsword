@@ -166,8 +166,8 @@ ROWS.push(
   ['발소리 (모래)', '발이 내려오는 속도 0.6 / 1.0 / 1.8 m/s (걸음 · 보통 · 크게 내딛음)', [0.6, 1, 1.8], (s, v) => s.footstep?.(v)],
   ['쓰러짐', '몸통이 떨어지는 속도 1.2(무릎이 꺾임) / 2 / 3 m/s', [1.2, 2, 3], (s, v) => s.bodyFall?.(v, { light: v < 1.5 })],
   ['판금이 막음', '막은 타격 30 / 70 / 120 J (전투 판정이 판금을 알게 되면 부른다)', [30, 70, 120], (s, v) => (s.plateBlock ? s.plateBlock(v) : s.helmet(v))],
-  ['판금이 부서짐', '부서지는 타격 60 / 100 / 150 J (깨짐 → 조각이 모래에 떨어짐)', [60, 100, 150], (s, v) => (s.plateBreak ? s.plateBreak(v) : s.helmet(v))],
-  ['무기 부러짐', '나뭇가지 / 언 참치 / 둘 다', ['wood', 'frozen', 'both'], (s, v) => (v === 'both' ? (s.weaponBreak?.('wood'), s.weaponBreak?.('frozen')) : s.weaponBreak?.(v)), ['나무', '참치', '둘']],
+  ['판금이 부서짐', '부서지는 타격 60 / 100 / 150 J (깨짐 → 조각 둘~셋이 바닥에 철컥)', [60, 100, 150], (s, v) => (s.plateBreak ? s.plateBreak(v) : s.helmet(v))],
+  ['무기 부러짐', '강철 칼(쇠 팅) / 나뭇가지 / 언 참치 / 나무·참치 둘 다', ['steel', 'wood', 'frozen', 'both'], (s, v) => (v === 'both' ? (s.weaponBreak?.('wood'), s.weaponBreak?.('frozen')) : s.weaponBreak?.(v)), ['강철', '나무', '참치', '둘']],
 );
 
 // ── 무기 뽑기 카드 ──
