@@ -289,7 +289,7 @@ const VOWELS = {
  *  breath: 숨 섞인 정도, rough: 목 긁힘(보컬 프라이), style: 죽을 때의 버릇 (voiceScript)
  *  rec: 녹음된 목소리 (public/sfx/voice/<id>_<ko|bleed|hurt><번호>.mp3, 출처는 public/sfx/LICENSE.txt).
  *       ko·bleed = 파일 개수(0이면 그 죽음은 합성 목소리), hurt = 깊은 상처에 짧게 내는 신음 개수(0이면 신음 없음),
- *       revive = 쓰러졌다 다시 일어설 때 숨 들이켜는 소리 개수(이졸데만),
+ *       revive = 부활 때 곁들이는 짧은 숨 들이켬 개수(이졸데만),
  *       rate = 재생 속도(목소리 높이), gain = 음량
  *       녹음은 들어 보지 않고 음높이·길이 분석으로 골랐다 — 귀로 듣고 바꾸려면 파일만 갈아 끼우면 된다
  *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 지금은 쓰는 캐릭터가 없다
@@ -1052,6 +1052,77 @@ export const SYNTH = {
   },
 
   /**
+   * 이졸데의 부활 (사장님 요청: 하늘에서 성스러운 빛이 홀리한 효과음과 함께 비추고 다시 일어선다 — WoW 부활·신성한 빛처럼).
+   * 4.2초 한 벌, 연출에 맞춘 순서: 빛이 내려오는 0~0.4초에 위로 쓸려 올라가는 반짝임(높은 종소리 열둘과 빛 바람),
+   * 0.4초에 부드러운 종 하나(비조화 배음, 2초 여운), 합창 패드(열린 화음 다섯 음을 세 겹씩 어긋나게, "아" 공명)가 0.5초에 걸쳐 부풀어
+   * 일어서는 동안 머물다 2.4초부터 1.2초에 걸쳐 가라앉는다. 2.4초(선 순간)에 한 옥타브 위 작은 종. 게임이 적막한 결투라 과하지 않게 —
+   * 화음은 움직이지 않고(멜로디 없음) 밝기는 1.6kHz에서 닫는다
+   */
+  holy(sr, r) {
+    const n = Math.round(4.2 * sr);
+    const out = new Float32Array(n);
+    // 합창 패드
+    const notes = [146.83, 220, 293.66, 369.99, 440]; // D3 A3 D4 F#4 A4
+    const pad = new Float32Array(n);
+    for (const f of notes) {
+      for (const k of [-1, 0, 1]) {
+        const det = 1 + k * between(r, 0.003, 0.005);
+        let ph = r() * TAU;
+        const vib = between(r, 4.6, 5.6);
+        const vph = r() * TAU;
+        const amp = (f < 200 ? 0.5 : f < 300 ? 0.8 : 1) / 15;
+        let step = 0;
+        for (let i = 0; i < n; i++) {
+          const t = i / sr;
+          const env = t < 0.5 ? (1 - Math.cos((Math.PI * t) / 0.5)) / 2 : t < 2.4 ? 1 : Math.exp(-(t - 2.4) / 0.45);
+          if (i % 32 === 0) step = (TAU * f * det * (1 + 0.003 * Math.sin(TAU * vib * t + vph))) / sr; // 비브라토는 32샘플마다 (일꾼 시간 절약)
+          ph += step;
+          pad[i] += amp * env * (Math.sin(ph) + 0.3 * Math.sin(2 * ph)); // (3배음은 1.6kHz 필터에 거의 잘려 뺐다)
+        }
+      }
+    }
+    const f1 = new Filt('bandpass', 800, 0.9, sr); // "아" 공명
+    const f2 = new Filt('lowpass', 1600, 0.7, sr);
+    for (let i = 0; i < n; i++) out[i] += 0.55 * f2.run(pad[i] + 0.8 * f1.run(pad[i]));
+    // 빛 바람: 위로 쓸려 올라가는 잡음 (아주 작게)
+    const bw = new Filt('bandpass', 1500, 2.5, sr);
+    for (let i = 0; i < Math.round(0.6 * sr); i++) {
+      const t = i / sr;
+      if (i % 64 === 0) bw.set(1500 * Math.pow(4, t / 0.6), 2.5);
+      const env = Math.sin(Math.PI * t / 0.6) ** 2;
+      out[i] += 0.05 * env * bw.run(r() * 2 - 1);
+    }
+    // 반짝임: 배음열 위를 오르는 짧은 종소리 열둘 (0~1.2초)
+    for (let j = 0; j < 12; j++) {
+      const t0 = 0.05 + j * 0.09 + r() * 0.03;
+      const f = 1760 * Math.pow(2, (j * 2 + (r() < 0.5 ? 0 : 1)) / 12) * (1 + (r() - 0.5) * 0.006);
+      const d = between(r, 0.35, 0.7);
+      let ph = r() * TAU;
+      const n0 = Math.round(t0 * sr);
+      for (let i = 0; i < Math.round(d * 1.2 * sr) && n0 + i < n; i++) {
+        const t = i / sr;
+        ph += (TAU * f) / sr;
+        out[n0 + i] += 0.035 * Math.min(1, t / 0.004) * Math.exp(-t / (d * 0.3)) * Math.sin(ph);
+      }
+    }
+    // 종 둘: 0.4초에 부드러운 종, 2.4초(선 순간)에 한 옥타브 위 작은 종
+    const bell = (t0, f0, amp, dur) => {
+      const n0 = Math.round(t0 * sr);
+      for (const [ratio, a, dk] of [[1, 1, 1], [2.4, 0.45, 0.6], [4.1, 0.2, 0.35], [1.003, 0.5, 1]]) {
+        let ph = r() * TAU;
+        for (let i = 0; n0 + i < n && i < Math.round(dur * 1.5 * sr); i++) {
+          const t = i / sr;
+          ph += (TAU * f0 * ratio) / sr;
+          out[n0 + i] += amp * a * Math.min(1, t / 0.003) * Math.exp(-t / (dur * dk * 0.35)) * Math.sin(ph);
+        }
+      }
+    };
+    bell(0.4, 1174.7, 0.11, 2.0); // D6
+    bell(2.4, 2349.3, 0.06, 1.4); // D7
+    return fadeOut(normalize(out, 0.9), sr, 0.15);
+  },
+
+  /**
    * 울림(잔향)용 충격 응답: 벽에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오).
    * 기본값은 경기장. 배경마다 다른 방(STAGE_SOUND.room): dur 길이(초), rt 꼬리가 60dB 줄어드는 시간,
    * e0·e1 초기 반사가 오는 때(벽까지 거리), lp 꼬리의 처음 밝기(Hz)
@@ -1404,6 +1475,7 @@ const BANK = [
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
   ['rainLoop', 1, SYNTH.rainLoop], // 화전 터
+  ['holy', 1, SYNTH.holy], // 이졸데 부활 (성 안뜰)
   ['dove', 2, SYNTH.dove], // 대성당
   ['wings', 2, SYNTH.wings], // 대성당 비둘기·홀 박쥐
   ['debris', 2, SYNTH.debris], // 대성당
@@ -2142,17 +2214,20 @@ export class Sound {
   }
 
   /**
-   * 쓰러졌다가 투지로 다시 일어섬 (이졸데, 사장님 결정): 짧게 숨을 들이켜는 소리 하나. 기합은 없다.
-   * 녹음(rec.revive)이 있는 캐릭터만 낸다. 부르는 자리는 main.js (디렉터가 연결): sound.revive('isolde')
+   * 부활 (이졸데, 사장님 요청): 하늘에서 성스러운 빛이 내려와 비추고 다시 일어선다. 빛이 내려오기 시작할 때 main.js 가 한 번 부른다(디렉터가 연결).
+   * 성스러운 효과음 한 벌(SYNTH.holy, 4.2초: 올라가는 반짝임 → 종 → 합창 패드 → 선 순간 작은 종)에, 일어서는 0.9초쯤 그 캐릭터의 짧은
+   * 숨 들이켬(rec.revive, 있으면)을 곁들인다. 기합은 없다. 적막한 결투라 칼 부딪힘보다 작게 낸다. 화면 소리에 가까워 좌우 위치 없음
    */
-  revive(voice, { pos } = {}) {
+  revive(voice, { breath = true } = {}) {
     if (!this._on || !this.ctx) return;
     const id = voice in VOICES ? voice : 'generic';
-    const rec = this.pickSample(`voice:${id}:revive`);
-    if (!rec) return;
-    const R = VOICES[id].rec || {};
-    const ev = this.event({ bus: this.fleshBus, gain: 0.8, prio: 2, pos });
-    this.layer(ev, rec, { gain: R.gain ?? 1, rate: (R.rate ?? 1) * between(Math.random, 0.97, 1.03) });
+    const ev = this.event({ bus: this.fleshBus, gain: 0.25, prio: 3 }); // 4초 평균이 칼 부딪힘 평균보다 3dB 아래 (튀지 않게)
+    this.layer(ev, this.pick('holy'), { rate: between(Math.random, 0.99, 1.01) });
+    const rec = breath ? this.pickSample(`voice:${id}:revive`) : null;
+    if (rec) {
+      const R = VOICES[id].rec || {};
+      this.layer(ev, rec, { gain: 1.3 * (R.gain ?? 1), rate: (R.rate ?? 1) * between(Math.random, 0.97, 1.03), delay: 0.9 });
+    }
   }
 
   /**
@@ -2637,9 +2712,27 @@ export class Sound {
         K.nodes.push(n);
       }
     }
+    K.loop(this.pick('fireLoop'), 0.012, 0.6, 0.85); // 잉걸불이 남은 불더미의 약한 "탁탁" (오른쪽 멀리, 느리게 재생해 낮게)
     K.start();
     this._amb = { out: K.out, nodes: K.nodes, wind: wg, windBase: 0.004 }; // 큰 타격에는 바람만 잠깐 세진다 (비는 그대로)
     this._every(20000, 55000, () => this.crow());
+  }
+
+  /** 까마귀들이 날아오름 (화전 터, 배경이 'crows' 로 알릴 때): 날갯짓 두세 번 + 놀란 "까악" 한둘. 멀리, 작게 (적막함을 깨지 않게). 4초에 한 번만 */
+  _crowsUp(data = {}) {
+    if (!this.stage.startsWith('clearing')) return;
+    const now = this.ctx.currentTime;
+    if (this._crowsT && now - this._crowsT < 4) return;
+    this._crowsT = now;
+    const k = clamp01(data.amp ?? 0.5);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.07 + 0.08 * k, prio: 0.2, pos: data.pos });
+    for (let i = 0, t = 0; i < 2 + Math.round(k); i++, t += between(Math.random, 0.12, 0.3)) this.layer(ev, this.pick('wings'), { gain: 0.6, rate: between(Math.random, 0.9, 1.1), delay: t });
+    const rec = this.pickSample('crow');
+    if (rec) this.layer(ev, rec, { gain: 0.5, rate: between(Math.random, 0.96, 1.08), delay: between(Math.random, 0.1, 0.4) });
+    if (k > 0.5) {
+      const rec2 = this.pickSample('crow');
+      if (rec2) this.layer(ev, rec2, { gain: 0.35, rate: between(Math.random, 0.95, 1.05), delay: between(Math.random, 0.6, 1.0) });
+    }
   }
 
   /** 먼 까마귀 한 마리 (화전 터). 숲 쪽 좌우 어느 한쪽에서 아주 작게 "까악", 3번에 1번은 두 번 운다. 녹음(stage/crow1-3, CC0)을 멀리 들리게 위를 닫은 것 */
@@ -2745,7 +2838,9 @@ export class Sound {
    *   싸움 소리보다 작게: 가장 세게 쳐도 칼 부딪힘의 약 1/3. 성 안뜰이 아니면 무시한다
    */
   stageEvent(name, data = {}) {
-    if (!this._on || !this.ctx || name !== 'bell' || this.stage !== 'castle') return;
+    if (!this._on || !this.ctx) return;
+    if (name === 'crows') return this._crowsUp(data); // 화전 터: 참나무의 까마귀들이 날아오른다 (외형 PM이 onEvent('crows') 로 알린다)
+    if (name !== 'bell' || this.stage !== 'castle') return;
     const c = this.ctx;
     const x = clamp01((data.amp ?? 0.3) / (data.max ?? 0.55));
     const t = c.currentTime;
