@@ -73,7 +73,7 @@
 | player, generic, bran, heinrich | 녹음 (HaelDB CC0, Baradari CC-BY 3.0, VoiceBosch CC-BY-SA 4.0) |
 | liao | 녹음 (HaelDB, 짧은 신음·낮은 신음) |
 | isolde | 녹음 (mvVoiceActing "girl damage" CC0: 짧게 맞는 소리 두 개, `gain: 1.3`). 사장님이 후보 3개 중 고름(15차) |
-| margarethe (슈바르츠) | 녹음 (Reitanna CC0: 목소리 섞인 "헉" / 긴 한숨). 사장님이 이졸데 후보였던 것을 슈바르츠에 고름(15차). `mute`는 기능만 남고 쓰는 캐릭터가 없다 |
+| margarethe (슈바르츠) | 녹음 (hisoul CC0: 지친 날숨 섞인 낮은 "하아…", 두 죽음에 같이 씀, `gain: 1.1`). 사장님 선택(15차, "노장이니까"). `mute`는 기능만 남고 쓰는 캐릭터가 없다. 사장님이 아낀 Reitanna 녹음은 `docs/sound_reserve/`에 보관 |
 
 ### 배경(스테이지) — `STAGE_SOUND` 표 + `setStage(id)`
 - 스테이지는 **고정 순서**로 돈다: 포세이돈 → 성 안뜰 → 산사 → 대성당 → 다시 포세이돈 (사장님 결정).

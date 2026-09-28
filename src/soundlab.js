@@ -211,7 +211,7 @@ const DEATH_ROWS = [
   ['isolde', '이졸데', '짧게 맞는 소리 "흣"·"읏" (녹음)'],
   ['liao', '랴오 쓰위엔', '거의 소리 없이 한숨'],
   ['heinrich', '하인리히', '쉰 웃음이 신음으로 끊김'],
-  ['margarethe', '마르그레테', '목소리 섞인 "헉", 피가 빠지면 긴 한숨 (녹음)'],
+  ['margarethe', '마르그레테', '지친 날숨 섞인 낮은 "하아…" (녹음)'],
 ];
 for (const [id, name, desc] of DEATH_ROWS) {
   ROWS.push([
