@@ -228,6 +228,27 @@ for (const [id, name, desc] of DEATH_ROWS) {
   ]);
 }
 
+// ── 깊은 상처의 짧은 신음 ──
+ROWS.push([
+  '상처 신음',
+  '깊은 상처에만, 한 사람당 2초에 한 번까지 짧게 "윽". 목소리는 캐릭터마다 죽음 목소리와 같은 배우',
+  DEATH_ROWS.map(([id]) => id),
+  (s, id) => {
+    s.cut?.(80, false);
+    s.hurt?.(id, 0.9, { me: id === 'player' });
+  },
+  ['나', '브란', '이졸데', '랴오', '하인리히', '슈바르츠'],
+]);
+
+// ── 칼이 바닥에 떨어짐 ──
+ROWS.push([
+  '칼이 바닥에 떨어짐',
+  '놓친 칼, 또는 쥔 채 쓰러진 칼이 땅에 닿는 순간 (지금 배경의 바닥 알갱이가 섞인다)',
+  ['steel', 'wood', 'rubber'],
+  (s, m) => s.swordLand?.(3, m),
+  ['강철', '나무', '고무 닭'],
+]);
+
 const $ = (id) => document.getElementById(id);
 const engines = { new: null, old: null };
 let which = 'new';

@@ -287,19 +287,20 @@ const VOWELS = {
  * 캐릭터별 목소리 (characters.js 의 id 로 찾는다. 없으면 generic).
  *  f0: 평소 목소리 높이(Hz), tract: 입안 공명대 배율(성도가 짧을수록 큼 — 여성 약 1.15),
  *  breath: 숨 섞인 정도, rough: 목 긁힘(보컬 프라이), style: 죽을 때의 버릇 (voiceScript)
- *  rec: 녹음된 목소리 (public/sfx/voice/<id>_<ko|bleed><번호>.mp3, 출처는 public/sfx/LICENSE.txt).
- *       ko·bleed = 파일 개수(0이면 그 죽음은 합성 목소리), rate = 재생 속도(목소리 높이), gain = 음량
+ *  rec: 녹음된 목소리 (public/sfx/voice/<id>_<ko|bleed|hurt><번호>.mp3, 출처는 public/sfx/LICENSE.txt).
+ *       ko·bleed = 파일 개수(0이면 그 죽음은 합성 목소리), hurt = 깊은 상처에 짧게 내는 신음 개수(0이면 신음 없음),
+ *       rate = 재생 속도(목소리 높이), gain = 음량
  *       녹음은 들어 보지 않고 음높이·길이 분석으로 골랐다 — 귀로 듣고 바꾸려면 파일만 갈아 끼우면 된다
  *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 지금은 쓰는 캐릭터가 없다
  */
 export const VOICES = {
-  player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 3번 목소리
-  generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2 } }, // HaelDB 첫 목소리 (전부 CC0)
-  bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + 지친 신음 kanyonwyvern(CC0). 굵고 거친 목
-  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp', rec: { ko: 1, bleed: 1, gain: 1.3 } }, // 짧게 맞는 소리 "흣"·"읏" 녹음(mvVoiceActing, CC0, 사장님 선택). 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
-  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 2, gain: 0.6, rate: 0.95 } }, // 짧은 신음 + 낮고 짧은 신음 녹음(HaelDB). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
-  heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침, 전부 CC0)
-  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', rec: { ko: 1, bleed: 1, gain: 1.1 } }, // 지친 날숨 섞인 낮은 "하아…" 녹음 하나를 두 죽음에 같이 쓴다(hisoul, CC0, 사장님 선택 — 노장이라). 음은 낮추지 않았다: 여성 녹음을 낮추면 익룡·괴수처럼 들렸고, 합성 날숨은 폰에서 뭉개졌다
+  player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 3번 목소리
+  generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 첫 목소리 (전부 CC0)
+  bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, hurt: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + 지친 신음 kanyonwyvern(CC0). 굵고 거친 목
+  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp', rec: { ko: 1, bleed: 1, hurt: 2, gain: 1.3 } }, // 짧게 맞는 소리 "흣"·"읏" 녹음(mvVoiceActing, CC0, 사장님 선택). 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
+  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 2, hurt: 2, gain: 0.6, rate: 0.95 } }, // 하인리히와 같은 배우(HaelDB 2번 목소리)를 작고 조금 낮게 — 설정상 하인리히와 닮은 사람(사장님). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
+  heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침, 전부 CC0)
+  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', rec: { ko: 1, bleed: 1, hurt: 1, gain: 1.1 } }, // 지친 날숨 섞인 낮은 "하아…" 녹음 하나를 두 죽음에 같이 쓴다(hisoul, CC0, 사장님 선택 — 노장이라). 음은 낮추지 않았다: 여성 녹음을 낮추면 익룡·괴수처럼 들렸고, 합성 날숨은 폰에서 뭉개졌다
 };
 
 /**
@@ -1000,6 +1001,27 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.9), sr, 0.06);
   },
 
+  /** 칼이 바닥에 떨어짐: 칼자루와 칼끝이 잇달아 닿는 "철-컥" (모래·돌이 받아서 짧게 멎는다 — 음이 오래 남으면 냄비처럼 들리므로 울림은 0.05초 안) */
+  swordLand(sr, r) {
+    const n = Math.round(0.45 * sr);
+    const out = new Float32Array(n);
+    let t = between(r, 0, 0.01);
+    for (let i = 0; i < 2; i++) {
+      const amp = i ? between(r, 0.45, 0.8) : 1;
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      pulse(px, sr, t, 0.0003, 1);
+      resonate(px, py, sr, [0, 1, 2, 3, 4].map(() => ({ f: between(r, 900, 5200), a: between(r, 0.4, 1), t60: between(r, 0.02, 0.05) })), Math.ceil((t + 0.002) * sr));
+      const a = (0.5 * amp) / (peakOf(py) || 1);
+      for (let j = 0; j < n; j++) out[j] += a * py[j];
+      noiseHit(out, sr, r, { t0: t, amp: 0.5 * amp, attack: 0.002, tau: 0.02, type: 'lowpass', f: between(r, 300, 500), q: 0.7 }); // 바닥에 받히는 "퍽"
+      gritBurst(out, sr, r, { t0: t + 0.002, span: 0.03, count: 5, amp: 0.1 * amp, fLo: 1500, fHi: 5000 }); // 튀는 알갱이
+      t += between(r, 0.04, 0.11);
+    }
+    saturate(out, 1.5);
+    return fadeOut(normalize(out, 0.9), sr, 0.06);
+  },
+
   /**
    * 울림(잔향)용 충격 응답: 벽에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오).
    * 기본값은 경기장. 배경마다 다른 방(STAGE_SOUND.room): dur 길이(초), rt 꼬리가 60dB 줄어드는 시간,
@@ -1348,6 +1370,7 @@ const BANK = [
   ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
   ['plateBreak', 2, SYNTH.plateBreak],
   ['plateDebris', 2, SYNTH.plateDebris],
+  ['swordLand', 3, SYNTH.swordLand],
   ['birdSong', 3, (sr, r) => SYNTH.bird(sr, r, 'song')], // 산사 배경 (맨 뒤: 판 시작 뒤 몇 초 안에만 있으면 된다)
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
@@ -1662,13 +1685,13 @@ export class Sound {
       /* 못 읽으면 합성 소리만 쓴다 */
     }
   }
-  /** 이번 판 캐릭터들의 녹음된 죽음 목소리 읽기 (public/sfx/voice/<id>_<ko|bleed><번호>.mp3). 다른 캐릭터 것은 버린다 */
+  /** 이번 판 캐릭터들의 녹음된 목소리 읽기 (public/sfx/voice/<id>_<ko|bleed|hurt><번호>.mp3). 다른 캐릭터 것은 버린다 */
   async loadVoiceSamples(ids) {
     for (const name of Object.keys(this.samples)) if (name.startsWith('voice:') && !ids.includes(name.split(':')[1])) delete this.samples[name];
     for (const id of ids) {
       const rec = VOICES[id]?.rec;
       if (!rec) continue;
-      for (const kind of ['ko', 'bleed']) {
+      for (const kind of ['ko', 'bleed', 'hurt']) {
         const name = `voice:${id}:${kind}`;
         if (this.samples[name]) continue;
         this.samples[name] = [];
@@ -2080,6 +2103,36 @@ export class Sound {
     const gk = STAGE_SOUND[this.stage].grit;
     const grit = gk && !light ? this.pickSample(gk) : null;
     if (grit) this.layer(ev, grit, { gain: 0.3 + 0.3 * x, rate: between(Math.random, 0.62, 0.72), delay: 0.012 });
+  }
+
+  /**
+   * 깊은 상처를 입어 짧게 내는 신음 ("윽"). BodySounds 가 깊은 상처에만, 한 사람당 2초에 한 번까지 부른다
+   * (적막한 결투라 자주 울지 않게). 녹음(rec.hurt)이 없는 캐릭터는 소리를 내지 않는다
+   */
+  hurt(voice, severity = 0.5, { me = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const id = voice in VOICES ? voice : 'generic';
+    const rec = this.pickSample(`voice:${id}:hurt`);
+    if (!rec) return;
+    const R = VOICES[id].rec || {};
+    const k = clamp01((severity - 0.4) / 0.8);
+    const ev = this.event({ bus: this.fleshBus, gain: (me ? 0.55 : 0.7) + 0.25 * k, prio: 2, pos });
+    this.layer(ev, rec, { gain: R.gain ?? 1, rate: (R.rate ?? 1) * between(Math.random, 0.96, 1.04), delay: 0.03 });
+  }
+
+  /**
+   * 칼이 바닥에 떨어짐 (놓친 칼, 또는 쥔 채 쓰러진 칼). speed = 떨어지던 속도 (m/s), material = 무기 재질.
+   * 쇠(강철·광검 자루)는 "철-컥", 나무는 "딱", 나머지(고무 닭·언 참치)는 둔한 "툭". 그 바닥의 알갱이 소리를 조금 깐다
+   */
+  swordLand(speed, material = 'steel', { pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const x = clamp01((speed - 1) / 4);
+    const metal = material === 'steel' || material === 'armor' || material === 'plasma';
+    const ev = this.event({ bus: metal ? this.metalBus : this.fleshBus, gain: 0.25 + 0.45 * x, prio: 1, pos });
+    if (metal) this.layer(ev, this.pick('swordLand'), { rate: between(Math.random, 0.9, 1.08) });
+    else this.layer(ev, this.pickSample(material === 'wood' ? 'woodHit' : 'soft') || this.pick('thump'), { gain: 0.6, rate: between(Math.random, 0.85, 1.05) });
+    const grit = this.pickSample(STAGE_SOUND[this.stage].grit || STAGE_SOUND[this.stage].step);
+    if (grit) this.layer(ev, grit, { gain: 0.25 + 0.2 * x, rate: between(Math.random, 0.9, 1.1), delay: 0.004 });
   }
 
   /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
@@ -2856,6 +2909,10 @@ export class BodySounds {
     this.lastFall = -1;
     this.t = 0;
     this.thudDue = 0; // 목소리 없는 캐릭터가 죽은 뒤 "쿵"을 내야 할 마감 시각 (0 = 없음)
+    this.nWounds = fighter.wounds?.length || 0; // 지금까지 본 상처 수 (새 상처 → 신음)
+    this.lastHurt = -9;
+    this.swordVy = 0; // 칼이 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
+    this.lastLand = -9;
   }
 
   update(dt) {
@@ -2911,6 +2968,30 @@ export class BodySounds {
       s.bodyFall(2.4);
       this.thudDue = 0;
     }
+
+    // 깊은 상처 → 짧은 신음. 한 번 벨 때 상처가 여러 개 몰려 생기므로 2초에 한 번만 (죽는 상처는 죽음 목소리가 대신한다)
+    const W = f.wounds || [];
+    if (W.length < this.nWounds) this.nWounds = W.length;
+    while (this.nWounds < W.length) {
+      const w = W[this.nWounds++];
+      if (f.state !== 'dead' && w.severity > 0.4 && this.t - this.lastHurt > 2) {
+        s.hurt(this.voice, w.severity, { me: this.me });
+        this.lastHurt = this.t;
+      }
+    }
+
+    // 칼이 바닥에 떨어짐: 놓친 칼, 또는 쥔 채 쓰러진 칼이 땅에 닿는 순간 (튀어서 다시 닿는 것은 0.5초 안에 한 번만)
+    const sw = f.sword;
+    if (sw && (!f.armed || f.state !== 'stand')) {
+      const y = sw.translation().y;
+      const vy = sw.linvel().y;
+      const v0 = this.swordVy;
+      if (v0 < -1.2 && vy > v0 * 0.35 && y < 0.25) {
+        if (this.t - this.lastLand > 0.5) s.swordLand(-v0, f.weapon?.material);
+        this.lastLand = this.t;
+        this.swordVy = 0;
+      } else this.swordVy = vy < 0 ? Math.min(v0, vy) : 0;
+    } else this.swordVy = 0;
   }
 }
 

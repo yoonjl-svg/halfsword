@@ -9,7 +9,7 @@ They were trimmed, high-passed, peak-normalized and converted to mono MP3.
 Thank you, Kenney!
 
 -------------------------------------------------------------------------------
-voice/  — death vocals, one small set per character (trimmed, high-passed at
+voice/  — death vocals and short hurt grunts, one small set per character (trimmed, high-passed at
 70 Hz, peak-normalized to -1 dBFS, converted to mono MP3). Sources and licences:
 
   CC0 (public domain) — HaelDB, "Male Grunt/Yelling sounds"
@@ -20,15 +20,21 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       generic_bleed1.mp3  <- yell3.wav
       heinrich_ko1.mp3    <- 2yell1.wav        heinrich_ko2.mp3 <- 2yell10.wav
       heinrich_bleed1.mp3 <- 2yell6.wav
-      liao_bleed1.mp3     <- yell6.wav         liao_bleed2.mp3  <- 2yell9.wav
+      liao_ko1.mp3        <- 2yell11.wav (0.33-0.78 s, -4.3 dB)
+      liao_bleed1.mp3     <- 2yell3.wav        liao_bleed2.mp3  <- 2yell9.wav
       generic_bleed2.mp3  <- yell8.wav         heinrich_bleed2.mp3 <- 2yell8.wav
+    short hurt grunts (<name>_hurt<n>.mp3, cut to 0.6 s at most):
+      player_hurt1.mp3    <- 3grunt1.wav       player_hurt2.mp3   <- 3grunt4.wav
+      generic_hurt1.mp3   <- yell7.wav         generic_hurt2.mp3  <- yell9.wav
+      heinrich_hurt1.mp3  <- 2yell7.wav        heinrich_hurt2.mp3 <- 2yell2.wav
+      liao_hurt1.mp3      <- 2yell4.wav (0.6-1.02 s)   liao_hurt2.mp3 <- 2yell5.wav (0.2-0.72 s)
     (the pack page lists both OGA-BY 3.0 and CC0; we use it under CC0)
 
   CC-BY 3.0 — Michel Baradari, "11 male human pain/death sounds"
     https://opengameart.org/content/11-male-human-paindeath-sounds
     http://creativecommons.org/licenses/by/3.0/
       bran_ko1.mp3 <- die1.wav   bran_ko2.mp3 <- deathh.wav   bran_bleed1.mp3 <- die2.wav
-      liao_ko1.mp3 <- painh.wav
+      bran_hurt1.mp3 <- pain1.wav   bran_hurt2.mp3 <- pain3.wav
 
   CC0 (public domain) — Freesound (https://freesound.org), preview MP3s, cut, high-passed
   at 70 Hz, peak-normalized to -1 dBFS, not pitch-shifted:
@@ -38,9 +44,13 @@ voice/  — death vocals, one small set per character (trimmed, high-passed at
       margarethe_ko1.mp3    <- hisoul, "Zisa, Relief, Moan, Tired, Exhale_2.wav"
       margarethe_bleed1.mp3    (the same clip in both files)
                                https://freesound.org/people/hisoul/sounds/520276/
+      margarethe_hurt1.mp3  <- hisoul, "Zisa, Pain, Shout Short, Impact_6.wav"
+                               https://freesound.org/people/hisoul/sounds/520275/
       isolde_ko1.mp3        <- mvVoiceActing, "girl damage" (3.3-4.4 s)
                                https://freesound.org/people/mvVoiceActing/sounds/855460/
       isolde_bleed1.mp3     <- mvVoiceActing, "girl damage" (7.8-8.9 s)
+                               https://freesound.org/people/mvVoiceActing/sounds/855460/
+      isolde_hurt1.mp3, isolde_hurt2.mp3 <- mvVoiceActing, "girl damage" (0.4-1.3 s, 1.9-2.7 s)
                                https://freesound.org/people/mvVoiceActing/sounds/855460/
 
 Thank you, HaelDB, Michel Baradari, kanyonwyvern, hisoul and mvVoiceActing!
