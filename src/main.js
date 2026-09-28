@@ -20,6 +20,7 @@ import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { installGunFx, clearGunFx } from './gun_fx.js';
+import { GUN_STANCE } from './gun.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
@@ -1135,14 +1136,16 @@ const guardName = $('guardName');
 let guardShown = -1;
 let guardTimer = 0;
 function updateGuardName(dt) {
-  const g = settings.guardNames && player.guardWeight() > 0.5 && player.alive ? player.guardPose.nearest : -1;
-  if (g !== guardShown && g >= 0) {
+  const gun = player.weapon?.gun; // 권총: 칼 자세 대신 '사격 자세' 하나만 (gun.js GUN_STANCE)
+  const g = settings.guardNames && (gun || player.guardWeight() > 0.5) && player.alive ? (gun ? 'gun' : player.guardPose.nearest) : -1;
+  if (g !== guardShown && (g === 'gun' || g >= 0)) {
     guardShown = g;
     guardName.innerHTML = '';
+    const info = gun ? GUN_STANCE : GUARDS[g];
     const b = document.createElement('b');
-    b.textContent = GUARDS[g].name;
+    b.textContent = info.name;
     const d = document.createElement('span');
-    d.textContent = GUARDS[g].desc;
+    d.textContent = info.desc;
     guardName.append(b, d);
     guardName.classList.add('show');
     guardTimer = 1.6;
