@@ -32,16 +32,17 @@ const params = new URLSearchParams(location.search);
 const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica');
 const FIXED_WEAPON = params.get('weapon');
 let lastPlayerWeapon = null; // 지난 판에 고른 무기 (다음 판 카드에서 되도록 뺀다)
-/** 이번 판 카드 세 장: 뽑기 목록에서 겹치지 않게 고르게 뽑는다 (지난 판 무기는 되도록 빼서 같은 무기가 두 판 연속 나오지 않게).
- *  테스트용 ?cards=excalibur,rubber_chicken,zweihander 로 세 장을 정할 수 있다 */
+/** 이번 판 내 카드 두 장 (맨 오른쪽 세 번째 칸은 상대 무기라 여기서 뽑지 않는다): 뽑기 목록에서 겹치지 않게 고르게 뽑는다
+ *  (지난 판 무기는 되도록 빼서 같은 무기가 두 판 연속 나오지 않게).
+ *  테스트용 ?cards=excalibur,rubber_chicken 으로 두 장을 정할 수 있다 (세 번째 id 를 적어도 버린다: 상대 카드는 상대 무기다) */
 function drawCardIds() {
-  // 모르는 id 는 버리고(getWeapon 이 롱소드로 바꿔 버린다) 서로 다른 세 장일 때만 쓴다
-  const forced = (params.get('cards') || '').split(',').filter((id) => id && getWeapon(id).id === id);
-  if (forced.length === 3 && new Set(forced).size === 3) return forced;
+  // 모르는 id 는 버리고(getWeapon 이 롱소드로 바꿔 버린다) 서로 다른 두 장일 때만 쓴다
+  const forced = (params.get('cards') || '').split(',').filter((id) => id && getWeapon(id).id === id).slice(0, 2);
+  if (forced.length === 2 && forced[0] !== forced[1]) return forced;
   const pool = PLAYER_WEAPON_POOL.filter((id) => id !== lastPlayerWeapon);
-  if (pool.length < 3) pool.push(...PLAYER_WEAPON_POOL.filter((id) => !pool.includes(id)));
+  if (pool.length < 2) pool.push(...PLAYER_WEAPON_POOL.filter((id) => !pool.includes(id)));
   const out = [];
-  while (out.length < 3) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  while (out.length < 2) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   return out;
 }
 
@@ -540,7 +541,8 @@ function showFoeLine(ch, line) {
 }
 
 // 이번 상대 소개 (이름 · 별명 · 한마디). 큰 글씨 알림(toast)과 따로, 작게 보여 준다.
-//  아랫줄(em)은 무기 뽑기 동안 "카드를 고르세요" → 고르면 상대 무기 → 싸움이 시작되면 내 무기 · 상대 무기
+//  아랫줄(em)은 무기 뽑기에서 카드를 고르는 동안만 "무기 카드를 한 장 고르세요". 무기 이름은 글로 적지 않는다
+//  (대사와 겹쳐 읽기 어렵다는 오너 의견: 내 무기와 상대 무기는 카드 두 장이 보여 준다)
 function showFoeIntro(ch) {
   const el = $('foeIntro');
   clearTimeout(showFoeIntro.t);
@@ -551,47 +553,67 @@ function showFoeIntro(ch) {
   el.querySelector('em').textContent = '';
   el.classList.add('show');
 }
-/** 소개 아랫줄: mine=true 면 "내 무기: X · 상대 무기: Y" (내 무기 이름은 등급 색), 아니면 상대 무기만 */
-function showFoeWeapons(mine) {
-  const em = $('foeIntro').querySelector('em');
-  em.textContent = mine ? '내 무기: ' : '';
-  if (mine) {
-    const b = document.createElement('b');
-    b.textContent = player.weapon.nameKo;
-    b.dataset.tier = player.weapon.tier || 'common';
-    em.append(b, ' · ');
-  }
-  em.append(`상대 무기: ${enemy.weapon.nameKo}`);
-}
 
-// ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장 → 하나를 누르면(PC는 1·2·3 키도) 뒤집혀 이번 판 무기가 나온다 ──
-//  고른 카드가 뒤집히고(0.45초) 0.4초 뒤 나머지 두 장도 어둡게 뒤집혀 무엇을 놓쳤는지 보여 준다.
-//  1.2초쯤 더 보여 주고(아무 데나 누르면 바로) 카드가 사라지면 무기가 손에 나타나고 "Battle".
+// ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장. 왼쪽 두 장이 내 카드, 맨 오른쪽은 상대 무기 칸(회색, 고를 수 없다) ──
+//  내 카드 하나를 누르면(PC는 1·2 키도) 뒤집혀 이번 판 내 무기가 나오고(0.45초), 0.35초 뒤 남은 내 카드가 어둡게 뒤집혀
+//  무엇을 놓쳤는지 보여 준다. 0.8초에 상대 카드가 뒤집혀 제 색으로 상대 무기를 보여 준다 (prepareRound 가 정한 무기).
+//  두 무기를 읽을 만큼 잠깐 더 보여 주고(상대 카드가 뒤집힌 뒤에 누르면 바로) 카드가 사라지면 무기가 손에 나타나고 "Battle".
+//  고른 때부터 싸움까지 약 2.4초.
 //  고르는 동안 싸움은 멈춰 있다: 판은 임시 무기(롱소드)로 세워 두기만 하고(물리·AI 없음, 무기는 감춤),
 //  카드를 고르면 그 무기로 판을 새로 세운다. 순서는 게임 루프의 시간으로 재서 일시정지하면 함께 멈춘다.
 //  카드 뒤집기·사라지기는 CSS 변환(transform)으로만 움직인다 (매 프레임 JS 로 그리지 않는다).
 const GRAND_WEAPONS = new Set(['excalibur']); // 진짜 엑스칼리버 카드는 금빛으로 일렁이고 울림이 크다
 const TIER_KO = { trash: '쓰레기', common: '커먼', rare: '레어', epic: '에픽', legend: '레전드' };
-// 초. others + 뒤집기(0.45초) = 0.85초에 나머지 두 장이 다 뒤집힌다: 누르거나 스페이스로 서두르더라도 그 뒤에야(skip) 사라진다.
-//  고른 뒤 tapGuard 동안의 누름은 버린다 (카드를 두 번 톡 친 두 번째 손가락이 결과를 건너뛰지 않게)
-const DRAW_T = { ready: 0.45, others: 0.4, build: 0.9, look: 2.05, tapGuard: 0.35, skip: 0.95, fly: 0.45 };
+const FOE_CARD = 2; // 맨 오른쪽 카드 = 상대 무기 칸
+// 초 (고른 때부터). others: 남은 내 카드가 뒤집힘, foe: 상대 카드가 뒤집힘 (+0.45초면 다 뒤집힌다),
+//  build: 고른 무기로 판을 새로 세움 (상대 카드가 다 뒤집힌 뒤, 아무것도 움직이지 않을 때), look: 사라지기 시작, fly: 사라지는 시간.
+//  tapGuard 전의 누름은 버린다 (카드를 두 번·세 번 톡 친 손가락이 상대 카드가 뒤집히기도 전에 결과를 건너뛰지 않게).
+//  그 뒤에 누르면(스페이스·엔터도) 남은 보여 주기를 건너뛰지만, 상대 무기가 잠깐은 보이도록 skip 전에는 사라지지 않는다
+const DRAW_T = { ready: 0.45, others: 0.35, foe: 0.8, tapGuard: 0.95, build: 1.3, skip: 1.6, look: 2.3, fly: 0.45 }; // look 2.3: 상대 무기를 약 1초 읽게
 const drawEl = $('draw');
 const cardEls = [...drawEl.querySelectorAll('.wcard')];
-// 뒷면: 금빛 마름모 안의 칼 문장 + (PC) 고르는 키 번호
+// ── 카드 뒷면 ──
+//  classic: 가죽 빛 바탕 + 가운데 마름모 칼 문장 (CSS 와 아래 작은 SVG, 그림 파일 없음). 오너가 게임의 픽셀 결에 맞춘 새 뒷면을
+//  고를 때까지 기본 (외형 PM 작업 중). 그림 파일 뒷면은 CARD_BACK_FILES 에 id: 경로 로 더하고 index.html 에 까는 법을 적는다.
+//  주소에 ?back=<id> 로 미리 볼 수 있다 (모르는 값이면 기본)
+const CARD_BACK_FILES = {}; // 예: p_castle: 'ui/cardbacks/p_castle.png'
+const CARD_BACK_DEFAULT = 'classic';
+const CARD_BACK = params.get('back') in CARD_BACK_FILES ? params.get('back') : CARD_BACK_DEFAULT;
+drawEl.dataset.back = CARD_BACK;
 const CARD_BACK_SVG =
   '<svg viewBox="0 0 60 100" aria-hidden="true"><path d="M30 3 L57 50 L30 97 L3 50 Z" fill="none" stroke="#d9a441" stroke-opacity=".75" stroke-width="2"/>' +
   '<path d="M30 11 L52 50 L30 89 L8 50 Z" fill="none" stroke="#d9a441" stroke-opacity=".35" stroke-width="1"/>' +
   '<path d="M30 18 L32.6 24 L32.6 60 L27.4 60 L27.4 24 Z" fill="#e8d3a0"/><rect x="19" y="60" width="22" height="3.6" rx="1.8" fill="#d9a441"/>' +
   '<rect x="28.3" y="63.6" width="3.4" height="12" fill="#8a5a2b"/><circle cx="30" cy="79" r="3.6" fill="#d9a441"/></svg>';
-const draw = { stage: null, t: 0, ids: [], pick: -1, others: false, built: false, skip: false, hold: false }; // stage: choose → reveal → fly
+// 상대 칸의 칼 문장은 회색으로 (filter 를 쓰지 않는다: 뒤집히는 카드의 뒷면 숨기기가 사파리에서 풀릴 수 있다)
+const CARD_BACK_SVG_FOE = CARD_BACK_SVG.replaceAll('#d9a441', '#86817a').replaceAll('#e8d3a0', '#a9a49c').replaceAll('#8a5a2b', '#55514c');
+if (CARD_BACK_FILES[CARD_BACK]) {
+  drawEl.style.setProperty('--backImg', `url("${CARD_BACK_FILES[CARD_BACK]}")`);
+  // 미리 받아 풀어 둔다: 메뉴가 떠 있는 동안 받아 두면 첫 판에 카드가 뜰 때 뒷면이 비었다가 그려지지 않는다
+  const img = new Image();
+  img.src = CARD_BACK_FILES[CARD_BACK];
+  img.decode?.().catch(() => {});
+}
+const draw = { stage: null, t: 0, ids: [], pick: -1, others: false, foe: false, built: false, skip: false, hold: false }; // stage: choose → reveal → fly
 cardEls.forEach((el, i) => {
-  el.querySelector('.wback').innerHTML = `${CARD_BACK_SVG}<span class="wkey">${i + 1}</span>`;
+  // 뒷면 배지: 내 카드는 (PC) 누를 키 번호, 상대 칸은 "상대" (폰에서도 보인다)
+  const emblem = CARD_BACK === 'classic' ? (i === FOE_CARD ? CARD_BACK_SVG_FOE : CARD_BACK_SVG) : '';
+  el.querySelector('.wback').innerHTML = emblem + (i === FOE_CARD ? '<span class="wkey wfoe">상대</span>' : `<span class="wkey">${i + 1}</span>`);
   el.addEventListener('click', () => pickCard(i));
 });
-// 결과를 보는 동안 아무 데나 누르면 바로 싸움으로 (고른 직후의 누름은 치지 않고, 못 고른 두 장이 다 뒤집힌 뒤에 사라진다)
+// 결과를 보는 동안 아무 데나 누르면 바로 싸움으로 (상대 카드가 뒤집히기 전의 누름은 치지 않고, 상대 무기가 잠깐 보인 뒤에 사라진다)
 function skipReveal() {
   if (draw.stage === 'reveal' && draw.t >= DRAW_T.tapGuard) draw.skip = true;
 }
+/** 상대 칸을 눌렀다: 고를 수 없다는 뜻으로 살짝 흔들기만 한다 (고르는 동안만) */
+function nudgeFoeCard() {
+  if (state !== 'draw' || draw.stage !== 'choose') return;
+  const el = cardEls[FOE_CARD];
+  el.classList.remove('nope');
+  void el.offsetWidth; // 흔들기 애니메이션을 처음부터 다시
+  el.classList.add('nope');
+}
+cardEls[FOE_CARD].addEventListener('animationend', (e) => e.animationName === 'nope' && cardEls[FOE_CARD].classList.remove('nope'));
 drawEl.addEventListener('pointerdown', skipReveal);
 window.addEventListener('resize', () => layoutDraw()); // 폰을 돌리거나 전체화면이 되면 카드 크기를 다시 맞춘다
 
@@ -616,15 +638,16 @@ function setWeaponsVisible(v) {
         });
 }
 
-/** 카드 세 장을 새로 채워 엎어 놓는다 */
+/** 카드 세 장을 새로 채워 엎어 놓는다: 내 카드 두 장 + 상대 무기 (prepareRound 가 정한 무기) */
 function openDraw() {
-  Object.assign(draw, { stage: 'choose', t: 0, ids: drawCardIds(), pick: -1, others: false, built: false, skip: false });
+  const foeId = getWeapon(foeWeaponId).id; // 짧은 별칭(chicken 등)도 상대가 실제로 드는 무기 id 로
+  Object.assign(draw, { stage: 'choose', t: 0, ids: [...drawCardIds(), foeId], pick: -1, others: false, foe: false, built: false, skip: false });
   cardEls.forEach((el, i) => {
     const w = getWeapon(draw.ids[i]);
-    el.className = 'wcard';
+    el.className = i === FOE_CARD ? 'wcard foe' : 'wcard';
     el.dataset.tier = w.tier || 'common';
     el.classList.toggle('grand', GRAND_WEAPONS.has(w.id));
-    el.setAttribute('aria-label', `${i + 1}번 카드`); // 뒤집히면 무기 이름·등급·설명으로 바뀐다 (revealLabel)
+    el.setAttribute('aria-label', i === FOE_CARD ? '상대 무기 카드 (고를 수 없어요)' : `${i + 1}번 카드`); // 뒤집히면 무기 이름·등급·설명으로 바뀐다 (revealLabel)
     const [, main, sub] = w.nameKo.match(/^(.*?)\s*\((.*)\)\s*$/) || [null, w.nameKo, ''];
     el.querySelector('.wthumb').style.backgroundImage = `url("ui/weapons/${w.id}.webp"), radial-gradient(closest-side, var(--tg), transparent)`;
     el.querySelector('.wname').textContent = main;
@@ -654,6 +677,9 @@ function layoutDraw() {
   drawEl.style.setProperty('--gap', `${gap}px`);
   drawEl.style.setProperty('--cw', `${cw}px`);
   drawEl.style.setProperty('--ch', `${ch}px`);
+  // 뒷면 그림(200×290)은 비율을 지킨 채 가운데 놓인다: 배지(높이 22px)의 가운데를 그림 아래쪽 홈(그림 아래 끝에서 21)에 맞춘다
+  const s = Math.min(cw / 200, ch / 290);
+  drawEl.style.setProperty('--kb', CARD_BACK === 'classic' ? '10px' : `${Math.max(4, Math.round((ch - 290 * s) / 2 + 21 * s - 11))}px`);
   // 글자 크기: 큰 카드(PC)는 크게, 가로로 든 폰은 중간, 좁거나 낮은 카드는 최소(이름 16px·설명 12px)
   const big = cw >= 205 && ch >= 300;
   const mid = cw >= 150 && !low;
@@ -663,8 +689,9 @@ function layoutDraw() {
   drawEl.classList.toggle('low', low);
 }
 
-/** i번째 카드를 고른다 (누르기 · 1/2/3 키) */
+/** i번째 카드를 고른다 (누르기 · 1/2 키). 상대 칸(맨 오른쪽)은 고를 수 없다: 누르면 살짝 흔들릴 뿐 */
 function pickCard(i) {
+  if (i === FOE_CARD) return nudgeFoeCard();
   if (state !== 'draw' || draw.stage !== 'choose' || draw.t < DRAW_T.ready) return; // 막 뜬 카드는 시작 단추를 두 번 누른 손가락에 안 뽑히게
   Object.assign(draw, { stage: 'reveal', t: 0, pick: i });
   const grand = GRAND_WEAPONS.has(draw.ids[i]);
@@ -673,13 +700,14 @@ function pickCard(i) {
   drawEl.classList.replace('choose', 'reveal');
   sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand }); // 두꺼운 카드 "촥" → 앞면이 드러나며 낮은 "둥" (레전드·에픽은 작은 반짝임, 엑스칼리버는 맑은 울림)
   haptic(grand ? 1 : 0.35);
-  if (currentFoe) showFoeWeapons(false); // 소개 아랫줄: 이제 상대 무기를 알려 준다 (내 무기는 카드에 보인다)
+  $('foeIntro').querySelector('em').textContent = ''; // "무기 카드를 한 장 고르세요"는 고르는 동안만
 }
 
 /** 뒤집힌 카드를 화면 읽기 프로그램이 무기 이름으로 읽게 한다 */
 function revealLabel(i) {
   const w = getWeapon(draw.ids[i]);
-  cardEls[i].setAttribute('aria-label', `${w.nameKo} · ${TIER_KO[w.tier] || TIER_KO.common} · ${(w.desc || '').replace(/\n/g, ' ')}`);
+  const who = i === FOE_CARD ? '상대 무기: ' : i === draw.pick ? '내 무기: ' : '';
+  cardEls[i].setAttribute('aria-label', `${who}${w.nameKo} · ${TIER_KO[w.tier] || TIER_KO.common} · ${(w.desc || '').replace(/\n/g, ' ')}`);
 }
 
 /** 고른 무기로 판을 새로 세운다 (카드가 가리고 있을 때, 아무것도 움직이지 않는 순간에) */
@@ -690,19 +718,27 @@ function buildPicked() {
   setWeaponsVisible(false);
 }
 
-/** 게임 루프가 state 'draw' 일 때 부른다: 카드 뒤집기 → 결과 보여 주기 → 사라지기 → 싸움 시작 */
+/** 게임 루프가 state 'draw' 일 때 부른다: 내 카드 뒤집기 → 남은 내 카드 → 상대 카드 → 결과 보여 주기 → 사라지기 → 싸움 시작 */
 function updateDraw(dt) {
   if (!draw.stage || draw.hold) return; // hold: 스크린샷용으로 순서를 잠깐 세운다 (game.draw.hold)
   draw.t += dt;
   if (draw.stage === 'reveal') {
     if (!draw.others && draw.t >= DRAW_T.others) {
       draw.others = true;
-      cardEls.forEach((el, i) => {
-        if (i === draw.pick) return;
-        el.classList.add('flipped', 'missed');
-        revealLabel(i);
-      });
-      sound.cardFlip({ pick: false }); // 나머지 두 장이 함께 "촥"
+      const other = 1 - draw.pick; // 남은 내 카드
+      cardEls[other].classList.add('flipped', 'missed');
+      revealLabel(other);
+      sound.cardFlip({ pick: false }); // 남은 카드가 "촥"
+    }
+    if (!draw.foe && draw.t >= DRAW_T.foe) {
+      // 상대 카드가 뒤집혀 제 색으로 상대 무기를 보여 준다 (소리는 고른 카드처럼: 등급 반짝임, 진짜 엑스칼리버면 맑은 울림)
+      draw.foe = true;
+      const w = getWeapon(draw.ids[FOE_CARD]);
+      const grand = GRAND_WEAPONS.has(w.id);
+      cardEls[FOE_CARD].classList.add('flipped');
+      revealLabel(FOE_CARD);
+      sound.cardFlip({ pick: true, tier: w.tier || 'common', grand });
+      haptic(grand ? 1 : 0.25);
     }
     if (!draw.built && draw.t >= DRAW_T.build) buildPicked();
     if (draw.t >= DRAW_T.look || (draw.skip && draw.t >= DRAW_T.skip)) {
@@ -787,13 +823,13 @@ async function startFight() {
     beginFight();
     return;
   }
-  // 무기 뽑기: 판은 임시 무기로 세워 두기만 하고(시간은 멈춤, 무기는 감춤) 카드 세 장을 띄운다
+  // 무기 뽑기: 판은 임시 무기로 세워 두기만 하고(시간은 멈춤, 무기는 감춤) 카드 세 장(내 카드 둘 + 상대 칸)을 띄운다
   newRound('longsword');
   setWeaponsVisible(false);
   state = 'draw';
   input.enabled = false;
   applyMoveMode();
-  if (currentFoe) $('foeIntro').querySelector('em').textContent = input.isTouchDevice ? '무기 카드를 한 장 고르세요' : '무기 카드를 한 장 고르세요 (1 · 2 · 3)';
+  if (currentFoe) $('foeIntro').querySelector('em').textContent = input.isTouchDevice ? '무기 카드를 한 장 고르세요' : '무기 카드를 한 장 고르세요 (1 · 2)';
   openDraw();
 }
 
@@ -803,7 +839,7 @@ function beginFight() {
   input.enabled = true;
   applyMoveMode();
   if (currentFoe) {
-    showFoeWeapons(true);
+    // 소개(이름 · 대사)는 조금 더 두었다가 걷는다 (무기 이름은 적지 않는다: 카드가 이미 보여 줬다)
     clearTimeout(showFoeIntro.t);
     showFoeIntro.t = setTimeout(() => $('foeIntro').classList.remove('show'), 2600);
   }
@@ -855,8 +891,8 @@ $('btnCalib').addEventListener('click', () => {
 });
 window.addEventListener('keydown', (e) => {
   if (state === 'draw') {
-    // 무기 뽑기: 1·2·3 으로 카드 고르기, 결과를 보는 동안 스페이스·엔터로 바로 싸움
-    const k = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
+    // 무기 뽑기: 1·2 로 카드 고르기 (3 번째는 상대 칸이라 키가 없다), 결과를 보는 동안 스페이스·엔터로 바로 싸움
+    const k = { Digit1: 0, Digit2: 1, Numpad1: 0, Numpad2: 1 }[e.code];
     if (k != null) pickCard(k);
     else if (e.code === 'Space' || e.code === 'Enter') skipReveal();
   }
@@ -1190,7 +1226,7 @@ window.game = {
   get combat() {
     return combat;
   },
-  draw, // 무기 뽑기 상태 (stage, ids, pick). 스크린샷용으로 game.draw.hold = true 면 순서가 멈춘다
+  draw, // 무기 뽑기 상태 (stage, ids = [내 카드, 내 카드, 상대 무기], pick). 스크린샷용으로 game.draw.hold = true 면 순서가 멈춘다
   get state() {
     return state;
   },
