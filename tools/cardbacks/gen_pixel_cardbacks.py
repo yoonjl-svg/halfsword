@@ -288,9 +288,116 @@ def cathedral():
     return pal, t, band, center, 'R'
 
 
+def clearing_a():
+    # 화전 터 1안(보관): 탄 땅 검정 바탕, 재 잿빛, 새싹 연두, 양골담초 노랑. 문양은 새싹과 밭돌, 가운데는 브란의 회초리(참나무 가지)
+    pal = dict(SHARED, B='#1a1816', A='#5e5c55', L='#8fae3e', Y='#c9a83a', W='#6e665a')
+    t = canvas(TW, TH, 'B')
+    # 흩어진 재 알갱이 (드문 잿빛 점)
+    for y in range(TH // 2):
+        for x in range(TW):
+            if (x * 7 + y * 3) % 13 == 0 and (x + y) % 2 == 0:
+                t[y][x] = 'A'
+    sprout = ['..L..L..', '.LL..LL.', '..L..L..', '...LL...', '...LL...', '....L...', '....L...', '...AAA..']
+    stones = ['........', '..AA.AA.', '.AAAAAAA', 'AAAA.AAA', '.AA..AA.', '........']
+    stamp(t, sprout, 8, 8)
+    stamp(t, stones, 16, 16)
+    stamp(t, stones, 16, 0)
+    sym_tile(t)
+    band = band_rows(['W.W.W.', 'WWWWWW', 'W.W.W.', 'WWWWWW'], 'B')  # 판자 빠진 울타리
+    center = canvas(14, 14, '.')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d <= 7:
+                center[y][x] = 'B'
+            if 6 < d <= 7:
+                center[y][x] = 'Y'
+    # 회초리: 왼쪽 아래에서 오른쪽 위로 뻗은 가지 (두 칸 굵기), 끝에 잎눈 둘
+    for k in range(9):
+        x, y = 3 + k, 10 - k
+        center[y][x] = 'g'
+        if 0 <= y - 1:
+            center[y - 1][x] = 'G'
+    center[3][10] = 'L'
+    center[2][10] = 'L'
+    center[4][8] = 'L'
+    center[4][9] = 'L'
+    return pal, t, band, center, 'L'
+
+
+def clearing():
+    # 화전 터 2안(오너 채택, 브란): 탄 땅 검정 바탕, 재 잿빛, 새싹 연두, 양골담초 노랑, 바랜 나무.
+    # 문양은 빗줄기와 새싹, 띠는 둥글게 이어 놓은 탄 통나무의 마구리, 가운데는 죽은 가지에 앉은 까마귀와 그 끝의 새잎
+    pal = dict(SHARED, B='#1a1816', A='#5e5c55', L='#8fae3e', Y='#c9a83a', W='#6e665a')
+    t = canvas(TW, TH, 'B')
+    # 비스듬한 빗줄기 (잿빛 두 칸 짧은 선, 드문드문)
+    for y in range(TH // 2):
+        for x in range(TW):
+            if (x * 5 + y * 3) % 11 == 0 and (x - y) % 4 == 0:
+                t[y][x] = 'A'
+                if y + 1 < TH // 2 and x > 0:
+                    t[y + 1][x - 1] = 'A'
+    sprout = ['..L..L..', '.LL..LL.', '..L..L..', '...LL...', '....L...', '....L...', '...AAA..', '........']
+    drop = ['...A....', '..A.....', '...A....', '..A.....', '........', '......A.', '.....A..', '......A.']
+    stamp(t, sprout, 8, 8)
+    stamp(t, drop, 16, 16)
+    stamp(t, drop, 16, 0)
+    sym_tile(t)
+    band = band_rows(['.WWWW.', 'WW..WW', 'WW..WW', '.WWWW.'], 'B')  # 통나무 마구리 (나이테)
+    center = canvas(14, 14, '.')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d <= 7:
+                center[y][x] = 'B'
+            if 6 < d <= 7:
+                center[y][x] = 'Y'
+    # 가운데 장식은 위 절반만 그리고 아래 절반은 180° 돌려 붙는다(아래 main). 옆모습 까마귀는 돌리면 둘이 겹쳐 덩어리로 보여서,
+    # 위에서 본 날개 편 까마귀(머리·꼬리가 대칭이라 돌려 붙여도 한 마리로 읽힌다)를 잿빛으로 넣는다
+    for y, (x0, x1) in {1: (6, 8), 2: (5, 9), 3: (2, 12), 4: (2, 12), 5: (3, 11), 6: (5, 9)}.items():
+        for x in range(x0, x1):
+            center[y][x] = 'A'
+    return pal, t, band, center, 'L'
+
+
+def poseidon_night():
+    # 밤의 포세이돈(하인리히 흑화): 포세이돈 안의 밤 변주 — 짙푸른 바탕에 어두운 물빛 마름모, 삼지창은 그대로, 물거품 자리에 달과 별, 가운데는 초승달과 불꽃
+    pal = dict(SHARED, B='#0c1220', T='#2a4d58', W='#dfe3d8', F='#e0782a')
+    t = canvas(TW, TH, 'B')
+    for y in range(TH // 2):
+        for x in range(TW):
+            if abs(x + 0.5 - 8) + abs(y + 0.5 - 8) == 8:
+                t[y][x] = 'T'
+    trident = ['G.GG.G', 'G.GG.G', 'G.GG.G', 'GGGGGG', '..GG..', '..gg..', '.GGGG.', '..gg..', '..gg..']
+    moon = ['..WW..', '.W..W.', 'W....W', 'W.....', '.W..W.', '..WW..']  # 이지러진 달과 별 하나
+    stamp(t, trident, 8, 8)
+    stamp(t, moon, 16, 16)
+    stamp(t, moon, 16, 0)
+    t[2][14] = 'W'
+    t[13][2] = 'W'
+    sym_tile(t)
+    band = band_rows(['.GGGGG', '.G...G', '.G.G.G', 'GG.GGG'], 'B')  # 그리스 뇌문 (포세이돈과 같다)
+    center = canvas(14, 14, '.')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d <= 7:
+                center[y][x] = 'B'
+            if 6 < d <= 7:
+                center[y][x] = 'G'
+            elif 3.2 < d <= 4.6 and dx < 0.8:  # 초승달 (왼쪽으로 열린 고리)
+                center[y][x] = 'W'
+    flame = ['..F.', '.FF.', 'FFFF', '.FF.']
+    stamp(center, flame, 8.5, 7, wrap=False)
+    return pal, t, band, center, 'T'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('castle', castle), ('temple', temple), ('cathedral', cathedral)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)
