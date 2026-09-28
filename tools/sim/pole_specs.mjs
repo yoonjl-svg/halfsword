@@ -9,6 +9,8 @@ const L = 1.2; // 앞손 앞
 const R = 1.2; // 앞손 뒤
 const rod = (m, len) => ({ Ie: (m * len * len) / 12, It: 0.00006 * (m / 0.9) });
 
+const env = (k) => (typeof process !== 'undefined' ? process.env[k] : undefined); // 브라우저(tools/browser/staff_clip.mjs)에서도 부른다
+
 export function registerPoleWeapons(WEAPONS) {
   const front = rod(0.9, L);
   const rear = rod(0.9, R);
@@ -24,7 +26,7 @@ export function registerPoleWeapons(WEAPONS) {
   };
   WEAPONS.proto_staff = { ...common, id: 'proto_staff', nameKo: '봉 (시제품)', edged: false, mBlunt: 3.5, mCut: 0.5, mThrust: 1, hiltLength: 0, bladeLength: L };
   // 창은 앞을 길게 쥘 수 있다(SPEAR_FRONT=앞손 앞 길이 m, 길이 합 2.4 m 그대로): 봉처럼 가운데를 쥐면 칼과 닿는 거리가 같다
-  const F = +(process.env.SPEAR_FRONT ?? 1.5); // 1.2 → 45% · 1.5 → 54% · 1.8 → 44% (리그 평균, 짝마다 24판)
+  const F = +(env('SPEAR_FRONT') ?? 1.5); // 1.2 → 45% · 1.5 → 54% · 1.8 → 44% (리그 평균, 짝마다 24판)
   const sf = rod(1.8 * (F / (L + R)), F);
   const sr = rod(1.8 * (1 - F / (L + R)), L + R - F);
   const spearParts = () => [
