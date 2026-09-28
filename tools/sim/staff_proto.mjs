@@ -108,6 +108,21 @@ console.log(`봉 시제품: 길이 ${(L + R).toFixed(1)} m, 앞손 앞 ${L} m ·
   if (LIB) {
     const m = motionFor(WEAPONS.staff_proto);
     SCHOOLS.staff_lib = { ...SCHOOLS[school], id: 'staff_lib', tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints };
+    // 기다림 전술(STAFF_WAIT=배율): 창·봉은 먼 간격에 서서 들어오는 상대를 맞찌른다 (pole_motion_research.md [원전 2차])
+    //  간격을 배율만큼 늘리고, 기술은 찌르기만, 맞받아치기도 찌르기로
+    const k = +(process.env.STAFF_WAIT ?? 0);
+    if (k) {
+      const S = SCHOOLS.staff_lib;
+      const th = S.tech.filter((t) => t.kind === 'thrust');
+      const M0 = S.measure;
+      Object.assign(S, {
+        measure: { ...M0, contact: M0.contact * k, reach: M0.reach * k },
+        tech: th,
+        techByName: Object.fromEntries(th.map((t) => [t.name, t])),
+        feints: S.feints.filter((f) => th.some((t) => t.name === f.fake)),
+        counter: { default: th.map((t) => t.name) },
+      });
+    }
   }
   let Wn = 0, Ln = 0, D = 0, nan = 0, dealt = 0, taken = 0, clashes = 0;
   for (let s = 1; s <= N; s++) {
