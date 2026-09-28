@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { buildArena } from './arena.js';
 import { rng, h3, _c, _v, Kit, box, cyl, limb, canvasTex, pointGlow, bakeLight } from './stage_kit.js';
+import { weaponEnv } from './weapon_looks.js';
 
 const C = {
   iron: 0x2a2a2e,
@@ -299,9 +300,13 @@ export function buildPoseidonNight(scene, lights = {}) {
     [14.0, -1.4],
     [8.2, -9.6],
   ]; // 석상(11.6, −6) 양옆의 횃대
+  // 석상 앞 제물 자리 (오너 요청): 받침 앞 땅바닥, 결투 자리 쪽. 석상(11.6, −6)에서 경기장 가운데 쪽으로 1.9m
+  const OFF = { x: 11.6 - 0.888 * 1.95, z: -6.0 + 0.459 * 1.95 };
+  const CANDLE_LIT = [OFF.x + 0.22, OFF.z - 0.28]; // 켜진 초 하나 (밤에 제물이 보이라고 — 누군가 조금 전에 다녀갔다)
   const glowPts = [
     ...braziers.map(([x, z]) => ({ x, y: 1.35, z, r: 11, c: [2.4, 1.1, 0.3] })), // 밤이라 세게 (달빛에 곱해지므로)
     ...stands.map(([x, z]) => ({ x, y: 2.5, z, r: 7.5, c: [2.0, 0.95, 0.3] })),
+    { x: CANDLE_LIT[0], y: 0.12, z: CANDLE_LIT[1], r: 1.6, c: [1.6, 0.8, 0.25] }, // 촛불: 작고 가깝게
   ];
   const glow = pointGlow(glowPts);
 
@@ -363,18 +368,51 @@ export function buildPoseidonNight(scene, lights = {}) {
     limb(K, 'iron', [x + lean * H, H - 0.15, z - 0.65], [x + lean * H - 0.3, H - 0.55, z - 0.65], 0.012, 0.012, C.rope, {}, 3); // 매듭 끈
   }
 
+  const flames = []; // 불꽃 자리 (화로·횃대·촛불). 아래 인스턴싱으로 그린다
+  // ── 석상 앞 제물: 은화 몇 닢(쌓인 것과 흩어진 것), 꺼진 초 둘과 켜진 초 하나, 마른 꽃을 꽂은 질그릇 — 아무도 안 오는 신전에 누군가 빌고 간 흔적 ──
+  {
+    const ox = OFF.x;
+    const oz = OFF.z;
+    // 은화: 얇은 원판. 셋은 쌓였고 나머지는 흩어졌다
+    const coin = (x, z, y = 0.002, rot = 0) => K.put('silver', new THREE.CylinderGeometry(0.021, 0.021, 0.004, 12), 0xcfd1cc, [x, y, z], [0, rot, 0], 1, { vary: 0.1, noise: 0.05 });
+    for (let i = 0; i < 3; i++) coin(ox - 0.12, oz + 0.05, 0.002 + i * 0.0045, r() * 3);
+    for (let i = 0; i < 6; i++) coin(ox + (r() - 0.5) * 0.7, oz + (r() - 0.5) * 0.6, 0.002, r() * 3);
+    // 초: 타다 남은 밀랍 초. 밑이 조금 퍼졌고 심지는 검다. 둘은 꺼졌고 하나는 켜져 있다
+    const candle = (x, z, h, lit) => {
+      K.put('wax', new THREE.CylinderGeometry(0.022, 0.03, h, 9), 0xe6dcc2, [x, h / 2, z], [0, 0, 0], 1, { vary: 0.08, noise: 0.08, rough: 0.004 });
+      K.put('wax', new THREE.CylinderGeometry(0.04, 0.03, 0.012, 9), 0xe6dcc2, [x, 0.006, z], [0, 0, 0], 1, { vary: 0.08, rough: 0.004 }); // 흘러내린 밀랍
+      K.put('dark', cyl(0.003, 0.003, 0.014, 4), 0x1a1512, [x, h + 0.006, z]);
+      if (lit) flames.push({ x, y: h + 0.008, z, s: 0.11, ph: r() * 6 });
+    };
+    candle(ox - 0.3, oz - 0.2, 0.07, false);
+    candle(ox + 0.05, oz + 0.3, 0.11, false);
+    candle(CANDLE_LIT[0], CANDLE_LIT[1], 0.09, true);
+    // 질그릇과 마른 꽃
+    K.put('clay', new THREE.CylinderGeometry(0.085, 0.06, 0.06, 10, 1, true), 0x7e6249, [ox + 0.36, 0.03, oz + 0.1], [0, 0, 0], 1, { vary: 0.1, noise: 0.12, rough: 0.004 });
+    K.put('clay', new THREE.CircleGeometry(0.06, 10), 0x5a4736, [ox + 0.36, 0.004, oz + 0.1], [-Math.PI / 2, 0, 0]);
+    for (let k = 0; k < 4; k++) {
+      const a = k * 1.6 + 0.3;
+      const tip = [ox + 0.36 + Math.cos(a) * 0.09, 0.2 + r() * 0.08, oz + 0.1 + Math.sin(a) * 0.09];
+      limb(K, 'stem', [ox + 0.36 + Math.cos(a) * 0.02, 0.05, oz + 0.1 + Math.sin(a) * 0.02], tip, 0.005, 0.003, 0x5c4d33, { vary: 0.2 }, 4);
+      K.put('stem', new THREE.SphereGeometry(0.022, 6, 5), 0x8f7c55, tip, [0, 0, 0], [1, 0.7, 1], { vary: 0.2, noise: 0.2 }); // 마른 꽃송이
+    }
+  }
+
   const std = (p) => new THREE.MeshStandardMaterial({ vertexColors: true, ...p });
   const meshes = [
     K.mesh('iron', std({ roughness: 0.55, metalness: 0.6 }), { light: glow }),
     K.mesh('wood', std({ roughness: 0.9 }), { light: glow }),
     K.mesh('cloth', std({ roughness: 1 }), { light: glow }),
     K.mesh('ash', std({ roughness: 1 })),
+    K.mesh('silver', std({ roughness: 0.3, metalness: 0.85, envMap: weaponEnv(), envMapIntensity: 1.2 }), { light: glow }),
+    K.mesh('wax', std({ roughness: 0.55 }), { light: glow }),
+    K.mesh('clay', std({ roughness: 0.95 }), { light: glow }),
+    K.mesh('stem', std({ roughness: 1 }), { light: glow }),
     K.mesh('embers', new THREE.MeshBasicMaterial({ vertexColors: true })),
   ];
   for (const m of meshes) if (m) scene.add(m);
 
-  // ── 불꽃 (화로 셋씩, 횃대 둘씩): 인스턴싱 원뿔, 매 프레임 일렁인다 ──
-  const flames = [];
+  // ── 불꽃 (화로 셋씩, 횃대 둘씩, 촛불 하나): 인스턴싱 원뿔, 매 프레임 일렁인다 ──
   for (const [x, z] of braziers) for (let i = 0; i < 3; i++) flames.push({ x: x + (i - 1) * 0.18, y: 1.28, z: z + ((i % 2) - 0.5) * 0.16, s: 1.0 - Math.abs(i - 1) * 0.28, ph: r() * 6 });
   for (const [x, z] of stands) for (let i = 0; i < 2; i++) flames.push({ x, y: 2.52, z, s: 0.5 - i * 0.18, ph: r() * 6 });
   const flameGeo = new THREE.ConeGeometry(0.17, 0.75, 7);

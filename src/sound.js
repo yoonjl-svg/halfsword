@@ -1052,6 +1052,25 @@ export const SYNTH = {
   },
 
   /**
+   * 찢어진 검은 천이 바람에 펄럭임 (밤의 포세이돈, 석상 옆 장대 둘): 2~5번 "퍼덕퍼덕" — 천이 꺾이며 공기를 치는 낮은 "퍽"(좁게 거른 잡음)에
+   * 천 끝이 튀는 짧은 "탁"을 얹고, 사이는 점점 느려진다. 위를 2.6kHz에서 닫아 멀리 들리게
+   */
+  clothFlap(sr, r) {
+    const n = Math.round(1.4 * sr);
+    const out = new Float32Array(n);
+    const k = Math.round(between(r, 2, 5));
+    let t = between(r, 0.02, 0.08);
+    for (let i = 0; i < k && t < 1.2; i++) {
+      noiseHit(out, sr, r, { t0: t, amp: between(r, 0.5, 1), attack: 0.004, tau: between(r, 0.02, 0.04), type: 'bandpass', f: between(r, 350, 900), q: 0.8 });
+      noiseHit(out, sr, r, { t0: t + 0.006, amp: between(r, 0.2, 0.4), attack: 0.002, tau: 0.01, type: 'highpass', f: 1800, q: 0.7 });
+      t += between(r, 0.12, 0.28) * (1 + (0.3 * i) / k);
+    }
+    const lp = new Filt('lowpass', 2600, 0.7, sr);
+    for (let i = 0; i < n; i++) out[i] = lp.run(out[i]);
+    return fadeOut(normalize(out, 0.9), sr, 0.1);
+  },
+
+  /**
    * 울림(잔향)용 충격 응답: 벽에 되울리는 초기 반사 몇 개 + 부드럽게 사라지는 꼬리 (스테레오).
    * 기본값은 경기장. 배경마다 다른 방(STAGE_SOUND.room): dur 길이(초), rt 꼬리가 60dB 줄어드는 시간,
    * e0·e1 초기 반사가 오는 때(벽까지 거리), lp 꼬리의 처음 밝기(Hz)
@@ -1404,6 +1423,7 @@ const BANK = [
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
   ['rainLoop', 1, SYNTH.rainLoop], // 화전 터
+  ['clothFlap', 2, SYNTH.clothFlap], // 밤의 포세이돈 (찢어진 천)
   ['dove', 2, SYNTH.dove], // 대성당
   ['wings', 2, SYNTH.wings], // 대성당 비둘기·홀 박쥐
   ['debris', 2, SYNTH.debris], // 대성당
@@ -1451,6 +1471,7 @@ const SAMPLES = {
 // room: reverbIR 모양 + 쇳소리(metal)·몸 소리(flesh)를 울림으로 보내는 양. 바깥(포세이돈·산사)은 울림 없음
 const STAGE_SOUND = {
   poseidon: { step: 'step' },
+  poseidon_night: { step: 'step', night: true }, // 밤의 포세이돈 (하인리히 재등장): 같은 바다·바람에 네 귀퉁이 화로·횃대의 불을 더하고 바람을 어둡게
   temple: { step: 'stepGravel', grit: 'stepGravel' },
   castle: { step: 'stepSnow', grit: 'stepSnow', room: { dur: 0.8, rt: 0.55, e0: 0.04, e1: 0.11, lp: 4000, metal: 0.22, flesh: 0.08 } }, // 성벽에 짧게 튕기는 메아리
   cathedral: { step: 'stepStone', grit: 'stepStone', room: { dur: 2.8, rt: 2.5, e0: 0.03, e1: 0.14, lp: 3500, metal: 0.4, flesh: 0.16 } }, // 돌 성당의 긴 울림
@@ -2263,8 +2284,17 @@ export class Sound {
    */
   ambience() {
     if (this._amb || !this.ctx || !this.master) return;
-    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
+    const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, poseidon_night: this._ambPoseidon, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
     if (amb) return amb.call(this);
+    return this._ambPoseidon();
+  }
+
+  /**
+   * 포세이돈 신전 (위 ambience 참고). night = 밤의 포세이돈: 파도는 그대로, 바람은 더 낮고 어둡게(480Hz, 1.4kHz 위를 닫음), 결투 자리
+   * 네 귀퉁이의 쇠 화로와 석상 앞 횃대의 불 "타닥"을 좌우로 아주 작게 깐다(되풀이 조각 둘). 밤바다는 낮보다 낮고 느리다(디렉터).
+   * 15~40초마다 찢어진 검은 천이 바람에 펄럭이고, 큰 타격에는 바람이 잠깐 세지며 불길이 "화르륵", 천도 펄럭인다(gust)
+   */
+  _ambPoseidon(night = !!STAGE_SOUND[this.stage]?.night) {
     const c = this.ctx;
     const buf = this._noiseBuf();
     const out = c.createGain();
@@ -2287,12 +2317,12 @@ export class Sound {
     surf.loop = true;
     const lp = c.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 500;
+    lp.frequency.value = night ? 380 : 500; // 밤바다는 더 낮고
     lp.Q.value = 0.3;
     const sg = c.createGain();
-    sg.gain.value = 0.03;
-    const w1 = lfo(0.083);
-    const w2 = lfo(0.131);
+    sg.gain.value = night ? 0.026 : 0.03;
+    const w1 = lfo(night ? 0.06 : 0.083); // 느리게 밀려온다
+    const w2 = lfo(night ? 0.095 : 0.131);
     amt(w1, 0.016, sg.gain);
     amt(w2, 0.009, sg.gain);
     amt(w1, 160, lp.frequency); // 파도가 부서질 때 조금 밝아진다
@@ -2304,18 +2334,44 @@ export class Sound {
     wind.playbackRate.value = 0.87; // 파도와 같은 잡음이 겹쳐 들리지 않게
     const bp = c.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.value = 650;
+    bp.frequency.value = night ? 480 : 650;
     bp.Q.value = 1.2;
     const wg = c.createGain();
-    wg.gain.value = 0.012;
+    wg.gain.value = night ? 0.009 : 0.012;
     const w3 = lfo(0.047);
     amt(w3, 220, bp.frequency);
     amt(w3, 0.008, wg.gain);
-    wind.connect(bp).connect(wg).connect(out);
+    if (night) {
+      const nl = c.createBiquadFilter(); // 밤: 바람의 위를 닫아 어둡게
+      nl.type = 'lowpass';
+      nl.frequency.value = 1400;
+      wind.connect(bp).connect(nl).connect(wg).connect(out);
+    } else wind.connect(bp).connect(wg).connect(out);
     const t = c.currentTime;
     for (const n of [surf, wind, w1, w2, w3]) n.start(t);
-    this._amb = { out, nodes: [surf, wind, w1, w2, w3] };
+    const nodes = [surf, wind, w1, w2, w3];
+    if (night) {
+      const fire = this.pick('fireLoop');
+      for (const [pan, rate] of [[-0.6, 0.95], [0.6, 1.06]]) {
+        const n = c.createBufferSource();
+        n.buffer = fire;
+        n.loop = true;
+        n.playbackRate.value = rate;
+        const fg = c.createGain();
+        fg.gain.value = 0.022;
+        const p = c.createStereoPanner?.();
+        if (p) {
+          p.pan.value = pan;
+          n.connect(fg).connect(p).connect(out);
+        } else n.connect(fg).connect(out);
+        n.start(t);
+        nodes.push(n);
+      }
+    }
+    this._amb = { out, nodes, wind: wg, windBase: night ? 0.009 : 0.012 };
+    if (night) this._every(15000, 40000, () => this.stageCall('flap', Math.random() * 0.5)); // 가끔 검은 천이 펄럭인다
   }
+
 
   /** 배경 흰 잡음 (4초, 22050Hz 로 만들어 메모리를 아낀다. 흰 잡음이라 되풀이 이음매에서 딸깍이지 않는다). 배경마다 같이 쓴다 */
   _noiseBuf() {
@@ -2540,6 +2596,7 @@ export class Sound {
       snort: ['horseSnort', 0.12, between(Math.random, 0.92, 1.08), 0],
       organ: ['organ', 0.12, 1, 0],
       stamp: ['horseStamp', 0.14, between(Math.random, 0.92, 1.08), 0],
+      flap: ['clothFlap', 0.05 + 0.08 * k, between(Math.random, 0.9, 1.1), 0], // 밤의 포세이돈: 찢어진 천이 바람에 펄럭
     }[kind];
     const ev = this.event({ bus: this.fleshBus, gain, prio: 0.1 });
     this.layer(ev, this.pick(bank), { rate, dur });
@@ -2862,6 +2919,12 @@ export class Sound {
       w.gain.setTargetAtTime(b, now + 0.7, 1.2);
     }
     if (this.stage.startsWith('clearing')) return; // 화전 터: 바람만 잠깐 (크게 튀는 소리는 넣지 않는다 — 사장님 컨셉)
+    if (this.stage === 'poseidon_night') {
+      // 밤의 포세이돈: 화로 불길이 잠깐 "화르륵", 바람에 검은 천이 펄럭
+      this.stageCall('flare', amount * 0.6);
+      if (Math.random() < 0.4 + amount * 0.6) this.stageCall('flap', amount);
+      return;
+    }
     if (this.stage === 'castle') return this.stageCall('flare', amount);
     if (this.stage === 'cathedral') {
       this.stageCall('debris', amount);

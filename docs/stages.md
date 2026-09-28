@@ -383,6 +383,8 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - **불빛**: 결투 자리 네 귀퉁이(±9.2, ±9.2 — 카메라 반지름 밖)의 세 다리 쇠 화로, 석상 양옆의 높은 횃대 둘. 불빛은 실제 조명 없이 신전 조각(대리석·기둥·바위·모래)의 꼭짓점 색에 구워 넣는다 — 색 속성이 없는 모래에는 흰색을 깔고 `vertexColors`를 켠 뒤 굽는다.
 - **불꽃**: 인스턴싱 원뿔(화로 셋씩, 횃대 둘씩)이 일렁이고, 화로에서 불티 240개가 올라 흩어진다.
 - **흑화의 표시**: 경기장 서쪽에 찢어진 검은 천을 건 장대 둘. 문장·문양은 없다.
+- **석상 앞 제물**(오너 요청): 받침 앞 땅바닥에 은화 아홉 닢(셋은 쌓였다), 타다 남은 밀랍 초 셋 — 둘은 꺼졌고 **하나는 켜져 있다**(밤이라 그래야 보이고, "누군가 조금 전에 다녀갔다"는 뜻. 촛불 빛은 둘레 땅·제물에 구웠다), 마른 꽃을 꽂은 질그릇. 아무도 안 오는 신전에 누군가 빌고 간 흔적.
+  - 그을음·재는 넣지 않았다(오너와 의논): 밤 배경에서 짙은 그을음은 대비가 없어 안 보인다.
 - **움직임**: 큰 타격이 나오면 불꽃이 크게 일고 불티가 흩어지며, 낮 신전의 먼지도 같이 흩날린다(`day.excite`).
 - **카드 뒷면**: `px_poseidon_night_*` — 포세이돈의 밤 변주. 짙푸른 바탕에 어두운 물빛 마름모, 삼지창은 그대로, 물거품 자리에 이지러진 달과 별, 가운데는 초승달과 불꽃. `docs/handoff/card_back_poseidon_night.png`. main.js `PX_BACKS`에 `poseidon_night: '#0c1220'` 한 항목을 더했다(디렉터에게 보고).
 - **소리**: `STAGE_SOUND`에 없어 포세이돈(바다) 값으로 떨어진다 — 밤 바다라 그대로도 어울리지만, 불 타는 소리·먼 파도 정도를 소리 PM에게 제안한다.
@@ -393,6 +395,7 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - [석상과 횃대](stages/poseidon_night_statue.jpg)
 - [화로](stages/poseidon_night_brazier.jpg)
 - [검은 천](stages/poseidon_night_banner.jpg)
+- [석상 앞 제물](stages/poseidon_night_offer.jpg) · [가까이](stages/poseidon_night_offer_close.jpg)
 - [바다](stages/poseidon_night_sea.jpg)
 - [달](stages/poseidon_night_moon.jpg)
 - [달 가까이](stages/poseidon_night_moon_close.jpg)
