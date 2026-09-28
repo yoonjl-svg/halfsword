@@ -15,7 +15,9 @@ import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
-import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON } from './weapons.js';
+import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
+import { breakWeaponLook } from './weapon_looks.js';
+import { spawnDebris, debrisEnabled } from './weapon_debris.js';
 import { decorateOutfit } from './outfits.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
@@ -856,9 +858,98 @@ export class Fighter {
     if (this._breakSeed / 4294967296 < p) this.breakWeapon();
   }
 
-  /** 무기가 부러진다: 날이 죽어 뭉툭한 몽둥이가 된다 (combat.js analyze()가 isBlade를 꺼서 처리) */
+  /**
+   * 무기가 부러진다: 칼날 끝쪽(spec.breakAt, 기본 절반 너머)이 떨어져 나가고 남은 토막은 뭉툭한 몽둥이가 된다
+   *  (combat.js analyze()가 isBlade를 꺼서 처리. BREAK.stubEdge 를 켜면 토막 날로 효율을 깎아 벤다).
+   *  물리: 칼날 콜라이더를 그 자리에서 줄인다(핸들이 그대로라 combat.js 의 접촉 기록이 끊기지 않는다) → 질량·관성·칼 길이가 함께 준다.
+   *  겉모습: 절단선 위 메쉬는 조각이 되어 날아가 사라지고(weapon_debris.js), 남는 끝엔 톱니 모양 부러진 면을 얹는다.
+   */
   breakWeapon() {
+    if (this.weaponBroken) return; // 한 번만 부러진다
     this.weaponBroken = true;
+    const cfg = this.weaponCfg;
+    const at = THREE.MathUtils.clamp(this.weapon.breakAt ?? BREAK.at, 0.05, 0.95);
+    const cutY = cfg.hiltLength + at * cfg.bladeLength;
+    this.trimSword(cutY);
+    cfg.bladeLength *= at; // 칼끝 계산(bladePoint)·판정(combat.js t)·마무리 간격(finish.js)이 새 길이를 쓴다
+    if (BREAK.stubEdge) {
+      cfg.mCut *= BREAK.stubCut;
+      cfg.mThrust *= BREAK.stubThrust;
+    }
+    // 칼끝 자리가 한순간에 옮겨졌다: 칼끝 속도 추정이 튀지 않게 이전 값을 버린다
+    this.tipPrev = null;
+    this.hitPointPrev = null;
+    this.shatterLook(cutY);
+  }
+
+  /** (파손) 칼 몸체에서 칼 축 높이 cutY(손 기준, m) 너머의 콜라이더를 잘라 내고 질량·관성 값을 다시 잰다 */
+  trimSword(cutY) {
+    const parts = this.weapon.buildParts({}); // 질량 자료만 쓴다 (색은 안 쓴다) — 생성자와 같은 순서라 swordColliders 와 짝이 맞다
+    parts.forEach(([shape, y, [pm, pc, pIe, pIt]], i) => {
+      const col = this.swordColliders[i];
+      if (!col || shape[0] !== 'box') return;
+      const [, hx, hy, hz] = shape;
+      const lo = y - hy;
+      if (y + hy <= cutY) return; // 절단선 아래 부품 (자루·코등이·폼멜)
+      if (lo >= cutY - 0.005) {
+        col.setEnabled(false); // 통째로 떨어져 나간 부품 (지금 무기엔 없다)
+        return;
+      }
+      const f = (cutY - lo) / (2 * hy); // 남는 비율 (길이)
+      const k = linearDensityK(pc / (2 * hy) + 0.5);
+      const whole = barMoments(1, k);
+      const kept = barMoments(f, k);
+      const L = 2 * hy;
+      const m2 = pm * (kept.m / whole.m);
+      // 휘두르는 축 관성: 무기 제원(pIe)과 이 밀도 모델의 비를 그대로 옮긴다 (단면 두께 몫 등이 함께 따라온다)
+      const Ie2 = (pIe / (pm * L * L * whole.var)) * m2 * L * L * kept.var;
+      const hy2 = (f * L) / 2;
+      col.setHalfExtents({ x: hx, y: hy2, z: hz });
+      col.setTranslationWrtParent({ x: 0, y: lo + hy2, z: 0 });
+      col.setMassProperties(m2, { x: 0, y: kept.com * L - hy2, z: 0 }, { x: Ie2, y: pIt * (kept.m / whole.m), z: Ie2 }, { x: 0, y: 0, z: 0, w: 1 });
+    });
+    const sword = this.sword;
+    sword.recomputeMassPropertiesFromColliders();
+    // 생성자와 같은 방식으로 타격·손목 계산용 값을 다시 잰다
+    const oldIt = this.swordProps.I.y;
+    const pI = sword.principalInertia();
+    const pF = sword.principalInertiaLocalFrame();
+    const lc = sword.localCom();
+    this.swordMass = sword.mass();
+    this.swordProps = { m: sword.mass(), I: { x: pI.x, y: pI.y, z: pI.z }, frame: new THREE.Quaternion(pF.x, pF.y, pF.z, pF.w) };
+    this.swordIhand = Math.max(pI.x, pI.z) + sword.mass() * lc.y * lc.y;
+    this.swordCom = lc.y;
+    // 날 세우기 힘은 칼날 축 관성에 비례해 맞춘다 (생성자 twistScale 주석) — 가벼워진 만큼 줄여야 축이 팽이처럼 돌지 않는다
+    if (oldIt > 0) this.twistScale *= pI.y / oldIt;
+  }
+
+  /** (파손) 칼 겉모습을 절단선에서 끊고, 떨어진 조각을 날려 보낸다 (보여 주기만 — 전역 난수를 건드리지 않는다) */
+  shatterLook(cutY) {
+    const group = this.swordGroup;
+    const sword = this.sword;
+    // 그룹 자세는 지난 화면 갱신 값일 수 있어 몸체 자세로 맞춘 뒤 자른다
+    const p = sword.translation();
+    group.position.set(p.x, p.y, p.z);
+    rot(sword, group.quaternion);
+    const out = isolatedVisual(() => breakWeaponLook(group, cutY, { material: this.weapon.material }), 0);
+    if (!out.fragment) return;
+    if (!debrisEnabled()) {
+      out.fragment.traverse((o) => o.geometry?.dispose());
+      return;
+    }
+    const v = sword.linvel();
+    const w = sword.angvel();
+    isolatedVisual(
+      () =>
+        spawnDebris(this.scene, out.fragment, {
+          pos: group.position.clone(),
+          quat: group.quaternion.clone(),
+          vel: new THREE.Vector3(v.x, v.y, v.z),
+          angvel: new THREE.Vector3(w.x, w.y, w.z),
+          owner: group,
+        }),
+      0,
+    );
   }
 
   /**
@@ -1643,6 +1734,21 @@ export class Fighter {
 
 function vecQ(q) {
   return { x: q.x, y: q.y, z: q.z, w: q.w };
+}
+
+// (파손) 칼날 질량이 길이를 따라 곧게 변한다고 본 밀도 ρ(u) = 1 + k·u (u: 자루 쪽 0 ~ 칼끝 1) 에서, 무게중심 비율 c 를 맞추는 k.
+//  롱소드처럼 무게가 자루 쪽에 몰린 칼(c≈0.34)은 k<0 이라, 절반이 부러지면 질량은 절반보다 많이 남는다.
+function linearDensityK(c) {
+  const den = 1 / 3 - c / 2;
+  return den > 1e-3 ? THREE.MathUtils.clamp((c - 0.5) / den, -0.95, 6) : 6;
+}
+/** 밀도 1 + k·u 인 막대의 [0, f] 구간: 질량 m, 무게중심 com(칼날 길이 비율), 무게중심 둘레 2차 모멘트 var(길이² 비율, 질량당) */
+function barMoments(f, k) {
+  const m = f + (k * f * f) / 2;
+  const s1 = (f * f) / 2 + (k * f ** 3) / 3;
+  const s2 = f ** 3 / 3 + (k * f ** 4) / 4;
+  const com = s1 / m;
+  return { m, com, var: s2 / m - com * com };
 }
 
 function shapeDesc(RAPIER, s) {

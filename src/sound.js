@@ -16,7 +16,7 @@
 //
 //  들어보기: 메뉴의 "소리 들어보기" (sounds.html)
 // ─────────────────────────────────────────────────────────────
-import { SOUND } from './config.js';
+import { SOUND, VITALS } from './config.js';
 
 // 무기 재질 쌍 API(Sound.impact)가 알아듣는 재질 이름들. 다른 무기를 추가하는 쪽에서 이 목록을 참고한다
 export const MATERIALS = ['steel', 'armor', 'flesh', 'wood', 'plasma', 'rubber', 'frozen'];
@@ -1411,6 +1411,7 @@ const SAMPLES = {
   stepStone: nums('step/stone', 8), // 대성당·홀 판석 "턱" (Kenney footstep_carpet + footstep_concrete), 또각이지 않게 낮추고 위를 닫음
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
+  breath: ['breath/breath1'], // 피를 흘리는 내 숨 한 번: 들이쉬고 "후우" (Sadiquecat, CC0)
 };
 
 // 배경(스테이지)마다 다른 것: 발소리 녹음(step), 쓰러질 때 바닥 알갱이(grit), 전투 소리가 벽에 되울리는 방(room).
@@ -2118,6 +2119,19 @@ export class Sound {
     const k = clamp01((severity - 0.4) / 0.8);
     const ev = this.event({ bus: this.fleshBus, gain: (me ? 0.55 : 0.7) + 0.25 * k, prio: 2, pos });
     this.layer(ev, rec, { gain: R.gain ?? 1, rate: (R.rate ?? 1) * between(Math.random, 0.96, 1.04), delay: 0.03 });
+  }
+
+  /**
+   * 내 숨 한 번 (녹음: 들이쉬고 "후우"). 피를 흘려 위험할 때 BodySounds 가 몇 초마다 부른다 — 화면 가장자리 붉은빛의 소리 짝.
+   * d = 위험도 0~1 (피 80% → 0, 45% → 1). 목소리보다 약 10dB 작게 시작해 d 가 클수록 조금 커지고 무거워진다(느리게 재생)
+   */
+  breath(d = 0) {
+    if (!this._on || !this.ctx) return;
+    const rec = this.pickSample('breath');
+    if (!rec) return;
+    const k = clamp01(d);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.5 + 0.2 * k, prio: 0.2 }); // 신음보다 약 10dB 작게, d=1 이면 2.4dB 더
+    this.layer(ev, rec, { rate: (1 - 0.06 * k) * between(Math.random, 0.97, 1.03) });
   }
 
   /**
@@ -2913,6 +2927,7 @@ export class BodySounds {
     this.lastHurt = -9;
     this.swordVy = 0; // 칼이 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
     this.lastLand = -9;
+    this.breathT = 0; // 다음 숨 시각 (0 = 지금은 숨을 내지 않는다)
   }
 
   update(dt) {
@@ -2977,6 +2992,22 @@ export class BodySounds {
       if (f.state !== 'dead' && w.severity > 0.4 && this.t - this.lastHurt > 2) {
         s.hurt(this.voice, w.severity, { me: this.me });
         this.lastHurt = this.t;
+      }
+    }
+
+    // 내 숨: "지금 얼마나 위험한가"를 귀로 알려 준다 (화면 가장자리 붉은빛의 짝). 나만 낸다 — 상대는 내지 않는다.
+    // 피가 80% 아래이고, 아직 피가 흐르거나(출혈 문턱은 붉은 테두리 맥박과 같은 0.002) 60% 아래로 위험할 때만.
+    // 출혈이 멎고 피가 60% 이상이면 다음 숨부터 내지 않는다(끊지 않고). 죽으면 바로 멈추고, 판이 바뀌면 새로 만들어져 초기화된다
+    if (this.me) {
+      const danger = f.state !== 'dead' && f.blood < VITALS.weakBlood && (f.bleed > 0.002 || f.blood < 0.6);
+      if (!danger) this.breathT = 0;
+      else {
+        const d = clamp01((VITALS.weakBlood - f.blood) / (VITALS.weakBlood - VITALS.collapseBlood)); // 위험도 0~1
+        if (!this.breathT) this.breathT = this.t + 1.2; // 처음 한 번은 조금 뒤에 (맞는 순간은 신음이 맡는다)
+        else if (this.t >= this.breathT) {
+          s.breath(d);
+          this.breathT = this.t + (5 - 3 * d) * between(Math.random, 0.85, 1.15); // 5초(d=0) → 2초(d=1), 사람 숨처럼 ±15% 흔들림
+        }
       }
     }
 

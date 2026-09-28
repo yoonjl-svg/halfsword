@@ -16,6 +16,9 @@
 | `node tools/sim/weapon_balance.mjs [판수] [무기id...] [--seed=첫번호]` | 무기별 vs 롱소드 승률·평균 종료 시간·파손 판 수를 잰다 (시드 1000+s·2000+s, `--seed`로 다른 판 묶음) (`newRound({weapon, weapon2})`로 서로 다른 무기를 쥐여주고, `weapon_measures.mjs`의 실측 간격을 AI에 끼워 짧은 칼도 제 간격에서 싸우게 한다). 무기id 생략 시 롱소드를 뺀 전체 |
 | `node tools/sim/weapon_measure.mjs [무기id...]` | 무기별 유파 간격(`measure`: contact/reach/clinch/cutTime)을 혼자 휘두르는 베기로 잰다 — 롱소드가 1.62가 되는 배율을 전체에 곱해 schools.js에 그대로 넣을 수 있는 값을 찍는다 |
 | `node tools/sim/weapon_break_rate.mjs [무기id...]` | 무기 파손률 표준 측정: 죽지 않는 60초 경합(롱소드 상대, 양쪽 자리 25판씩)에서 한 판에 부러진 비율. `TIER=rare`로 등급 강제, `DUMP=1`로 충돌 충격량 목록 |
+| `node tools/sim/weapon_break_check.mjs [--weapons=a,b] [--at=3]` | 무기 파손(칼날 끝쪽이 떨어져 나감) 점검: 콜라이더 끝=절단선, 절단선 위 보이는 꼭짓점 0, 파편이 사라지는지, NaN, AI 간격, 판 바뀜 정리 |
+| `node tools/sim/break_trace.mjs fights12.mjs` | 다른 시뮬을 그대로 돌리며 무기가 부러진 판·자리·스텝을 적는다 (부러진 판만 달라졌는지 가를 때) |
+| `node tools/sim/hybrid.mjs broken_duel.mjs 24 short longsword` | 판 시작부터 부러진 무기의 60초 경합 승률 (intact·blunt(예전)·short(지금) 비교, 윌슨 95%) |
 | `node tools/sim/weapon_tech_reach.mjs [무기id...]` | 무기 × 기술별 `TECH[].reach` 제안값(원래 롱소드 값 + 무기 차이). 롱소드 자기 검증으로 못 재는 기술은 '(불안정)'으로 걸러낸다 |
 | `node tools/sim/weapon_trace.mjs <무기A> <무기B> [seed]` | 두 무기를 AI 대 AI로 붙여 타격 하나하나(에너지·부위·칼날 어디서 맞았는지)를 그대로 찍어 본다 (밸런스 이상 원인 추적용) |
 | `node tools/sim/down_hits.mjs [판수] [무기id] [--stand]` | 쓰러진 상대에게 스크립트로 내려베기·사선 베기·아래로 찌르기 → 닿는 거리(0.45~1.35m)별 상처율과 안 들어간 이유(미접촉·문턱 미달·칼 면·칼자루). `--stand` = 서 있는 상대 대조 실험 |
