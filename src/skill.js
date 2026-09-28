@@ -99,11 +99,13 @@ export class Skill {
    *  (검술 층이 따로 내딛기를 부탁하면 AI 가 "안 내딛는다"고 정한 때도 내딛고, 곧이어 AI 걸음이 그 부탁을 덮어써 두 번 내딛었다)
    * @returns 시작했으면 true
    */
-  thrust({ step = true } = {}) {
+  thrust({ step = true, autoAim = false } = {}) {
     const f = this.f;
     if (this.tap || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
     // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 찌르지 않고, 쏠 때는 내딛지 않는다 (총구로 겨누며 팔만 뻗는다 — gun.js)
     if (f.weapon?.gun) {
+      // 사람: 겨누는 동작 없이 지금 총신(레이저) 방향으로 바로 쏜다 — 조준은 제 손으로 (사장님: 조준이 실력). AI 는 autoAim 으로 겨누며 쏜다
+      if (!autoAim) return gunCanFire(f, { now: true });
       if (!gunCanFire(f)) return false;
       step = false;
     }
