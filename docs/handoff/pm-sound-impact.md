@@ -557,4 +557,6 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
   - `STAGE_SOUND.poseidon_night = { step: 'step', night: true }`. 발소리·쓰러짐은 낮과 같은 모래.
   - 처음엔 배경 표가 `_ambPoseidon`을 밤 표시 없이 불러 낮과 똑같이 났다(실제 게임 노드 5개로 확인). `STAGE_SOUND[stage].night`를 읽게 고쳤다.
 - `sounds.html`: "밤의 포세이돈: 큰 타격", "배경 소리 바꾸기"에 밤 포세이돈.
-- 관문: 아래 수치. main.js 변경 없음, 새 파일 없음(0KB).
+- 측정(오프라인 렌더): flare tail (7.6-8.6s) night -42.7 dB vs day -48.3 dB | quiet amb (12.5-15s) night -44.2 dB / centroid 517 Hz, day -44.3 dB / 490 Hz. 배경 크기는 낮과 같고, 화로 불이 더해져 중심이 조금 올라간다.
+- 관문: 시뮬 3종 main 와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임 에서 배경 노드 7개(낮 5 + 불 2), 오류 0. main.js 변경 없음, 새 파일 없음(0KB).
+- 사장님께 낮(지금)·밤 비교 녹음을 보냈다. 낮 그대로를 고르시면 와 표의 밤 줄만 지우면 된다.
