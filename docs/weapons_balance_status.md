@@ -38,6 +38,9 @@
   - `guards.js` guardAt 이 `out.table` 을 읽는 한 줄 (없으면 예전 그대로)
   - `weapons.js` 모노호시자오 `motionSkip` 한 칸 (라이브러리만 읽는다)
   - fights12 · hybrid · live_battery · weapon_smoke 바이트 동일
+- 자루 무기(E): `docs/pole_frame_design.md`. 2.4 m 봉은 지금 물리로 쥘 수 있다(NaN 없음, 뒷손 100%). 칼 AI 로는 롱소드에 0~13%.
+  - 기다림·맞받아 찌르기를 숫자로 흉내 내도 오르지 않는다: 상처 수는 비슷한데 멍이라 판이 끝나지 않는다. 다음 버전에서 봉끝·머리 치기 판정이 먼저다.
+  - 연구 세션에 자루 타격 판정 근거 조사를 맡겼다 (`claude/pm-weapons` `docs/pole_strike_effects.md` 예정).
 - 문서:
   - `docs/weapon_motions.md`: 필요 개수 n, 자세·기술 값과 근거, 48판 비교, 시행착오 규칙 6, 다음 버전 이음 자리, 지금 게임 제안
   - `docs/pole_frame_design.md`: 창·봉 설계
