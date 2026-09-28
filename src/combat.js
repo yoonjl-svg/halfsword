@@ -24,6 +24,7 @@
 import * as THREE from 'three';
 import { STRIKE, ANATOMY, STEEL, ARMOR } from './config.js';
 import { BREAK } from './weapons.js';
+import { updateGun } from './gun.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -368,6 +369,7 @@ export class Combat {
     });
     this.bladeClash(world, bladePairs);
     this.armSteel();
+    for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
   }
 
   /**
