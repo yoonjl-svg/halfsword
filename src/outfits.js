@@ -355,6 +355,105 @@ const LIAO_GI_WAVY = {
   },
 };
 
+// 랴오 v6~v8(오너 요청: "양옆으로 내려오는 느낌 말고 다른 중단발 컬도 보여줘, 입에 풀을 물고"):
+// 비교용 세 가지. 모두 v3 부채꼴 꽁지머리·안대·머리띠·v4 V넥(흰 속깃+맨살)을 유지하고, 입가에 풀 한 줄기를 문다.
+//  v6 뒤로 넘긴 웨이브 — 이마에서 정수리를 넘어 목덜미까지 물결치며 뒤로 흐르는 가닥
+//  v7 반묶음 — 윗머리는 꽁지로 묶고, 나머지 곱슬이 뒤통수에서 목덜미로 늘어진다(얼굴 옆은 비움)
+//  v8 헝클어진 바람머리 — 곱슬 가닥이 머리 둘레에서 한쪽 뒤로 쓸려 흩어지고, 앞머리가 이마를 비스듬히 가로지른다
+const LIAO_GRASS = [[0.093, -0.045, 0.02], [0.13, -0.042, 0.045], [0.168, -0.028, 0.072], [0.2, -0.008, 0.092]];
+function liaoWavyHead(locks) {
+  return function head(g, look) {
+    const hair = [
+      new THREE.SphereGeometry(0.035, 8, 6).translate(-0.095, 0.07, 0),
+      ...LIAO_TAIL.map((pts, i) => taperedTube(pts, [0.03 - i * 0.002, 0.026, 0.016, 0.003], 10, 6)),
+      ...locks.map(([pts, radii]) => taperedTube(pts, radii, 12, 6)),
+    ];
+    addMerged(g, hair, look.hair, { roughness: 1 });
+    const patch = [
+      ball(0.02, 10, 8, [0.096, 0.016, -0.035], [0, 0.3, 0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, 0.04, -0.06], [0, 0, 1.0]),
+      cyl(0.004, 0.004, 0.05, 4, false, [0.07, -0.01, -0.06], [0, 0, -1.0]),
+    ];
+    addMerged(g, patch, 0x1a1a1a, { roughness: 0.9 });
+    // 입가에 문 풀 한 줄기 (입꼬리에서 앞·옆으로, 끝이 살짝 들린다) + 끝의 이삭
+    addMerged(
+      g,
+      [taperedTube(LIAO_GRASS, [0.0035, 0.003, 0.0022, 0.001], 8, 4), new THREE.SphereGeometry(0.006, 5, 4).scale(1.8, 0.8, 0.8).translate(0.197, -0.01, 0.09)],
+      0x6f8f3a,
+      { roughness: 0.9 },
+    );
+  };
+}
+const mz = (pts, k = 1) => pts.map(([x, y, z]) => [x, y, z * k]);
+// v6: 뒤로 넘긴 웨이브 — z 자리 다섯 곳에서 앞이마 → 정수리 → 뒤통수 → 목덜미, 높낮이가 물결친다
+const LIAO_SWEPT = [-0.06, -0.03, 0, 0.03, 0.06].map((zc, i) => [
+  [
+    [0.07, 0.08 + (i % 2) * 0.01, zc * 0.8],
+    [0.03, 0.118, zc],
+    [-0.03, 0.112, zc * 1.15],
+    [-0.085, 0.075, zc * 1.3],
+    [-0.118, 0.0, zc * 1.3],
+    [-0.108, -0.07, zc * 1.15],
+    [-0.09, -0.115, zc * 0.9],
+  ],
+  [0.018, 0.024, 0.026, 0.025, 0.02, 0.013, 0.004],
+]);
+// v7: 반묶음 — 뒤통수 아래쪽에서 목덜미로 늘어지는 곱슬(끝이 안으로 말림), 귀 뒤 짧은 가닥 둘
+const LIAO_HALFUP = [
+  ...[-0.07, -0.035, 0, 0.035, 0.07].map((zc) => [
+    [
+      [-0.095, 0.02, zc],
+      [-0.118, -0.04, zc * 1.12],
+      [-0.108, -0.1, zc * 1.08],
+      [-0.09, -0.14, zc * 0.95],
+      [-0.07, -0.145, zc * 0.8],
+    ],
+    [0.022, 0.025, 0.02, 0.012, 0.004],
+  ]),
+  ...[1, -1].map((s) => [
+    [
+      [-0.04, 0.02, s * 0.1],
+      [-0.06, -0.04, s * 0.115],
+      [-0.055, -0.09, s * 0.108],
+      [-0.04, -0.105, s * 0.095],
+    ],
+    [0.018, 0.02, 0.012, 0.004],
+  ]),
+];
+// v8: 헝클어진 바람머리 — 머리 둘레 여덟 곳에서 가닥이 밖·아래로 뻗다가 모두 뒤(-x)와 한쪽(-z)으로 쓸린다
+const LIAO_TOUSLED = [
+  ...Array.from({ length: 8 }, (_, i) => {
+    const a = Math.PI * 0.35 + (i / 8) * Math.PI * 1.3; // 앞얼굴을 뺀 둘레 (옆~뒤~옆)
+    const dx = Math.cos(a);
+    const dz = Math.sin(a);
+    const r0 = 0.1;
+    return [
+      [
+        [dx * r0 * 0.6, 0.085, dz * r0 * 0.6],
+        [dx * 0.118, 0.04, dz * 0.118],
+        [dx * 0.12 - 0.03, -0.02, dz * 0.12 - 0.025],
+        [dx * 0.11 - 0.06, -0.075, dz * 0.11 - 0.045],
+        [dx * 0.1 - 0.07, -0.1, dz * 0.1 - 0.03],
+      ],
+      [0.02, 0.024, 0.02, 0.012, 0.004],
+    ];
+  }),
+  // 이마를 비스듬히 가로지르는 앞머리 (오른쪽 위 → 왼쪽, 안대 위를 지나 눈썹 위에서 멈춘다)
+  [
+    [
+      [0.06, 0.1, 0.05],
+      [0.095, 0.075, 0.02],
+      [0.105, 0.058, -0.02],
+      [0.097, 0.05, -0.06],
+      [0.08, 0.035, -0.085],
+    ],
+    [0.016, 0.02, 0.018, 0.012, 0.004],
+  ],
+];
+const LIAO_GI_SWEPT = { ...LIAO_GI_CURLY, head: liaoWavyHead(LIAO_SWEPT) };
+const LIAO_GI_HALFUP = { ...LIAO_GI_CURLY, head: liaoWavyHead(LIAO_HALFUP) };
+const LIAO_GI_TOUSLED = { ...LIAO_GI_CURLY, head: liaoWavyHead(LIAO_TOUSLED) };
+
 // ═══════════════════════════════════ 하인리히 도른: 은빛 중갑 기사 ═══════════════════════════════════
 // 설정집: "화려한 배색"의 자칭 왕의 기사 — 은빛 판금이라도 수수하게 죽이지 않는다. 실전 갑옷보다
 // 훨씬 반들반들하게 닦아(금속성↑·거칠기↓) 과시욕을 드러내고, 예전 금빛 복제 엑스칼리버·금장 취향을
@@ -756,6 +855,9 @@ export const OUTFITS = {
   liao_gi_wild: LIAO_GI_WILD,
   liao_gi_curly: LIAO_GI_CURLY,
   liao_gi_wavy: LIAO_GI_WAVY,
+  liao_gi_swept: LIAO_GI_SWEPT,
+  liao_gi_halfup: LIAO_GI_HALFUP,
+  liao_gi_tousled: LIAO_GI_TOUSLED,
   heinrich_knight: HEINRICH_KNIGHT,
   heinrich_full_plate: HEINRICH_FULL_PLATE,
   margarethe_dragon: MARGARETHE_DRAGON,

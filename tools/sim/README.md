@@ -38,3 +38,13 @@
 | (공용) `tools/sim/is_main.mjs` | 측정 도구의 "직접 실행" 확인 `isMain(import.meta.url)`과 감싸는 스크립트용 `simPath()` — with_config·hybrid·with_weapon·with_spec 로 감싸도 결과가 찍힌다 |
 
 `jelly_harness.mjs` / `harness_m.mjs` 는 공용 무대(두 파이터 + 전투 판정)를 만든다.
+
+## 브라우저 도구 (`tools/browser/`, 개발 서버 필요)
+
+`npm run dev` 로 개발 서버를 띄운 뒤, playwright 가 있는 곳에서 (저장소 의존성에는 없다: `npm i --no-save playwright`) 돌린다.
+
+| 스크립트 | 용도 |
+|---|---|
+| `node tools/browser/smoke.mjs http://127.0.0.1:5173` | 한 판 시작 → 무기 카드 한 장 고르기 → 싸움 8초 진행 → 콘솔 에러 0 확인 (싸움이 실제로 흐르지 않았거나 에러가 있으면 종료 코드 1) |
+| `node tools/browser/touch_thrust.mjs http://127.0.0.1:5173` · `mouse_thrust.mjs` | 탭·클릭 찌르기 입력 시험. 무기 카드 뽑기는 `?weapon=longsword` 로 건너뛴다 (시험용 주소: 뽑기 없이 그 무기로 바로 싸움) |
+| `node tools/browser/weapon_thumbs.mjs http://127.0.0.1:5173 [무기id...]` | 무기 뽑기 카드의 작은 그림을 만든다: 게임 속 무기 모델(`src/weapons.js`)을 대각선으로 눕혀 찍어 `public/ui/weapons/<id>.webp` (256×256, 투명 배경)로 저장. 무기 겉모습을 바꾸거나 무기를 새로 넣으면 다시 돌린다. 찍는 페이지 `tools/browser/weapon_thumbs.html` 을 브라우저로 열면 결과를 눈으로 볼 수 있다 |
