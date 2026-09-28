@@ -28,6 +28,16 @@ export class FingerTrace {
     this.head = 0; // 다음에 쓸 자리
     this.count = 0; // 들어 있는 조각 수 (최대 n)
     this.total = 0; // 지금까지 넣은 조각 수 (읽는 쪽이 새 조각이 몇 개인지 알 수 있게)
+    // 화면 프레임 시계 (벽시계 ms, main.js 가 프레임마다 tick). 손가락이 멈추면 조각이 안 오므로 "얼마나 오래 안 왔나"를 이 시계로 잰다
+    //  (물리 스텝 시계로 재면 한 프레임에 스텝이 여럿 도는 느린 화면에서 움직이는 손가락도 멈춘 것으로 읽혔다). 0 = 아직 없음
+    this.now = 0;
+    this.frameDt = 0; // 바로 앞 프레임과의 사이 (ms)
+  }
+
+  /** 화면 프레임마다 한 번: 그 프레임의 벽시계 시각 (조각의 시각과 같은 시계) */
+  tick(now) {
+    if (this.now > 0 && now > this.now) this.frameDt = now - this.now;
+    this.now = now;
   }
 
   push(t, dx, dy, flag = 0) {
@@ -49,6 +59,8 @@ export class FingerTrace {
   clear() {
     this.head = 0;
     this.count = 0;
+    this.now = 0;
+    this.frameDt = 0;
   }
 }
 

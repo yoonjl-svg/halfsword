@@ -844,7 +844,8 @@ function frame(now) {
   last = now;
 
   if (state === 'fight' && player) {
-    // 손 목표 갱신 (입력 → 플레이어)
+    // 손 목표 갱신 (입력 → 플레이어). 손가락 궤적에 이 프레임 시각을 알린다 (결심 판정이 손가락이 멈췄는지 벽시계로 잰다)
+    input.fingerTrace.tick(now);
     const d = input.consumeHandDelta();
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
     const inScale = hitStop > 0 ? 0.25 : 1;

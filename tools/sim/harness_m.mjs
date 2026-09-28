@@ -184,7 +184,8 @@ export function inputPump(G, { hz = 60, f = G.player } = {}) {
         P.queue.shift();
       }
     }
-    // main.js frame(): 손 목표 갱신 (입력 → 플레이어)
+    // main.js frame(): 손 목표 갱신 (입력 → 플레이어). 손가락 궤적에 프레임 시각
+    input.fingerTrace.tick(P.wall);
     const d = input.consumeHandDelta();
     if (f.alive) {
       f.handOffset.x += d.x;

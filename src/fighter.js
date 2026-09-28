@@ -583,20 +583,24 @@ export class Fighter {
     const pT = -G.pelvisYaw * pf * gw * amp;
     const cp = sk.cutPose;
     if (cp.wBody > 0) {
-      // 결심 베기 (L1): 몸 목표를 획 프로그램(cutPose) 값으로 wBody 만큼 섞고, 더 빠르게 따라간다.
+      // 결심 베기 (L1): 골반·가슴 비틀기는 자세 지도 값의 yawK 배 (획 패드가 지나는 자세를 따라, 닿은 뒤 더 크게 푼다 —
+      //  몸이 칼과 함께 가서 칼이 겨눈 선을 벗어나지 않는다), 숙이기·낮추기는 획 프로그램(cutPose) 값으로 wBody 만큼 섞는다.
+      //  따라가는 빠르기는 휘두를 때 그대로 (설계 첫 값 60 rad/s 는 몸이 칼보다 먼저 돌아 칼이 겨눈 선 왼쪽으로 지나갔다).
       //  골반 목표는 초당 pelvisRate 넘게 바꾸지 않는다 (한 번에 크게 틀면 딛은 발이 비틀린다)
       const w = cp.wBody;
-      const sP = SKILL_BODY.pelvis * spd + (COMMIT.bodyFollow - SKILL_BODY.pelvis * spd) * w;
-      const sC = SKILL_BODY.chest * spd + (COMMIT.bodyFollow - SKILL_BODY.chest * spd) * w;
+      const k = 1 + (cp.yawK - 1) * w;
+      const sP = SKILL_BODY.pelvis * spd;
+      const sC = SKILL_BODY.chest * spd;
       const lim = COMMIT.pelvisRate * (Math.PI / 180) * dt;
-      this.pelvisTgt += THREE.MathUtils.clamp(pT + (cp.pelvisYaw - pT) * w - this.pelvisTgt, -lim, lim);
+      const hr = COMMIT.hipRoom;
+      this.pelvisTgt += THREE.MathUtils.clamp(THREE.MathUtils.clamp(pT * k, -hr, hr) - this.pelvisTgt, -lim, lim);
       follow('pelvisYaw', this.pelvisTgt, sP);
-      const cT = -G.chestYaw * gw * amp;
-      follow('chestYaw', cT + (cp.chestYaw - cT) * w, sC);
+      follow('chestYaw', -G.chestYaw * gw * amp * k, sC);
+      const wl = w * cp.wLean;
       const tT = G.pitch * gw;
-      follow('pitch', tT + (cp.pitch - tT) * w, sC);
+      follow('pitch', tT + (cp.pitch - tT) * wl, sC);
       const dT = (G.drop - 0.06) * gw;
-      follow('drop', dT + (cp.drop - dT) * w, sP);
+      follow('drop', dT + (cp.drop - dT) * wl, sP);
     } else {
       this.pelvisTgt = pT;
       follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd);
@@ -1448,6 +1452,7 @@ export class Fighter {
       aim.normalize();
     }
     if (cp.w > 0) this.cutAim(aim, cp);
+    if (cp.plane > 0) this.cutPlane(aim, cp);
     aim.applyQuaternion(this.yaw);
     // 목표 방향이 도는 속도: 손목 감쇠는 이 속도를 향한다 (멈추려는 게 아니라 목표를 따라가는 감쇠)
     const wAim = _v5.set(0, 0, 0);
@@ -1506,9 +1511,7 @@ export class Fighter {
         const stopAngle = (toward * toward) / (2 * brakeAcc);
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js)
         const fr = this.finish.amt > 0 && aim.y < blade.y ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
-        // 결심 베기 (L1) 닿기 앞뒤(cutPose.rel)에는 제동을 늦게 건다: 끝 자세에서 칼을 세우지 않고 지나가게
-        const rm = cp.w > 0 && cp.rel ? this.weaponCfg.releaseMargin * (COMMIT.releaseMargin / WEAPON.releaseMargin) : this.weaponCfg.releaseMargin;
-        if (angle > stopAngle * rm * fr) damp = this.weaponCfg.releaseDamping;
+        if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
           this.wristBrakeAng = angle;
@@ -1552,7 +1555,7 @@ export class Fighter {
 
   /**
    * 결심 베기 (L1)의 칼끝 방향 덧씌움 (몸 기준 aim 을 돌린다): 칼 젖히기(손목 감기: 올려본 각·옆 각)와
-   * 지나가기(끝 자세 너머로 휘두르는 면 안에서 더 돌리기). 각은 cutPose 가 u 에 따라 정하고 w 만큼 쓴다
+   * 지나가기(끝 자세 너머로 휘두르는 면 안에서 더 돌리기, 획이 끝난 뒤에도 버틴다). 각은 skill.cutPose 가 정한다
    */
   cutAim(aim, cp) {
     const w = cp.w;
@@ -1563,6 +1566,42 @@ export class Fighter {
     }
     if (cp.cockAz) aim.applyAxisAngle(UP, -cp.cockAz * w); // 옆 각 (+ = 칼 든 쪽)
     if (cp.over) aim.applyAxisAngle(_v7.set(cp.n[0], cp.n[1], cp.n[2]), cp.over * w);
+    if (cp.over2) aim.applyAxisAngle(_v7.set(cp.n2[0], cp.n2[1], cp.n2[2]), cp.over2 * w); // 앞 획의 버티기가 풀리는 몫
+  }
+
+  /**
+   * 결심 베기 (L1)의 휘두르는 면: 칼끝 목표를 지금 칼 방향에서 휘두르는 면 안으로, 베는 쪽으로 cp.plane 도 넘게 앞서지 않게 둔다.
+   *  목표가 칼과 거의 반대(곧게 내려베기의 지붕 → 바보)면 손목이 어느 쪽으로 돌지 정해지지 않아 칼이 먼저 뒤로 넘어갔다가 옆으로
+   *  떨어진다 → 늘 베는 쪽으로, 면 안에서 돈다.
+   *  면 = 지금 칼자루에서 상대 몸통(가슴)으로 가는 수평 방향을 품는 세로 면 (스텝마다): 손이 옆으로 밀려 있어도(지붕에서 가슴이
+   *  풀리는 동안 손이 0.3 m 까지 칼 반대쪽으로 끌린다) 칼끝이 상대 몸통 축 위로 지난다. 상대가 없으면 cp.pn (skill.startProgram)
+   */
+  cutPlane(aim, cp) {
+    const n = _pn.set(cp.pn[0], cp.pn[1], cp.pn[2]);
+    if (this.foe) {
+      const hp = this.sword.translation();
+      const tc = this.foe.bodies.chest.translation();
+      const d = _pa.set(tc.x - hp.x, 0, tc.z - hp.z).applyQuaternion(_pq.copy(this.yaw).invert());
+      d.y = 0;
+      if (d.lengthSq() > 1e-6) n.set(0, 1, 0).cross(d.normalize()).multiplyScalar(cp.pn[2] < 0 ? 1 : -1); // 베는 쪽이 + (cp.pn 과 같은 쪽)
+    }
+    const b = _pb.set(0, 1, 0).applyQuaternion(rot(this.sword, _pq)).applyQuaternion(_pq.copy(this.yaw).invert());
+    const bn = b.dot(n);
+    b.addScaledVector(n, -bn);
+    if (b.lengthSq() < 1e-6) return;
+    b.normalize();
+    const a = _pa.copy(aim).addScaledVector(n, -aim.dot(n));
+    if (a.lengthSq() < 1e-6) return;
+    a.normalize();
+    // b 에서 a 까지 n 둘레로 잰 각 (베는 쪽이 +). 거의 반대편(−135° 아래)이면 베는 쪽으로 돈 것으로 본다
+    let phi = Math.atan2(_pc.crossVectors(b, a).dot(n), b.dot(a));
+    if (phi < -0.75 * Math.PI) phi += 2 * Math.PI;
+    const lim = cp.plane;
+    if (phi > lim) aim.copy(b).applyAxisAngle(n, lim);
+    // 내려오는 동안(u planeSteerU 부터)은 칼이 면 밖으로 기운 만큼 칼끝 목표를 반대로 더 틀어 면으로 되돌린다: 가슴이 풀리며 칼을 옆으로
+    //  끌어 칼끝이 상대 몸통 축에서 0.4~0.5 m 옆으로 지나갔다 (levitate 가까운 더미 헛침 10/20). 올리는 동안(칼이 거의 설 때)
+    //  되돌리면 면이 크게 흔들려 걸어 들어가며 벤 칼이 거꾸로 비켜 갔다
+    if (COMMIT.planeSteer > 0 && this.commit.u >= COMMIT.planeSteerU) aim.addScaledVector(n, -COMMIT.planeSteer * bn).normalize();
   }
 
   /**
@@ -1877,6 +1916,11 @@ const _gh = new THREE.Vector3();
 const _gf = new THREE.Vector3();
 const _v7 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
+const _pn = new THREE.Vector3(); // 결심 베기 휘두르는 면 (cutPlane)
+const _pb = new THREE.Vector3();
+const _pa = new THREE.Vector3();
+const _pc = new THREE.Vector3();
+const _pq = new THREE.Quaternion();
 const _qt4 = new THREE.Quaternion();
 const _qg = new THREE.Quaternion();
 const _gA = new THREE.Vector3();
