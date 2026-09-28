@@ -137,6 +137,17 @@ export const POLE_GUARDS = {
   '왼쪽 바꿈': { name: 'Nebenhut', hand: [0.05, -0.3, -0.25], rear: [0.15, -0.1, 0.1], blade: [-20, -150], pelvisYaw: 45, chestYaw: 50 },
   '옆 지킴 (Nebenhut)': { name: 'Wechselhut', hand: [0.0, -0.35, 0.25], rear: [0.1, -0.15, 0.0], blade: [-25, 150], pelvisYaw: 20, chestYaw: 10 },
 };
+// 자세마다 어느 끝이 앞인가(frontEnd): 봉은 모두 'head'. 폴액스·나기나타는 꼬리(butt) 앞 자세가 있어 자세 칸 값으로 둔다 (docs/pole_frame_design.md §4-2)
+for (const g of Object.values(POLE_GUARDS)) g.frontEnd = 'head';
+
+// 손 간격(앞손~뒷손, m)은 자세 값이 아니라 무기·유파 값이다 → 스펙 handGap. [원전 2차] 영국 봉·나기나타, [추정] 마이어 봉·창
+export const POLE_HAND_GAP = { englishStaff: 0.35, naginata: 0.4, meyerStaff: 0.6, spear: [0.6, 0.9] };
+
+// 교차 베기(Kreutzhauw): 8자리를 멈추지 않고 거친다 — 연구 세션 pole_motion_research.md 로 고친 순서 [원전 2차]
+//  B 틀 talhoReves 처럼 흐름(flow)으로 잇는다. 오른/왼 지붕은 같은 Oberhut 을 좌우로 쓴다
+export const POLE_KREUTZHAUW = ['Nebenhut', 'Steurhut', 'Oberhut(R)', 'Wechselhut', 'Unterhut', 'Mittelhut', 'Oberhut(L)', 'Nebenhut'];
+// 마이어의 찌르기는 앞손을 놓지 않는다: 뒷손을 겨드랑이로 당겨(Ruck) 자루를 앞손 속으로 밀어낸다. 놓고 뻗는 찌르기는 영국 봉(스웻넘)
+export const POLE_THRUST = { meyer: 'ruck', english: 'release' };
 
 // ── 2) 기술 목록 ───────────────────────────────────────────
 const weight = (tech, pred, k) => tech.map((t) => (pred(t) ? { ...t, base: t.base * k } : t));
