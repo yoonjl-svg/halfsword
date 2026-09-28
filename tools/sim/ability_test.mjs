@@ -3,6 +3,7 @@
 //   node tools/sim/hybrid.mjs ability_test.mjs <무기id> <자리마다 판 수> <필드> <값>
 //   예) node tools/sim/hybrid.mjs ability_test.mjs qinggang 5 breakMult 3
 //       node tools/sim/hybrid.mjs ability_test.mjs monohoshizao 24 bleedMult 2
+//  권총이면 쏜 발 수·명중 수도 찍는다 (값 없이: node tools/sim/hybrid.mjs ability_test.mjs pistol 24)
 //  찍는 것: 승·패·무와 윌슨 95%, 평균 종료, 상대(롱소드) 칼이 부러진 판·부러진 시각, 내 칼이 부러진 판
 import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
@@ -13,7 +14,7 @@ const [id, nArg, field, val] = process.argv.slice(2);
 const N = +nArg || 5;
 if (field) WEAPONS[id][field] = +val;
 const SECONDS = 40;
-let W = 0, L = 0, D = 0, nan = 0, tSum = 0, tN = 0, foeBroke = 0, meBroke = 0;
+let W = 0, L = 0, D = 0, nan = 0, tSum = 0, tN = 0, foeBroke = 0, meBroke = 0, shots = 0, hits = 0, xWounds = 0;
 const breakT = [];
 for (let s = 1; s <= N; s++) {
   for (const xFirst of [true, false]) {
@@ -43,6 +44,8 @@ for (let s = 1; s <= N; s++) {
     }
     if (yb != null) (foeBroke++, breakT.push(yb.toFixed(1)));
     if (X.weaponBroken) meBroke++;
+    shots += X.gun?.shots ?? 0;
+    hits += X.gun?.hits ?? 0;
     if (res === 'W') W++;
     else if (res === 'L') L++;
     else D++;
@@ -51,4 +54,4 @@ for (let s = 1; s <= N; s++) {
 const n = 2 * N;
 const [lo, hi] = wilson(W, n);
 const pc = (v) => `${Math.round(100 * v)}%`;
-console.log(`${id} ${field ?? ''}=${val ?? '-'}  승 ${W} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(W / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · 상대 칼 부러짐 ${foeBroke}/${n}${breakT.length ? ` (${breakT.join(', ')}초)` : ''} · 내 칼 부러짐 ${meBroke} · NaN ${nan}`);
+console.log(`${id} ${field ?? ''}=${val ?? '-'}  승 ${W} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(W / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · 상대 칼 부러짐 ${foeBroke}/${n}${breakT.length ? ` (${breakT.join(', ')}초)` : ''} · 내 칼 부러짐 ${meBroke} · NaN ${nan}${shots ? ` · 총 ${shots}발 중 ${hits}발 명중 (${Math.round((100 * hits) / shots)}%), 판당 ${(shots / n).toFixed(1)}발` : ''}`);

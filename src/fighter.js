@@ -996,7 +996,7 @@ export class Fighter {
     // 다리가 체중을 싣는 걸음: 서 있는 동안만 (쓰러짐·일어남·무릎 꿇기는 예전 방식)
     const G = this.gait;
     const hybrid = !!G && this.state === 'stand';
-    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth);
+    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1); // moveMul: 권총은 발이 빠르다 (weapons.js)
     const st = this.stumble;
     const mv = this.state === 'stand' ? { x: this.move.x * (1 - st.length()) + st.x, y: this.move.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
     if (this.state === 'stand' && this.daze > 0.2) {

@@ -12,7 +12,7 @@
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna } from './weapon_looks.js';
+import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol } from './weapon_looks.js';
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -979,13 +979,44 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  17) 권총 — ??? 등급 (사장님, "재미 삼아 최소 비용으로"). 찌르기(탭)로 쏜다: 탄은 무한, 한 발 사이 6.5초.
+//      맞으면 늘 같은 세기(gun.js GUN.energy)의 찌르기 상처. 근접전 불가(날 없음·둔기 배율 0), 대신 발이 빠르다(moveMul).
+//      부서지지 않는다. 칼처럼 쥐어 총신이 칼 축을 따라 앞으로 뻗는다 (겉모습 weapon_looks.js drawPistol)
+// ═════════════════════════════════════════════════════════════
+const pistol = finalizeSpec('pistol', {
+  nameKo: '권총', nameEn: 'Pistol',
+  desc: '어디서 굴러 들어온 권총.\n찌르기로 쏜다. 붙어 싸울 순 없지만 발이 빠르다.',
+  grip: 'one-hand', material: 'steel', soundMaterial: 'steel',
+  tier: 'mystery',
+  gun: true, // gun.js: 찌르기 = 발사, 장전, AI 는 도망 다니며 쏜다
+  moveMul: 1.2, // 걷는 최고 속도 ×1.2 (도망 다니며 쏘라고)
+  fragility: 0, // 부서지지 않는다
+  edged: false, mBlunt: 0, // 근접전 불가: 몸을 쳐도 상처·멍이 없다
+  hiltLength: 0.06, bladeLength: 0.26, // 칼 원점(손)~총구 0.32 m
+  partMesh: hiddenParts,
+  buildParts(look) {
+    const grip = boxInertia(0.35, 0.015, 0.06, 0.013);
+    const frame = boxInertia(0.55, 0.016, 0.13, 0.013);
+    const nub = sphereInertia(0.02, 0.012);
+    return [
+      partTuple(['box', 0.015, 0.06, 0.013], 0, 0.35, 0, grip.Ie, grip.It, 0x6b4226),
+      partTuple(['ball', 0.012], -0.05, 0.02, 0, nub.Ie, nub.It, 0x2c2f35),
+      partTuple(['box', 0.016, 0.13, 0.013], 0.06 + 0.13, 0.55, 0, frame.Ie, frame.It, 0x2c2f35, false),
+    ];
+  },
+  decorate(group) {
+    drawPistol(group);
+  },
+});
+
 // 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
 //  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
-  rubber_chicken: rubberChicken, frozen_tuna: frozenTuna,
+  rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol,
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)

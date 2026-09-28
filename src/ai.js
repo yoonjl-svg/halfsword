@@ -26,6 +26,7 @@ import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
 import { EMO_REST, EMO_REST_ALL, emoMods } from './emotions.js';
+import { gunAI } from './gun.js';
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -215,9 +216,9 @@ export class AI {
     this.me.skill.level = this.level.skill;
   }
 
-  /** 상대가 칼을 놓쳤다: 간격을 지킬 까닭이 없다 → 쫓아가 끝낸다 (도망치는 빈손 상대를 놓치지 않게) */
+  /** 상대가 칼을 놓쳤다(또는 붙어 싸울 수 없는 권총을 들었다): 간격을 지킬 까닭이 없다 → 쫓아가 끝낸다 (도망치는 상대를 놓치지 않게) */
   get chasing() {
-    return this.foe.alive && !this.foe.armed && this.me.armed;
+    return this.foe.alive && (!this.foe.armed || !!this.foe.weapon?.gun) && this.me.armed;
   }
 
   /** 지금 공격 동작 중인가 (평가·디버그용) */
@@ -297,6 +298,7 @@ export class AI {
     this.myClosing = mv.x * ux + mv.z * uz; // 내가 상대에게 다가가는 빠르기
     const r = me.right(_v1);
     this.foeLat = dx * r.x + dz * r.z; // 상대가 내 오른쪽으로 비껴 선 정도
+    if (me.weapon?.gun) return gunAI(this, dt); // 권총(??? 등급): 간격을 벌려 도망 다니며 쏜다 (gun.js)
     // 상대가 얼마나 몰아치는가: 다가오며 휘두르는 사람이면 곧장 벨 수 있는 자세(지붕·황소)로 기다린다
     const aggrNow = (this.foeClosing > 0.6 ? 0.6 : 0) + (Math.hypot(s.hvx, s.hvy) > 3 && d < this.foeReach + 0.6 ? 0.6 : 0);
     this.foeAggro += (Math.min(1, aggrNow) - this.foeAggro) * Math.min(1, dt / 2.5);
