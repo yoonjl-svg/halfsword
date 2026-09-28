@@ -181,9 +181,10 @@ export function frameWatchGuards(frame) {
 //  (tools/sim/motion_lab.mjs parry <무기> on — 롱소드가 기술 6가지를 11 m/s 로 치고, 막는 쪽이 14 자세를 들고 버틴다, 간격 1.45·1.6 m).
 //  2판씩이라 거칠다: 다음 버전에서는 판 수를 늘리고 AI 가 막으며 움직이는 것까지 넣어 다시 찾는다
 export const LIB_PARRY = {
-  zweihander: { highL: [-0.4, 0.42], highR: [-0.22, 0.26], highC: [0.02, 0.52], lowL: [0, 0.03], lowR: [-0.4, -0.42], thrust: [0.02, 0.52] },
-  monohoshizao: { highL: [-0.22, 0.26], highR: [-0.18, -0.28], highC: [0.22, 0.26], lowL: [-0.4, -0.42], lowR: [-0.18, -0.28], thrust: [0.18, -0.28] },
-  frozen_tuna: { highL: [-0.22, 0.26], highR: [-0.18, -0.28], highC: [0.42, 0.42], lowL: [0, 0.03], lowR: [-0.4, -0.42], thrust: [0.02, 0.52] },
+  zweihander: { highL: [-0.4, 0.42], highR: [-0.22, 0.26], highC: [0.38, -0.44], lowL: [0, 0.03], lowR: [0.18, -0.28], thrust: [0.02, 0.52] }, // 넓게 찾음(12판/자세)
+  monohoshizao: { highL: [-0.22, 0.26], highR: [-0.22, 0.26], highC: [0.18, -0.28], lowL: [0.18, -0.28], lowR: [0, 0.03], thrust: [0.18, -0.28] }, // 넓게 찾음
+  frozen_tuna: { highL: [-0.4, -0.42], highR: [-0.22, 0.26], highC: [-0.4, -0.42], lowL: [0, 0.03], lowR: [-0.4, -0.42], thrust: [-0.4, -0.42] }, // 넓게 찾음
+  longsword: { highL: [-0.4, 0.42], highR: [-0.4, -0.42], highC: [0.55, -0.26], lowL: [0.42, 0.42], lowR: [0.18, -0.28], thrust: [-0.4, -0.42] }, // 점검용: 같은 방법으로 롱소드를 찾은 값 (원래 표와 비교)
   sabre: { highL: [-0.52, 0.03], highR: [0, 0.03], highC: [-0.4, -0.42], lowL: [-0.4, -0.42], lowR: [-0.18, -0.28], thrust: [-0.4, -0.42] },
   falchion: { highL: [-0.52, 0.03], highR: [-0.4, -0.42], highC: [0.42, 0.42], lowL: [0.42, 0.42], lowR: [0.22, 0.26], thrust: [-0.4, -0.42] },
   rapier: { highL: [0.52, 0.03], highR: [-0.52, 0.03], highC: [0.42, 0.42], lowL: [0.55, -0.26], lowR: [-0.4, -0.42], thrust: [-0.22, 0.26] },
