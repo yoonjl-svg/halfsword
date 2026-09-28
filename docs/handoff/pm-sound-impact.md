@@ -430,7 +430,7 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 | 하인리히 | HaelDB 2yell7, 2yell2 | CC0 |
 | 슈바르츠 | hisoul "Zisa, Pain, Shout Short, Impact_6" (Freesound 520275), 죽음 목소리와 같은 배우 | CC0 |
 
-- 랴오 죽음 목소리도 하인리히 배우로 맞췄다. 사장님 말씀("하인리히와 더 비슷해야")에 따른 PM 판단이고, 원하지 않으시면 되돌린다.
+- 랴오 죽음 목소리도 하인리히 배우로 맞췄다. 사장님 말씀("하인리히와 더 비슷해야")에 따라 PM이 먼저 바꿨고, 사장님이 확인하셨다("응").
   - `liao_ko1` ← HaelDB 2yell11(0.33~0.78초). 전에는 Baradari painh(브란 배우)였다. 예전 크기에 맞춰 -4.3dB.
   - `liao_bleed1` ← HaelDB 2yell3. 전에는 HaelDB yell6(기본 목소리 배우)였다.
   - `liao_bleed2`는 원래 2yell9(하인리히 배우)다. 이제 랴오 목소리는 모두 하인리히 배우다.
