@@ -58,7 +58,17 @@ export const TIER_DEFAULTS = {
 //    레어·에픽은 실물이 롱소드 물리라고 보고 맞췄다(청강검처럼 가벼운 칼은 충돌이 적어 같은 표로 조금 덜 부러진다: 에픽 2.2%).
 //  · 참치는 감독 지시로 안 부러진다(fragility 0). 실제 승패까지 가는 판(평균 17초)에서는 모든 값이 60초 경합보다 낮다.
 //  굴리는 난수는 fighter.js의 파이터별 전용 난수(Math.random 과 분리)라, 부러지지 않는 한 기존 시뮬 결과가 바뀌지 않는다.
-export const BREAK = { jRef: 6, k: 2 };
+export const BREAK = {
+  jRef: 6,
+  k: 2,
+  // 부러지는 자리: 칼날 길이의 이 비율(자루 쪽=0)에서 끊기고 칼끝 쪽이 떨어져 나간다 (무기마다 spec.breakAt 로 바꿀 수 있다)
+  at: 0.5,
+  // 남은 토막에 날이 남는가. false(기본) = 부러진 칼은 둔기 (지금 규칙). true = 토막 날로 베기·찌르기를 하되 효율을 깎는다
+  //  (stubCut·stubThrust 를 mCut·mThrust 에 곱한다 — 사장님 결정 대기)
+  stubEdge: false,
+  stubCut: 0.6,
+  stubThrust: 0.4,
+};
 // 감독 지시(2차): 실제 승패 판(평균 17초)에서는 60초 경합보다 훨씬 덜 부러지니 표 전체를 2배로 올린다.
 //  (60초 경합 기준 맞춤값의 2배: trash 0.20→0.40, common 0.028→0.056, rare 0.016→0.032, epic 0.0052→0.0104)
 export const TIER_FRAGILITY = { trash: 0.4, common: 0.056, rare: 0.032, epic: 0.0104, legend: 0 };
@@ -271,6 +281,7 @@ function finalizeSpec(id, s) {
     // 충돌 한 번(충격량 J)에 부러질 확률. 재질상 안 부러지는 무기(고무·플라스마)와 레전드는 늘 0.
     fragility: s.fragility ?? TIER_FRAGILITY[s.tier ?? 'common'], // 등급표 값 (무기가 직접 적으면 그 값)
     breakChance(J) { return breakChance(J, this.fragility, this.material); },
+    breakAt: s.breakAt ?? BREAK.at, // 부러지는 자리 (칼날 길이 비율, 자루 쪽=0) — fighter.breakWeapon()
     fragile: breakChance(BREAK.jRef, s.fragility ?? TIER_FRAGILITY[s.tier ?? 'common'], s.material) > 0, // 부러질 수 있는 무기인가
     ignoreArmor: !!s.ignoreArmor,
     thrustStyle: s.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (아래 THRUST_STYLE). 없으면 null

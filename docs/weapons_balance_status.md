@@ -15,6 +15,51 @@
 - 재는 도구: `tools/sim/weapon_league.mjs` (새). 무기 14종을 서로 다 붙인다(91짝, 짝마다 96판, hybrid). 두 쪽 다 주인공 대리가 쥐어 캐릭터 성격을 뺀다.
 - 롱소드 상대 폭(짧은 칼 35~55 등)은 참고로만 적는다.
 
+## 무기 파손: 칼날 끝쪽 절반이 실제로 떨어져 나간다 (디렉터 08:51, 사장님 요청)
+부러지는 순간 `spec.breakAt`(기본 `BREAK.at = 0.5`, 칼날 길이 비율·자루 쪽 0) 너머가 떨어져 나간다. 확정 수치(등급·power·내구·fragility·mCut/mThrust·토크 22)는 그대로.
+
+**무엇이 바뀌나**
+| 부분 | 내용 | 파일 |
+|---|---|---|
+| 물리 | 칼날 콜라이더를 **그 자리에서** 줄인다(`setHalfExtents`·`setTranslationWrtParent`·`setMassProperties`) — 콜라이더를 지우고 새로 만들면 핸들이 바뀌어 combat.js 의 접촉 기록(cutting·touching·드레인 중인 이벤트)이 끊긴 콜라이더를 찾다 죽는다. 남는 질량·무게중심·관성은 "무게중심 비율을 맞춘 선형 밀도"로 계산(롱소드는 무게가 자루 쪽이라 칼날 질량의 72%가 남는다). 몸체 질량을 다시 재고 swordProps·swordIhand·swordCom·twistScale(칼날 축 관성 비)도 다시. `weaponCfg.bladeLength` 가 줄어 bladePoint·판정 t·마무리 간격(finish.js)이 새 길이를 쓴다. 칼끝 속도 추정은 한 번 비운다 | fighter.js `breakWeapon()` + 새 `trimSword()`·`shatterLook()`·`linearDensityK()`·`barMoments()` |
+| 겉모습 | 절단선 위 메쉬는 조각으로, 걸친 메쉬(칼날·가지 몸통·닭 목)는 지오메트리를 둘로 복제해 절단면에 눌러 붙인다. 메쉬 객체는 그대로 둬 피 묻히기 참조가 안 끊긴다. 남는 끝엔 톱니 모양 부러진 면(평면 음영 로우폴리, 재질별 갓 부러진 색: 강철 밝은 은색·나무 밝은 속살·고무 노랑). decorate 로 그린 세이버·나뭇가지·닭도 같은 방법(단면 크기는 그려진 꼭짓점에서 잰다) — 클리핑 평면은 렌더러 설정(main.js)이 필요해 안 썼다. 전역 난수 안 건드림(isolatedVisual) | weapon_looks.js `breakWeaponLook()` |
+| 파편 | 부러질 때 칼 몸체 속도+각속도로 날아가 땅에 튀고 1.6초(마지막 0.5초 흐려짐) 뒤 사라진다. 물리 엔진과 무관한 겉모습만. 브라우저에선 스스로 rAF 로 돈다(게임 루프 안 건드림 — 그래서 일시정지·슬로모와 무관하게 실시간으로 흐른다). 판이 바뀌면(칼 그룹이 장면에서 빠지면) 바로 치운다. 시뮬(노드)에선 띄우지 않는다(`DEBRIS.headless` 로 켤 수 있다). 갑옷 파편과 합치기 쉽게 따로 뒀다 | 새 `src/weapon_debris.js` |
+| AI | 내 칼이 부러지면 내 간격 M(쓰러진 상대용 Mup 포함)·기술 닿는 거리 보정·마무리 간격을, 상대 칼이 부러지면 foeM·foeReach 를 **잃은 칼 길이 dL** 만큼 줄인다: reach − dL, contact − 0.85·dL(실측 표의 칼 길이 차 대 contact 차 비), clinch 는 contact 밑으로 | ai.js 파손 반응 (`brokenLoss`·`shrinkM`) |
+| 날 규칙 | 기본은 지금처럼 부러지면 둔기. 스위치 `BREAK.stubEdge`(기본 false) — 켜면 토막 날로 베고 찌르되 mCut×`stubCut` 0.6, mThrust×`stubThrust` 0.4. **사장님 결정 대기** | weapons.js `BREAK`, combat.js 1줄 |
+
+**combat.js 바뀐 줄 (전/후)**
+```js
+// 전
+import { STRIKE, ANATOMY, STEEL } from './config.js';
+const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.edged && !att.weaponBroken;
+// 후
+import { STRIKE, ANATOMY, STEEL } from './config.js';
+import { BREAK } from './weapons.js';
+const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.edged && (!att.weaponBroken || BREAK.stubEdge);
+```
+(stubEdge 가 false 인 동안 결과는 전과 같다.)
+
+**ai.js 바뀐 곳**: `update()` 안 "칼을 놓쳤다" 다음, "쓰러진 상대" 간격 앞에 파손 반응 블록 하나 + 파일 끝 도우미 `brokenLoss()`·`shrinkM()`. 감정(공포 +0.5 등) 부분은 그대로.
+
+**검사**
+- 부러지지 않은 판 바이트 동일: live_battery·weapon_smoke 전체 동일. fights12(levitate)는 1·4·8판, hybrid fights12 는 5판만 달라졌는데 — `tools/sim/break_trace.mjs` 로 확인하니 **정확히 무기가 부러진 판들**이다(hybrid 1판도 부러졌지만 45초에 부러져 결과가 안 바뀜). 나머지 판은 전부 같다. 새 결과: fights12 사망 9→10/12, hybrid 8/12 그대로.
+- 파손 점검 `tools/sim/weapon_break_check.mjs`(부러질 수 있는 무기 11종 전부): 칼날 콜라이더 끝 = 절단선(오차 0), 절단선 위 보이는 꼭짓점 0, 조각 1개가 1.60초에 사라짐, 4초 더 싸워도 NaN 0, AI 간격 줄어듦, 판 바뀜 정리 1→0. 예) 롱소드 칼 1.05→0.525 m, 질량 1.60→1.37 kg, 손 기준 관성 0.272→0.106. 나뭇가지 0.32→0.18 kg, 고무 닭 0.35→0.175 m(머리 떨어짐).
+- 브라우저: `tools/browser/weapon_break_shots.mjs` — 롱소드·세이버·나뭇가지, 콘솔 에러 0. `stubEdge=true` 도 NaN·예외 0.
+
+**연속 사진** (`docs/weapon_shots/break_<무기>_<0~3>.jpg` — 0 직전 · 1 부러진 순간 · 2 0.3초 뒤(조각이 날아감) · 3 2초 뒤(조각 사라지고 톱니 끝만))
+
+**부러진 뒤 60초 경합 승률** (`tools/sim/broken_duel.mjs`, hybrid, 주인공 대리 대 롱소드, 판 시작과 동시에 부러뜨림 — 최악의 경우, 자리마다 24판 = 48판, 윌슨 95%)
+| X 무기 | 안 부러짐 | 예전 파손(날만 죽음) | 지금 파손(끝 절반 떨어짐) |
+|---|---|---|---|
+| 롱소드 | 50% (36~64) | 40% (27~54) | **6% (2~17)** |
+| 세이버 | 31% (20~45) | 17% (9~30) | **4% (1~14)** |
+| 나뭇가지 | 38% (25~52) | 40% (27~54) — 원래 날이 없어 차이 없음 | **4% (1~14)** |
+
+- 0%는 아니다(세 무기 다 이긴 판이 있다). 다만 불리함이 크다: 예전엔 파손이 거의 벌이 아니었고(롱소드 −10%p, 나뭇가지 0), 이제는 −30~45%p. 판 시작부터 부러진 최악의 경우라 실제 판(중간에 부러짐)은 덜하다.
+- 더 눅이고 싶으면 손잡이: `breakAt` 을 0.6~0.7 로(덜 짧아짐), 또는 `stubEdge` 켜기. **디렉터 판단 요청** (지금은 지시 그대로 0.5·둔기).
+
+**제안(소리)**: 조각이 땅에 처음 닿는 순간 작은 쇳조각·나무토막 소리 — weapon_debris.js `tickDebris` 의 `d.landed = true` 자리에 붙이면 된다(sound.swordLand 의 작고 높은 판, 재질별).
+
 ## 검술 보정(skill.level)은 강해지는 장치가 아니다 (사장님 질문, 측정만 — 고치지 않음)
 - 메뉴의 "검술 보정"은 플레이어에게만 걸린다. AI는 난이도(0.4·0.7·0.85)와 캐릭터 값(브란 0.28 ~ 마르가레테 0.97)으로 따로 정해진다.
 - 한쪽 AI의 보정만 바꿔 보통 AI와 붙임 (롱소드끼리, hybrid). `tools/sim/skill_level_duel.mjs`
