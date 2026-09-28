@@ -243,6 +243,18 @@ export function weaponMatOpts(material, isBlade, tier) {
 //  Delp 1996 손목 굴곡 토크 실측(평균 12.2 N·m)이었고, 22 는 양손·팔 전체 기여 추정치 [D].
 const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 22 };
 
+// ── 찌르기 무기의 찌르기 장점 (감독 확정 수치 mCut·mThrust·power 와 별개의 장치) ──
+//  베기가 약한(mThrust > mCut) 에스톡·레이피어는 "톡 쳐서 찌르기"가 자연스러운 싸움법이 되도록 찌를 때만 이점을 준다.
+//   recover: 탭 찌르기 뒤 자세로 돌아오는 시간 배율 (skill.js). 겨누기·뻗기는 팔 힘의 한계라 빠르게 하지 않는다
+//   reach  : 탭 찌르기에서 손을 더 뻗는 거리 (m, skill.js)
+//   gap    : 찌르기가 옷·투구의 틈을 파고드는 정도 — 막아주는 몫의 이 비율을 무시한다 (combat.js)
+//   window : 칼끝 판정 폭 — 찌르기로 치는 칼날 위치(t > 0.8)와 칼축 방향(> 0.75) 기준을 이만큼 낮춘다 (combat.js)
+//  에스톡: 판금 틈을 노리던 찌르기검 → 틈 파고들기가 가장 크다. 레이피어: 가볍고 빠른 결투검 → 가장 빠르고 판정 폭이 넓다
+export const THRUST_STYLE = {
+  estoc: { recover: 0.7, reach: 0.12, gap: 0.5, window: 0.1 },
+  rapier: { recover: 0.6, reach: 0.1, gap: 0.3, window: 0.12 },
+};
+
 function finalizeSpec(id, s) {
   // ...s를 먼저 펼치고 계산된 필드를 뒤에 둔다 (뒤에 적은 값이 이긴다) →
   //  controlOverrides처럼 "기본값과 병합"해야 하는 필드가 s의 원본 값에 덮어써지지 않는다.
@@ -261,8 +273,11 @@ function finalizeSpec(id, s) {
     breakChance(J) { return breakChance(J, this.fragility, this.material); },
     fragile: breakChance(BREAK.jRef, s.fragility ?? TIER_FRAGILITY[s.tier ?? 'common'], s.material) > 0, // 부러질 수 있는 무기인가
     ignoreArmor: !!s.ignoreArmor,
+    thrustStyle: s.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (아래 THRUST_STYLE). 없으면 null
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
+    // 한손 자세표(guards.js ONE_HAND: 칼 든 어깨를 앞으로, 손을 더 뻗는다)를 쓰나. 한손 무기는 기본으로 쓴다
+    oneHandStance: s.oneHandStance ?? s.grip === 'one-hand',
     soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
   };
@@ -274,6 +289,7 @@ function finalizeSpec(id, s) {
 // ═════════════════════════════════════════════════════════════
 const longsword = finalizeSpec('longsword', {
   nameKo: '롱소드', nameEn: 'Longsword',
+  desc: '두 손으로 쥐는 균형 잡힌 장검.\n베기도 찌르기도 두루 잘한다.',
   grip: 'two-hand', material: 'steel',
   hiltLength: 0.13, bladeLength: 1.05, gripAlong: -0.14,
   // 겉모습만 (물리·질량은 위 실측 그대로, 한 글자도 안 바뀐다): 양날 마름모 단면 + 날 세움 면, 칼몸 절반까지 피홈,
@@ -312,6 +328,7 @@ const longsword = finalizeSpec('longsword', {
 // ═════════════════════════════════════════════════════════════
 const zweihander = finalizeSpec('zweihander', {
   nameKo: '츠바이핸더 (대형 양손검)', nameEn: 'Zweihänder',
+  desc: '정예 용병이 쓰던 거대한 양손검.\n느리지만 맞으면 묵직하게 부순다.',
   grip: 'two-hand', material: 'steel',
   tier: 'rare', // 감독 확정: 레어 — 도펠죌트너(정예 용병)만 다루던 특수 대검. power 1.05, 파손 계수 0.032
   hiltLength: 0.19, bladeLength: 1.17, gripAlong: -0.18,
@@ -366,9 +383,11 @@ const zweihander = finalizeSpec('zweihander', {
 // ═════════════════════════════════════════════════════════════
 const estoc = finalizeSpec('estoc', {
   nameKo: '에스톡 (찌르기검)', nameEn: 'Estoc',
+  desc: '갑옷 틈을 파고드는 찌르기검.\n찌르기로 싸워야 제값을 한다.',
   grip: 'hand-and-half', material: 'steel',
   hiltLength: 0.14, bladeLength: 1.15, gripAlong: -0.15,
   mCut: 0.55, mThrust: 1.35, mBlunt: 0.9, // 날이 거의 없어 베기는 약하고, 갑옷 틈을 노리는 찌르기는 뛰어나다
+  thrustStyle: THRUST_STYLE.estoc,
   // 각진(사각/육각) 뻣뻣한 단면 — 실제 에스톡처럼 날이 아니라 뻣뻣한 각진 봉 느낌으로.
   partMesh: swordKit({
     blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0085, bevel: 0, tip: 'needle', tipLen: 0.14 },
@@ -400,7 +419,9 @@ const estoc = finalizeSpec('estoc', {
 // ═════════════════════════════════════════════════════════════
 const sabre = finalizeSpec('sabre', {
   nameKo: '세이버 (기병도)', nameEn: 'Cavalry Sabre',
+  desc: '가볍게 휘어진 기병의 한손 칼.\n빠르게 베고 빠지기 좋다.',
   grip: 'one-hand', material: 'steel',
+  enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
   hiltLength: 0.11, bladeLength: 0.83,
   // 감독 확정 컨셉: 가장 가볍고 빠른 곡도, 베기 전용 — 찌르기는 약하고(0.7) 손목이 조금 더 빨리 돈다(34).
   //  굽은 날의 베기 효율은 물리 모델이 다 담지 못해 mCut 으로 보정. 팔쉬온(무거운 반달칼)과 확실히 갈린다.
@@ -444,10 +465,12 @@ const sabre = finalizeSpec('sabre', {
 // ═════════════════════════════════════════════════════════════
 const rapier = finalizeSpec('rapier', {
   nameKo: '레이피어', nameEn: 'Rapier',
+  desc: '길고 가는 르네상스 결투검.\n가장 빨리 찌르지만 베기는 약하다.',
   grip: 'one-hand', material: 'steel',
   tier: 'rare', // 감독 확정: 레어 — 르네상스 결투검, 로스터 유일의 찌르기 전용. power 1.05, 파손 계수 0.032
   hiltLength: 0.1, bladeLength: 0.95,
   mCut: 0.5, mThrust: 1.3, mBlunt: 0.7,
+  thrustStyle: THRUST_STYLE.rapier,
   // 가늘고 뻣뻣한 다이아몬드(마름모) 단면 — 찌르기 전용 칼답게 폭이 좁고 끝으로 갈수록 더 가늘어진다.
   partMesh: swordKit({
     blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0045, bevel: 0.0015, tip: 'needle', tipLen: 0.12 },
@@ -486,7 +509,9 @@ const rapier = finalizeSpec('rapier', {
 // ═════════════════════════════════════════════════════════════
 const falchion = finalizeSpec('falchion', {
   nameKo: '팔쉬온 (반달칼)', nameEn: 'Falchion',
+  desc: '끝이 넓고 무거운 외날 칼.\n내려찍듯 베면 도끼처럼 들어간다.',
   grip: 'one-hand', material: 'steel',
+  enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
   hiltLength: 0.1, bladeLength: 0.8,
   // 감독 확정 컨셉: 앞이 무거운 반달칼, "도끼 같은 칼" — 횟수는 적어도 한 방이 무겁고 투구 위로도 충격(mBlunt 1.4),
   //  베기 효율은 세이버보다 낮게(1.15), 찌르기는 거의 없다(0.6). 세이버(빠른 곡도)와 확실히 갈린다.
@@ -536,6 +561,7 @@ const falchion = finalizeSpec('falchion', {
 // ═════════════════════════════════════════════════════════════
 const monohoshizao = finalizeSpec('monohoshizao', {
   nameKo: '모노호시자오', nameEn: 'Monohoshizao',
+  desc: '사사키 코지로의 노다치.\n빨랫줄 장대라 불린 칼, 매섭게 벤다.',
   grip: 'two-hand', material: 'steel',
   tier: 'epic',
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
@@ -563,7 +589,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
       partTuple(['box', 0.014, 0.14, 0.017], 0, 0.3, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.014], -0.2, 0.09, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.04, 0.005, 0.04], 0.24, 0.04, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.72, blade.comY, blade.Ie, blade.It, 0xc9cfd5, true), // 하몬이 드러나게 칼몸은 조금 어둡게
+      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.72, blade.comY, blade.Ie, blade.It, 0xc1d3db, true), // 같은 에픽 청강검과 광도를 맞춘 강철색 (하몬은 꼭짓점 색으로 더 밝다)
     ];
   },
   // 에픽 명검의 세공 (전부 물리 무관, 콜라이더에서 ~1cm 안):
@@ -621,7 +647,9 @@ const monohoshizao = finalizeSpec('monohoshizao', {
 const QINGGANG_LOOK = { grip: 0x17171f, hilt: 0x8a6d3b };
 const qinggang = finalizeSpec('qinggang', {
   nameKo: '청강검', nameEn: 'Qinggang Sword',
+  desc: '쇠도 진흙처럼 벤다던 전설의 검.\n가볍고 빠른 한손 양날검.',
   grip: 'one-hand', material: 'steel',
+  enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
   tier: 'epic',
   hiltLength: 0.12, bladeLength: 0.74,
   mCut: 1.35, mThrust: 1.15, mBlunt: 0.95, // 감독 확정치 (mCut 1.35)
@@ -643,7 +671,7 @@ const qinggang = finalizeSpec('qinggang', {
       partTuple(['box', 0.015, 0.09, 0.015], 0, 0.1, 0, grip.Ie, grip.It, QINGGANG_LOOK.grip),
       partTuple(['ball', 0.02], -0.09, 0.1, 0, pommel.Ie, pommel.It, QINGGANG_LOOK.hilt),
       partTuple(['box', 0.035, 0.008, 0.012], 0.11, 0.04, 0, cross.Ie, cross.It, QINGGANG_LOOK.hilt),
-      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xbfe3ea, true),
+      partTuple(['box', 0.014, L / 2, 0.0045], 0.12 + L / 2, 0.61, blade.comY, blade.Ie, blade.It, 0xc4dbe1, true), // 푸른 강철(청강) — 같은 에픽 모노호시자오와 광도를 맞춤
     ];
   },
   // 청강검 장식 (전부 물리 무관, 콜라이더에서 ~1cm 안): 중국 명검의 어법으로 "곱되 요란하지 않게".
@@ -724,6 +752,7 @@ function excaliburGems(group) {
 
 const excalibur = finalizeSpec('excalibur', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur',
+  desc: '금빛 기운이 감도는 진짜 왕의 검.\n모든 타격이 한층 무겁게 들어간다.',
   grip: 'two-hand', material: 'steel',
   tier: 'legend', // 감독 등급: 레전드 → power 1.2·durability 1.0. 진품은 플레이어 전용(docs/characters.md)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
@@ -740,6 +769,7 @@ const excalibur = finalizeSpec('excalibur', {
 // ═════════════════════════════════════════════════════════════
 const excaliburReplica = finalizeSpec('excalibur_replica', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur', // 감독 지시: 화면에는 진품과 같은 이름 — 플레이어는 외관(빛나는 아우라 유무)만 보고 추측한다
+  desc: '일단은 왕의 검 엑스칼리버, 라고 쓰여 있다.',
   grip: 'two-hand', material: 'steel',
   tier: 'common', // 제원·등급은 커먼 (power 1.0)
   finishTier: 'legend', // 겉면 마감만 진품과 동일 (등급 마감으로도 구분되면 안 된다 — 오라가 유일한 표식)
@@ -757,7 +787,11 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 // ═════════════════════════════════════════════════════════════
 const lightsaber = finalizeSpec('lightsaber', {
   nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
+  desc: '빛으로 된 칼날, 갑옷도 소용없다.\n가볍지만 무거운 칼에는 밀린다.',
   grip: 'one-hand', material: 'plasma',
+  // 한손 자세표(칼 든 어깨를 앞으로)는 쓰지 않는다: 길고 가벼운 칼날이라 닿는 거리가 짧은 칼의 5배(+11cm 대 +2cm) 늘어
+  //  롱소드 상대 승률이 55 → 75%로 에픽 목표(45~65%)를 넘었다 (10라운드 B, ref_duel). 영화처럼 두 손 자세로 겨눈다
+  oneHandStance: false,
   tier: 'epic', // power 1.1 · 내구 0.95 (플라스마 칼날이라 어차피 안 부러진다)
   hiltLength: 0.15, bladeLength: 0.9,
   edged: true, ignoreArmor: true, mCut: 1.35, mThrust: 1.3,
@@ -803,6 +837,7 @@ const lightsaber = finalizeSpec('lightsaber', {
 // ═════════════════════════════════════════════════════════════
 const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
+  desc: '길에서 주운 나뭇가지. 날이 없다.\n세게 부딪히면 부러진다. 행운을 빈다.',
   grip: 'one-hand', material: 'wood',
   hiltLength: 0.15, bladeLength: 0.8,
   tier: 'trash', // 감독 등급: 쓰레기 → power 0.7·durability 0.4·fragility 0.2 (60초 경합에 60% 부러진다)
@@ -832,6 +867,7 @@ const treeBranch = finalizeSpec('tree_branch', {
 // ═════════════════════════════════════════════════════════════
 const rubberChicken = finalizeSpec('rubber_chicken', {
   nameKo: '고무 닭', nameEn: 'Rubber Chicken',
+  desc: '누르면 삑 소리 나는 고무 닭.',
   grip: 'one-hand', material: 'rubber',
   tier: 'trash', fragility: 0.95, // 감독 확정: 장난 무기는 쓰레기 등급(power 0.7), 파손도 나뭇가지와 똑같이 — 충돌이 가벼워 계수는 더 높다 (60초 경합 76%)
   hiltLength: 0.1, bladeLength: 0.35,
@@ -865,10 +901,12 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
 // ═════════════════════════════════════════════════════════════
 const frozenTuna = finalizeSpec('frozen_tuna', {
   nameKo: '냉동 참치', nameEn: 'Frozen Tuna',
+  desc: '꽁꽁 얼린 참치 한 마리. 안 부러진다.\n묵직하지만 꼬리가 미끄럽다.',
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
-  edged: false, mBlunt: 2.2, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
+  // mBlunt 2.2 → 2.8 (10라운드: hybrid 롱소드 상대 192판 12% → 17%, 모든 무기 목표 15~85%. 스펙 조정은 최소로)
+  edged: false, mBlunt: 2.8, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
   // 겉모습: 꼬리자루를 쥔 참치 — 주먹 아래 초승달 꼬리, 칼끝 쪽 머리. 역그늘 색·노란 토막지느러미·서리와 얼음막.
@@ -890,6 +928,9 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   },
 });
 
+// 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
+//  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
+//  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,

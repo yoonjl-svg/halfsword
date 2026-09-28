@@ -14,7 +14,9 @@ import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT } 
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
+import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON } from './weapons.js';
+import { decorateOutfit } from './outfits.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -183,6 +185,7 @@ export class Fighter {
     this.prevU = {};
     this.footLoad = { F: 1, B: 1 };
     this.crouch = 0; // 무릎 꿇기 등으로 낮춘 높이(m)
+    this.hunch = 0; // 상처·자세로 일부러 앞으로 숙인 각도(라디안)
     this.footstep = 0; // 발을 디딘 순간의 세기 (main이 읽고 0으로 되돌린다)
     this.gaitDir = new THREE.Vector2(1, 0); // 몸 기준 이동 방향 (x 앞, y 오른쪽)
     this.localVel = new THREE.Vector2();
@@ -201,6 +204,7 @@ export class Fighter {
     this.skill = new Skill(this); // 검술 층: 손 목표·허리·발에 익힌 몸놀림을 보탠다
     this.guardPose = {}; // 손이 따라가는 자세 (걸러진 손 목표 기준)
     this.bodyGuard = {}; // 몸이 따라가는 자세 (거르기 전 입력 기준)
+    this.finish = newFinish(); // 쓰러진 상대 마무리(내려찍기) 자세 (finish.js)
     this.bodyPose = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
     this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
     this.pelvisYawOffset = 0; // 골반을 트는 각도 (라디안, + = 왼쪽으로)
@@ -270,6 +274,9 @@ export class Fighter {
         group.add(dressTo);
       }
       const mesh = dressPart(dressTo, d, o.look);
+      // 장식 레이어(outfits.js): 갑옷판·머리모양 등을 얹는다. 무기 겉모습과 같은 이유로 전용 난수를
+      // 써서(isolatedVisual) 기존 시드 기준 시뮬(fights12 등)의 결과를 건드리지 않는다.
+      isolatedVisual(() => decorateOutfit(dressTo, d, o.look), 0);
       this.partMesh[d.name] = mesh; // 흔적(데칼)을 붙일 겉면
       if (group.userData.helmet) this.helmetGroup = group.userData.helmet;
       if (d.kind === 'head') {
@@ -350,13 +357,16 @@ export class Fighter {
       power: spec.power, // 등급 공격력 배율 (롱소드=1)
       ignoreArmor: spec.ignoreArmor,
       twoHand: spec.twoHand,
+      thrustStyle: spec.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
     };
     this.weaponBroken = false;
+    this.guardPose.oneHand = this.bodyGuard.oneHand = !!spec.oneHandStance; // 한손 무기는 한손 자세표 (guards.js: 칼 든 어깨를 앞으로, 손을 더 뻗는다. weapons.js oneHandStance)
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
-    //  씨앗은 "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림이 나오되 같은 순서로 돌리면 재현된다.
+    //  씨앗은 판 시드(o.breakSeed, 시뮬 하니스가 넘긴다) — 몇 번째로 돌리든 같은 시드면 같은 굴림이 나온다.
+    //  시드가 없으면(실제 게임) "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림.
     //  (자리 번호만으로 씨앗을 잡으면 매 판 같은 굴림이 나와 한쪽 자리만 계속 부러지거나 안 부러지는 편향이 생겼다)
-    Fighter._breakCount = (Fighter._breakCount ?? 0) + 1;
-    this._breakSeed = (Math.imul(0x9e3779b9, Fighter._breakCount) ^ ((o.index + 1) * 0x85ebca6b)) >>> 0;
+    const breakSeed = o.breakSeed ?? (Fighter._breakCount = (Fighter._breakCount ?? 0) + 1);
+    this._breakSeed = (Math.imul(0x9e3779b9, breakSeed) ^ ((o.index + 1) * 0x85ebca6b)) >>> 0;
     const L = spec.bladeLength;
     const wristLocal = new THREE.Vector3(0.565, 1.43, this.side * 0.2); // 앞으로 뻗은 팔 끝
     const wp = toWorld(wristLocal.toArray());
@@ -551,7 +561,7 @@ export class Fighter {
   updateBodyPose(dt) {
     const sk = this.skill;
     const gw = this.guardWeight();
-    const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard);
+    const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard, this.finish, sk.thrustPose);
     const bp = this.bodyPose;
     const bv = this.bodyPoseVel;
     // 딱 멈추는(임계 감쇠) 2차 필터: 출발도 멈춤도 매끄럽다 (1차 필터는 출발 순간 속도가 튄다)
@@ -583,7 +593,10 @@ export class Fighter {
 
   /** 바짝 붙었을 때 손을 상대 몸 속으로 뻗지 않는다 (팔을 접어 칼자루를 몸 가까이 당긴다) */
   closeReach() {
-    return Math.max(0.12, this.foeDistance() - 0.3);
+    const r = Math.max(0.12, this.foeDistance() - 0.3);
+    // 쓰러진 상대는 발밑에 누워 있어 가슴끼리 가까워도 손을 앞으로 뻗어 내려찍을 수 있다 (finish.js)
+    const fa = this.finish.amt;
+    return fa > 0 ? r + Math.max(0, 0.6 - r) * fa : r;
   }
 
   /**
@@ -629,6 +642,7 @@ export class Fighter {
     this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
 
     this.updateHeading(dt);
+    updateFinish(this, dt); // 상대가 쓰러져 있으면 아래쪽 자세를 내려찍기로 (finish.js)
     this.skill.update(dt);
     this.updateBodyPose(dt);
     this.driveBalance(dt);
@@ -660,7 +674,9 @@ export class Fighter {
     if (this.state === 'stand') {
       this.balance = Math.min(100, this.balance + VITALS.balanceRegen * dt);
       const lostFooting = this.offBalanceTime > BALANCE.fallDelay;
-      if (tilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(tilt > BODY.fallTiltDeg + 15);
+      // 기울기는 일부러 숙인 만큼(배를 다쳐 웅크림·자세)을 빼고 잰다: 웅크린 채 일어서자마자 넘어졌다고 다시 쓰러지기를 되풀이하지 않게
+      const fallTilt = tilt - THREE.MathUtils.radToDeg(this.hunch);
+      if (fallTilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(fallTilt > BODY.fallTiltDeg + 15);
       else if (this.legHealth < 0.25) this.knockDown(false); // 다리가 버티지 못해 주저앉는다
     } else if (this.state === 'down') {
       if (this.stateTime > this.downTime && this.consciousness > 0.3) this.setState('getup');
@@ -939,7 +955,7 @@ export class Fighter {
     if (mus > 0.1 && loadSum > 0) {
       const h = hybrid ? G.h : BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
       // hybrid: 보조 힘은 몸무게의 GAIT.assist만 (일어선 직후엔 100%에서 천천히 줄인다). 나머지는 다리 관절이 받친다
-      const share = hybrid ? GAIT.assist + (1 - GAIT.assist) * G.lev : BODY.support;
+      const share = hybrid ? G.supportShare(M * g) : BODY.support;
       let fy = M * g * share + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * v.y;
       // 다친 다리는 힘을 못 쓴다 → 체중을 버틸 수 있는 한계
       const legPower = (load.F * this.limbs.legF + load.B * this.limbs.legB) / loadSum;
@@ -996,9 +1012,12 @@ export class Fighter {
     let M = 0;
     const com = _c1.set(0, 0, 0);
     const vel = _c2.set(0, 0, 0);
+    // hybrid: 딛은 발에 더한 무게(GAIT.footExtra)는 땅이 바로 받치는 몫이라 무게중심 계산에서 뺀다
+    //  (발을 들고 디딜 때마다 무게중심이 튀지 않게). 발 몸체의 무게 = 발 콜라이더 무게
+    const G = this.gait;
     for (const name in this.bodies) {
       const b = this.bodies[name];
-      const m = b.mass();
+      const m = G && (name === 'footF' || name === 'footB') ? b.collider(0).mass() : b.mass();
       const c = b.worldCom();
       const v = b.linvel();
       com.x += c.x * m;
@@ -1158,6 +1177,7 @@ export class Fighter {
     const bp = this.bodyPose;
     const gw = this.guardWeight();
     const bend = (this.lean || 0) - Math.min(0.45, gut * 0.3) - 0.2 * kn - bp.pitch;
+    this.hunch = Math.max(0, -bend); // 일부러 앞으로 숙인 각도(라디안): 넘어짐 판정에서 뺀다
     // 가슴을 트는 각도(정면 기준): 검술 자세 지도 + (보정이 약할수록) 손이 있는 쪽으로.
     // 허리(척추)는 그중 골반이 이미 튼 만큼을 뺀 나머지만 튼다
     const chestYaw = bp.chestYaw + (1 - gw) * -sk.aim.x * 0.35;
@@ -1321,8 +1341,16 @@ export class Fighter {
     // ② 검술 자세 지도: 손가락 위치 → 실제 롱소드 자세의 손 위치(앞뒤 깊이 포함)와 칼끝 방향
     //  검술 보정이 셀수록 ②를 따른다 (끔 = ①만)
     const gw = this.guardWeight();
-    const G = guardAt(off.x, off.y, this.guardPose);
+    const G = guardAt(off.x, off.y, this.guardPose, this.finish);
     if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
+    // 탭 찌르기(skill.thrustPose)는 보정이 아니라 명령이라 검술 보정 세기(gw)와 무관하게 덧씌운다 — 보정 0 에서도 찌른다.
+    //  찌르기는 지금 손 목표(handBase, 덧씌우기 전)에서 뻗어 나간다 (skill.thrust)
+    const hb = (this.handBase ||= [0, 0, 0]);
+    hb[0] = handLocal.x;
+    hb[1] = handLocal.y;
+    hb[2] = handLocal.z;
+    const th = this.skill.thrustPose;
+    if (th.w > 0) handLocal.lerp(_v6.set(th.hand[0], th.hand[1], th.hand[2]), th.w);
     handLocal.x = Math.min(handLocal.x, this.closeReach());
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
@@ -1341,6 +1369,11 @@ export class Fighter {
     if (gw > 0) {
       aim.lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), gw);
       if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
+      aim.normalize();
+    }
+    if (th.w > 0) {
+      aim.lerp(_v6.set(th.dir[0], th.dir[1], th.dir[2]), th.w);
+      if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);
       aim.normalize();
     }
     aim.applyQuaternion(this.yaw);
@@ -1399,7 +1432,9 @@ export class Fighter {
       if (!this.wristBrake && toward > 3 && toward > tgtSp && angle > 0.25) {
         const brakeAcc = (cap * this.weaponCfg.brakeEcc) / this.swordIhand;
         const stopAngle = (toward * toward) / (2 * brakeAcc);
-        if (angle > stopAngle * this.weaponCfg.releaseMargin) damp = this.weaponCfg.releaseDamping;
+        // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js)
+        const fr = this.finish.amt > 0 && aim.y < blade.y ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
+        if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
           this.wristBrakeAng = angle;
