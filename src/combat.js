@@ -23,6 +23,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { STRIKE, ANATOMY, STEEL } from './config.js';
+import { BREAK } from './weapons.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -138,8 +139,8 @@ export class Combat {
     const HL = att.weaponCfg.hiltLength;
     const local = point.clone().sub(S.p).applyQuaternion(_q.copy(S.q).invert());
     const t = THREE.MathUtils.clamp((local.y - HL) / att.weaponCfg.bladeLength, 0, 1);
-    // 날이 없는 무기(나뭇가지·고무 닭 등)나 부러진 무기는 베기·찌르기 판정 없이 늘 둔기로 친다
-    const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.edged && !att.weaponBroken;
+    // 날이 없는 무기(나뭇가지·고무 닭 등)나 부러진 무기는 베기·찌르기 판정 없이 늘 둔기로 친다 (BREAK.stubEdge 면 부러진 토막도 날로 — 효율은 fighter.breakWeapon 이 깎는다)
+    const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.edged && (!att.weaponBroken || BREAK.stubEdge);
 
     // 유효 질량: 맞은 점에서의 강체 칼의 실제 유효 질량 + 팔·몸의 도움
     const mFree = freeMass(pr.w.fighter.swordProps, S, point, dir);

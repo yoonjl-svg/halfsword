@@ -2,6 +2,7 @@
 import * as CONFIG from '../../src/config.js';
 import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
+import { wilson } from './ref_duel.mjs';
 CONFIG.BODY.weightMode = 'hybrid';
 const S = +process.argv[2]; const N = +(process.argv[3] || 24);
 const st = { W: 0, L: 0, D: 0, fwd: 0, fwdMax: 0, steps: 0, give: [], take: 0, strikes: 0 };
@@ -20,4 +21,5 @@ for (let s = 1; s <= N; s++) for (const xf of [true, false]) {
 }
 const m = (a, i) => (a.length ? a.reduce((p, q) => p + q[i], 0) / a.length : 0);
 const n = st.W + st.L + st.D;
-console.log(`보정 ${S}: 승 ${st.W} 패 ${st.L} 무 ${st.D}/${n} · 손 앞뻗음 평균 ${(st.fwd / st.steps).toFixed(2)}m 최대 ${st.fwdMax.toFixed(2)}m · 낸 상처 ${(st.give.length / n).toFixed(1)}/판 (칼 속도 ${m(st.give, 0).toFixed(1)}m/s, 에너지 ${m(st.give, 1).toFixed(0)}J) · 받은 상처 ${(st.take / n).toFixed(1)}/판`);
+const [lo, hi] = wilson(st.W, n);
+console.log(`보정 ${S}: 승 ${st.W} 패 ${st.L} 무 ${st.D}/${n} (승률 ${Math.round(100 * st.W / n)}% [95% ${Math.round(100 * lo)}~${Math.round(100 * hi)}]) · 손 앞뻗음 평균 ${(st.fwd / st.steps).toFixed(2)}m 최대 ${st.fwdMax.toFixed(2)}m · 낸 상처 ${(st.give.length / n).toFixed(1)}/판 (칼 속도 ${m(st.give, 0).toFixed(1)}m/s, 에너지 ${m(st.give, 1).toFixed(0)}J) · 받은 상처 ${(st.take / n).toFixed(1)}/판`);

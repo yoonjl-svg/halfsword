@@ -18,7 +18,7 @@ import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
-import { Stages, nextStage, STAGE_IDS } from './stages.js';
+import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 
@@ -79,14 +79,16 @@ const lookvParam = params.get('lookv');
 const lookvVersion = lookvParam != null ? (lookvParam.startsWith('v') ? lookvParam : `v${lookvParam}`) : null;
 
 // ── 상대 캐릭터 고르기 (테스트/데모용 최소 기능. 정식 선택 UI는 나중에) ──
+//  (없음)        : 무대마다 그곳이 고향인 검객 (stages.js STAGE_FOE, 오너 결정). 짝이 없는 무대는 무작위
 //  ?foe=<id>     : characters.js의 특정 캐릭터로 고정
-//  ?foe=random   : 판마다 무작위로 다른 캐릭터 (아무것도 없을 때의 기본값)
+//  ?foe=random   : 판마다 무작위로 다른 캐릭터
 //  ?foe=default  : 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" (메뉴의 난이도 설정을 따른다)
-const foeParam = params.get('foe') || lookPreviewId || 'random';
+const foeParam = params.get('foe') || lookPreviewId || 'stage';
 const foeRandomEachRound = foeParam === 'random';
 let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
 let auras = []; // 진짜 엑스칼리버의 일렁임·빛 (aura.js)
 function pickFoe() {
+  if (foeParam === 'stage') return CHARACTERS_BY_ID[STAGE_FOE[stages.id]] || randomCharacter(currentFoe?.id); // 이번 판 무대의 검객
   if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
   if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
   return currentFoe; // 고정 지정이 없으면 같은 상대를 계속 쓴다
@@ -578,7 +580,7 @@ const cardEls = [...drawEl.querySelectorAll('.wcard')];
 //  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
 //  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
 //  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
-const PX_BACKS = { poseidon: '#1d3037', castle: '#1e2433', temple: '#1a352b', cathedral: '#2b171a' }; // 테마 → 바탕색
+const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', cathedral: '#2b171a' }; // 테마 → 바탕색
 const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
 const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
 let cardBack = 'classic';
@@ -859,6 +861,7 @@ async function startFight() {
 function beginFight() {
   state = 'fight';
   input.enabled = true;
+  emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
   applyMoveMode();
   if (currentFoe) {
     // 소개(이름 · 대사)는 조금 더 두었다가 걷는다 (무기 이름은 적지 않는다: 카드가 이미 보여 줬다)
