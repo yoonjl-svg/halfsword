@@ -20,7 +20,7 @@
   - `src/main.js`의 **사운드 호출 줄만**. 디렉터 요청에 따라 최소로 고치고, 보고에 정확한 전/후 조각과 행 번호를 적는다.
 - **건드리지 않는다**:
   - `src/fighter.js`
-  - `PLATE_PARTS`(main.js). 디렉터가 판금 판정 `r.plate`로 바꿀 예정이다.
+  - main.js의 갑옷·판정 코드(`r.plate`). 소리 호출만 디렉터 요청으로 고친다.
     - (방어구 병합에서 반영됨: `PLATE_PARTS`는 없어졌고 `onWound`가 `r.plate`로 `plateBlock`·`plateBreak`를 부른다 — `pm-sound-impact.md` 7차 덧붙임)
 - **브랜치**: `claude/pm-sound-impact`에만 커밋·푸시한다. **main에 직접 푸시하지 않는다.** PR은 요청이 있을 때만 만든다.
   - 디렉터가 병합하면 브랜치를 main에서 다시 시작한다: `git fetch origin && git checkout -B claude/pm-sound-impact origin/main`, 그다음 푸시는 `--force-with-lease`.
@@ -56,7 +56,7 @@
 - **칼끼리** `clash`: 무겁고 짧은 "챙". 냄비 소리가 나는 대역을 파내고, 쇠가 갈라지는 "크랙"을 넣었다. 마림바 같은 음정은 없다.
 - **피격** `cut`·`stab`·`blunt`·`helmet`·`bone`: 대전 게임(사무라이 쇼다운)식 피격음이다. BANK의 `hitCut`, `hitStab`, `hitBlunt`, `hitArmor`를 쓴다.
 - **판금** `plateBlock(energy, { material, pos })`, `plateBreak(energy, { pos })`: 미리 만들어 두었다.
-  - **아직 연결하지 않았다.** 디렉터가 갑옷 병합과 함께 `r.plate`로 연결하겠다고 했다(대기 중).
+  - main `6669659`(갑옷)에서 디렉터가 연결했다: 막으면 `plateBlock(e, {material})`, 뚫리면 `impact({b:'armor'})`, 판이 완전히 깨지면 `plateBreak(e)`, 투구는 `helmet(e)`. 디렉터의 armor_check로 판정대로 나는 것을 확인했다.
 - **휘두르는 바람** `whooshLoop(material)`: 플라즈마는 "훔" 소리를 낸다.
 - **칼 긁기** `scrape`: 강철끼리만.
 
@@ -154,11 +154,11 @@
 
 1. ~~네트워크 확인~~, ~~슈바르츠·이졸데 죽음 목소리~~: 15차에서 끝냈다. 사이트 접속 결과는 `sound_pm_takeover.md`.
 2. ~~VoiceBosch(CC-BY-SA) 남성 신음 3개 교체~~: 17차에서 A안으로 끝냈다. 이제 CC-BY-SA 음원은 없다.
-3. **판금 소리 연결**: 디렉터가 갑옷 병합을 끝내면 알려 준다. `plateBlock`·`plateBreak`는 이미 있다. 연결 뒤 실제 게임으로 확인한다. (연결됨 — 방어구 병합. 실제 게임 확인은 남았다)
+3. ~~판금 소리 연결~~: main `6669659`에서 디렉터가 연결했다(23차). 선택으로, 부러진 칼날·갑옷 조각이 땅에 닿을 때의 작은 소리를 `src/debris.js` 130행(`d.landed = true` 자리)에 붙일 수 있다(디렉터: 급하지 않음). (연결됨 — 방어구 병합. 실제 게임 확인은 남았다)
 4. (보류, 디렉터 결정) 산새·말 울음·비둘기 녹음 비교. 말 소리는 사장님이 뺀 적이 있다.
 5. ~~내 숨소리~~: 21차에서 끝냈다(C안, 디렉터 규칙, 사장님 확인 "그래 그렇게 해").
    - 참고로 고르지 않은 후보: A craigsmith R15-47(0.55-2.6·3.45-4.75·4.7-6.85초), B sickfin 711359(0.5-1.3·4.95-5.6·10.2-11.1초). 모두 CC0.
-   - 지금 남은 일은 없다. 디렉터의 판금 연결(`r.plate`) 알림을 기다린다.
+   - 지금 남은 일은 없다.
 6. **화전 터 소리·이졸데 부활**: 22차. 사장님: 부활 숨은 1안, 화전 터는 "실제로 적용해 보고 이상하면 다시 말할게". 부활 효과음은 성가 녹음 후보 6개(A~F)를 들려드렸고 선택을 기다린다. 임시로 A(스페인 교회 그레고리안)를 넣어 두었다. 고르시면 `stage/chant1.mp3`와 LICENSE만 바꾼다. 후보 자른 구간은 pm-sound-impact.md 22차 덧붙임 2.
    - 외형 PM에게 알릴 것: 까마귀가 날아오를 때 `arena.onEvent('crows', { amp: 0~1, pos })`를 부르면 소리가 난다. 디렉터를 통해 전했다.
    - 코드와 파일은 `git stash`에 있다: "hurt grunts + low-blood breath + sword landing".
