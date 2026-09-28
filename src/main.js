@@ -562,7 +562,8 @@ function showFoeIntro(ch) {
 //  고르는 동안 싸움은 멈춰 있다: 판은 임시 무기(롱소드)로 세워 두기만 하고(물리·AI 없음, 무기는 감춤),
 //  카드를 고르면 그 무기로 판을 새로 세운다. 순서는 게임 루프의 시간으로 재서 일시정지하면 함께 멈춘다.
 //  카드 뒤집기·사라지기는 CSS 변환(transform)으로만 움직인다 (매 프레임 JS 로 그리지 않는다).
-const GRAND_WEAPONS = new Set(['excalibur']); // 진짜 엑스칼리버 카드는 금빛으로 일렁이고 울림이 크다
+// 등급과 별개로 따로 대접하는 무기 카드 (금빛 일렁임·센 떨림). 오너 결정: "엑스칼리버를 등급과 별개로 우대할 필요는 없어" → 비워 둔다
+const GRAND_WEAPONS = new Set();
 const TIER_KO = { trash: '쓰레기', common: '커먼', rare: '레어', epic: '에픽', legend: '레전드' };
 const FOE_CARD = 2; // 맨 오른쪽 카드 = 상대 무기 칸
 // 초 (고른 때부터). others: 남은 내 카드가 뒤집힘, foe: 상대 카드가 뒤집힘 (+0.45초면 다 뒤집힌다),
@@ -719,7 +720,7 @@ function pickCard(i) {
   cardEls[i].classList.add('picked', 'flipped');
   revealLabel(i);
   drawEl.classList.replace('choose', 'reveal');
-  sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand }); // 두꺼운 카드 "촥" → 앞면이 드러나며 낮은 "둥" (레전드·에픽은 작은 반짝임, 엑스칼리버는 맑은 울림)
+  sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand }); // 두꺼운 카드 "촥" → 앞면이 드러나며 낮은 "둥" (레전드·에픽은 작은 반짝임)
   haptic(grand ? 1 : 0.35);
   $('foeIntro').querySelector('em').textContent = ''; // "무기 카드를 한 장 고르세요"는 고르는 동안만
 }
