@@ -11,7 +11,7 @@ if (!A_ || !B_) { console.error('알 수 없는 id. 가능:', Object.keys(CHARAC
 const SEEDS = +seedsArg, DUR = +durArg;
 
 function runDuel(seed) {
-  const opts = { seed, difficulty: A_.ai.level, persona: A_.ai.persona, weapon2: A_.weapon, AI2Class: AI, difficulty2: B_.ai.level, persona2: B_.ai.persona, weapon: B_.weapon };
+  const opts = { seed, difficulty: A_.ai.level, persona: A_.ai.persona, weapon2: A_.weapon, AI2Class: AI, difficulty2: B_.ai.level, persona2: B_.ai.persona, weapon: B_.weapon, revive: A_.revive, revive2: B_.revive };
   const G = newRound(opts);
   const { player: B, enemy: A } = G;
   const steps = Math.round(DUR / DT);

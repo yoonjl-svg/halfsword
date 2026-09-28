@@ -125,6 +125,11 @@ export const CHARACTERS = [
         },
       },
     },
+    // 부활 (오너 결정 2026-09-28: "이졸데는 좀 약한 대신 부활하게 하려고. 투지를 보여서 한 번 더 싸우는 거지.")
+    //  처음 죽으면 쓰러졌다가 하늘에서 내린 빛 속에서 한 번 다시 일어선다. 두 번째 죽음이 진짜 끝. 규칙·시간은 src/revive.js,
+    //  연출은 src/revive_fx.js, 문서는 docs/characters.md "부활". 되찾는 몸: 피 0.7(여전히 다친 몸) · 칼 든 팔 0.6 · 다리 0.7,
+    //  다시 싸울 때 집념 0.8 (10초 동안 다른 감정이 밀어내지 못함). 일어설 때의 대사는 lines.revive (캐릭터 PM 몫, 비어 있으면 알림만)
+    revive: { count: 1, blood: 0.7, limbs: { armS: 0.6, armO: 0.4, legF: 0.7, legB: 0.7 }, obsession: 0.8, obsessionHold: 10 },
     look: getLook('isolde'),
     lookVersion: CHARACTER_LOOK_VERSION.isolde,
     taunt: '사범님… 보고 계신가요. 정확하게 갈게요.',

@@ -23,6 +23,7 @@ import { installGunFx, clearGunFx } from './gun_fx.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
+import { ReviveFx } from './revive_fx.js';
 
 await RAPIER.init();
 
@@ -121,6 +122,8 @@ scene.add(sun, sun.target);
 //  스테이지는 fighterLight 로 색만 물들이고 더 밝게 할 수 있을 뿐 끌 수 없다 (fighter_light.js, docs/stages.md 조명 약속)
 //  배경이 바뀔 때마다 useStage 가 그 배경의 fighterLight 설정으로 바꿔 끼운다
 const fighterLight = createFighterLight({ hemi, sun });
+// 부활 연출 (이졸데, src/revive_fx.js): 하늘에서 내린 빛기둥·빛 알갱이·땅의 빛·진짜 빛 하나·몸의 빛. 부활하는 동안만 장면에 붙는다
+const reviveFx = new ReviveFx(scene, { renderer, camera, fighterLight });
 
 // ── 배경(스테이지): 판마다 정해진 순서 ─────────────────────────────────────
 //  오너 결정: 고르는 화면 없이 늘 포세이돈 신전 → 성 안뜰 → 산사 → 대성당 순서. 대성당 다음 판은 다시 포세이돈 (stages.js STAGE_ORDER)
@@ -137,6 +140,7 @@ let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그
 let lastRoundWon = false; // 지난 판을 이겼나 (사장님 결정: 이겨야 다음 무대·다음 상대로, 지면 같은 무대에서 같은 상대와 다시)
 function useStage(id) {
   if (id === stages.id) return false;
+  reviveFx.reset(); // 부활 연출이 남아 있으면 떼고 짓는다 (새 배경의 물체로 잘못 세지 않게)
   arena = stages.build(id); // 먼저 지은 배경은 치우고(GPU 자원까지), 빛·안개를 처음 값으로 되돌린 뒤 짓는다
   SUN_OFF = stages.sunOffset;
   fighterLight.setStage(arena);
@@ -245,6 +249,7 @@ function newRound(weaponId) {
   if (world) world.free();
   if (eventQueue) eventQueue.free();
   particles.clear();
+  reviveFx.reset();
 
   world = new RAPIER.World({ x: 0, y: PHYSICS.gravity, z: 0 });
   world.timestep = PHYSICS.timestep;
@@ -292,11 +297,18 @@ function newRound(weaponId) {
     heading: Math.PI,
     look: enemyLook,
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
+    revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
   });
   // 진짜 엑스칼리버의 기운 (보여 주기만)
   for (const a of auras) a.dispose();
   auras = [player, enemy].map(attachAura).filter(Boolean);
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
+  if (enemy.revive) {
+    // 부활하는 상대: 빛 하나가 더해진 셰이더를 지금(메뉴·카드가 가리는 동안) 만들어 둔다 — 빛이 내려오는 순간 멈칫하지 않게.
+    //  캐릭터 조명이 새 재질을 먼저 고쳐 놓아야(셰이더가 달라진다) 그 셰이더가 준비된다
+    fighterLight.update(fighterMeshes);
+    reviveFx.warm();
+  }
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
@@ -1008,15 +1020,36 @@ function watchEmotions() {
     }
   }
 }
-function showEmoMsg(text, emo) {
+function showEmoMsg(text, emo, ms = 2000) {
   const el = $('emoMsg');
   if (!el) return;
   el.textContent = text;
   el.dataset.emotion = emo;
   el.classList.add('show');
   clearTimeout(showEmoMsg.t);
-  showEmoMsg.t = setTimeout(() => el.classList.remove('show'), 2000);
+  showEmoMsg.t = setTimeout(() => el.classList.remove('show'), ms);
 }
+
+// ── 부활 (이졸데, src/revive.js · revive_fx.js): 연출이 알리는 때에 소리·알림 ──
+//  fall: 처음 쓰러짐 — 죽음 목소리 대신 신음 (쓰러뜨린 한 방에 몸 소리가 방금 신음을 냈으면 겹치지 않게)
+//  light: 하늘에서 빛이 내려오기 시작 — 성스러운 울림 (소리 담당이 sound.revive 를 만든다. 없으면 조용히 넘어간다)
+//  notice: 빛이 다 내려왔다 — "○○가 투지로 다시 일어선다" (감정 알림 자리), 캐릭터 시트에 lines.revive 가 있으면 대사 한 줄도
+reviveFx.onCue = (cue, f) => {
+  const ch = f === enemy ? currentFoe : null;
+  const voice = f === enemy ? currentFoe?.id || 'generic' : 'player';
+  if (cue === 'fall') {
+    const bs = bodySounds[f === enemy ? 1 : 0];
+    if (!bs || bs.t - bs.lastHurt > 0.5) {
+      sound.hurt(voice, 1.2, { me: f === player });
+      if (bs) bs.lastHurt = bs.t;
+    }
+  } else if (cue === 'light') sound.revive?.(voice);
+  else if (cue === 'notice' && state === 'fight' && !roundOver) {
+    const who = ch?.name || '상대';
+    showEmoMsg(`${who}${josa(who, '이', '가')} 투지로 다시 일어선다`, 'revive', 2600);
+    if (ch?.lines?.revive?.length) showFoeLine(ch, randomLine(ch, 'revive'));
+  }
+};
 
 /** 플레이어 감정: 이번 프레임의 사건을 모아 판정하고, 배율표를 파이터에 얹고, 공포면 손을 떨고, 화면 가장자리에 색을 입힌다 */
 function updatePlayerEmotion(dt) {
@@ -1099,6 +1132,7 @@ function checkRoundEnd(dt) {
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 상대' : '다시 싸우기';
     $('btnResume').style.display = 'none';
+    reviveFx.reset(); // 결과 화면: 부활 연출이 남아 있으면 치운다 (상대가 일어서는 동안 내가 죽었을 때)
     showMenu();
   }
 }
@@ -1259,6 +1293,7 @@ function frame(now) {
     }
     updateBindSound();
     for (const b of bodySounds) b.update(dt * scale);
+    reviveFx.update(enemy, dt * scale);
     particles.update(dt * scale);
     for (const a of auras) a.update(now / 1000);
     arena.update(dt);
@@ -1333,4 +1368,5 @@ window.game = {
   settings,
   sound, // 예: game.sound.clash(8) 로 소리 확인, game.sound.stats
   fighterLight, // 예: game.fighterLight.enabled = false 로 캐릭터 조명을 끄고 비교
+  reviveFx, // 부활 연출 (예: game.reviveFx.active, game.reviveFx.group)
 };
