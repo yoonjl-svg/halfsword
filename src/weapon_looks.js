@@ -1349,6 +1349,9 @@ export function breakWeaponLook(group, cutY, { material = 'steel' } = {}) {
 //   'revolver'  — 어디서 굴러 들어온 현대식 리볼버: 여섯 모 약실, 검은 강철 틀, 검은 고무 손잡이
 //  로우폴리·평면 음영(설계 언어 3D 기본 모드), 난수 없음.
 // ═════════════════════════════════════════════════════════════
+// 손잡이 치수 — 물리(weapons.js pistol buildParts 의 손잡이 콜라이더·무게)와 그림이 같이 쓴다: 칼 몸체 (x, y) = from 에서
+//  총신(+y)과 deg 만큼 꺾인 방향으로 len 만큼 (끝에 마개)
+export const PISTOL_GRIP = { from: [0.018, -0.028], deg: 105, len: 0.105 };
 export const PISTOL_STYLE = { value: 'flintlock' }; // 고른 풍 (시안 비교 도구는 globalThis.__pistolStyle 로 바꿔 본다)
 export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STYLE.value) {
   const flat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0, flatShading: true, ...o });
@@ -1386,7 +1389,7 @@ export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STY
     add(new THREE.TorusGeometry(0.015, 0.0028, 5, 10, Math.PI * 1.25), steel, [0.036, 0.01, 0], [0, 0, -Math.PI * 0.05]);
     add(new THREE.BoxGeometry(0.014, 0.004, 0.004), steel, [0.03, 0.006, 0], [0, 0, 0.25]);
     // 손잡이 (검은 고무, 110° — 리볼버는 더 뒤로 젖힌다)
-    const g = grip(0.1, 0.03, 0.026, rubber, 110, [0.022, -0.012]);
+    const g = grip(PISTOL_GRIP.len, 0.03, 0.026, rubber, PISTOL_GRIP.deg + 3, PISTOL_GRIP.from); // 리볼버는 조금 더 뒤로 젖힌다 (물리는 같은 손잡이)
     add(new THREE.BoxGeometry(0.012, 0.034, 0.028), steel, [g.end[0], g.end[1], 0], [0, 0, Math.atan2(g.dy, g.dx)]); // 밑마개
   } else {
     const iron = flat(0x3a3d44, { roughness: 0.5, metalness: 0.45, envMap: weaponEnv(), envMapIntensity: 0.7 });
@@ -1408,7 +1411,7 @@ export function drawPistol(group, style = globalThis.__pistolStyle ?? PISTOL_STY
     add(new THREE.TorusGeometry(0.019, 0.0028, 5, 12, Math.PI * 1.3), brass, [0.037, 0.018, 0], [0, 0, -Math.PI * 0.1]);
     add(new THREE.BoxGeometry(0.016, 0.004, 0.004), iron, [0.031, 0.012, 0], [0, 0, 0.3]);
     // 휜 나무 손잡이 (105°) + 놋쇠 밑마개
-    const g = grip(0.105, 0.028, 0.024, wood, 105, [0.018, -0.028]);
+    const g = grip(PISTOL_GRIP.len, 0.028, 0.024, wood, PISTOL_GRIP.deg, PISTOL_GRIP.from);
     add(new THREE.SphereGeometry(0.017, 6, 4), brass, [g.end[0], g.end[1], 0]);
   }
 }
