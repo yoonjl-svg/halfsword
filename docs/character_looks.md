@@ -60,6 +60,13 @@
   뿔은 옆으로 뻗은 귀, 술은 붉은 발톱처럼 보였다. 곡선을 따라 굵기가 매끈하게 변하는 관으로 다시
   만들고, 뿔은 위로 솟게, 술은 두툼하고 넓게 바꿨다.
 - 여전히 순수 장식(`helmet: null`).
+- **곁 판 v1** (2026-09-28, 디렉터 지시·사장님 승인): 판금이 실제로 막고 두 단계로 깨지게 되면서(config.js ARMOR), 1단계(내구 0.9
+  아래)에 떨어지는 조각이 가슴 이음매 줄(24×1×0.8cm, 먹색 위 먹색)뿐이라 대결 거리에서 깨지는 게 안 보였다. 막는 힘·판정은 그대로
+  두고 겉모습만: **가슴판 위·아래 가장자리에 밝은 강철 테**(27×2×35cm, 27×2.4×35cm)와 **배 판 아래 겹판 한 장**(28×3.4×28cm,
+  본판의 0.32배)을 덧댔다. 색은 밝은 강철(`0x8d939b`) 하나 — 먹색 2톤에 셋째 톤을 더한 것뿐, 튀는 색은 없다. 이음매 줄은 남겼다.
+  v3 세트(`MARGARETHE_DRAGON_HORNED`)의 chest·abdomen 만 덮어써서 v1·v2 보관본은 그대로다.
+  비교: [margarethe_trim_v1.png](handoff/margarethe_trim_v1.png). 떨어지는 순간: [전](character_looks/margarethe_trim_before.png) ·
+  [순간](character_looks/margarethe_trim_moment.png) · [후](character_looks/margarethe_trim_after.png).
 
 | v0 | v1 | v2 | v3 (지금) |
 | --- | --- | --- | --- |
