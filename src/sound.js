@@ -943,7 +943,7 @@ export const SYNTH = {
 
   /**
    * 판금이 부서짐: 금이 연달아 번지는 "짝-짝-짝" + 리벳이 튕겨 나가는 짧은 "틱-틱" + 가죽끈이 끊기는 "탁"
-   * + 판이 짧게 우는 "깡"(투구보다 조금 길게) + 묵직한 "쿵". 조각이 떨어지는 소리는 plateDebris 가 따로 낸다
+   * + 판이 짧게 우는 "깡"(투구보다 조금 길게) + 묵직한 "쿵". 조각이 떨어지는 소리는 Sound.plateBreak 이 _shard 로 따로 낸다
    */
   plateBreak(sr, r) {
     const n = Math.round(0.5 * sr);
@@ -977,29 +977,6 @@ export const SYNTH = {
     saturate(out, 2.4);
     thumpTone(out, sr, { t0: 0.001, f0: between(r, 55, 75), drop: 0.7, dropTau: 0.012, tau: 0.035, amp: 0.8 });
     return fadeOut(normalize(out, 0.95), sr, 0.08);
-  },
-
-  /** 부서진 판금 조각이 모래에 떨어짐: 2~4개가 차례로 "철-퍽" (모래가 받아서 울림 없이 둔하게 멎는다) */
-  plateDebris(sr, r) {
-    const n = Math.round(0.8 * sr);
-    const out = new Float32Array(n);
-    const k = Math.round(between(r, 2, 4));
-    let t = between(r, 0.0, 0.05);
-    for (let i = 0; i < k; i++) {
-      const amp = i ? between(r, 0.35, 0.7) : 1;
-      const px = new Float32Array(n);
-      const py = new Float32Array(n);
-      pulse(px, sr, t, 0.0003, 1);
-      resonate(px, py, sr, [0, 1, 2, 3].map(() => ({ f: between(r, 1500, 6000), a: between(r, 0.4, 1), t60: between(r, 0.015, 0.035) })), Math.ceil((t + 0.002) * sr));
-      const a = (0.45 * amp) / (peakOf(py) || 1);
-      for (let j = 0; j < n; j++) out[j] += a * py[j];
-      noiseHit(out, sr, r, { t0: t, amp: 0.6 * amp, attack: 0.002, tau: 0.018, type: 'lowpass', f: between(r, 250, 400), q: 0.7 }); // 모래에 박히는 "퍽"
-      gritBurst(out, sr, r, { t0: t + 0.002, span: 0.03, count: 6, amp: 0.12 * amp, fLo: 1500, fHi: 5000 }); // 튀는 모래
-      t += between(r, 0.07, 0.22);
-      if (t > 0.65) break;
-    }
-    saturate(out, 1.6);
-    return fadeOut(normalize(out, 0.9), sr, 0.06);
   },
 
   /** 칼이 바닥에 떨어짐: 칼자루와 칼끝이 잇달아 닿는 "철-컥" (모래·돌이 받아서 짧게 멎는다 — 음이 오래 남으면 냄비처럼 들리므로 울림은 0.05초 안) */
@@ -1417,7 +1394,6 @@ const BANK = [
   ['hitBlunt', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'blunt')],
   ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
   ['plateBreak', 2, SYNTH.plateBreak],
-  ['plateDebris', 2, SYNTH.plateDebris],
   ['swordLand', 3, SYNTH.swordLand],
   ['birdSong', 3, (sr, r) => SYNTH.bird(sr, r, 'song')], // 산사 배경 (맨 뒤: 판 시작 뒤 몇 초 안에만 있으면 된다)
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
@@ -2224,10 +2200,30 @@ export class Sound {
     if (grit) this.layer(ev, grit, { gain: 0.25 + 0.2 * x, rate: between(Math.random, 0.9, 1.1), delay: 0.004 });
   }
 
-  /** 무기가 부러짐 (material: 무기 재질. 나무·언 참치 말고는 부러지지 않는다) */
+  /**
+   * 쇠 조각 소리: 칼 떨어짐(swordLand) 조각을 빠르게 돌린 짧은 "팅"(kind 'blade', 1.5~1.9배) / "철컥"(kind 'armor', 1.15~1.4배).
+   *  25차에 조각이 땅에 닿을 때 쓰려고 만든 것을 사장님이 좋아하셔서("꽤 좋던데") 부서지는 순간의 소리로 쓴다(26차).
+   *  grit 이면 그 무대 바닥 알갱이 녹음을 살짝 얹는다(조각이 바닥에 떨어진 것). 새 조각 없음(0KB).
+   */
+  _shard(ev, kind, { gain = 1, delay = 0, grit = false } = {}) {
+    this.layer(ev, this.pick('swordLand'), { gain, rate: kind === 'armor' ? between(Math.random, 1.15, 1.4) : between(Math.random, 1.5, 1.9), delay });
+    if (!grit) return;
+    const g = this.pickSample(STAGE_SOUND[this.stage]?.grit || STAGE_SOUND[this.stage]?.step);
+    if (g) this.layer(ev, g, { gain: 0.2 * gain, rate: between(Math.random, 1.0, 1.2), delay: delay + 0.003 });
+  }
+
+  /** 무기가 부러짐 (material: 무기 재질. 강철은 쇠 "팅", 나무는 "우지끈", 언 참치는 "쩍") */
   weaponBreak(material = 'wood', pos) {
     if (!this._on || !this.ctx) return;
     const ev = this.event({ bus: this.metalBus, gain: 1, prio: 3, pos });
+    if (material === 'steel') {
+      // 강철 칼(커먼·레어·에픽은 등급표대로 부러진다): 꺾이는 두 토막이 함께 우는 "팅-팅"(12~20ms 사이, 다른 높이) + 떨어져 나간 끝이 튀는 작은 "철컥".
+      // 조각 하나(-31dB)로는 "내 칼이 부러졌다"가 안 들려서 둘을 겹쳤다(-27dB쯤, 나무 "우지끈" -22dB보다는 여전히 작다)
+      this._shard(ev, 'blade', { gain: 1 });
+      this._shard(ev, 'blade', { gain: 0.7, delay: between(Math.random, 0.012, 0.02) });
+      this._shard(ev, 'armor', { gain: 0.4, delay: between(Math.random, 0.04, 0.07) });
+      return;
+    }
     this.layer(ev, this.pick(material === 'frozen' ? 'breakFrozen' : 'breakWood'), { rate: between(Math.random, 0.92, 1.06) });
     const rec = this.pickSample('crack');
     if (rec && material !== 'frozen') this.layer(ev, rec, { gain: 0.55, rate: between(Math.random, 0.85, 1), delay: 0.002 });
@@ -2960,13 +2956,15 @@ export class Sound {
     this.impact({ a: material, b: 'armor', energy, pos });
   }
 
-  /** 판금이 완전히 부서짐: 금이 번지며 깨지는 소리 → 0.12~0.2초 뒤 조각이 모래에 떨어지는 소리 */
+  /** 판금이 완전히 부서짐: 금이 번지며 깨지는 소리 → 0.1~0.35초에 걸쳐 조각 둘~셋이 바닥에 "철컥" 흩어져 떨어짐(_shard) */
   plateBreak(energy = 100, { pos } = {}) {
     if (!this._on || !this.ctx) return;
     const e = clamp01(energy / 120);
     const ev = this.event({ bus: this.metalBus, gain: 0.7 + 0.3 * e, prio: 3, pos });
     this.layer(ev, this.pick('plateBreak'), { rate: between(Math.random, 0.94, 1.04) });
-    this.layer(ev, this.pick('plateDebris'), { gain: 0.6, rate: between(Math.random, 0.92, 1.08), delay: between(Math.random, 0.12, 0.2) });
+    // 조각: 합성 "철-퍽" 대신 25차 조각 착지 소리(사장님: "부서질 때 그걸 가져다 쓰자"). 센 타격이면 셋, 아니면 둘
+    const n = Math.random() < 0.3 + 0.6 * e ? 3 : 2;
+    for (let i = 0; i < n; i++) this._shard(ev, 'armor', { gain: 0.5 - 0.08 * i, delay: 0.1 + 0.09 * i + between(Math.random, 0, 0.05), grit: true });
   }
 
   /** 뼈 부딪히는/부러지는 소리 */
