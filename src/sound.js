@@ -1961,7 +1961,7 @@ export class Sound {
 
   /**
    * (예전 무기 뽑기 "딸깍" — 이제 카드는 cardFlip 을 쓴다) 화면 소리, 위치 없음. 아주 짧은 사각파 한 번 → 폰 부담 거의 없음.
-   * final = 고른 카드가 뒤집힐 때: 조금 낮고 길게 (아니면 나머지 두 장이 뒤집힐 때의 짧은 딸깍),
+   * final = 고른 카드가 뒤집힐 때: 조금 낮고 길게 (아니면 나머지 카드가 뒤집힐 때의 짧은 딸깍),
    * grand = 진짜 엑스칼리버를 뽑았을 때 한 옥타브 위 울림을 더한다
    */
   tick(final = false, grand = false) {
@@ -1991,7 +1991,8 @@ export class Sound {
    * 첫 탭에 바로 난다 (잡음은 build 때 만든 0.4초 잡음 this.noise 를 쓴다).
    *  pick = 고른 카드: 두꺼운 카드가 젖혀지는 "촥" + 앞면이 드러나는 순간(0.2초 뒤, 뒤집기 절반) 낮은 "둥"
    *         tier 'epic'·'legend' 는 그 위에 아주 작은 반짝임, grand(진짜 엑스칼리버)는 맑은 울림
-   *  pick 아님 = 나머지 두 장이 함께 뒤집힘: 작은 "촥" 두 번이 30ms 어긋나게
+   *  pick 아님 = 고르지 않은 내 카드 한 장이 뒤집힘: 작은 "촥" 한 번
+   *  (상대 무기 카드는 pick 처럼 부른다: 등급 반짝임·엑스칼리버 울림도 같다)
    */
   cardFlip({ pick = false, tier = 'common', grand = false } = {}) {
     if (!this._on || !this.ctx || !this.master || !this.noise) return;
@@ -2044,10 +2045,8 @@ export class Sound {
       o.stop(t + dur + 0.02);
     };
     if (!pick) {
-      for (const d of [0, 0.03]) {
-        snap(t0 + d, 0.3, between(Math.random, 2200, 3000), 0.014);
-        whoosh(t0 + d, 0.06);
-      }
+      snap(t0, 0.3, between(Math.random, 2200, 3000), 0.014);
+      whoosh(t0, 0.06);
       return;
     }
     snap(t0, 0.5, 2600, 0.02);

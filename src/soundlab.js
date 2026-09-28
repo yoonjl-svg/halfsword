@@ -173,7 +173,7 @@ ROWS.push(
 // ── 무기 뽑기 카드 ──
 ROWS.push([
   '카드 뒤집기',
-  '고른 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 / 엑스칼리버) · 나머지 두 장 "촥촥"',
+  '고른 카드·상대 카드 "촥 → 둥" (커먼 / 에픽 / 레전드 / 엑스칼리버) · 고르지 않은 내 카드 한 장 "촥"',
   [{ pick: true, tier: 'common' }, { pick: true, tier: 'epic' }, { pick: true, tier: 'legend' }, { pick: true, grand: true }, { pick: false }],
   (s, v) => s.cardFlip?.(v),
   ['커먼', '에픽', '레전드', '엑스칼리버', '나머지'],
