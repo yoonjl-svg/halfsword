@@ -137,35 +137,63 @@
       /* "상대" 배지: 붉은 빛 없이 글자만 희게 (오너 결정 — 붉으면 너무 튄다, 회색 글자는 안 읽힌다) */
       .wback .wkey.wfoe { border-color: rgba(236,232,225,.45); background: rgba(12,10,9,.7); color: #f7f4ef; font-size: 12px; letter-spacing: .06em; padding: 0 9px 0 10px; }
       .wcard.nope .wcardInner { animation: nope .3s ease-in-out; }
-      /* 앞면: 작은 그림 · 이름(등급 색) · 등급 · 설명 */
-      .wface { transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; padding: 8px 9px 10px; text-align: center;
-        border: 1px solid var(--tc); background: linear-gradient(172deg, #30241a, #17110c 70%); box-shadow: 0 8px 20px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.6); }
-      /* 누구 무기인지: 고른 카드 "내 무기"(금빛), 상대 카드 "상대 무기"(검붉은 빛). 못 고른 카드에는 없다 */
-      .wwho { display: none; flex: none; font-size: 11px; font-weight: 700; letter-spacing: .08em; line-height: 1; padding: 3px 8px 2px 9px; border-radius: 999px; margin-bottom: 1px; color: #1b1410; background: #d9a441; }
+      /* 앞면: 작은 그림 · 이름(등급 색) · 등급 · 설명.
+         결은 뒷면과 같게 (외형 PM, docs/design_language.md §4): 한 칸 = --px 인 네모 테두리 — 바깥 짙은 선 한 칸 · 등급색 한 칸 · 짙은 선 한 칸,
+         네 귀퉁이에 금빛 네모 징(두 칸), 바탕은 평면 단색, 부드러운 빛·둥근 알약은 쓰지 않는다. 테두리 색은 스테이지가 아닌 등급색
+         (뒷면이 이미 스테이지를 말하고, 앞면에서 가장 먼저 읽혀야 하는 것이 등급이다). 카드에는 filter 를 쓰지 않는다 (사파리 뒷면 숨기기) */
+      .wface { --fr: inset 0 0 0 var(--px) #140d09, inset 0 0 0 calc(2 * var(--px)) var(--tc), inset 0 0 0 calc(3 * var(--px)) #140d09;
+        --stud: linear-gradient(#d9a441, #d9a441);
+        transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; text-align: center; border-radius: 0;
+        padding: calc(3 * var(--px) + 5px) calc(3 * var(--px) + 5px) calc(3 * var(--px) + 6px);
+        background: var(--stud) left calc(4 * var(--px)) top calc(4 * var(--px)) / calc(2 * var(--px)) calc(2 * var(--px)) no-repeat,
+          var(--stud) right calc(4 * var(--px)) top calc(4 * var(--px)) / calc(2 * var(--px)) calc(2 * var(--px)) no-repeat,
+          var(--stud) left calc(4 * var(--px)) bottom calc(4 * var(--px)) / calc(2 * var(--px)) calc(2 * var(--px)) no-repeat,
+          var(--stud) right calc(4 * var(--px)) bottom calc(4 * var(--px)) / calc(2 * var(--px)) calc(2 * var(--px)) no-repeat,
+          #1d140d;
+        box-shadow: var(--fr), 0 8px 20px rgba(0,0,0,.5); }
+      /* 누구 무기인지: 고른 카드 "내 무기"(금빛 네모 딱지), 상대 카드 "상대 무기"(짙은 딱지에 흰 글자, 붉은색 없이). 못 고른 카드에는 없다 */
+      /*  딱지는 글 흐름에서 빼서 테두리 바로 안쪽 위 가운데에 얹는다 (그림 칸 위에 겹친다): 낮은 카드(568×320)에서도 설명 두 줄이 들어가게 */
+      .wwho { display: none; position: absolute; z-index: 1; left: 50%; top: calc(3 * var(--px) + 3px); transform: translateX(-50%); white-space: nowrap;
+        font-size: 11px; font-weight: 700; letter-spacing: .08em; line-height: 1; padding: 3px 7px 2px 8px; border-radius: 0;
+        color: #140d09; background: #d9a441; box-shadow: 0 0 0 var(--px) #140d09; }
       .wcard.picked .wwho, .wcard.foe .wwho { display: block; }
-      .wcard.foe .wwho { color: #fbe9e2; background: #93372d; }
-      .wthumb { flex: 1 1 auto; min-height: 36px; width: 100%; background-position: center; background-repeat: no-repeat; background-size: contain, 100% 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,.55)); }
-      .wname { display: block; font-size: var(--name); font-weight: 800; line-height: 1.15; color: var(--tc); text-shadow: 0 0 10px var(--tg), 0 1px 1px #000; margin-top: 2px; word-break: keep-all; }
+      .wcard.foe .wwho { color: #f4f0e9; background: #120e0b; box-shadow: inset 0 0 0 max(1px, calc(var(--px) / 2)) #a39d94, 0 0 0 var(--px) #140d09; }
+      /* 작은 그림: 픽셀로 구운 무기(ui/weapons_px 의 32·24·16칸)를 한 칸 = --px 로 정수 배 확대한다.
+         그림 칸 높이가 카드·설명 길이마다 달라서, 칸에 들어가는 가장 큰 그림을 컨테이너 질의로 고른다
+         (--px 가 4 인 큰 화면(높이 630 이상)은 문턱을 한 단계 올린다. 16칸도 안 들어가는 아주 낮은 칸만 contain) */
+      .wthumb { flex: 1 1 auto; min-height: 36px; width: 100%; position: relative; container-type: size; }
+      .wthumb::before { content: ''; position: absolute; inset: 0; background: var(--th16) center / calc(16 * var(--px)) no-repeat; image-rendering: pixelated; image-rendering: crisp-edges; }
+      @container (max-height: 47px) { .wthumb::before { background-size: contain; } }
+      @container (min-height: 72px) { .wthumb::before { background-image: var(--th24); background-size: calc(24 * var(--px)); } }
+      @container (min-height: 96px) { .wthumb::before { background-image: var(--th32); background-size: calc(32 * var(--px)); } }
+      @media (min-height: 630px) {
+        @container (min-height: 72px) { .wthumb::before { background-image: var(--th16); background-size: calc(16 * var(--px)); } }
+        @container (min-height: 96px) { .wthumb::before { background-image: var(--th24); background-size: calc(24 * var(--px)); } }
+        @container (min-height: 128px) { .wthumb::before { background-image: var(--th32); background-size: calc(32 * var(--px)); } }
+      }
+      .wname { display: block; font-size: var(--name); font-weight: 800; line-height: 1.15; color: var(--tc); text-shadow: 1px 1px 0 #000, -1px 0 0 #140d09; margin-top: 2px; word-break: keep-all; }
       .wsub { display: block; font-size: 12px; line-height: 1.25; color: #cfc0a2; word-break: keep-all; }
       .wsub:empty { display: none; }
-      .wtier { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .12em; line-height: 1; color: var(--tc); border: 1px solid var(--tc); border-radius: 999px; padding: 3px 8px 2px 9px; margin: 4px 0; opacity: .9; }
+      /* 등급: 등급색으로 채운 네모 딱지에 짙은 글자 */
+      .wtier { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: .12em; line-height: 1; color: #140d09; background: var(--tc); border: 0; border-radius: 0;
+        padding: 3px 7px 2px 8px; margin: 4px 0; box-shadow: 0 0 0 var(--px) #140d09; }
       /* 설명: 두 줄 글을 이어서 흘려 쓰고 줄 길이를 고르게 맞춘다 (카드 폭이 화면마다 달라 줄을 억지로 꺾으면 한두 글자만 남은 줄이 생긴다) */
       .wdesc { display: block; margin: 0; font-size: var(--desc); line-height: 1.34; color: #ece1cb; word-break: keep-all; text-wrap: balance; }
       #draw.wide .wsub { font-size: 13px; }
       #draw.wide .wtier { font-size: 13px; margin: 6px 0; }
-      #draw.low .wface { padding: 6px 7px 7px; }
-      #draw.low .wthumb { min-height: 28px; }
+      #draw.low .wface { padding: calc(3 * var(--px) + 2px) calc(3 * var(--px) + 3px) calc(3 * var(--px) + 1px); }
+      #draw.low .wthumb { min-height: 18px; }
+      #draw.low .wname { margin-top: 0; }
       #draw.low .wtier { margin: 2px 0; }
-      /* 고른 카드: 살짝 들리고 금빛 테두리. 못 고른 카드: 작아지고 어둡게 (무엇을 놓쳤는지는 보인다) */
+      /* 고른 카드: 살짝 들리고 바깥에 금빛 한 칸. 못 고른 카드: 작아지고 어둡게 (무엇을 놓쳤는지는 보인다) */
       .wcard.picked { transform: translateY(-1%) scale(1.03); z-index: 1; }
-      .wcard.picked .wface { box-shadow: 0 0 0 2px #d9a441, 0 10px 26px rgba(0,0,0,.55), 0 0 24px var(--tg); }
+      .wcard.picked .wface { box-shadow: var(--fr), 0 0 0 var(--px) #d9a441, 0 10px 26px rgba(0,0,0,.55); }
       .wcard.missed { transform: scale(.92); }
-      .wcard.missed .wface::after { content: ''; position: absolute; inset: 0; background: rgba(14,9,6,.36); }
-      .wcard.missed .wthumb { filter: grayscale(.7); }
-      /* 상대 카드가 뒤집히면 제 색으로: 검붉은 테두리 (내 카드의 금빛 테두리와 짝) */
-      .wcard.foe.flipped .wface { box-shadow: 0 0 0 2px #b0473b, 0 10px 26px rgba(0,0,0,.55), 0 0 24px var(--tg); }
+      .wcard.missed .wface::after { content: ''; position: absolute; inset: 0; background: rgba(14,9,6,.42); }
+      /* 상대 카드가 뒤집히면: 바깥에 옅은 회색 한 칸 (내 카드의 금빛 한 칸과 짝, 붉은색 없이) */
+      .wcard.foe.flipped .wface { box-shadow: var(--fr), 0 0 0 var(--px) #a39d94, 0 10px 26px rgba(0,0,0,.55); }
       /* 진짜 엑스칼리버: 앞면이 보이면 금빛으로 일렁인다 (빛 층의 불투명도만 움직인다) */
-      .wcard.grand::before { content: ''; position: absolute; inset: 0; border-radius: 10px; box-shadow: 0 0 30px 8px rgba(255,205,70,.75), 0 0 8px 2px rgba(255,236,160,.9); opacity: 0; transition: opacity .3s .2s; pointer-events: none; }
+      .wcard.grand::before { content: ''; position: absolute; inset: 0; border-radius: 0; box-shadow: 0 0 30px 8px rgba(255,205,70,.75), 0 0 8px 2px rgba(255,236,160,.9); opacity: 0; transition: opacity .3s .2s; pointer-events: none; }
       .wcard.grand.flipped::before { opacity: 1; animation: grandPulse 1.1s .5s ease-in-out infinite alternate; }
       .wcard.grand.missed::before { opacity: .35; animation: none; }
       @media (hover: hover) {
