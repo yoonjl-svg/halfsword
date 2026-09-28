@@ -12,7 +12,10 @@ import { WEAPONS } from '../../src/weapons.js';
 import { SCHOOLS } from '../../src/schools.js';
 import { applyMotionLibrary, motionFor } from '../../src/motion_library.js';
 import { report } from './weapon_league.mjs';
+import { registerPoleWeapons } from './pole_specs.mjs';
 
+// EXTRA=pole: 자루 무기 시제품(봉·창, pole_specs.mjs)도 리그에 넣는다 (보통 ONLY=proto_staff 와 함께)
+if (process.env.EXTRA === 'pole') registerPoleWeapons(WEAPONS);
 const IDS = Object.keys(WEAPONS).filter((id) => !WEAPONS[id].gun);
 const ROUND_SECONDS = 40;
 
@@ -28,14 +31,13 @@ function libSchool(id) {
 }
 
 function playOne(a, b, seed, aFirst, on) {
-  const school = (w) => (on ? libSchool(w) : SCHOOLS[w] ? w : 'longsword');
+  const lib = (w) => on || WEAPONS[w].frame === 'pole'; // 자루 시제품은 늘 라이브러리(칼 동작으로는 싸우지 못한다)
+  const school = (w) => (lib(w) ? libSchool(w) : SCHOOLS[w] ? w : 'longsword');
   const P = aFirst ? a : b;
   const E = aFirst ? b : a;
   const G = newRound({ walls: true, seed, weapon: P, weapon2: E, difficulty: 'normal', persona: { school: school(E) }, AI2Class: AI, difficulty2: 'normal', persona2: { school: school(P) } });
-  if (on) {
-    applyMotionLibrary(G.player, { ai: G.ai2, cover: false });
-    applyMotionLibrary(G.enemy, { ai: G.ai, cover: false });
-  }
+  if (lib(P)) applyMotionLibrary(G.player, { ai: G.ai2, cover: false });
+  if (lib(E)) applyMotionLibrary(G.enemy, { ai: G.ai, cover: false });
   for (let i = 0; i < ROUND_SECONDS / DT; i++) {
     G.step();
     const pd = G.player.state === 'dead';
