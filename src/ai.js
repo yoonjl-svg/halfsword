@@ -150,6 +150,22 @@ export class AI {
     this.parryTimes = []; // 최근 막힌 시각들 (분노 판정: 10초 안에 두 번)
     this.emoRest = { fear: -1, anger: -1, obsession: -1 }; // 감정별로 다시 지배할 수 있는 시각 (풀린 뒤 텀)
     this.emoRestAll = -1; // 어떤 감정이든 다시 켜질 수 있는 시각
+    // 시작 감정 (캐릭터 시트 persona.startEmotion, 예: { anger: 0.7 }): 서사대로 결투를 그 감정에 잠긴 채 시작한다.
+    //  세기는 그대로 emote()의 감쇠·지배 규칙을 따른다(사건이 없으면 사그라든다). 기본 AI에는 없어 예전과 같다
+    const SE = this.persona.startEmotion;
+    if (SE) {
+      const order = ['fear', 'anger', 'obsession'];
+      for (const k of order) if (SE[k] > 0) this.emo[k] = Math.min(1, SE[k]);
+      const dom = order.find((k) => this.emo[k] > 0.3);
+      if (dom) {
+        this.emotion = dom;
+        this.fear = dom === 'fear' ? this.emo.fear : 0;
+        this.anger = dom === 'anger' ? this.emo.anger : 0;
+        this.obsession = dom === 'obsession' ? this.emo.obsession : 0;
+        this.me.emoMods = emoMods(dom, this.emo[dom]);
+        if (dom === 'anger') this.patience = Math.min(this.patience, 0.2); // 발끈한 채 시작: 참을성이 바닥나 있다
+      }
+    }
     this.evParried = false; // 이번 스텝에 생긴 사건들 (afterStrike가 켜고 emote가 끈다)
     this.evLanded = false;
     // 무기 사건은 한 번만 공포로 센다 (무기·검술 담당 추가, emote() 참고)

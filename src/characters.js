@@ -45,6 +45,7 @@ export const CHARACTERS = [
       level: 'easy',
       persona: {
         school: 'tree_branch',
+        startEmotion: { anger: 0.7 }, // 사장 지시: 서사대로 '분노' 상태로 결투를 시작한다 (은화 걸고 막대기 하나 들고 선 촌놈의 발끈)
         level: { reaction: 0.42, guardChance: 0.22, counter: 0, feint: 0, followUp: 0.12, read: 0.2, discipline: 0.35, strength: 1.3, aggression: 0.9, windup: 1.6, chamberSpeed: 1.8, strikeSpeed: 7, skill: 0.28 }, // 힘은 장사 — 가벼운 나뭇가지라도 머리를 때리면 기절시킨다. 대신 정확도가 낮다
         pers: {
           precision: 0.4, // 아무 데나 후려친다 — 팔·다리에 걸리고 칼 면으로 때린다
@@ -290,7 +291,7 @@ export const CHARACTERS = [
         pers: {
           precision: 1, // 머리·목을 정확히 벤다
           guardStick: 6.2,
-          fearful: 0, // 한없이 차분하다 — 겁은 먹지 않는다
+          fearful: 0, // 공포 면역 (사장 확정): 문턱값 0이라 베여도·무기가 부러져도·진품 엑스칼리버 앞에서도 공포가 1도 쌓이지 않는다
           angry: 0.1,
           dogged: 0.4,
           guardSpeed: 0.5,
