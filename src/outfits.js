@@ -727,8 +727,26 @@ const onSurf = (a, y, r) => [Math.cos(a) * (r + 0.003), y, Math.sin(a) * (r + 0.
 const bowlR = (y) => (y < 0.016 ? 0.124 : 0.124 - ((y - 0.016) / 0.05) * 0.02);
 const spireR = (y) => 0.104 * (1 - (y - 0.066) / 0.105);
 
+// 마르그레테 v3 곁 판(디렉터 지시, 사장님 승인): 1단계 파손(내구 0.9 아래)에 떨어지는 조각이 가슴 이음매 줄(24×1×0.8cm,
+//  먹색 위 먹색)뿐이라 대결 거리에서 깨지는 게 안 보였다. 막는 힘·판정은 그대로 두고(config.js ARMOR, fighter.js 안 건드림)
+//  본판보다 한참 작은(ARMOR.plate.trim 0.4 배 아래) 밝은 강철 테를 덧대, 떨어지는 순간이 보이게 한다. 조각은 3cm 넘게(armor_eval 의
+//  "보이는 조각" 규칙). 튀는 색 없이 밝은 강철(2톤 안에서 셋째 톤)만 쓴다 — 절제는 그대로.
+const MG3_TRIM = 0x8d939b; // 밝은 강철 테 (먹색 판 0x2c2c32 위에서 또렷이 갈린다)
 const MARGARETHE_DRAGON_HORNED = {
   ...MARGARETHE_DRAGON,
+  chest(g) {
+    addMerged(g, [box(0.26, 0.25, 0.34, [0, 0.01, 0])], MG_PLATE, STEEL_OPTS); // 본판 (v1 그대로)
+    // 곁 판 (1단계에 떨어진다): 가슴판 위·아래 가장자리를 두른 밝은 강철 테 — 위 27×2×35cm, 아래 27×2.4×35cm
+    addMerged(g, [box(0.272, 0.02, 0.352, [0, 0.128, 0])], MG3_TRIM, STEEL_OPTS);
+    addMerged(g, [box(0.272, 0.024, 0.352, [0, -0.108, 0])], MG3_TRIM, STEEL_OPTS);
+    // 이음매 자국(세로줄)은 남긴다 — 같이 떨어지지만 눈에 띄는 조각으로 세지 않는다
+    addMerged(g, [box(0.008, 0.24, 0.01, [0.132, 0.01, 0])], MG_PLATE_DARK, STEEL_OPTS);
+  },
+  abdomen(g) {
+    addMerged(g, [cyl(0.13, 0.135, 0.1, 14, true, [0, 0, 0])], MG_PLATE, STEEL_OPTS); // 본판 (v1 그대로)
+    // 곁 판: 배 판 아래에 겹친 밝은 강철 겹판 한 장(28×3.4×28cm) — 본판의 0.32 배라 1단계에 떨어진다
+    addMerged(g, [cyl(0.138, 0.144, 0.034, 14, true, [0, -0.052, 0])], MG3_TRIM, STEEL_OPTS);
+  },
   head(g, look) {
     // 투구는 한 그룹(group.userData.helmet)으로 넘긴다. 오너 결정("실제로 막고, 닳고, 완전히 부서지면
     // 사라진다")에 따라 전투 쪽이 fighter.js에서 이 그룹을 떼어 내거나 조각내 흩뜨린다. 흩뜨릴 수 있게
