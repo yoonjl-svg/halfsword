@@ -1,19 +1,23 @@
 // ─────────────────────────────────────────────────────────────
-//  배경 5: 검은숲 변두리의 화전 터, 봄 이른 아침 (브란의 고향)
+//  배경 5: 검은숲 변두리의 화전 터, 봄 이른 아침 (브란의 고향) — 1안
 //   불을 놓고 얼마 안 된 검은 비탈 한가운데, 밭에서 골라낸 돌을 둥글게 쌓은 결투 자리 · 탄 그루터기와 쓰러진 통나무 ·
 //   서쪽(−x) 비탈 아래 기울어진 화전민 오두막(처진 이엉 지붕·그을린 굴뚝·빠진 울타리·장작더미·도끼 박힌 모탕·묶인 염소) ·
 //   북동쪽 숯가마와 가는 연기 · 탄 땅 사이로 드문드문 올라온 새싹 · 남동쪽 비탈 가장자리의 노란 양골담초 덤불 몇 무더기 ·
 //   둘레를 두른 검은 가문비 숲과 몇 그루 자작나무 · 동쪽(+x) 트인 쪽으로 낮게 드는 아침 해와 먼 산등성이 ·
 //   재가 떠다닌다 (큰 타격이 나오면 바람에 재와 연기가 휘날린다).
+//   오너 제안으로 봄비가 내린다 (opt.rain, 기본 켬): 하늘은 더 잿빛, 해는 누그러지고, 땅은 젖어 번들거리며 웅덩이가 하늘을 비춘다.
+//   비 없는 처음 모습은 ?stage=clearing_dry 로 본다 (stages.js).
 //  색: 검정(탄 땅) · 연두(새싹) · 노랑(양골담초) · 옅은 하늘 — 다른 배경에 없던 색이다. 다만 희망찬 봄이 아니라
 //   변두리로 밀려난 사람들의 살림이라 연두와 노랑은 드물고, 탄 땅과 재가 화면의 대부분이다 (오너: "너무 희망찬 느낌은 아니게").
-//  물리와는 무관한 그림만 만든다. 카메라가 도는 반지름(10.5m) 안에는 낮은 밭돌 무더기와 새싹만 둔다.
+//  같은 컨셉을 다른 세부로 푼 2안은 stage_clearing_b.js 이고, 땅·숲·새싹·비 같은 공통 조각은 이 파일에서 export 한다.
+//  물리와는 무관한 그림만 만든다. 카메라가 도는 반지름(10.5m) 안에는 낮은 밭돌 무더기·새싹·웅덩이만 둔다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { ARENA } from './config.js';
 import { rng, h3, _c, _v, Kit, box, cyl, limb, canvasTex } from './stage_kit.js';
+import { weaponEnv } from './weapon_looks.js';
 
-const C = {
+export const C = {
   ash: 0x1f1d1b, // 탄 땅 (질감에 곱해짐)
   soot: 0x161412, // 숯·그을음
   earth: 0x4a3f34, // 밟힌 맨땅 (결투 자리)
@@ -41,7 +45,7 @@ const C = {
 const ASH_TEX_AVG = 0.5; // 재 질감 평균 밝기(선형): 재질 색을 1/이만큼 올려 원래 색이 나오게
 
 /** 재 덮인 땅: 잿빛 알갱이, 숯 부스러기, 몇 군데 탄 나뭇가지 자국 */
-function ashTexture() {
+export function ashTexture() {
   const r = rng(23);
   return canvasTex(256, 256, (x, w, h) => {
     x.fillStyle = '#b3afa8';
@@ -71,33 +75,41 @@ function ashTexture() {
     }
   });
 }
-/** 아침 하늘: 옅고 흐릿하다. 해 쪽 수평선만 누르스름하고, 낮게 연기 띠가 깔렸다 */
-function skyTexture(sunAz) {
+/** 아침 하늘: 옅고 흐릿하다. 해 쪽 수평선만 누르스름하고, 낮게 연기 띠가 깔렸다. rain 이면 더 잿빛이고 해 쪽 빛도 약하다 */
+export function skyTexture(sunAz, rain = false) {
   const r = rng(9);
   return canvasTex(512, 256, (x, w, h) => {
     const g = x.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#6f8598');
-    g.addColorStop(0.28, '#93a5b1');
-    g.addColorStop(0.44, '#bcc5c6');
-    g.addColorStop(0.5, '#c9c9bf');
-    g.addColorStop(1, '#a9aca6');
+    if (rain) {
+      g.addColorStop(0, '#6a7680');
+      g.addColorStop(0.28, '#8a949b');
+      g.addColorStop(0.44, '#adb3b2');
+      g.addColorStop(0.5, '#b8b7ae');
+      g.addColorStop(1, '#9fa29c');
+    } else {
+      g.addColorStop(0, '#6f8598');
+      g.addColorStop(0.28, '#93a5b1');
+      g.addColorStop(0.44, '#bcc5c6');
+      g.addColorStop(0.5, '#c9c9bf');
+      g.addColorStop(1, '#a9aca6');
+    }
     x.fillStyle = g;
     x.fillRect(0, 0, w, h);
     // 해 뜨는 쪽 수평선의 누런 빛
     const u = ((((Math.PI - sunAz) / (Math.PI * 2)) % 1) + 1) % 1;
     for (const ux of [u * w, u * w - w, u * w + w]) {
       const rg = x.createRadialGradient(ux, h * 0.5, 0, ux, h * 0.5, w * 0.26);
-      rg.addColorStop(0, 'rgba(240,214,150,0.9)');
-      rg.addColorStop(0.4, 'rgba(225,200,150,0.35)');
+      rg.addColorStop(0, rain ? 'rgba(232,214,168,0.55)' : 'rgba(240,214,150,0.9)');
+      rg.addColorStop(0.4, rain ? 'rgba(215,200,160,0.2)' : 'rgba(225,200,150,0.35)');
       rg.addColorStop(1, 'rgba(210,200,170,0)');
       x.fillStyle = rg;
       x.fillRect(0, 0, w, h * 0.5);
     }
-    // 옅은 층구름과 낮게 깔린 연기 띠
-    for (let i = 0; i < 40; i++) {
-      x.fillStyle = `rgba(${150 + r() * 40},${155 + r() * 35},${160 + r() * 30},${0.12 + r() * 0.2})`;
+    // 옅은 층구름과 낮게 깔린 연기 띠 (비가 오면 구름이 더 낮고 짙다)
+    for (let i = 0; i < (rain ? 70 : 40); i++) {
+      x.fillStyle = rain ? `rgba(${110 + r() * 40},${116 + r() * 35},${122 + r() * 30},${0.16 + r() * 0.22})` : `rgba(${150 + r() * 40},${155 + r() * 35},${160 + r() * 30},${0.12 + r() * 0.2})`;
       x.beginPath();
-      x.ellipse(r() * w, h * (0.08 + r() * 0.3), 60 + r() * 140, 3 + r() * 9, 0, 0, Math.PI * 2);
+      x.ellipse(r() * w, h * (0.08 + r() * (rain ? 0.36 : 0.3)), 60 + r() * 140, 3 + r() * 9, 0, 0, Math.PI * 2);
       x.fill();
     }
     for (let i = 0; i < 16; i++) {
@@ -108,7 +120,7 @@ function skyTexture(sunAz) {
     }
   });
 }
-function dotTexture() {
+export function dotTexture() {
   return canvasTex(32, 32, (x, w, h) => {
     const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
     g.addColorStop(0, 'rgba(255,255,255,1)');
@@ -118,92 +130,502 @@ function dotTexture() {
     x.fillRect(0, 0, w, h);
   });
 }
+/** 빗줄기: 네모 점 안에 세로로 가는 줄 하나 (위아래 끝은 옅다) */
+function rainTexture() {
+  return canvasTex(32, 32, (x, w, h) => {
+    const g = x.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.3, 'rgba(255,255,255,0.9)');
+    g.addColorStop(0.75, 'rgba(255,255,255,0.9)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g;
+    x.fillRect(w / 2 - 1, 0, 2, h);
+  });
+}
 
 /**
- * 화전 터 경기장을 만든다. 반환: { update(dt), excite(amount), sunOffset, fighterLight }
- *  lights: main.js 의 { hemi, sun } — 이른 아침 빛으로 바꾼다
+ * 하늘·안개·빛을 화전 터의 아침으로 바꾼다. rain 이면 잿빛 비 오는 아침(해는 누그러지고 반구광이 조금 세다)
+ *  반환: { FOG, sunOffset }
  */
-export function buildClearing(scene, lights = {}) {
-  const r = rng(2203);
-  const K = new Kit(577);
-  const FOG = 0xb6bcb9; // 옅은 잿빛 안개 (연기가 섞인 아침 공기)
-  const sunOffset = { x: 8.5, y: 2.9, z: -3.5 }; // 동쪽 트인 비탈 너머로 낮게 뜬 해 → 긴 그림자
+export function morning(scene, lights, { rain = true, sunOffset = { x: 8.5, y: 2.9, z: -3.5 } } = {}) {
+  const FOG = rain ? 0xa9b0af : 0xb6bcb9; // 옅은 잿빛 안개 (연기가 섞인 아침 공기)
   scene.background = new THREE.Color(FOG);
-  scene.fog = new THREE.Fog(FOG, 30, 300);
+  scene.fog = new THREE.Fog(FOG, rain ? 26 : 30, rain ? 230 : 300);
   if (lights.hemi) {
-    lights.hemi.color.set(0xc4cdd2); // 옅은 아침 하늘
+    lights.hemi.color.set(rain ? 0xbdc6cb : 0xc4cdd2); // 옅은 아침 하늘
     lights.hemi.groundColor.set(0x56514b); // 검은 땅은 빛을 거의 되비치지 않는다
-    lights.hemi.intensity = 1.15;
+    lights.hemi.intensity = rain ? 1.3 : 1.15;
   }
   if (lights.sun) {
-    lights.sun.color.set(0xffd9a6); // 낮은 해의 누런 빛
-    lights.sun.intensity = 1.5;
+    lights.sun.color.set(rain ? 0xf4e6cf : 0xffd9a6); // 낮은 해의 누런 빛 (비구름에 누그러진다)
+    lights.sun.intensity = rain ? 1.2 : 1.5;
     lights.sun.position.set(sunOffset.x, sunOffset.y, sunOffset.z);
   }
   scene.add(
     new THREE.Mesh(
       new THREE.SphereGeometry(600, 48, 24),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, map: skyTexture(Math.atan2(sunOffset.z, sunOffset.x)) }),
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, map: skyTexture(Math.atan2(sunOffset.z, sunOffset.x), rain) }),
     ),
   );
+  return { FOG, sunOffset };
+}
 
-  // ── 비탈: 결투 자리 둘레(13m)까지는 평평하고, 그 밖은 서쪽(−x)으로 오르고 동쪽(+x)으로 내려간다 ──
-  const groundY = (x, z) => {
+/** 비탈 높이: 결투 자리 둘레(13m)까지는 평평하고, 그 밖은 서쪽(−x)으로 오르고 동쪽(+x)으로 내려간다 */
+export const slopeY = (x, z, tiltDir = -1) => {
+  const rr = Math.hypot(x, z);
+  const t = THREE.MathUtils.smoothstep(rr, 13, 40);
+  const tilt = tiltDir * x * 0.075 * t;
+  const bump = (h3(Math.round(x * 0.25), 1, Math.round(z * 0.25), 3) - 0.5) * 1.6 * t;
+  return tilt + bump;
+};
+
+/**
+ * 땅: 재로 덮인 검은 비탈. 결투 자리는 밟혀서 맨땅이 드러났고, 군데군데 타다 남은 마른 풀이 누렇다.
+ *  paint(x, z, tmp, n1): 색을 더 칠할 수 있다 (2안의 이랑 자리 등). wet 이면 젖어서 덜 거칠다
+ */
+export function ashGround(scene, groundY, { wet = true, paint = null } = {}) {
+  const HALF = 46;
+  const N = 92;
+  const pos = [];
+  const uv = [];
+  const col = [];
+  const cAsh = new THREE.Color(C.ash);
+  const cSoot = new THREE.Color(C.soot);
+  const cEarth = new THREE.Color(C.earth);
+  const cDry = new THREE.Color(0x6f6446);
+  const tmp = new THREE.Color();
+  const colorAt = (x, z) => {
     const rr = Math.hypot(x, z);
-    const t = THREE.MathUtils.smoothstep(rr, 13, 40);
-    const tilt = -x * 0.075 * t; // 서쪽이 높다
-    const bump = (h3(Math.round(x * 0.25), 1, Math.round(z * 0.25), 3) - 0.5) * 1.6 * t;
-    return tilt + bump;
+    const n1 = h3(Math.round(x * 0.5), 0, Math.round(z * 0.5), 4) * 0.5 + h3(x * 0.8, 2, z * 0.8, 6) * 0.5;
+    const n2 = h3(Math.round(x * 0.18), 5, Math.round(z * 0.18), 7);
+    tmp.copy(cAsh).lerp(cSoot, THREE.MathUtils.clamp((n1 - 0.45) * 1.8, 0, 1) * 0.7); // 더 탄 자리는 더 검다
+    const trod = THREE.MathUtils.clamp((8.4 - rr) / 2.0, 0, 1);
+    tmp.lerp(cEarth, trod * (0.55 + 0.45 * n1));
+    // 타다 남은 마른 풀 (바깥쪽, 드문드문)
+    if (rr > 12) tmp.lerp(cDry, THREE.MathUtils.clamp((n2 - 0.62) * 3, 0, 1) * 0.6 * THREE.MathUtils.smoothstep(rr, 12, 18));
+    if (paint) paint(x, z, tmp, n1);
+    if (wet) tmp.multiplyScalar(0.86); // 젖은 땅은 더 짙다
+    col.push(tmp.r / ASH_TEX_AVG, tmp.g / ASH_TEX_AVG, tmp.b / ASH_TEX_AVG);
   };
-  const sm = { vary: 0.1, noise: 0.08 };
+  for (let j = 0; j <= N; j++)
+    for (let i = 0; i <= N; i++) {
+      const x = -HALF + (2 * HALF * i) / N;
+      const z = -HALF + (2 * HALF * j) / N;
+      pos.push(x, groundY(x, z), z);
+      uv.push(x / 3, z / 3);
+      colorAt(x, z);
+    }
+  const idx = [];
+  for (let j = 0; j < N; j++)
+    for (let i = 0; i < N; i++) {
+      const a0 = j * (N + 1) + i;
+      idx.push(a0, a0 + N + 1, a0 + 1, a0 + 1, a0 + N + 1, a0 + N + 2);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const ground = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: ashTexture(), vertexColors: true, roughness: wet ? 0.8 : 0.98 }));
+  ground.receiveShadow = true;
+  scene.add(ground);
+}
 
-  // ── 땅: 재로 덮인 검은 비탈. 결투 자리는 밟혀서 맨땅이 드러났고, 군데군데 타다 남은 마른 풀이 누렇다 ──
-  {
-    const HALF = 46;
-    const N = 92;
+/** 웅덩이: 낮은 자리에 고인 빗물이 하늘을 비춘다 (납작한 원판, 반사 환경맵). 결투 자리 안에도 두는데 아주 낮아서 카메라에 안 걸린다 */
+export function puddles(scene, groundY, spots) {
+  const K = new Kit(91);
+  for (const [x, z, rx, rz, rot] of spots) K.put('p', new THREE.CircleGeometry(1, 20), 0x1b1f22, [x, groundY(x, z) + 0.012, z], [-Math.PI / 2, rot || 0, 0], [rx, rz, 1], { vary: 0.08, noise: 0.05, rough: 0.05 });
+  const m = K.mesh('p', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.05, envMap: weaponEnv(), envMapIntensity: 0.35 }));
+  if (m) {
+    m.geometry.computeVertexNormals();
+    // 물결 없이 평평하게 (rough 로 가장자리만 흔들렸으니 법선은 위로)
+    const n = m.geometry.attributes.normal;
+    for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0);
+    scene.add(m);
+  }
+}
+
+/** 탄 그루터기 (겉은 숯, 잘린 면은 속 나무색, 뿌리 몇 가닥) */
+export function charStump(K, r, groundY, x, z, rad, h, rot) {
+  const y = groundY(x, z);
+  K.push([x, y, z], rot);
+  K.put('char', cyl(rad * 0.92, rad * 1.15, h, 8), C.char, [0, h / 2, 0], [0, 0, 0], 1, { rough: 0.06, vary: 0.2, noise: 0.15 });
+  K.put('stump', new THREE.CylinderGeometry(rad * 0.86, rad * 0.86, 0.04, 8), C.stump, [0, h + 0.01, 0], [0, 0, 0], 1, { vary: 0.15, noise: 0.2 }); // 잘린 면 (속 나무)
+  for (let k = 0; k < 3; k++) {
+    const a = k * 2.1 + r();
+    limb(K, 'char', [Math.cos(a) * rad * 0.7, 0.12, Math.sin(a) * rad * 0.7], [Math.cos(a) * rad * 2.2, -0.05, Math.sin(a) * rad * 2.2], rad * 0.35, rad * 0.12, C.char, { vary: 0.2 }, 5);
+  }
+  K.pop();
+}
+/** 쓰러진 통나무 (charred 면 숯, 아니면 바랜 나무) */
+export function fallenLog(K, groundY, x, z, len, rad, rot, charred = 1) {
+  const y = groundY(x, z) + rad * 0.85;
+  K.push([x, y, z], rot);
+  K.put(charred ? 'char' : 'wood', cyl(rad, rad * 1.06, len, 9), charred ? C.char : C.woodGrey, [0, 0, 0], [0, 0, Math.PI / 2], 1, { rough: 0.04, vary: 0.2, noise: 0.15 });
+  K.put('stump', new THREE.CylinderGeometry(rad * 0.88, rad * 0.88, 0.03, 9), C.stump, [len / 2, 0, 0], [0, 0, Math.PI / 2], 1, { noise: 0.2 });
+  K.pop();
+}
+
+/** 여러 모양(색 속성 포함)을 한 모양으로 합친다 (Kit 은 재질별 합치기라 인스턴스용 원본에는 따로 쓴다) */
+function mergeAll(list) {
+  const pos = [];
+  const col = [];
+  const nrm = [];
+  for (const g of list) {
+    pos.push(...g.attributes.position.array);
+    col.push(...g.attributes.color.array);
+    if (!g.attributes.normal) g.computeVertexNormals();
+    nrm.push(...g.attributes.normal.array);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  return g;
+}
+
+/**
+ * 둘레의 검은 가문비 숲 (인스턴싱: 원뿔 세 단 + 줄기). 25m 밖은 빽빽하고 21~25m 가장자리는 어린 나무만 드문드문.
+ *  openAz 방향 ±openHalf 는 비탈이 트여 있다. avoid: [{x, z, r}] 안에는 안 심는다
+ */
+export function spruceForest(scene, groundY, FOG, { openAz = 0, openHalf = 0.7, avoid = [], count = 640, seed = 41 } = {}) {
+  const trees = [];
+  const tr = rng(seed);
+  for (let i = 0; i < count; i++) {
+    const a = tr() * Math.PI * 2;
+    const da = Math.atan2(Math.sin(a - openAz), Math.cos(a - openAz));
+    const open = Math.abs(da) < openHalf; // 트인 쪽
+    const d = open ? 40 + tr() * 12 : tr() < 0.15 ? 21 + tr() * 4 : 25 + tr() * 24;
+    const x = Math.cos(a) * d;
+    const z = Math.sin(a) * d;
+    if (avoid.some((o) => Math.hypot(x - o.x, z - o.z) < o.r)) continue;
+    trees.push({ x, z, y: groundY(x, z), h: d < 25 ? 4 + tr() * 3 : 6 + tr() * 6, rot: tr() * 6.3, k: 0.9 + tr() * 0.3 }); // 가장자리 어린 나무는 작다
+  }
+  // 원뿔 세 단 + 줄기를 한 모양으로 (꼭짓점 색으로 위쪽이 조금 밝다)
+  const tierGeo = (rad, h, y) => {
+    const g = new THREE.ConeGeometry(rad, h, 7, 1, true);
+    g.translate(0, y + h / 2, 0);
+    return g;
+  };
+  const parts = [tierGeo(1.0, 3.2, 0.0), tierGeo(0.8, 3.0, 2.2), tierGeo(0.55, 2.8, 4.2), cyl(0.09, 0.16, 1.4, 5).translate(0, 0.7, 0)];
+  const cols = [0.72, 0.86, 1.0, 0]; // 0 = 줄기
+  const merged = [];
+  for (let p = 0; p < parts.length; p++) {
+    const g = parts[p].toNonIndexed();
+    const n = g.attributes.position.count;
+    const col = new Float32Array(n * 3);
+    const base = new THREE.Color(cols[p] ? C.spruce : C.bark);
+    for (let i = 0; i < n; i++) {
+      const k = cols[p] ? cols[p] * (0.85 + h3(g.attributes.position.getX(i), g.attributes.position.getY(i), g.attributes.position.getZ(i), 2) * 0.3) : 1;
+      col[i * 3] = base.r * k;
+      col[i * 3 + 1] = base.g * k;
+      col[i * 3 + 2] = base.b * k;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    merged.push(g);
+  }
+  const treeGeo = mergeAll(merged);
+  treeGeo.scale(1, 1 / 7, 1); // 높이 7 → 1 로 정규화해서 인스턴스마다 h 배
+  const inst = new THREE.InstancedMesh(treeGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }), trees.length);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const s = new THREE.Vector3();
+  trees.forEach((t, i) => {
+    q.setFromAxisAngle(_v.set(0, 1, 0), t.rot);
+    s.set(t.k * t.h * 0.22, t.h, t.k * t.h * 0.22);
+    m.compose(_v.set(t.x, t.y - 0.2, t.z), q, s);
+    inst.setMatrixAt(i, m);
+    inst.setColorAt(i, _c.setScalar(0.8 + h3(t.x, 0, t.z, 9) * 0.4).lerp(_c.clone().set(FOG), THREE.MathUtils.smoothstep(Math.hypot(t.x, t.z), 24, 48) * 0.35));
+  });
+  inst.castShadow = false;
+  scene.add(inst);
+}
+
+/** 자작나무 한 그루: 흰 줄기(검은 마디), 가지 끝에 드문드문 연두 잎 뭉치 */
+export function birchTree(K, r, groundY, x, z, h, lean) {
+  const y = groundY(x, z);
+  K.push([x, y, z], r() * 6.3);
+  const top = [lean * h, h, 0];
+  limb(K, 'birch', [0, -0.2, 0], top, 0.13, 0.05, C.birch, { vary: 0.08, noise: 0.06 }, 7);
+  for (let k = 0; k < 6; k++) {
+    const t = 0.25 + r() * 0.65;
+    K.put('char', box(0.3, 0.06 + r() * 0.08, 0.05), C.char, [lean * h * t, h * t, 0], [0, r() * 3, 0], 1, { noise: 0.1 }); // 검은 마디
+  }
+  for (let k = 0; k < 7; k++) {
+    const t = 0.5 + r() * 0.45;
+    const a = r() * Math.PI * 2;
+    const b0 = [lean * h * t, h * t, 0];
+    const b1 = [b0[0] + Math.cos(a) * (0.8 + r()), b0[1] + 0.4 + r() * 0.8, b0[2] + Math.sin(a) * (0.8 + r())];
+    limb(K, 'birch', b0, b1, 0.035, 0.012, C.birch, { vary: 0.1 }, 5);
+    if (r() < 0.7) K.put('sproutLeaf', new THREE.IcosahedronGeometry(1, 0), C.sprout, b1, [0, r() * 3, 0], [0.26 + r() * 0.2, 0.13 + r() * 0.08, 0.26 + r() * 0.2], { vary: 0.2, noise: 0.15 });
+  }
+  K.pop();
+}
+
+/** 새싹: 탄 땅 사이로 드문드문 (인스턴싱, 작은 세모잎 두 장). avoid: [{x, z, r}] */
+export function sproutField(scene, groundY, { N = 1900, avoid = [], seed = 66, r0 = 8.8, r1 = 17 } = {}) {
+  const sr = rng(seed);
+  const g = new THREE.BufferGeometry();
+  // 잎 두 장 = 삼각형 넷 (양면)
+  const pts = [];
+  for (const rot of [0, Math.PI / 2]) {
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    const a = [-0.022 * c, 0, -0.022 * s];
+    const b = [0.022 * c, 0, 0.022 * s];
+    const t = [0.012 * c, 0.09, 0.012 * s];
+    pts.push(...a, ...b, ...t, ...b, ...a, ...t);
+  }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  g.computeVertexNormals();
+  const inst = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide }), N);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const s = new THREE.Vector3();
+  const cS = new THREE.Color(C.sprout);
+  const cD = new THREE.Color(C.sproutDry);
+  let i = 0;
+  let guard = 0;
+  while (i < N && guard++ < N * 20) {
+    const a = sr() * Math.PI * 2;
+    const d = r0 + Math.sqrt(sr()) * r1;
+    const x = Math.cos(a) * d;
+    const z = Math.sin(a) * d;
+    // 탄 자리(잿빛 얼룩이 짙은 곳)에는 안 났다 → 군데군데 뭉친다
+    if (h3(Math.round(x * 0.5), 0, Math.round(z * 0.5), 4) > 0.55 && sr() < 0.8) continue;
+    if (avoid.some((o) => Math.hypot(x - o.x, z - o.z) < o.r)) continue;
+    const k = 0.6 + sr() * 0.7;
+    q.setFromAxisAngle(_v.set(sr() - 0.5, 3, sr() - 0.5).normalize(), sr() * 6.3); // 조금씩 기울어 났다
+    s.set(k, k * (0.8 + sr() * 0.6), k);
+    m.compose(_v.set(x, groundY(x, z), z), q, s);
+    inst.setMatrixAt(i, m);
+    inst.setColorAt(i, _c.copy(cS).lerp(cD, sr() * 0.8).multiplyScalar(0.7 + sr() * 0.3));
+    i++;
+  }
+  inst.count = i;
+  inst.castShadow = false;
+  scene.add(inst);
+}
+
+/** 양골담초 덤불: clumps = [[cx, cz, n]]. 가지는 K 에, 노란 꽃은 인스턴싱으로 */
+export function broomBushes(scene, K, r, groundY, clumps) {
+  const broomPts = [];
+  for (const [cx, cz, n] of clumps) {
+    for (let i = 0; i < n; i++) {
+      const a = r() * Math.PI * 2;
+      const d = r() * 1.6;
+      const x = cx + Math.cos(a) * d;
+      const z = cz + Math.sin(a) * d;
+      const y = groundY(x, z);
+      const h = 0.6 + r() * 0.7;
+      for (let k = 0; k < 4; k++) {
+        const b = r() * Math.PI * 2;
+        limb(K, 'broomTwig', [x, y, z], [x + Math.cos(b) * 0.3, y + h, z + Math.sin(b) * 0.3], 0.03, 0.01, C.broomTwig, { vary: 0.15 }, 4);
+      }
+      broomPts.push([x, y + h * 0.7, z, h]);
+    }
+  }
+  const per = 9;
+  const g = new THREE.IcosahedronGeometry(0.075, 0);
+  const inst = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ roughness: 0.85, flatShading: true }), broomPts.length * per);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const s = new THREE.Vector3();
+  const cB = new THREE.Color(C.broom);
+  broomPts.forEach(([x, y, z, h], j) => {
+    for (let k = 0; k < per; k++) {
+      const a = r() * Math.PI * 2;
+      const d = r() * 0.32;
+      q.setFromAxisAngle(_v.set(1, 0, 0), r() * 3);
+      s.setScalar(0.8 + r() * 0.6);
+      m.compose(_v.set(x + Math.cos(a) * d, y + (r() - 0.5) * h * 0.5, z + Math.sin(a) * d), q, s);
+      inst.setMatrixAt(j * per + k, m);
+      inst.setColorAt(j * per + k, _c.copy(cB).multiplyScalar(0.8 + r() * 0.35));
+    }
+  });
+  scene.add(inst);
+}
+
+/** 먼 산등성이 두 겹 (안개에 옅게). 트인 쪽으로 보인다 */
+export function farHills(scene, FOG, layers = [
+  { R: 150, base: 14, amp: 24, top: 0x6d7a7a, seed: 3 },
+  { R: 240, base: 32, amp: 36, top: 0x8e9a9c, seed: 4 },
+]) {
+  const fogC = new THREE.Color(FOG);
+  for (const L of layers) {
+    const NA = 220;
+    const rr = rng(L.seed * 71);
+    const ph = [rr() * 6, rr() * 6, rr() * 6, rr() * 6];
     const pos = [];
-    const uv = [];
     const col = [];
-    const cAsh = new THREE.Color(C.ash);
-    const cSoot = new THREE.Color(C.soot);
-    const cEarth = new THREE.Color(C.earth);
-    const cDry = new THREE.Color(0x6f6446);
-    const tmp = new THREE.Color();
-    const colorAt = (x, z) => {
-      const rr = Math.hypot(x, z);
-      const n1 = h3(Math.round(x * 0.5), 0, Math.round(z * 0.5), 4) * 0.5 + h3(x * 0.8, 2, z * 0.8, 6) * 0.5;
-      const n2 = h3(Math.round(x * 0.18), 5, Math.round(z * 0.18), 7);
-      tmp.copy(cAsh).lerp(cSoot, THREE.MathUtils.clamp((n1 - 0.45) * 1.8, 0, 1) * 0.7); // 더 탄 자리는 더 검다
-      const trod = THREE.MathUtils.clamp((8.4 - rr) / 2.0, 0, 1);
-      tmp.lerp(cEarth, trod * (0.55 + 0.45 * n1));
-      // 타다 남은 마른 풀 (바깥쪽, 드문드문)
-      if (rr > 12) tmp.lerp(cDry, THREE.MathUtils.clamp((n2 - 0.62) * 3, 0, 1) * 0.6 * THREE.MathUtils.smoothstep(rr, 12, 18));
-      col.push(tmp.r / ASH_TEX_AVG, tmp.g / ASH_TEX_AVG, tmp.b / ASH_TEX_AVG);
-    };
-    for (let j = 0; j <= N; j++)
-      for (let i = 0; i <= N; i++) {
-        const x = -HALF + (2 * HALF * i) / N;
-        const z = -HALF + (2 * HALF * j) / N;
-        pos.push(x, groundY(x, z), z);
-        uv.push(x / 3, z / 3);
-        colorAt(x, z);
-      }
+    const top = new THREE.Color(L.top);
+    for (let i = 0; i <= NA; i++) {
+      const a = (i / NA) * Math.PI * 2;
+      const n = 0.4 * Math.sin(2 * a + ph[0]) + 0.35 * Math.abs(Math.sin(6 * a + ph[1])) + 0.2 * Math.abs(Math.sin(15 * a + ph[2])) + 0.1 * Math.sin(37 * a + ph[3]);
+      const hr = L.base + L.amp * (0.5 + 0.5 * n);
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      pos.push(c * L.R * 0.8, -12, s * L.R * 0.8, c * L.R * 0.95, hr * 0.65, s * L.R * 0.95, c * L.R, hr, s * L.R);
+      const mid = top.clone().lerp(fogC, 0.5);
+      col.push(fogC.r, fogC.g, fogC.b, mid.r, mid.g, mid.b, top.r, top.g, top.b);
+    }
     const idx = [];
-    for (let j = 0; j < N; j++)
-      for (let i = 0; i < N; i++) {
-        const a0 = j * (N + 1) + i;
-        idx.push(a0, a0 + N + 1, a0 + 1, a0 + 1, a0 + N + 1, a0 + N + 2);
-      }
+    for (let i = 0; i < NA; i++) {
+      const a = i * 3;
+      const b = (i + 1) * 3;
+      idx.push(a, b, a + 1, b, b + 1, a + 1, a + 1, b + 1, a + 2, b + 1, b + 2, a + 2);
+    }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.setIndex(idx);
-    g.computeVertexNormals();
-    const ground = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: ashTexture(), vertexColors: true, roughness: 0.98 }));
-    ground.receiveShadow = true;
-    scene.add(ground);
+    scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })));
   }
+}
+
+/** 화전 터 공용 재질로 Kit 을 메쉬로 만들어 scene 에 더한다 (light: 꼭짓점에 구울 빛) */
+export function clearingMeshes(scene, K, light = null) {
+  const std = (p) => new THREE.MeshStandardMaterial({ vertexColors: true, ...p });
+  const L = light ? { light } : {};
+  const meshes = [
+    K.mesh('stone', std({ roughness: 0.95, flatShading: true }), { cast: true, ...L }),
+    K.mesh('char', std({ roughness: 1, flatShading: true }), { cast: true, ...L }),
+    K.mesh('stump', std({ roughness: 0.9 }), L),
+    K.mesh('wood', std({ roughness: 0.9 }), { cast: true, ...L }),
+    K.mesh('daub', std({ roughness: 1 }), L),
+    K.mesh('thatch', std({ roughness: 1, flatShading: true }), L),
+    K.mesh('birch', std({ roughness: 0.8 })),
+    K.mesh('sproutLeaf', std({ roughness: 0.9, flatShading: true })),
+    K.mesh('broomTwig', std({ roughness: 0.95 })),
+    K.mesh('goat', std({ roughness: 0.85 })),
+    K.mesh('crow', std({ roughness: 0.6 })),
+    K.mesh('cloth', std({ roughness: 1 })),
+    K.mesh('iron', std({ roughness: 0.55, metalness: 0.5 }), L),
+    K.mesh('dark', std({ roughness: 1 })),
+    K.mesh('embers', new THREE.MeshBasicMaterial({ vertexColors: true })),
+  ];
+  for (const m of meshes) if (m) scene.add(m);
+}
+
+/** 연기: 자리(src)에서 위로 오르며 퍼지는 회색 점. 바람이 불면 눕는다. low 면 낮게 깔린다. 반환 step(dt, t, gust) */
+export function smokeColumn(scene, src, { n = 220, seed = 12, rise = 13, low = false } = {}) {
+  const smk = rng(seed);
+  const spos = new Float32Array(n * 3);
+  const sage = new Float32Array(n); // 0~1, 태어나서 사라질 때까지
+  const soff = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    sage[i] = smk();
+    soff[i * 2] = (smk() - 0.5) * 2;
+    soff[i * 2 + 1] = (smk() - 0.5) * 2;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(spos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: low ? 1.5 : 1.1, map: dotTexture(), transparent: true, opacity: low ? 0.12 : 0.16, depthWrite: false, color: 0x8a8a86 }));
+  pts.frustumCulled = false;
+  scene.add(pts);
+  return (dt, t, gust) => {
+    const lean = (low ? 1.2 : 0.35) + gust * 2.5;
+    for (let i = 0; i < n; i++) {
+      sage[i] += dt * (0.055 + gust * 0.05);
+      if (sage[i] > 1) sage[i] -= 1;
+      const a = sage[i];
+      const spread = 0.35 + a * a * (low ? 7 : 4.5);
+      const wob = Math.sin(t * 0.7 + i) * 0.3;
+      spos[i * 3] = src.x + soff[i * 2] * spread - a * a * lean * 6 + wob;
+      spos[i * 3 + 1] = src.y + a * rise * (1 - gust * 0.3);
+      spos[i * 3 + 2] = src.z + soff[i * 2 + 1] * spread + Math.cos(t * 0.5 + i * 1.7) * 0.3 - a * 0.6;
+    }
+    geo.attributes.position.needsUpdate = true;
+  };
+}
+
+/** 떠다니는 재. 반환 step(dt, t, gust) */
+export function ashDrift(scene, { n = 600, seed = 77 } = {}) {
+  const ar = rng(seed);
+  const apos = new Float32Array(n * 3);
+  const asp = new Float32Array(n);
+  const BOX = 22;
+  for (let i = 0; i < n; i++) {
+    apos[i * 3] = (ar() - 0.5) * 2 * BOX;
+    apos[i * 3 + 1] = ar() * 9;
+    apos[i * 3 + 2] = (ar() - 0.5) * 2 * BOX;
+    asp[i] = 0.25 + ar() * 0.5;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(apos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.06, map: dotTexture(), transparent: true, opacity: 0.85, depthWrite: false, color: 0x4a4744 }));
+  pts.frustumCulled = false;
+  scene.add(pts);
+  return (dt, t, gust) => {
+    const wx = -0.25 - gust * 3.5;
+    const wz = 0.1 + gust * 1.2;
+    for (let i = 0; i < n; i++) {
+      const j = i * 3;
+      apos[j + 1] += asp[i] * dt * (0.35 + gust * 1.2) * (Math.sin(t * 0.9 + i) > -0.3 ? 1 : -0.6);
+      apos[j] += (wx + Math.sin(t * 0.8 + i) * 0.35) * dt;
+      apos[j + 2] += (wz + Math.cos(t * 0.6 + i * 1.3) * 0.35) * dt;
+      if (apos[j + 1] > 9) apos[j + 1] -= 9;
+      if (apos[j + 1] < 0) apos[j + 1] += 9;
+      if (apos[j] < -BOX) apos[j] += 2 * BOX;
+      if (apos[j] > BOX) apos[j] -= 2 * BOX;
+      if (apos[j + 2] > BOX) apos[j + 2] -= 2 * BOX;
+      if (apos[j + 2] < -BOX) apos[j + 2] += 2 * BOX;
+    }
+    geo.attributes.position.needsUpdate = true;
+  };
+}
+
+/**
+ * 봄비: 가는 빗줄기(점 스프라이트)가 결투 자리 둘레 24m 상자 안에 내린다. 바람에 비스듬하고, 큰 타격이 나오면 휘몰아친다.
+ *  폰에서 가볍게: 점 2400개, 질감 한 장. 반환 step(dt, t, gust)
+ */
+export function springRain(scene, { n = 2400, seed = 55 } = {}) {
+  const rr = rng(seed);
+  const pos = new Float32Array(n * 3);
+  const sp = new Float32Array(n);
+  const BOX = 24;
+  const H = 14;
+  for (let i = 0; i < n; i++) {
+    pos[i * 3] = (rr() - 0.5) * 2 * BOX;
+    pos[i * 3 + 1] = rr() * H;
+    pos[i * 3 + 2] = (rr() - 0.5) * 2 * BOX;
+    sp[i] = 6.5 + rr() * 3;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.55, map: rainTexture(), transparent: true, opacity: 0.42, depthWrite: false, color: 0xd6dcdd }));
+  pts.frustumCulled = false;
+  scene.add(pts);
+  return (dt, t, gust) => {
+    const wx = -0.9 - gust * 5;
+    const wz = 0.3 + gust * 1.5;
+    for (let i = 0; i < n; i++) {
+      const j = i * 3;
+      pos[j + 1] -= sp[i] * dt;
+      pos[j] += wx * dt;
+      pos[j + 2] += wz * dt;
+      if (pos[j + 1] < 0) pos[j + 1] += H;
+      if (pos[j] < -BOX) pos[j] += 2 * BOX;
+      if (pos[j + 2] > BOX) pos[j + 2] -= 2 * BOX;
+    }
+    geo.attributes.position.needsUpdate = true;
+  };
+}
+
+/**
+ * 화전 터 경기장(1안)을 만든다. 반환: { update(dt), excite(amount), sunOffset, fighterLight }
+ *  lights: main.js 의 { hemi, sun } — 이른 아침 빛으로 바꾼다. opt.rain: 봄비 (기본 켬)
+ */
+export function buildClearing(scene, lights = {}, { rain = true } = {}) {
+  const r = rng(2203);
+  const K = new Kit(577);
+  const { FOG, sunOffset } = morning(scene, lights, { rain });
+  const groundY = (x, z) => slopeY(x, z, -1);
+  const HUT = { x: -15.5, z: 9, rot: 0.55 };
+  const KILN = { x: 13.5, z: -13 };
+
+  ashGround(scene, groundY, { wet: rain });
 
   // ── 결투 자리: 밭에서 골라낸 돌을 무릎 높이로 둥글게 쌓았다 (경기장 경계). 동쪽 한 군데가 무너져 트였다 ──
   {
@@ -227,18 +649,6 @@ export function buildClearing(scene, lights = {}) {
   }
 
   // ── 탄 그루터기와 쓰러진 통나무 (결투 자리 밖 9~24m) ──
-  const stump = (x, z, rad, h, rot) => {
-    const y = groundY(x, z);
-    K.push([x, y, z], rot);
-    K.put('char', cyl(rad * 0.92, rad * 1.15, h, 8), C.char, [0, h / 2, 0], [0, 0, 0], 1, { rough: 0.06, vary: 0.2, noise: 0.15 });
-    K.put('stump', new THREE.CylinderGeometry(rad * 0.86, rad * 0.86, 0.04, 8), C.stump, [0, h + 0.01, 0], [0, 0, 0], 1, { vary: 0.15, noise: 0.2 }); // 잘린 면 (속 나무)
-    // 뿌리 몇 가닥
-    for (let k = 0; k < 3; k++) {
-      const a = k * 2.1 + r();
-      limb(K, 'char', [Math.cos(a) * rad * 0.7, 0.12, Math.sin(a) * rad * 0.7], [Math.cos(a) * rad * 2.2, -0.05, Math.sin(a) * rad * 2.2], rad * 0.35, rad * 0.12, C.char, { vary: 0.2 }, 5);
-    }
-    K.pop();
-  };
   for (let i = 0; i < 54; i++) {
     const a = r() * Math.PI * 2;
     const d = 9.3 + r() * 14;
@@ -246,23 +656,15 @@ export function buildClearing(scene, lights = {}) {
     const z = Math.sin(a) * d;
     if (x < -10 && z > 4 && z < 14) continue; // 오두막 마당
     if (x > 9 && z < -8) continue; // 숯가마
-    stump(x, z, 0.14 + r() * 0.2, 0.2 + r() * 0.4, r() * 6.3);
+    charStump(K, r, groundY, x, z, 0.14 + r() * 0.2, 0.2 + r() * 0.4, r() * 6.3);
   }
-  const log = (x, z, len, rad, rot, charred = 1) => {
-    const y = groundY(x, z) + rad * 0.85;
-    K.push([x, y, z], rot);
-    K.put(charred ? 'char' : 'wood', cyl(rad, rad * 1.06, len, 9), charred ? C.char : C.woodGrey, [0, 0, 0], [0, 0, Math.PI / 2], 1, { rough: 0.04, vary: 0.2, noise: 0.15 });
-    K.put('stump', new THREE.CylinderGeometry(rad * 0.88, rad * 0.88, 0.03, 9), C.stump, [len / 2, 0, 0], [0, 0, Math.PI / 2], 1, { noise: 0.2 });
-    K.pop();
-  };
-  log(11.5, 6.5, 3.6, 0.24, 0.5);
-  log(-6, -14.5, 4.2, 0.28, 1.9);
-  log(4.5, 15.5, 2.8, 0.2, -0.4);
-  log(-15.5, -6, 3.1, 0.22, 2.6);
+  fallenLog(K, groundY, 11.5, 6.5, 3.6, 0.24, 0.5);
+  fallenLog(K, groundY, -6, -14.5, 4.2, 0.28, 1.9);
+  fallenLog(K, groundY, 4.5, 15.5, 2.8, 0.2, -0.4);
+  fallenLog(K, groundY, -15.5, -6, 3.1, 0.22, 2.6);
 
   // ── 서쪽 비탈 아래: 화전민 오두막 ──
   //   한 칸짜리 흙벽 오두막, 한쪽으로 처진 이엉 지붕, 돌을 쌓은 굴뚝(그을음), 판자 몇 장 빠진 울타리
-  const HUT = { x: -15.5, z: 9, rot: 0.55 };
   const HY = groundY(HUT.x, HUT.z);
   {
     K.push([HUT.x, HY, HUT.z], HUT.rot);
@@ -358,7 +760,6 @@ export function buildClearing(scene, lights = {}) {
   }
 
   // ── 북동쪽 숯가마: 흙을 덮은 둥근 가마, 위로 가는 연기 ──
-  const KILN = { x: 13.5, z: -13 };
   const KY = groundY(KILN.x, KILN.z);
   {
     K.put('daub', new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0x5d5044, [KILN.x, KY - 0.1, KILN.z], [0, 0, 0], [2.4, 1.7, 2.4], { rough: 0.06, vary: 0.06, noise: 0.14 });
@@ -368,335 +769,64 @@ export function buildClearing(scene, lights = {}) {
   }
 
   // ── 남동쪽 비탈 가장자리의 양골담초 덤불 (노랑은 여기뿐) ──
-  const broomPts = [];
-  for (const [cx, cz, n] of [
+  broomBushes(scene, K, r, groundY, [
     [15.5, 11.5, 7],
     [19, 7, 5],
     [12, 16.5, 4],
-  ]) {
-    for (let i = 0; i < n; i++) {
-      const a = r() * Math.PI * 2;
-      const d = r() * 1.6;
-      const x = cx + Math.cos(a) * d;
-      const z = cz + Math.sin(a) * d;
-      const y = groundY(x, z);
-      const h = 0.6 + r() * 0.7;
-      for (let k = 0; k < 4; k++) {
-        const b = r() * Math.PI * 2;
-        limb(K, 'broomTwig', [x, y, z], [x + Math.cos(b) * 0.3, y + h, z + Math.sin(b) * 0.3], 0.03, 0.01, C.broomTwig, { vary: 0.15 }, 4);
-      }
-      broomPts.push([x, y + h * 0.7, z, h]);
-    }
-  }
+  ]);
 
-  // ── 둘레의 숲: 검은 가문비 (인스턴싱 원뿔 세 단) 와 자작나무 몇 그루 ──
-  {
-    // 가문비: 22m 밖에 빽빽이, 안쪽(18~22m)엔 드문드문. 동쪽(+x) 20° 안팎은 비탈이 트여 있다
-    const trees = [];
-    const tr = rng(41);
-    for (let i = 0; i < 640; i++) {
-      const a = tr() * Math.PI * 2;
-      const open = Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 0.7; // 동쪽 트임
-      const d = open ? 40 + tr() * 12 : tr() < 0.15 ? 21 + tr() * 4 : 25 + tr() * 24;
-      const x = Math.cos(a) * d;
-      const z = Math.sin(a) * d;
-      if (Math.hypot(x - HUT.x, z - HUT.z) < 6.5 || Math.hypot(x - KILN.x, z - KILN.z) < 6) continue;
-      trees.push({ x, z, y: groundY(x, z), h: d < 25 ? 4 + tr() * 3 : 6 + tr() * 6, rot: tr() * 6.3, k: 0.9 + tr() * 0.3 }); // 가장자리 어린 나무는 작다
-    }
-    // 원뿔 세 단 + 줄기를 한 모양으로 (꼭짓점 색으로 위쪽이 조금 밝다)
-    const tierGeo = (rad, h, y) => {
-      const g = new THREE.ConeGeometry(rad, h, 7, 1, true);
-      g.translate(0, y + h / 2, 0);
-      return g;
-    };
-    const parts = [tierGeo(1.0, 3.2, 0.0), tierGeo(0.8, 3.0, 2.2), tierGeo(0.55, 2.8, 4.2), cyl(0.09, 0.16, 1.4, 5).translate(0, 0.7, 0)];
-    const cols = [0.72, 0.86, 1.0, 0]; // 0 = 줄기
-    const merged = [];
-    for (let p = 0; p < parts.length; p++) {
-      const g = parts[p].toNonIndexed();
-      const n = g.attributes.position.count;
-      const col = new Float32Array(n * 3);
-      const base = new THREE.Color(cols[p] ? C.spruce : C.bark);
-      for (let i = 0; i < n; i++) {
-        const k = cols[p] ? cols[p] * (0.85 + h3(g.attributes.position.getX(i), g.attributes.position.getY(i), g.attributes.position.getZ(i), 2) * 0.3) : 1;
-        col[i * 3] = base.r * k;
-        col[i * 3 + 1] = base.g * k;
-        col[i * 3 + 2] = base.b * k;
-      }
-      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      merged.push(g);
-    }
-    const treeGeo = mergeAll(merged);
-    treeGeo.scale(1, 1 / 7, 1); // 높이 7 → 1 로 정규화해서 인스턴스마다 h 배
-    const inst = new THREE.InstancedMesh(treeGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }), trees.length);
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const s = new THREE.Vector3();
-    trees.forEach((t, i) => {
-      q.setFromAxisAngle(_v.set(0, 1, 0), t.rot);
-      s.set(t.k * t.h * 0.22, t.h, t.k * t.h * 0.22);
-      m.compose(_v.set(t.x, t.y - 0.2, t.z), q, s);
-      inst.setMatrixAt(i, m);
-      inst.setColorAt(i, _c.setScalar(0.8 + h3(t.x, 0, t.z, 9) * 0.4).lerp(_c.clone().set(FOG), THREE.MathUtils.smoothstep(Math.hypot(t.x, t.z), 24, 48) * 0.35));
-    });
-    inst.castShadow = false;
-    scene.add(inst);
+  // ── 둘레의 숲: 검은 가문비와 자작나무 몇 그루 ──
+  spruceForest(scene, groundY, FOG, { avoid: [{ x: HUT.x, z: HUT.z, r: 6.5 }, { x: KILN.x, z: KILN.z, r: 6 }] });
+  for (const [x, z, h, lean] of [
+    [-9.5, -16.5, 6.5, 0.06],
+    [-12, -18.5, 5.5, -0.04],
+    [17, 14.5, 7, 0.05],
+    [20.5, 12, 5, 0.1],
+    [-20, 2, 8, 0.03],
+    [6, -19.5, 6, -0.07],
+    [-18, 15.5, 6.5, 0.08],
+  ])
+    birchTree(K, r, groundY, x, z, h, lean);
 
-    // 자작나무: 흰 줄기(검은 마디), 가지 끝에 드문드문 연두 잎 뭉치
-    const birch = (x, z, h, lean) => {
-      const y = groundY(x, z);
-      K.push([x, y, z], r() * 6.3);
-      const top = [lean * h, h, 0];
-      limb(K, 'birch', [0, -0.2, 0], top, 0.13, 0.05, C.birch, { vary: 0.08, noise: 0.06 }, 7);
-      for (let k = 0; k < 6; k++) {
-        const t = 0.25 + r() * 0.65;
-        K.put('char', box(0.3, 0.06 + r() * 0.08, 0.05), C.char, [lean * h * t, h * t, 0], [0, r() * 3, 0], 1, { noise: 0.1 }); // 검은 마디
-      }
-      for (let k = 0; k < 7; k++) {
-        const t = 0.5 + r() * 0.45;
-        const a = r() * Math.PI * 2;
-        const b0 = [lean * h * t, h * t, 0];
-        const b1 = [b0[0] + Math.cos(a) * (0.8 + r()), b0[1] + 0.4 + r() * 0.8, b0[2] + Math.sin(a) * (0.8 + r())];
-        limb(K, 'birch', b0, b1, 0.035, 0.012, C.birch, { vary: 0.1 }, 5);
-        if (r() < 0.7) K.put('sproutLeaf', new THREE.IcosahedronGeometry(1, 0), C.sprout, b1, [0, r() * 3, 0], [0.26 + r() * 0.2, 0.13 + r() * 0.08, 0.26 + r() * 0.2], { vary: 0.2, noise: 0.15 });
-      }
-      K.pop();
-    };
-    for (const [x, z, h, lean] of [
-      [-9.5, -16.5, 6.5, 0.06],
-      [-12, -18.5, 5.5, -0.04],
-      [17, 14.5, 7, 0.05],
-      [20.5, 12, 5, 0.1],
-      [-20, 2, 8, 0.03],
-      [6, -19.5, 6, -0.07],
-      [-18, 15.5, 6.5, 0.08],
-    ])
-      birch(x, z, h, lean);
-  }
+  sproutField(scene, groundY, { avoid: [{ x: HUT.x, z: HUT.z, r: 4.5 }, { x: KILN.x, z: KILN.z, r: 3 }] });
+  farHills(scene, FOG);
+  clearingMeshes(scene, K);
 
-  // ── 새싹: 탄 땅 사이로 드문드문 (인스턴싱, 작은 세모잎 두 장) ──
-  {
-    const N = 1900;
-    const sr = rng(66);
-    const g = new THREE.BufferGeometry();
-    // 잎 두 장 = 삼각형 넷 (양면)
-    const pts = [];
-    for (const rot of [0, Math.PI / 2]) {
-      const c = Math.cos(rot);
-      const s = Math.sin(rot);
-      const a = [-0.022 * c, 0, -0.022 * s];
-      const b = [0.022 * c, 0, 0.022 * s];
-      const t = [0.012 * c, 0.09, 0.012 * s];
-      pts.push(...a, ...b, ...t, ...b, ...a, ...t);
-    }
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    g.computeVertexNormals();
-    const inst = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide }), N);
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const s = new THREE.Vector3();
-    const cS = new THREE.Color(C.sprout);
-    const cD = new THREE.Color(C.sproutDry);
-    let i = 0;
-    while (i < N) {
-      const a = sr() * Math.PI * 2;
-      const d = 8.8 + Math.sqrt(sr()) * 17;
-      const x = Math.cos(a) * d;
-      const z = Math.sin(a) * d;
-      // 탄 자리(잿빛 얼룩이 짙은 곳)에는 안 났다 → 군데군데 뭉친다
-      if (h3(Math.round(x * 0.5), 0, Math.round(z * 0.5), 4) > 0.55 && sr() < 0.8) continue;
-      if (Math.hypot(x - HUT.x, z - HUT.z) < 4.5 || Math.hypot(x - KILN.x, z - KILN.z) < 3) continue;
-      const k = 0.6 + sr() * 0.7;
-      q.setFromAxisAngle(_v.set(sr() - 0.5, 3, sr() - 0.5).normalize(), sr() * 6.3); // 조금씩 기울어 났다
-      s.set(k, k * (0.8 + sr() * 0.6), k);
-      m.compose(_v.set(x, groundY(x, z), z), q, s);
-      inst.setMatrixAt(i, m);
-      inst.setColorAt(i, _c.copy(cS).lerp(cD, sr() * 0.8).multiplyScalar(0.7 + sr() * 0.3));
-      i++;
-    }
-    inst.castShadow = false;
-    scene.add(inst);
-  }
+  // 비: 낮은 자리에 웅덩이 (결투 자리 안쪽은 아주 납작한 원판이라 카메라에 안 걸린다)
+  if (rain)
+    puddles(scene, groundY, [
+      [2.5, 3.2, 1.4, 0.9, 0.4],
+      [-3.8, -1.5, 1.1, 0.7, 1.2],
+      [-1, 5.6, 0.8, 0.5, 0],
+      [9.5, -2, 1.8, 1.1, 0.7],
+      [-11, 3, 1.5, 0.9, 2.1],
+      [6, 12, 1.2, 0.8, 0.3],
+      [-6.5, -9.5, 1.3, 0.8, 1.6],
+      [13, 4.5, 1.0, 0.6, 0.9],
+    ]);
 
-  // ── 양골담초 꽃: 덤불 위에 노란 점 뭉치 (인스턴싱 작은 정이십면체) ──
-  {
-    const per = 9;
-    const g = new THREE.IcosahedronGeometry(0.075, 0);
-    const inst = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ roughness: 0.85, flatShading: true }), broomPts.length * per);
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const s = new THREE.Vector3();
-    const cB = new THREE.Color(C.broom);
-    broomPts.forEach(([x, y, z, h], j) => {
-      for (let k = 0; k < per; k++) {
-        const a = r() * Math.PI * 2;
-        const d = r() * 0.32;
-        q.setFromAxisAngle(_v.set(1, 0, 0), r() * 3);
-        s.setScalar(0.8 + r() * 0.6);
-        m.compose(_v.set(x + Math.cos(a) * d, y + (r() - 0.5) * h * 0.5, z + Math.sin(a) * d), q, s);
-        inst.setMatrixAt(j * per + k, m);
-        inst.setColorAt(j * per + k, _c.copy(cB).multiplyScalar(0.8 + r() * 0.35));
-      }
-    });
-    scene.add(inst);
-  }
-
-  // ── 먼 산등성이: 동쪽 트인 쪽으로 보인다 (안개에 옅게) ──
-  {
-    const fogC = new THREE.Color(FOG);
-    const layers = [
-      { R: 150, base: 14, amp: 24, top: 0x6d7a7a, seed: 3 },
-      { R: 240, base: 32, amp: 36, top: 0x8e9a9c, seed: 4 },
-    ];
-    for (const L of layers) {
-      const NA = 220;
-      const rr = rng(L.seed * 71);
-      const ph = [rr() * 6, rr() * 6, rr() * 6, rr() * 6];
-      const pos = [];
-      const col = [];
-      const top = new THREE.Color(L.top);
-      for (let i = 0; i <= NA; i++) {
-        const a = (i / NA) * Math.PI * 2;
-        const n = 0.4 * Math.sin(2 * a + ph[0]) + 0.35 * Math.abs(Math.sin(6 * a + ph[1])) + 0.2 * Math.abs(Math.sin(15 * a + ph[2])) + 0.1 * Math.sin(37 * a + ph[3]);
-        const hr = L.base + L.amp * (0.5 + 0.5 * n);
-        const c = Math.cos(a);
-        const s = Math.sin(a);
-        pos.push(c * L.R * 0.8, -12, s * L.R * 0.8, c * L.R * 0.95, hr * 0.65, s * L.R * 0.95, c * L.R, hr, s * L.R);
-        const mid = top.clone().lerp(fogC, 0.5);
-        col.push(fogC.r, fogC.g, fogC.b, mid.r, mid.g, mid.b, top.r, top.g, top.b);
-      }
-      const idx = [];
-      for (let i = 0; i < NA; i++) {
-        const a = i * 3;
-        const b = (i + 1) * 3;
-        idx.push(a, b, a + 1, b, b + 1, a + 1, a + 1, b + 1, a + 2, b + 1, b + 2, a + 2);
-      }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-      g.setIndex(idx);
-      scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })));
-    }
-  }
-
-  // ── 재질 ──
-  const std = (p) => new THREE.MeshStandardMaterial({ vertexColors: true, ...p });
-  const meshes = [
-    K.mesh('stone', std({ roughness: 0.95, flatShading: true }), { cast: true }),
-    K.mesh('char', std({ roughness: 1, flatShading: true }), { cast: true }),
-    K.mesh('stump', std({ roughness: 0.9 })),
-    K.mesh('wood', std({ roughness: 0.9 }), { cast: true }),
-    K.mesh('daub', std({ roughness: 1 })),
-    K.mesh('thatch', std({ roughness: 1, flatShading: true })),
-    K.mesh('birch', std({ roughness: 0.8 })),
-    K.mesh('sproutLeaf', std({ roughness: 0.9, flatShading: true })),
-    K.mesh('broomTwig', std({ roughness: 0.95 })),
-    K.mesh('goat', std({ roughness: 0.85 })),
-    K.mesh('iron', std({ roughness: 0.55, metalness: 0.5 })),
-    K.mesh('dark', std({ roughness: 1 })),
-  ];
-  for (const m of meshes) if (m) scene.add(m);
-
-  // ── 연기 (숯가마): 위로 오르며 퍼지는 회색 점. 바람이 불면 눕는다 ──
-  const SMOKE = 220;
-  const smk = rng(12);
-  const spos = new Float32Array(SMOKE * 3);
-  const sage = new Float32Array(SMOKE); // 0~1, 태어나서 사라질 때까지
-  const soff = new Float32Array(SMOKE * 2);
-  for (let i = 0; i < SMOKE; i++) {
-    sage[i] = smk();
-    soff[i * 2] = (smk() - 0.5) * 2;
-    soff[i * 2 + 1] = (smk() - 0.5) * 2;
-  }
-  const smokeGeo = new THREE.BufferGeometry();
-  smokeGeo.setAttribute('position', new THREE.BufferAttribute(spos, 3));
-  const smoke = new THREE.Points(smokeGeo, new THREE.PointsMaterial({ size: 1.1, map: dotTexture(), transparent: true, opacity: 0.16, depthWrite: false, color: 0x8a8a86 }));
-  smoke.frustumCulled = false;
-  scene.add(smoke);
-
-  // ── 떠다니는 재 ──
-  const ASH = 600;
-  const ar = rng(77);
-  const apos = new Float32Array(ASH * 3);
-  const asp = new Float32Array(ASH);
-  const BOX = 22;
-  for (let i = 0; i < ASH; i++) {
-    apos[i * 3] = (ar() - 0.5) * 2 * BOX;
-    apos[i * 3 + 1] = ar() * 9;
-    apos[i * 3 + 2] = (ar() - 0.5) * 2 * BOX;
-    asp[i] = 0.25 + ar() * 0.5;
-  }
-  const ashGeo = new THREE.BufferGeometry();
-  ashGeo.setAttribute('position', new THREE.BufferAttribute(apos, 3));
-  const ashPts = new THREE.Points(ashGeo, new THREE.PointsMaterial({ size: 0.06, map: dotTexture(), transparent: true, opacity: 0.85, depthWrite: false, color: 0x4a4744 }));
-  ashPts.frustumCulled = false;
-  scene.add(ashPts);
+  const steps = [smokeColumn(scene, { x: KILN.x, y: KY + 1.6, z: KILN.z }), ashDrift(scene)];
+  if (rain) steps.push(springRain(scene));
 
   let t = 0;
   let gust = 0;
-  const step = (dt) => {
-    // 연기: 나이에 따라 위로 오르고 퍼진다. 바람(동쪽 → 서쪽으로 조금 눕는다, 큰 타격이면 세게)
-    const lean = 0.35 + gust * 2.5;
-    for (let i = 0; i < SMOKE; i++) {
-      sage[i] += dt * (0.055 + gust * 0.05);
-      if (sage[i] > 1) sage[i] -= 1;
-      const a = sage[i];
-      const spread = 0.35 + a * a * 4.5;
-      const wob = Math.sin(t * 0.7 + i) * 0.3;
-      spos[i * 3] = KILN.x + soff[i * 2] * spread - a * a * lean * 6 + wob;
-      spos[i * 3 + 1] = KY + 1.6 + a * 13 * (1 - gust * 0.3);
-      spos[i * 3 + 2] = KILN.z + soff[i * 2 + 1] * spread + Math.cos(t * 0.5 + i * 1.7) * 0.3 - a * 0.6;
-    }
-    smokeGeo.attributes.position.needsUpdate = true;
-    // 재: 천천히 떠오르며 흐르고, 큰 타격이 나오면 휘날린다
-    const wx = -0.25 - gust * 3.5;
-    const wz = 0.1 + gust * 1.2;
-    for (let i = 0; i < ASH; i++) {
-      const j = i * 3;
-      apos[j + 1] += asp[i] * dt * (0.35 + gust * 1.2) * (Math.sin(t * 0.9 + i) > -0.3 ? 1 : -0.6);
-      apos[j] += (wx + Math.sin(t * 0.8 + i) * 0.35) * dt;
-      apos[j + 2] += (wz + Math.cos(t * 0.6 + i * 1.3) * 0.35) * dt;
-      if (apos[j + 1] > 9) apos[j + 1] -= 9;
-      if (apos[j + 1] < 0) apos[j + 1] += 9;
-      if (apos[j] < -BOX) apos[j] += 2 * BOX;
-      if (apos[j] > BOX) apos[j] -= 2 * BOX;
-      if (apos[j + 2] > BOX) apos[j + 2] -= 2 * BOX;
-      if (apos[j + 2] < -BOX) apos[j + 2] += 2 * BOX;
-    }
-    ashGeo.attributes.position.needsUpdate = true;
+  const stepAll = (dt) => {
+    for (const s of steps) s(dt, t, gust);
   };
-  step(0);
+  stepAll(0);
 
   return {
     sunOffset,
     // 검은 땅이 빛을 되비치지 않아 캐릭터 아래쪽이 어둡다 → 바탕빛을 누런 아침 해 색으로, 테두리광을 조금 세게
     fighterLight: { color: 0xffe2b8, rimColor: 0xd9e2e8, rim: 1.4, level: 0.9 },
-    /** 큰 타격: 재가 휘날리고 연기가 눕는다 */
+    /** 큰 타격: 재가 휘날리고 연기가 눕는다 (비도 휘몰아친다) */
     excite(amount) {
       gust = Math.min(1, gust + amount * 0.5);
     },
     update(dt) {
       t += dt;
       gust = Math.max(0, gust - dt * 0.4);
-      step(dt);
+      stepAll(dt);
     },
   };
-}
-
-/** 여러 모양(색 속성 포함)을 한 모양으로 합친다 (Kit 은 재질별 합치기라 인스턴스용 원본에는 따로 쓴다) */
-function mergeAll(list) {
-  const pos = [];
-  const col = [];
-  const nrm = [];
-  for (const g of list) {
-    pos.push(...g.attributes.position.array);
-    col.push(...g.attributes.color.array);
-    if (!g.attributes.normal) g.computeVertexNormals();
-    nrm.push(...g.attributes.normal.array);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  return g;
 }
