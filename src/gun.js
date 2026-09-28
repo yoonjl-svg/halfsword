@@ -18,7 +18,7 @@ export const GUN_STANCE = { name: '사격 자세', desc: '팔을 곧게 뻗어 �
 
 export const GUN = {
   energy: 80, // J: 맞으면 늘 이 세기의 찌르기 (사장님: 머리는 한 발에 즉사, 가슴은 두 발 — 투구·판금이 덮은 곳은 막히고 방어구가 부서진다). 가만히 선 상대 실측(tools/sim/gun_dummy.mjs): 머리 55 J 부터 즉사 · 가슴 1발 산다 · 2발 16초 뒤 죽음 · 3발 5초
-  cooldown: 4, // 초: 한 발 쏜 뒤 다음 발까지 (장전 소리는 이게 끝날 때). 사장님: 6.5 → 4.5 → 4
+  cooldown: 3, // 초: 한 발 쏜 뒤 다음 발까지 (장전 소리는 이게 끝날 때). 사장님: 6.5 → 4.5 → 4 → 3
   range: 25, // m: 총알이 닿는 거리
   armorBlunt: 0.25, // 투구·판금이 막으면(그리고 바로 부서지면) 몸에는 세기의 이 비율만 둔하게 전해진다
   laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
@@ -34,8 +34,8 @@ export const GUN = {
   reloadIn: 0.25, // 초: 쏜 뒤 이만큼에 걸쳐 총을 가슴 앞으로 당겨 올리고
   reloadOut: 0.6, // 초: 장전 끝 이만큼 전부터 다시 뻗는다 (장전이 끝나는 순간엔 이미 겨누고 있게)
   droop: 0, // 도: 뻗은 팔·총이 무게로 처지는 만큼 겨눔을 위로 올려 준다 (gunPose)
-  recoilBack: 0.5, // N·s: 쏠 때 총을 뒤로 미는 충격
-  recoilUp: 0.2, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다). 총신이 주먹 위에 있는 리볼버에서 총구가 약 18° 들렸다 0.8초에 제자리
+  recoilBack: 0.875, // N·s: 쏠 때 총을 뒤로 미는 충격 (사장님 '반동 1.5~2배': 0.5 → ×1.75)
+  recoilUp: 0.35, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다). 사장님 '반동 1.5~2배': 0.2 → ×1.75 (0.2 일 때 총구가 약 18° 들렸다 0.8초에 제자리)
   spread: 1, // 도: 서서 쏠 때 총알이 총신(레이저)에서 벗어나는 최대 각 — 레이저를 믿고 겨눌 수 있게 작게
   spreadMove: 3, // 도: 걷는 최고 속도로 달리며 쏘면 이만큼 더 벗어난다
 };
@@ -344,7 +344,7 @@ function sound(kind, f, ...more) {
 /** 총소리: 짧고 센 잡음 터짐 + 낮은 "쿵" + 경기장에 울리는 꼬리 */
 export function gunshotSound(snd, pos) {
   const c = snd.ctx;
-  const ev = snd.event({ bus: snd.metalBus, gain: 1.2, prio: 3, pos });
+  const ev = snd.event({ bus: snd.metalBus, gain: 2.2, prio: 3, pos }); // 사장님 '총성도 크게': 1.2 → 2.2 (약 +5 dB)
   const t = c.currentTime;
   const nb = snd._noiseBuf();
   const src = c.createBufferSource();
