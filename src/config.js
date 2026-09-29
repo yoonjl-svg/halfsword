@@ -505,4 +505,9 @@ export const SOUND = {
   reverb: 0, // 경기장 울림 (0 = 끔. 전투는 마른 소리가 낫다는 피드백으로 끔). 쇳소리가 관중석에 되울리는 정도 (원래 소리 대비 울림 에너지 비율의 제곱근)
   samples: true, // 녹음된 소리(public/sfx, Kenney.nl CC0)를 합성 소리에 섞기
   maxVoices: 12, // 동시에 울리는 소리 개수 한도 (넘으면 가장 오래된 소리를 끈다 → 폰 부담 줄이기)
+  // 타격 세기 눈금 (29차, 온몸 타격 R3 대비. sound.hitWeight): 'legacy' = 지금 소리 그대로, 'log' = hitKnee 위로 로그 무게를 켠다.
+  // 디렉터가 R3 에서 'log' 로 넘긴다 (main.js 에서 sound.hitScale = 'log' 도 된다). hitKnee 까지는 두 눈금이 같은 소리다.
+  hitScale: 'legacy',
+  hitKnee: 200, // J. 이 위부터 무게가 붙는다 (지금 게임의 타격은 대체로 이 아래)
+  hitHeavy: 500, // J. 무게 w 가 1 이 되는 에너지 (그 위는 로그로 천천히 더 오른다)
 };
