@@ -13,6 +13,7 @@
 
 ## 지금 상태
 - 브랜치 = main 940f665 + 온몸 기질 초안(persona.whole, 게임 미연결) + 이 문서들. fights12 회귀는 origin/main 기준과 바이트 동일(whole은 읽히지 않음).
+- 시트에 값만 있는 칸(게임 미연결): persona.whole(온몸 기질), persona.close(근접 밀치기). persona.idle은 ai.js holdStart로 연결됨(시작 정지 2초, 발 고정).
 - 광기의 하인리히 도른(`heinrich_mad`, '밤의 왕', 낮 +20%)은 main cc746f6에 반영·배포 완료.
 
 ## 열린 요청 (사장님 답 대기)
@@ -39,6 +40,8 @@ node -e "import('./src/characters.js').then(m=>console.log(Object.keys(m.CHARACT
 ```
 
 ## 다음 할 일
+- [x] 시작 정지 동안 persona.idle 자세 잡기 — ai.js holdStart (발 고정, 시간값은 ARENA.startHold만). 9/30
+- [ ] 근접 밀치기 동작(디렉터·동작·무기 PM)이 생기면 persona.close 연결
 - [ ] 사장님 답(위 1·3) 오면 반영
 - [ ] 동작 PM 범위 오면 windLen 재조정
 - [ ] R5 연결 뒤 `docs/reviews/R5_characters.md`: 기준선 대비 성격 유지 확인
