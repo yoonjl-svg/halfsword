@@ -166,7 +166,7 @@ function makeArm(dr) {
   const body = (rb) => ({ rb, m: rb.mass(), I: localTensor(rb, new Float64Array(9)) });
   // 새 debug 칸 (drive.debug 에 한 번 붙인다)
   const d = dr.debug;
-  for (const k of ['elbowRateErr', 'elbowRateDes', 'elbowRateCmd', 'elbowRateMeas', 'ffArm', 'ffElbow', 'ffCapArm', 'I_arm', 'I_fore', 'omegaDes', 'alphaDes', 'poleHold', 'poleFlipS', 'poleFlipO', 'warpK', 'girdle']) d[k] ??= 0;
+  for (const k of ['elbowRateErr', 'elbowRateDes', 'elbowRateCmd', 'elbowRateMeas', 'ffArm', 'ffElbow', 'ffCapArm', 'I_arm', 'I_fore', 'omegaDes', 'alphaDes', 'poleHold', 'poleFlipS', 'poleFlipO', 'poleJump', 'poleJumpDeg', 'poleJumpMaxS', 'poleJumpMaxO', 'alphaKink', 'warpK', 'girdle']) d[k] ??= 0;
   return {
     tDes: -1, // ω_des 가 이번 스텝 것인지 (드라이브 시계 도장)
     omegaDes: new THREE.Vector3(), alphaDes: new THREE.Vector3(), wFlex: 0, aFlex: 0,
@@ -215,6 +215,15 @@ const ArmMixin = {
     this.stats.ffCap++;
     this.debug.ffCap++;
     this.debug.ffCapArm++; // 팔 몫만 (몸통 몫과 같은 ffCap 에도 센다)
+  },
+  /** 섞지 않고 한 스텝에 돈 pole 각 (보고만, 도는 것은 안 바꾼다): 이번 각·팔마다 가장 큰 각, poleHystDeg/2 넘으면 센다 */
+  notePoleJump(deg, arm) {
+    const d = this.debug;
+    d.poleJumpDeg = deg;
+    if (arm) {
+      if (deg > d.poleJumpMaxO) d.poleJumpMaxO = deg;
+    } else if (deg > d.poleJumpMaxS) d.poleJumpMaxS = deg;
+    if (deg > 0.5 * DRIVE.poleHystDeg) d.poleJump++;
   },
   /** 팔꿈치 모터 목표 빠르기 기록: vz (모터에 넘긴 값), 잰 경첩 빠르기 */
   noteElbow(vz, meas) {
@@ -281,6 +290,22 @@ const ArmMixin = {
       _x.set(0, 1, 0).applyQuaternion(setQ(_qI, f.sword.rotation()));
       d.aimErrDeg = Math.acos(clamp(_x.dot(_w), -1, 1)) / D2R;
     }
+  },
+  /**
+   * §4.3 DRIVE.edgeFromClip 고리 (기본 끔): flatTarget (월드, 단위, 이미 flat 과 부호 맞춤) = lerp(flatTarget, blade × (yaw·Qc_cmd·edge), c).
+   *  edge 는 날이 향하는 쪽이라 칼 면 방향으로는 게임의 moving 몫 (mf = blade × edgeDir) 과 같은 식으로 바꾼다. moving 섞기 앞에 부른다
+   */
+  mixEdge(flatTarget, blade, flat) {
+    if (!DRIVE.hands) return;
+    const e = this.cmd.edge;
+    _v.set(e[0], e[1], e[2]).applyQuaternion(qCmd(this.cmd)).applyQuaternion(this.f.yaw);
+    const mf = _w.crossVectors(blade, _v);
+    if (mf.lengthSq() < 1e-4) return; // 날이 칼 축과 겹침: 정해지지 않는다
+    mf.normalize();
+    if (mf.dot(flat) < 0) mf.negate();
+    flatTarget.lerp(mf, this._c);
+    if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
+    flatTarget.normalize();
   },
   /** wAim (월드, 차분값) = lerp(차분, R·(swordDot·φ̇) + ω_chestCmd, c), R = yaw·Qc_cmd */
   aimRate(wAim) {
@@ -430,6 +455,8 @@ const ArmMixin = {
       if (!cand) {
         P.candT = 0;
         out.copy(pd).multiplyScalar(1 / m);
+        // 후보 아님 (또는 붙든 후보가 풀림): 섞지 않고 바로 간다 → 앞 방향과의 각을 센다 (poleFlip 과 따로)
+        this.notePoleJump(Math.acos(clamp(prev.dot(out), -1, 1)) / D2R, arm);
       } else {
         P.candT += dt;
         if (P.candT >= DRIVE.poleHystT && flex > DRIVE.poleMinFlexDeg * D2R && m > 1e-9) {
@@ -478,15 +505,19 @@ const ArmMixin = {
     const P = solveArmIK(Tp, Ssh, pole, st.outP);
     const M = solveArmIK(Tm, Ssh, pole, st.outM);
     const pd = cmd.phiDot, pdd = cmd.phiDDot;
+    // 손 닿음 자르기 꺾임을 세 풀이가 걸치면 두 차 차분은 꺾임/h 라 α 가 부푼다 → 두 차 몫을 빼고 센다 (한 차 몫·φ̈ 는 둔다)
+    const kink = P.clamped !== o.clamped || M.clamped !== o.clamped;
+    if (kink) d.alphaKink++;
     // 어깨: 가슴 기준 회전 → 월드 (manualMuscle 의 wT 와 같은 틀)
     const r1 = rotVec(_qI.copy(P.qUarm).multiply(_q.copy(M.qUarm).invert()), _x).multiplyScalar(1 / (2 * h)); // dθ/dφ
     const rp = rotVec(_qI.copy(P.qUarm).multiply(_q.copy(o.qUarm).invert()), _y);
     const rm = rotVec(_qI.copy(o.qUarm).multiply(_q.copy(M.qUarm).invert()), _z);
-    rp.sub(rm).multiplyScalar(1 / (h * h)); // d²θ/dφ²
+    if (kink) rp.set(0, 0, 0);
+    else rp.sub(rm).multiplyScalar(1 / (h * h)); // d²θ/dφ²
     st.omegaDes.copy(r1).multiplyScalar(pd).applyQuaternion(_qR);
     st.alphaDes.copy(rp).multiplyScalar(pd * pd).addScaledVector(r1, pdd).applyQuaternion(_qR);
     // 팔꿈치 굽힘
-    const f1 = (P.flex - M.flex) / (2 * h), f2 = (P.flex - 2 * o.flex + M.flex) / (h * h);
+    const f1 = (P.flex - M.flex) / (2 * h), f2 = kink ? 0 : (P.flex - 2 * o.flex + M.flex) / (h * h);
     st.wFlex = f1 * pd;
     st.aFlex = f2 * pd * pd + f1 * pdd;
     st.tDes = this.t;

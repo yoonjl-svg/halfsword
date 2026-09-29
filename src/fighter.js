@@ -1737,11 +1737,18 @@ export class Fighter {
     _mT.add(_mG.addScaledVector(boneAxis, -_mG.dot(boneAxis)));
     // R2 팔 앞먹임 (§6.6): + ffGain·S·I_arm·α_des — Hill 한도 앞에 더한다 (한도는 아래 하나뿐, 물면 ffCap)
     const dff = this.drive?.w > 0 && this.drive.armValid();
-    if (dff) this.drive.armFF(j, _mT, maxT);
+    if (dff) {
+      _mT0.copy(_mT); // 앞먹임 앞 (한도가 앞먹임 때문에 물었는지 가린다)
+      this.drive.armFF(j, _mT, maxT);
+    }
     // 힘-속도 관계: 팔을 빨리 휘두를수록 어깨 힘이 빠진다
     const tlen = _mT.length();
     const cap = maxT * hill(tlen > 1e-6 ? wSw.dot(_mT) / tlen : 0, this.weaponCfg.shoulderVmax);
-    if (dff && tlen > cap) this.drive.noteFfCap();
+    if (dff && tlen > cap) {
+      // 앞먹임 없이도 물었을 스텝은 세지 않는다 (앞먹임이 한도를 넘긴 스텝만)
+      const t0 = _mT0.length();
+      if (t0 <= maxT * hill(t0 > 1e-6 ? wSw.dot(_mT0) / t0 : 0, this.weaponCfg.shoulderVmax)) this.drive.noteFfCap();
+    }
     if (this.ins && j.name === 'uarmS') { const I = this.ins.sh; I.pre = tlen; I.cap = cap; I.maxT = maxT; I.hill = maxT > 0 ? cap / maxT : 0; I.sat = tlen > cap; I.wSw = wSw.length(); I.eAng = _mE.length(); I.wT = wT.length(); }
     if (tlen > cap) _mT.setLength(cap);
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
@@ -1862,6 +1869,7 @@ export class Fighter {
     if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(flat);
     flatTarget.normalize();
     if (flatTarget.dot(flat) < 0) flatTarget.negate();
+    if (DRIVE.edgeFromClip && this.drive?.w > 0) this.drive.mixEdge(flatTarget, blade, flat); // §4.3 고리 (기본 끔)
     const ev = edgeDir.length();
     const moving = THREE.MathUtils.smoothstep(ev, 0.5, 2.5);
     if (moving > 0) {
@@ -2444,6 +2452,7 @@ const _mE = new THREE.Vector3();
 const _mW = new THREE.Vector3();
 const _mA = new THREE.Vector3();
 const _mT = new THREE.Vector3();
+const _mT0 = new THREE.Vector3(); // R2 팔 앞먹임 앞 _mT (ffCap 가림)
 const _mS = new THREE.Vector3();
 const IDENTITY_Q = new THREE.Quaternion();
 const ALONG_X = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2); // 세로(y) 뼈 → 앞(x)으로 눕힘
