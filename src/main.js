@@ -31,10 +31,11 @@ await RAPIER.init();
 // R2 클립 아틀라스 (§3.8-9): 판 전에 읽는다 (Vite 가 묶음 JSON 을 이 조각에 싣는다 — base64 풀기·도함수는 여기서, 싸움 중엔 안 돈다).
 //  beginFight 가 기다린다. 드라이브는 newRound·beginFight 가 붙인다
 let atlas = null;
-const atlasReady = import('./strike/atlas.js')
-  .then(async (m) => {
+//  묶음 JSON 은 여기서 속성 없이 가져와 넘긴다: Vite 개발 서버는 import(…json, { with: { type: 'json' } }) 에 JS 모듈을 내줘 브라우저가 MIME 으로 거절한다
+const atlasReady = Promise.all([import('./strike/atlas.js'), import('./strike/clips/atlas_v0.json')])
+  .then(async ([m, j]) => {
     const t0 = performance.now();
-    atlas = await m.loadAtlasPacked();
+    atlas = await m.loadAtlasPacked(j.default);
     console.info(`[atlas] pack decode ${(performance.now() - t0).toFixed(1)} ms (${atlas.clips.length} clips)`);
     return atlas;
   })
