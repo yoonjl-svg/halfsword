@@ -30,7 +30,7 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, WHOLE, COMMIT, STROKE, GESTURE } from './config.js';
+import { SKILL, WEAPON, THRUST, WHOLE, COMMIT, STROKE, GESTURE, ARM, INPUT } from './config.js';
 import { FINISH } from './finish.js';
 import { guardAt } from './guards.js';
 import { gunCanFire, gunPose } from './gun.js';
@@ -44,6 +44,7 @@ const _tq = new THREE.Quaternion();
 const _g = {}; // guardAt 결과 (획을 시작할 때 휘두르는 면을 정하는 데만 쓴다)
 const _ga = new THREE.Vector3();
 const _gb = new THREE.Vector3();
+const _fs = { x: 0, y: 0 }; // R1: 스텝 시각의 손가락 자리 (fingerTrace.at)
 
 // 손가락 궤적 조각 표시 (input.js TRACE_REPLAY·TRACE_LIFT 와 같은 값. 검술 층은 입력 모듈을 들이지 않는다)
 const T_REPLAY = 1;
@@ -119,6 +120,13 @@ export class Skill {
     this.holdFeet = false; // AI 가 기술 걸음을 딛는 동안 true: 위 내딛기를 걸지 않는다 (ai.js moveFeet, GAIT.fwdFix)
     this.swings = 0;
     this.activity = 0; // 휘두르는 중인 정도 (0~1)
+    // R1 팔 놀림 (CONFIG.ARM): 스텝별 손가락 표본. fc = 읽기 커서(누적 자리·스텝 시각 ms), dF = 이 스텝 손가락 몫(패드 m, handOffset 에 든 것과 같게),
+    //  vF = 손가락 원 속도(두 표본 차 ÷ 벽시계 사이), vLead = 앞먹임 속도(가죽끈이 손가락에 끌려간 몫), gapE = 가죽끈 뒤 handOffset − anchor
+    this.fc = { on: false, x: 0, y: 0, t: 0, dt: 0 };
+    this.dF = new THREE.Vector2();
+    this.vF = new THREE.Vector2();
+    this.vLead = new THREE.Vector2();
+    this.gapE = new THREE.Vector2();
     this.autoGuard = false; // 플레이어만 true (main.js)
     this.cutPending = false; // 베기를 했고 아직 자세로 돌아가지 않음
     this.idle = 0; // 손가락(마우스)이 움직이지 않은 시간
@@ -386,6 +394,61 @@ export class Skill {
     else this.lunge = SKILL.lungeTime;
   }
 
+  /**
+   * R1: 이 스텝의 손가락 표본 (main.js·harness_m 이 handDeltaAt(stepT) 로 handOffset 에 더한 것과 같은 자리 fingerTrace.at(stepT + predictMs)).
+   *  dF = 두 표본 차 × inputScale (죽었거나 권총이면 0 — handOffset 에 안 든다). handOffset 이 손 닿는 끝(R) 밖이면 바깥으로 민 몫은 뺀다.
+   *  vF = dF ÷ 두 표본의 벽시계 사이 (보통은 물리 스텝 그대로. 한 프레임에 스텝이 몰리거나 멈칫·슬로모션으로 시각이 같으면 앞 값 유지 — 튀지 않는다)
+   */
+  readFinger(off, R) {
+    const f = this.f;
+    const c = this.fc;
+    const s = this.trace.at(f.stepT + INPUT.predictMs, _fs);
+    const d = this.dF;
+    c.dt = 0;
+    if (!c.on) {
+      c.on = true;
+      d.set(0, 0);
+      this.vF.set(0, 0);
+    } else {
+      const k = f.alive && !f.weapon?.gun ? f.inputScale ?? 1 : 0;
+      d.set((s.x - c.x) * k, (s.y - c.y) * k);
+      const L = off.length();
+      if (L > R) {
+        const dr = (d.x * off.x + d.y * off.y) / L;
+        if (dr > 0) {
+          d.x -= (dr * off.x) / L;
+          d.y -= (dr * off.y) / L;
+        }
+      }
+      c.dt = (f.stepT - c.t) / 1000;
+      if (c.dt > 0) this.vF.set(d.x / c.dt, d.y / c.dt);
+    }
+    c.x = s.x;
+    c.y = s.y;
+    c.t = f.stepT;
+    return true;
+  }
+
+  /**
+   * R1 (d): 앞먹임 속도 = 가죽끈이 손가락에 끌려간 몫. 건너뛰기 중이면 손가락 속도 그대로. 아니면 앞 스텝의 틈(gapE, ≤ 반경)에
+   *  손가락 몫(dF)만 더했을 때 가죽끈이 끌리는 만큼 (떨림은 0, 흔들림·자세 복귀·되맞춤처럼 손가락 아닌 이동은 들지 않는다. 크기 ≤ |dF|)
+   */
+  leadVel(skip, dead) {
+    const c = this.fc;
+    if (c.dt > 0) {
+      if (skip) this.vLead.copy(this.vF);
+      else {
+        const gx = this.gapE.x + this.dF.x;
+        const gy = this.gapE.y + this.dF.y;
+        const g = Math.hypot(gx, gy);
+        const k = g > dead ? (g - dead) / g / c.dt : 0;
+        this.vLead.set(gx * k, gy * k);
+      }
+    }
+    const off = this.f.handOffset;
+    this.gapE.set(off.x - this.anchor.x, off.y - this.anchor.y);
+  }
+
   update(dt) {
     if (dt <= 0) return;
     const f = this.f;
@@ -393,6 +456,9 @@ export class Skill {
     this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     const off = f.handOffset;
     const R = WEAPON.reach;
+    // R1: 손가락을 가진 파이터는 이 스텝의 손가락 표본을 읽는다 (손이 닿는 끝에 자르기 전 — 바깥으로 민 몫은 빼야 하므로)
+    const A = ARM;
+    const fin = (A.lead || A.rawSwing || A.leashSkip) && INPUT.coalesce && !!this.trace && f.stepT > 0 && this.readFinger(off, R);
     if (off.length() > R) off.setLength(R);
     this.clock += dt;
 
@@ -413,7 +479,9 @@ export class Skill {
     this.vel.x += (rx - this.vel.x) * k;
     this.vel.y += (ry - this.vel.y) * k;
     const sp = this.vel.length();
-    const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
+    // R1 (c): 손가락 원 속도로 읽는다 (걸러진 vel 은 τ 40 ms 늦다). 손가락이 없거나 끄면 예전 그대로
+    const vf = fin ? this.vF.length() : 0;
+    const swinging = (A.rawSwing && fin ? vf : sp) > SKILL.swingSpeed && f.alive && f.armed;
     // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐).
     //  결심 베기의 획 프로그램이 도는 동안(확정 뒤)도 휘두르는 중이다 — 확정 순간 1로 뛰지 않고 휘두를 때와 같은 빠르기로 오른다
     //  (1로 뛰면 몸이 팔 베기보다 먼저 돌아 칼이 100 ms 늦었다: 걸어 들어가며 벤 왼쪽 사선이 팔 베기가 맞힌 거리에서 비켜 갔다)
@@ -424,18 +492,28 @@ export class Skill {
     // 0) 가죽끈: anchor는 손가락(off)이 반경(inputDeadRadius)을 넘어야 그만큼만 끌려간다.
     //  반경 안의 떨림은 anchor를 전혀 움직이지 못한다 — 어디서 떨든(자세 경계라도) 걸러진다.
     //  큰 움직임(진짜 베기)은 반경이 순식간에 다 채워져 손가락과 거의 같이 움직인다(지연 ≈ 반경/속도).
+    //  R1 (b) 목줄 건너뛰기: 손가락이 swingSpeed 보다 빠른 동안은 anchor 가 손가락 몫(dF)을 그대로 따라가고(틈을 그대로 두므로 들어갈 때 튀지 않는다),
+    //  남은 틈은 넘친 빠르기가 반경을 지나는 만큼 풀린다 (문턱에서 0 → 나올 때도 튀지 않는다). 느린 떨림은 예전 가죽끈 그대로
+    const skip = A.leashSkip && fin && vf > SKILL.swingSpeed;
     if (SKILL.handDynamicsOn) {
+      const dead = SKILL.inputDeadRadius;
+      if (skip) this.anchor.add(this.dF);
       const adx = off.x - this.anchor.x;
       const ady = off.y - this.anchor.y;
       const ad = Math.hypot(adx, ady);
-      const dead = SKILL.inputDeadRadius;
       if (ad > dead) {
         const k = (ad - dead) / ad;
         this.anchor.x += adx * k;
         this.anchor.y += ady * k;
       }
+      if (skip) {
+        const e = Math.exp((-(vf - SKILL.swingSpeed) * dt) / dead);
+        this.anchor.set(off.x - (off.x - this.anchor.x) * e, off.y - (off.y - this.anchor.y) * e);
+      }
+      if (A.lead && fin) this.leadVel(skip, dead);
     } else {
       this.anchor.copy(off);
+      if (A.lead && fin && this.fc.dt > 0) this.vLead.copy(this.vF);
     }
 
     // 흐름(SKILL.flow, 시제품): 멈추지 않고 휘어 이어지는 끌기를 흐름으로 본다 (끄면 아무 일도 없다 — flowing 은 늘 false)
@@ -458,7 +536,8 @@ export class Skill {
       const pw = cm.padW;
       this.aimRaw.set(this.anchor.x + (cm.padX - this.anchor.x) * pw + this.follow.x, this.anchor.y + (cm.padY - this.anchor.y) * pw + this.follow.y);
     }
-    if (this.aimRaw.length() > R) this.aimRaw.setLength(R);
+    const rawOut = this.aimRaw.length() > R;
+    if (rawOut) this.aimRaw.setLength(R);
     // 손 목표를 "딱 멈추는"(임계 감쇠) 2차 필터로 거른다: 목표가 순간이동해도 손은 가속·감속하며 간다.
     //  (사람의 손도 순간적으로 속도를 바꾸지 못한다. 목표가 튀면 근육이 그 충격을 몸통에 그대로 전해 출렁인다)
     // 휘두르는 순간엔 근육을 긴장시켜(공동 수축) 더 빠르고 단단하게 따라간다. 결심 베기의 획 프로그램이 도는 동안도
@@ -468,8 +547,32 @@ export class Skill {
     const w = this.filterW;
     const ox = this.aim.x;
     const oy = this.aim.y;
-    const ax = w * w * (this.aimRaw.x - this.aim.x) - 2 * w * this.aimVel.x;
-    const ay = w * w * (this.aimRaw.y - this.aim.y) - 2 * w * this.aimVel.y;
+    let ax, ay;
+    if (A.lead && fin) {
+      // R1 (d) 앞섬 보정: 손가락 속도 앞먹임 (aimLead). 고른 끌기에서 지연 (1 − aimLead)·2/ω, 멈추면 앞먹임이 0 이 되어 필터가 선다.
+      //  획 패드가 섞이는 만큼(padW)은 손가락 몫이 아니다. 손 목표가 닿는 끝(R)에 잘렸으면 바깥으로 민 몫은 앞서지 않는다
+      let lx = this.vLead.x;
+      let ly = this.vLead.y;
+      if (cm.on && cm.padW > 0) {
+        lx *= 1 - cm.padW;
+        ly *= 1 - cm.padW;
+      }
+      if (rawOut) {
+        const ux = this.aimRaw.x / R;
+        const uy = this.aimRaw.y / R;
+        const dr = lx * ux + ly * uy;
+        if (dr > 0) {
+          lx -= dr * ux;
+          ly -= dr * uy;
+        }
+      }
+      const Ld = A.aimLead;
+      ax = w * w * (this.aimRaw.x - this.aim.x) + 2 * w * (Ld * lx - this.aimVel.x);
+      ay = w * w * (this.aimRaw.y - this.aim.y) + 2 * w * (Ld * ly - this.aimVel.y);
+    } else {
+      ax = w * w * (this.aimRaw.x - this.aim.x) - 2 * w * this.aimVel.x;
+      ay = w * w * (this.aimRaw.y - this.aim.y) - 2 * w * this.aimVel.y;
+    }
     this.aimVel.x += ax * dt;
     this.aimVel.y += ay * dt;
     this.aim.x += this.aimVel.x * dt;

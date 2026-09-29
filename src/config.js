@@ -482,7 +482,24 @@ export const SKILL_BODY = {
   pelvis: 34,
   chest: 26,
   holdAmount: 1, // 베지 않고 자세만 고칠 때 몸을 트는 정도 (벨 때 = 1). 줄이면 손이 몸통 대신 멀리 뻗어야 해서 오히려 흔들린다
-  holdSpeed: 0.3, // 그때 몸이 따라가는 빠르기 비율 (느긋하게)
+  // 그때 몸이 따라가는 빠르기 비율. R1 (docs/whole_body_redesign.md 3-2 (g), §9): 0.3 → 0.6 (끄기: SKILL_BODY.holdSpeed=0.3). AI 몸에도 같이 든다
+  holdSpeed: R0_OFF ? 0.3 : 0.6,
+};
+
+// R1 팔 놀림 지연 (docs/whole_body_redesign.md 3-2 (b)(c)(d), §8 R1). 손가락을 가진 파이터(skill.trace = input.fingerTrace, INPUT.coalesce)만:
+//  물리 스텝마다 손가락 자리(fingerTrace.at(stepT + predictMs), R0 입력과 같은 표본)의 두 표본 차 = 손가락 원 속도(패드 m/s, 벽시계).
+//  AI(손가락 없음)·INPUT.coalesce 끔(프레임에 몰아 넣어 원 속도가 깜빡인다)은 예전 길. 모두 끄면 예전과 바이트까지 같다.
+//  시뮬 끄기: ARM.lead=false ARM.rawSwing=false ARM.leashSkip=false SKILL_BODY.holdSpeed=0.3
+export const ARM = {
+  // (d) 앞섬 보정: 손 목표 필터(임계 감쇠, ω 그대로)에 손가락 속도 앞먹임 → 고른 지연 2/ω → (1 − aimLead)·2/ω (24 rad/s 에서 83 → 17 ms).
+  //  앞먹임 속도는 가죽끈이 손가락에 끌려간 몫만 (떨림·자세 복귀·되맞춤·손 닿는 끝·멈칫 배율이 튀는 값을 만들지 않는다). 자르기 없음
+  lead: !R0_OFF,
+  aimLead: 0.8, // §9 첫 값 (사장님 확인 전 설계 기본값)
+  // (c) swinging·activity 입력 = 손가락 원 속도 > SKILL.swingSpeed (τ 40 ms 로 거른 vel 대신. vel 은 이어 베기·흐름에 그대로). activity 의 오름·내림 빠르기는 그대로
+  rawSwing: !R0_OFF,
+  // (b) 목줄 건너뛰기: 손가락 원 속도 > SKILL.swingSpeed 동안 anchor 가 손가락을 그대로 따라가고 남은 틈은 넘친 빠르기만큼 풀린다
+  //  (들어갈 때·나올 때 anchor 가 튀지 않는다). 떨림 거르기(inputDeadRadius)는 그대로
+  leashSkip: !R0_OFF,
 };
 
 // 상대 AI (ai.js). 사람 검객처럼 간격을 지키며 빈틈을 노린다
