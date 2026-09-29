@@ -102,6 +102,12 @@ mustThrow('phi 가 표시 지도에서 벗어남', mut((c) => (c.data.cols.phi[6
 mustThrow('sword 가 단위 벡터가 아님', mut((c) => { for (let k = 30; k < 33; k++) c.data.cols.sword[k] *= 1.1; }), '길이');
 mustThrow('sword 가 한 표본에 20° 넘게 돎', mut((c) => { const s = c.data.cols.sword; [s[90], s[91], s[92]] = [-s[90], -s[91], -s[92]]; }), 'vecStepMaxDeg');
 mustThrow('보통 벌에 step 없음', mutM((c) => (c.step = null)), 'step');
+mustThrow('step.from 이 2벡터가 아님', mutM((c) => (c.step.from = [])), 'step');
+mustThrow('step.to 원소가 수가 아님', mutM((c) => (c.step.to = [null, 0])), 'step');
+mustThrow('step liftPhi > landPhi', mutM((c) => (c.step.liftPhi = 0.9)), 'liftPhi');
+mustThrow('step liftPhi 가 φ 범위 밖', mutM((c) => (c.step.liftPhi = 9)), 'liftPhi');
+mustThrow('step.liftT 가 수가 아님', mutM((c) => (c.step.liftT = 'x')), 'liftT');
+mustThrow('step liftT ≥ landT', mutM((c) => (c.step.liftT = c.step.landT + 0.1)), 'liftT');
 mustThrow('recoverTo 가 자세 id 가 아님', mut((c) => (c.recoverTo = 'nebenhut')), 'recoverTo');
 mustThrow('startFrom 이 자세 id 가 아님', mut((c) => (c.startFrom = 'zornhut')), 'startFrom');
 mustThrow('작은 벌 startPose.handError > 0.02', mut((c) => (c.startPose.handError = 0.03)), 'handError');
@@ -124,6 +130,7 @@ mustThrow('묶음 자료에 NaN', () => {
 mustThrow('묶음 marks 차례', () => validatePack({ ...packJson, clips: [{ ...packJson.clips[0], marks: { ...packJson.clips[0].marks, tw: 0.9 } }] }), 'marks 차례');
 mustThrow('묶음 sha1 꼴이 아님', () => validatePack({ ...packJson, clips: [{ ...packJson.clips[0], sha1: 'abc' }] }), 'sha1');
 mustThrow('묶음 크게 벌에 step 없음', () => validatePack({ ...packJson, clips: [{ ...packJson.clips[2], step: null }] }), 'step');
+mustThrow('묶음 step.from 이 2벡터가 아님', () => validatePack({ ...packJson, clips: [{ ...packJson.clips[1], step: { ...packJson.clips[1].step, from: [] } }] }), 'step');
 // sha1 ≠ 원본 파일 (둘 다 디스크에 있을 때): 이 도구가 견준다
 function checkSha1(pack, dir) {
   for (const c of pack.clips) {

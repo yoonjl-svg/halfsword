@@ -471,6 +471,7 @@ const _r = new Float64Array(3);
 
 // ── 검사 ──
 const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
+const isVec2 = (v) => Array.isArray(v) && v.length === 2 && isNum(v[0]) && isNum(v[1]);
 function checkMarks(id, marks, phiMarks) {
   if (!marks) fail(id, 'marks 없음');
   const m = marksArr(marks);
@@ -485,8 +486,12 @@ function checkIds(id, clip) {
   if (!GUARD_IDS.includes(clip.recoverTo)) fail(id, `recoverTo '${clip.recoverTo}' 은 게임 자세 id 가 아님`);
   if (clip.size !== 'small' && !clip.step) fail(id, `${clip.size} 벌에 step 이 없음`);
   if (clip.step) {
+    // 걸음: from·to 는 [앞, 옆] 2벡터, liftPhi < landPhi 가 φ 표시 범위 안, liftT·landT 는 있으면 수 (step() 이 그대로 뺀다)
     const s = clip.step;
-    if (!(s.foot === 'L' || s.foot === 'R') || !Array.isArray(s.from) || !Array.isArray(s.to) || !isNum(s.liftPhi) || !isNum(s.landPhi)) fail(id, `step 이 온전하지 않음: ${JSON.stringify(s)}`);
+    if (!(s.foot === 'L' || s.foot === 'R') || !isVec2(s.from) || !isVec2(s.to) || !isNum(s.liftPhi) || !isNum(s.landPhi)) fail(id, `step 이 온전하지 않음: ${JSON.stringify(s)}`);
+    if (!(s.liftPhi >= PHI_MARKS[0] && s.liftPhi < s.landPhi && s.landPhi <= PHI_MARKS[5])) fail(id, `step liftPhi ${s.liftPhi} < landPhi ${s.landPhi} 가 φ ${PHI_MARKS[0]} … ${PHI_MARKS[5]} 안이어야 함`);
+    for (const k of ['liftT', 'landT']) if (s[k] != null && !isNum(s[k])) fail(id, `step.${k} 가 수가 아님 (${s[k]})`);
+    if (isNum(s.liftT) && isNum(s.landT) && !(s.liftT < s.landT)) fail(id, `step liftT ${s.liftT} ≥ landT ${s.landT}`);
   }
 }
 
