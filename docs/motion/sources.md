@@ -19,16 +19,16 @@
 **아직 거절** — idosi.org(403), researchgate.net(403), ieeexplore.ieee.org(418), api.semanticscholar.org(429 = 너무 잦은 요청). 이 셋은 사이트 쪽이 자동 접속을 막는 것이라 환경 설정 문제가 아니다 — 다른 사본(도서관·저자 사본)을 찾는다.
 (9/29 낮까지는 위 대부분이 프록시에서 거절돼 검색 요약만 받았다. 표의 `snippet` 표시는 그때 것 — 원문을 읽으면 `full`/`abstract` 로 바꾼다.)
 
-## 0-2. 무기·검술 연구 ASS 표본 점검 (9/29, 디렉터 요청 — 인용 5건, 검색 요약 수준)
+## 0-2. 무기·검술 연구 ASS 표본 점검 (9/29, 디렉터 요청 — 인용 5건, 낮에는 검색 요약 수준 · 밤에 웹이 열려 본문으로 다시 확인)
 
 | 인용 | 점검 결과 | 고친 것 |
 |---|---|---|
-| ARMA "롱소드 칼끝 약 33.5 m/s" | **오독** — 측정이 아니라 칼자루(탱) 힘 셈의 가정 예시 (원문 검색 요약으로 다시 확인) | [2차 예시값]으로 낮추고 칼끝 빠르기 근거에서 뺌(README·evaluation·longsword_cuts·targets 문장, Zornhau 클립 `sources`) |
-| Chen 2017 "손이 발보다 0.07±0.05 s 먼저" | 값은 맞음. 1차 출처는 Gholipour 외 2008, Chen 은 인용 [2차] | Gholipour 행으로 옮김(`lunge_flow.md`, 런지 빌드 주석) |
+| ARMA "롱소드 칼끝 약 33.5 m/s" | **오독** — 측정이 아니라 칼자루(탱) 힘 셈의 가정 예시 (9/29 밤 1~3부 **본문 확인**, 3부 motions_and_impacts3.htm) | [2차 예시값]으로 낮추고 칼끝 빠르기 근거에서 뺌(README·evaluation·longsword_cuts·targets 문장, Zornhau 클립 `sources`) |
+| Chen 2017 "손이 발보다 0.07±0.05 s 먼저" | 값은 맞음. 1차 출처는 Gholipour 외 2008 (Chen 본문에는 이 수치 없음). **9/29 밤 Gholipour 본문: 저자는 숙련자 0.07 s 를 "거의 함께"로 읽고 "손 먼저" 믿음을 반박** — 표본 8명(초보 4·국가대표 4) | Gholipour 행으로 옮김(`lunge_flow.md`, 런지 빌드 주석) |
 | 검도 머리치기 0.818±0.085 s | 확인 | 세부(19명·250 Hz) 더함 |
 | Escamilla 2009 윗몸 857 °/s·배트 30 m/s | 확인 | 학술지 더함 |
 | Choi 거합 "무게중심 약 0.6 m/s 빠름" | 논문은 있으나 수치를 못 찾음 | ▶검증 필요 표시 |
-| (덤) Klempous·Kluwak 롱소드 모캡 | 논문 둘 있음 확인. 39 마커·근전도 16·인원은 확인 못 함 | ▶검증 필요 표시 |
+| (덤) Klempous·Kluwak 롱소드 모캡 | 9/29 밤 초록 확인: 숙련자 1 + 초보들(수 미상), Plug-in Gait 39 마커, 근전도 16, 힘·영상. PJAIT HML·Vicon·"요청하면 접근"은 초록에 없음, 공개 자료도 없음 | ▶ 표시 풀고 확인된 것만 남김 |
 
 ## 0-3. Meyer 1570 본문 대조 (9/29 — 네트워크가 열려 읽음)
 
@@ -52,9 +52,9 @@
 | 자료 | 무엇에 썼나 | 이용 조건 | 읽은 깊이 |
 |---|---|---|---|
 | Liechtenauer Zettel (14세기) 다섯 비밀 베기 구절 | Zwerch·Schiel·Scheitel·Krump 의 목적(무엇을 꺾나) | 퍼블릭 도메인 | memory |
-| Joachim Meyer, *Gründtliche Beschreibung der Kunst des Fechtens* (1570) | 분노의 자세(왼발 앞, 칼 오른 어깨, 칼날 등 뒤로), 네 곧은 베기, "모든 베기는 제 걸음", 베기 그림(세로·가로·사선) | 원문·도판 퍼블릭 도메인 | snippet (번역 인용 통해) |
+| Joachim Meyer, *Gründtliche Beschreibung der Kunst des Fechtens* (1570) | 분노의 자세(왼발 앞, 칼 오른 어깨, 칼날 등 뒤로), 네 곧은 베기, "모든 베기는 제 걸음", 베기 그림(세로·가로·사선) | 원문·도판 퍼블릭 도메인 | **full** — Garber 영역 + 1570 독일어 원문 (sprechfenster.org, §0-3) |
 | Pseudo-Hans Döbringer 주해 (1389, Hs.3227a) | 오른쪽에서 베며 오른발로 내딛기 | 원문 퍼블릭 도메인 | snippet |
-| Sigmund Ringeck 주해 (15세기) | Zornhau 문장(오른 어깨에서 앞날로 세게, 약하면 칼끝을 얼굴로) | 원문 퍼블릭 도메인 | snippet |
+| Sigmund Ringeck 주해 (15세기), Trosclair 역 (Wiktenauer) | 다섯 비밀 베기 주해 — Zornhau 27절(오른 어깨에서 앞날로 세게, 약하면 칼끝을 얼굴로; 걸음은 없음), Krumphau 42절(오른발로 상대 왼쪽까지 넓게 뛰어 딛고 팔을 엇걸어 칼끝을 손 위로), Zwerchhau 49절(오른발로 상대 왼쪽으로, 칼자루 머리 앞 높이·엄지 아래, 뒷날로 가로), Schielhau 58~59절(팔을 곧게 뻗어 뒷날로 상대 칼 약한 곳 → 오른 어깨; "사팔뜨기"는 이름에만), Scheitelhau 63절(위에서 곧게 앞날로, 팔을 높이 둔 채 칼끝을 얼굴로) | 원문 퍼블릭 도메인. **Trosclair 역 CC BY-NC-SA 4.0(비영리)** — 짧은 인용만. Farrell·Rawlings·ARMA 역은 저작권 — 쓰지 않음 | **full** (9/29 밤) |
 | Fiore, Getty MS Ludwig XV 13 (22r·23r·23v) | 이번 v0 에는 쓰지 않음 (CombatLab 인계서의 내려베기 참고 기록만 물려받음) | Getty Open Content (이미지 자유 이용 — 조건 재확인 필요) | 이전 프로젝트 기록 |
 
 ## 2. 번역·해설 [2차]
@@ -65,14 +65,14 @@
 | Wiktenauer 번역들 (Trosclair Ringeck, Lindholm Döbringer, Garber–Chidester Meyer 초벌 번역 PDF) | Wiktenauer 자체 글은 CC BY-SA 4.0, **번역마다 조건이 다름**(토론 페이지 표). 일부는 특별 허락으로만 올라 있음 | 조건 미확인 — 문장 인용은 짧게, 게임 안 글로 옮기지 않는다 |
 | 해설 블로그 (grauenwolf, swordfight.uk, scholarvictoria) | 인용만 | Meyer 네 곧은 베기, 걸음 규칙 |
 | **"Zornhau 끝 = 바꿈(Wechsel)"** | — | **원문 확인(9/29)**: 분노의 자세에서 시작, 반쯤에 긴 자세, 끝에 바꿈 — Meyer 장검 3장 fol. Ⅰ.9v.3–10r.1 "auff halben weg des hauwes ins Langort, und am endt in den Wechsel". 옆 지킴은 끝이 아니라 올려베기의 시작 |
-| 19세기 브로드소드·세이버 교본의 moulinet (Allanson-Winn & Phillipps-Wolley 1890, 기병 세이버 교범, Burton 1876 — 본문은 막힘) | 원문 퍼블릭 도메인 | 검색 요약만: 손을 뒤집어 칼을 몸 오른쪽 뒤로 원을 그려 올리고 손은 오른 어깨 가까이, 팔꿈치는 몸 안쪽. 세이버 클립(`moulinet_manuals`) 근거 |
-| Figueyredo, *Memorial of the Practice of the Montante* (1651) — 몬탄테 혼자 연습 규칙 32개 | 원문 퍼블릭 도메인, 번역은 조건 확인 전 — 서술만 요약 | 검색 요약만 읽음. 츠바이핸더 클립(`sources` 의 `figueyredo_montante`) 근거: 크게 돌리며 멈추지 않고 잇는다 |
+| 19세기 브로드소드·세이버 교본의 moulinet (Allanson-Winn & Phillipps-Wolley 1890, 기병 세이버 교범, Burton 1876 — 본문은 막힘) | 원문 퍼블릭 도메인 (Project Gutenberg) | **9/29 밤 본문 확인 — 요약과 세부가 다름.** Burton 1876 II장 §2: 손을 뒤집으며 칼이 오른 어깨 옆을 지나 원(Outside Moulinet), **팔은 거의 편 채** 팔꿈치가 흔들리지 않게. Allanson-Winn 1890 III장: "moulinet" 낱말은 없음, 원 막기에서 손목을 오른 어깨 20~25 cm 까지 당기고 칼끝을 뒤로 떨궈 원을 그림. 기병 교범(Bowdler Bell)은 못 읽음. "팔꿈치는 몸 안쪽"은 moulinet 서술이 아니라 다른 자세 옮김 서술. 세이버 클립 근거 문장(`moulinet_manuals`)을 고침 — 클립 모양(손이 어깨 가까이 감김)은 Allanson-Winn 쪽, Burton 의 "팔을 편 원"은 더 큰 moulinet (v1 에 견줄 거리) |
+| Figueyredo, *Memorial of the Practice of the Montante* (1651) — 몬탄테 혼자 연습 규칙 32개 | 원문 퍼블릭 도메인. Myers·Hick 역(Wiktenauer) **CC BY-NC-SA 4.0(비영리)** — 서술만 요약 | **9/29 밤 본문 확인 — 요약이 지나쳤다.** 단순 16 + 겹친 16 규칙: 걸음마다 아래에서 위로 올려베기·머리 위로 넘겨 돌리는 베기를 잇고 몸은 칼이 베는 쪽으로 돈다(Rule I). 그러나 **베기마다 칼을 얼굴 앞에 세워 멈춘다**("stopping" 8번). "멈추지 않고 잇는다"는 틀림 → 근거 문장을 고침. 츠바이핸더 v0 클립은 지나가기 뒤 얼굴 앞 멈춤이 없다 — v1 에 견줄 거리 |
 
 ## 3. 모션 캡처 논문·데이터 [측정]
 
 | 자료 | 내용 | 이용 조건 | 지금 상태 |
 |---|---|---|---|
-| Klempous·Kluwak·Kulbacki·Rozenblit 외, 독일 롱소드 다섯 비밀 베기 모캡 (PJAIT Human Motion Lab, Bytom; IEEE CINTI 2021 pp.137–142, EUROCAST 2022 "Reference Datasets for Analysis of Traditional Japanese and German Martial Arts" LNCS 13789 — 논문 있음 확인, 연구 ASS 표본 점검 9/29) | Zornhau·Schielhau·Zwerchhau·Krumphau·Scheitelhau. 숙련자 1명 + 초보들, Vicon Plug-in Gait 39 마커 + 근전도 16, 영상 — **이 세부는 확인 못 함 ▶검증 필요** | **공개 안 됨.** "HML 에 요청하면 접근 가능"(초록). 재사용 조건 불명 | **가장 필요한 자료.** 얻으려면 연구소·저자 연락이 필요 → **사장님께 먼저 여쭘** |
+| Klempous·Kluwak·Kulbacki·Rozenblit 외, 독일 롱소드 다섯 비밀 베기 모캡 (PJAIT Human Motion Lab, Bytom; IEEE CINTI 2021 pp.137–142, EUROCAST 2022 "Reference Datasets for Analysis of Traditional Japanese and German Martial Arts" LNCS 13789 — 논문 있음 확인. doi 10.1109/CINTI53070.2021.9668598 · 10.1007/978-3-031-25312-6_59) | Zornhau·Schielhau·Zwerchhau·Krumphau·Scheitelhau. 숙련자 1명 + 초보들(수 미상), 전신 Plug-in Gait 39 마커 + 근전도 16, 힘·영상 (**9/29 밤 초록 확인**, 본문은 유료). 기관 이름·Vicon 은 초록에 없음 | **공개 자료 없음**(Zenodo·Figshare·OpenAlex 찾아봄). 접근 조건은 초록에 없다(예전 "요청하면 접근" 문장은 확인 안 됨) | **가장 필요한 자료.** 얻으려면 연구소·저자 연락이 필요 → **사장님께 먼저 여쭘** |
 | Grontman 외, "Analysis of sword fencing training evaluation possibilities using Motion Capture techniques", IEEE SoSE 2020 | 4명(전문 1), Zwerchhau·Schielhau 칼끝 마커 궤적 그림 | 논문 — 그림 값 인용 | 초록만. ResearchGate 에 PDF 가 있을 수 있음(열지 못함) |
 | CMU Graphics Lab Motion Capture, subject 02 trial 07·08·09 "swordplay" (120 Hz) | 일반 칼놀림, 유파 검술 아님 | 연구·상업 제품 포함 사용 가능, **데이터 자체 재판매 금지**(변환본 포함), 출처 표기 요청 | 이전 CombatLab 에서 그대로 재생했다가 거절됨(뻣뻣함·뒤틀림). 여기서는 쓰지 않음 |
 | Murase 외, 검도 8단 머리치기 모캡 (ISBS 2020) | 10명, 최대 노력 머리·손목 치기 | 논문 | 초록만 — 숫자 없음 |
@@ -88,16 +88,16 @@
 | Welch 외 1995 (JOSPT 22(5), 야구 타격) | 골반 714 → 어깨 937 °/s | snippet |
 | Escamilla 외 2009 (야구, J. Appl. Biomech. 25(3)) | 성인 윗몸 857 °/s, 배트 30 m/s (청소년 717 °/s·25 m/s) | snippet — 연구 ASS 표본 점검 9/29 확인 |
 | SwordSTEM (Sean Franklin) "How fast do swords move" | 힘 뺀 오른쪽 내려베기, 베는 부분 최고 약 20 m/s, 닿기 몇 인치 앞에서 최고 | snippet |
-| George Turner (ARMA) "Sword Motions and Impacts" | ~~롱소드 칼끝 약 75 mph ≈ 33.5 m/s~~ → **측정값이 아니다**: 칼자루(탱) 힘을 셈하는 가정 예시("75 mph 로 부딪히면 폼멜 빠르기가 15 mph 쯤 바뀌어야"). [2차 예시값] — 칼끝 빠르기 근거에서 뺐다 (연구 ASS 표본 점검 9/29, 원문 검색 요약으로 확인) | snippet |
+| George Turner (ARMA) "Sword Motions and Impacts" | ~~롱소드 칼끝 약 75 mph ≈ 33.5 m/s~~ → **측정값이 아니다**: 칼자루(탱) 힘을 셈하는 가정 예시("75 mph 로 부딪히면 폼멜 빠르기가 15 mph 넘게 바뀌어야"). [2차 예시값] — 칼끝 빠르기 근거에서 뺐다 (9/29 밤 본문 확인) | full |
 | AAOS 관절 가동 범위 (1965; Greene & Heckman 1994) | 어깨 굽힘·벌림 180°, 팔꿈치 150°, 손목 굽힘 80°·폄 70°, 가슴허리 돌림 45°, 엉덩이 돌림 45° | snippet |
 | Chen 외 2017 개관 **본문** (PLoS ONE — 9/29 열림) | 런지 최고 빠르기: 무게중심 1.92/1.72 m/s(플뢰레/에페), 칼 2.91/2.49, 앞발 4.56/4.10. 숙련자 칼 2.90±0.30 vs 초보 2.52±0.29 m/s. "숙련자는 앞발보다 칼 든 팔을 먼저 뻗는다"는 Hassan & Klauck 1998 (ISBS) 인용. 손-발 0.07 s 수치는 본문에 없음 | **본문 확인** |
 | ISBS 엘리트 펜싱 런지 | 길이 1.24 m (0.88~1.86), 엉덩이 속도 1.97 m/s, 몸통 앞기울기 17.5° | snippet |
-| Chen 외 2017 펜싱 생체역학 개관 (PLoS ONE) | 숙련자는 팔이 발보다 먼저. 손-발 시간차는 아래 Gholipour 외 2008 을 인용한 것 [2차] (연구 ASS 표본 점검 9/29) | 검색 요약 (본문 막힘) |
-| Gholipour 외 2008 펜싱 런지 입체 촬영 (World J. Sport Sci.; 샤리프대 초보 8명·이란 국가대표, 고속 카메라 3대) | **손이 발보다 먼저 0.07±0.05 s (초보 0.13±0.15 s)** — `lunge_flow.md` 런지 순서의 1차 출처. 엉덩관절 굽힘 숙련 53° / 초보 40°, 앞무릎 굽힘 약 20° → 폄 51±9° | 검색 요약 |
-| Mulloy 외 ISBS 펜싱 런지 운동 사슬 | 뒷다리 엉덩이→무릎→발목 순서, 뒷발목 폄 564±132 °/s | 검색 요약 |
+| Chen 외 2017 펜싱 생체역학 개관 (PLoS ONE) | (위 본문 행으로 대신함) | full |
+| Gholipour·Tabrizi·Farahmand 2008 "Kinematics analysis of lunge fencing using stereophotogrametry", World J. Sport Sci. 1(1):32–37 — 남자 플뢰레 **8명(초보 4·국가대표 4)**, 50 fps 카메라 3대, 옆면 2D, 통계 검정 없음 | 팔꿈치 움직임 시작이 무릎보다 0.07±0.05 s(숙련)·0.13±0.15 s(초보) 먼저 — **저자는 숙련자가 "거의 함께" 움직인다고 읽고 "손 먼저" 믿음을 반박**. 엉덩관절 굽힘 숙련 53±11° / 초보 40±7°, 앞무릎 굽힘 20±12° → 폄 51±9° (초보 38 → 18±8°). `lunge_flow.md` 런지 순서의 1차 출처 — 클립의 0.07 s 는 그대로, 문구만 "먼저이거나 거의 함께"로 고침 | full (블로그 전재본 — 출판사 idosi.org 는 자동 접속 거절) |
+| Mulloy·Mullineaux·Irwin 2015 ISBS 33 (Poitiers) pp.1114–1117 펜싱 런지 운동 사슬 — 숙련 4·초보 6, 카메라 12대 | 숙련자 뒷다리 엉덩이→무릎→발목 순서(초보는 뚜렷하지 않음), 뒷발목 폄 564±132 °/s (초보 273±184) | full |
 | 검도 머리치기 시간 (Sports Biomechanics 2026) | 대학 선수 19명, 머리치기 0.818±0.085 s, 손목치기 0.745±0.101 s (동작 시작~닿기 직전, 250 Hz) | snippet — 연구 ASS 표본 점검 9/29 확인 |
 
-- 무거운 도구의 운동 사슬 [검색 요약]: 회전 투포환의 마지막 동작은 앞 60% 동안 발목·무릎·엉덩이가 **함께** 펴는 밀기, 그 뒤 팔꿈치·손목 차례다(가벼운 던지기의 채찍과 다름) — [DOAJ 초록](https://oalib-perpustakaan.upi.edu/Record/doaj_8e99cb013b1a44bba94b75c1c94b59c0/Description). 단순 팔 모형은 가벼운·무거운 도구의 최적 기법이 다르다고 본다(Alexander 1991 J Theor Biol 계열 — [SFU 학위논문 인용](https://summit.sfu.ca/_flysystem/fedora/sfu_migrate/5750/b15249815.pdf)). 츠바이핸더 운동 사슬 제안(앞섬은 롱소드와 같게, 돌림 곡선만 길게)의 근거.
+- 무거운 도구의 운동 사슬 [본문 확인 9/29 밤]: 회전 투포환의 마지막 동작은 앞 60% 동안 발목·무릎·엉덩이가 **함께** 펴는 밀기, 그 뒤 팔꿈치(60% 에서 시작, 85% 에서 최고)·손목 차례다(가벼운 던지기의 채찍과 다름) — Gutiérrez-Dávila·Rojas·Campos 2009, *Motricidad* 22:31–46, 2008 세계실내 결승 6명 ([본문](https://eurjhm.com/index.php/eurjhm/article/view/217)). 단순 팔 모형은 가벼운·무거운 도구의 최적 기법이 다르다고 본다(Alexander 1991 J Theor Biol 계열 — [SFU 학위논문 인용](https://summit.sfu.ca/_flysystem/fedora/sfu_migrate/5750/b15249815.pdf)). 츠바이핸더 운동 사슬 제안(앞섬은 롱소드와 같게, 돌림 곡선만 길게)의 근거.
 
 ## 5. 추정 [추정]
 
