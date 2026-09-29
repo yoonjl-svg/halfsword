@@ -147,7 +147,8 @@ function mediumSteps(large, small, med) {
 function def(o) {
   if (o.small.length !== o.large.length) throw new Error(`${o.id}: small·large 키 개수가 다르다`);
   const med = mediumTable(o.small, o.large);
-  const chainMed = { arm: 0, sword: 0, ramp: 0.12, seq: { pelvis: 0.09, chest: 0.065, dur: 0.31 } };
+  // 운동 사슬 앞섬은 크게 벌과 같게 (손 키 박자가 크게 벌 것이라, 짧게 두면 손 최고가 골반보다 앞섰다)
+  const chainMed = { arm: 0, sword: 0, ramp: 0.12, seq: { pelvis: 0.13, chest: 0.09, dur: 0.28 } };
   CUTS.push({
     ...o,
     small: { keys: rows(o.small, o.plane), steps: o.smallSteps ?? still(o.small[o.small.length - 1][0]), chain: CHAIN.small },
