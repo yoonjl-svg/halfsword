@@ -1102,6 +1102,7 @@ export function buildAtlas(recs, opts = {}) {
 /**
  * 묶음에서. src: 없음 = 번들의 src/strike/clips/atlas_v0.json (브라우저·기본), 객체 = 이미 읽은 JSON, 문자열 = 파일 경로(node).
  *  base64 → Float32 풀기와 도함수 계산이 여기서 돈다 (main.js 가 RAPIER.init 뒤에 부르고 beginFight 가 기다린다 — 싸움 중에는 돌지 않는다)
+ *  opts.clipsDir (node): 그 폴더에 index.json 이 있으면 묶음 sha1 을 원본 파일과 견준다 (§4.2, 다르면 예외). 폴더가 없으면 건너뛴다 (둘 다 디스크에 있을 때만)
  */
 export async function loadPack(src, opts = {}) {
   let pack = src;
@@ -1111,6 +1112,11 @@ export async function loadPack(src, opts = {}) {
     pack = JSON.parse(fs.readFileSync(src, 'utf8'));
   }
   const { grid, recs } = validatePack(pack);
+  if (opts.clipsDir != null) {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    if (fs.existsSync(path.join(opts.clipsDir, 'index.json'))) await checkPackSources(pack, opts.clipsDir);
+  }
   const atlas = buildAtlas(recs, { families: opts.families ?? ATLAS.families, grid, source: 'pack' });
   atlas.pack = { format: pack.format, generated: pack.generated, tool: pack.tool, bytes: opts.bytes };
   return atlas;
@@ -1143,7 +1149,27 @@ export async function loadRaw(dir, opts = {}) {
   const atlas = buildAtlas(recs, { families, grid, source: 'clips' });
   atlas.dir = dir;
   atlas.indexGenerated = index.generated;
+  // 원본 클립 집합 서명 (id 차례로 id:sha1) — 묶음의 generated. 같은 원본이면 몇 번을 다시 만들어도 같은 바이트
+  atlas.sourceSha1 = crypto.createHash('sha1').update(recs.map((r) => `${r.meta.id}:${r.meta.sha1}`).sort().join('\n')).digest('hex');
   return atlas;
+}
+/**
+ * 묶음 sha1 vs 원본 파일 (node, §4.2 "둘 다 디스크에 있을 때"). 파일 이름은 index.json 의 file (없으면 <id>.json).
+ *  원본이 없거나 sha1 이 다르면 예외 — 묶음을 다시 만들어야 한다 (pack_atlas.mjs). loadPack(…, { clipsDir })·atlas_check 가 부른다
+ */
+export async function checkPackSources(pack, dir) {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const crypto = await import('node:crypto');
+  const idxPath = path.join(dir, 'index.json');
+  const files = new Map();
+  if (fs.existsSync(idxPath)) for (const e of validateIndex(JSON.parse(fs.readFileSync(idxPath, 'utf8'))).clips) files.set(e.id, e.file);
+  for (const c of pack.clips) {
+    const p = path.join(dir, files.get(c.id) ?? `${c.id}.json`);
+    if (!fs.existsSync(p)) fail(c.id, `원본 ${p} 없음`);
+    const h = crypto.createHash('sha1').update(fs.readFileSync(p)).digest('hex');
+    if (h !== c.sha1) fail(c.id, `묶음 sha1 ${c.sha1} ≠ 원본 파일 ${h} — 묶음을 다시 만들어야 한다 (pack_atlas.mjs)`);
+  }
 }
 /** node 도구의 원본 클립 폴더: --clips=<dir> > ATLAS.clipsDir(저장소 뿌리 기준) > docs/motion/clips */
 export async function defaultClipsDir(root, argv = []) {
@@ -1155,11 +1181,12 @@ export async function defaultClipsDir(root, argv = []) {
   if (fs.existsSync(path.join(c1, 'index.json'))) return c1;
   return path.resolve(root, 'docs', 'motion', 'clips');
 }
-/** 묶음 JSON 을 만든다 (pack_atlas.mjs). atlas 는 loadRaw 의 것 */
+/** 묶음 JSON 을 만든다 (pack_atlas.mjs). atlas 는 loadRaw 의 것. 벽시계를 쓰지 않는다: generated = 원본 클립 sha1 집합의 sha1 → 같은 원본이면 같은 바이트 */
 export function packOf(atlas, tool = 'tools/motion/pack_atlas.mjs') {
+  if (!atlas.sourceSha1) fail('pack', 'packOf 는 loadRaw 가 만든 아틀라스만 (원본 sha1 이 없음)');
   return {
     format: ATLAS.packFormat, sourceFormat: ATLAS.format, indexFormat: ATLAS.indexFormat,
-    generated: new Date().toISOString().slice(0, 10), tool, sourceIndexGenerated: atlas.indexGenerated ?? null,
+    generated: `sha1:${atlas.sourceSha1}`, tool, sourceIndexGenerated: atlas.indexGenerated ?? null,
     phiGrid: { from: atlas.grid.from, to: atlas.grid.to, step: atlas.grid.step, n: atlas.grid.n },
     channels: CHANNELS.map(([name, width, kind]) => ({ name, width, kind })), width: WIDTH,
     note: 'Float32 리틀 엔디언 base64, 행 = φ 격자 점, 열 = channels 차례. 도함수는 읽을 때 만든다. chest.xFactor = chest.yaw − pelvis.yaw, t(φ) = marks 선형 조각',

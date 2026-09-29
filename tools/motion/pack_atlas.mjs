@@ -38,7 +38,7 @@ for (const c of pack.clips) console.log(`  ${c.id.padEnd(24)} sha1 ${c.sha1}`);
 
 // 되읽어 견주기: 같은 (베기, 쪽, φ, S) 표본의 최대 차이 (Float32 저장 → 1e-6 수준)
 const t1 = performance.now();
-const packed = await loadPack(outPath, { families });
+const packed = await loadPack(outPath, { families, clipsDir: dir }); // sha1 = 원본 파일도 여기서 본다
 const loadMs = performance.now() - t1;
 const a = makeSample(), b = makeSample();
 let maxV = 0, maxD1 = 0, maxD2 = 0;

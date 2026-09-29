@@ -5,22 +5,21 @@
 //      작은 벌 손 오차·작은 벌 vs guards.js·오른손잡이·묶음 형식·자료 길이·sha1
 //   3. 작은 벌 시작·끝 손 vs guards.js ≤ 0.02 m (베기마다)
 //   4. 표본 비용 (1e5 번, μs/번, 힙 증가) — 목표 ≤ 0.02 ms, 관문 ≤ 0.05 ms
-//   5. 묶음 크기 ≤ 1.5 MB, sha1 = 원본 파일, 되읽은 표본 = 원본 표본
+//   5. 묶음 크기 ≤ 1.5 MB, sha1 = 원본 파일 (atlas.js checkPackSources), 다시 만들면 바이트 동일, 되읽은 표본 = 원본 표본
 //   6. 보간: 격자 점 일치, d1·d2 = 유한 차분, 칸 경계 C², 방향 단위 길이·ω 일치, S 연속(sizeMid), over 선형(이득 1), 베기 섞기 끝값, 이월 도우미
 //   7. 부호표(§4.3): 가슴 틀 = body.mjs frame(), 바라보는 틀 손 = guards.js 손, 게임 yaw = −deg·D2R 이 three.js 의 +Y 회전과 같은 자리를 준다
 //  원본 폴더 기본값: ATLAS.clipsDir(../halfsword/docs/motion/clips, 저장소 뿌리 기준), 없으면 docs/motion/clips. 실패가 하나라도 있으면 종료 코드 1
 // ─────────────────────────────────────────────────────────────
-import { readFileSync, statSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { readFileSync, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
 import * as THREE from 'three';
 import { ATLAS, GAIT } from '../../src/config.js';
 import { GUARDS, guardAt } from '../../src/guards.js';
 import { frame as bodyFrame, m3 as bm3 } from '../motion/lib/body.mjs';
 import {
   AtlasError, loadRaw, loadPack, buildAtlas, validateIndex, validateClip, validatePack, resampleClip, makeGrid, makeSample, encodeF32,
-  chestFrame, quatFromM3, toFacing, toGame, m3apply, carryOver, angleDeg, defaultClipsDir,
+  chestFrame, quatFromM3, toFacing, toGame, m3apply, carryOver, angleDeg, defaultClipsDir, checkPackSources, packOf,
   CH, OFF, WIDTH, OUT_WIDTH, CHANNELS, GUARD_PADS, GUARD_IDS, PHI_MARKS, MARK_NAMES, D2R, R2D, LIN_IDX, DIR_OFFS, tOfPhi, dTdPhi,
 } from '../../src/strike/atlas.js';
 
@@ -139,16 +138,21 @@ mustThrow('표본 phi 없음', () => packed.sample(makeSample(), { cut: 'zornhau
 mustThrow('표본 S NaN', () => packed.sampleAt('zornhau', 'right', 0.5, NaN, makeSample()), '수가 아닌');
 mustThrow('표본 over NaN', () => packed.sampleAt('zornhau', 'right', 0.5, 1, makeSample(), NaN), '수가 아닌');
 mustThrow('sampleSize phi NaN', () => packed.sampleSize(makeSample(), 'zornhau', 'right', 'large', NaN), '수가 아님');
-// sha1 ≠ 원본 파일 (둘 다 디스크에 있을 때): 이 도구가 견준다
-function checkSha1(pack, dir) {
-  for (const c of pack.clips) {
-    const p = join(dir, `${c.id}.json`);
-    if (!existsSync(p)) throw new AtlasError(c.id, `원본 ${p} 없음`);
-    const h = createHash('sha1').update(readFileSync(p)).digest('hex');
-    if (h !== c.sha1) throw new AtlasError(c.id, `묶음 sha1 ${c.sha1} ≠ 원본 파일 ${h} — 묶음을 다시 만들어야 한다 (pack_atlas.mjs)`);
+// sha1 ≠ 원본 파일 (둘 다 디스크에 있을 때): atlas.js checkPackSources — loadPack(…, { clipsDir }) 도 같은 것을 부른다
+async function mustReject(name, fn, needle) {
+  fixN++;
+  try {
+    await fn();
+    console.log(`  FAIL  ${name}: 예외 없음`);
+  } catch (e) {
+    const ok = e instanceof AtlasError && (!needle || e.message.includes(needle));
+    if (ok) fixOk++;
+    console.log(`  ${ok ? 'ok  ' : 'FAIL'}  ${name}: ${e instanceof AtlasError ? e.message : e}`);
   }
 }
-mustThrow('묶음 sha1 ≠ 원본 파일', () => checkSha1({ clips: [{ ...packJson.clips[0], sha1: '0'.repeat(40) }] }, DIR), 'sha1');
+const stale = { ...packJson, clips: [{ ...packJson.clips[0], sha1: '0'.repeat(40) }, ...packJson.clips.slice(1)] };
+await mustReject('묶음 sha1 ≠ 원본 파일', () => checkPackSources(stale, DIR), 'sha1');
+await mustReject('loadPack(clipsDir) 가 옛 묶음을 거절', () => loadPack(stale, { clipsDir: DIR }), 'sha1');
 gate('틀린 입력 예외', fixOk === fixN, `${fixOk}/${fixN}`);
 
 // ── 3. 작은 벌 vs guards.js ──
@@ -223,12 +227,17 @@ console.log(`  ${PACK}: ${bytes} B = ${(bytes / 1e6).toFixed(3)} MB (${(bytes / 
 gate('묶음 ≤ 1.5 MB', bytes <= 1.5e6, `${(bytes / 1e6).toFixed(3)} MB`);
 let shaOk = true, shaMsg = '';
 try {
-  checkSha1(packJson, DIR);
+  await checkPackSources(packJson, DIR);
 } catch (e) {
   shaOk = false;
   shaMsg = e.message;
 }
 gate('묶음 sha1 = 원본 파일', shaOk, shaMsg || `${packJson.clips.length} 벌 일치`);
+{
+  // 재현: 같은 원본 → packOf 가 저장된 묶음과 바이트까지 같다 (벽시계 없음; generated = 원본 sha1 집합의 sha1)
+  const again = JSON.stringify(packOf(raw)), saved = readFileSync(PACK, 'utf8');
+  gate('묶음 재현 (원본에서 다시 만들면 바이트 동일)', again === saved, `generated ${packJson.generated} · ${again === saved ? '같음' : `다름 (${again.length} / ${saved.length} 글자)`}`);
+}
 {
   const a = makeSample(), b = makeSample();
   let mx = 0;
