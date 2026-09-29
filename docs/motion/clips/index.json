@@ -210,6 +210,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -347,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -280,
+     "frontOpenAfterLine": null,
+     "frontCloses": -130
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -499,6 +510,17 @@
        0.14
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -448,
+     "handsAboveHead": -348,
+     "bladeBehind": -415,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 60,
+     "frontCloses": 468
     },
     "time": {
      "wind": 0.28,
@@ -790,6 +812,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -508,
+     "handsAboveHead": -408,
+     "bladeBehind": -508,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 117,
+     "frontCloses": 633
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -1079,6 +1112,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -347,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -230,
+     "frontOpenAfterLine": 195,
+     "frontCloses": 262
     },
     "time": {
      "wind": 0.2,
@@ -1370,6 +1414,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -448,
+     "handsAboveHead": -348,
+     "bladeBehind": -415,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 60,
+     "frontCloses": 477
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -1659,6 +1714,17 @@
        0.11
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -500,
+     "handsAboveHead": -408,
+     "bladeBehind": -508,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 117,
+     "frontCloses": 650
     },
     "time": {
      "wind": 0.36,
@@ -1950,6 +2016,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -363,
+     "handsAboveHead": -322,
+     "bladeBehind": -263,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": null,
+     "frontOpenAfterLine": null,
+     "frontCloses": null
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -2239,6 +2316,17 @@
        0.13
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -465,
+     "handsAboveHead": -415,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -198
     },
     "time": {
      "wind": 0.28,
@@ -2530,6 +2618,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -525,
+     "handsAboveHead": -483,
+     "bladeBehind": -450,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -150
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -2819,6 +2918,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -363,
+     "handsAboveHead": -322,
+     "bladeBehind": -263,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": null,
+     "frontOpenAfterLine": null,
+     "frontCloses": null
     },
     "time": {
      "wind": 0.2,
@@ -3110,6 +3220,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -465,
+     "handsAboveHead": -415,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -198
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -3399,6 +3520,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -525,
+     "handsAboveHead": -483,
+     "bladeBehind": -450,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -150
     },
     "time": {
      "wind": 0.36,
@@ -3690,6 +3822,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -305,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -280,
+     "frontOpenAfterLine": 87,
+     "frontCloses": 170
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -3979,6 +4122,17 @@
        0.27
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -465,
+     "handsAboveHead": null,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 85,
+     "frontCloses": 510
     },
     "time": {
      "wind": 0.28,
@@ -4270,6 +4424,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -525,
+     "handsAboveHead": null,
+     "bladeBehind": -458,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 83,
+     "frontCloses": 658
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -4559,6 +4724,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -305,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -247,
+     "frontOpenAfterLine": 87,
+     "frontCloses": 378
     },
     "time": {
      "wind": 0.2,
@@ -4850,6 +5026,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -465,
+     "handsAboveHead": null,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 85,
+     "frontCloses": 552
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -5139,6 +5326,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -525,
+     "handsAboveHead": null,
+     "bladeBehind": -458,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 83,
+     "frontCloses": 700
     },
     "time": {
      "wind": 0.36,
@@ -5430,6 +5628,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -330,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -280,
+     "frontOpenAfterLine": null,
+     "frontCloses": -80
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -5719,6 +5928,17 @@
        0.2
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -448,
+     "handsAboveHead": -332,
+     "bladeBehind": -398,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -107
     },
     "time": {
      "wind": 0.28,
@@ -6010,6 +6230,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -508,
+     "handsAboveHead": -392,
+     "bladeBehind": -475,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -92
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -6299,6 +6530,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -322,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -238,
+     "frontOpenAfterLine": null,
+     "frontCloses": -97
     },
     "time": {
      "wind": 0.2,
@@ -6590,6 +6832,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -448,
+     "handsAboveHead": -332,
+     "bladeBehind": -398,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -107
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -6879,6 +7132,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -500,
+     "handsAboveHead": -392,
+     "bladeBehind": -475,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -92
     },
     "time": {
      "wind": 0.36,
@@ -7170,6 +7434,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": null,
+     "pelvisTurns": -380,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -280,
+     "frontOpenAfterLine": null,
+     "frontCloses": -188
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -7459,6 +7734,17 @@
        0.14
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -432,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 77,
+     "frontCloses": 485
     },
     "time": {
      "wind": 0.28,
@@ -7750,6 +8036,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -508,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 75,
+     "frontCloses": 633
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -8039,6 +8336,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": null,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -247,
+     "frontOpenAfterLine": null,
+     "frontCloses": -113
     },
     "time": {
      "wind": 0.2,
@@ -8330,6 +8638,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -432,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 77,
+     "frontCloses": 535
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -8619,6 +8938,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -508,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 75,
+     "frontCloses": 692
     },
     "time": {
      "wind": 0.36,
@@ -8910,6 +9240,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -363,
+     "handsAboveHead": -322,
+     "bladeBehind": -263,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": null,
+     "frontOpenAfterLine": null,
+     "frontCloses": null
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -9199,6 +9540,17 @@
        0.13
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -465,
+     "handsAboveHead": -415,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -198
     },
     "time": {
      "wind": 0.28,
@@ -9490,6 +9842,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -525,
+     "handsAboveHead": -483,
+     "bladeBehind": -450,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -158
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -9779,6 +10142,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -363,
+     "handsAboveHead": -322,
+     "bladeBehind": -263,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": null,
+     "frontOpenAfterLine": null,
+     "frontCloses": null
     },
     "time": {
      "wind": 0.2,
@@ -10070,6 +10444,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -465,
+     "handsAboveHead": -415,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -198
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -10359,6 +10744,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -525,
+     "handsAboveHead": -483,
+     "bladeBehind": -450,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -158
     },
     "time": {
      "wind": 0.36,
@@ -10650,6 +11046,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -330,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -280,
+     "frontOpenAfterLine": 103,
+     "frontCloses": 162
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -10939,6 +11346,17 @@
        0.35
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -432,
+     "handsAboveHead": null,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -148
     },
     "time": {
      "wind": 0.28,
@@ -11230,6 +11648,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -508,
+     "handsAboveHead": -392,
+     "bladeBehind": -475,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -117
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -11519,6 +11948,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -330,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -238,
+     "frontOpenAfterLine": 195,
+     "frontCloses": 245
     },
     "time": {
      "wind": 0.2,
@@ -11810,6 +12250,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -432,
+     "handsAboveHead": null,
+     "bladeBehind": -390,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": null,
+     "frontCloses": -148
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -12099,6 +12550,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -508,
+     "handsAboveHead": -392,
+     "bladeBehind": -475,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": null,
+     "frontCloses": -117
     },
     "time": {
      "wind": 0.36,
@@ -12390,6 +12852,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -305,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -280,
+     "frontOpenAfterLine": 87,
+     "frontCloses": 170
+    },
     "time": {
      "wind": 0.2,
      "releaseToLine": 0.28,
@@ -12679,6 +13152,17 @@
        0.17
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -398,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 68,
+     "frontCloses": 510
     },
     "time": {
      "wind": 0.28,
@@ -12970,6 +13454,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": -483,
+     "handsAboveHead": null,
+     "bladeBehind": -475,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 75,
+     "frontCloses": 650
+    },
     "time": {
      "wind": 0.36,
      "releaseToLine": 0.29,
@@ -13259,6 +13754,17 @@
        0.1
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -305,
+     "pelvisTurns": -172,
+     "footLifts": null,
+     "footLands": null,
+     "frontOpens": -247,
+     "frontOpenAfterLine": 87,
+     "frontCloses": 378
     },
     "time": {
      "wind": 0.2,
@@ -13550,6 +14056,17 @@
       ]
      }
     },
+    "signals": {
+     "handsAboveShoulder": null,
+     "handsAboveHead": null,
+     "bladeBehind": -398,
+     "pelvisTurns": -198,
+     "footLifts": -182,
+     "footLands": -40,
+     "frontOpens": -282,
+     "frontOpenAfterLine": 68,
+     "frontCloses": 535
+    },
     "time": {
      "wind": 0.28,
      "releaseToLine": 0.285,
@@ -13839,6 +14356,17 @@
        0.11
       ]
      }
+    },
+    "signals": {
+     "handsAboveShoulder": -483,
+     "handsAboveHead": null,
+     "bladeBehind": -475,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 75,
+     "frontCloses": 675
     },
     "time": {
      "wind": 0.36,

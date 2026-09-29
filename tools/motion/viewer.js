@@ -449,6 +449,7 @@ function renderSheet() {
         { l: '감기: 손이 가슴 앞면보다 뒤', sub: '목표 0.08 m 이상 뒤', v: `${fmt(s.wind.handBehindTorsoFront)} m`, c: judge(s.wind.handBehindTorsoFront, { min: 0.08, near: 0.03 }) },
         { l: '감기: 어깨 들림', sub: '목표 100° 이상', v: `${s.wind.shoulderElev}°`, c: judge(s.wind.shoulderElev, { min: 100, near: 10, na: !OVERHEAD.has(cut) }) },
         { l: '칼끝이 몸 뒤에 있는 시간', sub: '길수록 준비가 잘 보인다', v: `${fmt(s.opening.bladeBehindTime)} s`, c: '' },
+        { l: '처음 보이는 준비 신호', sub: '손이 어깨 위로 · 칼끝이 몸 뒤로 가운데 이른 것 (칼이 겨눈 선 기준) · 사람 반응 약 0.2~0.25 s [기억]', v: (() => { const g = s.signals ?? {}; const xs = [g.handsAboveShoulder, g.bladeBehind].filter((x) => x != null); return xs.length ? `${(Math.min(...xs) / 1000).toFixed(2)} s` : '—'; })(), c: '' },
       ],
     },
     {
@@ -464,6 +465,7 @@ function renderSheet() {
       h: '반동·허점이 있다',
       rows: [
         { l: '앞이 빈 시간', sub: '칼이 가슴 앞 띠를 0.3 m 넘게 비움 (감기 끝~복귀)', v: `${fmt(s.opening.openTime)} s`, c: '' },
+        { l: '앞이 마지막으로 열린 때', sub: '칼이 겨눈 선을 지난 뒤 언제까지 틈이 있나 (− 면 치기 전에 이미 닫힘)', v: s.signals?.frontCloses != null ? `${(s.signals.frontCloses / 1000).toFixed(2)} s` : '—', c: '' },
         { l: '지나가기 + 복귀', sub: '겨눈 선 → 다시 자세', v: `${fmt(s.time.follow + s.time.recover)} s`, c: '' },
         { l: '가장 많이 돌아선 각', sub: '가슴이 앞에서 돌아간 각 (등을 보이는 정도)', v: `${s.opening.maxTurn}°`, c: '' },
         { l: '무게중심이 옮겨 간 거리', sub: '시작 → 지나가기 끝 (걸음 포함)', v: `${fmt(s.range.comShift)} m`, c: '' },

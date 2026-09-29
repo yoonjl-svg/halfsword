@@ -259,6 +259,18 @@ function specTable(list) {
     L.push(`| ${c.nameKo} | ${c.size} | ${s.opening.openTime} | ${s.opening.bladeBehindTime} | ${s.opening.maxTurn} | ${s.range.comShift} | ${s.checks.reachOver} | ${s.checks.tipMin} | ${s.checks.wristMax} | ${s.checks.wristClampTime} | ${s.checks.wristOver160} |`);
   }
   L.push('');
+  L.push('## 6. 몸 신호 시간표 — 칼이 겨눈 선을 지나는 때(0) 기준 ms (− = 앞)');
+  L.push('');
+  L.push('상대·AI·플레이어가 몸에서 읽을 수 있는 것이 언제 나타나나. 빈칸 = 그 베기에는 없음. "앞이 열림/닫힘" = 칼이 가슴 앞 띠를 0.3 m 넘게 비우기 시작한 때/마지막으로 비운 때(§4 와 같은 정의).');
+  L.push('');
+  L.push('| 베기 | 크기 | 손이 어깨 위로 | 손이 머리 위로 | 칼끝이 몸 뒤로 | 골반이 돌기 시작 | 발 뗌 | 발 디딤 | 앞이 열림 (겨눈 선 뒤 첫) | 앞이 마지막으로 열린 때 |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|');
+  const sv = (x) => (x == null ? '' : x);
+  for (const c of R) {
+    const g = c.summary.signals;
+    L.push(`| ${c.nameKo} | ${c.size} | ${sv(g.handsAboveShoulder)} | ${sv(g.handsAboveHead)} | ${sv(g.bladeBehind)} | ${sv(g.pelvisTurns)} | ${sv(g.footLifts)} | ${sv(g.footLands)} | ${sv(g.frontOpenAfterLine)} | ${sv(g.frontCloses)} |`);
+  }
+  L.push('');
   L.push('## 5. 표시 자세 — 관절각과 몸 둘레 자리 (large, 오른쪽)');
   L.push('');
   L.push('각: 골반·가슴 = 월드 돌림(+ = 칼 쪽으로 감음), 척추 = 가슴−골반, 숙임 + = 앞. 어깨 들림 = 가슴 아래 방향과 위팔 사이(180 = 머리 위로 곧게). 팔꿈치·무릎 = 굽힘(0 = 곧음). 손목 = 아래팔과 칼 사이.');

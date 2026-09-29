@@ -467,8 +467,36 @@ export function summarize(rows, marks) {
     };
   };
   const keyPoses = Object.fromEntries(['t0', 'tw', 'tr', 'tc', 'tf'].map((k) => [k, keyPose(marks[k])]));
+  // 몸 신호 시간표 (겨눈 선 tc 기준 ms): 상대·AI·플레이어가 몸에서 읽을 수 있는 것이 언제 나타나고 사라지나
+  const rel = (r) => (r ? Math.round((r.t - tc) * 1000) : null);
+  const firstFrom = (a, b, f) => rows.find((r) => r.t >= a - 1e-9 && r.t <= b + 1e-9 && f(r)) ?? null;
+  const lastIn = (a, b, f) => [...rows].reverse().find((r) => r.t >= a - 1e-9 && r.t <= b + 1e-9 && f(r)) ?? null;
+  const shoulderY = (r) => r.J.shS[1];
+  const pelPeak = Math.max(...pick(marks.tw - 0.04, marks.tf).map((r) => Math.max(0, sgn * r.w.pelvis)));
+  const ankle = (r, k) => r.J.legs[k].ankle[1];
+  const stepFoot = ['L', 'R'].reduce((best, k) => (Math.max(...rows.map((r) => ankle(r, k))) > Math.max(...rows.map((r) => ankle(r, best))) ? k : best), 'R');
+  const lifted = (r) => ankle(r, stepFoot) > BODY.ankleY + 0.025;
+  const openAt = (r) => {
+    const c = r.J.C;
+    return segSeg(r.J.pommel, r.J.tip, [c[0] + 0.45, c[1] - 0.25, c[2]], [c[0] + 0.45, c[1] + 0.4, c[2]]) > 0.3;
+  };
+  const signals = {
+    handsAboveShoulder: rel(firstFrom(marks.t0, marks.tc, (r) => r.J.hS[1] > shoulderY(r) + 0.05)),
+    handsAboveHead: rel(firstFrom(marks.t0, marks.tc, (r) => r.J.hS[1] > r.J.head[1] + BODY.headR)),
+    bladeBehind: rel(firstFrom(marks.t0, marks.tc, (r) => r.J.tip[0] < r.J.C[0] - 0.1)),
+    pelvisTurns: rel(firstFrom(marks.tw - 0.1, marks.tc, (r) => sgn * r.w.pelvis > 0.2 * pelPeak)),
+    footLifts: rel(firstFrom(marks.t0, marks.tf, lifted)),
+    footLands: rel((() => {
+      const up = firstFrom(marks.t0, marks.tf, lifted);
+      return up ? firstFrom(up.t, marks.tg, (r) => !lifted(r)) : null;
+    })()),
+    frontOpens: rel(firstFrom(marks.tw, marks.tg, openAt)),
+    frontOpenAfterLine: rel(firstFrom(marks.tc, marks.tg, openAt)),
+    frontCloses: rel(lastIn(marks.tw, marks.tg, openAt)),
+  };
   return {
     keyPoses,
+    signals,
     time: { wind: +(marks.tw - marks.t0).toFixed(3), releaseToLine: +(tc - marks.tw).toFixed(3), follow: +(marks.tf - tc).toFixed(3), recover: +(marks.tg - marks.tf).toFixed(3), total: +marks.tg.toFixed(3) },
     tipPeak: +pTip.sp.tip.toFixed(1),
     tipAtLine: +atC.sp.tip.toFixed(1),
