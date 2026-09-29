@@ -12,7 +12,7 @@
 //
 //  섞기 (§4.4): S ≤ sizeMid 작게↔보통, 그 위 보통↔크게. 값·자리·각은 선형(yaw 는 풀어 둔 도 단위), 방향(sword·pole·edge)은 slerp(ω 는 slerp 의 닫힌 도함수).
 //   격자 칸 안은 (v, v′, v″) 5차 에르미트 → C² (방향은 시작 마디 접평면에서 같은 5차 → ḋ = ω × d).
-//   S 가 1 을 넘는 몫(over)은 모든 채널에 over·(크게 − 보통)을 더한다(방향은 보통→크게 회전 벡터를 over 배 더 돌림).
+//   S 가 1 을 넘는 몫(over)은 모든 채널에 over·(크게 − 보통)을 더한다(방향은 보통→크게 회전 벡터를 over 배 더 돌림). 표시·t(φ)·step·timing 도 같은 규칙.
 //   이득 1, 상한 없음 — 아틀라스는 자료를 표본할 뿐 빠르기·크기·시간에 걸쇠를 두지 않는다. φ 는 격자 양 끝(−1, 2.2) 밖에서 끝 자세를 든다(클립이 거기서 끝난다).
 //
 //  검사 (§4.2): 경고가 아니라 예외(AtlasError). 형식·hz·표본 수·채널 길이·NaN·t 단조·표시 순서·phiMarks·phi 지도·단위 벡터·칼 방향 한 표본 각·
@@ -814,6 +814,7 @@ export class Atlas {
   /**
    * 표본 (§4.4). req = { cut, side, phi, S, over?, cutB?, wAB? }
    *  S ≤ sizeMid: 작게↔보통, 그 위: 보통↔크게. S > 1 인 몫은 over 에 더해 크게 너머로 직선으로 잇는다(이득 1, 상한 없음).
+   *  시각 t·dt 도 같은 규칙: 표시 += over·(크게 − 보통) — marks()·step()·timing() 과 같은 시계.
    *  cutB·wAB: 두 번째 베기와 섞는 비율(같은 φ·S). 값·d1·d2 를 모두 채운다 (d = dφ 기준: ẋ = d1·φ̇, ẍ = d2·φ̇² + d1·φ̈)
    */
   sample(out, req) {
@@ -837,8 +838,12 @@ export class Atlas {
     out.over = over;
     out.cut = req.cut;
     out.side = req.side;
-    // 시각: 표시를 S 로 섞어 T(φ)·dT/dφ
+    // 시각: 표시를 S 로 섞고 over 몫은 크게 너머로 직선 (이득 1, addOver 와 같은 규칙) → T(φ)·dT/dφ
     this.marks(req.cut, req.side, S, _mk);
+    if (over > 0) {
+      const f = this.fam(req.cut, req.side), M = f.medium.marks, L = f.large.marks;
+      for (let i = 0; i < 6; i++) _mk[i] += (L[i] - M[i]) * over;
+    }
     out.t = tOfPhi(_mk, phi);
     out.dt = dTdPhi(_mk, phi);
     return out;
@@ -917,12 +922,12 @@ export class Atlas {
   }
 
   // ── 벌 사이 값 (표시·시간·걸음·자세 id) ──
-  /** 표시 여섯 [t0 … tg] 를 S 로 섞는다 (두 구간). S > 1 은 크게 너머로 직선 */
+  /** 표시 여섯 [t0 … tg] 를 S 로 섞는다 (두 구간). S > 1 은 크게 너머로 직선: 크게 + (S − 1)·(크게 − 보통) (이득 1, sample() 의 over 와 같다) */
   marks(cut, side, S, out = new Float64Array(6)) {
     const f = this.fam(cut, side), mid = ATLAS.sizeMid;
     let A, B, u;
     if (S <= mid) (A = f.small.marks), (B = f.medium.marks), (u = Math.max(0, S) / mid);
-    else (A = f.medium.marks), (B = f.large.marks), (u = (S - mid) / (1 - mid));
+    else (A = f.medium.marks), (B = f.large.marks), (u = sizeU(S, mid));
     for (let i = 0; i < 6; i++) out[i] = A[i] + (B[i] - A[i]) * u;
     return out;
   }
@@ -965,7 +970,7 @@ export class Atlas {
   }
   _pair(f, S) {
     const mid = ATLAS.sizeMid;
-    return S <= mid ? [f.small, f.medium, Math.max(0, S) / mid] : [f.medium, f.large, (S - mid) / (1 - mid)];
+    return S <= mid ? [f.small, f.medium, Math.max(0, S) / mid] : [f.medium, f.large, sizeU(S, mid)];
   }
   /** 복귀 자세 id — 크기에 따라 다를 수 있다(unterhau: small pflugL, medium/large ochsL). S 에 가장 가까운 벌의 값 */
   recoverTo(cut, side, S = 1) {
@@ -984,6 +989,8 @@ export class Atlas {
   }
 }
 const _mk = new Float64Array(6);
+/** 보통↔크게 비율: S ≤ 1 은 (S − mid)/(1 − mid), 그 위는 1 + (S − 1) — 넘는 몫은 이득 1 (채널의 over 와 같은 기울기), 상한 없음 */
+const sizeU = (S, mid) => (S <= 1 ? (S - mid) / (1 - mid) : S);
 const _req = { cut: '', side: 'right', phi: 0, S: 0, over: 0, cutB: null, wAB: 0 };
 
 /** o = a + (b − a)·u : 값·자리·각은 선형, 방향은 slerp, ω·α 선형 (o 가 a 나 b 여도 된다) */

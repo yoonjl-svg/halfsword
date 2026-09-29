@@ -21,7 +21,7 @@ import { frame as bodyFrame, m3 as bm3 } from '../motion/lib/body.mjs';
 import {
   AtlasError, loadRaw, loadPack, buildAtlas, validateIndex, validateClip, validatePack, resampleClip, makeGrid, makeSample, encodeF32,
   chestFrame, quatFromM3, toFacing, toGame, m3apply, carryOver, angleDeg, defaultClipsDir,
-  CH, OFF, WIDTH, OUT_WIDTH, CHANNELS, GUARD_PADS, GUARD_IDS, PHI_MARKS, D2R, R2D, LIN_IDX, DIR_OFFS,
+  CH, OFF, WIDTH, OUT_WIDTH, CHANNELS, GUARD_PADS, GUARD_IDS, PHI_MARKS, MARK_NAMES, D2R, R2D, LIN_IDX, DIR_OFFS, tOfPhi, dTdPhi,
 } from '../../src/strike/atlas.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -349,6 +349,34 @@ const A = packed, g = A.grid;
     }
   }
   gate('over: out += over·(크게 − 보통), 이득 1, 상한 없음 (S 1.25 … 3.25)', e <= 1e-9 && eDir <= 1e-6, `값 ${e.toExponential(2)} · 방향 각 ${eDir.toExponential(2)}°`);
+  // 시각·걸음도 같은 규칙: 표시·step = 크게 + over·(크게 − 보통). sample().t·dt = marks()/tAt() 의 시계 (두 답이 없다)
+  let eT = 0, eStep = 0, collapse = Infinity, collapseAt = '';
+  for (let i = 0; i < 200; i++) {
+    const cut = cuts[i & 3], side = sides[(i >> 2) & 1], phi = -1 + 3.2 * ((i * 0.37) % 1), over = 0.25 + (i % 5) * 0.5;
+    const f = A.fam(cut, side), M = f.medium.marks, L = f.large.marks, mk = new Float64Array(6);
+    for (let k = 0; k < 6; k++) mk[k] = L[k] + over * (L[k] - M[k]);
+    A.sampleAt(cut, side, phi, 1 + over, ov);
+    const mS = A.marks(cut, side, 1 + over);
+    for (let k = 0; k < 6; k++) eT = Math.max(eT, Math.abs(mS[k] - mk[k]));
+    eT = Math.max(eT, Math.abs(ov.t - tOfPhi(mk, phi)), Math.abs(ov.dt - dTdPhi(mk, phi)), Math.abs(ov.t - A.tAt(cut, side, phi, 1 + over)));
+    A.sampleAt(cut, side, phi, 1, ov, over); // S 1 + over 따로 = S 1 + over 합친 것
+    eT = Math.max(eT, Math.abs(ov.t - tOfPhi(mk, phi)), Math.abs(ov.dt - dTdPhi(mk, phi)));
+    const sL = A.step(cut, side, 1), sO = A.step(cut, side, 1 + over), sm = A.step(cut, side, ATLAS.sizeMid); // sizeMid = 보통 벌
+    for (const k of ['fwd', 'side', 'swingT']) eStep = Math.max(eStep, Math.abs(sO[k] - (sL[k] + over * (sL[k] - sm[k]))));
+  }
+  // 자료의 성질 (걸쇠 아님): 크게의 표시 간격이 보통보다 짧으면 over 가 크면 그 간격이 0 이 된다 → 그 over 를 적는다
+  for (const cut of cuts)
+    for (const side of sides) {
+      const f = A.fam(cut, side), M = f.medium.marks, L = f.large.marks;
+      for (let k = 0; k < 5; k++) {
+        const dL = L[k + 1] - L[k], dM = M[k + 1] - M[k];
+        if (dL < dM) {
+          const o = dL / (dM - dL);
+          if (o < collapse) (collapse = o), (collapseAt = `${cut}_${side} ${MARK_NAMES[k]}→${MARK_NAMES[k + 1]}`);
+        }
+      }
+    }
+  gate('over: 시각 t·dt·marks·step 도 크게 + over·(크게 − 보통) (이득 1, 멈춤 없음)', eT <= 1e-12 && eStep <= 1e-12, `표시·t·dt ${eT.toExponential(1)} · step ${eStep.toExponential(1)} · 보고만: 표시 간격이 0 이 되는 over ${collapse === Infinity ? '없음' : `${collapse.toFixed(2)} (${collapseAt})`}`);
 }
 {
   // 두 베기 섞기 끝값
