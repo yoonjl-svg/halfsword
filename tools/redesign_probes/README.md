@@ -10,7 +10,7 @@ src 패치 없이 도는 것: `ccdprobe*.mjs`, `wriststab.mjs`, `steptime.mjs`, 
 - `mx/mx.mjs`: 손·칼끝이 몸 둘레에서 가는 범위(가슴 앞 상자) 측정.
 - `costs/probe.mjs`, `costs/blockscan.mjs`: 온몸 베기의 대가(그만두기·헛침·회복·막힘) 측정.
 - `ccdprobe*.mjs`: 빠른 칼이 얇은 몸통을 건너뛰는지(부드러운 충돌 예측 거리) 측정.
-- `wriststab.mjs`: 가벼운 칼 손목 튐. `steptime.mjs`: 스텝 시간. `lethal.py`: 한 방 치명률 계산.
+- `wriststab.mjs`: 가벼운 칼 손목 튐 (정적 표). `FLIP=1 node tools/redesign_probes/wriststab.mjs`: 무기마다 record_wbs/tseq 조건의 획에서 60 Hz 각속도 부호 뒤집힘 비율, 옛 월드 25 rad/s 자르기가 걸렸을 스텝 수, R0 아래팔 상대 보호값(`STRIKE.wristRel`)이 걸린 스텝 수, 칼끝 최고 (env 는 파일 머리에). `steptime.mjs`: 스텝 시간. `lethal.py`: 한 방 치명률 계산.
 - `tech/`: 기술 실험(에너지·스윕). `run_*.sh`, `cmp_cf.js`: 위 도구 묶음 실행과 비교.
 
 재현 증거로 쓰려면 이 도구로 커밋·시드·명령을 적어 다시 재야 한다 (역할 분담안: scratchpad 에만 있는 도구로 잰 숫자는 증거가 아니다).

@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT, STRIKE } from './config.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs, fwdFixOn } from './gait.js';
 import { guardAt } from './guards.js';
@@ -240,7 +240,7 @@ export class Fighter {
     this.pelvisDropOffset = 0; // 자세에 따라 골반을 더 낮추는 정도 (m)
     this.pelvisTgt = 0; // 골반 비틀기 목표 (결심 베기 중엔 초당 COMMIT.pelvisRate 로만 바꾼다)
     this.aimDirW = new THREE.Vector3(1, 0, 0); // 칼끝이 향해야 할 방향 (월드)
-    this.debug = { aim: new THREE.Vector3(), wristTorque: new THREE.Vector3(), wristCap: 0 };
+    this.debug = { aim: new THREE.Vector3(), wristTorque: new THREE.Vector3(), wristCap: 0, wAimRel: 0, wAimRelClips: 0 }; // wAimRel: 칼끝 목표가 아래팔에 대해 도는 빠르기(rad/s), wAimRelClips: 보호값이 걸린 스텝 수 (측정용)
 
     this.bodies = {};
     this.groups = {}; // 부위 이름 → 화면용 그룹
@@ -1748,7 +1748,21 @@ export class Fighter {
     const wAim = _v5.set(0, 0, 0);
     if (this.prevAim && this.lastDt > 0) {
       wAim.crossVectors(this.prevAim, aim).multiplyScalar(1 / this.lastDt);
-      if (wAim.length() > 25) wAim.setLength(25);
+      if (STRIKE.wristRel) {
+        // 보호값은 아래팔 상대 빠르기에만 건다: 팔·몸통이 함께 도는 몫은 손목이 낼 필요가 없다 (월드 25 는 그 몫까지 잘라 빠른 휘두름을 제동했다).
+        //  걸리지 않은 스텝은 wAim 을 다시 쓰지 않는다 (자르기 없는 계산과 비트까지 같다)
+        const fw0 = forearm.angvel();
+        _wF.set(fw0.x, fw0.y, fw0.z);
+        _wF.addScaledVector(aim, -_wF.dot(aim));
+        _wR.copy(wAim).sub(_wF);
+        const wr = _wR.length();
+        this.debug.wAimRel = wr;
+        if (wr > STRIKE.wristRelMax) {
+          _wR.multiplyScalar(STRIKE.wristRelMax / wr);
+          wAim.copy(_wF).add(_wR);
+          this.debug.wAimRelClips++;
+        }
+      } else if (wAim.length() > 25) wAim.setLength(25);
     }
     (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
     this.aimDirW.copy(aim); // 빈손이 칼자루를 어디로 밀고 당길지 (offHand)
@@ -2355,6 +2369,8 @@ const _bloodColor = new THREE.Color(0x5a0808);
 const _paleColor = new THREE.Color(0xb8b4a8);
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
+const _wF = new THREE.Vector3(); // driveSword: 아래팔 각속도의 칼끝 목표에 수직인 몫
+const _wR = new THREE.Vector3(); // driveSword: 칼끝 목표가 아래팔에 대해 도는 빠르기
 const _ur = new THREE.Vector3();
 const _urq = new THREE.Quaternion();
 const _axis2 = new THREE.Vector3();
