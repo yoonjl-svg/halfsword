@@ -14,16 +14,16 @@
     "recordHz": 120,
     "inputHz": 120,
     "weapon": "longsword",
-    "gait": "levitate",
+    "gait": "hybrid",
     "skill": 0.7,
     "gap": null,
-    "input": "손가락을 AI 기술 'zwerch' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기",
+    "input": "손가락을 AI 기술 'zwerch' 길로: 시작 자세 2 s 들기 → 0.35 s 에 긋기",
     "commit": null
    },
    "summary": {
-    "tipPeak": 20.4,
-    "handPeak": 4.23,
-    "tipPeakT": 0.55
+    "tipPeak": 19.39,
+    "handPeak": 3.67,
+    "tipPeakT": 0.5667
    }
   },
   {
@@ -39,15 +39,15 @@
     "recordHz": 120,
     "inputHz": 120,
     "weapon": "longsword",
-    "gait": "levitate",
+    "gait": "hybrid",
     "skill": 0.7,
     "gap": null,
-    "input": "손가락을 AI 기술 'oberhau' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기",
+    "input": "손가락을 AI 기술 'oberhau' 길로: 시작 자세 2 s 들기 → 0.35 s 에 긋기",
     "commit": null
    },
    "summary": {
-    "tipPeak": 20.63,
-    "handPeak": 4.97,
+    "tipPeak": 18.12,
+    "handPeak": 4.73,
     "tipPeakT": 0.5833
    }
   },
@@ -64,16 +64,16 @@
     "recordHz": 120,
     "inputHz": 120,
     "weapon": "longsword",
-    "gait": "levitate",
+    "gait": "hybrid",
     "skill": 0.7,
     "gap": null,
-    "input": "손가락을 AI 기술 'unterhau' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기",
+    "input": "손가락을 AI 기술 'unterhau' 길로: 시작 자세 2 s 들기 → 0.35 s 에 긋기",
     "commit": null
    },
    "summary": {
-    "tipPeak": 9.26,
-    "handPeak": 4.94,
-    "tipPeakT": 0.4167
+    "tipPeak": 5.89,
+    "handPeak": 4.54,
+    "tipPeakT": 0.3167
    }
   },
   {
@@ -89,15 +89,15 @@
     "recordHz": 120,
     "inputHz": 120,
     "weapon": "longsword",
-    "gait": "levitate",
+    "gait": "hybrid",
     "skill": 0.7,
     "gap": null,
-    "input": "손가락을 AI 기술 'zornhau' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기",
+    "input": "손가락을 AI 기술 'zornhau' 길로: 시작 자세 2 s 들기 → 0.35 s 에 긋기",
     "commit": null
    },
    "summary": {
-    "tipPeak": 18.86,
-    "handPeak": 4.61,
+    "tipPeak": 17.36,
+    "handPeak": 4.14,
     "tipPeakT": 0.6167
    }
   },
@@ -114,16 +114,16 @@
     "recordHz": 120,
     "inputHz": 120,
     "weapon": "longsword",
-    "gait": "levitate",
+    "gait": "hybrid",
     "skill": 0.7,
     "gap": null,
-    "input": "손가락을 AI 기술 'zwerch' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기",
+    "input": "손가락을 AI 기술 'zwerch' 길로: 시작 자세 2 s 들기 → 0.35 s 에 긋기",
     "commit": null
    },
    "summary": {
-    "tipPeak": 20.4,
-    "handPeak": 4.23,
-    "tipPeakT": 0.55
+    "tipPeak": 19.39,
+    "handPeak": 3.67,
+    "tipPeakT": 0.5667
    }
   },
   {

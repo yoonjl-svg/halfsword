@@ -3,10 +3,11 @@
 //
 //   node tools/motion/record_game.mjs                → docs/motion/records/game_<베기>.json (지금 게임의 팔 베기, 상대 치움)
 //   node tools/motion/record_game.mjs zornhau 0.3    → 베기 하나, 휘두르는 시간 0.3초
+//   --levitate                                       → 시뮬 기본 체중 방식(골반 띄우기). 기본은 게임과 같은 hybrid
 //
 //  실제 src/ 게임 코드를 헤드리스로 돌린다(tools/sim/harness_m.mjs). src/ 는 바꾸지 않는다.
 //  플레이어 손가락(handOffset)을 AI 기술 길(ai_techniques.js TECH: 시작 자세 → 경유점 → 끝 자세)대로 움직인다
-//  — weapon_measure.mjs 와 같은 방식. 준비 0.5초 동안 시작 자세를 들고, 그다음 휘두른다.
+//  — weapon_measure.mjs 와 같은 방식. 게임과 같은 hybrid 걸음으로, 시작 자세에서 2초 서 있다가(가라앉기) 휘두른다.
 //  랙돌 관절 자리(몸체 자세 × 관절 기준점)를 매 스텝 적는다(lib/game_joints.mjs). 좌표는 클립과 같다:
 //   휘두르기 시작 때 골반 밑 땅이 원점, x 앞 · y 위 · z 칼 든 쪽.
 //  시각 0 = 휘두르기 시작 − 0.2초 (클립의 감기 끝 tw 와 맞추려면 비교 화면에서 시간 정렬을 쓴다)
@@ -24,13 +25,16 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'records');
 const args = process.argv.slice(2);
 const MAP = { zornhau: 'zornhau', oberhau: 'oberhau', zwerchhau: 'zwerch', mittelhau: 'zwerch', unterhau: 'unterhau' };
-const cuts = args[0] ? [args[0]] : Object.keys(MAP);
-const SWING = args[1] ? +args[1] : 0.35; // weapon_measure.mjs 가 롱소드에서 가장 잘 휘두른 값
-const CHAMBER = 0.5;
+const pos = args.filter((a) => !a.startsWith('--'));
+const cuts = pos[0] ? [pos[0]] : Object.keys(MAP);
+const SWING = pos[1] ? +pos[1] : 0.35; // weapon_measure.mjs 가 롱소드에서 가장 잘 휘두른 값
+const CHAMBER = +(process.env.CHAMBER || 2.0); // 시작 자세로 서서 기다리는 시간. hybrid 걸음은 0.5 s 로는 덜 가라앉는다(1 s 부터 값이 안정 — tseq.mjs 도 2 s)
 const PRE = 0.2;
 const POST = 0.9;
 const SEED = 1;
 const REV = process.env.GAME_REV || gitRev(ROOT, ['src']); // src/ 를 마지막으로 바꾼 커밋
+// 게임은 늘 다리로 체중을 받친다(main.js newRound: weightMode 'hybrid', 9/28 사장님 결정). 시뮬 기본값 levitate 는 --levitate 로만
+CONFIG.BODY.weightMode = args.includes('--levitate') ? 'levitate' : 'hybrid';
 
 function record(cutId) {
   const tech = TECH_BY_NAME[MAP[cutId]];
