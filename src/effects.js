@@ -3,8 +3,17 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
+import { FEEL } from './config.js';
 
 const MAX = 500;
+
+/**
+ * 포화점 너머 로그로 (FEEL.logScale): x ≤ cap 이면 그대로(예전 Math.min), 넘으면 cap·(1 + logGain·ln(x/cap)).
+ *  이음매에서 값·기울기가 이어지고 위 한도는 없다. 끄면 예전 Math.min(cap, x)
+ */
+export function logKnee(x, cap) {
+  return !FEEL.logScale || x <= cap ? Math.min(cap, x) : cap * (1 + FEEL.logGain * Math.log(x / cap));
+}
 
 export class Particles {
   constructor(scene) {
@@ -28,7 +37,7 @@ export class Particles {
    * 피는 칼이 지나간 방향으로 흩뿌려진다.
    */
   blood(point, dir, amount, speed = 4) {
-    const n = Math.min(60, Math.round(4 + amount));
+    const n = Math.round(logKnee(4 + amount, 60)); // 포화점 60 너머는 로그 (logKnee)
     const color = this.bloodOn ? 0x8a0000 : 0xb3b0a9; // 피 끄기면 회색 모래 먼지
     for (let i = 0; i < n; i++) {
       const k = 0.15 + Math.random() * 0.45;
@@ -49,7 +58,7 @@ export class Particles {
   }
 
   sparks(point, amount) {
-    const n = Math.min(24, Math.round(6 + amount));
+    const n = Math.round(logKnee(6 + amount, 24)); // 포화점 24 너머는 로그 (logKnee)
     for (let i = 0; i < n; i++) {
       const v = new THREE.Vector3((Math.random() - 0.5) * 5, Math.random() * 4, (Math.random() - 0.5) * 3);
       this.add(point, v, 0xffd27a, 0.012 + Math.random() * 0.01, 0.25 + Math.random() * 0.3, false);
@@ -129,7 +138,7 @@ export function haptic(strength = 1) {
     if (navigator.vibrate) {
       if (now - lastHaptic < 60) return;
       lastHaptic = now;
-      navigator.vibrate(Math.round(10 + 30 * Math.min(1, strength)));
+      navigator.vibrate(Math.round(10 + 30 * logKnee(strength, 1))); // 세기 1(120 J) 너머는 로그 (logKnee)
       return;
     }
     // 아이폰 사파리는 손가락이 화면을 누르거나 뗀 "그 순간"에만 진동을 허락한다.
