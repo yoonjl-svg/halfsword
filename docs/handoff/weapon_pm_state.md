@@ -16,7 +16,7 @@
 |---|---|---|
 | `docs/handoff/weapons_merge_list.md` (main 병합 최소 묶음 + 붉은 팀 명령) | 9/29 18:00 KST | 끝남 |
 | 이 상태 파일 | 늘 | 끝남(갱신 중) |
-| 무기 층 인터페이스 초안 `docs/weapon_layer.md` + `weapon_class.js` 칸 | 9/30 18:00 KST | 진행 중 |
+| 무기 층 인터페이스 초안 `docs/weapon_layer.md` + `weapon_class.js` 칸 | 9/30 18:00 KST | 끝남 (초안, 연구 ASS R6 조사 오면 3절 값 교체) |
 | 사장님 결정: 밸런스 수치 3개 + 청강검 선택안, 온몸 타격 Q13·Q14·Q26 | 디렉터가 전달 | 대기 |
 | 온몸 타격(R2 이후) 뒤 도끼·메이스 시제품 다시 재기 | R2 뒤 | 대기 |
 
@@ -33,6 +33,6 @@ motion_library 몸 동작 기능 확장, 밸런스 값 적용, 새 시제품. ma
 - 게임 불변 확인: `fights12.mjs`, `hybrid.mjs fights12.mjs`, `live_battery.mjs` 바이트 비교 + `weapon_smoke.mjs`
 
 ## 다음 할 일
-1. 무기 층 인터페이스 초안(9/30 18:00).
+1. 연구 ASS R6 조사가 오면 무기 층 3절 값 교체.
 2. 결정이 오면 밸런스 수치 적용(디렉터 지시 뒤) + 공통 검증.
 3. R2 시험판이 나오면 붉은 팀 명령(병합 목록 5절).

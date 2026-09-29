@@ -16,6 +16,7 @@
 | `docs/weapon_motion_sources_one_pole.md` | 한손·자루 무기 원전 조사 |
 | `docs/handoff/motion_library_integration.md` | 라이브러리를 게임에 잇는 자리·순서, §8 자루 무기 3단계 |
 | `docs/handoff/weapon_motion_research_brief.md` | 연구 ASS 지시서 |
+| `docs/weapon_layer.md` | 무기 층 인터페이스 초안(온몸 타격이 무기마다 읽을 값) |
 | `docs/handoff/weapons_merge_list.md` | 이 문서 |
 | `docs/handoff/weapon_pm_state.md` | 무기 PM 상태(맡은 일·열린 요청·재현 명령) |
 | `docs/handoff/*.jpg` 6장 | `motion_gallery`(192 KB) · `motion_clips`(158 KB) · `staff_clip` · `staff_clip_lib` · `spear_clip_lib` · `lightsaber_two_hand` (각 41~65 KB) |
@@ -24,7 +25,7 @@
 ## 2. 코드 — 게임 바뀜 없음
 | 경로 | 무엇 | 왜 게임이 안 바뀌나 | 검증 |
 |---|---|---|---|
-| `src/weapon_class.js` (새 파일) | 분류 함수·표 | `weapons.js` 가 불러 스펙에 `frame`·`style` 칸만 붙인다. 게임 코드에서 두 칸을 읽는 곳 없음(`grep -rn "\.frame\b\|\.style\b" src`) | 공통 |
+| `src/weapon_class.js` (새 파일) | 분류 함수·표 + 무기 층 `WEAPON_LAYER`·`weaponLayer()` (칸만) | `weapons.js` 가 불러 스펙에 `frame`·`style` 칸만 붙인다. 게임 코드에서 두 칸을 읽는 곳 없음(`grep -rn "\.frame\b\|\.style\b" src`) | 공통 |
 | `src/weapons.js` 의 **분류 부분만**: `import { classifyWeapon }` 한 줄 + `finalizeSpec` 의 `const spec = {…}; spec.frame/style = …; return spec;` | 이름표 칸 | 위와 같음 | 공통 |
 | `src/weapons.js` 모노호시자오 `motionSkip: ['지붕 (Vom Tag)']` | 라이브러리용 칸 | `motion_library.js` 만 읽는다(기본 꺼짐) | 공통 |
 | `src/motion_library.js` (새 파일) | 동작 라이브러리 | 기본 꺼짐(`MOTION.lib=false`), 게임 코드에서 import 없음 | 공통 |
