@@ -781,7 +781,9 @@ export const DRIVE = {
   stepS: 0.3, stepScale: 1.0, stepHold: 0.25, toeLever: 0.02, // Q7 (걸음 시간 바닥 없음, 발 돌림 빠르기 없음: §5.6)
   handOnStroke: true, // Q3: 감기 없는 긋기에도 손이 따른다 (φ_align / 자동 감기 + 이어받기). false = 대비책만
   edgeFromClip: false, // §4.3: 날 방향은 클립에서도 유도값 — 게임이 잰 hitPointVel 이 더 참
-  // W4b 칼 든 손 몫 방식 (A/B 스위치, W4b 판정까지 기본 'track'). 'track' | 'finger' | 'governed'. 드라이브 S > 0 스텝에서만 읽는다
+  // W4b 칼 든 손 몫 방식. 'track' | 'finger' | 'governed'. 드라이브 S > 0 스텝에서만 읽는다
+  //  W4b 판정: 이긴 방식 없음 → 기본 'track' 그대로. 셋 다 칼끝·tc 운동에너지 ≥ 맨 팔 베기 × 0.95 에서 탈락 (v12 in60 air horizR 5.98 vs 19.5 m/s,
+  //  diagR 4.10 vs 16.65). governed 는 한 걸음 Hill 지평이 멈춘 팔을 묶는다, finger 는 긋는 동안 클립 목표가 없다 (docs/strike/w4b_handmode.md)
   //  'track' = W4 그대로: 긋는 동안도 클립 손 길을 목표로 쫓는다
   //  'finger' = 감기(자세 잡기)는 클립 손, 베기 시작부터 손가락 → 손 매핑(R1 팔 베기)을 명령 가슴 틀로 돌린 것. 들뜸은 carryPhi 로 풀고,
   //    가운데 자세 둘레 손 들뜸 배율 = 1 + (g1 − 1)·S (g1 = 큰 클립 손 들뜸 / 손가락 매핑 들뜸, 무리마다 아틀라스에서 셈 — 맞춘 값 아님)
