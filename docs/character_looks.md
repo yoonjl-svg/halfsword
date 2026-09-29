@@ -92,7 +92,17 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 - **조준 레이저**: 사장님 "조준이 가능하려면 미리 발사궤적을 따라 옅은 레이저 선이 보여야", "아주 미세해야 해… 희미하게". 총을 든 검객마다 총구에서 총신 방향으로 처음 닿는 곳까지 붉은 선(5 mm, 불투명도 0.13)과 닿은 자리의 작은 점(1.2 cm, 0.3). 장전 중에도 같다 — **장전 표시는 하지 않는다**(사장님: "장전 표시는 과하다"; 앞서 정했던 실린더 회전·스윙아웃은 취소). 겉모습은 여기서만 정하고, gun.js 의 자체 레이저(`GUN.laser`)는 무기 PM이 끈다(두 겹 방지).
 - **이음새**: `gun.js` 의 `GUN_HOOKS.onShot` 을 감싼다(원래 걸린 소리는 그대로, 없으면 `gunshotSound` 를 직접 낸다). 스스로 돈다(requestAnimationFrame, 일시정지 중 멈춤). **main.js 두 줄** `installGunFx({ scene, sound, world, combat })` 과 판 바뀜 자리(clearDebris 옆)의 `clearGunFx()` 를 디렉터가 넣는다. world·combat 은 레이저·궤적 끝을 재는 읽기 전용 광선에만 쓴다. 디렉터 결정: 총은 현대식 리볼버(무기 PM이 다시 그림). 사격 자세는 온몸 타격 작업 뒤 디렉터가 정한다(지금 손대지 않음). 권총은 카드로만 나오므로 권총집 장식은 없다.
 - 효과 두 벌을 미리 만들어 돌려쓴다(두 검객이 거의 동시에 쏠 때). 레이저는 총 든 검객 수만큼. 조명은 만들지 않는다.
+- **v2 (사장님 9/29 "리볼버 발사 이펙트가 지금 좀 약한 거 같애" → 디렉터 지시)**: 섬광을 더 크고 밝게(별 0.6→1.1 m, 0.04초 최대 뒤 0.11초까지 빠른 감쇠) + 총구 앞 짧은 화염(원뿔 두 겹: 보통 섞기 속불 + 더하기 겉불, 세로 그라데이션으로 혀 모양, 0.24→0.4 m). 화약 불티 14점(밝은 주황, 보통 섞기, 중력, 0.35초). 연기 36점·더 크고 짙게. 궤적 줄 1.6 cm·불투명도 0.75·0.16초. 발사 순간 화면 흔들림(main.js `kickCamera` 를 `shake` 로 받음: 자기 총 0.45, 상대 총 0.15 — 맞았을 때 1.4 보다 작게). 총구 점광 하나(0xffb060, 세기 7→0, 0.1초, 거리 5 m) — 처음부터 장면에 두고 세기만 바꿔 셰이더 재컴파일 없음. 낮 무대 대비는 보통 섞기의 속불·불티·궤적이 맡는다. 전후 비교: [밤](handoff/gun_fx_v2_night.png) · [낮](handoff/gun_fx_v2_day.png) · [연기(0.7초 뒤)](handoff/gun_fx_v2_smoke.png). main.js 한 줄: installGunFx 호출에 `shake: (dir, strength) => kickCamera(dir, strength)`.
 - 스크린샷: [궤적(성 안뜰)](handoff/gun_fx_trace.png) · [궤적(밤 신전)](handoff/gun_fx_trace_night.png) · [레이저(성 안뜰)](handoff/gun_fx_laser.png) · [레이저(밤 신전)](handoff/gun_fx_laser_night.png) · [섬광(밤 신전)](handoff/gun_fx_flash.png) · [연기](handoff/gun_fx_smoke.png) · [섬광(성 안뜰)](handoff/gun_fx_flash_castle.png)
+
+## 칼 잔상 띠 (`src/sword_trail.js`, 디렉터 R0 화면 신호)
+
+디렉터(2026-09-29): "최근 물리 자세 2~4개의 칼 선분(칼자루→칼끝)으로 만든 삼각형 띠. 더하기 섞기, 약 60 ms에 사라짐, 빠를수록 짙음(칼끝 8 m/s 부터 25 m/s 최대, 값은 CONFIG), 그리기 호출 1번, 스텝당 0.1 ms 미만. 컨셉 '적막' 유지. 리볼버에는 안 붙임."
+- 물리 스텝마다 두 검객의 칼자루·칼끝 점을 고리(4개)에 기록하고, 프레임마다 자세 사이를 사각형(삼각형 둘)으로 잇는다. 두 검객 띠가 한 BufferGeometry 라 그리기 호출 1번. 색은 꼭짓점 색(검정 = 안 보임)으로 나이·속도를 담는다.
+- `CONFIG.SWORD_TRAIL` = { samples 4, life 0.06 s, vMin 8, vMax 25 m/s, strength 0.4, hiltFade 0.3 }. 찬 강철빛(`0xd2dff0`), 칼자루 쪽은 0.3 배로 옅어 칼끝 줄기로 읽힌다. strength 0.55 는 밤에 흰 부채꼴로 보여 0.4 로 낮췄다.
+- `setTone('normal'|'gold'|'grey')` — 금색(멈출 수 없는 구간)·회색(복귀 중)은 디렉터가 R4 에서 부른다. 부러진 칼은 `bladePoint` 가 남은 길이를 쓰므로 토막만큼만. 리볼버·놓친 칼은 건너뛴다.
+- 비용: `sample()` 스텝당 0.002~0.004 ms, `update()` 0.001~0.003 ms (헤드리스). 더하기 섞기라 눈밭·밝은 하늘 앞에서는 옅고 어두운 벽·밤에 또렷하다(디렉터 지정 방식).
+- 관문: fights12·hybrid fights12·live_battery main 940f665 과 바이트 동일, 스모크 콘솔 에러 0. 사진: [베기 중(밤)](handoff/sword_trail_cut.png) · [확대](handoff/sword_trail_cut_zoom.png) · [베기 중(낮)](handoff/sword_trail_cut_day.png) · [정지 시](handoff/sword_trail_rest.png).
 
 ## 광기의 하인리히 — 붉은 안광 (`src/mad_eyes.js`, 사장님 요청 · 디렉터 나눔)
 

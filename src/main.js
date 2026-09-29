@@ -22,6 +22,7 @@ import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { installGunFx, clearGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
+import { createSwordTrails } from './sword_trail.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
@@ -197,11 +198,13 @@ const particles = new Particles(scene);
 const sound = new Sound();
 // 권총(??? 등급) 총구 섬광·연기·총알 궤적·희미한 조준 레이저 (외형 PM, gun_fx.js — 소리는 그대로 두고 GUN_HOOKS.onShot 을 감싼다).
 //  world·combat 은 판마다 새로 만들어지니, 늘 지금 판 것을 가리키는 얇은 겉감을 넘긴다 (읽기만 한다 — 판정과 무관)
+const swordTrails = createSwordTrails(scene); // 칼 잔상 띠 (외형 PM, sword_trail.js — R0 화면 신호. 판마다 attach, 스텝마다 sample, 프레임마다 update)
 installGunFx({
   scene,
   sound,
   world: { castRay: (...a) => world?.castRay(...a) ?? null },
   combat: { get info() { return combat?.info; }, get fighters() { return combat?.fighters ?? []; } },
+  shake: (dir, strength) => kickCamera(dir, strength), // 발사 순간 짧은 화면 흔들림 (외형 PM v2, 사장님 '발사 이펙트 약하다')
 });
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
 sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
@@ -242,7 +245,7 @@ function prepareRound() {
  */
 function newRound(weaponId) {
   // 다리로 체중 받치기: 게임은 늘 gait.js 걸음(다리가 체중 대부분을 받친다). 오너 결정으로 설정 토글을 없애고 기본 적용했다.
-  //  CONFIG 의 기본값(levitate, 골반을 띄워 받치기)은 시뮬 도구용이다 (tools/sim/hybrid.mjs 로 감싸면 게임과 같다)
+  //  CONFIG 기본값도 'hybrid'라 시뮬 도구가 게임과 같은 걸음을 잰다(9/29). 이 줄은 콘솔·도구가 바꿔 둔 값을 판마다 되돌린다
   CONFIG.BODY.weightMode = 'hybrid';
   // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다)
   //  흩어지던 칼·투구·판금 조각과 벗겨진 케틀햇은 캐릭터 그룹 밖(장면)에 있어서 따로 치운다 (두 번 불러도 괜찮다)
@@ -317,6 +320,7 @@ function newRound(weaponId) {
   }
   const madEyes = attachMadEyes(enemy, currentFoe?.eyes === 'madGlow' || params.has('madEyes')); // 광기의 붉은 안광 (외형 PM, mad_eyes.js — 캐릭터 항목 eyes: 'madGlow' / 시험 ?madEyes=1). 잔상은 장면에 두므로 fighterMeshes 뒤에
   if (madEyes) auras.push(madEyes);
+  swordTrails.attach([player, enemy]); // 칼 잔상 띠: 이번 판 두 검객 (지난 띠는 지운다)
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
@@ -1284,6 +1288,7 @@ function frame(now) {
       enemy.cacheState();
       world.step(eventQueue, combat.physicsHooks);
       combat.afterStep(world, eventQueue);
+      swordTrails.sample(PHYSICS.timestep); // 칼 잔상 띠: 이 스텝의 칼 자세를 기록 (읽기만)
       clashCooldown -= PHYSICS.timestep;
       clashStopCooldown -= PHYSICS.timestep;
       stats.simTime += PHYSICS.timestep;
@@ -1308,6 +1313,7 @@ function frame(now) {
     reviveFx.update(enemy, dt * scale);
     particles.update(dt * scale);
     for (const a of auras) a.update(now / 1000);
+    swordTrails.update(); // 칼 잔상 띠
     arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
@@ -1335,7 +1341,8 @@ prepareRound();
 newRound(FIXED_WEAPON || 'longsword');
 requestAnimationFrame(frame);
 
-// 디버그/튜닝용: 브라우저 콘솔에서 game.player.blood, game.config.WEAPON.mass = 3 처럼 만져볼 수 있다
+// 디버그/튜닝용: 브라우저 콘솔에서 game.player.blood, game.config.GAIT.kneeBase = 0.2 처럼 만져볼 수 있다
+//  (WEAPON 값은 판을 만들 때 싸움꾼마다 weaponCfg 로 복사된다: 바꾸면 다음 판부터)
 window.game = {
   get player() {
     return player;

@@ -17,15 +17,38 @@
 
 ## 권총 한 손 사격 자세 (디렉터 13:37, 사장님 "사격 자세가 필요하다") — 사장님 확인 대기
 - 겨눌 때: 총 든 팔을 어깨 높이로 곧게 뻗어 총구가 상대 가슴을 향한다. 몸은 반쯤 옆으로(가슴 −35°, 골반 −21°), 다른 손은 몸 쪽. 걷기는 자유.
-- 장전(4초) 중: 쏜 직후 0.25초에 걸쳐 총을 가슴 앞으로 세워 올리고, 끝나기 0.6초 전부터 다시 겨눈다.
+- 장전(`GUN.cooldown`, 지금 2.5초. 이 글을 쓸 때는 4초) 중: 쏜 직후 0.25초에 걸쳐 총을 가슴 앞으로 세워 올리고, 끝나기 0.6초 전부터 다시 겨눈다.
 - 코드: 새 코드는 모두 `gun.js` 의 `gunPose(f, pose)` (skill.thrustPose 덧씌우기) · `aimErr(f)`. skill.js 는 두 줄만:
   - 전: `if (!autoAim) return gunCanFire(f, { now: true }); … step = false;` (AI 는 찌르며 겨눔) → 후: `if (f.weapon?.gun) return gunCanFire(f, { now: true });` (사람·AI 모두 자세의 총신 방향으로 바로 쏜다)
   - 전: `}` → 후: `} else if (this.f.weapon?.gun) this.thrustPose.w = gunPose(this.f, this.thrustPose);`
-- AI: 겨눈 지 1.5초 뒤(`aiFirst`), 총신이 가슴에서 12° 안(`aiAimTol`)일 때만 쏜다.
+- AI: 겨눈 지 1.5초 뒤(`aiFirst`), 총신이 가슴에서 12° 안(`aiAimTol`, 지금 `gun.js` 값은 3°)일 때만 쏜다.
 - 칼 싸움 불변: fights12 · hybrid fights12 · live_battery 모두 전과 바이트 동일. weapon_smoke 는 권총 줄만 달라짐.
 - 권총 수치 (전 → 후): ability_test 권총 12판 승률 100%(12-0, 명중 40/40) → **83%(10-2, 35/37)**. gun_dummy 세기 표 그대로. 반동 약 27°(팔을 뻗어 커짐). 가만히 겨눌 때 총신은 가슴에서 평균 약 10°(대개 아래로 5°) 벗어남. AI 명중: 랴오·이졸데 12/12, 브란(가만한 상대) 4/12.
 - 스크린샷: `docs/handoff/pistol_pose_v1.jpg` (겨눔·장전, 기본 카메라 844×390 + 옆), 콘솔 에러 0.
 - 자세 이름 표시: 사장님 결정 **"사격 자세"**. 문구는 gun.js `GUN_STANCE`, main.js `updateGuardName` 에 이음 한 곳(권총이면 GUARDS 대신 GUN_STANCE — 권총이 아니면 전과 같다). 브라우저 확인: 권총 "사격 자세", 롱소드 "긴 자세" 그대로, 콘솔 에러 0. 스크린샷 `docs/handoff/pistol_stance_label.jpg`.
+
+## 무기 유형·동작 라이브러리 (사장님: "분류에 이어 동작 개발까지 쭉 — 다음 버전에 쓰인다", 자율 작업)
+- 분류: `src/weapon_class.js` — 몸 틀(A 양손 보통·B 양손 앞무게·C 한손·D 사격·E 자루 무기) × 싸움 방식(두루·베기·찌르기·때리기·사격)을 질량 분포·배율로 자동 판정한다.
+  - 무기 스펙에 `frame`·`style` 이 붙는다. 게임은 읽지 않는다.
+  - 표 도구: `tools/sim/weapon_classes.mjs`
+- 동작 라이브러리: `src/motion_library.js` (기본 꺼짐)
+  - 몸 틀별 자세표, 방식별 기술, 런지·흐름 덧씌우기, 막기 덧씌우기 시제품
+  - 점검 도구: `tools/sim/motion_lab.mjs` (poses·swings·tap·duel·parry), `tools/browser/motion_gallery.mjs` → `docs/handoff/motion_gallery.jpg`
+- 게임에 닿는 곳:
+  - `guards.js` guardAt 이 `out.table` 을 읽는 한 줄 (없으면 예전 그대로)
+  - `weapons.js` 모노호시자오 `motionSkip` 한 칸 (라이브러리만 읽는다)
+  - fights12 · hybrid · live_battery · weapon_smoke 바이트 동일
+- 자루 무기(E): `docs/pole_frame_design.md` §8, 시제품 스펙 `tools/sim/pole_specs.mjs`, 넣는 순서 `docs/handoff/motion_library_integration.md` §8.
+  - 칼 AI 그대로는 0%. 봉끝 탭 찌르기(레이피어식) + 봉 자세표 + 찌르기·머리 내려치기만 주면 **판정을 바꾸지 않고** 봉 39~50%(둔기 3~4) · 창 54%(창날만 날, 앞손 앞 1.5 m) — 리그 평균 봉 48% · 창 54%, 상성 있음.
+  - 연구 세션 조사 둘을 바로 시험: 부위 효과표(`tools/sim/blunt_zones.mjs`, 넣으면 봉 56~65%·참치 23→44%), 찌르기 운동학(봉끝 4.2~8.6 m/s, 조사 범위 안).
+  - 한손 도끼·메이스 시제품(`tools/sim/proto_weapons.mjs`)은 지금 팔 힘 모델로 0~10% — 온몸 타격 뒤 다시.
+  - 분류: 두 손 간격으로 E 를 저절로 판정(`weapon_class.js`, 로스터 분류 그대로).
+- 문서:
+  - `docs/weapon_motions.md`: 필요 개수 n, 자세·기술 값과 근거, 48판 비교, 시행착오 규칙 6, 다음 버전 이음 자리, 지금 게임 제안
+  - `docs/pole_frame_design.md`: 창·봉 설계
+  - `docs/weapon_motion_sources_one_pole.md`: 한손·자루 무기 조사
+  - 무기-검술 연구 `claude/pm-weapons` 의 `docs/weapon_motion_research.md`
+- **지금 게임 제안(결정 필요):** 모노호시자오 `controlOverrides.twistScale 0.25` (날 세우기 ×2, 지금 0.125) + `mCut 1.7 → 1.4` = 롱소드 상대 60% (지금 50%). 가장 빠른 내려베기에서 날이 서지 않던 문제가 풀린다.
 
 ## 리볼버 강화 뒤 점검 (디렉터 14:52 — main d93c2aa: 장전 3초·반동 ×1.75·이동 ×1.3·총성 크게)
 | 잰 것 | 전 (장전 4초·반동 0.5/0.2·이동 ×1.2) | 후 |

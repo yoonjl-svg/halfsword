@@ -5,7 +5,11 @@
 //   · 총신 방향은 gun.js fire 와 같은 계산(칼 축 +y 를 총 몸체 회전으로). 연기의 퍼짐은 정해진 표(난수 없음).
 //   · 스스로 돈다(requestAnimationFrame): main.js 는 installGunFx({ scene, sound }) 한 줄만 부른다. 일시정지 중에는 멈춘다.
 //   · 판이 바뀔 때는 clearGunFx() (main.js 가 clearDebris() 를 부르는 자리에 한 줄) — 흔적이 쌓이지 않는다.
-//   · 폰에서 가볍게: 효과 두 벌(두 검객이 거의 동시에 쏠 때)만 미리 만들어 돌려쓴다. 조명은 안 만든다.
+//   · 폰에서 가볍게: 효과 두 벌(두 검객이 거의 동시에 쏠 때)만 미리 만들어 돌려쓴다.
+//   · v2 (사장님 9/29 "발사 이펙트가 좀 약한 거 같애" → 디렉터 지시): 섬광을 더 크고 밝게 + 총구 앞 짧은 화염(원뿔 두 겹: 보통 섞기 속불 + 더하기 겉불 —
+//     눈밭·밝은 낮에도 보이게), 2~3프레임 세게 뒤 빠르게 감쇠. 화약 불티(밝은 주황 점, 중력, 0.35초). 연기 더 많고 짙게. 궤적 줄 더 굵고 또렷하게.
+//     발사 순간 짧은 화면 흔들림(main.js kickCamera 를 shake 로 받아 작게: 자기 총 0.45, 상대 총 0.15). 총구 점광 하나(0.1초, 밤 무대에서 주변을 잠깐 비춘다 —
+//     처음부터 장면에 두고 세기만 0 ↔ 켬, 셰이더 재컴파일·끊김 없음).
 //   · 총알 궤적 (사장님 결정 "방식 B"): 총구에서 총알이 닿은 곳까지 옅은 담황색 줄 하나가 0.1초쯤 보였다 사라진다 — 빗나갔는지 한눈에 읽힌다.
 //     실제 총알 방향(gun.js 의 퍼짐·AI 보정이 든 것)과 닿은 거리는 무기 PM 이 onShot(f, p, dir, dist) 로 넘긴다.
 //     안 넘어오면 총신 방향으로 그리고, 거리는 gun.js 와 같은 광선으로 재고 아니면 GUN.range 다.
@@ -19,12 +23,45 @@ import * as THREE from 'three';
 import { GUN, GUN_HOOKS, gunshotSound } from './gun.js';
 import { canvasTex } from './stage_kit.js';
 
-const FLASH_T = 0.075; // 초: 섬광이 보이는 시간 (60fps 에서 네댓 프레임)
+const FLASH_T = 0.11; // 초: 섬광·화염이 보이는 시간 — 처음 FLASH_HOLD 는 최대 밝기(2~3프레임), 그 뒤 빠르게 감쇠
+const FLASH_HOLD = 0.04; // 초: 최대 밝기 유지
+const SPARK_T = 0.35; // 초: 화약 불티
+const LIGHT_T = 0.1; // 초: 총구 점광
+const NS = 14; // 불티 점 수
 const SMOKE_T = 1.2; // 초: 연기가 사라지기까지
-const TRACE_T = 0.11; // 초: 총알 궤적 줄이 사라지기까지 (60fps 에서 예닐곱 프레임 — 한 프레임이면 폰에서 놓친다)
-const NP = 24; // 연기 점 수
+const TRACE_T = 0.16; // 초: 총알 궤적 줄이 사라지기까지 (v2: 0.11 → 0.16, 더 또렷하게)
+const NP = 36; // 연기 점 수 (v2: 24 → 36)
 const LASER_A = 0.3; // 조준 레이저 선의 불투명도 (사장님 '조준선 지금보다 밝게': 0.13 → 0.3)
-const LASER_DOT_A = 0.6; // 닿은 자리 점 — 겨누는 데 쓰는 건 이 점이라 선보다 조금 또렷하게 (0.3 → 0.6)
+const RETICLE_A = 1.0; // 조준쇠(레이저 끝 표식)의 불투명도 — 겨누는 데 쓰는 건 이 표식이라 선보다 훨씬 또렷하게
+const RETICLE_DIM_A = 0.45; // 빗나가는 동안·장전 중의 흐린 조준쇠
+const RETICLE_SIZE = 0.07; // 조준쇠 크기 — 화면 기준(sizeAttenuation 없음): 멀어도 가까워도 같은 크기 (FPS 조준쇠처럼)
+
+/** 조준쇠: FPS 게임 조준쇠 꼴 — 고리 + 네 눈금(가운데는 비워 겨눈 자리가 가리지 않게) + 가운데 점. 선명한 빨강에 어두운 테두리(밝은 하늘·모래 위에서도 보이게)
+ *  (사장님 9/29: "조준점이 잘 안 보이더라. 더 선명한 붉은 색으로. 점 모양이 아니라 fps 게임 느낌의 조준쇠 같은 표식으로") */
+function reticleTexture() {
+  return canvasTex(64, 64, (g, w, h) => {
+    const c = w / 2;
+    g.lineCap = 'butt';
+    const draw = (color, lw) => {
+      g.strokeStyle = g.fillStyle = color;
+      g.lineWidth = lw;
+      g.beginPath();
+      g.arc(c, c, 22, 0, Math.PI * 2);
+      g.stroke();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        g.beginPath();
+        g.moveTo(c + dx * 8, c + dy * 8);
+        g.lineTo(c + dx * 18, c + dy * 18);
+        g.stroke();
+      }
+      g.beginPath();
+      g.arc(c, c, lw * 0.75, 0, Math.PI * 2);
+      g.fill();
+    };
+    draw('rgba(0,0,0,0.55)', 6); // 테두리
+    draw('rgb(255,20,20)', 3); // 선명한 빨강
+  });
+}
 
 /** 섬광: 네 갈래 별 + 둥근 심 (가운데 흰빛 → 주황 → 투명) */
 function flashTexture() {
@@ -58,6 +95,18 @@ function flashTexture() {
     }
   });
 }
+/** 화염 원뿔에 입힐 세로 그라데이션: 총구 쪽(밑면)은 진하고 꼭짓점 쪽은 투명 — 딱딱한 삼각형이 아니라 불꽃 혀처럼 보이게 */
+function flameTexture() {
+  return canvasTex(8, 64, (g, w, h) => {
+    const lg = g.createLinearGradient(0, 0, 0, h); // ConeGeometry 의 v: 0 = 꼭짓점, 1 = 밑면
+    lg.addColorStop(0, 'rgba(255,255,255,0)');
+    lg.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+    lg.addColorStop(0.75, 'rgba(255,255,255,0.9)');
+    lg.addColorStop(1, 'rgba(255,255,255,1)');
+    g.fillStyle = lg;
+    g.fillRect(0, 0, w, h);
+  });
+}
 function puffTexture() {
   return canvasTex(32, 32, (g, w, h) => {
     const rg = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
@@ -74,6 +123,13 @@ const SPREAD = Array.from({ length: NP }, (_, i) => {
   const a = i * 2.399963; // 황금각으로 고르게
   const rr = 0.25 + ((i * 7) % NP) / NP;
   return [Math.cos(a) * rr, Math.sin(a) * rr, 0.6 + ((i * 5) % NP) / NP, 0.4 + ((i * 3) % NP) / NP / 2];
+});
+
+// 불티마다 정해진 방향·속도 (난수 없음): [옆 u, 옆 v, 앞 속도 m/s]
+const SPARKS = Array.from({ length: NS }, (_, i) => {
+  const a = i * 2.399963 + 0.7;
+  const rr = 0.15 + ((i * 5) % NS) / NS * 0.55;
+  return [Math.cos(a) * rr, Math.sin(a) * rr, 4 + ((i * 7) % NS) / NS * 6];
 });
 
 const _q = new THREE.Quaternion();
@@ -94,9 +150,10 @@ export function clearGunFx() {
  *  레이저·궤적 끝을 재는 광선에만 쓴다 (gun.js 와 같은 광선, 판정과 무관한 읽기뿐).
  *  반환 { fire(pos, dir, dist), clear() } — 점검 도구가 직접 터뜨려 볼 때 / 판 바뀜에 치울 때
  */
-export function installGunFx({ scene, sound, world = null, combat = null }) {
+export function installGunFx({ scene, sound, world = null, combat = null, shake = null }) {
   const flashMat = new THREE.SpriteMaterial({ map: flashTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
   const puffMap = puffTexture();
+  const flameMap = flameTexture();
   const pool = [];
   for (let k = 0; k < 2; k++) {
     const flash = new THREE.Sprite(flashMat.clone());
@@ -107,20 +164,37 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     const pos = new Float32Array(NP * 3);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const smoke = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.16, map: puffMap, transparent: true, opacity: 0, depthWrite: false, color: 0x7d7874 })); // 흰 눈밭·밝은 하늘 앞에서도 보이게 조금 짙은 회색
+    const smoke = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.24, map: puffMap, transparent: true, opacity: 0, depthWrite: false, color: 0x6e6a66 })); // 흰 눈밭·밝은 하늘 앞에서도 보이게 조금 짙은 회색
     smoke.frustumCulled = false;
     smoke.visible = false;
+    // 화염: 총구 앞 짧은 원뿔 두 겹 — 속불(보통 섞기, 눈밭에서도 보인다) + 겉불(더하기, 밤에 번진다). 원뿔 꼭짓점이 +y 라 총신 방향으로 돌린다
+    const coneGeo = new THREE.ConeGeometry(0.045, 1, 10, 1, true);
+    const flameIn = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: 0xffd08a, map: flameMap, transparent: true, opacity: 0, depthWrite: false, fog: false, side: THREE.DoubleSide }));
+    const flameOut = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: 0xff7a28, map: flameMap, transparent: true, opacity: 0, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    flameIn.visible = flameOut.visible = false;
+    flameIn.renderOrder = flameOut.renderOrder = 5;
+    // 화약 불티: 밝은 주황 점 (보통 섞기라 눈밭에서도 보인다), 중력으로 떨어진다
+    const spos = new Float32Array(NS * 3);
+    const sgeo = new THREE.BufferGeometry();
+    sgeo.setAttribute('position', new THREE.BufferAttribute(spos, 3));
+    const sparks = new THREE.Points(sgeo, new THREE.PointsMaterial({ size: 0.045, map: puffMap, transparent: true, opacity: 0, depthWrite: false, color: 0xffb040 }));
+    sparks.frustumCulled = false;
+    sparks.visible = false;
     // 궤적: 가는 네모 기둥 (+y 로 1 m, 길이는 scale.y). 보통 섞기·호박색 — 더하기 섞기는 눈밭·밝은 하늘 앞에서 아예 안 보였다
     const trace = new THREE.Mesh(
-      new THREE.BoxGeometry(0.01, 1, 0.01).translate(0, 0.5, 0),
-      new THREE.MeshBasicMaterial({ color: 0xffc98a, transparent: true, opacity: 0, depthWrite: false, fog: false }),
+      new THREE.BoxGeometry(0.016, 1, 0.016).translate(0, 0.5, 0),
+      new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0, depthWrite: false, fog: false }),
     );
     trace.visible = false;
     trace.renderOrder = 4;
-    scene.add(flash, core, smoke, trace);
-    pool.push({ flash, core, smoke, trace, pos, vel: new Float32Array(NP * 3), t: -1, o: new THREE.Vector3(), d: new THREE.Vector3(), origin: new THREE.Vector3() });
+    scene.add(flash, core, smoke, trace, flameIn, flameOut, sparks);
+    pool.push({ flash, core, smoke, trace, flameIn, flameOut, sparks, spos, svel: new Float32Array(NS * 3), pos, vel: new Float32Array(NP * 3), t: -1, o: new THREE.Vector3(), d: new THREE.Vector3(), origin: new THREE.Vector3() });
   }
   let next = 0;
+  // 총구 점광 하나 (두 벌이 같이 쓴다 — 마지막 발이 가져간다). 처음부터 장면에 두고 세기만 바꾼다
+  const light = new THREE.PointLight(0xffb060, 0, 5, 2);
+  scene.add(light);
+  let lightT = -1;
 
   const aimTrace = (e, origin, dir, dist) => {
     e.trace.position.copy(origin);
@@ -151,9 +225,26 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
       e.vel[i * 3 + 1] = e.d.y * 1.3 * fw + _u.y * su * 0.6 + _v.y * sv * 0.6 + up * 0.3;
       e.vel[i * 3 + 2] = e.d.z * 1.3 * fw + _u.z * su * 0.6 + _v.z * sv * 0.6;
     }
-    e.flash.position.copy(e.o).addScaledVector(e.d, 0.05);
+    e.flash.position.copy(e.o).addScaledVector(e.d, 0.06);
     e.core.position.copy(e.o).addScaledVector(e.d, 0.02);
-    e.flash.visible = e.core.visible = e.smoke.visible = true;
+    // 화염 원뿔: 밑면이 총구, 꼭짓점이 앞
+    for (const c of [e.flameIn, e.flameOut]) {
+      c.quaternion.setFromUnitVectors(_Y, e.d);
+      c.position.copy(e.o);
+    }
+    // 불티: 총구에서 앞·옆으로 튄다
+    for (let i = 0; i < NS; i++) {
+      const [su, sv, fw] = SPARKS[i];
+      e.spos[i * 3] = e.o.x;
+      e.spos[i * 3 + 1] = e.o.y;
+      e.spos[i * 3 + 2] = e.o.z;
+      e.svel[i * 3] = e.d.x * fw + _u.x * su * fw * 0.5 + _v.x * sv * fw * 0.5;
+      e.svel[i * 3 + 1] = e.d.y * fw + _u.y * su * fw * 0.5 + _v.y * sv * fw * 0.5;
+      e.svel[i * 3 + 2] = e.d.z * fw + _u.z * su * fw * 0.5 + _v.z * sv * fw * 0.5;
+    }
+    light.position.copy(e.o).addScaledVector(e.d, 0.1);
+    lightT = 0;
+    e.flash.visible = e.core.visible = e.smoke.visible = e.flameIn.visible = e.flameOut.visible = e.sparks.visible = true;
     step(e, 0);
     return e;
   };
@@ -163,15 +254,40 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     const t = e.t;
     if (t < FLASH_T) {
       const k = t / FLASH_T;
-      e.flash.scale.setScalar(0.3 + 0.35 * k);
-      e.flash.material.opacity = 1 - k * 0.7;
-      e.flash.material.rotation = k * 0.6;
-      e.core.scale.setScalar(0.12 + 0.05 * k);
-      e.core.material.opacity = 1 - k;
-    } else e.flash.visible = e.core.visible = false;
+      const a = t < FLASH_HOLD ? 1 : 1 - (t - FLASH_HOLD) / (FLASH_T - FLASH_HOLD); // 2~3프레임 최대, 그 뒤 빠르게 감쇠
+      e.flash.scale.setScalar(0.6 + 0.5 * k);
+      e.flash.material.opacity = a;
+      e.flash.material.rotation = k * 0.8;
+      e.core.scale.setScalar(0.22 + 0.1 * k);
+      e.core.material.opacity = a;
+      // 화염: 길이 0.28 → 0.45 m, 속불은 빨리, 겉불은 조금 늦게 사그라진다
+      const len = 0.24 + 0.16 * k;
+      e.flameIn.scale.set(1 + 0.6 * k, len, 1 + 0.6 * k);
+      e.flameOut.scale.set(1.6 + 1.2 * k, len * 1.25, 1.6 + 1.2 * k);
+      e.flameIn.position.copy(e.o).addScaledVector(e.d, len / 2);
+      e.flameOut.position.copy(e.o).addScaledVector(e.d, (len * 1.25) / 2);
+      e.flameIn.material.opacity = 0.85 * a * a;
+      e.flameOut.material.opacity = 0.8 * a;
+    } else e.flash.visible = e.core.visible = e.flameIn.visible = e.flameOut.visible = false;
+    if (t < SPARK_T) {
+      for (let i = 0; i < NS; i++) {
+        const j = i * 3;
+        e.spos[j] += e.svel[j] * dt;
+        e.spos[j + 1] += e.svel[j + 1] * dt;
+        e.spos[j + 2] += e.svel[j + 2] * dt;
+        e.svel[j + 1] -= 9.8 * dt; // 중력
+        const damp = Math.max(0, 1 - dt * 2.5);
+        e.svel[j] *= damp;
+        e.svel[j + 2] *= damp;
+      }
+      e.sparks.geometry.attributes.position.needsUpdate = true;
+      const k = t / SPARK_T;
+      e.sparks.material.opacity = 1 - k * k;
+      e.sparks.material.size = 0.045 * (1 - 0.5 * k);
+    } else e.sparks.visible = false;
     if (t < TRACE_T) {
       const k = t / TRACE_T;
-      e.trace.material.opacity = 0.42 * (1 - k * k); // 옅게 시작해 빠르게 사라진다 (사장님: 옅은 줄 하나)
+      e.trace.material.opacity = 0.75 * (1 - k * k); // v2: 더 또렷하게 (0.42 → 0.75)
     } else e.trace.visible = false;
     if (t < SMOKE_T) {
       const damp = Math.max(0, 1 - dt * 3);
@@ -186,8 +302,8 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
       }
       e.smoke.geometry.attributes.position.needsUpdate = true;
       const k = t / SMOKE_T;
-      e.smoke.material.opacity = 0.75 * (1 - k) * (1 - k * 0.6);
-      e.smoke.material.size = 0.16 + 0.3 * k; // 퍼지며 커진다
+      e.smoke.material.opacity = 0.9 * (1 - k) * (1 - k * 0.6);
+      e.smoke.material.size = 0.24 + 0.4 * k; // 퍼지며 커진다 (v2: 조금 더 크게)
     } else {
       e.smoke.visible = false;
       e.t = -1;
@@ -206,23 +322,25 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   };
 
   // 조준 레이저: 총을 든 검객 수만큼 (판마다 검객이 바뀌므로 자리로 돌려쓴다)
-  const laserMat = new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: LASER_A, depthWrite: false });
-  const dotMat = laserMat.clone();
-  dotMat.opacity = LASER_DOT_A;
-  // 빗나가는 동안의 흐린 선·점 (사장님 9/29: "레이저 조준선이 상대방 머리 위 하늘로 치솟아 있어" — 몸에 안 걸린 동안 선이 25 m 지평선까지 뻗어
-  //  카메라에서는 상대 머리 위로 솟아 보였다. 이제 선은 상대 깊이에서 끊고, 점은 거기에 흐리게 남겨 흔들리는 겨눔이 몸 둘레 어디를 지나는지 보인다)
+  const laserMat = new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: LASER_A, depthWrite: false });
+  // 빗나가는 동안의 흐린 선 (사장님 9/29: "레이저 조준선이 상대방 머리 위 하늘로 치솟아 있어" — 몸에 안 걸린 동안 선이 25 m 지평선까지 뻗어
+  //  카메라에서는 상대 머리 위로 솟아 보였다. 이제 선은 상대 깊이에서 끊고, 조준쇠는 거기에 흐리게 남겨 흔들리는 겨눔이 몸 둘레 어디를 지나는지 보인다)
   const laserDimMat = laserMat.clone();
   laserDimMat.opacity = LASER_A * 0.5;
-  const dotDimMat = laserMat.clone();
-  dotDimMat.opacity = LASER_DOT_A * 0.4;
+  // 레이저 끝 조준쇠: 스프라이트(늘 카메라를 본다) · 화면 기준 크기 · 깊이 검사 없음(상대 몸 표면에 닿은 자리라 몸에 반쯤 묻히지 않게 늘 위에 그린다)
+  const reticleMap = reticleTexture();
+  const reticleMat = new THREE.SpriteMaterial({ map: reticleMap, transparent: true, opacity: RETICLE_A, depthTest: false, depthWrite: false, sizeAttenuation: false, fog: false });
+  const reticleDimMat = reticleMat.clone();
+  reticleDimMat.opacity = RETICLE_DIM_A;
   const beamGeo = new THREE.BoxGeometry(0.005, 1, 0.005).translate(0, 0.5, 0);
-  const dotGeo = new THREE.SphereGeometry(0.012, 6, 4);
   const lasers = [];
   const laserSlot = (i) => {
     while (lasers.length <= i) {
       const beam = new THREE.Mesh(beamGeo, laserMat);
-      const dot = new THREE.Mesh(dotGeo, dotMat);
-      beam.renderOrder = dot.renderOrder = 2;
+      const dot = new THREE.Sprite(reticleMat);
+      dot.scale.set(RETICLE_SIZE, RETICLE_SIZE, 1);
+      beam.renderOrder = 2;
+      dot.renderOrder = 3;
       beam.visible = dot.visible = false;
       scene.add(beam, dot);
       lasers.push({ beam, dot });
@@ -253,13 +371,13 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
       }
       const reloading = (f.gun?.cool ?? 0) > 0; // 쏜 직후·장전 중(총구가 위로 선다)에는 흐리게
       L.beam.material = reloading ? laserDimMat : laserMat;
-      L.dot.material = onTarget && !reloading ? dotMat : dotDimMat;
+      L.dot.material = onTarget && !reloading ? reticleMat : reticleDimMat;
       L.beam.position.copy(_u);
       L.beam.quaternion.setFromUnitVectors(_Y, _d);
       L.beam.scale.set(1, Math.max(0.01, end), 1);
       L.dot.position.copy(_u).addScaledVector(_d, end);
       L.beam.visible = true;
-      L.dot.visible = true; // 빗나가도 상대 깊이에 흐린 점 — 겨눔이 몸 둘레 어디를 지나는지 보인다
+      L.dot.visible = true; // 빗나가도 상대 깊이에 흐린 조준쇠 — 겨눔이 몸 둘레 어디를 지나는지 보인다
     }
     for (let i = n; i < lasers.length; i++) lasers[i].beam.visible = lasers[i].dot.visible = false;
   };
@@ -278,6 +396,14 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
       _d.set(0, 1, 0).applyQuaternion(_q); // 총신 방향 (gun.js fire 와 같다)
     }
     lastFire.set(f, fire(p, _d, typeof dist === 'number' && dist > 0 ? dist : measure(f, p, _d)));
+    // 발사 순간 짧은 화면 흔들림 (main.js kickCamera 체계, 작게): 자기 총은 반동 방향(총신 반대)으로, 상대 총은 아주 조금
+    if (shake) {
+      const mine = f === globalThis.window?.game?.player || f.index === 0;
+      _v.copy(_d).multiplyScalar(-1);
+      _v.y += 0.35;
+      _v.normalize();
+      shake(_v, mine ? 0.45 : 0.15);
+    }
   };
   // 무기 PM 의 onImpact (닿았을 때만, 같은 fire() 안에서 onShot 바로 뒤): 방금 쏜 줄을 실제 총알 방향·닿은 점으로 바로잡는다
   const prevImpact = GUN_HOOKS.onImpact;
@@ -297,6 +423,11 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     last = now;
     if (globalThis.window?.game?.state !== 'paused') {
       for (const e of pool) if (e.t >= 0) step(e, dt);
+      if (lightT >= 0) {
+        lightT += dt;
+        light.intensity = lightT < LIGHT_T ? 7 * (1 - lightT / LIGHT_T) : 0;
+        if (lightT >= LIGHT_T) lightT = -1;
+      }
       updateLasers();
     }
     requestAnimationFrame(tick);
@@ -305,8 +436,10 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   _clear = () => {
     for (const e of pool) {
       e.t = -1;
-      e.flash.visible = e.core.visible = e.smoke.visible = e.trace.visible = false;
+      e.flash.visible = e.core.visible = e.smoke.visible = e.trace.visible = e.flameIn.visible = e.flameOut.visible = e.sparks.visible = false;
     }
+    light.intensity = 0;
+    lightT = -1;
     for (const L of lasers) L.beam.visible = L.dot.visible = false;
   };
   return { fire, clear: _clear };

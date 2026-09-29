@@ -36,6 +36,16 @@ export const GAME_GUARDS = {
   wechselL: { hand: [0.32, -0.31, -0.1], blade: [-45, -40], pelvisYaw: -30, chestYaw: -40, pitch: 12, drop: 0.08 },
 };
 
+// 한손 무기 자세표 (src/guards.js ONE_HAND → BASE_ONE): 긴 자세·쟁기·황소·바보만 바뀐다(칼 든 어깨를 앞으로, 손을 더 뻗음).
+//  왼쪽 자세들은 게임도 두손 값 그대로 쓴다. 칼끝 방향(blade)은 교본 자세 그대로. 검사기가 게임 파일과 대조한다(validate_clip X1)
+export const GAME_GUARDS_ONE = {
+  ...GAME_GUARDS,
+  langort: { ...GAME_GUARDS.langort, hand: [0.68, 0.08, 0.1], pelvisYaw: -35, chestYaw: -45, pitch: 10 },
+  pflug: { ...GAME_GUARDS.pflug, hand: [0.4, -0.22, 0.13], pelvisYaw: -10, chestYaw: -25 },
+  ochs: { ...GAME_GUARDS.ochs, hand: [0.36, 0.26, 0.17], pelvisYaw: 0, chestYaw: -15 },
+  alber: { ...GAME_GUARDS.alber, hand: [0.5, -0.3, 0.05], pelvisYaw: -25, chestYaw: -25 },
+};
+
 // 기본 발 자리: 왼발 앞 (마이어 Zornhut: "왼발을 앞에 두고" [원전 2차])
 export const STANCE = { L: [0.27, -0.1, -10, 0, 0], R: [-0.26, 0.15, 40, 0, 0] };
 
@@ -62,11 +72,11 @@ function planeDir(plane, deg) {
 }
 
 /** 표 → 키 목록 (null 보간, 게임 자세, 월드 칼 방향 → 가슴 틀) */
-export function rows(table, plane) {
+export function rows(table, plane, guards = GAME_GUARDS) {
   const keys = table.map((r) => {
     if (typeof r[1] === 'string' && r[1].startsWith('G:')) {
       const name = r[1].slice(2);
-      const g = fromGameGuard(GAME_GUARDS[name]);
+      const g = fromGameGuard(guards[name]);
       return { t: r[0], tag: r[2] ?? null, p: [g.pelvis.yaw, g.pelvis.drop, 0], c: [g.chest.yaw, g.chest.lean, 0], h: g.hand, d: g.dirV, guard: name };
     }
     const [t, tag, py, drop, cy, lean, side, hx, hy, hz, ang] = r;
@@ -215,7 +225,7 @@ def({
     { t: 0.95, feet: F([0.27, -0.1, -45, 0.7, 0], [0.52, 0.12, 5, 0, 0]), px: 0.3 },
     { t: 1.5, feet: F([0.22, -0.12, -40, 0, 0], [0.52, 0.12, 5, 0, 0]), px: 0.3 },
   ],
-  sources: ['meyer_zornhut', 'meyer_zornhau', 'ringeck_zornhau', 'doebringer_step', 'meyer_step', 'golf_sequence', 'golf_xfactor', 'swordstem_speed', 'arma_speed', 'estimate'],
+  sources: ['meyer_zornhut', 'meyer_zornhau', 'ringeck_zornhau', 'doebringer_step', 'meyer_step', 'golf_sequence', 'golf_xfactor', 'swordstem_speed', 'estimate'], // arma_speed 뺌: 측정이 아니라 계산 예시였다 (연구 ASS 표본 점검 9/29)
 });
 
 // ─────────────────────────────────────────────────────────────
