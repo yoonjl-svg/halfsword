@@ -49,10 +49,11 @@ const SCALARS = {
   'pelvis.yaw': (k) => k.pelvis?.yaw, 'pelvis.pitch': (k) => k.pelvis?.pitch, 'pelvis.roll': (k) => k.pelvis?.roll,
   'chest.yaw': (k) => k.chest?.yaw, 'chest.lean': (k) => k.chest?.lean, 'chest.side': (k) => k.chest?.side,
   'hand.0': (k) => k.hand?.[0], 'hand.1': (k) => k.hand?.[1], 'hand.2': (k) => k.hand?.[2],
+  'hand2.0': (k) => k.hand2?.[0], 'hand2.1': (k) => k.hand2?.[1], 'hand2.2': (k) => k.hand2?.[2],
   'dir.0': (k) => k._dir?.[0], 'dir.1': (k) => k._dir?.[1], 'dir.2': (k) => k._dir?.[2],
 };
 for (const f of ['L', 'R']) for (const c of ['x', 'z', 'yaw', 'lift', 'up']) SCALARS[`feet.${f}.${c}`] = (k) => k.feet?.[f]?.[c];
-const GROUP = (name) => (name.startsWith('pelvis') ? 'pelvis' : name.startsWith('chest') ? 'chest' : name.startsWith('hand') ? 'arm' : name.startsWith('dir') ? 'sword' : 'feet');
+const GROUP = (name) => (name.startsWith('pelvis') ? 'pelvis' : name.startsWith('chest') ? 'chest' : name.startsWith('hand2') ? 'free' : name.startsWith('hand') ? 'arm' : name.startsWith('dir') ? 'sword' : 'feet');
 const DEFAULT = { 'pelvis.x': 0, 'pelvis.z': 0, 'pelvis.drop': 0.05, 'pelvis.yaw': 0, 'pelvis.pitch': 0, 'pelvis.roll': 0, 'chest.yaw': 0, 'chest.lean': 0, 'chest.side': 0, 'feet.L.lift': 0, 'feet.R.lift': 0, 'feet.L.yaw': 0, 'feet.R.yaw': 0, 'feet.L.up': 0, 'feet.R.up': 0 };
 
 /** 게임 자세표(guards.js) 값 → 가슴 틀 채널. 게임은 손 목표를 '바라보는 방향' 틀에 두고, 골반은 표 값의 절반만 튼다(fighter.js 615) */
@@ -107,6 +108,7 @@ export function buildTracks(keys) {
   for (const [name, get] of Object.entries(SCALARS)) {
     if (name.startsWith('dir.')) continue;
     const ks = keys.filter((k) => get(k) != null).map((k) => [k.t, get(k)]);
+    if (!ks.length && name.startsWith('hand2')) continue; // 빈손 키가 없으면(두손 무기) 채널 없음
     if (!ks.length) {
       const d = DEFAULT[name];
       if (d == null) throw new Error(`채널 ${name} 에 키가 하나도 없다`);
@@ -167,6 +169,7 @@ export function channelsAt(tracks, marks, chain, t) {
     out.chest.yaw = cy - py;
   }
   out.hand = [at('hand.0'), at('hand.1'), at('hand.2')];
+  if (tracks['hand2.0']) out.hand2 = [at('hand2.0'), at('hand2.1'), at('hand2.2')];
   // 칼 방향 키는 월드 틀이다 (베는 면이 월드에 있다). 가슴이 앞당겨 돌아도 칼은 제 시각표대로 — 몸통과 칼 사이의 늦춤이 저절로 생긴다
   out.dirW = tracks.dirV(t + (chain.sword ?? 0) * b);
   for (const f of ['L', 'R']) out.feet[f] = { x: at(`feet.${f}.x`), z: at(`feet.${f}.z`), yaw: at(`feet.${f}.yaw`), lift: at(`feet.${f}.lift`), up: Math.max(0, at(`feet.${f}.up`)) };
@@ -206,13 +209,57 @@ export function sampleClip(def, side = 1) {
   for (let i = 0; i < n; i++) {
     const t = i / HZ;
     const ch = channelsAt(tracks, marks, chain, t);
-    const J = pose(ch, side);
+    const J = pose(ch, side, def.sword);
     frames.push({ t, ch, J });
   }
   // 손목 한계 끌어오기는 v0 에서 끈다(def.wristLimit === true 일 때만): 감기 중 아래팔이 빨리 움직이는 곳에서 칼이 따라 튀었다
   //  (보통 가로 베기 칼끝 순간 52 m/s). 넘는 각은 summary.checks 에 적기만 한다
-  if (def.wristLimit === true) wristLimit(frames, side);
+  if (def.wristLimit === true) wristLimit(frames, side, def.sword);
+  // 땅: 칼끝이 땅(y = 0) 위 def.ground m 보다 낮아지면 칼을 덜 숙인다 (긴 칼 — 츠바이핸더 — 만 켠다. 롱소드 클립은 가장 낮아도 0.03 m)
+  if (def.ground != null) groundLimit(frames, side, def.sword, def.ground);
   return { frames, marks };
+}
+
+/** 가우스로 시간 부드럽게 (σ 초) — 한 값 배열 */
+function smooth1(arr, sigma) {
+  const n = arr.length;
+  const r = Math.ceil(sigma * 3 * HZ);
+  return arr.map((_, i) => {
+    let acc = 0, ws = 0;
+    for (let k = -r; k <= r; k++) {
+      const w = Math.exp(-0.5 * ((k / HZ) / sigma) ** 2);
+      acc += arr[Math.min(n - 1, Math.max(0, i + k))] * w;
+      ws += w;
+    }
+    return acc / ws;
+  });
+}
+
+/**
+ * 땅 한계 (오프라인): 칼끝 높이 = 손 높이 + 칼끝 길이 × 칼 방향 y. 땅 위 clear m 에 닿으려면 칼을 얼마나 덜 숙여야 하나(올려본 각 더하기)를
+ *  표본마다 셈하고, 시간으로 부드럽게(σ 40 ms, 봉우리는 1.3배로 부풀려 깎이지 않게) 한 만큼 칼을 올린다(옆 각은 그대로).
+ *  사람이 긴 칼로 하는 일(칼끝을 땅에 박지 않게 덜 숙임)을 흉내 낸 저작 규칙이다 — 게임 한도가 아니다.
+ */
+function groundLimit(frames, side, sword, clear) {
+  const tipLen = (sword ?? { tip: 1.18 }).tip;
+  const need = frames.map((f) => {
+    const d = f.J.dW;
+    const yMin = Math.max(-1, Math.min(1, (clear - f.J.hS[1]) / tipLen));
+    const el = Math.asin(Math.max(-1, Math.min(1, d[1])));
+    return Math.max(0, Math.asin(yMin) - el);
+  });
+  const sm = smooth1(need, 0.04).map((x, i) => Math.max(x * 1.3, need[i]));
+  for (let i = 0; i < frames.length; i++) {
+    if (sm[i] <= 1e-4) continue;
+    const f = frames[i];
+    const d = f.J.dW;
+    const h = Math.hypot(d[0], d[2]);
+    const az = h > 1e-6 ? Math.atan2(d[2], d[0]) : 0;
+    const el = Math.min(Math.PI / 2 - 1e-3, Math.asin(Math.max(-1, Math.min(1, d[1]))) + sm[i]);
+    const dN = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
+    f.ch = { ...f.ch, dirW: dN };
+    f.J = pose(f.ch, side, sword);
+  }
 }
 
 /**
@@ -221,7 +268,7 @@ export function sampleClip(def, side = 1) {
  *  칼끝 순간 37~80 m/s), 아래팔 방향과 넘친 각을 시간으로 부드럽게(가우스 σ 30 ms) 한 뒤 끌어온다. 이것은 기준 동작을
  *  사람답게 만드는 저작 규칙이지 게임의 한도가 아니다.
  */
-function wristLimit(frames, side) {
+function wristLimit(frames, side, sword) {
   const n = frames.length;
   const fore = frames.map((f) => v3.norm(v3.sub(f.J.hS, f.J.elS)));
   const gauss = (arr, sigma, pick) => {
@@ -256,7 +303,7 @@ function wristLimit(frames, side) {
     const dN = v3.norm(v3.add(v3.add(v3.mul(d, Math.cos(a)), v3.mul(kxd, Math.sin(a))), v3.mul(k, v3.dot(k, d) * (1 - Math.cos(a)))));
     const ch = { ...f.ch, dirW: dN };
     f.ch = ch;
-    f.J = pose(ch, side);
+    f.J = pose(ch, side, sword);
   }
 }
 

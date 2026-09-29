@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { shapeMetrics } from './lib/shape_metrics.mjs';
+import { score, SCORE_VERSION } from './score.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const D = join(ROOT, 'docs', 'motion');
@@ -80,6 +81,23 @@ for (const [cut, title, ids] of CUTS) {
   L.push(`| 사슬: 골반 / 가슴 / 손 (칼끝 최고 기준 ms) | ${rows.map((r) => `${r[1].seq.pelvis} / ${r[1].seq.chest} / ${r[1].seq.hand}`).join(' | ')} |`);
   L.push(`| 골반 / 가슴 최고 각속도 °/s | ${rows.map((r) => `${r[1].pelvisPeakRate} / ${r[1].chestPeakRate}`).join(' | ')} |`);
   L.push('');
+  // 채점 (score.mjs): 기록마다 작게·크게 기준 대비
+  const recs = [['지금 게임 · 팔 베기', ids.game], ['시험판 · 팔 베기', ids.arm], ['시험판 · 결심(온몸) 베기', ids.commit]].filter(([, id]) => has(id));
+  if (recs.length) {
+    L.push(`채점 (\`${SCORE_VERSION}\`, \`score.mjs\` — 정의는 [score.md](score.md)). 점수 0~1, 1 = 기준과 같음. 괄호 = 그 항목 점수.`);
+    L.push('');
+    L.push('| 기록 | 기준 | 합 | 손 오차 RMS m | 사슬 시각 차 평균 ms | 순서 뒤바뀜 (기준) | 칼 방향 차 평균° | 동작 범위 | 시간 배율 |');
+    L.push('|---|---|---|---|---|---|---|---|---|');
+    for (const [label, id] of recs) {
+      const rec = load(`records/${id}.json`);
+      for (const size of ['small', 'large']) {
+        const sc = score(load(`clips/${cut}_right_${size}.json`), rec);
+        const T = sc.terms;
+        L.push(`| ${label} | ${size === 'small' ? '작게' : '크게'} | **${sc.total}** | ${T.hand.rms} (${T.hand.score}) | ${T.phase.meanAbsMs} (${T.phase.score}) | ${T.order.inversions} (${T.order.refInversions}) | ${T.blade.meanDeg?.toFixed(0)} (${T.blade.score}) | ${T.range.score} | ${sc.align.timeScale} |`);
+      }
+    }
+    L.push('');
+  }
 }
 writeFileSync(join(D, 'compare_game.md'), L.join('\n') + '\n');
 console.log(L.join('\n'));

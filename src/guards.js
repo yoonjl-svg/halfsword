@@ -79,6 +79,10 @@ const BASE_ONE = BASE.map((g) => {
   return o ? { ...g, hand: o.hand, pelvisYaw: o.pelvisYaw * D2R, chestYaw: o.chestYaw * D2R, pitch: o.pitch != null ? o.pitch * D2R : g.pitch } : g;
 });
 
+/** 동작 라이브러리(motion_library.js)가 몸 틀별 자세표를 만들 때 바탕으로 쓰는 표 (교본 자세 NBASE 개, 같은 패드 자리) */
+export const GUARD_BASE = BASE;
+export const GUARD_BASE_ONE = BASE_ONE;
+
 const SIGMA2 = 0.15 * 0.15;
 
 /**
@@ -96,7 +100,9 @@ export function guardAt(x, y, out, fin = null, th = null) {
   h[0] = h[1] = h[2] = d[0] = d[1] = d[2] = 0;
   out.pelvisYaw = out.chestYaw = out.pitch = out.drop = 0;
   const fa = fin ? fin.amt : 0;
-  const T = out.oneHand ? BASE_ONE : GUARDS; // 한손 무기면 한손 자세표 (fighter 가 무기의 oneHandStance 로 out.oneHand 를 켠다)
+  // 한손 무기면 한손 자세표 (fighter 가 무기의 oneHandStance 로 out.oneHand 를 켠다). out.table 이 있으면 그 표
+  //  (동작 라이브러리 motion_library.js — 몸 틀별 자세표. 같은 패드 자리·같은 순서. 없으면 예전 그대로)
+  const T = out.table ?? (out.oneHand ? BASE_ONE : GUARDS);
   for (let i = 0; i < NBASE; i++) {
     const g = T[i];
     const dx = x - g.pad[0];
