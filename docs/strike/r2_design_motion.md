@@ -45,7 +45,7 @@ Loading rule (director decision in `clip_format.md` head): the game reads the th
 - `hz !== 120`, `n !== round(marks.tg·hz)+1` (small 121, medium 151, large 181 — verified), non-monotone `t`, marks not ordered `t0<tw<tr<tc<tf<tg`, `phiMarks` ≠ `{t0:-1,tw:0,tr:0.55,tc:0.85,tf:1.6,tg:2.2}`.
 - `cols.phi` deviating from the piecewise-linear map of `marks`/`phiMarks` by > 1e-3.
 - non-unit `sword`/`elbowPole*` (|len−1| > 1e-3).
-- `size !== 'small'` without `step`, `recoverTo` not in the guard id set (`pflug, pflugL, ochs, ochsL, tag, tagL, side, sideL, wechsel, wechselL, alber, nebenhut, langort`), or `startPose.handError`/`endPose.handError` > 0.02 (format promises 0: "16벌 모두 끝 자세 = 목표 자세 (손 오차 0 cm)").
+- `size !== 'small'` without `step`, `recoverTo` not in the guard id set (the 14 ids of `guards.js` / `atlas.js GUARD_IDS`: `tag, tagR, ochs, langort, side, pflug, wechsel, neben, alber, tagL, ochsL, sideL, pflugL, wechselL`), or `startPose.handError`/`endPose.handError` > 0.02 (format promises 0: "16벌 모두 끝 자세 = 목표 자세 (손 오차 0 cm)").
 - packed file: `sourceFormat` mismatch, or a source sha1 that differs from the clip on disk when both are present (sims).
 
 Content warnings (collected in `atlas.report`, printed once by sims, never silent): `summary.checks.wristOver160 > 0` (medium zwerch 0.13 s, krump 0.16 s, zorn 0.06 s, schiel 0.07 s), reach report (§2-2), elbow-pole flips (§2-2), cross-size hand jump at any mark > 0.35 m.
