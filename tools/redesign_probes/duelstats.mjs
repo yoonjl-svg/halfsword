@@ -4,7 +4,7 @@
 // SPD/HOLDALL 훅은 실험판 src(exp_src.patch) 에서만 듣는다 — 이 저장소 src 에는 적용하지 않았다.
 // R0 뒤 이 저장소 src 의 깃발(config.js STRIKE): CAP=1e9 → glitchFilter 켬(속도 한도 없음, 기본값), CAP=30 → 끔(예전 30 m/s 버림);
 //  HOLDEFF=1 → gripMu 켬(기본값). 예전 방식 전부(기준선)는 R0_OFF=1 로 돌린다. glitchDrops/capDrops = 튐 검사 / 30 m/s 한도로 버린 접촉 수,
-//  peakContact = 받아들인 접촉점 최고 빠르기(m/s, 무기별), sweptHits = 스윕 판정(STRIKE.sweep)으로 잡은 첫 접촉 수
+//  peakContact = 받아들인 접촉점 최고 빠르기(m/s, 무기별), sweptHits = 스윕 판정(STRIKE.sweep)으로 잡은 첫 접촉 수 (SWEPT=0|1 로 끔/켬)
 const N = +(process.argv[2] || 6);
 const SECS = +(process.argv[3] || 20);
 if (process.env.SPD) globalThis.__WRIST_SPD = +process.env.SPD;
@@ -14,6 +14,7 @@ if (process.env.HOLDEFF) globalThis.__HOLDEFF = 1;
 const CFG = await import('../../src/config.js');
 if (process.env.CAP) CFG.STRIKE.glitchFilter = +process.env.CAP >= 1e6;
 if (process.env.HOLDEFF) CFG.STRIKE.gripMu = true;
+if (process.env.SWEPT != null) CFG.STRIKE.sweep = !!+process.env.SWEPT; // 스윕 판정 끔/켬 (주지 않으면 설정 기본값)
 const H = await import('../sim/harness_m.mjs');
 const { newRound, AI, THREE } = H;
 const { LOOKS, getLook } = await import('../../src/looks.js');
