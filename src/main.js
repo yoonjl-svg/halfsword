@@ -1340,7 +1340,8 @@ prepareRound();
 newRound(FIXED_WEAPON || 'longsword');
 requestAnimationFrame(frame);
 
-// 디버그/튜닝용: 브라우저 콘솔에서 game.player.blood, game.config.WEAPON.mass = 3 처럼 만져볼 수 있다
+// 디버그/튜닝용: 브라우저 콘솔에서 game.player.blood, game.config.GAIT.kneeBase = 0.2 처럼 만져볼 수 있다
+//  (WEAPON 값은 판을 만들 때 싸움꾼마다 weaponCfg 로 복사된다: 바꾸면 다음 판부터)
 window.game = {
   get player() {
     return player;
