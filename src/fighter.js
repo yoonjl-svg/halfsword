@@ -10,9 +10,10 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT, STRIKE, GESTURE, ARM } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT, STRIKE, GESTURE, ARM, DRIVE } from './config.js';
 import { Skill } from './skill.js';
 import { Gesture } from './strike/gesture.js';
+import { ClipDrive } from './strike/drive.js';
 import { Gait, hybridJointDefs, fwdFixOn } from './gait.js';
 import { guardAt } from './guards.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
@@ -239,8 +240,8 @@ export class Fighter {
     this.guardPose = {}; // 손이 따라가는 자세 (걸러진 손 목표 기준)
     this.bodyGuard = {}; // 몸이 따라가는 자세 (거르기 전 입력 기준)
     this.finish = newFinish(); // 쓰러진 상대 마무리(내려찍기) 자세 (finish.js)
-    this.bodyPose = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
-    this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
+    this.bodyPose = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0, side: 0 }; // side: 옆굽힘 (클립 chest.side, R2 드라이브만 쓴다. 자세표 몫은 0)
+    this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0, side: 0 };
     this.pelvisYawOffset = 0; // 골반을 트는 각도 (라디안, + = 왼쪽으로)
     this.pelvisDropOffset = 0; // 자세에 따라 골반을 더 낮추는 정도 (m)
     this.pelvisTgt = 0; // 골반 비틀기 목표 (결심 베기 중엔 초당 COMMIT.pelvisRate 로만 바꾼다)
@@ -364,7 +365,7 @@ export class Fighter {
           raw.jointConfigureMotorModel(joint.handle, MOTOR_AXES[i], 1);
         });
       }
-      this.joints.push({ joint, name: jd.c, parent: this.bodies[jd.p], child: this.bodies[jd.c], type: jd.type, manual: !!jd.manual, restInv: rest.clone().invert(), k: jd.k, d: jd.d, max: jd.max, target: new THREE.Quaternion() });
+      this.joints.push({ joint, name: jd.c, parent: this.bodies[jd.p], child: this.bodies[jd.c], type: jd.type, manual: !!jd.manual, restInv: rest.clone().invert(), k: jd.k, d: jd.d, max: jd.max, lim: jd.lim, target: new THREE.Quaternion() }); // lim: 만들 때의 한계 (R2 드라이브가 넓혔다가 이 값으로 되돌린다)
     }
     this.jointByName = Object.fromEntries(this.joints.map((j) => [j.name, j]));
 
@@ -603,6 +604,12 @@ export class Fighter {
     return Math.min(1.3, Math.abs(1 - (a * b) / k2));
   }
 
+  /** R2 클립 추적을 붙인다 (아틀라스를 읽은 뒤: main.js newRound·beginFight, 시뮬 하니스). DRIVE.on 이 거짓이거나 아틀라스가 없으면 null */
+  attachDrive(atlas) {
+    this.drive = DRIVE.on && atlas ? new ClipDrive(this, atlas) : null;
+    return this.drive;
+  }
+
   /** 검술 자세 지도를 얼마나 따를지 (검술 보정 0 → 0, 약 0.4 → 0.64, 보통 이상 → 1) */
   guardWeight() {
     return Math.min(1, this.skill.level * 1.6);
@@ -659,6 +666,9 @@ export class Fighter {
       follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
       follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
     }
+    // 옆굽힘은 자세표 몫이 0: 드라이브가 놓으면 0 으로 돌아온다 (0 이면 건너뜀 — 한 번도 안 쓴 파이터는 그대로)
+    if (bp.side !== 0 || bv.side !== 0) follow('side', 0, SKILL_BODY.chest * spd);
+    if (this.drive?.w > 0) this.drive.mixBody(bp, bv, dt); // R2: 자세표 ↔ 클립 c(S) 로 섞기 (값·빠르기, §5.3)
     this.pelvisYawOffset = bp.pelvisYaw;
     this.pelvisDropOffset = bp.drop;
   }
@@ -725,10 +735,13 @@ export class Fighter {
     this.updateHeading(dt);
     updateFinish(this, dt); // 상대가 쓰러져 있으면 아래쪽 자세를 내려찍기로 (finish.js)
     this.skill.update(dt);
+    if (this.drive) this.drive.update(dt); // R2: 손짓 → 클립 표본 → cmd (S = 0 이면 w = 0 으로 끝)
+    else if (DRIVE.on && this.ges?.S > 0) this.strike.stats.atlasMissing++; // 아틀라스 없이 S > 0: 팔 베기로 (센다)
     this.updateBodyPose(dt);
     this.driveBalance(dt);
     if (this.gait?.active) this.gait.pinFeet();
     this.applyPose(dt);
+    if (this.drive?.w > 0) this.drive.applyTorques(); // R2: 앞먹임 회전력·무른 한계·관절 한계 넓히기 (§5.4-5.5)
     this.shove();
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
@@ -1330,8 +1343,13 @@ export class Fighter {
     const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, loadSum));
     const raw = this.uprightJoint.rawSet;
     for (const ax of MOTOR_AXES) {
-      const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
-      raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * r);
+      const r0 = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
+      // R2: yaw 축 강성만 1 − 0.9·S 로 푼다 (감쇠는 그대로 = 명령 골반 빠르기로의 빠르기 서보, §5.3). S = 0 이면 ×1
+      const dy = ax === MOTOR_AXES[2] && this.drive?.w > 0;
+      const r = r0 * (dy ? this.drive.anchorYawRelax() : 1);
+      const rd = r0 * (dy ? this.drive.anchorYawDamp() : 1);
+      raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * rd);
+      if (dy) this.drive.noteAnchor(BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * rd);
     }
     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
     //  (다리 걸음(hybrid)에서 걸음 방향 버그를 고친 뒤엔 GAIT.leanFix: 다리 1.5 가 맞춰진 크기. 0.05 를 그대로 쓰면 빨리 걸을 때 7°쯤 숙여
@@ -1550,10 +1568,12 @@ export class Fighter {
     // 가슴을 트는 각도(정면 기준): 검술 자세 지도 + (보정이 약할수록) 손이 있는 쪽으로.
     // 허리(척추)는 그중 골반이 이미 튼 만큼을 뺀 나머지만 튼다
     const chestYaw = bp.chestYaw + (1 - gw) * -sk.aim.x * 0.35;
-    const twist = THREE.MathUtils.clamp(chestYaw - (this.state === 'stand' ? bp.pelvisYaw : 0), -0.8, 0.8);
-    const spine = (name, pitch, yaw) => J[name].target.setFromEuler(_eu.set(0, yaw, pitch, 'YXZ'));
-    spine('abdomen', bend * 0.5, twist * 0.45);
-    spine('chest', bend * 0.5, twist * 0.55);
+    const tl = this.drive ? this.drive.twistLim() : 0.8; // R2: 0.8 + (spineTwist − 0.8)·S (Q5)
+    const twist = THREE.MathUtils.clamp(chestYaw - (this.state === 'stand' ? bp.pelvisYaw : 0), -tl, tl);
+    const spine = (name, pitch, yaw, roll = 0) => J[name].target.setFromEuler(_eu.set(roll, yaw, pitch, 'YXZ'));
+    const roll = bp.side * DRIVE.sideShare; // R2 옆굽힘 (클립 chest.side), 드라이브가 안 쓰면 0
+    spine('abdomen', bend * 0.5, twist * 0.45, roll);
+    spine('chest', bend * 0.5, twist * 0.55, roll);
     // 머리: 몸통이 틀어져도 상대를 본다. 멍하면 고개가 떨어진다
     spine('head', -0.35 * this.daze, -chestYaw);
   }

@@ -28,6 +28,26 @@ import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 
 await RAPIER.init();
+// R2 클립 아틀라스 (§3.8-9): 판 전에 읽는다 (Vite 가 묶음 JSON 을 이 조각에 싣는다 — base64 풀기·도함수는 여기서, 싸움 중엔 안 돈다).
+//  beginFight 가 기다린다. 드라이브는 newRound·beginFight 가 붙인다
+let atlas = null;
+//  묶음 JSON 은 여기서 속성 없이 가져와 넘긴다: Vite 개발 서버는 import(…json, { with: { type: 'json' } }) 에 JS 모듈을 내줘 브라우저가 MIME 으로 거절한다
+const atlasReady = Promise.all([import('./strike/atlas.js'), import('./strike/clips/atlas_v0.json')])
+  .then(async ([m, j]) => {
+    const t0 = performance.now();
+    atlas = await m.loadAtlasPacked(j.default);
+    console.info(`[atlas] pack decode ${(performance.now() - t0).toFixed(1)} ms (${atlas.clips.length} clips)`);
+    return atlas;
+  })
+  .catch((e) => {
+    console.error('[atlas] 읽기 실패 — 온몸 베기 없이 팔 베기로 (stats.atlasMissing 에 센다)', e);
+    return null;
+  });
+/** 이 판 파이터에 드라이브를 붙인다 (아틀라스가 있고 아직 안 붙였으면) */
+function attachDrives() {
+  if (!atlas) return;
+  for (const f of [player, enemy]) if (f && f.drive?.atlas !== atlas) f.attachDrive(atlas);
+}
 
 // 테스트용 URL 파라미터: ?weapon=monohoshizao&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
@@ -345,6 +365,7 @@ function newRound(weaponId) {
   player.skill.trace = input.fingerTrace;
   player.ges?.attachTrace(input.fingerTrace); // R2 손짓 층 (GESTURE.on): 같은 손가락 궤적을 스텝 시각으로 읽는다
   player.ges?.reset();
+  attachDrives(); // R2 클립 추적 (아틀라스를 이미 읽었으면)
   // 확정 신호 (모든 기기): 입력 자취가 금색으로 밝아지고 굵어진다. 안드로이드는 짧은 진동을 더한다 (숨소리는 소리 담당, R3 고리)
   player.onCommit = (stage) => {
     if (stage !== 'B') return;
@@ -953,7 +974,11 @@ async function startFight() {
 }
 
 /** 무기를 받았다: 싸움 시작 ("Battle", 조이스틱, 조작 안내) */
-function beginFight() {
+async function beginFight() {
+  // 아틀라스를 다 풀기 전엔 싸움을 시작하지 않는다 (§3.8-9). 보통 메뉴·카드 동안 이미 끝나 있다
+  if (!atlas) await atlasReady;
+  attachDrives();
+  if (PUPPET_ID) await startPuppet(); // R2 꼭두각시 (?puppet=<클립 id>)
   state = 'fight';
   input.enabled = true;
   emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
@@ -1252,6 +1277,28 @@ if (params.get('input') === 'wind' || params.get('input') === 'stroke') {
   settings.gestureInput = params.get('input');
   refreshSettingsUI();
 }
+// R2 꼭두각시 (§8.1): ?puppet=zornhau_right_large&S=1&loop=1 → 싸움이 시작되면 플레이어 몸 전체를 kinematic 으로 두고 클립대로 놓는다.
+//  상대는 AI 를 끄고 뒤로 물린다. S 는 크기(0 작게 · 0.5 보통 · 1 크게, 없으면 클립 id 의 크기), loop=0 이면 한 번만. 게임 코드 경로엔 끼지 않는다
+const PUPPET_ID = params.get('puppet');
+let puppet = null;
+async function startPuppet() {
+  const m = await import('./strike/puppet.js');
+  const c = m.parseClipId(PUPPET_ID);
+  if (!c || !atlas?.has(c.cut, c.side)) {
+    console.error(`[puppet] 모르는 클립 '${PUPPET_ID}' (예: zornhau_right_large)`);
+    return;
+  }
+  const S = params.get('S') != null ? +params.get('S') : c.S;
+  puppet = new m.Puppet(player, atlas, { cut: c.cut, side: c.side, S, loop: params.get('loop') !== '0' });
+  // 상대를 1.5 m 더 물린다 (칼끝이 닿지 않게)
+  const pp = player.bodies.pelvis.translation(), ep = enemy.bodies.pelvis.translation();
+  const dx = ep.x - pp.x, dz = ep.z - pp.z, dl = Math.hypot(dx, dz) || 1;
+  const mv = (rb) => { const t = rb.translation(); rb.setTranslation({ x: t.x + (dx / dl) * 1.5, y: t.y, z: t.z + (dz / dl) * 1.5 }, true); };
+  for (const { rb } of enemy.meshes) mv(rb);
+  mv(enemy.anchor);
+  puppet.start();
+  console.info(`[puppet] ${PUPPET_ID} S ${S} (T ${puppet.T.toFixed(2)} s)`);
+}
 const perf = params.get('fps') ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
 let last = performance.now();
 let acc = 0;
@@ -1323,9 +1370,10 @@ function frame(now) {
       enemy.foe = player;
       player.faceTarget = enemy.bodies.pelvis.translation();
       enemy.faceTarget = player.bodies.pelvis.translation();
-      ai.update(PHYSICS.timestep);
+      if (!puppet) ai.update(PHYSICS.timestep);
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);
+      if (puppet) puppet.update(PHYSICS.timestep); // R2 꼭두각시: 몸을 클립 자리로 (다음 world.step 에 옮겨진다)
       tickDebris(PHYSICS.timestep); // 흩어지는 칼·방어구 조각 (겉모습만, 게임 시간 — 멈칫·슬로모션을 따른다)
       player.cacheState();
       enemy.cacheState();
@@ -1409,6 +1457,9 @@ window.game = {
   },
   trail,
   stats,
+  get puppet() {
+    return puppet; // R2 꼭두각시 (?puppet=)
+  },
   config: CONFIG,
   THREE,
   camera,

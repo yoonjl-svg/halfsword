@@ -5,7 +5,7 @@
 //  쓰는 것은 제 필드(fighter.ges = 이 객체)와 fighter.strike(읽기 전용 보기)뿐. 엔진은 건드리지 않는다 (W3·W4 가 읽는다)
 //  상한·바닥·쿨다운 없음: S 는 1 위로 자르지 않고(over), φ̇ 에 바닥이 없다(clock 'finger'). 명세 §10 참고
 // ─────────────────────────────────────────────────────────────
-import { GESTURE, STROKE, COMMIT } from '../config.js';
+import { GESTURE, STROKE, COMMIT, DRIVE } from '../config.js';
 
 export const GES_IDLE = 0, GES_WIND = 1, GES_CUT = 2, GES_FOLLOW = 3, GES_RECOVER = 4;
 export const GES_NAMES = ['idle', 'wind', 'cut', 'follow', 'recover'];
@@ -288,7 +288,7 @@ export class Gesture {
       this.phiDotF = this._phiDotW;
     } else if (this.state === GES_RECOVER) this.phiDotF = 0;
     this.phiFilter(dt);
-    this.c = smoothstep(0, G.mixX, this.S);
+    this.c = smoothstep(0, DRIVE.mixX, this.S);
     // 확정 신호 (§3.8-8): 한 획에 한 번, 몸이 클립에 다 올라탄 첫 스텝 (c = 1). R5 가 φr→φf 창으로 옮긴다
     if (!this._fired && this.c === 1 && (this.state === GES_CUT || this.state === GES_FOLLOW)) {
       this._fired = true;
@@ -687,7 +687,7 @@ export class Gesture {
       this.Swind = 0;
     } else if (this.state !== GES_RECOVER) this.state = GES_RECOVER;
     this.phiDotF = 0;
-    this.c = smoothstep(0, GESTURE.mixX, this.S);
+    this.c = smoothstep(0, DRIVE.mixX, this.S);
     this.write();
   }
 

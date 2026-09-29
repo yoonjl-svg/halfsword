@@ -629,21 +629,26 @@ export class Skill {
     this.idle = f.inputActive ? 0 : this.idle + dt;
     const canRecover = this.autoGuard && L >= 0.35 && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel');
     // (결심 베기는 끝 자세 너머로 지나가기를 다 한 뒤에: 획 프로그램이 끝나기(u endU) 전엔 자세로 돌아가기를 시작하지 않는다)
-    if (canRecover && this.cutPending && !swinging && !f.handHeld && this.idle > SKILL.recoverDelay && !(prog && !cm.ended)) {
+    if (canRecover && this.cutPending && !swinging && !f.handHeld && this.idle > SKILL.recoverDelay && !(prog && !cm.ended) && !f.ges?.busy) {
       this.recovering = true;
       this.cutPending = false;
     }
     if (this.recovering) {
-      if (f.inputActive || !canRecover) this.recovering = false; // 다시 조작하면 바로 조작이 우선
-      else {
-        const hx = SKILL.homeGuard[0] - off.x;
-        const hy = SKILL.homeGuard[1] - off.y;
+      const sv = f.strike;
+      if (f.inputActive || !canRecover) {
+        this.recovering = false; // 다시 조작하면 바로 조작이 우선
+        if (sv?.homePad) sv.homePad = null; // R2: 베기 끝 자세(recoverTo)로 돌아가기는 손가락이 잡으면 끝
+      } else {
+        const home = sv?.homePad ?? SKILL.homeGuard; // R2: 방금 벤 클립의 recoverTo 자세 (§5.7), 없으면 기본 자세
+        const hx = home[0] - off.x;
+        const hy = home[1] - off.y;
         const d = Math.hypot(hx, hy);
         // 휘두르기로 오인되지 않게 휘두르기 기준 속도보다 느리게 옮긴다
         const step = SKILL.recoverSpeed * dt;
         if (d <= step) {
-          off.set(SKILL.homeGuard[0], SKILL.homeGuard[1]);
+          off.set(home[0], home[1]);
           this.recovering = false;
+          if (sv?.homePad) sv.homePad = null;
         } else {
           off.x += (hx / d) * step;
           off.y += (hy / d) * step;
@@ -654,7 +659,7 @@ export class Skill {
       this.lunge -= dt;
       // 물러나려는 중이면 내딛지 않는다 (조작이 우선). AI 가 기술 걸음을 딛는 중(holdFeet, ai.js moveFeet)에도.
       //  결심 베기가 확정된 뒤에는 L3 걸음이 대신한다 (COMMIT.armLunge 가 거짓일 때. R4 전까지는 팔 베기처럼 내딛는다). 1단계는 대가가 없다
-      if (f.move.y > -0.2 && !this.holdFeet && !(prog && !COMMIT.armLunge) && f.foeDistance() > SKILL.lungeMin) f.move.y = Math.max(f.move.y, SKILL.lungeMove * L);
+      if (f.move.y > -0.2 && !this.holdFeet && !(prog && !COMMIT.armLunge) && f.foeDistance() > SKILL.lungeMin && !f.drive?.stepping) f.move.y = Math.max(f.move.y, SKILL.lungeMove * L);
     }
 
     // 5) 탭 찌르기

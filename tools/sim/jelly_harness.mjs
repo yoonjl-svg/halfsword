@@ -6,8 +6,13 @@ import { Fighter, GROUND_GROUPS } from '../../src/fighter.js';
 import { LOOKS } from '../../src/looks.js';
 import { AI } from '../../src/ai.js';
 import { Combat } from '../../src/combat.js';
+import { loadAtlasPacked } from '../../src/strike/atlas.js';
 
 await RAPIER.init();
+// R2 클립 아틀라스: 한 번 읽는다 (main.js 처럼 판 전에). 드라이브는 newRound 가 붙인다 (DRIVE.on 이 거짓이면 attachDrive 가 null). 읽기에 난수·차례 영향 없음
+const _tA = performance.now();
+export const atlas = await loadAtlasPacked();
+if (!process.env.QUIET_ATLAS) console.error(`[atlas] pack decode ${(performance.now() - _tA).toFixed(1)} ms (${atlas.clips.length} clips)`);
 export { RAPIER, THREE, CONFIG, AI };
 const { PHYSICS, ARENA } = CONFIG;
 export const DT = PHYSICS.timestep;
@@ -35,6 +40,7 @@ export function newRound(opts = {}) {
   const gap = opts.gap ?? ARENA.startGap;
   const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: LOOKS.player, breakSeed: opts.seed });
   const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: LOOKS.enemy, breakSeed: opts.seed });
+  if (opts.drive !== false) { player.attachDrive(atlas); enemy.attachDrive(atlas); } // R2 드라이브 (main.js newRound 와 같게)
   if (opts.onFighter) { opts.onFighter(player, world, RAPIER); opts.onFighter(enemy, world, RAPIER); }
   const ai = new AI(enemy, player, opts.difficulty ?? 'normal');
   player.skill.level = opts.skill ?? 0.7;
