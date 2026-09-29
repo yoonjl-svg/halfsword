@@ -679,8 +679,8 @@ export class Combat {
   /**
    * R0 스윕 판정 (STRIKE.sweep, docs/whole_body_redesign.md §6-3). 빠른 칼은 한 스텝에 얇은 팔·목을 건너뛴다 — 엔진의 soft CCD 는 칼 무게중심의 직선 이동만
    * 보고(0.2 는 그대로 둔다) 휘두르는 회전은 못 본다. cutting 에 있는(통과로 예측한) 쌍이 이 스텝에 닿는 점이 없으면, 스텝 전 캐시 자세와 지금 자세 사이를
-   * 칼끝 이동 sweepStep 마다 N(2~16)개 자세로 slerp/lerp 해 부위 콜라이더와 칼날 모양을 contactShape 로 잰다. 지금 자세(s = 1)는 엔진이 다음 스텝에 보니
-   * s = 0 ~ (N−1)/N 만. 처음 닿은 점(칼날 쪽, 월드)과 그때의 칼 자세를 돌려준다 (this._hit 재사용, 스텝마다 THREE 할당 없음).
+   * 칼끝 이동 sweepStep 마다 N(2~16)등분한 자세로 slerp/lerp 해 부위 콜라이더와 칼날 모양을 contactShape 로 잰다. 지금 자세(s = 1)는 엔진이 다음 스텝에,
+   * 스텝 전 자세(s = 0)는 이번 스텝에 이미 보니 s = 1/N ~ (N−1)/N 만 (N−1 번). 처음 닿은 점(칼날 쪽, 월드)과 그때의 칼 자세를 돌려준다 (this._hit 재사용, 스텝마다 THREE 할당 없음).
    * N 의 위 16 은 속도 한도가 아니다: 표본 간격이 팔뚝 굵기(0.08 m)를 넘는 것은 칼끝이 한 스텝에 1.3 m 넘게 갈 때(120 Hz 에서 150 m/s 위)뿐이고,
    * 그때도 속도·에너지는 건드리지 않는다 (판정을 놓칠 수 있을 뿐)
    */
@@ -711,7 +711,8 @@ export class Combat {
     const qi = _sq3.copy(q1).invert();
     const off = _sb.set(tc.x, tc.y, tc.z).sub(p1).applyQuaternion(qi); // 칼날 콜라이더의 칼 기준 자리
     const rl = _sr.copy(qi).multiply(_sq.set(rc.x, rc.y, rc.z, rc.w)); // 칼 기준 콜라이더 회전 (칼날은 항등이지만 일반화)
-    for (let i = 0; i < N; i++) {
+    for (let i = 1; i < N; i++) {
+      // s = 0 (스텝 전 자세)은 엔진 narrowphase 가 이미 봤다
       const s = i / N;
       const q = _sq.copy(S.q).slerp(q1, s);
       const p = _sp.copy(S.p).lerp(p1, s);
