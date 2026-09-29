@@ -454,7 +454,8 @@ export class Gait {
     }
     // 발을 뗀 뒤 땅에서 떨어지면 원래 무게로 (땅에 닿은 채 가벼워지면 다리 힘에 발이 휙 끌려 땅을 긁는다)
     if (swing && swing.extra && (swing.soleY > 0.015 || swing.t > 0.12)) this.footMass(swing, false);
-    if (this.req) {
+    // 'strike' 부탁은 제 걸음이 떠 있는 동안 늙지 않는다 (걸음 길이는 손가락 빠르기에 비례, 시간 바닥 없음: 1초를 넘는 걸음도 제 자리에 딛는다)
+    if (this.req && !(this.req.kind === 'strike' && swing && swing.kind === 'req')) {
       this.req.age += dt;
       if (this.req.age > 1) this.req = null;
     }
@@ -685,10 +686,10 @@ export class Gait {
     } else if (l.kind === 'req' && this.req) {
       // 기술 걸음. lunge: 앞발을 fwd만큼 내딛는다. pass: 뒷발이 앞발을 지나 그 앞에 딛는다 (앞뒤 발이 바뀐다)
       const r = this.req;
-      const base = r.kind === 'lunge' ? l.p0 : other.plant;
-      // 'strike' (R2 온몸 베기 걸음): 클립의 fwd 그대로 (바닥 0.3·−0.1 없음), 옆 간격은 pass 처럼
+      // 'strike' (R2 온몸 베기 걸음): fwd·side 는 클립 속 내딛는 발 제 옮김 (to − from) → lunge 처럼 발을 뗀 자리에서 (바닥 0.3·−0.1 없음, 옆 간격 더하지 않음: p0 에 이미 있다)
+      const base = r.kind === 'lunge' || r.kind === 'strike' ? l.p0 : other.plant;
       const x = r.kind === 'lunge' || r.kind === 'strike' ? r.fwd : Math.max(0.3, r.fwd - 0.1);
-      const z = r.side + (r.kind === 'pass' || r.kind === 'strike' ? l.side * GAIT.guardWidth : 0);
+      const z = r.side + (r.kind === 'pass' ? l.side * GAIT.guardWidth : 0);
       out.set(base.x + fwd.x * x + rgt.x * z, ANKLE_H, base.z + fwd.z * x + rgt.z * z);
       l.yaw1 = this.headAhead();
     } else {

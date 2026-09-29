@@ -6,7 +6,7 @@
 //   앞먹임 회전력은 원래 있던 근력 한도 j.max·mus 로만 자른다 (Q4, debug.ffCap 에 센다)
 // ─────────────────────────────────────────────────────────────
 import { DRIVE, GESTURE, GAIT, STROKE } from '../config.js';
-import { makeSample, toGame, carryOver, CH, D2R, GUARD_PADS, chestFrame, quatFromM3 } from './atlas.js';
+import { makeSample, toGame, carryOver, CH, D2R, DROP_BASE, GAME_SIGN, GUARD_PADS, chestFrame, quatFromM3 } from './atlas.js';
 import { GES_IDLE, GES_WIND, GES_CUT, GES_FOLLOW, padFam } from './gesture.js';
 
 const ANG_Y = 4; // RawJointAxis.AngY (fighter.js MOTOR_AXES[1]): 비틀기 축
@@ -112,6 +112,7 @@ export class ClipDrive {
     this._inCut = false;
     this._carry = false;
     this._phiAlign = 0;
+    this._phiStart = 0; // 이어받기 시작 위상: 감기 0, 긋기 φ_align / −autoWindPhi (§5.2)
     this._rebaseD = 0; // 감기 베기: 걸러진 몸 위상이 시작할 때 들고 온 변위 (§5.2 이어받기의 φ 는 0 에서 시작한다)
     this._tau = 0;
     this._gPhiPrev = -1;
@@ -237,7 +238,7 @@ export class ClipDrive {
     this._c = smoothstep(0, DRIVE.mixX, S);
     // 새 획 (베기 시작 뒤 처음 보는 S > 0 스텝): 이어받기 표본·φ_align·돌아갈 자세·걸음 한 번
     if (st === GES_WIND || st === GES_IDLE) this._inCut = false;
-    else if (cutN !== this._cutSeen) this.beginCut(g, S, over, st, mode, phiG, cut, cutB, wAB, side, dt);
+    else if (cutN !== this._cutSeen) this.beginCut(g, S, over, st, mode, phiG, cut, cutB, wAB, side, dt, first);
     if (first) this.rebaseRoles();
     // 몸 위상 phiB (§5.2 / §3.10)
     let phiB = phiG, phiBDot = phiDotG, phiBDDot = phiDDotG;
@@ -251,12 +252,6 @@ export class ClipDrive {
         phiBDot = phiDotG + d * w * w * this._tau * e;
         phiBDDot = phiDDotG - d * w * w * (x - 1) * e;
       }
-    }
-    else if (st === GES_WIND && phiB > 0) {
-      // 감기 위상의 뜻역은 [−1, 0] (손가락 φ_F = −1 + min(1, |w|/sL1) ≤ 0). 걸러진 φ 가 앞섬(leadMs·S)·경사 보정으로 0 을 넘으면
-      //  감아 둔 채 버티는 몸이 내려치기를 시작했다 되돌아온다 (6 m/s 감기에서 +0.3) — 감기 동안엔 준비 자세(φ 0)에 둔다 (손짓 층 보고 W2)
-      phiB = 0;
-      phiBDot = phiBDDot = 0;
     }
     this._gPhiPrev = phiG;
     this._phiB = phiB;
@@ -278,7 +273,9 @@ export class ClipDrive {
     rq.cutB = cutB;
     rq.wAB = wAB;
     this.atlas.sample(A, rq);
-    if (this._carry && this._inCut && phiB < DRIVE.carryPhi) carryOver(A, this.Arev, this.A0, phiB > 0 ? phiB : 0, DRIVE.carryPhi);
+    // 이어받기 (두 방식 다): 페이드 좌표 = 베기 시작 뒤 위상 phiB − phiStart (감기는 phiStart 0 이라 그대로)
+    const u = phiB - this._phiStart;
+    if (this._carry && this._inCut && u < DRIVE.carryPhi) carryOver(A, this.Arev, this.A0, u > 0 ? u : 0, DRIVE.carryPhi);
     this.toCmd(A, phiB, phiBDot, phiBDDot, S, over, mode, g);
     if (!this._tcSeen && this._inCut && phiB >= 0.85) {
       this._tcSeen = true;
@@ -312,7 +309,7 @@ export class ClipDrive {
     this.debug.c = 0;
   }
 
-  beginCut(g, S, over, st, mode, phiG, cut, cutB, wAB, side, dt) {
+  beginCut(g, S, over, st, mode, phiG, cut, cutB, wAB, side, dt, first) {
     const f = this.f;
     this._cutSeen = this._scr ? this._sc.cutN : g.view ? g.view.stats.cuts : 0;
     this._inCut = true;
@@ -328,6 +325,7 @@ export class ClipDrive {
     this._carry = false;
     this._rebaseD = 0;
     this._phiAlign = 0;
+    this._phiStart = 0;
     if (!this._scr) {
       if (mode === 'wind') {
         // 이어받기 표본: φ_rev 와 0, 이 순간의 S 로 한 번 (§5.2)
@@ -347,8 +345,41 @@ export class ClipDrive {
         this._carry = true;
         this._rebaseD = this._gPhiPrev; // 앞 스텝의 거르개 위상 (이번 스텝에 한 번 움직였다: τ = dt 부터)
         this._tau = 0;
-      } else if (g.input !== 'stroke') this._phiAlign = this.phiAlign(cut, side, S, over, cutB, wAB);
-      else this._phiAlign = -GESTURE.autoWindPhi;
+      } else {
+        if (g.input !== 'stroke') this._phiAlign = this.phiAlign(cut, side, S, over, cutB, wAB);
+        else this._phiAlign = -GESTURE.autoWindPhi;
+        this._phiStart = this._phiAlign;
+        // 감기 없는 긋기의 이어받기 (§3.5 / §5.2): A0 = 시작 위상 표본, Arev = 베기 시작 때 몸이 따르던 자세 (W3 결정)
+        //  켜져 있었으면 앞 스텝의 표본 A (이번 스텝에 덮어쓰기 전) 그대로. 처음 켜지면 앞 표본이 없다 → A0 에 몸통 다섯 칸만
+        //  지금 명령 자세(bodyPose = 자세표 몫, c 가 0 이던 앞 스텝)를 클립 단위로 넣는다 (손·칼·발은 A0 그대로 = 이어받을 몫 0)
+        if (!first) {
+          const P = this.A, R = this.Arev;
+          R.v.set(P.v);
+          R.d1.set(P.d1);
+          R.d2.set(P.d2);
+        }
+        const rq = this._req;
+        rq.cut = cut;
+        rq.side = side;
+        rq.S = S;
+        rq.over = over;
+        rq.cutB = cutB;
+        rq.wAB = wAB;
+        rq.phi = this._phiStart;
+        this.atlas.sample(this.A0, rq);
+        if (first) {
+          const R = this.Arev, bp = f.bodyPose;
+          R.v.set(this.A0.v);
+          R.d1.set(this.A0.d1);
+          R.d2.set(this.A0.d2);
+          R.v[CH.pelvisYaw] = bp.pelvisYaw / GAME_SIGN.yaw;
+          R.v[CH.chestYaw] = bp.chestYaw / GAME_SIGN.yaw;
+          R.v[CH.chestLean] = bp.pitch / GAME_SIGN.lean;
+          R.v[CH.chestSide] = bp.side / GAME_SIGN.side;
+          R.v[CH.pelvisDrop] = (bp.drop + DROP_BASE) / GAME_SIGN.drop;
+        }
+        this._carry = true;
+      }
     }
     // 돌아갈 자세 (§5.7): S > 0 이 된 뒤에만
     const sv = f.strike;
@@ -638,11 +669,14 @@ export class ClipDrive {
       dbg.ffChest = tau2;
       dbg.ffAbd = tau1;
       if (DRIVE.ffHip) {
-        // 엉덩이: 골반 +τh, 딛은 허벅지 −τh·몫 (둘 다 디디면 반씩, 하나만이면 그 발, 걸음 없음·공중 = 닻(땅)이 받는다: 골반만)
+        // 엉덩이: 골반 +τh, 딛은 허벅지 −τh·몫 (둘 다 디디면 반씩, 하나만이면 그 발, 딛은 발 없음 = 두 허벅지 반씩, levitate(걸음 없음) = 닻이 받는다: 골반만)
         const yp = bodyY(qp, this._u3);
         let th = kf * iPel * aP + tau1;
         const gt = f.gait;
-        const F = gt?.active ? gt.legs.F.stance : false, Bk = gt?.active ? gt.legs.B.stance : false;
+        const sF0 = gt?.active ? gt.legs.F.stance : false, sB0 = gt?.active ? gt.legs.B.stance : false;
+        // 다리 걸음(hybrid)인데 딛은 발이 없다 (넘어짐·걸음 꺼짐·두 발 공중): 땅 닻이 받지 않는다 → 두 허벅지가 반씩 (엉덩이 관절 안쪽 짝)
+        const air = !!gt && !sF0 && !sB0;
+        const F = sF0 || air, Bk = sB0 || air;
         const cF = F ? J.thighF.max * this.legMus('F') : 0, cB = Bk ? J.thighB.max * this.legMus('B') : 0;
         if (F || Bk) {
           const sF = F && Bk ? 0.5 : F ? 1 : 0;
