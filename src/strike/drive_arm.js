@@ -7,6 +7,8 @@
 //  상한·바닥 없음: 새 자르기는 rateLim 의 S 비례 빠르기 하나. warp 길이 자르기는 warp 벡터에만 (도움 크기), 손 닿음 자르기는 센다
 //  W4b 손 몫 방식 DRIVE.handMode (w > 0 에서만 읽는다): 'track' = 위 그대로. 'finger' = 베기 중 손가락 매핑을 명령 가슴 틀로 (감기만 클립).
 //   'governed' = 손 위상 φH 가 팔이 이번 스텝에 닫을 수 있는 빠르기 (Hill 힘·관성·IK 민감도) 를 넘어 앞서지 않는다 (몸통·다리는 φB 그대로)
+//   'windOnly' (W4c) = 감기만 'track'. 베기 시작부터 다음 감기까지 DRIVE.hands=false 매핑 + tCut 의 실제 손 차이 (실제 가슴 틀), 겨눔 이어받기,
+//    베기 중 팔 앞먹임·함께 힘주기 없음. DRIVE.ffFilter 면 α_des·α_flex = 스텝 평균 가속 (ω_des·ω_flex 가 한 스텝에 바뀐 만큼 / dt)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { DRIVE, COMMIT, GESTURE, STROKE, WEAPON } from '../config.js';
@@ -199,7 +201,7 @@ function makeArm(dr) {
   const body = (rb) => ({ rb, m: rb.mass(), I: localTensor(rb, new Float64Array(9)) });
   // 새 debug 칸 (drive.debug 에 한 번 붙인다)
   const d = dr.debug;
-  for (const k of ['elbowRateErr', 'elbowRateDes', 'elbowRateCmd', 'elbowRateMeas', 'ffArm', 'ffElbow', 'ffCapArm', 'I_arm', 'I_fore', 'omegaDes', 'alphaDes', 'poleHold', 'poleFlipS', 'poleFlipO', 'poleJump', 'poleJumpDeg', 'poleJumpMaxS', 'poleJumpMaxO', 'alphaKink', 'warpK', 'girdle', 'handMode', 'phiH', 'phiLead', 'phiDotMax', 'govBind', 'fingerGain', 'carryU']) d[k] ??= 0;
+  for (const k of ['elbowRateErr', 'elbowRateDes', 'elbowRateCmd', 'elbowRateMeas', 'ffArm', 'ffElbow', 'ffCapArm', 'I_arm', 'I_fore', 'omegaDes', 'alphaDes', 'poleHold', 'poleFlipS', 'poleFlipO', 'poleJump', 'poleJumpDeg', 'poleJumpMaxS', 'poleJumpMaxO', 'alphaKink', 'warpK', 'girdle', 'handMode', 'phiH', 'phiLead', 'phiDotMax', 'govBind', 'fingerGain', 'carryU', 'windRebase', 'ffFiltered']) d[k] ??= 0;
   return {
     tDes: -1, // ω_des 가 이번 스텝 것인지 (드라이브 시계 도장)
     omegaDes: new THREE.Vector3(), alphaDes: new THREE.Vector3(), wFlex: 0, aFlex: 0,
@@ -221,6 +223,10 @@ function makeArm(dr) {
     fT: -1, fCut: -2, fCutA: -2, fk: 1, fg: 1, dq: new THREE.Quaternion(), dqI: new THREE.Quaternion(), fOff: new THREE.Vector3(), qA: new THREE.Quaternion(),
     aimC: new THREE.Vector3(), aimCPrev: new THREE.Vector3(), aimCT: -1, qRest: new Float64Array(4), M3: new Float64Array(9),
     g1: {}, gs: makeSample(), gOut: { hand: [0, 0, 0], dir: [0, 0, 0] }, c0: new THREE.Vector3(), fh: new THREE.Vector3(),
+    // W4c 'windOnly': 베기 시작 도장 (손·겨눔), 손 차이·칼 방향 (실제 가슴 몸 틀), 그 획의 S 최고, 이어받기 k
+    wCut: -2, wCutA: -2, wOff: new THREE.Vector3(), wAim: new THREE.Vector3(), wSpk: 0, wkT: -1, wk: 1,
+    // W4c ffFilter: 앞 스텝 ω_des (월드)·ω_flex, 적은 드라이브 시각
+    omPrev: new THREE.Vector3(), wfPrev: 0, ffT: -1,
   };
 }
 
@@ -235,6 +241,7 @@ const ArmMixin = {
   },
   /** 함께 힘주기 배율 1 + cocontract·S (어깨 휘두름·팔꿈치만) */
   cocontract() {
+    if (this._hm === 3 && this._inCut) return 1; // W4c 'windOnly' 베기 중 (tCut → 다음 감기): 함께 힘주기 없음
     return 1 + DRIVE.cocontract * this._w;
   },
   /** 이번 스텝의 ω_des 가 있나 (armIK 가 풀었나) */
@@ -290,6 +297,7 @@ const ArmMixin = {
   mixHand(handLocal) {
     if (!DRIVE.hands) return; // 켜는 차례 (팔 끔)
     if (this._hm === 1 && this._inCut) return this.mixHandFinger(handLocal);
+    if (this._hm === 3 && this._inCut) return this.mixHandWind(handLocal);
     this.aimWarp();
     const cmd = this.src(), c = this._c, hs = cmd.handS, wp = cmd.warp;
     _v.set(hs[0] + wp[0], hs[1] + wp[1], hs[2] + wp[2]).applyQuaternion(qCmd(cmd));
@@ -320,6 +328,7 @@ const ArmMixin = {
   mixAim(aim) {
     if (!DRIVE.hands) return;
     if (this._hm === 1 && this._inCut) return this.mixAimFinger(aim);
+    if (this._hm === 3 && this._inCut) return this.mixAimWind(aim);
     const cmd = this.src(), s = cmd.sword, c = this._c;
     const t = _v.set(s[0], s[1], s[2]).applyQuaternion(qCmd(cmd)).normalize();
     slerpAim(aim, t, c);
@@ -342,7 +351,7 @@ const ArmMixin = {
    *  edge 는 날이 향하는 쪽이라 칼 면 방향으로는 게임의 moving 몫 (mf = blade × edgeDir) 과 같은 식으로 바꾼다. moving 섞기 앞에 부른다
    */
   mixEdge(flatTarget, blade, flat) {
-    if (!DRIVE.hands) return;
+    if (!DRIVE.hands || (this._hm === 3 && this._inCut)) return;
     const e = this.src().edge;
     _v.set(e[0], e[1], e[2]).applyQuaternion(qCmd(this.cmd)).applyQuaternion(this.f.yaw);
     const mf = _w.crossVectors(blade, _v);
@@ -357,6 +366,7 @@ const ArmMixin = {
   aimRate(wAim) {
     if (!DRIVE.hands) return;
     if (this._hm === 1 && this._inCut) return this.aimRateFinger(wAim);
+    if (this._hm === 3 && this._inCut) return; // W4c 'windOnly' 베기 중: 차분 그대로 (hands=false 와 같다)
     const cmd = this.src(), sd = cmd.swordDot, pd = cmd.phiDot, wc = cmd.wChestCmd;
     _v.set(sd[0] * pd, sd[1] * pd, sd[2] * pd).applyQuaternion(qCmd(cmd)).applyQuaternion(this.f.yaw);
     _v.x += wc[0];
@@ -468,6 +478,9 @@ const ArmMixin = {
    */
   pole(pole, Dn, flex, arm = 0) {
     if (!DRIVE.hands) return;
+    // W4c 'windOnly' 베기 중: 클립 pole 몫은 이어받기 k 로 풀리고, 다 풀리면 hands=false 처럼 기본 pole 그대로
+    const wk = this._hm === 3 && this._inCut ? this.windCarry() : 1;
+    if (wk === 0) return;
     const st = this.arm, P = st.poles[arm], dt = this.f.lastDt || 1 / 120, cmd = this.cmd;
     if (!(P.last >= this.t - 1.5 * dt)) {
       // 새로 켜짐: 앞 스텝 (S = 0) 에 쓰던 기본 pole 의 사영에서 시작
@@ -480,7 +493,7 @@ const ArmMixin = {
     P.last = this.t;
     const hc = this.src(), src = arm ? hc.poleO : hc.poleS;
     // W4b 'finger' 베기 중: 클립 pole 몫은 이어받기 k 로 풀린다 (carryPhi 뒤 기본 pole)
-    const pw = this._hm === 1 && this._inCut ? this._w * this.fingerFrame().fk : this._w;
+    const pw = this._hm === 1 && this._inCut ? this._w * this.fingerFrame().fk : this._hm === 3 && this._inCut ? this._w * wk : this._w;
     _v.set(src[0], src[1], src[2]).applyQuaternion(qCmd(cmd)).applyQuaternion(this.f.yaw).applyQuaternion(setQ(_qR, this.f.bodies.chest.rotation()).invert());
     const pNew = _w.copy(pole).lerp(_v, pw).normalize();
     const pd = pNew.addScaledVector(Dn, -pNew.dot(Dn));
@@ -546,6 +559,7 @@ const ArmMixin = {
       if (this._inCut) return this.fingerRates(st, d);
       st.useRates = true;
     }
+    if (this._hm === 3 && this._inCut) return; // W4c 'windOnly' 베기 중: ω_des·α_des 없음 (hands=false 와 같다: 팔 앞먹임·클립 빠르기 없음)
     const cmd = this.src(), A = this._hm === 2 ? st.H.A : this.A, c = this._c, h = DRIVE.ikDphi, hh = 0.5 * h * h;
     const o1 = CH.handS, d1 = A.d1, d2 = A.d2;
     setQ(_qR, this.f.bodies.chest.rotation());
@@ -578,6 +592,18 @@ const ArmMixin = {
     const f1 = (P.flex - M.flex) / (2 * h), f2 = kink ? 0 : (P.flex - 2 * o.flex + M.flex) / (h * h);
     st.wFlex = f1 * pd;
     st.aFlex = f2 * pd * pd + f1 * pdd;
+    if (DRIVE.ffFilter) {
+      // W4c: α = 이번 스텝 ω_des·ω_flex 평균 가속 (앞 스텝에도 풀었을 때). 한 점 d²θ/dφ²·φ̇² 는 φ 가 한 스텝에 0.3 넘게 가면 띄엄띄엄 집는다
+      const dt = this._dtS;
+      if (st.ffT >= this.t - 1.5 * dt) {
+        st.alphaDes.copy(st.omegaDes).sub(st.omPrev).multiplyScalar(1 / dt);
+        st.aFlex = (st.wFlex - st.wfPrev) / dt;
+        d.ffFiltered |= 2;
+      }
+      st.omPrev.copy(st.omegaDes);
+      st.wfPrev = st.wFlex;
+      st.ffT = this.t;
+    }
     st.tDes = this.t;
     d.omegaDes = st.omegaDes.length();
     d.alphaDes = st.alphaDes.length();
@@ -649,13 +675,71 @@ const ArmMixin = {
   /** drive.update 끝 (w > 0 스텝마다): 방식을 읽고, 'governed' 면 φH 를 옮기고 φH 에서 손 몫을 뽑는다. 'track' 은 아무것도 안 쓴다 */
   armStep(dt) {
     const m = DRIVE.handMode;
-    const hm = m === 'finger' ? 1 : m === 'governed' ? 2 : 0;
+    const hm = m === 'finger' ? 1 : m === 'governed' ? 2 : m === 'windOnly' ? 3 : 0;
     this._hm = hm;
     if (hm !== 1 && this._arm && !this._arm.useRates) this._arm.useRates = true; // 'finger' 에서 바꿨으면 되돌린다
     if (hm === 0) return;
     const st = this.arm;
     this.debug.handMode = hm;
     if (hm === 2) this.govern(dt, st, this.debug);
+  },
+
+  // ───────── W4c 'windOnly' ─────────
+  /** 이어받기 k = 1 − sj((φB − φ_start)/carryPhi) (스텝마다 한 번). debug.carryU */
+  windCarry() {
+    const st = this.arm;
+    if (st.wkT === this.t) return st.wk;
+    st.wkT = this.t;
+    const u = (this._phiB - this._phiStart) / DRIVE.carryPhi;
+    st.wk = 1 - sj(u);
+    this.debug.carryU = u < 0 ? 0 : u > 1 ? 1 : u;
+    return st.wk;
+  },
+  /**
+   * 'windOnly' 베기 중 손: hands=false 의 매핑 손 (handLocal 그대로, 실제 가슴 원점) + 차이·S/S최고.
+   *  차이 = tCut 의 실제 손 − 매핑 손, 실제 가슴 몸 틀에 적어 가슴이 돌면 같이 돈다 (큰 감기에서 긋기가 시작되고 손가락 긋기가 그 위에 더해진다).
+   *  S/S최고 = 손짓 층이 획 뒤 S 를 푸는 그대로 (RECOVER 의 exp(−t/tauRelease), sSnap 에서 0) — 새 시간 상수 없음
+   */
+  mixHandWind(hl) {
+    const st = this.arm, f = this.f, ch = f.bodies.chest, S = this._w;
+    setQ(_qR, ch.rotation());
+    if (st.wCut !== this._cutSeen) {
+      st.wCut = this._cutSeen;
+      st.wSpk = S;
+      const ct = ch.translation();
+      _anc.x = 0.13;
+      _anc.y = 0;
+      _anc.z = 0;
+      bodyPoint(f.bodies.farmS, _anc, _fa); // 실제 손목점 (월드, noteHand 와 같은 점)
+      _fb.copy(hl).applyQuaternion(f.yaw); // 매핑 손 − 가슴 (월드)
+      _fa.x -= ct.x + _fb.x;
+      _fa.y -= ct.y + _fb.y;
+      _fa.z -= ct.z + _fb.z;
+      st.wOff.copy(_fa).applyQuaternion(_qI.copy(_qR).invert()); // 실제 가슴 몸 틀
+    }
+    if (S > st.wSpk) st.wSpk = S;
+    const k = S / st.wSpk;
+    _fa.copy(st.wOff).applyQuaternion(_qR).applyQuaternion(_qI.copy(f.yaw).invert()).multiplyScalar(k); // 바라보는 틀
+    hl.add(_fa);
+    this.debug.windRebase = _fa.length();
+    this.noteHand(hl);
+  },
+  /** 'windOnly' 베기 중 겨눔: slerp(손가락 겨눔, tCut 의 실제 칼 방향 (실제 가슴 틀에 붙여 들고 감), k) */
+  mixAimWind(aim) {
+    const st = this.arm, f = this.f;
+    setQ(_qR, f.bodies.chest.rotation());
+    if (st.wCutA !== this._cutSeen) {
+      st.wCutA = this._cutSeen;
+      if (f.sword) st.wAim.set(0, 1, 0).applyQuaternion(setQ(_qI, f.sword.rotation()));
+      else st.wAim.copy(aim).applyQuaternion(f.yaw);
+      st.wAim.applyQuaternion(_qI.copy(_qR).invert());
+    }
+    const k = this.windCarry();
+    if (k > 0) {
+      const t = _fc.copy(st.wAim).applyQuaternion(_qR).applyQuaternion(_qI.copy(f.yaw).invert()).normalize();
+      slerpAim(aim, t, k);
+    }
+    this.noteAim(aim);
   },
   /** 칼 든 팔·칼의 몸 (armFF 와 같은 그릇) */
   swordBody(st) {

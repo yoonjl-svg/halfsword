@@ -781,15 +781,21 @@ export const DRIVE = {
   stepS: 0.3, stepScale: 1.0, stepHold: 0.25, toeLever: 0.02, // Q7 (걸음 시간 바닥 없음, 발 돌림 빠르기 없음: §5.6)
   handOnStroke: true, // Q3: 감기 없는 긋기에도 손이 따른다 (φ_align / 자동 감기 + 이어받기). false = 대비책만
   edgeFromClip: false, // §4.3: 날 방향은 클립에서도 유도값 — 게임이 잰 hitPointVel 이 더 참
-  // W4b 칼 든 손 몫 방식. 'track' | 'finger' | 'governed'. 드라이브 S > 0 스텝에서만 읽는다
+  // W4b 칼 든 손 몫 방식. 'track' | 'finger' | 'governed' | 'windOnly' (W4c). 드라이브 S > 0 스텝에서만 읽는다
   //  W4b 판정: 이긴 방식 없음 → 기본 'track' 그대로. 셋 다 칼끝·tc 운동에너지 ≥ 맨 팔 베기 × 0.95 에서 탈락 (v12 in60 air horizR 5.98 vs 19.5 m/s,
   //  diagR 4.10 vs 16.65). governed 는 한 걸음 Hill 지평이 멈춘 팔을 묶는다, finger 는 긋는 동안 클립 목표가 없다 (docs/strike/w4b_handmode.md)
   //  'track' = W4 그대로: 긋는 동안도 클립 손 길을 목표로 쫓는다
   //  'finger' = 감기(자세 잡기)는 클립 손, 베기 시작부터 손가락 → 손 매핑(R1 팔 베기)을 명령 가슴 틀로 돌린 것. 들뜸은 carryPhi 로 풀고,
   //    가운데 자세 둘레 손 들뜸 배율 = 1 + (g1 − 1)·S (g1 = 큰 클립 손 들뜸 / 손가락 매핑 들뜸, 무리마다 아틀라스에서 셈 — 맞춘 값 아님)
   //  'governed' = 'track' 이지만 손 위상 φH 가 팔이 지금 낼 수 있는 빠르기(Hill·관성·IK 민감도)보다 앞서 가지 않는다. 상수 없음
+  //  'windOnly' (W4c) = 감기(WIND, RECOVER → WIND)만 'track' 처럼 클립 감기 자세를 c(S) 로 (큰 감기). 베기 시작(tCut)부터 다음 감기까지는
+  //    DRIVE.hands=false 와 같은 R1 손가락 매핑 (실제 가슴 원점) + tCut 의 실제 손 − 매핑 손 차이 (실제 가슴 틀에 붙여 들고 감, S/S최고 로 풀림),
+  //    겨눔은 tCut 의 실제 칼 방향 → 손가락 겨눔을 carryPhi 동안. 베기 중 팔 앞먹임·함께 힘주기 없음. 몸통·다리·걸음은 W3 그대로
   handMode: 'track',
   fingerFF: false, // 'finger' 베기 중 팔 앞먹임 = 명령 가슴 각가속도 × I_arm 만 (켬). W4b 잼: 끔이 칼끝·tc 운동에너지가 더 커서 끔 (감기+베기 diagR 19.0 vs 17.0 m/s, 42.7 vs 30.3 J)
+  // W4c 스위치: 참이면 드라이브 앞먹임 (몸통 가슴·골반 α, 팔 α_des·α_flex) 이 한 점 곡률 v″·φ̇² + v′·φ̈ 대신
+  //  이번 스텝 명령 빠르기의 평균 가속 (v′φ̇ 가 한 스텝에 바뀐 만큼 / dt) 을 쓴다 (φ̇ 은 손짓 층 거르개 값, 새 상수 없음). 판정 전까지 거짓
+  ffFilter: false,
   puppet: false, // 또는 클립 id
 };
 
