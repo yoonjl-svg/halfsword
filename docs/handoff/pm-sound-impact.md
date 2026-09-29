@@ -623,3 +623,30 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - 관문: 시뮬 3종 main `940f665`와 바이트 동일, 스모크 콘솔 에러 0(두 번), 실제 게임 `hitScale === 'legacy'`, `hitWeight(150,140) = {e:1, w:0, low:1}`, `footStrike` 호출 에러 0. main.js 변경 없음, 새 파일 0KB.
 - 상태 파일 `docs/handoff/sound_pm_state.md` 새로 만듦(디렉터 규칙 ④).
 
+## 30차: 강한 타격 배경 소리 간격 + 리볼버 총성 강화 (디렉터 지시 22:21, 사장님 결정 9/29 23:00 `docs/decisions.md`)
+
+- main `c9fc916` 병합(`8ac81c2`, config.js 충돌은 main 판을 그대로 — SOUND 키가 이미 들어 있었다). src 는 main 과 같았다.
+- **(1) 간격** — 사장님 "스테이지마다 강한 타격이 나오면 재생되는 소리가 너무 자주 들려. 간격을 좀 두자."
+  - 큰 타격에 반응하는 배경 소리 목록: `gust(amount)`(main.js 438행, 타격마다 e/250) → 밤 포세이돈 화로 불길·검은 천 펄럭임, 성 안뜰 화로 불길, 성당 돌 부스러기·비둘기 날갯짓, 어두운 홀 박쥐·벽난로 불길, 산사 단풍잎·풍경 / 성 안뜰 종 `stageEvent('bell')`(stage_castle 이 흔들림의 양 끝마다 알린다 → 한 타격에 여러 번) / 화전 터 까마귀 `stageEvent('crows')`(4초 제한이 있었다).
+  - `Sound._spaced(key)`: 같은 key 는 `SOUND.stageHitGap`(**10초**, config) 안에 다시 내지 않는다. `gust` 의 소리 호출은 `_hitCall(kind, k)`(= `_spaced` + `stageCall`)로, 단풍잎·풍경은 `_spaced('leaves'/'chime')`, 종은 `_spaced('bell')`, 까마귀는 `_spaced('crows')`(4초 → 10초). 바람이 잠깐 세지는 것(gust 의 wind gain)은 새 소리가 아니라 그대로. 타격음(베기·찌르기·투구·판금·부러짐)에는 안 건다. 배경의 저절로 나는 소리(`_every` 15~110초)도 그대로.
+  - 값 제안 10초(디렉터 예 8~12 s 가운데). 사장님이 직접 요청한 간격이라 이번만 넣었다. 바꾸려면 config 한 줄.
+- **(2) 총성** — 사장님 "소리도 비비탄 딱총 같은데 리볼버는 더 파괴력 있는 소리."
+  - 옛 소리(gun.js `gunshotSound`): 1.8kHz 밴드패스 잡음 0.6초 + 140→45Hz 사인 0.2초. 크랙도 몸통도 없어 "딱총".
+  - 새 소리 `SYNTH.gunshot`(0.7초, 2벌) + `SYNTH.gunTail`(1.6초, 2벌), `Sound.gunshot({pos})`: 0.2ms 어택 하이패스 크랙(2.5k↑, 4.2k 밴드) + 1.6k "탁" + 200~1200Hz 폭발 몸통(45~90ms) + 110→38Hz 충격파와 55Hz 무게 + 화약 "치직", 마지막에 saturate(2.2)로 근거리 압력. 이벤트 gain 1.7, metalBus(→ 무대 방 울림을 받는다), prio 3.
+  - 꼬리는 무대를 따른다: 방 울림(`STAGE_SOUND.room`)이 있는 성 안뜰·성당·홀은 방 울림이 붙으니 `gunTail` 0.25 만, 바깥(포세이돈·산사·화전 터)은 절벽·숲 메아리 `gunTail` 0.55(메아리 3~4번 + 1.4초 퍼짐). 성당(rt 2.5)은 꼬리를 0.85배로 낮게.
+  - `src/gun.js gunshotSound` 첫 줄 한 줄: `if (snd.gunshot) return snd.gunshot({ pos });` (옛 본문은 sound.js 가 오래된 판일 때만). 장전 소리는 그대로.
+  - 처음 판(크랙 1.0, 충격파 1.4, saturate 3.0, gain 2.2)은 -12.9dB·저역 93% 로 저음만 컸다 → 크랙 2.4·1.8, 몸통 1.7·1.2, 충격파 0.8·0.5, saturate 2.2, gain 1.7 로.
+- 측정(오프라인, 0.1~1.9초, 성당은 2.9초):
+  - `pos_old      -24.0 dB  peak 0.94  centroid  4419 Hz  <150Hz 51.9%  150-1.2k  8.7%  >2.5k 25.7%  audible 0.28s`
+  - `pos_new      -17.4 dB  peak 0.92  centroid  1278 Hz  <150Hz 85.6%  150-1.2k  9.2%  >2.5k  3.5%  audible 0.63s`
+  - `castle_old   -21.8 dB  peak 0.94  centroid  3483 Hz  <150Hz 55.1%  150-1.2k 10.9%  >2.5k 21.0%  audible 0.34s`
+  - `castle_new   -18.5 dB  peak 0.92  centroid  1293 Hz  <150Hz 76.4%  150-1.2k 17.3%  >2.5k  4.7%  audible 0.59s`
+  - `cath_old     -19.3 dB  peak 0.94  centroid  2064 Hz  <150Hz 62.3%  150-1.2k 11.3%  >2.5k 15.0%  audible 1.21s`
+  - `cath_new     -18.2 dB  peak 0.92  centroid  1380 Hz  <150Hz 74.3%  150-1.2k 20.3%  >2.5k  3.7%  audible 1.34s`
+  - `cut150_ref   -22.0 dB  peak 0.89  centroid  4782 Hz  <150Hz 45.5%  150-1.2k 34.1%  >2.5k 17.1%  audible 0.22s`
+  - 전→후: 포세이돈 -24.0 → -17.4dB(+6.6), 중심 4419 → 1278Hz, 들리는 길이 0.28 → 0.63초(메아리). 성 안뜰 +3.3dB, 성당 +1.1dB(옛것도 방 울림을 받았다). 베기 150J(-22dB)보다 4.6dB 크다.
+  - 그림: `docs/handoff/gunshot_before_after.png`(파형·1/12옥타브 스펙트럼, 전 포세이돈 / 후 포세이돈 / 후 성당).
+- `sounds.html`: "리볼버 총성"(한 발 / 세 발). 배경 소리 바꾸기로 무대별 꼬리 비교.
+- 관문: 시뮬 3종 main `c9fc916`와 바이트 동일, 스모크 콘솔 에러 0(두 번), 실제 게임(성 안뜰, 권총): 종 알림 3번 → 1번만, gust(1) 두 번 → 불길 1번, gun.js → `sound.gunshot` 1번, 에러 0. 판정·반동 물리 변경 없음.
+- 사장님께 미리듣기(포세이돈 전→후·후, 성 안뜰 전→후, 성당 후)와 그림을 보냈다. 내일 시험하신다.
+

@@ -18,6 +18,7 @@
   - `src/sound.js`, `src/soundgen.js`, `src/soundlab.js`, `sounds.html`, `public/sfx/**`
   - `src/config.js`의 SOUND 블록
   - `src/main.js`의 **사운드 호출 줄만**. 디렉터 요청에 따라 최소로 고치고, 보고에 정확한 전/후 조각과 행 번호를 적는다.
+  - `src/gun.js`는 디렉터 모듈. 소리 함수(`gunshotSound`·`reloadSound`)만 디렉터 지시로 고친다(30차: 첫 줄 한 줄로 `sound.gunshot` 에 넘김).
 - **건드리지 않는다**:
   - `src/fighter.js`
   - main.js의 갑옷·판정 코드(`r.plate`). 소리 호출만 디렉터 요청으로 고친다.
@@ -68,6 +69,8 @@
 - **발소리**: 발이 9cm 위로 들렸다가 6cm 아래로 닿는 순간 낸다. 녹음은 배경마다 다르다(아래 표).
 - **쓰러짐**: 골반·가슴이 초속 1m 넘게 떨어지다 땅 근처에서 멈추는 순간 낸다. 배경 바닥 알갱이 소리를 한 겹 더한다.
 - **세기 눈금** `hitWeight(energy, e0)` → `{ e, w, low }` (29차, 디렉터 R3 대비): `e` 는 지금 눈금(clamp01(energy/e0)), `w` 는 `hitScale` 이 'log' 일 때 200 J(`SOUND.hitKnee`) 위로 붙는 로그 무게(500 J = 1, 상한 없음), `low` 는 재생 속도 배율. 베기·찌르기·강철 충돌이 쓴다. `hitScale` 은 `SOUND.hitScale`(기본 'legacy' = 게임 소리 그대로) 또는 `sound.hitScale`. 새 타격 소리를 만들면 이 함수로 세기를 받는다.
+- **리볼버 총성** `gunshot({pos})` (30차, 사장님 "더 파괴력 있는 소리"): `SYNTH.gunshot`(크랙+몸통+충격파) + `SYNTH.gunTail`(바깥 메아리). gun.js `gunshotSound` 가 첫 줄에서 여기로 넘긴다. 꼬리는 `STAGE_SOUND.room` 유무로 정한다. 장전 소리는 gun.js 에 남아 있다.
+- **큰 타격 배경 소리 간격** `_spaced(key)` / `_hitCall(kind, k)` (30차, 사장님 "간격을 좀 두자"): 같은 소리는 `SOUND.stageHitGap`(10초) 안에 다시 안 낸다 — gust 의 불길·천·돌·비둘기·박쥐·단풍잎·풍경, 성 안뜰 종, 화전 터 까마귀. 타격음에는 안 건다. 새 배경 반응 소리를 넣으면 `_hitCall` 로 부른다.
 - **디딤** `footStrike(strength 0~1, pos)` (29차): 지나는 걸음의 무거운 딛기. 디렉터가 gait 딛는 순간에 잇는다(아직 안 부름).
 - **무기 부러짐** `weaponBreak(material)`: 강철(26차: `_shard` "팅-팅" + 작은 "철컥"), 나무 "우지끈", 언 참치 "쩍". 강철 칼도 등급표대로 부러지므로(커먼·레어·에픽) 강철 갈래가 꼭 있어야 한다 — 없으면 나무 소리가 난다.
 - **쇠 조각 `_shard(ev, kind, {gain, delay, grit})`** (26차): `swordLand` 조각을 빠르게 돌린 "팅"(blade 1.5~1.9배)/"철컥"(armor 1.15~1.4배) + 선택으로 무대 바닥 알갱이. 25차 조각 착지 소리를 사장님이 좋아하셔서("꽤 좋던데") 부서지는 순간에 쓴다. 새 파일 0KB.
