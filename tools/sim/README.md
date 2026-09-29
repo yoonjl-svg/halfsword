@@ -8,6 +8,7 @@
 | `node tools/sim/fights12.mjs` | AI 대 AI 12판: 사망 수, 넘어짐, 에너지 (치명도 회귀 기준: 7~8/12) |
 | `node tools/sim/live_battery.mjs` | 칼 조작 수락 테스트 (끝 속도, 자세 유지 오차, 흔들림 등) |
 | `node tools/sim/dance.mjs` | "춤추는 느낌" 측정: 떨리는 입력 / 느린 자세 이동 때 몸통 흔들림 |
+| `node tools/sim/input_latency.mjs [--json] [--hz=60,120,30]` | 입력 지연 (R0 입력 `INPUT.coalesce`, docs/whole_body_redesign.md 3-2 (a)·3-3): 합성 손가락 궤적을 게임과 같은 길(`harness_m.mjs` inputPump = main.js 의 프레임·스텝 시계)로 넣어 손가락 → 손 목표·겨눔 2 cm 도달·고른 지연(물리 시계 / 그려지는 스텝), 스텝별 손 목표 이동의 고름, 이동 보존, 팔·결심 베기 칼끝(12 m/s tseq 조건), 3 mm 8 Hz 떨림을 끔·켬으로 견준다 (`R0_OFF=1` 이면 끔만). 화면 60/120/30 Hz × 터치 표본 = 화면 또는 120 Hz(합쳐진 이벤트). 브라우저 실제 길은 `tools/browser/touch_trace.mjs` |
 | `node tools/sim/eval_m.mjs passive\|aiai\|aggro` | AI 평가: 가만히 있는 상대·AI끼리·돌진형 상대 (ai_old.mjs = 옛 AI 기준선) |
 | `node tools/sim/weapon_smoke.mjs` | 무기고(src/weapons.js) 전체를 롱소드 상대로 6초씩 돌려 예외·NaN(물리 발산)만 훑는다 |
 | `node tools/sim/ref_duel.mjs [vs\|field] [판수(자리마다)] [무기id...] [--seed=첫번호] [--levitate] [--proxy=ls] [--hero] [--json]` | **기준 하니스**(디렉터 10라운드 A6, 기본 hybrid). vs = 무기 X 대 롱소드(캐릭터 무기는 그 캐릭터가, 나머지는 주인공 대리가 쥔다. `--hero`면 캐릭터 무기도 주인공 대리가), field = 주인공 대리가 X로 캐릭터 다섯을 상대. 승·패·무, 윌슨 95% 구간, 파손. 간격은 게임 그대로(applyWeaponMeasure 안 씀) |
