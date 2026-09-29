@@ -979,6 +979,48 @@ export const SYNTH = {
     return fadeOut(normalize(out, 0.95), sr, 0.08);
   },
 
+  /**
+   * 리볼버 총성 (30차, 사장님 "비비탄 딱총 같다 → 더 파괴력 있는 소리"). .357/.44급을 겨눈다:
+   *  0.2ms 어택의 넓은 "딱" 크랙(총구 압력파) + 200~1200Hz 잡음이 잦아드는 "쾅" 몸통 + 110→38Hz 충격파와 60Hz 밑 무게(근거리 압력감)
+   *  + 화약 튀는 "치직" 조금. 마지막에 세게 눌러(saturate) 귀가 눌리는 느낌. 0.7초. 꼬리는 gunTail·무대 방 울림이 맡는다.
+   */
+  gunshot(sr, r) {
+    const n = Math.round(0.7 * sr);
+    const out = new Float32Array(n);
+    noiseHit(out, sr, r, { t0: 0, amp: 2.4, attack: 0.0002, tau: 0.007, type: 'highpass', f: 2500, q: 0.7 }); // 크랙 (폰 스피커에서 살아남는 몫이라 크게)
+    noiseHit(out, sr, r, { t0: 0.0005, amp: 1.8, attack: 0.0003, tau: 0.014, type: 'bandpass', f: 4200, q: 1.2 });
+    noiseHit(out, sr, r, { t0: 0.0008, amp: 1.2, attack: 0.0004, tau: 0.02, type: 'bandpass', f: 1600, q: 0.9 }); // 크랙과 몸통 사이를 잇는 "탁"
+    noiseHit(out, sr, r, { t0: 0.001, amp: 1.7, attack: 0.0008, tau: 0.045, type: 'bandpass', f: 600, q: 0.6 }); // 폭발 몸통 (폰 스피커가 내는 몫)
+    noiseHit(out, sr, r, { t0: 0.002, amp: 1.2, attack: 0.002, tau: 0.09, type: 'lowpass', f: 700, q: 0.7 });
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, 100, 120), drop: 0.65, dropTau: 0.03, attack: 0.001, tau: 0.1, amp: 0.8 }); // 충격파
+    thumpTone(out, sr, { t0: 0.004, f0: between(r, 52, 62), drop: 0.3, dropTau: 0.05, attack: 0.003, tau: 0.16, amp: 0.5 }); // 무게
+    gritBurst(out, sr, r, { t0: 0.003, span: 0.05, count: 14, amp: 0.25, fLo: 2000, fHi: 7000 }); // 화약 "치직"
+    saturate(out, 2.2, 0.2);
+    return fadeOut(normalize(out, 0.95), sr, 0.08);
+  },
+
+  /**
+   * 총성 꼬리 (바깥 무대용): 절벽·건물·숲에 되울리는 메아리 3~4번(80~260ms, 갈수록 낮고 작게) + 1.4초에 걸쳐 퍼지며 높은 쪽이 먼저
+   * 사라지는 울림. 방 울림이 있는 무대에서는 작게만 깐다(방 울림이 나머지를 낸다). 1.6초.
+   */
+  gunTail(sr, r) {
+    const n = Math.round(1.6 * sr);
+    const out = new Float32Array(n);
+    let t = between(r, 0.07, 0.11);
+    for (let i = 0; i < 4 && t < 0.7; i++) {
+      noiseHit(out, sr, r, { t0: t, amp: 0.55 * 0.6 ** i, attack: 0.003, tau: 0.03 + 0.02 * i, type: 'lowpass', f: 2200 - 400 * i, q: 0.6 });
+      thumpTone(out, sr, { t0: t, f0: between(r, 70, 90), drop: 0.4, dropTau: 0.03, attack: 0.004, tau: 0.08, amp: 0.35 * 0.7 ** i });
+      t += between(r, 0.09, 0.16);
+    }
+    const lp = new Filt('lowpass', 1800, 0.7, sr);
+    for (let i = Math.round(0.03 * sr); i < n; i++) {
+      const tt = i / sr;
+      if (i % 256 === 0) lp.set(1800 * Math.exp(-tt / 0.5) + 250, 0.7);
+      out[i] += 0.28 * Math.exp(-tt / 0.42) * lp.run(r() * 2 - 1);
+    }
+    return fadeOut(normalize(out, 0.8), sr, 0.15);
+  },
+
   /** 칼이 바닥에 떨어짐: 칼자루와 칼끝이 잇달아 닿는 "철-컥" (모래·돌이 받아서 짧게 멎는다 — 음이 오래 남으면 냄비처럼 들리므로 울림은 0.05초 안) */
   swordLand(sr, r) {
     const n = Math.round(0.45 * sr);
@@ -1395,6 +1437,8 @@ const BANK = [
   ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
   ['plateBreak', 2, SYNTH.plateBreak],
   ['swordLand', 3, SYNTH.swordLand],
+  ['gunshot', 2, SYNTH.gunshot],
+  ['gunTail', 2, SYNTH.gunTail],
   ['birdSong', 3, (sr, r) => SYNTH.bird(sr, r, 'song')], // 산사 배경 (맨 뒤: 판 시작 뒤 몇 초 안에만 있으면 된다)
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
@@ -2745,9 +2789,7 @@ export class Sound {
   /** 까마귀들이 날아오름 (화전 터, 배경이 'crows' 로 알릴 때): 날갯짓 두세 번 + 놀란 "까악" 한둘. 멀리, 작게 (적막함을 깨지 않게). 4초에 한 번만 */
   _crowsUp(data = {}) {
     if (!this.stage.startsWith('clearing')) return;
-    const now = this.ctx.currentTime;
-    if (this._crowsT && now - this._crowsT < 4) return;
-    this._crowsT = now;
+    if (!this._spaced('crows')) return; // 30차: 4초 → SOUND.stageHitGap(10초)
     const k = clamp01(data.amp ?? 0.5);
     const ev = this.event({ bus: this.fleshBus, gain: 0.07 + 0.08 * k, prio: 0.2, pos: data.pos });
     for (let i = 0, t = 0; i < 2 + Math.round(k); i++, t += between(Math.random, 0.12, 0.3)) this.layer(ev, this.pick('wings'), { gain: 0.6, rate: between(Math.random, 0.9, 1.1), delay: t });
@@ -2865,6 +2907,7 @@ export class Sound {
     if (!this._on || !this.ctx) return;
     if (name === 'crows') return this._crowsUp(data); // 화전 터: 참나무의 까마귀들이 날아오른다 (외형 PM이 onEvent('crows') 로 알린다)
     if (name !== 'bell' || this.stage !== 'castle') return;
+    if (!this._spaced('bell')) return; // 30차: 한 번 흔들리면 양 끝마다 치던 종을 10초에 한 번만 (사장님 "간격을 좀 두자")
     const c = this.ctx;
     const x = clamp01((data.amp ?? 0.3) / (data.max ?? 0.55));
     const t = c.currentTime;
@@ -2942,6 +2985,36 @@ export class Sound {
    *  산사: 단풍잎 "바스락" + 솔바람, 세면 풍경 / 성 안뜰: 눈보라 바람 + 화로 불길 "화르륵"
    *  대성당: 천장에서 돌 부스러기, 세면 비둘기가 날아오름 / 어두운 홀: 박쥐가 놀라 "푸드득", 벽난로 불길. 포세이돈은 아직 없음
    */
+  /**
+   * 리볼버 총성 (30차). gun.js gunshotSound 가 여기로 넘긴다. 핵심 조작 소리라 간격 제한은 없다.
+   *  총성 조각(크랙·몸통·충격파) 위에 꼬리: 방 울림이 있는 무대(성 안뜰·성당·홀)는 쇳소리 길의 방 울림이 붙으니 gunTail 을 조금만(0.25),
+   *  바깥(포세이돈·산사·화전 터)은 절벽·숲 메아리 gunTail 을 길고 크게(0.55). 큰 방(성당)은 꼬리를 낮게 튼다.
+   */
+  gunshot({ pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const R = STAGE_SOUND[this.stage]?.room;
+    const ev = this.event({ bus: this.metalBus, gain: 1.7, prio: 3, pos });
+    this.layer(ev, this.pick('gunshot'), { rate: between(Math.random, 0.96, 1.04) });
+    this.layer(ev, this.pick('gunTail'), { gain: R ? 0.25 : 0.55, rate: (R && R.rt > 2 ? 0.85 : 1) * between(Math.random, 0.95, 1.05), delay: 0.004 });
+  }
+
+  /**
+   * 큰 타격에 반응하는 배경 소리의 간격 (30차, 사장님 "너무 자주 들려. 간격을 좀 두자"): 같은 key 의 소리는 SOUND.stageHitGap(10초) 안에 다시 내지 않는다.
+   *  true 면 내도 된다(시각을 적는다). 타격음 자체에는 쓰지 않는다. 바람이 잠깐 세지는 것(gust 의 wind)은 새 소리가 아니라 그대로 둔다.
+   */
+  _spaced(key) {
+    const now = this.ctx.currentTime;
+    const gap = SOUND.stageHitGap ?? 10;
+    this._spacedT ??= {};
+    if (this._spacedT[key] !== undefined && now - this._spacedT[key] < gap) return false;
+    this._spacedT[key] = now;
+    return true;
+  }
+  /** 큰 타격 → 배경 소리 한 번, 간격을 지켜서 (gust 전용) */
+  _hitCall(kind, k) {
+    if (this._spaced(kind)) this.stageCall(kind, k);
+  }
+
   gust(amount) {
     if (!this._on || !this.ctx || this.stage === 'poseidon' || amount < 0.15) return;
     const now = this.ctx.currentTime;
@@ -2958,27 +3031,27 @@ export class Sound {
     if (this.stage.startsWith('clearing')) return; // 화전 터: 바람만 잠깐 (크게 튀는 소리는 넣지 않는다 — 사장님 컨셉)
     if (this.stage === 'poseidon_night') {
       // 밤의 포세이돈: 화로 불길이 잠깐 "화르륵", 바람에 검은 천이 펄럭
-      this.stageCall('flare', amount * 0.6);
-      if (Math.random() < 0.4 + amount * 0.6) this.stageCall('flap', amount);
+      this._hitCall('flare', amount * 0.6);
+      if (Math.random() < 0.4 + amount * 0.6) this._hitCall('flap', amount);
       return;
     }
-    if (this.stage === 'castle') return this.stageCall('flare', amount);
+    if (this.stage === 'castle') return this._hitCall('flare', amount);
     if (this.stage === 'cathedral') {
-      this.stageCall('debris', amount);
-      if (amount > 0.5 && Math.random() < amount * 0.6) this.stageCall('wings', amount);
+      this._hitCall('debris', amount);
+      if (amount > 0.5 && Math.random() < amount * 0.6) this._hitCall('wings', amount);
       return;
     }
     if (this.stage === 'darkhall') {
-      if (Math.random() < 0.4 + 0.5 * amount) this.stageCall('bat', amount);
-      if (amount > 0.5) this.stageCall('flare', amount * 0.4);
+      if (Math.random() < 0.4 + 0.5 * amount) this._hitCall('bat', amount);
+      if (amount > 0.5) this._hitCall('flare', amount * 0.4);
       return;
     }
-    const rec = this.pickSample('leaves');
+    const rec = this._spaced('leaves') ? this.pickSample('leaves') : null;
     if (rec) {
       const ev = this.event({ bus: this.fleshBus, gain: 0.08 + 0.12 * amount, bright: 4200, prio: 0.2 }); // 잎이 마른 종이처럼 쉬익 새지 않게 위를 닫는다
       this.layer(ev, rec, { rate: between(Math.random, 0.8, 1.0) });
     }
-    if (amount > 0.5 && Math.random() < amount) this.windChime(amount);
+    if (amount > 0.5 && Math.random() < amount && this._spaced('chime')) this.windChime(amount);
   }
 
   /** 새 판: 먹먹함을 푼다 */
