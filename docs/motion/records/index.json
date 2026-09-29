@@ -1,0 +1,60 @@
+{
+ "format": "stillness-motion-records/1",
+ "records": [
+  {
+   "id": "game_zornhau",
+   "cut": "zornhau",
+   "file": "game_zornhau.json",
+   "source": "지금 게임 (src/ 2026-09-29), 헤드리스, 플레이어 손가락을 AI 기술 'zornhau' 길로 0.35s 에 긋기, 상대 치움, skill 0.7, 롱소드",
+   "summary": {
+    "tipPeak": 18.86,
+    "handPeak": 4.61,
+    "tipPeakT": 0.6167
+   }
+  },
+  {
+   "id": "game_oberhau",
+   "cut": "oberhau",
+   "file": "game_oberhau.json",
+   "source": "지금 게임 (src/ 2026-09-29), 헤드리스, 플레이어 손가락을 AI 기술 'oberhau' 길로 0.35s 에 긋기, 상대 치움, skill 0.7, 롱소드",
+   "summary": {
+    "tipPeak": 20.63,
+    "handPeak": 4.97,
+    "tipPeakT": 0.5833
+   }
+  },
+  {
+   "id": "game_zwerchhau",
+   "cut": "zwerchhau",
+   "file": "game_zwerchhau.json",
+   "source": "지금 게임 (src/ 2026-09-29), 헤드리스, 플레이어 손가락을 AI 기술 'zwerch' 길로 0.35s 에 긋기, 상대 치움, skill 0.7, 롱소드",
+   "summary": {
+    "tipPeak": 20.4,
+    "handPeak": 4.23,
+    "tipPeakT": 0.55
+   }
+  },
+  {
+   "id": "game_mittelhau",
+   "cut": "mittelhau",
+   "file": "game_mittelhau.json",
+   "source": "지금 게임 (src/ 2026-09-29), 헤드리스, 플레이어 손가락을 AI 기술 'zwerch' 길로 0.35s 에 긋기, 상대 치움, skill 0.7, 롱소드",
+   "summary": {
+    "tipPeak": 20.4,
+    "handPeak": 4.23,
+    "tipPeakT": 0.55
+   }
+  },
+  {
+   "id": "game_unterhau",
+   "cut": "unterhau",
+   "file": "game_unterhau.json",
+   "source": "지금 게임 (src/ 2026-09-29), 헤드리스, 플레이어 손가락을 AI 기술 'unterhau' 길로 0.35s 에 긋기, 상대 치움, skill 0.7, 롱소드",
+   "summary": {
+    "tipPeak": 9.26,
+    "handPeak": 4.94,
+    "tipPeakT": 0.4167
+   }
+  }
+ ]
+}
