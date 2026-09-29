@@ -11,6 +11,7 @@
 //  요약)를 따른다: [M]=박물관·제작사 실측, [D]=그 실측값에서 계산으로 뽑아냄, [I]=참고할
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
+import { classifyWeapon } from './weapon_class.js';
 import * as THREE from 'three';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 
@@ -300,7 +301,7 @@ export const THRUST_STYLE = {
 function finalizeSpec(id, s) {
   // ...s를 먼저 펼치고 계산된 필드를 뒤에 둔다 (뒤에 적은 값이 이긴다) →
   //  controlOverrides처럼 "기본값과 병합"해야 하는 필드가 s의 원본 값에 덮어써지지 않는다.
-  return {
+  const spec = {
     ...s,
     id,
     // 특수 능력(에픽, 사장님): 카드 설명 끝에 한 칸 띄고 "(별칭: 효과)"를 붙인다. 능력은 늘 켜져 있다 (스위치 없음)
@@ -326,6 +327,12 @@ function finalizeSpec(id, s) {
     soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
   };
+  // 무기 유형 (weapon_class.js, docs/weapon_types.md): 몸 틀 × 싸움 방식. 스펙에 적으면 그 값, 아니면 질량 분포·배율로 자동.
+  //  지금은 이름표일 뿐 게임 동작은 읽지 않는다 (다음 버전 동작 라이브러리가 읽는다)
+  const cls = classifyWeapon(spec);
+  spec.frame = cls.frame;
+  spec.style = cls.style;
+  return spec;
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -610,6 +617,9 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   grip: 'two-hand', material: 'steel',
   tier: 'epic',
   ability: '제비 베기: 출혈',
+  // 동작 라이브러리(motion_library.js, 기본 꺼짐)의 앞무게 자세표에서 상단(上段)은 쓰지 않는다: 긴 자루·앞무게 칼이 칼끝을 뒤로 눕힌
+  //  상단에서 빠르게 내리면 날이 서지 않는다(날 세움 0~0.7) → 실제 싸움 48판 31% (상단 빼면 46%, 라이브러리 끔 50%). 지붕 자세 그대로
+  motionSkip: ['지붕 (Vom Tag)'],
   bleedMult: 2, // 에픽 특수 능력 '제비 베기: 출혈' (사장님 b안): 이 칼에 베이고 찔린 상처의 출혈 ×2 (롱소드 상대 ×1 38% · ×1.5 44% · ×2 50%, 48판씩 — 에픽 폭 45~65% 안)
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
   mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)
@@ -838,7 +848,10 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
 const lightsaber = finalizeSpec('lightsaber', {
   nameKo: '라이트세이버', nameEn: 'Lightsaber', // 감독 최종: 고유 이름 없이 '라이트세이버' (에픽)
   desc: '먼 은하에서 온 빛의 칼.\n무게가 없어 맞대면 밀린다.', // 사장님 확정 문구
-  grip: 'one-hand', material: 'plasma',
+  // 두 손으로 쥔다 (무기 PM 결정, 사장님 "찾아보고 정해"): 영화의 기본 칼놀림(밥 앤더슨 안무 — 에페·검도 바탕)이 긴 자루를 두 손으로 쥐고
+  //  크게 내려치는 쪽이다. 한 손 펜싱(마카시)은 휜 자루를 쓰는 특수한 유파. 자루(폼멜~이미터 0.27 m)도 두 손이 들어간다.
+  //  바꿔도 롱소드 상대 승률은 그대로였다(ability_test 48판: 한 손 63% → 두 손 65%, 95% 구간 48~75 / 50~77)
+  grip: 'two-hand', material: 'plasma',
   // 한손 자세표(칼 든 어깨를 앞으로)는 쓰지 않는다: 길고 가벼운 칼날이라 닿는 거리가 짧은 칼의 5배(+11cm 대 +2cm) 늘어
   //  롱소드 상대 승률이 55 → 75%로 에픽 목표(45~65%)를 넘었다 (10라운드 B, ref_duel). 영화처럼 두 손 자세로 겨눈다
   oneHandStance: false,
@@ -998,7 +1011,7 @@ const pistol = finalizeSpec('pistol', {
   //  롱소드 0.27)에 너무 세서 매 물리 스텝 감쇠 토크가 넘쳐 상한에 붙은 채 방향이 뒤집혔다 — 60 Hz 떨림 + 겨눔이 18° 비켜 섰다.
   //  0.8 부터 다시 떨고 0.35 아래는 12 Hz 울림이 남아 0.45. 놓아주기 감쇠(releaseDamping 1.5)도 같은 까닭으로 맞춘다
   controlOverrides: { twistScale: 0.25, aimDamping: 0.45, releaseDamping: 0.45 },
-  moveMul: 1.3, // 걷는 최고 속도 ×1.3 (도망 다니며 쏘라고 — 사장님 '칼 들었을 때보다 30% 빠르게')
+  moveMul: 1.4, // 걷는 최고 속도 ×1.4 (도망 다니며 쏘라고 — 사장님 '칼 들었을 때보다 30% 빠르게' → 9/29 '1.3배에서 1.4배로 상향')
   fragility: 0, // 부서지지 않는다
   edged: false, mBlunt: 0, // 근접전 불가: 몸을 쳐도 상처·멍이 없다
   hiltLength: 0.05, bladeLength: 0.15, // 칼 원점(손)~총구 0.20 m (사장님: 머스킷처럼 길어 보여 짧은 권총으로 — 예전 0.32 m)
