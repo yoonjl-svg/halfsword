@@ -775,6 +775,8 @@ export const DRIVE = {
   spineTwist: 0.95, absTwist: 0.55, chestTwist: 0.7, hipTwist: 1.1, hipRoom: 1.1, swingTwist: 1.0, maxTwist: 1.1, softLim: 0.15, kSoft: { spine: 400, hip: 600 }, dSoft: 20, sideShare: 0.5, // Q5
   girdle: 'off', girdleRate: 0.5, // 'anchor' = 실험. girdleRate 는 어깨 옮김 빠르기 → 'anchor' 를 켜면 Q5
   poleHystDeg: 120, poleHystT: 0.03, poleBlendT: 0.04, poleMinFlexDeg: 20, // 가장 빠른 지붕 감기에서 팔꿈치 모양 ≤ 70 ms 늦음 (§6.4)
+  poleMinDir: 0.25, // §6.4 뒤집힘 후보: 팔 방향에 사영한 pole 길이가 이보다 짧으면 (팔꿈치 방향이 안 정해짐) — 모양 이력, 빠르기 한도 아님
+  ikDphi: 0.01, // §6.6 ω_des·α_des 를 푸는 위상 간격 (IK 를 φB ± ikDphi 로 두 번 더)
   carryPhi: 0.3, warpMax: 0.25, warpFade: 0.03, // warp = 도움 손잡이, 한도 아님
   stepS: 0.3, stepScale: 1.0, stepHold: 0.25, toeLever: 0.02, // Q7 (걸음 시간 바닥 없음, 발 돌림 빠르기 없음: §5.6)
   handOnStroke: true, // Q3: 감기 없는 긋기에도 손이 따른다 (φ_align / 자동 감기 + 이어받기). false = 대비책만
