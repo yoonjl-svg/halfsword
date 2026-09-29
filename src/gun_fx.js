@@ -209,6 +209,12 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   const laserMat = new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: LASER_A, depthWrite: false });
   const dotMat = laserMat.clone();
   dotMat.opacity = LASER_DOT_A;
+  // 빗나가는 동안의 흐린 선·점 (사장님 9/29: "레이저 조준선이 상대방 머리 위 하늘로 치솟아 있어" — 몸에 안 걸린 동안 선이 25 m 지평선까지 뻗어
+  //  카메라에서는 상대 머리 위로 솟아 보였다. 이제 선은 상대 깊이에서 끊고, 점은 거기에 흐리게 남겨 흔들리는 겨눔이 몸 둘레 어디를 지나는지 보인다)
+  const laserDimMat = laserMat.clone();
+  laserDimMat.opacity = LASER_A * 0.5;
+  const dotDimMat = laserMat.clone();
+  dotDimMat.opacity = LASER_DOT_A * 0.4;
   const beamGeo = new THREE.BoxGeometry(0.005, 1, 0.005).translate(0, 0.5, 0);
   const dotGeo = new THREE.SphereGeometry(0.012, 6, 4);
   const lasers = [];
@@ -236,12 +242,24 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
       const mx = f.weapon.muzzleX ?? 0; // 총신이 칼 축에서 비켜 있으면(리볼버, 주먹 위) 그만큼 옮긴다 — gun.js muzzle() 과 같다
       if (mx) _u.add(_v.set(mx, 0, 0).applyQuaternion(_q));
       const dist = measure(f, _u, _d);
+      // 선의 끝: 무엇에 닿으면 거기, 빗나가면 상대 가슴 깊이 + 0.4 m 에서 끊는다 (지평선까지 늘이지 않는다)
+      let end = dist;
+      let onTarget = dist < GUN.range;
+      const fc = f.foe?.bodies?.chest?.translation?.();
+      if (fc) {
+        const along = (fc.x - _u.x) * _d.x + (fc.y - _u.y) * _d.y + (fc.z - _u.z) * _d.z; // 총신을 따라 잰 상대 가슴까지의 거리
+        const stop = Math.max(0.3, along + 0.4);
+        if (dist > stop) { end = stop; onTarget = false; } // 상대 깊이를 지나서야 닿거나 아예 안 닿음 = 빗나감
+      }
+      const reloading = (f.gun?.cool ?? 0) > 0; // 쏜 직후·장전 중(총구가 위로 선다)에는 흐리게
+      L.beam.material = reloading ? laserDimMat : laserMat;
+      L.dot.material = onTarget && !reloading ? dotMat : dotDimMat;
       L.beam.position.copy(_u);
       L.beam.quaternion.setFromUnitVectors(_Y, _d);
-      L.beam.scale.set(1, Math.max(0.01, dist), 1);
-      L.dot.position.copy(_u).addScaledVector(_d, dist);
+      L.beam.scale.set(1, Math.max(0.01, end), 1);
+      L.dot.position.copy(_u).addScaledVector(_d, end);
       L.beam.visible = true;
-      L.dot.visible = dist < GUN.range; // 허공으로 나가면 점은 없다
+      L.dot.visible = true; // 빗나가도 상대 깊이에 흐린 점 — 겨눔이 몸 둘레 어디를 지나는지 보인다
     }
     for (let i = n; i < lasers.length; i++) lasers[i].beam.visible = lasers[i].dot.visible = false;
   };
