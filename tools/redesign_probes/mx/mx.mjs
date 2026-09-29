@@ -1,14 +1,15 @@
 // Motion envelope + latency probe for the owner's two complaints (big motion, sluggishness).
-// Run from the snapshot root:  cd <snap> && node <scratch>/mx/mx.mjs <sub>   (env WHOLE=0|1, HZ=60|120, W=weapon)
+// Run (저장소 루트에서): node tools/redesign_probes/mx/mx.mjs <sub>   (env WHOLE=0|1, HZ=60|120, W=weapon) — src 패치 불필요
 //  sub: hull | env | lat | redirect | stop | walk
 import fs from 'node:fs';
-const SNAP = '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/src_4b5c56a';
-const H = await import(SNAP + '/tools/sim/harness_m.mjs');
+import { fileURLToPath } from 'node:url';
+const SNAP = new URL('../../../', import.meta.url); // 저장소 루트
+const H = await import(new URL('tools/sim/harness_m.mjs', SNAP));
 const { newRound, THREE, DT, CONFIG, V, Q, handPos, feedTrace, inputPump } = H;
-const { guardAt, GUARDS } = await import(SNAP + '/src/guards.js');
+const { guardAt, GUARDS } = await import(new URL('src/guards.js', SNAP));
 CONFIG.BODY.weightMode = 'hybrid'; // game default
 if (process.env.CFG) for (const [k, v] of Object.entries(JSON.parse(process.env.CFG))) { const [a, b] = k.split('.'); CONFIG[a][b] = v; } // e.g. CFG='{"SKILL.aimFilter":200}'
-const OUTDIR = '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/mx/out';
+const OUTDIR = fileURLToPath(new URL('./out', import.meta.url));
 fs.mkdirSync(OUTDIR, { recursive: true });
 const SUB = process.argv[2] || 'env';
 const R2D = 180 / Math.PI;

@@ -1,6 +1,7 @@
 #!/bin/bash
-cd /tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/tech
-node exp3_energy.mjs 12 base 1 out/e3_base.json
-node exp3_energy.mjs 8 heinrich 101 out/e3_heinrich.json
-node exp3_energy.mjs 8 margarethe 201 out/e3_margarethe.json
+cd "$(dirname "$0")/../../.." || exit 1
+O=tools/redesign_probes/tech/out; mkdir -p $O
+node tools/redesign_probes/tech/exp3_energy.mjs 12 base 1 $O/e3_base.json
+node tools/redesign_probes/tech/exp3_energy.mjs 8 heinrich 101 $O/e3_heinrich.json
+node tools/redesign_probes/tech/exp3_energy.mjs 8 margarethe 201 $O/e3_margarethe.json
 echo ALLDONE3

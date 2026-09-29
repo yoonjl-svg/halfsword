@@ -1,5 +1,8 @@
-const SNAP = process.env.SNAP || '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/tech/snap';
-const W = await import(SNAP + '/src/weapons.js');
+// 무기 목록 요약. 실행: node tools/redesign_probes/tech/wlist.mjs  (SNAP=<다른 체크아웃 경로> 로 바꿀 수 있다)
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+const SNAP = process.env.SNAP ? pathToFileURL(resolve(process.env.SNAP) + '/') : new URL('../../../', import.meta.url); // 저장소 루트
+const W = await import(new URL('src/weapons.js', SNAP));
 const list = W.WEAPONS || W.default || Object.values(W).find((x) => Array.isArray(x));
 const ids = Object.keys(W).join(',');
 console.log('exports', ids);

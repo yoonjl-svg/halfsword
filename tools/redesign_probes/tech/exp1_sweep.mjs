@@ -3,12 +3,13 @@
 // ("the hand") through a standing dummy's sword forearm (farmS) or neck (lower head ball), at a set tip speed, with the
 // sub-step phase randomised. Uses the real Fighter / Combat code from the scratch copy (tech/snap, env-gated patches).
 //
-// usage: node exp1_sweep.mjs [weapon=longsword] [target=farm|neck] [speeds=20,24,28,32,36,40,45] [phases=16]
+// 실험판 src 가 필요하다: tech/snap 의 env 패치(SPEED_GATE·CCD·DT·SWEPT 훅) — 이 저장소 src 에는 적용하지 않았다(맨 src 로는 그 env 가 무시된다).
+// usage (저장소 루트에서): node tools/redesign_probes/tech/exp1_sweep.mjs [weapon=longsword] [target=farm|neck] [speeds=20,24,28,32,36,40,45] [phases=16]
 // env:   MODE=driven|free   CCD=base|scale|<metres>   DT=120|240   SPEED_GATE (read by patched combat.js)
 //        F=0.75 (crossing point as fraction of blade length from the hilt)  CUT=edge|flat
 import fs from 'node:fs';
-const SNAP = '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/tech/snap';
-const H = await import(SNAP + '/tools/sim/harness_m.mjs');
+const SNAP = new URL('../../../', import.meta.url); // 저장소 루트
+const H = await import(new URL('tools/sim/harness_m.mjs', SNAP));
 const { newRound, THREE, CONFIG } = H;
 CONFIG.BODY.weightMode = process.env.BODYMODE || 'hybrid';
 

@@ -1,13 +1,14 @@
 // AI vs AI: record every wound (zone,type,eff,thr,plate,helmet) and every fresh blade clash impulse / rebound jolt,
 // and peak sword tip speeds (per step, per fighter). Deaths disabled? no — record time to death.
-// usage: node tools/sim/duelstats.mjs N secs  (env W, W2, LOOK=1 armored looks)
+// usage (저장소 루트에서): node tools/redesign_probes/duelstats.mjs N secs  (env W, W2, LOOK=1 armored looks, OUT=결과 json)
+// SPD/CAP/HOLDALL/HOLDEFF 훅은 실험판 src(exp_src.patch) 에서만 듣는다 — 이 저장소 src 에는 적용하지 않았다(기본 통계만 나온다).
 const N = +(process.argv[2] || 6);
 const SECS = +(process.argv[3] || 20);
 if (process.env.SPD) globalThis.__WRIST_SPD = +process.env.SPD;
 if (process.env.CAP) globalThis.__SPEEDCAP = +process.env.CAP;
 if (process.env.HOLDALL) globalThis.__HOLDALL = 1;
 if (process.env.HOLDEFF) globalThis.__HOLDEFF = 1;
-const H = await import('./harness_m.mjs');
+const H = await import('../sim/harness_m.mjs');
 const { newRound, AI, THREE } = H;
 const { LOOKS, getLook } = await import('../../src/looks.js');
 const W = process.env.W || 'longsword';
@@ -56,6 +57,7 @@ for (let s = 0; s < N; s++) {
   out.tipPeaks.push(peak.map((x) => +x.toFixed(1)));
 }
 out.capHits = globalThis.__capHits || [];
-const fn = process.env.OUT || `/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/out/duel_${W}_${W2}${process.env.LOOK ? '_armor' : ''}.json`;
+const fn = process.env.OUT || new URL(`./out/duel_${W}_${W2}${process.env.LOOK ? '_armor' : ''}.json`, import.meta.url).pathname;
+(await import('node:fs')).mkdirSync(new URL('./out/', import.meta.url), { recursive: true });
 (await import('node:fs')).writeFileSync(fn, JSON.stringify(out));
 console.log(fn, 'steps', out.steps, 'over30', out.over30, 'spikes', out.spikes, 'flips(60Hz chatter)', out.flips, 'stuckSteps', out.stuckSteps, 'capHits', out.capHits.length, 'wounds', out.wounds.length, 'clashes', out.clashJ.length, 'deaths', out.deaths.length, 'peaks', JSON.stringify(out.tipPeaks));

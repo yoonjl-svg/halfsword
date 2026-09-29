@@ -2,7 +2,9 @@
 // at a given tip speed. Counts: hook calls, contact manifolds, wounds (zone, J), missed passes.
 // env: CCD (soft ccd prediction m; 'auto' = max(0.2, k*v*dt)), CAP (combat speed cap, default 30),
 //      DTX (timestep divisor, 1 = 1/120, 2 = 1/240), W weapon, TGT farm|neck|chest, T frac along blade (0.75)
-// usage: node tools/sim/speedsweep.mjs "20,26,32,38,45" [phases]
+// usage (저장소 루트에서): node tools/redesign_probes/speedsweep.mjs "20,26,32,38,45" [phases]
+// 실험판 src 가 필요하다: exp_src.patch(__SPEEDCAP·__SWEPT·__CCD 훅) 를 적용한 체크아웃에서만 CAP/SWEPT/CCD 가 듣는다.
+// 이 저장소 src 에는 적용하지 않았다 — 맨 src 로 돌리면 그 env 는 무시된다.
 const speeds = (process.argv[2] || '20,26,32,38,45').split(',').map(Number);
 const PH = +(process.argv[3] || 12);
 const CCDENV = process.env.CCD || '0.2';
@@ -14,7 +16,7 @@ const TF = +(process.env.T || 0.75);
 globalThis.__SPEEDCAP = CAP; if (process.env.SWEPT) globalThis.__SWEPT = 1;
 const CFG = await import('../../src/config.js');
 CFG.PHYSICS.timestep = 1 / (120 * DTX);
-const H = await import('./harness_m.mjs');
+const H = await import('../sim/harness_m.mjs');
 const { newRound, THREE } = H;
 const DT = CFG.PHYSICS.timestep;
 

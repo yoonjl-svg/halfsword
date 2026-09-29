@@ -1,6 +1,7 @@
 // Standalone Rapier probe: does soft CCD stop a thin blade from tunnelling through a 4 cm-radius capsule?
+//  실행: node tools/redesign_probes/ccdprobe2.mjs (저장소 루트에서; src 패치 불필요)
 //  mode lin: blade translates at v (no rotation). mode rot: blade rotates about its hilt end with tip speed v.
-import R from '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/exp/node_modules/@dimforge/rapier3d-compat/rapier.mjs';
+import R from '@dimforge/rapier3d-compat'; // 저장소 node_modules (src/main.js 와 같은 패키지)
 await R.init();
 function run(mode, v, ccd, phase) {
   const w = new R.World({ x: 0, y: 0, z: 0 }); w.timestep = 1 / (120 * (+process.env.DTX || 1));

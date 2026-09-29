@@ -1,6 +1,6 @@
 // Cost inventory probe for committed (whole-body, L1) cuts vs arm cuts on the SAME finger trace.
-// Runs against the read-only snapshot src_4b5c56a. WHOLE.commit is toggled at runtime per trial (the code reads it every step).
-// usage: node probe.mjs <sub> [N]
+// Runs against this repo's src (originally the read-only snapshot src_4b5c56a) — src 패치 불필요. WHOLE.commit is toggled at runtime per trial (the code reads it every step).
+// usage (저장소 루트에서): node tools/redesign_probes/costs/probe.mjs <sub> [N]
 //   timeline  single big cut (4 families x 8/12 m/s x {air-miss at 1.7 m, hit at 1.55 m, far miss 2.8 m}) x finger {lift, back, hold}
 //   rect      does COMMIT.recover (hit/miss/blocked recovery time) change anything? (trajectory hash)
 //   abort     feint/abort: reverse or redirect the finger at t ms after start
@@ -8,14 +8,16 @@
 //   combo     second cut right after the first
 //   aiwin     AI exploitation: big cut that whiffs near a live AI; does the AI punish (commit on vs off)?
 import fs from 'node:fs';
-const SNAP = '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/src_4b5c56a';
-const H = await import(SNAP + '/tools/sim/harness_m.mjs');
+import { fileURLToPath } from 'node:url';
+const SNAP = new URL('../../../', import.meta.url); // 저장소 루트
+const H = await import(new URL('tools/sim/harness_m.mjs', SNAP));
 const { newRound, THREE, DT, CONFIG, V, Q, handPos, feedTrace, inputPump } = H;
 CONFIG.BODY.weightMode = process.env.MODE || 'hybrid';
 const SUB = process.argv[2] || 'timeline';
 const NARG = process.argv[3] != null ? +process.argv[3] : null;
 const HZ = +(process.env.HZ || 60);
-const OUTDIR = SNAP + '/../costs/out';
+const OUTDIR = fileURLToPath(new URL('./out', import.meta.url));
+fs.mkdirSync(OUTDIR, { recursive: true });
 
 const r0 = (x) => (x == null || !Number.isFinite(x) ? null : Math.round(x));
 const r1 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(1));

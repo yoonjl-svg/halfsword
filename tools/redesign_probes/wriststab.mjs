@@ -1,5 +1,7 @@
-const H = await import('/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/exp/tools/sim/harness_m.mjs');
-const { WEAPON_LIST } = await import('/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/exp/src/weapons.js');
+// 가벼운 칼 손목 튐 수치: 무기마다 c·dt/I, k·dt²/I, 최대 토크 한 스텝 각속도·칼끝 속도 변화 (1이 넘으면 한 스텝에 튄다)
+// 실행: node tools/redesign_probes/wriststab.mjs (저장소 루트에서; src 패치 불필요)
+const H = await import('../sim/harness_m.mjs');
+const { WEAPON_LIST } = await import('../../src/weapons.js');
 const dt = 1/120;
 for (const w of WEAPON_LIST) {
   const G = H.newRound({ seed: 1, weapon: w.id, walls: false });

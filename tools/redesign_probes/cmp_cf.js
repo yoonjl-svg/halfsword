@@ -1,6 +1,8 @@
 // compare counterfactual runs vs base: tip speed ratio per weapon/fam/mode, and hand peak ratio
+// 실행: node tools/redesign_probes/cmp_cf.js NAME... (run_cf.sh 결과 tools/redesign_probes/out/cf_*.json 을 읽는다)
 const fs = require('fs');
-const load = (n) => JSON.parse(fs.readFileSync(`out/cf_${n}.json`)).results;
+const path = require('path');
+const load = (n) => JSON.parse(fs.readFileSync(path.join(__dirname, 'out', `cf_${n}.json`))).results;
 const base = load('base');
 const key = (r) => `${r.weapon}/${r.fam}/${r.hz}/${r.v}/${r.mode}`;
 const B = Object.fromEntries(base.map((r) => [key(r), r.sm]));

@@ -1,11 +1,11 @@
 // Experiment 3 (record): AI vs AI duels (arm cuts, the game's normal AI) — every wound analysis result, every fresh
 // blade clash impulse, every weapon-impact impulse (clash + bone/helmet/plate rebound). Offline analysis (exp3_scale.mjs)
 // then rescales energy by m (tip speed x sqrt(m)) to see lethality, armor and weapon-break effects.
-// usage: node exp3_energy.mjs <n fights> <foe look: base|heinrich|margarethe> <seed0> <out.json> [weapon]
+// usage (저장소 루트에서): node tools/redesign_probes/tech/exp3_energy.mjs <n fights> <foe look: base|heinrich|margarethe> <seed0> <out.json> [weapon]
 import fs from 'node:fs';
-const SNAP = '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/tech/snap';
-const H = await import(SNAP + '/tools/sim/harness_m.mjs');
-const { CHARACTERS_BY_ID } = await import(SNAP + '/src/characters.js');
+const SNAP = new URL('../../../', import.meta.url); // 저장소 루트 (원래는 tech/snap 실험판 — 기록 자체는 맨 src 로도 돈다)
+const H = await import(new URL('tools/sim/harness_m.mjs', SNAP));
+const { CHARACTERS_BY_ID } = await import(new URL('src/characters.js', SNAP));
 const { newRound, DT, AI, CONFIG } = H;
 CONFIG.BODY.weightMode = 'hybrid';
 const N = +(process.argv[2] || 12);

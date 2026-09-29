@@ -1,2 +1,3 @@
 process.argv[2] = 'none';
-const SNAP = '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/wbspeed/src_4b5c56a';
+// 인계받은 파일이 여기서 끊겨 있다(두 줄뿐) — 측정 본문은 없다. 경로만 저장소 루트로 고쳐 둔다.
+const SNAP = new URL('../../../', import.meta.url); // 저장소 루트

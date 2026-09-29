@@ -1,9 +1,11 @@
 // Whole-body speed probe (scratch, not product): arm cut (WHOLE.commit=false) vs committed cut (WHOLE.commit=true)
 // Records per-physics-step time series of pelvis/chest yaw rate, shoulder/hand/tip speed, segmental contributions
 // to tip & hand velocity, and cap saturation (wrist, shoulder, elbow, spine) from the instrumented fighter.js copy.
-// Run: node tools/sim/hybrid.mjs tseq.mjs   env: WEAPONS=longsword,zweihander,sabre FAMS=diagR,vert,horizR HZS=60,120 VS=12 DIST=2.0 DWELL=1.0 AIR=1
+// Run (저장소 루트에서): node tools/sim/hybrid.mjs ../redesign_probes/tseq.mjs   env: WEAPONS=longsword,zweihander,sabre FAMS=diagR,vert,horizR HZS=60,120 VS=12 DIST=2.0 DWELL=1.0 AIR=1
 import fs from 'node:fs';
-import { newRound, THREE, DT, CONFIG, V, Q, handPos, feedTrace, inputPump } from './harness_m.mjs';
+// 계측판 src 가 필요하다: instr_src.patch(4b5c56a 의 fighter.js 계측) 를 적용한 체크아웃에서만 캡 포화 항목이 채워진다.
+// 이 저장소 src 에는 적용하지 않았다 — 맨 src 로 돌리면 그 항목은 비거나 실패한다.
+import { newRound, THREE, DT, CONFIG, V, Q, handPos, feedTrace, inputPump } from '../sim/harness_m.mjs';
 import { Fighter } from '../../src/fighter.js';
 // ── counterfactual knobs (probe only) ──
 // CFGSET="SKILL.aimFilterStrike=48;SKILL_BODY.pelvis=68"  WMUL="maxAimTorque:1.5,wristVmax:1.5"  JMUL="uarmS.max:1.5,farmS.max:1.5"
@@ -40,7 +42,8 @@ const DWELL = +(process.env.DWELL || 1.0);
 const AIR = process.env.AIR !== '0';
 const WIN = +(process.env.WIN || 0.6);
 const MODES = (process.env.MODES || 'arm,commit').split(',');
-const OUT = process.env.OUT || 'tseq.json';
+const OUT = process.env.OUT || new URL('./out/tseq.json', import.meta.url).pathname;
+fs.mkdirSync(new URL('./out/', import.meta.url), { recursive: true });
 const STR = process.env.STR != null ? +process.env.STR : null;
 
 function stroke(dx, dy, v, { hold = 0, lift = true, down = true } = {}) {

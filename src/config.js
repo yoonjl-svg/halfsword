@@ -5,6 +5,9 @@
 //  단위: 미터(m), 킬로그램(kg), 초(s), 뉴턴(N)
 // ─────────────────────────────────────────────────────────────
 
+// R0 검증용 — 시뮬에서 R0_OFF=1 이면 R0 깃발이 모두 꺼진다
+export const R0_OFF = typeof process !== 'undefined' && !!process.env && process.env.R0_OFF === '1';
+
 export const PHYSICS = {
   gravity: -9.81,
   timestep: 1 / 120, // 물리 한 스텝 길이. 작을수록 안정적이지만 무겁다.
