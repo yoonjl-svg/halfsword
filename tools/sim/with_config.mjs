@@ -1,7 +1,8 @@
-// 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 (hybrid.mjs 와 같은 방식)
+// 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 (감싸는 스크립트)
 // 실행: node tools/sim/with_config.mjs STRIKE.thrustAssist=2.5 weapon_balance.mjs 12 falchion
-//       node tools/sim/with_config.mjs ARMOR.on=false hybrid.mjs fights12.mjs   (true/false 는 참·거짓으로 읽는다)
-//       node tools/sim/with_config.mjs WHOLE.on=false hybrid.mjs fights12.mjs
+//       node tools/sim/with_config.mjs ARMOR.on=false fights12.mjs   (true/false 는 참·거짓으로 읽는다)
+//       node tools/sim/with_config.mjs BODY.weightMode=levitate fights12.mjs   (옛 기본 걸음. 글자는 그대로 넣는다)
+//       node tools/sim/with_config.mjs WHOLE.on=false fights12.mjs
 import * as CONFIG from '../../src/config.js';
 import { simPath } from './is_main.mjs';
 const args = process.argv.slice(2);

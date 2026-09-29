@@ -379,6 +379,7 @@ function sound(kind, f, ...more) {
 // ── 소리 (sound.js 의 이벤트·묶음을 그대로 빌려 쓴다: 전체 음량·끄기·먹먹함을 따른다) ──
 /** 총소리: 짧고 센 잡음 터짐 + 낮은 "쿵" + 경기장에 울리는 꼬리 */
 export function gunshotSound(snd, pos) {
+  if (snd.gunshot) return snd.gunshot({ pos }); // 30차: 총성은 sound.js 의 gunshot 이 낸다 (.357/.44급 + 무대 울림). 아래는 옛 소리 — sound.js 가 오래된 판일 때만
   const c = snd.ctx;
   const ev = snd.event({ bus: snd.metalBus, gain: 2.2, prio: 3, pos }); // 사장님 '총성도 크게': 1.2 → 2.2 (약 +5 dB)
   const t = c.currentTime;

@@ -135,8 +135,9 @@ export function twoBone(a, t, l1, l2, pole) {
  *       hand:[앞,위,옆] 가슴 틀, dir:[앞,위,옆] 가슴 틀 칼 방향,
  *       feet:{L:{x,z,yaw,lift,up}, R:{...}}, hand2(선택: 빈손 자리) }
  * side: +1 = 오른손잡이 (z+ 가 칼 든 쪽)
+ * sword: 칼 치수 (앞손에서 칼 축 m: offHand·pommel·tip, mass·com) — 기본 롱소드. 다른 무기는 lib/weapons.mjs weaponGeom()
  */
-export function pose(ch, side = 1) {
+export function pose(ch, side = 1, sword = SWORD) {
   const P = ch.pelvis;
   const Rp = frame(P.yaw, P.pitch, P.roll);
   const hipC = [P.x, BODY.hipY - P.drop, P.z];
@@ -181,7 +182,43 @@ export function pose(ch, side = 1) {
     const py = (-1 + 1.5 * hi * (1 - cross)) * (1 - back) + 0.45 * back;
     return v3.norm(m3.apply(Rc, [px, py, out]));
   };
-  const armS = twoBone(gS.sh, hS, BODY.upper, BODY.fore, pole(side, hS, gS.sh));
+  // 팔이 몸통을 뚫지 않게: 팔꿈치 방향을 어깨→손 축 둘레로 조금씩 돌려 가며, 위팔·아래팔이 몸통(가슴 틀 타원 단면)에
+  //  들어가지 않는 가장 가까운 방향을 고른다. 손 자리·칼은 그대로라 빠르기·손목 값은 바뀌지 않는다 (팔꿈치 자리만)
+  const TORSO = { front: 0.11 + 0.035, back: 0.1 + 0.035, half: 0.16 + 0.035, top: 0.08 }; // 팔 두께 0.035 를 더함, 높이는 엉덩이 위 ~ 어깨 바로 아래
+  const yHip = -(BODY.chestUp + BODY.waistUp) + 0.05;
+  const into = (sh, mid, hand) => {
+    let worst = 0;
+    const test = (p) => {
+      const q = m3.applyT(Rc, v3.sub(p, C));
+      if (q[1] < yHip || q[1] > TORSO.top) return;
+      const ax = q[0] >= 0 ? TORSO.front : TORSO.back;
+      const k = (q[0] / ax) ** 2 + (q[2] / TORSO.half) ** 2;
+      if (k < 1) worst = Math.max(worst, 1 - Math.sqrt(k));
+    };
+    for (let u = 0.45; u <= 1.001; u += 0.11) test(v3.lerp(sh, mid, u));
+    for (let u = 0.0; u <= 0.901; u += 0.15) test(v3.lerp(mid, hand, u));
+    return worst;
+  };
+  const clearArm = (sh, hand, pole0) => {
+    const first = twoBone(sh, hand, BODY.upper, BODY.fore, pole0);
+    if (into(sh, first.mid, hand) <= 0) return first;
+    const axis = v3.norm(v3.sub(hand, sh));
+    let best = first, bestD = into(sh, first.mid, hand);
+    for (let step = 1; step <= 36; step++) {
+      for (const sgn of [1, -1]) {
+        const a = sgn * step * 5 * D2R;
+        // 로드리게스: pole0 을 axis 둘레로 a 만큼
+        const kxv = v3.cross(axis, pole0);
+        const pr = v3.add(v3.add(v3.mul(pole0, Math.cos(a)), v3.mul(kxv, Math.sin(a))), v3.mul(axis, v3.dot(axis, pole0) * (1 - Math.cos(a))));
+        const arm = twoBone(sh, hand, BODY.upper, BODY.fore, pr);
+        const d = into(sh, arm.mid, hand);
+        if (d <= 0) return arm;
+        if (d < bestD - 1e-9) (best = arm), (bestD = d);
+      }
+    }
+    return best;
+  };
+  const armS = clearArm(gS.sh, hS, pole(side, hS, gS.sh));
   // 손목 한계: 아래팔과 칼 사이 각이 WRIST_MAX 를 넘으면 칼을 아래팔 쪽으로 끌어온다 (두손 망치 쥐기 약 90° + 손목 옆굽힘 [추정])
   const fore = v3.norm(v3.sub(hS, armS.mid));
   const cosA = v3.dot(fore, dW);
@@ -197,11 +234,12 @@ export function pose(ch, side = 1) {
     dW = v3.norm(v3.add(v3.add(v3.mul(fore, Math.cos(a)), v3.mul(kxv, Math.sin(a))), v3.mul(k, v3.dot(k, fore) * (1 - Math.cos(a)))));
     wristClamp = ang * R2D - WRIST_MAX;
   }
-  const hO = v3.add(hS, v3.mul(dW, SWORD.offHand));
-  const tip = v3.add(hS, v3.mul(dW, SWORD.tip));
-  const pommel = v3.add(hS, v3.mul(dW, SWORD.pommel));
+  // 빈손: 두손 무기는 칼자루 끝(앞손에서 칼 축 offHand), 한손 무기는 ch.hand2 (가슴 틀 — 허리·뒤·앞 등 빌드 도구가 정함)
+  const hO = sword.twoHand === false && ch.hand2 ? toW(ch.hand2) : v3.add(hS, v3.mul(dW, sword.offHand));
+  const tip = v3.add(hS, v3.mul(dW, sword.tip));
+  const pommel = v3.add(hS, v3.mul(dW, sword.pommel));
   const gO = girdle(-side, hO);
-  const armO = twoBone(gO.sh, hO, BODY.upper, BODY.fore, pole(-side, hO, gO.sh));
+  const armO = clearArm(gO.sh, hO, pole(-side, hO, gO.sh));
 
   // 다리: 골반 양쪽 엉덩이 관절 → 발목. 무릎은 발끝 쪽 앞으로
   const legs = {};
@@ -226,7 +264,8 @@ export function pose(ch, side = 1) {
     Rp, Rc, hipC, waist, C, neck, head,
     shS: gS.sh, shO: gO.sh, elS: armS.mid, elO: armO.mid, hS, hO,
     overS: armS.over, overO: armO.over, elevS: gS.elev, elevO: gO.elev,
-    dW, tip, pommel, legs, wristClamp,
+    girdleS: { lift: gS.lift, prot: gS.prot }, girdleO: { lift: gO.lift, prot: gO.prot },
+    dW, tip, pommel, legs, wristClamp, sword,
   };
 }
 
@@ -247,7 +286,8 @@ export function centerOfMass(J, withSword = true) {
     const g = J.legs[k];
     parts.push([v3.lerp(g.hip, g.knee, 0.43), M.thigh], [v3.lerp(g.knee, g.ankle, 0.43), M.shin], [v3.lerp(g.ankle, g.toe, 0.4), M.foot]);
   }
-  if (withSword) parts.push([v3.add(J.hS, v3.mul(J.dW, SWORD.com)), SWORD.mass]);
+  const S = J.sword ?? SWORD;
+  if (withSword) parts.push([v3.add(J.hS, v3.mul(J.dW, S.com)), S.mass]);
   let m = 0;
   let c = [0, 0, 0];
   for (const [p, w] of parts) {

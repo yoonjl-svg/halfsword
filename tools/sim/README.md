@@ -3,9 +3,18 @@
 실제 `src/` 코드를 그대로 불러와 1/120초 고정 스텝으로 돌린다. 결정적(같은 입력 → 같은 결과).
 `npm install` 후 저장소 루트에서 실행:
 
+## 관문과 소음 폭
+- 체중 방식 기본값(`BODY.weightMode`)은 게임과 같은 `hybrid`다(9/29 감사 R-003). 그 전 levitate 기본값으로 잰 숫자와 곧바로 견주지 않는다. 옛 숫자를 다시 보려면 `node tools/sim/with_config.mjs BODY.weightMode=levitate <스크립트>`.
+- 게임 불변 관문: 바꾸기 전·후 stdout 이 바이트 같아야 한다(`cmp`, 기록은 sha256).
+  - `node tools/sim/fights12.mjs` (기본 hybrid, 예전 `hybrid.mjs fights12.mjs`와 바이트 같다)
+  - `node tools/sim/live_battery.mjs`
+- **소음 폭**: fights12(12판)는 바이트 동일 관문 전용이다. 좋아졌다/나빠졌다로 읽지 않는다. 설정 하나를 100만분의 1 바꿔도(`BODY.uprightStiffness=2500.001`) 사망이 levitate 9/12 → 11/12, hybrid 8/12 → 7/12로 움직였다. 36판도 사망 24~27, 플레이어 승 12~19로 흔들린다(감사 9/29). 좋다/나쁘다 판단은 36판 이상으로 하고, 시드 묶음을 바꿔 돈 흔들림 폭을 함께 적는다.
+
+## 스크립트
+
 | 스크립트 | 용도 |
 |---|---|
-| `node tools/sim/fights12.mjs` | AI 대 AI 12판: 사망 수, 넘어짐, 에너지 (치명도 회귀 기준: 7~8/12) |
+| `node tools/sim/fights12.mjs` | AI 대 AI 12판: 사망 수, 넘어짐, 에너지. 바이트 동일 관문 전용(위 '소음 폭') |
 | `node tools/sim/live_battery.mjs` | 칼 조작 수락 테스트 (끝 속도, 자세 유지 오차, 흔들림 등) |
 | `node tools/sim/dance.mjs` | "춤추는 느낌" 측정: 떨리는 입력 / 느린 자세 이동 때 몸통 흔들림 |
 | `node tools/sim/input_latency.mjs [--json] [--hz=60,120,30]` | 입력 지연 (R0 입력 `INPUT.coalesce`, docs/whole_body_redesign.md 3-2 (a)·3-3): 합성 손가락 궤적을 게임과 같은 길(`harness_m.mjs` inputPump = main.js 의 프레임·스텝 시계)로 넣어 손가락 → 손 목표·겨눔 2 cm 도달·고른 지연(물리 시계 / 그려지는 스텝), 스텝별 손 목표 이동의 고름, 이동 보존, 팔·결심 베기 칼끝(12 m/s tseq 조건), 3 mm 8 Hz 떨림을 끔·켬으로 견준다 (`R0_OFF=1` 이면 끔만). 화면 60/120/30 Hz × 터치 표본 = 화면 또는 120 Hz(합쳐진 이벤트). 브라우저 실제 길은 `tools/browser/touch_trace.mjs` |
@@ -19,7 +28,7 @@
 | `node tools/sim/weapon_break_rate.mjs [무기id...]` | 무기 파손률 표준 측정: 죽지 않는 60초 경합(롱소드 상대, 양쪽 자리 25판씩)에서 한 판에 부러진 비율. `TIER=rare`로 등급 강제, `DUMP=1`로 충돌 충격량 목록 |
 | `node tools/sim/weapon_break_check.mjs [--weapons=a,b] [--at=3]` | 무기 파손(칼날 끝쪽이 떨어져 나감) 점검: 콜라이더 끝=절단선, 절단선 위 보이는 꼭짓점 0, 파편이 사라지는지, NaN, AI 간격, 판 바뀜 정리 |
 | `node tools/sim/break_trace.mjs fights12.mjs` | 다른 시뮬을 그대로 돌리며 무기가 부러진 판·자리·스텝을 적는다 (부러진 판만 달라졌는지 가를 때) |
-| `node tools/sim/hybrid.mjs broken_duel.mjs 24 short longsword` | 판 시작부터 부러진 무기의 60초 경합 승률 (intact·blunt(예전)·short(지금) 비교, 윌슨 95%) |
+| `node tools/sim/broken_duel.mjs 24 short longsword` | 판 시작부터 부러진 무기의 60초 경합 승률 (intact·blunt(예전)·short(지금) 비교, 윌슨 95%) |
 | `node tools/sim/weapon_tech_reach.mjs [무기id...]` | 무기 × 기술별 `TECH[].reach` 제안값(원래 롱소드 값 + 무기 차이). 롱소드 자기 검증으로 못 재는 기술은 '(불안정)'으로 걸러낸다 |
 | `node tools/sim/weapon_trace.mjs <무기A> <무기B> [seed]` | 두 무기를 AI 대 AI로 붙여 타격 하나하나(에너지·부위·칼날 어디서 맞았는지)를 그대로 찍어 본다 (밸런스 이상 원인 추적용) |
 | `node tools/sim/down_hits.mjs [판수] [무기id] [--stand]` | 쓰러진 상대에게 스크립트로 내려베기·사선 베기·아래로 찌르기 → 닿는 거리(0.45~1.35m)별 상처율과 안 들어간 이유(미접촉·문턱 미달·칼 면·칼자루). `--stand` = 서 있는 상대 대조 실험 |
@@ -30,6 +39,7 @@
 | `node tools/sim/revive_check.mjs [판수=16]` | 부활(이졸데, `src/revive.js`) 점검: 이졸데 대 주인공 대리(hybrid). 부활은 한 번만, 4초 안에 칼을 쥐고 다시 선다, 부활 중 상처 0, 다시 싸울 때 집념, 두 번째 죽음은 진짜 죽음, NaN 없음. 갈래: 자연·칼 놓침·칼 부러짐·둘 다(강제), 부활 중 주인공 대리 죽음 |
 | `node tools/sim/ai_thrust_pref.mjs [판수] [무기id...]` | AI가 찌르기 무기로 찌르기 기술을 더 고르는지 (고른 기술 비율, 찌르기 판정 수) |
 | `node tools/sim/with_config.mjs STRIKE.thrustAssist=2.5 <스크립트> [인자...]` | 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 (`true`/`false`는 불리언: `WHOLE.on=false`) |
+| `node tools/sim/hybrid.mjs <스크립트> [인자...]` | 옛 명령줄용 빈 래퍼: 아무것도 바꾸지 않는다(기본값이 이미 hybrid). 새 명령에는 쓰지 않는다 |
 | `node tools/sim/with_weapon.mjs estoc characters_eval.mjs both 3` | 모든 캐릭터에게 같은 무기를 쥐여 주고 다른 시뮬 스크립트를 돌린다 (근력·성격은 그대로, 브란의 대체 무기는 끔) |
 | `node tools/sim/thrust_strength.mjs [판수] [무기id...]` | 기본 AI 근력만 0.85 / 1.0 / 1.3 으로 바꿔 가만히 겨눈 더미를 상대로 낸 찌르기·베기 상처(분당 수·깊이·에너지)와 처치 시간 |
 | `node tools/sim/weapon_anatomy.mjs [duel\|dummy] [판수] [무기id...] [--seed=첫번호]` | 무기가 왜 이기고 지나: 몸 접촉마다 판정 전·후(상처 / 문턱 미달 / 칼 면), 문턱 대비 비율, 칼끝 속도, 유효 질량, 닿은 간격, 간격 띠별 시간, 첫 상처, AI 통계. `dummy` = 막지 않는 더미 상대 공격력 |
@@ -40,7 +50,7 @@
 | `node tools/sim/body_share.mjs [무기id...]` | 칼끝 속도 중 몸통(가슴·골반)이 만든 몫. 몸통 비틀기를 끄거나 크게 했을 때 칼 속도·에너지 변화 |
 | `node tools/sim/hit_phase.mjs [판수] [무기A] [무기B]` | 한 방이 왜 가벼운가: AI 대 AI 대결에서 몸에 닿은 순간마다 그 휘두름 최고 속도 대비 비율·느려지는 중·손목 제동 중·몸통 몫·닿은 칼날 지점·에너지·맞은 쪽 밀림(상처/멍 따로) |
 | `node tools/sim/chain_mass.mjs [무기id...]` | 칼 뒤에 실제로 실리는 질량: 물리 사슬(칼+손+팔+몸)의 유효 질량을 톡 밀어 재고 판정식(칼+0.3kg)과 견준다 |
-| `node tools/sim/thrust_review.mjs [skill\|step\|down\|assist\|demote\|snap\|all] [--hybrid]` | 탭 찌르기 검토 지적 수정 전·후: 검술 보정별 찌르기, AI 두 번 내딛기, 찌르다 넘어짐, 팔 질량 싣는 구간·멍으로 바뀐 찌르기 에너지, 내리찌르기 끊김 |
+| `node tools/sim/thrust_review.mjs [skill\|step\|down\|assist\|demote\|snap\|all] [--hybrid]` | (기본값이 hybrid라 `--hybrid`는 이제 효과 없음) 탭 찌르기 검토 지적 수정 전·후: 검술 보정별 찌르기, AI 두 번 내딛기, 찌르다 넘어짐, 팔 질량 싣는 구간·멍으로 바뀐 찌르기 에너지, 내리찌르기 끊김 |
 | `node tools/sim/hybrid.mjs wholebody.mjs <부분> [N]` | 온몸 베기 측정 묶음 (docs/whole_body_strike.md L0·7장): `support` `cuts` `detect` `react` `combo` `sweep` `trunkoff` `strength` `power` `stand` `miss` `block` `react_body` `ai` `aistep` `tapstep` `duel` `defend` `hitstop` `feedcheck` (`aistep` = AI 대 AI 기술 걸음 하나하나의 발 이동·닿은 뒤 밀림(발에 실린 동안 / 전체)·다시 딛기, 더듬기(`stutter_pct`: 내디딘 발이 딛은 지 0.3초 안에 다른 발보다 먼저 다시 뜸, 걸음 종류·AI 모드·조이스틱별 `stutterBy`), 딛은 뒤 0.1~0.3초 그 발에 실린 몸무게(`lungeLoad`), 내딛는 동안 낸 상처 때 그 발이 딛고 있었나(`woundWhileLunge`), 딛지 못한 부탁의 까닭(`notLanded`), 같은 싸움의 보통 걸음과 견줌. `AITRACE=1`이면 다시 딛은 걸음의 까닭과 시간표를 찍는다. `AISEED=<판>`은 그 판부터, `AITRACE_T=<판>:<P|E>:<시작초>:<끝초>`는 그 싸움꾼의 모드·조이스틱·붙잡기 반사·골반·두 발 상태를 0.025초마다 찍는다. `tapstep` = 탭 찌르기 내딛기의 앞발 이동·무게중심 전진). 플레이어 입력은 모두 손가락 궤적 길(`harness_m.mjs` `feedTrace`: input.js → handOffset → skill.update, 60/90/120 Hz는 `HZ=`)로 넣는다. 층 끄기: `with_config.mjs WHOLE.chain=false hybrid.mjs wholebody.mjs cuts`. 결과 JSON은 `OUTDIR=`/`OUT=` |
 | `node tools/sim/hybrid.mjs legs_gates.mjs <stand\|walk\|circle\|turn\|turnR\|mash\|getup\|push\|fight\|step\|all> [N]` | 다리 1.5 합격선 G1~G8·G10 (발이 받친 몸무게, 딛은 발 미끄러짐, 걷기·마구 흔들기 넘어짐, 제자리 돌기, 일어서기, AI 대결 넘어짐/선 채 분, requestStep 발 이동·밀림). `turnR` = 처음 방향·각도·쉬는 시간을 시드로 섞은 제자리 돌기(`turn`·`circle`·`push`는 난수를 안 써서 시드를 바꿔도 같은 판이다, `TRACE=<판>:<시작초>:<끝초>`로 두 발 상태를 찍는다). 걷기 방향·세기 고르기 `WDIRS=FR,FL WMAGS=1`. `MODE=levitate`로 견줌 |
 | `node --expose-gc tools/sim/hybrid.mjs perf_ab.mjs [블록=10] [스텝=2000]` | G9 성능: 온몸 베기 켬/끔(`SWITCH=WHOLE.commit` 처럼 층 하나도)을 한 프로세스에서 번갈아 — 스텝 시간 비 평균·95% 구간, THREE 생성 수 차이, 힙 할당 차이(끔 두 벌끼리 잡음 바닥과 함께) |

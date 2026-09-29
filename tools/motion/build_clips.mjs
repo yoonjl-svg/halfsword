@@ -6,7 +6,7 @@
 //
 //  키프레임(lib/cuts.mjs) → 크기 세 벌(small·medium·large) × 좌우 → 120 Hz 표본 + 측정값.
 // ─────────────────────────────────────────────────────────────
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CUTS, GAME_GUARDS } from './lib/cuts.mjs';
@@ -14,44 +14,15 @@ import { SOURCES } from './lib/sources.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, fromGameGuard, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { v3, m3, frame } from './lib/body.mjs';
+import { toKeys, marksOf, mirror, clipExtras, chainWithProfiles } from './lib/sets.mjs';
+import { validateFile, report } from './validate_clip.mjs';
+import { gripField } from './lib/weapons.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'clips');
 const args = process.argv.slice(2);
 const PRINT = args.includes('--print');
 const only = args.filter((a) => !a.startsWith('--'));
-
-const MIRROR_GUARD = { tag: null, langort: null, alber: null, neben: null,  tagR: 'tagL', tagL: 'tagR', ochs: 'ochsL', ochsL: 'ochs', side: 'sideL', sideL: 'side', pflug: 'pflugL', pflugL: 'pflug', wechsel: 'wechselL', wechselL: 'wechsel' };
-
-/** 저작 키 (p/c/h/d + 걸음 키) → clip.mjs 키 */
-function toKeys(set) {
-  const keys = set.keys.map((k) => ({
-    t: k.t,
-    tag: k.tag,
-    pelvis: { yaw: k.p[0], drop: k.p[1], pitch: k.p[2] ?? 0, roll: 0 },
-    chest: { yaw: k.c[0], lean: k.c[1], side: k.c[2] ?? 0 },
-    hand: k.h,
-    // 칼 방향: 저작 키는 그 키의 가슴 틀 → 월드로 바꿔 둔다 (보간은 월드에서)
-    dirV: m3.apply(frame(k.p[0] + k.c[0], (k.p[2] ?? 0) + k.c[1], k.c[2] ?? 0), k.d),
-  }));
-  for (const s of set.steps) {
-    const f = {};
-    for (const side of ['L', 'R']) {
-      const a = s.feet[side];
-      f[side] = { x: a[0], z: a[1], yaw: a[2], lift: a[3], up: a[4] };
-    }
-    keys.push({ t: s.t, feet: f, pelvis: { x: s.px ?? 0, z: s.pz ?? 0 } });
-  }
-  keys.sort((a, b) => a.t - b.t);
-  return keys;
-}
-function marksOf(set) {
-  const m = {};
-  for (const k of set.keys) if (k.tag) m[k.tag] = k.t;
-  m.t0 = set.keys[0].t;
-  for (const need of ['t0', 'tw', 'tr', 'tc', 'tf', 'tg']) if (m[need] == null) throw new Error(`표시 ${need} 없음`);
-  return m;
-}
 
 /** 크기 섞기: small 과 large 키를 u 만큼 (키 개수·표시가 같아야 한다) */
 function blend(small, large, u) {
@@ -103,49 +74,19 @@ function retimeSteps(med, large) {
   return { ...med, steps: med.steps.map((s) => ({ ...s, t: tmap(s.t) })) };
 }
 
-/** 왼쪽에서 베기 = 거울 (게임 자세표 키는 게임의 왼쪽 자세 값으로 바꾼다) */
-function mirror(set) {
-  const keys = set.keys.map((k) => {
-    if (k.guard && MIRROR_GUARD[k.guard]) {
-      const g = fromGameGuard(GAME_GUARDS[MIRROR_GUARD[k.guard]]);
-      return { t: k.t, tag: k.tag, p: [g.pelvis.yaw, g.pelvis.drop, 0], c: [g.chest.yaw, g.chest.lean, 0], h: g.hand, d: g.dirV };
-    }
-    return { t: k.t, tag: k.tag, p: [-k.p[0], k.p[1], k.p[2] ?? 0], c: [-k.c[0], k.c[1], -(k.c[2] ?? 0)], h: [k.h[0], k.h[1], -k.h[2]], d: [k.d[0], k.d[1], -k.d[2]] };
-  });
-  const steps = set.steps.map((s) => {
-    const m = (a) => [a[0], -a[1], -a[2], a[3], a[4]];
-    return { t: s.t, feet: { L: m(s.feet.R), R: m(s.feet.L) }, px: s.px, pz: -(s.pz ?? 0) };
-  });
-  return { keys, steps, chain: set.chain };
-}
-
 function build(cut, sizeName, sideName) {
   let set = sizeName === 'small' ? cut.small : sizeName === 'large' ? cut.large : cut.medium ? retimeSteps(cut.medium, cut.large) : blend(cut.small, cut.large, 0.5);
   if (sideName === 'left') set = mirror(set);
   const marks = marksOf(set);
-  const chain = { ...set.chain };
-  // 운동 사슬 곡선: 골반·가슴 돌림을 감기 끝 값 → 지나가기 끝 값으로, 최고 속도가 겨눈 선(tc)보다 앞서게
-  //  (골프 프로: 골반 → 가슴 → 팔 → 채, 간격 약 20~40 ms · 야구: 골반 → 어깨 [측정] — lib/cuts.mjs CHAIN.seq)
-  if (chain.seq) {
-    const kw = set.keys.find((k) => k.tag === 'tw');
-    const kc = set.keys.find((k) => k.tag === 'tc');
-    const kf = set.keys.find((k) => k.tag === 'tf');
-    const q = chain.seq;
-    // 겨눈 선에서의 돌림은 저작한 tc 키 값을 지킨다. 나머지(겨눈 선 → 지나가기 끝)는 느린 두 번째 곡선이 낸다
-    const slow = { peak2: marks.tc + 0.1, dur2: Math.max(0.3, (marks.tf - marks.tc) * 1.6) };
-    chain.profiles = {
-      pelvis: { v0: kw.p[0], vc: kc.p[0], v1: kf.p[0], tc: marks.tc, peak: marks.tc - q.pelvis, dur: q.dur, ...slow },
-      chest: { v0: kw.p[0] + kw.c[0], vc: kc.p[0] + kc.c[0], v1: kf.p[0] + kf.c[0], tc: marks.tc, peak: marks.tc - q.chest, dur: q.dur, ...slow },
-    };
-    chain.pelvis = 0;
-    chain.chest = 0;
-  }
+  // 운동 사슬 곡선 (lib/sets.mjs chainWithProfiles)
+  const chain = chainWithProfiles(set, marks);
   const def = { keys: toKeys(set), marks, chain };
   const { frames } = sampleClip(def, 1);
   const rows = measure(frames, marks);
   const summary = summarize(rows, marks);
   const over = rows.filter((r) => r.J.overS > 0.01 || r.J.overO > 0.01).map((r) => `${r.t.toFixed(2)}:${Math.max(r.J.overS, r.J.overO).toFixed(2)}`);
-  return { marks, rows, summary, def, over };
+  const extra = clipExtras(set, rows, marks);
+  return { marks, rows, summary, def, over, extra };
 }
 
 const SIZES = ['small', 'medium', 'large'];
@@ -156,7 +97,7 @@ for (const cut of CUTS) {
   if (only.length && !only.includes(cut.id)) continue;
   for (const side of SIDES) {
     for (const size of SIZES) {
-      const { marks, rows, summary, over } = build(cut, size, side);
+      const { marks, rows, summary, over, extra } = build(cut, size, side);
       const name = `${cut.id}_${side}_${size}`;
       const s = summary;
       const seq = s.sequence.map((q) => `${q.part} ${q.t > 0 ? '+' : ''}${q.t}`).join(' → ');
@@ -171,7 +112,7 @@ for (const cut of CUTS) {
           console.log(`    t ${r.t.toFixed(2)} 옆 ${(r.J.hS[2] - r.J.C[2]).toFixed(2)} 앞 ${(r.J.hS[0] - r.J.C[0]).toFixed(2)} 손높이 ${(r.J.hS[1] - r.J.hipC[1]).toFixed(2)} 가슴 ${r.yawC.toFixed(0)}° 칼끝 ${r.J.tip[1].toFixed(2)} m`);
       if (PRINT) continue;
       const clip = {
-        format: 'stillness-motion-clip/1', // data.cols[채널] = 120 Hz 표본 (벡터는 3칸씩 평면), J = joints 순서 관절 위치
+        format: 'stillness-motion-clip/2', // data.cols[채널] = 120 Hz 표본 (벡터는 3칸씩 평면), J = joints 순서 관절 위치. clip/1 + 채널·필드 더함 (clip_format.md §7)
         id: name,
         cut: cut.id,
         nameKo: cut.nameKo,
@@ -183,6 +124,7 @@ for (const cut of CUTS) {
         hz: HZ,
         weapon: 'longsword',
         handedness: 'right',
+        grip: gripField('longsword'), // 칼 치수 (앞손에서 칼 축 m) — src/weapons.js 에서 읽음
         units: 'm, 도(°), 초, rad/s(w), m/s(speed)',
         frame:
           '월드 = 클립 시작 때 골반 밑 땅, x 앞(상대 쪽) · y 위 · z 칼 든 쪽(오른쪽). 가슴 틀 값(handS·handO·sword·edge·elbow·shoulderS) = 가슴 가운데 원점, 가슴 상자와 함께 돈다. handS_face = 골반이 향하는 쪽 틀(게임의 지금 손 목표 틀과 같은 종류). yaw + = 칼 든 쪽 어깨·골반이 뒤로 (게임 guards.js 부호).',
@@ -196,20 +138,28 @@ for (const cut of CUTS) {
               ? '교본 서술(시작·끝 자세·걸음)과 스포츠 생체역학의 운동 사슬 시간차로 저작한 v0 [추정 포함] — 모캡 실측 아님'
               : '크게 벌을 겨눈 선 자세 쪽으로 줄임(몸·손 75%, 칼 각 85%), 시각은 작게와 크게의 가운데 [추정]',
         summary,
+        ...extra,
         joints: JOINTS,
         bones: BONES,
         data: toColumns(toJSONFrames(rows)),
       };
       writeFileSync(join(OUT, `${name}.json`), JSON.stringify(clip));
-      index.push({ id: name, cut: cut.id, nameKo: cut.nameKo, nameDe: cut.nameDe, family: cut.family, desc: cut.desc, side, size, file: `${name}.json`, summary });
+      index.push({ id: name, cut: cut.id, nameKo: cut.nameKo, nameDe: cut.nameDe, family: cut.family, desc: cut.desc, side, size, file: `${name}.json`, summary, ...extra });
     }
   }
 }
 if (!PRINT && !only.length) {
-  writeFileSync(join(OUT, 'index.json'), JSON.stringify({ format: 'stillness-motion-index/1', generated: new Date().toISOString().slice(0, 10), clips: index }, null, 1));
+  // 다른 도구(build_flow.mjs 흐름, build_lunge.mjs 런지)가 끼워 둔 항목은 지킨다
+  let kept = [];
+  try {
+    kept = JSON.parse(readFileSync(join(OUT, 'index.json'), 'utf8')).clips.filter((c) => !CUTS.some((k) => k.id === c.cut));
+  } catch {}
+  writeFileSync(join(OUT, 'index.json'), JSON.stringify({ format: 'stillness-motion-index/1', generated: new Date().toISOString().slice(0, 10), clips: [...index, ...kept] }, null, 1));
   writeFileSync(join(ROOT, 'docs', 'motion', 'spec_table.md'), specTable(index));
   console.log(`\n${index.length}개 클립 → ${OUT}, 사양표 → docs/motion/spec_table.md`);
 }
+// 검사 (validate_clip.mjs, clip_format.md §6): 다 만들었으면 목록째, 몇 베기만 만들었으면 그 파일만. 어긋나면 종료 코드 1
+if (!PRINT && !report((only.length ? index.map((e) => join(OUT, e.file)) : [join(OUT, 'index.json')]).map(validateFile), { quiet: true })) process.exit(1);
 
 /** 사양표 (오른쪽에서 베기만 — 왼쪽은 거울이라 같은 값) */
 function specTable(list) {
@@ -275,6 +225,17 @@ function specTable(list) {
     L.push(`| ${c.nameKo} | ${c.size} | ${sv(g.handsAboveShoulder)} | ${sv(g.handsAboveHead)} | ${sv(g.bladeBehind)} | ${sv(g.pelvisTurns)} | ${sv(g.footLifts)} | ${sv(g.footLands)} | ${sv(g.frontOpenAfterLine)} | ${sv(g.frontCloses)} |`);
   }
   L.push('');
+  L.push('## 7. 복귀 구간 · 시작·끝 자세 (게임 자세표 14개와 대조, 좌우 모두)');
+  L.push('');
+  L.push('> 복귀 구간 = 지나가기 끝(tf) → 복귀 끝(tg) 표본. 가장 가까운 자세 = 앞손 자리(가슴 가운데 원점, 바라보는 틀 — `src/guards.js` 손과 같은 틀) 오차가 가장 작은 게임 자세. 목표 = 그 클립 키에 적은 자세.');
+  L.push('');
+  L.push('| 클립 | 복귀 구간 s (표본) | 시작: 목표 → 가장 가까움 (손 오차 m) | 끝: 목표 → 가장 가까움 (손 오차 m) | 끝 다음 가까움 |');
+  L.push('|---|---|---|---|---|');
+  for (const c of list) {
+    const e = c.endPose, st = c.startPose;
+    L.push(`| ${c.id} | ${c.recovery.from} → ${c.recovery.to} (${c.recovery.samples}) | ${c.startFrom ?? '—'} → ${st.nearest} (${st.handError}) | ${c.recoverTo ?? '—'} → ${e.nearest} (${e.handError}) | ${e.next.map((x) => `${x.id} ${x.err}`).join(', ')} |`);
+  }
+  L.push('');
   L.push('## 5. 표시 자세 — 관절각과 몸 둘레 자리 (large, 오른쪽)');
   L.push('');
   L.push('각: 골반·가슴 = 월드 돌림(+ = 칼 쪽으로 감음), 척추 = 가슴−골반, 숙임 + = 앞. 어깨 들림 = 가슴 아래 방향과 위팔 사이(180 = 머리 위로 곧게). 팔꿈치·무릎 = 굽힘(0 = 곧음). 손목 = 아래팔과 칼 사이.');
@@ -293,7 +254,7 @@ function specTable(list) {
   L.push('');
   L.push('칼끝 가장 낮은 높이가 0 가까이거나 − 이면 칼끝이 땅에 닿는다. 작게 벌의 왼쪽 바꿈·바보 자세는 게임 자세표 값 그대로라 칼끝이 땅 높이까지 내려간다(게임에서는 땅이 막는다). ');
   L.push('');
-  L.push('앞이 빈 시간 = 감기 끝~복귀 동안 칼(폼멜~칼끝)이 가슴 앞 0.45 m 의 세로 띠(가슴 아래 0.25 ~ 위 0.4 m)에서 0.3 m 넘게 떨어져 있던 시간. 팔 넘침 0.033 m 는 지금 게임 쟁기 자세 자체가 게임 팔 길이보다 조금 먼 것이다.');
+  L.push('앞이 빈 시간 = 감기 끝~복귀 동안 칼(폼멜~칼끝)이 가슴 앞 0.45 m 의 세로 띠(가슴 아래 0.25 ~ 위 0.4 m)에서 0.3 m 넘게 떨어져 있던 시간. 팔 넘침 0.028 m 는 지금 게임 쟁기 자세 자체에서 뒷손(빈손)이 게임 팔 길이보다 조금 먼 것이다.');
   L.push('');
   return L.join('\n');
 }

@@ -135,6 +135,18 @@ class OldSound {
 
 // ── 소리 목록: [이름, 설명, [약, 중, 강] 값, 트는 함수(엔진, 값)] ──
 // 값은 게임 속 실제 범위(AI 대결 통계)에서 골랐다: 칼 충돌 속도 중간값 2m/s·상위 10% 6m/s, 베기 에너지 30~200J
+// 세기 눈금 A/B (29차, 디렉터 R3 대비): A = 지금 눈금(hitScale 'legacy'), B = 로그 무게('log'). 게임은 아직 A 다
+const AB_LABELS = ['A 150', 'B 150', 'A 300', 'B 300', 'A 500', 'B 500'];
+const AB_VALS = ['A150', 'B150', 'A300', 'B300', 'A500', 'B500'];
+function withScale(s, v, fn) {
+  const prev = s._hitScale;
+  s.hitScale = v[0] === 'B' ? 'log' : 'legacy';
+  try {
+    fn(+v.slice(1));
+  } finally {
+    s._hitScale = prev;
+  }
+}
 const ROWS = [
   ['칼끼리 부딪힘', '맞닿는 속도 2 / 5 / 10 m/s', [2, 5, 10], (s, v) => s.clash(v, 0)],
   ['스치며 긁고 지나감', '빗맞은 칼: 부딪힘 1.5 / 3 / 6 + 미끄러짐 7 m/s', [1.5, 3, 6], (s, v) => s.clash(v, 7)],
@@ -144,6 +156,9 @@ const ROWS = [
   ['찌르기', '20 / 50 / 100 J', [20, 50, 100], (s, v) => s.stab(v)],
   ['타박 (칼 면·손잡이)', '10 / 35 / 100 J', [10, 35, 100], (s, v) => s.blunt(v)],
   ['뼈 (머리·팔·다리 베기)', '베기 + 뼈 80 / 130 / 200 J', [80, 130, 200], (s, v) => (s.cut(v, false), s.bone(v))],
+  ['세기 눈금 A/B: 베기', 'A 지금 / B 로그 무게 — 150 / 300 / 500 J (200 J 까지는 같다)', AB_VALS, (s, v) => withScale(s, v, (J) => s.cut(J, false)), AB_LABELS],
+  ['세기 눈금 A/B: 찌르기', 'A 지금 / B 로그 무게 — 150 / 300 / 500 J', AB_VALS, (s, v) => withScale(s, v, (J) => s.stab(J)), AB_LABELS],
+  ['세기 눈금 A/B: 강철 × 강철', 'A 지금 / B 로그 무게 — 150 / 300 / 500 J', AB_VALS, (s, v) => withScale(s, v, (J) => s.impact({ a: 'steel', b: 'steel', energy: J })), AB_LABELS],
 ];
 
 // ── 재질 쌍 API(Sound.impact) 들어보기: 앞으로 다른 무기들이 쓸 sound.impact({a,b,energy}) ──
@@ -167,6 +182,8 @@ ROWS.push(
   ['쓰러짐', '몸통이 떨어지는 속도 1.2(무릎이 꺾임) / 2 / 3 m/s', [1.2, 2, 3], (s, v) => s.bodyFall?.(v, { light: v < 1.5 })],
   ['판금이 막음', '막은 타격 30 / 70 / 120 J (전투 판정이 판금을 알게 되면 부른다)', [30, 70, 120], (s, v) => (s.plateBlock ? s.plateBlock(v) : s.helmet(v))],
   ['판금이 부서짐', '부서지는 타격 60 / 100 / 150 J (깨짐 → 조각 둘~셋이 바닥에 철컥)', [60, 100, 150], (s, v) => (s.plateBreak ? s.plateBreak(v) : s.helmet(v))],
+  ['리볼버 총성', '한 발 / 세 발 연사. 지금 배경의 울림을 따른다 (배경 소리 바꾸기로 포세이돈·성·성당 비교)', [1, 3], (s, v) => { for (let i = 0; i < v; i++) setTimeout(() => s.gunshot?.({}), i * 380); }, ['한 발', '세 발']],
+  ['디딤 (지나는 걸음의 무거운 딛기)', 'footStrike 세기 0.3 / 0.7 / 1.0 (아직 게임에서 안 부른다 — 디렉터가 R2/R4 에서 잇는다)', [0.3, 0.7, 1], (s, v) => s.footStrike?.(v), ['0.3', '0.7', '1.0']],
   ['무기 부러짐', '강철 칼(쇠 팅) / 나뭇가지 / 언 참치 / 나무·참치 둘 다', ['steel', 'wood', 'frozen', 'both'], (s, v) => (v === 'both' ? (s.weaponBreak?.('wood'), s.weaponBreak?.('frozen')) : s.weaponBreak?.(v)), ['강철', '나무', '참치', '둘']],
 );
 

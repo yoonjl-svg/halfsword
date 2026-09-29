@@ -92,6 +92,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 .seg button { border-radius: 0; margin-left: -1px; }
 .seg button:first-child { border-radius: var(--r) 0 0 var(--r); margin-left: 0; }
 .seg button:last-child { border-radius: 0 var(--r) var(--r) 0; }
+.seg button:disabled, .tog input:disabled { opacity: .35; cursor: not-allowed; }
 .seg button[aria-pressed="true"] { background: var(--ref); color: var(--panel); border-color: var(--ref); position: relative; }
 label.tog { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); cursor: pointer; }
 input[type="range"] { width: 100%; accent-color: var(--ref); }

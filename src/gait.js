@@ -525,8 +525,7 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const l = L[k];
       if (!l.stance) continue;
-      const bump = l.tLand < GAIT.loadTime ? Math.sin((Math.PI * l.tLand) / GAIT.loadTime) : 0;
-      l.phi = GAIT.kneeBase + GAIT.loadKnee * bump * (this.walking || l.kind !== 'settle' ? 1 : 0.5);
+      l.phi = GAIT.kneeBase; // 디딜 때 더 굽히기(옛 loadKnee)는 0이라 지웠다. 무게를 받으며 저절로 굽는다
       const Ls = legLen(l.phi);
       const hx = l.hip.x - l.plant.x;
       const hz = l.hip.z - l.plant.z;
