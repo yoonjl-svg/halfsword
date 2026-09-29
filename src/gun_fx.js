@@ -24,7 +24,36 @@ const SMOKE_T = 1.2; // 초: 연기가 사라지기까지
 const TRACE_T = 0.11; // 초: 총알 궤적 줄이 사라지기까지 (60fps 에서 예닐곱 프레임 — 한 프레임이면 폰에서 놓친다)
 const NP = 24; // 연기 점 수
 const LASER_A = 0.3; // 조준 레이저 선의 불투명도 (사장님 '조준선 지금보다 밝게': 0.13 → 0.3)
-const LASER_DOT_A = 0.6; // 닿은 자리 점 — 겨누는 데 쓰는 건 이 점이라 선보다 조금 또렷하게 (0.3 → 0.6)
+const RETICLE_A = 1.0; // 조준쇠(레이저 끝 표식)의 불투명도 — 겨누는 데 쓰는 건 이 표식이라 선보다 훨씬 또렷하게
+const RETICLE_DIM_A = 0.45; // 빗나가는 동안·장전 중의 흐린 조준쇠
+const RETICLE_SIZE = 0.07; // 조준쇠 크기 — 화면 기준(sizeAttenuation 없음): 멀어도 가까워도 같은 크기 (FPS 조준쇠처럼)
+
+/** 조준쇠: FPS 게임 조준쇠 꼴 — 고리 + 네 눈금(가운데는 비워 겨눈 자리가 가리지 않게) + 가운데 점. 선명한 빨강에 어두운 테두리(밝은 하늘·모래 위에서도 보이게)
+ *  (사장님 9/29: "조준점이 잘 안 보이더라. 더 선명한 붉은 색으로. 점 모양이 아니라 fps 게임 느낌의 조준쇠 같은 표식으로") */
+function reticleTexture() {
+  return canvasTex(64, 64, (g, w, h) => {
+    const c = w / 2;
+    g.lineCap = 'butt';
+    const draw = (color, lw) => {
+      g.strokeStyle = g.fillStyle = color;
+      g.lineWidth = lw;
+      g.beginPath();
+      g.arc(c, c, 22, 0, Math.PI * 2);
+      g.stroke();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        g.beginPath();
+        g.moveTo(c + dx * 8, c + dy * 8);
+        g.lineTo(c + dx * 18, c + dy * 18);
+        g.stroke();
+      }
+      g.beginPath();
+      g.arc(c, c, lw * 0.75, 0, Math.PI * 2);
+      g.fill();
+    };
+    draw('rgba(0,0,0,0.55)', 6); // 테두리
+    draw('rgb(255,20,20)', 3); // 선명한 빨강
+  });
+}
 
 /** 섬광: 네 갈래 별 + 둥근 심 (가운데 흰빛 → 주황 → 투명) */
 function flashTexture() {
@@ -206,17 +235,25 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   };
 
   // 조준 레이저: 총을 든 검객 수만큼 (판마다 검객이 바뀌므로 자리로 돌려쓴다)
-  const laserMat = new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: LASER_A, depthWrite: false });
-  const dotMat = laserMat.clone();
-  dotMat.opacity = LASER_DOT_A;
+  const laserMat = new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: LASER_A, depthWrite: false });
+  // 빗나가는 동안의 흐린 선 (사장님 9/29: "레이저 조준선이 상대방 머리 위 하늘로 치솟아 있어" — 몸에 안 걸린 동안 선이 25 m 지평선까지 뻗어
+  //  카메라에서는 상대 머리 위로 솟아 보였다. 이제 선은 상대 깊이에서 끊고, 조준쇠는 거기에 흐리게 남겨 흔들리는 겨눔이 몸 둘레 어디를 지나는지 보인다)
+  const laserDimMat = laserMat.clone();
+  laserDimMat.opacity = LASER_A * 0.5;
+  // 레이저 끝 조준쇠: 스프라이트(늘 카메라를 본다) · 화면 기준 크기 · 깊이 검사 없음(상대 몸 표면에 닿은 자리라 몸에 반쯤 묻히지 않게 늘 위에 그린다)
+  const reticleMap = reticleTexture();
+  const reticleMat = new THREE.SpriteMaterial({ map: reticleMap, transparent: true, opacity: RETICLE_A, depthTest: false, depthWrite: false, sizeAttenuation: false, fog: false });
+  const reticleDimMat = reticleMat.clone();
+  reticleDimMat.opacity = RETICLE_DIM_A;
   const beamGeo = new THREE.BoxGeometry(0.005, 1, 0.005).translate(0, 0.5, 0);
-  const dotGeo = new THREE.SphereGeometry(0.012, 6, 4);
   const lasers = [];
   const laserSlot = (i) => {
     while (lasers.length <= i) {
       const beam = new THREE.Mesh(beamGeo, laserMat);
-      const dot = new THREE.Mesh(dotGeo, dotMat);
-      beam.renderOrder = dot.renderOrder = 2;
+      const dot = new THREE.Sprite(reticleMat);
+      dot.scale.set(RETICLE_SIZE, RETICLE_SIZE, 1);
+      beam.renderOrder = 2;
+      dot.renderOrder = 3;
       beam.visible = dot.visible = false;
       scene.add(beam, dot);
       lasers.push({ beam, dot });
@@ -236,12 +273,24 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
       const mx = f.weapon.muzzleX ?? 0; // 총신이 칼 축에서 비켜 있으면(리볼버, 주먹 위) 그만큼 옮긴다 — gun.js muzzle() 과 같다
       if (mx) _u.add(_v.set(mx, 0, 0).applyQuaternion(_q));
       const dist = measure(f, _u, _d);
+      // 선의 끝: 무엇에 닿으면 거기, 빗나가면 상대 가슴 깊이 + 0.4 m 에서 끊는다 (지평선까지 늘이지 않는다)
+      let end = dist;
+      let onTarget = dist < GUN.range;
+      const fc = f.foe?.bodies?.chest?.translation?.();
+      if (fc) {
+        const along = (fc.x - _u.x) * _d.x + (fc.y - _u.y) * _d.y + (fc.z - _u.z) * _d.z; // 총신을 따라 잰 상대 가슴까지의 거리
+        const stop = Math.max(0.3, along + 0.4);
+        if (dist > stop) { end = stop; onTarget = false; } // 상대 깊이를 지나서야 닿거나 아예 안 닿음 = 빗나감
+      }
+      const reloading = (f.gun?.cool ?? 0) > 0; // 쏜 직후·장전 중(총구가 위로 선다)에는 흐리게
+      L.beam.material = reloading ? laserDimMat : laserMat;
+      L.dot.material = onTarget && !reloading ? reticleMat : reticleDimMat;
       L.beam.position.copy(_u);
       L.beam.quaternion.setFromUnitVectors(_Y, _d);
-      L.beam.scale.set(1, Math.max(0.01, dist), 1);
-      L.dot.position.copy(_u).addScaledVector(_d, dist);
+      L.beam.scale.set(1, Math.max(0.01, end), 1);
+      L.dot.position.copy(_u).addScaledVector(_d, end);
       L.beam.visible = true;
-      L.dot.visible = dist < GUN.range; // 허공으로 나가면 점은 없다
+      L.dot.visible = true; // 빗나가도 상대 깊이에 흐린 조준쇠 — 겨눔이 몸 둘레 어디를 지나는지 보인다
     }
     for (let i = n; i < lasers.length; i++) lasers[i].beam.visible = lasers[i].dot.visible = false;
   };

@@ -1011,7 +1011,7 @@ const pistol = finalizeSpec('pistol', {
   //  롱소드 0.27)에 너무 세서 매 물리 스텝 감쇠 토크가 넘쳐 상한에 붙은 채 방향이 뒤집혔다 — 60 Hz 떨림 + 겨눔이 18° 비켜 섰다.
   //  0.8 부터 다시 떨고 0.35 아래는 12 Hz 울림이 남아 0.45. 놓아주기 감쇠(releaseDamping 1.5)도 같은 까닭으로 맞춘다
   controlOverrides: { twistScale: 0.25, aimDamping: 0.45, releaseDamping: 0.45 },
-  moveMul: 1.3, // 걷는 최고 속도 ×1.3 (도망 다니며 쏘라고 — 사장님 '칼 들었을 때보다 30% 빠르게')
+  moveMul: 1.4, // 걷는 최고 속도 ×1.4 (도망 다니며 쏘라고 — 사장님 '칼 들었을 때보다 30% 빠르게' → 9/29 '1.3배에서 1.4배로 상향')
   fragility: 0, // 부서지지 않는다
   edged: false, mBlunt: 0, // 근접전 불가: 몸을 쳐도 상처·멍이 없다
   hiltLength: 0.05, bladeLength: 0.15, // 칼 원점(손)~총구 0.20 m (사장님: 머스킷처럼 길어 보여 짧은 권총으로 — 예전 0.32 m)
