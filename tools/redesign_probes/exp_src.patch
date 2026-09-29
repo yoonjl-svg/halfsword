@@ -1,0 +1,96 @@
+diff -ru src_4b5c56a/src/combat.js exp/src/combat.js
+--- src_4b5c56a/src/combat.js	2026-09-28 15:13:25.000000000 +0000
++++ exp/src/combat.js	2026-09-28 16:37:08.780912580 +0000
+@@ -137,7 +137,7 @@
+     const speed = rel.length();
+     if (speed < 0.5) return null;
+     // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다
+-    if (speed > 30) return null;
++    if (speed > (globalThis.__SPEEDCAP ?? 30)) { (globalThis.__capHits ||= []).push({ s: +speed.toFixed(1), pred: predicting, part: pr.v.part }); return null; }
+     const dir = rel.clone().divideScalar(speed);
+ 
+     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
+@@ -308,6 +308,7 @@
+       });
+       const sw = c.pr.w.body;
+       const vb = c.pr.v.body;
++      if (!c.applied && !point && globalThis.__SWEPT) point = sweptPoint(c, col1, col2);
+       if (!c.applied) {
+         if (!point) continue; // 아직 실제로 닿지 않음 (가까이만 옴)
+         c.applied = true;
+@@ -345,7 +346,16 @@
+         const af = c.pr.w.fighter;
+         const cm = af.commit;
+         const held = COMMIT.stuckHoldFree && (cm?.on || af.skill?.rest?.w > 0);
+-        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + (held ? 0 : STRIKE.armAssist)) * s);
++        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + (held || globalThis.__HOLDALL ? 0 : STRIKE.armAssist)) * s);
++        if (globalThis.__HOLDEFF) {
++          // EXP: cap by the true two-body reduced mass at the hold point (never reverses the relative velocity)
++          const axh = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
++          const oh = tv(sw.translation());
++          const pAh = oh.clone().addScaledVector(axh, _b.copy(point).sub(oh).dot(axh));
++          const mA = freeMass(af.swordProps, liveState(sw), pAh, dir);
++          const mV = bodyMass(vb, onBone(c.pr.v, point), dir);
++          J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * s / (1 / mA + 1 / mV));
++        }
+         c.stuckT -= dt;
+         c.seen = this.stepNo;
+         // 결심 베기 (L1): 칼이 박힌 동안 획 시간을 늦추고 끝 너머로 미는 몫을 거둔다 (skill.updateCut). 획이 끝난 뒤 버티는 동안도 (updateRest)
+@@ -566,6 +576,36 @@
+   }
+ }
+ 
++// ── EXP: swept (sub-stepped) blade-vs-part test between the pre-step pose (cache) and the post-step pose ──
++const _sq = new THREE.Quaternion();
++const _sp = new THREE.Vector3();
++const _off = new THREE.Vector3();
++function sweptPoint(c, bladeCol, partCol) {
++  const att = c.pr.w.fighter;
++  const S = att.cache?.sword;
++  if (!S) return null;
++  const sw = c.pr.w.body;
++  const p1 = tv(sw.translation());
++  const q1 = rotQ(sw);
++  _off.copy(tv(bladeCol.translation())).sub(p1).applyQuaternion(q1.clone().invert()); // blade collider offset in sword frame
++  const tip0 = new THREE.Vector3(0, att.weaponCfg.hiltLength + att.weaponCfg.bladeLength, 0).applyQuaternion(S.q).add(S.p);
++  const tip1 = new THREE.Vector3(0, att.weaponCfg.hiltLength + att.weaponCfg.bladeLength, 0).applyQuaternion(q1).add(p1);
++  const K = Math.min(16, Math.max(2, Math.ceil(tip0.distanceTo(tip1) / 0.03)));
++  const shape = bladeCol.shape;
++  for (let i = 0; i < K; i++) { // samples from s = 0 (pre-step pose) up to just before the post-step pose
++    const s = i / K;
++    _sq.copy(S.q).slerp(q1, s);
++    _sp.copy(S.p).lerp(p1, s);
++    const pos = _off.clone().applyQuaternion(_sq).add(_sp);
++    const sc = partCol.contactShape(shape, vp(pos), { x: _sq.x, y: _sq.y, z: _sq.z, w: _sq.w }, 0.004);
++    if (sc && sc.distance < 0.004) {
++      globalThis.__sweptUsed = (globalThis.__sweptUsed || 0) + 1;
++      return new THREE.Vector3(sc.point2.x, sc.point2.y, sc.point2.z);
++    }
++  }
++  return null;
++}
++
+ // ── 도우미 ──
+ /**
+  * 방어구가 막는 몫(0~1): 내구도가 spec.fullUntil 까지는 멀쩡할 때처럼 다 막고, 그 아래로 찌그러지고 금이 가며 줄어든다
+diff -ru src_4b5c56a/src/fighter.js exp/src/fighter.js
+--- src_4b5c56a/src/fighter.js	2026-09-28 15:13:25.000000000 +0000
++++ exp/src/fighter.js	2026-09-28 16:30:24.649173979 +0000
+@@ -416,7 +416,7 @@
+         .setAngularDamping(0.3)
+         // 부드러운 충돌 예측(soft CCD): 빠른 칼이 몸을 뚫고 지나가지 않게 하면서도, "베고 지나가기" 판정(combat.js의
+         // 충돌 훅)을 거친다. 딱딱한 CCD는 이 판정을 무시하고 칼을 한 순간에 멈춰 세웠다 (칼끝 18 → 0.1 m/s)
+-        .setSoftCcdPrediction(0.2),
++        .setSoftCcdPrediction(globalThis.__CCD ?? 0.2),
+     );
+     const parts = spec.buildParts(o.look); // [모양, 위치y, [질량, 무게중심y, 휘두르는 축 관성, 칼날 축 관성], 색, 칼날인가]
+     const restitution = MATERIALS[spec.material]?.restitution ?? STEEL.restitution;
+@@ -1800,6 +1800,8 @@
+         }
+       }
+     }
++    // EXP: stable (implicit) damping — SPD-style: d_eff = d / (1 + d·dt/I). WRIST_SPD=1
++    if (globalThis.__WRIST_SPD) damp = damp / (1 + (damp * (this.lastDt || 1 / 120)) / (this.swordIhand * globalThis.__WRIST_SPD));
+     torque.addScaledVector(wSwing.sub(wAim), -damp);
+     // 칼 무게도 같은 힘 안에서 버틴다 (칼끝이 처지지 않게)
+     this.gravityTorque([sword], forearm, 0.13, _mG).multiplyScalar(-Math.min(1, str));
