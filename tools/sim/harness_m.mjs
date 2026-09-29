@@ -143,7 +143,7 @@ function withBrowser(fn) {
 }
 
 /** G 에 게임과 같은 입력 길(펌프)을 붙인다 (한 번만. 두 번째부터는 있는 것을 돌려준다). f = 입력을 받는 파이터 */
-export function inputPump(G, { hz = 60, f = G.player, touchHz = 0 } = {}) {
+export function inputPump(G, { hz = 60, f = G.player, touchHz = 0, lat = 0 } = {}) {
   if (G.pump) return G.pump;
   const input = withBrowser(() => new Input({ addEventListener() {} }));
   input.enabled = true;
@@ -155,10 +155,10 @@ export function inputPump(G, { hz = 60, f = G.player, touchHz = 0 } = {}) {
   const ppm = SCREEN_H / CONFIG.INPUT.touchSensitivity; // 패드 m → px (input.js 가 쓰는 배율의 거꾸로)
   // stick: 조이스틱 {x, y}. main.js 처럼 프레임마다 f.move 에 넣는다 (검술 층의 내딛기가 올려 둔 move 도 다음 프레임에 되돌아간다).
   //  null 로 두면 도구가 f.move 를 직접 다룬다
-  const P = { G, f, input, hz, touchHz, wall: 1000, acc: 0, budget: 0, queue: [], fx: 600, fy: 200, frames: 0, ppm, stick: { x: 0, y: 0 }, stepWall: 0 };
-  // 손가락 이벤트 하나를 input.js 에 (그동안만 브라우저 흉내). 시각 = 이 프레임의 벽시계. subs = 프레임 사이 표본 (getCoalescedEvents, 마지막 = 이 이벤트)
+  const P = { G, f, input, hz, touchHz, lat, wall: 1000, acc: 0, budget: 0, queue: [], fx: 600, fy: 200, frames: 0, ppm, stick: { x: 0, y: 0 }, stepWall: 0 };
+  // 손가락 이벤트 하나를 input.js 에 (그동안만 브라우저 흉내). 시각 = 이 프레임의 벽시계 − lat (브라우저 이벤트 시각은 rAF 보다 앞선다). subs = 프레임 사이 표본 (getCoalescedEvents, 마지막 = 이 이벤트)
   const send = (type, x, y, subs = null) => {
-    const e = { type, pointerId: 1, pointerType: 'touch', button: 0, clientX: x, clientY: y, timeStamp: P.wall };
+    const e = { type, pointerId: 1, pointerType: 'touch', button: 0, clientX: x, clientY: y, timeStamp: P.wall - P.lat };
     if (subs) e.getCoalescedEvents = () => subs;
     withBrowser(() => (type === 'pointerdown' ? input.onDown(e) : type === 'pointermove' ? input.onMove(e) : input.onUp(e)));
   };
@@ -192,7 +192,7 @@ export function inputPump(G, { hz = 60, f = G.player, touchHz = 0 } = {}) {
           const w = P.wall - ((m - 1 - j) * 1000) / P.touchHz;
           const [sx, sy] = q.pos(Math.max(0, Math.min(w - q.w0, q.T)));
           const cx = q.bx + sx * ppm, cy = q.by - sy * ppm;
-          if (cx !== px || cy !== py) { subs.push({ clientX: cx, clientY: cy, timeStamp: w }); px = cx; py = cy; }
+          if (cx !== px || cy !== py) { subs.push({ clientX: cx, clientY: cy, timeStamp: w - P.lat }); px = cx; py = cy; }
         }
         if (!subs.length) subs = null;
       }
@@ -250,9 +250,10 @@ export function inputPump(G, { hz = 60, f = G.player, touchHz = 0 } = {}) {
  * @returns 궤적 기록 { done, t0(시작한 물리 시각), t1(끝난 물리 시각), T(ms) } — G.step() 을 돌리면 채워진다
  */
 export function feedTrace(G, trace, hz = 60, opts = {}) {
-  const P = inputPump(G, { hz, f: opts.f, touchHz: opts.touchHz });
+  const P = inputPump(G, { hz, f: opts.f, touchHz: opts.touchHz, lat: opts.lat });
   P.hz = hz;
   if (opts.touchHz != null) P.touchHz = opts.touchHz;
+  if (opts.lat != null) P.lat = opts.lat;
   const tr = Array.isArray(trace) ? { pts: trace } : trace;
   let pos = tr.fn;
   let T = tr.T;

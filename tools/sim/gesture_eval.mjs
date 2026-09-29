@@ -149,7 +149,7 @@ function runSynth(path, input, opts = {}) {
 }
 
 /** 손가락 궤적 길 (input.js → fingerTrace → readFinger): feedTrace, 화면 hz / 터치 touchHz */
-function runTrace(path, input, hz, touchHz) {
+function runTrace(path, input, hz, touchHz, lat = 0) {
   const save = G_.input;
   G_.input = input;
   const G = newRound({ seed: 1, walls: false });
@@ -160,7 +160,7 @@ function runTrace(path, input, hz, touchHz) {
   // 손가락을 댄 자리 기준 상대 이동 (첫 점 = 0)
   const [, x0, y0] = path.pts[0];
   const lifted = path.pts.some((q) => q[3] === 0);
-  const q = feedTrace(G, { pts: path.pts.filter((q) => q[3] === 1).map(([t, x, y]) => [t, x - x0, y - y0]), lift: lifted }, hz, { touchHz });
+  const q = feedTrace(G, { pts: path.pts.filter((q) => q[3] === 1).map(([t, x, y]) => [t, x - x0, y - y0]), lift: lifted }, hz, { touchHz, lat });
   const ges = f.ges;
   const rec = [];
   let w0 = null;
@@ -386,6 +386,25 @@ function evalAll(input) {
     const spread = Math.max(...vals) - Math.min(...vals);
     const okA = Object.values(out).every((o) => (A ? o.famA === 'diagR' && o.S_atReversal >= 0.9 && o.latency_sample_to_CUT_steps != null && o.latency_sample_to_CUT_steps <= 1 : true));
     check('trace_60_120Hz', okA && spread <= 0.02 * Math.max(...vals), { ...out, phiDotF_spread: f3(spread) });
+  }
+
+  // 이벤트 시각이 rAF 보다 lat ms 앞선 브라우저 (60 Hz 화면, 120/240 Hz 터치): 긋는 중에 v 가 0 으로 끊기지 않고 CUT 이 FOLLOW 까지 간다
+  {
+    const path = zornhauWind('lin');
+    const tRev = path.marks.rev;
+    const out = {};
+    let ok = true;
+    for (const [th, lat] of [[120, 6], [120, 10], [240, 5], [240, 10]]) {
+      const R = runTrace(path, input, 60, th, lat);
+      const iCut = firstIdx(R.rec, (r) => r.st === GES_CUT && r.t >= tRev - 30);
+      const iFol = iCut >= 0 ? firstIdx(R.rec, (r) => r.st === GES_FOLLOW, iCut) : -1;
+      const iRec = iCut >= 0 ? firstIdx(R.rec, (r) => r.st === GES_RECOVER, iCut) : -1;
+      const last = R.rec[R.rec.length - 1];
+      const o = { famA: iCut >= 0 ? R.rec[iCut].famA : null, cutAfterVertex_ms: iCut >= 0 ? f1(R.rec[iCut].t - tRev) : null, follow: iFol >= 0, recover_phiF: iRec >= 0 ? f3(R.rec[iRec].phiF) : null, S_final: last.S, timeline: timeline(R.rec) };
+      out[`touch${th}_lat${lat}`] = o;
+      if (!(o.follow && (!A || o.famA === 'diagR') && last.S === 0)) ok = false;
+    }
+    check('trace_latency', ok, out);
   }
   return res;
 }

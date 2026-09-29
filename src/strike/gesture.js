@@ -1,10 +1,11 @@
 // ─────────────────────────────────────────────────────────────
 //  R2 손짓 층 (docs/strike/r2_impl_spec.md §3): 손가락 → 싣기 S·무리·방향·위상 φ. 물리 스텝마다 Skill.update 안에서 돈다.
 //   IDLE → WIND (손가락 자리로 감기, (A)) → CUT (빠르기 뒤집힘 / (B) 쉬다가 vStrike) → FOLLOW (φ ≥ 1) → RECOVER (φ 멈춤, S 풀림)
+//   CUT·FOLLOW 는 손가락이 멈추거나 떼거나 거꾸로 갈 때만 끝난다 (길이 한도 없음: φF·strokeLen·Sstroke 는 긋는 만큼 자란다)
 //  쓰는 것은 제 필드(fighter.ges = 이 객체)와 fighter.strike(읽기 전용 보기)뿐. 엔진은 건드리지 않는다 (W3·W4 가 읽는다)
 //  상한·바닥·쿨다운 없음: S 는 1 위로 자르지 않고(over), φ̇ 에 바닥이 없다(clock 'finger'). 명세 §10 참고
 // ─────────────────────────────────────────────────────────────
-import { GESTURE, STROKE } from '../config.js';
+import { GESTURE, STROKE, COMMIT } from '../config.js';
 
 export const GES_IDLE = 0, GES_WIND = 1, GES_CUT = 2, GES_FOLLOW = 3, GES_RECOVER = 4;
 export const GES_NAMES = ['idle', 'wind', 'cut', 'follow', 'recover'];
@@ -237,7 +238,7 @@ export class Gesture {
       }
       case GES_RECOVER: {
         if (A && F.held) {
-          // 획 방향으로 계속 가는 손가락(φ 가 followEnd 를 넘은 뒤의 나머지)은 되감기가 아니다: 원점이 획 방향으로 가장 멀리 간 자리를 따른다
+          // 획 방향으로 계속 가는 손가락(멈칫 뒤 같은 쪽으로 잇기)은 되감기가 아니다: 원점이 획 방향으로 가장 멀리 간 자리를 따른다
           if ((this.p[0] - this.o[0]) * this.dirC[0] + (this.p[1] - this.o[1]) * this.dirC[1] > 0) this.setOrigin();
           this.decayWind(this.measureWind(), E);
           if (this.Swind > 0) {
@@ -316,7 +317,8 @@ export class Gesture {
         }
       }
       tr.at(n > 0 ? Math.min(t, tM) : t, this._pos);
-      // 빠르기: t 를 감싸는 실제 조각 사이의 기울기. 마지막 조각 뒤는 그 앞 조각 사이 한 칸까지만 잇고(다음 조각이 올 때), 그 뒤는 멈춤
+      // 빠르기: t 를 감싸는 실제 조각 사이의 기울기. 마지막 조각 뒤는 옛 결심 경로의 멈춤 창(max(stillGap, stillFrames·프레임))
+      //  동안 그 기울기를 잇고, 그 뒤는 멈춤 — 이벤트 시각은 늘 rAF 보다 앞서니 한 칸만 이으면 긋는 중에 v = 0 으로 읽힌다
       if (held) {
         const j = tr.idx(kAt);
         const jn = kAt > 0 ? tr.idx(kAt - 1) : -1;
@@ -329,7 +331,8 @@ export class Gesture {
         } else if (kAt + 1 < n) {
           const jp = tr.idx(kAt + 1);
           const span = tr.t[j] - tr.t[jp];
-          if (span > 0 && t - tr.t[j] <= span && !(tr.flag[j] & T_REPLAY)) {
+          const hold = Math.max(span, COMMIT.stillGap, COMMIT.stillFrames * (tr.frameDt || 0)); // 틈 견딤 창 (한도 아님)
+          if (span > 0 && t - tr.t[j] <= hold && !(tr.flag[j] & T_REPLAY)) {
             vx = ((tr.x[j] - tr.x[jp]) / span) * 1000;
             vy = ((tr.y[j] - tr.y[jp]) / span) * 1000;
           }
@@ -567,13 +570,12 @@ export class Gesture {
     if (this.Sstroke > this._Shold) this._Shold = this.Sstroke; // 손가락이 긋는 동안 줄지 않는다
     this.S = Math.max(this.Scut, Math.min(1, this._Shold));
     this.over = Math.max(this._overCut, this._Shold - 1, 0);
-    // 손가락 시계 (Q1): φ̇ = 긋는 쪽 빠르기 / sL1, 바닥 없음. 'floor' = 1/T0 + kv·v (시뮬 전용)
+    // 손가락 시계 (Q1): φ̇ = 긋는 쪽 빠르기 / sL1, 바닥·천장 없음 (클립 끝 너머 φ 는 읽는 쪽(W3/R4)이 자른다). 'floor' = 1/T0 + kv·v (시뮬 전용)
     const va = along > 0 ? along : 0;
     this.phiDotF = floor ? 1 / (this.f.weaponCfg?.gestureT0 ?? G.T0) + G.kv * va : va / G.sL1;
     this.phiF += this.phiDotF * dt;
     this.ringPush(t);
     if (this.state === GES_CUT && this.phiF >= 1) this.state = GES_FOLLOW;
-    if (this.state === GES_FOLLOW && this.phiF >= G.followEnd) this.startRecover(t, false);
   }
 
   /** (B) RECOVER 에서 다음 긋기: vStrike 넘게, 앞 획과 거꾸로 긋거나 멈춘 뒤 쉬었다가 (쿨다운 없음) */
@@ -667,9 +669,10 @@ export class Gesture {
 
   // ───────── 몸 위상 (§3.6) ─────────
 
-  /** 임계 감쇠 2차 (ω = phiW), 경사 지연 보정 2/ω, 싣기만큼 앞섬 leadMs·S, 정확한 이산화. φ ≤ φF + φ̇F·leadMs·S */
+  /** 임계 감쇠 2차 (ω = phiW), 경사 지연 보정 2/ω, 싣기만큼 앞섬 leadMs·S, 정확한 이산화. 운동 방향으로 φ ≤ φF + φ̇F·leadMs·S, 앞 스텝보다 뒤로는 안 당김 */
   phiFilter(dt) {
     const G = GESTURE;
+    const phiPrev = this.phi;
     const w = G.phiW;
     const lead = (G.leadMs * this.S) / 1000;
     const u = this.phiF + this.phiDotF * (2 / w + lead);
@@ -680,7 +683,11 @@ export class Gesture {
     this.phiDot = (this.phiDot - w * a * dt) * E;
     this.phiDDot = w * w * (u - this.phi) - 2 * w * this.phiDot;
     const bound = this.phiF + this.phiDotF * lead;
-    if (this.phi > bound) this.phi = bound;
+    if (this.phiDotF >= 0 ? this.phi > bound : this.phi < bound) {
+      // 앞섬 한도 (Q22): 운동 방향으로만, 이미 앞선 만큼은 되돌리지 않음 (손가락이 멈춘 스텝에 몸 위상이 뒤로 튀지 않게)
+      this.phi = this.phiDotF >= 0 ? Math.max(bound, Math.min(this.phi, phiPrev)) : Math.min(bound, Math.max(this.phi, phiPrev));
+      this.phiDot = (this.phi - phiPrev) / dt;
+    }
   }
 
   /** 출력 정리 + 읽기 전용 보기 */

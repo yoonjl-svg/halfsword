@@ -709,7 +709,7 @@ export const GESTURE = {
   lateSelect: 0.07, lateSelectLen: 0.1, famBlendT: 0.04, sectorMax: 80, // 늦은 무리 고르기 (초·m·초·도)
   predictMs: 8, phiW: 60, leadMs: 40, // Q22 (predictMs: 자리 내다보기 허용 폭. 손짓 층은 실제 조각만 쓴다)
   T0: 0.3, kv: 0.35, // 'floor' 시계 전용 (시뮬). weaponCfg.gestureT0 가 있으면 그것. 관성 등급 문턱 없음 (Q26)
-  followEnd: 1.6, recoverEnd: 2.2, buffer: 0.15,
+  followEnd: 1.6, recoverEnd: 2.2, buffer: 0.15, // followEnd·recoverEnd: R4 되돌이 클립 몫 (예약). 손짓 층은 φ 로 베기를 끝내지 않는다 (길이 한도 없음)
   mixX: 0.25, // 자세표 ↔ 클립 넘김 폭 c(S) = smoothstep(0, mixX, S) — 확정 신호(onCommit)가 c = 1 에서. DRIVE.mixX 와 같은 값 (W3 가 DRIVE 로 옮긴다)
   famClip: { diag: 'zornhau', vert: 'oberhau', horiz: 'mittelhau', rise: 'unterhau' },
 };
