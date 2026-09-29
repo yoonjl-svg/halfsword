@@ -732,7 +732,7 @@ export const GESTURE = {
   ai: false, // AI 손도 손가락 합성(SyntheticFinger)으로 손짓 층을 거친다 (R5). 끄면 AI 는 손짓 층을 전혀 안 거친다
   input: 'wind', // 사장님 스위치 (Q3 부연): 'wind' (A) 손가락 자리로 감기 | 'stroke' (B) 긋기 길이·빠르기만, 감기는 몸이 짧게 스스로
   clock: 'finger', // Q1: φ̇ = 긋는 쪽 빠르기 / sL1, 바닥 없음. 'floor' = 설계서 옛 법칙 1/T0 + kv·v (시뮬 A/B 전용, 게임 기본값 금지)
-  sL0: 0.12, sL1: 0.55, padExt: 1.0, // Q21: 감기 무감 구간·감기 끝(m). sL1 너머는 over 로 선형 연장 (줄이는 이득 없음)
+  sL0: 0.12, sL1: 0.55, // Q21: 감기 무감 구간·감기 끝(m). sL1 너머는 over 로 선형 연장 (줄이는 이득 없음, 손가락 끌기 끝 없음)
   restV: 0.25, restDwell: 0.04, vStrike: 1.5, revDot: -0.3, tauRelease: 0.25, // Q2 (tauRelease 는 벤 뒤 S 풀림에도)
   vRef: 6.0, // Q3: 빠르기 기준 (= COMMIT.bSpeed). Lref·arc0 는 무리 패드 기하
   autoWindPhi: 0.3, // Q3 (B): 몸이 스스로 하는 짧은 감기 = 클립 φ −0.3 → 0, 손가락 시계 (패드 0.165 m)
