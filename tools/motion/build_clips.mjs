@@ -15,6 +15,7 @@ import { sampleClip, measure, summarize, toJSONFrames, toColumns, fromGameGuard,
 import { JOINTS, BONES } from './lib/body.mjs';
 import { v3, m3, frame } from './lib/body.mjs';
 import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
+import { validateFile, report } from './validate_clip.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'clips');
@@ -170,6 +171,8 @@ if (!PRINT && !only.length) {
   writeFileSync(join(ROOT, 'docs', 'motion', 'spec_table.md'), specTable(index));
   console.log(`\n${index.length}개 클립 → ${OUT}, 사양표 → docs/motion/spec_table.md`);
 }
+// 검사 (validate_clip.mjs, clip_format.md §6): 다 만들었으면 목록째, 몇 베기만 만들었으면 그 파일만. 어긋나면 종료 코드 1
+if (!PRINT && !report((only.length ? index.map((e) => join(OUT, e.file)) : [join(OUT, 'index.json')]).map(validateFile), { quiet: true })) process.exit(1);
 
 /** 사양표 (오른쪽에서 베기만 — 왼쪽은 거울이라 같은 값) */
 function specTable(list) {
@@ -264,7 +267,7 @@ function specTable(list) {
   L.push('');
   L.push('칼끝 가장 낮은 높이가 0 가까이거나 − 이면 칼끝이 땅에 닿는다. 작게 벌의 왼쪽 바꿈·바보 자세는 게임 자세표 값 그대로라 칼끝이 땅 높이까지 내려간다(게임에서는 땅이 막는다). ');
   L.push('');
-  L.push('앞이 빈 시간 = 감기 끝~복귀 동안 칼(폼멜~칼끝)이 가슴 앞 0.45 m 의 세로 띠(가슴 아래 0.25 ~ 위 0.4 m)에서 0.3 m 넘게 떨어져 있던 시간. 팔 넘침 0.033 m 는 지금 게임 쟁기 자세 자체가 게임 팔 길이보다 조금 먼 것이다.');
+  L.push('앞이 빈 시간 = 감기 끝~복귀 동안 칼(폼멜~칼끝)이 가슴 앞 0.45 m 의 세로 띠(가슴 아래 0.25 ~ 위 0.4 m)에서 0.3 m 넘게 떨어져 있던 시간. 팔 넘침 0.028 m 는 지금 게임 쟁기 자세 자체에서 뒷손(빈손)이 게임 팔 길이보다 조금 먼 것이다.');
   L.push('');
   return L.join('\n');
 }

@@ -17,6 +17,7 @@ import { SOURCES } from './lib/sources.mjs';
 import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, phaseAt, stepOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES, v3, m3, frame } from './lib/body.mjs';
+import { validateFile, report } from './validate_clip.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion');
@@ -237,6 +238,7 @@ if (!PRINT) {
   writeFileSync(ip, JSON.stringify(ix, null, 1));
   writeFileSync(join(OUT, 'flow_table.md'), flowTable(table));
   console.log(`흐름 클립 ${indexEntries.length}개 → docs/motion/clips, 표 → docs/motion/flow_table.md`);
+  if (!report([validateFile(ip)], { quiet: true })) process.exit(1); // 검사 (clip_format.md §6)
 }
 
 function flowTable(list) {

@@ -1,7 +1,8 @@
 # 기준 동작 클립 형식 — `stillness-motion-clip/2` (동작 연구 PM)
 
 - 작성: 2026-09-29. 이 형식은 동작 연구 PM 이 정하고, 바꿀 때는 버전 번호를 올린다. 읽는 쪽은 `format` 을 먼저 본다.
-- **clip/2 (9/29 오후)** = clip/1 에 채널·필드만 더한 것이다(지운 것 없음). clip/1 을 읽던 코드는 새 칸을 무시하면 그대로 읽힌다. 바뀐 점은 §3-6·§6.
+- **clip/2 (9/29 오후)** = clip/1 에 채널·필드만 더한 것이다(지운 것 없음). clip/1 을 읽던 코드는 새 칸을 무시하면 그대로 읽힌다. 바뀐 점은 §3-6·§7.
+- **검사 규칙은 §6** — 검사기 `tools/motion/validate_clip.mjs` 가 같은 규칙으로 모든 클립을 본다(빌드 도구가 끝에서 스스로 돌린다).
 - 파일은 크기별로 둔다(`<베기>_<쪽>_<크기>.json` + `index.json`) — 디렉터 결정(9/29): 게임 atlas.js 가 index.json 으로 세 벌을 읽는다.
 - 만드는 곳: `tools/motion/build_clips.mjs` (키프레임 `tools/motion/lib/cuts.mjs`, 몸 모형 `lib/body.mjs`, 표본·측정 `lib/clip.mjs`).
 - 읽는 곳: 게임의 클립 추적(재설계 §2-2 atlas), 비교 화면 `tools/motion/viewer.html`, 비교표 `tools/motion/compare.mjs`.
@@ -20,7 +21,9 @@
 - **월드(땅) 틀**: 클립 시작 때 골반 밑 땅이 원점. x = 앞(상대 쪽), y = 위, z = 칼 든 쪽. 오른손잡이(z+ = 오른쪽). 단위 m.
 - **가슴 틀**: 원점 = 가슴 가운데(게임 `guards.js` 손 목표 원점과 같은 점), 축 = 가슴 상자(돌림·숙임·옆굽힘을 따라 돈다). `[앞, 위, 칼 쪽]`.
 - **돌림(yaw) +** = 칼 든 쪽 어깨·골반이 뒤로 빠짐(칼 쪽으로 감음) — 게임 `guards.js` 부호. **숙임 +** = 앞으로. **옆굽힘 +** = 칼 쪽으로.
-- 왼쪽에서 베기(`left`)는 오른쪽을 거울에 비춘 것이다. 손은 그대로 오른손이 앞손(코등이 쪽)이고, 작은 벌은 게임의 왼쪽 자세 값을 쓴다.
+- 왼쪽에서 베기(`left`)는 오른쪽을 거울에 비춘 것이다. 손은 그대로 오른손이 앞손(코등이 쪽)이다 — 몸이 오른손잡이 그대로라 온전한 거울은 아니다:
+  - 게임 자세 키: 짝이 있는 자세는 게임의 왼쪽 자세 값(pflug → pflugL …). 가운데 한 자세(지붕·긴 자세·바보)는 게임 값 그대로(게임은 양쪽에 같은 자세를 쓴다).
+  - 저작 키: 거울. 거울 손이 칼 든 어깨(가슴 틀 [0, 0.1, 0.2])에서 팔 길이 0.565 m 를 넘으면 어깨 쪽으로 당긴다. 앞뒤 게임 자세가 둘 다 가운데 자세인 키(작게 Oberhau·Scheitelhau 의 지붕 → 바보·긴 자세)는 거울에 비추지 않는다(게임에서 그 구간은 양쪽이 같은 길).
 - 발 이름 L/R 은 해부학적 왼발·오른발. 게임 `F`/`B` 는 칼 쪽 발/반대 발(오른손잡이면 F = 오른발).
 
 ## 3. 한 벌의 구조
@@ -160,7 +163,62 @@
 - 좌표는 클립과 같다(기록 시작 때 골반 밑 땅 원점). 랙돌 관절 자리 = 붙은 몸체 자세 × (관절 기준점 − 몸체 처음 자리) — `tools/motion/lib/game_joints.mjs`.
 - 만드는 곳: `record_game.mjs`(main), `record_wbs.mjs --root=<체크아웃>`(다른 브랜치). 디렉터 도구가 같은 형식으로 내면 비교 화면·비교표가 그대로 읽는다.
 
-## 6. 바뀐 기록
+## 6. 검사 규칙 (clip/2)
+
+읽는 쪽(게임 atlas.js 로더 등)이 **같은 규칙으로 크게 실패**하도록 적는다. 규칙 번호는 검사기 출력과 같다.
+
+- 검사기: `node tools/motion/validate_clip.mjs [클립.json | index.json …]` — 인자가 없으면 `docs/motion/clips/index.json` 과 `docs/motion/clips/<무기>/index.json` 모두. 어긋나면 **종료 코드 1** 과 규칙 번호·이유를 찍는다. `--quiet` 어긋난 것만, `--json` 기계용.
+- `build_clips.mjs`·`build_flow.mjs`·`build_lunge.mjs` 가 끝에서 스스로 돌린다. 어긋나면 빌드가 실패한다.
+- 같은 규칙의 코드: `tools/motion/lib/clip_rules.mjs` 의 `checkClip(clip, { guards })`·`checkIndex(index, clips, guardsFor)` — node 모듈을 쓰지 않아 브라우저에서도 돈다. 게임 자세표는 부르는 쪽이 넘긴다(`src/guards.js` 의 `GUARDS` 를 이름으로 찾아 아래 id 에 붙인 것, `validate_clip.mjs` 의 `gameGuards()`).
+- 허용치는 **기준 자료가 맞게 만들어졌나**를 보는 값이다. 게임 동작의 한도가 아니다.
+- 읽는 쪽에 권함: 실패 규칙이 하나라도 있으면 그 클립을 쓰지 말고 클립 id·규칙 번호·이유를 오류로 띄운다. 경고(C2·G0 의 null)는 쓰되 한 번 알린다.
+
+### 6-1. 클립 한 벌
+
+| 번호 | 무엇 | 어떻게 재나 | 허용 |
+|---|---|---|---|
+| F1 | 형식 | `format` = `stillness-motion-clip/2` | 같아야 함 |
+| F2 | 필드 | `id`·`cut`·`side`·`size`·`weapon`·`handedness`·`nameKo`·`family`·`provenance` 가 글자. `side` ∈ right·left, `size` ∈ small·medium·large, `handedness` = right, `hz` 양의 정수, `sources` 1개 이상이고 칸마다 `license`, `summary.checks` 있음, `joints` = §3 의 23 관절 그 순서, `bones` 이름은 `joints` 안 | — |
+| F3 | 이름 | `id` 끝 = `_<side>_<size>`. 파일 이름 = `<id>.json` | — |
+| F4 | clip/2 필드 | `startFrom`·`recoverTo` = 자세 id 또는 null · `startPose`·`endPose` = { nearest, handError, next } · `recovery` = { from, to, samples } · `step` = null, 걸음 하나, 또는 걸음 배열(흐름). 걸음 = { foot L·R, from [x, z], to [x, z], liftT·landT·liftPhi·landPhi 수 또는 null } | — |
+| C1 | 채널 | §3-2 표의 채널이 모두 있고 폭이 같다 (`J` = 관절 23 × 3 = 69) | — |
+| C2 | 모르는 채널 | 표에 없는 채널이 있다 | 경고만 (무시해도 된다) |
+| L1 | 길이 | `cols[채널]` 길이 = `n` × 폭 | — |
+| N1 | NaN | `cols` 의 값이 모두 유한한 수 (JSON 의 null = NaN·무한을 적은 것) | — |
+| S1 | 표본 수 | `n` = round((marks.tg − marks.t0) × hz) + 1, `n` ≥ 2 | — |
+| S2 | 시각 | `t[0]` = marks.t0, 이웃 표본 간격 = 1/hz | ±0.0005 s |
+| P1 | 표시 순서 | t0 < tw < tr < tc < tf < tg, 이웃 사이 한 표본(1/hz) 이상. 흐름 클립은 `marks1`·`marks2` 도 각각, 그리고 marks1.tf = marks2.tw | — |
+| P2 | φ 표시 | `phiMarks` = { t0 −1, tw 0, tr 0.55, tc 0.85, tf 1.6, tg 2.2 } | 같아야 함 |
+| P3 | φ 채널 | 표시 사이에서 시간에 선형(§3-1), 첫 값 −1 · 끝 값 2.2, 줄지 않는다. 흐름 클립은 marks2.tw 에서 한 번만 되돌아간다(앞은 marks1, 뒤는 marks2 로 셈) | ±0.002 |
+| U1 | 방향 벡터 | `sword`·`edge`·`elbowPoleS`·`elbowPoleO` 길이 1 | ±0.01 |
+| U2 | 범위 | `openness` 0~1, `guardGap` ≥ 0, `feet.*.lift` 0~1 | — |
+| G0 | 목표 자세 | `startFrom`·`recoverTo` 가 게임 자세표에 있다. null 이면 경고(대조 안 함). 검사기가 그 무기의 자세표를 모르면 실패 | — |
+| G1 | 시작·끝 손 | 첫 표본(`startFrom`)·끝 표본(`recoverTo`)의 앞손 = `J` 의 hS − chest. 땅 틀 축 = 게임이 손 목표를 두는 '바라보는 틀'(가슴 가운데 원점, 돌림·숙임 없음). 게임 자세표 `hand` 와 거리 | **0.02 m** (디렉터 요청) |
+| G2 | 시작·끝 칼 | 같은 표본의 칼 방향 = `J` 의 tip − pommel, 자세표 칼끝 방향(guards.js `dir`)과 사이 각 | 3° |
+| G3 | 시작·끝 몸통 | `chest.yaw` ↔ `chestYaw`, `chest.lean` ↔ `pitch`, `pelvis.yaw` ↔ `pelvisYaw` × 0.5 (게임 fighter.js 는 골반을 자세표 값의 절반만 튼다), `pelvis.drop` ↔ `drop` | 2° · 0.01 m |
+| G4 | 적힌 값 | `startPose`·`endPose` (가장 가까운 자세 id·손 오차)가 데이터로 다시 잰 값과 같다. `recovery` = { from: tf, to: tg, samples: tf~tg 표본 수 } | 0.002 m |
+| R1 | 팔 넘침 | 모든 표본: \|손 − 어깨\| − 0.565 m. 어깨(가슴 틀) = [어깨띠 내밂, 0.1 + 어깨띠 들림, ±0.2] — 칼 팔 = `handS`·`girdleS`·+0.2, 빈 팔 = `handO`·`girdleO`·−0.2. 0.565 = 게임 위팔 0.30 + 아래팔 0.265 | 0.04 m (게임 쟁기 자세 자체가 뒷손에서 0.028 m 넘는다) |
+| R2 | 다리 넘침 | 모든 표본: \|발목 목표 − 엉덩이\| − 0.85 m (넓적다리 0.43 + 정강이 0.42). 발목 목표 = `J` 의 뒤꿈치 + 0.06 m × 발 방향(뒤꿈치 → 앞꿈치, 수평) + 0.06 m 위 — 발 모양은 `lib/body.mjs` | 0.02 m (지금 가장 큰 값: 런지 뒷다리 0.015 m) |
+| R3 | 뼈 길이 | `J` 에서 엉덩이–허리 0.13, 허리–가슴 0.27, 위팔 0.30, 넓적다리 0.43, 정강이 0.42 (게임 뼈대 치수). 두 손 사이·자루 끝↔칼끝 거리는 표본마다 같다(굳은 칼). `grip` 칸이 있으면 두 손 사이 = \|grip.offHand\|, 자루 끝↔칼끝 = grip.tip − grip.pommel | 0.005 m |
+
+### 6-2. 목록 (`index.json`)
+
+| 번호 | 무엇 | 어떻게 |
+|---|---|---|
+| I1 | 형식 | `format` = `stillness-motion-index/1`, `clips` 가 비지 않은 배열 |
+| I2 | 항목 | `id`·`cut`·`side`·`size`·`file` 이 글자, `id` 겹침 없음, `file` = id + '.json', 파일이 있고 §6-1 을 통과 |
+| I3 | 목록 = 파일 | 항목에 있는 칸(cut·side·size·family·nameKo·summary·step·startFrom·startPose·recoverTo·endPose·recovery·weapon·base·flow·lunge)이 클립 파일 값과 같다 |
+| I4 | 크기 벌 | 한 베기(같은 weapon·cut)는 small·medium·large 셋 다 또는 large 하나. 좌우가 같은 크기를 가진다 |
+| I5 | 좌우 짝 | 같은 베기·크기의 right·left 는 `marks`·표본 수가 같다 |
+| X1 | 자세표 사본 | 빌드 도구의 자세표 사본(`lib/cuts.mjs` GAME_GUARDS)이 `src/guards.js` 와 같다 — 게임 자세표가 바뀌면 클립을 다시 만들라는 알림 |
+
+### 6-3. 게임 자세표 대조
+
+- 자세 id ↔ `src/guards.js` 이름: tag 지붕 (Vom Tag) · tagR 어깨 지붕 (Vom Tag) · ochs 황소 (Ochs) · langort 긴 자세 (Langort) · side 옆 자세 · pflug 쟁기 (Pflug) · wechsel 바꿈 (Wechsel) · neben 옆 지킴 (Nebenhut) · alber 바보 (Alber) · tagL 왼쪽 어깨 지붕 · ochsL 왼쪽 황소 · sideL 왼쪽 옆 자세 · pflugL 왼쪽 쟁기 · wechselL 왼쪽 바꿈.
+- 두손 무기(롱소드·츠바이핸더)는 같은 자세표를 쓴다. 한손 무기 자세표(guards.js 안 `BASE_ONE`)는 게임이 내보내지 않아 검사기가 아직 모른다 — 한손 클립은 G0 로 실패한다.
+- 9/29: 52벌 모두 통과. 이 검사로 왼쪽 벌 5개의 팔 넘침(0.041~0.076 m)을 찾아 거울 규칙을 고쳤다(§2).
+
+## 7. 바뀐 기록
 
 | 버전 | 날짜 | 바뀐 것 |
 |---|---|---|
@@ -170,3 +228,4 @@
 | clip/1 | 2026-09-29 | 흐름 클립(§3-4) 더함 — 베기 클립은 그대로 |
 | clip/1 | 2026-09-29 | 런지 클립(§3-5) 더함 |
 | **clip/2** | 2026-09-29 | 디렉터 요청(재설계 atlas 채널 대조): 채널 `elbowPoleO`·`girdleS`·`girdleO`·`guardGap`·`openness`, 필드 `step`·`startFrom`·`startPose`·`recoverTo`·`endPose`·`recovery` 더함. 게임 자세 키를 게임과 같은 틀(바라보는 틀, 가슴 가운데 원점)로 옮기게 고쳐 시작·끝 자세 손이 자세표와 같아짐(전에는 숙임만큼 3~4 cm 어긋남). balanceAssist 는 없음 |
+| clip/2 | 2026-09-29 | 검사 규칙(§6)과 검사기 `validate_clip.mjs`(디렉터 요청). 형식은 같다. 검사로 찾은 왼쪽 벌 팔 넘침을 고치려고 거울 규칙을 바꿈(§2: 가운데 자세는 게임 값, 거울 손이 팔 길이를 넘으면 당김) — 왼쪽 13벌 값이 조금 바뀜, 팔 넘침 최대 0.076 → 0.028 m |

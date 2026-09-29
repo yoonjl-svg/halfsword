@@ -19,6 +19,7 @@ import { SOURCES } from './lib/sources.mjs';
 import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
+import { validateFile, report } from './validate_clip.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion');
@@ -170,4 +171,5 @@ if (!PRINT) {
   L.push('');
   writeFileSync(join(OUT, 'lunge_table.md'), L.join('\n') + '\n');
   console.log(`런지 클립 ${indexEntries.length}개 → docs/motion/clips, 표 → docs/motion/lunge_table.md`);
+  if (!report([validateFile(ip)], { quiet: true })) process.exit(1); // 검사 (clip_format.md §6)
 }

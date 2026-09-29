@@ -40,6 +40,7 @@ node tools/motion/record_game.mjs     # 지금 게임 기록 (hybrid, 2 s 서 �
 WBS_REV=d781ab9 node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>
 node tools/motion/compare.mjs         # compare_game.md
 node tools/motion/qa_clips.mjs        # 겹침 검사 (칼 ↔ 몸, 아래팔 ↔ 몸통)
+node tools/motion/validate_clip.mjs   # 클립 검사 (clip_format.md §6). 빌드 셋이 끝에서 스스로 돌린다 — 어긋나면 종료 코드 1
 npx vite                              # → /tools/motion/viewer.html
 ```
 
