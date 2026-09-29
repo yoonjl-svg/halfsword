@@ -13,7 +13,7 @@
 - **Q14 칼 파손**: 물리대로 둔다. 파손표를 다시 맞추지 않는다.
 - **Q26 한손 무기**: 물리에 맡긴다. 무기별 온몸 배율 목표를 두지 않는다.
 - **광기의 하인리히 조급함(aggression)**: 그대로. **안광 밝기**: 그대로.
-- **리볼버 흔들림**: 사장님이 지금 상태를 시험해 보신다. 시험 주소: `https://yoonjl-svg.github.io/halfsword/?weapon=pistol` (뽑기 없이 리볼버. `&foe=heinrich` 같은 상대 지정 가능).
+- **리볼버 흔들림**: 사장님이 지금 상태를 시험해 보신다. 시험 주소: `https://yoonjl-svg.github.io/halfsword/?weapon=pistol&foeWeapon=longsword` (뽑기 없이 내가 리볼버, 상대는 롱소드. `foeWeapon`을 빼면 상대도 리볼버를 든다).
 
 ## 디렉터가 기본값으로 시행 중 (사장님이 바꾸시면 되돌림)
 
