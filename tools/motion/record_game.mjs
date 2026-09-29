@@ -3,7 +3,7 @@
 //
 //   node tools/motion/record_game.mjs                → docs/motion/records/game_<베기>.json (지금 게임의 팔 베기, 상대 치움)
 //   node tools/motion/record_game.mjs zornhau 0.3    → 베기 하나, 휘두르는 시간 0.3초
-//   --levitate                                       → 시뮬 기본 체중 방식(골반 띄우기). 기본은 게임과 같은 hybrid
+//   --levitate                                       → 옛 체중 방식(골반 띄우기). 기본은 게임과 같은 hybrid
 //
 //  실제 src/ 게임 코드를 헤드리스로 돌린다(tools/sim/harness_m.mjs). src/ 는 바꾸지 않는다.
 //  플레이어 손가락(handOffset)을 AI 기술 길(ai_techniques.js TECH: 시작 자세 → 경유점 → 끝 자세)대로 움직인다
@@ -33,7 +33,7 @@ const PRE = 0.2;
 const POST = 0.9;
 const SEED = 1;
 const REV = process.env.GAME_REV || gitRev(ROOT, ['src']); // src/ 를 마지막으로 바꾼 커밋
-// 게임은 늘 다리로 체중을 받친다(main.js newRound: weightMode 'hybrid', 9/28 사장님 결정). 시뮬 기본값 levitate 는 --levitate 로만
+// 게임은 늘 다리로 체중을 받친다(main.js newRound: weightMode 'hybrid', 9/28 사장님 결정). 옛 levitate 는 --levitate 로만 (config 기본값도 hybrid)
 CONFIG.BODY.weightMode = args.includes('--levitate') ? 'levitate' : 'hybrid';
 
 function record(cutId) {

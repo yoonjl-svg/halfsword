@@ -48,9 +48,11 @@ export const BODY = {
   // 몸무게를 누가 받치나 (gait.js 머리말 참고)
   //  'hybrid'  : 다리 관절이 몸무게의 대부분을 땅까지 전한다. 딛은 발은 제자리에 붙어 있다 (보조 힘은 GAIT.assist만큼)
   //  'levitate': 예전 방식. 보이지 않는 힘이 골반을 거의 전부 떠받치고 다리는 걷는 흉내만 낸다
-  //  기본은 'levitate' (게임에서는 설정 토글로 'hybrid'를 켠다). 'hybrid'에 남은 것: 드물게(수백 번 걸음에 한 번꼴)
-  //  빨리 나가기 시작하거나 돌아선 뒤 걷기 시작할 때 뒤에 남은 발이 발끝으로 4cm 남짓 끌린다, 성능
-  weightMode: 'levitate',
+  //  기본은 'hybrid': 게임과 같다(main.js newRound 도 판마다 'hybrid'로 둔다, 9/28 사장님 "늘 켬"). 시뮬 도구도 기본으로
+  //  게임 걸음을 잰다(9/29 감사 R-003). 옛 levitate 숫자는 tools/sim/with_config.mjs BODY.weightMode=levitate 로만.
+  //  'hybrid'에 남은 것: 드물게(수백 번 걸음에 한 번꼴) 빨리 나가기 시작하거나 돌아선 뒤 걷기 시작할 때
+  //  뒤에 남은 발이 발끝으로 4cm 남짓 끌린다, 성능
+  weightMode: 'hybrid',
 };
 
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)

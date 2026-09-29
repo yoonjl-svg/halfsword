@@ -100,9 +100,9 @@ git push origin claude/first-game-development-2q36ha:main
 
 **검증 관문**
 - 칼 싸움과 상관없는 변경(총, 대사, 외형, 소리, 문서)은 아래 세 결과가 **바꾸기 전과 바이트 단위로 같아야** 합니다.
-  - `node tools/sim/fights12.mjs`
-  - `node tools/sim/hybrid.mjs fights12.mjs`
+  - `node tools/sim/fights12.mjs` (9/29부터 기본 hybrid. 예전 `hybrid.mjs fights12.mjs`와 바이트 같아 셋째 명령은 없어졌다)
   - `node tools/sim/live_battery.mjs`
+  - fights12(12판)는 바이트 관문 전용이다. 좋다/나쁘다로 읽지 않는다(`tools/sim/README.md` '소음 폭').
   - 캐릭터를 바꿀 때는 `characters_eval.mjs`도 봅니다.
 - 브라우저 스모크 `tools/browser/smoke.mjs`는 **콘솔 에러 0**이어야 합니다. 바뀐 기능은 전용 브라우저 스크립트로 실제 화면에서 확인합니다.
 - PM 코드도 병합 전에 읽고, 실제로 보이는지 확인합니다. 외형 PM `cfab046`에서 `return e;`가 함수 중간에 있어 총구 섬광이 사라진 것을 이렇게 잡았습니다.
@@ -579,7 +579,6 @@ git push origin claude/first-game-development-2q36ha:main
 - 바꾼 쪽에서도 똑같이 돌린 뒤 `cmp`로 견줍니다.
   ```
   node tools/sim/fights12.mjs > f12.txt
-  node tools/sim/hybrid.mjs fights12.mjs > hf12.txt
   node tools/sim/live_battery.mjs > live.txt
   ```
 - 무거운 시뮬은 한 번에 2개까지만 돌립니다(CPU 4개).
