@@ -16,7 +16,8 @@
 ## 0-1. 이 세션에서 막힌 곳 (EGRESS 차단 — 다시 시도하지 않는다)
 
 웹 본문 읽기 도구와 curl 이 프록시에서 거절됨(2026-09-29): wiktenauer.com, link.springer.com, ieeexplore.ieee.org, researchgate.net, mocap.cs.cmu.edu, pubmed.ncbi.nlm.nih.gov, pmc.ncbi.nlm.nih.gov, jstage.jst.go.jp, semanticscholar.org, zenodo.org, cdn.jsdelivr.net(curl). 검색 결과 요약만 받았다.
-오후(런지·흐름 조사)에 더 막힘: journals.plos.org, frontiersin.org, mdpi.com, ojs.ub.uni-konstanz.de, ira.lib.polyu.edu.hk, chukyo-u.repo.nii.ac.jp, biomedres.info, alliedacademies.org, files.4medicine.pl, idosi.org, clasicalfencing.wordpress.com, en.wikipedia.org, www.gutenberg.org(한손 칼 교본 본문). 이 환경의 네트워크 정책이다 — 사장님이 환경 설정의 네트워크 허용에서 열 수 있다.
+오후(런지·흐름 조사)에 더 막힘: journals.plos.org, frontiersin.org, mdpi.com, ojs.ub.uni-konstanz.de, ira.lib.polyu.edu.hk, chukyo-u.repo.nii.ac.jp, biomedres.info, alliedacademies.org, files.4medicine.pl, idosi.org, clasicalfencing.wordpress.com, en.wikipedia.org, www.gutenberg.org(한손 칼 교본 본문).
+9/29 저녁 사장님이 허용 목록에 더하셨다고 한 뒤 다시 시험: **journals.plos.org 만 열리고 나머지는 이 세션에서 여전히 403** (프록시 CONNECT 거절). 네트워크 설정은 새 세션부터 적용될 수 있다. 이 환경의 네트워크 정책이다 — 사장님이 환경 설정의 네트워크 허용에서 열 수 있다.
 
 ## 0-2. 무기·검술 연구 ASS 표본 점검 (9/29, 디렉터 요청 — 인용 5건, 검색 요약 수준)
 
@@ -72,6 +73,7 @@
 | SwordSTEM (Sean Franklin) "How fast do swords move" | 힘 뺀 오른쪽 내려베기, 베는 부분 최고 약 20 m/s, 닿기 몇 인치 앞에서 최고 | snippet |
 | George Turner (ARMA) "Sword Motions and Impacts" | ~~롱소드 칼끝 약 75 mph ≈ 33.5 m/s~~ → **측정값이 아니다**: 칼자루(탱) 힘을 셈하는 가정 예시("75 mph 로 부딪히면 폼멜 빠르기가 15 mph 쯤 바뀌어야"). [2차 예시값] — 칼끝 빠르기 근거에서 뺐다 (연구 ASS 표본 점검 9/29, 원문 검색 요약으로 확인) | snippet |
 | AAOS 관절 가동 범위 (1965; Greene & Heckman 1994) | 어깨 굽힘·벌림 180°, 팔꿈치 150°, 손목 굽힘 80°·폄 70°, 가슴허리 돌림 45°, 엉덩이 돌림 45° | snippet |
+| Chen 외 2017 개관 **본문** (PLoS ONE — 9/29 열림) | 런지 최고 빠르기: 무게중심 1.92/1.72 m/s(플뢰레/에페), 칼 2.91/2.49, 앞발 4.56/4.10. 숙련자 칼 2.90±0.30 vs 초보 2.52±0.29 m/s. "숙련자는 앞발보다 칼 든 팔을 먼저 뻗는다"는 Hassan & Klauck 1998 (ISBS) 인용. 손-발 0.07 s 수치는 본문에 없음 | **본문 확인** |
 | ISBS 엘리트 펜싱 런지 | 길이 1.24 m (0.88~1.86), 엉덩이 속도 1.97 m/s, 몸통 앞기울기 17.5° | snippet |
 | Chen 외 2017 펜싱 생체역학 개관 (PLoS ONE) | 숙련자는 팔이 발보다 먼저. 손-발 시간차는 아래 Gholipour 외 2008 을 인용한 것 [2차] (연구 ASS 표본 점검 9/29) | 검색 요약 (본문 막힘) |
 | Gholipour 외 2008 펜싱 런지 입체 촬영 (World J. Sport Sci.; 샤리프대 초보 8명·이란 국가대표, 고속 카메라 3대) | **손이 발보다 먼저 0.07±0.05 s (초보 0.13±0.15 s)** — `lunge_flow.md` 런지 순서의 1차 출처. 엉덩관절 굽힘 숙련 53° / 초보 40°, 앞무릎 굽힘 약 20° → 폄 51±9° | 검색 요약 |
