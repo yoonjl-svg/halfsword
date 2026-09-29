@@ -1046,8 +1046,8 @@ export function addOver(o, M, L, over) {
 }
 /**
  * 베기 시작 이월 (§1 row 6, §5.2): out += [rev − base]·k, k = 1 − sj(phi / carryPhi) (phi ≥ carryPhi 면 0).
- *  rev = φ_rev 표본, base = φ 0 표본 (둘 다 베기 시작 때 한 번, 그때의 S 로). 방향은 base→rev 회전을 k 배 더한다.
- *  d1·d2 에는 k′·k″ 몫을 더한다(방향은 회전 벡터 × k′·k″ 근사). 돌려주는 값 = k
+ *  rev = φ_rev 표본, base = φ 0 표본 (둘 다 베기 시작 때 한 번, 그때의 S 로). phi = 베기 시작부터 잰 위상 (§5.2 wind 의 phiB).
+ *  방향은 base→rev 회전 벡터 r 을 k 배: d = R(k·r)·d, ω = R(k·r)·ω + r·k′ (닫힌 식), α = R(k·r)·α + r·k″ (선형 근사). 돌려주는 값 = k
  */
 export function carryOver(out, rev, base, phi, carryPhi) {
   const u = phi / carryPhi;
@@ -1063,7 +1063,7 @@ export function carryOver(out, rev, base, phi, carryPhi) {
   for (let q = 0; q < DIR_OFFS.length; q++) {
     const c = DIR_OFFS[q];
     logRot(bv, c, rv, c, _r, 0);
-    rotateBy(ov, c, _r[0] * k, _r[1] * k, _r[2] * k);
+    rotate3(_r[0] * k, _r[1] * k, _r[2] * k, ov, c, out.d1, c, out.d2, c); // 값·ω·α 를 같은 R(k·r) 로
     for (let j = 0; j < 3; j++) {
       out.d1[c + j] += _r[j] * kd;
       out.d2[c + j] += _r[j] * kdd;

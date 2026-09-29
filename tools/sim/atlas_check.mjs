@@ -378,6 +378,30 @@ const A = packed, g = A.grid;
   A.sampleAt('zornhau', 'right', 0.15, 0.8, o);
   const kh = carryOver(o, rev, base, 0.15, 0.3);
   gate('이월 도우미: k(0)=1 전부, k(carryPhi)=0, 가운데 최소 저크', e <= 1e-5 && Math.abs(kh - 0.5) <= 1e-12, `오차 ${e.toExponential(1)} · k(½) ${kh}`);
+  // 이월 뒤 도함수: 방향 ḋ (유한 차분) vs ω × d, 선형 d1 vs 유한 차분 — φ 0.005 … 0.3
+  const p = makeSample(), q = makeSample(), c = makeSample(), eps = 1e-6;
+  let eSw = 0, ePole = 0, eLin = 0;
+  for (const [cut, phiRev, S] of [['zornhau', -0.4, 0.8], ['zornhau', -0.7, 1], ['oberhau', -0.5, 0.6], ['unterhau', -0.3, 1], ['mittelhau', -0.4, 0.9]]) {
+    A.sampleAt(cut, 'right', phiRev, S, rev);
+    A.sampleAt(cut, 'right', 0, S, base);
+    for (let phi = 0.005; phi < 0.3; phi += 0.0137) {
+      A.sampleAt(cut, 'right', phi - eps, S, p);
+      carryOver(p, rev, base, phi - eps, 0.3);
+      A.sampleAt(cut, 'right', phi + eps, S, q);
+      carryOver(q, rev, base, phi + eps, 0.3);
+      A.sampleAt(cut, 'right', phi, S, c);
+      carryOver(c, rev, base, phi, 0.3);
+      for (const k of LIN_IDX) eLin = Math.max(eLin, Math.abs((q.v[k] - p.v[k]) / (2 * eps) - c.d1[k]) / Math.max(1, Math.abs(c.d1[k])));
+      for (const o of [CH.sword, CH.poleS]) {
+        const dx = (q.v[o] - p.v[o]) / (2 * eps), dy = (q.v[o + 1] - p.v[o + 1]) / (2 * eps), dz = (q.v[o + 2] - p.v[o + 2]) / (2 * eps);
+        const w = c.d1, cx = w[o + 1] * c.v[o + 2] - w[o + 2] * c.v[o + 1], cy = w[o + 2] * c.v[o] - w[o] * c.v[o + 2], cz = w[o] * c.v[o + 1] - w[o + 1] * c.v[o];
+        const n = Math.sqrt(dx * dx + dy * dy + dz * dz), err = Math.sqrt((dx - cx) ** 2 + (dy - cy) ** 2 + (dz - cz) ** 2) / Math.max(n, 1);
+        if (o === CH.sword) eSw = Math.max(eSw, err);
+        else ePole = Math.max(ePole, err);
+      }
+    }
+  }
+  gate('이월 도우미 도함수: 칼 |ḋ − ω×d|/|ḋ| ≤ 1 %, 선형 d1 = 유한 차분', eSw <= 0.01 && eLin <= 1e-4, `칼 최대 ${(eSw * 100).toFixed(2)}% · 선형 ${eLin.toExponential(1)} · 보고만: elbowPoleS ${(ePole * 100).toFixed(2)}%`);
 }
 
 // ── 7. 부호표 (§4.3) ──
