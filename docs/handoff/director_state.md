@@ -31,6 +31,7 @@
 - 로컬 브랜치(디렉터 컨테이너 /home/user/*): wbs-impl(hs-wbs, = origin/claude/wbs-impl + main 병합) → wbs-r0(hs-r0, R0 5항목 통합; 수정 라운드 중) → wbs-r2-gesture(hs-r2-gesture, W2 진행 중). wbs-r2-atlas(hs-r2-atlas, W1 끝, 320b8f6). 원격에는 claude/wbs-impl만 있다(사장님 허락). 컨테이너가 바뀌면 로컬 브랜치는 사라지므로 R0·W1·W2가 끝나는 대로 wbs-impl에 합쳐 origin/claude/wbs-impl로 올린다.
 - R0 상태: 관문 G0(깃발 끄면 바이트 동일)·G2·G3a·G3b·G5·G6·G7 통과. G4는 60 Hz 입력이 120 Hz처럼 움직이게 된 의도된 변화(120 Hz 기준선 대비 ±3% 안)라 기준을 120 Hz로 다시 정의. G3c(가벼운 칼 손목 부호 뒤집힘)는 기존 문제, 수정 라운드에서 안정성 조건(c·dt/I ≤ 0.9, 상한 아님)으로 처리 중.
 - 시험판 /wb/는 옛 것(4b5c56a). R0+R1(팔 베기 지연)까지 되면 다시 만들어 사장님께 드린다.
+- 본판(main) 최근: c9c6c6c 리볼버 조준쇠(gun_fx.js 스프라이트 조준쇠, 외형 PM 모듈 — 다음 지시 때 한 줄 알린다)·이동 ×1.4. 사장님 시험 주소 `https://yoonjl-svg.github.io/halfsword/?weapon=pistol&foeWeapon=longsword`. 시험 플레이 약속: 본판은 언제나, R0+R1 시험판 /wb/ 10/1 밤, R2 첫 시험판(W2~W5) 10/4~5.
 
 ## 사장님 답 대기
 - Meyer 1570 번역서 전달(드라이브 비공개 폴더 PDF/EPUB 파일 이름).
