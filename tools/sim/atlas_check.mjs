@@ -18,6 +18,7 @@ import * as THREE from 'three';
 import { ATLAS, GAIT } from '../../src/config.js';
 import { GUARDS, guardAt } from '../../src/guards.js';
 import { frame as bodyFrame, m3 as bm3 } from '../motion/lib/body.mjs';
+import { GAME_GUARDS } from '../motion/lib/cuts.mjs';
 import {
   AtlasError, loadRaw, loadPack, buildAtlas, validateIndex, validateClip, validatePack, resampleClip, makeGrid, makeSample, encodeF32,
   chestFrame, quatFromM3, toFacing, toGame, m3apply, carryOver, angleDeg, defaultClipsDir, checkPackSources, packOf,
@@ -166,6 +167,17 @@ for (const cut of raw.families) {
   console.log(`  ${cut.padEnd(10)} ${rows.map((r) => `${r.id.replace(cut + '_', '').padEnd(12)} ${r.startFrom}→${r.start.toFixed(4)} ${r.recoverTo}→${r.end.toFixed(4)}`).join(' · ')}  최대 ${mx.toFixed(4)}`);
 }
 gate('작은 벌 vs guards.js ≤ 0.02 m', svgMax <= ATLAS.smallTol, `최대 ${svgMax.toFixed(4)} m (원본·묶음 같은 격자)`);
+{
+  // GUARD_PADS 는 guards.js GUARDS 의 차례로 읽는다 (거기엔 id 가 없다) → 14 개 모두 cuts.mjs GAME_GUARDS(동작 PM 의 id) 의 손과 같은지 본다.
+  //  작은 벌 대조는 startFrom/recoverTo 로 쓰인 id 만 걸러 내므로, guards.js 차례가 바뀌면 여기서 걸린다
+  const keys = Object.keys(GAME_GUARDS);
+  let bad = keys.length === GUARD_IDS.length && keys.every((k, i) => k === GUARD_IDS[i]) ? '' : `id 차례 다름: ${keys.join(' ')}`;
+  for (let i = 0; i < GUARD_IDS.length && !bad; i++) {
+    const a = GUARDS[i].hand, b = GAME_GUARDS[GUARD_IDS[i]].hand;
+    if (Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > 1e-9) bad = `${GUARD_IDS[i]}: guards.js[${i}] 손 ${a} ≠ GAME_GUARDS 손 ${b}`;
+  }
+  gate('GUARD_IDS 차례 = guards.js GUARDS 차례 (14 개 손 = cuts.mjs GAME_GUARDS)', !bad, bad || `${GUARD_IDS.length} 개 같음`);
+}
 
 // ── 4. 표본 비용 ──
 console.log(`\n## 4. 표본 비용 (${NCALLS} 번)`);

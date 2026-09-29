@@ -35,7 +35,7 @@ export const ARM_REACH = 0.565; // 위팔 0.3 + 아래팔 0.265 (fighter.js a + 
 export const DROP_BASE = 0.06; // fighter.js:649 follow('drop', (G.drop - 0.06)…)
 
 // 게임 자세표 id (동작 연구 PM 의 cuts.mjs GAME_GUARDS 와 같은 이름) — guards.js GUARDS 의 앞 14개와 같은 차례.
-//  자리(pad)는 guards.js 에서 그대로 읽는다: 자세표 차례나 자리가 바뀌면 작은 벌 대조(smallTol)가 걸린다
+//  자리(pad)는 guards.js 에서 차례로 읽는다 (거기엔 id 가 없다): 차례가 바뀌면 atlas_check 의 14 개 손 대조(GAME_GUARDS)가 걸린다 — 작은 벌 대조(smallTol)는 쓰인 id 만 본다
 export const GUARD_IDS = ['tag', 'tagR', 'ochs', 'langort', 'side', 'pflug', 'wechsel', 'neben', 'alber', 'tagL', 'ochsL', 'sideL', 'pflugL', 'wechselL'];
 export const GUARD_PADS = Object.fromEntries(GUARD_IDS.map((id, i) => [id, GUARDS[i].pad]));
 
