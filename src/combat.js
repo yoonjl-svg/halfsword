@@ -86,8 +86,11 @@ export class Combat {
     this.jolted = new Set(); // 이 스텝에 엔진 충격(칼끼리·튕김)을 받은 칼 주인 (다음 스텝 튐 검사가 그 한 스텝을 건너뛴다)
     this.glitchWaived = 0; // 직전 스텝 충격 때문에 튐 검사를 건너뛴 수 (기록만)
     // R0 스윕 판정 (STRIKE.sweep): 결과 그릇(할당 없이 재사용)과 스윕으로 잡은 첫 접촉 수 (기록만)
-    this._hit = { point: new THREE.Vector3(), p: new THREE.Vector3(), q: new THREE.Quaternion() };
+    this._hit = { point: new THREE.Vector3(), n: new THREE.Vector3(), p: new THREE.Vector3(), q: new THREE.Quaternion() };
     this.sweptHits = 0;
+    // R0 스윕 넓힘 (STRIKE.sweepAll): 통과 예측 밖의 무기·몸 쌍 "칼콜라이더:몸콜라이더" → { pr, wc, vc, seen, applied }, 이 스텝에 엔진이 힘을 준 쌍
+    this.near = new Map();
+    this.struck = new Set();
     this.fighters = [...new Set([...colliderInfo.values()].map((i) => i.fighter))];
     // Rapier 물리 훅: 칼과 상대 몸이 부딪히려 할 때마다(매 스텝) 불린다.
     // 여기서는 엔진 함수를 부르면 안 되므로, 스텝 직전에 저장해 둔 값(cacheState)만 쓴다.
@@ -117,7 +120,8 @@ export class Combat {
 
   filterContactPair(c1, c2) {
     const pr = this.pairOf(c1, c2);
-    if (!pr || pr.w.part !== 'blade') return 1; // 1 = 평소처럼 부딪힘
+    if (!pr) return 1; // 1 = 평소처럼 부딪힘
+    if (pr.w.part !== 'blade') return this.nearBy(pr);
     const key = `${pr.wc}:${pr.vc}`;
     let cut = this.cutting.get(key);
     if (cut) {
@@ -130,6 +134,16 @@ export class Combat {
       this.cutting.set(key, { seen: this.stepNo, applied: false, pr, wc: pr.wc, vc: pr.vc });
       return 0;
     }
+    return this.nearBy(pr);
+  }
+
+  /** 통과로 예측하지 않은 무기·몸 쌍을 적어 둔다 (STRIKE.sweepAll. sweepNear 가 엔진이 놓친 첫 접촉을 찾는다). 늘 1 */
+  nearBy(pr) {
+    if (!STRIKE.sweepAll) return 1;
+    const key = `${pr.wc}:${pr.vc}`;
+    const e = this.near.get(key);
+    if (e) e.seen = this.stepNo;
+    else this.near.set(key, { pr, wc: pr.wc, vc: pr.vc, seen: this.stepNo, applied: false });
     return 1;
   }
 
@@ -487,16 +501,67 @@ export class Combat {
       if (!pr) return;
       if (STRIKE.glitchFilter) this.jolted.add(pr.w.fighter); // 몸에 튕긴 칼 (엔진 충격 + rebound)
       if (this.cutting.has(`${pr.wc}:${pr.vc}`)) return;
+      if (STRIKE.sweepAll) this.struck.add(`${pr.wc}:${pr.vc}`);
       const c = contactOf(world, pr.wc, pr.vc);
       if (!c) return;
       this.strike(pr, c.p, false);
       this.rebound(pr, c.p, c.n);
     });
+    if (STRIKE.sweepAll) this.sweepNear(world);
     this.bladeClash(world, bladePairs);
     this.armSteel();
     for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
     // R0 튐 검사: 이 스텝의 스텝 전 칼 상태를 다음 스텝과 견주려고 남긴다
     if (STRIKE.glitchFilter) for (const f of this.fighters) if (f.cache?.sword) this.keepSword(f, f.cache.sword);
+  }
+
+  /**
+   * R0 스윕 넓힘 (STRIKE.sweepAll): 통과 예측 밖의 무기·몸 쌍 가운데 이 스텝에 엔진이 힘을 주지 않은(힘 사건 없음) 쌍은, 얕은 접촉점(4 mm 안, 깊이 겹쳐 충격 0 인 자세 포함)이
+   * 있으면 그 점, 없으면 스윕(sweptContact)으로 첫 접촉을 찾아 튕긴 충돌과 같이 상처(strike)·되튐(rebound)을 준다. 한 번 닿은 쌍은 떨어질 때(seen 2 스텝 넘게)까지 다시 안 본다.
+   * 빠른 둔기·손잡이가 한 스텝에 팔·목을 건너뛰던 것(40~50 m/s 에서 8~25% 놓침)을 잡는다
+   */
+  sweepNear(world) {
+    for (const [key, e] of this.near) {
+      if (this.stepNo - e.seen > 2) {
+        this.near.delete(key);
+        continue;
+      }
+      if (this.struck.has(key)) e.applied = true; // 엔진이 힘을 줘 튕긴 충돌로 이미 쳤다 (이어 닿아 있는 동안 다시 치지 않는다)
+      if (e.applied || this.cutting.has(key)) continue;
+      if (!this.pairOf(e.wc, e.vc)) continue; // 부활 중·손에서 놓친 칼 (contactShape 는 충돌 그룹을 모른다)
+      const col1 = world.getCollider(e.wc);
+      const col2 = world.getCollider(e.vc);
+      if (!col1 || !col2) continue;
+      let point = null;
+      let n = null;
+      world.contactPair(col1, col2, (m, flipped) => {
+        for (let i = 0; i < m.numContacts() && !point; i++) {
+          if (m.contactDist(i) < 0.004) {
+            const lp = flipped ? m.localContactPoint2(i) : m.localContactPoint1(i);
+            if (!lp) continue;
+            point = new THREE.Vector3(lp.x, lp.y, lp.z).applyQuaternion(rotQ(col1)).add(tv(col1.translation()));
+            const nn = m.normal();
+            const s = flipped ? -1 : 1;
+            n = new THREE.Vector3(nn.x * s, nn.y * s, nn.z * s);
+          }
+        }
+      });
+      let bladePt = null;
+      if (!point) {
+        const hit = STRIKE.sweep ? this.sweptContact(e, col1, col2) : null;
+        if (!hit) continue;
+        point = hit.point.clone();
+        n = hit.n.clone();
+        const S = e.pr.w.fighter.cache.sword;
+        bladePt = point.clone().sub(hit.p).applyQuaternion(_sr.copy(hit.q).invert()).applyQuaternion(S.q).add(S.p); // 같은 칼날 점의 스텝 전 자리 (속도는 이것으로)
+        this.sweptHits++;
+      }
+      e.applied = true;
+      this.strike(e.pr, point, false, bladePt);
+      this.rebound(e.pr, point, n);
+      if (STRIKE.glitchFilter) this.jolted.add(e.pr.w.fighter);
+    }
+    this.struck.clear();
   }
 
   /**
@@ -722,6 +787,7 @@ export class Combat {
       if (sc && sc.distance < 0.004) {
         const h = this._hit;
         h.point.set(sc.point2.x, sc.point2.y, sc.point2.z); // 칼날 쪽 점, 월드 좌표 (위의 manifold 경로도 칼날 쪽 점을 쓴다)
+        h.n.set(-sc.normal1.x, -sc.normal1.y, -sc.normal1.z); // 칼 → 몸 (normal1 은 부위 겉에서 밖으로)
         h.p.copy(p);
         h.q.copy(q);
         return h;

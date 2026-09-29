@@ -447,7 +447,7 @@ export class Fighter {
         .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
         .setContactForceEventThreshold(1)
         // 칼날만: 충돌 직전에 combat.js가 "가르고 지나갈지"를 정할 수 있게 한다
-        .setActiveHooks(isBlade ? RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS : RAPIER.ActiveHooks.NONE);
+        .setActiveHooks(isBlade || STRIKE.sweepAll ? RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS : RAPIER.ActiveHooks.NONE); // sweepAll: 손잡이·날 없는 무기도 가까이 온 쌍을 적는다 (늘 1 = 평소처럼 부딪힘)
       if (pose?.rotZ) cd.setRotation(vecQ(new THREE.Quaternion().setFromAxisAngle(Z_AXIS, pose.rotZ)));
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
