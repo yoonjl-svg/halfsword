@@ -1835,6 +1835,13 @@ export class Fighter {
         }
       }
     }
+    const release = damp === this.weaponCfg.releaseDamping;
+    // R0 (§6-5): 명시적 감쇠의 안정 조건 c·dt/I ≤ wristStableK. 감쇠가 도는 칼을 늦추는(일률 < 0) 스텝에만 건다 — 칼을 목표 빠르기로 끌어올리는 감쇠·강성·토크 상한은
+    //  그대로라 칼을 빠르게 하는 힘은 한 스텝도 줄지 않는다. 늦추는 쪽이 한 스텝에 목표를 지나쳐 거꾸로 돌리던 몫만 없앤다 (가벼운 칼·고무 닭 떨림)
+    if (STRIKE.wristStable && this.lastDt > 0) {
+      const cMax = (STRIKE.wristStableK * this.swordIhand) / this.lastDt;
+      if (damp > cMax && _wE.copy(wSwing).sub(wAim).dot(wSwing) > 0) damp = cMax;
+    }
     torque.addScaledVector(wSwing.sub(wAim), -damp);
     // 칼 무게도 같은 힘 안에서 버틴다 (칼끝이 처지지 않게)
     this.gravityTorque([sword], forearm, 0.13, _mG).multiplyScalar(-Math.min(1, str));
@@ -1849,7 +1856,7 @@ export class Fighter {
     this.wristHill = (this.wristHill ?? h) + (h - (this.wristHill ?? h)) * Math.min(1, (this.lastDt || 1 / 120) / 0.03);
     cap *= this.wristHill;
     if (tl > cap) torque.setLength(cap);
-    if (this.ins) { const I = this.ins.wr; I.pre = tl; I.cap = cap; I.cap0 = this.weaponCfg.maxAimTorque * str; I.hill = this.wristHill; I.sat = tl > cap; I.vAlong = vAlong; I.damp = damp; I.brake = !!this.wristBrake; I.angle = angle; I.release = damp === this.weaponCfg.releaseDamping; }
+    if (this.ins) { const I = this.ins.wr; I.pre = tl; I.cap = cap; I.cap0 = this.weaponCfg.maxAimTorque * str; I.hill = this.wristHill; I.sat = tl > cap; I.vAlong = vAlong; I.damp = damp; I.brake = !!this.wristBrake; I.angle = angle; I.release = release; }
     // 측정용 (테스트 도구가 읽는다)
     this.debug.aim.copy(aim);
     this.debug.wristTorque.copy(torque);
@@ -2408,6 +2415,7 @@ const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
 const _wF = new THREE.Vector3(); // driveSword: 아래팔 각속도의 칼끝 목표에 수직인 몫
 const _wR = new THREE.Vector3(); // driveSword: 칼끝 목표가 아래팔에 대해 도는 빠르기
+const _wE = new THREE.Vector3(); // driveSword: 손목 감쇠가 향하는 빠르기 차이 (wristStable)
 const _ur = new THREE.Vector3();
 const _urq = new THREE.Quaternion();
 const _axis2 = new THREE.Vector3();
