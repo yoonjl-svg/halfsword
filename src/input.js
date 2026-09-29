@@ -42,6 +42,7 @@ export class FingerTrace {
     this.pt = new Float64Array(8);
     this.px = new Float64Array(8);
     this.py = new Float64Array(8);
+    this._o = { x: 0, y: 0 };
   }
 
   /** 화면 프레임마다 한 번: 그 프레임의 벽시계 시각 (조각의 시각과 같은 시계) */
@@ -51,6 +52,12 @@ export class FingerTrace {
   }
 
   push(t, dx, dy, flag = 0) {
+    if (flag & TRACE_LIFT && INPUT.coalesce && this.count > 0) {
+      // 뗀 순간까지 내다본 몫을 누적에 접어 둔다 (dx·dy 는 0 그대로): 손은 이미 그만큼 갔으니 다음 획 첫 스텝에 되갚지 않는다
+      const o = this.ahead(t, this._o);
+      this.sx = o.x;
+      this.sy = o.y;
+    }
     const i = this.head;
     this.t[i] = t;
     this.dx[i] = dx;
@@ -60,7 +67,7 @@ export class FingerTrace {
     this.sy += dy;
     this.x[i] = this.sx;
     this.y[i] = this.sy;
-    if (!(flag & TRACE_LIFT)) this.pn = 0; // 새 실제 조각이 예측을 대신한다 (뗀 조각은 남긴다: ahead 가 뗀 시각에 멈춘다)
+    this.pn = 0; // 새 실제 조각이 예측을 대신한다 (뗀 조각은 위에서 예측까지 접었다)
     this.head = (i + 1) % this.n;
     if (this.count < this.n) this.count++;
     this.total++;
@@ -95,7 +102,6 @@ export class FingerTrace {
     }
     let i1 = this.idx(0);
     if (t >= this.t[i1]) return this.ahead(t, out);
-    if (this.count > 1 && (this.flag[i1] & TRACE_LIFT) !== 0 && t >= this.t[this.idx(1)]) return this.ahead(t, out); // 마지막 움직임 ~ 뗀 사이도 내다본 자리 (뗀 시각에 튀지 않게)
     for (let k = 1; k < this.count; k++) {
       const i0 = this.idx(k);
       if (this.t[i0] <= t) {
@@ -114,20 +120,17 @@ export class FingerTrace {
 
   /**
    * 마지막 실제 조각 뒤 (t ≥ 마지막 조각 시각): predictMs 까지만 내다본다 — 브라우저가 내다본 자리가 있으면 그 사이를 직선으로,
-   *  없으면 최근 predictMs 이상의 조각으로 잰 빠르기로 곧게. 손가락을 뗐으면 뗀 시각에서 멈춘다 (되튀지 않는다).
+   *  없으면 최근 predictMs 이상의 조각으로 잰 빠르기로 곧게. 손가락을 뗐으면 뗀 조각 자리 그대로 (push 가 뗀 순간까지 내다본 자리를 접어 두었다. 되튀지 않는다).
    *  내다본 몫은 다음 실제 조각이 바로잡는다 (Input.handDeltaAt) — 실제 움직임을 줄이거나 자르는 일은 없다
    */
   ahead(t, out) {
     const h = INPUT.predictMs;
-    const iL = this.idx(0);
-    const lifted = (this.flag[iL] & TRACE_LIFT) !== 0;
-    const iR = lifted && this.count > 1 ? this.idx(1) : iL; // 마지막으로 움직인 조각
+    const iR = this.idx(0); // 마지막 조각
     const tR = this.t[iR];
-    let tq = Math.min(t, tR + h);
-    if (lifted) tq = Math.min(tq, this.t[iL]);
+    const tq = Math.min(t, tR + h);
     out.x = this.x[iR];
     out.y = this.y[iR];
-    if (!(h > 0) || tq <= tR || (lifted && this.count === 1)) return out;
+    if (this.flag[iR] & TRACE_LIFT || !(h > 0) || tq <= tR) return out; // 뗀 뒤는 내다보지 않는다 (톡 치기도 움직임 0)
     if (this.pn > 0) {
       // 브라우저 예측: (tR, 마지막 조각) → 예측 자리들을 잇는 꺾은선. 마지막 예측 뒤는 그 자리
       let t0 = tR, x0 = out.x, y0 = out.y;
@@ -150,7 +153,7 @@ export class FingerTrace {
     // 곧게: 최근 조각들로 잰 빠르기 (뗀 조각 앞에서 멈춘다 — 앞 획의 빠르기는 섞지 않는다)
     let iB = iR;
     let span = 0;
-    for (let k = (iR === iL ? 0 : 1) + 1; k < this.count; k++) {
+    for (let k = 1; k < this.count; k++) {
       const i = this.idx(k);
       if (this.flag[i] & TRACE_LIFT) break;
       iB = i;
@@ -336,7 +339,8 @@ export class Input {
 
   /**
    * (INPUT.coalesce) 물리 스텝마다: 스텝 시각 t(벽시계 ms)에서 predictMs 앞의 손가락 자리까지, 지난 호출 뒤 옮긴 몫.
-   *  예측으로 앞선 몫은 다음 호출에서 실제 조각으로 바로잡힌다 — 합은 늘 실제 이동과 같다 (조각을 놓치거나 두 번 더하지 않는다).
+   *  예측으로 앞선 몫은 다음 호출에서 실제 조각으로 바로잡힌다 — 합은 실제 이동 + 뗄 때마다 남긴 내다본 몫(predictMs 어치까지)이다
+   *  (조각을 놓치거나 두 번 더하지 않는다. 뗀 순간 앞선 몫은 FingerTrace.push 가 접어 다음 획에 되갚지 않는다).
    *  첫 호출(판 시작 syncHand 뒤)은 0: 지난 판·뽑기 화면의 이동을 넘기지 않는다
    */
   handDeltaAt(t) {
