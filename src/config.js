@@ -487,7 +487,8 @@ export const SKILL_BODY = {
 };
 
 // R1 팔 놀림 지연 (docs/whole_body_redesign.md 3-2 (b)(c)(d), §8 R1). 손가락을 가진 파이터(skill.trace = input.fingerTrace, INPUT.coalesce)만:
-//  물리 스텝마다 손가락 자리(fingerTrace.at(stepT + predictMs), R0 입력과 같은 표본)의 두 표본 차 = 손가락 원 속도(패드 m/s, 벽시계).
+//  물리 스텝마다 손가락 자리(fingerTrace.at(stepT + predictMs), R0 입력과 같은 표본)의 두 표본 차 = 손 목표 몫(앞먹임). 판정용 손가락 원 속도는
+//  실제 조각 두 개(한 스텝 이상 떨어진)의 기울기 (fingerTrace.rawVel — 내다본 몫·프레임 몰림 없이, 멈춤 창은 COMMIT.stillGap·stillFrames). 빠르기는 게임 초당.
 //  AI(손가락 없음)·INPUT.coalesce 끔(프레임에 몰아 넣어 원 속도가 깜빡인다)은 예전 길. 모두 끄면 예전과 바이트까지 같다.
 //  시뮬 끄기: ARM.lead=false ARM.rawSwing=false ARM.leashSkip=false SKILL_BODY.holdSpeed=0.3
 export const ARM = {
@@ -495,7 +496,7 @@ export const ARM = {
   //  앞먹임 속도는 가죽끈이 손가락에 끌려간 몫만 (떨림·자세 복귀·되맞춤·손 닿는 끝·멈칫 배율이 튀는 값을 만들지 않는다). 자르기 없음
   lead: !R0_OFF,
   aimLead: 0.8, // §9 첫 값 (사장님 확인 전 설계 기본값)
-  // (c) swinging·activity 입력 = 손가락 원 속도 > SKILL.swingSpeed (τ 40 ms 로 거른 vel 대신. vel 은 이어 베기·흐름에 그대로). activity 의 오름·내림 빠르기는 그대로
+  // (c) swinging·activity 입력 = 손가락 원 속도(실제 조각) > SKILL.swingSpeed (τ 40 ms 로 거른 vel 대신. vel 은 이어 베기·흐름에 그대로). activity 의 오름·내림 빠르기는 그대로
   rawSwing: !R0_OFF,
   // (b) 목줄 건너뛰기: 손가락 원 속도 > SKILL.swingSpeed 동안 anchor 가 손가락을 그대로 따라가고 남은 틈은 넘친 빠르기만큼 풀린다
   //  (들어갈 때·나올 때 anchor 가 튀지 않는다). 떨림 거르기(inputDeadRadius)는 그대로

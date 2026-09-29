@@ -45,6 +45,7 @@ const _g = {}; // guardAt 결과 (획을 시작할 때 휘두르는 면을 정�
 const _ga = new THREE.Vector3();
 const _gb = new THREE.Vector3();
 const _fs = { x: 0, y: 0 }; // R1: 스텝 시각의 손가락 자리 (fingerTrace.at)
+const _fv = { x: 0, y: 0 }; // R1: 실제 조각으로 잰 손가락 빠르기 (fingerTrace.rawVel)
 
 // 손가락 궤적 조각 표시 (input.js TRACE_REPLAY·TRACE_LIFT 와 같은 값. 검술 층은 입력 모듈을 들이지 않는다)
 const T_REPLAY = 1;
@@ -120,11 +121,13 @@ export class Skill {
     this.holdFeet = false; // AI 가 기술 걸음을 딛는 동안 true: 위 내딛기를 걸지 않는다 (ai.js moveFeet, GAIT.fwdFix)
     this.swings = 0;
     this.activity = 0; // 휘두르는 중인 정도 (0~1)
-    // R1 팔 놀림 (CONFIG.ARM): 스텝별 손가락 표본. fc = 읽기 커서(누적 자리·스텝 시각 ms), dF = 이 스텝 손가락 몫(패드 m, handOffset 에 든 것과 같게),
-    //  vF = 손가락 원 속도(두 표본 차 ÷ 벽시계 사이), vLead = 앞먹임 속도(가죽끈이 손가락에 끌려간 몫), gapE = 가죽끈 뒤 handOffset − anchor
-    this.fc = { on: false, x: 0, y: 0, t: 0, dt: 0 };
+    // R1 팔 놀림 (CONFIG.ARM): 스텝별 손가락 표본. fc = 읽기 커서(누적 자리·스텝 시각 ms, dt 벽시계 s, g·gdt 게임 시간 s), dF = 이 스텝 손가락 몫(패드 m, handOffset 에 든 것과 같게),
+    //  vF = dF ÷ 게임 시간 (앞먹임용), vS = 실제 조각 두 개로 잰 손가락 빠르기(게임 초당 — swinging·목줄 건너뛰기 판정),
+    //  vLead = 앞먹임 속도(가죽끈이 손가락에 끌려간 몫), gapE = 가죽끈 뒤 handOffset − anchor
+    this.fc = { on: false, x: 0, y: 0, t: 0, dt: 0, g: 0, gdt: 0 };
     this.dF = new THREE.Vector2();
     this.vF = new THREE.Vector2();
+    this.vS = new THREE.Vector2();
     this.vLead = new THREE.Vector2();
     this.gapE = new THREE.Vector2();
     this.autoGuard = false; // 플레이어만 true (main.js)
@@ -396,32 +399,55 @@ export class Skill {
 
   /**
    * R1: 이 스텝의 손가락 표본 (main.js·harness_m 이 handDeltaAt(stepT) 로 handOffset 에 더한 것과 같은 자리 fingerTrace.at(stepT + predictMs)).
-   *  dF = 두 표본 차 × inputScale (죽었거나 권총이면 0 — handOffset 에 안 든다). handOffset 이 손 닿는 끝(R) 밖이면 바깥으로 민 몫은 뺀다.
-   *  vF = dF ÷ 두 표본의 벽시계 사이 (보통은 물리 스텝 그대로. 한 프레임에 스텝이 몰리거나 멈칫·슬로모션으로 시각이 같으면 앞 값 유지 — 튀지 않는다)
+   *  dF = 두 표본 차 × inputScale (죽었거나 권총이면 0 — handOffset 에 안 든다). handOffset 이 손 닿는 끝(R) 밖이면 바깥으로 민 몫 가운데
+   *  자르기가 자르는 만큼(|off| − R)만 뺀다. 빠르기는 게임 초당 (멈칫·슬로모션에도 예전 걸러진 vel 과 같은 시계):
+   *  vF = dF ÷ 게임 시간, vS = 실제 조각 두 개(한 스텝 이상 떨어진)의 기울기 × inputScale × 벽시계/게임 시간 — 내다본 몫·프레임 몰림이 빠르기로 들지 않는다.
+   *  스텝 시각이 같으면(한 프레임에 몰린 멈칫·슬로모션 스텝) 앞 값 유지, 그 게임 시간은 다음 나눗수에 쌓인다
    */
-  readFinger(off, R) {
+  readFinger(off, R, dt) {
     const f = this.f;
     const c = this.fc;
-    const s = this.trace.at(f.stepT + INPUT.predictMs, _fs);
+    const tr = this.trace;
+    const s = tr.at(f.stepT + INPUT.predictMs, _fs);
     const d = this.dF;
     c.dt = 0;
     if (!c.on) {
       c.on = true;
+      c.g = 0;
       d.set(0, 0);
       this.vF.set(0, 0);
+      this.vS.set(0, 0);
     } else {
       const k = f.alive && !f.weapon?.gun ? f.inputScale ?? 1 : 0;
       d.set((s.x - c.x) * k, (s.y - c.y) * k);
+      c.g += dt;
       const L = off.length();
+      let ux = 0, uy = 0, q = 1; // 손 닿는 끝에서 바깥 몫이 남는 비율
       if (L > R) {
-        const dr = (d.x * off.x + d.y * off.y) / L;
+        ux = off.x / L;
+        uy = off.y / L;
+        const dr = d.x * ux + d.y * uy;
         if (dr > 0) {
-          d.x -= (dr * off.x) / L;
-          d.y -= (dr * off.y) / L;
+          const cut = Math.min(dr, L - R);
+          d.x -= cut * ux;
+          d.y -= cut * uy;
+          q = (dr - cut) / dr;
         }
       }
       c.dt = (f.stepT - c.t) / 1000;
-      if (c.dt > 0) this.vF.set(d.x / c.dt, d.y / c.dt);
+      if (c.dt > 0) {
+        c.gdt = c.g;
+        c.g = 0;
+        this.vF.set(d.x / c.gdt, d.y / c.gdt);
+        const w = tr.rawVel(f.stepT, dt * 1000, Math.max(COMMIT.stillGap, COMMIT.stillFrames * (tr.frameDt || 0)), _fv);
+        const m = (k * c.dt) / c.gdt;
+        const v = this.vS.set(w.x * m, w.y * m);
+        const vr = v.x * ux + v.y * uy;
+        if (q < 1 && vr > 0) {
+          v.x -= vr * (1 - q) * ux;
+          v.y -= vr * (1 - q) * uy;
+        }
+      }
     }
     c.x = s.x;
     c.y = s.y;
@@ -441,7 +467,7 @@ export class Skill {
         const gx = this.gapE.x + this.dF.x;
         const gy = this.gapE.y + this.dF.y;
         const g = Math.hypot(gx, gy);
-        const k = g > dead ? (g - dead) / g / c.dt : 0;
+        const k = g > dead ? (g - dead) / g / c.gdt : 0;
         this.vLead.set(gx * k, gy * k);
       }
     }
@@ -458,7 +484,7 @@ export class Skill {
     const R = WEAPON.reach;
     // R1: 손가락을 가진 파이터는 이 스텝의 손가락 표본을 읽는다 (손이 닿는 끝에 자르기 전 — 바깥으로 민 몫은 빼야 하므로)
     const A = ARM;
-    const fin = (A.lead || A.rawSwing || A.leashSkip) && INPUT.coalesce && !!this.trace && f.stepT > 0 && this.readFinger(off, R);
+    const fin = (A.lead || A.rawSwing || A.leashSkip) && INPUT.coalesce && !!this.trace && f.stepT > 0 && this.readFinger(off, R, dt);
     if (off.length() > R) off.setLength(R);
     this.clock += dt;
 
@@ -479,8 +505,8 @@ export class Skill {
     this.vel.x += (rx - this.vel.x) * k;
     this.vel.y += (ry - this.vel.y) * k;
     const sp = this.vel.length();
-    // R1 (c): 손가락 원 속도로 읽는다 (걸러진 vel 은 τ 40 ms 늦다). 손가락이 없거나 끄면 예전 그대로
-    const vf = fin ? this.vF.length() : 0;
+    // R1 (c): 손가락 원 속도(실제 조각 두 개)로 읽는다 (걸러진 vel 은 τ 40 ms 늦다). 손가락이 없거나 끄면 예전 그대로
+    const vf = fin ? this.vS.length() : 0;
     const swinging = (A.rawSwing && fin ? vf : sp) > SKILL.swingSpeed && f.alive && f.armed;
     // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐).
     //  결심 베기의 획 프로그램이 도는 동안(확정 뒤)도 휘두르는 중이다 — 확정 순간 1로 뛰지 않고 휘두를 때와 같은 빠르기로 오른다
