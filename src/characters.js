@@ -14,6 +14,7 @@
 
 import { WEAPONS, WEAPON_LIST } from './weapons.js';
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
+import { AI_LEVELS } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산할 때만 읽는다 (config.js는 아무것도 import하지 않아 순환이 없다)
 
 export const CHARACTERS = [
   // ───────────────────────────────────────────── 1. 쉬움 : 촌뜨기 난동꾼 ─────────────────────────────────────────────
@@ -332,17 +333,57 @@ export const CHARACTERS = [
 //  CHARACTERS(다섯) 밖에 둔다: 기본 회전(randomCharacter)·시뮬 라운드로빈에는 들어가지 않고, id로만 불린다
 //  (stages.js STAGE_FOE 짝·?foe=id). 원본 시트를 복사해 만들며, 원본은 건드리지 않는다.
 const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
+
+// 광기의 하인리히 실력 숫자 (사장 확정 2026-09-28: "능력치는 원래의 하인리히 +20%").
+//  출발점은 낮의 하인리히가 게임에서 실제로 받는 값 = AI_LEVELS[ai.level] 위에 persona.level을 덮은 것 (ai.js setLevel과 같은 병합).
+//  그래서 하인리히 시트에 없는 chamberSpeed·parrySpeed·predict도 normal 기본값에서 같이 올리고, 결과는 열다섯 키를 모두 적는다.
+//  원본에서 그때그때 계산하므로 낮의 하인리히를 고치면 +20% 관계도 따라간다. 원본 시트·AI_LEVELS는 읽기만 한다.
+//  [방향, 상한]: +1 = 클수록 세다(×1.2), -1 = 작을수록 세다(시간이라 ÷1.2), 0 = 그대로. 상한 1 = 확률·0~1 값이라 1에서 자른다
+const MAD_SCALE = 1.2;
+const MAD_LEVEL_RULES = {
+  reaction: [-1], // 반응 시간(초)
+  windup: [-1], // 준비 동작에서 멈추는 시간
+  chamberSpeed: [+1],
+  strikeSpeed: [+1],
+  parrySpeed: [+1],
+  guardChance: [+1, 1],
+  predict: [+1, 1], // 1을 넘으면 몸을 너무 앞질러 봐서 오히려 틀린다
+  counter: [+1, 1],
+  feint: [+1, 1],
+  followUp: [+1, 1],
+  read: [+1, 1], // (1−read)가 난수 폭이라 1을 넘으면 뜻이 뒤집힌다
+  discipline: [+1], // 1을 넘는 값도 쓴다 (마르그레테 1.05)
+  strength: [+1],
+  aggression: [0], // 실력이 아니라 기질(조급함)이다 — 올리면 낮의 약점 "먼저 무리하게 들어온다"만 커진다
+  skill: [+1, 1], // 0~1 척도
+};
+function scaledLevel(ai, scale) {
+  const base = { ...(AI_LEVELS[ai.level] || AI_LEVELS.normal), ...ai.persona?.level };
+  const out = {};
+  for (const [key, v] of Object.entries(base)) {
+    const [dir, cap = Infinity] = MAD_LEVEL_RULES[key] || [0]; // 표에 없는 새 키는 그대로 둔다 (새 실력 숫자가 생기면 여기에 방향을 적는다)
+    const x = dir > 0 ? v * scale : dir < 0 ? v / scale : v;
+    out[key] = Math.round(Math.min(cap, x) * 1e4) / 1e4;
+  }
+  return out;
+}
+// 성격(pers)·유파(school)·난이도 이름('normal')은 하인리히 그대로 깊은 복사하고, persona.level만 바꿔 끼운다.
+//  지금 값: reaction .175 · windup .375 · chamberSpeed 3.6 · strikeSpeed 15.6 · parrySpeed 5.4 · guardChance .792 · predict .9 · counter .384 ·
+//   feint .552 · followUp .864 · read .864 · discipline .9 · strength 1.38 · aggression 1.15(그대로) · skill .984
+//  strikeSpeed·chamberSpeed·parrySpeed·strength는 손 목표 필터·관절 속도 한계에 막혀 체감은 +20%보다 작다 (docs/characters.md)
+const HEINRICH_MAD_AI = JSON.parse(JSON.stringify(HEINRICH.ai));
+HEINRICH_MAD_AI.persona.level = scaledLevel(HEINRICH.ai, MAD_SCALE);
 export const CHARACTER_VARIANTS = [
   // 4b. 광기의 하인리히 도른 — 밤의 포세이돈 신전에 다시 나타나는 하인리히 (사장 요청, 디렉터 14:08).
   //  붉은 눈·안광 아우라는 외형 담당 몫이고, 여기서는 eyes 표식만 둔다.
-  //  아직 사장 확정 전인 것: 별칭·대사·수치. 대사와 수치는 하인리히 것을 그대로 쓰고, 제안은 docs/character_lore.md §4b에.
-  //  지금 낮의 하인리히와 다른 것은 이름·서사·eyes 표식뿐이다
+  //  사장 확정(2026-09-28): 별칭 '밤의 왕', 대사는 우선 등장·승리 1종씩, 실력 숫자는 낮의 하인리히 +20% (HEINRICH_MAD_AI).
+  //  성격(pers)·유파·감정 문턱·외형·무기·목소리(variantOf)는 낮의 하인리히 그대로다. 설정은 docs/character_lore.md §4b
   {
     ...HEINRICH,
     id: 'heinrich_mad',
     variantOf: 'heinrich',
     name: '광기의 하인리히 도른',
-    epithet: '검에 먹힌 자', // 제안 (원본 별칭 '미치광이'와 겹치지 않게). 다른 후보: '밤의 왕' / '왕의 검'
+    epithet: '밤의 왕', // 사장 확정 (원본 별칭 '미치광이'와 겹치지 않는다)
     origin: '포세이돈 신전에서 쓰러진 뒤 그 자리를 떠나지 않았다. 밤이 되면 같은 자리에 다시 선다',
     backstory:
       '신전에서 베였다. 죽지는 않았다. 바닷물이 밀려와 피를 씻어 가는 동안 그는 칼을 놓지 않았고, 그날 밤부터 신전 기둥 사이에 앉아 칼과 이야기했다. ' +
@@ -353,8 +394,14 @@ export const CHARACTER_VARIANTS = [
       '웃지 않는다. 소리치지 않는다. 낮의 하인리히에게 남아 있던 사람의 확신은 없고, 검의 방향만 남았다. 맞아도 반응이 늦고, 물러날 줄을 모른다. ' +
       '느리게 다가와 한 번 물면 놓지 않는다.',
     // 시작 감정은 없다 (사장: "분노나 집념으로 시작하는 건 싫어"). 감정은 하인리히와 같은 보통 규칙을 따른다
-    ai: JSON.parse(JSON.stringify(HEINRICH.ai)),
-    lines: JSON.parse(JSON.stringify(HEINRICH.lines)),
+    ai: HEINRICH_MAD_AI,
+    // 대사는 우선 1종씩 (사장 확정). 게임이 읽는 intro·win만 둔다 — 나머지 키를 비워 두어야 낮의 하인리히 대사가 새지 않는다.
+    //  taunt도 덮어쓴다: 대사를 못 찾을 때 쓰는 값이라 그대로 두면 낮의 '무릎 꿇어라…'가 물려 나온다
+    taunt: '무릎은 필요 없다. 목만.',
+    lines: {
+      intro: ['무릎은 필요 없다. 목만.'],
+      win: ['…이제 파도 소리가 들리는군.'],
+    },
     look: HEINRICH.look,
     lookVersion: HEINRICH.lookVersion,
     eyes: 'madGlow', // 외형 담당과 맞춘 표식: 붉은 눈 + 안광 아우라
@@ -379,7 +426,7 @@ export function pickCharacterWeapon(char, rnd = Math.random) {
 }
 
 /**
- * 캐릭터 대사 한 줄을 무작위로 (감독 지시: 시작할 때와 이길 때 3종씩 랜덤, 죽으면 말이 없다).
+ * 캐릭터 대사 한 줄을 무작위로 (감독 지시: 시작할 때와 이길 때 3종씩 랜덤, 죽으면 말이 없다. 광기의 하인리히는 사장 지시로 우선 1종씩).
  *  key: 'intro' | 'win' (그 밖의 키도 lines에 있으면 쓴다). 없으면 taunt, 그것도 없으면 ''
  */
 export function randomLine(char, key) {
