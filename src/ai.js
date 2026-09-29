@@ -20,7 +20,8 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, BODY, SKILL } from './config.js';
+import { AI_LEVELS, BODY, SKILL, GESTURE } from './config.js';
+import { SyntheticFinger } from './strike/gesture.js';
 import { Senses } from './ai_sense.js';
 import { fwdFixOn } from './gait.js';
 import { padDist } from './ai_techniques.js';
@@ -1300,7 +1301,48 @@ export class AI {
     off.x += this.tremor.x - this.tremorApplied.x;
     off.y += this.tremor.y - this.tremorApplied.y;
     this.tremorApplied.copy(this.tremor);
+    if (GESTURE.ai) this.synthPush(dt, off); // R2 AI 자리 (기본 꺼짐): 자르기 전 손 자리를 손가락 합성에 — 손짓 층을 플레이어와 같은 길로
     if (off.length() > 0.62) off.setLength(0.62);
+  }
+
+  /** (GESTURE.ai) 손 자리를 제 시계(ms)로 손가락 합성에 쌓는다. 손짓 층은 me.stepT 에서 읽는다. ai.js 는 손짓 층의 출력을 읽지 않는다 */
+  synthPush(dt, off) {
+    const me = this.me;
+    if (!me.aiSynth) {
+      me.aiSynth = new SyntheticFinger(64);
+      this.synT = 0;
+      me.ges?.attachSource(me.aiSynth);
+    }
+    this.synT += dt * 1000;
+    me.stepT = this.synT;
+    me.aiSynth.push(this.synT, off.x, off.y, true);
+  }
+
+  /**
+   * (R5 자리, 정의만 — 아직 부르지 않는다) 기술 하나를 손가락 길로: 지금 손 → 준비 자세 쪽 감기(S 만큼, 원판 너머도) → 되돌아서 → tech.path 를 따라 긋기.
+   *  돌려주는 것: [[ms, x, y], ...] (0 = 지금). S = 싣기(자르지 않음), windT = 감기 시간(s). 긋기 빠르기 = GESTURE.vRef·S (m/s, S = 0 이면 긋기 없음)
+   */
+  planStrike(tech, S, windT) {
+    const G = GESTURE;
+    const off = this.me.handOffset;
+    const pts = [[0, off.x, off.y]];
+    const cx = tech.from[0] - off.x;
+    const cy = tech.from[1] - off.y;
+    const cl = Math.hypot(cx, cy) || 1;
+    const Lw = G.sL0 + (G.sL1 - G.sL0) * S; // 감기 길이: S 가 1 을 넘으면 sL1 너머로 (over)
+    let t = windT * 1000;
+    let x = off.x + (cx / cl) * Lw;
+    let y = off.y + (cy / cl) * Lw;
+    pts.push([t, x, y]);
+    const v = G.vRef * S;
+    if (!(v > 0)) return pts;
+    for (const q of tech.path) {
+      t += (Math.hypot(q[0] - x, q[1] - y) / v) * 1000;
+      x = q[0];
+      y = q[1];
+      pts.push([t, x, y]);
+    }
+    return pts;
   }
 
   /** 발놀림: 간격 조절, 옆으로 돌기, 베며 내딛기, 물러나기 */

@@ -149,6 +149,8 @@ export function inputPump(G, { hz = 60, f = G.player, touchHz = 0 } = {}) {
   input.enabled = true;
   f.skill.detect = true; // 결심 판정은 플레이어만 (main.js 와 같게)
   f.skill.trace = input.fingerTrace; // 결심 판정이 읽는 손가락 원래 궤적 (main.js 와 같게)
+  f.ges?.attachTrace(input.fingerTrace); // R2 손짓 층 (GESTURE.on, main.js 와 같게)
+  f.ges?.reset();
   f.skill.autoGuard = true;
   const ppm = SCREEN_H / CONFIG.INPUT.touchSensitivity; // 패드 m → px (input.js 가 쓰는 배율의 거꾸로)
   // stick: 조이스틱 {x, y}. main.js 처럼 프레임마다 f.move 에 넣는다 (검술 층의 내딛기가 올려 둔 move 도 다음 프레임에 되돌아간다).
@@ -225,6 +227,7 @@ export function inputPump(G, { hz = 60, f = G.player, touchHz = 0 } = {}) {
     P.budget--;
     // main.js while: 이 스텝이 끝나는 벽시계 시각 (프레임 시각 − 남은 스텝·나머지 몫). R0 입력이 켜지면 그 시각의 손가락 자리까지 스텝마다
     P.stepWall = P.wall - (P.acc + P.budget * DT) * 1000;
+    f.stepT = P.stepWall; // 손짓 층의 스텝 시계 (main.js 와 같은 벽시계, 명세 §2.3)
     if (CONFIG.INPUT.coalesce) {
       const s = input.handDeltaAt(P.stepWall);
       if (f.alive) {

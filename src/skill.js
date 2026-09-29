@@ -30,7 +30,7 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, WHOLE, COMMIT, STROKE } from './config.js';
+import { SKILL, WEAPON, THRUST, WHOLE, COMMIT, STROKE, GESTURE } from './config.js';
 import { FINISH } from './finish.js';
 import { guardAt } from './guards.js';
 import { gunCanFire, gunPose } from './gun.js';
@@ -399,7 +399,9 @@ export class Skill {
     // 6) 결심 베기: 손가락 궤적으로 판정하고(플레이어), 진행 중인 획 프로그램을 한 스텝 넘긴다.
     //  (돌려주기가 시작되면 handOffset·anchor·prev 를 획 패드 자리로 맞추므로 아래 손 목표 속도보다 먼저)
     const cm = f.commit;
-    if (WHOLE.on && WHOLE.commit && this.detect && this.trace) this.detectCommit(dt);
+    //  (R2 손짓 층이 켜지면 옛 결심 판정 대신 손짓 층 — f.commit 은 켜지지 않는다. 옛 경로는 W5 가 지울 때까지 GESTURE.on=false 비교용)
+    if (GESTURE.on && f.ges) f.ges.update(dt, f.stepT);
+    else if (WHOLE.on && WHOLE.commit && this.detect && this.trace) this.detectCommit(dt);
     if (cm.on) this.updateCut(dt);
     if (this.rest.w > 0) this.updateRest(dt);
 

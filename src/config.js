@@ -693,6 +693,27 @@ export const STROKE = {
   },
 };
 
+// R2 손짓 층 (src/strike/gesture.js, docs/strike/r2_impl_spec.md §3). 손가락 → 싣기 S·방향·위상 φ (물리 스텝마다).
+//  패드 m·m/s·초. 상한·바닥·쿨다운 없음: S 는 1 위로 자르지 않는다(넘친 몫 = over), φ̇ 에 바닥 없음(clock 'finger').
+//  상한처럼 보일 수 있는 값(sL0 무감 구간, sectorMax, lateSelect 무리 잠금, leadMs, sSnap)은 명세 §10 에 사장님 질문과 짝지어 있다
+export const GESTURE = {
+  on: true, // 끄면(false) 옛 결심 경로(detectCommit) 그대로 — 시뮬 비교 깃발 (W5 가 옛 경로를 지울 때까지)
+  ai: false, // AI 손도 손가락 합성(SyntheticFinger)으로 손짓 층을 거친다 (R5). 끄면 AI 는 손짓 층을 전혀 안 거친다
+  input: 'wind', // 사장님 스위치 (Q3 부연): 'wind' (A) 손가락 자리로 감기 | 'stroke' (B) 긋기 길이·빠르기만, 감기는 몸이 짧게 스스로
+  clock: 'finger', // Q1: φ̇ = 긋는 쪽 빠르기 / sL1, 바닥 없음. 'floor' = 설계서 옛 법칙 1/T0 + kv·v (시뮬 A/B 전용, 게임 기본값 금지)
+  sL0: 0.12, sL1: 0.55, padExt: 1.0, // Q21: 감기 무감 구간·감기 끝(m). sL1 너머는 over 로 선형 연장 (줄이는 이득 없음)
+  restV: 0.25, restDwell: 0.04, vStrike: 1.5, revDot: -0.3, tauRelease: 0.25, // Q2 (tauRelease 는 벤 뒤 S 풀림에도)
+  vRef: 6.0, // Q3: 빠르기 기준 (= COMMIT.bSpeed). Lref·arc0 는 무리 패드 기하
+  autoWindPhi: 0.3, // Q3 (B): 몸이 스스로 하는 짧은 감기 = 클립 φ −0.3 → 0, 손가락 시계 (패드 0.165 m)
+  sSnap: 0.02, // 풀리는 S 가 이보다 작으면 정확히 0 (투명성 항목, §10)
+  lateSelect: 0.07, lateSelectLen: 0.1, famBlendT: 0.04, sectorMax: 80, // 늦은 무리 고르기 (초·m·초·도)
+  predictMs: 8, phiW: 60, leadMs: 40, // Q22 (predictMs: 자리 내다보기 허용 폭. 손짓 층은 실제 조각만 쓴다)
+  T0: 0.3, kv: 0.35, // 'floor' 시계 전용 (시뮬). weaponCfg.gestureT0 가 있으면 그것. 관성 등급 문턱 없음 (Q26)
+  followEnd: 1.6, recoverEnd: 2.2, buffer: 0.15,
+  mixX: 0.25, // 자세표 ↔ 클립 넘김 폭 c(S) = smoothstep(0, mixX, S) — 확정 신호(onCommit)가 c = 1 에서. DRIVE.mixX 와 같은 값 (W3 가 DRIVE 로 옮긴다)
+  famClip: { diag: 'zornhau', vert: 'oberhau', horiz: 'mittelhau', rise: 'unterhau' },
+};
+
 // 소리 (sound.js). 소리마다 들어보기: 메뉴의 "소리 들어보기"
 export const SOUND = {
   volume: 0.8, // 전체 음량
