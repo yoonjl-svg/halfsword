@@ -13,7 +13,7 @@
   - 게임은 Half Sword 같은 물리 롱소드 결투다. Three.js + Rapier로 만들었고, 아이폰 모바일 웹이 주 대상이다.
 - **사람**:
   - 오너(사장님): 들어 보고 결정한다.
-  - 디렉터(별도 Claude 세션): 병합·배포하고 `main.js`를 소유한다.
+  - 디렉터(별도 세션): 병합·배포하고 `main.js`를 소유한다.
 - **고칠 수 있는 파일**:
   - `src/sound.js`, `src/soundgen.js`, `src/soundlab.js`, `sounds.html`, `public/sfx/**`
   - `src/config.js`의 SOUND 블록
