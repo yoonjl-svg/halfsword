@@ -16,7 +16,7 @@
 - 광기의 하인리히 도른(`heinrich_mad`, '밤의 왕', 낮 +20%)은 main cc746f6에 반영·배포 완료.
 
 ## 열린 요청 (사장님 답 대기)
-1. 여정 대화 목업 v3 — https://claude.ai/artifact/CFPNVy9ug6ZPdHZxmDJtmK (스테이지 사이 대사창 임시 화면, 대사 전부 임시, 설정집 미저장). 승인 뒤 분담: 화면·전환 디렉터 / 대사 본문 캐릭터 PM(`lines.arrive`·`lines.road`).
+1. 여정 대화 목업 v3 — **보류(사장님이 다시 말씀하실 때까지, 9/29 13:30)**. 관련 작업 없음. https://claude.ai/artifact/CFPNVy9ug6ZPdHZxmDJtmK (스테이지 사이 대사창 임시 화면, 대사 전부 임시, 설정집 미저장). 다시 열리면 분담: 화면·전환 디렉터 / 대사 본문 캐릭터 PM(`lines.arrive`·`lines.road`).
 2. 설정 점검 ⑥-4·5·8 (`docs/settings_audit.md`).
 3. 온몸 타격 제한 둘(`docs/character_whole_body.md` §7): "검술 낮으면 동작 작다"는 S에 걸지 말 것 / Q2 감기 공짜 거두기.
 
@@ -42,4 +42,4 @@ node -e "import('./src/characters.js').then(m=>console.log(Object.keys(m.CHARACT
 - [ ] 사장님 답(위 1·3) 오면 반영
 - [ ] 동작 PM 범위 오면 windLen 재조정
 - [ ] R5 연결 뒤 `docs/reviews/R5_characters.md`: 기준선 대비 성격 유지 확인
-- [ ] 여정 대사 승인 시 `lines.arrive`/`lines.road` 본문 + 설정집
+- [ ] (보류) 여정 대사 — 사장님이 다시 말씀하실 때만
