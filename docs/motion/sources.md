@@ -4,6 +4,19 @@
 - **읽은 깊이를 솔직히 적는다.** 이 세션의 웹 읽기 도구는 거의 모든 사이트(Wiktenauer, Springer, IEEE, ResearchGate, CMU, PubMed 등)에서 막혔다. 그래서 **본문을 연 자료는 없고**, 모두 검색 결과 요약(snippet)이나 초록 수준이다. 숫자는 다른 곳에서 한 번 더 확인해야 한다.
   - 표기: `snippet` 검색 요약 · `abstract` 초록 · `full` 본문 · `memory` 확인 전 기억
 
+## 0. 다른 세션이 이미 모은 출처 (옮기지 않고 링크만)
+
+| 문서 | 브랜치 | 내용 |
+|---|---|---|
+| `docs/handoff/motion_research_handoff.md` (커밋 fc590ee) | `claude/pm-weapons` | 무기-검술 연구 인계서: 교본 계보, 모캡·생체역학 자료표(CMU·5MUDM·Delp·Holzbaur·SwordSTEM), 버린 시도 |
+| `docs/weapon_motion_research.md`, `docs/pole_motion_research.md` | `claude/pm-weapons` | 무기 유형별 검술 동작 원전 조사, 자루 무기 동작 |
+| `docs/weapon_motion_sources_one_pole.md`, `docs/weapon_motions.md` | `claude/pm-weapons-balance` | 무기 PM 동작 라이브러리 출처·자세표 |
+| `docs/reference/combatlab_handoff_2026-09-27.md` | `main` | 이전 Unity CombatLab: Fiore Getty 원고 특정(22r·23r·23v), CMU swordplay 거절 경위 |
+
+## 0-1. 이 세션에서 막힌 곳 (EGRESS 차단 — 다시 시도하지 않는다)
+
+웹 본문 읽기 도구와 curl 이 프록시에서 거절됨(2026-09-29): wiktenauer.com, link.springer.com, ieeexplore.ieee.org, researchgate.net, mocap.cs.cmu.edu, pubmed.ncbi.nlm.nih.gov, pmc.ncbi.nlm.nih.gov, jstage.jst.go.jp, semanticscholar.org, zenodo.org, cdn.jsdelivr.net(curl). 검색 결과 요약만 받았다.
+
 ## 1. 교본 원문·도판 [원전]
 
 | 자료 | 무엇에 썼나 | 이용 조건 | 읽은 깊이 |
