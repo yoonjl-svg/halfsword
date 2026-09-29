@@ -39,8 +39,9 @@
 
 - SendMessage는 디렉터 세션에 닿지 않는다. **트리거로 보낸다**:
   - `mcp__Claude_Code_Remote__create_trigger`에 `persistent_session_id`(디렉터 세션 id)와 `run_once_at`(몇 분 뒤)을 준다.
-  - **디렉터 세션 id** (2026-09-29 09:59 KST, 옛 디렉터 알림): 사장님 결정으로 디렉터가 바뀌었다. 새 디렉터 = `session_01NDJVGN7xsXPq19Yzry3BvH`("디렉터 · Stillness 총괄 (새)"). 옛 디렉터 `session_01KcYCh6UfKjrR4m8QjPcEbM`는 물러나 병합·배포를 하지 않는다. 디렉터 인계서는 main `docs/director_handoff.md`(`940f665`).
-    - 알림 직후에는 새 세션이 첫 턴에 실패해 잠시 보관(archived) 상태였고, 10:19 KST 새 디렉터가 "정상으로 돌아왔다, 보고는 이 id로"라고 알려 왔다. 보고 전에 `get_session`으로 살아 있는지 한 번 보는 습관은 유지한다.
+  - **디렉터 세션 id** (2026-09-29 11:16 KST, 은퇴 디렉터의 알림 — 사장님 지시): 진짜 디렉터 = `session_014nJCzE4hyxiYc9innhSUng`("Stillness game director handoff", 사장님이 직접 만든 세션). 옛 디렉터 `session_01KcYCh6UfKjrR4m8QjPcEbM`는 은퇴했고 더 보내지 않는다. 디렉터 인계서는 main `docs/director_handoff.md`(`940f665`).
+    - 혼선 기록: 같은 날 09:59에 옛 디렉터가 `session_01NDJVGN7xsXPq19Yzry3BvH`("디렉터 · Stillness 총괄 (새)")을 새 디렉터라고 알렸으나, 이는 옛 디렉터가 만든 중복 세션이었고 보관됐다. 그쪽으로 보낸 인수 보고는 014n에 다시 보냈다.
+    - 보고 전에 `get_session`으로 살아 있는지(RUNNING, 제목) 한 번 보는 습관은 유지한다.
   - 보고는 짧게 쓴다: 커밋 해시, 무엇을 했는지, main.js 전/후 조각, 관문 결과.
 - 디렉터의 지시·병합 알림은 이 세션에 "scheduled trigger" 알림으로 온다. `ReadNotifications`로 읽는다.
 - 디렉터가 요구하는 **관문**:
