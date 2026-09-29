@@ -22,6 +22,7 @@ import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { installGunFx, clearGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
+import { createSwordTrails } from './sword_trail.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
@@ -197,6 +198,7 @@ const particles = new Particles(scene);
 const sound = new Sound();
 // 권총(??? 등급) 총구 섬광·연기·총알 궤적·희미한 조준 레이저 (외형 PM, gun_fx.js — 소리는 그대로 두고 GUN_HOOKS.onShot 을 감싼다).
 //  world·combat 은 판마다 새로 만들어지니, 늘 지금 판 것을 가리키는 얇은 겉감을 넘긴다 (읽기만 한다 — 판정과 무관)
+const swordTrails = createSwordTrails(scene); // 칼 잔상 띠 (외형 PM, sword_trail.js — R0 화면 신호. 판마다 attach, 스텝마다 sample, 프레임마다 update)
 installGunFx({
   scene,
   sound,
@@ -317,6 +319,7 @@ function newRound(weaponId) {
   }
   const madEyes = attachMadEyes(enemy, currentFoe?.eyes === 'madGlow' || params.has('madEyes')); // 광기의 붉은 안광 (외형 PM, mad_eyes.js — 캐릭터 항목 eyes: 'madGlow' / 시험 ?madEyes=1). 잔상은 장면에 두므로 fighterMeshes 뒤에
   if (madEyes) auras.push(madEyes);
+  swordTrails.attach([player, enemy]); // 칼 잔상 띠: 이번 판 두 검객 (지난 띠는 지운다)
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
@@ -1284,6 +1287,7 @@ function frame(now) {
       enemy.cacheState();
       world.step(eventQueue, combat.physicsHooks);
       combat.afterStep(world, eventQueue);
+      swordTrails.sample(PHYSICS.timestep); // 칼 잔상 띠: 이 스텝의 칼 자세를 기록 (읽기만)
       clashCooldown -= PHYSICS.timestep;
       clashStopCooldown -= PHYSICS.timestep;
       stats.simTime += PHYSICS.timestep;
@@ -1308,6 +1312,7 @@ function frame(now) {
     reviveFx.update(enemy, dt * scale);
     particles.update(dt * scale);
     for (const a of auras) a.update(now / 1000);
+    swordTrails.update(); // 칼 잔상 띠
     arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
