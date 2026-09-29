@@ -993,7 +993,39 @@ const _mk = new Float64Array(6);
 const sizeU = (S, mid) => (S <= 1 ? (S - mid) / (1 - mid) : S);
 const _req = { cut: '', side: 'right', phi: 0, S: 0, over: 0, cutB: null, wAB: 0 };
 
-/** o = a + (b − a)·u : 값·자리·각은 선형, 방향은 slerp, ω·α 선형 (o 가 a 나 b 여도 된다) */
+/**
+ * slerp 의 정확한 각속도 (할당 없음): s = R(n, uθ)·w₀ 꼴, n = a×b/|a×b|, θ = ∠(a, b), ȧ = ω_a×a, ḃ = ω_b×b
+ *  → Ω = uθ̇n + sin(uθ)ṅ + (1−cos uθ)(n×ṅ) + R(n, uθ)·w  (w = 돌려지는 벡터의 ω: blendInto 는 ω_a, addOver 는 섞은 값의 ω)
+ *  a·b·ω_a·ω_b·w·out 모두 같은 칸 c. w·out 은 같은 배열이어도 된다(먼저 읽는다). 나란함/마주봄(|a×b| < 1e-6): 축이 없어 w + (ω_b − ω_a)·u
+ */
+function slerpRate(av, bv, ad1, bd1, c, u, w, out) {
+  const ax = av[c], ay = av[c + 1], az = av[c + 2], bx = bv[c], by = bv[c + 1], bz = bv[c + 2];
+  const wax = ad1[c], way = ad1[c + 1], waz = ad1[c + 2], wbx = bd1[c], wby = bd1[c + 1], wbz = bd1[c + 2];
+  const wx = w[c], wy = w[c + 1], wz = w[c + 2];
+  const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
+  const sn = Math.sqrt(cx * cx + cy * cy + cz * cz);
+  if (sn < 1e-6) {
+    out[c] = wx + (wbx - wax) * u;
+    out[c + 1] = wy + (wby - way) * u;
+    out[c + 2] = wz + (wbz - waz) * u;
+    return;
+  }
+  const dax = way * az - waz * ay, day = waz * ax - wax * az, daz = wax * ay - way * ax; // ȧ
+  const dbx = wby * bz - wbz * by, dby = wbz * bx - wbx * bz, dbz = wbx * by - wby * bx; // ḃ
+  const th = Math.atan2(sn, ax * bx + ay * by + az * bz);
+  const thd = -(dax * bx + day * by + daz * bz + ax * dbx + ay * dby + az * dbz) / sn;
+  const nx = cx / sn, ny = cy / sn, nz = cz / sn;
+  const ccx = day * bz - daz * by + ay * dbz - az * dby, ccy = daz * bx - dax * bz + az * dbx - ax * dbz, ccz = dax * by - day * bx + ax * dby - ay * dbx; // ċ
+  const nd = nx * ccx + ny * ccy + nz * ccz;
+  const ndx = (ccx - nx * nd) / sn, ndy = (ccy - ny * nd) / sn, ndz = (ccz - nz * nd) / sn; // ṅ
+  const ps = u * th, sp = Math.sin(ps), cp = 1 - Math.cos(ps), cc = 1 - cp;
+  const nnx = ny * ndz - nz * ndy, nny = nz * ndx - nx * ndz, nnz = nx * ndy - ny * ndx; // n×ṅ
+  const kd = nx * wx + ny * wy + nz * wz; // R(n, ψ)·w
+  out[c] = u * thd * nx + sp * ndx + cp * nnx + wx * cc + (ny * wz - nz * wy) * sp + nx * kd * cp;
+  out[c + 1] = u * thd * ny + sp * ndy + cp * nny + wy * cc + (nz * wx - nx * wz) * sp + ny * kd * cp;
+  out[c + 2] = u * thd * nz + sp * ndz + cp * nnz + wz * cc + (nx * wy - ny * wx) * sp + nz * kd * cp;
+}
+/** o = a + (b − a)·u : 값·자리·각은 선형, 방향은 slerp (ω 는 slerp 의 닫힌 도함수 slerpRate, α 는 선형) (o 가 a 나 b 여도 된다) */
 export function blendInto(a, b, u, o) {
   const av = a.v, bv = b.v, ov = o.v, ad1 = a.d1, bd1 = b.d1, od1 = o.d1, ad2 = a.d2, bd2 = b.d2, od2 = o.d2;
   for (let q = 0; q < LIN_IDX.length; q++) {
@@ -1004,39 +1036,13 @@ export function blendInto(a, b, u, o) {
   }
   for (let q = 0; q < DIR_OFFS.length; q++) {
     const c = DIR_OFFS[q];
-    // slerp 의 정확한 도함수: s = R(n, uθ)·a, n = a×b/|a×b| → Ω = uθ̇n + sin(uθ)ṅ + (1−cos uθ)(n×ṅ) + R(n,uθ)·ω_a  (ȧ = ω_a×a, ḃ = ω_b×b)
-    const ax = av[c], ay = av[c + 1], az = av[c + 2], bx = bv[c], by = bv[c + 1], bz = bv[c + 2];
-    const wax = ad1[c], way = ad1[c + 1], waz = ad1[c + 2], wbx = bd1[c], wby = bd1[c + 1], wbz = bd1[c + 2];
-    const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
-    const sn = Math.hypot(cx, cy, cz);
+    slerpRate(av, bv, ad1, bd1, c, u, ad1, od1); // ω 먼저 (값을 쓰기 전의 a·b 로; o 가 a 여도 된다)
     slerp3(av, c, bv, c, u, ov, c);
-    if (sn < 1e-6) {
-      for (let k = 0; k < 3; k++) od1[c + k] = ad1[c + k] + (bd1[c + k] - ad1[c + k]) * u; // 나란함/마주봄: 축이 없어 선형
-    } else {
-      const dax = way * az - waz * ay, day = waz * ax - wax * az, daz = wax * ay - way * ax; // ȧ
-      const dbx = wby * bz - wbz * by, dby = wbz * bx - wbx * bz, dbz = wbx * by - wby * bx; // ḃ
-      const th = Math.atan2(sn, ax * bx + ay * by + az * bz);
-      const thd = -(dax * bx + day * by + daz * bz + ax * dbx + ay * dby + az * dbz) / sn;
-      const nx = cx / sn, ny = cy / sn, nz = cz / sn;
-      const ccx = day * bz - daz * by + ay * dbz - az * dby, ccy = daz * bx - dax * bz + az * dbx - ax * dbz, ccz = dax * by - day * bx + ax * dby - ay * dbx; // ċ
-      const nd = nx * ccx + ny * ccy + nz * ccz;
-      const ndx = (ccx - nx * nd) / sn, ndy = (ccy - ny * nd) / sn, ndz = (ccz - nz * nd) / sn; // ṅ
-      const ps = u * th, sp = Math.sin(ps), cp = 1 - Math.cos(ps);
-      const nnx = ny * ndz - nz * ndy, nny = nz * ndx - nx * ndz, nnz = nx * ndy - ny * ndx; // n×ṅ
-      // R(n, ψ)·ω_a
-      const kd = nx * wax + ny * way + nz * waz, cc = 1 - cp;
-      const rwx = wax * cc + (ny * waz - nz * way) * sp + nx * kd * cp;
-      const rwy = way * cc + (nz * wax - nx * waz) * sp + ny * kd * cp;
-      const rwz = waz * cc + (nx * way - ny * wax) * sp + nz * kd * cp;
-      od1[c] = u * thd * nx + sp * ndx + cp * nnx + rwx;
-      od1[c + 1] = u * thd * ny + sp * ndy + cp * nny + rwy;
-      od1[c + 2] = u * thd * nz + sp * ndz + cp * nnz + rwz;
-    }
     for (let k = 0; k < 3; k++) od2[c + k] = ad2[c + k] + (bd2[c + k] - ad2[c + k]) * u; // α 는 선형 근사 (아무도 안 쓴다: 팔 α 는 IK 유한 차분, §6.6)
   }
   return o;
 }
-/** 크게 너머 직선 이음: o += over·(L − M). 방향은 M→L 회전 벡터를 over 배 더 돌린다 (slerp t > 1). 이득 1, 자르지 않는다 */
+/** 크게 너머 직선 이음: o += over·(L − M). 방향은 M→L 회전 벡터를 over 배 더 돌린다 (slerp t > 1), ω 는 그 회전의 닫힌 도함수(slerpRate), α 는 선형. 이득 1, 자르지 않는다 */
 export function addOver(o, M, L, over) {
   const ov = o.v, mv = M.v, lv = L.v;
   for (let q = 0; q < LIN_IDX.length; q++) {
@@ -1049,10 +1055,8 @@ export function addOver(o, M, L, over) {
     const c = DIR_OFFS[q];
     logRot(mv, c, lv, c, _r, 0);
     rotateBy(ov, c, _r[0] * over, _r[1] * over, _r[2] * over);
-    for (let k = 0; k < 3; k++) {
-      o.d1[c + k] += (L.d1[c + k] - M.d1[c + k]) * over;
-      o.d2[c + k] += (L.d2[c + k] - M.d2[c + k]) * over;
-    }
+    slerpRate(mv, lv, M.d1, L.d1, c, over, o.d1, o.d1); // Ω = R(over·r)·ω_o + (over·r)˙ 닫힌 식
+    for (let k = 0; k < 3; k++) o.d2[c + k] += (L.d2[c + k] - M.d2[c + k]) * over; // α 는 선형 (아무도 안 쓴다, §6.6)
   }
   return o;
 }

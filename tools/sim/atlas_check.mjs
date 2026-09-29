@@ -349,6 +349,29 @@ const A = packed, g = A.grid;
     }
   }
   gate('over: out += over·(크게 − 보통), 이득 1, 상한 없음 (S 1.25 … 3.25)', e <= 1e-9 && eDir <= 1e-6, `값 ${e.toExponential(2)} · 방향 각 ${eDir.toExponential(2)}°`);
+  // over 의 방향 ω: |ḋ − ω×d| (유한 차분) — 칼 관문, pole 은 보고만 (뒤집힘 자리). S 1 + over ∈ {0.5, 1, 3}, S 0.3 + over 1
+  {
+    const p = makeSample(), q = makeSample(), c = makeSample(), eps = 1e-6;
+    const acc = { sword: [0, 0, 0], elbowPoleS: [0, 0, 0], elbowPoleO: [0, 0, 0] }; // Σerr² Σ|ḋ|² max(err/|ḋ|, |ḋ| > 1)
+    for (const [S, over] of [[1, 0.5], [1, 1], [1, 3], [0.3, 1]])
+      for (let i = 0; i < 160; i++) {
+        const cut = cuts[i & 3], side = sides[(i >> 2) & 1], phi = -0.98 + 3.16 * ((i * 0.618) % 1);
+        A.sampleAt(cut, side, phi - eps, S, p, over);
+        A.sampleAt(cut, side, phi + eps, S, q, over);
+        A.sampleAt(cut, side, phi, S, c, over);
+        for (const [name, o] of [['sword', CH.sword], ['elbowPoleS', CH.poleS], ['elbowPoleO', CH.poleO]]) {
+          const dx = (q.v[o] - p.v[o]) / (2 * eps), dy = (q.v[o + 1] - p.v[o + 1]) / (2 * eps), dz = (q.v[o + 2] - p.v[o + 2]) / (2 * eps);
+          const w = c.d1, cx = w[o + 1] * c.v[o + 2] - w[o + 2] * c.v[o + 1], cy = w[o + 2] * c.v[o] - w[o] * c.v[o + 2], cz = w[o] * c.v[o + 1] - w[o + 1] * c.v[o];
+          const err = Math.hypot(dx - cx, dy - cy, dz - cz), n = Math.hypot(dx, dy, dz), a = acc[name];
+          a[0] += err * err;
+          a[1] += n * n;
+          if (n > 1) a[2] = Math.max(a[2], err / n);
+        }
+      }
+    const st = (a) => [Math.sqrt(a[0] / Math.max(a[1], 1e-12)), a[2]];
+    const [sr, sm] = st(acc.sword), [psr, psm] = st(acc.elbowPoleS), [por, pom] = st(acc.elbowPoleO);
+    gate('over: 방향 ω = slerp 닫힌 도함수 — 칼 |ḋ − ω×d| rms ≤ 1 %, 최대 ≤ 3 % (S 1 + over 0.5/1/3, S 0.3 + over 1)', sr <= 0.01 && sm <= 0.03, `칼 rms ${(sr * 100).toFixed(3)}% max ${(sm * 100).toFixed(3)}% · 보고만: elbowPoleS rms ${(psr * 100).toFixed(2)}% max ${(psm * 100).toFixed(1)}% · elbowPoleO rms ${(por * 100).toFixed(2)}% max ${(pom * 100).toFixed(1)}%`);
+  }
   // 시각·걸음도 같은 규칙: 표시·step = 크게 + over·(크게 − 보통). sample().t·dt = marks()/tAt() 의 시계 (두 답이 없다)
   let eT = 0, eStep = 0, collapse = Infinity, collapseAt = '';
   for (let i = 0; i < 200; i++) {
