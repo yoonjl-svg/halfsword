@@ -478,6 +478,11 @@ export const INPUT = {
   tapPx: 12, // 손가락 탭: 움직인 거리 한도 (px)
   clickMs: 250, // 마우스 클릭: 누른 시간 한도 (ms). 마우스는 끌지 않은 클릭만
   clickPx: 6, // 마우스 클릭: 그동안 움직인 거리 한도 (px, 잠긴 마우스의 움직임 합)
+  // R0 입력 (docs/whole_body_redesign.md 3-2 (a), §9 predictMs): 합쳐진 터치 이벤트(getCoalescedEvents)를 조각마다 제 시각으로 쌓고, 손 목표는
+  //  프레임에 한 번 몰아 넣지 않고 물리 스텝 시각의 손가락 자리(보간)로 스텝마다 옮긴다. 마지막 조각 뒤는 predictMs 까지만 예측(getPredictedEvents,
+  //  없으면 마지막 빠르기로 곧게) — 내다보는 시간이지 움직임·빠르기를 자르는 값이 아니다. 끄면 예전 길 그대로 (프레임에 한 번, 조각 시각은 이벤트 시각)
+  coalesce: !R0_OFF,
+  predictMs: 8, // (ms) 마지막 실제 조각 뒤로 내다보는 시간. 0 이면 예측 없음
 };
 
 // 탭 찌르기 (skill.js thrust): 칼끝을 목표로 맞추고 → 칼 선을 따라 손을 뻗고 → 자세로 돌아온다 (합 약 0.45초)

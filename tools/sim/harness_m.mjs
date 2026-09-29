@@ -125,6 +125,8 @@ export const f1 = (x) => +x.toFixed(1);
 //   · down (기본 true): 첫 프레임에 손가락을 댄다. false 면 앞 궤적에서 떼지 않은 손가락이 그 자리에서 이어 간다
 //   · lift (기본 true): 끝나는 프레임에 손가락을 뗀다 (TRACE_LIFT 조각)
 //  화면: innerHeight 390 px → 1 패드 m = 150 px (INPUT.touchSensitivity 2.6)
+//  R0 입력 (CONFIG.INPUT.coalesce, main.js 와 같게): 손 목표는 프레임이 아니라 물리 스텝마다 그 스텝의 벽시계 시각의 손가락 자리까지
+//   (input.handDeltaAt). touchHz 를 hz 보다 크게 주면(예: 120 Hz 터치 / 60 Hz 화면) 프레임 사이 표본을 getCoalescedEvents 로 묶어 넣는다
 // ─────────────────────────────────────────────────────────────
 const SCREEN_H = 390;
 const SHIM = { window: { addEventListener() {}, innerHeight: SCREEN_H, innerWidth: 844 }, document: { pointerLockElement: null }, matchMedia: () => ({ matches: true }) };
@@ -141,7 +143,7 @@ function withBrowser(fn) {
 }
 
 /** G 에 게임과 같은 입력 길(펌프)을 붙인다 (한 번만. 두 번째부터는 있는 것을 돌려준다). f = 입력을 받는 파이터 */
-export function inputPump(G, { hz = 60, f = G.player } = {}) {
+export function inputPump(G, { hz = 60, f = G.player, touchHz = 0 } = {}) {
   if (G.pump) return G.pump;
   const input = withBrowser(() => new Input({ addEventListener() {} }));
   input.enabled = true;
@@ -151,10 +153,11 @@ export function inputPump(G, { hz = 60, f = G.player } = {}) {
   const ppm = SCREEN_H / CONFIG.INPUT.touchSensitivity; // 패드 m → px (input.js 가 쓰는 배율의 거꾸로)
   // stick: 조이스틱 {x, y}. main.js 처럼 프레임마다 f.move 에 넣는다 (검술 층의 내딛기가 올려 둔 move 도 다음 프레임에 되돌아간다).
   //  null 로 두면 도구가 f.move 를 직접 다룬다
-  const P = { G, f, input, hz, wall: 1000, acc: 0, budget: 0, queue: [], fx: 600, fy: 200, frames: 0, ppm, stick: { x: 0, y: 0 } };
-  // 손가락 이벤트 하나를 input.js 에 (그동안만 브라우저 흉내). 시각 = 이 프레임의 벽시계
-  const send = (type, x, y) => {
+  const P = { G, f, input, hz, touchHz, wall: 1000, acc: 0, budget: 0, queue: [], fx: 600, fy: 200, frames: 0, ppm, stick: { x: 0, y: 0 }, stepWall: 0 };
+  // 손가락 이벤트 하나를 input.js 에 (그동안만 브라우저 흉내). 시각 = 이 프레임의 벽시계. subs = 프레임 사이 표본 (getCoalescedEvents, 마지막 = 이 이벤트)
+  const send = (type, x, y, subs = null) => {
     const e = { type, pointerId: 1, pointerType: 'touch', button: 0, clientX: x, clientY: y, timeStamp: P.wall };
+    if (subs) e.getCoalescedEvents = () => subs;
     withBrowser(() => (type === 'pointerdown' ? input.onDown(e) : type === 'pointermove' ? input.onMove(e) : input.onUp(e)));
   };
   P.frame = () => {
@@ -177,7 +180,21 @@ export function inputPump(G, { hz = 60, f = G.player } = {}) {
       const [x, y] = q.pos(tau);
       const nx = q.bx + x * ppm;
       const ny = q.by - y * ppm;
-      if (nx !== P.fx || ny !== P.fy) send('pointermove', nx, ny);
+      // 터치 표본이 화면보다 잦으면(touchHz) 프레임 사이 표본을 제 시각으로 묶는다 (자리가 바뀐 것만. 마지막 = 이 프레임)
+      const m = P.touchHz > P.hz ? Math.round(P.touchHz / P.hz) : 1;
+      let subs = null;
+      if (m > 1) {
+        subs = [];
+        let px = P.fx, py = P.fy;
+        for (let j = 0; j < m; j++) {
+          const w = P.wall - ((m - 1 - j) * 1000) / P.touchHz;
+          const [sx, sy] = q.pos(Math.max(0, Math.min(w - q.w0, q.T)));
+          const cx = q.bx + sx * ppm, cy = q.by - sy * ppm;
+          if (cx !== px || cy !== py) { subs.push({ clientX: cx, clientY: cy, timeStamp: w }); px = cx; py = cy; }
+        }
+        if (!subs.length) subs = null;
+      }
+      if (nx !== P.fx || ny !== P.fy) send('pointermove', nx, ny, subs);
       P.fx = nx;
       P.fy = ny;
       if (P.wall - q.w0 >= q.T) {
@@ -187,10 +204,10 @@ export function inputPump(G, { hz = 60, f = G.player } = {}) {
         P.queue.shift();
       }
     }
-    // main.js frame(): 손 목표 갱신 (입력 → 플레이어). 손가락 궤적에 프레임 시각
+    // main.js frame(): 손 목표 갱신 (입력 → 플레이어). 손가락 궤적에 프레임 시각. R0 입력이 켜지면 손 목표는 스텝마다 (P.tick)
     input.fingerTrace.tick(P.wall);
     const d = input.consumeHandDelta();
-    if (f.alive) {
+    if (!CONFIG.INPUT.coalesce && f.alive) {
       f.handOffset.x += d.x;
       f.handOffset.y += d.y;
     }
@@ -206,6 +223,15 @@ export function inputPump(G, { hz = 60, f = G.player } = {}) {
   P.tick = () => {
     while (P.budget <= 0) P.frame();
     P.budget--;
+    // main.js while: 이 스텝이 끝나는 벽시계 시각 (프레임 시각 − 남은 스텝·나머지 몫). R0 입력이 켜지면 그 시각의 손가락 자리까지 스텝마다
+    P.stepWall = P.wall - (P.acc + P.budget * DT) * 1000;
+    if (CONFIG.INPUT.coalesce) {
+      const s = input.handDeltaAt(P.stepWall);
+      if (f.alive) {
+        f.handOffset.x += s.x;
+        f.handOffset.y += s.y;
+      }
+    }
   };
   const step0 = G.step;
   G.step = () => {
@@ -221,8 +247,9 @@ export function inputPump(G, { hz = 60, f = G.player } = {}) {
  * @returns 궤적 기록 { done, t0(시작한 물리 시각), t1(끝난 물리 시각), T(ms) } — G.step() 을 돌리면 채워진다
  */
 export function feedTrace(G, trace, hz = 60, opts = {}) {
-  const P = inputPump(G, { hz, f: opts.f });
+  const P = inputPump(G, { hz, f: opts.f, touchHz: opts.touchHz });
   P.hz = hz;
+  if (opts.touchHz != null) P.touchHz = opts.touchHz;
   const tr = Array.isArray(trace) ? { pts: trace } : trace;
   let pos = tr.fn;
   let T = tr.T;

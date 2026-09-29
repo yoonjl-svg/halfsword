@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
-import { PHYSICS, ARENA, CAMERA } from './config.js';
+import { PHYSICS, ARENA, CAMERA, INPUT } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { GUARDS } from './guards.js';
 import { InputTrail } from './trail.js';
@@ -340,6 +340,7 @@ function newRound(weaponId) {
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   // 결심 베기 (온몸 베기 L1): 플레이어만 손가락 원래 궤적으로 결심을 판정한다. 지난 판의 궤적은 읽지 않는다
   input.fingerTrace.clear();
+  input.syncHand(); // R0 입력: 스텝 읽기 커서도 새로
   player.skill.detect = true;
   player.skill.trace = input.fingerTrace;
   // 확정 신호 (모든 기기): 입력 자취가 금색으로 밝아지고 굵어진다. 안드로이드는 짧은 진동을 더한다 (숨소리는 소리 담당, R3 고리)
@@ -1255,8 +1256,9 @@ function frame(now) {
     const d = input.consumeHandDelta();
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
     const inScale = hitStop > 0 ? 0.25 : 1;
+    const perStep = INPUT.coalesce; // R0 입력: 손 목표는 물리 스텝마다 (아래 while). 여기서는 프레임 몫으로 inputActive 만
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
-    if (player.alive && !player.weapon?.gun) {
+    if (!perStep && player.alive && !player.weapon?.gun) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
@@ -1291,6 +1293,16 @@ function frame(now) {
     const physT0 = perf ? performance.now() : 0;
     let steps = 0;
     while (acc >= PHYSICS.timestep && steps < PHYSICS.maxStepsPerFrame) {
+      if (perStep) {
+        // R0 입력: 이 스텝이 끝나는 벽시계 시각의 손가락 자리까지 (물리 시계는 acc 만큼 벽시계에 뒤진다. 멈칫·슬로모션 동안은 프레임 시각).
+        //  권총·죽은 뒤에도 읽어 커서를 옮긴다 — 그동안의 이동을 나중에 몰아 넣지 않는다 (예전 consumeHandDelta 가 버리던 것과 같게)
+        const tStep = scale < 1 ? now : now - (acc - PHYSICS.timestep) * 1000;
+        const s = input.handDeltaAt(tStep);
+        if (player.alive && !player.weapon?.gun) {
+          player.handOffset.x += s.x * inScale;
+          player.handOffset.y += s.y * inScale;
+        }
+      }
       player.foe = enemy;
       enemy.foe = player;
       player.faceTarget = enemy.bodies.pelvis.translation();
