@@ -1,10 +1,11 @@
 // 브라우저 스모크: 한 판 시작 → 무기 카드 한 장 고르기 (내 카드 1번. 맨 오른쪽은 상대 칸이라 못 고른다) → 상대 카드가 뒤집히는지 →
 //  싸움 8초 진행 → 콘솔 에러 0 확인 (싸움이 실제로 흘렀는지도 본다)
 //  실행: vite 개발 서버를 띄운 뒤 (npm run dev) playwright 가 설치된 곳에서
-//    node tools/browser/smoke.mjs http://127.0.0.1:5173
+//    node tools/browser/smoke.mjs http://127.0.0.1:5173 [?hand=wind]   (셋째 인자 = 주소 뒤 질의, 없으면 그대로)
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 const base = process.argv[2] || 'http://127.0.0.1:5173';
+const query = process.argv[3] || '';
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 480, height: 840 } });
 const errors = [];
@@ -12,7 +13,7 @@ page.on('pageerror', (e) => errors.push('pageerror: ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text() + ' @' + (m.location()?.url || '?')); });
 page.on('requestfailed', (r) => errors.push('requestfailed: ' + r.url()));
 page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
-await page.goto(base + '/', { waitUntil: 'networkidle' });
+await page.goto(base + '/' + query, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 30000 });
 await page.getByText('싸움 시작').click();
 // 무기 뽑기: 카드가 다 깔리면(0.45초) 내 카드 첫 장을 누르고, 상대 카드가 뒤집힌 뒤 카드가 사라져 싸움이 시작될 때까지 기다린다

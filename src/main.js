@@ -44,6 +44,14 @@ const atlasReady = Promise.all([import('./strike/atlas.js'), import('./strike/cl
     console.error('[atlas] 읽기 실패 — 온몸 베기 없이 팔 베기로 (stats.atlasMissing 에 센다)', e);
     return null;
   });
+// 칼 든 손 몫 (시험 빌드의 사장님 스위치, 설정 handMode): 'trunk' = 몸통·다리·걸음만 (DRIVE.hands 거짓, 기본) |
+//  'wind' = 큰 감기 (hands 참, handMode 'windOnly', ffFilter 참). 싸움을 열 때 (beginFight) 한 번 적용 — 손가락 없는 AI 는 S = 0 이라 읽지 않는다
+const DRIVE_TRUNK = { hands: CONFIG.DRIVE.hands, handMode: CONFIG.DRIVE.handMode, ffFilter: CONFIG.DRIVE.ffFilter }; // config 기본 = trunk
+function applyHandMode() {
+  const D = CONFIG.DRIVE;
+  if (settings.handMode === 'wind') (D.hands = true), (D.handMode = 'windOnly'), (D.ffFilter = true);
+  else (D.hands = DRIVE_TRUNK.hands), (D.handMode = DRIVE_TRUNK.handMode), (D.ffFilter = DRIVE_TRUNK.ffFilter);
+}
 /** 이 판 파이터에 드라이브를 붙인다 (아틀라스가 있고 아직 안 붙였으면) */
 function attachDrives() {
   if (!atlas) return;
@@ -70,7 +78,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, wholeBody: true, autoChamber: false, gestureInput: 'wind' };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, wholeBody: true, autoChamber: false, gestureInput: 'wind', handMode: 'trunk' };
 // 자동 감기 설정을 쓰는가 (온몸 베기 미리보기에서는 거짓: 설정 줄이 없고, 저장된 값이 참이어도 켜지 않는다 — newRound).
 //  다시 열려면 이것을 참으로 하고 index.html 에 '자동 감기' 줄(data-setting="autoChamber")을 되살린다
 const AUTO_CHAMBER_SETTING = false;
@@ -982,6 +990,7 @@ async function startFight() {
 async function beginFight() {
   // 아틀라스를 다 풀기 전엔 싸움을 시작하지 않는다 (§3.8-9). 보통 메뉴·카드 동안 이미 끝나 있다
   if (!atlas) await atlasReady;
+  applyHandMode(); // 손 몫 스위치는 싸움 앞에서만 (싸우는 중 설정을 바꾸면 다음 싸움부터)
   attachDrives();
   if (PUPPET_ID) await startPuppet(); // R2 꼭두각시 (?puppet=<클립 id>)
   state = 'fight';
@@ -1284,6 +1293,11 @@ function updateGuardName(dt) {
 //  주소 값이 설정 줄보다 먼저 (설정 줄에도 그대로 보인다. 설정 줄을 누르면 그 값으로 바뀐다)
 if (params.get('input') === 'wind' || params.get('input') === 'stroke') {
   settings.gestureInput = params.get('input');
+  refreshSettingsUI();
+}
+// 칼 든 손 몫 (사장님 스위치, 설정 handMode): ?hand=trunk (몸통만, 기본) | ?hand=wind (큰 감기). ?input= 과 같이 주소 값이 설정 줄보다 먼저
+if (params.get('hand') === 'trunk' || params.get('hand') === 'wind') {
+  settings.handMode = params.get('hand');
   refreshSettingsUI();
 }
 // R2 꼭두각시 (§8.1): ?puppet=zornhau_right_large&S=1&loop=1 → 싸움이 시작되면 플레이어 몸 전체를 kinematic 으로 두고 클립대로 놓는다.
