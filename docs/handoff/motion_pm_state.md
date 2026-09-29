@@ -1,6 +1,6 @@
 # 인체 동작 연구 PM — 상태 (늘 최신으로 둔다)
 
-- 갱신: 2026-09-29 오전 (KST). 새 세션은 이 파일만 읽고 이어받는다.
+- 갱신: 2026-09-29 낮 (KST). 새 세션은 이 파일만 읽고 이어받는다.
 - 세션: `session_013YFFvQRnDedG7CTF1eVknA` · 브랜치 `claude/pm-motion-research`. **`docs/motion`·`tools/motion` 만 건드리면 디렉터가 검토 없이 main 에 병합한다.** 새 일을 시작하기 전에 main 을 한 번 병합해 둔다.
 - 디렉터: `session_014nJCzE4hyxiYc9innhSUng` ("Stillness game director handoff", 사장님 확정). `01NDJ…`(보관됨)·`01Kc…`(은퇴)에는 보내지 않는다.
 - 역할: main `docs/pm_roles_charter.md` 부록 A (9/29부터 기본값 시행).
@@ -19,6 +19,8 @@
 | 무엇 | 어디 |
 |---|---|
 | 롱소드 기준 클립 `stillness-motion-clip/2` 48개 (8 베기 × 좌우 × 작게·보통·크게) + 8자 흐름 2 + 런지 찌르기 2, 크기별 파일 + `index.json` (디렉터: 한 파일에 합치지 말 것) | `docs/motion/clips` |
+| 츠바이핸더 크게 벌 v0 8개 (Zornhau·Oberhau·Mittelhau·Unterhau × 좌우) + 따로 `index.json`. 배율은 제안(`build_zweihander.mjs` PROPOSAL, `zweihander_table.md`) | `docs/motion/clips/zweihander` |
+| 클립 검사기 `validate_clip.mjs` (규칙 = `clip_format.md` §6, 코드 = `lib/clip_rules.mjs` 브라우저에서도 돎). 빌드 도구 넷이 끝에서 스스로 돌린다. 60벌 모두 통과 | `tools/motion` |
 | 게임 기록 `stillness-motion-record/1`: 지금 게임 팔 베기 5 (hybrid 걸음, 2 s 서 있기), 시험판 팔·결심 베기 8 (claude/wbs-impl d781ab9) | `docs/motion/records` |
 | 문서: README(처음 볼 곳) · longsword_cuts · spec_table(자동, §7 복귀·시작·끝 자세) · evaluation · targets(초안) · clip_format(clip/2, 재설계 atlas 채널 대조 §3-6) · compare_game(자동) · review_wbs_trial · lunge_flow · flow_table/lunge_table(자동) · weapon_body · sources | `docs/motion` |
 | 비교 화면 (막대 인형 + 게임 기록 겹치기 + 다섯 기준) | `tools/motion/viewer.html` (vite), 공개 페이지 https://claude.ai/artifact/9WQuMAwtePPqLZjM5o49cC — 게시본은 viewer.html 의 `BEGIN-ARTIFACT`…`END-BODY` 사이를 떼어 `MOTION_DATA_BASE = './'` 로 바꾸고 clips·records 를 옆에 둔 것 |
@@ -26,7 +28,7 @@
 ## 열린 요청
 
 - 디렉터 9/29 과제: (a) 채널 대조·빠진 채널 채우기 — **끝남** (a489576, clip/2). (b) 복귀 구간 표본·끝 자세와 가장 가까운 게임 자세 — **끝남** (a489576, spec_table §7: 52벌 모두 시작·끝 자세 = 목표 자세, 손 오차 0 cm). (c) 보통 벌 사이 자세·감기 직후 손목 넘침 — **R2 시험판 뒤에**.
-- 내일부터: 츠바이핸더(감기·지나가기 길고 몸통 몫 큼) · 한손 세이버 moulinet · 레이피어, 각 4무리 × large 만 v0 (R6용, 급하지 않음). 연구 ASS 문헌 조사 결과가 오면 참고. 근거는 `weapon_body.md`.
+- 디렉터 9/29 11:48 과제: ① 검사기 — **끝남** ② 츠바이핸더 large v0 — **끝남** ③ (9/30) 한손 세이버 moulinet(어깨·팔꿈치 원운동, 몸통 몫 작게) 4무리 large v0, 레이피어 큰 공격(런지 찌르기 포함) large v0 — 몸 모형에 빈손 규칙이 필요. 한손 자세표(guards.js BASE_ONE)를 게임이 내보내지 않아 검사기 G 규칙이 한손 클립을 못 본다 → 디렉터에게 export 부탁할 것. 연구 ASS 문헌 결과 오면 붙임 ④ 그다음 score.mjs (compare.mjs 에서 채점 함수를 떼어 버전 붙임: 기준 대비 손 오차·위상 오차·최고 순서·칼 방향·동작 범위, 디렉터 chain.mjs 가 부름).
 - R2 시험판이 나오면 소견 (디렉터 chain.mjs 는 record/1 형식으로 기록을 낸다).
 - 사장님 질문 3개(모캡 자료 요청·직접 촬영·Meyer 번역서)와 논문 사이트 네트워크 차단 — 디렉터가 사장님께 올림. 답 전에는 연락·비용 없음.
 
@@ -40,6 +42,7 @@ node tools/motion/record_game.mjs     # 지금 게임 기록 (hybrid, 2 s 서 �
 WBS_REV=d781ab9 node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>
 node tools/motion/compare.mjs         # compare_game.md
 node tools/motion/qa_clips.mjs        # 겹침 검사 (칼 ↔ 몸, 아래팔 ↔ 몸통)
+node tools/motion/build_zweihander.mjs # 츠바이핸더 크게 벌 8 + zweihander_table.md (build_clips 뒤)
 node tools/motion/validate_clip.mjs   # 클립 검사 (clip_format.md §6). 빌드 셋이 끝에서 스스로 돌린다 — 어긋나면 종료 코드 1
 npx vite                              # → /tools/motion/viewer.html
 ```
@@ -49,3 +52,5 @@ npx vite                              # → /tools/motion/viewer.html
 - 크게 감기 초반 등 8벌에서 아래팔이 몸통에 0.01~0.22 s 동안 25~40% 들어간다(쥔 손이 가슴 앞에 가까워 팔꿈치로는 못 비킴) — 키를 고칠 거리. 칼이 몸을 지나가는 클립은 없다.
 - 보통 벌 감기에서 손목(아래팔-칼) 각이 160° 를 넘는 베기가 있다(Zwerch 175° 등) — 디렉터: R2 뒤에.
 - 논문 본문을 못 읽어(네트워크 정책) 런지·세이버·테니스 수치는 검색 요약이다.
+- 츠바이핸더: 빈 팔 아래팔이 몸통에 들어가는 순간 — Mittelhau 오른쪽 감기 초반 0.28 s 동안 53% (롱소드 같은 곳 41%), Unterhau 왼쪽 35%. 롱소드 키 모양을 늘인 것이라 몬탄테다운 흐름·리카소 쥐기는 없다.
+- 왼쪽 벌은 오른손잡이 몸의 거울이라 온전한 거울이 아니다(clip_format §2) — 가운데 자세는 게임 값, 거울 손이 팔 길이를 넘으면 당김.

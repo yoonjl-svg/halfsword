@@ -19,6 +19,8 @@ const SIZE_KO = { small: '작게 (지금 게임)', medium: '보통', large: '크
 const OVERHEAD = new Set(['zornhau', 'oberhau', 'schielhau', 'scheitelhau', 'krumphau']);
 const TURNING = new Set(['zornhau', 'zwerchhau', 'mittelhau', 'unterhau']);
 const CROSSING = new Set(['zornhau', 'mittelhau']);
+// 롱소드 말고 다른 무기 클립은 clips/<무기>/index.json 에 따로 있다 (clip_format.md §1). 화면에서는 '<무기>:<베기>' 로 묶는다
+const WEAPON_KO = { zweihander: '츠바이핸더' };
 const REC_FOR = { zornhau: 'game_zornhau', oberhau: 'game_oberhau', zwerchhau: 'game_zwerchhau', mittelhau: 'game_mittelhau', unterhau: 'game_unterhau', schielhau: 'game_zornhau', scheitelhau: 'game_oberhau', krumphau: 'game_zornhau' };
 
 const state = {
@@ -309,8 +311,15 @@ let noSmall = false; // 작게 벌도 바탕 베기도 없는 클립(런지): "�
 let rec = null;
 let recOffset = 0;
 
-function clipId(cut, side, size) {
-  return `${cut}_${side}_${size}`;
+/** 이 베기에 겹쳐 볼 게임 기록 — 다른 무기('<무기>:<베기>')는 같은 베기의 롱소드 게임 기록 */
+function recFor(cut) {
+  return REC_FOR[cut] ?? REC_FOR[cut.split(':').pop()];
+}
+function entryFor(cut, side, size) {
+  return index.clips.find((c) => c.cut === cut && c.side === side && c.size === size);
+}
+function pathOf(e) {
+  return `clips/${e.dir ?? ''}${e.file}`;
 }
 async function loadCurrent() {
   // 흐름 클립은 크게 한 벌뿐이다: 없는 크기는 바탕 베기(base) 클립으로 채워 "작게 대비" 숫자만 쓰고, 크기 단추·세 크기 겹쳐 보기는 막는다
@@ -320,9 +329,9 @@ async function loadCurrent() {
   if (!have.has(state.size)) state.size = SIZES.filter((s) => have.has(s)).pop() ?? 'large';
   // 바탕 베기도 없으면(런지) 있는 한 벌로 채운다 — 이때 "작게 대비" 숫자는 쓰지 않는다(renderSheet 의 noSmall)
   const one = SIZES.find((s) => have.has(s));
-  const ids = SIZES.map((s) => (have.has(s) ? clipId(state.cut, state.side, s) : base ? clipId(base, state.side, s) : clipId(state.cut, state.side, one)));
+  const picks = SIZES.map((s) => (have.has(s) ? entryFor(state.cut, state.side, s) : base ? entryFor(base, state.side, s) : entryFor(state.cut, state.side, one)));
   noSmall = !have.has('small') && !base;
-  const clips = await Promise.all(ids.map((id) => getJSON(`clips/${id}.json`)));
+  const clips = await Promise.all(picks.map((e) => getJSON(pathOf(e))));
   SIZES.forEach((s, i) => (sizeClips[s] = clips[i]));
   for (const b of $('size').querySelectorAll('button')) b.disabled = !have.has(b.dataset.v);
   pressed('size', state.size);
@@ -426,8 +435,8 @@ function judge(v, t) {
 function renderSheet() {
   const s = clip.summary;
   const small = sizeClips.small.summary;
-  const cut = clip.base ?? state.cut;
-  $('sName').innerHTML = `${clip.nameKo}<span class="de">${clip.nameDe}</span>`;
+  const cut = clip.base ?? clip.cut;
+  $('sName').innerHTML = `${WEAPON_KO[clip.weapon] ? `${WEAPON_KO[clip.weapon]} · ` : ''}${clip.nameKo}<span class="de">${clip.nameDe}</span>`;
   $('sDesc').textContent = `${clip.desc} · ${SIZE_KO[state.size]} · ${state.side === 'right' ? '오른쪽에서' : '왼쪽에서'}`;
   const seq = s.sequence;
   const P = Object.fromEntries(seq.map((q) => [q.part, q]));
@@ -886,14 +895,14 @@ function renderCuts() {
   const seen = new Map();
   for (const c of index.clips) if (!seen.has(c.cut)) seen.set(c.cut, c);
   $('cuts').innerHTML = [...seen.values()]
-    .map((c) => `<button type="button" class="cut" data-cut="${c.cut}" aria-pressed="${c.cut === state.cut}"><span class="ko">${c.nameKo}</span><span class="de">${c.nameDe}</span><span class="fam">${c.family ?? ''}</span></button>`)
+    .map((c) => `<button type="button" class="cut" data-cut="${c.cut}" aria-pressed="${c.cut === state.cut}"><span class="ko">${c.nameKo}</span><span class="de">${c.nameDe}</span><span class="fam">${c.weaponKo ? `${c.weaponKo} · ` : ''}${c.family ?? ''}</span></button>`)
     .join('');
   $('cuts').addEventListener('click', (e) => {
     const b = e.target.closest('button.cut');
     if (!b) return;
     state.cut = b.dataset.cut;
     for (const x of $('cuts').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x.dataset.cut === state.cut));
-    if (state.recAuto !== false) state.rec = REC_FOR[state.cut] ?? state.rec;
+    if (state.recAuto !== false) state.rec = recFor(state.cut) ?? state.rec;
     $('rec').value = state.rec;
     remember();
     loadCurrent().catch(showError);
@@ -1031,13 +1040,20 @@ async function boot() {
     showError(e);
     return;
   }
+  // 다른 무기 클립 (있으면): 같은 베기라도 '<무기>:<베기>' 로 따로 단추를 만든다
+  for (const w of Object.keys(WEAPON_KO)) {
+    try {
+      const wi = await getJSON(`clips/${w}/index.json`);
+      index = { ...index, clips: [...index.clips, ...wi.clips.map((c) => ({ ...c, cut: `${w}:${c.cut}`, dir: `${w}/`, weaponKo: WEAPON_KO[w] }))] };
+    } catch {}
+  }
   try {
     recIndex = await getJSON('records/index.json');
   } catch {
     recIndex = { records: [] };
   }
   if (!index.clips.some((c) => c.cut === state.cut)) state.cut = index.clips[0].cut;
-  state.rec = REC_FOR[state.cut] && recIndex.records.some((r) => r.id === REC_FOR[state.cut]) ? REC_FOR[state.cut] : '';
+  state.rec = recFor(state.cut) && recIndex.records.some((r) => r.id === recFor(state.cut)) ? recFor(state.cut) : '';
   renderCuts();
   renderRecSelect();
   $('play').textContent = state.playing ? '멈춤' : '재생';

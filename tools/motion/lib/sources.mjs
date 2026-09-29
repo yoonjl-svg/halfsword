@@ -188,6 +188,27 @@ export const SOURCES = {
     read: 'abstract',
     license: '인용',
   },
+  figueyredo_montante: {
+    kind: 'translation',
+    cite: 'Diogo Gomes de Figueyredo, Memorial of the Practice of the Montante (1651) — 몬탄테(대형 양손검) 혼자 연습 규칙 32개: 칼을 크게 돌리며 베기를 멈추지 않고 잇고, 걸음과 함께 나아가고 물러난다',
+    url: 'https://wiktenauer.com/wiki/Diogo_Gomes_de_Figueyredo',
+    read: 'snippet',
+    license: '원문(1651) 퍼블릭 도메인. 번역은 저작권 있을 수 있음 — 서술만 요약',
+  },
+  heavy_implement: {
+    kind: 'biomech',
+    cite: '무거운 도구의 운동 사슬: 회전 투포환 마지막 동작 — 앞 60% 는 발목·무릎·엉덩이가 함께 펴는 밀기, 그 뒤 팔꿈치·손목 차례(가벼운 던지기와 다름). 두 마디 팔 모형은 가벼운·무거운 도구의 최적 기법이 다르다고 봄(Alexander 1991 J Theor Biol 계열)',
+    url: 'https://oalib-perpustakaan.upi.edu/Record/doaj_8e99cb013b1a44bba94b75c1c94b59c0/Description',
+    read: 'snippet',
+    license: '인용',
+  },
+  game_weapons: {
+    kind: 'estimate',
+    cite: '게임 무기 스펙 src/weapons.js (츠바이핸더: Albion "The Wallace" 2.892 kg·칼날 1.17 m 실측 + 균형점 추정) — 손 자리·칼 길이·무게·앞손 둘레 관성을 여기서 읽음 (tools/motion/lib/weapons.mjs)',
+    url: '',
+    read: 'full',
+    license: '우리 것',
+  },
   estimate: {
     kind: 'estimate',
     cite: '동작 연구 PM 추정 — 게임 뼈대 치수·교본 자세·생체역학 범위 안에서 정함',

@@ -43,9 +43,12 @@ export const TOL = {
   guardTrunk: 2, // °   시작·끝 골반·가슴 돌림, 숙임
   guardDrop: 0.01, // m  시작·끝 낮춤
   poseField: 0.002, // m  startPose·endPose 에 적힌 손 오차 대 다시 잰 값
-  armOver: 0.04, // m   팔 넘침 — 게임 쟁기 자세 자체가 뒷손에서 0.028 m 넘는다(게임 팔 0.565 m 로 못 닿음). 그보다 조금 크게
+  armOver: 0.04, // m   팔 넘침 — 게임 쟁기 자세 자체가 롱소드 뒷손에서 0.028 m 넘는다(게임 팔 0.565 m 로 못 닿음). 그보다 조금 크게.
+  //                    시작·끝 게임 자세 자체의 넘침이 더 크면(츠바이핸더 쟁기 뒷손 0.047 m — 칼자루가 4 cm 길다) 그 값까지 (R1)
   legOver: 0.02, // m   다리 넘침 — 지금 가장 큰 값은 런지 뒷다리 0.015 m
   bone: 0.005, // m     뼈 길이 (J 는 0.001 m 로 반올림)
+  ground: -0.02, // m   칼끝 높이 아래 한계 (땅 = 0, 칼끝 굵기·반올림 몫)
+  round: 0.002, // m    손·어깨띠 채널 반올림(0.001 m) 두 번 몫 — R1 에서 시작·끝 자세 넘침과 견줄 때
 };
 
 /** 게임 자세 id (build 도구·clip 필드 이름) → src/guards.js 자세 이름 */
@@ -247,24 +250,42 @@ export function checkClip(clip, opts = {}) {
     const i = d.cols[ch].findIndex((x) => x < lo - 1e-9 || x > hi + 1e-9);
     if (i >= 0) err('U2', `${ch} 표본 ${i} 값 ${d.cols[ch][i]} — ${lo} ~ ${hi} 밖`);
   };
+  // U3: 칼끝이 땅(y = 0) 밑으로 들어가지 않는다
+  {
+    const Jc = d.cols.J;
+    let lo = { y: Infinity, i: 0 };
+    for (let i = 0; i < n; i++) {
+      const y = Jc[(i * JOINTS.length + J.tip) * 3 + 1];
+      if (y < lo.y) lo = { y, i };
+    }
+    if (lo.y < TOL.ground) err('U3', `칼끝이 땅 밑 ${lo.y.toFixed(3)} m (표본 ${lo.i}, t ${t[lo.i]}) — 허용 ${TOL.ground} m`);
+  }
   range('openness', 0, 1);
   range('guardGap', 0, Infinity);
   range('feet.L.lift', 0, 1);
   range('feet.R.lift', 0, 1);
 
   // ── R 뼈 길이·팔다리 넘침 ──
-  // R1 팔: 어깨(가슴 틀) = [어깨띠 내밂, 0.1 + 어깨띠 들림, ±0.2] → 손까지 거리 − (위팔 0.30 + 아래팔 0.265)
+  // R1 팔: 어깨(가슴 틀) = [어깨띠 내밂, 0.1 + 어깨띠 들림, ±0.2] → 손까지 거리 − (위팔 0.30 + 아래팔 0.265).
+  //  허용 = max(0.04 m, 첫·끝 표본의 넘침): 시작·끝은 게임 자세(G1)라, 그 자세 자체의 넘침(게임 자세표 × 그 무기 칼자루 길이)까지는 봐준다
   const reach = BODY.upper + BODY.fore;
-  let arm = { over: -1, i: 0, which: '' };
-  for (let i = 0; i < n; i++) {
+  const overAt = (i) => {
+    let best = { over: -1, i, which: '' };
     for (const [hand, gird, sz, which] of [['handS', 'girdleS', 1, '칼 팔'], ['handO', 'girdleO', -1, '빈 팔']]) {
       const h = at(clip, hand, i), g = at(clip, gird, i);
       const sh = [BODY.shoulder[0] + g[1], BODY.shoulder[1] + g[0], sz * BODY.shoulder[2]];
       const o = len(sub(h, sh)) - reach;
-      if (o > arm.over) arm = { over: o, i, which };
+      if (o > best.over) best = { over: o, i, which };
     }
+    return best;
+  };
+  let arm = { over: -1, i: 0, which: '' };
+  for (let i = 0; i < n; i++) {
+    const o = overAt(i);
+    if (o.over > arm.over) arm = o;
   }
-  if (arm.over > TOL.armOver) err('R1', `${arm.which} 넘침 ${arm.over.toFixed(3)} m (표본 ${arm.i}, t ${t[arm.i]}) — 손이 어깨에서 팔 길이 ${reach} m 보다 멀다, 허용 ${TOL.armOver} m`);
+  const armTol = Math.max(TOL.armOver, overAt(0).over + TOL.round, overAt(n - 1).over + TOL.round);
+  if (arm.over > armTol) err('R1', `${arm.which} 넘침 ${arm.over.toFixed(3)} m (표본 ${arm.i}, t ${t[arm.i]}) — 손이 어깨에서 팔 길이 ${reach} m 보다 멀다, 허용 ${armTol.toFixed(3)} m (0.04 또는 시작·끝 게임 자세 자체의 넘침)`);
   // R2 다리: 발목 목표 = 뒤꿈치 + 0.06 m × 발 방향(뒤꿈치 → 앞꿈치, 수평) + 0.06 m 위 (body.mjs 발 모양) → 엉덩이에서 거리 − (0.43 + 0.42)
   let leg = { over: -1, i: 0, foot: '' };
   for (let i = 0; i < n; i++) {

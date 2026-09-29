@@ -36,6 +36,7 @@
 | Wiktenauer 번역들 (Trosclair Ringeck, Lindholm Döbringer, Garber–Chidester Meyer 초벌 번역 PDF) | Wiktenauer 자체 글은 CC BY-SA 4.0, **번역마다 조건이 다름**(토론 페이지 표). 일부는 특별 허락으로만 올라 있음 | 조건 미확인 — 문장 인용은 짧게, 게임 안 글로 옮기지 않는다 |
 | 해설 블로그 (grauenwolf, swordfight.uk, scholarvictoria) | 인용만 | Meyer 네 곧은 베기, 걸음 규칙 |
 | **"Zornhau 끝 = 왼쪽 바꿈·옆 지킴"** | — | 현대 Meyer 수련의 관행으로 적었다 [기억]. Meyer 원문에서 확인 못 함 |
+| Figueyredo, *Memorial of the Practice of the Montante* (1651) — 몬탄테 혼자 연습 규칙 32개 | 원문 퍼블릭 도메인, 번역은 조건 확인 전 — 서술만 요약 | 검색 요약만 읽음. 츠바이핸더 클립(`sources` 의 `figueyredo_montante`) 근거: 크게 돌리며 멈추지 않고 잇는다 |
 
 ## 3. 모션 캡처 논문·데이터 [측정]
 
@@ -65,12 +66,15 @@
 | Mulloy 외 ISBS 펜싱 런지 운동 사슬 | 뒷다리 엉덩이→무릎→발목 순서, 뒷발목 폄 564±132 °/s | 검색 요약 |
 | 검도 머리치기 시간 (Sports Biomechanics 2026) | 대학 선수 머리치기 0.818±0.085 s, 손목치기 0.745±0.101 s | snippet |
 
+- 무거운 도구의 운동 사슬 [검색 요약]: 회전 투포환의 마지막 동작은 앞 60% 동안 발목·무릎·엉덩이가 **함께** 펴는 밀기, 그 뒤 팔꿈치·손목 차례다(가벼운 던지기의 채찍과 다름) — [DOAJ 초록](https://oalib-perpustakaan.upi.edu/Record/doaj_8e99cb013b1a44bba94b75c1c94b59c0/Description). 단순 팔 모형은 가벼운·무거운 도구의 최적 기법이 다르다고 본다(Alexander 1991 J Theor Biol 계열 — [SFU 학위논문 인용](https://summit.sfu.ca/_flysystem/fedora/sfu_migrate/5750/b15249815.pdf)). 츠바이핸더 운동 사슬 제안(앞섬은 롱소드와 같게, 돌림 곡선만 길게)의 근거.
+
 ## 5. 추정 [추정]
 
 - 몸 모형 치수는 게임 뼈대(`src/fighter.js`) 그대로. 사람 팔(어깨→칼자루 약 0.63~0.66 m)보다 짧다(0.565 m).
 - 키프레임 자세·시간, 운동 사슬 간격(골반 −130 / 가슴 −90 ms 를 빠른 곡선의 최고로), 베는 면(겨눈 방향)은 위 자료의 범위 안에서 정했다.
 - 손목 한계 약 135°(두손 망치 쥐기 약 90° + 옆굽힘·굽힘) — 측정 자료 없음.
 - 허점 어림(앞이 빈 시간)의 띠 크기(가슴 앞 0.45 m, 0.3 m)는 정의일 뿐 측정이 아니다.
+- 츠바이핸더 크게 벌의 배율(감기 1.3 · 풀기 1.27 · 지나가기 1.5 · 복귀 1.3 · 몸통 돌림 1.2)은 게임 무기 부품 값으로 셈한 관성(2.81배)과 재설계 T0 비(1.27)에서 낸 **제안**이다(`zweihander_table.md` §1). 칼 치수는 게임 스펙 `src/weapons.js`(`sources` 의 `game_weapons`).
 
 ## 6. 확보하지 못한 것 · 사장님께 여쭐 것
 

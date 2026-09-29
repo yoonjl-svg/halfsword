@@ -12,7 +12,8 @@
 | 경로 | 내용 |
 |---|---|
 | `docs/motion/clips/<베기>_<right\|left>_<small\|medium\|large>.json` | 클립 한 벌. 베기: zornhau, oberhau, zwerchhau, schielhau, unterhau, scheitelhau, krumphau, mittelhau |
-| `docs/motion/clips/index.json` | `{ format: 'stillness-motion-index/1', generated, clips: [{ id, cut, nameKo, nameDe, family, desc, side, size, file, summary }] }` |
+| `docs/motion/clips/index.json` | `{ format: 'stillness-motion-index/1', generated, clips: [{ id, cut, nameKo, nameDe, family, desc, side, size, file, summary }] }` — 롱소드 |
+| `docs/motion/clips/<무기>/<베기>_<쪽>_large.json` + `index.json` | 다른 무기(지금 `zweihander` 8벌: zornhau·oberhau·mittelhau·unterhau × 좌우, large 만). 목록 형식은 같고 위에 `weapon`·`grip`·`proposal`, 항목마다 `weapon`. 롱소드 목록과 섞지 않는다 — 같은 베기 id 가 무기마다 있다 |
 | `docs/motion/records/<id>.json` | 게임 기록 (§5) |
 | `docs/motion/records/index.json` | `{ format: 'stillness-motion-records/1', records: [{ id, cut, kind, file, source, summary }] }` |
 
@@ -36,6 +37,8 @@
   hz: 120, weapon: 'longsword', handedness: 'right',
   marks:    { t0, tw, tr, tc, tf, tg },      // 초
   phiMarks: { t0: -1, tw: 0, tr: 0.55, tc: 0.85, tf: 1.6, tg: 2.2 },
+  grip:     { offHand, pommel, guard, tip, mass, com, inertia, from },  // 칼 치수 (앞손에서 칼 축 m · kg · 앞손 둘레 kg·m²) — 게임 src/weapons.js 에서 읽음
+  proposal: { time, trunk, chain, basis },  // 츠바이핸더만: 롱소드 크게 벌 대비 제안 배율과 근거 (zweihander_table.md §1)
   sources:  [{ id, kind, cite, url, read, license }],
   provenance: '…',                          // 작게 = 게임 자세표, 크게 = 저작, 보통 = 섞음
   summary:  { … },                           // 측정 요약 (spec_table.md 와 같은 값)
@@ -192,12 +195,13 @@
 | P3 | φ 채널 | 표시 사이에서 시간에 선형(§3-1), 첫 값 −1 · 끝 값 2.2, 줄지 않는다. 흐름 클립은 marks2.tw 에서 한 번만 되돌아간다(앞은 marks1, 뒤는 marks2 로 셈) | ±0.002 |
 | U1 | 방향 벡터 | `sword`·`edge`·`elbowPoleS`·`elbowPoleO` 길이 1 | ±0.01 |
 | U2 | 범위 | `openness` 0~1, `guardGap` ≥ 0, `feet.*.lift` 0~1 | — |
+| U3 | 땅 | 모든 표본에서 칼끝 높이(`J` 의 tip y, 땅 = 0) ≥ −0.02 m — 칼이 땅을 뚫지 않는다 | −0.02 m |
 | G0 | 목표 자세 | `startFrom`·`recoverTo` 가 게임 자세표에 있다. null 이면 경고(대조 안 함). 검사기가 그 무기의 자세표를 모르면 실패 | — |
 | G1 | 시작·끝 손 | 첫 표본(`startFrom`)·끝 표본(`recoverTo`)의 앞손 = `J` 의 hS − chest. 땅 틀 축 = 게임이 손 목표를 두는 '바라보는 틀'(가슴 가운데 원점, 돌림·숙임 없음). 게임 자세표 `hand` 와 거리 | **0.02 m** (디렉터 요청) |
 | G2 | 시작·끝 칼 | 같은 표본의 칼 방향 = `J` 의 tip − pommel, 자세표 칼끝 방향(guards.js `dir`)과 사이 각 | 3° |
 | G3 | 시작·끝 몸통 | `chest.yaw` ↔ `chestYaw`, `chest.lean` ↔ `pitch`, `pelvis.yaw` ↔ `pelvisYaw` × 0.5 (게임 fighter.js 는 골반을 자세표 값의 절반만 튼다), `pelvis.drop` ↔ `drop` | 2° · 0.01 m |
 | G4 | 적힌 값 | `startPose`·`endPose` (가장 가까운 자세 id·손 오차)가 데이터로 다시 잰 값과 같다. `recovery` = { from: tf, to: tg, samples: tf~tg 표본 수 } | 0.002 m |
-| R1 | 팔 넘침 | 모든 표본: \|손 − 어깨\| − 0.565 m. 어깨(가슴 틀) = [어깨띠 내밂, 0.1 + 어깨띠 들림, ±0.2] — 칼 팔 = `handS`·`girdleS`·+0.2, 빈 팔 = `handO`·`girdleO`·−0.2. 0.565 = 게임 위팔 0.30 + 아래팔 0.265 | 0.04 m (게임 쟁기 자세 자체가 뒷손에서 0.028 m 넘는다) |
+| R1 | 팔 넘침 | 모든 표본: \|손 − 어깨\| − 0.565 m. 어깨(가슴 틀) = [어깨띠 내밂, 0.1 + 어깨띠 들림, ±0.2] — 칼 팔 = `handS`·`girdleS`·+0.2, 빈 팔 = `handO`·`girdleO`·−0.2. 0.565 = 게임 위팔 0.30 + 아래팔 0.265 | max(0.04 m, 첫·끝 표본의 넘침 + 반올림 0.002 m) — 시작·끝은 게임 자세라 그 자세 자체의 넘침까지 봐준다 (롱소드 쟁기 뒷손 0.028 m, 츠바이핸더 쟁기 뒷손 0.047 m: 칼자루가 4 cm 길다) |
 | R2 | 다리 넘침 | 모든 표본: \|발목 목표 − 엉덩이\| − 0.85 m (넓적다리 0.43 + 정강이 0.42). 발목 목표 = `J` 의 뒤꿈치 + 0.06 m × 발 방향(뒤꿈치 → 앞꿈치, 수평) + 0.06 m 위 — 발 모양은 `lib/body.mjs` | 0.02 m (지금 가장 큰 값: 런지 뒷다리 0.015 m) |
 | R3 | 뼈 길이 | `J` 에서 엉덩이–허리 0.13, 허리–가슴 0.27, 위팔 0.30, 넓적다리 0.43, 정강이 0.42 (게임 뼈대 치수). 두 손 사이·자루 끝↔칼끝 거리는 표본마다 같다(굳은 칼). `grip` 칸이 있으면 두 손 사이 = \|grip.offHand\|, 자루 끝↔칼끝 = grip.tip − grip.pommel | 0.005 m |
 
@@ -215,7 +219,7 @@
 ### 6-3. 게임 자세표 대조
 
 - 자세 id ↔ `src/guards.js` 이름: tag 지붕 (Vom Tag) · tagR 어깨 지붕 (Vom Tag) · ochs 황소 (Ochs) · langort 긴 자세 (Langort) · side 옆 자세 · pflug 쟁기 (Pflug) · wechsel 바꿈 (Wechsel) · neben 옆 지킴 (Nebenhut) · alber 바보 (Alber) · tagL 왼쪽 어깨 지붕 · ochsL 왼쪽 황소 · sideL 왼쪽 옆 자세 · pflugL 왼쪽 쟁기 · wechselL 왼쪽 바꿈.
-- 두손 무기(롱소드·츠바이핸더)는 같은 자세표를 쓴다. 한손 무기 자세표(guards.js 안 `BASE_ONE`)는 게임이 내보내지 않아 검사기가 아직 모른다 — 한손 클립은 G0 로 실패한다.
+- 두손 무기(롱소드·츠바이핸더)는 같은 자세표를 쓴다. 츠바이핸더는 칼자루가 길어(뒷손 −0.18 m, 롱소드 −0.14 m) 같은 쟁기 자세에서 뒷손이 0.047 m 넘친다 — 게임 자세 그대로라 R1 이 봐준다. 한손 무기 자세표(guards.js 안 `BASE_ONE`)는 게임이 내보내지 않아 검사기가 아직 모른다 — 한손 클립은 G0 로 실패한다.
 - 9/29: 52벌 모두 통과. 이 검사로 왼쪽 벌 5개의 팔 넘침(0.041~0.076 m)을 찾아 거울 규칙을 고쳤다(§2).
 
 ## 7. 바뀐 기록
@@ -229,3 +233,4 @@
 | clip/1 | 2026-09-29 | 런지 클립(§3-5) 더함 |
 | **clip/2** | 2026-09-29 | 디렉터 요청(재설계 atlas 채널 대조): 채널 `elbowPoleO`·`girdleS`·`girdleO`·`guardGap`·`openness`, 필드 `step`·`startFrom`·`startPose`·`recoverTo`·`endPose`·`recovery` 더함. 게임 자세 키를 게임과 같은 틀(바라보는 틀, 가슴 가운데 원점)로 옮기게 고쳐 시작·끝 자세 손이 자세표와 같아짐(전에는 숙임만큼 3~4 cm 어긋남). balanceAssist 는 없음 |
 | clip/2 | 2026-09-29 | 검사 규칙(§6)과 검사기 `validate_clip.mjs`(디렉터 요청). 형식은 같다. 검사로 찾은 왼쪽 벌 팔 넘침을 고치려고 거울 규칙을 바꿈(§2: 가운데 자세는 게임 값, 거울 손이 팔 길이를 넘으면 당김) — 왼쪽 13벌 값이 조금 바뀜, 팔 넘침 최대 0.076 → 0.028 m |
+| clip/2 | 2026-09-29 | 칸 `grip`(모든 클립: 칼 치수, 게임 src/weapons.js 에서 읽음)·`proposal`(츠바이핸더) 더함. 츠바이핸더 크게 벌 8벌을 `clips/zweihander/` 에 따로 둠. 검사 U3(칼끝이 땅 밑으로 가지 않음) 더함, R1 허용에 시작·끝 게임 자세 자체의 넘침을 넣음(츠바이핸더 쟁기 뒷손 0.047 m) |

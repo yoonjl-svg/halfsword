@@ -14,8 +14,9 @@ import { SOURCES } from './lib/sources.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, fromGameGuard, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { v3, m3, frame } from './lib/body.mjs';
-import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
+import { toKeys, marksOf, mirror, clipExtras, chainWithProfiles } from './lib/sets.mjs';
 import { validateFile, report } from './validate_clip.mjs';
+import { gripField } from './lib/weapons.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'clips');
@@ -77,23 +78,8 @@ function build(cut, sizeName, sideName) {
   let set = sizeName === 'small' ? cut.small : sizeName === 'large' ? cut.large : cut.medium ? retimeSteps(cut.medium, cut.large) : blend(cut.small, cut.large, 0.5);
   if (sideName === 'left') set = mirror(set);
   const marks = marksOf(set);
-  const chain = { ...set.chain };
-  // 운동 사슬 곡선: 골반·가슴 돌림을 감기 끝 값 → 지나가기 끝 값으로, 최고 속도가 겨눈 선(tc)보다 앞서게
-  //  (골프 프로: 골반 → 가슴 → 팔 → 채, 간격 약 20~40 ms · 야구: 골반 → 어깨 [측정] — lib/cuts.mjs CHAIN.seq)
-  if (chain.seq) {
-    const kw = set.keys.find((k) => k.tag === 'tw');
-    const kc = set.keys.find((k) => k.tag === 'tc');
-    const kf = set.keys.find((k) => k.tag === 'tf');
-    const q = chain.seq;
-    // 겨눈 선에서의 돌림은 저작한 tc 키 값을 지킨다. 나머지(겨눈 선 → 지나가기 끝)는 느린 두 번째 곡선이 낸다
-    const slow = { peak2: marks.tc + 0.1, dur2: Math.max(0.3, (marks.tf - marks.tc) * 1.6) };
-    chain.profiles = {
-      pelvis: { v0: kw.p[0], vc: kc.p[0], v1: kf.p[0], tc: marks.tc, peak: marks.tc - q.pelvis, dur: q.dur, ...slow },
-      chest: { v0: kw.p[0] + kw.c[0], vc: kc.p[0] + kc.c[0], v1: kf.p[0] + kf.c[0], tc: marks.tc, peak: marks.tc - q.chest, dur: q.dur, ...slow },
-    };
-    chain.pelvis = 0;
-    chain.chest = 0;
-  }
+  // 운동 사슬 곡선 (lib/sets.mjs chainWithProfiles)
+  const chain = chainWithProfiles(set, marks);
   const def = { keys: toKeys(set), marks, chain };
   const { frames } = sampleClip(def, 1);
   const rows = measure(frames, marks);
@@ -138,6 +124,7 @@ for (const cut of CUTS) {
         hz: HZ,
         weapon: 'longsword',
         handedness: 'right',
+        grip: gripField('longsword'), // 칼 치수 (앞손에서 칼 축 m) — src/weapons.js 에서 읽음
         units: 'm, 도(°), 초, rad/s(w), m/s(speed)',
         frame:
           '월드 = 클립 시작 때 골반 밑 땅, x 앞(상대 쪽) · y 위 · z 칼 든 쪽(오른쪽). 가슴 틀 값(handS·handO·sword·edge·elbow·shoulderS) = 가슴 가운데 원점, 가슴 상자와 함께 돈다. handS_face = 골반이 향하는 쪽 틀(게임의 지금 손 목표 틀과 같은 종류). yaw + = 칼 든 쪽 어깨·골반이 뒤로 (게임 guards.js 부호).',

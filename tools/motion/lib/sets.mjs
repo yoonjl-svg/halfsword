@@ -77,6 +77,28 @@ export function mirror(set) {
   return { keys, steps, chain: set.chain };
 }
 
+/**
+ * 운동 사슬 곡선: 골반·가슴 돌림을 감기 끝 값 → 지나가기 끝 값으로, 최고 속도가 겨눈 선(tc)보다 앞서게
+ *  (골프 프로: 골반 → 가슴 → 팔 → 채, 간격 약 20~40 ms · 야구: 골반 → 어깨 [측정] — lib/cuts.mjs CHAIN.seq)
+ *  겨눈 선에서의 돌림은 저작한 tc 키 값을 지킨다. 나머지(겨눈 선 → 지나가기 끝)는 느린 두 번째 곡선이 낸다(tc + peak2After 에 최고)
+ */
+export function chainWithProfiles(set, marks, { peak2After = 0.1 } = {}) {
+  const chain = { ...set.chain };
+  if (!chain.seq) return chain;
+  const kw = set.keys.find((k) => k.tag === 'tw');
+  const kc = set.keys.find((k) => k.tag === 'tc');
+  const kf = set.keys.find((k) => k.tag === 'tf');
+  const q = chain.seq;
+  const slow = { peak2: marks.tc + peak2After, dur2: Math.max(0.3, (marks.tf - marks.tc) * 1.6) };
+  chain.profiles = {
+    pelvis: { v0: kw.p[0], vc: kc.p[0], v1: kf.p[0], tc: marks.tc, peak: marks.tc - q.pelvis, dur: q.dur, ...slow },
+    chest: { v0: kw.p[0] + kw.c[0], vc: kc.p[0] + kc.c[0], v1: kf.p[0] + kf.c[0], tc: marks.tc, peak: marks.tc - q.chest, dur: q.dur, ...slow },
+  };
+  chain.pelvis = 0;
+  chain.chest = 0;
+  return chain;
+}
+
 /** clip/2 에 더한 클립 단위 값: 걸음(목표·때), 시작·복귀 목표 자세와 시작·끝 자세에 가장 가까운 게임 자세(손 오차), 복귀 구간 표본 */
 export function clipExtras(set, rows, marks) {
   const last = set.keys[set.keys.length - 1];

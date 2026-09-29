@@ -18,6 +18,7 @@ import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, phaseAt, stepOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES, v3, m3, frame } from './lib/body.mjs';
 import { validateFile, report } from './validate_clip.mjs';
+import { gripField } from './lib/weapons.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion');
@@ -209,6 +210,7 @@ for (const side of ['right', 'left']) {
     hz: HZ,
     weapon: 'longsword',
     handedness: 'right',
+    grip: gripField('longsword'), // 칼 치수 (앞손에서 칼 축 m) — src/weapons.js 에서 읽음
     units: 'm, 도(°), 초, rad/s(w), m/s(speed)',
     frame: '베기 클립과 같다 (lib/clip.mjs · clip_format.md §2)',
     marks,
