@@ -20,7 +20,7 @@ const OVERHEAD = new Set(['zornhau', 'oberhau', 'schielhau', 'scheitelhau', 'kru
 const TURNING = new Set(['zornhau', 'zwerchhau', 'mittelhau', 'unterhau']);
 const CROSSING = new Set(['zornhau', 'mittelhau']);
 // 롱소드 말고 다른 무기 클립은 clips/<무기>/index.json 에 따로 있다 (clip_format.md §1). 화면에서는 '<무기>:<베기>' 로 묶는다
-const WEAPON_KO = { zweihander: '츠바이핸더' };
+const WEAPON_KO = { zweihander: '츠바이핸더', sabre: '세이버', rapier: '레이피어' };
 const REC_FOR = { zornhau: 'game_zornhau', oberhau: 'game_oberhau', zwerchhau: 'game_zwerchhau', mittelhau: 'game_mittelhau', unterhau: 'game_unterhau', schielhau: 'game_zornhau', scheitelhau: 'game_oberhau', krumphau: 'game_zornhau' };
 
 const state = {

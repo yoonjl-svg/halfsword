@@ -32,11 +32,12 @@ export function weaponGeom(id) {
     inertia: r3(I),
     inertiaExact: I, // 배율 셈용 (반올림 전)
     twoHand: w.twoHand,
+    oneHandStance: w.oneHandStance,
   };
 }
 
 /** 클립 `grip` 칸: 이 클립이 가정한 칼 치수 (앞손에서 칼 축 m, 무게 kg, 관성 kg·m²) — 읽는 쪽이 손 자리를 게임과 맞춰 볼 수 있게 */
 export function gripField(id) {
   const g = weaponGeom(id);
-  return { offHand: g.offHand, pommel: g.pommel, guard: g.guard, tip: g.tip, mass: g.mass, com: g.com, inertia: g.inertia, from: `src/weapons.js ${id}` };
+  return { hands: g.twoHand ? 2 : 1, offHand: g.twoHand ? g.offHand : null, pommel: g.pommel, guard: g.guard, tip: g.tip, mass: g.mass, com: g.com, inertia: g.inertia, from: `src/weapons.js ${id}` };
 }

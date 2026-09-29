@@ -17,6 +17,7 @@ export function toKeys(set) {
     pelvis: { yaw: k.p[0], drop: k.p[1], pitch: k.p[2] ?? 0, roll: 0 },
     chest: { yaw: k.c[0], lean: k.c[1], side: k.c[2] ?? 0 },
     hand: k.h,
+    hand2: k.h2, // 한손 무기의 빈손 (가슴 틀). 없으면 두손 쥐기
     // 칼 방향: 저작 키는 그 키의 가슴 틀 → 월드로 바꿔 둔다 (보간은 월드에서)
     dirV: m3.apply(frame(k.p[0] + k.c[0], (k.p[2] ?? 0) + k.c[1], k.c[2] ?? 0), k.d),
   }));
@@ -50,25 +51,27 @@ export function marksOf(set) {
  *    — 게임에서 그 구간은 양쪽이 같은 길이다(거울에 비추면 손이 옆으로 10 cm 지그재그).
  */
 const SAME_GUARD = { tag: 'tag', langort: 'langort', alber: 'alber' };
-function guardKey(k, id) {
-  const g = fromGameGuard(GAME_GUARDS[id]);
-  return { t: k.t, tag: k.tag, p: [g.pelvis.yaw, g.pelvis.drop, 0], c: [g.chest.yaw, g.chest.lean, 0], h: g.hand, d: g.dirV, guard: id };
+function guardKey(k, id, guards) {
+  const g = fromGameGuard(guards[id]);
+  return { t: k.t, tag: k.tag, p: [g.pelvis.yaw, g.pelvis.drop, 0], c: [g.chest.yaw, g.chest.lean, 0], h: g.hand, d: g.dirV, guard: id, h2: mirrorH2(k) };
 }
-export function mirror(set) {
+/** 한손 무기의 빈손: 거울에 비추지 않는다 — 몸은 오른손잡이 그대로라 빈 팔(왼팔)은 왼쪽에 남는다 (왼쪽 베기 = 뒷손 베기) */
+const mirrorH2 = (k) => (k.h2 ? [...k.h2] : undefined);
+export function mirror(set, guards = GAME_GUARDS) {
   const reach = BODY.upper + BODY.fore;
   // 저작 키마다 앞·뒤로 가장 가까운 게임 자세 키
   const before = [], after = [];
   set.keys.forEach((k, i) => (before[i] = k.guard ?? before[i - 1]));
   for (let i = set.keys.length - 1; i >= 0; i--) after[i] = set.keys[i].guard ?? after[i + 1];
   const keys = set.keys.map((k, i) => {
-    if (k.guard && MIRROR_GUARD[k.guard]) return guardKey(k, MIRROR_GUARD[k.guard]);
-    if (k.guard && SAME_GUARD[k.guard]) return guardKey(k, SAME_GUARD[k.guard]);
-    if (SAME_GUARD[before[i]] && SAME_GUARD[after[i]]) return { t: k.t, tag: k.tag, p: [...k.p], c: [...k.c], h: [...k.h], d: [...k.d] };
+    if (k.guard && MIRROR_GUARD[k.guard]) return guardKey(k, MIRROR_GUARD[k.guard], guards);
+    if (k.guard && SAME_GUARD[k.guard]) return guardKey(k, SAME_GUARD[k.guard], guards);
+    if (SAME_GUARD[before[i]] && SAME_GUARD[after[i]]) return { t: k.t, tag: k.tag, p: [...k.p], c: [...k.c], h: [...k.h], d: [...k.d], h2: k.h2 };
     let h = [k.h[0], k.h[1], -k.h[2]];
     const off = v3.sub(h, BODY.shoulder);
     if (v3.len(off) > reach) h = v3.add(BODY.shoulder, v3.mul(off, reach / v3.len(off)));
     // 짝이 없는 자세(옆 지킴)는 이름 없음
-    return { t: k.t, tag: k.tag, p: [-k.p[0], k.p[1], k.p[2] ?? 0], c: [-k.c[0], k.c[1], -(k.c[2] ?? 0)], h, d: [k.d[0], k.d[1], -k.d[2]] };
+    return { t: k.t, tag: k.tag, p: [-k.p[0], k.p[1], k.p[2] ?? 0], c: [-k.c[0], k.c[1], -(k.c[2] ?? 0)], h, d: [k.d[0], k.d[1], -k.d[2]], h2: mirrorH2(k) };
   });
   const steps = set.steps.map((s) => {
     const m = (a) => [a[0], -a[1], -a[2], a[3], a[4]];
@@ -100,15 +103,15 @@ export function chainWithProfiles(set, marks, { peak2After = 0.1 } = {}) {
 }
 
 /** clip/2 에 더한 클립 단위 값: 걸음(목표·때), 시작·복귀 목표 자세와 시작·끝 자세에 가장 가까운 게임 자세(손 오차), 복귀 구간 표본 */
-export function clipExtras(set, rows, marks) {
+export function clipExtras(set, rows, marks, guards = GAME_GUARDS) {
   const last = set.keys[set.keys.length - 1];
   const rec = rows.filter((r) => r.t >= marks.tf - 1e-9 && r.t <= marks.tg + 1e-9);
   return {
     step: stepOf(rows, marks),
     startFrom: set.keys[0].guard ?? null,
-    startPose: nearestGuard(rows[0].J, GAME_GUARDS),
+    startPose: nearestGuard(rows[0].J, guards),
     recoverTo: last.guard ?? null,
-    endPose: nearestGuard(rows[rows.length - 1].J, GAME_GUARDS),
+    endPose: nearestGuard(rows[rows.length - 1].J, guards),
     recovery: { from: +marks.tf.toFixed(3), to: +marks.tg.toFixed(3), samples: rec.length },
   };
 }

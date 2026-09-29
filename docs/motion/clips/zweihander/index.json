@@ -3,6 +3,7 @@
  "weapon": "zweihander",
  "generated": "2026-09-29",
  "grip": {
+  "hands": 2,
   "offHand": -0.18,
   "pommel": -0.16,
   "guard": 0.175,

@@ -16,7 +16,7 @@
 ## 0-1. 이 세션에서 막힌 곳 (EGRESS 차단 — 다시 시도하지 않는다)
 
 웹 본문 읽기 도구와 curl 이 프록시에서 거절됨(2026-09-29): wiktenauer.com, link.springer.com, ieeexplore.ieee.org, researchgate.net, mocap.cs.cmu.edu, pubmed.ncbi.nlm.nih.gov, pmc.ncbi.nlm.nih.gov, jstage.jst.go.jp, semanticscholar.org, zenodo.org, cdn.jsdelivr.net(curl). 검색 결과 요약만 받았다.
-오후(런지·흐름 조사)에 더 막힘: journals.plos.org, frontiersin.org, mdpi.com, ojs.ub.uni-konstanz.de, ira.lib.polyu.edu.hk, chukyo-u.repo.nii.ac.jp, biomedres.info, alliedacademies.org, files.4medicine.pl, idosi.org, clasicalfencing.wordpress.com, en.wikipedia.org. 이 환경의 네트워크 정책이다 — 사장님이 환경 설정의 네트워크 허용에서 열 수 있다.
+오후(런지·흐름 조사)에 더 막힘: journals.plos.org, frontiersin.org, mdpi.com, ojs.ub.uni-konstanz.de, ira.lib.polyu.edu.hk, chukyo-u.repo.nii.ac.jp, biomedres.info, alliedacademies.org, files.4medicine.pl, idosi.org, clasicalfencing.wordpress.com, en.wikipedia.org, www.gutenberg.org(한손 칼 교본 본문). 이 환경의 네트워크 정책이다 — 사장님이 환경 설정의 네트워크 허용에서 열 수 있다.
 
 ## 1. 교본 원문·도판 [원전]
 
@@ -36,6 +36,7 @@
 | Wiktenauer 번역들 (Trosclair Ringeck, Lindholm Döbringer, Garber–Chidester Meyer 초벌 번역 PDF) | Wiktenauer 자체 글은 CC BY-SA 4.0, **번역마다 조건이 다름**(토론 페이지 표). 일부는 특별 허락으로만 올라 있음 | 조건 미확인 — 문장 인용은 짧게, 게임 안 글로 옮기지 않는다 |
 | 해설 블로그 (grauenwolf, swordfight.uk, scholarvictoria) | 인용만 | Meyer 네 곧은 베기, 걸음 규칙 |
 | **"Zornhau 끝 = 왼쪽 바꿈·옆 지킴"** | — | 현대 Meyer 수련의 관행으로 적었다 [기억]. Meyer 원문에서 확인 못 함 |
+| 19세기 브로드소드·세이버 교본의 moulinet (Allanson-Winn & Phillipps-Wolley 1890, 기병 세이버 교범, Burton 1876 — 본문은 막힘) | 원문 퍼블릭 도메인 | 검색 요약만: 손을 뒤집어 칼을 몸 오른쪽 뒤로 원을 그려 올리고 손은 오른 어깨 가까이, 팔꿈치는 몸 안쪽. 세이버 클립(`moulinet_manuals`) 근거 |
 | Figueyredo, *Memorial of the Practice of the Montante* (1651) — 몬탄테 혼자 연습 규칙 32개 | 원문 퍼블릭 도메인, 번역은 조건 확인 전 — 서술만 요약 | 검색 요약만 읽음. 츠바이핸더 클립(`sources` 의 `figueyredo_montante`) 근거: 크게 돌리며 멈추지 않고 잇는다 |
 
 ## 3. 모션 캡처 논문·데이터 [측정]

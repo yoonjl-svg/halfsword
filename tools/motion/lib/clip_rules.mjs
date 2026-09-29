@@ -304,7 +304,8 @@ export function checkClip(clip, opts = {}) {
     ['hipC', 'waist', BODY.waistUp], ['waist', 'chest', BODY.chestUp], ['shS', 'elS', BODY.upper], ['shO', 'elO', BODY.upper],
     ['hipL', 'kneeL', BODY.thigh], ['kneeL', 'ankleL', BODY.shin], ['hipR', 'kneeR', BODY.thigh], ['kneeR', 'ankleR', BODY.shin],
   ];
-  const rigid = [['hS', 'hO', '두 손 사이'], ['pommel', 'tip', '자루 끝 ↔ 칼끝']];
+  // 한손 무기(grip.hands 1)는 빈손이 칼자루를 잡지 않으니 두 손 사이는 보지 않는다
+  const rigid = [...(clip.grip?.hands === 1 ? [] : [['hS', 'hO', '두 손 사이']]), ['pommel', 'tip', '자루 끝 ↔ 칼끝']];
   const L0 = Object.fromEntries(rigid.map(([a, b]) => [a + b, len(sub(joint(clip, 0, a), joint(clip, 0, b)))]));
   for (let i = 0; i < n; i++) {
     for (const [a, b, want] of boneRule) {
@@ -327,7 +328,7 @@ export function checkClip(clip, opts = {}) {
   }
   if (clip.grip) {
     const g = clip.grip;
-    if (Math.abs(L0.hShO - Math.abs(g.offHand)) > TOL.bone) err('R3', `두 손 사이 ${L0.hShO.toFixed(3)} m ≠ grip.offHand ${g.offHand}`);
+    if (g.hands !== 1 && Math.abs(L0.hShO - Math.abs(g.offHand)) > TOL.bone) err('R3', `두 손 사이 ${L0.hShO.toFixed(3)} m ≠ grip.offHand ${g.offHand}`);
     if (Math.abs(L0.pommeltip - (g.tip - g.pommel)) > TOL.bone) err('R3', `자루 끝 ↔ 칼끝 ${L0.pommeltip.toFixed(3)} m ≠ grip.tip − grip.pommel ${(g.tip - g.pommel).toFixed(3)}`);
   }
 

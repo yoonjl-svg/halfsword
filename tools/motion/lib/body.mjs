@@ -234,7 +234,8 @@ export function pose(ch, side = 1, sword = SWORD) {
     dW = v3.norm(v3.add(v3.add(v3.mul(fore, Math.cos(a)), v3.mul(kxv, Math.sin(a))), v3.mul(k, v3.dot(k, fore) * (1 - Math.cos(a)))));
     wristClamp = ang * R2D - WRIST_MAX;
   }
-  const hO = v3.add(hS, v3.mul(dW, sword.offHand));
+  // 빈손: 두손 무기는 칼자루 끝(앞손에서 칼 축 offHand), 한손 무기는 ch.hand2 (가슴 틀 — 허리·뒤·앞 등 빌드 도구가 정함)
+  const hO = sword.twoHand === false && ch.hand2 ? toW(ch.hand2) : v3.add(hS, v3.mul(dW, sword.offHand));
   const tip = v3.add(hS, v3.mul(dW, sword.tip));
   const pommel = v3.add(hS, v3.mul(dW, sword.pommel));
   const gO = girdle(-side, hO);

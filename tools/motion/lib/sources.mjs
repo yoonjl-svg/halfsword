@@ -195,6 +195,20 @@ export const SOURCES = {
     read: 'snippet',
     license: '원문(1651) 퍼블릭 도메인. 번역은 저작권 있을 수 있음 — 서술만 요약',
   },
+  moulinet_manuals: {
+    kind: 'translation',
+    cite: '19세기 브로드소드·세이버 교본의 moulinet(작은 풍차): 손을 뒤집어 칼을 몸 오른쪽 뒤로 원을 그려 올리고, 손은 오른 어깨 가까이, 팔꿈치는 몸 안쪽 — 베기와 손목 연습 (Allanson-Winn & Phillipps-Wolley 1890 Broadsword; 기병 세이버 교범: 칼날이 팔꿈치 뒤로 돌아 앞으로)',
+    url: 'https://archive.org/download/broadswordquarte00ribo/broadswordquarte00ribo.pdf',
+    read: 'snippet',
+    license: '원문 퍼블릭 도메인(1890) — 검색 요약만 읽음',
+  },
+  tennis_upper_limb: {
+    kind: 'biomech',
+    cite: '테니스 포핸드(엘리트, IMU): 라켓 빠르기 중 위팔 수평 굽힘 45~48%, 팔꿈치 폄 17~21%, 위팔 안쪽 돌림 14~16% (Sensors 2022 "Upper limb joint contribution … IMU")',
+    url: 'https://www.mdpi.com/journal/sensors',
+    read: 'snippet',
+    license: '인용',
+  },
   heavy_implement: {
     kind: 'biomech',
     cite: '무거운 도구의 운동 사슬: 회전 투포환 마지막 동작 — 앞 60% 는 발목·무릎·엉덩이가 함께 펴는 밀기, 그 뒤 팔꿈치·손목 차례(가벼운 던지기와 다름). 두 마디 팔 모형은 가벼운·무거운 도구의 최적 기법이 다르다고 봄(Alexander 1991 J Theor Biol 계열)',

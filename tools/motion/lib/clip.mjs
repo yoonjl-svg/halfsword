@@ -49,10 +49,11 @@ const SCALARS = {
   'pelvis.yaw': (k) => k.pelvis?.yaw, 'pelvis.pitch': (k) => k.pelvis?.pitch, 'pelvis.roll': (k) => k.pelvis?.roll,
   'chest.yaw': (k) => k.chest?.yaw, 'chest.lean': (k) => k.chest?.lean, 'chest.side': (k) => k.chest?.side,
   'hand.0': (k) => k.hand?.[0], 'hand.1': (k) => k.hand?.[1], 'hand.2': (k) => k.hand?.[2],
+  'hand2.0': (k) => k.hand2?.[0], 'hand2.1': (k) => k.hand2?.[1], 'hand2.2': (k) => k.hand2?.[2],
   'dir.0': (k) => k._dir?.[0], 'dir.1': (k) => k._dir?.[1], 'dir.2': (k) => k._dir?.[2],
 };
 for (const f of ['L', 'R']) for (const c of ['x', 'z', 'yaw', 'lift', 'up']) SCALARS[`feet.${f}.${c}`] = (k) => k.feet?.[f]?.[c];
-const GROUP = (name) => (name.startsWith('pelvis') ? 'pelvis' : name.startsWith('chest') ? 'chest' : name.startsWith('hand') ? 'arm' : name.startsWith('dir') ? 'sword' : 'feet');
+const GROUP = (name) => (name.startsWith('pelvis') ? 'pelvis' : name.startsWith('chest') ? 'chest' : name.startsWith('hand2') ? 'free' : name.startsWith('hand') ? 'arm' : name.startsWith('dir') ? 'sword' : 'feet');
 const DEFAULT = { 'pelvis.x': 0, 'pelvis.z': 0, 'pelvis.drop': 0.05, 'pelvis.yaw': 0, 'pelvis.pitch': 0, 'pelvis.roll': 0, 'chest.yaw': 0, 'chest.lean': 0, 'chest.side': 0, 'feet.L.lift': 0, 'feet.R.lift': 0, 'feet.L.yaw': 0, 'feet.R.yaw': 0, 'feet.L.up': 0, 'feet.R.up': 0 };
 
 /** 게임 자세표(guards.js) 값 → 가슴 틀 채널. 게임은 손 목표를 '바라보는 방향' 틀에 두고, 골반은 표 값의 절반만 튼다(fighter.js 615) */
@@ -107,6 +108,7 @@ export function buildTracks(keys) {
   for (const [name, get] of Object.entries(SCALARS)) {
     if (name.startsWith('dir.')) continue;
     const ks = keys.filter((k) => get(k) != null).map((k) => [k.t, get(k)]);
+    if (!ks.length && name.startsWith('hand2')) continue; // 빈손 키가 없으면(두손 무기) 채널 없음
     if (!ks.length) {
       const d = DEFAULT[name];
       if (d == null) throw new Error(`채널 ${name} 에 키가 하나도 없다`);
@@ -167,6 +169,7 @@ export function channelsAt(tracks, marks, chain, t) {
     out.chest.yaw = cy - py;
   }
   out.hand = [at('hand.0'), at('hand.1'), at('hand.2')];
+  if (tracks['hand2.0']) out.hand2 = [at('hand2.0'), at('hand2.1'), at('hand2.2')];
   // 칼 방향 키는 월드 틀이다 (베는 면이 월드에 있다). 가슴이 앞당겨 돌아도 칼은 제 시각표대로 — 몸통과 칼 사이의 늦춤이 저절로 생긴다
   out.dirW = tracks.dirV(t + (chain.sword ?? 0) * b);
   for (const f of ['L', 'R']) out.feet[f] = { x: at(`feet.${f}.x`), z: at(`feet.${f}.z`), yaw: at(`feet.${f}.yaw`), lift: at(`feet.${f}.lift`), up: Math.max(0, at(`feet.${f}.up`)) };

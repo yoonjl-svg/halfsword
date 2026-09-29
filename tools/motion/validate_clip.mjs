@@ -10,7 +10,8 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GUARDS } from '../../src/guards.js';
-import { GAME_GUARDS } from './lib/cuts.mjs';
+import { GAME_GUARDS, GAME_GUARDS_ONE } from './lib/cuts.mjs';
+import { WEAPONS } from '../../src/weapons.js';
 import { bladeDir } from './lib/body.mjs';
 import { checkClip, checkIndex, GUARD_NAMES } from './lib/clip_rules.mjs';
 
@@ -27,20 +28,40 @@ export function gameGuards() {
   }
   return out;
 }
-/** 무기 → 게임 자세표. 두손 무기는 같은 표를 쓴다(guards.js). 한손 무기 표(BASE_ONE)는 게임이 내보내지 않아 아직 모른다 */
-const TWO_HAND = ['longsword', 'zweihander'];
-let cache;
+/**
+ * 한손 무기 자세표 (게임 BASE_ONE = GUARDS 에 ONE_HAND 를 덮은 것). 게임이 BASE_ONE 을 내보내지 않아 src/guards.js 글에서
+ *  `const ONE_HAND = { … };` 를 읽어 같은 식으로 덮는다(도 → 라디안, pitch 는 있을 때만). guards.js 가 BASE_ONE 을 내보내면 그것을 쓰면 된다
+ */
+export function gameGuardsOne() {
+  const src = readFileSync(join(ROOT, 'src', 'guards.js'), 'utf8');
+  const m = src.match(/const ONE_HAND = (\{[\s\S]*?\n\});/);
+  if (!m) throw new Error('src/guards.js 에서 ONE_HAND 표를 못 찾았다 — 검사기 gameGuardsOne() 을 게임에 맞출 것');
+  const over = Function(`return (${m[1]});`)();
+  const D = Math.PI / 180;
+  const out = gameGuards();
+  for (const [id, name] of Object.entries(GUARD_NAMES)) {
+    const o = over[name];
+    if (!o) continue;
+    out[id] = { ...out[id], hand: o.hand, pelvisYaw: o.pelvisYaw * D, chestYaw: o.chestYaw * D, pitch: o.pitch != null ? o.pitch * D : out[id].pitch };
+  }
+  return out;
+}
+/** 무기 → 게임 자세표. 두손 무기는 guards.js GUARDS, 한손 자세 무기(weapons.js oneHandStance)는 한손 표 */
+let cache, cacheOne;
 export function guardsFor(weapon) {
-  if (!TWO_HAND.includes(weapon)) return null;
-  return (cache ??= gameGuards());
+  const w = WEAPONS[weapon];
+  if (!w) return null;
+  return w.oneHandStance ? (cacheOne ??= gameGuardsOne()) : (cache ??= gameGuards());
 }
 
-/** X1: 빌드 도구가 쓰는 자세표 사본(lib/cuts.mjs GAME_GUARDS)이 게임과 같은가 */
+/** X1: 빌드 도구가 쓰는 자세표 사본(lib/cuts.mjs GAME_GUARDS·GAME_GUARDS_ONE)이 게임과 같은가 */
 export function checkGuardCopy() {
+  return [...copyDiff(GAME_GUARDS, gameGuards(), 'GAME_GUARDS'), ...copyDiff(GAME_GUARDS_ONE, gameGuardsOne(), 'GAME_GUARDS_ONE (한손)')];
+}
+function copyDiff(copy, g, label) {
   const out = [];
-  const g = gameGuards();
   const D = Math.PI / 180;
-  for (const [id, c] of Object.entries(GAME_GUARDS)) {
+  for (const [id, c] of Object.entries(copy)) {
     const w = g[id];
     if (!w) {
       out.push({ rule: 'X1', level: 'error', msg: `사본 자세 ${id} 가 게임에 없다` });
@@ -54,7 +75,7 @@ export function checkGuardCopy() {
       Math.abs(c.chestYaw * D - w.chestYaw) > 1e-9 ||
       Math.abs(c.pitch * D - w.pitch) > 1e-9 ||
       Math.abs(c.drop - w.drop) > 1e-9;
-    if (diff) out.push({ rule: 'X1', level: 'error', msg: `자세표 사본 ${id} 가 게임 src/guards.js 와 다르다 — lib/cuts.mjs GAME_GUARDS 를 고치고 클립을 다시 만들 것` });
+    if (diff) out.push({ rule: 'X1', level: 'error', msg: `자세표 사본 ${label} ${id} 가 게임 src/guards.js 와 다르다 — lib/cuts.mjs 를 고치고 클립을 다시 만들 것` });
   }
   return out;
 }
