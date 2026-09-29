@@ -815,7 +815,8 @@ function renderCuts() {
 }
 function renderRecSelect() {
   const opts = [['', '겹치지 않음']];
-  for (const r of recIndex?.records ?? []) opts.push([r.id, `지금 게임 · ${r.cut} (팔 베기)`]);
+  const KIND = { 'game-arm': '지금 게임 · 팔 베기', 'wbs-arm': '시험판(wbs) · 팔 베기', 'wbs-commit': '시험판(wbs) · 결심(온몸) 베기' };
+  for (const r of recIndex?.records ?? []) opts.push([r.id, `${KIND[r.kind] ?? r.kind ?? '기록'} · ${r.cut}`]);
   if (fileRecord) opts.push(['__file', `파일: ${fileRecord.id ?? '기록'}`]);
   $('rec').innerHTML = opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
   $('rec').value = state.rec;

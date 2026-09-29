@@ -14,7 +14,8 @@
 | 평가 기준 초안 | [`evaluation.md`](evaluation.md) | "사람처럼 / 크다 / 준비가 읽힌다 / 빠르고 세다 / 반동·허점" |
 | 출처 | [`sources.md`](sources.md) | 교본·번역·모캡 논문·공개 데이터·생체역학·추정, 이용 조건, 읽은 깊이, 확보 못 한 것 |
 | 게임이 읽을 수치 | `docs/motion/clips/*.json` (48개) + `index.json` | 8 베기 × 좌우 × 작게·보통·크게, 120 Hz |
-| 우리 캐릭터 기록 | `docs/motion/records/*.json` | 지금 게임의 팔 베기(헤드리스). `node tools/motion/record_game.mjs` |
+| 우리 캐릭터 기록 | `docs/motion/records/*.json` | 지금 게임의 팔 베기(`record_game.mjs`), 디렉터 시험판의 팔·결심 베기(`record_wbs.mjs`) — 헤드리스 |
+| 기준 ↔ 게임 모양 비교 | [`compare_game.md`](compare_game.md) (자동 생성), [`review_wbs_trial.md`](review_wbs_trial.md) | 관절 위치만으로 같은 식으로 잰 표, 시험판 소견 |
 
 ## 무엇을 만들었나
 
@@ -98,6 +99,8 @@ data: { n, width, cols }                  // 열 단위: cols[채널] = 표본 n
 node tools/motion/build_clips.mjs            # 클립 48개 + index.json + spec_table.md
 node tools/motion/build_clips.mjs --print --seq --over   # 파일 없이 요약·사슬 순서·팔 넘침만
 node tools/motion/record_game.mjs            # 지금 게임 팔 베기 기록 (zornhau·oberhau·zwerchhau·mittelhau·unterhau)
+node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>   # 시험판 팔·결심 베기 기록 (review_wbs_trial.md 재현)
+node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 → docs/motion/compare_game.md
 npm run dev                                   # → http://localhost:5173/tools/motion/viewer.html
 ```
 
