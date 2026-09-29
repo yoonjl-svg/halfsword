@@ -223,7 +223,9 @@ export class Gait {
     if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다)
     if (this.f.move.y < -0.1) return false;
-    this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), hold: o.hold ?? 0, age: 0 };
+    // 온몸 베기 걸음('strike', R2 §5.6)은 시간 바닥이 없다: 손가락이 모는 만큼 짧게 부탁하고, 발이 언제 닿는지는 swingVmax(물리)가 정한다
+    const dur = o.kind === 'strike' ? Math.max(o.duration ?? 0.4, 1e-3) : clamp(o.duration ?? 0.4, 0.28, 0.7);
+    this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: dur, hold: o.hold ?? 0, age: 0 };
     return true;
   }
 
@@ -243,13 +245,14 @@ export class Gait {
     if (!turn) return turn;
     const f = this.f;
     const pel = f.heading + (f.pelvisYawOffset || 0);
+    const mt = f.drive?.w > 0 ? f.drive.maxTwist() : GAIT.maxTwist; // R2: 0.9 + (1.1 − 0.9)·S (Q5)
     let lim = Infinity;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
       if (!l.stance) continue;
       // 도는 쪽으로 이미 비튼 만큼 (디딜 때의 발 방향 기준: 발이 비틀려 끌려가도 한계가 따라 늘지 않게)
       const tw = wrap(pel - l.yawTD) * Math.sign(turn);
-      lim = Math.min(lim, Math.max(0, GAIT.maxTwist - tw));
+      lim = Math.min(lim, Math.max(0, mt - tw));
     }
     return Math.sign(turn) * Math.min(Math.abs(turn), lim);
   }
@@ -683,8 +686,9 @@ export class Gait {
       // 기술 걸음. lunge: 앞발을 fwd만큼 내딛는다. pass: 뒷발이 앞발을 지나 그 앞에 딛는다 (앞뒤 발이 바뀐다)
       const r = this.req;
       const base = r.kind === 'lunge' ? l.p0 : other.plant;
-      const x = r.kind === 'lunge' ? r.fwd : Math.max(0.3, r.fwd - 0.1);
-      const z = r.side + (r.kind === 'pass' ? l.side * GAIT.guardWidth : 0);
+      // 'strike' (R2 온몸 베기 걸음): 클립의 fwd 그대로 (바닥 0.3·−0.1 없음), 옆 간격은 pass 처럼
+      const x = r.kind === 'lunge' || r.kind === 'strike' ? r.fwd : Math.max(0.3, r.fwd - 0.1);
+      const z = r.side + (r.kind === 'pass' || r.kind === 'strike' ? l.side * GAIT.guardWidth : 0);
       out.set(base.x + fwd.x * x + rgt.x * z, ANKLE_H, base.z + fwd.z * x + rgt.z * z);
       l.yaw1 = this.headAhead();
     } else {
@@ -710,7 +714,8 @@ export class Gait {
     // 발을 돌려 딛는 각도는 엉덩이·발목이 비틀 수 있는 만큼만 (더 돌려 디디면 디딘 뒤 다리가 발을 되돌려 비틀어 미끄러진다)
     if (GAIT.swingTwist > 0) {
       const pel = f.heading + (f.pelvisYawOffset || 0);
-      l.yaw1 = pel + clamp(wrap(l.yaw1 - pel), -GAIT.swingTwist, GAIT.swingTwist);
+      const st = f.drive?.w > 0 ? f.drive.swingTwist() : GAIT.swingTwist; // R2: 0.6 + (1.0 − 0.6)·S (Q5)
+      l.yaw1 = pel + clamp(wrap(l.yaw1 - pel), -st, st);
     }
     // 다리가 꼬이지 않게: 딛은 발에서 자기 쪽으로 최소 간격
     const lat = (out.x - other.plant.x) * rgt.x + (out.z - other.plant.z) * rgt.z;
@@ -747,7 +752,9 @@ export class Gait {
    *  foot 'F' | 'B', strength 0.15~1 (카메라 내려앉음과 같은 세기), kind 'walk' | 'settle' | 'catch' | 부탁한 걸음 종류
    *  연출(L6a)이 결심 베기 디딤('strike')에 무거운 발 구름·화면 내려앉음을 붙인다
    */
-  onTouchdown(foot, strength, kind) {}
+  onTouchdown(foot, strength, kind) {
+    if (kind === 'strike') this.f.drive?.onLanded(foot); // R2: 온몸 베기 걸음이 닿았다 (drive.stepping 끝)
+  }
 
   /**
    * 딛은 발만 조금 무겁게 한다 (신발·쇠 발싸개 몫, GAIT.footExtra kg).
@@ -808,6 +815,7 @@ export class Gait {
         //  (조금만 모자랄 땐 들지 않는다: 들락날락하면 발이 떨린다)
         const heel = Math.max(0, this.heelOff(l, _h, _a, legLen(l.phi)) - GAIT.heelDead);
         l.heel += (heel - l.heel) * 0.3;
+        if (f.drive?.w > 0) l.heel = Math.max(l.heel, f.drive.heelFloor(l.k)); // R2: 클립 발 뒤꿈치 (역할로) · heelMax · S — 바닥일 뿐 (S = 0 이면 안 쓴다)
         if (l.heel > 0.01) this.toePivot(l, _a, l.heel);
         //  (디딜 때 이미 굽어 있던 만큼(phiTD)에서 더 굽히는 몫만 제한한다: 무릎을 굽힌 채 뛰듯 걸을 땐 그 굽힘부터)
         //  (걷는 중 디딘 직후(무게를 받는 동안)만: 서 있을 땐 자세대로 무릎을 굽힌다)
@@ -1035,10 +1043,14 @@ export class Gait {
       _p.z = pt.z;
       fb.addForceAtPoint(_f, _p, true);
       // 발이 땅 위에서 도는 것도 마찰이 붙잡는다 (한계 = 마찰 × 무게 × 발바닥 크기). 넘으면 딛은 방향도 따라 돈다
-      const lt = GAIT.pinMu * l.Nf * 0.05;
+      //  (R2: 발끝으로 딛으면(뒤꿈치 > 0.3) 마찰 팔이 0.05 → toeLever 로 S 만큼 짧아진다. 딛은 발 돌림 목표는 드라이브가 바로 쓴다 — 빠르기 한도 없음, Q5)
+      const dr = f.drive?.w > 0 ? f.drive : null;
+      const lt = GAIT.pinMu * l.Nf * (dr && l.heel > 0.3 ? dr.toeLever() : 0.05);
+      if (dr) dr.footPivot(l);
       let ye = wrap(l.yaw - l.footYaw);
       const yMax = lt / GAIT.pinYawK;
       if (Math.abs(ye) > yMax) {
+        if (dr) dr.noteSlip(Math.abs(ye) - yMax);
         l.yaw = l.footYaw + Math.sign(ye) * yMax;
         ye = Math.sign(ye) * yMax;
       }

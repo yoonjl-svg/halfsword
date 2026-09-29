@@ -741,8 +741,25 @@ export const GESTURE = {
   predictMs: 8, phiW: 60, leadMs: 40, // Q22 (predictMs: 자리 내다보기 허용 폭. 손짓 층은 실제 조각만 쓴다)
   T0: 0.3, kv: 0.35, // 'floor' 시계 전용 (시뮬). weaponCfg.gestureT0 가 있으면 그것. 관성 등급 문턱 없음 (Q26)
   followEnd: 1.6, recoverEnd: 2.2, buffer: 0.15, // followEnd·recoverEnd: R4 되돌이 클립 몫 (예약). 손짓 층은 φ 로 베기를 끝내지 않는다 (길이 한도 없음)
-  mixX: 0.25, // 자세표 ↔ 클립 넘김 폭 c(S) = smoothstep(0, mixX, S) — 확정 신호(onCommit)가 c = 1 에서. DRIVE.mixX 와 같은 값 (W3 가 DRIVE 로 옮긴다)
   famClip: { diag: 'zornhau', vert: 'oberhau', horiz: 'mittelhau', rise: 'unterhau' },
+};
+
+// R2 클립 추적 (docs/strike/r2_impl_spec.md §5.9, src/strike/drive.js). 몸통·닻·앞먹임 회전력·범위·발·내딛기
+//  S = 0 이면 모든 고리가 멈춘다(엔진에 쓰는 것 없음). 상한·바닥 없음: 걸음 시간 바닥(stepDurMin)·발 돌림 빠르기(footYawRate) 두지 않는다
+export const DRIVE = {
+  on: true, trunk: true, hands: true, ff: true, feet: true, step: true, // 켜는 차례(몸통 → 앞먹임 → 발 → 걸음)는 고치는 차례일 뿐, 내보낼 땐 모두 참
+  ffGain: 0.8, ffHip: true, cocontract: 0.5, motorRate: 40, shoulderRate: 40, motorRateAll: false, // Q4 (motorRateAll A/B → Q17). ffGain 은 설계서 값 — 넘어짐 때문에 내리지 않는다 (§5.4, Q24)
+  anchorRelaxYawK: 0.9, anchorRelaxYawD: 0.0, // Q24 (R4 가 D 를 푼다)
+  balanceAssist: { phi: [-1, 0.55, 1.6, 2.2], v: [1, 1, 1, 1] }, // 설계서 §4-1 이음매: R2 는 늘 1. R4 가 [1, 0.5, 0.5, 1]
+  mixX: 0.25, // 자세표 ↔ 클립 넘김 폭 c(S) = smoothstep(0, mixX, S). S 자체는 크기 (§5.3). 손짓 층 확정 신호(c = 1)도 이 값
+  spineTwist: 0.95, absTwist: 0.55, chestTwist: 0.7, hipTwist: 1.1, hipRoom: 1.1, swingTwist: 1.0, maxTwist: 1.1, softLim: 0.15, kSoft: { spine: 400, hip: 600 }, dSoft: 20, sideShare: 0.5, // Q5
+  girdle: 'off', girdleRate: 0.5, // 'anchor' = 실험. girdleRate 는 어깨 옮김 빠르기 → 'anchor' 를 켜면 Q5
+  poleHystDeg: 120, poleHystT: 0.03, poleBlendT: 0.04, poleMinFlexDeg: 20, // 가장 빠른 지붕 감기에서 팔꿈치 모양 ≤ 70 ms 늦음 (§6.4)
+  carryPhi: 0.3, warpMax: 0.25, warpFade: 0.03, // warp = 도움 손잡이, 한도 아님
+  stepS: 0.3, stepScale: 1.0, stepHold: 0.25, toeLever: 0.02, // Q7 (걸음 시간 바닥 없음, 발 돌림 빠르기 없음: §5.6)
+  handOnStroke: true, // Q3: 감기 없는 긋기에도 손이 따른다 (φ_align / 자동 감기 + 이어받기). false = 대비책만
+  edgeFromClip: false, // §4.3: 날 방향은 클립에서도 유도값 — 게임이 잰 hitPointVel 이 더 참
+  puppet: false, // 또는 클립 id
 };
 
 // 소리 (sound.js). 소리마다 들어보기: 메뉴의 "소리 들어보기"

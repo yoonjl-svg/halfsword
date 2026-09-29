@@ -28,6 +28,25 @@ import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 
 await RAPIER.init();
+// R2 클립 아틀라스 (§3.8-9): 판 전에 읽는다 (Vite 가 묶음 JSON 을 이 조각에 싣는다 — base64 풀기·도함수는 여기서, 싸움 중엔 안 돈다).
+//  beginFight 가 기다린다. 드라이브는 newRound·beginFight 가 붙인다
+let atlas = null;
+const atlasReady = import('./strike/atlas.js')
+  .then(async (m) => {
+    const t0 = performance.now();
+    atlas = await m.loadAtlasPacked();
+    console.info(`[atlas] pack decode ${(performance.now() - t0).toFixed(1)} ms (${atlas.clips.length} clips)`);
+    return atlas;
+  })
+  .catch((e) => {
+    console.error('[atlas] 읽기 실패 — 온몸 베기 없이 팔 베기로 (stats.atlasMissing 에 센다)', e);
+    return null;
+  });
+/** 이 판 파이터에 드라이브를 붙인다 (아틀라스가 있고 아직 안 붙였으면) */
+function attachDrives() {
+  if (!atlas) return;
+  for (const f of [player, enemy]) if (f && f.drive?.atlas !== atlas) f.attachDrive(atlas);
+}
 
 // 테스트용 URL 파라미터: ?weapon=monohoshizao&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
@@ -345,6 +364,7 @@ function newRound(weaponId) {
   player.skill.trace = input.fingerTrace;
   player.ges?.attachTrace(input.fingerTrace); // R2 손짓 층 (GESTURE.on): 같은 손가락 궤적을 스텝 시각으로 읽는다
   player.ges?.reset();
+  attachDrives(); // R2 클립 추적 (아틀라스를 이미 읽었으면)
   // 확정 신호 (모든 기기): 입력 자취가 금색으로 밝아지고 굵어진다. 안드로이드는 짧은 진동을 더한다 (숨소리는 소리 담당, R3 고리)
   player.onCommit = (stage) => {
     if (stage !== 'B') return;
@@ -953,7 +973,10 @@ async function startFight() {
 }
 
 /** 무기를 받았다: 싸움 시작 ("Battle", 조이스틱, 조작 안내) */
-function beginFight() {
+async function beginFight() {
+  // 아틀라스를 다 풀기 전엔 싸움을 시작하지 않는다 (§3.8-9). 보통 메뉴·카드 동안 이미 끝나 있다
+  if (!atlas) await atlasReady;
+  attachDrives();
   state = 'fight';
   input.enabled = true;
   emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
