@@ -159,10 +159,10 @@ for (const cut of CUTS) {
   }
 }
 if (!PRINT && !only.length) {
-  // 흐름 클립(build_flow.mjs)이 끼워 둔 항목은 지킨다
+  // 다른 도구(build_flow.mjs 흐름, build_lunge.mjs 런지)가 끼워 둔 항목은 지킨다
   let kept = [];
   try {
-    kept = JSON.parse(readFileSync(join(OUT, 'index.json'), 'utf8')).clips.filter((c) => c.cut.startsWith('flow_'));
+    kept = JSON.parse(readFileSync(join(OUT, 'index.json'), 'utf8')).clips.filter((c) => !CUTS.some((k) => k.id === c.cut));
   } catch {}
   writeFileSync(join(OUT, 'index.json'), JSON.stringify({ format: 'stillness-motion-index/1', generated: new Date().toISOString().slice(0, 10), clips: [...index, ...kept] }, null, 1));
   writeFileSync(join(ROOT, 'docs', 'motion', 'spec_table.md'), specTable(index));

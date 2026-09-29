@@ -92,6 +92,11 @@
 | `flow` | 두 겨눈 선 사이: `contactGap`(s), `tipMin`·`handMin`(m/s, 첫 겨눈 선 뒤 시각), `bladeRateMin`(rad/s), `tipLow`, `wristMax`, `chestTurn`, 걸음(`pelvisAdvance`·`stepR`·`stepL`) |
 | `data.cols.phi` | 첫 베기 φ 가 `marks2.tw` 에서 1.6 에 닿고, 거기서 둘째 베기 φ 0 으로 새로 시작한다 |
 
+### 3-5. 런지 클립 (`lunge_*`, `build_lunge.mjs`)
+
+찌르기라 베기 표시를 이렇게 읽는다: `tw` = 팔이 움직이기 시작, `tr` = 앞발이 뜨기 직전, `tc` = 칼끝이 겨눈 선(앞발 딛기와 같은 때), `tf` = 골반이 가장 낮음, `tg` = 쟁기 자세로 돌아옴. 크게 벌만 있고 바탕 베기(`base`)가 없다.
+`lunge` 필드: `handFirst`(ms, + = 손이 먼저), `footLand`(s, 앞발 딛기 − tc), `pelvisDrop`(m), `lowAfterLand`(s), `stanceEnd`(m), `kneeFront`·`kneeBack`(°, 180 = 곧게), `lean`(°), `advance`(m), `legOver`.
+
 ## 4. 쓸 때 주의
 
 - **몸 모형은 표시·검사용이다.** 팔·다리 IK 와 날개뼈는 `lib/body.mjs` 의 단순한 규칙이다. 게임은 자기 IK(재설계 §7-2 `src/strike`)로 `handS`·`sword`·몸통 채널을 따라가면 되고, `J` 의 팔꿈치 자리를 그대로 강요할 필요는 없다.
@@ -134,3 +139,4 @@
 | record/1 | 2026-09-29 | `cond`(기록 조건: 커밋·시드·Hz·무기·걸음·skill·거리·결심·입력) 더함 — 없어도 읽힌다, 디렉터 요청 |
 | clip/1 | 2026-09-29 | `summary.followThrough.handSideChest` 더함(형식은 같음). 크게 Zornhau 지나가기 손 자리 고침(손을 배 앞으로 끌어들이지 않음) |
 | clip/1 | 2026-09-29 | 흐름 클립(§3-4) 더함 — 베기 클립은 그대로 |
+| clip/1 | 2026-09-29 | 런지 클립(§3-5) 더함 |

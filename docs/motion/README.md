@@ -16,8 +16,8 @@
 | 모양 목표 초안 | [`targets.md`](targets.md) | 재설계 §2-6 모양 줄(감기·지나가기·회전·손 길·사슬 순서·걸음)을 사람 자료로 다시 세움 — 아래 문턱만, 범위는 순서·참고로 |
 | 파일 형식 | [`clip_format.md`](clip_format.md) | 클립·게임 기록 형식 (버전 번호), 좌표·부호, 채널, 섞을 때 주의 |
 | 출처 | [`sources.md`](sources.md) | 교본·번역·모캡 논문·공개 데이터·생체역학·추정, 이용 조건, 읽은 깊이, 확보 못 한 것 |
-| 게임이 읽을 수치 | `docs/motion/clips/*.json` (48개 + 흐름 2개) + `index.json` | 8 베기 × 좌우 × 작게·보통·크게, 120 Hz. 흐름: 8자(분노의 베기 좌우 이어 베기) 크게 × 좌우 |
-| 런지·흐름 사람 기준 | [`lunge_flow.md`](lunge_flow.md), [`flow_table.md`](flow_table.md) (자동 생성) | 런지 몸 낮춤(게임 다리로 계산한 표), 흐름에서 칼을 세우지 않는 손목 — 디렉터·무기 PM 에게 |
+| 게임이 읽을 수치 | `docs/motion/clips/*.json` (48개 + 흐름 2개 + 런지 2개) + `index.json` | 8 베기 × 좌우 × 작게·보통·크게, 120 Hz. 흐름: 8자(분노의 베기 좌우 이어 베기) 크게 × 좌우. 런지: 쟁기 자세에서 내디디며 찌르기 크게 × 좌우 |
+| 런지·흐름 사람 기준 | [`lunge_flow.md`](lunge_flow.md), [`flow_table.md`](flow_table.md) · [`lunge_table.md`](lunge_table.md) (자동 생성) | 런지 몸 낮춤(게임 다리로 계산한 표), 흐름에서 칼을 세우지 않는 손목 — 디렉터·무기 PM 에게 |
 | 우리 캐릭터 기록 | `docs/motion/records/*.json` | 지금 게임의 팔 베기(`record_game.mjs`), 디렉터 시험판의 팔·결심 베기(`record_wbs.mjs`) — 헤드리스 |
 | 기준 ↔ 게임 모양 비교 | [`compare_game.md`](compare_game.md) (자동 생성), [`review_wbs_trial.md`](review_wbs_trial.md) | 관절 위치만으로 같은 식으로 잰 표, 시험판 소견 |
 
@@ -105,6 +105,7 @@ data: { n, width, cols }                  // 열 단위: cols[채널] = 표본 n
 node tools/motion/build_clips.mjs            # 클립 48개 + index.json + spec_table.md
 node tools/motion/build_clips.mjs --print --seq --over   # 파일 없이 요약·사슬 순서·팔 넘침만 (--trace: 지나가기 손 자리)
 node tools/motion/build_flow.mjs             # 8자 흐름 클립 2개 + index.json 에 끼움 + flow_table.md (build_clips 뒤에 돌린다)
+node tools/motion/build_lunge.mjs            # 런지 찌르기 클립 2개 + index.json 에 끼움 + lunge_table.md (--step= --drop= 로 걸음·낮춤)
 node tools/motion/record_game.mjs            # 지금 게임 팔 베기 기록 (zornhau·oberhau·zwerchhau·mittelhau·unterhau)
 node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>   # 시험판 팔·결심 베기 기록 (review_wbs_trial.md 재현)
 node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 → docs/motion/compare_game.md

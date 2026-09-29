@@ -62,7 +62,7 @@ function planeDir(plane, deg) {
 }
 
 /** 표 → 키 목록 (null 보간, 게임 자세, 월드 칼 방향 → 가슴 틀) */
-function rows(table, plane) {
+export function rows(table, plane) {
   const keys = table.map((r) => {
     if (typeof r[1] === 'string' && r[1].startsWith('G:')) {
       const name = r[1].slice(2);
