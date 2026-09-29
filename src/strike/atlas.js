@@ -720,7 +720,7 @@ export class Atlas {
     }
     this.families = want.slice();
     this.report.families = want.map((cut) => `${cut} (${SIDES.map((s) => SIZES.map((z) => this.fams[cut][s][z].id).join(' ')).join(' | ')})`);
-    this._tmp = [makeSample(), makeSample(), makeSample(), makeSample(), makeSample()];
+    this._tmp = [makeSample(), makeSample(), makeSample(), makeSample()];
     this._M = new Float64Array(9);
     this._buildReport();
   }
@@ -828,11 +828,11 @@ export class Atlas {
     let over = req.over || 0, S = S0;
     if (S > 1) (over += S - 1), (S = 1);
     else if (!(S >= 0)) S = 0;
-    this._famSample(this.fam(req.cut, req.side), phi, S, over, out, this._tmp[0], this._tmp[1], this._tmp[2], this._tmp[3]);
+    this._famSample(this.fam(req.cut, req.side), phi, S, over, out, this._tmp[0], this._tmp[1], this._tmp[2]);
     const w = req.wAB;
     if (req.cutB && w > 0 && req.cutB !== req.cut) {
-      const o2 = this._tmp[4];
-      this._famSample(this.fam(req.cutB, req.side), phi, S, over, o2, this._tmp[0], this._tmp[1], this._tmp[2], this._tmp[3]);
+      const o2 = this._tmp[3];
+      this._famSample(this.fam(req.cutB, req.side), phi, S, over, o2, this._tmp[0], this._tmp[1], this._tmp[2]);
       blendInto(out, o2, w, out);
     }
     for (let q = 0; q < DIR_OFFS.length; q++) normalize3(out.v, DIR_OFFS[q]); // slerp 는 Float32 격자 오차(≈1e-7)를 남긴다
@@ -865,7 +865,7 @@ export class Atlas {
     _req.wAB = 0;
     return this.sample(out, _req);
   }
-  _famSample(f, phi, S, over, out, tA, tB, tM, tL) {
+  _famSample(f, phi, S, over, out, tA, tB, tL) {
     const mid = ATLAS.sizeMid;
     let A, B, u;
     if (S <= mid) (A = f.small), (B = f.medium), (u = S / mid);
@@ -874,14 +874,13 @@ export class Atlas {
     this._eval(B, phi, tB);
     blendInto(tA, tB, u, out);
     if (over > 0) {
-      let M = tA, L = tB;
+      // 보통·크게: S > sizeMid 면 tA·tB 그대로, 아니면 보통은 tB 에 이미 있다 → 크게만 더 (보통을 두 번 재지 않는다)
+      let L = tB;
       if (A !== f.medium) {
-        this._eval(f.medium, phi, tM);
         this._eval(f.large, phi, tL);
-        M = tM;
         L = tL;
       }
-      addOver(out, M, L, over);
+      addOver(out, B === f.medium ? tB : tA, L, over);
     }
   }
   /** 격자 칸 안 5차 에르미트 (값·d1·d2 로 C²). 방향: 시작 마디 접평면의 5차 에르미트 → 회전 (derive 참고). 격자 밖은 끝 자세, 도함수 0 */
