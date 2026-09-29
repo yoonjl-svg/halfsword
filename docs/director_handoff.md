@@ -84,7 +84,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 **커밋 끝 줄**
 - 커밋 메시지 끝에는 **자기 세션의 안내(system reminder)가 알려 주는 두 줄**(Co-Authored-By 한 줄 + Claude-Session 주소 한 줄)을 그대로 붙입니다. 세션마다 주소가 다릅니다. 예는 `git log -3 origin/main`에서 봅니다.
-- **코드, 문서, 커밋 본문 어디에도 AI 모델 이름을 쓰지 않습니다.** 끝 줄만 예외입니다. 문서를 올리기 전에 모델 이름으로 grep 해서 0건인지 확인합니다(브랜치 이름 `claude/…`는 괜찮습니다).
+- **코드, 문서, 커밋 본문 어디에도 AI 모델 이름을 쓰지 않습니다.** 끝 줄만 예외입니다. 문서를 올리기 전에 모델 이름으로 grep 해서 0건인지 확인합니다(브랜치 이름 `claude/…`는 괜찮습니다). 영문·한글 표기를 함께 보는 명령은 `docs/handoff/director_state.md` 운영 규칙에 있습니다.
 - Stop 훅(`~/.claude/stop-hook-git-check.sh`)은 커밋하지 않은 변경이 있으면 커밋·푸시하라고 조릅니다. 워크플로가 커밋 안 된 변경을 검증하는 중이면 커밋하지 말고 까닭만 짧게 답합니다. 검증이 끝나면 커밋합니다.
 
 **PM에게 말하기 (트리거)**
@@ -130,12 +130,12 @@ git push origin claude/first-game-development-2q36ha:main
 
 환경은 대부분 `env_01YG7HgthZqrnM2wyk4jrLkh`이고, 사운드 PM만 `env_01A6VUoNJgYWiFs5hTZrWavH`(음원 사이트 접속 가능)입니다. 모델 칸은 저장소에 올릴 때 지웁니다.
 
-### 새 디렉터 (⛔ 아직 안 만듦, 9/29 09:55 기준)
+### 새 디렉터 (만들었음)
+- id: `session_014nJCzE4hyxiYc9innhSUng`. 지금 명단과 상태는 `docs/handoff/director_state.md`가 우선합니다(이 장은 9/29 09:55 기록).
 - 사장님 지정: 모델은 사장님이 고르신 것("…로"), 울트라코드("새 디렉터도 울트라코드야")
 - 브랜치: 같은 개발 브랜치 `claude/first-game-development-2q36ha` → main
-- 만들어지면 id를 여기에 적고 모든 PM에게 알립니다.
 
-### 옛 디렉터 (물러나는 중)
+### 옛 디렉터 (은퇴)
 - id: `session_01KcYCh6UfKjrR4m8QjPcEbM` ("첫 게임 개발 계획 (디렉터)")
 - 브랜치: `claude/first-game-development-2q36ha` → main
 - 노력·권한: 울트라코드, auto
