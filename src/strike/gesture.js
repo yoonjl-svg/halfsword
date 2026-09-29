@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  R2 손짓 층 (docs/strike/r2_impl_spec.md §3): 손가락 → 싣기 S·무리·방향·위상 φ. 물리 스텝마다 Skill.update 안에서 돈다.
-//   IDLE → WIND (손가락 자리로 감기, (A)) → CUT (빠르기 뒤집힘 / (B) 쉬다가 vStrike) → FOLLOW (φ ≥ 1) → RECOVER (φ 멈춤, S 풀림)
+//   IDLE → WIND (손가락 자리로 감기, (A)) → CUT (빠르기 뒤집힘 / 쉬다가 vStrike: (B), (A) 는 sectorMax 틈 쪽만) → FOLLOW (φ ≥ 1) → RECOVER (φ 멈춤, S 풀림)
 //   CUT·FOLLOW 는 손가락이 멈추거나 떼거나 거꾸로 갈 때만 끝난다 (길이 한도 없음: φF·strokeLen·Sstroke 는 긋는 만큼 자란다)
 //  쓰는 것은 제 필드(fighter.ges = 이 객체)와 fighter.strike(읽기 전용 보기)뿐. 엔진은 건드리지 않는다 (W3·W4 가 읽는다)
 //  상한·바닥·쿨다운 없음: S 는 1 위로 자르지 않고(over), φ̇ 에 바닥이 없다(clock 'finger'). 명세 §10 참고
@@ -147,7 +147,10 @@ export class Gesture {
     this._Shold = 0;
     this._rest = 0; // 쉰 시간 (ms)
     this._dwellT = -Infinity; // 마지막 머묾 시각 (ms)
-    this._restedRec = false; // RECOVER 들어온 뒤 머묾이 있었나 ((B) "쉬다가")
+    this._restedRec = false; // RECOVER 들어온 뒤 머묾이 있었나 ((B) "쉬다가", (A) 원점 따르기 끝)
+    this._Sres = 0; // RECOVER → WIND 로 넘어온 앞 획의 풀림 몫 (출력 바닥만, Swind·Scut 에는 안 들어간다)
+    this._oRes = 0; // 그 over 몫
+    this._gap = false; // 이번 measureWind 가 sectorMax 틈이라 0 을 냈나
     this._tS = 0;
     this._fam = -1; // famA 번호
     this._famB = -1;
@@ -217,8 +220,13 @@ export class Gesture {
             this.state = GES_WIND;
           }
         }
-        if (this.state === GES_WIND) this.phiF = this._phiW;
-        else if (A ? this.reversal(vx, vy, sp) : F.held && sp > G.vStrike) this.startCut(tStepMs, A ? 'rev' : 'auto', vx, vy, sp);
+        if (this.state === GES_WIND) {
+          this.phiF = this._phiW;
+          break;
+        }
+        // (A) 뒤집힘, 또는 sectorMax 틈(감기가 될 수 없는 쪽)으로 vStrike 넘게 긋기 = 감기 없는 긋기 (§3.10). (B) 쉬다가 vStrike
+        const rev = A && this.reversal(vx, vy, sp);
+        if (rev || (F.held && sp > G.vStrike && (!A || this._gap))) this.startCut(tStepMs, rev ? 'rev' : 'auto', vx, vy, sp);
         else this.phiF = A ? this._phiW : -1;
         break;
       }
@@ -229,20 +237,25 @@ export class Gesture {
           break;
         }
         this.decayWind(target, E); // 뗐으면 풀린다 (다시 대면 그 감기에서 그을 수 있다)
+        this.decayRes(E);
         if (target > 0) this.commitWindFam();
         if (!F.held) this._phiDotW = 0;
         if (this.Swind === 0) this._overWind = 0;
         this.phiF = this._phiW;
-        if (this.Swind === 0 && dwell) this.toIdle();
+        if (this.Swind === 0 && this._Sres === 0 && dwell) this.toIdle(); // S = max(Swind, 풀림 몫) 가 0 일 때만
         break;
       }
       case GES_RECOVER: {
         if (A && F.held) {
-          // 획 방향으로 계속 가는 손가락(멈칫 뒤 같은 쪽으로 잇기)은 되감기가 아니다: 원점이 획 방향으로 가장 멀리 간 자리를 따른다
-          if ((this.p[0] - this.o[0]) * this.dirC[0] + (this.p[1] - this.o[1]) * this.dirC[1] > 0) this.setOrigin();
+          // 멈칫 뒤 획 방향으로 잇는 손가락은 되감기가 아니다: RECOVER 첫 머묾 전까지만 원점이 획 방향으로 가장 멀리 간 자리를 따른다.
+          //  머문 뒤는 그 머묾 자리가 원점 (§3.7) — 어느 쪽으로 가든 곧바로 감기
+          if (!this._restedRec && (this.p[0] - this.o[0]) * this.dirC[0] + (this.p[1] - this.o[1]) * this.dirC[1] > 0) this.setOrigin();
           this.decayWind(this.measureWind(), E);
           if (this.Swind > 0) {
-            // 되감기는 곧바로 (Q18, 쿨다운 없음)
+            // 되감기는 곧바로 (Q18, 쿨다운 없음). 앞 획의 싣기는 끊지 않고 RECOVER 처럼 계속 풀린다 (출력 바닥, Scut 은 Swind 만)
+            this._Sres = this.S;
+            this._oRes = this.over;
+            this.decayRes(E);
             this.commitWindFam();
             this.state = GES_WIND;
             this.phiF = this._phiW;
@@ -270,8 +283,8 @@ export class Gesture {
       this.S = 0;
       this.over = 0;
     } else if (this.state === GES_WIND) {
-      this.S = this.Swind;
-      this.over = this._overWind;
+      this.S = Math.max(this.Swind, this._Sres);
+      this.over = Math.max(this._overWind, this._oRes);
       this.phiDotF = this._phiDotW;
     } else if (this.state === GES_RECOVER) this.phiDotF = 0;
     this.phiFilter(dt);
@@ -403,6 +416,7 @@ export class Gesture {
     this._phiW = -1 + Math.min(1, L / G.sL1);
     this._phiDotW = L > 0 && L < G.sL1 ? (this.v[0] * wx + this.v[1] * wy) / L / G.sL1 : 0;
     this._cf = -1;
+    this._gap = false;
     if (!(L > 0)) {
       this._overWind = 0;
       return 0;
@@ -422,8 +436,9 @@ export class Gesture {
     if (ib < 0) (ib = iMax), (db = dMax - TAU);
     const gap = da - db;
     if (gap > G.sectorMax * D2R) {
-      // 이웃 사이가 sectorMax 보다 넓다 (곧게 아래 = 바보 자세로 바꾸기): 감기가 아니다
+      // 이웃 사이가 sectorMax 보다 넓다 (곧게 아래 = 바보 자세로 바꾸기): 감기가 아니다 (그쪽으로 빠르게 그으면 IDLE 에서 긋기)
       this._overWind = 0;
+      this._gap = true;
       return 0;
     }
     const target = smoothstep(G.sL0, G.sL1, L);
@@ -455,6 +470,13 @@ export class Gesture {
     }
   }
 
+  /** 되감기로 넘어온 앞 획의 풀림 몫: RECOVER 와 같은 tauRelease·sSnap (새 값 없음). 출력 S·over 의 바닥일 뿐 */
+  decayRes(E) {
+    this._Sres *= E;
+    this._oRes *= E;
+    if (this._Sres < GESTURE.sSnap) this._Sres = this._oRes = 0;
+  }
+
   /** famA 의 좌우 (vert 는 손가락 가로 성분으로, vert 준비 자세의 x 폭 안에서는 앞 값) */
   setSide(x) {
     const s = SIDE[this._fam];
@@ -484,6 +506,7 @@ export class Gesture {
     this.Swind = 0;
     this.Sstroke = 0;
     this._Shold = 0;
+    this._Sres = this._oRes = 0;
     this.strokeLen = 0;
     this._tS = t;
     this.mode = this.Scut > 0 ? 'wind' : 'stroke';
@@ -643,6 +666,7 @@ export class Gesture {
     this.state = GES_IDLE;
     this.S = this.Swind = this.over = 0;
     this._overWind = this._overCut = 0;
+    this._Sres = this._oRes = 0;
     this.mode = null;
     this.phiF = -1;
     this.phi = -1; // S = 0: 몸 위상은 아무도 안 읽는다 — 다음 감기가 −1 에서 곧게 시작하게

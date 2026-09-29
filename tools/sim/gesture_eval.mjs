@@ -4,6 +4,8 @@
 //       node tools/sim/hybrid.mjs gesture_eval.mjs --input=wind
 //  사례: (i) 쟁기 → 어깨 지붕 → 뒤집힘 → 바꿈 (zornhau 감기)  (ii) 감기 없는 쟁기 긋기  (iii) 감기 끝에서 1 s 버티기
 //        (iv) 떼기 → tauRelease 로 풀림, 정확히 0  (v) 3 mm / 8 Hz 떨림  (+ 손가락 궤적 길(feedTrace) 60/120 Hz 로 같은 φ̇ 확인)
+//        (vi) 베고 곧바로 되감기: 원점에서 sL0 를 넘는 스텝에 WIND (쿨다운 없음)  (vii) 되감기의 S 는 앞 획 풀림 아래로 안 떨어지고 Scut 은 Swind 만
+//        (viii) sectorMax 틈 쪽으로 빠르게 긋기 = 베기
 //  PASS/FAIL 은 최소 목표에만. 나머지는 보고
 import { newRound, CONFIG, DT, feedTrace, inputPump } from './harness_m.mjs';
 import { SyntheticFinger, GES_NAMES, GES_CUT, GES_FOLLOW, GES_WIND, GES_IDLE, GES_RECOVER, padFam } from '../../src/strike/gesture.js';
@@ -106,6 +108,25 @@ function liftTop() {
 function liftAfter() {
   return new Path(...PFLUG).hold(400).move(...TAG_R, 3, 'lin').mark('rev').move(...WECHSEL_L, 6, 'lin').lift().mark('lift').hold(1500);
 }
+/** zornhau 뒤 머묾 없이 곧바로 어깨 지붕 쪽으로 dist 만큼 되감고 다시 긋는다 (lift: 되감다가 뗀다) */
+function rewindBack(dist, lift = false) {
+  const p = new Path(...PFLUG).hold(400).move(...TAG_R, 3, 'lin').mark('rev').move(...WECHSEL_L, 6, 'lin').mark('turn');
+  const dx = TAG_R[0] - WECHSEL_L[0], dy = TAG_R[1] - WECHSEL_L[1], dl = Math.hypot(dx, dy);
+  const k = Math.min(dist, dl) / dl;
+  p.move(WECHSEL_L[0] + dx * k, WECHSEL_L[1] + dy * k, 3, 'lin').mark('top');
+  if (lift) return p.lift().mark('lift').hold(1500);
+  return p.mark('rev2').move(...WECHSEL_L, 6, 'lin').mark('stop').hold(1200);
+}
+/** 어깨 지붕에서 가운데 (0,0) 까지 긋고 stopMs 멈췄다가 획 방향(+dirC) 성분을 가진 굽은 길로 왼쪽 가로 준비 자세까지 감고, 오른쪽으로 긋는다 */
+function rewindCurve(stopMs) {
+  const p = new Path(...PFLUG).hold(400).move(...TAG_R, 3, 'lin').mark('rev').move(0, 0, 6, 'mj').mark('turn');
+  if (stopMs > 0) p.hold(stopMs);
+  return p.mark('rest').move(-0.3, -0.12, 3, 'lin').move(-0.52, 0.03, 3, 'lin').mark('top').hold(100).mark('rev2').move(0.4, 0.03, 6, 'mj').mark('stop').hold(1000);
+}
+/** 가운데까지 긋고 멈추지 않고 획 방향으로 굽어 나갔다가 (+dirC) 왼쪽 어깨 지붕으로 감고, diagL 로 긋는다 */
+function rewindLoop() {
+  return new Path(...PFLUG).hold(400).move(...TAG_R, 3, 'lin').mark('rev').move(0, 0, 6, 'lin').move(-0.2, -0.12, 4, 'lin').mark('turn').move(-0.4, 0.42, 3, 'lin').mark('top').hold(100).mark('rev2').move(0.38, -0.44, 6, 'lin').mark('stop').hold(1000);
+}
 function stillJitter() {
   return new Path(...PFLUG).hold(2400).jitter();
 }
@@ -141,7 +162,7 @@ function runSynth(path, input, opts = {}) {
   const nSteps = Math.ceil((path.T + (opts.tail ?? 300)) / STEP_MS);
   for (let i = 0; i < nSteps; i++) {
     G.step();
-    rec.push({ t: k * STEP_MS, st: ges.state, S: ges.S, Sw: ges.Swind, Ss: ges.Sstroke, over: ges.over, c: ges.c, phiF: ges.phiF, phi: ges.phi, phiDot: ges.phiDot, famA: ges.famA, famB: ges.famB, mix: ges.famMix, side: ges.side, busy: ges.busy, v: Math.hypot(ges.v[0], ges.v[1]), arc0: ges.arc0, len: ges.strokeLen, mode: ges.mode, o: [...ges.o].map(x=>+x.toFixed(3)), p: [...ges.p].map(x=>+x.toFixed(3)) });
+    rec.push({ t: k * STEP_MS, st: ges.state, S: ges.S, Sw: ges.Swind, Ss: ges.Sstroke, Scut: ges.Scut, over: ges.over, c: ges.c, phiF: ges.phiF, phi: ges.phi, phiDot: ges.phiDot, famA: ges.famA, famB: ges.famB, mix: ges.famMix, side: ges.side, busy: ges.busy, v: Math.hypot(ges.v[0], ges.v[1]), arc0: ges.arc0, len: ges.strokeLen, mode: ges.mode, o: [...ges.o].map(x=>+x.toFixed(3)), p: [...ges.p].map(x=>+x.toFixed(3)) });
   }
   G_.input = save.input;
   G_.clock = save.clock;
@@ -349,6 +370,103 @@ function evalAll(input) {
     const info = { cuts: R2.cuts, famsDuringHold: [...fams], cutDuringHold: cutsHold > 0, famAfterLock: ff, S_hold_min: f3(Math.min(...hold.map((r) => r.S))), S_final: last.S, timeline: timeline(R2.rec) };
     if (A) check('v_jitter_hold_top', R2.cuts === 1 && fams.size === 1 && !cutsHold && ff?.flips === 0 && last.S === 0, info);
     else check('v_jitter_hold_top', !cutsHold && ff?.flips === 0 && last.S === 0, info);
+  }
+
+  // (vi) 베고 곧바로 되감기 (Q18): 명세 원점(마지막 머묾, 없으면 startRecover 원점)에서 |p − o| 가 sL0 를 넘는 스텝 iX 에서 한 스텝 안에 WIND,
+  //  Swind 는 감는 동안 줄지 않고, 다음 뒤집힘은 감기 무리의 베기. (B) 는 감기가 없으므로 보고만
+  //  back: 머묾 없이 −dirC 로 / curve: 60 ms 머문 뒤 +dirC 성분을 가진 굽은 길 / loop: 멈추지 않고 +dirC 로 굽어 나갔다가 되감기
+  const rewindCheck = (name, path, orig, fam2) => {
+    const R = runSynth(path, input);
+    const iC1 = firstIdx(R.rec, (r) => r.st === GES_CUT);
+    const iR = iC1 < 0 ? -1 : firstIdx(R.rec, (r) => r.st === GES_RECOVER, iC1);
+    const iRest = orig === 'rest' ? firstIdx(R.rec, (r) => r.t >= path.marks.rest) : -1;
+    const O = orig === 'rest' ? (iRest >= 0 ? R.rec[iRest].p : null) : iR >= 0 ? R.rec[iR].o : null;
+    const from = Math.max(iR, iRest);
+    const iX = O && iR >= 0 ? firstIdx(R.rec, (r) => Math.hypot(r.p[0] - O[0], r.p[1] - O[1]) > G_.sL0, from) : -1;
+    const iW = iR >= 0 ? firstIdx(R.rec, (r) => r.st === GES_WIND, iR) : -1;
+    const iTop = firstIdx(R.rec, (r) => r.t >= path.marks.top);
+    let swDown = 0;
+    for (let i = Math.max(1, iW + 1); iW >= 0 && i < iTop; i++) if (R.rec[i].Sw < R.rec[i - 1].Sw) swDown++;
+    const iC2 = iW >= 0 ? firstIdx(R.rec, (r) => r.st === GES_CUT, iW) : -1;
+    const c2 = iC2 >= 0 ? R.rec[iC2] : null;
+    const last = R.rec[R.rec.length - 1];
+    const info = {
+      origin: O, cross_sL0_ms: iX >= 0 ? f1(R.rec[iX].t) : null, wind_ms: iW >= 0 ? f1(R.rec[iW].t) : null, wind_after_cross_steps: iX >= 0 && iW >= 0 ? iW - iX : null,
+      Sw_top: iTop > 0 ? f3(R.rec[iTop - 1].Sw) : null, Sw_down_steps: swDown, cut2: c2 ? { famA: c2.famA, Scut: f3(c2.Scut), mode: c2.mode } : null, cuts: R.cuts, S_final: last.S, timeline: timeline(R.rec),
+    };
+    const ok = iX >= 0 && iW >= 0 && iW <= iX + 1 && swDown === 0 && R.rec[iTop - 1].Sw >= 0.9 && c2?.famA === fam2 && c2.Scut >= 0.9 && last.S === 0;
+    check(name, A ? ok : null, info);
+    return R;
+  };
+  rewindCheck('vi_rewind_back', rewindBack(9), 'recover', 'diagR');
+  rewindCheck('vi_rewind_curve_dwell', rewindCurve(60), 'rest', 'horizL');
+  rewindCheck('vi_rewind_loop', rewindLoop(), 'recover', 'diagL');
+  {
+    // 보고만: 20 ms 멈칫(머묾 restDwell 보다 짧다) 뒤 +dirC 성분을 가진 되감기 — RECOVER 원점이 첫 머묾 전까지 획 방향을 따르는 규칙에 가려
+    //  감기로 안 읽히고, 오른쪽 긋기가 horizR 감기가 된다 (그 규칙이 없으면 멈칫 뒤 같은 쪽으로 잇는 긋기가 감기가 된다 — 사장님 질문)
+    const path = rewindCurve(20);
+    const R = runSynth(path, input);
+    const i2 = firstIdx(R.rec, (r) => r.t >= path.marks.rev2 + 30);
+    check('vi_rewind_curve_hitch_report', null, { cuts: R.cuts, afterRev2: i2 >= 0 ? { state: GES_NAMES[R.rec[i2].st], famA: R.rec[i2].famA } : null, timeline: timeline(R.rec) });
+  }
+
+  // (vii) 되감기의 S (A): 앞 획의 풀림이 WIND 에서도 tauRelease 로 이어진다 — 한 스텝에 E = e^(−dt/tauRelease) 보다 빨리 안 준다 (sSnap 아래 0 은 빼고).
+  //  짧게 되감아(0.3 m) 풀림 몫이 Swind 보다 클 때 다시 그어도 Scut 은 그 앞 스텝의 Swind 만. 되감다가 떼도 S 는 풀림대로 0 까지
+  {
+    const E = Math.exp(-DT / G_.tauRelease);
+    const out = {};
+    let ok = true;
+    for (const [k, path] of [['short', rewindBack(0.3)], ['lift', rewindBack(0.3, true)]]) {
+      const R = runSynth(path, input, { tail: 600 });
+      const iC1 = firstIdx(R.rec, (r) => r.st === GES_CUT);
+      const iR = iC1 < 0 ? -1 : firstIdx(R.rec, (r) => r.st === GES_RECOVER, iC1);
+      const iW = iR < 0 ? -1 : firstIdx(R.rec, (r) => r.st === GES_WIND, iR);
+      const iC2 = iW < 0 ? -1 : firstIdx(R.rec, (r) => r.st === GES_CUT, iW);
+      const iEnd = iC2 >= 0 ? iC2 : R.rec.length;
+      let fast = 0, below = 0, fl = iW > 0 ? R.rec[iW - 1].S : 0;
+      for (let i = Math.max(1, iR + 1); iR >= 0 && i < iEnd; i++) {
+        const a = R.rec[i - 1].S, b = R.rec[i].S;
+        if (b < a * E * (1 - 1e-12) && !(b === 0 && a * E < G_.sSnap)) fast++;
+      }
+      for (let i = iW; iW >= 0 && i < iEnd && R.rec[i].st === GES_WIND; i++) {
+        fl *= E;
+        if (fl < G_.sSnap) fl = 0;
+        if (R.rec[i].S < fl * (1 - 1e-12)) below++;
+      }
+      const last = R.rec[R.rec.length - 1];
+      const pre = iC2 > 0 ? R.rec[iC2 - 1] : null;
+      const o = {
+        S_recover_last: iW > 0 ? f3(R.rec[iW - 1].S) : null, S_wind_first: iW >= 0 ? f3(R.rec[iW].S) : null, Sw_wind_first: iW >= 0 ? f3(R.rec[iW].Sw) : null, faster_than_release_steps: fast, below_floor_steps: below,
+        S_final: last.S, state_final: GES_NAMES[last.st], timeline: timeline(R.rec),
+      };
+      let okK = iW >= 0 && fast === 0 && below === 0 && last.S === 0 && last.st === GES_IDLE;
+      if (k === 'short') {
+        o.atReversal = pre ? { S: f3(pre.S), Swind: f3(pre.Sw), Scut: f3(R.rec[iC2].Scut) } : null;
+        okK = okK && !!pre && R.rec[iC2].Scut === pre.Sw && pre.S > pre.Sw; // 바닥이 살아 있을 때 뒤집어도 Scut = Swind
+      } else okK = okK && iC2 < 0;
+      out[k] = o;
+      if (!okK) ok = false;
+    }
+    check('vii_rewind_S_floor', A ? ok : null, out);
+  }
+
+  // (viii) sectorMax 틈 (감기가 될 수 없는 쪽, 곧게 아래·쟁기에서 오른쪽): 쉬다가 12 m/s 로 그으면 (A) 도 베기 — vStrike 를 넘는 첫 스텝에 CUT (§3.10)
+  {
+    const out = {};
+    let ok = true;
+    for (const [k, a, b] of [['pflug_down', PFLUG, [0.18, -0.9]], ['pflug_right', PFLUG, [0.9, -0.28]], ['center_down', [0, 0], [0, -0.7]]]) {
+      const path = new Path(...a).hold(400).mark('go').move(...b, 12, 'lin').mark('stop').hold(800);
+      const R = runSynth(path, input);
+      const tCrit = fingerCriterionT(R.sf, path.marks.go, null, true);
+      const iCut = firstIdx(R.rec, (r) => r.st === GES_CUT);
+      const cut = iCut >= 0 ? R.rec[iCut] : null;
+      const lat = cut && tCrit != null ? +((cut.t - tCrit) / STEP_MS).toFixed(2) : null;
+      const last = R.rec[R.rec.length - 1];
+      const endR = R.rec[Math.max(0, firstIdx(R.rec, (r) => r.t >= path.marks.stop) - 1)];
+      out[k] = { cuts: R.cuts, famA: cut?.famA, mode: cut?.mode, latency_steps: lat, S_end: f3(endR.S), wind: R.rec.some((r) => r.st === GES_WIND), S_final: last.S };
+      if (!(cut && R.cuts === 1 && cut.mode === 'stroke' && lat != null && lat <= 1 && !out[k].wind && last.S === 0)) ok = false;
+    }
+    check('viii_gap_stroke', ok, out);
   }
 
   // 손가락 궤적 길 (input.js → FingerTrace → readFinger): 60 / 120 Hz 화면, 120 Hz 터치 — 같은 φ̇, 같은 뒤집힘 지연
