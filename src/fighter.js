@@ -2082,20 +2082,41 @@ export class Fighter {
     for (const name in this.bodies) c.parts[name] = put(this.bodies[name], c.parts[name]);
   }
 
-  syncMeshes() {
+  /** 겉모습을 몸에 맞춘다. alpha < 1 (RENDER.interp, main.js 가 누산기/timestep 을 준다)이면 지난 스텝 직전 자세(cacheState) → 지금 자세를 보간 */
+  syncMeshes(alpha = 1) {
     // 피를 많이 흘리면 얼굴이 창백해진다
     if (this.faceMat) {
       const pale = THREE.MathUtils.clamp((1 - this.blood) / 0.5, 0, 1) * 0.7;
       this.faceMat.color.copy(this.skinColor).lerp(_paleColor, pale);
     }
+    const prev = alpha < 1 && this.cache ? this.prevSlots() : null;
     for (const { rb, group } of this.meshes) {
       const t = rb.translation();
       const r = rb.rotation();
-      group.position.set(t.x, t.y, t.z);
-      group.quaternion.set(r.x, r.y, r.z, r.w);
+      const pv = prev && prev.get(rb);
+      if (pv) {
+        group.position.lerpVectors(pv.p, _ip.set(t.x, t.y, t.z), alpha);
+        group.quaternion.slerpQuaternions(pv.q, _iq.set(r.x, r.y, r.z, r.w), alpha);
+      } else {
+        group.position.set(t.x, t.y, t.z);
+        group.quaternion.set(r.x, r.y, r.z, r.w);
+      }
     }
   }
+
+  /** 몸체 → cacheState 의 지난 자세 칸 (칸 객체는 첫 cacheState 뒤 바뀌지 않아 한 번만 만든다). 벗겨진 투구(loose)는 칸이 없어 그대로 놓는다 */
+  prevSlots() {
+    if (!this._prevSlots) {
+      const m = new Map();
+      for (const n in this.bodies) if (this.cache.parts[n]) m.set(this.bodies[n], this.cache.parts[n]);
+      if (this.cache.sword) m.set(this.sword, this.cache.sword);
+      this._prevSlots = m;
+    }
+    return this._prevSlots;
+  }
 }
+const _ip = new THREE.Vector3(); // syncMeshes 보간용
+const _iq = new THREE.Quaternion();
 
 // ── 도우미 함수들 ──
 

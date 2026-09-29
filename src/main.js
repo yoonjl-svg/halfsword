@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
-import { PHYSICS, ARENA, CAMERA, INPUT } from './config.js';
+import { PHYSICS, ARENA, CAMERA, INPUT, RENDER } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { GUARDS } from './guards.js';
 import { InputTrail } from './trail.js';
@@ -15,7 +15,7 @@ import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } fr
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL } from './weapons.js';
 import { attachAura } from './aura.js';
-import { Particles, haptic, hapticPulse, stickDecal, rebuildDecal } from './effects.js';
+import { Particles, haptic, hapticPulse, stickDecal, rebuildDecal, logKnee } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
@@ -406,10 +406,13 @@ function onWound(att, vic, r, point, pr) {
     const steel = r.helmet && vic.helmetGroup ? (vic.helmetGroup.userData.pieces?.bowl ?? vic.helmetGroup).children[0] : r.plate ? vic.plateMeshNear(pr.v.part, r.local) : null;
     if (steel?.geometry) {
       const p = r.local.clone().applyMatrix4(new THREE.Matrix4().copy(steel.matrixWorld).invert().multiply(group.matrixWorld));
-      stickDecal(steel, p, bladeLocal, 'scratch', 0.03, Math.min(0.16, 0.04 + e / 1200));
-      if (e > 60) stickDecal(steel, p, null, 'dent', 0.03 + Math.min(0.05, e / 4000), 0.03 + Math.min(0.05, e / 4000));
+      // 자국 크기: 포화점(긁힘 144 J·찌그러짐 200 J·멍 120 J) 너머는 로그로 계속 커진다 (effects.logKnee, FEEL.logScale)
+      stickDecal(steel, p, bladeLocal, 'scratch', 0.03, 0.04 + logKnee(e / 1200, 0.12));
+      const dent = 0.03 + logKnee(e / 4000, 0.05);
+      if (e > 60) stickDecal(steel, p, null, 'dent', dent, dent);
     } else if (!opened) {
-      if (e > 15) stickDecal(mesh, local, null, 'bruise', 0.05 + Math.min(0.08, e / 1500), 0.05 + Math.min(0.08, e / 1500));
+      const br = 0.05 + logKnee(e / 1500, 0.08);
+      if (e > 15) stickDecal(mesh, local, null, 'bruise', br, br);
     } else if (settings.blood) {
       const len = Math.min(0.24, 0.06 + sev * 0.14);
       if (r.type === 'stab') stickDecal(mesh, local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
@@ -431,7 +434,7 @@ function onWound(att, vic, r, point, pr) {
     if (opened) sound.impact({ a: mat, b: 'armor', energy: e * 0.8 });
     else sound.plateBlock(e, { material: mat });
   }
-  if ((r.helmet || r.plate) && CONFIG.ARMOR.on && e > 30) particles.sparks(point, Math.min(10, e / 20) * (opened ? 0.5 : 1));
+  if ((r.helmet || r.plate) && CONFIG.ARMOR.on && e > 30) particles.sparks(point, logKnee(e / 20, 10) * (opened ? 0.5 : 1)); // 200 J 너머 로그
   // 이번 타격에 판금 부위나 투구가 완전히 부서졌으면(fighter.applyWound 가 표시한다) 깨지는 소리를 한 번
   if (vic.armorBroke) {
     vic.armorBroke = false;
@@ -442,6 +445,7 @@ function onWound(att, vic, r, point, pr) {
   else sound.blunt(e);
   if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet && !r.plate) sound.bone(e);
   // 멈칫: 재질에 따라. 살을 깨끗이 가르면 짧게, 박히거나 뼈·투구에 걸리면 길게 (최대 0.1초 — 조작이 늦게 느껴지지 않게)
+  //  길이 한도는 FEEL.logScale 과 무관하게 그대로 둔다 (Q15). 먼지·바람(excite/gust)도 그대로 (무대·소리 쪽에서 1 로 포화)
   const bone = e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg');
   const stopT = r.pass ? Math.min(0.06, e / 2000) : r.stuck || bone || r.helmet || r.plate ? Math.min(0.1, e / 900) : Math.min(0.08, e / 1200);
   hitStop = Math.max(hitStop, stopT);
@@ -449,7 +453,7 @@ function onWound(att, vic, r, point, pr) {
   //  (손을 축으로 도는 강체에서 한 점을 치면 축(손)이 받는 충격 = 1 − a·b/k²)
   const sting = att.swordSting(r.t);
   // 카메라가 칼이 지나간 방향으로 밀린다 (내가 맞으면 더 크게, 내가 칠 땐 손이 받은 충격만큼)
-  kickCamera(r.dir, Math.min(1.6, e / 120) * (vic === player ? 1.4 : 0.4 + 0.4 * sting));
+  kickCamera(r.dir, logKnee(e / 120, 1.6) * (vic === player ? 1.4 : 0.4 + 0.4 * sting)); // 192 J 너머 로그 (haptic 의 포화점은 effects.haptic 안)
   if (vic === player) haptic(e / 120);
   else if (att === player) haptic((e / 120) * (0.4 + 0.6 * sting));
   if (!vic.alive) slowMo = 1.6;
@@ -1321,6 +1325,8 @@ function frame(now) {
       acc -= PHYSICS.timestep;
       steps++;
     }
+    // 그리기 보간 비율 (RENDER.interp): 지난 스텝 직전 자세 → 지금 자세 사이 acc/timestep. 스텝 한도에 걸려 시간을 버렸으면 지금 자세 그대로
+    const alpha = RENDER.interp && steps < PHYSICS.maxStepsPerFrame ? Math.min(1, acc / PHYSICS.timestep) : 1;
     if (steps === PHYSICS.maxStepsPerFrame) acc = 0;
     if (perf) {
       physMs = performance.now() - physT0;
@@ -1328,8 +1334,8 @@ function frame(now) {
       capped = steps === PHYSICS.maxStepsPerFrame;
       simGot = steps * PHYSICS.timestep;
     }
-    player.syncMeshes();
-    enemy.syncMeshes();
+    player.syncMeshes(alpha);
+    enemy.syncMeshes(alpha);
     for (const f of [player, enemy]) {
       updateWhoosh(f, dt * scale);
       updateDrips(f, dt * scale);

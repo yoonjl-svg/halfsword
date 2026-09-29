@@ -29,6 +29,17 @@ export const CAMERA = {
   lookAhead: 2.2, // 내 앞쪽 얼마나 먼 곳을 화면 가운데로 볼지
 };
 
+// 그리기 (R0 render). 물리는 건드리지 않는다 — 시뮬은 안 읽는다
+export const RENDER = {
+  interp: !R0_OFF, // 물리 누산기 비율(acc/timestep)로 지난 스텝 자세 → 지금 자세를 보간해 그린다 (fighter.syncMeshes). 화면 지연 ≤ 물리 한 스텝(8 ms)
+};
+
+// 맞은 느낌 (R0 render). 멈칫(hitStop) 길이는 그대로 (Q15)
+export const FEEL = {
+  logScale: !R0_OFF, // 맞은 느낌 크기(흔들림·진동·불꽃·피 수·자국 크기)가 예전 포화점을 넘으면 로그로 계속 커진다 (effects.logKnee)
+  logGain: 1, // 포화점 너머 로그 기울기 (1 = 자연로그)
+};
+
 export const BODY = {
   standHeight: 0.95, // 서 있을 때 골반 높이
   support: 1.0, // 골반을 떠받치는 힘(중력 대비 배수)
