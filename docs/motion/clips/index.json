@@ -400,25 +400,25 @@
       "chestYaw": 28,
       "xFactor": 26,
       "lean": 6,
-      "shoulderElev": 130,
-      "elbowS": 91,
-      "wrist": 121,
+      "shoulderElev": 140,
+      "elbowS": 103,
+      "wrist": 128,
       "kneeL": 50,
       "kneeR": 65,
       "handChest": [
-       0.33,
-       0.36,
-       0.15
+       0.26,
+       0.38,
+       0.14
       ],
       "handWorld": [
-       0.31,
-       1.53,
-       0.32
+       0.26,
+       1.56,
+       0.28
       ],
       "tipWorld": [
-       -0.07,
-       2.37,
-       1.06
+       -0.12,
+       2.4,
+       1.01
       ],
       "swordElAz": [
        45,
@@ -530,9 +530,9 @@
      "recover": 0.425,
      "total": 1.25
     },
-    "tipPeak": 24.9,
+    "tipPeak": 24.8,
     "tipAtLine": 21.6,
-    "handPeak": 6.5,
+    "handPeak": 7.3,
     "sequence": [
      {
       "part": "골반",
@@ -546,31 +546,31 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -86,
-      "value": 18.7
+      "t": -90,
+      "value": 24.6
      },
      {
       "part": "손",
-      "t": -82,
-      "value": 6.5
+      "t": -86,
+      "value": 7.3
      },
      {
       "part": "손목(칼)",
-      "t": -82,
-      "value": 14.1
+      "t": -86,
+      "value": 17.8
      },
      {
       "part": "칼끝",
       "t": -32,
-      "value": 24.9
+      "value": 24.8
      }
     ],
     "ordered": true,
     "trunkCarry": 0.79,
     "shareAtTipPeak": {
-     "trunk": 0.35,
-     "arm": 0.05,
-     "wrist": 0.59
+     "trunk": 0.36,
+     "arm": 0.04,
+     "wrist": 0.6
     },
     "wind": {
      "handAboveHeadTop": 0.04,
@@ -587,8 +587,8 @@
      "chestYaw": 105,
      "pelvisYaw": 56,
      "xFactorMax": 33,
-     "handPath": 2.69,
-     "tipPath": 11.98,
+     "handPath": 2.64,
+     "tipPath": 11.97,
      "comShift": 0.2
     },
     "opening": {
@@ -600,8 +600,8 @@
      "reachOver": 0.033,
      "legOver": 0,
      "tipMin": 0.08,
-     "wristMax": 167,
-     "wristClampTime": 0.26,
+     "wristMax": 166,
+     "wristClampTime": 0.27,
      "wristOver160": 0.06
     }
    }
@@ -1306,25 +1306,25 @@
       "chestYaw": -28,
       "xFactor": -26,
       "lean": 6,
-      "shoulderElev": 95,
-      "elbowS": 47,
-      "wrist": 37,
+      "shoulderElev": 92,
+      "elbowS": 64,
+      "wrist": 39,
       "kneeL": 65,
       "kneeR": 50,
       "handChest": [
-       0.33,
-       0.36,
-       -0.15
+       0.26,
+       0.38,
+       -0.14
       ],
       "handWorld": [
-       0.31,
-       1.53,
-       -0.32
+       0.26,
+       1.56,
+       -0.28
       ],
       "tipWorld": [
-       -0.07,
-       2.37,
-       -1.06
+       -0.12,
+       2.4,
+       -1.01
       ],
       "swordElAz": [
        45,
@@ -1436,9 +1436,9 @@
      "recover": 0.425,
      "total": 1.25
     },
-    "tipPeak": 24.9,
+    "tipPeak": 24.8,
     "tipAtLine": 21.6,
-    "handPeak": 6.5,
+    "handPeak": 7.3,
     "sequence": [
      {
       "part": "골반",
@@ -1457,26 +1457,26 @@
      },
      {
       "part": "손",
-      "t": -82,
-      "value": 6.5
+      "t": -86,
+      "value": 7.3
      },
      {
       "part": "손목(칼)",
-      "t": -152,
-      "value": 14.5
+      "t": -148,
+      "value": 12.2
      },
      {
       "part": "칼끝",
       "t": -32,
-      "value": 24.9
+      "value": 24.8
      }
     ],
     "ordered": true,
     "trunkCarry": 0.79,
     "shareAtTipPeak": {
-     "trunk": 0.35,
+     "trunk": 0.36,
      "arm": 0.26,
-     "wrist": 0.38
+     "wrist": 0.39
     },
     "wind": {
      "handAboveHeadTop": 0.04,
@@ -1493,8 +1493,8 @@
      "chestYaw": 105,
      "pelvisYaw": 56,
      "xFactorMax": 33,
-     "handPath": 2.72,
-     "tipPath": 12.04,
+     "handPath": 2.67,
+     "tipPath": 12.03,
      "comShift": 0.2
     },
     "opening": {
@@ -2212,25 +2212,25 @@
       "chestYaw": 16,
       "xFactor": 11,
       "lean": 6,
-      "shoulderElev": 129,
-      "elbowS": 76,
-      "wrist": 84,
+      "shoulderElev": 155,
+      "elbowS": 87,
+      "wrist": 102,
       "kneeL": 51,
       "kneeR": 66,
       "handChest": [
-       0.33,
-       0.41,
-       0.03
+       0.26,
+       0.43,
+       0.04
       ],
       "handWorld": [
-       0.4,
-       1.59,
-       0.14
+       0.34,
+       1.61,
+       0.13
       ],
       "tipWorld": [
-       0.08,
-       2.72,
-       0.14
+       0.02,
+       2.74,
+       0.13
       ],
       "swordElAz": [
        74,
@@ -2344,7 +2344,7 @@
     },
     "tipPeak": 23.9,
     "tipAtLine": 13.1,
-    "handPeak": 5.4,
+    "handPeak": 6.7,
     "sequence": [
      {
       "part": "골반",
@@ -2358,18 +2358,18 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -111,
-      "value": 23
+      "t": -98,
+      "value": 37.6
      },
      {
       "part": "손",
-      "t": -148,
-      "value": 5.4
+      "t": -94,
+      "value": 6.7
      },
      {
       "part": "손목(칼)",
-      "t": -111,
-      "value": 25.7
+      "t": -98,
+      "value": 36.1
      },
      {
       "part": "칼끝",
@@ -2377,7 +2377,7 @@
       "value": 23.9
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.8,
     "shareAtTipPeak": {
      "trunk": 0.06,
@@ -2399,8 +2399,8 @@
      "chestYaw": 39,
      "pelvisYaw": 30,
      "xFactorMax": 13,
-     "handPath": 2.36,
-     "tipPath": 9.49,
+     "handPath": 2.35,
+     "tipPath": 9.52,
      "comShift": 0.23
     },
     "opening": {
@@ -2412,8 +2412,8 @@
      "reachOver": 0.033,
      "legOver": 0,
      "tipMin": 0.47,
-     "wristMax": 140,
-     "wristClampTime": 0.1,
+     "wristMax": 139,
+     "wristClampTime": 0.09,
      "wristOver160": 0
     }
    }
@@ -3118,25 +3118,25 @@
       "chestYaw": -16,
       "xFactor": -11,
       "lean": 6,
-      "shoulderElev": 94,
-      "elbowS": 66,
-      "wrist": 39,
+      "shoulderElev": 97,
+      "elbowS": 76,
+      "wrist": 41,
       "kneeL": 66,
       "kneeR": 51,
       "handChest": [
-       0.33,
-       0.41,
-       -0.03
+       0.26,
+       0.43,
+       -0.04
       ],
       "handWorld": [
-       0.4,
-       1.59,
-       -0.14
+       0.34,
+       1.61,
+       -0.13
       ],
       "tipWorld": [
-       0.08,
-       2.72,
-       -0.14
+       0.02,
+       2.74,
+       -0.13
       ],
       "swordElAz": [
        74,
@@ -3250,7 +3250,7 @@
     },
     "tipPeak": 23.9,
     "tipAtLine": 13.1,
-    "handPeak": 5.4,
+    "handPeak": 6.7,
     "sequence": [
      {
       "part": "골반",
@@ -3264,18 +3264,18 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -148,
-      "value": 21.9
+      "t": -111,
+      "value": 19.3
      },
      {
       "part": "손",
-      "t": -148,
-      "value": 5.4
+      "t": -94,
+      "value": 6.7
      },
      {
       "part": "손목(칼)",
-      "t": -148,
-      "value": 24.1
+      "t": -127,
+      "value": 21.3
      },
      {
       "part": "칼끝",
@@ -3283,12 +3283,12 @@
       "value": 23.9
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.8,
     "shareAtTipPeak": {
      "trunk": 0.06,
-     "arm": 0.28,
-     "wrist": 0.66
+     "arm": 0.29,
+     "wrist": 0.65
     },
     "wind": {
      "handAboveHeadTop": 0.1,
@@ -3305,8 +3305,8 @@
      "chestYaw": 39,
      "pelvisYaw": 30,
      "xFactorMax": 12,
-     "handPath": 2.37,
-     "tipPath": 9.5,
+     "handPath": 2.36,
+     "tipPath": 9.53,
      "comShift": 0.23
     },
     "opening": {
@@ -4024,25 +4024,25 @@
       "chestYaw": 24,
       "xFactor": 21,
       "lean": 4,
-      "shoulderElev": 139,
-      "elbowS": 90,
-      "wrist": 119,
+      "shoulderElev": 142,
+      "elbowS": 103,
+      "wrist": 122,
       "kneeL": 46,
       "kneeR": 63,
       "handChest": [
-       0.31,
-       0.39,
-       0.12
+       0.25,
+       0.38,
+       0.14
       ],
       "handWorld": [
-       0.3,
+       0.23,
        1.59,
-       0.29
+       0.28
       ],
       "tipWorld": [
-       0.28,
-       1.57,
-       1.47
+       0.22,
+       1.56,
+       1.46
       ],
       "swordElAz": [
        -1,
@@ -4156,7 +4156,7 @@
     },
     "tipPeak": 24.4,
     "tipAtLine": 19.6,
-    "handPeak": 5,
+    "handPeak": 5.9,
     "sequence": [
      {
       "part": "골반",
@@ -4171,12 +4171,12 @@
      {
       "part": "어깨(위팔)",
       "t": -23,
-      "value": 12.1
+      "value": 11.9
      },
      {
       "part": "손",
-      "t": -144,
-      "value": 5
+      "t": -90,
+      "value": 5.9
      },
      {
       "part": "손목(칼)",
@@ -4189,7 +4189,7 @@
       "value": 24.4
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.76,
     "shareAtTipPeak": {
      "trunk": 0.33,
@@ -4211,12 +4211,12 @@
      "chestYaw": 90,
      "pelvisYaw": 51,
      "xFactorMax": 25,
-     "handPath": 2.36,
-     "tipPath": 10.5,
+     "handPath": 2.34,
+     "tipPath": 10.49,
      "comShift": 0.11
     },
     "opening": {
-     "openTime": 0.56,
+     "openTime": 0.58,
      "bladeBehindTime": 0.3,
      "maxTurn": 47
     },
@@ -4930,25 +4930,25 @@
       "chestYaw": -24,
       "xFactor": -21,
       "lean": 4,
-      "shoulderElev": 96,
-      "elbowS": 54,
-      "wrist": 62,
+      "shoulderElev": 93,
+      "elbowS": 64,
+      "wrist": 66,
       "kneeL": 63,
       "kneeR": 46,
       "handChest": [
-       0.31,
-       0.39,
-       -0.12
+       0.25,
+       0.38,
+       -0.14
       ],
       "handWorld": [
-       0.3,
+       0.23,
        1.59,
-       -0.29
+       -0.28
       ],
       "tipWorld": [
-       0.28,
-       1.57,
-       -1.47
+       0.22,
+       1.56,
+       -1.46
       ],
       "swordElAz": [
        -1,
@@ -5062,7 +5062,7 @@
     },
     "tipPeak": 24.4,
     "tipAtLine": 19.6,
-    "handPeak": 5,
+    "handPeak": 5.9,
     "sequence": [
      {
       "part": "골반",
@@ -5081,8 +5081,8 @@
      },
      {
       "part": "손",
-      "t": -144,
-      "value": 5
+      "t": -90,
+      "value": 5.9
      },
      {
       "part": "손목(칼)",
@@ -5095,7 +5095,7 @@
       "value": 24.4
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.76,
     "shareAtTipPeak": {
      "trunk": 0.33,
@@ -5117,12 +5117,12 @@
      "chestYaw": 90,
      "pelvisYaw": 51,
      "xFactorMax": 25,
-     "handPath": 2.38,
-     "tipPath": 10.58,
+     "handPath": 2.36,
+     "tipPath": 10.57,
      "comShift": 0.1
     },
     "opening": {
-     "openTime": 0.6,
+     "openTime": 0.62,
      "bladeBehindTime": 0.3,
      "maxTurn": 47
     },
@@ -5836,25 +5836,25 @@
       "chestYaw": 24,
       "xFactor": 23,
       "lean": 6,
-      "shoulderElev": 114,
-      "elbowS": 80,
-      "wrist": 89,
+      "shoulderElev": 125,
+      "elbowS": 96,
+      "wrist": 97,
       "kneeL": 51,
       "kneeR": 66,
       "handChest": [
-       0.4,
-       0.32,
+       0.31,
+       0.34,
        0.14
       ],
       "handWorld": [
-       0.39,
-       1.49,
-       0.33
+       0.32,
+       1.52,
+       0.3
       ],
       "tipWorld": [
-       0.3,
-       2.63,
-       0.6
+       0.22,
+       2.66,
+       0.56
       ],
       "swordElAz": [
        76,
@@ -5957,7 +5957,7 @@
      "footLands": -40,
      "frontOpens": -282,
      "frontOpenAfterLine": null,
-     "frontCloses": -123
+     "frontCloses": -115
     },
     "time": {
      "wind": 0.28,
@@ -5968,7 +5968,7 @@
     },
     "tipPeak": 24.7,
     "tipAtLine": 11.2,
-    "handPeak": 7.3,
+    "handPeak": 8.5,
     "sequence": [
      {
       "part": "골반",
@@ -5983,17 +5983,17 @@
      {
       "part": "어깨(위팔)",
       "t": -98,
-      "value": 17
+      "value": 24.6
      },
      {
       "part": "손",
-      "t": -94,
-      "value": 7.3
+      "t": -90,
+      "value": 8.5
      },
      {
       "part": "손목(칼)",
-      "t": -148,
-      "value": 17.7
+      "t": -98,
+      "value": 22.4
      },
      {
       "part": "칼끝",
@@ -6023,13 +6023,13 @@
      "chestYaw": 79,
      "pelvisYaw": 43,
      "xFactorMax": 30,
-     "handPath": 2.32,
+     "handPath": 2.27,
      "tipPath": 8.9,
      "comShift": 0.21
     },
     "opening": {
      "openTime": 0.17,
-     "bladeBehindTime": 0.15,
+     "bladeBehindTime": 0.16,
      "maxTurn": 49
     },
     "checks": {
@@ -6742,25 +6742,25 @@
       "chestYaw": -24,
       "xFactor": -23,
       "lean": 6,
-      "shoulderElev": 95,
-      "elbowS": 36,
-      "wrist": 47,
+      "shoulderElev": 89,
+      "elbowS": 59,
+      "wrist": 34,
       "kneeL": 66,
       "kneeR": 51,
       "handChest": [
-       0.4,
-       0.32,
+       0.31,
+       0.34,
        -0.14
       ],
       "handWorld": [
-       0.39,
-       1.49,
-       -0.33
+       0.32,
+       1.52,
+       -0.3
       ],
       "tipWorld": [
-       0.3,
-       2.63,
-       -0.6
+       0.22,
+       2.66,
+       -0.56
       ],
       "swordElAz": [
        76,
@@ -6863,7 +6863,7 @@
      "footLands": -40,
      "frontOpens": -282,
      "frontOpenAfterLine": null,
-     "frontCloses": -123
+     "frontCloses": -115
     },
     "time": {
      "wind": 0.28,
@@ -6874,7 +6874,7 @@
     },
     "tipPeak": 24.7,
     "tipAtLine": 11.2,
-    "handPeak": 7.3,
+    "handPeak": 8.5,
     "sequence": [
      {
       "part": "골반",
@@ -6888,18 +6888,18 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -161,
-      "value": 13
+      "t": -102,
+      "value": 9.2
      },
      {
       "part": "손",
-      "t": -94,
-      "value": 7.3
+      "t": -90,
+      "value": 8.5
      },
      {
       "part": "손목(칼)",
-      "t": -36,
-      "value": 10.4
+      "t": -23,
+      "value": 11.8
      },
      {
       "part": "칼끝",
@@ -6911,8 +6911,8 @@
     "trunkCarry": 0.77,
     "shareAtTipPeak": {
      "trunk": 0.19,
-     "arm": 0.32,
-     "wrist": 0.49
+     "arm": 0.38,
+     "wrist": 0.43
     },
     "wind": {
      "handAboveHeadTop": 0.02,
@@ -6929,13 +6929,13 @@
      "chestYaw": 79,
      "pelvisYaw": 43,
      "xFactorMax": 30,
-     "handPath": 2.35,
+     "handPath": 2.3,
      "tipPath": 8.94,
      "comShift": 0.21
     },
     "opening": {
      "openTime": 0.17,
-     "bladeBehindTime": 0.15,
+     "bladeBehindTime": 0.16,
      "maxTurn": 49
     },
     "checks": {
@@ -7648,25 +7648,25 @@
       "chestYaw": 30,
       "xFactor": 26,
       "lean": 8,
-      "shoulderElev": 26,
+      "shoulderElev": 22,
       "elbowS": 81,
-      "wrist": 89,
+      "wrist": 86,
       "kneeL": 55,
       "kneeR": 69,
       "handChest": [
-       0.35,
-       -0.15,
+       0.32,
+       -0.18,
        0.14
       ],
       "handWorld": [
-       0.27,
-       0.99,
-       0.31
+       0.24,
+       0.96,
+       0.29
       ],
       "tipWorld": [
-       0.25,
-       0.14,
-       1.13
+       0.22,
+       0.11,
+       1.11
       ],
       "swordElAz": [
        -46,
@@ -7778,9 +7778,9 @@
      "recover": 0.425,
      "total": 1.25
     },
-    "tipPeak": 25.6,
+    "tipPeak": 25.5,
     "tipAtLine": 19.6,
-    "handPeak": 5.7,
+    "handPeak": 6.1,
     "sequence": [
      {
       "part": "골반",
@@ -7795,30 +7795,30 @@
      {
       "part": "어깨(위팔)",
       "t": -86,
-      "value": 6.5
+      "value": 8.3
      },
      {
       "part": "손",
       "t": -86,
-      "value": 5.7
+      "value": 6.1
      },
      {
       "part": "손목(칼)",
-      "t": -32,
-      "value": 7.6
+      "t": -27,
+      "value": 7.8
      },
      {
       "part": "칼끝",
       "t": -32,
-      "value": 25.6
+      "value": 25.5
      }
     ],
     "ordered": true,
     "trunkCarry": 0.8,
     "shareAtTipPeak": {
      "trunk": 0.33,
-     "arm": 0.21,
-     "wrist": 0.47
+     "arm": 0.19,
+     "wrist": 0.48
     },
     "wind": {
      "handAboveHeadTop": -0.6,
@@ -7835,19 +7835,19 @@
      "chestYaw": 99,
      "pelvisYaw": 55,
      "xFactorMax": 31,
-     "handPath": 1.98,
+     "handPath": 1.96,
      "tipPath": 10.1,
      "comShift": 0.13
     },
     "opening": {
      "openTime": 0.56,
-     "bladeBehindTime": 0.27,
+     "bladeBehindTime": 0.28,
      "maxTurn": 52
     },
     "checks": {
      "reachOver": 0.033,
      "legOver": 0,
-     "tipMin": 0.06,
+     "tipMin": 0.05,
      "wristMax": 121,
      "wristClampTime": 0,
      "wristOver160": 0
@@ -8554,25 +8554,25 @@
       "chestYaw": -30,
       "xFactor": -26,
       "lean": 8,
-      "shoulderElev": 44,
+      "shoulderElev": 41,
       "elbowS": 37,
-      "wrist": 32,
+      "wrist": 28,
       "kneeL": 69,
       "kneeR": 55,
       "handChest": [
-       0.35,
-       -0.15,
+       0.32,
+       -0.18,
        -0.14
       ],
       "handWorld": [
-       0.27,
-       0.99,
-       -0.31
+       0.24,
+       0.96,
+       -0.29
       ],
       "tipWorld": [
-       0.25,
-       0.14,
-       -1.13
+       0.22,
+       0.11,
+       -1.11
       ],
       "swordElAz": [
        -46,
@@ -8684,9 +8684,9 @@
      "recover": 0.425,
      "total": 1.25
     },
-    "tipPeak": 25.6,
+    "tipPeak": 25.5,
     "tipAtLine": 19.6,
-    "handPeak": 5.7,
+    "handPeak": 6.1,
     "sequence": [
      {
       "part": "골반",
@@ -8706,7 +8706,7 @@
      {
       "part": "손",
       "t": -86,
-      "value": 5.7
+      "value": 6.1
      },
      {
       "part": "손목(칼)",
@@ -8716,15 +8716,15 @@
      {
       "part": "칼끝",
       "t": -32,
-      "value": 25.6
+      "value": 25.5
      }
     ],
     "ordered": true,
     "trunkCarry": 0.8,
     "shareAtTipPeak": {
      "trunk": 0.33,
-     "arm": 0.35,
-     "wrist": 0.33
+     "arm": 0.33,
+     "wrist": 0.34
     },
     "wind": {
      "handAboveHeadTop": -0.6,
@@ -8741,19 +8741,19 @@
      "chestYaw": 99,
      "pelvisYaw": 55,
      "xFactorMax": 31,
-     "handPath": 2.06,
-     "tipPath": 10.15,
+     "handPath": 2.04,
+     "tipPath": 10.14,
      "comShift": 0.13
     },
     "opening": {
      "openTime": 0.61,
-     "bladeBehindTime": 0.27,
+     "bladeBehindTime": 0.28,
      "maxTurn": 52
     },
     "checks": {
      "reachOver": 0,
      "legOver": 0,
-     "tipMin": 0.06,
+     "tipMin": 0.05,
      "wristMax": 114,
      "wristClampTime": 0,
      "wristOver160": 0
@@ -9460,25 +9460,25 @@
       "chestYaw": 14,
       "xFactor": 12,
       "lean": 6,
-      "shoulderElev": 140,
-      "elbowS": 68,
-      "wrist": 89,
+      "shoulderElev": 156,
+      "elbowS": 81,
+      "wrist": 97,
       "kneeL": 51,
       "kneeR": 66,
       "handChest": [
-       0.35,
-       0.43,
+       0.28,
+       0.44,
        0.05
       ],
       "handWorld": [
-       0.44,
-       1.6,
-       0.15
+       0.37,
+       1.62,
+       0.14
       ],
       "tipWorld": [
-       0.2,
-       2.76,
-       0.15
+       0.12,
+       2.78,
+       0.14
       ],
       "swordElAz": [
        78,
@@ -9581,7 +9581,7 @@
      "footLands": -40,
      "frontOpens": -282,
      "frontOpenAfterLine": null,
-     "frontCloses": -198
+     "frontCloses": -190
     },
     "time": {
      "wind": 0.28,
@@ -9592,7 +9592,7 @@
     },
     "tipPeak": 24.2,
     "tipAtLine": 12.2,
-    "handPeak": 5.8,
+    "handPeak": 7.2,
     "sequence": [
      {
       "part": "골반",
@@ -9606,18 +9606,18 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -102,
-      "value": 14.9
+      "t": -94,
+      "value": 23
      },
      {
       "part": "손",
-      "t": -148,
-      "value": 5.8
+      "t": -94,
+      "value": 7.2
      },
      {
       "part": "손목(칼)",
-      "t": -119,
-      "value": 15.6
+      "t": -94,
+      "value": 19.4
      },
      {
       "part": "칼끝",
@@ -9625,11 +9625,11 @@
       "value": 24.2
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.78,
     "shareAtTipPeak": {
      "trunk": 0.06,
-     "arm": 0.14,
+     "arm": 0.15,
      "wrist": 0.79
     },
     "wind": {
@@ -9647,12 +9647,12 @@
      "chestYaw": 38,
      "pelvisYaw": 29,
      "xFactorMax": 13,
-     "handPath": 2.2,
-     "tipPath": 9.08,
+     "handPath": 2.19,
+     "tipPath": 9.11,
      "comShift": 0.26
     },
     "opening": {
-     "openTime": 0.09,
+     "openTime": 0.1,
      "bladeBehindTime": 0.16,
      "maxTurn": 26
     },
@@ -10367,24 +10367,24 @@
       "xFactor": -12,
       "lean": 6,
       "shoulderElev": 101,
-      "elbowS": 52,
-      "wrist": 43,
+      "elbowS": 66,
+      "wrist": 39,
       "kneeL": 66,
       "kneeR": 51,
       "handChest": [
-       0.35,
-       0.43,
+       0.28,
+       0.44,
        -0.05
       ],
       "handWorld": [
-       0.44,
-       1.6,
-       -0.15
+       0.37,
+       1.62,
+       -0.14
       ],
       "tipWorld": [
-       0.2,
-       2.76,
-       -0.15
+       0.12,
+       2.78,
+       -0.14
       ],
       "swordElAz": [
        78,
@@ -10487,7 +10487,7 @@
      "footLands": -40,
      "frontOpens": -282,
      "frontOpenAfterLine": null,
-     "frontCloses": -198
+     "frontCloses": -190
     },
     "time": {
      "wind": 0.28,
@@ -10498,7 +10498,7 @@
     },
     "tipPeak": 24.2,
     "tipAtLine": 12.2,
-    "handPeak": 5.8,
+    "handPeak": 7.2,
     "sequence": [
      {
       "part": "골반",
@@ -10512,18 +10512,18 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -152,
-      "value": 17.4
+      "t": -111,
+      "value": 14.1
      },
      {
       "part": "손",
-      "t": -148,
-      "value": 5.8
+      "t": -94,
+      "value": 7.2
      },
      {
       "part": "손목(칼)",
-      "t": -152,
-      "value": 18.1
+      "t": -136,
+      "value": 16.7
      },
      {
       "part": "칼끝",
@@ -10531,7 +10531,7 @@
       "value": 24.2
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.78,
     "shareAtTipPeak": {
      "trunk": 0.06,
@@ -10553,12 +10553,12 @@
      "chestYaw": 38,
      "pelvisYaw": 29,
      "xFactorMax": 13,
-     "handPath": 2.21,
-     "tipPath": 9.1,
+     "handPath": 2.2,
+     "tipPath": 9.12,
      "comShift": 0.26
     },
     "opening": {
-     "openTime": 0.09,
+     "openTime": 0.1,
      "bladeBehindTime": 0.16,
      "maxTurn": 26
     },
@@ -11272,25 +11272,25 @@
       "chestYaw": 29,
       "xFactor": 25,
       "lean": 8,
-      "shoulderElev": 58,
-      "elbowS": 95,
-      "wrist": 53,
+      "shoulderElev": 61,
+      "elbowS": 111,
+      "wrist": 59,
       "kneeL": 53,
       "kneeR": 68,
       "handChest": [
-       0.33,
-       0.19,
-       0.02
+       0.26,
+       0.23,
+       0.04
       ],
       "handWorld": [
-       0.36,
-       1.34,
-       0.25
+       0.3,
+       1.39,
+       0.23
       ],
       "tipWorld": [
-       0.76,
-       2.12,
-       1.04
+       0.69,
+       2.17,
+       1.03
       ],
       "swordElAz": [
        41,
@@ -11393,7 +11393,7 @@
      "footLands": -40,
      "frontOpens": -282,
      "frontOpenAfterLine": null,
-     "frontCloses": -157
+     "frontCloses": -132
     },
     "time": {
      "wind": 0.28,
@@ -11404,7 +11404,7 @@
     },
     "tipPeak": 25.8,
     "tipAtLine": 12.1,
-    "handPeak": 6,
+    "handPeak": 6.8,
     "sequence": [
      {
       "part": "골반",
@@ -11418,18 +11418,18 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -173,
-      "value": 66.3
+      "t": -165,
+      "value": 52.5
      },
      {
       "part": "손",
-      "t": -148,
-      "value": 6
+      "t": -90,
+      "value": 6.8
      },
      {
       "part": "손목(칼)",
-      "t": -173,
-      "value": 63
+      "t": -157,
+      "value": 49.9
      },
      {
       "part": "칼끝",
@@ -11437,7 +11437,7 @@
       "value": 25.8
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.8,
     "shareAtTipPeak": {
      "trunk": 0.28,
@@ -11459,12 +11459,12 @@
      "chestYaw": 70,
      "pelvisYaw": 37,
      "xFactorMax": 30,
-     "handPath": 1.97,
-     "tipPath": 9.17,
+     "handPath": 1.94,
+     "tipPath": 9.16,
      "comShift": 0.17
     },
     "opening": {
-     "openTime": 0.13,
+     "openTime": 0.16,
      "bladeBehindTime": 0.13,
      "maxTurn": 49
     },
@@ -11473,7 +11473,7 @@
      "legOver": 0,
      "tipMin": 0.2,
      "wristMax": 171,
-     "wristClampTime": 0.2,
+     "wristClampTime": 0.21,
      "wristOver160": 0.16
     }
    }
@@ -12178,25 +12178,25 @@
       "chestYaw": -29,
       "xFactor": -25,
       "lean": 8,
-      "shoulderElev": 59,
-      "elbowS": 88,
-      "wrist": 10,
+      "shoulderElev": 61,
+      "elbowS": 98,
+      "wrist": 22,
       "kneeL": 68,
       "kneeR": 53,
       "handChest": [
-       0.33,
-       0.19,
-       -0.02
+       0.26,
+       0.23,
+       -0.04
       ],
       "handWorld": [
-       0.36,
-       1.34,
-       -0.25
+       0.3,
+       1.39,
+       -0.23
       ],
       "tipWorld": [
-       0.76,
-       2.12,
-       -1.04
+       0.69,
+       2.17,
+       -1.03
       ],
       "swordElAz": [
        41,
@@ -12299,7 +12299,7 @@
      "footLands": -40,
      "frontOpens": -282,
      "frontOpenAfterLine": null,
-     "frontCloses": -157
+     "frontCloses": -132
     },
     "time": {
      "wind": 0.28,
@@ -12310,7 +12310,7 @@
     },
     "tipPeak": 25.8,
     "tipAtLine": 12.1,
-    "handPeak": 6,
+    "handPeak": 6.8,
     "sequence": [
      {
       "part": "골반",
@@ -12324,18 +12324,18 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -161,
-      "value": 16.9
+      "t": -102,
+      "value": 14.3
      },
      {
       "part": "손",
-      "t": -148,
-      "value": 6
+      "t": -90,
+      "value": 6.8
      },
      {
       "part": "손목(칼)",
       "t": -152,
-      "value": 14.7
+      "value": 9.6
      },
      {
       "part": "칼끝",
@@ -12343,7 +12343,7 @@
       "value": 25.8
      }
     ],
-    "ordered": false,
+    "ordered": true,
     "trunkCarry": 0.8,
     "shareAtTipPeak": {
      "trunk": 0.28,
@@ -12365,12 +12365,12 @@
      "chestYaw": 70,
      "pelvisYaw": 37,
      "xFactorMax": 30,
-     "handPath": 2,
-     "tipPath": 9.24,
+     "handPath": 1.97,
+     "tipPath": 9.23,
      "comShift": 0.18
     },
     "opening": {
-     "openTime": 0.13,
+     "openTime": 0.16,
      "bladeBehindTime": 0.13,
      "maxTurn": 49
     },
@@ -13084,25 +13084,25 @@
       "chestYaw": 30,
       "xFactor": 28,
       "lean": 6,
-      "shoulderElev": 47,
-      "elbowS": 106,
-      "wrist": 97,
+      "shoulderElev": 46,
+      "elbowS": 115,
+      "wrist": 98,
       "kneeL": 50,
       "kneeR": 65,
       "handChest": [
-       0.34,
+       0.3,
        0.08,
-       0.18
+       0.21
       ],
       "handWorld": [
-       0.26,
+       0.22,
        1.26,
-       0.34
+       0.35
       ],
       "tipWorld": [
-       0.27,
-       1.26,
-       1.52
+       0.22,
+       1.27,
+       1.53
       ],
       "swordElAz": [
        0,
@@ -13216,7 +13216,7 @@
     },
     "tipPeak": 25.6,
     "tipAtLine": 20.1,
-    "handPeak": 6,
+    "handPeak": 7.1,
     "sequence": [
      {
       "part": "골반",
@@ -13230,13 +13230,13 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -144,
-      "value": 7.3
+      "t": -90,
+      "value": 10.4
      },
      {
       "part": "손",
       "t": -90,
-      "value": 6
+      "value": 7.1
      },
      {
       "part": "손목(칼)",
@@ -13271,12 +13271,12 @@
      "chestYaw": 105,
      "pelvisYaw": 57,
      "xFactorMax": 33,
-     "handPath": 2.41,
+     "handPath": 2.4,
      "tipPath": 10.91,
      "comShift": 0.14
     },
     "opening": {
-     "openTime": 0.59,
+     "openTime": 0.6,
      "bladeBehindTime": 0.35,
      "maxTurn": 53
     },
@@ -13990,25 +13990,25 @@
       "chestYaw": -30,
       "xFactor": -28,
       "lean": 6,
-      "shoulderElev": 59,
-      "elbowS": 57,
-      "wrist": 26,
+      "shoulderElev": 60,
+      "elbowS": 56,
+      "wrist": 24,
       "kneeL": 65,
       "kneeR": 50,
       "handChest": [
-       0.34,
+       0.3,
        0.08,
-       -0.18
+       -0.21
       ],
       "handWorld": [
-       0.26,
+       0.22,
        1.26,
-       -0.34
+       -0.35
       ],
       "tipWorld": [
-       0.27,
-       1.26,
-       -1.52
+       0.22,
+       1.27,
+       -1.53
       ],
       "swordElAz": [
        0,
@@ -14122,7 +14122,7 @@
     },
     "tipPeak": 25.6,
     "tipAtLine": 20.1,
-    "handPeak": 6,
+    "handPeak": 7.1,
     "sequence": [
      {
       "part": "골반",
@@ -14136,13 +14136,13 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -148,
-      "value": 4.7
+      "t": -90,
+      "value": 6.6
      },
      {
       "part": "손",
       "t": -90,
-      "value": 6
+      "value": 7.1
      },
      {
       "part": "손목(칼)",
@@ -14159,7 +14159,7 @@
     "trunkCarry": 0.81,
     "shareAtTipPeak": {
      "trunk": 0.41,
-     "arm": 0.13,
+     "arm": 0.12,
      "wrist": 0.47
     },
     "wind": {
@@ -14182,7 +14182,7 @@
      "comShift": 0.13
     },
     "opening": {
-     "openTime": 0.62,
+     "openTime": 0.63,
      "bladeBehindTime": 0.35,
      "maxTurn": 53
     },

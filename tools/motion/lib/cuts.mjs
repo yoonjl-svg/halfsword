@@ -120,10 +120,10 @@ export const CUTS = [];
  *  달라 사이 자세의 손목이 사람 어림을 넘었다. 여기서는 크게 벌의 같은 키에서, 몸 돌림·숙임·손 자리는 겨눈 선(tc) 값과의
  *  차이를 AMP 만큼, 칼 각(겨눈 선 = 0)은 ANG 만큼만 남긴다. 준비(t0)·복귀(tg)는 게임 자세 그대로, 시각은 작게와 크게의 가운데.
  */
-const MED = { AMP: 0.75, ANG: 0.85 };
+const MED = { AMP: 0.75, ANG: 0.85, TR: 0.3 };
 function mediumTable(small, large) {
   const tcRow = large.find((r) => r[1] === 'tc');
-  return large.map((r, i) => {
+  const med = large.map((r, i) => {
     const t = +((small[i][0] + r[0]) / 2).toFixed(3);
     if (typeof r[1] === 'string' && r[1].startsWith('G:')) return [t, r[1], r[2]];
     const out = [t, r[1]];
@@ -134,6 +134,12 @@ function mediumTable(small, large) {
     out.push(r[10] == null ? null : +(r[10] * MED.ANG).toFixed(1));
     return out;
   });
+  // 손목 풀림(tr) 키의 손을 앞 키 쪽으로 MED.TR 만큼 되돌린다: 보통 벌은 몸통 몫이 작아 손 첫 봉우리(풀림 앞)가
+  //  골반보다 앞섰다. 손 옮김을 풀림 뒤로 조금 미루면 손 최고가 골반 → 가슴 뒤로 간다
+  const iTr = med.findIndex((r) => r[1] === 'tr');
+  if (iTr > 0 && med[iTr - 1][7] != null && med[iTr][7] != null)
+    for (let j = 7; j <= 9; j++) med[iTr][j] = +(med[iTr][j] + (med[iTr - 1][j] - med[iTr][j]) * MED.TR).toFixed(3);
+  return med;
 }
 function mediumSteps(large, small, med) {
   const base = large[0];
