@@ -221,6 +221,7 @@ export class Gait {
    */
   requestStep(o = {}) {
     if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
+    if (this.f.feetHeld) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다)
     if (this.f.move.y < -0.1) return false;
     // 온몸 베기 걸음('strike', R2 §5.6)은 시간 바닥이 없다: 손가락이 모는 만큼 짧게 부탁하고, 발이 언제 닿는지는 swingVmax(물리)가 정한다
@@ -316,7 +317,7 @@ export class Gait {
     }
     const speed = Math.hypot(want.x, want.z);
     // 가려는 쪽의 앞뒤 몫 (+1 = 앞으로, −1 = 뒤로): 조종 입력으로 (want에는 균형 잡는 발걸음 등이 섞여 들쭉날쭉하다)
-    const mv = f.move;
+    const mv = f.feetHeld ? null : f.move; // 판 시작 정지 동안엔 조종 입력이 없는 것으로
     const foreFrac = mv && mv.lengthSq() > 1e-6 ? mv.y / mv.length() : 0;
     const backness = clamp((-foreFrac - GAIT.backFrom) / GAIT.backFull, 0, 1); // 뒤로 가는 정도 (0 ~ 1, 비스듬히 물러나는 것도)
     // 걷기 시작·멈추기 판단은 걸러진 속도로, 조금 여유를 두고 (균형 잡는 발걸음(stumble)이 매 스텝 들쭉날쭉해서
@@ -424,7 +425,8 @@ export class Gait {
           next = df > 0 ? 'B' : 'F';
         }
       } else if (next) kind = 'catch';
-      else if (this.idleT > GAIT.settleDelay && !(this.holdT > 0)) {
+      else if (this.idleT > GAIT.settleDelay && !(this.holdT > 0) && !f.feetHeld) {
+        // (판 시작 정지 동안엔 자세 고쳐 딛기도 미룬다. 닿지 않는 발·균형 잡는 걸음은 그대로)
         // 자리 고치기는 settleMax번까지, 몸을 돌려 발이 틀어진 것은 언제든 (발을 돌려 딛는다)
         next = this.settleLeg(this.settles < GAIT.settleMax);
         if (next) {

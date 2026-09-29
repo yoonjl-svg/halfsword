@@ -19,7 +19,7 @@ import { Particles, haptic, hapticPulse, stickDecal, rebuildDecal, logKnee } fro
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
-import { installGunFx, clearGunFx } from './gun_fx.js';
+import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
 import { createSwordTrails } from './sword_trail.js';
@@ -349,6 +349,7 @@ function newRound(weaponId) {
   const madEyes = attachMadEyes(enemy, currentFoe?.eyes === 'madGlow' || params.has('madEyes')); // 광기의 붉은 안광 (외형 PM, mad_eyes.js — 캐릭터 항목 eyes: 'madGlow' / 시험 ?madEyes=1). 잔상은 장면에 두므로 fighterMeshes 뒤에
   if (madEyes) auras.push(madEyes);
   swordTrails.attach([player, enemy]); // 칼 잔상 띠: 이번 판 두 검객 (지난 띠는 지운다)
+  if (player.weapon?.gun || enemy.weapon?.gun) warmGunFx(renderer, camera); // 권총 효과 재질을 지금 무대 빛으로 미리 컴파일 (첫 발 멈칫 방지)
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
@@ -1221,14 +1222,18 @@ function updateCamera(dt) {
   _cd.set(b.x - a.x, 0, b.z - a.z);
   if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
   const right = _cd.set(-camDir.z, 0, camDir.x);
+  // 판 시작: 조금 높고 먼 자리에서 무대를 보여 주다가 발이 풀릴 때(ARENA.startHold)까지 평소 자리로 부드럽게 내려온다 (사장님 9/30).
+  //  시계는 판마다 새로 0부터 세는 player.fightT (싸움 전 메뉴·무기 뽑기 동안엔 0이라 시작 자리에서 기다린다)
+  const open = ARENA.startHold > 0 ? 1 - THREE.MathUtils.smoothstep(player.fightT, 0, ARENA.startHold) : 0;
+  const camH = CAMERA.height + CAMERA.openUp * open;
   camTarget
     .copy(a)
-    .addScaledVector(camDir, -CAMERA.back)
+    .addScaledVector(camDir, -(CAMERA.back + CAMERA.openBack * open))
     .addScaledVector(right, CAMERA.shoulder)
-    .setY(CAMERA.height);
+    .setY(camH);
   // 경기장 바깥 돌벽을 뚫고 나가지 않게
   const r = Math.hypot(camTarget.x, camTarget.z);
-  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(CAMERA.height);
+  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
   const k = 1 - Math.exp(-dt * 6);
   camera.position.lerp(camTarget, k);
   const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1);

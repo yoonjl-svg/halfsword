@@ -93,6 +93,16 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 - **이음새**: `gun.js` 의 `GUN_HOOKS.onShot` 을 감싼다(원래 걸린 소리는 그대로, 없으면 `gunshotSound` 를 직접 낸다). 스스로 돈다(requestAnimationFrame, 일시정지 중 멈춤). **main.js 두 줄** `installGunFx({ scene, sound, world, combat })` 과 판 바뀜 자리(clearDebris 옆)의 `clearGunFx()` 를 디렉터가 넣는다. world·combat 은 레이저·궤적 끝을 재는 읽기 전용 광선에만 쓴다. 디렉터 결정: 총은 현대식 리볼버(무기 PM이 다시 그림). 사격 자세는 온몸 타격 작업 뒤 디렉터가 정한다(지금 손대지 않음). 권총은 카드로만 나오므로 권총집 장식은 없다.
 - 효과 두 벌을 미리 만들어 돌려쓴다(두 검객이 거의 동시에 쏠 때). 레이저는 총 든 검객 수만큼. 조명은 만들지 않는다.
 - **v2 (사장님 9/29 "리볼버 발사 이펙트가 지금 좀 약한 거 같애" → 디렉터 지시)**: 섬광을 더 크고 밝게(별 0.6→1.1 m, 0.04초 최대 뒤 0.11초까지 빠른 감쇠) + 총구 앞 짧은 화염(원뿔 두 겹: 보통 섞기 속불 + 더하기 겉불, 세로 그라데이션으로 혀 모양, 0.24→0.4 m). 화약 불티 14점(밝은 주황, 보통 섞기, 중력, 0.35초). 연기 36점·더 크고 짙게. 궤적 줄 1.6 cm·불투명도 0.75·0.16초. 발사 순간 화면 흔들림(main.js `kickCamera` 를 `shake` 로 받음: 자기 총 0.45, 상대 총 0.15 — 맞았을 때 1.4 보다 작게). 총구 점광 하나(0xffb060, 세기 7→0, 0.1초, 거리 5 m) — 처음부터 장면에 두고 세기만 바꿔 셰이더 재컴파일 없음. 낮 무대 대비는 보통 섞기의 속불·불티·궤적이 맡는다. 전후 비교: [밤](handoff/gun_fx_v2_night.png) · [낮](handoff/gun_fx_v2_day.png) · [연기(0.7초 뒤)](handoff/gun_fx_v2_smoke.png). main.js 한 줄: installGunFx 호출에 `shake: (dir, strength) => kickCamera(dir, strength)`.
+- **v3 폰 성능 후속 (디렉터)**: (1) 첫 발 멈칫 — `warmGunFx(renderer, camera)` 가 효과 물체를 임시 장면에 옮겨 지금 무대의 빛·안개로 컴파일하고(`compile(tmp, camera, scene)`), 질감을 올리고, 다음 두 프레임을 불투명도 0 으로 그려 꼭짓점 버퍼까지 올린다. main.js 가 권총이 있는 판을 세울 때 부른다. (2) 총구 점광을 없애고 총구 둘레 큰 더하기 빛무리(지름 약 3 m, 0.1초)로 바꿨다 — 점광을 늘 두면 빛 받는 모든 재질이 매 픽셀 빛 하나를 더 계산하고, 쏠 때만 넣었다 빼면 빛 개수가 바뀌어 모든 재질 셰이더가 다시 만들어진다(측정: 성 안뜰 프로그램 19 → 33). 수치(헤드리스, 프레임 중앙값 대비):
+
+| | v2 첫 발 | v3 첫 발 |
+| --- | --- | --- |
+| 새 셰이더 프로그램 | 4개 | 0개 |
+| 새 모양·질감 올림 | 8·3 | 0·0 |
+| 첫 발 프레임 (성 안뜰, 평소 약 130 ms) | 415~570 ms | 131 ms |
+| 첫 발 프레임 (밤 신전, 평소 약 165~240 ms) | 491~726 ms | 213~304 ms (둘째 발과 같은 폭) |
+
+점광 유무의 평소 프레임 차이는 헤드리스(소프트웨어 렌더)에서 ±3% 잡음 안이라 가려지지 않았다 — 폰에서는 조명 계산이 더 비싸므로 없애는 쪽을 골랐다. 사진: [밤](handoff/gun_fx_v3_night.png) · [낮](handoff/gun_fx_v3_day.png).
 - 스크린샷: [궤적(성 안뜰)](handoff/gun_fx_trace.png) · [궤적(밤 신전)](handoff/gun_fx_trace_night.png) · [레이저(성 안뜰)](handoff/gun_fx_laser.png) · [레이저(밤 신전)](handoff/gun_fx_laser_night.png) · [섬광(밤 신전)](handoff/gun_fx_flash.png) · [연기](handoff/gun_fx_smoke.png) · [섬광(성 안뜰)](handoff/gun_fx_flash_castle.png)
 
 ## 칼 잔상 띠 (`src/sword_trail.js`, 디렉터 R0 화면 신호)

@@ -160,15 +160,57 @@ function mediumSteps(large, small, med) {
     return { t: st.t, feet: f, px: (st.px ?? 0) * 0.5, pz: (st.pz ?? 0) * 0.5 };
   });
 }
+/**
+ * 보통 벌 감기 칼 (v1, 디렉터 9/29): 크게 벌을 줄인 보통 벌은 감기 끝(tw) 칼이 크게 쪽에 붙어 작게와 65~90° 벌어졌다 —
+ *  게임이 작게 → 보통 → 크게를 섞을 때 칼이 한 번에 돈다. 감기(t0 뒤 ~ tw) 키의 칼 방향을 작게·크게 같은 키 방향의
+ *  가운데(구면 보간 MED.TW)로 두고, tw 뒤 ~ 풀기(tr) 앞 키는 지금 보통 방향으로 서서히 돌려놓는다. 몸·손은 그대로.
+ */
+MED.TW = 0.5;
+function slerp(a, b, u) {
+  const d = Math.max(-1, Math.min(1, v3.dot(a, b)));
+  const w = Math.acos(d);
+  if (w < 1e-6) return a;
+  return v3.norm(v3.add(v3.mul(a, Math.sin((1 - u) * w) / Math.sin(w)), v3.mul(b, Math.sin(u * w) / Math.sin(w))));
+}
+function mediumWindBlade(medKeys, smallKeys, largeKeys) {
+  const iTw = medKeys.findIndex((k) => k.tag === 'tw');
+  const iTr = medKeys.findIndex((k) => k.tag === 'tr');
+  if (iTw < 1 || iTr <= iTw) return medKeys;
+  const half = (i) => slerp(smallKeys[i].d, largeKeys[i].d, MED.TW);
+  for (let i = 1; i <= iTw; i++) medKeys[i].d = half(i);
+  for (let i = iTw + 1; i < iTr; i++) {
+    const u = (medKeys[i].t - medKeys[iTw].t) / (medKeys[iTr].t - medKeys[iTw].t);
+    medKeys[i].d = slerp(half(i), medKeys[i].d, u);
+  }
+  return medKeys;
+}
+/**
+ * 이른 걸음 (v1, 디렉터 9/29): 크게 벌 걸음 키 시각을 앞으로 당긴다 — 디딤(tc 0.65)은 그대로, 뒤꿈치 준비 0.36 → 0.30,
+ *  발 뗌 키 0.5 → 0.40, 옮김 가운데 0.58 → 0.52. 발이 감기 끝(tw) 무렵에 떠서 공중 시간이 약 0.24 → 0.32 s 로 길어진다
+ *  (손가락 빠르기로 줄여 틀어도 게임 발 최고 6 m/s 안에서 tc 에 닿게). 같은 걸음 키의 골반 앞 옮김(px·pz)도 같이 당긴다
+ *  (발만 먼저 나가면 다리가 닿지 않는다). 손·칼·몸 키는 그대로. [추정 — 사람 자료: Meyer "베기와 함께 딛는다", 참고이지 한도 아님]
+ */
+const EARLY_STEP = [[0, 0], [0.36, 0.3], [0.5, 0.4], [0.58, 0.52], [0.65, 0.65]];
+function earlyStep(steps) {
+  const map = (t) => {
+    for (let i = 0; i < EARLY_STEP.length - 1; i++) {
+      const [a, A] = EARLY_STEP[i], [b, B] = EARLY_STEP[i + 1];
+      if (t <= b + 1e-9) return +(A + ((B - A) * (t - a)) / (b - a)).toFixed(3);
+    }
+    return t;
+  };
+  return steps.map((s) => ({ ...s, t: map(s.t) }));
+}
 function def(o) {
   if (o.small.length !== o.large.length) throw new Error(`${o.id}: small·large 키 개수가 다르다`);
+  if (o.largeSteps) o = { ...o, largeSteps: earlyStep(o.largeSteps) };
   const med = mediumTable(o.small, o.large);
   // 운동 사슬 앞섬은 크게 벌과 같게 (손 키 박자가 크게 벌 것이라, 짧게 두면 손 최고가 골반보다 앞섰다)
   const chainMed = { arm: 0, sword: 0, ramp: 0.12, seq: { pelvis: 0.13, chest: 0.09, dur: 0.28 } };
   CUTS.push({
     ...o,
     small: { keys: rows(o.small, o.plane), steps: o.smallSteps ?? still(o.small[o.small.length - 1][0]), chain: CHAIN.small },
-    medium: { keys: rows(med, o.plane), steps: mediumSteps(o.largeSteps, o.small, med), chain: chainMed, stepTimesFrom: 'large' },
+    medium: { keys: mediumWindBlade(rows(med, o.plane), rows(o.small, o.plane), rows(o.large, o.plane)), steps: mediumSteps(o.largeSteps, o.small, med), chain: chainMed, stepTimesFrom: 'large' },
     large: { keys: rows(o.large, o.plane), steps: o.largeSteps, chain: CHAIN.large },
   });
 }

@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { CUTS, rows, GAME_GUARDS_ONE, STANCE } from './lib/cuts.mjs';
 import { SOURCES } from './lib/sources.mjs';
 import { toKeys, marksOf, mirror, clipExtras, chainWithProfiles } from './lib/sets.mjs';
-import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, HZ } from './lib/clip.mjs';
+import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, stanceOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { weaponGeom, gripField } from './lib/weapons.mjs';
 import { validateFile, report } from './validate_clip.mjs';
@@ -283,6 +283,7 @@ for (const side of ['right', 'left']) {
     tipAtLine: s.tipAtLine,
     legOver: s.checks.legOver,
   };
+  b.extra.stance = stanceOf(b.rows);
   b.extra.step = stepOf(b.rows.filter((r) => r.t <= b.marks.tf + 1e-9), b.marks);
   const name = `lunge_thrust_${side}_large`;
   console.log(`rapier ${name}: 손 먼저 ${lunge.handFirst} ms · 앞발 딛기 ${lunge.footLand} s · 골반 ${lunge.pelvisDrop} m 낮아짐 · 칼끝이 앞으로 ${reachTip} m · 칼끝 최고 ${s.tipPeak} m/s (선 ${s.tipAtLine}) · 넘침 팔 ${s.checks.reachOver} 다리 ${s.checks.legOver}`);

@@ -339,6 +339,11 @@
     "liftPhi": 0.539,
     "landPhi": 0.85
    },
+   "stance": {
+    "swordFoot": "R",
+    "start": "rear",
+    "end": "rear"
+   },
    "startFrom": "pflug",
    "startPose": {
     "nearest": "pflug",
@@ -699,6 +704,11 @@
     "landT": 0.3,
     "liftPhi": 0.539,
     "landPhi": 0.85
+   },
+   "stance": {
+    "swordFoot": "R",
+    "start": "front",
+    "end": "front"
    },
    "startFrom": "pflugL",
    "startPose": {
