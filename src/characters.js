@@ -65,6 +65,12 @@ export const CHARACTERS = [
           // 크게 감아 치는 가로베기·올려베기를 좋아한다 (힘이 안 실리는 기술). 찌르기는 나뭇가지로는 못 한다
           techPref: { zwerch: 1.6, zwerchL: 1.4, unterhau: 1.3, oberhau: 1.2, zornhau: 0.8, stichPflug: 0.1, stichPflugL: 0.1, stichOchs: 0.1, stichOchsL: 0.1, stichAlber: 0.1 },
         },
+        // 온몸 타격 기질 (persona.whole, 초안 — 게임은 아직 읽지 않는다. 디렉터가 R5에서 ai.js planStrike/opportunity에 연결)
+        //  sPref/sSpread: 결심 베기에 몸을 싣는 정도 S(0~1)의 중심과 폭 / windRate: 베기 중 감기를 눈에 띄게 하는 비율
+        //  windLen: 감기 길이 초 [짧게, 길게] (사장님 결정: 난이도별 최소 감기 제한은 두지 않는다 — 이 값이 곧 감기 길이)
+        //  punish: 상대의 틈(windup 감기 / overrun 지나가기 / thrown 튕김)에 뛰어드는 확률 / evade: 큰 베기를 볼 때 비켜서기(1) 대 막기(0)
+        //  근거·범위는 docs/character_whole_body.md
+        whole: { sPref: 0.9, sSpread: 0.1, windRate: 0.85, windLen: [0.45, 0.9], punish: { windup: 0.1, overrun: 0.35, thrown: 0.15 }, evade: 0.15 }, // 다 싣는다. 감기가 크고 길어 다 보인다. 틈은 못 읽고, 큰 베기는 막지도 피하지도 않고 맞바꾼다
       },
     },
     look: getLook('bran'),
@@ -124,6 +130,7 @@ export const CHARACTERS = [
           circleRate: 0.2,
           guardPref: { pflugR: 1.6, langort: 1.55, ochsR: 1.2, alber: 0.3, nebenR: 0.3 },
         },
+        whole: { sPref: 0.35, sSpread: 0.15, windRate: 0.45, windLen: [0.3, 0.5], punish: { windup: 0.3, overrun: 0.5, thrown: 0.35 }, evade: 0.55 }, // 교본대로 중간 크기. 배운 대로 비켜서고, 지나간 상대는 벌한다. 집념이 켜져도 S가 아니라 정확도로 간다
       },
     },
     // 부활 (오너 결정 2026-09-28: "이졸데는 좀 약한 대신 부활하게 하려고. 투지를 보여서 한 번 더 싸우는 거지.")
@@ -189,6 +196,7 @@ export const CHARACTERS = [
           // 검(劍)의 장기는 찌르기: 얼굴·가슴을 찌르는 기술을 즐겨 쓴다
           techPref: { stichPflug: 1.6, stichOchs: 1.5, stichAlber: 1.4, stichPflugL: 1.3, stichOchsL: 1.2, zornhau: 1.0 },
         },
+        whole: { sPref: 0.3, sSpread: 0.3, windRate: 0.3, windLen: [0.2, 0.45], punish: { windup: 0.6, overrun: 0.55, thrown: 0.5 }, evade: 0.75 }, // 대개 작고 빠른 찌르기, 가끔 느닷없이 크게. 감기를 보면 먼저 찌른다. 가벼운 칼이라 큰 베기는 막지 않고 비켜선다
       },
     },
     look: getLook('liao'),
@@ -252,6 +260,7 @@ export const CHARACTERS = [
           // 크고 무거운 베기(분노의 베기·정수리 베기)로 확실히 끝내려 한다 — 마이어식 큰 동작
           techPref: { zornhau: 1.5, zornhauL: 1.4, oberhau: 1.3, zwerch: 1.2, unterhau: 0.7, unterhauL: 0.7 },
         },
+        whole: { sPref: 0.75, sSpread: 0.2, windRate: 0.7, windLen: [0.3, 0.6], punish: { windup: 0.45, overrun: 0.6, thrown: 0.55 }, evade: 0.3 }, // 마이어식 큰 감기, 다만 계산된 것 — 감기를 들고 있다 거두는 속임수. 물러나지 않고 마주 걸어 들어가 되받는다
       },
     },
     look: getLook('heinrich'),
@@ -312,6 +321,7 @@ export const CHARACTERS = [
           // 머리·목을 노리는 무거운 베기(분노의 베기·정수리 베기)만 쓴다. 올려베기·가로베기처럼 힘이 안 실리는 기술은 안 쓴다
           techPref: { zornhau: 1.6, oberhau: 1.4, zornhauL: 1.3, unterhau: 0.4, unterhauL: 0.4, zwerch: 0.5, zwerchL: 0.5 },
         },
+        whole: { sPref: 0.55, sSpread: 0.1, windRate: 0.25, windLen: [0.2, 0.3], punish: { windup: 0.8, overrun: 0.8, thrown: 0.75 }, evade: 0.45 }, // 감기 없이 자세에서 곧장 벤다. 온몸을 싣되 딱 필요한 만큼. 상대의 모든 틈을 벌한다(Nachreisen). 큰 베기는 받아치며 막는다(Absetzen)
       },
     },
     look: getLook('margarethe'),
@@ -373,6 +383,8 @@ function scaledLevel(ai, scale) {
 //  strikeSpeed·chamberSpeed·parrySpeed·strength는 손 목표 필터·관절 속도 한계에 막혀 체감은 +20%보다 작다 (docs/characters.md)
 const HEINRICH_MAD_AI = JSON.parse(JSON.stringify(HEINRICH.ai));
 HEINRICH_MAD_AI.persona.level = scaledLevel(HEINRICH.ai, MAD_SCALE);
+// 온몸 타격 기질(초안, 캐릭터 PM): 낮보다 더 싣고 더 자주 감고, 물러날 줄을 모른다 — 비켜서기 대신 맞받는다
+HEINRICH_MAD_AI.persona.whole = { sPref: 0.9, sSpread: 0.1, windRate: 0.8, windLen: [0.25, 0.5], punish: { windup: 0.5, overrun: 0.65, thrown: 0.6 }, evade: 0.15 };
 export const CHARACTER_VARIANTS = [
   // 4b. 광기의 하인리히 도른 — 밤의 포세이돈 신전에 다시 나타나는 하인리히 (사장 요청, 디렉터 14:08).
   //  붉은 눈·안광 아우라는 외형 담당 몫이고, 여기서는 eyes 표식만 둔다.
