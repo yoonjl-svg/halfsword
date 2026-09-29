@@ -168,6 +168,31 @@ export class FingerTrace {
     return out;
   }
 
+  /**
+   * R1: 실제 조각만으로 잰 손가락 빠르기 (패드 m/s, 벽시계 — 내다본 몫·프레임 몰림이 섞이지 않는다): 마지막 조각과, 그보다 minSpan(ms) 이상 앞선
+   *  가장 최근 조각 사이의 기울기. 뗐거나 이번 획 조각이 모자라면 0. 마지막 조각 뒤 t(ms)가 hold(두 조각 사이보다 짧으면 두 조각 사이)를 넘으면
+   *  멈춘 것 — 0 (움직이지 않으면 조각이 안 온다). out 에 써서 돌려준다
+   */
+  rawVel(t, minSpan, hold, out) {
+    out.x = out.y = 0;
+    const iR = this.idx(0);
+    if (iR < 0 || this.flag[iR] & TRACE_LIFT) return out;
+    const tR = this.t[iR];
+    for (let k = 1; k < this.count; k++) {
+      const i = this.idx(k);
+      if (this.flag[i] & TRACE_LIFT) break;
+      const span = tR - this.t[i];
+      if (span > 0 && span >= minSpan) {
+        if (t - tR <= Math.max(hold, span)) {
+          out.x = ((this.x[iR] - this.x[i]) / span) * 1000;
+          out.y = ((this.y[iR] - this.y[i]) / span) * 1000;
+        }
+        break;
+      }
+    }
+    return out;
+  }
+
   clear() {
     this.head = 0;
     this.count = 0;
