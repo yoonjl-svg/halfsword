@@ -117,7 +117,7 @@ const marksArr = (marks) => MARK_NAMES.map((k) => marks[k]);
 // ── 작은 벡터 도구 (할당 없음: 배열 + 시작 칸) ──
 const dot3 = (a, ao, b, bo) => a[ao] * b[bo] + a[ao + 1] * b[bo + 1] + a[ao + 2] * b[bo + 2];
 function normalize3(o, oo) {
-  const l = Math.hypot(o[oo], o[oo + 1], o[oo + 2]) || 1;
+  const l = Math.sqrt(o[oo] * o[oo] + o[oo + 1] * o[oo + 1] + o[oo + 2] * o[oo + 2]) || 1;
   o[oo] /= l;
   o[oo + 1] /= l;
   o[oo + 2] /= l;
@@ -141,7 +141,7 @@ function slerp3(a, ao, b, bo, u, o, oo) {
     let px, py, pz;
     if (Math.abs(ay) < 0.9) (px = -az), (py = 0), (pz = ax);
     else (px = 0), (py = az), (pz = -ay);
-    const pl = Math.hypot(px, py, pz) || 1;
+    const pl = Math.sqrt(px * px + py * py + pz * pz) || 1;
     const c = Math.cos(u * Math.PI), s = Math.sin(u * Math.PI) / pl;
     o[oo] = ax * c + px * s;
     o[oo + 1] = ay * c + py * s;
@@ -159,7 +159,7 @@ function logRot(a, ao, b, bo, o, oo) {
   const cx = a[ao + 1] * b[bo + 2] - a[ao + 2] * b[bo + 1];
   const cy = a[ao + 2] * b[bo] - a[ao] * b[bo + 2];
   const cz = a[ao] * b[bo + 1] - a[ao + 1] * b[bo];
-  const s = Math.hypot(cx, cy, cz);
+  const s = Math.sqrt(cx * cx + cy * cy + cz * cz);
   const c = dot3(a, ao, b, bo);
   const ang = Math.atan2(s, c);
   if (s < 1e-9) {
@@ -171,7 +171,7 @@ function logRot(a, ao, b, bo, o, oo) {
     let px, py, pz;
     if (Math.abs(a[ao + 1]) < 0.9) (px = -a[ao + 2]), (py = 0), (pz = a[ao]);
     else (px = 0), (py = a[ao + 2]), (pz = -a[ao + 1]);
-    const pl = Math.hypot(px, py, pz) || 1;
+    const pl = Math.sqrt(px * px + py * py + pz * pz) || 1;
     o[oo] = (px / pl) * Math.PI;
     o[oo + 1] = (py / pl) * Math.PI;
     o[oo + 2] = (pz / pl) * Math.PI;
@@ -183,8 +183,10 @@ function logRot(a, ao, b, bo, o, oo) {
   return ang;
 }
 /** o[oo..] 를 회전 벡터 r (rx,ry,rz; 각 = |r|) 로 돌린다 (로드리게스) */
-function rotateBy(o, oo, rx, ry, rz) {
-  const ang = Math.hypot(rx, ry, rz);
+/** o[oo..] 를 회전 벡터 s·r[ro..] 로 돌린다 (축·각을 배열로 받는다: 실수 인자 셋은 부를 때마다 V8 상자가 된다) */
+function rotateBy(o, oo, r, ro, sc) {
+  const rx = r[ro] * sc, ry = r[ro + 1] * sc, rz = r[ro + 2] * sc;
+  const ang = Math.sqrt(rx * rx + ry * ry + rz * rz);
   if (ang < 1e-12) return;
   const kx = rx / ang, ky = ry / ang, kz = rz / ang;
   const c = Math.cos(ang), s = Math.sin(ang);
@@ -194,9 +196,10 @@ function rotateBy(o, oo, rx, ry, rz) {
   o[oo + 1] = vy * c + (kz * vx - kx * vz) * s + ky * kd * (1 - c);
   o[oo + 2] = vz * c + (kx * vy - ky * vx) * s + kz * kd * (1 - c);
 }
-/** 같은 회전 벡터 (rx,ry,rz) 로 세 벡터를 제자리에서 돌린다 (로드리게스, 삼각함수 한 번) */
-function rotate3(rx, ry, rz, p, po, q, qo, w, wo) {
-  const ang = Math.hypot(rx, ry, rz);
+/** 같은 회전 벡터 sc·r[ro..] 로 세 벡터를 제자리에서 돌린다 (로드리게스, 삼각함수 한 번) */
+function rotate3(r, ro, sc, p, po, q, qo, w, wo) {
+  const rx = r[ro] * sc, ry = r[ro + 1] * sc, rz = r[ro + 2] * sc;
+  const ang = Math.sqrt(rx * rx + ry * ry + rz * rz);
   if (ang < 1e-12) return;
   const kx = rx / ang, ky = ry / ang, kz = rz / ang;
   const c = Math.cos(ang), s = Math.sin(ang), t = 1 - c;
@@ -462,8 +465,8 @@ function derive(grid, gv) {
         rc[base + 3 + k] = d1[b + k];
         rc[base + 6 + k] = d2[b + k];
       }
-      rotateBy(rc, base + 3, -rc[base], -rc[base + 1], -rc[base + 2]);
-      rotateBy(rc, base + 6, -rc[base], -rc[base + 1], -rc[base + 2]);
+      rotateBy(rc, base + 3, rc, base, -1);
+      rotateBy(rc, base + 6, rc, base, -1);
     }
   return { v, d1, d2, rc };
 }
@@ -918,7 +921,7 @@ export class Atlas {
         od2[o + k] = (m0 * k1 + a0 * k2 + p1 * k3 + m1 * k4 + a1 * k5) / hh;
         ov[o + k] = V[a + o + k];
       }
-      rotate3(_rr[0], _rr[1], _rr[2], ov, o, od1, o, od2, o);
+      rotate3(_rr, 0, 1, ov, o, od1, o, od2, o);
     }
     if (outside) {
       od1.fill(0);
@@ -1059,7 +1062,7 @@ export function addOver(o, M, L, over) {
   for (let q = 0; q < DIR_OFFS.length; q++) {
     const c = DIR_OFFS[q];
     logRot(mv, c, lv, c, _r, 0);
-    rotateBy(ov, c, _r[0] * over, _r[1] * over, _r[2] * over);
+    rotateBy(ov, c, _r, 0, over);
     slerpRate(mv, lv, M.d1, L.d1, c, over, o.d1, o.d1); // Ω = R(over·r)·ω_o + (over·r)˙ 닫힌 식
     for (let k = 0; k < 3; k++) o.d2[c + k] += (L.d2[c + k] - M.d2[c + k]) * over; // α 는 선형 (아무도 안 쓴다, §6.6)
   }
@@ -1084,7 +1087,7 @@ export function carryOver(out, rev, base, phi, carryPhi) {
   for (let q = 0; q < DIR_OFFS.length; q++) {
     const c = DIR_OFFS[q];
     logRot(bv, c, rv, c, _r, 0);
-    rotate3(_r[0] * k, _r[1] * k, _r[2] * k, ov, c, out.d1, c, out.d2, c); // 값·ω·α 를 같은 R(k·r) 로
+    rotate3(_r, 0, k, ov, c, out.d1, c, out.d2, c); // 값·ω·α 를 같은 R(k·r) 로
     for (let j = 0; j < 3; j++) {
       out.d1[c + j] += _r[j] * kd;
       out.d2[c + j] += _r[j] * kdd;

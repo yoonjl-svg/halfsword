@@ -4,13 +4,14 @@
 //   2. 틀린 입력은 예외여야 한다: 형식·hz·표본 수·채널·NaN·t 단조·표시 순서·phiMarks·phi 지도·단위 벡터·칼 한 표본 각·세 벌 완비·step·자세 id·
 //      작은 벌 손 오차·작은 벌 vs guards.js·오른손잡이·묶음 형식·자료 길이·sha1
 //   3. 작은 벌 시작·끝 손 vs guards.js ≤ 0.02 m (베기마다)
-//   4. 표본 비용 (1e5 번, μs/번, 힙 증가) — 목표 ≤ 0.02 ms, 관문 ≤ 0.05 ms
+//   4. 표본 비용 (1e5 번, 데운 둘째 판: μs/번, 작은 gc 수, gc 뒤 남은 힙) — 목표 ≤ 0.02 ms, 관문 ≤ 0.05 ms
 //   5. 묶음 크기 ≤ 1.5 MB, sha1 = 원본 파일 (atlas.js checkPackSources), 다시 만들면 바이트 동일, 되읽은 표본 = 원본 표본
 //   6. 보간: 격자 점 일치, d1·d2 = 유한 차분, 칸 경계 C², 방향 단위 길이·ω 일치, S 연속(sizeMid), over 선형(이득 1), 베기 섞기 끝값, 이월 도우미
 //   7. 부호표(§4.3): 가슴 틀 = body.mjs frame(), 바라보는 틀 손 = guards.js 손, 게임 yaw = −deg·D2R 이 three.js 의 +Y 회전과 같은 자리를 준다
 //  원본 폴더 기본값: ATLAS.clipsDir(../halfsword/docs/motion/clips, 저장소 뿌리 기준), 없으면 docs/motion/clips. 실패가 하나라도 있으면 종료 코드 1
 // ─────────────────────────────────────────────────────────────
 import { readFileSync, statSync } from 'node:fs';
+import { PerformanceObserver, constants } from 'node:perf_hooks';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
@@ -170,7 +171,13 @@ gate('작은 벌 vs guards.js ≤ 0.02 m', svgMax <= ATLAS.smallTol, `최대 ${s
 console.log(`\n## 4. 표본 비용 (${NCALLS} 번)`);
 const out = makeSample();
 const cuts = raw.families, sides = ['right', 'left'];
-function bench(A, mode) {
+// 작은 gc (scavenge) 수: 짧게 살다 죽는 할당(실수 상자 등)을 센다 — heapUsed 차이는 그 사이 gc 가 몇 번 돌았는지에 따라 흔들려 믿을 수 없다
+let minorGC = 0;
+new PerformanceObserver((l) => {
+  for (const e of l.getEntries()) if (e.detail?.kind === constants.NODE_PERFORMANCE_GC_MINOR) minorGC++;
+}).observe({ entryTypes: ['gc'] });
+const tick = () => new Promise((r) => setTimeout(r, 0)); // gc 항목은 다음 틱에 온다
+async function bench(A, mode) {
   const req = { cut: 'zornhau', side: 'right', phi: 0, S: 0, over: 0, cutB: null, wAB: 0 };
   const run = (n) => {
     let acc = 0;
@@ -189,36 +196,32 @@ function bench(A, mode) {
     }
     return acc;
   };
-  // 바탕: 요청 객체에 같은 수를 쓰기만 (측정 틀 자체의 힙 증가 — 실수를 객체 칸에 쓰면 V8 이 상자를 만들 수 있다)
-  const base = (n) => {
-    let acc = 0;
-    for (let i = 0; i < n; i++) {
-      req.phi = -1 + ((i * 0.0137) % 3.2);
-      req.S = (i * 0.0071) % 1.0;
-      out.phi = req.phi;
-      out.S = req.S;
-      acc += out.phi;
-    }
-    return acc;
-  };
-  run(20000);
-  base(20000);
+  // 앞 두 판은 데우기 (JIT 단계 올림·필드 표현 바뀜·IC 자료가 섞인다). 잰 것은 같은 닫힘의 셋째 판
+  run(NCALLS);
+  run(NCALLS);
   global.gc?.();
-  const hb0 = process.memoryUsage().heapUsed;
-  base(NCALLS);
-  const hb1 = process.memoryUsage().heapUsed;
   global.gc?.();
-  const h0 = process.memoryUsage().heapUsed;
+  await tick();
+  const g0 = minorGC, h0 = process.memoryUsage().heapUsed;
   const t0 = performance.now();
   run(NCALLS);
   const dt = performance.now() - t0;
+  global.gc?.();
+  global.gc?.();
+  await tick();
   const h1 = process.memoryUsage().heapUsed;
-  return { us: (dt * 1000) / NCALLS, heapKB: (h1 - h0) / 1024, baseKB: (hb1 - hb0) / 1024 };
+  return { us: (dt * 1000) / NCALLS, scav: minorGC - g0, keptKB: (h1 - h0) / 1024 };
 }
-const bPlain = bench(packed, 'plain'), bOver = bench(packed, 'over'), bFam = bench(packed, 'fam');
-console.log(`  묶음 아틀라스: 한 베기 ${bPlain.us.toFixed(3)} μs/번 · over>0 ${bOver.us.toFixed(3)} μs · 두 베기 섞기 ${bFam.us.toFixed(3)} μs`);
-console.log(`  힙 증가 (${NCALLS} 번${global.gc ? '' : ', --expose-gc 없이 잰 값'}): 표본 ${bPlain.heapKB.toFixed(0)} kB · 바탕(요청·그릇에 실수 쓰기만) ${bPlain.baseKB.toFixed(0)} kB → 표본 몫 ≈ ${Math.max(0, bPlain.heapKB - bPlain.baseKB).toFixed(0)} kB (${(Math.max(0, bPlain.heapKB - bPlain.baseKB) * 1024 / NCALLS).toFixed(1)} B/번); 배열·객체 새로 만들지 않음`);
+const bPlain = await bench(packed, 'plain'), bOver = await bench(packed, 'over'), bFam = await bench(packed, 'fam');
+console.log(`  묶음 아틀라스 (데운 뒤 셋째 판): 한 베기 ${bPlain.us.toFixed(3)} μs/번 · over>0 ${bOver.us.toFixed(3)} μs · 두 베기 섞기 ${bFam.us.toFixed(3)} μs`);
+console.log(`  작은 gc (${NCALLS} 번): 한 베기 ${bPlain.scav} · over ${bOver.scav} · 두 베기 ${bFam.scav} — 코드는 배열·객체를 만들지 않고, 남는 것은 V8 이 함수 경계에서 만드는 실수 상자(곧 죽음)`);
+if (global.gc) console.log(`  gc 뒤 남은 힙: 한 베기 ${bPlain.keptKB.toFixed(1)} kB · over ${bOver.keptKB.toFixed(1)} kB · 두 베기 ${bFam.keptKB.toFixed(1)} kB (남아 쌓이는 할당이 없으면 0 근처)`);
+else console.log('  gc 뒤 남은 힙: 잴 수 없음 (--expose-gc 없이) — node --expose-gc 로 돌린다');
 gate('표본 비용 ≤ 0.02 ms (관문 ≤ 0.05)', bFam.us <= 50, `한 베기 ${bPlain.us.toFixed(2)} μs · 두 베기 ${bFam.us.toFixed(2)} μs${bFam.us > 20 ? ' (목표 0.02 ms 넘음)' : ''}`);
+if (global.gc) {
+  const kept = Math.max(bPlain.keptKB, bOver.keptKB, bFam.keptKB);
+  gate('표본이 힙에 남기는 것 ≤ 16 kB (gc 뒤, 데운 셋째 판)', kept <= 16, `최대 ${kept.toFixed(1)} kB / ${NCALLS} 번 · 작은 gc ${bPlain.scav}/${bOver.scav}/${bFam.scav}`);
+}
 
 // ── 5. 묶음 ──
 console.log('\n## 5. 묶음');
