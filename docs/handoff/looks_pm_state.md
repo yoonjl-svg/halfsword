@@ -1,6 +1,6 @@
 # 외형 PM 상태 (늘 최신으로 — 디렉터 규칙 ④)
 
-세션 `session_01HNkUuYHag8VSg6xpgbkGVR` · 브랜치 `claude/pm-character-looks` · 갱신 2026-09-29
+세션 `session_01HNkUuYHag8VSg6xpgbkGVR` · 브랜치 `claude/pm-character-looks` · 갱신 2026-09-29 13:10 KST (사장님: 안광 밝기 지금 그대로 — 닫힘)
 
 ## 맡은 일
 - 캐릭터 겉모습(`src/outfits.js`·`src/looks.js`), 스테이지 배경(`src/stage_*.js`, `src/stages.js`), 픽셀 카드 뒷면(`tools/cardbacks/`), 겉모습 효과(`src/gun_fx.js` 권총 섬광·연기·궤적·레이저, `src/mad_eyes.js` 광기의 하인리히 안광, `src/sword_trail.js` 칼 잔상 띠).
@@ -11,7 +11,6 @@
 - 광기의 하인리히 붉은 안광(핏빛·밝기 낮춤·빛꼬리), 권총 효과, 밤의 포세이돈·화전 개간지 스테이지, 판금 밑 속옷, 마르그레테 곁 판, 픽셀 카드 뒷면.
 
 ## 열린 요청
-- (사장님) 안광 밝기를 게임에서 보시고 더 줄일지 — 대기.
 - (디렉터 R4) `trail.setTone('gold'|'grey')` 호출은 디렉터가 넣는다. `swordTrails.attach([player, enemy])` 가 돌려주는 손잡이 두 개(검객 순)에 `setTone` 이 있다 — main.js 에서 잡아 두려면 `const trailHandles = swordTrails.attach(...)`.
 - 브랜치에만 남은 것: 픽셀 카드 앞면 실험 파일(되돌리기 결정, main 에 올리지 않음).
 
@@ -32,4 +31,4 @@ const swordTrails = createSwordTrails(scene);            // 모듈 상단 (insta
 
 ## 다음 할 일
 - (계획만, 디렉터 2번) 동작 연구 PM 클립의 극단 자세에서 마르그레테 뿔 투구·어깨받이·판금 뚫림 점검: 클립(`docs/motion/clips`, large 벌)이 나오면 (가) 클립의 관절 각을 `f.groups` 에 직접 넣고 물리 없이 그리는 자세 뷰어(`tools/browser/`)를 만들어 — 손 머리 위 +0.15 m, 칼끝 등 뒤 1.4 m, 지나가기(손이 반대 엉덩이 옆) — 세 자세에서 (나) 팔·칼 메시와 투구·어깨받이·판금 메시의 바운딩 상자 겹침을 세고 (다) 겹친 곳을 근접 사진으로 찍는다. 실제 확인은 R2 시험판 뒤.
-- 사장님 안광 피드백 반영.
+- (디렉터 Q13 참고, 지금 할 일 없음) 센 베기가 판금·투구에 맞으면 둔기 충격으로 갑옷이 닳아 부서지고, 다 부서진 뒤 벨 수 있다. 부서짐 표현은 지금 두 단계 그대로. R3 에서 닳는 양이 늘면 조각·찌그러짐 표현 요청이 올 수 있다.
