@@ -135,8 +135,9 @@ export function twoBone(a, t, l1, l2, pole) {
  *       hand:[앞,위,옆] 가슴 틀, dir:[앞,위,옆] 가슴 틀 칼 방향,
  *       feet:{L:{x,z,yaw,lift,up}, R:{...}}, hand2(선택: 빈손 자리) }
  * side: +1 = 오른손잡이 (z+ 가 칼 든 쪽)
+ * sword: 칼 치수 (앞손에서 칼 축 m: offHand·pommel·tip, mass·com) — 기본 롱소드. 다른 무기는 lib/weapons.mjs weaponGeom()
  */
-export function pose(ch, side = 1) {
+export function pose(ch, side = 1, sword = SWORD) {
   const P = ch.pelvis;
   const Rp = frame(P.yaw, P.pitch, P.roll);
   const hipC = [P.x, BODY.hipY - P.drop, P.z];
@@ -233,9 +234,10 @@ export function pose(ch, side = 1) {
     dW = v3.norm(v3.add(v3.add(v3.mul(fore, Math.cos(a)), v3.mul(kxv, Math.sin(a))), v3.mul(k, v3.dot(k, fore) * (1 - Math.cos(a)))));
     wristClamp = ang * R2D - WRIST_MAX;
   }
-  const hO = v3.add(hS, v3.mul(dW, SWORD.offHand));
-  const tip = v3.add(hS, v3.mul(dW, SWORD.tip));
-  const pommel = v3.add(hS, v3.mul(dW, SWORD.pommel));
+  // 빈손: 두손 무기는 칼자루 끝(앞손에서 칼 축 offHand), 한손 무기는 ch.hand2 (가슴 틀 — 허리·뒤·앞 등 빌드 도구가 정함)
+  const hO = sword.twoHand === false && ch.hand2 ? toW(ch.hand2) : v3.add(hS, v3.mul(dW, sword.offHand));
+  const tip = v3.add(hS, v3.mul(dW, sword.tip));
+  const pommel = v3.add(hS, v3.mul(dW, sword.pommel));
   const gO = girdle(-side, hO);
   const armO = clearArm(gO.sh, hO, pole(-side, hO, gO.sh));
 
@@ -263,7 +265,7 @@ export function pose(ch, side = 1) {
     shS: gS.sh, shO: gO.sh, elS: armS.mid, elO: armO.mid, hS, hO,
     overS: armS.over, overO: armO.over, elevS: gS.elev, elevO: gO.elev,
     girdleS: { lift: gS.lift, prot: gS.prot }, girdleO: { lift: gO.lift, prot: gO.prot },
-    dW, tip, pommel, legs, wristClamp,
+    dW, tip, pommel, legs, wristClamp, sword,
   };
 }
 
@@ -284,7 +286,8 @@ export function centerOfMass(J, withSword = true) {
     const g = J.legs[k];
     parts.push([v3.lerp(g.hip, g.knee, 0.43), M.thigh], [v3.lerp(g.knee, g.ankle, 0.43), M.shin], [v3.lerp(g.ankle, g.toe, 0.4), M.foot]);
   }
-  if (withSword) parts.push([v3.add(J.hS, v3.mul(J.dW, SWORD.com)), SWORD.mass]);
+  const S = J.sword ?? SWORD;
+  if (withSword) parts.push([v3.add(J.hS, v3.mul(J.dW, S.com)), S.mass]);
   let m = 0;
   let c = [0, 0, 0];
   for (const [p, w] of parts) {

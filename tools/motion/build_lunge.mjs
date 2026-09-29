@@ -4,7 +4,7 @@
 //   node tools/motion/build_lunge.mjs --print   → 숫자만
 //
 //  롱소드, 쟁기 자세(왼발 앞)에서 앞발을 내디디며 가슴을 찌른다.
-//   손(칼 든 팔)이 먼저: 앞발 뜨기 0.07 s 앞 [검색 요약: Chen 외 2017, 숙련자 0.07±0.05 s]
+//   손(칼 든 팔)이 먼저: 앞발 뜨기 0.07 s 앞 [Gholipour 외 2008 본문: 숙련자 팔꿈치가 무릎보다 0.07±0.05 s 먼저 — 저자는 "거의 함께"로 읽음]
 //   칼끝이 겨눈 선에 닿는 때 = 앞발 딛기 직전 [지도서]
 //   끝 자세: 앞 정강이 거의 수직, 뒷다리 거의 곧게, 몸통 앞기울기 약 18° [검색 요약: ISBS 17.5°]
 //   가장 낮은 때 = 앞발 딛은 뒤 앞무릎이 받을 때 (+0.06 s) [추정]
@@ -19,6 +19,8 @@ import { SOURCES } from './lib/sources.mjs';
 import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
+import { validateFile, report } from './validate_clip.mjs';
+import { gripField } from './lib/weapons.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion');
@@ -127,6 +129,7 @@ for (const side of ['right', 'left']) {
     hz: HZ,
     weapon: 'longsword',
     handedness: 'right',
+    grip: gripField('longsword'), // 칼 치수 (앞손에서 칼 축 m) — src/weapons.js 에서 읽음
     units: 'm, 도(°), 초, rad/s(w), m/s(speed)',
     frame: '베기 클립과 같다 (clip_format.md §2)',
     marks,
@@ -170,4 +173,5 @@ if (!PRINT) {
   L.push('');
   writeFileSync(join(OUT, 'lunge_table.md'), L.join('\n') + '\n');
   console.log(`런지 클립 ${indexEntries.length}개 → docs/motion/clips, 표 → docs/motion/lunge_table.md`);
+  if (!report([validateFile(ip)], { quiet: true })) process.exit(1); // 검사 (clip_format.md §6)
 }

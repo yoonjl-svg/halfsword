@@ -1882,30 +1882,55 @@ export class Sound {
     if (soft) this.layer(ev, soft, { gain: gain * 0.5, rate: rate * between(Math.random, 0.9, 1.05) });
   }
 
+  /**
+   * 에너지(J) → 세기 (29차, 디렉터: 온몸 타격 R3 대비. 베기·찌르기·강철 충돌이 함께 쓴다).
+   *  e   지금까지의 눈금 그대로: clamp01(energy / e0). e0 는 소리마다 다르다(베기 140, 찌르기 100, 강철 90). 그 위는 포화.
+   *  w   무게. hitScale 이 'log' 일 때만 0 이 아니다. SOUND.hitKnee(200 J)까지는 0 — 지금 게임 소리와 같다.
+   *      그 위는 로그 눈금 w = log2(E / 200) / log2(500 / 200): 300 J ≈ 0.44, 500 J = 1, 1000 J ≈ 1.76 (상한 없이 천천히 오른다).
+   *      소리는 w 를 크기(×(1+0.7w) ≈ +4.6dB@500), 낮은 음(low ≈ -16%@500), 묵직한 저음 한 겹(0.8w)으로 바꾼다.
+   *  low 재생 속도 배율 2^(-0.25w) — 무거우면 낮아진다. w = 0 이면 1.
+   */
+  hitWeight(energy, e0) {
+    const e = clamp01(energy / e0);
+    const knee = SOUND.hitKnee ?? 200;
+    const heavy = SOUND.hitHeavy ?? 500;
+    const w = this.hitScale === 'log' && energy > knee ? Math.log2(energy / knee) / Math.log2(heavy / knee) : 0;
+    return { e, w, low: 2 ** (-0.25 * w) };
+  }
+  /** 타격 세기 눈금: 'legacy'(지금, 기본 = SOUND.hitScale) | 'log'(hitWeight 의 무게 w 를 켠다). R3 에서 디렉터가 한 줄로 넘긴다 */
+  get hitScale() {
+    return this._hitScale ?? SOUND.hitScale ?? 'legacy';
+  }
+  set hitScale(v) {
+    this._hitScale = v;
+  }
+
   /** 베기: 천이 찢기고 살을 가르는 "쉭-지직" + 젖은 소리 + 몸통 "퍽". through = 베고 지나감 */
   cut(energy, through) {
     if (!this._on || !this.ctx) return;
-    const e = clamp01(energy / 140);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.45 + 0.6 * e ** 0.8, prio: 2 });
+    const { e, w, low } = this.hitWeight(energy, 140);
+    const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w), prio: 2 });
     // 대전 게임식 "챡-촤악-징 퍽": 맞은 순간이 또렷하게 튀어나와야 한다 (예전엔 누비옷 너머 둔한 "쿵" 위주라 흐릿했다)
     // 베고 지나가면 칼바람 꼬리를 길게(느리게 틀기)
-    this.layer(ev, this.pick('hitCut'), { gain: 1, rate: through ? between(Math.random, 0.85, 0.92) : between(Math.random, 0.96, 1.06) });
+    this.layer(ev, this.pick('hitCut'), { gain: 1, rate: low * (through ? between(Math.random, 0.85, 0.92) : between(Math.random, 0.96, 1.06)) });
     // 천이 찢기며 살을 가르는 "지직"은 뒤에 작게
-    this.layer(ev, this.pick('slice'), { gain: 0.3 + 0.2 * e, rate: through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1), delay: 0.01 });
+    this.layer(ev, this.pick('slice'), { gain: 0.3 + 0.2 * e, rate: low * (through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1)), delay: 0.01 });
     // 깊이 베인 큰 상처(e 높음)는 물컹한 크런치가 섞인 "젖은" 소리로
-    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: 0.3 + 0.4 * e, rate: between(Math.random, 0.85, 1.15), delay: 0.015 });
-    this.body(ev, through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e);
+    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: (0.3 + 0.4 * e) * (1 + 0.3 * w), rate: between(Math.random, 0.85, 1.15), delay: 0.015 });
+    this.body(ev, (through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e) * (1 + 0.5 * w), low);
+    if (w > 0) this.layer(ev, this.pick('thump'), { gain: 0.8 * w, rate: 0.7 * low, delay: 0.004 }); // 무게(200 J 위): 묵직한 저음 한 겹
   }
 
   /** 찌르기: 무겁고 짧은 "퍽" + 푹 들어가는 젖은 소리 */
   stab(energy) {
     if (!this._on || !this.ctx) return;
-    const e = clamp01(energy / 100);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.45 + 0.6 * e ** 0.8, prio: 2 });
-    this.layer(ev, this.pick('hitStab'), { gain: 1, rate: between(Math.random, 0.95, 1.05) }); // 대전 게임식 "챡-푹"
-    this.body(ev, 0.85, 0.85);
-    this.layer(ev, this.pick('wet'), { gain: 0.5 + 0.4 * e, rate: between(Math.random, 0.7, 0.85), delay: 0.008 });
+    const { e, w, low } = this.hitWeight(energy, 100);
+    const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w), prio: 2 });
+    this.layer(ev, this.pick('hitStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 대전 게임식 "챡-푹"
+    this.body(ev, 0.85 * (1 + 0.5 * w), 0.85 * low);
+    this.layer(ev, this.pick('wet'), { gain: (0.5 + 0.4 * e) * (1 + 0.3 * w), rate: low * between(Math.random, 0.7, 0.85), delay: 0.008 });
     this.layer(ev, this.pick('slice'), { gain: 0.3, rate: 1.3, delay: 0.004 }); // 천을 뚫는 짧은 "틱"
+    if (w > 0) this.layer(ev, this.pick('thump'), { gain: 0.8 * w, rate: 0.7 * low, delay: 0.004 }); // 무게(200 J 위): 묵직한 저음 한 겹
   }
 
   /** 둔기(칼 면, 손잡이, 막힌 베기): "퍽" + 칼 면이 몸을 때리는 둔한 쇳소리 */
@@ -1942,10 +1967,11 @@ export class Sound {
   }
   /** steel+steel (또는 알 수 없는 재질): 기존 칼끼리 부딪힘과 같은 소리, 에너지를 세기로 바꿔서 쓴다 */
   _impactSteel(energy, pos) {
-    const e = clamp01(energy / 90);
-    const ev = this.event({ bus: this.metalBus, gain: 0.2 + 0.8 * e ** 0.7, bright: e > 0.75 ? 0 : 2400 + 11000 * e, prio: 1 + e, pos });
+    const { e, w, low } = this.hitWeight(energy, 90);
+    const ev = this.event({ bus: this.metalBus, gain: (0.2 + 0.8 * e ** 0.7) * (1 + 0.7 * w), bright: e > 0.75 ? 0 : 2400 + 11000 * e, prio: 1 + e, pos });
     const buf = Math.random() < clamp01((e - 0.15) / 0.4) ? this.pick('clashHard') : this.pick('clashSoft');
-    this.layer(ev, buf, { rate: between(Math.random, 0.93, 1.05) * (1 - 0.05 * e), dur: 0.35 + 1.1 * e });
+    this.layer(ev, buf, { rate: low * between(Math.random, 0.93, 1.05) * (1 - 0.05 * e), dur: 0.35 + 1.1 * e + 0.5 * w });
+    if (w > 0) this.layer(ev, this.pick('clashHard'), { gain: 0.8 * w, rate: 0.72 * low, delay: 0.006, dur: 1.2 }); // 무게(200 J 위): 낮게 우는 쇠 한 겹 더
   }
   /** steel/wood+armor 또는 armor+armor: 투구·판금이 우그러지는 "퍽-크덕" */
   _impactArmor(energy, plateOnPlate, pos) {
@@ -2014,6 +2040,21 @@ export class Sound {
       this.layer(ev, rec, { rate: between(Math.random, 0.9, 1.02) });
       if (x > 0.65) this.layer(ev, this.pick('stepHeavy'), { gain: 0.35 * x, rate: between(Math.random, 0.9, 1.05) });
     } else this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) });
+  }
+
+  /**
+   * 디딤: 지나는 걸음의 무거운 딛기 (29차, 디렉터가 R2/R4 에서 gait 의 딛는 순간 onTouchdown 'strike' 에 잇는다. 아직 부르는 곳 없음).
+   *  strength 0~1 (0 = 보통 걸음, 1 = 온몸을 실어 내리찍는 딛기). 발소리와 같은 바닥 녹음을 조금 낮게 틀고 합성 "쿵"(stepHeavy)을
+   *  세기만큼 깔고, 세게 디디면 몸무게가 실리는 낮은 "쿵"(thump)을 한 겹 더 — 발소리보다 크고 타격음(-21dB 안팎)보다는 작게(1.0 에서 -25dB쯤).
+   */
+  footStrike(strength = 1, pos) {
+    if (!this._on || !this.ctx) return;
+    const k = clamp01(strength);
+    const rec = this.pickSample(STAGE_SOUND[this.stage].step);
+    const ev = this.event({ bus: this.fleshBus, gain: (rec ? 0.3 : 0.22) + 0.35 * k, prio: 0.6, pos });
+    if (rec) this.layer(ev, rec, { rate: between(Math.random, 0.86, 0.96) });
+    this.layer(ev, this.pick('stepHeavy'), { gain: 0.4 + 0.4 * k, rate: between(Math.random, 0.85, 0.98) });
+    if (k > 0.5) this.layer(ev, this.pick('thump'), { gain: 0.5 * (k - 0.5), rate: 0.6, delay: 0.005 }); // 몸무게가 실리는 낮은 "쿵"
   }
 
   /**
