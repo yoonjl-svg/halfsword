@@ -4,7 +4,7 @@
 // SPD/HOLDALL 훅은 실험판 src(exp_src.patch) 에서만 듣는다 — 이 저장소 src 에는 적용하지 않았다.
 // R0 뒤 이 저장소 src 의 깃발(config.js STRIKE): CAP=1e9 → glitchFilter 켬(속도 한도 없음, 기본값), CAP=30 → 끔(예전 30 m/s 버림);
 //  HOLDEFF=1 → gripMu 켬(기본값). 예전 방식 전부(기준선)는 R0_OFF=1 로 돌린다. glitchDrops/capDrops = 튐 검사 / 30 m/s 한도로 버린 접촉 수,
-//  peakContact = 받아들인 접촉점 최고 빠르기(m/s, 무기별)
+//  peakContact = 받아들인 접촉점 최고 빠르기(m/s, 무기별), sweptHits = 스윕 판정(STRIKE.sweep)으로 잡은 첫 접촉 수
 const N = +(process.argv[2] || 6);
 const SECS = +(process.argv[3] || 20);
 if (process.env.SPD) globalThis.__WRIST_SPD = +process.env.SPD;
@@ -19,7 +19,7 @@ const { newRound, AI, THREE } = H;
 const { LOOKS, getLook } = await import('../../src/looks.js');
 const W = process.env.W || 'longsword';
 const W2 = process.env.W2 || W;
-const out = { fast: [], spikes: 0, flips: 0, steps: 0, stuckSteps: 0, over30: 0, capHits: null, wounds: [], clashJ: [], jolts: [], tipPeaks: [], tipHist: {}, deaths: [], glitchDrops: 0, capDrops: 0, peakContact: {}, spikeList: [] };
+const out = { fast: [], spikes: 0, flips: 0, steps: 0, stuckSteps: 0, over30: 0, capHits: null, wounds: [], clashJ: [], jolts: [], tipPeaks: [], tipHist: {}, deaths: [], glitchDrops: 0, capDrops: 0, sweptHits: 0, peakContact: {}, spikeList: [] };
 const bins = [10, 15, 20, 25, 30, 35, 40, 50, 60, 1e9];
 for (let s = 0; s < N; s++) {
   const opts = { seed: 100 + s, weapon: W, weapon2: W2, AI2Class: AI };
@@ -72,10 +72,11 @@ for (let s = 0; s < N; s++) {
   out.tipPeaks.push(peak.map((x) => +x.toFixed(1)));
   out.glitchDrops += G.combat.glitchDrops;
   out.capDrops += G.combat.capDrops;
+  out.sweptHits += G.combat.sweptHits;
   for (const [id, v] of G.combat.peakSpeed) out.peakContact[id] = Math.max(out.peakContact[id] || 0, +v.toFixed(1));
 }
 out.capHits = globalThis.__capHits || [];
 const fn = process.env.OUT || new URL(`./out/duel_${W}_${W2}${process.env.LOOK ? '_armor' : ''}.json`, import.meta.url).pathname;
 (await import('node:fs')).mkdirSync(new URL('./out/', import.meta.url), { recursive: true });
 (await import('node:fs')).writeFileSync(fn, JSON.stringify(out));
-console.log(fn, 'steps', out.steps, 'over30', out.over30, 'spikes', out.spikes, 'flips(60Hz chatter)', out.flips, 'stuckSteps', out.stuckSteps, 'capHits', out.capHits.length, 'wounds', out.wounds.length, 'clashes', out.clashJ.length, 'deaths', out.deaths.length, 'peaks', JSON.stringify(out.tipPeaks), 'glitchDrops', out.glitchDrops, 'capDrops', out.capDrops, 'peakContact', JSON.stringify(out.peakContact));
+console.log(fn, 'steps', out.steps, 'over30', out.over30, 'spikes', out.spikes, 'flips(60Hz chatter)', out.flips, 'stuckSteps', out.stuckSteps, 'capHits', out.capHits.length, 'wounds', out.wounds.length, 'clashes', out.clashJ.length, 'deaths', out.deaths.length, 'peaks', JSON.stringify(out.tipPeaks), 'glitchDrops', out.glitchDrops, 'capDrops', out.capDrops, 'sweptHits', out.sweptHits, 'peakContact', JSON.stringify(out.peakContact));

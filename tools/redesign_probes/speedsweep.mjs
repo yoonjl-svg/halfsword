@@ -3,7 +3,8 @@
 // env: CCD (soft ccd prediction m; 'auto' = max(0.2, k*v*dt)), CAP (combat speed cap, default 30),
 //      DTX (timestep divisor, 1 = 1/120, 2 = 1/240), W weapon, TGT farm|neck|chest, T frac along blade (0.75)
 // usage (저장소 루트에서): node tools/redesign_probes/speedsweep.mjs "20,26,32,38,45" [phases]
-// SWEPT/CCD 는 실험판 src(exp_src.patch 의 __SWEPT·__CCD 훅) 에서만 듣는다 — 이 저장소 src 에는 적용하지 않았다.
+// CCD 는 실험판 src(exp_src.patch 의 __CCD 훅) 에서만 듣는다 — 이 저장소 src 에는 적용하지 않았다.
+// SWEPT=0|1 → config.js STRIKE.sweep (R0 스윕 판정) 끔/켬. 주지 않으면 설정 기본값(켬, R0_OFF=1 이면 끔). swept = 스윕으로 잡은 첫 접촉 수 (위상 합)
 // R0 뒤 이 저장소 src: CAP 을 주지 않으면 config.js STRIKE.glitchFilter 그대로(기본 켬 = 속도 한도 없음, 튐 검사. R0_OFF=1 이면 예전 30 m/s 버림),
 //  CAP=30 → glitchFilter 끔(예전 30 m/s 버림), CAP=1e9 → 켬. drops = 튐 검사·30 m/s 한도로 버린 접촉 수 (위상 합)
 const speeds = (process.argv[2] || '20,26,32,38,45').split(',').map(Number);
@@ -14,9 +15,10 @@ const DTX = +(process.env.DTX || 1);
 const W = process.env.W || 'longsword';
 const TGT = process.env.TGT || 'farm';
 const TF = +(process.env.T || 0.75);
-globalThis.__SPEEDCAP = CAP ?? 30; if (process.env.SWEPT) globalThis.__SWEPT = 1;
+globalThis.__SPEEDCAP = CAP ?? 30;
 const CFG = await import('../../src/config.js');
 if (CAP != null) CFG.STRIKE.glitchFilter = CAP >= 1e6;
+if (process.env.SWEPT != null) CFG.STRIKE.sweep = !!+process.env.SWEPT;
 const CAPTXT = CAP ?? (CFG.STRIKE.glitchFilter ? 'glitch' : 30);
 CFG.PHYSICS.timestep = 1 / (120 * DTX);
 const H = await import('../sim/harness_m.mjs');
@@ -141,23 +143,24 @@ function runOne(vtip, phase) {
   const ws = G.wounds.slice(w0).filter((w) => w.vic === V);
   // contact point speed actually reported
   if (TB) partHit = G.clashes - c0;
-  return { hooks: hooks.calls, pass: hooks.pass, manif, overl, wounds: ws.map((w) => `${w.zone}:${w.type}:${w.energy.toFixed(0)}`), hit: partHit > 0, spd, bounces, stepMs: tStep / steps, afterMs: tAfter / steps, ccd, drops: G.combat.glitchDrops + G.combat.capDrops };
+  return { hooks: hooks.calls, pass: hooks.pass, manif, overl, wounds: ws.map((w) => `${w.zone}:${w.type}:${w.energy.toFixed(0)}`), hit: partHit > 0, spd, bounces, stepMs: tStep / steps, afterMs: tAfter / steps, ccd, drops: G.combat.glitchDrops + G.combat.capDrops, swept: G.combat.sweptHits };
 }
 
 const out = [];
 for (const v of speeds) {
-  let hit = 0, bnc = 0, anyContact = 0, overl = 0, E = [], types = {}, ms = 0, am = 0, drops = 0;
+  let hit = 0, bnc = 0, anyContact = 0, overl = 0, E = [], types = {}, ms = 0, am = 0, drops = 0, swept = 0;
   for (let p = 0; p < PH; p++) {
     const r = runOne(v, p / PH);
     if (r.hit) hit++;
     drops += r.drops;
+    swept += r.swept;
     if (r.manif > 0) anyContact++; if (r.bounces > 0) bnc++;
     if (r.overl > 0) overl++;
     ms += r.stepMs; am += r.afterMs;
     for (const w of r.wounds) { const [z, t, e] = w.split(':'); types[`${z}:${t}`] = (types[`${z}:${t}`] || 0) + 1; E.push(+e); }
     if (process.env.VERB) console.log(v, p, JSON.stringify(r));
   }
-  const row = { vtip: v, vcontact: +(v * (0 + (1) * 1)).toFixed(1), hitPct: Math.round((100 * hit) / PH), bouncePct: Math.round((100 * bnc) / PH), contactPct: Math.round((100 * anyContact) / PH), overlapPct: Math.round((100 * overl) / PH), Emed: E.sort((a, b) => a - b)[E.length >> 1] ?? null, types, drops, stepMs: +(ms / PH).toFixed(3), afterMs: +(am / PH).toFixed(4) };
+  const row = { vtip: v, vcontact: +(v * (0 + (1) * 1)).toFixed(1), hitPct: Math.round((100 * hit) / PH), bouncePct: Math.round((100 * bnc) / PH), contactPct: Math.round((100 * anyContact) / PH), overlapPct: Math.round((100 * overl) / PH), Emed: E.sort((a, b) => a - b)[E.length >> 1] ?? null, types, drops, swept, stepMs: +(ms / PH).toFixed(3), afterMs: +(am / PH).toFixed(4) };
   out.push(row);
-  console.log(JSON.stringify({ W, TGT, TF, CCD: CCDENV, CAP: CAPTXT, DTX, ...row }));
+  console.log(JSON.stringify({ W, TGT, TF, CCD: CCDENV, CAP: CAPTXT, SWEPT: CFG.STRIKE.sweep, DTX, ...row }));
 }
