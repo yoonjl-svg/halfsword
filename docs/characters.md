@@ -777,10 +777,29 @@ AI 대결 승률은 밸런스 참고용일 뿐이라(감독) 브란의 낮은 �
 
 ## 광기의 하인리히 도른 — 밤의 포세이돈 변형 (사장 요청, 디렉터 14:08)
 
-- **시트**: `src/characters.js` `CHARACTER_VARIANTS`에 `heinrich_mad` — 하인리히 시트를 복사(ai·lines 깊은 복사, look·lookVersion은 같은 참조)하고
-  이름 '광기의 하인리히 도른', 별칭 제안 '검에 먹힌 자', 서사·기질 문장, `eyes: 'madGlow'`(외형 담당과 맞출 표식)만 다르다. 시작 감정은 없다(사장 확정: "분노나 집념으로 시작하는 건 싫어").
+- **시트**: `src/characters.js` `CHARACTER_VARIANTS`에 `heinrich_mad` — 하인리히 시트를 복사(ai 깊은 복사 뒤 `persona.level`만 바꿔 끼움, look·lookVersion은 같은 참조)하고
+  이름 '광기의 하인리히 도른', 별칭 '밤의 왕'(사장 확정), 서사·기질 문장, 대사, 실력 숫자, `eyes: 'madGlow'`(외형 담당과 맞춘 표식)가 다르다. 시작 감정은 없다(사장 확정: "분노나 집념으로 시작하는 건 싫어").
   `CHARACTERS`(다섯)는 그대로라 `randomCharacter`·시뮬 라운드로빈에 안 들어가고, `CHARACTERS_BY_ID`에만 합쳐진다 → `?foe=heinrich_mad`와
   `STAGE_FOE.poseidon_night = 'heinrich_mad'`(디렉터)로 나온다.
-- **확정 전(제안만, 설정집 §4b)**: 별칭 · 등장/승리 대사 3종씩 · 공포 면역 · 반응 .18/막기 .72/힘 1.20/정확도 .95/실력 .90. 게임에는 아직 낮의 대사·수치.
+- **사장 확정(2026-09-28)**: 별칭 '밤의 왕' · 대사는 우선 1종씩 — `lines`에 게임이 읽는 `intro`("무릎은 필요 없다. 목만.")·`win`("…이제 파도 소리가 들리는군.")만
+  두고, `taunt`도 새 등장 대사로 덮어쓴다(대사를 못 찾을 때 쓰는 값이라 그대로면 낮의 "무릎 꿇어라…"가 물려 나온다). 공격·맞음 등 나머지 키는 게임이 안 읽어서 뺐다.
+  · 실력 숫자(`persona.level`) = 낮의 하인리히 +20% — 성격(`pers`, 정확도 .9 포함)·유파·난이도 이름('normal')·감정 문턱은 그대로. 공포 면역·옛 수치 제안은 채택 안 됨.
+- **+20% 계산** (`scaledLevel`, `MAD_LEVEL_RULES`): 출발점은 게임이 실제로 쓰는 값 = `AI_LEVELS.normal` 위에 하인리히 `persona.level`을 덮은 것(`ai.js` `setLevel`과 같은 병합).
+  그래서 하인리히 시트에 없는 chamberSpeed·parrySpeed·predict도 normal 값에서 같이 올리고, 결과는 열다섯 키를 모두 적는다(기본값이 끼어들지 않게).
+  클수록 센 값 ×1.2 · 작을수록 센 값(reaction·windup, 시간) ÷1.2 · 확률·0~1 값(guardChance·predict·counter·feint·followUp·read·skill)은 1에서 자름 ·
+  aggression은 기질이라 그대로. 하인리히 원본에서 그때그때 계산하므로 낮의 하인리히를 고치면 따라가고, 원본 시트·`AI_LEVELS`는 읽기만 한다.
+
+  | | reaction | windup | chamber | strike | parry | guard | predict | counter | feint | followUp | read | discipline | strength | aggression | skill |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | 하인리히 (실효값) | .21 | .45 | 3 | 13 | 4.5 | .66 | .75 | .32 | .46 | .72 | .72 | .75 | 1.15 | 1.15 | .82 |
+  | 광기의 하인리히 | .175 | .375 | 3.6 | 15.6 | 5.4 | .792 | .90 | .384 | .552 | .864 | .864 | .90 | 1.38 | 1.15 | .984 |
+
+- **체감이 +20%보다 작은 키**: strikeSpeed(손 목표 필터 ω=24의 최고 속도 한계에 이미 약 83% — 칼끝 최고 속도는 거의 그대로) · chamberSpeed·parrySpeed(같은 필터, 도달 시간 −4~6%)
+  · strength(어깨 18·팔꿈치 25 rad/s 한계는 힘과 무관, 손목 한계는 √힘이라 +9.5%, 중력 보상 두 곳은 이미 1로 막힘) · skill(자세 지도 따르기가 이미 1로 막혀 이어 베기 거리만 +20%)
+  · windup(절대량 약 30ms) · guardChance(달려드는 상대에게는 0.9 바닥에 이미 걸림). 판단·확률 키(reaction·predict·guardChance·counter·read·followUp)는 거의 그대로 +20%.
+- **측정** (게임과 같은 hybrid + 캐릭터 겉모습, 판 45초, 두 자리 같은 시드, 저장소 밖 작업 스크립트 — 저장소 도구로는 `duel_pair`·`pair_sweep`가 변형 id를 받는다): 맞대결 광기 대 낮 55.2%(53승 43패, 96판, 95% 45~65 — 뚜렷한 차이 아님)
+  · 주인공 대리(normal AI + 롱소드 + 케틀햇) 상대 낮 69.8% → 광기 72.9%(각 48판, 오차 안), 평균 종료 16.8 → 13.1초 · 가만히 선 더미 60초 × 16시드 평균 처치 시간 20.9 → 12.0초(−43%), NaN 0.
+  AI끼리 승률보다 한 방 세기·처치 속도에서 드러난다(AI 승률은 체감 난이도와 다르다는 기존 방침대로 참고만).
 - **회귀**: fights12 HEAD = origin/main(59260d9 위 새 기준) 바이트 동일. 라운드로빈에 `heinrich_mad` 없음(확인).
+  사장 확정 반영 뒤(2026-09-28): fights12 · hybrid fights12 · live_battery · characters_eval both 2 가 45962d8 기준 출력과 바이트 동일, 낮의 하인리히·다섯 명 시트 JSON 동일.
 - 밤의 포세이돈 자리 대사(스테이지 사이 힌트 — 이졸데 "그 사람은 그렇게 쉽게 죽지 않는다")는 여정 대사 시스템 결정 뒤.

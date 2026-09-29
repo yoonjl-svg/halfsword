@@ -88,6 +88,7 @@ export class Input {
     this.taps = 0;
     this.press = null;
     this.fingerTrace = new FingerTrace(); // 칼 쪽 손가락 원래 궤적 (온몸 베기 결심 판정이 읽는다)
+    this.tapOnDown = false; // 권총(main.js 가 켠다): 손가락이 닿는(클릭하는) 순간 한 번 친 것으로 센다 — 떼는 때·누른 시간과 상관없이
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     window.addEventListener('pointermove', (e) => this.onMove(e));
@@ -113,6 +114,7 @@ export class Input {
         }
       }
     }
+    if (this.tapOnDown && (e.pointerType !== 'mouse' || (lockedBefore && e.button === 0))) this.taps++; // 권총: 두 번째 손가락으로 쳐도 쏜다
     if (this.activeTouch !== null) return; // 칼은 손가락 하나로만
     this.activeTouch = e.pointerId;
     this.lastX = e.clientX;
@@ -120,7 +122,7 @@ export class Input {
     const mouse = e.pointerType === 'mouse';
     // 시간은 이벤트가 생긴 시각(e.timeStamp)으로 잰다: 한 프레임이 길면 핸들러가 늦게 돌아 누른 시간이 부풀려진다
     // 마우스는 왼쪽(주) 버튼 클릭만 찌르기 (오른쪽·가운데 버튼은 아니다)
-    this.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !mouse || (lockedBefore && e.button === 0) };
+    this.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !this.tapOnDown && (!mouse || (lockedBefore && e.button === 0)) }; // 권총은 이미 셌다
     if (!mouse) this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
   }
 
