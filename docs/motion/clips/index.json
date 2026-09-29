@@ -14497,6 +14497,658 @@
      "wristOver160": 0
     }
    }
+  },
+  {
+   "id": "flow_zornhau8_right_large",
+   "cut": "flow_zornhau8",
+   "base": "zornhau",
+   "nameKo": "8자 흐름",
+   "nameDe": "Zornhau ↔ Zornhau",
+   "family": "흐름 · 이어 베기",
+   "desc": "오른쪽에서 분노의 베기로 내려벤 칼이 왼 엉덩이 옆을 지나 서지 않고 왼 어깨 뒤로 돌아 올라가, 곧장 왼쪽에서 분노의 베기로 내려벤다(8자). 베기마다 한 걸음.",
+   "side": "right",
+   "size": "large",
+   "file": "flow_zornhau8_right_large.json",
+   "summary": {
+    "keyPoses": {
+     "t0": {
+      "t": 0,
+      "pelvisYaw": 13,
+      "chestYaw": 25,
+      "xFactor": 13,
+      "lean": 5,
+      "shoulderElev": 24,
+      "elbowS": 36,
+      "wrist": 61,
+      "kneeL": 31,
+      "kneeR": 32,
+      "handChest": [
+       0.32,
+       -0.31,
+       0.02
+      ],
+      "handWorld": [
+       0.28,
+       0.92,
+       0.15
+      ],
+      "tipWorld": [
+       1.32,
+       1.44,
+       -0.04
+      ],
+      "swordElAz": [
+       26,
+       -10
+      ],
+      "footL": [
+       0.27,
+       -0.1
+      ],
+      "footR": [
+       -0.26,
+       0.15
+      ]
+     },
+     "tw": {
+      "t": 0.37,
+      "pelvisYaw": 35,
+      "chestYaw": 75,
+      "xFactor": 40,
+      "lean": -4,
+      "shoulderElev": 158,
+      "elbowS": 92,
+      "wrist": 93,
+      "kneeL": 44,
+      "kneeR": 48,
+      "handChest": [
+       -0.12,
+       0.52,
+       0.12
+      ],
+      "handWorld": [
+       -0.27,
+       1.72,
+       -0.11
+      ],
+      "tipWorld": [
+       -1.05,
+       1.06,
+       -0.7
+      ],
+      "swordElAz": [
+       -34,
+       -143
+      ],
+      "footL": [
+       0.27,
+       -0.1
+      ],
+      "footR": [
+       -0.27,
+       0.16
+      ]
+     },
+     "tr": {
+      "t": 0.55,
+      "pelvisYaw": 3,
+      "chestYaw": 36,
+      "xFactor": 33,
+      "lean": 5,
+      "shoulderElev": 147,
+      "elbowS": 96,
+      "wrist": 130,
+      "kneeL": 53,
+      "kneeR": 79,
+      "handChest": [
+       0.26,
+       0.42,
+       0.18
+      ],
+      "handWorld": [
+       0.2,
+       1.61,
+       0.35
+      ],
+      "tipWorld": [
+       -0.55,
+       2.29,
+       0.95
+      ],
+      "swordElAz": [
+       36,
+       142
+      ],
+      "footL": [
+       0.27,
+       -0.1
+      ],
+      "footR": [
+       -0.05,
+       0.15
+      ]
+     },
+     "tc": {
+      "t": 0.65,
+      "pelvisYaw": -15,
+      "chestYaw": -20,
+      "xFactor": -5,
+      "lean": 10,
+      "shoulderElev": 76,
+      "elbowS": 57,
+      "wrist": 61,
+      "kneeL": 70,
+      "kneeR": 44,
+      "handChest": [
+       0.5,
+       0.2,
+       0.06
+      ],
+      "handWorld": [
+       0.75,
+       1.32,
+       -0.17
+      ],
+      "tipWorld": [
+       1.9,
+       1.52,
+       0.02
+      ],
+      "swordElAz": [
+       10,
+       9
+      ],
+      "footL": [
+       0.27,
+       -0.1
+      ],
+      "footR": [
+       0.52,
+       0.12
+      ]
+     },
+     "tf": {
+      "t": 0.97,
+      "pelvisYaw": -35,
+      "chestYaw": -75,
+      "xFactor": -40,
+      "lean": 6,
+      "shoulderElev": 78,
+      "elbowS": 76,
+      "wrist": 58,
+      "kneeL": 67,
+      "kneeR": 53,
+      "handChest": [
+       0.11,
+       0.3,
+       -0.2
+      ],
+      "handWorld": [
+       0.08,
+       1.48,
+       -0.22
+      ],
+      "tipWorld": [
+       -0.64,
+       1.4,
+       -1.15
+      ],
+      "swordElAz": [
+       -4,
+       -128
+      ],
+      "footL": [
+       0.27,
+       -0.1
+      ],
+      "footR": [
+       0.52,
+       0.1
+      ]
+     }
+    },
+    "signals": {
+     "handsAboveShoulder": -508,
+     "handsAboveHead": -408,
+     "bladeBehind": -508,
+     "pelvisTurns": -233,
+     "footLifts": -217,
+     "footLands": -17,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 50,
+     "frontCloses": 508
+    },
+    "time": {
+     "wind": 0.36,
+     "releaseToLine": 0.29,
+     "follow": 0.32,
+     "recover": 0.28,
+     "total": 1.25
+    },
+    "tipPeak": 35.6,
+    "tipAtLine": 31.4,
+    "handPeak": 9.9,
+    "sequence": [
+     {
+      "part": "골반",
+      "t": -125,
+      "value": 5.4
+     },
+     {
+      "part": "가슴",
+      "t": -79,
+      "value": 11.2
+     },
+     {
+      "part": "어깨(위팔)",
+      "t": -67,
+      "value": 28.1
+     },
+     {
+      "part": "손",
+      "t": -71,
+      "value": 9.9
+     },
+     {
+      "part": "손목(칼)",
+      "t": -58,
+      "value": 20.5
+     },
+     {
+      "part": "칼끝",
+      "t": -25,
+      "value": 35.6
+     }
+    ],
+    "ordered": true,
+    "trunkCarry": 0.77,
+    "shareAtTipPeak": {
+     "trunk": 0.34,
+     "arm": 0,
+     "wrist": 0.66
+    },
+    "wind": {
+     "handAboveHeadTop": 0.11,
+     "handBehindTorsoFront": 0.23,
+     "shoulderElev": 158
+    },
+    "followThrough": {
+     "handSideChest": -0.37,
+     "handSidePelvis": -0.38,
+     "handSideRoot": -0.45,
+     "handHeightOverHip": 0.67
+    },
+    "range": {
+     "chestYaw": 150,
+     "pelvisYaw": 70,
+     "xFactorMax": 45,
+     "handPath": 4.14,
+     "tipPath": 15.29,
+     "comShift": 0.24
+    },
+    "opening": {
+     "openTime": 0.67,
+     "bladeBehindTime": 0.58,
+     "maxTurn": 75
+    },
+    "checks": {
+     "reachOver": 0.033,
+     "legOver": 0,
+     "tipMin": 0.03,
+     "wristMax": 154,
+     "wristClampTime": 0.06,
+     "wristOver160": 0
+    }
+   },
+   "flow": {
+    "contactGap": 0.6,
+    "tipMin": {
+     "v": 4.2,
+     "t": 0.4,
+     "ofPeak1": 0.12
+    },
+    "handMin": {
+     "v": 1.15,
+     "t": 0.35
+    },
+    "bladeRateMin": {
+     "v": 3,
+     "t": 0.4
+    },
+    "tipLow": 0.08,
+    "wristMax": 59,
+    "chestTurn": 75,
+    "pelvisAdvance": 0.58,
+    "stepR": 0.73,
+    "stepL": 0.5,
+    "legOver": 0
+   }
+  },
+  {
+   "id": "flow_zornhau8_left_large",
+   "cut": "flow_zornhau8",
+   "base": "zornhau",
+   "nameKo": "8자 흐름",
+   "nameDe": "Zornhau ↔ Zornhau",
+   "family": "흐름 · 이어 베기",
+   "desc": "오른쪽에서 분노의 베기로 내려벤 칼이 왼 엉덩이 옆을 지나 서지 않고 왼 어깨 뒤로 돌아 올라가, 곧장 왼쪽에서 분노의 베기로 내려벤다(8자). 베기마다 한 걸음.",
+   "side": "left",
+   "size": "large",
+   "file": "flow_zornhau8_left_large.json",
+   "summary": {
+    "keyPoses": {
+     "t0": {
+      "t": 0,
+      "pelvisYaw": -10,
+      "chestYaw": -20,
+      "xFactor": -10,
+      "lean": 5,
+      "shoulderElev": 16,
+      "elbowS": 49,
+      "wrist": 88,
+      "kneeL": 31,
+      "kneeR": 30,
+      "handChest": [
+       0.28,
+       -0.31,
+       0.04
+      ],
+      "handWorld": [
+       0.28,
+       0.93,
+       -0.06
+      ],
+      "tipWorld": [
+       1.32,
+       1.44,
+       0.14
+      ],
+      "swordElAz": [
+       26,
+       11
+      ],
+      "footL": [
+       -0.26,
+       -0.15
+      ],
+      "footR": [
+       0.27,
+       0.1
+      ]
+     },
+     "tw": {
+      "t": 0.37,
+      "pelvisYaw": -35,
+      "chestYaw": -75,
+      "xFactor": -40,
+      "lean": -4,
+      "shoulderElev": 152,
+      "elbowS": 52,
+      "wrist": 53,
+      "kneeL": 48,
+      "kneeR": 44,
+      "handChest": [
+       -0.12,
+       0.52,
+       -0.12
+      ],
+      "handWorld": [
+       -0.27,
+       1.72,
+       0.11
+      ],
+      "tipWorld": [
+       -1.05,
+       1.06,
+       0.7
+      ],
+      "swordElAz": [
+       -34,
+       143
+      ],
+      "footL": [
+       -0.27,
+       -0.16
+      ],
+      "footR": [
+       0.27,
+       0.1
+      ]
+     },
+     "tr": {
+      "t": 0.55,
+      "pelvisYaw": -3,
+      "chestYaw": -36,
+      "xFactor": -33,
+      "lean": 5,
+      "shoulderElev": 105,
+      "elbowS": 39,
+      "wrist": 47,
+      "kneeL": 79,
+      "kneeR": 53,
+      "handChest": [
+       0.26,
+       0.42,
+       -0.18
+      ],
+      "handWorld": [
+       0.2,
+       1.61,
+       -0.35
+      ],
+      "tipWorld": [
+       -0.55,
+       2.29,
+       -0.95
+      ],
+      "swordElAz": [
+       36,
+       -142
+      ],
+      "footL": [
+       -0.05,
+       -0.15
+      ],
+      "footR": [
+       0.27,
+       0.1
+      ]
+     },
+     "tc": {
+      "t": 0.65,
+      "pelvisYaw": 15,
+      "chestYaw": 20,
+      "xFactor": 5,
+      "lean": 10,
+      "shoulderElev": 82,
+      "elbowS": 35,
+      "wrist": 11,
+      "kneeL": 44,
+      "kneeR": 70,
+      "handChest": [
+       0.5,
+       0.2,
+       -0.06
+      ],
+      "handWorld": [
+       0.75,
+       1.32,
+       0.17
+      ],
+      "tipWorld": [
+       1.9,
+       1.52,
+       -0.02
+      ],
+      "swordElAz": [
+       10,
+       -9
+      ],
+      "footL": [
+       0.52,
+       -0.12
+      ],
+      "footR": [
+       0.27,
+       0.1
+      ]
+     },
+     "tf": {
+      "t": 0.97,
+      "pelvisYaw": 35,
+      "chestYaw": 75,
+      "xFactor": 40,
+      "lean": 6,
+      "shoulderElev": 121,
+      "elbowS": 143,
+      "wrist": 127,
+      "kneeL": 53,
+      "kneeR": 67,
+      "handChest": [
+       0.11,
+       0.3,
+       0.2
+      ],
+      "handWorld": [
+       0.08,
+       1.48,
+       0.22
+      ],
+      "tipWorld": [
+       -0.64,
+       1.4,
+       1.15
+      ],
+      "swordElAz": [
+       -4,
+       128
+      ],
+      "footL": [
+       0.52,
+       -0.1
+      ],
+      "footR": [
+       0.27,
+       0.1
+      ]
+     }
+    },
+    "signals": {
+     "handsAboveShoulder": -500,
+     "handsAboveHead": -408,
+     "bladeBehind": -508,
+     "pelvisTurns": -233,
+     "footLifts": -42,
+     "footLands": 217,
+     "frontOpens": -283,
+     "frontOpenAfterLine": 50,
+     "frontCloses": 508
+    },
+    "time": {
+     "wind": 0.36,
+     "releaseToLine": 0.29,
+     "follow": 0.32,
+     "recover": 0.28,
+     "total": 1.25
+    },
+    "tipPeak": 35.6,
+    "tipAtLine": 31.4,
+    "handPeak": 9.9,
+    "sequence": [
+     {
+      "part": "골반",
+      "t": -125,
+      "value": 5.4
+     },
+     {
+      "part": "가슴",
+      "t": -79,
+      "value": 11.2
+     },
+     {
+      "part": "어깨(위팔)",
+      "t": -167,
+      "value": 50.5
+     },
+     {
+      "part": "손",
+      "t": -71,
+      "value": 9.9
+     },
+     {
+      "part": "손목(칼)",
+      "t": -167,
+      "value": 46.6
+     },
+     {
+      "part": "칼끝",
+      "t": -25,
+      "value": 35.6
+     }
+    ],
+    "ordered": true,
+    "trunkCarry": 0.77,
+    "shareAtTipPeak": {
+     "trunk": 0.34,
+     "arm": 0.29,
+     "wrist": 0.37
+    },
+    "wind": {
+     "handAboveHeadTop": 0.11,
+     "handBehindTorsoFront": 0.23,
+     "shoulderElev": 152
+    },
+    "followThrough": {
+     "handSideChest": -0.37,
+     "handSidePelvis": -0.38,
+     "handSideRoot": -0.45,
+     "handHeightOverHip": 0.67
+    },
+    "range": {
+     "chestYaw": 150,
+     "pelvisYaw": 70,
+     "xFactorMax": 45,
+     "handPath": 4.17,
+     "tipPath": 15.34,
+     "comShift": 0.24
+    },
+    "opening": {
+     "openTime": 0.67,
+     "bladeBehindTime": 0.58,
+     "maxTurn": 75
+    },
+    "checks": {
+     "reachOver": 0,
+     "legOver": 0,
+     "tipMin": 0.03,
+     "wristMax": 144,
+     "wristClampTime": 0.03,
+     "wristOver160": 0
+    }
+   },
+   "flow": {
+    "contactGap": 0.6,
+    "tipMin": {
+     "v": 4.2,
+     "t": 0.4,
+     "ofPeak1": 0.12
+    },
+    "handMin": {
+     "v": 1.15,
+     "t": 0.35
+    },
+    "bladeRateMin": {
+     "v": 3,
+     "t": 0.4
+    },
+    "tipLow": 0.08,
+    "wristMax": 144,
+    "chestTurn": 75,
+    "pelvisAdvance": 0.58,
+    "stepR": 0.5,
+    "stepL": 0.73,
+    "legOver": 0
+   }
   }
  ]
 }

@@ -155,6 +155,14 @@ export function channelsAt(tracks, marks, chain, t) {
     out.pelvis.yaw = py;
     out.chest.yaw = cy - py;
   }
+  // 흐름(이어 베기): 베기마다 제 운동 사슬 곡선 — segments: [{ tw, tf, profiles }] (build_flow.mjs)
+  for (const sg of chain.segments ?? []) {
+    if (t < sg.tw || t > sg.tf) continue;
+    const py = profileAt(sg.profiles.pelvis, t);
+    const cy = profileAt(sg.profiles.chest, t);
+    out.pelvis.yaw = py;
+    out.chest.yaw = cy - py;
+  }
   out.hand = [at('hand.0'), at('hand.1'), at('hand.2')];
   // 칼 방향 키는 월드 틀이다 (베는 면이 월드에 있다). 가슴이 앞당겨 돌아도 칼은 제 시각표대로 — 몸통과 칼 사이의 늦춤이 저절로 생긴다
   out.dirW = tracks.dirV(t + (chain.sword ?? 0) * b);

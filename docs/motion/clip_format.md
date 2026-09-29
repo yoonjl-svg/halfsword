@@ -79,6 +79,19 @@
 
 `time`(단계 길이) · `tipPeak`·`tipAtLine`·`handPeak` · `sequence`(골반·가슴·어깨·손·손목·칼끝 최고 시각 ms, tc 기준 · 최고값) · `ordered` · `trunkCarry` · `shareAtTipPeak` · `wind`(손 높이·앞뒤·어깨 들림) · `followThrough`(지나가기: `handSideChest` = 가슴 가운데 기준 머리 방향 틀 옆 거리, 디렉터 `mx.mjs` 의 hand_side_min 과 같은 식 · `handSidePelvis`·`handSideRoot` 참고 · `handHeightOverHip`) · `range`(가슴·골반 회전, 척추 비틀림, 손·칼끝 길, 무게중심 옮김) · `opening`(앞이 빈 시간, 칼끝이 몸 뒤, 돌아선 각) · `checks`(팔·다리 넘침, 칼끝 최저 높이, 손목 각) · `keyPoses`(t0·tw·tr·tc·tf 의 관절각·자리).
 
+### 3-4. 흐름 클립 (`flow_*`, `build_flow.mjs`)
+
+베기 둘을 멈추지 않고 이은 클립이다. 형식은 같고 몇 가지를 더 가진다.
+
+| 필드 | 뜻 |
+|---|---|
+| `cut` · `base` | `flow_zornhau8` · 바탕 베기(`zornhau`). 크게 벌만 있다 — 비교 화면은 없는 크기를 바탕 베기 클립으로 채워 "작게 대비" 숫자에만 쓴다 |
+| `marks` | 전체: t0 · 첫 베기 tw·tr·tc · 둘째 베기 tf·tg |
+| `marks1` · `marks2` | 베기마다 표시. `marks1.tf` = `marks2.tw` (첫 지나가기 끝 = 둘째 감기 끝, 몸통이 반대로 가장 많이 감긴 때) |
+| `summary` · `summary2` | 첫 베기(marks1 창) · 둘째 베기(marks2 창) 측정 |
+| `flow` | 두 겨눈 선 사이: `contactGap`(s), `tipMin`·`handMin`(m/s, 첫 겨눈 선 뒤 시각), `bladeRateMin`(rad/s), `tipLow`, `wristMax`, `chestTurn`, 걸음(`pelvisAdvance`·`stepR`·`stepL`) |
+| `data.cols.phi` | 첫 베기 φ 가 `marks2.tw` 에서 1.6 에 닿고, 거기서 둘째 베기 φ 0 으로 새로 시작한다 |
+
 ## 4. 쓸 때 주의
 
 - **몸 모형은 표시·검사용이다.** 팔·다리 IK 와 날개뼈는 `lib/body.mjs` 의 단순한 규칙이다. 게임은 자기 IK(재설계 §7-2 `src/strike`)로 `handS`·`sword`·몸통 채널을 따라가면 되고, `J` 의 팔꿈치 자리를 그대로 강요할 필요는 없다.
@@ -120,3 +133,4 @@
 | clip/1, record/1 | 2026-09-29 | 처음 (같은 날 보통 벌 만드는 법을 섞기 → 크게 벌 줄이기로 바꿈 — 형식은 같음) |
 | record/1 | 2026-09-29 | `cond`(기록 조건: 커밋·시드·Hz·무기·걸음·skill·거리·결심·입력) 더함 — 없어도 읽힌다, 디렉터 요청 |
 | clip/1 | 2026-09-29 | `summary.followThrough.handSideChest` 더함(형식은 같음). 크게 Zornhau 지나가기 손 자리 고침(손을 배 앞으로 끌어들이지 않음) |
+| clip/1 | 2026-09-29 | 흐름 클립(§3-4) 더함 — 베기 클립은 그대로 |

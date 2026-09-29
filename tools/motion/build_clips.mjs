@@ -6,7 +6,7 @@
 //
 //  키프레임(lib/cuts.mjs) → 크기 세 벌(small·medium·large) × 좌우 → 120 Hz 표본 + 측정값.
 // ─────────────────────────────────────────────────────────────
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CUTS, GAME_GUARDS } from './lib/cuts.mjs';
@@ -14,44 +14,13 @@ import { SOURCES } from './lib/sources.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, fromGameGuard, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { v3, m3, frame } from './lib/body.mjs';
+import { toKeys, marksOf, mirror } from './lib/sets.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'clips');
 const args = process.argv.slice(2);
 const PRINT = args.includes('--print');
 const only = args.filter((a) => !a.startsWith('--'));
-
-const MIRROR_GUARD = { tag: null, langort: null, alber: null, neben: null,  tagR: 'tagL', tagL: 'tagR', ochs: 'ochsL', ochsL: 'ochs', side: 'sideL', sideL: 'side', pflug: 'pflugL', pflugL: 'pflug', wechsel: 'wechselL', wechselL: 'wechsel' };
-
-/** 저작 키 (p/c/h/d + 걸음 키) → clip.mjs 키 */
-function toKeys(set) {
-  const keys = set.keys.map((k) => ({
-    t: k.t,
-    tag: k.tag,
-    pelvis: { yaw: k.p[0], drop: k.p[1], pitch: k.p[2] ?? 0, roll: 0 },
-    chest: { yaw: k.c[0], lean: k.c[1], side: k.c[2] ?? 0 },
-    hand: k.h,
-    // 칼 방향: 저작 키는 그 키의 가슴 틀 → 월드로 바꿔 둔다 (보간은 월드에서)
-    dirV: m3.apply(frame(k.p[0] + k.c[0], (k.p[2] ?? 0) + k.c[1], k.c[2] ?? 0), k.d),
-  }));
-  for (const s of set.steps) {
-    const f = {};
-    for (const side of ['L', 'R']) {
-      const a = s.feet[side];
-      f[side] = { x: a[0], z: a[1], yaw: a[2], lift: a[3], up: a[4] };
-    }
-    keys.push({ t: s.t, feet: f, pelvis: { x: s.px ?? 0, z: s.pz ?? 0 } });
-  }
-  keys.sort((a, b) => a.t - b.t);
-  return keys;
-}
-function marksOf(set) {
-  const m = {};
-  for (const k of set.keys) if (k.tag) m[k.tag] = k.t;
-  m.t0 = set.keys[0].t;
-  for (const need of ['t0', 'tw', 'tr', 'tc', 'tf', 'tg']) if (m[need] == null) throw new Error(`표시 ${need} 없음`);
-  return m;
-}
 
 /** 크기 섞기: small 과 large 키를 u 만큼 (키 개수·표시가 같아야 한다) */
 function blend(small, large, u) {
@@ -101,22 +70,6 @@ function retimeSteps(med, large) {
     return mM.tg;
   };
   return { ...med, steps: med.steps.map((s) => ({ ...s, t: tmap(s.t) })) };
-}
-
-/** 왼쪽에서 베기 = 거울 (게임 자세표 키는 게임의 왼쪽 자세 값으로 바꾼다) */
-function mirror(set) {
-  const keys = set.keys.map((k) => {
-    if (k.guard && MIRROR_GUARD[k.guard]) {
-      const g = fromGameGuard(GAME_GUARDS[MIRROR_GUARD[k.guard]]);
-      return { t: k.t, tag: k.tag, p: [g.pelvis.yaw, g.pelvis.drop, 0], c: [g.chest.yaw, g.chest.lean, 0], h: g.hand, d: g.dirV };
-    }
-    return { t: k.t, tag: k.tag, p: [-k.p[0], k.p[1], k.p[2] ?? 0], c: [-k.c[0], k.c[1], -(k.c[2] ?? 0)], h: [k.h[0], k.h[1], -k.h[2]], d: [k.d[0], k.d[1], -k.d[2]] };
-  });
-  const steps = set.steps.map((s) => {
-    const m = (a) => [a[0], -a[1], -a[2], a[3], a[4]];
-    return { t: s.t, feet: { L: m(s.feet.R), R: m(s.feet.L) }, px: s.px, pz: -(s.pz ?? 0) };
-  });
-  return { keys, steps, chain: set.chain };
 }
 
 function build(cut, sizeName, sideName) {
@@ -206,7 +159,12 @@ for (const cut of CUTS) {
   }
 }
 if (!PRINT && !only.length) {
-  writeFileSync(join(OUT, 'index.json'), JSON.stringify({ format: 'stillness-motion-index/1', generated: new Date().toISOString().slice(0, 10), clips: index }, null, 1));
+  // 흐름 클립(build_flow.mjs)이 끼워 둔 항목은 지킨다
+  let kept = [];
+  try {
+    kept = JSON.parse(readFileSync(join(OUT, 'index.json'), 'utf8')).clips.filter((c) => c.cut.startsWith('flow_'));
+  } catch {}
+  writeFileSync(join(OUT, 'index.json'), JSON.stringify({ format: 'stillness-motion-index/1', generated: new Date().toISOString().slice(0, 10), clips: [...index, ...kept] }, null, 1));
   writeFileSync(join(ROOT, 'docs', 'motion', 'spec_table.md'), specTable(index));
   console.log(`\n${index.length}개 클립 → ${OUT}, 사양표 → docs/motion/spec_table.md`);
 }

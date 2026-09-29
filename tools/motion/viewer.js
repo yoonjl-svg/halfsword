@@ -312,9 +312,18 @@ function clipId(cut, side, size) {
   return `${cut}_${side}_${size}`;
 }
 async function loadCurrent() {
-  const ids = SIZES.map((s) => clipId(state.cut, state.side, s));
+  // 흐름 클립은 크게 한 벌뿐이다: 없는 크기는 바탕 베기(base) 클립으로 채워 "작게 대비" 숫자만 쓰고, 크기 단추·세 크기 겹쳐 보기는 막는다
+  const entries = index.clips.filter((c) => c.cut === state.cut && c.side === state.side);
+  const have = new Set(entries.map((c) => c.size));
+  const base = entries[0]?.base;
+  if (!have.has(state.size)) state.size = SIZES.filter((s) => have.has(s)).pop() ?? 'large';
+  const ids = SIZES.map((s) => (have.has(s) || !base ? clipId(state.cut, state.side, s) : clipId(base, state.side, s)));
   const clips = await Promise.all(ids.map((id) => getJSON(`clips/${id}.json`)));
   SIZES.forEach((s, i) => (sizeClips[s] = clips[i]));
+  for (const b of $('size').querySelectorAll('button')) b.disabled = !have.has(b.dataset.v);
+  pressed('size', state.size);
+  $('allSizes').disabled = have.size < SIZES.length;
+  if (have.size < SIZES.length) state.all = $('allSizes').checked = false;
   clip = sizeClips[state.size];
   buildFigures();
   await loadRecord();
@@ -413,7 +422,7 @@ function judge(v, t) {
 function renderSheet() {
   const s = clip.summary;
   const small = sizeClips.small.summary;
-  const cut = state.cut;
+  const cut = clip.base ?? state.cut;
   $('sName').innerHTML = `${clip.nameKo}<span class="de">${clip.nameDe}</span>`;
   $('sDesc').textContent = `${clip.desc} · ${SIZE_KO[state.size]} · ${state.side === 'right' ? '오른쪽에서' : '왼쪽에서'}`;
   const seq = s.sequence;
@@ -472,6 +481,21 @@ function renderSheet() {
       ],
     },
   ];
+  if (clip.flow) {
+    const f = clip.flow;
+    groups.unshift({
+      h: '흐름 (이어 베기)',
+      rows: [
+        { l: '겨눈 선 → 다음 겨눈 선', sub: '첫 베기 칼이 겨눈 선을 지난 뒤 둘째 베기가 지나기까지 [추정]', v: `${fmt(f.contactGap)} s`, c: '' },
+        { l: '사이에서 칼끝이 가장 느릴 때', sub: `첫 칼끝 최고의 ${Math.round(f.tipMin.ofPeak1 * 100)}% · 첫 겨눈 선 +${fmt(f.tipMin.t)} s (이어 감기 꼭대기)`, v: `${fmt(f.tipMin.v, 1)} m/s`, c: f.tipMin.v >= 2 ? chip('good', '칼이 서지 않음') : chip('warn', '거의 섬') },
+        { l: '사이에서 손이 가장 느릴 때', sub: `첫 겨눈 선 +${fmt(f.handMin.t)} s`, v: `${fmt(f.handMin.v)} m/s`, c: '' },
+        { l: '칼 돌림이 가장 느릴 때', sub: '손 → 칼끝 방향이 도는 빠르기 (월드)', v: `${fmt(f.bladeRateMin.v, 1)} rad/s`, c: '' },
+        { l: '몸통이 되감기를 끝낸 때', sub: '가슴이 반대쪽으로 가장 많이 감긴 때 = 둘째 감기 끝', v: `+${fmt(clip.marks2.tw - clip.marks1.tc)} s`, c: '' },
+        { l: '둘째 베기 칼끝 최고', sub: '둘째 베기도 온몸 베기 (첫 베기와 같은 크기)', v: `${clip.summary2.tipPeak} m/s`, c: '' },
+        { l: '걸음', sub: '베기마다 한 걸음 (Meyer "모든 베기는 제 걸음")', v: `${fmt(f.pelvisAdvance)} m`, c: '' },
+      ],
+    });
+  }
   $('crits').innerHTML =
     groups
       .map(
@@ -543,7 +567,29 @@ const PHASES = [
   ['tc', 'tf', '지나가기'],
   ['tf', 'tg', '복귀'],
 ];
+// 흐름 클립(marks1·marks2): 첫 베기 → 이어 감기(서지 않음) → 둘째 베기 → 지나가기 → 복귀
+function flowBands() {
+  const a = clip.marks1, b = clip.marks2;
+  return [
+    [a.t0, a.tw, '감기', 0],
+    [a.tw, a.tc, '베기', 1],
+    [a.tc, b.tw, '이어 감기', 0],
+    [b.tw, b.tc, '베기', 1],
+    [b.tc, b.tf, '지나가기', 2],
+    [b.tf, b.tg, '복귀', 3],
+  ];
+}
 function phaseName(t) {
+  if (clip.marks2) {
+    const a = clip.marks1, b = clip.marks2;
+    if (t < a.tw) return '감기';
+    if (t < a.tc) return t < a.tr ? '베기 · 몸이 먼저' : '베기 · 손목 풀림';
+    if (t < b.tw) return '이어 감기 · 칼이 서지 않음';
+    if (t < b.tc) return t < b.tr ? '둘째 베기 · 몸이 먼저' : '둘째 베기 · 손목 풀림';
+    if (t < b.tf) return '지나가기';
+    if (t < b.tg) return '복귀';
+    return '자세';
+  }
   const m = clip.marks;
   if (t < m.tw) return '감기';
   if (t < m.tr) return '베기 · 몸이 먼저';
@@ -558,8 +604,9 @@ function bandColors() {
 function renderBands() {
   const T = duration(clip);
   const cols = bandColors();
-  $('bands').innerHTML = PHASES.map(([a, b], i) => `<span style="width:${((clip.marks[b] - clip.marks[a]) / T) * 100}%;background:${cols[i]}"></span>`).join('');
-  $('bandlbl').innerHTML = PHASES.map(([a, b, name]) => `<span style="width:${((clip.marks[b] - clip.marks[a]) / T) * 100}%">${name}</span>`).join('');
+  const list = clip.marks2 ? flowBands() : PHASES.map(([a, b, name], i) => [clip.marks[a], clip.marks[b], name, i]);
+  $('bands').innerHTML = list.map(([a, b, , ci]) => `<span style="width:${((b - a) / T) * 100}%;background:${cols[ci]}"></span>`).join('');
+  $('bandlbl').innerHTML = list.map(([a, b, name]) => `<span style="width:${((b - a) / T) * 100}%">${name}</span>`).join('');
 }
 
 // ── 곡선 ──

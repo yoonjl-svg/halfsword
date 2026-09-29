@@ -153,6 +153,27 @@ export const SOURCES = {
     read: 'snippet',
     license: '연구·상업 제품 포함 사용 가능, 데이터 자체 재판매 금지(변환본 포함), 출처 표기 요청. 유파 검술 아님',
   },
+  fencing_review: {
+    kind: 'biomech',
+    cite: 'Chen 외 2017 "Biomechanics of fencing sport: A scoping review" (PLoS ONE 12(2) e0171578): 숙련자는 팔이 발보다 먼저, 손-발 시간차 0.07±0.05 s (초보 0.13±0.15 s)',
+    url: 'https://doi.org/10.1371/journal.pone.0171578',
+    read: 'search-summary',
+    license: '인용 (CC BY, 본문은 네트워크 정책으로 못 읽음)',
+  },
+  fencing_gholipour: {
+    kind: 'biomech',
+    cite: 'Gholipour 외 2008 펜싱 런지 입체 촬영: 엉덩관절 굽힘 숙련 53° / 초보 40°, 앞무릎 처음 굽힘 약 20° → 폄 51±9° (초보 38° → 18±8°)',
+    url: 'https://joh.ut.ac.ir/article_26965.html',
+    read: 'search-summary',
+    license: '인용',
+  },
+  fencing_mulloy: {
+    kind: 'biomech',
+    cite: 'Mulloy 외 ISBS "Use of the kinematic chain in the fencing attacking lunge": 숙련자 뒷다리 엉덩이→무릎→발목 순서, 뒷발목 폄 564±132 °/s (초보 273±184)',
+    url: 'https://ojs.ub.uni-konstanz.de/cpa/article/view/6606',
+    read: 'search-summary',
+    license: '인용',
+  },
   fencing_lunge: {
     kind: 'biomech',
     cite: 'ISBS 엘리트 펜싱 런지: 길이 1.24 m (0.88~1.86), 엉덩이 속도 1.97 m/s, 몸통 앞기울기 17.5°',
