@@ -702,6 +702,28 @@ export const STROKE = {
   },
 };
 
+// R2 클립 아틀라스 (src/strike/atlas.js). 동작 연구 PM 의 clip/2 기준 동작(docs/motion/clips)을 φ(위상)·S(크기) 로 표본하는 자료다.
+//  값을 자르지 않는다: S 는 작게↔보통↔크게 두 구간 섞기, 1 을 넘는 몫(over)은 보통→크게 축을 그대로 직선으로 이어 간다(이득 1, 상한 없음).
+//  검사는 경고가 아니라 예외다(strict): 형식·버전·채널·길이·NaN·표시 순서가 틀리면 AtlasError 를 던진다
+export const ATLAS = {
+  source: 'pack', // 'pack' = 묶음(src/strike/clips/atlas_v0.json, 브라우저·기본) · 'clips' = 원본 클립을 읽는다(node 도구)
+  pack: 'v0',
+  format: 'stillness-motion-clip/2', // 원본 클립 형식 (clip/1 은 거절: girdle·elbowPoleO·step·recoverTo 가 없다)
+  indexFormat: 'stillness-motion-index/1',
+  packFormat: 'stillness-atlas-pack/1',
+  families: ['zornhau', 'oberhau', 'mittelhau', 'unterhau'], // 게임이 모는 베기 (gesture famClip 이 고른다)
+  reserved: ['zwerchhau', 'schielhau', 'scheitelhau', 'krumphau'], // 클립은 있으나 아직 안 모는 베기 (다음 라운드는 이 두 목록만 바꾼다)
+  hz: 120, // 클립 표본 Hz (다르면 예외)
+  phiStep: 0.01, // φ 격자 간격 (−1 … 2.2 → 321 점)
+  sgWindow: 5, // 격자 위 도함수: 5점 Savitzky–Golay (2차 맞춤)
+  sizeMid: 0.5, // S 가 이 값까지는 작게↔보통, 넘으면 보통↔크게 (clip_format §4: 곧게 섞으면 손목이 160° 를 넘는다)
+  smallTol: 0.02, // 작은 벌의 시작·끝 손 자리가 게임 자세표(guards.js)와 어긋나도 되는 거리 m (넘으면 예외 — guards.js 를 바꾸면 여기서 걸린다)
+  vecStepMaxDeg: 20, // 칼 방향(sword)이 한 표본(1/120 s) 사이에 돌 수 있는 각(°) — 저작 오류 검사(v0 최대 12.5°). 팔꿈치 pole·edge 는 뒤집힘이 정상이라 보고만 한다
+  poleFlipDeg: 57, // 팔꿈치 pole 이 한 표본에 이보다 크게 돌면 '뒤집힘'으로 보고 (drive_arm 의 pole 이력이 다룬다)
+  strict: true, // 검사 실패 = 예외 (false 는 없다: 조용히 넘어가는 길을 두지 않는다)
+  clipsDir: '../halfsword/docs/motion/clips', // node 도구의 원본 클립 기본 위치(저장소 뿌리 기준). 없으면 docs/motion/clips
+};
+
 // 소리 (sound.js). 소리마다 들어보기: 메뉴의 "소리 들어보기"
 export const SOUND = {
   volume: 0.8, // 전체 음량
