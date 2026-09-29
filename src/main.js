@@ -49,7 +49,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, wholeBody: true, autoChamber: false };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, wholeBody: true, autoChamber: false, gestureInput: 'wind' };
 // 자동 감기 설정을 쓰는가 (온몸 베기 미리보기에서는 거짓: 설정 줄이 없고, 저장된 값이 참이어도 켜지 않는다 — newRound).
 //  다시 열려면 이것을 참으로 하고 index.html 에 '자동 감기' 줄(data-setting="autoChamber")을 되살린다
 const AUTO_CHAMBER_SETTING = false;
@@ -343,6 +343,8 @@ function newRound(weaponId) {
   input.syncHand(); // R0 입력: 스텝 읽기 커서도 새로
   player.skill.detect = true;
   player.skill.trace = input.fingerTrace;
+  player.ges?.attachTrace(input.fingerTrace); // R2 손짓 층 (GESTURE.on): 같은 손가락 궤적을 스텝 시각으로 읽는다
+  player.ges?.reset();
   // 확정 신호 (모든 기기): 입력 자취가 금색으로 밝아지고 굵어진다. 안드로이드는 짧은 진동을 더한다 (숨소리는 소리 담당, R3 고리)
   player.onCommit = (stage) => {
     if (stage !== 'B') return;
@@ -572,6 +574,7 @@ function refreshSettingsUI() {
   particles.bloodOn = settings.blood;
   sound.on = settings.sound;
   input.invertTilt = settings.invertTilt;
+  CONFIG.GESTURE.input = settings.gestureInput === 'stroke' ? 'stroke' : 'wind'; // 손짓 입력 방식 (A 감기 / B 긋기, 시험 빌드의 사장님 스위치). 손짓 층이 스텝마다 읽는다
   input.useTilt = settings.moveMode === 'tilt';
   document.body.classList.toggle('touch', input.isTouchDevice);
   document.body.classList.toggle('moveStick', settings.moveMode !== 'tilt');
@@ -1243,6 +1246,12 @@ function updateGuardName(dt) {
 
 // ── 게임 루프 ──
 // 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다
+// 손짓 입력 방식 (사장님 스위치, GESTURE.input): ?input=wind (A 손가락 자리로 감기, 기본) | ?input=stroke (B 긋기 길이·빠르기만)
+//  주소 값이 설정 줄보다 먼저 (설정 줄에도 그대로 보인다. 설정 줄을 누르면 그 값으로 바뀐다)
+if (params.get('input') === 'wind' || params.get('input') === 'stroke') {
+  settings.gestureInput = params.get('input');
+  refreshSettingsUI();
+}
 const perf = params.get('fps') ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
 let last = performance.now();
 let acc = 0;
@@ -1260,6 +1269,7 @@ function frame(now) {
     const d = input.consumeHandDelta();
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
     const inScale = hitStop > 0 ? 0.25 : 1;
+    player.inputScale = inScale; // 손짓 층도 손가락 조각을 같은 배율로 쌓는다 (p 와 handOffset 이 어긋나지 않게)
     const perStep = INPUT.coalesce; // R0 입력: 손 목표는 물리 스텝마다 (아래 while). 여기서는 프레임 몫으로 inputActive 만
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
     if (!perStep && player.alive && !player.weapon?.gun) {
@@ -1297,10 +1307,12 @@ function frame(now) {
     const physT0 = perf ? performance.now() : 0;
     let steps = 0;
     while (acc >= PHYSICS.timestep && steps < PHYSICS.maxStepsPerFrame) {
+      // 이 스텝이 끝나는 벽시계 시각 (물리 시계는 acc 만큼 벽시계에 뒤진다. 멈칫·슬로모션 동안은 프레임 시각). 손짓 층의 스텝 시계 (§2.3)
+      const tStep = scale < 1 ? now : now - (acc - PHYSICS.timestep) * 1000;
+      player.stepT = tStep;
       if (perStep) {
-        // R0 입력: 이 스텝이 끝나는 벽시계 시각의 손가락 자리까지 (물리 시계는 acc 만큼 벽시계에 뒤진다. 멈칫·슬로모션 동안은 프레임 시각).
+        // R0 입력: 이 스텝 시각의 손가락 자리까지.
         //  권총·죽은 뒤에도 읽어 커서를 옮긴다 — 그동안의 이동을 나중에 몰아 넣지 않는다 (예전 consumeHandDelta 가 버리던 것과 같게)
-        const tStep = scale < 1 ? now : now - (acc - PHYSICS.timestep) * 1000;
         const s = input.handDeltaAt(tStep);
         if (player.alive && !player.weapon?.gun) {
           player.handOffset.x += s.x * inScale;

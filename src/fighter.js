@@ -10,8 +10,9 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT, STRIKE } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, WHOLE, SUPPORT, COMMIT, STRIKE, GESTURE } from './config.js';
 import { Skill } from './skill.js';
+import { Gesture } from './strike/gesture.js';
 import { Gait, hybridJointDefs, fwdFixOn } from './gait.js';
 import { guardAt } from './guards.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
@@ -231,6 +232,10 @@ export class Fighter {
     // 앞뒤 깊이는 자동: 가운데로 모을수록 팔을 앞으로 뻗는다.
     this.handOffset = new THREE.Vector2(0.15, 0.0);
     this.skill = new Skill(this); // 검술 층: 손 목표·허리·발에 익힌 몸놀림을 보탠다
+    this.stepT = 0; // 이 물리 스텝이 끝나는 벽시계 ms (main.js·harness 가 스텝마다). inputScale: 멈칫 동안 손가락 배율 (main.js)
+    this.inputScale = 1;
+    this.ges = GESTURE.on ? new Gesture(this) : null; // R2 손짓 층 (src/strike/gesture.js). drive 는 아틀라스를 읽은 뒤 붙인다 (W3)
+    this.drive = null;
     this.guardPose = {}; // 손이 따라가는 자세 (걸러진 손 목표 기준)
     this.bodyGuard = {}; // 몸이 따라가는 자세 (거르기 전 입력 기준)
     this.finish = newFinish(); // 쓰러진 상대 마무리(내려찍기) 자세 (finish.js)
