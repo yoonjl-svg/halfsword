@@ -211,7 +211,7 @@ export const SOURCES = {
   },
   meyer_dussack: {
     kind: 'translation',
-    cite: 'Meyer 1570 뒤삭(한손 칼) 3장 네 베기: 황소에서 딛으며 곧게 내려 벤 뒤 팔을 뻗은 긴 자세에서 멈추고, 칼 앞쪽을 왼쪽 아래로 떨어뜨리며 칼자루를 칼이 늘어진 채 머리 둘레로 끌어올려 다시 벤다 — 베기마다 오른발을 앞으로 (Garber 역 + 원문)',
+    cite: 'Meyer 1570 뒤삭(한손 칼) 3장 네 베기: 황소에서 딛으며 곧게 내려 벤 뒤 팔을 뻗은 긴 자세에서 멈추고, 칼 앞쪽을 왼쪽 아래로 떨어뜨리며 칼자루를 칼이 늘어진 채 머리 둘레로 끌어올려 다시 벤다 — 베기마다 오른발을 앞으로. 첫째 규칙은 "처음엔 반만(긴 자세까지), 둘째엔 선을 끝까지 지나" 벤다 (fol. Ⅱ.4v, Garber 역 + 1570 원본 영인본)',
     url: 'https://sprechfenster.org/meyer/1570/dusack-chapter-3-the-four-cuts/',
     read: 'full',
     license: '원문 퍼블릭 도메인. 번역은 짧은 인용만',
