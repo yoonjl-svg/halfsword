@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { CUTS } from './lib/cuts.mjs';
 import { SOURCES } from './lib/sources.mjs';
 import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
-import { sampleClip, measure, summarize, toJSONFrames, toColumns, phaseAt, stepOf, HZ } from './lib/clip.mjs';
+import { sampleClip, measure, summarize, toJSONFrames, toColumns, phaseAt, stepOf, stanceOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES, v3, m3, frame } from './lib/body.mjs';
 import { validateFile, report } from './validate_clip.mjs';
 import { gripField } from './lib/weapons.mjs';
@@ -177,6 +177,7 @@ function build(sideName) {
   };
   // clip/2 필드: 걸음은 베기마다 하나씩 (첫 베기 = 둘째 감기 끝까지, 둘째 베기 = 첫 겨눈 선부터)
   const extra = clipExtras({ keys }, rows, marks);
+  extra.stance = stanceOf(rows);
   extra.step = [stepOf(rows.filter((r) => r.t <= m2.tw + 1e-9), m1), stepOf(rows.filter((r) => r.t >= m1.tc - 1e-9), m2)];
   return { rows, marks, m1, m2, s1, s2, flow, def, extra };
 }

@@ -8,8 +8,11 @@
 //   · 폰에서 가볍게: 효과 두 벌(두 검객이 거의 동시에 쏠 때)만 미리 만들어 돌려쓴다.
 //   · v2 (사장님 9/29 "발사 이펙트가 좀 약한 거 같애" → 디렉터 지시): 섬광을 더 크고 밝게 + 총구 앞 짧은 화염(원뿔 두 겹: 보통 섞기 속불 + 더하기 겉불 —
 //     눈밭·밝은 낮에도 보이게), 2~3프레임 세게 뒤 빠르게 감쇠. 화약 불티(밝은 주황 점, 중력, 0.35초). 연기 더 많고 짙게. 궤적 줄 더 굵고 또렷하게.
-//     발사 순간 짧은 화면 흔들림(main.js kickCamera 를 shake 로 받아 작게: 자기 총 0.45, 상대 총 0.15). 총구 점광 하나(0.1초, 밤 무대에서 주변을 잠깐 비춘다 —
-//     처음부터 장면에 두고 세기만 0 ↔ 켬, 셰이더 재컴파일·끊김 없음).
+//     발사 순간 짧은 화면 흔들림(main.js kickCamera 를 shake 로 받아 작게: 자기 총 0.45, 상대 총 0.15).
+//   · 주변 비춤은 조명 없이 흉내 낸다(디렉터 폰 성능 후속): 총구 둘레 큰 더하기 섞기 빛무리(지름 약 3 m, 0.1초). 점광은 쓰지 않는다 —
+//     늘 장면에 두면 꺼져 있어도 빛을 받는 모든 재질이 매 픽셀 빛 하나를 더 계산하고, 쏠 때만 넣었다 빼면 빛 개수가 바뀌어
+//     모든 재질의 셰이더가 다시 만들어진다(측정: 프로그램 19 → 33, 성 안뜰).
+//   · 첫 발 멈칫 방지: warmGunFx(renderer, camera) 가 효과 재질을 지금 무대의 빛·안개로 미리 컴파일한다(main.js 가 권총이 있는 판을 세울 때 부른다).
 //   · 총알 궤적 (사장님 결정 "방식 B"): 총구에서 총알이 닿은 곳까지 옅은 담황색 줄 하나가 0.1초쯤 보였다 사라진다 — 빗나갔는지 한눈에 읽힌다.
 //     실제 총알 방향(gun.js 의 퍼짐·AI 보정이 든 것)과 닿은 거리는 무기 PM 이 onShot(f, p, dir, dist) 로 넘긴다.
 //     안 넘어오면 총신 방향으로 그리고, 거리는 gun.js 와 같은 광선으로 재고 아니면 GUN.range 다.
@@ -26,7 +29,7 @@ import { canvasTex } from './stage_kit.js';
 const FLASH_T = 0.11; // 초: 섬광·화염이 보이는 시간 — 처음 FLASH_HOLD 는 최대 밝기(2~3프레임), 그 뒤 빠르게 감쇠
 const FLASH_HOLD = 0.04; // 초: 최대 밝기 유지
 const SPARK_T = 0.35; // 초: 화약 불티
-const LIGHT_T = 0.1; // 초: 총구 점광
+const GLOW_T = 0.1; // 초: 총구 둘레 빛무리 (조명 대신)
 const NS = 14; // 불티 점 수
 const SMOKE_T = 1.2; // 초: 연기가 사라지기까지
 const TRACE_T = 0.16; // 초: 총알 궤적 줄이 사라지기까지 (v2: 0.11 → 0.16, 더 또렷하게)
@@ -139,6 +142,11 @@ const _u = new THREE.Vector3();
 const _v = new THREE.Vector3();
 
 let _clear = null;
+let _warm = null;
+/** 첫 발 멈칫 방지 (디렉터): 권총이 있는 판을 세울 때 main.js 가 부른다. 효과 재질을 지금 무대의 빛·안개로 미리 컴파일한다 */
+export function warmGunFx(renderer, camera) {
+  _warm?.(renderer, camera);
+}
 /** 판이 바뀔 때(main.js 가 clearDebris() 를 부르는 자리) 남은 섬광·연기를 바로 거둔다. 효과는 1.2초 안에 스스로 사라지지만 쌓임 없이 깨끗이 (디렉터 조건) */
 export function clearGunFx() {
   _clear?.();
@@ -187,14 +195,15 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
     );
     trace.visible = false;
     trace.renderOrder = 4;
-    scene.add(flash, core, smoke, trace, flameIn, flameOut, sparks);
-    pool.push({ flash, core, smoke, trace, flameIn, flameOut, sparks, spos, svel: new Float32Array(NS * 3), pos, vel: new Float32Array(NP * 3), t: -1, o: new THREE.Vector3(), d: new THREE.Vector3(), origin: new THREE.Vector3() });
+    // 빛무리: 총구 둘레 큰 더하기 섞기 원 — 조명 없이 "잠깐 주변이 밝아진" 느낌 (깊이 판정은 켜서 몸·기둥 뒤로는 가려진다)
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffMap, color: 0xffa050, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    glow.visible = false;
+    glow.renderOrder = 4;
+    scene.add(flash, core, smoke, trace, flameIn, flameOut, sparks, glow);
+    pool.push({ flash, core, smoke, trace, flameIn, flameOut, sparks, glow, spos, svel: new Float32Array(NS * 3), pos, vel: new Float32Array(NP * 3), t: -1, o: new THREE.Vector3(), d: new THREE.Vector3(), origin: new THREE.Vector3() });
   }
   let next = 0;
   // 총구 점광 하나 (두 벌이 같이 쓴다 — 마지막 발이 가져간다). 처음부터 장면에 두고 세기만 바꾼다
-  const light = new THREE.PointLight(0xffb060, 0, 5, 2);
-  scene.add(light);
-  let lightT = -1;
 
   const aimTrace = (e, origin, dir, dist) => {
     e.trace.position.copy(origin);
@@ -242,8 +251,8 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
       e.svel[i * 3 + 1] = e.d.y * fw + _u.y * su * fw * 0.5 + _v.y * sv * fw * 0.5;
       e.svel[i * 3 + 2] = e.d.z * fw + _u.z * su * fw * 0.5 + _v.z * sv * fw * 0.5;
     }
-    light.position.copy(e.o).addScaledVector(e.d, 0.1);
-    lightT = 0;
+    e.glow.position.copy(e.o).addScaledVector(e.d, 0.1);
+    e.glow.visible = true;
     e.flash.visible = e.core.visible = e.smoke.visible = e.flameIn.visible = e.flameOut.visible = e.sparks.visible = true;
     step(e, 0);
     return e;
@@ -269,6 +278,11 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
       e.flameIn.material.opacity = 0.85 * a * a;
       e.flameOut.material.opacity = 0.8 * a;
     } else e.flash.visible = e.core.visible = e.flameIn.visible = e.flameOut.visible = false;
+    if (t < GLOW_T) {
+      const k = t / GLOW_T;
+      e.glow.scale.setScalar(2.4 + 1.2 * k);
+      e.glow.material.opacity = 0.42 * (1 - k) * (1 - k);
+    } else e.glow.visible = false;
     if (t < SPARK_T) {
       for (let i = 0; i < NS; i++) {
         const j = i * 3;
@@ -421,25 +435,43 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
   const tick = (now) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
+    if (warmFrames > 0 && --warmFrames === 0) {
+      for (const e of pool) if (e.t < 0) for (const o of [e.flash, e.core, e.smoke, e.trace, e.flameIn, e.flameOut, e.sparks, e.glow]) o.visible = false;
+    }
     if (globalThis.window?.game?.state !== 'paused') {
       for (const e of pool) if (e.t >= 0) step(e, dt);
-      if (lightT >= 0) {
-        lightT += dt;
-        light.intensity = lightT < LIGHT_T ? 7 * (1 - lightT / LIGHT_T) : 0;
-        if (lightT >= LIGHT_T) lightT = -1;
-      }
       updateLasers();
     }
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+  // 첫 발 멈칫 방지: 효과 물체를 잠깐 임시 장면으로 옮겨(보이게) 지금 무대의 빛·안개로 컴파일하고 되돌린다 — 본 장면 전체를 다시 훑지 않는다
+  let warmFrames = 0;
+  _warm = (renderer, camera) => {
+    const tmp = new THREE.Scene();
+    const objs = [];
+    for (const e of pool) for (const o of [e.flash, e.core, e.smoke, e.trace, e.flameIn, e.flameOut, e.sparks, e.glow]) objs.push([o, o.visible]);
+    for (const [o] of objs) {
+      tmp.add(o); // add 는 원래 부모(scene)에서 떼어 온다
+      o.visible = true;
+    }
+    renderer.compile(tmp, camera, scene);
+    for (const [o] of objs) scene.add(o);
+    for (const m of [flashMat.map, puffMap, flameMap]) if (m) renderer.initTexture(m);
+    // 모양(꼭짓점 버퍼)도 올려 둔다: 다음 두 프레임 동안 투명(불투명도 0)으로 그리고 숨긴다 — 쏘는 중인 효과는 건드리지 않는다
+    if (pool.every((e) => e.t < 0)) {
+      for (const [o] of objs) {
+        o.visible = true;
+        o.material.opacity = 0;
+      }
+      warmFrames = 2;
+    } else for (const [o, v] of objs) o.visible = v;
+  };
   _clear = () => {
     for (const e of pool) {
       e.t = -1;
-      e.flash.visible = e.core.visible = e.smoke.visible = e.trace.visible = e.flameIn.visible = e.flameOut.visible = e.sparks.visible = false;
+      e.flash.visible = e.core.visible = e.smoke.visible = e.trace.visible = e.flameIn.visible = e.flameOut.visible = e.sparks.visible = e.glow.visible = false;
     }
-    light.intensity = 0;
-    lightT = -1;
     for (const L of lasers) L.beam.visible = L.dot.visible = false;
   };
   return { fire, clear: _clear };

@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA } from './config.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
@@ -101,6 +101,7 @@ const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
 const _q1 = new THREE.Quaternion();
 const UP = new THREE.Vector3(0, 1, 0);
+const HELD_MOVE = Object.freeze({ x: 0, y: 0 }); // 발이 묶인 동안 읽는 조종 입력 (feetHeld)
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 const toV = (v) => _v3.set(v.x, v.y, v.z);
@@ -200,6 +201,7 @@ export class Fighter {
     this.stumble = new THREE.Vector2(); // 균형을 잡으려고 자동으로 딛는 걸음 (몸 기준)
     this.state = 'stand'; // stand | down | getup | dead
     this.stateTime = 0;
+    this.fightT = 0; // 판이 시작된 뒤 흐른 시간 (step 이 센다. 판마다 새로 만들어져 0부터)
     this.muscle = 1; // 근육 힘 비율 (넘어지면 0 근처로)
     this.move = new THREE.Vector2(); // x: 옆걸음(+오른쪽), y: 앞(+)/뒤(-). 각각 -1 ~ 1
     this.strength = o.strength ?? 1;
@@ -697,6 +699,12 @@ export class Fighter {
       if (t - dt <= 0) this.hitCooldowns.delete(k);
       else this.hitCooldowns.set(k, t - dt);
     }
+    this.fightT += dt;
+  }
+
+  /** 판 시작 뒤 ARENA.startHold 초 동안 발이 묶였나 (사장님 9/30: 시작 2초 뒤 움직여). 걷기·기술 걸음·자세 고쳐 딛기만 막고 팔·칼·균형 걸음(stumble·닿지 않는 발)은 그대로 */
+  get feetHeld() {
+    return this.fightT < ARENA.startHold - 1e-6;
   }
 
   // 상태: stand(서 있음) → down(완전히 쓰러짐) → getup(무릎 꿇고 → 일어섬) → stand
@@ -1192,7 +1200,8 @@ export class Fighter {
     const hybrid = !!G && this.state === 'stand';
     const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1); // moveMul: 권총은 발이 빠르다 (weapons.js)
     const st = this.stumble;
-    const mv = this.state === 'stand' ? { x: this.move.x * (1 - st.length()) + st.x, y: this.move.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
+    const mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
+    const mv = this.state === 'stand' ? { x: mvIn.x * (1 - st.length()) + st.x, y: mvIn.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
     if (this.state === 'stand' && this.daze > 0.2) {
       // 멍하면 발이 제멋대로 움찔거린다
       mv.x += Math.sin(this.stateTime * 3.1) * this.daze * 0.5;
