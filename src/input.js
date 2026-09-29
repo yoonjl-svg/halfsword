@@ -32,6 +32,16 @@ export class FingerTrace {
     //  (물리 스텝 시계로 재면 한 프레임에 스텝이 여럿 도는 느린 화면에서 움직이는 손가락도 멈춘 것으로 읽혔다). 0 = 아직 없음
     this.now = 0;
     this.frameDt = 0; // 바로 앞 프레임과의 사이 (ms)
+    // R0 입력 (INPUT.coalesce): 조각까지의 누적 자리 (패드 m). at(t) 가 스텝 시각의 손가락 자리를 보간해 읽는다. clear 해도 sx·sy 는 잇는다
+    this.x = new Float64Array(n);
+    this.y = new Float64Array(n);
+    this.sx = 0;
+    this.sy = 0;
+    // 브라우저가 내다본 자리 (getPredictedEvents): (시각, 누적 자리). 실제 조각이 오면 비운다
+    this.pn = 0;
+    this.pt = new Float64Array(8);
+    this.px = new Float64Array(8);
+    this.py = new Float64Array(8);
   }
 
   /** 화면 프레임마다 한 번: 그 프레임의 벽시계 시각 (조각의 시각과 같은 시계) */
@@ -46,6 +56,11 @@ export class FingerTrace {
     this.dx[i] = dx;
     this.dy[i] = dy;
     this.flag[i] = flag;
+    this.sx += dx;
+    this.sy += dy;
+    this.x[i] = this.sx;
+    this.y[i] = this.sy;
+    if (!(flag & TRACE_LIFT)) this.pn = 0; // 새 실제 조각이 예측을 대신한다 (뗀 조각은 남긴다: ahead 가 뗀 시각에 멈춘다)
     this.head = (i + 1) % this.n;
     if (this.count < this.n) this.count++;
     this.total++;
@@ -56,11 +71,106 @@ export class FingerTrace {
     return k >= 0 && k < this.count ? (this.head - 1 - k + this.n) % this.n : -1;
   }
 
+  /** 브라우저가 내다본 자리 하나 (시각 t ms, 누적 자리 x·y). 마지막 실제 조각보다 앞이거나 시각이 거꾸로면 버린다 */
+  predict(t, x, y) {
+    if (this.pn >= this.pt.length) return;
+    const iL = this.idx(0);
+    if (iL >= 0 && !(t > this.t[iL])) return;
+    if (this.pn > 0 && !(t > this.pt[this.pn - 1])) return;
+    const k = this.pn++;
+    this.pt[k] = t;
+    this.px[k] = x;
+    this.py[k] = y;
+  }
+
+  /**
+   * 벽시계 시각 t(ms)의 손가락 자리 (누적, 패드 m): 조각 사이는 직선 보간, 마지막 실제 조각 뒤는 ahead(). 버퍼보다 오래된 시각은 가장 오랜 조각 자리.
+   *  out 에 써서 돌려준다 (스텝마다 새로 만들지 않는다). 머리부터 거슬러 찾는다 (보통 1~4 조각: t 는 지난 프레임 안이다)
+   */
+  at(t, out) {
+    if (this.count === 0) {
+      out.x = this.sx;
+      out.y = this.sy;
+      return out;
+    }
+    let i1 = this.idx(0);
+    if (t >= this.t[i1]) return this.ahead(t, out);
+    if (this.count > 1 && (this.flag[i1] & TRACE_LIFT) !== 0 && t >= this.t[this.idx(1)]) return this.ahead(t, out); // 마지막 움직임 ~ 뗀 사이도 내다본 자리 (뗀 시각에 튀지 않게)
+    for (let k = 1; k < this.count; k++) {
+      const i0 = this.idx(k);
+      if (this.t[i0] <= t) {
+        const span = this.t[i1] - this.t[i0];
+        const u = span > 0 ? (t - this.t[i0]) / span : 1;
+        out.x = this.x[i0] + (this.x[i1] - this.x[i0]) * u;
+        out.y = this.y[i0] + (this.y[i1] - this.y[i0]) * u;
+        return out;
+      }
+      i1 = i0;
+    }
+    out.x = this.x[i1];
+    out.y = this.y[i1];
+    return out;
+  }
+
+  /**
+   * 마지막 실제 조각 뒤 (t ≥ 마지막 조각 시각): predictMs 까지만 내다본다 — 브라우저가 내다본 자리가 있으면 그 사이를 직선으로,
+   *  없으면 최근 predictMs 이상의 조각으로 잰 빠르기로 곧게. 손가락을 뗐으면 뗀 시각에서 멈춘다 (되튀지 않는다).
+   *  내다본 몫은 다음 실제 조각이 바로잡는다 (Input.handDeltaAt) — 실제 움직임을 줄이거나 자르는 일은 없다
+   */
+  ahead(t, out) {
+    const h = INPUT.predictMs;
+    const iL = this.idx(0);
+    const lifted = (this.flag[iL] & TRACE_LIFT) !== 0;
+    const iR = lifted && this.count > 1 ? this.idx(1) : iL; // 마지막으로 움직인 조각
+    const tR = this.t[iR];
+    let tq = Math.min(t, tR + h);
+    if (lifted) tq = Math.min(tq, this.t[iL]);
+    out.x = this.x[iR];
+    out.y = this.y[iR];
+    if (!(h > 0) || tq <= tR || (lifted && this.count === 1)) return out;
+    if (this.pn > 0) {
+      // 브라우저 예측: (tR, 마지막 조각) → 예측 자리들을 잇는 꺾은선. 마지막 예측 뒤는 그 자리
+      let t0 = tR, x0 = out.x, y0 = out.y;
+      for (let k = 0; k < this.pn; k++) {
+        const t1 = this.pt[k];
+        if (tq <= t1) {
+          const u = t1 > t0 ? (tq - t0) / (t1 - t0) : 1;
+          out.x = x0 + (this.px[k] - x0) * u;
+          out.y = y0 + (this.py[k] - y0) * u;
+          return out;
+        }
+        t0 = t1;
+        x0 = this.px[k];
+        y0 = this.py[k];
+      }
+      out.x = x0;
+      out.y = y0;
+      return out;
+    }
+    // 곧게: 최근 조각들로 잰 빠르기 (뗀 조각 앞에서 멈춘다 — 앞 획의 빠르기는 섞지 않는다)
+    let iB = iR;
+    let span = 0;
+    for (let k = (iR === iL ? 0 : 1) + 1; k < this.count; k++) {
+      const i = this.idx(k);
+      if (this.flag[i] & TRACE_LIFT) break;
+      iB = i;
+      span = tR - this.t[i];
+      if (span >= h) break;
+    }
+    if (span > 0) {
+      const dtq = tq - tR;
+      out.x += ((this.x[iR] - this.x[iB]) / span) * dtq;
+      out.y += ((this.y[iR] - this.y[iB]) / span) * dtq;
+    }
+    return out;
+  }
+
   clear() {
     this.head = 0;
     this.count = 0;
     this.now = 0;
     this.frameDt = 0;
+    this.pn = 0;
   }
 }
 
@@ -87,7 +197,11 @@ export class Input {
     //  press = 지금 누르고 있는 손가락(마우스) { id, t(누른 시각 ms), x, y, moved(움직인 거리 px), mouse, ok }
     this.taps = 0;
     this.press = null;
-    this.fingerTrace = new FingerTrace(); // 칼 쪽 손가락 원래 궤적 (온몸 베기 결심 판정이 읽는다)
+    // 칼 쪽 손가락 원래 궤적 (온몸 베기 결심 판정이 읽는다). R0 입력이 켜지면 조각이 화면 프레임보다 잦다(120 Hz 터치, 1000 Hz 마우스) → 고리를 넉넉히
+    this.fingerTrace = new FingerTrace(INPUT.coalesce ? 256 : 64);
+    this._cur = { on: false, x: 0, y: 0 }; // R0 입력: 스텝 읽기 커서 (지난 handDeltaAt 이 읽은 손가락 자리)
+    this._at = { x: 0, y: 0 };
+    this._d = { x: 0, y: 0 };
     this.tapOnDown = false; // 권총(main.js 가 켠다): 손가락이 닿는(클릭하는) 순간 한 번 친 것으로 센다 — 떼는 때·누른 시간과 상관없이
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
@@ -128,28 +242,65 @@ export class Input {
 
   onMove(e) {
     if (!this.enabled) return;
+    // R0 입력 (INPUT.coalesce): 프레임 사이에 합쳐진 조각들(getCoalescedEvents, 마지막 = 이 이벤트)을 제 시각으로 하나씩 쌓는다.
+    //  없거나 마지막이 이 이벤트와 어긋나면 예전처럼 이 이벤트 하나만
+    let list = null;
+    if (INPUT.coalesce && e.getCoalescedEvents) {
+      const l = e.getCoalescedEvents();
+      const z = l && l.length ? l[l.length - 1] : null;
+      if (z && z.clientX === e.clientX && z.clientY === e.clientY) list = l;
+    }
     if (e.pointerType === 'mouse' && document.pointerLockElement === this.canvas) {
       // 일부 브라우저는 잠금 직후 엉뚱하게 큰 값을 한 번 보낸다 → 무시
       if (Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
-      const mdx = e.movementX * INPUT.mouseSensitivity;
-      const mdy = e.movementY * INPUT.mouseSensitivity;
-      this.handDX += mdx;
-      this.handDY -= mdy;
-      this.fingerTrace.push(e.timeStamp || performance.now(), mdx, -mdy);
+      if (list) {
+        // 합쳐진 조각의 movement 합이 이 이벤트와 다르면(조각에 movement 를 안 주는 브라우저) 예전 길 — 잃는 것 없음
+        let sx = 0, sy = 0;
+        for (const ev of list) { sx += ev.movementX; sy += ev.movementY; }
+        if (sx !== e.movementX || sy !== e.movementY) list = null;
+      }
+      const n = list ? list.length : 1;
+      for (let k = 0; k < n; k++) {
+        const ev = list ? list[k] : e;
+        const mdx = ev.movementX * INPUT.mouseSensitivity;
+        const mdy = ev.movementY * INPUT.mouseSensitivity;
+        this.handDX += mdx;
+        this.handDY -= mdy;
+        this.fingerTrace.push(this.stamp(ev, e), mdx, -mdy);
+      }
       if (this.press?.mouse) this.press.moved += Math.hypot(e.movementX, e.movementY);
       return;
     }
     if (e.pointerId !== this.activeTouch) return;
     if (this.press?.id === e.pointerId) this.press.moved = Math.max(this.press.moved, Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y));
     const scale = INPUT.touchSensitivity / Math.max(320, window.innerHeight);
-    const tdx = (e.clientX - this.lastX) * scale;
-    const tdy = (e.clientY - this.lastY) * scale;
-    this.handDX += tdx;
-    this.handDY -= tdy;
-    this.fingerTrace.push(e.timeStamp || performance.now(), tdx, -tdy);
-    this.lastX = e.clientX;
-    this.lastY = e.clientY;
+    const n = list ? list.length : 1;
+    for (let k = 0; k < n; k++) {
+      const ev = list ? list[k] : e;
+      const tdx = (ev.clientX - this.lastX) * scale;
+      const tdy = (ev.clientY - this.lastY) * scale;
+      this.handDX += tdx;
+      this.handDY -= tdy;
+      this.fingerTrace.push(this.stamp(ev, e), tdx, -tdy);
+      this.lastX = ev.clientX;
+      this.lastY = ev.clientY;
+    }
+    if (INPUT.coalesce && INPUT.predictMs > 0 && e.getPredictedEvents) {
+      // 브라우저가 내다본 자리 (마지막 실제 조각에서의 상대 이동 → 누적 자리). 시각이 거꾸로인 것은 predict 가 버린다
+      const pr = e.getPredictedEvents();
+      const tr = this.fingerTrace;
+      for (let k = 0; pr && k < pr.length; k++) {
+        const p = pr[k];
+        tr.predict(p.timeStamp, tr.sx + (p.clientX - this.lastX) * scale, tr.sy - (p.clientY - this.lastY) * scale);
+      }
+    }
     this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
+  }
+
+  /** 조각의 시각: 합쳐진 조각 제 것, 없으면 이 이벤트 것, 그것도 없으면 지금 (ev === e 면 예전 `e.timeStamp || performance.now()` 와 같다) */
+  stamp(ev, e) {
+    const t = ev.timeStamp;
+    return t > 0 ? t : e.timeStamp || performance.now();
   }
 
   onUp(e) {
@@ -181,6 +332,32 @@ export class Input {
     this.handDX = 0;
     this.handDY = 0;
     return d;
+  }
+
+  /**
+   * (INPUT.coalesce) 물리 스텝마다: 스텝 시각 t(벽시계 ms)에서 predictMs 앞의 손가락 자리까지, 지난 호출 뒤 옮긴 몫.
+   *  예측으로 앞선 몫은 다음 호출에서 실제 조각으로 바로잡힌다 — 합은 늘 실제 이동과 같다 (조각을 놓치거나 두 번 더하지 않는다).
+   *  첫 호출(판 시작 syncHand 뒤)은 0: 지난 판·뽑기 화면의 이동을 넘기지 않는다
+   */
+  handDeltaAt(t) {
+    const s = this.fingerTrace.at(t + INPUT.predictMs, this._at);
+    const c = this._cur;
+    const d = this._d;
+    if (c.on) {
+      d.x = s.x - c.x;
+      d.y = s.y - c.y;
+    } else {
+      d.x = d.y = 0;
+      c.on = true;
+    }
+    c.x = s.x;
+    c.y = s.y;
+    return d;
+  }
+
+  /** 판 시작: 스텝 읽기 커서를 새로 (다음 handDeltaAt 이 0 부터) */
+  syncHand() {
+    this._cur.on = false;
   }
 
   /** { x: 옆걸음 -1(왼)~1(오른), y: -1(뒤)~1(앞) } */
