@@ -639,6 +639,7 @@ export class Combat {
     }
     // 결심 베기 (L1): 새로 부딪힌 칼은 결과로 적는다 (막힘 / 약하게 스친 것은 스침). 막힘을 더 가르는 것은 L4
     if (fresh) for (const f of [A.fighter, B.fighter]) if (f.commit?.on) f.skill.strikeResult(vn >= 2 ? 'blocked' : 'glance', { vn, impulse: J });
+    if (fresh) for (const f of [A.fighter, B.fighter]) if (f.drive?.w > 0) f.drive.onResult(vn >= 2 ? 'blocked' : 'glance', { vn, impulse: J }); // R2 (§6.7): 겨눔 휘기 끝·결과 도장 (옛 결심 경로와 따로)
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
   }
 
@@ -737,6 +738,7 @@ export class Combat {
     }
     // 결심 베기 (L1): 결과 기록 (가르고 지나갔으면 'through', 아니면 'hit' — 맞히면 지나가기를 줄인다)
     if (att.commit?.on) att.skill.strikeResult(r.pass ? 'through' : 'hit', r);
+    if (att.drive?.w > 0) att.drive.onResult(r.pass ? 'through' : 'hit', r); // R2 (§6.7)
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
   }

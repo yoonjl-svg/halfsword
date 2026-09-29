@@ -41,7 +41,7 @@ function makeCmd() {
   return {
     S: 0, c: 0, over: 0, mode: 0, phi: -1, phiDot: 0, phiDDot: 0, phiF: -1, phiDotF: 0,
     pelvisYaw: 0, pelvisYawDot: 0, pelvisYawDDot: 0, chestYaw: 0, chestYawDot: 0, chestYawDDot: 0,
-    pitch: 0, pitchDot: 0, pitchDDot: 0, drop: 0, dropDot: 0, side: 0, sideDot: 0,
+    pitch: 0, pitchDot: 0, pitchDDot: 0, drop: 0, dropDot: 0, side: 0, sideDot: 0, sideDDot: 0,
     qChestCmd: new Float64Array([0, 0, 0, 1]), // 바라보는 틀 쿼터니언 [x, y, z, w] (three.js 차례)
     wChestCmd: new Float64Array(3), // 명령 가슴 틀의 월드 각속도 (rad/s)
     handS: new Float64Array(3), handO: new Float64Array(3), sword: new Float64Array(3),
@@ -107,6 +107,11 @@ export class ClipDrive {
     this._v3 = new Float64Array(3);
     this._u3 = new Float64Array(3);
     this._T = { x: 0, y: 0, z: 0 };
+    this._restChest = new Float64Array([0, 0, 0, -1]); // W4b: mixBody 앞 자세표 가슴 [chestYaw, pitch, side, 드라이브 시각]
+    this._hm = 0; // W4b: 손 몫 방식 0 track · 1 finger · 2 governed · 3 windOnly (armStep 이 w > 0 스텝마다)
+    this._dtS = 0; // W4c: 이번 스텝 dt (w > 0 스텝에서만 쓴다)
+    this._ffT = -1; // W4c ffFilter: 앞 스텝 명령 빠르기를 적은 드라이브 시각
+    this._ffPrev = new Float64Array(4); // W4c ffFilter: 앞 스텝 chestYawDot·pelvisYawDot·pitchDot·sideDot
     // 컷(한 획) 상태
     this._cutSeen = -1;
     this._inCut = false;
@@ -171,6 +176,7 @@ export class ClipDrive {
       I_aboveChest: 0, I_aboveAbd: 0, I_pelvis: 0, softLim: 0,
       stepReq: 0, stepDur: 0, tStepReq: -1, landed: 0, tLand: -1, tTc: -1, footSlip: 0, footSlipMax: 0,
       warp: 0, reachClamp: 0, poleFlip: 0, rateClip: 0,
+      windRebase: 0, ffFiltered: 0, // W4c: windOnly 베기 손 차이 (m), 앞먹임이 스텝 평균 가속을 썼나 (1 몸통, 2 팔)
     };
   }
 
@@ -236,6 +242,7 @@ export class ClipDrive {
     this.active = true;
     this._w = S;
     this._c = smoothstep(0, DRIVE.mixX, S);
+    this._dtS = dt;
     // 새 획 (베기 시작 뒤 처음 보는 S > 0 스텝): 이어받기 표본·φ_align·돌아갈 자세·걸음 한 번
     if (st === GES_WIND || st === GES_IDLE) this._inCut = false;
     else if (cutN !== this._cutSeen) this.beginCut(g, S, over, st, mode, phiG, cut, cutB, wAB, side, dt, first);
@@ -277,6 +284,7 @@ export class ClipDrive {
     const u = phiB - this._phiStart;
     if (this._carry && this._inCut && u < DRIVE.carryPhi) carryOver(A, this.Arev, this.A0, u > 0 ? u : 0, DRIVE.carryPhi);
     this.toCmd(A, phiB, phiBDot, phiBDDot, S, over, mode, g);
+    if (this.armStep) this.armStep(dt); // W4b: 손 몫 방식 (DRIVE.handMode, w > 0 에서만 읽는다). 'track' 은 아무것도 안 쓴다
     if (!this._tcSeen && this._inCut && phiB >= 0.85) {
       this._tcSeen = true;
       this.debug.tTc = this.t;
@@ -462,6 +470,8 @@ export class ClipDrive {
     cmd.dropDot = _g1.drop * pd;
     cmd.side = _g0.side;
     cmd.sideDot = _g1.side * pd;
+    cmd.sideDDot = _g2.side * pd2 + _g1.side * pdd; // W4b: 명령 가슴 각가속도 (handMode 'finger' 팔 앞먹임)
+    if (DRIVE.ffFilter) this.ffStepMean(cmd);
     // 가슴 틀 (명령): M = ry(−yaw)·rz(−lean)·rx(side) → 쿼터니언. 각속도 = ȧ·ŷ + ry(a)·ḃẑ + ry(a)rz(b)·ċx̂ (a = chestYaw, b = −pitch, c = side)
     const v = A.v;
     const M = chestFrame(v[CH.chestYaw], v[CH.chestLean], v[CH.chestSide], this._M);
@@ -505,6 +515,28 @@ export class ClipDrive {
     sv.guardGap = cmd.guardGap;
   }
 
+  /**
+   * W4c DRIVE.ffFilter: 앞먹임 가속 = 이번 스텝 명령 빠르기의 평균 가속 (v′φ̇ 가 한 스텝에 바뀐 만큼 / dt). 한 점 v″·φ̇² 는
+   *  손가락 빠르기에서 한 스텝에 φ 가 0.3 넘게 가 클립 곡률을 띄엄띄엄 집어 부호가 스텝마다 뒤집힌다. 앞 스텝이 꺼져 있었으면 한 점 값 그대로. 새 상수 없음
+   */
+  ffStepMean(cmd) {
+    const P = this._ffPrev, dt = this._dtS;
+    this.debug.ffFiltered = 0;
+    if (this._ffT >= this.t - 1.5 * dt) {
+      const k = 1 / dt;
+      cmd.chestYawDDot = (cmd.chestYawDot - P[0]) * k;
+      cmd.pelvisYawDDot = (cmd.pelvisYawDot - P[1]) * k;
+      cmd.pitchDDot = (cmd.pitchDot - P[2]) * k;
+      cmd.sideDDot = (cmd.sideDot - P[3]) * k;
+      this.debug.ffFiltered = 1;
+    }
+    P[0] = cmd.chestYawDot;
+    P[1] = cmd.pelvisYawDot;
+    P[2] = cmd.pitchDot;
+    P[3] = cmd.sideDot;
+    this._ffT = this.t;
+  }
+
   /** 한 획에 한 번 (§5.6): 긋는 중(CUT·FOLLOW) · S > stepS · 무리 잠김 · 걸음 켜짐. 거절은 센다, 다시 부탁하지 않는다 */
   requestStepIfDue(st, Sx) {
     // CUT 또는 FOLLOW (긋는 중): 느리게 쌓이는 (B)·감기 없는 긋기는 S 가 φ 1 을 넘어서야 stepS 를 넘을 수 있다 — Q7 "S > 0.3 인 긋기는 모두 내딛는다"
@@ -545,6 +577,12 @@ export class ClipDrive {
 
   // ───────── 몸 자세 (updateBodyPose 끝, pelvisYawOffset 앞) ─────────
   mixBody(bp, bv) {
+    // W4b: 섞기 전 자세표 가슴 (handMode 'finger' 가 손을 돌리는 기준 틀). 몸 모양엔 안 쓴다
+    const r = this._restChest;
+    r[0] = bp.chestYaw;
+    r[1] = bp.pitch;
+    r[2] = bp.side;
+    r[3] = this.t;
     if (!DRIVE.trunk) return;
     const c = this._c, cmd = this.cmd;
     for (let i = 0; i < 5; i++) {
