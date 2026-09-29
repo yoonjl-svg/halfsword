@@ -156,9 +156,6 @@ export class Skill {
     // 결심 판정 상태 (손가락 원래 궤적을 읽은 자리와 지금 긋고 있는 한 획의 후보)
     // 결심 베기가 끝난 뒤 끝 자세 너머에서 버티는 덧씌움 (끝 손 더함·지나가기). 손가락이 움직이면 푼다
     this.rest = { w: 0, free: false, hand: [0, 0, 0], over: 0, n: [0, 0, 1] };
-    // 무리마다 획 시간 아래 한도 (초): 결심 베기의 칼끝이 COMMIT.tipMax 를 넘으면 그 무리의 다음 획부터 늦춘다 (설계서 L1 (b) 획 시간.
-    //  COMMIT.tcFloorOn 이 켜져 있을 때만. 미리보기에서는 꺼서 늘 비어 있다)
-    this.tcFloor = {};
     this.det = { read: null, t: -1e9, lifted: true, frame: COMMIT.frameGuess, gaps: new Float64Array(8), gi: 0, px: 0, py: 0, sx: 0, sy: 0, st: 0, len: 0, peak: 0, lastSp: 0, dwx: 1e9, dwy: 1e9, dwt0: 0, dwell: 0, sinceSwing: 1e9, fastT: -1e9, stage: 0, lx: 0, ly: 0, tA: 0, quiet: 0, blocked: false, stopped: false };
   }
 
@@ -935,14 +932,10 @@ export class Skill {
     cm.hold = 0;
     cm.liftA = 0;
     cm.kIn = auto && C.autoBlend > 0 ? 0 : 1; // 팔 베기에서 들어 올리기로 넘어간 정도 (update)
-    // 획 시간 아래 한도가 걸린 무리(가벼운 칼이 너무 빨랐다): 패드가 닿기(u 1)에 끝 자세에 닿는 빠르기보다 빠르지 않게, 손가락도 앞지르지 않는다
-    cm.vpk = 0;
     cm.freeK = 1;
     // 자동 감기의 베기 패드 빠르기: 쟁기에서 그은 손가락은 방향만 정했다 (그 세기는 c 로 획 시간에 들어갔다). 준비 자세 → 끝 자세를
     //  Tc × autoPadT 에 긋는 빠르기로 (손가락 빠르기로 그으면 가벼운 한손 칼은 준비 자세에서 끝까지 채찍질해 칼끝이 팔 베기보다 15~29% 빨랐다)
     if (auto && C.autoPadT > 0) cm.vs = Math.max(C.padMinV * 0.5, Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby) / (C.autoPadT * cm.Tc));
-    cm.capped = cm.Tc > cm.TcFree;
-    if (cm.capped) cm.vs = Math.min(cm.vs, Math.max(C.padMinV * 0.5, Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby) / Math.max(0.05, (1 - Math.max(0, cm.u0)) * cm.Tc)));
     // 휘두르는 면 (몸 기준): 출발 자리와 끝 자세의 칼끝 방향 둘 다에 수직. 지나가기가 이 축으로 칼끝을 끝 너머로 더 돌린다
     guardAt(cm.pbx, cm.pby, _g);
     _ga.set(_g.dir[0], _g.dir[1], _g.dir[2]);
@@ -991,8 +984,6 @@ export class Skill {
     const one = !f.weaponCfg.twoHand; // 한손 칼은 몸통을 덜 쓰고 팔을 더 뻗고 빨리 끝난다
     // 획 시간: 세게 그을수록(c)·검술이 좋을수록·힘이 셀수록 빠르고, 칼이 무거울수록·지칠수록 느리다
     cm.Tc = B.Tc0 * (C.powerTc[0] - C.powerTc[1] * c) * (1 + 0.3 * (1 - L)) * Math.pow(f.strength, -0.35) * Math.pow(Ir, 0.25) * (1 + 0.4 * (1 - vig)) * (one ? 0.8 : 1);
-    cm.TcFree = cm.Tc;
-    cm.Tc = Math.max(cm.Tc, this.tcFloor[this.floorKey()] ?? 0); // 앞 획의 칼끝이 너무 빨랐던 무리
     // 크기: 세게 그을수록 크다 (몸·손 더함 모두). 몸 값은 검술 자세 지도를 따르는 정도도 곱한다. 왼쪽 무리는 leftScale
     const amp = (C.powerAmp[0] + C.powerAmp[1] * c) * lv * (0.7 + 0.3 * vig) * cm.k;
     const body = amp * f.guardWeight();
@@ -1118,9 +1109,6 @@ export class Skill {
       cm.kIn = 1;
     }
     cm.padW = (cm.fading ? cm.w : 1 - cm.handback) * cm.kIn;
-    // 이 획의 칼끝 최고 빠르기 (베기를 시작한 뒤 획이 끝날 때까지. 무엇에 닿은 뒤의 휘청임·부딪힘 튐은 빼고 — 헛침은 넣는다: 칼끝이 가장
-    //  빠른 때는 닿기 조금 뒤 u 1.1~1.2 다): 획 시간 아래 한도
-    if (cm.cutting && (!cm.result || cm.result === 'miss') && !cm.fading && u < C.endU) cm.vpk = Math.max(cm.vpk, f.tipVel.length());
     // 몸: 비틀기 배율 (닿기 전에는 자세 지도 그대로 — 팔 베기와 같은 선으로 칼이 간다), 숙이기·낮추기 (COMMIT.keyU.lean)
     const E = C.envU;
     const K = C.keyU.lean;
@@ -1183,7 +1171,7 @@ export class Skill {
     const cm = this.f.commit;
     const Lt = Math.hypot(cm.ex - cm.pbx, cm.ey - cm.pby);
     const fo = this.anchor;
-    if (Lt > 1e-6 && !(cm.stuckT > 0) && cm.start !== 'auto' && !cm.capped) cm.pa = Math.max(cm.pa, ((fo.x - cm.pbx) * (cm.ex - cm.pbx) + (fo.y - cm.pby) * (cm.ey - cm.pby)) / Lt);
+    if (Lt > 1e-6 && !(cm.stuckT > 0) && cm.start !== 'auto') cm.pa = Math.max(cm.pa, ((fo.x - cm.pbx) * (cm.ex - cm.pbx) + (fo.y - cm.pby) * (cm.ey - cm.pby)) / Lt);
     const a = Lt > 1e-6 ? Math.min(1, cm.pa / Lt) : 1;
     cm.padX = cm.pbx + (cm.ex - cm.pbx) * a;
     cm.padY = cm.pby + (cm.ey - cm.pby) * a;
@@ -1206,12 +1194,6 @@ export class Skill {
     if (COMMIT.armLunge && f.state === 'stand' && d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) this.lunge = SKILL.lungeTime;
   }
 
-  /** 획 시간 아래 한도를 적는 자리: 무리 (자동 감기는 무리 + '*') */
-  floorKey() {
-    const cm = this.f.commit;
-    return cm.start === 'auto' ? cm.fam + '*' : cm.fam;
-  }
-
   /** 획이 끝났다 (u endU): 회복 시간을 정하고, 끝 더함·지나가기를 버티기(rest)로 넘긴다 */
   endStroke() {
     const f = this.f;
@@ -1219,12 +1201,6 @@ export class Skill {
     const C = COMMIT;
     cm.ended = true;
     cm.endT = this.clock;
-    // 칼끝이 한도를 넘었으면 이 무리의 획 시간 아래 한도를 그만큼 올린다 (다음 획부터. 가벼운 칼)
-    //  (한 번 오른 한도가 계속 쌓이지 않게: 넘지 않은 획이 오면 절반씩 내린다. 자동 감기는 칼끝이 다르게 나와 따로 둔다)
-    //  COMMIT.tcFloorOn 이 꺼져 있으면 한도를 올리지 않는다 (미리보기. 한도가 걸린 획이 오히려 빨랐다 — config.js)
-    const fk = this.floorKey();
-    if (C.tcFloorOn && cm.vpk > C.tipMax) this.tcFloor[fk] = Math.min(C.tcFloorMax * cm.base.Tc0, cm.Tc * (cm.vpk / C.tipMax));
-    else if (this.tcFloor[fk]) this.tcFloor[fk] *= 0.5;
     const r = cm.result;
     const rec = r === 'hit' || r === 'through' ? C.recover.hit : r === 'blocked' || r === 'glance' ? C.recover.blocked : C.recover.miss;
     cm.recT = rec * (1 + 0.6 * (1 - clamp(this.level, 0, 1)));
