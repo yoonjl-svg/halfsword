@@ -965,9 +965,9 @@
       "chestYaw": -40,
       "xFactor": -25,
       "lean": 3,
-      "shoulderElev": 41,
+      "shoulderElev": 45,
       "elbowS": 117,
-      "wrist": 36,
+      "wrist": 26,
       "kneeL": 27,
       "kneeR": 27,
       "handChest": [
@@ -1004,9 +1004,9 @@
       "chestYaw": -36,
       "xFactor": -23,
       "lean": 6,
-      "shoulderElev": 53,
+      "shoulderElev": 56,
       "elbowS": 84,
-      "wrist": 30,
+      "wrist": 15,
       "kneeL": 30,
       "kneeR": 29,
       "handChest": [
@@ -1150,8 +1150,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -251,
-      "value": 7.8
+      "t": -238,
+      "value": 7
      },
      {
       "part": "손",
@@ -1160,8 +1160,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": -259,
-      "value": 12.5
+      "t": 91,
+      "value": 9.7
      },
      {
       "part": "칼끝",
@@ -1173,13 +1173,13 @@
     "trunkCarry": 0.23,
     "shareAtTipPeak": {
      "trunk": 0.08,
-     "arm": 0.13,
-     "wrist": 0.79
+     "arm": 0.38,
+     "wrist": 0.53
     },
     "wind": {
      "handAboveHeadTop": -0.26,
      "handBehindTorsoFront": -0.1,
-     "shoulderElev": 54
+     "shoulderElev": 62
     },
     "followThrough": {
      "handSideChest": -0.19,
@@ -2099,7 +2099,7 @@
      "xFactorMax": 18,
      "handPath": 2.14,
      "tipPath": 7.05,
-     "comShift": 0.02
+     "comShift": 0.03
     },
     "opening": {
      "openTime": 0,
@@ -3891,8 +3891,8 @@
     "trunkCarry": 0.22,
     "shareAtTipPeak": {
      "trunk": 0.14,
-     "arm": -0.12,
-     "wrist": 0.98
+     "arm": -0.2,
+     "wrist": 1.06
     },
     "wind": {
      "handAboveHeadTop": -0.27,
@@ -4628,9 +4628,9 @@
       "chestYaw": -40,
       "xFactor": -27,
       "lean": 2,
-      "shoulderElev": 66,
+      "shoulderElev": 68,
       "elbowS": 54,
-      "wrist": 30,
+      "wrist": 34,
       "kneeL": 27,
       "kneeR": 26,
       "handChest": [
@@ -4774,8 +4774,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -255,
-      "value": 15.7
+      "t": -234,
+      "value": 14.8
      },
      {
       "part": "손",
@@ -4784,8 +4784,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": -238,
-      "value": 10.9
+      "t": -255,
+      "value": 10.3
      },
      {
       "part": "칼끝",
@@ -4803,7 +4803,7 @@
     "wind": {
      "handAboveHeadTop": -0.27,
      "handBehindTorsoFront": -0.14,
-     "shoulderElev": 66
+     "shoulderElev": 75
     },
     "followThrough": {
      "handSideChest": -0.32,
@@ -6401,9 +6401,9 @@
       "chestYaw": -40,
       "xFactor": -25,
       "lean": 3,
-      "shoulderElev": 41,
+      "shoulderElev": 45,
       "elbowS": 117,
-      "wrist": 36,
+      "wrist": 26,
       "kneeL": 27,
       "kneeR": 27,
       "handChest": [
@@ -6442,7 +6442,7 @@
       "lean": 4,
       "shoulderElev": 62,
       "elbowS": 71,
-      "wrist": 40,
+      "wrist": 39,
       "kneeL": 28,
       "kneeR": 28,
       "handChest": [
@@ -6586,8 +6586,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -251,
-      "value": 8.2
+      "t": -238,
+      "value": 7.6
      },
      {
       "part": "손",
@@ -6596,8 +6596,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": -259,
-      "value": 8.4
+      "t": -313,
+      "value": 6.6
      },
      {
       "part": "칼끝",
@@ -6609,13 +6609,13 @@
     "trunkCarry": 0.21,
     "shareAtTipPeak": {
      "trunk": 0.04,
-     "arm": 0.19,
-     "wrist": 0.77
+     "arm": 0.46,
+     "wrist": 0.5
     },
     "wind": {
      "handAboveHeadTop": -0.25,
      "handBehindTorsoFront": -0.1,
-     "shoulderElev": 58
+     "shoulderElev": 64
     },
     "followThrough": {
      "handSideChest": -0.11,
@@ -8399,7 +8399,7 @@
      {
       "part": "어깨(위팔)",
       "t": -238,
-      "value": 23.7
+      "value": 24.4
      },
      {
       "part": "손",
@@ -8421,13 +8421,13 @@
     "trunkCarry": 0,
     "shareAtTipPeak": {
      "trunk": 0.17,
-     "arm": -0.64,
-     "wrist": 1.47
+     "arm": -0.73,
+     "wrist": 1.56
     },
     "wind": {
      "handAboveHeadTop": -0.71,
      "handBehindTorsoFront": -0.17,
-     "shoulderElev": 48
+     "shoulderElev": 49
     },
     "followThrough": {
      "handSideChest": -0.26,
@@ -8515,9 +8515,9 @@
       "chestYaw": -52,
       "xFactor": -26,
       "lean": 13,
-      "shoulderElev": 30,
+      "shoulderElev": 45,
       "elbowS": 41,
-      "wrist": 35,
+      "wrist": 10,
       "kneeL": 55,
       "kneeR": 52,
       "handChest": [
@@ -8554,9 +8554,9 @@
       "chestYaw": -30,
       "xFactor": -26,
       "lean": 8,
-      "shoulderElev": 41,
+      "shoulderElev": 44,
       "elbowS": 37,
-      "wrist": 28,
+      "wrist": 24,
       "kneeL": 69,
       "kneeR": 55,
       "handChest": [
@@ -8729,7 +8729,7 @@
     "wind": {
      "handAboveHeadTop": -0.6,
      "handBehindTorsoFront": -0.12,
-     "shoulderElev": 45
+     "shoulderElev": 51
     },
     "followThrough": {
      "handSideChest": -0.3,
@@ -8817,7 +8817,7 @@
       "chestYaw": -74,
       "xFactor": -36,
       "lean": 16,
-      "shoulderElev": 43,
+      "shoulderElev": 44,
       "elbowS": 2,
       "wrist": 40,
       "kneeL": 57,
@@ -8856,9 +8856,9 @@
       "chestYaw": -37,
       "xFactor": -31,
       "lean": 10,
-      "shoulderElev": 50,
+      "shoulderElev": 58,
       "elbowS": 17,
-      "wrist": 23,
+      "wrist": 9,
       "kneeL": 84,
       "kneeR": 59,
       "handChest": [
@@ -9031,7 +9031,7 @@
     "wind": {
      "handAboveHeadTop": -0.66,
      "handBehindTorsoFront": -0.03,
-     "shoulderElev": 56
+     "shoulderElev": 57
     },
     "followThrough": {
      "handSideChest": -0.33,
@@ -11837,9 +11837,9 @@
       "chestYaw": -40,
       "xFactor": -25,
       "lean": 3,
-      "shoulderElev": 41,
+      "shoulderElev": 45,
       "elbowS": 117,
-      "wrist": 36,
+      "wrist": 26,
       "kneeL": 27,
       "kneeR": 27,
       "handChest": [
@@ -11876,9 +11876,9 @@
       "chestYaw": -36,
       "xFactor": -23,
       "lean": 6,
-      "shoulderElev": 45,
+      "shoulderElev": 46,
       "elbowS": 82,
-      "wrist": 14,
+      "wrist": 20,
       "kneeL": 30,
       "kneeR": 29,
       "handChest": [
@@ -12022,8 +12022,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -251,
-      "value": 6
+      "t": -238,
+      "value": 5.8
      },
      {
       "part": "손",
@@ -12032,8 +12032,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": -188,
-      "value": 9.9
+      "t": -238,
+      "value": 6.6
      },
      {
       "part": "칼끝",
@@ -12051,7 +12051,7 @@
     "wind": {
      "handAboveHeadTop": -0.26,
      "handBehindTorsoFront": -0.1,
-     "shoulderElev": 50
+     "shoulderElev": 56
     },
     "followThrough": {
      "handSideChest": -0.22,
@@ -12178,9 +12178,9 @@
       "chestYaw": -29,
       "xFactor": -25,
       "lean": 8,
-      "shoulderElev": 61,
+      "shoulderElev": 63,
       "elbowS": 98,
-      "wrist": 22,
+      "wrist": 27,
       "kneeL": 68,
       "kneeR": 53,
       "handChest": [
@@ -12324,8 +12324,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -102,
-      "value": 14.3
+      "t": -140,
+      "value": 60.1
      },
      {
       "part": "손",
@@ -12334,8 +12334,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": -152,
-      "value": 9.6
+      "t": -148,
+      "value": 22.4
      },
      {
       "part": "칼끝",
@@ -12353,7 +12353,7 @@
     "wind": {
      "handAboveHeadTop": -0.05,
      "handBehindTorsoFront": 0.07,
-     "shoulderElev": 81
+     "shoulderElev": 84
     },
     "followThrough": {
      "handSideChest": -0.18,
@@ -12482,7 +12482,7 @@
       "lean": 6,
       "shoulderElev": 71,
       "elbowS": 88,
-      "wrist": 26,
+      "wrist": 21,
       "kneeL": 78,
       "kneeR": 54,
       "handChest": [
@@ -12636,8 +12636,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": -179,
-      "value": 23.1
+      "t": -108,
+      "value": 24.5
      },
      {
       "part": "칼끝",
@@ -12951,8 +12951,8 @@
     "trunkCarry": 0.22,
     "shareAtTipPeak": {
      "trunk": 0.14,
-     "arm": -0.11,
-     "wrist": 0.97
+     "arm": -0.19,
+     "wrist": 1.05
     },
     "wind": {
      "handAboveHeadTop": -0.28,
@@ -13162,9 +13162,9 @@
       "chestYaw": -52,
       "xFactor": -18,
       "lean": 6,
-      "shoulderElev": 58,
+      "shoulderElev": 68,
       "elbowS": 66,
-      "wrist": 31,
+      "wrist": 23,
       "kneeL": 62,
       "kneeR": 60,
       "handChest": [
@@ -13464,9 +13464,9 @@
       "chestYaw": -64,
       "xFactor": -24,
       "lean": 5,
-      "shoulderElev": 67,
+      "shoulderElev": 85,
       "elbowS": 51,
-      "wrist": 26,
+      "wrist": 35,
       "kneeL": 73,
       "kneeR": 56,
       "handChest": [
@@ -13532,8 +13532,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -71,
-      "value": 11.8
+      "t": 229,
+      "value": 48.1
      },
      {
       "part": "손",
@@ -13575,7 +13575,7 @@
      "xFactorMax": 45,
      "handPath": 3.21,
      "tipPath": 13.21,
-     "comShift": 0.26
+     "comShift": 0.25
     },
     "opening": {
      "openTime": 0.79,
@@ -13688,9 +13688,9 @@
       "chestYaw": -40,
       "xFactor": -27,
       "lean": 2,
-      "shoulderElev": 61,
+      "shoulderElev": 63,
       "elbowS": 53,
-      "wrist": 25,
+      "wrist": 31,
       "kneeL": 27,
       "kneeR": 26,
       "handChest": [
@@ -13834,8 +13834,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -255,
-      "value": 14.9
+      "t": -234,
+      "value": 14.4
      },
      {
       "part": "손",
@@ -13844,8 +13844,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": -238,
-      "value": 12.3
+      "t": -255,
+      "value": 11.6
      },
      {
       "part": "칼끝",
@@ -13863,7 +13863,7 @@
     "wind": {
      "handAboveHeadTop": -0.28,
      "handBehindTorsoFront": -0.14,
-     "shoulderElev": 62
+     "shoulderElev": 76
     },
     "followThrough": {
      "handSideChest": -0.32,
@@ -13951,9 +13951,9 @@
       "chestYaw": -53,
       "xFactor": -30,
       "lean": 3,
-      "shoulderElev": 67,
+      "shoulderElev": 83,
       "elbowS": 47,
-      "wrist": 40,
+      "wrist": 53,
       "kneeL": 48,
       "kneeR": 45,
       "handChest": [
@@ -13990,9 +13990,9 @@
       "chestYaw": -30,
       "xFactor": -28,
       "lean": 6,
-      "shoulderElev": 60,
+      "shoulderElev": 66,
       "elbowS": 56,
-      "wrist": 24,
+      "wrist": 21,
       "kneeL": 65,
       "kneeR": 50,
       "handChest": [
@@ -14136,8 +14136,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -90,
-      "value": 6.6
+      "t": -161,
+      "value": 46.8
      },
      {
       "part": "손",
@@ -14165,7 +14165,7 @@
     "wind": {
      "handAboveHeadTop": -0.24,
      "handBehindTorsoFront": -0.07,
-     "shoulderElev": 67
+     "shoulderElev": 85
     },
     "followThrough": {
      "handSideChest": -0.37,
@@ -14292,9 +14292,9 @@
       "chestYaw": -38,
       "xFactor": -33,
       "lean": 5,
-      "shoulderElev": 64,
+      "shoulderElev": 75,
       "elbowS": 49,
-      "wrist": 25,
+      "wrist": 15,
       "kneeL": 79,
       "kneeR": 54,
       "handChest": [
@@ -14438,8 +14438,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -150,
-      "value": 11.5
+      "t": -108,
+      "value": 46.6
      },
      {
       "part": "손",
@@ -14448,8 +14448,8 @@
      },
      {
       "part": "손목(칼)",
-      "t": 25,
-      "value": 12
+      "t": -142,
+      "value": 13.5
      },
      {
       "part": "칼끝",
@@ -14673,9 +14673,9 @@
       "chestYaw": -75,
       "xFactor": -40,
       "lean": 6,
-      "shoulderElev": 78,
+      "shoulderElev": 82,
       "elbowS": 76,
-      "wrist": 58,
+      "wrist": 52,
       "kneeL": 67,
       "kneeR": 53,
       "handChest": [
@@ -14741,8 +14741,8 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -67,
-      "value": 28.1
+      "t": 271,
+      "value": 68.9
      },
      {
       "part": "손",
@@ -15110,7 +15110,7 @@
      "xFactorMax": 45,
      "handPath": 4.17,
      "tipPath": 15.34,
-     "comShift": 0.24
+     "comShift": 0.23
     },
     "opening": {
      "openTime": 0.67,

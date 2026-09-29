@@ -109,6 +109,7 @@ node tools/motion/build_lunge.mjs            # 런지 찌르기 클립 2개 + in
 node tools/motion/record_game.mjs            # 지금 게임 팔 베기 기록 (zornhau·oberhau·zwerchhau·mittelhau·unterhau)
 node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>   # 시험판 팔·결심 베기 기록 (review_wbs_trial.md 재현)
 node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 → docs/motion/compare_game.md
+node tools/motion/qa_clips.mjs               # 겹침 검사: 칼 ↔ 몸, 아래팔 ↔ 몸통 (표로 찍음)
 npm run dev                                   # → http://localhost:5173/tools/motion/viewer.html
 ```
 
@@ -125,6 +126,7 @@ npm run dev                                   # → http://localhost:5173/tools/
   칼 베기는 준비를 더 빨리 하지만, 준비가 읽히려면 감기 0.4~0.5 s 도 검토할 만하다(조작 반응성과 맞바꿈 — 디렉터·사장님 판단).
 - 어깨·손목 "최고 시각"은 방향 변화율로 재서 흔들린다. 운동 사슬 판정은 골반 → 가슴 → 손 → 칼끝으로만 하고, 120 Hz 표본이라 10 ms 안의 차이는 같은 때로 본다.
 - **운동 사슬 순서(골반 → 가슴 → 손 → 칼끝)는 보통·크게 32벌 모두 맞는다**(9/29 오후 고침). 처음에는 크게 세로 베기 둘과 보통 벌 11벌에서 손 최고가 골반보다 앞섰다 — 손목 풀림 때 손이 너무 먼저 앞으로 나가 손 빠르기가 두 봉우리였다. 크게 세로 베기는 손 키를, 보통 벌은 몸통 앞섬을 크게 벌과 같게 하고 풀림 키의 손을 30% 되돌려(`MED.TR`) 고쳤다. 칼끝 빠르기·손목은 거의 그대로다.
+- **겹침 검사** (`node tools/motion/qa_clips.mjs`): 칼이 머리·몸통·다리를 지나가는 클립은 없다(가장 가까워도 0.10 m). 아래팔이 몸통을 뚫던 것(빈 팔이 오른 엉덩이·오른 어깨로 건너갈 때 팔꿈치가 아래·뒤로 가서, 가장 깊게 96%)은 9/29 오후에 팔꿈치를 어깨→손 축 둘레로 돌려 몸통을 비키게 고쳤다(`lib/body.mjs` clearArm — 손·칼은 그대로라 빠르기·손목 값은 안 바뀜). 남은 것: 크게 감기 초반 등 8벌에서 0.01~0.22 s 동안 25~40% (쥔 손 자체가 가슴 앞에 가까워 팔꿈치로는 못 비킴 — 키를 고칠 거리).
 - 물리가 없다. 칼 관성·근력 한도·균형은 게임(Rapier)이 정한다. 기준 동작은 "사람이면 이 모양·이 시간표로 움직인다"만 말한다.
 - 롱소드만 냈다. 흐름은 8자(분노의 베기 좌우) 하나, 런지는 사람 기준 표(`lunge_flow.md`)만 냈다. 세이버(팔꿈치 축 moulinet)·레이피어 런지 클립·츠바이핸더는 다음 차례다.
 
