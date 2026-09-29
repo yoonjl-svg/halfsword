@@ -12,7 +12,7 @@
 //  발 = [x, z, 발끝 돌림°, 뒤꿈치 들림 0~1, 발 들림 m], 클립 시작 때 골반 밑 땅이 원점. px·pz = 골반 옮김(m)
 //  표시: t0 시작 · tw 감기 끝 · tr 손목 풀림 · tc 칼이 겨눈 선을 지남 · tf 지나가기 끝 · tg 복귀
 //
-//  크기: small = 지금 게임의 팔 베기(자세표 그대로 잇기), large = 온몸 베기, medium = 둘을 반씩 섞음.
+//  크기: small = 지금 게임의 팔 베기(자세표 그대로 잇기), large = 온몸 베기, medium = 크게 벌을 겨눈 선 자세 쪽으로 줄인 것(mediumTable).
 //  출처 id 는 lib/sources.mjs. [원전] 교본 · [2차] 번역·해설 · [측정] 생체역학 · [추정] 우리가 정함
 // ─────────────────────────────────────────────────────────────
 import { fromGameGuard } from './clip.mjs';
@@ -115,10 +115,43 @@ const still = (tg) => [
 ];
 
 export const CUTS = [];
+/**
+ * 보통 벌 (v1): 크게 벌을 "겨눈 선 자세 쪽으로 줄인" 것. small·large 를 그냥 섞으면(v0) 게임 자세와 온몸 자세의 모양이
+ *  달라 사이 자세의 손목이 사람 어림을 넘었다. 여기서는 크게 벌의 같은 키에서, 몸 돌림·숙임·손 자리는 겨눈 선(tc) 값과의
+ *  차이를 AMP 만큼, 칼 각(겨눈 선 = 0)은 ANG 만큼만 남긴다. 준비(t0)·복귀(tg)는 게임 자세 그대로, 시각은 작게와 크게의 가운데.
+ */
+const MED = { AMP: 0.75, ANG: 0.85 };
+function mediumTable(small, large) {
+  const tcRow = large.find((r) => r[1] === 'tc');
+  return large.map((r, i) => {
+    const t = +((small[i][0] + r[0]) / 2).toFixed(3);
+    if (typeof r[1] === 'string' && r[1].startsWith('G:')) return [t, r[1], r[2]];
+    const out = [t, r[1]];
+    for (let j = 2; j <= 9; j++) {
+      const v = r[j], c = tcRow[j];
+      out.push(v == null ? null : c == null ? v : +(c + (v - c) * MED.AMP).toFixed(3));
+    }
+    out.push(r[10] == null ? null : +(r[10] * MED.ANG).toFixed(1));
+    return out;
+  });
+}
+function mediumSteps(large, small, med) {
+  const base = large[0];
+  // 걸음: 크게 걸음의 발 옮김을 반만, 시각은 표시에 맞춰 옮긴다 (build_clips 가 표시로 다시 맞춘다)
+  return large.map((st) => {
+    const f = {};
+    for (const side of ['L', 'R']) f[side] = base.feet[side].map((v, k) => v + (st.feet[side][k] - v) * 0.5);
+    return { t: st.t, feet: f, px: (st.px ?? 0) * 0.5, pz: (st.pz ?? 0) * 0.5 };
+  });
+}
 function def(o) {
+  if (o.small.length !== o.large.length) throw new Error(`${o.id}: small·large 키 개수가 다르다`);
+  const med = mediumTable(o.small, o.large);
+  const chainMed = { arm: 0, sword: 0, ramp: 0.12, seq: { pelvis: 0.09, chest: 0.065, dur: 0.31 } };
   CUTS.push({
     ...o,
     small: { keys: rows(o.small, o.plane), steps: o.smallSteps ?? still(o.small[o.small.length - 1][0]), chain: CHAIN.small },
+    medium: { keys: rows(med, o.plane), steps: mediumSteps(o.largeSteps, o.small, med), chain: chainMed, stepTimesFrom: 'large' },
     large: { keys: rows(o.large, o.plane), steps: o.largeSteps, chain: CHAIN.large },
   });
 }

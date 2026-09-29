@@ -88,6 +88,21 @@ function blend(small, large, u) {
   return { keys, steps, chain };
 }
 
+/** 보통 벌 걸음: 크게 벌 걸음 시각을 보통 벌 표시로 옮긴다 */
+function retimeSteps(med, large) {
+  const mL = marksOf(large);
+  const mM = marksOf(med);
+  const pts = ['t0', 'tw', 'tr', 'tc', 'tf', 'tg'];
+  const tmap = (t) => {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = mL[pts[i]], b = mL[pts[i + 1]];
+      if (t <= b + 1e-9) return mM[pts[i]] + ((mM[pts[i + 1]] - mM[pts[i]]) * (t - a)) / (b - a);
+    }
+    return mM.tg;
+  };
+  return { ...med, steps: med.steps.map((s) => ({ ...s, t: tmap(s.t) })) };
+}
+
 /** 왼쪽에서 베기 = 거울 (게임 자세표 키는 게임의 왼쪽 자세 값으로 바꾼다) */
 function mirror(set) {
   const keys = set.keys.map((k) => {
@@ -105,7 +120,7 @@ function mirror(set) {
 }
 
 function build(cut, sizeName, sideName) {
-  let set = sizeName === 'small' ? cut.small : sizeName === 'large' ? cut.large : blend(cut.small, cut.large, 0.5);
+  let set = sizeName === 'small' ? cut.small : sizeName === 'large' ? cut.large : cut.medium ? retimeSteps(cut.medium, cut.large) : blend(cut.small, cut.large, 0.5);
   if (sideName === 'left') set = mirror(set);
   const marks = marksOf(set);
   const chain = { ...set.chain };
@@ -175,7 +190,7 @@ for (const cut of CUTS) {
             ? '지금 게임의 팔 베기 자세표(src/guards.js) 값을 그대로 옮김 + 저작 사이 키'
             : size === 'large'
               ? '교본 서술(시작·끝 자세·걸음)과 스포츠 생체역학의 운동 사슬 시간차로 저작한 v0 [추정 포함] — 모캡 실측 아님'
-              : 'small 과 large 를 반씩 섞음 [추정]',
+              : '크게 벌을 겨눈 선 자세 쪽으로 줄임(몸·손 75%, 칼 각 85%), 시각은 작게와 크게의 가운데 [추정]',
         summary,
         joints: JOINTS,
         bones: BONES,
@@ -200,7 +215,7 @@ function specTable(list) {
   L.push('');
   L.push('> `node tools/motion/build_clips.mjs` 가 만든다. 손으로 고치지 말 것. 오른쪽에서 베기만 적는다(왼쪽은 거울이라 같은 값).');
   L.push('> 값은 v0 기준 동작(교본 서술 + 생체역학 운동 사슬로 저작, 게임 뼈대 치수)에서 잰 것이다. 모캡 실측이 아니다 — 출처와 믿을 정도는 `docs/motion/sources.md`.');
-  L.push('> small = 지금 게임의 팔 베기(자세표를 그대로 이음), large = 온몸 베기, medium = 반씩.');
+  L.push('> small = 지금 게임의 팔 베기(자세표를 그대로 이음), large = 온몸 베기, medium = 크게 벌을 겨눈 선 자세 쪽으로 줄인 것(몸·손 75%, 칼 각 85%, 시각은 작게와 크게의 가운데).');
   L.push('');
   L.push('## 1. 빠르기·시간');
   L.push('');
@@ -258,9 +273,9 @@ function specTable(list) {
     }
   }
   L.push('');
-  L.push('아래팔-칼 각은 칼과 칼 든 아래팔 사이 각이다. 사람 어림 [추정, 측정 자료 없음]: 두손 망치 쥐기 약 90° + 손목 옆굽힘으로 약 135°, 손목 폄(최대 70°)까지 보태면 약 160°. 160° 를 넘는 순간은 저작한 칼이 손목으로 낼 수 없는 늦춤을 요구한 것이다(v0 는 막지 않고 적기만 한다 — `tools/motion/lib/body.mjs` WRIST_MAX 주석). 크게 벌은 대부분 160° 안이고, 보통 벌은 작게(게임 자세)와 크게를 그냥 섞은 탓에 감기 끝에서 넘는다 — 게임에서 작은 벌과 큰 벌을 곧게 섞어도 같은 일이 생긴다. v1 에서 보통 벌을 따로 저작한다.');
+  L.push('아래팔-칼 각은 칼과 칼 든 아래팔 사이 각이다. 사람 어림 [추정, 측정 자료 없음]: 두손 망치 쥐기 약 90° + 손목 옆굽힘으로 약 135°, 손목 폄(최대 70°)까지 보태면 약 160°. 160° 를 넘는 순간은 저작한 칼이 손목으로 낼 수 없는 늦춤을 요구한 것이다(v0 는 막지 않고 적기만 한다 — `tools/motion/lib/body.mjs` WRIST_MAX 주석). 크게 벌은 대부분 160° 안이다. 작게(게임 자세)와 크게를 곧게 섞으면 사이 자세가 165~177° 까지 간다(v0 보통 벌) — 게임에서 작은 벌과 큰 벌을 곧게 섞어도 같은 일이 생긴다. 지금 보통 벌은 크게 벌을 줄여 만들어 대부분 안이다.');
   L.push('');
-  L.push('칼끝 가장 낮은 높이가 0 가까이거나 − 이면 칼끝이 땅에 닿는다. 작게 벌의 왼쪽 바꿈·바보 자세는 게임 자세표 값 그대로라 칼끝이 땅 높이까지 내려간다(게임에서는 땅이 막는다). 보통 벌은 섞은 값이라 더 내려가는 곳이 있다.');
+  L.push('칼끝 가장 낮은 높이가 0 가까이거나 − 이면 칼끝이 땅에 닿는다. 작게 벌의 왼쪽 바꿈·바보 자세는 게임 자세표 값 그대로라 칼끝이 땅 높이까지 내려간다(게임에서는 땅이 막는다). ');
   L.push('');
   L.push('앞이 빈 시간 = 감기 끝~복귀 동안 칼(폼멜~칼끝)이 가슴 앞 0.45 m 의 세로 띠(가슴 아래 0.25 ~ 위 0.4 m)에서 0.3 m 넘게 떨어져 있던 시간. 팔 넘침 0.033 m 는 지금 게임 쟁기 자세 자체가 게임 팔 길이보다 조금 먼 것이다.');
   L.push('');
