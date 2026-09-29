@@ -204,7 +204,7 @@ for (const id of Object.keys(TABLES)) {
       marks: Object.fromEntries(Object.entries(b.marks).map(([k, v]) => [k, +v.toFixed(4)])),
       phiMarks: { t0: -1, tw: 0, tr: 0.55, tc: 0.85, tf: 1.6, tg: 2.2 },
       proposal: PROPOSAL,
-      sources: ['moulinet_manuals', 'tennis_upper_limb', 'fencing_review', 'baseball_sequence', 'game_weapons', 'estimate'].map((sid) => ({ id: sid, ...SOURCES[sid] })),
+      sources: ['meyer_dussack', 'moulinet_manuals', 'tennis_upper_limb', 'fencing_review', 'baseball_sequence', 'game_weapons', 'estimate'].map((sid) => ({ id: sid, ...SOURCES[sid] })),
       provenance: '세이버 크게 벌 v0: 사람 기준(한손 칼은 어깨·팔꿈치, moulinet 원)으로 저작한 키 [추정 포함] — 시작·끝은 게임 한손 자세표, 모캡 실측 아님',
       summary: s,
       ...b.extra,
