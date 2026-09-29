@@ -13,11 +13,11 @@
 | `docs/weapon_motion_sources_one_pole.md`, `docs/weapon_motions.md` | `claude/pm-weapons-balance` | 무기 PM 동작 라이브러리 출처·자세표 |
 | `docs/reference/combatlab_handoff_2026-09-27.md` | `main` | 이전 Unity CombatLab: Fiore Getty 원고 특정(22r·23r·23v), CMU swordplay 거절 경위 |
 
-## 0-1. 이 세션에서 막힌 곳 (EGRESS 차단 — 다시 시도하지 않는다)
+## 0-1. 웹 접속 (9/29 밤 다시 시험 — 거의 다 열림)
 
-웹 본문 읽기 도구와 curl 이 프록시에서 거절됨(2026-09-29): wiktenauer.com, link.springer.com, ieeexplore.ieee.org, researchgate.net, mocap.cs.cmu.edu, pubmed.ncbi.nlm.nih.gov, pmc.ncbi.nlm.nih.gov, jstage.jst.go.jp, semanticscholar.org, zenodo.org, cdn.jsdelivr.net(curl). 검색 결과 요약만 받았다.
-오후(런지·흐름 조사)에 더 막힘: journals.plos.org, frontiersin.org, mdpi.com, ojs.ub.uni-konstanz.de, ira.lib.polyu.edu.hk, chukyo-u.repo.nii.ac.jp, biomedres.info, alliedacademies.org, files.4medicine.pl, idosi.org, clasicalfencing.wordpress.com, en.wikipedia.org, www.gutenberg.org(한손 칼 교본 본문).
-9/29 저녁 사장님이 허용 목록에 더하셨다고 한 뒤 다시 시험: **journals.plos.org 만 열리고 나머지는 이 세션에서 여전히 403** (프록시 CONNECT 거절). 네트워크 설정은 새 세션부터 적용될 수 있다. 이 환경의 네트워크 정책이다 — 사장님이 환경 설정의 네트워크 허용에서 열 수 있다.
+사장님이 환경 설정에서 사이트 제한을 푸신 뒤(9/29 밤) 다시 시험: **열림** — wiktenauer.com, sprechfenster.org, pubmed·pmc.ncbi.nlm.nih.gov, link.springer.com, en.wikipedia.org, www.gutenberg.org, isbs.org, ojs.ub.uni-konstanz.de, semanticscholar.org(웹), journals.plos.org.
+**아직 거절** — idosi.org(403), researchgate.net(403), ieeexplore.ieee.org(418), api.semanticscholar.org(429 = 너무 잦은 요청). 이 셋은 사이트 쪽이 자동 접속을 막는 것이라 환경 설정 문제가 아니다 — 다른 사본(도서관·저자 사본)을 찾는다.
+(9/29 낮까지는 위 대부분이 프록시에서 거절돼 검색 요약만 받았다. 표의 `snippet` 표시는 그때 것 — 원문을 읽으면 `full`/`abstract` 로 바꾼다.)
 
 ## 0-2. 무기·검술 연구 ASS 표본 점검 (9/29, 디렉터 요청 — 인용 5건, 검색 요약 수준)
 
@@ -113,5 +113,5 @@
    게임에 동작을 그대로 쓰지 않고 **관절각·시간·칼끝 속도 같은 수치를 대조용으로만** 쓰는 조건으로 요청해도 될지.
    → **사장님 답(9/29): 하지 않는다** (저자 연락 없음).
 2. ~~직접 촬영~~ — **사장님 답(9/29): 하지 않는다. 계획에서 뺐다.**
-3. **번역서 구입** — Forgeng 역 Meyer. **사장님이 사 주시기로 함(9/29).** 받는 형태(제안): 전자책 PDF·EPUB 을 사장님 구글 드라이브 비공개 폴더에 두고 파일 이름·링크를 전달 → 드라이브 연결로 읽는다. **저작물이라 파일은 저장소에 절대 넣지 않고**, 읽고 정리한 메모(짧은 인용·쪽수)만 이 문서와 `longsword_cuts.md` 에 남긴다.
-4. 이 세션에서 웹 본문 읽기가 막혀 있다. 원문 대조(Wiktenauer 전사, 논문 PDF)는 웹이 열린 곳에서 다시 해야 한다. **사장님이 여는 쪽으로 말씀 중(9/29)** — 열릴 때까지 요약만 쓰고 막힌 주소는 §0-1 목록에만 적는다.
+3. **번역서 구입** — Forgeng 역 Meyer. **사장님이 사 주시기로 함(9/29).** → 9/29 밤: 무료 Garber 영역 + 1570 독일어 원문(sprechfenster.org, §0-3)을 교차해 **대신하기로 함 — 유료 번역은 없어도 된다.** 사장님이 독일어 원본 파일도 주시기로 함. 받는 형태(제안): 전자책 PDF·EPUB 을 사장님 구글 드라이브 비공개 폴더에 두고 파일 이름·링크를 전달 → 드라이브 연결로 읽는다. **저작물이라 파일은 저장소에 절대 넣지 않고**, 읽고 정리한 메모(짧은 인용·쪽수)만 이 문서와 `longsword_cuts.md` 에 남긴다.
+4. ~~웹 본문 읽기 막힘~~ — **사장님이 9/29 밤 여심.** 원문 대조를 다시 하는 중(§0-1·§0-3).
