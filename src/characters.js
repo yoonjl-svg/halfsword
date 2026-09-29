@@ -67,7 +67,7 @@ export const CHARACTERS = [
         },
         // 온몸 타격 기질 (persona.whole, 초안 — 게임은 아직 읽지 않는다. 디렉터가 R5에서 ai.js planStrike/opportunity에 연결)
         //  sPref/sSpread: 결심 베기에 몸을 싣는 정도 S(0~1)의 중심과 폭 / windRate: 베기 중 감기를 눈에 띄게 하는 비율
-        //  windLen: 감기 길이 초 [짧게, 길게] (난이도별 최소 감기 Q8은 사장님 몫이라 여기 값은 그 위에 얹힌다)
+        //  windLen: 감기 길이 초 [짧게, 길게] (사장님 결정: 난이도별 최소 감기 제한은 두지 않는다 — 이 값이 곧 감기 길이)
         //  punish: 상대의 틈(windup 감기 / overrun 지나가기 / thrown 튕김)에 뛰어드는 확률 / evade: 큰 베기를 볼 때 비켜서기(1) 대 막기(0)
         //  근거·범위는 docs/character_whole_body.md
         whole: { sPref: 0.9, sSpread: 0.1, windRate: 0.85, windLen: [0.45, 0.9], punish: { windup: 0.1, overrun: 0.35, thrown: 0.15 }, evade: 0.15 }, // 다 싣는다. 감기가 크고 길어 다 보인다. 틈은 못 읽고, 큰 베기는 막지도 피하지도 않고 맞바꾼다

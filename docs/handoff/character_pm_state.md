@@ -16,10 +16,11 @@
 - 광기의 하인리히 도른(`heinrich_mad`, '밤의 왕', 낮 +20%)은 main cc746f6에 반영·배포 완료.
 
 ## 열린 요청 (사장님 답 대기)
-1. 광기의 하인리히 조급함(aggression) +20% 여부 — 오르면 whole.sSpread 0.15·windLen 하한 0.2로 제안.
-2. 여정 대화 목업 v3 — https://claude.ai/artifact/CFPNVy9ug6ZPdHZxmDJtmK (스테이지 사이 대사창 임시 화면, 대사 전부 임시, 설정집 미저장). 승인 뒤 분담: 화면·전환 디렉터 / 대사 본문 캐릭터 PM(`lines.arrive`·`lines.road`).
-3. 설정 점검 ⑥-4·5·8 (`docs/settings_audit.md`).
-4. 온몸 타격 제한 셋(`docs/character_whole_body.md` §6): Q8 최소 감기 / "검술 낮으면 동작 작다"는 S에 걸지 말 것 / Q2 감기 공짜 거두기.
+1. 여정 대화 목업 v3 — https://claude.ai/artifact/CFPNVy9ug6ZPdHZxmDJtmK (스테이지 사이 대사창 임시 화면, 대사 전부 임시, 설정집 미저장). 승인 뒤 분담: 화면·전환 디렉터 / 대사 본문 캐릭터 PM(`lines.arrive`·`lines.road`).
+2. 설정 점검 ⑥-4·5·8 (`docs/settings_audit.md`).
+3. 온몸 타격 제한 둘(`docs/character_whole_body.md` §7): "검술 낮으면 동작 작다"는 S에 걸지 말 것 / Q2 감기 공짜 거두기.
+
+답 받은 것(9/29 13:00): 광기의 하인리히 조급함 그대로 · Q1 물리로만 · Q3 S 상한 없음 · Q5 발 돌림 허용 · Q8 최소 감기 제한 없음(기질값만) → `character_whole_body.md` §6 반영.
 
 ## 다른 PM에게 기다리는 것
 - 동작 PM: 캐릭터별 감기 모습 범위(브란 windup 1.6 ~ 하인리히 0.28) → 오면 `windLen`을 그 안으로 재조정.
@@ -38,7 +39,7 @@ node -e "import('./src/characters.js').then(m=>console.log(Object.keys(m.CHARACT
 ```
 
 ## 다음 할 일
-- [ ] 사장님 답(위 1·2·4) 오면 반영
+- [ ] 사장님 답(위 1·3) 오면 반영
 - [ ] 동작 PM 범위 오면 windLen 재조정
 - [ ] R5 연결 뒤 `docs/reviews/R5_characters.md`: 기준선 대비 성격 유지 확인
 - [ ] 여정 대사 승인 시 `lines.arrive`/`lines.road` 본문 + 설정집
