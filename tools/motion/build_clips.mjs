@@ -14,7 +14,7 @@ import { SOURCES } from './lib/sources.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, fromGameGuard, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { v3, m3, frame } from './lib/body.mjs';
-import { toKeys, marksOf, mirror } from './lib/sets.mjs';
+import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'clips');
@@ -98,7 +98,8 @@ function build(cut, sizeName, sideName) {
   const rows = measure(frames, marks);
   const summary = summarize(rows, marks);
   const over = rows.filter((r) => r.J.overS > 0.01 || r.J.overO > 0.01).map((r) => `${r.t.toFixed(2)}:${Math.max(r.J.overS, r.J.overO).toFixed(2)}`);
-  return { marks, rows, summary, def, over };
+  const extra = clipExtras(set, rows, marks);
+  return { marks, rows, summary, def, over, extra };
 }
 
 const SIZES = ['small', 'medium', 'large'];
@@ -109,7 +110,7 @@ for (const cut of CUTS) {
   if (only.length && !only.includes(cut.id)) continue;
   for (const side of SIDES) {
     for (const size of SIZES) {
-      const { marks, rows, summary, over } = build(cut, size, side);
+      const { marks, rows, summary, over, extra } = build(cut, size, side);
       const name = `${cut.id}_${side}_${size}`;
       const s = summary;
       const seq = s.sequence.map((q) => `${q.part} ${q.t > 0 ? '+' : ''}${q.t}`).join(' → ');
@@ -124,7 +125,7 @@ for (const cut of CUTS) {
           console.log(`    t ${r.t.toFixed(2)} 옆 ${(r.J.hS[2] - r.J.C[2]).toFixed(2)} 앞 ${(r.J.hS[0] - r.J.C[0]).toFixed(2)} 손높이 ${(r.J.hS[1] - r.J.hipC[1]).toFixed(2)} 가슴 ${r.yawC.toFixed(0)}° 칼끝 ${r.J.tip[1].toFixed(2)} m`);
       if (PRINT) continue;
       const clip = {
-        format: 'stillness-motion-clip/1', // data.cols[채널] = 120 Hz 표본 (벡터는 3칸씩 평면), J = joints 순서 관절 위치
+        format: 'stillness-motion-clip/2', // data.cols[채널] = 120 Hz 표본 (벡터는 3칸씩 평면), J = joints 순서 관절 위치. clip/1 + 채널·필드 더함 (clip_format.md §7)
         id: name,
         cut: cut.id,
         nameKo: cut.nameKo,
@@ -149,12 +150,13 @@ for (const cut of CUTS) {
               ? '교본 서술(시작·끝 자세·걸음)과 스포츠 생체역학의 운동 사슬 시간차로 저작한 v0 [추정 포함] — 모캡 실측 아님'
               : '크게 벌을 겨눈 선 자세 쪽으로 줄임(몸·손 75%, 칼 각 85%), 시각은 작게와 크게의 가운데 [추정]',
         summary,
+        ...extra,
         joints: JOINTS,
         bones: BONES,
         data: toColumns(toJSONFrames(rows)),
       };
       writeFileSync(join(OUT, `${name}.json`), JSON.stringify(clip));
-      index.push({ id: name, cut: cut.id, nameKo: cut.nameKo, nameDe: cut.nameDe, family: cut.family, desc: cut.desc, side, size, file: `${name}.json`, summary });
+      index.push({ id: name, cut: cut.id, nameKo: cut.nameKo, nameDe: cut.nameDe, family: cut.family, desc: cut.desc, side, size, file: `${name}.json`, summary, ...extra });
     }
   }
 }
@@ -231,6 +233,17 @@ function specTable(list) {
   for (const c of R) {
     const g = c.summary.signals;
     L.push(`| ${c.nameKo} | ${c.size} | ${sv(g.handsAboveShoulder)} | ${sv(g.handsAboveHead)} | ${sv(g.bladeBehind)} | ${sv(g.pelvisTurns)} | ${sv(g.footLifts)} | ${sv(g.footLands)} | ${sv(g.frontOpenAfterLine)} | ${sv(g.frontCloses)} |`);
+  }
+  L.push('');
+  L.push('## 7. 복귀 구간 · 시작·끝 자세 (게임 자세표 14개와 대조, 좌우 모두)');
+  L.push('');
+  L.push('> 복귀 구간 = 지나가기 끝(tf) → 복귀 끝(tg) 표본. 가장 가까운 자세 = 앞손 자리(가슴 가운데 원점, 바라보는 틀 — `src/guards.js` 손과 같은 틀) 오차가 가장 작은 게임 자세. 목표 = 그 클립 키에 적은 자세.');
+  L.push('');
+  L.push('| 클립 | 복귀 구간 s (표본) | 시작: 목표 → 가장 가까움 (손 오차 m) | 끝: 목표 → 가장 가까움 (손 오차 m) | 끝 다음 가까움 |');
+  L.push('|---|---|---|---|---|');
+  for (const c of list) {
+    const e = c.endPose, st = c.startPose;
+    L.push(`| ${c.id} | ${c.recovery.from} → ${c.recovery.to} (${c.recovery.samples}) | ${c.startFrom ?? '—'} → ${st.nearest} (${st.handError}) | ${c.recoverTo ?? '—'} → ${e.nearest} (${e.handError}) | ${e.next.map((x) => `${x.id} ${x.err}`).join(', ')} |`);
   }
   L.push('');
   L.push('## 5. 표시 자세 — 관절각과 몸 둘레 자리 (large, 오른쪽)');

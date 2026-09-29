@@ -262,6 +262,7 @@ export function pose(ch, side = 1) {
     Rp, Rc, hipC, waist, C, neck, head,
     shS: gS.sh, shO: gO.sh, elS: armS.mid, elO: armO.mid, hS, hO,
     overS: armS.over, overO: armO.over, elevS: gS.elev, elevO: gO.elev,
+    girdleS: { lift: gS.lift, prot: gS.prot }, girdleO: { lift: gO.lift, prot: gO.prot },
     dW, tip, pommel, legs, wristClamp,
   };
 }

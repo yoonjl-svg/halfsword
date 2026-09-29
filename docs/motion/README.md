@@ -26,7 +26,7 @@
 1. **기준 동작 v0** (`tools/motion/lib/cuts.mjs` → `node tools/motion/build_clips.mjs`)
    - 베기: 분노의 베기 Zornhau, 위에서 베기 Oberhau, 가로 베기 Zwerchhau, 사팔뜨기 베기 Schielhau, 아래에서 베기 Unterhau.
      제안: 정수리 베기 Scheitelhau, 굽은 베기 Krumphau. 디렉터 목록에 있어 가운데 베기 Mittelhau 도 같이 냈다.
-   - 크기 셋: **작게 = 지금 게임의 팔 베기**(자세표 `src/guards.js` 를 그대로 이음 — 헤드리스로 돌린 지금 게임 Zornhau 칼끝 17.4 m/s, 작게 클립 18.7 m/s 로 맞는다),
+   - 크기 셋: **작게 = 지금 게임의 팔 베기**(자세표 `src/guards.js` 를 그대로 이음 — 헤드리스로 돌린 지금 게임 Zornhau 칼끝 17.4 m/s, 작게 클립 19.6 m/s 로 가깝다. 작게 벌의 시작·끝 자세는 게임 자세표와 손 자리가 같다(0 cm)),
      **크게 = 온몸 베기**, **보통 = 크게 벌을 겨눈 선 자세 쪽으로 줄인 것(몸·손 75%, 칼 각 85%, 시각은 작게와 크게의 가운데)**. 디렉터 설계의 S(싣기)가 "같은 클립의 작은 벌과 큰 벌 사이를 섞는다"(redesign §2-2)와 같은 구조다.
    - 좌우: 오른쪽에서 벤 것을 거울로. 작게 벌의 왼쪽은 게임의 왼쪽 자세 값을 그대로 쓴다.
 2. **몸 모형** (`tools/motion/lib/body.mjs`): 게임 뼈대 치수(발목 0.08 · 무릎 0.50 · 엉덩이 0.93 · 허리 1.06 · 가슴 1.33 · 어깨 1.43, 위팔 0.30 + 아래팔·손 0.265, 어깨 가슴 틀 (0, 0.1, ±0.2), 부위 무게)로 만든 막대 인형.
@@ -96,7 +96,7 @@ data: { n, width, cols }                  // 열 단위: cols[채널] = 표본 n
 | `J` | 월드 | `joints` 순서 관절 위치 (막대 인형·발 자리·칼끝): hipC, waist, chest, neck, head, shS, elS, hS, shO, elO, hO, hipL, kneeL, ankleL, heelL, toeL, hipR, kneeR, ankleR, heelR, toeR, pommel, tip |
 
 - 월드 = 클립 시작 때 골반 밑 땅, x 앞(상대 쪽) · y 위 · z 칼 든 쪽. 오른손잡이 기준이고 발 이름 L/R 은 해부학적 왼발·오른발이다(게임 `F`/`B` 는 칼 쪽 발/반대 발 — 오른손잡이면 F = 오른발).
-- redesign §2-2 atlas 채널과의 대응: 양손 위치 = `handS`·`handO`, 칼 방향과 날 = `sword`·`edge`, 골반 yaw·pitch·내림 = `pelvis.*`, X-factor·숙임 = `chest.*`, 팔꿈치 방향 = `elbowPoleS`, 어깨띠 들림 = `J` 의 `shS` − 가슴 틀 (0, 0.1, 0.2), 발 돌림·들림 = `feet.*`, 딛기 시각 = `J` 의 발목 높이, 무게중심 = `com`.
+- redesign §2-2 atlas 채널과의 대응표는 `clip_format.md` §3-6 (clip/2 에서 빠진 채널을 채움 — balanceAssist 만 없음).
   balanceAssist·openness 는 아직 채널로 내지 않았다(openness 는 `summary.opening` 의 어림 시간만).
 
 ## 다시 만들기

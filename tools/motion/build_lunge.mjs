@@ -16,8 +16,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rows, STANCE } from './lib/cuts.mjs';
 import { SOURCES } from './lib/sources.mjs';
-import { toKeys, marksOf, mirror } from './lib/sets.mjs';
-import { sampleClip, measure, summarize, toJSONFrames, toColumns, HZ } from './lib/clip.mjs';
+import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
+import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -100,19 +100,22 @@ function build(sideName) {
     tipAtLine: s.tipAtLine,
     legOver: s.checks.legOver,
   };
-  return { rows: rws, marks, s, lunge };
+  // clip/2 필드: 걸음은 앞발을 내디딘 것(가장 낮은 때까지) — 끝에는 제자리로 돌아오므로
+  const extra = clipExtras(set, rws, marks);
+  extra.step = stepOf(rws.filter((r) => r.t <= marks.tf + 1e-9), marks);
+  return { rows: rws, marks, s, lunge, extra };
 }
 
 const indexEntries = [];
 const out = [];
 for (const side of ['right', 'left']) {
-  const { rows: rws, marks, s, lunge } = build(side);
+  const { rows: rws, marks, s, lunge, extra } = build(side);
   const name = `lunge_thrust_${side}_large`;
   console.log(`${name}: 손 먼저 ${lunge.handFirst} ms · 칼끝 겨눈 선 ${marks.tc} s, 앞발 딛기 ${lunge.footLand >= 0 ? '+' : ''}${lunge.footLand} s · 골반 ${lunge.pelvisDrop} m 낮아짐 (딛은 뒤 +${lunge.lowAfterLand} s) · 두 발 사이 ${lunge.stanceEnd} m · 앞무릎 ${lunge.kneeFront}° 뒷무릎 ${lunge.kneeBack}° · 숙임 ${lunge.lean}° · 골반 ${lunge.advance} m 나감 · 칼끝 최고 ${s.tipPeak} m/s (선 ${s.tipAtLine}) · 다리 넘침 ${lunge.legOver} · 팔 넘침 ${s.checks.reachOver}`);
   out.push({ side, marks, s, lunge });
   if (PRINT) continue;
   const clip = {
-    format: 'stillness-motion-clip/1',
+    format: 'stillness-motion-clip/2',
     id: name,
     cut: 'lunge_thrust',
     nameKo: '런지 찌르기',
@@ -133,12 +136,13 @@ for (const side of ['right', 'left']) {
     provenance: '사람 런지 순서·끝 자세(lunge_flow.md §1, 검색 요약·지도서)로 저작 [추정 포함]. 모캡 실측 아님',
     summary: s,
     lunge,
+    ...extra,
     joints: JOINTS,
     bones: BONES,
     data: toColumns(toJSONFrames(rws)),
   };
   writeFileSync(join(OUT, 'clips', `${name}.json`), JSON.stringify(clip));
-  indexEntries.push({ id: name, cut: clip.cut, nameKo: clip.nameKo, nameDe: clip.nameDe, family: clip.family, desc: clip.desc, side, size: 'large', file: `${name}.json`, summary: s, lunge });
+  indexEntries.push({ id: name, cut: clip.cut, nameKo: clip.nameKo, nameDe: clip.nameDe, family: clip.family, desc: clip.desc, side, size: 'large', file: `${name}.json`, summary: s, lunge, ...extra });
 }
 
 if (!PRINT) {

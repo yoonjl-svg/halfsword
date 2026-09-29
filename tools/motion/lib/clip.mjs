@@ -59,7 +59,10 @@ const DEFAULT = { 'pelvis.x': 0, 'pelvis.z': 0, 'pelvis.drop': 0.05, 'pelvis.yaw
 export function fromGameGuard(g) {
   const pelvisYaw = g.pelvisYaw * 0.5;
   const chestRel = g.chestYaw - pelvisYaw;
-  const R = m3.ry(g.chestYaw); // 바라보는 틀 → 가슴 틀
+  // 게임은 손 목표·칼끝 방향을 "바라보는 틀"(fighter.yaw, 가슴 가운데 원점)에 둔다 (fighter.js 손 목표: handLocal.applyQuaternion(this.yaw)).
+  //  몸 모형은 손·칼을 가슴 틀(돌림 + 숙임)로 받으므로, 이 자세의 가슴 틀을 통째로 되돌려야 월드에서 게임과 같은 자리가 된다
+  //  (예전엔 돌림만 되돌려 숙임 5~12° 만큼 손이 3~4 cm 어긋났다)
+  const R = frame(g.chestYaw, g.pitch, 0);
   const hand = m3.applyT(R, g.hand);
   const dir = m3.applyT(R, bladeDir(g.blade[0], g.blade[1]));
   return { pelvis: { yaw: pelvisYaw, pitch: 0, drop: g.drop }, chest: { yaw: chestRel, lean: g.pitch }, hand, dirV: dir };
@@ -531,6 +534,53 @@ export function summarize(rows, marks) {
   };
 }
 
+/** 칼이 가슴 앞 0.45 m 세로 띠(가슴 높이 −0.25 ~ +0.4 m)에서 떨어진 거리 m — summarize 의 openAt 과 같은 띠·같은 셈(칼 13점) */
+export function guardGapOf(J) {
+  const c = J.C;
+  const b0 = [c[0] + 0.45, c[1] - 0.25, c[2]], b1 = [c[0] + 0.45, c[1] + 0.4, c[2]];
+  const ab = v3.sub(b1, b0);
+  let best = Infinity;
+  for (let i = 0; i <= 12; i++) {
+    const p = v3.lerp(J.pommel, J.tip, i / 12);
+    const u = Math.max(0, Math.min(1, v3.dot(v3.sub(p, b0), ab) / v3.dot(ab, ab)));
+    best = Math.min(best, v3.dist(p, v3.add(b0, v3.mul(ab, u))));
+  }
+  return best;
+}
+
+/** 걸음: 가장 많이 옮긴 발, 처음·끝 자리(발목, 땅 틀 x·z), 뜨는·딛는 때 (발목이 1 cm 넘게 뜸 · 다시 4 mm 안으로) */
+export function stepOf(rows, marks) {
+  const ank = (r, f) => r.J.legs[f].ankle;
+  const moved = (f) => Math.hypot(ank(rows.at(-1), f)[0] - ank(rows[0], f)[0], ank(rows.at(-1), f)[2] - ank(rows[0], f)[2]);
+  const foot = moved('L') >= moved('R') ? 'L' : 'R';
+  if (moved(foot) < 0.05) return null;
+  const y0 = ank(rows[0], foot)[1];
+  const lift = rows.find((r) => ank(r, foot)[1] > y0 + 0.01);
+  const land = lift && rows.find((r) => r.t > lift.t && ank(r, foot)[1] <= y0 + 0.004);
+  const xz = (p) => [+p[0].toFixed(3), +p[2].toFixed(3)];
+  return {
+    foot,
+    from: xz(ank(rows[0], foot)),
+    to: xz(ank(rows.at(-1), foot)),
+    liftT: lift ? +lift.t.toFixed(3) : null,
+    landT: land ? +land.t.toFixed(3) : null,
+    liftPhi: lift ? +phaseAt(marks, lift.t).toFixed(3) : null,
+    landPhi: land ? +phaseAt(marks, land.t).toFixed(3) : null,
+  };
+}
+
+/**
+ * 끝 자세(복귀 끝)가 게임 자세표(src/guards.js 14개) 중 어느 것과 가장 가까운가 — 앞손 자리 오차 m.
+ *  비교 틀 = guards.js 손과 같은 틀: 가슴 가운데 원점, 바라보는 방향(땅 틀 x 앞 · y 위 · z 칼 쪽).
+ */
+export function nearestGuard(J, guards) {
+  const h = v3.sub(J.hS, J.C);
+  const list = Object.entries(guards)
+    .map(([id, g]) => ({ id, err: +v3.len(v3.sub(h, g.hand)).toFixed(3) }))
+    .sort((a, b) => a.err - b.err);
+  return { nearest: list[0].id, handError: list[0].err, next: list.slice(1, 3) };
+}
+
 const r4 = (x) => Math.round(x * 1e4) / 1e4;
 const r1 = (x) => Math.round(x * 10) / 10;
 const rv = (a) => a.map(r4);
@@ -554,6 +604,15 @@ export function toJSONFrames(rows) {
       sword: inChestDir(J.dW),
       edge: inChestDir(r.edge),
       elbowPoleS: inChestDir(v3.norm(v3.sub(J.elS, v3.lerp(J.shS, J.hS, 0.5)))),
+      elbowPoleO: inChestDir(v3.norm(v3.sub(J.elO, v3.lerp(J.shO, J.hO, 0.5)))),
+      // 어깨띠: 들림(위)·내밂(앞) m — 팔을 60° 넘게 들면 최대 0.06 m 오르고, 뻗으면 최대 0.04 m 나간다 (body.mjs girdle)
+      girdleS: [r3(J.girdleS.lift), r3(J.girdleS.prot)],
+      girdleO: [r3(J.girdleO.lift), r3(J.girdleO.prot)],
+      // 틈: 칼(자루 끝 → 칼끝)이 가슴 앞 0.45 m 세로 띠에서 떨어진 거리 m, 0.2 → 0.4 m 를 0 → 1 로 (summarize 의 '앞이 빈 때'와 같은 띠)
+      ...(() => {
+        const gap = guardGapOf(J);
+        return { guardGap: r3(gap), openness: r3(Math.max(0, Math.min(1, (gap - 0.2) / 0.2)) ** 2 * (3 - 2 * Math.max(0, Math.min(1, (gap - 0.2) / 0.2)))) };
+      })(),
       feet: { L: { yaw: r1(r.ch.feet.L.yaw), lift: r3(r.ch.feet.L.lift) }, R: { yaw: r1(r.ch.feet.R.yaw), lift: r3(r.ch.feet.R.lift) } },
       com: rv3(r.com),
       ang: Object.fromEntries(Object.entries(r.ang).filter(([k]) => !k.startsWith('footYaw')).map(([k, v]) => [k, r1(v)])),

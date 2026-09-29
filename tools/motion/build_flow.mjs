@@ -14,8 +14,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CUTS } from './lib/cuts.mjs';
 import { SOURCES } from './lib/sources.mjs';
-import { toKeys, marksOf, mirror } from './lib/sets.mjs';
-import { sampleClip, measure, summarize, toJSONFrames, toColumns, phaseAt, HZ } from './lib/clip.mjs';
+import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
+import { sampleClip, measure, summarize, toJSONFrames, toColumns, phaseAt, stepOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES, v3, m3, frame } from './lib/body.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -173,7 +173,10 @@ function build(sideName) {
     stepL: +Math.hypot(rows[rows.length - 1].J.legs.L.ankle[0] - rows[0].J.legs.L.ankle[0], rows[rows.length - 1].J.legs.L.ankle[2] - rows[0].J.legs.L.ankle[2]).toFixed(2),
     legOver: Math.max(s1.checks.legOver, s2.checks.legOver),
   };
-  return { rows, marks, m1, m2, s1, s2, flow, def };
+  // clip/2 필드: 걸음은 베기마다 하나씩 (첫 베기 = 둘째 감기 끝까지, 둘째 베기 = 첫 겨눈 선부터)
+  const extra = clipExtras({ keys }, rows, marks);
+  extra.step = [stepOf(rows.filter((r) => r.t <= m2.tw + 1e-9), m1), stepOf(rows.filter((r) => r.t >= m1.tc - 1e-9), m2)];
+  return { rows, marks, m1, m2, s1, s2, flow, def, extra };
 }
 
 const DESC = '오른쪽에서 분노의 베기로 내려벤 칼이 왼 엉덩이 옆을 지나 서지 않고 왼 어깨 뒤로 돌아 올라가, 곧장 왼쪽에서 분노의 베기로 내려벤다(8자). 베기마다 한 걸음.';
@@ -181,7 +184,7 @@ const SRC = ['meyer_zornhau', 'meyer_step', 'golf_sequence', 'estimate'];
 const indexEntries = [];
 const table = [];
 for (const side of ['right', 'left']) {
-  const { rows, marks, m1, m2, s1, s2, flow } = build(side);
+  const { rows, marks, m1, m2, s1, s2, flow, extra } = build(side);
   const name = `flow_zornhau8_${side}_large`;
   console.log(
     `${name}: 겨눈 선 ${m1.tc} → ${m2.tc} s (사이 ${flow.contactGap} s) | 칼끝 최고 ${s1.tipPeak} / ${s2.tipPeak} m/s | 사이 칼끝 최저 ${flow.tipMin.v} m/s (첫 최고의 ${flow.tipMin.ofPeak1}, 겨눈 선 +${flow.tipMin.t} s) | 손 최저 ${flow.handMin.v} m/s | 칼 돌림 최저 ${flow.bladeRateMin.v} rad/s | 칼끝 최저 높이 ${flow.tipLow} m | 손목 ${flow.wristMax}° | 가슴 ${flow.chestTurn}° | 넘침 팔 ${s1.checks.reachOver}/${s2.checks.reachOver} | 순서 ${s1.ordered && s2.ordered ? 'OK' : '뒤섞임'}`,
@@ -192,7 +195,7 @@ for (const side of ['right', 'left']) {
   table.push({ side, m1, m2, s1, s2, flow });
   if (PRINT) continue;
   const clip = {
-    format: 'stillness-motion-clip/1',
+    format: 'stillness-motion-clip/2',
     id: name,
     cut: 'flow_zornhau8',
     base: 'zornhau', // 없는 크기(작게·보통)는 비교 화면이 이 베기 클립으로 대신 잰다
@@ -217,12 +220,13 @@ for (const side of ['right', 'left']) {
     summary: s1,
     summary2: s2,
     flow,
+    ...extra,
     joints: JOINTS,
     bones: BONES,
     data: toColumns(toJSONFrames(rows)),
   };
   writeFileSync(join(OUT, 'clips', `${name}.json`), JSON.stringify(clip));
-  indexEntries.push({ id: name, cut: clip.cut, base: clip.base, nameKo: clip.nameKo, nameDe: clip.nameDe, family: clip.family, desc: clip.desc, side, size: 'large', file: `${name}.json`, summary: s1, flow });
+  indexEntries.push({ id: name, cut: clip.cut, base: clip.base, nameKo: clip.nameKo, nameDe: clip.nameDe, family: clip.family, desc: clip.desc, side, size: 'large', file: `${name}.json`, summary: s1, flow, ...extra });
 }
 
 if (!PRINT) {
