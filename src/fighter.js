@@ -241,6 +241,11 @@ export class Fighter {
     this.pelvisTgt = 0; // 골반 비틀기 목표 (결심 베기 중엔 초당 COMMIT.pelvisRate 로만 바꾼다)
     this.aimDirW = new THREE.Vector3(1, 0, 0); // 칼끝이 향해야 할 방향 (월드)
     this.debug = { aim: new THREE.Vector3(), wristTorque: new THREE.Vector3(), wristCap: 0 };
+    // 계측 탭 (tools/sim/chain.mjs): 도구가 { wr:{}, sh:{}, el:{}, sp:{}, off:{on:false}, hl:null } 를 꽂으면 그 스텝의 근육 내부값을 적는다
+    //  wr 손목(pre·cap·cap0·hill·sat·vAlong·damp·brake·angle·release·wAimRaw·tau) · sh 어깨(pre·cap·maxT·hill·sat·wSw·eAng·wT) · el 팔꿈치(err·mErr·maxErr·hill·sat·wRel·tgtV)
+    //  sp.abdomen/chest 척추(errY·maxErr·satY·tgtVy·velClampY) · hl 손 목표 [x,y,z, 깎기 전 x, 패드 x,y] · off 빈손(on·F·p·vp)
+    //  게임·시뮬은 꽂지 않는다 — 비용은 null 검사뿐, 수치는 바뀌지 않는다
+    this.ins = null;
 
     this.bodies = {};
     this.groups = {}; // 부위 이름 → 화면용 그룹
@@ -1585,12 +1590,15 @@ export class Fighter {
           const wc = j.child.angvel();
           const wp = j.parent.angvel();
           const wRel = (wc.x - wp.x) * ax.x + (wc.y - wp.y) * ax.y + (wc.z - wp.z) * ax.z;
-          mErr *= hill(Math.sign(_rv.z - _cur.z || 1) * wRel, this.weaponCfg.elbowVmax);
+          const hf = hill(Math.sign(_rv.z - _cur.z || 1) * wRel, this.weaponCfg.elbowVmax);
+          mErr *= hf;
+          if (this.ins) { const I = this.ins.el; I.err = Math.abs(_rv.z - _cur.z); I.mErr = mErr; I.maxErr = maxErr; I.hill = hf; I.sat = I.err > mErr; I.wRel = wRel; I.tgtV = (_rv.z - prev.z) * inv; }
         }
         const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -mErr, mErr);
         const vz = THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
         raw.jointConfigureMotor(j.joint.handle, HINGE_AXIS, tz, vz, k, d);
       } else {
+        if (this.ins && (n === 'abdomen' || n === 'chest')) { const I = (this.ins.sp[n] ||= {}); I.errY = _rv.y - _cur.y; I.maxErr = maxErr; I.satY = Math.abs(I.errY) > maxErr; I.tgtVy = (_rv.y - prev.y) * inv; I.velClampY = Math.abs(I.tgtVy) > 15; } // velClampY = 아래 ±15 모터 속도 자르기가 물었나 (읽기만)
         for (const [i, ax] of [[0, 'x'], [1, 'y'], [2, 'z']]) {
           const t = _cur[ax] + THREE.MathUtils.clamp(_rv[ax] - _cur[ax], -maxErr, maxErr);
           const v = THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
@@ -1674,6 +1682,7 @@ export class Fighter {
     // 힘-속도 관계: 팔을 빨리 휘두를수록 어깨 힘이 빠진다
     const tlen = _mT.length();
     const cap = maxT * hill(tlen > 1e-6 ? wSw.dot(_mT) / tlen : 0, this.weaponCfg.shoulderVmax);
+    if (this.ins && j.name === 'uarmS') { const I = this.ins.sh; I.pre = tlen; I.cap = cap; I.maxT = maxT; I.hill = maxT > 0 ? cap / maxT : 0; I.sat = tlen > cap; I.wSw = wSw.length(); I.eAng = _mE.length(); I.wT = wT.length(); }
     if (tlen > cap) _mT.setLength(cap);
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
@@ -1716,7 +1725,9 @@ export class Fighter {
       handLocal.y += cp.hand[1] * cp.w;
       handLocal.z += cp.hand[2] * cp.w;
     }
+    const hlx0 = handLocal.x;
     handLocal.x = Math.min(handLocal.x, this.closeReach());
+    if (this.ins) { const h = (this.ins.hl ||= new Float64Array(6)); h[0] = handLocal.x; h[1] = handLocal.y; h[2] = handLocal.z; h[3] = hlx0; h[4] = off.x; h[5] = off.y; }
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
@@ -1748,6 +1759,7 @@ export class Fighter {
     const wAim = _v5.set(0, 0, 0);
     if (this.prevAim && this.lastDt > 0) {
       wAim.crossVectors(this.prevAim, aim).multiplyScalar(1 / this.lastDt);
+      if (this.ins) this.ins.wr.wAimRaw = wAim.length();
       if (wAim.length() > 25) wAim.setLength(25);
     }
     (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
@@ -1823,6 +1835,7 @@ export class Fighter {
     this.wristHill = (this.wristHill ?? h) + (h - (this.wristHill ?? h)) * Math.min(1, (this.lastDt || 1 / 120) / 0.03);
     cap *= this.wristHill;
     if (tl > cap) torque.setLength(cap);
+    if (this.ins) { const I = this.ins.wr; I.pre = tl; I.cap = cap; I.cap0 = this.weaponCfg.maxAimTorque * str; I.hill = this.wristHill; I.sat = tl > cap; I.vAlong = vAlong; I.damp = damp; I.brake = !!this.wristBrake; I.angle = angle; I.release = damp === this.weaponCfg.releaseDamping; }
     // 측정용 (테스트 도구가 읽는다)
     this.debug.aim.copy(aim);
     this.debug.wristTorque.copy(torque);
@@ -1833,6 +1846,7 @@ export class Fighter {
     const twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * this.twistScale);
     twist.addScaledVector(wTwist, -0.12 * this.twistScale);
     torque.add(twist);
+    if (this.ins) (this.ins.wr.tau ||= new THREE.Vector3()).copy(torque); // 비틀기까지 더한 최종 손목 힘 (손목 일률 τ·ω)
     sword.addTorque(vecArg(torque), true);
     // 손목 근육의 반작용은 아래팔로 간다. 단, 아래팔 길이 방향으로 비트는 몫은
     // 아래팔이 너무 가늘어(관성이 작아) 받으면 팽이처럼 돈다 → 팔뚝 뼈(요골·척골)가 그러듯
@@ -1970,6 +1984,7 @@ export class Fighter {
       this.limbs.armO > 0.3 &&
       GRIP.on;
     this.gripping = false;
+    if (this.ins) this.ins.off.on = false;
     if (!want) return;
     const along = this.weaponCfg.gripAlong;
     const sword = this.sword;
@@ -2000,6 +2015,7 @@ export class Fighter {
     if (F.length() > GRIP.maxForce) F.setLength(GRIP.maxForce);
     fo.addForceAtPoint(vecArg(F), vecArg(hand), true);
     sword.addForceAtPoint({ x: -F.x, y: -F.y, z: -F.z }, vecArg(pommel), true);
+    if (this.ins) { const O = this.ins.off; O.on = true; (O.F ||= new THREE.Vector3()).set(-F.x, -F.y, -F.z); (O.p ||= new THREE.Vector3()).copy(pommel); (O.vp ||= new THREE.Vector3()).set(vp.x, vp.y, vp.z); } // 칼자루에 준 힘·폼멜 속도 (빈손 일률 F·v)
   }
 
   /** 빈팔 역운동학 (팔이 아래로 늘어진 몸체 기준: 뼈 방향 −y, 팔꿈치는 앞(+x)으로 접힌다) */
