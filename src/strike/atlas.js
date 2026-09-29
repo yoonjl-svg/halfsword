@@ -531,7 +531,10 @@ export function validateClip(clip, opts = {}) {
     if (col.length !== n * req[ch]) fail(id, `채널 '${ch}' 길이 ${col.length} ≠ n·폭 = ${n * req[ch]}`);
   }
   for (const ch in D.cols) {
-    const col = D.cols[ch];
+    // 모든 칸 (안 모는 com·w.*·speed.*·ang.* 도): 폭·길이·수
+    const col = D.cols[ch], w = D.width[ch];
+    if (!(Number.isInteger(w) && w > 0)) fail(id, `채널 '${ch}' 폭 ${w}`);
+    if (!col || col.length !== n * w) fail(id, `채널 '${ch}' 길이 ${col?.length} ≠ n·폭 = ${n * w}`);
     for (let i = 0; i < col.length; i++) if (!isNum(col[i])) fail(id, `채널 '${ch}' [${i}] 가 수가 아님 (${col[i]})`);
   }
   const t = D.cols.t;
@@ -546,12 +549,12 @@ export function validateClip(clip, opts = {}) {
   checkIds(id, clip);
   // 단위 방향: 길이. 칼은 한 표본 각도 (저작 오류), 팔꿈치 pole·edge 는 뒤집힘이 정상 → 보고
   const checks = { swordStepMax: 0, poleStepMax: 0, poleFlips: [], reach: null };
-  for (const ch of ['sword', 'elbowPoleS', 'elbowPoleO']) {
+  for (const ch of ['sword', 'edge', 'elbowPoleS', 'elbowPoleO']) {
     const col = D.cols[ch];
     for (let i = 0; i < n; i++) {
       const l = Math.hypot(col[i * 3], col[i * 3 + 1], col[i * 3 + 2]);
       if (Math.abs(l - 1) > 0.02) fail(id, `${ch}[${i}] 길이 ${l.toFixed(3)} (단위 벡터 ±0.02)`);
-      if (i === 0) continue;
+      if (i === 0 || ch === 'edge') continue; // edge: 길이만 (묶음 검사와 같게; 몰지 않고 뒤집힘이 잦아 보고에 넣지 않는다)
       const a = angleDeg(col, (i - 1) * 3, col, i * 3);
       if (ch === 'sword') {
         if (a > ATLAS.vecStepMaxDeg) fail(id, `sword 가 한 표본(t ${t[i - 1]} → ${t[i]}) 에 ${a.toFixed(1)}° 돎 (vecStepMaxDeg ${ATLAS.vecStepMaxDeg})`);
@@ -801,6 +804,7 @@ export class Atlas {
   // ── 표본 ──
   /** 한 벌·한 크기를 φ 에서 (섞기 없음). out.v/d1/d2 를 채운다 */
   sampleSize(out, cut, side, size, phi) {
+    if (!Number.isFinite(phi)) fail(`${cut}_${side}_${size}`, `sampleSize: phi 가 수가 아님 (${phi})`);
     this._eval(this.fam(cut, side)[size], phi, out);
     for (let q = 0; q < DIR_OFFS.length; q++) normalize3(out.v, DIR_OFFS[q]);
     out.v[CH.xFactor] = out.v[CH.chestYaw] - out.v[CH.pelvisYaw];
@@ -819,6 +823,8 @@ export class Atlas {
    */
   sample(out, req) {
     const S0 = req.S, phi = req.phi;
+    // 수가 아닌 인자(NaN·undefined·±Infinity)는 예외 — 시작 자세로 조용히 바뀌지 않게. 유한한 값은 어느 것도 막지 않는다
+    if (!Number.isFinite(phi) || !Number.isFinite(S0) || !Number.isFinite(req.over ?? 0)) fail(`${req.cut}_${req.side}`, `sample: phi ${phi} · S ${S0} · over ${req.over} 가운데 수가 아닌 것이 있음`);
     let over = req.over || 0, S = S0;
     if (S > 1) (over += S - 1), (S = 1);
     else if (!(S >= 0)) S = 0;

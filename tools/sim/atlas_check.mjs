@@ -90,6 +90,8 @@ mustThrow('hz 60', mut((c) => (c.hz = 60)), 'hz 60');
 mustThrow('handedness left', mut((c) => (c.handedness = 'left')), 'handedness');
 mustThrow('data.n ≠ round(tg·hz)+1', mut((c) => (c.marks.tg = 1.1)), 'data.n');
 mustThrow('채널 길이 ≠ n·폭', mut((c) => c.data.cols.handS.pop()), '길이');
+mustThrow('안 모는 채널 길이 ≠ n·폭 (com)', mut((c) => c.data.cols.com.pop()), "'com' 길이");
+mustThrow('안 모는 채널 폭 없음 (speed.tip)', mut((c) => delete c.data.width['speed.tip']), "'speed.tip' 폭");
 mustThrow('채널 빠짐 (girdleO)', mut((c) => delete c.data.cols.girdleO), "'girdleO' 없음");
 mustThrow('채널 폭 다름 (sword 2)', mut((c) => (c.data.width.sword = 2)), '폭');
 mustThrow('NaN', mut((c) => (c.data.cols['chest.yaw'][40] = NaN)), '수가 아님');
@@ -100,6 +102,7 @@ mustThrow('marks 차례 (tr > tc)', mut((c) => (c.marks.tr = 0.5)), 'marks 차�
 mustThrow('phiMarks 다름 (tc 0.8)', mut((c) => (c.phiMarks.tc = 0.8)), 'phiMarks.tc');
 mustThrow('phi 가 표시 지도에서 벗어남', mut((c) => (c.data.cols.phi[60] += 0.01)), 'phi[60]');
 mustThrow('sword 가 단위 벡터가 아님', mut((c) => { for (let k = 30; k < 33; k++) c.data.cols.sword[k] *= 1.1; }), '길이');
+mustThrow('edge 가 단위 벡터가 아님', mut((c) => c.data.cols.edge.fill(0, 30, 33)), 'edge[10] 길이');
 mustThrow('sword 가 한 표본에 20° 넘게 돎', mut((c) => { const s = c.data.cols.sword; [s[90], s[91], s[92]] = [-s[90], -s[91], -s[92]]; }), 'vecStepMaxDeg');
 mustThrow('보통 벌에 step 없음', mutM((c) => (c.step = null)), 'step');
 mustThrow('step.from 이 2벡터가 아님', mutM((c) => (c.step.from = [])), 'step');
@@ -131,6 +134,11 @@ mustThrow('묶음 marks 차례', () => validatePack({ ...packJson, clips: [{ ...
 mustThrow('묶음 sha1 꼴이 아님', () => validatePack({ ...packJson, clips: [{ ...packJson.clips[0], sha1: 'abc' }] }), 'sha1');
 mustThrow('묶음 크게 벌에 step 없음', () => validatePack({ ...packJson, clips: [{ ...packJson.clips[2], step: null }] }), 'step');
 mustThrow('묶음 step.from 이 2벡터가 아님', () => validatePack({ ...packJson, clips: [{ ...packJson.clips[1], step: { ...packJson.clips[1].step, from: [] } }] }), 'step');
+mustThrow('표본 phi NaN', () => packed.sampleAt('zornhau', 'right', NaN, 1, makeSample()), '수가 아닌');
+mustThrow('표본 phi 없음', () => packed.sample(makeSample(), { cut: 'zornhau', side: 'right', S: 1 }), '수가 아닌');
+mustThrow('표본 S NaN', () => packed.sampleAt('zornhau', 'right', 0.5, NaN, makeSample()), '수가 아닌');
+mustThrow('표본 over NaN', () => packed.sampleAt('zornhau', 'right', 0.5, 1, makeSample(), NaN), '수가 아닌');
+mustThrow('sampleSize phi NaN', () => packed.sampleSize(makeSample(), 'zornhau', 'right', 'large', NaN), '수가 아님');
 // sha1 ≠ 원본 파일 (둘 다 디스크에 있을 때): 이 도구가 견준다
 function checkSha1(pack, dir) {
   for (const c of pack.clips) {
