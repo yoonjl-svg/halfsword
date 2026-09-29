@@ -161,10 +161,14 @@ for (const cut of CUTS) {
       const s = summary;
       const seq = s.sequence.map((q) => `${q.part} ${q.t > 0 ? '+' : ''}${q.t}`).join(' → ');
       console.log(
-        `${name.padEnd(26)} 칼끝 ${String(s.tipPeak).padStart(5)} m/s (선 ${s.tipAtLine}) 손 ${s.handPeak} | 가슴 ${s.range.chestYaw}° 골반 ${s.range.pelvisYaw}° X ${s.range.xFactorMax}° | 손 위 ${s.wind.handAboveHeadTop} 뒤 ${s.wind.handBehindTorsoFront} 어깨 ${s.wind.shoulderElev}° | 지나감 ${s.followThrough.handSidePelvis} | 손길 ${s.range.handPath} m | 몸통 ${s.shareAtTipPeak.trunk} 손목 ${s.shareAtTipPeak.wrist} | ${s.ordered ? '순서 OK' : '순서 뒤섞임'} | 넘침 팔 ${s.checks.reachOver} 다리 ${s.checks.legOver}`,
+        `${name.padEnd(26)} 칼끝 ${String(s.tipPeak).padStart(5)} m/s (선 ${s.tipAtLine}) 손 ${s.handPeak} | 가슴 ${s.range.chestYaw}° 골반 ${s.range.pelvisYaw}° X ${s.range.xFactorMax}° | 손 위 ${s.wind.handAboveHeadTop} 뒤 ${s.wind.handBehindTorsoFront} 어깨 ${s.wind.shoulderElev}° | 지나감 ${s.followThrough.handSideChest} | 손길 ${s.range.handPath} m | 몸통 ${s.shareAtTipPeak.trunk} 손목 ${s.shareAtTipPeak.wrist} | ${s.ordered ? '순서 OK' : '순서 뒤섞임'} | 넘침 팔 ${s.checks.reachOver} 다리 ${s.checks.legOver} | 손목 ${s.checks.wristMax}° 칼끝 최저 ${s.checks.tipMin} m`,
       );
       if (args.includes('--seq')) console.log('   ', seq);
       if (args.includes('--over') && over.length) console.log('    팔 넘침', over.filter((_, i) => i % 3 === 0).join(' '));
+      // --trace: 겨눈 선 → 복귀 끝, 0.05 s 마다 손 옆 거리(가슴 가운데 기준)·앞 거리·손 높이(엉덩이 위)·가슴 돌림·칼끝 높이
+      if (args.includes('--trace'))
+        for (const r of rows.filter((r, i) => r.t >= marks.tc - 1e-9 && i % 6 === 0))
+          console.log(`    t ${r.t.toFixed(2)} 옆 ${(r.J.hS[2] - r.J.C[2]).toFixed(2)} 앞 ${(r.J.hS[0] - r.J.C[0]).toFixed(2)} 손높이 ${(r.J.hS[1] - r.J.hipC[1]).toFixed(2)} 가슴 ${r.yawC.toFixed(0)}° 칼끝 ${r.J.tip[1].toFixed(2)} m`);
       if (PRINT) continue;
       const clip = {
         format: 'stillness-motion-clip/1', // data.cols[채널] = 120 Hz 표본 (벡터는 3칸씩 평면), J = joints 순서 관절 위치
@@ -243,11 +247,11 @@ function specTable(list) {
   L.push('');
   L.push('## 3. 크기 — 몸 둘레 어디까지 가나');
   L.push('');
-  L.push('| 베기 | 크기 | 가슴 회전 범위° | 골반 회전 범위° | 척추 비틀림 최대° | 감기 손 높이 (머리 꼭대기 위) m | 감기 손 (가슴 앞면보다 뒤) m | 감기 어깨 들림° | 지나가기 손 (반대 엉덩이 쪽 옆 거리) m | 지나가기 끝 손 높이 (엉덩이 위) m | 손 길 m | 칼끝 길 m |');
+  L.push('| 베기 | 크기 | 가슴 회전 범위° | 골반 회전 범위° | 척추 비틀림 최대° | 감기 손 높이 (머리 꼭대기 위) m | 감기 손 (가슴 앞면보다 뒤) m | 감기 어깨 들림° | 지나가기 손 옆 거리 (가슴 가운데 기준, 반대쪽 −) m | 지나가기 끝 손 높이 (엉덩이 위) m | 손 길 m | 칼끝 길 m |');
   L.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const c of R) {
     const s = c.summary;
-    L.push(`| ${c.nameKo} | ${c.size} | ${s.range.chestYaw} | ${s.range.pelvisYaw} | ${s.range.xFactorMax} | ${s.wind.handAboveHeadTop} | ${s.wind.handBehindTorsoFront} | ${s.wind.shoulderElev} | ${s.followThrough.handSidePelvis} | ${s.followThrough.handHeightOverHip} | ${s.range.handPath} | ${s.range.tipPath} |`);
+    L.push(`| ${c.nameKo} | ${c.size} | ${s.range.chestYaw} | ${s.range.pelvisYaw} | ${s.range.xFactorMax} | ${s.wind.handAboveHeadTop} | ${s.wind.handBehindTorsoFront} | ${s.wind.shoulderElev} | ${s.followThrough.handSideChest} | ${s.followThrough.handHeightOverHip} | ${s.range.handPath} | ${s.range.tipPath} |`);
   }
   L.push('');
   L.push('## 4. 반동·허점 (어림값)');

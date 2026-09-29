@@ -394,10 +394,13 @@ export function summarize(rows, marks) {
   const handAbove = Math.max(...windRows.map((r) => r.J.hS[1] - headTop(r)));
   const behind = Math.min(...windRows.map((r) => m3.applyT(r.J.Rc, v3.sub(r.J.hS, r.J.C))[0] - BODY.torsoFront));
   const elev = Math.max(...windRows.map((r) => r.ang.shoulderElevS));
-  // 지나가기: 칼 든 손이 반대쪽 엉덩이 옆으로 얼마나 넘어가나 (골반 틀 옆 좌표, 칼 쪽 +)
+  // 지나가기: 칼 든 손이 반대쪽으로 얼마나 넘어가나 (칼 쪽 +)
+  //  handSideChest = 가슴 가운데 기준, 머리 방향(땅) 틀 옆 좌표 — 디렉터 mx.mjs 의 hand_side_min 과 같은 식이고 재설계 §2-6 목표가 이 값
+  //  handSidePelvis = 골반 틀(골반과 같이 돎) 옆 좌표, handSideRoot = 골반 가운데 기준 땅 틀 옆 좌표 (참고)
   const follow = pick(marks.tc, marks.tf);
   // 오른쪽에서 벤 베기(가슴이 − 로 돎)는 −z 쪽으로, 왼쪽에서 벤 베기는 +z 쪽으로 넘어간다 → 늘 '넘어간 쪽 = −' 로 적는다
   const crossSide = (v) => (sgn < 0 ? v : -v);
+  const crossChest = Math.min(...follow.map((r) => crossSide(r.J.hS[2] - r.J.C[2])));
   const cross = Math.min(...follow.map((r) => crossSide(m3.applyT(r.J.Rp, v3.sub(r.J.hS, r.J.hipC))[2])));
   const crossRoot = Math.min(...follow.map((r) => crossSide(r.J.hS[2] - r.J.hipC[2])));
   const endRow = rows.find((r) => r.t >= marks.tf);
@@ -506,7 +509,7 @@ export function summarize(rows, marks) {
     trunkCarry: +trunkCarry.toFixed(2),
     shareAtTipPeak: { trunk: +pTip.share.trunk.toFixed(2), arm: +pTip.share.arm.toFixed(2), wrist: +pTip.share.wrist.toFixed(2) },
     wind: { handAboveHeadTop: +handAbove.toFixed(2), handBehindTorsoFront: +(-behind).toFixed(2), shoulderElev: Math.round(elev) },
-    followThrough: { handSidePelvis: +cross.toFixed(2), handSideRoot: +crossRoot.toFixed(2), handHeightOverHip: +(endRow.J.hS[1] - endRow.J.hipC[1]).toFixed(2) },
+    followThrough: { handSideChest: +crossChest.toFixed(2), handSidePelvis: +cross.toFixed(2), handSideRoot: +crossRoot.toFixed(2), handHeightOverHip: +(endRow.J.hS[1] - endRow.J.hipC[1]).toFixed(2) },
     range: {
       chestYaw: Math.round(range(main.map((r) => r.yawC))),
       pelvisYaw: Math.round(range(main.map((r) => r.yawP))),

@@ -438,7 +438,7 @@ function renderSheet() {
         { l: '손이 움직인 길이', sub: '감기+베기+지나가기 · 목표 1.8 m 이상', v: `${fmt(s.range.handPath)} m`, c: judge(s.range.handPath, { min: 1.8, near: 0.2 }) },
         { l: '가슴 회전 범위', sub: '목표 130° 이상 (세로 베기는 덜 튼다)', v: `${s.range.chestYaw}°`, c: judge(s.range.chestYaw, { min: 130, near: 15, na: !TURNING.has(cut) }) },
         { l: '골반 회전 범위', sub: '목표 70° 이상', v: `${s.range.pelvisYaw}°`, c: judge(s.range.pelvisYaw, { min: 70, near: 8, na: !TURNING.has(cut) }) },
-        { l: '지나가기: 손이 반대 엉덩이 너머', sub: '골반 기준 옆 거리 · 목표 −0.35 m 너머', v: `${fmt(s.followThrough.handSidePelvis)} m`, c: judge(-s.followThrough.handSidePelvis, { min: 0.35, near: 0.08, na: !CROSSING.has(cut) }) },
+        { l: '지나가기: 손이 반대쪽으로 넘어감', sub: '가슴 가운데 기준 옆 거리(디렉터 측정과 같은 식) · 재설계 목표 −0.35 m 너머 · 게임 팔 0.565 m', v: `${fmt(s.followThrough.handSideChest ?? s.followThrough.handSidePelvis)} m`, c: judge(-(s.followThrough.handSideChest ?? s.followThrough.handSidePelvis), { min: 0.35, near: 0.08, na: !CROSSING.has(cut) }) },
       ],
     },
     {

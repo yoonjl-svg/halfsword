@@ -276,6 +276,7 @@
      "shoulderElev": 50
     },
     "followThrough": {
+     "handSideChest": -0.23,
      "handSidePelvis": -0.19,
      "handSideRoot": -0.25,
      "handHeightOverHip": 0.03
@@ -476,26 +477,26 @@
       "pelvisYaw": -34,
       "chestYaw": -53,
       "xFactor": -20,
-      "lean": 21,
-      "shoulderElev": 24,
-      "elbowS": 67,
-      "wrist": 31,
+      "lean": 18,
+      "shoulderElev": 39,
+      "elbowS": 56,
+      "wrist": 38,
       "kneeL": 69,
       "kneeR": 66,
       "handChest": [
-       0.35,
-       -0.17,
-       0.01
+       0.41,
+       -0.12,
+       -0.03
       ],
       "handWorld": [
        0.37,
-       0.89,
-       -0.29
+       0.94,
+       -0.38
       ],
       "tipWorld": [
        0.02,
-       0.04,
-       -1.04
+       0.09,
+       -1.13
       ],
       "swordElAz": [
        -46,
@@ -519,7 +520,7 @@
      "footLifts": -182,
      "footLands": -40,
      "frontOpens": -282,
-     "frontOpenAfterLine": 60,
+     "frontOpenAfterLine": 52,
      "frontCloses": 468
     },
     "time": {
@@ -531,7 +532,7 @@
     },
     "tipPeak": 25.7,
     "tipAtLine": 22.5,
-    "handPeak": 6.9,
+    "handPeak": 6.8,
     "sequence": [
      {
       "part": "골반",
@@ -551,7 +552,7 @@
      {
       "part": "손",
       "t": -52,
-      "value": 6.9
+      "value": 6.8
      },
      {
       "part": "손목(칼)",
@@ -577,27 +578,28 @@
      "shoulderElev": 148
     },
     "followThrough": {
-     "handSidePelvis": -0.19,
-     "handSideRoot": -0.37,
-     "handHeightOverHip": 0.1
+     "handSideChest": -0.33,
+     "handSidePelvis": -0.21,
+     "handSideRoot": -0.4,
+     "handHeightOverHip": 0.15
     },
     "range": {
      "chestYaw": 105,
      "pelvisYaw": 56,
      "xFactorMax": 30,
-     "handPath": 2.79,
+     "handPath": 2.74,
      "tipPath": 12.02,
-     "comShift": 0.21
+     "comShift": 0.2
     },
     "opening": {
-     "openTime": 0.34,
-     "bladeBehindTime": 0.23,
+     "openTime": 0.52,
+     "bladeBehindTime": 0.22,
      "maxTurn": 53
     },
     "checks": {
      "reachOver": 0.033,
      "legOver": 0,
-     "tipMin": 0.04,
+     "tipMin": 0.08,
      "wristMax": 167,
      "wristClampTime": 0.25,
      "wristOver160": 0.06
@@ -777,26 +779,26 @@
       "pelvisYaw": -40,
       "chestYaw": -65,
       "xFactor": -25,
-      "lean": 24,
-      "shoulderElev": 22,
-      "elbowS": 42,
-      "wrist": 23,
+      "lean": 20,
+      "shoulderElev": 39,
+      "elbowS": 32,
+      "wrist": 26,
       "kneeL": 81,
       "kneeR": 64,
       "handChest": [
-       0.3,
-       -0.3,
-       0
+       0.38,
+       -0.22,
+       -0.06
       ],
       "handWorld": [
-       0.42,
-       0.76,
-       -0.24
+       0.4,
+       0.82,
+       -0.36
       ],
       "tipWorld": [
-       -0.32,
-       0.07,
-       -0.85
+       -0.33,
+       0.13,
+       -0.98
       ],
       "swordElAz": [
        -36,
@@ -820,7 +822,7 @@
      "footLifts": -217,
      "footLands": -17,
      "frontOpens": -283,
-     "frontOpenAfterLine": 117,
+     "frontOpenAfterLine": 67,
      "frontCloses": 633
     },
     "time": {
@@ -831,7 +833,7 @@
      "total": 1.5
     },
     "tipPeak": 35.5,
-    "tipAtLine": 31.1,
+    "tipAtLine": 31.3,
     "handPeak": 9.8,
     "sequence": [
      {
@@ -878,27 +880,28 @@
      "shoulderElev": 158
     },
     "followThrough": {
-     "handSidePelvis": -0.19,
-     "handSideRoot": -0.36,
-     "handHeightOverHip": -0.02
+     "handSideChest": -0.32,
+     "handSidePelvis": -0.23,
+     "handSideRoot": -0.4,
+     "handHeightOverHip": 0.04
     },
     "range": {
      "chestYaw": 140,
      "pelvisYaw": 75,
      "xFactorMax": 45,
-     "handPath": 3.58,
-     "tipPath": 14.25,
-     "comShift": 0.34
+     "handPath": 3.53,
+     "tipPath": 14.26,
+     "comShift": 0.33
     },
     "opening": {
-     "openTime": 0.56,
+     "openTime": 0.77,
      "bladeBehindTime": 0.48,
      "maxTurn": 75
     },
     "checks": {
      "reachOver": 0.033,
      "legOver": 0,
-     "tipMin": 0.01,
+     "tipMin": 0.03,
      "wristMax": 154,
      "wristClampTime": 0.06,
      "wristOver160": 0
@@ -1179,6 +1182,7 @@
      "shoulderElev": 54
     },
     "followThrough": {
+     "handSideChest": -0.19,
      "handSidePelvis": -0.18,
      "handSideRoot": -0.2,
      "handHeightOverHip": 0.04
@@ -1379,26 +1383,26 @@
       "pelvisYaw": 34,
       "chestYaw": 53,
       "xFactor": 20,
-      "lean": 21,
-      "shoulderElev": 27,
-      "elbowS": 63,
-      "wrist": 87,
+      "lean": 18,
+      "shoulderElev": 34,
+      "elbowS": 64,
+      "wrist": 88,
       "kneeL": 66,
       "kneeR": 69,
       "handChest": [
-       0.35,
-       -0.17,
-       -0.01
+       0.41,
+       -0.12,
+       0.03
       ],
       "handWorld": [
        0.37,
-       0.89,
-       0.29
+       0.94,
+       0.38
       ],
       "tipWorld": [
        0.02,
-       0.04,
-       1.04
+       0.09,
+       1.13
       ],
       "swordElAz": [
        -46,
@@ -1422,7 +1426,7 @@
      "footLifts": -182,
      "footLands": -40,
      "frontOpens": -282,
-     "frontOpenAfterLine": 60,
+     "frontOpenAfterLine": 52,
      "frontCloses": 477
     },
     "time": {
@@ -1434,7 +1438,7 @@
     },
     "tipPeak": 25.7,
     "tipAtLine": 22.5,
-    "handPeak": 6.9,
+    "handPeak": 6.8,
     "sequence": [
      {
       "part": "골반",
@@ -1448,13 +1452,13 @@
      },
      {
       "part": "어깨(위팔)",
-      "t": -161,
-      "value": 10.8
+      "t": 23,
+      "value": 11.2
      },
      {
       "part": "손",
       "t": -52,
-      "value": 6.9
+      "value": 6.8
      },
      {
       "part": "손목(칼)",
@@ -1471,8 +1475,8 @@
     "trunkCarry": 0.96,
     "shareAtTipPeak": {
      "trunk": 0.44,
-     "arm": 0.25,
-     "wrist": 0.31
+     "arm": 0.26,
+     "wrist": 0.3
     },
     "wind": {
      "handAboveHeadTop": 0.04,
@@ -1480,27 +1484,28 @@
      "shoulderElev": 97
     },
     "followThrough": {
-     "handSidePelvis": -0.19,
-     "handSideRoot": -0.37,
-     "handHeightOverHip": 0.1
+     "handSideChest": -0.33,
+     "handSidePelvis": -0.21,
+     "handSideRoot": -0.4,
+     "handHeightOverHip": 0.15
     },
     "range": {
      "chestYaw": 105,
      "pelvisYaw": 56,
      "xFactorMax": 30,
-     "handPath": 2.82,
+     "handPath": 2.77,
      "tipPath": 12.08,
      "comShift": 0.2
     },
     "opening": {
-     "openTime": 0.34,
-     "bladeBehindTime": 0.23,
+     "openTime": 0.5,
+     "bladeBehindTime": 0.22,
      "maxTurn": 53
     },
     "checks": {
      "reachOver": 0.033,
      "legOver": 0,
-     "tipMin": 0.04,
+     "tipMin": 0.08,
      "wristMax": 104,
      "wristClampTime": 0,
      "wristOver160": 0
@@ -1680,26 +1685,26 @@
       "pelvisYaw": 40,
       "chestYaw": 65,
       "xFactor": 25,
-      "lean": 24,
-      "shoulderElev": 22,
-      "elbowS": 42,
+      "lean": 20,
+      "shoulderElev": 27,
+      "elbowS": 55,
       "wrist": 91,
       "kneeL": 64,
       "kneeR": 81,
       "handChest": [
-       0.3,
-       -0.3,
-       0
+       0.38,
+       -0.22,
+       0.06
       ],
       "handWorld": [
-       0.42,
-       0.76,
-       0.24
+       0.4,
+       0.82,
+       0.36
       ],
       "tipWorld": [
-       -0.32,
-       0.07,
-       0.85
+       -0.33,
+       0.13,
+       0.98
       ],
       "swordElAz": [
        -36,
@@ -1723,8 +1728,8 @@
      "footLifts": -217,
      "footLands": -17,
      "frontOpens": -283,
-     "frontOpenAfterLine": 117,
-     "frontCloses": 650
+     "frontOpenAfterLine": 67,
+     "frontCloses": 658
     },
     "time": {
      "wind": 0.36,
@@ -1734,7 +1739,7 @@
      "total": 1.5
     },
     "tipPeak": 35.5,
-    "tipAtLine": 31.1,
+    "tipAtLine": 31.3,
     "handPeak": 9.8,
     "sequence": [
      {
@@ -1781,27 +1786,28 @@
      "shoulderElev": 152
     },
     "followThrough": {
-     "handSidePelvis": -0.19,
-     "handSideRoot": -0.36,
-     "handHeightOverHip": -0.02
+     "handSideChest": -0.32,
+     "handSidePelvis": -0.23,
+     "handSideRoot": -0.4,
+     "handHeightOverHip": 0.04
     },
     "range": {
      "chestYaw": 140,
      "pelvisYaw": 75,
      "xFactorMax": 45,
-     "handPath": 3.61,
-     "tipPath": 14.3,
-     "comShift": 0.34
+     "handPath": 3.55,
+     "tipPath": 14.31,
+     "comShift": 0.33
     },
     "opening": {
-     "openTime": 0.58,
+     "openTime": 0.8,
      "bladeBehindTime": 0.48,
      "maxTurn": 75
     },
     "checks": {
      "reachOver": 0.033,
      "legOver": 0,
-     "tipMin": 0.01,
+     "tipMin": 0.03,
      "wristMax": 91,
      "wristClampTime": 0,
      "wristOver160": 0
@@ -2082,6 +2088,7 @@
      "shoulderElev": 174
     },
     "followThrough": {
+     "handSideChest": -0.03,
      "handSidePelvis": 0.01,
      "handSideRoot": -0.03,
      "handHeightOverHip": 0.02
@@ -2383,6 +2390,7 @@
      "shoulderElev": 168
     },
     "followThrough": {
+     "handSideChest": -0.07,
      "handSidePelvis": 0,
      "handSideRoot": -0.08,
      "handHeightOverHip": 0.19
@@ -2684,6 +2692,7 @@
      "shoulderElev": 167
     },
     "followThrough": {
+     "handSideChest": -0.05,
      "handSidePelvis": 0.01,
      "handSideRoot": -0.06,
      "handHeightOverHip": 0.06
@@ -2985,6 +2994,7 @@
      "shoulderElev": 179
     },
     "followThrough": {
+     "handSideChest": -0.03,
      "handSidePelvis": 0.01,
      "handSideRoot": -0.03,
      "handHeightOverHip": 0.02
@@ -3286,6 +3296,7 @@
      "shoulderElev": 141
     },
     "followThrough": {
+     "handSideChest": -0.07,
      "handSidePelvis": 0,
      "handSideRoot": -0.08,
      "handHeightOverHip": 0.19
@@ -3587,6 +3598,7 @@
      "shoulderElev": 162
     },
     "followThrough": {
+     "handSideChest": -0.05,
      "handSidePelvis": 0.01,
      "handSideRoot": -0.06,
      "handHeightOverHip": 0.06
@@ -3888,6 +3900,7 @@
      "shoulderElev": 55
     },
     "followThrough": {
+     "handSideChest": -0.32,
      "handSidePelvis": -0.27,
      "handSideRoot": -0.32,
      "handHeightOverHip": 0.51
@@ -4189,6 +4202,7 @@
      "shoulderElev": 141
     },
     "followThrough": {
+     "handSideChest": -0.33,
      "handSidePelvis": -0.27,
      "handSideRoot": -0.36,
      "handHeightOverHip": 0.73
@@ -4490,6 +4504,7 @@
      "shoulderElev": 133
     },
     "followThrough": {
+     "handSideChest": -0.35,
      "handSidePelvis": -0.32,
      "handSideRoot": -0.39,
      "handHeightOverHip": 0.72
@@ -4791,6 +4806,7 @@
      "shoulderElev": 66
     },
     "followThrough": {
+     "handSideChest": -0.32,
      "handSidePelvis": -0.27,
      "handSideRoot": -0.32,
      "handHeightOverHip": 0.51
@@ -5092,6 +5108,7 @@
      "shoulderElev": 91
     },
     "followThrough": {
+     "handSideChest": -0.33,
      "handSidePelvis": -0.27,
      "handSideRoot": -0.36,
      "handHeightOverHip": 0.73
@@ -5393,6 +5410,7 @@
      "shoulderElev": 126
     },
     "followThrough": {
+     "handSideChest": -0.35,
      "handSidePelvis": -0.32,
      "handSideRoot": -0.39,
      "handHeightOverHip": 0.72
@@ -5694,6 +5712,7 @@
      "shoulderElev": 57
     },
     "followThrough": {
+     "handSideChest": -0.12,
      "handSidePelvis": -0.05,
      "handSideRoot": -0.13,
      "handHeightOverHip": 0.39
@@ -5995,6 +6014,7 @@
      "shoulderElev": 146
     },
     "followThrough": {
+     "handSideChest": -0.25,
      "handSidePelvis": -0.11,
      "handSideRoot": -0.3,
      "handHeightOverHip": 0.41
@@ -6296,6 +6316,7 @@
      "shoulderElev": 150
     },
     "followThrough": {
+     "handSideChest": -0.23,
      "handSidePelvis": -0.07,
      "handSideRoot": -0.27,
      "handHeightOverHip": 0.36
@@ -6597,6 +6618,7 @@
      "shoulderElev": 58
     },
     "followThrough": {
+     "handSideChest": -0.11,
      "handSidePelvis": -0.04,
      "handSideRoot": -0.12,
      "handHeightOverHip": 0.39
@@ -6898,6 +6920,7 @@
      "shoulderElev": 95
     },
     "followThrough": {
+     "handSideChest": -0.25,
      "handSidePelvis": -0.11,
      "handSideRoot": -0.3,
      "handHeightOverHip": 0.41
@@ -7199,6 +7222,7 @@
      "shoulderElev": 149
     },
     "followThrough": {
+     "handSideChest": -0.23,
      "handSidePelvis": -0.07,
      "handSideRoot": -0.27,
      "handHeightOverHip": 0.36
@@ -7500,6 +7524,7 @@
      "shoulderElev": 24
     },
     "followThrough": {
+     "handSideChest": -0.24,
      "handSidePelvis": -0.2,
      "handSideRoot": -0.25,
      "handHeightOverHip": 0.67
@@ -7801,6 +7826,7 @@
      "shoulderElev": 25
     },
     "followThrough": {
+     "handSideChest": -0.31,
      "handSidePelvis": -0.22,
      "handSideRoot": -0.33,
      "handHeightOverHip": 0.73
@@ -8102,6 +8128,7 @@
      "shoulderElev": 28
     },
     "followThrough": {
+     "handSideChest": -0.33,
      "handSidePelvis": -0.26,
      "handSideRoot": -0.34,
      "handHeightOverHip": 0.84
@@ -8403,6 +8430,7 @@
      "shoulderElev": 48
     },
     "followThrough": {
+     "handSideChest": -0.26,
      "handSidePelvis": -0.21,
      "handSideRoot": -0.27,
      "handHeightOverHip": 0.67
@@ -8704,6 +8732,7 @@
      "shoulderElev": 45
     },
     "followThrough": {
+     "handSideChest": -0.31,
      "handSidePelvis": -0.22,
      "handSideRoot": -0.33,
      "handHeightOverHip": 0.73
@@ -9005,6 +9034,7 @@
      "shoulderElev": 56
     },
     "followThrough": {
+     "handSideChest": -0.33,
      "handSidePelvis": -0.26,
      "handSideRoot": -0.34,
      "handHeightOverHip": 0.84
@@ -9306,6 +9336,7 @@
      "shoulderElev": 173
     },
     "followThrough": {
+     "handSideChest": -0.14,
      "handSidePelvis": -0.07,
      "handSideRoot": -0.15,
      "handHeightOverHip": 0.39
@@ -9607,6 +9638,7 @@
      "shoulderElev": 165
     },
     "followThrough": {
+     "handSideChest": -0.06,
      "handSidePelvis": 0.05,
      "handSideRoot": -0.07,
      "handHeightOverHip": 0.43
@@ -9908,6 +9940,7 @@
      "shoulderElev": 167
     },
     "followThrough": {
+     "handSideChest": -0.06,
      "handSidePelvis": 0.06,
      "handSideRoot": -0.08,
      "handHeightOverHip": 0.37
@@ -10209,6 +10242,7 @@
      "shoulderElev": 179
     },
     "followThrough": {
+     "handSideChest": -0.14,
      "handSidePelvis": -0.07,
      "handSideRoot": -0.15,
      "handHeightOverHip": 0.39
@@ -10510,6 +10544,7 @@
      "shoulderElev": 117
     },
     "followThrough": {
+     "handSideChest": -0.06,
      "handSidePelvis": 0.05,
      "handSideRoot": -0.07,
      "handHeightOverHip": 0.43
@@ -10811,6 +10846,7 @@
      "shoulderElev": 162
     },
     "followThrough": {
+     "handSideChest": -0.06,
      "handSidePelvis": 0.06,
      "handSideRoot": -0.08,
      "handHeightOverHip": 0.37
@@ -11112,6 +11148,7 @@
      "shoulderElev": 45
     },
     "followThrough": {
+     "handSideChest": -0.29,
      "handSidePelvis": -0.26,
      "handSideRoot": -0.32,
      "handHeightOverHip": 0.03
@@ -11413,6 +11450,7 @@
      "shoulderElev": 154
     },
     "followThrough": {
+     "handSideChest": -0.19,
      "handSidePelvis": -0.15,
      "handSideRoot": -0.24,
      "handHeightOverHip": 0.16
@@ -11714,6 +11752,7 @@
      "shoulderElev": 150
     },
     "followThrough": {
+     "handSideChest": -0.2,
      "handSidePelvis": -0.14,
      "handSideRoot": -0.26,
      "handHeightOverHip": 0.13
@@ -12015,6 +12054,7 @@
      "shoulderElev": 50
     },
     "followThrough": {
+     "handSideChest": -0.22,
      "handSidePelvis": -0.2,
      "handSideRoot": -0.24,
      "handHeightOverHip": 0.04
@@ -12316,6 +12356,7 @@
      "shoulderElev": 81
     },
     "followThrough": {
+     "handSideChest": -0.19,
      "handSidePelvis": -0.15,
      "handSideRoot": -0.24,
      "handHeightOverHip": 0.16
@@ -12617,6 +12658,7 @@
      "shoulderElev": 149
     },
     "followThrough": {
+     "handSideChest": -0.2,
      "handSidePelvis": -0.14,
      "handSideRoot": -0.26,
      "handHeightOverHip": 0.13
@@ -12918,6 +12960,7 @@
      "shoulderElev": 49
     },
     "followThrough": {
+     "handSideChest": -0.32,
      "handSidePelvis": -0.27,
      "handSideRoot": -0.32,
      "handHeightOverHip": 0.51
@@ -13219,6 +13262,7 @@
      "shoulderElev": 64
     },
     "followThrough": {
+     "handSideChest": -0.38,
      "handSidePelvis": -0.32,
      "handSideRoot": -0.41,
      "handHeightOverHip": 0.46
@@ -13520,6 +13564,7 @@
      "shoulderElev": 75
     },
     "followThrough": {
+     "handSideChest": -0.4,
      "handSidePelvis": -0.38,
      "handSideRoot": -0.43,
      "handHeightOverHip": 0.47
@@ -13821,6 +13866,7 @@
      "shoulderElev": 62
     },
     "followThrough": {
+     "handSideChest": -0.32,
      "handSidePelvis": -0.27,
      "handSideRoot": -0.32,
      "handHeightOverHip": 0.51
@@ -14122,6 +14168,7 @@
      "shoulderElev": 67
     },
     "followThrough": {
+     "handSideChest": -0.38,
      "handSidePelvis": -0.32,
      "handSideRoot": -0.41,
      "handHeightOverHip": 0.46
@@ -14423,6 +14470,7 @@
      "shoulderElev": 93
     },
     "followThrough": {
+     "handSideChest": -0.4,
      "handSidePelvis": -0.38,
      "handSideRoot": -0.43,
      "handHeightOverHip": 0.47

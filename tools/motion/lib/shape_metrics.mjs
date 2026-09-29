@@ -2,6 +2,7 @@
 //  관절 위치만으로 재는 동작 모양 (동작 연구 PM) — 기준 클립과 게임 기록을 같은 식으로 잰다
 //   가슴 돌림 = 어깨선(shS − shO) 방향, 골반 돌림 = 엉덩이선(hipR − hipL) 방향 (오른손잡이). + = 칼 쪽으로 감음
 //   "칼끝 최고"(베기 시작 표시 뒤) 앞뒤 0.35 s 를 베기 창으로 본다
+//   지나가기 옆 거리 = 가슴 가운데 기준 머리 방향 틀 (디렉터 mx.mjs 와 같은 식, 재설계 §2-6 목표 −0.35 m)
 // ─────────────────────────────────────────────────────────────
 import { JOINTS } from './body.mjs';
 
@@ -67,9 +68,8 @@ export function shapeMetrics(rec) {
     const f = [Math.cos(y), 0, Math.sin(y)]; // 가슴 앞쪽 (돌림 부호: + 면 칼 쪽을 향함)
     handBack = Math.max(handBack, -((hS[0] - C[0]) * f[0] + (hS[2] - C[2]) * f[2] - 0.11));
     tipBack = Math.max(tipBack, C[0] - tp[0]);
-    const yp = pelvisYaw[i] / R2D;
-    const r = [-Math.sin(yp), 0, Math.cos(yp)]; // 골반 옆 (칼 쪽)
-    const side = (hS[0] - hip[0]) * r[0] + (hS[2] - hip[2]) * r[2];
+    // 지나가기: 가슴 가운데 기준, 머리 방향 틀 옆 좌표 (디렉터 mx.mjs hand_side_min 과 같은 식). 칼끝 최고 뒤에서 가장 멀리 넘어간 값
+    const side = hS[2] - C[2];
     if (i >= iTip) cross = Math.min(cross, sg < 0 ? side : -side);
     if (i > 0 && i >= lo && i <= hi) {
       handPath += len(sub(hS, P(i - 1, 'hS')));

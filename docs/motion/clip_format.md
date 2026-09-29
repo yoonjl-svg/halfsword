@@ -77,7 +77,7 @@
 
 ### 3-3. 요약 (`summary`)
 
-`time`(단계 길이) · `tipPeak`·`tipAtLine`·`handPeak` · `sequence`(골반·가슴·어깨·손·손목·칼끝 최고 시각 ms, tc 기준 · 최고값) · `ordered` · `trunkCarry` · `shareAtTipPeak` · `wind`(손 높이·앞뒤·어깨 들림) · `followThrough` · `range`(가슴·골반 회전, 척추 비틀림, 손·칼끝 길, 무게중심 옮김) · `opening`(앞이 빈 시간, 칼끝이 몸 뒤, 돌아선 각) · `checks`(팔·다리 넘침, 칼끝 최저 높이, 손목 각) · `keyPoses`(t0·tw·tr·tc·tf 의 관절각·자리).
+`time`(단계 길이) · `tipPeak`·`tipAtLine`·`handPeak` · `sequence`(골반·가슴·어깨·손·손목·칼끝 최고 시각 ms, tc 기준 · 최고값) · `ordered` · `trunkCarry` · `shareAtTipPeak` · `wind`(손 높이·앞뒤·어깨 들림) · `followThrough`(지나가기: `handSideChest` = 가슴 가운데 기준 머리 방향 틀 옆 거리, 디렉터 `mx.mjs` 의 hand_side_min 과 같은 식 · `handSidePelvis`·`handSideRoot` 참고 · `handHeightOverHip`) · `range`(가슴·골반 회전, 척추 비틀림, 손·칼끝 길, 무게중심 옮김) · `opening`(앞이 빈 시간, 칼끝이 몸 뒤, 돌아선 각) · `checks`(팔·다리 넘침, 칼끝 최저 높이, 손목 각) · `keyPoses`(t0·tw·tr·tc·tf 의 관절각·자리).
 
 ## 4. 쓸 때 주의
 
@@ -119,3 +119,4 @@
 |---|---|---|
 | clip/1, record/1 | 2026-09-29 | 처음 (같은 날 보통 벌 만드는 법을 섞기 → 크게 벌 줄이기로 바꿈 — 형식은 같음) |
 | record/1 | 2026-09-29 | `cond`(기록 조건: 커밋·시드·Hz·무기·걸음·skill·거리·결심·입력) 더함 — 없어도 읽힌다, 디렉터 요청 |
+| clip/1 | 2026-09-29 | `summary.followThrough.handSideChest` 더함(형식은 같음). 크게 Zornhau 지나가기 손 자리 고침(손을 배 앞으로 끌어들이지 않음) |
