@@ -1,5 +1,5 @@
 #!/bin/bash
-# 실험판 src(exp_src.patch) 가 필요하다(CAP/CCD/SWEPT 훅) — 이 저장소 src 에는 적용하지 않았다
+# CAP·SWEPT 는 이 저장소 src 의 config.js STRIKE.glitchFilter·sweep 으로 이어진다 (speedsweep.mjs). CCD 갈래만 실험판 src(exp_src.patch) 가 필요하다
 cd "$(dirname "$0")/../.." || exit 1
 S=16,20,24,28,32,36,40,45,50
 O=tools/redesign_probes/out/speed; mkdir -p $O

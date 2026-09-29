@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL, ARMOR, COMMIT } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, COMMIT, PHYSICS } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 
@@ -34,6 +34,16 @@ const _c = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _e = new THREE.Vector3();
 const _q = new THREE.Quaternion();
+const _g = new THREE.Vector3(); // 튐 검사용 (predict 의 point 가 _e 라 따로 둔다)
+// R0 스윕 판정용 (sweptContact). _a~_e·_q 는 afterStep 의 끌림·붙잡기가 쓰고 있어 따로 둔다
+const _sa = new THREE.Vector3();
+const _sb = new THREE.Vector3();
+const _sc = new THREE.Vector3();
+const _sp = new THREE.Vector3();
+const _sq = new THREE.Quaternion();
+const _sq2 = new THREE.Quaternion();
+const _sq3 = new THREE.Quaternion();
+const _sr = new THREE.Quaternion();
 
 /** 강체 상태(p, q, com, v, w)에서 한 점의 속도 */
 function velAt(st, point, out) {
@@ -65,6 +75,17 @@ export class Combat {
     this.bladeLast = -1e9;
     this.steelArmed = true; // 지금 칼 재질에 반발이 켜져 있는가
     this.touching = new Map(); // "칼콜라이더:몸콜라이더" → 마지막으로 닿은 스텝 (투구·뼈 되튐을 한 번만)
+    this.dt = PHYSICS.timestep; // afterStep 이 world.timestep 으로 덮어쓴다 (첫 스텝의 predict 도 읽는다)
+    // R0 튐 검사 (STRIKE.glitchFilter): 싸움꾼 → 직전 스텝의 스텝 전 칼 상태 {com, v, w}. 기록: 무기 id → 받아들인 접촉점 최고 빠르기(m/s, 자르지 않는다),
+    //  튐으로 버린 수, 마지막으로 버린 것. capDrops 는 R0 전 방식(30 m/s 넘어 버림)의 수 (R0_OFF=1 에서만 는다)
+    this.prevSword = new Map();
+    this.peakSpeed = new Map();
+    this.glitchDrops = 0;
+    this.capDrops = 0;
+    this.lastGlitch = null;
+    // R0 스윕 판정 (STRIKE.sweep): 결과 그릇(할당 없이 재사용)과 스윕으로 잡은 첫 접촉 수 (기록만)
+    this._hit = { point: new THREE.Vector3(), p: new THREE.Vector3(), q: new THREE.Quaternion() };
+    this.sweptHits = 0;
     this.fighters = [...new Set([...colliderInfo.values()].map((i) => i.fighter))];
     // Rapier 물리 훅: 칼과 상대 몸이 부딪히려 할 때마다(매 스텝) 불린다.
     // 여기서는 엔진 함수를 부르면 안 되므로, 스텝 직전에 저장해 둔 값(cacheState)만 쓴다.
@@ -130,28 +151,35 @@ export class Combat {
    * 핵심 분석. S/P = 칼/부위의 상태 { p, q, com, v, w }
    * @returns {{type, zone, energy, severity, pass, absorb, local, dir, t, helmet, speed}}
    */
-  analyze(pr, point, S, P, predicting = false) {
+  analyze(pr, point, S, P, predicting = false, bladePt = null) {
     const att = pr.w.fighter;
-    const vBlade = velAt(S, point, new THREE.Vector3());
+    // bladePt (R0 스윕): point 가 스텝 도중 자세에서 닿은 점이면, 같은 칼날 점을 S(스텝 전) 자세로 옮긴 자리. 칼 쪽 속도·칼날 위 위치는 이것으로, 몸 쪽은 point 로
+    const bp = bladePt || point;
+    const vBlade = velAt(S, bp, new THREE.Vector3());
     const vBody = velAt(P, point, new THREE.Vector3());
     const rel = vBlade.sub(vBody);
     const speed = rel.length();
     if (speed < 0.5) return null;
-    // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다
-    if (speed > 30) return null;
+    if (!STRIKE.glitchFilter) {
+      // R0 전 방식 (R0_OFF=1): 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다
+      if (speed > 30) {
+        this.capDrops++;
+        return null;
+      }
+    } else if (this.glitch(att, S, bp, vBody, speed)) return null; // R0 (§6-1): 빠르기 한도 없음, 물리 튐만 거른다
     const dir = rel.clone().divideScalar(speed);
 
     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
     const axis = _a.copy(Y).applyQuaternion(S.q);
     const edge = _b.copy(X).applyQuaternion(S.q);
     const HL = att.weaponCfg.hiltLength;
-    const local = point.clone().sub(S.p).applyQuaternion(_q.copy(S.q).invert());
+    const local = bp.clone().sub(S.p).applyQuaternion(_q.copy(S.q).invert());
     const t = THREE.MathUtils.clamp((local.y - HL) / att.weaponCfg.bladeLength, 0, 1);
     // 날이 없는 무기(나뭇가지·고무 닭 등)나 부러진 무기는 베기·찌르기 판정 없이 늘 둔기로 친다 (BREAK.stubEdge 면 부러진 토막도 날로 — 효율은 fighter.breakWeapon 이 깎는다)
     const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.edged && (!att.weaponBroken || BREAK.stubEdge);
 
     // 유효 질량: 맞은 점에서의 강체 칼의 실제 유효 질량 + 팔·몸의 도움
-    const mFree = freeMass(pr.w.fighter.swordProps, S, point, dir);
+    const mFree = freeMass(pr.w.fighter.swordProps, S, bp, dir);
     let mEff = mFree + STRIKE.armAssist;
     let ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
@@ -283,6 +311,40 @@ export class Combat {
     };
   }
 
+  /**
+   * R0 튐 검사 (STRIKE.glitchFilter, docs/whole_body_redesign.md §6-1) — 빠르기 한도가 아니다.
+   * 접촉점 상대 빠르기가 NaN 이거나, 직전 스텝에 남겨 둔 칼 상태(prevSword)로 같은 점에서 잰 값보다 한 스텝에 glitchAcc·dt 넘게 '늘었을'
+   * 때만 튐으로 버린다. 느려지는 쪽·되튐은 거르지 않는다. 직전 상태가 없거나(첫 스텝) S 가 스텝 전 캐시가 아니면(측정 도구가 합성한 상태)
+   * 거르지 않는다. 받아들인 접촉의 무기별 최고 빠르기는 peakSpeed 에 기록만 한다 (§6-1: '측정 최고의 3배'는 기준이 아니라 기록용)
+   */
+  glitch(att, S, point, vBody, speed) {
+    if (!Number.isFinite(speed)) {
+      this.glitchDrops++;
+      return true;
+    }
+    const p = this.prevSword.get(att);
+    if (p && S === att.cache?.sword) {
+      const sPrev = velAt(p, point, _g).sub(vBody).length();
+      if (speed - sPrev > STRIKE.glitchAcc * this.dt) {
+        this.glitchDrops++;
+        this.lastGlitch = { weapon: att.weapon?.id, speed, sPrev, step: this.stepNo };
+        return true;
+      }
+    }
+    const id = att.weapon?.id;
+    if (id) this.peakSpeed.set(id, Math.max(this.peakSpeed.get(id) || 0, speed));
+    return false;
+  }
+
+  /** 이 스텝의 스텝 전 칼 상태를 다음 스텝의 튐 검사에 쓰려고 남긴다 (cacheState 가 같은 객체를 덮어쓰므로 값을 복사. velAt 이 읽는 com·v·w 만) */
+  keepSword(f, S) {
+    let k = this.prevSword.get(f);
+    if (!k) this.prevSword.set(f, (k = { com: new THREE.Vector3(), v: new THREE.Vector3(), w: new THREE.Vector3() }));
+    k.com.copy(S.com);
+    k.v.copy(S.v);
+    k.w.copy(S.w);
+  }
+
   /** 매 물리 스텝 직후: 가르고 있는 칼 처리 + 일반 충돌(튕김) 처리 */
   afterStep(world, eventQueue) {
     this.stepNo++;
@@ -309,22 +371,36 @@ export class Combat {
       });
       const sw = c.pr.w.body;
       const vb = c.pr.v.body;
+      // R0 스윕 (STRIKE.sweep, §6-3): 통과로 예측했는데 이 스텝에 닿는 점이 없으면 직전 자세와 지금 자세 사이에서 찾는다 (빠른 칼은 한 스텝에 얇은 팔·목을 건너뛴다).
+      //  pairOf 를 다시 보는 것은 contactShape 가 충돌 그룹(부활 중 유령 몸, revive.js)·손에서 놓친 칼을 모르기 때문
+      const hit = STRIKE.sweep && !point && !c.applied && col1 && col2 && this.pairOf(c.wc, c.vc) ? this.sweptContact(c, col1, col2) : null;
+      if (hit) point = hit.point.clone();
+      let vpt = point; // 몸 쪽 점 (스윕이면 닿은 자리 그대로. 칼 쪽 point 는 아래에서 그 칼날 점의 지금 자리로 옮긴다)
       if (!c.applied) {
         if (!point) continue; // 아직 실제로 닿지 않음 (가까이만 옴)
         c.applied = true;
-        const r = this.strike(c.pr, point, true); // 상처는 처음 닿는 순간에 한 번
+        let bladePt = null;
+        if (hit) {
+          // 스윕: 칼 기준 자리는 닿은 자세로. 판정(strike)은 스텝 전 칼 상태로 하므로 같은 칼날 점을 그 자세로 옮겨 준다 (속도·칼날 위 위치가 정확)
+          c.localPt = point.clone().sub(hit.p).applyQuaternion(_sr.copy(hit.q).invert());
+          const S = c.pr.w.fighter.cache.sword;
+          bladePt = c.localPt.clone().applyQuaternion(S.q).add(S.p);
+          this.sweptHits++;
+        }
+        const r = this.strike(c.pr, point, true, bladePt); // 상처는 처음 닿는 순간에 한 번
         // 몸이 흡수할 실제 에너지 (판정용 보정 전 값)
         c.Eleft = r ? Math.min(r.energy, r.absorb) / STRIKE.energyScale : 0;
         c.stuck = r ? r.stuck : false;
         c.mFree = r ? r.mFree : 0.3;
         c.stuckT = 0;
-        c.localPt = point.clone().sub(tv(sw.translation())).applyQuaternion(rotQ(sw).invert());
+        if (hit) point = c.localPt.clone().applyQuaternion(rotQ(sw)).add(tv(sw.translation())); // 끌림은 그 칼날 점의 지금 자리에서 (닿은 자리에 두면 미는 방향이 회전한 만큼 어긋난다)
+        else c.localPt = point.clone().sub(tv(sw.translation())).applyQuaternion(rotQ(sw).invert());
       }
       // 박힌 칼은 닿은 자리에 붙잡아 둔다
-      if (!point && c.stuckT > 0) point = c.localPt.clone().applyQuaternion(rotQ(sw)).add(tv(sw.translation()));
+      if (!point && c.stuckT > 0) vpt = point = c.localPt.clone().applyQuaternion(rotQ(sw)).add(tv(sw.translation()));
       if (!point) continue;
       const va = sw.velocityAtPoint(vp(point));
-      const vv = vb.velocityAtPoint(vp(point));
+      const vv = vb.velocityAtPoint(vp(vpt));
       const rel = _e.set(va.x - vv.x, va.y - vv.y, va.z - vv.z);
       const s = rel.length();
       if (s < 1e-3) continue;
@@ -340,13 +416,27 @@ export class Combat {
           c.held = true; // 빠질 때 onUnstick 을 부른다
         }
       } else if (c.stuckT > 0) {
-        // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다)
-        //  결심 베기 (L1, 획·버티기 중): 한 순간에 붙잡는 몫은 칼 자체의 유효 질량까지만 (팔 몫 armAssist 를 더하면 가벼운 칼은 한 스텝에
-        //  칼 빠르기가 거꾸로 뒤집혀, 손목이 조금만 밀어도 칼이 떨며 돌았다 — 라이트세이버 칼끝 30~60 m/s. 결심을 끄면 예전 그대로)
+        // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다). 한 순간의 충격 J ≤ 0.8·mHold·s 라 상대 속도가 뒤집히지 않는다
         const af = c.pr.w.fighter;
         const cm = af.commit;
-        const held = COMMIT.stuckHoldFree && (cm?.on || af.skill?.rest?.w > 0);
-        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + (held ? 0 : STRIKE.armAssist)) * s);
+        let mHold; // 한 순간에 붙잡는 몫의 질량 (kg)
+        if (STRIKE.gripMu) {
+          // R0 (§6-2): 두 몸의 환산질량 μ = 1/(1/m칼 + 1/m부위). 충격은 칼 강체엔 칼날 중심선 위 pA 에, 몸엔 뼈 위 pv 에 걸리므로(아래) 그 점·그 방향의
+          //  유효 질량으로 잰다. 칼은 손 없이 강체 하나로: applyImpulseAtPoint 가 미는 몸이 칼 강체뿐이라서다. 예전엔 처음 닿을 때의 칼 유효 질량에
+          //  팔 몫 armAssist 까지 더해 붙잡아, 가벼운 칼(레이피어·라이트세이버)은 그 몫이 칼 강체보다 무거워 한 스텝에 칼 빠르기가 뒤집혀 떨었다 (칼끝 33~72 m/s)
+          const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
+          const o = tv(sw.translation());
+          const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
+          const mA = freeMass(af.swordProps, { q: rotQ(sw), com: tv(sw.worldCom()) }, pA, dir); // freeMass 는 S.q·S.com 만 읽는다
+          const mV = bodyMass(vb, onBone(c.pr.v, vpt), dir);
+          mHold = 1 / (1 / mA + 1 / mV);
+        } else {
+          // R0 전 방식 (R0_OFF=1): 처음 닿을 때의 칼 유효 질량 + 팔 몫. 결심 베기 (L1, 획·버티기 중)엔 칼 자체의 유효 질량까지만 (COMMIT.stuckHoldFree —
+          //  팔 몫 armAssist 를 더하면 가벼운 칼은 한 스텝에 칼 빠르기가 거꾸로 뒤집혀, 손목이 조금만 밀어도 칼이 떨며 돌았다 — 라이트세이버 칼끝 30~60 m/s)
+          const held = COMMIT.stuckHoldFree && (cm?.on || af.skill?.rest?.w > 0);
+          mHold = c.mFree + (held ? 0 : STRIKE.armAssist);
+        }
+        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * mHold * s);
         c.stuckT -= dt;
         c.seen = this.stepNo;
         // 결심 베기 (L1): 칼이 박힌 동안 획 시간을 늦추고 끝 너머로 미는 몫을 거둔다 (skill.updateCut). 획이 끝난 뒤 버티는 동안도 (updateRest)
@@ -358,7 +448,7 @@ export class Combat {
         const o = tv(sw.translation());
         const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
         sw.applyImpulseAtPoint({ x: -dir.x * J, y: -dir.y * J, z: -dir.z * J }, vp(pA), true);
-        const pv = onBone(c.pr.v, point);
+        const pv = onBone(c.pr.v, vpt);
         vb.applyImpulseAtPoint({ x: dir.x * J * 0.8, y: dir.y * J * 0.8, z: dir.z * J * 0.8 }, vp(pv), true);
       }
     }
@@ -388,6 +478,8 @@ export class Combat {
     this.bladeClash(world, bladePairs);
     this.armSteel();
     for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
+    // R0 튐 검사: 이 스텝의 스텝 전 칼 상태를 다음 스텝과 견주려고 남긴다
+    if (STRIKE.glitchFilter) for (const f of this.fighters) if (f.cache?.sword) this.keepSword(f, f.cache.sword);
   }
 
   /**
@@ -540,7 +632,7 @@ export class Combat {
   }
 
   /** 실제 접촉점에서 다시 정확히 분석하고 상처/에너지 전달을 적용 */
-  strike(pr, point, passing) {
+  strike(pr, point, passing, bladePt = null) {
     const att = pr.w.fighter;
     const vic = pr.v.fighter;
     const key = `${att.index}:${pr.v.part}`;
@@ -550,11 +642,11 @@ export class Combat {
     if (vic.hitCooldowns.has(key)) {
       // 같은 부위에 방금 상처가 났으면 새 상처는 없지만, 가르고 지나가는 칼은 여전히 저항을 받는다
       if (!passing) return null;
-      const r = this.analyze(pr, point, S, P);
+      const r = this.analyze(pr, point, S, P, false, bladePt);
       if (r) r.stuck = r.energy <= r.absorb;
       return r;
     }
-    const r = this.analyze(pr, point, S, P);
+    const r = this.analyze(pr, point, S, P, false, bladePt);
     if (!r || r.energy < STRIKE.minEnergy) return null;
     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
@@ -565,6 +657,59 @@ export class Combat {
     if (att.commit?.on) att.skill.strikeResult(r.pass ? 'through' : 'hit', r);
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
+  }
+
+  /**
+   * R0 스윕 판정 (STRIKE.sweep, docs/whole_body_redesign.md §6-3). 빠른 칼은 한 스텝에 얇은 팔·목을 건너뛴다 — 엔진의 soft CCD 는 칼 무게중심의 직선 이동만
+   * 보고(0.2 는 그대로 둔다) 휘두르는 회전은 못 본다. cutting 에 있는(통과로 예측한) 쌍이 이 스텝에 닿는 점이 없으면, 스텝 전 캐시 자세와 지금 자세 사이를
+   * 칼끝 이동 sweepStep 마다 N(2~16)개 자세로 slerp/lerp 해 부위 콜라이더와 칼날 모양을 contactShape 로 잰다. 지금 자세(s = 1)는 엔진이 다음 스텝에 보니
+   * s = 0 ~ (N−1)/N 만. 처음 닿은 점(칼날 쪽, 월드)과 그때의 칼 자세를 돌려준다 (this._hit 재사용, 스텝마다 THREE 할당 없음).
+   * N 의 위 16 은 속도 한도가 아니다: 표본 간격이 팔뚝 굵기(0.08 m)를 넘는 것은 칼끝이 한 스텝에 1.3 m 넘게 갈 때(120 Hz 에서 150 m/s 위)뿐이고,
+   * 그때도 속도·에너지는 건드리지 않는다 (판정을 놓칠 수 있을 뿐)
+   */
+  sweptContact(c, bladeCol, partCol) {
+    const att = c.pr.w.fighter;
+    const S = att.cache?.sword;
+    if (!S || !bladeCol.isEnabled() || !partCol.isEnabled()) return null;
+    const sw = c.pr.w.body;
+    const t1 = sw.translation();
+    const r1 = sw.rotation();
+    const p1 = _sa.set(t1.x, t1.y, t1.z);
+    const q1 = _sq2.set(r1.x, r1.y, r1.z, r1.w);
+    const L = att.weaponCfg.hiltLength + att.weaponCfg.bladeLength; // 부러진 칼은 breakWeapon 이 bladeLength 를 줄여 둔다
+    const travel = _sb.set(0, L, 0).applyQuaternion(S.q).add(S.p).distanceTo(_sc.set(0, L, 0).applyQuaternion(q1).add(p1)); // 칼끝 이동
+    if (!(travel > 1e-4)) return null; // 안 움직였다 (NaN 포함)
+    const N = Math.min(16, Math.max(2, Math.ceil(travel / STRIKE.sweepStep)));
+    // 칼날 모양 (엔진 JS 쪽 캐시). 부러진 칼은 fighter.trimSword 가 setHalfExtents 로 줄였는데 캐시는 옛 크기라(setHalfExtents 는 캐시를 안 비운다) 다르면 새로 읽는다
+    let shape = bladeCol.shape;
+    if (att.weaponBroken && shape.halfExtents) {
+      const he = bladeCol.halfExtents();
+      if (he && Math.abs(shape.halfExtents.y - he.y) > 1e-9) {
+        bladeCol.clearShapeCache();
+        shape = bladeCol.shape;
+      }
+    }
+    const tc = bladeCol.translation();
+    const rc = bladeCol.rotation();
+    const qi = _sq3.copy(q1).invert();
+    const off = _sb.set(tc.x, tc.y, tc.z).sub(p1).applyQuaternion(qi); // 칼날 콜라이더의 칼 기준 자리
+    const rl = _sr.copy(qi).multiply(_sq.set(rc.x, rc.y, rc.z, rc.w)); // 칼 기준 콜라이더 회전 (칼날은 항등이지만 일반화)
+    for (let i = 0; i < N; i++) {
+      const s = i / N;
+      const q = _sq.copy(S.q).slerp(q1, s);
+      const p = _sp.copy(S.p).lerp(p1, s);
+      const pos = _sc.copy(off).applyQuaternion(q).add(p);
+      const rot = _sq3.copy(q).multiply(rl);
+      const sc = partCol.contactShape(shape, pos, rot, 0.004); // 엔진은 x·y·z(·w)만 읽으니 THREE 벡터·사원수를 그대로 준다
+      if (sc && sc.distance < 0.004) {
+        const h = this._hit;
+        h.point.set(sc.point2.x, sc.point2.y, sc.point2.z); // 칼날 쪽 점, 월드 좌표 (위의 manifold 경로도 칼날 쪽 점을 쓴다)
+        h.p.copy(p);
+        h.q.copy(q);
+        return h;
+      }
+    }
+    return null;
   }
 }
 
