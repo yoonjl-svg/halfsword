@@ -237,11 +237,11 @@ function specTable(list) {
   L.push('');
   L.push('## 4. 반동·허점 (어림값)');
   L.push('');
-  L.push('| 베기 | 크기 | 앞이 빈 시간 s | 칼끝이 몸 뒤에 있는 시간 s | 가장 많이 돌아선 각° | 무게중심 옮김 m | 팔 넘침 m | 칼끝 가장 낮은 높이 m | 아래팔-칼 각 최대° | 135° 넘은 시간 s |');
-  L.push('|---|---|---|---|---|---|---|---|---|---|');
+  L.push('| 베기 | 크기 | 앞이 빈 시간 s | 칼끝이 몸 뒤에 있는 시간 s | 가장 많이 돌아선 각° | 무게중심 옮김 m | 팔 넘침 m | 칼끝 가장 낮은 높이 m | 아래팔-칼 각 최대° | 135° 넘은 시간 s | 160° 넘은 시간 s |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|---|');
   for (const c of R) {
     const s = c.summary;
-    L.push(`| ${c.nameKo} | ${c.size} | ${s.opening.openTime} | ${s.opening.bladeBehindTime} | ${s.opening.maxTurn} | ${s.range.comShift} | ${s.checks.reachOver} | ${s.checks.tipMin} | ${s.checks.wristMax} | ${s.checks.wristClampTime} |`);
+    L.push(`| ${c.nameKo} | ${c.size} | ${s.opening.openTime} | ${s.opening.bladeBehindTime} | ${s.opening.maxTurn} | ${s.range.comShift} | ${s.checks.reachOver} | ${s.checks.tipMin} | ${s.checks.wristMax} | ${s.checks.wristClampTime} | ${s.checks.wristOver160} |`);
   }
   L.push('');
   L.push('## 5. 표시 자세 — 관절각과 몸 둘레 자리 (large, 오른쪽)');
@@ -258,7 +258,7 @@ function specTable(list) {
     }
   }
   L.push('');
-  L.push('아래팔-칼 각은 칼과 칼 든 아래팔 사이 각이다. 사람 두손 망치 쥐기로 약 135° 까지가 어림 한계다 [추정]. 이를 넘는 순간은 저작한 칼이 손목으로 낼 수 없는 늦춤을 요구한 것이다(v0 는 막지 않고 적기만 한다 — `tools/motion/lib/body.mjs` WRIST_MAX 주석). 크게 벌은 감기 직후 0.05~0.1 s, 보통 벌은 작게(게임 자세)와 크게를 그냥 섞은 탓에 감기 끝에서 더 길게 넘는다. v1 에서 고친다.');
+  L.push('아래팔-칼 각은 칼과 칼 든 아래팔 사이 각이다. 사람 어림 [추정, 측정 자료 없음]: 두손 망치 쥐기 약 90° + 손목 옆굽힘으로 약 135°, 손목 폄(최대 70°)까지 보태면 약 160°. 160° 를 넘는 순간은 저작한 칼이 손목으로 낼 수 없는 늦춤을 요구한 것이다(v0 는 막지 않고 적기만 한다 — `tools/motion/lib/body.mjs` WRIST_MAX 주석). 크게 벌은 대부분 160° 안이고, 보통 벌은 작게(게임 자세)와 크게를 그냥 섞은 탓에 감기 끝에서 넘는다 — 게임에서 작은 벌과 큰 벌을 곧게 섞어도 같은 일이 생긴다. v1 에서 보통 벌을 따로 저작한다.');
   L.push('');
   L.push('칼끝 가장 낮은 높이가 0 가까이거나 − 이면 칼끝이 땅에 닿는다. 작게 벌의 왼쪽 바꿈·바보 자세는 게임 자세표 값 그대로라 칼끝이 땅 높이까지 내려간다(게임에서는 땅이 막는다). 보통 벌은 섞은 값이라 더 내려가는 곳이 있다.');
   L.push('');

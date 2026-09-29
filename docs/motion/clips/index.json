@@ -287,7 +287,8 @@
      "legOver": 0,
      "tipMin": -0.11,
      "wristMax": 108,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -576,7 +577,8 @@
      "legOver": 0,
      "tipMin": -0.12,
      "wristMax": 165,
-     "wristClampTime": 0.21
+     "wristClampTime": 0.21,
+     "wristOver160": 0.03
     }
    }
   },
@@ -865,7 +867,8 @@
      "legOver": 0,
      "tipMin": 0.01,
      "wristMax": 154,
-     "wristClampTime": 0.06
+     "wristClampTime": 0.06,
+     "wristOver160": 0
     }
    }
   },
@@ -1154,7 +1157,8 @@
      "legOver": 0,
      "tipMin": 0.01,
      "wristMax": 88,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -1443,7 +1447,8 @@
      "legOver": 0,
      "tipMin": -0.12,
      "wristMax": 96,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -1732,7 +1737,8 @@
      "legOver": 0,
      "tipMin": 0.01,
      "wristMax": 91,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -2021,7 +2027,8 @@
      "legOver": 0,
      "tipMin": 0,
      "wristMax": 108,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -2310,7 +2317,8 @@
      "legOver": 0,
      "tipMin": 0.12,
      "wristMax": 136,
-     "wristClampTime": 0.02
+     "wristClampTime": 0.02,
+     "wristOver160": 0
     }
    }
   },
@@ -2599,7 +2607,8 @@
      "legOver": 0,
      "tipMin": 0.24,
      "wristMax": 144,
-     "wristClampTime": 0.03
+     "wristClampTime": 0.03,
+     "wristOver160": 0
     }
    }
   },
@@ -2888,7 +2897,8 @@
      "legOver": 0,
      "tipMin": 0,
      "wristMax": 92,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -3177,7 +3187,8 @@
      "legOver": 0,
      "tipMin": 0.12,
      "wristMax": 101,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -3466,7 +3477,8 @@
      "legOver": 0,
      "tipMin": 0.24,
      "wristMax": 111,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -3755,7 +3767,8 @@
      "legOver": 0,
      "tipMin": 1.17,
      "wristMax": 114,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -4044,7 +4057,8 @@
      "legOver": 0,
      "tipMin": 1.32,
      "wristMax": 177,
-     "wristClampTime": 0.22
+     "wristClampTime": 0.22,
+     "wristOver160": 0.11
     }
    }
   },
@@ -4333,7 +4347,8 @@
      "legOver": 0,
      "tipMin": 0.94,
      "wristMax": 163,
-     "wristClampTime": 0.19
+     "wristClampTime": 0.19,
+     "wristOver160": 0.02
     }
    }
   },
@@ -4622,7 +4637,8 @@
      "legOver": 0,
      "tipMin": 1.17,
      "wristMax": 105,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -4911,7 +4927,8 @@
      "legOver": 0,
      "tipMin": 1.32,
      "wristMax": 132,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -5200,7 +5217,8 @@
      "legOver": 0,
      "tipMin": 0.93,
      "wristMax": 129,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -5489,7 +5507,8 @@
      "legOver": 0,
      "tipMin": 1.04,
      "wristMax": 94,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -5778,7 +5797,8 @@
      "legOver": 0,
      "tipMin": 0.91,
      "wristMax": 169,
-     "wristClampTime": 0.17
+     "wristClampTime": 0.17,
+     "wristOver160": 0.13
     }
    }
   },
@@ -6067,7 +6087,8 @@
      "legOver": 0,
      "tipMin": 0.7,
      "wristMax": 151,
-     "wristClampTime": 0.11
+     "wristClampTime": 0.11,
+     "wristOver160": 0
     }
    }
   },
@@ -6356,7 +6377,8 @@
      "legOver": 0,
      "tipMin": 1.04,
      "wristMax": 89,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -6645,7 +6667,8 @@
      "legOver": 0,
      "tipMin": 0.91,
      "wristMax": 96,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -6934,7 +6957,8 @@
      "legOver": 0,
      "tipMin": 0.7,
      "wristMax": 88,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -7223,7 +7247,8 @@
      "legOver": 0,
      "tipMin": 0.01,
      "wristMax": 121,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -7512,7 +7537,8 @@
      "legOver": 0,
      "tipMin": 0.08,
      "wristMax": 82,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -7801,7 +7827,8 @@
      "legOver": 0,
      "tipMin": 0.09,
      "wristMax": 121,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -8090,7 +8117,8 @@
      "legOver": 0,
      "tipMin": -0.11,
      "wristMax": 88,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -8379,7 +8407,8 @@
      "legOver": 0,
      "tipMin": 0.08,
      "wristMax": 96,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -8668,7 +8697,8 @@
      "legOver": 0,
      "tipMin": 0.09,
      "wristMax": 111,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -8957,7 +8987,8 @@
      "legOver": 0,
      "tipMin": 1.04,
      "wristMax": 106,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -9246,7 +9277,8 @@
      "legOver": 0,
      "tipMin": 0.87,
      "wristMax": 135,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -9535,7 +9567,8 @@
      "legOver": 0.001,
      "tipMin": 0.7,
      "wristMax": 140,
-     "wristClampTime": 0.03
+     "wristClampTime": 0.03,
+     "wristOver160": 0
     }
    }
   },
@@ -9824,7 +9857,8 @@
      "legOver": 0,
      "tipMin": 1.04,
      "wristMax": 92,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -10113,7 +10147,8 @@
      "legOver": 0,
      "tipMin": 0.87,
      "wristMax": 100,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -10402,7 +10437,8 @@
      "legOver": 0,
      "tipMin": 0.7,
      "wristMax": 108,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -10691,7 +10727,8 @@
      "legOver": 0,
      "tipMin": -0.11,
      "wristMax": 82,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -10980,7 +11017,8 @@
      "legOver": 0,
      "tipMin": 0.01,
      "wristMax": 165,
-     "wristClampTime": 0.16
+     "wristClampTime": 0.16,
+     "wristOver160": 0.07
     }
    }
   },
@@ -11269,7 +11307,8 @@
      "legOver": 0,
      "tipMin": 0.14,
      "wristMax": 147,
-     "wristClampTime": 0.07
+     "wristClampTime": 0.07,
+     "wristOver160": 0
     }
    }
   },
@@ -11558,7 +11597,8 @@
      "legOver": 0,
      "tipMin": 0.01,
      "wristMax": 88,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -11847,7 +11887,8 @@
      "legOver": 0,
      "tipMin": 0.01,
      "wristMax": 96,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -12136,7 +12177,8 @@
      "legOver": 0,
      "tipMin": 0.14,
      "wristMax": 88,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -12425,7 +12467,8 @@
      "legOver": 0,
      "tipMin": 1.17,
      "wristMax": 110,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -12714,7 +12757,8 @@
      "legOver": 0,
      "tipMin": 1.3,
      "wristMax": 124,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -13003,7 +13047,8 @@
      "legOver": 0,
      "tipMin": 1.24,
      "wristMax": 114,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -13292,7 +13337,8 @@
      "legOver": 0,
      "tipMin": 1.17,
      "wristMax": 105,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -13581,7 +13627,8 @@
      "legOver": 0,
      "tipMin": 1.3,
      "wristMax": 114,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   },
@@ -13870,7 +13917,8 @@
      "legOver": 0,
      "tipMin": 1.24,
      "wristMax": 113,
-     "wristClampTime": 0
+     "wristClampTime": 0,
+     "wristOver160": 0
     }
    }
   }

@@ -427,7 +427,7 @@ function renderSheet() {
       rows: [
         { l: '운동 사슬 순서', sub: `골반 ${P['골반'].t} → 가슴 ${P['가슴'].t} → 손 ${P['손'].t} → 칼끝 ${P['칼끝'].t} ms (겨눈 선 기준)`, v: ordered ? '순서대로' : '뒤섞임', c: ordered ? (gapPC >= 20 && gapPC <= 60 ? chip('good', '목표 안') : chip('warn', '간격 좁음')) : chip('bad', '목표 밖') },
         { l: '척추 비틀림 최대 (X-factor)', sub: '목표 40° 이상 · 사람 가슴허리 돌림 약 45° (AAOS, 참고·한도 아님)', v: `${s.range.xFactorMax}°`, c: judge(s.range.xFactorMax, { min: 40, near: 5, na: !TURNING.has(cut) }) },
-        { l: '손목 (아래팔-칼) 각 최대', sub: `사람 두손 쥐기 약 135° [추정, 참고·한도 아님] · 넘은 시간 ${fmt(s.checks.wristClampTime)} s`, v: `${s.checks.wristMax}°`, c: s.checks.wristMax <= 135 ? chip('good', '사람 범위') : chip('warn', '관찰: 사람 범위 밖') },
+        { l: '손목 (아래팔-칼) 각 최대', sub: `사람 어림: 옆굽힘 약 135°, 손목 폄까지 약 160° [추정, 참고·한도 아님] · 160° 넘은 시간 ${fmt(s.checks.wristOver160 ?? 0)} s`, v: `${s.checks.wristMax}°`, c: s.checks.wristMax <= 135 ? chip('good', '사람 범위') : s.checks.wristMax <= 160 ? chip('good', '손목을 크게 폄') : chip('warn', '관찰: 사람 범위 밖') },
         { l: '팔이 모자란 길이', sub: '게임 팔(어깨→칼자루 0.565 m)로 닿는가 · 0.03 은 지금 쟁기 자세 자체', v: `${fmt(s.checks.reachOver, 3)} m`, c: s.checks.reachOver <= 0.035 ? chip('good', '닿음') : chip('warn', '조금 모자람') },
         { l: '칼끝 가장 낮은 높이', sub: '0 = 땅 · 작게는 게임 자세표 그대로라 땅까지 내려가는 자세가 있다', v: `${fmt(s.checks.tipMin)} m`, c: s.checks.tipMin >= 0.05 ? chip('good', '땅 위') : s.checks.tipMin >= -0.02 ? chip('warn', '땅 스침') : chip('bad', '땅 아래') },
       ],

@@ -198,7 +198,55 @@ export function sampleClip(def, side = 1) {
     const J = pose(ch, side);
     frames.push({ t, ch, J });
   }
+  // 손목 한계 끌어오기는 v0 에서 끈다(def.wristLimit === true 일 때만): 감기 중 아래팔이 빨리 움직이는 곳에서 칼이 따라 튀었다
+  //  (보통 가로 베기 칼끝 순간 52 m/s). 넘는 각은 summary.checks 에 적기만 한다
+  if (def.wristLimit === true) wristLimit(frames, side);
   return { frames, marks };
+}
+
+/**
+ * 손목 한계 (두 번 돌림, 오프라인): 칼 든 아래팔과 칼 사이 각이 WRIST_HUMAN(135°, 사람 두손 쥐기 어림 [추정])을 넘는 만큼
+ *  칼을 아래팔 쪽으로 끌어온다. 한 표본씩 막으면 팔을 많이 접은 자세에서 아래팔 방향이 조금만 바뀌어도 칼이 튀므로(v0 시험:
+ *  칼끝 순간 37~80 m/s), 아래팔 방향과 넘친 각을 시간으로 부드럽게(가우스 σ 30 ms) 한 뒤 끌어온다. 이것은 기준 동작을
+ *  사람답게 만드는 저작 규칙이지 게임의 한도가 아니다.
+ */
+function wristLimit(frames, side) {
+  const n = frames.length;
+  const fore = frames.map((f) => v3.norm(v3.sub(f.J.hS, f.J.elS)));
+  const gauss = (arr, sigma, pick) => {
+    const r = Math.ceil(sigma * 3 * HZ);
+    const w = [];
+    for (let k = -r; k <= r; k++) w.push(Math.exp(-0.5 * ((k / HZ) / sigma) ** 2));
+    return arr.map((_, i) => {
+      let acc = null, ws = 0;
+      for (let k = -r; k <= r; k++) {
+        const j = Math.min(n - 1, Math.max(0, i + k));
+        const v = pick(arr[j]);
+        acc = acc == null ? (Array.isArray(v) ? v.map((x) => x * w[k + r]) : v * w[k + r]) : Array.isArray(v) ? acc.map((x, q) => x + v[q] * w[k + r]) : acc + v * w[k + r];
+        ws += w[k + r];
+      }
+      return Array.isArray(acc) ? acc.map((x) => x / ws) : acc / ws;
+    });
+  };
+  const foreS = gauss(fore, 0.03, (v) => v).map((v) => v3.norm(v));
+  const excess = frames.map((f, i) => Math.max(0, Math.acos(Math.max(-1, Math.min(1, v3.dot(foreS[i], f.J.dW)))) * R2D - WRIST_HUMAN));
+  // 넘친 각을 부드럽게 하되 봉우리가 깎이지 않게 조금 부풀린다
+  const exS = gauss(excess, 0.03, (v) => v).map((x, i) => Math.max(x * 1.3, excess[i] > 0 ? excess[i] * 0.9 : 0));
+  for (let i = 0; i < n; i++) {
+    const e = exS[i];
+    if (e <= 0.2) continue;
+    const f = frames[i];
+    const d = f.J.dW;
+    let k = v3.cross(d, foreS[i]); // d 를 아래팔 쪽으로 돌리는 축
+    if (v3.len(k) < 1e-6) continue;
+    k = v3.norm(k);
+    const a = e * D2R;
+    const kxd = v3.cross(k, d);
+    const dN = v3.norm(v3.add(v3.add(v3.mul(d, Math.cos(a)), v3.mul(kxd, Math.sin(a))), v3.mul(k, v3.dot(k, d) * (1 - Math.cos(a)))));
+    const ch = { ...f.ch, dirW: dN };
+    f.ch = ch;
+    f.J = pose(ch, side);
+  }
 }
 
 /** 표본 → 클립 JSON 한 벌 + 측정값 */
@@ -398,7 +446,8 @@ export function summarize(rows, marks) {
   const legOver = Math.max(...rows.map((r) => Math.max(r.J.legs.L.over, r.J.legs.R.over)));
   const tipMin = Math.min(...rows.map((r) => r.J.tip[1])); // 칼끝이 가장 낮았던 높이 (0 = 땅)
   const wristMax = Math.max(...rows.map((r) => r.ang.wrist)); // 아래팔-칼 각 최대 (body.mjs WRIST_MAX 로 막힌다)
-  const wristClampTime = rows.filter((r) => r.ang.wrist > WRIST_HUMAN + 0.5).length / HZ; // 아래팔-칼 각이 사람 어림 한계(135°)를 넘은 시간
+  const wristClampTime = rows.filter((r) => r.ang.wrist > WRIST_HUMAN + 0.5).length / HZ; // 아래팔-칼 각이 135° 를 넘은 시간 (손목 옆굽힘만으로 닿는 어림)
+  const wristOver160 = rows.filter((r) => r.ang.wrist > 160.5).length / HZ; // 160° 를 넘은 시간 (손목 폄까지 보태도 어려운 어림)
   // 칼끝 최고 때 가슴 각속도가 자기 최고의 몇 %
   const trunkCarry = pC.w.chest ? (sgn * pTip.w.chest) / (sgn * pC.w.chest) : 0;
   // 칼끝이 겨눈 선(φc)을 지날 때
@@ -439,7 +488,7 @@ export function summarize(rows, marks) {
       comShift: +v3.dist(rows[0].com, endRow.com).toFixed(2),
     },
     opening: { openTime: +openTime.toFixed(2), bladeBehindTime: +behindTime.toFixed(2), maxTurn: Math.round(Math.max(...main.map((r) => Math.abs(r.yawC)))) },
-    checks: { reachOver: +reachOver.toFixed(3), legOver: +legOver.toFixed(3), tipMin: +tipMin.toFixed(2), wristMax: Math.round(wristMax), wristClampTime: +wristClampTime.toFixed(2) },
+    checks: { reachOver: +reachOver.toFixed(3), legOver: +legOver.toFixed(3), tipMin: +tipMin.toFixed(2), wristMax: Math.round(wristMax), wristClampTime: +wristClampTime.toFixed(2), wristOver160: +wristOver160.toFixed(2) },
   };
 }
 
