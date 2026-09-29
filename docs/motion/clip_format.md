@@ -234,7 +234,7 @@
 
 - 자세 id ↔ `src/guards.js` 이름: tag 지붕 (Vom Tag) · tagR 어깨 지붕 (Vom Tag) · ochs 황소 (Ochs) · langort 긴 자세 (Langort) · side 옆 자세 · pflug 쟁기 (Pflug) · wechsel 바꿈 (Wechsel) · neben 옆 지킴 (Nebenhut) · alber 바보 (Alber) · tagL 왼쪽 어깨 지붕 · ochsL 왼쪽 황소 · sideL 왼쪽 옆 자세 · pflugL 왼쪽 쟁기 · wechselL 왼쪽 바꿈.
 - 두손 무기(롱소드·츠바이핸더)는 같은 자세표를 쓴다. 츠바이핸더는 칼자루가 길어(뒷손 −0.18 m, 롱소드 −0.14 m) 같은 쟁기 자세에서 뒷손이 0.047 m 넘친다 — 게임 자세 그대로라 R1 이 봐준다.
-- 한손 자세 무기(weapons.js `oneHandStance`: 세이버·레이피어 등)는 게임의 한손 자세표 `BASE_ONE` = `GUARDS` 에 `ONE_HAND`(긴 자세·쟁기·황소·바보만 바꿈)를 덮은 것. 게임이 `BASE_ONE` 을 내보내지 않아 검사기는 `src/guards.js` 글에서 `ONE_HAND` 표를 읽어 같은 식으로 덮는다(`validate_clip.mjs` gameGuardsOne). guards.js 가 `BASE_ONE` 을 내보내면 그것을 쓰는 편이 튼튼하다(디렉터 몫).
+- 한손 자세 무기(weapons.js `oneHandStance`: 세이버·레이피어 등)는 게임의 한손 자세표 `BASE_ONE` = `GUARDS` 에 `ONE_HAND`(긴 자세·쟁기·황소·바보만 바꿈)를 덮은 것. 검사기는 게임이 내보내는 `GUARD_BASE_ONE`(main b403696 부터)을 그대로 읽는다(`validate_clip.mjs` gameGuardsOne — 9/29 밤까지는 guards.js 글에서 `ONE_HAND` 를 읽어 덮었다).
 - 9/29: 52벌 모두 통과. 이 검사로 왼쪽 벌 5개의 팔 넘침(0.041~0.076 m)을 찾아 거울 규칙을 고쳤다(§2).
 
 ## 7. 바뀐 기록
