@@ -204,6 +204,7 @@ installGunFx({
   sound,
   world: { castRay: (...a) => world?.castRay(...a) ?? null },
   combat: { get info() { return combat?.info; }, get fighters() { return combat?.fighters ?? []; } },
+  shake: (dir, strength) => kickCamera(dir, strength), // 발사 순간 짧은 화면 흔들림 (외형 PM v2, 사장님 '발사 이펙트 약하다')
 });
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
 sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
