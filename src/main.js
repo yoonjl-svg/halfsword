@@ -21,6 +21,7 @@ import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
 import { installGunFx, clearGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
+import { attachMadEyes } from './mad_eyes.js';
 import { PerfMeter } from './perfmeter.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
@@ -314,6 +315,8 @@ function newRound(weaponId) {
     fighterLight.update(fighterMeshes);
     reviveFx.warm();
   }
+  const madEyes = attachMadEyes(enemy, currentFoe?.eyes === 'madGlow' || params.has('madEyes')); // 광기의 붉은 안광 (외형 PM, mad_eyes.js — 캐릭터 항목 eyes: 'madGlow' / 시험 ?madEyes=1). 잔상은 장면에 두므로 fighterMeshes 뒤에
+  if (madEyes) auras.push(madEyes);
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
@@ -1233,14 +1236,16 @@ function frame(now) {
     const d = input.consumeHandDelta();
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
     const inScale = hitStop > 0 ? 0.25 : 1;
-    if (player.alive) {
+    // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
+    if (player.alive && !player.weapon?.gun) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
     player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
-    // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust)
+    // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust). 권총은 손가락이 닿는 순간 쏜다 (쏘는 타이밍이 실력이라 뗄 때까지 늦추지 않는다)
+    input.tapOnDown = !!player.weapon?.gun;
     if (input.consumeTaps() > 0 && player.alive) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();

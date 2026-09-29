@@ -8,7 +8,9 @@
 //   · 폰에서 가볍게: 효과 두 벌(두 검객이 거의 동시에 쏠 때)만 미리 만들어 돌려쓴다. 조명은 안 만든다.
 //   · 총알 궤적 (사장님 결정 "방식 B"): 총구에서 총알이 닿은 곳까지 옅은 담황색 줄 하나가 0.1초쯤 보였다 사라진다 — 빗나갔는지 한눈에 읽힌다.
 //     실제 총알 방향(gun.js 의 퍼짐·AI 보정이 든 것)과 닿은 거리는 무기 PM 이 onShot(f, p, dir, dist) 로 넘긴다.
-//     안 넘어오면 총신 방향으로 그리고, 거리는 world·combat 이 주어졌을 때 gun.js 와 같은 광선으로 재고 아니면 GUN.range 다.
+//     안 넘어오면 총신 방향으로 그리고, 거리는 gun.js 와 같은 광선으로 재고 아니면 GUN.range 다.
+//     무기 PM 의 GUN_HOOKS.onImpact(f, point, dir, what) 가 오면(닿았을 때만, onShot 바로 뒤) 그 발의 줄을 실제 방향·닿은 점으로 바로잡는다.
+//   · 총구: onShot 의 pos 가 총구다(리볼버는 총신이 주먹 위 8 cm — 칼 축이 아니다). 레이저 시작점도 같은 자리(칼 몸체 (weapon.muzzleX, 손잡이+총신 길이, 0)).
 //   · 조준 레이저 (사장님: "아주 미세해야 해 … 희미하게"): 총을 든 검객마다 총구에서 총신 방향으로 처음 닿는 곳까지 아주 옅은 붉은 선과
 //     닿은 자리의 작은 점. 매 프레임 gun.js 와 같은 광선으로 잰다(world·combat 필요, 판정과 무관한 읽기뿐). 장전 중에도 같은 밝기 —
 //     장전 표시는 하지 않는다(사장님). 겉모습은 여기서만 정한다: gun.js 의 GUN.laser 는 무기 PM 이 끈다 (두 겹으로 그리지 않게).
@@ -88,7 +90,8 @@ export function clearGunFx() {
 
 /**
  * 권총 효과를 설치한다. scene: 장면, sound: main.js 의 Sound (GUN_HOOKS.onShot 이 비어 있을 때 총소리를 내는 데 쓴다).
- *  world·combat (있으면): onShot 이 닿은 거리를 안 넘길 때 궤적 끝을 재는 데 쓴다 (gun.js 와 같은 광선, 판정과 무관한 읽기뿐).
+ *  world·combat 은 안 넘겨도 된다: 검객의 world(f.world)와 window.game.combat 을 그때그때 읽는다 (main.js 는 combat 을 나중에 만든다).
+ *  레이저·궤적 끝을 재는 광선에만 쓴다 (gun.js 와 같은 광선, 판정과 무관한 읽기뿐).
  *  반환 { fire(pos, dir, dist), clear() } — 점검 도구가 직접 터뜨려 볼 때 / 판 바뀜에 치울 때
  */
 export function installGunFx({ scene, sound, world = null, combat = null }) {
@@ -115,21 +118,25 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     trace.visible = false;
     trace.renderOrder = 4;
     scene.add(flash, core, smoke, trace);
-    pool.push({ flash, core, smoke, trace, pos, vel: new Float32Array(NP * 3), t: -1, o: new THREE.Vector3(), d: new THREE.Vector3() });
+    pool.push({ flash, core, smoke, trace, pos, vel: new Float32Array(NP * 3), t: -1, o: new THREE.Vector3(), d: new THREE.Vector3(), origin: new THREE.Vector3() });
   }
   let next = 0;
 
+  const aimTrace = (e, origin, dir, dist) => {
+    e.trace.position.copy(origin);
+    e.trace.quaternion.setFromUnitVectors(_Y, dir);
+    e.trace.scale.set(1, Math.max(0.01, dist), 1);
+    e.trace.visible = true;
+  };
   const fire = (origin, dir, dist = GUN.range) => {
     const e = pool[next];
     next = (next + 1) % pool.length;
     e.t = 0;
     e.o.copy(origin).addScaledVector(dir, 0.03);
     e.d.copy(dir).normalize();
-    // 궤적 줄: 총구 앞 8 cm(섬광 속)에서 닿은 곳까지
-    e.trace.position.copy(origin);
-    e.trace.quaternion.setFromUnitVectors(_Y, e.d);
-    e.trace.scale.set(1, Math.max(0.01, dist), 1);
-    e.trace.visible = true;
+    // 궤적 줄: 총구에서 닿은 곳까지 (onImpact 가 오면 실제 방향·점으로 바로잡는다)
+    e.origin.copy(origin);
+    aimTrace(e, origin, e.d, dist);
     // 총신에 수직인 두 축
     _u.set(0, 1, 0);
     if (Math.abs(e.d.y) > 0.9) _u.set(1, 0, 0);
@@ -148,6 +155,7 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     e.core.position.copy(e.o).addScaledVector(e.d, 0.02);
     e.flash.visible = e.core.visible = e.smoke.visible = true;
     step(e, 0);
+    return e;
   };
 
   const step = (e, dt) => {
@@ -187,11 +195,13 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   };
 
   // 궤적 끝 거리 재기 (onShot 이 dist 를 안 넘길 때): gun.js castRay 와 같은 광선 — 쏜 사람 자신의 콜라이더는 건너뛴다
+  const getCombat = () => combat ?? globalThis.window?.game?.combat ?? null;
   const measure = (f, o, d) => {
-    if (!world?.castRay) return GUN.range;
-    const info = combat?.info;
+    const w = world ?? f.world;
+    if (!w?.castRay) return GUN.range;
+    const info = getCombat()?.info;
     const ray = { origin: { x: o.x, y: o.y, z: o.z }, dir: { x: d.x, y: d.y, z: d.z } };
-    const hit = world.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, (c) => info?.get(c.handle)?.fighter !== f);
+    const hit = w.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, (c) => info?.get(c.handle)?.fighter !== f);
     return hit ? (hit.timeOfImpact ?? hit.toi) : GUN.range;
   };
 
@@ -215,14 +225,16 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
   };
   const updateLasers = () => {
     let n = 0;
-    for (const f of combat?.fighters ?? []) {
+    for (const f of getCombat()?.fighters ?? []) {
       if (!f.weapon?.gun || !f.alive || !f.armed) continue;
       const r = f.sword?.rotation?.();
       if (!r) continue;
       const L = laserSlot(n++);
       _q.set(r.x, r.y, r.z, r.w);
       _d.set(0, 1, 0).applyQuaternion(_q); // 총신 방향 (gun.js 와 같다)
-      f.bladePoint(1, _u); // 총구
+      f.bladePoint(1, _u); // 칼 축 끝
+      const mx = f.weapon.muzzleX ?? 0; // 총신이 칼 축에서 비켜 있으면(리볼버, 주먹 위) 그만큼 옮긴다 — gun.js muzzle() 과 같다
+      if (mx) _u.add(_v.set(mx, 0, 0).applyQuaternion(_q));
       const dist = measure(f, _u, _d);
       L.beam.position.copy(_u);
       L.beam.quaternion.setFromUnitVectors(_Y, _d);
@@ -234,6 +246,7 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
     for (let i = n; i < lasers.length; i++) lasers[i].beam.visible = lasers[i].dot.visible = false;
   };
 
+  const lastFire = new WeakMap(); // 검객 → 방금 쏜 효과 (onImpact 가 줄을 바로잡을 때)
   // gun.js 의 onShot 을 감싼다 (소리는 그대로). dir·dist 는 무기 PM 이 넘기는 실제 총알 방향·닿은 거리 (없으면 총신 방향으로 잰다)
   const prev = GUN_HOOKS.onShot;
   GUN_HOOKS.onShot = (f, p, dir, dist) => {
@@ -246,7 +259,18 @@ export function installGunFx({ scene, sound, world = null, combat = null }) {
       _q.set(r.x, r.y, r.z, r.w);
       _d.set(0, 1, 0).applyQuaternion(_q); // 총신 방향 (gun.js fire 와 같다)
     }
-    fire(p, _d, typeof dist === 'number' && dist > 0 ? dist : measure(f, p, _d));
+    lastFire.set(f, fire(p, _d, typeof dist === 'number' && dist > 0 ? dist : measure(f, p, _d)));
+  };
+  // 무기 PM 의 onImpact (닿았을 때만, 같은 fire() 안에서 onShot 바로 뒤): 방금 쏜 줄을 실제 총알 방향·닿은 점으로 바로잡는다
+  const prevImpact = GUN_HOOKS.onImpact;
+  GUN_HOOKS.onImpact = (f, point, dir, what) => {
+    if (prevImpact) prevImpact(f, point, dir, what);
+    const e = lastFire.get(f);
+    if (!e || e.t < 0 || e.t > 0.05 || !point) return;
+    _d.set(point.x, point.y, point.z).sub(e.origin);
+    const dist = _d.length();
+    if (dist < 0.01) return;
+    aimTrace(e, e.origin, _d.divideScalar(dist), dist);
   };
 
   let last = performance.now();
