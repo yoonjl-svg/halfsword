@@ -761,6 +761,12 @@ export const GESTURE = {
   autoWindPhi: 0.3, // Q3 (B): 몸이 스스로 하는 짧은 감기 = 클립 φ −0.3 → 0, 손가락 시계 (패드 0.165 m)
   sSnap: 0.02, // 풀리는 S 가 이보다 작으면 정확히 0 (투명성 항목, §10)
   lateSelect: 0.07, lateSelectLen: 0.1, famBlendT: 0.04, sectorMax: 80, // 늦은 무리 고르기 (초·m·초·도)
+  // 참 = sectorMax 를 모든 이웃 짝에 (옛 규칙, 쟁기에서 horizR–riseR 81.1° 가 막혀 riseR 를 감을 수 없다). 거짓 = riseL–riseR 틈 (곧게 아래) 에만
+  //  (W5, 사장님 확인표 4행 디렉터 안). W5 잼 (ffFilter 참, 격자 3 무기 × wind·stroke × v 3–20 × 입력 60/120): 거짓이면 chainW 기준 (1) 빠짐
+  //  272 → 283 (horizR 25 → 35: 쟁기 → 옆 자세가 이제 감기 S 0.75–0.80, 전에는 틈 긋기 S 1), hold 314 → 324. chainW riseR 는 감기 선이 riseR
+  //  준비 자세 방향 그대로라 틈 경계 (3.8e-14°) 에 떨어져 여전히 틈. 1 mm 위로 옮겨 감게 하면 riseR 빠짐 33 대 옛 32 / 48 행, 칼끝 비 1.03 대 1.12.
+  //  잰 되돌아감이라 옛 규칙을 기본으로 두고 사장님께 묻는다
+  sectorAll: true,
   predictMs: 8, phiW: 60, leadMs: 40, // Q22 (predictMs: 자리 내다보기 허용 폭. 손짓 층은 실제 조각만 쓴다)
   T0: 0.3, kv: 0.35, // 'floor' 시계 전용 (시뮬). weaponCfg.gestureT0 가 있으면 그것. 관성 등급 문턱 없음 (Q26)
   followEnd: 1.6, recoverEnd: 2.2, buffer: 0.15, // followEnd·recoverEnd: R4 되돌이 클립 몫 (예약). 손짓 층은 φ 로 베기를 끝내지 않는다 (길이 한도 없음)

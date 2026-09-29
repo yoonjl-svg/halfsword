@@ -37,6 +37,7 @@ for (let i = 0; i < NF; i++) {
   SIDE.push(k === 'vert' ? null : P.left ? 'left' : 'right'); // vert 는 손가락 좌우로
 }
 const VERT = FAMS.indexOf('vert');
+const RISE_R = FAMS.indexOf('riseR'), RISE_L = FAMS.indexOf('riseL'); // sectorMax 가 보는 짝 (riseL → riseR 반시계 = 곧게 아래)
 const VERT_X = VERT >= 0 ? Math.abs(CHX[VERT]) : 0; // vert 좌우를 가르는 폭 = vert 준비 자세 자신의 x (패드 기하)
 
 /** 무리 key → { base: 'diag'|'vert'|'horiz'|'rise', side: 'right'|'left'|null } */
@@ -435,7 +436,9 @@ export class Gesture {
     if (ia < 0) (ia = iMin), (da = dMin + TAU); // 한쪽이 비었다: 반대편 끝을 돌아서
     if (ib < 0) (ib = iMax), (db = dMax - TAU);
     const gap = da - db;
-    if (gap > G.sectorMax * D2R) {
+    // W5 (사장님 확인표 4행, 디렉터 안): GESTURE.sectorAll 거짓이면 sectorMax 는 riseL–riseR 틈 (곧게 아래, 바보 자세) 에만 건다 —
+    //  다른 이웃 짝은 넓어도 섞는다. 기본은 참 (옛 규칙, 모든 짝): 거짓의 잰 기준 (1) 이 나빠져서 (config.js GESTURE.sectorAll)
+    if (gap > G.sectorMax * D2R && (G.sectorAll || (ia === RISE_R && ib === RISE_L))) {
       // 이웃 사이가 sectorMax 보다 넓다 (곧게 아래 = 바보 자세로 바꾸기): 감기가 아니다 (그쪽으로 빠르게 그으면 IDLE 에서 긋기)
       this._overWind = 0;
       this._gap = true;

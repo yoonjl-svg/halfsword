@@ -1,7 +1,7 @@
 // S = 0 불변 관문 (docs/strike/r2_impl_spec.md §7, §8.2 'S = 0'). 새 빌드 대 기준 B·A 를 같은 묶음에서 바이트로 견준다
 //
 //   node tools/sim/s0_diff.mjs [--batteries=arm,live,dance,fights] [--hz=120,60] [--weapons=longsword,zweihander,sabre]
-//        [--ginput=wind,stroke] [--seeds=1,13,25,37,49] [--ref=<체크아웃>] [--ref-only] [--no-main] [--quick] [--out=<폴더>]
+//        [--ginput=wind,stroke] [--seeds=1,13,25,37,49] [--ref=<체크아웃>] [--ref-only] [--no-main] [--quick] [--out=<폴더>] [--set=GRP.key=val ...]
 //
 //  빌드 (with_config 로 설정만 바꾼다, 모두 같은 체크아웃):
 //   new    = 기본 (GESTURE.on·DRIVE.on 켬) — 손가락이 있는 묶음(arm·live·dance)은 입력 방식 (A) wind·(B) stroke 둘 다
@@ -127,7 +127,9 @@ const MIXX = CFG.DRIVE.mixX;
 const TAP = path.join(HERE, 's0_tap.mjs');
 const t00 = Date.now();
 
-const BUILDS = { new: [], B: ['GESTURE.on=false', 'COMMIT.minLevel=2'], A: ['GESTURE.on=false'] };
+// --set=GRP.key=val (여러 번): 세 빌드 모두에 더한다 (설정 바꿔 보기, 예: GESTURE.sectorAll=false). 기본 AI 판·깃발 끈 판 sha 견줌에는 안 넣는다
+const XSETS = argv.filter((s) => s.startsWith('--set=')).map((s) => s.slice(6));
+const BUILDS = { new: [...XSETS], B: ['GESTURE.on=false', 'COMMIT.minLevel=2', ...XSETS], A: ['GESTURE.on=false', ...XSETS] };
 const ginSet = (g) => (g === 'wind' ? [] : [`GESTURE.input=${g}`]);
 const dtSet = (hz) => (hz === 120 ? [] : [`PHYSICS.timestep=${1 / hz}`]);
 
