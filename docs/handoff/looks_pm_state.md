@@ -1,12 +1,13 @@
 # 외형 PM 상태 (늘 최신으로 — 디렉터 규칙 ④)
 
-세션 `session_01HNkUuYHag8VSg6xpgbkGVR` · 브랜치 `claude/pm-character-looks` · 갱신 2026-09-30 01:00 KST (권총 이펙트 v3 폰 성능)
+세션 `session_01HNkUuYHag8VSg6xpgbkGVR` · 브랜치 `claude/pm-character-looks` · 갱신 2026-09-30 01:50 KST (칼 잔상 v2)
 
 ## 맡은 일
 - 캐릭터 겉모습(`src/outfits.js`·`src/looks.js`), 스테이지 배경(`src/stage_*.js`, `src/stages.js`), 픽셀 카드 뒷면(`tools/cardbacks/`), 겉모습 효과(`src/gun_fx.js` 권총 섬광·연기·궤적·레이저, `src/mad_eyes.js` 광기의 하인리히 안광, `src/sword_trail.js` 칼 잔상 띠).
 - 온몸 타격 화면 신호의 모양·색(잔상 띠, 금색·회색 흔적, 맞은 느낌 — 뜻은 디렉터). 갑옷 뚫림 점검·수정. 카메라는 디렉터 코드(의견만).
 
 ## 끝남
+- 칼 잔상 v2 (사장님 9/30 "너무 반짝여 칼보다 돋보인다"): 보통 섞기·칼날 색 × 0.55·불투명도 최대 0.3, 금속·비 trash 칼에만(나뭇가지·고무닭·냉동참치·광선검·리볼버 없음). 전후 docs/handoff/sword_trail_v2_{steel,branch}.png.
 - 권총 이펙트 v3 폰 성능 (디렉터 후속, 브랜치에 푸시·병합 대기): 첫 발 셰이더·버퍼 예열 `warmGunFx`(main.js 두 줄: import 에 추가, newRound 에서 권총 있을 때 호출), 총구 점광 → 빛무리 스프라이트. 첫 발 새 프로그램 4 → 0, 성 안뜰 첫 발 프레임 415~570 → 131 ms. 시뮬 3종 main 과 바이트 동일, 스모크 0.
 - 권총 발사 이펙트 v2 (사장님 9/29 23:00 "좀 약하다"): 섬광·화염·불티·연기·궤적 강화, 발사 흔들림(main.js installGunFx 에 `shake: (dir, strength) => kickCamera(dir, strength)` 한 줄), 총구 점광 0.1초. 전후 비교 docs/handoff/gun_fx_v2_{night,day}.png. 시뮬 3종 main 과 바이트 동일, 스모크 콘솔 에러 0.
 - 칼 잔상 띠 v1: `src/sword_trail.js` + `CONFIG.SWORD_TRAIL` + main.js 네 줄(아래). 사진 `docs/handoff/sword_trail_{cut,cut_zoom,cut_day,rest}.png`.
