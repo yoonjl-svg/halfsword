@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL, ARMOR, COMMIT } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, COMMIT, PHYSICS } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 
@@ -34,6 +34,7 @@ const _c = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _e = new THREE.Vector3();
 const _q = new THREE.Quaternion();
+const _g = new THREE.Vector3(); // 튐 검사용 (predict 의 point 가 _e 라 따로 둔다)
 
 /** 강체 상태(p, q, com, v, w)에서 한 점의 속도 */
 function velAt(st, point, out) {
@@ -65,6 +66,14 @@ export class Combat {
     this.bladeLast = -1e9;
     this.steelArmed = true; // 지금 칼 재질에 반발이 켜져 있는가
     this.touching = new Map(); // "칼콜라이더:몸콜라이더" → 마지막으로 닿은 스텝 (투구·뼈 되튐을 한 번만)
+    this.dt = PHYSICS.timestep; // afterStep 이 world.timestep 으로 덮어쓴다 (첫 스텝의 predict 도 읽는다)
+    // R0 튐 검사 (STRIKE.glitchFilter): 싸움꾼 → 직전 스텝의 스텝 전 칼 상태 {com, v, w}. 기록: 무기 id → 받아들인 접촉점 최고 빠르기(m/s, 자르지 않는다),
+    //  튐으로 버린 수, 마지막으로 버린 것. capDrops 는 R0 전 방식(30 m/s 넘어 버림)의 수 (R0_OFF=1 에서만 는다)
+    this.prevSword = new Map();
+    this.peakSpeed = new Map();
+    this.glitchDrops = 0;
+    this.capDrops = 0;
+    this.lastGlitch = null;
     this.fighters = [...new Set([...colliderInfo.values()].map((i) => i.fighter))];
     // Rapier 물리 훅: 칼과 상대 몸이 부딪히려 할 때마다(매 스텝) 불린다.
     // 여기서는 엔진 함수를 부르면 안 되므로, 스텝 직전에 저장해 둔 값(cacheState)만 쓴다.
@@ -137,8 +146,13 @@ export class Combat {
     const rel = vBlade.sub(vBody);
     const speed = rel.length();
     if (speed < 0.5) return null;
-    // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다
-    if (speed > 30) return null;
+    if (!STRIKE.glitchFilter) {
+      // R0 전 방식 (R0_OFF=1): 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다
+      if (speed > 30) {
+        this.capDrops++;
+        return null;
+      }
+    } else if (this.glitch(att, S, point, vBody, speed)) return null; // R0 (§6-1): 빠르기 한도 없음, 물리 튐만 거른다
     const dir = rel.clone().divideScalar(speed);
 
     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
@@ -283,6 +297,40 @@ export class Combat {
     };
   }
 
+  /**
+   * R0 튐 검사 (STRIKE.glitchFilter, docs/whole_body_redesign.md §6-1) — 빠르기 한도가 아니다.
+   * 접촉점 상대 빠르기가 NaN 이거나, 직전 스텝에 남겨 둔 칼 상태(prevSword)로 같은 점에서 잰 값보다 한 스텝에 glitchAcc·dt 넘게 '늘었을'
+   * 때만 튐으로 버린다. 느려지는 쪽·되튐은 거르지 않는다. 직전 상태가 없거나(첫 스텝) S 가 스텝 전 캐시가 아니면(측정 도구가 합성한 상태)
+   * 거르지 않는다. 받아들인 접촉의 무기별 최고 빠르기는 peakSpeed 에 기록만 한다 (§6-1: '측정 최고의 3배'는 기준이 아니라 기록용)
+   */
+  glitch(att, S, point, vBody, speed) {
+    if (!Number.isFinite(speed)) {
+      this.glitchDrops++;
+      return true;
+    }
+    const p = this.prevSword.get(att);
+    if (p && S === att.cache?.sword) {
+      const sPrev = velAt(p, point, _g).sub(vBody).length();
+      if (speed - sPrev > STRIKE.glitchAcc * this.dt) {
+        this.glitchDrops++;
+        this.lastGlitch = { weapon: att.weapon?.id, speed, sPrev, step: this.stepNo };
+        return true;
+      }
+    }
+    const id = att.weapon?.id;
+    if (id) this.peakSpeed.set(id, Math.max(this.peakSpeed.get(id) || 0, speed));
+    return false;
+  }
+
+  /** 이 스텝의 스텝 전 칼 상태를 다음 스텝의 튐 검사에 쓰려고 남긴다 (cacheState 가 같은 객체를 덮어쓰므로 값을 복사. velAt 이 읽는 com·v·w 만) */
+  keepSword(f, S) {
+    let k = this.prevSword.get(f);
+    if (!k) this.prevSword.set(f, (k = { com: new THREE.Vector3(), v: new THREE.Vector3(), w: new THREE.Vector3() }));
+    k.com.copy(S.com);
+    k.v.copy(S.v);
+    k.w.copy(S.w);
+  }
+
   /** 매 물리 스텝 직후: 가르고 있는 칼 처리 + 일반 충돌(튕김) 처리 */
   afterStep(world, eventQueue) {
     this.stepNo++;
@@ -340,13 +388,27 @@ export class Combat {
           c.held = true; // 빠질 때 onUnstick 을 부른다
         }
       } else if (c.stuckT > 0) {
-        // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다)
-        //  결심 베기 (L1, 획·버티기 중): 한 순간에 붙잡는 몫은 칼 자체의 유효 질량까지만 (팔 몫 armAssist 를 더하면 가벼운 칼은 한 스텝에
-        //  칼 빠르기가 거꾸로 뒤집혀, 손목이 조금만 밀어도 칼이 떨며 돌았다 — 라이트세이버 칼끝 30~60 m/s. 결심을 끄면 예전 그대로)
+        // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다). 한 순간의 충격 J ≤ 0.8·mHold·s 라 상대 속도가 뒤집히지 않는다
         const af = c.pr.w.fighter;
         const cm = af.commit;
-        const held = COMMIT.stuckHoldFree && (cm?.on || af.skill?.rest?.w > 0);
-        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * (c.mFree + (held ? 0 : STRIKE.armAssist)) * s);
+        let mHold; // 한 순간에 붙잡는 몫의 질량 (kg)
+        if (STRIKE.gripMu) {
+          // R0 (§6-2): 두 몸의 환산질량 μ = 1/(1/m칼 + 1/m부위). 충격은 칼 강체엔 칼날 중심선 위 pA 에, 몸엔 뼈 위 pv 에 걸리므로(아래) 그 점·그 방향의
+          //  유효 질량으로 잰다. 칼은 손 없이 강체 하나로: applyImpulseAtPoint 가 미는 몸이 칼 강체뿐이라서다. 예전엔 처음 닿을 때의 칼 유효 질량에
+          //  팔 몫 armAssist 까지 더해 붙잡아, 가벼운 칼(레이피어·라이트세이버)은 그 몫이 칼 강체보다 무거워 한 스텝에 칼 빠르기가 뒤집혀 떨었다 (칼끝 33~72 m/s)
+          const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
+          const o = tv(sw.translation());
+          const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
+          const mA = freeMass(af.swordProps, { q: rotQ(sw), com: tv(sw.worldCom()) }, pA, dir); // freeMass 는 S.q·S.com 만 읽는다
+          const mV = bodyMass(vb, onBone(c.pr.v, point), dir);
+          mHold = 1 / (1 / mA + 1 / mV);
+        } else {
+          // R0 전 방식 (R0_OFF=1): 처음 닿을 때의 칼 유효 질량 + 팔 몫. 결심 베기 (L1, 획·버티기 중)엔 칼 자체의 유효 질량까지만 (COMMIT.stuckHoldFree —
+          //  팔 몫 armAssist 를 더하면 가벼운 칼은 한 스텝에 칼 빠르기가 거꾸로 뒤집혀, 손목이 조금만 밀어도 칼이 떨며 돌았다 — 라이트세이버 칼끝 30~60 m/s)
+          const held = COMMIT.stuckHoldFree && (cm?.on || af.skill?.rest?.w > 0);
+          mHold = c.mFree + (held ? 0 : STRIKE.armAssist);
+        }
+        J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * mHold * s);
         c.stuckT -= dt;
         c.seen = this.stepNo;
         // 결심 베기 (L1): 칼이 박힌 동안 획 시간을 늦추고 끝 너머로 미는 몫을 거둔다 (skill.updateCut). 획이 끝난 뒤 버티는 동안도 (updateRest)
@@ -388,6 +450,8 @@ export class Combat {
     this.bladeClash(world, bladePairs);
     this.armSteel();
     for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
+    // R0 튐 검사: 이 스텝의 스텝 전 칼 상태를 다음 스텝과 견주려고 남긴다
+    if (STRIKE.glitchFilter) for (const f of this.fighters) if (f.cache?.sword) this.keepSword(f, f.cache.sword);
   }
 
   /**
