@@ -131,7 +131,23 @@
 - 좌표는 클립과 같다(기록 시작 때 골반 밑 땅 원점). 랙돌 관절 자리 = 붙은 몸체 자세 × (관절 기준점 − 몸체 처음 자리) — `tools/motion/lib/game_joints.mjs`.
 - 만드는 곳: `record_game.mjs`(main), `record_wbs.mjs --root=<체크아웃>`(다른 브랜치). 디렉터 도구가 같은 형식으로 내면 비교 화면·비교표가 그대로 읽는다.
 
-## 6. 바뀐 기록
+## 6. 게임용 묶음 — `stillness-motion-atlas/1` (`build_atlas.mjs`)
+
+재설계 §2-2 (2) atlas 구조에 맞춘 내보내기다. 클립을 다시 뽑은 것이라 값은 같고, 게임이 쓰지 않는 막대 인형 관절(J)·측정용 채널은 뺐다.
+
+| | |
+|---|---|
+| 파일 | `docs/motion/atlas/<베기>_<right\|left>.json` 16개 (약 75 KB씩) + `index.json` (벌마다 구간 시간·걸음) |
+| 세 벌 | `sets.small` · `sets.medium` · `sets.large` 한 파일에 |
+| 위상 격자 | `phi` = −1 ~ 2.2, 0.025 간격 129칸. 표시(−1 감기 시작 · 0 감기 끝 · 0.55 손목 풀림 · 0.85 겨눈 선 · 1.6 지나가기 끝 · 2.2 복귀)가 모두 칸 위에 온다 → **벌끼리 같은 칸을 바로 섞는다(S)** |
+| 벌마다 | `marks`(s) · `durations`(감기·풀기→겨눈 선·지나가기·복귀 s) · `step`(옮기는 발, 처음·끝 자리, 뜨는·딛는 φ) · `summary` · `ch`(채널) |
+| 채널 `ch` | `t` · `handS`·`handO`(가슴 틀, 칸마다 [x,y,z] 평면) · `sword`·`edge`·`pole`(단위 벡터, 가슴 틀) · `pelvisYaw`·`pelvisPitch`·`pelvisDrop` · `xFactor`·`lean`·`side` · `girdleLift`·`girdleProt` · `footL_x/z/yaw/lift`·`footR_…` (땅 틀) · `openness`(0~1)·`guardGap`(m) · `balanceAssist` |
+
+- 섞기: 위치·각은 곧게, 방향 채널은 섞은 뒤 길이 1로(칼이 크게 도는 칸에서는 slerp 가 낫다). 작게↔크게를 곧게 섞지 말고 보통 벌을 사이에 둘 것(§4).
+- `balanceAssist` 는 재설계 §4 기본값(φ 0.55~1.6 에서 0.5)으로 자리만 채웠다 — 사람 자료가 아니다.
+- 흐름·런지 클립은 아직 묶음에 없다(세 벌이 없음).
+
+## 7. 바뀐 기록
 
 | 버전 | 날짜 | 바뀐 것 |
 |---|---|---|
@@ -140,3 +156,4 @@
 | clip/1 | 2026-09-29 | `summary.followThrough.handSideChest` 더함(형식은 같음). 크게 Zornhau 지나가기 손 자리 고침(손을 배 앞으로 끌어들이지 않음) |
 | clip/1 | 2026-09-29 | 흐름 클립(§3-4) 더함 — 베기 클립은 그대로 |
 | clip/1 | 2026-09-29 | 런지 클립(§3-5) 더함 |
+| atlas/1 | 2026-09-29 | 게임용 묶음(§6) 처음 — 역할 분담안 "한 파일에 세 벌" |

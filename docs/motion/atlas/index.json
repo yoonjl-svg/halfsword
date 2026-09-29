@@ -1,0 +1,646 @@
+{
+ "format": "stillness-motion-atlas-index/1",
+ "phiCount": 129,
+ "atlases": [
+  {
+   "id": "zornhau_right",
+   "cut": "zornhau",
+   "side": "right",
+   "nameKo": "분노의 베기",
+   "file": "zornhau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.52,
+     0.12
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "zornhau_left",
+   "cut": "zornhau",
+   "side": "left",
+   "nameKo": "분노의 베기",
+   "file": "zornhau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.52,
+     -0.12
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "oberhau_right",
+   "cut": "oberhau",
+   "side": "right",
+   "nameKo": "위에서 베기",
+   "file": "oberhau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.55,
+     0.1
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "oberhau_left",
+   "cut": "oberhau",
+   "side": "left",
+   "nameKo": "위에서 베기",
+   "file": "oberhau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.55,
+     -0.1
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "zwerchhau_right",
+   "cut": "zwerchhau",
+   "side": "right",
+   "nameKo": "가로 베기",
+   "file": "zwerchhau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.42,
+     0.38
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "zwerchhau_left",
+   "cut": "zwerchhau",
+   "side": "left",
+   "nameKo": "가로 베기",
+   "file": "zwerchhau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.42,
+     -0.38
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "schielhau_right",
+   "cut": "schielhau",
+   "side": "right",
+   "nameKo": "사팔뜨기 베기",
+   "file": "schielhau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.55,
+     0.24
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "schielhau_left",
+   "cut": "schielhau",
+   "side": "left",
+   "nameKo": "사팔뜨기 베기",
+   "file": "schielhau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.55,
+     -0.24
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "unterhau_right",
+   "cut": "unterhau",
+   "side": "right",
+   "nameKo": "아래에서 베기",
+   "file": "unterhau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.52,
+     0.12
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "unterhau_left",
+   "cut": "unterhau",
+   "side": "left",
+   "nameKo": "아래에서 베기",
+   "file": "unterhau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.52,
+     -0.12
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "scheitelhau_right",
+   "cut": "scheitelhau",
+   "side": "right",
+   "nameKo": "정수리 베기 (제안)",
+   "file": "scheitelhau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.62,
+     0.1
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "scheitelhau_left",
+   "cut": "scheitelhau",
+   "side": "left",
+   "nameKo": "정수리 베기 (제안)",
+   "file": "scheitelhau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.62,
+     -0.1
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "krumphau_right",
+   "cut": "krumphau",
+   "side": "right",
+   "nameKo": "굽은 베기 (제안)",
+   "file": "krumphau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.34,
+     0.55
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "krumphau_left",
+   "cut": "krumphau",
+   "side": "left",
+   "nameKo": "굽은 베기 (제안)",
+   "file": "krumphau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.34,
+     -0.55
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "mittelhau_right",
+   "cut": "mittelhau",
+   "side": "right",
+   "nameKo": "가운데 베기",
+   "file": "mittelhau_right.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "R",
+    "from": [
+     -0.26,
+     0.15
+    ],
+    "to": [
+     0.5,
+     0.2
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  },
+  {
+   "id": "mittelhau_left",
+   "cut": "mittelhau",
+   "side": "left",
+   "nameKo": "가운데 베기",
+   "file": "mittelhau_left.json",
+   "durations": {
+    "small": {
+     "wind": 0.2,
+     "release": 0.28,
+     "follow": 0.22,
+     "recover": 0.3
+    },
+    "medium": {
+     "wind": 0.28,
+     "release": 0.285,
+     "follow": 0.26,
+     "recover": 0.425
+    },
+    "large": {
+     "wind": 0.36,
+     "release": 0.29,
+     "follow": 0.3,
+     "recover": 0.55
+    }
+   },
+   "step": {
+    "foot": "L",
+    "from": [
+     -0.26,
+     -0.15
+    ],
+    "to": [
+     0.5,
+     -0.2
+    ],
+    "liftPhi": 0.125,
+    "landPhi": 0.825
+   }
+  }
+ ]
+}
