@@ -21,6 +21,7 @@
 | Q13 판금·투구 → 센 베기는 둔기 충격 + 갑옷 닳음(디렉터가 R3 에서 combat.js 구현) | 둔기 부위 효과값·갑옷 손상 배율·부서진 뒤 규칙 제안 `docs/strike/q13_values_proposal.md` | 끝남 (25b1bca, 디렉터 9/29 지시로 R0 전에 시작) — 사장님 질문 3건(틈 찌르기·맨몸에도 켜기·부순 한 방 남는 에너지) |
 | Q14 칼 파손 물리대로 · Q26 한손 무기 물리에 맡김(배율 목표 칸 없음) | — | 반영함 |
 | 온몸 타격(R2 이후) 뒤 도끼·메이스 시제품 다시 재기 | R2 뒤 | 대기 |
+| 리볼버 사실감(사장님 9/29 직접): 6연발·사격 사이 0.7초·다 쏘면 장전 9초·장전 자세와 한 발마다 딸깍·겨눔 가운데 가슴~머리 사이 무작위 흔들림 | — | 끝남 `eea5b34` (gun.js 는 디렉터 영역 → main 병합 요청). 권총 대 롱소드 83% → 96% — 세기 조정은 사장님 결정 |
 
 ## 하지 말 것 (디렉터 9/29)
 motion_library 몸 동작 기능 확장, 밸런스 값 적용, 새 시제품. main 에 없는 작업을 더 키우지 않는다. 새 원격 브랜치 금지.
@@ -32,6 +33,7 @@ motion_library 몸 동작 기능 확장, 밸런스 값 적용, 새 시제품. ma
 - 밸런스 제안 묶음: `node tools/sim/with_spec.mjs 'rubber_chicken.mBlunt=3.8' 'monohoshizao.controlOverrides={"maxAimTorque":22,"aimStiffness":70,"wristVmax":34,"twistScale":0.25}' 'monohoshizao.mCut=1.4' 'zweihander.mCut=1.35' motion_league.mjs run 24 0 1 off`
 - 봉: `STAFF_N=48 STAFF_THRUST=rapier STAFF_MBLUNT=3.5 LIB=1 node tools/sim/hybrid.mjs staff_proto.mjs` · 봉·창 리그: `EXTRA=pole ONLY=proto_staff node tools/sim/motion_league.mjs run 12 0 1 off`
 - 부위 효과표: `node tools/sim/hybrid.mjs blunt_zones.mjs <무기id> 24 on|off`
+- 리볼버: `node tools/sim/gun_check.mjs` · `node tools/sim/hybrid.mjs ability_test.mjs pistol 24` · `node tools/sim/gun_dummy.mjs`
 - 게임 불변 확인: `fights12.mjs`, `hybrid.mjs fights12.mjs`, `live_battery.mjs` 바이트 비교 + `weapon_smoke.mjs`
 
 ## 다음 할 일
