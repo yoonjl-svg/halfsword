@@ -38,7 +38,9 @@
 ## 2. 디렉터와 연락하기
 
 - SendMessage는 디렉터 세션에 닿지 않는다. **트리거로 보낸다**:
-  - `mcp__Claude_Code_Remote__create_trigger`에 `persistent_session_id: "session_01KcYCh6UfKjrR4m8QjPcEbM"`와 `run_once_at`(몇 분 뒤)을 준다.
+  - `mcp__Claude_Code_Remote__create_trigger`에 `persistent_session_id`(디렉터 세션 id)와 `run_once_at`(몇 분 뒤)을 준다.
+  - **디렉터 세션 id** (2026-09-29 09:59 KST, 옛 디렉터 알림): 사장님 결정으로 디렉터가 바뀌었다. 새 디렉터 = `session_01NDJVGN7xsXPq19Yzry3BvH`("디렉터 · Stillness 총괄 (새)"). 옛 디렉터 `session_01KcYCh6UfKjrR4m8QjPcEbM`는 물러나 병합·배포를 하지 않는다. 디렉터 인계서는 main `docs/director_handoff.md`(`940f665`).
+    - 주의: 알림 직후 `get_session`으로 보니 새 세션이 첫 턴에 실패하고 보관(archived) 상태였다. 보고를 보내기 전에 `get_session`으로 살아 있는지 확인하고, 아니면 사장님께 여쭌다.
   - 보고는 짧게 쓴다: 커밋 해시, 무엇을 했는지, main.js 전/후 조각, 관문 결과.
 - 디렉터의 지시·병합 알림은 이 세션에 "scheduled trigger" 알림으로 온다. `ReadNotifications`로 읽는다.
 - 디렉터가 요구하는 **관문**:
