@@ -114,6 +114,12 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 - 비용: `sample()` 스텝당 0.002~0.004 ms, `update()` 0.001~0.003 ms (헤드리스). 더하기 섞기라 눈밭·밝은 하늘 앞에서는 옅고 어두운 벽·밤에 또렷하다(디렉터 지정 방식).
 - 관문: fights12·hybrid fights12·live_battery main 940f665 과 바이트 동일, 스모크 콘솔 에러 0. 사진: [베기 중(밤)](handoff/sword_trail_cut.png) · [확대](handoff/sword_trail_cut_zoom.png) · [베기 중(낮)](handoff/sword_trail_cut_day.png) · [정지 시](handoff/sword_trail_rest.png).
 
+### 칼 잔상 띠 v2 (사장님 9/30 "칼무리의 궤적이 너무 반짝여서 오히려 칼보다 돋보이는 거 같애. 나뭇가지나 낮은 계급 칼을 들면 어울리지도 않고")
+- 더하기 섞기를 버리고 **보통 섞기의 반투명 띠**. 색은 그 칼날 재질 색 × `dim` 0.55 — 늘 칼보다 어둡고, 밤에 흰 부채꼴이 되지 않으며 안개도 받는다. 청강검은 제 칼날 색조(청록 회색)를 따른다. 불투명도 최대 `strength` 0.3(속도 25 m/s), 칼자루 쪽 0.3 배.
+- **무기별**: `trailFor(weapon)` = 금속 칼날(`material 'steel'`)이면서 `tier` 가 `trash` 가 아닐 때만. 나뭇가지(wood·trash)·고무닭(rubber)·냉동참치(frozen)·광선검(plasma, 자체 빛)·리볼버(gun)는 잔상 없음. weapons.js 의 기존 필드(material·tier·gun)만 읽어 새 필드는 필요 없었다.
+- 금색·회색 톤(`setTone`)은 짧고 은은한 어두운 금색·회색으로만 남겼다(R5 에서 다른 자리로 옮긴다).
+- 확인(헤드리스 12초): 롱소드·청강검은 띠가 그려지고(색 0.38·0.40·0.42 / 0.30·0.39·0.41), 나뭇가지·광선검·고무닭은 한 번도 안 그려진다. 전후 비교: [강철](handoff/sword_trail_v2_steel.png) · [나뭇가지](handoff/sword_trail_v2_branch.png).
+
 ## 광기의 하인리히 — 붉은 안광 (`src/mad_eyes.js`, 사장님 요청 · 디렉터 나눔)
 
 사장님(2026-09-28): "밤의 포세이돈 신전에 등장하는 하인리히 앞에 '광기의'라는 접두를 붙여서 다른 캐릭터로 구분하고 싶어. 모델링은 그대로 쓰되 광기를 표현하고 싶어. 눈을 붉게 할까? 안광이 아우라처럼 흔들리게."
