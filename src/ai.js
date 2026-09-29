@@ -398,8 +398,7 @@ export class AI {
       py -= 0.06;
     } else if (I.gesture === 'pointFace' && u < 0.5) {
       const point = G.find((g) => g.name === 'langort');
-      if (point) (px = point.pad[0]), (py = point.pad[1]); // 칼끝을 상대 얼굴 쪽으로 곧게
-      speed = Math.max(speed, 1.6);
+      if (point) (px = point.pad[0]), (py = point.pad[1]); // 칼끝을 상대 얼굴 쪽으로 곧게 (빠르기는 기질의 guardSpeed 그대로 — 하한 없음, 디렉터 9/30)
     }
     me.move.set(0, 0);
     this.mode = 'watch';
