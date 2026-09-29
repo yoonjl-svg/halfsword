@@ -305,6 +305,7 @@ let index = null;
 let recIndex = null;
 let clip = null; // 지금 크기
 const sizeClips = {}; // 같은 베기·같은 쪽의 세 크기
+let noSmall = false; // 작게 벌도 바탕 베기도 없는 클립(런지): "작게 대비" 숫자를 쓰지 않는다
 let rec = null;
 let recOffset = 0;
 
@@ -312,9 +313,21 @@ function clipId(cut, side, size) {
   return `${cut}_${side}_${size}`;
 }
 async function loadCurrent() {
-  const ids = SIZES.map((s) => clipId(state.cut, state.side, s));
+  // 흐름 클립은 크게 한 벌뿐이다: 없는 크기는 바탕 베기(base) 클립으로 채워 "작게 대비" 숫자만 쓰고, 크기 단추·세 크기 겹쳐 보기는 막는다
+  const entries = index.clips.filter((c) => c.cut === state.cut && c.side === state.side);
+  const have = new Set(entries.map((c) => c.size));
+  const base = entries[0]?.base;
+  if (!have.has(state.size)) state.size = SIZES.filter((s) => have.has(s)).pop() ?? 'large';
+  // 바탕 베기도 없으면(런지) 있는 한 벌로 채운다 — 이때 "작게 대비" 숫자는 쓰지 않는다(renderSheet 의 noSmall)
+  const one = SIZES.find((s) => have.has(s));
+  const ids = SIZES.map((s) => (have.has(s) ? clipId(state.cut, state.side, s) : base ? clipId(base, state.side, s) : clipId(state.cut, state.side, one)));
+  noSmall = !have.has('small') && !base;
   const clips = await Promise.all(ids.map((id) => getJSON(`clips/${id}.json`)));
   SIZES.forEach((s, i) => (sizeClips[s] = clips[i]));
+  for (const b of $('size').querySelectorAll('button')) b.disabled = !have.has(b.dataset.v);
+  pressed('size', state.size);
+  $('allSizes').disabled = have.size < SIZES.length;
+  if (have.size < SIZES.length) state.all = $('allSizes').checked = false;
   clip = sizeClips[state.size];
   buildFigures();
   await loadRecord();
@@ -413,7 +426,7 @@ function judge(v, t) {
 function renderSheet() {
   const s = clip.summary;
   const small = sizeClips.small.summary;
-  const cut = state.cut;
+  const cut = clip.base ?? state.cut;
   $('sName').innerHTML = `${clip.nameKo}<span class="de">${clip.nameDe}</span>`;
   $('sDesc').textContent = `${clip.desc} · ${SIZE_KO[state.size]} · ${state.side === 'right' ? '오른쪽에서' : '왼쪽에서'}`;
   const seq = s.sequence;
@@ -455,8 +468,10 @@ function renderSheet() {
     {
       h: '빠르고 세다',
       rows: [
-        { l: '칼끝 최고 빠르기', sub: `작게(지금 게임) ${small.tipPeak} m/s 의 ${fmt(ratio)}배 · 목표 1.45배 이상 · 사람 20~33 m/s (참고, 한도 아님)`, v: `${s.tipPeak} m/s`, c: judge(ratio, { min: 1.45, near: 0.1 }) },
-        { l: '에너지 비 어림 (빠르기²)', sub: '같은 유효 질량이면 · 목표 2배 이상', v: `${fmt(ratio * ratio)}배`, c: judge(ratio * ratio, { min: 2, near: 0.3 }) },
+        noSmall
+          ? { l: '칼끝 최고 빠르기', sub: '작게 벌이 없는 클립 — 비율은 재지 않는다', v: `${s.tipPeak} m/s`, c: '' }
+          : { l: '칼끝 최고 빠르기', sub: `작게(지금 게임) ${small.tipPeak} m/s 의 ${fmt(ratio)}배 · 목표 1.45배 이상 · 사람 20~33 m/s (참고, 한도 아님)`, v: `${s.tipPeak} m/s`, c: judge(ratio, { min: 1.45, near: 0.1 }) },
+        ...(noSmall ? [] : [{ l: '에너지 비 어림 (빠르기²)', sub: '같은 유효 질량이면 · 목표 2배 이상', v: `${fmt(ratio * ratio)}배`, c: judge(ratio * ratio, { min: 2, near: 0.3 }) }]),
         { l: '칼끝 최고 때 가슴이 도는 빠르기', sub: '자기 최고 대비 · 목표 30% 이상', v: `${Math.round(s.trunkCarry * 100)}%`, c: judge(s.trunkCarry, { min: 0.3, near: 0.05 }) },
         { l: '칼끝 빠르기 중 몸통 몫', sub: '목표 30% 이상', v: `${Math.round(s.shareAtTipPeak.trunk * 100)}%`, c: judge(s.shareAtTipPeak.trunk, { min: 0.3, near: 0.05 }) },
       ],
@@ -472,6 +487,37 @@ function renderSheet() {
       ],
     },
   ];
+  if (clip.lunge) {
+    const g = clip.lunge;
+    groups.unshift({
+      h: '런지 (사람 기준: lunge_flow.md)',
+      rows: [
+        { l: '손이 먼저', sub: '손이 움직이기 시작 → 앞발이 뜸 · 사람 숙련자 70 ± 50 ms [검색 요약]', v: `${g.handFirst} ms`, c: g.handFirst >= 20 ? chip('good', '손 먼저') : chip('warn', '발과 같이') },
+        { l: '칼끝이 닿는 때 → 앞발 딛기', sub: '사람: 칼끝이 앞발 딛기 직전·그때 닿는다 [지도서]', v: `${g.footLand >= 0 ? '+' : ''}${fmt(g.footLand)} s`, c: '' },
+        { l: '골반이 가장 낮아진 양', sub: '쟁기 자세에서 · 두 발 사이로 정해진다 (앞 정강이 수직·뒷다리 곧게)', v: `${fmt(g.pelvisDrop)} m`, c: '' },
+        { l: '가장 낮은 때', sub: '앞발 딛은 뒤 앞무릎이 받을 때 [추정]', v: `+${fmt(g.lowAfterLand, 3)} s`, c: '' },
+        { l: '끝 자세', sub: '두 발 사이 · 앞무릎 · 뒷무릎 (180° = 곧게)', v: `${fmt(g.stanceEnd)} m · ${g.kneeFront}° · ${g.kneeBack}°`, c: '' },
+        { l: '몸 숙임', sub: '가장 낮을 때 · 사람 17.5° [검색 요약: ISBS]', v: `${g.lean}°`, c: '' },
+      ],
+    });
+  }
+  if (clip.flow) {
+    const f = clip.flow;
+    groups.unshift({
+      h: '흐름 (이어 베기)',
+      rows: [
+        { l: '겨눈 선 → 다음 겨눈 선', sub: '첫 베기 칼이 겨눈 선을 지난 뒤 둘째 베기가 지나기까지 [추정]', v: `${fmt(f.contactGap)} s`, c: '' },
+        { l: '사이에서 칼끝이 가장 느릴 때', sub: `첫 칼끝 최고의 ${Math.round(f.tipMin.ofPeak1 * 100)}% · 첫 겨눈 선 +${fmt(f.tipMin.t)} s (이어 감기 꼭대기)`, v: `${fmt(f.tipMin.v, 1)} m/s`, c: f.tipMin.v >= 2 ? chip('good', '칼이 서지 않음') : chip('warn', '거의 섬') },
+        { l: '사이에서 손이 가장 느릴 때', sub: `첫 겨눈 선 +${fmt(f.handMin.t)} s`, v: `${fmt(f.handMin.v)} m/s`, c: '' },
+        { l: '칼 돌림이 가장 느릴 때', sub: '손 → 칼끝 방향이 도는 빠르기 (월드)', v: `${fmt(f.bladeRateMin.v, 1)} rad/s`, c: '' },
+        { l: '몸통이 되감기를 끝낸 때', sub: '가슴이 반대쪽으로 가장 많이 감긴 때 = 둘째 감기 끝', v: `+${fmt(clip.marks2.tw - clip.marks1.tc)} s`, c: '' },
+        { l: '둘째 베기 칼끝 최고', sub: '둘째 베기도 온몸 베기 (첫 베기와 같은 크기)', v: `${clip.summary2.tipPeak} m/s`, c: '' },
+        { l: '걸음', sub: '베기마다 한 걸음 (Meyer "모든 베기는 제 걸음")', v: `${fmt(f.pelvisAdvance)} m`, c: '' },
+      ],
+    });
+  }
+  // 런지(찌르기)는 베기 기준(사슬·크기·몸통 몫)으로 재지 않는다 — 런지 숫자와 반동·허점만
+  if (clip.lunge) groups.splice(0, groups.length, ...groups.filter((g) => g.h.startsWith('런지') || g.h === '반동·허점이 있다'));
   $('crits').innerHTML =
     groups
       .map(
@@ -543,7 +589,39 @@ const PHASES = [
   ['tc', 'tf', '지나가기'],
   ['tf', 'tg', '복귀'],
 ];
+// 흐름 클립(marks1·marks2): 첫 베기 → 이어 감기(서지 않음) → 둘째 베기 → 지나가기 → 복귀
+function flowBands() {
+  const a = clip.marks1, b = clip.marks2;
+  return [
+    [a.t0, a.tw, '감기', 0],
+    [a.tw, a.tc, '베기', 1],
+    [a.tc, b.tw, '이어 감기', 0],
+    [b.tw, b.tc, '베기', 1],
+    [b.tc, b.tf, '지나가기', 2],
+    [b.tf, b.tg, '복귀', 3],
+  ];
+}
+const LUNGE_PHASES = ['준비', '찌르기 · 런지', '낮아짐', '복귀'];
 function phaseName(t) {
+  if (clip.lunge) {
+    const m = clip.marks;
+    if (t < m.tw) return '준비';
+    if (t < m.tr) return '찌르기 · 손 먼저';
+    if (t < m.tc) return '찌르기 · 앞발이 남';
+    if (t < m.tf) return '앞발 딛음 · 낮아짐';
+    if (t < m.tg) return '복귀';
+    return '자세';
+  }
+  if (clip.marks2) {
+    const a = clip.marks1, b = clip.marks2;
+    if (t < a.tw) return '감기';
+    if (t < a.tc) return t < a.tr ? '베기 · 몸이 먼저' : '베기 · 손목 풀림';
+    if (t < b.tw) return '이어 감기 · 칼이 서지 않음';
+    if (t < b.tc) return t < b.tr ? '둘째 베기 · 몸이 먼저' : '둘째 베기 · 손목 풀림';
+    if (t < b.tf) return '지나가기';
+    if (t < b.tg) return '복귀';
+    return '자세';
+  }
   const m = clip.marks;
   if (t < m.tw) return '감기';
   if (t < m.tr) return '베기 · 몸이 먼저';
@@ -558,8 +636,9 @@ function bandColors() {
 function renderBands() {
   const T = duration(clip);
   const cols = bandColors();
-  $('bands').innerHTML = PHASES.map(([a, b], i) => `<span style="width:${((clip.marks[b] - clip.marks[a]) / T) * 100}%;background:${cols[i]}"></span>`).join('');
-  $('bandlbl').innerHTML = PHASES.map(([a, b, name]) => `<span style="width:${((clip.marks[b] - clip.marks[a]) / T) * 100}%">${name}</span>`).join('');
+  const list = clip.marks2 ? flowBands() : PHASES.map(([a, b, name], i) => [clip.marks[a], clip.marks[b], clip.lunge ? LUNGE_PHASES[i] : name, i]);
+  $('bands').innerHTML = list.map(([a, b, , ci]) => `<span style="width:${((b - a) / T) * 100}%;background:${cols[ci]}"></span>`).join('');
+  $('bandlbl').innerHTML = list.map(([a, b, name]) => `<span style="width:${((b - a) / T) * 100}%">${name}</span>`).join('');
 }
 
 // ── 곡선 ──

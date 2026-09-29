@@ -16,6 +16,7 @@
 ## 0-1. 이 세션에서 막힌 곳 (EGRESS 차단 — 다시 시도하지 않는다)
 
 웹 본문 읽기 도구와 curl 이 프록시에서 거절됨(2026-09-29): wiktenauer.com, link.springer.com, ieeexplore.ieee.org, researchgate.net, mocap.cs.cmu.edu, pubmed.ncbi.nlm.nih.gov, pmc.ncbi.nlm.nih.gov, jstage.jst.go.jp, semanticscholar.org, zenodo.org, cdn.jsdelivr.net(curl). 검색 결과 요약만 받았다.
+오후(런지·흐름 조사)에 더 막힘: journals.plos.org, frontiersin.org, mdpi.com, ojs.ub.uni-konstanz.de, ira.lib.polyu.edu.hk, chukyo-u.repo.nii.ac.jp, biomedres.info, alliedacademies.org, files.4medicine.pl, idosi.org, clasicalfencing.wordpress.com, en.wikipedia.org. 이 환경의 네트워크 정책이다 — 사장님이 환경 설정의 네트워크 허용에서 열 수 있다.
 
 ## 1. 교본 원문·도판 [원전]
 
@@ -59,6 +60,9 @@
 | George Turner (ARMA) "Sword Motions and Impacts" | 롱소드 칼끝 약 75 mph ≈ 33.5 m/s | snippet |
 | AAOS 관절 가동 범위 (1965; Greene & Heckman 1994) | 어깨 굽힘·벌림 180°, 팔꿈치 150°, 손목 굽힘 80°·폄 70°, 가슴허리 돌림 45°, 엉덩이 돌림 45° | snippet |
 | ISBS 엘리트 펜싱 런지 | 길이 1.24 m (0.88~1.86), 엉덩이 속도 1.97 m/s, 몸통 앞기울기 17.5° | snippet |
+| Chen 외 2017 펜싱 생체역학 개관 (PLoS ONE) | 숙련자는 팔이 발보다 먼저, 손-발 시간차 0.07±0.05 s (초보 0.13±0.15 s) — `lunge_flow.md` 런지 순서 | 검색 요약 (본문 막힘) |
+| Gholipour 외 2008 펜싱 런지 입체 촬영 | 엉덩관절 굽힘 숙련 53° / 초보 40°, 앞무릎 굽힘 약 20° → 폄 51±9° | 검색 요약 |
+| Mulloy 외 ISBS 펜싱 런지 운동 사슬 | 뒷다리 엉덩이→무릎→발목 순서, 뒷발목 폄 564±132 °/s | 검색 요약 |
 | 검도 머리치기 시간 (Sports Biomechanics 2026) | 대학 선수 머리치기 0.818±0.085 s, 손목치기 0.745±0.101 s | snippet |
 
 ## 5. 추정 [추정]
