@@ -767,7 +767,10 @@ export const GESTURE = {
 // R2 클립 추적 (docs/strike/r2_impl_spec.md §5.9, src/strike/drive.js). 몸통·닻·앞먹임 회전력·범위·발·내딛기
 //  S = 0 이면 모든 고리가 멈춘다(엔진에 쓰는 것 없음). 상한·바닥 없음: 걸음 시간 바닥(stepDurMin)·발 돌림 빠르기(footYawRate) 두지 않는다
 export const DRIVE = {
-  on: true, trunk: true, hands: true, ff: true, feet: true, step: true, // 켜는 차례(몸통 → 앞먹임 → 발 → 걸음)는 고치는 차례일 뿐, 내보낼 땐 모두 참
+  // hands 기본 거짓 (W4c 판정): 손 추적을 끄고 몸통·다리·걸음만 켠 몸통만 (trunkOnly) 을 가장 안전한 기본으로 둔다. 칼 든 손은 R1 팔 베기 손가락 매핑 (실제 가슴 틀)
+  //  세 방식 (trunkOnly·windOnly·windOnlyFF) 모두 기준 (1) '어느 손가락 빠르기에서도 맨 팔 베기보다 약하지 않다' 에서 탈락. 빠진 행 trunkOnly 84 < windOnlyFF 141 < windOnly 152 / 280
+  //  (chainW vert hit 칼끝 26-72 %, chain diagR hit 상처 16-17 %, riseR, docs/strike/w4c_windonly.md). 나머지 켜는 차례(몸통 → 앞먹임 → 발 → 걸음)는 모두 참
+  on: true, trunk: true, hands: false, ff: true, feet: true, step: true,
   ffGain: 0.8, ffHip: true, cocontract: 0.5, motorRate: 40, shoulderRate: 40, motorRateAll: false, // Q4 (motorRateAll A/B → Q17). ffGain 은 설계서 값 — 넘어짐 때문에 내리지 않는다 (§5.4, Q24)
   anchorRelaxYawK: 0.9, anchorRelaxYawD: 0.0, // Q24 (R4 가 D 를 푼다)
   balanceAssist: { phi: [-1, 0.55, 1.6, 2.2], v: [1, 1, 1, 1] }, // 설계서 §4-1 이음매: R2 는 늘 1. R4 가 [1, 0.5, 0.5, 1]
@@ -782,6 +785,7 @@ export const DRIVE = {
   handOnStroke: true, // Q3: 감기 없는 긋기에도 손이 따른다 (φ_align / 자동 감기 + 이어받기). false = 대비책만
   edgeFromClip: false, // §4.3: 날 방향은 클립에서도 유도값 — 게임이 잰 hitPointVel 이 더 참
   // W4b 칼 든 손 몫 방식. 'track' | 'finger' | 'governed' | 'windOnly' (W4c). 드라이브 S > 0 스텝에서만 읽는다
+  //  W4c: hands 기본 거짓이라 기본 경로에서는 읽히지 않는다 (DRIVE.hands=true 일 때만 뜻이 있다). 'windOnly' 는 실험 스위치
   //  W4b 판정: 이긴 방식 없음 → 기본 'track' 그대로. 셋 다 칼끝·tc 운동에너지 ≥ 맨 팔 베기 × 0.95 에서 탈락 (v12 in60 air horizR 5.98 vs 19.5 m/s,
   //  diagR 4.10 vs 16.65). governed 는 한 걸음 Hill 지평이 멈춘 팔을 묶는다, finger 는 긋는 동안 클립 목표가 없다 (docs/strike/w4b_handmode.md)
   //  'track' = W4 그대로: 긋는 동안도 클립 손 길을 목표로 쫓는다
@@ -794,7 +798,8 @@ export const DRIVE = {
   handMode: 'track',
   fingerFF: false, // 'finger' 베기 중 팔 앞먹임 = 명령 가슴 각가속도 × I_arm 만 (켬). W4b 잼: 끔이 칼끝·tc 운동에너지가 더 커서 끔 (감기+베기 diagR 19.0 vs 17.0 m/s, 42.7 vs 30.3 J)
   // W4c 스위치: 참이면 드라이브 앞먹임 (몸통 가슴·골반 α, 팔 α_des·α_flex) 이 한 점 곡률 v″·φ̇² + v′·φ̈ 대신
-  //  이번 스텝 명령 빠르기의 평균 가속 (v′φ̇ 가 한 스텝에 바뀐 만큼 / dt) 을 쓴다 (φ̇ 은 손짓 층 거르개 값, 새 상수 없음). 판정 전까지 거짓
+  //  이번 스텝 명령 빠르기의 평균 가속 (v′φ̇ 가 한 스텝에 바뀐 만큼 / dt) 을 쓴다 (φ̇ 은 손짓 층 거르개 값, 새 상수 없음).
+  //  W4c: 거짓 그대로. 잡음 고침은 유효 (감기 α_des 38970 → 12000 rad/s², v12) 이나 windOnlyFF 가 이기지 못해 기본 경로로 올리지 않는다 (실험)
   ffFilter: false,
   puppet: false, // 또는 클립 id
 };
