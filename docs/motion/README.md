@@ -13,8 +13,12 @@
 | 측정 사양표 | [`spec_table.md`](spec_table.md) (자동 생성) | 크기별 칼끝 빠르기·시간, 운동 사슬 시각, 동작 범위, 허점, 표시 자세의 관절각 |
 | 평가 기준 초안 | [`evaluation.md`](evaluation.md) | "사람처럼 / 크다 / 준비가 읽힌다 / 빠르고 세다 / 반동·허점" |
 | 무기별 몸 (초안) | [`weapon_body.md`](weapon_body.md) | 게임 무기의 휘두르는 관성(손 둘레)과 시간 배율, 한손 무기의 몸통 몫, 츠바이핸더 감기 — 무기 PM 분류 틀 근거 |
+| 시작 자세 (자동) | [`start_poses.md`](start_poses.md) | 무리마다 어느 게임 자세에서 작게·보통·크게까지 닿나(칼 호·손 길) — 사장님 Q3 싣기 = 시작 자세 호 + 손가락 긋기 |
+| 채점 | [`score.md`](score.md) | `stillness-motion-score/1`: 기준 대비 손 오차·위상 오차·최고 순서·칼 방향·동작 범위 (`tools/motion/score.mjs`, 디렉터 chain.mjs 가 부름) |
+| 한손 무기 (자동) | [`onehand_table.md`](onehand_table.md) | 세이버 moulinet 크게 벌 v0 8개(4무리 × 좌우)·레이피어 런지 2개와 롱소드 나란히: 제안·근거, 몸통·팔·손목 몫, 한계 |
+| 츠바이핸더 (자동) | [`zweihander_table.md`](zweihander_table.md) | 츠바이핸더 크게 벌 v0 8개와 롱소드 크게 벌 나란히: 제안 배율·근거, 시간, 몸통 몫, 반동·허점 |
 | 모양 목표 초안 | [`targets.md`](targets.md) | 재설계 §2-6 모양 줄(감기·지나가기·회전·손 길·사슬 순서·걸음)을 사람 자료로 다시 세움 — 아래 문턱만, 범위는 순서·참고로 |
-| 파일 형식 | [`clip_format.md`](clip_format.md) | 클립·게임 기록 형식 (버전 번호), 좌표·부호, 채널, 섞을 때 주의 |
+| 파일 형식 | [`clip_format.md`](clip_format.md) | 클립·게임 기록 형식 (버전 번호), 좌표·부호, 채널, 섞을 때 주의, **검사 규칙 §6** (`validate_clip.mjs`) |
 | 출처 | [`sources.md`](sources.md) | 교본·번역·모캡 논문·공개 데이터·생체역학·추정, 이용 조건, 읽은 깊이, 확보 못 한 것 |
 | 게임이 읽을 수치 | `docs/motion/clips/*.json` (48개 + 흐름 2개 + 런지 2개) + `index.json` | 8 베기 × 좌우 × 작게·보통·크게, 120 Hz. 흐름: 8자(분노의 베기 좌우 이어 베기) 크게 × 좌우. 런지: 쟁기 자세에서 내디디며 찌르기 크게 × 좌우 |
 | 런지·흐름 사람 기준 | [`lunge_flow.md`](lunge_flow.md), [`flow_table.md`](flow_table.md) · [`lunge_table.md`](lunge_table.md) (자동 생성) | 런지 몸 낮춤(게임 다리로 계산한 표), 흐름에서 칼을 세우지 않는 손목 — 디렉터·무기 PM 에게 |
@@ -42,7 +46,7 @@
 
 | | 작게 (지금 게임) | 크게 (온몸) | 사람 자료 |
 |---|---|---|---|
-| 칼끝 최고 m/s | 11~20 | **34~37** (작게의 1.8~2.3배, Unterhau 3.3배) | 힘 뺀 베기 약 20, 최대 약 33.5 (SwordSTEM, ARMA — 각 한 건) |
+| 칼끝 최고 m/s | 11~20 | **34~37** (작게의 1.8~2.3배, Unterhau 3.3배) | 힘 뺀 베기 약 20 (SwordSTEM 한 건). 최대를 잰 자료는 아직 없다 — 전에 적은 33.5(ARMA)는 계산 예시였다 |
 | 감기 끝 → 칼이 겨눈 선 | 0.28 s | 0.29 s | 골프 내려치기 약 0.25~0.3 s [기억, 확인 필요] |
 | 운동 사슬 (겨눈 선 기준 최고 시각) | 거의 한꺼번에 | 골반 −129 → 가슴 −79 → 손 −71 → 칼끝 −25 ms (Zornhau) | 골반 → 가슴 → 팔 → 채, 간격 20~40 ms (골프) |
 | 골반 / 가슴 최고 각속도 | 130 / 380 °/s (Zornhau) | 300 / 640 °/s (Zornhau) | 골프 480±82 / 605±87 °/s |
@@ -108,8 +112,13 @@ node tools/motion/build_flow.mjs             # 8자 흐름 클립 2개 + index.j
 node tools/motion/build_lunge.mjs            # 런지 찌르기 클립 2개 + index.json 에 끼움 + lunge_table.md (--step= --drop= 로 걸음·낮춤)
 node tools/motion/record_game.mjs            # 지금 게임 팔 베기 기록 (zornhau·oberhau·zwerchhau·mittelhau·unterhau)
 node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>   # 시험판 팔·결심 베기 기록 (review_wbs_trial.md 재현)
-node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 → docs/motion/compare_game.md
+node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 + 채점 표 → docs/motion/compare_game.md
+node tools/motion/start_table.mjs            # 시작 자세 표 → docs/motion/start_poses.md
+node tools/motion/score.mjs <기준.json> <기록.json>   # 채점 한 벌 (JSON, score.md)
 node tools/motion/qa_clips.mjs               # 겹침 검사: 칼 ↔ 몸, 아래팔 ↔ 몸통 (표로 찍음)
+node tools/motion/build_onehand.mjs          # 세이버 크게 벌 8개 + 레이피어 런지 2개 → docs/motion/clips/sabre·rapier/ + onehand_table.md (build_lunge 뒤)
+node tools/motion/build_zweihander.mjs       # 츠바이핸더 크게 벌 8개 → docs/motion/clips/zweihander/ + zweihander_table.md (build_clips 뒤, 배율은 파일 위 PROPOSAL)
+node tools/motion/validate_clip.mjs          # 클립 검사(clip_format.md §6): 형식·채널·길이·표본 수·φ·시작/끝 자세 ±2 cm·팔다리 넘침·NaN. 어긋나면 종료 코드 1 (빌드 도구가 끝에서 스스로 돌린다)
 npm run dev                                   # → http://localhost:5173/tools/motion/viewer.html
 ```
 
@@ -120,7 +129,7 @@ npm run dev                                   # → http://localhost:5173/tools/
 - **v0 는 모션 캡처가 아니다.** 교본의 시작·끝 자세·걸음 규칙과 스포츠 생체역학의 운동 사슬 순서·빠르기 범위로 저작한 것이다. 사람 모캡과 대조한 오차는 아직 없다(`sources.md` — 롱소드 다섯 베기 모캡은 공개되지 않았다).
 - **손목 각(아래팔-칼)**: 사람 어림 [추정, 측정 자료 없음] = 망치 쥐기 약 90° + 손목 옆굽힘으로 약 135°, 손목 폄(최대 70°)까지 보태면 약 160°. 크게 벌은 최대 114~163° 로 거의 160° 안이다(가로 베기 감기만 0.02 s 넘음). 보통 벌은 섞은 탓에 165~177° 까지 간다. 몸 모형에 한계를 걸어 칼을 끌어오는 방법(한 표본씩, 시간으로 부드럽게 두 가지)을 시험했으나 감기 중 칼이 튀어(칼끝 순간 37~80 m/s) v0 에서는 끄고 적기만 한다(`spec_table.md` §4, `tools/motion/lib/clip.mjs` wristLimit).
 - **보통 벌**: 처음(v0)에는 작게와 크게를 그냥 반씩 섞었더니 게임 자세와 온몸 자세의 모양이 달라 사이 자세의 손목이 165~177° 까지 갔다. **게임에서 S 로 작은 벌과 큰 벌을 곧게 섞어도 같은 일이 생긴다.** 그래서 보통 벌을 크게 벌에서 줄여 만들었다(v1: 칼끝 24~26 m/s, 크기 재는 값 대부분이 작게와 크게 사이). 섞을 때는 보통 벌을 사이에 두고 두 구간으로 섞기를 권한다(작게↔보통, 보통↔크게). 보통 벌도 감기에서 손목이 160° 를 잠깐 넘는 베기가 있다(0.06~0.16 s).
-- 칼끝 34~37 m/s 는 사람 최대 자료(33.5 m/s, 한 건)를 조금 넘는다. 사람 기준 동작 쪽을 모캡 수치로 다시 맞춘다는 뜻이고, **게임 빠르기의 한도가 아니다**(사장님: 빠르기·세기에 위쪽 한도 없음).
+- 칼끝 34~37 m/s 와 견줄 사람 최대 측정 자료는 아직 없다(전에 인용한 ARMA 33.5 m/s 는 칼자루 힘 셈의 가정 예시였다 — 연구 ASS 표본 점검 9/29). 모캡 수치를 얻으면 사람 기준 동작 쪽을 다시 맞춘다는 뜻이고, **게임 빠르기의 한도가 아니다**(사장님: 빠르기·세기에 위쪽 한도 없음).
 - 작게 벌의 왼쪽 바꿈·바보 자세는 게임 자세표 값 그대로라 칼끝이 땅 높이까지 내려간다(게임에서는 땅이 막는다).
 - **크게 벌의 감기(0.36 s)가 빠른 편이다.** 칼이 쟁기에서 등 뒤까지 약 240° 를 돌아 감기 중에도 칼끝이 최고 약 20 m/s 다. 골프는 백스윙이 다운스윙의 약 3배 길다(대중서 "Tour Tempo" [기억]).
   칼 베기는 준비를 더 빨리 하지만, 준비가 읽히려면 감기 0.4~0.5 s 도 검토할 만하다(조작 반응성과 맞바꿈 — 디렉터·사장님 판단).

@@ -1,14 +1,16 @@
 // ─────────────────────────────────────────────────────────────
 //  기준 클립 겹침 검사 (동작 연구 PM)
 //   node tools/motion/qa_clips.mjs   → 칼이 몸(머리·몸통·다리)을 지나가는지, 아래팔이 몸통 안으로 들어가는지
+//   node tools/motion/qa_clips.mjs docs/motion/clips/zweihander/index.json   → 다른 목록
 //  몸통 = 가슴 틀 타원 단면(앞 0.11 · 뒤 0.10 · 옆 0.16 m + 팔 두께 0.035, 엉덩이 위 ~ 어깨 바로 아래). 5~10% 는 몸에 닿는 정도
 // ─────────────────────────────────────────────────────────────
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const D = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs', 'motion', 'clips');
-const ix = JSON.parse(readFileSync(join(D, 'index.json'), 'utf8'));
+const IX = process.argv[2] ? resolve(process.argv[2]) : join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs', 'motion', 'clips', 'index.json');
+const D = dirname(IX);
+const ix = JSON.parse(readFileSync(IX, 'utf8'));
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
