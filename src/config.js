@@ -781,6 +781,13 @@ export const DRIVE = {
   stepS: 0.3, stepScale: 1.0, stepHold: 0.25, toeLever: 0.02, // Q7 (걸음 시간 바닥 없음, 발 돌림 빠르기 없음: §5.6)
   handOnStroke: true, // Q3: 감기 없는 긋기에도 손이 따른다 (φ_align / 자동 감기 + 이어받기). false = 대비책만
   edgeFromClip: false, // §4.3: 날 방향은 클립에서도 유도값 — 게임이 잰 hitPointVel 이 더 참
+  // W4b 칼 든 손 몫 방식 (A/B 스위치, W4b 판정까지 기본 'track'). 'track' | 'finger' | 'governed'. 드라이브 S > 0 스텝에서만 읽는다
+  //  'track' = W4 그대로: 긋는 동안도 클립 손 길을 목표로 쫓는다
+  //  'finger' = 감기(자세 잡기)는 클립 손, 베기 시작부터 손가락 → 손 매핑(R1 팔 베기)을 명령 가슴 틀로 돌린 것. 들뜸은 carryPhi 로 풀고,
+  //    가운데 자세 둘레 손 들뜸 배율 = 1 + (g1 − 1)·S (g1 = 큰 클립 손 들뜸 / 손가락 매핑 들뜸, 무리마다 아틀라스에서 셈 — 맞춘 값 아님)
+  //  'governed' = 'track' 이지만 손 위상 φH 가 팔이 지금 낼 수 있는 빠르기(Hill·관성·IK 민감도)보다 앞서 가지 않는다. 상수 없음
+  handMode: 'track',
+  fingerFF: false, // 'finger' 베기 중 팔 앞먹임 = 명령 가슴 각가속도 × I_arm 만 (켬). W4b 잼: 끔이 칼끝·tc 운동에너지가 더 커서 끔 (감기+베기 diagR 19.0 vs 17.0 m/s, 42.7 vs 30.3 J)
   puppet: false, // 또는 클립 id
 };
 

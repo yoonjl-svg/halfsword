@@ -41,7 +41,7 @@ function makeCmd() {
   return {
     S: 0, c: 0, over: 0, mode: 0, phi: -1, phiDot: 0, phiDDot: 0, phiF: -1, phiDotF: 0,
     pelvisYaw: 0, pelvisYawDot: 0, pelvisYawDDot: 0, chestYaw: 0, chestYawDot: 0, chestYawDDot: 0,
-    pitch: 0, pitchDot: 0, pitchDDot: 0, drop: 0, dropDot: 0, side: 0, sideDot: 0,
+    pitch: 0, pitchDot: 0, pitchDDot: 0, drop: 0, dropDot: 0, side: 0, sideDot: 0, sideDDot: 0,
     qChestCmd: new Float64Array([0, 0, 0, 1]), // 바라보는 틀 쿼터니언 [x, y, z, w] (three.js 차례)
     wChestCmd: new Float64Array(3), // 명령 가슴 틀의 월드 각속도 (rad/s)
     handS: new Float64Array(3), handO: new Float64Array(3), sword: new Float64Array(3),
@@ -107,6 +107,8 @@ export class ClipDrive {
     this._v3 = new Float64Array(3);
     this._u3 = new Float64Array(3);
     this._T = { x: 0, y: 0, z: 0 };
+    this._restChest = new Float64Array([0, 0, 0, -1]); // W4b: mixBody 앞 자세표 가슴 [chestYaw, pitch, side, 드라이브 시각]
+    this._hm = 0; // W4b: 손 몫 방식 0 track · 1 finger · 2 governed (armStep 이 w > 0 스텝마다)
     // 컷(한 획) 상태
     this._cutSeen = -1;
     this._inCut = false;
@@ -277,6 +279,7 @@ export class ClipDrive {
     const u = phiB - this._phiStart;
     if (this._carry && this._inCut && u < DRIVE.carryPhi) carryOver(A, this.Arev, this.A0, u > 0 ? u : 0, DRIVE.carryPhi);
     this.toCmd(A, phiB, phiBDot, phiBDDot, S, over, mode, g);
+    if (this.armStep) this.armStep(dt); // W4b: 손 몫 방식 (DRIVE.handMode, w > 0 에서만 읽는다). 'track' 은 아무것도 안 쓴다
     if (!this._tcSeen && this._inCut && phiB >= 0.85) {
       this._tcSeen = true;
       this.debug.tTc = this.t;
@@ -462,6 +465,7 @@ export class ClipDrive {
     cmd.dropDot = _g1.drop * pd;
     cmd.side = _g0.side;
     cmd.sideDot = _g1.side * pd;
+    cmd.sideDDot = _g2.side * pd2 + _g1.side * pdd; // W4b: 명령 가슴 각가속도 (handMode 'finger' 팔 앞먹임)
     // 가슴 틀 (명령): M = ry(−yaw)·rz(−lean)·rx(side) → 쿼터니언. 각속도 = ȧ·ŷ + ry(a)·ḃẑ + ry(a)rz(b)·ċx̂ (a = chestYaw, b = −pitch, c = side)
     const v = A.v;
     const M = chestFrame(v[CH.chestYaw], v[CH.chestLean], v[CH.chestSide], this._M);
@@ -545,6 +549,12 @@ export class ClipDrive {
 
   // ───────── 몸 자세 (updateBodyPose 끝, pelvisYawOffset 앞) ─────────
   mixBody(bp, bv) {
+    // W4b: 섞기 전 자세표 가슴 (handMode 'finger' 가 손을 돌리는 기준 틀). 몸 모양엔 안 쓴다
+    const r = this._restChest;
+    r[0] = bp.chestYaw;
+    r[1] = bp.pitch;
+    r[2] = bp.side;
+    r[3] = this.t;
     if (!DRIVE.trunk) return;
     const c = this._c, cmd = this.cmd;
     for (let i = 0; i < 5; i++) {

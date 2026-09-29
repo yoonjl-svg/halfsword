@@ -130,6 +130,7 @@ function hill(v, vmax, a = 0.25, ecc = 1.4) {
   const e = Math.min(1, -r / 0.3);
   return 1 + (ecc - 1) * (1 - (1 - e) * (1 - e));
 }
+ClipDrive.hill = hill; // W4b: 'governed' 가 manualMuscle·팔꿈치와 같은 힘-속도 곡선으로 팔이 낼 빠르기를 잰다
 
 /**
  * 손 목표(몸 앞 평면의 좌우 x, 위아래 y) → 칼끝 방향 (몸 기준: x 앞, y 위, z 칼 든 쪽)
@@ -1633,7 +1634,7 @@ export class Fighter {
         }
         const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -mErr, mErr);
         let vz = (_rv.z - prev.z) * inv;
-        if (dff && n === 'farmS') vz = vz + (dr.omegaFlex() - vz) * dr.w; // 클립 굽힘 빠르기 쪽으로 (도는 목표의 차분은 한 스텝 늦고 IK 로 뭉개진다)
+        if (dff && n === 'farmS') vz = vz + (dr.omegaFlex() - vz) * dr.flexW(); // 클립 굽힘 빠르기 쪽으로 (도는 목표의 차분은 한 스텝 늦고 IK 로 뭉개진다). flexW = S, W4b 'finger' 베기 중엔 0
         if (dw && (vz > rl || vz < -rl)) dr.noteRateClip();
         vz = THREE.MathUtils.clamp(vz, -rl, rl);
         if (dw && n === 'farmS') {
