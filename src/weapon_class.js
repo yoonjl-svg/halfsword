@@ -91,3 +91,44 @@ export function classifyWeapon(spec) {
   const phys = weaponPhysics(spec);
   return { frame: classifyFrame(spec, phys), style: classifyStyle(spec), phys };
 }
+
+// ── 무기 층 (온몸 타격이 무기마다 읽을 값, docs/weapon_layer.md) ─────────────
+//  칸과 첫 값만 둔다. 게임은 아직 읽지 않는다(디렉터가 R2 에서 배선). 값마다 [제안]·근거는 docs/weapon_layer.md
+//  T0(베기 위상 기본 시간): 재설계 §2-4 첫 값 셋(롱소드 0.30 · 츠바이핸더 0.38 · 세이버 0.24 s)을 맞추는 한 식으로 나머지를 정한다.
+//   T0 = 기준 T0 × √((I + K) / (I기준 + K)) — I 는 손 기준 칼 관성, K 는 칼과 함께 돌리는 팔·몸 관성 몫(0.547 kg·m² 로 츠바이핸더 0.38 이 맞는다).
+//   기준은 두손(A·B·E) 롱소드 0.30, 한손(C) 세이버 0.24 — 한손 클립은 몸통 몫이 작아 따로 잰다(재설계 §2-2)
+export const WEAPON_LAYER = {
+  T0_REF: { two: 0.3, heavy: 0.3, pole: 0.3, one: 0.24 },
+  I_REF: { two: 0.272, heavy: 0.272, pole: 0.272, one: 0.179 }, // 롱소드·세이버 weaponPhysics().I
+  K_BODY: 0.547,
+  // 클립 무리(family): 재설계 atlas 의 무리 모음 이름. 두손은 리히테나워 네 무리(Zornhau·Oberhau·Mittelhau·Unterhau),
+  //  한손은 같은 네 무리 + 세이버 원운동(moulinet), 자루는 찌르기 + 정수리 내려치기뿐(봉 시제품 측정)
+  FAMILY: { two: 'longsword', heavy: 'longsword', one: 'sabre', pole: 'pole', gun: null },
+  WIND: { two: 1, heavy: 1.25, one: 0.85, pole: 1, gun: 0 }, // 감기 시간 배율 [제안]
+  FOLLOW: { two: 1, heavy: 1.25, one: 0.85, pole: 0.8, gun: 0 }, // 지나가기 시간 배율 [제안]
+  TRUNK: { two: 0.4, heavy: 0.5, one: 0.25, pole: 0.4, gun: 0 }, // 몸통 몫 힌트(재설계 trunkCarry 0.4 가 두손 기준) [제안]
+};
+
+/** 무기 하나의 무기 층 값 (게임은 아직 읽지 않는다) */
+export function weaponLayer(spec) {
+  const { frame, style, phys } = classifyWeapon(spec);
+  const L = WEAPON_LAYER;
+  const grip = spec.grip === 'one-hand' ? 'one' : 'two';
+  const T0 = frame === 'gun' ? null : Math.round(100 * L.T0_REF[frame] * Math.sqrt((phys.I + L.K_BODY) / (L.I_REF[frame] + L.K_BODY))) / 100;
+  return {
+    frame,
+    style,
+    grip,
+    family: L.FAMILY[frame],
+    // 무리 안에서 무엇을 먼저: 찌르기 방식은 찌르기, 때리기는 찌르기 없음(동작은 베기와 같음), 자루는 찌르기 + 정수리만
+    families: frame === 'gun' ? [] : frame === 'pole' ? ['thrust', 'Oberhau'] : style === 'blunt' ? ['Zornhau', 'Oberhau', 'Mittelhau', 'Unterhau'] : ['Zornhau', 'Oberhau', 'Mittelhau', 'Unterhau', 'thrust', ...(frame === 'one' ? ['moulinet'] : [])],
+    thrustFirst: style === 'thrust' || frame === 'pole',
+    T0,
+    windMul: L.WIND[frame],
+    followMul: L.FOLLOW[frame],
+    trunkShare: L.TRUNK[frame],
+    // S = 0 자세표: 동작 라이브러리(motion_library.js frameTable)의 몸 틀 표. 두손 보통은 지금 게임 표 그대로
+    stanceTable: frame === 'gun' ? null : frame === 'two' ? 'GUARDS' : frame === 'one' ? 'BASE_ONE+one' : frame,
+    skipStances: spec.motionSkip ?? [],
+  };
+}
