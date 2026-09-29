@@ -14,11 +14,11 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newRound, DT, THREE } from '../sim/harness_m.mjs';
+import { newRound, DT, THREE, CONFIG } from '../sim/harness_m.mjs';
 import { TECH_BY_NAME } from '../../src/ai_techniques.js';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { frameOf, jointsOf, speeds } from './lib/game_joints.mjs';
-import { writeRecord } from './lib/records.mjs';
+import { writeRecord, gitRev } from './lib/records.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'records');
@@ -29,10 +29,12 @@ const SWING = args[1] ? +args[1] : 0.35; // weapon_measure.mjs 가 롱소드에�
 const CHAMBER = 0.5;
 const PRE = 0.2;
 const POST = 0.9;
+const SEED = 1;
+const REV = process.env.GAME_REV || gitRev(ROOT, ['src']); // src/ 를 마지막으로 바꾼 커밋
 
 function record(cutId) {
   const tech = TECH_BY_NAME[MAP[cutId]];
-  const G = newRound({ weapon: 'longsword', seed: 1 });
+  const G = newRound({ weapon: 'longsword', seed: SEED });
   G.park();
   const f = G.player;
   const path = [tech.from, ...tech.path];
@@ -62,7 +64,20 @@ function record(cutId) {
     id: `game_${cutId}`,
     cut: cutId,
     kind: 'game-arm',
-    source: `지금 게임 (src/ ${new Date().toISOString().slice(0, 10)}), 헤드리스, 플레이어 손가락을 AI 기술 '${tech.name}' 길로 ${SWING}s 에 긋기, 상대 치움, skill 0.7, 롱소드`,
+    source: `지금 게임 (src/ ${REV}), 헤드리스, 플레이어 손가락을 AI 기술 '${tech.name}' 길로 ${SWING}s 에 긋기, 상대 치움, skill ${f.skill.level}, 롱소드`,
+    cond: {
+      code: `src/ ${REV}`,
+      seed: SEED,
+      physicsHz: Math.round(1 / DT),
+      recordHz: Math.round(1 / DT),
+      inputHz: Math.round(1 / DT), // 손가락 자리를 물리 스텝마다 넣는다
+      weapon: 'longsword',
+      gait: CONFIG.BODY.weightMode,
+      skill: f.skill.level,
+      gap: null, // 상대 치움 (G.park)
+      input: `손가락을 AI 기술 '${tech.name}' 길로: 시작 자세 ${CHAMBER} s 들기 → ${SWING} s 에 긋기`,
+      commit: null,
+    },
     hz: Math.round(1 / DT),
     marks: { swingStart: PRE, tipPeak: frames[peakI].t },
     summary: { tipPeak: Math.max(...tip), handPeak: Math.max(...hand), tipPeakT: frames[peakI].t },

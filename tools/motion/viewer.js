@@ -522,7 +522,12 @@ function renderRecRows() {
     ['손 최고 높이 (머리 꼭대기 위)', `${fmt(recTop)} m`, `이 클립 ${fmt(clip.summary.wind.handAboveHeadTop)} m`],
     ['시간 맞춤', `${fmt(recOffset)} s`, state.recAlign ? '칼끝 최고 시각을 맞춤' : '맞추지 않음'],
   ];
-  box.innerHTML = rows.map(([l, v, sub]) => `<div class="row"><div class="lbl">${l}<small>${sub}</small></div><div class="v">${v}</div><div></div></div>`).join('') + `<p class="note">${rec.source}</p>`;
+  const esc = (x) => String(x).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+  const c = rec.cond;
+  const cond = c
+    ? `<p class="note">조건: ${esc(c.code)} · 시드 ${esc(c.seed)} · 물리 ${esc(c.physicsHz)} / 기록 ${esc(c.recordHz)} / 입력 ${esc(c.inputHz)} Hz · ${esc(c.weapon)} · 걸음 ${esc(c.gait)} · skill ${esc(c.skill)} · ${c.gap == null ? '상대 치움' : `거리 ${esc(c.gap)} m`}${c.commit ? ` · 결심 ${esc(c.commit)}` : ''}</p>`
+    : '';
+  box.innerHTML = rows.map(([l, v, sub]) => `<div class="row"><div class="lbl">${l}<small>${sub}</small></div><div class="v">${v}</div><div></div></div>`).join('') + `<p class="note">${esc(rec.source)}</p>` + cond;
 }
 function renderLegend() {
   const items = [[`기준 · ${SIZE_KO[state.size]}`, C.ref]];

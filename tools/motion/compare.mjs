@@ -29,6 +29,27 @@ L.push('> 가슴 돌림 = 어깨선, 골반 돌림 = 엉덩이선. 베기 창 = 
 L.push('> 기록: 지금 게임 = `record_game.mjs`(main, 손가락을 AI 기술 길로), 시험판 = `record_wbs.mjs`(claude/wbs-impl, tseq.mjs 와 같은 조건, 손가락 12 m/s).');
 L.push('> **사람 값은 참고이지 한도가 아니다.** 게임이 기준보다 크거나 빠른 것은 문제가 아니고, 작거나 느린 것이 "모자람"이다.');
 L.push('');
+// 기록 조건 (디렉터 요청: 커밋·시드·Hz·무기). 기록 파일의 cond 를 그대로 옮긴다
+const used = CUTS.flatMap(([, , ids]) => Object.values(ids)).filter(has);
+if (used.length) {
+  const idx = Object.fromEntries(recIndex.map((r) => [r.id, r]));
+  L.push('## 기록 조건');
+  L.push('');
+  L.push('| 기록 | 코드 (커밋) | 시드 | 물리 / 기록 / 입력 Hz | 무기 | 걸음 | skill | 거리 m | 결심 (WHOLE.commit) | 입력 |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|');
+  for (const id of used) {
+    const c = idx[id].cond ?? load(`records/${id}.json`).cond;
+    if (!c) {
+      L.push(`| ${id} | (조건 없음 — 다시 기록할 것) |||||||||`);
+      continue;
+    }
+    L.push(`| ${id} | ${c.code} | ${c.seed} | ${c.physicsHz} / ${c.recordHz} / ${c.inputHz} | ${c.weapon} | ${c.gait} | ${c.skill} | ${c.gap == null ? '상대 치움' : c.gap.toFixed(1)} | ${c.commit ?? '없음'} | ${c.input} |`);
+  }
+  L.push('');
+  L.push('- 기준 클립(`docs/motion/clips`)은 저작 키프레임을 120 Hz 로 뽑은 것이라 시드·물리가 없다. 롱소드, 오른손잡이.');
+  L.push('- 같은 코드·시드면 같은 기록이 나온다(2026-09-29 다시 기록해 관절 자리가 한 자리도 안 바뀐 것을 확인).');
+  L.push('');
+}
 const COLS = [
   ['tipPeak', '칼끝 최고 m/s'],
   ['handTop', '손 최고 높이 (머리 꼭대기 위) m'],

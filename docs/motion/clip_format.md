@@ -93,7 +93,15 @@
 {
   format: 'stillness-motion-record/1',
   id, cut, kind: 'game-arm' | 'wbs-arm' | 'wbs-commit',
-  source: '어느 코드·조건으로 쟀나 (커밋, 입력, 거리, skill …)',
+  source: '어느 코드·조건으로 쟀나 (사람이 읽는 한 줄)',
+  cond: {                                       // 같은 조건을 기계가 읽는 꼴로 (compare_game.md '기록 조건' 표)
+    code,                                       // 'src/ 001249b' | 'claude/wbs-impl d781ab9' ('+고침' = 안 올린 고침이 있었음)
+    seed, physicsHz, recordHz, inputHz,         // 시드 · 물리 스텝 · 기록 · 손가락 입력 Hz
+    weapon, gait, skill,                        // 'longsword' · BODY.weightMode · 숙련도
+    gap,                                        // 두 사람 거리 m (null = 상대 치움)
+    commit,                                     // WHOLE.commit ('끔' | '켬 (결심 n번)' | null = 그런 설정 없음)
+    input,                                      // 손가락을 어떻게 움직였나
+  },
   hz: 120,
   marks: { swingStart | cutStroke, tipPeak },   // 기록마다 있는 시각 표시 (s)
   summary: { tipPeak, handPeak, tipPeakT, … },
@@ -110,3 +118,4 @@
 | 버전 | 날짜 | 바뀐 것 |
 |---|---|---|
 | clip/1, record/1 | 2026-09-29 | 처음 (같은 날 보통 벌 만드는 법을 섞기 → 크게 벌 줄이기로 바꿈 — 형식은 같음) |
+| record/1 | 2026-09-29 | `cond`(기록 조건: 커밋·시드·Hz·무기·걸음·skill·거리·결심·입력) 더함 — 없어도 읽힌다, 디렉터 요청 |

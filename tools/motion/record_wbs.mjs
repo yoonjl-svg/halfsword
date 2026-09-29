@@ -16,7 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { jointsOf, speeds } from './lib/game_joints.mjs';
-import { writeRecord } from './lib/records.mjs';
+import { writeRecord, gitRev } from './lib/records.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'docs', 'motion', 'records');
@@ -35,9 +35,12 @@ const cfg = await import(pathToFileURL(join(WROOT, 'src/config.js')).href);
 cfg.BODY.weightMode = 'hybrid'; // tools/sim/hybrid.mjs 와 같게
 const H = await import(pathToFileURL(join(WROOT, 'tools/sim/harness_m.mjs')).href);
 const { newRound, DT, THREE, CONFIG, feedTrace, inputPump } = H;
-const rev = process.env.WBS_REV || 'claude/wbs-impl'; // 기록에 남길 커밋 (예: WBS_REV=d781ab9)
+const rev = process.env.WBS_REV || gitRev(WROOT); // 기록에 남길 커밋 (체크아웃의 HEAD, WBS_REV 로 덮어쓸 수 있음)
+const SEED = 7;
+const GAP = 2.0;
 
 const PAD = { Pflug: [0.18, -0.28], ShR: [0.42, 0.42], WechselL: [-0.4, -0.42], Tag: [0.02, 0.52], Alber: [0, -0.5], Side: [0.52, 0.03], SideL: [-0.52, 0.03], Wechsel: [0.38, -0.44], OchsL: [-0.22, 0.26] };
+const padName = (xy) => Object.keys(PAD).find((k) => PAD[k] === xy);
 const FAM = {
   diagR: { ch: PAD.ShR, end: PAD.WechselL, cut: 'zornhau' },
   vert: { ch: PAD.Tag, end: PAD.Alber, cut: 'oberhau' },
@@ -60,7 +63,7 @@ function setPad(P, xy) {
 
 function trial(fam, mode) {
   CONFIG.WHOLE.commit = mode !== 'arm';
-  const G = newRound({ walls: false, gap: 2.0 + 0.17, seed: 7, weapon: 'longsword' });
+  const G = newRound({ walls: false, gap: GAP + 0.17, seed: SEED, weapon: 'longsword' });
   const P = G.player, E = G.enemy;
   G.ai.update = () => E.move.set(0, 0);
   for (let i = 0; i < E.sword.numColliders(); i++) E.sword.collider(i).setCollisionGroups(0);
@@ -133,6 +136,19 @@ for (const fam of Object.keys(FAM)) {
       cut: FAM[fam].cut,
       kind: mode === 'arm' ? 'wbs-arm' : 'wbs-commit',
       source: `디렉터 온몸 베기 구현 ${rev} (${mode === 'arm' ? '팔 베기, WHOLE.commit 끔' : '결심 베기, WHOLE.commit 켬'}), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 ${V} m/s 획, 입력 ${HZ} Hz, 칼 충돌 끔. 결심 ${commits}번`,
+      cond: {
+        code: `claude/wbs-impl ${rev}`,
+        seed: SEED,
+        physicsHz: Math.round(1 / DT),
+        recordHz: Math.round(1 / DT),
+        inputHz: HZ,
+        weapon: 'longsword',
+        gait: cfg.BODY.weightMode,
+        skill: 0.7,
+        gap: GAP,
+        input: `패드: Pflug ${JSON.stringify(PAD.Pflug)} 2 s → ${padName(FAM[fam].ch)} ${JSON.stringify(FAM[fam].ch)} 1.2 m/s + 1 s 머묾 → ${padName(FAM[fam].end)} ${JSON.stringify(FAM[fam].end)} ${V} m/s (tseq.mjs)`,
+        commit: mode === 'arm' ? '끔' : `켬 (결심 ${commits}번)`,
+      },
       hz: Math.round(1 / DT),
       marks: { cutStroke: +tStart.toFixed(4), tipPeak: frames[peakI].t },
       summary: { tipPeak: Math.max(...tip), handPeak: Math.max(...hand), tipPeakT: frames[peakI].t, commits },

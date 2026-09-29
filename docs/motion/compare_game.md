@@ -5,6 +5,26 @@
 > 기록: 지금 게임 = `record_game.mjs`(main, 손가락을 AI 기술 길로), 시험판 = `record_wbs.mjs`(claude/wbs-impl, tseq.mjs 와 같은 조건, 손가락 12 m/s).
 > **사람 값은 참고이지 한도가 아니다.** 게임이 기준보다 크거나 빠른 것은 문제가 아니고, 작거나 느린 것이 "모자람"이다.
 
+## 기록 조건
+
+| 기록 | 코드 (커밋) | 시드 | 물리 / 기록 / 입력 Hz | 무기 | 걸음 | skill | 거리 m | 결심 (WHOLE.commit) | 입력 |
+|---|---|---|---|---|---|---|---|---|---|
+| game_zornhau | src/ 001249b | 1 | 120 / 120 / 120 | longsword | levitate | 0.7 | 상대 치움 | 없음 | 손가락을 AI 기술 'zornhau' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기 |
+| wbs_diagR_arm | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 끔 | 패드: Pflug [0.18,-0.28] 2 s → ShR [0.42,0.42] 1.2 m/s + 1 s 머묾 → WechselL [-0.4,-0.42] 12 m/s (tseq.mjs) |
+| wbs_diagR_commit | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 켬 (결심 2번) | 패드: Pflug [0.18,-0.28] 2 s → ShR [0.42,0.42] 1.2 m/s + 1 s 머묾 → WechselL [-0.4,-0.42] 12 m/s (tseq.mjs) |
+| game_oberhau | src/ 001249b | 1 | 120 / 120 / 120 | longsword | levitate | 0.7 | 상대 치움 | 없음 | 손가락을 AI 기술 'oberhau' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기 |
+| wbs_vert_arm | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 끔 | 패드: Pflug [0.18,-0.28] 2 s → Tag [0.02,0.52] 1.2 m/s + 1 s 머묾 → Alber [0,-0.5] 12 m/s (tseq.mjs) |
+| wbs_vert_commit | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 켬 (결심 2번) | 패드: Pflug [0.18,-0.28] 2 s → Tag [0.02,0.52] 1.2 m/s + 1 s 머묾 → Alber [0,-0.5] 12 m/s (tseq.mjs) |
+| game_mittelhau | src/ 001249b | 1 | 120 / 120 / 120 | longsword | levitate | 0.7 | 상대 치움 | 없음 | 손가락을 AI 기술 'zwerch' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기 |
+| wbs_horizR_arm | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 끔 | 패드: Pflug [0.18,-0.28] 2 s → Side [0.52,0.03] 1.2 m/s + 1 s 머묾 → SideL [-0.52,0.03] 12 m/s (tseq.mjs) |
+| wbs_horizR_commit | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 켬 (결심 2번) | 패드: Pflug [0.18,-0.28] 2 s → Side [0.52,0.03] 1.2 m/s + 1 s 머묾 → SideL [-0.52,0.03] 12 m/s (tseq.mjs) |
+| game_unterhau | src/ 001249b | 1 | 120 / 120 / 120 | longsword | levitate | 0.7 | 상대 치움 | 없음 | 손가락을 AI 기술 'unterhau' 길로: 시작 자세 0.5 s 들기 → 0.35 s 에 긋기 |
+| wbs_riseR_arm | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 끔 | 패드: Pflug [0.18,-0.28] 2 s → Wechsel [0.38,-0.44] 1.2 m/s + 1 s 머묾 → OchsL [-0.22,0.26] 12 m/s (tseq.mjs) |
+| wbs_riseR_commit | claude/wbs-impl d781ab9 | 7 | 120 / 120 / 60 | longsword | hybrid | 0.7 | 2.0 | 켬 (결심 2번) | 패드: Pflug [0.18,-0.28] 2 s → Wechsel [0.38,-0.44] 1.2 m/s + 1 s 머묾 → OchsL [-0.22,0.26] 12 m/s (tseq.mjs) |
+
+- 기준 클립(`docs/motion/clips`)은 저작 키프레임을 120 Hz 로 뽑은 것이라 시드·물리가 없다. 롱소드, 오른손잡이.
+- 같은 코드·시드면 같은 기록이 나온다(2026-09-29 다시 기록해 관절 자리가 한 자리도 안 바뀐 것을 확인).
+
 ## 분노의 베기 Zornhau
 
 | | 기준 작게 (= 지금 게임 자세표) | 기준 크게 (온몸) | 지금 게임 · 팔 베기 | 시험판 · 팔 베기 | 시험판 · 결심(온몸) 베기 |
