@@ -83,6 +83,8 @@ export class Combat {
     this.glitchDrops = 0;
     this.capDrops = 0;
     this.lastGlitch = null;
+    this.jolted = new Set(); // 이 스텝에 엔진 충격(칼끼리·튕김)을 받은 칼 주인 (다음 스텝 튐 검사가 그 한 스텝을 건너뛴다)
+    this.glitchWaived = 0; // 직전 스텝 충격 때문에 튐 검사를 건너뛴 수 (기록만)
     // R0 스윕 판정 (STRIKE.sweep): 결과 그릇(할당 없이 재사용)과 스윕으로 잡은 첫 접촉 수 (기록만)
     this._hit = { point: new THREE.Vector3(), p: new THREE.Vector3(), q: new THREE.Quaternion() };
     this.sweptHits = 0;
@@ -166,7 +168,7 @@ export class Combat {
         this.capDrops++;
         return null;
       }
-    } else if (this.glitch(att, S, bp, vBody, speed)) return null; // R0 (§6-1): 빠르기 한도 없음, 물리 튐만 거른다
+    } else if (this.glitch(att, S, bp, vBody, speed, predicting)) return null; // R0 (§6-1): 빠르기 한도 없음, 물리 튐만 거른다
     const dir = rel.clone().divideScalar(speed);
 
     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
@@ -315,9 +317,10 @@ export class Combat {
    * R0 튐 검사 (STRIKE.glitchFilter, docs/whole_body_redesign.md §6-1) — 빠르기 한도가 아니다.
    * 접촉점 상대 빠르기가 NaN 이거나, 직전 스텝에 남겨 둔 칼 상태(prevSword)로 같은 점에서 잰 값보다 한 스텝에 glitchAcc·dt 넘게 '늘었을'
    * 때만 튐으로 버린다. 느려지는 쪽·되튐은 거르지 않는다. 직전 상태가 없거나(첫 스텝) S 가 스텝 전 캐시가 아니면(측정 도구가 합성한 상태)
-   * 거르지 않는다. 받아들인 접촉의 무기별 최고 빠르기는 peakSpeed 에 기록만 한다 (§6-1: '측정 최고의 3배'는 기준이 아니라 기록용)
+   * 거르지 않는다. 직전 스텝에 칼이 엔진 충격(칼끼리·튕김, jolted)을 받았어도 거르지 않는다 (충격 전 상태와 견주게 되어 진짜 접촉을 버린다).
+   * 받아들인 실제 접촉(예측 predict 는 빼고)의 무기별 최고 빠르기는 peakSpeed 에 기록만 한다 (§6-1: '측정 최고의 3배'는 기준이 아니라 기록용)
    */
-  glitch(att, S, point, vBody, speed) {
+  glitch(att, S, point, vBody, speed, predicting = false) {
     if (!Number.isFinite(speed)) {
       this.glitchDrops++;
       return true;
@@ -326,13 +329,18 @@ export class Combat {
     if (p && S === att.cache?.sword) {
       const sPrev = velAt(p, point, _g).sub(vBody).length();
       if (speed - sPrev > STRIKE.glitchAcc * this.dt) {
+        // 직전 스텝 충격(칼끼리·튕김) 전·후 비교는 튐과 구분 못 한다 — 그 한 스텝은 버리지 않는다 (끌림·박힘 충격은 넣지 않는다)
+        if (p.jolt) {
+          this.glitchWaived++;
+          return false;
+        }
         this.glitchDrops++;
         this.lastGlitch = { weapon: att.weapon?.id, speed, sPrev, step: this.stepNo };
         return true;
       }
     }
     const id = att.weapon?.id;
-    if (id) this.peakSpeed.set(id, Math.max(this.peakSpeed.get(id) || 0, speed));
+    if (id && !predicting) this.peakSpeed.set(id, Math.max(this.peakSpeed.get(id) || 0, speed));
     return false;
   }
 
@@ -343,6 +351,7 @@ export class Combat {
     k.com.copy(S.com);
     k.v.copy(S.v);
     k.w.copy(S.w);
+    k.jolt = this.jolted.has(f);
   }
 
   /** 매 물리 스텝 직후: 가르고 있는 칼 처리 + 일반 충돌(튕김) 처리 */
@@ -351,6 +360,7 @@ export class Combat {
     // 1) 가르고 지나가는 칼: 몸 속을 지나는 동안 매 순간 저항을 받는다
     const dt = world.timestep;
     this.dt = dt;
+    if (STRIKE.glitchFilter) this.jolted.clear();
     for (const [key, c] of this.cutting) {
       if (this.stepNo - c.seen > 2 && !(c.stuckT > 0)) {
         this.cutting.delete(key); // 더 이상 겹치지 않음
@@ -387,7 +397,12 @@ export class Combat {
           bladePt = c.localPt.clone().applyQuaternion(S.q).add(S.p);
           this.sweptHits++;
         }
+        const gd = this.glitchDrops;
         const r = this.strike(c.pr, point, true, bladePt); // 상처는 처음 닿는 순간에 한 번
+        if (!r && this.glitchDrops > gd) {
+          this.cutting.delete(key); // 튐으로 버린 첫 닿음은 지나간 것으로 두지 않는다: 다음 스텝 새 캐시로 다시 예측
+          continue;
+        }
         // 몸이 흡수할 실제 에너지 (판정용 보정 전 값)
         c.Eleft = r ? Math.min(r.energy, r.absorb) / STRIKE.energyScale : 0;
         c.stuck = r ? r.stuck : false;
@@ -463,12 +478,14 @@ export class Combat {
       if (!a || !b || a.fighter === b.fighter) return;
       if (a.kind === 'weapon' && b.kind === 'weapon') {
         if (!a.fighter.armed || !b.fighter.armed) return; // 땅에 떨어진 칼은 겨루기(바인드·쨍)가 아니다
+        if (STRIKE.glitchFilter) this.jolted.add(a.fighter).add(b.fighter);
         // 칼끼리는 모아서 한 번에 (칼날-칼날, 칼날-코등이… 여러 쌍이 한 스텝에 함께 닿는다)
         bladePairs.push(a.fighter.index < b.fighter.index ? [h1, h2] : [h2, h1]);
         return;
       }
       const pr = this.pairOf(h1, h2);
       if (!pr) return;
+      if (STRIKE.glitchFilter) this.jolted.add(pr.w.fighter); // 몸에 튕긴 칼 (엔진 충격 + rebound)
       if (this.cutting.has(`${pr.wc}:${pr.vc}`)) return;
       const c = contactOf(world, pr.wc, pr.vc);
       if (!c) return;
