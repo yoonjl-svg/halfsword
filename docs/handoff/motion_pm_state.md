@@ -25,12 +25,12 @@
 | 클립 검사기 `validate_clip.mjs` (규칙 = `clip_format.md` §6, 코드 = `lib/clip_rules.mjs` 브라우저에서도 돎). 빌드 도구 넷이 끝에서 스스로 돌린다. 70벌 모두 통과 | `tools/motion` |
 | 게임 기록 `stillness-motion-record/1`: 지금 게임 팔 베기 5 (hybrid 걸음, 2 s 서 있기), 시험판 팔·결심 베기 8 (claude/wbs-impl d781ab9) | `docs/motion/records` |
 | 문서: README(처음 볼 곳) · longsword_cuts · spec_table(자동, §7 복귀·시작·끝 자세) · evaluation · targets(초안) · clip_format(clip/2, 재설계 atlas 채널 대조 §3-6) · compare_game(자동) · review_wbs_trial · lunge_flow · flow_table/lunge_table(자동) · weapon_body · sources | `docs/motion` |
-| 비교 화면 (막대 인형 + 게임 기록 겹치기 + 다섯 기준) | `tools/motion/viewer.html` (vite), 공개 페이지 https://claude.ai/artifact/9WQuMAwtePPqLZjM5o49cC — 게시본은 viewer.html 의 `BEGIN-ARTIFACT`…`END-BODY` 사이를 떼어 `MOTION_DATA_BASE = './'` 로 바꾸고 clips·records 를 옆에 둔 것 |
+| 비교 화면 (막대 인형 + 게임 기록 겹치기 + 다섯 기준) | `tools/motion/viewer.html` (vite), 공개 페이지 https://claude.ai/artifact/9WQuMAwtePPqLZjM5o49cC (9/29 v17: 롱소드·츠바이핸더·세이버·레이피어) — 게시본은 viewer.html 의 `BEGIN-ARTIFACT`…`END-BODY` 사이를 떼어 `MOTION_DATA_BASE = './'` 로 바꾸고 clips·records 를 옆에 둔 것 |
 
 ## 열린 요청
 
 - 디렉터 9/29 과제: (a) 채널 대조·빠진 채널 채우기 — **끝남** (a489576, clip/2). (b) 복귀 구간 표본·끝 자세와 가장 가까운 게임 자세 — **끝남** (a489576, spec_table §7: 52벌 모두 시작·끝 자세 = 목표 자세, 손 오차 0 cm). (c) 보통 벌 사이 자세·감기 직후 손목 넘침 — **R2 시험판 뒤에**.
-- 디렉터 9/29 11:48 과제: ① 검사기 — **끝남** ② 츠바이핸더 large v0 — **끝남** ③ 세이버 moulinet 4무리 · 레이피어 런지 large v0 — **끝남(9/29 앞당김)**. 한손 자세표는 guards.js ONE_HAND 글을 읽어 검사(게임이 BASE_ONE 을 내보내면 그걸로 — 디렉터에게 제안). 연구 ASS 문헌 결과 오면 붙임 ④ score.mjs — **끝남(9/29)**. 소견: 작게 벌은 게임 자세표를 이은 것이라 지금 게임 기술 길과 손 오차 0.11~0.39 m — 게임 비교에는 게임 기록 자체를 기준으로 쓰는 편이 맞을 수 있다(디렉터 판단).
+- 디렉터 9/29 11:48 과제: ① 검사기 — **끝남** (9e03989) ② 츠바이핸더 large v0 — **끝남** (8f01c96) ③ 세이버 moulinet 4무리 · 레이피어 런지 large v0 — **끝남(9/29 앞당김, c07fa10)**. 한손 자세표는 guards.js ONE_HAND 글을 읽어 검사(게임이 BASE_ONE 을 내보내면 그걸로 — 디렉터에게 제안). 연구 ASS 문헌 결과 오면 붙임 ④ score.mjs — **끝남(9/29, 15b2240)**. 소견: 작게 벌은 게임 자세표를 이은 것이라 지금 게임 기술 길과 손 오차 0.11~0.39 m — 게임 비교에는 게임 기록 자체를 기준으로 쓰는 편이 맞을 수 있다(디렉터 판단).
 - R2 시험판이 나오면 소견 (디렉터 chain.mjs 는 record/1 형식으로 기록을 낸다).
 - 사장님 질문 3개(모캡 자료 요청·직접 촬영·Meyer 번역서)와 논문 사이트 네트워크 차단 — 디렉터가 사장님께 올림. 답 전에는 연락·비용 없음.
 
