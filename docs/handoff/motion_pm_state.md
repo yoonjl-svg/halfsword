@@ -20,6 +20,7 @@
 |---|---|
 | 롱소드 기준 클립 `stillness-motion-clip/2` 48개 (8 베기 × 좌우 × 작게·보통·크게) + 8자 흐름 2 + 런지 찌르기 2, 크기별 파일 + `index.json` (디렉터: 한 파일에 합치지 말 것) | `docs/motion/clips` |
 | 츠바이핸더 크게 벌 v0 8개 (Zornhau·Oberhau·Mittelhau·Unterhau × 좌우) + 따로 `index.json`. 배율은 제안(`build_zweihander.mjs` PROPOSAL, `zweihander_table.md`) | `docs/motion/clips/zweihander` |
+| 채점 함수 `score.mjs` (`stillness-motion-score/1`, 정의 `score.md`): 손 오차·위상 오차·최고 순서·칼 방향·동작 범위 → 0~1. compare.mjs 가 같은 함수로 `compare_game.md` 채점 표를 만든다 | `tools/motion` |
 | 세이버 moulinet 크게 벌 v0 8개 + 레이피어 런지 2개 (한손: 빈손 채널, 게임 한손 자세표). `build_onehand.mjs` PROPOSAL, `onehand_table.md` | `docs/motion/clips/sabre`, `docs/motion/clips/rapier` |
 | 클립 검사기 `validate_clip.mjs` (규칙 = `clip_format.md` §6, 코드 = `lib/clip_rules.mjs` 브라우저에서도 돎). 빌드 도구 넷이 끝에서 스스로 돌린다. 70벌 모두 통과 | `tools/motion` |
 | 게임 기록 `stillness-motion-record/1`: 지금 게임 팔 베기 5 (hybrid 걸음, 2 s 서 있기), 시험판 팔·결심 베기 8 (claude/wbs-impl d781ab9) | `docs/motion/records` |
@@ -29,7 +30,7 @@
 ## 열린 요청
 
 - 디렉터 9/29 과제: (a) 채널 대조·빠진 채널 채우기 — **끝남** (a489576, clip/2). (b) 복귀 구간 표본·끝 자세와 가장 가까운 게임 자세 — **끝남** (a489576, spec_table §7: 52벌 모두 시작·끝 자세 = 목표 자세, 손 오차 0 cm). (c) 보통 벌 사이 자세·감기 직후 손목 넘침 — **R2 시험판 뒤에**.
-- 디렉터 9/29 11:48 과제: ① 검사기 — **끝남** ② 츠바이핸더 large v0 — **끝남** ③ 세이버 moulinet 4무리 · 레이피어 런지 large v0 — **끝남(9/29 앞당김)**. 한손 자세표는 guards.js ONE_HAND 글을 읽어 검사(게임이 BASE_ONE 을 내보내면 그걸로 — 디렉터에게 제안). 연구 ASS 문헌 결과 오면 붙임 ④ 그다음 score.mjs (compare.mjs 에서 채점 함수를 떼어 버전 붙임: 기준 대비 손 오차·위상 오차·최고 순서·칼 방향·동작 범위, 디렉터 chain.mjs 가 부름).
+- 디렉터 9/29 11:48 과제: ① 검사기 — **끝남** ② 츠바이핸더 large v0 — **끝남** ③ 세이버 moulinet 4무리 · 레이피어 런지 large v0 — **끝남(9/29 앞당김)**. 한손 자세표는 guards.js ONE_HAND 글을 읽어 검사(게임이 BASE_ONE 을 내보내면 그걸로 — 디렉터에게 제안). 연구 ASS 문헌 결과 오면 붙임 ④ score.mjs — **끝남(9/29)**. 소견: 작게 벌은 게임 자세표를 이은 것이라 지금 게임 기술 길과 손 오차 0.11~0.39 m — 게임 비교에는 게임 기록 자체를 기준으로 쓰는 편이 맞을 수 있다(디렉터 판단).
 - R2 시험판이 나오면 소견 (디렉터 chain.mjs 는 record/1 형식으로 기록을 낸다).
 - 사장님 질문 3개(모캡 자료 요청·직접 촬영·Meyer 번역서)와 논문 사이트 네트워크 차단 — 디렉터가 사장님께 올림. 답 전에는 연락·비용 없음.
 

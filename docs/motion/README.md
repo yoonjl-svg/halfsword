@@ -13,6 +13,7 @@
 | 측정 사양표 | [`spec_table.md`](spec_table.md) (자동 생성) | 크기별 칼끝 빠르기·시간, 운동 사슬 시각, 동작 범위, 허점, 표시 자세의 관절각 |
 | 평가 기준 초안 | [`evaluation.md`](evaluation.md) | "사람처럼 / 크다 / 준비가 읽힌다 / 빠르고 세다 / 반동·허점" |
 | 무기별 몸 (초안) | [`weapon_body.md`](weapon_body.md) | 게임 무기의 휘두르는 관성(손 둘레)과 시간 배율, 한손 무기의 몸통 몫, 츠바이핸더 감기 — 무기 PM 분류 틀 근거 |
+| 채점 | [`score.md`](score.md) | `stillness-motion-score/1`: 기준 대비 손 오차·위상 오차·최고 순서·칼 방향·동작 범위 (`tools/motion/score.mjs`, 디렉터 chain.mjs 가 부름) |
 | 한손 무기 (자동) | [`onehand_table.md`](onehand_table.md) | 세이버 moulinet 크게 벌 v0 8개(4무리 × 좌우)·레이피어 런지 2개와 롱소드 나란히: 제안·근거, 몸통·팔·손목 몫, 한계 |
 | 츠바이핸더 (자동) | [`zweihander_table.md`](zweihander_table.md) | 츠바이핸더 크게 벌 v0 8개와 롱소드 크게 벌 나란히: 제안 배율·근거, 시간, 몸통 몫, 반동·허점 |
 | 모양 목표 초안 | [`targets.md`](targets.md) | 재설계 §2-6 모양 줄(감기·지나가기·회전·손 길·사슬 순서·걸음)을 사람 자료로 다시 세움 — 아래 문턱만, 범위는 순서·참고로 |
@@ -110,7 +111,8 @@ node tools/motion/build_flow.mjs             # 8자 흐름 클립 2개 + index.j
 node tools/motion/build_lunge.mjs            # 런지 찌르기 클립 2개 + index.json 에 끼움 + lunge_table.md (--step= --drop= 로 걸음·낮춤)
 node tools/motion/record_game.mjs            # 지금 게임 팔 베기 기록 (zornhau·oberhau·zwerchhau·mittelhau·unterhau)
 node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>   # 시험판 팔·결심 베기 기록 (review_wbs_trial.md 재현)
-node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 → docs/motion/compare_game.md
+node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 + 채점 표 → docs/motion/compare_game.md
+node tools/motion/score.mjs <기준.json> <기록.json>   # 채점 한 벌 (JSON, score.md)
 node tools/motion/qa_clips.mjs               # 겹침 검사: 칼 ↔ 몸, 아래팔 ↔ 몸통 (표로 찍음)
 node tools/motion/build_onehand.mjs          # 세이버 크게 벌 8개 + 레이피어 런지 2개 → docs/motion/clips/sabre·rapier/ + onehand_table.md (build_lunge 뒤)
 node tools/motion/build_zweihander.mjs       # 츠바이핸더 크게 벌 8개 → docs/motion/clips/zweihander/ + zweihander_table.md (build_clips 뒤, 배율은 파일 위 PROPOSAL)
