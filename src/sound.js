@@ -2181,7 +2181,7 @@ export class Sound {
     const rec = this.pickSample('breath');
     if (!rec) return;
     const k = clamp01(d);
-    const ev = this.event({ bus: this.fleshBus, gain: 0.5 + 0.2 * k, prio: 0.2 }); // 신음보다 약 10dB 작게, d=1 이면 2.4dB 더
+    const ev = this.event({ bus: this.fleshBus, gain: 0.25 + 0.1 * k, prio: 0.2 }); // 신음보다 약 16dB 작게, d=1 이면 2.4dB 더 (사장님 '지금보다 절반 정도로 작게': 0.5+0.2k → 0.25+0.1k)
     this.layer(ev, rec, { rate: (1 - 0.06 * k) * between(Math.random, 0.97, 1.03) });
   }
 

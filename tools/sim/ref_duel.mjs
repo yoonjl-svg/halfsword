@@ -26,7 +26,7 @@ const OWNER = Object.fromEntries(CHARACTERS.filter((c) => c.weapon !== 'longswor
 let PROXY_LS = false; // --proxy=ls
 let HERO_ALL = false; // --hero
 const hero = (w) => (PROXY_LS ? { level: 'normal', persona: null, who: '주인공 대리(롱소드 유파)' } : { level: 'normal', persona: { school: w }, who: '주인공 대리' });
-const charSide = (c, w) => ({ level: c.ai.level, persona: w !== c.weapon ? { ...c.ai.persona, school: w } : c.ai.persona, who: c.id });
+const charSide = (c, w) => ({ level: c.ai.level, persona: w !== c.weapon ? { ...c.ai.persona, school: w } : c.ai.persona, who: c.id, revive: c.revive }); // revive: 이졸데의 부활
 
 /** 판 시드로 굴리는 작은 난수 (브란의 대체 무기 뽑기용 — Math.random 을 건드리지 않는다) */
 function rng(seed) {
@@ -43,7 +43,7 @@ function rng(seed) {
 export function playOne(x, y, seed, xFirst) {
   const P = xFirst ? x : y;
   const E = xFirst ? y : x;
-  const G = newRound({ walls: true, seed, weapon: P.weapon, weapon2: E.weapon, difficulty: E.level, persona: E.persona, AI2Class: AI, difficulty2: P.level, persona2: P.persona });
+  const G = newRound({ walls: true, seed, weapon: P.weapon, weapon2: E.weapon, difficulty: E.level, persona: E.persona, AI2Class: AI, difficulty2: P.level, persona2: P.persona, revive: E.revive, revive2: P.revive });
   let tDead = null;
   let res = 'D';
   let nan = false;

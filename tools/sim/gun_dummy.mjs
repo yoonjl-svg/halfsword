@@ -52,6 +52,8 @@ function trial(E, zone, n, gap = 2, look = null) {
   let quiet = 0;
   for (let t = 0; t < 0.5; t += DT) (G.step(), (quiet = Math.max(quiet, (ax().angleTo(a0) * 180) / Math.PI)));
   const a1 = ax();
+  const keepIn = GUN.reloadIn;
+  GUN.reloadIn = 1e9; // 사격 자세의 장전 동작(총을 세워 올림)을 빼고 반동만 잰다
   f.gun = { cool: 0, pending: 1, shots: 0, hits: 0, seed: 1 }; // 바로 한 발
   f.skill.thrustPush = true;
   let peak = 0;
@@ -62,6 +64,7 @@ function trial(E, zone, n, gap = 2, look = null) {
     peak = Math.max(peak, ang);
     if (back == null && t > 0.05 && ang < peak * 0.3) back = t;
   }
+  GUN.reloadIn = keepIn;
   console.log(`반동: 총구가 최대 ${peak.toFixed(1)}° 들림, ${back?.toFixed(2) ?? '1.2초 넘게'}초 만에 거의 제자리 (안 쏠 때 흔들림 ${quiet.toFixed(1)}°)`);
 }
 for (const E of list) {
