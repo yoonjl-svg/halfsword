@@ -106,7 +106,7 @@ export const SOURCES = {
   },
   baseball_sequence: {
     kind: 'biomech',
-    cite: 'Welch 외 1995 JOSPT 22(5) 야구 타격: 골반 최고 714 °/s → 어깨 937 °/s. Escamilla 2009: 성인 윗몸 857 °/s, 배트 30 m/s',
+    cite: 'Welch 외 1995 JOSPT 22(5) 야구 타격: 골반 최고 714 °/s → 어깨 937 °/s. Escamilla 외 2009 (J. Appl. Biomech. 25(3)): 성인 윗몸 857 °/s, 배트 30 m/s (청소년 717 °/s·25 m/s, 연구 ASS 표본 점검 9/29 확인)',
     url: 'https://www.jospt.org/doi/10.2519/jospt.1995.22.5.193',
     read: 'snippet',
     license: '인용',
@@ -119,8 +119,8 @@ export const SOURCES = {
     license: '인용',
   },
   arma_speed: {
-    kind: 'biomech',
-    cite: 'George Turner (ARMA) "Sword Motions and Impacts": 롱소드 칼끝 약 75 mph (≈33.5 m/s) 고속 촬영',
+    kind: 'estimate',
+    cite: 'George Turner (ARMA) "Sword Motions and Impacts": 칼자루(탱) 힘을 셈하는 가정 예시 — "75 mph(≈33.5 m/s)로 부딪히면 폼멜 빠르기가 15 mph 쯤 바뀌어야". 측정값이 아니다 (연구 ASS 표본 점검 9/29, 원문 검색 요약으로 확인). 칼끝 빠르기 근거로 쓰지 않는다',
     url: 'https://thearma.org/spotlight/GTA/motions_and_impacts.htm',
     read: 'snippet',
     license: '인용',
@@ -134,7 +134,7 @@ export const SOURCES = {
   },
   mocap_5mudm: {
     kind: 'mocap',
-    cite: 'Klempous·Kluwak·Kulbacki·Rozenblit 외, 독일 롱소드 다섯 비밀 베기 모캡 (PJAIT HML, Vicon Plug-in Gait 39 마커 + 근전도 16; IEEE CINTI 2021 / EUROCAST 2022 LNCS 13789)',
+    cite: 'Klempous·Kluwak·Kulbacki·Rozenblit 외, 독일 롱소드 다섯 비밀 베기 모캡 (PJAIT HML; IEEE CINTI 2021 pp.137–142 / EUROCAST 2022 "Reference Datasets for Analysis of Traditional Japanese and German Martial Arts" — 논문 있음 확인. 39 마커·근전도 16·인원은 확인 못 함 ▶검증 필요, 연구 ASS 표본 점검 9/29)',
     url: 'https://doi.org/10.1007/978-3-031-25312-6_59',
     read: 'abstract',
     license: '공개 안 됨 — "HML 에 요청하면 접근 가능". 요청(저자·기관 연락)은 사장님 허락 뒤',
@@ -155,14 +155,14 @@ export const SOURCES = {
   },
   fencing_review: {
     kind: 'biomech',
-    cite: 'Chen 외 2017 "Biomechanics of fencing sport: A scoping review" (PLoS ONE 12(2) e0171578): 숙련자는 팔이 발보다 먼저, 손-발 시간차 0.07±0.05 s (초보 0.13±0.15 s)',
+    cite: 'Chen 외 2017 "Biomechanics of fencing sport: A scoping review" (PLoS ONE 12(2) e0171578): 숙련자는 팔이 발보다 먼저. 손-발 시간차 0.07±0.05 s (초보 0.13±0.15 s)는 Gholipour 외 2008 을 인용한 것 [2차] (연구 ASS 표본 점검 9/29)',
     url: 'https://doi.org/10.1371/journal.pone.0171578',
     read: 'search-summary',
     license: '인용 (CC BY, 본문은 네트워크 정책으로 못 읽음)',
   },
   fencing_gholipour: {
     kind: 'biomech',
-    cite: 'Gholipour 외 2008 펜싱 런지 입체 촬영: 엉덩관절 굽힘 숙련 53° / 초보 40°, 앞무릎 처음 굽힘 약 20° → 폄 51±9° (초보 38° → 18±8°)',
+    cite: 'Gholipour 외 2008 펜싱 런지 입체 촬영 (World J. Sport Sci.; 샤리프대 초보 8명·이란 국가대표, 고속 카메라 3대): 손이 발보다 먼저 0.07±0.05 s (초보 0.13±0.15 s — 1차 출처, 연구 ASS 표본 점검 9/29), 엉덩관절 굽힘 숙련 53° / 초보 40°, 앞무릎 처음 굽힘 약 20° → 폄 51±9° (초보 38° → 18±8°)',
     url: 'https://joh.ut.ac.ir/article_26965.html',
     read: 'search-summary',
     license: '인용',
@@ -183,7 +183,7 @@ export const SOURCES = {
   },
   kendo_men: {
     kind: 'biomech',
-    cite: '검도 머리치기: 8단 10명 모캡(Murase 외 ISBS 2020, 수치는 초록에 없음). 대학 선수 머리치기 총 0.818±0.085 s (Sports Biomechanics 2026)',
+    cite: '검도 머리치기: 8단 10명 모캡(Murase 외 ISBS 2020, 수치는 초록에 없음). 대학 선수 머리치기 총 0.818±0.085 s · 손목치기 0.745±0.101 s (Sports Biomechanics 2026 — 19명, 동작 시작~닿기 직전, 250 Hz, 연구 ASS 표본 점검 9/29 확인)',
     url: 'https://commons.nmu.edu/isbs/vol38/iss1/135/',
     read: 'abstract',
     license: '인용',

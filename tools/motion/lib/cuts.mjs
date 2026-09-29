@@ -225,7 +225,7 @@ def({
     { t: 0.95, feet: F([0.27, -0.1, -45, 0.7, 0], [0.52, 0.12, 5, 0, 0]), px: 0.3 },
     { t: 1.5, feet: F([0.22, -0.12, -40, 0, 0], [0.52, 0.12, 5, 0, 0]), px: 0.3 },
   ],
-  sources: ['meyer_zornhut', 'meyer_zornhau', 'ringeck_zornhau', 'doebringer_step', 'meyer_step', 'golf_sequence', 'golf_xfactor', 'swordstem_speed', 'arma_speed', 'estimate'],
+  sources: ['meyer_zornhut', 'meyer_zornhau', 'ringeck_zornhau', 'doebringer_step', 'meyer_step', 'golf_sequence', 'golf_xfactor', 'swordstem_speed', 'estimate'], // arma_speed 뺌: 측정이 아니라 계산 예시였다 (연구 ASS 표본 점검 9/29)
 });
 
 // ─────────────────────────────────────────────────────────────
