@@ -1,7 +1,7 @@
 // R2 관문 한 벌 (docs/strike/r2_impl_spec.md §8.2 표 차례, §9 W5). 하위 도구를 하나씩 (nice) 돌리고 줄마다 PASS/FAIL (최소 목표에만) 을 적는다
 //
 //   node tools/sim/r2_gates.mjs [--hz=60,120] [--weapons=longsword,zweihander,sabre] [--input=wind,stroke] [--quick] [--out=<폴더>]
-//        [--r1=<R1 체크아웃>] [--ai-min=10] [--skip=s0,ai,perf,...]
+//        [--r1=<R1 체크아웃>] [--ai-min=10] [--skip=s0,ai,perf,...] [--set=GRP.key=val ...]
 //
 //  빠르기·에너지 비·걸음 착지 분포는 보고만 (위쪽 관문 없음). 도구는 재기만 한다 (자르기·한도 없음)
 //  Hz 뜻 (줄마다 'Hz' 칸): 입력 = 화면(손가락) 프레임 Hz, 물리는 게임과 같은 120 · 물리 = PHYSICS.timestep (AI 끼리처럼 손가락이 없는 줄) · J = 24–45 fps 흔들림
@@ -24,6 +24,8 @@ const arg = (k, d) => {
   return a == null ? d : a.includes('=') ? a.slice(k.length + 3) : true;
 };
 const list = (k, d) => String(arg(k, d)).split(',').filter(Boolean);
+// --set=GRP.key=val (여러 번): chain.mjs 하위 실행에만 넘긴다 (게임 설정 바꿔 보기. game 행만 뜻, plain 은 DRIVE.on=false)
+const SETS = argv.filter((s) => s.startsWith('--set='));
 
 // ═════════════ 아이: AI 끼리 긴 판 (--child=ai, 뿌리 = R2_ROOT) ═════════════
 if (arg('child') === 'ai') {
@@ -153,6 +155,7 @@ const J = { meta: { root: ROOT, hz: HZS, weapons: WEAPONS, input: GINPUTS, v: VS
 const rev = spawnSync('git', ['-C', ROOT, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
 const dirty = spawnSync('git', ['-C', ROOT, 'status', '--porcelain', '--', 'src'], { encoding: 'utf8' }).stdout.trim() ? '+src 고침' : '';
 J.meta.rev = rev + dirty;
+J.meta.sets = SETS.map((x) => x.slice(6));
 const say = (s) => console.log(s);
 say(`r2_gates  ${ROOT} ${rev}${dirty}  Hz ${HZS.join(',')}  무기 ${WEAPONS.join(',')}  입력 방식 ${GINPUTS.join(',')}  v ${VS.join(',')}${QUICK ? '  (quick)' : ''}  out ${OUT}`);
 
@@ -215,7 +218,7 @@ if (!SKIP.has('s0')) {
 let latJ = null, mxJ = null;
 if (!SKIP.has('latency')) {
   const f = path.join(OUT, 'chain_latency.json');
-  sub('chain_latency', [SIM('chain.mjs'), 'zornhau-wind', '--blocks=latency', `--input=${HZS.join(',')}`, '--jitter', `--ginput=${GINPUTS.join(',')}`, `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
+  sub('chain_latency', [SIM('chain.mjs'), ...SETS, 'zornhau-wind', '--blocks=latency', `--input=${HZS.join(',')}`, '--jitter', `--ginput=${GINPUTS.join(',')}`, `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
   latJ = JSON.parse(fs.readFileSync(f, 'utf8')).blocks.latency;
   const g = latJ.filter((r) => r.gate_ms != null);
   const worst = (hz) => { const a = g.filter((r) => r.inputHz === hz); return a.length ? a.map((r) => r.pelvis5_ms ?? '없음').join('/') : null; };
@@ -225,7 +228,7 @@ if (!SKIP.has('latency')) {
 }
 if (!SKIP.has('mx')) {
   const f = path.join(OUT, 'chain_mx.json');
-  sub('chain_mx', [SIM('chain.mjs'), '--blocks=mx,pace', `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
+  sub('chain_mx', [SIM('chain.mjs'), ...SETS, '--blocks=mx,pace', `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
   mxJ = JSON.parse(fs.readFileSync(f, 'utf8')).blocks;
   const ls = mxJ.mx.filter((r) => r.weapon === 'longsword');
   const fl = (r) => Object.entries(r.gates).filter(([, v]) => v === false).map(([k]) => k).join(',');
@@ -242,14 +245,14 @@ if (!SKIP.has('grid')) {
   for (const variant of ['W', 'hold'])
     for (const w of WEAPONS) {
       const f = path.join(OUT, `chain_${variant}_${w}.json`);
-      const r = sub(`chain_${variant}_${w}`, [SIM('chain.mjs'), `--variant=${variant}`, '--modes=game,plain', '--scenes=air,hit', `--fams=${FAMS.join(',')}`, `--v=${(variant === 'W' ? VSTEP : VS).join(',')}`, `--input=${HZS.join(',')}`, `--ginput=${GINPUTS.join(',')}`, `--weapon=${w}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
+      const r = sub(`chain_${variant}_${w}`, [SIM('chain.mjs'), ...SETS, `--variant=${variant}`, '--modes=game,plain', '--scenes=air,hit', `--fams=${FAMS.join(',')}`, `--v=${(variant === 'W' ? VSTEP : VS).join(',')}`, `--input=${HZS.join(',')}`, `--ginput=${GINPUTS.join(',')}`, `--weapon=${w}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
       if (r.status === 0) grid[variant].push(...JSON.parse(fs.readFileSync(f, 'utf8')).rows);
       if (!J.meta.atlasDecode) J.meta.atlasDecode = (r.err.match(/pack decode ([\d.]+) ms/) || [])[1] ?? null;
     }
   if (!SKIP.has('jitter'))
     for (const w of WEAPONS) {
       const f = path.join(OUT, `chain_J_${w}.json`);
-      const r = sub(`chain_J_${w}`, [SIM('chain.mjs'), '--variant=W', '--modes=game', '--scenes=air,hit', `--fams=${FAMS.join(',')}`, `--v=${VS.join(',')}`, `--input=${HZS[0]}`, '--jitter', `--ginput=${GINPUTS.join(',')}`, `--weapon=${w}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
+      const r = sub(`chain_J_${w}`, [SIM('chain.mjs'), ...SETS, '--variant=W', '--modes=game', '--scenes=air,hit', `--fams=${FAMS.join(',')}`, `--v=${VS.join(',')}`, `--input=${HZS[0]}`, '--jitter', `--ginput=${GINPUTS.join(',')}`, `--weapon=${w}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
       if (r.status === 0) jitRows.push(...JSON.parse(fs.readFileSync(f, 'utf8')).rows.filter((x) => x.inputHz === 'J'));
     }
 }
@@ -324,6 +327,12 @@ if (grid.W.length) {
   // 비 (보고): game/plain 칼끝·tc 운동에너지 (in60 v12 air)
   const pm = new Map(grid.W.filter((r) => r.mode === 'plain').map((r) => [keyOf(r), r]));
   const ratios = gW.filter((r) => r.scene === 'air' && r.v === 12 && r.inputHz === HZS[0]).map((r) => { const p = pm.get(keyOf(r)); return p ? `${r.fam}/${r.weapon[0]}/${r.ginput[0]} ${(r.tipPeak / p.tipPeak).toFixed(2)}/${p.KEatTc_J ? (r.KEatTc_J / p.KEatTc_J).toFixed(2) : '-'}` : null; }).filter(Boolean);
+  // 앞먹임 잡음 (보고): chainW game 행의 드라이브 w > 0 스텝 |최고| — 명령 가슴·골반 yaw 각가속도, 몸통 앞먹임 회전력
+  const fz = gW.map((r) => r.ffNoise).filter(Boolean);
+  const fmax = (k) => (fz.length ? Math.max(...fz.map((x) => x[k] ?? 0)) : null);
+  const fmed = (k) => qq(fz.map((x) => x[k] ?? 0), 0.5);
+  J.raw.ffNoise = Object.fromEntries(['chestYawDDot', 'pelvisYawDDot', 'ffChest', 'ffAbd', 'ffHip', 'alphaDes'].map((k) => [k, { max: fmax(k), median: fmed(k) }]));
+  add('앞먹임 잡음 (chainW game, w > 0 스텝 절댓값 최고: 가슴·골반 yaw 명령 각가속도 rad/s², 몸통 앞먹임 N·m, 보고)', `입력 ${HZS.join('/')}`, `가슴 α 최고 ${fmax('chestYawDDot')} (가운데 ${fmed('chestYawDDot')}), 골반 α ${fmax('pelvisYawDDot')} (${fmed('pelvisYawDDot')}), ffChest ${fmax('ffChest')}, ffAbd ${fmax('ffAbd')}, ffHip ${fmax('ffHip')}, 팔 α_des ${fmax('alphaDes')}; ${fz.length} 행`, '-', null);
   add('빠르기·에너지 비 game/plain (칼끝 최고 / tc 운동에너지, air v12, 보고 — R3 가 ≥ 1.45×·2× 관문)', `입력 ${HZS[0]}`, ratios.join('; '), '-', null);
 }
 
@@ -388,7 +397,7 @@ add('Owner (보기 도구 화면·A/B 스위치·금빛 자취·사장님 판정
 // ── 쓰기 ──
 const wall = Math.round((Date.now() - t00) / 1000);
 J.meta.wall_s = wall;
-const md = [`# R2 관문 (${J.meta.rev}, ${new Date().toISOString()}, 벽시계 ${Math.floor(wall / 60)} 분 ${wall % 60} 초)`, '', `무기 ${WEAPONS.join('·')}, 입력 방식 ${GINPUTS.join('·')}, v ${VS.join('/')} m/s, 입력 Hz ${HZS.join('/')}${QUICK ? ' (quick)' : ''}. PASS/FAIL 은 최소 목표에만, '보고' 는 관문 없음.`, '', '| 관문 | Hz | 잰 값 | 목표 | 결과 |', '|---|---|---|---|---|'];
+const md = [`# R2 관문 (${J.meta.rev}, ${new Date().toISOString()}, 벽시계 ${Math.floor(wall / 60)} 분 ${wall % 60} 초)`, '', `무기 ${WEAPONS.join('·')}, 입력 방식 ${GINPUTS.join('·')}, v ${VS.join('/')} m/s, 입력 Hz ${HZS.join('/')}${QUICK ? ' (quick)' : ''}${SETS.length ? `, chain 설정 ${J.meta.sets.join(' ')}` : ''}. PASS/FAIL 은 최소 목표에만, '보고' 는 관문 없음.`, '', '| 관문 | Hz | 잰 값 | 목표 | 결과 |', '|---|---|---|---|---|'];
 for (const r of rows) md.push(`| ${r.gate} | ${r.hz} | ${String(r.number).replace(/\|/g, '/')} | ${r.target} | ${r.result}${r.detail ? ` (${String(r.detail).replace(/\|/g, '/').slice(0, 300)})` : ''} |`);
 const nF = rows.filter((r) => r.result === 'FAIL').length, nP = rows.filter((r) => r.result === 'PASS').length;
 md.push('', `PASS ${nP}, FAIL ${nF}, 보고 ${rows.length - nP - nF}.`);

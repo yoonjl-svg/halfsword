@@ -309,6 +309,8 @@ function trial(fam, mode, scene, o) {
   // 새 방식: 채널 (감기 시작부터 전부) · 손 길 누적 (감기 시작부터)
   const chan = NEW && CHANNELS ? { names: chanNames(P), t0: G.t, rows: [] } : null;
   let pathCum = 0, hPrev = null;
+  // 앞먹임 잡음 (드라이브 w > 0 스텝의 |최고|, 읽기만): 명령 가슴·골반 yaw 각가속도 (rad/s²), 몸통 앞먹임 회전력 (N·m), 팔 α_des
+  const ffn = NEW ? { chestYawDDot: 0, pelvisYawDDot: 0, ffChest: 0, ffAbd: 0, ffHip: 0, alphaDes: 0, steps: 0 } : null;
   const snap = () => {
     const p = P.bodies.pelvis.translation();
     const fw = P.forward();
@@ -320,6 +322,12 @@ function trial(fam, mode, scene, o) {
       q.s.x = sampleX(P);
       q.s.x.path = pathCum;
       if (chan) chan.rows.push(chanRow(P));
+      const D = P.drive;
+      if (D && D.w > 0) {
+        const cm = D.cmd, d = D.debug;
+        ffn.steps++;
+        for (const [k, x] of [['chestYawDDot', cm.chestYawDDot], ['pelvisYawDDot', cm.pelvisYawDDot], ['ffChest', d.ffChest], ['ffAbd', d.ffAbd], ['ffHip', d.ffHip], ['alphaDes', d.alphaDes ?? 0]]) if (Math.abs(x) > ffn[k]) ffn[k] = Math.abs(x);
+      }
     }
     return q;
   };
@@ -369,6 +377,7 @@ function trial(fam, mode, scene, o) {
     T.final = P.state;
     T.dbgEnd = P.drive ? Object.fromEntries(Object.entries(P.drive.debug).filter(([, v]) => typeof v === 'number')) : null;
     T.nDrop = nDrop;
+    T.ffNoise = ffn;
   }
   return T;
 }
@@ -589,6 +598,7 @@ function newMetrics(T, m) {
     hitch: r3(hitch), hitchRaw: r3(hitchRaw), hitch_ms: ms(iH), hitchFrom: iC != null ? 'tCut' : 'stroke', hitchTo: iTcB != null ? (game ? 'phiB0.85' : 'phi0.85') : 'tc|tipPeak', hitchWin_ms: Math.round((iB - iA) * DT * 1000), hitchPass: hitch < HITCH_GATE,
     order10,
     land,
+    ffNoise: T.ffNoise && T.ffNoise.steps ? Object.fromEntries(Object.entries(T.ffNoise).map(([k, x]) => [k, k === 'steps' ? x : +x.toPrecision(5)])) : null,
     stats: { stepRequests: st.stepRequests ?? null, stepRefused: st.stepRefused ?? null, stepLanded: st.stepLanded ?? null, stepLost: st.stepLost ?? null, footSlipMax: r3(st.footSlipMax ?? null), ffCap: st.ffCap ?? null, reachClamp: st.reachClamp ?? null, poleFlip: st.poleFlip ?? null, rateClip: st.rateClip ?? null, cuts: st.cuts ?? null, atlasMissing: st.atlasMissing ?? null },
   };
 }
