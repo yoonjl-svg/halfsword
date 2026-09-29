@@ -9,7 +9,7 @@
 - 무기 분류 `src/weapon_class.js` · `docs/weapon_types.md`
 - 동작 라이브러리 `src/motion_library.js`(기본 꺼짐) · `docs/weapon_motions.md` → 온몸 타격의 '무기 층'으로 합침(역할 분담안 4번)
 - 자루 무기(봉·창) 시제품 `tools/sim/pole_specs.mjs` · `docs/pole_frame_design.md`
-- 무기-검술 연구 ASS 지휘 (`session_01QoWtSqxGN5jYBMudxkqo1x`, 브랜치 `claude/pm-weapons`, 요청 목록은 디렉터 9/29 지시 5의 순서)
+- (9/29 폐지) 무기-검술 연구 ASS — 사장님 지시로 보관, 요청 목록 닫음. 조사가 필요하면 디렉터에게 요청(일회성 조사 에이전트). 자루 무기 조사는 하지 않음(로스터 밖).
 
 ## 열린 요청
 | 일 | 기한 | 상태 |
@@ -35,6 +35,6 @@ motion_library 몸 동작 기능 확장, 밸런스 값 적용, 새 시제품. ma
 - 게임 불변 확인: `fights12.mjs`, `hybrid.mjs fights12.mjs`, `live_battery.mjs` 바이트 비교 + `weapon_smoke.mjs`
 
 ## 다음 할 일
-1. (끝남 — R6 조사 반영) 연구 ASS 다음 순서: 자루 무기 조사는 디렉터 지시 순서대로 대기.
+1. (끝남) R6 조사 반영. 병합 목록 1~3절과 라이트세이버 두 손은 디렉터가 main 에 올리는 중 — 올라오면 main 을 병합한다.
 2. R0 뒤: Q13 값 제안(둔기 부위 효과 문턱·갑옷 손상 배율). R3 뒤: 밸런스 수치 다시 재서 제안(빌드 커밋 적기).
 3. R2 시험판이 나오면 붉은 팀 명령(병합 목록 5절).
