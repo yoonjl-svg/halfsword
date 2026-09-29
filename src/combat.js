@@ -53,7 +53,7 @@ function velAt(st, point, out) {
 /** 부위 이름 + 부위 기준 위치 → 해부학적 구역 */
 function zoneOf(info, local) {
   if (info.kind === 'head') return local.y < -0.05 ? 'neck' : 'head';
-  if (info.kind === 'chest') return local.y > 0.11 ? 'neck' : 'chest';
+  if (info.kind === 'chest') return local.y > 0.11 && (!STRIKE.sweep || Math.abs(local.z) < STRIKE.neckHalfZ) ? 'neck' : 'chest'; // 윗띠라도 어깨 쪽(|z| 큼)은 가슴
   return info.kind; // pelvis | arm | leg
 }
 
