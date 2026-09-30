@@ -620,6 +620,7 @@ attachStick(input, $('moveStick'), $('moveKnob'));
 let state = 'menu'; // menu | fight | paused
 let roundOver = false;
 let roundOverTime = 0;
+let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
 
 $('howto').innerHTML = input.isTouchDevice
   ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>폰을 앞뒤로 기울이면 전진·후퇴, 좌우로 기울이면 옆걸음.</li><li>◎ 버튼: 지금 각도를 "똑바로"로 다시 맞춰요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>'
@@ -1202,18 +1203,27 @@ function updateHud() {
   if (filter !== hudLast.filter) $('vignette').style.filter = hudLast.filter = filter;
 }
 
+/** 판 끝 결과 글자: 결정타 슬로모션(slowMo)이 끝난 뒤에 한 번. 슬로모션 동안 참수·쓰러지는 장면을 글자가 가리지 않게 */
+function showRoundResult() {
+  if (resultShown || slowMo > 0) return;
+  resultShown = true;
+  showToast(lastRoundWon ? '승리' : '패배', 0);
+}
+
 function checkRoundEnd(dt) {
   if (!roundOver) {
     if (!enemy.alive || !player.alive) {
       roundOver = true;
+      resultShown = false;
       const win = !enemy.alive;
       lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
-      showToast(win ? '승리' : '패배', 0);
+      showRoundResult();
       if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
       else lastFoeLine = '';
     }
     return;
   }
+  showRoundResult();
   roundOverTime += dt;
   if (roundOverTime > 3.5 && state === 'fight') {
     state = 'paused';
