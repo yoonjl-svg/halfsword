@@ -488,9 +488,9 @@ export class Combat {
     const zone = zoneOf(pr.v, vicLocal);
     let e = 0;
     const noArmor = att.weaponCfg.ignoreArmor; // 라이트세이버: 투구·판금에 튕기지 않는다 (맨머리·맨몸처럼)
-    if (zone === 'head') e = !noArmor && vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.helmet : STEEL.skull;
-    else if (!noArmor && zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.plate; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
-    else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone;
+    if (zone === 'head') e = !noArmor && vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.steel : STEEL.bone; // 투구 / 맨머리
+    else if (!noArmor && zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.steel; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
+    else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone; // 팔다리 뼈
     if (e <= 0) return;
     const vPre = velAt(S, point, _a).sub(velAt(P, point, _b)).dot(n); // + = 다가옴
     if (vPre < STEEL.reboundMinSpeed) return;

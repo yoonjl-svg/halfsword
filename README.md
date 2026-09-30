@@ -188,7 +188,7 @@ src/
 - 칼이 너무 가볍다/무겁다 → `WEAPON.mass`, 손목 힘 `WEAPON.maxAimTorque` (작을수록 칼의 관성이 더 느껴짐)
 - 휘두르는 게 너무 느리다 → `WEAPON.maxAimTorque`, `WEAPON.wristVmax` ↑, 팔 근육 힘은 `fighter.js`의 `jointDefs`(k, max)
 - 너무 쉽게 죽는다/안 죽는다 → `STRIKE.energyScale` (판정용 에너지 배율)
-- 칼끼리 튕기는 정도 → `STEEL.restitution` (칼끼리 = 이 값², 실제로는 그 절반쯤), 투구·머리·뼈에서 되튀는 정도 → `STEEL.helmet`, `skull`, `bone`
+- 칼끼리 튕기는 정도 → `STEEL.restitution` (칼끼리 = 이 값², 실제로는 그 절반쯤), 투구·판금·머리·뼈에서 되튀는 정도 → `STEEL.steel`(투구·판금), `bone`(두개골·팔다리 뼈)
 - (실험) 휘두르는 반작용·충격을 골반·몸통까지 → `RECOIL.anchorRelax = true`
 - 너무 잘 넘어진다 → `BALANCE.fallRange` ↑, `VITALS.staggerPerJoule` ↓
 - 상대가 너무 세다/약하다 → `AI_LEVELS`
