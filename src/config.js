@@ -63,6 +63,19 @@ export const BODY = {
   weightMode: 'hybrid',
 };
 
+// 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면
+//  발을 딛고(걸음 요청) 몸·칼자루로 민다. 새 힘 없음: 걸음·다리 힘·팔 근육·Rapier 접촉이 밀고, 넘어짐은 상대 균형이 정한다.
+//  on=false 면 오늘 그대로 (closeStep 안 부름 → lift 0 → 접기 줄 그대로, AI closeQuarters 첫 줄 return)
+export const CLOSE = {
+  on: true,
+  // 닿는 거리(가슴~가슴, m, 기하): 팔이 가운데로 앞으로 닿는 거리 √(0.565²−0.2²) ≈ 0.53 (armIK 위팔 0.3 + 아래팔 0.27 − 0.005,
+  //  어깨 옆 0.2, fighter.js armIK) + 상대 가슴 반두께 0.11 (fighter.js partDefs chest) + 칼자루 hiltLength (weapons.js). 롱소드 ≈ 0.77.
+  //  빈손이면 null 을 넘겨 칼자루 0 (몸만). shove() 의 0.75 (fighter.js) 의 무기별판
+  reach(weapon) {
+    return 0.53 + 0.11 + (weapon?.hiltLength ?? 0);
+  },
+};
+
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
 export const GAIT = {
   footExtra: 2, // 딛은 발 무게에 더하는 몫(kg): 신발·쇠 발싸개. 딛은 발의 물리 계산이 더 잘 수렴한다 (내딛는 발은 원래 무게)

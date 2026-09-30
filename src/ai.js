@@ -1400,6 +1400,8 @@ export class AI {
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * 0.15 * k); // 몰렸으면 먼저 친다
     }
     if (!this.foe.alive) fwd = side = 0;
+    me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
+    me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
     const lim = Math.max(1, mv);
     me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -lim, lim));

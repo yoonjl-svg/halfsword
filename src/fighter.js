@@ -206,6 +206,19 @@ export class Fighter {
     this.fightT = 0; // 판이 시작된 뒤 흐른 시간 (step 이 센다. 판마다 새로 만들어져 0부터)
     this.muscle = 1; // 근육 힘 비율 (넘어지면 0 근처로)
     this.move = new THREE.Vector2(); // x: 옆걸음(+오른쪽), y: 앞(+)/뒤(-). 각각 -1 ~ 1
+    // 근접 밀치기 (closeStep, config.js CLOSE). 기본은 끔: main.js 가 플레이어에, ai.js 가 persona.close 있는 AI 에 켠다
+    this.canShove = false;
+    this.stickX = 0; // 스틱 원값 (감정 배수·검술 층 덮어쓰기 전). 플레이어는 main.js, AI 는 moveFeet 가 쓴다
+    this.stickY = 0;
+    this.closeArmed = false; // 걸쇠: 안쪽에서 스틱을 안 밀면 켜지고, 밀면 발사
+    this.barge = null; // 밀치는 중 { phase: 'step'|'press', L, stepOk, d0 } (발사 ~ 누르기 끝)
+    this.bargeEnd = null; // 마지막 밀치기가 끝난 까닭 (refused·dropped·apart·release·armFull·state·swing·thrust)
+    this.shoves = 0; // 발사 횟수
+    this.lift = 0; // 접기 풀기 0~1 (0 = 오늘 접기 그대로)
+    this.liftV = 0;
+    this.closeW = 0; // 누르기 손 목표 무게 w 0~1
+    this.closeWV = 0;
+    this.armFull = false; // 칼 든 팔이 이번 IK 에서 다 펴졌나 (목표가 팔 길이 밖)
     this.strength = o.strength ?? 1;
     this.gaitPhase = 0;
     this.gaitWeight = 0; // 0 = 서 있음, 1 = 걷는 중 (부드럽게 바뀜)
@@ -1682,6 +1695,7 @@ export class Fighter {
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
+    else this.armFull = false;
     if (mus < 0.12 || !this.armed) return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     const str = this.strength * mus * (0.35 + 0.65 * this.armHealth);
     const forearm = this.bodies.farmS;
@@ -1817,7 +1831,9 @@ export class Fighter {
     const a = 0.3; // 위팔
     const b = 0.27; // 아래팔 + 손목까지
     const D = T.sub(S);
-    const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+    const Dl = D.length();
+    this.armFull = Dl >= a + b - 0.005; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
+    const d = THREE.MathUtils.clamp(Dl, 0.08, a + b - 0.005);
     const Dn = D.normalize();
     // 팔꿈치는 아래·뒤·바깥쪽을 향한다
     const pole = _ik3.set(-0.25, -1, this.side * 0.5).normalize();

@@ -78,6 +78,7 @@ export class Skill {
     this.lunge = 0; // 내딛는 중 남은 시간
     this.swings = 0;
     this.activity = 0; // 휘두르는 중인 정도 (0~1)
+    this.swinging = false; // 이번 스텝에 휘두르는 중인가 (update 의 판단을 필드로: 근접 밀치기가 읽는다)
     this.autoGuard = false; // 플레이어만 true (main.js)
     this.cutPending = false; // 베기를 했고 아직 자세로 돌아가지 않음
     this.idle = 0; // 손가락(마우스)이 움직이지 않은 시간
@@ -338,6 +339,7 @@ export class Skill {
     this.vel.y += (ry - this.vel.y) * k;
     const sp = this.vel.length();
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
+    this.swinging = swinging;
     // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐)
     this.activity += ((swinging ? 1 : 0) - this.activity) * Math.min(1, dt / (swinging ? 0.04 : 0.4));
 

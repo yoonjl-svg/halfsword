@@ -417,6 +417,7 @@ function newRound(weaponId) {
   player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
+  player.canShove = true; // 근접 밀치기: 플레이어는 스틱으로 (CLOSE.on 이 통째로 끄고 켠다)
   combat = new Combat(colliderInfo, { onWound, onClash });
   // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
   const foeVoice = voiceOf(currentFoe);
@@ -1363,6 +1364,8 @@ function frame(now) {
     const m = input.move;
     const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
     player.move.set(player.alive ? m.x * emv : 0, player.alive ? m.y * emv : 0);
+    player.stickX = player.alive ? m.x : 0; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
+    player.stickY = player.alive ? m.y : 0;
     updateGuardName(dt);
     // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다
     const mouseMode = !input.isTouchDevice;
