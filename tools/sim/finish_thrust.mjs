@@ -69,7 +69,7 @@ function watchTap(G, t0, fwd) {
   //  lowE: 찍는 중 몸통·머리 찌르기가 STRIKE.minEnergy 아래라 버려짐. viol: 즉사 표시(r.finish)가 조건 밖에서 켜짐 (0이어야)
   const st = { req: [], plant: null, td: null, push: null, pushGrip: null, shadow: 0, lowE: 0, viol: 0, drops: [] };
   C.strike = (pr, point, passing) => {
-    const vs = E.state;
+    const ps = P.state;
     const sk = P.skill;
     const mine = pr.w.fighter === P && pr.v?.fighter === E && G.t >= t0;
     // 찍는 중(tap.down·go·thrustPush)에 즉사 부위에 닿음: 문턱으로 낮추기 전 판정을 한 번 더 본다 (analyze 는 부작용 없음·난수 없음)
@@ -89,11 +89,13 @@ function watchTap(G, t0, fwd) {
       }
     }
     const r = orig(pr, point, passing);
+    // viol: 즉사 표시가 combat.js analyze 의 finish 조건 밖에서 켜졌나 — 조건 전부를 부르기 전 상태로 다시 본다
+    //  (내 칼·내 상대·쓰러짐·즉사 부위·tap.down·go·thrustPush 는 plunging, 찌르기, 나는 서거나 무릎). 누가 누구를 쳤든 센다
+    if (r?.finish && !(plunging && r.type === 'stab' && (ps === 'stand' || ps === 'kneel') && P.foe === E)) st.viol++;
     if (mine && pr.v && r) {
       const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.sword.rotation()));
       const along = r.dir && r.bladeAxis ? r.dir.dot(r.bladeAxis) : null;
       log.push({ t: G.t, part: pr.v.part, type: r.type, kin: r0?.type ?? r.type, energy: r.energy, eff: r.eff, thr: r.thr, plate: r.plate, helmet: r.helmet, pass: r.pass, finish: !!r.finish, plunging, cool, along, axisEl: Math.asin(THREE.MathUtils.clamp(axis.y, -1, 1)) * R2D, grip: V(P.sword.translation()), pel: V(P.bodies.pelvis.translation()), push: P.skill.thrustPush });
-      if (r.finish && (vs !== 'down' || !sk.tap?.down)) st.viol++;
     }
     return r;
   };

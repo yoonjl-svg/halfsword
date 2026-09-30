@@ -424,7 +424,7 @@ function onWound(att, vic, r, point, pr) {
     sound.plateBreak(e);
   }
   if (r.type === 'cut') sound.cut(e, r.pass);
-  else if (r.type === 'stab') sound.stab(e);
+  else if (r.type === 'stab' && opened) sound.stab(e); // 날이 들지 못한 내려찍기 즉사 찌르기(r.finish, 심각도 0)는 막힌 타격 소리
   else sound.blunt(e);
   if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet && !r.plate) sound.bone(e);
   // 멈칫: 재질에 따라. 살을 깨끗이 가르면 짧게, 박히거나 뼈·투구에 걸리면 길게 (최대 0.1초 — 조작이 늦게 느껴지지 않게)

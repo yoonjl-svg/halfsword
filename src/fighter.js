@@ -801,6 +801,9 @@ export class Fighter {
     if (this.state === 'dead' || this.revival) return; // 부활하는 동안엔 상처를 받지 않는다
     const sev = h.severity;
     const Z = h.zone;
+    // 날이 살을 갈랐나. 보통은 찌르기·베기 = 문턱을 넘음 (못 넘으면 combat.js 가 멍으로 바꿔 보낸다). 내려찍기 즉사 찌르기(h.finish)만
+    //  문턱을 못 넘어도 찌르기로 온다 — 그땐 판·옷·상처를 막힌 타격(멍)처럼 적는다 (판을 뚫었다·옷이 찢겼다·빈 상처로 적지 않는다)
+    const bit = h.type !== 'blunt' && sev > 0;
     // 통증과 휘청임 (에너지가 클수록)
     this.pain = Math.min(2, this.pain + sev * 0.8 + h.energy / 150);
     this.balance -= h.energy * VITALS.staggerPerJoule;
@@ -813,13 +816,13 @@ export class Fighter {
         this.shedHelmet(hs, h); // 파손: 문턱을 넘을 때마다 곁 조각(뿔·볏)이 떨어져 날아간다 (조각 투구만)
         setHelmetWear(this.helmetGroup, this.helmetIntegrity); // 찌그러짐·금 (조각 투구만, 케틀햇은 그대로)
       }
-      if (this.helmetIntegrity <= 0 || (h.type === 'blunt' && h.energy > hs.knockBlunt)) this.knockOffHelmet(h.dir, h.energy);
-    } else if (h.plate && h.type === 'blunt') {
+      if (this.helmetIntegrity <= 0 || (!bit && h.energy > hs.knockBlunt)) this.knockOffHelmet(h.dir, h.energy);
+    } else if (h.plate && !bit) {
       this.wearPlate(h.part, h.energy, h.dir, Z); // 판이 막았다: 판만 닳고 밑의 옷은 그대로
     } else if (Z !== 'head' && Z !== 'neck') {
       if (h.plate) this.wearPlate(h.part, h.energy, h.dir, Z); // 판을 뚫고 들어왔다: 판도 닳고 옷도 찢어진다
       const c = this.cloth[h.part] ?? 1;
-      const tear = h.type === 'blunt' ? h.energy / 800 : 0.25 + sev * 0.5;
+      const tear = !bit ? h.energy / 800 : 0.25 + sev * 0.5;
       this.cloth[h.part] = Math.max(0, c - tear);
     }
 
@@ -829,7 +832,7 @@ export class Fighter {
     //  죽음은 다른 죽음과 같이 die → tryRevive (투지 부활) 를 거친다
     if (h.finish) this.die('내려찍기');
 
-    if (h.type === 'blunt') {
+    if (!bit) {
       if (Z === 'head' || Z === 'neck') {
         const k = h.helmet ? h.helmetBlunt : 1;
         this.consciousness -= h.energy * VITALS.concussionPerJoule * k;

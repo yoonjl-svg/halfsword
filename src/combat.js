@@ -255,7 +255,8 @@ export class Combat {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
       } else if (!predicting && !finish) {
-        type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (내려찍기 즉사 찌르기는 찌르기 그대로 — 판·투구에 막혀도 칼은 물리로 튕긴다)
+        type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (내려찍기 즉사 찌르기는 찌르기 그대로 — 판·투구에 막혀도 칼은 물리로 튕긴다.
+        //  판·옷·소리는 심각도 0 이라 막힌 타격으로 적힌다: fighter.applyWound·main.js onWound)
         // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
         if (assisted) ({ mEff, ephys, energy } = assisted);
       }
