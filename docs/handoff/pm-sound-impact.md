@@ -668,3 +668,19 @@ VoiceBosch 3개 파일은 같은 라이선스로 공개해야 한다. 부담되�
 - 관문: 시뮬 3종 main `63f6b94`와 바이트 동일(1322B/497B/497B), 스모크 콘솔 에러 0, 실제 게임: 기본 'legacy', flesh 녹음 8개·새 합성 4벌 읽힘, 세 모드 모두 베기·찌르기·칼 면·베고 지나감 에러 0, 4xx 없음. main.js 변경 없음.
 - 사장님께 세 안 미리듣기(같은 장면)와 그림을 보냈다. 고르시면 `SOUND.fleshHit` 기본값을 그 안으로 바꾸고, 안 고른 쪽(녹음 파일 또는 합성)은 지운다.
 
+## 32차: 참수 소리 (디렉터 지시 12:53, main `a6acc44` 참수 물리 — COMBAT.decapitate)
+
+- main `a96cba3` 병합. 참수: 목을 가르고 지나간 치명 베기 → `fighter.decapitate`(목 관절을 떼고 `decapitated = true`) → `die('목')` → `COMBAT_HOOKS.onDecapitate(f, headBody)`.
+- **연결은 BodySounds 로**(main.js·combat.js 변경 없음): `f.decapitated` 가 켜지는 순간을 본다. `COMBAT_HOOKS.onDecapitate` 는 쓰지 않았다 — sound.js 가 combat.js 를 import 하면 일꾼(soundgen.js)에 three.js 가 딸려 오고, main.js 에 줄을 넣지 않아도 한 프레임(16ms) 안에 같은 순간을 잡는다. 이미 죽은 몸의 목이 잘려도(die 가 아무것도 안 하는 경우) 플래그로 잡힌다. 훅은 외형 PM 등이 쓰게 비워 둔다.
+- (1) **그 순간** `Sound.decapitate({me, pos})`: 베는 소리(main.js onWound 의 cut)는 이미 난다. 그 위에 짧고 무거운 절단감만 — 뼈 조각 `bone` 0.7~0.8배(목뼈가 끊기는 둔한 "뚝") + 나무 쪼개짐 녹음 `crack` 0.8~0.9배 + `wetHeavy` 0.6~0.7배(목이 떨어져 나가는 "철퍽") + `thump` 0.6배 + 0.12초 뒤 `wet` 0.5~0.6배 작게(목 단면). **목소리는 내지 않는다**(숨이 성대를 지나지 않는다; "적막"). BodySounds 는 decapitated 면 `death` 목소리를 건너뛴다. 내가 당하면 `fadeOutWorld`(이명·먹먹함)는 그대로.
+- (2) **떨어진 머리** `Sound.headLand(speed, {helmet, pos})`: 머리 몸의 충돌은 지금까지 소리 체계에 없었다(BodySounds 는 발·골반·가슴·칼만 봤다). 칼 떨어짐과 같은 방법으로 `f.bodies.head` 를 본다 — 떨어지던 머리(v < -0.8 m/s)가 0.4m 아래서 멈추거나 튀면 그 순간, 0.12초에 한 번까지. 맨머리: `thump` + 누비옷 너머 `soft` 녹음 "퍽" / 투구째(`f.hasHelmet`): `helmet` 조각 0.7~0.8배 둔한 "텅" + `thump`. 둘 다 무대 바닥 알갱이.
+- 실제 장면(`tools/browser/decap_shots.mjs` 에 소리 호출 기록을 붙인 사본, 성 안뜰·츠바이핸더): 랴오·하인리히·이졸데·마르그레테 모두 cut(256~267J) → 16ms 뒤 decapitate → 약 0.55초 뒤 headLand(5.3~5.4 m/s) → 칼·몸 떨어짐. 죽음 목소리 없음. 마르그레테는 용 투구라 칼을 목 조금 아래(머리 몸 기준 -0.11m)로 몰아야 목에 맞았고 headLand helmet:true. 이졸데는 되살아나지 않음(디렉터 확인 항목). 콘솔 에러 0.
+- 측정(오프라인, 위 시각대로 재현, 성 안뜰):
+  - `decap_before cut+sever 0.3-0.8  -14.2dB | head land 0.85-1.1  -21.3dB | tail 1.7-3.2  -18.7dB`
+  - `decap_after_bare cut+sever 0.3-0.8  -16.5dB | head land 0.85-1.1  -19.0dB | tail 1.7-3.2  -20.6dB`
+  - `decap_after_helm cut+sever 0.3-0.8  -16.5dB | head land 0.85-1.1  -20.7dB | tail 1.7-3.2  -20.6dB`
+  - 전(목소리 신음)보다 0.3~0.8초 구간이 2.3dB 작다 — 과장 없이. 머리 떨어짐은 칼 떨어짐(-24dB 안팎)보다 조금 크고 몸 쓰러짐보다 작다.
+  - 그림: `docs/handoff/decap_sound_before_after.png`(파형, 전 / 후 맨머리 / 후 투구째).
+- `sounds.html`: "참수 (32차)"(맨머리 / 투구째), "머리가 바닥에 닿음"(1 / 2.5 / 4 m/s).
+- 관문: 시뮬 3종 main `a96cba3`와 바이트 동일(1322B/498B/498B), 스모크 콘솔 에러 0, 실제 참수 4명 에러 0. 새 파일 0KB(기존 조각·녹음만).
+

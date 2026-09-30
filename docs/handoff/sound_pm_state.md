@@ -8,6 +8,7 @@
 - 역할 분담안(main `docs/pm_roles_charter.md` 부록 B): 에너지 눈금(150 J과 500 J이 다르게), 디딤 소리(동작 PM의 딛는 시각 φc·gait onTouchdown 'strike'), 센 타격·딛기가 소리에 맞는지 확인, 라운드 판정에 소리 의견.
 
 ## 진행 중 / 끝남
+- [끝남] 32차(9/30): 참수 소리 — 절단감 `decapitate`(목소리 없음) + 떨어진 머리 `headLand`(맨머리/투구). BodySounds 로 연결, main.js 변경 없음. 그림 `decap_sound_before_after.png`.
 - [진행 중] 31차(9/30): 칼→몸 소리 후보 셋, 사장님 선택 대기.
 - [끝남] 30차: 큰 타격 배경 소리 간격 `SOUND.stageHitGap` = 10초(`_spaced`; 종·불길·천·돌·새·박쥐·나뭇잎·풍경·까마귀). 타격음은 그대로.
 - [끝남] 30차: 리볼버 총성 `sound.gunshot` (.357/.44급, 무대 방 울림 + 바깥 메아리 꼬리). gun.js `gunshotSound` 첫 줄이 넘긴다. 전후 그림 `gunshot_before_after.png`. 사장님 내일 시험.
@@ -23,11 +24,13 @@
 - R2/R4 에서 디렉터가 gait 딛는 순간에 `sound.footStrike(strength, pos)`를 잇는다.
 
 ## 재현 명령
+- 참수 소리: `tools/browser/decap_shots.mjs` 로 장면을 만든다(playwright 는 `node_modules/playwright` 경로로). 용 투구(마르그레테)는 목을 머리 몸 기준 -0.11m 로 몰아야 목에 맞는다.
 - 시뮬 3종(main과 바이트 동일해야 함): `node tools/sim/live_battery.mjs`, `node tools/sim/fights12.mjs`, `node tools/sim/hybrid.mjs fights12.mjs` — main 워크트리와 `cmp`.
 - 스모크: `npx vite --port 5179 --strictPort --host 127.0.0.1` 뒤 `node tools/browser/smoke.mjs http://127.0.0.1:5179` → "ZERO console errors".
 - 들어보기: `sounds.html` (같은 vite). 오프라인 렌더는 `window.lab.render({dur, events:[{t, call, args}], samples:true, returnAudio:'b64', seed})`.
 
 ## 관문 (최근)
+- 32차: 시뮬 3종 main `a96cba3`와 바이트 동일, 스모크 콘솔 에러 0, 실제 참수 4명(decap_shots 사본) 에러 0.
 - 31차: 시뮬 3종 main `63f6b94`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임 세 모드 에러 0.
 - 30차: 시뮬 3종 main `c9fc916`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임(성 안뜰·권총) 간격·총성 경로 확인.
 - 29차: 시뮬 3종 main `940f665`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임 hitScale 'legacy'·w=0 확인.

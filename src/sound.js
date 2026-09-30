@@ -2431,6 +2431,41 @@ export class Sound {
     if (me) this.fadeOutWorld();
   }
 
+  /**
+   * 참수 (32차, 디렉터: COMBAT.decapitate — 목을 가르고 지나간 치명 베기). 베는 소리(main.js onWound 의 cut)는 이미 났다.
+   *  그 위에 짧고 무거운 절단감만 얹는다(과장 없이, "적막"): 목뼈가 끊기는 둔한 "뚝"(뼈 조각·나무 쪼개짐 녹음을 낮게),
+   *  목이 떨어져 나가는 무거운 젖은 소리(wetHeavy 낮게), 몸통이 받는 낮은 "쿵", 0.12초 뒤 목 단면의 낮은 젖은 소리 한 번.
+   *  목소리는 내지 않는다 — 숨이 목(성대)을 지나지 않는다. BodySounds 가 이때 죽음 목소리를 건너뛴다. 내가 당하면 귀가 멍해진다
+   */
+  decapitate({ me = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const ev = this.event({ bus: this.fleshBus, gain: 0.9, prio: 3, pos });
+    this.layer(ev, this.pick('bone'), { gain: 0.8, rate: between(Math.random, 0.7, 0.8), delay: 0.004 });
+    const rec = this.pickSample('crack');
+    if (rec) this.layer(ev, rec, { gain: 0.5, rate: between(Math.random, 0.8, 0.9), delay: 0.006 });
+    this.layer(ev, this.pick('wetHeavy'), { gain: 0.7, rate: between(Math.random, 0.6, 0.7), delay: 0.012 });
+    this.layer(ev, this.pick('thump'), { gain: 0.5, rate: 0.6, delay: 0.008 });
+    this.layer(ev, this.pick('wet'), { gain: 0.25, rate: between(Math.random, 0.5, 0.6), delay: 0.12 });
+    if (me) this.fadeOutWorld();
+  }
+
+  /**
+   * 떨어진 머리가 바닥에 닿음 (32차, BodySounds 가 머리 몸의 낙하를 보고 부른다. 굴러 튈 때마다, 0.12초에 한 번까지).
+   *  speed = 닿기 직전 떨어지던 속도(m/s). 맨머리: 둔한 "퍽"(합성 쿵 + 누비옷 녹음) / 투구째: 투구 조각을 낮게 튼 둔한 "텅" + 쿵.
+   *  둘 다 그 무대 바닥 알갱이(모래·자갈·눈·돌·흙)를 얹는다
+   */
+  headLand(speed, { helmet = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const x = clamp01((speed - 0.8) / 4);
+    const ev = this.event({ bus: helmet ? this.metalBus : this.fleshBus, gain: 0.2 + 0.45 * x, prio: 1, pos });
+    if (helmet) this.layer(ev, this.pick('helmet'), { gain: 0.9, rate: between(Math.random, 0.7, 0.8) });
+    this.layer(ev, this.pick('thump'), { gain: helmet ? 0.7 : 0.9, rate: between(Math.random, 0.8, 0.95) });
+    const soft = helmet ? null : this.pickSample('soft');
+    if (soft) this.layer(ev, soft, { gain: 0.5, rate: between(Math.random, 1.0, 1.15) });
+    const grit = this.pickSample(STAGE_SOUND[this.stage].grit || STAGE_SOUND[this.stage].step);
+    if (grit) this.layer(ev, grit, { gain: 0.25 + 0.2 * x, rate: between(Math.random, 1.0, 1.15), delay: 0.004 });
+  }
+
   /** 내가 쓰러짐: 이명(삐—)이 울리고, 온 소리가 몇 초에 걸쳐 먹먹해진다 */
   fadeOutWorld() {
     const c = this.ctx;
@@ -3335,15 +3370,23 @@ export class BodySounds {
     this.swordVy = 0; // 칼이 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
     this.lastLand = -9;
     this.breathT = 0; // 다음 숨 시각 (0 = 지금은 숨을 내지 않는다)
+    this.decap = !!fighter.decapitated; // 참수를 이미 알렸나 (32차)
+    this.headVy = 0; // 떨어진 머리가 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
+    this.lastHead = -9;
   }
 
   update(dt) {
     const f = this.f;
     const s = this.s;
     this.t += dt;
+    // 참수 (32차): fighter.decapitate 가 decapitated 를 켠다(die 와 같은 순간). 절단감 소리를 한 번, 죽음 목소리는 내지 않는다
+    if (f.decapitated && !this.decap) {
+      this.decap = true;
+      s.decapitate({ me: this.me });
+    }
     if (f.state !== this.state) {
       if (f.state === 'dead') {
-        s.death(this.voice, f.causeOfDeath, { me: this.me });
+        if (!f.decapitated) s.death(this.voice, f.causeOfDeath, { me: this.me });
         if (VOICES[this.voice]?.mute) this.thudDue = this.t + 1.2; // 1.2초 안에 몸이 닿지 않으면(이미 누워 있었음) 그때 낸다
       }
       else if (f.state === 'getup' && this.state === 'stand') s.bodyFall(1.2, { light: true }); // 무릎이 꺾여 주저앉음
@@ -3430,6 +3473,19 @@ export class BodySounds {
         this.swordVy = 0;
       } else this.swordVy = vy < 0 ? Math.min(v0, vy) : 0;
     } else this.swordVy = 0;
+
+    // 떨어진 머리가 바닥에 닿음 (32차): 칼과 같은 방법 — 떨어지던 머리가 땅 가까이서 멈추거나 튀면 그 순간. 굴러 튈 때마다 작게
+    const hb = this.decap ? f.bodies?.head : null;
+    if (hb) {
+      const y = hb.translation().y;
+      const vy = hb.linvel().y;
+      const v0 = this.headVy;
+      if (v0 < -0.8 && vy > v0 * 0.35 && y < 0.4) {
+        if (this.t - this.lastHead > 0.12) s.headLand(-v0, { helmet: !!f.hasHelmet, pos: hb.translation() });
+        this.lastHead = this.t;
+        this.headVy = 0;
+      } else this.headVy = vy < 0 ? Math.min(v0, vy) : 0;
+    }
   }
 }
 
