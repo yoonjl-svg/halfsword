@@ -682,11 +682,68 @@ export class Fighter {
 
   /**
    * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, config.js CLOSE). 힘을 더하지 않는다: 발은 gait 걸음 요청,
-   *  몸은 스틱 걷기의 다리 힘, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword).
+   *  몸은 스틱 걷기의 다리 힘, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword). 넘어짐은 상대 균형이 정한다.
+   *  발사 = 걸쇠 && 밂 && 준비. 1단계(step) 딛기 → req 다리 착지 → 2단계(press) 누르기 → 물리 사건으로 끝 → lift·closeW 되돌림.
    */
   closeStep() {
     const dt = this.lastDt;
-    const b = this.barge;
+    const f = this.foe;
+    const g = this.gait;
+    const sk = this.skill;
+    const d = this.foeDistance();
+    const reach = CLOSE.reach(this.armed ? this.weapon : null); // 빈손은 맨몸 (칼자루 0)
+    const push = this.stickY > Math.abs(this.stickX); // 밂 = 상대 쪽 90° 부채꼴 (기하, 감정 배수와 무관)
+    const idle = this.stickY <= 0; // 안 밂. 그 사이(대각선 앞)는 걸쇠를 그대로 둔다 (숫자 없는 히스테리시스)
+    const foeUp = !!f && f.alive && f.state === 'stand' && !f.revival; // 상대 kneel·getup 은 아님
+    let b = this.barge;
+    if (b) {
+      // 끝 = 물리 사건 (시간값 없음). 먼저: 나·상대 stand 아님, 베기·찌르기 시작
+      let end = null;
+      if (this.state !== 'stand' || !foeUp || !g?.active) end = 'state';
+      else if (sk.swinging) end = 'swing';
+      else if (sk.tap) end = 'thrust';
+      else if (b.phase === 'step' && g.req !== b.req) {
+        // req 다리 착지는 touchdown 이 req 를 지운다 (gait.js touchdown). 오래돼 버려진 요청(기존 req.age > 1 s)이나
+        //  다른 요청이 덮어쓴 것이면 밀치기 끝 (발 없는 팔 밀기는 없다)
+        if (g.req || b.req.age > 1) end = 'dropped';
+        else b.phase = 'press';
+      }
+      if (!end && b.phase === 'press') {
+        if (d > reach) end = 'apart'; // 떨어짐: 팔·칼자루가 더는 닿지 않는다
+        else if (idle) end = 'release'; // 밂이 풀림
+        else if (this.armFull && !this.closeTouch()) end = 'armFull'; // 팔이 다 펴졌는데 닿은 것 없음 (밂을 다 씀)
+      }
+      if (end) {
+        this.barge = b = null;
+        this.bargeEnd = end;
+      }
+    }
+    if (!b) {
+      // 걸쇠: 밀치는 중엔 건드리지 않는다 (1단계 중 엄지가 가운데를 지나도 재발사 없음)
+      if (!(d <= reach)) this.closeArmed = false;
+      else if (idle) this.closeArmed = true;
+      else if (push && this.closeArmed) {
+        // 밀면 걸쇠를 쓴다 (준비가 안 된 밂 — 베는 중·찌르는 중·발 묶임 등 — 이 나중에 저절로 밀치기가 되지 않게)
+        this.closeArmed = false;
+        const ready =
+          this.state === 'stand' && g?.active && !this.feetHeld && !(this.armed && this.weapon?.gun) && foeUp && !this.revival && !sk.swinging && !sk.tap;
+        if (ready) {
+          // 걸음 길이 L: 몸통 닿는 선(shove() 의 0.55)까지 남은 거리, 발 한 번(GAIT.maxReach). 0 이면 몸통이 이미 닿아 걸음 없음
+          const L = THREE.MathUtils.clamp(d - 0.55, 0, GAIT.maxReach);
+          this.shoves++;
+          b = this.barge = { phase: L > 0 ? 'step' : 'press', L, stepOk: null, d0: d, req: null };
+          if (L > 0) {
+            // 찌르기 걸음과 같은 요청 (skill.js thrust: lunge, 0.3 s). 거절되면 밀치기 끝
+            b.stepOk = g.requestStep({ kind: 'lunge', fwd: L, duration: 0.3 });
+            if (b.stepOk) b.req = g.req;
+            else {
+              this.barge = b = null;
+              this.bargeEnd = 'refused';
+            }
+          }
+        }
+      }
+    }
     // 되돌림 섞기: lift(접기 풀기)·closeW(누르기 무게)는 기존 몸 자세 따라가기 SKILL_BODY.chest(26/s, updateBodyPose 의
     //  임계 감쇠 2차 필터)로 목표를 따라간다. 밀치는 동안 lift → 1, 누르기에서 closeW → 1, 끝나면 둘 다 0 으로 (잠그지 않는다)
     const w = SKILL_BODY.chest;
@@ -696,6 +753,26 @@ export class Fighter {
     this.lift += this.liftV * dt;
     this.closeWV += (w * w * (wt - this.closeW) - 2 * w * this.closeWV) * dt;
     this.closeW += this.closeWV * dt;
+  }
+
+  /** 누르기: 내 팔·칼이 상대 몸(발 빼고)이나 칼에 닿아 있나 (Rapier 접촉을 읽기만 한다) */
+  closeTouch() {
+    const f = this.foe;
+    if (!f) return false;
+    const mine = [this.bodies.uarmS, this.bodies.farmS, this.bodies.uarmO, this.bodies.farmO].map((rb) => rb.collider(0)).concat(this.armed ? this.swordColliders : []);
+    const theirs = [];
+    for (const [k, rb] of Object.entries(f.bodies)) if (!k.startsWith('foot')) theirs.push(rb.collider(0));
+    theirs.push(...f.swordColliders);
+    let hit = false;
+    for (const a of mine) {
+      for (const c of theirs) {
+        this.world.contactPair(a, c, (m) => {
+          if (m.numContacts() > 0) hit = true;
+        });
+        if (hit) return true;
+      }
+    }
+    return false;
   }
 
   // ── 매 물리 스텝마다 호출: 근육을 움직인다 ──
