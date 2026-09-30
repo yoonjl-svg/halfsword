@@ -173,7 +173,7 @@ function aimErr(f) {
 
 /** 겨눌 머리가 없다: 참수됐거나(몸에서 떨어진 머리) 죽은 상대 (COMBAT.decapitate 를 끄면 예전처럼 늘 머리도 본다) */
 export function headOff(foe) {
-  return foe.decapitated || (COMBAT.decapitate && !foe.alive);
+  return !!foe.decapitated; // 떨어진 머리만 겨눔에서 뺀다 (죽었지만 머리가 붙은 상대는 그대로 — 스위치가 참수 판 밖의 싸움을 바꾸지 않게, 디렉터 9/30)
 }
 
 /** 총구 (월드): 칼 몸체 (spec.muzzleX, 손잡이+칼날 길이, 0) — 총신이 주먹 위로 올라와 있어 칼 축에서 비켜 있다 */
