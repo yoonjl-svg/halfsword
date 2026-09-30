@@ -29,7 +29,7 @@
 | 외형 PM | session_01HNkUuYHag8VSg6xpgbkGVR | claude/pm-character-looks | 대기. R2 뒤 갑옷 뚫림 점검 |
 | 사운드 PM | session_018mZ2Hqp8QUttYxEroMCesF | claude/pm-sound-impact (환경 env_01A6VUoNJgYWiFs5hTZrWavH) | 대기. R3에 hitScale 'log' 켜기 |
 | 기획 PM | session_01QRwbXg6zS4784iUVd3XGV5 | claude/pm-design | 9/30 신설(사장님). 1등급 high(노력은 사장님이 앱에서). 코드 읽기만, docs/design/. 첫 과제: 구조 지도 → 세 방향(어드벤처·RPG·대전 격투) → 수직 슬라이스. 역할 문서 docs/handoff/design_pm_charter.md |
-| 감사 | session_01P6xekotejC4FCmL2uX1S85 | claude/audit | 매일 17:00 diff 감사, 일요일 10:00 전체. 권고 대장 docs/audit/register.md. 디렉터는 권고마다 하루 안에 답 |
+| 감사 | session_01P6xekotejC4FCmL2uX1S85 | claude/audit | **10/1 01:30 사장님 지시로 쉼**(정기 트리거 꺼 둠, 재개 지시 때까지). 확인표 답 기준 = 구글 문서(사장님 드라이브), 체크한 줄만 고침. 권고 대장 docs/audit/register.md |
 | 폐지 | 연구 ASS session_01QoWtSqxGN5jYBMudxkqo1x(보관), 옛 디렉터 session_01KcYCh6UfKjrR4m8QjPcEbM(은퇴), 중복 디렉터 session_01NDJVGN7xsXPq19Yzry3BvH(보관) | | |
 
 ## 온몸 타격 진행 (브랜치·워크트리)
