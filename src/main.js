@@ -15,7 +15,7 @@ import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } fr
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL } from './weapons.js';
 import { attachAura } from './aura.js';
-import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
+import { Particles, haptic, stickDecal, rebuildDecal, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
@@ -240,6 +240,78 @@ function prepareRound() {
 }
 
 /**
+ * 판 시작 예열: 싸움 도중 처음 나오는 효과의 셰이더를 지금(메뉴·카드가 가리는 동안) 만든다 — 처음 나오는 순간 멈칫하지 않게.
+ *  상처 자국(캐릭터 겉면에 붙어 캐릭터 조명이 고친 재질) · 칼 잔상 · 피·불꽃 입자 · 칼이 부러질 때의 조각과 부러진 면.
+ *  compile 만 하고 그리지 않는다 (화면 그대로). 캐릭터 조명이 재질을 먼저 고쳐 놓아야(셰이더가 달라진다) 그 셰이더가 준비된다.
+ *  셰이더는 쓰는 재질이 하나라도 살아 있어야 남으므로 예열 재질은 다음 예열까지 들고 있다.
+ *  예열 물체는 따로 된 난수로 만든다 (three 가 UUID 에 Math.random 을 쓴다 — 판의 난수 흐름을 그대로 두게)
+ */
+let fxWarmMats = [];
+let fxWarmSeed = 0x6a09e667;
+let fxWarmGeo = null;
+function quietly(fn) {
+  const real = Math.random;
+  Math.random = () => (fxWarmSeed = (Math.imul(fxWarmSeed, 1664525) + 1013904223) >>> 0) / 4294967296;
+  try {
+    return fn();
+  } finally {
+    Math.random = real;
+  }
+}
+const fragileOf = () => [player, enemy].filter((f) => f.weapon?.fragile && f.swordGroup);
+const breakFace = () => new THREE.MeshStandardMaterial({ flatShading: true, side: THREE.DoubleSide }); // weapon_looks.js breakWeaponLook 톱니 면과 같은 설정
+/** 캐릭터에 잠깐 붙일 예열 물체: 상처 자국(겉면) · 부러진 칼의 톱니 면(칼 그룹) */
+function fxWarmers() {
+  return quietly(() => {
+    fxWarmGeo ??= new THREE.PlaneGeometry(0.001, 0.001);
+    const on = [];
+    const host = Object.values(player.partMesh).find(Boolean);
+    if (host) on.push([host, decalWarmMesh()]);
+    for (const f of fragileOf()) on.push([f.swordGroup, new THREE.Mesh(fxWarmGeo, breakFace())]);
+    return on;
+  });
+}
+function withWarmers(on, fn) {
+  for (const [parent, mesh] of on) parent.add(mesh);
+  try {
+    fn();
+  } finally {
+    for (const [, mesh] of on) mesh.removeFromParent();
+  }
+}
+/** newRound 끝에서: 붙여 둔 예열 물체와 칼 조각(장면에 뜬다)·잔상·입자의 셰이더를 지금 무대 빛으로 만든다 */
+function warmRoundFx(on) {
+  const mats = on.map(([, mesh]) => mesh.material);
+  withWarmers(on, () => {
+    fighterLight.update(fighterMeshes);
+    // 칼 조각 (breakWeaponLook · debris.js spawnDebris 와 같은 재질 설정): 떨어지는 쪽은 칼 재질 복제본(캐릭터 조명이 고친 뒤 복제 —
+    //  조명 셰이더는 안 따라간다)과 톱니 면 복제본을 흐리게 해 장면에 띄운다
+    const loose = quietly(() => {
+      const g = new THREE.Group();
+      const put = (m, geo) => {
+        m.transparent = true;
+        mats.push(m);
+        g.add(new THREE.Mesh(geo, m));
+      };
+      for (const f of fragileOf()) {
+        f.swordGroup.traverse((o) => {
+          if (!o.isMesh || on.some(([, mesh]) => mesh === o)) return;
+          for (let p = o; p && p !== f.swordGroup; p = p.parent) if (!p.visible) return;
+          for (const m of [].concat(o.material)) put(m.clone(), o.geometry);
+        });
+        put(breakFace(), fxWarmGeo);
+      }
+      return g;
+    });
+    scene.add(loose);
+    for (const o of [...on.map(([, mesh]) => mesh), loose, swordTrails.mesh, particles.mesh]) renderer.compile(o, camera, scene);
+    scene.remove(loose);
+  });
+  for (const m of fxWarmMats) m.dispose(); // 지난 예열 재질: 새 것이 같은 셰이더를 잡은 뒤에 푼다
+  fxWarmMats = mats;
+}
+
+/**
  * 싸움판 만들기: prepareRound 가 정한 상대와 주인공 무기(weaponId)로 물리 세계와 두 사람을 새로 세운다.
  *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다).
  */
@@ -312,11 +384,14 @@ function newRound(weaponId) {
   for (const a of auras) a.dispose();
   auras = [player, enemy].map(attachAura).filter(Boolean);
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
+  const fxWarm = fxWarmers(); // 싸움 도중 처음 나오는 효과의 셰이더 예열용 (부활 빛 예열에 같이 넣고, 판 끝에 warmRoundFx)
   if (enemy.revive) {
     // 부활하는 상대: 빛 하나가 더해진 셰이더를 지금(메뉴·카드가 가리는 동안) 만들어 둔다 — 빛이 내려오는 순간 멈칫하지 않게.
-    //  캐릭터 조명이 새 재질을 먼저 고쳐 놓아야(셰이더가 달라진다) 그 셰이더가 준비된다
-    fighterLight.update(fighterMeshes);
-    reviveFx.warm();
+    //  캐릭터 조명이 새 재질을 먼저 고쳐 놓아야(셰이더가 달라진다) 그 셰이더가 준비된다. 예열용 자국·톱니 면도 잠깐 붙여 같이 만든다
+    withWarmers(fxWarm, () => {
+      fighterLight.update(fighterMeshes);
+      reviveFx.warm();
+    });
   }
   const madEyes = attachMadEyes(enemy, currentFoe?.eyes === 'madGlow' || params.has('madEyes')); // 광기의 붉은 안광 (외형 PM, mad_eyes.js — 캐릭터 항목 eyes: 'madGlow' / 시험 ?madEyes=1). 잔상은 장면에 두므로 fighterMeshes 뒤에
   if (madEyes) auras.push(madEyes);
@@ -348,6 +423,7 @@ function newRound(weaponId) {
   // 시간이 흐르기 전에도(무기 뽑기 동안) 선 자세 그대로 보이게 겉모습을 몸에 맞춰 둔다
   player.syncMeshes();
   enemy.syncMeshes();
+  warmRoundFx(fxWarm); // 판 도중 처음 나오는 효과(자국·잔상·입자·칼 조각)의 셰이더 (판의 난수를 다 쓴 뒤 — 그리기 전과 같은 순서)
 }
 
 // ── 타격감 ──
