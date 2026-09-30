@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
@@ -274,6 +274,7 @@ export class Fighter {
     const weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index));
 
     const defs = partDefs(this.side);
+    this.headR = defs.find((d) => d.name === 'head').shape[1]; // 머리 공 반지름 (skill.js 찍기 겨눔이 머리 꼭대기 높이를 잰다)
     this.localPos = {};
     this.localRot = {};
     for (const d of defs) {
@@ -932,6 +933,9 @@ export class Fighter {
     if (this.state === 'dead' || this.revival) return; // 부활하는 동안엔 상처를 받지 않는다
     const sev = h.severity;
     const Z = h.zone;
+    // 날이 살을 갈랐나. 보통은 찌르기·베기 = 문턱을 넘음 (못 넘으면 combat.js 가 멍으로 바꿔 보낸다). 내려찍기 즉사 찌르기(h.finish)만
+    //  문턱을 못 넘어도 찌르기로 온다 — 그땐 판·옷·상처를 막힌 타격(멍)처럼 적는다 (판을 뚫었다·옷이 찢겼다·빈 상처로 적지 않는다)
+    const bit = h.type !== 'blunt' && sev > 0;
     // 통증과 휘청임 (에너지가 클수록)
     this.pain = Math.min(2, this.pain + sev * 0.8 + h.energy / 150);
     this.balance -= h.energy * VITALS.staggerPerJoule;
@@ -944,17 +948,23 @@ export class Fighter {
         this.shedHelmet(hs, h); // 파손: 문턱을 넘을 때마다 곁 조각(뿔·볏)이 떨어져 날아간다 (조각 투구만)
         setHelmetWear(this.helmetGroup, this.helmetIntegrity); // 찌그러짐·금 (조각 투구만, 케틀햇은 그대로)
       }
-      if (this.helmetIntegrity <= 0 || (h.type === 'blunt' && h.energy > hs.knockBlunt)) this.knockOffHelmet(h.dir, h.energy);
-    } else if (h.plate && h.type === 'blunt') {
+      if (this.helmetIntegrity <= 0 || (!bit && h.energy > hs.knockBlunt)) this.knockOffHelmet(h.dir, h.energy);
+    } else if (h.plate && !bit) {
       this.wearPlate(h.part, h.energy, h.dir, Z); // 판이 막았다: 판만 닳고 밑의 옷은 그대로
     } else if (Z !== 'head' && Z !== 'neck') {
       if (h.plate) this.wearPlate(h.part, h.energy, h.dir, Z); // 판을 뚫고 들어왔다: 판도 닳고 옷도 찢어진다
       const c = this.cloth[h.part] ?? 1;
-      const tear = h.type === 'blunt' ? h.energy / 800 : 0.25 + sev * 0.5;
+      const tear = !bit ? h.energy / 800 : 0.25 + sev * 0.5;
       this.cloth[h.part] = Math.max(0, c - tear);
     }
 
-    if (h.type === 'blunt') {
+    // 사장님 결정 (9/30 "맞으면 즉사로"): 쓰러진 상대를 탭 마무리로 내리찍는 칼끝이 몸통(가슴·배·골반)이나 머리에
+    //  찌르기로 닿았다 (combat.js analyze 의 finish) → 즉사. 옷·살·판금·투구 문턱은 따지지 않는다.
+    //  판금·투구가 칼을 막아 튕겨 내는 것(analyze 의 pass → 물리 필터·rebound)은 그대로 — 막는 건 물리, 죽음은 이 규칙.
+    //  죽음은 다른 죽음과 같이 die → tryRevive (투지 부활) 를 거친다
+    if (h.finish) this.die('내려찍기');
+
+    if (!bit) {
       if (Z === 'head' || Z === 'neck') {
         const k = h.helmet ? h.helmetBlunt : 1;
         this.consciousness -= h.energy * VITALS.concussionPerJoule * k;
@@ -1893,8 +1903,9 @@ export class Fighter {
       if (!this.wristBrake && toward > 3 && toward > tgtSp && angle > 0.25) {
         const brakeAcc = (cap * this.weaponCfg.brakeEcc) / this.swordIhand;
         const stopAngle = (toward * toward) / (2 * brakeAcc);
-        // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js)
-        const fr = this.finish.amt > 0 && aim.y < blade.y ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
+        // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
+        const tap = this.skill.tap;
+        const fr = this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
         if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
@@ -1947,13 +1958,13 @@ export class Fighter {
     rot(chest, _q1);
     const c = chest.translation();
     const T = _ik1.set(target.x - c.x, target.y - c.y, target.z - c.z).applyQuaternion(_q2.copy(_q1).invert());
-    const S = _ik2.set(0, 0.1, this.side * 0.2); // 어깨 (가슴 기준)
-    const a = 0.3; // 위팔
-    const b = 0.27; // 아래팔 + 손목까지
+    const S = _ik2.set(ARM.shoulder[0], ARM.shoulder[1], this.side * ARM.shoulder[2]); // 어깨 (가슴 기준)
+    const a = ARM.upper; // 위팔
+    const b = ARM.fore; // 아래팔 + 손목까지
     const D = T.sub(S);
     const Dl = D.length();
-    this.armFull = Dl >= a + b - 0.005; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
-    const d = THREE.MathUtils.clamp(Dl, 0.08, a + b - 0.005);
+    this.armFull = Dl >= a + b - ARM.slack; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
+    const d = THREE.MathUtils.clamp(Dl, 0.08, a + b - ARM.slack);
     const Dn = D.normalize();
     // 팔꿈치는 아래·뒤·바깥쪽을 향한다
     const pole = _ik3.set(-0.25, -1, this.side * 0.5).normalize();

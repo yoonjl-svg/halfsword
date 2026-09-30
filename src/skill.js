@@ -17,15 +17,16 @@
 //   3) 내딛기: 알맞은 간격에서 휘두르기 시작하면 앞발을 내딛으며 벤다
 //   4) 자세로 돌아가기: 베기를 마치고 손가락을 떼면(마우스는 잠깐 멈추면) 교본의 기본 자세(쟁기)로 칼을 되돌린다.
 //      숙련된 검사는 베고 나서 칼을 아무 데나 두지 않고 곧바로 자세를 잡는다. (플레이어만. AI는 스스로 자세를 고른다)
-//   5) 탭 찌르기(thrust): 화면을 톡 치면 칼끝을 상대 몸통(칼이 높으면 머리, 쓰러졌으면 누운 몸)으로 맞추고 칼 선을 따라
+//   5) 탭 찌르기(thrust): 화면을 톡 치면 칼끝을 상대 몸통(칼이 높으면 머리)으로 맞추고 칼 선을 따라
 //      손을 뻗은 뒤 자세로 돌아온다 (약 0.45초, 한 걸음 내딛으며). 자세 지도 위에 덧씌우는 자세(thrustPose)로 한다.
+//      쓰러진 상대면 찍기(plungePose): 닿는 곳까지 걸어 들어가 두 손을 머리 위로 들고 칼끝을 누운 몸에 겨눈 뒤 힘껏 내려찍는다.
 //
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST } from './config.js';
-import { FINISH } from './finish.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
+import { FINISH, armRay } from './finish.js';
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -38,6 +39,7 @@ const _sq = new THREE.Quaternion();
 const _d1 = new THREE.Vector3();
 const _d2 = new THREE.Vector3();
 const _r = new THREE.Vector3();
+const _u0 = [0, 0, 0];
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
 
 /** 두 선분(p1–q1, p2–q2) 사이 가장 가까운 거리 (칼날끼리 맞닿았나 — 칼 길 잡기) */
@@ -113,34 +115,33 @@ export class Skill {
     //  (겨누기·뻗기까지 빠르게 하면 팔이 손 목표를 따라가지 못해 오히려 덜 뻗는다 — 측정: 레이피어 탭 상처 60% → 20%)
     const ts = f.weaponCfg.thrustStyle;
     const K = { aim: THRUST.aim, extend: THRUST.extend, hold: THRUST.hold, recover: THRUST.recover * (ts?.recover ?? 1), reach: THRUST.reach + (ts?.reach ?? 0) };
-    // 누운 몸을 내리찌를 때는 팔이 아래로 느리게 내려와(측정: 칼끝이 몸에 못 미친 판이 있었다) 더 길게, 더 오래 뻗는다
-    if (down) {
-      K.reach += THRUST.downReach;
-      K.extend *= THRUST.downExtend;
-    }
     this.tap = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], down, head: !down && this.aimRaw.y > THRUST.headPad, K };
     // 칼 길 잡기(R6): 칼이 맞닿았으면 그 칼 선 (아니면 null). 바로 앞 찌르기가 끝나고 bindRest 초 안의 탭(연타)은 잡지 않는다
     this.tap.bound = down || this.sinceThrust < THRUST.bindRest ? null : this.boundAxis();
     this.thrusts++;
-    // 한 걸음 내딛으며 찌른다. 쓰러진 상대는 누운 몸이 한 팔 넘게 떨어져 있을 때만 (가까우면 마무리 자세가 거리를 맞춘다)
-    const T = f.finish.target;
-    if (step && f.state === 'stand' && (!down || Math.hypot(T[0], T[2]) > THRUST.downStepFrom * (f.finish.k ?? 1))) {
+    if (down) {
+      // 쓰러진 상대: 누운 몸 점이 닿는 곳(finish.js plunge.inside) 밖이고 걸어서 닿으면(plunge.walk) 걸어 들어간다 (plungePose — 디딤마다 본다).
+      //  AI(step:false — 제 걸음은 AI 가 정한다)·무릎 꿇은 채는 걷지 않고 그 자리에서 찍는다
+      const tp = this.tap;
+      tp.walkOk = step !== false && f.state === 'stand';
+      if (tp.walkOk && f.finish.plunge.walk) tp.walking = true;
+    } else if (step && f.state === 'stand') {
+      // 한 걸음 내딛으며 찌른다
       if (f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
-      else if (!down) this.lunge = SKILL.lungeTime;
-      else this.tap.step = true; // 누운 몸은 가슴끼리 거리가 짧아 기존 내딛기 조건에 안 걸린다 → 찌르는 동안 직접 내딛는다
+      else this.lunge = SKILL.lungeTime;
     }
     return true;
   }
 
   /**
-   * 찌르기 목표점 (몸 기준): 쓰러진 상대의 누운 몸 / 머리 / 가슴.
+   * 찌르기 목표점 (몸 기준): 쓰러진 상대는 칼끝이 찔러 들어갈 끝(누운 몸 중심 너머, finish.js plunge.tip) / 머리 / 가슴.
    * 몸통은 가슴을 겨눈다 — 배 쪽은 칼자루를 쥔 상대의 두 팔뚝이 앞을 가려 칼끝이 팔에 먼저 걸린다 (측정: 첫 접촉의 3/4이 팔)
    */
   thrustTarget(out) {
     const f = this.f;
     const tp = this.tap;
     if (tp.down) {
-      const T = f.finish.target;
+      const T = f.finish.plunge.tip;
       return out.set(T[0], T[1], T[2]);
     }
     const foe = f.foe;
@@ -184,7 +185,8 @@ export class Skill {
     const K = tp?.K; // 이번 찌르기의 시간·뻗는 거리 (무기의 찌르기 장점 반영)
     if (tp) tp.t += dt;
     this.thrustPush = false;
-    if (!tp || tp.t >= K.aim + K.extend + K.hold + K.recover || !f.alive || !f.armed || !f.foe) {
+    // 찍기(tp.down)의 끝은 시간이 아니라 몸의 일(plungePose 의 tEnd): 끝난 뒤 자세로 돌아오는 시간만 잰다
+    if (!tp || tp.t >= (tp.down ? (tp.tEnd ?? Infinity) + K.recover : K.aim + K.extend + K.hold + K.recover) || !f.alive || !f.armed || !f.foe) {
       this.tap = null;
       pose.w = 0;
       return;
@@ -200,6 +202,10 @@ export class Skill {
         this.tap = null;
         pose.w = 0;
       } else pose.w = tp.abort.w * (1 - r);
+      return;
+    }
+    if (tp.down) {
+      this.plungePose(tp, K);
       return;
     }
     const t = tp.t;
@@ -220,9 +226,9 @@ export class Skill {
     const bd = tp.bound;
     if (bd) _q.multiplyScalar(THRUST.bindTurn).add(_u.set(bd[0], bd[1], bd[2]).multiplyScalar(1 - THRUST.bindTurn)).normalize();
     //  팔이 이미 굽어 있으면(황소처럼 손이 머리 옆) 당길 필요가 없다 — 어깨에서 손까지 거리로 가늠한다.
-    //  (쓰러진 상대는 겨눔 자세가 이미 칼끝을 몸 위로 띄워 두어 당기지 않는다. 칼이 맞닿았으면 당기지 않고 곧게 민다)
+    //  (칼이 맞닿았으면 당기지 않고 곧게 민다. 쓰러진 상대는 plungePose)
     const ext = Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2); // 어깨(가슴 기준 [0, 0.1, 0.2])에서 손까지
-    const ch = tp.down || bd ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1);
+    const ch = bd ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1);
     const a = THREE.MathUtils.clamp(t / K.aim, 0, 1);
     const s = THREE.MathUtils.clamp((t - K.aim) / K.extend, 0, 1);
     const e = -ch * a * a * (3 - 2 * a) + (ch + K.reach) * s * s * (3 - 2 * s);
@@ -237,8 +243,8 @@ export class Skill {
     // 칼끝: 겨누는 동안은 지금 손(칼자루)에서 목표점 너머 past 의 점을 향해 돌리고, 뻗기 시작하면 그 방향을 붙잡는다.
     //  뻗는 동안 손은 거의 칼 축 방향으로 가는데(측정 0.96), 방향을 계속 고쳐 잡으면 손목이 5~9° 늦게 따라 돌며
     //  칼끝이 옆으로 쓸려 칼 축 방향 성분이 0.7까지 떨어졌다 → 붙잡아 두면 칼끝은 손과 함께 칼 축을 따라 나간다
-    //  (쓰러진 상대를 내리찌를 때는 칼이 거의 수직이라 손이 칼 선에서 벗어나는 만큼을 계속 고쳐 잡는 편이 낫다 — 측정)
-    if (!bd && (t < K.aim || !tp.dir || tp.down)) {
+    //  (쓰러진 상대는 plungePose 가 칼끝을 매 스텝 고쳐 잡는다)
+    if (!bd && (t < K.aim || !tp.dir)) {
       const sp = f.sword.translation();
       P.addScaledVector(_q, T.past);
       _q.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv);
@@ -246,13 +252,196 @@ export class Skill {
       pose.dir[0] = P.x;
       pose.dir[1] = P.y;
       pose.dir[2] = P.z;
-      if (t >= K.aim && !tp.down) tp.dir = [P.x, P.y, P.z];
+      if (t >= K.aim) tp.dir = [P.x, P.y, P.z];
     }
-    const b = tp.down ? FINISH.strike : T.body;
+    const b = T.body;
     pose.pelvisYaw = b.pelvisYaw * D2R;
     pose.chestYaw = b.chestYaw * D2R;
     pose.pitch = b.pitch * D2R;
     pose.drop = b.drop;
+  }
+
+  /**
+   * 찍기 (쓰러진 상대에게 탭, 사장님 9/30: "닿을 때까지 걸어들어가 … 양손을 번쩍 드는 동시에 칼날을 아래로 돌려잡고 힘껏 내려찍음").
+   * finish.js 가 매 스텝 정한 fin.plunge(몸 점 T, 칼 방향 dir, 닿는 곳 inside·short)를 읽는다. 매 스텝 차례로:
+   *  1) 걸어 들어가기: 몸 점이 닿는 곳 밖이고 걸어서 닿으면 앞으로 걷는다(내딛기와 같은 밀기). 끝은 발이 디딜 때 본다 — 닿는 곳에
+   *     들어온 뒤 첫 디딤 · 한 걸음(디딤 → 디딤)이 몸 점을 가깝게 하지 못함 · 걸어서는 닿지 않게 됨(몸 점이 손 아래를 지남) ·
+   *     플레이어가 물러남 · 서 있지 않음 · 그만두기(tp.abort)
+   *  2) 겨눔: 칼자루를 머리 위 FINISH.hands 로 올리며 칼끝을 몸 점 너머로 겨눈다. 두 가지를 붙잡으면(latch) 찍는다(go):
+   *     손이 올라옴 = 오르던 칼자루가 멈춘 봉우리가 머리 꼭대기 높이 이상이거나, 앞 봉우리보다 높지 않음(팔이 더 오르지 못함)
+   *     칼이 선에 섬 = 칼 축 ↔ 몸 점 선 각의 골이 누운 몸 두께가 보이는 각(asin(top/거리)) 안이거나, 앞 골보다 낮지 않음(흔들림 바닥)
+   *     그리고 걷기가 끝났고, 걸었으면 골반이 멈추거나 더 느려지지 않을 때
+   *  3) 내려찍기: 찍기 시작 때 칼자루 G0 에서 몸 점 쪽 칼 선을 따라 팔이 닿는 끝까지 한 번에 손 목표를 둔다
+   *     (빠르기는 근육이 정한다). 칼끝은 매 스텝 몸 점 너머로 다시 겨눈다. 끝은 칼자루가 칼 선을 따라 나아가다 멈춘 때:
+   *     칼끝이 누운 몸 윗면 높이 아래면(몸·땅에 박힘) 끝, 아니면 앞 멈춤보다 더 나아가지 못했으면 끝(팔 끝)
+   * 끝나는가: 걷기는 디딤마다 가까워지거나 끝난다(몸 점이 들어오거나, minFwd 뒤로 지나가면 finish 가 꺼져 그만둔다).
+   *  봉우리·골·멈춤은 칼자루 흔들림(±0.04m, 약 5Hz)으로 되풀이되고, 두 번째로 나아지지 않는 것에서 끝난다.
+   *  상대가 일어나거나 죽거나 내가 넘어지면 tp.abort. 시간으로 끝내는 것은 없다
+   */
+  plungePose(tp, K) {
+    const f = this.f;
+    const pose = this.thrustPose;
+    const fin = f.finish;
+    const pl = fin.plunge;
+    const side = f.side ?? 1;
+    const L = f.weaponCfg.hiltLength + f.weaponCfg.bladeLength;
+    const c = f.bodies.chest.translation();
+    _c.set(c.x, c.y, c.z);
+    _yawInv.copy(f.yaw).invert();
+    const sp = f.sword.translation();
+    const G = _p.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv); // 칼자루 (몸 기준)
+    const q = f.sword.rotation();
+    const bAx = _u.set(0, 1, 0).applyQuaternion(_sq.set(q.x, q.y, q.z, q.w)).applyQuaternion(_yawInv); // 칼 축 (몸 기준)
+    // ── 1) 걸어 들어가기 (시간으로 끝내지 않는다)
+    //  찍기 전에 몸 점이 다시 닿는 곳 밖으로 나가면(겨누며 몸이 흔들려) 다시 걷는다
+    if (tp.walkOk && !tp.go && !tp.walking && !tp.walkDone && pl.walk && f.state === 'stand') {
+      tp.walking = true;
+      tp.crossed = false;
+      tp.plantShort = null;
+    }
+    if (tp.walking) {
+      tp.walked = true;
+      const plant = f.gait?.active ? f.gait.sinceTD === 0 : true; // 발을 디딘 스텝 (다리 걸음이 없으면 매 스텝)
+      if (f.state !== 'stand') tp.walking = false;
+      else if (f.move.y <= -0.2) {
+        tp.walking = false; // 플레이어가 물러선다: 여기서 찍는다
+        tp.walkDone = true;
+        tp.walkEnd = 'back';
+      } else if (tp.crossed) {
+        if (plant) {
+          tp.walking = false; // 닿는 곳에 들어온 뒤 첫 디딤
+          tp.walkEnd = 'inside';
+        }
+      } else if (pl.inside) tp.crossed = true; // 닿는 곳 안: 더 밀지 않고 디딜 때까지 기다린다
+      else if (!pl.walk) {
+        tp.walking = false; // 걸어서는 닿지 않게 됐다 (몸 점이 손 아래를 지났다): 여기서 찍는다
+        tp.walkDone = true;
+        tp.walkEnd = 'unreachable';
+      } else if (plant) {
+        tp.plants = (tp.plants || 0) + 1;
+        // 한 걸음(디딤 → 디딤)이 몸 점을 가깝게 하지 못했으면 멈추고 여기서 찍는다. 첫 디딤은 기준만 잡는다 (탭은 걸음 중간이라 견줄 수 없다)
+        if (tp.plantShort != null && pl.short >= tp.plantShort) {
+          tp.walking = false;
+          tp.walkDone = true;
+          tp.walkEnd = 'noprogress';
+        }
+        tp.plantShort = pl.short;
+      }
+      if (tp.walking && !tp.crossed) f.move.y = Math.max(f.move.y, SKILL.lungeMove * this.level);
+    }
+    // ── 2) 겨눔 도착 (찍기 전): 손이 올라옴 · 칼이 선에 섬 을 붙잡는다
+    if (!tp.go) {
+      const y = G.y; // 칼자루 높이 (가슴 기준)
+      if (tp.y != null) {
+        const headTop = f.bodies.head.translation().y + f.headR - c.y; // 머리 꼭대기 (가슴 기준)
+        let peakNow = false;
+        let sat = false;
+        if (y > tp.y) tp.rose = true;
+        else if (tp.rose) {
+          // 오르던 칼자루가 멈춘 곳(봉우리). 앞 봉우리보다 높지 않으면 팔이 더 오르지 못한다
+          sat = tp.peak != null && tp.y <= tp.peak;
+          tp.peak = Math.max(tp.peak ?? -Infinity, tp.y);
+          tp.rose = false;
+          peakNow = true;
+        }
+        if (!tp.upDone && ((peakNow && tp.peak >= headTop) || sat)) {
+          tp.upDone = true;
+          tp.upWhy = sat ? 'peak' : 'head';
+        }
+        const T = pl.T;
+        const tx = T[0] - G.x;
+        const ty = T[1] - G.y;
+        const tz = T[2] - G.z;
+        const tn = Math.hypot(tx, ty, tz); // 칼자루 → 몸 점 (머리 위 손이면 1.2m 넘게)
+        const la = Math.acos(THREE.MathUtils.clamp((bAx.x * tx + bAx.y * ty + bAx.z * tz) / tn, -1, 1)); // 칼 축 ↔ 몸 점 선
+        if (tp.upDone && bAx.y < 0 && tp.la != null && !tp.lineDone) {
+          if (la < tp.la) tp.laFalling = true;
+          else if (tp.laFalling) {
+            tp.laFalling = false;
+            const tol = Math.asin(FINISH.top / tn); // 칼 선이 누운 몸 두께 안으로 지나는 각
+            if (tp.la <= tol || (tp.laMin != null && tp.la >= tp.laMin)) {
+              tp.lineDone = true;
+              tp.lineWhy = tp.la <= tol ? 'tol' : 'floor';
+            }
+            tp.laMin = Math.min(tp.laMin ?? Infinity, tp.la);
+          }
+        }
+        tp.la = la;
+        const settled = !tp.walked || (tp.pvPrev != null && tp.pv >= tp.pvPrev) || tp.pv <= 0; // 걸었으면 골반이 멈추거나 더 느려지지 않을 때
+        if (tp.t >= K.aim && tp.upDone && tp.lineDone && !tp.walking && settled) {
+          tp.go = true;
+          tp.tGo = tp.t;
+          tp.G0 = [G.x, G.y, G.z];
+        }
+      }
+      tp.y = y;
+      tp.pvPrev = tp.pv;
+    }
+    {
+      const pv = f.bodies.pelvis.linvel();
+      const fw = _b.set(1, 0, 0).applyQuaternion(f.yaw);
+      tp.pv = pv.x * fw.x + pv.z * fw.z; // 골반이 앞으로 가는 빠르기
+    }
+    // ── 3) 내려찍기: 칼 선 = 찍기 시작 때 칼자루 G0 → 몸 점
+    let G0 = null;
+    let u0x = 0;
+    let u0y = 0;
+    let u0z = 0;
+    let n0 = 0;
+    if (tp.go) {
+      G0 = tp.G0;
+      const ex = pl.T[0] - G0[0];
+      const ey = pl.T[1] - G0[1];
+      const ez = pl.T[2] - G0[2];
+      n0 = Math.hypot(ex, ey, ez);
+      u0x = ex / n0;
+      u0y = ey / n0;
+      u0z = ez / n0;
+    }
+    if (tp.go && !tp.ended) {
+      // 끝 (시간이 아니라 몸의 일): 칼자루가 칼 선을 따라 나아가다 멈췄다
+      const prog = (G.x - G0[0]) * u0x + (G.y - G0[1]) * u0y + (G.z - G0[2]) * u0z;
+      const sv = f.sword.linvel();
+      const uw = _b.set(u0x, u0y, u0z).applyQuaternion(f.yaw);
+      const va = sv.x * uw.x + sv.y * uw.y + sv.z * uw.z;
+      const tipLow = G.y + bAx.y * L <= pl.T[1] + FINISH.top; // 칼끝이 누운 몸 윗면 높이에 닿았거나 아래
+      if (tp.va > 0 && va <= 0) {
+        // 몸·땅에 박힘 / 앞 멈춤보다 더 나아가지 못함 (팔 끝)
+        if (tipLow || (tp.revProg != null && prog <= tp.revProg)) {
+          tp.ended = true;
+          tp.tEnd = tp.t;
+        }
+        tp.revProg = Math.max(tp.revProg ?? -Infinity, prog);
+      }
+      tp.va = va;
+    }
+    this.thrustPush = !!tp.go && !tp.ended; // 팔 무게는 내려찍는 동안만 싣는다 (combat.js)
+    // ── 4) 자세
+    pose.w = tp.ended ? 1 - (tp.t - tp.tEnd) / K.recover : Math.min(1, tp.t / K.aim);
+    if (!tp.go) {
+      const hs = FINISH.hands; // 머리 위 겨눔 손
+      pose.hand[0] = hs[0];
+      pose.hand[1] = hs[1];
+      pose.hand[2] = hs[2] * side;
+    } else if (!tp.ended) {
+      // 칼 선을 따라 팔이 닿는 끝까지 한 번에 (빠르기는 근육이 정한다). 칼끝이 몸 점 너머 sink 에 닿는 거리보다 짧지 않게
+      //  (G0 는 팔이 놓은 곳이라 팔이 닿는 공 안 — 근이 실수. 만에 하나 아니면 비교가 거짓이라 칼끝 거리를 쓴다)
+      const D = n0 + FINISH.sink - L;
+      _u0[0] = u0x;
+      _u0[1] = u0y;
+      _u0[2] = u0z;
+      const ray = armRay(G0, _u0, side);
+      const D0 = ray >= D ? ray : D;
+      for (let k = 0; k < 3; k++) pose.hand[k] = G0[k] + _u0[k] * D0;
+    } // 끝난 뒤: 마지막 손 목표 그대로 돌아온다
+    for (let k = 0; k < 3; k++) pose.dir[k] = pl.dir[k];
+    // 몸: 허리 비틀기는 겨눔 그대로, 찍으면 숙이고 낮춘다
+    const H = FINISH.hover;
+    const B = tp.go ? FINISH.strike : FINISH.hover;
+    pose.pelvisYaw = H.pelvisYaw * D2R;
+    pose.chestYaw = H.chestYaw * D2R;
+    pose.pitch = B.pitch * D2R;
+    pose.drop = B.drop;
   }
 
   /**

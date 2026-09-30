@@ -30,6 +30,7 @@ import { updateGun } from './gun.js';
 //  onDecapitate(f, headBody): 참수된 순간 한 번 (fighter.applyWound, die 뒤) — 사운드 PM 이 소리를 건다
 export const COMBAT_HOOKS = { onDecapitate: null };
 
+const FINISH_PARTS = new Set(['chest', 'abdomen', 'pelvis', 'head']); // 내려찍기 즉사 부위 (몸통·머리). 부위 이름으로 — 가슴·머리 몸체의 목 쪽도 들어간다
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
 const _a = new THREE.Vector3();
@@ -192,6 +193,14 @@ export class Combat {
     const vicLocal = point.clone().sub(P.p).applyQuaternion(_q.copy(P.q).invert());
     const zone = zoneOf(pr.v, vicLocal);
     const vic = pr.v.fighter;
+    // 사장님 결정 (9/30 "맞으면 즉사로"): 탭 마무리 찌르기가 내리찍는 동안(skill.tap.down·go, thrustPush = 끝나기 전)
+    //  칼끝이 칼 축으로(찌르기) 쓰러진 상대의 몸통(가슴·배·골반)·머리에 닿으면 즉사 (fighter.applyWound).
+    //  옷·살·판금·투구 문턱은 이것을 막지 못한다 — 아래 문턱은 상처 깊이와 관통(pass: 물리로 튕기나 가르나)만 정한다.
+    //  걸리지 않는 것: 서 있는·무릎 꿇은·일어나는 상대 (vic.state) · 보통 탭 찌르기 (tap.down) · 겨누는 중·걷는 중 (go) ·
+    //  찍기가 끝난 뒤·돌아오는 중 (thrustPush) · 자세 지도로 친 내려찍기·AI 내려베기 (tap 없음) · 베기·둔기·날 없는 무기 (stab) ·
+    //  팔다리 (부위) · 내가 넘어졌을 때 (att.state) · 다른 상대 (att.foe). 판단만 한다 — 예측(predicting)·측정 도구가 불러도 부작용 없음
+    const tp = att.skill?.tap;
+    const finish = type === 'stab' && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && vic.state === 'down' && FINISH_PARTS.has(pr.v.part);
     // 투구: 머리 윗부분(눈썹 위)만 덮는다. 종류별 값은 ARMOR.helmets (케틀햇 = 예전 ANATOMY.helmet 그대로)
     const helmet = zone === 'head' && vic.hasHelmet && vicLocal.y > -0.01;
     const hs = helmet ? vic.helmetSpec || ARMOR.helmets.kettle : null;
@@ -249,8 +258,9 @@ export class Combat {
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
-      } else if (!predicting) {
-        type = 'blunt'; // 날이 들지 못했으면 멍만 든다
+      } else if (!predicting && !finish) {
+        type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (내려찍기 즉사 찌르기는 찌르기 그대로 — 판·투구에 막혀도 칼은 물리로 튕긴다.
+        //  판·옷·소리는 심각도 0 이라 막힌 타격으로 적힌다: fighter.applyWound·main.js onWound)
         // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
         if (assisted) ({ mEff, ephys, energy } = assisted);
       }
@@ -278,6 +288,7 @@ export class Combat {
       thr,
       eff,
       bladeAxis: axis.clone(),
+      finish, // 내려찍기 즉사 (사장님 결정 9/30, fighter.applyWound)
     };
   }
 
