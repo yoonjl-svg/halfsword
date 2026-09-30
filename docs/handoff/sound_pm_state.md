@@ -1,6 +1,6 @@
 # 사운드 PM 상태 (늘 최신으로)
 
-갱신: 2026-09-29 23:1x (30차). 브랜치 `claude/pm-sound-impact`. 디렉터 `session_014nJCzE4hyxiYc9innhSUng`. 자세한 규칙은 `sound_pm_handoff.md`, 작업 기록은 `pm-sound-impact.md`.
+갱신: 2026-09-30 (30차 뒤). 브랜치 `claude/pm-sound-impact`. 디렉터 `session_014nJCzE4hyxiYc9innhSUng`. 자세한 규칙은 `sound_pm_handoff.md`, 작업 기록은 `pm-sound-impact.md`.
 
 ## 맡은 일
 - 모든 소리: `src/sound.js`(엔진·합성·녹음 로딩·BodySounds), `src/soundgen.js`(일꾼), `src/soundlab.js` + `sounds.html`(들어보기), `public/sfx/**`(CC0 위주, 출처 `LICENSE.txt`), `config.js` SOUND 블록.
@@ -15,6 +15,7 @@
 - [안 함] 총성 후보: 디렉터 보류(사장님이 원하실 때).
 
 ## 열린 요청 / 기다리는 것
+- (9/30 사장님 직접) 칼로 몸을 칠 때 소리가 "전자 파리채로 모기 잡는 소리 같다" → 리얼리즘 칼싸움 게임 참고 조사 보고함. 원인: 5차 `SYNTH.hitSlash`(사무라이 쇼다운식)의 3~7.5kHz 금속 "징" 울림 + 딱딱 튀는 클릭 + 세게 누른 찌그러짐, `slice`의 2.6kHz 틱 수천 개. 후보(녹음 기반 / 합성 수정) 만들지 사장님 답 대기.
 - 화전 터(clearing) 소리: 사장님 실제 플레이 피드백 대기.
 - 총성·간격(30차): 사장님 내일 시험 → 피드백에 따라 `SOUND.stageHitGap`·`gunshot` gain/크랙 조정.
 - R3 에서 디렉터가 `sound.hitScale = 'log'`(또는 config `SOUND.hitScale`)로 넘기고, 타격 호출에 온몸 타격 에너지를 준다.
