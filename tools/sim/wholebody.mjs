@@ -1,14 +1,12 @@
 // 온몸 베기 측정 묶음 (docs/whole_body_strike.md L0·7장·15장). 이해 단계의 motion_sim·cutprobe·body_probe·step_probe·
 //  hand_probe·impact_probe 를 합쳤다. 플레이어 입력은 모두 손가락 궤적 길(harness_m.mjs feedTrace: input.js → handOffset →
-//  skill.update)로 넣는다. 결심 단계는 fighter.onCommit(stage, c, fam) 고리로 센다 (결심 층이 없으면 0).
+//  skill.update)로 넣는다. 손짓 층 확정 (첫 c(S) = 1 스텝) 은 fighter.onCommit(stage, c, fam) 고리로 센다.
 // 실행 (저장소 뿌리): node tools/sim/hybrid.mjs wholebody.mjs <부분> [N]
 //   MODE=hybrid|levitate 로 걸음 방식을 바꾼다 (없으면 감싸는 스크립트가 정한 값). 층 끄기: with_config.mjs WHOLE.chain=false ...
 //   결과: 요약을 찍고 JSON 을 OUT(없으면 OUTDIR 또는 임시 폴더의 wholebody_<부분>_<모드>.json)에 남긴다
 // 부분:
 //   support        지탱도 s: 가만히 섬 / 8방향 걷기 (s 평균·범위)
 //   cuts           플레이어 베기 4무리 × {상대 1.55 m, 틈 2.0, 2.3 m} × 손가락 {6, 12 m/s}: 손 경로·호·골반/가슴·무게중심·발·빠르기…
-//   detect         결심 판정: 큰 긋기·들었다 베기·자세 바꾸기 29가지 × 빠르기 × {60, 90, 120 Hz} × {멈춤, 떼기}
-//   react          반응: 긋기 시작 → 칼끝이 긋는 방향으로 2 cm / → 닿기 (결심 켬·끔)
 //   combo          오른-왼-오른 베기 0.6/0.8/1.0초 간격, 걷다가 곧바로 베기: 발 닿는 시각
 //   sweep          서 있는 더미 1.38/1.53/1.71/1.91 m + 걸어 들어가며: 에너지·헛침·첫 부위·옆 어긋남·최고 빠르기와 닿기 시간차
 //   trunkoff       척추·골반 비틀기를 0으로 묶은 베기: 에너지 비
@@ -22,18 +20,15 @@
 //   aistep N       AI 대 AI 의 기술 걸음(ai.js gaitStep → gait.requestStep) 하나하나: 발 이동, 닿을 때 몸 전진, 닿은 뒤 밀림,
 //                  다시 딛기(같은 발이 0.5초 안에 다른 발보다 먼저 다시 뜸), 부탁했는데 기술 걸음으로 딛지 못한 것 (R1 합격선)
 //   tapstep N      플레이어 탭 찌르기(skill.thrust)의 내딛기: 상대 1.6/1.9/2.2 m × N번. 앞발 이동, 닿을 때 무게중심 전진, 닿은 뒤 밀림
-//   duel N         스크립트 플레이어(결심 베기만 / 팔 베기만) 대 보통 AI: 시도당 준 에너지, 맞힌·맞은 비율, 넘어짐/분과 까닭
+//   duel N         스크립트 플레이어(큰 감기 베기만 / 작은 팔 베기만) 대 보통 AI: 시도당 준 에너지, 맞힌·맞은 비율, 넘어짐/분과 까닭
 //   defend N       스크립트 방어자(반응 250 ms + 막기 긋기 100 ms) 대 AI 쉬움/보통/어려움: 막은 비율
 //   hitstop N      AI 대 AI 의 멈칫(main.js 규칙 그대로): 가운데값과 멈칫 총량(벽시계 시간 중 비율)
 //   feedcheck      같은 궤적을 두 번 넣으면 handOffset 이 바이트까지 같은가 (60/90/120 Hz)
-//   replay         멈칫 뒤 흘려 넣은 손가락 조각(TRACE_REPLAY)으로 생긴 결심 (0 이어야 한다). 대조: 같은 긋기를 표시 없이
-//   snap           돌려주기 때 칼이 튀는가: 획 끝(돌려주기 시작) 뒤 0.3초 동안 칼끝 빠르기가 그때의 1.5배를 넘은 판 (손가락이 짧게 멈춤·
-//                  끝 너머로 감·뗌·그대로). NOREBASE=1 이면 돌려줄 때 손가락 몫을 획 패드에 맞추지 않는다 (도구가 튐을 잡는지 대조)
+//   (옛 결심 경로의 detect·react·replay·snap 은 R2 W5 가 경로와 함께 지웠다. 손짓 층 관문은 gesture_eval.mjs·s0_diff.mjs·chain.mjs)
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { newRound, THREE, DT, AI, CONFIG, V, Q, handPos, feedTrace, inputPump } from './harness_m.mjs';
-import { TRACE_REPLAY } from '../../src/input.js';
 import { Fighter } from '../../src/fighter.js';
 
 if (process.env.MODE) CONFIG.BODY.weightMode = process.env.MODE;
@@ -42,7 +37,7 @@ const SUB = process.argv[2] || 'cuts';
 const NARG = process.argv[3] != null ? +process.argv[3] : null;
 const HZ = +(process.env.HZ || 60); // 화면 새로고침 빠르기 (손가락 궤적이 들어오는 박자). 폰 기본 60
 // 플레이어 긋기의 모양 (cuts·react·sweep 등 playerCut): 'drag' = 같은 빠르기로 끌기 (R0·R1 기준 수치), 'minjerk' = 사람 손가락처럼
-//  천천히 출발해 가속했다 멈춤 (v 는 평균 빠르기, 최고 1.875 v). 결심 판정 합격선(detect)은 늘 minjerk
+//  천천히 출발해 가속했다 멈춤 (v 는 평균 빠르기, 최고 1.875 v)
 const SHAPE = process.env.SHAPE || 'drag';
 
 const R2D = 180 / Math.PI;
@@ -280,7 +275,7 @@ function sample(f, t) {
     s: f.support,
     levC: f.gait ? f.gait.levC : 0,
     wsat: f.debug.wristCap > 0 && f.debug.wristTorque.length() >= f.debug.wristCap * 0.98,
-    stage: f.commit?.stage ?? (f.commit?.on ? 'on' : null),
+    S: f.ges?.S ?? 0, // 손짓 층 싣기 (옛 결심 단계 자리)
   };
 }
 
@@ -612,255 +607,6 @@ if (SUB === 'cuts') {
   for (const [k, s] of Object.entries(out.byFam)) line(k, s);
   line('걸음', out.steps);
   line('손 경로 6/12', out.handPathRatio6to12);
-}
-
-// ── 결심 판정 시험 궤적 (finalizer/commit_rule4.mjs 와 같은 모양) ──
-const tp = (name, S, dirDeg, len) => ({ name, S, legs: [[Math.cos((dirDeg * Math.PI) / 180) * len, Math.sin((dirDeg * Math.PI) / 180) * len]] });
-const TP = [
-  tp('Pflug diag DL', PAD.Pflug, 225, 0.65), tp('Pflug->WechselL drop', PAD.Pflug, 194, 0.65), tp('Pflug down', PAD.Pflug, 268, 0.65), tp('Pflug left', PAD.Pflug, 180, 0.65), tp('Pflug diag DR', PAD.Pflug, 315, 0.65),
-  tp('PflugL diag DR', PAD.PflugL, 315, 0.65), tp('PflugL right', PAD.PflugL, 0, 0.65), tp('PflugL diag DL', PAD.PflugL, 225, 0.65),
-  tp('ShR diagR', PAD.ShR, 225, 0.8), tp('ShL diagL', PAD.ShL, 312, 0.8), tp('Tag vert', PAD.Tag, 269, 0.8), tp('Tag diag DL', PAD.Tag, 230, 0.7),
-  tp('Ochs diagR', PAD.Ochs, 225, 0.65), tp('Ochs vert', PAD.Ochs, 262, 0.75), tp('OchsL diagL', PAD.OchsL, 315, 0.65),
-  tp('Side horizR', PAD.Side, 180, 0.9), tp('SideL horizL', PAD.SideL, 0, 0.9),
-  tp('Wechsel riseR', PAD.Wechsel, 130, 0.8), tp('WechselL riseL', PAD.WechselL, 48, 0.8), tp('Alber riseL', PAD.Alber, 60, 0.7), tp('Alber riseR', PAD.Alber, 120, 0.7), tp('Neben riseR', PAD.Neben, 140, 0.8),
-];
-const deg = (d, len) => [Math.cos((d * Math.PI) / 180) * len, Math.sin((d * Math.PI) / 180) * len];
-const HOOK = [
-  { name: 'Pflug hook up->DL', S: PAD.Pflug, legs: [deg(85, 0.5), deg(225, 0.75)] },
-  { name: 'Pflug hook upR->DL', S: PAD.Pflug, legs: [deg(60, 0.5), deg(225, 0.8)] },
-  { name: 'PflugL hook up->DR', S: PAD.PflugL, legs: [deg(95, 0.5), deg(315, 0.75)] },
-];
-const VSMALL = { name: 'Pflug V small', S: PAD.Pflug, legs: [deg(100, 0.4), deg(230, 0.7)] }; // 팔 베기여야 한다
-const mv = (a, b) => ({ name: `${a}->${b}`, S: PAD[a], to: PAD[b], legs: [[PAD[b][0] - PAD[a][0], PAD[b][1] - PAD[a][1]]] });
-const FP = [['Pflug', 'Ochs'], ['Pflug', 'OchsL'], ['Pflug', 'Tag'], ['Pflug', 'PflugL'], ['PflugL', 'Pflug'], ['Pflug', 'Alber'], ['Pflug', 'Wechsel'], ['Pflug', 'Neben'], ['Pflug', 'Langort'],
-  ['Ochs', 'OchsL'], ['OchsL', 'Ochs'], ['Alber', 'Ochs'], ['Alber', 'OchsL'], ['WechselL', 'Ochs'], ['Wechsel', 'OchsL'], ['Tag', 'Langort'], ['Langort', 'Side'], ['Langort', 'SideL'], ['Ochs', 'Pflug'],
-  ['OchsL', 'PflugL'], ['Tag', 'Ochs'], ['Ochs', 'Tag'], ['Side', 'Langort'], ['ShR', 'Ochs'], ['Ochs', 'Langort'], ['Langort', 'Pflug'], ['Wechsel', 'Pflug'], ['WechselL', 'PflugL'], ['Alber', 'Pflug']].map(([a, b]) => mv(a, b));
-
-/**
- * 결심 판정 한 번: 시작 자리로 옮기고(dwell 이면 0.3초 머묾, 아니면 지나가며) 궤적을 긋는다.
- * foeAttack: 상대 AI 가 치기 시작할 때 긋는다. 돌려주는 값: 1단계·확정 시각(ms, 긋기 시작부터), 손목이 자리 잡은 시각
- */
-function detectOne(c, v, hz, { lift = false, dwell = true, foeAttack = false, commitOn = true, secs = 1.0, shift = 0 } = {}) {
-  const save0 = CONFIG.WHOLE.commit;
-  CONFIG.WHOLE.commit = commitOn;
-  const G = stage({ gap: foeAttack ? 1.9 : 2.2, seed: 11, hz, foeAI: foeAttack, immortal: true, immortalP: true });
-  const P = G.player;
-  G.run(0.8 + shift * DT); // shift: 물리 스텝 몇 개 늦게 시작 (같은 긋기를 조금 흔들어 잴 때의 잡음 바닥)
-  const off = [P.handOffset.x, P.handOffset.y];
-  const ch = feedTrace(G, stroke(c.S[0] - off[0], c.S[1] - off[1], 1.2, { hold: dwell ? 300 : 0, lift: false }), hz);
-  while (!ch.done) G.step();
-  if (foeAttack) for (let i = 0; i < 6 / DT && !(G.ai.mode === 'attack' && G.ai.phase === 'strike'); i++) G.step();
-  const tr = feedTrace(G, strokes(c.legs, v, { lift, down: false, hold: lift ? 0 : 150 }), hz);
-  const nC = P.commitLog.length;
-  const yawInv = () => P.yaw.clone().invert();
-  const wr = [];
-  while (tr.t0 == null) G.step();
-  const t0 = tr.t0;
-  const tips = [];
-  for (let i = 0; i < secs / DT; i++) {
-    G.step();
-    wr.push({ t: G.t, h: handPos(P).sub(V(P.bodies.chest.translation())).applyQuaternion(yawInv()) });
-    tips.push({ t: G.t - t0, p: P.bladePoint(1, new THREE.Vector3()).sub(V(P.bodies.chest.translation())).applyQuaternion(yawInv()) });
-  }
-  const log = P.commitLog.slice(nC);
-  const A = log.find((x) => x.stage === 'A');
-  const B = log.find((x) => x.stage === 'B');
-  const fin = wr[wr.length - 1].h;
-  let tSettle = null;
-  for (let i = wr.length - 1; i >= 0; i--) if (wr[i].h.distanceTo(fin) > 0.03) {
-    tSettle = wr[Math.min(wr.length - 1, i + 1)].t;
-    break;
-  }
-  CONFIG.WHOLE.commit = save0;
-  return { A: A ? r0((A.t - t0) * 1000) : null, B: B ? r0((B.t - t0) * 1000) : null, fam: B?.fam ?? A?.fam ?? null, c: B ? r2(B.c) : null, settle: tSettle == null ? 0 : r0((tSettle - t0) * 1000), tips };
-}
-/** 칼끝(가슴 기준)이 출발 → 목표 거리의 frac 만큼 간 시각 (ms, 긋기 시작부터). 목표 = 결심을 끈 판이 1.5초 뒤 자리 잡은 칼끝 */
-const tipProgress = (tips, target, frac = 0.8) => {
-  const a = tips[0].p;
-  const d = target.clone().sub(a);
-  const L2 = d.lengthSq();
-  if (L2 < 1e-6) return 0;
-  const x = tips.find((s) => s.p.clone().sub(a).dot(d) / L2 >= frac);
-  return x ? r0(x.t * 1000) : null;
-};
-/** 늦어짐 (ms): 칼끝이 목표 쪽으로 20·30·…·70% 를 간 시각을 결심 켬·끔으로 견준 차이의 가운데값.
- *  한 수준만 보면(예: 80%) 칼끝이 그 수준 바로 앞에서 되돌아 흔들릴 때 다음 번 넘을 때까지 수백 ms 가 한꺼번에 뛴다 */
-const LEVELS = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
-const tipDelay = (on, off, target) => {
-  const ds = LEVELS.map((lv) => {
-    const a = tipProgress(on, target, lv);
-    const b = tipProgress(off, target, lv);
-    return b == null ? null : a == null ? 999 : a - b;
-  }).filter((x) => x != null);
-  return ds.length ? r0(med(ds)) : 0;
-};
-/** 칼끝(가슴 기준)이 목표 자리 5 cm 안에 들어 자리 잡은 시각 (ms, 긋기 시작부터): 5 cm 안에 들고 그 뒤 0.15초 동안 8 cm 밖으로 안 나감.
- *  (처음 5 cm 안에 드는 때로 재면 칼끝이 가는 길에 목표 곁을 지나기만 해도 잡힌다) */
-const tipArrive = (tips, target) => {
-  const n = Math.round(0.15 / DT);
-  for (let i = 0; i < tips.length; i++) {
-    if (tips[i].p.distanceTo(target) >= 0.05) continue;
-    let ok = true;
-    for (let j = i; j < Math.min(tips.length, i + n); j++) if (tips[j].p.distanceTo(target) >= 0.08) ok = false;
-    if (ok) return r0(tips[i].t * 1000);
-  }
-  return null;
-};
-
-if (SUB === 'detect') {
-  const HZ = process.env.DHZ ? process.env.DHZ.split(',').map(Number) : [60, 90, 120]; // DHZ=60 이면 60 Hz 만 (나눠 돌리기)
-  const speeds = NARG ? [NARG] : [4, 5, 6, 8, 12];
-  const PARTS = (process.env.DPART || 'big,fp,foe').split(','); // 나눠 돌리기: big(큰 긋기·들었다 베기) fp(자세 바꾸기) foe(상대 공격 중)
-  const res = {};
-  for (const hz of HZ)
-    for (const v of speeds) {
-      const key = `${hz}Hz ${v}m/s`;
-      const r = { big: null, hook: null, vsmall: null, fp: null, fpFoe: null };
-      if (v >= 5 && PARTS.includes('big')) {
-        let n = 0;
-        let nA = 0;
-        let nB = 0;
-        const miss = [];
-        const tA = [];
-        const tB = [];
-        const pflugN = [0, 0];
-        for (const c of TP)
-          for (const lift of [false, true]) {
-            const d = detectOne(c, v, hz, { lift });
-            n++;
-            if (d.A != null) nA++, tA.push(d.A);
-            if (d.B != null) nB++, tB.push(d.B);
-            else miss.push(c.name + (lift ? '(떼기)' : ''));
-            if (c.name.startsWith('Pflug')) (pflugN[0] += 1), (pflugN[1] += d.B != null ? 1 : 0);
-          }
-        r.big = { confirmed: `${nB}/${n}`, pct: pct(nB, n), stageA: `${nA}/${n}`, pflug: `${pflugN[1]}/${pflugN[0]}`, tA_med: r0(med(tA)), tB_med: r0(med(tB)), tB_max: tB.length ? Math.max(...tB) : null, miss };
-        let hk = 0;
-        for (const c of HOOK) for (const lift of [false, true]) if (detectOne(c, v, hz, { lift }).B != null) hk++;
-        r.hook = `${hk}/${HOOK.length * 2}`;
-        r.vsmall = detectOne(VSMALL, v, hz).B != null ? '확정(틀림)' : '팔 베기';
-      }
-      if ([4, 6, 8].includes(v) && PARTS.includes('fp')) {
-        let fB = 0;
-        let fA = 0;
-        let fBd = 0;
-        const delays = [];
-        const noise = [];
-        const delayBy = [];
-        const bad = [];
-        for (const c of FP)
-          for (const dwell of [false, true]) {
-            const d = detectOne(c, v, hz, { dwell, secs: 1.5 });
-            if (d.A != null && d.B == null) {
-              // 가짜 1단계가 자세 바꾸기를 늦춘 시간: 칼끝이 목표 자세 5 cm 안에 드는 시각, 결심 끔 대비 (설계서 L1 합격선)
-              fA++;
-              //  목표 = 그 판이 1.5초 뒤 자리 잡은 칼끝 (판마다 따로: 가죽끈(anchor)·이어 베기가 남긴 1~2 cm 차이로 자세 지도 섞임이 달라
-              //  칼끝이 5 cm 넘게 다른 자리에 설 수 있다 — 결심을 끈 판의 자리를 목표로 삼으면 영영 못 닿은 것으로 잡힌다)
-              const off = detectOne(c, v, hz, { dwell, commitOn: false, secs: 1.5 });
-              const target = off.tips.at(-1).p;
-              const dl = tipDelay(d.tips, off.tips, target);
-              // 잡음 바닥: 결심을 끈 같은 긋기를 한 물리 스텝 늦게 시작해 잰 차이 (− 한 스텝)
-              const off2 = detectOne(c, v, hz, { dwell, commitOn: false, secs: 1.5, shift: 1 });
-              noise.push(tipDelay(off2.tips, off.tips, target) - r0(DT * 1000));
-              delays.push(dl);
-              const sOn = tipArrive(d.tips, d.tips.at(-1).p);
-              const sOff = tipArrive(off.tips, off.tips.at(-1).p);
-              delayBy.push(`${c.name}${dwell ? '(머묾)' : ''} ${dl} (50%: ${tipProgress(off.tips, target, 0.5)}→${tipProgress(d.tips, target, 0.5)}, 잡음 ${noise.at(-1)}; 5 cm 자리 잡기 ${sOff}→${sOn})`);
-            }
-            if (d.B != null) (dwell ? fBd++ : fB++), bad.push(c.name + (dwell ? '(머묾)' : ''));
-          }
-        r.fp = { confirmed: `${fB}/${FP.length}`, confirmedDwelled: `${fBd}/${FP.length}`, stageA: `${fA}/${FP.length * 2}`, delay_ms_max: delays.length ? Math.max(...delays) : 0, delay_ms_med: delays.length ? r0(med(delays)) : 0, noise_ms_med: noise.length ? r0(med(noise.map(Math.abs))) : 0, noise_ms_max: noise.length ? Math.max(...noise.map(Math.abs)) : 0, delayBy, bad };
-      }
-      if (PARTS.includes('foe')) {
-        // 상대 공격 중 자세 바꾸기 (머묾 포함, 4~12 m/s 모두): 막기 모양 긋기는 확정되면 안 된다
-        let foe = 0;
-        const badFoe = [];
-        for (const c of FP) {
-          const dd = detectOne(c, v, hz, { foeAttack: true });
-          if (dd.B != null) foe++, badFoe.push(c.name);
-        }
-        r.fpFoe = `${foe}/${FP.length}`;
-        r.fpFoeBad = badFoe;
-      }
-      res[key] = r;
-      line(key, { big: r.big && r.big.confirmed, pflug: r.big?.pflug, tA: r.big?.tA_med, tB: r.big?.tB_med, hook: r.hook, vsmall: r.vsmall, fp: r.fp && r.fp.confirmed, fpA: r.fp?.stageA, fpDw: r.fp?.confirmedDwelled, fpFoe: r.fpFoe, delay: r.fp && [r.fp.delay_ms_med, r.fp.delay_ms_max], noise: r.fp && [r.fp.noise_ms_med, r.fp.noise_ms_max] });
-      if (r.big?.miss.length) line('  놓친 큰 긋기', r.big.miss);
-      if (r.fp?.bad.length) line('  가짜 확정', r.fp.bad);
-      if (r.fpFoeBad?.length) line('  상대 공격 중 가짜 확정', r.fpFoeBad);
-    }
-  out.res = res;
-  out.note = '확정·1단계는 fighter.onCommit 고리로 센다. 결심 층(L1)이 없으면 모두 0 (기준).';
-}
-
-if (SUB === 'react') {
-  // 준비 자세에서 8 m/s 로 긋기 시작 → 칼끝(가슴 기준)이 긋는 방향(패드 → 몸: 칼 든 쪽·위)으로 2 cm 움직인 때 (moveDir),
-  //  어느 쪽이든 2 cm 움직인 때 (moveAny), → 1.55 m 더미에 닿은 때 (hit: 첫 상처나 칼 부딪힘). 쟁기에서 곧바로 사선으로 긋기(자동 감기 자리)도.
-  //  결심 켬·끔을 한 프로세스에서 번갈아 잰다. 닿기는 칼이 닿느냐 마느냐가 몇 cm 에 갈리므로 더미 거리를 1.55 ± 0.03 m 로 흔든 세 판의
-  //  가운데값으로 본다 (칼끝 움직임은 더미와 상관없다)
-  const rows = [];
-  const cases = [...['diagR', 'vert', 'horizR', 'diagL'].map((fam) => ({ fam, from: FAM[fam].ch, to: FAM[fam].end })), { fam: 'Pflug→diag', from: PAD.Pflug, to: [PAD.Pflug[0] - 0.46, PAD.Pflug[1] - 0.46] }].filter((c) => !process.env.RFAMS || process.env.RFAMS.split(',').includes(c.fam));
-  const jits = process.env.RJIT ? process.env.RJIT.split(',').map(Number) : [-0.03, 0, 0.03];
-  for (const commitOn of [false, true])
-    for (const cs of cases)
-      for (const hz of [60, 120])
-        for (const jit of jits) {
-        const save0 = CONFIG.WHOLE.commit;
-        CONFIG.WHOLE.commit = commitOn;
-        const G = stage({ dist: 1.55 + jit, seed: 5, hz, immortal: true });
-        G.run(1.5);
-        const C = playerCut(G, { ch: cs.from, end: cs.to }, { v: 8, hz, after: 0.8, dwell: 0.3 });
-        const S = C.S;
-        const dx = cs.to[0] - cs.from[0];
-        const dy = cs.to[1] - cs.from[1];
-        const L = Math.hypot(dx, dy);
-        const dir = new THREE.Vector3(0, dy / L, dx / L); // 몸 기준 (앞, 위, 칼 든 쪽)
-        const tip0 = S[C.i0 - 1].tipBC;
-        let tDir = null;
-        let tAny = null;
-        for (let i = C.i0; i < S.length; i++) {
-          const d = S[i].tipBC.clone().sub(tip0);
-          if (tDir == null && d.dot(dir) >= 0.02) tDir = S[i].t;
-          if (tAny == null && d.length() >= 0.02) tAny = S[i].t;
-        }
-        // 휘두르는 호를 따라: 칼끝이 이 휘두름의 회전 방향(긋기 시작 뒤 0.45초 동안 칼 각속도의 합)으로 2 cm 나간 때.
-        //  칼끝은 호를 그리므로(지붕에서 곧게 내려베면 칼끝은 먼저 앞·위로 넘어간다) 패드 방향 투영(moveDir)은 칼끝이 이미 한참
-        //  휘두른 뒤에야 2 cm 가 된다. 감기(칼 젖히기)로 칼끝이 반대로 가면 그만큼 늦게 잡힌다 (설계서 "지금 약 30 ms" 에 맞는 잣대)
-        const Lt = G.player.weaponCfg.hiltLength + G.player.weaponCfg.bladeLength;
-        const nAx = new THREE.Vector3();
-        for (let i = C.i0; i < S.length && S[i].t - C.t0 <= 0.45; i++) nAx.addScaledVector(S[i].w, DT);
-        nAx.normalize();
-        let phi = 0;
-        let tArc = null;
-        for (let i = C.i0; i < S.length && tArc == null; i++) {
-          const cr = new THREE.Vector3().crossVectors(S[i - 1].blade, S[i].blade);
-          phi += Math.atan2(cr.length(), S[i - 1].blade.dot(S[i].blade)) * Math.sign(cr.dot(nAx) || 1);
-          if (phi * Lt >= 0.02) tArc = S[i].t;
-        }
-        const w = C.wounds.find((x) => x.t <= C.t0 + 0.8);
-        const cl = G.clashT.find((c) => c.t >= C.t0 && c.t <= C.t0 + 0.8);
-        const tHit = w ? w.t : cl ? cl.t : null;
-        rows.push({ commitOn, fam: cs.fam, hz, jit, moveArc_ms: tArc == null ? null : r0((tArc - C.t0) * 1000), moveDir_ms: tDir == null ? null : r0((tDir - C.t0) * 1000), moveAny_ms: tAny == null ? null : r0((tAny - C.t0) * 1000), hit_ms: tHit == null ? null : r0((tHit - C.t0) * 1000), d0: r2(C.d0), commits: G.player.commitLog.filter((c) => c.t >= C.t0 - 0.05).map((c) => `${c.stage}@${r0((c.t - C.t0) * 1000)}`).join(' ') });
-        CONFIG.WHOLE.commit = save0;
-      }
-  out.rows = rows;
-  for (const on of [false, true]) {
-    const rs = rows.filter((r) => r.commitOn === on && r.fam !== 'Pflug→diag');
-    const pf = rows.filter((r) => r.commitOn === on && r.fam === 'Pflug→diag');
-    out[on ? 'on' : 'off'] = { moveArc_ms_med: r0(med(rs.map((r) => r.moveArc_ms))), moveArc_ms_max: Math.max(...rs.map((r) => r.moveArc_ms ?? 999)), moveDir_ms_med: r0(med(rs.map((r) => r.moveDir_ms))), moveDir_ms_max: Math.max(...rs.map((r) => r.moveDir_ms ?? 999)), moveAny_ms_med: r0(med(rs.map((r) => r.moveAny_ms))), hit_ms_med: r0(med(rs.map((r) => r.hit_ms))), pflugArc_ms: pf.map((r) => r.moveArc_ms), pflugHit_ms: pf.map((r) => r.hit_ms) };
-    line(on ? '결심 켬' : '결심 끔', out[on ? 'on' : 'off']);
-  }
-  for (const r of rows) line(`  ${r.commitOn ? '켬' : '끔'} ${r.fam} ${r.hz}Hz ${r.jit}`, r);
-  // 무리·Hz 마다 세 판의 가운데값, 그리고 닿기가 늦어진 시간 (켬 − 끔)
-  const byK = {};
-  for (const cs of cases)
-    for (const hz of [60, 120]) {
-      const g = (on) => rows.filter((r) => r.commitOn === on && r.fam === cs.fam && r.hz === hz);
-      const mh = (rs) => (rs.some((r) => r.hit_ms != null) ? med(rs.map((r) => r.hit_ms)) : null);
-      const off = mh(g(false));
-      const on = mh(g(true));
-      byK[`${cs.fam} ${hz}Hz`] = { moveDir_off: med(g(false).map((r) => r.moveDir_ms)), moveDir_on: med(g(true).map((r) => r.moveDir_ms)), hit_off: off, hit_on: on, hitDelay: off != null && on != null ? on - off : null, hitsOff: g(false).filter((r) => r.hit_ms != null).length, hitsOn: g(true).filter((r) => r.hit_ms != null).length };
-    }
-  out.byCase = byK;
-  for (const [k, v] of Object.entries(byK)) line(k, v);
 }
 
 if (SUB === 'combo') {
@@ -1603,7 +1349,7 @@ if (SUB === 'hitstop') {
   line('멈칫 총량 (%)', out.stopTotal_pct);
 }
 
-/** 스크립트 플레이어(결심 베기만 / 팔 베기만) 대 보통 AI 한 판 */
+/** 스크립트 플레이어(큰 감기 베기만 / 작은 팔 베기만, 이름표 commit·arm 은 옛 이름) 대 보통 AI 한 판 */
 function duelFight(seed, policy, secs = 30) {
   const G = stage({ walls: true, gap: CONFIG.ARENA.startGap, seed, foeAI: true });
   const P = G.player;
@@ -1670,11 +1416,11 @@ if (SUB === 'duel') {
     const causes = {};
     for (const k of kds) causes[k.c] = (causes[k.c] || 0) + 1;
     res[policy] = { attempts: rows.length, E_perAttempt: r1(mean(rows.map((r) => r.E))), hit_pct: pct(rows.filter((r) => r.hit).length, rows.length), gotHit1s_pct: pct(rows.filter((r) => r.gotHit).length, rows.length), kdPerMin: r2(kds.length / Math.max(1e-6, standMin)), kdCauses: causes, deaths };
-    line(policy === 'commit' ? '결심 베기만' : '팔 베기만', res[policy]);
+    line(policy === 'commit' ? '큰 감기 베기만 (감기 → 12 m/s)' : '작은 팔 베기만', res[policy]);
   }
   res.commitOverArm_E = r2(res.commit.E_perAttempt / res.arm.E_perAttempt);
   res.commitOverArm_gotHit = r2(res.commit.gotHit1s_pct / Math.max(1e-6, res.arm.gotHit1s_pct));
-  line('결심/팔 (에너지, 맞은 비율)', [res.commitOverArm_E, res.commitOverArm_gotHit]);
+  line('큰/작은 (에너지, 맞은 비율)', [res.commitOverArm_E, res.commitOverArm_gotHit]);
   out.res = res;
 }
 
@@ -1750,112 +1496,6 @@ if (SUB === 'feedcheck') {
   out.res = res;
 }
 
-if (SUB === 'replay') {
-  // 멈칫 동안 모았다가 흘려 넣는 손가락(L6a): 긋기 전체를 0.1초에 흘려 넣는다 (조각마다 TRACE_REPLAY). 결심 판정은 이것을 건너뛰어야 한다.
-  //  'part': 앞 0.35 m 만 흘려 넣고 나머지는 진짜 손가락으로 8 m/s (흘려 넣은 끝에서 새로 본다 → 나머지가 짧아 확정 안 됨)
-  const rows = [];
-  for (const hz of [60, 120])
-    for (const c of TP)
-      for (const kind of ['replay', 'part', 'plain']) {
-        const G = stage({ gap: 2.2, seed: 11, hz, immortal: true, immortalP: true });
-        const P = G.player;
-        G.run(0.8);
-        const off = [P.handOffset.x, P.handOffset.y];
-        const ch = feedTrace(G, stroke(c.S[0] - off[0], c.S[1] - off[1], 1.2, { hold: 300, lift: false }), hz);
-        while (!ch.done) G.step();
-        const ft = G.pump.input.fingerTrace;
-        const push0 = ft.push.bind(ft);
-        let rep = false;
-        ft.push = (t, dx, dy, fl = 0) => push0(t, dx, dy, rep ? fl | TRACE_REPLAY : fl);
-        const [dx, dy] = c.legs[0];
-        const L = Math.hypot(dx, dy);
-        const nC = P.commitLog.length;
-        if (kind === 'part') {
-          const k = 0.35 / L;
-          const a = feedTrace(G, stroke(dx * k, dy * k, 0.35 / 0.1, { shape: 'drag', lift: false, down: false }), hz);
-          rep = true;
-          while (!a.done) G.step();
-          rep = false;
-          feedTrace(G, stroke(dx * (1 - k), dy * (1 - k), 8, { shape: 'drag', lift: true, down: false }), hz);
-        } else {
-          const a = feedTrace(G, stroke(dx, dy, kind === 'plain' ? 8 : L / 0.1, { shape: kind === 'plain' ? 'minjerk' : 'drag', lift: false, down: false, hold: 150 }), hz);
-          rep = kind !== 'plain';
-          while (!a.done) G.step();
-          rep = false;
-        }
-        G.run(0.8);
-        const log = P.commitLog.slice(nC);
-        rows.push({ hz, name: c.name, kind, A: log.some((x) => x.stage === 'A'), B: log.some((x) => x.stage === 'B') });
-      }
-  out.rows = rows;
-  for (const kind of ['replay', 'part', 'plain']) {
-    const rs = rows.filter((r) => r.kind === kind);
-    out[kind] = { n: rs.length, stageA: rs.filter((r) => r.A).length, confirmed: rs.filter((r) => r.B).length };
-    line(kind === 'replay' ? '흘려 넣은 긋기' : kind === 'part' ? '앞만 흘려 넣음' : '대조 (진짜 긋기)', out[kind]);
-  }
-}
-
-if (SUB === 'snap') {
-  // 돌려주기 때 칼이 튀는가 (설계서 L1 합격선 "칼 튐 0"): 획 끝 뒤 0.3초 동안 칼끝 빠르기가 끝 자세로 가는 빠르기의 1.5배를
-  //  넘으면 튐 (끝 자세로 가던 칼이 손가락 자리로 한 번 더 휘두름). 획 끝 = 칼끝이 획의 최고 빠르기를 지나 그 절반 아래로 떨어진 때,
-  //  끝 자세로 가는 빠르기 = 그때 칼끝 빠르기. 손가락 끝내기 네 가지(그대로 누름·짧게 멈춤·끝 너머로·뗌) × 무리 다섯
-  if (process.env.NOREBASE) {
-    const { Skill } = await import('../../src/skill.js');
-    Skill.prototype.startHandback = function () {
-      const cm = this.f.commit;
-      cm.hb = true;
-      this.det.stage = 0;
-      this.det.blocked = true;
-    };
-  }
-  const rows = [];
-  const cases = [['diagR', PAD.ShR, PAD.WechselL], ['vert', PAD.Tag, PAD.Alber], ['horizR', PAD.Side, PAD.SideL], ['diagL', PAD.ShL, PAD.Wechsel], ['Pflug→diag', PAD.Pflug, [PAD.Pflug[0] - 0.46, PAD.Pflug[1] - 0.46]]];
-  for (const hz of [60, 120])
-    for (const [fam, a, b] of cases)
-      for (const ending of ['hold', 'short', 'over', 'lift']) {
-        const G = stage({ dist: 2.3, seed: 5, hz, air: true, immortal: true });
-        const P = G.player;
-        P.skill.autoGuard = false; // 손을 뗀 뒤 기본 자세로 돌아가는 움직임(쟁기로 1.2 m/s)은 돌려주기가 아니다 — 따로 두지 않으면 섞여 잡힌다
-        G.run(1.0);
-        const off = [P.handOffset.x, P.handOffset.y];
-        const ch = feedTrace(G, stroke(a[0] - off[0], a[1] - off[1], 1.2, { hold: 300, lift: false }), hz);
-        while (!ch.done) G.step();
-        let dx = b[0] - a[0];
-        let dy = b[1] - a[1];
-        const L = Math.hypot(dx, dy);
-        // short: 0.62 m(확정되는 길이)만 긋고 멈춤 — 끝에서 멀어 끝 고르기가 안 걸리는 자리 / over: 끝 너머 0.35 m 더
-        const k = ending === 'short' ? Math.min(1, 0.62 / L) : ending === 'over' ? (L + 0.35) / L : 1;
-        dx *= k;
-        dy *= k;
-        const tr = feedTrace(G, strokes([[dx, dy]], 10, { lift: ending === 'lift', down: false, hold: ending === 'lift' ? 0 : 900 }), hz);
-        while (tr.t0 == null) G.step();
-        let hbT = null;
-        let committed = false;
-        const sp = [];
-        for (let i = 0; i < 1.4 / DT; i++) {
-          G.step();
-          const cm = P.commit;
-          if (cm.stage === 'B') committed = true;
-          if (hbT == null && cm.on && cm.hb) hbT = G.t;
-          sp.push({ t: G.t, v: P.tipVel.length() });
-        }
-        // 획의 최고 빠르기 (긋기 시작 뒤 0.7초 안) → 그 절반 아래로 떨어진 때가 획 끝
-        let iPk = 0;
-        for (let i = 0; i < sp.length && sp[i].t - tr.t0 <= 0.7; i++) if (sp[i].v > sp[iPk].v) iPk = i;
-        let iE = sp.findIndex((x, i) => i > iPk && x.v < 0.5 * sp[iPk].v);
-        if (iE < 0) iE = sp.length - 1;
-        const vE = sp[iE].v;
-        let vMax = 0;
-        for (let i = iE + 1; i < sp.length && sp[i].t <= sp[iE].t + 0.3; i++) vMax = Math.max(vMax, sp[i].v);
-        const ratio = vMax / Math.max(vE, 1e-3);
-        rows.push({ hz, fam, ending, committed, hb_ms: hbT == null ? null : r0((hbT - tr.t0) * 1000), pk: r1(sp[iPk].v), pk_ms: r0((sp[iPk].t - tr.t0) * 1000), end_ms: r0((sp[iE].t - tr.t0) * 1000), vEnd: r1(vE), vMax: r1(vMax), ratio: r2(ratio), snap: ratio > 1.5 });
-      }
-  out.rows = rows;
-  const rs = rows.filter((r) => r.committed);
-  out.summary = { cases: rows.length, committed: rs.length, snaps: rs.filter((r) => r.snap).length, ratioMax: r2(Math.max(...rs.map((r) => r.ratio))), ratioMed: r2(med(rs.map((r) => r.ratio))), noRebase: !!process.env.NOREBASE, whole: CONFIG.WHOLE.commit };
-  line('칼 튐', out.summary);
-  for (const r of rows) line(`  ${r.fam} ${r.ending} ${r.hz}Hz`, r);
-}
-
 if (out.rows || out.res || Object.keys(out).length > 3) save(SUB, out);
-else console.log('모르는 부분:', SUB, '(support cuts detect react combo sweep trunkoff strength power stand miss block react_body ai duel defend hitstop feedcheck)');
+else if (['detect', 'react', 'replay', 'snap'].includes(SUB)) console.log(`지운 부분: ${SUB} (옛 결심 경로와 함께 R2 W5 가 지웠다 — gesture_eval.mjs·s0_diff.mjs·chain.mjs)`);
+else console.log('모르는 부분:', SUB, '(support cuts combo sweep trunkoff strength power stand miss block react_body ai duel defend hitstop feedcheck)');

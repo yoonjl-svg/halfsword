@@ -1,13 +1,14 @@
 // R2 관문 한 벌 (docs/strike/r2_impl_spec.md §8.2 표 차례, §9 W5). 하위 도구를 하나씩 (nice) 돌리고 줄마다 PASS/FAIL (최소 목표에만) 을 적는다
 //
 //   node tools/sim/r2_gates.mjs [--hz=60,120] [--weapons=longsword,zweihander,sabre] [--input=wind,stroke] [--quick] [--out=<폴더>]
-//        [--r1=<R1 체크아웃>] [--ai-min=10] [--skip=s0,ai,perf,...] [--set=GRP.key=val ...]
+//        [--r1=<R1 체크아웃>] [--s0-ref=<체크아웃>] [--ai-min=10] [--skip=s0,ai,perf,...] [--set=GRP.key=val ...]
+//  --s0-ref = s0_diff --ref (옛 결심 경로 지우기 전 체크아웃과 바이트 견줌, §7-8 checkout 방식)
 //
 //  빠르기·에너지 비·걸음 착지 분포는 보고만 (위쪽 관문 없음). 도구는 재기만 한다 (자르기·한도 없음)
 //  Hz 뜻 (줄마다 'Hz' 칸): 입력 = 화면(손가락) 프레임 Hz, 물리는 게임과 같은 120 · 물리 = PHYSICS.timestep (AI 끼리처럼 손가락이 없는 줄) · J = 24–45 fps 흔들림
 //  --quick = 롱소드·입력 60 Hz·v 12 (기준 (1)·되돌아감·걸음), s0_diff --quick, AI 1 분, perf 짧게
 //  기준 (1) '맨 팔 베기보다 약하지 않다': 짝 (무리, air/hit, 입력 Hz, v, 무기, 입력 방식) 마다 game (설정 그대로) 대 plain (같은 커밋 DRIVE.on=false,
-//   둘 다 게임 설정 — WHOLE.commit 을 끄지 않는다: pf 가 바뀐다). 칼끝 최고 ≥ 0.95×, 맨 팔이 상처를 냈으면 첫 상처 J ≥ 0.95× 그리고 때 ≤ 맨 팔/0.95,
+//   둘 다 게임 설정). 칼끝 최고 ≥ 0.95×, 맨 팔이 상처를 냈으면 첫 상처 J ≥ 0.95× 그리고 때 ≤ 맨 팔/0.95,
 //   air 는 칼끝 최고 때 ≤ 맨 팔/0.95, 값이 없으면 빠짐. 관문 = chainW (감기 3 m/s, 머묾 0) 행, hold (1.2 m/s + 1 s) 행은 따로 보고
 //  결과: <out>/r2_gates.md, r2_gates.json, 하위 도구 출력 (기본 out = 임시 폴더, 저장소에 쓰지 않는다)
 import fs from 'node:fs';
@@ -202,6 +203,8 @@ if (!SKIP.has('gesture'))
 // ── S = 0 (s0_diff) ──
 if (!SKIP.has('s0')) {
   const a = [SIM('s0_diff.mjs'), `--out=${path.join(OUT, 's0')}`, `--ginput=${GINPUTS.join(',')}`];
+  const S0REF = arg('s0-ref', null);
+  if (S0REF) a.push(`--ref=${path.resolve(S0REF)}`);
   if (QUICK) a.push('--quick');
   else a.push(`--hz=${[120, 60].join(',')}`, `--weapons=${WEAPONS.join(',')}`);
   const r = sub('s0_diff', a);
@@ -209,9 +212,10 @@ if (!SKIP.has('s0')) {
   try { js = JSON.parse(fs.readFileSync(path.join(OUT, 's0', 's0_diff.json'), 'utf8')); } catch {}
   J.raw.s0 = js ? { verdict: js.verdict, fail: js.fail, misclass: js.misclass, shaChecks: js.shaChecks, classifiedCount: js.classified.length } : null;
   const leaks = js ? js.classified.filter((c) => c.cls === 'leak').length : null;
-  const stageA = js ? js.classified.filter((c) => c.cls === 'stageA').length : null;
+  const refDiff = js ? js.results.reduce((n, r) => n + r.cmp.filter((c) => String(c.vs).startsWith('ref:') && c.verdict !== 'IDENTICAL').length, 0) : null;
+  const refN = js ? js.results.reduce((n, r) => n + r.cmp.filter((c) => String(c.vs).startsWith('ref:')).length, 0) : 0;
   const mis = js ? Object.entries(js.misclass).map(([g, m]) => `${g} 쟁기 ${m.pflugK}/${m.pflugN} (${m.pflugPct} %), 전체 ${m.k}/${m.n}`).join('; ') : '';
-  add('S = 0 (§7: new = 기준 B 바이트, A 는 1단계 소비만; 깃발 끈 판 = main sha)', 'arm = 입력 60/120, AI 판 = 물리 120/60', js ? `샘 ${leaks}, 1단계 소비 ${stageA}, sha ${js.shaChecks.filter((s) => s.pass).length}/${js.shaChecks.length}` : `끝 ${r.status}`, 'S = 0 샘 0, sha 모두 같음', js ? js.fail === 0 : false);
+  add(`S = 0 (§7: new = 기준 B (GESTURE.on=false) 바이트${S0REF ? '; checkout 견줌 = 옛 경로 지우기 전 new·B 바이트' : ''}; 깃발 끈 판 = main sha)`, 'arm = 입력 60/120, AI 판 = 물리 120/60', js ? `샘 ${leaks}${S0REF ? `, ref 다름 ${refDiff}/${refN}` : ''}, sha ${js.shaChecks.filter((s) => s.pass).length}/${js.shaChecks.length}` : `끝 ${r.status}`, `S = 0 샘 0${S0REF ? '·ref 모두 같음' : ''}, sha 모두 같음`, js ? js.fail === 0 : false);
   if (js) add('Gesture 오분류 (arm 묶음 쟁기 시작 입력에서 S ≥ mixX)', '입력 60/120', mis, '≤ 3 %', Object.values(js.misclass).every((m) => m.pass));
 }
 // ── chain.mjs 묶음 (latency · mx · pace) ──

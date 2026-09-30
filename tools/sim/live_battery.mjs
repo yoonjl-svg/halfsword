@@ -3,7 +3,6 @@
 // Optional instrumentation read if the implementation exposes it: fighter.debug = { aim: Vector3 (world commanded blade dir), wristTorque: Vector3, wristCap: number }
 import { newRound, THREE, DT, AI, CONFIG } from './jelly_harness.mjs';
 import { guardAt } from '../../src/guards.js';
-import { FingerTrace } from '../../src/input.js';
 
 const V = (v) => new THREE.Vector3(v.x, v.y, v.z);
 const Q = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
@@ -51,22 +50,16 @@ function settleAt(G, f, xy, secs = 1.5) {
 export const CUTS = { oberhau: [[0.02, 0.52], [0.0, -0.45]], zornhau: [[0.42, 0.42], [-0.4, -0.42]], zwerch: [[0.52, 0.06], [-0.5, 0.06]], unterhau: [[0.38, -0.44], [-0.3, 0.26]] };
 
 // ───────── one cut: tip, phase of peak, impact-zone speed, onset, 10–90 %, overshoot past final guard, settle ─────────
-//  trace: 온몸 베기 결심 판정(L1)을 켠 채 — 손 목표를 옮긴 만큼을 손가락 궤적(input.fingerTrace 와 같은 조각, 물리 스텝마다)으로도
-//  넣는다 (skill.detect). 기본(끔)은 예전과 바이트까지 같다
-export function cut(name, sp = 13, { trace = false } = {}) {
+//  (옛 결심 판정 부분 commitcuts·trace 는 R2 W5 가 옛 경로와 함께 지웠다)
+export function cut(name, sp = 13) {
   const [a, b] = CUTS[name];
   const G = mk(); const f = G.player;
   settleAt(G, f, a, 1.5);
-  const ft = trace ? new FingerTrace() : null;
-  const commits = [];
-  if (ft) { f.skill.detect = true; f.skill.trace = ft; f.onCommit = (st, c, fam) => commits.push(`${st}${fam}@${Math.round(G.t * 1000)}`); }
   const rows = []; let tArr = null; const yawInv = f.yaw.clone().invert();
   let prevW = null;
   for (let i = 0; i < (0.6 + 1.4) / DT; i++) {
     const off = f.handOffset; const dx = b[0] - off.x, dy = b[1] - off.y, d = Math.hypot(dx, dy), st = sp * DT;
-    const ox = off.x, oy = off.y;
     if (tArr == null) { if (d > st) { off.x += (dx / d) * st; off.y += (dy / d) * st; } else { off.set(b[0], b[1]); tArr = (i + 1) * DT; } }
-    if (ft && (off.x !== ox || off.y !== oy)) ft.push(G.t * 1000, off.x - ox, off.y - oy);
     G.step();
     const bd = bladeDir(f); const w = V(f.sword.angvel()); w.addScaledVector(bd, -w.dot(bd));
     const fa = (() => { const x = f.handOffset.x, y = f.handOffset.y; const gw = f.guardWeight(); const Gd = guardAt(x, y, {}); const a0 = new THREE.Vector3(...guardDir(x, y)); if (gw > 0) { a0.lerp(new THREE.Vector3(...Gd.dir), gw); if (a0.lengthSq() < 0.04) a0.set(...Gd.dir); a0.normalize(); } return a0.applyQuaternion(f.yaw); })();
@@ -96,7 +89,6 @@ export function cut(name, sp = 13, { trace = false } = {}) {
     let acc = 0, brk = 0; for (let i = 0; i < rows.length; i++) { const x = rows[i].wt.dot(n) * DT; if (i <= iPk) acc += x; else if (rows[i].t <= tArr + 0.8) brk += Math.min(0, x); }
     out.impDrive = r2(acc); out.impBrake = r2(brk);
   }
-  if (ft) out.commits = commits.join(' ');
   return out;
 }
 export function cuts(sp = 13) {
@@ -192,13 +184,6 @@ const parts = (process.argv[2] || 'cuts,steps,kata,walk,jitter,hits').split(',')
 const res = { commit: 'live ../../src' };
 if (parts.includes('cuts')) res.cuts = cuts(13).avg3;
 if (parts.includes('percut')) res.percut = cuts(13).per;
-// 결심 켠 부분 (온몸 베기 L1, 설계서 9장): 같은 네 베기를 손가락 궤적 길로 (결심 판정 켬). 기본 목록에는 없다 → 기본 출력은 예전과 같다
-if (parts.includes('commitcuts')) {
-  const per = Object.fromEntries(Object.keys(CUTS).map((k) => [k, cut(k, 13, { trace: true })]));
-  const main = ['oberhau', 'zornhau', 'zwerch'];
-  const av = (k) => r1(mean(main.map((m) => per[m][k])));
-  res.commitcuts = { avg3: { tip: av('tip'), tipMin: Math.min(...main.map((m) => per[m].tip)), tipMax: Math.max(...main.map((m) => per[m].tip)), phasePk: r2(mean(main.map((m) => per[m].phasePk))), vZone: av('vZone'), onset: av('onset_ms'), b10_90: av('b10_90'), over: av('over'), settle: av('settle_ms'), a33: av('a33'), handA50: av('handA50') }, per };
-}
 if (parts.includes('steps')) res.steps = steps();
 if (parts.includes('kata')) res.kata = kata();
 if (parts.includes('walk')) res.walk = walk();

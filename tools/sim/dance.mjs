@@ -3,25 +3,8 @@
 import { newRound, THREE, DT, CONFIG } from './jelly_harness.mjs';
 import { guardAt, GUARDS } from '../../src/guards.js';
 import { cuts as liveCuts } from './live_battery.mjs';
-import { FingerTrace } from '../../src/input.js';
 const variant = process.argv[2] || 'base';
-// DETECT=1: 온몸 베기 결심 판정(L1)을 켠 플레이어 (skill.detect). 손 목표를 옮긴 만큼을 손가락 궤적으로도 넣고(60 Hz 떨림은 두 스텝에 한 번)
-//  1단계·확정이 몇 번 걸렸는지 센다 (느린 자세 이동과 떨림은 1단계도 안 걸려야 한다)
-const DETECT = !!process.env.DETECT;
-const commitLog = [];
-function detectOn(G, P) {
-  if (!DETECT) return () => {};
-  const ft = new FingerTrace();
-  P.skill.detect = true;
-  P.skill.trace = ft;
-  P.onCommit = (st, c, fam) => commitLog.push(`${st}${fam}`);
-  let px = P.handOffset.x, py = P.handOffset.y;
-  return () => {
-    if (P.handOffset.x !== px || P.handOffset.y !== py) ft.push(G.t * 1000, P.handOffset.x - px, P.handOffset.y - py);
-    px = P.handOffset.x;
-    py = P.handOffset.y;
-  };
-}
+// (옛 결심 판정 DETECT=1 은 R2 W5 가 옛 경로와 함께 지웠다)
 if (process.env.PATCH) { const m = await import(process.env.PATCH); m.default?.(CONFIG); }
 const Q = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
 const ang = (a, b) => Math.acos(THREE.MathUtils.clamp(a.dot(b), -1, 1)) * 57.2958;
@@ -31,13 +14,12 @@ const bladeW = [], chestW = [];
 for (const p of pads) {
   const G = newRound({ walls: false }); G.park(); G.ai.update = () => {};
   const P = G.player; P.skill.level = 0.7;
-  P.handOffset.set(p[0], p[1]); const feed = detectOn(G, P); feed(); for (let i = 0; i < 2.5 / DT; i++) G.step();
+  P.handOffset.set(p[0], p[1]); for (let i = 0; i < 2.5 / DT; i++) G.step();
   let jx = 0, jy = 0;
   for (let i = 0; i < 3 / DT; i++) {
     // 느린 떨림: 1cm 안팎을 천천히 오가는 손가락 (60Hz 입력을 120Hz 스텝에 나눠)
     if (i % 2 === 0) { jx += (rnd() - 0.5) * 0.004 - jx * 0.05; jy += (rnd() - 0.5) * 0.004 - jy * 0.05; }
     P.handOffset.set(p[0] + jx, p[1] + jy);
-    feed();
     G.step();
     const w = P.sword.angvel(); const b = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.sword.rotation()));
     const W = new THREE.Vector3(w.x, w.y, w.z); W.addScaledVector(b, -W.dot(b));
@@ -49,11 +31,11 @@ for (const p of pads) {
 const G = newRound({ walls: false }); G.park(); G.ai.update = () => {};
 const P = G.player; P.skill.level = 0.7;
 const path = [[0.18, -0.28], [0.42, 0.42], [-0.18, -0.28], [0.0, 0.03]];
-P.handOffset.set(...path[0]); const feedS = detectOn(G, P); feedS(); for (let i = 0; i < 1.2 / DT; i++) G.step();
+P.handOffset.set(...path[0]); for (let i = 0; i < 1.2 / DT; i++) G.step();
 const yaw = []; const cw2 = [];
 for (let k = 1; k < path.length; k++) {
   const a = path[k - 1], b = path[k];
-  for (let i = 0; i < 0.8 / DT; i++) { const t = (i + 1) * DT / 0.8; P.handOffset.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); feedS(); G.step(); const c = P.bodies.chest.angvel(); cw2.push(Math.hypot(c.x, c.y, c.z)); yaw.push(P.bodyPose.chestYaw); }
+  for (let i = 0; i < 0.8 / DT; i++) { const t = (i + 1) * DT / 0.8; P.handOffset.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); G.step(); const c = P.bodies.chest.angvel(); cw2.push(Math.hypot(c.x, c.y, c.z)); yaw.push(P.bodyPose.chestYaw); }
   for (let i = 0; i < 0.6 / DT; i++) { G.step(); const c = P.bodies.chest.angvel(); cw2.push(Math.hypot(c.x, c.y, c.z)); yaw.push(P.bodyPose.chestYaw); }
 }
 const rms = (a) => Math.sqrt(a.reduce((s, x) => s + x * x, 0) / a.length);
@@ -68,7 +50,7 @@ console.log(`${variant}: jitter bladeW_rms ${rms(bladeW).toFixed(2)} chestW_rms 
   for (const pad of holdPads) {
     const G = newRound({ walls: false }); G.park(); G.ai.update = () => {};
     const P = G.player; P.skill.level = 0.7;
-    P.handOffset.set(pad[0], pad[1]); const feedH = detectOn(G, P); feedH(); for (let i = 0; i < 2.5 / DT; i++) G.step();
+    P.handOffset.set(pad[0], pad[1]); for (let i = 0; i < 2.5 / DT; i++) G.step();
     const target = guardAt(pad[0], pad[1], {});
     const targetDir = new THREE.Vector3(...target.dir).applyQuaternion(P.yaw);
     const yaw0 = P.bodyPose.chestYaw;
@@ -76,7 +58,6 @@ console.log(`${variant}: jitter bladeW_rms ${rms(bladeW).toFixed(2)} chestW_rms 
     for (let i = 0; i < 3 / DT; i++) {
       if (i % 2 === 0) { jx += (rnd() - 0.5) * 0.004 - jx * 0.05; jy += (rnd() - 0.5) * 0.004 - jy * 0.05; }
       P.handOffset.set(pad[0] + jx, pad[1] + jy);
-      feedH();
       G.step();
       const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.sword.rotation()));
       devDir.push(ang(blade, targetDir));
@@ -96,4 +77,3 @@ console.log(`${variant}: jitter bladeW_rms ${rms(bladeW).toFixed(2)} chestW_rms 
   CONFIG.SKILL.handDynamicsOn = was;
   console.log(`${variant}: flick-to-cut  onset ${off.onset}→${on.onset}ms  b10_90 ${off.b10_90}→${on.b10_90}ms  tip ${off.tip}→${on.tip}m/s (handDynamicsOn 꺼짐→켜짐, 거의 그대로여야 한다)`);
 }
-if (DETECT) console.log(`${variant}: 결심 판정 켬 — 1단계·확정 ${commitLog.length}번 ${commitLog.join(' ')}`);

@@ -11,7 +11,7 @@
 //    베기 중 팔 앞먹임·함께 힘주기 없음. DRIVE.ffFilter 면 α_des·α_flex = 스텝 평균 가속 (ω_des·ω_flex 가 한 스텝에 바뀐 만큼 / dt)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { DRIVE, COMMIT, GESTURE, STROKE, WEAPON } from '../config.js';
+import { DRIVE, GESTURE, STROKE, WEAPON } from '../config.js';
 import { ClipDrive } from './drive.js';
 import { makeSample, CH, chestFrame, m3apply, D2R, carryOver, quatFromM3, GAME_SIGN } from './atlas.js';
 import { GES_WIND } from './gesture.js';
@@ -417,7 +417,7 @@ const ArmMixin = {
       const t = B.abdomen.translation();
       _x.set(t.x, t.y, t.z);
     } else {
-      const tc = B.chest.translation(), th = B.head.translation(), k2 = COMMIT.planeK;
+      const tc = B.chest.translation(), th = B.head.translation(), k2 = DRIVE.planeK;
       _x.set(tc.x + (th.x - tc.x) * k2, tc.y + (th.y - tc.y) * k2, tc.z + (th.z - tc.z) * k2);
     }
     const ct = this.f.bodies.chest.translation();

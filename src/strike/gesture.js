@@ -5,7 +5,7 @@
 //  쓰는 것은 제 필드(fighter.ges = 이 객체)와 fighter.strike(읽기 전용 보기)뿐. 엔진은 건드리지 않는다 (W3·W4 가 읽는다)
 //  상한·바닥·쿨다운 없음: S 는 1 위로 자르지 않고(over), φ̇ 에 바닥이 없다(clock 'finger'). 명세 §10 참고
 // ─────────────────────────────────────────────────────────────
-import { GESTURE, STROKE, COMMIT, DRIVE } from '../config.js';
+import { GESTURE, STROKE, DRIVE } from '../config.js';
 
 export const GES_IDLE = 0, GES_WIND = 1, GES_CUT = 2, GES_FOLLOW = 3, GES_RECOVER = 4;
 export const GES_NAMES = ['idle', 'wind', 'cut', 'follow', 'recover'];
@@ -173,12 +173,12 @@ export class Gesture {
     this.write();
   }
 
-  /** 몸이 온몸 베기를 할 수 있나 (skill.js canCommit 의 몸 조건 − 무릎: 닻은 설 때만 골반 명령을 따르고 무릎 꿇으면 내딛지 못한다) */
+  /** 몸이 온몸 베기를 할 수 있나 (옛 skill.js canCommit 의 몸 조건 − 검술 문턱 − 무릎: 닻은 설 때만 골반 명령을 따르고 무릎 꿇으면 내딛지 못한다) */
   static bodyOk(f) {
     return f.alive && f.armed && !f.weapon?.gun && f.state === 'stand' && !f.skill.tap && !(f.finish?.amt > 0.5);
   }
 
-  /** 물리 스텝마다 (Skill.update 에서, 옛 detectCommit 자리). dt = 물리 dt (s), tStepMs = 이 스텝이 끝나는 벽시계 ms */
+  /** 물리 스텝마다 (Skill.update 에서, 옛 결심 판정 자리). dt = 물리 dt (s), tStepMs = 이 스텝이 끝나는 벽시계 ms */
   update(dt, tStepMs) {
     if (!this.src) {
       if (this.state === GES_IDLE && this.S === 0) return; // 손가락 없는 AI: 비용 없음
@@ -345,7 +345,7 @@ export class Gesture {
         } else if (kAt + 1 < n) {
           const jp = tr.idx(kAt + 1);
           const span = tr.t[j] - tr.t[jp];
-          const hold = Math.max(span, COMMIT.stillGap, COMMIT.stillFrames * (tr.frameDt || 0)); // 틈 견딤 창 (한도 아님)
+          const hold = Math.max(span, GESTURE.stillGap, GESTURE.stillFrames * (tr.frameDt || 0)); // 틈 견딤 창 (한도 아님)
           if (span > 0 && t - tr.t[j] <= hold && !(tr.flag[j] & T_REPLAY)) {
             vx = ((tr.x[j] - tr.x[jp]) / span) * 1000;
             vy = ((tr.y[j] - tr.y[jp]) / span) * 1000;

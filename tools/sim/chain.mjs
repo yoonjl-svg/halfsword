@@ -9,15 +9,15 @@
 //
 //  Hz: --hz = 물리 Hz (게임 120 고정), --input·HZ = 화면(손가락) 프레임 Hz. JITTER = 화면 프레임 24–45 fps (씨앗 고정 수열, 판마다 같은 수열)
 //  장면 변형 (--variant): W (기본) = 쟁기 2 s → 감기 자리 3 m/s, 머묾 0 (손가락이 거꾸로 돌아 곧장 벤다) → 끝 자리 v m/s 획
-//                         hold = 쟁기 2 s → 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 (옛 기본. --variant=hold 만 주면 옛 실행과 바이트까지 같다)
-//  방식 (--modes): game = 설정 그대로 (드라이브·손짓 켬, WHOLE.commit 도 그대로), plain = 같은 커밋 DRIVE.on=false (맨 팔 베기).
-//    옛 arm (WHOLE.commit 끔) / commit (켬) 은 옛 경로를 지울 때까지 남긴다 (hold 기본값). WHOLE.commit 을 끄면 pf 가 바뀌어 기준이 아니다 (§7)
+//                         hold = 쟁기 2 s → 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 (옛 기본)
+//  방식 (--modes): game = 설정 그대로 (드라이브·손짓 켬), plain = 같은 커밋 DRIVE.on=false (맨 팔 베기).
+//    옛 arm / commit 방식 (옛 결심 경로 끔·켬) 은 R2 W5 가 그 경로와 함께 지웠다 (지우기 전 체크아웃의 chain.mjs 로 잰다)
 //  --ginput = GESTURE.input (A 'wind' / B 'stroke'), --clock = GESTURE.clock ('floor' 는 시뮬 전용)
 //
 //  --root 의 src/ 와 tools/sim/harness_m.mjs 를 읽기만 한다(다른 가지의 체크아웃도 된다). 동작 연구 PM 의 라이브러리(tools/motion/lib)는
-//  이 저장소 것을 쓴다. 조건은 tools/motion/record_wbs.mjs(= tseq.mjs)와 같다: hybrid 걸음, skill 0.7, 상대는 서 있기만(칼 충돌 끔).
+//  이 저장소 것을 쓴다. 조건은 옛 tools/motion/record_wbs.mjs(= tseq.mjs, 둘 다 R2 W5 가 지움)와 같다: hybrid 걸음, skill 0.7, 상대는 서 있기만(칼 충돌 끔).
 //  장면: air = 2.0 m 헛치기(내 칼 충돌 끔, 기록 파일을 낸다) · stop = 획 절반에서 손가락 멈춤(1 s 누른 채) · hit = 1.55 m 에서 맞힘(내 칼 충돌 켬)
-//  내는 것: (1) 동작 연구 PM 의 stillness-motion-record/1 기록(air 장면, --out 폴더 — docs/motion 에는 쓰지 않는다. J 칸은 record_wbs.mjs 와 바이트까지 같다, --check)
+//  내는 것: (1) 동작 연구 PM 의 stillness-motion-record/1 기록(air 장면, --out 폴더 — docs/motion 에는 쓰지 않는다. --check = 기록 폴더와 J 칸 견줌)
 //         (2) 표: 칼끝·손·골반·가슴 최고와 때, 겨눈 선을 지난 때 tc, 사슬 순서(tc 기준), 칼끝 속도의 몸통·팔·손목 몫, 칼 운동에너지, 손목·빈손 일,
 //             근육 한계 포화 비율(fighter.ins 계측 탭), 지연(손가락 → 손 목표 2 cm·손 2 cm·칼끝 5 cm·고른 지연·골반/가슴 5°), 대가(멈춤 넘침·복귀·쏠림·상처)
 //         (3) --json 한 벌. --vs=<앞선 json> 이면 칼끝·KE·상처 에너지 Δ%, 지연 Δms 를 견주고 |Δ| > 3 % 또는 물리 한 스텝 넘는 것에 표를 한다
@@ -68,10 +68,8 @@ const SEED = +arg('seed', 7);
 const VFS = list('v', process.env.SPEED || 12).map(Number);
 const VF = VFS[0];
 const FAMS = list('fams', 'diagR,vert,horizR,riseR');
-const MODES = list('modes', VARIANT === 'hold' ? 'arm,commit' : 'game,plain');
-for (const m of MODES) if (!['arm', 'commit', 'game', 'plain'].includes(m)) throw new Error(`모르는 방식 ${m}`);
-const LEGACY = (m) => m === 'arm' || m === 'commit';
-const ALL_LEGACY = MODES.every(LEGACY); // 옛 방식만: 옛 출력 그대로 (새 칸·새 묶음 없음)
+const MODES = list('modes', 'game,plain');
+for (const m of MODES) if (!['game', 'plain'].includes(m)) throw new Error(`모르는 방식 ${m}${m === 'arm' || m === 'commit' ? ' (옛 결심 경로와 함께 R2 W5 가 지웠다)' : ''}`);
 const SCENES = list('scenes', 'air,stop,hit');
 const JITTER = process.env.JITTER === '1' || !!arg('jitter', false);
 const BLOCKS = new Set(list('blocks', 'rows'));
@@ -87,7 +85,7 @@ const JSON_OUT = resolve(arg('json', join(OUT, `chain_${WEAPON}_${HZ}_${INPUT}.j
 const VS = arg('vs', null);
 const CHECK = arg('check', null);
 const MD = !!arg('md', false);
-const RECORD = ALL_LEGACY ? !arg('no-record', false) : !!arg('record', false); // 새 방식은 --record 일 때만 (행이 많다)
+const RECORD = !!arg('record', false); // --record 일 때만 (행이 많다)
 const R0_OFF = process.env.R0_OFF === '1';
 
 const GAP = 2.0; // 헛치기·멈춤 거리 (record_wbs.mjs)
@@ -110,7 +108,7 @@ for (const s of sets) {
   cfg[grp][key] = parseVal(s.slice(i + 1));
 }
 // 게임 설정 (--set 뒤): game/plain 은 판마다 이것으로 되돌린다 (plain 은 DRIVE.on 만 끈다)
-const BASE = { commit: cfg.WHOLE.commit, drive: cfg.DRIVE?.on, input: cfg.GESTURE?.input, clock: cfg.GESTURE?.clock };
+const BASE = { drive: cfg.DRIVE?.on, input: cfg.GESTURE?.input, clock: cfg.GESTURE?.clock };
 const GINPUTS = list('ginput', BASE.input ?? 'wind');
 const CLOCKS = list('clock', BASE.clock ?? 'finger');
 const H = await import(pathToFileURL(join(ROOT, 'tools/sim/harness_m.mjs')).href);
@@ -196,7 +194,6 @@ function sample(G, P, E) {
   const online = bd.dot(q) / (q.length() + 1e-9); // 칼 방향과 칼자루 → 상대 가슴 사이 cos (겨눈 선을 지나는 때 = 최대)
   const I = P.ins || {};
   const wr = I.wr || {}, shI = I.sh || {}, el = I.el || {}, sp = I.sp || {}, off = I.off || {};
-  const cm = P.commit || {};
   const sk = P.skill;
   return {
     gt: G.t, tip, hand, tipH: toH(tip), handH: toH(hand), tgtH: toH(P.handTarget),
@@ -208,7 +205,7 @@ function sample(G, P, E) {
     online, heading: P.heading,
     pelTw: wrap(bodyYaw(B.pelvis) - P.heading) * R2D * -P.side, chTw: wrap(bodyYaw(ch) - P.heading) * R2D * -P.side,
     off: [P.handOffset.x, P.handOffset.y], aim: [sk.aim.x, sk.aim.y], aimRaw: [sk.aimRaw.x, sk.aimRaw.y],
-    act: sk.activity, cmOn: !!cm.on, cmStage: cm.stage ?? null, cmU: cm.u ?? null, padOn: !!cm.padOn,
+    act: sk.activity,
     com: P.com ? P.com.clone() : V(B.pelvis.translation()), comV: P.comVel.clone(), s: P.support, offB: P.offBalance, state: P.state,
     // 계측 탭 (fighter.ins, 없으면 undefined)
     wrSat: wr.sat, wrHill: wr.hill, wAimRaw: wr.wAimRaw, release: wr.release, brake: wr.brake,
@@ -263,19 +260,15 @@ function jitterPump(G) {
   };
 }
 
-/** 한 판: record_wbs.mjs 의 순서 그대로 + 표본 + 대가 창. o = { weapon, input, v, ginput, clock } */
+/** 한 판: 옛 record_wbs.mjs 의 순서 그대로 + 표본 + 대가 창. o = { weapon, input, v, ginput, clock } */
 function trial(fam, mode, scene, o) {
-  const NEW = !LEGACY(mode);
   const VF = o.v, INPUT = o.input;
-  if (NEW) {
-    cfg.WHOLE.commit = BASE.commit;
-    cfg.DRIVE.on = mode === 'plain' ? false : BASE.drive;
-    cfg.GESTURE.input = o.ginput;
-    cfg.GESTURE.clock = o.clock;
-  } else cfg.WHOLE.commit = mode !== 'arm';
+  cfg.DRIVE.on = mode === 'plain' ? false : BASE.drive;
+  cfg.GESTURE.input = o.ginput;
+  cfg.GESTURE.clock = o.clock;
   const dist = scene === 'hit' ? HIT_DIST : GAP;
   const G = newRound({ walls: false, gap: dist + 0.17, seed: SEED, weapon: o.weapon });
-  if (NEW) cfg.DRIVE.on = BASE.drive; // 드라이브는 판을 만들 때 붙는다 (plain = 붙지 않음)
+  cfg.DRIVE.on = BASE.drive; // 드라이브는 판을 만들 때 붙는다 (plain = 붙지 않음)
   const P = G.player, E = G.enemy;
   G.ai.update = () => E.move.set(0, 0);
   for (let i = 0; i < E.sword.numColliders(); i++) E.sword.collider(i).setCollisionGroups(0);
@@ -284,7 +277,7 @@ function trial(fam, mode, scene, o) {
   P.skill.level = 0.7;
   setPad(P, PAD.Pflug);
   inputPump(G, { hz: INPUT });
-  if (NEW && o.jitter) jitterPump(G);
+  if (o.jitter) jitterPump(G);
   P.ins = { wr: {}, sh: {}, el: {}, sp: {}, off: { on: false }, hl: null }; // 계측 탭 꽂기 (수치는 바뀌지 않는다)
   const commits = [];
   const oc = P.onCommit.bind(P);
@@ -306,16 +299,16 @@ function trial(fam, mode, scene, o) {
   const W0 = { origin: new THREE.Vector3(0, 0, 0), yaw0: 0 };
   const keep = Math.round(PRE / DT);
   const buf = [];
-  // 새 방식: 채널 (감기 시작부터 전부) · 손 길 누적 (감기 시작부터)
-  const chan = NEW && CHANNELS ? { names: chanNames(P), t0: G.t, rows: [] } : null;
+  // 채널 (감기 시작부터 전부) · 손 길 누적 (감기 시작부터)
+  const chan = CHANNELS ? { names: chanNames(P), t0: G.t, rows: [] } : null;
   let pathCum = 0, hPrev = null;
   // 앞먹임 잡음 (드라이브 w > 0 스텝의 |최고|, 읽기만): 명령 가슴·골반 yaw 각가속도 (rad/s²), 몸통 앞먹임 회전력 (N·m), 팔 α_des
-  const ffn = NEW ? { chestYawDDot: 0, pelvisYawDDot: 0, ffChest: 0, ffAbd: 0, ffHip: 0, alphaDes: 0, steps: 0 } : null;
+  const ffn = { chestYawDDot: 0, pelvisYawDDot: 0, ffChest: 0, ffAbd: 0, ffHip: 0, alphaDes: 0, steps: 0 };
   const snap = () => {
     const p = P.bodies.pelvis.translation();
     const fw = P.forward();
     const q = { J: jointsOf(P, THREE, W0), o: [p.x, p.z], yaw: Math.atan2(fw.z, fw.x), s: sample(G, P, E) };
-    if (NEW) {
+    {
       const h = q.s.hand;
       if (hPrev) pathCum += h.distanceTo(hPrev);
       hPrev = h;
@@ -370,7 +363,7 @@ function trial(fam, mode, scene, o) {
     return { t: +(i * DT).toFixed(4), J };
   });
   const T = { fam, mode, scene, S: buf.map((q) => q.s), frames, i0, tStart, cut, moveT, dx, dy, tgt, gap: dist, commits, wounds, catches, kd, hasTap, o };
-  if (NEW) {
+  {
     T.Jw = buf.map((q) => q.J); // 월드 관절 (tCut 의 손 높이·뒤)
     T.chan = chan ? { names: chan.names, i0: i0 + nDrop, rows: chan.rows } : null; // i0 = 채널 줄에서 획 시작 줄
     T.stats = { ...(P.strike?.stats || {}) };
@@ -387,21 +380,21 @@ function makeRecord(T, tc) {
   const { fam, mode, frames, tStart, commits } = T;
   const { v: VF, input: INPUT, weapon: WEAPON } = T.o;
   const hold = `${CHV} m/s + ${HOLD / 1000} s 머묾`;
-  const mdesc = mode === 'arm' ? '팔 베기, WHOLE.commit 끔' : mode === 'commit' ? '결심 베기, WHOLE.commit 켬' : mode === 'game' ? '게임 설정' : '맨 팔 베기, DRIVE.on=false';
+  const mdesc = mode === 'game' ? '게임 설정' : '맨 팔 베기, DRIVE.on=false';
   const tip = speeds(frames, DT, 'tip');
   const hand = speeds(frames, DT, 'hS');
   const peakI = tip.indexOf(Math.max(...tip));
   const n = commits.length;
   return {
     format: 'stillness-motion-record/1',
-    id: LEGACY(mode) ? `wbs_${fam}_${mode}` : `wbs_${fam}_${mode}_${VARIANT}_${WEAPON}_v${VF}_in${T.o.jitter ? 'J' : INPUT}_${T.o.ginput}`,
+    id: `wbs_${fam}_${mode}_${VARIANT}_${WEAPON}_v${VF}_in${T.o.jitter ? 'J' : INPUT}_${T.o.ginput}`,
     cut: FAM[fam].cut,
-    kind: LEGACY(mode) ? (mode === 'arm' ? 'wbs-arm' : 'wbs-commit') : `wbs-${mode}`,
+    kind: `wbs-${mode}`,
     source: `${CODE} (${mdesc}), chain.mjs = tseq.mjs 조건: hybrid, ${WEAPON}, skill 0.7, ${T.gap} m, 감기 ${hold} → 끝 ${VF} m/s, 입력 ${INPUT} Hz, 칼 충돌 끔. 결심 ${n}번`,
     cond: {
       code: CODE, seed: SEED, physicsHz: Math.round(1 / DT), recordHz: Math.round(1 / DT), inputHz: INPUT, weapon: WEAPON, gait: cfg.BODY.weightMode, skill: 0.7, gap: T.gap,
       input: `패드: Pflug ${JSON.stringify(PAD.Pflug)} 2 s → ${padName(FAM[fam].ch)} ${JSON.stringify(FAM[fam].ch)} ${hold} → ${padName(FAM[fam].end)} ${JSON.stringify(FAM[fam].end)} ${VF} m/s (tseq.mjs)`,
-      commit: mode === 'arm' ? '끔' : mode === 'commit' ? `켬 (결심 ${n}번)` : `WHOLE.commit ${cfg.WHOLE.commit}, DRIVE.on ${mode === 'game'}`,
+      commit: `DRIVE.on ${mode === 'game'} (확정 ${n}번)`,
     },
     hz: Math.round(1 / DT),
     marks: { cutStroke: +tStart.toFixed(4), tipPeak: frames[peakI].t },
@@ -633,7 +626,7 @@ const tag = R0_OFF ? 'R0_OFF=1' : 'R0 켬';
 console.log(`chain.mjs  root ${ROOT}  코드 ${CODE}  물리 ${HZ} Hz  입력 ${INPUT} Hz  시드 ${SEED}  무기 ${WEAPON}  끝 ${VF} m/s  ${tag}${sets.length ? '  set ' + sets.join(' ') : ''}`);
 const t00 = Date.now();
 const channels = {}; // 새 방식 행의 스텝 채널 (key → { names, i0, rows })
-if (!ALL_LEGACY) console.log(`변형 ${VARIANT} (감기 ${CHV} m/s, 머묾 ${HOLD} ms)  방식 ${MODES.join(',')}  무기 ${WEAPONS.join(',')}  입력 Hz ${INPUTS.join(',')}${JITTER ? '+J(24–45 fps)' : ''}  v ${VFS.join(',')}  입력 방식 ${GINPUTS.join(',')}  시계 ${CLOCKS.join(',')}  묶음 ${[...BLOCKS].join(',')}`);
+console.log(`변형 ${VARIANT} (감기 ${CHV} m/s, 머묾 ${HOLD} ms)  방식 ${MODES.join(',')}  무기 ${WEAPONS.join(',')}  입력 Hz ${INPUTS.join(',')}${JITTER ? '+J(24–45 fps)' : ''}  v ${VFS.join(',')}  입력 방식 ${GINPUTS.join(',')}  시계 ${CLOCKS.join(',')}  묶음 ${[...BLOCKS].join(',')}`);
 const OPTS = [];
 for (const weapon of WEAPONS)
   for (const input of JITTER ? [...INPUTS, 'J'] : INPUTS)
@@ -647,18 +640,15 @@ if (BLOCKS.has('rows'))
         for (const scene of SCENES) {
           const T = trial(fam, mode, scene, o);
           const m = metrics(T);
-          const NEW = !LEGACY(mode);
-          if (NEW) {
-            Object.assign(m, newMetrics(T, m));
-            m.key = `${fam}/${mode}/${scene}/${VARIANT}/${o.weapon}/in${o.jitter ? 'J' : o.input}/v${o.v}/${o.ginput}/${o.clock}`;
-            m.chan = chanSummary(T);
-            if (T.chan) channels[m.key] = T.chan;
-          }
+          Object.assign(m, newMetrics(T, m));
+          m.key = `${fam}/${mode}/${scene}/${VARIANT}/${o.weapon}/in${o.jitter ? 'J' : o.input}/v${o.v}/${o.ginput}/${o.clock}`;
+          m.chan = chanSummary(T);
+          if (T.chan) channels[m.key] = T.chan;
           if (scene === 'air') {
             const rec = makeRecord(T, m.tc);
             m.shape = shapeMetrics(rec);
             m.record = { tipPeak: rec.summary.tipPeak, handPeak: rec.summary.handPeak, tipPeakT: rec.summary.tipPeakT, n: rec.data.n };
-            if (!NEW || CHECK) records.push(rec);
+            if (CHECK) records.push(rec);
             if (RECORD) writeRecord(OUT, rec);
           }
           rows.push(m);
@@ -668,7 +658,6 @@ if (BLOCKS.has('rows'))
 //  쟁기 2 s → 어깨 지붕(ShR) 쪽으로 drag = 3 m/s 끌기 / step = 0.3 m 를 50 ms (6 m/s) 걸음. 손가락 시작 → 골반·가슴 5°, S > 0, 손 2 cm
 const LAT_GATE = { 60: 33, 120: 25 }; // 골반 5° 까지 ms (입력 Hz 별, 명세 §8.2)
 function latTrial(mode, kind, o) {
-  cfg.WHOLE.commit = BASE.commit;
   cfg.DRIVE.on = mode === 'plain' ? false : BASE.drive;
   cfg.GESTURE.input = o.ginput;
   cfg.GESTURE.clock = o.clock;
@@ -722,7 +711,6 @@ async function rawAtlas() {
 }
 const { frameOf } = await import('../motion/lib/game_joints.mjs');
 function tracked(cut, S, pace, gap, weapon) {
-  cfg.WHOLE.commit = BASE.commit;
   cfg.DRIVE.on = BASE.drive;
   const G = newRound({ seed: 1, gap, walls: false, weapon });
   G.ai.update = () => {};
@@ -842,7 +830,7 @@ const blockOut = {};
 if (BLOCKS.has('latency')) {
   blockOut.latency = [];
   for (const o of OPTS.filter((q, i, a) => a.findIndex((z) => z.weapon === q.weapon && z.input === q.input && z.jitter === q.jitter && z.ginput === q.ginput && z.clock === q.clock) === i))
-    for (const mode of MODES.filter((m) => !LEGACY(m)))
+    for (const mode of MODES)
       for (const kind of ['step', 'drag']) blockOut.latency.push(latTrial(mode, kind, o));
 }
 if (BLOCKS.has('mx') || BLOCKS.has('pace')) {
@@ -884,7 +872,7 @@ if (rows.some((r) => r.land)) {
   const qq = (a, p) => { const b = a.filter((x) => x != null).sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(p * (b.length - 1) + 0.5))] : null; };
   blockOut.landing = Object.fromEntries(Object.entries(byV).map(([v, a]) => [v, { n: a.length, landed: a.filter((x) => x != null).length, median_ms: qq(a, 0.5), p90_ms: qq(a, 0.9) }]));
 }
-if (!ALL_LEGACY) cfg.GESTURE.input = BASE.input, (cfg.GESTURE.clock = BASE.clock), (cfg.WHOLE.commit = BASE.commit), (cfg.DRIVE.on = BASE.drive);
+cfg.GESTURE.input = BASE.input, (cfg.GESTURE.clock = BASE.clock), (cfg.DRIVE.on = BASE.drive);
 const elapsed = ((Date.now() - t00) / 1000).toFixed(1);
 const hasTap = rows.some((r) => r.hasTap);
 
@@ -909,18 +897,11 @@ function table(cols, rowFn, title, rs = rows) {
   console.log(cols.map(([h, w, rt]) => pad(h, w, rt)).join(' '));
   for (const r of rs) console.log(rowFn(r).map((v, i) => pad(v, cols[i][1], cols[i][2] !== false)).join(' '));
 }
-const legRows = rows.filter((r) => LEGACY(r.mode));
-table(cols1, row1, '속도·사슬 (t = 획 시작 기준 ms, 창 0.6 s)', legRows);
-table(cols2, row2, '포화·지연·대가', legRows);
-// 새 방식 행 (game/plain): 기준 (1) 칸·되돌아감·tCut 의 손·걸음
-const newRows = rows.filter((r) => !LEGACY(r.mode));
+// game/plain 행: 기준 (1) 칸·되돌아감·tCut 의 손·걸음 (옛 방식 표 두 벌은 --md 로)
+const newRows = rows;
 const colsN = [['키', 58, false], ['칼끝', 6], ['@ms', 4], ['KE@tc', 6], ['상처 J@ms 부위', 18, false], ['tCut', 5], ['손 위/뒤/감기길', 17, false], ['S/c 최고', 11, false], ['되돌아감', 8], ['순서', 4, false], ['착지−tc', 7], ['넘어짐', 6]];
 const rowN = (r) => [r.key, r.tipPeak, r.tipPeakMs, r.KEatTc_J, r.woundJ != null ? `${r.woundJ}@${r.woundMs} ${r.woundPart}` : r.scene === 'hit' ? '없음' : '-', r.tCut_ms, `${r.handTopCut}/${r.handBackCut}/${r.handPathWind}`, `${r.Smax}/${r.cMax}`, r.hitch, r.order10 ? 'O' : '×', r.land?.landMinusTc_ms, r.falls];
 table(colsN, rowN, `game/plain 행 (t = 획 시작 기준 ms, 되돌아감 m/s 관문 ${HITCH_GATE}, 순서 = 골반 ≤ 가슴 ≤ 손 ≤ 칼끝 10 ms 같음)`, newRows);
-if (legRows.some((r) => r.shape)) {
-  console.log('\n[모양 (동작 연구 PM shape_metrics, air)]');
-  for (const r of legRows) if (r.shape) console.log(`${pad(r.fam, 6, false)} ${pad(r.mode, 6, false)}`, JSON.stringify(r.shape));
-}
 if (blockOut.latency) {
   console.log('\n[latency: 손가락 시작 → 골반·가슴 5°, S > 0, 손 2 cm, 칼끝 5 cm (ms). 관문 = step·game 골반 5° ≤ 33 ms (입력 60 Hz) / 25 ms (120 Hz)]');
   for (const r of blockOut.latency) console.log(`${pad(r.mode, 5, false)} ${pad(r.kind, 4, false)} ${pad(r.weapon, 10, false)} in${pad(r.inputHz, 3, false)} ${pad(r.ginput, 6, false)} 골반 ${pad(r.pelvis5_ms, 4)} 가슴 ${pad(r.chest5_ms, 4)} S ${pad(r.S0_ms, 4)} 손 ${pad(r.hand2_ms, 4)} 칼끝 ${pad(r.tip5_ms, 4)}${r.gate_ms != null ? `  ≤ ${r.gate_ms} ${r.pass ? 'PASS' : 'FAIL'}` : ''}`);
@@ -945,7 +926,7 @@ if (MD) {
   console.log('\n### 포화·지연·대가\n'); md(cols2, row2);
 }
 
-// ── 기록 J 칸이 앞선 기록과 같은가 (record_wbs.mjs 재현 증명) ──
+// ── 기록 J 칸이 앞선 기록과 같은가 (--check 폴더) ──
 if (CHECK) {
   console.log(`\n[기록 견주기 ${CHECK}]`);
   let same = 0, diff = 0;
@@ -965,7 +946,7 @@ if (CHECK) {
 
 // ── json ──
 const outJ = { format: 'chain/1', meta: { root: ROOT, branch, rev, code: CODE, physicsHz: HZ, inputHz: INPUT, seed: SEED, weapon: WEAPON, v: VF, r0off: R0_OFF, hasTap, sets, generated: new Date().toISOString(), elapsed_s: +elapsed, cmd: process.argv.slice(2).join(' ') }, rows };
-if (!ALL_LEGACY || Object.keys(blockOut).length) {
+{
   Object.assign(outJ.meta, { variant: VARIANT, chamberV: CHV, holdMs: HOLD, modes: MODES, weapons: WEAPONS, inputHz: INPUTS, jitter: JITTER, v: VFS, ginput: GINPUTS, clock: CLOCKS, blocks: [...BLOCKS], hzMeaning: '물리 physicsHz (게임 120), inputHz = 화면(손가락) 프레임, J = 24–45 fps 흔들림' });
   outJ.blocks = blockOut;
   outJ.famNames = FAM_NAMES;

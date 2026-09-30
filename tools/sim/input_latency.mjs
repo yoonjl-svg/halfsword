@@ -4,7 +4,8 @@
 //   drag  : 3 m/s 곧은 끌기 1.08 m — 손가락 → 손 목표(handOffset)·겨눔(skill.aim) 2 cm 도달 지연, 고른(정상) 지연(모든 스텝 = 물리 시계 기준,
 //           프레임 마지막 스텝 = 화면에 그려지는 상태 기준), 스텝별 손 목표 이동의 고름(표준편차/평균: 0 = 스텝마다 같게, 1 = 2v·0·2v·0 처럼
 //           한 프레임 몫이 첫 스텝에 몰림), 이동 보존(손가락을 뗀 두 프레임 뒤 손 목표 − 시작 = 손가락 이동. 예측한 몫이 남지 않아야 0)
-//   cut12 : 감기(1.2 m/s, 1초 머묾) → 12 m/s 사선 베기(tseq·record_wbs 와 같은 조건) — 칼끝·손 최고 빠르기, 결심 횟수(WHOLE.commit 켠 판)
+//   cut12 : 감기(1.2 m/s, 1초 머묾) → 12 m/s 사선 베기(chain.mjs hold 와 같은 조건) — 게임 설정 그대로 칼끝·손 최고 빠르기, 손짓 층 확정 횟수
+//           (옛 결심 켬/끔 두 줄은 R2 W5 가 옛 경로와 함께 지웠다)
 //   jitter: 손가락 3 mm · 8 Hz 흔들림 2초 — 손 목표·겨눔·칼끝의 흔들림 RMS
 //  INPUT.coalesce 끔·켬을 한 프로세스에서 견준다 (R0_OFF=1 이면 끔만). 화면 60/120/30 Hz, 터치 표본 = 화면과 같게 또는 120 Hz(합쳐진 이벤트).
 //  실행: node tools/sim/input_latency.mjs [--json] [--hz=60,120,30]      (hybrid 걸음: node tools/sim/hybrid.mjs input_latency.mjs)
@@ -88,32 +89,26 @@ function drag(cond) {
   };
 }
 
-/** cut12: 감기 → 12 m/s 사선 베기 (tseq 조건) — 칼끝·손 최고, 결심 */
-function cut12(cond, commit) {
-  const c0 = CONFIG.WHOLE.commit;
-  CONFIG.WHOLE.commit = commit;
-  try {
-    const S = stage(cond);
-    const { G, P, pump } = S;
-    const off = [P.handOffset.x, P.handOffset.y];
-    const ch = feedTrace(G, stroke(PAD.ShR[0] - off[0], PAD.ShR[1] - off[1], 1.2, { hold: 1000, lift: false }), cond.hz, { touchHz: cond.touchHz });
-    while (!ch.done) G.step();
-    const cur = [P.handOffset.x, P.handOffset.y];
-    const cut = feedTrace(G, stroke(PAD.WechselL[0] - cur[0], PAD.WechselL[1] - cur[1], 12, { down: false, lift: true }), cond.hz, { touchHz: cond.touchHz });
-    let tip = 0, hand = 0, tipT = 0, t5 = null, prev = P.handOffset.clone();
-    const hx0 = cur[0], hy0 = cur[1];
-    for (let i = 0; i < Math.round(1.0 / DT); i++) {
-      G.step();
-      const tv = P.tipVel.length();
-      if (tv > tip) { tip = tv; tipT = pump.stepWall; }
-      hand = Math.max(hand, P.handOffset.distanceTo(prev) / DT);
-      prev.copy(P.handOffset);
-      if (t5 == null && cut.w0 != null && Math.hypot(P.handOffset.x - hx0, P.handOffset.y - hy0) >= 0.05) t5 = pump.stepWall - cut.w0;
-    }
-    return { tip_mps: f2(tip), tipT_ms: f1(tipT - cut.w0), handPad_mps: f2(hand), hand5cm_ms: f1(t5), commits: S.commits() };
-  } finally {
-    CONFIG.WHOLE.commit = c0;
+/** cut12: 감기 → 12 m/s 사선 베기 (chain.mjs hold 조건) — 칼끝·손 최고, 손짓 층 확정 */
+function cut12(cond) {
+  const S = stage(cond);
+  const { G, P, pump } = S;
+  const off = [P.handOffset.x, P.handOffset.y];
+  const ch = feedTrace(G, stroke(PAD.ShR[0] - off[0], PAD.ShR[1] - off[1], 1.2, { hold: 1000, lift: false }), cond.hz, { touchHz: cond.touchHz });
+  while (!ch.done) G.step();
+  const cur = [P.handOffset.x, P.handOffset.y];
+  const cut = feedTrace(G, stroke(PAD.WechselL[0] - cur[0], PAD.WechselL[1] - cur[1], 12, { down: false, lift: true }), cond.hz, { touchHz: cond.touchHz });
+  let tip = 0, hand = 0, tipT = 0, t5 = null, prev = P.handOffset.clone();
+  const hx0 = cur[0], hy0 = cur[1];
+  for (let i = 0; i < Math.round(1.0 / DT); i++) {
+    G.step();
+    const tv = P.tipVel.length();
+    if (tv > tip) { tip = tv; tipT = pump.stepWall; }
+    hand = Math.max(hand, P.handOffset.distanceTo(prev) / DT);
+    prev.copy(P.handOffset);
+    if (t5 == null && cut.w0 != null && Math.hypot(P.handOffset.x - hx0, P.handOffset.y - hy0) >= 0.05) t5 = pump.stepWall - cut.w0;
   }
+  return { tip_mps: f2(tip), tipT_ms: f1(tipT - cut.w0), handPad_mps: f2(hand), hand5cm_ms: f1(t5), commits: S.commits() };
 }
 
 /** jitter: 3 mm 8 Hz 흔들림 — 손 목표·겨눔·칼끝 RMS */
@@ -143,11 +138,11 @@ const out = { R0_OFF, predictMs: CONFIG.INPUT.predictMs, weightMode: CONFIG.BODY
 for (const flag of FLAGS) {
   CONFIG.INPUT.coalesce = flag;
   for (const c of conds) {
-    const r = { coalesce: flag, hz: c.hz, touchHz: c.touchHz, drag: drag(c), cutArm: cut12(c, false), cutCommit: cut12(c, true), jitter: jitter(c) };
+    const r = { coalesce: flag, hz: c.hz, touchHz: c.touchHz, drag: drag(c), cutArm: cut12(c), jitter: jitter(c) };
     out.rows.push(r);
     if (!JSON_OUT) {
-      const d = r.drag, ca = r.cutArm, cc = r.cutCommit, j = r.jitter;
-      console.log(`${flag ? '켬' : '끔'} 화면 ${String(c.hz).padStart(3)} Hz 터치 ${String(c.touchHz).padStart(3)} Hz │ drag 2cm 손 ${d.hand2cm_ms} 겨눔 ${d.aim2cm_ms} ms · 고른 지연 손 ${d.handLag_ms} 겨눔 ${d.aimLag_ms} ms (그려지는 스텝 손 ${d.handLagShown_ms} 겨눔 ${d.aimLagShown_ms}) · 스텝 고름 ${d.stepUnif} (최대 ${d.stepMax_mm} mm) · 보존 ${d.conserve_mm} mm │ 팔 베기 칼끝 ${ca.tip_mps} m/s (t ${ca.tipT_ms} ms, 손 5cm ${ca.hand5cm_ms} ms) · 결심 베기 칼끝 ${cc.tip_mps} m/s 결심 ${cc.commits} │ 떨림 손 ${j.hand_mm} 겨눔 ${j.aim_mm} mm 칼끝 ${j.tip_mps} m/s`);
+      const d = r.drag, ca = r.cutArm, j = r.jitter;
+      console.log(`${flag ? '켬' : '끔'} 화면 ${String(c.hz).padStart(3)} Hz 터치 ${String(c.touchHz).padStart(3)} Hz │ drag 2cm 손 ${d.hand2cm_ms} 겨눔 ${d.aim2cm_ms} ms · 고른 지연 손 ${d.handLag_ms} 겨눔 ${d.aimLag_ms} ms (그려지는 스텝 손 ${d.handLagShown_ms} 겨눔 ${d.aimLagShown_ms}) · 스텝 고름 ${d.stepUnif} (최대 ${d.stepMax_mm} mm) · 보존 ${d.conserve_mm} mm │ 팔 베기 칼끝 ${ca.tip_mps} m/s (t ${ca.tipT_ms} ms, 손 5cm ${ca.hand5cm_ms} ms) · 확정 ${ca.commits} │ 떨림 손 ${j.hand_mm} 겨눔 ${j.aim_mm} mm 칼끝 ${j.tip_mps} m/s`);
     }
   }
 }
@@ -158,7 +153,7 @@ if (FLAGS.length === 2) {
   for (const c of conds) {
     const a = out.rows.find((r) => !r.coalesce && r.hz === c.hz && r.touchHz === c.touchHz);
     const b = out.rows.find((r) => r.coalesce && r.hz === c.hz && r.touchHz === c.touchHz);
-    const d = { hz: c.hz, touchHz: c.touchHz, hand2cm_ms: f1(b.drag.hand2cm_ms - a.drag.hand2cm_ms), aim2cm_ms: f1(b.drag.aim2cm_ms - a.drag.aim2cm_ms), handLag_ms: f1(b.drag.handLag_ms - a.drag.handLag_ms), aimLag_ms: f1(b.drag.aimLag_ms - a.drag.aimLag_ms), aimLagShown_ms: f1(b.drag.aimLagShown_ms - a.drag.aimLagShown_ms), stepUnif: f3(b.drag.stepUnif - a.drag.stepUnif), armTip_pct: f2(((b.cutArm.tip_mps - a.cutArm.tip_mps) / a.cutArm.tip_mps) * 100), commitTip_pct: f2(((b.cutCommit.tip_mps - a.cutCommit.tip_mps) / a.cutCommit.tip_mps) * 100), jitterHand_mm: f3(b.jitter.hand_mm - a.jitter.hand_mm) };
+    const d = { hz: c.hz, touchHz: c.touchHz, hand2cm_ms: f1(b.drag.hand2cm_ms - a.drag.hand2cm_ms), aim2cm_ms: f1(b.drag.aim2cm_ms - a.drag.aim2cm_ms), handLag_ms: f1(b.drag.handLag_ms - a.drag.handLag_ms), aimLag_ms: f1(b.drag.aimLag_ms - a.drag.aimLag_ms), aimLagShown_ms: f1(b.drag.aimLagShown_ms - a.drag.aimLagShown_ms), stepUnif: f3(b.drag.stepUnif - a.drag.stepUnif), armTip_pct: f2(((b.cutArm.tip_mps - a.cutArm.tip_mps) / a.cutArm.tip_mps) * 100), jitterHand_mm: f3(b.jitter.hand_mm - a.jitter.hand_mm) };
     out.diff.push(d);
     if (!JSON_OUT) console.log(`켬−끔 화면 ${String(c.hz).padStart(3)} Hz 터치 ${String(c.touchHz).padStart(3)} Hz: 2cm 손 ${d.hand2cm_ms} 겨눔 ${d.aim2cm_ms} ms · 고른 지연 손 ${d.handLag_ms} 겨눔 ${d.aimLag_ms} ms (그려지는 스텝 겨눔 ${d.aimLagShown_ms}) · 스텝 고름 ${d.stepUnif} · 팔 베기 칼끝 ${d.armTip_pct}% · 결심 베기 칼끝 ${d.commitTip_pct}% · 떨림 손 ${d.jitterHand_mm} mm`);
   }

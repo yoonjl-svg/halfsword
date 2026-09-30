@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL, ARMOR, COMMIT, PHYSICS } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, PHYSICS } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 
@@ -447,7 +447,6 @@ export class Combat {
       } else if (c.stuckT > 0) {
         // 박힘: 칼과 몸이 함께 움직이도록 붙잡는다 (빼내려면 힘이 든다). 한 순간의 충격 J ≤ 0.8·mHold·s 라 상대 속도가 뒤집히지 않는다
         const af = c.pr.w.fighter;
-        const cm = af.commit;
         let mHold; // 한 순간에 붙잡는 몫의 질량 (kg)
         if (STRIKE.gripMu) {
           // R0 (§6-2): 두 몸의 환산질량 μ = 1/(1/m칼 + 1/m부위). 충격은 칼 강체엔 칼날 중심선 위 pA 에, 몸엔 뼈 위 pv 에 걸리므로(아래) 그 점·그 방향의
@@ -460,16 +459,12 @@ export class Combat {
           const mV = bodyMass(vb, onBone(c.pr.v, vpt), dir);
           mHold = 1 / (1 / mA + 1 / mV);
         } else {
-          // R0 전 방식 (R0_OFF=1): 처음 닿을 때의 칼 유효 질량 + 팔 몫. 결심 베기 (L1, 획·버티기 중)엔 칼 자체의 유효 질량까지만 (COMMIT.stuckHoldFree —
-          //  팔 몫 armAssist 를 더하면 가벼운 칼은 한 스텝에 칼 빠르기가 거꾸로 뒤집혀, 손목이 조금만 밀어도 칼이 떨며 돌았다 — 라이트세이버 칼끝 30~60 m/s)
-          const held = COMMIT.stuckHoldFree && (cm?.on || af.skill?.rest?.w > 0);
-          mHold = c.mFree + (held ? 0 : STRIKE.armAssist);
+          // R0 전 방식 (R0_OFF=1): 처음 닿을 때의 칼 유효 질량 + 팔 몫
+          mHold = c.mFree + STRIKE.armAssist;
         }
         J = Math.min(Math.min(STRIKE.stuckDamp * s, STRIKE.stuckForce) * dt, 0.8 * mHold * s);
         c.stuckT -= dt;
         c.seen = this.stepNo;
-        // 결심 베기 (L1): 칼이 박힌 동안 획 시간을 늦추고 끝 너머로 미는 몫을 거둔다 (skill.updateCut). 획이 끝난 뒤 버티는 동안도 (updateRest)
-        if (cm) cm.stuckT = Math.max(cm.stuckT || 0, 2 * dt);
       }
       if (J > 0) {
         // 칼에는 칼날 중심선 위에 건다 (날 끝에 걸면 칼이 길이 방향으로 팽이처럼 돈다)
@@ -637,9 +632,8 @@ export class Combat {
         f.absorbWeaponImpact?.(J, f === A.fighter ? B.fighter : A.fighter); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다 (상대 칼의 breakMult — 청강검 '창천')
       }
     }
-    // 결심 베기 (L1): 새로 부딪힌 칼은 결과로 적는다 (막힘 / 약하게 스친 것은 스침). 막힘을 더 가르는 것은 L4
-    if (fresh) for (const f of [A.fighter, B.fighter]) if (f.commit?.on) f.skill.strikeResult(vn >= 2 ? 'blocked' : 'glance', { vn, impulse: J });
-    if (fresh) for (const f of [A.fighter, B.fighter]) if (f.drive?.w > 0) f.drive.onResult(vn >= 2 ? 'blocked' : 'glance', { vn, impulse: J }); // R2 (§6.7): 겨눔 휘기 끝·결과 도장 (옛 결심 경로와 따로)
+    // 새로 부딪힌 칼은 결과로 적는다 (막힘 / 약하게 스친 것은 스침). R2 (§6.7): 겨눔 휘기 끝·결과 도장
+    if (fresh) for (const f of [A.fighter, B.fighter]) if (f.drive?.w > 0) f.drive.onResult(vn >= 2 ? 'blocked' : 'glance', { vn, impulse: J });
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
   }
 
@@ -736,9 +730,8 @@ export class Combat {
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part });
     }
-    // 결심 베기 (L1): 결과 기록 (가르고 지나갔으면 'through', 아니면 'hit' — 맞히면 지나가기를 줄인다)
-    if (att.commit?.on) att.skill.strikeResult(r.pass ? 'through' : 'hit', r);
-    if (att.drive?.w > 0) att.drive.onResult(r.pass ? 'through' : 'hit', r); // R2 (§6.7)
+    // 결과 기록 (가르고 지나갔으면 'through', 아니면 'hit'). R2 (§6.7)
+    if (att.drive?.w > 0) att.drive.onResult(r.pass ? 'through' : 'hit', r);
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
   }

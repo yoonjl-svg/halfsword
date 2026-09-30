@@ -1,24 +1,24 @@
-// S = 0 불변 관문 (docs/strike/r2_impl_spec.md §7, §8.2 'S = 0'). 새 빌드 대 기준 B·A 를 같은 묶음에서 바이트로 견준다
+// S = 0 불변 관문 (docs/strike/r2_impl_spec.md §7, §8.2 'S = 0'). 새 빌드 대 기준 B 를 같은 묶음에서 바이트로 견준다
 //
 //   node tools/sim/s0_diff.mjs [--batteries=arm,live,dance,fights] [--hz=120,60] [--weapons=longsword,zweihander,sabre]
 //        [--ginput=wind,stroke] [--seeds=1,13,25,37,49] [--ref=<체크아웃>] [--ref-only] [--no-main] [--quick] [--out=<폴더>] [--set=GRP.key=val ...]
 //
 //  빌드 (with_config 로 설정만 바꾼다, 모두 같은 체크아웃):
 //   new    = 기본 (GESTURE.on·DRIVE.on 켬) — 손가락이 있는 묶음(arm·live·dance)은 입력 방식 (A) wind·(B) stroke 둘 다
-//   B      = GESTURE.on=false COMMIT.minLevel=2 (옛 1단계도 없음)  → new 와 바이트 같아야 한다
-//   A      = GESTURE.on=false (오늘 설정)                         → 1단계 소비 스텝만 달라도 된다 (분류해 적는다)
+//   B      = GESTURE.on=false (맨 팔 베기)                         → new 와 바이트 같아야 한다
+//            (옛 결심 경로를 지운 뒤 (R2 W5, §7-8): 옛 기준 B 'GESTURE.on=false COMMIT.minLevel=2' 가 이것이 되고, 1단계 소비를 가르던 기준 A 는 없다)
 //  묶음:
 //   arm    = 팔 베기 입력 (감기 없음 |w| < sL0, 쉼에서 vStrike 넘는 획 없음 — 목록은 출력 'inputs'):
 //            자세 6곳 3 mm / 8 Hz 떨림 2 s, 쟁기에서 8 방향 0.1 m 획 (4·8 m/s), 자세 바꾸기 29가지 0.7 m/s 최소 저크 (최고 1.31 m/s < vStrike 1.5)
 //            패드를 손가락 없이 시작 자세에 두고 (setPad) 1 s 뒤 긋는다. 입력 Hz 60/120 (화면 프레임, 물리 120), 무기 셋 (고를 수 있다)
 //   live   = live_battery.mjs 기본 · dance = dance.mjs 기본 · fights = fights12.mjs SEED0 1/13/25/37/49 (AI 끼리, 손가락 없음 → (A) 만)
 //            이 셋은 무기를 고를 수 없다 (롱소드). Hz = 물리 Hz (PHYSICS.timestep 1/120 게임, 1/60)
-//  스텝 탭 (s0_tap.mjs, node --import): 물리 스텝마다 몸 전부의 해시와 S·w·옛 결심 on. 판(world)마다 처음 어긋난 스텝을 찾아 가른다:
+//  스텝 탭 (s0_tap.mjs, node --import): 물리 스텝마다 몸 전부의 해시와 S·w (옛 결심 on 칸은 지운 뒤 늘 0). 판(world)마다 처음 어긋난 스텝을 찾아 가른다:
 //   new 쪽 S > 0 (그 스텝·앞 두 스텝) → 손짓 문턱 오분류 (실패 아님, arm 묶음에서 S ≥ mixX 인 입력 비율 ≤ 3 % 관문)
-//   기준 A 의 commit.on (같은 창) → 1단계 소비 (A 만, 적는다)
 //   그 밖 → S = 0 샘 = FAIL
 //  깃발 끈 판 (wbs_baselines.md §3 명령) = main sha, 기본 AI 판 = wbs_baselines.md §1 sha (둘 다 실행할 때 문서에서 읽는다)
-//  --ref=<체크아웃>: 같은 묶음·같은 빌드를 그 체크아웃에서도 돌려 바이트 견줌 (옛 경로 지우기 전 ↔ 뒤, §7-8). --ref-only 면 이것만
+//  --ref=<체크아웃>: 같은 묶음을 그 체크아웃에서도 돌려 바이트 견줌 (옛 경로 지우기 전 ↔ 뒤, §7-8): new ↔ ref new, B ↔ ref B.
+//   ref 의 config 에 옛 COMMIT 이 있으면 ref B 에 COMMIT.minLevel=2 를 더한다 (지우기 전 기준 B). --ref-only 면 이것만
 //  S = 0 FAIL (샘·ref 차이·sha 어긋남) 이 하나라도 있으면 끝 코드 1. 오분류 비율은 따로 적는다 (§8.2 Gesture 줄의 관문, 끝 코드 밖). 결과: <out>/s0_diff.json, s0_diff.md (기본 out = 임시 폴더)
 import fs from 'node:fs';
 import os from 'node:os';
@@ -129,7 +129,10 @@ const t00 = Date.now();
 
 // --set=GRP.key=val (여러 번): 세 빌드 모두에 더한다 (설정 바꿔 보기, 예: GESTURE.sectorAll=false). 기본 AI 판·깃발 끈 판 sha 견줌에는 안 넣는다
 const XSETS = argv.filter((s) => s.startsWith('--set=')).map((s) => s.slice(6));
-const BUILDS = { new: [...XSETS], B: ['GESTURE.on=false', 'COMMIT.minLevel=2', ...XSETS], A: ['GESTURE.on=false', ...XSETS] };
+const BUILDS = { new: [...XSETS], B: ['GESTURE.on=false', ...XSETS] };
+// ref (지우기 전 체크아웃) 의 기준 B: 옛 COMMIT 이 있으면 옛 1단계를 막는다 (§7 기준 B 그대로)
+const REF_OLD = REF ? /export const COMMIT\b/.test(fs.readFileSync(path.join(REF, 'src/config.js'), 'utf8')) : false;
+const REF_B = REF_OLD ? ['GESTURE.on=false', 'COMMIT.minLevel=2', ...XSETS] : BUILDS.B;
 const ginSet = (g) => (g === 'wind' ? [] : [`GESTURE.input=${g}`]);
 const dtSet = (hz) => (hz === 120 ? [] : [`PHYSICS.timestep=${1 / hz}`]);
 
@@ -163,7 +166,7 @@ function rounds(t) {
   return m;
 }
 /**
- * 견주기: kind 'B' | 'A' | 'ref'. new (또는 지금 체크아웃) = x, 기준 = y
+ * 견주기: kind 'B' | 'ref'. new (또는 지금 체크아웃) = x, 기준 = y
  * 판마다 처음 어긋난 스텝 → 분류. 돌려주는 것: { verdict, rounds: [...], sameStdout, sameTap }
  */
 function compare(x, y, kind) {
@@ -186,7 +189,7 @@ function compare(x, y, kind) {
     let sAt = 0, cmAt = 0;
     for (let j = Math.max(0, k - 2); j <= Math.min(k, na - 1); j++) sAt = Math.max(sAt, x.tap.S[(a.a + j) * 2], x.tap.S[(a.a + j) * 2 + 1], x.tap.w[(a.a + j) * 2], x.tap.w[(a.a + j) * 2 + 1]);
     for (let j = Math.max(0, k - 2); j <= Math.min(k, nb - 1); j++) cmAt |= y.tap.cm[(b.a + j) * 2] | y.tap.cm[(b.a + j) * 2 + 1];
-    const cls = kind === 'ref' ? 'refDiff' : sAt > 0 ? 'misclass' : kind === 'A' && cmAt ? 'stageA' : 'leak';
+    const cls = kind === 'ref' ? 'refDiff' : sAt > 0 ? 'misclass' : 'leak';
     res.push({ round: id, cls, step: k, S: +sAt.toFixed(4), cmBase: !!cmAt, Smax });
   }
   const bad = res.filter((r) => r.cls === 'leak' || r.cls === 'missing' || r.cls === 'refDiff');
@@ -209,20 +212,20 @@ let fail = 0;
 const log = (s) => console.log(s);
 log(`s0_diff  뿌리 ${ROOT0}${REF ? `  ref ${REF}` : ''}  묶음 ${BATS.join(',')}  Hz ${HZS.join(',')} (arm = 입력 Hz 60/120·물리 120, 나머지 = 물리 Hz)  무기 ${WEAPONS.join(',')} (arm 만 고름)  입력 방식 ${GINPUTS.join(',')}  mixX ${MIXX}  out ${OUT}`);
 for (const J of jobs) {
-  const mk = (build, gin) => ({ ...J, sets: [...BUILDS[build], ...(build === 'new' ? ginSet(gin) : []), ...(J.battery === 'arm' ? [] : dtSet(J.hz))] });
+  const mk = (build, gin, ref) => ({ ...J, sets: [...(ref && build === 'B' ? REF_B : BUILDS[build]), ...(build === 'new' ? ginSet(gin) : []), ...(J.battery === 'arm' ? [] : dtSet(J.hz))] });
   const tagOf = (build, gin, ref) => `${J.label.replace(/[^A-Za-z0-9=.]+/g, '_')}_${build}${build === 'new' ? '_' + gin : ''}${ref ? '_ref' : ''}`;
   const gins = J.fingers ? GINPUTS : ['wind'];
   const row = { job: J.label, battery: J.battery, hz: J.hz, weapon: J.weapon ?? 'longsword', cmp: [] };
+  const mine = {}; // 이 체크아웃에서 이미 돈 것 (ref 견줌에 다시 쓴다)
   if (!REF_ONLY) {
-    const B = run(ROOT0, mk('B'), tagOf('B'));
-    const A = run(ROOT0, mk('A'), tagOf('A'));
+    const B = (mine.B = run(ROOT0, mk('B'), tagOf('B')));
     row.shaB = B.sha;
-    row.shaA = A.sha;
     for (const g of gins) {
       const N = run(ROOT0, mk('new', g), tagOf('new', g));
-      for (const [kind, base] of [['B', B], ['A', A]]) {
-        const c = compare(N, base, kind);
-        row.cmp.push({ vs: kind, ginput: g, shaNew: N.sha, ...c });
+      if (g === 'wind') mine.new = N;
+      {
+        const c = compare(N, B, 'B');
+        row.cmp.push({ vs: 'B', ginput: g, shaNew: N.sha, ...c });
         if (c.verdict === 'FAIL') fail++;
       }
       if (J.battery === 'arm') {
@@ -236,13 +239,13 @@ for (const J of jobs) {
         row.misclass ||= {};
         row.misclass[g] = { n: per.length, ids: per.map((p) => p.id), sGeMixX: per.filter((p) => p.Smax >= MIXX).map((p) => p.id), sPos: per.filter((p) => p.Smax > 0).map((p) => `${p.id}(${p.Smax})`) };
       }
-      log(`${J.label.padEnd(26)} ${g.padEnd(6)} new ${N.sha.slice(0, 8)} B ${B.sha.slice(0, 8)} A ${A.sha.slice(0, 8)}  ` + row.cmp.filter((c) => c.ginput === g).map((c) => `vs ${c.vs}: ${c.verdict}${c.verdict !== 'IDENTICAL' ? ` (${summ(c)})` : ''}`).join('  ') + `  (${N.s} s)`);
+      log(`${J.label.padEnd(26)} ${g.padEnd(6)} new ${N.sha.slice(0, 8)} B ${B.sha.slice(0, 8)}  ` + row.cmp.filter((c) => c.ginput === g).map((c) => `vs ${c.vs}: ${c.verdict}${c.verdict !== 'IDENTICAL' ? ` (${summ(c)})` : ''}`).join('  ') + `  (${N.s} s)`);
     }
   }
   if (REF) {
     for (const [build, g] of [['new', 'wind'], ['B']]) {
-      const X = run(ROOT0, mk(build, g), tagOf(build, g) + '_x');
-      const Y = run(REF, mk(build, g), tagOf(build, g, true));
+      const X = mine[build] ?? run(ROOT0, mk(build, g), tagOf(build, g) + '_x');
+      const Y = run(REF, mk(build, g, true), tagOf(build, g, true));
       const c = compare(X, Y, 'ref');
       row.cmp.push({ vs: `ref:${build}`, ginput: g ?? null, shaNew: X.sha, shaRef: Y.sha, ...c });
       if (c.verdict !== 'IDENTICAL') fail++;
@@ -304,7 +307,7 @@ const classified = [];
 for (const r of results) for (const c of r.cmp) for (const q of c.rounds) if (q.cls !== 'same') classified.push({ job: r.job, vs: c.vs, ginput: c.ginput, ...q });
 const md = [];
 md.push(`# s0_diff (${new Date().toISOString()}, ${((Date.now() - t00) / 1000).toFixed(0)} s)`, '');
-md.push(`뿌리 \`${ROOT0}\`${REF ? `, ref \`${REF}\`` : ''}. Hz: arm = 입력 Hz (물리 120), live·dance·fights = 물리 Hz. 무기: arm 만 ${WEAPONS.join('·')}, 나머지 롱소드 (고를 수 없음).`, '');
+md.push(`뿌리 \`${ROOT0}\`${REF ? `, ref \`${REF}\` (ref 기준 B: ${REF_B.join(' ')})` : ''}. Hz: arm = 입력 Hz (물리 120), live·dance·fights = 물리 Hz. 무기: arm 만 ${WEAPONS.join('·')}, 나머지 롱소드 (고를 수 없음).`, '');
 md.push('| 묶음 | 입력 방식 | vs | 판정 | 표준 출력 | 탭 | 가름 |', '|---|---|---|---|---|---|---|');
 for (const r of results) for (const c of r.cmp) md.push(`| ${r.job} | ${c.ginput ?? '-'} | ${c.vs} | ${c.verdict} | ${c.sameStdout ? '같음' : '다름'} | ${c.sameTap ? '같음' : '다름'} | ${c.verdict === 'IDENTICAL' ? '' : summ(c)} |`);
 if (Object.keys(mis).length) {
