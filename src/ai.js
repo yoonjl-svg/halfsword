@@ -84,7 +84,7 @@ export class AI {
   constructor(me, foe, levelName = 'normal', persona = null) {
     this.me = me;
     this.foe = foe;
-    me.ai = this; // 상대(플레이어)의 결심 판정이 "AI가 치는 중"인지 읽는다 (skill.js threatened. 읽기만)
+    me.ai = this; // 파이터에서 제 AI 를 찾는 뒤쪽 고리. 지금 src 에서 읽는 곳 없음 (읽던 옛 결심 판정 skill.js threatened 는 R2 W5 가 지움)
     this.sense = new Senses(me, foe);
     this.persona = persona || {};
     this.school = schoolOf(this.persona.school);

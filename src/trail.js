@@ -19,7 +19,7 @@ export class InputTrail {
     this.touch = []; // { x, y, t, v } (null = 손가락을 뗀 자리: 선을 끊는다)
     this.pad = []; // { x, y, t } (패드 좌표, m)
     this.enabled = true;
-    this.goldT = -1; // 결심 확정 신호: 이 시각(초)까지 흔적이 금색으로 밝아지고 굵어진다
+    this.goldT = -1; // 확정 신호 (몸이 클립에 실림): 이 시각(초)까지 흔적이 금색으로 밝아지고 굵어진다
     this.goldLen = 0.3;
     this.drawn = false; // 캔버스에 지우지 않은 그림이 있나 (없으면 지우지 않는다 — 빈 캔버스를 매 프레임 지우지 않게)
     this.resize();
@@ -57,7 +57,7 @@ export class InputTrail {
     this.pad.push({ x, y, t });
   }
 
-  /** 결심 베기 확정 (온몸 베기 L1): 지금 보이는 흔적을 dur 초 동안 금색으로 밝고 굵게 */
+  /** 확정 신호 (손짓 층 onCommit('B') = 베기의 첫 c(S) = 1 스텝, main.js): 지금 보이는 흔적을 dur 초 동안 금색으로 밝고 굵게 */
   confirm(t, dur = 0.3) {
     this.goldT = t + dur;
     this.goldLen = dur;
@@ -87,7 +87,7 @@ export class InputTrail {
     // 아래에서 무엇이든 그릴 수 있으면 다음 프레임에 지운다 (선 두 점 이상, 또는 마우스 원판)
     if (this.touch.length > 1 || (showPad && this.pad.length)) this.drawn = true;
 
-    // 결심 확정 신호: 금색으로 밝고 굵게 (확정 순간 1 → 끝에 0)
+    // 확정 신호: 금색으로 밝고 굵게 (확정 순간 1 → 끝에 0)
     const gold = this.goldT > now ? Math.min(1, (this.goldT - now) / this.goldLen) : 0;
     // 손가락 흔적: 어두운 테두리 위에 밝은 선 (모래·하늘 어디서든 보이게). 처음엔 또렷하다가 끝에 빨리 사라진다
     for (const pass of [0, 1]) {

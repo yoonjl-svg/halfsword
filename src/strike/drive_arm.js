@@ -948,7 +948,7 @@ const ArmMixin = {
     hl.copy(h);
     this.noteHand(hl);
   },
-  /** 'finger' 베기 중 겨눔: Δ·(slerp(I, q_이어받기, k)·손가락 겨눔 (cutPlane 뒤)) */
+  /** 'finger' 베기 중 겨눔: Δ·(slerp(I, q_이어받기, k)·손가락 겨눔 (fighter 팔 베기 겨눔. 옛 cutPlane 은 R2 W5 가 지움)) */
   mixAimFinger(aim) {
     const st = this.fingerFrame(), cmd = this.cmd, dt = this.f.lastDt || 1 / 120;
     if (st.fCutA !== this._cutSeen) {

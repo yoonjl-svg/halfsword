@@ -454,7 +454,7 @@ function newRound(weaponId) {
   player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
-  // 결심 베기 (온몸 베기 L1): 플레이어만 손가락 원래 궤적으로 결심을 판정한다. 지난 판의 궤적은 읽지 않는다
+  // 손가락 원래 궤적: 플레이어만 (R1 팔 놀림 skill.readFinger·R2 손짓 층이 읽는다). 지난 판의 궤적은 읽지 않는다
   input.fingerTrace.clear();
   input.syncHand(); // R0 입력: 스텝 읽기 커서도 새로
   player.skill.detect = true;
@@ -1440,7 +1440,7 @@ function frame(now) {
   const paint = renderCap.tick(dt, settings.fpsCap ? CONFIG.RENDER.fpsCap : 0); // 이번 프레임을 그리나
 
   if (state === 'fight' && player) {
-    // 손 목표 갱신 (입력 → 플레이어). 손가락 궤적에 이 프레임 시각을 알린다 (결심 판정이 손가락이 멈췄는지 벽시계로 잰다)
+    // 손 목표 갱신 (입력 → 플레이어). 손가락 궤적에 이 프레임 시각을 알린다 (손짓 층·R1 팔 놀림이 프레임 사이 frameDt 로 손가락이 멈췄는지 잰다)
     input.fingerTrace.tick(now);
     const d = input.consumeHandDelta();
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)

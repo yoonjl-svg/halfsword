@@ -8,14 +8,14 @@ import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
 
 // 손가락 궤적 조각의 표시 (FingerTrace.flag)
-export const TRACE_REPLAY = 1; // 멈칫 동안 모았다가 흘려 넣은 조각 (결심 판정은 건너뛴다. 연출 층 L6a가 단다)
+export const TRACE_REPLAY = 1; // 멈칫 동안 모았다가 흘려 넣은 조각 (손짓 층 빠르기 재기는 건너뛴다. 연출 층 L6a가 단다)
 export const TRACE_LIFT = 2; // 손가락을 뗀 순간 (dx = dy = 0)
 
 /**
  * 손가락 원래 궤적 (온몸 베기 docs/whole_body_strike.md 4-5): 칼 쪽 손가락(PC는 잠긴 마우스)의 움직임을
  * (시각 ms, dx, dy, 표시) 조각으로 고리 버퍼에 쌓는다. 시각은 이벤트가 생긴 벽시계 시각(e.timeStamp),
  * dx·dy는 handOffset에 더하는 것과 같은 배율의 패드 m (+x 오른쪽, +y 위)이고 자르지 않는다.
- * 결심 판정(L1)이 걸러진 skill.vel이나 잘린 handOffset 대신 이것을 읽는다: 폰 새로고침 빠르기(60/90/120 Hz)와
+ * R1 팔 놀림(skill.readFinger)·R2 손짓 층(gesture.js)이 걸러진 skill.vel이나 잘린 handOffset 대신 이것을 읽는다: 폰 새로고침 빠르기(60/90/120 Hz)와
  * 상관없이 긋기 시작과 빠르기를 같게 본다. 미리 만든 배열만 쓴다 (조각마다 새로 만들지 않는다)
  */
 export class FingerTrace {
@@ -225,7 +225,7 @@ export class Input {
     //  press = 지금 누르고 있는 손가락(마우스) { id, t(누른 시각 ms), x, y, moved(움직인 거리 px), mouse, ok }
     this.taps = 0;
     this.press = null;
-    // 칼 쪽 손가락 원래 궤적 (온몸 베기 결심 판정이 읽는다). R0 입력이 켜지면 조각이 화면 프레임보다 잦다(120 Hz 터치, 1000 Hz 마우스) → 고리를 넉넉히
+    // 칼 쪽 손가락 원래 궤적 (R1 팔 놀림·R2 손짓 층이 읽는다). R0 입력이 켜지면 조각이 화면 프레임보다 잦다(120 Hz 터치, 1000 Hz 마우스) → 고리를 넉넉히
     this.fingerTrace = new FingerTrace(INPUT.coalesce ? 256 : 64);
     this._cur = { on: false, x: 0, y: 0 }; // R0 입력: 스텝 읽기 커서 (지난 handDeltaAt 이 읽은 손가락 자리)
     this._at = { x: 0, y: 0 };

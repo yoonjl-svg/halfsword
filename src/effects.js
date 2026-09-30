@@ -169,7 +169,7 @@ export function haptic(strength = 1) {
   }
 }
 
-/** 아주 짧은 진동 한 번 (ms). 안드로이드만: 아이폰은 손가락을 누르거나 뗀 순간에만 울릴 수 있어 여기선 건너뛴다 (결심 확정 신호) */
+/** 아주 짧은 진동 한 번 (ms). 안드로이드만: 아이폰은 손가락을 누르거나 뗀 순간에만 울릴 수 있어 여기선 건너뛴다 (확정 신호, 몸이 클립에 실림) */
 export function hapticPulse(ms) {
   try {
     if (!navigator.vibrate) return;
