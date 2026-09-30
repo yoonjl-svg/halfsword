@@ -62,8 +62,8 @@ export const BODY = {
   //  뒤에 남은 발이 발끝으로 4cm 남짓 끌린다, 성능
   weightMode: 'hybrid',
   // 관절 한도·자기 몸 충돌 (검술 보정 v2 설계 '뒤틀림은 물리가 막는다', 사장님 9/30 23:40 켬). 값은 사람 움직임 봉투
-  //  (docs/motion/human_envelope_2026-09-30.md) 의 물리 범위이지 튜닝 값이 아니다(fighter.js HUMAN). false = 오늘 그대로(바이트까지)
-  humanLimits: false,
+  //  (docs/motion/human_envelope_2026-09-30.md) 의 물리 범위이지 튜닝 값이 아니다(fighter.js HUMAN). false = 오늘 그대로(바이트까지, 옛 기준 sha)
+  humanLimits: true,
 };
 
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)

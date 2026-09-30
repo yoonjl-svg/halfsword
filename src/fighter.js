@@ -34,6 +34,10 @@ const weaponBit = (i) => (i === 0 ? 4 : 16);
 // 발은 따로: 상대 발·다리와는 부딪히지 않는다 (서로 발을 밟고 마찰로 엉겨 붙는 것을 막는다)
 const footBit = (i) => (i === 0 ? 64 : 128);
 const groups = (member, filter) => (member << 16) | filter;
+// 자기 몸 충돌 (BODY.humanLimits 일 때만): 제 몸통·허벅지, 제 칼팔
+const torsoBit = (i) => (i === 0 ? 256 : 512);
+const armSBit = (i) => (i === 0 ? 1024 : 2048);
+const TORSO_PARTS = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
 // ─────────────────────────────────────────────────────────────
@@ -97,6 +101,46 @@ function jointDefs(s) {
     { p: 'shinB', c: 'footB', at: [0, 0.08, -s * 0.095], type: 'hinge', k: 700, d: 24, max: 240, lim: [-0.6, 0.8] },
   ];
 }
+
+// ─────────────────────────────────────────────────────────────
+//  사람 관절 범위 (BODY.humanLimits, 사장님 9/30 23:40 "관절 한도·자기 몸 충돌 켬"). 튜닝 값이 아니라 물리 범위다
+//  — 확인표 '사장님 확인 전 (해부학 범위)'. 출처: docs/motion/human_envelope_2026-09-30.md 표 1 (tools/motion/human_envelope.json
+//  literature·bySize.large), 아래팔 돌림만 봉투에 칸이 없어 문헌: AAOS, "Joint Motion: Method of Measuring and Recording" (1965) —
+//  엎침 80°·뒤침 80° (Norkin & White, "Measurement of Joint Motion" 도 같은 값).
+//  엔진(Rapier) 공 관절 한도는 축마다 상대 회전 쿼터니언 성분(sin(θ/2))에 걸리고 기준(0)이 몸체 틀끼리 같은 자세라, 섞인 회전에선
+//  근사다(탐침: 칼 어깨를 축 한도로 옮기면 억지로 민 표본의 27~34 % 가 면 범위 밖). 그래서 칼 어깨 면과 손목 원뿔은 밧줄(rope = 두 점
+//  사이 최대 거리)로 각을 정확히 막는다: 관절 자리 W 에서 방향 u 로 L 인 점과 방향 n 으로 K 인 점 사이 거리 ≤ √(L²+K²−2LK·cosα)
+//  ⟺ u 와 n 사이 각 ≤ α. K ≫ L 로 두면 거리가 한계 근처에서 가장 빨리 변해 엔진의 mm 위치 오차가 작은 각 오차가 된다(기하, 각은 L·K 와 무관).
+// ─────────────────────────────────────────────────────────────
+const HD = Math.PI / 180;
+export const HUMAN = {
+  spineTwist: [-29, 46], // 척추 비틀림(어깨선 − 엉덩이선) °, 봉투 클립 크게 범위 (+ = 칼 든 어깨가 뒤로). AAOS 한쪽 45 와 맞음
+  shoulderPlane: [-45, 130], // 칼 어깨 들림 면 °: 수평 벌림 약 45 · 수평 모음(몸 앞 가로지름) 약 130 (봉투 문헌 칸, AAOS)
+  shoulderElev: 180, // 칼 어깨 들림 ° (굽힘·벌림 180, AAOS)
+  shoulderExt: 60, // 칼 어깨 폄(뒤로) ° (AAOS)
+  elbow: 150, // 칼 팔꿈치 굽힘 ° (AAOS 150, 봉투 문헌 칸)
+  gripFlex: 163, // 아래팔-칼 각 ° 최대: 봉투 손목 칸 클립 크게 최대 163 (135~160 부터 무리), 설계 측정 줄 '> 163'
+  forearmRoll: 80, // 아래팔 엎침·뒤침 ° (AAOS 80 · 80)
+};
+/**
+ * BODY.humanLimits 일 때 관절 표를 사람 범위로 (몸이 만들어질 때 한 번). false 면 부르지 않는다 → 오늘 그대로
+ *  - 척추 비틀림(축 한도 y): 봉투 −29~46° 를 오늘 복부 0.5 : 가슴 0.6 비율로 나눈다. 엔진 y 가 + 면 칼 든 어깨가 앞으로 → 봉투 + (뒤로) 는 엔진 −
+ *  - 칼 팔꿈치(경첩): 0~150°
+ *  - 칼 어깨 면은 밧줄 (Fighter.shoulderOn), 손목 원뿔은 밧줄 (Fighter.gripConeOn)
+ */
+export function humanJointDefs(defs, s) {
+  const [tw0, tw1] = HUMAN.spineTwist;
+  const share = { abdomen: 0.5 / 1.1, chest: 0.6 / 1.1 }; // 오늘 척추 한도 0.5 : 0.6 (jointDefs) 의 비율
+  const sideLim = (a, b) => (s > 0 ? [a * HD, b * HD] : [-b * HD, -a * HD]);
+  for (const jd of defs) {
+    if (jd.c === 'abdomen' || jd.c === 'chest') jd.lim = { ...jd.lim, y: sideLim(-tw1 * share[jd.c], -tw0 * share[jd.c]) };
+    if (jd.c === 'farmS') jd.lim = [0, HUMAN.elbow * HD];
+  }
+  return defs;
+}
+// 밧줄 기하: 관절 자리에서 몸 쪽 방향으로 L = 1 m, 다른 쪽 방향으로 K = 10 m 인 가상의 두 점 (각은 L·K 와 무관, 위 머리말)
+const ROPE_L = 1;
+const ROPE_K = 10;
 
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -258,7 +302,15 @@ export class Fighter {
     const otherWeapon = weaponBit(1 - this.index);
     const bodyGroups = groups(myBody, BIT.ground | otherBody | otherWeapon);
     const footGroups = groups(footBit(this.index), BIT.ground | otherWeapon);
-    const weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index));
+    let weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index));
+    // 자기 몸 충돌 (BODY.humanLimits): 제 칼·칼팔(위팔·아래팔) ↔ 제 몸통(골반·배·가슴)·허벅지. 그 밖의 제 몸끼리는 그대로 지나간다.
+    //  제 몸 닿음은 combat.js 가 같은 싸움꾼 쌍을 버려 상처·부딪힘·불꽃·소리·멈칫이 되지 않는다(pairOf·접촉힘 사건)
+    const HL = BODY.humanLimits;
+    const myTorso = torsoBit(this.index);
+    const myArmS = armSBit(this.index);
+    const torsoGroups = groups(myBody | myTorso, BIT.ground | otherBody | otherWeapon | weaponBit(this.index) | myArmS);
+    const armSGroups = groups(myBody | myArmS, BIT.ground | otherBody | otherWeapon | myTorso);
+    if (HL) weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index) | myTorso);
 
     const defs = partDefs(this.side);
     this.localPos = {};
@@ -280,7 +332,7 @@ export class Fighter {
         .setMass(d.mass)
         // 옷·살끼리는 잘 미끄러진다 (마찰이 크면 팔이 상대 몸에 걸려 같이 끌려간다)
         .setFriction(d.foot ? 0.9 : 0.25)
-        .setCollisionGroups(d.foot ? footGroups : bodyGroups);
+        .setCollisionGroups(d.foot ? footGroups : HL && TORSO_PARTS.has(d.name) ? torsoGroups : HL && (d.name === 'uarmS' || d.name === 'farmS') ? armSGroups : bodyGroups);
       const col = world.createCollider(cd, rb);
       if (d.name === 'abdomen') {
         // 배는 가볍고(10kg) 무거운 골반과 상체(30kg) 사이에 끼어 있어서, 엔진의 반복 계산(6회)으로는
@@ -329,6 +381,7 @@ export class Fighter {
     // 관절 생성 + 근육(관절 모터) + 각도 제한
     const jdefs = jointDefs(this.side);
     if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
+    if (HL) humanJointDefs(jdefs, this.side);
     for (const jd of jdefs) {
       const P = new THREE.Vector3(...jd.at);
       const rp = this.localRot[jd.p];
@@ -357,6 +410,11 @@ export class Fighter {
       this.joints.push({ joint, name: jd.c, parent: this.bodies[jd.p], child: this.bodies[jd.c], type: jd.type, manual: !!jd.manual, restInv: rest.clone().invert(), k: jd.k, d: jd.d, max: jd.max, target: new THREE.Quaternion() });
     }
     this.jointByName = Object.fromEntries(this.joints.map((j) => [j.name, j]));
+    // 자기 몸 충돌: 어깨에서 이어진 가슴 ↔ 위팔은 원래 겹쳐 있어 닿음을 끈다 (관절로 이어진 쌍)
+    if (HL) {
+      this.jointByName.uarmS.joint.setContactsEnabled(false);
+      this.shoulderOn();
+    }
 
     // ── 똑바로 서기: 보이지 않는 "기준 막대"(운동학 물체)에 골반을 회전 모터로 묶는다 ──
     //  위치는 자유(골반을 끌고 다니지 않음), 회전만 모터로 맞춘다. 엔진이 한꺼번에 풀어서 떨리지 않는다.
@@ -485,6 +543,7 @@ export class Fighter {
       sword,
       true,
     );
+    if (HL) this.gripConeOn();
     this.swordGroup = group;
     this.swordMass = sword.mass();
     // 타격 계산용: 칼의 질량·주관성 모멘트(몸체 기준)와 손 기준 회전 관성
@@ -1099,6 +1158,48 @@ export class Fighter {
     if (!this.armed) return;
     this.armed = false;
     this.world.removeImpulseJoint(this.gripJoint, true);
+    if (this.gripCone) for (const j of this.gripCone) this.world.removeImpulseJoint(j, true);
+    this.gripCone = null;
+  }
+
+  /**
+   * 손목 원뿔 (BODY.humanLimits, 설계 P1 = ② 의 전제). 엔진 공 관절 축 한도는 기준(0)이 '칼이 아래팔에 수직'이라 원뿔을 못 그린다
+   *  → 밧줄(rope, 두 점 사이 최대 거리)로 각을 정확히 막는다. 손목 W 에서 길이 e 인 두 점 사이 거리 = 2e·sin(각/2) 이 커지지 않게:
+   *   (1) 아래팔-칼 각 ≤ HUMAN.gripFlex: 아래팔 축 위 W + e·x(아래팔) ↔ 칼 축 위 W + e·y(칼)
+   *   (2) 아래팔 돌림 ≤ HUMAN.forearmRoll: 경첩 축 W + e·z(아래팔) ↔ 칼 면 W + e·z(칼). 쥔 자세에서 칼 면 = 팔꿈치 경첩 축이라
+   *       곧은 칼의 굴림 = 엎침·뒤침. 옆으로 꺾은 손목(요골·척골 치우침)도 같은 몫을 쓴다
+   *  e = 아래팔 끝에서 손목까지 0.13 m (손목 관절 자리 재사용, 기하. 막는 각은 e 와 무관). 칼을 놓치면 풀고(dropSword) 다시 쥐면 건다(revive.js)
+   */
+  gripConeOn() {
+    if (this.gripCone) return;
+    const R = this.R;
+    const L = ROPE_L;
+    const K = ROPE_K;
+    const len = (deg) => Math.sqrt(L * L + K * K - 2 * L * K * Math.cos(deg * HD));
+    const rope = (deg, a1, a2) => this.world.createImpulseJoint(R.JointData.rope(len(deg), a1, a2), this.bodies.farmS, this.sword, true);
+    // 손목 W = 아래팔 몸체 (0.13, 0, 0) = 칼 몸체 원점 (위 gripJoint)
+    this.gripCone = [rope(HUMAN.gripFlex, { x: 0.13 + K, y: 0, z: 0 }, { x: 0, y: L, z: 0 }), rope(HUMAN.forearmRoll, { x: 0.13, y: 0, z: K }, { x: 0, y: 0, z: L })];
+  }
+
+  /**
+   * 칼 어깨 들림 면 −45°~130° (수평 벌림 45 · 수평 모음 130, HUMAN.shoulderPlane): 면 = atan2(앞, 바깥) 인 위팔 방향 u 가 두 반공간
+   *  (면 40° 쪽 수평 n1 과 u 의 각 ≤ 90° → 면 −50~130, 면 45° 쪽 n2 → 면 −45~135) 의 교집합 = 쐐기 −45~130 에 있게 한다. 위팔 끝 쪽 점(어깨에서 L)
+   *  ↔ 가슴에 붙은 먼 점(어깨에서 n 쪽 K) 밧줄 둘. 쐐기는 곧게 위·아래(들림 0·180)를 품으므로 들림 0~180 은 따로 막지 않는다.
+   *  근사: 봉투의 폄 60°(늘어뜨린 팔을 뒤로)는 이 쐐기가 대신 막는다(팔을 −45° 면 뒤로 늘어뜨릴 수 없음) — 확인표 줄에 적음
+   */
+  shoulderOn() {
+    const R = this.R;
+    const s = this.side;
+    const L = ROPE_L;
+    const K = ROPE_K;
+    const [p0, p1] = HUMAN.shoulderPlane;
+    const S = { x: 0, y: 0.1, z: 0.2 * s }; // 어깨 (가슴 몸체 기준, jointDefs uarmS 자리 − 가슴 자리)
+    const rope = (c) => {
+      const n = { x: Math.sin(c * HD), z: s * Math.cos(c * HD) }; // 면 c 쪽 수평 방향 (가슴 틀: 앞 x, 바깥 = s·z)
+      return this.world.createImpulseJoint(R.JointData.rope(Math.sqrt(L * L + K * K), { x: S.x + K * n.x, y: S.y, z: S.z + K * n.z }, { x: -0.15 + L, y: 0, z: 0 }), this.bodies.chest, this.bodies.uarmS, true);
+    };
+    // 위팔 몸체: 뼈가 x 를 따라 누움, 어깨 = (−0.15, 0, 0) (partDefs uarmS 자리 0.15). 반공간 가운데 면 = 끝 − 90 / 시작 + 90
+    this.shoulderRopes = [rope(p1 - 90), rope(p0 + 90)];
   }
 
   /**
@@ -1782,6 +1883,9 @@ export class Fighter {
     if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(flat);
     flatTarget.normalize();
     if (flatTarget.dot(flat) < 0) flatTarget.negate();
+    // 사람 관절 범위(BODY.humanLimits): 가까운 쪽 칼 면이 아래팔 돌림 범위(HUMAN.forearmRoll, 손목 밧줄) 밖이고 반대쪽은 안이면 반대쪽 날을 쓴다 (양날)
+    const zf = BODY.humanLimits ? _cr2.set(0, 0, 1).applyQuaternion(rot(forearm, _cq)) : null;
+    if (zf) rollSide(flatTarget, zf);
     const ev = edgeDir.length();
     if (v2 && this.corr?.win) {
       // 보정 v2 ① 날 맞춤 (창 안에서만, corr.js): 굴림 목표만 바꾼다. 판정(combat.js:179-181)이 쓸 상대 기준 속도 rel⊥ 로
@@ -1797,6 +1901,7 @@ export class Fighter {
         mf.normalize();
         mfRel.normalize();
         if (mf.dot(flat) < 0) mf.negate();
+        if (zf) rollSide(mf, zf);
         if (mfRel.dot(mf) < 0) mfRel.negate();
         mf.lerp(mfRel, sv).normalize();
         flatTarget.lerp(mf, moving);
@@ -1809,6 +1914,7 @@ export class Fighter {
       if (moving > 0) {
         const mf = edgeDir.crossVectors(blade, edgeDir).normalize();
         if (mf.dot(flat) < 0) mf.negate();
+        if (zf) rollSide(mf, zf);
         flatTarget.lerp(mf, moving);
         if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
         flatTarget.normalize();
@@ -2308,6 +2414,13 @@ const _paleColor = new THREE.Color(0xb8b4a8);
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
 const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
+const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
+const _cq = new THREE.Quaternion();
+const COS_ROLL = Math.cos(HUMAN.forearmRoll * HD);
+/** 칼 면 목표 t(단위, 칼에 수직)가 아래팔 돌림 범위 밖이고 −t 는 안이면 뒤집는다 (BODY.humanLimits 일 때만 부른다) */
+function rollSide(t, zf) {
+  if (t.dot(zf) < COS_ROLL && -t.dot(zf) >= COS_ROLL) t.negate();
+}
 const _ur = new THREE.Vector3();
 const _urq = new THREE.Quaternion();
 const _axis2 = new THREE.Vector3();

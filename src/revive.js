@@ -16,6 +16,7 @@
 //  fighter.js 에는 갈고리 몇 줄만 둔다: 생성자(reviveOf) · die(tryRevive) · updateState(reviveTick) · applyWound · shove
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { BODY } from './config.js';
 
 // 시간(초)과 되찾는 몸 상태의 기본값. 캐릭터 시트의 revive 가 같은 이름으로 덮어쓴다 (limbs 는 항목별로)
 export const REVIVE = {
@@ -214,6 +215,7 @@ function attachSword(f, V) {
   // 날아오는 동안 꺼 둔 충돌을 부활 중의 유령 칼로 (부활이 끝나면 ghost 가 원래대로 되돌린다)
   for (const [col, g] of V.groups || []) if (f.swordColliders.includes(col)) col.setCollisionGroups(ghostSword(g));
   f.gripJoint = f.world.createImpulseJoint(f.R.JointData.spherical({ x: 0.13, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }), f.bodies.farmS, sw, true);
+  if (BODY.humanLimits) f.gripConeOn(); // 손목 원뿔도 다시 (fighter.js, 사람 관절 범위)
   f.armed = true;
   f.tipPrev = null; // 칼끝 자리가 한순간에 옮겨졌다: 칼끝 속도 추정이 튀지 않게 (breakWeapon 과 같다)
   f.hitPointPrev = null;
