@@ -1,0 +1,107 @@
+# 검술 보정 v2 구현 기록 — 2026-10-01 (feat-corr)
+
+- 가지 `feat-corr` (b03af1a 위). 설계 `docs/strike/correction_v2_design_2026-10-01.md`(권위), 측정 `docs/strike/corr_v2_measure.md`, 기준 sha `docs/strike/corr_baselines.md`, 시험판 메모 `docs/strike/corr_v2_probe_note.md`, 확인표 (아) 52~82행.
+- 사장님 9/30 23:40 답 넷(아래 '사장님 답')은 그대로 지었고, 나머지는 디렉터 가답(사장님 확인 전)이다. 관절 범위 값은 모두 '사장님 확인 전 (해부학 범위)'.
+- 합치기·시험판 복사(public/corr/)는 디렉터. 이 가지는 밀지 않았다.
+
+## 작업별로 지은 것
+| 작업 | 커밋 | 지은 것 | 관문 |
+|---|---|---|---|
+| 1 스위치·배관 | cc9e1bb | `SKILL.corr`/`corrAI` 'old', `corrTip` true, `BODY.humanLimits`(L 전 false). `skill.corr`·`corrTip`(skill.js 생성자), ai.js setLevel 이 `corrAI`·`corrTip=false` 를 씀. main.js 설정 `corr`·`corrTip` + `?corr=v2|old`·`?tip=0|1`(그 접속만, 저장 안 함). index.html '보정 방식 옛/새'·'끝점 겨눔' 줄과 새 보정 설명(겨눔 끔이면 가운데 구절 뺌) | 한도 끔 12223139 / 2f453e0b, SKILL.corr=v2 fights12 12223139 |
+| 3 당김 없애기·순서 | b15dee2 | v2·s > 0: 손 당김(1672)·방향 당김(1696-1700)·자세표 몸 목표(619-623)·(1−gw) 몸 돌림 없앰, 몸 = 골반 s·0.5·turn → 가슴 s·turn(0.35·골반 0.5 재사용), 찌르기 몸은 th.w·s 명령, 이어 베기 없앰(aimRaw = anchor), gw ≥ 1 분기 없앰, HUD 이름은 쉴 때만. 마무리 FINISH_GUARDS 는 s·fin.amt 명령으로 남김(finish.js·guards.js 마무리 부분 손대지 않음). 한손 BASE_ONE 도 함께 빠짐 | 동일성, s0 IDENTICAL |
+| 4 탐지기·① 날 맞춤 | a19d3a9 | `src/corr.js` 탐지기(1706 뒤, 제 scratch, 난수 없음): 쓸기 면 Π, 상대 몸 부위 후보(띠·닿는 거리·앞쪽·다가옴), 겨눈 부위 창 열 때 고정. ① 창 τ = d/v_close < T_roll(= 8·I/kd 실행 중 유도, 롱소드 67.6 ms), 굴림 목표 mf = norm(lerp(mf, mfRel, s)), moving = smoothstep(max(\|own⊥\|,\|rel⊥\|), 0.5, 2.5). combat.js 는 v2 공격자만 `bladeTouch`(+ `touchStep`) 적음 | 동일성, s0 IDENTICAL |
+| L 관절 한도·제 몸 충돌 | bbf642b | `HUMAN`(fighter.js): 척추 비틀림 −29~46°(복부 0.5 : 가슴 0.6 로 나눔, 칼 쪽 부호), 칼 팔꿈치 0~150°, 칼 어깨 들림 면 −45~130°(밧줄 둘), 손목 원뿔 아래팔-칼 ≤ 163°·아래팔 돌림 ≤ 80°(밧줄 둘, 칼 놓으면 풀고 다시 쥐면 다시), 제 칼·칼팔 ↔ 제 몸통·허벅지 충돌(제 몸 닿음은 상처·부딪힘·불꽃·소리·멈칫 아님), 한도 켬일 때 날 부호 규칙 `rollSide`. 기본 true 로 뒤집음 | 한도 끔 = 오늘, 기본 5613b5b9 / 37f25f76 두 번 |
+| 6 되돌아옴 ③ | 7a474b2 | v2·s > 0·선 자세·총 아님: 시작 조건 오늘 그대로(recoverDelay 0.25 s 재사용), 목적지 dest = lerp(homeGuard, pad*, s)(pad* = guardDir 닫힌 역, 손 → 상대 가슴), recoverSpeed 1.2 걷기, `recoverDest`·`recoverP` = 1 − d/d0, `lift`(handHeld 참 → 거짓), 'ready' 사건(`readies`·`readyT`: 칼끝이 가슴 상자 단면 앞, 휘두르지 않음, 두 발 디딤). 무릎 = 오늘 걷기 | 동일성, s0 IDENTICAL |
+| 5 끝점 겨눔 ② | b3a13b0 | corr.js tipStep(v2 플레이어·`corrTip`·손목 원뿔 있음(= humanLimits)·선 자세·총 아님·th.w = 0): 켜짐은 뗌 스텝에만, 손가락이 아직 긋는 중(skill.quiet = 0), toward > 0 을 탐지기가 직접 계산, 겨눈 부위가 Π 안 앞쪽, φ손가락 < φ*. aim 을 n 축으로 s·(φ*−φ손가락) 돌림, 면 밖 성분 그대로. 닫힘: contact·pastEdge·recede·band·stopped, 닫힐 때 aim 붙잡음, 풀림 walk(slerp(붙잡음, 걷기 aim, recoverP)) 또는 touch(손가락에 바로 넘김, 튐 `tipJump`). aimDirW 도 같은 aim. 손목 걸쇠 안 씀 | 동일성, s0(겨눔 켬) IDENTICAL |
+| 2 도구 | 4fce93e | corr_lib·corr_s0·chain_corr·envelope_check·corr_ai_battery·corr_shots, live_battery·body_share(corr 인식)·skill_level_duel `--both`. 옛 출력 바이트 같음 | live 2f453e0b · body_share dab0a69d · duel be742581 (한도 끔 = b03af1a) |
+| 7 측정·기록·확인표 | `corr item7` (이 기록이 든 커밋) | `docs/strike/corr_v2_measure.md`, 이 기록, 확인표 점검·줄 더함, decisions 줄, README | 잡음 폭으로 보고 |
+| 8 시험판 메모 | `corr item8` | `docs/strike/corr_v2_probe_note.md`, `vite build --base /halfsword/corr/` 확인(임시 폴더) | 사장님 플레이 |
+
+## 인터페이스 (도구와 맞춤, 통합에서 대조)
+- config.js: `SKILL.corr`·`SKILL.corrAI`('old' | 'v2'), `SKILL.corrTip`(true), `BODY.humanLimits`(true). with_config 로 뒤집는다.
+- Skill: `corr`, `corrTip`, `lift`(뗌 스텝), `recoverDest`([x, y]), `recoverP`(1 − d/d0), `readies`·`readyT`. 설계 밖 더함: `heldPrev`, `readyNow`, `recoverD0`.
+- fighter.corr(v2 파이터, 첫 v2 스텝 전·옛 파이터는 null): `win`, `part`, `tau`, `vClose`, `tRoll`, `opens`, `closes`, `switches`(0 이어야), `rollTarget`, `tip`, `tipHold`, `tipOnsets`, `tipCarried`, `tipArcLeft`, `tipOut`(0 이어야), `tipEnd`(contact·pastEdge·recede·band·stopped·walk·touch), `fingerAim`. 설계 밖 더함: `winSteps`, `closeWhy`, `n`, `plane`, `touchPrev`, `relPerp`, `tipPart`, `tipN`, `tipA`, `holdAim`, `cmdAim`, `tipJump`(rad), `heldPrev`, `arcDone`, `prevB`, `walked`.
+- attacker `bladeTouch`(v2 공격자만): combat.js cutting 넣음·접촉힘 타격·onClash 에 참, 그 스텝에 그 공격자의 cutting 쌍·타격·부딪힘이 없으면 afterStep 끝에 지움. 더함: `touchStep`(스텝 도장). ① 의 '칼끼리 새로 부딪힘'은 기존 `f.feel`(touching && time === 0)로 읽음(새 전투 필드 없음).
+- fighter: `gripCone`·`shoulderRopes`(밧줄 관절), `gripConeOn()`·`shoulderOn()`, 내보냄 `HUMAN`·`humanJointDefs`.
+- main.js: `settings.corr`·`settings.corrTip`, `?corr=v2`·`?tip=0|1` → `player.skill.corr`·`corrTip`. window.game 그대로.
+- 통합 대조: 도구가 읽는 필드는 모두 위 이름과 같았다(도구 쪽·src 쪽 고침 없음). 어긋남은 위 '더함' 뿐이고 도구는 그것을 읽지 않는다.
+
+## 동일성 (관문, 모두 통과 — 통합 4fce93e 에서 다시 돌림)
+stdout sha256 앞 8자리, `2>/dev/null`, nice -n 10. 기록 `…/scratchpad/corr/impl/integ/identity/shas.txt`.
+| 명령 | 바탕 b03af1a | 지금 |
+|---|---|---|
+| `with_config.mjs BODY.humanLimits=false fights12.mjs` | 12223139 | 12223139 |
+| `with_config.mjs BODY.humanLimits=false live_battery.mjs` | 2f453e0b | 2f453e0b |
+| `with_config.mjs BODY.humanLimits=false SKILL.corr=v2 fights12.mjs` | 12223139 | 12223139 |
+| `with_config.mjs BODY.humanLimits=false SKILL.corr=old SKILL.corrAI=old live_battery.mjs` | 2f453e0b | 2f453e0b |
+| `fights12.mjs` (기본, 한도 켬) ×2 | — | 5613b5b9, 5613b5b9 |
+| `live_battery.mjs` (기본) ×2 | — | 37f25f76, 37f25f76 |
+| `with_config.mjs SKILL.corr=v2 fights12.mjs` (한도 켬) | — | 5613b5b9 |
+- **새 본판 기준 (사장님 9/30 23:40 관절 한도·자기 몸 충돌 켬)**: fights12 `5613b5b9` · live_battery `37f25f76`. 작업 L 에서 적은 값 그대로 다시 나왔다(`docs/strike/corr_baselines.md`, `tools/sim/README.md`).
+- corr_s0 (`node tools/sim/corr_s0.mjs --limits=off,on --scenes=a,b`): 12/12 IDENTICAL (장면 a 플레이어 패드 순서 시드 1~3, 장면 b AI 대 AI 시드 1~3, 한도 끔·켬, 끝점 겨눔 켬; 손 목표·칼 쿼터니언·tipVel·골반·가슴·상처·Math.random 수 비트 해시, 2400 스텝씩), 72 s. `--s=0.4`: 12/12 스텝 0 에서 DIFF(v2 가지가 삶) → 통과, 85 s.
+- 도구 옛 출력(한도 끔, hs-corr): live_battery 2f453e0b · body_share dab0a69d · skill_level_duel 0.7 4 be742581 = b03af1a.
+- chain_corr old0·old07 한도 끔(344판)은 b03af1a 로 돈 '전'(`tools/base_chain.json`)과 줄마다 같다(344/344, 한도 칸 뺀 json 비교).
+
+## 측정 요약 (`docs/strike/corr_v2_measure.md` 에서)
+- chain_corr 기본 행렬(1032판, 한도 켬; '전' = b03af1a old0·old07). '바라는 쪽' 맞음: 첫 닿음 날 각(v2 10.5~11.2° < old07 16.6°, old0 14.0°), hitMove 납작 몫(v207 0.171 < old07 0.257, old0 0.195), ① 창이 마지막 구간(중앙 54~58 ms, T_roll 67.6 ms)·창 안 부위 바뀜 0·닿음 밖 빠른 굴림 0(old07 14), ② 켜질 때 남은 호 몫 0.11~0.15·면 밖 각 0, ② 음성(누른 채 멈춤 켜짐 0, 상처 v207 3 = v207tip0 3 ≤ old0 4), 넘김 튐(멈춘 뒤·되돌아온 뒤 ≈ old0), 상처/휘두름 ≥ old0(v207 0.602 = old0 0.602, v204 0.662, v21 0.644), 첫 닿음 칼끝·첫 상처 J ≥ old07, 엄지-손 각 ≈ old0(20° 대 old07 46°).
+- 못 맞음: 칼끝 최고(v2 9.1~9.7 m/s < old07 11.6), 겨눈 부위 거리(v2 0.33~0.40 m > old0 0.21 — 잣대가 다름), 닿기 전 2프레임 굴림 중앙값(v207 8.2° > old07 7.0°, 평균은 작음), 가슴 몫 중앙값(−1 %, 골반 4 % > 0), 아래팔 돌림 이탈(v2 475~526 스텝 > old0 355, 넘침 ≤ 1.8°)·빈팔 어깨 면(1.07 배)·두 발 뜸(v21 497 > 169), ② 양성 liftShort 0.7 (v207 2/12 = v207tip0 2/12; 0.4·1 에선 늘음).
+- 한도 끔에서 새 보정이 가장 많이 맞힌다(맞힘 장면 상처/휘두름 v207 1.356, v21 1.384 대 old0 0.870·old07 0.907). 켬에서 old0 수준으로 내려오는 것은 칼 어깨 쐐기가 머리 위 세로 획을 막기 때문(측정 4장, 확인표 81행).
+- live_twin C0 (실제 main 길의 쌍둥이, 폰 같은 입력 60·30J): 설정 0 은 v2 시험 트리와 HEAD 가 sha 까지 같음. passive 에서 v2 는 뒤틀림 지수 0.000~0.002(옛 0~0.105)·떨림(osc > 8 Hz) 0.013~0.015(옛 0.028~0.036)로 조용하고, 맞힘/획은 0.42~0.79(옛 1.08~2.58)·칼끝 5.7~6.2 m/s(옛 7.6~8.7)로 작다. 제 몸 뚫림 0.
+- AI(보고만): corrAI v2 로 하면 세 난이도 두 묶음 모두 죽음이 30~34 → 0~15 로 줄고 상처 에너지 89 → 47~54 J — 변화(두 묶음 같은 쪽). skill_level_duel: v2 X 는 0.4·0.7·1 모두 승이 준다(0 은 줄마다 같음). 한손 뻗음 −5~13 cm(롱소드 +19 cm). down_ai 마무리율 48/48 = 48/48.
+
+## 관절 한도 켬 / 끔
+- 사장님 9/30 23:40 켬. fights12 켬 5613b5b9 / 끔 12223139 (죽음 7/12 대 9/12, 넘어짐 1.2 대 1.2, 12판은 잡음 폭 안), live_battery 37f25f76 / 2f453e0b. 걸린 시간 fights12 56 s 대 53 s, live 17 s 대 16 s (감싸면 92/88, 33/29 s).
+- envelope_check (fights12): 아래팔 돌림 > 80° 30074 → 1301 스텝(넘침 ≤ 0.6°), 칼 어깨 면 1387 → 2, 척추 39 → 1, 제 몸 뚫림 4578 → 0, 두 발 뜸 1124 → 791. 빈팔은 늘어남(어깨 면 14607 → 20521, 팔꿈치·들림 봉투 밖 0·936 → 5386·5223). NaN 없음, 쓰러짐 늘지 않음.
+- 막는 움직임: 머리 위 세로 획(지붕에서), 왼쪽 자세들(손이 몸 앞을 크게 가로지름), 한손 지붕·왼쪽. 원인은 칼 어깨 쐐기 하나(끄면 세로 상처가 한도 끔 수준으로 돌아옴). 확인표 81행.
+
+## 손목 원뿔과 출처 (P1, ② 의 전제)
+- 아래팔-칼 각 ≤ 163°: 봉투 손목 칸(`tools/motion/human_envelope.json` wrist, 문서 `docs/motion/human_envelope_2026-09-30.md`)의 클립 크게 최대 163°, '135~160° 무리' 주석, 설계 측정 줄 '> 163°'. 사장님 숫자가 아니라 해부학 범위로 끌어옴.
+- 아래팔 돌림(엎침·뒤침) ±80°: 봉투에 칸이 없어 문헌 — AAOS, "Joint Motion: Method of Measuring and Recording" (1965) 엎침 80°·뒤침 80° (Norkin & White "Measurement of Joint Motion" 같은 값; envelope_check 는 같은 AAOS 값을 Greene & Heckman 1994 로 적음). 인용은 fighter.js `HUMAN` 머리말.
+- 둘 다 `BODY.humanLimits` 아래(fighter.js `HUMAN`·`gripConeOn`, 쥔 관절 481-486 자리에 밧줄), 확인표 73·74행 '사장님 확인 전 (해부학 범위)'. ② 는 원뿔이 있을 때만(humanLimits true) 돈다: 한도를 끄면 v207 = v207tip0 (측정 1·2장).
+
+## 어긋남 (인터페이스·설계와 다른 곳)
+- 위 '더함' 필드들(탐지기 속 값, 도구는 안 읽음).
+- ② 켜짐에 `skill.quiet === 0`(손가락이 아직 긋는 중)을 더함: 없으면 30 fps 들쭉날쭉 입력에서 누른 채 멈췄다 뗀 칼이 켜졌다(비판 H1). 확인표 80행.
+- 칼 어깨·손목 원뿔은 축마다 공 관절 한도가 아니라 밧줄 관절(축 한도는 섞인 회전에서 27~34 % 샘). 밧줄 기하 L 1 m·K 10 m, 확인표 76행.
+- 한도 켬에서 날 부호 규칙 `rollSide` 더함(범위 끝에 걸린 날을 반대 날로), 확인표 77행.
+- 칼 어깨 쐐기는 들림과 무관하게 걸린다(수평 면 반공간 둘). 머리 위 자세(지붕 Vom Tag)의 위팔이 쐐기 끝에 닿아 세로 베기·짧은 세로 무리가 한도 켬에서 거의 닿지 않는다(측정 4장). 한도 쪽 설계 질문으로 올림(확인표 81행), 기준은 다시 재지 않았다.
+- tools/sim/README.md 관문 줄은 작업 L 이 먼저 고쳤고 통합에서 도구 줄을 더함.
+
+## 사장님 답 (9/30 23:40) — 지은 것
+1. **C3 관절 한도·자기 몸 충돌 켬** → `BODY.humanLimits` 기본 true(작업 L). 끄면 오늘과 바이트 같음. 새 본판 기준 5613b5b9 / 37f25f76. 확인표 54행 결정됨.
+2. **C2 끝점 겨눔 켜고 끄기로 탑재** → `SKILL.corrTip` true, 설정 '끝점 겨눔', `?tip=0|1`, 메뉴 설명 구절(작업 1·5). 손목 원뿔은 해부학 범위(작업 L). 확인표 53행 결정됨.
+3. **C1 AI 는 옛 보정(사람이 먼저)** → `SKILL.corrAI 'old'`, setLevel 이 씀, AI 는 ② 없음(`corrTip=false`). AI old 대 v2 는 보고만(측정 3장). 확인표 52행 AI 부분 결정됨.
+4. **C5 마무리 예외로 남김** → v2 에서도 FINISH_GUARDS 를 s·fin.amt 로 명령(finish.js·guards.js 마무리 부분 손대지 않음). 마무리율 old 대 v2 는 측정 3장. 확인표 56행 결정됨.
+
+## 여쭐 것 (디렉터 가답·해부학 범위 — 질문 / 지금 빌드의 가답 / 다르게 답하시면)
+형식: **질문** — 지금 빌드의 가답 — 다르게 답하시면. 괄호는 확인표 행·설계 여쭘 번호.
+1. **플레이어 기본 보정을 옛(old)으로 두고 시험판만 `?corr=v2` 로?** (52, 여쭘 1) — old, 설정 '보정 방식'·주소로 새 보정 — v2 기본이면 모든 플레이어의 느낌이 바뀜(config.js `SKILL.corr` 한 줄), 새 본판 기준 sha 는 그대로(AI 판).
+2. **새 보정 세기 s = 설정값 선형(보통 0.7 ≠ 강 1)?** (52, 여쭘 13) — 선형 — min(1, 1.6·s) 이면 보통 = 강, AI 갈림(0.7/0.85/0.97)도 달라짐.
+3. **되돌아옴 시계: 기존 recoverDelay 0.25 s 재사용, 사건(손 뗌·칼 닿음·② 닫힘·'ready')만 더함?** (55, 여쭘 3, C4) — 재사용 — 사건만이면 뗌 즉시 되돌아옴 시작(시간값 하나 없어짐, 느낌 바뀜).
+4. **한손 무기 자세표(BASE_ONE: 팔 0.68 m·칼 어깨 앞으로)를 새 보정에서 뺄까요(날것)?** (57, 여쭘 16, C6) — 뺌. 한손 머리 높이 뻗음 5~13 cm 줄음 — 명령으로 되살리면 새 보정에 자세 당김이 하나 더 생김.
+5. **① 날 맞춤을 상대 칼에는 켜지 않음(오늘 막기 그대로)?** (57, 여쭘 17, C6) — 제외 — 켜면 막을 때 날로 받게 되어 날막기·면막기가 바뀜.
+6. **무기·상태 표: 날 없는 무기 ① 끔·② 맞힘만, 총 ①②③ 끔, 부러진 칼은 토막 날일 때 남은 길이로, 선 자세 밖 끔, 무릎은 오늘 걷기; AI 는 당김 없앰·①·순서만?** (57, C6) — 설계 표 그대로 — 칸마다 바꿀 수 있음(예: AI 에 ② 를 주면 속임을 망침).
+7. **① 창을 τ = d/v_close < T_roll(= 8·I/kd, 롱소드 67.6 ms, 기존 굴림 서보에서 유도)로 열까요?** (58, 여쭘 8, C7) — 유도값 — 없애면 닿는 거리 안 전체가 창(획 대부분), 굴림 목표가 오래 흔들림.
+8. **기존 smoothstep 0.5~2.5 m/s 를 max(제 칼⊥, 상대 기준⊥) 에도?** (59, 여쭘 9) — 재사용 — 없으면 느린 닿음에서 굴림이 떤다.
+9. **② 목표 = 겨눈 부위 단면의 먼 가장자리, 더 좁히지 않음?** (60, 여쭘 7) — 기하 + 손목 원뿔 — 좁히면 유일한 한도 후보가 생김.
+10. **② 는 손 뗌에서만, 겨눈 점은 부위 끝; 켜짐에 '손가락이 아직 긋는 중'(기존 휘두르기 깃발) 조건?** (61·80, 여쭘 10) — 그렇게 — 깃발을 빼면 30 fps 에서 누른 채 멈췄다 뗀 칼이 끝까지 감(작업 5 탐침에서 조건 전 30J holdShort 2 번·stop 1 번).
+11. **② 붙잡음 중에 다시 닿으면 바로 손가락에 넘김(튐은 잼)?** (62, 여쭘 11) — 바로 넘김. 튐 중앙 1.45°(0.7)·45.6°(1), 27판 중 26 판 ≤ 옮긴 각 — 패드 거리로 섞어 넘기면 거리 값 하나가 생김.
+12. **이어 베기(손이 손가락 너머 ≤ 0.105 m)를 새 보정에서 없앰?** (63, 여쭘 12) — 없앰 — 두면 손이 손가락 너머로 감.
+13. **쉴 자리 = 칼끝이 상대 가슴을 겨누는 패드(pad*), 쟁기 모양 아님?** (64·78, 여쭘 14) — pad* — homeGuard(쟁기)면 모양은 교본답지만 겨눔이 아님.
+14. **몸 돌림 0.35·골반 몫 0.5 (오늘 끔의 양) 그대로?** (65, 여쭘 18) — 그대로. 가슴 몫 중앙값 −1 %·골반 4 % — 크게 하면 큰 몸 쓰기(R2′ 물리 몫).
+15. **HUD 자세 이름은 새 보정에서 쉴 때만?** (66, 여쭘 20) — 쉴 때만 — 늘 보이면 날것 자세에 교본 이름.
+16. **AI 막기 굴림은 재기만(막기 방향 명령·새 문턱 없음)?** (67, 여쭘 19) — 재기만. AI v2 막기 버팀 88~99 % — 무너지면 명령을 여쭘.
+17. **R2′ 틀 문제(손가락 지도가 명령 가슴을 탈까)는 이번 가지 밖?** (68, 여쭘 21) — 손대지 않음. 설계 여쭘 5 의 R2′ 72° 끄기도 wbs-impl 일로 남음.
+18. **① 탐지기의 기존 수 새 일(면 보호 lengthSq < 1e-4, combat.predict 닿는 점, 겉면 투영 거리, feel.time === 0)?** (69) — 재사용.
+19. **제 몸 충돌 쌍 = 제 칼·칼팔 ↔ 제 몸통·허벅지 (머리·빈팔·다리 아래 제외)?** (75, C3 켬은 사장님 답) — 디렉터 목록 — 넣으면 더 막힘.
+20. **관절 밧줄 기하 L 1 m·K 10 m?** (76) — 기하(각과 무관) — 짧게 하면 원뿔이 샘.
+21. **한도 켬에서 날 부호 규칙(범위 끝에 걸린 날을 반대 날로)?** (77) — 켬 — 끄면 납작 맞음 늚.
+22. **'ready' 정의(칼끝이 가슴 상자 단면 앞, 휘두르지 않음, 두 발 디딤)?** (79) — 재기만. 뗌 뒤 안 켜진 판 81~84 % — 넓히면 '되돌아옴 끝' 표지가 자주 켜짐(아무것도 막지 않음).
+23. **척추 비틀림 −29~46° (복부 : 가슴 0.5 : 0.6 로 나눔)?** (70, 사장님 확인 전 (해부학 범위)) — 봉투 값 — 넓히면 오늘 ±63°.
+24. **칼 어깨 들림 면 −45~130°(수평 벌림 45·모음 130), 들림 180, 폄 60?** (71, 해부학 범위) — 봉투·AAOS 값 — 넓히면 왼쪽 자세가 닿음.
+25. **칼 어깨 쐐기를 들림과 무관하게 걸까요, 팔을 옆으로 든 자세(들림 60~160°)에서만 걸까요?** (81, 해부학 범위, 작업 7 에서 드러남) — 지금은 모든 들림에서 건다: 지붕에서 내려오는 세로 획이 거의 닿지 않음(v207 상처 21 → 2, 쐐기만 끄면 돌아옴) — 들림에 따라 걸면 머리 위 자세가 풀리고 새 본판 기준을 까닭과 함께 다시 잼.
+26. **칼 팔꿈치 0~150° (오늘 0~143°)?** (72, 해부학 범위) — AAOS 150 — 좁히면 오늘 값.
+27. **손목 원뿔: 아래팔-칼 ≤ 163°?** (73, 해부학 범위) — 봉투 최대 163 — 160 이면 '무리' 끝, 135 면 무리 시작. ② 의 전제.
+28. **아래팔 돌림(엎침·뒤침) ±80° (AAOS)?** (74, 해부학 범위) — 80 — 좁히면 날 세우기가 범위 끝에 더 자주 걸림(지금도 이탈 스텝이 이 끝에 붙음).
+29. **빈팔 어깨·팔꿈치에 한도를 둘까요?** (82) — 재기만. 켬에서 빈팔이 더 돌아감(live 5044 → 13155 스텝) — 넣으면 두 손 쥔 자세가 또 막힐 수 있음.
+30. **시험판에서 끝점 겨눔 켬 / 끔을 비교해 주실 것** (53, 사장님 답: 켜고 끄기로 탑재) — 기본 켬 — 끄시면 날 맞춤·되돌아옴만.

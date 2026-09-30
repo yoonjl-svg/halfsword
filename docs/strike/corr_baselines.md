@@ -30,3 +30,9 @@ fights12 는 바이트 관문 전용 (`tools/sim/README.md` '소음 폭'). sha25
 - fights12: 사망 9/12 → 7/12, 넘어짐 1.2/판 그대로, 연 상처 7.0 → 6.1/판 (12판은 소음 폭 안 — README).
 - live_battery cuts: 세 베기 평균 칼끝 19.4 → 18.3 m/s (자세 지도 옛 보정 0.7, 교본 자세 일부를 한도가 막음: 확인표 71행).
 - 기록: `…/scratchpad/corr/impl/impl/gates/itemL/` (명령·시간 shas.txt, 출력 *.txt).
+
+## 5. 10/1 통합에서 다시 돌림 (feat-corr `4fce93e`, 작업 2 도구를 넣은 뒤)
+- 1~3 의 여덟 줄 모두 같은 sha (기본값 fights12·live_battery 는 두 번씩). 기록 `…/scratchpad/corr/impl/integ/identity/shas.txt`.
+- `node tools/sim/corr_s0.mjs --limits=off,on --scenes=a,b` = 12/12 IDENTICAL (새 보정 설정 0 = 옛 설정 0, 끝점 겨눔 켬), `--s=0.4` 는 12/12 스텝 0 에서 달라 통과.
+- 도구 옛 출력(한도 끔): live_battery 2f453e0b · body_share dab0a69d · skill_level_duel 0.7 4 be742581 = b03af1a.
+- envelope_check 로 감싸도 stdout 그대로: fights12 켬 5613b5b9 · 끔 12223139, live_battery 켬 37f25f76 · 끔 2f453e0b.

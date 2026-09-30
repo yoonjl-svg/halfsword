@@ -10,6 +10,7 @@
   - `node tools/sim/live_battery.mjs`
   - 기준 sha256 앞 8자리: 9/29 hybrid 기본값 fights12 `afdd8c66` · live_battery `11433650` → **9/30 시작 거리 7.0·2초 정지 뒤(ARENA.startGap·startHold): fights12 `a74bb59c` · live_battery `2f453e0b`** → **9/30 09:10 시작 거리 5.6 뒤: fights12 `38fb5b51` · live_battery `2f453e0b`** (hybrid.mjs fights12.mjs 도 같다) → **9/30 14:30 되튐 통합·판금 이동 ×0.8 뒤: fights12 `12223139`** (live_battery 는 다시 재지 않음). 옛 기준은 `with_config.mjs ARENA.startGap=4.2 ARENA.startHold=0 <스크립트>` 로 바이트 그대로 나온다.
   - **10/1 새 본판 기준 (사장님 9/30 23:40 관절 한도·자기 몸 충돌 켬, `BODY.humanLimits` 기본 true, feat-corr)**: 기본값 `node tools/sim/fights12.mjs` = `5613b5b9` · `node tools/sim/live_battery.mjs` = `37f25f76` (두 번 돌려 같음). 한도 끔 = 오늘 = 옛 기준: `node tools/sim/with_config.mjs BODY.humanLimits=false fights12.mjs` = `12223139` · 같은 깃발 `live_battery.mjs` = `2f453e0b`. 보정 스위치는 AI 판을 바꾸지 않는다: `SKILL.corr=v2` 를 더해도 fights12 는 두 경우 모두 같다(AI 는 `SKILL.corrAI` 'old'). 명령·해설 전체는 `docs/strike/corr_baselines.md`. 이 뒤 모든 실행은 이 값을 재현해야 한다(한도 쪽 버그를 고칠 때만, 까닭을 옆에 적고 다시 잰다).
+  - **보정 v2 관문 (feat-corr)**: 한도 끔 = 오늘 = `12223139` / `2f453e0b` (`with_config.mjs BODY.humanLimits=false`, 보정 `SKILL.corr=old SKILL.corrAI=old` 를 더해도 같다) · `with_config.mjs BODY.humanLimits=false SKILL.corr=v2 fights12.mjs` = `12223139` · 기본값(한도 켬) = 새 본판 기준 `5613b5b9` / `37f25f76`, `SKILL.corr=v2` fights12 도 `5613b5b9` · `node tools/sim/corr_s0.mjs --limits=off,on` = 12/12 IDENTICAL (새 보정 설정 0 = 옛 설정 0, 끝점 겨눔 켬, 플레이어·AI 장면), `--s=0.4` 는 달라야 통과(v2 가지가 산다). 10/1 통합에서 다시 돌려 모두 같음.
   - 시작 정지는 시뮬에도 걸린다: 싸움꾼마다 `fightT`(fighter.step 이 센다)로 재서 판을 새로 만든 뒤 처음 2초는 조종 입력·기술 걸음·자세 고쳐 딛기가 없다(팔·칼·균형 걸음은 그대로). 판 초반을 재는 도구는 이 2초를 감안한다.
 - **소음 폭**: fights12(12판)는 바이트 동일 관문 전용이다. 좋아졌다/나빠졌다로 읽지 않는다. 설정 하나를 100만분의 1 바꿔도(`BODY.uprightStiffness=2500.001`) 사망이 levitate 9/12 → 11/12, hybrid 8/12 → 7/12로 움직였다. 36판도 사망 24~27, 플레이어 승 12~19로 흔들린다(감사 9/29). 좋다/나쁘다 판단은 36판 이상으로 하고, 시드 묶음을 바꿔 돈 흔들림 폭을 함께 적는다.
 
@@ -18,7 +19,7 @@
 | 스크립트 | 용도 |
 |---|---|
 | `node tools/sim/fights12.mjs` | AI 대 AI 12판: 사망 수, 넘어짐, 에너지. 바이트 동일 관문 전용(위 '소음 폭') |
-| `node tools/sim/live_battery.mjs` | 칼 조작 수락 테스트 (끝 속도, 자세 유지 오차, 흔들림 등) |
+| `node tools/sim/live_battery.mjs` | 칼 조작 수락 테스트 (끝 속도, 자세 유지 오차, 흔들림 등) · `with_config SKILL.corr=v2` 로 돌리면 기준 칼 방향(aimOf·fa)이 v2 가지를 따른다(옛 출력 바이트 같음) |
 | `node tools/sim/dance.mjs` | "춤추는 느낌" 측정: 떨리는 입력 / 느린 자세 이동 때 몸통 흔들림 |
 | `node tools/sim/eval_m.mjs passive\|aiai\|aggro` | AI 평가: 가만히 있는 상대·AI끼리·돌진형 상대 (ai_old.mjs = 옛 AI 기준선) |
 | `node tools/sim/weapon_smoke.mjs` | 무기고(src/weapons.js) 전체를 롱소드 상대로 6초씩 돌려 예외·NaN(물리 발산)만 훑는다 |
@@ -50,7 +51,12 @@
 | `node tools/sim/weapon_tempo.mjs [무기id...] [--loop]` | 휘두름 빠르기: 손 목표를 두 자세 사이로 왕복(또는 `--loop` 타원으로 멈추지 않고)시키며 한 번 휘두르는 시간을 줄여 가며 칼날 70% 속도·베기 에너지 지표(상한: 최고 속도·칼날 70%·날 세움 1)·지표×날 세움과 제 힘을 지키는 템포를 잰다 |
 | `node tools/sim/tactic_probe.mjs <무기id> '<level json>' [판수] [--seed=첫번호]` | 무기 쪽 AI 에만 난이도 값(공격성 등)을 덮어써 롱소드와 붙인다. 같은 값을 롱소드끼리에도 줘 대조한다 |
 | `node tools/sim/with_spec.mjs 'id.field=<json>' <스크립트> [인자...]` | 무기 스펙 필드를 잠깐 바꾼 채로 다른 시뮬 스크립트를 돌린다 (예: 찌르기 장점 thrustStyle 실험) |
-| `node tools/sim/body_share.mjs [무기id...]` | 칼끝 속도 중 몸통(가슴·골반)이 만든 몫. 몸통 비틀기를 끄거나 크게 했을 때 칼 속도·에너지 변화 |
+| `node tools/sim/body_share.mjs [무기id...]` | 칼끝 속도 중 몸통(가슴·골반)이 만든 몫. 몸통 비틀기를 끄거나 크게 했을 때 칼 속도·에너지 변화 · `with_config SKILL.corr=v2` 로 돌리면 몸 모드 바꿔 끼우기가 v2 가지를 따른다(옛 출력 바이트 같음) |
+| `node tools/sim/corr_s0.mjs [--limits=off,on] [--scenes=a,b] [--seeds=1,2,3] [--s=0.4]` | 검술 보정 v2 설정 0 = 옛 설정 0 (스텝마다 비트 해시: 손 목표·칼 쿼터니언·tipVel·골반·가슴·상처·Math.random 수). 장면 a 플레이어 패드 순서 · b AI 대 AI. 다르면 처음 다른 스텝·파이터·양, 종료 1. `--s=0.4` 는 v2 가지가 사는지 확인 |
+| `node tools/sim/chain_corr.mjs [--root=트리] [--modes=old0,old07,v204,v207,v21,v207tip0] [--scenes=air,stop,hit,hitMove] [--fams=…] [--input=60,120,30J,J] [--limits=on,off] [--quick] [--json=파일]` | 검술 보정 v2 측정 한 벌 (wbs chain.mjs 장면 틀, 실제 입력 길): 날 각·납작 몫·① 창·② 켜짐·넘김 튐·엄지-손 일치·몸통 몫·되돌아옴·겨눔 오차·관절 범위 이탈. 한 판 한 줄 json + 방식 × 장면 요약. 기본 행렬 1032판 ≈ 25 분 |
+| `node tools/sim/envelope_check.mjs <시뮬.mjs> [인자]` | 다른 시뮬을 감싸 관절 각(봉투 anglesAt 정의)·두 발 뜸·제 몸 뚫림이 봉투·설계·문헌 범위 밖인 스텝을 센다 (참고 수). 감싼 stdout 그대로, 표는 stderr, `ENVELOPE_JSON=파일` 이면 json |
+| `node tools/sim/corr_ai_battery.mjs [--levels=normal,easy,hard] [--sets=A,B] [--arms=old,v2] [--json=파일]` | AI 거울 결투 36판 × 묶음, SKILL.corrAI old 대 v2: 죽음·승패(윌슨)·쓰러짐·휘두름당 상처·에너지·닿을 때 칼끝·날 각·납작 몫·머리목 %·버틴 막기·첫 상처·마무리율, README 잡음 폭 곁에 (보고만: AI 는 옛 보정) |
+| `node tools/sim/skill_level_duel.mjs <S> [N] --both` | 같은 시드로 X 의 skill.corr old 다음 v2, 결과 두 줄 + 차이 + '손 앞뻗음 뜻 바뀜' 한 줄 (--both 없으면 예전 그대로) |
 | `node tools/sim/hit_phase.mjs [판수] [무기A] [무기B]` | 한 방이 왜 가벼운가: AI 대 AI 대결에서 몸에 닿은 순간마다 그 휘두름 최고 속도 대비 비율·느려지는 중·손목 제동 중·몸통 몫·닿은 칼날 지점·에너지·맞은 쪽 밀림(상처/멍 따로) |
 | `node tools/sim/chain_mass.mjs [무기id...]` | 칼 뒤에 실제로 실리는 질량: 물리 사슬(칼+손+팔+몸)의 유효 질량을 톡 밀어 재고 판정식(칼+0.3kg)과 견준다 |
 | `node tools/sim/thrust_review.mjs [skill\|step\|down\|assist\|demote\|snap\|all] [--hybrid]` | (기본값이 hybrid라 `--hybrid`는 이제 효과 없음) 탭 찌르기 검토 지적 수정 전·후: 검술 보정별 찌르기, AI 두 번 내딛기, 찌르다 넘어짐, 팔 질량 싣는 구간·멍으로 바뀐 찌르기 에너지, 내리찌르기 끊김 |
@@ -70,3 +76,4 @@
 | `node tools/browser/revive_shots.mjs http://127.0.0.1:5173 <출력 폴더> [castle,cathedral,darkhall,clearing,castle_px,defeat]` | 부활 연출 연속 사진(844×390, 가짜 시계로 한 프레임씩): 쓰러짐·빛이 내려옴·알림·일어섬(+옆에서)·빛이 사라짐·다시 싸움·결과. 콘솔 에러 0, 연출 물체·빛이 남지 않는지(장면 자식 수), 두 번째 죽음 → 승리, `defeat` = 부활 중 주인공 죽음 → 패배 |
 | `node tools/browser/decap_shots.mjs http://127.0.0.1:5173 <출력 폴더> [liao,isolde]` | 참수 연출 사진(844×390, 가짜 시계): `?weapon=zweihander&foe=<id>` 로 싸움을 열고 `window.game` 으로 칼을 상대 목으로 몰아 벤 뒤 0.2초·1.5초(기본 카메라 + 옆), 결과 화면, 다시 싸우기. 콘솔 에러 0, 참수(관절 12·목 단면·목 자리 틈), 이졸데는 부활하지 않음, 다시 싸우기 → 새 상대는 머리가 붙어 있다 |
 | `node tools/browser/weapon_thumbs.mjs http://127.0.0.1:5173 [무기id...]` | 무기 뽑기 카드의 작은 그림을 만든다: 게임 속 무기 모델(`src/weapons.js`)을 대각선으로 눕혀 찍어 `public/ui/weapons/<id>.webp` (256×256, 투명 배경)로 저장. 무기 겉모습을 바꾸거나 무기를 새로 넣으면 다시 돌린다. 찍는 페이지 `tools/browser/weapon_thumbs.html` 을 브라우저로 열면 결과를 눈으로 볼 수 있다 |
+| `node tools/browser/corr_shots.mjs http://127.0.0.1:5173 <폴더> [diag,flat,liftShort,holdShort] [0.7,1]` | 검술 보정: 옛 대 `?corr=v2` (liftShort 는 `tip=1/0`) 장면 사진·프레임 상태 json. 터치 = CDP, 가짜 시계. 켜진 `skill.corr`·`corrTip` 이 주소와 다르면 에러 |
