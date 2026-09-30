@@ -1,6 +1,6 @@
 # 인체 동작 연구 PM — 상태 (늘 최신으로 둔다)
 
-- 갱신: 2026-09-29 밤 (KST). 새 세션은 이 파일만 읽고 이어받는다.
+- 갱신: 2026-09-30 18:00 (KST). 9/30 정기 보고 보냄(trig_01W494HgL6ALUudV5ssAweB3) — 지금 대기. 새 세션은 이 파일만 읽고 이어받는다.
 - 세션: `session_013YFFvQRnDedG7CTF1eVknA` · 브랜치 `claude/pm-motion-research`. **`docs/motion`·`tools/motion` 만 건드리면 디렉터가 검토 없이 main 에 병합한다.** 새 일을 시작하기 전에 main 을 한 번 병합해 둔다.
 - 디렉터: `session_014nJCzE4hyxiYc9innhSUng` ("Stillness game director handoff", 사장님 확정). `01NDJ…`(보관됨)·`01Kc…`(은퇴)에는 보내지 않는다.
 - 역할: main `docs/pm_roles_charter.md` 부록 A (9/29부터 기본값 시행).
@@ -40,6 +40,8 @@
 - 디렉터 9/29 21:06 v1 과제(기한 9/30 18:00): ① 보통 벌 감기 칼을 작게·크게 가운데로 — **끝남** (tw 차이 작게↔보통 69·90·81° → 47·61·58°, 손목 최대도 줄어 Zwerch 175 → 159°) ② 이른 걸음 — **끝남** (발 뗌 0.41 → 0.33 s, 디딤 tc, 발 최고 7.9 → 4.2 m/s) ③ `stance` 칸 + 검사 F5·T1 — **끝남** ④ 70벌 검사 통과·index 갱신 — **끝남**. 한손 자세표: main b403696 병합, 검사기가 GUARD_BASE_ONE 을 그대로 읽음 — **끝남**(70벌·X1 통과). 보고는 9/30 18:00 정기 보고에 합침(자체 알림 trig_01Ejgv8cVYLczq7HUA3RmtoW 17:52).
 
 - 디렉터 9/30 01:10 사장님 지시(근접 밀어내기): 의견 `docs/motion/close_quarters_opinion_2026-09-30.md` 올림(09b2ca2), 디렉터에게 알림. 클립은 지시 오면 만든다. Fiore 발차기·Ringeck 밀어내기는 원문 대조 전 [기억].
+
+- 디렉터 9/30 22:00 (R2 시험판 실패 — 사장님): ① 사람 움직임 봉투 `docs/motion/human_envelope_2026-09-30.md` + `tools/motion/human_envelope.json` (`node tools/motion/envelope.mjs`) — **끝남**. ② 10/1 아침 `docs/strike/r2_live_diagnosis_2026-09-30.md` 가 main(또는 dev 가지)에 올라오면 검객 역학 독립 검토 `docs/motion/r2_diag_review_2026-10-01.md` (≤40줄) → 디렉터 트리거 5줄. 정기 보고 18:00 그대로.
 
 ## 다시 만들기
 
