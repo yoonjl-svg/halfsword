@@ -211,7 +211,7 @@ export class Fighter {
     this.stickX = 0; // 스틱 원값 (감정 배수·검술 층 덮어쓰기 전). 플레이어는 main.js, AI 는 moveFeet 가 쓴다
     this.stickY = 0;
     this.closeArmed = false; // 걸쇠: 안쪽에서 스틱을 안 밀면 켜지고, 밀면 발사
-    this.barge = null; // 밀치는 중 { phase: 'step'|'press', L, stepOk, d0 } (발사 ~ 누르기 끝)
+    this.barge = null; // 밀치는 중 { phase: 'step'|'press', L, stepOk, d0, req(걸음 요청), bent(누르기 중 팔이 굽어 있었나) } (발사 ~ 누르기 끝)
     this.bargeEnd = null; // 마지막 밀치기가 끝난 까닭 (refused·dropped·apart·release·armFull·state·swing·thrust)
     this.shoves = 0; // 발사 횟수
     this.closeStepKind = 'lunge'; // 딛기 걸음 종류: 앞발 lunge. 랴오(persona.close.kind 'kick')는 뒷발이 지나 딛는 pass (ai.js)
@@ -712,7 +712,9 @@ export class Fighter {
       if (!end && b.phase === 'press') {
         if (d > reach) end = 'apart'; // 떨어짐: 팔·칼자루가 더는 닿지 않는다
         else if (idle) end = 'release'; // 밂이 풀림
-        else if (this.armFull && !this.closeTouch()) end = 'armFull'; // 팔이 다 펴졌는데 닿은 것 없음 (밂을 다 씀)
+        else if (this.armFull && b.bent && !this.closeTouch()) end = 'armFull'; // 팔이 다 펴졌는데 닿은 것 없음 (밂을 다 씀)
+        // 다 펴짐은 누르기 중의 사건: 누르기 중 굽어 있던 팔이 다 펴진 때만. 처음부터 팔 길이 끝인 자세(지붕 등)는 밂을 쓴 게 아니다
+        if (!this.armFull) b.bent = true;
       }
       if (end) {
         this.barge = b = null;
@@ -732,7 +734,7 @@ export class Fighter {
           // 걸음 길이 L: 몸통 닿는 선(shove() 의 0.55)까지 남은 거리, 발 한 번(GAIT.maxReach). 0 이면 몸통이 이미 닿아 걸음 없음
           const L = THREE.MathUtils.clamp(d - 0.55, 0, GAIT.maxReach);
           this.shoves++;
-          b = this.barge = { phase: L > 0 ? 'step' : 'press', L, stepOk: null, d0: d, req: null };
+          b = this.barge = { phase: L > 0 ? 'step' : 'press', L, stepOk: null, d0: d, req: null, bent: false };
           if (L > 0) {
             // 찌르기 걸음과 같은 요청 (skill.js thrust: lunge, 0.3 s. 랴오만 pass). 거절되면 밀치기 끝
             b.stepOk = g.requestStep({ kind: this.closeStepKind, fwd: L, duration: 0.3 });
