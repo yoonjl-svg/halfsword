@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
@@ -680,6 +680,24 @@ export class Fighter {
     this.bodies.chest.addForce({ x: -dir.x * F, y: 0, z: -dir.z * F }, true);
   }
 
+  /**
+   * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, config.js CLOSE). 힘을 더하지 않는다: 발은 gait 걸음 요청,
+   *  몸은 스틱 걷기의 다리 힘, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword).
+   */
+  closeStep() {
+    const dt = this.lastDt;
+    const b = this.barge;
+    // 되돌림 섞기: lift(접기 풀기)·closeW(누르기 무게)는 기존 몸 자세 따라가기 SKILL_BODY.chest(26/s, updateBodyPose 의
+    //  임계 감쇠 2차 필터)로 목표를 따라간다. 밀치는 동안 lift → 1, 누르기에서 closeW → 1, 끝나면 둘 다 0 으로 (잠그지 않는다)
+    const w = SKILL_BODY.chest;
+    const lt = b ? 1 : 0;
+    const wt = b?.phase === 'press' ? 1 : 0;
+    this.liftV += (w * w * (lt - this.lift) - 2 * w * this.liftV) * dt;
+    this.lift += this.liftV * dt;
+    this.closeWV += (w * w * (wt - this.closeW) - 2 * w * this.closeWV) * dt;
+    this.closeW += this.closeWV * dt;
+  }
+
   // ── 매 물리 스텝마다 호출: 근육을 움직인다 ──
   step(dt) {
     this.lastDt = dt;
@@ -704,6 +722,7 @@ export class Fighter {
     this.driveBalance(dt);
     if (this.gait?.active) this.gait.pinFeet();
     this.applyPose(dt);
+    if (this.canShove && CLOSE.on) this.closeStep(); // 근접 밀치기: 힘을 더하지 않는다 (shove() 의 힘 순서 그대로)
     this.shove();
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
@@ -1691,7 +1710,12 @@ export class Fighter {
     hb[2] = handLocal.z;
     const th = this.skill.thrustPose;
     if (th.w > 0) handLocal.lerp(_v6.set(th.hand[0], th.hand[1], th.hand[2]), th.w);
-    handLocal.x = Math.min(handLocal.x, this.closeReach());
+    // 바짝 붙으면 손을 접는다 (closeReach). 근접 밀치기 중엔 접기를 lift 만큼 푼다: x' = 접은 x + (x − 접은 x)·lift.
+    //  lift 0 이면 오늘 줄 그대로 (같은 float). 손이 자세 깊이에 남아 코등이·칼 팔뚝이 상대 몸통에 닿는다
+    const foldX = Math.min(handLocal.x, this.closeReach());
+    handLocal.x = foldX + (handLocal.x - foldX) * this.lift;
+    // 누르기: 손 목표 앞뒤를 상대 가슴 앞면(d − 0.11, 가슴 반두께 partDefs chest)으로 closeW 만큼. 높이·옆은 손가락이 둔 그대로
+    if (this.closeW > 0 && this.foe) handLocal.x += (this.foeDistance() - 0.11 - handLocal.x) * this.closeW;
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
