@@ -1,0 +1,357 @@
+diff --git a/src/ai.js b/src/ai.js
+index 9c9ab3f..705299a 100644
+--- a/src/ai.js
++++ b/src/ai.js
+@@ -27,6 +27,10 @@ import { schoolOf } from './schools.js';
+ import { getWeapon } from './weapons.js';
+ import { EMO_REST, EMO_REST_ALL, emoMods } from './emotions.js';
+ import { gunAI } from './gun.js';
++const JC = (globalThis.__JC ||= {});
++const Jc = (k, n = 1) => { JC[k] = (JC[k] || 0) + n; };
++const JA = ((typeof process !== 'undefined' && process.env.J_ABL) || '').split(',');
++const ab = (k) => JA.includes(k);
+ 
+ // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
+ const FEAR_TREMOR = 0.03;
+@@ -779,6 +783,7 @@ export class AI {
+       if (cls.online) fit *= t.presses ? 1.5 : t.kind === 'thrust' ? 0.5 : 0.9;
+       if (why === 'finish') fit *= up ? 1.5 : 0.6; // 쓰러진 상대: 위에서 내려친다
+       if (why === 'windup' || why === 'stepin') fit *= t.fast ? 1.6 : 1; // 짧은 순간: 빠른 기술
++      if (ab('nofit')) fit = 1;
+       if (why === 'stop') fit *= t.presses ? 2 : t.kind === 'thrust' ? 0.3 : 1; // 달려드는 몸을 맞받는다: 무거운 베기
+       if (t.presses) fit *= 1 + 0.6 * this.anger; // 화나면 무거운 베기(분노의 베기·내려베기)만 찾는다
+       w *= Math.pow(fit, 0.3 + 0.7 * L.read);
+@@ -813,17 +818,18 @@ export class AI {
+     this.path.length = 0;
+     this.pointBlocked = false;
+     if (!opt.chain) this.stats.attacks++;
++    Jc('ai.why.' + why); Jc('ai.tech.' + tech.name);
+     // 속임수: 먼저 다른 곳을 치는 척하다가 바꾼다 (상대가 잘 막을수록 자주)
+     this.feint = null;
+     if (!opt.noFeint && (why === 'patience' || why === 'open' || why === 'weak')) {
+       const want = L.feint * (1 + Math.min(2, this.foeParried * 0.4));
+-      if (Math.random() < want * (1 - this.anger)) { // 화나면 속임수를 안 쓴다 (곧장 친다)
++      if (Math.random() < want * (1 - this.anger) && !ab('nofeint')) { // 화나면 속임수를 안 쓴다 (곧장 친다)
+         const byName = this.school.techByName;
+         const cands = this.school.feints.filter((f) => padDist(hand, byName[f.fake].from) < 0.45);
+         if (cands.length) {
+           this.feint = cands[Math.floor(Math.random() * cands.length)];
+           this.tech = byName[this.feint.fake];
+-          this.stats.feints++;
++          this.stats.feints++; Jc('ai.feint');
+         }
+       }
+     }
+@@ -1132,13 +1138,13 @@ export class AI {
+     const L = this.level;
+     if (th.id === this.threatSeen) return false;
+     this.threatSeen = th.id;
+-    if (Math.random() > L.guardChance) return false; // 못 봤거나 늦었다
++    if (Math.random() > L.guardChance) { Jc('ai.resp.miss'); return false; } // 못 봤거나 늦었다
+     this.defLine = th.line;
+     // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다 (겁먹으면 엄두를 못 낸다)
+     if (Math.random() < L.counter * (1 - 0.8 * this.fear) && d < this.M.reach + 0.3 && d > this.M.clinch + 0.1) {
+       const t = this.counterTech(th);
+       if (t && this.startAttack(t, 'counter', { noFeint: true, skipChamber: true })) {
+-        this.stats.counters++;
++        this.stats.counters++; Jc('ai.resp.counter');
+         return true;
+       }
+     }
+@@ -1151,6 +1157,7 @@ export class AI {
+     const pVoid = edge || th.thrust ? 0.8 : 0.3;
+     // 칼이 없으면 막을 수 없으니 물러난다. 겁먹었을 때도 칼로 받기보다 물러나 피한다
+     this.defVoid = !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8;
++    Jc(this.defVoid ? 'ai.resp.void' : 'ai.resp.parry');
+     if (this.defVoid) this.stats.voids++;
+     else this.stats.parries++;
+     this.timer = 0.65;
+diff --git a/src/combat.js b/src/combat.js
+index 49b6f55..dae904a 100644
+--- a/src/combat.js
++++ b/src/combat.js
+@@ -26,6 +26,10 @@ import { STRIKE, ANATOMY, STEEL, ARMOR } from './config.js';
+ import { BREAK } from './weapons.js';
+ import { updateGun } from './gun.js';
+ 
++const JC = (globalThis.__JC ||= {});
++const Jc = (k, n = 1) => { JC[k] = (JC[k] || 0) + n; };
++const JA = ((typeof process !== 'undefined' && process.env.J_ABL) || '').split(',');
++const ab = (k) => JA.includes(k);
+ const Y = new THREE.Vector3(0, 1, 0);
+ const X = new THREE.Vector3(1, 0, 0);
+ const _a = new THREE.Vector3();
+@@ -130,9 +134,9 @@ export class Combat {
+     const vBody = velAt(P, point, new THREE.Vector3());
+     const rel = vBlade.sub(vBody);
+     const speed = rel.length();
+-    if (speed < 0.5) return null;
++    if (speed < 0.5) { if (!predicting) Jc('an.slow<0.5'); return null; }
+     // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다
+-    if (speed > 30) return null;
++    if (speed > 30) { if (!predicting) Jc('an.fast>30'); if (!ab('nofast')) return null; }
+     const dir = rel.clone().divideScalar(speed);
+ 
+     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
+@@ -158,6 +162,7 @@ export class Combat {
+     const along = rel.dot(axis) / speed;
+     const ts = att.weaponCfg.thrustStyle; // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
+     const win = ts ? ts.window : 0; // 칼끝 판정 폭
++    if (!predicting) Jc(isBlade ? 'an.isBlade' : (pr.w.part !== 'blade' ? 'an.notBladePart' : (!att.weaponCfg.edged ? 'an.unedged' : (local.y <= HL - 0.01 ? 'an.hiltZone' : 'an.brokenNoStub'))));
+     if (isBlade) {
+       if (along > STRIKE.stabAlign - win && t > 0.8 - win) {
+         type = 'stab';
+@@ -165,7 +170,9 @@ export class Combat {
+         //  겨눈 뒤 ~ 뻗고 버티기 끝)에는 팔을 곧게 뻗어 칼 축으로 민다 → 팔·어깨 무게가 칼끝 뒤에 함께 실린다.
+         //  겨누며 당기는 동안·자세로 돌아오는 동안·넘어진 뒤는 아니다. 그 밖의 칼 축 방향 접촉(자세 지도를 따라 칼을 돌리다
+         //  닿은 것)은 예전 그대로. 칼끝이 들어가지 못해 멍으로 바뀌면 이 몫을 빼고 원래 에너지로 돌린다(아래)
+-        if (att.skill?.thrustPush && (att.state === 'stand' || att.state === 'kneel')) {
++        if (!predicting) Jc('an.geo.stab');
++        if (att.skill?.thrustPush && (att.state === 'stand' || att.state === 'kneel') && !ab('noassist')) {
++          if (!predicting) Jc('an.stab.assist');
+           assisted = { mEff, ephys, energy };
+           mEff = mFree + STRIKE.thrustAssist;
+           ephys = 0.5 * mEff * speed * speed;
+@@ -177,13 +184,17 @@ export class Combat {
+         const edgeAlign = pl > 1e-3 ? Math.abs(perp.dot(edge)) / pl : 0;
+         if (edgeAlign > STRIKE.edgeAlign) {
+           type = 'cut';
++          if (!predicting) Jc('an.geo.cut');
+           quality = (edgeAlign - STRIKE.edgeAlign) / (1 - STRIKE.edgeAlign); // 날이 똑바로 설수록 잘 베인다
+           quality = 0.4 + 0.6 * quality;
++          if (ab('q1')) quality = 1;
++          if (!predicting) Jc('an.cut.qsum', quality);
+           // 칼날 길이 방향으로 미끄러지며 벨수록(당겨 베기) 잘 들고, 칼날 손잡이 쪽은 덜 든다
+         }
+       }
+     }
+ 
++    if (isBlade && type === 'blunt' && !predicting) Jc('an.geo.flat');
+     // 맞은 곳
+     const vicLocal = point.clone().sub(P.p).applyQuaternion(_q.copy(P.q).invert());
+     const zone = zoneOf(pr.v, vicLocal);
+@@ -195,6 +206,7 @@ export class Combat {
+     //  (예전엔 플레이어 케틀햇만 빼서 라이트세이버가 케틀햇 문턱 200 J 를 그대로 받았다 — 주석 의도와 반대였다. 디렉터 12:38)
+     const helmOn = helmet && !att.weaponCfg.ignoreArmor;
+     const A = helmOn ? { ...ANATOMY.head, ...hs } : ANATOMY[zone];
++    if (!predicting) { Jc('an.zone.' + zone); if (helmet) Jc('an.helmet'); if (helmOn) Jc('an.helmOn'); }
+     // 판금(ARMOR.on, look.armor === 'plate'): 그 부위 판이 남아 있고 맞은 곳을 판이 덮었으면(팔다리는 판이 붙은 자리만).
+     //  목(가슴 윗부분)은 덮지 않는다
+     const body = zone !== 'head' && zone !== 'neck';
+@@ -209,13 +221,16 @@ export class Combat {
+       helmetBlunt = hs.blunt + (1 - hs.blunt) * (1 - hi);
+     } else if (body) {
+       guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
++      if (ab('nocloth')) guard = 1;
++      if (!predicting) { Jc('an.cloth.n'); Jc('an.cloth.guardSum', guard); if (plate) Jc('an.plate'); }
+       if (plate) plateGuard = ARMOR.plate.guardMin + (1 - ARMOR.plate.guardMin) * armorHold(ARMOR.plate, vic.plate[pr.v.part]);
+       // 팔다리 판(견갑·팔 통판·손목 보호대·허벅지 판·정강이받이·쇠신)은 몸통 판보다 얇다: 문턱 × ARMOR.plate.limb
+       if (plate && (zone === 'arm' || zone === 'leg')) plateGuard *= ARMOR.plate.limb;
+     }
+-    if (att.weaponCfg.ignoreArmor) (guard = 1), (plateGuard = 0); // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
++    if (att.weaponCfg.ignoreArmor) { if (!predicting) Jc('an.ignoreArmor'); (guard = 1), (plateGuard = 0); } // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
+     // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구·판금은 gap 의 절반을 무시한다
+     else if (type === 'stab' && ts?.gap) {
++      if (!predicting) Jc('an.gap');
+       if (helmOn) guard *= 1 - 0.5 * ts.gap;
+       else if (body) {
+         guard -= ts.gap * Math.max(0, guard - 0.55);
+@@ -230,6 +245,7 @@ export class Combat {
+     const emoDealt = am?.dealt ?? 1;
+     const emoTaken = vm?.taken ?? 1;
+     const emoPass = (am?.pass ?? 0) + (vm?.pass ?? 0);
++    if (!predicting && (emoDealt !== 1 || emoTaken !== 1 || emoPass !== 0)) Jc('an.emoActive');
+     let severity = 0;
+     let pass = false;
+     let thr = null; // 날이 들기 시작하는 문턱(J) — 측정 도구(weapon_anatomy.mjs, armor_eval.mjs)도 읽는다
+@@ -238,19 +254,26 @@ export class Combat {
+       const wMult = att.weaponCfg.power * (type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust); // 등급 배율 × 무기별 베기/찌르기 배율
+       thr = (type === 'cut' ? A.cut : A.stab) * guard;
+       // 판금: 강철판 문턱 × 판의 막음. 판 밑 누비옷보다 약해지지는 않는다 (큰 쪽)
++      if (!predicting && plateGuard > 0 && (type === 'cut' ? ARMOR.plate.cut : ARMOR.plate.stab) * plateGuard > thr) Jc('an.plateFloorWins');
++      if (!predicting && helmet && (type === 'cut' ? ANATOMY.head.cut : ANATOMY.head.stab) > thr) Jc('an.helmFloorWins');
+       if (plateGuard > 0) thr = Math.max(thr, (type === 'cut' ? ARMOR.plate.cut : ARMOR.plate.stab) * plateGuard);
+       // 투구: 찌그러지고 틈을 파고들어도 맨머리보다 약해지지는 않는다 (케틀햇은 가장 약할 때도 맨머리보다 세서 그대로)
+       if (helmet) thr = Math.max(thr, type === 'cut' ? ANATOMY.head.cut : ANATOMY.head.stab);
+       eff = energy * quality * wMult * emoDealt * emoTaken;
+       if (eff > thr) {
+-        severity = (eff - thr) / (type === 'cut' ? 90 : 60);
+-        pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
++        severity = (eff - thr) / (ab('onediv') ? 75 : (type === 'cut' ? 90 : 60));
++        pass = eff > thr * ((ab('pass1') ? 1 : 1.25) - emoPass);
++        if (!predicting) { Jc('an.wound.' + type); if (pass) Jc('an.pass.' + type); else Jc('an.embed.' + type); if (att.skill?.thrustPush && type==='stab') Jc('an.woundAssisted'); }
++        else { Jc('pred.wound'); if (pass) Jc('pred.pass'); } // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
+       } else if (!predicting) {
+         type = 'blunt'; // 날이 들지 못했으면 멍만 든다
++        Jc('an.downgrade'); if (assisted) Jc('an.downgrade.assisted');
++        if (ab('keepassist')) assisted = null;
+         // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
+         if (assisted) ({ mEff, ephys, energy } = assisted);
+       }
+     }
++    if (!predicting) Jc('an.final.' + type);
+     if (type === 'blunt') energy *= att.weaponCfg.power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
+     return {
+       type,
+@@ -487,16 +510,19 @@ export class Combat {
+     if (zone === 'head') e = !noArmor && vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.helmet : STEEL.skull;
+     else if (!noArmor && zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.plate; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
+     else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone;
++    Jc('rb.' + (e === STEEL.helmet ? 'helmet' : e === STEEL.skull ? 'skull' : e === STEEL.plate ? 'plate' : e === STEEL.bone ? 'bone' : 'none'));
++    if (ab('norebound')) return;
++    if (ab('onerebound') && e > 0) e = 0.15;
+     if (e <= 0) return;
+     const vPre = velAt(S, point, _a).sub(velAt(P, point, _b)).dot(n); // + = 다가옴
+-    if (vPre < STEEL.reboundMinSpeed) return;
++    if (vPre < STEEL.reboundMinSpeed) { Jc('rb.tooSlow'); return; }
+     const sw = pr.w.body;
+     const vb = pr.v.body;
+     const va = sw.velocityAtPoint(point);
+     const vv = vb.velocityAtPoint(point);
+     const vPost = (va.x - vv.x) * n.x + (va.y - vv.y) * n.y + (va.z - vv.z) * n.z;
+     const want = -e * vPre;
+-    if (vPost <= want) return; // 이미 그만큼 떨어지고 있다
++    if (vPost <= want) { Jc('rb.alreadyApart'); return; } // 이미 그만큼 떨어지고 있다
+     // 칼에는 칼날 중심선 위에 건다 (날 끝에 걸면 칼이 길이 방향으로 팽이처럼 돈다) → 유효 질량도 그 점에서.
+     //  몸은 뼈(중심선)로 받는다
+     const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
+@@ -506,6 +532,7 @@ export class Combat {
+     const mB = gripMass(att.swordProps, liveState(sw), pA, n, STEEL.handMass);
+     const mV = bodyMass(vb, pV, n);
+     const J = (vPost - want) / (1 / mB + 1 / mV);
++    Jc('rb.applied'); Jc('rb.Jsum', J);
+     sw.applyImpulseAtPoint({ x: -n.x * J, y: -n.y * J, z: -n.z * J }, vp(pA), true);
+     vb.applyImpulseAtPoint({ x: n.x * J, y: n.y * J, z: n.z * J }, vp(pV), true);
+     // 칼을 쥔 팔도 충격을 받는다: 멈추는 충격량(≈ 유효 질량 × 다가오던 속도) + 되튀는 몫
+@@ -528,7 +555,8 @@ export class Combat {
+     // 속도는 스텝 "직전" 값을 쓴다. 튕긴 충돌은 스텝 뒤엔 이미 속도가 꺾여 있어서 에너지가 작게 나온다.
+     const S = att.cache?.sword || liveState(pr.w.body);
+     const P = vic.cache?.parts[pr.v.part] || liveState(pr.v.body);
+-    if (vic.hitCooldowns.has(key)) {
++    if (vic.hitCooldowns.has(key) && !ab('nocool')) {
++      Jc(passing ? 'st.cool.passing' : 'st.cool.drop');
+       // 같은 부위에 방금 상처가 났으면 새 상처는 없지만, 가르고 지나가는 칼은 여전히 저항을 받는다
+       if (!passing) return null;
+       const r = this.analyze(pr, point, S, P);
+@@ -536,10 +564,13 @@ export class Combat {
+       return r;
+     }
+     const r = this.analyze(pr, point, S, P);
+-    if (!r || r.energy < STRIKE.minEnergy) return null;
++    if (!r) { Jc('st.null'); return null; }
++    if (r.energy < STRIKE.minEnergy && !ab('nomin')) { Jc('st.minE'); return null; }
++    Jc(passing ? 'st.passing' : 'st.bounce');
+     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
+     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
+-    if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
++    if (!(r.type !== 'blunt' || r.severity > 0 || r.energy > 10)) Jc('st.gate10.skip');
++    if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10 || ab('nogate10')) {
+       vic.applyWound({ ...r, part: pr.v.part });
+     }
+     this.hooks.onWound?.(att, vic, r, point, pr);
+diff --git a/src/fighter.js b/src/fighter.js
+index deb1b31..0766bd6 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -21,6 +21,10 @@ import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩
+ // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
+ import { decorateOutfit, setHelmetWear, setPlateWear } from './outfits.js';
+ import { reviveOf, tryRevive, reviveTick } from './revive.js';
++const JC = (globalThis.__JC ||= {});
++const Jc = (k, n = 1) => { JC[k] = (JC[k] || 0) + n; };
++const JA = ((typeof process !== 'undefined' && process.env.J_ABL) || '').split(',');
++const ab = (k) => JA.includes(k);
+ 
+ // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
+ // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
+@@ -723,14 +727,20 @@ export class Fighter {
+       const lostFooting = this.offBalanceTime > BALANCE.fallDelay;
+       // 기울기는 일부러 숙인 만큼(배를 다쳐 웅크림·자세)을 빼고 잰다: 웅크린 채 일어서자마자 넘어졌다고 다시 쓰러지기를 되풀이하지 않게
+       const fallTilt = tilt - THREE.MathUtils.radToDeg(this.hunch);
+-      if (fallTilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(fallTilt > BODY.fallTiltDeg + 15);
+-      else if (this.legHealth < 0.25) this.knockDown(false); // 다리가 버티지 못해 주저앉는다
++      if (fallTilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) {
++        Jc('kd.cause.' + (fallTilt > BODY.fallTiltDeg ? 'tilt' : this.balance <= 0 ? 'balance' : 'footing'));
++        if (fallTilt > BODY.fallTiltDeg && this.balance <= 0) Jc('kd.tilt&balance');
++        if (fallTilt > BODY.fallTiltDeg && lostFooting) Jc('kd.tilt&footing');
++        if (this.balance <= 0 && lostFooting) Jc('kd.balance&footing');
++        this.knockDown(ab('allheavy') ? true : fallTilt > BODY.fallTiltDeg + 15);
++      }
++      else if (this.legHealth < 0.25) { Jc('kd.cause.leg'); this.knockDown(false); } // 다리가 버티지 못해 주저앉는다
+     } else if (this.state === 'down') {
+       if (this.stateTime > this.downTime && this.consciousness > 0.3) this.setState('getup');
+     } else if (this.state === 'getup') {
+       if (this.stateTime > this.kneelTime) {
+         // 무릎 꿇은 자세에서 일어서기. 다리가 못 버티면 무릎 꿇은 채로 남는다
+-        if (this.legHealth < 0.25) this.setState('kneel');
++        if (this.legHealth < 0.25) { if (this.state !== 'kneel') Jc('st.getup->kneel'); this.setState('kneel'); }
+         else if (this.stateTime > this.kneelTime + this.riseTime) {
+           this.setState('stand');
+           this.balance = 60;
+@@ -760,6 +770,7 @@ export class Fighter {
+   knockDown(heavy = true) {
+     if (this.state === 'dead' || this.state === 'down') return;
+     if (!heavy && (this.state === 'getup' || this.state === 'kneel')) return;
++    Jc('kd.call.' + (heavy ? 'heavy' : 'light') + '.from.' + this.state);
+     this.balance = 0;
+     if (heavy) {
+       this.downTime = BODY.fallDuration * (1 + (1 - this.legHealth) + (1 - this.vigor));
+@@ -771,7 +782,8 @@ export class Fighter {
+ 
+   die(cause) {
+     if (this.state === 'dead') return;
+-    if (tryRevive(this, cause)) return; // 처음 죽음이면 투지로 다시 일어선다 (revive.js)
++    Jc('die.' + cause);
++    if (tryRevive(this, cause)) { Jc('die.revived'); return; } // 처음 죽음이면 투지로 다시 일어선다 (revive.js)
+     this.causeOfDeath = cause;
+     this.setState('dead');
+   }
+@@ -801,6 +813,7 @@ export class Fighter {
+     const sev = h.severity;
+     const Z = h.zone;
+     // 통증과 휘청임 (에너지가 클수록)
++    Jc('aw.' + h.type + '.' + Z);
+     this.pain = Math.min(2, this.pain + sev * 0.8 + h.energy / 150);
+     this.balance -= h.energy * VITALS.staggerPerJoule;
+ 
+@@ -826,7 +839,8 @@ export class Fighter {
+       if (Z === 'head' || Z === 'neck') {
+         const k = h.helmet ? h.helmetBlunt : 1;
+         this.consciousness -= h.energy * VITALS.concussionPerJoule * k;
+-        if (h.energy * k > 45) this.knockDown(h.energy * k > 90); // 머리를 세게 맞으면 주저앉거나 쓰러진다
++        Jc('aw.headBlunt.consSum', h.energy * VITALS.concussionPerJoule * k);
++        if (h.energy * k > 45) { Jc(h.energy * k > 90 ? 'aw.headBlunt>90' : 'aw.headBlunt45-90'); if (!ab('nohk')) this.knockDown(h.energy * k > 90); } // 머리를 세게 맞으면 주저앉거나 쓰러진다
+         this.daze = Math.min(1, (this.daze || 0) + h.energy * k / 100); // 멍함
+       }
+       return;
+@@ -834,22 +848,25 @@ export class Fighter {
+ 
+     // 베기/찌르기 → 상처 + 출혈
+     const bleedPerSev = h.bleedPerSev;
+-    const bleed = sev * bleedPerSev * (h.type === 'stab' ? 1.6 : 1);
++    const bleed = sev * bleedPerSev * (h.type === 'stab' && !ab('nostab16') ? 1.6 : 1);
++    Jc('aw.bleedSum.' + h.type, bleed); Jc('aw.sevSum.' + h.type, sev);
+     this.bleed += bleed;
+     this.wounds.push({ part: h.part, type: h.type, severity: sev, bleed, local: h.local.clone() });
+ 
+     // 치명상
++    const headDie = ab('headone') ? sev > 0.5 : ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5));
++    if (Z === 'head' && h.type === 'cut' && sev > 0.5 && sev <= 0.8) Jc('aw.headCut0.5-0.8');
+     if (Z === 'neck' && sev > 0.5) this.die('목');
+-    else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
+-    else if (Z === 'chest' && h.type === 'stab' && sev > 1.1) this.bleed += 0.25; // 심장·폐: 몇 초 안에 쓰러진다
++    else if (Z === 'head' && headDie) this.die('머리');
++    else if (Z === 'chest' && h.type === 'stab' && sev > 1.1) { Jc('aw.chestStab>1.1'); if (!ab('nochest')) this.bleed += 0.25; } // 심장·폐: 몇 초 안에 쓰러진다
+ 
+     // 팔다리 기능
+     const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' }[h.part];
+     if (limb) {
+       this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * 0.7);
+-      if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
++      if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) { if (this.armed) Jc('aw.dropSword'); this.dropSword(); }
+     }
+-    if (Z === 'head' && h.type === 'cut') this.consciousness -= sev * 0.5;
++    if (Z === 'head' && h.type === 'cut') { Jc('aw.headCutCons'); if (!ab('nohcc')) this.consciousness -= sev * 0.5; }
+   }
+ 
+   /**

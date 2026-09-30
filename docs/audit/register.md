@@ -12,9 +12,15 @@
 | R-003 | 9/29 | 디렉터 | 측정 바로잡기: weightMode 기본값 hybrid, 안 읽히는 WHOLE 스위치 8개(가짜 층 끄기), fights12 소음 폭 표기, chain.mjs 하나로 획 드라이버 5벌 합치기, 안 도는 redesign_probes 정리 | 2026-09-29.md R-003, evidence README 2절 | ①③ 수용(지금, main: weightMode 기본 hybrid, 기준 파일 재생성, README 소음 폭). ② W5에서(WHOLE 스위치 8개, README:43·wholebody.mjs:5). ④ chain.mjs는 9fd9283에 있음, 획 드라이버 통합·redesign_probes 정리는 W5 | 수용(단계) |
 | R-004 | 9/29 | 디렉터(flow·motion_library 는 사장님) | 지금 설정에서 기여 0인 코드 지우기(main 약 250줄: flow, uprightRelax, footReaction, accelLean, THRUST.bind, holdAmount, loadKnee, WEAPON.mass/length, getUpDuration; wbs: tcFloor 코드, bufferLock). motion_library·weapon_class 두 벌 문제는 R2 W1 에서 정해 받기 | 2026-09-29.md R-004, evidence walk/hist/ablation | 조건부 수용. 지금: getUpDuration·WEAPON.mass/length(+주석)·loadKnee 삭제(바이트 동일 증명). W4 뒤: uprightRelax·footReaction·accelLean·holdAmount. 유지: THRUST.bind(무기 PM 판단). 사장님 질문: SKILL.flow 삭제, motion_library·weapon_class와 아틀라스 두 벌 | 수용(조건부) |
 | R-005 | 9/29 | 디렉터 | 모델 이름 지우기(decisions.md:30-31, sound_pm_handoff.md:16). grep 에 한글 표기도 넣기. 어긋난 문서 6곳 고치기(whole_body_strike.md:160 "24 m/s 이하" 등) | 2026-09-29.md R-005 | 수용. (a) 5f928a1에서 정리 — 감사가 main grep 0건 확인(9/29 22:30). (b) 문서 6곳 지금 고침, grep에 한글 표기 추가 | 수용 (a)완료 |
-| B-1 | 9/29 | 디렉터 | cacheState 게으르게(CPU 약 8%) | 부록 B | — | 대기 |
+| B-1 | 9/29 | 디렉터 | cacheState 게으르게(CPU 약 8%) | 부록 B | — | O-001에 합침 |
 | B-2 | 9/29 | 디렉터 | 두 손 쥠 용수철이 떨림의 출처, GRIP.k/d 다시 보기 | 부록 B | — | 대기 |
 | B-3 | 9/29 | 디렉터 | 사장님 결정 원장을 decisions.md 하나로 | 부록 B | — | 대기 |
 | B-4 | 9/29 | 디렉터 | 도구 정리 2차(싸움 루프 9벌, 감싸기 5개, jelly_harness, director_checks, 일회성 시뮬, 안 쓰는 이미지) | 부록 B | — | 대기 |
 | B-5 | 9/29 | 디렉터 | 옛 설계 문서 보관, "R2" 이름 겹침 | 부록 B | — | 대기 |
 | B-6 | 9/29 | 사장님 | 느낌 쪽 작은 단계 5개(시뮬로는 거의 0) | 부록 B | — | 대기 |
+| O-001 | 9/30 | 디렉터(확인 뒤) | 매 스텝 임시 객체 줄이기(1.1 MB/프레임, GC 5초에 최대 100 ms): 몸 상태 한 번만 읽어 공유, 임시 벡터 재사용. 바이트 동일 | 2026-09-30.md O-001 | — | 미답 |
+| O-002 | 9/30 | 디렉터 (a)(b) / 사장님 (c) | (a) 없어진 PCFSoftShadowMap 한 줄 (b) 먼 무대 형상 그림자 받기 끄기 (c) 해상도 2→1.5·MSAA·120 Hz 폰 60 fps 묶기는 사장님 결정 | 2026-09-30.md O-002 | — | 미답 |
+| O-003 | 9/30 | 디렉터(확인 뒤), blur 빼기만 사장님 | 판 안에서 쌓이는 것·새는 것: 상처 자국 재료, 판 도중 셰이더 생성, 입자 전체 업로드, 자취 캔버스, 옛 울림 연결, 테두리 매 프레임 쓰기 | 2026-09-30.md O-003 | — | 미답 |
+| O-004 | 9/30 | 사장님 | 안 켜지거나 결과 안 바꾸는 판정 지우기·합치기(투구 바닥값, 가슴 찌르기 +0.25, 머리 의식 잃음, 넘어짐 4조건→1, 에너지 바닥 2→1, 되튐 5종→1, 옷감 보호, 찌르기 특례 6→1). 한 번에 하나씩 | 2026-09-30.md O-004 | — | 미답 |
+| O-005 | 9/30 | 디렉터(확인 뒤), 츠베르히·기회 종류는 PM·사장님 | 두 번 하는 장치: AI emote()↔emotions.js, 부활 중 die() 매 스텝, 안 고르는 AI 선택지 | 2026-09-30.md O-005 | — | 미답 |
+| P-1~P-5 | 9/30 | 사장님·디렉터·PM | 물리 빈도, 성 안뜰 눈송이, 대성당 빛줄기, 메뉴 전속력 그리기, R2 handMode 가짓수 | 2026-09-30.md 대기 | — | 대기 |
