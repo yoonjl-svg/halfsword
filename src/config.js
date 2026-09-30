@@ -29,6 +29,11 @@ export const CAMERA = {
   openBack: 1.0, // 판 시작: 이만큼 더 뒤에서 시작해 같은 시간 동안 평소 거리로 (m)
 };
 
+// 그리기 (main.js 게임 루프). 해상도(DPR min(devicePixelRatio, 2))·MSAA 는 그대로 둔다
+export const RENDER = {
+  fpsCap: 60, // 사장님 9/30 결정, 발열 — 화면 갱신 상한, 물리·입력과 무관. 90/120 Hz 화면에서만 프레임을 거른다 (0 = 묶지 않음. 설정 '화면 갱신 60 fps 묶기'로 끌 수 있다)
+};
+
 export const BODY = {
   standHeight: 0.95, // 서 있을 때 골반 높이
   support: 1.0, // 골반을 떠받치는 힘(중력 대비 배수)

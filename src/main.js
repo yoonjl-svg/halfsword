@@ -24,6 +24,7 @@ import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
 import { createSwordTrails } from './sword_trail.js';
 import { PerfMeter } from './perfmeter.js';
+import { createRenderCap } from './render_cap.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
@@ -50,7 +51,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, fpsCap: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -1317,6 +1318,9 @@ function updateGuardName(dt) {
 const perf = params.get('fps') ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
 let last = performance.now();
 let acc = 0;
+// 화면 갱신 상한 (CONFIG.RENDER.fpsCap, 사장님 9/30): 90/120 Hz 화면에서 그리기만 60 fps 로 거른다.
+//  물리 스텝·입력·소리·카메라 따라가기는 rAF 마다 예전 그대로. 거르는 건 renderer.render 와 그 직전의 겉모습 갱신뿐
+const renderCap = createRenderCap();
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -1324,6 +1328,7 @@ function frame(now) {
   let dt = Math.min(0.1, frameMs / 1000);
   last = now;
   let physMs = 0, physSteps = 0, capped = false, simWant = 0, simGot = 0; // 성능 측정 표시(?fps=1)용
+  const paint = renderCap.tick(dt, settings.fpsCap ? CONFIG.RENDER.fpsCap : 0); // 이번 프레임을 그리나
 
   if (state === 'fight' && player) {
     // 손 목표 갱신 (입력 → 플레이어)
@@ -1402,8 +1407,11 @@ function frame(now) {
     for (const b of bodySounds) b.update(dt * scale);
     reviveFx.update(enemy, dt * scale);
     particles.update(dt * scale);
-    for (const a of auras) a.update(now / 1000);
-    swordTrails.update(); // 칼 잔상 띠
+    if (paint) {
+      // 겉모습만 (시계로 도는 빛·안광, 칼 잔상 꼭짓점): 그리는 프레임에만
+      for (const a of auras) a.update(now / 1000);
+      swordTrails.update(); // 칼 잔상 띠
+    }
     arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
@@ -1417,13 +1425,17 @@ function frame(now) {
     // 판이 끝나 메뉴가 뜬 뒤에도 흩어지던 칼·투구·판금 조각은 마저 날아 사라진다 (판 끝 슬로모션 0.5배 그대로. 싸움 중 일시정지면 멈춘 채)
     if (roundOver) tickDebris(dt * 0.5);
   }
-  updateCamera(dt);
-  fighterLight.update(fighterMeshes);
-  const renderT0 = perf ? performance.now() : 0;
-  renderer.render(scene, camera);
-  if (perf) perf.frame(now, frameMs, physMs, performance.now() - renderT0, physSteps, capped, simWant, simGot);
+  updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
+  let renderMs = 0;
+  if (paint) {
+    fighterLight.update(fighterMeshes);
+    const renderT0 = perf ? performance.now() : 0;
+    renderer.render(scene, camera);
+    renderMs = perf ? performance.now() - renderT0 : 0;
+  } else camera.updateMatrixWorld(); // 그리기가 해 주던 카메라 행렬 갱신 — 소리 좌우(sound._where)가 읽는다
+  if (perf) perf.frame(now, frameMs, physMs, renderMs, physSteps, capped, simWant, simGot, paint);
   trail.enabled = settings.trail && state === 'fight';
-  trail.draw(now / 1000, !input.isTouchDevice);
+  if (paint) trail.draw(now / 1000, !input.isTouchDevice);
 }
 
 // 메뉴 뒤 배경으로 보일 첫 판을 미리 만들어 둔다
@@ -1461,7 +1473,8 @@ window.game = {
   THREE,
   camera,
   freeCam: false,
-  renderInfo: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
+  renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
+  renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 갱신 60 fps 묶기' (game.settings.fpsCap)
   // 배경: game.stage 로 지금 배경·짓는 시간 확인, game.setStage('castle') 로 바로 바꿔 보기 (싸우는 중이면 잠깐 멈칫한다)
   get stage() {
     return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
