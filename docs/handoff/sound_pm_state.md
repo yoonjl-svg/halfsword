@@ -7,7 +7,8 @@
 - `src/main.js`는 디렉터 요청 시 사운드 호출 줄만. `src/fighter.js`·`src/gun.js`·`src/debris.js`는 건드리지 않는다.
 - 역할 분담안(main `docs/pm_roles_charter.md` 부록 B): 에너지 눈금(150 J과 500 J이 다르게), 디딤 소리(동작 PM의 딛는 시각 φc·gait onTouchdown 'strike'), 센 타격·딛기가 소리에 맞는지 확인, 라운드 판정에 소리 의견.
 
-## 진행 중 / 끝남 (2026-09-29)
+## 진행 중 / 끝남
+- [진행 중] 31차(9/30): 칼→몸 소리 후보 셋, 사장님 선택 대기.
 - [끝남] 30차: 큰 타격 배경 소리 간격 `SOUND.stageHitGap` = 10초(`_spaced`; 종·불길·천·돌·새·박쥐·나뭇잎·풍경·까마귀). 타격음은 그대로.
 - [끝남] 30차: 리볼버 총성 `sound.gunshot` (.357/.44급, 무대 방 울림 + 바깥 메아리 꼬리). gun.js `gunshotSound` 첫 줄이 넘긴다. 전후 그림 `gunshot_before_after.png`. 사장님 내일 시험.
 - [끝남] 세기 눈금 준비: `sound.hitWeight(energy, e0)` — 베기·찌르기·강철 충돌 공통. `SOUND.hitScale`('legacy' 기본 = 지금 소리, 'log' = 200 J 위로 로그 무게). `sounds.html` "세기 눈금 A/B" 3행(150/300/500 J). 게임 호출은 안 바꿈.
@@ -15,7 +16,7 @@
 - [안 함] 총성 후보: 디렉터 보류(사장님이 원하실 때).
 
 ## 열린 요청 / 기다리는 것
-- (9/30 사장님 직접) 칼로 몸을 칠 때 소리가 "전자 파리채로 모기 잡는 소리 같다" → 리얼리즘 칼싸움 게임 참고 조사 보고함. 원인: 5차 `SYNTH.hitSlash`(사무라이 쇼다운식)의 3~7.5kHz 금속 "징" 울림 + 딱딱 튀는 클릭 + 세게 누른 찌그러짐, `slice`의 2.6kHz 틱 수천 개. 후보(녹음 기반 / 합성 수정) 만들지 사장님 답 대기.
+- (9/30 사장님 직접) 칼→몸 소리가 "전자 파리채 같다" → 31차 후보 셋(1안 녹음 'rec' / 2안 합성 'synth' / 지금 'legacy')을 `SOUND.fleshHit` 로 넣고(기본 'legacy', 게임 소리 그대로) 미리듣기 보냄. **사장님 선택 대기** → 고르면 기본값 바꾸고 안 고른 쪽 지움.
 - 화전 터(clearing) 소리: 사장님 실제 플레이 피드백 대기.
 - 총성·간격(30차): 사장님 내일 시험 → 피드백에 따라 `SOUND.stageHitGap`·`gunshot` gain/크랙 조정.
 - R3 에서 디렉터가 `sound.hitScale = 'log'`(또는 config `SOUND.hitScale`)로 넘기고, 타격 호출에 온몸 타격 에너지를 준다.
@@ -27,6 +28,7 @@
 - 들어보기: `sounds.html` (같은 vite). 오프라인 렌더는 `window.lab.render({dur, events:[{t, call, args}], samples:true, returnAudio:'b64', seed})`.
 
 ## 관문 (최근)
+- 31차: 시뮬 3종 main `63f6b94`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임 세 모드 에러 0.
 - 30차: 시뮬 3종 main `c9fc916`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임(성 안뜰·권총) 간격·총성 경로 확인.
 - 29차: 시뮬 3종 main `940f665`와 바이트 동일, 스모크 콘솔 에러 0, 실제 게임 hitScale 'legacy'·w=0 확인.
 
