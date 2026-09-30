@@ -19,6 +19,7 @@ export class Particles {
     this.mesh.count = 0;
     scene.add(this.mesh);
     this.list = [];
+    this.dirty = false; // 지난 올림 뒤로 바뀐 입자가 있나 (새로 붙음·움직임·사라짐)
     this._m = new THREE.Matrix4();
     this._q = new THREE.Quaternion();
     this._s = new THREE.Vector3();
@@ -62,14 +63,18 @@ export class Particles {
   add(p, v, color, size, life, sticks) {
     if (this.list.length >= MAX) this.list.shift();
     this.list.push({ p: p.clone(), v, color: new THREE.Color(color), size, life, sticks, stuck: false });
+    this.dirty = true;
   }
 
   update(dt) {
-    const out = [];
-    for (const it of this.list) {
+    // 제자리에서 추린다 (매 프레임 새 배열을 만들지 않는다. 순서는 그대로)
+    const list = this.list;
+    let n = 0;
+    for (const it of list) {
       it.life -= dt;
       if (it.life <= 0) continue;
       if (!it.stuck) {
+        this.dirty = true;
         it.v.y -= 9.81 * dt;
         it.p.addScaledVector(it.v, dt);
         if (it.p.y <= 0.002) {
@@ -82,26 +87,38 @@ export class Particles {
           } else it.life = 0;
         }
       }
-      out.push(it);
+      list[n++] = it;
     }
-    this.list = out;
-    let i = 0;
-    for (const it of this.list) {
+    if (n !== list.length) this.dirty = true;
+    list.length = n;
+    // 바뀐 게 없으면(다 바닥에 붙어 가만히 있거나 하나도 없으면) 올리지 않는다. 올릴 때는 살아 있는 칸만
+    if (!this.dirty) return;
+    this.dirty = false;
+    for (let i = 0; i < n; i++) {
+      const it = list[i];
       const s = it.size;
       this._s.set(s, it.stuck ? 0.002 : s, s);
       this._m.compose(it.p, this._q, this._s);
       this.mesh.setMatrixAt(i, this._m);
       this.mesh.setColorAt(i, it.color);
-      i++;
     }
-    this.mesh.count = i;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    this.mesh.count = n;
+    if (n > 0) {
+      const im = this.mesh.instanceMatrix;
+      const ic = this.mesh.instanceColor;
+      im.clearUpdateRanges();
+      im.addUpdateRange(0, n * 16);
+      im.needsUpdate = true;
+      ic.clearUpdateRanges();
+      ic.addUpdateRange(0, n * 3);
+      ic.needsUpdate = true;
+    }
   }
 
   clear() {
     this.list = [];
     this.mesh.count = 0;
+    this.dirty = false;
   }
 }
 
