@@ -358,13 +358,9 @@ export class AI {
     const th = this.threat(s, c, r, d);
     this.noThreat = th ? 0 : this.noThreat + dt;
     this.emote(dt, hurt, !!th && d < this.M.clinch + 0.4);
+    // 밀치는 중(me.barge)에도 모드 분기는 그대로 돈다: 베기·찌르기를 시작하면 'swing'·'thrust', 막으며 물러서면(defVoid)
+    //  closeWant 가 풀려 스틱 0 → 'release' 로 끝난다 (버틴 상대에게 누르기가 끝없이 남지 않게. 새 숫자 없음)
     this.closeQuarters(s, d);
-    // 밀치는 중(me.barge): 모드 분기를 건너뛴다. 손과 발(스틱 1 유지)은 돈다
-    if (me.barge && !kneeling) {
-      this.moveHand(dt);
-      this.moveFeet(dt, d);
-      return;
-    }
 
     if (kneeling) {
       // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
@@ -1483,10 +1479,10 @@ export class AI {
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * 0.15 * k); // 몰렸으면 먼저 친다
     }
     // 근접 밀치기: 닿는 거리 안에서 스틱만 (벽 처리 뒤라 side 를 ±k 로 바꾸지 못한다). 걸쇠가 꺼져 있으면 한 스텝 0 으로 장전,
-    //  켜져 있으면 1 로 발사, 밀치는 동안 1 유지(누르기). 휘두르는 중·베는 중(strike·follow, 팔이 묶임)은 미룬다
+    //  켜져 있으면 1 로 발사, 밀치는 동안 closeWant 면 1 유지(누르기). 휘두르는 중·베는 중(strike·follow, 팔이 묶임)은 미룬다
     const armsBusy = this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow');
     if (CLOSE.on && this.closeInside && !me.skill.swinging && (me.barge || (this.closeWant && !armsBusy))) {
-      fwd = me.barge ? 1 : me.closeArmed ? 1 : 0;
+      fwd = me.barge ? (this.closeWant ? 1 : 0) : me.closeArmed ? 1 : 0; // 밀치는 중엔 closeWant 동안만 누른다 (풀리면 release)
       side = 0;
     }
     if (!this.foe.alive) fwd = side = 0;
