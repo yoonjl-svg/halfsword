@@ -11,7 +11,7 @@
 //   sweep          서 있는 더미 1.38/1.53/1.71/1.91 m + 걸어 들어가며: 에너지·헛침·첫 부위·옆 어긋남·최고 빠르기와 닿기 시간차
 //   trunkoff       척추·골반 비틀기를 0으로 묶은 베기: 에너지 비
 //   strength       근력 0.8 / 1.0 / 1.3: 획 시간·에너지
-//   power          손가락 6 / 8.6 / 12 m/s (결심 세기 c 0.3 / 0.6 / 1.0): 획 시간·에너지·걸음
+//   power          손가락 6 / 8.6 / 12 m/s: 획 시간·에너지·걸음
 //   stand N        상대 없이 제자리 베기 N번: 스스로 넘어짐, s 평균
 //   miss N         헛친 베기 (상대가 멀다): 비틀 걸음·넘어짐·s 회복 시간 (반은 조이스틱을 뒤로 당긴다)
 //   block N        멈춰 선 막기 / 근력 1.3 츠바이핸더 AI 에 막힘: 부딪힘·잃은 빠르기·밀린 발·기울기
@@ -748,7 +748,7 @@ if (SUB === 'trunkoff') {
 
 if (SUB === 'strength' || SUB === 'power') {
   const res = {};
-  const cases = SUB === 'strength' ? [0.8, 1.0, 1.3].map((s) => ({ key: `근력 ${s}`, str: s, v: 12 })) : [[0.3, 6], [0.6, 6 + (0.3 * 6) / 0.7], [1.0, 12]].map(([c, v]) => ({ key: `c ${c} (${r1(v)} m/s)`, v }));
+  const cases = SUB === 'strength' ? [0.8, 1.0, 1.3].map((s) => ({ key: `근력 ${s}`, str: s, v: 12 })) : [6, 6 + (0.3 * 6) / 0.7, 12].map((v) => ({ key: `손가락 ${r1(v)} m/s`, v })); // 빠르기는 옛 결심 세기 c 0.3/0.6/1 자리 그대로 (c 는 R2 W5 가 지움)
   for (const cs of cases) {
     // 맞느냐 빗나가느냐가 몇 cm 에 갈려 에너지가 크게 흔들린다 → 3무리 × 4거리 × 3흔듦 = 36번의 평균
     const rows = sweepRows(['diagR', 'vert', 'horizR'], { dists: [1.38, 1.53, 1.71, 1.91], walkDists: [], v: cs.v, str: cs.str });
@@ -761,8 +761,8 @@ if (SUB === 'strength' || SUB === 'power') {
     out.T_08over13 = r2(res[ks[0]].strokeT_ms / res[ks[2]].strokeT_ms);
     line('근력 1.3/1.0 에너지 · 0.8/1.3 획 시간', [out.E_13over10, out.T_08over13]);
   } else {
-    out.E_c1overc03 = r2(res[ks[2]].meanE / res[ks[0]].meanE);
-    line('c 1 / c 0.3 에너지', out.E_c1overc03);
+    out.E_12over6 = r2(res[ks[2]].meanE / res[ks[0]].meanE);
+    line('손가락 12 / 6 m/s 에너지', out.E_12over6);
   }
   out.res = res;
 }
