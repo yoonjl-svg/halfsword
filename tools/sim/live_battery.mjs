@@ -1,6 +1,8 @@
 // heft_design/live_battery.mjs — acceptance battery that runs the LIVE project code (../../src) with NO replicas.
 // Use after implementing the heavy-sword plan:   node live_battery.mjs cuts,steps,kata,walk,jitter,hits,fights,jam
 // Optional instrumentation read if the implementation exposes it: fighter.debug = { aim: Vector3 (world commanded blade dir), wristTorque: Vector3, wristCap: number }
+// 검술 보정 v2 (skill.corr 'v2'): aimOf·cut().fa 의 기준 칼 방향은 f.debug.aim 먼저, 없으면 날것 guardDir 매핑 (자세 지도 당김 없음). 'old' 는 예전 식 그대로
+//   node tools/sim/with_config.mjs SKILL.corr=v2 live_battery.mjs   (플레이어만 v2. AI 싸움(fights)은 SKILL.corrAI 를 따른다)
 import { newRound, THREE, DT, AI, CONFIG } from './jelly_harness.mjs';
 import { guardAt } from '../../src/guards.js';
 
@@ -23,6 +25,7 @@ function guardDir(x, y) {
 /** commanded blade direction (world) exactly as driveSword builds it from the filtered aim; prefers fighter.debug.aim */
 function aimOf(f, x = f.skill.aim.x, y = f.skill.aim.y) {
   if (f.debug?.aim && x === f.skill.aim.x && y === f.skill.aim.y) return f.debug.aim.clone();
+  if (f.skill.corr === 'v2') return new THREE.Vector3(...guardDir(x, y)).applyQuaternion(f.yaw); // 검술 보정 v2: 자세 당김 없음 → 날것 매핑이 기준
   const gw = f.guardWeight(); const G = guardAt(x, y, f.guardPose || {});
   const a = new THREE.Vector3(...guardDir(x, y));
   if (gw > 0) { a.lerp(new THREE.Vector3(...G.dir), gw); if (a.lengthSq() < 0.04) a.set(...G.dir); a.normalize(); }
@@ -61,7 +64,7 @@ export function cut(name, sp = 13) {
     if (tArr == null) { if (d > st) { off.x += (dx / d) * st; off.y += (dy / d) * st; } else { off.set(b[0], b[1]); tArr = (i + 1) * DT; } }
     G.step();
     const bd = bladeDir(f); const w = V(f.sword.angvel()); w.addScaledVector(bd, -w.dot(bd));
-    const fa = (() => { const x = f.handOffset.x, y = f.handOffset.y; const gw = f.guardWeight(); const Gd = guardAt(x, y, {}); const a0 = new THREE.Vector3(...guardDir(x, y)); if (gw > 0) { a0.lerp(new THREE.Vector3(...Gd.dir), gw); if (a0.lengthSq() < 0.04) a0.set(...Gd.dir); a0.normalize(); } return a0.applyQuaternion(f.yaw); })();
+    const fa = (() => { const x = f.handOffset.x, y = f.handOffset.y; const gw = f.guardWeight(); const Gd = guardAt(x, y, {}); const a0 = new THREE.Vector3(...guardDir(x, y)); if (f.skill.corr === 'v2') return a0.applyQuaternion(f.yaw); /* v2: 날것 매핑 */ if (gw > 0) { a0.lerp(new THREE.Vector3(...Gd.dir), gw); if (a0.lengthSq() < 0.04) a0.set(...Gd.dir); a0.normalize(); } return a0.applyQuaternion(f.yaw); })();
     rows.push({ t: (i + 1) * DT, blade: bd, w, tip: f.tipVel.length(), mid: f.hitPointVel.length(), hand: wristPos(f), fa, wt: f.debug?.wristTorque?.clone(), cap: f.debug?.wristCap });
     prevW = w;
   }

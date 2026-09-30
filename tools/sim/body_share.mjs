@@ -7,12 +7,14 @@
 //   몸통 고정: 자세 지도의 골반·가슴 비틀기를 끈다 (팔과 손목만으로 휘두름)
 //   온몸    : 골반을 교본 값만큼 다 틀고, 몸통이 더 빨리 따라간다 (골반 34 → 50, 가슴 26 → 40 rad/s)
 // 사용법: node tools/sim/body_share.mjs [무기id...]
+//  검술 보정 v2: node tools/sim/with_config.mjs SKILL.corr=v2 body_share.mjs — 몸 모드 바꿔 끼우기가 skill.corr 가 고른 가지를 따른다 (아래 poseV2)
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { Fighter } from '../../src/fighter.js';
 import { SKILL_BODY } from '../../src/config.js';
 import { guardAt } from '../../src/guards.js';
 import { STRIKE } from '../../src/config.js';
 import { isMain } from './is_main.mjs';
+import * as CONFIG from '../../src/config.js';
 
 const PAIRS = {
   '어깨↔왼바꿈': [[0.42, 0.42], [-0.4, -0.42]],
@@ -25,6 +27,7 @@ const origPose = Fighter.prototype.updateBodyPose;
 let MODE = '기본';
 Fighter.prototype.updateBodyPose = function (dt) {
   if (MODE === '기본') return origPose.call(this, dt);
+  if (this.skill.corr === 'v2') return poseV2.call(this, dt);
   const sk = this.skill;
   const gw = this.guardWeight();
   const G = guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard, this.finish, sk.thrustPose);
@@ -47,6 +50,34 @@ Fighter.prototype.updateBodyPose = function (dt) {
   this.pelvisYawOffset = bp.pelvisYaw;
   this.pelvisDropOffset = bp.drop;
 };
+
+// 검술 보정 v2 가지 (skill.corr 'v2', 설계 '순서와 정렬'): 자세표 없이 turn = −aimRaw.x·0.35, s = skill.level 선형.
+//  기본 = 게임 코드 그대로. 몸통 고정 = 골반·가슴 비틀기 0 (숙이기·낮추기도 0: v2 엔 자세표 몸 값이 없다).
+//  온몸 = 골반을 몫 0.5 대신 1.0 으로, 몸통을 더 빨리 (골반 50, 가슴 40 rad/s — 옛 온몸과 같은 수)
+function poseV2(dt) {
+  const sk = this.skill;
+  const s = sk.level;
+  guardAt(sk.aimRaw.x, sk.aimRaw.y, this.bodyGuard, this.finish, sk.thrustPose); // nearest 는 게임처럼 계속 적는다
+  const bp = this.bodyPose;
+  const bv = this.bodyPoseVel;
+  const follow = (key, target, w) => {
+    bv[key] += (w * w * (target - bp[key]) - 2 * w * bv[key]) * dt;
+    bp[key] += bv[key] * dt;
+  };
+  const turn = -sk.aimRaw.x * 0.35;
+  if (MODE === '몸통 고정') {
+    follow('pelvisYaw', 0, SKILL_BODY.pelvis);
+    follow('chestYaw', 0, SKILL_BODY.chest);
+    follow('pitch', 0, SKILL_BODY.chest);
+  } else {
+    follow('pelvisYaw', s * 1.0 * turn, 50);
+    follow('chestYaw', s * turn, 40);
+    follow('pitch', 0, 40);
+  }
+  follow('drop', 0, SKILL_BODY.pelvis);
+  this.pelvisYawOffset = bp.pelvisYaw;
+  this.pelvisDropOffset = bp.drop;
+}
 
 function pointAt(f, t) {
   const c = f.weaponCfg;
@@ -105,6 +136,7 @@ function run(id, pair, T) {
 if (isMain(import.meta.url)) {
   const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['longsword', 'qinggang', 'zweihander'];
   console.log('칸 = 칼날 70% 최고 속도 m/s (그 순간 가슴이 만든 몫 %, 골반이 만든 몫 %) · 판정 에너지 비 = (v / 기본 v)²');
+  if (CONFIG.SKILL.corr === 'v2') console.log('검술 보정 v2 (SKILL.corr v2): 몸통 고정·온몸은 v2 몸 법칙(turn = −aimRaw.x·0.35, s = skill.level)을 바꿔 끼운다');
   for (const id of ids) {
     for (const pair of Object.keys(PAIRS)) {
       for (const T of [0.9, 0.45]) {
