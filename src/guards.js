@@ -190,3 +190,66 @@ function overlay(out, th) {
   out.pitch += (th.pitch - out.pitch) * w;
   out.drop += (th.drop - out.drop) * w;
 }
+
+/**
+ * 보정 v2 마무리 명령 (설계 '마무리 = FINISH_GUARDS 를 s·fin.amt 로 명령'): guardAt 과 같은 무게(SIGMA2·fa·아래 자세 × (1 − fa))로
+ *  마무리 패드 몫만 섞는다. 보통 자세표·찌르기 덧씌우기는 넣지 않는다 (v2 에 자세 당김이 되살아나지 않게).
+ * out = { hand:[3], dir:[3], pelvisYaw, chestYaw, pitch, drop, share } — share = 마무리 무게 / 전체 무게 (fin.amt 가 이미 들어 있다).
+ * src: 표를 고르는 자세 객체 (guardPose·bodyGuard: table·oneHand, guardAt 과 같은 규칙). 새 수 없음
+ */
+export function finishAt(x, y, out, fin, src = null) {
+  const h = (out.hand ||= [0, 0, 0]);
+  const d = (out.dir ||= [0, 0, 0]);
+  h[0] = h[1] = h[2] = d[0] = d[1] = d[2] = 0;
+  out.pelvisYaw = out.chestYaw = out.pitch = out.drop = out.share = 0;
+  const fa = fin ? fin.amt : 0;
+  if (!(fa > 0)) return out;
+  const T = src?.table ?? (src?.oneHand ? BASE_ONE : GUARDS);
+  let wSum = 0;
+  for (let i = 0; i < NBASE; i++) {
+    const g = T[i];
+    const dx = x - g.pad[0];
+    const dy = y - g.pad[1];
+    let w = Math.exp(-(dx * dx + dy * dy) / SIGMA2);
+    if (g.low) w *= 1 - fa;
+    wSum += w;
+  }
+  let wFin = 0;
+  let bestW = -1;
+  let bestDir = null;
+  for (let j = 0; j < FINISH_GUARDS.length; j++) {
+    const F = FINISH_GUARDS[j];
+    const p = fin[F.finish];
+    for (const pad of F.pads) {
+      const dx = x - pad[0];
+      const dy = y - pad[1];
+      const w = Math.exp(-(dx * dx + dy * dy) / SIGMA2) * fa;
+      if (w > bestW) {
+        bestW = w;
+        bestDir = p.dir;
+      }
+      wFin += w;
+      for (let k = 0; k < 3; k++) {
+        h[k] += p.hand[k] * w;
+        d[k] += p.dir[k] * w;
+      }
+      out.pelvisYaw += p.pelvisYaw * w;
+      out.chestYaw += p.chestYaw * w;
+      out.pitch += p.pitch * w;
+      out.drop += p.drop * w;
+    }
+  }
+  wSum += wFin;
+  out.share = wFin / Math.max(1e-9, wSum);
+  const inv = 1 / Math.max(1e-9, wFin);
+  for (let k = 0; k < 3; k++) h[k] *= inv;
+  out.pelvisYaw *= inv;
+  out.chestYaw *= inv;
+  out.pitch *= inv;
+  out.drop *= inv;
+  // 칼끝 방향: guardAt 과 같은 규칙 (상쇄되면(길이 < 0.35, guardAt 의 수) 가장 무거운 마무리 패드의 방향)
+  const len = Math.hypot(d[0], d[1], d[2]);
+  if (len * inv < 0.35 && bestDir) for (let k = 0; k < 3; k++) d[k] = bestDir[k];
+  else if (len > 0) for (let k = 0; k < 3; k++) d[k] /= len;
+  return out;
+}

@@ -14,7 +14,7 @@ import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, A
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
-import { guardAt } from './guards.js';
+import { guardAt, finishAt } from './guards.js';
 import { corrStep } from './corr.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
@@ -694,13 +694,17 @@ export class Fighter {
         piT += (th.pitch - piT) * kt;
         dT += (th.drop - 0.06 - dT) * kt;
       }
-      // 마무리(쓰러진 상대 내려찍기)만 자세 당김 예외 (사장님 9/30 23:40): guardAt 의 fin 섞기를 s·fin.amt 로
-      const kf = s * this.finish.amt;
-      if (kf > 0) {
-        pT += (-G.pelvisYaw * 0.5 * amp - pT) * kf;
-        cT += (-G.chestYaw * amp - cT) * kf;
-        piT += (G.pitch - piT) * kf;
-        dT += (G.drop - 0.06 - dT) * kf;
+      // 마무리(쓰러진 상대 내려찍기)만 자세 당김 예외 (사장님 9/30 23:40): FINISH_GUARDS 몫만(finishAt, 보통 자세표·찌르기 덧씌우기 없음)을
+      //  s·(마무리 무게 몫, fin.amt 포함) 로 명령
+      if (this.finish.amt > 0) {
+        const F = finishAt(sk.aimRaw.x, sk.aimRaw.y, _finB, this.finish, this.bodyGuard);
+        const kf = s * F.share;
+        if (kf > 0) {
+          pT += (-F.pelvisYaw * 0.5 * amp - pT) * kf;
+          cT += (-F.chestYaw * amp - cT) * kf;
+          piT += (F.pitch - piT) * kf;
+          dT += (F.drop - 0.06 - dT) * kf;
+        }
       }
       follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd);
       follow('chestYaw', cT, SKILL_BODY.chest * spd);
@@ -1164,11 +1168,11 @@ export class Fighter {
 
   /**
    * 손목 원뿔 (BODY.humanLimits, 설계 P1 = ② 의 전제). 엔진 공 관절 축 한도는 기준(0)이 '칼이 아래팔에 수직'이라 원뿔을 못 그린다
-   *  → 밧줄(rope, 두 점 사이 최대 거리)로 각을 정확히 막는다. 손목 W 에서 길이 e 인 두 점 사이 거리 = 2e·sin(각/2) 이 커지지 않게:
-   *   (1) 아래팔-칼 각 ≤ HUMAN.gripFlex: 아래팔 축 위 W + e·x(아래팔) ↔ 칼 축 위 W + e·y(칼)
-   *   (2) 아래팔 돌림 ≤ HUMAN.forearmRoll: 경첩 축 W + e·z(아래팔) ↔ 칼 면 W + e·z(칼). 쥔 자세에서 칼 면 = 팔꿈치 경첩 축이라
+   *  → 밧줄(rope, 두 점 사이 최대 거리)로 각을 정확히 막는다 (위 머리말: W 에서 u 로 L 인 점 ↔ n 으로 K 인 점, 거리 ≤ √(L²+K²−2LK·cosα) ⟺ 각 ≤ α):
+   *   (1) 아래팔-칼 각 ≤ HUMAN.gripFlex: 아래팔 축 W + K·x(아래팔) ↔ 칼 축 W + L·y(칼)
+   *   (2) 아래팔 돌림 ≤ HUMAN.forearmRoll: 경첩 축 W + K·z(아래팔) ↔ 칼 면 W + L·z(칼). 쥔 자세에서 칼 면 = 팔꿈치 경첩 축이라
    *       곧은 칼의 굴림 = 엎침·뒤침. 옆으로 꺾은 손목(요골·척골 치우침)도 같은 몫을 쓴다
-   *  e = 아래팔 끝에서 손목까지 0.13 m (손목 관절 자리 재사용, 기하. 막는 각은 e 와 무관). 칼을 놓치면 풀고(dropSword) 다시 쥐면 건다(revive.js)
+   *  손목 W = 아래팔 몸체 (0.13, 0, 0) (손목 관절 자리 재사용, 기하. 막는 각은 L·K 와 무관). 칼을 놓치면 풀고(dropSword) 다시 쥐면 건다(revive.js)
    */
   gripConeOn() {
     if (this.gripCone) return;
@@ -1807,9 +1811,12 @@ export class Fighter {
     const sv = this.skill.level;
     const v2 = this.skill.corr === 'v2' && sv > 0;
     if (v2) {
-      // 보정 v2: 손 당김 없음(한손 자세표도 함께). 마무리만 예외(사장님 9/30 23:40): guardAt 의 fin 섞기를 s·fin.amt 로 명령
-      const kf = sv * this.finish.amt;
-      if (kf > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), kf);
+      // 보정 v2: 손 당김 없음(한손 자세표도 함께). 마무리만 예외(사장님 9/30 23:40): FINISH_GUARDS 몫만(finishAt) s·몫 으로 명령
+      if (this.finish.amt > 0) {
+        const F = finishAt(off.x, off.y, _finH, this.finish, this.guardPose);
+        const kf = sv * F.share;
+        if (kf > 0) handLocal.lerp(_v6.set(F.hand[0], F.hand[1], F.hand[2]), kf);
+      }
     } else if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     // 탭 찌르기(skill.thrustPose)는 보정이 아니라 명령이라 검술 보정 세기(gw)와 무관하게 덧씌운다 — 보정 0 에서도 찌른다.
     //  찌르기는 지금 손 목표(handBase, 덧씌우기 전)에서 뻗어 나간다 (skill.thrust)
@@ -1835,11 +1842,11 @@ export class Fighter {
     // 자세에서 자세로 손을 옮기면 칼이 크게(최대 100° 넘게) 돌며 베기가 된다.
     const aim = _v3.set(...guardDir(off.x, off.y));
     if (v2) {
-      // 보정 v2: 칼끝 방향 당김 없음. 마무리만 s·fin.amt (위와 같은 예외)
-      const kf = sv * this.finish.amt;
+      // 보정 v2: 칼끝 방향 당김 없음. 마무리만 FINISH_GUARDS 몫 s·몫 (위와 같은 예외, 같은 _finH)
+      const kf = this.finish.amt > 0 ? sv * _finH.share : 0;
       if (kf > 0) {
-        aim.lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), kf);
-        if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
+        aim.lerp(_v6.set(_finH.dir[0], _finH.dir[1], _finH.dir[2]), kf);
+        if (aim.lengthSq() < 0.04) aim.set(_finH.dir[0], _finH.dir[1], _finH.dir[2]);
         aim.normalize();
       }
     } else if (gw > 0) {
@@ -2416,6 +2423,8 @@ const _v5 = new THREE.Vector3();
 const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
 const _cq = new THREE.Quaternion();
+const _finB = {}; // 보정 v2 마무리 명령 (finishAt): 몸
+const _finH = {}; // 보정 v2 마무리 명령 (finishAt): 손·칼끝 (driveSword 한 번 안에서 손 → 칼끝이 같은 값을 읽는다)
 const COS_ROLL = Math.cos(HUMAN.forearmRoll * HD);
 /** 칼 면 목표 t(단위, 칼에 수직)가 아래팔 돌림 범위 밖이고 −t 는 안이면 뒤집는다 (BODY.humanLimits 일 때만 부른다) */
 function rollSide(t, zf) {

@@ -15,7 +15,7 @@
 //   여기서 직접 계산 — 손목 걸쇠는 쓰지 않음) ㉡ 겨눈 부위가 Π 안 앞쪽 ㉢ 면 안 각 φ손가락 < φ* ㉣ th.w = 0.
 //   a* = Π 안 부위 단면의 먼 가장자리: φ* = φ(c_Π) + asin(√(r² − h²)/|c_Π − H|) (기하). aim 을 n 축으로 s·(φ* − φ손가락)만 돌린다 —
 //   손가락 aim 의 면 밖 성분은 그대로(tipOut = 0). 손 목표는 안 건드린다. 닫힘: 닿음·칼끝이 a* 를 지남·v_close ≤ 0·띠 밖·toward ≤ 0.
-//   닫힐 때의 aim 을 붙잡고(되튐 없음), 되돌아옴 걷기 진행 p = skill.recoverP 로 slerp(붙잡음, 걷기 aim, p) 하며 풀거나(③),
+//   닫힐 때의 aim 을 몸 틀에 붙잡고(되튐 없음, 몸이 돌면 같이 돈다), 되돌아옴 걷기 진행 p = skill.recoverP 로 slerp(붙잡음, 걷기 aim, p) 하며 풀거나(③),
 //   손가락이 다시 닿으면 그 스텝에 손가락에 넘긴다(튐 = tipJump, ≤ 옮긴 각). 시간값 없음
 //  모든 값은 fighter.corr 에 적는다 (측정 도구가 읽는다).
 // ─────────────────────────────────────────────────────────────
@@ -38,6 +38,8 @@ const _w = new THREE.Vector3();
 const _ax = new THREE.Vector3();
 const _rq = new THREE.Quaternion();
 const _f = new THREE.Vector3();
+const _hw = new THREE.Vector3();
+const _yi = new THREE.Quaternion();
 const Y = new THREE.Vector3(0, 1, 0);
 /** 면 Π(b, t 로 펼친) 안에서 b 로부터 v 까지 도는 쪽(+ = 쓸기 쪽) 각 */
 const inPlane = (v, b, t) => Math.atan2(v.dot(t), v.dot(b));
@@ -65,7 +67,7 @@ export function newCorr(f) {
     rollTarget: new THREE.Vector3(), relPerp: new THREE.Vector3(), n: new THREE.Vector3(), plane: false, touchPrev: false, closeWhy: null,
     // ② 끝점 겨눔 (item 5)
     tip: false, tipHold: false, tipOnsets: 0, tipCarried: 0, tipArcLeft: null, tipOut: 0, tipEnd: null, fingerAim: new THREE.Vector3(),
-    tipPart: null, tipN: new THREE.Vector3(), tipA: new THREE.Vector3(), holdAim: new THREE.Vector3(), cmdAim: new THREE.Vector3(), tipJump: null, heldPrev: false, arcDone: 0, prevB: null,
+    tipPart: null, tipN: new THREE.Vector3(), tipA: new THREE.Vector3(), holdAim: new THREE.Vector3() /* 몸 틀 */, cmdAim: new THREE.Vector3(), tipJump: null, heldPrev: false, arcDone: 0, prevB: null,
   };
 }
 
@@ -162,7 +164,9 @@ function tipStep(f, C, aim, s, L, HL) {
       tipEnd(C, why);
       C.tipHold = true;
       C.walked = false;
-      C.holdAim.copy(aim); // 닫힐 때의 aim 을 붙잡는다 (되튐 없음)
+      // 닫힐 때의 aim 을 붙잡는다 (되튐 없음). 몸 틀(f.yaw)에 적어 둔다: 손가락 aim 도 몸 틀에서 오니, 몸이 돌거나 걸어도
+      //  붙잡음이 세계 한 방향에 박히지 않는다 (몸이 돌면 손가락 aim 과 같이 돈다, 새 수 없음)
+      C.holdAim.copy(aim).applyQuaternion(_yi.copy(f.yaw).invert());
     }
     return;
   }
@@ -175,11 +179,12 @@ function tipStep(f, C, aim, s, L, HL) {
       C.tipEnd = 'walk';
       return;
     }
+    _hw.copy(C.holdAim).applyQuaternion(f.yaw); // 붙잡은 aim (몸 틀 → 세계)
     if (p > 0) {
-      _rq.setFromUnitVectors(C.holdAim, aim);
+      _rq.setFromUnitVectors(_hw, aim);
       _rq.slerp(_q.identity(), 1 - p); // hold → finger 로 p 만큼
-      aim.copy(C.holdAim).applyQuaternion(_rq);
-    } else aim.copy(C.holdAim);
+      aim.copy(_hw).applyQuaternion(_rq);
+    } else aim.copy(_hw);
     C.cmdAim.copy(aim);
     return;
   }
