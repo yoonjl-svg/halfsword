@@ -401,7 +401,7 @@ function onWound(att, vic, r, point, pr) {
       if (r.type === 'stab') stickDecal(mesh, local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
       else stickDecal(mesh, local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len);
       // 피가 옷에 번진다 (상처에서 계속 흐르는 만큼)
-      const wound = vic.wounds[vic.wounds.length - 1];
+      const wound = vic.wounds.findLast((w) => !w.stump); // 참수: 목 단면(stump)은 건너뛰고 목 상처에 번진다
       if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, local, null, 'soak', 0.04, 0.04);
     } else {
       stickDecal(mesh, local, bladeLocal, 'bruise', 0.03, 0.08);

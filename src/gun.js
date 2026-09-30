@@ -172,7 +172,7 @@ function aimErr(f) {
 }
 
 /** 겨눌 머리가 없다: 참수됐거나(몸에서 떨어진 머리) 죽은 상대 (COMBAT.decapitate 를 끄면 예전처럼 늘 머리도 본다) */
-function headOff(foe) {
+export function headOff(foe) {
   return foe.decapitated || (COMBAT.decapitate && !foe.alive);
 }
 

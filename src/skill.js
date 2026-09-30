@@ -23,9 +23,9 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, COMBAT } from './config.js';
+import { SKILL, WEAPON, THRUST } from './config.js';
 import { FINISH } from './finish.js';
-import { gunCanFire, gunPose } from './gun.js';
+import { gunCanFire, gunPose, headOff } from './gun.js';
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -143,9 +143,8 @@ export class Skill {
       return out.set(T[0], T[1], T[2]);
     }
     const foe = f.foe;
-    // 떨어진 머리(참수)·죽은 상대의 머리는 겨누지 않는다: 가슴으로 (COMBAT.decapitate)
-    const headOff = foe.decapitated || (COMBAT.decapitate && !foe.alive);
-    out.copy(foe.bodies[tp.head && !headOff ? 'head' : 'chest'].translation());
+    // 떨어진 머리(참수)·죽은 상대의 머리는 겨누지 않는다: 가슴으로 (gun.js headOff)
+    out.copy(foe.bodies[tp.head && !headOff(foe) ? 'head' : 'chest'].translation());
     return out.sub(_c).applyQuaternion(_yawInv);
   }
 
