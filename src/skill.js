@@ -39,6 +39,40 @@ const _d1 = new THREE.Vector3();
 const _d2 = new THREE.Vector3();
 const _r = new THREE.Vector3();
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
+const _ps = new THREE.Vector3();
+const _pd = new THREE.Vector3();
+const _pt = new THREE.Vector3();
+
+/**
+ * 보정 v2 ③ pad*: 칼끝이 상대 가슴을 향하는 패드 = fighter.js guardDir 의 닫힌 역 (az → x, el → y, 같은 조각 식·같은 끝값).
+ *  칼 방향은 손(날것 매핑의 손 자리)에서 상대 가슴으로. 손 자리가 패드에 따라 바뀌니 homeGuard 에서 시작해 두 번 고쳐 잡는다(기하).
+ *  패드 범위는 입력 매핑이 쓰는 WEAPON.reach 안 (update 첫 줄의 손가락 자르기와 같은 값)
+ */
+function padStar(f, out) {
+  const c = f.bodies.chest.translation();
+  const fc = f.foe.bodies.chest.translation();
+  _yawInv.copy(f.yaw).invert();
+  _ps.set(fc.x - c.x, fc.y - c.y, fc.z - c.z).applyQuaternion(_yawInv); // 상대 가슴 (내 가슴 원점, 몸 틀)
+  const R = WEAPON.reach;
+  let x = SKILL.homeGuard[0];
+  let y = SKILL.homeGuard[1];
+  for (let k = 0; k < 2; k++) {
+    const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (x * x + y * y) / (R * R)));
+    _pd.set(_ps.x - depth, _ps.y - (0.1 + y), _ps.z - (0.1 + x)).normalize(); // 손 → 상대 가슴
+    const az = THREE.MathUtils.clamp(Math.atan2(_pd.z, _pd.x), -1.1, 1.3);
+    const el = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(_pd.y, -1, 1)), -0.6, 1.75);
+    x = az / 1.7 + 0.05;
+    y = el <= 0 ? 0.1 + el / 1.1 : 0.1 + (el * 0.5) / 1.65;
+    const d = Math.hypot(x, y);
+    if (d > R) {
+      x *= R / d;
+      y *= R / d;
+    }
+  }
+  out[0] = x;
+  out[1] = y;
+  return out;
+}
 
 /** 두 선분(p1–q1, p2–q2) 사이 가장 가까운 거리 (칼날끼리 맞닿았나 — 칼 길 잡기) */
 function segDist(p1, q1, p2, q2) {
@@ -407,12 +441,42 @@ export class Skill {
       this.recovering = false;
     }
     this.idle = f.inputActive ? 0 : this.idle + dt;
+    // 보정 v2 사건: 손 뗌 = 손가락이 화면에서 떨어진 스텝 (handHeld 참 → 거짓, main.js — 입력 쪽 사건이라 공포 떨림에 속지 않음)
+    this.lift = !!this.heldPrev && !f.handHeld;
+    this.heldPrev = !!f.handHeld;
     const canRecover = this.autoGuard && L >= 0.35 && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel');
+    // 보정 v2 ③ 되돌아옴 겨눔 (s > 0, 선 자세·총 아님·상대 있음): 걷는 목적지만 바꾼다 dest = lerp(homeGuard, pad*, s). 무릎은 오늘 걷기
+    const v2r = this.corr === 'v2' && L > 0 && f.state === 'stand' && !f.weapon?.gun && !!f.foe;
     if (canRecover && this.cutPending && !swinging && !f.handHeld && this.idle > SKILL.recoverDelay) {
       this.recovering = true;
       this.cutPending = false;
+      if (v2r) {
+        const ps = padStar(f, (this.recoverDest ||= [0, 0]));
+        ps[0] = SKILL.homeGuard[0] + (ps[0] - SKILL.homeGuard[0]) * L;
+        ps[1] = SKILL.homeGuard[1] + (ps[1] - SKILL.homeGuard[1]) * L;
+        this.recoverD0 = Math.hypot(ps[0] - off.x, ps[1] - off.y);
+        this.recoverP = 0;
+      }
     }
-    if (this.recovering) {
+    if (this.recovering && v2r && this.recoverD0 != null) {
+      // 보정 v2: 같은 빠르기(recoverSpeed)로 pad* 쪽 목적지로 걷는다. 겨눔 덧씌우기 없음 → 다음 손길에 튐 없음. 진행 p = 1 − d/d0 (② 붙잡음을 푼다)
+      if (f.inputActive || !canRecover) this.recovering = false;
+      else {
+        const hx = this.recoverDest[0] - off.x;
+        const hy = this.recoverDest[1] - off.y;
+        const d = Math.hypot(hx, hy);
+        const step = SKILL.recoverSpeed * dt;
+        if (d <= step) {
+          off.set(this.recoverDest[0], this.recoverDest[1]);
+          this.recovering = false;
+          this.recoverP = 1;
+        } else {
+          off.x += (hx / d) * step;
+          off.y += (hy / d) * step;
+          this.recoverP = this.recoverD0 > 0 ? 1 - (d - step) / this.recoverD0 : 1;
+        }
+      }
+    } else if (this.recovering) {
       if (f.inputActive || !canRecover) this.recovering = false; // 다시 조작하면 바로 조작이 우선
       else {
         const hx = SKILL.homeGuard[0] - off.x;
@@ -428,6 +492,23 @@ export class Skill {
           off.y += (hy / d) * step;
         }
       }
+    }
+    if (!this.recovering) this.recoverD0 = null;
+    // 보정 v2 'ready' 사건 (재기만, 아무것도 막지 않음): 칼끝이 가슴 앞(가슴 상자 단면 안, 앞쪽)이고 두 발이 다 딛고 있다
+    if (this.corr === 'v2' && L > 0 && f.alive && f.armed) {
+      const g = f.gait;
+      const sp = f.sword.translation();
+      const sr = f.sword.rotation();
+      const c = f.bodies.chest.translation();
+      _yawInv.copy(f.yaw).invert();
+      const tip = _pt.set(0, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength, 0).applyQuaternion(_sq.set(sr.x, sr.y, sr.z, sr.w));
+      tip.set(tip.x + sp.x - c.x, tip.y + sp.y - c.y, tip.z + sp.z - c.z).applyQuaternion(_yawInv);
+      const ready = !swinging && tip.x > 0 && Math.abs(tip.y) <= 0.13 && Math.abs(tip.z) <= 0.18 && (!g?.active || (g.legs.F.stance && g.legs.B.stance)); // 가슴 상자 반 높이·반 폭 (fighter.js partDefs)
+      if (ready && !this.readyNow) {
+        this.readies = (this.readies ?? 0) + 1;
+        this.readyT = f.fightT;
+      }
+      this.readyNow = ready;
     }
     if (this.lunge > 0) {
       this.lunge -= dt;
