@@ -103,6 +103,7 @@ export class Combat {
     const res = this.predict(pr);
     if (res && res.pass) {
       this.cutting.set(key, { seen: this.stepNo, applied: false, pr, wc: pr.wc, vc: pr.vc });
+      if (pr.w.fighter.skill?.corr === 'v2') pr.w.fighter.bladeTouch = true; // 보정 v2 사건: 닿음 (corr.js)
       return 0;
     }
     return 1;
@@ -292,6 +293,7 @@ export class Combat {
         this.cutting.delete(key); // 더 이상 겹치지 않음
         continue;
       }
+      if (c.pr.w.fighter.skill?.corr === 'v2') c.pr.w.fighter.touchStep = this.stepNo; // 보정 v2: 아직 가르는 중 = 닿아 있음
       const col1 = world.getCollider(c.wc);
       const col2 = world.getCollider(c.vc);
       let point = null;
@@ -371,9 +373,12 @@ export class Combat {
       if (!c) return;
       this.strike(pr, c.p, false);
       this.rebound(pr, c.p, c.n);
+      if (pr.w.fighter.skill?.corr === 'v2') (pr.w.fighter.bladeTouch = true), (pr.w.fighter.touchStep = this.stepNo); // 보정 v2: 접촉힘 타격 = 닿음
     });
     this.bladeClash(world, bladePairs);
     this.armSteel();
+    // 보정 v2 사건: 떨어짐 = 이번 스텝에 가르는 쌍·접촉힘 타격·칼끼리 닿음이 하나도 없음 (v2 공격자만 적는다)
+    for (const f of this.fighters) if (f.skill?.corr === 'v2' && f.bladeTouch && f.touchStep !== this.stepNo) f.bladeTouch = false;
     for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
   }
 
@@ -450,6 +455,7 @@ export class Combat {
         f.absorbWeaponImpact?.(J, f === A.fighter ? B.fighter : A.fighter); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다 (상대 칼의 breakMult — 청강검 '창천')
       }
     }
+    for (const f of [A.fighter, B.fighter]) if (f.skill?.corr === 'v2') (f.bladeTouch = true), (f.touchStep = this.stepNo); // 보정 v2: 칼끼리 닿음
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
   }
 

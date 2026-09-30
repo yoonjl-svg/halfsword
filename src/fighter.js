@@ -15,6 +15,7 @@ import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
+import { corrStep } from './corr.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
@@ -1751,6 +1752,8 @@ export class Fighter {
       aim.normalize();
     }
     aim.applyQuaternion(this.yaw);
+    // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
+    if (v2) corrStep(this, aim, sv);
     // 목표 방향이 도는 속도: 손목 감쇠는 이 속도를 향한다 (멈추려는 게 아니라 목표를 따라가는 감쇠)
     const wAim = _v5.set(0, 0, 0);
     if (this.prevAim && this.lastDt > 0) {
@@ -1780,13 +1783,37 @@ export class Fighter {
     flatTarget.normalize();
     if (flatTarget.dot(flat) < 0) flatTarget.negate();
     const ev = edgeDir.length();
-    const moving = THREE.MathUtils.smoothstep(ev, 0.5, 2.5);
-    if (moving > 0) {
-      const mf = edgeDir.crossVectors(blade, edgeDir).normalize();
-      if (mf.dot(flat) < 0) mf.negate();
-      flatTarget.lerp(mf, moving);
-      if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
-      flatTarget.normalize();
+    if (v2 && this.corr?.win) {
+      // 보정 v2 ① 날 맞춤 (창 안에서만, corr.js): 굴림 목표만 바꾼다. 판정(combat.js:179-181)이 쓸 상대 기준 속도 rel⊥ 로
+      //  mfRel = b × rel⊥ 를 양날 규칙으로 mf 쪽에 부호 맞춘 뒤 방향끼리 섞는다(속도 벡터는 섞지 않는다: 반대여도 납작이 되지 않음).
+      //  섞기 세기는 기존 smoothstep 0.5~2.5 m/s 를 max(|제 칼⊥|, |rel⊥|) 에 (여쭘 9). 이득 4 / 0.12·twistScale 그대로
+      const rp = this.corr.relPerp;
+      const moving = THREE.MathUtils.smoothstep(Math.max(ev, rp.length()), 0.5, 2.5);
+      if (moving > 0) {
+        const mfRel = _cr1.crossVectors(blade, rp);
+        const mf = edgeDir.crossVectors(blade, edgeDir);
+        if (mf.lengthSq() < 1e-4) mf.copy(mfRel);
+        if (mfRel.lengthSq() < 1e-4) mfRel.copy(mf);
+        mf.normalize();
+        mfRel.normalize();
+        if (mf.dot(flat) < 0) mf.negate();
+        if (mfRel.dot(mf) < 0) mfRel.negate();
+        mf.lerp(mfRel, sv).normalize();
+        flatTarget.lerp(mf, moving);
+        if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
+        flatTarget.normalize();
+      }
+      this.corr.rollTarget.copy(flatTarget);
+    } else {
+      const moving = THREE.MathUtils.smoothstep(ev, 0.5, 2.5);
+      if (moving > 0) {
+        const mf = edgeDir.crossVectors(blade, edgeDir).normalize();
+        if (mf.dot(flat) < 0) mf.negate();
+        flatTarget.lerp(mf, moving);
+        if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
+        flatTarget.normalize();
+      }
+      if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
     }
     // 칼날 축(길쭉한 방향)으로 도는 회전은 관성이 아주 작아서, 큰 힘을 주면
     // 계산이 폭주해 칼이 팽이처럼 돈다. 그래서 비틀림은 아주 약하게 따로 다룬다.
@@ -2280,6 +2307,7 @@ const _bloodColor = new THREE.Color(0x5a0808);
 const _paleColor = new THREE.Color(0xb8b4a8);
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
+const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _ur = new THREE.Vector3();
 const _urq = new THREE.Quaternion();
 const _axis2 = new THREE.Vector3();
