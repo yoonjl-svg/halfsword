@@ -52,7 +52,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, fpsCap: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, fpsCap: true, corr: CONFIG.SKILL.corr, corrTip: CONFIG.SKILL.corrTip };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -60,9 +60,17 @@ try {
 } catch {
   /* 저장소를 못 쓰면 기본값으로 */
 }
+// 검술 보정 방식 시험판: ?corr=v2|old · ?tip=1|0 은 이번 접속에만 설정을 덮는다 (저장하지 않음. 메뉴에서 그 설정을 누르면 그때부터 저장)
+const urlSet = {};
+if (params.get('corr') === 'v2' || params.get('corr') === 'old') urlSet.corr = params.get('corr');
+if (params.get('tip') === '1' || params.get('tip') === '0') urlSet.corrTip = params.get('tip') === '1';
+const savedSet = { corr: settings.corr, corrTip: settings.corrTip };
+Object.assign(settings, urlSet);
 const saveSettings = () => {
   try {
-    localStorage.setItem('gladiator-settings', JSON.stringify(settings));
+    const out = { ...settings };
+    for (const k in urlSet) out[k] = savedSet[k];
+    localStorage.setItem('gladiator-settings', JSON.stringify(out));
   } catch {
     /* 무시 */
   }
@@ -416,6 +424,8 @@ function newRound(weaponId) {
   playerEv = { hurt: false, parried: false, landed: false };
   player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
+  player.skill.corr = settings.corr; // 보정 방식 옛 / 새 (설정 또는 ?corr=)
+  player.skill.corrTip = settings.corrTip; // 끝점 겨눔 켬 / 끔 (설정 또는 ?tip=)
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   combat = new Combat(colliderInfo, { onWound, onClash });
   // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
@@ -635,6 +645,14 @@ function refreshSettingsUI() {
       el.classList.toggle('on', !!settings[key]);
     }
   });
+  // 새 보정 설명 (설계 '설정 0~1 의 새 뜻'): 끝점 겨눔을 끄면 가운데 구절을 뺀다
+  const corrCap = document.getElementById('corrCap');
+  if (corrCap) {
+    corrCap.style.display = settings.corr === 'v2' ? '' : 'none';
+    corrCap.textContent = settings.corrTip
+      ? '닿기 직전 날을 세우고, 손을 떼며 벤 칼끝을 끝까지 보내고, 쉴 때 칼끝을 상대에게 겨눈다. 휘두르는 길은 언제나 손가락이 정한다.'
+      : '닿기 직전 날을 세우고, 쉴 때 칼끝을 상대에게 겨눈다. 휘두르는 길은 언제나 손가락이 정한다.';
+  }
   particles.bloodOn = settings.blood;
   sound.on = settings.sound;
   input.invertTilt = settings.invertTilt;
@@ -651,6 +669,8 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
         settings[key] = b.dataset.v;
         if (key === 'difficulty' && ai && !currentFoe) ai.setLevel(settings.difficulty); // 캐릭터를 골랐으면 그 캐릭터의 난이도를 따로 지킨다
         if (key === 'skill' && player) player.skill.level = +settings.skill;
+        if (key === 'corr' && player) player.skill.corr = settings.corr;
+        delete urlSet[key]; // 메뉴에서 고르면 주소의 덮어쓰기는 끝나고 저장한다
         saveSettings();
         refreshSettingsUI();
       }),
@@ -658,6 +678,8 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
   } else {
     el.addEventListener('click', () => {
       settings[key] = !settings[key];
+      if (key === 'corrTip' && player) player.skill.corrTip = settings.corrTip;
+      delete urlSet[key];
       saveSettings();
       refreshSettingsUI();
       if (key === 'pixel') resize();

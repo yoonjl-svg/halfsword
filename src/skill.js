@@ -67,6 +67,8 @@ export class Skill {
   constructor(fighter, level = SKILL.level) {
     this.f = fighter;
     this.level = level;
+    this.corr = SKILL.corr; // 보정 방식 'old' | 'v2' (AI 는 ai.js setLevel 이 SKILL.corrAI 로, 플레이어는 main.js 설정으로 덮어쓴다)
+    this.corrTip = SKILL.corrTip; // v2 끝점 겨눔 ② (AI 는 늘 끔)
     this.prev = fighter.handOffset.clone();
     this.vel = new THREE.Vector2(); // 손 목표가 움직이는 속도 (m/s, 몸 앞 평면)
     this.follow = new THREE.Vector2(); // 이어 베기로 더해지는 손 목표

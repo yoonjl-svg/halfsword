@@ -61,6 +61,9 @@ export const BODY = {
   //  'hybrid'에 남은 것: 드물게(수백 번 걸음에 한 번꼴) 빨리 나가기 시작하거나 돌아선 뒤 걷기 시작할 때
   //  뒤에 남은 발이 발끝으로 4cm 남짓 끌린다, 성능
   weightMode: 'hybrid',
+  // 관절 한도·자기 몸 충돌 (검술 보정 v2 설계 '뒤틀림은 물리가 막는다', 사장님 9/30 23:40 켬). 값은 사람 움직임 봉투
+  //  (docs/motion/human_envelope_2026-09-30.md) 의 물리 범위이지 튜닝 값이 아니다(fighter.js HUMAN). false = 오늘 그대로(바이트까지)
+  humanLimits: false,
 };
 
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
@@ -419,6 +422,11 @@ export const SKILL = {
   homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
   recoverDelay: 0.25, // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
   recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)
+  // ── 검술 보정 방식 (docs/strike/correction_v2_design_2026-10-01.md). 'old' = 오늘 그대로(바이트까지), 'v2' = 휘두르는 동안
+  //  자세 당김 없음 + 마지막 궤적의 날 맞춤·끝점 겨눔·되돌아옴 (세기 s = level 선형). with_config.mjs 로 뒤집는다 ──
+  corr: 'old', // 플레이어 (설정 '보정 방식', ?corr=v2). 기본 옛 보정 — 사장님 확인 전 (디렉터 가답)
+  corrAI: 'old', // AI (ai.js setLevel). 사장님 9/30 23:40 "사람이 먼저": AI 는 옛 보정 유지, 재측정 뒤
+  corrTip: true, // v2 끝점 겨눔 ② 켬 (사장님 9/30 23:40 켜고 끄기로 탑재, 설정 '끝점 겨눔', ?tip=0|1). v2 플레이어·s > 0·BODY.humanLimits 일 때만
 
   // ── 입력 쪽 동역학(설정 "손맛"): 손가락 떨림이 목표를 그대로 튕기지 못하게 한다 ──
   //  "연체동물이 춤춘다"는 느낌의 실제 원인 — 손가락이 잘게 떨리면 목표(aimRaw)가 그만큼 순간이동하고,
