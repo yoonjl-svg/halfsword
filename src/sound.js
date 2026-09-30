@@ -979,63 +979,75 @@ export const SYNTH = {
   },
 
   /**
-   * 대전 게임식 베기 2 (34차, 사장님 "사무라이 쇼다운의 피격음 참고해 보는 건 어때?"): "자-슉 + 쿵 + 촤아악".
-   *  5차 hitSlash 도 같은 참고로 만들었지만 3~7.5kHz 금속 울림·딱딱 튀는 클릭·세게 누른 찌그러짐이 겹쳐 전기 "파직"이 됐다
-   *  (9/30 "전자 파리채"). 그 셋을 빼고 네 겹으로 다시 쌓는다:
-   *  1) "자": 칼날이 들어가는 크고 밝은 잡음 덩이 — 1.2kHz 위, 어택 2ms, 70~90ms, 가운데 8k→3k
-   *  2) "슉": 살이 갈라지는 1.2~3.5kHz 젖은 잡음(불규칙하게 떨림), 10ms 뒤부터 110~150ms (찌르기는 낮고 짧게 "푹")
-   *  3) "쿵": 55~70Hz 무거운 저음 0.1초 — 대전 게임의 과장된 무게. 저음만 따로 살짝 눌러 붙인다(잡음은 누르지 않는다)
-   *  4) "촤아악": 피가 뿜어지는 잡음 — 3kHz→1.2kHz 로 내려가며 0.35~0.5초, 두세 번 울컥거린다 (25ms 뒤부터)
-   * kind: 'cut' | 'stab' | 'through'(베고 지나감: 슉·촤아악을 길게)
+   * 대전 게임식 베기 2 (34·35차, 사장님 "사무라이 쇼다운의 피격음" → "하오마루·갠주로·한조의 강베기 소리처럼").
+   *  5차 hitSlash 도 같은 참고였지만 3~7.5kHz 금속 울림·딱딱 튀는 클릭·세게 누른 찌그러짐이 겹쳐 전기 "파직"이 됐다(9/30).
+   *  그 셋 없이 층을 나눠 쌓는다 — 강베기일수록 두껍고 길게:
+   *  1) "자": 칼날이 들어가는 밝은 잡음, 1.5kHz 위, 어택 1.5ms (강베기는 짧게 — 몸통에 묻힌다)
+   *  2) "쩌억": 살덩이가 크게 갈라지는 두꺼운 잡음 — 900Hz 가운데·400~2.5kHz, 거칠게 떨리고(70Hz) 잡음만 따로 눌러 두껍게,
+   *     아케이드 기판 샘플처럼 16kHz 로 성기게 잡아 9kHz 위를 닫는다(금속 울림이 아니라 "거친 결"). 강베기 160~200ms
+   *  3) "쿵": 50~65Hz 저음 — 대전 게임의 과장된 무게. 저음만 따로 눌러 붙인다
+   *  4) "촤아아악": 피가 뿜어지는 잡음 — 2.8k→1kHz 로 내려가며 두세 번 울컥. 강베기 0.65~0.85초
+   * kind: 'cut'(보통 베기) | 'heavy'(강베기) | 'through'(베고 지나감: 강베기 + 길게) | 'stab'(찌르기: "자-푹", 피는 짧게)
    */
   slashHit(sr, r, kind = 'cut') {
     const stab = kind === 'stab';
+    const heavy = kind === 'heavy' || kind === 'through';
     const thru = kind === 'through';
-    const n = Math.round(0.7 * sr);
+    const n = Math.round((heavy ? 1.1 : 0.75) * sr);
     const out = new Float32Array(n);
     // 1) 자
-    const E = Math.round((stab ? between(r, 0.05, 0.06) : between(r, 0.07, 0.09)) * sr);
-    const hp = new Filt('highpass', 1200, 0.7, sr);
+    const E = Math.round((heavy ? between(r, 0.03, 0.04) : stab ? between(r, 0.04, 0.05) : between(r, 0.05, 0.065)) * sr);
+    const hp = new Filt('highpass', 1500, 0.7, sr);
     const bp = new Filt('bandpass', 8000, 0.5, sr);
-    for (let i = 0; i < E + Math.round(0.03 * sr); i++) {
+    for (let i = 0; i < E + Math.round(0.02 * sr); i++) {
       const u = i / E;
-      if (i % 32 === 0) bp.set(8000 * Math.pow(3000 / 8000, Math.min(1, u)), 0.5);
-      const env = Math.min(1, i / (0.002 * sr)) * (u < 1 ? 1 - 0.35 * u : 0.65 * Math.exp(-(i - E) / (0.01 * sr)));
+      if (i % 32 === 0) bp.set(8000 * Math.pow(3500 / 8000, Math.min(1, u)), 0.5);
+      const env = Math.min(1, i / (0.0015 * sr)) * (u < 1 ? 1 - 0.4 * u : 0.6 * Math.exp(-(i - E) / (0.008 * sr)));
       const x = r() * 2 - 1;
-      out[i] += (1.0 * hp.run(x) + 1.3 * bp.run(x)) * env;
+      out[i] += (heavy ? 0.7 : 1) * (hp.run(x) + 1.2 * bp.run(x)) * env;
     }
-    // 2) 슉 / 푹
-    const t0 = Math.round(0.01 * sr);
-    const P = Math.round((thru ? between(r, 0.2, 0.26) : stab ? between(r, 0.08, 0.11) : between(r, 0.11, 0.15)) * sr);
-    const fa = stab ? 2000 : 3500;
-    const fb = stab ? 800 : 1200;
-    const pb = new Filt('bandpass', fa, 0.8, sr);
-    const am = wobble(r, sr, 120);
-    for (let i = 0; i < P; i++) {
-      const u = i / P;
-      if (i % 32 === 0) pb.set(fa * Math.pow(fb / fa, u), 0.8);
-      out[t0 + i] += 1.3 * pb.run(r() * 2 - 1) * Math.min(1, i / (0.004 * sr)) * (1 - u) ** 1.1 * (0.4 + 0.6 * Math.abs(am()));
+    // 2) 쩌억 — 따로 만들어 눌러 두껍게, 성기게 잡아 거친 결
+    const B = Math.round((thru ? between(r, 0.2, 0.24) : heavy ? between(r, 0.16, 0.2) : stab ? between(r, 0.08, 0.1) : between(r, 0.1, 0.13)) * sr);
+    const body = new Float32Array(B + Math.round(0.05 * sr));
+    const fc = stab ? 700 : 900;
+    const bb = new Filt('bandpass', fc * 1.6, 0.6, sr);
+    const flick = wobble(r, sr, 70);
+    for (let i = 0; i < body.length; i++) {
+      const u = Math.min(1, i / B);
+      if (i % 32 === 0) bb.set(fc * 1.6 * Math.pow(0.6, u), 0.6);
+      const env = Math.min(1, i / (0.002 * sr)) * (i < B ? (1 - u) ** 0.8 : 0);
+      body[i] = bb.run(r() * 2 - 1) * env * (0.45 + 0.55 * Math.abs(flick()));
     }
-    // 4) 촤아악 (피)
-    const g0 = Math.round(0.025 * sr);
-    const G = Math.round((thru ? between(r, 0.45, 0.55) : stab ? between(r, 0.25, 0.32) : between(r, 0.35, 0.45)) * sr);
-    const gb = new Filt('bandpass', 3000, 0.7, sr);
-    const spurts = stab ? 2 : 3;
-    const flick = wobble(r, sr, 60);
+    saturate(body, heavy ? 2.6 : 2);
+    let held = 0;
+    for (let i = 0; i < body.length; i++) {
+      if (i % 3 === 0) held = body[i];
+      body[i] = held;
+    }
+    const lp9 = new Filt('lowpass', 9000, 0.7, sr);
+    const b0 = Math.round(0.004 * sr);
+    const bk = heavy ? 1.3 : 1;
+    for (let i = 0; i < body.length && b0 + i < n; i++) out[b0 + i] += bk * lp9.run(body[i]);
+    // 4) 촤아아악 (피)
+    const g0 = Math.round((heavy ? 0.04 : 0.025) * sr);
+    const G = Math.round((thru ? between(r, 0.75, 0.9) : heavy ? between(r, 0.65, 0.8) : stab ? between(r, 0.25, 0.32) : between(r, 0.4, 0.5)) * sr);
+    const gb = new Filt('bandpass', 2800, 0.7, sr);
+    const spurts = stab ? 2 : heavy ? 3 : 2;
+    const fl = wobble(r, sr, 60);
     for (let i = 0; i < G && g0 + i < n; i++) {
       const u = i / G;
-      if (i % 32 === 0) gb.set(3000 * Math.pow(1200 / 3000, u), 0.7);
-      const pulse = 0.55 + 0.45 * Math.cos(Math.PI * 2 * spurts * u) ** 2; // 울컥울컥
-      out[g0 + i] += 0.55 * gb.run(r() * 2 - 1) * Math.min(1, i / (0.01 * sr)) * (1 - u) ** 1.4 * pulse * (0.7 + 0.3 * Math.abs(flick()));
+      if (i % 32 === 0) gb.set(2800 * Math.pow(1000 / 2800, u), 0.7);
+      const pulse = 0.5 + 0.5 * Math.cos(Math.PI * spurts * u) ** 2; // 울컥울컥
+      out[g0 + i] += (heavy ? 0.7 : 0.55) * gb.run(r() * 2 - 1) * Math.min(1, i / (0.012 * sr)) * (1 - u) ** 1.2 * pulse * (0.7 + 0.3 * Math.abs(fl()));
     }
     // 3) 쿵 (저음만 따로 눌러서 더한다)
     const lo = new Float32Array(n);
-    thumpTone(lo, sr, { t0: 0.001, f0: between(r, 55, 70), drop: 0.6, dropTau: 0.02, attack: 0.002, tau: stab ? 0.08 : 0.1, amp: 1 });
+    thumpTone(lo, sr, { t0: 0.001, f0: between(r, 50, 65), drop: 0.6, dropTau: 0.025, attack: 0.002, tau: heavy ? 0.14 : stab ? 0.08 : 0.1, amp: 1 });
     saturate(lo, 1.8);
     normalize(lo, 1);
     const pk = peakOf(out) || 1;
-    for (let i = 0; i < n; i++) out[i] = out[i] / pk + 0.4 * lo[i];
-    return fadeOut(normalize(out, 0.9), sr, 0.06);
+    for (let i = 0; i < n; i++) out[i] = out[i] / pk + (heavy ? 0.5 : 0.4) * lo[i];
+    return fadeOut(normalize(out, 0.9), sr, heavy ? 0.12 : 0.06);
   },
 
   /**
@@ -1536,6 +1548,7 @@ const BANK = [
   ['bladeStab', 2, (sr, r) => SYNTH.bladeCut(sr, r, 'stab')],
   ['bladeThrough', 2, (sr, r) => SYNTH.bladeCut(sr, r, 'through')],
   ['slashCut', 3, (sr, r) => SYNTH.slashHit(sr, r, 'cut')],
+  ['slashHeavy', 3, (sr, r) => SYNTH.slashHit(sr, r, 'heavy')],
   ['slashStab', 2, (sr, r) => SYNTH.slashHit(sr, r, 'stab')],
   ['slashThrough', 2, (sr, r) => SYNTH.slashHit(sr, r, 'through')],
   ['plateBreak', 2, SYNTH.plateBreak],
@@ -2057,7 +2070,7 @@ export class Sound {
   /**
    * 칼이 몸을 칠 때의 소리 (31·33차 후보, 사장님 "전자 파리채로 모기 잡는 소리 같아" → 31차 안은 "둔기·죽도 같다"): 'legacy' = 지금(5차 hitSlash),
    * 'synth' = 날 선 칼 합성(bladeCut), 'rec' = 날 선 칼 녹음(flesh/edge*.mp3 + 젖은 꼬리, 없으면 합성),
-   * 'samsho' = 대전 게임식 2(34차 slashHit: "자-슉 + 쿵 + 촤아악"). 기본은 SOUND.fleshHit.
+   * 'samsho' = 대전 게임식 2(34·35차 slashHit: "자-쩌억 + 쿵 + 촤아악", 강베기는 두껍고 길게). 기본은 SOUND.fleshHit.
    * 베기·찌르기만 바뀐다. 칼 면(blunt)·투구·판금 소리는 그대로
    */
   get fleshHit() {
@@ -2089,8 +2102,9 @@ export class Sound {
     const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w), prio: 2 });
     const mode = this.fleshHit;
     if (mode === 'samsho') {
-      // 대전 게임식 2 (34차): "자-슉 + 쿵 + 촤아악" — 금속 울림·클릭·찌그러짐 없이
-      this.layer(ev, this.pick(through ? 'slashThrough' : 'slashCut'), { gain: 1, rate: low * between(Math.random, 0.96, 1.05) });
+      // 대전 게임식 2 (34·35차): "자-쩌억 + 쿵 + 촤아악" — 금속 울림·클릭 없이
+      // 강베기(에너지 112 J 위, e ≥ 0.8)와 베고 지나감은 두껍고 긴 판, 보통 베기는 짧은 판
+      this.layer(ev, this.pick(through ? 'slashThrough' : e >= 0.8 ? 'slashHeavy' : 'slashCut'), { gain: 1, rate: low * between(Math.random, 0.96, 1.05) });
     } else if (mode === 'legacy') {
       // 대전 게임식 "챡-촤악-징 퍽": 맞은 순간이 또렷하게 튀어나와야 한다 (예전엔 누비옷 너머 둔한 "쿵" 위주라 흐릿했다)
       // 베고 지나가면 칼바람 꼬리를 길게(느리게 틀기)
