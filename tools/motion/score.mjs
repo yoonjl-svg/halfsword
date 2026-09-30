@@ -59,7 +59,7 @@ function reader(o) {
 /**
  * 움직임 시작과 칼끝 최고 시각.
  *  시작: 기준 클립 = marks.t0 (자세에서 떠남), 게임 기록 = marks.swingStart (손가락이 자세에서 떠남, record_game.mjs),
- *        시험판 기록 = marks.cutStroke (베기 획을 건 때, record_wbs.mjs), 없으면 손 빠르기로 찾음(칼끝 최고 앞에서 손이 자기 최고의 20% 밑이던 마지막 때)
+ *        시험판 기록 = marks.cutStroke (베기 획을 건 때, tools/sim/chain.mjs 기록·옛 record_wbs.mjs — R2 W5 가 지움), 없으면 손 빠르기로 찾음(칼끝 최고 앞에서 손이 자기 최고의 20% 밑이던 마지막 때)
  *  칼끝 최고: 클립은 감기 끝(tw) 뒤에서 찾는다 — 감기 중 빠른 칼 돌림을 베기로 잡지 않게 (lib/shape_metrics.mjs 와 같다)
  */
 function anchors(o, R, startOverride) {

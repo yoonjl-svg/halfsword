@@ -164,7 +164,7 @@
     seed, physicsHz, recordHz, inputHz,         // 시드 · 물리 스텝 · 기록 · 손가락 입력 Hz
     weapon, gait, skill,                        // 'longsword' · BODY.weightMode · 숙련도
     gap,                                        // 두 사람 거리 m (null = 상대 치움)
-    commit,                                     // WHOLE.commit ('끔' | '켬 (결심 n번)' | null = 그런 설정 없음)
+    commit,                                     // 옛 WHOLE.commit ('끔' | '켬 (결심 n번)', R2 W5 가 지움) | chain.mjs 'DRIVE.on 참|거짓 (확정 n번)' | null = 그런 설정 없음
     input,                                      // 손가락을 어떻게 움직였나
   },
   hz: 120,
@@ -176,7 +176,7 @@
 ```
 
 - 좌표는 클립과 같다(기록 시작 때 골반 밑 땅 원점). 랙돌 관절 자리 = 붙은 몸체 자세 × (관절 기준점 − 몸체 처음 자리) — `tools/motion/lib/game_joints.mjs`.
-- 만드는 곳: `record_game.mjs`(main), `record_wbs.mjs --root=<체크아웃>`(다른 브랜치). 디렉터 도구가 같은 형식으로 내면 비교 화면·비교표가 그대로 읽는다.
+- 만드는 곳: `record_game.mjs`(main), `tools/sim/chain.mjs --out=<폴더>`(시험판; 옛 `record_wbs.mjs --root=<체크아웃>` 는 R2 W5 가 지움, `e0d8fee` 에 있음). 디렉터 도구가 같은 형식으로 내면 비교 화면·비교표가 그대로 읽는다.
 
 ## 6. 검사 규칙 (clip/2)
 

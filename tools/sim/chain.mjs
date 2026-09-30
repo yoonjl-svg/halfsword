@@ -88,10 +88,10 @@ const MD = !!arg('md', false);
 const RECORD = !!arg('record', false); // --record 일 때만 (행이 많다)
 const R0_OFF = process.env.R0_OFF === '1';
 
-const GAP = 2.0; // 헛치기·멈춤 거리 (record_wbs.mjs)
+const GAP = 2.0; // 헛치기·멈춤 거리 (옛 record_wbs.mjs)
 const HIT_DIST = 1.55; // 맞힘 거리 (costs/probe.mjs)
 const PRE = 0.6; // 기록 시각 0 = 베기 획 − PRE
-const POST_REC = 1.0; // 기록 창: 획 뒤 이만큼 (record_wbs.mjs)
+const POST_REC = 1.0; // 기록 창: 획 뒤 이만큼 (옛 record_wbs.mjs)
 const POST = 2.5; // 대가 창: 획(멈춤 장면은 손가락 멈춤) 뒤 이만큼
 const STOP_FRAC = 0.5; // 멈춤 장면: 감기 → 끝의 이 비율에서 손가락을 멈춘다 (mx.mjs stop)
 const R2D = 180 / Math.PI;
@@ -116,7 +116,7 @@ const { guardAt } = await import(pathToFileURL(join(ROOT, 'src/guards.js')).href
 const { getWeapon } = await import(pathToFileURL(join(ROOT, 'src/weapons.js')).href);
 for (const w of WEAPONS)
   if (getWeapon(w).gun) {
-    console.log('권총은 결심 베기가 없다');
+    console.log('권총은 온몸 베기가 없다');
     process.exit(2);
   }
 const branch = (() => {
@@ -130,7 +130,7 @@ const rev = process.env.WBS_REV || gitRev(ROOT);
 const CODE = `${branch} ${rev}`;
 const STEP_MS = 1000 / HZ;
 
-// ── 패드 자리·무리 (record_wbs.mjs 와 같다) ──
+// ── 패드 자리·무리 (옛 record_wbs.mjs 와 같다) ──
 const PAD = { Pflug: [0.18, -0.28], ShR: [0.42, 0.42], WechselL: [-0.4, -0.42], Tag: [0.02, 0.52], Alber: [0, -0.5], Side: [0.52, 0.03], SideL: [-0.52, 0.03], Wechsel: [0.38, -0.44], OchsL: [-0.22, 0.26] };
 const padName = (xy) => Object.keys(PAD).find((k) => PAD[k] === xy);
 const FAM = {
@@ -294,7 +294,7 @@ function trial(fam, mode, scene, o) {
   const hasTap = P.ins.wr.pre !== undefined;
   const F = FAM[fam];
   const off = [P.handOffset.x, P.handOffset.y];
-  // 월드 관절을 굴려 두다가(최근 PRE 초) 베기 획 PRE 초 앞을 원점으로 삼는다 (record_wbs.mjs)
+  // 월드 관절을 굴려 두다가(최근 PRE 초) 베기 획 PRE 초 앞을 원점으로 삼는다 (옛 record_wbs.mjs)
   const W0 = { origin: new THREE.Vector3(0, 0, 0), yaw0: 0 };
   const keep = Math.round(PRE / DT);
   const buf = [];
@@ -348,7 +348,7 @@ function trial(fam, mode, scene, o) {
     G.step();
     buf.push(snap());
   }
-  // 첫 표본의 골반 밑 땅·바라보는 방향을 원점으로 다시 적는다 (record_wbs.mjs 와 같은 식·자릿수)
+  // 첫 표본의 골반 밑 땅·바라보는 방향을 원점으로 다시 적는다 (옛 record_wbs.mjs 와 같은 식·자릿수)
   const [ox, oz] = buf[0].o;
   const c = Math.cos(-buf[0].yaw), sn = Math.sin(-buf[0].yaw);
   const frames = buf.slice(0, iRecEnd).map((q, i) => {
@@ -389,7 +389,7 @@ function makeRecord(T, tc) {
     id: `wbs_${fam}_${mode}_${VARIANT}_${WEAPON}_v${VF}_in${T.o.jitter ? 'J' : INPUT}_${T.o.ginput}`,
     cut: FAM[fam].cut,
     kind: `wbs-${mode}`,
-    source: `${CODE} (${mdesc}), chain.mjs = tseq.mjs 조건: hybrid, ${WEAPON}, skill 0.7, ${T.gap} m, 감기 ${hold} → 끝 ${VF} m/s, 입력 ${INPUT} Hz, 칼 충돌 끔. 결심 ${n}번`,
+    source: `${CODE} (${mdesc}), chain.mjs = tseq.mjs 조건: hybrid, ${WEAPON}, skill 0.7, ${T.gap} m, 감기 ${hold} → 끝 ${VF} m/s, 입력 ${INPUT} Hz, 칼 충돌 끔. 확정 ${n}번`,
     cond: {
       code: CODE, seed: SEED, physicsHz: Math.round(1 / DT), recordHz: Math.round(1 / DT), inputHz: INPUT, weapon: WEAPON, gait: cfg.BODY.weightMode, skill: 0.7, gap: T.gap,
       input: `패드: Pflug ${JSON.stringify(PAD.Pflug)} 2 s → ${padName(FAM[fam].ch)} ${JSON.stringify(FAM[fam].ch)} ${hold} → ${padName(FAM[fam].end)} ${JSON.stringify(FAM[fam].end)} ${VF} m/s (tseq.mjs)`,
