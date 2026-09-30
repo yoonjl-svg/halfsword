@@ -1,6 +1,6 @@
 # 디렉터 상태 파일 (후임 디렉터가 가장 먼저 읽는다)
 
-- 갱신: 2026-09-29 22:00 KST. 디렉터 세션 session_014nJCzE4hyxiYc9innhSUng (디렉터 모델, ultracode, auto — 모델은 앱의 세션 정보에서 본다).
+- 갱신: 2026-09-30 18:10 KST. 디렉터 세션 session_014nJCzE4hyxiYc9innhSUng (디렉터 모델, ultracode, auto — 모델은 앱의 세션 정보에서 본다).
 - 읽는 순서: 이 파일 → docs/decisions.md(사장님 결정, 최신순) → docs/director_handoff.md(2장 규칙·7장 도구) → docs/strike/r2_impl_spec.md(§1·§9·§10).
 
 ## 디렉터 전용 조율 기준 (사장님 9/30 09:40·09:50 — PM에게 전하지 않는다)
@@ -40,6 +40,9 @@
 - 감사 답(9/29 23:25 감사 세션에 트리거로 전달): R-001 부분 수용(삭제는 W5 유지), R-002 수용(표 docs/strike/owner_defaults_table.md → 9/30 08:00 사장님), R-003 ①③ 수용 완료(2daf262)·②④ W5, R-004 조건부 수용(9b5e94c 지금 몫, fighter.js 몫 W4 뒤, THRUST.bind 유지), R-005 수용 완료(10d9839). 이행 요약 scratchpad/audit/apply_2026-09-29.md.
 - 사운드 PM(타격 소리 간격·리볼버 총성)·외형 PM(발사 이펙트)에게 9/29 23:20 지시. 끝나면 디렉터에게 트리거로 알리기로 함 → 브랜치 확인 뒤 main 병합·배포.
 - R1 끝(9/29 23:45, wf_9c387b92-620, 31 에이전트): wbs-r1-arm a055980. 숨은 상한 검토 "그대로는 출하 불가": ARM.lead(aimLead 0.8)가 실제 휘두름을 −36% 느리게 함(옆베기 19.7→12.6 m/s, 사선 첫 상처 144→37 J). 디렉터 결정: ARM.lead 기본 꺼 둠(코드 유지, W4 팔 앞먹임 뒤 재측정, 사장님 표 26행), holdSpeed 0.6 은 손가락 검객만(AI 0.3 유지, 표 25행). 마무리 에이전트가 두 변경 뒤 wbs-impl 에 병합·관문·푸시(요약 scratchpad/r1/r1_final_summary.md). 열린 질문: 1.5 m/s 밑 느린 끌기에도 '고른 지연 ≤ 20 ms' 를 적용할지(적용하면 목줄 규칙 변경 필요).
+- 9/30 18:10: main ← dev 2a9613b(병합 에이전트 dc1c2af + 썸네일 재삭제). 들어간 것: fps 60 묶기(feat-fpscap 06cbe41, src/render_cap.js·RENDER.fpsCap·설정 줄), 되튐 2종 STEEL.steel 0.2·bone 0.1 + 가슴 찌르기 +0.25 삭제 + ARMOR.moveMul 0.8(feat-rules 3af8260), 참수 소리(사운드 ea7486f; 칼→몸 기본 SOUND.fleshHit 'legacy' 그대로, samsho/rec/synth 는 sounds.html 후보), 참수 외형 src/decap_fx.js(외형 7d31b7e, 역사째 병합 → 카드 뒷면 v2 시안 p_*.svg 4개·gen_cardbacks.py 도 들어옴, 게임은 안 읽음), 승리 글자를 슬로모 끝난 뒤로(8330ae9, main.js checkRoundEnd showRoundResult/resultShown, 결정타 슬로모 전체), 확인표 (바)45~46·(사)47~51(개수 51). 기준 sha: fights12=hybrid **12223139**, live_battery 2f453e0b (feat-rules 값과 같음). **tools/sim/README 기준 sha 줄은 아직 옛 값(38fb5b51) — 자동 분류기가 에이전트 커밋을 막음, diff 는 scratchpad/merge/readme_baseline_uncommitted.diff.** 성능 감사 수용 9커밋(4350454)도 포함.
+- 9/30 18:05 마무리 찌르기(feat-finish d326b5b, hs-finish, 워크플로 wf_0da1972e-8c3 38 에이전트 + 디렉터 고침): 탭 → 어느 자세에서든 겨눔 손(plunge.hand) → 닿지 않으면 한 걸음(gait lunge, 발 디디면) → 칼 선 따라 내리찌름. 숨은 잠김(높은 자세 시작 시 칼이 수평 바로 위에 멈춰 탭이 잠김, 480판 중 1) → 칼이 더 눕지 않으면 끝으로 봄(d326b5b, 새 숫자 없음). finish_thrust 3 --rows: 맨몸 상처 79%(쟁기 93·황소 90·바보 77·지붕 55; 0.5m 85·0.8m 58·1.1m 83·1.4m 88·1.6m 79), 판금 55%, 480판 모두 찌름. 목표 95% 미달(지붕 시작은 칼을 먼저 눕혀야 해 0.4초 늦고 비스듬히 들어감; 0.8m 는 걸음 없이 팔만으로 애매). 자기 기준에서 fights12 38fb5b51·live 2f453e0b 바이트 동일. **dev 병합은 자동 분류기가 막음(에이전트도, 디렉터 재시도도 "Auto-Mode Bypass") — 사장님 결정 대기: 권한을 열거나 직접 병합.** 충돌 예상: skill.js 가져오기 줄, tools/sim/README 표. 사장님 질문: ① 내딛기 한 걸음만 vs 닿을 때까지(지금) ② 0.5m 안 가파른 겨눔 손 높이 hoverMaxY 0.42 위로 올릴지.
+- 9/30 18:00 PM 보고: 캐릭터(가지=main, holdStart 반영, persona.close 는 밀치기 동작 대기), 동작(v1 ①~④ 끝, Meyer 유료 번역 불필요, 대기), 사운드(참수 소리 끝, 칼→몸 후보 35차 사장님 선택 대기, Freesound·YouTube 막힘), 무기(Q13 값 제안 25b1bca 문서만, 질문 3, 기억 62%), 외형(칼 잔상 v2·참수 외형 끝, 디렉터 메모 대기). 비용 누적 $2,271(디렉터 $1,125).
 - 9/30 10:50: 참수 끝 → main a6acc44(feat-decap 9fa2de3·37e2caf + headOff 규칙 좁힘). 도구 tools/sim/decap_check.mjs, tools/browser/decap_shots.mjs. 외형 PM(단면·피)·사운드 PM(onDecapitate 훅) 후속 지시함. 마무리 찌르기 워크플로 wf_0da1972e-8c3(가지 feat-finish, 워크트리 hs-finish) 진행 중.
 - 9/30 10:20 진행 중: 참수 워크플로 wf_0b82245d-a71(가지 feat-decap, 워크트리 hs-decap). 쓰러진 상대 마무리: 측정 에이전트(scratchpad/finish/measure_2026-09-30.md) 뒤 "찌르기 탭 → 자동 겨눔 내려찍기" 구현 예정, 무릎 꿇은 상대는 자세 지도 높이 겹침. R2 뒤 할 일: 누운 상대 베기 실효성 재측정 → 낮으면 베기 커맨드도 내려찍기로(사장님 10:20).
 - 9/30 09:15: 시작 거리 7.0 → 5.6(사장님 "조금만 붙이자"). main 기준 fights12 38fb5b51 · live_battery 2f453e0b. wbs-impl 은 다음 main 병합 때 따라옴(W5 시험판 빌드 전 병합 필수). W5 는 재시작 뒤 resume(wf_3ac7ca74-8e4, 작업 wd4hi2j2k): B 끝, C(기록·README·안내문·옛 경로 삭제·최종 관문) 진행 중. 섹터 규칙 디렉터 안은 측정에서 기준 1 이 나빠져 옛 규칙 유지(GESTURE.sectorAll 스위치만) → 확인표 4행 갱신 필요.
@@ -59,6 +62,7 @@
 - 본판(main) 최근: c9c6c6c 리볼버 조준쇠(gun_fx.js 스프라이트 조준쇠, 외형 PM 모듈 — 다음 지시 때 한 줄 알린다)·이동 ×1.4. 사장님 시험 주소 `https://yoonjl-svg.github.io/halfsword/?weapon=pistol&foeWeapon=longsword`. 시험 플레이 약속: 본판은 언제나, R0+R1 시험판 /wb/ 10/1 밤, R2 첫 시험판(W2~W5) 10/4~5.
 
 ## 사장님 답 대기
+- (9/30 18:10) feat-finish(마무리 찌르기) dev 병합과 tools/sim/README 기준 sha 갱신: 자동 분류기가 막음. 권한을 열어 주시거나 직접 병합/커밋. 마무리 찌르기 질문 ①②(위 18:05 항목). 사운드 칼→몸 후보 선택(SOUND.fleshHit). 무기 PM Q13 질문 3. 캐릭터 PM 설정 점검 ⑥-4·5·8·Q2. 기획 PM 방향(Q-S1~S3). 확인표 51행.
 - Meyer 1570 번역서 전달(드라이브 비공개 폴더 PDF/EPUB 파일 이름).
 - 무기 PM 제안 "가벼운 무기 T0 아래 한도"(디렉터 의견: 두지 않기). 설정 점검 ⑥-4·5·8. 여정 대화 목업은 보류.
 - 무기 PM 교체 시점(80% 규칙대로), 디렉터 교체(85%).
