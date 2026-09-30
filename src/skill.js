@@ -119,11 +119,11 @@ export class Skill {
     this.tap.bound = down || this.sinceThrust < THRUST.bindRest ? null : this.boundAxis();
     this.thrusts++;
     if (down) {
-      // 쓰러진 상대: 누운 몸 점이 닿는 곳(finish.js plunge.inside) 밖이면 걸어 들어간다 (plungePose — 디딤마다 본다).
+      // 쓰러진 상대: 누운 몸 점이 닿는 곳(finish.js plunge.inside) 밖이고 걸어서 닿으면(plunge.walk) 걸어 들어간다 (plungePose — 디딤마다 본다).
       //  AI(step:false — 제 걸음은 AI 가 정한다)·무릎 꿇은 채는 걷지 않고 그 자리에서 찍는다
       const tp = this.tap;
       tp.walkOk = step !== false && f.state === 'stand';
-      if (tp.walkOk && !f.finish.plunge.inside) tp.walking = true;
+      if (tp.walkOk && f.finish.plunge.walk) tp.walking = true;
     } else if (step && f.state === 'stand') {
       // 한 걸음 내딛으며 찌른다
       if (f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
@@ -262,8 +262,9 @@ export class Skill {
   /**
    * 찍기 (쓰러진 상대에게 탭, 사장님 9/30: "닿을 때까지 걸어들어가 … 양손을 번쩍 드는 동시에 칼날을 아래로 돌려잡고 힘껏 내려찍음").
    * finish.js 가 매 스텝 정한 fin.plunge(몸 점 T, 칼 방향 dir, 닿는 곳 inside·short)를 읽는다. 매 스텝 차례로:
-   *  1) 걸어 들어가기: 몸 점이 닿는 곳 밖이면 앞으로 걷는다(내딛기와 같은 밀기). 끝은 발이 디딜 때 본다 — 닿는 곳에 들어온 뒤
-   *     첫 디딤 · 한 걸음(디딤 → 디딤)이 몸 점을 가깝게 하지 못함 · 플레이어가 물러남 · 서 있지 않음 · 그만두기(tp.abort)
+   *  1) 걸어 들어가기: 몸 점이 닿는 곳 밖이고 걸어서 닿으면 앞으로 걷는다(내딛기와 같은 밀기). 끝은 발이 디딜 때 본다 — 닿는 곳에
+   *     들어온 뒤 첫 디딤 · 한 걸음(디딤 → 디딤)이 몸 점을 가깝게 하지 못함 · 걸어서는 닿지 않게 됨(몸 점이 손 아래를 지남) ·
+   *     플레이어가 물러남 · 서 있지 않음 · 그만두기(tp.abort)
    *  2) 겨눔: 칼자루를 머리 위 FINISH.hands 로 올리며 칼끝을 몸 점 너머로 겨눈다. 두 가지를 붙잡으면(latch) 찍는다(go):
    *     손이 올라옴 = 오르던 칼자루가 멈춘 봉우리가 머리 꼭대기 높이 이상이거나, 앞 봉우리보다 높지 않음(팔이 더 오르지 못함)
    *     칼이 선에 섬 = 칼 축 ↔ 몸 점 선 각의 골이 누운 몸 두께가 보이는 각(asin(top/거리)) 안이거나, 앞 골보다 낮지 않음(흔들림 바닥)
@@ -291,7 +292,7 @@ export class Skill {
     const bAx = _u.set(0, 1, 0).applyQuaternion(_sq.set(q.x, q.y, q.z, q.w)).applyQuaternion(_yawInv); // 칼 축 (몸 기준)
     // ── 1) 걸어 들어가기 (시간으로 끝내지 않는다)
     //  찍기 전에 몸 점이 다시 닿는 곳 밖으로 나가면(겨누며 몸이 흔들려) 다시 걷는다
-    if (tp.walkOk && !tp.go && !tp.walking && !tp.walkDone && !pl.inside && f.state === 'stand') {
+    if (tp.walkOk && !tp.go && !tp.walking && !tp.walkDone && pl.walk && f.state === 'stand') {
       tp.walking = true;
       tp.crossed = false;
       tp.plantShort = null;
@@ -310,7 +311,11 @@ export class Skill {
           tp.walkEnd = 'inside';
         }
       } else if (pl.inside) tp.crossed = true; // 닿는 곳 안: 더 밀지 않고 디딜 때까지 기다린다
-      else if (plant) {
+      else if (!pl.walk) {
+        tp.walking = false; // 걸어서는 닿지 않게 됐다 (몸 점이 손 아래를 지났다): 여기서 찍는다
+        tp.walkDone = true;
+        tp.walkEnd = 'unreachable';
+      } else if (plant) {
         tp.plants = (tp.plants || 0) + 1;
         // 한 걸음(디딤 → 디딤)이 몸 점을 가깝게 하지 못했으면 멈추고 여기서 찍는다. 첫 디딤은 기준만 잡는다 (탭은 걸음 중간이라 견줄 수 없다)
         if (tp.plantShort != null && pl.short >= tp.plantShort) {

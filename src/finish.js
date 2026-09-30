@@ -16,7 +16,7 @@
 //  두 사람 다 서 있으면 amt = 0 이고 자세 지도 계산은 예전과 한 비트도 다르지 않다.
 //  플레이어와 AI 가 같은 파이터 코드를 쓰므로 AI 의 내려베기도 그대로 마무리가 된다.
 //  탭 마무리 찌르기(skill.js plungePose, 사장님 9/30 "닿을 때까지 걸어들어가 … 양손을 번쩍 드는 동시에 칼날을 아래로 돌려잡고
-//   힘껏 내려찍음")는 fin.plunge 만 읽는다: 몸 점 T, 칼끝이 들어갈 끝 tip, 칼 방향 dir, 닿는 곳(inside·short)
+//   힘껏 내려찍음")는 fin.plunge 만 읽는다: 몸 점 T, 칼끝이 들어갈 끝 tip, 칼 방향 dir, 닿는 곳(inside·short·walk)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { MEASURED } from './ai.js';
@@ -86,6 +86,7 @@ const _tp = new THREE.Vector3();
 const _sq = new THREE.Quaternion();
 const _ax = new THREE.Vector3();
 const _Hs = [0, 0, 0];
+const DOWN = [0, -1, 0];
 
 function pose(body) {
   return { hand: [0, 0, 0], dir: [0, -1, 0], pelvisYaw: body.pelvisYaw * D2R, chestYaw: body.chestYaw * D2R, pitch: body.pitch * D2R, drop: body.drop };
@@ -93,7 +94,7 @@ function pose(body) {
 
 /** 이 파이터의 마무리 상태 (guards.js guardAt 의 fin) */
 export function newFinish() {
-  return { amt: 0, on: false, k: null, gap: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike), plunge: { T: [0, 0, 0], tip: [0, 0, 0], dir: [0, -1, 0], u: [0, -1, 0], n: 0, D: 0, Dmax: 0, short: 0, inside: false } };
+  return { amt: 0, on: false, k: null, gap: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike), plunge: { T: [0, 0, 0], tip: [0, 0, 0], dir: [0, -1, 0], u: [0, -1, 0], n: 0, D: 0, Dmax: 0, short: 0, inside: false, walk: false } };
 }
 
 /**
@@ -225,6 +226,11 @@ function aimPoses(f, fin, T, Tp) {
   //  short: 닿는 곳까지 모자란 수평 거리 (걸어 들어가기가 디딤마다 가까워졌나 견준다. 걸음 길이로 쓰지 않는다)
   //   밖은 몸 점이 손보다 앞일 때뿐이라 수평 성분이 0 이 아니다 (손 바로 아래는 늘 닿는 곳 안)
   pl.short = pl.inside ? 0 : (pl.D - pl.Dmax) / Math.hypot(u[0], u[2]);
+  //  walk: 걸어 들어가면 닿는가. 걸으면 몸 점은 손 쪽으로 오다 손 바로 아래를 지나 뒤로 간다 — 손 바로 아래(걸어서 가장 가까운 곳)에서도
+  //   닿는 곳 밖이면 칼이 짧은 것 (팔쉬온 0.90m·청강검 0.86m·부러진 칼. 롱소드 1.18m 는 0.27m 남는다). 몸 점이 손보다 뒤면 걸을수록 멀어진다.
+  //   그때 걸으면 몸 점이 발밑 뒤로 지나가 마무리가 꺼질 뿐이었다 (측정: 부러진 롱소드 0.66m 가 누운 몸을 넘어 걸어가 찍지 못함,
+  //   팔쉬온 18판 중 4판) → 걷지 않고 선 자리에서 찍는다
+  pl.walk = !pl.inside && Tp.x > _Hs[0] && _Hs[1] - Tp.y + FINISH.sink - L <= armRay(_Hs, DOWN, side);
   const tip = pl.tip;
   tip[0] = Tp.x + u[0] * FINISH.sink;
   tip[1] = Tp.y + u[1] * FINISH.sink;
