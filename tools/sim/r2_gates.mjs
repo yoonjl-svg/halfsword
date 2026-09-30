@@ -143,7 +143,7 @@ const HZS = list('hz', QUICK ? '60' : '60,120').map(Number);
 const WEAPONS = list('weapons', QUICK ? 'longsword' : 'longsword,zweihander,sabre');
 const GINPUTS = list('input', 'wind,stroke');
 const VS = QUICK ? [12] : [3, 6, 12, 20]; // 기준 (1) 손가락 빠르기
-const VSTEP = QUICK ? [12] : [3, 4, 6, 12, 20]; // chainW 격자 (걸음 착지 분포 SPEED=4,6,12,20 도 여기서)
+const VSTEP = QUICK ? [12] : [3, 4, 6, 12, 20]; // chainW 격자 (걸음 착지 분포 SPEED=4,6,12,20 도 여기서). 기준 (1)·되돌아감·사슬 순서·60↔120 도 격자의 v 를 모두 센다 (v 4 도 game·plain 짝이 있다)
 const FAMS = ['horizR', 'diagR', 'vert', 'riseR'];
 const OUT = path.resolve(arg('out', fs.mkdtempSync(path.join(os.tmpdir(), 'r2_gates_'))));
 const R1 = arg('r1', null) ? path.resolve(arg('r1')) : null;
@@ -152,13 +152,13 @@ const SKIP = new Set(list('skip', ''));
 fs.mkdirSync(OUT, { recursive: true });
 const t00 = Date.now();
 const rows = [];
-const J = { meta: { root: ROOT, hz: HZS, weapons: WEAPONS, input: GINPUTS, v: VS, quick: QUICK, r1: R1, aiMinutes: AIMIN, started: new Date().toISOString() }, rows, raw: {} };
+const J = { meta: { root: ROOT, hz: HZS, weapons: WEAPONS, input: GINPUTS, v: VS, vW: VSTEP, quick: QUICK, r1: R1, aiMinutes: AIMIN, started: new Date().toISOString() }, rows, raw: {} };
 const rev = spawnSync('git', ['-C', ROOT, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
 const dirty = spawnSync('git', ['-C', ROOT, 'status', '--porcelain', '--', 'src'], { encoding: 'utf8' }).stdout.trim() ? '+src 고침' : '';
 J.meta.rev = rev + dirty;
 J.meta.sets = SETS.map((x) => x.slice(6));
 const say = (s) => console.log(s);
-say(`r2_gates  ${ROOT} ${rev}${dirty}  Hz ${HZS.join(',')}  무기 ${WEAPONS.join(',')}  입력 방식 ${GINPUTS.join(',')}  v ${VS.join(',')}${QUICK ? '  (quick)' : ''}  out ${OUT}`);
+say(`r2_gates  ${ROOT} ${rev}${dirty}  Hz ${HZS.join(',')}  무기 ${WEAPONS.join(',')}  입력 방식 ${GINPUTS.join(',')}  v ${VS.join(',')} (chainW ${VSTEP.join(',')})${QUICK ? '  (quick)' : ''}  out ${OUT}`);
 
 /** 하위 도구 (nice, 차례로). 출력은 <out>/<name>.out/.err */
 function sub(name, args, { env = {}, cwd = ROOT, allowFail = true } = {}) {
@@ -278,7 +278,7 @@ if (!SKIP.has('grid')) {
 const keyOf = (r) => `${r.fam}/${r.scene}/in${r.inputHz}/v${r.v}/${r.weapon}/${r.ginput}`;
 function criterion(rs) {
   const game = new Map(), plain = new Map();
-  for (const r of rs) if (VS.includes(r.v)) (r.mode === 'game' ? game : plain).set(keyOf(r), r);
+  for (const r of rs) (r.mode === 'game' ? game : plain).set(keyOf(r), r); // 격자가 돈 v 모두 (chainW = VSTEP, hold = VS)
   const items = [];
   const keys = new Set([...game.keys(), ...plain.keys()]);
   for (const k of keys) {
@@ -311,7 +311,7 @@ if (grid.W.length) {
   add('기준 (1) hold (1.2 m/s + 1 s 머묾, 보고)', `입력 ${HZS.join('/')}`, `빠짐 ${h.fails}/${h.items} 항목, ${h.failRows}/${h.pairs} 짝 (${Object.entries(h.byFam).map(([f, n]) => `${f} ${n}`).join(', ')})`, '-', null);
   // 되돌아감 (새 정의)
   const gWall = grid.W.filter((r) => r.mode === 'game');
-  const gW = gWall.filter((r) => VS.includes(r.v));
+  const gW = gWall; // v 4 포함 (격자가 돈 줄 모두)
   const byV = {};
   for (const r of gW) byV[r.v] = Math.max(byV[r.v] ?? 0, r.hitch ?? 0);
   const hmax = Math.max(...gW.map((r) => r.hitch ?? 0));
@@ -424,7 +424,7 @@ add('Owner (보기 도구 화면·A/B 스위치·금빛 자취·사장님 판정
 // ── 쓰기 ──
 const wall = Math.round((Date.now() - t00) / 1000);
 J.meta.wall_s = wall;
-const md = [`# R2 관문 (${J.meta.rev}, ${new Date().toISOString()}, 벽시계 ${Math.floor(wall / 60)} 분 ${wall % 60} 초)`, '', `무기 ${WEAPONS.join('·')}, 입력 방식 ${GINPUTS.join('·')}, v ${VS.join('/')} m/s, 입력 Hz ${HZS.join('/')}${QUICK ? ' (quick)' : ''}${SETS.length ? `, chain 설정 ${J.meta.sets.join(' ')}` : ''}. PASS/FAIL 은 최소 목표에만, '보고' 는 관문 없음.`, '', '| 관문 | Hz | 잰 값 | 목표 | 결과 |', '|---|---|---|---|---|'];
+const md = [`# R2 관문 (${J.meta.rev}, ${new Date().toISOString()}, 벽시계 ${Math.floor(wall / 60)} 분 ${wall % 60} 초)`, '', `무기 ${WEAPONS.join('·')}, 입력 방식 ${GINPUTS.join('·')}, v ${VS.join('/')} m/s (chainW ${VSTEP.join('/')}), 입력 Hz ${HZS.join('/')}${QUICK ? ' (quick)' : ''}${SETS.length ? `, chain 설정 ${J.meta.sets.join(' ')}` : ''}. PASS/FAIL 은 최소 목표에만, '보고' 는 관문 없음.`, '', '| 관문 | Hz | 잰 값 | 목표 | 결과 |', '|---|---|---|---|---|'];
 for (const r of rows) md.push(`| ${r.gate} | ${r.hz} | ${String(r.number).replace(/\|/g, '/')} | ${r.target} | ${r.result}${r.detail ? ` (${String(r.detail).replace(/\|/g, '/').slice(0, 300)})` : ''} |`);
 const nF = rows.filter((r) => r.result === 'FAIL').length, nP = rows.filter((r) => r.result === 'PASS').length;
 md.push('', `PASS ${nP}, FAIL ${nF}, 보고 ${rows.length - nP - nF}.`);
