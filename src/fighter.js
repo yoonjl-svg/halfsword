@@ -900,6 +900,7 @@ export class Fighter {
    */
   decapitate(sev, bleed) {
     const J = this.jointByName.head;
+    if (this.decapitated || !J.joint) return; // 한 번만: 게임은 죽은 몸이 상처를 안 받지만, die 를 막은 시뮬 과녁(chain.mjs 등)은 목을 또 베일 수 있다
     const a = J.joint.anchor1(); // 가슴 몸 기준 목 관절 자리
     this.world.removeImpulseJoint(J.joint, true);
     this.joints.splice(this.joints.indexOf(J), 1); // 근육을 더는 걸지 않는다 (applyPose 의 J.head 목표 쓰기는 아무 데도 안 간다)
