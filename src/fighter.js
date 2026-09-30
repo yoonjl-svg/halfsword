@@ -833,7 +833,7 @@ export class Fighter {
       return;
     }
 
-    // 베기/찌르기 → 상처 + 출혈
+    // 베기/찌르기 → 상처 + 출혈. 찌르기는 ×1.6 (가슴 찌르기 +0.25 는 이것과 겹쳐 지움 — 사장님 9/30 14:30, 128판 0회)
     const bleedPerSev = h.bleedPerSev;
     const bleed = sev * bleedPerSev * (h.type === 'stab' ? 1.6 : 1);
     this.bleed += bleed;
@@ -847,7 +847,6 @@ export class Fighter {
       this.die('목');
       if (decap) COMBAT_HOOKS.onDecapitate?.(this, this.bodies.head);
     } else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
-    else if (Z === 'chest' && h.type === 'stab' && sev > 1.1) this.bleed += 0.25; // 심장·폐: 몇 초 안에 쓰러진다
 
     // 팔다리 기능
     const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' }[h.part];
