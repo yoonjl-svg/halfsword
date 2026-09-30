@@ -13,7 +13,7 @@
 //  매 물리 스텝 combat.js afterStep 이 updateGun 을, skill.js thrust 가 gunCanFire 를, ai.js 가 gunAI 를 부른다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { ANATOMY, ARENA } from './config.js';
+import { ANATOMY, ARENA, COMBAT } from './config.js';
 
 /** 권총을 든 동안 화면에 띄우는 자세 이름 (사장님: "사격 자세 라고 써") — main.js 자세 이름 표시가 GUARDS 대신 쓴다 */
 export const GUN_STANCE = { name: '사격 자세', desc: '총이 저절로 상대를 겨누며 흔들린다 · 레이저가 몸에 걸린 순간 탭으로 쏜다' };
@@ -114,7 +114,7 @@ export function gunPose(f, pose) {
   // 상대 가슴 (몸 기준)
   const c = f.bodies.chest.translation();
   const t = foe.bodies.chest.translation();
-  const hd = foe.bodies.head?.translation() ?? t;
+  const hd = headOff(foe) ? t : foe.bodies.head?.translation() ?? t; // 떨어진 머리·죽은 상대는 가슴만
   const m = GUN.aimMid;
   _gq.copy(f.yaw).invert();
   _ga.set(t.x + (hd.x - t.x) * m - c.x, t.y + (hd.y - t.y) * m - GUN.aimLow - c.y, t.z + (hd.z - t.z) * m - c.z).applyQuaternion(_gq).sub(_gp.set(S[0], S[1], S[2]));
@@ -168,7 +168,12 @@ function aimErr(f) {
     const c = b.translation();
     return (ax.angleTo(new THREE.Vector3(c.x - o.x, c.y - o.y, c.z - o.z)) * 180) / Math.PI;
   };
-  return Math.min(err(foe.bodies.chest), foe.bodies.head ? err(foe.bodies.head) : 180);
+  return Math.min(err(foe.bodies.chest), foe.bodies.head && !headOff(foe) ? err(foe.bodies.head) : 180);
+}
+
+/** 겨눌 머리가 없다: 참수됐거나(몸에서 떨어진 머리) 죽은 상대 (COMBAT.decapitate 를 끄면 예전처럼 늘 머리도 본다) */
+function headOff(foe) {
+  return foe.decapitated || (COMBAT.decapitate && !foe.alive);
 }
 
 /** 총구 (월드): 칼 몸체 (spec.muzzleX, 손잡이+칼날 길이, 0) — 총신이 주먹 위로 올라와 있어 칼 축에서 비켜 있다 */

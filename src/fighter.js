@@ -10,7 +10,8 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT } from './config.js';
+import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
@@ -839,8 +840,13 @@ export class Fighter {
     this.wounds.push({ part: h.part, type: h.type, severity: sev, bleed, local: h.local.clone() });
 
     // 치명상
-    if (Z === 'neck' && sev > 0.5) this.die('목');
-    else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
+    if (Z === 'neck' && sev > 0.5) {
+      // 참수 (COMBAT.decapitate): 칼이 목을 가르고 지나간 베기만. 튕긴 충돌·찌르기·둔기·총은 아니다
+      const decap = COMBAT.decapitate && h.type === 'cut' && h.pass && h.passing;
+      if (decap) this.decapitate(sev, bleed);
+      this.die('목');
+      if (decap) COMBAT_HOOKS.onDecapitate?.(this, this.bodies.head);
+    } else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
     else if (Z === 'chest' && h.type === 'stab' && sev > 1.1) this.bleed += 0.25; // 심장·폐: 몇 초 안에 쓰러진다
 
     // 팔다리 기능
@@ -850,6 +856,22 @@ export class Fighter {
       if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
     }
     if (Z === 'head' && h.type === 'cut') this.consciousness -= sev * 0.5;
+  }
+
+  /**
+   * 참수: 목 관절(가슴 → 머리)을 뗀다. 물리 스텝 밖(combat.afterStep → strike → applyWound)에서만 불린다.
+   *  머리 몸·콜라이더·겉모습(얼굴·눈·머리카락·투구)은 그대로 — 머리는 칼·끌림이 준 속도 그대로 날아간다(더하는 힘 없음).
+   *  몸통엔 목 단면 상처(stump, 가슴 기준 목 관절 자리): 목 상처와 같은 출혈. 되살아나지 않는다(revive.js tryRevive)
+   */
+  decapitate(sev, bleed) {
+    const J = this.jointByName.head;
+    const a = J.joint.anchor1(); // 가슴 몸 기준 목 관절 자리
+    this.world.removeImpulseJoint(J.joint, true);
+    this.joints.splice(this.joints.indexOf(J), 1); // 근육을 더는 걸지 않는다 (applyPose 의 J.head 목표 쓰기는 아무 데도 안 간다)
+    J.joint = null;
+    this.decapitated = true;
+    this.bleed += bleed;
+    this.wounds.push({ part: 'chest', type: 'cut', severity: sev, bleed, local: new THREE.Vector3(a.x, a.y, a.z), stump: true });
   }
 
   /**

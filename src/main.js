@@ -1165,8 +1165,9 @@ const _cd = new THREE.Vector3();
 function updateCamera(dt) {
   if (!player || window.game?.freeCam) return; // freeCam: 디버그용으로 카메라를 직접 조종
   // 흔들리는 골반 대신 몸 전체 무게중심을 부드럽게 따라간다
-  const a = camFollow.lerp(player.com || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
-  const b = enemy.com || enemy.pelvisPos;
+  //  (참수된 몸은 무게중심에 날아가는 머리가 섞이니 골반을 따른다)
+  const a = camFollow.lerp((!player.decapitated && player.com) || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
+  const b = (!enemy.decapitated && enemy.com) || enemy.pelvisPos;
   // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지)
   _cd.set(b.x - a.x, 0, b.z - a.z);
   if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
