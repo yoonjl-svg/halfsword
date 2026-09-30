@@ -85,12 +85,19 @@ const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
   delete settings.legWeight; // 없앤 설정 ('다리로 체중 받치기'는 이제 늘 켜짐)
+  delete settings.autoChamber; // 없앤 설정 (자동 감기, R2 W5 가 옛 결심 경로와 함께 지움)
+  // 시험 스위치의 모르는 저장값 (손으로 고친 저장소 등) 은 기본값으로 — 설정 줄에 켜진 칸이 없게 두지 않는다
+  if (settings.handMode !== 'trunk' && settings.handMode !== 'wind') settings.handMode = DEFAULTS.handMode;
+  if (settings.gestureInput !== 'wind' && settings.gestureInput !== 'stroke') settings.gestureInput = DEFAULTS.gestureInput;
 } catch {
   /* 저장소를 못 쓰면 기본값으로 */
 }
+// 주소 (?input=·?hand=) 가 덮은 설정의 원래 (저장된) 값: 저장할 때는 이 값을 쓴다. 주소 값은 이번 열기에만 —
+//  다른 줄을 눌러도 저장되지 않고, 그 줄을 직접 눌러야 저장된다 (click 이 여기서 지운다)
+const urlKept = {};
 const saveSettings = () => {
   try {
-    localStorage.setItem('gladiator-settings', JSON.stringify(settings));
+    localStorage.setItem('gladiator-settings', JSON.stringify({ ...settings, ...urlKept }));
   } catch {
     /* 무시 */
   }
@@ -698,6 +705,7 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
     el.querySelectorAll('button').forEach((b) =>
       b.addEventListener('click', () => {
         settings[key] = b.dataset.v;
+        delete urlKept[key]; // 이 줄을 직접 골랐다 → 이제 저장한다
         if (key === 'difficulty' && ai && !currentFoe) ai.setLevel(settings.difficulty); // 캐릭터를 골랐으면 그 캐릭터의 난이도를 따로 지킨다
         if (key === 'skill' && player) player.skill.level = +settings.skill;
         saveSettings();
@@ -1382,13 +1390,15 @@ function updateGuardName(dt) {
 // ── 게임 루프 ──
 // 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다
 // 손짓 입력 방식 (사장님 스위치, GESTURE.input): ?input=wind (A 손가락 자리로 감기, 기본) | ?input=stroke (B 긋기 길이·빠르기만)
-//  주소 값이 설정 줄보다 먼저 (설정 줄에도 그대로 보인다. 설정 줄을 누르면 그 값으로 바뀐다)
+//  주소 값이 설정 줄보다 먼저 (설정 줄에도 그대로 보인다. 설정 줄을 누르면 그 값으로 바뀐다). 주소 값은 저장하지 않는다 (urlKept)
 if (params.get('input') === 'wind' || params.get('input') === 'stroke') {
+  urlKept.gestureInput = settings.gestureInput;
   settings.gestureInput = params.get('input');
   refreshSettingsUI();
 }
 // 칼 든 손 몫 (사장님 스위치, 설정 handMode): ?hand=trunk (몸통만, 기본) | ?hand=wind (큰 감기). ?input= 과 같이 주소 값이 설정 줄보다 먼저
 if (params.get('hand') === 'trunk' || params.get('hand') === 'wind') {
+  urlKept.handMode = settings.handMode;
   settings.handMode = params.get('hand');
   refreshSettingsUI();
 }
