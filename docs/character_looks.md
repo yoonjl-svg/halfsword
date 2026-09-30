@@ -114,6 +114,20 @@ v3 추가 컷: [3/4](character_looks/margarethe_threeq.jpg) · [옆](character_l
 - 비용: `sample()` 스텝당 0.002~0.004 ms, `update()` 0.001~0.003 ms (헤드리스). 더하기 섞기라 눈밭·밝은 하늘 앞에서는 옅고 어두운 벽·밤에 또렷하다(디렉터 지정 방식).
 - 관문: fights12·hybrid fights12·live_battery main 940f665 과 바이트 동일, 스모크 콘솔 에러 0. 사진: [베기 중(밤)](handoff/sword_trail_cut.png) · [확대](handoff/sword_trail_cut_zoom.png) · [베기 중(낮)](handoff/sword_trail_cut_day.png) · [정지 시](handoff/sword_trail_rest.png).
 
+### 칼 잔상 띠 v2 (사장님 9/30 "칼무리의 궤적이 너무 반짝여서 오히려 칼보다 돋보이는 거 같애. 나뭇가지나 낮은 계급 칼을 들면 어울리지도 않고")
+- 더하기 섞기를 버리고 **보통 섞기의 반투명 띠**. 색은 그 칼날 재질 색 × `dim` 0.55 — 늘 칼보다 어둡고, 밤에 흰 부채꼴이 되지 않으며 안개도 받는다. 청강검은 제 칼날 색조(청록 회색)를 따른다. 불투명도 최대 `strength` 0.3(속도 25 m/s), 칼자루 쪽 0.3 배.
+- **무기별**: `trailFor(weapon)` = 금속 칼날(`material 'steel'`)이면서 `tier` 가 `trash` 가 아닐 때만. 나뭇가지(wood·trash)·고무닭(rubber)·냉동참치(frozen)·광선검(plasma, 자체 빛)·리볼버(gun)는 잔상 없음. weapons.js 의 기존 필드(material·tier·gun)만 읽어 새 필드는 필요 없었다.
+- 금색·회색 톤(`setTone`)은 짧고 은은한 어두운 금색·회색으로만 남겼다(R5 에서 다른 자리로 옮긴다).
+- 확인(헤드리스 12초): 롱소드·청강검은 띠가 그려지고(색 0.38·0.40·0.42 / 0.30·0.39·0.41), 나뭇가지·광선검·고무닭은 한 번도 안 그려진다. 전후 비교: [강철](handoff/sword_trail_v2_steel.png) · [나뭇가지](handoff/sword_trail_v2_branch.png).
+
+## 참수 겉모습 (`src/decap_fx.js`, 사장님 9/30 "머리를 베게 되면 머리가 떨어지면 좋겠는데" — 물리·판정은 디렉터 `fighter.decapitate`)
+- **목 단면**: 몸통 쪽(가슴 그룹, 목 단면 상처 `stump` 의 local 자리, 옷깃 위 y ≥ 0.176)과 머리 쪽(머리 그룹 y −0.072, 아래를 봄)에 반지름 4.6 cm 원판 — 검붉은 살(`0x4a0a0c`) + 조금 밝은 가장자리 띠 + 뒤쪽으로 치우친 작은 목뼈 단면(`0xcfc4b2`). '피 표현'을 끄면 어두운 회색.
+- **피 분출**: 몸통 단면에서 처음 1.5초, 목 방향으로 박동(2.2 Hz)하며 초당 70 → 10 방울, 속도 4 → 1.4 m/s. 그 뒤는 기존 상처 출혈(stump 상처의 bleed → `updateDrips`)이 이어받는다. 머리 쪽은 처음 0.8초 몇 방울. '피 표현'을 끄면 분출 없음. 이 모듈 전용 난수(순번 해시) — `Math.random` 안 씀.
+- **떨어진 머리**: 광기의 하인리히 안광은 머리 그룹의 자식이라 머리와 같이 떨어지고, 죽은 뒤 2.5초에 꺼진다 — 땅에 구른 머리에 떠 있는 눈빛은 없다. 투구·머리카락도 머리와 함께 간다(디렉터 물리).
+- main.js 세 줄: import, `createDecapFx(particles)`, 프레임마다 `decapFx.update([player, enemy], dt * scale)`.
+- 관문: fights12·hybrid fights12·live_battery main 과 바이트 동일, smoke 콘솔 에러 0, `decap_shots.mjs`(liao 성 안뜰, heinrich_mad 밤 신전) 참수 확인 통과·콘솔 에러 0. 전후: [decap_fx_v1.png](handoff/decap_fx_v1.png).
+- 메모(디렉터 몫): 기본 카메라에서는 결과 글자 "승리"가 화면 가운데를 덮어 슬로모션 중 머리 분리가 글자 뒤에 가려질 때가 있다. 옆 카메라에서는 분리가 잘 읽힌다.
+
 ## 광기의 하인리히 — 붉은 안광 (`src/mad_eyes.js`, 사장님 요청 · 디렉터 나눔)
 
 사장님(2026-09-28): "밤의 포세이돈 신전에 등장하는 하인리히 앞에 '광기의'라는 접두를 붙여서 다른 캐릭터로 구분하고 싶어. 모델링은 그대로 쓰되 광기를 표현하고 싶어. 눈을 붉게 할까? 안광이 아우라처럼 흔들리게."
