@@ -32,7 +32,7 @@ const PRE = 0.6;
 const POST = 1.0;
 
 const cfg = await import(pathToFileURL(join(WROOT, 'src/config.js')).href);
-cfg.BODY.weightMode = 'hybrid'; // tools/sim/hybrid.mjs 와 같게
+cfg.BODY.weightMode = 'hybrid'; // 게임과 같게 (config 기본값과 같다)
 const H = await import(pathToFileURL(join(WROOT, 'tools/sim/harness_m.mjs')).href);
 const { newRound, DT, THREE, CONFIG, feedTrace, inputPump } = H;
 const rev = process.env.WBS_REV || gitRev(WROOT); // 기록에 남길 커밋 (체크아웃의 HEAD, WBS_REV 로 덮어쓸 수 있음)

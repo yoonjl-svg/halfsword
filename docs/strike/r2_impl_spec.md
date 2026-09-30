@@ -20,7 +20,7 @@
 | 3 | Passing step data | `fwd = step.to[0] − step.from[0]` (zornhau large 0.78, medium 0.39), `side = step.to[1] − step.from[1]` (−0.03 / −0.015); blended by the two-segment rule with small = `{fwd 0, side 0, liftPhi 0.178, landPhi 0.833}` so fwd(S) rises from 0. `kind:'strike'` gets the lateral `guardWidth` offset like `'pass'` (`gait.js:687`), uses `x = r.fwd` exactly (no `Math.max(0.3, r.fwd − 0.1)`, `gait.js:686`), and has **no duration floor** (`gait.js:226` clamp skipped for `'strike'`; §1.1-M — the earlier `stepDurMin 0.15` bound above ≈ 4 m/s finger). The pre-existing floors are listed under Q7 (§10). The rear foot passes (`gait.js:411`); clip foot channels are mapped by **role** (stance/swing), not by anatomical side (§5.6). |
 | 4 | Bundle size (raw clips ≈ 6 MB) | `tools/motion/pack_atlas.mjs` → `src/strike/clips/atlas_v0.json` (`stillness-atlas-pack/1`): 4 families × 2 sides × 3 sizes, driven channels only, resampled on the φ grid, Float32 base64 ≈ 1.4 MB; derivatives computed at load. Raw-clip loader for node tools. Both paths end in one `buildAtlas()`. |
 | 5 | Size blend of directions | `sword`, `elbowPoleS/O` are **slerped** between sizes and between families (clip_format §4; small↔medium sword differs 75–90° at tw). Positions/angles lerp (yaw on unwrapped degrees). |
-| 6 | φ jump at cut start | Motion's carry-over on the clip share: `clipEff(φ) = clip(φ,S) + [clip(φ_rev,S) − clip(0,S)]·(1 − sj(φ/carryPhi))`, `carryPhi 0.3` (directions: residual rotation slerped by the same weight). No hand hitch; φ filter unchanged. |
+| 6 | φ jump at cut start | Motion's carry-over on the clip share: `clipEff(φ) = clip(φ,S) + [clip(φ_rev,S) − clip(0,S)]·(1 − sj(φ/carryPhi))`, `carryPhi 0.3` (directions: the residual rotation scaled by the same weight, `R(k·r)`, §5.2). No hand hitch; φ filter unchanged. |
 | 7 | Hip τ_ff vs anchor, no pelvisLag plan | Feed-forward chain (§5.4) is complementary to the anchor: anchor `d 330` acts on relative rate to the commanded target, so with exact τ_ff the anchor torque is ≈ 0; too little → anchor supplies it, too much → anchor damps it. `drive.debug` records `pelvisLag`, `chestLag`, `tauAnchor`, `P_anchor` every step; W3 acceptance stages `ffGain 0 → 0.8` and `anchorRelaxYawK 0 → 0.9` against those channels and the fall counter. |
 | 8 | Citation slips | Fixed: touch trace push `input.js:149` (mouse 138, lift 167); drop `fighter.js:649`; `gravityTorque` `fighter.js:1607`; `sj` `skill.js:53`; heel `gait.js:809-811`; req step lines `gait.js:685-687`; Rapier `dynamics/impulse_joint.d.ts:109`; no `this.f.now` exists → `fighter.stepT` (§2.3). |
 | — | Additive delta rule (motion) rejected | Keep control's `lerp(guard(finger), clip(φ,S), S)`; the additive `guard + Δ` desynchronises whenever the finger leaves the small clip's timeline (judge example: hand never reaches the strike line). |
@@ -123,7 +123,7 @@ Output `fighter.ges`:
 |---|---|
 | `state` | IDLE / WIND / CUT / FOLLOW / RECOVER |
 | `S`, `Swind`, `Sstroke`, `Scut` | load 0–1; `S = max(Scut, Sstroke)` after cut start, `Swind` before; **exactly 0** below `sSnap` while decaying (§3.7) |
-| `over` | size continuation beyond S = 1 (wind: `(|w| − sL1)/(0.5·(sL1 − sL0))`; stroke: `Sraw − 1`), ≥ 0, never clamped (§3.4, §4.4) |
+| `over` | size continuation beyond S = 1, counted in medium→large steps (one unit adds one `(large − medium)`, §4.4) (wind: `(|w| − sL1)/(0.5·(sL1 − sL0))`; stroke: `Sstroke − 1`), ≥ 0, never clamped (§3.4, §4.4) |
 | `c` | guard↔clip crossfade `smoothstep(0, mixX, S)` (§5.3) |
 | `input` | `'wind'` (A) / `'stroke'` (B) — `GESTURE.input`, the owner's switch (§3.10) |
 | `mode` | `'wind'` (clip started from the finger wind at φ_rev) / `'stroke'` (no finger wind: clip started at `φ_align` in (A), at `−autoWindPhi` in (B)); hands join in both (`DRIVE.handOnStroke true`) |
@@ -142,7 +142,7 @@ Output `fighter.ges`:
 
 - Contract with R0: `fingerTrace.at(tMs, out)` gives the finger at physics time `t` (event-time interpolation, `predictMs 8` look-ahead allowed for **position only**). If R0's `at` returns integrated positions, gesture uses them directly; if it returns only per-step deltas/velocities, gesture integrates. Either way:
   1. **p is never clamped.** Touch input is relative (`input.js:149 this.fingerTrace.push(e.timeStamp || performance.now(), tdx, -tdy)`; the same deltas go to `handOffset`, which `skill.js:399 if (off.length() > R) off.setLength(R);` clamps at 0.62 m). Gesture sets `p := f.handOffset` on each touch-down (first piece after `TRACE_LIFT`) and while not held (auto-return moves the pad), and during a held touch integrates the unclamped pieces itself. A wind dragged to 0.62–1.0 m (or beyond) counts in full.
-  2. **Reversal is judged on real samples.** `v` and the reversal test use the last two real samples; the 8 ms prediction is never used for `v`.
+  2. **Reversal is judged on real samples.** `v` and the reversal test use the last two real samples; the 8 ms prediction is never used for `v`. (구현 9/29: after the last real sample `readFinger` carries that velocity over `max(span, COMMIT.stillGap, COMMIT.stillFrames·frameDt)` — a gap-tolerance window, not a limit; event times run ahead of the rAF step, so carrying it only one sample span read a running stroke as `v = 0`, `93b25ac`. W5's deletion of the old commit path must keep these two `COMMIT` values.)
   3. Lift (`TRACE_LIFT`, `input.js:167`) arrives as `held = false`; `v` survives one more step (flick = reversal on lift), then 0.
   4. **Hit-stop.** `main.js:1259 const inScale = hitStop > 0 ? 0.25 : 1;` scales the `handOffset` deltas (`:1261-1262`) while `input.fingerTrace` is unscaled. `main.js` publishes `player.inputScale = inScale` before the physics loop (`:1293`); gesture multiplies every integrated piece by `f.inputScale ?? 1` (harness: 1), so `p` and `handOffset` stay in step; pieces flagged `TRACE_REPLAY` (`input.js:11`, no producer yet) are skipped as detectCommit does; when `inputScale` returns to 1 gesture re-syncs `p := handOffset + (p − handOffset)·0` (a guard; with the same scale the drift is 0). `v` for the reversal test uses the unscaled trace (the finger's real motion), so a reversal during hit-stop is still recognised on its step.
 
@@ -153,15 +153,17 @@ update(dt, t):
   if (!source) { if (state === IDLE && S === 0) return; decayToIdle(tau 0.08); return }   // AI fighters without a source cost nothing
   if (!Gesture.bodyOk(f)) { decayToIdle(tau 0.08); return }
   F = readFinger(src, t)                            // p, v, held (v along the stroke: vC = max(0, dot(v, dirC)))
-  updateRest(F)                                     // |v| < restV for ≥ restDwell → o := p   (IDLE/WIND only; also on touch-down)
+  updateRest(F)                                     // |v| < restV for ≥ restDwell → o := p   (IDLE, RECOVER, WIND with Swind = 0; also on touch-down)
   switch (state):
     IDLE:    w = p − o; computeWind(w)              // (A) only: Swind, famA/B/mix, side, phiF = −1 + min(1, |w|/sL1), over
              if (Swind > 0) state = WIND            // continue in the same step
              else if (input === 'stroke' && |v| > vStrike) startCut(t, 'auto')     // (B): stroke start from rest, §3.10
+             else if (input === 'wind' && held && gap && |v| > vStrike) startCut(t, 'auto')   // (A): gap = computeWind gave 0 because the neighbour gap > sectorMax (§3.4); 구현 9/29: 499a9b7
     WIND:    w = p − o; computeWind(w)
              if (reversal(F, w)) startCut(t)        // §3.5
              else if (|v| < vStrike && dot(v, ŵ) < 0) Swind → smoothstep(sL0, sL1, |w|) with τ tauRelease   // slow return (Q2)
-             if (Swind == 0 && dwell ≥ restDwell) state = IDLE
+             S = max(Swind, Sres); over = max(overWind, oRes)   // Sres/oRes: the previous stroke's load after a rewind (RECOVER below), ×e^(−dt/tauRelease) per step, 0 below sSnap; never enters Swind/Scut, cleared at startCut/toIdle/reset (구현 9/29: 499a9b7)
+             if (Swind == 0 && Sres == 0 && dwell ≥ restDwell) state = IDLE
     CUT:     phiDotF = kφ·vC; phiF += phiDotF·dt    // finger clock, no floor (Q1, §3.6); 'floor' sim mode: 1/T0 + kv·vC
              strokeLen += |Δp|; v̄ = strokeLen / (t − tCut); Sstroke = arc0·(strokeLen/Lref)·(v̄/vRef)   // §3.4, unclamped
              S = max(Scut, min(1, Sstroke)); over = max(overWind, Sstroke − 1)          // monotone while the finger moves
@@ -170,11 +172,12 @@ update(dt, t):
              if (phiF ≥ 1) state = FOLLOW
     FOLLOW:  same clock and stop rule as CUT (label only: φ ≥ 1 = follow-through, R5's signal window)
              ring.push(t, p)                        // 0.15 s, 24 slots × 3 Float64, preallocated — origin bookkeeping, no input is ignored
-             if (phiF ≥ followEnd) startRecover(t)
+             // no φ end: FOLLOW ends only by the stop rule (구현 9/29: the `phiF ≥ followEnd → startRecover` line is gone — a hidden length limit; followEnd/recoverEnd are reserved for R4, 93b25ac)
     RECOVER: phiF frozen                            // the command stays where the finger left it; the body's inertia is physics (Q1). R4 may drive 1.6 → 2.2 with its recovery clip
-             S → 0 with τ tauRelease; if (S < sSnap) S = 0    // snap: exact 0 re-enters the S = 0 identity (§7)
-             w = p − o; computeWind(w); if (Swind > 0) { state = WIND; S = Swind }     // (A): rewind recognised at once (Q18)
+             if (input === 'wind' && held && !restedSinceRecover && dot(p − o, dirC) > 0) o := p   // (A) origin rule, §3.7 (구현 9/29: 499a9b7)
+             w = p − o; computeWind(w); if (Swind > 0) { state = WIND; Sres = S·e^(−dt/tauRelease); oRes = over·e^(−dt/tauRelease) }   // (A): rewind recognised at once (Q18); S does not drop to Swind in one step (구현 9/29: 499a9b7)
              if (input === 'stroke' && |v| > vStrike && dot(v, dirC_prev) < 0) startCut(t, 'auto')   // (B): the next stroke
+             S → 0 with τ tauRelease; if (S < sSnap) S = 0    // snap: exact 0 re-enters the S = 0 identity (§7); after the rewind / next-stroke checks, as in the code
              if (S === 0 && dwell ≥ restDwell) state = IDLE
   phiFilter(dt)                                      // §3.6
   write out
@@ -186,7 +189,7 @@ update(dt, t):
 
 ### 3.4 Wind vector, S, family
 
-- Origin `o`: last place where `|v| < restV 0.25 m/s` for ≥ `restDwell 40 ms`; touch-down position; at `startRecover` the last dwell inside the ring (else the ring's oldest sample). **Held wind**: while `state === WIND && Swind > 0` a dwell does *not* move `o` (the wind is held at the chamber, Q2 — `w`, `ŵ` and the family keep their values, so a fast move against `ŵ` from the held chamber is the reversal); `o` follows dwells only in IDLE or once `Swind` has decayed to 0. **Finger only**: `computeWind` and the (B) stroke start run only while `held`; a lift in WIND decays `Swind` with `tauRelease` (a re-touch within the decay can still stroke from it), and Skill's auto-return moving `handOffset` at `recoverSpeed 1.2 m/s` while the finger is up is never a gesture (p is re-synced to `handOffset` without winding).
+- Origin `o`: last place where `|v| < restV 0.25 m/s` for ≥ `restDwell 40 ms`; touch-down position; at `startRecover` the last dwell inside the ring (else the ring's oldest sample). **Held wind**: while `state === WIND && Swind > 0` a dwell does *not* move `o` (the wind is held at the chamber, Q2 — `w`, `ŵ` and the family keep their values, so a fast move against `ŵ` from the held chamber is the reversal); `o` follows dwells only in IDLE, in RECOVER (§3.7) or once `Swind` has decayed to 0. **Finger only**: `computeWind` and the (B) stroke start run only while `held`; a lift in WIND decays `Swind` with `tauRelease` (a re-touch within the decay can still stroke from it), and Skill's auto-return moving `handOffset` at `recoverSpeed 1.2 m/s` while the finger is up is never a gesture (p is re-synced to `handOffset` without winding).
 - `w = p − o`, `|w|` unclamped. `Swind = smoothstep(sL0 0.12, sL1 0.55, |w|)`: rises instantly; falls only while the finger returns slowly (τ 0.25 s, Q2). `overWind = max(0, (|w| − sL1) / (0.5·(sL1 − sL0)))` = how many more medium→large size steps the finger has dragged beyond the large wind (0.215 m each, the same pad distance that carries S 0.5 → 1); the atlas continues **every** clip channel linearly by it (§4.4). Doc §2-2 (1): extra drag is a bigger wind — no gain below 1, no channel frozen.
 - Wind phase `phiF = −1 + min(1, |w| / sL1)`; beyond `sL1` φ stays 0 (the chamber) and the pose keeps growing through `overWind`. The wind pose is 1:1 with the finger from the first frame.
 - **Stroke load (Q3, both modes).** `arc0 = |o_pad − end_f| / |ch_f − end_f|` (the arc the start pose already has toward the family's end pad; pflug→zornhau 0.39, vom Tag→oberhau ≈ 1.0, unclamped so a start beyond the chamber gives > 1), `Lref_f = |ch_f − end_f|` (family geometry from `STROKE.path`, config.js:664-670), `vRef 6 m/s` (= today's `COMMIT.bSpeed`, the speed the game already calls a fast stroke), `v̄` = stroke length / time since cut start. `Sstroke = arc0 · (strokeLen / Lref_f) · (v̄ / vRef)`; `S = min(1, Sstroke)`, the excess is `over`. From a high guard a long fast stroke is the biggest cut; from pflug the same finger gives ≈ 0.39 at 6 m/s, 0.78 at 12 m/s, 1.0+ at 15 m/s — geometry and the owner's two inputs, no number that stops it. A fast reposition (0.3 m at 3 m/s from pflug) gives 0.06: continuous, no cliff.
@@ -213,15 +216,18 @@ update(dt, t):
     phi'    = u + (e + (phiDot + ω e) dt)·E
     phiDot' = (phiDot − ω(phiDot + ω e) dt)·E
   phiDDot = ω²(u − phi) − 2ω·phiDot                    // used by the τ_ff chain
-  phi = min(phi, phiF + phiDotF·leadMs·S/1000)         // lead bound: the command never runs ahead of the finger by more than 40 ms·S (Q22)
+  bound = phiF + phiDotF·leadMs·S/1000                 // lead bound: the command never runs ahead of the finger by more than 40 ms·S (Q22)
+  if (phiDotF ≥ 0 ? phi > bound : phi < bound)         // in the direction of motion only; never pulls φ back behind its previous value
+    phi = phiDotF ≥ 0 ? max(bound, min(phi, phiPrev)) : min(bound, max(phi, phiPrev)); phiDot = (phi − phiPrev)/dt
   ```
+  (구현 9/29: the lead bound `φ ≤ φF + φ̇F·leadMs·S/1000` applies in the direction of motion and never pulls φ back behind its previous value — the earlier `phi = min(phi, bound)` made φ jump back on the step the finger stopped and forced a lead when φ̇F < 0, `93b25ac`.)
   Constant-speed drags are tracked with zero steady lag; a jump (new touch) is 59 % followed within 33 ms. Exact discretisation is unconditionally stable (dt is fixed 1/120 anyway). With the finger clock `u` freezes when the finger stops, so the filter settles onto the frozen command within ≈ 3/ω = 50 ms (this is the filter's own settling, not a continuation).
 
 ### 3.7 FOLLOW buffer and recovery
 
-- During FOLLOW (φ 1–1.6) the finger still drives φ (same clock); `(t, p)` goes to the 0.15 s ring for origin bookkeeping. The guard share `(1 − c)` still follows the finger. No input is discarded or delayed.
+- During FOLLOW (φ ≥ 1, no upper end; 구현 9/29: `followEnd`/`recoverEnd` are reserved for R4 and no longer end a cut — FOLLOW has no length limit and ends only by the stop rule below, `93b25ac`) the finger still drives φ (same clock); `(t, p)` goes to the 0.15 s ring for origin bookkeeping. The guard share `(1 − c)` still follows the finger. No input is discarded or delayed.
 - **S after the reversal**: held at `max(Scut, Sstroke)` while the finger keeps moving along `dirC`; the first step the finger stops (`|v| < restV`), lifts, or moves against `dirC` → `startRecover(t)`: φ freezes, S decays with `tauRelease` (Q2's value; no second constant) and snaps to 0 below `sSnap`. As S falls, `c(S)` hands the pose back to `guardAt(finger)` and Skill's auto-return (`SKILL.recoverSpeed`, Q17); the body's angular momentum is what physics keeps (R4 relaxes the servos that erase it).
-- `startRecover(t)`: `o :=` last dwell in the ring (or its oldest sample), then `w = p − o` → a wind begun during follow-through is recognised on the first recovery step (Q18, no cooldown). The trunk share keeps its momentum physically; a deep follow-through has to be re-wound.
+- `startRecover(t)`: `o :=` last dwell in the ring (or its oldest sample), then `w = p − o` → a wind begun during follow-through is recognised on the first recovery step (Q18, no cooldown). The trunk share keeps its momentum physically; a deep follow-through has to be re-wound. (A) In RECOVER, until the first dwell, `(p − o)·dirC > 0 ⇒ o := p` (continuing the same way after a hitch is not a wind); after a dwell, the dwell point is `o` (구현 9/29: `499a9b7`). The cost of this rule: a +dirC rewind right after a 10–30 ms hitch (shorter than `restDwell`) still reads as the stroke's continuation (`gesture_eval` reports it, `vi_rewind_curve_hitch_report`); dropping the rule fixes that but turns a same-side continuation after a 20 ms hitch into a wind — the director's/owner's choice (Q18 vs Q1).
 - Skill auto-return (`skill.js:504`) does not start while `ges.busy` (`CUT`/`FOLLOW` only); RECOVER releases it at once, so the pad goes home while S decays.
 
 ### 3.8 Hooks
@@ -244,7 +250,7 @@ export const GESTURE = {
   on: true, ai: false,
   input: 'wind',                         // owner's switch (Q3 부연): 'wind' (A) finger-position wind | 'stroke' (B) stroke length/speed only, short automatic body wind
   clock: 'finger',                       // Q1 as answered: φ̇ = v_along / sL1, no floor. 'floor' = doc law 1/T0 + kv·v, sims only
-  sL0: 0.12, sL1: 0.55, padExt: 1.0,     // Q21; overWind = (|w| − sL1)/(0.5·(sL1 − sL0)), linear continuation, no gain
+  sL0: 0.12, sL1: 0.55,                  // Q21; overWind = (|w| − sL1)/(0.5·(sL1 − sL0)), linear continuation, no gain; no pad-drag end (구현 9/29: the 1.0 m pad-extension value is deleted — nothing read it and it would have been a size ceiling, Q3; b9b1c4a)
   restV: 0.25, restDwell: 0.04, vStrike: 1.5, revDot: -0.3, tauRelease: 0.25,     // Q2 (tauRelease is also the post-stroke S decay)
   vRef: 6.0,                             // Q3: stroke speed that counts as 1 (= today's COMMIT.bSpeed); Lref and arc0 are family geometry
   autoWindPhi: 0.3,                      // Q3 (B): the automatic wind = clip φ −0.3 → 0, finger-clocked (0.165 m of pad)
@@ -252,7 +258,7 @@ export const GESTURE = {
   lateSelect: 0.07, lateSelectLen: 0.10, famBlendT: 0.04, sectorMax: 80,
   predictMs: 8, phiW: 60, leadMs: 40,    // Q22
   T0: 0.30, kv: 0.35,                    // 'floor' clock only (sims); weaponCfg.gestureT0 may override; no inertia-class threshold (Q26)
-  followEnd: 1.6, recoverEnd: 2.2, buffer: 0.15,
+  followEnd: 1.6, recoverEnd: 2.2, buffer: 0.15,   // followEnd/recoverEnd: reserved for R4's recovery clip; the gesture never ends a cut by φ (구현 9/29: 93b25ac)
   famClip: { diag: 'zornhau', vert: 'oberhau', horiz: 'mittelhau', rise: 'unterhau' },
 };
 ```
@@ -262,7 +268,7 @@ export const GESTURE = {
 | | (A) `input: 'wind'` (default) | (B) `input: 'stroke'` |
 |---|---|---|
 | wind | finger position: `w = p − o`, `Swind`, φ −1→0 at 1:1 (§3.4) | finger winds ignored (`Swind ≡ 0`); IDLE stays IDLE while the finger positions |
-| cut start | velocity reversal (§3.5); a no-wind stroke also enters CUT | first step with `|v| > vStrike` from rest (`startCut(t, 'auto')`): `dirC = v̂`, family by `dirC` (the lateSelect rule from step 0, `famBlendT` crossfade if it changes within `lateSelect`), side by family / `dirC.x` |
+| cut start | velocity reversal (§3.5; with `Swind = 0` too, to measure `Sstroke`); from rest, a stroke toward a `sectorMax` gap (no wind exists there, §3.4) with `|v| > vStrike` also enters CUT (`'auto'`, `dirC = v̂`) (구현 9/29: `499a9b7`) | first step with `|v| > vStrike` from rest (`startCut(t, 'auto')`): `dirC = v̂`, family by `dirC` (the lateSelect rule from step 0, `famBlendT` crossfade if it changes within `lateSelect`), side by family / `dirC.x` |
 | S | `max(Scut, Sstroke)` (§3.4) | `Sstroke` only: `arc0 · (strokeLen/Lref) · (v̄/vRef)`, rising from 0 during the stroke (continuous, no cliff) |
 | clip phase at start | wind: `φ_rev` carry-over; no-wind: `φ_align` | `−autoWindPhi`: the body performs the wind itself while the finger is already stroking; the wind portion consumes `autoWindPhi·sL1 = 0.165 m` of finger travel at the finger clock (no time value); hands join from the start scaled by the rising S, so the up-swing is proportional to the load, never a yank |
 | hands | join (`handOnStroke true`) | join |
@@ -280,15 +286,15 @@ Both modes ship in the test build (settings toggle mirroring `GESTURE.input`, `?
 | what | where |
 |---|---|
 | Source of truth | `docs/motion/clips/<cut>_<right\|left>_<small\|medium\|large>.json` + `index.json` (motion PM; never edited by the game) |
-| Pack | `src/strike/clips/atlas_v0.json` built by `node tools/motion/pack_atlas.mjs [--families=zornhau,oberhau,mittelhau,unterhau] [--out=src/strike/clips/atlas_v0.json]`: `{ format:'stillness-atlas-pack/1', sourceFormat:'stillness-motion-clip/2', indexFormat:'stillness-motion-index/1', generated, phiGrid:{from:-1,to:2.2,step:0.01}, channels:[…], clips:[{ id, cut, side, size, sha1, marks, phiMarks, step, startFrom, recoverTo, endPose, summary:{time, checks}, data: base64 Float32 [321 × width] }] }`. Strips `J`, `ang.*`, `w.*`, `speed.*`, `com`. Keeps `edge` (3 floats, compared, not driven — §4.3). 37 floats × 321 × 24 clips ≈ 1.14 MB Float32 (≈ 1.5 MB base64). Derivatives are computed at load (5-tap Savitzky–Golay on the grid), not stored. |
+| Pack | `src/strike/clips/atlas_v0.json` built by `node tools/motion/pack_atlas.mjs [--families=zornhau,oberhau,mittelhau,unterhau] [--out=src/strike/clips/atlas_v0.json]`: `{ format:'stillness-atlas-pack/1', sourceFormat:'stillness-motion-clip/2', indexFormat:'stillness-motion-index/1', generated:'sha1:<sha1 over the sorted source id:sha1 set>', tool, sourceIndexGenerated, phiGrid:{from:-1,to:2.2,step:0.01}, channels:[…], clips:[{ id, cut, side, size, sha1, marks, phiMarks, step, startFrom, recoverTo, endPose, summary:{time, checks}, data: base64 Float32 [321 × width] }] }`. Strips `J`, `ang.*`, `w.*`, `speed.*`, `com`. Keeps `edge` (3 floats, compared, not driven — §4.3). 37 floats × 321 × 24 clips ≈ 1.14 MB Float32 (≈ 1.5 MB base64). Derivatives are computed at load (5-tap Savitzky–Golay on the grid), not stored. `generated` carries no date: repacking identical clips is byte-identical; `sourceIndexGenerated` keeps the index date (구현 9/29: `2e299eb`). (구현 9/29: 34 floats per grid point — `t` (piecewise-linear on the marks), `phi` (the grid) and `chest.xFactor` (= chest − pelvis yaw) are recomputed at load; pack 1.445 MB, `8d03a34`, regenerated `ed59e34`.) |
 | Loaders | `loadAtlasPacked(json)` (browser: `import pack from './clips/atlas_v0.json'` inside `strike/atlas.js`, which `main.js` dynamic-imports at module top right after `await RAPIER.init()` and awaits in `beginFight()` — §3.8-9; the decode never runs during a fight; node sims default) and `loadAtlasFromClips(dir)` (node fs, raw clips: `atlas_check.mjs`, `puppet.mjs`, `pack_atlas.mjs`; sims with `ATLAS.source='clips'`). Both call `buildAtlas(clips, opts)`. |
 
 ### 4.2 Validation — throw, never warn
 
 `validateIndex`, `validateClip`, `validatePack` throw `AtlasError(id, reason)` on:
-- `index.format !== 'stillness-motion-index/1'`, `clip.format !== 'stillness-motion-clip/2'` (clip/1 refused: no `girdle*`, `elbowPoleO`, `step`, `recoverTo`), pack `format`/`sourceFormat` mismatch, pack sha1 ≠ source clip when both are on disk (node).
+- `index.format !== 'stillness-motion-index/1'`, `clip.format !== 'stillness-motion-clip/2'` (clip/1 refused: no `girdle*`, `elbowPoleO`, `step`, `recoverTo`), pack `format`/`sourceFormat` mismatch, pack sha1 ≠ source clip when both are on disk (node; 구현 9/29: `checkPackSources(pack, dir)` in atlas.js — `loadPack(src, { clipsDir })` calls it when `<clipsDir>/index.json` exists, `pack_atlas.mjs` re-reads its output that way and `atlas_check.mjs` calls it directly; node sims pass `clipsDir: await defaultClipsDir(ROOT, argv)`, `2e299eb`).
 - `hz !== 120`, `data.n !== round(marks.tg·hz) + 1` (small 121, medium 151, large 181), any `cols[ch].length !== n·width[ch]`, NaN/Infinity, non-monotone `t`, marks not `t0 < tw < tr < tc < tf < tg`, `phiMarks !== {t0:−1,tw:0,tr:0.55,tc:0.85,tf:1.6,tg:2.2}`, `cols.phi` off the piecewise-linear map by > 1e−3.
-- Required channels: `t phi pelvis.yaw pelvis.pitch pelvis.drop chest.yaw chest.xFactor chest.lean chest.side handS handO sword elbowPoleS elbowPoleO girdleS girdleO guardGap openness feet.L.yaw feet.L.lift feet.R.yaw feet.R.lift` (+ `J`, `ang.*` for tools). Unit channels `sword`, `elbowPole*`: |len − 1| ≤ 0.02; adjacent-sample angle ≤ `vecStepMaxDeg 20`.
+- Required channels: `t phi pelvis.yaw pelvis.pitch pelvis.drop chest.yaw chest.xFactor chest.lean chest.side handS handO sword elbowPoleS elbowPoleO girdleS girdleO guardGap openness feet.L.yaw feet.L.lift feet.R.yaw feet.R.lift` (+ `J`, `ang.*` for tools). Unit channels `sword`, `edge`, `elbowPole*`: |len − 1| ≤ 0.02 (`edge`: length only, no flip report — the same check as `validatePack`; 구현 9/29: `f559793`); adjacent-sample angle ≤ `vecStepMaxDeg 20` (구현 9/29: `sword` only — the v0 poles flip 60–180° between frames, so they go to the flip report below instead of throwing, `8d03a34`).
 - Family completeness: all three sizes for a (cut, side) or the family is refused; `size !== 'small'` without `step`; `recoverTo`/`startFrom` not in the guard id set (the 14 ids of `guards.js` / `atlas.js GUARD_IDS`: `tag, tagR, ochs, langort, side, pflug, wechsel, neben, alber, tagL, ochsL, sideL, pflugL, wechselL`).
 - Small clips: `startPose.handError`, `endPose.handError` ≤ `smallTol 0.02`; at load, `guardAt(pad(startFrom))` and `guardAt(pad(recoverTo))` recomputed with `src/guards.js` vs `handS[0]`, `handS[n−1]` (facing frame, §4.3) ≤ 0.02 m (spec_table §7: all 48 are 0). A guards.js change trips here.
 - `handedness === 'right'`; `pelvis.pitch` must be |·| < 1e−6 in v0 (else `report.warn`).
@@ -332,6 +338,8 @@ Left clips are already mirrored by the motion PM; `fighter.side` is always +1 (`
 - **Family blend** (`cutB`, `wAB`, same φ and S): same rules. Format guarantee: same φ marks across cuts.
 - **Cell interpolation**: quintic Hermite from `(v, v′, v″)` at both grid ends → C² positions/angles; returns `v`, `dv/dφ`, `d²v/dφ²` per channel so the drive forms `ẋ = v′·φ̇`, `ẍ = v″·φ̇² + v′·φ̈`.
 - **Size continuation beyond large** (`over > 0`, any φ; wind `overWind` or stroke `Sstroke − 1`, §3.4): `out.ch += over·(large − medium)` for **every** driven channel (scalars, positions, angles; directions `sword`, `elbowPole*` by scaling the medium→large rotation vector by `1 + over` — slerp with t > 1). Gain 1 = the size axis simply continues; nothing is frozen at the large pose. Unclamped; the soft limits (§5.5), the reach clamp (counted, §4.6) and the muscles are the only walls. Doc §2-2 (1): extra drag is a bigger wind.
+  - **What `over` counts**: medium→large steps — one unit adds one `(large − medium)`. The wind gives it as pad distance beyond `sL1` (one unit per 0.215 m, §3.4), the stroke as `Sstroke − 1`, and `sample()` adds any `S > 1` it is handed (`over += S − 1`). One unit of S beyond 1 therefore adds one step, half the per-unit-S slope of the medium→large segment (there 0.5 S is one step); gain 1, no cap (구현 9/29: gesture.js `over = max(overCut, Sstroke − 1)`, atlas.js `sample()`/`sizeU`, `4025ed7`).
+  - **Time, marks, step past large**: `t(φ)`, `dT/dφ`, the marks, `step()` and `timing()` continue with the same rule as the channels, `large + over·(large − medium)`, gain 1, no hold; direction ω under `over` is the closed-form slerp rate (구현 9/29: `4025ed7`, `b8e84b2`). A mark interval that is shorter at large than at medium reaches 0 at a large `over` (tr→tc at over 5.00 in v0): `atlas_check` reports it, nothing clamps it.
 - Cost: 4 grid lookups × 37 channels × 3 quantities ≈ 450 multiply-adds → target ≤ 0.02 ms (gate ≤ 0.05; `atlas_check.mjs` prints the measured time and allocation count — the 0.02 ms is an estimate until it does).
 - `atlas.timing(cut, side, S)` → `summary.time` blended; `atlas.step(cut, side, S)` → `{fwd, side, liftPhi, landPhi}` with small = `{0, 0, 0.178, 0.833}`; `atlas.recoverTo/startFrom/nearGuards(cut, side)`; `atlas.has(cut, side)`; `atlas.report`; `atlas.meta[id]` (sources, provenance, sha1).
 
@@ -383,15 +391,17 @@ export class ClipDrive {
 g = f.ges; S = g.S; if (S === 0) { w = 0; if (wasActive) restoreOnce(); return }     // exact 0 (snap, §3.3)
 phiB = g.mode === 'stroke' ? (g.input === 'stroke' ? −autoWindPhi : phiAlign) + g.phi : g.phi   // §3.5 / §3.10
 atlas.sample(A, { cut: clipOf(g.famA), side: g.side, phi: phiB, S, cutB: clipOf(g.famB), wAB: g.famMix })
-if (g.state >= CUT && phiB < carryPhi && g.mode === 'wind'):          // cut-start carry-over (mustFix 6)
-   k = 1 − sj(phiB / carryPhi)
-   for X in {handS, handO, girdleS, poleS, poleO, pelvisYaw, chestYaw, pitch, drop, side}: A.X += (Arev.X − A0.X)·k
-   sword: A.sword = slerp(A.sword, q_res · A.sword, k)  where q_res = rotation A0.sword → Arev.sword
-   (Arev = sample at phiRev, A0 = sample at 0, both taken once at cut start with the locked S)
+phiStart = g.mode === 'wind' ? 0 : phiB at the cut start                 // φ_align (A) / −autoWindPhi (B), §3.5 / §3.10
+if (g.state >= CUT && phiB − phiStart < carryPhi):                      // cut-start carry-over (mustFix 6), both modes (§3.5)
+   k = 1 − sj((phiB − phiStart) / carryPhi)                             // fade coordinate = phase since the cut start
+   every linear channel X (handS, handO, girdle*, pelvisYaw, chestYaw, pitch, drop, side, feet, …): A.X += (Arev.X − A0.X)·k
+   directions d (sword, edge, poleS, poleO): A.d = R(k·r)·A.d, ω = R(k·r)·ω + r·k′   where r = rotation vector A0.d → Arev.d
+   (Arev = sample at phiRev, A0 = sample at phiStart, both taken once at cut start with the locked S)
 apply size continuation: A.X += g.over·(large.X − medium.X) (§4.4)
 convert to game units/signs (§4.3) → cmd; qChestCmd = Qc(cmd.chestYaw, cmd.pitch, cmd.side); wChestCmd from the three rates; cmd.balanceAssist = DRIVE.balanceAssist(phiB) (= 1)
 aimWarp(); requestStepIfDue(); fill debug
 ```
+(구현 9/29: atlas.js `carryOver(out, rev, base, phi, carryPhi)` rotates directions by `R(k·r)` with the closed-form rate `ω = R(k·r)·ω + r·k′`; the earlier `slerp(A.sword, q_res·A.sword, k)` differs by up to 6.7° on the sword and 26° on `elbowPoleO` near anti-parallel, `39c7e94`. The helper takes the fade coordinate from its caller: for the φ_align / −autoWindPhi starts W3 passes `phiB − phiStart` and `base = sample(phiStart)`. The earlier `g.mode === 'wind'` gate contradicted §3.5, §3.10 and W4's hitch gate, which carry over in both modes; which sample stands for `Arev` at a stroke start (§3.5's residual offset) is W3's to fix. The direction α under carry-over is a linear approximation — W3/W4 must not consume it.)
 
 ### 5.3 Trunk and pelvis: timetable instead of filters; anchor
 
@@ -616,23 +626,26 @@ Order: **W1 ∥ W2 → W3 (puppet gate, then physics) → W4 → W5** (W5's chai
 
 ## 10. Owner-question map (every value that could act as a cap/floor)
 
+Every value in this table that no owner answer covers is an unapproved default until the owner answers; the owner's decision table is `docs/strike/owner_defaults_table.md` (9/29). Rows marked **decided** follow `docs/decisions.md`.
+
 | Q | R2 default relied on | values |
 |---|---|---|
-| **Q3** (answered: no cap; start arc + length *and* speed; (A)/(B) switch) | `Sstroke = arc0 · (strokeLen/Lref_f) · (v̄/vRef)`, unclamped (`over` beyond 1) | `vRef 6 m/s` (= today's `COMMIT.bSpeed`, the only number; `arc0`, `Lref_f` are pad geometry), `handOnStroke true`, `GESTURE.input 'wind'|'stroke'` in the test build, `autoWindPhi 0.3` (the short automatic wind of (B), finger-clocked: 0.165 m of pad), the same passing step for no-wind strokes (Q7) |
-| **Q5** (answered: allow) | foot pivot and wider ranges | `spineTwist 0.95`, abdomen/chest `0.55/0.7`, `hipTwist/hipRoom 1.1`, `swingTwist 1.0`, `maxTwist 1.1`, `softLim 0.15`, `kSoft 400/600`, toe lever 0.02; **no foot-yaw rate** (dropped: it would have bound above ≈ 1.7× clip pace for the swing-role foot); `girdleRate 0.5 m/s` only if `DRIVE.girdle 'anchor'` is ever enabled (a shoulder-travel rate, 0.06 m in ≥ 120 ms) |
+| **Q3** — **decided** 9/29 13:00 (no cap; start arc + length *and* speed; (A)/(B) switch) | `Sstroke = arc0 · (strokeLen/Lref_f) · (v̄/vRef)`, unclamped (`over` beyond 1) | `vRef 6 m/s` (= today's `COMMIT.bSpeed`, the only number; `arc0`, `Lref_f` are pad geometry), `handOnStroke true`, `GESTURE.input 'wind'|'stroke'` in the test build, `autoWindPhi 0.3` (the short automatic wind of (B), finger-clocked: 0.165 m of pad), the same passing step for no-wind strokes (Q7) |
+| **Q5** — **decided** 9/29 13:00 (allow) | foot pivot and wider ranges | `spineTwist 0.95`, abdomen/chest `0.55/0.7`, `hipTwist/hipRoom 1.1`, `swingTwist 1.0`, `maxTwist 1.1`, `softLim 0.15`, `kSoft 400/600`, toe lever 0.02; **no foot-yaw rate** (dropped: it would have bound above ≈ 1.7× clip pace for the swing-role foot); `girdleRate 0.5 m/s` only if `DRIVE.girdle 'anchor'` is ever enabled (a shoulder-travel rate, 0.06 m in ≥ 120 ms) |
+| **Q10** — **decided** 9/29 13:00, done in R0 | the hit check's "discard above 30 m/s" becomes a physics-glitch check (NaN, abnormal acceleration) | R0 `STRIKE.glitchFilter` / `glitchAcc` (an R0 prerequisite, header); no R2 value |
 | **Q7** | passing step on, joystick-independent — **also for no-wind strokes** (any stroke with S > 0.3 in (A), every big stroke in (B); 0.23 m at S 0.3 → 0.78 m at S 1) | `stepS 0.3` (below it the blended step < 0.23 m is not requested; the trunk still pivots on the feet), `stepScale 1.0` × clip fwd (large 0.78 m — larger than the 0.5 m quoted in Q7; `stepScale 0.64` gives 0.5), `stepHold 0.25`; **no duration floor** for `'strike'` (the earlier `stepDurMin 0.15` would have bound for finger > ≈ 4 m/s); pre-existing physics/floors: `GAIT.swingVmax 6` (0.78 m needs ≥ 0.13 s, so at finger speed the foot lands after tc — reported, §5.6), pass length `Math.max(0.3, fwd − 0.1)` (`:686`; `'strike'` exact), refusal while retreating `move.y < −0.1` (`:225`), `GAIT.requestSteps` |
 | **Q17** (partial) | lighter arm cut is R1's; R2 touches only: auto-return destination `homePad` (recoverTo), `motorRateAll` A/B, `phiW 60` feel | — |
-| **Q21** | pad extension to 1.0 m | `padExt 1.0`, `sL1 0.55` (S saturates; the pose continues linearly through `over` on every channel, gain 1 — no de-facto size ceiling), `sL0 0.12` deadband (nothing whole-body for the first 0.12 m of a drag = 20 ms at 6 m/s, 40 ms at 3 m/s; the doc's value; the ≤ 3 % / jitter gate depends on it), `sectorMax 80°` (straight-down pull is not a wind), `restV/restDwell`, `lateSelect` thresholds; pointer capture is R0/input |
+| **Q21** | pad drag beyond the 0.62 m disc, no end (구현 9/29: the 1.0 m pad-extension value is deleted, `b9b1c4a`) | `sL1 0.55` (S saturates; the pose continues linearly through `over` on every channel, gain 1 — no de-facto size ceiling), `sL0 0.12` deadband (nothing whole-body for the first 0.12 m of a drag = 20 ms at 6 m/s, 40 ms at 3 m/s; the doc's value; the ≤ 3 % / jitter gate depends on it), `sectorMax 80°` (straight-down pull is not a wind), `restV/restDwell`, `lateSelect` thresholds; pointer capture is R0/input |
 | **Q4** | human strength stays | Hill, `maxAimTorque 22`, shoulder/elbow 80 unchanged; τ_ff capped by `j.max·mus`; motor target-rate `15/20 → 40·S` (not physiology) |
 | **Q22** | protective values | R0 `STRIKE.wristRel 60`, `leadMs 40·S`, `phiW 60` |
-| **Q1** (answered: physics only, no time/brake values) | the command follows the finger; only the body's inertia continues | `clock 'finger'`: `φ̇ = v_along/sL1`, **no `1/T0` floor**; S held only while the finger moves along the stroke, decays with `tauRelease` (Q2's value, no second constant) when it stops/lifts/reverses; no input ignored (ring = origin bookkeeping); RECOVER freezes φ. Kept and declared: family lock after `lateSelect` (a shape choice, §3.4), `leadMs 40·S` (an upper bound on the command *leading* the finger, Q22). The doc's `1/T0 + kv·v` law is `clock 'floor'`, sims only. R4's `brake0/brakeK` must be re-read against this answer too |
+| **Q1** — **decided** 9/29 13:00 (physics only, no time/brake values) | the command follows the finger; only the body's inertia continues | `clock 'finger'`: `φ̇ = v_along/sL1`, **no `1/T0` floor**; S held only while the finger moves along the stroke, decays with `tauRelease` (Q2's value, no second constant) when it stops/lifts/reverses; no input ignored (ring = origin bookkeeping); RECOVER freezes φ. Kept and declared: family lock after `lateSelect` (a shape choice, §3.4), `leadMs 40·S` (an upper bound on the command *leading* the finger, Q22). The doc's `1/T0 + kv·v` law is `clock 'floor'`, sims only. R4's `brake0/brakeK` must be re-read against this answer too |
 | **Q2** | winds free to hold/withdraw | `tauRelease 0.25` (also the post-stroke S decay, §3.7), `vStrike 1.5`, `revDot −0.3` |
 | **Q24** | anchor relax | `anchorRelaxYawK 0.9`, `anchorRelaxYawD 0` (R4: 0.7 carry / trunkDampRelax 0.5), `balanceAssist ≡ 1` (R4's φ-table); `ffGain 0.8` — if falls rise at 0.8 / 0.9 the numbers go to the owner here, not down (§5.4) |
-| **Q18** | no cooldown | recovery = S decays (`tauRelease`) with φ frozen; a rewind or the next (B) stroke is recognised on the first RECOVER step; the clip's `summary.time.recover` (0.30–0.55 s) is reported for R4's recovery clip, not used as a clock in R2 |
-| — | not limits, listed for transparency | `warpMax 0.25` (assistance), `ffGain 0.8`, `cocontract 0.5`, `closeReach` (guard share only), `PHYSICS.maxStepsPerFrame 6` (φ is event-time based), `sSnap 0.02` (a decaying S below 2 % is 0: truncates an invisible tail so restore/identity re-enter), `mixX 0.25` (guard↔clip crossfade width; above it the pose is 100 % clip), pole hysteresis `30 + 40 ms` (elbow-shape lag on the fastest roof winds, `poleFlip` reported), kneel excluded from S > 0 (clips are standing cuts; anchor fixed at kneel fighter.js:1310, `requestStep` refuses kneel gait.js:223 — the arm cut at kneel is unchanged) |
-| Q8 / Q26 | later rounds | Q8 is not set (decisions.md: temperament only); Q26 (answered: physics decides) — no inertia-class threshold anywhere in R2, one-hand sizes (R6) |
+| **Q18** | no cooldown | recovery = S decays (`tauRelease`) with φ frozen; a rewind or the next (B) stroke is recognised on the first RECOVER step; the clip's `summary.time.recover` (0.30–0.55 s) is reported for R4's recovery clip, not used as a clock in R2. Declared (구현 9/29: `499a9b7`): until the first RECOVER dwell a finger continuing along `dirC` moves `o` (§3.7), so a +dirC rewind right after a 10–30 ms hitch is not recognised (reported) |
+| — | not limits, listed for transparency | `warpMax 0.25` (assistance), `ffGain 0.8`, `cocontract 0.5`, `closeReach` (guard share only), `PHYSICS.maxStepsPerFrame 6` (φ is event-time based), atlas data checks (`vecStepMaxDeg 20` on authored sword directions, v0 max 12.5°; non-finite `phi`/`S`/`over` throw in `sample()`/`sampleSize()`; S < 0 read as 0; the end pose held with zero derivatives outside φ ∈ [−1, 2.2], the clip's data extent), `readFinger`'s velocity gap window (§3.2-2), `sSnap 0.02` (a decaying S below 2 % is 0: truncates an invisible tail so restore/identity re-enter), `mixX 0.25` (guard↔clip crossfade width; above it the pose is 100 % clip), pole hysteresis `30 + 40 ms` (elbow-shape lag on the fastest roof winds, `poleFlip` reported), kneel excluded from S > 0 (clips are standing cuts; anchor fixed at kneel fighter.js:1310, `requestStep` refuses kneel gait.js:223 — the arm cut at kneel is unchanged) |
+| Q8 / **Q26** — Q26 **decided** 9/29 13:00; light weapons **decided** 9/29 23:00 | later rounds | Q8 is not set (decisions.md: temperament only); Q26 (physics decides) — no inertia-class threshold anywhere in R2, one-hand sizes (R6); "가벼운 칼 하한 없음" (23:00): no floor for light weapons — the proposed `T0` floor is rejected (`T0` lives only in the sims-only `clock 'floor'`), a wrist flip is a control-law matter, never a floor |
 
-No new owner question is added. Q1, Q3, Q5, Q26 rows carry the owner's answers; the rest keep the doc's pending defaults.
+No new owner question is added. Rows marked **decided** carry the owner's answers (`decisions.md` 9/29 13:00: Q1, Q3, Q5, Q10, Q26; 23:00: no light-weapon floor); the rest keep the doc's pending defaults, unapproved until the owner answers in `owner_defaults_table.md`.
 
 ---
 

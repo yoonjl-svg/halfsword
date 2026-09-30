@@ -164,6 +164,14 @@ export function checkClip(clip, opts = {}) {
     }
   }
 
+  // stance (v1, 있으면): { swordFoot L·R, start·end front·rear } — 모양은 여기서, J 와 맞는지는 표본 검사 뒤 T1 에서
+  const stanceOk = 'stance' in clip && clip.stance !== null;
+  if (stanceOk) {
+    const s = clip.stance;
+    if (!['L', 'R'].includes(s?.swordFoot) || !['front', 'rear'].includes(s?.start) || !['front', 'rear'].includes(s?.end))
+      err('F5', `stance 가 { swordFoot: L·R, start·end: front·rear } 꼴이 아니다`);
+  }
+
   // ── 표시·위상 (표본 검사 전에: 표본 수 계산에 쓴다) ──
   const marks = clip.marks;
   const marksOk = (m, name) => {
@@ -364,6 +372,14 @@ export function checkClip(clip, opts = {}) {
       const cnt = t.filter((x) => x >= marks.tf - 1e-6 && x <= marks.tg + 1e-6).length;
       if (Math.abs(rc.from - marks.tf) > 1e-3 || Math.abs(rc.to - marks.tg) > 1e-3 || rc.samples !== cnt) err('G4', `recovery ${JSON.stringify(rc)} ≠ { from: tf ${marks.tf}, to: tg ${marks.tg}, samples: ${cnt} }`);
     }
+  }
+  // ── T1 선 자세 표시 ↔ J (칼 쪽 발 발목이 앞인가) ──
+  if (stanceOk && ['L', 'R'].includes(clip.stance.swordFoot)) {
+    const sf = clip.stance.swordFoot, of = sf === 'R' ? 'L' : 'R';
+    const n = clip.data.n;
+    const side = (i) => (joint(clip, i, `ankle${sf}`)[0] >= joint(clip, i, `ankle${of}`)[0] ? 'front' : 'rear');
+    if (side(0) !== clip.stance.start) err('T1', `stance.start '${clip.stance.start}' — 첫 표본 J 는 칼 쪽 발(${sf})이 ${side(0)}`);
+    if (side(n - 1) !== clip.stance.end) err('T1', `stance.end '${clip.stance.end}' — 끝 표본 J 는 칼 쪽 발(${sf})이 ${side(n - 1)}`);
   }
   return out;
 }

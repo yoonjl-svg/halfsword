@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { rows, STANCE } from './lib/cuts.mjs';
 import { SOURCES } from './lib/sources.mjs';
 import { toKeys, marksOf, mirror, clipExtras } from './lib/sets.mjs';
-import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, HZ } from './lib/clip.mjs';
+import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, stanceOf, HZ } from './lib/clip.mjs';
 import { JOINTS, BONES } from './lib/body.mjs';
 import { validateFile, report } from './validate_clip.mjs';
 import { gripField } from './lib/weapons.mjs';
@@ -104,6 +104,7 @@ function build(sideName) {
   };
   // clip/2 필드: 걸음은 앞발을 내디딘 것(가장 낮은 때까지) — 끝에는 제자리로 돌아오므로
   const extra = clipExtras(set, rws, marks);
+  extra.stance = stanceOf(rws);
   extra.step = stepOf(rws.filter((r) => r.t <= marks.tf + 1e-9), marks);
   return { rows: rws, marks, s, lunge, extra };
 }

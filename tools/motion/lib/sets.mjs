@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 import { v3, m3, frame, BODY } from './body.mjs';
 import { GAME_GUARDS } from './cuts.mjs';
-import { fromGameGuard, stepOf, nearestGuard } from './clip.mjs';
+import { fromGameGuard, stepOf, stanceOf, nearestGuard } from './clip.mjs';
 
 export const MIRROR_GUARD = { tag: null, langort: null, alber: null, neben: null,  tagR: 'tagL', tagL: 'tagR', ochs: 'ochsL', ochsL: 'ochs', side: 'sideL', sideL: 'side', pflug: 'pflugL', pflugL: 'pflug', wechsel: 'wechselL', wechselL: 'wechsel' };
 
@@ -108,6 +108,7 @@ export function clipExtras(set, rows, marks, guards = GAME_GUARDS) {
   const rec = rows.filter((r) => r.t >= marks.tf - 1e-9 && r.t <= marks.tg + 1e-9);
   return {
     step: stepOf(rows, marks),
+    stance: stanceOf(rows),
     startFrom: set.keys[0].guard ?? null,
     startPose: nearestGuard(rows[0].J, guards),
     recoverTo: last.guard ?? null,
