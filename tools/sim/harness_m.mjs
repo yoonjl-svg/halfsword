@@ -126,7 +126,7 @@ export const f1 = (x) => +x.toFixed(1);
 //  합성 손가락 궤적을 게임과 같은 길로 넣는다: 화면 프레임(hz)마다 input.js(Input.onDown/onMove/onUp)가 손가락 이벤트를
 //  받아 handDX·handDY·fingerTrace 에 쌓고, main.js frame() 처럼 consumeHandDelta → player.handOffset·handHeld·inputActive,
 //  탭이면 찌르기. 물리 스텝은 main.js 와 같은 누적 시계(acc)로 돈다 (60 Hz 면 프레임마다 2스텝, 90 Hz 면 1·1·2스텝 …)
-//  → 새로고침 빠르기에 따라 손 목표가 갱신되는 박자까지 폰과 같다. 결심 판정(L1)은 skill.detect 인 파이터만 한다(여기서 켠다)
+//  → 새로고침 빠르기에 따라 손 목표가 갱신되는 박자까지 폰과 같다. 손가락 파이터(skill.detect·trace)는 여기서 켠다 (main.js 와 같게)
 //  궤적: { pts: [[t ms, x, y], ...] } (손가락을 댄 자리에서의 이동, 패드 m, 사이는 직선) 또는 { fn: (t ms) => [x, y], T: ms }
 //   · down (기본 true): 첫 프레임에 손가락을 댄다. false 면 앞 궤적에서 떼지 않은 손가락이 그 자리에서 이어 간다
 //   · lift (기본 true): 끝나는 프레임에 손가락을 뗀다 (TRACE_LIFT 조각)
@@ -153,8 +153,8 @@ export function inputPump(G, { hz = 60, f = G.player, touchHz = 0, lat = 0 } = {
   if (G.pump) return G.pump;
   const input = withBrowser(() => new Input({ addEventListener() {} }));
   input.enabled = true;
-  f.skill.detect = true; // 결심 판정은 플레이어만 (main.js 와 같게)
-  f.skill.trace = input.fingerTrace; // 결심 판정이 읽는 손가락 원래 궤적 (main.js 와 같게)
+  f.skill.detect = true; // 손가락 파이터 (main.js 와 같게: 모든 휘두르기 골반 몫 pf)
+  f.skill.trace = input.fingerTrace; // R1 readFinger 가 읽는 손가락 원래 궤적 (main.js 와 같게)
   f.ges?.attachTrace(input.fingerTrace); // R2 손짓 층 (GESTURE.on, main.js 와 같게)
   f.ges?.reset();
   f.skill.autoGuard = true;

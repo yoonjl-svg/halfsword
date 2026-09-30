@@ -4,7 +4,7 @@
 //  할당: "새로 더한 스텝당 할당 0개" — THREE.Vector3·Quaternion 생성 수(생성자 가로채기)와 JS 힙 할당(가비지 수집이 끼지 않은
 //  짧은 창의 힙 증가, --expose-gc 필요)을 켬·끔으로 견준다. 차이가 0이면 합격
 // 실행 (저장소 뿌리): node --expose-gc tools/sim/hybrid.mjs perf_ab.mjs [블록 수=10] [블록당 스텝=2000]
-//   A/B 로 켜고 끌 스위치: 기본 WHOLE.on. 다른 것: SWITCH=WHOLE.commit (그 층만 켬/끔, WHOLE.on 은 켠 채)
+//   A/B 로 켜고 끌 스위치: 기본 WHOLE.on. 다른 것: SWITCH=DRIVE.on·GESTURE.on (그 층만 켬/끔, WHOLE.on 은 켠 채)
 //   결과: 요약을 찍고 JSON 을 OUT(없으면 OUTDIR 또는 임시 폴더의 perf_ab_<모드>.json)에 남긴다
 import fs from 'node:fs';
 import os from 'node:os';

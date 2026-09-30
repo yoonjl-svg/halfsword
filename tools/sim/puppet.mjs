@@ -1,14 +1,15 @@
 // ─────────────────────────────────────────────────────────────
 //  R2 꼭두각시 관문 (docs/strike/r2_impl_spec.md §8.1, W3). 좌표 문제를 물리 전에 잡는다
 //   node tools/sim/puppet.mjs [--cuts=zornhau,oberhau,mittelhau,unterhau] [--sides=right,left] [--sizes=small,medium,large]
-//        [--girdle=off,anchor] [--physics] [--record=<폴더>] [--out=<json>] [--clips=<원본 클립 폴더>]
+//        [--girdle=off,anchor] [--physics] [--hand=trunk|wind] [--paces=1,1.5] [--record=<폴더>] [--out=<json>] [--clips=<원본 클립 폴더>]
 //   1) 운동학 확인 (물리 없음): 원본 클립 표본마다 아틀라스(원본 클립 길) φ·S 표본 → src/strike/puppet.js kinPose (게임 몸 치수·armIK)
 //      → 손목점·팔꿈치·칼끝을 클립 자신의 J 와 (클립 월드에서) 견준다. 손 ≤ 0.03 m (t0…tf 평균), 칼 ≤ 5°, 칼끝 ≤ 0.05 m
 //      부호 넷: (i) 골반 yaw ↔ J 엉덩이 선 (ii) drop (iii) chest.side ↔ J 어깨 높이 (iv) 발 yaw (딛는 발 Δ = 골반 Δ, 뒷발 벌림 ↔ GAIT.rearToe)
 //      날 각 (게임 멈춘 칼 면 ↔ Qc·edge, 보고만), 팔꿈치 뒤집힘·손 닿음 자름 (보고). girdle 'off'(관문) · 'anchor'(보고)
 //   2) --physics: 부호를 실제 엔진에서 (골반 yaw·drop·옆굽힘·딛는 발), 랙돌 꼭두각시 기록 (kind 'puppet'),
-//      짜 놓은 위상 추적 (drive.script, 클립 빠르기·1.5배, kind 'tracked') — 팔은 W4 몫이라 추적 기록의 손은 아직 자세표 손이다
-//   PASS/FAIL 은 관문 최소값에만. 기록은 --record 폴더에만 쓴다 (docs/motion/records 는 W5 몫)
+//      짜 놓은 위상 추적 (drive.script, 클립 빠르기·1.5배 (--paces), kind 'tracked'). --hand = 시험판 '칼 든 손' 스위치와 같게
+//      (trunk = DRIVE.hands 거짓 (기본), wind = hands 참·handMode 'windOnly'·ffFilter 참 — main.js applyHandMode) 두고 추적 id 끝에 _trunk/_wind
+//   PASS/FAIL 은 관문 최소값에만. 기록은 --record 폴더에만 쓴다 (index.json 도 갱신, docs/motion/records 는 W5 가 이것으로 채움)
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,6 +29,10 @@ const SIZES = arg('sizes', 'small,medium,large').split(',');
 const GIRDLES = arg('girdle', 'off,anchor').split(',');
 const PHYS = process.argv.includes('--physics');
 const REC = arg('record', null);
+const HAND = arg('hand', null); // 'trunk' | 'wind' | null (설정 그대로, id 꼬리 없음)
+const PACES = arg('paces', '1,1.5').split(',').map(Number);
+if (HAND === 'wind') (CONFIG.DRIVE.hands = true), (CONFIG.DRIVE.handMode = 'windOnly'), (CONFIG.DRIVE.ffFilter = true);
+else if (HAND != null && HAND !== 'trunk') throw new Error(`--hand=${HAND}: trunk 또는 wind`);
 const OUT = arg('out', null);
 const SIZE_S = { small: 0, medium: 0.5, large: 1 };
 const GATE = { hand: 0.03, sword: 5, tip: 0.05 };
@@ -295,7 +300,12 @@ async function physics() {
   // 랙돌 꼭두각시 기록 (kind 'puppet') + 추적 (kind 'tracked', 클립 빠르기·1.5배)
   const recDir = REC ? path.resolve(REC) : null;
   if (recDir) fs.mkdirSync(recDir, { recursive: true });
-  const writeRec = (r) => { if (recDir) fs.writeFileSync(path.join(recDir, `${r.id}.json`), JSON.stringify(r)); };
+  const { writeRecord, gitRev } = await import('../motion/lib/records.mjs');
+  const CODE = gitRev(ROOT, ['src']); // 기록한 게임 코드
+  const writeRec = (r) => { if (recDir) writeRecord(recDir, r); };
+  const DV = CONFIG.DRIVE;
+  const handKo = DV.hands ? `칼 든 손 큰 감기 (DRIVE.hands 참, handMode '${DV.handMode}', ffFilter ${DV.ffFilter}; 짜 놓은 위상은 φ ≥ 0 에서 베기로 들어 그 뒤는 손가락 매핑 + tCut 손 차이 — 손가락은 Pflug 에 멈춰 있음)` : `칼 든 손 몸통만 (DRIVE.hands 거짓, ffFilter ${DV.ffFilter}; 손은 팔 베기 손가락 매핑 — 손가락은 Pflug 에 멈춰 있음)`;
+  const handTag = HAND ? `_${HAND}` : '';
   const record = (id, kind, cut, frames, source, cond) => {
     const tip = speeds(frames, DT, 'tip'), hand = speeds(frames, DT, 'hS');
     const pk = tip.indexOf(Math.max(...tip));
@@ -317,7 +327,7 @@ async function physics() {
     const m = (a) => r3(a.reduce((s, x) => s + x, 0) / Math.max(1, a.length));
     return { hand: m(e.hand), tip: m(e.tip), chest: m(e.chest) };
   };
-  const cond = (extra) => ({ code: 'wbs-r2-drive', seed: 1, physicsHz: Math.round(1 / DT), recordHz: Math.round(1 / DT), inputHz: null, weapon: 'longsword', gait: CONFIG.BODY.weightMode, skill: null, gap: null, commit: null, ...extra });
+  const cond = (extra) => ({ code: CODE, seed: 1, physicsHz: Math.round(1 / DT), recordHz: Math.round(1 / DT), inputHz: null, weapon: 'longsword', gait: CONFIG.BODY.weightMode, skill: null, gap: null, commit: null, ...extra });
   for (const cut of CUTS) {
     const side = 'right', size = 'large', S = 1;
     const clip = atlas.fam(cut, side)[size].raw;
@@ -342,7 +352,7 @@ async function physics() {
       out.puppet.push({ id: r.id, n: frames.length, vsClip: vsClip(frames, clip), tipPeak: r.summary.tipPeak, clipTipPeak: clip.summary?.tipPeak ?? null });
     }
     // 추적: 물리 켬, drive.script 가 클립 시계를 T0 빠르기·1.5배로
-    for (const pace of [1, 1.5]) {
+    for (const pace of PACES) {
       const G = quiet();
       const P = G.player, D = P.drive;
       for (let i = 0; i < 0.5 / DT; i++) { D.script(-1, S, cut, side, 0); G.step(); }
@@ -358,7 +368,7 @@ async function physics() {
         if (P.state !== 'stand') falls = 1;
       }
       D.script(null);
-      const r = record(`tracked_${cut}_${side}_${size}_x${pace}`, 'tracked', cut, frames, `추적 (drive.script, 클립 시계 ×${pace}), S ${S}, 물리 켬 — 팔은 W4 전이라 자세표 손`, cond({ input: `drive.script ×${pace}` }));
+      const r = record(`tracked_${cut}_${side}_${size}${handTag}_x${pace}`, 'tracked', cut, frames, `추적 (drive.script, 클립 시계 ×${pace}), S ${S}, 물리 켬, ${handKo}`, cond({ input: `drive.script ×${pace}`, hand: HAND ?? (DV.hands ? DV.handMode : 'trunk') }));
       writeRec(r);
       out.tracked.push({ id: r.id, pace, vsClip: vsClip(frames, clip), pelvisLagMaxDeg: r1((lagMax * 180) / Math.PI), chestLagMaxDeg: r1((chLagMax * 180) / Math.PI), falls, ffCap: D.stats.ffCap - ffCap0, tipPeak: r.summary.tipPeak });
     }

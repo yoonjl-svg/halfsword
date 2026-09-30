@@ -1,9 +1,9 @@
 // 가벼운 칼 손목 튐 수치: 무기마다 c·dt/I, k·dt²/I, 최대 토크 한 스텝 각속도·칼끝 속도 변화 (1이 넘으면 한 스텝에 튄다)
 // 실행: node tools/redesign_probes/wriststab.mjs (저장소 루트에서; src 패치 불필요)
 //
-// FLIP=1: 동적 측정 (R0 손목 항목, 설계서 §6-5 "부호 뒤집힘 ≤ 7%" 관문은 여기서 보고만 한다). tools/motion/record_wbs.mjs·tseq 조건:
+// FLIP=1: 동적 측정 (R0 손목 항목, 설계서 §6-5 "부호 뒤집힘 ≤ 7%" 관문은 여기서 보고만 한다). 옛 record_wbs.mjs·tseq 조건 (둘 다 R2 W5 가 지움):
 //   hybrid 걸음, skill 0.7, 상대 2.0 m(서 있기만, 칼 충돌 끔), 쟁기 2 s → 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 v m/s 획(손가락 뗌).
-//   무기 × 무리 × v × {arm(WHOLE.commit 끔), commit(켬)} 마다 베기 획 시작 뒤 0.6 s 창에서
+//   무기 × 무리 × v 마다 (게임 설정 그대로) 베기 획 시작 뒤 0.6 s 창에서
 //     flip60/flip120: 칼의 아래팔 상대 각속도(칼날 축 몫 뺌)가 표본 사이에 뒤집힌 비율 (60 Hz 표본 / 물리 스텝. 둘 다 > 2 rad/s 일 때만)
 //     old25: 칼끝 목표가 월드에서 25 rad/s 보다 빨리 돈 스텝 수 (옛 자르기가 걸렸을 스텝), clips: STRIKE.wristRel 보호값이 걸린 스텝 수(fighter.debug)
 //     relMax: 목표의 아래팔 상대 빠르기 최고(rad/s), tip: 칼끝 최고(m/s), 그리고 옛 월드 25 자르기(STRIKE.wristRel 끔)로 같은 획을 다시 잰 값
@@ -23,8 +23,8 @@ for (const w of WEAPON_LIST) {
 }
 } else {
   const { newRound, DT, THREE, CONFIG, feedTrace, inputPump, V, Q } = H;
-  const { STRIKE, WHOLE, BODY } = CONFIG;
-  BODY.weightMode = 'hybrid'; // tools/sim/hybrid.mjs·record_wbs.mjs 와 같게
+  const { STRIKE, BODY } = CONFIG;
+  BODY.weightMode = 'hybrid'; // tools/sim/hybrid.mjs 와 같게
   const HZ = +(process.env.HZ || 60);
   const VS = (process.env.VS || '12,20').split(',').map(Number);
   const FAMS = (process.env.FAMS || 'diagR,horizR,vert').split(',');
@@ -52,7 +52,6 @@ for (const w of WEAPON_LIST) {
   function trial(weapon, mode, fam, v, commit, variant) {
     STRIKE.wristRel = variant === 'old' ? false : variant === 'none' ? true : rel0.on;
     STRIKE.wristRelMax = variant === 'none' ? Infinity : rel0.max;
-    WHOLE.commit = commit;
     const G = newRound({ walls: false, gap: (mode === 'dummy' ? 1.6 : 2.0) + 0.17, seed: SEED, weapon });
     const P = G.player, E = G.enemy;
     G.ai.update = () => E.move.set(0, 0);
@@ -117,7 +116,7 @@ for (const w of WEAPON_LIST) {
   const per = {};
   for (const weapon of WEAPONS) {
     const agg = (per[weapon] = { steps: 0, flip120: 0, n60: 0, flip60: 0, old25: 0, new60: 0, clips: 0, relMax: 0, tipArm: 0, tipCommit: 0, oldFlip60: 0, oldN60: 0, oldTipArm: 0, oldTipCommit: 0, dTipMax: 0, nan: 0 });
-    for (const mode of MODES) for (const fam of FAMS) for (const v of VS) for (const commit of [false, true]) {
+    for (const mode of MODES) for (const fam of FAMS) for (const v of VS) for (const commit of [false]) { // 게임 설정 한 벌 (옛 결심 켬 줄은 R2 W5 가 옛 경로와 함께 지웠다)
       const a = trial(weapon, mode, fam, v, commit, 'cfg');
       const o = trial(weapon, mode, fam, v, commit, 'old');
       const row = { weapon, mode, fam, v, commit, steps: a.steps, flip60_pct: r1((100 * a.flip60) / Math.max(1, a.n60)), flip120_pct: r1((100 * a.flip120) / Math.max(1, a.steps)), old25: a.old25, new60: a.new60, clips: a.clips, relMax: r1(a.relMax), tip: r2(a.tip), commits: a.commits, hits: a.hits, oldFlip60_pct: r1((100 * o.flip60) / Math.max(1, o.n60)), oldTip: r2(o.tip), nan: a.nan || o.nan };

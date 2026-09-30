@@ -36,7 +36,7 @@ if (used.length) {
   const idx = Object.fromEntries(recIndex.map((r) => [r.id, r]));
   L.push('## 기록 조건');
   L.push('');
-  L.push('| 기록 | 코드 (커밋) | 시드 | 물리 / 기록 / 입력 Hz | 무기 | 걸음 | skill | 거리 m | 결심 (WHOLE.commit) | 입력 |');
+  L.push('| 기록 | 코드 (커밋) | 시드 | 물리 / 기록 / 입력 Hz | 무기 | 걸음 | skill | 거리 m | 결심 (기록 cond.commit, 옛 경로) | 입력 |');
   L.push('|---|---|---|---|---|---|---|---|---|---|');
   for (const id of used) {
     const c = idx[id].cond ?? load(`records/${id}.json`).cond;

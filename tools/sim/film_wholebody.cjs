@@ -3,7 +3,7 @@
 //  game.input.onDown/onMove/onUp 에 터치 이벤트를 프레임마다 넣으면 main.js frame() 이 폰과 똑같이 handOffset 으로 옮긴다.
 //  세 줄: 폰 게임 카메라 / 옆(내 왼쪽에서) / 앞 비스듬히(상대 쪽에서). 8칸: 긋기 시작 뒤 0, 60, 120, 180, 240, 300, 400, 550 ms
 //  (헛침·쏠림 장면은 1.2초 동안 10칸). 겹쳐 그리기: 칼끝 자취(빨강), 손 자취(노랑), 무게중심 바닥 점(하늘), 발 디딘 자리(초록).
-//  칸 아래: 손 직선 이동(몸 기준), 무게중심 전진, 골반·가슴 각, 결심 단계, 멈칫. 맨 위: 넣은 손가락 궤적.
+//  칸 아래: 손 직선 이동(몸 기준), 무게중심 전진, 골반·가슴 각, 손짓 층 싣기 S, 멈칫. 맨 위: 넣은 손가락 궤적.
 //  더미는 죽지 않는다(die 막음). 멈칫은 켠 채로 찍고 칸에 표시한다.
 // 실행 (저장소 뿌리): node tools/sim/film_wholebody.cjs <장면> [hybrid|levitate] [--off] [--size=844x390] [--out=폴더] [--url=주소]
 //   장면: zornhau-stand (어깨 지붕 → 왼쪽 아래 사선, 상대 1.55 m) · zornhau-step (같은 베기, 틈 2.0 m) · pflug-zornhau (쟁기에서 곧장 사선)
@@ -210,7 +210,6 @@ const TYPE = SC.type || 'cut';
         // 손 직선 이동은 몸 기준(처음 앞 방향 틀)으로: 몸이 나간 만큼은 뺀다
         const hx = hd.x - c.x - (R.h0.x - R.h0.c.x);
         const hz = hd.z - c.z - (R.h0.z - R.h0.c.z);
-        const cm = P.commit;
         R.rows.push({
           ms: Math.round(ms),
           handChord: +Math.hypot(hx, hd.y - R.h0.y, hz).toFixed(2),
@@ -219,7 +218,7 @@ const TYPE = SC.type || 'cut';
           feet: ['footF', 'footB'].map((k) => (P.gait?.legs?.[k === 'footF' ? 'F' : 'B']?.stance ? '■' : '□')).join(''),
           pelvis: wrapD(yawOf(P.bodies.pelvis) - R.yaw0),
           chest: wrapD(yawOf(P.bodies.chest) - R.yaw0),
-          stage: cm && cm.on ? cm.stage : '-',
+          S: P.ges ? +P.ges.S.toFixed(2) : '-', // 손짓 층 싣기 (옛 결심 단계 자리, R2 W5)
           stop,
           tipV: +P.tipVel.length().toFixed(1),
         });
@@ -413,7 +412,7 @@ const TYPE = SC.type || 'cut';
       chestRange: [Math.min(...rows.map((r) => r.chest)), Math.max(...rows.map((r) => r.chest))],
       tipVmax: Math.max(...rows.map((r) => r.tipV)),
       stopFrames: rows.filter((r) => r.stop).length,
-      stages: [...new Set(rows.map((r) => r.stage))].join(''),
+      Smax: Math.max(0, ...rows.map((r) => (typeof r.S === 'number' ? r.S : 0))),
       hits,
     };
     console.log(TAG, preset || '', JSON.stringify(summ));
@@ -435,7 +434,7 @@ const TYPE = SC.type || 'cut';
       for (const c of shots) {
         const o = c.ov[v];
         html += `<td style="vertical-align:top"><div>${v} ${c.ms} ms${c.row?.stop ? ' <span style="color:#f66">멈칫</span>' : ''}</div><div style="position:relative;width:${cw}px;height:${ch}px"><img width="${cw}" height="${ch}" src="${img(c.img[v])}"><svg width="${cw}" height="${ch}" style="position:absolute;left:0;top:0">${dots(o.foot, '#3d6', 2)}${poly(o.com, '#6cf', 2)}${poly(o.hand, '#fc4', 2)}${poly(o.tip, '#f44', 2)}</svg></div>`;
-        if (v === 'side' && c.row) html += `<div style="font-size:11px;color:#bbb">손 ${c.row.handChord} m · 몸 ${c.row.comFwd} m (이동 ${c.row.comDist}) · 발 ${c.row.feet}<br>골반 ${c.row.pelvis}° 가슴 ${c.row.chest}° · 결심 ${c.row.stage} · 칼끝 ${c.row.tipV} m/s</div>`;
+        if (v === 'side' && c.row) html += `<div style="font-size:11px;color:#bbb">손 ${c.row.handChord} m · 몸 ${c.row.comFwd} m (이동 ${c.row.comDist}) · 발 ${c.row.feet}<br>골반 ${c.row.pelvis}° 가슴 ${c.row.chest}° · S ${c.row.S} · 칼끝 ${c.row.tipV} m/s</div>`;
         html += '</td>';
       }
       html += '</tr>';

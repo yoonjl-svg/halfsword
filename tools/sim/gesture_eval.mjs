@@ -450,7 +450,9 @@ function evalAll(input) {
     check('vii_rewind_S_floor', A ? ok : null, out);
   }
 
-  // (viii) sectorMax 틈 (감기가 될 수 없는 쪽, 곧게 아래·쟁기에서 오른쪽): 쉬다가 12 m/s 로 그으면 (A) 도 베기 — vStrike 를 넘는 첫 스텝에 CUT (§3.10)
+  // (viii) sectorMax 틈 (감기가 될 수 없는 쪽, 곧게 아래): 쉬다가 12 m/s 로 그으면 (A) 도 베기 — vStrike 를 넘는 첫 스텝에 CUT (§3.10)
+  //  W5: GESTURE.sectorAll 거짓 (sectorMax 는 riseL–riseR 틈에만) 이면 쟁기에서 오른쪽 (horizR–riseR 81.1°) 은 틈이 아니라 감기 (옆 자세) —
+  //  옛 규칙 (sectorAll 참, 기본) 에서만 베기를 기대한다 ((B) 는 틈과 상관없이 베기). 곧게 아래 두 경우는 두 규칙 모두 베기
   {
     const out = {};
     let ok = true;
@@ -464,7 +466,9 @@ function evalAll(input) {
       const last = R.rec[R.rec.length - 1];
       const endR = R.rec[Math.max(0, firstIdx(R.rec, (r) => r.t >= path.marks.stop) - 1)];
       out[k] = { cuts: R.cuts, famA: cut?.famA, mode: cut?.mode, latency_steps: lat, S_end: f3(endR.S), wind: R.rec.some((r) => r.st === GES_WIND), S_final: last.S };
-      if (!(cut && R.cuts === 1 && cut.mode === 'stroke' && lat != null && lat <= 1 && !out[k].wind && last.S === 0)) ok = false;
+      if (A && k === 'pflug_right' && !G_.sectorAll) {
+        if (!(R.cuts === 0 && out[k].wind)) ok = false; // 감기 (틈 아님)
+      } else if (!(cut && R.cuts === 1 && cut.mode === 'stroke' && lat != null && lat <= 1 && !out[k].wind && last.S === 0)) ok = false;
     }
     check('viii_gap_stroke', ok, out);
   }
