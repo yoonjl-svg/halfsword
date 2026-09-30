@@ -241,9 +241,10 @@ function texture(kind) {
   texCache[kind] = t;
   return t;
 }
+const decalMats = new WeakSet(); // 자국마다 새로 만든 재질 (판이 끝나면 푼다 — 그림(texCache)은 종류별로 같이 써서 두고)
 function decalMaterial(kind, map = texture(kind)) {
   const metal = kind === 'scratch' || kind === 'dent';
-  return new THREE.MeshStandardMaterial({
+  const m = new THREE.MeshStandardMaterial({
     map,
     transparent: true,
     depthWrite: false,
@@ -251,6 +252,15 @@ function decalMaterial(kind, map = texture(kind)) {
     polygonOffsetFactor: -4,
     roughness: metal ? 0.2 : 0.7,
     metalness: metal ? 0.9 : 0,
+  });
+  decalMats.add(m);
+  return m;
+}
+
+/** root 아래 상처 자국의 재질을 푼다 (판을 치울 때. 장면에서 뗀 뒤에 부른다. 모양은 부르는 쪽이 푼다) */
+export function disposeDecals(root) {
+  root.traverse((o) => {
+    if (decalMats.has(o.material)) o.material.dispose();
   });
 }
 

@@ -15,7 +15,7 @@ import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } fr
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL } from './weapons.js';
 import { attachAura } from './aura.js';
-import { Particles, haptic, stickDecal, rebuildDecal, decalWarmMesh } from './effects.js';
+import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
@@ -221,6 +221,8 @@ let bodySounds = [];
 function clearFlying() {
   clearDebris();
   clearGunFx(); // 총구 섬광·연기도 새 판에 남지 않게
+  // 벗겨진 투구의 긁힌 자국 재질도 푼다 (clearLoose 가 장면에서 떼고 모양을 푼다)
+  for (const f of [player, enemy]) for (const m of f?.meshes ?? []) if (m.kind === 'loose' && m.group.parent) disposeDecals(m.group);
   player?.clearLoose();
   enemy?.clearLoose();
 }
@@ -319,12 +321,14 @@ function newRound(weaponId) {
   // 다리로 체중 받치기: 게임은 늘 gait.js 걸음(다리가 체중 대부분을 받친다). 오너 결정으로 설정 토글을 없애고 기본 적용했다.
   //  CONFIG 기본값도 'hybrid'라 시뮬 도구가 게임과 같은 걸음을 잰다(9/29). 이 줄은 콘솔·도구가 바꿔 둔 값을 판마다 되돌린다
   CONFIG.BODY.weightMode = 'hybrid';
-  // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다)
+  // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다.
+  //  상처 자국 재질만은 자국마다 새로 만들어 다시 안 쓰니 푼다 — 자국 그림은 종류별로 같이 써서 둔다)
   //  흩어지던 칼·투구·판금 조각과 벗겨진 케틀햇은 캐릭터 그룹 밖(장면)에 있어서 따로 치운다 (두 번 불러도 괜찮다)
   clearFlying();
   for (const g of fighterMeshes) {
     scene.remove(g);
     g.traverse((o) => o.geometry?.dispose());
+    disposeDecals(g);
   }
   fighterMeshes.length = 0;
   if (world) world.free();
