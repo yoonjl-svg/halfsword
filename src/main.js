@@ -1183,12 +1183,16 @@ function updatePlayerEmotion(dt) {
 }
 
 // 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
+//  값이 바뀔 때만 스타일을 쓴다 (같은 값을 매 프레임 쓰지 않게 — 보이는 것은 같다)
+const hudLast = { opacity: null, filter: null };
 function updateHud() {
   const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
   const pulse = player.bleed > 0.002 ? 0.15 * (0.5 + 0.5 * Math.sin(performance.now() / 180)) : 0;
   const v = Math.min(1, lost * 0.85 + Math.min(1, player.pain) * 0.35 + pulse);
-  $('vignette').style.opacity = v.toFixed(3);
-  $('vignette').style.filter = player.consciousness < 0.6 ? `blur(${(0.6 - player.consciousness) * 6}px)` : '';
+  const opacity = v.toFixed(3);
+  const filter = player.consciousness < 0.6 ? `blur(${(0.6 - player.consciousness) * 6}px)` : '';
+  if (opacity !== hudLast.opacity) $('vignette').style.opacity = hudLast.opacity = opacity;
+  if (filter !== hudLast.filter) $('vignette').style.filter = hudLast.filter = filter;
 }
 
 function checkRoundEnd(dt) {
