@@ -12,6 +12,8 @@
 import * as THREE from 'three';
 
 const AURA_WEAPONS = new Set(['excalibur']); // 복제품(excalibur_replica)은 빠진다
+// 기운 세기 (사장님 9/29 "너무 세, 지금의 절반으로": 1 → 0.5) — 아지랑이 투명도·점 조명·칼날 발광에 모두 곱한다
+const AURA_STRENGTH = 0.5;
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -22,6 +24,7 @@ const VERT = /* glsl */ `
 `;
 const FRAG = /* glsl */ `
   uniform float uTime;
+  uniform float uStrength; // AURA_STRENGTH
   uniform vec3 uColor;
   uniform float uHalfW; // 판 절반 폭 (m)
   uniform float uEdge;  // 칼날 절반 폭 (m): 빛은 칼날 가장자리에서 가장 밝고 바깥으로 옅어진다
@@ -36,7 +39,7 @@ const FRAG = /* glsl */ `
     float along = smoothstep(0.0, 0.06, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
     // 위로 흐르는 아지랑이: 세로 무늬가 칼끝 쪽으로 천천히 흘러가며 흔들린다
     float flick = mix(0.45, 1.0, wave(vUv)) * mix(0.75, 1.0, sin(uTime * 0.9) * 0.5 + 0.5);
-    float a = across * along * flick * 0.55;
+    float a = across * along * flick * 0.55 * uStrength;
     gl_FragColor = vec4(uColor, a);
   }
 `;
@@ -53,6 +56,7 @@ export function attachAura(fighter) {
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
+      uStrength: { value: AURA_STRENGTH },
       uColor: { value: new THREE.Color(1.0, 0.82, 0.45) },
       uHalfW: { value: 0.11 },
       uEdge: { value: 0.026 },
@@ -73,7 +77,7 @@ export function attachAura(fighter) {
     m.renderOrder = 2;
     group.add(m);
   }
-  const light = new THREE.PointLight(0xffd98a, 1.2, 2.0, 2);
+  const light = new THREE.PointLight(0xffd98a, 1.2 * AURA_STRENGTH, 2.0, 2);
   group.add(light);
   entry.group.add(group);
   // 칼날 자체도 은은하게 빛난다 (밝은 낮에도 보이도록 자체 발광)
@@ -84,8 +88,8 @@ export function attachAura(fighter) {
     update(t) {
       mat.uniforms.uTime.value = t;
       const breath = Math.sin(t * 1.3) * 0.5 + 0.5;
-      light.intensity = 0.8 + 0.5 * breath + 0.12 * Math.sin(t * 4.7);
-      if (bladeMat) bladeMat.emissiveIntensity = 0.18 + 0.22 * breath;
+      light.intensity = (0.8 + 0.5 * breath + 0.12 * Math.sin(t * 4.7)) * AURA_STRENGTH;
+      if (bladeMat) bladeMat.emissiveIntensity = (0.18 + 0.22 * breath) * AURA_STRENGTH;
     },
     dispose() {
       entry.group.remove(group);

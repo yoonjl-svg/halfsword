@@ -942,6 +942,115 @@ export const SYNTH = {
   },
 
   /**
+   * 날 선 칼이 살을 벰 (33차, 사장님: 31차 두 안이 "둔기나 죽도 소리 같다 — 고기가 날카로운 금속에 베이는 소리가 나야"). 세 겹:
+   *  1) 칼날 "슉": 1.5kHz 위의 매끈한 잡음 덩이 — 어택 3ms, 45~70ms 머물다 빠르게 사라지고 가운데가 7k→3k 로 내려간다.
+   *     날카로움은 여기서 나온다. 전기 "파직"의 원인(딱딱 튀는 클릭, 3~7kHz 금속 울림, 세게 누른 찌그러짐)은 넣지 않는다
+   *  2) 살이 갈라지는 "쯔억": 0.9~2.2kHz 잡음을 불규칙하게 떨어 젖은 결을 낸다 (8ms 뒤부터, 베고 지나가면 길게)
+   *  3) 작은 "툭": 90~110Hz 짧게 — 몽둥이·죽도처럼 치는 무게와 1~2kHz "팍"은 없다
+   * kind: 'cut' | 'stab'(짧고 좁게, 툭이 조금 더) | 'through'(베고 지나감: 갈라지는 소리를 길게)
+   */
+  bladeCut(sr, r, kind = 'cut') {
+    const stab = kind === 'stab';
+    const thru = kind === 'through';
+    const n = Math.round((thru ? 0.4 : 0.3) * sr);
+    const out = new Float32Array(n);
+    const E = Math.round((stab ? between(r, 0.035, 0.05) : between(r, 0.045, 0.07)) * sr);
+    const hp = new Filt('highpass', 1500, 0.7, sr);
+    const bp = new Filt('bandpass', 7000, 0.5, sr);
+    for (let i = 0; i < E + Math.round(0.03 * sr) && i < n; i++) {
+      const u = i / E;
+      if (i % 32 === 0) bp.set(7000 * Math.pow(3000 / 7000, Math.min(1, u)), 0.5);
+      const env = Math.min(1, i / (0.003 * sr)) * (u < 1 ? 1 - 0.3 * u : 0.7 * Math.exp(-(i - E) / (0.008 * sr)));
+      const x = r() * 2 - 1;
+      out[i] += (1.1 * hp.run(x) + 1.4 * bp.run(x)) * env;
+    }
+    const t0 = Math.round(0.008 * sr);
+    const P = Math.round((thru ? between(r, 0.18, 0.24) : stab ? between(r, 0.07, 0.1) : between(r, 0.09, 0.15)) * sr);
+    const f1 = thru ? 2200 : 1800;
+    const pb = new Filt('bandpass', f1, 0.8, sr);
+    const am = wobble(r, sr, 110);
+    for (let i = 0; i < P && t0 + i < n; i++) {
+      const u = i / P;
+      if (i % 32 === 0) pb.set(f1 * Math.pow(900 / f1, u), 0.8);
+      out[t0 + i] += 0.6 * pb.run(r() * 2 - 1) * Math.min(1, i / (0.004 * sr)) * (1 - u) ** 1.2 * (0.35 + 0.65 * Math.abs(am()));
+    }
+    thumpTone(out, sr, { t0: 0.002, f0: between(r, 90, 110), drop: 0.5, dropTau: 0.01, attack: 0.001, tau: stab ? 0.03 : 0.022, amp: stab ? 0.3 : 0.18 });
+    return fadeOut(normalize(out, 0.9), sr, 0.03);
+  },
+
+  /**
+   * 대전 게임식 베기 2 (34·35차, 사장님 "사무라이 쇼다운의 피격음" → "하오마루·갠주로·한조의 강베기 소리처럼").
+   *  5차 hitSlash 도 같은 참고였지만 3~7.5kHz 금속 울림·딱딱 튀는 클릭·세게 누른 찌그러짐이 겹쳐 전기 "파직"이 됐다(9/30).
+   *  그 셋 없이 층을 나눠 쌓는다 — 강베기일수록 두껍고 길게:
+   *  1) "자": 칼날이 들어가는 밝은 잡음, 1.5kHz 위, 어택 1.5ms (강베기는 짧게 — 몸통에 묻힌다)
+   *  2) "쩌억": 살덩이가 크게 갈라지는 두꺼운 잡음 — 900Hz 가운데·400~2.5kHz, 거칠게 떨리고(70Hz) 잡음만 따로 눌러 두껍게,
+   *     아케이드 기판 샘플처럼 16kHz 로 성기게 잡아 9kHz 위를 닫는다(금속 울림이 아니라 "거친 결"). 강베기 160~200ms
+   *  3) "쿵": 50~65Hz 저음 — 대전 게임의 과장된 무게. 저음만 따로 눌러 붙인다
+   *  4) "촤아아악": 피가 뿜어지는 잡음 — 2.8k→1kHz 로 내려가며 두세 번 울컥. 강베기 0.65~0.85초
+   * kind: 'cut'(보통 베기) | 'heavy'(강베기) | 'through'(베고 지나감: 강베기 + 길게) | 'stab'(찌르기: "자-푹", 피는 짧게)
+   */
+  slashHit(sr, r, kind = 'cut') {
+    const stab = kind === 'stab';
+    const heavy = kind === 'heavy' || kind === 'through';
+    const thru = kind === 'through';
+    const n = Math.round((heavy ? 1.1 : 0.75) * sr);
+    const out = new Float32Array(n);
+    // 1) 자
+    const E = Math.round((heavy ? between(r, 0.03, 0.04) : stab ? between(r, 0.04, 0.05) : between(r, 0.05, 0.065)) * sr);
+    const hp = new Filt('highpass', 1500, 0.7, sr);
+    const bp = new Filt('bandpass', 8000, 0.5, sr);
+    for (let i = 0; i < E + Math.round(0.02 * sr); i++) {
+      const u = i / E;
+      if (i % 32 === 0) bp.set(8000 * Math.pow(3500 / 8000, Math.min(1, u)), 0.5);
+      const env = Math.min(1, i / (0.0015 * sr)) * (u < 1 ? 1 - 0.4 * u : 0.6 * Math.exp(-(i - E) / (0.008 * sr)));
+      const x = r() * 2 - 1;
+      out[i] += (heavy ? 0.7 : 1) * (hp.run(x) + 1.2 * bp.run(x)) * env;
+    }
+    // 2) 쩌억 — 따로 만들어 눌러 두껍게, 성기게 잡아 거친 결
+    const B = Math.round((thru ? between(r, 0.2, 0.24) : heavy ? between(r, 0.16, 0.2) : stab ? between(r, 0.08, 0.1) : between(r, 0.1, 0.13)) * sr);
+    const body = new Float32Array(B + Math.round(0.05 * sr));
+    const fc = stab ? 700 : 900;
+    const bb = new Filt('bandpass', fc * 1.6, 0.6, sr);
+    const flick = wobble(r, sr, 70);
+    for (let i = 0; i < body.length; i++) {
+      const u = Math.min(1, i / B);
+      if (i % 32 === 0) bb.set(fc * 1.6 * Math.pow(0.6, u), 0.6);
+      const env = Math.min(1, i / (0.002 * sr)) * (i < B ? (1 - u) ** 0.8 : 0);
+      body[i] = bb.run(r() * 2 - 1) * env * (0.45 + 0.55 * Math.abs(flick()));
+    }
+    saturate(body, heavy ? 2.6 : 2);
+    let held = 0;
+    for (let i = 0; i < body.length; i++) {
+      if (i % 3 === 0) held = body[i];
+      body[i] = held;
+    }
+    const lp9 = new Filt('lowpass', 9000, 0.7, sr);
+    const b0 = Math.round(0.004 * sr);
+    const bk = heavy ? 1.3 : 1;
+    for (let i = 0; i < body.length && b0 + i < n; i++) out[b0 + i] += bk * lp9.run(body[i]);
+    // 4) 촤아아악 (피)
+    const g0 = Math.round((heavy ? 0.04 : 0.025) * sr);
+    const G = Math.round((thru ? between(r, 0.75, 0.9) : heavy ? between(r, 0.65, 0.8) : stab ? between(r, 0.25, 0.32) : between(r, 0.4, 0.5)) * sr);
+    const gb = new Filt('bandpass', 2800, 0.7, sr);
+    const spurts = stab ? 2 : heavy ? 3 : 2;
+    const fl = wobble(r, sr, 60);
+    for (let i = 0; i < G && g0 + i < n; i++) {
+      const u = i / G;
+      if (i % 32 === 0) gb.set(2800 * Math.pow(1000 / 2800, u), 0.7);
+      const pulse = 0.5 + 0.5 * Math.cos(Math.PI * spurts * u) ** 2; // 울컥울컥
+      out[g0 + i] += (heavy ? 0.7 : 0.55) * gb.run(r() * 2 - 1) * Math.min(1, i / (0.012 * sr)) * (1 - u) ** 1.2 * pulse * (0.7 + 0.3 * Math.abs(fl()));
+    }
+    // 3) 쿵 (저음만 따로 눌러서 더한다)
+    const lo = new Float32Array(n);
+    thumpTone(lo, sr, { t0: 0.001, f0: between(r, 50, 65), drop: 0.6, dropTau: 0.025, attack: 0.002, tau: heavy ? 0.14 : stab ? 0.08 : 0.1, amp: 1 });
+    saturate(lo, 1.8);
+    normalize(lo, 1);
+    const pk = peakOf(out) || 1;
+    for (let i = 0; i < n; i++) out[i] = out[i] / pk + (heavy ? 0.5 : 0.4) * lo[i];
+    return fadeOut(normalize(out, 0.9), sr, heavy ? 0.12 : 0.06);
+  },
+
+  /**
    * 판금이 부서짐: 금이 연달아 번지는 "짝-짝-짝" + 리벳이 튕겨 나가는 짧은 "틱-틱" + 가죽끈이 끊기는 "탁"
    * + 판이 짧게 우는 "깡"(투구보다 조금 길게) + 묵직한 "쿵". 조각이 떨어지는 소리는 Sound.plateBreak 이 _shard 로 따로 낸다
    */
@@ -977,6 +1086,48 @@ export const SYNTH = {
     saturate(out, 2.4);
     thumpTone(out, sr, { t0: 0.001, f0: between(r, 55, 75), drop: 0.7, dropTau: 0.012, tau: 0.035, amp: 0.8 });
     return fadeOut(normalize(out, 0.95), sr, 0.08);
+  },
+
+  /**
+   * 리볼버 총성 (30차, 사장님 "비비탄 딱총 같다 → 더 파괴력 있는 소리"). .357/.44급을 겨눈다:
+   *  0.2ms 어택의 넓은 "딱" 크랙(총구 압력파) + 200~1200Hz 잡음이 잦아드는 "쾅" 몸통 + 110→38Hz 충격파와 60Hz 밑 무게(근거리 압력감)
+   *  + 화약 튀는 "치직" 조금. 마지막에 세게 눌러(saturate) 귀가 눌리는 느낌. 0.7초. 꼬리는 gunTail·무대 방 울림이 맡는다.
+   */
+  gunshot(sr, r) {
+    const n = Math.round(0.7 * sr);
+    const out = new Float32Array(n);
+    noiseHit(out, sr, r, { t0: 0, amp: 2.4, attack: 0.0002, tau: 0.007, type: 'highpass', f: 2500, q: 0.7 }); // 크랙 (폰 스피커에서 살아남는 몫이라 크게)
+    noiseHit(out, sr, r, { t0: 0.0005, amp: 1.8, attack: 0.0003, tau: 0.014, type: 'bandpass', f: 4200, q: 1.2 });
+    noiseHit(out, sr, r, { t0: 0.0008, amp: 1.2, attack: 0.0004, tau: 0.02, type: 'bandpass', f: 1600, q: 0.9 }); // 크랙과 몸통 사이를 잇는 "탁"
+    noiseHit(out, sr, r, { t0: 0.001, amp: 1.7, attack: 0.0008, tau: 0.045, type: 'bandpass', f: 600, q: 0.6 }); // 폭발 몸통 (폰 스피커가 내는 몫)
+    noiseHit(out, sr, r, { t0: 0.002, amp: 1.2, attack: 0.002, tau: 0.09, type: 'lowpass', f: 700, q: 0.7 });
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, 100, 120), drop: 0.65, dropTau: 0.03, attack: 0.001, tau: 0.1, amp: 0.8 }); // 충격파
+    thumpTone(out, sr, { t0: 0.004, f0: between(r, 52, 62), drop: 0.3, dropTau: 0.05, attack: 0.003, tau: 0.16, amp: 0.5 }); // 무게
+    gritBurst(out, sr, r, { t0: 0.003, span: 0.05, count: 14, amp: 0.25, fLo: 2000, fHi: 7000 }); // 화약 "치직"
+    saturate(out, 2.2, 0.2);
+    return fadeOut(normalize(out, 0.95), sr, 0.08);
+  },
+
+  /**
+   * 총성 꼬리 (바깥 무대용): 절벽·건물·숲에 되울리는 메아리 3~4번(80~260ms, 갈수록 낮고 작게) + 1.4초에 걸쳐 퍼지며 높은 쪽이 먼저
+   * 사라지는 울림. 방 울림이 있는 무대에서는 작게만 깐다(방 울림이 나머지를 낸다). 1.6초.
+   */
+  gunTail(sr, r) {
+    const n = Math.round(1.6 * sr);
+    const out = new Float32Array(n);
+    let t = between(r, 0.07, 0.11);
+    for (let i = 0; i < 4 && t < 0.7; i++) {
+      noiseHit(out, sr, r, { t0: t, amp: 0.55 * 0.6 ** i, attack: 0.003, tau: 0.03 + 0.02 * i, type: 'lowpass', f: 2200 - 400 * i, q: 0.6 });
+      thumpTone(out, sr, { t0: t, f0: between(r, 70, 90), drop: 0.4, dropTau: 0.03, attack: 0.004, tau: 0.08, amp: 0.35 * 0.7 ** i });
+      t += between(r, 0.09, 0.16);
+    }
+    const lp = new Filt('lowpass', 1800, 0.7, sr);
+    for (let i = Math.round(0.03 * sr); i < n; i++) {
+      const tt = i / sr;
+      if (i % 256 === 0) lp.set(1800 * Math.exp(-tt / 0.5) + 250, 0.7);
+      out[i] += 0.28 * Math.exp(-tt / 0.42) * lp.run(r() * 2 - 1);
+    }
+    return fadeOut(normalize(out, 0.8), sr, 0.15);
   },
 
   /** 칼이 바닥에 떨어짐: 칼자루와 칼끝이 잇달아 닿는 "철-컥" (모래·돌이 받아서 짧게 멎는다 — 음이 오래 남으면 냄비처럼 들리므로 울림은 0.05초 안) */
@@ -1393,8 +1544,17 @@ const BANK = [
   ['hitStab', 2, (sr, r) => SYNTH.hitSlash(sr, r, 'stab')],
   ['hitBlunt', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'blunt')],
   ['hitArmor', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'armor')],
+  ['bladeCut', 3, (sr, r) => SYNTH.bladeCut(sr, r, 'cut')],
+  ['bladeStab', 2, (sr, r) => SYNTH.bladeCut(sr, r, 'stab')],
+  ['bladeThrough', 2, (sr, r) => SYNTH.bladeCut(sr, r, 'through')],
+  ['slashCut', 3, (sr, r) => SYNTH.slashHit(sr, r, 'cut')],
+  ['slashHeavy', 3, (sr, r) => SYNTH.slashHit(sr, r, 'heavy')],
+  ['slashStab', 2, (sr, r) => SYNTH.slashHit(sr, r, 'stab')],
+  ['slashThrough', 2, (sr, r) => SYNTH.slashHit(sr, r, 'through')],
   ['plateBreak', 2, SYNTH.plateBreak],
   ['swordLand', 3, SYNTH.swordLand],
+  ['gunshot', 2, SYNTH.gunshot],
+  ['gunTail', 2, SYNTH.gunTail],
   ['birdSong', 3, (sr, r) => SYNTH.bird(sr, r, 'song')], // 산사 배경 (맨 뒤: 판 시작 뒤 몇 초 안에만 있으면 된다)
   ['birdWarbler', 2, (sr, r) => SYNTH.bird(sr, r, 'warbler')],
   ['fireLoop', 1, SYNTH.fireLoop], // 성 안뜰·어두운 홀
@@ -1441,6 +1601,9 @@ const SAMPLES = {
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
   breath: ['breath/breath1'], // 피를 흘리는 내 숨 한 번: 들이쉬고 "후우" (Sadiquecat, CC0)
+  // 칼이 몸을 칠 때 "녹음" 안 (33차 후보, Freesound CC0 — 출처 public/sfx/LICENSE.txt). SOUND.fleshHit 이 'rec' 일 때만 쓴다
+  fleshEdge: nums('flesh/edge', 5), // 날 선 칼이 살에 들어가는 매끈한 "슉" (칼·검 찌르기 녹음, 멜론 찌르기)
+  fleshWet: nums('flesh/wet', 2), // 깊이 베였을 때 젖은 꼬리 (피 튀는 소리, 위를 3.5kHz 에서 닫음)
 };
 
 // 배경(스테이지)마다 다른 것: 발소리 녹음(step), 쓰러질 때 바닥 알갱이(grit), 전투 소리가 벽에 되울리는 방(room).
@@ -1904,20 +2067,58 @@ export class Sound {
   set hitScale(v) {
     this._hitScale = v;
   }
+  /**
+   * 칼이 몸을 칠 때의 소리 (31·33차 후보, 사장님 "전자 파리채로 모기 잡는 소리 같아" → 31차 안은 "둔기·죽도 같다"): 'legacy' = 지금(5차 hitSlash),
+   * 'synth' = 날 선 칼 합성(bladeCut), 'rec' = 날 선 칼 녹음(flesh/edge*.mp3 + 젖은 꼬리, 없으면 합성),
+   * 'samsho' = 대전 게임식 2(34·35차 slashHit: "자-쩌억 + 쿵 + 촤아악", 강베기는 두껍고 길게). 기본은 SOUND.fleshHit.
+   * 베기·찌르기만 바뀐다. 칼 면(blunt)·투구·판금 소리는 그대로
+   */
+  get fleshHit() {
+    return this._fleshHit ?? SOUND.fleshHit ?? 'legacy';
+  }
+  set fleshHit(v) {
+    this._fleshHit = v;
+  }
+
+  /**
+   * 녹음 안(33차): 날 선 칼이 살에 들어가는 "슉" 녹음(fleshEdge) + 합성 bladeCut 의 갈라지는 "쯔억"·작은 "툭"을 조금 + 깊으면 젖은 꼬리.
+   * 녹음이 아직 안 읽혔으면 false → 합성으로 낸다
+   */
+  _fleshRec(ev, kind, e, low) {
+    const edge = this.pickSample('fleshEdge');
+    if (!edge) return false;
+    this.layer(ev, edge, { gain: 1.2, rate: low * (kind === 'stab' ? between(Math.random, 0.85, 0.95) : between(Math.random, 0.95, 1.08)) });
+    const syn = kind === 'stab' ? 'bladeStab' : kind === 'through' ? 'bladeThrough' : 'bladeCut';
+    this.layer(ev, this.pick(syn), { gain: 0.35, rate: low * between(Math.random, 0.95, 1.05), delay: 0.004 });
+    const wet = e > 0.3 ? this.pickSample('fleshWet') : null;
+    if (wet) this.layer(ev, wet, { gain: 0.15 + 0.3 * e, rate: between(Math.random, 0.95, 1.1), delay: 0.012 });
+    return true;
+  }
 
   /** 베기: 천이 찢기고 살을 가르는 "쉭-지직" + 젖은 소리 + 몸통 "퍽". through = 베고 지나감 */
   cut(energy, through) {
     if (!this._on || !this.ctx) return;
     const { e, w, low } = this.hitWeight(energy, 140);
     const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w), prio: 2 });
-    // 대전 게임식 "챡-촤악-징 퍽": 맞은 순간이 또렷하게 튀어나와야 한다 (예전엔 누비옷 너머 둔한 "쿵" 위주라 흐릿했다)
-    // 베고 지나가면 칼바람 꼬리를 길게(느리게 틀기)
-    this.layer(ev, this.pick('hitCut'), { gain: 1, rate: low * (through ? between(Math.random, 0.85, 0.92) : between(Math.random, 0.96, 1.06)) });
-    // 천이 찢기며 살을 가르는 "지직"은 뒤에 작게
-    this.layer(ev, this.pick('slice'), { gain: 0.3 + 0.2 * e, rate: low * (through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1)), delay: 0.01 });
+    const mode = this.fleshHit;
+    if (mode === 'samsho') {
+      // 대전 게임식 2 (34·35차): "자-쩌억 + 쿵 + 촤아악" — 금속 울림·클릭 없이
+      // 강베기(에너지 112 J 위, e ≥ 0.8)와 베고 지나감은 두껍고 긴 판, 보통 베기는 짧은 판
+      this.layer(ev, this.pick(through ? 'slashThrough' : e >= 0.8 ? 'slashHeavy' : 'slashCut'), { gain: 1, rate: low * between(Math.random, 0.96, 1.05) });
+    } else if (mode === 'legacy') {
+      // 대전 게임식 "챡-촤악-징 퍽": 맞은 순간이 또렷하게 튀어나와야 한다 (예전엔 누비옷 너머 둔한 "쿵" 위주라 흐릿했다)
+      // 베고 지나가면 칼바람 꼬리를 길게(느리게 틀기)
+      this.layer(ev, this.pick('hitCut'), { gain: 1, rate: low * (through ? between(Math.random, 0.85, 0.92) : between(Math.random, 0.96, 1.06)) });
+      // 천이 찢기며 살을 가르는 "지직"은 뒤에 작게
+      this.layer(ev, this.pick('slice'), { gain: 0.3 + 0.2 * e, rate: low * (through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1)), delay: 0.01 });
+    } else if (!(mode === 'rec' && this._fleshRec(ev, through ? 'through' : 'cut', e, low))) {
+      // 날 선 칼 합성: 매끈한 "슉" + 갈라지는 "쯔억" + 작은 "툭" (베고 지나가면 갈라지는 소리를 길게)
+      this.layer(ev, this.pick(through ? 'bladeThrough' : 'bladeCut'), { gain: 1, rate: low * between(Math.random, 0.95, 1.06) });
+    }
     // 깊이 베인 큰 상처(e 높음)는 물컹한 크런치가 섞인 "젖은" 소리로
-    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: (0.3 + 0.4 * e) * (1 + 0.3 * w), rate: between(Math.random, 0.85, 1.15), delay: 0.015 });
-    this.body(ev, (through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e) * (1 + 0.5 * w), low);
+    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: (mode === 'legacy' ? 1 : 0.65) * (0.3 + 0.4 * e) * (1 + 0.3 * w), rate: between(Math.random, 0.85, 1.15), delay: 0.015 });
+    // 몸통 "퍽"(주먹 녹음 + 누비옷 쿵): 날 선 칼은 몽둥이처럼 몸을 밀지 않는다 → 새 안에서는 작게(0.25배). 이 층이 31차 안을 "둔기"로 들리게 했다
+    this.body(ev, (mode === 'legacy' ? 1 : 0.25) * (through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e) * (1 + 0.5 * w), low);
     if (w > 0) this.layer(ev, this.pick('thump'), { gain: 0.8 * w, rate: 0.7 * low, delay: 0.004 }); // 무게(200 J 위): 묵직한 저음 한 겹
   }
 
@@ -1926,10 +2127,13 @@ export class Sound {
     if (!this._on || !this.ctx) return;
     const { e, w, low } = this.hitWeight(energy, 100);
     const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w), prio: 2 });
-    this.layer(ev, this.pick('hitStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 대전 게임식 "챡-푹"
-    this.body(ev, 0.85 * (1 + 0.5 * w), 0.85 * low);
-    this.layer(ev, this.pick('wet'), { gain: (0.5 + 0.4 * e) * (1 + 0.3 * w), rate: low * between(Math.random, 0.7, 0.85), delay: 0.008 });
-    this.layer(ev, this.pick('slice'), { gain: 0.3, rate: 1.3, delay: 0.004 }); // 천을 뚫는 짧은 "틱"
+    const mode = this.fleshHit;
+    if (mode === 'samsho') this.layer(ev, this.pick('slashStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 대전 게임식 2 "자-푹 + 쿵 + 촤악"
+    else if (mode === 'legacy') this.layer(ev, this.pick('hitStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 대전 게임식 "챡-푹"
+    else if (!(mode === 'rec' && this._fleshRec(ev, 'stab', e, low))) this.layer(ev, this.pick('bladeStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 날 선 칼 "슉-푹"
+    this.body(ev, (mode === 'legacy' ? 0.85 : 0.3) * (1 + 0.5 * w), 0.85 * low); // 찌르기는 칼끝이 몸을 조금 민다 — 베기보다는 크게
+    this.layer(ev, this.pick('wet'), { gain: (mode === 'legacy' ? 1 : 0.65) * (0.5 + 0.4 * e) * (1 + 0.3 * w), rate: low * between(Math.random, 0.7, 0.85), delay: 0.008 });
+    if (mode === 'legacy') this.layer(ev, this.pick('slice'), { gain: 0.3, rate: 1.3, delay: 0.004 }); // 천을 뚫는 짧은 "틱" (새 안에서는 뺀다 — "지직"의 한 원인)
     if (w > 0) this.layer(ev, this.pick('thump'), { gain: 0.8 * w, rate: 0.7 * low, delay: 0.004 }); // 무게(200 J 위): 묵직한 저음 한 겹
   }
 
@@ -2293,6 +2497,41 @@ export class Sound {
     else this.layer(ev, this.pick(`voice:${id}:${kind}`), { rate: between(Math.random, 0.97, 1.03) });
     if (cause === '목') this.layer(ev, this.pick('wetHeavy'), { gain: 0.5, rate: between(Math.random, 0.55, 0.65), delay: 0.08 });
     if (me) this.fadeOutWorld();
+  }
+
+  /**
+   * 참수 (32차, 디렉터: COMBAT.decapitate — 목을 가르고 지나간 치명 베기). 베는 소리(main.js onWound 의 cut)는 이미 났다.
+   *  그 위에 짧고 무거운 절단감만 얹는다(과장 없이, "적막"): 목뼈가 끊기는 둔한 "뚝"(뼈 조각·나무 쪼개짐 녹음을 낮게),
+   *  목이 떨어져 나가는 무거운 젖은 소리(wetHeavy 낮게), 몸통이 받는 낮은 "쿵", 0.12초 뒤 목 단면의 낮은 젖은 소리 한 번.
+   *  목소리는 내지 않는다 — 숨이 목(성대)을 지나지 않는다. BodySounds 가 이때 죽음 목소리를 건너뛴다. 내가 당하면 귀가 멍해진다
+   */
+  decapitate({ me = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const ev = this.event({ bus: this.fleshBus, gain: 0.9, prio: 3, pos });
+    this.layer(ev, this.pick('bone'), { gain: 0.8, rate: between(Math.random, 0.7, 0.8), delay: 0.004 });
+    const rec = this.pickSample('crack');
+    if (rec) this.layer(ev, rec, { gain: 0.5, rate: between(Math.random, 0.8, 0.9), delay: 0.006 });
+    this.layer(ev, this.pick('wetHeavy'), { gain: 0.7, rate: between(Math.random, 0.6, 0.7), delay: 0.012 });
+    this.layer(ev, this.pick('thump'), { gain: 0.5, rate: 0.6, delay: 0.008 });
+    this.layer(ev, this.pick('wet'), { gain: 0.25, rate: between(Math.random, 0.5, 0.6), delay: 0.12 });
+    if (me) this.fadeOutWorld();
+  }
+
+  /**
+   * 떨어진 머리가 바닥에 닿음 (32차, BodySounds 가 머리 몸의 낙하를 보고 부른다. 굴러 튈 때마다, 0.12초에 한 번까지).
+   *  speed = 닿기 직전 떨어지던 속도(m/s). 맨머리: 둔한 "퍽"(합성 쿵 + 누비옷 녹음) / 투구째: 투구 조각을 낮게 튼 둔한 "텅" + 쿵.
+   *  둘 다 그 무대 바닥 알갱이(모래·자갈·눈·돌·흙)를 얹는다
+   */
+  headLand(speed, { helmet = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const x = clamp01((speed - 0.8) / 4);
+    const ev = this.event({ bus: helmet ? this.metalBus : this.fleshBus, gain: 0.2 + 0.45 * x, prio: 1, pos });
+    if (helmet) this.layer(ev, this.pick('helmet'), { gain: 0.9, rate: between(Math.random, 0.7, 0.8) });
+    this.layer(ev, this.pick('thump'), { gain: helmet ? 0.7 : 0.9, rate: between(Math.random, 0.8, 0.95) });
+    const soft = helmet ? null : this.pickSample('soft');
+    if (soft) this.layer(ev, soft, { gain: 0.5, rate: between(Math.random, 1.0, 1.15) });
+    const grit = this.pickSample(STAGE_SOUND[this.stage].grit || STAGE_SOUND[this.stage].step);
+    if (grit) this.layer(ev, grit, { gain: 0.25 + 0.2 * x, rate: between(Math.random, 1.0, 1.15), delay: 0.004 });
   }
 
   /** 내가 쓰러짐: 이명(삐—)이 울리고, 온 소리가 몇 초에 걸쳐 먹먹해진다 */
@@ -2745,9 +2984,7 @@ export class Sound {
   /** 까마귀들이 날아오름 (화전 터, 배경이 'crows' 로 알릴 때): 날갯짓 두세 번 + 놀란 "까악" 한둘. 멀리, 작게 (적막함을 깨지 않게). 4초에 한 번만 */
   _crowsUp(data = {}) {
     if (!this.stage.startsWith('clearing')) return;
-    const now = this.ctx.currentTime;
-    if (this._crowsT && now - this._crowsT < 4) return;
-    this._crowsT = now;
+    if (!this._spaced('crows')) return; // 30차: 4초 → SOUND.stageHitGap(10초)
     const k = clamp01(data.amp ?? 0.5);
     const ev = this.event({ bus: this.fleshBus, gain: 0.07 + 0.08 * k, prio: 0.2, pos: data.pos });
     for (let i = 0, t = 0; i < 2 + Math.round(k); i++, t += between(Math.random, 0.12, 0.3)) this.layer(ev, this.pick('wings'), { gain: 0.6, rate: between(Math.random, 0.9, 1.1), delay: t });
@@ -2865,6 +3102,7 @@ export class Sound {
     if (!this._on || !this.ctx) return;
     if (name === 'crows') return this._crowsUp(data); // 화전 터: 참나무의 까마귀들이 날아오른다 (외형 PM이 onEvent('crows') 로 알린다)
     if (name !== 'bell' || this.stage !== 'castle') return;
+    if (!this._spaced('bell')) return; // 30차: 한 번 흔들리면 양 끝마다 치던 종을 10초에 한 번만 (사장님 "간격을 좀 두자")
     const c = this.ctx;
     const x = clamp01((data.amp ?? 0.3) / (data.max ?? 0.55));
     const t = c.currentTime;
@@ -2942,6 +3180,36 @@ export class Sound {
    *  산사: 단풍잎 "바스락" + 솔바람, 세면 풍경 / 성 안뜰: 눈보라 바람 + 화로 불길 "화르륵"
    *  대성당: 천장에서 돌 부스러기, 세면 비둘기가 날아오름 / 어두운 홀: 박쥐가 놀라 "푸드득", 벽난로 불길. 포세이돈은 아직 없음
    */
+  /**
+   * 리볼버 총성 (30차). gun.js gunshotSound 가 여기로 넘긴다. 핵심 조작 소리라 간격 제한은 없다.
+   *  총성 조각(크랙·몸통·충격파) 위에 꼬리: 방 울림이 있는 무대(성 안뜰·성당·홀)는 쇳소리 길의 방 울림이 붙으니 gunTail 을 조금만(0.25),
+   *  바깥(포세이돈·산사·화전 터)은 절벽·숲 메아리 gunTail 을 길고 크게(0.55). 큰 방(성당)은 꼬리를 낮게 튼다.
+   */
+  gunshot({ pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const R = STAGE_SOUND[this.stage]?.room;
+    const ev = this.event({ bus: this.metalBus, gain: 1.7, prio: 3, pos });
+    this.layer(ev, this.pick('gunshot'), { rate: between(Math.random, 0.96, 1.04) });
+    this.layer(ev, this.pick('gunTail'), { gain: R ? 0.25 : 0.55, rate: (R && R.rt > 2 ? 0.85 : 1) * between(Math.random, 0.95, 1.05), delay: 0.004 });
+  }
+
+  /**
+   * 큰 타격에 반응하는 배경 소리의 간격 (30차, 사장님 "너무 자주 들려. 간격을 좀 두자"): 같은 key 의 소리는 SOUND.stageHitGap(10초) 안에 다시 내지 않는다.
+   *  true 면 내도 된다(시각을 적는다). 타격음 자체에는 쓰지 않는다. 바람이 잠깐 세지는 것(gust 의 wind)은 새 소리가 아니라 그대로 둔다.
+   */
+  _spaced(key) {
+    const now = this.ctx.currentTime;
+    const gap = SOUND.stageHitGap ?? 10;
+    this._spacedT ??= {};
+    if (this._spacedT[key] !== undefined && now - this._spacedT[key] < gap) return false;
+    this._spacedT[key] = now;
+    return true;
+  }
+  /** 큰 타격 → 배경 소리 한 번, 간격을 지켜서 (gust 전용) */
+  _hitCall(kind, k) {
+    if (this._spaced(kind)) this.stageCall(kind, k);
+  }
+
   gust(amount) {
     if (!this._on || !this.ctx || this.stage === 'poseidon' || amount < 0.15) return;
     const now = this.ctx.currentTime;
@@ -2958,27 +3226,27 @@ export class Sound {
     if (this.stage.startsWith('clearing')) return; // 화전 터: 바람만 잠깐 (크게 튀는 소리는 넣지 않는다 — 사장님 컨셉)
     if (this.stage === 'poseidon_night') {
       // 밤의 포세이돈: 화로 불길이 잠깐 "화르륵", 바람에 검은 천이 펄럭
-      this.stageCall('flare', amount * 0.6);
-      if (Math.random() < 0.4 + amount * 0.6) this.stageCall('flap', amount);
+      this._hitCall('flare', amount * 0.6);
+      if (Math.random() < 0.4 + amount * 0.6) this._hitCall('flap', amount);
       return;
     }
-    if (this.stage === 'castle') return this.stageCall('flare', amount);
+    if (this.stage === 'castle') return this._hitCall('flare', amount);
     if (this.stage === 'cathedral') {
-      this.stageCall('debris', amount);
-      if (amount > 0.5 && Math.random() < amount * 0.6) this.stageCall('wings', amount);
+      this._hitCall('debris', amount);
+      if (amount > 0.5 && Math.random() < amount * 0.6) this._hitCall('wings', amount);
       return;
     }
     if (this.stage === 'darkhall') {
-      if (Math.random() < 0.4 + 0.5 * amount) this.stageCall('bat', amount);
-      if (amount > 0.5) this.stageCall('flare', amount * 0.4);
+      if (Math.random() < 0.4 + 0.5 * amount) this._hitCall('bat', amount);
+      if (amount > 0.5) this._hitCall('flare', amount * 0.4);
       return;
     }
-    const rec = this.pickSample('leaves');
+    const rec = this._spaced('leaves') ? this.pickSample('leaves') : null;
     if (rec) {
       const ev = this.event({ bus: this.fleshBus, gain: 0.08 + 0.12 * amount, bright: 4200, prio: 0.2 }); // 잎이 마른 종이처럼 쉬익 새지 않게 위를 닫는다
       this.layer(ev, rec, { rate: between(Math.random, 0.8, 1.0) });
     }
-    if (amount > 0.5 && Math.random() < amount) this.windChime(amount);
+    if (amount > 0.5 && Math.random() < amount && this._spaced('chime')) this.windChime(amount);
   }
 
   /** 새 판: 먹먹함을 푼다 */
@@ -3170,15 +3438,23 @@ export class BodySounds {
     this.swordVy = 0; // 칼이 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
     this.lastLand = -9;
     this.breathT = 0; // 다음 숨 시각 (0 = 지금은 숨을 내지 않는다)
+    this.decap = !!fighter.decapitated; // 참수를 이미 알렸나 (32차)
+    this.headVy = 0; // 떨어진 머리가 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
+    this.lastHead = -9;
   }
 
   update(dt) {
     const f = this.f;
     const s = this.s;
     this.t += dt;
+    // 참수 (32차): fighter.decapitate 가 decapitated 를 켠다(die 와 같은 순간). 절단감 소리를 한 번, 죽음 목소리는 내지 않는다
+    if (f.decapitated && !this.decap) {
+      this.decap = true;
+      s.decapitate({ me: this.me });
+    }
     if (f.state !== this.state) {
       if (f.state === 'dead') {
-        s.death(this.voice, f.causeOfDeath, { me: this.me });
+        if (!f.decapitated) s.death(this.voice, f.causeOfDeath, { me: this.me });
         if (VOICES[this.voice]?.mute) this.thudDue = this.t + 1.2; // 1.2초 안에 몸이 닿지 않으면(이미 누워 있었음) 그때 낸다
       }
       else if (f.state === 'getup' && this.state === 'stand') s.bodyFall(1.2, { light: true }); // 무릎이 꺾여 주저앉음
@@ -3265,6 +3541,19 @@ export class BodySounds {
         this.swordVy = 0;
       } else this.swordVy = vy < 0 ? Math.min(v0, vy) : 0;
     } else this.swordVy = 0;
+
+    // 떨어진 머리가 바닥에 닿음 (32차): 칼과 같은 방법 — 떨어지던 머리가 땅 가까이서 멈추거나 튀면 그 순간. 굴러 튈 때마다 작게
+    const hb = this.decap ? f.bodies?.head : null;
+    if (hb) {
+      const y = hb.translation().y;
+      const vy = hb.linvel().y;
+      const v0 = this.headVy;
+      if (v0 < -0.8 && vy > v0 * 0.35 && y < 0.4) {
+        if (this.t - this.lastHead > 0.12) s.headLand(-v0, { helmet: !!f.hasHelmet, pos: hb.translation() });
+        this.lastHead = this.t;
+        this.headVy = 0;
+      } else this.headVy = vy < 0 ? Math.min(v0, vy) : 0;
+    }
   }
 }
 

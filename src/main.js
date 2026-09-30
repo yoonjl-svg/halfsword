@@ -15,15 +15,17 @@ import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } fr
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL } from './weapons.js';
 import { attachAura } from './aura.js';
-import { Particles, haptic, stickDecal, rebuildDecal } from './effects.js';
+import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
-import { installGunFx, clearGunFx } from './gun_fx.js';
+import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
 import { createSwordTrails } from './sword_trail.js';
+import { createDecapFx } from './decap_fx.js';
 import { PerfMeter } from './perfmeter.js';
+import { createRenderCap } from './render_cap.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
@@ -50,7 +52,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, fpsCap: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -105,7 +107,7 @@ function pickFoe() {
 const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap; // three 0.186 은 PCFSoft 를 없애고 이것으로 바꿔 그렸다 (같은 그림, 경고만 없앰)
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
@@ -195,6 +197,7 @@ resize();
 
 // ── 물리 세계와 등장인물 ──
 const particles = new Particles(scene);
+const decapFx = createDecapFx(particles); // 참수 목 단면·피 분출 (외형 PM, decap_fx.js — 겉모습만)
 const sound = new Sound();
 // 권총(??? 등급) 총구 섬광·연기·총알 궤적·희미한 조준 레이저 (외형 PM, gun_fx.js — 소리는 그대로 두고 GUN_HOOKS.onShot 을 감싼다).
 //  world·combat 은 판마다 새로 만들어지니, 늘 지금 판 것을 가리키는 얇은 겉감을 넘긴다 (읽기만 한다 — 판정과 무관)
@@ -204,6 +207,7 @@ installGunFx({
   sound,
   world: { castRay: (...a) => world?.castRay(...a) ?? null },
   combat: { get info() { return combat?.info; }, get fighters() { return combat?.fighters ?? []; } },
+  shake: (dir, strength) => kickCamera(dir, strength), // 발사 순간 짧은 화면 흔들림 (외형 PM v2, 사장님 '발사 이펙트 약하다')
 });
 sound.setStage(stages.id); // 배경 소리·바닥 소리가 배경을 따른다
 sound.listener = camera; // 배경 소리(성 종 등)의 좌우 자리를 카메라 기준으로 정한다
@@ -220,6 +224,8 @@ let bodySounds = [];
 function clearFlying() {
   clearDebris();
   clearGunFx(); // 총구 섬광·연기도 새 판에 남지 않게
+  // 벗겨진 투구의 긁힌 자국 재질도 푼다 (clearLoose 가 장면에서 떼고 모양을 푼다)
+  for (const f of [player, enemy]) for (const m of f?.meshes ?? []) if (m.kind === 'loose' && m.group.parent) disposeDecals(m.group);
   player?.clearLoose();
   enemy?.clearLoose();
 }
@@ -239,19 +245,93 @@ function prepareRound() {
 }
 
 /**
+ * 판 시작 예열: 싸움 도중 처음 나오는 효과의 셰이더를 지금(메뉴·카드가 가리는 동안) 만든다 — 처음 나오는 순간 멈칫하지 않게.
+ *  상처 자국(캐릭터 겉면에 붙어 캐릭터 조명이 고친 재질) · 칼 잔상 · 피·불꽃 입자 · 칼이 부러질 때의 조각과 부러진 면.
+ *  compile 만 하고 그리지 않는다 (화면 그대로). 캐릭터 조명이 재질을 먼저 고쳐 놓아야(셰이더가 달라진다) 그 셰이더가 준비된다.
+ *  셰이더는 쓰는 재질이 하나라도 살아 있어야 남으므로 예열 재질은 다음 예열까지 들고 있다.
+ *  예열 물체는 따로 된 난수로 만든다 (three 가 UUID 에 Math.random 을 쓴다 — 판의 난수 흐름을 그대로 두게)
+ */
+let fxWarmMats = [];
+let fxWarmSeed = 0x6a09e667;
+let fxWarmGeo = null;
+function quietly(fn) {
+  const real = Math.random;
+  Math.random = () => (fxWarmSeed = (Math.imul(fxWarmSeed, 1664525) + 1013904223) >>> 0) / 4294967296;
+  try {
+    return fn();
+  } finally {
+    Math.random = real;
+  }
+}
+const fragileOf = () => [player, enemy].filter((f) => f.weapon?.fragile && f.swordGroup);
+const breakFace = () => new THREE.MeshStandardMaterial({ flatShading: true, side: THREE.DoubleSide }); // weapon_looks.js breakWeaponLook 톱니 면과 같은 설정
+/** 캐릭터에 잠깐 붙일 예열 물체: 상처 자국(겉면) · 부러진 칼의 톱니 면(칼 그룹) */
+function fxWarmers() {
+  return quietly(() => {
+    fxWarmGeo ??= new THREE.PlaneGeometry(0.001, 0.001);
+    const on = [];
+    const host = Object.values(player.partMesh).find(Boolean);
+    if (host) on.push([host, decalWarmMesh()]);
+    for (const f of fragileOf()) on.push([f.swordGroup, new THREE.Mesh(fxWarmGeo, breakFace())]);
+    return on;
+  });
+}
+function withWarmers(on, fn) {
+  for (const [parent, mesh] of on) parent.add(mesh);
+  try {
+    fn();
+  } finally {
+    for (const [, mesh] of on) mesh.removeFromParent();
+  }
+}
+/** newRound 끝에서: 붙여 둔 예열 물체와 칼 조각(장면에 뜬다)·잔상·입자의 셰이더를 지금 무대 빛으로 만든다 */
+function warmRoundFx(on) {
+  const mats = on.map(([, mesh]) => mesh.material);
+  withWarmers(on, () => {
+    fighterLight.update(fighterMeshes);
+    // 칼 조각 (breakWeaponLook · debris.js spawnDebris 와 같은 재질 설정): 떨어지는 쪽은 칼 재질 복제본(캐릭터 조명이 고친 뒤 복제 —
+    //  조명 셰이더는 안 따라간다)과 톱니 면 복제본을 흐리게 해 장면에 띄운다
+    const loose = quietly(() => {
+      const g = new THREE.Group();
+      const put = (m, geo) => {
+        m.transparent = true;
+        mats.push(m);
+        g.add(new THREE.Mesh(geo, m));
+      };
+      for (const f of fragileOf()) {
+        f.swordGroup.traverse((o) => {
+          if (!o.isMesh || on.some(([, mesh]) => mesh === o)) return;
+          for (let p = o; p && p !== f.swordGroup; p = p.parent) if (!p.visible) return;
+          for (const m of [].concat(o.material)) put(m.clone(), o.geometry);
+        });
+        put(breakFace(), fxWarmGeo);
+      }
+      return g;
+    });
+    scene.add(loose);
+    for (const o of [...on.map(([, mesh]) => mesh), loose, swordTrails.mesh, particles.mesh]) renderer.compile(o, camera, scene);
+    scene.remove(loose);
+  });
+  for (const m of fxWarmMats) m.dispose(); // 지난 예열 재질: 새 것이 같은 셰이더를 잡은 뒤에 푼다
+  fxWarmMats = mats;
+}
+
+/**
  * 싸움판 만들기: prepareRound 가 정한 상대와 주인공 무기(weaponId)로 물리 세계와 두 사람을 새로 세운다.
  *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다).
  */
 function newRound(weaponId) {
   // 다리로 체중 받치기: 게임은 늘 gait.js 걸음(다리가 체중 대부분을 받친다). 오너 결정으로 설정 토글을 없애고 기본 적용했다.
-  //  CONFIG 의 기본값(levitate, 골반을 띄워 받치기)은 시뮬 도구용이다 (tools/sim/hybrid.mjs 로 감싸면 게임과 같다)
+  //  CONFIG 기본값도 'hybrid'라 시뮬 도구가 게임과 같은 걸음을 잰다(9/29). 이 줄은 콘솔·도구가 바꿔 둔 값을 판마다 되돌린다
   CONFIG.BODY.weightMode = 'hybrid';
-  // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다)
+  // 이전 판 정리 (무기 뽑기 때문에 한 판에 두 번 만들 수 있어 모양 데이터는 바로 풀어 준다. 재질·텍스처는 다음 판이 다시 쓴다.
+  //  상처 자국 재질만은 자국마다 새로 만들어 다시 안 쓰니 푼다 — 자국 그림은 종류별로 같이 써서 둔다)
   //  흩어지던 칼·투구·판금 조각과 벗겨진 케틀햇은 캐릭터 그룹 밖(장면)에 있어서 따로 치운다 (두 번 불러도 괜찮다)
   clearFlying();
   for (const g of fighterMeshes) {
     scene.remove(g);
     g.traverse((o) => o.geometry?.dispose());
+    disposeDecals(g);
   }
   fighterMeshes.length = 0;
   if (world) world.free();
@@ -311,15 +391,19 @@ function newRound(weaponId) {
   for (const a of auras) a.dispose();
   auras = [player, enemy].map(attachAura).filter(Boolean);
   for (const c of scene.children) if (!before.has(c)) fighterMeshes.push(c);
+  const fxWarm = fxWarmers(); // 싸움 도중 처음 나오는 효과의 셰이더 예열용 (부활 빛 예열에 같이 넣고, 판 끝에 warmRoundFx)
   if (enemy.revive) {
     // 부활하는 상대: 빛 하나가 더해진 셰이더를 지금(메뉴·카드가 가리는 동안) 만들어 둔다 — 빛이 내려오는 순간 멈칫하지 않게.
-    //  캐릭터 조명이 새 재질을 먼저 고쳐 놓아야(셰이더가 달라진다) 그 셰이더가 준비된다
-    fighterLight.update(fighterMeshes);
-    reviveFx.warm();
+    //  캐릭터 조명이 새 재질을 먼저 고쳐 놓아야(셰이더가 달라진다) 그 셰이더가 준비된다. 예열용 자국·톱니 면도 잠깐 붙여 같이 만든다
+    withWarmers(fxWarm, () => {
+      fighterLight.update(fighterMeshes);
+      reviveFx.warm();
+    });
   }
   const madEyes = attachMadEyes(enemy, currentFoe?.eyes === 'madGlow' || params.has('madEyes')); // 광기의 붉은 안광 (외형 PM, mad_eyes.js — 캐릭터 항목 eyes: 'madGlow' / 시험 ?madEyes=1). 잔상은 장면에 두므로 fighterMeshes 뒤에
   if (madEyes) auras.push(madEyes);
   swordTrails.attach([player, enemy]); // 칼 잔상 띠: 이번 판 두 검객 (지난 띠는 지운다)
+  if (player.weapon?.gun || enemy.weapon?.gun) warmGunFx(renderer, camera); // 권총 효과 재질을 지금 무대 빛으로 미리 컴파일 (첫 발 멈칫 방지)
   // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
   //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
@@ -346,6 +430,7 @@ function newRound(weaponId) {
   // 시간이 흐르기 전에도(무기 뽑기 동안) 선 자세 그대로 보이게 겉모습을 몸에 맞춰 둔다
   player.syncMeshes();
   enemy.syncMeshes();
+  warmRoundFx(fxWarm); // 판 도중 처음 나오는 효과(자국·잔상·입자·칼 조각)의 셰이더 (판의 난수를 다 쓴 뒤 — 그리기 전과 같은 순서)
 }
 
 // ── 타격감 ──
@@ -399,7 +484,7 @@ function onWound(att, vic, r, point, pr) {
       if (r.type === 'stab') stickDecal(mesh, local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
       else stickDecal(mesh, local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len);
       // 피가 옷에 번진다 (상처에서 계속 흐르는 만큼)
-      const wound = vic.wounds[vic.wounds.length - 1];
+      const wound = vic.wounds.findLast((w) => !w.stump); // 참수: 목 단면(stump)은 건너뛰고 목 상처에 번진다
       if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, local, null, 'soak', 0.04, 0.04);
     } else {
       stickDecal(mesh, local, bladeLocal, 'bruise', 0.03, 0.08);
@@ -535,6 +620,7 @@ attachStick(input, $('moveStick'), $('moveKnob'));
 let state = 'menu'; // menu | fight | paused
 let roundOver = false;
 let roundOverTime = 0;
+let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
 
 $('howto').innerHTML = input.isTouchDevice
   ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>폰을 앞뒤로 기울이면 전진·후퇴, 좌우로 기울이면 옆걸음.</li><li>◎ 버튼: 지금 각도를 "똑바로"로 다시 맞춰요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>'
@@ -1105,26 +1191,39 @@ function updatePlayerEmotion(dt) {
 }
 
 // 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
+//  값이 바뀔 때만 스타일을 쓴다 (같은 값을 매 프레임 쓰지 않게 — 보이는 것은 같다)
+const hudLast = { opacity: null, filter: null };
 function updateHud() {
   const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
   const pulse = player.bleed > 0.002 ? 0.15 * (0.5 + 0.5 * Math.sin(performance.now() / 180)) : 0;
   const v = Math.min(1, lost * 0.85 + Math.min(1, player.pain) * 0.35 + pulse);
-  $('vignette').style.opacity = v.toFixed(3);
-  $('vignette').style.filter = player.consciousness < 0.6 ? `blur(${(0.6 - player.consciousness) * 6}px)` : '';
+  const opacity = v.toFixed(3);
+  const filter = player.consciousness < 0.6 ? `blur(${(0.6 - player.consciousness) * 6}px)` : '';
+  if (opacity !== hudLast.opacity) $('vignette').style.opacity = hudLast.opacity = opacity;
+  if (filter !== hudLast.filter) $('vignette').style.filter = hudLast.filter = filter;
+}
+
+/** 판 끝 결과 글자: 결정타 슬로모션(slowMo)이 끝난 뒤에 한 번. 슬로모션 동안 참수·쓰러지는 장면을 글자가 가리지 않게 */
+function showRoundResult() {
+  if (resultShown || slowMo > 0) return;
+  resultShown = true;
+  showToast(lastRoundWon ? '승리' : '패배', 0);
 }
 
 function checkRoundEnd(dt) {
   if (!roundOver) {
     if (!enemy.alive || !player.alive) {
       roundOver = true;
+      resultShown = false;
       const win = !enemy.alive;
       lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
-      showToast(win ? '승리' : '패배', 0);
+      showRoundResult();
       if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
       else lastFoeLine = '';
     }
     return;
   }
+  showRoundResult();
   roundOverTime += dt;
   if (roundOverTime > 3.5 && state === 'fight') {
     state = 'paused';
@@ -1163,20 +1262,25 @@ const _cd = new THREE.Vector3();
 function updateCamera(dt) {
   if (!player || window.game?.freeCam) return; // freeCam: 디버그용으로 카메라를 직접 조종
   // 흔들리는 골반 대신 몸 전체 무게중심을 부드럽게 따라간다
-  const a = camFollow.lerp(player.com || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
-  const b = enemy.com || enemy.pelvisPos;
+  //  (참수된 몸은 무게중심에 날아가는 머리가 섞이니 골반을 따른다)
+  const a = camFollow.lerp((!player.decapitated && player.com) || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
+  const b = (!enemy.decapitated && enemy.com) || enemy.pelvisPos;
   // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지)
   _cd.set(b.x - a.x, 0, b.z - a.z);
   if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
   const right = _cd.set(-camDir.z, 0, camDir.x);
+  // 판 시작: 조금 높고 먼 자리에서 무대를 보여 주다가 발이 풀릴 때(ARENA.startHold)까지 평소 자리로 부드럽게 내려온다 (사장님 9/30).
+  //  시계는 판마다 새로 0부터 세는 player.fightT (싸움 전 메뉴·무기 뽑기 동안엔 0이라 시작 자리에서 기다린다)
+  const open = ARENA.startHold > 0 ? 1 - THREE.MathUtils.smoothstep(player.fightT, 0, ARENA.startHold) : 0;
+  const camH = CAMERA.height + CAMERA.openUp * open;
   camTarget
     .copy(a)
-    .addScaledVector(camDir, -CAMERA.back)
+    .addScaledVector(camDir, -(CAMERA.back + CAMERA.openBack * open))
     .addScaledVector(right, CAMERA.shoulder)
-    .setY(CAMERA.height);
+    .setY(camH);
   // 경기장 바깥 돌벽을 뚫고 나가지 않게
   const r = Math.hypot(camTarget.x, camTarget.z);
-  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(CAMERA.height);
+  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
   const k = 1 - Math.exp(-dt * 6);
   camera.position.lerp(camTarget, k);
   const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1);
@@ -1226,6 +1330,9 @@ function updateGuardName(dt) {
 const perf = params.get('fps') ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
 let last = performance.now();
 let acc = 0;
+// 화면 갱신 상한 (CONFIG.RENDER.fpsCap, 사장님 9/30): 90/120 Hz 화면에서 그리기만 60 fps 로 거른다.
+//  물리 스텝·입력·소리·카메라 따라가기는 rAF 마다 예전 그대로. 거르는 건 renderer.render 와 그 직전의 겉모습 갱신뿐
+const renderCap = createRenderCap();
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -1233,6 +1340,7 @@ function frame(now) {
   let dt = Math.min(0.1, frameMs / 1000);
   last = now;
   let physMs = 0, physSteps = 0, capped = false, simWant = 0, simGot = 0; // 성능 측정 표시(?fps=1)용
+  const paint = renderCap.tick(dt, settings.fpsCap ? CONFIG.RENDER.fpsCap : 0); // 이번 프레임을 그리나
 
   if (state === 'fight' && player) {
     // 손 목표 갱신 (입력 → 플레이어)
@@ -1307,12 +1415,16 @@ function frame(now) {
       updateWhoosh(f, dt * scale);
       updateDrips(f, dt * scale);
     }
+    decapFx.update([player, enemy], dt * scale); // 참수: 목 단면·피 분출
     updateBindSound();
     for (const b of bodySounds) b.update(dt * scale);
     reviveFx.update(enemy, dt * scale);
     particles.update(dt * scale);
-    for (const a of auras) a.update(now / 1000);
-    swordTrails.update(); // 칼 잔상 띠
+    if (paint) {
+      // 겉모습만 (시계로 도는 빛·안광, 칼 잔상 꼭짓점): 그리는 프레임에만
+      for (const a of auras) a.update(now / 1000);
+      swordTrails.update(); // 칼 잔상 띠
+    }
     arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
@@ -1326,13 +1438,17 @@ function frame(now) {
     // 판이 끝나 메뉴가 뜬 뒤에도 흩어지던 칼·투구·판금 조각은 마저 날아 사라진다 (판 끝 슬로모션 0.5배 그대로. 싸움 중 일시정지면 멈춘 채)
     if (roundOver) tickDebris(dt * 0.5);
   }
-  updateCamera(dt);
-  fighterLight.update(fighterMeshes);
-  const renderT0 = perf ? performance.now() : 0;
-  renderer.render(scene, camera);
-  if (perf) perf.frame(now, frameMs, physMs, performance.now() - renderT0, physSteps, capped, simWant, simGot);
+  updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
+  let renderMs = 0;
+  if (paint) {
+    fighterLight.update(fighterMeshes);
+    const renderT0 = perf ? performance.now() : 0;
+    renderer.render(scene, camera);
+    renderMs = perf ? performance.now() - renderT0 : 0;
+  } else camera.updateMatrixWorld(); // 그리기가 해 주던 카메라 행렬 갱신 — 소리 좌우(sound._where)가 읽는다
+  if (perf) perf.frame(now, frameMs, physMs, renderMs, physSteps, capped, simWant, simGot, paint);
   trail.enabled = settings.trail && state === 'fight';
-  trail.draw(now / 1000, !input.isTouchDevice);
+  if (paint) trail.draw(now / 1000, !input.isTouchDevice);
 }
 
 // 메뉴 뒤 배경으로 보일 첫 판을 미리 만들어 둔다
@@ -1340,7 +1456,8 @@ prepareRound();
 newRound(FIXED_WEAPON || 'longsword');
 requestAnimationFrame(frame);
 
-// 디버그/튜닝용: 브라우저 콘솔에서 game.player.blood, game.config.WEAPON.mass = 3 처럼 만져볼 수 있다
+// 디버그/튜닝용: 브라우저 콘솔에서 game.player.blood, game.config.GAIT.kneeBase = 0.2 처럼 만져볼 수 있다
+//  (WEAPON 값은 판을 만들 때 싸움꾼마다 weaponCfg 로 복사된다: 바꾸면 다음 판부터)
 window.game = {
   get player() {
     return player;
@@ -1369,7 +1486,8 @@ window.game = {
   THREE,
   camera,
   freeCam: false,
-  renderInfo: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
+  renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
+  renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 갱신 60 fps 묶기' (game.settings.fpsCap)
   // 배경: game.stage 로 지금 배경·짓는 시간 확인, game.setStage('castle') 로 바로 바꿔 보기 (싸우는 중이면 잠깐 멈칫한다)
   get stage() {
     return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };

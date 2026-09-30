@@ -19,6 +19,7 @@ export class InputTrail {
     this.touch = []; // { x, y, t, v } (null = 손가락을 뗀 자리: 선을 끊는다)
     this.pad = []; // { x, y, t } (패드 좌표, m)
     this.enabled = true;
+    this.drawn = false; // 캔버스에 지우지 않은 그림이 있나 (없으면 지우지 않는다 — 빈 캔버스를 매 프레임 지우지 않게)
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -28,6 +29,7 @@ export class InputTrail {
     this.dpr = dpr;
     this.canvas.width = Math.round(window.innerWidth * dpr);
     this.canvas.height = Math.round(window.innerHeight * dpr);
+    this.drawn = false; // 크기를 정하면 캔버스가 비워진다
   }
 
   /** 손가락이 움직였다 (화면 좌표 px, 시간 초) */
@@ -57,19 +59,25 @@ export class InputTrail {
     this.touch.length = 0;
     this.pad.length = 0;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.drawn = false;
   }
 
   draw(now, showPad) {
     const g = this.ctx;
     const dpr = this.dpr;
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (this.drawn) {
+      g.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.drawn = false;
+    }
     if (!this.enabled) return;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.lineCap = 'round';
     // 오래된 점 버리기
     while (this.touch.length && (this.touch[0] === null || now - this.touch[0].t > LIFE)) this.touch.shift();
     while (this.pad.length > 1 && now - this.pad[0].t > LIFE) this.pad.shift();
+    // 아래에서 무엇이든 그릴 수 있으면 다음 프레임에 지운다 (선 두 점 이상, 또는 마우스 원판)
+    if (this.touch.length > 1 || (showPad && this.pad.length)) this.drawn = true;
 
     // 손가락 흔적: 어두운 테두리 위에 밝은 선 (모래·하늘 어디서든 보이게). 처음엔 또렷하다가 끝에 빨리 사라진다
     for (const pass of [0, 1]) {

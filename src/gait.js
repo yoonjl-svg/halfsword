@@ -212,6 +212,7 @@ export class Gait {
    */
   requestStep(o = {}) {
     if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
+    if (this.f.feetHeld) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다)
     if (this.f.move.y < -0.1) return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0 };
@@ -293,7 +294,7 @@ export class Gait {
     }
     const speed = Math.hypot(want.x, want.z);
     // 가려는 쪽의 앞뒤 몫 (+1 = 앞으로, −1 = 뒤로): 조종 입력으로 (want에는 균형 잡는 발걸음 등이 섞여 들쭉날쭉하다)
-    const mv = f.move;
+    const mv = f.feetHeld ? null : f.move; // 판 시작 정지 동안엔 조종 입력이 없는 것으로
     const foreFrac = mv && mv.lengthSq() > 1e-6 ? mv.y / mv.length() : 0;
     const backness = clamp((-foreFrac - GAIT.backFrom) / GAIT.backFull, 0, 1); // 뒤로 가는 정도 (0 ~ 1, 비스듬히 물러나는 것도)
     // 걷기 시작·멈추기 판단은 걸러진 속도로, 조금 여유를 두고 (균형 잡는 발걸음(stumble)이 매 스텝 들쭉날쭉해서
@@ -401,7 +402,8 @@ export class Gait {
           next = df > 0 ? 'B' : 'F';
         }
       } else if (next) kind = 'catch';
-      else if (this.idleT > GAIT.settleDelay) {
+      else if (this.idleT > GAIT.settleDelay && !f.feetHeld) {
+        // (판 시작 정지 동안엔 자세 고쳐 딛기도 미룬다. 닿지 않는 발·균형 잡는 걸음은 그대로)
         // 자리 고치기는 settleMax번까지, 몸을 돌려 발이 틀어진 것은 언제든 (발을 돌려 딛는다)
         next = this.settleLeg(this.settles < GAIT.settleMax);
         if (next) {
@@ -500,8 +502,7 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const l = L[k];
       if (!l.stance) continue;
-      const bump = l.tLand < GAIT.loadTime ? Math.sin((Math.PI * l.tLand) / GAIT.loadTime) : 0;
-      l.phi = GAIT.kneeBase + GAIT.loadKnee * bump * (this.walking || l.kind !== 'settle' ? 1 : 0.5);
+      l.phi = GAIT.kneeBase; // 디딜 때 더 굽히기(옛 loadKnee)는 0이라 지웠다. 무게를 받으며 저절로 굽는다
       const Ls = legLen(l.phi);
       const hx = l.hip.x - l.plant.x;
       const hz = l.hip.z - l.plant.z;

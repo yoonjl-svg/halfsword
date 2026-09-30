@@ -3,7 +3,8 @@
 //   · '찌르기'(탭)로 쏜다. 총은 저절로 상대를 겨누지만(자동 조준 — 끌기로 총을 돌리지 않는다, 조이스틱은 이동만) 겨눔이 상대 몸
 //     둘레를 느리게 크게 흔들린다(GUN.sway*). 레이저 점이 몸 위를 들락날락할 때 그 순간에 맞춰 탭하는 것이 실력이다(사장님).
 //     사람은 지금 총신 방향(칼 축 = 몸체 +y, 레이저가 보여 준다)으로 바로 한 발. AI 도 같은 흔들림으로 겨누고, 레이저가 가슴을
-//     지날 때(GUN.aiAimTol) 쏜다. 탄은 무한이지만 한 발 사이 간격(GUN.cooldown)이 길다.
+//     지날 때(GUN.aiAimTol) 쏜다. 싱글액션 6연발(사장님 "사실감"): 겨눈 사격 사이 GUN.cooldown, 여섯 발을 다 쏘면 GUN.reload 초 동안
+//     실린더를 열고 한 발씩 채운다 — 다 채워야 다시 쏠 수 있다.
 //   · 맞으면 늘 같은 세기(GUN.energy)의 찌르기 상처 — 새 상처 종류는 만들지 않는다. 투구·판금은 총알을 막는 대신 그 자리에서 부서진다.
 //     맨머리 한 발 = 즉사, 가슴은 두세 발. 쏘면 팔 동작으로 총구를 튀겨 올린다(GUN.kick*, 물리 반동은 작은 '탁'). 총신 방향으로 레이저(탄 길)를 그린다
 //   · 근접전 불가: 무기 제원이 날 없음·둔기 배율 0 이라 몸을 쳐도 아무 효과가 없다 (weapons.js pistol).
@@ -12,18 +13,24 @@
 //  매 물리 스텝 combat.js afterStep 이 updateGun 을, skill.js thrust 가 gunCanFire 를, ai.js 가 gunAI 를 부른다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { ANATOMY, ARENA } from './config.js';
+import { ANATOMY, ARENA, COMBAT } from './config.js';
 
 /** 권총을 든 동안 화면에 띄우는 자세 이름 (사장님: "사격 자세 라고 써") — main.js 자세 이름 표시가 GUARDS 대신 쓴다 */
 export const GUN_STANCE = { name: '사격 자세', desc: '총이 저절로 상대를 겨누며 흔들린다 · 레이저가 몸에 걸린 순간 탭으로 쏜다' };
 
 export const GUN = {
   energy: 70, // J: 맞으면 늘 이 세기의 찌르기 (사장님 '10 J 정도 약하게': 80 → 70. 머리는 한 발에 즉사 — 투구·판금이 덮은 곳은 막히고 방어구가 부서진다). 가만히 선 상대 실측(tools/sim/gun_dummy.mjs): 머리 55 J 부터 즉사 · 70 J 가슴 2발은 산다 · 3발이면 죽는다 (가슴 두 발로 죽는 가장 낮은 값은 75 J)
-  cooldown: 2.5, // 초: 한 발 쏜 뒤 다음 발까지 (장전 소리는 이게 끝날 때). 사장님: 6.5 → 4.5 → 4 → 3 → 2.5
+  // 탄창 (사장님 9/29 "사실감이 중요하다" — 건슬링어의 리볼버는 싱글액션 6연발): 겨눈 사격 사이 0.7초, 여섯 발 다 쏘면 장전 9초(다 채워야 쏜다)
+  //  실제 싱글액션: 숙련자가 겨누고 쏘면 0.4~0.6초, 보통 0.8~1.5초 · 게이트 장전(빈 탄피 하나씩 빼고 한 발씩 넣기) 숙련자 8~15초 [일반 수치, 출처 미대조]
+  rounds: 6, // 실린더에 드는 탄
+  cooldown: 0.7, // 초: 한 발 쏜 뒤 다음 발까지 (공이치기를 젖히고 반동에서 돌아와 다시 겨눔). 예전(단발) 6.5 → … → 2.5
+  reload: 9, // 초: 여섯 발을 다 쏘면 장전 — 게이트를 열고(reloadOpen) 한 발씩 넣고 닫는다(reloadClose). 다 끝나야 다시 쏜다
+  reloadOpen: 0.9, // 초: 장전 첫머리 — 게이트를 열고 빈 탄피를 밀어낸다 (그 뒤부터 한 발씩 넣는 딸깍)
+  reloadClose: 0.8, // 초: 장전 끝 — 게이트를 닫고 공이치기를 젖힌다 ("철-컥")
   range: 25, // m: 총알이 닿는 거리
   armorBlunt: 0.25, // 투구·판금이 막으면(그리고 바로 부서지면) 몸에는 세기의 이 비율만 둔하게 전해진다
   laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
-  aiAimTol: 3, // 도: AI 는 총구가 상대 가슴에서 이만큼 안일 때만 쏜다 — 흔들림(swayYaw)보다 좁게: 사람처럼 흔들리는 겨눔이 가슴을 지날 때를 기다린다
+  aiAimTol: 3, // 도: AI 는 총구가 상대 가슴이나 머리에서 이만큼 안일 때만 쏜다 — 흔들림(swayYaw)보다 좁게: 사람처럼 흔들리는 겨눔이 가슴을 지날 때를 기다린다
   aiFirst: 1.5, // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
   maxWait: 0.6, // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
   // 사격 자세 (사장님: 한 손 사격 자세) — gunPose. 몸 기준 [앞, 위, 총 든 쪽] (m·도)
@@ -35,20 +42,27 @@ export const GUN = {
   //  않는다 — 그래도 주기마다 가슴 가운데 근처(4 m 에서 10 cm 안)를 지난다.
   //  보통 결투 거리(3~4 m)에서 몸통 반폭은 ±3~4° — 옆 10° 면 레이저 점이 몸통 밖으로 확실히 나갔다가 돌아온다. 사장님이 해 보고 조정할 손잡이
   swayYaw: 10, // 도: 옆 흔들림 폭 (가운데에서 끝까지)
-  swayPitch: 4, // 도: 위아래 흔들림 폭 (8자의 두 고리 높이). 클수록 가슴을 가파르게 비스듬히 지나 몸통 위에 머무는 때가 짧다
+  swayPitch: 6, // 도: (9/29 4 → 6: 머리와 가슴을 오가게) 위아래 흔들림 폭 (8자의 두 고리 높이). 클수록 가슴을 가파르게 비스듬히 지나 몸통 위에 머무는 때가 짧다
   swayPeriod: 2.6, // 초: 8자 한 바퀴 (그 사이 가슴을 두 번 지난다). 짧을수록 빠르게 흔들린다
   swayWobble: 0.35, // 흔들리는 빠르기가 이 비율만큼 느리게 오르내린다 (0 이면 늘 같은 박자)
   swayBreath: 0.25, // 폭이 이 비율만큼 느리게 커졌다 작아진다 (0 이면 늘 같은 크기)
   swayDrift: 1.2, // 도: 8자의 가운데가 가슴 둘레를 이만큼 느리게 떠돈다 (0 이면 늘 가슴 한가운데를 지난다)
-  aimLow: 0.07, // m: 겨누는 점을 상대 가슴 몸체 중심에서 이만큼 내린다 — 총구가 총신 줄에서 주먹 위로 8 cm 올라와 있어 흔들림 가운데가 가슴 위로 뜨지 않게
+  aimLow: 0.07, // m: (예전) 겨누는 점을 상대 가슴 몸체 중심에서 이만큼 내린다 — 총구가 총신 줄에서 주먹 위로 8 cm 올라와 있어 흔들림 가운데가 가슴 위로 뜨지 않게
+  // 겨누는 가운데 (사장님 9/29 "머리 가슴 사이 근처를 지금보다 불확실하게 흔들리며 랜덤 조준"): 가슴 몸체와 머리 사이 이 비율 자리(0 = 가슴, 1 = 머리) — aimLow 는 그 뒤에 뺀다
+  aimMid: 0.5,
+  // 불규칙한 흔들림: 8자 위에 얹는 매끄러운 무작위 떠돌이. swayRandHold 초마다 새 목표(옆 ±swayRandYaw°, 위아래 ±swayRandPitch°)를 전용 난수로 뽑아
+  //  부드럽게 옮겨 간다 — 언제 몸에 걸릴지 읽기 어렵게. 판정 난수(Math.random·탄 퍼짐)와 분리한 검객별 난수라 칼 판은 바이트 그대로
+  swayRandYaw: 5,
+  swayRandPitch: 5,
+  swayRandHold: 0.45,
   sideOn: -35, // 몸을 결투 사수처럼 반쯤 옆으로: 가슴을 이만큼 틀어 총 든 어깨를 앞으로 (도, 찌르기 몸 −20 과 같은 쪽)
   // 쏘는 동작 (사장님: "반동이 아니라 동작으로 총 쏘는 느낌을", 무기 PM 제안): 쏜 직후 총구를 위로 꺾고 손을 뒤로 당긴 뒤 장전 자세로 잇는다
   kickDeg: 16, // 도: 쏜 직후 총구를 이만큼 위로 꺾는다 (자세 목표 — 손목이 조금 넘쳐 실제 총구는 0.06초에 약 24° 까지 든다, 물리 반동 약 3° 포함)
   kickBack: 0.04, // m: 손을 이만큼 뒤로 당긴다
   kickTime: 0.08, // 초: 꺾은 채로 이만큼 — 그 뒤 장전 자세가 시작된다
   kickFade: 0.15, // 초: 꺾음이 이만큼에 걸쳐 풀리며 장전 자세로 넘어간다
-  reloadIn: 0.25, // 초: 꺾음(kickTime) 뒤 이만큼에 걸쳐 총을 가슴 앞으로 당겨 올리고
-  reloadOut: 0.6, // 초: 장전 끝 이만큼 전부터 다시 뻗는다 (장전이 끝나는 순간엔 이미 겨누고 있게)
+  reloadIn: 0.35, // 초: (장전 때만) 꺾음 뒤 이만큼에 걸쳐 총을 가슴 앞으로 당겨 올리고 실린더 쪽을 연다
+  reloadOut: 0.6, // 초: 장전 끝 이만큼 전부터 다시 뻗는다 (장전이 끝나는 순간엔 이미 겨누고 있게). 발 사이(cooldown)에는 당겨 올리지 않고 겨눈 채 공이치기만 젖힌다
   droop: 0, // 도: 뻗은 팔·총이 무게로 처지는 만큼 겨눔을 위로 올려 준다 (gunPose)
   recoilBack: 0.5, // N·s: 쏠 때 총을 뒤로 미는 충격 (사장님 '수전증처럼 떨려' → ×1.75(0.875) 에서 되돌림. 보이는 튐은 kick* 동작이 맡는다)
   recoilUp: 0.2, // N·s: 총구를 위로 차 올리는 충격 (총구에 건다). 0.35 → 0.2 되돌림 — 손목이 안정된 지금은 약 4° 튀었다 0.05초에 제자리인 짧은 '탁'
@@ -58,7 +72,7 @@ export const GUN = {
 /** main.js·효과 모듈이 이어 줄 자리: onShot(fighter, pos, dir, dist) — dir: 실제 총알 방향(퍼짐·AI 보정 포함), dist: 닿은 곳까지 거리(빗나가면 GUN.range), onReload(fighter, pos),
  *  onImpact(fighter, point, dir, what) — 총알이 닿은 곳과 날아간 방향(what: 'body' 몸 · 'world' 땅·벽 · 'weapon' 칼).
  *  빗나가 아무 데도 안 닿으면 부르지 않는다. 보여 주기만 (외형 PM gun_fx 의 탄착 먼지·궤적) */
-export const GUN_HOOKS = { onShot: null, onReload: null, onImpact: null };
+export const GUN_HOOKS = { onShot: null, onReload: null, onImpact: null, onReloadStart: null, onLoadRound: null }; // onReloadStart: 게이트 열기 · onLoadRound: 한 발 넣기 딸깍 · onReload: 닫고 젖히기
 
 const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
@@ -100,24 +114,27 @@ export function gunPose(f, pose) {
   // 상대 가슴 (몸 기준)
   const c = f.bodies.chest.translation();
   const t = foe.bodies.chest.translation();
+  const hd = headOff(foe) ? t : foe.bodies.head?.translation() ?? t; // 떨어진 머리·죽은 상대는 가슴만
+  const m = GUN.aimMid;
   _gq.copy(f.yaw).invert();
-  _ga.set(t.x - c.x, t.y - GUN.aimLow - c.y, t.z - c.z).applyQuaternion(_gq).sub(_gp.set(S[0], S[1], S[2]));
+  _ga.set(t.x + (hd.x - t.x) * m - c.x, t.y + (hd.y - t.y) * m - GUN.aimLow - c.y, t.z + (hd.z - t.z) * m - c.z).applyQuaternion(_gq).sub(_gp.set(S[0], S[1], S[2]));
   if (_ga.lengthSq() < 1e-6) _ga.set(1, 0, 0);
   _ga.normalize();
   // 흔들림: 옆(몸 위 축 둘레)·위아래(옆 축 둘레)로 돌린다 — 손과 총구가 같이 돈다. 위상은 검객마다 다르게
   const sw = gunSway(g.t ?? 0, f.index * 2.1, _sw);
-  _ga.applyAxisAngle(_gu, sw.yaw * D2R);
+  const rs = g.rs ?? { yaw: 0, pitch: 0 }; // 불규칙한 떠돌이 (updateGun 이 옮긴다)
+  _ga.applyAxisAngle(_gu, (sw.yaw + rs.yaw) * D2R);
   const side = _gs.crossVectors(_ga, _gu).normalize();
-  _ga.applyAxisAngle(side, (sw.pitch + GUN.droop) * D2R).normalize();
+  _ga.applyAxisAngle(side, (sw.pitch + rs.pitch + GUN.droop) * D2R).normalize();
   // 쏜 뒤 지난 시간 (쏜 다음 스텝에 0)
-  const ts = g.cool > 0 ? GUN.cooldown - g.cool : Infinity;
+  const ts = g.since ?? Infinity;
   // 쏘는 동작: kickTime 동안 꺾은 채로, 그 뒤 kickFade 에 걸쳐 풀린다 (장전 자세가 이어받는다)
   //  (꺾을 때도 반 박자 안에 부드럽게 올린다 — 한 스텝에 꺾으면 손목이 넘쳐 한 번 더 출렁였다)
   const up = Math.min(1, ts / (0.5 * GUN.kickTime));
   const e = ts < GUN.kickTime ? up * up * (3 - 2 * up) : ts < GUN.kickTime + GUN.kickFade ? 1 - (ts - GUN.kickTime) / GUN.kickFade : 0;
   // 장전: 꺾음 뒤 당겨 올리고, 끝나 갈 때 다시 뻗는다 (0 = 뻗음, 1 = 가슴 앞)
   let r = 0;
-  if (g.cool > 0) r = Math.max(0, Math.min(1, (ts - GUN.kickTime) / GUN.reloadIn, g.cool / GUN.reloadOut));
+  if (g.cool > 0 && g.reloading) r = Math.max(0, Math.min(1, (ts - GUN.kickTime) / GUN.reloadIn, g.cool / GUN.reloadOut)); // 장전 때만 당겨 올린다
   r = r * r * (3 - 2 * r);
   const L = GUN.armLen * (1 - 0.45 * r);
   for (let k = 0; k < 3; k++) pose.hand[k] = S[k] + _ga.getComponent(k) * (L - GUN.kickBack * e); // 꺾을 때 손을 겨눔 줄 따라 뒤로 당긴다
@@ -146,8 +163,17 @@ function aimErr(f) {
   const r = f.sword.rotation();
   const ax = _gp.set(0, 1, 0).applyQuaternion(_gq.set(r.x, r.y, r.z, r.w));
   const o = muzzle(f, new THREE.Vector3());
-  const c = foe.bodies.chest.translation();
-  return (ax.angleTo(new THREE.Vector3(c.x - o.x, c.y - o.y, c.z - o.z)) * 180) / Math.PI;
+  // 가슴과 머리 중 가까운 쪽 (9/29: 겨눔 가운데가 가슴과 머리 사이로 올라갔다 — 둘 중 하나에 걸리면 쏜다)
+  const err = (b) => {
+    const c = b.translation();
+    return (ax.angleTo(new THREE.Vector3(c.x - o.x, c.y - o.y, c.z - o.z)) * 180) / Math.PI;
+  };
+  return Math.min(err(foe.bodies.chest), foe.bodies.head && !headOff(foe) ? err(foe.bodies.head) : 180);
+}
+
+/** 겨눌 머리가 없다: 참수됐거나(몸에서 떨어진 머리) 죽은 상대 (COMBAT.decapitate 를 끄면 예전처럼 늘 머리도 본다) */
+export function headOff(foe) {
+  return !!foe.decapitated; // 떨어진 머리만 겨눔에서 뺀다 (죽었지만 머리가 붙은 상대는 그대로 — 스위치가 참수 판 밖의 싸움을 바꾸지 않게, 디렉터 9/30)
 }
 
 /** 총구 (월드): 칼 몸체 (spec.muzzleX, 손잡이+칼날 길이, 0) — 총신이 주먹 위로 올라와 있어 칼 축에서 비켜 있다 */
@@ -158,11 +184,36 @@ function muzzle(f, out) {
 }
 
 function state(f) {
-  return (f.gun ??= { cool: 0, pending: -1, shots: 0, hits: 0, seed: (0x2545f491 ^ Math.imul(f.index + 1, 0x9e3779b9)) >>> 0 });
+  return (f.gun ??= { cool: 0, pending: -1, shots: 0, hits: 0, ammo: GUN.rounds, reloading: false, since: Infinity, seed: (0x2545f491 ^ Math.imul(f.index + 1, 0x9e3779b9)) >>> 0, sseed: (0x68e31da4 ^ Math.imul(f.index + 7, 0x85ebca6b)) >>> 0 });
 }
 function rand(g) {
   g.seed = (Math.imul(g.seed, 1664525) + 1013904223) >>> 0;
   return g.seed / 4294967296;
+}
+/** 흔들림 전용 난수 (탄 퍼짐 난수와 따로 — 흔들림을 바꿔도 탄 퍼짐 순서가 그대로) */
+function srand(g) {
+  g.sseed = (Math.imul(g.sseed, 1664525) + 1013904223) >>> 0;
+  return g.sseed / 4294967296;
+}
+/** 불규칙한 떠돌이: swayRandHold 초마다 새 목표를 뽑아 매끄럽게(smoothstep) 옮겨 간다 → g.rs { yaw, pitch } (도) */
+function updateRandSway(g, dt) {
+  const H = GUN.swayRandHold;
+  if (!g.rsA) {
+    g.rsA = { yaw: 0, pitch: 0 };
+    g.rsB = { yaw: (srand(g) * 2 - 1) * GUN.swayRandYaw, pitch: (srand(g) * 2 - 1) * GUN.swayRandPitch };
+    g.rsT = 0;
+    g.rsH = H;
+  }
+  g.rsT += dt;
+  if (g.rsT >= g.rsH) {
+    g.rsA = g.rsB;
+    g.rsB = { yaw: (srand(g) * 2 - 1) * GUN.swayRandYaw, pitch: (srand(g) * 2 - 1) * GUN.swayRandPitch };
+    g.rsT -= g.rsH;
+    g.rsH = H * (0.6 + 0.8 * srand(g)); // 머무는 시간도 들쭉날쭉
+  }
+  const u = Math.min(1, g.rsT / g.rsH);
+  const e = u * u * (3 - 2 * u);
+  g.rs = { yaw: g.rsA.yaw + (g.rsB.yaw - g.rsA.yaw) * e, pitch: g.rsA.pitch + (g.rsB.pitch - g.rsA.pitch) * e };
 }
 
 /** 지금 쏠 수 있나 (skill.js thrust 가 묻는다). 쏠 수 있으면 이번 찌르기에 한 발을 건다 */
@@ -174,22 +225,44 @@ export function gunCanFire(f, { now = false } = {}) {
   return true;
 }
 
-/** 매 물리 스텝: 걸어 둔 한 발을 팔이 뻗을 때 쏘고, 장전 시간을 센다 */
+/** 매 물리 스텝: 걸어 둔 한 발을 팔이 뻗을 때 쏘고, 발 사이·장전 시간을 센다 */
 export function updateGun(f, world, combat, dt) {
   const g = state(f);
   g.t = (g.t ?? 0) + dt; // 흔들림 시계 (물리 스텝마다, 상태와 상관없이 흐른다)
+  g.since += dt;
+  updateRandSway(g, dt);
   if (GUN.laser) updateLaser(f, g, world, combat);
   if (g.cool > 0) {
+    const before = GUN.reload - g.cool;
     g.cool -= dt;
-    if (g.cool <= 0) sound('onReload', f);
+    if (g.reloading) {
+      // 장전: 게이트를 연 뒤 한 발씩 고르게 넣는다(딸깍), 끝에 닫고 젖힌다
+      const span = GUN.reload - GUN.reloadOpen - GUN.reloadClose;
+      const after = GUN.reload - g.cool;
+      for (let i = 0; i < GUN.rounds; i++) {
+        const ti = GUN.reloadOpen + (span * (i + 0.5)) / GUN.rounds;
+        if (before < ti && after >= ti) sound('onLoadRound', f, i + 1);
+      }
+      if (g.cool <= 0) {
+        g.reloading = false;
+        g.ammo = GUN.rounds;
+        sound('onReload', f);
+      }
+    }
   }
   if (g.pending < 0) return;
   g.pending += dt;
   if (!f.alive || !f.armed) return void (g.pending = -1);
   if (!f.skill?.thrustPush && g.pending < GUN.maxWait) return;
   g.pending = -1;
-  g.cool = GUN.cooldown;
   g.shots++;
+  g.since = 0;
+  g.ammo--;
+  if (g.ammo <= 0) {
+    g.reloading = true;
+    g.cool = GUN.reload;
+    sound('onReloadStart', f);
+  } else g.cool = GUN.cooldown;
   fire(f, world, combat);
 }
 
@@ -373,12 +446,13 @@ function sound(kind, f, ...more) {
   if (hook) return hook(f, p, ...more);
   const snd = globalThis.window?.game?.sound;
   if (!snd?.ctx || !snd._on) return;
-  (kind === 'onShot' ? gunshotSound : reloadSound)(snd, p);
+  ({ onShot: gunshotSound, onReload: reloadSound, onReloadStart: gateOpenSound, onLoadRound: loadRoundSound })[kind]?.(snd, p);
 }
 
 // ── 소리 (sound.js 의 이벤트·묶음을 그대로 빌려 쓴다: 전체 음량·끄기·먹먹함을 따른다) ──
 /** 총소리: 짧고 센 잡음 터짐 + 낮은 "쿵" + 경기장에 울리는 꼬리 */
 export function gunshotSound(snd, pos) {
+  if (snd.gunshot) return snd.gunshot({ pos }); // 30차: 총성은 sound.js 의 gunshot 이 낸다 (.357/.44급 + 무대 울림). 아래는 옛 소리 — sound.js 가 오래된 판일 때만
   const c = snd.ctx;
   const ev = snd.event({ bus: snd.metalBus, gain: 2.2, prio: 3, pos }); // 사장님 '총성도 크게': 1.2 → 2.2 (약 +5 dB)
   const t = c.currentTime;
@@ -410,7 +484,44 @@ export function gunshotSound(snd, pos) {
   ev.srcs.push(src, o);
   ev.end = t + 0.62;
 }
-/** 장전 소리: 슬라이드를 당겼다 놓는 쇳소리 두 번 "철-컥" */
+/** 짧은 쇳소리 몇 개 (장전 소리들이 같이 쓴다): [[시각 s, 중심 주파수 Hz, 세기, 길이 s], ...] */
+function clicks(snd, pos, list, gain) {
+  const c = snd.ctx;
+  const ev = snd.event({ bus: snd.metalBus, gain, prio: 1, pos });
+  const t0 = c.currentTime;
+  const nb = snd._noiseBuf();
+  let end = t0;
+  for (const [dt, f, amp, len] of list) {
+    const t = t0 + dt;
+    const src = c.createBufferSource();
+    src.buffer = nb;
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = f;
+    bp.Q.value = 6;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(amp, t + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    src.connect(bp).connect(g).connect(ev.input);
+    src.start(t, Math.random() * 3);
+    src.stop(t + len + 0.01);
+    ev.srcs.push(src);
+    end = Math.max(end, t + len + 0.01);
+  }
+  ev.end = end;
+}
+/** 장전 시작: 게이트를 열고(딸깍) 빈 탄피 여섯을 밀어내 떨어뜨린다(짤랑) */
+export function gateOpenSound(snd, pos) {
+  const list = [[0, 2800, 0.9, 0.05]];
+  for (let i = 0; i < 6; i++) list.push([0.25 + i * 0.07, 5200 + 400 * (i % 3), 0.35, 0.04]);
+  clicks(snd, pos, list, 0.45);
+}
+/** 한 발 넣기: 탄이 약실에 들어가는 작은 "딸깍" + 실린더를 한 칸 돌리는 "틱" */
+export function loadRoundSound(snd, pos) {
+  clicks(snd, pos, [[0, 3600, 0.8, 0.035], [0.09, 5000, 0.45, 0.025]], 0.4);
+}
+/** 장전 소리(끝): 게이트를 닫고 공이치기를 젖히는 쇳소리 두 번 "철-컥" */
 export function reloadSound(snd, pos) {
   const c = snd.ctx;
   const ev = snd.event({ bus: snd.metalBus, gain: 0.5, prio: 1, pos });

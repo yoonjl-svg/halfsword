@@ -20,12 +20,12 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, BODY, SKILL } from './config.js';
+import { AI_LEVELS, ARENA, BODY, SKILL } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
-import { EMO_REST, EMO_REST_ALL, emoMods } from './emotions.js';
+import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -63,7 +63,7 @@ export const MEASURED = {
 };
 const LS_MEASURED = MEASURED.longsword;
 
-// 감정 텀 상수와 고유 능력 배율표는 emotions.js 에 (플레이어와 같은 값을 쓴다)
+// 감정 판정(Emotions)·텀 상수·고유 능력 배율표는 emotions.js 에 (플레이어와 같은 규칙)
 export class AI {
   /**
    * persona: 캐릭터마다 다른 개성을 주입한다 (characters.js). 안 주면(undefined) 예전과 똑같은
@@ -141,16 +141,15 @@ export class AI {
       techPref,
     };
     // 감정 셋 (공포·분노·집념): 지배 감정 하나 + 세기 0~1 + 시간 감쇠 — 자세히는 emote() 참고.
-    //  지금 검술에 효과를 내는 것은 공포뿐이고(this.fear), 분노·집념은 판정만 하며 세기와 지배 시간을 잰다
-    this.emo = { fear: 0, anger: 0, obsession: 0 };
+    //  판정(사건·세기·감쇠·지배·텀·무기 사건 한 번만·막힌 시각)은 emotions.js Emotions 한 곳이 한다 (플레이어와 같은 규칙).
+    //  문턱값은 this.pers 를 그대로 읽는다. this.emo(세기)·this.emotion(지배 감정)은 그 판정의 값이다
+    this.emoCore = new Emotions();
+    this.emoCore.th = this.pers;
+    this.emo = this.emoCore.E;
+    this.emoEv = { hurt: false, bleeding: false, nearMiss: false, weaponBroken: false, disarmed: false, foeLegendNear: false, foeBroke: false, parried: false, winning: false, foeBleeding: false, landed: false }; // 이번 스텝 사건 (emote 가 채운다)
     this.anger = 0; // 검술에 실제로 걸리는 분노 세기 (분노가 지배 감정일 때만 > 0)
     this.obsession = 0; // 검술에 실제로 걸리는 집념 세기 (집념이 지배 감정일 때만 > 0)
-    this.emotion = null; // 지배 감정 이름 (없으면 null)
     this.fear = 0; // 검술에 실제로 쓰는 공포 세기 (다른 감정이 지배하면 0)
-    this.emoT = 0;
-    this.parryTimes = []; // 최근 막힌 시각들 (분노 판정: 10초 안에 두 번)
-    this.emoRest = { fear: -1, anger: -1, obsession: -1 }; // 감정별로 다시 지배할 수 있는 시각 (풀린 뒤 텀)
-    this.emoRestAll = -1; // 어떤 감정이든 다시 켜질 수 있는 시각
     // 시작 감정 (캐릭터 시트 persona.startEmotion, 예: { anger: 0.7 }): 서사대로 결투를 그 감정에 잠긴 채 시작한다.
     //  세기는 그대로 emote()의 감쇠·지배 규칙을 따른다(사건이 없으면 사그라든다). 기본 AI에는 없어 예전과 같다
     const SE = this.persona.startEmotion;
@@ -169,10 +168,6 @@ export class AI {
     }
     this.evParried = false; // 이번 스텝에 생긴 사건들 (afterStrike가 켜고 emote가 끈다)
     this.evLanded = false;
-    // 무기 사건은 한 번만 공포로 센다 (무기·검술 담당 추가, emote() 참고)
-    this.sawBroken = false; // 내 무기가 부러진 것을 알아챘나
-    this.sawDisarmed = false; // 칼을 놓친 것을 알아챘나
-    this.sawFoeBroken = false; // 상대 무기가 부러진 것을 봤나
     this.tremor = new THREE.Vector2(); // 공포 떨림: 손 위치에 얹는 잔떨림 (보이는 신호)
     this.tremorApplied = new THREE.Vector2(); // 지금 손 위치에 실제로 얹혀 있는 떨림 (누적되지 않게 차이만 더한다)
     this.tremorT = 0;
@@ -252,6 +247,9 @@ export class AI {
     // 부활하는 동안(revive.js): 싸우지 않고 기다린다. 끝나면 집념으로 다시 싸운다
     if (me.revival) return this.holdForRevive(dt);
     if (this.reviving) this.resumeAfterRevive();
+    // 판 시작 정지(ARENA.startHold, 사장님 9/30): 발은 묶인 채 캐릭터마다 서 있는 모습(persona.idle)만 보인다.
+    //  시트에 idle이 없는 기본 AI는 이 분기를 타지 않는다 (예전과 같다)
+    if (me.feetHeld && this.persona?.idle && me.state === 'stand') return this.holdStart(dt);
 
     // 완전히 쓰러졌다: 칼을 머리 위로 들어 가리기만 한다 (팔에도 힘이 거의 없다)
     if (me.state === 'down') {
@@ -374,6 +372,54 @@ export class AI {
 
   // ───────────────────────── 부활 (revive.js) ─────────────────────────
   /** 부활하는 동안: 발을 멈추고 칼을 지금 자세로 든 채 기다린다 (공격하지 않는다). 처음 한 번 감정을 비운다 (떨림도 멎는다) */
+  /**
+   * 판 시작 정지 동안 서 있는 모습 (persona.idle = { guard, gesture }, 캐릭터 PM).
+   *  발은 절대 움직이지 않는다(move 0, 기술 걸음 없음). 시간은 ARENA.startHold 하나만 읽는다.
+   *  gesture: stomp 칼을 어깨에 걸친 채 들썩 / settle 자세를 한 번 비틀었다 고쳐 잡음 / lowTip·still 가만히 / pointFace 칼끝을 얼굴에 겨눴다가 제 자세로
+   */
+  holdStart(dt) {
+    const me = this.me;
+    const I = this.persona.idle;
+    const G = this.school.guards;
+    const guard = G.find((g) => g.name === I.guard) || this.guard;
+    const u = ARENA.startHold > 0 ? clamp(me.fightT / ARENA.startHold, 0, 1) : 1; // 정지 구간 안의 위치 0~1
+    let px = guard.pad[0];
+    let py = guard.pad[1];
+    let speed = this.pers.guardSpeed;
+    if (I.gesture === 'stomp') {
+      py += 0.035 * Math.sin(u * Math.PI * 6); // 발 대신 어깨가 들썩인다 (세 번)
+    } else if (I.gesture === 'settle' && u < 0.45) {
+      px += 0.08; // 한 번 비틀어 잡았다가
+      py -= 0.06;
+    } else if (I.gesture === 'pointFace' && u < 0.5) {
+      const point = G.find((g) => g.name === 'langort');
+      if (point) (px = point.pad[0]), (py = point.pad[1]); // 칼끝을 상대 얼굴 쪽으로 곧게 (빠르기는 기질의 guardSpeed 그대로 — 하한 없음, 디렉터 9/30)
+    }
+    me.move.set(0, 0);
+    this.mode = 'watch';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.feint = null;
+    this.feintPts = 0;
+    this.feintHold = 0;
+    this.stepT = 0;
+    this.guard = guard; // 정지가 풀리면 이 자세에서 싸움을 시작한다
+    this.hand.set(px, py);
+    this.handSpeed = speed;
+    this.prevFoePain = this.foe.pain;
+    this.prevMyPain = me.pain;
+    this.moveHand(dt);
+  }
+
+  /** 지배 감정 이름 (없으면 null) — 감정 판정(this.emoCore)이 가진 값. 시작 감정·부활이 여기로 정한다 */
+  get emotion() {
+    return this.emoCore.emotion;
+  }
+
+  set emotion(v) {
+    this.emoCore.emotion = v;
+  }
+
   holdForRevive(dt) {
     const me = this.me;
     if (!this.reviving) {
@@ -410,8 +456,8 @@ export class AI {
     this.emotion = 'obsession';
     this.fear = this.anger = 0;
     this.obsession = this.emo.obsession;
-    this.emoRestAll = this.emoT + (R.obsessionHold ?? 10);
-    this.emoRest.obsession = -1;
+    this.emoCore.restAll = this.emoCore.t + (R.obsessionHold ?? 10);
+    this.emoCore.rest.obsession = -1;
     this.me.emoMods = emoMods('obsession', this.emo.obsession);
     // 하던 공격·속임수·이어치기를 버리고 간 보기부터 (물고 늘어지니 참을성은 바닥)
     this.mode = 'watch';
@@ -429,10 +475,10 @@ export class AI {
     this.patience = Math.min(this.patience, 0.2);
     this.guardTimer = 0;
     this.decideTimer = 0;
-    this.sawDisarmed = false; // 칼을 다시 쥐었다
+    this.emoCore.sawDisarmed = false; // 칼을 다시 쥐었다
     this.threatSeen = this.threatId;
     this.noThreat = 1;
-    this.parryTimes.length = 0;
+    this.emoCore.parryTimes.length = 0;
     this.foeReach = this.foeM.reach + 0.05;
     this.prevFoePain = this.foe.pain;
     this.prevMyPain = this.me.pain;
@@ -485,6 +531,7 @@ export class AI {
   /**
    * 감정층 (공포·분노·집념). 눈에 보이는 사건으로만 켜지고, 시간이 지나면 가라앉는다. 세기(0~1)는 저마다의
    * 문턱값(pers.fearful·angry·dogged: 이 인물이 그 감정에 얼마나 잘 빠지는가)로 곱해진다.
+   * 아래 사건·세기·감쇠·지배·텀 규칙은 emotions.js Emotions.update 한 곳에 있다 — 여기서는 사건을 모아 넘기고 AI 몫만 더한다.
    *  공포: 베였다(+0.4), 피가 계속 난다(+0.12/s), 상대 칼이 코앞까지 왔다(+0.3/s). 9초 감쇠
    *  분노: 10초 안에 두 번 이상 막혔다(+0.35), 이기고 있는데 맞았다(+0.3). 12초 감쇠
    *  집념: 상대가 피 흘린다(+0.2/s), 방금 맞혔다(+0.3). 8초 감쇠
@@ -506,71 +553,35 @@ export class AI {
    * 문턱값이 전부 0이면 this.fear·this.anger·this.obsession이 늘 0이라 모든 곳이 예전과 똑같이 계산된다.
    */
   emote(dt, hurt, nearMiss) {
-    const P = this.pers;
-    const E = this.emo;
     const me = this.me;
     const foe = this.foe;
-    this.emoT += dt;
-    if (P.fearful <= 0 && P.angry <= 0 && P.dogged <= 0) return;
-    const decay = (v, tau) => v - (v * dt) / tau;
-    let up = 0;
-    if (hurt) up += 0.4;
-    if (me.bleed > 0.01) up += dt * 0.12;
-    if (nearMiss) up += dt * 0.3;
-    // 무기 사건 (무기·검술 담당 추가): 내 무기가 부러졌다(+0.5), 칼을 놓쳤다(+0.4) — 각각 한 번만. 상대가 레전드 무기
-    //  (진품 엑스칼리버 — 겉으로 빛나 누구나 알아본다)를 들고 사정거리 근처에 있으면 위압(+0.08/s). 상대 무기가 부러지면
-    //  한숨 돌린다(공포 −0.2, 한 번만) — 그리고 집념이 +0.3 (아래).
-    if (me.weaponBroken && !this.sawBroken) { this.sawBroken = true; up += 0.5; }
-    if (!me.armed) { if (!this.sawDisarmed) { this.sawDisarmed = true; up += 0.4; } } else this.sawDisarmed = false;
-    if (foe.armed && foe.weapon?.tier === 'legend' && this.d < this.M.reach + 0.5) up += dt * 0.08;
-    const foeBrokeNow = foe.weaponBroken && !this.sawFoeBroken;
-    if (foeBrokeNow) this.sawFoeBroken = true;
-    E.fear = clamp(decay(E.fear, 9) + (up - (foeBrokeNow ? 0.2 : 0)) * P.fearful, 0, 1);
-    up = 0;
-    if (this.evParried) {
-      this.parryTimes.push(this.emoT);
-      this.parryTimes = this.parryTimes.filter((t) => this.emoT - t < 10);
-      if (this.parryTimes.length >= 2) up += 0.35;
-    }
-    if (hurt && foe.blood < me.blood) up += 0.3;
-    E.anger = clamp(decay(E.anger, 12) + up * P.angry, 0, 1);
-    up = 0;
-    if (foe.bleed > 0.01) up += dt * 0.2;
-    if (this.evLanded) up += 0.3;
-    if (foeBrokeNow) up += 0.3; // 상대 무기가 부러졌다: 지금이 기회다
-    E.obsession = clamp(decay(E.obsession, 8) + up * P.dogged, 0, 1);
+    const C = this.emoCore;
+    const E = this.emo;
+    const cur = this.emotion;
+    // 사건 (무기 사건 — 무기·검술 담당 추가: 내 무기가 부러졌다·칼을 놓쳤다는 한 번만. 상대가 레전드 무기(진품 엑스칼리버 —
+    //  겉으로 빛나 누구나 알아본다)를 들고 사정거리 근처에 있으면 위압. 상대 무기가 부러지면 한숨 돌리고 집념이 오른다)
+    const ev = this.emoEv;
+    ev.hurt = hurt;
+    ev.bleeding = me.bleed > 0.01;
+    ev.nearMiss = nearMiss;
+    ev.weaponBroken = me.weaponBroken;
+    ev.disarmed = !me.armed;
+    ev.foeLegendNear = foe.armed && foe.weapon?.tier === 'legend' && this.d < this.M.reach + 0.5;
+    ev.foeBroke = foe.weaponBroken;
+    ev.parried = this.evParried;
+    ev.winning = foe.blood < me.blood;
+    ev.foeBleeding = foe.bleed > 0.01;
+    ev.landed = this.evLanded;
+    if (!C.update(dt, ev)) return; // 문턱값이 전부 0 (기본 AI): 감정층이 꺼져 있다
     this.evParried = this.evLanded = false;
 
-    // 지배 감정 고르기
+    // 아래는 AI 에만 있는 것: 지배 감정이 없으면 공포 세기가 그대로 검술에 걸린다, 발끈한 순간 참을성, 관찰 통계
     const order = ['fear', 'anger', 'obsession'];
-    const cur = this.emotion;
-    const t = this.emoT;
-    // 풀린 감정은 한동안(EMO_REST 초) 다시 지배하지 못하고, 어떤 감정이든 직전 감정이 풀린 뒤 EMO_REST_ALL 초는 쉰다
-    //  — 같은 감정이 연달아 켜지거나 감정이 쉴 새 없이 바뀌지 않게 하는 텀. 세기 자체는 계속 쌓이고 줄어든다
-    const release = (k) => {
-      this.emoRest[k] = t + EMO_REST;
-      this.emoRestAll = t + EMO_REST_ALL;
-    };
-    if (cur && E[cur] < 0.15) {
-      this.emotion = null;
-      release(cur);
-    }
-    const cand = t >= this.emoRestAll ? order.find((k) => E[k] > 0.3 && k !== this.emotion && t >= this.emoRest[k]) : null;
-    if (cand) {
-      const c = this.emotion;
-      // 우선순위가 높은 감정은 지금 지배 감정보다 0.15 이상 약하지만 않으면 넘겨받고, 낮은 감정은 0.15 이상 세야
-      //  넘겨받는다 (두 조건이 동시에 참일 수 없어 매 스텝 왔다 갔다 하지 않는다)
-      const higher = c && order.indexOf(cand) < order.indexOf(c);
-      if (!c || (higher ? E[cand] > E[c] - 0.15 : E[cand] > E[c] + 0.15)) {
-        if (c) release(c); // 자리를 뺏긴 감정도 텀을 쉰다
-        this.emotion = cand;
-      }
-    }
     this.fear = this.emotion === 'fear' || this.emotion === null ? E.fear : 0;
     this.anger = this.emotion === 'anger' ? E.anger : 0;
     this.obsession = this.emotion === 'obsession' ? E.obsession : 0;
     // 고유 능력(emotions.js 배율표): 상처 판정(combat.js)과 발놀림(moveFeet)이 읽는다. 감정이 없으면 전부 1
-    this.me.emoMods = emoMods(this.emotion, this.emotion ? E[this.emotion] : 0);
+    this.me.emoMods = C.mods;
     if (this.emotion === 'anger' && cur !== 'anger') this.patience = Math.min(this.patience, 0.2); // 발끈한 순간: 참을성이 바닥난다
 
     // 관찰용 통계: 감정별 최고 세기, 지배한 시간, 지배 감정으로 켜진 횟수

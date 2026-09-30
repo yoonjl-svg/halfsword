@@ -147,6 +147,18 @@ function withScale(s, v, fn) {
     s._hitScale = prev;
   }
 }
+// 칼→몸 소리 후보 (31·33차): 누르는 동안만 fleshHit 을 바꾼다. 게임은 SOUND.fleshHit
+function withFlesh(s, mode, fn) {
+  const prev = s._fleshHit;
+  s.fleshHit = mode;
+  try {
+    fn();
+  } finally {
+    s._fleshHit = prev;
+  }
+}
+const FLESH_SCENE = (s) => [[40, 'cut'], [90, 'cut'], [140, 'cut'], [110, 'through'], [60, 'stab'], [110, 'stab'], [40, 'blunt']].forEach(([J, k], i) =>
+  setTimeout(() => (k === 'stab' ? s.stab(J) : k === 'blunt' ? s.blunt(J) : s.cut(J, k === 'through')), i * 650));
 const ROWS = [
   ['칼끼리 부딪힘', '맞닿는 속도 2 / 5 / 10 m/s', [2, 5, 10], (s, v) => s.clash(v, 0)],
   ['스치며 긁고 지나감', '빗맞은 칼: 부딪힘 1.5 / 3 / 6 + 미끄러짐 7 m/s', [1.5, 3, 6], (s, v) => s.clash(v, 7)],
@@ -156,6 +168,7 @@ const ROWS = [
   ['찌르기', '20 / 50 / 100 J', [20, 50, 100], (s, v) => s.stab(v)],
   ['타박 (칼 면·손잡이)', '10 / 35 / 100 J', [10, 35, 100], (s, v) => s.blunt(v)],
   ['뼈 (머리·팔·다리 베기)', '베기 + 뼈 80 / 130 / 200 J', [80, 130, 200], (s, v) => (s.cut(v, false), s.bone(v))],
+  ['칼→몸 소리 후보 (33·34차)', '대전 게임식 2 / 날 선 칼 녹음 / 날 선 칼 합성 / 지금 — 각각 베기 40·90·140, 베고 지나감 110, 찌르기 60·110, 칼 면 40 J 을 차례로 (칼 면은 모두 같다)', ['samsho', 'rec', 'synth', 'legacy'], (s, v) => withFlesh(s, v, () => {}) || FLESH_SCENE({ cut: (J, t) => withFlesh(s, v, () => s.cut(J, t)), stab: (J) => withFlesh(s, v, () => s.stab(J)), blunt: (J) => withFlesh(s, v, () => s.blunt(J)) }), ['대전식 2', '녹음', '합성', '지금']],
   ['세기 눈금 A/B: 베기', 'A 지금 / B 로그 무게 — 150 / 300 / 500 J (200 J 까지는 같다)', AB_VALS, (s, v) => withScale(s, v, (J) => s.cut(J, false)), AB_LABELS],
   ['세기 눈금 A/B: 찌르기', 'A 지금 / B 로그 무게 — 150 / 300 / 500 J', AB_VALS, (s, v) => withScale(s, v, (J) => s.stab(J)), AB_LABELS],
   ['세기 눈금 A/B: 강철 × 강철', 'A 지금 / B 로그 무게 — 150 / 300 / 500 J', AB_VALS, (s, v) => withScale(s, v, (J) => s.impact({ a: 'steel', b: 'steel', energy: J })), AB_LABELS],
@@ -182,6 +195,9 @@ ROWS.push(
   ['쓰러짐', '몸통이 떨어지는 속도 1.2(무릎이 꺾임) / 2 / 3 m/s', [1.2, 2, 3], (s, v) => s.bodyFall?.(v, { light: v < 1.5 })],
   ['판금이 막음', '막은 타격 30 / 70 / 120 J (전투 판정이 판금을 알게 되면 부른다)', [30, 70, 120], (s, v) => (s.plateBlock ? s.plateBlock(v) : s.helmet(v))],
   ['판금이 부서짐', '부서지는 타격 60 / 100 / 150 J (깨짐 → 조각 둘~셋이 바닥에 철컥)', [60, 100, 150], (s, v) => (s.plateBreak ? s.plateBreak(v) : s.helmet(v))],
+  ['참수 (32차)', '베고 지나감 150 J + 절단감(목소리 없음) → 떨어진 머리가 굴러 닿음. 맨머리 / 투구째', ['bare', 'helmet'], (s, v) => { s.cut(150, true); s.decapitate?.({}); [[0.55, 3.2], [0.85, 1.6], [1.05, 0.95]].forEach(([t, sp]) => setTimeout(() => s.headLand?.(sp, { helmet: v === 'helmet' }), t * 1000)); setTimeout(() => s.bodyFall(2.2), 900); }, ['맨머리', '투구째']],
+  ['머리가 바닥에 닿음', '떨어지던 속도 1 / 2.5 / 4 m/s (맨머리)', [1, 2.5, 4], (s, v) => s.headLand?.(v, {})],
+  ['리볼버 총성', '한 발 / 세 발 연사. 지금 배경의 울림을 따른다 (배경 소리 바꾸기로 포세이돈·성·성당 비교)', [1, 3], (s, v) => { for (let i = 0; i < v; i++) setTimeout(() => s.gunshot?.({}), i * 380); }, ['한 발', '세 발']],
   ['디딤 (지나는 걸음의 무거운 딛기)', 'footStrike 세기 0.3 / 0.7 / 1.0 (아직 게임에서 안 부른다 — 디렉터가 R2/R4 에서 잇는다)', [0.3, 0.7, 1], (s, v) => s.footStrike?.(v), ['0.3', '0.7', '1.0']],
   ['무기 부러짐', '강철 칼(쇠 팅) / 나뭇가지 / 언 참치 / 나무·참치 둘 다', ['steel', 'wood', 'frozen', 'both'], (s, v) => (v === 'both' ? (s.weaponBreak?.('wood'), s.weaponBreak?.('frozen')) : s.weaponBreak?.(v)), ['강철', '나무', '참치', '둘']],
 );

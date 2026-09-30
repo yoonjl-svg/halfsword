@@ -1,6 +1,10 @@
 // ─────────────────────────────────────────────────────────────
 //  칼 잔상 띠 (외형 PM, 디렉터 R0 화면 신호): 최근 물리 자세 2~4개의 칼 선분(칼자루→칼끝)을 이어 만든 삼각형 띠.
-//   · 더하기 섞기, 약 60 ms 에 사라지고, 칼끝이 빠를수록 짙다 (CONFIG SWORD_TRAIL: vMin 8 m/s 부터 보이기 시작해 vMax 25 m/s 에서 최대).
+//   · 약 60 ms 에 사라지고, 칼끝이 빠를수록 짙다 (CONFIG SWORD_TRAIL: vMin 8 m/s 부터 보이기 시작해 vMax 25 m/s 에서 최대).
+//   · v2 (사장님 9/30 "너무 반짝여서 칼보다 돋보인다, 나뭇가지·낮은 계급 칼엔 어울리지도 않는다"):
+//     보통 섞기의 반투명 띠, 색은 그 칼날 재질 색 × dim(0.55) — 늘 칼보다 어둡고 밤에 흰 부채꼴이 되지 않는다(안개도 받는다).
+//     청강검처럼 칼날 색이 있으면 그 색조. 잔상은 금속 칼날(weapon.material 'steel')이면서 trash 등급이 아닐 때만 —
+//     나뭇가지·고무닭·냉동참치(비금속), 광선검(자체 빛), 리볼버에는 없다.
 //   · 두 검객 띠를 한 BufferGeometry 에 담아 그리기 호출 1번. 물리 스텝마다 sample() (칼자루·칼끝 두 점만 읽는다, 0.1 ms 미만),
 //     프레임마다 update() 가 꼭짓점을 다시 쓴다. 물리·판정에는 손대지 않는다(읽기만).
 //   · 무기가 부러지면 bladePoint 가 남은 토막 길이를 쓰므로 띠도 토막만큼만. 리볼버(weapon.gun)·손에서 놓친 칼에는 안 붙는다.
@@ -13,10 +17,15 @@ import * as THREE from 'three';
 import { SWORD_TRAIL } from './config.js';
 
 const TONES = {
-  normal: new THREE.Color(0xd2dff0), // 찬 강철빛 (밤에도 낮에도 은은히)
-  gold: new THREE.Color(0xffc978), // 멈출 수 없는 구간
-  grey: new THREE.Color(0x9aa0a8), // 복귀 중
+  normal: null, // 칼날 재질 색 × dim
+  gold: new THREE.Color(0xc89a4a), // 멈출 수 없는 구간 (짧고 은은하게 — R5 에서 다른 자리로 옮긴다)
+  grey: new THREE.Color(0x6e7278), // 복귀 중
 };
+const STEEL = new THREE.Color(0xc4cad2); // 칼날 색을 못 읽을 때의 강철
+/** 이 무기에 잔상을 붙이나: 금속 칼날이면서 trash 등급이 아닐 때만 (비금속·광선검·총 없음) */
+export function trailFor(weapon) {
+  return !!weapon && weapon.material === 'steel' && !weapon.gun && weapon.tier !== 'trash';
+}
 const MAX_FIGHTERS = 2;
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -24,21 +33,21 @@ const _b = new THREE.Vector3();
 /** 검객 하나의 최근 자세 고리 (칼자루 h·칼끝 p·게임 시간 t·칼끝 속도 v) */
 function makeSlot() {
   const K = SWORD_TRAIL.samples;
-  return { f: null, tone: TONES.normal, n: 0, head: 0, hx: new Float32Array(K), hy: new Float32Array(K), hz: new Float32Array(K), px: new Float32Array(K), py: new Float32Array(K), pz: new Float32Array(K), t: new Float32Array(K), v: new Float32Array(K) };
+  return { f: null, on: false, base: new THREE.Color(), tone: null, n: 0, head: 0, hx: new Float32Array(K), hy: new Float32Array(K), hz: new Float32Array(K), px: new Float32Array(K), py: new Float32Array(K), pz: new Float32Array(K), t: new Float32Array(K), v: new Float32Array(K) };
 }
 
 export function createSwordTrails(scene) {
   const K = SWORD_TRAIL.samples;
   const maxVerts = MAX_FIGHTERS * (K - 1) * 6; // 자세 사이마다 사각형 하나 = 삼각형 둘
   const pos = new Float32Array(maxVerts * 3);
-  const col = new Float32Array(maxVerts * 3);
+  const col = new Float32Array(maxVerts * 4); // RGBA — 보통 섞기에서 꼭짓점마다 불투명도
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 4).setUsage(THREE.DynamicDrawUsage));
   geo.setDrawRange(0, 0);
   const mesh = new THREE.Mesh(
     geo,
-    new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false }),
+    new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }),
   );
   mesh.name = 'swordTrail';
   mesh.frustumCulled = false;
@@ -53,7 +62,7 @@ export function createSwordTrails(scene) {
     now += dt;
     for (const s of slots) {
       const f = s.f;
-      if (!f || !f.sword || !f.armed || f.weapon?.gun) {
+      if (!s.on || !f || !f.sword || !f.armed) {
         s.n = 0;
         continue;
       }
@@ -85,20 +94,26 @@ export function createSwordTrails(scene) {
   const update = () => {
     let n = 0;
     const { life, vMin, vMax, strength, hiltFade: hf } = SWORD_TRAIL;
-    const put = (x, y, z, r, g, b) => {
+    let cr = 0, cg = 0, cb = 0;
+    const put = (x, y, z, a) => {
       const o = n * 3;
       pos[o] = x;
       pos[o + 1] = y;
       pos[o + 2] = z;
-      col[o] = r;
-      col[o + 1] = g;
-      col[o + 2] = b;
+      const c = n * 4;
+      col[c] = cr;
+      col[c + 1] = cg;
+      col[c + 2] = cb;
+      col[c + 3] = a;
       n++;
     };
     for (const s of slots) {
       if (s.n < 2) continue;
-      const tone = s.tone;
-      // 자세 세기: 나이로 옅어지고 속도로 짙어진다
+      const tone = s.tone ?? s.base;
+      cr = tone.r;
+      cg = tone.g;
+      cb = tone.b;
+      // 자세 세기(불투명도): 나이로 옅어지고 속도로 짙어진다
       const w = (i) => {
         const age = now - s.t[i];
         const k = Math.min(1, Math.max(0, (s.v[i] - vMin) / (vMax - vMin)));
@@ -110,15 +125,13 @@ export function createSwordTrails(scene) {
         const w0 = w(i0);
         const w1 = w(i1);
         if (w0 <= 0.002 && w1 <= 0.002) continue;
-        const r0 = tone.r * w0, g0 = tone.g * w0, b0 = tone.b * w0;
-        const r1 = tone.r * w1, g1 = tone.g * w1, b1 = tone.b * w1;
-        // 사각형 (h0, p0, p1, h1) → 삼각형 (h0,p0,p1) (h0,p1,h1). 칼자루 쪽은 살짝 더 옅게
-        put(s.hx[i0], s.hy[i0], s.hz[i0], r0 * hf, g0 * hf, b0 * hf);
-        put(s.px[i0], s.py[i0], s.pz[i0], r0, g0, b0);
-        put(s.px[i1], s.py[i1], s.pz[i1], r1, g1, b1);
-        put(s.hx[i0], s.hy[i0], s.hz[i0], r0 * hf, g0 * hf, b0 * hf);
-        put(s.px[i1], s.py[i1], s.pz[i1], r1, g1, b1);
-        put(s.hx[i1], s.hy[i1], s.hz[i1], r1 * hf, g1 * hf, b1 * hf);
+        // 사각형 (h0, p0, p1, h1) → 삼각형 (h0,p0,p1) (h0,p1,h1). 칼자루 쪽은 옅게
+        put(s.hx[i0], s.hy[i0], s.hz[i0], w0 * hf);
+        put(s.px[i0], s.py[i0], s.pz[i0], w0);
+        put(s.px[i1], s.py[i1], s.pz[i1], w1);
+        put(s.hx[i0], s.hy[i0], s.hz[i0], w0 * hf);
+        put(s.px[i1], s.py[i1], s.pz[i1], w1);
+        put(s.hx[i1], s.hy[i1], s.hz[i1], w1 * hf);
       }
     }
     geo.setDrawRange(0, n);
@@ -134,11 +147,16 @@ export function createSwordTrails(scene) {
     const handles = [];
     for (let i = 0; i < MAX_FIGHTERS; i++) {
       const s = slots[i];
-      s.f = fighters[i] ?? null;
+      const f = fighters[i] ?? null;
+      s.f = f;
       s.n = 0;
       s.head = 0;
-      s.tone = TONES.normal;
-      handles.push({ setTone: (name) => void (s.tone = TONES[name] ?? TONES.normal) });
+      s.tone = null;
+      s.on = trailFor(f?.weapon);
+      // 띠 색: 그 칼날 재질 색 × dim (청강검이면 그 색조) — 늘 칼보다 어둡다
+      const bc = f?.bladeMesh?.material?.color;
+      s.base.copy(bc ?? STEEL).multiplyScalar(SWORD_TRAIL.dim);
+      handles.push({ setTone: (name) => void (s.tone = TONES[name] ?? null) });
     }
     geo.setDrawRange(0, 0);
     mesh.visible = false;
