@@ -1,6 +1,6 @@
 // 브라우저 스모크: 한 판 시작 → 무기 카드 한 장 고르기 (내 카드 1번. 맨 오른쪽은 상대 칸이라 못 고른다) → 상대 카드가 뒤집히는지 →
 //  싸움 8초 진행 → 콘솔 에러 0 확인 (싸움이 실제로 흘렀는지도 본다). 아틀라스 풀기 로그 ('[atlas] pack decode') 가 싸움 (state 'fight') 전에 찍혔는지,
-//  적용된 손짓 방식·손 몫 (GESTURE.input·DRIVE.hands/handMode/ffFilter) 도 찍는다
+//  적용된 손짓 방식·손 몫 (GESTURE.input·DRIVE.hands/handMode/ffFilter) 을 찍고 주소 질의와 맞는지 본다 (새 브라우저라 저장값 없음: 질의 없으면 기본 감기·몸통만)
 //  실행: vite 개발 서버를 띄운 뒤 (npm run dev) playwright 가 설치된 곳에서
 //    node tools/browser/smoke.mjs http://127.0.0.1:5173 ['?input=stroke&hand=wind']   (셋째 인자 = 주소 뒤 질의, 없으면 그대로)
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
@@ -29,6 +29,13 @@ fightSeen = true;
 console.log('atlas:', atlasLog ? `${atlasLog.text} (싸움 전 ${atlasLog.beforeFight})` : '없음');
 const cfg = await page.evaluate(() => { const C = window.game.config; return { input: C.GESTURE.input, hands: C.DRIVE.hands, handMode: C.DRIVE.handMode, ffFilter: C.DRIVE.ffFilter, gestureAi: C.GESTURE.ai }; });
 console.log('config:', JSON.stringify(cfg));
+{
+  const q = new URLSearchParams(query);
+  const expInput = q.get('input') === 'stroke' ? 'stroke' : 'wind';
+  const wind = q.get('hand') === 'wind';
+  if (cfg.input !== expInput) errors.push(`GESTURE.input ${cfg.input} != query/default ${expInput}`);
+  if (wind ? !(cfg.hands === true && cfg.handMode === 'windOnly' && cfg.ffFilter === true) : cfg.hands !== false) errors.push(`hand config ${JSON.stringify(cfg)} does not match '${wind ? 'wind' : 'trunk'}' (query '${query}')`);
+}
 if (!atlasLog?.beforeFight) errors.push(`atlas decode log not seen before state 'fight' (${atlasLog ? atlasLog.text : 'none'})`);
 const drawn = await page.evaluate(() => ({ foeFlipped: document.querySelector('#draw .wcard.foe').classList.contains('flipped'), foeCard: window.game.draw.ids[2], foeWeapon: window.game.enemy.weapon.id, intro: document.getElementById('foeIntro').textContent }));
 if (!drawn.foeFlipped) errors.push('foe card was not revealed before the fight');
