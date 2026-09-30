@@ -64,10 +64,16 @@ export const BODY = {
 };
 
 // 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면
-//  발을 딛고(걸음 요청) 몸·칼자루로 민다. 새 힘 없음: 걸음·다리 힘·팔 근육·Rapier 접촉이 밀고, 넘어짐은 상대 균형이 정한다.
-//  on=false 면 오늘 그대로 (closeStep 안 부름 → lift 0 → 접기 줄 그대로, AI closeQuarters 첫 줄 return)
+//  발을 딛고(걸음 요청) 몸·칼자루로 민다. 걸음·다리 힘·팔 근육·Rapier 접촉이 밀고, 누르기 동안엔 다리 밀기(legDrive)를 더한다.
+//  넘어짐은 상대 균형이 정한다 (상대 쪽 한도·쿨다운 없음).
+//  on=false 면 오늘 그대로 (closeStep 안 부름 → lift 0 → 접기 줄 그대로, 누르기 없음 → 다리 밀기 없음, AI closeQuarters 첫 줄 return)
 export const CLOSE = {
   on: true,
+  // 다리 밀기(N, 사장님 10/1 02:05 "힘 넣어"): 누르기(2단계) 동안, 내 발 하나라도 땅을 딛고 있을 때(gait pinFeet 가 잰 접촉 힘)
+  //  골반을 상대 가슴 쪽으로 수평으로 미는 땅 반작용. 근육(muscle)·힘(strength)을 곱한다 (shove() 와 같은 곱).
+  //  크기: 버티고 선 어른이 고정된 것을 수평으로 밀 때 최대 힘 ≈ 300~500 N (Chaffin·Andersson·Martin, Occupational Biomechanics 의
+  //  밀기 힘 자료, 확인 전). 그 가운데 400
+  legDrive: 400,
   // 닿는 거리(가슴~가슴, m, 기하): 팔이 가운데로 앞으로 닿는 거리 √(0.565²−0.2²) ≈ 0.53 (armIK 위팔 0.3 + 아래팔 0.27 − 0.005,
   //  어깨 옆 0.2, fighter.js armIK) + 상대 가슴 반두께 0.11 (fighter.js partDefs chest) + 칼자루 hiltLength (weapons.js). 롱소드 ≈ 0.77.
   //  빈손이면 null 을 넘겨 칼자루 0 (몸만). shove() 의 0.75 (fighter.js) 의 무기별판

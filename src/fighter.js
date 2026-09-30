@@ -682,8 +682,9 @@ export class Fighter {
   }
 
   /**
-   * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, config.js CLOSE). 힘을 더하지 않는다: 발은 gait 걸음 요청,
-   *  몸은 스틱 걷기의 다리 힘, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword). 넘어짐은 상대 균형이 정한다.
+   * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, config.js CLOSE). 발은 gait 걸음 요청, 몸은 스틱 걷기의 다리 힘에
+   *  누르기 동안 다리 밀기(CLOSE.legDrive) 하나를 더하고, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword).
+   *  넘어짐은 상대 균형이 정한다.
    *  발사 = 걸쇠 && 밂 && 준비. 1단계(step) 딛기 → req 다리 착지 → 2단계(press) 누르기 → 물리 사건으로 끝 → lift·closeW 되돌림.
    */
   closeStep() {
@@ -747,6 +748,21 @@ export class Fighter {
         }
       }
     }
+    // 다리 밀기 (config.js CLOSE.legDrive, 사장님 10/1 02:05): 누르기 동안만, 내 발 하나라도 땅을 딛고 있으면 (gait.pinFeet 가 이 스텝에
+    //  잰 발의 땅 접촉 힘 l.N, 걸음·발 떼기 판단과 같은 값) 골반을 상대 가슴 쪽으로 수평으로 민다. 땅 반작용이라 반대 힘은 땅이 받는다.
+    //  상대는 닿은 몸·칼로 받고, 넘어짐은 상대 균형이 정한다. 가슴 숙이기는 새 자세 값 없이 기존 걷는 방향 숙이기(driveBalance lean,
+    //  골반 앞 속도)가 맡는다
+    if (b?.phase === 'press' && ((g.legs.F.N || 0) > 0 || (g.legs.B.N || 0) > 0)) {
+      const a = this.bodies.chest.translation();
+      const c = f.bodies.chest.translation();
+      const dx = c.x - a.x;
+      const dz = c.z - a.z;
+      const n = Math.hypot(dx, dz);
+      if (n > 1e-6) {
+        const k = (CLOSE.legDrive * this.muscle * this.strength) / n;
+        this.bodies.pelvis.addForce({ x: dx * k, y: 0, z: dz * k }, true);
+      }
+    }
     // 되돌림 섞기: lift(접기 풀기)·closeW(누르기 무게)는 기존 몸 자세 따라가기 SKILL_BODY.chest(26/s, updateBodyPose 의
     //  임계 감쇠 2차 필터)로 목표를 따라간다. 밀치는 동안 lift → 1, 누르기에서 closeW → 1, 끝나면 둘 다 0 으로 (잠그지 않는다)
     const w = SKILL_BODY.chest;
@@ -802,7 +818,7 @@ export class Fighter {
     this.driveBalance(dt);
     if (this.gait?.active) this.gait.pinFeet();
     this.applyPose(dt);
-    if (this.canShove && CLOSE.on) this.closeStep(); // 근접 밀치기: 힘을 더하지 않는다 (shove() 의 힘 순서 그대로)
+    if (this.canShove && CLOSE.on) this.closeStep(); // 근접 밀치기: 누르기 동안 다리 밀기만 더한다 (shove() 의 힘 순서 그대로)
     this.shove();
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
