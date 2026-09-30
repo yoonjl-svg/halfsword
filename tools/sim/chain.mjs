@@ -21,7 +21,7 @@
 //         (2) 표: 칼끝·손·골반·가슴 최고와 때, 겨눈 선을 지난 때 tc, 사슬 순서(tc 기준), 칼끝 속도의 몸통·팔·손목 몫, 칼 운동에너지, 손목·빈손 일,
 //             근육 한계 포화 비율(fighter.ins 계측 탭), 지연(손가락 → 손 목표 2 cm·손 2 cm·칼끝 5 cm·고른 지연·골반/가슴 5°), 대가(멈춤 넘침·복귀·쏠림·상처)
 //         (3) --json 한 벌. --vs=<앞선 json> 이면 칼끝·KE·상처 에너지 Δ%, 지연 Δms 를 견주고 |Δ| > 3 % 또는 물리 한 스텝 넘는 것에 표를 한다
-//         (4) game/plain 행 (R2 W5): 칼끝 최고·때, tc 운동에너지, 첫 상처 J·ms·부위, tCut 의 손 높이·뒤·손 길, 넘어짐, S·c 최고, 되돌아감(hitch),
+//         (4) game/plain 행 (R2 W5): 칼끝 최고·때 (베기 창 = 획 시작 … 손짓 층이 다시 idle, 최고가 창 끝이면 peakAtEdge), tc 운동에너지, 첫 상처 J·ms·부위, tCut 의 손 높이·뒤·손 길, 넘어짐, S·c 최고, 되돌아감(hitch),
 //             걸음 (tLand − tTc), 사슬 순서 (10 ms 같음), 스텝마다 채널 (f.strike S/φ/φ̇/상태/무리/c/over + drive.debug 전부, json 'channels') + 요약
 //             되돌아감 = tCut … 몸 위상 tc (φB ≥ 0.85, 맨 팔은 손짓 φ) 사이, 손이 tCut 의 제 자리보다 베는 쪽으로 나간 뒤 그 자리로 되돌아가는
 //             빠르기의 최고 (가슴 원점·바라보는 틀). 관문 0.5 m/s. (옛 관문은 φ 0 클립 손 쪽 빠르기라 큰 감기를 앞으로 베는 것을 셌다)
@@ -93,7 +93,6 @@ const HIT_DIST = 1.55; // 맞힘 거리 (costs/probe.mjs)
 const PRE = 0.6; // 기록 시각 0 = 베기 획 − PRE
 const POST_REC = 1.0; // 기록 창: 획 뒤 이만큼 (record_wbs.mjs)
 const POST = 2.5; // 대가 창: 획(멈춤 장면은 손가락 멈춤) 뒤 이만큼
-const WIN = 0.6; // 최고·포화를 찾는 베기 창 (tseq.mjs)
 const STOP_FRAC = 0.5; // 멈춤 장면: 감기 → 끝의 이 비율에서 손가락을 멈춘다 (mx.mjs stop)
 const R2D = 180 / Math.PI;
 
@@ -410,11 +409,17 @@ const r0 = (x) => (x == null || !Number.isFinite(x) ? null : Math.round(x));
 const r1 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(1));
 const r2 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(2));
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
+/** 베기 창 끝: 손가락 획이 끝난 뒤 손짓 층이 처음 idle (상태 0) 로 돌아간 스텝, 없으면 마지막 (고정 창은 최고를 창 끝에서 잘랐다) */
+function strokeEnd(T) {
+  const { S, i0, moveT } = T;
+  for (let i = i0 + Math.round(moveT / DT) + 1; i < S.length; i++) if (S[i].x.st === 0) return i;
+  return S.length - 1;
+}
 function metrics(T) {
   const { S, i0, cut, moveT, scene, dx, dy, tgt, hasTap } = T;
   const t0 = cut.t0;
   const n = S.length;
-  const iEnd = Math.min(n - 1, i0 + Math.round(WIN / DT));
+  const iEnd = strokeEnd(T);
   const ms = (i) => (i == null ? null : Math.round((S[i].gt - t0) * 1000));
   const argmax = (get, a = i0, b = iEnd) => { let best = a; for (let i = a; i <= b; i++) if (get(S[i]) > get(S[best])) best = i; return best; };
   const first = (pred, a = i0, b = n - 1) => { for (let i = a; i <= b; i++) if (pred(S[i], i)) return i; return null; };
@@ -502,14 +507,14 @@ function metrics(T) {
     Object.assign(cost, { recover_ms: iHome == null || tLift == null ? null : Math.round((S[iHome].gt - tLift) * 1000), comMax_m: r3(comMax), comEnd_m: r3(along(S[n - 1])), comSide_m: r3(side(S[n - 1])), comVpk_mps: r2(vPk), settle_ms: ms(iSettle), supportMin: r3(sMin), support9_ms: ms(iS9), catches: T.catches, knockdowns: T.kd });
   }
   if (scene === 'hit') {
-    const hits = T.wounds.filter((w) => w.gt >= t0 && w.gt <= t0 + 0.8);
+    const hits = T.wounds.filter((w) => w.gt >= t0 && w.gt <= S[iEnd].gt);
     const h = hits[0];
     Object.assign(cost, { hits: hits.length, hitZone: h?.zone ?? null, hitE_J: r0(h?.E), hitV_mps: r1(h?.v), hitMEff_kg: r2(h?.mEff), hit_ms: h ? Math.round((h.gt - t0) * 1000) : null });
   }
   const cms = T.commits.filter((c) => c.gt >= t0 - 0.05).map((c) => `${c.st}@${Math.round((c.gt - t0) * 1000)}`);
   return {
     fam: T.fam, mode: T.mode, scene, key: `${T.fam}/${T.mode}/${scene}`, hasTap,
-    tip: r2(tv), tipFD: r2(S[iTipFD].tipVfd), t_tip: ms(iTip), hand: r2(S[iHand].handV), t_hand: ms(iHand), shoulder: r2(S[iSh].shV), t_shoulder: ms(iSh),
+    tip: r2(tv), peakAtEdge: iTip >= iEnd - 1, tWin: ms(iEnd), tipFD: r2(S[iTipFD].tipVfd), t_tip: ms(iTip), hand: r2(S[iHand].handV), t_hand: ms(iHand), shoulder: r2(S[iSh].shV), t_shoulder: ms(iSh),
     pelRate: r0(sg * S[iPel].pelW * R2D), t_pelvis: ms(iPel), chRate: r0(sg * S[iCh].chW * R2D), t_chest: ms(iCh), chAtTip_pct: r0((100 * S[iTip].chW) / (S[iCh].chW || 1)),
     swRelW: r1(S[iRelW].swRelW), t_swRel: ms(iRelW), swW: r1(Math.max(...S.slice(i0, iEnd + 1).map((s) => s.swW))),
     tc: ms(iTc), onlineMax: r3(S[iTc].online), tipAtTc: r2(S[iTc].tipV), seq, ordered,
@@ -534,12 +539,15 @@ function newMetrics(T, m) {
   let iC = null;
   for (let i = Math.max(1, i0 - 6); i < n; i++) if (S[i].x.cuts > S[i - 1].x.cuts) { iC = i; break; }
   // 몸 위상 tc: game = drive φB ≥ 0.85 (drive.debug.tTc), plain = 손짓 φ ≥ 0.85
+  //  game 은 이 획의 beginCut 이 쓴 tCut 만 (드라이브 시계가 tCut 앞 스텝보다 뒤). 감기 자리로 가는 획 (B 에선 베기) 의 옛 tCut·tTc 는 창을 0 스텝으로 만든다
   let iTcB = null;
-  if (iC != null)
+  if (iC != null) {
+    const tPrev = S[iC - 1].x.dt;
     for (let i = iC; i < n; i++) {
       const x = S[i].x;
-      if (game ? x.tTc >= 0 && x.tTc >= x.tCutD : (x.st === 2 || x.st === 3) && x.phi >= 0.85) { iTcB = i; break; }
+      if (game ? x.tCutD > tPrev && x.tTc >= x.tCutD : (x.st === 2 || x.st === 3) && x.phi >= 0.85) { iTcB = i; break; }
     }
+  }
   // 되돌아감: tCut(없으면 획 시작) … 몸 위상 tc (없으면 겨눈 선 tc). 가슴 원점·바라보는 틀의 손 (몸이 옮겨·도는 몫은 뺀다)
   const iA = iC ?? i0;
   // 몸 위상 tc 가 없으면 (손짓 층이 이 획을 베기로 읽지 않음) 겨눈 선 tc 와 칼끝 최고 중 늦은 것까지
@@ -561,7 +569,7 @@ function newMetrics(T, m) {
   const y = Math.atan2(-sv[0], sv[2]);
   const handTopCut = hS[1] - (head[1] + 0.1);
   const handBackCut = -((hS[0] - C[0]) * Math.cos(y) + (hS[2] - C[2]) * Math.sin(y) - 0.11);
-  const iEnd = Math.min(n - 1, i0 + Math.round(WIN / DT));
+  const iEnd = strokeEnd(T);
   let Smax = 0, cMax = 0, overMax = 0;
   for (let i = 0; i < n; i++) {
     const x = S[i].x;
@@ -569,7 +577,7 @@ function newMetrics(T, m) {
     if (x.c > cMax) cMax = x.c;
     if (x.over > overMax) overMax = x.over;
   }
-  const hit = T.scene === 'hit' ? T.wounds.filter((w) => w.gt >= t0 && w.gt <= t0 + 0.8)[0] : null;
+  const hit = T.scene === 'hit' ? T.wounds.filter((w) => w.gt >= t0 && w.gt <= S[iEnd].gt)[0] : null;
   // 걸음 (drive.debug, 드라이브 시계): tLand − tTc
   let land = null;
   if (game && T.dbgEnd) {

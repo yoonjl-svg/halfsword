@@ -9,7 +9,7 @@
 //  --quick = 롱소드·입력 60 Hz·v 12 (기준 (1)·되돌아감·걸음), s0_diff --quick, AI 1 분, perf 짧게
 //  기준 (1) '맨 팔 베기보다 약하지 않다': 짝 (무리, air/hit, 입력 Hz, v, 무기, 입력 방식) 마다 game (설정 그대로) 대 plain (같은 커밋 DRIVE.on=false,
 //   둘 다 게임 설정). 칼끝 최고 ≥ 0.95×, 맨 팔이 상처를 냈으면 첫 상처 J ≥ 0.95× 그리고 때 ≤ 맨 팔/0.95,
-//   air 는 칼끝 최고 때 ≤ 맨 팔/0.95, 값이 없으면 빠짐. 관문 = chainW (감기 3 m/s, 머묾 0) 행, hold (1.2 m/s + 1 s) 행은 따로 보고
+//   air 는 칼끝 최고 때 ≤ 맨 팔/0.95, 값이 없으면 빠짐 (짝 한쪽 없음·칼끝 최고가 베기 창 끝 (peakAtEdge)·하위 실행 실패도 빠짐). 관문 = chainW (감기 3 m/s, 머묾 0) 행, hold (1.2 m/s + 1 s) 행은 따로 보고
 //  결과: <out>/r2_gates.md, r2_gates.json, 하위 도구 출력 (기본 out = 임시 폴더, 저장소에 쓰지 않는다)
 import fs from 'node:fs';
 import os from 'node:os';
@@ -207,6 +207,7 @@ if (!SKIP.has('s0')) {
   if (S0REF) a.push(`--ref=${path.resolve(S0REF)}`);
   if (QUICK) a.push('--quick');
   else a.push(`--hz=${[120, 60].join(',')}`, `--weapons=${WEAPONS.join(',')}`);
+  fs.rmSync(path.join(OUT, 's0', 's0_diff.json'), { force: true }); // 끊긴 실행이 앞선 json 을 읽지 않게
   const r = sub('s0_diff', a);
   let js = null;
   try { js = JSON.parse(fs.readFileSync(path.join(OUT, 's0', 's0_diff.json'), 'utf8')); } catch {}
@@ -222,8 +223,12 @@ if (!SKIP.has('s0')) {
 let latJ = null, mxJ = null;
 if (!SKIP.has('latency')) {
   const f = path.join(OUT, 'chain_latency.json');
-  sub('chain_latency', [SIM('chain.mjs'), ...SETS, 'zornhau-wind', '--blocks=latency', `--input=${HZS.join(',')}`, '--jitter', `--ginput=${GINPUTS.join(',')}`, `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
-  latJ = JSON.parse(fs.readFileSync(f, 'utf8')).blocks.latency;
+  fs.rmSync(f, { force: true });
+  const rl = sub('chain_latency', [SIM('chain.mjs'), ...SETS, 'zornhau-wind', '--blocks=latency', `--input=${HZS.join(',')}`, '--jitter', `--ginput=${GINPUTS.join(',')}`, `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
+  try { latJ = JSON.parse(fs.readFileSync(f, 'utf8')).blocks.latency; } catch {}
+  if (!latJ) add('감기가 손가락을 따름 (chain_latency)', `입력 ${HZS.join('/')}`, `json 없음 (끝 ${rl.status})`, '실행 끝 0', false);
+}
+if (latJ) {
   const g = latJ.filter((r) => r.gate_ms != null);
   const worst = (hz) => { const a = g.filter((r) => r.inputHz === hz); return a.length ? a.map((r) => r.pelvis5_ms ?? '없음').join('/') : null; };
   for (const hz of HZS) add(`감기가 손가락을 따름 (0.3 m / 50 ms 걸음 → 골반 5°, game)`, `입력 ${hz}`, `골반 5° ${worst(hz)} ms (무기·입력 방식별)`, `≤ ${hz === 60 ? 33 : hz === 120 ? 25 : '?'} ms`, g.filter((r) => r.inputHz === hz).every((r) => r.pass));
@@ -232,8 +237,12 @@ if (!SKIP.has('latency')) {
 }
 if (!SKIP.has('mx')) {
   const f = path.join(OUT, 'chain_mx.json');
-  sub('chain_mx', [SIM('chain.mjs'), ...SETS, '--blocks=mx,pace', `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
-  mxJ = JSON.parse(fs.readFileSync(f, 'utf8')).blocks;
+  fs.rmSync(f, { force: true });
+  const rm = sub('chain_mx', [SIM('chain.mjs'), ...SETS, '--blocks=mx,pace', `--weapon=${WEAPONS.join(',')}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
+  try { mxJ = JSON.parse(fs.readFileSync(f, 'utf8')).blocks; } catch {}
+  if (!mxJ) add('Motion size·Tracking·걸음 착지 (chain_mx)', '물리 120 (입력 없음)', `json 없음 (끝 ${rm.status})`, '실행 끝 0', false);
+}
+if (mxJ) {
   const ls = mxJ.mx.filter((r) => r.weapon === 'longsword');
   const fl = (r) => Object.entries(r.gates).filter(([, v]) => v === false).map(([k]) => k).join(',');
   add('Motion size (S 1 롱소드 짜 놓은 위상 추적 기록, shape_metrics)', '물리 120 (입력 없음)', ls.map((r) => `${r.cut} ${r.pass ? 'P' : 'F'}${r.pass ? '' : '(' + fl(r) + ')'} 손위 ${r.shape.handTop} 손길 ${r.shape.handPath}`).join('; '), '손 머리 위 +0.05·뒤 0.10·어깨 130°·칼 뒤 1.0·지나가기 −0.30/−0.33·가슴 120°·골반 65°·X 순서·손 길 1.8', ls.length > 0 && ls.every((r) => r.pass));
@@ -244,18 +253,24 @@ if (!SKIP.has('mx')) {
 
 // ── 기준 (1) 격자: chainW (관문)·hold (보고) × game/plain, air·hit, v, 입력 Hz, 무기, 입력 방식 ──
 const grid = { W: [], hold: [] };
+const gridFail = { W: [], hold: [] }; // 끝이 0 이 아니거나 json 을 못 읽은 하위 실행 (빠짐 = 실패)
 let jitRows = [];
 if (!SKIP.has('grid')) {
   for (const variant of ['W', 'hold'])
     for (const w of WEAPONS) {
       const f = path.join(OUT, `chain_${variant}_${w}.json`);
+      fs.rmSync(f, { force: true });
       const r = sub(`chain_${variant}_${w}`, [SIM('chain.mjs'), ...SETS, `--variant=${variant}`, '--modes=game,plain', '--scenes=air,hit', `--fams=${FAMS.join(',')}`, `--v=${(variant === 'W' ? VSTEP : VS).join(',')}`, `--input=${HZS.join(',')}`, `--ginput=${GINPUTS.join(',')}`, `--weapon=${w}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
-      if (r.status === 0) grid[variant].push(...JSON.parse(fs.readFileSync(f, 'utf8')).rows);
+      let rs = null;
+      if (r.status === 0) try { rs = JSON.parse(fs.readFileSync(f, 'utf8')).rows; } catch {}
+      if (rs) grid[variant].push(...rs);
+      else gridFail[variant].push(`chain_${variant}_${w} (끝 ${r.status})`);
       if (!J.meta.atlasDecode) J.meta.atlasDecode = (r.err.match(/pack decode ([\d.]+) ms/) || [])[1] ?? null;
     }
   if (!SKIP.has('jitter'))
     for (const w of WEAPONS) {
       const f = path.join(OUT, `chain_J_${w}.json`);
+      fs.rmSync(f, { force: true });
       const r = sub(`chain_J_${w}`, [SIM('chain.mjs'), ...SETS, '--variant=W', '--modes=game', '--scenes=air,hit', `--fams=${FAMS.join(',')}`, `--v=${VS.join(',')}`, `--input=${HZS[0]}`, '--jitter', `--ginput=${GINPUTS.join(',')}`, `--weapon=${w}`, '--no-channels', `--out=${path.join(OUT, 'rec')}`, `--json=${f}`]);
       if (r.status === 0) jitRows.push(...JSON.parse(fs.readFileSync(f, 'utf8')).rows.filter((x) => x.inputHz === 'J'));
     }
@@ -265,25 +280,30 @@ function criterion(rs) {
   const game = new Map(), plain = new Map();
   for (const r of rs) if (VS.includes(r.v)) (r.mode === 'game' ? game : plain).set(keyOf(r), r);
   const items = [];
-  for (const [k, p] of plain) {
-    const g = game.get(k);
+  const keys = new Set([...game.keys(), ...plain.keys()]);
+  for (const k of keys) {
+    const g = game.get(k), p = plain.get(k);
     const push = (item, ok, val, ref) => items.push({ key: k, item, ok, game: val, plain: ref });
-    if (!g) { push('row', false, null, null); continue; }
+    if (!g || !p) { push('row', false, g ? '있음' : null, p ? '있음' : null); continue; }
+    // 칼끝 최고가 베기 창 끝에 걸린 쪽은 최고를 모른다 → 빠짐 (실패)
+    if (g.peakAtEdge || p.peakAtEdge) { push('peakAtEdge', false, g.peakAtEdge ? `창 끝 ${g.tipPeakMs}` : g.tipPeakMs, p.peakAtEdge ? `창 끝 ${p.tipPeakMs}` : p.tipPeakMs); continue; }
     push('tipPeak', g.tipPeak != null && p.tipPeak != null && g.tipPeak >= 0.95 * p.tipPeak, g.tipPeak, p.tipPeak);
     if (p.scene === 'hit' && p.woundJ != null) {
       push('woundJ', g.woundJ != null && g.woundJ >= 0.95 * p.woundJ, g.woundJ, p.woundJ);
-      if (p.woundMs > 0) push('woundMs', g.woundMs != null && g.woundMs <= p.woundMs / 0.95, g.woundMs, p.woundMs);
+      push('woundMs', p.woundMs > 0 && g.woundMs != null && g.woundMs <= p.woundMs / 0.95, g.woundMs, p.woundMs);
     }
-    if (p.scene === 'air' && p.tipPeakMs > 0) push('tipPeakMs', g.tipPeakMs != null && g.tipPeakMs <= p.tipPeakMs / 0.95, g.tipPeakMs, p.tipPeakMs);
+    if (p.scene === 'air') push('tipPeakMs', p.tipPeakMs > 0 && g.tipPeakMs != null && g.tipPeakMs <= p.tipPeakMs / 0.95, g.tipPeakMs, p.tipPeakMs);
   }
   const fails = items.filter((x) => !x.ok);
   const failRows = new Set(fails.map((x) => x.key));
   const byFam = {};
   for (const x of fails) { const f = x.key.split('/')[0]; byFam[f] = (byFam[f] || 0) + 1; }
-  return { pairs: plain.size, items: items.length, fails: fails.length, failRows: failRows.size, byFam, failList: fails };
+  return { pairs: keys.size, items: items.length, fails: fails.length, failRows: failRows.size, byFam, failList: fails };
 }
 const crit = { W: criterion(grid.W), hold: criterion(grid.hold) };
 J.raw.criterion = { W: { ...crit.W, failList: crit.W.failList }, hold: { ...crit.hold, failList: crit.hold.failList } };
+for (const v of ['W', 'hold']) if (gridFail[v].length) add(`기준 (1) chain${v} 실행 실패`, `입력 ${HZS.join('/')}`, gridFail[v].join(', '), '실패 0', false);
+if (!SKIP.has('grid') && !grid.W.length) add('기준 (1) chainW: game ≥ 맨 팔', `입력 ${HZS.join('/')}`, '행 없음', '빠짐 0', false);
 if (grid.W.length) {
   const c = crit.W;
   add('기준 (1) chainW: game ≥ 맨 팔 (칼끝 최고 0.95×, 첫 상처 J 0.95×·때 /0.95, air 최고 때 /0.95)', `입력 ${HZS.join('/')}`, `빠짐 ${c.fails}/${c.items} 항목, ${c.failRows}/${c.pairs} 짝 (${Object.entries(c.byFam).map(([f, n]) => `${f} ${n}`).join(', ')})`, '빠짐 0', c.fails === 0);

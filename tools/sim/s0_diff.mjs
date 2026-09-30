@@ -192,6 +192,7 @@ function compare(x, y, kind) {
     const cls = kind === 'ref' ? 'refDiff' : sAt > 0 ? 'misclass' : 'leak';
     res.push({ round: id, cls, step: k, S: +sAt.toFixed(4), cmBase: !!cmAt, Smax });
   }
+  for (const id of ry.keys()) if (!rx.has(id)) { res.push({ round: id, cls: 'missing' }); sameTap = false; } // 기준에만 있는 판
   const bad = res.filter((r) => r.cls === 'leak' || r.cls === 'missing' || r.cls === 'refDiff');
   const verdict = bad.length ? 'FAIL' : sameStdout && sameTap ? 'IDENTICAL' : res.every((r) => r.cls === 'same') && !sameStdout ? 'FAIL' : 'CLASSIFIED';
   return { verdict, sameStdout, sameTap, rounds: res, stdoutOnly: !sameStdout && res.every((r) => r.cls === 'same') };
