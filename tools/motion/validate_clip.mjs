@@ -9,7 +9,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GUARDS } from '../../src/guards.js';
+import { GUARDS, GUARD_BASE_ONE } from '../../src/guards.js';
 import { GAME_GUARDS, GAME_GUARDS_ONE } from './lib/cuts.mjs';
 import { WEAPONS } from '../../src/weapons.js';
 import { bladeDir } from './lib/body.mjs';
@@ -28,21 +28,13 @@ export function gameGuards() {
   }
   return out;
 }
-/**
- * 한손 무기 자세표 (게임 BASE_ONE = GUARDS 에 ONE_HAND 를 덮은 것). 게임이 BASE_ONE 을 내보내지 않아 src/guards.js 글에서
- *  `const ONE_HAND = { … };` 를 읽어 같은 식으로 덮는다(도 → 라디안, pitch 는 있을 때만). guards.js 가 BASE_ONE 을 내보내면 그것을 쓰면 된다
- */
+/** 한손 무기 자세표 — 게임이 내보내는 src/guards.js GUARD_BASE_ONE (GUARDS 에 ONE_HAND 를 덮은 것, main b403696 부터) */
 export function gameGuardsOne() {
-  const src = readFileSync(join(ROOT, 'src', 'guards.js'), 'utf8');
-  const m = src.match(/const ONE_HAND = (\{[\s\S]*?\n\});/);
-  if (!m) throw new Error('src/guards.js 에서 ONE_HAND 표를 못 찾았다 — 검사기 gameGuardsOne() 을 게임에 맞출 것');
-  const over = Function(`return (${m[1]});`)();
-  const D = Math.PI / 180;
-  const out = gameGuards();
+  const out = {};
   for (const [id, name] of Object.entries(GUARD_NAMES)) {
-    const o = over[name];
-    if (!o) continue;
-    out[id] = { ...out[id], hand: o.hand, pelvisYaw: o.pelvisYaw * D, chestYaw: o.chestYaw * D, pitch: o.pitch != null ? o.pitch * D : out[id].pitch };
+    const g = GUARD_BASE_ONE.find((x) => x.name === name);
+    if (!g) throw new Error(`src/guards.js GUARD_BASE_ONE 에 자세 '${name}' (${id}) 가 없다 — lib/clip_rules.mjs GUARD_NAMES 를 게임에 맞출 것`);
+    out[id] = { hand: g.hand, dir: g.dir, pelvisYaw: g.pelvisYaw, chestYaw: g.chestYaw, pitch: g.pitch, drop: g.drop };
   }
   return out;
 }

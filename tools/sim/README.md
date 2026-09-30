@@ -8,6 +8,8 @@
 - 게임 불변 관문: 바꾸기 전·후 stdout 이 바이트 같아야 한다(`cmp`, 기록은 sha256).
   - `node tools/sim/fights12.mjs` (기본 hybrid, 예전 `hybrid.mjs fights12.mjs`와 바이트 같다)
   - `node tools/sim/live_battery.mjs`
+  - 기준 sha256 앞 8자리: 9/29 hybrid 기본값 fights12 `afdd8c66` · live_battery `11433650` → **9/30 시작 거리 7.0·2초 정지 뒤(ARENA.startGap·startHold): fights12 `a74bb59c` · live_battery `2f453e0b`** → **9/30 09:10 시작 거리 5.6 뒤: fights12 `38fb5b51` · live_battery `2f453e0b`** (hybrid.mjs fights12.mjs 도 같다). 옛 기준은 `with_config.mjs ARENA.startGap=4.2 ARENA.startHold=0 <스크립트>` 로 바이트 그대로 나온다.
+  - 시작 정지는 시뮬에도 걸린다: 싸움꾼마다 `fightT`(fighter.step 이 센다)로 재서 판을 새로 만든 뒤 처음 2초는 조종 입력·기술 걸음·자세 고쳐 딛기가 없다(팔·칼·균형 걸음은 그대로). 판 초반을 재는 도구는 이 2초를 감안한다.
 - **소음 폭**: fights12(12판)는 바이트 동일 관문 전용이다. 좋아졌다/나빠졌다로 읽지 않는다. 설정 하나를 100만분의 1 바꿔도(`BODY.uprightStiffness=2500.001`) 사망이 levitate 9/12 → 11/12, hybrid 8/12 → 7/12로 움직였다. 36판도 사망 24~27, 플레이어 승 12~19로 흔들린다(감사 9/29). 좋다/나쁘다 판단은 36판 이상으로 하고, 시드 묶음을 바꿔 돈 흔들림 폭을 함께 적는다.
 
 ## 스크립트
@@ -36,6 +38,7 @@
 | `node tools/sim/tap_thrust.mjs [stand\|down\|duel\|all] [판수] [무기id] [--seed=첫번호]` | 탭 찌르기(skill.thrust) 검증: 처음 닿은 판정이 찌르기인지, 상처·상처 깊이, 상대 칼에 먼저 막혔는지. 탭 결과 네 갈래(상처 / 칼에 걸렸고 상처 없음 / 몸에만 닿음 / 아무것도 못 닿음), 못 닿은 탭의 까닭(거리 모자람·내딛은 거리 / 옆으로 빗나감), duel 은 탭 연타 판 결과(이김·짐·무)도 |
 | 위 세 도구 공통: `--str=0.85` `--foeStr=1.3` `--emo=off` `--emoP=anger:1` `--emoE=fear:1` | 플레이어·상대 근력, 감정 능력 끄기(게임의 `?emo=0`), 플레이어·상대 감정 고정(감정:세기). `str_emo.mjs` 참고 |
 | `node tools/sim/revive_check.mjs [판수=16]` | 부활(이졸데, `src/revive.js`) 점검: 이졸데 대 주인공 대리(hybrid). 부활은 한 번만, 4초 안에 칼을 쥐고 다시 선다, 부활 중 상처 0, 다시 싸울 때 집념, 두 번째 죽음은 진짜 죽음, NaN 없음. 갈래: 자연·칼 놓침·칼 부러짐·둘 다(강제), 부활 중 주인공 대리 죽음 |
+| `node tools/sim/decap_check.mjs [probe\|fights]` | 참수(사장님 9/30, `COMBAT.decapitate`, fighter.js `decapitate`) 점검. probe = 가만히 선 상대의 목을 벤다(실제 휘두르기를 찾고, 첫 접촉이 치명 목 베기가 아니면 칼을 목으로 몬다): 목 관절 떨어짐(관절 수), 목 자리 틈 1초에 0.3 m 넘게, 3초 동안 최고 속도·NaN, 남은 몸은 인형 그대로, 죽음·참수·목 단면 상처(출혈 = 목 상처), 이졸데 시트면 부활 안 함·횟수 그대로, 스위치 끄면 머리 붙어 있고 이졸데가 되살아남. 둔기·칼 면·못 지나간 목 베기·튕긴 길 pass·찌르기·죽은 몸·권총 목 → 참수 없음. fights = fights12 와 같은 12판(베낌, 줄마다 fights12 표기도 찍는다): 시드마다 참수된 쪽·끝·죽은 까닭, 합계 참수·죽음·NaN·튕긴 길 치명 목 베기 수. 끄고 돌리려면 `with_config.mjs COMBAT.decapitate=false decap_check.mjs fights` |
 | `node tools/sim/ai_thrust_pref.mjs [판수] [무기id...]` | AI가 찌르기 무기로 찌르기 기술을 더 고르는지 (고른 기술 비율, 찌르기 판정 수) |
 | `node tools/sim/with_config.mjs STRIKE.thrustAssist=2.5 <스크립트> [인자...]` | 설정값 몇 개를 바꾼 채로 다른 시뮬 스크립트를 돌린다 |
 | `node tools/sim/hybrid.mjs <스크립트> [인자...]` | 옛 명령줄용 빈 래퍼: 아무것도 바꾸지 않는다(기본값이 이미 hybrid). 새 명령에는 쓰지 않는다 |
@@ -64,4 +67,5 @@
 | `node tools/browser/armor_check.mjs http://127.0.0.1:5173 margarethe castle 4 [폴더]` | 방어구 점검: 판을 여러 번 열며(일시정지 → 처음부터 다시, 카드 뽑기) 실제 `combat.strike` 로 투구·판금을 깨 보고, 콘솔 에러 0 · 판마다 장면 물체·모양 수 · 흩어진 조각(부러진 칼날 끝과 방어구 조각, `src/debris.js`)이 판 시작마다 0 이고 새 판·배경 바꾸기·판 끝 메뉴 뒤에서 둘 다 치워지는지, 부러진 칼(토막 날)로 판금을 쳐도 소리가 판정대로인지, 타격마다 판금·투구 소리가 판정대로인지(막음 → `plateBlock`, 뚫림 → 갑옷 쇳소리, 완전 파손 → `plateBreak` 한 번) 본다. 내 카드 두 장 가운데 날 선 무기를 고른다. 견갑 멀쩡/부서지는 순간/부서진 뒤 스크린샷, 배경이 `darkhall` 이면 캐릭터 조명을 받은 판금 스크린샷도 |
 | `node tools/browser/touch_thrust.mjs http://127.0.0.1:5173` · `mouse_thrust.mjs` | 탭·클릭 찌르기 입력 시험. 무기 카드 뽑기는 `?weapon=longsword` 로 건너뛴다 (시험용 주소: 뽑기 없이 그 무기로 바로 싸움) |
 | `node tools/browser/revive_shots.mjs http://127.0.0.1:5173 <출력 폴더> [castle,cathedral,darkhall,clearing,castle_px,defeat]` | 부활 연출 연속 사진(844×390, 가짜 시계로 한 프레임씩): 쓰러짐·빛이 내려옴·알림·일어섬(+옆에서)·빛이 사라짐·다시 싸움·결과. 콘솔 에러 0, 연출 물체·빛이 남지 않는지(장면 자식 수), 두 번째 죽음 → 승리, `defeat` = 부활 중 주인공 죽음 → 패배 |
+| `node tools/browser/decap_shots.mjs http://127.0.0.1:5173 <출력 폴더> [liao,isolde]` | 참수 연출 사진(844×390, 가짜 시계): `?weapon=zweihander&foe=<id>` 로 싸움을 열고 `window.game` 으로 칼을 상대 목으로 몰아 벤 뒤 0.2초·1.5초(기본 카메라 + 옆), 결과 화면, 다시 싸우기. 콘솔 에러 0, 참수(관절 12·목 단면·목 자리 틈), 이졸데는 부활하지 않음, 다시 싸우기 → 새 상대는 머리가 붙어 있다 |
 | `node tools/browser/weapon_thumbs.mjs http://127.0.0.1:5173 [무기id...]` | 무기 뽑기 카드의 작은 그림을 만든다: 게임 속 무기 모델(`src/weapons.js`)을 대각선으로 눕혀 찍어 `public/ui/weapons/<id>.webp` (256×256, 투명 배경)로 저장. 무기 겉모습을 바꾸거나 무기를 새로 넣으면 다시 돌린다. 찍는 페이지 `tools/browser/weapon_thumbs.html` 을 브라우저로 열면 결과를 눈으로 볼 수 있다 |

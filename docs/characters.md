@@ -803,3 +803,11 @@ AI 대결 승률은 밸런스 참고용일 뿐이라(감독) 브란의 낮은 �
 - **회귀**: fights12 HEAD = origin/main(59260d9 위 새 기준) 바이트 동일. 라운드로빈에 `heinrich_mad` 없음(확인).
   사장 확정 반영 뒤(2026-09-28): fights12 · hybrid fights12 · live_battery · characters_eval both 2 가 45962d8 기준 출력과 바이트 동일, 낮의 하인리히·다섯 명 시트 JSON 동일.
 - 밤의 포세이돈 자리 대사(스테이지 사이 힌트 — 이졸데 "그 사람은 그렇게 쉽게 죽지 않는다")는 여정 대사 시스템 결정 뒤.
+
+## 결투 시작 정지 동안 서 있는 모습 (사장님 9/30 01:10, 디렉터 확정)
+
+- 시작 거리 7.0 m, 판 시작 뒤 `ARENA.startHold` 2초 동안 둘 다 발만 묶인다(디렉터, fighter.js `feetHeld`).
+- 그 2초 동안 AI는 시트 `persona.idle = { guard, gesture }`대로 서 있는다: `ai.js holdStart()`. 발 입력 0·기술 걸음 없음, 시간값은 startHold 하나만 읽는다. idle이 없는 기본 AI는 이 분기를 타지 않는다.
+- 브란 tagR·들썩(stomp) / 이졸데 pflugR·비틀었다 고쳐 잡기(settle) / 랴오 alber·가만히 / 하인리히 langort로 얼굴 겨눔 → tag(pointFace) / 마르그레테 ochsR·미동 없음 / 광기의 하인리히 langort·겨눈 채 정지.
+- 확인: 정지 2초 동안 여섯 명 모두 끝 자세가 idle.guard, 발 이동 0.045 m는 판 시작 첫 0.09초의 자리 잡기로 기본 AI와 같다(걸음 아님). fights12 main 80e78bc 기준 바이트 동일, 헤드리스 콘솔 오류 0.
+

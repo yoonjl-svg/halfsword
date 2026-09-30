@@ -20,7 +20,7 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, BODY, SKILL } from './config.js';
+import { AI_LEVELS, ARENA, BODY, SKILL } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
@@ -252,6 +252,9 @@ export class AI {
     // 부활하는 동안(revive.js): 싸우지 않고 기다린다. 끝나면 집념으로 다시 싸운다
     if (me.revival) return this.holdForRevive(dt);
     if (this.reviving) this.resumeAfterRevive();
+    // 판 시작 정지(ARENA.startHold, 사장님 9/30): 발은 묶인 채 캐릭터마다 서 있는 모습(persona.idle)만 보인다.
+    //  시트에 idle이 없는 기본 AI는 이 분기를 타지 않는다 (예전과 같다)
+    if (me.feetHeld && this.persona?.idle && me.state === 'stand') return this.holdStart(dt);
 
     // 완전히 쓰러졌다: 칼을 머리 위로 들어 가리기만 한다 (팔에도 힘이 거의 없다)
     if (me.state === 'down') {
@@ -374,6 +377,45 @@ export class AI {
 
   // ───────────────────────── 부활 (revive.js) ─────────────────────────
   /** 부활하는 동안: 발을 멈추고 칼을 지금 자세로 든 채 기다린다 (공격하지 않는다). 처음 한 번 감정을 비운다 (떨림도 멎는다) */
+  /**
+   * 판 시작 정지 동안 서 있는 모습 (persona.idle = { guard, gesture }, 캐릭터 PM).
+   *  발은 절대 움직이지 않는다(move 0, 기술 걸음 없음). 시간은 ARENA.startHold 하나만 읽는다.
+   *  gesture: stomp 칼을 어깨에 걸친 채 들썩 / settle 자세를 한 번 비틀었다 고쳐 잡음 / lowTip·still 가만히 / pointFace 칼끝을 얼굴에 겨눴다가 제 자세로
+   */
+  holdStart(dt) {
+    const me = this.me;
+    const I = this.persona.idle;
+    const G = this.school.guards;
+    const guard = G.find((g) => g.name === I.guard) || this.guard;
+    const u = ARENA.startHold > 0 ? clamp(me.fightT / ARENA.startHold, 0, 1) : 1; // 정지 구간 안의 위치 0~1
+    let px = guard.pad[0];
+    let py = guard.pad[1];
+    let speed = this.pers.guardSpeed;
+    if (I.gesture === 'stomp') {
+      py += 0.035 * Math.sin(u * Math.PI * 6); // 발 대신 어깨가 들썩인다 (세 번)
+    } else if (I.gesture === 'settle' && u < 0.45) {
+      px += 0.08; // 한 번 비틀어 잡았다가
+      py -= 0.06;
+    } else if (I.gesture === 'pointFace' && u < 0.5) {
+      const point = G.find((g) => g.name === 'langort');
+      if (point) (px = point.pad[0]), (py = point.pad[1]); // 칼끝을 상대 얼굴 쪽으로 곧게 (빠르기는 기질의 guardSpeed 그대로 — 하한 없음, 디렉터 9/30)
+    }
+    me.move.set(0, 0);
+    this.mode = 'watch';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.feint = null;
+    this.feintPts = 0;
+    this.feintHold = 0;
+    this.stepT = 0;
+    this.guard = guard; // 정지가 풀리면 이 자세에서 싸움을 시작한다
+    this.hand.set(px, py);
+    this.handSpeed = speed;
+    this.prevFoePain = this.foe.pain;
+    this.prevMyPain = me.pain;
+    this.moveHand(dt);
+  }
+
   holdForRevive(dt) {
     const me = this.me;
     if (!this.reviving) {

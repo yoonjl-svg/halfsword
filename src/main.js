@@ -401,7 +401,7 @@ function onWound(att, vic, r, point, pr) {
       if (r.type === 'stab') stickDecal(mesh, local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
       else stickDecal(mesh, local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len);
       // 피가 옷에 번진다 (상처에서 계속 흐르는 만큼)
-      const wound = vic.wounds[vic.wounds.length - 1];
+      const wound = vic.wounds.findLast((w) => !w.stump); // 참수: 목 단면(stump)은 건너뛰고 목 상처에 번진다
       if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, local, null, 'soak', 0.04, 0.04);
     } else {
       stickDecal(mesh, local, bladeLocal, 'bruise', 0.03, 0.08);
@@ -1165,20 +1165,25 @@ const _cd = new THREE.Vector3();
 function updateCamera(dt) {
   if (!player || window.game?.freeCam) return; // freeCam: 디버그용으로 카메라를 직접 조종
   // 흔들리는 골반 대신 몸 전체 무게중심을 부드럽게 따라간다
-  const a = camFollow.lerp(player.com || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
-  const b = enemy.com || enemy.pelvisPos;
+  //  (참수된 몸은 무게중심에 날아가는 머리가 섞이니 골반을 따른다)
+  const a = camFollow.lerp((!player.decapitated && player.com) || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
+  const b = (!enemy.decapitated && enemy.com) || enemy.pelvisPos;
   // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지)
   _cd.set(b.x - a.x, 0, b.z - a.z);
   if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
   const right = _cd.set(-camDir.z, 0, camDir.x);
+  // 판 시작: 조금 높고 먼 자리에서 무대를 보여 주다가 발이 풀릴 때(ARENA.startHold)까지 평소 자리로 부드럽게 내려온다 (사장님 9/30).
+  //  시계는 판마다 새로 0부터 세는 player.fightT (싸움 전 메뉴·무기 뽑기 동안엔 0이라 시작 자리에서 기다린다)
+  const open = ARENA.startHold > 0 ? 1 - THREE.MathUtils.smoothstep(player.fightT, 0, ARENA.startHold) : 0;
+  const camH = CAMERA.height + CAMERA.openUp * open;
   camTarget
     .copy(a)
-    .addScaledVector(camDir, -CAMERA.back)
+    .addScaledVector(camDir, -(CAMERA.back + CAMERA.openBack * open))
     .addScaledVector(right, CAMERA.shoulder)
-    .setY(CAMERA.height);
+    .setY(camH);
   // 경기장 바깥 돌벽을 뚫고 나가지 않게
   const r = Math.hypot(camTarget.x, camTarget.z);
-  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(CAMERA.height);
+  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
   const k = 1 - Math.exp(-dt * 6);
   camera.position.lerp(camTarget, k);
   const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1);

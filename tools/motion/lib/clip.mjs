@@ -617,6 +617,16 @@ export function stepOf(rows, marks) {
 }
 
 /**
+ * 선 자세 (clip/2 v1, 디렉터 9/29): 칼 쪽 발(오른손잡이 = R)이 처음(t0)·끝(tg) 표본에서 앞인가 뒤인가.
+ *  앞·뒤 = 두 발목의 땅 틀 x(앞) 차이. R2 는 발 채널을 역할(딛은 발·옮기는 발)로 읽고, 검사기는 이 표시를 J 와 맞춰 본다.
+ */
+export function stanceOf(rows, swordFoot = 'R') {
+  const other = swordFoot === 'R' ? 'L' : 'R';
+  const at = (r) => (r.J.legs[swordFoot].ankle[0] >= r.J.legs[other].ankle[0] ? 'front' : 'rear');
+  return { swordFoot, start: at(rows[0]), end: at(rows.at(-1)) };
+}
+
+/**
  * 끝 자세(복귀 끝)가 게임 자세표(src/guards.js 14개) 중 어느 것과 가장 가까운가 — 앞손 자리 오차 m.
  *  비교 틀 = guards.js 손과 같은 틀: 가슴 가운데 원점, 바라보는 방향(땅 틀 x 앞 · y 위 · z 칼 쪽).
  */
