@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────
 //  감정: 판정(사건 → 세기 → 지배 감정 → 텀)과 고유 능력(트레이드오프)
 //
-//  두 곳에서 쓴다.
-//   - AI(ai.js): 판정은 ai.js의 emote()가 (예전 그대로) 하고, 여기서는 텀 상수와 능력표만 가져간다.
-//   - 플레이어(main.js): 아래 Emotions 클래스가 같은 규칙으로 판정한다 — 플레이어도 겁먹고 화내고 물고 늘어진다.
+//  두 곳에서 쓴다 — 판정은 아래 Emotions 한 곳이다.
+//   - AI(ai.js): emote()가 사건을 모아 Emotions.update 를 부르고, AI 에만 있는 것(지배 감정이 없을 때 공포 통과,
+//     발끈할 때 참을성, 관찰 통계)만 덧붙인다.
+//   - 플레이어(main.js): 같은 규칙으로 판정한다 — 플레이어도 겁먹고 화내고 물고 늘어진다.
 //
 //  고유 능력(EMO_ABILITY)은 "배율표" 하나다. 상처 판정(combat.js)과 이동(ai.js·main.js)이 fighter.emoMods를 읽기만
 //  한다. 감정이 없으면 전부 1(NO_MODS)이라 예전과 똑같고, enabled=false 로 두면 감정이 켜져도 능력이 사라진다 —
@@ -57,9 +58,10 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ORDER = ['fear', 'anger', 'obsession']; // 생존 우선
 
 /**
- * 플레이어용 감정 판정 — ai.js emote()와 같은 규칙(같은 사건, 같은 세기, 같은 감쇠, 같은 지배·텀).
+ * 감정 판정 (AI·플레이어 공통): 사건 → 세기 → 감쇠 → 지배 감정 → 텀.
  * thresholds = { fearful, angry, dogged } (0이면 그 감정은 꺼진 것과 같다)
  * ev(사건) = { hurt, bleeding, nearMiss, weaponBroken, disarmed, foeLegendNear, foeBroke, parried, winning, foeBleeding, landed }
+ * update 는 판정했으면 true, 문턱값이 전부 0이면 시계만 가고 false (AI 는 그때 제 몫도 건너뛴다)
  */
 export class Emotions {
   constructor(thresholds = {}) {
@@ -88,7 +90,7 @@ export class Emotions {
     const P = this.th;
     const E = this.E;
     this.t += dt;
-    if (P.fearful <= 0 && P.angry <= 0 && P.dogged <= 0) return;
+    if (P.fearful <= 0 && P.angry <= 0 && P.dogged <= 0) return false; // 감정층 꺼짐 (시계만 간다)
     const decay = (v, tau) => v - (v * dt) / tau;
     // 공포: 베였다(+0.4), 피가 난다(+0.12/s), 상대 칼이 코앞(+0.3/s), 내 무기가 부러졌다(+0.5)·놓쳤다(+0.4, 각 한 번),
     //  상대 레전드 무기 근접(+0.08/s), 상대 무기 부러짐(−0.2, 한 번). 9초 감쇠
@@ -139,5 +141,6 @@ export class Emotions {
         this.count[cand]++;
       }
     }
+    return true;
   }
 }
