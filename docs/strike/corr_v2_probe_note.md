@@ -1,7 +1,7 @@
 # /corr/ 검술 보정 v2 시험판 메모 (2026-10-01)
 
 - 주소: https://yoonjl-svg.github.io/halfsword/corr/?corr=v2 (배포가 끝난 뒤 새로고침). 본 게임과 따로 빌드한 정적 파일입니다.
-- 원본: `feat-corr` `5d90bd2` 에서 빌드 확인 (src·index.html 은 `b3a13b0` 과 같음, 그 뒤는 도구·문서뿐; b03af1a 위, 작업 1~8). 이 메모를 넣은 커밋 뒤에도 src 는 그대로다. 설계 `docs/strike/correction_v2_design_2026-10-01.md`, 구현 기록 `docs/strike/corr_v2_impl_record_2026-10-01.md`, 측정 `docs/strike/corr_v2_measure.md`.
+- 원본: `feat-corr` `df98f66` 에서 빌드 확인 (10/1 고침: v2 마무리가 FINISH_GUARDS 몫만 명령, ② 붙잡음을 몸 틀에; b03af1a 위, 작업 1~8 + 고침). 이 메모를 고친 커밋은 문서뿐이라 src·index.html 은 `df98f66` 과 같다. 설계 `docs/strike/correction_v2_design_2026-10-01.md`, 구현 기록 `docs/strike/corr_v2_impl_record_2026-10-01.md`, 측정 `docs/strike/corr_v2_measure.md`.
 - 빌드 (디렉터): feat-corr 에서 `npm run build -- --base /halfsword/corr/` 로 dev 작업 트리의 `public/corr/` 에. 이 메모의 빌드 확인은 `vite build --base /halfsword/corr/` 를 임시 폴더로 낸 것입니다(저장소에 dist 없음).
 
 ## 켜고 끄기 두 개
