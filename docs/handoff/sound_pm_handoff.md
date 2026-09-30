@@ -70,7 +70,7 @@
 - **쓰러짐**: 골반·가슴이 초속 1m 넘게 떨어지다 땅 근처에서 멈추는 순간 낸다. 배경 바닥 알갱이 소리를 한 겹 더한다.
 - **세기 눈금** `hitWeight(energy, e0)` → `{ e, w, low }` (29차, 디렉터 R3 대비): `e` 는 지금 눈금(clamp01(energy/e0)), `w` 는 `hitScale` 이 'log' 일 때 200 J(`SOUND.hitKnee`) 위로 붙는 로그 무게(500 J = 1, 상한 없음), `low` 는 재생 속도 배율. 베기·찌르기·강철 충돌이 쓴다. `hitScale` 은 `SOUND.hitScale`(기본 'legacy' = 게임 소리 그대로) 또는 `sound.hitScale`. 새 타격 소리를 만들면 이 함수로 세기를 받는다.
 - **참수** `decapitate({me, pos})` / **떨어진 머리** `headLand(speed, {helmet, pos})` (32차): BodySounds 가 `f.decapitated` 와 `f.bodies.head` 를 보고 부른다. 참수면 죽음 목소리를 내지 않는다. `COMBAT_HOOKS.onDecapitate`(combat.js)는 쓰지 않는다(일꾼에 three.js 가 딸려 오지 않게).
-- **칼→몸 소리 후보** `SOUND.fleshHit` (31·33차, 사장님 "전자 파리채로 모기 잡는 소리 같아" → 31차 안은 "둔기·죽도 같다"): 'legacy'(5차 hitSlash, 지금) / 'synth'(날 선 칼 합성 `bladeCut`) / 'rec'(칼 박힘 녹음 `flesh/edge*` + 젖은 꼬리, `_fleshRec`). 베기·찌르기만 바뀌고 새 안에서는 몸통 "퍽"을 0.25~0.3배로 줄인다. 사장님 선택 대기.
+- **칼→몸 소리 후보** `SOUND.fleshHit` (31·33차, 사장님 "전자 파리채로 모기 잡는 소리 같아" → 31차 안은 "둔기·죽도 같다"): 'legacy'(5차 hitSlash, 지금) / 'synth'(날 선 칼 합성 `bladeCut`) / 'rec'(칼 박힘 녹음 `flesh/edge*` + 젖은 꼬리, `_fleshRec`) / 'samsho'(34차 대전 게임식 2 `slashHit`: "자-슉 + 쿵 + 촤아악"). 베기·찌르기만 바뀌고 새 안에서는 몸통 "퍽"을 0.25~0.3배로 줄인다. 사장님 선택 대기.
 - **리볼버 총성** `gunshot({pos})` (30차, 사장님 "더 파괴력 있는 소리"): `SYNTH.gunshot`(크랙+몸통+충격파) + `SYNTH.gunTail`(바깥 메아리). gun.js `gunshotSound` 가 첫 줄에서 여기로 넘긴다. 꼬리는 `STAGE_SOUND.room` 유무로 정한다. 장전 소리는 gun.js 에 남아 있다.
 - **큰 타격 배경 소리 간격** `_spaced(key)` / `_hitCall(kind, k)` (30차, 사장님 "간격을 좀 두자"): 같은 소리는 `SOUND.stageHitGap`(10초) 안에 다시 안 낸다 — gust 의 불길·천·돌·비둘기·박쥐·단풍잎·풍경, 성 안뜰 종, 화전 터 까마귀. 타격음에는 안 건다. 새 배경 반응 소리를 넣으면 `_hitCall` 로 부른다.
 - **디딤** `footStrike(strength 0~1, pos)` (29차): 지나는 걸음의 무거운 딛기. 디렉터가 gait 딛는 순간에 잇는다(아직 안 부름).
