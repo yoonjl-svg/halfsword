@@ -788,6 +788,7 @@ export class Fighter {
     this.pain = Math.max(0, this.pain - dt * 0.6);
     if (this.state === 'dead') return;
     this.consciousness = Math.min(1, this.consciousness + dt * 0.03); // 정신이 천천히 돌아온다
+    if (this.revival) return; // 부활하는 동안은 죽지 않는다 (die → tryRevive 가 곧장 돌려보내던 것을 매 스텝 부르지 않게)
     if (this.blood < VITALS.collapseBlood) this.die('출혈');
     else if (this.consciousness <= 0) this.die('기절');
   }
