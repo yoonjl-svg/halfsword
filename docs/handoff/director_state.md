@@ -1,7 +1,11 @@
 # 디렉터 상태 파일 (후임 디렉터가 가장 먼저 읽는다)
 
-- 갱신: 2026-09-29 22:00 KST. 디렉터 세션 session_014nJCzE4hyxiYc9innhSUng (디렉터 모델, ultracode, auto — 모델은 앱의 세션 정보에서 본다).
+- 갱신: 2026-09-30 18:10 KST. 디렉터 세션 session_014nJCzE4hyxiYc9innhSUng (디렉터 모델, ultracode, auto — 모델은 앱의 세션 정보에서 본다).
 - 읽는 순서: 이 파일 → docs/decisions.md(사장님 결정, 최신순) → docs/director_handoff.md(2장 규칙·7장 도구) → docs/strike/r2_impl_spec.md(§1·§9·§10).
+
+## 디렉터 전용 조율 기준 (사장님 9/30 09:40·09:50 — PM에게 전하지 않는다)
+- 사장님: "우리가 추구하는 건 화려함이 아니라 '검호'와 같은 정직하고 적막한 일촉즉발의 게임성." 그리고 "그건 너만 봐. PM들의 작업은 자유롭게, 그 후 자유로운 결과를 조율하는 디렉터만의 기준으로 삼아."
+- 쓰임: PM 지시문·차터·decisions.md 에 넣지 않는다. PM 결과물을 받아 합칠지·되돌릴지·다듬을지 정할 때 디렉터가 스스로 묻는 잣대: 효과·소리·연출은 상황을 읽게 돕는 만큼만, 물리는 정직하게(숨은 보정·상한 없음), 결투는 거리와 호흡의 긴장 위에 한 수로 끝날 수 있게, "적막과 일촉즉발을 더하는가, 깎는가".
 
 ## 사장님이 정한 운영 규칙 (2026-09-29)
 - 보고: 한국어, 한국 시간, "끝남 / 진행 중 / 안 함". 디렉터는 하루 3회 08:00·18:20·22:00 KST(정기 트리거가 이 세션에 걸려 있다. 교체하면 새 세션에 다시 건다). PM은 18:00 1회.
@@ -24,6 +28,7 @@
 | 캐릭터 PM | session_01HSrct4UE9qVgfTi4hd59qi | claude/pm-characters | 대기. R5에 기질값 |
 | 외형 PM | session_01HNkUuYHag8VSg6xpgbkGVR | claude/pm-character-looks | 대기. R2 뒤 갑옷 뚫림 점검 |
 | 사운드 PM | session_018mZ2Hqp8QUttYxEroMCesF | claude/pm-sound-impact (환경 env_01A6VUoNJgYWiFs5hTZrWavH) | 대기. R3에 hitScale 'log' 켜기 |
+| 기획 PM | session_01QRwbXg6zS4784iUVd3XGV5 | claude/pm-design | 9/30 신설(사장님). 1등급 high(노력은 사장님이 앱에서). 코드 읽기만, docs/design/. 첫 과제: 구조 지도 → 세 방향(어드벤처·RPG·대전 격투) → 수직 슬라이스. 역할 문서 docs/handoff/design_pm_charter.md |
 | 감사 | session_01P6xekotejC4FCmL2uX1S85 | claude/audit | 매일 17:00 diff 감사, 일요일 10:00 전체. 권고 대장 docs/audit/register.md. 디렉터는 권고마다 하루 안에 답 |
 | 폐지 | 연구 ASS session_01QoWtSqxGN5jYBMudxkqo1x(보관), 옛 디렉터 session_01KcYCh6UfKjrR4m8QjPcEbM(은퇴), 중복 디렉터 session_01NDJVGN7xsXPq19Yzry3BvH(보관) | | |
 
@@ -35,6 +40,12 @@
 - 감사 답(9/29 23:25 감사 세션에 트리거로 전달): R-001 부분 수용(삭제는 W5 유지), R-002 수용(표 docs/strike/owner_defaults_table.md → 9/30 08:00 사장님), R-003 ①③ 수용 완료(2daf262)·②④ W5, R-004 조건부 수용(9b5e94c 지금 몫, fighter.js 몫 W4 뒤, THRUST.bind 유지), R-005 수용 완료(10d9839). 이행 요약 scratchpad/audit/apply_2026-09-29.md.
 - 사운드 PM(타격 소리 간격·리볼버 총성)·외형 PM(발사 이펙트)에게 9/29 23:20 지시. 끝나면 디렉터에게 트리거로 알리기로 함 → 브랜치 확인 뒤 main 병합·배포.
 - R1 끝(9/29 23:45, wf_9c387b92-620, 31 에이전트): wbs-r1-arm a055980. 숨은 상한 검토 "그대로는 출하 불가": ARM.lead(aimLead 0.8)가 실제 휘두름을 −36% 느리게 함(옆베기 19.7→12.6 m/s, 사선 첫 상처 144→37 J). 디렉터 결정: ARM.lead 기본 꺼 둠(코드 유지, W4 팔 앞먹임 뒤 재측정, 사장님 표 26행), holdSpeed 0.6 은 손가락 검객만(AI 0.3 유지, 표 25행). 마무리 에이전트가 두 변경 뒤 wbs-impl 에 병합·관문·푸시(요약 scratchpad/r1/r1_final_summary.md). 열린 질문: 1.5 m/s 밑 느린 끌기에도 '고른 지연 ≤ 20 ms' 를 적용할지(적용하면 목줄 규칙 변경 필요).
+- 9/30 18:10: main ← dev 2a9613b(병합 에이전트 dc1c2af + 썸네일 재삭제). 들어간 것: fps 60 묶기(feat-fpscap 06cbe41, src/render_cap.js·RENDER.fpsCap·설정 줄), 되튐 2종 STEEL.steel 0.2·bone 0.1 + 가슴 찌르기 +0.25 삭제 + ARMOR.moveMul 0.8(feat-rules 3af8260), 참수 소리(사운드 ea7486f; 칼→몸 기본 SOUND.fleshHit 'legacy' 그대로, samsho/rec/synth 는 sounds.html 후보), 참수 외형 src/decap_fx.js(외형 7d31b7e, 역사째 병합 → 카드 뒷면 v2 시안 p_*.svg 4개·gen_cardbacks.py 도 들어옴, 게임은 안 읽음), 승리 글자를 슬로모 끝난 뒤로(8330ae9, main.js checkRoundEnd showRoundResult/resultShown, 결정타 슬로모 전체), 확인표 (바)45~46·(사)47~51(개수 51). 기준 sha: fights12=hybrid **12223139**, live_battery 2f453e0b (feat-rules 값과 같음). **tools/sim/README 기준 sha 줄은 아직 옛 값(38fb5b51) — 자동 분류기가 에이전트 커밋을 막음, diff 는 scratchpad/merge/readme_baseline_uncommitted.diff.** 성능 감사 수용 9커밋(4350454)도 포함.
+- 9/30 18:05 마무리 찌르기(feat-finish d326b5b, hs-finish, 워크플로 wf_0da1972e-8c3 38 에이전트 + 디렉터 고침): 탭 → 어느 자세에서든 겨눔 손(plunge.hand) → 닿지 않으면 한 걸음(gait lunge, 발 디디면) → 칼 선 따라 내리찌름. 숨은 잠김(높은 자세 시작 시 칼이 수평 바로 위에 멈춰 탭이 잠김, 480판 중 1) → 칼이 더 눕지 않으면 끝으로 봄(d326b5b, 새 숫자 없음). finish_thrust 3 --rows: 맨몸 상처 79%(쟁기 93·황소 90·바보 77·지붕 55; 0.5m 85·0.8m 58·1.1m 83·1.4m 88·1.6m 79), 판금 55%, 480판 모두 찌름. 목표 95% 미달(지붕 시작은 칼을 먼저 눕혀야 해 0.4초 늦고 비스듬히 들어감; 0.8m 는 걸음 없이 팔만으로 애매). 자기 기준에서 fights12 38fb5b51·live 2f453e0b 바이트 동일. **dev 병합은 자동 분류기가 막음(에이전트도, 디렉터 재시도도 "Auto-Mode Bypass") — 사장님 결정 대기: 권한을 열거나 직접 병합.** 충돌 예상: skill.js 가져오기 줄, tools/sim/README 표. 사장님 질문: ① 내딛기 한 걸음만 vs 닿을 때까지(지금) ② 0.5m 안 가파른 겨눔 손 높이 hoverMaxY 0.42 위로 올릴지.
+- 9/30 18:00 PM 보고: 캐릭터(가지=main, holdStart 반영, persona.close 는 밀치기 동작 대기), 동작(v1 ①~④ 끝, Meyer 유료 번역 불필요, 대기), 사운드(참수 소리 끝, 칼→몸 후보 35차 사장님 선택 대기, Freesound·YouTube 막힘), 무기(Q13 값 제안 25b1bca 문서만, 질문 3, 기억 62%), 외형(칼 잔상 v2·참수 외형 끝, 디렉터 메모 대기). 비용 누적 $2,271(디렉터 $1,125).
+- 9/30 10:50: 참수 끝 → main a6acc44(feat-decap 9fa2de3·37e2caf + headOff 규칙 좁힘). 도구 tools/sim/decap_check.mjs, tools/browser/decap_shots.mjs. 외형 PM(단면·피)·사운드 PM(onDecapitate 훅) 후속 지시함. 마무리 찌르기 워크플로 wf_0da1972e-8c3(가지 feat-finish, 워크트리 hs-finish) 진행 중.
+- 9/30 10:20 진행 중: 참수 워크플로 wf_0b82245d-a71(가지 feat-decap, 워크트리 hs-decap). 쓰러진 상대 마무리: 측정 에이전트(scratchpad/finish/measure_2026-09-30.md) 뒤 "찌르기 탭 → 자동 겨눔 내려찍기" 구현 예정, 무릎 꿇은 상대는 자세 지도 높이 겹침. R2 뒤 할 일: 누운 상대 베기 실효성 재측정 → 낮으면 베기 커맨드도 내려찍기로(사장님 10:20).
+- 9/30 09:15: 시작 거리 7.0 → 5.6(사장님 "조금만 붙이자"). main 기준 fights12 38fb5b51 · live_battery 2f453e0b. wbs-impl 은 다음 main 병합 때 따라옴(W5 시험판 빌드 전 병합 필수). W5 는 재시작 뒤 resume(wf_3ac7ca74-8e4, 작업 wd4hi2j2k): B 끝, C(기록·README·안내문·옛 경로 삭제·최종 관문) 진행 중. 섹터 규칙 디렉터 안은 측정에서 기준 1 이 나빠져 옛 규칙 유지(GESTURE.sectorAll 스위치만) → 확인표 4행 갱신 필요.
 - 9/30 05:20 W4c 끝(wf_dc7db524-c3b, 73분): wbs-r2-arm 51f59d6(bf4a457 windOnly·ffFilter, 51f59d6 출하: **DRIVE.hands 기본 false = trunkOnly**). 승자 없음(기준 1 실패 A trunkOnly 84 / C windOnlyFF 141 / B windOnly 152 of 280). 핵심: 큰 감기+반전 베기 장면(chainW)만 보면 C 36 ≤ A 41 로 C 가 약하지 않고 동작이 큼(손 경로 2~3.3 m, 어깨 118~128°); C 의 실패는 CUT 에 못 드는 chain 유지 장면(제스처가 감기로 읽음)에서 나옴. hitch 관문은 큰 감기에 맞지 않음(tCut 때 손이 챔버 0.85 m 뒤). riseR 반토막 = 드라이브 결함 아님, sectorMax 80° 섹터 틈(Pflug 에서 riseR 챔버 양옆 81°·128°)이라 올려베기를 감을 수 없음 → 표 4행(디렉터 안: 곧장 아래 틈에만 적용). ffFilter(스텝 평균 가속)는 잡음 결함 수정(alphaDes 39k→12k), C 가 못 이겨 기본 미적용. 디렉터 결정: R2 시험판 기본 trunkOnly, ?hand=wind 로 windOnlyFF 비교 가능(사장님 플레이가 판정), W5 에서 ffFilter 기본화 측정·sector 규칙 적용·chainW 를 1차 장면으로·hitch 관문 재정의·옛 결심 경로 삭제·시험판. 통합 에이전트가 wbs-r2-arm → wbs-impl + main src(시작 거리·잔상 v2·리볼버) 병합·아틀라스 팩 재생성(motion PM 클립 수정으로 3 FAIL) 중; W5 스크립트 작성 중(scratchpad/r2/w5_gates_build_workflow.js).
 - 9/30 03:30 W4b 끝(wf_d707a350-6a6, 51분): wbs-r2-arm 7fa74be(b3ba671 handMode 세 가지, 7fa74be 판정 메모 docs/strike/w4b_handmode.md). **승자 없음**: track·finger·governed 모두 기준 1(맨 팔 베기보다 약하면 안 됨) 실패(44행 중 34/35/27). 공통 원인 = 손 목표 추적 자체가 속도를 잃음. 가장 가까운 구성은 **trunkOnly(DRIVE.hands=false, W3 몸통·다리만 + 손은 오늘의 팔 매핑)**: horizR 23.4(기준 19.5)·vert 19.3(16.0) 로 기준선 초과, diagR air 0.947·riseR 2.75(7.92) 만 실패. governed 는 한 스텝 지평이라 쉬는 팔이 느린 목표를 받음(법칙 오류, 상수는 아님). phiB 미분이 거르지 않은 값이라 앞먹임이 잡음(alphaDes 7만~10만 rad/s², W3 몸통 앞먹임도 같은 경로). 판정 scratchpad/r2/w4b/judge.md. 디렉터 결정 → W4c: 'windOnly'(감기 동안만 클립 챔버 자세 추적으로 동작을 크게, 베기 시작에 오늘의 팔 매핑으로 이어받기, 몸통·다리는 W3) + 거른 위상 미분으로 앞먹임 + riseR 원인 조사, trunkOnly 와 함께 측정·판정(기준 1은 정점·첫 상처 에너지·시각까지). 스크립트 scratchpad/r2/w4c_windonly_workflow.js. 표 38·39행 추가.
 - 9/30 02:30 W4 끝(wf_1c503c5d-00b, 42 에이전트, 2.4 h): wbs-r2-arm c57210a(91f3e89 구현 A + c57210a 검토 고침). **관문 실패, 병합 보류.** 팔이 클립 손 경로를 손가락 속도로 못 따라감(사람 토크 80 N·m·어깨 18 rad/s 로는 클립 T0 페이스에 19~25 rad/s 필요, 손가락은 그 7.5배): 추적 손 오차 0.27~0.62 m(≤0.08), 칼 35~55°(≤15°), 모양 관문 3/4 실패. 결정적: 손가락 베기가 맨 팔 베기보다 **약해짐**(chain arm horizR 23.3 → 8.7 m/s, tc 운동 에너지 54 → 21 J, 첫 상처 없음) — R1 앞섬 보정과 같은 병리(목표가 근육보다 앞서면 팔이 짧고 느린 길로 감). S=0 불변 21/21은 통과. 디렉터 진단: 상한 부족이 아니라 제어 병리. 토크는 사람 값 유지. 대응 = W4b: DRIVE.handMode 세 가지('track' 현재 / 'finger' 베기 중 손은 손가락 직결(명령 가슴 틀에서, S 로 진폭) / 'governed' 근육이 낼 수 있는 위상 속도로 추적 목표를 매 스텝 물리 계산) 구현·측정·판정 워크플로(스크립트 scratchpad/r2/w4b_handmode_workflow.js). 기준 1: 어떤 손가락 속도에서도 맨 팔 베기보다 약하면 안 됨. 사장님 질문 추가: Q4 팔꿈치 앞먹임의 별도 상한(j.max·mus, Hill 계수 없음)·pole 즉시 전환 보고. R2 첫 시험판(10/2 밤)은 W4b 결과에 달림; 최악의 경우 W3 + 'finger' 모드로 시험판.
@@ -51,6 +62,7 @@
 - 본판(main) 최근: c9c6c6c 리볼버 조준쇠(gun_fx.js 스프라이트 조준쇠, 외형 PM 모듈 — 다음 지시 때 한 줄 알린다)·이동 ×1.4. 사장님 시험 주소 `https://yoonjl-svg.github.io/halfsword/?weapon=pistol&foeWeapon=longsword`. 시험 플레이 약속: 본판은 언제나, R0+R1 시험판 /wb/ 10/1 밤, R2 첫 시험판(W2~W5) 10/4~5.
 
 ## 사장님 답 대기
+- (9/30 18:10) feat-finish(마무리 찌르기) dev 병합과 tools/sim/README 기준 sha 갱신: 자동 분류기가 막음. 권한을 열어 주시거나 직접 병합/커밋. 마무리 찌르기 질문 ①②(위 18:05 항목). 사운드 칼→몸 후보 선택(SOUND.fleshHit). 무기 PM Q13 질문 3. 캐릭터 PM 설정 점검 ⑥-4·5·8·Q2. 기획 PM 방향(Q-S1~S3). 확인표 51행.
 - Meyer 1570 번역서 전달(드라이브 비공개 폴더 PDF/EPUB 파일 이름).
 - 무기 PM 제안 "가벼운 무기 T0 아래 한도"(디렉터 의견: 두지 않기). 설정 점검 ⑥-4·5·8. 여정 대화 목업은 보류.
 - 무기 PM 교체 시점(80% 규칙대로), 디렉터 교체(85%).

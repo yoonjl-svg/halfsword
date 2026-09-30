@@ -10,7 +10,8 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, WHOLE, SUPPORT, STRIKE, GESTURE, ARM, DRIVE } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, WHOLE, SUPPORT, STRIKE, GESTURE, ARM, DRIVE, COMBAT } from './config.js';
+import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gesture } from './strike/gesture.js';
 import { ClipDrive, solveArmIK, makeArmOut, armReach, flexOf } from './strike/drive_arm.js'; // R2: drive.js + 팔 몫 (W4 mixin)
@@ -192,6 +193,7 @@ export class Fighter {
     //  감싸서 그 부위 전체를, 나머지(견갑·손목 보호대·정강이받이·골반 아래 자락)는 판이 실제로 덮은 곳만 막는다(손목 보호대가
     //  아래팔 전체를, 허벅지께에 늘어진 자락이 골반 전체를 막지 않게). 흔적(데칼)은 맞은 곳에서 가장 가까운 판에 붙인다
     this.plateBoxes = {};
+    this.plateGait = []; // 걷는 속도를 늦추는 판이 붙은 부위 (몸통·다리, ARMOR.moveMul)
     // 방어구가 부서진 기록 (측정 도구가 읽는다): 완전히 부서진 판금 부위 수, 파손(곁 조각이 떨어져 나감) 횟수
     this.platesBroken = 0;
     this.armorShed = 0;
@@ -325,6 +327,7 @@ export class Fighter {
       if (dressTo.userData.armor?.length) {
         this.plateGroups[d.name] = dressTo;
         this.plateBoxes[d.name] = armorBoxes(group, dressTo, d.kind !== 'chest' && d.kind !== 'abdomen');
+        if (d.kind !== 'arm') this.plateGait.push(d.name);
       }
       if (d.kind === 'head') {
         this.faceMat = mesh.material;
@@ -820,6 +823,7 @@ export class Fighter {
     this.pain = Math.max(0, this.pain - dt * 0.6);
     if (this.state === 'dead') return;
     this.consciousness = Math.min(1, this.consciousness + dt * 0.03); // 정신이 천천히 돌아온다
+    if (this.revival) return; // 부활하는 동안은 죽지 않는다 (die → tryRevive 가 곧장 돌려보내던 것을 매 스텝 부르지 않게)
     if (this.blood < VITALS.collapseBlood) this.die('출혈');
     else if (this.consciousness <= 0) this.die('기절');
   }
@@ -865,16 +869,20 @@ export class Fighter {
       return;
     }
 
-    // 베기/찌르기 → 상처 + 출혈
+    // 베기/찌르기 → 상처 + 출혈. 찌르기는 ×1.6 (가슴 찌르기 +0.25 는 이것과 겹쳐 지움 — 사장님 9/30 14:30, 128판 0회)
     const bleedPerSev = h.bleedPerSev;
     const bleed = sev * bleedPerSev * (h.type === 'stab' ? 1.6 : 1);
     this.bleed += bleed;
     this.wounds.push({ part: h.part, type: h.type, severity: sev, bleed, local: h.local.clone() });
 
     // 치명상
-    if (Z === 'neck' && sev > 0.5) this.die('목');
-    else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
-    else if (Z === 'chest' && h.type === 'stab' && sev > 1.1) this.bleed += 0.25; // 심장·폐: 몇 초 안에 쓰러진다
+    if (Z === 'neck' && sev > 0.5) {
+      // 참수 (COMBAT.decapitate): 칼이 목을 가르고 지나간 베기만. 튕긴 충돌·찌르기·둔기·총은 아니다
+      const decap = COMBAT.decapitate && h.type === 'cut' && h.pass && h.passing;
+      if (decap) this.decapitate(sev, bleed);
+      this.die('목');
+      if (decap) COMBAT_HOOKS.onDecapitate?.(this, this.bodies.head);
+    } else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
 
     // 팔다리 기능
     const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' }[h.part];
@@ -883,6 +891,22 @@ export class Fighter {
       if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
     }
     if (Z === 'head' && h.type === 'cut') this.consciousness -= sev * 0.5;
+  }
+
+  /**
+   * 참수: 목 관절(가슴 → 머리)을 뗀다. 물리 스텝 밖(combat.afterStep → strike → applyWound)에서만 불린다.
+   *  머리 몸·콜라이더·겉모습(얼굴·눈·머리카락·투구)은 그대로 — 머리는 칼·끌림이 준 속도 그대로 날아간다(더하는 힘 없음).
+   *  몸통엔 목 단면 상처(stump, 가슴 기준 목 관절 자리): 목 상처와 같은 출혈. 되살아나지 않는다(revive.js tryRevive)
+   */
+  decapitate(sev, bleed) {
+    const J = this.jointByName.head;
+    const a = J.joint.anchor1(); // 가슴 몸 기준 목 관절 자리
+    this.world.removeImpulseJoint(J.joint, true);
+    this.joints.splice(this.joints.indexOf(J), 1); // 근육을 더는 걸지 않는다 (applyPose 의 J.head 목표 쓰기는 아무 데도 안 간다)
+    J.joint = null;
+    this.decapitated = true;
+    this.bleed += bleed;
+    this.wounds.push({ part: 'chest', type: 'cut', severity: sev, bleed, local: new THREE.Vector3(a.x, a.y, a.z), stump: true });
   }
 
   /**
@@ -927,6 +951,12 @@ export class Fighter {
     const B = this.plateBoxes[part];
     if (!B.partial) return true;
     for (const b of B.list) if (b.box.distanceToPoint(local) <= ARMOR.plate.coverMargin) return true;
+    return false;
+  }
+
+  /** 몸통·다리 판금이 하나라도 남아 있나 (걷는 최고 속도 × ARMOR.moveMul). 팔 판만 남거나 다 부서지면 아니다. ARMOR 끔이면 늘 아니다 */
+  wearsPlate() {
+    for (const k of this.plateGait) if ((this.plate[k] ?? 0) > 0) return true;
     return false;
   }
 
@@ -1231,7 +1261,7 @@ export class Fighter {
     // 다리가 체중을 싣는 걸음: 서 있는 동안만 (쓰러짐·일어남·무릎 꿇기는 예전 방식)
     const G = this.gait;
     const hybrid = !!G && this.state === 'stand';
-    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1); // moveMul: 권총은 발이 빠르다 (weapons.js)
+    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1) * (this.wearsPlate() ? ARMOR.moveMul : 1); // moveMul: 권총은 발이 빠르다 (weapons.js), 판금은 느리다 (config.js ARMOR)
     const st = this.stumble;
     const mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
     const mv = this.state === 'stand' ? { x: mvIn.x * (1 - st.length()) + st.x, y: mvIn.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };

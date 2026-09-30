@@ -22,9 +22,13 @@ export class Particles {
     this.mesh = new THREE.InstancedMesh(geo, mat, MAX);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.frustumCulled = false;
+    // 색 칸을 처음부터 만든다: 첫 입자 때 생기면 셰이더가 바뀌어 싸움 중에 새로 만든다 (판 시작 예열이 미리 만든다)
+    this.mesh.setColorAt(0, new THREE.Color(0xffffff));
+    this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     this.mesh.count = 0;
     scene.add(this.mesh);
     this.list = [];
+    this.dirty = false; // 지난 올림 뒤로 바뀐 입자가 있나 (새로 붙음·움직임·사라짐)
     this._m = new THREE.Matrix4();
     this._q = new THREE.Quaternion();
     this._s = new THREE.Vector3();
@@ -68,14 +72,18 @@ export class Particles {
   add(p, v, color, size, life, sticks) {
     if (this.list.length >= MAX) this.list.shift();
     this.list.push({ p: p.clone(), v, color: new THREE.Color(color), size, life, sticks, stuck: false });
+    this.dirty = true;
   }
 
   update(dt) {
-    const out = [];
-    for (const it of this.list) {
+    // 제자리에서 추린다 (매 프레임 새 배열을 만들지 않는다. 순서는 그대로)
+    const list = this.list;
+    let n = 0;
+    for (const it of list) {
       it.life -= dt;
       if (it.life <= 0) continue;
       if (!it.stuck) {
+        this.dirty = true;
         it.v.y -= 9.81 * dt;
         it.p.addScaledVector(it.v, dt);
         if (it.p.y <= 0.002) {
@@ -88,26 +96,38 @@ export class Particles {
           } else it.life = 0;
         }
       }
-      out.push(it);
+      list[n++] = it;
     }
-    this.list = out;
-    let i = 0;
-    for (const it of this.list) {
+    if (n !== list.length) this.dirty = true;
+    list.length = n;
+    // 바뀐 게 없으면(다 바닥에 붙어 가만히 있거나 하나도 없으면) 올리지 않는다. 올릴 때는 살아 있는 칸만
+    if (!this.dirty) return;
+    this.dirty = false;
+    for (let i = 0; i < n; i++) {
+      const it = list[i];
       const s = it.size;
       this._s.set(s, it.stuck ? 0.002 : s, s);
       this._m.compose(it.p, this._q, this._s);
       this.mesh.setMatrixAt(i, this._m);
       this.mesh.setColorAt(i, it.color);
-      i++;
     }
-    this.mesh.count = i;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    this.mesh.count = n;
+    if (n > 0) {
+      const im = this.mesh.instanceMatrix;
+      const ic = this.mesh.instanceColor;
+      im.clearUpdateRanges();
+      im.addUpdateRange(0, n * 16);
+      im.needsUpdate = true;
+      ic.clearUpdateRanges();
+      ic.addUpdateRange(0, n * 3);
+      ic.needsUpdate = true;
+    }
   }
 
   clear() {
     this.list = [];
     this.mesh.count = 0;
+    this.dirty = false;
   }
 }
 
@@ -243,10 +263,11 @@ function texture(kind) {
   texCache[kind] = t;
   return t;
 }
-function decalMaterial(kind) {
+const decalMats = new WeakSet(); // 자국마다 새로 만든 재질 (판이 끝나면 푼다 — 그림(texCache)은 종류별로 같이 써서 두고)
+function decalMaterial(kind, map = texture(kind)) {
   const metal = kind === 'scratch' || kind === 'dent';
-  return new THREE.MeshStandardMaterial({
-    map: texture(kind),
+  const m = new THREE.MeshStandardMaterial({
+    map,
     transparent: true,
     depthWrite: false,
     polygonOffset: true,
@@ -254,6 +275,25 @@ function decalMaterial(kind) {
     roughness: metal ? 0.2 : 0.7,
     metalness: metal ? 0.9 : 0,
   });
+  decalMats.add(m);
+  return m;
+}
+
+/** root 아래 상처 자국의 재질을 푼다 (판을 치울 때. 장면에서 뗀 뒤에 부른다. 모양은 부르는 쪽이 푼다) */
+export function disposeDecals(root) {
+  root.traverse((o) => {
+    if (decalMats.has(o.material)) o.material.dispose();
+  });
+}
+
+/**
+ * 판 시작 예열용: 진짜 자국과 같은 셰이더가 나오는 작은 판 하나 (종류마다 거칠기·금속성 값만 달라 셰이더는 하나).
+ *  그림은 빈 질감 — 셰이더는 그림이 있다는 것만 보고, compile 은 그림을 올리지 않는다 (자국 그림은 처음 쓸 때 그대로 만든다)
+ */
+let warm = null;
+export function decalWarmMesh() {
+  warm ??= { geo: new THREE.PlaneGeometry(0.001, 0.001), tex: new THREE.Texture() }; // 자국 모양처럼 위치·법선·uv
+  return new THREE.Mesh(warm.geo, decalMaterial('cut', warm.tex));
 }
 
 /** 표면 방향(법선) 어림: 상자는 가장 가까운 면, 캡슐은 옆면, 구는 바깥쪽 */

@@ -26,6 +26,10 @@ import { STRIKE, ANATOMY, STEEL, ARMOR, PHYSICS } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 
+// 전투 사건 갈고리 (gun.js GUN_HOOKS 와 같은 식): 비어 있으면 아무 일도 없다. 판정·난수와 무관
+//  onDecapitate(f, headBody): 참수된 순간 한 번 (fighter.applyWound, die 뒤) — 사운드 PM 이 소리를 건다
+export const COMBAT_HOOKS = { onDecapitate: null };
+
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
 const _a = new THREE.Vector3();
@@ -672,9 +676,9 @@ export class Combat {
     const zone = zoneOf(pr.v, vicLocal);
     let e = 0;
     const noArmor = att.weaponCfg.ignoreArmor; // 라이트세이버: 투구·판금에 튕기지 않는다 (맨머리·맨몸처럼)
-    if (zone === 'head') e = !noArmor && vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.helmet : STEEL.skull;
-    else if (!noArmor && zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.plate; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
-    else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone;
+    if (zone === 'head') e = !noArmor && vic.hasHelmet && vicLocal.y > -0.01 ? STEEL.steel : STEEL.bone; // 투구 / 맨머리
+    else if (!noArmor && zone !== 'neck' && vic.platedAt?.(pr.v.part, vicLocal)) e = STEEL.steel; // 판금 (ARMOR.on 일 때만, 판이 덮은 곳)
+    else if (pr.v.kind === 'arm' || pr.v.kind === 'leg') e = STEEL.bone; // 팔다리 뼈
     if (e <= 0) return;
     const vPre = velAt(S, point, _a).sub(velAt(P, point, _b)).dot(n); // + = 다가옴
     if (vPre < STEEL.reboundMinSpeed) return;
@@ -728,7 +732,7 @@ export class Combat {
     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
-      vic.applyWound({ ...r, part: pr.v.part });
+      vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
     }
     // 결과 기록 (가르고 지나갔으면 'through', 아니면 'hit'). R2 (§6.7)
     if (att.drive?.w > 0) att.drive.onResult(r.pass ? 'through' : 'hit', r);

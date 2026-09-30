@@ -51,6 +51,7 @@ export function reviveOf(spec) {
  */
 export function tryRevive(f, cause) {
   if (f.revival) return true;
+  if (f.decapitated) return false; // 참수된 몸은 일어서지 않는다 (현실감 귀결, COMBAT.decapitate — 남은 횟수는 그대로)
   const R = f.revive;
   if (!R || R.left <= 0) return false;
   R.left--;
