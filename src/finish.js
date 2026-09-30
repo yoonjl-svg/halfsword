@@ -15,6 +15,8 @@
 //     손목이 제동을 걸기 전이다 → 빠른 칼날이 들어간다
 //  두 사람 다 서 있으면 amt = 0 이고 자세 지도 계산은 예전과 한 비트도 다르지 않다.
 //  플레이어와 AI 가 같은 파이터 코드를 쓰므로 AI 의 내려베기도 그대로 마무리가 된다.
+//  탭 마무리 찌르기(skill.js plungePose)는 fin.plunge 만 읽는다 (칼끝이 들어갈 끝·찌르기 겨눔 손·칼 방향·모자란 거리).
+//   위 자세 값(target·hover·strike)은 그대로라 자세 지도로 치는 마무리는 예전과 한 비트도 다르지 않다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { MEASURED } from './ai.js';
@@ -75,7 +77,7 @@ function pose(body) {
 
 /** 이 파이터의 마무리 상태 (guards.js guardAt 의 fin) */
 export function newFinish() {
-  return { amt: 0, on: false, k: null, gap: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike) };
+  return { amt: 0, on: false, k: null, gap: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike), plunge: { tip: [0, 0, 0], hand: [0, 0, 0], dir: [0, -1, 0], short: 0, steep: false } };
 }
 
 /**
@@ -136,7 +138,8 @@ function aimPoses(f, fin, T) {
   const sh = S.hand;
   sh[1] = clamp(topY + FINISH.steep * reach, FINISH.strikeY[0], FINISH.strikeY[1]);
   const dv = sh[1] - topY;
-  sh[0] = clamp(T.x - Math.sqrt(Math.max(0, reach * reach - dv * dv)), FINISH.strikeFwd[0], FINISH.strikeFwd[1]);
+  const xWant = T.x - Math.sqrt(Math.max(0, reach * reach - dv * dv)); // 손이 가야 할 앞 거리 (닿을 수 있는 범위로 자르기 전)
+  sh[0] = clamp(xWant, FINISH.strikeFwd[0], FINISH.strikeFwd[1]);
   sh[2] = 0.06 + clamp(0.35 * T.z, -0.15, 0.2); // 옆으로 누운 쪽으로 조금 따라간다
   // 칼 선: 내려찍기 손에서 몸 중심 T 를 지나 sink 만큼 더 (몸 밑 땅속). 그 끝이 겨눈 점
   //  (T 바로 아래를 겨누면 선이 몸 윗면 높이에서 몸 앞을 지나가 버린다 — 측정: 가까이 누운 몸에서 칼이 몸 앞 땅을 쳤다)
@@ -155,7 +158,8 @@ function aimPoses(f, fin, T) {
   const want = topY + FINISH.clear - uy * L;
   const back = clamp((want - sh[1]) / Math.max(0.2, -uy), FINISH.hoverBack[0], FINISH.hoverBack[1]);
   const hh = H.hand;
-  hh[0] = Math.max(FINISH.hoverMinX, sh[0] - ux * back);
+  const hx = sh[0] - ux * back; // 겨눔 손이 가야 할 앞 거리 (가슴 앞 hoverMinX 로 자르기 전)
+  hh[0] = Math.max(FINISH.hoverMinX, hx);
   hh[1] = Math.min(FINISH.hoverMaxY, sh[1] - uy * back);
   hh[2] = sh[2] - uz * back;
   // 겨눔 손이 물러날 수 있는 한계에 걸려 칼끝이 몸에 닿을 만큼 낮으면, 그만큼 칼끝을 들어 올린다 (고정 각도)
@@ -177,6 +181,26 @@ function aimPoses(f, fin, T) {
   sd[0] = dx / n;
   sd[1] = dy / n;
   sd[2] = dz / n;
+  // 탭 마무리 찌르기(skill.js thrust)만 읽는 값. 위 자세 값은 그대로다
+  //  tip: 칼끝이 찔러 들어갈 끝 (칼 선이 몸 중심을 지나 sink 만큼 더 간 곳)
+  //  short: 누운 몸이 지금 선 자리에서 내리찌르기가 닿는 곳보다 먼 거리(m) — 내려찍기 손이 앞으로 뻗는 끝(strikeFwd)에 걸려
+  //   모자란 만큼. 그만큼 내딛어야 칼 선이 몸에 닿는다
+  //  steep: 누운 몸이 너무 가까워 겨눔 손이 가슴 앞(hoverMinX)에 걸리면, 칼 선을 세워 누운 몸 바로 위에서 곧장 내리찌른다
+  //   (걸린 손에서 비스듬히 찌르면 팔이 다 닿지 못한 만큼 칼끝이 앞으로 밀려, 가로로 누운 좁은 몸 너머 땅에 떨어졌다)
+  //  hand: 찌르기 겨눔 손, dir: 지금 칼자루에서 tip 으로
+  const pl = fin.plunge;
+  pl.short = Math.max(0, xWant - sh[0]);
+  pl.steep = hx < FINISH.hoverMinX;
+  pl.tip[0] = pl.steep ? T.x : px;
+  pl.tip[1] = pl.steep ? T.y - FINISH.sink : py;
+  pl.tip[2] = pl.steep ? T.z : pz;
+  pl.hand[0] = pl.steep ? T.x : hh[0];
+  pl.hand[1] = hh[1];
+  pl.hand[2] = pl.steep ? T.z : hh[2];
+  _h.set(pl.tip[0], pl.tip[1], pl.tip[2]).sub(_a.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv)).normalize();
+  pl.dir[0] = _h.x;
+  pl.dir[1] = _h.y;
+  pl.dir[2] = _h.z;
   const hd = H.dir;
   if (lift > 0) {
     const el = Math.asin(clamp(sd[1], -1, 1)) + lift;

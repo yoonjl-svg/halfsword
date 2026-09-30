@@ -1729,8 +1729,9 @@ export class Fighter {
       if (!this.wristBrake && toward > 3 && toward > tgtSp && angle > 0.25) {
         const brakeAcc = (cap * this.weaponCfg.brakeEcc) / this.swordIhand;
         const stopAngle = (toward * toward) / (2 * brakeAcc);
-        // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js)
-        const fr = this.finish.amt > 0 && aim.y < blade.y ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
+        // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
+        const tap = this.skill.tap;
+        const fr = this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
         if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
