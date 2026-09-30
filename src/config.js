@@ -356,6 +356,10 @@ export const ARMOR = {
   plate: { cut: 70, stab: 47, limb: 0.65, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, coverMargin: 0.02, shedBelow: 0.9, trim: 0.4 },
   // 부서진 투구·판금 조각이 흩어졌다가 사라지는 시간(초): 최소 ~ 최대 (전용 난수로 고른다, 겉모습만)
   debrisLife: [1.1, 1.7],
+  // 사장님 9/30, 판금을 입은 검객의 걷는 최고 속도 ×0.8 ("갑옷 입은 사람은 느려지게 하자. 이동 속도 -20%").
+  //  몸통·다리 판(가슴판·배 판띠·골반 자락·허벅지·정강이·쇠신)이 하나라도 남아 있는 동안만. 팔 판(견갑 등)만 남거나
+  //  다 부서지면 느려짐도 사라진다 (fighter.js wearsPlate). 무기 moveMul(권총 ×1.4)과 곱해진다. 플레이어·AI 같다
+  moveMul: 0.8,
 };
 
 export const VITALS = {

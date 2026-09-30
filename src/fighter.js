@@ -189,6 +189,7 @@ export class Fighter {
     //  감싸서 그 부위 전체를, 나머지(견갑·손목 보호대·정강이받이·골반 아래 자락)는 판이 실제로 덮은 곳만 막는다(손목 보호대가
     //  아래팔 전체를, 허벅지께에 늘어진 자락이 골반 전체를 막지 않게). 흔적(데칼)은 맞은 곳에서 가장 가까운 판에 붙인다
     this.plateBoxes = {};
+    this.plateGait = []; // 걷는 속도를 늦추는 판이 붙은 부위 (몸통·다리, ARMOR.moveMul)
     // 방어구가 부서진 기록 (측정 도구가 읽는다): 완전히 부서진 판금 부위 수, 파손(곁 조각이 떨어져 나감) 횟수
     this.platesBroken = 0;
     this.armorShed = 0;
@@ -309,6 +310,7 @@ export class Fighter {
       if (dressTo.userData.armor?.length) {
         this.plateGroups[d.name] = dressTo;
         this.plateBoxes[d.name] = armorBoxes(group, dressTo, d.kind !== 'chest' && d.kind !== 'abdomen');
+        if (d.kind !== 'arm') this.plateGait.push(d.name);
       }
       if (d.kind === 'head') {
         this.faceMat = mesh.material;
@@ -918,6 +920,12 @@ export class Fighter {
     return false;
   }
 
+  /** 몸통·다리 판금이 하나라도 남아 있나 (걷는 최고 속도 × ARMOR.moveMul). 팔 판만 남거나 다 부서지면 아니다. ARMOR 끔이면 늘 아니다 */
+  wearsPlate() {
+    for (const k of this.plateGait) if ((this.plate[k] ?? 0) > 0) return true;
+    return false;
+  }
+
   /** 맞은 점(부위 몸 좌표)에서 가장 가까운 판금 메쉬 (흔적을 붙일 곳) */
   plateMeshNear(part, local) {
     let best = null;
@@ -1219,7 +1227,7 @@ export class Fighter {
     // 다리가 체중을 싣는 걸음: 서 있는 동안만 (쓰러짐·일어남·무릎 꿇기는 예전 방식)
     const G = this.gait;
     const hybrid = !!G && this.state === 'stand';
-    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1); // moveMul: 권총은 발이 빠르다 (weapons.js)
+    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1) * (this.wearsPlate() ? ARMOR.moveMul : 1); // moveMul: 권총은 발이 빠르다 (weapons.js), 판금은 느리다 (config.js ARMOR)
     const st = this.stumble;
     const mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
     const mv = this.state === 'stand' ? { x: mvIn.x * (1 - st.length()) + st.x, y: mvIn.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
