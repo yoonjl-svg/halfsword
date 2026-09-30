@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, ARM } from './config.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt } from './guards.js';
@@ -258,6 +258,7 @@ export class Fighter {
     const weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index));
 
     const defs = partDefs(this.side);
+    this.headR = defs.find((d) => d.name === 'head').shape[1]; // 머리 공 반지름 (skill.js 찍기 겨눔이 머리 꼭대기 높이를 잰다)
     this.localPos = {};
     this.localRot = {};
     for (const d of defs) {
@@ -821,6 +822,12 @@ export class Fighter {
       const tear = h.type === 'blunt' ? h.energy / 800 : 0.25 + sev * 0.5;
       this.cloth[h.part] = Math.max(0, c - tear);
     }
+
+    // 사장님 결정 (9/30 "맞으면 즉사로"): 쓰러진 상대를 탭 마무리로 내리찍는 칼끝이 몸통(가슴·배·골반)이나 머리에
+    //  찌르기로 닿았다 (combat.js analyze 의 finish) → 즉사. 옷·살·판금·투구 문턱은 따지지 않는다.
+    //  판금·투구가 칼을 막아 튕겨 내는 것(analyze 의 pass → 물리 필터·rebound)은 그대로 — 막는 건 물리, 죽음은 이 규칙.
+    //  죽음은 다른 죽음과 같이 die → tryRevive (투지 부활) 를 거친다
+    if (h.finish) this.die('내려찍기');
 
     if (h.type === 'blunt') {
       if (Z === 'head' || Z === 'neck') {
@@ -1784,11 +1791,11 @@ export class Fighter {
     rot(chest, _q1);
     const c = chest.translation();
     const T = _ik1.set(target.x - c.x, target.y - c.y, target.z - c.z).applyQuaternion(_q2.copy(_q1).invert());
-    const S = _ik2.set(0, 0.1, this.side * 0.2); // 어깨 (가슴 기준)
-    const a = 0.3; // 위팔
-    const b = 0.27; // 아래팔 + 손목까지
+    const S = _ik2.set(ARM.shoulder[0], ARM.shoulder[1], this.side * ARM.shoulder[2]); // 어깨 (가슴 기준)
+    const a = ARM.upper; // 위팔
+    const b = ARM.fore; // 아래팔 + 손목까지
     const D = T.sub(S);
-    const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+    const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - ARM.slack);
     const Dn = D.normalize();
     // 팔꿈치는 아래·뒤·바깥쪽을 향한다
     const pole = _ik3.set(-0.25, -1, this.side * 0.5).normalize();
