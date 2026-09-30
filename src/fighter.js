@@ -214,6 +214,7 @@ export class Fighter {
     this.barge = null; // 밀치는 중 { phase: 'step'|'press', L, stepOk, d0 } (발사 ~ 누르기 끝)
     this.bargeEnd = null; // 마지막 밀치기가 끝난 까닭 (refused·dropped·apart·release·armFull·state·swing·thrust)
     this.shoves = 0; // 발사 횟수
+    this.closeStepKind = 'lunge'; // 딛기 걸음 종류: 앞발 lunge. 랴오(persona.close.kind 'kick')는 뒷발이 지나 딛는 pass (ai.js)
     this.lift = 0; // 접기 풀기 0~1 (0 = 오늘 접기 그대로)
     this.liftV = 0;
     this.closeW = 0; // 누르기 손 목표 무게 w 0~1
@@ -733,8 +734,8 @@ export class Fighter {
           this.shoves++;
           b = this.barge = { phase: L > 0 ? 'step' : 'press', L, stepOk: null, d0: d, req: null };
           if (L > 0) {
-            // 찌르기 걸음과 같은 요청 (skill.js thrust: lunge, 0.3 s). 거절되면 밀치기 끝
-            b.stepOk = g.requestStep({ kind: 'lunge', fwd: L, duration: 0.3 });
+            // 찌르기 걸음과 같은 요청 (skill.js thrust: lunge, 0.3 s. 랴오만 pass). 거절되면 밀치기 끝
+            b.stepOk = g.requestStep({ kind: this.closeStepKind, fwd: L, duration: 0.3 });
             if (b.stepOk) b.req = g.req;
             else {
               this.barge = b = null;

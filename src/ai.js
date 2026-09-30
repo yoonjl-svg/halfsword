@@ -20,7 +20,7 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, ARENA, BODY, SKILL } from './config.js';
+import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
@@ -78,6 +78,16 @@ export class AI {
     this.foe = foe;
     this.sense = new Senses(me, foe);
     this.persona = persona || {};
+    // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)
+    if (this.persona.close) me.canShove = true;
+    if (this.persona.close?.kind === 'kick') me.closeStepKind = 'pass'; // 랴오 발차기 = 뒷발이 지나 딛는 몸 부딪기 (발차기 명령·발 충돌이 없다)
+    this.closeWant = false; // 밀기로 정함 (사건마다 한 번 rate 굴림)
+    this.closeBind = false; // 칼이 맞물려 있나 (checkBind 와 같은 기하, 읽기만)
+    this.closeIn = false; // 지난 스텝에 닿는 거리 안이었나 (E1 들어섬)
+    this.closeInside = false; // 이번 스텝 닿는 거리 안 (moveFeet 스틱 덮어쓰기)
+    this.closeWasBarge = false;
+    this.closeShoves = 0; // 지난 스텝까지 본 me.shoves (같은 스텝에 발사·거절된 것도 끝으로 읽는다)
+    this.closeEv = { E1: 0, E2: 0, E4: 0, won: 0, cut: 0 }; // 굴린 사건 수·이긴 수·이어 벤 수 (재기용)
     this.school = schoolOf(this.persona.school);
     // 간격 상수 (가슴과 가슴 사이 수평 거리, m). school.measure는 롱소드로 잰 값이라, 칼이 그보다 짧거나
     // 길면 그 비율만큼 줄이거나 늘린다 — 안 그러면 짧은 칼을 쥔 쪽이 롱소드 간격에서 공격을 걸었다가
@@ -245,14 +255,21 @@ export class AI {
     const L = this.level;
 
     // 부활하는 동안(revive.js): 싸우지 않고 기다린다. 끝나면 집념으로 다시 싸운다
-    if (me.revival) return this.holdForRevive(dt);
+    if (me.revival) {
+      this.closeWant = this.closeBind = false;
+      return this.holdForRevive(dt);
+    }
     if (this.reviving) this.resumeAfterRevive();
     // 판 시작 정지(ARENA.startHold, 사장님 9/30): 발은 묶인 채 캐릭터마다 서 있는 모습(persona.idle)만 보인다.
     //  시트에 idle이 없는 기본 AI는 이 분기를 타지 않는다 (예전과 같다)
-    if (me.feetHeld && this.persona?.idle && me.state === 'stand') return this.holdStart(dt);
+    if (me.feetHeld && this.persona?.idle && me.state === 'stand') {
+      this.closeWant = this.closeBind = false;
+      return this.holdStart(dt);
+    }
 
     // 완전히 쓰러졌다: 칼을 머리 위로 들어 가리기만 한다 (팔에도 힘이 거의 없다)
     if (me.state === 'down') {
+      this.closeWant = this.closeBind = false;
       me.move.set(0, 0);
       this.mode = 'withdraw';
       this.phase = 'ready';
@@ -341,6 +358,13 @@ export class AI {
     const th = this.threat(s, c, r, d);
     this.noThreat = th ? 0 : this.noThreat + dt;
     this.emote(dt, hurt, !!th && d < this.M.clinch + 0.4);
+    this.closeQuarters(s, d);
+    // 밀치는 중(me.barge): 모드 분기를 건너뛴다. 손과 발(스틱 1 유지)은 돈다
+    if (me.barge && !kneeling) {
+      this.moveHand(dt);
+      this.moveFeet(dt, d);
+      return;
+    }
 
     if (kneeling) {
       // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
@@ -450,6 +474,7 @@ export class AI {
    */
   resumeAfterRevive() {
     this.reviving = false;
+    this.closeWant = this.closeBind = false;
     const R = this.me.revive || {};
     this.emo.fear = this.emo.anger = 0;
     this.emo.obsession = Math.min(1, R.obsession ?? 0.8);
@@ -911,6 +936,64 @@ export class AI {
     if (this.pointBlocked) return 0; // 칼끝부터 쳐서 비킨다. 들어가는 것은 그다음 칼(이어 치기)에서
     const short = this.contactDist() - this.M.contact - this.tech.reach * this.reachScale;
     return clamp(short * 0.8, 0, 0.3);
+  }
+
+  /**
+   * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md): 인물(persona.close = { rate, kind, then })만 정한다. 몸은 플레이어와 같은
+   *  규칙(fighter.closeStep)이고 AI 는 스틱만 움직인다 (moveFeet). 시간·쿨다운 없이 사건마다 한 번 Math.random() < rate:
+   *  E1 닿는 거리 안으로 들어섬, E2 칼이 맞물림(checkBind 와 같은 기하, 읽기만), E4 내 밀치기가 끝났는데 여전히 안쪽.
+   *  kind 'kick'(랴오)도 같은 몸 부딪기 (발차기 명령·발 충돌이 없다). 기본 AI 는 첫 줄에서 돌아간다 (난수 없음)
+   */
+  closeQuarters(s, d) {
+    if (!CLOSE.on || !this.persona.close) return;
+    const me = this.me;
+    const foe = this.foe;
+    const C = this.persona.close;
+    // 끝난 밀치기: fighter.closeStep 이 barge 를 지우고 까닭을 bargeEnd 에 남긴다 (같은 스텝에 발사·거절된 것은 shoves 로 본다)
+    const ended = (this.closeWasBarge || me.shoves !== this.closeShoves) && !me.barge ? me.bargeEnd : null;
+    this.closeWasBarge = !!me.barge;
+    this.closeShoves = me.shoves;
+    const up = me.state === 'stand' && foe.alive && foe.state === 'stand' && s.state === 'stand' && !foe.revival;
+    let cut = false;
+    if (ended) {
+      this.closeWant = false;
+      // then 'cut': 밀고 곧장 벤다. 'recover' 는 손에서 가까운 기술, 'shove' 는 느린 이유 목록에 없어 바로 친다
+      cut = ended !== 'refused' && C.then === 'cut' && up && this.mode !== 'attack' && this.startAttack(this.pickTech(s, 'recover'), 'shove', { noFeint: true, fastChamber: true });
+      if (cut) this.closeEv.cut++;
+    }
+    const inside = me.foeDistance() <= CLOSE.reach(me.armed ? me.weapon : null); // 실제 가슴 거리 (플레이어와 같은 안쪽)
+    this.closeInside = inside;
+    // 풀림: 안쪽 밖, 누군가 stand 아님, 발 묶임, 쓰러진 상대 간격(downGap) → 다시 되면 들어섬(E1)으로 본다
+    if (!inside || !up || me.feetHeld || this.Mup) {
+      this.closeWant = this.closeBind = false;
+      this.closeIn = false;
+      return;
+    }
+    // 거절, 막으며 물러섬(defVoid): 접는다. 안쪽에 있는 동안은 다시 들어섬으로 보지 않는다
+    if (ended === 'refused' || (this.mode === 'defend' && this.defVoid)) {
+      this.closeWant = this.closeBind = false;
+      this.closeIn = true;
+      return;
+    }
+    const roll = (ev) => {
+      if (this.closeWant) return;
+      this.closeEv[ev]++;
+      if (Math.random() < C.rate) {
+        this.closeWant = true;
+        this.closeEv.won++;
+      }
+    };
+    if (!this.closeIn) roll('E1');
+    this.closeIn = true;
+    let bind = false;
+    if (me.armed && foe.armed && me.tipPrev && foe.tipPrev) {
+      me.bladePoint(0.1, _a0);
+      foe.bladePoint(0.1, _b0);
+      bind = segDist(_a0, me.tipPrev, _b0, foe.tipPrev) < 0.07; // checkBind 와 같은 기하 (this.bound 는 건드리지 않는다)
+    }
+    if (bind && !this.closeBind) roll('E2');
+    this.closeBind = bind;
+    if (ended && ended !== 'refused' && !cut) roll('E4'); // then 'none'(또는 벨 수 없었음): 여전히 안쪽이면 다시 굴린다
   }
 
   /** 지금 베기 시작하면 칼이 닿을 때쯤의 거리 (서로 다가오는 빠르기 × 베는 시간, 멈춰 서는 몫은 뺀다) */
@@ -1398,6 +1481,13 @@ export class AI {
       if (fwd < 0 && outBack > 0.3) fwd *= 1 - k * 0.8; // 뒤로는 더 못 간다
       side = side * (1 - k) + Math.sign(toCenter || 1) * k;
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * 0.15 * k); // 몰렸으면 먼저 친다
+    }
+    // 근접 밀치기: 닿는 거리 안에서 스틱만 (벽 처리 뒤라 side 를 ±k 로 바꾸지 못한다). 걸쇠가 꺼져 있으면 한 스텝 0 으로 장전,
+    //  켜져 있으면 1 로 발사, 밀치는 동안 1 유지(누르기). 휘두르는 중·베는 중(strike·follow, 팔이 묶임)은 미룬다
+    const armsBusy = this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow');
+    if (CLOSE.on && this.closeInside && !me.skill.swinging && (me.barge || (this.closeWant && !armsBusy))) {
+      fwd = me.barge ? 1 : me.closeArmed ? 1 : 0;
+      side = 0;
     }
     if (!this.foe.alive) fwd = side = 0;
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
