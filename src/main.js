@@ -1329,7 +1329,10 @@ let guardShown = -1;
 let guardTimer = 0;
 function updateGuardName(dt) {
   const gun = player.weapon?.gun; // 권총: 칼 자세 대신 '사격 자세' 하나만 (gun.js GUN_STANCE)
-  const g = settings.guardNames && (gun || player.guardWeight() > 0.5) && player.alive ? (gun ? 'gun' : player.guardPose.nearest) : -1;
+  // 보정 v2 (s > 0): 날것 자세라 휘두르지도(quiet > 0) 되돌아오지도 않을 때만 이름을 보인다 (여쭘 20, 기존 깃발만)
+  const sk = player.skill;
+  const rest = !(sk.corr === 'v2' && sk.level > 0) || (sk.quiet > 0 && !sk.recovering);
+  const g = settings.guardNames && (gun || (player.guardWeight() > 0.5 && rest)) && player.alive ? (gun ? 'gun' : player.guardPose.nearest) : -1;
   if (g !== guardShown && (g === 'gun' || g >= 0)) {
     guardShown = g;
     guardName.innerHTML = '';

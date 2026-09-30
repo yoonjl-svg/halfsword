@@ -108,7 +108,8 @@ export class Skill {
     if (f.weapon?.gun) return gunCanFire(f, { now: true }); // 권총: 찌르는 동작 없이 사격 자세(gunPose, 자동 조준 + 흔들림)의 지금 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
     // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽]). 검술 보정이 다 걸려 있으면 자세 지도의 손, 덜 걸려 있으면(보정 약·끔)
     //  날것 손 위치와 섞인 실제 손 목표(fighter.handBase)에서 뻗는다 — 자세 지도의 손에서 뻗으면 실제 손보다 뒤에서 시작해 덜 나갔다
-    const g = f.guardWeight() >= 1 || !f.handBase ? f.guardPose.hand : f.handBase;
+    // 보정 v2 (s > 0): 자세 지도의 손이 없다 → 늘 지금 손 목표(handBase)에서 뻗는다
+    const g = this.corr === 'v2' && this.level > 0 ? f.handBase || f.guardPose.hand : f.guardWeight() >= 1 || !f.handBase ? f.guardPose.hand : f.handBase;
     const down = f.finish.on && f.finish.amt > 0.5; // 쓰러진 상대: 누운 몸을 내리찌른다 (finish.js 가 겨눈 곳)
     // 찌르기 무기(weapons.js THRUST_STYLE)는 더 멀리 찌르고 더 빨리 자세로 돌아온다.
     //  (겨누기·뻗기까지 빠르게 하면 팔이 손 목표를 따라가지 못해 오히려 덜 뻗는다 — 측정: 레이피어 탭 상처 60% → 20%)
@@ -366,12 +367,17 @@ export class Skill {
     if (f.weapon?.enterParry) this.enterParry(dt);
     const fk = this.flowing ? SKILL.flowFollow : 1; // 흐르는 동안은 이어 베기를 더 밀어 칼이 멈추지 않고 돌아 나가게
 
-    // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
-    if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L * fk);
-    this.follow.multiplyScalar(Math.exp(-dt / SKILL.followDecay));
-    const fm = SKILL.followMax * L * fk;
-    if (this.follow.length() > fm) this.follow.setLength(fm);
-    this.aimRaw.copy(this.anchor).add(this.follow);
+    if (this.corr === 'v2' && L > 0) {
+      // 보정 v2: 이어 베기 없음 (손은 손가락 너머로 가지 않는다 — 손가락 너머는 칼끝뿐, 여쭘 12)
+      this.aimRaw.copy(this.anchor);
+    } else {
+      // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
+      if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L * fk);
+      this.follow.multiplyScalar(Math.exp(-dt / SKILL.followDecay));
+      const fm = SKILL.followMax * L * fk;
+      if (this.follow.length() > fm) this.follow.setLength(fm);
+      this.aimRaw.copy(this.anchor).add(this.follow);
+    }
     if (this.aimRaw.length() > R) this.aimRaw.setLength(R);
     // 손 목표를 "딱 멈추는"(임계 감쇠) 2차 필터로 거른다: 목표가 순간이동해도 손은 가속·감속하며 간다.
     //  (사람의 손도 순간적으로 속도를 바꾸지 못한다. 목표가 튀면 근육이 그 충격을 몸통에 그대로 전해 출렁인다)

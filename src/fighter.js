@@ -616,11 +616,43 @@ export class Fighter {
     const act = sk.activity;
     const amp = SKILL_BODY.holdAmount + (1 - SKILL_BODY.holdAmount) * act;
     const spd = SKILL_BODY.holdSpeed + (1 - SKILL_BODY.holdSpeed) * act;
-    // 골반은 아직 발 위치를 바꾸지 못해서(발 딛기 방향 전환 전) 교본 값의 절반만 튼다
-    follow('pelvisYaw', -G.pelvisYaw * 0.5 * gw * amp, SKILL_BODY.pelvis * spd);
-    follow('chestYaw', -G.chestYaw * gw * amp, SKILL_BODY.chest * spd);
-    follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
-    follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
+    const s = sk.level;
+    if (sk.corr === 'v2' && s > 0) {
+      // 보정 v2 (설계 '순서와 정렬'): 자세표 몸 목표 없음. 오늘 끔의 몸 돌림(−x·0.35, applyPose 1510 의 수)을 거르기 전 aimRaw 로
+      //  골반 s·0.5(620 의 골반 몫)·가슴 s 만큼 먼저 따라간다 → 골반 → 가슴 → 손(걸러진 aim) → 칼끝 순. 숙이기·낮추기 0
+      const turn = -sk.aimRaw.x * 0.35;
+      let pT = s * 0.5 * turn;
+      let cT = s * turn;
+      let piT = 0;
+      let dT = 0;
+      // 찌르기 몸 돌림은 명령(손·칼끝과 같다): thrustPose 몸 값을 th.w·s 로 덧씌운다 (오늘은 bodyGuard × gw)
+      const th = sk.thrustPose;
+      const kt = th.w * s;
+      if (kt > 0) {
+        pT += (-th.pelvisYaw * 0.5 * amp - pT) * kt;
+        cT += (-th.chestYaw * amp - cT) * kt;
+        piT += (th.pitch - piT) * kt;
+        dT += (th.drop - 0.06 - dT) * kt;
+      }
+      // 마무리(쓰러진 상대 내려찍기)만 자세 당김 예외 (사장님 9/30 23:40): guardAt 의 fin 섞기를 s·fin.amt 로
+      const kf = s * this.finish.amt;
+      if (kf > 0) {
+        pT += (-G.pelvisYaw * 0.5 * amp - pT) * kf;
+        cT += (-G.chestYaw * amp - cT) * kf;
+        piT += (G.pitch - piT) * kf;
+        dT += (G.drop - 0.06 - dT) * kf;
+      }
+      follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd);
+      follow('chestYaw', cT, SKILL_BODY.chest * spd);
+      follow('pitch', piT, SKILL_BODY.chest * spd);
+      follow('drop', dT, SKILL_BODY.pelvis * spd);
+    } else {
+      // 골반은 아직 발 위치를 바꾸지 못해서(발 딛기 방향 전환 전) 교본 값의 절반만 튼다
+      follow('pelvisYaw', -G.pelvisYaw * 0.5 * gw * amp, SKILL_BODY.pelvis * spd);
+      follow('chestYaw', -G.chestYaw * gw * amp, SKILL_BODY.chest * spd);
+      follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
+      follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
+    }
     this.pelvisYawOffset = bp.pelvisYaw;
     this.pelvisDropOffset = bp.drop;
   }
@@ -1507,7 +1539,8 @@ export class Fighter {
     this.hunch = Math.max(0, -bend); // 일부러 앞으로 숙인 각도(라디안): 넘어짐 판정에서 뺀다
     // 가슴을 트는 각도(정면 기준): 검술 자세 지도 + (보정이 약할수록) 손이 있는 쪽으로.
     // 허리(척추)는 그중 골반이 이미 튼 만큼을 뺀 나머지만 튼다
-    const chestYaw = bp.chestYaw + (1 - gw) * -sk.aim.x * 0.35;
+    // 보정 v2 (s > 0): 몸 돌림의 s 몫은 이미 bodyPose(aimRaw) 에 있다 → 걸러진 손 쪽 몫은 (1 − s)
+    const chestYaw = sk.corr === 'v2' && sk.level > 0 ? bp.chestYaw + (1 - sk.level) * -sk.aim.x * 0.35 : bp.chestYaw + (1 - gw) * -sk.aim.x * 0.35;
     const twist = THREE.MathUtils.clamp(chestYaw - (this.state === 'stand' ? bp.pelvisYaw : 0), -0.8, 0.8);
     const spine = (name, pitch, yaw) => J[name].target.setFromEuler(_eu.set(0, yaw, pitch, 'YXZ'));
     spine('abdomen', bend * 0.5, twist * 0.45);
@@ -1668,8 +1701,14 @@ export class Fighter {
     // ② 검술 자세 지도: 손가락 위치 → 실제 롱소드 자세의 손 위치(앞뒤 깊이 포함)와 칼끝 방향
     //  검술 보정이 셀수록 ②를 따른다 (끔 = ①만)
     const gw = this.guardWeight();
-    const G = guardAt(off.x, off.y, this.guardPose, this.finish);
-    if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
+    const G = guardAt(off.x, off.y, this.guardPose, this.finish); // v2 도 부른다: nearest → ai_sense.js·HUD
+    const sv = this.skill.level;
+    const v2 = this.skill.corr === 'v2' && sv > 0;
+    if (v2) {
+      // 보정 v2: 손 당김 없음(한손 자세표도 함께). 마무리만 예외(사장님 9/30 23:40): guardAt 의 fin 섞기를 s·fin.amt 로 명령
+      const kf = sv * this.finish.amt;
+      if (kf > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), kf);
+    } else if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     // 탭 찌르기(skill.thrustPose)는 보정이 아니라 명령이라 검술 보정 세기(gw)와 무관하게 덧씌운다 — 보정 0 에서도 찌른다.
     //  찌르기는 지금 손 목표(handBase, 덧씌우기 전)에서 뻗어 나간다 (skill.thrust)
     const hb = (this.handBase ||= [0, 0, 0]);
@@ -1693,7 +1732,15 @@ export class Fighter {
     //  허리 아래로     → 칼끝이 내려감(아래 자세)
     // 자세에서 자세로 손을 옮기면 칼이 크게(최대 100° 넘게) 돌며 베기가 된다.
     const aim = _v3.set(...guardDir(off.x, off.y));
-    if (gw > 0) {
+    if (v2) {
+      // 보정 v2: 칼끝 방향 당김 없음. 마무리만 s·fin.amt (위와 같은 예외)
+      const kf = sv * this.finish.amt;
+      if (kf > 0) {
+        aim.lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), kf);
+        if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
+        aim.normalize();
+      }
+    } else if (gw > 0) {
       aim.lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), gw);
       if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
       aim.normalize();
