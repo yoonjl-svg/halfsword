@@ -400,7 +400,7 @@ if (!SKIP.has('perf')) {
   }
 }
 
-// ── AI 끼리 안정 (10 분 × Hz × 무기), 넘어짐 R1 견줌 ──
+// ── AI 끼리 안정 (10 분 × Hz × 무기), 넘어짐 R1 견줌 (--r1 이 없으면 견줄 것이 없으니 FAIL) ──
 if (!SKIP.has('ai')) {
   const ai = [];
   for (const hz of [60, 120])
@@ -416,7 +416,7 @@ if (!SKIP.has('ai')) {
     const a = ai.filter((x) => x.who === 'R2' && x.hz === hz), b = ai.filter((x) => x.who === 'R1' && x.hz === hz);
     const nan = a.reduce((s, x) => s + (x.nan ?? 1), 0), gl = a.reduce((s, x) => s + (x.glitch ?? 1), 0), er = a.reduce((s, x) => s + (x.errors ?? 1), 0);
     const fallsOk = b.length ? a.every((x) => { const y = b.find((z) => z.weapon === x.weapon); return y && x.falls <= y.falls; }) : null;
-    add(`안정: AI 끼리 ${AIMIN} 분 × 무기 (NaN·튐·오류 0, 넘어짐 ≤ R1)`, `물리 ${hz}`, a.map((x) => { const y = b.find((z) => z.weapon === x.weapon); return `${x.weapon} NaN ${x.nan} 튐 ${x.glitch} 넘어짐 ${x.falls}${y ? ` (R1 ${y.falls})` : ''} 휘두름 ${x.strikes} 상처 ${x.hits} 칼 부딪힘 ${x.clashes} 판 ${x.rounds}`; }).join('; '), 'NaN 0·튐 0·넘어짐 ≤ R1', nan === 0 && gl === 0 && er === 0 && fallsOk !== false, fallsOk == null ? 'R1 체크아웃 없음 (--r1)' : null);
+    add(`안정: AI 끼리 ${AIMIN} 분 × 무기 (NaN·튐·오류 0, 넘어짐 ≤ R1)`, `물리 ${hz}`, a.map((x) => { const y = b.find((z) => z.weapon === x.weapon); return `${x.weapon} NaN ${x.nan} 튐 ${x.glitch} 넘어짐 ${x.falls}${y ? ` (R1 ${y.falls})` : ''} 휘두름 ${x.strikes} 상처 ${x.hits} 칼 부딪힘 ${x.clashes} 판 ${x.rounds}`; }).join('; '), 'NaN 0·튐 0·넘어짐 ≤ R1', nan === 0 && gl === 0 && er === 0 && fallsOk === true, fallsOk == null ? 'R1 체크아웃 없음 (--r1) — 넘어짐 ≤ R1 을 못 견줘 FAIL' : null);
   }
 }
 add('Owner (보기 도구 화면·A/B 스위치·금빛 자취·사장님 판정)', '-', '이 도구 밖 (W5-C: 기록·화면·시험판)', '사장님 판정', null);
