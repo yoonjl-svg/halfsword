@@ -1,6 +1,6 @@
 # 기획 PM 상태 파일 (후임이 가장 먼저 읽는다)
 
-- 갱신: 2026-09-30 17:00 KST. 세션 session_01QRwbXg6zS4784iUVd3XGV5, 브랜치 `claude/pm-design`, 환경 env_01YG7HgthZqrnM2wyk4jrLkh.
+- 갱신: 2026-09-30 17:20 KST. 세션 session_01QRwbXg6zS4784iUVd3XGV5, 브랜치 `claude/pm-design`, 환경 env_01YG7HgthZqrnM2wyk4jrLkh.
 - 읽는 순서: 이 파일 → `docs/handoff/design_pm_charter.md` → `docs/handoff/director_state.md`(세션 명단·운영 규칙) → `docs/decisions.md` → 내 산출물 `docs/design/*`.
 - 디렉터 세션: session_014nJCzE4hyxiYc9innhSUng. 알릴 때는 매번 새 트리거(create_trigger + persistent_session_id, 일정 없음) → fire_trigger.
 - 보고 규칙(사장님 9/30 15:20, 디렉터 전달): 기획 PM은 정기 보고를 하지 않는다(토큰 절약). 18:00 cron은 지웠다. 산출물이 끝났을 때만 디렉터에게 트리거 한 줄, 사장님께 여쭐 것이 있을 때만 직접 여쭙는다.
@@ -9,7 +9,8 @@
 - ✅ 끝남: 과제 1 구조 지도 `docs/design/structure_map.md` (main `851d0af` 기준, 276줄). 물리/규칙/데이터/연출 분류, 모듈 지도, 스텝 흐름, 콘텐츠 목록(무기 15·캐릭터 6·무대 6+2·기술 12·자세 14·클립), 진행 중 항목, 세 방향 이음새 관찰 10개, 사장님 질문 3개(Q-S1~S3).
 - ✅ 끝남(초안): 과제 2 세 방향 `docs/design/direction_{adventure,rpg,fighting}.md` — 각각 요약 10줄 / 핵심이 그대로 주는 것 / 새로 필요한 것(시스템·콘텐츠·UI, 주 단위 비용) / 핵심을 해치는 지점 / 참고 게임 / 사장님이 정할 것. 기준은 main(팔 베기), R2 시험판 뒤 한 절 덧붙임.
 - ✅ 끝남: 디렉터 사실 확인(`docs/design/structure_map_review_2026-09-30.md`, main 4e50775) 반영 — 틀림 3(Q1 해석·넘어짐 갈래·W4 출하 형태)·부정확 15·빠진 것·대기 브랜치 §6.1. 방향 문서의 R2/R4 표현도 고침.
-- ⏳ 진행 중: 없음.
+- ✅ 끝남: 사장님 직접 질문 3개(각자 폰 대전 방식·인벤토리·오픈월드/던전 난이도) 답 → `docs/design/owner_qa_2026-09-30.md`.
+- ⏳ 진행 중: 없음. 사장님 답(Q-S1~S3, 방향 선택) 대기.
 - ⛔ 안 함: 과제 3 수직 슬라이스(사장님이 방향을 고르신 뒤). 후보는 각 방향 문서 요약 9번째 줄.
 
 ## 열린 질문 (사장님)
