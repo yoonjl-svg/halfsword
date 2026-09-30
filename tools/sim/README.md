@@ -9,6 +9,7 @@
   - `node tools/sim/fights12.mjs` (기본 hybrid, 예전 `hybrid.mjs fights12.mjs`와 바이트 같다)
   - `node tools/sim/live_battery.mjs`
   - 기준 sha256 앞 8자리: 9/29 hybrid 기본값 fights12 `afdd8c66` · live_battery `11433650` → **9/30 시작 거리 7.0·2초 정지 뒤(ARENA.startGap·startHold): fights12 `a74bb59c` · live_battery `2f453e0b`** → **9/30 09:10 시작 거리 5.6 뒤: fights12 `38fb5b51` · live_battery `2f453e0b`** (hybrid.mjs fights12.mjs 도 같다) → **9/30 14:30 되튐 통합·판금 이동 ×0.8 뒤: fights12 `12223139`** (live_battery 는 다시 재지 않음). 옛 기준은 `with_config.mjs ARENA.startGap=4.2 ARENA.startHold=0 <스크립트>` 로 바이트 그대로 나온다.
+  - 9/30 근접 밀치기(feat-shove, `CLOSE.on` 기본 true) 뒤: fights12 `12223139` · live_battery `2f453e0b` — 켬과 `with_config.mjs CLOSE.on=false` 모두 8b4c70e 와 같다(live_battery 는 8b4c70e 에서 다시 재어 `2f453e0b` 그대로). 이 컨테이너에서 8b4c70e 를 두 번 돌려 sha 가 같았다(결정적). 같은 시드가 달라지는 곳에서는 `shove_check.mjs --control`(한 프로세스 안 off/on, Math.random 호출 수·힘·requestStep 흔적 해시)이 관문이고 바이트 비교는 결정적인 곳에서 한다. 인물을 넘기는 도구(characters_eval·revive_check 등)는 켜면 인물이 밀어 숫자가 바뀔 수 있다: 전·켬·끔 표는 `docs/strike/shove_impl_record_2026-09-30.md`.
   - 시작 정지는 시뮬에도 걸린다: 싸움꾼마다 `fightT`(fighter.step 이 센다)로 재서 판을 새로 만든 뒤 처음 2초는 조종 입력·기술 걸음·자세 고쳐 딛기가 없다(팔·칼·균형 걸음은 그대로). 판 초반을 재는 도구는 이 2초를 감안한다.
 - **소음 폭**: fights12(12판)는 바이트 동일 관문 전용이다. 좋아졌다/나빠졌다로 읽지 않는다. 설정 하나를 100만분의 1 바꿔도(`BODY.uprightStiffness=2500.001`) 사망이 levitate 9/12 → 11/12, hybrid 8/12 → 7/12로 움직였다. 36판도 사망 24~27, 플레이어 승 12~19로 흔들린다(감사 9/29). 좋다/나쁘다 판단은 36판 이상으로 하고, 시드 묶음을 바꿔 돈 흔들림 폭을 함께 적는다.
 
@@ -53,6 +54,7 @@
 | `node tools/sim/hit_phase.mjs [판수] [무기A] [무기B]` | 한 방이 왜 가벼운가: AI 대 AI 대결에서 몸에 닿은 순간마다 그 휘두름 최고 속도 대비 비율·느려지는 중·손목 제동 중·몸통 몫·닿은 칼날 지점·에너지·맞은 쪽 밀림(상처/멍 따로) |
 | `node tools/sim/chain_mass.mjs [무기id...]` | 칼 뒤에 실제로 실리는 질량: 물리 사슬(칼+손+팔+몸)의 유효 질량을 톡 밀어 재고 판정식(칼+0.3kg)과 견준다 |
 | `node tools/sim/thrust_review.mjs [skill\|step\|down\|assist\|demote\|snap\|all] [--hybrid]` | (기본값이 hybrid라 `--hybrid`는 이제 효과 없음) 탭 찌르기 검토 지적 수정 전·후: 검술 보정별 찌르기, AI 두 번 내딛기, 찌르다 넘어짐, 팔 질량 싣는 구간·멍으로 바뀐 찌르기 에너지, 내리찌르기 끊김 |
+| `node tools/sim/shove_check.mjs [--quick] [--neg] [--control] [--persona] [--json] [--n=K] [--pn=K] [--debug=칸]` | 근접 밀치기(설계 `docs/strike/shove_design_2026-09-30.md`, config.js `CLOSE`) 점검. 기본 = 핵심 칸(시작 붙음·걸어 들어옴·칼 맞물림·상대 등 벽·내 등 벽 × 상대 버팀·물러남 × 롱소드·세이버·나뭇가지) + 덧칸(판금·지붕·둘 다 밂·빈손), 칸마다 N=10, 같은 대본을 CLOSE.on=false 로 돈 대조군. 밀린 거리(0.5·1·2 s)·넘어짐·손 목표 튐·디딘 발 겹침·칼 부딪힘·상처·끝난 까닭. `--neg` 원치 않는 발사 0번 칸(민 채 쫓기·찌르기 톡·베면서 밂·옆으로 돌기·감정 배수·상대 kneel/getup·빈손·권총·기본 AI) · `--control` 한 프로세스 off/on 흔적 같음 · `--persona` 0절 기준표(인물 대 기본 AI·걸어오는 꼭두각시, 켬/끔). 무거우니 `nice -n 10`, 기본 전체 ≈15분 |
 | (공용) `tools/sim/is_main.mjs` | 측정 도구의 "직접 실행" 확인 `isMain(import.meta.url)`과 감싸는 스크립트용 `simPath()` — with_config·hybrid·with_weapon·with_spec 로 감싸도 결과가 찍힌다 |
 
 `jelly_harness.mjs` / `harness_m.mjs` 는 공용 무대(두 파이터 + 전투 판정)를 만든다.
@@ -68,4 +70,5 @@
 | `node tools/browser/touch_thrust.mjs http://127.0.0.1:5173` · `mouse_thrust.mjs` | 탭·클릭 찌르기 입력 시험. 무기 카드 뽑기는 `?weapon=longsword` 로 건너뛴다 (시험용 주소: 뽑기 없이 그 무기로 바로 싸움) |
 | `node tools/browser/revive_shots.mjs http://127.0.0.1:5173 <출력 폴더> [castle,cathedral,darkhall,clearing,castle_px,defeat]` | 부활 연출 연속 사진(844×390, 가짜 시계로 한 프레임씩): 쓰러짐·빛이 내려옴·알림·일어섬(+옆에서)·빛이 사라짐·다시 싸움·결과. 콘솔 에러 0, 연출 물체·빛이 남지 않는지(장면 자식 수), 두 번째 죽음 → 승리, `defeat` = 부활 중 주인공 죽음 → 패배 |
 | `node tools/browser/decap_shots.mjs http://127.0.0.1:5173 <출력 폴더> [liao,isolde]` | 참수 연출 사진(844×390, 가짜 시계): `?weapon=zweihander&foe=<id>` 로 싸움을 열고 `window.game` 으로 칼을 상대 목으로 몰아 벤 뒤 0.2초·1.5초(기본 카메라 + 옆), 결과 화면, 다시 싸우기. 콘솔 에러 0, 참수(관절 12·목 단면·목 자리 틈), 이졸데는 부활하지 않음, 다시 싸우기 → 새 상대는 머리가 붙어 있다 |
+| `node tools/browser/shove_shots.mjs http://127.0.0.1:5173 <출력 폴더> [glued,wall,glued_off,wall_off]` | 근접 밀치기 화면 확인(844×390, 가짜 시계로 한 프레임씩): 붙음 → 스틱을 놓았다 새로 밂 → 딛기 → 누르기 → 되돌림 → 이어 베기, 상대 등 뒤가 울타리인 장면. 플레이어는 진짜 입력(키보드 W = input.move, 캔버스 마우스 끌기 = 베기)으로만, 상대는 기본 상대(`?foe=default`)의 AI 를 꼭두각시로 바꿔 버티게 한다(붙음은 판 전에 `ARENA.startGap` 1.6). 순간마다 PNG(게임 카메라 + 옆)와 JSON, 모든 프레임 JSON(d·단계·lift·closeW·상대 골반 밀림·두 사람 발·발 겹침·손 목표 한 스텝 변화·콘솔 에러), 장면 요약. `_off` = 같은 대본을 CLOSE.on=false 로(오늘의 걸어 밀기) |
 | `node tools/browser/weapon_thumbs.mjs http://127.0.0.1:5173 [무기id...]` | 무기 뽑기 카드의 작은 그림을 만든다: 게임 속 무기 모델(`src/weapons.js`)을 대각선으로 눕혀 찍어 `public/ui/weapons/<id>.webp` (256×256, 투명 배경)로 저장. 무기 겉모습을 바꾸거나 무기를 새로 넣으면 다시 돌린다. 찍는 페이지 `tools/browser/weapon_thumbs.html` 을 브라우저로 열면 결과를 눈으로 볼 수 있다 |

@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
@@ -206,6 +206,20 @@ export class Fighter {
     this.fightT = 0; // 판이 시작된 뒤 흐른 시간 (step 이 센다. 판마다 새로 만들어져 0부터)
     this.muscle = 1; // 근육 힘 비율 (넘어지면 0 근처로)
     this.move = new THREE.Vector2(); // x: 옆걸음(+오른쪽), y: 앞(+)/뒤(-). 각각 -1 ~ 1
+    // 근접 밀치기 (closeStep, config.js CLOSE). 기본은 끔: main.js 가 플레이어에, ai.js 가 persona.close 있는 AI 에 켠다
+    this.canShove = false;
+    this.stickX = 0; // 스틱 원값 (감정 배수·검술 층 덮어쓰기 전). 플레이어는 main.js, AI 는 moveFeet 가 쓴다
+    this.stickY = 0;
+    this.closeArmed = false; // 걸쇠: 안쪽에서 스틱을 안 밀면 켜지고, 밀면 발사
+    this.barge = null; // 밀치는 중 { phase: 'step'|'press', L, stepOk, d0, req(걸음 요청), bent(누르기 중 팔이 굽어 있었나) } (발사 ~ 누르기 끝)
+    this.bargeEnd = null; // 마지막 밀치기가 끝난 까닭 (refused·dropped·apart·release·armFull·state·swing·thrust)
+    this.shoves = 0; // 발사 횟수
+    this.closeStepKind = 'lunge'; // 딛기 걸음 종류: 앞발 lunge. 랴오(persona.close.kind 'kick')는 뒷발이 지나 딛는 pass (ai.js)
+    this.lift = 0; // 접기 풀기 0~1 (0 = 오늘 접기 그대로)
+    this.liftV = 0;
+    this.closeW = 0; // 누르기 손 목표 무게 w 0~1
+    this.closeWV = 0;
+    this.armFull = false; // 칼 든 팔이 이번 IK 에서 다 펴졌나 (목표가 팔 길이 밖)
     this.strength = o.strength ?? 1;
     this.gaitPhase = 0;
     this.gaitWeight = 0; // 0 = 서 있음, 1 = 걷는 중 (부드럽게 바뀜)
@@ -667,6 +681,103 @@ export class Fighter {
     this.bodies.chest.addForce({ x: -dir.x * F, y: 0, z: -dir.z * F }, true);
   }
 
+  /**
+   * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, config.js CLOSE). 힘을 더하지 않는다: 발은 gait 걸음 요청,
+   *  몸은 스틱 걷기의 다리 힘, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword). 넘어짐은 상대 균형이 정한다.
+   *  발사 = 걸쇠 && 밂 && 준비. 1단계(step) 딛기 → req 다리 착지 → 2단계(press) 누르기 → 물리 사건으로 끝 → lift·closeW 되돌림.
+   */
+  closeStep() {
+    const dt = this.lastDt;
+    const f = this.foe;
+    const g = this.gait;
+    const sk = this.skill;
+    const d = this.foeDistance();
+    const reach = CLOSE.reach(this.armed ? this.weapon : null); // 빈손은 맨몸 (칼자루 0)
+    const push = this.stickY > Math.abs(this.stickX); // 밂 = 상대 쪽 90° 부채꼴 (기하, 감정 배수와 무관)
+    const idle = this.stickY <= 0; // 안 밂. 그 사이(대각선 앞)는 걸쇠를 그대로 둔다 (숫자 없는 히스테리시스)
+    const foeUp = !!f && f.alive && f.state === 'stand' && !f.revival; // 상대 kneel·getup 은 아님
+    let b = this.barge;
+    if (b) {
+      // 끝 = 물리 사건 (시간값 없음). 먼저: 나·상대 stand 아님, 베기·찌르기 시작
+      let end = null;
+      if (this.state !== 'stand' || !foeUp || !g?.active) end = 'state';
+      else if (sk.swinging) end = 'swing';
+      else if (sk.tap) end = 'thrust';
+      else if (b.phase === 'step' && g.req !== b.req) {
+        // req 다리 착지는 touchdown 이 req 를 지운다 (gait.js touchdown). 오래돼 버려진 요청(기존 req.age > 1 s)이나
+        //  다른 요청이 덮어쓴 것이면 밀치기 끝 (발 없는 팔 밀기는 없다)
+        if (g.req || b.req.age > 1) end = 'dropped';
+        else b.phase = 'press';
+      }
+      if (!end && b.phase === 'press') {
+        if (d > reach) end = 'apart'; // 떨어짐: 팔·칼자루가 더는 닿지 않는다
+        else if (idle) end = 'release'; // 밂이 풀림
+        else if (this.armFull && b.bent && !this.closeTouch()) end = 'armFull'; // 팔이 다 펴졌는데 닿은 것 없음 (밂을 다 씀)
+        // 다 펴짐은 누르기 중의 사건: 누르기 중 굽어 있던 팔이 다 펴진 때만. 처음부터 팔 길이 끝인 자세(지붕 등)는 밂을 쓴 게 아니다
+        if (!this.armFull) b.bent = true;
+      }
+      if (end) {
+        this.barge = b = null;
+        this.bargeEnd = end;
+      }
+    }
+    if (!b) {
+      // 걸쇠: 밀치는 중엔 건드리지 않는다 (1단계 중 엄지가 가운데를 지나도 재발사 없음)
+      if (!(d <= reach)) this.closeArmed = false;
+      else if (idle) this.closeArmed = true;
+      else if (push && this.closeArmed) {
+        // 밀면 걸쇠를 쓴다 (준비가 안 된 밂 — 베는 중·찌르는 중·발 묶임 등 — 이 나중에 저절로 밀치기가 되지 않게)
+        this.closeArmed = false;
+        const ready =
+          this.state === 'stand' && g?.active && !this.feetHeld && !(this.armed && this.weapon?.gun) && foeUp && !this.revival && !sk.swinging && !sk.tap;
+        if (ready) {
+          // 걸음 길이 L: 몸통 닿는 선(shove() 의 0.55)까지 남은 거리, 발 한 번(GAIT.maxReach). 0 이면 몸통이 이미 닿아 걸음 없음
+          const L = THREE.MathUtils.clamp(d - 0.55, 0, GAIT.maxReach);
+          this.shoves++;
+          b = this.barge = { phase: L > 0 ? 'step' : 'press', L, stepOk: null, d0: d, req: null, bent: false };
+          if (L > 0) {
+            // 찌르기 걸음과 같은 요청 (skill.js thrust: lunge, 0.3 s. 랴오만 pass). 거절되면 밀치기 끝
+            b.stepOk = g.requestStep({ kind: this.closeStepKind, fwd: L, duration: 0.3 });
+            if (b.stepOk) b.req = g.req;
+            else {
+              this.barge = b = null;
+              this.bargeEnd = 'refused';
+            }
+          }
+        }
+      }
+    }
+    // 되돌림 섞기: lift(접기 풀기)·closeW(누르기 무게)는 기존 몸 자세 따라가기 SKILL_BODY.chest(26/s, updateBodyPose 의
+    //  임계 감쇠 2차 필터)로 목표를 따라간다. 밀치는 동안 lift → 1, 누르기에서 closeW → 1, 끝나면 둘 다 0 으로 (잠그지 않는다)
+    const w = SKILL_BODY.chest;
+    const lt = b ? 1 : 0;
+    const wt = b?.phase === 'press' ? 1 : 0;
+    this.liftV += (w * w * (lt - this.lift) - 2 * w * this.liftV) * dt;
+    this.lift += this.liftV * dt;
+    this.closeWV += (w * w * (wt - this.closeW) - 2 * w * this.closeWV) * dt;
+    this.closeW += this.closeWV * dt;
+  }
+
+  /** 누르기: 내 팔·칼이 상대 몸(발 빼고)이나 칼에 닿아 있나 (Rapier 접촉을 읽기만 한다) */
+  closeTouch() {
+    const f = this.foe;
+    if (!f) return false;
+    const mine = [this.bodies.uarmS, this.bodies.farmS, this.bodies.uarmO, this.bodies.farmO].map((rb) => rb.collider(0)).concat(this.armed ? this.swordColliders : []);
+    const theirs = [];
+    for (const [k, rb] of Object.entries(f.bodies)) if (!k.startsWith('foot')) theirs.push(rb.collider(0));
+    theirs.push(...f.swordColliders);
+    let hit = false;
+    for (const a of mine) {
+      for (const c of theirs) {
+        this.world.contactPair(a, c, (m) => {
+          if (m.numContacts() > 0) hit = true;
+        });
+        if (hit) return true;
+      }
+    }
+    return false;
+  }
+
   // ── 매 물리 스텝마다 호출: 근육을 움직인다 ──
   step(dt) {
     this.lastDt = dt;
@@ -691,6 +802,7 @@ export class Fighter {
     this.driveBalance(dt);
     if (this.gait?.active) this.gait.pinFeet();
     this.applyPose(dt);
+    if (this.canShove && CLOSE.on) this.closeStep(); // 근접 밀치기: 힘을 더하지 않는다 (shove() 의 힘 순서 그대로)
     this.shove();
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
@@ -1678,10 +1790,16 @@ export class Fighter {
     hb[2] = handLocal.z;
     const th = this.skill.thrustPose;
     if (th.w > 0) handLocal.lerp(_v6.set(th.hand[0], th.hand[1], th.hand[2]), th.w);
-    handLocal.x = Math.min(handLocal.x, this.closeReach());
+    // 바짝 붙으면 손을 접는다 (closeReach). 근접 밀치기 중엔 접기를 lift 만큼 푼다: x' = 접은 x + (x − 접은 x)·lift.
+    //  lift 0 이면 오늘 줄 그대로 (같은 float). 손이 자세 깊이에 남아 코등이·칼 팔뚝이 상대 몸통에 닿는다
+    const foldX = Math.min(handLocal.x, this.closeReach());
+    handLocal.x = foldX + (handLocal.x - foldX) * this.lift;
+    // 누르기: 손 목표 앞뒤를 상대 가슴 앞면(d − 0.11, 가슴 반두께 partDefs chest)으로 closeW 만큼. 높이·옆은 손가락이 둔 그대로
+    if (this.closeW > 0 && this.foe) handLocal.x += (this.foeDistance() - 0.11 - handLocal.x) * this.closeW;
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
+    else this.armFull = false;
     if (mus < 0.12 || !this.armed) return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     const str = this.strength * mus * (0.35 + 0.65 * this.armHealth);
     const forearm = this.bodies.farmS;
@@ -1817,7 +1935,9 @@ export class Fighter {
     const a = 0.3; // 위팔
     const b = 0.27; // 아래팔 + 손목까지
     const D = T.sub(S);
-    const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+    const Dl = D.length();
+    this.armFull = Dl >= a + b - 0.005; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
+    const d = THREE.MathUtils.clamp(Dl, 0.08, a + b - 0.005);
     const Dn = D.normalize();
     // 팔꿈치는 아래·뒤·바깥쪽을 향한다
     const pole = _ik3.set(-0.25, -1, this.side * 0.5).normalize();
