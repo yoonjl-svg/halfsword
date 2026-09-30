@@ -961,7 +961,7 @@ export class Fighter {
     // 사장님 결정 (9/30 "맞으면 즉사로"): 쓰러진 상대를 탭 마무리로 내리찍는 칼끝이 몸통(가슴·배·골반)이나 머리에
     //  찌르기로 닿았다 (combat.js analyze 의 finish) → 즉사. 옷·살·판금·투구 문턱은 따지지 않는다.
     //  판금·투구가 칼을 막아 튕겨 내는 것(analyze 의 pass → 물리 필터·rebound)은 그대로 — 막는 건 물리, 죽음은 이 규칙.
-    //  죽음은 다른 죽음과 같이 die → tryRevive (투지 부활) 를 거친다
+    //  찍기 즉사는 참수처럼 되살아나지 않는다 (디렉터 10/1): die → tryRevive 가 원인 '내려찍기'를 부활로 바꾸지 않는다 (revive.js)
     if (h.finish) this.die('내려찍기');
 
     if (!bit) {
