@@ -1,18 +1,29 @@
-// 마무리 찌르기 확인 (src/skill.js thrust → plungePose, src/finish.js plunge): 실제 게임 화면(844×390 가로 폰, 터치)에서
-//  상대를 강제로 쓰러뜨리고(window.game — 시험 전용 주소 값 없음) 누운 몸통이 약 1.5m 앞에 오게 걸어간 뒤 칼 쪽 화면을 한 번 톡 친다.
-//  찍는 순간: 탭 직전 · 겨눔(내리찌르기를 시작하는 프레임) · 칼이 누운 몸에 처음 닿은 프레임 · 그 뒤
-//  확인하는 것: 콘솔 에러 0, 탭이 마무리 찌르기(tap.down)였나, 걸음을 부탁했나·그 발이 디뎠나, 접촉 판정(찌르기/베기/둔기)·에너지·상처
+// 마무리 찌르기(내려찍기) 확인 (src/skill.js thrust → plungePose, src/finish.js plunge): 실제 게임 화면(844×390 가로 폰, 터치)에서
+//  상대를 강제로 쓰러뜨리고(window.game — 시험 전용 주소 값 없음) 누운 몸통이 약 1.5m 앞에 오게 걸어간 뒤, 칼을 교본 자세 하나
+//  (--guard, tools/sim/finish_thrust.mjs 의 PADS)에 두고 칼 쪽 화면을 한 번 톡 친다.
+//  찍는 순간: 탭 직전 · 겨눔(내리찍기를 시작하는 프레임: tap.go 첫 프레임) · 내려찍기(칼이 누운 몸에 처음 닿은 프레임,
+//   안 닿으면 thrustPush 가 꺼지는 프레임) · 그 뒤
+//  확인하는 것: 콘솔 에러 0, 탭이 마무리 찌르기(tap.down)였나, 걸어 들어갔나(walking·walkEnd), 찍기 시작 때 칼자루 높이
+//   (가슴 기준 m, 명령 FINISH.hands 와 견줌), 접촉 판정(찌르기/베기/둔기)·에너지·상처, 상대가 죽었나·원인
 //  시간은 playwright 가짜 시계로 한 프레임(1/60초)씩 돌린다 (느린 소프트웨어 렌더링에서도 같은 순간이 찍힌다)
 //  실행: vite 개발 서버를 띄운 뒤
-//    node tools/browser/finish_shots.mjs http://127.0.0.1:5173 <출력 폴더> [거리 m = 1.5]
+//    node tools/browser/finish_shots.mjs http://127.0.0.1:5173 <출력 폴더> [거리 m = 1.5] [--guard=쟁기|황소|지붕|바보]
+//  파일 이름: finish_<자세>_0_before_tap · _1_hover · _2_plunge · _3_after
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
-const out = process.argv[3] || '.';
-const DIST = +(process.argv[4] || 1.5);
+const argv = process.argv.slice(2);
+const pos = argv.filter((a) => !a.startsWith('--'));
+const base = (pos[0] || 'http://127.0.0.1:5173').replace(/\/$/, '');
+const out = pos[1] || '.';
+const DIST = +(pos[2] || 1.5);
+// 교본 자세 패드 (tools/sim/finish_thrust.mjs PADS 와 같은 값)
+const PADS = { 쟁기: [0.18, -0.28], 황소: [0.22, 0.26], 지붕: [0.02, 0.52], 바보: [0.0, -0.5] };
+const GUARD = argv.find((a) => a.startsWith('--guard='))?.split('=')[1] ?? '쟁기';
+if (!PADS[GUARD]) throw new Error(`자세 없음: ${GUARD} (${Object.keys(PADS)})`);
+const PAD = PADS[GUARD];
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
@@ -85,40 +96,71 @@ for (let i = 0; i < 4 && Math.abs(d - DIST) > 0.08; i++) {
   d = await dist();
 }
 await page.evaluate(() => (window.__walk = 1));
-await run(400);
+// 칼을 교본 자세에 둔다 (finish_thrust.mjs setHand 와 같은 값들: 휘두르기로 보이지 않게 이전 목표·속도까지). 자리 잡는 0.4초 동안 51ms 마다 다시
+const setPad = (xy) =>
+  page.evaluate((xy) => {
+    const p = window.game.player;
+    const sk = p.skill;
+    p.handOffset.set(xy[0], xy[1]);
+    for (const k of ['prev', 'aim', 'aimRaw']) sk[k].set(xy[0], xy[1]);
+    sk.anchor?.set(xy[0], xy[1]);
+    sk.aimVel.set(0, 0);
+    sk.vel.set(0, 0);
+    sk.follow.set(0, 0);
+    return [+p.handOffset.x.toFixed(3), +p.handOffset.y.toFixed(3)];
+  }, xy);
+for (let t = 0; t < 400; t += 51) {
+  await setPad(PAD);
+  await run(51);
+}
+const padAtTap = await setPad(PAD);
 d = await dist();
-const pre = await page.evaluate(() => ({ fin: window.game.player.finish.on, amt: +window.game.player.finish.amt.toFixed(2), short: +window.game.player.finish.plunge.short.toFixed(3), steep: window.game.player.finish.plunge.steep }));
-const files = [await shot('finish_0_before_tap')];
+const pre = await page.evaluate(() => {
+  const p = window.game.player;
+  const pl = p.finish.plunge;
+  return { fin: p.finish.on, amt: +p.finish.amt.toFixed(2), inside: pl.inside ?? null, short: +pl.short.toFixed(3) };
+});
+const name = (k) => `finish_${GUARD}_${k}`;
+const files = [await shot(name('0_before_tap'))];
 const n0 = await page.evaluate(() => window.game.player.skill.thrusts);
 await page.touchscreen.tap(844 * 0.72, 390 * 0.42); // 칼 쪽(오른쪽) 화면을 한 번 톡
-const rec = { tap: null, go: null, hit: null };
+const rec = { tap: null, go: null, hit: null, pushOff: null };
 let hover = false;
-let hitShot = false;
-for (let t = 0; t < 3000; t += 17) {
+let plungeShot = false;
+let pushed = false;
+for (let t = 0; t < 4000; t += 17) {
   await run(17);
   const s = await page.evaluate(() => {
     const p = window.game.player;
     const tp = p.skill.tap;
     const G = p.gait;
-    return { thrusts: p.skill.thrusts, down: !!tp?.down, wait: tp ? (tp.wait === undefined ? 'none' : tp.wait ? 'waiting' : 'done') : null, go: !!tp?.go, w: +p.skill.thrustPose.w.toFixed(2), push: p.skill.thrustPush, lastTD: G?.lastTD, sinceTD: G ? +G.sinceTD.toFixed(3) : null, hits: window.__hits.length };
+    const c = p.bodies.chest.translation();
+    const g = p.sword.translation();
+    return {
+      thrusts: p.skill.thrusts, down: !!tp?.down, walking: !!tp?.walking, walkEnd: tp?.walkEnd ?? null, go: !!tp?.go, w: +p.skill.thrustPose.w.toFixed(2), push: p.skill.thrustPush,
+      gripY: +(g.y - c.y).toFixed(3), lastTD: G?.lastTD, sinceTD: G ? +G.sinceTD.toFixed(3) : null, hits: window.__hits.length, enemy: window.game.enemy.state,
+    };
   });
-  if (!rec.tap && s.thrusts > n0) rec.tap = { t, down: s.down, wait: s.wait };
+  if (!rec.tap && s.thrusts > n0) rec.tap = { t, down: s.down, walking: s.walking };
   if (rec.tap && !hover && s.go) {
     hover = true;
-    rec.go = { t, ...s };
-    files.push(await shot('finish_1_hover'));
+    // 찍기 시작 = 겨눔이 선 프레임: 칼자루 높이(가슴 기준) 대 명령
+    rec.go = { t, ...s, cmdY: await page.evaluate(async () => (await import('/src/finish.js')).FINISH.hands?.[1] ?? null) };
+    files.push(await shot(name('1_hover')));
   }
-  if (s.hits > 0 && !hitShot) {
-    hitShot = true;
-    rec.hit = { t, ...s };
-    files.push(await shot('finish_2_contact'));
+  if (s.push) pushed = true;
+  if (!plungeShot && (s.hits > 0 || (pushed && !s.push))) {
+    plungeShot = true;
+    if (s.hits > 0) rec.hit = { t, ...s };
+    else rec.pushOff = { t, ...s };
+    files.push(await shot(name('2_plunge')));
   }
-  if (hitShot && t > (rec.hit?.t ?? 0) + 250) break;
-  if (rec.tap && !s.down && s.wait === null && t > 1500) break;
+  if (plungeShot && t > (rec.hit?.t ?? rec.pushOff?.t ?? 0) + 250) break;
+  if (rec.tap && !s.down && !s.walking && t > 1500 && !s.w) break;
 }
-files.push(await shot('finish_3_after'));
-const result = await page.evaluate(() => ({ hits: window.__hits.slice(0, 4), wounds: window.game.enemy.wounds?.length ?? null, enemy: window.game.enemy.state, player: window.game.player.state }));
-console.log(JSON.stringify({ startDist: +before.toFixed(2), tapDist: +d.toFixed(2), pre, rec, result, files }, null, 1));
+files.push(await shot(name('3_after')));
+const result = await page.evaluate(() => ({ hits: window.__hits.slice(0, 4), wounds: window.game.enemy.wounds?.length ?? null, enemy: window.game.enemy.state, causeOfDeath: window.game.enemy.causeOfDeath ?? null, revival: window.game.enemy.revival?.cause ?? null, player: window.game.player.state }));
+console.log(JSON.stringify({ guard: GUARD, pad: padAtTap, startDist: +before.toFixed(2), tapDist: +d.toFixed(2), pre, rec, result, files }, null, 1));
 console.log(errors.length ? `콘솔 에러 ${errors.length}:\n${errors.join('\n')}` : '콘솔 에러 0');
 await browser.close();
 process.exit(errors.length ? 1 : 0);
