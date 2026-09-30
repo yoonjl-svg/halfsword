@@ -269,23 +269,36 @@ export class Skill {
 
   /**
    * 마무리 찌르기: 겨누는 시간(K.aim)이 지난 뒤 내리찌르기를 시작해도 되나. 기다림은 시간이 아니라 몸의 일로 끝난다
-   *  - 손이 겨눔 손보다 낮은 데서 시작했으면(바보 = 내려찍기 자리) 칼자루가 더 오르지 않을 때
-   *  - 부탁한 걸음(tp.wait = gait.req)이 끝났을 때: 그 발이 디디면 gait.touchdown 이 req 를 비운다
-   *    (걸음이 버려지거나 다른 걸음으로 바뀌어도 끝 — 선 자리에서 찌른다)
+   *  - 칼자루(칼 원점 = 쥔 손)가 겨눔 손 높이로 왔을 때: 낮은 데서(바보 = 내려찍기 자리) 시작했으면 그 높이에 닿거나 오르다 멈췄을 때,
+   *    높은 데서(황소·지붕) 시작했으면 더 내려오지 않고 칼이 수평 아래로 누웠을 때
+   *  - 부탁한 걸음(tp.wait = gait.req)이 끝났을 때: 그 발이 디디면 gait.touchdown 이 req 를 비운다.
+   *    다른 걸음으로 바뀌면 끝 — 선 자리에서 찌른다. 걸음이 디디지 못하고 버려지면(gait 의 req 나이) 다음에 어느 발이든 디딜 때 끝
    */
   plungeReady(tp, K) {
     const f = this.f;
     const fin = f.finish;
     const G = f.gait;
     if (!tp.go) {
-      // 낮은 손에서 곧장 내리찌르면 칼끝이 이미 몸 위에 있어 속도를 붙일 거리가 없다
+      // 낮은 손에서 곧장 내리찌르면 칼끝이 이미 몸 위에 있어 속도를 붙일 거리가 없다.
+      //  높은 손에서 곧장 내리찌르면 칼이 아직 머리 위에서 내려오는 중이라 칼 선을 벗어나 베거나 친다
       const c = f.bodies.chest.translation();
       const y = f.sword.translation().y - c.y;
-      if (tp.low == null) tp.low = y < fin.plunge.hand[1];
-      if (!tp.low || (tp.t >= K.aim && tp.y != null && y <= tp.y)) tp.arrived = true;
+      const hy = fin.plunge.hand[1];
+      if (tp.low == null) tp.low = y < hy;
+      if (tp.t >= K.aim) {
+        // 낮은 손: 겨눔 손 높이까지 올라왔거나, 오르던 칼자루가 더 오르지 않을 때 (팔이 처져 목표 높이에 못 미친 채 멈춘다 — 측정 쟁기 0.08m)
+        if (tp.low) {
+          if (y >= hy || (tp.rose && y <= tp.y)) tp.arrived = true;
+        } else if (tp.y != null && y >= tp.y) {
+          // 높은 손: 칼자루가 더 내려오지 않고 칼이 수평 아래로 누웠을 때
+          const q = f.sword.rotation();
+          if (_u.set(0, 1, 0).applyQuaternion(_sq.set(q.x, q.y, q.z, q.w)).y <= 0) tp.arrived = true;
+        }
+      }
+      if (tp.y != null && y > tp.y) tp.rose = true;
       tp.y = y;
     }
-    if (tp.wait && G?.req !== tp.wait) tp.wait = null;
+    if (tp.wait && G?.req !== tp.wait && (G?.req || !G?.active || G.sinceTD === 0)) tp.wait = null;
     return !!tp.arrived && !tp.wait;
   }
 
