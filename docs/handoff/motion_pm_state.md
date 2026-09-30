@@ -41,6 +41,8 @@
 
 - 디렉터 9/30 01:10 사장님 지시(근접 밀어내기): 의견 `docs/motion/close_quarters_opinion_2026-09-30.md` 올림(09b2ca2), 디렉터에게 알림. 클립은 지시 오면 만든다. Fiore 발차기·Ringeck 밀어내기는 원문 대조 전 [기억].
 
+- 디렉터 9/30 22:00 (R2 시험판 실패 — 사장님): ① 사람 움직임 봉투 `docs/motion/human_envelope_2026-09-30.md` + `tools/motion/human_envelope.json` (`node tools/motion/envelope.mjs`) — **끝남**. ② 10/1 아침 `docs/strike/r2_live_diagnosis_2026-09-30.md` 가 main(또는 dev 가지)에 올라오면 검객 역학 독립 검토 `docs/motion/r2_diag_review_2026-10-01.md` (≤40줄) → 디렉터 트리거 5줄. 정기 보고 18:00 그대로.
+
 ## 다시 만들기
 
 ```bash
