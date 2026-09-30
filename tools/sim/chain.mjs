@@ -273,6 +273,10 @@ function trial(fam, mode, scene, o) {
   for (let i = 0; i < E.sword.numColliders(); i++) E.sword.collider(i).setCollisionGroups(0);
   if (scene !== 'hit') for (let i = 0; i < P.sword.numColliders(); i++) P.sword.collider(i).setCollisionGroups(0);
   E.die = () => {};
+  // 죽지 않는 과녁은 참수 뒤에도 서 있어 목을 또 베일 수 있다: 이미 없는 목의 상처는 건너뛴다 (두 번 참수·목 출혈·통증 없음).
+  //  다른 부위 상처 (참수 전 과녁 그대로)·칼이 닿은 판정·onWound (첫 상처 J·때)·drive.onResult 는 그대로. 목을 다시 베지 않는 판은 바이트 같음
+  const aw = E.applyWound.bind(E);
+  E.applyWound = (h) => { if (!(E.decapitated && h.zone === 'neck')) aw(h); };
   P.skill.level = 0.7;
   setPad(P, PAD.Pflug);
   inputPump(G, { hz: INPUT });
