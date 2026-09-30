@@ -364,20 +364,30 @@ if (grid.W.length) {
 }
 
 // ── grep 관문: ai.js·ai_sense.js 는 f.strike·f.ges 를 읽지 않는다 ──
+//  허용된 부름 (ges?.attachSource(…), 손가락 합성 붙이기: 쓰기만) 만 지우고 그 줄의 나머지는 본다. 주석은 문자열 밖의 // 부터.
+//  여러 줄 풀어 쓰기 ({ ges, … } = f) 는 줄을 이어 한 번 더 본다. 파일이 없으면 빠짐 (실패). 계산한 키 (f[k]) 는 grep 으로 못 본다
 if (!SKIP.has('grep')) {
   const bad = [];
   const pat = /\.(strike|ges)\b(?!\s*\()|\[\s*['"`](strike|ges)['"`]\s*\]|\{[^}]*\b(strike|ges)\b[^}]*\}\s*=\s*[A-Za-z_$]|\b(strike|ges)\s*:\s*[A-Za-z_$][\w$]*\s*[,}]/;
+  const ALLOW = /\bges\?\.attachSource\([^()]*\)/g;
+  const noComment = (l) => {
+    let q = null;
+    for (let i = 0; i < l.length; i++) {
+      const c = l[i];
+      if (q) { if (c === '\\') i++; else if (c === q) q = null; } else if (c === '"' || c === "'" || c === '`') q = c;
+      else if (c === '/' && l[i + 1] === '/') return l.slice(0, i);
+    }
+    return l;
+  };
   for (const f of ['src/ai.js', 'src/ai_sense.js']) {
     const p = path.join(ROOT, f);
-    if (!fs.existsSync(p)) continue;
-    fs.readFileSync(p, 'utf8').split('\n').forEach((l, i) => {
-      const code = l.replace(/\/\/.*$/, '');
-      if (!pat.test(code)) return;
-      if (/\bges\?\.attachSource\(/.test(code) && !/\.strike\b/.test(code)) return; // 허용: 손가락 합성 붙이기 (쓰기만, 출력 안 읽음)
-      bad.push(`${f}:${i + 1}: ${l.trim()}`);
-    });
+    if (!fs.existsSync(p)) { bad.push(`${f}: 파일 없음`); continue; }
+    const raw = fs.readFileSync(p, 'utf8').split('\n');
+    const code = raw.map((l) => noComment(l).replace(ALLOW, ''));
+    code.forEach((c, i) => { if (pat.test(c)) bad.push(`${f}:${i + 1}: ${raw[i].trim()}`); });
+    for (const m of code.join(' ').match(/\{[^{}]*\b(strike|ges)\b[^{}]*\}\s*=\s*[A-Za-z_$]/g) || []) if (!code.some((c) => pat.test(c) && c.includes(m))) bad.push(`${f}: 여러 줄 풀어 쓰기 ${m.replace(/\s+/g, ' ').slice(0, 80)}`);
   }
-  add('grep: ai.js·ai_sense.js 가 f.strike·f.ges 를 읽지 않음 (허용 ges?.attachSource 한 줄)', '-', bad.length ? bad.join(' | ') : '없음', '0 줄', bad.length === 0);
+  add('grep: ai.js·ai_sense.js 가 f.strike·f.ges 를 읽지 않음 (허용 ges?.attachSource(…) 부름만; 계산한 키 f[k] 는 못 봄)', '-', bad.length ? bad.join(' | ') : '없음', '0 줄', bad.length === 0);
 }
 
 // ── 성능 ──
