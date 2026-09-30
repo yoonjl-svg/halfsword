@@ -127,6 +127,314 @@
    }
   },
   {
+   "id": "puppet_mittelhau_right_large",
+   "cut": "mittelhau",
+   "kind": "puppet",
+   "file": "puppet_mittelhau_right_large.json",
+   "source": "꼭두각시 (src/strike/puppet.js), 클립 mittelhau_right_large S 1, 몸 전체 kinematic",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "클립 시계 그대로 (mittelhau_right_large)"
+   },
+   "summary": {
+    "tipPeak": 35.87,
+    "handPeak": 8.69,
+    "tipPeakT": 0.625
+   }
+  },
+  {
+   "id": "puppet_oberhau_right_large",
+   "cut": "oberhau",
+   "kind": "puppet",
+   "file": "puppet_oberhau_right_large.json",
+   "source": "꼭두각시 (src/strike/puppet.js), 클립 oberhau_right_large S 1, 몸 전체 kinematic",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "클립 시계 그대로 (oberhau_right_large)"
+   },
+   "summary": {
+    "tipPeak": 33.39,
+    "handPeak": 8.39,
+    "tipPeakT": 0.6167
+   }
+  },
+  {
+   "id": "puppet_unterhau_right_large",
+   "cut": "unterhau",
+   "kind": "puppet",
+   "file": "puppet_unterhau_right_large.json",
+   "source": "꼭두각시 (src/strike/puppet.js), 클립 unterhau_right_large S 1, 몸 전체 kinematic",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "클립 시계 그대로 (unterhau_right_large)"
+   },
+   "summary": {
+    "tipPeak": 35.9,
+    "handPeak": 8.16,
+    "tipPeakT": 0.625
+   }
+  },
+  {
+   "id": "puppet_zornhau_right_large",
+   "cut": "zornhau",
+   "kind": "puppet",
+   "file": "puppet_zornhau_right_large.json",
+   "source": "꼭두각시 (src/strike/puppet.js), 클립 zornhau_right_large S 1, 몸 전체 kinematic",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "클립 시계 그대로 (zornhau_right_large)"
+   },
+   "summary": {
+    "tipPeak": 34.86,
+    "handPeak": 9.66,
+    "tipPeakT": 0.625
+   }
+  },
+  {
+   "id": "tracked_mittelhau_right_large_trunk_x1",
+   "cut": "mittelhau",
+   "kind": "tracked",
+   "file": "tracked_mittelhau_right_large_trunk_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 몸통만 (DRIVE.hands 거짓, ffFilter true; 손은 팔 베기 손가락 매핑 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "trunk"
+   },
+   "summary": {
+    "tipPeak": 1.81,
+    "handPeak": 1.34,
+    "tipPeakT": 0.5667
+   }
+  },
+  {
+   "id": "tracked_mittelhau_right_large_wind_x1",
+   "cut": "mittelhau",
+   "kind": "tracked",
+   "file": "tracked_mittelhau_right_large_wind_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 큰 감기 (DRIVE.hands 참, handMode 'windOnly', ffFilter true; 짜 놓은 위상은 φ ≥ 0 에서 베기로 들어 그 뒤는 손가락 매핑 + tCut 손 차이 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "wind"
+   },
+   "summary": {
+    "tipPeak": 20.3,
+    "handPeak": 6.88,
+    "tipPeakT": 0.6167
+   }
+  },
+  {
+   "id": "tracked_oberhau_right_large_trunk_x1",
+   "cut": "oberhau",
+   "kind": "tracked",
+   "file": "tracked_oberhau_right_large_trunk_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 몸통만 (DRIVE.hands 거짓, ffFilter true; 손은 팔 베기 손가락 매핑 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "trunk"
+   },
+   "summary": {
+    "tipPeak": 0.75,
+    "handPeak": 0.69,
+    "tipPeakT": 1.1917
+   }
+  },
+  {
+   "id": "tracked_oberhau_right_large_wind_x1",
+   "cut": "oberhau",
+   "kind": "tracked",
+   "file": "tracked_oberhau_right_large_wind_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 큰 감기 (DRIVE.hands 참, handMode 'windOnly', ffFilter true; 짜 놓은 위상은 φ ≥ 0 에서 베기로 들어 그 뒤는 손가락 매핑 + tCut 손 차이 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "wind"
+   },
+   "summary": {
+    "tipPeak": 15.99,
+    "handPeak": 3.2,
+    "tipPeakT": 0.3
+   }
+  },
+  {
+   "id": "tracked_unterhau_right_large_trunk_x1",
+   "cut": "unterhau",
+   "kind": "tracked",
+   "file": "tracked_unterhau_right_large_trunk_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 몸통만 (DRIVE.hands 거짓, ffFilter true; 손은 팔 베기 손가락 매핑 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "trunk"
+   },
+   "summary": {
+    "tipPeak": 1.37,
+    "handPeak": 1.15,
+    "tipPeakT": 0.5417
+   }
+  },
+  {
+   "id": "tracked_unterhau_right_large_wind_x1",
+   "cut": "unterhau",
+   "kind": "tracked",
+   "file": "tracked_unterhau_right_large_wind_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 큰 감기 (DRIVE.hands 참, handMode 'windOnly', ffFilter true; 짜 놓은 위상은 φ ≥ 0 에서 베기로 들어 그 뒤는 손가락 매핑 + tCut 손 차이 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "wind"
+   },
+   "summary": {
+    "tipPeak": 16.69,
+    "handPeak": 6.39,
+    "tipPeakT": 0.2167
+   }
+  },
+  {
+   "id": "tracked_zornhau_right_large_trunk_x1",
+   "cut": "zornhau",
+   "kind": "tracked",
+   "file": "tracked_zornhau_right_large_trunk_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 몸통만 (DRIVE.hands 거짓, ffFilter true; 손은 팔 베기 손가락 매핑 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "trunk"
+   },
+   "summary": {
+    "tipPeak": 1.5,
+    "handPeak": 1.37,
+    "tipPeakT": 0.5583
+   }
+  },
+  {
+   "id": "tracked_zornhau_right_large_wind_x1",
+   "cut": "zornhau",
+   "kind": "tracked",
+   "file": "tracked_zornhau_right_large_wind_x1.json",
+   "source": "추적 (drive.script, 클립 시계 ×1), S 1, 물리 켬, 칼 든 손 큰 감기 (DRIVE.hands 참, handMode 'windOnly', ffFilter true; 짜 놓은 위상은 φ ≥ 0 에서 베기로 들어 그 뒤는 손가락 매핑 + tCut 손 차이 — 손가락은 Pflug 에 멈춰 있음)",
+   "cond": {
+    "code": "8ba2bb3",
+    "seed": 1,
+    "physicsHz": 120,
+    "recordHz": 120,
+    "inputHz": null,
+    "weapon": "longsword",
+    "gait": "hybrid",
+    "skill": null,
+    "gap": null,
+    "commit": null,
+    "input": "drive.script ×1",
+    "hand": "wind"
+   },
+   "summary": {
+    "tipPeak": 16.15,
+    "handPeak": 4.56,
+    "tipPeakT": 0.925
+   }
+  },
+  {
    "id": "wbs_diagR_arm",
    "cut": "zornhau",
    "kind": "wbs-arm",

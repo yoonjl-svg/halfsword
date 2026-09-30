@@ -910,8 +910,9 @@ function renderCuts() {
 }
 function renderRecSelect() {
   const opts = [['', '겹치지 않음']];
-  const KIND = { 'game-arm': '지금 게임 · 팔 베기', 'wbs-arm': '시험판(wbs) · 팔 베기', 'wbs-commit': '시험판(wbs) · 결심(온몸) 베기' };
-  for (const r of recIndex?.records ?? []) opts.push([r.id, `${KIND[r.kind] ?? r.kind ?? '기록'} · ${r.cut}`]);
+  const KIND = { 'game-arm': '지금 게임 · 팔 베기', 'wbs-arm': '시험판(wbs) · 팔 베기', 'wbs-commit': '시험판(wbs) · 결심(온몸) 베기', puppet: 'R2 꼭두각시 (물리 없음)', tracked: 'R2 추적 (짜 놓은 위상)' };
+  const HAND_KO = { trunk: '몸통만', wind: '큰 감기' };
+  for (const r of recIndex?.records ?? []) opts.push([r.id, `${KIND[r.kind] ?? r.kind ?? '기록'}${r.cond?.hand ? ` · ${HAND_KO[r.cond.hand] ?? r.cond.hand}` : ''} · ${r.cut}`]);
   if (fileRecord) opts.push(['__file', `파일: ${fileRecord.id ?? '기록'}`]);
   $('rec').innerHTML = opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
   $('rec').value = state.rec;
