@@ -23,7 +23,7 @@
 //         (3) --json 한 벌. --vs=<앞선 json> 이면 칼끝·KE·상처 에너지 Δ%, 지연 Δms 를 견주고 |Δ| > 3 % 또는 물리 한 스텝 넘는 것에 표를 한다
 //         (4) game/plain 행 (R2 W5): 칼끝 최고·때 (베기 창 = 획 시작 … 손짓 층이 다시 idle, 최고가 창 끝이면 peakAtEdge), tc 운동에너지, 첫 상처 J·ms·부위, tCut 의 손 높이·뒤·손 길, 넘어짐, S·c 최고, 되돌아감(hitch),
 //             걸음 (tLand − tTc), 사슬 순서 (10 ms 같음), 스텝마다 채널 (f.strike S/φ/φ̇/상태/무리/c/over + drive.debug 전부, json 'channels') + 요약
-//             되돌아감 = tCut … 몸 위상 tc (φB ≥ 0.85, 맨 팔은 손짓 φ) 사이, 손이 tCut 의 제 자리보다 베는 쪽으로 나간 뒤 그 자리로 되돌아가는
+//             되돌아감 = tCut (없으면 획 시작) … 칼끝 최고·몸 위상 tc (φB ≥ 0.85, 맨 팔은 손짓 φ) 중 늦은 것 사이, 손이 tCut 의 제 자리보다 베는 쪽으로 나간 뒤 그 자리로 되돌아가는
 //             빠르기의 최고 (가슴 원점·바라보는 틀). 관문 0.5 m/s. (옛 관문은 φ 0 클립 손 쪽 빠르기라 큰 감기를 앞으로 베는 것을 셌다)
 //         (5) 묶음 (--blocks): latency = 감기가 손가락을 따르나 (zornhau-wind: 3 m/s 끌기·0.3 m/50 ms 걸음 → 골반·가슴 5°, 관문 33/25 ms),
 //             mx = 짜 놓은 위상(drive.script, S 1, 클립 빠르기) 추적 기록의 모양 (shape_metrics) + 추적 (DTW), pace = 짜 놓은 위상 걸음 착지 (tc ± 50 ms)
@@ -548,11 +548,12 @@ function newMetrics(T, m) {
       if (game ? x.tCutD > tPrev && x.tTc >= x.tCutD : (x.st === 2 || x.st === 3) && x.phi >= 0.85) { iTcB = i; break; }
     }
   }
-  // 되돌아감: tCut(없으면 획 시작) … 몸 위상 tc (없으면 겨눈 선 tc). 가슴 원점·바라보는 틀의 손 (몸이 옮겨·도는 몫은 뺀다)
+  // 되돌아감: tCut(없으면 획 시작) … 칼끝 최고·몸 위상 tc 중 늦은 것. 가슴 원점·바라보는 틀의 손 (몸이 옮겨·도는 몫은 뺀다)
+  //  모든 줄이 같은 끝 규칙: 몸 위상 tc 만으로 끝내면 φB 0.85 가 tCut 뒤 25–75 ms 에 와서 베기 대부분을 못 봤다.
+  //  겨눈 선 tc (online 최고) 는 끝으로 쓰지 않는다: 쟁기로 돌아가며 칼이 다시 상대를 겨눌 때 잡혀 (diagR 긋기 tc 875 ms, 칼끝 최고 258 ms) 복귀를 되돌아감으로 센다
   const iA = iC ?? i0;
-  // 몸 위상 tc 가 없으면 (손짓 층이 이 획을 베기로 읽지 않음) 겨눈 선 tc 와 칼끝 최고 중 늦은 것까지
-  const iTcOn = i0 + Math.round(Math.max(m.tc ?? 0, m.t_tip ?? 0) / (DT * 1000));
-  const iB = Math.min(n - 1, iTcB ?? Math.max(iA + 1, iTcOn));
+  const iTipOn = i0 + Math.round((m.t_tip ?? 0) / (DT * 1000));
+  const iB = Math.min(n - 1, Math.max(iA + 1, iTipOn, iTcB ?? 0));
   const h0 = S[iA].handH, dC = S[iB].handH.clone().sub(h0);
   let hitch = 0, hitchRaw = 0, iH = null;
   for (let i = iA + 1; i <= iB; i++) {
@@ -596,7 +597,7 @@ function newMetrics(T, m) {
     handPathWind: r3(S[iA].x.path), handPathCut: r3(S[iEnd].x.path - S[i0].x.path),
     falls: T.kd + (T.final === 'stand' ? 0 : T.kd ? 0 : 1), finalState: T.final,
     Smax: r3(Smax), cMax: r3(cMax), overMax: r3(overMax),
-    hitch: r3(hitch), hitchRaw: r3(hitchRaw), hitch_ms: ms(iH), hitchFrom: iC != null ? 'tCut' : 'stroke', hitchTo: iTcB != null ? (game ? 'phiB0.85' : 'phi0.85') : 'tc|tipPeak', hitchWin_ms: Math.round((iB - iA) * DT * 1000), hitchPass: hitch < HITCH_GATE,
+    hitch: r3(hitch), hitchRaw: r3(hitchRaw), hitch_ms: ms(iH), hitchFrom: iC != null ? 'tCut' : 'stroke', hitchTo: iTcB != null ? `max(tipPeak,${game ? 'phiB0.85' : 'phi0.85'})` : 'tipPeak', hitchWin_ms: Math.round((iB - iA) * DT * 1000), hitchPass: hitch < HITCH_GATE,
     order10,
     land,
     ffNoise: T.ffNoise && T.ffNoise.steps ? Object.fromEntries(Object.entries(T.ffNoise).map(([k, x]) => [k, k === 'steps' ? x : +x.toPrecision(5)])) : null,

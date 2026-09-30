@@ -316,7 +316,10 @@ if (grid.W.length) {
   for (const r of gW) byV[r.v] = Math.max(byV[r.v] ?? 0, r.hitch ?? 0);
   const hmax = Math.max(...gW.map((r) => r.hitch ?? 0));
   const worstH = gW.reduce((a, r) => ((r.hitch ?? 0) > (a?.hitch ?? -1) ? r : a), null);
-  add('되돌아감 (tCut … 몸 위상 tc, 손이 tCut 제 자리로 되돌아가는 빠르기, chainW game)', `입력 ${HZS.join('/')}`, `최고 ${hmax.toFixed(2)} m/s (${worstH ? worstH.key : '-'}); v별 ${Object.entries(byV).map(([v, x]) => `${v}: ${x.toFixed(2)}`).join(', ')}; 원래 값 (앞선 조건 없이) 최고 ${Math.max(...gW.map((r) => r.hitchRaw ?? 0)).toFixed(2)}`, '< 0.5 m/s', hmax < 0.5);
+  // 창 (tCut 또는 획 시작 … 끝) 길이도 적는다. 0 스텝 창은 잰 것이 없으니 빠짐 (실패)
+  const wins = gW.map((r) => r.hitchWin_ms).filter((x) => x != null);
+  const win0 = gW.filter((r) => !(r.hitchWin_ms > 0)).length;
+  add('되돌아감 (tCut … 칼끝 최고·몸 위상 tc 중 늦은 것, 손이 tCut 제 자리로 되돌아가는 빠르기, chainW game)', `입력 ${HZS.join('/')}`, `최고 ${hmax.toFixed(2)} m/s (${worstH ? `${worstH.key}, ${worstH.hitchFrom} … ${worstH.hitchTo} 창 ${worstH.hitchWin_ms} ms` : '-'}); v별 ${Object.entries(byV).map(([v, x]) => `${v}: ${x.toFixed(2)}`).join(', ')}; 원래 값 (앞선 조건 없이) 최고 ${Math.max(...gW.map((r) => r.hitchRaw ?? 0)).toFixed(2)}; 창 ${wins.length ? `${Math.min(...wins)}–${Math.max(...wins)}` : '-'} ms${win0 ? `, 0 스텝 창 ${win0} 줄 (빠짐)` : ''}`, '< 0.5 m/s', hmax < 0.5 && win0 === 0);
   const gh = grid.hold.filter((r) => r.mode === 'game');
   if (gh.length) add('되돌아감 hold (보고)', `입력 ${HZS.join('/')}`, `최고 ${Math.max(...gh.map((r) => r.hitch ?? 0)).toFixed(2)} m/s`, '-', null);
   // 사슬 순서 (air, game, chainW)
