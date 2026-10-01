@@ -157,6 +157,12 @@ function armU(T, S, side, out) {
   const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
   return out.copy(Dn).multiplyScalar(Math.cos(alpha)).addScaledVector(pDir, Math.sin(alpha));
 }
+/** ① 날것의 매핑 (몸 틀, 가슴 원점): 패드 (x, y) → 손 (깊이, 0.1 + y, 0.1 + x), 가운데로 모을수록 앞으로 뻗는다. driveSword·corrScale·padHand 가 같은 식을 읽는다 */
+function rawHand(x, y, out) {
+  const R = WEAPON.reach;
+  const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (x * x + y * y) / (R * R)));
+  return out.set(depth, 0.1 + y, 0.1 + x);
+}
 // 밧줄 기하: 관절 자리에서 몸 쪽 방향으로 L = 1 m, 다른 쪽 방향으로 K = 10 m 인 가상의 두 점 (각은 L·K 와 무관, 위 머리말)
 const ROPE_L = 1;
 const ROPE_K = 10;
@@ -682,8 +688,8 @@ export class Fighter {
   }
 
   /** 검술 자세 지도를 얼마나 따를지 (검술 보정 0 → 0, 약 0.4 → 0.64, 보통 이상 → 1) */
-  guardWeight() {
-    return Math.min(1, this.skill.level * 1.6);
+  guardWeight(s = this.skill.level) {
+    return Math.min(1, s * 1.6);
   }
 
   /**
@@ -691,7 +697,7 @@ export class Fighter {
    *  옛 보정은 쉼 자세(SKILL.homeGuard)에서 자세 지도 손으로 팔꿈치를 굽혀 두는데, 날것 매핑은 그 자리를 팔 길이(ARM 0.57 m) 너머에 둬서
    *  armIK 가 팔을 곧게 편다(10/1 탐침: 쉼 팔꿈치 16° 대 46°). 그래서 쉼 손 목표가 어깨에서 옛 보정 쉼과 같은 거리에 오게 한다:
    *   k(s) = |옛 쉼 손 목표(s) − 옛 쉼 어깨(s)| / |날것 쉼 손 목표 − v2 쉼 어깨|
-   *   옛 쉼 손 목표 = 날것.lerp(guardAt(homeGuard).hand, gw(s))           (driveSword 옛 줄, gw = guardWeight 의 min(1, 1.6·s))
+   *   옛 쉼 손 목표 = 날것.lerp(guardAt(homeGuard).hand, gw(s))           (driveSword 옛 줄, gw = guardWeight(s) 그대로 부름)
    *   옛 쉼 어깨 = armIK 의 S 를 옛 길이 명령하는 가슴 자세로 돌린 자리: yaw −G.chestYaw·gw·holdAmount + (1 − gw)·몸 돌림, 숙임 G.pitch·gw
    *               (updateBodyPose 옛 가지 + applyPose, 쉼 = 휘두르지 않음 → amp = SKILL_BODY.holdAmount)
    *   v2 쉼 어깨 = S 를 v2 쉼 몸 돌림 −homeGuard.x·BODY_TURN 으로 돌린 자리 (v2 가지는 숙임 0) = 배수의 가운데(고정점)
@@ -703,13 +709,11 @@ export class Fighter {
     const c = (this._corrK ||= { s: NaN, S: new THREE.Vector3() });
     if (c.s === s && c.table === gp.table && c.oneHand === gp.oneHand) return c;
     const [hx, hy] = SKILL.homeGuard;
-    const R = WEAPON.reach;
-    const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (hx * hx + hy * hy) / (R * R)));
-    const raw = _cs1.set(depth, 0.1 + hy, 0.1 + hx);
+    const raw = rawHand(hx, hy, _cs1);
     _csG.table = gp.table;
     _csG.oneHand = gp.oneHand;
     const G = guardAt(hx, hy, _csG);
-    const gw = Math.min(1, s * 1.6);
+    const gw = this.guardWeight(s);
     const turn = -hx * BODY_TURN;
     const old = _cs2.copy(raw).lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     const sh = _cs3.set(ARM.shoulder[0], ARM.shoulder[1], this.side * ARM.shoulder[2]);
@@ -819,9 +823,7 @@ export class Fighter {
 
   /** 보정 v2 패드 → 손 목표 (몸 틀, 가슴 원점): 날것 매핑을 corrScale 배수로 (driveSword 의 v2 줄과 같은 식). skill.js pad*·updateBodyPose 순서가 쓴다 */
   padHand(x, y, s, out) {
-    const R = WEAPON.reach;
-    const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (x * x + y * y) / (R * R)));
-    out.set(depth, 0.1 + y, 0.1 + x);
+    rawHand(x, y, out);
     const c = this.corrScale(s);
     return out.sub(c.S).multiplyScalar(c.k).add(c.S);
   }
@@ -1979,10 +1981,8 @@ export class Fighter {
 
     // 손 목표 위치: 가슴 앞 평면의 (좌우, 위아래) + 자동 깊이 (몸이 바라보는 방향 기준)
     const off = this.skill.aim; // 손 목표 (입력 + 검술 층의 이어 베기, 부드럽게 걸러진 값)
-    const R = WEAPON.reach;
-    // ① 날것의 매핑: 가운데로 모을수록 팔을 앞으로 뻗는다
-    const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (off.x * off.x + off.y * off.y) / (R * R)));
-    const handLocal = _v2.set(depth, 0.1 + off.y, 0.1 + off.x);
+    // ① 날것의 매핑: 가운데로 모을수록 팔을 앞으로 뻗는다 (rawHand: corrScale·padHand 와 같은 식 하나)
+    const handLocal = rawHand(off.x, off.y, _v2);
     // ② 검술 자세 지도: 손가락 위치 → 실제 롱소드 자세의 손 위치(앞뒤 깊이 포함)와 칼끝 방향
     //  검술 보정이 셀수록 ②를 따른다 (끔 = ①만)
     const gw = this.guardWeight();
