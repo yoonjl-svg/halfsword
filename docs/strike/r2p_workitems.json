@@ -1,0 +1,73 @@
+{
+  "spec": "docs/strike/r2p_spec_2026-10-02.md",
+  "base": "e028f42",
+  "branch": "r2p-design",
+  "grades": { "1": "판단", "2": "구현", "3": "측정" },
+  "rule": "모든 새 줄은 BODY.chain === 'legs' 가지 안. 기본 'anchor' 는 바이트 동일(G1). 값은 모두 '사장님 확인 전'(확인표 122~129, 151~156). main 에 push 하지 않는다.",
+  "items": [
+    {
+      "id": "W1a",
+      "title": "잔차 장부 chain_ledger.mjs + 측정 도구 이식 (live_twin·live_common·live_diag·support_measure)",
+      "done": "오늘 anchor 에서 세 장면(P 24 획·대본 크게 베기·F 1 판) 기준 표가 나오고, 닻 yaw 토크가 잔차 r_z 로·닻 감쇠 ≈1.7 kW 가 숨은 일률로 잡힌다. 열: L_z·dL/dt, 접촉 임펄스×6/7×r, 핀 yaw 토크, 선언 받침·밀기, 닻 토크 재계산, 골반·가슴·손·칼끝 최고 시각, 몸통 몫, 발 하중 p10·wF·마찰 예산, 핀 미끄러짐·발 yaw 핀 포화, 엉덩이 τ̂·포화율·싱크 몫, --digest. 이식 도구가 hs-diag 와 같은 수를 낸다.",
+      "gate": "G1 (도구만, sha 그대로)",
+      "grade": 3,
+      "hours": 6,
+      "depends": []
+    },
+    {
+      "id": "W1b",
+      "title": "사슬 최소판: BODY.chain, 닻 yaw 0·닻 틀 = 실제 골반, 딛은 다리 q_hip* = R_y(−w_l Δψ), 엉덩이 y σ 포화·속도 목표 0, 척추 y 속도 목표 0·ζ 가지, pinFeet ×6/7, lunge 가지, 탐색판 public/r2p/?chain=legs + HUD",
+      "done": "anchor 바이트 동일(fights12 e6cb7a8c · live_battery 061cf14a · corr_s0 12/12 + digest cmp). legs 가 서고 걷고 베고 돌아서며 P 24 획 넘어짐 0. G2b 엉덩이 y 토크 중 골반 각가속도로 간 몫 ≥ 0.5 (미달이면 R1′: 구동 경로 재검토 뒤 진행). 첫 탐색판 48 시간 안 — 사장님 세 물음(내 생각대로 갔나 / 몸이 실렸나 / 비틀렸나·미끄러졌나).",
+      "gate": "G1 · G2 · G2b · G3 · G4",
+      "grade": 2,
+      "hours": 16,
+      "depends": ["W1a"]
+    },
+    {
+      "id": "W2",
+      "title": "측정 묶음: 진단 §7 명령(legs 칸 + C2·anchor 대조, pacings 120/60/45J/30J/J, seeds 7-9, passive+fight, LIVE_TOUCH mj·fc), live_diag 60/30J, chain_corr, body_share, envelope_check, duel_similarity, chain_ledger, fights12·live_battery legs 배터리",
+      "done": "관문표 G2~G12 채움, 궤적 sha ≥3 중앙값, 칸 차 소음 폭 표기, AI 승패·넘어짐 전후표.",
+      "gate": "G5 · G6 · G7 · G8 · G9 · G10 · G11 · G12",
+      "grade": 3,
+      "hours": 8,
+      "depends": ["W1b"]
+    },
+    {
+      "id": "W3",
+      "title": "분리 실험(각각 깃발·따로 측정): 124 legTorque asis↔human, 125 ζ {0.3,0.5,0.7,오늘}, 128 나눔 {0.5,0.7}, 126 lunge 끔 ↔ 156 거리식 걸음, 151 손목 반작용, 152 빈팔 충돌",
+      "done": "축별 한 표, 바뀌는 특징(parts) 명시. 상자 밖 값은 URL 칸으로만, 본판 기본값 변경 0.",
+      "gate": "G2 · G4 · G5 · G6 · G8",
+      "grade": 2,
+      "hours": 8,
+      "depends": ["W2"]
+    },
+    {
+      "id": "W4",
+      "title": "둘째 탐색판: W3 최선 조합 + 154 체중 이동 IK(S1 없이, c* = weightFront) 후보 + 156 거리식 걸음 칸 — URL 인자 칸으로 사장님이 고름",
+      "done": "각 칸 G1·G10(넘어짐 0)·G11 통과, 다리 >8 Hz ≤ 0.035, 핀 미끄러짐/획 보고. 둘째 탐색판 ≈ 4 일째.",
+      "gate": "G1 · G4 · G11",
+      "grade": 2,
+      "hours": 8,
+      "depends": ["W3"]
+    },
+    {
+      "id": "W5",
+      "title": "회의론·경쟁 비교: 샛별 A-012~014·A-003 수치를 §8 비교란에(정해진 열람 시각 뒤), 못한 것 명시, 폰 손가락 자국 재생(허락 시), 심사 blockers 대조표",
+      "done": "§8 표가 숫자로 채워지고 못한 것 목록이 있다.",
+      "gate": "—",
+      "grade": 1,
+      "hours": 4,
+      "depends": ["W2"]
+    },
+    {
+      "id": "W6",
+      "title": "판정·명세: 결과를 spec §5 표에, 확인표 122~129·151~156 상태 갱신, 본판 기본 'legs' 여부 사장님·디렉터 판정, 탐색판 주소 인자 정리",
+      "done": "사장님 질문 ≤ 3(§9), decisions 줄, 본판 기본값은 판정 전 'anchor' 유지.",
+      "gate": "—",
+      "grade": 1,
+      "hours": 4,
+      "depends": ["W4", "W5"]
+    }
+  ],
+  "totals": { "hours": 54, "days_estimate": "5.5~6.5", "first_probe": "W1b 끝, 48 시간 안 (public/r2p/?chain=legs)" }
+}

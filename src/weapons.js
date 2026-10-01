@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────────────────────
 import { classifyWeapon } from './weapon_class.js';
 import * as THREE from 'three';
-import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
+import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -320,6 +320,11 @@ function finalizeSpec(id, s) {
     fragile: breakChance(BREAK.jRef, s.fragility ?? TIER_FRAGILITY[s.tier ?? 'common'], s.material) > 0, // 부러질 수 있는 무기인가
     ignoreArmor: !!s.ignoreArmor,
     thrustStyle: s.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (아래 THRUST_STYLE). 없으면 null
+    // 가시 무기(모르겐슈테른): 날은 없지만(edged:false → 늘 둔기) 'blade' 부품 끝(t > 0.8)이 칼 축 방향으로 들어가면 약한 찌르기 (combat.js analyze, 확인표 줄 135).
+    //  없는 무기는 거짓 — combat.js 의 그 가지는 spike 로만 열린다
+    spike: !!s.spike,
+    // 부러지는 절대 높이(손 기준 m): 적으면 breakAt(칼날 비율) 대신 이 높이에서 끊고, 그 위에 통째로 있는 부품(쇠 공 머리)은 떨어져 나간다 (fighter.breakWeapon, 줄 139)
+    breakY: s.breakY ?? null,
     gripAlong: s.gripAlong ?? -0.14,
     twoHand: s.grip !== 'one-hand',
     // 한손 자세표(guards.js ONE_HAND: 칼 든 어깨를 앞으로, 손을 더 뻗는다)를 쓰나. 한손 무기는 기본으로 쓴다
@@ -1053,13 +1058,55 @@ const pistol = finalizeSpec('pistol', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  18) 모르겐슈테른 — 레어 둔기 (사장님 10/2 00:50 "모르겐슈테른을 구현해", 9/30 "둔기 … 레어 정도로?").
+//      14~16세기 독일·스위스의 짧은(한손) 고정 철구 모르겐슈테른: 물푸레 자루 끝에 가시 박은 연철 공. 설계 docs/strike/morgenstern_design_2026-10-02.md,
+//      수치는 모두 docs/strike/owner_defaults_table.md 줄 130~150 ('사장님 확인 전').
+//      [M] 사료 범위: 짧은 것 전체 0.6~0.9 m · 1.2~2.5 kg(쇠 공), 공 Ø 5~8 cm, 가시 2~5 cm × 8~16개. [D] 밀도 계산(물푸레 0.68 · 연철 7.85 g/cm³)으로 질량을 세웠다.
+//      날이 없어(edged:false) 늘 둔기 판정 — 멍·균형·의식(머리)·넘어짐·투구 벗김(200 J)·판금 닳음(wearPlate)은 모두 기존 식 그대로(새 문턱 없음).
+//      가시만 살·누비옷에 약한 찌르기(spike + mThrust 0.35; 판금·투구 위에서는 기존 문턱 47/0.35 = 134 J 가 막아 둔기 그대로).
+//      파손: 나무 자루가 보강띠 밑(breakY 0.40)에서 부러지고 쇠 공 머리가 통째로 떨어져 날아간다 — 남는 자루 토막(≈0.4 kg)이 둔기.
+// ═════════════════════════════════════════════════════════════
+const morgenstern = finalizeSpec('morgenstern', {
+  nameKo: '모르겐슈테른 (가시 철퇴)', nameEn: 'Morgenstern', // 카드 글 초안 — 줄 148 (문구는 사장님 확인 전)
+  desc: '가시 박은 쇠 공을 자루 끝에 단 둔기.\n갑옷 위로도 충격이 들어가고 투구를 벗긴다.',
+  grip: 'one-hand', material: 'steel', // 틀 C 한손 → 세이버 자세표 guardBaseOne('blunt'); 대안 'hand-and-half'(B 앞무게) — 줄 133. 재질 steel: 자루에 쇠 보강띠·소리는 쇠 (줄 146)
+  tier: 'rare', // 등급표 기본값 power 1.05 · durability 0.85 · fragility 0.032 — 줄 136 (확인만)
+  edged: false, // 날 없음 → 늘 둔기 (classifyStyle 'blunt')
+  mBlunt: 1.3, // 둔타 E 배율 — 줄 134 (시제품 1.8 · 참치 2.8 · 나뭇가지 1; 질량·속도는 물리가 담으니 낮게 시작해 측정으로)
+  spike: true, mThrust: 0.35, mCut: 0, // 가시 = 약한 찌르기 — 줄 135 (mCut 은 베기 길이 없어 안 읽힌다, 0 으로 적어 둔다)
+  // 길이 — 줄 131: hiltLength 0.54 = 머리 밑, bladeLength 0.14 = 머리('blade' 부품) 구간 → 손~가시 끝 0.68 m, 밑마개까지 전체 0.82 m
+  hiltLength: 0.54, bladeLength: 0.14,
+  breakY: 0.4, // 파손 — 줄 139: 자루 위쪽 보강띠 밑에서 끊긴다 (쇠 공 안에서 끊기는 breakAt 대신). fragility 는 레어 표 그대로
+  // 겉모습: 부품(자루·마개·철구)마다 따로 그리지 않고 decorate 가 통째로 그린다 (weapon_looks.js drawMorgenstern — 밑마개·가죽 감개·물푸레 자루·쇠 보강띠·목 띠·철구·가시 12개)
+  partMesh: hiddenParts,
+  buildParts(look) {
+    // 질량 분포 — 줄 130 (후보 M-B): 자루 0.60 kg(물푸레 Ø 3.2 cm × 0.67 m 0.37 + 쇠 보강띠 2줄 0.2 + 끈 [D]) + 밑마개 0.08 [I] + 연철 공 Ø 6.5 cm 1.13 + 가시 12개 0.13 ≈ 1.20 [D]
+    //  = 1.88 kg, 무게중심 손에서 0.45 m, 손 기준 휘두름 관성 0.50 kg·m² (롱소드 0.27 · 세이버 0.18 · 츠바이핸더 0.77), 가시 끝 유효질량 1.0 kg (롱소드 칼끝 0.18)
+    //  대안 M-A 1.73 / M-C 2.05 / M-D 2.20 kg (설계 1-1 표). 손 기준 관성의 89 % 가 머리의 m·r² 라 공 모양 자체는 거의 안 중요하다
+    const haft = boxInertia(0.6, 0.016, 0.335, 0.016); // 자루 한 상자: y −0.13 ~ 0.54 (쥐는 곳 0.16 m 포함)
+    const cap = sphereInertia(0.08, 0.02); // 밑마개 (쇠 캡)
+    const head = sphereInertia(1.2, 0.035); // 연철 공 (가시 질량 포함)
+    return [
+      partTuple(['box', 0.016, 0.335, 0.016], 0.205, 0.6, 0, haft.Ie, haft.It, null),
+      partTuple(['ball', 0.02], -0.135, 0.08, 0, cap.Ie, cap.It, null),
+      // 철구 = 'blade' 부품 (isBlade 참 → colliderInfo.part 'blade': 가시 찌르기 t·가르기 예측 훅이 머리에서 돈다. 날 없음이라 예측은 늘 "부딪힘").
+      //  콜라이더 공 r 0.05 — 줄 132: 몸체 r 0.0325 보다 1.75 cm 밖, 가시 끝(0.0625) 보다 1.25 cm 안 ('가시 사이로 미끄러진다'. 겉모습 약속 ~1 cm 의 예외)
+      partTuple(['ball', 0.05], 0.61, 1.2, 0, head.Ie, head.It, null, true),
+    ];
+  },
+  decorate(group, look) {
+    drawMorgenstern(group, look, 'rare');
+  },
+});
+
 // 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
 //  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
-  rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol,
+  rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol, morgenstern,
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
@@ -1072,6 +1119,7 @@ export const WEAPON_ALIASES = {
   messer: 'falchion', hwandudaedo: 'longsword', // 삭제된 무기 (감독 결정) — 옛 id 로 죽지 않게
   arming_sword: 'longsword', arming: 'longsword', // 삭제된 무기 (감독 결정)
   replica: 'excalibur_replica', saber: 'lightsaber',
+  morningstar: 'morgenstern', mace: 'morgenstern', // 모르겐슈테른 (영어 이름·둔기 통칭)
 };
 
 // 아무 무기도 지정하지 않았을 때(o.weapon 없음) 쓰는 기본 무기.

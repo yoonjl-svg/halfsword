@@ -60,6 +60,9 @@ export const MEASURED = {
   tree_branch: [1.46, 1.61, 1.13, 0.29],
   rubber_chicken: [0.88, 1.24, 0.68, 0.18],
   frozen_tuna: [1.36, 1.63, 1.05, 0.44],
+  // 모르겐슈테른 (레어 둔기, 확인표 줄 144): hybrid weapon_measure.mjs 실측 contact 0.88 · clinch 0.68 · cutTime 0.39 raw (머리가 무거워 0.35 s 베기에서 70 % 지점이 늦게 머리 높이를 지난다).
+  //  reach 는 같은 날 도구가 모든 무기에서 내딛기 몫을 못 재어(롱소드도 1.62 = contact) 같은 틀(C 한손) 세이버의 reach/contact 비 1.58/1.39 로 유도한 값 [D]
+  morgenstern: [0.88, 1.0, 0.68, 0.39],
 };
 const LS_MEASURED = MEASURED.longsword;
 
@@ -235,6 +238,8 @@ export class AI {
     this.level = PL ? { ...base, ...PL } : base;
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
+    this.me.skill.corr = SKILL.corrAI; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)
+    this.me.skill.corrTip = false; // AI 는 끝점 겨눔 ② 없음 (손 뗌 사건이 없고 속임을 망친다, 설계 AI 절)
   }
 
   /** 상대가 칼을 놓쳤다(또는 붙어 싸울 수 없는 권총을 들었다): 간격을 지킬 까닭이 없다 → 쫓아가 끝낸다 (도망치는 상대를 놓치지 않게) */

@@ -104,6 +104,7 @@ export class Combat {
     const res = this.predict(pr);
     if (res && res.pass) {
       this.cutting.set(key, { seen: this.stepNo, applied: false, pr, wc: pr.wc, vc: pr.vc });
+      if (pr.w.fighter.skill?.corr === 'v2') pr.w.fighter.bladeTouch = true; // 보정 v2 사건: 닿음 (corr.js)
       return 0;
     }
     return 1;
@@ -163,7 +164,11 @@ export class Combat {
     const along = rel.dot(axis) / speed;
     const ts = att.weaponCfg.thrustStyle; // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
     const win = ts ? ts.window : 0; // 칼끝 판정 폭
-    if (isBlade) {
+    // 가시 무기(weapons.js spike — 모르겐슈테른, 확인표 줄 135): 날은 없지만 머리('blade' 부품) 끝(t > 0.8)이 칼 축 방향으로 들어가면 약한 찌르기(mThrust 0.35).
+    //  베기는 없다. 문턱은 아래 기존 식 그대로(살·누비옷 stab × guard; 판금·투구 위는 47/0.35 = 134 J 라 사실상 둔기). 부러지면 가시도 없다.
+    //  spike 가 없는 무기는 늘 거짓 → 아래 가지는 예전과 바이트까지 같다
+    const spike = !isBlade && pr.w.part === 'blade' && att.weaponCfg.spike && !att.weaponBroken;
+    if (isBlade || spike) {
       if (along > STRIKE.stabAlign - win && t > 0.8 - win) {
         type = 'stab';
         // 칼끝 찌르기 동작(skill.js thrust: 탭 찌르기, 찌르기 무기 AI 의 찌르기 기술)에서 칼끝을 뻗는 구간(thrustPush:
@@ -176,7 +181,7 @@ export class Combat {
           ephys = 0.5 * mEff * speed * speed;
           energy = ephys * STRIKE.energyScale;
         }
-      } else {
+      } else if (isBlade) {
         const perp = rel.clone().addScaledVector(axis, -rel.dot(axis));
         const pl = perp.length();
         const edgeAlign = pl > 1e-3 ? Math.abs(perp.dot(edge)) / pl : 0;
@@ -195,12 +200,14 @@ export class Combat {
     const vic = pr.v.fighter;
     // 사장님 결정 (9/30 "맞으면 즉사로"): 탭 마무리 찌르기가 내리찍는 동안(skill.tap.down·go, thrustPush = 끝나기 전)
     //  칼끝이 칼 축으로(찌르기) 쓰러진 상대의 몸통(가슴·배·골반)·머리에 닿으면 즉사 (fighter.applyWound).
-    //  옷·살·판금·투구 문턱은 이것을 막지 못한다 — 아래 문턱은 상처 깊이와 관통(pass: 물리로 튕기나 가르나)만 정한다.
+    //  옷·살 문턱은 이것을 막지 못한다 — 아래 문턱은 상처 깊이와 관통(pass: 물리로 튕기나 가르나)만 정한다.
+    //  판금·투구는 막는다 (사장님 10/1 21:45, C 를 확률 아닌 물리로): 판·투구 위에 닿아 문턱을 못 넘으면 finish 를 끄고 멍으로 보낸다 — 판금 상대는
+    //  finish.js 가 겨눔 점을 목(갑옷 없는 틈)으로 옮기고, 들어가느냐는 물리가 정한다. 갑옷 무시 무기(ignoreArmor)는 예전처럼 막히지 않는다.
     //  걸리지 않는 것: 서 있는·무릎 꿇은·일어나는 상대 (vic.state) · 보통 탭 찌르기 (tap.down) · 겨누는 중·걷는 중 (go) ·
     //  찍기가 끝난 뒤·돌아오는 중 (thrustPush) · 자세 지도로 친 내려찍기·AI 내려베기 (tap 없음) · 베기·둔기·날 없는 무기 (stab) ·
     //  팔다리 (부위) · 내가 넘어졌을 때 (att.state) · 다른 상대 (att.foe). 판단만 한다 — 예측(predicting)·측정 도구가 불러도 부작용 없음
     const tp = att.skill?.tap;
-    const finish = type === 'stab' && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && vic.state === 'down' && FINISH_PARTS.has(pr.v.part);
+    let finish = type === 'stab' && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && vic.state === 'down' && FINISH_PARTS.has(pr.v.part);
     // 투구: 머리 윗부분(눈썹 위)만 덮는다. 종류별 값은 ARMOR.helmets (케틀햇 = 예전 ANATOMY.helmet 그대로)
     const helmet = zone === 'head' && vic.hasHelmet && vicLocal.y > -0.01;
     const hs = helmet ? vic.helmetSpec || ARMOR.helmets.kettle : null;
@@ -215,6 +222,7 @@ export class Combat {
     // 막아주는 정도: 투구·판금은 찌그러질수록, 옷은 찢어질수록 약해진다
     let guard = 1;
     let helmetBlunt = 1;
+    let plateBlunt = 1; // 판금 위 둔타가 판을 '통해' 몸에 전해지는 비율 (ARMOR.plate.blunt, 투구 helmet.blunt 와 같은 꼴. 확인표 줄 140 — 부위 효과표(줄 141, R3)만 읽는다)
     let plateGuard = 0; // 판금의 막음 비율 (0 = 판 없음). 문턱은 아래에서 누비옷 문턱과 큰 쪽을 쓴다
     if (helmOn) {
       const hi = vic.helmetIntegrity;
@@ -223,6 +231,7 @@ export class Combat {
     } else if (body) {
       guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
       if (plate) plateGuard = ARMOR.plate.guardMin + (1 - ARMOR.plate.guardMin) * armorHold(ARMOR.plate, vic.plate[pr.v.part]);
+      if (plate) plateBlunt = ARMOR.plate.blunt + (1 - ARMOR.plate.blunt) * (1 - vic.plate[pr.v.part]); // 찌그러질수록 더 전해진다 (투구 식과 같음)
       // 팔다리 판(견갑·팔 통판·손목 보호대·허벅지 판·정강이받이·쇠신)은 몸통 판보다 얇다: 문턱 × ARMOR.plate.limb
       if (plate && (zone === 'arm' || zone === 'leg')) plateGuard *= ARMOR.plate.limb;
     }
@@ -258,8 +267,9 @@ export class Combat {
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
-      } else if (!predicting && !finish) {
-        type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (내려찍기 즉사 찌르기는 찌르기 그대로 — 판·투구에 막혀도 칼은 물리로 튕긴다.
+      } else if (!predicting && (!finish || ((plate || helmet) && !att.weaponCfg.ignoreArmor))) {
+        if (finish) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다
+        type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (맨몸 내려찍기 즉사 찌르기는 찌르기 그대로 — 옷·살 문턱에 막혀도.
         //  판·옷·소리는 심각도 0 이라 막힌 타격으로 적힌다: fighter.applyWound·main.js onWound)
         // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
         if (assisted) ({ mEff, ephys, energy } = assisted);
@@ -285,6 +295,7 @@ export class Combat {
       helmet,
       helmetBlunt,
       plate, // 판금 위를 맞았나 (fighter.applyWound 가 판을 깎고, 겉모습·소리는 강철로)
+      plateBlunt, // 판을 통해 몸에 전해지는 둔기 비율 (판 없으면 1). 지금 게임은 읽지 않는다 — 둔타 효과표 시제품(tools/sim/blunt_zones.mjs)·R3 몫
       thr,
       eff,
       bladeAxis: axis.clone(),
@@ -303,6 +314,7 @@ export class Combat {
         this.cutting.delete(key); // 더 이상 겹치지 않음
         continue;
       }
+      if (c.pr.w.fighter.skill?.corr === 'v2') c.pr.w.fighter.touchStep = this.stepNo; // 보정 v2: 아직 가르는 중 = 닿아 있음
       const col1 = world.getCollider(c.wc);
       const col2 = world.getCollider(c.vc);
       let point = null;
@@ -382,9 +394,12 @@ export class Combat {
       if (!c) return;
       this.strike(pr, c.p, false);
       this.rebound(pr, c.p, c.n);
+      if (pr.w.fighter.skill?.corr === 'v2') (pr.w.fighter.bladeTouch = true), (pr.w.fighter.touchStep = this.stepNo); // 보정 v2: 접촉힘 타격 = 닿음
     });
     this.bladeClash(world, bladePairs);
     this.armSteel();
+    // 보정 v2 사건: 떨어짐 = 이번 스텝에 가르는 쌍·접촉힘 타격·칼끼리 닿음이 하나도 없음 (v2 공격자만 적는다)
+    for (const f of this.fighters) if (f.skill?.corr === 'v2' && f.bladeTouch && f.touchStep !== this.stepNo) f.bladeTouch = false;
     for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
   }
 
@@ -461,6 +476,7 @@ export class Combat {
         f.absorbWeaponImpact?.(J, f === A.fighter ? B.fighter : A.fighter); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다 (상대 칼의 breakMult — 청강검 '창천')
       }
     }
+    for (const f of [A.fighter, B.fighter]) if (f.skill?.corr === 'v2') (f.bladeTouch = true), (f.touchStep = this.stepNo); // 보정 v2: 칼끼리 닿음
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
   }
 

@@ -18,6 +18,7 @@ export const WEAPON_MEASURES = {
   tree_branch: { contact: 1.46, reach: 1.61, clinch: 1.13, cutTime: 0.29 },
   rubber_chicken: { contact: 0.88, reach: 1.24, clinch: 0.68, cutTime: 0.18 },
   frozen_tuna: { contact: 1.36, reach: 1.63, clinch: 1.05, cutTime: 0.44 },
+  morgenstern: { contact: 0.88, reach: 1.0, clinch: 0.68, cutTime: 0.39 }, // ai.js MEASURED 와 같다 (reach 는 세이버 비로 유도 [D], 확인표 줄 144)
 };
 
 /** AI 하나의 유파 간격을 그 무기 실측치로 바꿔 끼운다 (롱소드는 그대로 두어 기본 AI 회귀를 지킨다) */
