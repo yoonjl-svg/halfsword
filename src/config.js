@@ -188,6 +188,14 @@ export const GAIT = {
   turnAhead: 0.8, // 돌아서는 중엔 바라볼 방향을 이만큼(라디안)까지 미리 보고 발을 돌려 딛는다. 0 = 끔
 };
 
+// 칼 든 팔의 길이와 어깨 자리 (fighter.js armIK·shoulderOn, 보정 v2 날것 매핑 반지름 fighter.corrScale 이 같은 값을 읽는다 — 둘째 사본 없음).
+//  위팔 0.3 m · 아래팔 + 손목까지 0.27 m (팔 뻗은 길이 0.57 m), 어깨 = 가슴 몸체 기준 (앞, 위, 칼 쪽 × side) m (jointDefs uarmS 자리 − 가슴 자리)
+export const ARM = {
+  upper: 0.3,
+  fore: 0.27,
+  shoulder: [0, 0.1, 0.2],
+};
+
 export const WEAPON = {
   aimStiffness: 60, // 칼끝 방향을 맞추는 회전 힘 (손목 힘). 낮을수록 칼이 관성대로 따라온다
   aimDamping: 11, // 칼이 흔들리지 않고 딱 서는 값 (감쇠비 ≈ 0.9)

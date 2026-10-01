@@ -42,10 +42,11 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
 const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
 const _pt = new THREE.Vector3();
+const _ph = new THREE.Vector3(); // pad* 의 손 자리 (fighter.padHand)
 
 /**
  * 보정 v2 ③ pad*: 칼끝이 상대 가슴을 향하는 패드 = fighter.js guardDir 의 닫힌 역 (az → x, el → y, 같은 조각 식·같은 끝값).
- *  칼 방향은 손(날것 매핑의 손 자리)에서 상대 가슴으로. 손 자리가 패드에 따라 바뀌니 homeGuard 에서 시작해 두 번 고쳐 잡는다(기하).
+ *  칼 방향은 손(v2 매핑의 손 자리 = fighter.padHand, 날것 매핑을 어깨 둘레 배수로)에서 상대 가슴으로. 손 자리가 패드에 따라 바뀌니 homeGuard 에서 시작해 두 번 고쳐 잡는다(기하).
  *  패드 범위는 입력 매핑이 쓰는 WEAPON.reach 안 (update 첫 줄의 손가락 자르기와 같은 값)
  */
 function padStar(f, out) {
@@ -57,8 +58,8 @@ function padStar(f, out) {
   let x = SKILL.homeGuard[0];
   let y = SKILL.homeGuard[1];
   for (let k = 0; k < 2; k++) {
-    const depth = 0.12 + 0.5 * Math.sqrt(Math.max(0, 1 - (x * x + y * y) / (R * R)));
-    _pd.set(_ps.x - depth, _ps.y - (0.1 + y), _ps.z - (0.1 + x)).normalize(); // 손 → 상대 가슴
+    const h = f.padHand(x, y, f.skill.level, _ph); // v2 매핑 손 자리 (driveSword 와 같은 배수, fix2 B)
+    _pd.set(_ps.x - h.x, _ps.y - h.y, _ps.z - h.z).normalize(); // 손 → 상대 가슴
     const az = THREE.MathUtils.clamp(Math.atan2(_pd.z, _pd.x), -1.1, 1.3);
     const el = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(_pd.y, -1, 1)), -0.6, 1.75);
     x = az / 1.7 + 0.05;
