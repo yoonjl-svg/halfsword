@@ -91,7 +91,7 @@ export const CLOSE = {
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
 export const GAIT = {
   footExtra: 2, // 딛은 발 무게에 더하는 몫(kg): 신발·쇠 발싸개. 딛은 발의 물리 계산이 더 잘 수렴한다 (내딛는 발은 원래 무게)
-  assist: 0.3, // 보이지 않는 힘이 받쳐 주는 몸무게 비율 (나머지는 다리 관절 → 발 → 땅). 0이면 다리가 전부. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 놀 수 있는 칸 (손맛 바닥 통과 = legs asis 10 칸) 중 실전 동작 유사도 1 위 58.5 (docs/strike/support_optimum_2026-10-01.md)
+  assist: 0.2, // 10/1 21:10 사장님 결정(디렉터 권고): 0.3 → 0.2. 보이지 않는 힘이 받쳐 주는 몸무게 비율 (나머지는 다리 관절 → 발 → 땅). 0이면 다리가 전부. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 놀 수 있는 칸 (손맛 바닥 통과 = legs asis 10 칸) 중 실전 동작 유사도 1 위 58.5 (docs/strike/support_optimum_2026-10-01.md)
   handover: 0.6,
   handoverMax: 2.5, // 발을 다 고쳐 딛지 못해도 이 시간(초)이 지나면 넘겨받는다
   handoverSlow: 0.6, // 넘겨받는 동안 걷는 속도를 이 비율만큼 줄인다 // 일어선 직후 보조 힘을 100%에서 assist로 줄이는 시간(초)
@@ -560,7 +560,7 @@ export const SOUND = {
   stageHitGap: 10,
   // 칼이 몸을 칠 때의 소리 (31·33차 후보, 사장님 "전자 파리채로 모기 잡는 소리 같아"): 'legacy' 지금 / 'synth' 날 선 칼 합성 / 'rec' 날 선 칼 녹음 / 'samsho' 대전 게임식 2.
   // 사장님이 고르시기 전까지 'legacy' (게임 소리 그대로). sounds.html "칼→몸 소리 후보" 에서 비교
-  fleshHit: 'legacy',
+  fleshHit: 'samsho', // 10/1 21:10 사장님: "예전에 만든 slash35_heavy(35차 강베기) 버전이 지금보다 낫다" → 기본값. 다른 후보는 sounds.html 에 그대로
 };
 
 /**
