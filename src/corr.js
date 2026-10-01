@@ -119,15 +119,18 @@ function tipStep(f, C, aim, s, L, HL) {
   const held = !!f.handHeld;
   const touch = held && !C.heldPrev;
   C.heldPrev = held;
+  // 손길 없이 손 입력이 움직이면(PC 포인터 잠금 마우스: handHeld 거짓·inputActive 참) 손길과 똑같이 넘긴다 — 폰은 닿아야만 움직이니 그대로.
+  //  (숨은 상한 점검 F1 10/1: 마우스에서는 붙잡음이 풀리지 않아 베기를 막았다. 새 수 없음, 걷기를 멈추는 같은 사건 inputActive 를 쓴다)
+  const resume = !held && !!f.inputActive && (C.tip || C.tipHold);
   // 이번 손길에 칼이 면 안에서 쓴 각 (켜질 때 남은 호 몫을 재는 데만)
-  if (touch) C.arcDone = 0;
+  if (touch || resume) C.arcDone = 0;
   if (C.prevB && C.plane) C.arcDone += Math.abs(Math.atan2(_w.crossVectors(C.prevB, _b).length(), C.prevB.dot(_b)));
   (C.prevB ||= new THREE.Vector3()).copy(_b);
   const ok = sk.corrTip && f.gripCone && f.state === 'stand' && !f.weapon?.gun && f.foe && !f.foe.revival;
-  if (!ok || touch) {
+  if (!ok || touch || resume) {
     if (C.tip || C.tipHold) {
-      C.tipJump = touch ? Math.acos(THREE.MathUtils.clamp(C.cmdAim.dot(aim), -1, 1)) : null; // 넘김 튐: 지난 스텝 명령 aim ↔ 손가락 aim
-      C.tipEnd = touch ? 'touch' : 'gate';
+      C.tipJump = touch || resume ? Math.acos(THREE.MathUtils.clamp(C.cmdAim.dot(aim), -1, 1)) : null; // 넘김 튐: 지난 스텝 명령 aim ↔ 손가락 aim
+      C.tipEnd = touch ? 'touch' : resume ? 'mouse' : 'gate';
     }
     C.tip = false;
     C.tipHold = false;
