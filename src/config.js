@@ -64,7 +64,7 @@ export const BODY = {
   // 다리 근육 상한 (받침 sweep 손잡이, 사장님 확인 전, docs/strike/owner_defaults_table.md)
   //  'asis' : 관절 표 그대로 (엉덩이 560 · 무릎 500 N·m, 사람 최대의 2.7 · 2.4 배)
   //  'human': 엉덩이·무릎 관절 근육 상한(j.max)만 아래 사람 값으로. k·d·딛은 다리 배율·mus·발목은 그대로
-  legTorque: 'asis', // 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안에서 실전 동작 유사도 최고 58.5 (docs/strike/support_optimum_2026-10-01.md)
+  legTorque: 'asis', // 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 20 칸: 'human' 10 칸은 손맛 바닥 ✗ (걷기 무릎 한도 닿음 0.42–0.62 · 밀치기 미발사 13/40) → 'asis'. 유사도로는 human 이 상위에 많음 (docs/strike/support_optimum_2026-10-01.md)
   legHipHuman: 208, // 사람 엉덩이 폄 최대 등척 힘 208±63 N·m (젊은 남자, 75 kg·1.75 m 환산: Anderson·Madigan·Nussbaum 2007 J Biomech 40:3105 표 3)
   legKneeHuman: 210, // 사람 무릎 폄 최대 등척 힘 210±52 N·m (같은 문헌. 동심 60°/s 는 2.21 N·m/kg ≈ 166 N·m: Baumgart 외 2021 Sports Med Open)
 };
@@ -91,7 +91,7 @@ export const CLOSE = {
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
 export const GAIT = {
   footExtra: 2, // 딛은 발 무게에 더하는 몫(kg): 신발·쇠 발싸개. 딛은 발의 물리 계산이 더 잘 수렴한다 (내딛는 발은 원래 무게)
-  assist: 0.3, // 보이지 않는 힘이 받쳐 주는 몸무게 비율 (나머지는 다리 관절 → 발 → 땅). 0이면 다리가 전부. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안에서 실전 동작 유사도 최고 58.5 (docs/strike/support_optimum_2026-10-01.md)
+  assist: 0.3, // 보이지 않는 힘이 받쳐 주는 몸무게 비율 (나머지는 다리 관절 → 발 → 땅). 0이면 다리가 전부. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 놀 수 있는 칸 (손맛 바닥 통과 = legs asis 10 칸) 중 실전 동작 유사도 1 위 58.5 (docs/strike/support_optimum_2026-10-01.md)
   handover: 0.6,
   handoverMax: 2.5, // 발을 다 고쳐 딛지 못해도 이 시간(초)이 지나면 넘겨받는다
   handoverSlow: 0.6, // 넘겨받는 동안 걷는 속도를 이 비율만큼 줄인다 // 일어선 직후 보조 힘을 100%에서 assist로 줄이는 시간(초)
@@ -192,7 +192,7 @@ export const GAIT = {
   catchSag: 0.05, // 골반이 목표보다 이만큼(m) 넘게 주저앉으면 보조 힘을 되살린다 (붙잡기 반사)
   catchTilt: 35, // 몸이 이 각도(도) 넘게 기울어도
   catchOff: 0.15, // 균형을 이만큼 넘게 잃어도 (fighter.offBalance)
-  catchMode: 'on', // 붙잡기 반사 (받침 손잡이): 'on' = 위 셋 다 · 'fall' = 균형 잃음(catchOff)만 · 'off' = 끔. 일어선 직후 넘겨받기는 늘 그대로. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안에서 실전 동작 유사도 최고 58.5 (docs/strike/support_optimum_2026-10-01.md)
+  catchMode: 'on', // 붙잡기 반사 (받침 손잡이): 'on' = 위 셋 다 · 'fall' = 균형 잃음(catchOff)만 · 'off' = 끔. 일어선 직후 넘겨받기는 늘 그대로. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 놀 수 있는 칸 (손맛 바닥 통과 = legs asis 10 칸) 중 실전 동작 유사도 1 위 58.5 (docs/strike/support_optimum_2026-10-01.md)
   catchHurry: 1, // 크게 균형을 잃으면(세게 밀림) 내딛는 발을 최대 (1 + 이 값)배 빨리 옮겨 딛는다. 0 = 끔
   hurryFrom: 0.35, // 균형을 이만큼(fighter.offBalance) 넘게 잃을 때부터 서두른다 (+0.2에서 최대)
   reachHurry: 1, // 딛은 발 뒤꿈치를 heelHurry(라디안) 넘게 들면 내딛는 발을 최대 (1 + 이 값)배 빨리 딛는다. 0 = 끔

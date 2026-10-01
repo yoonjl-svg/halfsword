@@ -201,7 +201,7 @@
 ## 2026-10-01 18:40 사장님: 받침 적정값 시뮬로 결정
 
 - 사장님 (/support/ 탐침을 해 보시고): ① 반사 끔은 다리가 흐느적이고 일어서기가 안 됨 → `GAIT.catchMode` 는 'on' 이나 'fall' (정말 넘어질 때만). ② `GAIT.assist` 는 0.1~0.3 (0 은 덜 자연스러움). 이 안에서 PM 이 연구한 실제 결투 동작과 가장 닮은 조합을 시뮬로 골라 본판 기본값으로.
-- 잣대: 동작 PM 유사도 척도 `stillness-duel-similarity/1` (docs/motion/duel_similarity_metric_2026-10-01.md + tools/motion/duel_similarity.mjs, origin/claude/pm-motion-research eb1b72b, 바이트 그대로; 잰 몸 운동·발 접촉 힘만, fy·share·lev 안 읽음). 칸을 채점하기 전에 얼림 (metricSha 06415e39d60c; 빠진 값 이유 표시만 고친 뒤 0609e6293508, 점수 같음).
+- 잣대: 동작 PM 유사도 척도 `stillness-duel-similarity/1` (docs/motion/duel_similarity_metric_2026-10-01.md + tools/motion/duel_similarity.mjs, origin/claude/pm-motion-research eb1b72b, 바이트 그대로; 잰 몸 운동·발 접촉 힘에서, fy·share 안 읽음; 반사 몫 특징 하나 (몫 합 7.5 %) 만 반사 램프 levC 를 읽음 — PM 그대로, 켜질수록 깎기만, 빼고 셈해도 놀 수 있는 칸 안 1 위 같음). 칸을 채점하기 전에 얼림 (metricSha 06415e39d60c; 빠진 값 이유 표시만 고친 뒤 0609e6293508, 점수 같음).
 - 격자 20 칸 (assist 0.1·0.15·0.2·0.25·0.3 × catch on·fall × legs asis·human, f7f490e, seed set 둘, 뺀 조각 0). 판사 둘 + 중재: 척도 판사 1 위 `a0.25_cfall_lhuman` (19 칸 동점 뒤 잰 fy 로 결정), 손맛 판사·중재 1 위 **`a0.3_con_lasis`** — human 다리 10 칸은 걷기 무릎 한도 닿음 0.42–0.62 (기준 0.027) · 밀치기 미발사 13/40 판으로 바닥 ✗, human 평균은 빈 판이 부풀린 값.
 - **고름: a0.3_con_lasis = 기본값 그대로 (assist 0.3 · catch on · legs asis)**, 유사도 58.5 (s1 57.6 / s2 59.5, 모음 57.7). 다음 `a0.3_cfall_lasis` 57.5 (소음 안 동점, 띠 안 특징 26 vs 25). 20 칸 폭 5.3 점 — 바꿔서 더 닮아지는 근거 없음. 모든 칸 공통 결손 (가슴 앞섬 0 점, 서기·걷기 발 하중) 은 받침 손잡이 밖 → R2′.
 - 기준 sha 그대로: fights12 `12223139` · live_battery `2f453e0b` (두 번 같음, 옛 기본 with_config 로도 같음; docs/strike/support_baselines.md). 확인표 87·88행 결정됨(10/1 18:40), 85·86 (사람 다리 값) 은 '사장님 확인 전' 그대로. 문서 docs/strike/support_optimum_2026-10-01.md.
