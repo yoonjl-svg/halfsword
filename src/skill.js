@@ -24,7 +24,7 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST } from './config.js';
+import { SKILL, WEAPON, THRUST, BODY } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
 
@@ -623,7 +623,8 @@ export class Skill {
       this.swings++;
       const d = f.foeDistance();
       // 쓰러진 상대를 내려찍을 때(finish.js)는 내딛지 않는다: 마무리 자세가 거리를 맞추고, 내딛으면 칼이 누운 몸을 지나 발밑에 떨어진다
-      if (d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) this.lunge = SKILL.lungeTime;
+      // R2′ 'legs' (확인표 126): 매 베기 앞걸음(lunge)을 끈다 — 걸음은 균형(capture point·stumble·settle)에서만. 대안 156(거리식)은 둘째 탐색판
+      if (BODY.chain !== 'legs' && d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) this.lunge = SKILL.lungeTime;
     }
     this.quiet = swinging ? 0 : this.quiet + dt;
 
