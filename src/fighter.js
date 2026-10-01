@@ -114,7 +114,9 @@ function jointDefs(s) {
 // ─────────────────────────────────────────────────────────────
 const HD = Math.PI / 180;
 export const HUMAN = {
-  spineTwist: [-29, 46], // 척추 비틀림(어깨선 − 엉덩이선) °, 봉투 클립 크게 범위 (+ = 칼 든 어깨가 뒤로). AAOS 한쪽 45 와 맞음
+  // 척추 비틀림(어깨선 − 엉덩이선) °, + = 칼 든 어깨가 뒤로. 한쪽 45 대칭 (10/1 동작 PM 교정, docs/motion/corr_v2_shoulder_note_2026-10-01.md
+  //  origin/claude/pm-motion-research 922058d: 문헌 AAOS 가슴허리 돌림 한쪽 약 45, 왼쪽 벌 클립 −41°. 예전 −29~46 은 오른쪽 클립만 잰 값)
+  spineTwist: [-45, 45],
   shoulderPlane: [-45, 130], // 칼 어깨 들림 면 °: 수평 벌림 약 45 · 수평 모음(몸 앞 가로지름) 약 130 (봉투 문헌 칸, AAOS)
   shoulderElev: 180, // 칼 어깨 들림 ° (굽힘·벌림 180, AAOS)
   shoulderExt: 60, // 칼 어깨 폄(뒤로) ° (AAOS)
@@ -124,7 +126,7 @@ export const HUMAN = {
 };
 /**
  * BODY.humanLimits 일 때 관절 표를 사람 범위로 (몸이 만들어질 때 한 번). false 면 부르지 않는다 → 오늘 그대로
- *  - 척추 비틀림(축 한도 y): 봉투 −29~46° 를 오늘 복부 0.5 : 가슴 0.6 비율로 나눈다. 엔진 y 가 + 면 칼 든 어깨가 앞으로 → 봉투 + (뒤로) 는 엔진 −
+ *  - 척추 비틀림(축 한도 y): HUMAN.spineTwist ±45° 를 오늘 복부 0.5 : 가슴 0.6 비율로 나눈다. 엔진 y 가 + 면 칼 든 어깨가 앞으로 → 봉투 + (뒤로) 는 엔진 −
  *  - 칼 팔꿈치(경첩): 0~150°
  *  - 칼 어깨 면은 밧줄 (Fighter.shoulderOn), 손목 원뿔은 밧줄 (Fighter.gripConeOn)
  */

@@ -9,7 +9,7 @@
 //        bothAir = 두 발 뒤꿈치·발끝이 다 땅에서 1 cm 넘게 뜸 (봉투 발 뜸 정의와 같음)
 //        pen = 제 칼날(칼자루 끝 → 칼끝 선분)·칼 든 아래팔(farmS 캡슐)이 제 몸통(골반·배·가슴 상자)·넓적다리(캡슐)에 파고든 깊이 (m, 제 충돌체 모양)
 //     new Counter()  .add(f) 스텝마다 → .table() 글 · .json()
-//        센다: 봉투 'all' 범위(human_envelope.json, 클립 24벌 min~max) 밖, 설계 칸(아래팔-칼 > 163°, 척추 비틀림 −29~46° 밖),
+//        센다: 봉투 'all' 범위(human_envelope.json, 클립 24벌 min~max) 밖, 설계 칸(아래팔-칼 > 163°, 척추 비틀림 ±45° 밖 — HUMAN.spineTwist, 10/1 교정),
 //              문헌 칸(칼·빈 어깨 들림 면 −45~130°: 수평 벌림 45·모음 130, 들림 60~160° 표본만; 팔꿈치 > 150°: AAOS; 아래팔 돌림 > 80°: AAOS 엎침 80·뒤침 80),
 //              두 발 뜸, 제 몸 뚫림 (깊이 > 1 cm: hs-diag live_common.mjs DECL.penTolM 과 같은 선언 — 상자·캡슐이 거칠어 1 cm 아래는 셈 않음)
 //        서 있는 스텝(state 'stand')만, 판 시작 0.5 s 뒤부터 (live_common DECL.settleS 와 같은 선언: 몸이 처음 놓이는 동안). 칼을 놓치면 칼 칸은 건너뛴다
@@ -34,7 +34,7 @@ export const RANGES = {
   env: Object.fromEntries(KEYS.map((k) => [k, [ENV.all[k].min, ENV.all[k].max]])),
   extra: {
     'wrist>163': { key: 'wrist', lo: -Infinity, hi: 163, src: '설계 측정 칸: 아래팔-칼 > 163° (봉투 wrist 문헌 135~160° 무리)' },
-    'spineTwist-29..46': { key: 'spineTwist', lo: -29, hi: 46, src: '설계·C3: 척추 비틀림 −29~46° (봉투 클립)' },
+    'spineTwist-45..45': { key: 'spineTwist', lo: -45, hi: 45, src: 'HUMAN.spineTwist: 척추 비틀림 ±45° (10/1 동작 PM 교정: AAOS 한쪽 약 45, 왼쪽 클립 −41°. 예전 −29~46 은 오른쪽 클립만)' },
     // 수평 모음·벌림은 팔을 옆으로 든 자세의 값이라 들림 60~160° 표본만 본다 (hs-diag live_common RANGES.shoulderAcross 와 같은 선언: 낮은 팔의 들림 면은 뜻이 약하다)
     'shPlaneS-45..130': { key: 'shPlaneS', lo: -45, hi: 130, when: (s) => s.shElevS >= 60 && s.shElevS <= 160, src: 'C3·봉투 문헌: 칼 어깨 수평 벌림 약 45 · 수평 모음 약 130 (AAOS), 들림 60~160°' },
     'shPlaneO-45..130': { key: 'shPlaneO', lo: -45, hi: 130, when: (s) => s.shElevO >= 60 && s.shElevO <= 160, src: '같음 (빈 팔, H4)' },
