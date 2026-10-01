@@ -1,6 +1,6 @@
 # 디렉터 상태 파일 (후임 디렉터가 가장 먼저 읽는다)
 
-- 갱신: 2026-10-01 19:10 KST. 디렉터 세션 session_014nJCzE4hyxiYc9innhSUng (디렉터 모델, ultracode, auto — 모델은 앱의 세션 정보에서 본다).
+- 갱신: 2026-10-01 21:00 KST. 디렉터 세션 session_014nJCzE4hyxiYc9innhSUng (디렉터 모델, ultracode, auto — 모델은 앱의 세션 정보에서 본다).
 - 읽는 순서: 이 파일 → docs/decisions.md(사장님 결정, 최신순) → docs/director_handoff.md(2장 규칙·7장 도구) → docs/strike/r2_impl_spec.md(§1·§9·§10).
 
 ## 디렉터 전용 조율 기준 (사장님 9/30 09:40·09:50 — PM에게 전하지 않는다)
@@ -40,6 +40,7 @@
 - 감사 답(9/29 23:25 감사 세션에 트리거로 전달): R-001 부분 수용(삭제는 W5 유지), R-002 수용(표 docs/strike/owner_defaults_table.md → 9/30 08:00 사장님), R-003 ①③ 수용 완료(2daf262)·②④ W5, R-004 조건부 수용(9b5e94c 지금 몫, fighter.js 몫 W4 뒤, THRUST.bind 유지), R-005 수용 완료(10d9839). 이행 요약 scratchpad/audit/apply_2026-09-29.md.
 - 사운드 PM(타격 소리 간격·리볼버 총성)·외형 PM(발사 이펙트)에게 9/29 23:20 지시. 끝나면 디렉터에게 트리거로 알리기로 함 → 브랜치 확인 뒤 main 병합·배포.
 - R1 끝(9/29 23:45, wf_9c387b92-620, 31 에이전트): wbs-r1-arm a055980. 숨은 상한 검토 "그대로는 출하 불가": ARM.lead(aimLead 0.8)가 실제 휘두름을 −36% 느리게 함(옆베기 19.7→12.6 m/s, 사선 첫 상처 144→37 J). 디렉터 결정: ARM.lead 기본 꺼 둠(코드 유지, W4 팔 앞먹임 뒤 재측정, 사장님 표 26행), holdSpeed 0.6 은 손가락 검객만(AI 0.3 유지, 표 25행). 마무리 에이전트가 두 변경 뒤 wbs-impl 에 병합·관문·푸시(요약 scratchpad/r1/r1_final_summary.md). 열린 질문: 1.5 m/s 밑 느린 끌기에도 '고른 지연 ≤ 20 ms' 를 적용할지(적용하면 목줄 규칙 변경 필요).
+- 10/1 21:00: **받침 적정값 시뮬 끝**(wf_d8d06f95-c7f, PM 척도 eb1b72b 그대로): 20칸 유사도 53.7~59.0(기준 0.3/on/asis 58.5, 씨앗 편차 1.9~9.1) → 척도가 칸을 가르지 못함; legs=human 10칸은 손맛 바닥 탈락(걷기 무릎 한도 닿음 0.42~0.62·밀치기 미발사); 결론 "기본값 그대로(0.3/on/asis)". 척도 한계(워크플로 발견): 굳은 몸도 83점, catchShare 가 반사 횟수(운동학 아님), 서기 띠에 0 포함. **main f1fa40c** = feat-support 병합(손잡이 GAIT.catchMode·BODY.legTorque·?assist ?catch ?legs 스위치, 문서 docs/strike/support_optimum_2026-10-01.md, 확인표 85~88행; 기본값 그대로라 기준 sha 12223139/2f453e0b 유지). 디렉터 권고: 0.2/on 으로 낮추기(측정 비용 0, 보이지 않는 힘 절반) — 사장님 한마디 대기.
 - 10/1 19:10: 사장님 결론(decisions 18:40): 반사 켬/넘어질 때만, 받침 0.1~0.3, 적정값은 "실제 결투 동작 유사도" 시뮬로 → **워크플로 wf_d8d06f95-c7f**(첫 실행 wf_3d056a0f-d04 는 PM 척도 도착 직후 멈추고 다시 띄움; 척도 = origin/claude/pm-motion-research eb1b72b → main 5a4356c docs/motion/duel_similarity_metric_2026-10-01.md + tools/motion/duel_similarity.mjs, 기준 100·C2 76·R2 출시 54; scratchpad/support/support_optimum_workflow.js; 척도→20칸 측정→판정→채택(feat-support 기본값+새 sha)→리뷰). 동작 PM에 척도 정의 요청. 끝나면 디렉터가 feat-support 를 main 에 병합(새 기준 sha, 확인표 87·88 갱신, corr_baselines §2 재측정 메모). 그 다음 = 보정 v2 본판 병합 판단(사장님 5차 판정 뒤) → R2′ 설계(골반 먼저→척추 탄성→팔).
 - 10/1 18:20: 보정 v2 5차 탐색판(main 86de9bb, feat-corr 27d26b6: 한손 무기 되돌아옴 = 한손 쟁기, 날것 매핑을 한손 옆선 몸 돌림 위에서). 사장님 시험: 이동 이상 없음(/support/), 한손검 거꾸로 쥠은 3차 기준 관찰 → 5차 재확인 요청, 나뭇가지 고정 자세 고침, 휘두르기 체감 차이 적음. 받침 '반사 끔' 뜻 설명함. **디렉터 기억 69 %(압축 경계 뒤) → 85 %에 교체 준비: 이 파일이 인수인계 전부.** 디렉터 비용 $2,143(워크플로 포함). PM 18:00 보고는 오늘 없음(새 지시 없음 상태).
 - 10/1 15:40: 보정 v2 탐색판 3차(쉼·되돌아옴 자세 지도 복원, feat-corr 739721f)·4차(끝점 겨눔이 손 아래·몸 뒤 반구로 안 감, f580e75; 사장님 ?tip=0 이분법으로 원인 확정) → main 14bcf1f. **받침 쓸기 끝**(decisions 15:40): 권고 짝 받침 0·반사 끔·다리 그대로, 탐색판 /support/ (main 28f2b20, feat-support f7f490e, ?assist ?catch ?legs). 외부 검수 안내문 docs/review_brief_for_external.md(아스트라용). 모델 운용: 다음부터 기계적 단계 소넷 medium, 판단 단계 Opus high(사장님 "판단은 네게"). 주간 한도: Opus 공통 85 %+, Fable 43 %.
