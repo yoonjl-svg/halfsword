@@ -70,6 +70,15 @@ export const BODY = {
   // 관절 한도·자기 몸 충돌 (검술 보정 v2 설계 '뒤틀림은 물리가 막는다', 사장님 9/30 23:40 켬). 값은 사람 움직임 봉투
   //  (docs/motion/human_envelope_2026-09-30.md) 의 물리 범위이지 튜닝 값이 아니다(fighter.js HUMAN). false = 오늘 그대로(바이트까지, 옛 기준 sha)
   humanLimits: true,
+  // ── R2′ 운동 사슬 (docs/strike/r2p_spec_2026-10-02.md §2·§3·§2.5, 값은 모두 사장님 확인 전, 확인표 122~129) ──
+  //  'anchor': 오늘 그대로(바이트 동일). 골반 yaw 는 기준 막대(닻, 질량 무한 운동학 물체)가 돌린다.
+  //  'legs'  : 닻 yaw 축 모터 강성·감쇠 0·0 (123, 닻은 실제 골반 yaw 를 따라 pitch·roll 기준 틀 노릇만) → 골반 yaw 목표(heading + pelvisYawOffset)는
+  //            딛은 다리의 엉덩이 비틀기(y 축) 근육이 발 마찰로 돌린다 (124: 엔진 암시 모터 + 포화 축소 σ = min(1, j.max·mus/|τ_pd|), 속도 목표 0,
+  //            목표는 하중 몫 w_l = Nf_l/ΣNf 로 나눔 — gait.poseLegs·fighter.driveJoints). 척추 비틀기 축은 수동 감쇠·ζ 아래 (125),
+  //            skill.lunge(매 베기 앞걸음) 끔 (126), 발 핀 마찰 한계의 접촉 N ×6/7 (127, Rapier 과대 보고 교정). 128·129 는 그대로.
+  //  탐색판: public/r2p/?chain=legs|anchor (주소 인자는 탐색판 빌드 R2P_PROBE 에서만 읽힌다, src/r2p_probe.js). 본판 기본값 변경 0.
+  chain: 'anchor', // 확인표 122
+  chainSpineZeta: 0.5, // 확인표 125 ('legs' 만, 첫 탐색판의 유일한 새 수): 척추 비틀기(y) 축 감쇠비. d_y = ζ·2·√(k·I_up) → 복부 ≈66·가슴 ≈57 N·m·s/rad (오늘 180·160 = ζ ≈1.4). x·z 축·강성(129)은 그대로
 };
 
 // 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면

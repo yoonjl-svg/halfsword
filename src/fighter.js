@@ -1142,6 +1142,7 @@ export class Fighter {
     this.driveJoints(); // 모든 관절 근육을 움직인다
     this.elbowGravity();
     this.trackBlade(dt);
+    if (this.chainDbg) this.chainProbe(dt); // 탐색판 HUD 측정만 (public/r2p/?chain=…)
 
     for (const [k, t] of this.hitCooldowns) {
       if (t - dt <= 0) this.hitCooldowns.delete(k);
@@ -1842,7 +1843,16 @@ export class Fighter {
     const al = this.accelLean.length();
     // 자세에 따라 골반을 튼다 (서 있을 때만)
     let anchorQ = this.yaw;
-    if (this.state === 'stand' && this.pelvisYawOffset) anchorQ = _qt.setFromAxisAngle(UP, this.heading + this.pelvisYawOffset);
+    if (BODY.chain === 'legs') {
+      // R2′ K1 (확인표 123): 닻은 **실제** 골반 yaw(측정값)를 따라 pitch·roll 기준 틀 노릇만 한다 — yaw 토크 0 (아래 모터 0·0).
+      //  의도 ψ* = heading + pelvisYawOffset(오늘 닻 목표식 그대로, 새 식 없음)와의 차 Δψ 는 딛은 다리의 엉덩이 근육 몫 (gait.poseLegs, 124)
+      const fp = _cv1.set(1, 0, 0).applyQuaternion(rot(pelvis, _cq1));
+      if (Math.hypot(fp.x, fp.z) > 0.3) this.chainPsi = Math.atan2(-fp.z, fp.x);
+      else if (this.chainPsi == null) this.chainPsi = this.heading;
+      const psiStar = this.state === 'stand' && this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading;
+      this.chainDpsi = Math.atan2(Math.sin(psiStar - this.chainPsi), Math.cos(psiStar - this.chainPsi));
+      anchorQ = _qt.setFromAxisAngle(UP, this.chainPsi);
+    } else if (this.state === 'stand' && this.pelvisYawOffset) anchorQ = _qt.setFromAxisAngle(UP, this.heading + this.pelvisYawOffset);
     if (al > 1) {
       const ang = Math.atan(al / (M * g)) * BODY.accelLean;
       _axis2.set(this.accelLean.z / al, 0, -this.accelLean.x / al);
@@ -1854,8 +1864,29 @@ export class Fighter {
     const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, loadSum));
     const raw = this.uprightJoint.rawSet;
     for (const ax of MOTOR_AXES) {
+      if (BODY.chain === 'legs' && ax === MOTOR_AXES[1]) {
+        // R2′ K1 (123): 닻 yaw 축(AngY: 닻 틀의 y = 연직. 닻 관절은 축 (1,0,0) 으로 만들어 틀이 몸 틀과 같다) 강성·감쇠 0·0 — 약한 닻·상한 둔 닻 없음
+        //  (질량 무한 몸체의 토크는 반작용이 땅으로 안 간다). 감쇠 330 도 함께 사라진다. 옆·앞뒤 기울기(AngX·AngZ)는 오늘 그대로
+        raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, 0, 0);
+        continue;
+      }
       const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
       raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * r);
+    }
+    if (this.chainDbg) {
+      // 탐색판 HUD(측정만): 선언한 걷기 밀기 힘(골반 (1−up)·가슴 up)과 닻 yaw 토크 재계산(k·e + d·ω, legs 는 0)
+      const D = this.chainDbg;
+      D.pushX = fx;
+      D.pushZ = fz;
+      if (BODY.chain === 'legs') D.anchorTau = 0;
+      else {
+        const ap = _cv1.set(1, 0, 0).applyQuaternion(rot(pelvis, _cq1));
+        const psi = Math.hypot(ap.x, ap.z) > 0.3 ? Math.atan2(-ap.z, ap.x) : this.heading;
+        const psiStar = this.state === 'stand' && this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading;
+        const e = Math.atan2(Math.sin(psiStar - psi), Math.cos(psiStar - psi));
+        const r = this.uprightRelax(MOTOR_AXES[1]);
+        D.anchorTau = BODY.uprightStiffness * assist * r * e - BODY.uprightDamping * assist * r * pelvis.angvel().y;
+      }
     }
     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
     this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.05, -0.12, 0.12) : 0;
@@ -2091,14 +2122,150 @@ export class Fighter {
         const vz = THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
         raw.jointConfigureMotor(j.joint.handle, HINGE_AXIS, tz, vz, k, d);
       } else {
+        const chainY = BODY.chain === 'legs' && (n === 'thighF' || n === 'thighB' || n === 'abdomen' || n === 'chest'); // R2′ 비틀기 y 축 (124·125)
         for (const [i, ax] of [[0, 'x'], [1, 'y'], [2, 'z']]) {
           const t = _cur[ax] + THREE.MathUtils.clamp(_rv[ax] - _cur[ax], -maxErr, maxErr);
+          if (chainY && i === 1) {
+            this.chainAxisY(j, raw, t - _cur.y, t, k, d, mus);
+            continue;
+          }
           const v = THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
           raw.jointConfigureMotor(j.joint.handle, MOTOR_AXES[i], t, v, k, d);
         }
       }
       prev.copy(_rv);
     }
+  }
+
+  /**
+   * R2′ 'legs' 비틀기 y 축 구동 (명세 §2.2·§2.3, 심사 조건: 명시 토크 쌍 금지 → 엔진 암시 모터 + 포화 축소 σ).
+   *  엉덩이(thigh, 124): 속도 목표 0, τ_pd = k·e − d·ω_rel,y, τ_cap = 기존 j.max × mus(새 수 없음), σ = min(1, τ_cap/|τ_pd|) → k·d 를 함께 σ 배.
+   *  척추(abdomen·chest, 125): 같은 σ 길, 속도 목표 0(수동 감쇠), d_y = ζ·2·√(k_관절·I_윗몸) (ζ = BODY.chainSpineZeta, I 는 명세 부록 A 어림).
+   *  e = 끌어 붙인 목표 − 현재(maxErr 자르기 뒤, 스프링 몫은 오늘처럼 j.max 안), ω_rel = (자식 − 부모) 각속도를 관절 기준 틀로.
+   *  감쇠항까지 상한 안에 들어오고, 암시 해라 허벅지 비틀기 관성 0.02 kg·m² 에서도 안정하다. x·z 축은 오늘 그대로.
+   */
+  chainAxisY(j, raw, e, t, k, d, mus) {
+    const n = j.name;
+    let dy = d;
+    if (n === 'abdomen' || n === 'chest') dy = BODY.chainSpineZeta * 2 * Math.sqrt(j.k * CHAIN_SPINE_I[n]) * Math.sqrt(Math.max(0.05, mus)) * (j.gain || 1);
+    const wc = j.child.angvel();
+    const wp = j.parent.angvel();
+    // 상대 각속도를 부모 틀(부모⁻¹) → 관절 기준 틀(restInv)로
+    const w = _cw.set(wc.x - wp.x, wc.y - wp.y, wc.z - wp.z).applyQuaternion(rot(j.parent, _cq1).invert()).applyQuaternion(j.restInv);
+    const tau = k * e - dy * w.y;
+    const cap = j.max * mus;
+    const sigma = Math.min(1, cap / Math.max(1e-9, Math.abs(tau)));
+    j.chainSigma = sigma;
+    j.chainTau = tau * sigma; // 낼 토크 추정(스텝 전 값, 장부의 τ̂ 는 W1a 가 교차 검산)
+    raw.jointConfigureMotor(j.joint.handle, MOTOR_AXES[1], t, 0, k * sigma, dy * sigma);
+  }
+
+  /**
+   * 탐색판 HUD 전용 측정(시뮬·본판에서는 chainDbg 가 없어 돌지 않는다). 물리를 바꾸지 않는다.
+   *  수직축 각운동량 L_y(모든 강체 + 칼, 무게중심 기준)·dL/dt, 선언한 힘의 yaw 토크(발 핀 힘·핀 yaw 토크·걷기 밀기)와의 차 r_y(잔차, 엔진 접촉 마찰과 닻 yaw 토크가 남는다 —
+   *  W1a 장부 chain_ledger 의 식을 줄인 것: 접촉 임펄스 ×6/7×r 은 여기서 안 센다), 골반·가슴 yaw 각속도, 엉덩이 σ 포화율, 발 핀 미끄러짐 수.
+   */
+  chainProbe(dt) {
+    const D = this.chainDbg;
+    const list = this.meshes;
+    let M = 0;
+    let cx = 0;
+    let cz = 0;
+    let vx = 0;
+    let vz = 0;
+    const acc = (rb) => {
+      const m = rb.mass();
+      const c = rb.worldCom();
+      const v = rb.linvel();
+      M += m;
+      cx += m * c.x;
+      cz += m * c.z;
+      vx += m * v.x;
+      vz += m * v.z;
+    };
+    for (const { rb } of list) acc(rb);
+    if (this.armed) acc(this.sword);
+    if (M <= 0) return;
+    cx /= M;
+    cz /= M;
+    vx /= M;
+    vz /= M;
+    let L = 0;
+    const addL = (rb) => {
+      const m = rb.mass();
+      const c = rb.worldCom();
+      const v = rb.linvel();
+      L += m * ((c.z - cz) * (v.x - vx) - (c.x - cx) * (v.z - vz));
+      const I = rb.principalInertia();
+      const fr = rb.principalInertiaLocalFrame();
+      rot(rb, _cq1).multiply(_cq2.set(fr.x, fr.y, fr.z, fr.w)); // 월드 ← 주축 틀
+      const wv = rb.angvel();
+      _cv1.set(wv.x, wv.y, wv.z).applyQuaternion(_cq3.copy(_cq1).invert());
+      _cv1.set(_cv1.x * I.x, _cv1.y * I.y, _cv1.z * I.z).applyQuaternion(_cq1);
+      L += _cv1.y;
+    };
+    for (const { rb } of list) addL(rb);
+    if (this.armed) addL(this.sword);
+    const dLdt = D.L == null || !(dt > 0) ? 0 : (L - D.L) / dt;
+    D.L = L;
+    // 선언한 외부 힘의 yaw 토크 (무게중심 기준): 발 핀 힘 + 핀 yaw 토크 + 걷기 밀기(골반 (1−up)·가슴 up)
+    let tau = 0;
+    const g = this.gait;
+    if (g?.active) {
+      for (const k of ['F', 'B']) {
+        const l = g.legs[k];
+        if (!l.chainPinOn) continue;
+        tau += (l.chainPinZ - cz) * l.chainPinFx - (l.chainPinX - cx) * l.chainPinFz + l.chainPinTy;
+      }
+    }
+    const pushX = D.pushX || 0;
+    const pushZ = D.pushZ || 0;
+    if (pushX || pushZ) {
+      const up = BODY.upperShare;
+      const pc = this.bodies.pelvis.translation();
+      const cc = this.bodies.chest.translation();
+      tau += (pc.z - cz) * pushX * (1 - up) - (pc.x - cx) * pushZ * (1 - up) + (cc.z - cz) * pushX * up - (cc.x - cx) * pushZ * up;
+    }
+    const r = dLdt - tau;
+    // 창(약 0.5 s) 통계: 잔차 rms, σ<1 스텝 몫, 골반·가슴 yaw 각속도 최고(1 s 감쇠 유지)
+    const N = 60;
+    D.rr = D.rr || new Float64Array(N);
+    D.sat = D.sat || new Uint8Array(N);
+    D.i = ((D.i || 0) + 1) % N;
+    D.rr[D.i] = r * r;
+    const JF = this.jointByName.thighF;
+    const JB = this.jointByName.thighB;
+    const sF = JF.chainSigma ?? 1;
+    const sB = JB.chainSigma ?? 1;
+    D.sat[D.i] = sF < 1 || sB < 1 ? 1 : 0;
+    let rs = 0;
+    let sc = 0;
+    for (let i = 0; i < N; i++) {
+      rs += D.rr[i];
+      sc += D.sat[i];
+    }
+    D.rRms = Math.sqrt(rs / N);
+    D.satRate = sc / N;
+    D.sigma = Math.min(sF, sB);
+    D.hipTau = Math.max(Math.abs(JF.chainTau || 0), Math.abs(JB.chainTau || 0));
+    const wp = Math.abs(this.bodies.pelvis.angvel().y) * 57.2958;
+    const wc = Math.abs(this.bodies.chest.angvel().y) * 57.2958;
+    D.pelvisW = wp;
+    D.chestW = wc;
+    const decay = Math.exp(-dt / 1.0);
+    D.pelvisWmax = Math.max(wp, (D.pelvisWmax || 0) * decay);
+    D.chestWmax = Math.max(wc, (D.chestWmax || 0) * decay);
+    D.dpsi = this.chainDpsi || 0;
+    D.spineTwist = 0;
+    for (const nm of ['abdomen', 'chest']) {
+      const j = this.jointByName[nm];
+      rot(j.parent, _cq1).invert();
+      rot(j.child, _cq2);
+      toRotVec(_cq3.copy(j.restInv).multiply(_cq1.multiply(_cq2)), _cv1);
+      D.spineTwist += _cv1.y;
+    }
+    D.slips = g?.active ? (g.legs.F.chainSlips || 0) + (g.legs.B.chainSlips || 0) : 0;
+    D.steps = (D.steps || 0) + 1;
   }
 
   /**
@@ -2840,6 +3007,14 @@ const _bloodColor = new THREE.Color(0x5a0808);
 const _paleColor = new THREE.Color(0xb8b4a8);
 const _v4 = new THREE.Vector3();
 const _tiltUp = new THREE.Vector3(); // tiltDeg 전용 (driveBalance 의 _v1 과 겹치지 않게)
+// R2′ 운동 사슬 전용 임시값 (다른 함수의 임시 벡터와 겹치지 않게)
+const _cv1 = new THREE.Vector3();
+const _cw = new THREE.Vector3();
+const _cq1 = new THREE.Quaternion();
+const _cq2 = new THREE.Quaternion();
+const _cq3 = new THREE.Quaternion();
+// 척추 비틀기 축의 윗몸 yaw 관성 어림 (kg·m², 명세 부록 A: 가슴+머리+두 팔+칼 ≈ 2.0, 복부는 그 위 전부 ≈ 2.45) — 확인표 125 의 d 를 ζ 에서 셈하는 데만 쓴다
+const CHAIN_SPINE_I = { abdomen: 2.45, chest: 2.0 };
 const _v5 = new THREE.Vector3();
 const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
