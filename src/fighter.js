@@ -14,7 +14,8 @@ import { BODY, WEAPON, VITALS, BALANCE, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, A
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
-import { guardAt } from './guards.js';
+import { guardAt, guardBaseOne, guardBaseTwo } from './guards.js';
+import { classifyStyle } from './weapon_class.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
@@ -419,6 +420,12 @@ export class Fighter {
     };
     this.weaponBroken = false;
     this.guardPose.oneHand = this.bodyGuard.oneHand = !!spec.oneHandStance; // 한손 무기는 한손 자세표 (guards.js: 칼 든 어깨를 앞으로, 손을 더 뻗는다. weapons.js oneHandStance)
+    // 무기 종류별 자세표 (동작 PM 10/1 docs/motion/one_hand_guards_2026-10-01.md·two_hand_thrust_guards_2026-10-01.md, 사장님 10/1 21:45 승인):
+    //  한손 → 찌르기 표(레이피어·청강검: 칼끝 늘 상대 쪽, 손목 베기) / 세이버 표(세이버·팔쉬온·나뭇가지·고무 닭: 감는 자세는 팔꿈치 굽힘),
+    //  두손 찌르기 칼(에스톡) → 두손 찌르기 표(감기 자세 9개가 칼끝 상대 쪽). 그 밖의 두손 무기는 표를 두지 않아 예전 교본 표 그대로(바이트 같음).
+    //  동작 라이브러리(motion_library.js, 게임에선 꺼짐)가 켜지면 그쪽 몸 틀 표가 이것을 덮는다
+    const gStyle = classifyStyle(spec);
+    this.guardPose.table = this.bodyGuard.table = spec.oneHandStance ? guardBaseOne(gStyle) : gStyle === 'thrust' ? guardBaseTwo(gStyle) : undefined;
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
     //  씨앗은 판 시드(o.breakSeed, 시뮬 하니스가 넘긴다) — 몇 번째로 돌리든 같은 시드면 같은 굴림이 나온다.
     //  시드가 없으면(실제 게임) "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림.
