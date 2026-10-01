@@ -22,9 +22,9 @@ const TONES = {
   grey: new THREE.Color(0x6e7278), // 복귀 중
 };
 const STEEL = new THREE.Color(0xc4cad2); // 칼날 색을 못 읽을 때의 강철
-/** 이 무기에 잔상을 붙이나: 금속 칼날이면서 trash 등급이 아닐 때만 (비금속·광선검·총 없음) */
+/** 이 무기에 잔상을 붙이나: 금속 칼날이면서 trash 등급이 아닐 때만 (비금속·광선검·총 없음). 날 없는 둔기(모르겐슈테른)도 없음 — 사장님 9/30 "둔기는 거의 없음", 확인표 줄 145 */
 export function trailFor(weapon) {
-  return !!weapon && weapon.material === 'steel' && !weapon.gun && weapon.tier !== 'trash';
+  return !!weapon && weapon.material === 'steel' && !weapon.gun && weapon.tier !== 'trash' && weapon.edged !== false;
 }
 const MAX_FIGHTERS = 2;
 const _a = new THREE.Vector3();

@@ -397,7 +397,9 @@ export const ARMOR = {
   //   하인리히 손목 보호대)이 떨어져 날아간다.
   //   곁 판 = 본판(가장 큰 판)의 trim 배보다 작은 판 — 하인리히 v2 견갑처럼 본판(위팔 통판)에 버금가는 판은 완전 파손 때까지 남는다.
   //   곁 판이 없는 부위(마르그레테 견갑처럼 판이 하나뿐인 곳)는 완전 파손 때 한꺼번에. shedBelow 0 이면 늘 한꺼번에
-  plate: { cut: 70, stab: 47, limb: 0.65, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, coverMargin: 0.02, shedBelow: 0.9, trim: 0.4 },
+  //  blunt: 둔기 충격이 판을 통해 몸에 전해지는 비율(멀쩡할 때, 투구 helmets.*.blunt 와 같은 칸. T = blunt + (1 − blunt)(1 − 내구)). 판 밑 누비(아밍 더블릿 1~2 cm)가 절반을 먹는다는
+  //   Q13 값 제안 1-2 그대로 [추정] — 확인표 줄 140. combat.js 가 plateBlunt 로 돌려주고 몸통·팔다리 둔타 효과표(줄 141, R3)만 곱한다. 아픔·균형·판 닳음은 E 전체(지금 그대로)
+  plate: { cut: 70, stab: 47, limb: 0.65, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, coverMargin: 0.02, shedBelow: 0.9, trim: 0.4, blunt: 0.5 },
   // 부서진 투구·판금 조각이 흩어졌다가 사라지는 시간(초): 최소 ~ 최대 (전용 난수로 고른다, 겉모습만)
   debrisLife: [1.1, 1.7],
   // 사장님 9/30, 판금을 입은 검객의 걷는 최고 속도 ×0.8 ("갑옷 입은 사람은 느려지게 하자. 이동 속도 -20%").

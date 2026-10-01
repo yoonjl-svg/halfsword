@@ -115,13 +115,15 @@ const MEASURES = {
   lightsaber: [1.46, 1.65, 1.13, 0.18],
   rubber_chicken: [0.88, 1.24, 0.68, 0.13],
   frozen_tuna: [1.36, 1.63, 1.05, 0.32],
+  morgenstern: [0.88, 1.0, 0.68, 0.29], // 레어 둔기 (확인표 줄 143·144): 실측 contact/clinch, reach 는 세이버 비로 유도, 베는 시간 0.30 × 0.39/0.41
 };
 const weakThrust = (tech, k) => tech.map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * k } : t));
 for (const [id, [contact, reach, clinch, cutTime]] of Object.entries(MEASURES)) {
   SCHOOLS[id] = { ...L, id, weapon: id, measure: { contact, reach, clinch, cutTime } };
 }
 // 날이 없는 것(고무 닭·참치)은 찌르기 없음. 곡도·반달칼은 찌르기를 덜 믿는다
-for (const id of ['rubber_chicken', 'frozen_tuna']) SCHOOLS[id] = { ...SCHOOLS[id], tech: noThrust, techByName: byName(noThrust), feints: noThrustFeints };
+//  모르겐슈테른도 날이 없어 찌르기 기술 없음 — 가시 찌르기는 플레이어 탭만 (AI 찌르기는 thrustStyle 없는 무기에서 힘이 안 실려 30 J 도 못 낸다, 줄 143 제안대로 7기술)
+for (const id of ['rubber_chicken', 'frozen_tuna', 'morgenstern']) SCHOOLS[id] = { ...SCHOOLS[id], tech: noThrust, techByName: byName(noThrust), feints: noThrustFeints };
 for (const id of ['sabre', 'falchion']) { const t = weakThrust(TECH, 0.5); SCHOOLS[id] = { ...SCHOOLS[id], tech: t, techByName: byName(t) }; }
 
 // 10라운드 6-7 (무기 PM, 디렉터 승인 — 덧붙이기만, 위 값은 그대로): 모노호시자오 한 칼 자세 —
