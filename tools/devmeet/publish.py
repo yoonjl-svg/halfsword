@@ -3,7 +3,7 @@
 
 사용: python3 tools/devmeet/publish.py YYYY-MM-DD [--no-push]
 전제: 디렉터가 미리 써 둔 것 — docs/devmeet/YYYY-MM-DD.md (첫 줄 '# 개발자 회의록 YYYY-MM-DD (적막)'), docs/devmeet/ledger.md 갱신,
-      (선택) docs/devmeet/notes/YYYY-MM-DD-fable.md 남김말.
+      (선택) docs/devmeet/notes/YYYY-MM-DD-uhwa.md 남김말.
 하는 일: ① 작성 노트 docs/dev_exchange/notes/YYYY-MM-DD.md 를 일지와 같은 바이트로 만들어 먼저 커밋 (= manifest 의 source_sha)
          ② docs/devmeet/YYYY-MM-DD.json manifest(샛별 PROTOCOL.md v1: report_id, window, technical_base 14bcf1f, source_sha, notes_blob_sha,
             notes_sha256, markdown_sha256, previous_*) 를 쓰고 일지·대장·남김말과 함께 커밋 ③ dev 가지와 main 에 push (디렉터만 main 에 올린다).
@@ -65,7 +65,7 @@ def main():
         'status': 'published',
         'date': day,
         'report_id': f'{REPO}@{day}T23:30+09:00',
-        'team': 'fable',
+        'team': 'uhwa',
         'repo': REPO,
         'window': {'start_exclusive': start, 'end_inclusive': f'{day}T23:30:00+09:00'},
         'technical_base': BASE,
