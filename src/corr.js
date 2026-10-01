@@ -17,6 +17,10 @@
 //   손가락 aim 의 면 밖 성분은 그대로(tipOut = 0). 손 목표는 안 건드린다. 닫힘: 닿음·칼끝이 a* 를 지남·v_close ≤ 0·띠 밖·toward ≤ 0.
 //   닫힐 때의 aim 을 몸 틀에 붙잡고(되튐 없음, 몸이 돌면 같이 돈다), 되돌아옴 걷기 진행 p = skill.recoverP 로 slerp(붙잡음, 걷기 aim, p) 하며 풀거나(③),
 //   손가락이 다시 닿으면 그 스텝에 손가락에 넘긴다(튐 = tipJump, ≤ 옮긴 각). 시간값 없음
+//   손 높이·앞 반구 (사장님 10/1 '칼을 반대로 쥐듯이 휘두른다'): ② 의 n 축 돌림은 명령 aim 이 (1) 손잡이가 겨눈 부위 가운데보다 위면 손 높이 수평 아래로,
+//   (2) 언제나 몸 앞 반구(몸 틀 앞 축) 뒤로 — 손가락 aim 이 이미 그 너머면 손가락보다 더 — 처음 넘어가는 각(levelAngle, 기하)에서 멈춘다. 새 수 없음.
+//   높은 손에서 칼끝만 아래 부위로 꺾으면 칼날이 손 밑으로 매달린 역수 쥠(아래로 찌르는 쥠), 가까운 부위의 먼 가장자리로 넘기면 칼이 몸 뒤·팔꿈치 쪽으로
+//   접힌다(아래팔-칼 120° 넘음): 그 몫은 손가락(손을 옮김)의 일이다. 평면 밖 성분·켜고 끄기 그대로
 //  모든 값은 fighter.corr 에 적는다 (측정 도구가 읽는다).
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -41,8 +45,31 @@ const _f = new THREE.Vector3();
 const _hw = new THREE.Vector3();
 const _yi = new THREE.Quaternion();
 const Y = new THREE.Vector3(0, 1, 0);
+const _lk = new THREE.Vector3();
+const _fw = new THREE.Vector3();
 /** 면 Π(b, t 로 펼친) 안에서 b 로부터 v 까지 도는 쪽(+ = 쓸기 쪽) 각 */
 const inPlane = (v, b, t) => Math.atan2(v.dot(t), v.dot(b));
+/**
+ * 단위 v 를 단위 축 n 으로 α 만큼 돌릴 때 성분 v(α)·k = P·cos α + Q·sin α + R 가 m = min(0, v·k) 아래로 처음 내려가는 α (≥ 0, 기하).
+ *  R = (n·k)(n·v), P = v·k − R, Q = (n × v)·k. 내려가지 않으면 Infinity (k 에 수직인 면 돌림: P = Q = 0)
+ */
+function levelAngle(v, n, k) {
+  const vk = v.dot(k);
+  const m = Math.min(0, vk);
+  const R = n.dot(k) * n.dot(v);
+  const P = vk - R;
+  const Q = _lk.crossVectors(n, v).dot(k);
+  if (vk <= 0 && Q < 0) return 0; // 이미 넘어 있고 돌림이 곧장 더 넘긴다 (아래 식의 α = β + |β| = 0 을 반올림 없이)
+  const c = (m - R) / Math.hypot(P, Q);
+  if (!(c > -1)) return Infinity;
+  const a = Math.atan2(Q, P) + Math.acos(Math.min(1, c));
+  return a - 2 * Math.PI * Math.floor(a / (2 * Math.PI));
+}
+/** ② 손 높이·앞 반구 (머리말): 손잡이(_H)가 겨눈 부위 가운데보다 위면 수평, 그리고 몸 앞 축(f.yaw 의 x) */
+function levelCap(f, body, v, n) {
+  const up = _H.y > body.translation().y ? levelAngle(v, n, Y) : Infinity;
+  return Math.min(up, levelAngle(v, n, _fw.set(1, 0, 0).applyQuaternion(f.yaw)));
+}
 
 /** 부위 경계 반지름 (충돌체 모양: 공 r, 캡슐 반길이 + r, 상자 반대각선) — 기하 */
 const _radius = new WeakMap();
@@ -157,8 +184,8 @@ function tipStep(f, C, aim, s, L, HL) {
       if (!_ev.band) why = 'band';
       else if (!(_ev.vClose > 0)) why = 'recede';
     }
-    // 명령 aim = 손가락 aim 을 켤 때의 면 법선 축으로 옮긴 각만큼 (면 밖 성분 그대로)
-    _rq.setFromAxisAngle(C.tipN, C.tipCarried);
+    // 명령 aim = 손가락 aim 을 켤 때의 면 법선 축으로 옮긴 각만큼 (면 밖 성분 그대로). 손 높이·앞 반구에서 멈춘다 (levelCap)
+    _rq.setFromAxisAngle(C.tipN, Math.min(C.tipCarried, levelCap(f, f.foe.bodies[C.tipPart], aim, C.tipN)));
     _f.copy(aim).applyQuaternion(_rq);
     if (!why && toward(_f) <= 0) why = 'stopped';
     aim.copy(_f);
@@ -214,6 +241,8 @@ function tipStep(f, C, aim, s, L, HL) {
   const phiStar = inPlane(_u, _b, _t) + Math.asin(Math.min(1, rho / dc));
   const phiF = inPlane(_f.copy(aim), _b, _t);
   if (!(phiF < phiStar)) return;
+  const carry = Math.min(s * (phiStar - phiF), levelCap(f, body, aim, _n)); // 손 높이·앞 반구 (머리말)
+  if (!(carry > 0)) return;
   C.tip = true;
   C.tipHold = false;
   C.tipPart = best;
@@ -224,7 +253,7 @@ function tipStep(f, C, aim, s, L, HL) {
   C.tipArcLeft = phiF > 0 ? phiF / (C.arcDone + phiF) : 0;
   C.tipEnd = null;
   C.tipJump = null;
-  _rq.setFromAxisAngle(_n, C.tipCarried);
+  _rq.setFromAxisAngle(_n, carry);
   aim.applyQuaternion(_rq);
   C.cmdAim.copy(aim);
   // 면 밖 각(명령 aim ↔ 손가락 aim, 법선 n 기준): 축 회전이라 0 (재어 둔다)
