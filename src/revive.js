@@ -52,6 +52,7 @@ export function reviveOf(spec) {
 export function tryRevive(f, cause) {
   if (f.revival) return true;
   if (f.decapitated) return false; // 참수된 몸은 일어서지 않는다 (현실감 귀결, COMBAT.decapitate — 남은 횟수는 그대로)
+  if (cause === '내려찍기') return false; // 찍기 즉사는 참수처럼 되살아나지 않는다 (디렉터 10/1). 남은 횟수는 그대로 (fighter.applyWound h.finish)
   const R = f.revive;
   if (!R || R.left <= 0) return false;
   R.left--;

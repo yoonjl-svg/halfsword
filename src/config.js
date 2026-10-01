@@ -63,6 +63,25 @@ export const BODY = {
   weightMode: 'hybrid',
 };
 
+// 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면
+//  발을 딛고(걸음 요청) 몸·칼자루로 민다. 걸음·다리 힘·팔 근육·Rapier 접촉이 밀고, 누르기 동안엔 다리 밀기(legDrive)를 더한다.
+//  넘어짐은 상대 균형이 정한다 (상대 쪽 한도·쿨다운 없음).
+//  on=false 면 오늘 그대로 (closeStep 안 부름 → lift 0 → 접기 줄 그대로, 누르기 없음 → 다리 밀기 없음, AI closeQuarters 첫 줄 return)
+export const CLOSE = {
+  on: true,
+  // 다리 밀기(N, 사장님 10/1 02:05 "힘 넣어"): 누르기(2단계) 동안, 내 발 하나라도 땅을 딛고 있을 때(gait pinFeet 가 잰 접촉 힘)
+  //  골반을 상대 가슴 쪽으로 수평으로 미는 땅 반작용. 근육(muscle)·힘(strength)을 곱한다 (shove() 와 같은 곱).
+  //  크기: 버티고 선 어른이 고정된 것을 수평으로 밀 때 최대 힘 ≈ 300~500 N (Chaffin·Andersson·Martin, Occupational Biomechanics 의
+  //  밀기 힘 자료, 확인 전). 그 가운데 400
+  legDrive: 400,
+  // 닿는 거리(가슴~가슴, m, 기하): 팔이 가운데로 앞으로 닿는 거리 √(0.565²−0.2²) ≈ 0.53 (armIK 위팔 0.3 + 아래팔 0.27 − 0.005,
+  //  어깨 옆 0.2, fighter.js armIK) + 상대 가슴 반두께 0.11 (fighter.js partDefs chest) + 칼자루 hiltLength (weapons.js). 롱소드 ≈ 0.77.
+  //  빈손이면 null 을 넘겨 칼자루 0 (몸만). shove() 의 0.75 (fighter.js) 의 무기별판
+  reach(weapon) {
+    return 0.53 + 0.11 + (weapon?.hiltLength ?? 0);
+  },
+};
+
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
 export const GAIT = {
   footExtra: 2, // 딛은 발 무게에 더하는 몫(kg): 신발·쇠 발싸개. 딛은 발의 물리 계산이 더 잘 수렴한다 (내딛는 발은 원래 무게)
@@ -487,6 +506,10 @@ export const INPUT = {
   clickPx: 6, // 마우스 클릭: 그동안 움직인 거리 한도 (px, 잠긴 마우스의 움직임 합)
 };
 
+// 칼 든 팔의 뼈대 (fighter.armIK 가 쓰던 수를 옮겨 둠 — 값 그대로). finish.js 가 내려찍기 닿는 곳(팔이 닿는 공)을 잴 때도 읽는다
+//  (finish.js 가 fighter.js 를 부르면 서로 부르게 되어 여기 둔다)
+export const ARM = { shoulder: [0, 0.1, 0.2], upper: 0.3, fore: 0.27, slack: 0.005 }; // 어깨(가슴 기준, 옆은 × side)·위팔·아래팔(손목까지)·펴짐 여유 (m)
+
 // 탭 찌르기 (skill.js thrust): 칼끝을 목표로 맞추고 → 칼 선을 따라 손을 뻗고 → 자세로 돌아온다 (합 약 0.45초)
 //  칼끝은 매 스텝 "지금 손에서 목표 너머의 한 점"을 겨눈다 → 손이 어느 길로 가든 칼끝이 칼 축을 따라 들어가 '찌르기'로 판정된다
 export const THRUST = {
@@ -501,9 +524,6 @@ export const THRUST = {
   past: 0.35, // 칼끝이 겨누는 점: 목표 몸 중심 너머로 이만큼 (m)
   headPad: 0.15, // 패드(손 목표)가 이보다 높으면(황소·지붕) 머리를, 아니면 몸통을 찌른다
   step: 0.3, // 내딛는 걸음 (다리 걸음 켰을 때 gait.requestStep, m)
-  downStepFrom: 1.05, // 쓰러진 상대: 누운 몸이 이보다 멀면(m, 내 가슴에서) 내딛으며 찌른다
-  downReach: 0.15, // 쓰러진 상대를 내리찌를 때 더 뻗는 거리 (m)
-  downExtend: 1.5, // 그때 뻗는 시간 배율
   body: { pelvisYaw: -20, chestYaw: -20, pitch: 8, drop: 0.07 }, // 찌를 때 몸 (긴 자세처럼 칼 든 어깨를 앞으로, 도·m)
   // 칼 길 잡고 찌르기(R6, 스트린제레·압세첸): 찌르기를 시작할 때 내 칼과 상대 칼이 bind(m) 안으로 맞닿아 있으면
   //  칼끝을 목표로 크게 돌리지 않는다 — 돌리면 상대 칼을 쓸고 지나가다 걸린다(측정: 걸림의 2/3가 겨누는 0.11초 안).

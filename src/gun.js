@@ -2,8 +2,8 @@
 //  권총 (??? 등급, 사장님 — "재미 삼아 최소 비용으로", 이런 무기는 더 늘리지 않는다)
 //   · '찌르기'(탭)로 쏜다. 총은 저절로 상대를 겨누지만(자동 조준 — 끌기로 총을 돌리지 않는다, 조이스틱은 이동만) 겨눔이 상대 몸
 //     둘레를 느리게 크게 흔들린다(GUN.sway*). 레이저 점이 몸 위를 들락날락할 때 그 순간에 맞춰 탭하는 것이 실력이다(사장님).
-//     사람은 지금 총신 방향(칼 축 = 몸체 +y, 레이저가 보여 준다)으로 바로 한 발. AI 도 같은 흔들림으로 겨누고, 레이저가 가슴을
-//     지날 때(GUN.aiAimTol) 쏜다. 싱글액션 6연발(사장님 "사실감"): 겨눈 사격 사이 GUN.cooldown, 여섯 발을 다 쏘면 GUN.reload 초 동안
+//     사람은 지금 총신 방향(칼 축 = 몸체 +y, 레이저가 보여 준다)으로 바로 한 발. AI 도 같은 흔들림으로 겨누고, 레이저가 무릎 위 몸
+//     (허벅지~머리)을 지날 때(GUN.aiAimTol) 쏜다. 싱글액션 6연발(사장님 "사실감"): 겨눈 사격 사이 GUN.cooldown, 여섯 발을 다 쏘면 GUN.reload 초 동안
 //     실린더를 열고 한 발씩 채운다 — 다 채워야 다시 쏠 수 있다.
 //   · 맞으면 늘 같은 세기(GUN.energy)의 찌르기 상처 — 새 상처 종류는 만들지 않는다. 투구·판금은 총알을 막는 대신 그 자리에서 부서진다.
 //     맨머리 한 발 = 즉사, 가슴은 두세 발. 쏘면 팔 동작으로 총구를 튀겨 올린다(GUN.kick*, 물리 반동은 작은 '탁'). 총신 방향으로 레이저(탄 길)를 그린다
@@ -30,7 +30,8 @@ export const GUN = {
   range: 25, // m: 총알이 닿는 거리
   armorBlunt: 0.25, // 투구·판금이 막으면(그리고 바로 부서지면) 몸에는 세기의 이 비율만 둔하게 전해진다
   laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
-  aiAimTol: 3, // 도: AI 는 총구가 상대 가슴이나 머리에서 이만큼 안일 때만 쏜다 — 흔들림(swayYaw)보다 좁게: 사람처럼 흔들리는 겨눔이 가슴을 지날 때를 기다린다
+  aiAimTol: 3, // 도: AI 는 총구가 상대의 무릎 위 몸 부위(두 허벅지·골반·배·가슴·머리 몸체 중심) 중 하나에서 이만큼 안일 때만 쏜다 — 흔들림(swayYaw)보다 좁게: 사람처럼 흔들리는 겨눔이 몸을 지날 때를 기다린다
+  //  (9/30 21:30 "무릎 위 정도부터를 랜덤하게 이동하며 겨누게": 겨눔 가운데가 허벅지에 내려가 있으면 예전처럼 가슴·머리만 봐서는 쏘지 못한다 → 겨누는 몸 줄과 같은 부위로 넓힘. 3° 는 그대로)
   aiFirst: 1.5, // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
   maxWait: 0.6, // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
   // 사격 자세 (사장님: 한 손 사격 자세) — gunPose. 몸 기준 [앞, 위, 총 든 쪽] (m·도)
@@ -39,17 +40,23 @@ export const GUN = {
   // 자동 조준의 흔들림 (사장님: "자동으로 상대를 조준하되 꽤 많이 흔들리게 — 타이밍을 맞춰 발사만 누르면 되지만 그게 집중력을 요하게").
   //  난수 없이 시간·검객별 위상만의 함수다: 옆 sin θ · 위아래 sin 2θ 의 8자(리사주)라 한 주기에 두 번 가운데(가슴)를 지난다.
   //  θ 는 느리게 빨라졌다 느려졌다(swayWobble), 폭도 느리게 숨 쉬듯 변하고(swayBreath) 가운데도 조금씩 떠돌아(swayDrift) 똑같이 되풀이되지
-  //  않는다 — 그래도 주기마다 가슴 가운데 근처(4 m 에서 10 cm 안)를 지난다.
+  //  않는다 — 그래도 주기마다 겨눔 가운데(aimSpan: 무릎~머리 사이 지금 높이) 근처(4 m 에서 10 cm 안)를 지난다.
   //  보통 결투 거리(3~4 m)에서 몸통 반폭은 ±3~4° — 옆 10° 면 레이저 점이 몸통 밖으로 확실히 나갔다가 돌아온다. 사장님이 해 보고 조정할 손잡이
   swayYaw: 10, // 도: 옆 흔들림 폭 (가운데에서 끝까지)
   swayPitch: 6, // 도: (9/29 4 → 6: 머리와 가슴을 오가게) 위아래 흔들림 폭 (8자의 두 고리 높이). 클수록 가슴을 가파르게 비스듬히 지나 몸통 위에 머무는 때가 짧다
   swayPeriod: 2.6, // 초: 8자 한 바퀴 (그 사이 가슴을 두 번 지난다). 짧을수록 빠르게 흔들린다
   swayWobble: 0.35, // 흔들리는 빠르기가 이 비율만큼 느리게 오르내린다 (0 이면 늘 같은 박자)
   swayBreath: 0.25, // 폭이 이 비율만큼 느리게 커졌다 작아진다 (0 이면 늘 같은 크기)
-  swayDrift: 1.2, // 도: 8자의 가운데가 가슴 둘레를 이만큼 느리게 떠돈다 (0 이면 늘 가슴 한가운데를 지난다)
+  swayDrift: 1.2, // 도: 8자의 가운데가 겨눔 가운데(aimSpan) 둘레를 이만큼 느리게 떠돈다 (0 이면 늘 그 한가운데를 지난다)
   aimLow: 0.07, // m: (예전) 겨누는 점을 상대 가슴 몸체 중심에서 이만큼 내린다 — 총구가 총신 줄에서 주먹 위로 8 cm 올라와 있어 흔들림 가운데가 가슴 위로 뜨지 않게
-  // 겨누는 가운데 (사장님 9/29 "머리 가슴 사이 근처를 지금보다 불확실하게 흔들리며 랜덤 조준"): 가슴 몸체와 머리 사이 이 비율 자리(0 = 가슴, 1 = 머리) — aimLow 는 그 뒤에 뺀다
-  aimMid: 0.5,
+  // 겨누는 가운데 (사장님 9/30 21:30 "라이플이 나왔을 때 조준쇠가 너무 상대 캐릭터의 상체에만 쏠려 있으니 어색하더라. 무릎 위 정도부터를 랜덤하게
+  //  이동하며 겨누게 해."): 8자의 가운데가 상대의 몸 줄(두 무릎 가운데 → 골반 → 배 → 가슴 → 머리, 매 스텝 실제 몸체 자리를 읽는다) 위를
+  //  무작위로 오르내린다 (aimSpan · updateAimSpan). 끝은 숫자가 아니라 몸이다: 아래 끝 = 무릎 관절, 위 끝 = 머리 몸체 중심(떨어진 머리는 빼고
+  //  가슴까지). 줄 길이 비율로 고르게 뽑는다. aimLow 는 그 뒤에 뺀다. 옆 흔들림·옆 떠돌이는 그대로.
+  //  (예전 9/29 aimMid 0.5 — 가슴과 머리 사이 한가운데에 고정, "머리 가슴 사이 근처를 … 랜덤 조준" — 를 대신한다)
+  aimSpanLoops: 0.5, // 8자 몇 바퀴마다 몸 줄 위의 새 높이를 뽑나 (사장님 확인 전 — 디렉터 쪽이 고른 숫자): 0.5 = 반 바퀴(평균 1.3 초, 머무는 시간은
+  //  swayRandHold 처럼 0.6~1.4 배 들쭉날쭉). 한 높이에서 8자가 가운데를 한 번 지나고, 무릎→머리를 한 번에 옮겨도(4 m 에서 약 16°) 가장 빠른 때가
+  //  8자의 위아래 빠르기(약 30°/s)와 비슷해 조준쇠가 순간이동처럼 튀지 않는다. 키우면 느리게 떠돌고 줄이면 몸 위를 바삐 오르내린다
   // 불규칙한 흔들림: 8자 위에 얹는 매끄러운 무작위 떠돌이. swayRandHold 초마다 새 목표(옆 ±swayRandYaw°, 위아래 ±swayRandPitch°)를 전용 난수로 뽑아
   //  부드럽게 옮겨 간다 — 언제 몸에 걸릴지 읽기 어렵게. 판정 난수(Math.random·탄 퍼짐)와 분리한 검객별 난수라 칼 판은 바이트 그대로
   swayRandYaw: 5,
@@ -84,6 +91,7 @@ const _gq = new THREE.Quaternion();
 const _ga = new THREE.Vector3();
 const _gu = new THREE.Vector3(0, 1, 0);
 const _gs = new THREE.Vector3();
+const _gt = new THREE.Vector3();
 const D2R = Math.PI / 180;
 
 /** 자동 조준 흔들림 (도): 시간 t(초)·검객별 위상 ph 의 결정적 함수 → out { yaw, pitch }. 난수를 쓰지 않는다 (판정·난수 순서 불변) */
@@ -101,7 +109,8 @@ const _sw = { yaw: 0, pitch: 0 };
 /**
  * 한 손 사격 자세 (사장님 필요, 디렉터 13:37): skill.js 가 찌르기 중이 아니면 매 스텝 부른다 — 찌르기 덧씌우기 자세(thrustPose)를 채우고
  *  덧씌울 정도(0~1)를 돌려준다. 칼 자세 표(guards.js)는 건드리지 않고 그 위에 얹힌다. 걷기·물러나기는 그대로다.
- *  · 겨눔(자동 조준): 총 든 팔을 어깨에서 곧게 뻗고, 총구가 상대 가슴을 향한 채 그 둘레를 느리게 8자로 흔들린다(gunSway).
+ *  · 겨눔(자동 조준): 총 든 팔을 어깨에서 곧게 뻗고, 총구가 상대 몸을 향한 채 느리게 8자로 흔들린다(gunSway). 8자의 가운데는
+ *    무릎~머리 사이를 무작위로 천천히 오르내린다(aimSpan, 사장님 9/30 21:30).
  *    조준 패드(skill.aimRaw)는 읽지 않는다 — 사람·AI 똑같이 겨누고, 쏘는 순간을 고르는 것이 실력이다. 몸은 반쯤 옆으로(sideOn).
  *  · 쏜 직후: 총구를 위로 꺾고 손을 뒤로 당긴다(kick*) — 쏘는 느낌은 이 동작이 낸다.
  *  · 장전 중: 총을 가슴 앞으로 당겨 올려 총구를 위로 세운다(외형 PM 이 이때 약실을 빼냈다 넣는다). 장전 끝에 다시 뻗는다
@@ -111,13 +120,12 @@ export function gunPose(f, pose) {
   if (!f.alive || !f.armed || !foe || (f.state !== 'stand' && f.state !== 'kneel')) return 0;
   const g = state(f);
   const S = GUN.shoulder;
-  // 상대 가슴 (몸 기준)
+  // 겨누는 가운데: 상대 몸 줄(무릎~머리) 위 지금 높이 g.h 의 자리 (updateAimSpan 이 옮긴다. 첫 스텝이면 여기서 시작 높이를 뽑는다) — 몸 기준으로
+  if (g.h == null) updateAimSpan(g, 0);
   const c = f.bodies.chest.translation();
-  const t = foe.bodies.chest.translation();
-  const hd = headOff(foe) ? t : foe.bodies.head?.translation() ?? t; // 떨어진 머리·죽은 상대는 가슴만
-  const m = GUN.aimMid;
+  const t = aimSpan(foe, g.h, _gt);
   _gq.copy(f.yaw).invert();
-  _ga.set(t.x + (hd.x - t.x) * m - c.x, t.y + (hd.y - t.y) * m - GUN.aimLow - c.y, t.z + (hd.z - t.z) * m - c.z).applyQuaternion(_gq).sub(_gp.set(S[0], S[1], S[2]));
+  _ga.set(t.x - c.x, t.y - GUN.aimLow - c.y, t.z - c.z).applyQuaternion(_gq).sub(_gp.set(S[0], S[1], S[2]));
   if (_ga.lengthSq() < 1e-6) _ga.set(1, 0, 0);
   _ga.normalize();
   // 흔들림: 옆(몸 위 축 둘레)·위아래(옆 축 둘레)로 돌린다 — 손과 총구가 같이 돈다. 위상은 검객마다 다르게
@@ -156,19 +164,23 @@ export function gunPose(f, pose) {
   return 1;
 }
 
-/** 지금 총신이 상대 가슴에서 벗어난 각 (도) */
+/** AI 가 쏘는 문턱을 재는 무릎 위 몸 부위 (머리는 headOff 가 아닐 때 따로 더한다) — 겨누는 몸 줄(aimSpan)과 같은 부위 */
+const AIM_PARTS = ['thighF', 'thighB', 'pelvis', 'abdomen', 'chest'];
+/** 지금 총신이 상대 몸에서 벗어난 각 (도): 무릎 위 부위 몸체 중심 가운데 가장 가까운 것 */
 function aimErr(f) {
   const foe = f.foe;
   if (!foe) return 180;
   const r = f.sword.rotation();
   const ax = _gp.set(0, 1, 0).applyQuaternion(_gq.set(r.x, r.y, r.z, r.w));
   const o = muzzle(f, new THREE.Vector3());
-  // 가슴과 머리 중 가까운 쪽 (9/29: 겨눔 가운데가 가슴과 머리 사이로 올라갔다 — 둘 중 하나에 걸리면 쏜다)
+  // 무릎 위 부위 중 가장 가까운 것 (9/30 21:30: 겨눔 가운데가 무릎~머리를 떠돈다 — 겨누는 몸 줄의 부위 하나에 걸리면 쏜다. 예전 9/29 는 가슴·머리만)
   const err = (b) => {
     const c = b.translation();
     return (ax.angleTo(new THREE.Vector3(c.x - o.x, c.y - o.y, c.z - o.z)) * 180) / Math.PI;
   };
-  return Math.min(err(foe.bodies.chest), foe.bodies.head && !headOff(foe) ? err(foe.bodies.head) : 180);
+  let best = foe.bodies.head && !headOff(foe) ? err(foe.bodies.head) : 180;
+  for (const k of AIM_PARTS) if (foe.bodies[k]) best = Math.min(best, err(foe.bodies[k]));
+  return best;
 }
 
 /** 겨눌 머리가 없다: 참수됐거나(몸에서 떨어진 머리) 죽은 상대 (COMBAT.decapitate 를 끄면 예전처럼 늘 머리도 본다) */
@@ -184,16 +196,87 @@ function muzzle(f, out) {
 }
 
 function state(f) {
-  return (f.gun ??= { cool: 0, pending: -1, shots: 0, hits: 0, ammo: GUN.rounds, reloading: false, since: Infinity, seed: (0x2545f491 ^ Math.imul(f.index + 1, 0x9e3779b9)) >>> 0, sseed: (0x68e31da4 ^ Math.imul(f.index + 7, 0x85ebca6b)) >>> 0 });
+  return (f.gun ??= { cool: 0, pending: -1, shots: 0, hits: 0, ammo: GUN.rounds, reloading: false, since: Infinity, seed: (0x2545f491 ^ Math.imul(f.index + 1, 0x9e3779b9)) >>> 0, sseed: (0x68e31da4 ^ Math.imul(f.index + 7, 0x85ebca6b)) >>> 0, hseed: (0x3c6ef372 ^ Math.imul(f.index + 13, 0xc2b2ae35)) >>> 0 });
 }
 function rand(g) {
   g.seed = (Math.imul(g.seed, 1664525) + 1013904223) >>> 0;
   return g.seed / 4294967296;
 }
-/** 흔들림 전용 난수 (탄 퍼짐 난수와 따로 — 흔들림을 바꿔도 탄 퍼짐 순서가 그대로) */
-function srand(g) {
-  g.sseed = (Math.imul(g.sseed, 1664525) + 1013904223) >>> 0;
-  return g.sseed / 4294967296;
+/** 흔들림 전용 난수 (탄 퍼짐 난수와 따로 — 흔들림을 바꿔도 탄 퍼짐 순서가 그대로). k = 'hseed' 는 겨눔 높이 전용 (옆·위아래 떠돌이 순서를 안 건드린다) */
+function srand(g, k = 'sseed') {
+  g[k] = (Math.imul(g[k], 1664525) + 1013904223) >>> 0;
+  return g[k] / 4294967296;
+}
+/** 겨눔 높이 (사장님 9/30 21:30 "무릎 위 정도부터를 랜덤하게 이동하며 겨누게"): 8자 aimSpanLoops 바퀴마다 몸 줄 위 새 높이(0 = 무릎, 1 = 머리)를
+ *  전용 난수로 고르게 뽑아 매끄럽게(smoothstep) 옮겨 간다 → g.h. 머무는 시간은 updateRandSway 처럼 0.6~1.4 배 들쭉날쭉 */
+function updateAimSpan(g, dt) {
+  const H = GUN.swayPeriod * GUN.aimSpanLoops;
+  if (g.hA == null) {
+    g.hA = srand(g, 'hseed');
+    g.hB = srand(g, 'hseed');
+    g.hT = 0;
+    g.hH = H * (0.6 + 0.8 * srand(g, 'hseed'));
+  }
+  g.hT += dt;
+  if (g.hT >= g.hH) {
+    g.hA = g.hB;
+    g.hB = srand(g, 'hseed');
+    g.hT -= g.hH;
+    g.hH = H * (0.6 + 0.8 * srand(g, 'hseed'));
+  }
+  const u = Math.min(1, g.hT / g.hH);
+  g.h = g.hA + (g.hB - g.hA) * u * u * (3 - 2 * u);
+}
+// 무릎 관절 자리 (허벅지 몸체 기준, 관절을 만든 그대로: fighter.js jointDefs 의 허벅지–정강이 관절) — 검객마다 한 번 읽어 둔다
+const _knee = new WeakMap();
+const _kq = new THREE.Quaternion();
+const _kv = new THREE.Vector3();
+const _span = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+/** 두 무릎의 가운데 (월드) → out. 무릎 관절을 못 찾으면 허벅지 몸체 중심 */
+function kneeMid(foe, out) {
+  let K = _knee.get(foe);
+  if (!K) {
+    K = ['F', 'B'].map((s) => {
+      const a = foe.joints?.find((J) => J.name === 'shin' + s)?.joint.anchor1();
+      return new THREE.Vector3(a?.x ?? 0, a?.y ?? 0, a?.z ?? 0);
+    });
+    _knee.set(foe, K);
+  }
+  out.set(0, 0, 0);
+  ['thighF', 'thighB'].forEach((name, i) => {
+    const b = foe.bodies[name];
+    const r = b.rotation();
+    const p = b.translation();
+    out.add(_kv.copy(K[i]).applyQuaternion(_kq.set(r.x, r.y, r.z, r.w))).add(_kv.set(p.x, p.y, p.z));
+  });
+  return out.multiplyScalar(0.5);
+}
+/**
+ * 겨누는 몸 줄 위 높이 h (0 = 무릎, 1 = 머리) 의 자리 (월드) → out: 두 무릎 가운데 → 골반 → 배 → 가슴 → 머리 몸체 중심을 잇는 꺾은 줄을
+ *  길이 비율로 따라간다 (사장님 9/30 21:30). 매 스텝 실제 몸체 자리라 웅크리거나 무릎 꿇으면 줄도 따라 짧아진다. 떨어진 머리(headOff)는 빼고 가슴까지
+ */
+function aimSpan(foe, h, out) {
+  const B = foe.bodies;
+  const P = _span;
+  kneeMid(foe, P[0]);
+  let n = 1;
+  for (const k of ['pelvis', 'abdomen', 'chest']) {
+    const p = B[k].translation();
+    P[n++].set(p.x, p.y, p.z);
+  }
+  if (B.head && !headOff(foe)) {
+    const p = B.head.translation();
+    P[n++].set(p.x, p.y, p.z);
+  }
+  let L = 0;
+  for (let i = 1; i < n; i++) L += P[i].distanceTo(P[i - 1]);
+  let s = Math.max(0, Math.min(1, h)) * L;
+  for (let i = 1; i < n; i++) {
+    const d = P[i].distanceTo(P[i - 1]);
+    if (s <= d || i === n - 1) return out.copy(P[i - 1]).lerp(P[i], d > 1e-9 ? Math.min(1, s / d) : 0);
+    s -= d;
+  }
+  return out.copy(P[0]);
 }
 /** 불규칙한 떠돌이: swayRandHold 초마다 새 목표를 뽑아 매끄럽게(smoothstep) 옮겨 간다 → g.rs { yaw, pitch } (도) */
 function updateRandSway(g, dt) {
@@ -231,6 +314,7 @@ export function updateGun(f, world, combat, dt) {
   g.t = (g.t ?? 0) + dt; // 흔들림 시계 (물리 스텝마다, 상태와 상관없이 흐른다)
   g.since += dt;
   updateRandSway(g, dt);
+  updateAimSpan(g, dt);
   if (GUN.laser) updateLaser(f, g, world, combat);
   if (g.cool > 0) {
     const before = GUN.reload - g.cool;
@@ -287,6 +371,7 @@ function fire(f, world, combat) {
   if (g.aim > 0 && f.foe?.bodies?.chest) {
     const c = f.foe.bodies.chest.translation();
     // 가슴 몸체 중심보다 10 cm 아래(명치)를 노린다 — 가슴 중심을 노리면 남은 오차가 위로 튈 때 목·얼굴로 가서 첫 발에 즉사했다
+    //  (9/30 21:30 겨눔이 무릎~머리를 떠돌아 허벅지·배에 걸려 쏠 때도 이 보정은 예전 그대로 명치 쪽 — 난이도 값이라 바꾸지 않는다)
     const to = new THREE.Vector3(c.x - _o.x, c.y - 0.1 - _o.y, c.z - _o.z).normalize();
     _d.lerp(to, g.aim).normalize();
   }
@@ -570,7 +655,7 @@ export function gunAI(ai, dt) {
   ai.hand.set(0, 0); // 사격 자세(gunPose)는 조준 패드를 읽지 않는다 — 손 목표만 가운데에 둔다
   ai.handSpeed = 1.2;
   ai.moveHand(dt);
-  // 흔들리는 총구가 상대 가슴에서 aiAimTol° 안으로 들어왔을 때만 쏜다 (팔을 뻗는 중이나 장전 뒤 내려오는 중엔 쏘지 않는다)
+  // 흔들리는 총구가 상대의 무릎 위 몸 부위(허벅지·골반·배·가슴·머리) 중 하나에서 aiAimTol° 안으로 들어왔을 때만 쏜다 (팔을 뻗는 중이나 장전 뒤 내려오는 중엔 쏘지 않는다)
   const aimed = aimErr(me) < GUN.aiAimTol;
   if (ai.gunT >= GUN.aiFirst && aimed && d < 7 && (me.gun?.cool ?? 0) <= 0 && me.skill.thrust({ step: false })) state(me).aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7);
 }
