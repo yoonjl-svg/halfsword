@@ -14,7 +14,9 @@ export function zoneEffects(Y, log) {
   Y.applyWound = (h) => {
     orig(h);
     if (h.type !== 'blunt' || Y.state === 'dead') return;
-    const E = h.energy;
+    // 판금 위 둔타는 판을 '통해' 전해지는 비율(combat.js plateBlunt = ARMOR.plate.blunt 0.5 + 찌그러짐, 확인표 줄 140)만 부위 효과에 싣는다 — 아픔·균형·판 닳음은 게임이 E 전체로 이미 적었다.
+    //  plateBlunt 가 없는 트리(옛 코드)는 1
+    const E = h.energy * (h.plate ? (h.plateBlunt ?? 1) : 1);
     const cos = h.bladeAxis && h.dir ? Math.abs(h.bladeAxis.dot(h.dir)) : 0;
     const poke = cos > 0.7;
     const Z = h.zone;
