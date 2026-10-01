@@ -39,6 +39,7 @@ motion_library 몸 동작 기능 확장, 밸런스 값 적용, 새 시제품. ma
 - 게임 불변 확인: `fights12.mjs`, `hybrid.mjs fights12.mjs`, `live_battery.mjs` 바이트 비교 + `weapon_smoke.mjs`
 
 ## 다음 할 일
+0. (10/2) 모르겐슈테른이 로스터 레어 둔기로 들어왔다(가지 `feat-morgenstern` deb30e5+, `docs/strike/morgenstern_record_2026-10-02.md`): 롱소드 상대 8 %·판금 상대 10 %로 띠 미달, 원인은 접촉 수(롱소드의 1/11). 둔기 제안서(`blunt_weapons_proposal.md`) 후속은 확인표 130~152 사장님 답 뒤 — 무기 PM 은 값 제안만(mBlunt·토크·틀 후보 151·152).
 1. (끝남) R6 조사 반영. 병합 목록 1~3절과 라이트세이버 두 손은 디렉터가 main 에 올리는 중 — 올라오면 main 을 병합한다.
 2. (끝남) Q13 값 제안. R3 구현 뒤: 제안서 5절 확인 명령. R3 뒤: 밸런스 수치 다시 재서 제안(빌드 커밋 적기).
 3. R2 시험판이 나오면 붉은 팀 명령(병합 목록 5절).

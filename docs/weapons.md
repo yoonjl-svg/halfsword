@@ -32,6 +32,7 @@
 | tree_branch | 나뭇가지 | 한손 | 0.32 | 0.80 | 0.15 | wood (edged:false) |
 | rubber_chicken | 고무 닭 | 한손 | 0.20 | 0.35 | 0.10 | rubber (edged:false) |
 | frozen_tuna | 냉동 참치 | 두손 | 1.50 | 0.75 | 0.15 | frozen (edged:false) |
+| morgenstern (`morningstar`/`mace`) | 모르겐슈테른 (가시 철퇴, 레어 둔기) | 한손 | 1.88 | 0.14 (철구 'blade' 부품) | 0.54 | steel (edged:false, spike — 가시 약한 찌르기 mThrust 0.35). 손~가시 끝 0.68 m, 수치는 `docs/strike/owner_defaults_table.md` 130~152 '사장님 확인 전' |
 
 현재 캐릭터가 참조 중이라고 하신 네 개(`longsword, jian, branch, excalibur`) 중 `branch`는
 이 로스터에서 `tree_branch`로 되어 있다 — id를 맞추거나 `schools.js`에서 매핑해 주시면 된다.
@@ -63,12 +64,13 @@
   | rubber_chicken (`chicken`) | trash | 0.7 | 0.4 | 감독 지시: 쓰레기 등급, 나뭇가지와 똑같이 부서진다(fragility 0.95) |
   | frozen_tuna | common | 1.0 | 0.8 | 감독 지시: 부러지지 않는다(fragility 0) |
   | lightsaber | epic | 1.1 | 0.95 | 이름은 최종 '라이트세이버'. 플라스마라 안 부러진다 |
+  | morgenstern | rare | 1.05 | 0.85 | 10/2 레어 둔기(사장님 10/2 00:50). 등급표 기본값, `breakY 0.40` 자루가 부러지며 철구가 떨어진다. 60 s 경합 파손 30~33 %(레어 2배 목표 18 % 넘음 — 확인표 139) |
   | 나머지 전부 | common | 1.0 | 0.8 | |
 
 - **별칭** `WEAPON_ALIASES` — `getWeapon()`이 알아서 정식 id로 바꾼다:
   `branch`/`stick`→`tree_branch`, `chicken`→`rubber_chicken`, `tuna`→`frozen_tuna`,
   `sharp`→`longsword_sharp`, `replica`→`excalibur_replica`, `arming`→`arming_sword`,
-  `saber`→`lightsaber`. characters.js의 `weapon: 'branch'`는 그대로 두셔도 된다.
+  `saber`→`lightsaber`, `morningstar`/`mace`→`morgenstern`. characters.js의 `weapon: 'branch'`는 그대로 두셔도 된다.
   모르는 id는 롱소드로 대신하고 콘솔에 경고를 한 번 찍는다.
 - **소리 재질** `spec.soundMaterial` — 소리 담당 API `sound.impact({a, b, energy})`가 아는 이름
   (`steel/armor/flesh/wood/plasma/rubber`)으로 옮긴 값. 물리 재질과 다른 건 냉동 참치뿐
