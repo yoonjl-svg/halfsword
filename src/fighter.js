@@ -97,6 +97,14 @@ function jointDefs(s) {
   ];
 }
 
+// BODY.legTorque 'human': 엉덩이·무릎 근육 상한(j.max)만 사람 최대 힘으로 (k·d·각도 제한·발목은 그대로, 새 한도 없음)
+function humanLegTorque(jdefs) {
+  for (const jd of jdefs) {
+    if (jd.c === 'thighF' || jd.c === 'thighB') jd.max = BODY.legHipHuman;
+    else if (jd.c === 'shinF' || jd.c === 'shinB') jd.max = BODY.legKneeHuman;
+  }
+}
+
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
@@ -343,6 +351,7 @@ export class Fighter {
     // 관절 생성 + 근육(관절 모터) + 각도 제한
     const jdefs = jointDefs(this.side);
     if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
+    if (BODY.legTorque === 'human') humanLegTorque(jdefs);
     for (const jd of jdefs) {
       const P = new THREE.Vector3(...jd.at);
       const rp = this.localRot[jd.p];
