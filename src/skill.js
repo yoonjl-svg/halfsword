@@ -728,5 +728,8 @@ export class Skill {
       this.updateThrust(dt);
       this.activity = Math.max(this.activity, this.thrustPose.w); // 찌르는 동안엔 몸도 벨 때처럼 빠르게 따라온다
     } else if (this.f.weapon?.gun) this.thrustPose.w = gunPose(this.f, this.thrustPose); // 권총: 한 손 사격 자세를 덧씌운다 (gun.js)
+    // 찍기 예외 (fighter.js finishRelax, 사장님 "찍기는 예외"): 탭 마무리(tap.down)가 있는 동안만 칼 어깨 면·손목 원뿔 밧줄을 느슨하게,
+    //  끝나면(tap 끝·abort 되돌아옴 끝·칼 놓침·상대 일어남 → tap null) 되감는다. 한도 끔이면 밧줄이 없어 아무 일도 없다
+    f.finishRelax(!!this.tap?.down);
   }
 }

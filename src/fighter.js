@@ -175,6 +175,9 @@ function rawHand(x, y, out) {
 // 밧줄 기하: 관절 자리에서 몸 쪽 방향으로 L = 1 m, 다른 쪽 방향으로 K = 10 m 인 가상의 두 점 (각은 L·K 와 무관, 위 머리말)
 const ROPE_L = 1;
 const ROPE_K = 10;
+// 손목 원뿔 밧줄의 아래팔 쪽 닻 (gripConeOn): 손목 W = 아래팔 몸체 (0.13, 0, 0) 에서 아래팔 축 x 로 K · 경첩 축 z 로 K. 찍기 예외(finishRelax)는 W 로 옮긴다
+const GRIP_W = { x: 0.13, y: 0, z: 0 };
+const GRIP_A1 = [{ x: 0.13 + ROPE_K, y: 0, z: 0 }, { x: 0.13, y: 0, z: ROPE_K }];
 // armIK 의 팔꿈치 겨냥(pole, 가슴 틀 (뒤, 아래, 바깥 × side) 방향)과 거리 자르기 (m): armIK 와 보정 v2 순서 결합(corrTrunkTurn)이 같은 값을 읽는다
 const IK_POLE = [-0.25, -1, 0.5];
 const IK_DMIN = 0.08;
@@ -1523,7 +1526,7 @@ export class Fighter {
     this.armed = false;
     this.world.removeImpulseJoint(this.gripJoint, true);
     if (this.gripCone) for (const j of this.gripCone) this.world.removeImpulseJoint(j, true);
-    this.gripCone = null;
+    this.gripCone = null; // 다시 쥐면(revive.js gripConeOn) 찍기 예외 상태(finishFree)대로 건다
   }
 
   /**
@@ -1542,7 +1545,33 @@ export class Fighter {
     const len = (deg) => Math.sqrt(L * L + K * K - 2 * L * K * Math.cos(deg * HD));
     const rope = (deg, a1, a2) => this.world.createImpulseJoint(R.JointData.rope(len(deg), a1, a2), this.bodies.farmS, this.sword, true);
     // 손목 W = 아래팔 몸체 (0.13, 0, 0) = 칼 몸체 원점 (위 gripJoint)
-    this.gripCone = [rope(HUMAN.gripFlex, { x: 0.13 + K, y: 0, z: 0 }, { x: 0, y: L, z: 0 }), rope(HUMAN.forearmRoll, { x: 0.13, y: 0, z: K }, { x: 0, y: 0, z: L })];
+    this.gripCone = [rope(HUMAN.gripFlex, GRIP_A1[0], { x: 0, y: L, z: 0 }), rope(HUMAN.forearmRoll, GRIP_A1[1], { x: 0, y: 0, z: L })];
+    if (this.finishFree) this.ropeAnchors(); // 찍기 예외 중에 다시 쥐었다(revive.js): 느슨한 채로 건다
+  }
+
+  /**
+   * 찍기 예외 (사장님 9/30 23:40 "한도 켠다" + "찍기는 (보정의) 예외로 남겨", 디렉터 안 A). 탭 마무리(skill.tap.down: 걸어 들어가기·겨눔·내려찍기·
+   *  되돌아옴, abort 의 되돌아옴까지) 동안만 칼 어깨 들림 면 밧줄(shoulderOn)과 손목 원뿔 밧줄(gripConeOn)을 느슨하게 하고, 탭이 끝나면 되감는다.
+   *  까닭(10/1 진단, finish_thrust 2 --armour=both): 겨눔 손 FINISH.hands 옆 0(몸 가운데)은 위팔이 몸 앞을 가로질러 들림 면 150~156° 가 되는
+   *  자세인데 사람 한도 130° 밧줄이 겨눔 스텝의 90% 동안 팽팽해 손이 바깥·앞·낮은 자리에서 멈추고(찍기 시작 때 go), 판금 상대의 9 cm 목 창을
+   *  가슴판으로 빗나갔다(즉사 판금 98 → 65/160, 맨몸 158 → 151). 어깨 밧줄만 풀면 손목 원뿔(163°)이 다음 벽이라 둘을 함께 푼다.
+   *  방식: 관절은 세계에 그대로 두고 가슴·아래팔 쪽 닻(anchor1)만 관절 자리(어깨 S·손목 W)로 옮긴다 — 두 닻 사이가 늘 L(1 m) 이라 한계
+   *  √(L²+K²−2LK·cosα) ≥ 9.8 m 를 넘지 못해 밧줄이 당기지 않는다. 관절 수·차례가 바뀌지 않아 닻이 제자리인 스텝은 한 비트도 달라지지 않고
+   *  (탭 마무리가 없는 판은 바꾸기 전과 바이트 같음), 되감을 때 팔이 범위 밖이면 밧줄이 제자리로 당긴다(엔진 위치 보정). 다른 한도(팔꿈치·척추·
+   *  제 몸 충돌)는 그대로. 새 수치 없음 — 확인표 121 줄(docs/strike/owner_defaults_table.md). skill.js update 가 매 스텝 부른다
+   */
+  finishRelax(on) {
+    on = !!on;
+    if (on === !!this.finishFree) return;
+    this.finishFree = on;
+    this.ropeAnchors();
+  }
+
+  /** 밧줄 닻을 지금 상태대로 둔다: 찍기 예외(finishFree) 면 가슴·아래팔 쪽 닻을 관절 자리로(느슨), 아니면 제자리(shoulderOn·gripConeOn 의 값) */
+  ropeAnchors() {
+    const free = !!this.finishFree;
+    if (this.shoulderRopes) this.shoulderRopes.forEach((j, i) => j.setAnchor1(free ? this.shoulderW : this.shoulderA1[i]));
+    if (this.gripCone) this.gripCone.forEach((j, i) => j.setAnchor1(free ? GRIP_W : GRIP_A1[i]));
   }
 
   /**
@@ -1558,9 +1587,13 @@ export class Fighter {
     const K = ROPE_K;
     const [p0, p1] = HUMAN.shoulderPlane;
     const S = { x: ARM.shoulder[0], y: ARM.shoulder[1], z: ARM.shoulder[2] * s }; // 어깨 (가슴 몸체 기준, config ARM)
+    this.shoulderW = S; // 찍기 예외(finishRelax)가 닻을 여기로 옮겨 밧줄을 느슨하게 한다
+    this.shoulderA1 = [];
     const rope = (c) => {
       const n = { x: Math.sin(c * HD), z: s * Math.cos(c * HD) }; // 면 c 쪽 수평 방향 (가슴 틀: 앞 x, 바깥 = s·z)
-      const j = this.world.createImpulseJoint(R.JointData.rope(Math.sqrt(L * L + K * K), { x: S.x + K * n.x, y: S.y, z: S.z + K * n.z }, { x: -0.15 + L, y: 0, z: 0 }), this.bodies.chest, this.bodies.uarmS, true);
+      const a1 = { x: S.x + K * n.x, y: S.y, z: S.z + K * n.z };
+      this.shoulderA1.push(a1);
+      const j = this.world.createImpulseJoint(R.JointData.rope(Math.sqrt(L * L + K * K), a1, { x: -0.15 + L, y: 0, z: 0 }), this.bodies.chest, this.bodies.uarmS, true);
       // 밧줄도 가슴 ↔ 위팔 사이 관절이다. 엔진은 두 몸체 사이 관절 중 하나라도 닿음이 켜져 있으면 그 쌍의 닿음을 되살린다 → 공 관절에서 끈 닿음
       //  (생성자 '원래 겹쳐 있어 닿음을 끈다')이 밧줄로 돌아와, 팔을 몸 앞으로 모으면 면 약 80° 에서 위팔 윗머리가 가슴 상자에 걸렸다
       //  (10/1 fix2 탐침: 한도 켬 쉼·왼쪽 누름 모든 스텝에서 −12~−20 mm 파고듦). 공 관절과 같이 끈다
