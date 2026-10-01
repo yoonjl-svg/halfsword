@@ -140,9 +140,34 @@ export function humanJointDefs(defs, s) {
   }
   return defs;
 }
+/**
+ * armIK 의 위팔 방향 u (가슴 틀): 손 목표 T(가슴 틀)·어깨 S 에서 armIK 와 같은 식 (같은 IK_POLE·IK_DMIN·IK_MARGIN·ARM 길이). out 에 쓴다.
+ *  보정 v2 순서 결합(Fighter.corrTrunkTurn)이 '이 가슴 yaw 면 칼 어깨가 어디를 향하나'를 몸을 움직이지 않고 묻는 데 쓴다
+ */
+function armU(T, S, side, out) {
+  const a = ARM.upper;
+  const b = ARM.fore;
+  const D = _au1.copy(T).sub(S);
+  const d = THREE.MathUtils.clamp(D.length(), IK_DMIN, a + b - IK_MARGIN);
+  const Dn = D.normalize();
+  const pole = _au2.set(IK_POLE[0], IK_POLE[1], side * IK_POLE[2]).normalize();
+  const pDir = pole.addScaledVector(Dn, -pole.dot(Dn));
+  if (pDir.lengthSq() < 1e-6) pDir.set(0, -1, 0);
+  pDir.normalize();
+  const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
+  return out.copy(Dn).multiplyScalar(Math.cos(alpha)).addScaledVector(pDir, Math.sin(alpha));
+}
 // 밧줄 기하: 관절 자리에서 몸 쪽 방향으로 L = 1 m, 다른 쪽 방향으로 K = 10 m 인 가상의 두 점 (각은 L·K 와 무관, 위 머리말)
 const ROPE_L = 1;
 const ROPE_K = 10;
+// armIK 의 팔꿈치 겨냥(pole, 가슴 틀 (뒤, 아래, 바깥 × side) 방향)과 거리 자르기 (m): armIK 와 보정 v2 순서 결합(corrTrunkTurn)이 같은 값을 읽는다
+const IK_POLE = [-0.25, -1, 0.5];
+const IK_DMIN = 0.08;
+const IK_MARGIN = 0.005;
+// 보정 v2 순서 결합의 이분법 횟수: 괄호 [0, δ*] 를 2⁻¹⁶ 로 (δ* ≤ π 면 0.003° 아래). 풀이 해상도일 뿐 크기·빠르기를 정하지 않는다 (기하)
+const TURN_BISECT = 16;
+// 보정 v2 몸 돌림의 골반 몫 (updateBodyPose v2 가지의 s·0.5·turn = 옛 가지 620 의 골반 몫 0.5, 이름만 붙인 재사용)
+const PELVIS_SHARE = 0.5;
 // 손이 있는 쪽으로 몸을 트는 계수 (rad / 패드 m): applyPose 의 −aim.x·0.35, 보정 v2 updateBodyPose 의 −aimRaw.x·0.35 와 같은 수 (이름만 붙인 재사용)
 const BODY_TURN = 0.35;
 
@@ -698,6 +723,77 @@ export class Fighter {
     return c;
   }
 
+  /**
+   * 보정 v2 순서 결합 (fix2 A): 패드 (x, y) 가 명령하는 손 목표 T (padHand, x 는 closeReach 로 자름 — driveSword 와 같음) 에 대해, 가슴 yaw 가
+   *  psi0 (v2 가지의 총 가슴 명령 = 몸 돌림 −x·BODY_TURN) 일 때 칼 어깨가 T 에 닿지 못하면 그 넘침 각 δ (rad, 몸 틀 yaw 와 같은 부호)를 돌려준다. 0 = 닿음.
+   *  가슴 yaw ψ 에서 armIK 는 T 를 가슴 틀 Ry(−ψ)·T 로 보고 어깨 S(ARM.shoulder) 에서 푼다 → 위팔 u 는 armIK 식 그대로 (armU, 같은 IK_POLE·IK_DMIN·IK_MARGIN).
+   *   (1) 들림 면 (밧줄이 있을 때 = BODY.humanLimits): 밧줄 두 개가 거는 반공간 u·n ≥ 0 (n = 면 끝 − 90 · 시작 + 90 쪽 수평, shoulderOn 과 같은 식).
+   *       끝(몸 앞 가로지름) 쪽을 넘으면 칼 든 어깨를 앞으로(+side), 시작 쪽을 넘으면 뒤로(−side) 튼다
+   *   (2) 팔 길이 (옆으로만): 어깨–T 높이 차 |Dy| < ARM.upper + ARM.fore 일 때 수평 거리가 그 높이의 수평 팔 길이 √(L² − Dy²) 를 넘으면 T 쪽으로.
+   *       높이만으로 못 닿으면(|Dy| ≥ L) 트는 것이 돕지 못하니 0
+   *  δ = 조건이 막 풀리는 가장 작은 각: 괄호 [0, δ*] 를 TURN_BISECT 번 이분 (δ* = 그 방향으로 돌아 어깨가 T 의 수평 방향을 바로 보는 각 — 거기서
+   *  들림 면은 0° 근처(옆으로 뻗음)로 풀리고 수평 거리는 가장 짧다. 그 너머는 어깨가 T 에서 다시 멀어진다: 기하 괄호, 자르기 아님).
+   *  δ* 에서도 안 풀리면(트는 것으로 닿지 못함) 0. 두 조건이 다 걸리면 큰 쪽. 크기·빠르기는 부르는 쪽 follow·관절·근육이 정한다
+   */
+  corrTrunkTurn(x, y, s, psi0) {
+    const T = this.padHand(x, y, s, _ct1);
+    T.x = Math.min(T.x, this.closeReach());
+    const side = this.side;
+    const sh = _ct2.set(ARM.shoulder[0], ARM.shoulder[1], side * ARM.shoulder[2]);
+    const L = ARM.upper + ARM.fore;
+    // 어깨가 T 의 수평 방향을 보는 가슴 yaw (몸 틀 yaw: 방향 h = atan2(−z, x) 가 h + ψ 로 돈다). 어깨 방향 = atan2(−sh.z, sh.x)
+    const face = Math.atan2(-T.z, T.x) - Math.atan2(-sh.z, sh.x);
+    const towards = (dir) => {
+      let a = (face - psi0) * dir;
+      a -= 2 * Math.PI * Math.floor(a / (2 * Math.PI)); // [0, 2π): dir 쪽으로 도는 양
+      return a;
+    };
+    const tc = (psi) => _ct3.copy(T).applyAxisAngle(UP, -psi); // 가슴 틀 T
+    const solve = (dir, bad) => {
+      if (!bad(psi0)) return 0;
+      const hi0 = towards(dir);
+      if (bad(psi0 + dir * hi0)) return 0;
+      let lo = 0;
+      let hi = hi0;
+      for (let i = 0; i < TURN_BISECT; i++) {
+        const mid = 0.5 * (lo + hi);
+        if (bad(psi0 + dir * mid)) lo = mid;
+        else hi = mid;
+      }
+      return dir * hi;
+    };
+    let best = 0;
+    if (this.shoulderRopes?.length) {
+      const [p0, p1] = HUMAN.shoulderPlane;
+      // 밧줄 밖 = 두 반공간 중 하나라도 u·n < 0 (n 은 shoulderOn 의 rope(c) 방향). 어느 끝을 넘었나는 면 각 φ 가 쐐기 밖 호의 어느 쪽 끝에 가까운지로
+      //  (쐐기 밖 호를 가운데에서 나눔: 끝 p1 쪽 = 몸 앞 가로지름 → +side, 시작 p0 쪽 = 뒤로 → −side)
+      const over = (psi) => {
+        const u = armU(tc(psi), sh, side, _ct4);
+        const outside = [p1 - 90, p0 + 90].some((c) => Math.sin(c * HD) * u.x + side * Math.cos(c * HD) * u.z < 0);
+        if (!outside) return 0;
+        const phi = Math.atan2(u.x, side * u.z) / HD;
+        const up = phi - p1 - 360 * Math.floor((phi - p1) / 360); // p1 에서 위로 φ 까지 [0, 360)
+        const down = p0 - phi - 360 * Math.floor((p0 - phi) / 360); // φ 에서 위로 p0 까지 [0, 360)
+        return up <= down ? 1 : -1;
+      };
+      const d1 = solve(side, (psi) => over(psi) === 1);
+      const d2 = solve(-side, (psi) => over(psi) === -1);
+      best = Math.abs(d1) >= Math.abs(d2) ? d1 : d2;
+    }
+    const Dy = T.y - sh.y;
+    if (Math.abs(Dy) < L) {
+      const Lh = Math.sqrt(L * L - Dy * Dy);
+      const far = (psi) => {
+        const t = tc(psi);
+        return Math.hypot(t.x - sh.x, t.z - sh.z) > Lh;
+      };
+      const dir = Math.sin(face - psi0) >= 0 ? 1 : -1; // T 쪽으로 짧게 도는 방향
+      const d3 = solve(dir, far);
+      if (Math.abs(d3) > Math.abs(best)) best = d3;
+    }
+    return best;
+  }
+
   /** 보정 v2 패드 → 손 목표 (몸 틀, 가슴 원점): 날것 매핑을 corrScale 배수로 (driveSword 의 v2 줄과 같은 식). skill.js pad*·updateBodyPose 순서가 쓴다 */
   padHand(x, y, s, out) {
     const R = WEAPON.reach;
@@ -731,8 +827,12 @@ export class Fighter {
       // 보정 v2 (설계 '순서와 정렬'): 자세표 몸 목표 없음. 오늘 끔의 몸 돌림(−x·0.35, applyPose 1510 의 수)을 거르기 전 aimRaw 로
       //  골반 s·0.5(620 의 골반 몫)·가슴 s 만큼 먼저 따라간다 → 골반 → 가슴 → 손(걸러진 aim) → 칼끝 순. 숙이기·낮추기 0
       const turn = -sk.aimRaw.x * BODY_TURN;
-      let pT = s * 0.5 * turn;
-      let cT = s * turn;
+      // 순서 결합 (fix2 A, 엉덩이가 손보다 먼저): 거르기 전 패드가 명령하는 손 목표에 칼 어깨가 닿지 못하면(들림 면 밖·팔 길이 밖) 그 넘침 각만큼
+      //  가슴을 더 틀고 골반이 같은 몫(PELVIS_SHARE)을 받는다. 손이 필요로 하는 만큼 통째로(s 를 곱하지 않음: 어느 단계든 손은 손가락이 간 곳으로).
+      //  자르기 없음 — 척추 ±45°(HUMAN.spineTwist)·applyPose 비틀림 ±0.8·근육이 막는다
+      const ex = this.corrTrunkTurn(sk.aimRaw.x, sk.aimRaw.y, s, turn);
+      let pT = s * PELVIS_SHARE * turn + PELVIS_SHARE * ex;
+      let cT = s * turn + ex;
       let piT = 0;
       let dT = 0;
       // 찌르기 몸 돌림은 명령(손·칼끝과 같다): thrustPose 몸 값을 th.w·s 로 덧씌운다 (오늘은 bodyGuard × gw)
@@ -2057,10 +2157,10 @@ export class Fighter {
     const a = ARM.upper; // 위팔
     const b = ARM.fore; // 아래팔 + 손목까지
     const D = T.sub(S);
-    const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+    const d = THREE.MathUtils.clamp(D.length(), IK_DMIN, a + b - IK_MARGIN);
     const Dn = D.normalize();
     // 팔꿈치는 아래·뒤·바깥쪽을 향한다
-    const pole = _ik3.set(-0.25, -1, this.side * 0.5).normalize();
+    const pole = _ik3.set(IK_POLE[0], IK_POLE[1], this.side * IK_POLE[2]).normalize();
     const pDir = pole.addScaledVector(Dn, -pole.dot(Dn));
     if (pDir.lengthSq() < 1e-6) pDir.set(0, -1, 0);
     pDir.normalize();
@@ -2476,6 +2576,12 @@ const _v5 = new THREE.Vector3();
 const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
 const _cq = new THREE.Quaternion();
+const _ct1 = new THREE.Vector3(); // 보정 v2 corrTrunkTurn (순서 결합)
+const _ct2 = new THREE.Vector3();
+const _ct3 = new THREE.Vector3();
+const _ct4 = new THREE.Vector3();
+const _au1 = new THREE.Vector3(); // armU
+const _au2 = new THREE.Vector3();
 const _cs1 = new THREE.Vector3(); // 보정 v2 corrScale (반지름 유도)
 const _cs2 = new THREE.Vector3();
 const _cs3 = new THREE.Vector3();
