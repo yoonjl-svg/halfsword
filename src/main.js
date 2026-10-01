@@ -68,6 +68,34 @@ const saveSettings = () => {
   }
 };
 
+// ── 보이지 않는 받침 시험 스위치 (받침 sweep, 사장님 확인 전): 이번 접속에만 CONFIG 를 덮는다 (저장하지 않음, 메뉴 설정 아님)
+//  ?assist=0..1        GAIT.assist    골반을 받치는 보이지 않는 힘의 몫 (기본 0.3)
+//  ?catch=on|fall|off  GAIT.catchMode 붙잡기 반사 (기본 on)
+//  ?legs=asis|human    BODY.legTorque 엉덩이·무릎 근육 상한 (기본 asis)
+//  몸 물리는 하나라 주인공과 상대 둘 다 같은 값을 쓴다 (Fighter·Gait 가 CONFIG 를 직접 읽는다).
+//  첫 판을 세우기 전에 적어서 legTorque 가 관절 표까지 간다. 틀린 값은 버린다 (깎거나 반올림하거나 다른 수로 바꾸지 않는다).
+//  셋 다 없으면 아무것도 쓰지 않는다 (꼬리표도 없다)
+const supportSet = {};
+{
+  const a = params.get('assist');
+  if (a !== null && /^(\d+(\.\d*)?|\.\d+)$/.test(a) && +a >= 0 && +a <= 1) supportSet.assist = +a;
+  const c = params.get('catch');
+  if (c === 'on' || c === 'fall' || c === 'off') supportSet.catchMode = c;
+  const l = params.get('legs');
+  if (l === 'asis' || l === 'human') supportSet.legTorque = l;
+  if ('assist' in supportSet) CONFIG.GAIT.assist = supportSet.assist;
+  if ('catchMode' in supportSet) CONFIG.GAIT.catchMode = supportSet.catchMode;
+  if ('legTorque' in supportSet) CONFIG.BODY.legTorque = supportSet.legTorque;
+  if (Object.keys(supportSet).length) {
+    // 꼬리표: 메뉴 첫머리 (시작·일시정지·판 끝 메뉴에 늘 보인다)
+    const tag = document.createElement('p');
+    tag.className = 'sub';
+    tag.id = 'supportTag';
+    tag.textContent = `받침 ${CONFIG.GAIT.assist} · 반사 ${CONFIG.GAIT.catchMode} · 다리 ${CONFIG.BODY.legTorque}`;
+    document.getElementById('menuSub')?.after(tag);
+  }
+}
+
 // ── 겉모습 미리보기 (모델링 PM 라운드): 마음에 안 들어도 지우지 않고 archive에 쌓아 둔 옛 버전들을
 //  주소창에서 바로 볼 수 있게 한다. 플레이어 외형에는 적용하지 않는다(감독 지시: 주인공은 그대로).
 //  ?look=margarethe:v0  : 그 캐릭터를 상대로 고정하고 그 버전을 입힌다 (버전 생략 시 지금 버전)
