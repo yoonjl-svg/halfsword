@@ -43,6 +43,8 @@
 
 - 디렉터 9/30 22:00 (R2 시험판 실패 — 사장님): ① 사람 움직임 봉투 `docs/motion/human_envelope_2026-09-30.md` + `tools/motion/human_envelope.json` (`node tools/motion/envelope.mjs`) — **끝남**. ② R2 진단 독립 검토 `docs/motion/r2_diag_review_2026-10-01.md` — **끝남**(2413111, 디렉터에게 보냄). ③ 보정 v2 어깨 검토 `corr_v2_shoulder_note_2026-10-01.md` — **끝남**(922058d; 척추 ±45° 대칭은 디렉터가 반영). 다음 PM 몫(지시 오면): 클립 v2 — 크게 가로 마무리·왼쪽 시작 8벌의 어깨 160~180°를 척추·골반으로 옮기고 아래팔 침범 없애기. 정기 보고 18:00 그대로.
 
+- 디렉터 10/1 18:50 (받침·반사 고르기): 유사도 척도 `docs/motion/duel_similarity_metric_2026-10-01.md` + `tools/motion/duel_similarity.mjs` (`stillness-duel-similarity/1`) — **끝남**. 10/1 18:00 정기 보고는 이 보고에 합쳐 보냄(놓침 — 다음부터 17:52 자체 알림 걸 것).
+
 ## 다시 만들기
 
 ```bash
