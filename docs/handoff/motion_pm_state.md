@@ -45,6 +45,8 @@
 
 - 디렉터 10/1 18:50 (받침·반사 고르기): 유사도 척도 `docs/motion/duel_similarity_metric_2026-10-01.md` + `tools/motion/duel_similarity.mjs` (`stillness-duel-similarity/1`) — **끝남**. 10/1 18:00 정기 보고는 이 보고에 합쳐 보냄(놓침 — 다음부터 17:52 자체 알림 걸 것).
 
+- 디렉터 10/1 21:50 (사장님 승인): 한손 자세표를 무기 종류별로 — `docs/motion/one_hand_guards_2026-10-01.md` + `src/guards.js` ONE_HAND_THRUST·ONE_HAND_SABRE·guardBaseOne(style) (디렉터 요청으로 src 수정) — **끝남**. fighter 쪽 선택(out.table)은 디렉터 몫. 에스톡은 두손 표라 이 표를 안 탄다고 알림.
+
 ## 다시 만들기
 
 ```bash

@@ -18,7 +18,7 @@
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CUTS, rows, GAME_GUARDS_ONE, STANCE } from './lib/cuts.mjs';
+import { CUTS, rows, GAME_GUARDS_ONE, GAME_GUARDS_ONE_THRUST, STANCE } from './lib/cuts.mjs';
 import { SOURCES } from './lib/sources.mjs';
 import { toKeys, marksOf, mirror, clipExtras, chainWithProfiles } from './lib/sets.mjs';
 import { sampleClip, measure, summarize, toJSONFrames, toColumns, stepOf, stanceOf, HZ } from './lib/clip.mjs';
@@ -251,7 +251,7 @@ const LUNGE_STEPS = [
 ];
 const PARRY_HAND = { rest: [0.18, 0.02, -0.1], lunge: [0.12, 0.1, -0.15] };
 function rapierSet() {
-  const keys = rows(RAPIER_TABLE, { f: [1, -0.03, 0], c: [0, 1, 0] }, GAME_GUARDS_ONE);
+  const keys = rows(RAPIER_TABLE, { f: [1, -0.03, 0], c: [0, 1, 0] }, GAME_GUARDS_ONE_THRUST);
   for (const k of keys) {
     const u = Math.max(0, Math.min(1, (k.p[1] - g0) / DROP)); // 낮아진 만큼 빈손이 올라가며 물러남
     k.h2 = PARRY_HAND.rest.map((v, j) => v + (PARRY_HAND.lunge[j] - v) * u);
@@ -263,8 +263,8 @@ const indexR = [];
 const lungeRows = [];
 if (!PRINT) mkdirSync(OUT_R, { recursive: true });
 for (const side of ['right', 'left']) {
-  const set = side === 'left' ? mirror(rapierSet(), GAME_GUARDS_ONE) : rapierSet();
-  const b = build(set, RAPIER, GAME_GUARDS_ONE);
+  const set = side === 'left' ? mirror(rapierSet(), GAME_GUARDS_ONE_THRUST) : rapierSet();
+  const b = build(set, RAPIER, GAME_GUARDS_ONE_THRUST);
   const s = b.summary;
   const front = side === 'left' ? 'R' : 'L';
   const ank = (r) => r.J.legs[front].ankle;
