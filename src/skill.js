@@ -41,6 +41,41 @@ const _d2 = new THREE.Vector3();
 const _r = new THREE.Vector3();
 const _u0 = [0, 0, 0];
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
+const _ps = new THREE.Vector3();
+const _pd = new THREE.Vector3();
+const _pt = new THREE.Vector3();
+const _ph = new THREE.Vector3(); // pad* 의 손 자리 (fighter.padHand)
+
+/**
+ * 보정 v2 ③ pad*: 칼끝이 상대 가슴을 향하는 패드 = fighter.js guardDir 의 닫힌 역 (az → x, el → y, 같은 조각 식·같은 끝값).
+ *  칼 방향은 손(v2 매핑의 손 자리 = fighter.padHand, 날것 매핑을 어깨 둘레 배수로)에서 상대 가슴으로. 손 자리가 패드에 따라 바뀌니 homeGuard 에서 시작해 두 번 고쳐 잡는다(기하).
+ *  패드 범위는 입력 매핑이 쓰는 WEAPON.reach 안 (update 첫 줄의 손가락 자르기와 같은 값)
+ */
+function padStar(f, out) {
+  const c = f.bodies.chest.translation();
+  const fc = f.foe.bodies.chest.translation();
+  _yawInv.copy(f.yaw).invert();
+  _ps.set(fc.x - c.x, fc.y - c.y, fc.z - c.z).applyQuaternion(_yawInv); // 상대 가슴 (내 가슴 원점, 몸 틀)
+  const R = WEAPON.reach;
+  let x = SKILL.homeGuard[0];
+  let y = SKILL.homeGuard[1];
+  for (let k = 0; k < 2; k++) {
+    const h = f.padHand(x, y, f.skill.level, _ph); // v2 매핑 손 자리 (driveSword 와 같은 배수, fix2 B)
+    _pd.set(_ps.x - h.x, _ps.y - h.y, _ps.z - h.z).normalize(); // 손 → 상대 가슴
+    const az = THREE.MathUtils.clamp(Math.atan2(_pd.z, _pd.x), -1.1, 1.3);
+    const el = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(_pd.y, -1, 1)), -0.6, 1.75);
+    x = az / 1.7 + 0.05;
+    y = el <= 0 ? 0.1 + el / 1.1 : 0.1 + (el * 0.5) / 1.65;
+    const d = Math.hypot(x, y);
+    if (d > R) {
+      x *= R / d;
+      y *= R / d;
+    }
+  }
+  out[0] = x;
+  out[1] = y;
+  return out;
+}
 
 /** 두 선분(p1–q1, p2–q2) 사이 가장 가까운 거리 (칼날끼리 맞닿았나 — 칼 길 잡기) */
 function segDist(p1, q1, p2, q2) {
@@ -69,6 +104,8 @@ export class Skill {
   constructor(fighter, level = SKILL.level) {
     this.f = fighter;
     this.level = level;
+    this.corr = SKILL.corr; // 보정 방식 'v2' | 'old' (플레이어 = config 그대로, 새 보정 하나 — 사장님 10/1 22:05 위임 → 디렉터 결정; AI 는 ai.js setLevel 이 SKILL.corrAI 'old' 로 덮어쓴다)
+    this.corrTip = SKILL.corrTip; // v2 끝점 겨눔 ② (config 기본 끔, 같은 결정. AI 는 늘 끔)
     this.prev = fighter.handOffset.clone();
     this.vel = new THREE.Vector2(); // 손 목표가 움직이는 속도 (m/s, 몸 앞 평면)
     this.follow = new THREE.Vector2(); // 이어 베기로 더해지는 손 목표
@@ -109,7 +146,8 @@ export class Skill {
     if (f.weapon?.gun) return gunCanFire(f, { now: true }); // 권총: 찌르는 동작 없이 사격 자세(gunPose, 자동 조준 + 흔들림)의 지금 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
     // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽]). 검술 보정이 다 걸려 있으면 자세 지도의 손, 덜 걸려 있으면(보정 약·끔)
     //  날것 손 위치와 섞인 실제 손 목표(fighter.handBase)에서 뻗는다 — 자세 지도의 손에서 뻗으면 실제 손보다 뒤에서 시작해 덜 나갔다
-    const g = f.guardWeight() >= 1 || !f.handBase ? f.guardPose.hand : f.handBase;
+    // 보정 v2 (s > 0): 자세 지도의 손이 없다 → 늘 지금 손 목표(handBase)에서 뻗는다
+    const g = this.corr === 'v2' && this.level > 0 ? f.handBase || f.guardPose.hand : f.guardWeight() >= 1 || !f.handBase ? f.guardPose.hand : f.handBase;
     const down = f.finish.on && f.finish.amt > 0.5; // 쓰러진 상대: 누운 몸을 내리찌른다 (finish.js 가 겨눈 곳)
     // 찌르기 무기(weapons.js THRUST_STYLE)는 더 멀리 찌르고 더 빨리 자세로 돌아온다.
     //  (겨누기·뻗기까지 빠르게 하면 팔이 손 목표를 따라가지 못해 오히려 덜 뻗는다 — 측정: 레이피어 탭 상처 60% → 20%)
@@ -555,12 +593,17 @@ export class Skill {
     if (f.weapon?.enterParry) this.enterParry(dt);
     const fk = this.flowing ? SKILL.flowFollow : 1; // 흐르는 동안은 이어 베기를 더 밀어 칼이 멈추지 않고 돌아 나가게
 
-    // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
-    if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L * fk);
-    this.follow.multiplyScalar(Math.exp(-dt / SKILL.followDecay));
-    const fm = SKILL.followMax * L * fk;
-    if (this.follow.length() > fm) this.follow.setLength(fm);
-    this.aimRaw.copy(this.anchor).add(this.follow);
+    if (this.corr === 'v2' && L > 0) {
+      // 보정 v2: 이어 베기 없음 (손은 손가락 너머로 가지 않는다 — 손가락 너머는 칼끝뿐, 여쭘 12)
+      this.aimRaw.copy(this.anchor);
+    } else {
+      // 1) 이어 베기: 휘두르는 동안 움직이는 방향으로 목표를 더 밀어 두었다가 천천히 되돌린다
+      if (swinging) this.follow.addScaledVector(this.vel, dt * SKILL.followGain * L * fk);
+      this.follow.multiplyScalar(Math.exp(-dt / SKILL.followDecay));
+      const fm = SKILL.followMax * L * fk;
+      if (this.follow.length() > fm) this.follow.setLength(fm);
+      this.aimRaw.copy(this.anchor).add(this.follow);
+    }
     if (this.aimRaw.length() > R) this.aimRaw.setLength(R);
     // 손 목표를 "딱 멈추는"(임계 감쇠) 2차 필터로 거른다: 목표가 순간이동해도 손은 가속·감속하며 간다.
     //  (사람의 손도 순간적으로 속도를 바꾸지 못한다. 목표가 튀면 근육이 그 충격을 몸통에 그대로 전해 출렁인다)
@@ -590,12 +633,51 @@ export class Skill {
       this.recovering = false;
     }
     this.idle = f.inputActive ? 0 : this.idle + dt;
+    // 보정 v2 사건: 손 뗌 = 손가락이 화면에서 떨어진 스텝 (handHeld 참 → 거짓, main.js — 입력 쪽 사건이라 공포 떨림에 속지 않음)
+    this.lift = !!this.heldPrev && !f.handHeld;
+    this.heldPrev = !!f.handHeld;
     const canRecover = this.autoGuard && L >= 0.35 && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel');
+    // 보정 v2 ③ 되돌아옴 겨눔 (s > 0, 선 자세·총 아님·상대 있음): 걷는 목적지만 바꾼다 dest = lerp(homeGuard, pad*, s). 무릎은 오늘 걷기
+    const v2r = this.corr === 'v2' && L > 0 && f.state === 'stand' && !f.weapon?.gun && !!f.foe;
     if (canRecover && this.cutPending && !swinging && !f.handHeld && this.idle > SKILL.recoverDelay) {
       this.recovering = true;
       this.cutPending = false;
+      if (v2r) {
+        // 한손 무기(guardPose.oneHand)는 옛 보정처럼 homeGuard 로 (사장님 탐색판 3·4차 '나뭇가지 기본 자세가 몸통 오른쪽으로 쭉 편 것처럼 고정'):
+        //  pad*(가슴 앞 가운데)의 한손 자세표는 팔을 끝까지 뻗고 45° 옆으로 선 3번 자세(찌르기 자세)라, 쉼 무게(bodyPose.idle)가 그리로 끌면
+        //  벤 뒤마다 팔이 곧게 뻗은 채 굳는다. homeGuard 의 한손 쟁기는 칼끝이 상대 얼굴을 겨누니(guards.js) ③ 의 겨눔은 그대로다. 걷기·진행 p 는 같다
+        const ps = (this.recoverDest ||= [0, 0]);
+        if (f.guardPose?.oneHand) {
+          ps[0] = SKILL.homeGuard[0];
+          ps[1] = SKILL.homeGuard[1];
+        } else {
+          padStar(f, ps);
+          ps[0] = SKILL.homeGuard[0] + (ps[0] - SKILL.homeGuard[0]) * L;
+          ps[1] = SKILL.homeGuard[1] + (ps[1] - SKILL.homeGuard[1]) * L;
+        }
+        this.recoverD0 = Math.hypot(ps[0] - off.x, ps[1] - off.y);
+        this.recoverP = 0;
+      }
     }
-    if (this.recovering) {
+    if (this.recovering && v2r && this.recoverD0 != null) {
+      // 보정 v2: 같은 빠르기(recoverSpeed)로 pad* 쪽 목적지로 걷는다. 겨눔 덧씌우기 없음 → 다음 손길에 튐 없음. 진행 p = 1 − d/d0 (② 붙잡음을 푼다)
+      if (f.inputActive || !canRecover) this.recovering = false;
+      else {
+        const hx = this.recoverDest[0] - off.x;
+        const hy = this.recoverDest[1] - off.y;
+        const d = Math.hypot(hx, hy);
+        const step = SKILL.recoverSpeed * dt;
+        if (d <= step) {
+          off.set(this.recoverDest[0], this.recoverDest[1]);
+          this.recovering = false;
+          this.recoverP = 1;
+        } else {
+          off.x += (hx / d) * step;
+          off.y += (hy / d) * step;
+          this.recoverP = this.recoverD0 > 0 ? 1 - (d - step) / this.recoverD0 : 1;
+        }
+      }
+    } else if (this.recovering) {
       if (f.inputActive || !canRecover) this.recovering = false; // 다시 조작하면 바로 조작이 우선
       else {
         const hx = SKILL.homeGuard[0] - off.x;
@@ -611,6 +693,29 @@ export class Skill {
           off.y += (hy / d) * step;
         }
       }
+    }
+    if (!this.recovering) this.recoverD0 = null;
+    // 보정 v2 'ready' 사건 (재기만, 아무것도 막지 않음): 칼끝이 가슴 앞(가슴 상자 단면 안, 앞쪽)이고 두 발이 다 딛고 있다
+    if (this.corr === 'v2' && L > 0 && f.alive && f.armed) {
+      const g = f.gait;
+      const sp = f.sword.translation();
+      const sr = f.sword.rotation();
+      const c = f.bodies.chest.translation();
+      _yawInv.copy(f.yaw).invert();
+      const tip = _pt.set(0, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength, 0).applyQuaternion(_sq.set(sr.x, sr.y, sr.z, sr.w));
+      tip.set(tip.x + sp.x - c.x, tip.y + sp.y - c.y, tip.z + sp.z - c.z).applyQuaternion(_yawInv);
+      const ready = !swinging && tip.x > 0 && Math.abs(tip.y) <= 0.13 && Math.abs(tip.z) <= 0.18 && (!g?.active || (g.legs.F.stance && g.legs.B.stance)); // 가슴 상자 반 높이·반 폭 (fighter.js partDefs)
+      if (ready && !this.readyNow) {
+        this.readies = (this.readies ?? 0) + 1;
+        this.readyT = f.fightT;
+      }
+      this.readyNow = ready;
+    }
+    if (this.corr === 'v2' && L > 0) {
+      // 보정 v2 쉼 무게의 목표 (fighter.updateBodyPose 가 SKILL_BODY 따라가기로 쫓고 driveSword 가 손·칼끝을 그만큼 옛 자세 지도 쪽으로 섞는다):
+      //  손가락이 닿았거나 움직이거나 휘두르는 중 = 0 (날것), 되돌아오는 동안 = 걷기 진행 recoverP (무릎 걷기는 진행 값이 없어 끝날 때까지 0),
+      //  벤 뒤 되돌아옴을 기다리는 동안 = 0, 그 밖(쉼, 되돌아옴 끝) = 1. 새 수·시계 없음 — 있는 사건만 읽는다
+      this.idleGoal = f.handHeld || f.inputActive || swinging ? 0 : this.recovering ? (this.recoverD0 != null ? this.recoverP : 0) : this.cutPending && canRecover ? 0 : 1;
     }
     if (this.lunge > 0) {
       this.lunge -= dt;

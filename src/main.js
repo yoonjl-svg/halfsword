@@ -57,6 +57,8 @@ const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
   delete settings.legWeight; // 없앤 설정 ('다리로 체중 받치기'는 이제 늘 켜짐)
+  delete settings.corr; // 없앤 설정 ('보정 방식' 옛/새: 사장님 10/1 22:05 위임 → 디렉터 결정, 새 보정이 유일한 보정 — CONFIG.SKILL.corr)
+  delete settings.corrTip; // 없앤 설정 ('끝점 겨눔': 같은 결정으로 끔 — CONFIG.SKILL.corrTip. 플레이어 보정 옵션은 '검술 보정 세기'(skill) 하나)
 } catch {
   /* 저장소를 못 쓰면 기본값으로 */
 }
@@ -68,33 +70,8 @@ const saveSettings = () => {
   }
 };
 
-// ── 보이지 않는 받침 시험 스위치 (받침 sweep, 사장님 확인 전): 이번 접속에만 CONFIG 를 덮는다 (저장하지 않음, 메뉴 설정 아님)
-//  ?assist=0..1        GAIT.assist    골반을 받치는 보이지 않는 힘의 몫 (기본 0.3)
-//  ?catch=on|fall|off  GAIT.catchMode 붙잡기 반사 (기본 on)
-//  ?legs=asis|human    BODY.legTorque 엉덩이·무릎 근육 상한 (기본 asis)
-//  몸 물리는 하나라 주인공과 상대 둘 다 같은 값을 쓴다 (Fighter·Gait 가 CONFIG 를 직접 읽는다).
-//  첫 판을 세우기 전에 적어서 legTorque 가 관절 표까지 간다. 틀린 값은 버린다 (깎거나 반올림하거나 다른 수로 바꾸지 않는다).
-//  셋 다 없으면 아무것도 쓰지 않는다 (꼬리표도 없다)
-const supportSet = {};
-{
-  const a = params.get('assist');
-  if (a !== null && /^(\d+(\.\d*)?|\.\d+)$/.test(a) && +a >= 0 && +a <= 1) supportSet.assist = +a;
-  const c = params.get('catch');
-  if (c === 'on' || c === 'fall' || c === 'off') supportSet.catchMode = c;
-  const l = params.get('legs');
-  if (l === 'asis' || l === 'human') supportSet.legTorque = l;
-  if ('assist' in supportSet) CONFIG.GAIT.assist = supportSet.assist;
-  if ('catchMode' in supportSet) CONFIG.GAIT.catchMode = supportSet.catchMode;
-  if ('legTorque' in supportSet) CONFIG.BODY.legTorque = supportSet.legTorque;
-  if (Object.keys(supportSet).length) {
-    // 꼬리표: 메뉴 첫머리 (시작·일시정지·판 끝 메뉴에 늘 보인다)
-    const tag = document.createElement('p');
-    tag.className = 'sub';
-    tag.id = 'supportTag';
-    tag.textContent = `받침 ${CONFIG.GAIT.assist} · 반사 ${CONFIG.GAIT.catchMode} · 다리 ${CONFIG.BODY.legTorque}`;
-    document.getElementById('menuSub')?.after(tag);
-  }
-}
+// 보이지 않는 받침(GAIT.assist 0.2)·붙잡기 반사(GAIT.catchMode)·다리 근육 상한(BODY.legTorque)은 config.js 에서만 온다
+//  (탐색판 주소 스위치 ?assist ?catch ?legs 는 값이 정해져(사장님 10/1 21:10 받침 0.2·반사 켬·다리 그대로) 본판에서 뺐다, 10/1 22:05)
 
 // ── 겉모습 미리보기 (모델링 PM 라운드): 마음에 안 들어도 지우지 않고 archive에 쌓아 둔 옛 버전들을
 //  주소창에서 바로 볼 수 있게 한다. 플레이어 외형에는 적용하지 않는다(감독 지시: 주인공은 그대로).
@@ -444,6 +421,8 @@ function newRound(weaponId) {
   playerEv = { hurt: false, parried: false, landed: false };
   player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
+  player.skill.corr = CONFIG.SKILL.corr; // 플레이어 보정 = 새 보정 하나 (Skill 생성자도 같은 값을 읽는다. 설정·주소 스위치 없음, 디렉터 결정 10/1 22:05)
+  player.skill.corrTip = CONFIG.SKILL.corrTip; // 끝점 겨눔 ② 끔 (같은 결정)
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   player.canShove = true; // 근접 밀치기: 플레이어는 스틱으로 (CLOSE.on 이 통째로 끄고 켠다)
   combat = new Combat(colliderInfo, { onWound, onClash });
@@ -1336,7 +1315,10 @@ let guardShown = -1;
 let guardTimer = 0;
 function updateGuardName(dt) {
   const gun = player.weapon?.gun; // 권총: 칼 자세 대신 '사격 자세' 하나만 (gun.js GUN_STANCE)
-  const g = settings.guardNames && (gun || player.guardWeight() > 0.5) && player.alive ? (gun ? 'gun' : player.guardPose.nearest) : -1;
+  // 보정 v2 (s > 0): 날것 자세라 휘두르지도(quiet > 0) 되돌아오지도 않을 때만 이름을 보인다 (여쭘 20, 기존 깃발만)
+  const sk = player.skill;
+  const rest = !(sk.corr === 'v2' && sk.level > 0) || (sk.quiet > 0 && !sk.recovering);
+  const g = settings.guardNames && (gun || (player.guardWeight() > 0.5 && rest)) && player.alive ? (gun ? 'gun' : player.guardPose.nearest) : -1;
   if (g !== guardShown && (g === 'gun' || g >= 0)) {
     guardShown = g;
     guardName.innerHTML = '';

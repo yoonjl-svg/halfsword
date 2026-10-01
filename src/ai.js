@@ -235,6 +235,8 @@ export class AI {
     this.level = PL ? { ...base, ...PL } : base;
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
+    this.me.skill.corr = SKILL.corrAI; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)
+    this.me.skill.corrTip = false; // AI 는 끝점 겨눔 ② 없음 (손 뗌 사건이 없고 속임을 망친다, 설계 AI 절)
   }
 
   /** 상대가 칼을 놓쳤다(또는 붙어 싸울 수 없는 권총을 들었다): 간격을 지킬 까닭이 없다 → 쫓아가 끝낸다 (도망치는 상대를 놓치지 않게) */

@@ -67,6 +67,9 @@ export const BODY = {
   legTorque: 'asis', // 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 20 칸: 'human' 10 칸은 손맛 바닥 ✗ (걷기 무릎 한도 닿음 0.42–0.62 · 밀치기 미발사 13/40) → 'asis'. 유사도로는 human 이 상위에 많음 (docs/strike/support_optimum_2026-10-01.md)
   legHipHuman: 208, // 사람 엉덩이 폄 최대 등척 힘 208±63 N·m (젊은 남자, 75 kg·1.75 m 환산: Anderson·Madigan·Nussbaum 2007 J Biomech 40:3105 표 3)
   legKneeHuman: 210, // 사람 무릎 폄 최대 등척 힘 210±52 N·m (같은 문헌. 동심 60°/s 는 2.21 N·m/kg ≈ 166 N·m: Baumgart 외 2021 Sports Med Open)
+  // 관절 한도·자기 몸 충돌 (검술 보정 v2 설계 '뒤틀림은 물리가 막는다', 사장님 9/30 23:40 켬). 값은 사람 움직임 봉투
+  //  (docs/motion/human_envelope_2026-09-30.md) 의 물리 범위이지 튜닝 값이 아니다(fighter.js HUMAN). false = 오늘 그대로(바이트까지, 옛 기준 sha)
+  humanLimits: true,
 };
 
 // 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면
@@ -209,6 +212,16 @@ export const GAIT = {
   swingTwist: 0.6, // 내딛는 발 방향을 골반 방향에서 이만큼(라디안)까지만 돌린다 (엉덩이 비틀기 한계). 0 = 제한 없음
   turnAccel: 2.5, // 돌면서 걸을 때 방향을 트는 가속(m/s²) 한계: 속도 ≤ 이 값 ÷ 도는 빠르기. 0 = 제한 없음
   turnAhead: 0.8, // 돌아서는 중엔 바라볼 방향을 이만큼(라디안)까지 미리 보고 발을 돌려 딛는다. 0 = 끔
+};
+
+// 칼 든 팔의 길이와 어깨 자리 (fighter.js armIK·shoulderOn, 보정 v2 날것 매핑 반지름 fighter.corrScale 이 같은 값을 읽는다 — 둘째 사본 없음).
+//  finish.js 가 내려찍기 닿는 곳(팔이 닿는 공)을 잴 때도 읽는다 (finish.js 가 fighter.js 를 부르면 서로 부르게 되어 여기 둔다).
+//  위팔 0.3 m · 아래팔 + 손목까지 0.27 m (팔 뻗은 길이 0.57 m), 어깨 = 가슴 몸체 기준 (앞, 위, 칼 쪽 × side) m (jointDefs uarmS 자리 − 가슴 자리)
+export const ARM = {
+  upper: 0.3,
+  fore: 0.27,
+  shoulder: [0, 0.1, 0.2],
+  slack: 0.005, // 펴짐 여유 (m): armIK 가 손 목표 거리를 (위팔 + 아래팔 − 이 값)에서 자른다. 근접 밀치기 '팔 다 펴짐'(fighter.armFull)·보정 v2 순서 결합(fighter armU)이 같은 값을 읽는다
 };
 
 export const WEAPON = {
@@ -445,6 +458,13 @@ export const SKILL = {
   homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
   recoverDelay: 0.25, // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
   recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)
+  // ── 검술 보정 방식 (docs/strike/correction_v2_design_2026-10-01.md). 'old' = 옛 보정(바이트까지 그대로), 'v2' = 휘두르는 동안
+  //  자세 당김 없음 + 마지막 궤적의 날 맞춤 ① · 되돌아옴 ③ · 사람 관절 한도 · 몸통 돌기 결합 (세기 s = level 선형). with_config.mjs 로 뒤집는다 ──
+  //  사장님 10/1 22:05 위임 → 디렉터 결정: 새 보정이 유일한 보정, 끝점 겨눔 끔 (docs/decisions.md 10/1 22:05).
+  //  플레이어에게 보이는 보정 옵션은 '검술 보정 세기'(설정 'skill': 끔·약·보통·강) 하나뿐 — 메뉴·주소 스위치(?corr ?tip) 는 없다
+  corr: 'v2', // 플레이어의 유일한 보정 (main.js 가 player.skill.corr 에 그대로 준다). 'old' 는 시뮬 대조용으로만 남는다 (with_config.mjs SKILL.corr=old)
+  corrAI: 'old', // AI (ai.js setLevel). 사장님 9/30 23:40 "사람이 먼저": AI 는 옛 보정 유지, 재측정 뒤
+  corrTip: false, // v2 끝점 겨눔 ② 끔 (디렉터 결정 10/1 22:05: 측정 corr_v2_measure.md §1 에서 상처/휘두름·첫 상처·날 각 차이 없음, 29~34 % 휘두름에서만 켜짐, 거꾸로 쥠 결함의 원인. 사장님 '켜면 화려, 끄면 투박·사실적'). 켜려면 여기만 (with_config.mjs SKILL.corrTip=true)
 
   // ── 입력 쪽 동역학(설정 "손맛"): 손가락 떨림이 목표를 그대로 튕기지 못하게 한다 ──
   //  "연체동물이 춤춘다"는 느낌의 실제 원인 — 손가락이 잘게 떨리면 목표(aimRaw)가 그만큼 순간이동하고,
@@ -512,10 +532,6 @@ export const INPUT = {
   clickMs: 250, // 마우스 클릭: 누른 시간 한도 (ms). 마우스는 끌지 않은 클릭만
   clickPx: 6, // 마우스 클릭: 그동안 움직인 거리 한도 (px, 잠긴 마우스의 움직임 합)
 };
-
-// 칼 든 팔의 뼈대 (fighter.armIK 가 쓰던 수를 옮겨 둠 — 값 그대로). finish.js 가 내려찍기 닿는 곳(팔이 닿는 공)을 잴 때도 읽는다
-//  (finish.js 가 fighter.js 를 부르면 서로 부르게 되어 여기 둔다)
-export const ARM = { shoulder: [0, 0.1, 0.2], upper: 0.3, fore: 0.27, slack: 0.005 }; // 어깨(가슴 기준, 옆은 × side)·위팔·아래팔(손목까지)·펴짐 여유 (m)
 
 // 탭 찌르기 (skill.js thrust): 칼끝을 목표로 맞추고 → 칼 선을 따라 손을 뻗고 → 자세로 돌아온다 (합 약 0.45초)
 //  칼끝은 매 스텝 "지금 손에서 목표 너머의 한 점"을 겨눈다 → 손이 어느 길로 가든 칼끝이 칼 축을 따라 들어가 '찌르기'로 판정된다

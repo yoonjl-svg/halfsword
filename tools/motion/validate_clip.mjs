@@ -9,8 +9,9 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GUARDS, GUARD_BASE_ONE } from '../../src/guards.js';
-import { GAME_GUARDS, GAME_GUARDS_ONE } from './lib/cuts.mjs';
+import { GUARDS, guardBaseOne } from '../../src/guards.js';
+import { classifyStyle } from '../../src/weapon_class.js';
+import { GAME_GUARDS, GAME_GUARDS_ONE, GAME_GUARDS_ONE_THRUST } from './lib/cuts.mjs';
 import { WEAPONS } from '../../src/weapons.js';
 import { bladeDir } from './lib/body.mjs';
 import { checkClip, checkIndex, GUARD_NAMES } from './lib/clip_rules.mjs';
@@ -28,27 +29,31 @@ export function gameGuards() {
   }
   return out;
 }
-/** 한손 무기 자세표 — 게임이 내보내는 src/guards.js GUARD_BASE_ONE (GUARDS 에 ONE_HAND 를 덮은 것, main b403696 부터) */
-export function gameGuardsOne() {
+/** 한손 무기 자세표 — 게임이 내보내는 src/guards.js guardBaseOne(style) (세이버 표·찌르기 표, 동작 연구 PM 10/1) */
+export function gameGuardsOne(style = 'cut') {
+  const T = guardBaseOne(style);
   const out = {};
   for (const [id, name] of Object.entries(GUARD_NAMES)) {
-    const g = GUARD_BASE_ONE.find((x) => x.name === name);
-    if (!g) throw new Error(`src/guards.js GUARD_BASE_ONE 에 자세 '${name}' (${id}) 가 없다 — lib/clip_rules.mjs GUARD_NAMES 를 게임에 맞출 것`);
+    const g = T.find((x) => x.name === name);
+    if (!g) throw new Error(`src/guards.js 한손 표(${style})에 자세 '${name}' (${id}) 가 없다 — lib/clip_rules.mjs GUARD_NAMES 를 게임에 맞출 것`);
     out[id] = { hand: g.hand, dir: g.dir, pelvisYaw: g.pelvisYaw, chestYaw: g.chestYaw, pitch: g.pitch, drop: g.drop };
   }
   return out;
 }
-/** 무기 → 게임 자세표. 두손 무기는 guards.js GUARDS, 한손 자세 무기(weapons.js oneHandStance)는 한손 표 */
-let cache, cacheOne;
+/** 무기 → 게임 자세표. 두손 무기는 guards.js GUARDS, 한손 자세 무기(weapons.js oneHandStance)는 싸움 방식(weapon_class.js)에 맞는 한손 표 */
+const cacheOne = {};
+let cache;
 export function guardsFor(weapon) {
   const w = WEAPONS[weapon];
   if (!w) return null;
-  return w.oneHandStance ? (cacheOne ??= gameGuardsOne()) : (cache ??= gameGuards());
+  if (!w.oneHandStance) return (cache ??= gameGuards());
+  const style = classifyStyle(w) === 'thrust' || classifyStyle(w) === 'versatile' ? 'thrust' : 'cut';
+  return (cacheOne[style] ??= gameGuardsOne(style));
 }
 
 /** X1: 빌드 도구가 쓰는 자세표 사본(lib/cuts.mjs GAME_GUARDS·GAME_GUARDS_ONE)이 게임과 같은가 */
 export function checkGuardCopy() {
-  return [...copyDiff(GAME_GUARDS, gameGuards(), 'GAME_GUARDS'), ...copyDiff(GAME_GUARDS_ONE, gameGuardsOne(), 'GAME_GUARDS_ONE (한손)')];
+  return [...copyDiff(GAME_GUARDS, gameGuards(), 'GAME_GUARDS'), ...copyDiff(GAME_GUARDS_ONE, gameGuardsOne('cut'), 'GAME_GUARDS_ONE (한손 세이버)'), ...copyDiff(GAME_GUARDS_ONE_THRUST, gameGuardsOne('thrust'), 'GAME_GUARDS_ONE_THRUST (한손 찌르기)')];
 }
 function copyDiff(copy, g, label) {
   const out = [];

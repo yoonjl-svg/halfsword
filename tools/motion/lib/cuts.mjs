@@ -36,14 +36,40 @@ export const GAME_GUARDS = {
   wechselL: { hand: [0.32, -0.31, -0.1], blade: [-45, -40], pelvisYaw: -30, chestYaw: -40, pitch: 12, drop: 0.08 },
 };
 
-// 한손 무기 자세표 (src/guards.js ONE_HAND → BASE_ONE): 긴 자세·쟁기·황소·바보만 바뀐다(칼 든 어깨를 앞으로, 손을 더 뻗음).
-//  왼쪽 자세들은 게임도 두손 값 그대로 쓴다. 칼끝 방향(blade)은 교본 자세 그대로. 검사기가 게임 파일과 대조한다(validate_clip X1)
+// 한손 무기 자세표 (src/guards.js ONE_HAND_SABRE·ONE_HAND_THRUST, 동작 연구 PM 10/1 — docs/motion/one_hand_guards_2026-10-01.md).
+//  세이버 표 = 세이버·팔쉬온·날 없는 한손 무기(감는 자세는 팔꿈치를 굽혀 칼을 어깨·머리 옆에), 찌르기 표 = 레이피어·청강검(칼끝은 늘 상대 쪽).
+//  검사기가 게임 파일과 대조한다(validate_clip X1). GAME_GUARDS_ONE 은 예전 이름 그대로 세이버 표
 export const GAME_GUARDS_ONE = {
-  ...GAME_GUARDS,
-  langort: { ...GAME_GUARDS.langort, hand: [0.68, 0.08, 0.1], pelvisYaw: -35, chestYaw: -45, pitch: 10 },
-  pflug: { ...GAME_GUARDS.pflug, hand: [0.4, -0.22, 0.13], pelvisYaw: -10, chestYaw: -25 },
-  ochs: { ...GAME_GUARDS.ochs, hand: [0.36, 0.26, 0.17], pelvisYaw: 0, chestYaw: -15 },
-  alber: { ...GAME_GUARDS.alber, hand: [0.5, -0.3, 0.05], pelvisYaw: -25, chestYaw: -25 },
+  tag: { ...GAME_GUARDS.tag, hand: [0.2, 0.45, 0.12], blade: [95, 0], pelvisYaw: 5, chestYaw: -10, pitch: 0 },
+  tagR: { ...GAME_GUARDS.tagR, hand: [0.2, 0.18, 0.24], blade: [40, 170], pelvisYaw: 10, chestYaw: 0, pitch: 3 },
+  ochs: { ...GAME_GUARDS.ochs, hand: [0.36, 0.26, 0.17], blade: [-15, -12], pelvisYaw: 0, chestYaw: -15, pitch: 3 },
+  langort: { ...GAME_GUARDS.langort, hand: [0.68, 0.08, 0.1], blade: [-3, 0], pelvisYaw: -35, chestYaw: -45, pitch: 10 },
+  side: { ...GAME_GUARDS.side, hand: [0.14, 0.24, 0.3], blade: [30, 150], pelvisYaw: 10, chestYaw: 5, pitch: 2 },
+  pflug: { ...GAME_GUARDS.pflug, hand: [0.4, -0.22, 0.13], blade: [30, -12], pelvisYaw: -10, chestYaw: -25, pitch: 5 },
+  wechsel: { ...GAME_GUARDS.wechsel, hand: [0.3, -0.25, 0.2], blade: [-40, 30], pelvisYaw: -5, chestYaw: -15, pitch: 5 },
+  neben: { ...GAME_GUARDS.neben, hand: [0.1, -0.2, 0.26], blade: [-35, 150], pelvisYaw: 10, chestYaw: 5, pitch: 5 },
+  alber: { ...GAME_GUARDS.alber, hand: [0.46, -0.28, 0.07], blade: [-40, 0], pelvisYaw: -25, chestYaw: -25, pitch: 8 },
+  tagL: { ...GAME_GUARDS.tagL, hand: [0.24, 0.2, -0.04], blade: [45, -160], pelvisYaw: -25, chestYaw: -40, pitch: 3 },
+  ochsL: { ...GAME_GUARDS.ochsL, hand: [0.34, 0.28, 0], blade: [-15, 12], pelvisYaw: -20, chestYaw: -35, pitch: 3 },
+  sideL: { ...GAME_GUARDS.sideL, hand: [0.24, 0.14, -0.02], blade: [25, -150], pelvisYaw: -25, chestYaw: -40, pitch: 2 },
+  pflugL: { ...GAME_GUARDS.pflugL, hand: [0.36, -0.22, 0], blade: [25, 12], pelvisYaw: -20, chestYaw: -35, pitch: 5 },
+  wechselL: { ...GAME_GUARDS.wechselL, hand: [0.36, -0.28, -0.02], blade: [-45, -40], pelvisYaw: -25, chestYaw: -40, pitch: 10 },
+};
+export const GAME_GUARDS_ONE_THRUST = {
+  tag: { ...GAME_GUARDS.tag, hand: [0.32, 0.38, 0.1], blade: [-25, -6], pelvisYaw: -20, chestYaw: -35, pitch: 4 },
+  tagR: { ...GAME_GUARDS.tagR, hand: [0.38, 0.18, 0.24], blade: [-12, -10], pelvisYaw: -20, chestYaw: -35, pitch: 4 },
+  ochs: { ...GAME_GUARDS.ochs, hand: [0.4, 0.24, 0.17], blade: [-15, -10], pelvisYaw: -15, chestYaw: -30 },
+  langort: { ...GAME_GUARDS.langort, hand: [0.68, 0.08, 0.1], blade: [-3, 0], pelvisYaw: -35, chestYaw: -45, pitch: 10 },
+  side: { ...GAME_GUARDS.side, hand: [0.36, -0.04, 0.26], blade: [2, -16], pelvisYaw: -20, chestYaw: -35, pitch: 4 },
+  pflug: { ...GAME_GUARDS.pflug, hand: [0.4, -0.22, 0.13], blade: [30, -12], pelvisYaw: -10, chestYaw: -25, pitch: 5 },
+  wechsel: { ...GAME_GUARDS.wechsel, hand: [0.38, -0.3, 0.18], blade: [-10, -10], pelvisYaw: -15, chestYaw: -30, pitch: 6 },
+  neben: { ...GAME_GUARDS.neben, hand: [0.24, -0.24, 0.24], blade: [12, -8], pelvisYaw: -10, chestYaw: -25, pitch: 5 },
+  alber: { ...GAME_GUARDS.alber, hand: [0.46, -0.28, 0.07], blade: [-20, 0], pelvisYaw: -25, chestYaw: -25, pitch: 8 },
+  tagL: { ...GAME_GUARDS.tagL, hand: [0.42, 0.2, -0.04], blade: [-12, 10], pelvisYaw: -25, chestYaw: -40, pitch: 4 },
+  ochsL: { ...GAME_GUARDS.ochsL, hand: [0.44, 0.22, -0.02], blade: [-12, 8], pelvisYaw: -25, chestYaw: -40, pitch: 4 },
+  sideL: { ...GAME_GUARDS.sideL, hand: [0.44, 0, -0.08], blade: [0, 12], pelvisYaw: -25, chestYaw: -40, pitch: 4 },
+  pflugL: { ...GAME_GUARDS.pflugL, hand: [0.42, -0.2, -0.04], blade: [22, 12], pelvisYaw: -25, chestYaw: -40, pitch: 5 },
+  wechselL: { ...GAME_GUARDS.wechselL, hand: [0.42, -0.3, -0.06], blade: [-15, 10], pelvisYaw: -25, chestYaw: -40, pitch: 8 },
 };
 
 // 기본 발 자리: 왼발 앞 (마이어 Zornhut: "왼발을 앞에 두고" [원전 2차])
