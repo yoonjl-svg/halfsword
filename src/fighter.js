@@ -1374,7 +1374,12 @@ export class Fighter {
     const S = { x: ARM.shoulder[0], y: ARM.shoulder[1], z: ARM.shoulder[2] * s }; // 어깨 (가슴 몸체 기준, config ARM)
     const rope = (c) => {
       const n = { x: Math.sin(c * HD), z: s * Math.cos(c * HD) }; // 면 c 쪽 수평 방향 (가슴 틀: 앞 x, 바깥 = s·z)
-      return this.world.createImpulseJoint(R.JointData.rope(Math.sqrt(L * L + K * K), { x: S.x + K * n.x, y: S.y, z: S.z + K * n.z }, { x: -0.15 + L, y: 0, z: 0 }), this.bodies.chest, this.bodies.uarmS, true);
+      const j = this.world.createImpulseJoint(R.JointData.rope(Math.sqrt(L * L + K * K), { x: S.x + K * n.x, y: S.y, z: S.z + K * n.z }, { x: -0.15 + L, y: 0, z: 0 }), this.bodies.chest, this.bodies.uarmS, true);
+      // 밧줄도 가슴 ↔ 위팔 사이 관절이다. 엔진은 두 몸체 사이 관절 중 하나라도 닿음이 켜져 있으면 그 쌍의 닿음을 되살린다 → 공 관절에서 끈 닿음
+      //  (생성자 '원래 겹쳐 있어 닿음을 끈다')이 밧줄로 돌아와, 팔을 몸 앞으로 모으면 면 약 80° 에서 위팔 윗머리가 가슴 상자에 걸렸다
+      //  (10/1 fix2 탐침: 한도 켬 쉼·왼쪽 누름 모든 스텝에서 −12~−20 mm 파고듦). 공 관절과 같이 끈다
+      j.setContactsEnabled(false);
+      return j;
     };
     // 위팔 몸체: 뼈가 x 를 따라 누움, 어깨 = (−0.15, 0, 0) (partDefs uarmS 자리 0.15). 반공간 가운데 면 = 끝 − 90 / 시작 + 90
     this.shoulderRopes = [rope(p1 - 90), rope(p0 + 90)];
