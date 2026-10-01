@@ -46,7 +46,7 @@
 - **assist 가 간접으로 바꾸는 것**: 발 붙잡기 pinFeet 한계 μ·Nf (941-1016) — share 가 작을수록 Nf 가 커져 미끄럼·비틀 한계가 커짐 (칼끝 18.05 → 18.53 m/s 와 맞음, PM 검토 '빠진 원인 2'). AI 의 offBalance 읽기 (ai.js:710-721).
 - **안 바꾼 받침**: 높이 스프링·감쇠 (같은 fy 안), 똑바로 서기 닻 (1462-1467), 걷기 밂 (push 수평), 무릎 꿇기 하중 바닥 0.6 (1394-1398), getup·kneel 동안의 `BODY.support 1.0` (hybrid 밖), 넘어짐 판정 (844-874)·일어서기·부활.
 - **이미 있던 흠 (이번 밖)**: driveBalance 의 fwd 가 tiltDeg() 의 임시값 덮어쓰기로 가슴 위 방향이 된다 (gait.js:270 → fighter.js tiltDeg). 모든 catchMode 가 tiltDeg() 를 같은 자리에서 불러 그대로 두었다 (한 번에 하나).
-- **손잡이 (a443f38)**: `GAIT.catchMode` 'on' | 'fall' | 'off' (gait.js catch 줄: 'fall' = offBalance 램프만, 'off' = need 0, levH 는 모든 모드 그대로) · `BODY.legTorque` 'asis' | 'human' (`humanLegTorque` 가 thighF/B·shinF/B 의 j.max 만 208 · 210 N·m 으로, k·d·각도·배율·발목 그대로, 새 한도 없음). 기본값과 명시 기본값 (`with_config GAIT.catchMode=on BODY.legTorque=asis`) 모두 fights12 `12223139` · live_battery `2f453e0b`.
+- **손잡이 (a443f38)**: `GAIT.catchMode` 'on' | 'fall' | 'off' (gait.js catch 줄: 'fall' = offBalance 램프만, 'off' = need 0, levH 는 모든 모드 그대로) · `BODY.legTorque` 'asis' | 'human' (`humanLegTorque` 가 thighF/B·shinF/B 의 j.max 만 208 · 210 N·m 으로, k·d·각도·배율·발목 그대로, 새 한도 없음. j.max 는 스프링 몫만, 엉덩이 ball 은 축마다 묶음 → 9절). 기본값과 명시 기본값 (`with_config GAIT.catchMode=on BODY.legTorque=asis`) 모두 fights12 `12223139` · live_battery `2f453e0b`.
 
 ## 3. 쓸기 표 (30 칸)
 
@@ -207,24 +207,27 @@
 4. **반사 'fall'** (균형 잃을 때만): 중간 길로 둘까요? 평걸음에서도 19 번/분 켜져 디렉터 권고는 'off'.
 5. **다음에 줄일 힘의 차례**: 디렉터 안 = 높이 스프링 → 넘겨받기 → 닻 → 걷기 밂.
 6. **'human' 감쇠 몫** (9절): 'human' 은 모터 스프링 몫만 210 · 208 N·m 로 묶고 감쇠 몫 d·(vt − ω) 는 묶지 않아 딛은 무릎 합이 걷기 스텝 15–47 % 에서 210 을 넘습니다. 'human' 일 때만 감쇠 몫을 스프링이 남긴 j.max·mus 안에 넣을까요 (새 숫자 없이 문헌 값 안, 모터가 하는 일을 바꾸므로 감독·사장님 결정)? 넣으면 'human' 칸 다시 잼.
+7. **'human' 엉덩이 축마다 묶음** (9절): 엉덩이 208 은 축마다라 회전력 크기는 √3 × 208 = 360 N·m 까지 갑니다. 'human' 일 때만 축 셋 합 크기를 208 로 묶을까요 (같은 감독·사장님 결정)?
 
 ## 9. 다리 회전력 다시 읽기 (리뷰 뒤 고침, 10/1)
 
 - 1·3절 표와 위 글의 무릎·엉덩이 τ 는 **모터 스프링 몫** k·gain·clamp(e, ±maxErr) 다 (support_measure.mjs). fighter.js applyPose 의 maxErr = j.max·mus/k 가 이 몫만 묶어 구조상 ≤ j.max. jointConfigureMotor(…, k, d) 의 **감쇠 몫** d·gain·(vt − ω) 는 묶임이 없다 (Rapier 0.19 에 모터 최대 힘 설정 없음, vt 만 ±15 rad/s). `humanLegTorque` 는 j.max 만 바꾸고 d 는 그대로. a50644a 부터 모든 관절이 이 구조 (기본값 바이트 그대로).
+- 엉덩이 ball 은 x·y·z 축마다 ±maxErr 로 자른다 (fighter.js applyPose) → 스프링 몫만으로도 벡터 크기가 √3 × j.max 까지 ('human' 360 · asis 970 N·m). 'human' 엉덩이 208 은 축마다 값이고, 굽힘 (문헌 146) · 벌림 · 비틀기 축에도 같은 208.
 - 합 어림 (반작용 있는 관절 회전력, 새 힘 아님) 두 가지. A = k·e + d·(vt − 풀이 뒤 상대 각속도) (딛은 다리, 걷기 씨앗 202 · 싸움 30 s 씨앗 303). B = 같은 식에 스텝 평균 관절 각속도 (걷기 씨앗 102, 5 s). Rapier 모터가 힘 모델이라 실제는 (d + dt·k)(vt − ω) 쪽 → A 가 낮게 읽음.
 
-| 칸 · 장면 | 무릎 j.max | 무릎 스프링 몫 p90 | 무릎 합 p90 / p99 (A) | 합 > j.max % (A) | 무릎 합 p90 (B) · > j.max % | 엉덩이 j.max | 엉덩이 합 p90 (B) · > j.max % |
-|---|---|---|---|---|---|---|---|
-| a0.3_con_lasis 걷기 | 500 | 463 | 301 / 581 | 1.4 | 555 · 14 | 560 | 406 · 6 |
-| a0_coff_lasis 걷기 | 500 | 500 | 437 / 832 | 5.3 | 733 · 30 | 560 | 598 · 11 |
-| a0.3_con_lhuman 걷기 | 210 | 210 | 235 / 626 | 15.2 | — | 208 | — |
-| a0_coff_lhuman 걷기 | 210 | 210 | 288 / 857 | 23 | 521 · 47 | 208 | 480 · 49 |
-| a0.3_con_lasis 싸움 | 500 | 290 | 194 / 434 | 0.6 | — | 560 | — |
-| a0_coff_lasis 싸움 | 500 | 420 | 229 / 460 | 0.8 | — | 560 | — |
-| a0.3_con_lhuman 싸움 | 210 | 210 | 99 / 306 | 2.5 | — | 208 | — |
-| a0_coff_lhuman 싸움 | 210 | 210 | 192 / 483 | 8.1 | — | 208 | — |
+| 칸 · 장면 | 무릎 j.max | 무릎 스프링 몫 p90 | 무릎 합 p90 / p99 (A) | 합 > j.max % (A) | 무릎 합 p90 (B) · > j.max % | 엉덩이 j.max | 엉덩이 스프링 몫 크기 p90 / max | 엉덩이 합 p90 (B) · > j.max % |
+|---|---|---|---|---|---|---|---|---|
+| a0.3_con_lasis 걷기 | 500 | 463 | 301 / 581 | 1.4 | 555 · 14 | 560 | 276 / 565 | 406 · 6 |
+| a0_coff_lasis 걷기 | 500 | 500 | 437 / 832 | 5.3 | 733 · 30 | 560 | 446 / 571 | 598 · 11 |
+| a0.3_con_lhuman 걷기 | 210 | 210 | 235 / 626 | 15.2 | — | 208 | 214 / 264 | — |
+| a0_coff_lhuman 걷기 | 210 | 210 | 288 / 857 | 23 | 521 · 47 | 208 | 237 / 295 | 480 · 49 |
+| a0.3_con_lasis 싸움 | 500 | 290 | 194 / 434 | 0.6 | — | 560 | 188 / 579 | — |
+| a0_coff_lasis 싸움 | 500 | 420 | 229 / 460 | 0.8 | — | 560 | 345 / 907 | — |
+| a0.3_con_lhuman 싸움 | 210 | 210 | 99 / 306 | 2.5 | — | 208 | 182 / 263 | — |
+| a0_coff_lhuman 싸움 | 210 | 210 | 192 / 483 | 8.1 | — | 208 | 228 / 360 | — |
 
 - 읽기: 'human' 칸은 '사람 다리' 가 아니라 '스프링 몫만 사람 값' 이다. 딛은 무릎 합이 걷기에서 15–23 % (A) · 47 % (B) 스텝, 싸움에서 2.5–8 % (A) 스텝에서 210 을 넘고 문헌 +1 SD 262 넘음도 걷기 7–14 % (A). 그래서 '사람 다리면 걷기 처짐 0.26 m' 는 사람보다 센 다리에서 나온 값 (진짜 사람 다리면 더 처질 쪽). asis 통과 칸의 '500 닿음 18 %' 도 스프링 몫이고 합은 걷기 p90 437–733 · p99 832–1472 N·m.
 - 판정·순위·권고 짝은 안 바뀜 (판정 기준에 τ 없음, 손잡이·코드 안 바뀜). 바뀐 것은 다리 힘을 읽는 법뿐.
-- 감쇠 몫을 j.max·mus 안에 넣는 것은 모터가 하는 일을 바꾸는 새 묶음이라 이번에 안 함 (여쭘 6).
+- 'human' 엉덩이 스프링 몫 크기는 걷기 p90 237 · max 295, 싸움 p99 · max 300 · 360 N·m (문헌 +1 SD 271 넘음).
+- 감쇠 몫을 j.max·mus 안에 넣는 것과 엉덩이를 벡터 크기로 묶는 것은 모터가 하는 일을 바꾸는 새 묶음이라 이번에 안 함 (여쭘 6 · 7).
 - 재현 (읽기만, 얼린 트리): `nice -n 10 node …/support/fix/knee_damp.mjs <tree> <assist> <on|off> <asis|human> <walk|fight> 2>/dev/null` (A), `nice -n 10 node …/support/review/physics/knee_tau.mjs <tree> GAIT.assist=0,GAIT.catchMode=off,BODY.legTorque=human 2>/dev/null` (B). 로그 …/support/review/caps/knee_damp_*.log · …/support/fix/knee_damp_fight_extra.log · …/support/review/physics/knee_tau.log.
