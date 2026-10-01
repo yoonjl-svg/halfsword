@@ -1715,7 +1715,9 @@ export class Fighter {
   /** 몸통이 "의도한 자세"(가속할 때 숙인 것 포함)에서 벗어난 각도 */
   tiltDeg() {
     rot(this.bodies.chest, _q1);
-    const up = _v1.set(0, 1, 0).applyQuaternion(_q1);
+    // Gait.update 가 driveBalance 의 앞 방향 축(_v1)을 든 채로 이 함수를 부른다 — 같은 임시 벡터를 쓰면 앞 축이 덮여 걸음 균형이 틀어진다
+    //  (샛별 팀 A-001 7da5f3f 발견, 사장님 10/2 01:10 "복사해와"; 회귀 검사 tools/sim/balance_axes.test.mjs)
+    const up = _tiltUp.set(0, 1, 0).applyQuaternion(_q1);
     const ref = this.anchorUp || UP;
     return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.dot(ref), -1, 1)));
   }
@@ -2816,6 +2818,7 @@ const _eu = new THREE.Euler();
 const _bloodColor = new THREE.Color(0x5a0808);
 const _paleColor = new THREE.Color(0xb8b4a8);
 const _v4 = new THREE.Vector3();
+const _tiltUp = new THREE.Vector3(); // tiltDeg 전용 (driveBalance 의 _v1 과 겹치지 않게)
 const _v5 = new THREE.Vector3();
 const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
