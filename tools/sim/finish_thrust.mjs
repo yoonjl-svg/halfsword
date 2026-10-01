@@ -95,7 +95,7 @@ function watchTap(G, t0, fwd) {
     if (mine && pr.v && r) {
       const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.sword.rotation()));
       const along = r.dir && r.bladeAxis ? r.dir.dot(r.bladeAxis) : null;
-      log.push({ t: G.t, part: pr.v.part, type: r.type, kin: r0?.type ?? r.type, energy: r.energy, eff: r.eff, thr: r.thr, plate: r.plate, helmet: r.helmet, pass: r.pass, finish: !!r.finish, plunging, cool, along, axisEl: Math.asin(THREE.MathUtils.clamp(axis.y, -1, 1)) * R2D, grip: V(P.sword.translation()), pel: V(P.bodies.pelvis.translation()), push: P.skill.thrustPush });
+      log.push({ t: G.t, part: pr.v.part, zone: r.zone, type: r.type, kin: r0?.type ?? r.type, energy: r.energy, eff: r.eff, thr: r.thr, plate: r.plate, helmet: r.helmet, pass: r.pass, finish: !!r.finish, plunging, cool, along, axisEl: Math.asin(THREE.MathUtils.clamp(axis.y, -1, 1)) * R2D, grip: V(P.sword.translation()), pel: V(P.bodies.pelvis.translation()), push: P.skill.thrustPush });
     }
     return r;
   };
@@ -186,6 +186,7 @@ export function finishTrial({ guard, dist, fall, seed, weapon = 'longsword', pla
   const first = W.log[0] ?? null;
   const tor = W.log.find((l) => TORSO.has(l.part)) ?? null;
   const fin = W.log.find((l) => FIN_PARTS.has(l.part) && l.plunging) ?? W.log.find((l) => FIN_PARTS.has(l.part)) ?? null; // 찍는 중 즉사 부위 첫 접촉
+  const killBy = W.log.find((l) => l.finish) ?? null; // 즉사를 낸 접촉 (analyze 의 finish 가 켜진 첫 접촉; 10/1 C 뒤 판·투구에 막힌 접촉은 finish 가 꺼진다)
   const ws = G.wounds.slice(w0).filter((w) => w.att === P && (w.type === 'cut' || w.type === 'stab') && w.severity > 0);
   // 못 죽인 까닭
   let why = null;
@@ -195,6 +196,7 @@ export function finishTrial({ guard, dist, fall, seed, weapon = 'longsword', pla
     else if (!fin && !drop) why = '몸통못닿음';
     else if (!W.log.some((l) => FIN_PARTS.has(l.part) && l.kin === 'stab') && drop) why = drop.startsWith('cool') ? '쿨다운' : 'minEnergy';
     else if (fin.kin !== 'stab') why = fin.plate || fin.helmet ? '판에미끄러짐' : '찌르기아님';
+    else if (fin.type === 'blunt' && (fin.plate || fin.helmet)) why = '판에막힘'; // 판금·투구가 찍기를 막았다 (10/1 C: 즉사 없음)
     else why = fin.finish ? '즉사표시뒤살아있음' : '찌르기인데즉사아님';
   }
   const ang = (from, to) => {
@@ -214,7 +216,8 @@ export function finishTrial({ guard, dist, fall, seed, weapon = 'longsword', pla
     handPush: tor && W.st.pushGrip && W.st.push <= tor.t ? ang(W.st.pushGrip, tor.grip) : null,
     wound: ws.length > 0, stab: ws.some((w) => w.type === 'stab'), sev: ws.reduce((m, w) => Math.max(m, w.severity), 0),
     kill, cause, tDeath, why,
-    fin: fin ? { part: fin.part, type: fin.type, kin: fin.kin, along: fin.along, energy: fin.energy, eff: fin.eff, thr: fin.thr, plate: fin.plate, helmet: fin.helmet, pass: fin.pass, finish: fin.finish, plunging: fin.plunging } : null,
+    killBy: killBy ? { part: killBy.part, zone: killBy.zone, plate: killBy.plate, helmet: killBy.helmet, pass: killBy.pass, eff: killBy.eff, thr: killBy.thr } : null,
+    fin: fin ? { part: fin.part, zone: fin.zone, type: fin.type, kin: fin.kin, along: fin.along, energy: fin.energy, eff: fin.eff, thr: fin.thr, plate: fin.plate, helmet: fin.helmet, pass: fin.pass, finish: fin.finish, plunging: fin.plunging } : null,
     shadow: W.st.shadow, lowE: W.st.lowE, viol: W.st.viol, drops: W.st.drops,
     go: !!tp?.go, tapLeft: !!P.skill.tap, ended: tp?.ended ?? null, tEnd: tp?.tEnd ?? null,
     tTD: W.st.td != null ? W.st.td - t0 : null, tipV: tp?.go ? tipV : null,
@@ -360,6 +363,14 @@ function armourBlock(rows) {
     `판금: 즉사 ${k.length}/${rows.length} · 찍기 몸통 접촉 판금 위 ${pf.length}: 찌르기 ${ps.length} eff 평균 ${f(avg(ps.map((r) => r.fin.eff)), 0)}J / 문턱 평균 ${f(avg(ps.map((r) => r.fin.thr)), 0)}J · eff>thr ${ps.filter((r) => r.fin.eff > r.fin.thr).length}` +
       ` · 판이 칼을 막고도(pass false) 죽음 ${ps.filter((r) => !r.fin.pass && r.kill).length} · 판을 뚫고(pass) 죽음 ${ps.filter((r) => r.fin.pass && r.kill).length} · 판에 미끄러져 찌르기 아님(베기·둔기) ${pf.filter((r) => r.fin.kin !== 'stab').length} · 몸통 못 닿음 ${rows.filter((r) => r.why === '몸통못닿음' || r.why === '안닿음').length}`,
   );
+  // 10/1 C: 판금 상대는 목을 겨눈다 — 찍는 중 첫 즉사 부위 접촉의 구역별 즉사
+  const zs = {};
+  for (const r of rows) if (r.fin?.plunging) { const k = `${r.fin.zone ?? r.fin.part}${r.fin.plate ? '(판)' : r.fin.helmet ? '(투구)' : ''}`; (zs[k] ??= [0, 0]); zs[k][1]++; if (r.kill) zs[k][0]++; }
+  console.log(`찍기 첫 접촉 구역별 즉사/접촉: ${Object.entries(zs).map(([k, v]) => `${k} ${v[0]}/${v[1]}`).join(' · ')} · 판에 막힘 ${rows.filter((r) => r.why === '판에막힘').length}`);
+  // 즉사를 낸 접촉(finish 켜진 첫 접촉)의 구역: 판 위인데 문턱을 못 넘은 즉사는 0 이어야 한다 (10/1 C). 문턱은 넘었지만 pass 가 아닌 것은 날이 판에 든 것(상처 있음)
+  const kb = {};
+  for (const r of rows) if (r.kill && r.killBy) { const k = `${r.killBy.zone ?? r.killBy.part}${r.killBy.plate ? (r.killBy.eff > r.killBy.thr ? '(판 문턱 넘음)' : '(판 못 뚫음!)') : r.killBy.helmet ? '(투구)' : ''}`; kb[k] = (kb[k] ?? 0) + 1; }
+  console.log(`즉사를 낸 접촉 구역별: ${Object.entries(kb).map(([k, v]) => `${k} ${v}`).join(' · ')} · 즉사인데 finish 접촉 없음 ${rows.filter((r) => r.kill && !r.killBy).length}`);
   const hf = rows.filter((r) => r.fin?.helmet);
   if (hf.length) {
     const hs = hf.filter((r) => r.fin.kin === 'stab');

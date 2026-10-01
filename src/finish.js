@@ -51,6 +51,11 @@ export const FINISH = {
   //  팔이 선을 따라 뻗을 여유가 남는 곳. ideal(0.85, 겨눔 켜기·AI 간격)은 닿는 곳 끝자락이라 느린 끝 베기가 됐다.
   //  측정 (시제품, 몸 점 앞 거리별 찌르기): 0.5m 9/9 · 0.6 17/23 · 0.7 15/17 · 0.8 13/17 · 0.9 4/8
   plungeAt: 0.55,
+  // 판금 상대(몸통 판이 남아 있는 쓰러진 상대, 사장님 10/1 21:45 "C 를 확률 아닌 물리로"): 날 있는 무기의 겨눔 점·찍을 점을 몸통 선 대신
+  //  목 한 점으로 — 머리 몸체 기준 아래로 이 거리(m). 목 구역(combat.js zoneOf: 머리 몸체 −0.05 아래, 가슴 몸체 0.11 위)은 투구(−0.01 위)도
+  //  판금도 덮지 않는다. 몸 축을 따라 즉사 창은 머리 밑(−0.10)에서 투구 끝(−0.01)까지 9cm (맨머리 찌르기도 즉사), 그 아래 가슴 윗면까지 6cm 는
+  //  몸체가 없는 틈(빗나감) → 창의 가운데 −0.06 에 둔다 (양쪽 4cm 여유). 나머지는 물리: 목·맨머리면 즉사, 판·투구에 닿으면 멍만 들고 튕긴다
+  neckAt: -0.06,
   // 내려찍는 동안 손목이 칼을 세우기 시작하는 때를 늦춘다 (fighter.driveSword 의 놓아주기 여유 × (1 − 이 값)).
   //  목표 각도가 몸 밑 땅속이라, 제동을 늦춰도 칼은 몸이나 땅에 먼저 닿는다
   brakeRelief: 0.8,
@@ -113,26 +118,42 @@ export function updateFinish(f, dt) {
     _yawInv.copy(f.yaw).invert();
     // 날 없는 무기(나뭇가지·고무 닭·참치)나 부러진 칼은 머리를 내려찍는다: 둔기로 몸통을 치면 멍만 들고, 머리 충격만 기절시킨다
     const blunt = !f.weaponCfg.edged || f.weaponBroken;
-    const p0 = foe.bodies[blunt ? 'head' : 'pelvis'].translation();
-    const p1 = foe.bodies[blunt ? 'head' : 'chest'].translation();
-    _a.set(p0.x, p0.y, p0.z).sub(_c).applyQuaternion(_yawInv);
-    _b.set(p1.x, p1.y, p1.z).sub(_c).applyQuaternion(_yawInv);
-    // 몸통 선(골반 → 가슴) 위에서 내 앞 ideal 거리의 점에 가장 가까운 곳 (수평면에서)
-    const ex = _b.x - _a.x;
-    const ez = _b.z - _a.z;
-    const el2 = ex * ex + ez * ez;
-    const ideal = FINISH.ideal * fin.k;
-    const s = el2 > 1e-6 ? THREE.MathUtils.clamp(((ideal - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
-    _t.copy(_a).lerp(_b, s);
+    // 판금 상대 (사장님 10/1 21:45, C 를 확률 아닌 물리로): 날 있는 무기는 몸통 가운데 대신 목 — 투구 밑·가슴판 위, 갑옷이 없는 틈 — 한 점을
+    //  겨누고 찍는다 (FINISH.neckAt). 나머지는 물리가 정한다 (combat.js finish: 목·맨머리면 즉사, 판·투구에 닿으면 멍만 들고 튕긴다).
+    //  한 점이라 몸통 선 위의 점 고르기는 건너뛴다. 맨몸 상대·둔기는 예전 계산 그대로 (한 비트도 다르지 않다)
+    const neck = !blunt && !!foe.torsoPlated?.();
+    let ex = 0;
+    let ez = 0;
+    let el2 = 0;
+    if (neck) {
+      const hp = foe.bodies.head.translation();
+      const hq = foe.bodies.head.rotation();
+      _t.set(0, FINISH.neckAt, 0).applyQuaternion(_sq.set(hq.x, hq.y, hq.z, hq.w)).add(_a.set(hp.x, hp.y, hp.z)).sub(_c).applyQuaternion(_yawInv);
+    } else {
+      const p0 = foe.bodies[blunt ? 'head' : 'pelvis'].translation();
+      const p1 = foe.bodies[blunt ? 'head' : 'chest'].translation();
+      _a.set(p0.x, p0.y, p0.z).sub(_c).applyQuaternion(_yawInv);
+      _b.set(p1.x, p1.y, p1.z).sub(_c).applyQuaternion(_yawInv);
+      // 몸통 선(골반 → 가슴) 위에서 내 앞 ideal 거리의 점에 가장 가까운 곳 (수평면에서)
+      ex = _b.x - _a.x;
+      ez = _b.z - _a.z;
+      el2 = ex * ex + ez * ez;
+      const ideal = FINISH.ideal * fin.k;
+      const s = el2 > 1e-6 ? THREE.MathUtils.clamp(((ideal - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
+      _t.copy(_a).lerp(_b, s);
+    }
     const hd = Math.hypot(_t.x, _t.z);
     if (_t.x > FINISH.minFwd && hd < FINISH.range * fin.k) {
       on = true;
       fin.target[0] = _t.x;
       fin.target[1] = _t.y;
       fin.target[2] = _t.z;
-      // 내려찍을 몸 점: 같은 몸통 선에서 내 앞 plungeAt 거리의 점에 가장 가까운 곳
-      const sp = el2 > 1e-6 ? THREE.MathUtils.clamp(((FINISH.plungeAt * fin.k - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
-      _tp.copy(_a).lerp(_b, sp);
+      if (neck) _tp.copy(_t);
+      else {
+        // 내려찍을 몸 점: 같은 몸통 선에서 내 앞 plungeAt 거리의 점에 가장 가까운 곳
+        const sp = el2 > 1e-6 ? THREE.MathUtils.clamp(((FINISH.plungeAt * fin.k - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
+        _tp.copy(_a).lerp(_b, sp);
+      }
       aimPoses(f, fin, _t, _tp);
     }
   }
