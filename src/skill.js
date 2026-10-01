@@ -452,9 +452,18 @@ export class Skill {
       this.recovering = true;
       this.cutPending = false;
       if (v2r) {
-        const ps = padStar(f, (this.recoverDest ||= [0, 0]));
-        ps[0] = SKILL.homeGuard[0] + (ps[0] - SKILL.homeGuard[0]) * L;
-        ps[1] = SKILL.homeGuard[1] + (ps[1] - SKILL.homeGuard[1]) * L;
+        // 한손 무기(guardPose.oneHand)는 옛 보정처럼 homeGuard 로 (사장님 탐색판 3·4차 '나뭇가지 기본 자세가 몸통 오른쪽으로 쭉 편 것처럼 고정'):
+        //  pad*(가슴 앞 가운데)의 한손 자세표는 팔을 끝까지 뻗고 45° 옆으로 선 3번 자세(찌르기 자세)라, 쉼 무게(bodyPose.idle)가 그리로 끌면
+        //  벤 뒤마다 팔이 곧게 뻗은 채 굳는다. homeGuard 의 한손 쟁기는 칼끝이 상대 얼굴을 겨누니(guards.js) ③ 의 겨눔은 그대로다. 걷기·진행 p 는 같다
+        const ps = (this.recoverDest ||= [0, 0]);
+        if (f.guardPose?.oneHand) {
+          ps[0] = SKILL.homeGuard[0];
+          ps[1] = SKILL.homeGuard[1];
+        } else {
+          padStar(f, ps);
+          ps[0] = SKILL.homeGuard[0] + (ps[0] - SKILL.homeGuard[0]) * L;
+          ps[1] = SKILL.homeGuard[1] + (ps[1] - SKILL.homeGuard[1]) * L;
+        }
         this.recoverD0 = Math.hypot(ps[0] - off.x, ps[1] - off.y);
         this.recoverP = 0;
       }

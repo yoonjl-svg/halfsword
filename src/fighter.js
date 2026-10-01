@@ -719,7 +719,13 @@ export class Fighter {
     const old = _cs2.copy(raw).lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     const sh = _cs3.set(ARM.shoulder[0], ARM.shoulder[1], this.side * ARM.shoulder[2]);
     const shOld = _cs4.copy(sh).applyAxisAngle(Z_AXIS, -G.pitch * gw).applyAxisAngle(UP, -G.chestYaw * gw * SKILL_BODY.holdAmount + (1 - gw) * turn);
-    c.S.copy(sh).applyAxisAngle(UP, turn);
+    // 한손 무기 (guardPose.oneHand, 사장님 탐색판 3·4차 '나뭇가지 기본 자세가 몸통 오른쪽으로 쭉 편 것처럼'): 옆으로 선 한손 자세를 날것 매핑의 바탕으로.
+    //  선 자세 = 옛 보정 쉼(homeGuard)의 한손 자세표 몸 돌림 그대로 (updateBodyPose 옛 가지: 가슴 −G.chestYaw·gw·holdAmount, 골반 그 0.5 몫). 새 수 없음.
+    //  날것 매핑을 그 가슴 yaw 로 돌려(가슴 틀에서 읽어) 칼 든 어깨가 앞으로 나온 몸 앞에 손이 오고, 배수 k 의 가운데도 그 어깨다. 두손은 0 (예전 그대로)
+    c.stC = gp.oneHand ? -G.chestYaw * gw * SKILL_BODY.holdAmount : 0;
+    c.stP = gp.oneHand ? -G.pelvisYaw * PELVIS_SHARE * gw * SKILL_BODY.holdAmount : 0;
+    if (c.stC) raw.applyAxisAngle(UP, c.stC);
+    c.S.copy(sh).applyAxisAngle(UP, c.stC ? turn + c.stC : turn);
     c.r = old.distanceTo(shOld);
     c.k = c.r / raw.distanceTo(c.S);
     c.s = s;
@@ -826,6 +832,7 @@ export class Fighter {
   padHand(x, y, s, out) {
     rawHand(x, y, out);
     const c = this.corrScale(s);
+    if (c.stC) out.applyAxisAngle(UP, c.stC); // 한손: 옆으로 선 가슴 틀 (corrScale)
     return out.sub(c.S).multiplyScalar(c.k).add(c.S);
   }
 
@@ -857,9 +864,15 @@ export class Fighter {
       //  가슴을 더 틀고 골반이 같은 몫(PELVIS_SHARE)을 받는다. 손이 필요로 하는 만큼 통째로(s 를 곱하지 않음: 어느 단계든 손은 손가락이 간 곳으로).
       //  자르기 없음 — 척추 ±45°(HUMAN.spineTwist)·applyPose 비틀림 ±0.8·근육이 막는다. 빠르기는 아래 follow 의 SKILL_BODY.pelvis·chest × spd 재사용
       //  (휘두르지 않을 때 spd = SKILL_BODY.holdSpeed 0.3 → 가슴 26·0.3 = 7.8 rad/s 로 손 거르기 SKILL.aimFilter 14 rad/s 보다 느려, 느린 끌기에선 몸이 손 목표 뒤에 온다: 10/1 검토 F2, 사장님 확인 거리)
-      const ex = this.corrTrunkTurn(sk.aimRaw.x, sk.aimRaw.y, s, turn);
+      // 한손 무기: 옆으로 선 자세(corrScale stC·stP = 옛 쉼의 한손 자세표 몸 돌림)를 바탕으로 더한다. 가슴 총 명령도 그만큼 (순서 결합의 ψ0)
+      const cs = this.corrScale(s);
+      const ex = this.corrTrunkTurn(sk.aimRaw.x, sk.aimRaw.y, s, cs.stC ? turn + cs.stC : turn);
       let pT = s * PELVIS_SHARE * turn + PELVIS_SHARE * ex;
       let cT = s * turn + ex;
+      if (cs.stC) {
+        pT += cs.stP;
+        cT += cs.stC;
+      }
       let piT = 0;
       let dT = 0;
       // 찌르기 몸 돌림은 명령(손·칼끝과 같다): thrustPose 몸 값을 th.w·s 로 덧씌운다 (오늘은 bodyGuard × gw)
@@ -2009,6 +2022,7 @@ export class Fighter {
       const oldHand = wi > 0 ? _wi1.copy(handLocal).lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw) : null;
       // 보정 v2: 손 당김 없음(한손 자세표도 함께). 날것 매핑은 어깨 둘레 한 배수 k(s) 로 (fix2 B, corrScale: 쉼 손이 옛 쉼과 같은 어깨 거리)
       const cs = this.corrScale(sv);
+      if (cs.stC) handLocal.applyAxisAngle(UP, cs.stC); // 한손: 옆으로 선 가슴 틀에서 읽는다 (corrScale, padHand 와 같은 식)
       handLocal.sub(cs.S).multiplyScalar(cs.k).add(cs.S);
       // 마무리만 예외(사장님 9/30 23:40): FINISH_GUARDS 몫만(finishAt) s·몫 으로 명령
       if (this.finish.amt > 0) {
