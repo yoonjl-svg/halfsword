@@ -32,8 +32,8 @@ function anglesAt(p) {
     const u = nrm(sub(p(el), p(sh)));
     const front = dot(u, F), out = dot(u, lat) * side, upc = dot(u, up);
     const elev = ang(u, up.map((v) => -v)); // 팔이 아래에서 들린 각 0~180
-    // 들림 면(ISB 식): 0 = 옆으로(벌림 면), +90 = 앞으로(굽힘 면), 90 넘으면 몸 앞을 가로지름, − = 뒤로. 팔이 20° 밑이거나 160° 위(곧게 위)면 정하지 않음
-    return { elev, plane: elev > 20 && elev < 160 ? Math.atan2(front, out) * R2D : null, vec: [front, out, upc] };
+    // 들림 면(ISB 식): 0 = 옆으로(벌림 면), +90 = 앞으로(굽힘 면), 90 넘으면 몸 앞을 가로지름, − = 뒤로. 팔이 30~120° 들렸을 때만(수평 모음이 뜻 있는 자리), 값은 −90~270 으로 펴서 180 근처에서 뒤집히지 않게
+    return { elev, plane: elev > 30 && elev < 120 ? ((x) => (x < -90 ? x + 360 : x))(Math.atan2(front, out) * R2D) : null, vec: [front, out, upc] };
   };
   const aS = arm('shS', 'elS', 1), aO = arm('shO', 'elO', -1);
   const elbow = (sh, el, h) => 180 - ang(sub(p(sh), p(el)), sub(p(h), p(el)));
@@ -124,7 +124,7 @@ const all = agg(per);
 // 문헌 사람 값 (참고, 한도 아님) — 줄마다 출처
 const LIT = {
   shElevS: { rom: '굽힘·벌림 180 (들림 0~180), 폄 60', speed: '—', src: 'AAOS ROM (aaos_rom)' },
-  shPlaneS: { rom: '수평 모음(몸 앞 가로지름) 약 130 · 수평 벌림 약 45 [기억]', speed: '야구 던지기 위팔 돌림(안쪽 돌림 축) 최고 약 7000 °/s — 위팔 방향 각속도와 다른 축 [기억: Fleisig 외 1995]', src: 'AAOS ROM' },
+  shPlaneS: { rom: '수평 모음(몸 앞 가로지름) 약 130~140 (들림 면 값과 같은 눈금) · 수평 벌림 약 45 [기억]. **크게 가로·Mittel·Zwerch 마무리 클립이 160~180 으로 사람 값을 30~40° 넘는다 — 클립 흠(아래팔이 몸통에 들어가는 것과 같은 원인), 한도로 쓰지 말 것**', speed: '야구 던지기 위팔 돌림(안쪽 돌림 축) 최고 약 7000 °/s — 위팔 방향 각속도와 다른 축 [기억: Fleisig 외 1995]', src: 'AAOS ROM' },
   elbowS: { rom: '굽힘 150 (0 = 곧게)', speed: '던지기 팔꿈치 폄 최고 약 2200~2500 °/s [기억: Fleisig 외 1995 — 원문 대조 전]', src: 'AAOS ROM' },
   wrist: { rom: '손목 굽힘 80 · 폄 70 (아래팔-칼 각은 쥔 칼이라 손목+손가락 합, 사람 어림 ≈ 135~160° 부터 무리 — clip_format 손목 검사)', speed: '—', src: 'AAOS ROM · 이 저장소 spec_table' },
   spineTwist: { rom: '가슴허리 돌림 45 (한쪽). 골프 X-factor 최고 약 40~60', speed: '—', src: 'AAOS ROM · golf_xfactor' },
@@ -135,13 +135,13 @@ const LIT = {
 };
 writeFileSync(join(ROOT, 'tools', 'motion', 'human_envelope.json'), JSON.stringify({
   format: 'stillness-human-envelope/1', generated: '2026-09-30', note: '기준 클립(저작, 모캡 아님) 24벌에서 잰 값 + 문헌 사람 값. 참고이지 한도가 아니다. 각도 °, 각속도 °/s, 각가속도 °/s², 시각 ms(칼끝 최고 = 0), 길이 m.',
-  frames: { shoulder: 'elev = 몸통 틀(up = 허리→목, lat = 칼 반대 어깨→칼 어깨)에서 위팔이 아래로부터 들린 각; plane = 들림 면 atan2(앞, 바깥) — 0 옆·90 앞·>90 몸 앞 가로지름·− 뒤 (20° < elev < 160° 표본만); shPlane 의 vMax·aMax = 위팔 방향의 몸통 틀 각속도·각가속도', elbow: '180 − 위팔·아래팔 각 (0 = 곧게)', wrist: '아래팔(팔꿈치→손)과 칼(폼멜→칼끝) 사이 각 (0 = 곧게)', spineTwist: '어깨선 돌림 − 엉덩이선 돌림 (땅 틀 yaw)', hip: '넓적다리와 몸통 아래 방향 사이 각 (굽힘·폄 크기)', knee: '180 − 넓적다리·정강이 각 (0 = 곧게)', smoothing: '5 표본(≈ 42 ms) 이동 평균 뒤 가운데 차분' },
+  frames: { shoulder: 'elev = 몸통 틀(up = 허리→목, lat = 칼 반대 어깨→칼 어깨)에서 위팔이 아래로부터 들린 각; plane = 들림 면 atan2(앞, 바깥) — 0 옆·90 앞·>90 몸 앞 가로지름·− 뒤 (30° < elev < 120° 표본만, −90~270 으로 폄 — 180 = 팔이 어깨선을 따라 반대쪽으로); shPlane 의 vMax·aMax = 위팔 방향의 몸통 틀 각속도·각가속도', elbow: '180 − 위팔·아래팔 각 (0 = 곧게)', wrist: '아래팔(팔꿈치→손)과 칼(폼멜→칼끝) 사이 각 (0 = 곧게)', spineTwist: '어깨선 돌림 − 엉덩이선 돌림 (땅 틀 yaw)', hip: '넓적다리와 몸통 아래 방향 사이 각 (굽힘·폄 크기)', knee: '180 − 넓적다리·정강이 각 (0 = 곧게)', smoothing: '5 표본(≈ 42 ms) 이동 평균 뒤 가운데 차분' },
   all, bySize, clips: per, literature: LIT,
 }, null, 1));
 
 // 문서
 const f0 = (x) => Math.round(x), f2 = (x) => x.toFixed(2);
-const NAMES = { shElevS: '칼 어깨 들림 (0 = 팔 내림)', shPlaneS: '칼 어깨 들림 면 (0 옆·90 앞·>90 몸 앞 가로지름·− 뒤·±180 곧게 뒤) — 빠르기 칸 = 위팔 각속도(몸통 틀)', shElevO: '빈쪽 어깨 들림', shPlaneO: '빈쪽 어깨 들림 면 — 빠르기 = 위팔 각속도', elbowS: '칼 팔꿈치 굽힘', elbowO: '빈쪽 팔꿈치 굽힘', wrist: '아래팔-칼 각(손목)', spineTwist: '척추 비틀림(어깨선−엉덩이선)', hipL: '왼 엉덩관절 굽힘', hipR: '오른 엉덩관절 굽힘', kneeL: '왼 무릎 굽힘', kneeR: '오른 무릎 굽힘', pelvisYaw: '골반 돌림', chestYaw: '가슴(어깨선) 돌림' };
+const NAMES = { shElevS: '칼 어깨 들림 (0 = 팔 내림)', shPlaneS: '칼 어깨 들림 면 (0 옆·90 앞·>90 몸 앞 가로지름·180 반대 어깨 쪽·− 뒤, 팔 30~120° 들렸을 때) — 빠르기 칸 = 위팔 각속도(몸통 틀)', shElevO: '빈쪽 어깨 들림', shPlaneO: '빈쪽 어깨 들림 면 — 빠르기 = 위팔 각속도', elbowS: '칼 팔꿈치 굽힘', elbowO: '빈쪽 팔꿈치 굽힘', wrist: '아래팔-칼 각(손목)', spineTwist: '척추 비틀림(어깨선−엉덩이선)', hipL: '왼 엉덩관절 굽힘', hipR: '오른 엉덩관절 굽힘', kneeL: '왼 무릎 굽힘', kneeR: '오른 무릎 굽힘', pelvisYaw: '골반 돌림', chestYaw: '가슴(어깨선) 돌림' };
 const L = [];
 L.push('# 사람 움직임 봉투 — 기준 클립 24벌 + 문헌 (2026-09-30, 자동 생성)');
 L.push('');
