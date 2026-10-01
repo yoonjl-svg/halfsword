@@ -110,7 +110,7 @@ function oneHandTable(over) {
   return BASE.map((g) => {
     const o = over[g.name];
     if (!o) return g;
-    const out = { ...g, hand: o.hand, pelvisYaw: o.pelvisYaw * D2R, chestYaw: o.chestYaw * D2R, pitch: o.pitch != null ? o.pitch * D2R : g.pitch };
+    const out = { ...g, hand: o.hand, pelvisYaw: o.pelvisYaw * D2R, chestYaw: o.chestYaw * D2R, pitch: o.pitch != null ? o.pitch * D2R : g.pitch, drop: o.drop ?? g.drop };
     if (o.blade) {
       const el = o.blade[0] * D2R, az = o.blade[1] * D2R;
       out.blade = o.blade;
@@ -119,8 +119,29 @@ function oneHandTable(over) {
     return out;
   });
 }
+// 두손 찌르기 칼(frame two + style thrust — 지금은 에스톡뿐)의 자세 (동작 연구 PM 10/1, docs/motion/two_hand_thrust_guards_2026-10-01.md).
+//  베기를 감는 자세(지붕·어깨 지붕·옆 자세·바꿈·옆 지킴·바보와 왼쪽 짝)를 칼끝이 늘 상대 쪽인 두손 찌르기 자세로 바꾼다
+//  (Fiore Posta Longa·Breve·Finestra·Porta di Ferro Mezzana, 독일식 Ochs·Pflug 변형. 하프소딩은 넣지 않음).
+//  황소·쟁기·긴 자세·왼쪽 황소·왼쪽 쟁기는 두손 표 값 그대로. 손 = 앞손, 빈손은 칼자루 끝(폼멜)을 잡는다 — 두 손 모두 두손 표의 끝값 안
+const TWO_HAND_THRUST = {
+  '지붕 (Vom Tag)': { hand: [0.24, 0.38, 0.08], blade: [-22, -4], pelvisYaw: 20, chestYaw: 25, pitch: 2, drop: 0.05 },
+  '어깨 지붕 (Vom Tag)': { hand: [0.22, 0.35, 0.21], blade: [-20, -14], pelvisYaw: 30, chestYaw: 35, pitch: 3, drop: 0.06 },
+  '황소 (Ochs)': { hand: [0.28, 0.29, 0.22], blade: [-15, -12], pelvisYaw: 25, chestYaw: 30, pitch: 3, drop: 0.07 },
+  '긴 자세 (Langort)': { hand: [0.57, 0.07, 0.03], blade: [-3, 0], pelvisYaw: -20, chestYaw: -20, pitch: 8, drop: 0.07 },
+  '옆 자세': { hand: [0.26, 0.0, 0.18], blade: [5, -14], pelvisYaw: 25, chestYaw: 30, pitch: 4, drop: 0.07 },
+  '쟁기 (Pflug)': { hand: [0.28, -0.31, 0.15], blade: [30, -12], pelvisYaw: 25, chestYaw: 25, pitch: 5, drop: 0.07 },
+  '바꿈 (Wechsel)': { hand: [0.26, -0.28, 0.12], blade: [18, -14], pelvisYaw: 20, chestYaw: 20, pitch: 5, drop: 0.07 },
+  '옆 지킴 (Nebenhut)': { hand: [0.2, -0.22, 0.18], blade: [15, -10], pelvisYaw: 30, chestYaw: 35, pitch: 5, drop: 0.08 },
+  '바보 (Alber)': { hand: [0.32, -0.28, 0.04], blade: [15, 0], pelvisYaw: -10, chestYaw: -5, pitch: 6, drop: 0.07 },
+  '왼쪽 어깨 지붕': { hand: [0.22, 0.35, -0.12], blade: [-20, 14], pelvisYaw: -20, chestYaw: -30, pitch: 3, drop: 0.06 },
+  '왼쪽 황소': { hand: [0.28, 0.29, -0.12], blade: [-15, 12], pelvisYaw: -20, chestYaw: -30, pitch: 3, drop: 0.07 },
+  '왼쪽 옆 자세': { hand: [0.3, 0.0, -0.04], blade: [5, 14], pelvisYaw: -20, chestYaw: -25, pitch: 4, drop: 0.07 },
+  '왼쪽 쟁기': { hand: [0.28, -0.31, -0.06], blade: [30, 12], pelvisYaw: -20, chestYaw: -20, pitch: 5, drop: 0.07 },
+  '왼쪽 바꿈': { hand: [0.3, -0.3, -0.05], blade: [15, 14], pelvisYaw: -25, chestYaw: -30, pitch: 8, drop: 0.08 },
+};
 const BASE_ONE_THRUST = oneHandTable(ONE_HAND_THRUST);
 const BASE_ONE_SABRE = oneHandTable(ONE_HAND_SABRE);
+const BASE_TWO_THRUST = oneHandTable(TWO_HAND_THRUST);
 
 /** 동작 라이브러리(motion_library.js)가 몸 틀별 자세표를 만들 때 바탕으로 쓰는 표 (교본 자세 NBASE 개, 같은 패드 자리) */
 export const GUARD_BASE = BASE;
@@ -130,6 +151,11 @@ export const GUARD_BASE_ONE_SABRE = BASE_ONE_SABRE;
 /** 한손 무기 자세표 고르기 — style = weapon_class.js classifyStyle 값 */
 export function guardBaseOne(style) {
   return style === 'thrust' || style === 'versatile' ? BASE_ONE_THRUST : BASE_ONE_SABRE;
+}
+export const GUARD_BASE_TWO_THRUST = BASE_TWO_THRUST;
+/** 두손 무기 자세표 고르기 — style 'thrust'(에스톡) → 두손 찌르기 표, 그 밖은 교본 표 그대로 */
+export function guardBaseTwo(style) {
+  return style === 'thrust' ? BASE_TWO_THRUST : BASE;
 }
 
 const SIGMA2 = 0.15 * 0.15;
