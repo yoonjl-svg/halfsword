@@ -164,7 +164,11 @@ export class Combat {
     const along = rel.dot(axis) / speed;
     const ts = att.weaponCfg.thrustStyle; // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
     const win = ts ? ts.window : 0; // 칼끝 판정 폭
-    if (isBlade) {
+    // 가시 무기(weapons.js spike — 모르겐슈테른, 확인표 줄 135): 날은 없지만 머리('blade' 부품) 끝(t > 0.8)이 칼 축 방향으로 들어가면 약한 찌르기(mThrust 0.35).
+    //  베기는 없다. 문턱은 아래 기존 식 그대로(살·누비옷 stab × guard; 판금·투구 위는 47/0.35 = 134 J 라 사실상 둔기). 부러지면 가시도 없다.
+    //  spike 가 없는 무기는 늘 거짓 → 아래 가지는 예전과 바이트까지 같다
+    const spike = !isBlade && pr.w.part === 'blade' && att.weaponCfg.spike && !att.weaponBroken;
+    if (isBlade || spike) {
       if (along > STRIKE.stabAlign - win && t > 0.8 - win) {
         type = 'stab';
         // 칼끝 찌르기 동작(skill.js thrust: 탭 찌르기, 찌르기 무기 AI 의 찌르기 기술)에서 칼끝을 뻗는 구간(thrustPush:
@@ -177,7 +181,7 @@ export class Combat {
           ephys = 0.5 * mEff * speed * speed;
           energy = ephys * STRIKE.energyScale;
         }
-      } else {
+      } else if (isBlade) {
         const perp = rel.clone().addScaledVector(axis, -rel.dot(axis));
         const pl = perp.length();
         const edgeAlign = pl > 1e-3 ? Math.abs(perp.dot(edge)) / pl : 0;
@@ -218,6 +222,7 @@ export class Combat {
     // 막아주는 정도: 투구·판금은 찌그러질수록, 옷은 찢어질수록 약해진다
     let guard = 1;
     let helmetBlunt = 1;
+    let plateBlunt = 1; // 판금 위 둔타가 판을 '통해' 몸에 전해지는 비율 (ARMOR.plate.blunt, 투구 helmet.blunt 와 같은 꼴. 확인표 줄 140 — 부위 효과표(줄 141, R3)만 읽는다)
     let plateGuard = 0; // 판금의 막음 비율 (0 = 판 없음). 문턱은 아래에서 누비옷 문턱과 큰 쪽을 쓴다
     if (helmOn) {
       const hi = vic.helmetIntegrity;
@@ -226,6 +231,7 @@ export class Combat {
     } else if (body) {
       guard = 0.55 + 0.45 * (vic.cloth[pr.v.part] ?? 1);
       if (plate) plateGuard = ARMOR.plate.guardMin + (1 - ARMOR.plate.guardMin) * armorHold(ARMOR.plate, vic.plate[pr.v.part]);
+      if (plate) plateBlunt = ARMOR.plate.blunt + (1 - ARMOR.plate.blunt) * (1 - vic.plate[pr.v.part]); // 찌그러질수록 더 전해진다 (투구 식과 같음)
       // 팔다리 판(견갑·팔 통판·손목 보호대·허벅지 판·정강이받이·쇠신)은 몸통 판보다 얇다: 문턱 × ARMOR.plate.limb
       if (plate && (zone === 'arm' || zone === 'leg')) plateGuard *= ARMOR.plate.limb;
     }
@@ -289,6 +295,7 @@ export class Combat {
       helmet,
       helmetBlunt,
       plate, // 판금 위를 맞았나 (fighter.applyWound 가 판을 깎고, 겉모습·소리는 강철로)
+      plateBlunt, // 판을 통해 몸에 전해지는 둔기 비율 (판 없으면 1). 지금 게임은 읽지 않는다 — 둔타 효과표 시제품(tools/sim/blunt_zones.mjs)·R3 몫
       thr,
       eff,
       bladeAxis: axis.clone(),

@@ -512,6 +512,7 @@ export class Fighter {
       ignoreArmor: spec.ignoreArmor,
       twoHand: spec.twoHand,
       thrustStyle: spec.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
+      spike: !!spec.spike, // 가시 무기(모르겐슈테른): 날 없는 머리 끝의 약한 찌르기 (combat.js analyze, 확인표 줄 135). 없는 무기는 거짓
     };
     this.weaponBroken = false;
     this.guardPose.oneHand = this.bodyGuard.oneHand = !!spec.oneHandStance; // 한손 무기는 한손 자세표 (guards.js: 칼 든 어깨를 앞으로, 손을 더 뻗는다. weapons.js oneHandStance)
@@ -593,7 +594,9 @@ export class Fighter {
       if (isBlade) {
         this.bladeColliders.push(col);
         this.bladeMesh = mesh; // 벨수록 피가 묻는다
-        this.bladeBaseColor = mesh.material.color.clone(); // 무기마다 다른 밑색 — bloodyBlade가 여기서부터 피 색으로 섞는다
+        // 무기마다 다른 밑색 — bloodyBlade가 여기서부터 피 색으로 섞는다. partMesh 가 안 그리는 무기(hiddenParts 인 'blade' 부품 — 모르겐슈테른 철구)는
+        //  재질이 없어 null 로 두고, 아래 decorate 가 group.userData.bladeMesh 로 진짜 메쉬와 밑색을 준다
+        this.bladeBaseColor = mesh.material?.color.clone() ?? null;
       }
     }
     isolatedVisual(() => spec.decorate?.(group, o.look), 0);
@@ -1278,6 +1281,8 @@ export class Fighter {
     if (h.finish) this.die('내려찍기');
 
     if (!bit) {
+      // 판금 위 둔타: h.plateBlunt(판을 통해 몸에 전해지는 비율, config.js ARMOR.plate.blunt, 확인표 줄 140)는 몸통·팔다리 둔타 효과표(줄 141, R3 — 아직 없음)에만
+      //  곱하기로 되어 있다. 아픔·균형·판 닳음은 위에서 E 전체로 적었다. 머리·목은 판이 덮지 않는다 (투구는 helmetBlunt)
       if (Z === 'head' || Z === 'neck') {
         const k = h.helmet ? h.helmetBlunt : 1;
         this.consciousness -= h.energy * VITALS.concussionPerJoule * k;
@@ -1609,10 +1614,21 @@ export class Fighter {
     if (this.weaponBroken) return; // 한 번만 부러진다
     this.weaponBroken = true;
     const cfg = this.weaponCfg;
-    const at = THREE.MathUtils.clamp(this.weapon.breakAt ?? BREAK.at, 0.05, 0.95);
-    const cutY = cfg.hiltLength + at * cfg.bladeLength;
-    this.trimSword(cutY);
-    cfg.bladeLength *= at; // 칼끝 계산(bladePoint)·판정(combat.js t)·마무리 간격(finish.js)이 새 길이를 쓴다
+    let cutY;
+    if (this.weapon.breakY != null) {
+      // 절대 높이에서 부러지는 무기 (모르겐슈테른 breakY 0.40, 확인표 줄 139): 나무 자루가 보강띠 밑에서 끊기고, 절단선 위에 통째로 있는
+      //  쇠 공 머리는 trimSword 의 '통째로 떨어지는 부품' 가지로 콜라이더가 꺼진다 → 겉모습도 머리가 조각으로 날아간다(breakWeaponLook).
+      //  남는 자루 토막이 둔기: 칼끝 계산·마무리 간격이 토막 길이를 읽게 hilt/blade 길이를 토막 끝에 맞춘다 (끝 2 cm 를 'blade' 구간으로)
+      cutY = this.weapon.breakY;
+      this.trimSword(cutY);
+      cfg.hiltLength = cutY - 0.02;
+      cfg.bladeLength = 0.02;
+    } else {
+      const at = THREE.MathUtils.clamp(this.weapon.breakAt ?? BREAK.at, 0.05, 0.95);
+      cutY = cfg.hiltLength + at * cfg.bladeLength;
+      this.trimSword(cutY);
+      cfg.bladeLength *= at; // 칼끝 계산(bladePoint)·판정(combat.js t)·마무리 간격(finish.js)이 새 길이를 쓴다
+    }
     if (BREAK.stubEdge) {
       cfg.mCut *= BREAK.stubCut;
       cfg.mThrust *= BREAK.stubThrust;
@@ -1628,12 +1644,17 @@ export class Fighter {
     const parts = this.weapon.buildParts({}); // 질량 자료만 쓴다 (색은 안 쓴다) — 생성자와 같은 순서라 swordColliders 와 짝이 맞다
     parts.forEach(([shape, y, [pm, pc, pIe, pIt]], i) => {
       const col = this.swordColliders[i];
-      if (!col || shape[0] !== 'box') return;
+      if (!col) return;
+      if (shape[0] !== 'box') {
+        // 공 부품: 절단선 위에 통째로 있으면 떨어져 나간다 (모르겐슈테른 쇠 공 머리, spec.breakY). 폼멜·컵 힐트는 늘 절단선 아래라 예전처럼 그대로
+        if (shape[0] === 'ball' && y - shape[1] >= cutY - 0.005) col.setEnabled(false);
+        return;
+      }
       const [, hx, hy, hz] = shape;
       const lo = y - hy;
       if (y + hy <= cutY) return; // 절단선 아래 부품 (자루·코등이·폼멜)
       if (lo >= cutY - 0.005) {
-        col.setEnabled(false); // 통째로 떨어져 나간 부품 (지금 무기엔 없다)
+        col.setEnabled(false); // 통째로 떨어져 나간 부품 (칼에는 없다 — 모르겐슈테른은 머리가 공 부품이라 위 가지)
         return;
       }
       const f = (cutY - lo) / (2 * hy); // 남는 비율 (길이)

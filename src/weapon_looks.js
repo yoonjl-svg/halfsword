@@ -1340,6 +1340,104 @@ export function breakWeaponLook(group, cutY, { material = 'steel' } = {}) {
   return { fragment };
 }
 
+// ─────────────────────────────────────────────────────────────
+//  모르겐슈테른 (레어 둔기): 14~16세기 독일·스위스의 짧은 고정 철구 모르겐슈테른. 설계 docs/strike/morgenstern_design_2026-10-02.md 4절,
+//  치수는 확인표(docs/strike/owner_defaults_table.md) 줄 130~132. 난수 없음(시뮬 재현성), 삼각형 ≈ 830 (예산 ≤ 1,000).
+//   밑마개(연철 원기둥, y −0.145~−0.115) → 가죽 감개(y −0.115~0.05, 끈 고리 8개는 정점색 띠) → 물푸레 자루(y 0.05~0.54, r 0.016 → 0.014, 결은 정점색)
+//   → 쇠 보강띠(langet) 2줄(y 0.29~0.54, 서로 180°, 리벳 3개씩) → 목 띠(페룰, y 0.52~0.555) → 연철 공(중심 y 0.61, r 0.0325) → 사각뿔 가시 12개(h 0.03):
+//   끝 1(축) · 위 고리 5(위도 +40°) · 아래 고리 6(위도 −10°, 위 고리와 36° 어긋남). 자루가 들어오는 아래 반구는 비운다.
+//  콜라이더(weapons.js morgenstern.buildParts): 자루 상자 반치수 0.016 = 자루 r(일치), 밑마개 공 r 0.02 대 r 0.019(1 mm), 철구 공 r 0.05 대 몸체 0.0325 + 가시 0.03 = 0.0625(±1.25 cm — 줄 132).
+//  색: 단조 연철 0x4b4f55(거친 쇠), 갈아 둔 가시 끝 0x8a8f95(밝고 매끈 — 대결 거리에서 '가시 공' 으로 읽히는 명암), 물푸레 0x6b4a2a/결 0x55381f, 가죽 0x3a2a1c.
+//  레어 마감은 FINISH.rare(metal 0.92 · env 1.1)를 metalMat 인자로 직접 (장식 메쉬라 weaponMatOpts 를 안 거친다 — 츠바이핸더 decorate 와 같은 방식).
+//  group.userData.bladeMesh = 철구 몸체 (피가 공에 묻는다). 파손(breakWeaponLook, 절단선 y 0.40): 자루·보강띠는 걸쳐서 갈라지고 목 띠·공·가시·위쪽 리벳은 통째로 떨어진다.
+// ─────────────────────────────────────────────────────────────
+export function drawMorgenstern(group, look, tier = 'rare') {
+  const F = finishOf(tier);
+  const iron = metalMat(0x4b4f55, { rough: 0.48, metal: 0.85, env: F.env });
+  const ironBright = metalMat(0x8a8f95, { rough: 0.35, metal: F.metal, env: F.env }); // 갈아 둔 가시 끝
+  const leather = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
+  const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
+  // 밑마개: 짧은 원기둥 + 납작한 못대가리 (원기둥 10각)
+  addTo(group, new THREE.CylinderGeometry(0.019, 0.017, 0.03, 10, 1), iron, [0, -0.13, 0]);
+  addTo(group, new THREE.CylinderGeometry(0.009, 0.013, 0.006, 8, 1), iron, [0, -0.148, 0]);
+  // 가죽 감개: 끈을 감아 올린 손잡이 — 고리 8개를 정점색 띠(짙은 홈 / 밝은 등)와 살짝 불룩한 반지름으로
+  const LEA = lin(0x3a2a1c);
+  const LEA_L = lin(0x5a4330);
+  const LEA_D = lin(0x241810);
+  group.add(
+    new THREE.Mesh(
+      organicBody({
+        y0: -0.115,
+        y1: 0.05,
+        segs: 16,
+        radial: 10,
+        radius: (t) => 0.0175 + 0.0012 * Math.max(0, Math.sin(t * Math.PI * 8)) ** 2,
+        color: (t, a) => {
+          const ring = Math.sin(t * Math.PI * 8); // 고리 8개: 등은 밝고 사이 홈은 짙다
+          let c = mixc(LEA_D, LEA_L, clamp01(0.5 + 0.6 * ring));
+          return mixc(c, LEA, 0.35 + 0.25 * Math.sin(3 * a + 20 * t)); // 손때·무두질 얼룩
+        },
+        cap0: { color: LEA_D },
+      }),
+      leather,
+    ),
+  );
+  // 물푸레 자루: 살짝 가늘어지는 12각 원기둥, 결은 길이 방향 줄무늬(정점색)
+  const ASH = lin(0x6b4a2a);
+  const GRAIN = lin(0x55381f);
+  const ASH_L = lin(0x7d5a36);
+  group.add(
+    new THREE.Mesh(
+      organicBody({
+        y0: 0.05,
+        y1: 0.54,
+        segs: 6,
+        radial: 12,
+        radius: (t) => 0.016 - 0.002 * t,
+        color: (t, a, y) => {
+          const g = 0.5 + 0.5 * Math.sin(5 * a + 2.3 * y) * Math.sin(3 * a - 7 * y + 1.1);
+          let c = mixc(ASH, GRAIN, smooth(0.55, 0.9, g));
+          return mixc(c, ASH_L, 0.25 * smooth(0.6, 1, 0.5 + 0.5 * Math.sin(2 * a + 0.7)));
+        },
+      }),
+      wood,
+    ),
+  );
+  // 쇠 보강띠(langet) 2줄: 자루에 붙은 납작 막대, 서로 180°, 리벳 3개씩 (리벳은 납작한 6각 기둥)
+  for (const side of [1, -1]) {
+    const band = addTo(group, new THREE.BoxGeometry(0.003, 0.25, 0.012), iron, [side * 0.0165, 0.415, 0]);
+    band.name = 'langet';
+    for (const y of [0.31, 0.415, 0.52]) {
+      const r = addTo(group, new THREE.CylinderGeometry(0.0028, 0.0028, 0.002, 6, 1), iron, [side * 0.0185, y, 0]);
+      r.rotation.z = Math.PI / 2;
+    }
+  }
+  // 목 띠(페룰): 자루 끝을 감싼 쇠 고리
+  addTo(group, new THREE.CylinderGeometry(0.019, 0.0185, 0.035, 10, 1), iron, [0, 0.5375, 0]);
+  // 철구 몸체: 연철 공 (중심 y 0.61, r 0.0325). 피가 묻는 메쉬
+  const head = addTo(group, new THREE.SphereGeometry(0.0325, 10, 7), iron, [0, 0.61, 0]);
+  head.name = 'head';
+  group.userData.bladeMesh = head;
+  // 가시 12개: 사각뿔(ConeGeometry 4각, 45° 돌려 모서리가 앞뒤·좌우로), 밑동을 공 속에 2 mm 묻는다
+  const spikeGeo = new THREE.ConeGeometry(0.006, 0.03, 4, 1);
+  spikeGeo.rotateY(Math.PI / 4);
+  spikeGeo.translate(0, 0.0325 + 0.015 - 0.002, 0); // 원점 = 공 중심, +y 로 뻗음
+  const dirs = [[Math.PI / 2, 0]]; // [위도, 경도]: 끝 가시(축)
+  for (let k = 0; k < 5; k++) dirs.push([(40 * Math.PI) / 180, ((72 * k + 40) * Math.PI) / 180]); // 위 고리 5
+  for (let k = 0; k < 6; k++) dirs.push([(-10 * Math.PI) / 180, ((60 * k + 76) * Math.PI) / 180]); // 아래 고리 6 (위 고리와 36° 어긋남)
+  const up = new THREE.Vector3(0, 1, 0);
+  const d = new THREE.Vector3();
+  for (const [lat, lon] of dirs) {
+    d.set(Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon));
+    const sp = new THREE.Mesh(spikeGeo, ironBright);
+    sp.position.set(0, 0.61, 0);
+    sp.quaternion.setFromUnitVectors(up, d);
+    sp.name = 'spike';
+    group.add(sp);
+  }
+  castAll(group);
+}
+
 // ═════════════════════════════════════════════════════════════
 //  권총 (??? 등급). 칼 축(+y)이 발사 방향이다. 주먹(칼 원점)은 손잡이 가운데를 쥐고, 총신·약실·틀은 주먹 위로 완전히 올라온다
 //  (사장님: "손잡이를 잡고 총신은 손 완전히 위로") — 총신 축은 칼 축과 나란히 PISTOL_BORE_X 만큼 위(−x). 총구는 (PISTOL_BORE_X, 0.20 m):
