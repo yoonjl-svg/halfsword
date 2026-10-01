@@ -265,11 +265,20 @@ export class Gait {
     //  보조가 커지면 딛은 발의 정지 마찰(pinFeet)도 약해져서 발이 끌려가며 버틴다
     {
       const sag = Math.max(this.h, this.hNom - 0.04) - f.bodies.pelvis.translation().y;
-      const need = Math.max(
-        clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
-        clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
-        clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1),
-      );
+      const cm = GAIT.catchMode;
+      let need;
+      if (cm === 'on') {
+        need = Math.max(
+          clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
+          clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
+          clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1),
+        );
+      } else {
+        // 'fall' = 균형 잃음만, 'off' = 0. tiltDeg 는 값을 안 써도 같은 때 부른다
+        //  (fighter.js 임시 벡터 _v1 을 'on' 과 똑같이 덮어써서 걸음이 손잡이 하나만큼만 바뀌게)
+        f.tiltDeg();
+        need = cm === 'fall' ? clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1) : 0;
+      }
       if (need > this.levC) this.levC += (need - this.levC) * Math.min(1, dt * 30);
       this.lev = Math.max(this.levH, this.levC);
     }
