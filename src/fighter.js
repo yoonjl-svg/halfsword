@@ -729,11 +729,14 @@ export class Fighter {
    *  가슴 yaw ψ 에서 armIK 는 T 를 가슴 틀 Ry(−ψ)·T 로 보고 어깨 S(ARM.shoulder) 에서 푼다 → 위팔 u 는 armIK 식 그대로 (armU, 같은 IK_POLE·IK_DMIN·IK_MARGIN).
    *   (1) 들림 면 (밧줄이 있을 때 = BODY.humanLimits): 밧줄 두 개가 거는 반공간 u·n ≥ 0 (n = 면 끝 − 90 · 시작 + 90 쪽 수평, shoulderOn 과 같은 식).
    *       끝(몸 앞 가로지름) 쪽을 넘으면 칼 든 어깨를 앞으로(+side), 시작 쪽을 넘으면 뒤로(−side) 튼다
-   *   (2) 팔 길이 (옆으로만): 어깨–T 높이 차 |Dy| < ARM.upper + ARM.fore 일 때 수평 거리가 그 높이의 수평 팔 길이 √(L² − Dy²) 를 넘으면 T 쪽으로.
-   *       높이만으로 못 닿으면(|Dy| ≥ L) 트는 것이 돕지 못하니 0
-   *  δ = 조건이 막 풀리는 가장 작은 각: 괄호 [0, δ*] 를 TURN_BISECT 번 이분 (δ* = 그 방향으로 돌아 어깨가 T 의 수평 방향을 바로 보는 각 — 거기서
-   *  들림 면은 0° 근처(옆으로 뻗음)로 풀리고 수평 거리는 가장 짧다. 그 너머는 어깨가 T 에서 다시 멀어진다: 기하 괄호, 자르기 아님).
-   *  δ* 에서도 안 풀리면(트는 것으로 닿지 못함) 0. 두 조건이 다 걸리면 큰 쪽. 크기·빠르기는 부르는 쪽 follow·관절·근육이 정한다
+   *   (2) 팔 길이 (옆으로만): 어깨–T 수평 거리가 그 높이의 수평 팔 길이 √(L² − Dy²) (L = ARM.upper + ARM.fore, |Dy| ≥ L 이면 0) 를 넘으면 T 쪽으로
+   *  δ = 조건이 막 풀리는 가장 작은 각: 괄호 [0, δₑ] 를 TURN_BISECT 번 이분. δₑ = 그 방향으로 돌 때 조건이 가장 덜 걸리는 각 (기하 괄호, 자르기 아님):
+   *   - 팔 길이·바깥 목표(|T 수평| ≥ |S 수평|)의 들림 면: δ* = 어깨가 T 의 수평 방향을 바로 보는 각. 거기서 수평 거리가 가장 짧고, 어깨 → T 방향은
+   *     0° 쪽으로 한 방향으로 돈다(T 가 어깨를 품은 원 위를 돈다)
+   *   - 안쪽 목표(|T 수평| < |S 수평|, 맞붙어 closeReach 로 당긴 손)의 들림 면: δ* 에서는 T 가 어깨와 가슴 가운데 사이라 팔이 몸 안쪽(180°)을 향해
+   *     다시 나쁘다. 어깨 → T 방향이 가장 바깥으로 오는 곳은 T 의 원에 닿는 접선: δₜ = δ* − acos(|T 수평| / |S 수평|) (0 이하면 그쪽으로 트는 것이 돕지 못함 → 0)
+   *  δₑ 에서도 안 풀리면(트는 것으로 다 닿지 못함) δₑ 를 돌려준다: 가장 덜 넘치는 데까지 튼다 (0 으로 끄면 풀리는 이웃 패드와 수십 도 뜀).
+   *  두 조건이 다 걸리면 큰 쪽. 크기·빠르기는 부르는 쪽 follow(SKILL_BODY 빠르기·holdSpeed 몫)·관절·근육이 정한다
    */
   corrTrunkTurn(x, y, s, psi0) {
     const T = this.padHand(x, y, s, _ct1);
@@ -749,10 +752,11 @@ export class Fighter {
       return a;
     };
     const tc = (psi) => _ct3.copy(T).applyAxisAngle(UP, -psi); // 가슴 틀 T
-    const solve = (dir, bad) => {
-      if (!bad(psi0)) return 0;
-      const hi0 = towards(dir);
-      if (bad(psi0 + dir * hi0)) return 0;
+    const rS = Math.hypot(sh.x, sh.z);
+    const rT = Math.hypot(T.x, T.z);
+    const solve = (dir, bad, hi0) => {
+      if (!bad(psi0) || hi0 <= 0) return 0;
+      if (bad(psi0 + dir * hi0)) return dir * hi0;
       let lo = 0;
       let hi = hi0;
       for (let i = 0; i < TURN_BISECT; i++) {
@@ -765,32 +769,51 @@ export class Fighter {
     let best = 0;
     if (this.shoulderRopes?.length) {
       const [p0, p1] = HUMAN.shoulderPlane;
-      // 밧줄 밖 = 두 반공간 중 하나라도 u·n < 0 (n 은 shoulderOn 의 rope(c) 방향). 어느 끝을 넘었나는 면 각 φ 가 쐐기 밖 호의 어느 쪽 끝에 가까운지로
-      //  (쐐기 밖 호를 가운데에서 나눔: 끝 p1 쪽 = 몸 앞 가로지름 → +side, 시작 p0 쪽 = 뒤로 → −side)
-      const over = (psi) => {
+      // 밧줄 밖 = 두 반공간 중 하나라도 u·n < 0 (n 은 shoulderOn 의 rope(c) 방향) = 면 각 φ 가 [p0, p1] 밖 (밖이 아니면 null)
+      const phiOut = (psi) => {
         const u = armU(tc(psi), sh, side, _ct4);
         const outside = [p1 - 90, p0 + 90].some((c) => Math.sin(c * HD) * u.x + side * Math.cos(c * HD) * u.z < 0);
-        if (!outside) return 0;
-        const phi = Math.atan2(u.x, side * u.z) / HD;
-        const up = phi - p1 - 360 * Math.floor((phi - p1) / 360); // p1 에서 위로 φ 까지 [0, 360)
-        const down = p0 - phi - 360 * Math.floor((p0 - phi) / 360); // φ 에서 위로 p0 까지 [0, 360)
-        return up <= down ? 1 : -1;
+        return outside ? Math.atan2(u.x, side * u.z) / HD : null;
       };
-      const d1 = solve(side, (psi) => over(psi) === 1);
-      const d2 = solve(-side, (psi) => over(psi) === -1);
-      best = Math.abs(d1) >= Math.abs(d2) ? d1 : d2;
+      const up = (phi) => phi - p1 - 360 * Math.floor((phi - p1) / 360); // p1 에서 위로 φ 까지 [0, 360)
+      const down = (phi) => p0 - phi - 360 * Math.floor((p0 - phi) / 360); // φ 에서 위로 p0 까지 [0, 360)
+      const phi0 = phiOut(psi0);
+      if (phi0 !== null) {
+        // 두 방향 다 푼다. +side(칼 든 어깨 앞으로): φ 가 줄어 p1 로 들어온다 → 아직 = 밖이고 p1 에서 위로 잰 각이 쐐기 밖 호의 가운데(half) 또는
+        //  φ0 중 먼 쪽 안 (들어왔다 p0 로 다시 나간 φ 는 '아직' 이 아님). −side(뒤로): φ 가 늘어 p0 로 들어온다 → 거울. 넘침 = 들어올 끝까지의 각.
+        //  φ0 가 그 쪽 반이면 예전 판정(가운데로 나눔) 그대로. 풀리는 쪽 중 작은 각, 둘 다 못 풀면 δₑ 에서 덜 넘치는 쪽
+        //  (안쪽 목표는 φ 가 가운데 너머여도 실제로 풀리는 쪽을 고른다)
+        const half = (360 - (p1 - p0)) / 2;
+        // δₑ: 바깥 목표 δ*, 안쪽 목표 접선 δₜ. 반 바퀴(π) 너머는 다른 방향으로 덜 돌아 닿는 같은 가슴 방향이라 괄호를 π 에서 끊는다 (기하)
+        const end = (dir) => Math.min(Math.PI, towards(dir) - (rT < rS ? Math.acos(rT / rS) : 0));
+        const ways = [
+          { dir: side, gap: up },
+          { dir: -side, gap: down },
+        ];
+        let pick = null;
+        for (const w of ways) {
+          const g0 = w.gap(phi0);
+          const left = (psi) => {
+            const phi = phiOut(psi);
+            return phi === null || w.gap(phi) > Math.max(g0, half) ? 0 : w.gap(phi);
+          };
+          const e = end(w.dir);
+          const turn = solve(w.dir, (psi) => left(psi) > 0, e);
+          const v = e > 0 ? left(psi0 + turn) : g0;
+          if (!pick || v < pick.v || (v === pick.v && Math.abs(turn) < Math.abs(pick.turn))) pick = { turn, v };
+        }
+        best = pick.turn;
+      }
     }
     const Dy = T.y - sh.y;
-    if (Math.abs(Dy) < L) {
-      const Lh = Math.sqrt(L * L - Dy * Dy);
-      const far = (psi) => {
-        const t = tc(psi);
-        return Math.hypot(t.x - sh.x, t.z - sh.z) > Lh;
-      };
-      const dir = Math.sin(face - psi0) >= 0 ? 1 : -1; // T 쪽으로 짧게 도는 방향
-      const d3 = solve(dir, far);
-      if (Math.abs(d3) > Math.abs(best)) best = d3;
-    }
+    const Lh = Math.sqrt(Math.max(0, L * L - Dy * Dy));
+    const far = (psi) => {
+      const t = tc(psi);
+      return Math.hypot(t.x - sh.x, t.z - sh.z) > Lh;
+    };
+    const dir = Math.sin(face - psi0) >= 0 ? 1 : -1; // T 쪽으로 짧게 도는 방향
+    const d3 = solve(dir, far, towards(dir));
+    if (Math.abs(d3) > Math.abs(best)) best = d3;
     return best;
   }
 
@@ -829,7 +852,8 @@ export class Fighter {
       const turn = -sk.aimRaw.x * BODY_TURN;
       // 순서 결합 (fix2 A, 엉덩이가 손보다 먼저): 거르기 전 패드가 명령하는 손 목표에 칼 어깨가 닿지 못하면(들림 면 밖·팔 길이 밖) 그 넘침 각만큼
       //  가슴을 더 틀고 골반이 같은 몫(PELVIS_SHARE)을 받는다. 손이 필요로 하는 만큼 통째로(s 를 곱하지 않음: 어느 단계든 손은 손가락이 간 곳으로).
-      //  자르기 없음 — 척추 ±45°(HUMAN.spineTwist)·applyPose 비틀림 ±0.8·근육이 막는다
+      //  자르기 없음 — 척추 ±45°(HUMAN.spineTwist)·applyPose 비틀림 ±0.8·근육이 막는다. 빠르기는 아래 follow 의 SKILL_BODY.pelvis·chest × spd 재사용
+      //  (휘두르지 않을 때 spd = SKILL_BODY.holdSpeed 0.3 → 가슴 26·0.3 = 7.8 rad/s 로 손 거르기 SKILL.aimFilter 14 rad/s 보다 느려, 느린 끌기에선 몸이 손 목표 뒤에 온다: 10/1 검토 F2, 사장님 확인 거리)
       const ex = this.corrTrunkTurn(sk.aimRaw.x, sk.aimRaw.y, s, turn);
       let pT = s * PELVIS_SHARE * turn + PELVIS_SHARE * ex;
       let cT = s * turn + ex;
