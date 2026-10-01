@@ -511,6 +511,12 @@ export class Skill {
       }
       this.readyNow = ready;
     }
+    if (this.corr === 'v2' && L > 0) {
+      // 보정 v2 쉼 무게의 목표 (fighter.updateBodyPose 가 SKILL_BODY 따라가기로 쫓고 driveSword 가 손·칼끝을 그만큼 옛 자세 지도 쪽으로 섞는다):
+      //  손가락이 닿았거나 움직이거나 휘두르는 중 = 0 (날것), 되돌아오는 동안 = 걷기 진행 recoverP (무릎 걷기는 진행 값이 없어 끝날 때까지 0),
+      //  벤 뒤 되돌아옴을 기다리는 동안 = 0, 그 밖(쉼, 되돌아옴 끝) = 1. 새 수·시계 없음 — 있는 사건만 읽는다
+      this.idleGoal = f.handHeld || f.inputActive || swinging ? 0 : this.recovering ? (this.recoverD0 != null ? this.recoverP : 0) : this.cutPending && canRecover ? 0 : 1;
+    }
     if (this.lunge > 0) {
       this.lunge -= dt;
       // 물러나려는 중이면 내딛지 않는다 (조작이 우선)
