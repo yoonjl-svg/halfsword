@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────
 //  support_measure.mjs — 보이지 않는 받침 재기 (읽기만 한다)
+//   출처: 디렉터 임시 폴더 scratchpad/support/tools/support_measure.mjs (support_sweep 10/1, 어느 워크트리에도 없던 도구) 를 본판에 이식(R2′ W1a).
+//   바뀐 것: --root 기본 = 이 트리 (tools/sim/../..). 식·장면·표본·출력은 그대로 (같은 트리면 같은 수: W1a 확인 idle,cuts quick 씨앗 1 — summary.json 의 meta.root 만 다르고 나머지 바이트 같음).
+//   유사도 특징(pelvisLead·footLoadP10·catchShare·legHf)을 뽑는 유일한 도구 — R2′ W2 의 지지 열(G3·G11)이 이것을 쓴다.
 //
-//   node support_measure.mjs --root=<트리> --scenes=<idle,walk,cuts,shove,hit,getup|all> [--set=GROUP.key=value,...]
+//   node tools/sim/support_measure.mjs [--root=<트리>] --scenes=<idle,walk,cuts,shove,hit,getup|all> [--set=GROUP.key=value,...]
 //        [--seed=N] [--out=<폴더>] [--quick] [--proof] [--json]
 //   라이브러리: import { measure, loadGame, SCENE_NAMES, summarise } from './support_measure.mjs'
 //     measure({ root, scenes, set, seed, out, quick, proof }) → { meta, scenes: {...}, proof }
@@ -1067,11 +1070,11 @@ if (process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(S
     if (!m) throw new Error('알 수 없는 인자 ' + a);
     args[m[1]] = m[2] ?? true;
   }
-  if (!args.root) throw new Error('--root=<트리> 필요');
+  const root = args.root ?? resolve(fileURLToPath(new URL('../..', import.meta.url))); // 기본 = 이 트리
   const scenes = !args.scenes || args.scenes === 'all' ? SCENE_NAMES : String(args.scenes).split(',');
   const set = parseSets(args.set);
   const out = args.out ? resolve(args.out) : null;
-  const res = await measure({ root: args.root, scenes, set, seed: +(args.seed ?? 1), out, quick: !!args.quick, proof: !!args.proof });
+  const res = await measure({ root, scenes, set, seed: +(args.seed ?? 1), out, quick: !!args.quick, proof: !!args.proof });
   const js = JSON.stringify(res, null, 1);
   const outHash = createHash('sha256').update(js).digest('hex').slice(0, 16);
   if (out) {

@@ -1,19 +1,20 @@
 // ─────────────────────────────────────────────────────────────
 //  live_twin.mjs — R2 실전 진단 쌍둥이 (브라우저 없이 main.js frame() 을 그대로 흉내: 같은 차림표·빠르기·표본·요약)
+//   출처: hs-diag(가지 wbs-diag 08b864a) tools/sim/live_twin.mjs + 디렉터 사본(scratchpad corr/impl/diag/run, corr·humanLimits 열). 본판 이식(R2′ W1a):
+//   --root 기본 = 이 트리, M·C1·C2·C3 칸(src/strike 가 있는 가지에서만 돌던 온몸·손짓·드라이브 칸)과 꼭두각시(--puppet) 제거. 표본·요약·sha 정의는 그대로
+//   (같은 트리·같은 칸이면 hs-diag 의 C0 칸과 passive sha 가 같다 — W1a 확인: C0-k1 60 s7 quick a003b0c7b562 n 1319).
 //
-//   node tools/sim/live_twin.mjs [--cells=M-wind-trunk-k1,C2-k1|main|controls|all|spot] [--pacings=60,30J|all] [--blocks=passive,fight]
-//        [--seeds=7] [--out=<폴더>] [--root=<체크아웃>] [--rows|--full] [--quick] [--rounds=2] [--maxS=60] [--foe=heinrich|default] [--mortal]
-//        [--puppet=zornhau_right_large] [--table]
+//   node tools/sim/live_twin.mjs [--cells=k1,k0.7|all] [--pacings=60,30J|all] [--blocks=passive,fight]
+//        [--seeds=7] [--out=<폴더>] [--root=<체크아웃>] [--rows|--full] [--quick] [--rounds=2] [--maxS=60] [--foe=heinrich|default] [--mortal] [--table]
 //   칸 (live_common 차림표·빠르기·sampleFighter·summarise 를 브라우저 도구와 같이 쓴다):
-//     M-<wind|stroke>-<trunk|wind>-k<0|0.4|0.7|1>  온몸·손짓·드라이브 켬 (본 칸)
-//     C1-<wind|stroke>-k<s>  온몸 끔 (settings.wholeBody 거짓 — 손짓·드라이브는 그대로 돈다)   C2-k<s>  손짓·드라이브 끔 (R0/R1 팔만)
-//     C3-<wind|stroke>-k<s>  드라이브만 끔   C0-k<s>  main 그대로 (--root=main 체크아웃: src/strike 없음 → main.js 의 프레임 몫 입력)
+//     k<0|0.4|0.7|1>  본판 그대로, 검술 보정 세기만 (옛 이름 C0-k<s> 도 받는다 — 파일 이름은 적은 그대로). all = k0,k0.4,k1
+//     설정 칸(BODY.chain 'legs' 등)은 with_config.mjs 로 감싸지 않는다 — 아이 과정이 따로 뜨므로 --root 에 그 설정의 트리를 주거나 R2P 탐색판 인자처럼 CONFIG 를 바꾼 트리를 쓴다
 //   묶음: passive = 상대 AI 멈춤·1.3 m·둘 다 죽지 않음 (--mortal: 나는 죽는다 = 브라우저 도구와 같게), 차림표 한 벌 + 50 ms
 //         fight = heinrich 기본 AI (?foe=heinrich&weapon=longsword), 차림표 되풀이 + 조이스틱 다가가기, 누가 죽으면 (기록 멈춤) 또는 fightT 60 s, 2 판
 //   내는 것: <out>/<cell>__<pacing>__s<seed>.json — 브라우저 도구 live_diag.mjs 와 같은 꼴 { meta, blocks: { passive, fight }, errors, worst }
 //            (블록: summary · rounds · events · sha (표본 JSON 줄마다) · shaEvents · steps · frames · samples (솎음 4, gzip-base64)).
 //            --rows (--full) 면 스텝 표본 전부 <cell>__<pacing>__s<seed>__<block>.samples.jsonl.gz
-//   --table: <out> 의 json 을 읽어 표 (table.md) 만 쓴다.  --puppet=<클립 id>: 꼭두각시 자세 차례를 같은 표본으로 (확인용)
+//   --table: <out> 의 json 을 읽어 표 (table.md) 만 쓴다.
 //  칸·묶음마다 새 node 과정 (모듈 상태가 섞이지 않게, nice 10, 하나씩). src 는 읽기만 — 하니스 쪽 바꿈은 페이지에서 하는 것과 같은 것뿐 (AI 멈춤·과녁 죽지 않음·손 쟁기)
 //  자르기·한도·바닥 없음 (재기만 한다)
 // ─────────────────────────────────────────────────────────────
@@ -42,32 +43,18 @@ const sha = (buf) => createHash('sha256').update(buf).digest('hex');
 // ───────── 칸 ─────────
 const SKILLS = ['0', '0.4', '1'];
 export function cellGroup(name) {
-  const M = [];
-  for (const i of ['wind', 'stroke']) for (const h of ['trunk', 'wind']) for (const k of SKILLS) M.push(`M-${i}-${h}-k${k}`);
-  const C = [];
-  for (const i of ['wind', 'stroke']) for (const k of SKILLS) C.push(`C1-${i}-k${k}`);
-  for (const k of SKILLS) C.push(`C2-k${k}`);
-  for (const i of ['wind', 'stroke']) for (const k of SKILLS) C.push(`C3-${i}-k${k}`);
-  if (name === 'main') return M;
-  if (name === 'controls') return C;
-  if (name === 'all') return [...M, ...C];
-  if (name === 'spot') return ['M-wind-trunk-k0.7', 'M-stroke-trunk-k0.7'];
-  if (name === 'C0') return SKILLS.map((k) => `C0-k${k}`);
+  if (name === 'all' || name === 'main' || name === 'C0') return SKILLS.map((k) => `k${k}`);
   return [name];
 }
-/** 칸 이름 → 요청 (settings·CONFIG 스위치) */
+/** 칸 이름 → 요청 (본판: 검술 보정 세기만. kind 'main' = hs-diag 의 C0 칸과 같은 뜻) */
 export function parseCell(id) {
   let m;
   const sk = (s) => {
     if (!['0', '0.4', '0.7', '1'].includes(s)) throw new Error(`칸 ${id}: 검술 보정 ${s} (0 | 0.4 | 0.7 | 1)`);
     return s;
   };
-  if ((m = /^M-(wind|stroke)-(trunk|wind)-k([\d.]+)$/.exec(id))) return { name: id, kind: 'M', input: m[1], hand: m[2], skill: sk(m[3]), whole: true, gesture: true, drive: true };
-  if ((m = /^C1-(wind|stroke)(?:-(trunk|wind))?-k([\d.]+)$/.exec(id))) return { name: id, kind: 'C1', input: m[1], hand: m[2] || 'trunk', skill: sk(m[3]), whole: false, gesture: true, drive: true };
-  if ((m = /^C2-k([\d.]+)$/.exec(id))) return { name: id, kind: 'C2', input: null, hand: null, skill: sk(m[1]), whole: true, gesture: false, drive: false };
-  if ((m = /^C3-(wind|stroke)-k([\d.]+)$/.exec(id))) return { name: id, kind: 'C3', input: m[1], hand: null, skill: sk(m[2]), whole: true, gesture: true, drive: false };
-  if ((m = /^C0-k([\d.]+)$/.exec(id))) return { name: id, kind: 'C0', input: null, hand: null, skill: sk(m[1]), whole: null, gesture: null, drive: null };
-  throw new Error(`모르는 칸 ${id}`);
+  if ((m = /^(?:C0-)?k([\d.]+)$/.exec(id))) return { name: id, kind: 'main', input: null, hand: null, skill: sk(m[1]), whole: null, gesture: null, drive: null };
+  throw new Error(`모르는 칸 ${id} (k<0|0.4|0.7|1>)`);
 }
 
 // ───────── 차림표 (브라우저 도구 live_diag.mjs programme 과 같다): 보통 = buildProgramme, --quick = 감기 크게 빠르게 · 긋기 보통 느리게 × clean·cont 4 획
@@ -114,7 +101,6 @@ async function child() {
   const quick = !!arg('quick', false);
   const rowsPath = arg('rows-path', null);
   const mortal = !!arg('mortal', false); // PASSIVE 에서 나는 죽는다 (브라우저 도구와 같게: 죽으면 기록 멈춤)
-  const puppetId = arg('puppet', null);
   const u = (p) => pathToFileURL(join(ROOT, p)).href;
   // Rapier 는 전역 window 가 없을 때 불러야 한다 (harness_m.mjs 와 같음)
   const RAPIER = (await import(u('node_modules/@dimforge/rapier3d-compat/rapier.mjs'))).default;
@@ -128,28 +114,13 @@ async function child() {
   const { Input } = await import(u('src/input.js'));
   const { Emotions } = await import(u('src/emotions.js'));
   const { CHARACTERS_BY_ID } = await import(u('src/characters.js'));
-  const hasStrike = existsSync(join(ROOT, 'src/strike/atlas.js'));
-  if (cell.kind === 'C0' && hasStrike) throw new Error('C0 (main 그대로) 는 --root=<main 체크아웃> 에서만 (이 뿌리에 src/strike 가 있다)');
-  if (cell.kind !== 'C0' && !hasStrike) throw new Error(`${cell.id}: 이 뿌리에 src/strike 가 없다 (main 체크아웃은 C0 칸만)`);
-  let atlas = null;
-  if (hasStrike) atlas = await (await import(u('src/strike/atlas.js'))).loadAtlasPacked();
-  const puppetMod = puppetId ? await import(u('src/strike/puppet.js')) : null;
+  if (existsSync(join(ROOT, 'src/strike/atlas.js'))) throw new Error('이 이식판은 본판(src/strike 없음) 전용 — 온몸 가지(M·C1~C3 칸)는 hs-diag 의 live_twin 으로');
   const { PHYSICS, ARENA } = CONFIG;
   const DT = PHYSICS.timestep;
   const MAXS = PHYSICS.maxStepsPerFrame;
 
-  // ── 설정 (main.js settings · 칸 스위치: 파이터를 만들기 전) ──
-  const settings = { skill: cell.skill, wholeBody: cell.whole !== false, handMode: cell.hand || 'trunk' };
-  if (CONFIG.GESTURE && cell.gesture != null) CONFIG.GESTURE.on = cell.gesture;
-  if (CONFIG.GESTURE && cell.input) CONFIG.GESTURE.input = cell.input; // ?input= 과 같다 (refreshSettingsUI 몫)
-  if (CONFIG.DRIVE && cell.drive != null) CONFIG.DRIVE.on = cell.drive;
-  const DRIVE_TRUNK = CONFIG.DRIVE ? { hands: CONFIG.DRIVE.hands, handMode: CONFIG.DRIVE.handMode, ffFilter: CONFIG.DRIVE.ffFilter } : null;
-  const applyHandMode = () => {
-    const D = CONFIG.DRIVE;
-    if (!D) return;
-    if (settings.handMode === 'wind') (D.hands = true), (D.handMode = 'windOnly'), (D.ffFilter = true);
-    else (D.hands = DRIVE_TRUNK.hands), (D.handMode = DRIVE_TRUNK.handMode), (D.ffFilter = DRIVE_TRUNK.ffFilter);
-  };
+  // ── 설정 (main.js settings: 본판은 검술 보정 세기뿐 — 파이터를 만들기 전) ──
+  const settings = { skill: cell.skill };
 
   // ── 씨앗 난수 (harness_m.seedRandom 과 같은 식; 판 사이 이어 간다 — 페이지와 같게) ──
   {
@@ -197,7 +168,7 @@ async function child() {
   const foe = foeArg === 'default' ? null : CHARACTERS_BY_ID[foeArg];
   if (foeArg !== 'default' && !foe) throw new Error(`모르는 상대 ${foeArg}`);
   const foeWeapon = L.PROGRAMME.passive.weapon; // ?weapon=longsword → 상대도 롱소드 (prepareRound)
-  let world, eventQueue, colliderInfo, player, enemy, ai, combat, playerEmo, playerEv, puppet = null;
+  let world, eventQueue, colliderInfo, player, enemy, ai, combat, playerEmo, playerEv;
   let hitStop = 0, slowMo = 0, clashCooldown = 0, clashStopCooldown = 0, roundOver = false, roundOverTime = 0, result = null;
   const tremor = { x: 0, y: 0, ax: 0, ay: 0, t: 0 };
   let acc = 0, last = 0, now = 0, tStepNow = 0;
@@ -209,7 +180,6 @@ async function child() {
 
   function newRound(k) {
     CONFIG.BODY.weightMode = 'hybrid';
-    if (CONFIG.WHOLE) CONFIG.WHOLE.on = !!settings.wholeBody;
     if (world) world.free();
     if (eventQueue) eventQueue.free();
     world = new RAPIER.World({ x: 0, y: PHYSICS.gravity, z: 0 });
@@ -230,7 +200,7 @@ async function child() {
     // 무기 파손 씨앗 = 페이지의 Fighter 셈 (메뉴 뒤 판 1·2, k 번째 싸움 판 2k+1·2k+2)
     Fighter._breakCount = 2 * k;
     const xP = -ARENA.startGap / 2;
-    const gapE = puppetId ? L.PROGRAMME.passive.gapM + 1.5 : block === 'passive' ? L.PROGRAMME.passive.gapM : ARENA.startGap;
+    const gapE = block === 'passive' ? L.PROGRAMME.passive.gapM : ARENA.startGap;
     player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: '나', x: xP, heading: 0, look: LOOKS.player, weapon: foeWeapon });
     enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: foe ? foe.name : '상대', x: xP + gapE, heading: Math.PI, look: foe ? foe.look : LOOKS.enemy, weapon: foeWeapon, revive: foe?.revive });
     const persona = foe && foeWeapon !== foe.weapon ? { ...foe.ai.persona, school: foeWeapon } : foe?.ai.persona;
@@ -242,12 +212,9 @@ async function child() {
     player.skill.autoGuard = true;
     input.fingerTrace?.clear();
     input.syncHand?.();
-    if (hasTrace) (player.skill.detect = true), (player.skill.trace = input.fingerTrace); // main (C0) 에는 손가락 궤적·detect 가 없다
+    if (hasTrace) (player.skill.detect = true), (player.skill.trace = input.fingerTrace); // 본판에는 손가락 궤적·detect 가 없다 (null)
     player.ges?.attachTrace(input.fingerTrace);
     player.ges?.reset();
-    // (R1 가지 체크아웃은 아틀라스·손짓 층만 있고 드라이브가 없다: attachDrive 가 없으면 건너뛴다)
-    const attachDrives = () => { if (atlas) for (const f of [player, enemy]) if (f && typeof f.attachDrive === 'function' && f.drive?.atlas !== atlas) f.attachDrive(atlas); };
-    attachDrives();
     player.onCommit = (stage, S, fam) => ev({ type: 'commit', stage, S: +S, fam, ...evBase() }); // main.js 의 덮개는 금색 자취·진동뿐 (물리 없음)
     combat = new Combat(colliderInfo, { onWound, onClash });
     roundOver = false;
@@ -259,7 +226,7 @@ async function child() {
       const okd = f.knockDown.bind(f);
       f.knockDown = (heavy) => (f.state === 'stand' && ev({ type: 'knock', who, heavy: heavy !== false, ...evBase() }), okd(heavy));
     }
-    if (block === 'passive' || puppetId) {
+    if (block === 'passive') {
       ai.update = () => enemy.move.set(0, 0);
       // PASSIVE: 둘 다 죽지 않는다 (상처·피·아픔·넘어짐은 그대로). 멈춘 상대 칼에 내 몸이 부딪혀 죽으면 판 끝 슬로모션으로 차림표가 끊긴다
       //  → 죽었을 때를 'death' 사건으로만 적고 차림표를 끝까지 (참수 뒤 목 상처는 건너뜀, chain.mjs 과녁과 같게)
@@ -270,14 +237,6 @@ async function child() {
       }
     }
     // beginFight
-    applyHandMode();
-    attachDrives();
-    if (puppetId) {
-      const c = puppetMod.parseClipId(puppetId);
-      if (!c || !atlas.has(c.cut, c.side)) throw new Error(`모르는 클립 ${puppetId}`);
-      puppet = new puppetMod.Puppet(player, atlas, { cut: c.cut, side: c.side, S: c.S, loop: true });
-      puppet.start();
-    }
     input.enabled = true;
   }
 
@@ -356,7 +315,6 @@ async function child() {
   let own = null;
   let first = true;
   const frames = { n: 0, sum: 0, min: Infinity, max: 0, steps: {}, capped: 0, scaled: 0 };
-  const pupChk = puppetId ? { n: 0, dElMax: 0, dEl: [] } : null;
   // 칼을 놓치면 (dropSword) 관절은 지워지고 f.gripJoint 손잡이만 남는다 → 그 anchor1 을 읽으면 Rapier 가 unreachable 로 멈춘다.
   //  공용 sampleFighter 를 고치지 않고: 놓친 동안만 gripJoint 를 null 로 보이는 겉 (나머지는 그대로 파이터)
   const noGrip = (f) => new Proxy(f, { get: (t, k) => (k === 'gripJoint' ? null : Reflect.get(t, k)) });
@@ -378,11 +336,6 @@ async function child() {
     }
     s.rd = rdNow;
     samples.push(s);
-    if (pupChk && puppet) {
-      const d = Math.abs(s.elS - (puppet.P.flex * 180) / Math.PI);
-      pupChk.n++;
-      pupChk.dElMax = Math.max(pupChk.dElMax, d);
-    }
   };
 
   // ── main.js frame() (싸움 상태) ──
@@ -439,10 +392,9 @@ async function child() {
       enemy.foe = player;
       player.faceTarget = enemy.bodies.pelvis.translation();
       enemy.faceTarget = player.bodies.pelvis.translation();
-      if (!puppet) ai.update(PHYSICS.timestep);
+      ai.update(PHYSICS.timestep);
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);
-      if (puppet) puppet.update(PHYSICS.timestep);
       player.cacheState();
       enemy.cacheState();
       world.step(eventQueue, combat.physicsHooks);
@@ -462,7 +414,7 @@ async function child() {
   const pace = L.pacer(pacing, seed);
   const fightMaxS = +arg('maxS', quick ? 12 : L.PROGRAMME.fight.maxS);
   const nRounds = block === 'fight' ? +arg('rounds', quick ? 1 : L.PROGRAMME.fight.rounds) : 1;
-  const prog = puppetId ? { strokes: [], t0: 0, tEnd: 0 } : programme(block === 'fight' ? fightLoops(fightMaxS, quick) : 1, quick);
+  const prog = programme(block === 'fight' ? fightLoops(fightMaxS, quick) : 1, quick);
   const rounds = [];
   const roundSpans = [];
   const winsAll = [];
@@ -491,8 +443,8 @@ async function child() {
     let qi = 0;
     let stickOn = false, stickDown = false;
     const iS0 = samples.length;
-    // PASSIVE: 차림표 끝 + 50 ms (브라우저 도구와 같다), 꼭두각시: 클립 두 번 + 1.4 s
-    const endT = puppetId ? wall0 + 1000 * (2 * puppet.T + 1.4) : block === 'passive' ? wall0 + prog.tEnd + 50 : Infinity;
+    // PASSIVE: 차림표 끝 + 50 ms (브라우저 도구와 같다)
+    const endT = block === 'passive' ? wall0 + prog.tEnd + 50 : Infinity;
     let reason = null;
     while (!reason) {
       const next = last + pace.next();
@@ -515,7 +467,7 @@ async function child() {
       else if (now >= endT) reason = 'end';
     }
     rec = false;
-    const result = block === 'passive' || puppetId ? 'end' : reason === 'roundOver' ? (enemy.alive ? 'loss' : 'win') : reason === 'maxS' ? 'timeout' : reason;
+    const result = block === 'passive' ? 'end' : reason === 'roundOver' ? (enemy.alive ? 'loss' : 'win') : reason === 'maxS' ? 'timeout' : reason;
     const lastTw = samples.length > iS0 ? samples[samples.length - 1].tw : wall0;
     const winAll = L.strokeWindows(prog, wall0);
     const wins = winAll.filter((w) => w.twEnd <= lastTw); // 판 끝에 끊긴 획은 뺀다
@@ -533,8 +485,8 @@ async function child() {
   const secRun = (performance.now() - t0run) / 1000;
 
   // ── 요약 (브라우저 도구와 같은 meta: 판 기록은 FIGHT 만, 서 있기 창은 첫 판) ──
-  const ginput = cell.kind === 'C0' || cell.gesture === false ? null : cell.input;
-  const bname = puppetId ? 'puppet' : block;
+  const ginput = null; // 본판에는 손짓 입력이 없다
+  const bname = block;
   const rMeta = (rs) => (block === 'fight' ? rs.map((x) => ({ result: x.result, t: x.fightT })) : []);
   const summary = L.summarise(samples, events, { dt: DT, who: 'player', ginput, strokes: winsAll, standWin: roundSpans[0].standWin, rounds: rMeta(rounds), cell: cell.name, block: bname });
   // 판마다 요약 (더 붙인 것: 브라우저 도구에는 없다)
@@ -551,14 +503,8 @@ async function child() {
   const shaEvents = hE.digest('hex');
   if (rowsPath) writeFileSync(rowsPath, gzipSync(Buffer.from(samples.map((s) => JSON.stringify(s)).join('\n'))));
   const live = {
-    'WHOLE.on': CONFIG.WHOLE ? CONFIG.WHOLE.on : null,
-    'GESTURE.on': CONFIG.GESTURE ? CONFIG.GESTURE.on : null,
-    'GESTURE.input': CONFIG.GESTURE ? CONFIG.GESTURE.input : null,
-    'DRIVE.on': CONFIG.DRIVE ? CONFIG.DRIVE.on : null,
-    'DRIVE.hands': CONFIG.DRIVE ? CONFIG.DRIVE.hands : null,
-    'DRIVE.handMode': CONFIG.DRIVE ? CONFIG.DRIVE.handMode : null,
-    'DRIVE.ffFilter': CONFIG.DRIVE ? CONFIG.DRIVE.ffFilter : null,
     'BODY.weightMode': CONFIG.BODY.weightMode,
+    'BODY.chain': CONFIG.BODY.chain ?? null, 'BODY.legTorque': CONFIG.BODY.legTorque ?? null, 'GAIT.assist': CONFIG.GAIT?.assist ?? null, // (R2′ 칸 표시 — 읽기만)
     'INPUT.coalesce': CONFIG.INPUT.coalesce ?? null,
     timestep: PHYSICS.timestep,
     maxSteps: PHYSICS.maxStepsPerFrame,
@@ -568,26 +514,18 @@ async function child() {
     'skill.level': player.skill.level,
     guardWeight: player.guardWeight ? player.guardWeight() : null,
     hasTrace,
-    atlas: !!atlas,
     foe: foe ? foe.id : 'default',
     corr: player.skill.corr ?? null, corrTip: player.skill.corrTip ?? null, corrAI: enemy.skill.corr ?? null, humanLimits: CONFIG.BODY.humanLimits ?? null, // (corr 측정)
   };
   // 요청과 살아 있는 값이 다르면 오류 (잘못된 칸을 조용히 재지 않는다)
   const bad = [];
-  if (cell.kind !== 'C0') {
-    if (live['WHOLE.on'] !== cell.whole) bad.push(`WHOLE.on ${live['WHOLE.on']}`);
-    if (live.ges !== cell.gesture) bad.push(`ges ${live.ges}`);
-    if (live.drive !== cell.drive) bad.push(`drive ${live.drive}`);
-    if (cell.gesture && live['GESTURE.input'] !== cell.input) bad.push(`input ${live['GESTURE.input']}`);
-    if (cell.drive && live['DRIVE.hands'] !== (cell.hand === 'wind')) bad.push(`hands ${live['DRIVE.hands']}`);
-  }
+  if (live.ges || live.drive || CONFIG.WHOLE) bad.push('이 트리에 온몸 가지(ges·drive·WHOLE)가 있다 — 본판 이식판이 아니라 hs-diag 의 live_twin 으로');
   if (Math.abs(live['skill.level'] - +cell.skill) > 1e-9) bad.push(`skill ${live['skill.level']}`);
   const out = {
     block: bname, summary, rounds, events, errors: bad.map((b) => `살아 있는 값이 요청과 다르다: ${b}`), ownCollide: own, sha: sampleSha, shaEvents, steps: samples.length, frames: frames.n,
     frameStats: { meanMs: +(frames.sum / Math.max(1, frames.n)).toFixed(4), minMs: +frames.min.toFixed(4), maxMs: +frames.max.toFixed(4), steps: frames.steps, capped: frames.capped, scaled: frames.scaled },
     samples: pack(samples, +arg('every', DECIM)), wallS: secRun, live, wouldDie, mortal,
     programme: { strokes: prog.strokes.length, t0: prog.t0, tEnd: prog.tEnd, quick: !!prog.quick, loops: block === 'fight' ? fightLoops(fightMaxS, quick) : 1, maxS: block === 'fight' ? fightMaxS : null, rounds: nRounds },
-    puppet: pupChk ? { clip: puppetId, T: puppet.T, n: pupChk.n, elbowVsClipMaxDeg: +pupChk.dElMax.toFixed(3) } : undefined,
   };
   writeFileSync(arg('tmp'), JSON.stringify(out));
 }
@@ -606,23 +544,22 @@ const f2 = (x) => (x == null || !Number.isFinite(x) ? '-' : (+x).toFixed(2));
 function line(run) {
   const b = run.blocks;
   const s = (k) => b[k]?.summary;
-  const P = s('passive'), F = s('fight'), Q = s('puppet');
+  const P = s('passive'), F = s('fight');
   const one = (S, k) =>
     S
       ? `${k} dist ${f3(S.distortion.index)} pen/str ${f3(S.selfPen.perStroke)} tele/str ${f3(S.selfPen.teleports.perStroke)} bothOff ${f3(S.boneless.feet.bothOffFrac)} load ${f2(S.boneless.load.median)} pelStd ${f3(S.boneless.pelvis.stdMedian)} dip ${f3(S.boneless.pelvis.dip)} osc>8 ${f3(S.boneless.osc.highShareMean)} tip ${f2(S.task.tipPeakMedian)} hits/str ${f2(S.task.hitsPerStroke)} falls ${S.task.falls}${S.control ? ` miscl ${S.control.misclass.count}/${S.control.strokes} spur c/t ${S.control.spuriousCommits.clean}/${S.control.spuriousCommits.cont} drv+ ${f2(S.control.driveAfterReleaseMs.median)}ms ret ${f2(S.control.postLiftHandSpeed.median)}` : ''}`
       : '';
-  return [one(P, 'P'), one(F, 'F'), one(Q, 'Q'), F ? `rounds ${b.fight.rounds.map((r) => `${r.result}@${f2(r.fightT)}`).join(',')}` : ''].filter(Boolean).join(' | ');
+  return [one(P, 'P'), one(F, 'F'), F ? `rounds ${b.fight.rounds.map((r) => `${r.result}@${f2(r.fightT)}`).join(',')}` : ''].filter(Boolean).join(' | ');
 }
 function parent() {
   const OUT = resolve(arg('out', 'tools/sim/out/live_twin'));
   mkdirSync(OUT, { recursive: true });
   if (arg('table', false)) return table(OUT);
-  const cells = list('cells', 'M-wind-trunk-k1').flatMap(cellGroup);
+  const cells = list('cells', 'k1').flatMap(cellGroup);
   const pacings = list('pacings', '60').flatMap((p) => (p === 'all' ? L.PACING_NAMES : [p]));
   for (const p of pacings) if (!L.PACINGS[p]) throw new Error(`모르는 pacing ${p}`);
   const seeds = list('seeds', '7').map(Number);
-  const puppetId = arg('puppet', null);
-  const blocks = puppetId ? ['puppet'] : list('blocks', 'passive,fight');
+  const blocks = list('blocks', 'passive,fight');
   const quick = !!arg('quick', false);
   const toolSha256 = sha(readFileSync(SELF));
   const commonSha256 = sha(readFileSync(COMMON));
@@ -633,7 +570,7 @@ function parent() {
   for (const cell of cells)
     for (const pacing of pacings)
       for (const seed of seeds) {
-        const file = join(OUT, `${cell}__${pacing}__s${seed}${tag}${puppetId ? '__' + puppetId : ''}.json`);
+        const file = join(OUT, `${cell}__${pacing}__s${seed}${tag}.json`);
         const C = parseCell(cell);
         // 브라우저 도구 live_diag.mjs 와 같은 꼴: { meta, blocks, errors, worst } (쌍둥이는 그리지 않아 worst 는 빈 것)
         const T0 = Date.now();
@@ -651,10 +588,9 @@ function parent() {
         for (const block of blocks) {
           const tmp = join(OUT, `.tmp_${process.pid}_${block}.json`);
           const rowsPath = arg('rows', false) || arg('full', false) ? file.replace(/\.json$/, `__${block}.samples.jsonl.gz`) : null;
-          const cargs = [SELF, '--child', `--root=${ROOT}`, `--cell=${cell}`, `--pacing=${pacing}`, `--seed=${seed}`, `--block=${block === 'puppet' ? 'passive' : block}`, `--tmp=${tmp}`];
+          const cargs = [SELF, '--child', `--root=${ROOT}`, `--cell=${cell}`, `--pacing=${pacing}`, `--seed=${seed}`, `--block=${block}`, `--tmp=${tmp}`];
           if (quick) cargs.push('--quick');
           if (rowsPath) cargs.push(`--rows-path=${rowsPath}`);
-          if (puppetId) cargs.push(`--puppet=${puppetId}`);
           for (const k of ['rounds', 'maxS', 'every', 'foe', 'mortal']) if (args[k] != null) cargs.push(`--${k}=${args[k]}`);
           const t0 = Date.now();
           const r = spawnSync('nice', ['-n', '10', process.execPath, ...cargs], { encoding: 'utf8', maxBuffer: 1 << 26 });
@@ -692,11 +628,10 @@ function parent() {
   writeFileSync(ix, JSON.stringify([...prev.filter((r) => !seen.has(r.file)), ...summaryRows], null, 1));
 }
 
-// ───────── 표 (--table): 칸 파일 → table.md (본 칸 옆에 C0·C1·C2·C3) ─────────
+// ───────── 표 (--table): 칸 파일 → table.md ─────────
 function table(OUT) {
   const runs = readdirSync(OUT).filter((f) => f.endsWith('.json') && f.includes('__') && !f.startsWith('.')).map((f) => JSON.parse(readFileSync(join(OUT, f), 'utf8'))).filter((r) => r.meta && r.blocks).map((r) => ({ ...r, cell: r.meta.cell, pacing: r.meta.pacing, seed: r.meta.seed, quick: r.meta.quick }));
-  const order = (c) => (c.startsWith('M-') ? 0 : c.startsWith('C0') ? 1 : c.startsWith('C1') ? 2 : c.startsWith('C2') ? 3 : 4);
-  runs.sort((a, b) => order(a.cell) - order(b.cell) || a.cell.localeCompare(b.cell) || String(a.pacing).localeCompare(String(b.pacing)) || a.seed - b.seed);
+  runs.sort((a, b) => a.cell.localeCompare(b.cell) || String(a.pacing).localeCompare(String(b.pacing)) || a.seed - b.seed);
   const cols = [
     ['distortion', (S) => f3(S.distortion.index)],
     ['worst joint', (S) => Object.entries(S.distortion.perJoint).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${f2(v)}`).join(' ')],
@@ -723,7 +658,7 @@ function table(OUT) {
     ['ret m/s', (S) => (S.control ? f2(S.control.postLiftHandSpeed.median) : '-')],
     ['hitch max', (S) => (S.control ? f2(S.control.hitch.max) : '-')],
   ];
-  const md = ['# live_twin 표', '', `칸 파일 ${runs.length} 개 (${OUT}). 본 칸 (M) 다음에 대조 칸 C0 main 그대로 · C1 온몸 끔 · C2 R0/R1 팔만 · C3 드라이브 끔`, ''];
+  const md = ['# live_twin 표', '', `칸 파일 ${runs.length} 개 (${OUT}). 칸 = k<검술 보정> (본판)`, ''];
   for (const blk of ['passive', 'fight']) {
     md.push(`## ${blk}`, '', `| cell | pacing | seed | ${cols.map((c) => c[0]).join(' | ')} |`, `|${'---|'.repeat(cols.length + 3)}`);
     for (const r of runs) {

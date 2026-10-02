@@ -1,5 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  live_diag.mjs — R2 실전 진단 브라우저 하니스 (하니스 a). 폰 같은 프레임 빠르기로 실제 게임 길을 결정적으로 돌려 잰다
+//   출처: hs-diag(가지 wbs-diag 08b864a) tools/browser/live_diag.mjs 를 본판에 이식(R2′ W1a). 바뀐 것: M·C1·C2·C3 칸(src/strike 가 있는 가지의
+//   온몸·손짓·드라이브 칸) 제거 → 칸은 k<검술 보정> 하나 (옛 이름 C0-k<s> 도 받는다). R2′ 탐색판은 --url 에 그 빌드(public/r2p/?chain=legs 같은 주소 인자)를 준다.
+//   터치·프레임·표본·sha 정의는 그대로 (tools/sim/live_twin.mjs 와 같은 칸 이름·파일 꼴).
 //   · 결정적 브라우저 (det.mjs 방식을 옮김): 페이지 난수 씨앗 고정 · 소리 끔 · performance.now·rAF 를 손으로 넘김 · 캔버스 읽기
 //   · 프레임 간격 = live_common PACINGS (씨앗 고정). 프레임마다: 그 프레임 끝 시각까지의 터치 표본을 CDP Input.dispatchTouchEvent 로
 //     진짜 캔버스에 보낸 뒤 (timestamp = (timeOrigin + 페이지 ms)/1000 → e.timeStamp 가 가짜 시계와 같다) 한 프레임을 넘긴다
@@ -16,11 +19,10 @@
 //   · 게임 캔버스는 CSS 로 투명하게 둔다 (--disable-gpu-compositing 과 함께: 소프트웨어 합성이 WebGL 을 읽어 오지 않게 → 터치·프레임이 빠르다).
 //     누르기 판정·그리기·읽기는 그대로 (opacity 는 hit-test 를 바꾸지 않는다)
 //  실행 (vite 를 띄운 뒤):
-//   node tools/browser/live_diag.mjs --url=http://127.0.0.1:5210 --cells=M-wind-trunk-k1 --pacings=60,30J [--blocks=passive,fight]
+//   node tools/browser/live_diag.mjs --url=http://127.0.0.1:5210 --cells=k1 --pacings=60,30J [--blocks=passive,fight]
 //        [--rounds=2] [--seed=7] [--out=폴더] [--render-skip] [--png] [--quick] [--full] [--max-s=60] [--tree=이름] [--serial] [--pad0-ms=0]
 //   node tools/browser/live_diag.mjs --table --out=폴더     (폴더의 <칸>__<빠르기>.json → table.md)
-//  칸: M-<wind|stroke>-<trunk|wind>-k<0|0.4|0.7|1> · C1-<입력>[-<손>]-k<s> (온몸 끔) · C2-k<s> (손짓·드라이브 끔) · C3-<입력>-k<s> (드라이브만 끔) · C0-k<s> (main 그대로, --url 이 그 트리)
-//   M* = 주 칸 12 개
+//  칸: k<0|0.4|0.7|1> (본판 그대로, 검술 보정 세기만; --url 이 그 트리·그 주소 인자) · all = k0,k0.4,k1
 //  playwright 는 /home/user/halfsword/package.json 기준으로 찾는다 (det.mjs 와 같이). 크롬 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs';
@@ -55,9 +57,7 @@ const TREE = opt('tree', null);
 const BLOCKS = String(opt('blocks', 'passive,fight')).split(',').filter(Boolean);
 const PACS = String(opt('pacings', '60')).split(',').filter(Boolean);
 const SKILLS = ['0', '0.4', '0.7', '1'];
-const MAIN_CELLS = [];
-for (const i of ['wind', 'stroke']) for (const h of ['trunk', 'wind']) for (const k of ['0', '0.4', '1']) MAIN_CELLS.push(`M-${i}-${h}-k${k}`);
-const CELLS = String(opt('cells', 'M-wind-trunk-k1')).split(',').filter(Boolean).flatMap((c) => (c === 'M*' ? MAIN_CELLS : [c]));
+const CELLS = String(opt('cells', 'k1')).split(',').filter(Boolean).flatMap((c) => (c === 'all' ? ['k0', 'k0.4', 'k1'] : [c]));
 const CHROME = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
 const CHROME_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox', '--disable-gpu-compositing'];
 const VIEW = { width: L.MAP_PHONE.innerWidth, height: L.MAP_PHONE.innerHeight };
@@ -70,12 +70,8 @@ const SWORD = 1, STICK = 2; // CDP 손가락 id
 function parseCell(name) {
   let m;
   const k = (s) => { if (!SKILLS.includes(s)) throw new Error(`칸 ${name}: 검술 보정 값 ${s} (메뉴 값 ${SKILLS.join('/')})`); return s; };
-  if ((m = /^M-(wind|stroke)-(trunk|wind)-k([\d.]+)$/.exec(name))) return { name, kind: 'M', input: m[1], hand: m[2], skill: k(m[3]), whole: true, gesture: true, drive: true };
-  if ((m = /^C1-(wind|stroke)(?:-(trunk|wind))?-k([\d.]+)$/.exec(name))) return { name, kind: 'C1', input: m[1], hand: m[2] || 'trunk', skill: k(m[3]), whole: false, gesture: true, drive: true };
-  if ((m = /^C2-k([\d.]+)$/.exec(name))) return { name, kind: 'C2', input: null, hand: null, skill: k(m[1]), whole: true, gesture: false, drive: false };
-  if ((m = /^C3-(wind|stroke)-k([\d.]+)$/.exec(name))) return { name, kind: 'C3', input: m[1], hand: null, skill: k(m[2]), whole: true, gesture: true, drive: false };
-  if ((m = /^C0-k([\d.]+)$/.exec(name))) return { name, kind: 'C0', input: null, hand: null, skill: k(m[1]), whole: null, gesture: null, drive: null };
-  throw new Error(`모르는 칸 ${name}`);
+  if ((m = /^(?:C0-)?k([\d.]+)$/.exec(name))) return { name, kind: 'main', input: null, hand: null, skill: k(m[1]), whole: null, gesture: null, drive: null };
+  throw new Error(`모르는 칸 ${name} (k<0|0.4|0.7|1>)`);
 }
 
 // ───────── 차림표 ─────────
@@ -381,14 +377,10 @@ function pageHarness(o) {
 
 // ───────── 칸 설정 ─────────
 function cellSettings(c) {
-  const s = { pixel: false, sound: false, skill: c.skill, fpsCap: true };
-  if (c.kind !== 'C0') Object.assign(s, { wholeBody: c.whole, gestureInput: c.input || 'wind', handMode: c.hand || 'trunk' });
-  return s;
+  return { pixel: false, sound: false, skill: c.skill, fpsCap: true };
 }
 function cellQuery(c) {
   const q = new URLSearchParams({ weapon: L.PROGRAMME.fight.weapon, foe: L.PROGRAMME.fight.foe, stage: 'poseidon' });
-  if (c.input) q.set('input', c.input);
-  if (c.hand) q.set('hand', c.hand);
   return q.toString();
 }
 /** 켜진 상태 ↔ 요청: 어긋나면 오류 목록 */
@@ -405,25 +397,10 @@ function checkLive(c, live) {
   eq('weapon', live.weapon, L.PROGRAMME.fight.weapon);
   eq('foeWeapon', live.foeWeapon, L.PROGRAMME.fight.weapon);
   eq('foeName', live.foeName, '하인리히 도른');
-  if (c.kind === 'C0') {
-    eq('GESTURE', live.GESTURE, null);
-    eq('player.ges', live.ges, 'absent');
-    eq('player.drive', live.drive, 'absent');
-    return bad;
-  }
-  eq('settings.wholeBody', live.settings.wholeBody, c.whole);
-  eq('WHOLE.on', live.WHOLE, c.whole);
-  eq('GESTURE.on', live.GESTURE?.on, c.gesture);
-  eq('DRIVE.on', live.DRIVE?.on, c.drive);
-  eq('player.ges', live.ges, c.gesture ? 'on' : 'null');
-  eq('player.drive', live.drive, c.drive ? 'on' : 'null');
-  if (c.input) eq('GESTURE.input', live.GESTURE?.input, c.input);
-  if (c.hand) {
-    eq('settings.handMode', live.settings.handMode, c.hand);
-    eq('DRIVE.hands', live.DRIVE?.hands, c.hand === 'wind');
-    eq('DRIVE.handMode', live.DRIVE?.handMode, c.hand === 'wind' ? 'windOnly' : live.DRIVE?.handModeDefault);
-    eq('DRIVE.ffFilter', live.DRIVE?.ffFilter, c.hand === 'wind' ? true : live.DRIVE?.ffFilterDefault);
-  }
+  // 본판: 온몸 가지(GESTURE·ges·drive)가 없어야 한다
+  eq('GESTURE', live.GESTURE, null);
+  eq('player.ges', live.ges, 'absent');
+  eq('player.drive', live.drive, 'absent');
   return bad;
 }
 const readLive = (originPx) => {
@@ -433,7 +410,7 @@ const readLive = (originPx) => {
   return {
     state: g.state, inner: [innerWidth, innerHeight], isTouch: g.input ? g.input.isTouchDevice : document.body.classList.contains('touch'), touchSensitivity: C.INPUT.touchSensitivity,
     settings: { ...g.settings }, WHOLE: C.WHOLE ? C.WHOLE.on : null, GESTURE: C.GESTURE ? { on: C.GESTURE.on, input: C.GESTURE.input } : null,
-    DRIVE: C.DRIVE ? { on: C.DRIVE.on, hands: C.DRIVE.hands, handMode: C.DRIVE.handMode, ffFilter: C.DRIVE.ffFilter, handModeDefault: window.__driveDefault?.handMode, ffFilterDefault: window.__driveDefault?.ffFilter } : null,
+    DRIVE: C.DRIVE ? { on: C.DRIVE.on } : null, chain: C.BODY.chain ?? null, legTorque: C.BODY.legTorque ?? null, assist: C.GAIT ? C.GAIT.assist ?? null : null,
     ges: tri(p.ges), drive: tri(p.drive), skillLevel: p.skill.level, guardWeight: p.guardWeight ? p.guardWeight() : null,
     weightMode: C.BODY.weightMode, timestep: C.PHYSICS.timestep, maxSteps: C.PHYSICS.maxStepsPerFrame, renderFpsCap: C.RENDER ? C.RENDER.fpsCap : null,
     weapon: p.weapon?.id, foeWeapon: e.weapon?.id, foeName: e.name, stage: g.stage?.id, stick: [r.left + r.width / 2, r.top + r.height / 2, r.width], stickShown: document.getElementById('moveStick').classList.contains('show'),
@@ -458,26 +435,18 @@ async function runBlock(browser, cell, pacing, block, log) {
 async function blockBody(ctx, c, cell, pacing, block, log, T0) {
   const page = await ctx.newPage();
   const errors = [];
-  let atlasLog = null;
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); if (m.text().startsWith('[atlas] pack decode')) atlasLog = m.text(); });
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('requestfailed', (r) => errors.push('requestfailed: ' + r.url()));
   const url = `${URL0}/?${cellQuery(c)}`;
   await page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000, polling: 50 });
-  const hasDrive = await page.evaluate(() => !!window.game.config.DRIVE);
-  if (hasDrive) for (let i = 0; i < 1200 && !atlasLog && !errors.length; i++) await page.waitForTimeout(50);
   await page.evaluate((n) => { for (let i = 0; i < n; i++) window.__frame(16); }, MENU_FRAMES);
-  // 칸 스위치 (판을 세우기 전): C2·C3 는 CONFIG 로, 그리기 거르기는 RENDER.fpsCap 을 아주 작게
+  // 판을 세우기 전: 그리기 거르기는 RENDER.fpsCap 을 아주 작게 (칸 스위치는 없다 — 설정 칸은 --url 의 빌드·주소 인자 몫)
   const toggles = await page.evaluate(([c, rskip]) => {
     const C = window.game.config;
-    if (C.DRIVE) window.__driveDefault = { hands: C.DRIVE.hands, handMode: C.DRIVE.handMode, ffFilter: C.DRIVE.ffFilter };
-    if (c.kind === 'C2' || c.kind === 'C3') {
-      C.GESTURE.on = c.gesture;
-      C.DRIVE.on = c.drive;
-    }
     if (rskip) (window.game.settings.fpsCap = true), (C.RENDER.fpsCap = 0.001);
-    return { GESTURE: C.GESTURE ? C.GESTURE.on : null, DRIVE: C.DRIVE ? C.DRIVE.on : null, renderFpsCap: C.RENDER.fpsCap, settingsFpsCap: window.game.settings.fpsCap };
+    return { chain: C.BODY ? C.BODY.chain ?? null : null, legTorque: C.BODY ? C.BODY.legTorque ?? null : null, assist: C.GAIT ? C.GAIT.assist ?? null : null, renderFpsCap: C.RENDER.fpsCap, settingsFpsCap: window.game.settings.fpsCap };
   }, [c, RSKIP]);
   await page.evaluate(`window.__sampleFighter = (${L.sampleFighter.toString()}); window.__LH = ${HELPER_SRC}; true`);
   await page.evaluate(pageHarness, { png: PNGON });
@@ -510,7 +479,6 @@ async function blockBody(ctx, c, cell, pacing, block, log, T0) {
     if (rd === 0) {
       live = await page.evaluate(readLive, L.PROGRAMME.originPx);
       live.toggles = toggles;
-      live.atlasLog = atlasLog;
       const bad = checkLive(c, live);
       if (bad.length) { const err = new Error(`칸 ${cell}: 켜진 상태가 요청과 다르다 — ${bad.join('; ')}`); err.live = live; throw err; }
       if (live.elAtOrigin !== 'game') { throw new Error(`칼 손가락 자리 ${L.PROGRAMME.originPx} 의 요소 ${live.elAtOrigin} (캔버스 아님)`); }
@@ -598,7 +566,7 @@ async function blockBody(ctx, c, cell, pacing, block, log, T0) {
   if (!inputCheck.swordDownOk || !inputCheck.swordUpOk || !inputCheck.stickDownOk) errors.push(`터치 전달 어긋남 ${JSON.stringify(inputCheck)}`);
   if (H.tsDev.max > 0.3) errors.push(`터치 시각 어긋남 ${H.tsDev.max.toFixed(3)} ms (반올림으로 못 되찾을 수 있다)`);
   // 요약 (모든 스텝)
-  const ginput = c.gesture === false || c.kind === 'C0' ? null : c.input;
+  const ginput = null; // 본판에는 손짓 입력이 없다
   const smeta = { dt: live.timestep, who: 'player', ginput, strokes: windows, standWin: rounds[0].standWin, rounds: block === 'fight' ? rounds.map((r) => ({ result: r.result, t: r.fightT })) : [], cell, block };
   const summary = L.summarise(allS, allE, smeta);
   // 나쁜 순간: 앞뒤 창 (전체 해상도)
@@ -677,9 +645,7 @@ async function runCell(browser, cell, pacing, log) {
 const f3 = (x, d = 3) => (x == null || !Number.isFinite(+x) ? '–' : (+x).toFixed(d));
 function cellOrder(name) {
   const c = parseCell(name);
-  const ik = c.input === 'wind' ? 0 : c.input === 'stroke' ? 1 : 2;
-  const kk = { M: 0, C1: 1, C3: 2, C2: 3, C0: 4 }[c.kind];
-  return [ik, kk, c.hand === 'wind' ? 1 : 0, +c.skill];
+  return [+c.skill];
 }
 function writeTable() {
   const files = fs.readdirSync(OUT).filter((f) => /__[^_]+\.json$/.test(f) && !f.endsWith('.error.json'));
@@ -693,7 +659,7 @@ function writeTable() {
   for (const r of rows) { const k = `${r.block} · ${r.pacing}`; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
   const pacOrder = (p) => L.PACING_NAMES.indexOf(p);
   const keys = [...groups.keys()].sort((a, b) => { const [ba, pa] = a.split(' · '), [bb, pb] = b.split(' · '); return ba === bb ? pacOrder(pa) - pacOrder(pb) : ba < bb ? 1 : -1; });
-  const md = [`# R2 실전 진단 — 브라우저 하니스 표 (${new Date().toISOString()})`, '', `폴더 ${OUT} · 파일 ${files.length} · 칸 행 순서: 입력별 M 행 바로 옆에 C1 (온몸 끔) · C3 (드라이브만 끔), 끝에 C2 (손짓·드라이브 끔) · C0 (main 그대로)`, '', '판정 표 (RANGES · PEAKS · OSC · DECL) = tools/sim/live_common.mjs. 각 값 정의 = summarise.', ''];
+  const md = [`# R2 실전 진단 — 브라우저 하니스 표 (${new Date().toISOString()})`, '', `폴더 ${OUT} · 파일 ${files.length} · 칸 = k<검술 보정> (본판; 설정 칸은 --tree 이름으로 구분)`, '', '판정 표 (RANGES · PEAKS · OSC · DECL) = tools/sim/live_common.mjs. 각 값 정의 = summarise.', ''];
   const T = (title, head, fn) => { md.push(`### ${title}`, '', `| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`); return fn; };
   for (const k of keys) {
     const G = groups.get(k).sort(cmp);

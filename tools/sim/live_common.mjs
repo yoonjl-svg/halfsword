@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  live_common.mjs — R2 실전 진단 공용 (브라우저 하니스·시뮬 쌍둥이가 같은 것을 쓴다)
+//   출처: hs-diag(가지 wbs-diag 08b864a) tools/sim/live_common.mjs 를 그대로 본판에 이식(R2′ W1a) — 이 머리 주석 두 줄 말고는 바이트 같다 (sampleFighter 의 toString 도 같다).
 //   PROGRAMME  긋기 차림표 (패드 m, 손가락 표본 8 ms) + 패드 → 화면 px (input.js 배율)
 //   PACINGS    rAF 프레임 간격 생성기 (씨앗 고정, 브라우저·쌍둥이 같은 수열)
 //   RANGES     사람 관절 가동 범위 (출처·여유)      PEAKS  사람 최고 각속도·각가속도 (출처)

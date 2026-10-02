@@ -29,7 +29,8 @@
 //   척추: 비틀림 각 (가슴 yaw − 골반 yaw, °) 최고 · ±45° 닿음 스텝 · 손목 반작용 → 가슴 직접 토크 (driveSword 단계의 가슴 addTorque, 확인표 151)
 //  장면: script = 대본 베기 (상대 치움, 손 목표를 자세 쌍 사이로 F.v = 12 m/s 직선 이동, body_share 꼴; 획 = 반 왕복)  corr = chain_corr 장면 틀 (입력 길: 쟁기 → 감기 3 m/s
 //        → 베기 12 m/s → 뗌, 헛치기 2.0 m)  p24 = live_common 차림표 24 획 (P, 상대 1.3 m 멈춤·둘 다 죽지 않음)  fight = AI 대 AI 한 판 (획 = skill.swings 증가 창)
-//  결정적: 같은 시드 → 같은 출력. --digest 는 스텝마다 플레이어 상태 (골반·가슴·칼·칼끝 속도) 해시, --proof 는 장부 없이 한 번 더 돌려 해시가 같음을 보인다 (읽기만 함의 증명).
+//  상대와 닿는 스텝(foreign)은 깨끗한 통계에서 빼고 (상대 마찰 모름) '모든 스텝' 열을 따로 적는다 — p24·fight 는 칼이 상대에 자주 닿아 깨끗한 스텝이 적다.
+//  결정적: 같은 시드 → 같은 출력. script·corr 는 고정 박자(60)라 시드와 무관하다 (다이제스트 같음) — 시드 변동은 corr --input=30J|J (떨리는 박자, corr_lib.pacer) 나 fight 에서만. --digest 는 스텝마다 플레이어 상태 (골반·가슴·칼·칼끝 속도) 해시, --proof 는 장부 없이 한 번 더 돌려 해시가 같음을 보인다 (읽기만 함의 증명).
 //  --selftest: 상자 시험 (쉼·밀어 붙잡힘·공중 회전) 으로 법선·마찰 합력·관성 부기 검산. 라이브러리: import { attachLedger, summariseStrokes } (live_twin 등에서 같은 표본)
 //  출력: 획마다 한 줄 + 장면 중앙값 + 기준선 줄 (r_V rms ↔ τ̂닻_V rms 상관·비). 모델 이름 없음. 새 수 없음 (문턱은 표시일 뿐, 명세 155 는 판정값).
 // ─────────────────────────────────────────────────────────────
@@ -427,12 +428,15 @@ export function summariseStrokes(rows, i0, i1, extra = {}) {
   let budgetWin = null;
   if (tPel != null) { const a = t0 + tPel / 1000 - 0.1, b = t0 + tPel / 1000; const bw = w.filter((r) => r.t >= a - 1e-9 && r.t <= b + 1e-9).map((r) => r.budget); if (bw.length) budgetWin = Math.min(...bw); }
   const rV = g('rV'), aV = g('aV'), rx = g('rx'), rz = g('rz'), ax = g('ax'), az = g('az');
+  // 모든 스텝 (상대 접촉 스텝 포함: 상대 접촉의 법선 충격량은 τ_known 에 들어가고 그 마찰만 모른다 → p24·fight 처럼 상대와 닿는 장면의 참고값)
+  const rVa = g('rV', w), aVa = g('aV', w);
   const hipV = g('hipTauV'), ia = ok.map((r) => r.Iup * r.alphaPel);
   const sumSq = hipV.reduce((s, x) => s + x * x, 0);
   const S = {
     ...extra, i0, i1, steps: w.length, foreignSteps: w.length - ok.length, durMs: w.length ? Math.round((w[w.length - 1].t - t0) * 1000) : 0,
     rV_rms: rms(rV), rV_max: maxAbs(rV), aV_rms: rms(aV), aV_max: maxAbs(aV), corrV: pearson(rV, aV), ratioV: rms(aV) > 0 ? rms(rV) / rms(aV) : null, slopeV: slope0(rV, aV),
     rV_minus_aV_rms: rms(ok.map((r) => (r.aV == null ? r.rV : r.rV - r.aV))),
+    rV_rms_all: rms(rVa), aV_rms_all: rms(aVa), corrV_all: pearson(rVa, aVa), ratioV_all: rms(aVa) > 0 ? rms(rVa) / rms(aVa) : null, foreignShare: w.length ? (w.length - ok.length) / w.length : null,
     rH_rms: rms(g('rH')), rH_max: maxAbs(g('rH')), aH_rms: rms(g('aH')), corrH: pearson([...rx, ...rz], [...ax, ...az]), rH_minus_aH_rms: rms(ok.flatMap((r) => (r.ax == null ? [r.rx, r.rz] : [r.rx - r.ax, r.rz - r.az]))),
     aVpre_rms: rms(g('aVpre')), corrVpre: pearson(rV, g('aVpre')), corrHpre: pearson([...rx, ...rz], [...rx, ...rz].map((_, i) => 0)) == null ? null : null,
     hidden_mean: mean(g('hidden')), hidden_min: g('hidden').length ? Math.min(...g('hidden')) : null, hidden_max: g('hidden').length ? Math.max(...g('hidden')) : null, hiddenYaw_mean: mean(g('hiddenYaw')), hiddenYaw_min: g('hiddenYaw').length ? Math.min(...g('hiddenYaw')) : null,
@@ -455,7 +459,7 @@ export function summariseStrokes(rows, i0, i1, extra = {}) {
 }
 const fmtStroke = (S) => {
   const lab = `${S.scene} ${String(S.fam).padEnd(7)} s${S.seed} #${S.k}${S.part ? ' ' + S.part : ''}`.padEnd(28);
-  return `${lab} ${f(S.durMs / 1000, 2)}s | rV rms ${f(S.rV_rms, 1, 5)} max ${f(S.rV_max, 0, 4)} | τ̂닻V rms ${f(S.aV_rms, 1, 5)} max ${f(S.aV_max, 0, 4)} corr ${f(S.corrV, 2)} ratio ${f(S.ratioV, 2)} | rH ${f(S.rH_rms, 1)} τ̂닻H ${f(S.aH_rms, 1)} corrH ${f(S.corrH, 2)} | 숨은 W ${f(S.hidden_mean, 0)} min ${f(S.hidden_min, 0)} | 마찰 N ${f(S.fric_rms, 0)} 예산 ${f(S.budget_win, 0)} 한발 ${f(S.single, 2)} | 골반 ${f(S.pelW_max, 0)} 가슴 ${f(S.chW_max, 0)} °/s Δpc ${S.dpc ?? '-'} Δpt ${S.dpt ?? '-'} Δct ${S.dct ?? '-'} ms ${S.orderOk == null ? '' : S.orderOk ? '순서✓' : '순서✗'} | 칼끝 ${f(S.tip_max, 1)} 가슴 ${f(100 * S.chShare, 0)}% 골반 ${f(100 * S.pelShare, 0)}% | N_F ${f(S.NF_p10, 0)} N_B ${f(S.NB_p10, 0)} p10 ${f(S.load_p10, 2)} wF ${f(S.wF_mean, 2)} | 미끄럼 ${S.slipEv} (${f(S.slipDist, 3)} m) yaw포화 ${f(S.yawSat, 2)} | σ<1 F ${f(S.sigLtF, 2)} B ${f(S.sigLtB, 2)} hipτ̂V ${f(S.hipTauV_rms, 1)} 싱크 ${f(S.sink, 2)} | 비틀림 ${f(S.twist_max, 0)}° 한도 ${S.twistLimit} | 손목→가슴 ${f(S.wristChest_rms, 1)} | ${S.fallen ? '넘어짐' : '섬'}${S.foreignSteps ? ` 상대접촉 ${S.foreignSteps}` : ''}`;
+  return `${lab} ${f(S.durMs / 1000, 2)}s | rV rms ${f(S.rV_rms, 1, 5)} max ${f(S.rV_max, 0, 4)} | τ̂닻V rms ${f(S.aV_rms, 1, 5)} max ${f(S.aV_max, 0, 4)} corr ${f(S.corrV, 2)} ratio ${f(S.ratioV, 2)}${S.foreignSteps ? ` (모든 스텝: rV ${f(S.rV_rms_all, 1)} τ̂ ${f(S.aV_rms_all, 1)} corr ${f(S.corrV_all, 2)})` : ''} | rH ${f(S.rH_rms, 1)} τ̂닻H ${f(S.aH_rms, 1)} corrH ${f(S.corrH, 2)} | 숨은 W ${f(S.hidden_mean, 0)} min ${f(S.hidden_min, 0)} | 마찰 N ${f(S.fric_rms, 0)} 예산 ${f(S.budget_win, 0)} 한발 ${f(S.single, 2)} | 골반 ${f(S.pelW_max, 0)} 가슴 ${f(S.chW_max, 0)} °/s Δpc ${S.dpc ?? '-'} Δpt ${S.dpt ?? '-'} Δct ${S.dct ?? '-'} ms ${S.orderOk == null ? '' : S.orderOk ? '순서✓' : '순서✗'} | 칼끝 ${f(S.tip_max, 1)} 가슴 ${f(100 * S.chShare, 0)}% 골반 ${f(100 * S.pelShare, 0)}% | N_F ${f(S.NF_p10, 0)} N_B ${f(S.NB_p10, 0)} p10 ${f(S.load_p10, 2)} wF ${f(S.wF_mean, 2)} | 미끄럼 ${S.slipEv} (${f(S.slipDist, 3)} m) yaw포화 ${f(S.yawSat, 2)} | σ<1 F ${f(S.sigLtF, 2)} B ${f(S.sigLtB, 2)} hipτ̂V ${f(S.hipTauV_rms, 1)} 싱크 ${f(S.sink, 2)} | 비틀림 ${f(S.twist_max, 0)}° 한도 ${S.twistLimit} | 손목→가슴 ${f(S.wristChest_rms, 1)} | ${S.fallen ? '넘어짐' : '섬'}${S.foreignSteps ? ` 상대접촉 ${S.foreignSteps}` : ''}`;
 };
 
 // ───────── 장면 ─────────
@@ -697,7 +701,7 @@ async function main() {
       }
   }
   // 장면 요약 (중앙값)
-  const keys = ['rV_rms', 'rV_max', 'aV_rms', 'aV_max', 'corrV', 'ratioV', 'slopeV', 'rV_minus_aV_rms', 'rH_rms', 'aH_rms', 'corrH', 'rH_minus_aH_rms', 'corrVpre', 'aVpre_rms', 'hidden_mean', 'hidden_min', 'hiddenYaw_mean', 'fric_rms', 'budget_win', 'single', 'pelW_max', 'chW_max', 'dpc', 'dpt', 'dct', 'orderOk', 'tip_max', 'chShare', 'pelShare', 'NF_p10', 'NB_p10', 'load_p10', 'wF_mean', 'slipEv', 'slipDist', 'yawSat', 'sigLtF', 'sigLtB', 'hipTauV_rms', 'sink', 'twist_max', 'twistLimit', 'wristChest_rms', 'fallen', 'vertRes_rms', 'gyroV_rms', 'gyroH_rms', 'kYaw', 'dYaw'];
+  const keys = ['rV_rms', 'rV_max', 'aV_rms', 'aV_max', 'corrV', 'ratioV', 'slopeV', 'rV_minus_aV_rms', 'rV_rms_all', 'aV_rms_all', 'corrV_all', 'ratioV_all', 'foreignShare', 'rH_rms', 'aH_rms', 'corrH', 'rH_minus_aH_rms', 'corrVpre', 'aVpre_rms', 'hidden_mean', 'hidden_min', 'hiddenYaw_mean', 'fric_rms', 'budget_win', 'single', 'pelW_max', 'chW_max', 'dpc', 'dpt', 'dct', 'orderOk', 'tip_max', 'chShare', 'pelShare', 'NF_p10', 'NB_p10', 'load_p10', 'wF_mean', 'slipEv', 'slipDist', 'yawSat', 'sigLtF', 'sigLtB', 'hipTauV_rms', 'sink', 'twist_max', 'twistLimit', 'wristChest_rms', 'fallen', 'vertRes_rms', 'gyroV_rms', 'gyroH_rms', 'kYaw', 'dYaw'];
   const groups = {};
   for (const S of all) { const g = `${S.scene}:${S.part ?? (S.scene === 'fight' ? S.fam : S.scene === 'p24' ? S.kind : 'cut')}`; (groups[g] ||= []).push(S); }
   const summary = {};
@@ -709,7 +713,7 @@ async function main() {
     S.slipEv_sum = arr.reduce((s, x) => s + (x.slipEv || 0), 0);
     summary[g] = S;
     const m = (k, n = 1) => `${f(S[k].med, n)} [${f(S[k].p10, n)}–${f(S[k].p90, n)}]`;
-    console.log(`${g.padEnd(12)} n ${String(S.n).padStart(3)} | rV rms ${m('rV_rms')} max ${m('rV_max', 0)} | τ̂닻V rms ${m('aV_rms')} | corr ${m('corrV', 2)} ratio ${m('ratioV', 2)} slope ${m('slopeV', 2)} | rV−τ̂ rms ${m('rV_minus_aV_rms')} | rH ${m('rH_rms')} τ̂닻H ${m('aH_rms')} corrH ${m('corrH', 2)} rH−τ̂ ${m('rH_minus_aH_rms')} | 숨은 W ${m('hidden_mean', 0)} min ${m('hidden_min', 0)} | 마찰 N ${m('fric_rms', 0)} 예산 ${m('budget_win', 0)} 한발 ${m('single', 2)} | 골반 ${m('pelW_max', 0)} 가슴 ${m('chW_max', 0)} °/s Δpc ${m('dpc', 0)} Δpt ${m('dpt', 0)} Δct ${m('dct', 0)} 순서 ${m('orderOk', 2)} | 칼끝 ${m('tip_max', 1)} 가슴몫 ${m('chShare', 2)} | p10 ${m('load_p10', 2)} wF ${m('wF_mean', 2)} | 미끄럼 Σ${S.slipEv_sum} yaw포화 ${m('yawSat', 2)} | σ<1 ${m('sigLtF', 2)}/${m('sigLtB', 2)} hipτ̂V ${m('hipTauV_rms', 1)} 싱크 ${m('sink', 2)} | 비틀림 ${m('twist_max', 0)}° | 넘어짐 Σ${S.fallen_sum} | 자이로 생략 V ${m('gyroV_rms', 1)} | 수직검산 ${m('vertRes_rms', 2)}`);
+    console.log(`${g.padEnd(12)} n ${String(S.n).padStart(3)} | rV rms ${m('rV_rms')} max ${m('rV_max', 0)} | τ̂닻V rms ${m('aV_rms')} | corr ${m('corrV', 2)} ratio ${m('ratioV', 2)} slope ${m('slopeV', 2)} | rV−τ̂ rms ${m('rV_minus_aV_rms')}${S.foreignShare.med ? ` | 모든 스텝 (상대 접촉 ${m('foreignShare', 2)}): rV ${m('rV_rms_all')} τ̂ ${m('aV_rms_all')} corr ${m('corrV_all', 2)} ratio ${m('ratioV_all', 2)}` : ''} | rH ${m('rH_rms')} τ̂닻H ${m('aH_rms')} corrH ${m('corrH', 2)} rH−τ̂ ${m('rH_minus_aH_rms')} | 숨은 W ${m('hidden_mean', 0)} min ${m('hidden_min', 0)} | 마찰 N ${m('fric_rms', 0)} 예산 ${m('budget_win', 0)} 한발 ${m('single', 2)} | 골반 ${m('pelW_max', 0)} 가슴 ${m('chW_max', 0)} °/s Δpc ${m('dpc', 0)} Δpt ${m('dpt', 0)} Δct ${m('dct', 0)} 순서 ${m('orderOk', 2)} | 칼끝 ${m('tip_max', 1)} 가슴몫 ${m('chShare', 2)} | p10 ${m('load_p10', 2)} wF ${m('wF_mean', 2)} | 미끄럼 Σ${S.slipEv_sum} yaw포화 ${m('yawSat', 2)} | σ<1 ${m('sigLtF', 2)}/${m('sigLtB', 2)} hipτ̂V ${m('hipTauV_rms', 1)} 싱크 ${m('sink', 2)} | 비틀림 ${m('twist_max', 0)}° | 넘어짐 Σ${S.fallen_sum} | 자이로 생략 V ${m('gyroV_rms', 1)} | 수직검산 ${m('vertRes_rms', 2)}`);
   }
   const base = all.filter((S) => S.scene === 'script' || S.part === '베기');
   if (base.length) {
