@@ -2,6 +2,7 @@
   "spec": "docs/strike/r2p_spec_2026-10-02.md",
   "base": "e028f42",
   "branch": "r2p-design",
+  "impl": { "branch": "r2p-impl", "head": "7400a0b", "judged": "2026-10-02 디렉터 판정: W1a 완료 · W1b 부분(G2b 미달 → R1′) · W2 완료 · 본판 기본 'anchor' 유지, 명세 §5 '측정 10/2' 열" },
   "grades": { "1": "판단", "2": "구현", "3": "측정" },
   "rule": "모든 새 줄은 BODY.chain === 'legs' 가지 안. 기본 'anchor' 는 바이트 동일(G1). 값은 모두 '사장님 확인 전'(확인표 122~129, 151~156). main 에 push 하지 않는다.",
   "items": [
@@ -10,6 +11,8 @@
       "title": "잔차 장부 chain_ledger.mjs + 측정 도구 이식 (live_twin·live_common·live_diag·support_measure)",
       "done": "오늘 anchor 에서 세 장면(P 24 획·대본 크게 베기·F 1 판) 기준 표가 나오고, 닻 yaw 토크가 잔차 r_z 로·닻 감쇠 ≈1.7 kW 가 숨은 일률로 잡힌다. 열: L_z·dL/dt, 접촉 임펄스×6/7×r, 핀 yaw 토크, 선언 받침·밀기, 닻 토크 재계산, 골반·가슴·손·칼끝 최고 시각, 몸통 몫, 발 하중 p10·wF·마찰 예산, 핀 미끄러짐·발 yaw 핀 포화, 엉덩이 τ̂·포화율·싱크 몫, --digest. 이식 도구가 hs-diag 와 같은 수를 낸다.",
       "gate": "G1 (도구만, sha 그대로)",
+      "status": "완료 10/2 (r2p-impl 7400a0b)",
+      "result": "chain_ledger --selftest PASS(쉼·수평 밀기·공중 회전·수직축 힘쌍) · --proof 장부 켬/끔 다이제스트 같음 · anchor 기준선 표(대본 베기 n 54: r_V rms 52.4 ↔ τ̂닻_V 49.0 N·m, 획 안 상관 0.965, 비 1.009; 숨은 일률 획 최저 −2238 W = 닻 감쇠 ≈2 kW, 획 평균 −8~−24 W) · 이식 4 도구가 hs-diag 와 같은 수(live_twin passive sha a003b0c7b562 n 1319, support_measure summary·series 바이트 같음, live_diag 1315 스텝 오류 0) · G1 sha 그대로(fights12 afd3a954 · live_battery 5e3f14c2, feat-a001 뒤 기준). 한계: Rapier 가 접선 충격량을 안 내줘 두 발 마찰 힘쌍은 예산 열(μ·min(N)·d_feet)로만 — 잔차의 하한",
       "grade": 3,
       "hours": 6,
       "depends": []
@@ -19,6 +22,8 @@
       "title": "사슬 최소판: BODY.chain, 닻 yaw 0·닻 틀 = 실제 골반, 딛은 다리 q_hip* = R_y(−w_l Δψ), 엉덩이 y σ 포화·속도 목표 0, 척추 y 속도 목표 0·ζ 가지, pinFeet ×6/7, lunge 가지, 탐색판 public/r2p/?chain=legs + HUD",
       "done": "anchor 바이트 동일(fights12 e6cb7a8c · live_battery 061cf14a · corr_s0 12/12 + digest cmp). legs 가 서고 걷고 베고 돌아서며 P 24 획 넘어짐 0. G2b 엉덩이 y 토크 중 골반 각가속도로 간 몫 ≥ 0.5 (미달이면 R1′: 구동 경로 재검토 뒤 진행). 첫 탐색판 48 시간 안 — 사장님 세 물음(내 생각대로 갔나 / 몸이 실렸나 / 비틀렸나·미끄러졌나).",
       "gate": "G1 · G2 · G2b · G3 · G4",
+      "status": "부분 10/2 — G1 통과, legs 안정, G2b 미달 → 명세 §7 R1′ 발동(구동 경로 재검토가 W3 첫 일)",
+      "result": "fb347dc(+재검증 0c4ace0): anchor 바이트 동일(fights12 afd3a954 · live_battery 5e3f14c2 · finish_thrust 1 --stand f4395565 · corr_s0 12/12) · legs 서고 걷고 베고 돌아섬, P 24 획 넘어짐 0, fights12 legs f7fe531a NaN 0 · 심사 차단 조건 위반 0(약한 닻 없음: yaw 모터 0·0, 명시 토크 쌍 없음: 암시 σ, 계획기·S1 없음, 새 입력 채널 기본 켬 없음, 새 수 = 스위치 122 + ζ 125 + lunge 끔 126; CHAIN_SPINE_I 는 부록 A 값) · G2b 싱크 몫 0.018(≥0.5 미달): 엉덩이 τ̂ 수직 339 N·m 대 골반 I·α 3~30, σ 포화 아님(0.7~3.6 %) → 토크가 다리 비틀기·발로 감. 디렉터 판독: 목표식이 허벅지 방향(발목 − 실제 엉덩이 점)을 안 바꿔 수직 허벅지에선 순수 비틀기(명세 R1′ 가 가정한 굽힘·벌림 몫 없음) · 메모: 내딛는 다리의 엉덩이 y 축도 σ 길(속도 목표 0)을 탐 — 명세는 딛은 다리만 명시, 측정 분리 안 됨 · 탐색판 public/r2p/?chain=legs 빌드됨(main 반영은 디렉터)",
       "grade": 2,
       "hours": 16,
       "depends": ["W1a"]
@@ -28,6 +33,8 @@
       "title": "측정 묶음: 진단 §7 명령(legs 칸 + C2·anchor 대조, pacings 120/60/45J/30J/J, seeds 7-9, passive+fight, LIVE_TOUCH mj·fc), live_diag 60/30J, chain_corr, body_share, envelope_check, duel_similarity, chain_ledger, fights12·live_battery legs 배터리",
       "done": "관문표 G2~G12 채움, 궤적 sha ≥3 중앙값, 칸 차 소음 폭 표기, AI 승패·넘어짐 전후표.",
       "gate": "G5 · G6 · G7 · G8 · G9 · G10 · G11 · G12",
+      "status": "완료 10/2 (미측정: G9 채점표·live_diag 브라우저·pacings 120/45J/J·LIVE_TOUCH·fight 블록·perf_ab)",
+      "result": "명세 §5 '측정 10/2' 열. 통과 G1(+G2 숨은 일률 ≤50 W, G4 ω·관절 이탈·자기 관통) · 실패 G2 잔차 36.4/최고 101 N·m · G2b 0.018 · G3 p10 0.59(anchor 0.60 도 미달) · G4 다리 >8 Hz 0.047 · G5 순서 0, 골반−칼끝 +209 ms · G6 가슴 몫 0.09, 칼끝 16.8 m/s · G7 하락 우세(n 3) · G8 맞힘/획 0.17(60)/0.46(30J) · G10 49.4(−4.1, 1 시드 measure 조각) · G11 서기 yaw 7.45 °/s, p24 미끄러짐 Σ29 · G12 +4.5 %. AI 전후: fights12 dead 8 → 6/12, downs/판 1.4 → 0.8, 결투 넘어짐 Σ2 → Σ2. 궤적: 대본 베기 시드 무관(n 54), live_twin legs 시드별 다름(3 시드 범위 표기)",
       "grade": 3,
       "hours": 8,
       "depends": ["W1b"]
