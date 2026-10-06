@@ -1,6 +1,6 @@
 # 인체 동작 연구 PM — 상태 (늘 최신으로 둔다)
 
-- 갱신: 2026-09-30 18:00 (KST). 9/30 정기 보고 보냄(trig_01W494HgL6ALUudV5ssAweB3) — 지금 대기. 새 세션은 이 파일만 읽고 이어받는다.
+- 갱신: 2026-10-07 00:50 (KST). 10/2~10/6 보고는 세션이 쉬어 10/7 에 묶어 보냄(trig_016NfSb18Ag8aETmDuf9DPVy) — 지금 대기. 새 세션은 이 파일만 읽고 이어받는다.
 - 세션: `session_013YFFvQRnDedG7CTF1eVknA` · 브랜치 `claude/pm-motion-research`. **`docs/motion`·`tools/motion` 만 건드리면 디렉터가 검토 없이 main 에 병합한다.** 새 일을 시작하기 전에 main 을 한 번 병합해 둔다.
 - 디렉터: `session_014nJCzE4hyxiYc9innhSUng` ("Stillness game director handoff", 사장님 확정). `01NDJ…`(보관됨)·`01Kc…`(은퇴)에는 보내지 않는다.
 - 역할: main `docs/pm_roles_charter.md` 부록 A (9/29부터 기본값 시행).
