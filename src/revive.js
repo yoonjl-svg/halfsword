@@ -119,7 +119,7 @@ function end(f) {
 function ghost(f, on) {
   const V = f.revival;
   if (!on) {
-    for (const [col, g] of V.groups || []) col.setCollisionGroups(g);
+    for (const [col, g] of V.groups || []) if (col.isEnabled()) col.setCollisionGroups(g); // 파손으로 떼어 낸 부품(비활성·그룹 0)은 되살리지 않는다
     V.groups = null;
     return;
   }
@@ -214,7 +214,7 @@ function attachSword(f, V) {
   sw.setAngvel({ x: 0, y: 0, z: 0 }, true);
   sw.setGravityScale(1, true);
   // 날아오는 동안 꺼 둔 충돌을 부활 중의 유령 칼로 (부활이 끝나면 ghost 가 원래대로 되돌린다)
-  for (const [col, g] of V.groups || []) if (f.swordColliders.includes(col)) col.setCollisionGroups(ghostSword(g));
+  for (const [col, g] of V.groups || []) if (f.swordColliders.includes(col) && col.isEnabled()) col.setCollisionGroups(ghostSword(g));
   f.gripJoint = f.world.createImpulseJoint(f.R.JointData.spherical({ x: 0.13, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }), f.bodies.farmS, sw, true);
   if (BODY.humanLimits) f.gripConeOn(); // 손목 원뿔도 다시 (fighter.js, 사람 관절 범위)
   f.armed = true;

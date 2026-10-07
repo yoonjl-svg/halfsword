@@ -267,12 +267,16 @@ export class Combat {
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
-      } else if (!predicting && (!finish || ((plate || helmet) && !att.weaponCfg.ignoreArmor))) {
-        if (finish) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다
-        type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (맨몸 내려찍기 즉사 찌르기는 찌르기 그대로 — 옷·살 문턱에 막혀도.
-        //  판·옷·소리는 심각도 0 이라 막힌 타격으로 적힌다: fighter.applyWound·main.js onWound)
-        // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
-        if (assisted) ({ mEff, ephys, energy } = assisted);
+      } else {
+        const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor;
+        if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.
+        //  예측 경로(predicting)도 같게 — 10/7 S-016: 예측만 이 분기를 건너뛰어 판금에 막힐 찍기를 즉사로 읽던 결함(마무리 도구 판금 칸 45/45 불일치)
+        if (!predicting && (!finish || armorBlocks)) {
+          type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (맨몸 내려찍기 즉사 찌르기는 찌르기 그대로 — 옷·살 문턱에 막혀도.
+          //  판·옷·소리는 심각도 0 이라 막힌 타격으로 적힌다: fighter.applyWound·main.js onWound)
+          // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
+          if (assisted) ({ mEff, ephys, energy } = assisted);
+        }
       }
     }
     if (type === 'blunt') energy *= att.weaponCfg.power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
