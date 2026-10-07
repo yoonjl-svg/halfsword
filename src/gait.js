@@ -140,7 +140,6 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const L = this.legs[k];
       L.stance = true;
-      L.Nf = 0; // 새 서기: 지난 서기의 걸러진 하중 기록을 버린다 — 안 버리면 넘어짐→기립 뒤 첫 서기에서 묵은 Nf(수백 N)가 핀 마찰 한도로 쓰여 미끄러진다 (10/7; 샛별 10차 '새 서기 Nf 초기화' 와 같은 결함, 공통 조상 코드)
       this.plantAt(L);
       this.footMass(L, true);
       L.tLand = 1;
