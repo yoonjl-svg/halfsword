@@ -329,6 +329,7 @@ function warmRoundFx(on) {
  *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다).
  */
 function newRound(weaponId) {
+  input.resetTransient(); // 지난 판의 손가락 상태를 물려받지 않는다 (10/8 입력 수명주기)
   // 다리로 체중 받치기: 게임은 늘 gait.js 걸음(다리가 체중 대부분을 받친다). 오너 결정으로 설정 토글을 없애고 기본 적용했다.
   //  CONFIG 기본값도 'hybrid'라 시뮬 도구가 게임과 같은 걸음을 잰다(9/29). 이 줄은 콘솔·도구가 바꿔 둔 값을 판마다 되돌린다
   CONFIG.BODY.weightMode = 'hybrid';
@@ -638,11 +639,15 @@ $('howto').innerHTML = input.isTouchDevice
   ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>폰을 앞뒤로 기울이면 전진·후퇴, 좌우로 기울이면 옆걸음.</li><li>◎ 버튼: 지금 각도를 "똑바로"로 다시 맞춰요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>'
   : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>W A S D (또는 방향키) 로 걸어요.</li><li>Esc 로 마우스 잠금 해제, P 로 일시정지.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>';
 
+// 기울기 센서를 못 쓸 때의 임시 대체(이번 실행에만): 저장된 선호(settings.moveMode)는 덮어쓰지 않는다 — 다음에 센서가 되면 기울기로 돌아온다 (10/8 입력 수명주기)
+let sensorMoveFallback = null;
+const moveModeValue = () => sensorMoveFallback ?? settings.moveMode;
 function refreshSettingsUI() {
   document.querySelectorAll('[data-setting]').forEach((el) => {
     const key = el.dataset.setting;
     if (el.classList.contains('seg')) {
-      el.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === settings[key]));
+      const cur = key === 'moveMode' ? moveModeValue() : settings[key];
+      el.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === cur));
     } else {
       el.classList.toggle('on', !!settings[key]);
     }
@@ -650,9 +655,9 @@ function refreshSettingsUI() {
   particles.bloodOn = settings.blood;
   sound.on = settings.sound;
   input.invertTilt = settings.invertTilt;
-  input.useTilt = settings.moveMode === 'tilt';
+  input.useTilt = moveModeValue() === 'tilt';
   document.body.classList.toggle('touch', input.isTouchDevice);
-  document.body.classList.toggle('moveStick', settings.moveMode !== 'tilt');
+  document.body.classList.toggle('moveStick', moveModeValue() !== 'tilt');
   applyMoveMode();
 }
 document.querySelectorAll('[data-setting]').forEach((el) => {
@@ -661,6 +666,7 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
     el.querySelectorAll('button').forEach((b) =>
       b.addEventListener('click', () => {
         settings[key] = b.dataset.v;
+        if (key === 'moveMode') { sensorMoveFallback = null; input.resetTransient(); } // 사용자가 직접 고르면 임시 대체를 푼다
         if (key === 'difficulty' && ai && !currentFoe) ai.setLevel(settings.difficulty); // 캐릭터를 골랐으면 그 캐릭터의 난이도를 따로 지킨다
         if (key === 'skill' && player) player.skill.level = +settings.skill;
         saveSettings();
@@ -963,7 +969,7 @@ function showToast(text, ms = 1200) {
 // 이동 방식에 맞게 조이스틱 / 영점 버튼을 보이거나 숨긴다
 function applyMoveMode() {
   const touch = input.isTouchDevice;
-  const tilt = settings.moveMode === 'tilt';
+  const tilt = moveModeValue() === 'tilt';
   // 무기 뽑기 동안에는 걸을 수 없으니 조이스틱을 감춘다 (카드 자리도 넓어진다). 싸움이 시작되면 나타난다
   $('moveStick').classList.toggle('show', touch && !tilt && state !== 'menu' && state !== 'draw');
   $('btnCalib').style.display = touch && tilt ? '' : 'none';
@@ -988,12 +994,12 @@ async function startFight() {
     } catch {
       /* 무시 */
     }
-    if (settings.moveMode === 'tilt') {
+    if (moveModeValue() === 'tilt') {
       const ok = await input.enableTilt();
       setTimeout(() => {
         if (!ok || !input.tiltActive) {
-          settings.moveMode = 'stick';
-          saveSettings();
+          sensorMoveFallback = 'stick'; // 저장 선호는 그대로 두고 이번 실행만 조이스틱으로
+          input.resetTransient();
           refreshSettingsUI();
           showHint('기울기 센서를 쓸 수 없어서 조이스틱으로 바꿨어요.');
         } else {
@@ -1029,6 +1035,7 @@ async function startFight() {
 
 /** 무기를 받았다: 싸움 시작 ("Battle", 조이스틱, 조작 안내) */
 function beginFight() {
+  input.resetTransient();
   state = 'fight';
   input.enabled = true;
   emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
@@ -1042,7 +1049,7 @@ function beginFight() {
   showHint(
     !input.isTouchDevice
       ? '클릭해서 마우스 잠금 · WASD 이동 · 클릭하면 찌르기'
-      : settings.moveMode === 'tilt'
+      : moveModeValue() === 'tilt'
         ? '끌어서 칼 휘두르기 · 톡 치면 찌르기 · 앞뒤/좌우로 기울여서 걷기'
         : '왼쪽 아래 조이스틱으로 걷기 · 나머지 화면을 끌어서 휘두르고 톡 쳐서 찌르기',
   );
@@ -1054,6 +1061,7 @@ function pause() {
   pausedFrom = state;
   state = 'paused';
   input.enabled = false;
+  input.resetTransient();
   document.exitPointerLock?.();
   $('menuTitle').textContent = '일시정지';
   $('menuSub').textContent = '설정을 바꾸거나 계속할 수 있어요.';
@@ -1069,6 +1077,7 @@ function showMenu() {
 }
 
 function resume() {
+  input.resetTransient();
   sound.unlock(); // 폰이 전화·잠금 등으로 소리를 멈췄으면 다시 켠다
   menu.classList.remove('show');
   state = pausedFrom;
@@ -1080,6 +1089,12 @@ function resume() {
 $('btnStart').addEventListener('click', startFight);
 $('btnResume').addEventListener('click', resume);
 $('btnPause').addEventListener('click', pause);
+// 두 번째 손가락은 click 을 믿을 수 없다(첫 손가락이 칼·조이스틱을 쥔 채) → 터치의 pointerdown 으로도 멈춘다 (10/8 입력 수명주기)
+$('btnPause').addEventListener('pointerdown', (event) => {
+  if (event.pointerType !== 'touch') return;
+  event.preventDefault();
+  pause();
+});
 $('btnCalib').addEventListener('click', () => {
   input.calibrateTilt();
   showHint('지금 각도를 기준으로 맞췄어요.', 1500);
@@ -1101,8 +1116,10 @@ for (const ev of ['touchend', 'pointerup', 'keydown']) {
   window.addEventListener(ev, () => sound.ctx && sound.unlock(), { passive: true });
 }
 document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pause(); // 화면을 떠나면(전화·앱 전환) 멈춘다 — 돌아와서 첫 손가락이 지난 획을 잇지 않게 (10/8)
   if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
+window.addEventListener('blur', pause);
 // ── 감정이 켜지는 순간 한 줄 알림 ──
 //  상대: "오소리 브란이 공포에 잠식되었다" / 주인공: 주어 없이 "공포에 잠식되었다" (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
 const EMO_TEXT = {
@@ -1240,6 +1257,7 @@ function checkRoundEnd(dt) {
   if (roundOverTime > 3.5 && state === 'fight') {
     state = 'paused';
     input.enabled = false;
+    input.resetTransient();
     document.exitPointerLock?.();
     toast.classList.remove('show');
     const win = !enemy.alive;

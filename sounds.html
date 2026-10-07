@@ -26,6 +26,12 @@
       .btns button:active { background: var(--accent); color: #1b1410; }
       #demo { width: 100%; margin: 14px 0 6px; padding: 14px; font-size: 16px; font-weight: 800; border: 0; border-radius: 8px; background: var(--accent); color: #1b1410; }
       #info { color: var(--dim); font-size: 12px; min-height: 1.5em; }
+      /* 폰(좁은 화면): 줄을 세로로, 버튼은 라벨 길이에 맞춰 (10/8, 'A2/B2 단축' 라벨이 52px 에 안 들어가 잘리던 것) */
+      @media (max-width: 560px) {
+        .row { flex-direction: column; align-items: stretch; }
+        .btns { flex-wrap: wrap; }
+        .btns button { width: auto; min-width: 52px; min-height: 44px; height: auto; padding: 6px 8px; }
+      }
     </style>
   </head>
   <body>
