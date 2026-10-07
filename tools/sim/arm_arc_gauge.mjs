@@ -13,7 +13,9 @@ const fams = String(args.fams ?? 'diagR,vert,horizR').split(',');
 const STROKES = +(args.strokes ?? 6);
 const CAP = args.cap != null ? +args.cap : null; // --cap=N : 시험할 무기들의 손목 토크 상한(weapons.js controlOverrides.maxAimTorque)을 이번 실행에만 바꾼다 (config WEAPON.maxAimTorque 는 무기표가 덮으므로 with_config 로는 안 바뀐다)
 const STIFF = args.stiff != null ? +args.stiff : null; // --stiff=N : aimStiffness 도 같은 식
-const MOVE = +(args.move ?? 0); // --move=1 앞으로 걸으며 벤다 / -1 뒤로 / 0 선 채 (P.move.y)
+const MOVE = +(args.move ?? 0);
+const VFING = args.v != null ? +args.v : null;
+const HELD = args.held != null ? +args.held : 1; // --held=1(기본) 손가락이 닿은 채로(놀이처럼 handHeld: 보정 v2 쉼 무게 0) / 0 = 옛 대본(쉼 무게가 획 사이에 1 로 돌아감 — 10/8 03:50 전 표의 조건) // --v=6 : 손가락 빠르기(m/s) 덮어쓰기 (FAM.v 기본 12 — 사람 손가락은 6~8) // --move=1 앞으로 걸으며 벤다 / -1 뒤로 / 0 선 채 (P.move.y)
 class Passive { update() {} }
 const med = (a) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
 const G_ACC = 9.81;
@@ -30,11 +32,12 @@ for (const weapon of weapons) {
   if (CAP != null) getWeapon(weapon).controlOverrides.maxAimTorque = CAP;
   if (STIFF != null) getWeapon(weapon).controlOverrides.aimStiffness = STIFF;
   for (const fam of fams) {
-    const F = FAM[fam];
+    const F = VFING ? { ...FAM[fam], v: VFING } : FAM[fam];
     const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed: 7, AIClass: Passive }); const P = G.player;
     G.park(); P.skill.level = 0.7;
     P.handOffset.set(F.ch[0], F.ch[1]);
     for (let i = 0; i < Math.round(1.5 / DT); i++) { P.move.set(0, 0); G.step(); }
+    if (HELD) P.handHeld = true;
     let tgt = F.end;
     for (let k = 0; k < STROKES; k++) {
       const from = [P.handOffset.x, P.handOffset.y];
@@ -43,6 +46,7 @@ for (const weapon of weapons) {
       const sw = P.sword; const m = sw.mass();
       const ke0 = swordKE(sw);
       let Ew = 0, Eg = 0, sat = 0, steps = 0, tipMax = 0, iMax = 0, keMax = ke0, EwMax = 0, EgMax = 0, satMax = 0, tauMax = 0, capAt = 0, handMax = 0;
+      let pelW = 0, iPel = 0, chW = 0, iCh = 0, iHand = 0; const pelB = P.bodies.pelvis, chB = P.bodies.chest;
       const hb = P.bodies.farmS; const _hp = new THREE.Vector3(), _hq = new THREE.Quaternion();
       for (let i = 0; i < n; i++) {
         const off = P.handOffset;
@@ -57,18 +61,19 @@ for (const weapon of weapons) {
         steps++; if (cap > 0 && tau.length() >= 0.98 * cap) sat++;
         tauMax = Math.max(tauMax, tau.length()); capAt = cap;
         const hr = hb.rotation(), ht = hb.translation(); _hp.set(0.13, 0, 0).applyQuaternion(_hq.set(hr.x, hr.y, hr.z, hr.w)).add(_hp.set ? new THREE.Vector3(ht.x, ht.y, ht.z) : null);
-        const hv = hb.velocityAtPoint({ x: _hp.x, y: _hp.y, z: _hp.z }); handMax = Math.max(handMax, Math.hypot(hv.x, hv.y, hv.z));
+        const hv = hb.velocityAtPoint({ x: _hp.x, y: _hp.y, z: _hp.z }); const hs = Math.hypot(hv.x, hv.y, hv.z); if (hs > handMax) { handMax = hs; iHand = i; }
+        const pw = Math.abs(pelB.angvel().y), cw = Math.abs(chB.angvel().y); if (pw > pelW) { pelW = pw; iPel = i; } if (cw > chW) { chW = cw; iCh = i; }
         const tip = P.tipVel.length();
         if (tip > tipMax) { tipMax = tip; iMax = i; keMax = swordKE(sw); EwMax = Ew; EgMax = Eg; satMax = sat / steps; }
       }
       const Et = keMax - ke0; const Eh = Et - EwMax - EgMax;
-      rows.push({ weapon, fam, k, dir: tgt === F.end ? 'fwd' : 'back', tipMax: +tipMax.toFixed(2), tAcc: +((iMax + 1) * DT).toFixed(3), Et: +Et.toFixed(1), Ew: +EwMax.toFixed(1), Eh: +Eh.toFixed(1), Eg: +EgMax.toFixed(1), sat: +satMax.toFixed(2), tauMax: +tauMax.toFixed(1), cap: +capAt.toFixed(1), handMax: +handMax.toFixed(2) });
+      rows.push({ weapon, fam, k, dir: tgt === F.end ? 'fwd' : 'back', tipMax: +tipMax.toFixed(2), tAcc: +((iMax + 1) * DT).toFixed(3), Et: +Et.toFixed(1), Ew: +EwMax.toFixed(1), Eh: +Eh.toFixed(1), Eg: +EgMax.toFixed(1), sat: +satMax.toFixed(2), tauMax: +tauMax.toFixed(1), cap: +capAt.toFixed(1), handMax: +handMax.toFixed(2), pelW: +pelW.toFixed(2), chW: +chW.toFixed(2), leadPel: +((iMax - iPel) * DT * 1000).toFixed(0), leadCh: +((iMax - iCh) * DT * 1000).toFixed(0), leadHand: +((iMax - iHand) * DT * 1000).toFixed(0) });
       tgt = tgt === F.end ? F.ch : F.end;
     }
   }
   const sh = (r, k) => (r.Et > 1 ? r[k] / r.Et : NaN);
-  const S = { weapon, n: rows.length, tipMax: med(rows.map((r) => r.tipMax)), tAcc: med(rows.map((r) => r.tAcc)), Et: med(rows.map((r) => r.Et)), wrist: med(rows.map((r) => sh(r, 'Ew'))), hand: med(rows.map((r) => sh(r, 'Eh'))), grav: med(rows.map((r) => sh(r, 'Eg'))), sat: med(rows.map((r) => r.sat)), tauMax: med(rows.map((r) => r.tauMax)), cap: med(rows.map((r) => r.cap)), handMax: med(rows.map((r) => r.handMax)) };
+  const S = { weapon, n: rows.length, tipMax: med(rows.map((r) => r.tipMax)), tAcc: med(rows.map((r) => r.tAcc)), Et: med(rows.map((r) => r.Et)), wrist: med(rows.map((r) => sh(r, 'Ew'))), hand: med(rows.map((r) => sh(r, 'Eh'))), grav: med(rows.map((r) => sh(r, 'Eg'))), sat: med(rows.map((r) => r.sat)), tauMax: med(rows.map((r) => r.tauMax)), cap: med(rows.map((r) => r.cap)), handMax: med(rows.map((r) => r.handMax)), pelW: med(rows.map((r) => r.pelW)), chW: med(rows.map((r) => r.chW)), leadPel: med(rows.map((r) => r.leadPel)), leadCh: med(rows.map((r) => r.leadCh)), leadHand: med(rows.map((r) => r.leadHand)) };
   out.push({ summary: S, rows });
-  console.log(`${weapon.padEnd(12)} 획 ${S.n}: 칼끝 최고 중앙 ${S.tipMax.toFixed(1)} m/s · 손 최고 ${S.handMax.toFixed(1)} m/s · 가속 ${(S.tAcc * 1000).toFixed(0)} ms · 얻은 KE ${S.Et.toFixed(0)} J · 몫 손목 ${(S.wrist * 100).toFixed(0)} % / 손(팔 호) ${(S.hand * 100).toFixed(0)} % / 중력 ${(S.grav * 100).toFixed(0)} % · 손목 포화 ${(S.sat * 100).toFixed(0)} % 스텝 · |τ| 최고 ${S.tauMax.toFixed(1)} / 상한 ${S.cap.toFixed(1)} N·m`);
+  console.log(`${weapon.padEnd(12)} 획 ${S.n}: 칼끝 최고 중앙 ${S.tipMax.toFixed(1)} m/s · 손 최고 ${S.handMax.toFixed(1)} m/s · 가속 ${(S.tAcc * 1000).toFixed(0)} ms · 얻은 KE ${S.Et.toFixed(0)} J · 몫 손목 ${(S.wrist * 100).toFixed(0)} % / 손(팔 호) ${(S.hand * 100).toFixed(0)} % / 중력 ${(S.grav * 100).toFixed(0)} % · 손목 포화 ${(S.sat * 100).toFixed(0)} % 스텝 · |τ| 최고 ${S.tauMax.toFixed(1)} / 상한 ${S.cap.toFixed(1)} N·m · 골반 ω ${S.pelW.toFixed(1)} · 가슴 ω ${S.chW.toFixed(1)} rad/s · 칼끝 최고보다 앞선 시간 골반 ${S.leadPel} / 가슴 ${S.leadCh} / 손 ${S.leadHand} ms`);
   if (args.json) console.log(JSON.stringify(rows));
 }

@@ -47,6 +47,15 @@ if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = mor
 // 테스트용 ?cutReact=same|full|legacy : 절삭 끌림 반작용 방식(config STRIKE.cutReact, 기본 legacy)을 이번 실행에만 바꾼다 — 사장님 비교용(10/8 타격 B 질문)
 const cutReact = params.get('cutReact');
 if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.STRIKE.cutReact = cutReact;
+// 테스트용 R2′ 팔 단계 탐색 인자(10/8, 사장님 비교용·이번 실행만): ?swing=arc (WA1 손목 hold+release) · ?trunkArc=4&trunkArcSpeed=2 (WA2 몸의 호) · ?chain=legs (골반 = 발 힘쌍 A)
+const swingParam = params.get('swing');
+if (swingParam === 'arc' || swingParam === 'servo') CONFIG.ARM.swing = swingParam;
+const trunkArc = +params.get('trunkArc');
+if (trunkArc >= 0 && params.has('trunkArc')) CONFIG.BODY.trunkArc = trunkArc;
+const trunkArcSpeed = +params.get('trunkArcSpeed');
+if (trunkArcSpeed > 0) CONFIG.BODY.trunkArcSpeed = trunkArcSpeed;
+const chainParam = params.get('chain');
+if (chainParam === 'legs' || chainParam === 'anchor') CONFIG.BODY.chain = chainParam;
 let lastPlayerWeapon = null; // 지난 판에 고른 무기 (다음 판 카드에서 되도록 뺀다)
 /** 이번 판 내 카드 두 장 (맨 오른쪽 세 번째 칸은 상대 무기라 여기서 뽑지 않는다): 뽑기 목록에서 겹치지 않게 고르게 뽑는다
  *  (지난 판 무기는 되도록 빼서 같은 무기가 두 판 연속 나오지 않게).

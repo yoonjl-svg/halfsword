@@ -78,6 +78,8 @@ export const BODY = {
   //            skill.lunge(매 베기 앞걸음) 끔 (126), 발 핀 마찰 한계의 접촉 N ×6/7 (127, Rapier 과대 보고 교정). 128·129 는 그대로.
   //  탐색판: public/r2p/?chain=legs|anchor (주소 인자는 탐색판 빌드 R2P_PROBE 에서만 읽힌다, src/r2p_probe.js). 본판 기본값 변경 0.
   chain: 'anchor', // 확인표 122
+  trunkArcSpeed: 1, // WA2 보조: 호가 켜진 동안(trunkArc > 0, activity) 몸 자세 따라가기 빠르기(SKILL_BODY.pelvis·chest) 배수 — 1 = 오늘. 몸이 느려 손 속도에 안 실리는지 가르는 계측용
+  trunkArc: 0, // R2′ 팔 단계 WA2 '몸의 호'(docs/strike/r2p_arm_arc_2026-10-08.md §4): 휘두르는 동안 몸 돌림(보정 v2 updateBodyPose 의 −x·0.35)을 획 시작 자리에서의 손가락 가로 이동량 × 이 배수만큼 더 튼다(골반 몫 0.5·가슴 1 비율 그대로, 서 있을 때·쉼 자세는 그대로). 0 = 오늘(바이트 동일). 골반은 chain 'legs' 면 발 사이 힘쌍(§9-4 A)으로, 'anchor' 면 닻 모터로 돈다. 값은 계측 뒤 — 확인표 174
   chainSpineZeta: 0.5, // 확인표 125 ('legs' 만, 첫 탐색판의 유일한 새 수): 척추 비틀기(y) 축 감쇠비. d_y = ζ·2·√(k·I_up) → 복부 ≈66·가슴 ≈57 N·m·s/rad (오늘 180·160 = ζ ≈1.4). x·z 축·강성(129)은 그대로
 };
 

@@ -912,6 +912,17 @@ export class Fighter {
     if (sk.corr === 'v2' && s > 0) {
       // 보정 v2 (설계 '순서와 정렬'): 자세표 몸 목표 없음. 오늘 끔의 몸 돌림(−x·0.35, applyPose 1510 의 수)을 거르기 전 aimRaw 로
       //  골반 s·0.5(620 의 골반 몫)·가슴 s 만큼 먼저 따라간다 → 골반 → 가슴 → 손(걸러진 aim) → 칼끝 순. 숙이기·낮추기 0
+      // WA2 몸의 호(BODY.trunkArc, 10/8): 획 시작 때의 손가락 가로 자리 x0 를 잡아 두고, 휘두르는 동안 (x − x0)·trunkArc·activity 만큼 몸 돌림 명령을 더 튼다 —
+      //  쉼·자세 고치기(activity 0)와 trunkArc 0 은 오늘 그대로. 골반(0.5 몫)·가슴(1)·순서 결합 ex 모두 같은 turn 을 보므로 비율은 그대로, 크기만 커진다.
+      let arc = 0; // 몸의 호 몫(rad): 순서 결합 ex 가 보는 turn 에는 넣지 않는다 — ex 는 '손이 닿는 데 필요한 만큼' 으로 되돌리는 보정이라 호를 상쇄한다(10/8 03:55 dbg)
+      if (BODY.trunkArc > 0) {
+        if (sk.swinging && this.arcX0 == null) this.arcX0 = sk.aim.x;
+        if (this.arcX0 != null) {
+          // 호 몫은 걸러진 손 목표(aim)로 — 날것 패드(aimRaw)로 하면 몸이 손보다 150 ms 넘게 먼저 돌아 끝나 버려(10/8 계측: 가슴 최고가 칼끝 최고보다 192 ms 앞) 손 속도에 실리지 않는다
+          arc = -(sk.aim.x - this.arcX0) * BODY.trunkArc * act * BODY_TURN;
+          if (!sk.swinging && act < 0.05) this.arcX0 = null;
+        }
+      }
       const turn = -sk.aimRaw.x * BODY_TURN;
       // 순서 결합 (fix2 A, 엉덩이가 손보다 먼저): 거르기 전 패드가 명령하는 손 목표에 칼 어깨가 닿지 못하면(들림 면 밖·팔 길이 밖) 그 넘침 각만큼
       //  가슴을 더 틀고 골반이 같은 몫(PELVIS_SHARE)을 받는다. 손이 필요로 하는 만큼 통째로(s 를 곱하지 않음: 어느 단계든 손은 손가락이 간 곳으로).
@@ -920,8 +931,8 @@ export class Fighter {
       // 한손 무기: 옆으로 선 자세(corrScale stC·stP = 옛 쉼의 한손 자세표 몸 돌림)를 바탕으로 더한다. 가슴 총 명령도 그만큼 (순서 결합의 ψ0)
       const cs = this.corrScale(s);
       const ex = this.corrTrunkTurn(sk.aimRaw.x, sk.aimRaw.y, s, cs.stC ? turn + cs.stC : turn);
-      let pT = s * PELVIS_SHARE * turn + PELVIS_SHARE * ex;
-      let cT = s * turn + ex;
+      let pT = s * PELVIS_SHARE * turn + PELVIS_SHARE * ex + PELVIS_SHARE * arc;
+      let cT = s * turn + ex + arc;
       if (cs.stC) {
         pT += cs.stP;
         cT += cs.stC;
@@ -960,8 +971,9 @@ export class Fighter {
         piT += (G.pitch * gw - piT) * wi;
         dT += ((G.drop - 0.06) * gw - dT) * wi;
       }
-      follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd);
-      follow('chestYaw', cT, SKILL_BODY.chest * spd);
+      const arcSpd = BODY.trunkArc > 0 ? 1 + (BODY.trunkArcSpeed - 1) * act : 1; // WA2 보조(trunkArcSpeed): 휘두르는 동안만 몸이 더 빨리 따라간다 (기본 1 = 오늘)
+      follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd * arcSpd);
+      follow('chestYaw', cT, SKILL_BODY.chest * spd * arcSpd);
       follow('pitch', piT, SKILL_BODY.chest * spd);
       follow('drop', dT, SKILL_BODY.pelvis * spd);
     } else {
