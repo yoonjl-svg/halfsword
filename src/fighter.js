@@ -2413,7 +2413,10 @@ export class Fighter {
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
     else this.armFull = false;
-    if (mus < 0.12 || !this.armed) return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
+    if (mus < 0.12 || !this.armed) {
+      this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
+      return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
+    }
     const str = this.strength * mus * (0.35 + 0.65 * this.armHealth);
     const forearm = this.bodies.farmS;
 
