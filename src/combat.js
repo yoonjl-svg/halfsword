@@ -356,7 +356,9 @@ export class Combat {
       if (s < 1e-3) continue;
       const dir = rel.divideScalar(s);
       let J = 0;
+      let inDrag = false;
       if (c.Eleft > 0) {
+        inDrag = true;
         // 끌림: 이번 순간에 흡수하는 에너지 = min(남은 에너지, c·속도²·dt). 한 순간에 속도를 크게 꺾지는 않는다
         const Estep = Math.min(c.Eleft, STRIKE.dragC * s * s * dt);
         J = Math.min(Estep / s, STRIKE.dragCap * c.mFree * s);
@@ -373,14 +375,27 @@ export class Combat {
         const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
         const o = tv(sw.translation());
         const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
-        sw.applyImpulseAtPoint({ x: -dir.x * J, y: -dir.y * J, z: -dir.z * J }, vp(pA), true);
-        // 몸 쪽 반작용 (STRIKE.cutReact, 10/8 비교): legacy = 0.8·J 를 뼈 중심선 점에(9/26 이전부터, 근거 기록 없음) · full = J 를 뼈 점에 · same = J 를 칼과 같은 점에(작용·반작용 그대로)
+        // 몸 쪽 반작용 (STRIKE.cutReact, 사장님 결정 10/8 02:15 same): legacy = 0.8·J 를 뼈 중심선 점에(9/26 이전부터, 근거 기록 없음) · full = J 를 뼈 점에 · same = J 를 칼과 같은 점에(작용·반작용 그대로)
         const mode = STRIKE.cutReact || 'legacy';
         const kv = mode === 'legacy' ? 0.8 : 1;
         const pv = mode === 'same' ? pA : onBone(c.pr.v, point);
+        if (mode === 'same') {
+          // 끌림은 미는 힘이지 튕기는 힘이 아니다: 한 스텝의 충격량이 닿은 점의 상대 속도를 뒤집지 못하게 한다 — 두 강체의 그 점·그 방향 유효 질량으로
+          //  J ≤ s / (1/m_칼 + 1/m_부위). 얇은 팔(축 둘레 관성이 작다)에 겉면 점으로 주면 이 상한 없이는 팔이 팽이처럼 돈다(10/8 측정: 접촉 뒤 |ω| p90 86 rad/s).
+          //  덜 흡수한 에너지는 남겨 다음 스텝에 마저 흡수한다 (총 흡수 에너지는 같다)
+          const att = c.pr.w.fighter;
+          const mB = att.swordProps ? gripMass(att.swordProps, liveState(sw), pA, dir, STEEL.handMass) : c.mFree + STRIKE.armAssist;
+          const mV = bodyMass(vb, pA, dir);
+          const Jcap = s / (1 / mB + 1 / mV);
+          if (J > Jcap) {
+            if (inDrag) c.Eleft += (J - Jcap) * s;
+            J = Jcap;
+          }
+        }
+        sw.applyImpulseAtPoint({ x: -dir.x * J, y: -dir.y * J, z: -dir.z * J }, vp(pA), true);
         vb.applyImpulseAtPoint({ x: dir.x * J * kv, y: dir.y * J * kv, z: dir.z * J * kv }, vp(pv), true);
         if (globalThis.__cutLog) { // 측정용(도구만 켠다): 접촉별 몫 — 칼 충격량 합, 몸 부위 속도 변화
-          if (!c.log) { const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel(); c.log = { part: c.pr.v.part, v0: [v.x, v.y, v.z], w0: [w.x, w.y, w.z], s0: s, swv0: [vs.x, vs.y, vs.z], Jsum: 0, steps: 0, mode }; globalThis.__cutLog.push(c.log); }
+          if (!c.log) { const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel(); c.log = { who: c.pr.v.fighter.name, part: c.pr.v.part, v0: [v.x, v.y, v.z], w0: [w.x, w.y, w.z], s0: s, swv0: [vs.x, vs.y, vs.z], Jsum: 0, steps: 0, mode }; globalThis.__cutLog.push(c.log); }
           const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel();
           c.log.v1 = [v.x, v.y, v.z]; c.log.w1 = [w.x, w.y, w.z]; c.log.s1 = s; c.log.swv1 = [vs.x, vs.y, vs.z]; c.log.Jsum += J; c.log.steps++;
         }
