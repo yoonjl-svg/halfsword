@@ -1645,6 +1645,14 @@ export class Fighter {
     this.shatterLook(cutY);
   }
 
+  /** (파손) 떨어져 나간 부품의 콜라이더를 세계에서 떼어 낸다. Rapier 0.19.3 의 setEnabled(false) 는 충돌을 끄지 못한다
+   *  (10/7 격리 시험: 비활성 뒤에도 13 스텝째 접촉 그대로, 게임에서는 떨어진 철구 머리가 30 초에 2,802 번 닿음) → 충돌 그룹 0 으로
+   *  어떤 것과도 짝이 안 되게 하고, 부활의 유령 복원(revive.js ghost)이 되살리지 않도록 비활성 표시도 남긴다 */
+  detachCollider(col) {
+    col.setCollisionGroups(0);
+    col.setEnabled(false);
+  }
+
   /** (파손) 칼 몸체에서 칼 축 높이 cutY(손 기준, m) 너머의 콜라이더를 잘라 내고 질량·관성 값을 다시 잰다 */
   trimSword(cutY) {
     const parts = this.weapon.buildParts({}); // 질량 자료만 쓴다 (색은 안 쓴다) — 생성자와 같은 순서라 swordColliders 와 짝이 맞다
@@ -1653,14 +1661,14 @@ export class Fighter {
       if (!col) return;
       if (shape[0] !== 'box') {
         // 공 부품: 절단선 위에 통째로 있으면 떨어져 나간다 (모르겐슈테른 쇠 공 머리, spec.breakY). 폼멜·컵 힐트는 늘 절단선 아래라 예전처럼 그대로
-        if (shape[0] === 'ball' && y - shape[1] >= cutY - 0.005) col.setEnabled(false);
+        if (shape[0] === 'ball' && y - shape[1] >= cutY - 0.005) this.detachCollider(col);
         return;
       }
       const [, hx, hy, hz] = shape;
       const lo = y - hy;
       if (y + hy <= cutY) return; // 절단선 아래 부품 (자루·코등이·폼멜)
       if (lo >= cutY - 0.005) {
-        col.setEnabled(false); // 통째로 떨어져 나간 부품 (칼에는 없다 — 모르겐슈테른은 머리가 공 부품이라 위 가지)
+        this.detachCollider(col); // 통째로 떨어져 나간 부품 (칼에는 없다 — 모르겐슈테른은 머리가 공 부품이라 위 가지)
         return;
       }
       const f = (cutY - lo) / (2 * hy); // 남는 비율 (길이)
@@ -2453,7 +2461,9 @@ export class Fighter {
     const wAim = _v5.set(0, 0, 0);
     if (this.prevAim && this.lastDt > 0) {
       wAim.crossVectors(this.prevAim, aim).multiplyScalar(1 / this.lastDt);
-      if (wAim.length() > 25) wAim.setLength(25);
+      const wRaw = wAim.length(); // 측정용(동작 무관): 상한 전 목표 각속도 최고·상한에 걸린 횟수 (tools/sim 탐침이 읽는다)
+      if (wRaw > (this.aimRateMax || 0)) this.aimRateMax = wRaw;
+      if (wRaw > 25) { wAim.setLength(25); this.aimRateClamps = (this.aimRateClamps || 0) + 1; }
     }
     (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
     this.aimDirW.copy(aim); // 빈손이 칼자루를 어디로 밀고 당길지 (offHand)
