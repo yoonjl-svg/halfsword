@@ -206,6 +206,7 @@ function flySword(f, V, dt) {
 function attachSword(f, V) {
   V.sword = null;
   f.holdLocal = null; // ARM.swing 'arc' 쥠 방향은 다시 쥘 때 새로 잡는다 (10/8 검토 2)
+  f.aimLagMap = 0;
   f.holdW = 0;
   f.holdOn = false;
   const sw = f.sword;

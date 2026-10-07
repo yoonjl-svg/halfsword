@@ -920,8 +920,14 @@ export class Fighter {
       //  획 사이가 짧을 때 앞 획의 x0 가 남아 반대 방향 계단 명령이 들어갔다(10/8 2 등급 검토 1). 죽음·무장 해제 뒤에도 다음 휘두름에서 새로 잡힌다
       const gapA = this.arcGap ?? 9;
       this.arcGap = sk.swinging ? 0 : gapA + dt;
-      if (sk.swinging && (this.arcX0 == null || gapA > 0.2)) this.arcX0 = sk.aim.x;
-      this.swingDir = this.arcX0 != null ? Math.sign(sk.aim.x - this.arcX0) : 0; // 획 방향(패드 x), driveSword 의 손 follow-through 가 읽는다
+      // 획 방향 = 손 목표 속도의 가로 성분(부드러운 부호: |vx| 0.5 m/s 에서 ±1, 세로 획은 0 근처) — x0 대비 변위 부호로 하면 쉼 없는 되돌림 획에서 앞 획 방향이 남고(10/8 2 등급 검토 2-1), 세로 획은 노이즈로 ±1 이 됐다(2-2)
+      const vx = sk.vel.x;
+      const moving = Math.abs(vx) > 0.3; // 가로로 움직이는 중일 때만 방향을 갱신 — 손가락이 끝 자리에 서면(follow-through 가 필요한 바로 그때) 마지막 방향을 지킨다; 세로 획은 갱신이 없어 0 에 머문다
+      const dirNow = moving ? THREE.MathUtils.clamp(vx / 0.5, -1, 1) : (this.swingDir || 0);
+      const reversed = sk.swinging && moving && (this.swingDir || 0) * dirNow < -0.25; // 획이 되돌아섰다(연속 베기의 경계)
+      if (sk.swinging && (this.arcX0 == null || gapA > 0.2 || reversed)) this.arcX0 = sk.aim.x;
+      if (sk.swinging && moving) this.swingDir = dirNow;
+      else if (this.arcX0 == null) this.swingDir = 0;
       this.swingAct = act;
       if (this.arcX0 != null) {
         // 호 몫은 걸러진 손 목표(aim)로 — 날것 패드(aimRaw)로 하면 몸이 손보다 150 ms 넘게 먼저 돌아 끝나 버려(10/8 계측: 가슴 최고가 칼끝 최고보다 192 ms 앞) 손 속도에 실리지 않는다.
@@ -929,10 +935,7 @@ export class Fighter {
         if (BODY.trunkArc > 0) arc = -(sk.aim.x - this.arcX0) * BODY.trunkArc * act * BODY_TURN;
         // WA2-2 follow-through(BODY.trunkFollow): 칼(머리)이 겨눔 방향보다 뒤처진 각만큼 획 방향으로 몸을 더 돌려 둔다 — 손이 끝 자리에 닿아도 무거운 머리가 따라올 때까지 몸이 멈추지 않는다.
         //  머리가 따라오면(뒤처짐 0) 저절로 사라진다. activity 를 곱해 쉼 자세의 뒤처짐(칼이 아직 겨눔에 안 맞은 때)은 안 센다
-        if (BODY.trunkFollow > 0 && this.aimLagMap > 0) {
-          const dir = Math.sign(sk.aim.x - this.arcX0);
-          arc += -dir * BODY.trunkFollow * this.aimLagMap * act * BODY_TURN;
-        }
+        if (BODY.trunkFollow > 0 && this.aimLagMap > 0) arc += -(this.swingDir || 0) * BODY.trunkFollow * this.aimLagMap * act * BODY_TURN;
       }
       if (this.arcX0 != null && !sk.swinging && act < 0.05) this.arcX0 = null;
     }
@@ -989,7 +992,7 @@ export class Fighter {
         piT += (G.pitch * gw - piT) * wi;
         dT += ((G.drop - 0.06) * gw - dT) * wi;
       }
-      const arcSpd = BODY.trunkArc > 0 ? 1 + (BODY.trunkArcSpeed - 1) * act : 1; // WA2 보조(trunkArcSpeed): 휘두르는 동안만 몸이 더 빨리 따라간다 (기본 1 = 오늘)
+      const arcSpd = BODY.trunkArc > 0 && this.r2pOn() ? 1 + (BODY.trunkArcSpeed - 1) * act : 1; // WA2 보조(trunkArcSpeed): 휘두르는 동안만 몸이 더 빨리 따라간다 (기본 1 = 오늘)
       follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd * arcSpd);
       follow('chestYaw', cT, SKILL_BODY.chest * spd * arcSpd);
       follow('pitch', piT, SKILL_BODY.chest * spd);
@@ -999,9 +1002,10 @@ export class Fighter {
       //  WA4(10/8): 옛 보정 가지(AI)에도 몸의 호·follow-through(arc)를 더한다 — arc 가 0 이면 식 그대로(바이트 동일)
       const pT0 = -G.pelvisYaw * 0.5 * gw * amp;
       const cT0 = -G.chestYaw * gw * amp;
-      const arcSpd0 = BODY.trunkArc > 0 ? 1 + (BODY.trunkArcSpeed - 1) * act : 1;
-      follow('pelvisYaw', arc !== 0 ? pT0 + PELVIS_SHARE * arc : pT0, SKILL_BODY.pelvis * spd * arcSpd0);
-      follow('chestYaw', arc !== 0 ? cT0 + arc : cT0, SKILL_BODY.chest * spd * arcSpd0);
+      const arcSpd0 = BODY.trunkArc > 0 && this.r2pOn() ? 1 + (BODY.trunkArcSpeed - 1) * act : 1;
+      const arcO = arc !== 0 ? arc * (1 - sk.thrustPose.w) : 0; // 찌르기 자세 동안은 v2 가지처럼 호를 줄인다 (검토 2-7)
+      follow('pelvisYaw', arcO !== 0 ? pT0 + PELVIS_SHARE * arcO : pT0, SKILL_BODY.pelvis * spd * arcSpd0);
+      follow('chestYaw', arcO !== 0 ? cT0 + arcO : cT0, SKILL_BODY.chest * spd * arcSpd0);
       follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
       follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
     }
@@ -2271,7 +2275,7 @@ export class Fighter {
     spine('abdomen', bend * 0.5, twist * 0.45);
     spine('chest', bend * 0.5, twist * 0.55);
     // 머리: 몸통이 틀어져도 상대를 본다. 멍하면 고개가 떨어진다
-    spine('head', -0.35 * this.daze, -chestYaw);
+    spine('head', -0.35 * this.daze, -THREE.MathUtils.clamp(chestYaw, -0.8, 0.8)); // 몸의 호가 가슴 명령을 키워도 머리 목표는 비틀기 한도(±0.8)와 같은 범위 (검토 2-6; 오늘 값은 이 안이라 바이트 동일)
   }
 
   // 근육: 목표 자세로 관절을 돌린다. 모터는 물리 엔진이 한꺼번에 풀어서 떨리지 않는다.
@@ -2554,15 +2558,18 @@ export class Fighter {
     const mus = this.muscle;
 
     // 손 목표 위치: 가슴 앞 평면의 (좌우, 위아래) + 자동 깊이 (몸이 바라보는 방향 기준)
-    let off = this.skill.aim; // 손 목표 (입력 + 검술 층의 이어 베기, 부드럽게 걸러진 값)
-    if (BODY.handFollow > 0 && this.swingDir && this.aimLagMap > 0.05 && this.swingAct > 0 && this.r2pOn()) {
-      // WA2-2 손의 follow-through: 머리가 겨눔보다 뒤처진 동안 손 목표를 획 방향으로 더 보낸다(패드 m = handFollow × 뒤처짐 rad × activity, 패드 반지름 안에서).
-      //  무거운 한손 무기는 손이 끝 자리에 서면 머리가 따라오며 느려진다 — 사람은 손을 계속 돌려 머리를 싣는다
+    const off = this.skill.aim; // 손 목표 (입력 + 검술 층의 이어 베기, 부드럽게 걸러진 값) — 자세 지도·겨눔·찌르기 출발점은 늘 이것을 본다
+    let offH = off; // 손 자리에만 쓰는 목표 (WA2-2 손의 follow-through 가 늘인다)
+    const skT = this.skill;
+    if (BODY.handFollow > 0 && this.swingDir && this.aimLagMap > 0.05 && this.swingAct > 0 && this.r2pOn() && !skT.tap && !(skT.thrustPose.w > 0) && this.finish.amt <= 0) {
+      // WA2-2 손의 follow-through: 머리가 겨눔보다 뒤처진 동안 손 자리를 획 방향으로 더 보낸다(패드 m = handFollow × 뒤처짐 rad × activity, 패드 반지름 안에서).
+      //  무거운 한손 무기는 손이 끝 자리에 서면 머리가 따라오며 느려진다 — 사람은 손을 계속 돌려 머리를 싣는다. 탭 찌르기·찌르기 자세·마무리 동안은 안 늘인다(검토 2-3);
+      //  자세 지도(guardAt → nearest, AI 가 읽음)·칼끝 방향(guardDir)·찌르기 출발점(handBase)은 늘이지 않은 off 그대로(검토 2-8)
       const extra = this.swingDir * BODY.handFollow * this.aimLagMap * this.swingAct;
-      off = _followOff.set(THREE.MathUtils.clamp(off.x + extra, -WEAPON.reach, WEAPON.reach), off.y);
+      offH = _followOff.set(THREE.MathUtils.clamp(off.x + extra, -WEAPON.reach, WEAPON.reach), off.y);
     }
     // ① 날것의 매핑: 가운데로 모을수록 팔을 앞으로 뻗는다 (rawHand: corrScale·padHand 와 같은 식 하나)
-    const handLocal = rawHand(off.x, off.y, _v2);
+    const handLocal = rawHand(offH.x, offH.y, _v2);
     // ② 검술 자세 지도: 손가락 위치 → 실제 롱소드 자세의 손 위치(앞뒤 깊이 포함)와 칼끝 방향
     //  검술 보정이 셀수록 ②를 따른다 (끔 = ①만)
     const gw = this.guardWeight();
@@ -2605,6 +2612,7 @@ export class Fighter {
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
     else this.armFull = false;
     if (mus < 0.12 || !this.armed) {
+      this.aimLagMap = 0; // follow-through 의 뒤처짐도 0 (쓰러짐·무장 해제 동안 낡은 값으로 몸을 더 틀지 않게 — 검토 2-5)
       this.holdLocal = null; // ARM.swing 'arc' 의 쥠 방향·되섞기도 버린다 (칼을 놓치거나 쓰러진 동안 남아 다음 쥠의 첫 60 ms 를 옛 방향으로 끌던 것 — 10/8 검토 2; servo 에선 읽지 않는 값)
       this.holdW = 0;
       this.holdOn = false;
