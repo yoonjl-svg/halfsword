@@ -587,7 +587,7 @@ export const SOUND = {
   stageHitGap: 10,
   // 칼이 몸을 칠 때의 소리 (31·33차 후보, 사장님 "전자 파리채로 모기 잡는 소리 같아"): 'legacy' 지금 / 'synth' 날 선 칼 합성 / 'rec' 날 선 칼 녹음 / 'samsho' 대전 게임식 2.
   // 사장님이 고르시기 전까지 'legacy' (게임 소리 그대로). sounds.html "칼→몸 소리 후보" 에서 비교
-  fleshHit: 'samsho', // 10/1 21:10 사장님: "예전에 만든 slash35_heavy(35차 강베기) 버전이 지금보다 낫다" → 기본값. 다른 후보는 sounds.html 에 그대로
+  fleshHit: 'drawn', // 10/7 사장님 지시로 샛별 일반판의 사용자 선택을 그대로: 'drawn' = A2 단축 약베기(.26 s)/B2 단축 강베기(.35 s, 112 J 경계), 찌르기는 samsho 유지 (샛별 7cbac07, 사용자 선택 10/2·'15 % 크게' 10/3). 'samsho' = 10/1 21:10 사장님 선택(35차 강베기)이던 전 기본값, sounds.html 에 그대로
 };
 
 /**
