@@ -48,6 +48,11 @@ if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = mor
 const cutReact = params.get('cutReact');
 if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.STRIKE.cutReact = cutReact;
 // 테스트용 R2′ 팔 단계 탐색 인자(10/8, 사장님 비교용·이번 실행만): ?swing=arc (WA1 손목 hold+release) · ?trunkArc=4&trunkArcSpeed=2 (WA2 몸의 호) · ?chain=legs (골반 = 발 힘쌍 A)
+// ?r2p=1 : R2′ 팔 단계 권고 묶음 한 번에(10/8 WA2-2: swing arc · trunkArc 2 · trunkFollow 1 · handFollow 0.25). ?r2p=legs 는 chain legs(발 힘쌍 A)까지. 개별 인자가 뒤에 오면 그것이 덮는다
+const r2p = params.get('r2p');
+if (r2p === '1' || r2p === 'legs' || r2p === 'all') { CONFIG.ARM.swing = 'arc'; CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 1; CONFIG.BODY.handFollow = 0.25; if (r2p === 'legs') CONFIG.BODY.chain = 'legs'; if (r2p === 'all') CONFIG.BODY.r2pScope = 'all'; }
+const r2pScope = params.get('r2pScope');
+if (r2pScope === 'player' || r2pScope === 'all') CONFIG.BODY.r2pScope = r2pScope;
 const swingParam = params.get('swing');
 if (swingParam === 'arc' || swingParam === 'servo') CONFIG.ARM.swing = swingParam;
 const trunkArc = +params.get('trunkArc');

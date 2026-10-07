@@ -802,6 +802,11 @@ export class Fighter {
    *  δₑ 에서도 안 풀리면(트는 것으로 다 닿지 못함) δₑ 를 돌려준다: 가장 덜 넘치는 데까지 튼다 (0 으로 끄면 풀리는 이웃 패드와 수십 도 뜀).
    *  두 조건이 다 걸리면 큰 쪽. 크기·빠르기는 부르는 쪽 follow(SKILL_BODY 빠르기·holdSpeed 몫)·관절·근육이 정한다
    */
+  /** R2′ 팔 단계 묶음이 이 검객에게 걸리나 (BODY.r2pScope: 'player' = index 0 만, 'all' = 모두) */
+  r2pOn() {
+    return BODY.r2pScope === 'all' || this.index === 0;
+  }
+
   corrTrunkTurn(x, y, s, psi0) {
     const T = this.padHand(x, y, s, _ct1);
     T.x = Math.min(T.x, this.closeReach());
@@ -909,33 +914,33 @@ export class Fighter {
     const amp = SKILL_BODY.holdAmount + (1 - SKILL_BODY.holdAmount) * act;
     const spd = SKILL_BODY.holdSpeed + (1 - SKILL_BODY.holdSpeed) * act;
     const s = sk.level;
+    let arc = 0; // 몸의 호 몫(rad): 순서 결합 ex 가 보는 turn 에는 넣지 않는다 — ex 는 '손이 닿는 데 필요한 만큼' 으로 되돌리는 보정이라 호를 상쇄한다(10/8 03:55 dbg)
+    if ((BODY.trunkArc > 0 || BODY.handFollow > 0 || BODY.trunkFollow > 0) && this.r2pOn()) {
+      // 획의 시작 자리 x0: 휘두름이 시작되는 변(조용했던 시간 > 0.2 s 뒤, skill.js 의 quiet 와 같은 기준)마다 다시 잡는다 — activity 가 0.05 아래로 식기(1.2 s)를 기다리면
+      //  획 사이가 짧을 때 앞 획의 x0 가 남아 반대 방향 계단 명령이 들어갔다(10/8 2 등급 검토 1). 죽음·무장 해제 뒤에도 다음 휘두름에서 새로 잡힌다
+      const gapA = this.arcGap ?? 9;
+      this.arcGap = sk.swinging ? 0 : gapA + dt;
+      if (sk.swinging && (this.arcX0 == null || gapA > 0.2)) this.arcX0 = sk.aim.x;
+      this.swingDir = this.arcX0 != null ? Math.sign(sk.aim.x - this.arcX0) : 0; // 획 방향(패드 x), driveSword 의 손 follow-through 가 읽는다
+      this.swingAct = act;
+      if (this.arcX0 != null) {
+        // 호 몫은 걸러진 손 목표(aim)로 — 날것 패드(aimRaw)로 하면 몸이 손보다 150 ms 넘게 먼저 돌아 끝나 버려(10/8 계측: 가슴 최고가 칼끝 최고보다 192 ms 앞) 손 속도에 실리지 않는다.
+        //  숙련도 s 를 곱하지 않는다: 보정이 아니라 몸의 휘두름이라 어느 단계든 같은 크기(ex 와 같은 뜻)
+        if (BODY.trunkArc > 0) arc = -(sk.aim.x - this.arcX0) * BODY.trunkArc * act * BODY_TURN;
+        // WA2-2 follow-through(BODY.trunkFollow): 칼(머리)이 겨눔 방향보다 뒤처진 각만큼 획 방향으로 몸을 더 돌려 둔다 — 손이 끝 자리에 닿아도 무거운 머리가 따라올 때까지 몸이 멈추지 않는다.
+        //  머리가 따라오면(뒤처짐 0) 저절로 사라진다. activity 를 곱해 쉼 자세의 뒤처짐(칼이 아직 겨눔에 안 맞은 때)은 안 센다
+        if (BODY.trunkFollow > 0 && this.aimLagMap > 0) {
+          const dir = Math.sign(sk.aim.x - this.arcX0);
+          arc += -dir * BODY.trunkFollow * this.aimLagMap * act * BODY_TURN;
+        }
+      }
+      if (this.arcX0 != null && !sk.swinging && act < 0.05) this.arcX0 = null;
+    }
     if (sk.corr === 'v2' && s > 0) {
       // 보정 v2 (설계 '순서와 정렬'): 자세표 몸 목표 없음. 오늘 끔의 몸 돌림(−x·0.35, applyPose 1510 의 수)을 거르기 전 aimRaw 로
       //  골반 s·0.5(620 의 골반 몫)·가슴 s 만큼 먼저 따라간다 → 골반 → 가슴 → 손(걸러진 aim) → 칼끝 순. 숙이기·낮추기 0
       // WA2 몸의 호(BODY.trunkArc, 10/8): 획 시작 때의 손가락 가로 자리 x0 를 잡아 두고, 휘두르는 동안 (x − x0)·trunkArc·activity 만큼 몸 돌림 명령을 더 튼다 —
       //  쉼·자세 고치기(activity 0)와 trunkArc 0 은 오늘 그대로. 골반(0.5 몫)·가슴(1)·순서 결합 ex 모두 같은 turn 을 보므로 비율은 그대로, 크기만 커진다.
-      let arc = 0; // 몸의 호 몫(rad): 순서 결합 ex 가 보는 turn 에는 넣지 않는다 — ex 는 '손이 닿는 데 필요한 만큼' 으로 되돌리는 보정이라 호를 상쇄한다(10/8 03:55 dbg)
-      if (BODY.trunkArc > 0 || BODY.handFollow > 0) {
-        // 획의 시작 자리 x0: 휘두름이 시작되는 변(조용했던 시간 > 0.2 s 뒤, skill.js 의 quiet 와 같은 기준)마다 다시 잡는다 — activity 가 0.05 아래로 식기(1.2 s)를 기다리면
-        //  획 사이가 짧을 때 앞 획의 x0 가 남아 반대 방향 계단 명령이 들어갔다(10/8 2 등급 검토 1). 죽음·무장 해제 뒤에도 다음 휘두름에서 새로 잡힌다
-        const gapA = this.arcGap ?? 9;
-        this.arcGap = sk.swinging ? 0 : gapA + dt;
-        if (sk.swinging && (this.arcX0 == null || gapA > 0.2)) this.arcX0 = sk.aim.x;
-        this.swingDir = this.arcX0 != null ? Math.sign(sk.aim.x - this.arcX0) : 0; // 획 방향(패드 x), driveSword 의 손 follow-through 가 읽는다
-        this.swingAct = act;
-        if (this.arcX0 != null && BODY.trunkArc > 0) {
-          // 호 몫은 걸러진 손 목표(aim)로 — 날것 패드(aimRaw)로 하면 몸이 손보다 150 ms 넘게 먼저 돌아 끝나 버려(10/8 계측: 가슴 최고가 칼끝 최고보다 192 ms 앞) 손 속도에 실리지 않는다.
-          //  숙련도 s 를 곱하지 않는다: 보정이 아니라 몸의 휘두름이라 어느 단계든 같은 크기(ex 와 같은 뜻)
-          arc = -(sk.aim.x - this.arcX0) * BODY.trunkArc * act * BODY_TURN;
-          // WA2-2 follow-through(BODY.trunkFollow): 칼(머리)이 겨눔 방향보다 뒤처진 각만큼 획 방향으로 몸을 더 돌려 둔다 — 손이 끝 자리에 닿아도 무거운 머리가 따라올 때까지 몸이 멈추지 않는다.
-          //  머리가 따라오면(뒤처짐 0) 저절로 사라진다. activity 를 곱해 쉼 자세의 뒤처짐(칼이 아직 겨눔에 안 맞은 때)은 안 센다
-          if (BODY.trunkFollow > 0 && this.aimLagMap > 0) {
-            const dir = Math.sign(sk.aim.x - this.arcX0);
-            arc += -dir * BODY.trunkFollow * this.aimLagMap * act * BODY_TURN;
-          }
-        }
-        if (this.arcX0 != null && !sk.swinging && act < 0.05) this.arcX0 = null;
-      }
       const turn = -sk.aimRaw.x * BODY_TURN;
       // 순서 결합 (fix2 A, 엉덩이가 손보다 먼저): 거르기 전 패드가 명령하는 손 목표에 칼 어깨가 닿지 못하면(들림 면 밖·팔 길이 밖) 그 넘침 각만큼
       //  가슴을 더 틀고 골반이 같은 몫(PELVIS_SHARE)을 받는다. 손이 필요로 하는 만큼 통째로(s 를 곱하지 않음: 어느 단계든 손은 손가락이 간 곳으로).
@@ -991,8 +996,12 @@ export class Fighter {
       follow('drop', dT, SKILL_BODY.pelvis * spd);
     } else {
       // 골반은 아직 발 위치를 바꾸지 못해서(발 딛기 방향 전환 전) 교본 값의 절반만 튼다
-      follow('pelvisYaw', -G.pelvisYaw * 0.5 * gw * amp, SKILL_BODY.pelvis * spd);
-      follow('chestYaw', -G.chestYaw * gw * amp, SKILL_BODY.chest * spd);
+      //  WA4(10/8): 옛 보정 가지(AI)에도 몸의 호·follow-through(arc)를 더한다 — arc 가 0 이면 식 그대로(바이트 동일)
+      const pT0 = -G.pelvisYaw * 0.5 * gw * amp;
+      const cT0 = -G.chestYaw * gw * amp;
+      const arcSpd0 = BODY.trunkArc > 0 ? 1 + (BODY.trunkArcSpeed - 1) * act : 1;
+      follow('pelvisYaw', arc !== 0 ? pT0 + PELVIS_SHARE * arc : pT0, SKILL_BODY.pelvis * spd * arcSpd0);
+      follow('chestYaw', arc !== 0 ? cT0 + arc : cT0, SKILL_BODY.chest * spd * arcSpd0);
       follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
       follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
     }
@@ -2546,7 +2555,7 @@ export class Fighter {
 
     // 손 목표 위치: 가슴 앞 평면의 (좌우, 위아래) + 자동 깊이 (몸이 바라보는 방향 기준)
     let off = this.skill.aim; // 손 목표 (입력 + 검술 층의 이어 베기, 부드럽게 걸러진 값)
-    if (BODY.handFollow > 0 && this.swingDir && this.aimLagMap > 0.05 && this.swingAct > 0) {
+    if (BODY.handFollow > 0 && this.swingDir && this.aimLagMap > 0.05 && this.swingAct > 0 && this.r2pOn()) {
       // WA2-2 손의 follow-through: 머리가 겨눔보다 뒤처진 동안 손 목표를 획 방향으로 더 보낸다(패드 m = handFollow × 뒤처짐 rad × activity, 패드 반지름 안에서).
       //  무거운 한손 무기는 손이 끝 자리에 서면 머리가 따라오며 느려진다 — 사람은 손을 계속 돌려 머리를 싣는다
       const extra = this.swingDir * BODY.handFollow * this.aimLagMap * this.swingAct;
@@ -2652,7 +2661,7 @@ export class Fighter {
       const bl = _lagB.set(0, 1, 0).applyQuaternion(_q1);
       this.aimLagMap = Math.atan2(_lagC.crossVectors(bl, mapAim).length(), bl.dot(mapAim));
     }
-    if (ARM.swing === 'arc') {
+    if (ARM.swing === 'arc' && this.r2pOn()) {
       // WA1 손목은 버티기만(R2′ 팔 단계): 휘두르는 동안 서보 목표 = 획 시작 때 잡아 둔 '칼↔아래팔' 상대 방향 → 서보는 관성에 맞서 칼을 돌리지 않고 쥠 각만 지킨다.
       //  회전은 손 경로(팔 호)·두 손 짝힘(offHand, 목표는 자세 지도)·채찍이 만든다. 탭 찌르기·마무리·찌르기 자세는 예외(오늘 그대로). 획이 끝나면(swinging 끝) 60 ms 에 걸쳐 자세 지도로 되섞어 날을 세운다
       const sk = this.skill;
@@ -2684,7 +2693,7 @@ export class Fighter {
       if (wRaw > 25) { wAim.setLength(25); this.aimRateClamps = (this.aimRateClamps || 0) + 1; }
     }
     (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
-    this.aimDirW.copy(ARM.swing === 'arc' ? mapAim : aim); // 빈손이 칼자루를 어디로 밀고 당길지 (offHand) — arc 에서도 자세 지도 방향(두 손 짝힘이 회전을 만든다)
+    this.aimDirW.copy(ARM.swing === 'arc' && this.r2pOn() ? mapAim : aim); // 빈손이 칼자루를 어디로 밀고 당길지 (offHand) — arc 에서도 자세 지도 방향(두 손 짝힘이 회전을 만든다)
     rot(sword, _q1);
     const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1);
     const axis = new THREE.Vector3().crossVectors(blade, aim);
