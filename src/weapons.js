@@ -1075,6 +1075,7 @@ const morgenstern = finalizeSpec('morgenstern', {
   edged: false, // 날 없음 → 늘 둔기 (classifyStyle 'blunt')
   mBlunt: 1.3, // 둔타 E 배율 — 줄 134 (시제품 1.8 · 참치 2.8 · 나뭇가지 1; 질량·속도는 물리가 담으니 낮게 시작해 측정으로)
   spike: true, mThrust: 0.35, mCut: 0, // 가시 = 약한 찌르기 — 줄 135 (mCut 은 베기 길이 없어 안 읽힌다, 0 으로 적어 둔다)
+  ignoreArmorDamage: true, // 사장님 10/8 00:10 '갑옷 방어력 완전 무시' — 판정만(투구 둔타 k = 1, 가시 찌르기·마무리에 판금·투구 문턱 안 씀); 쇠에 튕기는 물리·투구 벗김·판 닳음은 그대로 (확인표 168). 라이트세이버 ignoreArmor(물리까지)와 다름
   // 길이 — 줄 131: hiltLength 0.54 = 머리 밑, bladeLength 0.14 = 머리('blade' 부품) 구간 → 손~가시 끝 0.68 m, 밑마개까지 전체 0.82 m
   hiltLength: 0.54, bladeLength: 0.14,
   breakY: 0.4, // 파손 — 줄 139: 자루 위쪽 보강띠 밑에서 끊긴다 (쇠 공 안에서 끊기는 breakAt 대신). fragility 는 레어 표 그대로
@@ -1086,13 +1087,15 @@ const morgenstern = finalizeSpec('morgenstern', {
     //  대안 M-A 1.73 / M-C 2.05 / M-D 2.20 kg (설계 1-1 표). 손 기준 관성의 89 % 가 머리의 m·r² 라 공 모양 자체는 거의 안 중요하다
     const haft = boxInertia(0.6, 0.016, 0.335, 0.016); // 자루 한 상자: y −0.13 ~ 0.54 (쥐는 곳 0.16 m 포함)
     const cap = sphereInertia(0.08, 0.02); // 밑마개 (쇠 캡)
-    const head = sphereInertia(1.2, 0.035); // 연철 공 (가시 질량 포함)
+    // 10/8 사장님 '지금보다 확실히 육중하고 공포스럽게' → 한손 대안(확인표 167): 몸체 Ø 6.5 → 9 cm(r 0.045), 머리 1.2 → 1.9 kg, 전체 ≈ 2.58 kg, 무게중심 ≈ 0.49 m, 손 기준 관성 ≈ 0.76 kg·m²(츠바이핸더 0.77)
+    const head = sphereInertia(1.9, 0.045); // 연철 공 (가시 질량 포함)
     return [
       partTuple(['box', 0.016, 0.335, 0.016], 0.205, 0.6, 0, haft.Ie, haft.It, null),
       partTuple(['ball', 0.02], -0.135, 0.08, 0, cap.Ie, cap.It, null),
       // 철구 = 'blade' 부품 (isBlade 참 → colliderInfo.part 'blade': 가시 찌르기 t·가르기 예측 훅이 머리에서 돈다. 날 없음이라 예측은 늘 "부딪힘").
       //  콜라이더 공 r 0.05 — 줄 132: 몸체 r 0.0325 보다 1.75 cm 밖, 가시 끝(0.0625) 보다 1.25 cm 안 ('가시 사이로 미끄러진다'. 겉모습 약속 ~1 cm 의 예외)
-      partTuple(['ball', 0.05], 0.61, 1.2, 0, head.Ie, head.It, null, true),
+      //  콜라이더 공 r 0.06(10/8): 몸체 r 0.045 보다 1.5 cm 밖, 가시 끝(0.075) 보다 1.5 cm 안 — 줄 132 와 같은 규칙
+      partTuple(['ball', 0.06], 0.61, 1.9, 0, head.Ie, head.It, null, true),
     ];
   },
   decorate(group, look) {

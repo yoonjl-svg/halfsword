@@ -1414,14 +1414,14 @@ export function drawMorgenstern(group, look, tier = 'rare') {
   }
   // 목 띠(페룰): 자루 끝을 감싼 쇠 고리
   addTo(group, new THREE.CylinderGeometry(0.019, 0.0185, 0.035, 10, 1), iron, [0, 0.5375, 0]);
-  // 철구 몸체: 연철 공 (중심 y 0.61, r 0.0325). 피가 묻는 메쉬
-  const head = addTo(group, new THREE.SphereGeometry(0.0325, 10, 7), iron, [0, 0.61, 0]);
+  // 철구 몸체: 연철 공 (중심 y 0.61, r 0.045 — 10/8 사장님 '육중하게', 전 0.0325). 피가 묻는 메쉬
+  const head = addTo(group, new THREE.SphereGeometry(0.045, 12, 8), iron, [0, 0.61, 0]);
   head.name = 'head';
   group.userData.bladeMesh = head;
   // 가시 12개: 사각뿔(ConeGeometry 4각, 45° 돌려 모서리가 앞뒤·좌우로), 밑동을 공 속에 2 mm 묻는다
-  const spikeGeo = new THREE.ConeGeometry(0.006, 0.03, 4, 1);
+  const spikeGeo = new THREE.ConeGeometry(0.007, 0.03, 4, 1);
   spikeGeo.rotateY(Math.PI / 4);
-  spikeGeo.translate(0, 0.0325 + 0.015 - 0.002, 0); // 원점 = 공 중심, +y 로 뻗음
+  spikeGeo.translate(0, 0.045 + 0.015 - 0.002, 0); // 원점 = 공 중심, +y 로 뻗음 (가시 끝 r ≈ 0.073)
   const dirs = [[Math.PI / 2, 0]]; // [위도, 경도]: 끝 가시(축)
   for (let k = 0; k < 5; k++) dirs.push([(40 * Math.PI) / 180, ((72 * k + 40) * Math.PI) / 180]); // 위 고리 5
   for (let k = 0; k < 6; k++) dirs.push([(-10 * Math.PI) / 180, ((60 * k + 76) * Math.PI) / 180]); // 아래 고리 6 (위 고리와 36° 어긋남)

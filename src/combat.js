@@ -214,7 +214,7 @@ export class Combat {
     const hs = helmet ? vic.helmetSpec || ARMOR.helmets.kettle : null;
     // ignoreArmor 무기(라이트세이버 '고온 플라스마: 갑옷 무시', 사장님 확정)는 모든 투구를 무시한다: 맨머리 판정(투구는 베여 닳기만 한다).
     //  (예전엔 플레이어 케틀햇만 빼서 라이트세이버가 케틀햇 문턱 200 J 를 그대로 받았다 — 주석 의도와 반대였다. 디렉터 12:38)
-    const helmOn = helmet && !att.weaponCfg.ignoreArmor;
+    const helmOn = helmet && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage; // ignoreArmorDamage(모르겐슈테른): 투구가 판정에서 막아주지 않는다(둔타 k = 1, 문턱 맨머리) — 벗김·닳음·물리는 그대로
     const A = helmOn ? { ...ANATOMY.head, ...hs } : ANATOMY[zone];
     // 판금(ARMOR.on, look.armor === 'plate'): 그 부위 판이 남아 있고 맞은 곳을 판이 덮었으면(팔다리는 판이 붙은 자리만).
     //  목(가슴 윗부분)은 덮지 않는다
@@ -237,6 +237,7 @@ export class Combat {
       if (plate && (zone === 'arm' || zone === 'leg')) plateGuard *= ARMOR.plate.limb;
     }
     if (att.weaponCfg.ignoreArmor) (guard = 1), (plateGuard = 0); // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
+    else if (att.weaponCfg.ignoreArmorDamage) plateGuard = 0; // 모르겐슈테른: 판금은 막아주지 않되 누비옷(guard)은 그대로
     // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구·판금은 gap 의 절반을 무시한다
     else if (type === 'stab' && ts?.gap) {
       if (helmOn) guard *= 1 - 0.5 * ts.gap;
@@ -269,7 +270,7 @@ export class Combat {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
       } else {
-        const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor;
+        const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
         if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.
         //  예측 경로(predicting)도 같게 — 10/7 S-016: 예측만 이 분기를 건너뛰어 판금에 막힐 찍기를 즉사로 읽던 결함(마무리 도구 판금 칸 45/45 불일치)
         if (!predicting && (!finish || armorBlocks)) {

@@ -527,6 +527,7 @@ export class Fighter {
       mBlunt: spec.mBlunt,
       power: spec.power, // 등급 공격력 배율 (롱소드=1)
       ignoreArmor: spec.ignoreArmor,
+      ignoreArmorDamage: !!spec.ignoreArmorDamage, // 판정만 갑옷 무시 (모르겐슈테른, 사장님 10/8 00:10): combat.analyze — 물리 되튐은 그대로
       twoHand: spec.twoHand,
       thrustStyle: spec.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
       spike: !!spec.spike, // 가시 무기(모르겐슈테른): 날 없는 머리 끝의 약한 찌르기 (combat.js analyze, 확인표 줄 135). 없는 무기는 거짓
