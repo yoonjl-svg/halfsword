@@ -80,7 +80,7 @@ export const BODY = {
   chain: 'anchor', // 확인표 122
   trunkArcSpeed: 1, // WA2 보조: 호가 켜진 동안(trunkArc > 0, activity) 몸 자세 따라가기 빠르기(SKILL_BODY.pelvis·chest) 배수 — 1 = 오늘. 몸이 느려 손 속도에 안 실리는지 가르는 계측용
   r2pScope: 'player', // R2′ 팔 단계 묶음(ARM.swing arc·trunkArc·trunkFollow·handFollow)을 누구에게 거나: 'player'(index 0, 기본) | 'all'. AI(옛 보정)는 겨눔을 서보에 기대고 있어 묶음을 그대로 걸면 베기가 빗나가 치명도가 23 → 8/36 로 떨어진다(10/8 WA4 측정) — AI 적용은 별도 항목(WA5)
-  handFollow: 0, // WA2-2 손의 follow-through(설계 §2c): 휘두르는 동안 칼(머리)이 겨눔보다 뒤처진 각(rad) × 이 값(패드 m/rad)만큼 손 목표를 획 방향으로 더 보낸다 — 손가락이 끝 자리에 서도 손은 머리가 따라올 때까지 호를 이어 간다(무거운 한손 무기의 휘두름). 0 = 오늘(바이트 동일). 확인표 177
+  handFollow: 0, // WA2-2 손의 follow-through(설계 §2c; 한손 무기만 — 두 손 무기는 빗나감, WA6): 휘두르는 동안 칼(머리)이 겨눔보다 뒤처진 각(rad) × 이 값(패드 m/rad)만큼 손 목표를 획 방향으로 더 보낸다 — 손가락이 끝 자리에 서도 손은 머리가 따라올 때까지 호를 이어 간다(무거운 한손 무기의 휘두름). 0 = 오늘(바이트 동일). 확인표 177
   trunkFollow: 0, // WA2-2 follow-through(docs/strike/r2p_arm_arc_2026-10-08.md §2c): 휘두르는 동안 칼(머리)이 겨눔 방향보다 뒤처진 각(rad)만큼 몸 돌림을 더 유지한다 — 획 방향으로 trunkFollow × 뒤처짐 × activity × 0.35 rad. 손이 끝 자리에 닿아도 무거운 머리가 따라올 때까지 몸이 계속 돈다. 0 = 오늘(바이트 동일). 값은 계측 뒤 — 확인표 176
   trunkArc: 0, // R2′ 팔 단계 WA2 '몸의 호'(docs/strike/r2p_arm_arc_2026-10-08.md §4): 휘두르는 동안 몸 돌림(보정 v2 updateBodyPose 의 −x·0.35)을 획 시작 자리에서의 손가락 가로 이동량 × 이 배수만큼 더 튼다(골반 몫 0.5·가슴 1 비율 그대로, 서 있을 때·쉼 자세는 그대로). 0 = 오늘(바이트 동일). 골반은 chain 'legs' 면 발 사이 힘쌍(§9-4 A)으로, 'anchor' 면 닻 모터로 돈다. 값은 계측 뒤 — 확인표 174
   chainSpineZeta: 0.5, // 확인표 125 ('legs' 만, 첫 탐색판의 유일한 새 수): 척추 비틀기(y) 축 감쇠비. d_y = ζ·2·√(k·I_up) → 복부 ≈66·가슴 ≈57 N·m·s/rad (오늘 180·160 = ζ ≈1.4). x·z 축·강성(129)은 그대로
@@ -235,7 +235,7 @@ export const ARM = {
   upper: 0.3,
   fore: 0.27,
   shoulder: [0, 0.1, 0.2],
-  swing: 'servo', // R2′ 팔 단계(docs/strike/r2p_arm_arc_2026-10-08.md): 'servo' = 오늘(휘두르는 동안 손목 서보가 자세 지도 방향으로 칼을 돌린다) · 'arc' = WA1 손목은 버티기만(휘두르는 동안 서보 목표 = 획 시작 때의 칼↔아래팔 쥠 방향, 회전은 손 경로·두 손 짝힘·채찍이; 획이 끝나면 자세 지도로 되섞음). 빈손 짝힘 목표(aimDirW)는 두 경우 모두 자세 지도
+  swing: 'servo', // R2′ 팔 단계(docs/strike/r2p_arm_arc_2026-10-08.md): 'servo' = 오늘(휘두르는 동안 손목 서보가 자세 지도 방향으로 칼을 돌린다) · 'arc' = WA1 손목은 버티기만(한손 무기만, WA6; 휘두르는 동안 서보 목표 = 획 시작 때의 칼↔아래팔 쥠 방향, 회전은 손 경로·두 손 짝힘·채찍이; 획이 끝나면 자세 지도로 되섞음). 빈손 짝힘 목표(aimDirW)는 두 경우 모두 자세 지도
   slack: 0.005, // 펴짐 여유 (m): armIK 가 손 목표 거리를 (위팔 + 아래팔 − 이 값)에서 자른다. 근접 밀치기 '팔 다 펴짐'(fighter.armFull)·보정 v2 순서 결합(fighter armU)이 같은 값을 읽는다
 };
 

@@ -2561,7 +2561,7 @@ export class Fighter {
     const off = this.skill.aim; // 손 목표 (입력 + 검술 층의 이어 베기, 부드럽게 걸러진 값) — 자세 지도·겨눔·찌르기 출발점은 늘 이것을 본다
     let offH = off; // 손 자리에만 쓰는 목표 (WA2-2 손의 follow-through 가 늘인다)
     const skT = this.skill;
-    if (BODY.handFollow > 0 && this.swingDir && this.aimLagMap > 0.05 && this.swingAct > 0 && this.r2pOn() && !skT.tap && !(skT.thrustPose.w > 0) && this.finish.amt <= 0) {
+    if (BODY.handFollow > 0 && !this.weaponCfg.twoHand && this.swingDir && this.aimLagMap > 0.05 && this.swingAct > 0 && this.r2pOn() && !skT.tap && !(skT.thrustPose.w > 0) && this.finish.amt <= 0) { // 한손 무기만 (WA6): 두 손 무기에선 손이 손가락 자리를 지나쳐 사선 베기가 빗나갔다
       // WA2-2 손의 follow-through: 머리가 겨눔보다 뒤처진 동안 손 자리를 획 방향으로 더 보낸다(패드 m = handFollow × 뒤처짐 rad × activity, 패드 반지름 안에서).
       //  무거운 한손 무기는 손이 끝 자리에 서면 머리가 따라오며 느려진다 — 사람은 손을 계속 돌려 머리를 싣는다. 탭 찌르기·찌르기 자세·마무리 동안은 안 늘인다(검토 2-3);
       //  자세 지도(guardAt → nearest, AI 가 읽음)·칼끝 방향(guardDir)·찌르기 출발점(handBase)은 늘이지 않은 off 그대로(검토 2-8)
@@ -2673,7 +2673,8 @@ export class Fighter {
       // WA1 손목은 버티기만(R2′ 팔 단계): 휘두르는 동안 서보 목표 = 획 시작 때 잡아 둔 '칼↔아래팔' 상대 방향 → 서보는 관성에 맞서 칼을 돌리지 않고 쥠 각만 지킨다.
       //  회전은 손 경로(팔 호)·두 손 짝힘(offHand, 목표는 자세 지도)·채찍이 만든다. 탭 찌르기·마무리·찌르기 자세는 예외(오늘 그대로). 획이 끝나면(swinging 끝) 60 ms 에 걸쳐 자세 지도로 되섞어 날을 세운다
       const sk = this.skill;
-      const holding = sk.swinging && !sk.tap && !(th.w > 0) && this.finish.amt <= 0;
+      // 한손 무기만 (10/8 WA6): 두 손 무기는 두 손 짝힘이 회전을 만들고 서보가 날을 세워야 베는 자리가 맞는다 — hold 를 걸면 세로 베기가 아래로 처지고 사선 베기가 빗나갔다(step_strike: 롱소드 목 91 J → 가슴/빗나감). 한손 무거운 머리만 서보가 제동 노릇을 해 hold 가 이득(모르겐슈테른 8.3 → 8.7)
+      const holding = sk.swinging && !sk.tap && !(th.w > 0) && this.finish.amt <= 0 && !this.weaponCfg.twoHand;
       rot(forearm, _holdQ);
       if (holding && (!this.holdLocal || !this.holdOn)) { // 휘두름이 시작되는 변마다 다시 잡는다 (앞 획의 60 ms 되섞기 중에 새 획이 오면 옛 쥠 방향을 안 쓰게 — 10/8 검토 3)
         rot(sword, _q1);

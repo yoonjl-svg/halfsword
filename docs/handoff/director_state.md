@@ -6,7 +6,7 @@
 ## 지금 상태 (10/6 22:20 KST) — 한도 정지 뒤 재가동
 
 ### 갱신 10/8 04:20 KST — R2′ 팔 단계 WA0~WA4 하룻밤에, 본판 기본은 모두 끔(바이트 동일)
-- 절삭 반작용 same 본판(02:30, 뒤집힘 금지 상한 포함). R2′ 팔 단계: 계측 도구 arm_arc_gauge · 손목 hold(ARM.swing arc) · 몸의 호(BODY.trunkArc) · follow-through(trunkFollow·handFollow) · 범위(r2pScope 'player') · 스위치 `?r2p=1|legs|all`. 권고 묶음(arc·2·1·0.25)으로 상한 22 모르겐슈테른 7.5 → 9.2 m/s, 롱소드 13.9 → 19.7(선 자세 대본, 손가락 닿은 채). AI 에 걸면 치명도 반 토막(겨눔이 서보 전제) → WA5(AI 적응)·WA3(서보 제동)·걸음 몫이 남은 일. 설계 문서 docs/strike/r2p_arm_arc_2026-10-08.md §2~§2d, 확인표 173~178 사장님 확인 전.
+- 절삭 반작용 same 본판(02:30, 뒤집힘 금지 상한 포함). R2′ 팔 단계: 계측 도구 arm_arc_gauge · 손목 hold(ARM.swing arc) · 몸의 호(BODY.trunkArc) · follow-through(trunkFollow·handFollow) · 범위(r2pScope 'player') · 스위치 `?r2p=1|legs|all`. 권고 묶음 `?r2p=1`(호 2·몸 follow 1 + 한손 무기만 hold·손 follow 0.25)으로 상한 22 모르겐슈테른 7.5 → 8.7 m/s, 롱소드 13.9 → 16.6(자리 유지; 선 자세 대본, 손가락 닿은 채). AI 조종 검객은 묶음으로 더 진다(WA5 전까지 플레이어만). AI 에 걸면 치명도 반 토막(겨눔이 서보 전제) → WA5(AI 적응)·WA3(서보 제동)·걸음 몫이 남은 일. 설계 문서 docs/strike/r2p_arm_arc_2026-10-08.md §2~§2d, 확인표 173~178 사장님 확인 전.
 - 계측 조건 정정: harness 대본은 손가락 '뗀' 조건이었음(쉼 자세표가 획을 밀어 줌) — `--held=1` 이 기본, 10/7 장부 script 수치는 그 조건의 값(명세에 정정).
 - 시간 보고: 시계·커밋 시각으로(04:02 정정). 관문 기준선: fights12 `8d574a8c` · live_battery `7e4587f3` · finish_thrust `d4d463b3` · corr_s0 IDENTICAL(옛 반작용은 `STRIKE.cutReact=legacy` = ea286e32).
 
