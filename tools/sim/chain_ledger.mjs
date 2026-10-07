@@ -110,6 +110,8 @@ export function attachLedger(G, fighter, opts = {}) {
   const UPPER = new Set(['pelvis', 'abdomen', 'chest', 'head', 'uarmS', 'farmS', 'uarmO', 'farmO', 'sword'].map(iOf).filter((i) => i >= 0));
   const iPel = iOf('pelvis'), iCh = iOf('chest'), iAb = iOf('abdomen');
   const iFootF = iOf('footF'), iFootB = iOf('footB'), iThF = iOf('thighF'), iThB = iOf('thighB');
+  const iHead = iOf('head'), iUS = iOf('uarmS'), iFS = iOf('farmS'), iUO = iOf('uarmO'), iFO = iOf('farmO'), iSw = iOf('sword');
+  const TORSO = new Set([iPel, iAb, iCh, iHead].filter((i) => i >= 0)), ARMS = new Set([iUS, iFS, iUO, iFO].filter((i) => i >= 0)); // 10/7 사슬 분해 열: 몸통·팔·칼의 수직축 각운동량
   const nIter = world.integrationParameters?.numSolverIterations ?? 4;
   const KC = nIter / (nIter + 1); // Rapier 0.19 접촉 충격량 (n+1)/n 과대 보고 교정 (support_optimum §2, 확인표 127)
   const pinMu = opts.pinMu ?? CONFIG?.GAIT?.pinMu ?? 0.9;
@@ -196,13 +198,16 @@ export function attachLedger(G, fighter, opts = {}) {
     const M = mass.reduce((s, x) => s + x, 0);
     c = scl(c, 1 / M); vc = scl(vc, 1 / M);
     let Lt = V3(), P = V3(), Gy = V3();
+    let LtY = 0, LaY = 0, LsY = 0;
     const Iw = [];
     for (let i = 0; i < bodies.length; i++) {
       const qw = qmul(qb[i], Iq[i]); // 월드 ← 주축 틀
       const wl = qinvrot(qw, w[i]);
       const Lr = qrot(qw, V3(Ip[i].x * wl.x, Ip[i].y * wl.y, Ip[i].z * wl.z));
       Gy = add(Gy, cross(w[i], Lr)); // 엔진이 생략한 자이로 항 ω×(Iω): Rapier 는 ω 를 I⁻¹τ 로만 적분해 몸마다 dL/dt = τ + ω×L (w1a/gyro_test.mjs)
-      Lt = add(Lt, add(Lr, scl(cross(sub(p[i], c), sub(v[i], vc)), mass[i])));
+      const Li = add(Lr, scl(cross(sub(p[i], c), sub(v[i], vc)), mass[i]));
+      Lt = add(Lt, Li);
+      if (TORSO.has(i)) LtY += Li.y; else if (ARMS.has(i)) LaY += Li.y; else if (i === iSw) LsY += Li.y;
       P = add(P, scl(v[i], mass[i]));
       // 수직축 관성 (주축 틀 → 월드 yy 성분)
       const ey = qinvrot(qw, UP);
@@ -215,7 +220,7 @@ export function attachLedger(G, fighter, opts = {}) {
     let Iup = 0;
     for (const i of UPPER) { const dx = p[i].x - cu.x, dz = p[i].z - cu.z; Iup += Iw[i] + mass[i] * (dx * dx + dz * dz); }
     const an = fighter.anchor;
-    return { t: G.t, p, v, w, q: qb, c, vc, L: Lt, P, Gy, Iup, qA: cp(an.rotation()), state: fighter.state, muscle: fighter.muscle };
+    return { t: G.t, p, v, w, q: qb, c, vc, L: Lt, LtY, LaY, LsY, dpsi: fighter.chainDpsi ?? null, P, Gy, Iup, qA: cp(an.rotation()), state: fighter.state, muscle: fighter.muscle };
   };
   let prev = sample();
   decl = [];
@@ -295,13 +300,14 @@ export function attachLedger(G, fighter, opts = {}) {
     // 선언 힘의 돌림힘 (cbar 기준), 수평 합력
     const td = { support: V3(), push: V3(), pin: V3(), shove: V3(), sword: V3(), offhand: V3(), muscle: V3(), elbowG: V3(), track: V3(), other: V3() };
     let Fd = V3();
-    let wristChest = 0, pinYawF = 0, pinYawB = 0;
+    let wristChest = 0, pinYawF = 0, pinYawB = 0, shChestY = 0;
     for (const d of decl) {
       const slot = td[d.kind] || td.other;
       if (d.F) { const tau = cross(sub(d.p, cbar), d.F); slot.x += tau.x; slot.y += tau.y; slot.z += tau.z; Fd = add(Fd, d.F); }
       if (d.T) {
         slot.x += d.T.x; slot.y += d.T.y; slot.z += d.T.z;
         if (d.kind === 'sword' && d.body === iCh) wristChest += d.T.y;
+        if (d.kind === 'muscle' && d.body === iCh) shChestY += d.T.y; // 칼 팔 어깨 근육(manualMuscle)이 가슴에 주는 수직 반작용 토크
         if (d.kind === 'pin' && d.body === iFootF) pinYawF += d.T.y;
         if (d.kind === 'pin' && d.body === iFootB) pinYawB += d.T.y;
       }
@@ -395,6 +401,7 @@ export function attachLedger(G, fighter, opts = {}) {
       aVpre: ancPre ? ancPre.world.y : null, aHpre: ancPre ? Math.hypot(ancPre.world.x, ancPre.world.z) : null,
       eYaw: anc ? anc.e.y : null, hidden: anc ? anc.power : null, hiddenYaw: anc ? anc.powerY : null, kYaw: anc ? anc.m[AXG.y]?.k ?? null : null, dYaw: anc ? anc.m[AXG.y]?.d ?? null : null,
       pelW: cur.w[iPel].y, chW: cur.w[iCh].y, alphaPel, Iup: cur.Iup, handV, tipV, chShare, pelShare,
+      dpsi: cur.dpsi, LtY: cur.LtY, LaY: cur.LaY, LsY: cur.LsY, dLtY: (cur.LtY - prev.LtY) / dt, dLaY: (cur.LaY - prev.LaY) / dt, dLsY: (cur.LsY - prev.LsY) / dt, shChestY, spAbY: sp.ab ? sp.ab.world.y : null, spChY: sp.ch ? sp.ch.world.y : null,
       hipTauV, hipTauYF: hips.F ? hips.F.local.y : null, hipTauYB: hips.B ? hips.B.local.y : null, sigF: sig.F, sigB: sig.B,
       spineTauY: (sp.ab ? sp.ab.local.y : 0) + (sp.ch ? sp.ch.local.y : 0), twist,
       NF, NB, wF: NF + NB > 1 ? NF / (NF + NB) : null, load: (NF + NB) / Mg, dfeet, budget, single, Nother: C.other.N,
@@ -684,6 +691,7 @@ async function main() {
   const all = [];
   const digests = [];
   let rowsOut = null;
+  let rid = 0;
   const rowsPath = arg('rows', null);
   for (const scene of scenes) {
     const fams = scene === 'script' || scene === 'corr' ? list('fams', SCENE_FAMS[scene].join(',')) : SCENE_FAMS[scene];
@@ -699,8 +707,9 @@ async function main() {
           digests.push({ scene, fam, seed, digest: R.digest, proof });
           console.log(`digest ${scene} ${fam} s${seed} ${R.digest}${proof ? ` proof ${proof}` : ''} (${sec.toFixed(1)} s)`);
         }
-        for (const S of R.strokes) { all.push(S); if (!quiet) console.log(fmtStroke(S)); }
-        if (rowsPath && !rowsOut) { rowsOut = R.rows.map((r) => JSON.stringify({ scene, fam, seed, ...r })).join('\n') + '\n'; }
+        rid++;
+        for (const S of R.strokes) { S.rid = rid; all.push(S); if (!quiet) console.log(fmtStroke(S)); }
+        if (rowsPath) { rowsOut = (rowsOut || '') + R.rows.map((r) => JSON.stringify({ rid, scene, fam, seed, ...r })).join('\n') + '\n'; } // 10/7: 모든 판의 행을 저장 (전에는 첫 판만)
       }
   }
   // 장면 요약 (중앙값)
