@@ -22,6 +22,7 @@
 - 혼자 서서 heading +40°: legs 골반이 0.6 s 안에 따라감(최고 ≈88 °/s), 남는 Δψ ≈ 7~8°(pelvisYawOffset 몫).
 - 명세 §2.2 '크기 감'(골반 최고 290~400 °/s)보다 **낮다**. 엉덩이 σ 는 거의 포화하지 않으므로 상한이 아니라 **땅 쪽 싱크**(발 비틀기 마찰·핀 yaw 한계, R1′)가 의심된다 — G2b 싱크 몫은 W1a 장부로 잰다. 새 수는 넣지 않았다.
 - 브라우저 smoke(vite 5182, `R2P_PROBE=1`): 기본 0 오류, `?chain=legs` 0 오류, HUD 뜸·anchor 와 본판(인자 없음)엔 HUD 없음.
+- 재검증(10/2, 다시 시도 — W1a WIP 297a58c 위, src 변경 0): anchor fights12 `afd3a954` · live_battery `5e3f14c2` · finish_thrust 1 --stand `f4395565`(base_sha 와 같음) · corr_s0 `--limits=on,off` 12/12 IDENTICAL; legs fights12 `f7fe531a`(NaN 0, dead 6/12, downs 0.8); 10 s 결투 시드 1~3 legs: 골반 ω 최고 110~135 °/s · 가슴 336~359 · 비틀기 최고 28~29° · 넘어짐 0 · σ<1 몫 0.4~0.8 % (anchor: 골반 218~1153 · 넘어짐 1). `R2P_PROBE=1 vite build` 결과가 public/r2p 와 바이트 같음(main-2WEkx-5L.js); 본판 빌드에는 r2pHud 흔적 0. smoke 5182: 기본·`?chain=legs` 둘 다 0 오류, HUD 는 `?chain=` 있을 때만.
 
 ## HUD 한 줄 (탐색판 전용, `?chain=` 있을 때만)
 골반 ω(지금/1 s 최고) · 가슴 ω · 엉덩이 σ 포화율(0.5 s, σ·τ̂) · 잔차 r(dL_y/dt − 선언 힘의 yaw 토크, rms, 엔진 접촉 마찰·닻 토크가 남는 줄임 식) · 닻 τ_y 재계산 · Δψ · 척추 비틀기 · 핀 미끄러짐 수.
