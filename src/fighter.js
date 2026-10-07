@@ -2612,6 +2612,28 @@ export class Fighter {
     aim.applyQuaternion(this.yaw);
     // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
     if (v2) corrStep(this, aim, sv);
+    const mapAim = _holdMap.copy(aim); // 자세 지도 방향(빈손 짝힘·보정은 늘 이것을 본다)
+    if (ARM.swing === 'arc') {
+      // WA1 손목은 버티기만(R2′ 팔 단계): 휘두르는 동안 서보 목표 = 획 시작 때 잡아 둔 '칼↔아래팔' 상대 방향 → 서보는 관성에 맞서 칼을 돌리지 않고 쥠 각만 지킨다.
+      //  회전은 손 경로(팔 호)·두 손 짝힘(offHand, 목표는 자세 지도)·채찍이 만든다. 탭 찌르기·마무리·찌르기 자세는 예외(오늘 그대로). 획이 끝나면(swinging 끝) 60 ms 에 걸쳐 자세 지도로 되섞어 날을 세운다
+      const sk = this.skill;
+      const holding = sk.swinging && !sk.tap && !(th.w > 0) && this.finish.amt <= 0;
+      rot(forearm, _holdQ);
+      if (holding && !this.holdLocal) {
+        rot(sword, _q1);
+        this.holdLocal = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1).applyQuaternion(_holdQ.clone().invert());
+        this.holdW = 0;
+      }
+      const dtH = this.lastDt || 1 / 120;
+      this.holdW = THREE.MathUtils.clamp((this.holdW ?? 0) + (holding ? dtH / 0.03 : -dtH / 0.06), 0, 1);
+      if (this.holdLocal && this.holdW > 0) {
+        const held = _holdDir.copy(this.holdLocal).applyQuaternion(_holdQ);
+        aim.lerp(held, this.holdW);
+        if (aim.lengthSq() < 1e-4) aim.copy(held);
+        aim.normalize();
+      }
+      if (!holding && this.holdW <= 0) this.holdLocal = null;
+    }
     // 목표 방향이 도는 속도: 손목 감쇠는 이 속도를 향한다 (멈추려는 게 아니라 목표를 따라가는 감쇠)
     const wAim = _v5.set(0, 0, 0);
     if (this.prevAim && this.lastDt > 0) {
@@ -2622,7 +2644,7 @@ export class Fighter {
       if (wRaw > 25) { wAim.setLength(25); this.aimRateClamps = (this.aimRateClamps || 0) + 1; }
     }
     (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
-    this.aimDirW.copy(aim); // 빈손이 칼자루를 어디로 밀고 당길지 (offHand)
+    this.aimDirW.copy(ARM.swing === 'arc' ? mapAim : aim); // 빈손이 칼자루를 어디로 밀고 당길지 (offHand) — arc 에서도 자세 지도 방향(두 손 짝힘이 회전을 만든다)
     rot(sword, _q1);
     const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1);
     const axis = new THREE.Vector3().crossVectors(blade, aim);
@@ -3185,6 +3207,9 @@ const _cq3 = new THREE.Quaternion();
 // 척추 비틀기 축의 윗몸 yaw 관성 어림 (kg·m², 명세 부록 A: 가슴+머리+두 팔+칼 ≈ 2.0, 복부는 그 위 전부 ≈ 2.45) — 확인표 125 의 d 를 ζ 에서 셈하는 데만 쓴다
 const CHAIN_SPINE_I = { abdomen: 2.45, chest: 2.0 };
 const _v5 = new THREE.Vector3();
+const _holdMap = new THREE.Vector3(); // ARM.swing 'arc' (driveSword hold)
+const _holdDir = new THREE.Vector3();
+const _holdQ = new THREE.Quaternion();
 const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
 const _cq = new THREE.Quaternion();

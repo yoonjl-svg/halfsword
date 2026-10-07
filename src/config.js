@@ -230,6 +230,7 @@ export const ARM = {
   upper: 0.3,
   fore: 0.27,
   shoulder: [0, 0.1, 0.2],
+  swing: 'servo', // R2′ 팔 단계(docs/strike/r2p_arm_arc_2026-10-08.md): 'servo' = 오늘(휘두르는 동안 손목 서보가 자세 지도 방향으로 칼을 돌린다) · 'arc' = WA1 손목은 버티기만(휘두르는 동안 서보 목표 = 획 시작 때의 칼↔아래팔 쥠 방향, 회전은 손 경로·두 손 짝힘·채찍이; 획이 끝나면 자세 지도로 되섞음). 빈손 짝힘 목표(aimDirW)는 두 경우 모두 자세 지도
   slack: 0.005, // 펴짐 여유 (m): armIK 가 손 목표 거리를 (위팔 + 아래팔 − 이 값)에서 자른다. 근접 밀치기 '팔 다 펴짐'(fighter.armFull)·보정 v2 순서 결합(fighter armU)이 같은 값을 읽는다
 };
 

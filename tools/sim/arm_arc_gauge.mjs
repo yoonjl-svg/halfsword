@@ -41,7 +41,8 @@ for (const weapon of weapons) {
       const n = Math.round((dist / F.v + 0.6) / DT);
       const sw = P.sword; const m = sw.mass();
       const ke0 = swordKE(sw);
-      let Ew = 0, Eg = 0, sat = 0, steps = 0, tipMax = 0, iMax = 0, keMax = ke0, EwMax = 0, EgMax = 0, satMax = 0, tauMax = 0, capAt = 0;
+      let Ew = 0, Eg = 0, sat = 0, steps = 0, tipMax = 0, iMax = 0, keMax = ke0, EwMax = 0, EgMax = 0, satMax = 0, tauMax = 0, capAt = 0, handMax = 0;
+      const hb = P.bodies.farmS; const _hp = new THREE.Vector3(), _hq = new THREE.Quaternion();
       for (let i = 0; i < n; i++) {
         const off = P.handOffset;
         const dx = tgt[0] - off.x, dy = tgt[1] - off.y, d = Math.hypot(dx, dy), st = F.v * DT;
@@ -54,17 +55,19 @@ for (const weapon of weapons) {
         Eg += -m * G_ACC * v.y * DT;
         steps++; if (cap > 0 && tau.length() >= 0.98 * cap) sat++;
         tauMax = Math.max(tauMax, tau.length()); capAt = cap;
+        const hr = hb.rotation(), ht = hb.translation(); _hp.set(0.13, 0, 0).applyQuaternion(_hq.set(hr.x, hr.y, hr.z, hr.w)).add(_hp.set ? new THREE.Vector3(ht.x, ht.y, ht.z) : null);
+        const hv = hb.velocityAtPoint({ x: _hp.x, y: _hp.y, z: _hp.z }); handMax = Math.max(handMax, Math.hypot(hv.x, hv.y, hv.z));
         const tip = P.tipVel.length();
         if (tip > tipMax) { tipMax = tip; iMax = i; keMax = swordKE(sw); EwMax = Ew; EgMax = Eg; satMax = sat / steps; }
       }
       const Et = keMax - ke0; const Eh = Et - EwMax - EgMax;
-      rows.push({ weapon, fam, k, dir: tgt === F.end ? 'fwd' : 'back', tipMax: +tipMax.toFixed(2), tAcc: +((iMax + 1) * DT).toFixed(3), Et: +Et.toFixed(1), Ew: +EwMax.toFixed(1), Eh: +Eh.toFixed(1), Eg: +EgMax.toFixed(1), sat: +satMax.toFixed(2), tauMax: +tauMax.toFixed(1), cap: +capAt.toFixed(1) });
+      rows.push({ weapon, fam, k, dir: tgt === F.end ? 'fwd' : 'back', tipMax: +tipMax.toFixed(2), tAcc: +((iMax + 1) * DT).toFixed(3), Et: +Et.toFixed(1), Ew: +EwMax.toFixed(1), Eh: +Eh.toFixed(1), Eg: +EgMax.toFixed(1), sat: +satMax.toFixed(2), tauMax: +tauMax.toFixed(1), cap: +capAt.toFixed(1), handMax: +handMax.toFixed(2) });
       tgt = tgt === F.end ? F.ch : F.end;
     }
   }
   const sh = (r, k) => (r.Et > 1 ? r[k] / r.Et : NaN);
-  const S = { weapon, n: rows.length, tipMax: med(rows.map((r) => r.tipMax)), tAcc: med(rows.map((r) => r.tAcc)), Et: med(rows.map((r) => r.Et)), wrist: med(rows.map((r) => sh(r, 'Ew'))), hand: med(rows.map((r) => sh(r, 'Eh'))), grav: med(rows.map((r) => sh(r, 'Eg'))), sat: med(rows.map((r) => r.sat)), tauMax: med(rows.map((r) => r.tauMax)), cap: med(rows.map((r) => r.cap)) };
+  const S = { weapon, n: rows.length, tipMax: med(rows.map((r) => r.tipMax)), tAcc: med(rows.map((r) => r.tAcc)), Et: med(rows.map((r) => r.Et)), wrist: med(rows.map((r) => sh(r, 'Ew'))), hand: med(rows.map((r) => sh(r, 'Eh'))), grav: med(rows.map((r) => sh(r, 'Eg'))), sat: med(rows.map((r) => r.sat)), tauMax: med(rows.map((r) => r.tauMax)), cap: med(rows.map((r) => r.cap)), handMax: med(rows.map((r) => r.handMax)) };
   out.push({ summary: S, rows });
-  console.log(`${weapon.padEnd(12)} 획 ${S.n}: 칼끝 최고 중앙 ${S.tipMax.toFixed(1)} m/s · 가속 ${(S.tAcc * 1000).toFixed(0)} ms · 얻은 KE ${S.Et.toFixed(0)} J · 몫 손목 ${(S.wrist * 100).toFixed(0)} % / 손(팔 호) ${(S.hand * 100).toFixed(0)} % / 중력 ${(S.grav * 100).toFixed(0)} % · 손목 포화 ${(S.sat * 100).toFixed(0)} % 스텝 · |τ| 최고 ${S.tauMax.toFixed(1)} / 상한 ${S.cap.toFixed(1)} N·m`);
+  console.log(`${weapon.padEnd(12)} 획 ${S.n}: 칼끝 최고 중앙 ${S.tipMax.toFixed(1)} m/s · 손 최고 ${S.handMax.toFixed(1)} m/s · 가속 ${(S.tAcc * 1000).toFixed(0)} ms · 얻은 KE ${S.Et.toFixed(0)} J · 몫 손목 ${(S.wrist * 100).toFixed(0)} % / 손(팔 호) ${(S.hand * 100).toFixed(0)} % / 중력 ${(S.grav * 100).toFixed(0)} % · 손목 포화 ${(S.sat * 100).toFixed(0)} % 스텝 · |τ| 최고 ${S.tauMax.toFixed(1)} / 상한 ${S.cap.toFixed(1)} N·m`);
   if (args.json) console.log(JSON.stringify(rows));
 }
