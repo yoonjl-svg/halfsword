@@ -916,9 +916,14 @@ export class Fighter {
       //  쉼·자세 고치기(activity 0)와 trunkArc 0 은 오늘 그대로. 골반(0.5 몫)·가슴(1)·순서 결합 ex 모두 같은 turn 을 보므로 비율은 그대로, 크기만 커진다.
       let arc = 0; // 몸의 호 몫(rad): 순서 결합 ex 가 보는 turn 에는 넣지 않는다 — ex 는 '손이 닿는 데 필요한 만큼' 으로 되돌리는 보정이라 호를 상쇄한다(10/8 03:55 dbg)
       if (BODY.trunkArc > 0) {
-        if (sk.swinging && this.arcX0 == null) this.arcX0 = sk.aim.x;
+        // 획의 시작 자리 x0: 휘두름이 시작되는 변(조용했던 시간 > 0.2 s 뒤, skill.js 의 quiet 와 같은 기준)마다 다시 잡는다 — activity 가 0.05 아래로 식기(1.2 s)를 기다리면
+        //  획 사이가 짧을 때 앞 획의 x0 가 남아 반대 방향 계단 명령이 들어갔다(10/8 2 등급 검토 1). 죽음·무장 해제 뒤에도 다음 휘두름에서 새로 잡힌다
+        const gapA = this.arcGap ?? 9;
+        this.arcGap = sk.swinging ? 0 : gapA + dt;
+        if (sk.swinging && (this.arcX0 == null || gapA > 0.2)) this.arcX0 = sk.aim.x;
         if (this.arcX0 != null) {
-          // 호 몫은 걸러진 손 목표(aim)로 — 날것 패드(aimRaw)로 하면 몸이 손보다 150 ms 넘게 먼저 돌아 끝나 버려(10/8 계측: 가슴 최고가 칼끝 최고보다 192 ms 앞) 손 속도에 실리지 않는다
+          // 호 몫은 걸러진 손 목표(aim)로 — 날것 패드(aimRaw)로 하면 몸이 손보다 150 ms 넘게 먼저 돌아 끝나 버려(10/8 계측: 가슴 최고가 칼끝 최고보다 192 ms 앞) 손 속도에 실리지 않는다.
+          //  숙련도 s 를 곱하지 않는다: 보정이 아니라 몸의 휘두름이라 어느 단계든 같은 크기(ex 와 같은 뜻)
           arc = -(sk.aim.x - this.arcX0) * BODY.trunkArc * act * BODY_TURN;
           if (!sk.swinging && act < 0.05) this.arcX0 = null;
         }
@@ -2577,6 +2582,9 @@ export class Fighter {
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
     else this.armFull = false;
     if (mus < 0.12 || !this.armed) {
+      this.holdLocal = null; // ARM.swing 'arc' 의 쥠 방향·되섞기도 버린다 (칼을 놓치거나 쓰러진 동안 남아 다음 쥠의 첫 60 ms 를 옛 방향으로 끌던 것 — 10/8 검토 2; servo 에선 읽지 않는 값)
+      this.holdW = 0;
+      this.holdOn = false;
       this.aimOff = true; // 측정용: 다음 재개 스텝을 표시
       this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
       return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
@@ -2631,7 +2639,7 @@ export class Fighter {
       const sk = this.skill;
       const holding = sk.swinging && !sk.tap && !(th.w > 0) && this.finish.amt <= 0;
       rot(forearm, _holdQ);
-      if (holding && !this.holdLocal) {
+      if (holding && (!this.holdLocal || !this.holdOn)) { // 휘두름이 시작되는 변마다 다시 잡는다 (앞 획의 60 ms 되섞기 중에 새 획이 오면 옛 쥠 방향을 안 쓰게 — 10/8 검토 3)
         rot(sword, _q1);
         this.holdLocal = new THREE.Vector3(0, 1, 0).applyQuaternion(_q1).applyQuaternion(_holdQ.clone().invert());
         this.holdW = 0;
@@ -2645,6 +2653,7 @@ export class Fighter {
         aim.normalize();
       }
       if (!holding && this.holdW <= 0) this.holdLocal = null;
+      this.holdOn = holding;
     }
     // 목표 방향이 도는 속도: 손목 감쇠는 이 속도를 향한다 (멈추려는 게 아니라 목표를 따라가는 감쇠)
     const wAim = _v5.set(0, 0, 0);
