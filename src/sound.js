@@ -2527,6 +2527,17 @@ export class Sound {
   }
 
   /**
+   * 팔·다리 절단 (fighter.sever, 설계 §4): 베는 소리는 이미 났고 그 위에 참수보다 가벼운 절단감 — 뼈 "뚝" 낮게, 젖은 소리, 몸이 받는 작은 쿵. 목소리는 상처 신음이 이어받는다
+   */
+  sever({ me = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const ev = this.event({ bus: this.fleshBus, gain: 0.7, prio: 2.5, pos });
+    this.layer(ev, this.pick('bone'), { gain: 0.6, rate: between(Math.random, 0.75, 0.9), delay: 0.004 });
+    this.layer(ev, this.pick('wetHeavy'), { gain: 0.5, rate: between(Math.random, 0.65, 0.8), delay: 0.012 });
+    this.layer(ev, this.pick('thump'), { gain: 0.3, rate: 0.7, delay: 0.008 });
+  }
+
+  /**
    * 떨어진 머리가 바닥에 닿음 (32차, BodySounds 가 머리 몸의 낙하를 보고 부른다. 굴러 튈 때마다, 0.12초에 한 번까지).
    *  speed = 닿기 직전 떨어지던 속도(m/s). 맨머리: 둔한 "퍽"(합성 쿵 + 누비옷 녹음) / 투구째: 투구 조각을 낮게 튼 둔한 "텅" + 쿵.
    *  둘 다 그 무대 바닥 알갱이(모래·자갈·눈·돌·흙)를 얹는다
@@ -3448,6 +3459,7 @@ export class BodySounds {
     this.lastLand = -9;
     this.breathT = 0; // 다음 숨 시각 (0 = 지금은 숨을 내지 않는다)
     this.decap = !!fighter.decapitated; // 참수를 이미 알렸나 (32차)
+    this.nSevered = fighter.severed?.length || 0; // 알린 절단 수 (fighter.sever)
     this.headVy = 0; // 떨어진 머리가 떨어지던 가장 빠른 속도 (바닥에 닿는 순간을 잡는다)
     this.lastHead = -9;
   }
@@ -3461,6 +3473,8 @@ export class BodySounds {
       this.decap = true;
       s.decapitate({ me: this.me });
     }
+    const nSev = f.severed?.length || 0;
+    if (nSev > this.nSevered) { this.nSevered = nSev; s.sever({ me: this.me }); } // 팔·다리 절단: 절단감 한 번
     if (f.state !== this.state) {
       if (f.state === 'dead') {
         if (!f.decapitated) s.death(this.voice, f.causeOfDeath, { me: this.me });

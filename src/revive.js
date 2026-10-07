@@ -73,9 +73,9 @@ export function reviveTick(f, dt) {
     f.muscle = Math.min(f.muscle, 0.02); // 죽은 몸처럼 힘이 다 풀린다 (보통 넘어짐은 0.1)
     if (V.t < R.lie) return;
     restore(f, R);
-    f.setState('getup'); // 기존 일어서기: 무릎 꿇은 자세 → 일어섬
+    if (!f.missingLeg) f.setState('getup'); // 기존 일어서기: 무릎 꿇은 자세 → 일어섬. 다리를 잃었으면 누운 채 되살아난다 (사장님 10/8 00:20)
     V.phase = 'rise';
-    if (!f.armed) V.sword = startSwordReturn(f);
+    if (!f.armed && !f.severedLimbs?.has('armS')) V.sword = startSwordReturn(f); // 칼 팔이 잘렸으면 칼은 돌아오지 않는다
   }
   if (V.phase === 'rise') {
     f.kneelTime = R.kneel;
@@ -101,7 +101,7 @@ function restore(f, R) {
   f.daze = 0;
   f.balance = 100;
   f.offBalanceTime = 0;
-  for (const k in R.limbs) if (k in f.limbs) f.limbs[k] = Math.max(f.limbs[k], R.limbs[k]);
+  for (const k in R.limbs) if (k in f.limbs && !f.severedLimbs?.has(k)) f.limbs[k] = Math.max(f.limbs[k], R.limbs[k]); // 잘려 나간 팔다리는 돌아오지 않는다
 }
 
 function end(f) {
@@ -119,7 +119,7 @@ function end(f) {
 function ghost(f, on) {
   const V = f.revival;
   if (!on) {
-    for (const [col, g] of V.groups || []) if (col.isEnabled()) col.setCollisionGroups(g); // 파손으로 떼어 낸 부품(비활성·그룹 0)은 되살리지 않는다
+    for (const [col, g] of V.groups || []) if (col.isEnabled() && !f.colliderInfo?.get(col.handle)?.detached) col.setCollisionGroups(g); // 파손으로 떼어 낸 부품(비활성·그룹 0)은 되살리지 않는다
     V.groups = null;
     return;
   }

@@ -28,7 +28,7 @@ import { updateGun } from './gun.js';
 
 // 전투 사건 갈고리 (gun.js GUN_HOOKS 와 같은 식): 비어 있으면 아무 일도 없다. 판정·난수와 무관
 //  onDecapitate(f, headBody): 참수된 순간 한 번 (fighter.applyWound, die 뒤) — 사운드 PM 이 소리를 건다
-export const COMBAT_HOOKS = { onDecapitate: null };
+export const COMBAT_HOOKS = { onDecapitate: null, onSever: null }; // onSever(f, kind('elbow'|'shoulder'|'knee'|'hip'), bodies[], parentPart): 팔·다리가 떨어진 순간 한 번 (fighter.sever)
 
 const FINISH_PARTS = new Set(['chest', 'abdomen', 'pelvis', 'head']); // 내려찍기 즉사 부위 (몸통·머리). 부위 이름으로 — 가슴·머리 몸체의 목 쪽도 들어간다
 const Y = new THREE.Vector3(0, 1, 0);
@@ -84,6 +84,7 @@ export class Combat {
     const b = this.info.get(c2);
     if (!a || !b || a.fighter === b.fighter) return null;
     if (a.fighter.revival || b.fighter.revival) return null; // 부활하는 동안엔 상처를 주고받지 않는다 (revive.js)
+    if (a.detached || b.detached) return null; // 잘려 떨어진 팔다리(와 그 손의 칼)는 잔해: 상처를 내지도 받지도 않는다 (fighter.sever)
     // 손에서 놓친(땅에 떨어진) 칼은 부딪히기만 하고 상처를 내지 않는다
     if ((a.kind === 'weapon' && !a.fighter.armed) || (b.kind === 'weapon' && !b.fighter.armed)) return null;
     if (a.kind === 'weapon' && b.kind !== 'weapon') return { w: a, v: b, wc: c1, vc: c2 };
@@ -385,6 +386,7 @@ export class Combat {
       const a = this.info.get(h1);
       const b = this.info.get(h2);
       if (!a || !b || a.fighter === b.fighter) return;
+      if (a.detached || b.detached) return; // 잔해(잘린 팔다리)는 겨루기·튕김 판정에서 뺀다
       if (a.kind === 'weapon' && b.kind === 'weapon') {
         if (!a.fighter.armed || !b.fighter.armed) return; // 땅에 떨어진 칼은 겨루기(바인드·쨍)가 아니다
         // 칼끼리는 모아서 한 번에 (칼날-칼날, 칼날-코등이… 여러 쌍이 한 스텝에 함께 닿는다)

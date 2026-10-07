@@ -39,6 +39,17 @@ const groups = (member, filter) => (member << 16) | filter;
 const torsoBit = (i) => (i === 0 ? 256 : 512);
 const armSBit = (i) => (i === 0 ? 1024 : 2048);
 const TORSO_PARTS = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
+// ── 팔·다리 절단 (COMBAT.limbSever, 설계 docs/strike/limb_sever_design_2026-10-07.md §2) ──
+//  베인 부위 → 뗄 수 있는 관절 후보. 'own' = 그 부위 자신의 관절(앵커2 가 부위 틀), 'child' = 아래 부위의 관절(앵커1 이 부위 틀).
+//  팔꿈치 = farm*의 관절, 어깨 = uarm*의 관절, 무릎 = shin*의 관절, 엉덩이 = thigh*의 관절. 손목·발목은 안 한다(몸체가 손·발을 따로 안 가짐).
+const LIMB_SEVER_JOINTS = {
+  farmS: [['farmS', 'own', 'elbow']], farmO: [['farmO', 'own', 'elbow']],
+  uarmS: [['farmS', 'child', 'elbow'], ['uarmS', 'own', 'shoulder']], uarmO: [['farmO', 'child', 'elbow'], ['uarmO', 'own', 'shoulder']],
+  shinF: [['shinF', 'own', 'knee']], shinB: [['shinB', 'own', 'knee']],
+  thighF: [['shinF', 'child', 'knee'], ['thighF', 'own', 'hip']], thighB: [['shinB', 'child', 'knee'], ['thighB', 'own', 'hip']],
+};
+/** count 모드의 수집함: 통과 베기가 팔다리 관절 근처에 닿을 때마다 한 줄 (자르지 않는다). 측정 도구 tools/sim/limb_sever_count.mjs 가 읽는다 */
+export const LIMB_SEVER_COUNT = { events: [] };
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
 // ─────────────────────────────────────────────────────────────
@@ -242,6 +253,7 @@ export class Fighter {
   constructor(RAPIER, world, scene, colliderInfo, o) {
     this.R = RAPIER;
     this.world = world;
+    this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
     this.index = o.index;
     this.name = o.name;
     this.side = 1; // 오른손잡이
@@ -519,6 +531,7 @@ export class Fighter {
       thrustStyle: spec.thrustStyle ?? null, // 찌르기 무기의 찌르기 장점 (weapons.js THRUST_STYLE)
       spike: !!spec.spike, // 가시 무기(모르겐슈테른): 날 없는 머리 끝의 약한 찌르기 (combat.js analyze, 확인표 줄 135). 없는 무기는 거짓
     };
+    this.weaponSpecId = spec.id; // 기록용(절단 발생률 표의 무기 열)
     this.weaponBroken = false;
     this.guardPose.oneHand = this.bodyGuard.oneHand = !!spec.oneHandStance; // 한손 무기는 한손 자세표 (guards.js: 칼 든 어깨를 앞으로, 손을 더 뻗는다. weapons.js oneHandStance)
     // 무기 종류별 자세표 (동작 PM 10/1 docs/motion/one_hand_guards_2026-10-01.md·two_hand_thrust_guards_2026-10-01.md, 사장님 10/1 21:45 승인):
@@ -1180,7 +1193,7 @@ export class Fighter {
       if (fallTilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(fallTilt > BODY.fallTiltDeg + 15);
       else if (this.legHealth < 0.25) this.knockDown(false); // 다리가 버티지 못해 주저앉는다
     } else if (this.state === 'down') {
-      if (this.stateTime > this.downTime && this.consciousness > 0.3) this.setState('getup');
+      if (this.stateTime > this.downTime && this.consciousness > 0.3 && !this.missingLeg) this.setState('getup'); // 다리를 잃었으면 서지 않는다 (절단 설계 §3-6)
     } else if (this.state === 'getup') {
       if (this.stateTime > this.kneelTime) {
         // 무릎 꿇은 자세에서 일어서기. 다리가 못 버티면 무릎 꿇은 채로 남는다
@@ -1303,6 +1316,7 @@ export class Fighter {
     const bleed = sev * bleedPerSev * (h.type === 'stab' ? 1.6 : 1);
     this.bleed += bleed;
     this.wounds.push({ part: h.part, type: h.type, severity: sev, bleed, local: h.local.clone() });
+    if (COMBAT.limbSever !== 'off') this.limbSeverCheck(h); // 팔·다리 절단 후보 (count: 세기만 / on: 관절 떼기)
 
     // 치명상
     if (Z === 'neck' && sev > 0.5) {
@@ -1336,6 +1350,136 @@ export class Fighter {
     this.decapitated = true;
     this.bleed += bleed;
     this.wounds.push({ part: 'chest', type: 'cut', severity: sev, bleed, local: new THREE.Vector3(a.x, a.y, a.z), stump: true });
+  }
+
+  /**
+   * 팔·다리 절단 후보 — 베인 부위(h.part)에서 가장 가까운 뗄 수 있는 관절과 그 거리(m). 조건은 설계 §2:
+   *  통과 베기(cut·pass·passing·!stuck)만 보고, 문턱(심각도·반경)은 여기서 안 자른다 — count 모드는 전부 기록하고 on 모드가 문턱을 댄다.
+   *  h.local 은 베인 부위 몸체 틀의 점(combat.analyze vicLocal). 'own' 관절의 anchor2()·'child' 관절의 anchor1() 이 같은 틀이다.
+   */
+  limbSeverTarget(h) {
+    const cands = LIMB_SEVER_JOINTS[h.part];
+    if (!cands || !h.local) return null;
+    let best = null;
+    for (const [name, side, kind] of cands) {
+      const J = this.jointByName[name];
+      if (!J?.joint) continue; // 이미 뗀 관절
+      const a = side === 'own' ? J.joint.anchor2() : J.joint.anchor1();
+      const dist = Math.hypot(h.local.x - a.x, h.local.y - a.y, h.local.z - a.z);
+      if (!best || dist < best.dist) best = { joint: name, kind, dist };
+    }
+    return best;
+  }
+
+  limbSeverCheck(h) {
+    if (h.type !== 'cut' || !h.pass || !h.passing || h.stuck) return;
+    const t = this.limbSeverTarget(h);
+    if (!t) return;
+    if (COMBAT.limbSever === 'count') {
+      LIMB_SEVER_COUNT.events.push({ victim: this.name, part: h.part, joint: t.joint, kind: t.kind, dist: +t.dist.toFixed(4), severity: +h.severity.toFixed(3), energy: Math.round(h.energy), weapon: this.foe?.weaponSpecId ?? null, state: this.state });
+    }
+    if (COMBAT.limbSever === 'on' && h.severity >= COMBAT.limbSeverSeverity && t.dist <= COMBAT.limbSeverRadius) this.sever(t, h);
+  }
+
+  /** 관절 정의 다시 셈(생성자와 같은 변형 순서) — 수동 관절 재생성에 쓴다 */
+  jointDefFor(childName) {
+    const jdefs = jointDefs(this.side);
+    if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
+    if (BODY.legTorque === 'human') humanLegTorque(jdefs);
+    if (BODY.humanLimits) humanJointDefs(jdefs, this.side);
+    return jdefs.find((jd) => jd.c === childName) || null;
+  }
+
+  /**
+   * 모터 없는 수동 관절(같은 자리·같은 한계). 떨어진 부위 안쪽 관절(무릎 아래 발목, 어깨 아래 팔꿈치 …)에 쓴다.
+   *  모터 축을 0·0 으로 두면 Rapier 0.19.3 에선 속도 잠금이라(10/7 A-021) 설정하지 않은 축으로 새로 만든다 — 그래야 잘린 다리가 막대처럼 굳지 않는다.
+   */
+  passiveJoint(childName) {
+    const jd = this.jointDefFor(childName);
+    if (!jd) return null;
+    const RAPIER = this.R;
+    const P = new THREE.Vector3(...jd.at);
+    const rp = this.localRot[jd.p];
+    const rc = this.localRot[jd.c];
+    const a1 = P.clone().sub(this.localPos[jd.p]).applyQuaternion(rp.clone().invert());
+    const a2 = P.clone().sub(this.localPos[jd.c]).applyQuaternion(rc.clone().invert());
+    const data = jd.type === 'hinge' ? RAPIER.JointData.revolute(vecArg(a1), vecArg(a2), { x: 0, y: 0, z: 1 }) : RAPIER.JointData.spherical(vecArg(a1), vecArg(a2));
+    const joint = this.world.createImpulseJoint(data, this.bodies[jd.p], this.bodies[jd.c], true);
+    if (jd.manual) return joint;
+    if (jd.type === 'hinge') joint.setLimits(jd.lim[0], jd.lim[1]);
+    else ['x', 'y', 'z'].forEach((ax, i) => joint.rawSet.jointSetLimits(joint.handle, MOTOR_AXES[i], jd.lim[ax][0], jd.lim[ax][1]));
+    return joint;
+  }
+
+  /**
+   * 팔·다리 절단 (설계 docs/strike/limb_sever_design_2026-10-07.md §3). 물리 스텝 밖(combat.afterStep → strike → applyWound)에서만.
+   *  관절을 떼고(힘·속도 더하지 않음), 떨어진 부위 안쪽 관절은 수동 관절로 다시 만들며, 몸값(totalMass)·gait 받침을 고치고,
+   *  떨어진 부위는 잔해(상처를 내지도 받지도 않음, colliderInfo.detached). 칼 팔이면 칼은 잘린 아래팔과 함께 간다(쥠 관절 그대로, armed 만 false).
+   *  다리를 잃으면 서지 않는다(한 다리 보행 없음) — 부활은 참수 아닌 한 허용(사장님 10/8 00:20), 누운 채 손목 제어는 오늘처럼 산다.
+   */
+  sever(t, h) {
+    const J = this.jointByName[t.joint];
+    if (!J?.joint) return false;
+    const PARTS = { farmS: ['farmS'], farmO: ['farmO'], uarmS: ['uarmS', 'farmS'], uarmO: ['uarmO', 'farmO'], shinF: ['shinF', 'footF'], shinB: ['shinB', 'footB'], thighF: ['thighF', 'shinF', 'footF'], thighB: ['thighB', 'shinB', 'footB'] }[t.joint];
+    const limb = { farmS: 'armS', uarmS: 'armS', farmO: 'armO', uarmO: 'armO', shinF: 'legF', thighF: 'legF', shinB: 'legB', thighB: 'legB' }[t.joint];
+    const jd = this.jointDefFor(t.joint);
+    const parentName = jd ? jd.p : null;
+    const a1 = J.joint.anchor1(); // 몸 쪽 부위 틀의 단면 자리
+    const a2 = J.joint.anchor2(); // 떨어진 부위 틀의 단면 자리 (겉모습 limb_fx)
+    // 1. 관절 떼기 (속도·힘은 그대로)
+    this.world.removeImpulseJoint(J.joint, true);
+    J.joint = null;
+    this.joints = this.joints.filter((j) => j !== J);
+    this.detachedParts ||= new Set();
+    this.severedLimbs ||= new Set();
+    for (const p of PARTS) this.detachedParts.add(p);
+    this.severedLimbs.add(limb);
+    // 2. 떨어진 부위 안쪽 관절 → 모터 없는 수동 관절
+    for (const p of PARTS.slice(1)) {
+      const Ji = this.jointByName[p];
+      if (!Ji?.joint) continue;
+      this.world.removeImpulseJoint(Ji.joint, true);
+      this.joints = this.joints.filter((j) => j !== Ji);
+      Ji.joint = this.passiveJoint(p);
+      Ji.passive = true;
+    }
+    // 3. 몸값·받침 (제어기가 보는 질량만; 몸체 질량·속도는 손대지 않는다)
+    let lost = 0;
+    for (const p of PARTS) {
+      const b = this.bodies[p];
+      for (let i = 0; i < b.numColliders(); i++) {
+        const col = b.collider(i);
+        lost += col.mass();
+        const info = this.colliderInfo.get(col.handle);
+        if (info) info.detached = true;
+      }
+    }
+    this.totalMass = Math.max(1, this.totalMass - lost);
+    if (this.gait) this.gait.Mg = this.totalMass * 9.81;
+    // 4. 기능
+    this.limbs[limb] = 0;
+    if (limb === 'armS') {
+      this.armed = false; // 칼은 잘린 아래팔이 쥔 채 떨어진다 (gripJoint·gripCone 그대로). combat.pairOf 는 armed 아닌 칼의 접촉에 상처를 안 적는다
+      this.aimOff = true;
+      this.prevAim = null;
+      for (const col of this.swordColliders) { const info = this.colliderInfo.get(col.handle); if (info) info.detached = true; }
+    }
+    if (limb === 'armO') this.gripping = false;
+    if (limb === 'legF' || limb === 'legB') {
+      this.missingLeg = true;
+      if (this.gait?.active) this.gait.exit();
+      this.knockDown(true);
+      this.downTime = 1e9; // 서지 않는다 (updateState 의 getup 전이도 missingLeg 를 본다)
+    }
+    // 5. 상처·출혈: 떨어진 부위의 상처는 더는 몸의 피가 아니다; 단면 상처를 몸 쪽 부위에 (참수와 같은 꼴)
+    for (const w of this.wounds) if (this.detachedParts.has(w.part) && !w.detached) { this.bleed = Math.max(0, this.bleed - w.bleed); w.bleed = 0; w.detached = true; }
+    const bleed = h.severity * (h.bleedPerSev ?? 0.012);
+    this.bleed += bleed;
+    this.wounds.push({ part: parentName, type: 'cut', severity: h.severity, bleed, local: new THREE.Vector3(a1.x, a1.y, a1.z), stump: true, limb: t.kind });
+    this.severed ||= [];
+    this.severed.push({ joint: t.joint, kind: t.kind, parts: PARTS, limb, parent: parentName, severity: h.severity, energy: h.energy, dist: t.dist, parentLocal: { x: a1.x, y: a1.y, z: a1.z }, childLocal: { x: a2.x, y: a2.y, z: a2.z } });
+    COMBAT_HOOKS.onSever?.(this, t.kind, PARTS.map((p) => this.bodies[p]), parentName);
+    return true;
   }
 
   /**
@@ -2302,7 +2446,7 @@ export class Fighter {
 
   /** 팔꿈치 중력 보상: 아래팔과 칼의 무게를 팔꿈치 근육이 미리 버틴다 (엔진 모터는 목표 각도만 쫓으므로 따로 건다) */
   elbowGravity() {
-    if (this.muscle < 0.12 || this.state === 'dead') return;
+    if (this.muscle < 0.12 || this.state === 'dead' || this.detachedParts?.has('farmS')) return; // 팔꿈치가 잘렸으면 보상 토크 없음 (잔해에 힘 0)
     const up = this.bodies.uarmS;
     this.gravityTorque([this.bodies.farmS, this.armed ? this.sword : null], up, 0.15, _mG);
     rot(up, _qg);

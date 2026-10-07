@@ -135,6 +135,7 @@ export class Gait {
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
   enter() {
+    if (this.f.missingLeg) return; // 다리를 잃은 몸은 걷기·서기 제어를 다시 켜지 않는다 (fighter.sever)
     this.active = true;
     this.sense();
     for (const k of ['F', 'B']) {

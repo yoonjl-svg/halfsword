@@ -24,6 +24,7 @@ import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
 import { createSwordTrails } from './sword_trail.js';
 import { createDecapFx } from './decap_fx.js';
+import { createLimbFx } from './limb_fx.js';
 import { attachHands } from './hands.js';
 import { PerfMeter } from './perfmeter.js';
 import { createRenderCap } from './render_cap.js';
@@ -204,6 +205,7 @@ resize();
 // ── 물리 세계와 등장인물 ──
 const particles = new Particles(scene);
 const decapFx = createDecapFx(particles); // 참수 목 단면·피 분출 (외형 PM, decap_fx.js — 겉모습만)
+const limbFx = createLimbFx(particles); // 팔·다리 절단 단면·피 (limb_fx.js — 겉모습만, 판정은 fighter.sever)
 const sound = new Sound();
 // 권총(??? 등급) 총구 섬광·연기·총알 궤적·희미한 조준 레이저 (외형 PM, gun_fx.js — 소리는 그대로 두고 GUN_HOOKS.onShot 을 감싼다).
 //  world·combat 은 판마다 새로 만들어지니, 늘 지금 판 것을 가리키는 얇은 겉감을 넘긴다 (읽기만 한다 — 판정과 무관)
@@ -1431,6 +1433,7 @@ function frame(now) {
       updateDrips(f, dt * scale);
     }
     decapFx.update([player, enemy], dt * scale); // 참수: 목 단면·피 분출
+    limbFx.update([player, enemy], dt * scale); // 팔·다리 절단: 단면·피
     updateBindSound();
     for (const b of bodySounds) b.update(dt * scale);
     reviveFx.update(enemy, dt * scale);

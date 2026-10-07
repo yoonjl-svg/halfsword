@@ -64,7 +64,16 @@
 - **Q3 기본 켬**: 참수와 같이 본판 기본 켬(권고, count 표 뒤) / 탐색판에서만.
 - **Q4 잔해 규칙**: 떨어진 팔다리·그 칼은 상처를 내지도 받지도 않음(권고).
 
-## 7. 구현 순서·규모 (코드 변경은 사장님 답 뒤)
+## 7-결과. 구현 (10/8 00:31~01:35, 디렉터 직접, 에이전트 0)
+- ① count 모드(`COMBAT.limbSever 'count'`, `fighter.js LIMB_SEVER_COUNT`, 도구 `tools/sim/limb_sever_count.mjs`): 36 판(fights12 × 3 묶음, 롱소드끼리) 후보 102 건·판당 2.83, 심각도 중앙 0.49·p90 1.28, 관절 거리 중앙 0.14 m. 격자: 1.2/0.085 → 0 건, 0.8/0.11 → 0.28/판, **1.0/0.11 → 0.19/판(7 건, 전부 팔꿈치)**. off·count 모두 fights12 sha `4ecd1481`(행동 변화 0).
+- 문턱 결정(디렉터, 사장님 위임 10/7 23:30): **S_sever 1.0**(살 문턱 위 90 J — 뼈를 지나갈 세기의 뜻), **r_joint 0.11 m**(아래팔 0.19 의 관절 쪽 ≈ 절반; 손목·발목 쪽 베기는 안 자른다). 확인표 164·165.
+- ② `fighter.sever()`: 관절 제거, 떨어진 부위 안쪽 관절은 **모터 없는 수동 관절로 재생성**(`passiveJoint`, A-021 때문), 몸값·gait.Mg, `colliderInfo.detached`(combat.pairOf·겨루기에서 잔해 제외), 기능(limbs 0; 칼 팔이면 armed false 인 채 칼은 아래팔과 함께; 빈팔이면 gripping false), 다리면 gait.exit·knockDown·`missingLeg`(서지 않음: updateState·gait.enter·revive 가 본다), 상처(떨어진 부위 상처의 피를 빼고 단면 상처를 몸 쪽에), `COMBAT_HOOKS.onSever`. 팔꿈치가 잘리면 `elbowGravity` 보상 토크를 끈다(검사가 잡아낸 1건).
+- 부활(사장님 10/8 00:20): tryRevive 는 참수만 거절; reviveTick 은 missingLeg 면 getup 을 건너뛰고 누운 채 되살리며, 칼 팔이 잘렸으면 칼이 돌아오지 않고, restore 는 잘린 팔다리를 되살리지 않는다. ghost 는 잔해 collider 를 건드리지 않는다.
+- ③ 겉모습 `src/limb_fx.js`(양쪽 단면 원판 — 몸체 캡슐 반지름, 분출 0.6/0.35 s, 전용 난수), 소리 `Sound.sever`(참수보다 가벼운 절단감) + BodySounds 가 `severed` 수를 본다. main.js 에 `limbFx.update` 한 줄.
+- ④ 검사 `tools/sim/limb_sever_check.mjs` **73 건 통과**. 전후표(36 판, 롱소드끼리): off dead 22·downs 1.31 → on dead 23·downs 1.31, 절단 7 건(판 7개, 플레이어 쪽 6·AI 쪽 1, 전부 팔꿈치), NaN 0. 새 기준선 fights12 `ea286e32`(off `4ecd1481`), live_battery·finish_thrust 그대로.
+- 남은 것: 사장님 플레이 1회(눈·소리 확인 — 특히 잘린 아래팔이 칼을 쥔 채 떨어지는 모습, 다리를 잃고 누운 채 베는 모습), 롱소드 외 무기 배터리(츠바이핸더·팔쉬온은 더 자주 자를 것), 어깨·엉덩이 절단은 합성 검사만 통과(자연 전투에서 36 판 중 0 건).
+
+## 7. 구현 순서·규모 (원래 계획, 10/7)
 ① `COMBAT.limbSever` + count 모드 + 측정표(fighter.js applyWound 10 줄, 도구 1) → 사장님 164·165·Q1~Q4 → ② 'on': fighter.js `sever()`·`disarmWithLimb()`(≈ 70 줄), combat.js detached 건너뜀(5), gait.js 다리 제외(10), revive.js(2), 수동 관절 재생성(jointDefs 재사용 20) → ③ limb_fx.js(decap_fx 재사용 ≈ 80)·소리 훅 → ④ 검사 도구·배터리·sha 갱신·보고. 2 등급 구현 1 회(가지 limb-sever), 디렉터 통합·검산. 예상 세션 비용 ≈ $25.
 
 ## 8. 샛별 A-008(사지 절단 시험안, 10/1 뒤 기본 끔)과 다른 점 — 모방이 아니라 더 정직하게
