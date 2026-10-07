@@ -2414,6 +2414,7 @@ export class Fighter {
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
     else this.armFull = false;
     if (mus < 0.12 || !this.armed) {
+      this.aimOff = true; // 측정용: 다음 재개 스텝을 표시
       this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
       return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     }
@@ -2466,6 +2467,7 @@ export class Fighter {
       wAim.crossVectors(this.prevAim, aim).multiplyScalar(1 / this.lastDt);
       const wRaw = wAim.length(); // 측정용(동작 무관): 상한 전 목표 각속도 최고·상한에 걸린 횟수 (tools/sim 탐침이 읽는다)
       if (wRaw > (this.aimRateMax || 0)) this.aimRateMax = wRaw;
+      if (this.aimOff) { this.aimOff = false; this.aimReactN = (this.aimReactN || 0) + 1; if (wRaw > (this.aimReactMax || 0)) this.aimReactMax = wRaw; } // 측정용: 재개 첫 스텝의 raw 목표 각속도
       if (wRaw > 25) { wAim.setLength(25); this.aimRateClamps = (this.aimRateClamps || 0) + 1; }
     }
     (this.prevAim || (this.prevAim = new THREE.Vector3())).copy(aim);
