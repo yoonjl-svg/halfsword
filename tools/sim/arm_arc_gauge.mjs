@@ -47,7 +47,7 @@ for (const weapon of weapons) {
       const sw = P.sword; const m = sw.mass();
       const ke0 = swordKE(sw);
       let Ew = 0, Eg = 0, sat = 0, steps = 0, tipMax = 0, iMax = 0, keMax = ke0, EwMax = 0, EgMax = 0, satMax = 0, tauMax = 0, capAt = 0, handMax = 0;
-      const hsA = [], pwA = [], cwA = []; const pelB = P.bodies.pelvis, chB = P.bodies.chest; const _ht = new THREE.Vector3();
+      const hsA = [], pwA = [], cwA = [], pwrA = [], brA = []; const pelB = P.bodies.pelvis, chB = P.bodies.chest; const _ht = new THREE.Vector3();
       const hb = P.bodies.farmS; const _hp = new THREE.Vector3(), _hq = new THREE.Quaternion();
       for (let i = 0; i < n; i++) {
         const off = P.handOffset;
@@ -58,7 +58,7 @@ for (const weapon of weapons) {
         G.step();
         const w = sw.angvel(); const v = sw.linvel();
         const tau = P.debug.wristTorque; const cap = P.debug.wristCap || 0;
-        Ew += (tau.x * (w0x + w.x) + tau.y * (w0y + w.y) + tau.z * (w0z + w.z)) * 0.5 * DT; // 스텝 앞뒤 평균 ω (끝 ω 만 쓰면 τ·Δω·dt/2 만큼 부풀어 Et 의 3~10 % — 10/8 검토 5)
+        const pwr = (tau.x * (w0x + w.x) + tau.y * (w0y + w.y) + tau.z * (w0z + w.z)) * 0.5; Ew += pwr * DT; pwrA.push(pwr); brA.push(P.wristBrake ? 1 : 0); // 스텝 앞뒤 평균 ω (끝 ω 만 쓰면 τ·Δω·dt/2 만큼 부풀어 Et 의 3~10 % — 10/8 검토 5)
         Eg += -m * G_ACC * v.y * DT;
         steps++; if (cap > 0 && tau.length() >= 0.98 * cap) sat++;
         tauMax = Math.max(tauMax, tau.length()); capAt = cap;
@@ -72,13 +72,16 @@ for (const weapon of weapons) {
       const Et = keMax - ke0; const Eh = Et - EwMax - EgMax;
       const amax = (A) => { let b = 0; for (let j = 1; j <= iMax && j < A.length; j++) if (A[j] > A[b]) b = j; return b; }; // 칼끝 최고 '이전' 창의 최고 자리 (선행 시간용 — 10/8 검토 4)
       const iPel = amax(pwA), iCh = amax(cwA), iHand = amax(hsA); const pelW = pwA[iPel] ?? 0, chW = cwA[iCh] ?? 0;
-      rows.push({ weapon, fam, k, dir: tgt === F.end ? 'fwd' : 'back', tipMax: +tipMax.toFixed(2), tAcc: +((iMax + 1) * DT).toFixed(3), Et: +Et.toFixed(1), Ew: +EwMax.toFixed(1), Eh: +Eh.toFixed(1), Eg: +EgMax.toFixed(1), sat: +satMax.toFixed(2), tauMax: +tauMax.toFixed(1), cap: +capAt.toFixed(1), handMax: +handMax.toFixed(2), pelW: +pelW.toFixed(2), chW: +chW.toFixed(2), leadPel: +((iMax - iPel) * DT * 1000).toFixed(0), leadCh: +((iMax - iCh) * DT * 1000).toFixed(0), leadHand: +((iMax - iHand) * DT * 1000).toFixed(0) });
+      // WA3: 칼끝 최고 '이전' 창에서 손목이 제동(음의 일)한 몫과 제동 플래그가 처음 선 시각
+      let EwNeg = 0, negSteps = 0; for (let j = 0; j <= iMax && j < pwrA.length; j++) if (pwrA[j] < 0) { EwNeg += pwrA[j] * DT; negSteps++; }
+      let iBrake = -1; for (let j = 0; j < brA.length; j++) if (brA[j]) { iBrake = j; break; }
+      rows.push({ weapon, fam, k, dir: tgt === F.end ? 'fwd' : 'back', tipMax: +tipMax.toFixed(2), tAcc: +((iMax + 1) * DT).toFixed(3), Et: +Et.toFixed(1), Ew: +EwMax.toFixed(1), Eh: +Eh.toFixed(1), Eg: +EgMax.toFixed(1), sat: +satMax.toFixed(2), tauMax: +tauMax.toFixed(1), cap: +capAt.toFixed(1), handMax: +handMax.toFixed(2), pelW: +pelW.toFixed(2), chW: +chW.toFixed(2), leadPel: +((iMax - iPel) * DT * 1000).toFixed(0), leadCh: +((iMax - iCh) * DT * 1000).toFixed(0), leadHand: +((iMax - iHand) * DT * 1000).toFixed(0), EwNeg: +EwNeg.toFixed(1), negFrac: +(negSteps / Math.max(1, iMax + 1)).toFixed(2), brakeLead: iBrake >= 0 ? +((iMax - iBrake) * DT * 1000).toFixed(0) : null });
       tgt = tgt === F.end ? F.ch : F.end;
     }
   }
   const sh = (r, k) => (r.Et > 1 ? r[k] / r.Et : NaN);
-  const S = { weapon, n: rows.length, tipMax: med(rows.map((r) => r.tipMax)), tAcc: med(rows.map((r) => r.tAcc)), Et: med(rows.map((r) => r.Et)), wrist: med(rows.map((r) => sh(r, 'Ew'))), hand: med(rows.map((r) => sh(r, 'Eh'))), grav: med(rows.map((r) => sh(r, 'Eg'))), sat: med(rows.map((r) => r.sat)), tauMax: med(rows.map((r) => r.tauMax)), cap: med(rows.map((r) => r.cap)), handMax: med(rows.map((r) => r.handMax)), pelW: med(rows.map((r) => r.pelW)), chW: med(rows.map((r) => r.chW)), leadPel: med(rows.map((r) => r.leadPel)), leadCh: med(rows.map((r) => r.leadCh)), leadHand: med(rows.map((r) => r.leadHand)) };
+  const S = { weapon, n: rows.length, tipMax: med(rows.map((r) => r.tipMax)), tAcc: med(rows.map((r) => r.tAcc)), Et: med(rows.map((r) => r.Et)), wrist: med(rows.map((r) => sh(r, 'Ew'))), hand: med(rows.map((r) => sh(r, 'Eh'))), grav: med(rows.map((r) => sh(r, 'Eg'))), sat: med(rows.map((r) => r.sat)), tauMax: med(rows.map((r) => r.tauMax)), cap: med(rows.map((r) => r.cap)), handMax: med(rows.map((r) => r.handMax)), pelW: med(rows.map((r) => r.pelW)), chW: med(rows.map((r) => r.chW)), leadPel: med(rows.map((r) => r.leadPel)), leadCh: med(rows.map((r) => r.leadCh)), leadHand: med(rows.map((r) => r.leadHand)), EwNeg: med(rows.map((r) => r.EwNeg)), negFrac: med(rows.map((r) => r.negFrac)), brakeLead: med(rows.map((r) => r.brakeLead).filter((v) => v != null)), brakeN: rows.filter((r) => r.brakeLead != null).length };
   out.push({ summary: S, rows });
-  console.log(`${weapon.padEnd(12)} 획 ${S.n}: 칼끝 최고 중앙 ${S.tipMax.toFixed(1)} m/s · 손 최고 ${S.handMax.toFixed(1)} m/s · 가속 ${(S.tAcc * 1000).toFixed(0)} ms · 얻은 KE ${S.Et.toFixed(0)} J · 몫 손목 ${(S.wrist * 100).toFixed(0)} % / 손(팔 호) ${(S.hand * 100).toFixed(0)} % / 중력 ${(S.grav * 100).toFixed(0)} % · 손목 포화 ${(S.sat * 100).toFixed(0)} % 스텝 · |τ| 최고 ${S.tauMax.toFixed(1)} / 상한 ${S.cap.toFixed(1)} N·m · 골반 ω ${S.pelW.toFixed(1)} · 가슴 ω ${S.chW.toFixed(1)} rad/s · 칼끝 최고보다 앞선 시간 골반 ${S.leadPel} / 가슴 ${S.leadCh} / 손 ${S.leadHand} ms · 서지 않은 스텝 ${falls} · 골반 최저 ${minPelY.toFixed(2)} m`);
+  console.log(`${weapon.padEnd(12)} 획 ${S.n}: 칼끝 최고 중앙 ${S.tipMax.toFixed(1)} m/s · 손 최고 ${S.handMax.toFixed(1)} m/s · 가속 ${(S.tAcc * 1000).toFixed(0)} ms · 얻은 KE ${S.Et.toFixed(0)} J · 몫 손목 ${(S.wrist * 100).toFixed(0)} % / 손(팔 호) ${(S.hand * 100).toFixed(0)} % / 중력 ${(S.grav * 100).toFixed(0)} % · 손목 포화 ${(S.sat * 100).toFixed(0)} % 스텝 · |τ| 최고 ${S.tauMax.toFixed(1)} / 상한 ${S.cap.toFixed(1)} N·m · 골반 ω ${S.pelW.toFixed(1)} · 가슴 ω ${S.chW.toFixed(1)} rad/s · 칼끝 최고보다 앞선 시간 골반 ${S.leadPel} / 가슴 ${S.leadCh} / 손 ${S.leadHand} ms · 서지 않은 스텝 ${falls} · 골반 최저 ${minPelY.toFixed(2)} m · [WA3] 칼끝 최고 전 손목 제동 일 ${S.EwNeg.toFixed(1)} J(음의 일 스텝 비율 ${(S.negFrac * 100).toFixed(0)} %) · 제동 플래그 시작 = 칼끝 최고 ${S.brakeLead >= 0 ? S.brakeLead + ' ms 전' : (-S.brakeLead) + ' ms 뒤'} (${S.brakeN}/${S.n} 획)`);
   if (args.json) console.log(JSON.stringify(rows));
 }
