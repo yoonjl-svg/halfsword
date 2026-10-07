@@ -48,9 +48,10 @@ if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = mor
 const cutReact = params.get('cutReact');
 if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.STRIKE.cutReact = cutReact;
 // 테스트용 R2′ 팔 단계 탐색 인자(10/8, 사장님 비교용·이번 실행만): ?swing=arc (WA1 손목 hold+release) · ?trunkArc=4&trunkArcSpeed=2 (WA2 몸의 호) · ?chain=legs (골반 = 발 힘쌍 A)
-// ?r2p=1 : R2′ 팔 단계 권고 묶음 한 번에(10/8 WA2-2: swing arc · trunkArc 2 · trunkFollow 1 · handFollow 0.25). ?r2p=legs 는 chain legs(발 힘쌍 A)까지. 개별 인자가 뒤에 오면 그것이 덮는다
+// ?r2p=1 : R2′ 팔 단계 권고 묶음 한 번에(10/8 WA6 뒤: trunkArc 2 · trunkFollow 1 — 몸의 호와 몸 follow 만. 손목 hold(swing arc)·손 follow 는 베는 자리를 깨서(한손 무기 포함, step_strike 04:45) 묶음에서 뺐다; 실험은 ?swing=arc ?handFollow= 로 따로).
+//  ?r2p=legs 는 chain legs(발 힘쌍 A)까지, ?r2p=all 은 AI 에도. 개별 인자가 뒤에 오면 그것이 덮는다
 const r2p = params.get('r2p');
-if (r2p === '1' || r2p === 'legs' || r2p === 'all') { CONFIG.ARM.swing = 'arc'; CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 1; CONFIG.BODY.handFollow = 0.25; if (r2p === 'legs') CONFIG.BODY.chain = 'legs'; if (r2p === 'all') CONFIG.BODY.r2pScope = 'all'; }
+if (r2p === '1' || r2p === 'legs' || r2p === 'all') { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 1; if (r2p === 'legs') CONFIG.BODY.chain = 'legs'; if (r2p === 'all') CONFIG.BODY.r2pScope = 'all'; }
 const r2pScope = params.get('r2pScope');
 if (r2pScope === 'player' || r2pScope === 'all') CONFIG.BODY.r2pScope = r2pScope;
 const swingParam = params.get('swing');
