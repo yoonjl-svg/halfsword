@@ -44,6 +44,9 @@ const FIXED_WEAPON = params.get('weapon');
 // 테스트용 ?morgTorque=33 : 모르겐슈테른 손목 겨눔 토크 상한(기본 22 = 한손 무기 공통, 확인표 169)을 이번 실행에만 바꾼다 — 사장님 비교용, 저장하지 않는다
 const morgTorque = +params.get('morgTorque');
 if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = morgTorque;
+// 테스트용 ?cutReact=same|full|legacy : 절삭 끌림 반작용 방식(config STRIKE.cutReact, 기본 legacy)을 이번 실행에만 바꾼다 — 사장님 비교용(10/8 타격 B 질문)
+const cutReact = params.get('cutReact');
+if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.STRIKE.cutReact = cutReact;
 let lastPlayerWeapon = null; // 지난 판에 고른 무기 (다음 판 카드에서 되도록 뺀다)
 /** 이번 판 내 카드 두 장 (맨 오른쪽 세 번째 칸은 상대 무기라 여기서 뽑지 않는다): 뽑기 목록에서 겹치지 않게 고르게 뽑는다
  *  (지난 판 무기는 되도록 빼서 같은 무기가 두 판 연속 나오지 않게).

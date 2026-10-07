@@ -374,8 +374,16 @@ export class Combat {
         const o = tv(sw.translation());
         const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
         sw.applyImpulseAtPoint({ x: -dir.x * J, y: -dir.y * J, z: -dir.z * J }, vp(pA), true);
-        const pv = onBone(c.pr.v, point);
-        vb.applyImpulseAtPoint({ x: dir.x * J * 0.8, y: dir.y * J * 0.8, z: dir.z * J * 0.8 }, vp(pv), true);
+        // 몸 쪽 반작용 (STRIKE.cutReact, 10/8 비교): legacy = 0.8·J 를 뼈 중심선 점에(9/26 이전부터, 근거 기록 없음) · full = J 를 뼈 점에 · same = J 를 칼과 같은 점에(작용·반작용 그대로)
+        const mode = STRIKE.cutReact || 'legacy';
+        const kv = mode === 'legacy' ? 0.8 : 1;
+        const pv = mode === 'same' ? pA : onBone(c.pr.v, point);
+        vb.applyImpulseAtPoint({ x: dir.x * J * kv, y: dir.y * J * kv, z: dir.z * J * kv }, vp(pv), true);
+        if (globalThis.__cutLog) { // 측정용(도구만 켠다): 접촉별 몫 — 칼 충격량 합, 몸 부위 속도 변화
+          if (!c.log) { const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel(); c.log = { part: c.pr.v.part, v0: [v.x, v.y, v.z], w0: [w.x, w.y, w.z], s0: s, swv0: [vs.x, vs.y, vs.z], Jsum: 0, steps: 0, mode }; globalThis.__cutLog.push(c.log); }
+          const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel();
+          c.log.v1 = [v.x, v.y, v.z]; c.log.w1 = [w.x, w.y, w.z]; c.log.s1 = s; c.log.swv1 = [vs.x, vs.y, vs.z]; c.log.Jsum += J; c.log.steps++;
+        }
       }
     }
 
