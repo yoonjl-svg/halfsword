@@ -73,7 +73,7 @@ export function createLimbFx(particles) {
     for (let i = live.length - 1; i >= 0; i--) {
       const st = live[i];
       st.t += dt;
-      if (st.t > PARENT_T) { live.splice(i, 1); continue; }
+      if (st.t > PARENT_T || !fighters.includes(st.f)) { live.splice(i, 1); continue; } // 지난 판의 검객이면 버린다 (10/8 검토 7)
       if (!blood) continue;
       if (st.pg) {
         const kk = 1 - st.t / PARENT_T;

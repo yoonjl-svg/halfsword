@@ -43,13 +43,13 @@ export class Input {
     //  안 버리면 다음 손가락이 지난 손가락의 이동량·누름을 물려받아 첫 획이 튄다. 입력이 꺼진 동안의 키도 무시한다
     window.addEventListener('pointercancel', (e) => this.onCancel(e));
     canvas.addEventListener('lostpointercapture', (e) => this.onCancel(e));
-    window.addEventListener('keydown', (e) => { if (this.enabled) this.keys.add(e.code); });
+    window.addEventListener('keydown', (e) => this.keys.add(e.code)); // 물리적으로 누른 키는 늘 기록 — 읽는 쪽(move)이 enabled 로 거른다
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
-    window.addEventListener('blur', () => this.resetTransient());
+    window.addEventListener('blur', () => { this.resetTransient(); this.keys.clear(); }); // 창을 떠나면 keyup 이 안 오므로 키도 지운다
   }
 
-  /** 끝났거나 끊긴 손짓을 버린다 — 감도·기울기 기준 같은 저장 설정은 그대로 */
-  resetTransient() {
+  /** 칼 손가락의 손짓만 버린다 (취소·캡처 상실: 조이스틱 엄지와 누르고 있는 키는 그대로 — 10/8 검토 5) */
+  resetHand() {
     this.handDX = 0;
     this.handDY = 0;
     this.taps = 0;
@@ -57,15 +57,19 @@ export class Input {
     this.activeTouch = null;
     this.lastX = 0;
     this.lastY = 0;
-    this.keys.clear();
-    this.stickMove = { x: 0, y: 0 };
     if (this.trail?.clear) this.trail.clear();
     else this.trail?.lift?.();
+  }
+
+  /** 끝났거나 끊긴 손짓을 전부 버린다(판 경계·일시정지·계속) — 감도·기울기 기준 같은 저장 설정과 물리적으로 누르고 있는 키(keys)는 그대로(키는 keyup·blur 가 지운다, 10/8 검토 6) */
+  resetTransient() {
+    this.resetHand();
+    this.stickMove = { x: 0, y: 0 };
     for (const reset of this._resetHooks) reset();
   }
 
   onCancel(e) {
-    if (e.pointerId === this.activeTouch || e.pointerId === this.press?.id) this.resetTransient();
+    if (e.pointerId === this.activeTouch || e.pointerId === this.press?.id) this.resetHand();
   }
 
   onDown(e) {

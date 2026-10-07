@@ -1059,10 +1059,12 @@ function beginFight() {
 }
 
 let pausedFrom = 'fight'; // 싸움 중에 멈췄나, 무기 뽑기 중에 멈췄나 (계속하기가 돌아갈 곳)
+let pauseOpen = false; // pause() 로 연 메뉴인가 (판 끝 결과 메뉴와 구별)
 function pause() {
   if (state !== 'fight' && state !== 'draw') return;
   pausedFrom = state;
   state = 'paused';
+  pauseOpen = true;
   input.enabled = false;
   input.resetTransient();
   document.exitPointerLock?.();
@@ -1080,6 +1082,7 @@ function showMenu() {
 }
 
 function resume() {
+  pauseOpen = false;
   input.resetTransient();
   sound.unlock(); // 폰이 전화·잠금 등으로 소리를 멈췄으면 다시 켠다
   menu.classList.remove('show');
@@ -1111,7 +1114,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.code !== 'KeyP') return;
   if (state === 'fight' || state === 'draw') pause();
-  else if (state === 'paused' && !roundOver) resume();
+  else if (state === 'paused' && (!roundOver || pauseOpen)) resume(); // 자동 일시정지(화면 이탈)가 판 끝 느린 화면과 겹쳐도 P 로 돌아온다 (10/8 검토 11)
 });
 // 싸우는 도중 전화·잠금·다른 앱 때문에 소리가 멈췄으면(아이폰은 'interrupted'), 다음에 화면을 만질 때 다시 켠다.
 // (일시정지 → 계속하기를 누르지 않아도 되게. 시작 버튼을 누르기 전에는 소리 장치를 만들지 않는다: sound.ctx 가 있을 때만)

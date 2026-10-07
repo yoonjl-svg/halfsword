@@ -3,6 +3,7 @@
 //  ② 600 프레임 동안 떨어진 몸체에 힘·충격량 호출 0, 떨어진 부위 관절(수동)에 모터 설정 호출 0, NaN 0
 //  ③ 다리 상실: 600 프레임 뒤에도 서지 않음(getup·stand 0), 부활(revive) 뒤에도 누움·limbs 유지 · 팔 상실: armed false 인데 칼은 아래팔과 함께(쥠 관절 살아 있음), 칼·부위 접촉은 combat.pairOf null
 //  ④ 조건 미달(찌르기·약함·관절에서 멂·박힘·passing 아님)이면 절단 0
+//  ⑥ (10/8 검토) 칼 팔 어깨 절단(uarmS): 어깨 면 밧줄 제거·튐 없음 · 다리 상실 뒤 누운 채 휘두름(칼끝 속도)·부활 뒤에도 손목 제어 삶
 //  ⑤ 'on' 배터리: fights12 와 같은 36 판 — 절단 사건/판, 사망·넘어짐, NaN
 // 실행: node tools/sim/limb_sever_check.mjs [--sets=3]
 import { newRound, THREE, DT, AI, CONFIG } from './jelly_harness.mjs';
@@ -40,6 +41,7 @@ const CASES = MODE === 'off' ? [] : [
   { name: 'shoulder', part: 'uarmO', joint: 'uarmO', parts: ['uarmO', 'farmO'], limb: 'armO' },
   { name: 'knee', part: 'shinF', joint: 'shinF', parts: ['shinF', 'footF'], limb: 'legF' },
   { name: 'hip', part: 'thighB', joint: 'thighB', parts: ['thighB', 'shinB', 'footB'], limb: 'legB' },
+  { name: 'shoulderS', kind: 'shoulder', part: 'uarmS', joint: 'uarmS', parts: ['uarmS', 'farmS'], limb: 'armS' }, // 칼 팔 어깨 (어깨 면 밧줄 shoulderOn 도 함께 떼어야 한다 — 10/8 검토 4)
 ];
 for (const C of CASES) {
   const G = round({ revive2: { count: 1 } }); const P = G.player;
@@ -56,18 +58,24 @@ for (const C of CASES) {
   say(close(mass0 - P.totalMass, expectLost, 1e-6), `${C.name}: 몸값 −${expectLost.toFixed(2)} kg`, `${mass0.toFixed(2)} → ${P.totalMass.toFixed(2)}`);
   say(C.parts.every((p) => { const b = P.bodies[p]; return v3(b.linvel()).distanceTo(vel0[p].v) < 1e-9 && v3(b.angvel()).distanceTo(vel0[p].w) < 1e-9; }), `${C.name}: 자르는 순간 속도 보존`);
   say(P.limbs[C.limb] === 0, `${C.name}: limbs.${C.limb} = 0`);
-  say(P.wounds.at(-1)?.stump === true && P.wounds.at(-1)?.limb === C.name, `${C.name}: 단면 상처(${P.wounds.at(-1)?.part})`);
+  say(P.wounds.at(-1)?.stump === true && P.wounds.at(-1)?.limb === (C.kind ?? C.name), `${C.name}: 단면 상처(${P.wounds.at(-1)?.part})`);
   const det = C.parts.every((p) => { const b = P.bodies[p]; for (let i = 0; i < b.numColliders(); i++) if (!G.combat.info.get(b.collider(i).handle)?.detached) return false; return true; });
   say(det, `${C.name}: colliderInfo.detached`);
   const spyF = spyBodies(P, C.parts); const spyM = spyMotors(P, new Set(inner.map((p) => P.jointByName[p].joint.handle)));
-  const states = new Set();
-  for (let i = 0; i < 600; i++) { G.step(); states.add(P.state); }
+  const states = new Set(); let pop = 0;
+  for (let i = 0; i < 600; i++) { G.step(); states.add(P.state); if (i < 10) for (const p of C.parts) pop = Math.max(pop, v3(P.bodies[p].linvel()).length()); }
+  say(pop < 3, `${C.name}: 자른 직후 10 프레임 떨어진 부위 튐 없음(최대 |v| ${pop.toFixed(2)} m/s)`);
+  if (C.joint === 'uarmS') say(P.shoulderRopes === null, `${C.name}: 어깨 면 밧줄 제거`);
   say(spyF.force === 0, `${C.name}: 떨어진 몸체에 힘·충격량 호출 0 (600 프레임)`, `${spyF.force}`);
   say(spyM.motor === 0, `${C.name}: 수동 관절 모터 설정 0`, `${spyM.motor}`);
   say(nanFree(P), `${C.name}: NaN 0`);
   if (C.limb.startsWith('leg')) {
     say(!states.has('getup') && !states.has('stand') && P.state === 'down', `${C.name}: 서지 않음(600 프레임 상태 ${[...states].join('/')})`);
     say(P.missingLeg === true && !P.gait.active, `${C.name}: gait 꺼짐·missingLeg`);
+    // 누운 채 휘두름(설계 §3-6): 손 목표를 크게 옮기면 칼끝이 움직인다 (down 상태 근육 목표 0.35, 10/8 검토 2)
+    const swing = () => { let tip = 0, pelY = 0; const st = new Set(); P.handOffset.set(-0.7, 0.7); for (let i = 0; i < 40; i++) G.step(); P.handOffset.set(0.7, -0.7); for (let i = 0; i < 60; i++) { G.step(); tip = Math.max(tip, P.tipVel.length()); pelY = Math.max(pelY, P.bodies.pelvis.translation().y); st.add(P.state); } return { tip, pelY, st }; };
+    const s1 = swing();
+    say(s1.tip > 2 && s1.pelY < 0.6 && !s1.st.has('stand') && !s1.st.has('getup'), `${C.name}: 누운 채 휘두름(칼끝 최대 ${s1.tip.toFixed(1)} m/s · 골반 y ${s1.pelY.toFixed(2)} · muscle ${P.muscle.toFixed(2)})`);
     // 부활: 피를 다 흘린 죽음 → tryRevive → 누운 채 되살아남
     const left0 = P.revive.left; P.die('피');
     say(P.revival != null && P.revive.left === left0 - 1, `${C.name}: 부활 시작(참수 아님)`);
@@ -75,6 +83,8 @@ for (const C of CASES) {
     const st2 = new Set(); for (let i = 0; i < need; i++) { G.step(); st2.add(P.state); }
     say(P.revival == null && P.state === 'down' && !st2.has('stand') && !st2.has('getup'), `${C.name}: 부활 끝 — 누운 채(상태 ${[...st2].join('/')})`, `blood ${P.blood.toFixed(2)}`);
     say(P.limbs[C.limb] === 0, `${C.name}: 부활 뒤에도 limbs.${C.limb} = 0`);
+    const s2 = swing();
+    say(s2.tip > 2 && !s2.st.has('stand') && !s2.st.has('getup') && P.muscle > 0.12, `${C.name}: 부활 뒤에도 누운 채 휘두름(칼끝 ${s2.tip.toFixed(1)} m/s · muscle ${P.muscle.toFixed(2)})`);
   } else {
     const sw = C.limb === 'armS';
     if (sw) {

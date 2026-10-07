@@ -73,9 +73,9 @@ export function reviveTick(f, dt) {
     f.muscle = Math.min(f.muscle, 0.02); // 죽은 몸처럼 힘이 다 풀린다 (보통 넘어짐은 0.1)
     if (V.t < R.lie) return;
     restore(f, R);
-    if (!f.missingLeg) f.setState('getup'); // 기존 일어서기: 무릎 꿇은 자세 → 일어섬. 다리를 잃었으면 누운 채 되살아난다 (사장님 10/8 00:20)
-    V.phase = 'rise';
     if (!f.armed && !f.severedLimbs?.has('armS')) V.sword = startSwordReturn(f); // 칼 팔이 잘렸으면 칼은 돌아오지 않는다
+    if (f.missingLeg) { V.phase = 'stand'; V.standT = V.t; } // 다리를 잃었으면 누운 채 되살아난다(사장님 10/8 00:20) — 일어서기 단계를 기다리지 않고 바로 빛을 거두는 단계로 (유령 시간 ≈ 6 s 없앰, 10/8 검토 2)
+    else { f.setState('getup'); V.phase = 'rise'; } // 기존 일어서기: 무릎 꿇은 자세 → 일어섬
   }
   if (V.phase === 'rise') {
     f.kneelTime = R.kneel;
@@ -88,6 +88,7 @@ export function reviveTick(f, dt) {
       V.standT = V.t;
     }
   }
+  if (V.phase === 'stand' && V.sword) flySword(f, V, dt); // 다리를 잃고 누운 채 되살아나는 길: 칼은 이 단계에 날아온다 (일어서기 단계가 없다)
   if (V.phase === 'stand' && V.t >= V.standT + R.linger + R.fade) end(f);
 }
 

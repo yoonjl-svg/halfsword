@@ -1138,7 +1138,7 @@ export class Fighter {
 
     // 상태에 따른 근육 힘 목표치
     let targetMuscle = 1;
-    if (this.state === 'down') targetMuscle = 0.1;
+    if (this.state === 'down') targetMuscle = this.missingLeg ? 0.35 : 0.1; // 다리를 잃고 누운 몸: 팔·손목은 산다(절단 설계 §3-6 '누운 채 벤다' — driveSword 문턱 0.12 위, 10/8 검토 2)
     else if (this.state === 'dead') targetMuscle = 0.02;
     else if (this.state === 'getup') targetMuscle = Math.min(1, 0.35 + this.stateTime / this.kneelTime);
     if (this.state !== 'dead') targetMuscle *= this.vigor;
@@ -1377,6 +1377,7 @@ export class Fighter {
     const t = this.limbSeverTarget(h);
     if (!t) return;
     if (COMBAT.limbSever === 'count') {
+      if (LIMB_SEVER_COUNT.events.length >= 20000) LIMB_SEVER_COUNT.events.shift(); // 상한(브라우저 콘솔에서 count 모드를 켜 둬도 안 불어남)
       LIMB_SEVER_COUNT.events.push({ victim: this.name, part: h.part, joint: t.joint, kind: t.kind, dist: +t.dist.toFixed(4), severity: +h.severity.toFixed(3), energy: Math.round(h.energy), weapon: this.foe?.weaponSpecId ?? null, state: this.state });
     }
     if (COMBAT.limbSever === 'on' && h.severity >= COMBAT.limbSeverSeverity && t.dist <= COMBAT.limbSeverRadius) this.sever(t, h);
@@ -1433,8 +1434,13 @@ export class Fighter {
     this.joints = this.joints.filter((j) => j !== J);
     this.detachedParts ||= new Set();
     this.severedLimbs ||= new Set();
+    const fresh = PARTS.filter((p) => !this.detachedParts.has(p)); // 같은 팔다리를 두 번 자를 때(팔꿈치 뒤 어깨) 이미 떨어진 부위는 다시 빼지 않는다 (10/8 검토 3)
     for (const p of PARTS) this.detachedParts.add(p);
     this.severedLimbs.add(limb);
+    if (t.joint === 'uarmS' && this.shoulderRopes) { // 칼 어깨 면 밧줄(shoulderOn)은 가슴↔위팔 관절이라 함께 뗀다 (10/8 검토 4)
+      for (const j of this.shoulderRopes) this.world.removeImpulseJoint(j, true);
+      this.shoulderRopes = null;
+    }
     // 2. 떨어진 부위 안쪽 관절 → 모터 없는 수동 관절
     for (const p of PARTS.slice(1)) {
       const Ji = this.jointByName[p];
@@ -1446,7 +1452,7 @@ export class Fighter {
     }
     // 3. 몸값·받침 (제어기가 보는 질량만; 몸체 질량·속도는 손대지 않는다)
     let lost = 0;
-    for (const p of PARTS) {
+    for (const p of fresh) {
       const b = this.bodies[p];
       for (let i = 0; i < b.numColliders(); i++) {
         const col = b.collider(i);

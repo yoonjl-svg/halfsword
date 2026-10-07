@@ -236,11 +236,13 @@ const _span = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), ne
 function kneeMid(foe, out) {
   let K = _knee.get(foe);
   if (!K) {
+    let missing = false;
     K = ['F', 'B'].map((s) => {
-      const a = foe.joints?.find((J) => J.name === 'shin' + s)?.joint.anchor1();
+      const a = foe.jointByName?.['shin' + s]?.joint?.anchor1(); // 잘려 나간 무릎(fighter.sever)은 관절이 없다 → 그때는 캐시하지 않는다 (10/8 검토 8)
+      if (!a) missing = true;
       return new THREE.Vector3(a?.x ?? 0, a?.y ?? 0, a?.z ?? 0);
     });
-    _knee.set(foe, K);
+    if (!missing) _knee.set(foe, K);
   }
   out.set(0, 0, 0);
   ['thighF', 'thighB'].forEach((name, i) => {

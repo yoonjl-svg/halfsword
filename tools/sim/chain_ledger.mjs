@@ -335,7 +335,8 @@ export function attachLedger(G, fighter, opts = {}) {
     let hipTauV = 0;
     for (const k of ['F', 'B']) {
       const ith = k === 'F' ? iThF : iThB;
-      const h = motorTau(hHip[k], prev.q[iPel], cur.w[iPel], prev.q[ith], cur.w[ith]);
+      const hj = J['thigh' + k]?.joint; // 잘린 엉덩이(fighter.sever)는 관절이 없다 → 매 스텝 다시 읽는다 (10/8 검토 9)
+      const h = hj ? motorTau(hj.handle, prev.q[iPel], cur.w[iPel], prev.q[ith], cur.w[ith]) : null;
       hips[k] = h;
       if (h) hipTauV -= h.world.y;
       // 10/7 검산자 제안: 엉덩이 y 축 스프링 몫 k·e 와 감쇠 몫 d·ω 를 따로, 관절 오차 e_y·상대 ω_y, 한계(±0.6 rad, fighter.js jointDefs) 근접 표지
