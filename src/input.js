@@ -6,10 +6,12 @@
 // ─────────────────────────────────────────────────────────────
 import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
+import { configureMobileIntent, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
 
 export class Input {
-  constructor(canvas) {
+  constructor(canvas, params = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : new URLSearchParams()) {
     this.canvas = canvas;
+    this.mobileIntent = configureMobileIntent(params); // 폰 touch 세로 배율 (기본 1.35, ?mobileVerticalGain=1 이 옛 매핑; 시뮬 도구는 1 을 넘겨 기준선을 지킨다)
     this.handDX = 0; // 누적된 손 이동량(m). +x = 화면 오른쪽
     this.handDY = 0; // +y = 위
     this.keys = new Set();
@@ -80,9 +82,9 @@ export class Input {
     }
     if (e.pointerId !== this.activeTouch) return;
     if (this.press?.id === e.pointerId) this.press.moved = Math.max(this.press.moved, Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y));
-    const scale = INPUT.touchSensitivity / Math.max(320, window.innerHeight);
-    this.handDX += (e.clientX - this.lastX) * scale;
-    this.handDY -= (e.clientY - this.lastY) * scale;
+    const delta = mapMobileHandDelta({ dx: e.clientX - this.lastX, dy: e.clientY - this.lastY, height: window.innerHeight, sensitivity: INPUT.touchSensitivity, pointerType: e.pointerType, verticalGain: this.mobileIntent.verticalGain });
+    this.handDX += delta.x;
+    this.handDY += delta.y;
     this.lastX = e.clientX;
     this.lastY = e.clientY;
     this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);

@@ -123,3 +123,4 @@
 - **도구**: tools/sim/m1_probe.mjs(외부 충격량·지속 토크·내부 힘쌍 — 힘쌍은 모터가 상쇄해 기록용), tools/sim/m1b_turn.mjs(heading 계단 + 장부, `--rows=1`). 측정 원본은 디렉터 작업 공간 scratchpad/r2pi/m1/(세션 한정).
 - **비용 선**: $2,687(10/7 10:00 UTC) — cost_log 는 scratchpad/ops/cost_log.jsonl, 08:00·22:00 보고에 줄 하나.
 - (19:55 추가) ⑥ 절단 설계 문서 끝남: docs/strike/limb_sever_design_2026-10-07.md, 확인표 164~166, 질문 4 — 사장님 답 뒤 구현. 다음은 devmeet 2026-10-07 초안(23:22 발행).
+- (21:30 추가) 샛별 일반판 분류 보고서 `docs/dev_exchange/reviews/2026-10-07-codex-general-build.md` — 범주 1 전부 이식 끝(피격음·숨소리·폰 세로 1.35), 범주 2·3 과 우선순위 초안은 사장님 답 대기. 절단 설계는 승인판 규칙(칼 놓기·부활 없음)으로 바꿀 것.

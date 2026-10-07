@@ -97,7 +97,7 @@ export function pacer(input, seed) {
 export function inputPump(G, deps, { f = G.player, pace = () => 60 } = {}) {
   if (G.pump) return G.pump;
   const { Input, CONFIG, DT } = deps;
-  const input = withBrowser(() => new Input({ addEventListener() {} }));
+  const input = withBrowser(() => new Input({ addEventListener() {} }, new URLSearchParams('mobileVerticalGain=1')));
   input.enabled = true;
   f.skill.autoGuard = true; // main.js:419
   if (input.fingerTrace) {

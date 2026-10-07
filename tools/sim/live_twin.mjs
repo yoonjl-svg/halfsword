@@ -145,7 +145,7 @@ async function child() {
       for (const k of added) delete globalThis[k];
     }
   };
-  const input = withBrowser(() => new Input({ addEventListener() {} }));
+  const input = withBrowser(() => new Input({ addEventListener() {} }, new URLSearchParams('mobileVerticalGain=1')));
   const hasTrace = !!input.fingerTrace;
   const send = (type, x, y, ts, id = 1) => {
     const e = { type, pointerId: id, pointerType: 'touch', button: 0, clientX: x, clientY: y, timeStamp: ts };
