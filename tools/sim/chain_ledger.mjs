@@ -109,7 +109,7 @@ export function attachLedger(G, fighter, opts = {}) {
   const iOf = (n) => (fighter.bodies[n] ? idx.get(fighter.bodies[n].handle) : n === 'sword' && fighter.sword ? idx.get(fighter.sword.handle) : -1);
   const UPPER = new Set(['pelvis', 'abdomen', 'chest', 'head', 'uarmS', 'farmS', 'uarmO', 'farmO', 'sword'].map(iOf).filter((i) => i >= 0));
   const iPel = iOf('pelvis'), iCh = iOf('chest'), iAb = iOf('abdomen');
-  const iFootF = iOf('footF'), iFootB = iOf('footB'), iThF = iOf('thighF'), iThB = iOf('thighB');
+  const iFootF = iOf('footF'), iFootB = iOf('footB'), iThF = iOf('thighF'), iThB = iOf('thighB'), iShF = iOf('shinF'), iShB = iOf('shinB');
   const iHead = iOf('head'), iUS = iOf('uarmS'), iFS = iOf('farmS'), iUO = iOf('uarmO'), iFO = iOf('farmO'), iSw = iOf('sword');
   const TORSO = new Set([iPel, iAb, iCh, iHead].filter((i) => i >= 0)), ARMS = new Set([iUS, iFS, iUO, iFO].filter((i) => i >= 0)); // 10/7 사슬 분해 열: 몸통·팔·칼의 수직축 각운동량
   const nIter = world.integrationParameters?.numSolverIterations ?? 4;
@@ -331,13 +331,15 @@ export function attachLedger(G, fighter, opts = {}) {
     const anc = motorTau(hUp, prev.qA, wA, prev.q[iPel], cur.w[iPel], AXG);
     const ancPre = motorTau(hUp, prev.qA, wA, prev.q[iPel], prev.w[iPel], AXG);
     // 엉덩이 (반작용을 골반에: −τ)
-    const hips = {};
+    const hips = {}, hipSplit = { F: null, B: null };
     let hipTauV = 0;
     for (const k of ['F', 'B']) {
       const ith = k === 'F' ? iThF : iThB;
       const h = motorTau(hHip[k], prev.q[iPel], cur.w[iPel], prev.q[ith], cur.w[ith]);
       hips[k] = h;
       if (h) hipTauV -= h.world.y;
+      // 10/7 검산자 제안: 엉덩이 y 축 스프링 몫 k·e 와 감쇠 몫 d·ω 를 따로, 관절 오차 e_y·상대 ω_y, 한계(±0.6 rad, fighter.js jointDefs) 근접 표지
+      if (h && h.m) { const my = h.m[AX.y]; hipSplit[k] = { e: h.e.y, w: h.wr.y, ke: my ? -my.k * (h.e.y - my.t) : null, dw: my ? -my.d * (h.wr.y - my.tv) : null, lim: Math.abs(h.e.y) >= 0.57 ? 1 : 0 }; }
     }
     // 포화율 추정 σ̂ = 넘어간 k_y ÷ (j.k·mus·gain)
     const legsMus = Math.max(0.15, fighter.muscle);
@@ -403,6 +405,9 @@ export function attachLedger(G, fighter, opts = {}) {
       pelW: cur.w[iPel].y, chW: cur.w[iCh].y, alphaPel, Iup: cur.Iup, handV, tipV, chShare, pelShare,
       dpsi: cur.dpsi, LtY: cur.LtY, LaY: cur.LaY, LsY: cur.LsY, dLtY: (cur.LtY - prev.LtY) / dt, dLaY: (cur.LaY - prev.LaY) / dt, dLsY: (cur.LsY - prev.LsY) / dt, shChestY, spAbY: sp.ab ? sp.ab.world.y : null, spChY: sp.ch ? sp.ch.world.y : null,
       hipTauV, hipTauYF: hips.F ? hips.F.local.y : null, hipTauYB: hips.B ? hips.B.local.y : null, sigF: sig.F, sigB: sig.B,
+      hipEyF: hipSplit.F?.e ?? null, hipWyF: hipSplit.F?.w ?? null, hipKeF: hipSplit.F?.ke ?? null, hipDwF: hipSplit.F?.dw ?? null, hipLimF: hipSplit.F?.lim ?? null,
+      hipEyB: hipSplit.B?.e ?? null, hipWyB: hipSplit.B?.w ?? null, hipKeB: hipSplit.B?.ke ?? null, hipDwB: hipSplit.B?.dw ?? null, hipLimB: hipSplit.B?.lim ?? null,
+      thWyF: cur.w[iThF].y, thWyB: cur.w[iThB].y, shWyF: iShF >= 0 ? cur.w[iShF].y : null, shWyB: iShB >= 0 ? cur.w[iShB].y : null, ftWyF: cur.w[iFootF].y, ftWyB: cur.w[iFootB].y,
       spineTauY: (sp.ab ? sp.ab.local.y : 0) + (sp.ch ? sp.ch.local.y : 0), twist,
       NF, NB, wF: NF + NB > 1 ? NF / (NF + NB) : null, load: (NF + NB) / Mg, dfeet, budget, single, Nother: C.other.N,
       slipF: slip.F.d, slipB: slip.B.d, slipEvF: slip.F.ev, slipEvB: slip.B.ev, yawSatF: yawSat('F', pinYawF), yawSatB: yawSat('B', pinYawB), pinYawF, pinYawB,
