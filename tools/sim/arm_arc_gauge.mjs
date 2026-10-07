@@ -2,7 +2,7 @@
 //  칼이 얻는 운동 에너지가 어디서 오나 — 손목 겨눔 토크(driveSword 가 칼에 직접 주는 τ·ω) / 손이 칼자루를 끌어 주는 몫(어깨·팔꿈치·몸통이
 //  손을 움직인 일 = 나머지) / 중력.  dKE/dt = P_손목 + P_손 + P_중력 (상대 없음·접촉 없음). 획 창 = 손 목표가 움직이기 시작 → 칼끝 최고 속도.
 //  손목 포화 = 창 안에서 |τ| ≥ 0.98·상한 인 스텝 비율. 결정적(고정 박자).
-//  실행: node tools/sim/arm_arc_gauge.mjs [--weapons=longsword,morgenstern,zweihander] [--fams=diagR,vert,horizR] [--strokes=6] [--cap=22] [--stiff=60] [--json]
+//  실행: node tools/sim/arm_arc_gauge.mjs [--weapons=longsword,morgenstern,zweihander] [--fams=diagR,vert,horizR] [--strokes=6] [--cap=22] [--stiff=60] [--move=0|1|-1] [--json]
 import { newRound } from './harness_m.mjs';
 import { DT, THREE } from './jelly_harness.mjs';
 import { FAM } from './corr_lib.mjs';
@@ -13,6 +13,7 @@ const fams = String(args.fams ?? 'diagR,vert,horizR').split(',');
 const STROKES = +(args.strokes ?? 6);
 const CAP = args.cap != null ? +args.cap : null; // --cap=N : 시험할 무기들의 손목 토크 상한(weapons.js controlOverrides.maxAimTorque)을 이번 실행에만 바꾼다 (config WEAPON.maxAimTorque 는 무기표가 덮으므로 with_config 로는 안 바뀐다)
 const STIFF = args.stiff != null ? +args.stiff : null; // --stiff=N : aimStiffness 도 같은 식
+const MOVE = +(args.move ?? 0); // --move=1 앞으로 걸으며 벤다 / -1 뒤로 / 0 선 채 (P.move.y)
 class Passive { update() {} }
 const med = (a) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
 const G_ACC = 9.81;
@@ -47,7 +48,7 @@ for (const weapon of weapons) {
         const off = P.handOffset;
         const dx = tgt[0] - off.x, dy = tgt[1] - off.y, d = Math.hypot(dx, dy), st = F.v * DT;
         if (d > st) { off.x += (dx / d) * st; off.y += (dy / d) * st; } else off.set(tgt[0], tgt[1]);
-        P.move.set(0, 0);
+        P.move.set(0, MOVE);
         G.step();
         const w = sw.angvel(); const v = sw.linvel();
         const tau = P.debug.wristTorque; const cap = P.debug.wristCap || 0;
