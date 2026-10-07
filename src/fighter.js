@@ -489,7 +489,12 @@ export class Fighter {
       this.bodies.pelvis,
       true,
     );
-    for (const ax of MOTOR_AXES) this.uprightJoint.rawSet.jointConfigureMotorModel(this.uprightJoint.handle, ax, 1); // 1 = 힘(N·m) 기준
+    // 축 번호(측정 10/7, 디렉터 작업 공간 a021/axis_map_test): generic(축 (1,0,0)) 관절은 raw 3 = 닻 x, raw 4 = 닻 z(앞뒤 숙임), raw 5 = 닻 y(연직 = yaw). spherical(3·4·5 = x·y·z)과 다르다.
+    //  R2′ K1 (확인표 123, legs): yaw 축(raw 5 = MOTOR_AXES[2]) 모터는 **설정하지 않는다** — 0·0 설정은 자유가 아니라 경성 속도 잠금(한 관절 시험 10/7). 모터 bit 가 안 켜진 축만 자유다.
+    for (const ax of MOTOR_AXES) {
+      if (BODY.chain === 'legs' && ax === MOTOR_AXES[2]) continue;
+      this.uprightJoint.rawSet.jointConfigureMotorModel(this.uprightJoint.handle, ax, 1); // 1 = 힘(N·m) 기준
+    }
 
 
     // ── 무기: 데이터 중심 무기고(weapons.js)에서 무기 하나를 골라 만든다 ──
@@ -1823,7 +1828,7 @@ export class Fighter {
     // 자세에 따라 골반을 튼다 (서 있을 때만)
     let anchorQ = this.yaw;
     if (BODY.chain === 'legs') {
-      // R2′ K1 (확인표 123): 닻은 **실제** 골반 yaw(측정값)를 따라 pitch·roll 기준 틀 노릇만 한다 — yaw 토크 0 (아래 모터 0·0).
+      // R2′ K1 (확인표 123): 닻은 **실제** 골반 yaw(측정값)를 따라 pitch·roll 기준 틀 노릇만 한다 — yaw 토크 0 (yaw 축 raw 5 모터 미설정).
       //  의도 ψ* = heading + pelvisYawOffset(오늘 닻 목표식 그대로, 새 식 없음)와의 차 Δψ 는 딛은 다리의 엉덩이 근육 몫 (gait.poseLegs, 124)
       const fp = _cv1.set(1, 0, 0).applyQuaternion(rot(pelvis, _cq1));
       if (Math.hypot(fp.x, fp.z) > 0.3) this.chainPsi = Math.atan2(-fp.z, fp.x);
@@ -1843,17 +1848,15 @@ export class Fighter {
     const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, loadSum));
     const raw = this.uprightJoint.rawSet;
     for (const ax of MOTOR_AXES) {
-      if (BODY.chain === 'legs' && ax === MOTOR_AXES[1]) {
-        // R2′ K1 (123): 닻 yaw 축(AngY: 닻 틀의 y = 연직. 닻 관절은 축 (1,0,0) 으로 만들어 틀이 몸 틀과 같다) 강성·감쇠 0·0 — 약한 닻·상한 둔 닻 없음
-        //  (질량 무한 몸체의 토크는 반작용이 땅으로 안 간다). 감쇠 330 도 함께 사라진다. 옆·앞뒤 기울기(AngX·AngZ)는 오늘 그대로
-        raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, 0, 0);
-        continue;
-      }
+      // R2′ K1 (123, legs): yaw 축 raw 5(MOTOR_AXES[2]) 는 생성 때부터 모터 미설정 → 여기서도 부르지 않는다(0·0 을 넣으면 그 축이 잠긴다 — 10/7 한 관절 시험).
+      //  약한 닻·상한 둔 닻 없음(질량 무한 몸체의 토크는 반작용이 땅으로 안 간다). 감쇠 330 도 함께 사라진다. 옆·앞뒤 기울기(raw 3·4)는 오늘 그대로.
+      //  10/2~10/6 의 W1b 는 raw 4(= 닻 z, 앞뒤 숙임)를 0·0 으로 잠그고 yaw 는 2500·330 그대로 둔 잘못된 구현이었다 — 그때의 W2 수치는 K1 측정이 아니다.
+      if (BODY.chain === 'legs' && ax === MOTOR_AXES[2]) continue;
       const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
       raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * r);
     }
     if (this.chainDbg) {
-      // 탐색판 HUD(측정만): 선언한 걷기 밀기 힘(골반 (1−up)·가슴 up)과 닻 yaw 토크 재계산(k·e + d·ω, legs 는 0)
+      // 탐색판 HUD(측정만): 선언한 걷기 밀기 힘(골반 (1−up)·가슴 up)과 닻 yaw 토크 재계산(k·e + d·ω; legs 는 yaw 모터 미설정이라 0)
       const D = this.chainDbg;
       D.pushX = fx;
       D.pushZ = fz;
@@ -1863,7 +1866,7 @@ export class Fighter {
         const psi = Math.hypot(ap.x, ap.z) > 0.3 ? Math.atan2(-ap.z, ap.x) : this.heading;
         const psiStar = this.state === 'stand' && this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading;
         const e = Math.atan2(Math.sin(psiStar - psi), Math.cos(psiStar - psi));
-        const r = this.uprightRelax(MOTOR_AXES[1]);
+        const r = this.uprightRelax(MOTOR_AXES[2]); // yaw 축 = raw 5 (uprightRelax 의 정의와 같음)
         D.anchorTau = BODY.uprightStiffness * assist * r * e - BODY.uprightDamping * assist * r * pelvis.angvel().y;
       }
     }

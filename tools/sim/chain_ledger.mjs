@@ -91,7 +91,8 @@ const slope0 = (y, x) => { let sxy = 0, sxx = 0; for (let i = 0; i < x.length; i
 const rN = (x, n = 2) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(n));
 const f = (x, n = 1, w = 0) => (x == null || !Number.isFinite(x) ? '-'.padStart(w) : (+x).toFixed(n).padStart(w));
 const UP = V3(0, 1, 0);
-const AX = { x: 3, y: 4, z: 5 }; // RawJointAxis.AngX/AngY/AngZ (fighter.js MOTOR_AXES)
+const AX = { x: 3, y: 4, z: 5 }; // RawJointAxis.AngX/AngY/AngZ — spherical 관절(엉덩이·척추): raw 3·4·5 = 몸 틀 x·y·z
+const AXG = { x: 3, z: 4, y: 5 }; // 닻 generic(축 (1,0,0)) 관절: raw 4 = 닻 z, raw 5 = 닻 y(연직 = yaw) — 측정 10/7 (디렉터 작업 공간 a021/axis_map_test.mjs). 10/2 W1a·W2 는 y=4 로 적었다: anchor 는 세 축 k·d 가 같아 τ̂ 값이 바뀌지 않고, legs(옛 W1b) 는 τ̂닻_V 0 을 적은 것이 틀렸다(실제 raw 5 는 2500·330)
 
 // ───────── 장부 붙이기 ─────────
 /**
@@ -186,6 +187,8 @@ export function attachLedger(G, fighter, opts = {}) {
     let c = V3(), vc = V3();
     for (let i = 0; i < bodies.length; i++) {
       const b = bodies[i];
+      // 질량·주관성은 스텝마다 다시 읽는다 (10/7): gait.footMass 가 딛은 발에 +2 kg 을 켰다 끄고(gait.js footMass·GAIT.footExtra) setAdditionalMass 는 관성도 함께 키운다 → 붙일 때 한 번 읽은 값으로는 L·dL/dt 가 틀어진다
+      mass[i] = b.mass(); { const pi = b.principalInertia(); Ip[i] = V3(pi.x, pi.y, pi.z); }
       const pc = b.worldCom(), lv = b.linvel(), av = b.angvel();
       p.push(V3(pc.x, pc.y, pc.z)); v.push(V3(lv.x, lv.y, lv.z)); w.push(V3(av.x, av.y, av.z)); qb.push(cp(b.rotation()));
       c = add(c, scl(p[i], mass[i])); vc = add(vc, scl(v[i], mass[i]));
@@ -266,14 +269,14 @@ export function attachLedger(G, fighter, opts = {}) {
     return out;
   };
 
-  const motorTau = (h, qParent, wParent, qChild, wChild) => {
+  const motorTau = (h, qParent, wParent, qChild, wChild, AXM = AX) => {
     const m = cap.get(h);
     if (!m) return null;
     const e = rotvec(qmul(qconj(qParent), qChild));
     const wr = qinvrot(qParent, sub(wChild, wParent));
     const tl = V3();
     const pw = V3();
-    for (const [ax, i] of [['x', AX.x], ['y', AX.y], ['z', AX.z]]) {
+    for (const [ax, i] of [['x', AXM.x], ['y', AXM.y], ['z', AXM.z]]) {
       const s = m[i];
       if (!s) continue;
       tl[ax] = -(s.k * (e[ax] - s.t) + s.d * (wr[ax] - s.tv));
@@ -319,8 +322,8 @@ export function attachLedger(G, fighter, opts = {}) {
     // 닻 τ̂ (post ω 와 pre ω)
     const dqA = qmul(cur.qA, qconj(prev.qA));
     const wA = scl(rotvec(dqA), 1 / dt);
-    const anc = motorTau(hUp, prev.qA, wA, prev.q[iPel], cur.w[iPel]);
-    const ancPre = motorTau(hUp, prev.qA, wA, prev.q[iPel], prev.w[iPel]);
+    const anc = motorTau(hUp, prev.qA, wA, prev.q[iPel], cur.w[iPel], AXG);
+    const ancPre = motorTau(hUp, prev.qA, wA, prev.q[iPel], prev.w[iPel], AXG);
     // 엉덩이 (반작용을 골반에: −τ)
     const hips = {};
     let hipTauV = 0;
@@ -390,7 +393,7 @@ export function attachLedger(G, fighter, opts = {}) {
       rV: r.y, rx: r.x, rz: r.z, rH: Math.hypot(r.x, r.z),
       aV: anc ? anc.world.y : null, ax: anc ? anc.world.x : null, az: anc ? anc.world.z : null, aH: anc ? Math.hypot(anc.world.x, anc.world.z) : null,
       aVpre: ancPre ? ancPre.world.y : null, aHpre: ancPre ? Math.hypot(ancPre.world.x, ancPre.world.z) : null,
-      eYaw: anc ? anc.e.y : null, hidden: anc ? anc.power : null, hiddenYaw: anc ? anc.powerY : null, kYaw: anc ? anc.m[AX.y]?.k ?? null : null, dYaw: anc ? anc.m[AX.y]?.d ?? null : null,
+      eYaw: anc ? anc.e.y : null, hidden: anc ? anc.power : null, hiddenYaw: anc ? anc.powerY : null, kYaw: anc ? anc.m[AXG.y]?.k ?? null : null, dYaw: anc ? anc.m[AXG.y]?.d ?? null : null,
       pelW: cur.w[iPel].y, chW: cur.w[iCh].y, alphaPel, Iup: cur.Iup, handV, tipV, chShare, pelShare,
       hipTauV, hipTauYF: hips.F ? hips.F.local.y : null, hipTauYB: hips.B ? hips.B.local.y : null, sigF: sig.F, sigB: sig.B,
       spineTauY: (sp.ab ? sp.ab.local.y : 0) + (sp.ch ? sp.ch.local.y : 0), twist,
