@@ -67,6 +67,7 @@
 | `node tools/sim/weapon_tempo.mjs [무기id...] [--loop]` | 휘두름 빠르기: 손 목표를 두 자세 사이로 왕복(또는 `--loop` 타원으로 멈추지 않고)시키며 한 번 휘두르는 시간을 줄여 가며 칼날 70% 속도·베기 에너지 지표(상한: 최고 속도·칼날 70%·날 세움 1)·지표×날 세움과 제 힘을 지키는 템포를 잰다 |
 | `node tools/sim/tactic_probe.mjs <무기id> '<level json>' [판수] [--seed=첫번호]` | 무기 쪽 AI 에만 난이도 값(공격성 등)을 덮어써 롱소드와 붙인다. 같은 값을 롱소드끼리에도 줘 대조한다 |
 | `node tools/sim/with_spec.mjs 'id.field=<json>' <스크립트> [인자...]` | 무기 스펙 필드를 잠깐 바꾼 채로 다른 시뮬 스크립트를 돌린다 (예: 찌르기 장점 thrustStyle 실험) |
+| `node tools/sim/with_mass.mjs [--weapon=morgenstern] --parts=0.54,0.072,1.71 <스크립트> [인자…]` | **부품 질량 변형 감싸기**(10/8): 겉모습 그대로 buildParts 의 부품 질량(차례대로, 빈 칸은 그대로)과 관성(같은 비율)만 바꿔 다른 시뮬을 돌린다. 시작에 전체 질량·무게중심·손 기준 관성을 찍는다. 10/8 모르겐슈테른 −10 %·무게중심 이동 비교표는 docs/decisions.md 10/8 14:30 |
 | `node tools/sim/body_share.mjs [무기id...]` | 칼끝 속도 중 몸통(가슴·골반)이 만든 몫. 몸통 비틀기를 끄거나 크게 했을 때 칼 속도·에너지 변화 · `with_config SKILL.corr=v2` 로 돌리면 몸 모드 바꿔 끼우기가 v2 가지를 따른다(옛 출력 바이트 같음) |
 | `node tools/sim/corr_s0.mjs [--limits=off,on] [--scenes=a,b] [--seeds=1,2,3] [--s=0.4]` | 검술 보정 v2 설정 0 = 옛 설정 0 (스텝마다 비트 해시: 손 목표·칼 쿼터니언·tipVel·골반·가슴·상처·Math.random 수). 장면 a 플레이어 패드 순서 · b AI 대 AI. 다르면 처음 다른 스텝·파이터·양, 종료 1. `--s=0.4` 는 v2 가지가 사는지 확인 |
 | `node tools/sim/chain_corr.mjs [--root=트리] [--modes=old0,old07,v204,v207,v21,v207tip0] [--scenes=air,stop,hit,hitMove] [--fams=…] [--input=60,120,30J,J] [--limits=on,off] [--quick] [--json=파일]` | 검술 보정 v2 측정 한 벌 (wbs chain.mjs 장면 틀, 실제 입력 길): 날 각·납작 몫·① 창·② 켜짐·넘김 튐·엄지-손 일치·몸통 몫·되돌아옴·겨눔 오차·관절 범위 이탈. 한 판 한 줄 json + 방식 × 장면 요약. 기본 행렬 1032판 ≈ 25 분 |
