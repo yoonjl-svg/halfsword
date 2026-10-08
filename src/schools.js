@@ -10,7 +10,7 @@
 //      지금(① 구조)은 독일 말고는 자리만이다: 이탈리아·이베리아·일본·무유파는 독일 내용 그대로, 중국은 전 지안 꾸러미 그대로
 //      (전엔 모든 무기 꾸러미가 롱소드 꾸러미 위에 간격만 바꾼 것이었다 — 판이 바이트까지 같게 그 내용을 그대로 옮겼다).
 //      ②③ 단계(10/9, docs/strike/school_impl_2026-10-09.md): 일본·중국에 유파 자료(names·techK·rest·counterArt·newTech)를 더했다 — 아래 '유파 자료' 머리말.
-//      자세 이름은 늘 켬(HUD 만), 가중치·쉴 자세·맞받아치기는 SKILL.schoolArt 1 일 때만(기본 0 = 오늘 판 그대로). 값은 모두 사장님 확인 전
+//      자세 이름·쉴 자세는 늘, 가중치·맞받아치기·새 기술(燕返し)은 SKILL.schoolArt(기본 1, 사장님 10/9 01:5x) 일 때. 값(가중치 수)은 사장님 확인 전 — 켜는 것만 결정됨
 //   ② SCHOOLS — AI 가 쥐는 꾸러미 (옛 계약 그대로: 유파 내용 + 그 꾸러미를 잰 무기 weapon + 간격 measure). 열쇠도 옛 그대로:
 //      인물 꾸러미(longsword 기본·tree_branch 브란·qinggang/jian 랴오·excalibur_replica 하인리히 — 캐릭터 PM, 지금처럼 유지)와
 //      무기 id 꾸러미(weaponSchool: 무기의 유파 + 그 무기 간격 + 무기 예외). 도구가 SCHOOLS[id]·schoolOf(id) 로 읽고 새 열쇠를 끼운다.
@@ -81,7 +81,7 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //   rest       쉴 자세 = G 패드 열쇠 (보정 v2 ③ 되돌아옴 겨눔의 목표 — 플레이어만 쓴다. AI 는 autoGuard 가 꺼져 있어 읽지 않는다)
 //   counterArt 맞받아 베기 목록 (꾸러미 counter 꼴). 열쇠를 counter 로 두지 않은 까닭: 꾸러미 조립(pack)이 유파의 counter 를 그대로 가져가 끔에서도 판이 바뀐다
 //   newTech    새 기술 후보 (TECH 꼴 + ai:false + src) — AI 는 쓰지 않는다. 자료·갤러리용, 재지 않았다
-//  techK·counterArt 는 SKILL.schoolArt 1 일 때만 sword_art.js 가 입힌다 (0 = 가중치·맞받아치기 없음). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
+//  techK·counterArt·newTech 는 SKILL.schoolArt(기본 1 — 사장님 10/9 01:5x '스위치 켜') 일 때 sword_art.js 가 입힌다 (0 = 10/9 01:49 까지의 판). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
 
 // 일본 (카타나 가족: 지금 모노호시자오 = 앞무게 틀, 뒤에 올 카타나 = 두손 보통 틀). 이름 14 자리 — 원전 이름 + 자리 근거 7, 원전 이름 + 자리 [해석] 3, 원전 없음 4(쉬운 말)
 const JAPANESE_NAMES = {
@@ -106,10 +106,10 @@ const JAPANESE_TECHK = {
   'two:*': { oberhau: 1.3, zornhau: 1.2, zornhauL: 1.2, zwerch: 0.8, zwerchL: 0.8, thrust: 0.8 },
   'heavy:cut': { zwerch: 0.8, zwerchL: 0.8 },
 };
-// 일본 새 기술 후보 (모두 ai:false — 초안 §6. 수는 [추정])
+// 일본 새 기술 후보 (초안 §6. 수는 [추정]). 燕返し 는 AI 에 열림 — 사장님 10/9 01:5x(48 판 52 → 56 % 소음 폭, 실제 사용 2/430: '있거나 없거나면 없을 이유도 없다'). 나머지는 ai:false 자료
 //  燕返し 길은 초안 안 3-가 그대로(지붕 → 곧장 바보까지 내려벤 뒤 오른 황소로 퍼올림). 다른 꼴(왼쪽 바꿈을 지나 왼 황소로)은 안 쓴 후보로 문서에만
 const JAPANESE_NEW_TECH = [
-  { name: 'tsubameGaeshi', ai: false, from: G.tag, path: [[0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR], open: 'H', kind: 'cut', reach: -0.05, base: 0.8, presses: true, chain: 2, src: '이름 [전승] · 동작 오륜서 表2 R0000015/23 「打ちはづしたる太刀其儘置きて…下よりすくひ上げて打つ」 [원문] · 길의 수 [추정]' },
+  { name: 'tsubameGaeshi', from: G.tag, path: [[0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR], open: 'H', kind: 'cut', reach: -0.05, base: 0.8, presses: true, chain: 2, src: '이름 [전승] · 동작 오륜서 表2 R0000015/23 「打ちはづしたる太刀其儘置きて…下よりすくひ上げて打つ」 [원문] · 길의 수 [추정]' },
   { name: 'omote5', ai: false, from: G.sideR, path: [[0.3, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'H', kind: 'cut', reach: -0.05, base: 0.6, presses: true, chain: 1, src: '오륜서 水の巻 表5 「我右の肩に横に構へて…上段に振り上げ、上より直ちにきる」 R0000016/24 [원문] · 길의 수 [추정]' },
   // 小手 — 길은 중국 zuoyi 와 같은 것 하나로 둔다(두 초안이 같은 꼴이라 적음). 유파마다 이름만 다르다
   { name: 'kote', ai: false, from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, src: '검도형 2본·6본 小手 (읽기 담당 표) · 오륜서 「手をはる」 [원문] · 길은 중국 zuoyi 와 같음 [추정]' },
@@ -169,7 +169,7 @@ export const TRADITIONS = {
 };
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
-export const SCHOOL_ART = { weights: true, rest: true, counter: true, newTech: false }; // newTech: 유파 새 기술(ai:false 가 아닌 것)을 꾸러미에 더함 — 기본 끔(재지 않은 길), motion_lab SCHOOL_NEWTECH= 로 켬
+export const SCHOOL_ART = { weights: true, rest: true, counter: true, newTech: true }; // newTech: 유파 새 기술 가운데 ai:false 가 아닌 것(지금은 燕返し 하나 — 사장님 10/9 01:5x '없을 이유도 없다')을 꾸러미에 더함. 나머지 후보는 ai:false 자료(재면 motion_lab SCHOOL_NEWTECH= 로 켬)
 
 /**
  * 무기 → 유파 기본값 (틀·방식에서 자동). 스펙에 school 이 있으면 그것 (모노호시자오 japanese · 청강검 chinese).

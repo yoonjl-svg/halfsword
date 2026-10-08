@@ -65,7 +65,7 @@ if (getupLead >= 0 && params.has('getupLead')) CONFIG.BODY.getupLead = getupLead
 const motionLib = +params.get('motionLib');
 if (motionLib >= 0 && params.has('motionLib')) CONFIG.SKILL.motionLib = motionLib; // 동작 라이브러리(무기 PM) 본판 스위치 — 10/8 18:50 기본 1(사장님 '적용', 확인표 34). `?motionLib=0` = 전 물리
 const schoolArt = +params.get('schoolArt');
-if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 0 = 가중치·맞받아치기 없음(이름·쉴 자세는 늘). `?schoolArt=1` = 유파 가중치·맞받아치기 켬 — 사장님 확인 전
+if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 1(사장님 10/9 01:5x '스위치 켜') = 유파 가중치·맞받아치기·새 기술(燕返し) 켬. `?schoolArt=0` = 그 전 판(이름·쉴 자세는 늘)
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
 const getupLag = +params.get('getupLag');
