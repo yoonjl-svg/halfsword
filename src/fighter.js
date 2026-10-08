@@ -1247,6 +1247,17 @@ export class Fighter {
     return THREE.MathUtils.clamp(1 - (this.stateTime - this.kneelTime) / this.riseTime, 0, 1);
   }
 
+  /**
+   * 뒷다리(무릎 꿇은 다리 B)의 무릎 꿇은 정도. BODY.getupLead(10/8, 확인표 194) 면 앞다리(딛은 다리 F)가 먼저 펴고, 뒷다리는 riseTime 의 getupLag 몫만큼 접힌 채
+   * 기다렸다가 남은 시간에 편다 — 사람이 한쪽 무릎에서 일어설 때 앞발로 밀어 서고 뒷발은 뒤따라 딛는 차례. 0(오늘)이면 kneelAmount 와 같은 값(두 다리가 한 비율로 함께 펴짐).
+   */
+  get kneelAmountB() {
+    if (!(BODY.getupLead > 0) || this.state !== 'getup' || this.stateTime < this.kneelTime) return this.kneelAmount;
+    const lag = THREE.MathUtils.clamp(BODY.getupLag, 0, 0.95);
+    const u = (this.stateTime - this.kneelTime) / this.riseTime;
+    return THREE.MathUtils.clamp(1 - (u - lag) / (1 - lag), 0, 1);
+  }
+
   setState(s) {
     this.state = s;
     this.stateTime = 0;
@@ -2268,14 +2279,15 @@ export class Fighter {
     this.stanceDrop += (drop - this.stanceDrop) * Math.min(1, dt * 20);
     // 무릎 꿇기 자세 (앞다리는 세워 발을 딛고, 뒷다리는 무릎을 땅에)
     const kn = this.kneelAmount;
-    if (kn > 0) {
-      const K = (name, a) => J[name].target.slerp(_qk.setFromAxisAngle(Z_AXIS, a), kn);
-      K('thighF', 1.25);
-      K('shinF', -1.45);
-      K('footF', 0.2);
-      K('thighB', -0.15);
-      K('shinB', -1.75);
-      K('footB', 0.8); // 뒷발은 발끝으로 땅을 짚는다
+    const knB = this.kneelAmountB; // 뒷다리 차례(BODY.getupLead): 0 이면 kn 과 같은 값이라 오늘과 같은 섞기
+    if (kn > 0 || knB > 0) {
+      const K = (name, a, w) => J[name].target.slerp(_qk.setFromAxisAngle(Z_AXIS, a), w);
+      K('thighF', 1.25, kn);
+      K('shinF', -1.45, kn);
+      K('footF', 0.2, kn);
+      K('thighB', -0.15, knB);
+      K('shinB', -1.75, knB);
+      K('footB', 0.8, knB); // 뒷발은 발끝으로 땅을 짚는다
     }
     const setZ = (name, a) => J[name].target.setFromAxisAngle(Z_AXIS, a);
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
