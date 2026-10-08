@@ -261,7 +261,7 @@ if (mode === 'poses') {
   };
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
-      const seed = (xFirst ? 1000 : 2000) + s;
+      const seed = (xFirst ? 1000 : 2000) + s + (+process.env.DUEL_SEED0 || 0); // DUEL_SEED0=24: 시드 25~48 (새 48 판, 기본 0)
       const x = { weapon: id, persona: { school } };
       const y = { weapon: 'longsword', persona: { school: 'longsword' } };
       const P = xFirst ? x : y;
@@ -352,7 +352,7 @@ if (mode === 'poses') {
   const n = 2 * N;
   const [lo, hi] = wilson(Wn, n);
   const pc = (v) => `${Math.round(100 * v)}%`;
-  const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => `${k} ${v}`).join(', ');
+  const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, process.env.USED_ALL === '1' ? 99 : 14).map(([k, v]) => `${k} ${v}`).join(', ');
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
   const fmt = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || '-';
   console.log(`  속임수: ${fmt(feintUsed)} · 맞받아 베기: ${fmt(counterUsed)}`); // 둘째 줄 (10/9 고유 동작 단계 — 첫 줄은 전과 같다)

@@ -206,8 +206,12 @@ const NONE_NAMES = {
   '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '손을 왼 허리에, 끝은 상대 얼굴', src: '쉬운 말' },
   '왼쪽 바꿈': { name: '왼 아래로 내림', desc: '끝을 왼쪽 아래로 · 내려친 끝, 여기서 되올린다', src: '쉬운 말' },
 };
-// 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0 · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
-const CHINESE_TECHK = { '*': { zwerch: 2.0, zwerchL: 2.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };
+// 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0(10/9 腰擊 쓰임에서 ×3.0) · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
+//  腰擊 ×2.0 → ×3.0 (10/9 腰擊 쓰임 — docs/strike/chinese_yaoji_2026-10-09.md): ×2 로는 공용 腰擊(zwerch·zwerchL)이 휘두름의 6 % — 옆 자세에 손이 있어도 base 0.5 가 분노의 베기(1.4)에 졌다
+const CHINESE_TECHK = { '*': { zwerch: 3.0, zwerchL: 3.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };
+// 중국 간 보는 자세 (10/9 腰擊 쓰임): 독일 9 곳 + 腰擊勢(옆 자세). 조선세법 「腰擊勢者… 劍中之首擊也. 右脚右手斬蛇勢」 무비지 쪽166/0580 [원문] — 腰擊을 치는 자세.
+//  threat·high·low 는 [추정](칼끝이 옆으로 비켜 덜 겨누고, 가슴 높이로 가로 친다). 이 자세는 물러남(pressed)에서 잡는다 — 아래 TRADITIONS.chinese withdraw
+const CHINESE_GUARDS = [...WATCH_GUARDS, { name: 'sideR', pad: G.sideR, threat: 0.2, high: 0.4, low: 0.2 }];
 // 안 B (초습 쪽, ≈ 1.6 : 1) — 안 A + 찌르기 ×1.87 (= 2.8 ÷ 1.5). 재기용으로만 내보낸다(기본에 이어 두지 않음 — 도구가 TRADITIONS.chinese.techK 를 이것으로 바꿔 끼운다)
 export const CHINESE_TECHK_B = { '*': { ...CHINESE_TECHK['*'], thrust: 1.87 } };
 // 중국 고유 동작 셋 (초안 §4: 刺·擊 고리 둘 + 斂翅. 수는 [추정])
@@ -387,7 +391,9 @@ export const TRADITIONS = {
   japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE, passives: JAPANESE_PASSIVES },
   // 중국: 청강검·지안(스펙 school). 기술 목록 = 지금 지안 꾸러미 그대로 (기술별 reach 보정은 청강검 실측 — ③ 단계에서 무기 쪽으로 가를 후보), 그 위에 유파 자료.
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
-  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES },
+  //  물러남(10/9 腰擊 쓰임): 몰려 물러날 때 腰擊勢(옆 자세)로 거둔다 — 斂翅 「佯北誘賺… 倒退進步腰擊」(무비지 쪽174/0588 [원문]): 물러나며 腰擊을 들고 있다가 들어가 벤다.
+  //   그 밖(calm)은 독일 그대로(쟁기·긴 자세 — 坦腹·中平, 찌르기 쪽). 전엔 독일 값(pressed 황소)이라 기술을 고를 때 손이 옆 자세 0.2 m 안에 있던 적이 48 판 pickTech 502 번 가운데 0 번
+  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES },
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [] }, // 무유파: 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
