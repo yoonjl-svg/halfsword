@@ -723,3 +723,9 @@
 - 간격 보정 실험(`r2p_ai_diag --contact`): 'all' 에서 contact 1.57 → **1.52**: 36 판 P 14 / **E 15**(머리·목 60 → 127, 넘어짐 24 → 14), 72 판 **P 33 / E 27**; 1.47 은 13/11, reach 1.9 는 18/9, 호 1 로 줄이기는 17/8. 'player' 범위에서 1.52 는 반대로 E 가 밀려(72 판 P 41/E 11) → 보정은 **묶음을 쓰는 AI 에만**(`BODY.r2pAiContact −0.05`, 'all' 에서만 걸림, ai.js 생성자). 기본 'player' 기준 불변(fights12 `415c3c7e`·corr 12/12).
 - 'all' 기준: fights12 `970317a1`(dead 7/12 · downs 1.4) · live `c2072cd1`(플레이어 조작은 범위 무관). AI 첫 베기 'all' 23/27 — 벤 상처 14 → 6 으로 둔타가 늘어남(호를 쓴 AI 의 날 세움; 결투 벤 상처는 165 로 많음) — 지켜볼 것.
 - 권고: **'all' + 보정 −0.05** — 플레이어와 상대가 같은 몸으로 싸우고(공정), 치명도도 높다(72 판 dead 60/72 대 player 52/72). 단점은 AI 첫 베기 둔타 비율. 결정은 사장님. 시간 16:49~17:02(예상 30~40 분).
+
+## 2026-10-08 17:25 사장님 "권고대로. 기각 깃발도 정리해" — R2′ 묶음 범위 **'all'**(AI 도 묶음, 간격 보정 −0.05) 본판 + 기각 깃발 네 가지 코드 삭제
+- 적용: `BODY.r2pScope 'all'`(옛 범위 `?r2pScope=player`), `BODY.r2pAiContact −0.05`(193). 새 기준: fights12 **`970317a1`**(dead 7/12 · downs 1.4) · live_battery `c2072cd1`(그대로 — 플레이어 조작은 범위 무관) · finish_thrust `d65cc1df`(그대로) · corr_s0 IDENTICAL 12/12 · weapon_smoke 16/16. 옛 범위 불변: `with_config BODY.r2pScope=player` → `415c3c7e` · `c2072cd1` · `d65cc1df`.
+- 삭제(코드·주소 인자·리셋, 기록은 이 문서에 남음): 손목 hold `ARM.swing 'arc'`(173, 04:45 기각) · 손 follow `BODY.handFollow`(177) · 서보 풀기 `ARM.servoLagRelease`(179, 12:5x 기각) · 내려앉기 `BODY.dropArc`·`pitchArc`(190, 16:05 효과 없음). 삭제 전후 관문 바이트 동일(위 sha) — 모두 꺼진 채였음을 확인. 남긴 실험 깃발: `BODY.chain legs`·`GAIT.pushAtFoot`·`cutStep`(legs 보류, 사장님 '깃발 유지'), `BODY.trunkArcSpeed`.
+- 삭제 중 실수 하나: 내려앉기 블록을 지우며 `let arc = 0` 선언이 같이 빠져 모든 시뮬이 비었음(ReferenceError) → 즉시 복구, 관문 재실행으로 확인. 교훈: 블록 삭제 뒤엔 sha 가 아니라 **출력이 비었는지**부터 본다(sha e3b0c442 = 빈 출력).
+- 시간 17:15~17:2x(예상 25~30 분).

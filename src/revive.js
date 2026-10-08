@@ -205,11 +205,8 @@ function flySword(f, V, dt) {
 /** 칼을 손에 쥔다: 손목 자리·쥐는 자세에 맞춰 놓고 생성자와 같은 손목 관절을 다시 만든다 */
 function attachSword(f, V) {
   V.sword = null;
-  f.holdLocal = null; // ARM.swing 'arc' 쥠 방향은 다시 쥘 때 새로 잡는다 (10/8 검토 2)
   f.aimLagMap = 0;
   f.aimLagBehind = 0;
-  f.holdW = 0;
-  f.holdOn = false;
   const sw = f.sword;
   const w = wristOf(f, _p);
   sw.setTranslation({ x: w.x, y: w.y, z: w.z }, true);

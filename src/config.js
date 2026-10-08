@@ -79,12 +79,9 @@ export const BODY = {
   //            skill.lunge(매 베기 앞걸음) 끔 (126), 발 핀 마찰 한계의 접촉 N ×6/7 (127, Rapier 과대 보고 교정). 128·129 는 그대로.
   //  탐색판: public/r2p/?chain=legs|anchor (주소 인자는 탐색판 빌드 R2P_PROBE 에서만 읽힌다, src/r2p_probe.js). 본판 기본값 변경 0.
   chain: 'anchor', // 확인표 122
-  dropArc: 0, // [실험 16:05 — 효과 없음(세로 14.4 → 14.6, 사선 −5 %), 보류] 내려앉기 — 휘두르는 동안 손가락이 가운데 아래로 내려간 만큼(패드 단위) × 값(m) × activity 만큼 골반을 낮춘다(자세 지도 drop 에 더함, R2′ 범위만). 0 = 오늘(바이트 동일). ?dropArc=
-  pitchArc: 0, // [실험 16:05 — 보류, dropArc 와 같음] 내려앉기의 숙임 — 같은 양 × 값(rad) 만큼 가슴을 앞으로 숙인다(자세 지도 pitch 에 더함). 0 = 오늘. ?pitchArc=
   trunkArcSpeed: 1, // WA2 보조: 호가 켜진 동안(trunkArc > 0, activity) 몸 자세 따라가기 빠르기(SKILL_BODY.pelvis·chest) 배수 — 1 = 오늘. 몸이 느려 손 속도에 안 실리는지 가르는 계측용
   r2pAiContact: -0.05, // (c) 10/8 17:00: 묶음을 쓰는 AI 의 유파 간격 contact 보정(m). 'all' 범위에서만 걸림(player 범위의 상대 AI 는 묶음이 없어 0) — 확인표 193, 사장님 확인 전
-  r2pScope: 'player', // R2′ 팔 단계 묶음(ARM.swing arc·trunkArc·trunkFollow·handFollow)을 누구에게 거나: 'player'(index 0, 기본) | 'all'. AI(옛 보정)는 겨눔을 서보에 기대고 있어 묶음을 그대로 걸면 베기가 빗나가 치명도가 23 → 8/36 로 떨어진다(10/8 WA4 측정) — AI 적용은 별도 항목(WA5)
-  handFollow: 0, // [실험용, 권고 묶음에서 뺌 10/8 04:45 — 베는 자리를 깬다(한손 무기도 세로 머리 → 팔 36 J, 사선 빗나감)] WA2-2 손의 follow-through(설계 §2c; 한손 무기만): 휘두르는 동안 칼(머리)이 겨눔보다 뒤처진 각(rad) × 이 값(패드 m/rad)만큼 손 목표를 획 방향으로 더 보낸다 — 손가락이 끝 자리에 서도 손은 머리가 따라올 때까지 호를 이어 간다(무거운 한손 무기의 휘두름). 0 = 오늘(바이트 동일). 확인표 177
+  r2pScope: 'all', // **기본 'all' — 사장님 10/8 17:15 '권고대로'**: R2′ 묶음(몸의 호 trunkArc·몸 follow trunkFollow·한손 앞세움 servoLead·세로 follow vertLead)을 플레이어와 AI 모두에게. AI 는 r2pAiContact 로 간격을 당긴다. 'player' = index 0 만(14:40~17:15 의 본판; `?r2pScope=player`, fights12 `415c3c7e`). 기각된 손목 hold(ARM.swing arc)·손 follow(handFollow)·서보 풀기(servoLagRelease)·내려앉기(dropArc·pitchArc)는 10/8 17:20 코드에서 지움(기록: docs/decisions.md)
   trunkFollow: 0.5, // WA2-2 follow-through(docs/strike/r2p_arm_arc_2026-10-08.md §2c, 10/8 WA5 §2j 로 고침): 휘두르는 동안 칼(머리)이 겨눔보다 획 방향으로 **뒤처진** 각(fighter.aimLagBehind, 부호 있음 — 앞서 넘어간 칼엔 0)만큼 몸 돌림을 더 유지한다(× activity × 0.35 rad) — 무거운 머리가 따라올 때까지 몸이 멈추지 않는다. **기본 0.5 — 사장님 10/8 14:40**(0 = 전 물리 = `?r2p=off`; 1 이면 두 손 무기 AI 첫 베기 25 → 17/30; 확인표 176). 한손 손 follow 는 handFollow
   trunkArc: 2, // R2′ 팔 단계 WA2 '몸의 호'(docs/strike/r2p_arm_arc_2026-10-08.md §4, 10/8 WA5 §2j 로 고침): 휘두르는 동안 자세 지도의 몸 돌림(보정 v2 updateBodyPose 의 −x·0.35) 기울기를 (1 + 값·activity) 배로 — 호는 손가락 자리 x 그 자체에 비례(획 시작점과 무관, x = 0 에서 0: 오른쪽에서 감으면 코일됐다가 베며 풀린다)해 베는 자리가 그대로다. 골반은 PELVIS_SHARE 몫, 순서 결합 ex 밖. **기본 2 — 사장님 10/8 14:40 "플레이어에게만 적용해"**(r2pScope player; 0 = 10/8 14:40 전 물리 = `?r2p=off`, fights12 `8d574a8c`; 확인표 174). R2′ 범위(r2pScope) 안에서만
   chainSpineZeta: 0.5, // 확인표 125 ('legs' 만, 첫 탐색판의 유일한 새 수): 척추 비틀기(y) 축 감쇠비. d_y = ζ·2·√(k·I_up) → 복부 ≈66·가슴 ≈57 N·m·s/rad (오늘 180·160 = ζ ≈1.4). x·z 축·강성(129)은 그대로
@@ -241,10 +238,8 @@ export const ARM = {
   upper: 0.3,
   fore: 0.27,
   shoulder: [0, 0.1, 0.2],
-  servoLagRelease: 0, // [실험, 사장님 10/8 12:05 '그렇게 해'] 1 = 한손 무기에서 머리가 겨눔보다 뒤처진 동안 손목 서보 상한을 풀어 준다: cap × (1 − activity × min(1, 뒤처짐/90°)) — 뒤처진 머리에 맞서 제동하던 손목 일(−9 J)을 없애 채찍이 살게. 0 = 오늘(바이트 동일)
   vertLead: 0.05, // **기본 0.05 — 사장님 10/8 16:20 '그렇게 해'(확인표 189)**. 사장님 10/8 16:00 '짧은 세로 획 보상': 세로 follow-through: 손가락이 빠르게 아래로 긋는 동안(패드 세로 속도 v < 0) 손목 서보의 목표 방향을 v × 값(rad per m/s) 만큼 더 아래로 기울인다(상한 0.5 rad; 손가락이 멈추면 τ 0.15 s 로 풀림). 손은 손가락 너머로 안 가고(보정 v2 원칙) 칼끝만 더 내려간다. R2′ 범위만. 0 = 오늘(바이트 동일). ?vertLead=
   servoLead: 0.5, // [10/8 T2 길 (c), 확인표 180] 손목 서보의 목표 각을 (1 + servoLead) 배로 앞세움(한손 무기·R2′ 범위만): 제동도 그만큼 늦게 걸린다. 권고 묶음 `?r2p=1` 이 0.5 로 켠다(상한 28 위에서 모르겐슈테른 8.8 → 9.7 m/s, 베는 자리 그대로; 상한 22 위에선 +0.1 뿐). **기본 0.5 — 사장님 10/8 14:40 (플레이어만, 한손 무기만)**; 0 = 전 물리 = `?r2p=off`. R1 의 손 목표 앞섬(ARM.lead)과 다른 것
-  swing: 'servo', // R2′ 팔 단계(docs/strike/r2p_arm_arc_2026-10-08.md): 'servo' = 오늘(휘두르는 동안 손목 서보가 자세 지도 방향으로 칼을 돌린다) · 'arc' = [실험용, 권고 묶음에서 뺌 10/8 04:45 — 베는 자리를 깬다] WA1 손목은 버티기만(한손 무기만, WA6; 휘두르는 동안 서보 목표 = 획 시작 때의 칼↔아래팔 쥠 방향, 회전은 손 경로·두 손 짝힘·채찍이; 획이 끝나면 자세 지도로 되섞음). 빈손 짝힘 목표(aimDirW)는 두 경우 모두 자세 지도
   slack: 0.005, // 펴짐 여유 (m): armIK 가 손 목표 거리를 (위팔 + 아래팔 − 이 값)에서 자른다. 근접 밀치기 '팔 다 펴짐'(fighter.armFull)·보정 v2 순서 결합(fighter armU)이 같은 값을 읽는다
 };
 

@@ -47,9 +47,9 @@ if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = mor
 // 테스트용 ?cutReact=same|full|legacy : 절삭 끌림 반작용 방식(config STRIKE.cutReact, 기본 legacy)을 이번 실행에만 바꾼다 — 사장님 비교용(10/8 타격 B 질문)
 const cutReact = params.get('cutReact');
 if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.STRIKE.cutReact = cutReact;
-// 테스트용 R2′ 팔 단계 탐색 인자(10/8, 사장님 비교용·이번 실행만): ?swing=arc (WA1 손목 hold+release) · ?trunkArc=4&trunkArcSpeed=2 (WA2 몸의 호) · ?chain=legs (골반 = 발 힘쌍 A)
-// ?r2p=1 : R2′ 팔 단계 권고 묶음 한 번에 — 10/8 14:40 부터 본판 기본(플레이어만)이라 1 은 확인용, `?r2p=off` 가 전 물리(10/8 WA6 뒤: trunkArc 2(가운데 기준 호, 10/8 WA5) · trunkFollow 0.5 · 한손 servoLead 0.5 — 몸의 호·몸 follow·한손 겨눔 앞세움만. 손목 hold(swing arc)·손 follow 는 베는 자리를 깨서(한손 무기 포함, step_strike 04:45) 묶음에서 뺐다; 실험은 ?swing=arc ?handFollow= 로 따로).
-//  ?r2p=legs 는 chain legs(발 힘쌍 A)까지, ?r2p=all 은 AI 에도. 개별 인자가 뒤에 오면 그것이 덮는다
+// R2′ 팔 단계 인자(10/8): ?trunkArc= ?trunkArcSpeed= ?trunkFollow= ?servoLead= ?vertLead= ?r2pScope=player|all ?anchorYawMax= ?twoHandCap= ?chain=legs ?pushAtFoot= ?cutStep= — 기각된 ?swing=arc ?handFollow= ?servoLagRelease= ?dropArc= ?pitchArc= 는 17:20 코드에서 지움
+// ?r2p=1 : R2′ 팔 단계 묶음(trunkArc 2 · trunkFollow 0.5 · 한손 servoLead 0.5) — 10/8 17:15 부터 플레이어·AI 모두 본판 기본이라 1 은 확인용. `?r2p=off` 가 묶음 전 물리(세로 follow 는 `?vertLead=0`, 닻 상한은 `?anchorYawMax=0`, 두 손 상한은 `?twoHandCap=22` 로 따로)
+//  ?r2p=legs 는 chain legs(발 힘쌍 A)+걸음 채널까지, ?r2p=all 은 범위 all(이제 기본과 같음; 옛 범위는 ?r2pScope=player). 개별 인자가 뒤에 오면 그것이 덮는다
 const r2pAll = params.getAll('r2p'); // ?r2p=1&r2p=legs 처럼 여러 번 와도 전부 적용 (legs·all 은 1 을 포함한다)
 if (r2pAll.includes('off') || r2pAll.includes('0')) { CONFIG.BODY.trunkArc = 0; CONFIG.BODY.trunkFollow = 0; CONFIG.ARM.servoLead = 0; } // 10/8 14:40 본판 기본이 묶음(플레이어만)이 된 뒤 비교용: 전 물리
 if (r2pAll.some((v) => v === '1' || v === 'legs' || v === 'all')) { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 0.5; /* 10/8 WA5: 1 이면 두 손 무기 AI 첫 베기 25 → 17/30 (몸이 더 돌아 칼이 짧아짐), 0.5 면 24/30 */ CONFIG.ARM.servoLead = 0.5; /* 10/8 T2 (c): 한손 서보 겨눔 앞세움 — 모르겐슈테른 8.8 → 9.7 m/s, 두 손 무기엔 안 걸림 */ if (r2pAll.includes('legs')) { CONFIG.BODY.chain = 'legs'; CONFIG.GAIT.pushAtFoot = 1; CONFIG.GAIT.cutStep = 1; } /* 10/8 T3: legs 는 걸음 조율 채널 A·B 와 함께 */ if (r2pAll.includes('all')) CONFIG.BODY.r2pScope = 'all'; }
@@ -59,26 +59,16 @@ const twoHandCap = +params.get('twoHandCap');
 if (twoHandCap > 0 && params.has('twoHandCap')) setGripTorque('two-hand', twoHandCap); // 10/8 16:20 두 손 서보 상한 26 본판 뒤 비교용(22 = 전 값)
 const vertLead = +params.get('vertLead');
 if (vertLead >= 0 && params.has('vertLead')) CONFIG.ARM.vertLead = vertLead;
-const dropArc = +params.get('dropArc');
-if (dropArc >= 0 && params.has('dropArc')) CONFIG.BODY.dropArc = dropArc;
-const pitchArc = +params.get('pitchArc');
-if (pitchArc >= 0 && params.has('pitchArc')) CONFIG.BODY.pitchArc = pitchArc;
 const anchorYawMax = +params.get('anchorYawMax');
 if (anchorYawMax >= 0 && params.has('anchorYawMax')) CONFIG.BODY.anchorYawMax = anchorYawMax; // 실험(10/8 15:10): 닻 yaw 모터 토크 상한 N·m, 0 = 오늘
 const pushAtFoot = +params.get('pushAtFoot');
 if (pushAtFoot >= 0 && params.has('pushAtFoot')) CONFIG.GAIT.pushAtFoot = pushAtFoot;
 const cutStep = +params.get('cutStep');
 if (cutStep >= 0 && params.has('cutStep')) CONFIG.GAIT.cutStep = cutStep;
-const servoLagRelease = +params.get('servoLagRelease');
-if (servoLagRelease >= 0 && params.has('servoLagRelease')) CONFIG.ARM.servoLagRelease = servoLagRelease;
 const servoLead = +params.get('servoLead');
 if (servoLead >= 0 && params.has('servoLead')) CONFIG.ARM.servoLead = servoLead;
-const swingParam = params.get('swing');
-if (swingParam === 'arc' || swingParam === 'servo') CONFIG.ARM.swing = swingParam;
 const trunkArc = +params.get('trunkArc');
 if (trunkArc >= 0 && params.has('trunkArc')) CONFIG.BODY.trunkArc = trunkArc;
-const handFollow = +params.get('handFollow');
-if (handFollow >= 0 && params.has('handFollow')) CONFIG.BODY.handFollow = handFollow;
 const trunkFollow = +params.get('trunkFollow');
 if (trunkFollow >= 0 && params.has('trunkFollow')) CONFIG.BODY.trunkFollow = trunkFollow;
 const trunkArcSpeed = +params.get('trunkArcSpeed');
