@@ -23,7 +23,7 @@ import { TECH, FEINTS, G, WATCH_GUARDS, TECH_BY_NAME } from './ai_techniques.js'
 import { THRUST, SKILL } from './config.js';
 
 export const MOTION = {
-  // 본판 스위치 = config SKILL.motionLib (사장님 10/8 18:50 '적용', 확인표 34 — 기본 켬). 켜져 있으면 Fighter 생성자가 applyMotionLibrary 를, AI 생성자가 libSchool 을 부른다.
+  // 본판 스위치 = config SKILL.motionLib (사장님 10/8 18:50 '적용', 확인표 34 — 기본 켬). 켜져 있으면 Fighter·AI 생성자가 sword_art.js resolveSwordArt 로 라이브러리 몫을 입힌다(옛 이름 applyMotionLibrary·libSchool 은 motion_library.js 호환 겉면).
   //  점검 도구(motion_lab·motion_league)는 MOTION.lib = false 로 끄고 직접 입혀 끔/켬을 나란히 잰다. `?motionLib=0` = 전 물리(바이트 동일)
   get lib() { return !!SKILL.motionLib; },
   set lib(v) { SKILL.motionLib = v ? 1 : 0; },
