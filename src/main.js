@@ -68,6 +68,8 @@ const schoolArt = +params.get('schoolArt');
 if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 1(사장님 10/9 01:5x '스위치 켜') = 유파 가중치·맞받아치기·새 기술(燕返し) 켬. `?schoolArt=0` = 그 전 판(이름·쉴 자세는 늘)
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
+const oneVersatile = params.get('oneVersatile');
+if (oneVersatile === 'mixed' || oneVersatile === 'thrust' || oneVersatile === 'cut') CONFIG.SKILL.oneVersatileTable = oneVersatile; // 한손 두루(청강검) 자세표(10/9 바닥 고침): 기본 'mixed'(섞은 표, 사장님 확인 전). `?oneVersatile=thrust` = 그 전 판(찌르기 표) · `cut` = 세이버 표(안 B)
 const getupLag = +params.get('getupLag');
 if (getupLag >= 0 && params.has('getupLag')) CONFIG.BODY.getupLag = getupLag; // 뒷다리가 기다리는 몫(riseTime 비율, 기본 0.5)
 const pushAtFoot = +params.get('pushAtFoot');

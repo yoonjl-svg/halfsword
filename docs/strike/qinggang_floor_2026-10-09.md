@@ -125,3 +125,70 @@ W_ID=qinggang W_HYBRID=1 node tools/sim/qinggang_swing_wrap.mjs motion_lab.mjs s
 W_ID=qinggang W_STYLE=cut node tools/sim/qinggang_swing_wrap.mjs motion_lab.mjs swings qinggang zornhau zwerch
 ```
 48 판 한 번 2 분쯤(4 코어에 셋 나란히).
+
+## § 고침 (적용) — 안 A 섞은 표 (10/9, 2 등급, 가지 `…/qinggang-table-2q36ha`)
+
+74ea2e2 위. 시각 10/9 02:51 ~ 03:15 (KST). **모든 값 사장님 확인 전** — 10/1 승인 표는 "찌르기 표: 레이피어·청강검"이었고, 이 고침은 청강검(한손 두루)만 섞은 표로 돌린다.
+
+### 바꾼 것
+- `src/guards.js`: `ONE_HAND_VERSATILE` = `ONE_HAND_THRUST` 에서 **베기를 감는 8 곳**(지붕·어깨 지붕·옆 자세·바꿈·옆 지킴·왼쪽 어깨 지붕·왼쪽 옆 자세·왼쪽 바꿈 — `VERSATILE_CHAMBER`)만 `ONE_HAND_SABRE` 값으로. 겨눔 6 곳(황소·긴 자세·쟁기·바보·왼쪽 황소·왼쪽 쟁기)은 찌르기 표 그대로. `guardBaseOne('versatile')` 이 이 표(`GUARD_BASE_ONE_VERSATILE`)를 돌려준다. `'thrust'`(레이피어) → 찌르기 표, `'cut'`·`'blunt'` → 세이버 표는 그대로(같은 객체). 표 내용은 진단 도구의 `QG_TABLE=hybrid` 표와 JSON 까지 같다(확인함).
+- 자리 이름(`name`)은 바탕 그대로 → 중국 유파 이름 덮개·frames.js `FRAME_GUARDS` 열쇠가 그대로 맞는다. `resolveSwordArt(getWeapon('qinggang')).names` = 표두세·우익세·역린세·직부송서·요격세·탄복세·요략세·간수세·점검세·좌익세·…·과좌세 (고치기 전과 이름 16 개 같음, 손·칼끝 값만 섞은 표 값).
+- 손잡이 `SKILL.oneVersatileTable` (src/config.js): **`'mixed'` 기본** = 섞은 표 · `'thrust'` = 고치기 전 판(찌르기 표, 바이트 같음 — 아래) · `'cut'` = 세이버 표 통째(안 B). URL `?oneVersatile=mixed|thrust|cut` (src/main.js). `guardBaseOne` 은 `'versatile'` 일 때만 손잡이를 읽는다. AI·플레이어 둘 다 바뀐다(같은 `baseTableOf` 길). 시뮬에서는 `node tools/sim/with_config.mjs SKILL.oneVersatileTable=thrust motion_lab.mjs duel qinggang 24 main`.
+- ai.js·schools.js·sword_art.js·motion_lab.mjs 는 건드리지 않았다.
+
+### 잰 것 — 청강검 (`node tools/sim/hybrid.mjs motion_lab.mjs duel qinggang 24 main`, 48 판)
+
+| 조건 | 승/패/무 | 승률 | 평균 종료 |
+|---|---|---|---|
+| 고치기 전 (74ea2e2 사본) | 0/40/8 | 0 % | 22.6 s |
+| `thrust` 손잡이 (이 가지) | 0/40/8 | 0 % | 22.6 s — 고치기 전과 출력 바이트 같음(쓴 기술 횟수까지) |
+| **`mixed` (기본, 안 A)** | **21/20/7** | **44 %** | 18.1 s |
+| `cut` (안 B) | 24/21/3 | 50 % | 20.2 s |
+| 시드 25~48 (`qinggang_diag.mjs`, `QG_SEEDS=25-48`): 고치기 전 → `mixed` | 0/40/8 → 22/23/3 | 0 → 46 % | |
+| **96 판 합**: 고치기 전 → `mixed` | **0/80/16 → 43/43/10** | **0 → 45 %** | |
+
+- 진단 때(0b0ddd5) 섞은 표는 25/21/2·22/23/3 이었다. 그 뒤 병합(유파 고유 동작 등)으로 기준이 2/38/8 → 0/40/8 로 옮겨 왔고, 진단 도구를 74ea2e2 사본에서 `QG_TABLE=hybrid` 로 다시 돌리면 **21/20/7, 평균 종료 18.12 s** — 이 가지의 본판(`mixed`)과 같은 판이다. 즉 고침은 진단의 표를 그대로 옮겼고, 차이는 기준이 옮긴 몫이다(소음 폭 ±14 점 안).
+- 안 B(`cut`)가 이번 48 판에선 안 A 보다 3 승 많지만 소음 폭 안이다. 안 A 를 기본으로 둔 까닭은 진단 §6 그대로(劍의 겨눔 6 곳 — 황소·바보 칼끝 — 을 남김).
+
+### 다른 한손 무기 — 바이트 같음 (74ea2e2 사본 → 이 가지, 같은 명령)
+
+| 무기 (싸움 방식) | 고치기 전 | 고친 뒤 | 출력 |
+|---|---|---|---|
+| 레이피어 (thrust) | 22/22/4 | 22/22/4 | 바이트 같음 |
+| 세이버 (cut) | 28/17/3 | 28/17/3 | 바이트 같음 |
+| 팔쉬온 (cut) | 22/23/3 | 22/23/3 | 바이트 같음 |
+| 나뭇가지 (blunt) | 10/37/1 | 10/37/1 | 바이트 같음 |
+| 고무 닭 (blunt) | 5/39/4 | 5/39/4 | 바이트 같음 |
+| 모르겐슈테른 (blunt) | 5/37/6 | 5/37/6 | 바이트 같음 |
+
+(바이트 같음 = 승/패/무·평균 종료·쓴 기술 횟수·속임수·맞받아 베기 줄 전부.)
+
+### 플레이어 쪽 — 혼자 휘두르기 (`motion_lab swings qinggang`, 칼날 70 % 최고 속도 m/s · ×날 세움 J)
+
+| 기술 | 고치기 전 | 고친 뒤 (`mixed`) |
+|---|---|---|
+| zornhau | 7.7 · 45 | **17.8 · 261** |
+| zornhauL | 9.4 · 72 | 17.1 · 212 |
+| oberhau | 8.7 · 60 | 14.0 · 150 |
+| zwerch | 4.6 · 11 | **18.2 · 208** |
+| zwerchL | 5.7 · 27 | 18.4 · 238 |
+| unterhau | 6.0 · 28 | 7.0 · 41 |
+| wristCut | 5.2 · 20 | 16.0 · 212 |
+| stichPflug | 4.4 · 16 | 4.3 · 15 (쟁기 자리는 두 표 같음 — 찌르기 그대로) |
+
+### 관문 (모두 같음)
+
+| 관문 | 기대 | 결과 |
+|---|---|---|
+| `node tools/sim/fights12.mjs` | `578402e1` | `578402e1` |
+| `node tools/sim/live_battery.mjs` | `c2072cd1` | `c2072cd1` |
+| `node tools/sim/finish_thrust.mjs 1 --stand` | `d65cc1df` | `d65cc1df` |
+| `node tools/sim/corr_s0.mjs --limits=on,off --scenes=a,b` | IDENTICAL 12/12 | IDENTICAL 12/12 |
+| `node tools/sim/weapon_smoke.mjs` | OK 16/16 | OK 16/16, 출력 sha `a3ca246d` = 74ea2e2 사본 |
+| `npx vite build` | 됨 | 됨 |
+
+(sha = 출력에서 rapier 경고 줄 "using deprecated parameters…" 을 뺀 sha256 앞 8 자.)
+
+### 남은 것 (사장님·PM 몫)
+- 사장님 확인표 220 — 섞은 표 기본(`mixed`)으로 둘지, 안 B(`cut`)·그 전(`thrust`)인지. 10/1 동작 연구 문서에는 한 줄 덧붙임만 했다(승인 표 자체는 그대로).
+- 청강검 AI 45 % (96 판)가 에픽(power 1.1·절단 ×3) 무기로 센지(세이버 58 %와 비교)는 캐릭터 PM 몫. 플레이어 청강검의 베기가 세이버급으로 빨라진다 — 손으로 쳐 볼 것.

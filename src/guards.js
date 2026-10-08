@@ -18,6 +18,8 @@
 //  yaw = + 이면 칼 든 쪽 어깨·골반이 뒤로 빠진다(몸을 칼 든 쪽으로 튼다). pitch = + 이면 앞으로 숙인다.
 // ─────────────────────────────────────────────────────────────
 
+import { SKILL } from './config.js';
+
 const RAW = [
   // 이름, 패드 [x, y], 손 [앞, 위, 옆], 칼끝 [올려본 각, 옆 각], 골반 yaw, 가슴 yaw, 숙이기, 낮추기(m)
   { name: '지붕 (Vom Tag)', desc: '칼을 머리 위로 세운 자세 · 위에서 내려베기 준비', pad: [0.02, 0.52], hand: [0.18, 0.55, 0.06], blade: [100, 0], pelvisYaw: 25, chestYaw: 30, pitch: 0, drop: 0.05 },
@@ -72,7 +74,10 @@ export const GUARDS = [...BASE, ...FINISH_GUARDS.map((g) => ({ ...g, pad: g.pads
 //    몸은 옆으로 세운다. 베기는 손목 베기(작은 호). 칼을 옆으로 눕히거나 팔을 수평으로 펴는 자세가 없다.
 //  · ONE_HAND_SABRE (세이버·팔쉬온, 날 없는 한손 무기 — 나뭇가지·고무 닭 — 도 이 표): 감는 자세는 팔꿈치를 굽혀
 //    칼을 어깨·머리 옆에 둔다(어깨 걸침·걸친 막기 류). 팔을 수평으로 펴지 않는다. 겨누는 자세는 지금(10라운드 B)과 같다.
-//  고르는 규칙: weapon_class.js classifyStyle 이 'thrust' 또는 'versatile'(청강검) → THRUST, 그 밖('cut'·'blunt') → SABRE.
+//  · ONE_HAND_VERSATILE (두루 한손 칼: 청강검 — 10/9 고침, docs/strike/qinggang_floor_2026-10-09.md 안 A): 겨누는 6 곳은 THRUST,
+//    베기를 감는 8 곳은 SABRE (아래 VERSATILE_CHAMBER). 劍의 "겨눠 찌르고, 감아 벤다".
+//  고르는 규칙: weapon_class.js classifyStyle 이 'thrust' → THRUST, 'versatile'(청강검) → SKILL.oneVersatileTable 손잡이
+//   ('mixed' 기본 = VERSATILE · 'thrust' = 10/9 고침 전 THRUST · 'cut' = SABRE 통째, 안 B), 그 밖('cut'·'blunt') → SABRE.
 //   guardBaseOne(style) 이 표를 돌려준다. GUARD_BASE_ONE 은 예전 이름 그대로 SABRE 표(뜻이 같은 기본값).
 const ONE_HAND_THRUST = {
   '지붕 (Vom Tag)': { hand: [0.32, 0.38, 0.1], blade: [-25, -6], pelvisYaw: -20, chestYaw: -35, pitch: 4 },
@@ -106,6 +111,13 @@ const ONE_HAND_SABRE = {
   '왼쪽 쟁기': { hand: [0.36, -0.22, 0.0], blade: [25, 12], pelvisYaw: -20, chestYaw: -35, pitch: 5 },
   '왼쪽 바꿈': { hand: [0.36, -0.28, -0.02], blade: [-45, -40], pelvisYaw: -25, chestYaw: -40, pitch: 10 },
 };
+// 두루 한손 표 (10/9 청강검 바닥 고침 안 A): 찌르기 표에서 베기를 감는 8 곳만 세이버 표 값으로 바꾼다.
+//  찌르기 표의 이 자리들은 칼끝이 늘 상대 쪽(올려본 각 −25~+12°)이라 자세에서 자세로 가는 베기 길에서 칼이 돌지 않았다
+//  (zornhau 7.7 m/s · 45 J → 섞은 표 17.8 m/s · 261 J). 황소·긴 자세·쟁기·바보·왼쪽 황소·왼쪽 쟁기(겨눔 6 곳)는 찌르기 표 그대로.
+//  자리 이름(name)은 바탕 그대로라 유파 이름 덮개(schools.js names)·frames.js FRAME_GUARDS 열쇠가 그대로 맞는다
+const VERSATILE_CHAMBER = ['지붕 (Vom Tag)', '어깨 지붕 (Vom Tag)', '옆 자세', '바꿈 (Wechsel)', '옆 지킴 (Nebenhut)', '왼쪽 어깨 지붕', '왼쪽 옆 자세', '왼쪽 바꿈'];
+const ONE_HAND_VERSATILE = { ...ONE_HAND_THRUST };
+for (const k of VERSATILE_CHAMBER) ONE_HAND_VERSATILE[k] = ONE_HAND_SABRE[k];
 function oneHandTable(over) {
   return BASE.map((g) => {
     const o = over[g.name];
@@ -141,6 +153,7 @@ const TWO_HAND_THRUST = {
 };
 const BASE_ONE_THRUST = oneHandTable(ONE_HAND_THRUST);
 const BASE_ONE_SABRE = oneHandTable(ONE_HAND_SABRE);
+const BASE_ONE_VERSATILE = oneHandTable(ONE_HAND_VERSATILE);
 const BASE_TWO_THRUST = oneHandTable(TWO_HAND_THRUST);
 
 /** 동작 라이브러리(motion_library.js)가 몸 틀별 자세표를 만들 때 바탕으로 쓰는 표 (교본 자세 NBASE 개, 같은 패드 자리) */
@@ -148,9 +161,15 @@ export const GUARD_BASE = BASE;
 export const GUARD_BASE_ONE = BASE_ONE_SABRE;
 export const GUARD_BASE_ONE_THRUST = BASE_ONE_THRUST;
 export const GUARD_BASE_ONE_SABRE = BASE_ONE_SABRE;
-/** 한손 무기 자세표 고르기 — style = weapon_class.js classifyStyle 값 */
+export const GUARD_BASE_ONE_VERSATILE = BASE_ONE_VERSATILE;
+/** 한손 무기 자세표 고르기 — style = weapon_class.js classifyStyle 값. 'versatile'(청강검)만 SKILL.oneVersatileTable 을 읽는다 */
 export function guardBaseOne(style) {
-  return style === 'thrust' || style === 'versatile' ? BASE_ONE_THRUST : BASE_ONE_SABRE;
+  if (style === 'thrust') return BASE_ONE_THRUST;
+  if (style === 'versatile') {
+    const t = SKILL.oneVersatileTable;
+    return t === 'thrust' ? BASE_ONE_THRUST : t === 'cut' ? BASE_ONE_SABRE : BASE_ONE_VERSATILE;
+  }
+  return BASE_ONE_SABRE;
 }
 export const GUARD_BASE_TWO_THRUST = BASE_TWO_THRUST;
 /** 두손 무기 자세표 고르기 — style 'thrust'(에스톡) → 두손 찌르기 표, 그 밖은 교본 표 그대로 */
