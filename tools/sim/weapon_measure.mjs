@@ -18,7 +18,10 @@
 //   - cutTime은 그 최대 도달 순간까지 걸린 시간을 그대로 쓴다(거리 보정과 무관하니 배율 없음).
 //
 // 사용법: node tools/sim/weapon_measure.mjs [무기id...] (생략 시 전체)
+//  10/8 ① 구조: 재는 함수(measureSwing·measureAll)를 내보낸다 — 생성기 `node tools/sim/weapon_measures.mjs --gen` 이 같은 측정을 부른다.
+//   직접 실행할 때 찍는 글은 전과 같다
 import { newRound, DT } from './harness_m.mjs';
+import { isMain } from './is_main.mjs';
 import { WEAPONS } from '../../src/weapons.js';
 import { TECH_BY_NAME } from '../../src/ai_techniques.js';
 
@@ -35,7 +38,7 @@ function lerp(a, b, t) {
 
 /** weaponId로 혼자 zornhau를 한 번 휘두르며 칼날 70% 지점이 머리 높이를 지나는 순간의
  * 최대 전방 거리(가슴 기준)와 그때까지 걸린 시간을 잰다. lunge=true면 내딛기를 더한다. */
-function measureSwing(weaponId, { lunge = false } = {}) {
+export function measureSwing(weaponId, { lunge = false } = {}) {
   const G = newRound({ weapon: weaponId, weapon2: weaponId, seed: 1 });
   G.park();
   const att = G.player;
@@ -84,21 +87,28 @@ function measureSwing(weaponId, { lunge = false } = {}) {
   return { raw: maxFwd, cutTime: atT };
 }
 
-// 보정 배율: 롱소드의 raw contact가 정확히 1.62가 되도록 맞춘다
-const longswordRaw = measureSwing('longsword', { lunge: false }).raw;
-const CALIBRATION = 1.62 / longswordRaw;
-
-const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(WEAPONS);
-const rows = [];
-console.log(`보정 배율(롱소드 raw ${longswordRaw.toFixed(3)}m → 1.62m 기준): ${CALIBRATION.toFixed(4)}\n`);
-for (const id of ids) {
-  const c = measureSwing(id, { lunge: false });
-  const r = measureSwing(id, { lunge: true });
-  const contact = +(c.raw * CALIBRATION).toFixed(2);
-  const reach = +(r.raw * CALIBRATION).toFixed(2);
-  const clinch = +(contact * CLINCH_RATIO).toFixed(2);
-  const cutTime = +c.cutTime.toFixed(2);
-  rows.push({ id, contact, reach, clinch, cutTime });
-  console.log(`${id.padEnd(16)} contact=${contact}  reach=${reach}  clinch=${clinch}  cutTime=${cutTime}`);
+/** 무기 여럿을 한 번에: 롱소드 raw 로 보정 배율을 정하고 무기마다 선 채·내디디며 한 번씩 휘두른다 (값은 직접 실행과 같다) */
+export function measureAll(ids = Object.keys(WEAPONS)) {
+  // 보정 배율: 롱소드의 raw contact가 정확히 1.62가 되도록 맞춘다
+  const longswordRaw = measureSwing('longsword', { lunge: false }).raw;
+  const CALIBRATION = 1.62 / longswordRaw;
+  const rows = [];
+  for (const id of ids) {
+    const c = measureSwing(id, { lunge: false });
+    const r = measureSwing(id, { lunge: true });
+    const contact = +(c.raw * CALIBRATION).toFixed(2);
+    const reach = +(r.raw * CALIBRATION).toFixed(2);
+    const clinch = +(contact * CLINCH_RATIO).toFixed(2);
+    const cutTime = +c.cutTime.toFixed(2);
+    rows.push({ id, contact, reach, clinch, cutTime });
+  }
+  return { longswordRaw, calibration: CALIBRATION, rows };
 }
-console.log('\n' + JSON.stringify(rows, null, 1));
+
+if (isMain(import.meta.url)) {
+  const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(WEAPONS);
+  const { longswordRaw, calibration: CALIBRATION, rows } = measureAll(ids);
+  console.log(`보정 배율(롱소드 raw ${longswordRaw.toFixed(3)}m → 1.62m 기준): ${CALIBRATION.toFixed(4)}\n`);
+  for (const { id, contact, reach, clinch, cutTime } of rows) console.log(`${id.padEnd(16)} contact=${contact}  reach=${reach}  clinch=${clinch}  cutTime=${cutTime}`);
+  console.log('\n' + JSON.stringify(rows, null, 1));
+}
