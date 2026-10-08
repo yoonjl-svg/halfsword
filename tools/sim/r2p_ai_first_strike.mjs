@@ -1,8 +1,10 @@
 // WA5 통제 실험(R2′ 묶음을 AI 가 쓸 때 베는 자리, 10/8): 가만히 선(자세만 지키는) 상대에게 AI 가 고른 첫 베기 — 맞나, 베나, 어디를, 얼마나, 빗나가면 어느 쪽으로. 결정적.
 //  node tools/sim/r2p_ai_first_strike.mjs [--N=36] [--who=P|E] [--bundle=player|all [--trunkArc=2] [--trunkFollow=0.5]] [--chain=legs] [--rows=1]   (who=E 면 E 의 AI(옛 보정)가 가만히 선 P 를, P 면 보정 v2 의 P 가 E 를 벤다; bundle 은 with_config 없이 안에서 켠다)
 import { newRound, DT, AI, THREE, CONFIG } from './jelly_harness.mjs';
+import { MEASURED } from '../../src/ai.js';
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v] = a.slice(2).split('='); return [k, v ?? '1']; }));
 const N = +(args.N ?? 36), who = args.who ?? 'P';
+for (const [k, i] of [['contact', 0], ['reach', 1], ['clinch', 2], ['cutTime', 3]]) if (args[k] != null) MEASURED.longsword[i] = +args[k]; // AI 롱소드 간격 실측값 [contact, reach, clinch, cutTime] 덮어쓰기(두 손 상한 26 뒤 박자 맞추기 실험, 10/8)
 if (args.bundle) { CONFIG.BODY.trunkArc = +(args.trunkArc ?? 2); CONFIG.BODY.trunkFollow = +(args.trunkFollow ?? 0.5); CONFIG.ARM.servoLead = 0.5; if (args.bundle === 'all') CONFIG.BODY.r2pScope = 'all'; }
 if (args.chain) CONFIG.BODY.chain = args.chain;
 const seedRand = (seed) => { let s = seed * 9301 + 49297; Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
@@ -17,6 +19,7 @@ for (let seed = 1; seed <= N; seed++) {
   const att = who === 'P' ? P : E, vic = who === 'P' ? E : P;
   if (who === 'P') { G.ai = { update() { E.move.set(0, 0); } }; G.ai2 = new AI(P, E, 'normal'); } else { G.ai2 = { update() { P.move.set(0, 0); } }; }
   const ai = who === 'P' ? G.ai2 : G.ai;
+  for (const k of ['contact', 'reach', 'clinch', 'cutTime']) if (args[k] != null) ai.M[k] = +args[k]; // AI 의 유파 간격(this.M, schools.js 에서 옴) 덮어쓰기 — MEASURED 는 롱소드엔 비율 1 이라 안 통함
   strikeStarted = null; let seen = 0; const hits = []; let minD = 9, atMin = null, peak = 0, tEnd = null, fell = false, started = false;
   const tip = () => att.tipPos ? att.tipPos : null;
   for (let i = 0; i < 8 / DT; i++) {

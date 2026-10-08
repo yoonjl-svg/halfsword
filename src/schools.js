@@ -29,7 +29,7 @@ export const SCHOOLS = {
   longsword: {
     id: 'longsword',
     weapon: 'longsword',
-    measure: { contact: 1.62, reach: 2.0, clinch: 1.25, cutTime: 0.3 },
+    measure: { contact: 1.57, reach: 1.8, clinch: 1.25, cutTime: 0.3 }, // 10/8 16:35 두 손 서보 상한 26 뒤 AI 박자 재조정(사장님 '그렇게 해'): 빠른 칼이 옛 간격(1.62/2.0)에선 0.05~0.19 m 짧게 지나가 첫 베기 25 → 20/30 → 1.57/1.8 에서 28/32(확인표 192). 전 1.62/2.0
     guards: WATCH_GUARDS,
     tech: TECH,
     techByName: TECH_BY_NAME,

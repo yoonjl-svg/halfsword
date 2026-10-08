@@ -284,7 +284,7 @@ export function weaponMatOpts(material, isBlade, tier) {
 // 감독 확정: 한손 무기도 "양손으로 잡고 휘두른다"고 가정한다(현실의 한손검 이점 — 가벼운 몸놀림·빠른 자세 전환 — 을 지금 다
 //  구현할 수 없으니 그 대신). 그래픽·grip 표시는 그대로 두고 손목·팔 힘 한계만 두손 값(22 N·m)으로 통일. 한손 값 12 는
 //  Delp 1996 손목 굴곡 토크 실측(평균 12.2 N·m)이었고, 22 는 양손·팔 전체 기여 추정치 [D].
-const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 22 };
+const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 26 }; // two-hand 22 → 26: 사장님 10/8 16:20 '그렇게 해'(확인표 191) — 두 손 짝힘은 한 손 손목보다 세다(츠바이핸더 28 선례). 세로 베기(서보 포화 91 %) 14.4 → 14.8 m/s, 자리 에너지 86 → 116 J. 무기별 명시값(츠바이핸더 28·참치 16)은 그대로. `?twoHandCap=22` = 전 값(setGripTorque)
 
 // ── 찌르기 무기의 찌르기 장점 (감독 확정 수치 mCut·mThrust·power 와 별개의 장치) ──
 //  베기가 약한(mThrust > mCut) 에스톡·레이피어는 "톡 쳐서 찌르기"가 자연스러운 싸움법이 되도록 찌를 때만 이점을 준다.
@@ -331,6 +331,7 @@ function finalizeSpec(id, s) {
     oneHandStance: s.oneHandStance ?? s.grip === 'one-hand',
     soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
+    capFromGrip: !(s.controlOverrides && 'maxAimTorque' in s.controlOverrides), // 서보 상한이 쥠 기본값에서 왔나(setGripTorque 가 바꿀 대상)
   };
   // 무기 유형 (weapon_class.js, docs/weapon_types.md): 몸 틀 × 싸움 방식. 스펙에 적으면 그 값, 아니면 질량 분포·배율로 자동.
   //  지금은 이름표일 뿐 게임 동작은 읽지 않는다 (다음 버전 동작 라이브러리가 읽는다)
@@ -1144,4 +1145,10 @@ export function getWeapon(id) {
     console.warn(`[weapons] 모르는 무기 id '${id}' → ${DEFAULT_WEAPON} 로 대신합니다`);
   }
   return WEAPONS[DEFAULT_WEAPON];
+}
+
+/** 쥠 종류 기본 서보 상한을 바꾼다(명시 상한이 없는 무기만) — 10/8 비교용 `?twoHandCap=` */
+export function setGripTorque(grip, value) {
+  GRIP_TORQUE[grip] = value;
+  for (const spec of Object.values(WEAPONS)) if (spec.grip === grip && spec.capFromGrip) spec.controlOverrides.maxAimTorque = value;
 }

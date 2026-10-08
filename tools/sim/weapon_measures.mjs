@@ -4,7 +4,7 @@
 // 캐릭터 PM 의 schools.js 에 무기별 꾸러미가 다 생기면 이 표는 필요 없어진다.
 // 10라운드 B: 한손 뻗기(guards.js) 뒤 hybrid(게임 기본)로 다시 잰 값 — ai.js MEASURED 와 같다 (롱소드 줄은 기본 AI 값 그대로)
 export const WEAPON_MEASURES = {
-  longsword: { contact: 1.62, reach: 2.0, clinch: 1.25, cutTime: 0.3 }, // 기본 AI 값 그대로 (회귀 기준)
+  longsword: { contact: 1.57, reach: 1.8, clinch: 1.25, cutTime: 0.3 }, // 기본 AI 값 그대로 (회귀 기준; 10/8 16:35 두 손 상한 26 뒤 1.62/2.0 → 1.57/1.8)
   zweihander: { contact: 1.71, reach: 2.08, clinch: 1.32, cutTime: 0.48 },
   estoc: { contact: 1.57, reach: 1.99, clinch: 1.22, cutTime: 0.42 }, // 균형 재분배(칼날 0.72·폼멜 0.6kg) 후 재실측 1.75 → 유효 간격(칼 중간이 닿는 안쪽)
   sabre: { contact: 1.39, reach: 1.58, clinch: 1.07, cutTime: 0.36 },

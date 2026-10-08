@@ -46,7 +46,7 @@ export const MEASURED = {
   //  10라운드 B: 한손 뻗기(guards.js) 뒤 hybrid(게임 기본)로 다시 잰 값 (tools/sim/hybrid.mjs weapon_measure.mjs). 에스톡은 유효 간격(× 0.914)
   //  (finish.js 도 읽는다: 쓰러진 상대까지 닿는 거리 배율 downReachK)
   //  cutTime 은 보정 없는 raw(롱소드 0.41)라 비율로만 쓴다.
-  longsword: [1.62, 1.9, 1.25, 0.41],
+  longsword: [1.57, 1.8, 1.25, 0.41], // 10/8 16:35: 1.62/1.9 → 1.57/1.8 — schools.js 롱소드 measure 와 함께(다른 무기는 이 값에 대한 비율로 간격을 받으니 같이 바꿔야 그대로다)
   zweihander: [1.71, 2.08, 1.32, 0.48],
   estoc: [1.57, 1.99, 1.22, 0.42],
   sabre: [1.39, 1.58, 1.07, 0.36],

@@ -5,8 +5,10 @@
 //  node tools/sim/with_config.mjs BODY.trunkArc=2 BODY.trunkFollow=1 r2p_ai_diag.mjs --N=36                    (묶음 플레이어 P 만)
 //  node tools/sim/with_config.mjs BODY.trunkArc=2 BODY.trunkFollow=1 BODY.r2pScope=all r2p_ai_diag.mjs --N=36  (묶음 둘 다)
 import { newRound, DT, AI } from './jelly_harness.mjs';
+import { MEASURED } from '../../src/ai.js';
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v] = a.slice(2).split('='); return [k, v ?? '1']; }));
 const N = +(args.N ?? 36);
+for (const [k, i] of [['contact', 0], ['reach', 1], ['clinch', 2], ['cutTime', 3]]) if (args[k] != null) MEASURED.longsword[i] = +args[k]; // AI 롱소드 간격 실측값 [contact, reach, clinch, cutTime] 덮어쓰기(두 손 상한 26 뒤 박자 맞추기 실험, 10/8)
 const seedRand = (seed) => { let s = seed * 9301 + 49297; Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
 const med = (a) => { if (!a.length) return NaN; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
 const p90 = (a) => { if (!a.length) return NaN; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length * 0.9)]; };
@@ -35,6 +37,7 @@ for (let seed = 1; seed <= N; seed++) {
   seedRand(seed);
   const G = newRound({ walls: true, seed }); const P = G.player, E = G.enemy; P.skill.level = 0.7; G.ai2 = new AI(P, E, 'normal');
   const F = { P, E }, ais = { P: G.ai2, E: G.ai };
+  for (const a of [G.ai, G.ai2]) for (const k of ['contact', 'reach', 'clinch', 'cutTime']) if (args[k] != null) a.M[k] = +args[k]; // 유파 간격 덮어쓰기(실험)
   const prev = { P: 'stand', E: 'stand' }; let seen = 0; const s0 = { Pf: side.P.falls, Ef: side.E.falls, Pc: side.P.cutHits, Ec: side.E.cutHits, Ph: side.P.hits, Eh: side.E.hits, Ps: side.P.swings, Es: side.E.swings };
   cur.P = null; cur.E = null; G_t = () => G.t;
   for (let i = 0; i < 30 / DT; i++) {
