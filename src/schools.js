@@ -96,8 +96,8 @@ export function traditionOf(spec) {
   const frame = spec?.frame ?? 'two';
   const style = spec?.style ?? 'versatile';
   if (frame === 'gun' || style === 'shoot') return 'none';
+  if (style === 'blunt') return 'none'; // 둔기는 틀과 상관없이 무유파(사장님 10/8: 몽둥이·총 = 무유파 — 냉동 참치도 앞무게 틀의 몸놀림만 받고 전통은 없음)
   if (frame === 'heavy') return 'iberian';
-  if (style === 'blunt') return 'none';
   if (frame === 'one' && style === 'thrust') return 'italian';
   return 'german';
 }
