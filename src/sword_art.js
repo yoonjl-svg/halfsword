@@ -21,14 +21,15 @@
 //   school       AI 가 쥐는 꾸러미: 인물이 고른 것(persona.school, 없으면 롱소드 = 독일) + lib 이면 몸 틀·방식 가중치·새 기술·속임수·간 보는 자세
 //   tech·feints·parry·watch  그 꾸러미의 기술·속임수·막기 자리·간 보는 자세
 //   measure      그 꾸러미로 이 무기를 쥘 때의 간격 (꾸러미 간격을 무기 실측 비율로 늘이고 줄임) · measureFor(다른 무기) = 상대 칼 어림용
-//   restGuard    쉴 자세 (보정 v2 ③ 되돌아옴 겨눔의 목표 — skill.js 가 pad 를 읽는다, 플레이어만) — SKILL.schoolArt 1 이고 유파 rest 가 있으면 그 패드,
-//                아니면 SKILL.homeGuard(쟁기 자리). 일본·중국 기본 rest 'pflugR' 은 homeGuard 와 같은 자리(안 B) — 안 A 'langort' 는 사장님 확인 전
+//   restGuard    쉴 자세 (보정 v2 ③ 되돌아옴 겨눔의 목표 — skill.js 가 pad 를 읽는다, 플레이어만) — 유파 rest 가 있으면 그 패드(일본·중국 'langort' = 中段·中平, 사장님 10/9 01:2x 안 A),
+//                아니면 SKILL.homeGuard(쟁기 자리). 스위치와 상관없이 늘. 비교 손잡이 SKILL.schoolRest(`?schoolRest=pflugR` = 안 B)
 //   tradition    유파 전통 열쇠 (인물이 꾸러미를 고르면 그 꾸러미의 것, 아니면 무기의 것 — schools.js traditionOf)
 //   lib          동작 라이브러리를 입히나 (본판 스위치 MOTION.lib — 도구는 opts.lib 로 직접)
 //   motion       옛 motionFor 모양 (도구·fighter.motion 호환)
 //  school·measure·motion 은 처음 읽을 때 만든다: 검객 생성자는 몸 쪽만 읽어 유파 병합(기억해 두는 꾸러미)을 건드리지 않는다 — 전과 같은 차례.
-//  주의: 지금 기본 AI(인물 없음)는 무기 유파와 상관없이 롱소드(독일) 꾸러미 + 그 무기 간격 비율을 쓴다 — 오늘 그대로(무기 유파 꾸러미로 바꾸면 판이 바뀐다)
-//  유파 자료 (10/9 ②③, SKILL.schoolArt 1 일 때만 — schools.js '유파 자료' 머리말): 꾸러미에 유파 기술 가중치(techK)·맞받아치기(counterArt)를 덮는다.
+//  기본 AI(인물 없음)는 그 무기의 유파 꾸러미(schools.js weaponSchool: 무기 유파 내용 + 그 무기 간격)를 쥔다 — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율; 롱소드는 같은 꾸러미라 관문 동일,
+//   다른 무기는 docs/strike/motion_lib_main_2026-10-08.md §3 '본판(켬)' 열(motion_lab duel main = 무기 꾸러미)이 곧 기본 AI 의 수치). 꾸러미가 없는 무기(총)는 롱소드 꾸러미
+//  유파 자료 (10/9 ②③, SKILL.schoolArt 1 일 때만 — schools.js '유파 자료' 머리말): 꾸러미에 유파 기술 가중치(techK)·맞받아치기(counterArt)를 덮는다 (쉴 자세·이름은 늘).
 //   어느 유파의 것을 덮나 = art.tradition — 인물이 꾸러미를 골랐으면 그 꾸러미의 유파, 아니면 무기의 유파(traditionOf).
 //   그래서 인물 없는 기본 AI 가 모노호시자오를 쥐면 독일 꾸러미 위에 일본 가중치가 얹힌다(꾸러미는 오늘 그대로 독일 — 그것은 바꾸지 않았다, 사장님 확인 전).
 //   이름 덮기는 스위치와 상관없이 늘 한다(HUD 만)
@@ -75,7 +76,8 @@ function gripOf(spec) {
 
 /** 쉴 자세 (사장님 10/8 21:5x '유파가 정한다'): SKILL.schoolArt 1 이고 SCHOOL_ART.rest 이고 유파 rest(G 패드 열쇠)가 있으면 그 패드, 아니면 SKILL.homeGuard(쟁기 자리) */
 function restGuardOf(names, tradition) {
-  const key = SKILL.schoolArt && SCHOOL_ART.rest ? TRADITIONS[tradition]?.rest : null;
+  const own = TRADITIONS[tradition]?.rest; // 유파 쉴 자세 (일본·중국 'langort' — 사장님 10/9 01:2x 안 A). 없는 유파(독일 등)는 homeGuard
+  const key = SCHOOL_ART.rest && own ? SKILL.schoolRest || own : null; // `?schoolRest=pflugR` = 안 B 비교(유파 rest 가 있는 무기만 바뀐다)
   const pad = key && G[key] ? G[key] : SKILL.homeGuard;
   let index = -1;
   let best = Infinity;
@@ -214,7 +216,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   };
   // AI 꾸러미: 인물이 고른 꾸러미(없으면 롱소드) → lib 이면 몸 틀·방식 몫을 더한다 (전 ai.js schoolOf + libSchool) → 스위치를 켜면 유파 자료(art.tradition 의 것)
   lazy(art, 'school', () => {
-    const pkg = 'school' in opts ? opts.school : schoolOf(persona?.school);
+    const pkg = 'school' in opts ? opts.school : schoolOf(persona?.school ?? w.id); // 인물이 없으면 무기 유파 꾸러미(weaponSchool) — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율)
     const s = lib ? mergeLibSchool(pkg, spec) : pkg;
     return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style) : s;
   });

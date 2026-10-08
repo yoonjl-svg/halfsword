@@ -81,7 +81,7 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //   rest       쉴 자세 = G 패드 열쇠 (보정 v2 ③ 되돌아옴 겨눔의 목표 — 플레이어만 쓴다. AI 는 autoGuard 가 꺼져 있어 읽지 않는다)
 //   counterArt 맞받아 베기 목록 (꾸러미 counter 꼴). 열쇠를 counter 로 두지 않은 까닭: 꾸러미 조립(pack)이 유파의 counter 를 그대로 가져가 끔에서도 판이 바뀐다
 //   newTech    새 기술 후보 (TECH 꼴 + ai:false + src) — AI 는 쓰지 않는다. 자료·갤러리용, 재지 않았다
-//  techK·rest·counterArt 는 SKILL.schoolArt 1 일 때만 sword_art.js 가 입힌다 (0 = 이름만, 오늘 판 그대로)
+//  techK·counterArt 는 SKILL.schoolArt 1 일 때만 sword_art.js 가 입힌다 (0 = 가중치·맞받아치기 없음). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
 
 // 일본 (카타나 가족: 지금 모노호시자오 = 앞무게 틀, 뒤에 올 카타나 = 두손 보통 틀). 이름 14 자리 — 원전 이름 + 자리 근거 7, 원전 이름 + 자리 [해석] 3, 원전 없음 4(쉬운 말)
 const JAPANESE_NAMES = {
@@ -146,7 +146,8 @@ const CHINESE_NEW_TECH = [
 
 // 유파 전통 여섯 (사장님 10/8 20:xx: 유파 5 + 무유파). rest = 쉴 자세(보정 v2 ③ 되돌아옴 겨눔의 목표) — 사장님 10/8 21:5x '유파가 정한다'
 //  (독일 쟁기/긴 자세 · 이탈리아 테르차 · 이베리아 중단형 · 일본 中段 · 중국 中平 · 무유파 앞으로 겨눔). null = SKILL.homeGuard(쟁기 자리) 그대로.
-//  일본·중국 rest 기본은 'pflugR' = 안 B (SKILL.homeGuard 와 같은 자리 [0.18, −0.28] — 스위치를 켜도 바이트 그대로). 안 A 는 'langort'(긴 자세 자리 = 中段·中平) — 사장님 확인 전
+//  일본·중국 rest = 'langort'(긴 자세 자리 [0.0, 0.03] = 中段·中平) — **사장님 10/9 01:2x 답: 안 A**(확인표 198). 쉴 자세는 스위치(SKILL.schoolArt)와 상관없이 늘 쓴다(플레이어 ③ 되돌아옴만).
+//  비교용 `?schoolRest=pflugR`(= 안 B, 쟁기 자리 = SKILL.homeGuard — 10/9 00:49 까지의 판)
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로)
@@ -158,10 +159,10 @@ export const TRADITIONS = {
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
-  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'pflugR', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, newTech: JAPANESE_NEW_TECH },
+  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, newTech: JAPANESE_NEW_TECH },
   // 중국: 청강검·지안(스펙 school). 기술 목록 = 지금 지안 꾸러미 그대로 (기술별 reach 보정은 청강검 실측 — ③ 단계에서 무기 쪽으로 가를 후보), 그 위에 유파 자료.
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
-  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'pflugR', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, newTech: CHINESE_NEW_TECH },
+  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, newTech: CHINESE_NEW_TECH },
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null },
 };

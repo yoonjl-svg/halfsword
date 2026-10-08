@@ -516,7 +516,8 @@ export const SKILL = {
   flowBreak: 0.4, // 칼이 막혀 흐름이 끊긴 뒤 다시 흐를 수 있기까지 (초)
   flowChain: 1, // AI 가 한 번에 이어 흐르는 베기 수 (처음 베기 빼고). 3이면 풍차처럼 부딪히기만 해 판이 안 끝났다(96판 사망 32, 1이면 63)
   motionLib: 1, // **기본 1 — 사장님 10/8 18:50 '굳이 안 쳐봐도 적용'**(확인표 34 답): 무기 PM 동작 라이브러리(src/motion_library.js — 몸 틀 자세표(앞무게 상단·팔상·중단·협, 한손 3번·2번 자세), 새 기술(몬탄테 탈류→레베스·손목 베기), 찌르기 무기 런지·앞무게 흐름 덧씌우기)를 본판에 켠다. 생성자(fighter.js)가 자세표·덧씌우기를 입히고 AI 생성자가 유파 꾸러미에 기술을 더한다(libSchool). 롱소드류(두손 두루)·총은 바뀌는 것 없음. 0 = 전 물리(바이트 동일, `?motionLib=0`)
-  schoolArt: 0, // 유파 자료(schools.js TRADITIONS 일본·중국 — ②③ 단계 10/9): 0 = 유파 이름만(HUD, 오늘 판 그대로), 1 = 유파 가중치(techK)·쉴 자세(rest)·맞받아치기(counterArt) 켬 — 사장님 확인 전 (`?schoolArt=1`, docs/strike/school_impl_2026-10-09.md)
+  schoolRest: '', // 유파 쉴 자세 비교 손잡이(10/9): '' = 유파 값(일본·중국 'langort' = 中段·中平, 사장님 안 A) · 'pflugR' = 안 B(쟁기 자리, 10/9 00:49 까지의 판). 유파 rest 가 있는 무기(모노호시자오·청강검)만 바뀐다, 플레이어 ③ 되돌아옴만 (`?schoolRest=`)
+  schoolArt: 0, // 유파 자료(schools.js TRADITIONS 일본·중국 — ②③ 단계 10/9): 0 = 유파 가중치·맞받아치기 없음(이름·쉴 자세는 늘), 1 = 유파 가중치(techK)·맞받아치기(counterArt) 켬 — 사장님 확인 전 (`?schoolArt=1`, docs/strike/school_impl_2026-10-09.md)
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 
