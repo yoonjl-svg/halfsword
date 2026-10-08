@@ -225,7 +225,7 @@ techK: { // 지금 jianTech(찌르기 ×1.5) 위에 곱
   zwerch: 2.0, zwerchL: 2.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2,
   thrustExtra: 1.0, // 안 A. 안 B 는 2.8 / 1.5 ≈ 1.87
 },
-newTech: ['yaoji', 'zuoyi'], // 모두 ai:false 로 시작
+unique: ['yaoji', 'zuoyi', 'lianchi'], // 고유 동작 셋 (옛 이름 newTech — 10/9 고유 동작 단계, docs/strike/school_unique_2026-10-09.md). lianchi = 斂翅 속임수 꼴
 rest: 'langort', // 안 A (안 B = 'pflugR')
 covers: { highC: '거정격 (擧鼎格)', thrust: '어거격 (御車格)' }, // 막기 덧씌우기 이름만 (기본 끔)
 ```

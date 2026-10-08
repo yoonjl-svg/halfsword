@@ -276,7 +276,7 @@ techK: { // 기술 base 곱 — 갈래(틀:방식)별
 },
 counter: { default: ['oberhau', 'zornhau', 'zornhauL'] },
 rest: 'langort', // 안 A (안 B = 'pflugR')
-newTech: ['tsubameGaeshi', 'omote5', 'kote'], // 모두 ai:false 로 시작
+unique: ['tsubameGaeshi', 'kote', 'kokoRenda'], // 고유 동작 셋 (옛 이름 newTech — 10/9 고유 동작 단계, docs/strike/school_unique_2026-10-09.md). omote5 는 spare(ai:false)
 ```
 
 ## 13. 사장님께 여쭐 것

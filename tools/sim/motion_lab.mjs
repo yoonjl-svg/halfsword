@@ -6,7 +6,8 @@
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
-import { SCHOOLS, SCHOOL_ART, TRADITIONS, CHINESE_TECHK_B } from '../../src/schools.js';
+import { SCHOOLS, SCHOOL_ART, TRADITIONS, CHINESE_TECHK_B, traditionOf } from '../../src/schools.js';
+import { mergeUnique } from '../../src/sword_art.js';
 import { STRIKE, GAIT, SKILL } from '../../src/config.js';
 // 유파 자료 (10/9 ②③ — 켜는 곳은 이 도구뿐, src 기본은 끔): SCHOOL_ART=1 → SKILL.schoolArt 1.
 //  SCHOOL_ART_PARTS=weights,rest,counter (켤 몫만, 없으면 셋 다) · SCHOOL_REST=langort (일본·중국 쉴 자세 안 A) · SCHOOL_TECHK=B (중국 가중치 안 B)
@@ -17,9 +18,19 @@ if (process.env.SCHOOL_ART === '1') {
 }
 if (process.env.SCHOOL_REST) for (const t of ['japanese', 'chinese']) TRADITIONS[t].rest = process.env.SCHOOL_REST;
 if (process.env.SCHOOL_TECHK === 'B') TRADITIONS.chinese.techK = CHINESE_TECHK_B;
-if (process.env.SCHOOL_NEWTECH) { // 유파 새 기술 후보를 AI 에 열어 재기: SCHOOL_NEWTECH=tsubameGaeshi,yaoji (SCHOOL_ART=1 + PARTS 에 newTech 필요)
+// 유파 고유 동작 (10/9 — 옛 이름 newTech): SCHOOL_UNIQUE=이름,이름 = 고유 동작 켬 묶음을 이것으로 딱 맞춘다(적은 것만 ai 켬, 나머지 유파 고유 동작은 모두 끔 — 'none' = 모두 끔).
+//  독일 고유 동작은 상대(롱소드 AI)도 독일이라 전역으로 켜면 양쪽이 같이 바뀐다 → 독일 이름은 전역으로 켜지 않고 duel 의 시험 쪽(X) 꾸러미에만 더한다(아래 uqX).
+//  SCHOOL_NEWTECH=이름 (옛 손잡이) = 적은 것만 더 켬(나머지는 src 기본 그대로)
+const UQ_SET = process.env.SCHOOL_UNIQUE ? process.env.SCHOOL_UNIQUE.split(',') : null;
+const uqX = [];
+if (UQ_SET) for (const [tn, t] of Object.entries(TRADITIONS)) for (const x of t.unique ?? []) {
+  const on = UQ_SET.includes(x.name);
+  if (tn === 'german') { if (on) uqX.push(x); continue; } // 독일: 전역 ai 는 그대로(끔) — 시험 쪽에만
+  x.ai = on;
+}
+if (process.env.SCHOOL_NEWTECH) {
   const names = process.env.SCHOOL_NEWTECH.split(',');
-  for (const t of ['japanese', 'chinese']) for (const x of TRADITIONS[t].newTech ?? []) if (names.includes(x.name)) x.ai = true;
+  for (const t of Object.values(TRADITIONS)) for (const x of [...(t.unique ?? []), ...(t.spare ?? [])]) if (names.includes(x.name)) x.ai = true;
 }
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
@@ -185,9 +196,16 @@ if (mode === 'poses') {
   const school0 = useTech || !useTable ? null : key; void school0;
   // 기술만: 라이브러리 기술 목록 · 자세표만: 자세표 + 그 표의 막기 자리 · 켬: 둘 다
   if (!useTech && useTable) SCHOOLS[key] = { ...base, id: key, ...(m.parry && process.env.NO_PARRY !== '1' ? { parry: { ...base.parry, ...m.parry } } : {}) };
-  const school = useTech || useTable ? key : SCHOOLS[id] ? id : 'longsword'; // main: 유파 그대로(생성자 libSchool 이 더한다)
+  let school = useTech || useTable ? key : SCHOOLS[id] ? id : 'longsword'; // main: 유파 그대로(생성자 libSchool 이 더한다)
+  if ((uqX.length || process.env.UQ_XPACK === '1') && traditionOf(W) === 'german') { // UQ_XPACK=1: 더할 것 없이 시험 쪽 꾸러미만 따로 만든다(대조군) // 독일 고유 동작: 시험 쪽 꾸러미에만 (상대 롱소드 꾸러미는 그대로)
+    const k2 = `${school}__uq`;
+    SCHOOLS[k2] = { ...mergeUnique(SCHOOLS[school], uqX), id: k2 };
+    school = k2;
+  }
   let Wn = 0, L = 0, D = 0, nan = 0, tSum = 0, tN = 0;
   const used = {};
+  const feintUsed = {};
+  const counterUsed = {};
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
       const seed = (xFirst ? 1000 : 2000) + s;
@@ -208,6 +226,8 @@ if (mode === 'poses') {
         G.step();
         const tn = XA?.tech?.name;
         if (tn && tn !== lastTech && XA.phase === 'strike') used[tn] = (used[tn] ?? 0) + 1;
+        if (tn && tn !== lastTech && XA.phase === 'strike' && XA.feint) feintUsed[XA.feint.name] = (feintUsed[XA.feint.name] ?? 0) + 1; // 속임수(가짜 기술 이름으로 위에 세어진 것 가운데)
+        if (tn && tn !== lastTech && XA.phase === 'strike' && XA.why === 'counter') counterUsed[tn] = (counterUsed[tn] ?? 0) + 1; // 맞받아 베기로 고른 것
         lastTech = XA?.phase === 'strike' ? tn : null;
         const v = X.sword.linvel();
         if (![v.x, v.y, v.z].every(Number.isFinite)) { nan++; break; }
@@ -230,6 +250,8 @@ if (mode === 'poses') {
   const pc = (v) => `${Math.round(100 * v)}%`;
   const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => `${k} ${v}`).join(', ');
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
+  const fmt = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || '-';
+  console.log(`  속임수: ${fmt(feintUsed)} · 맞받아 베기: ${fmt(counterUsed)}`); // 둘째 줄 (10/9 고유 동작 단계 — 첫 줄은 전과 같다)
 } else if (mode === 'tap') {
   // 탭 찌르기 한 번 (상대는 치움): 칼끝이 내 가슴에서 앞으로 가장 멀리 간 거리, 그때까지 걸린 시간, 칼끝 최고 속도, 몸 낮춤.
   //  자세(패드)마다 한 번씩: 쟁기·긴 자세·황소. 라이브러리 끔/켬(켬이면 무기 방식의 덧씌우기 — 찌르기 방식은 런지)
