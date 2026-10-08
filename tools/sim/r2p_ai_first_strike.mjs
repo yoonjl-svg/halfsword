@@ -3,7 +3,7 @@
 import { newRound, DT, AI, THREE, CONFIG } from './jelly_harness.mjs';
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v] = a.slice(2).split('='); return [k, v ?? '1']; }));
 const N = +(args.N ?? 36), who = args.who ?? 'P';
-if (args.bundle) { CONFIG.BODY.trunkArc = +(args.trunkArc ?? 2); CONFIG.BODY.trunkFollow = +(args.trunkFollow ?? 1); CONFIG.ARM.servoLead = 0.5; if (args.bundle === 'all') CONFIG.BODY.r2pScope = 'all'; }
+if (args.bundle) { CONFIG.BODY.trunkArc = +(args.trunkArc ?? 2); CONFIG.BODY.trunkFollow = +(args.trunkFollow ?? 0.5); CONFIG.ARM.servoLead = 0.5; if (args.bundle === 'all') CONFIG.BODY.r2pScope = 'all'; }
 if (args.chain) CONFIG.BODY.chain = args.chain;
 const seedRand = (seed) => { let s = seed * 9301 + 49297; Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
 const med = (a) => { if (!a.length) return NaN; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
