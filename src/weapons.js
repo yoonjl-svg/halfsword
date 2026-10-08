@@ -621,6 +621,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   nameKo: '모노호시자오', nameEn: 'Monohoshizao',
   desc: '사사키 코지로의 노다치.\n빨랫줄 장대라 불린 칼, 매섭게 벤다.',
   grip: 'two-hand', material: 'steel',
+  school: 'japanese', // 유파(schools.js TRADITIONS): 틀은 앞무게(이베리아가 기본)지만 일본 도검술 — 10/8 ① 구조 (일본 유파는 아직 이베리아와 같은 내용의 자리만)
   tier: 'epic',
   ability: '제비 베기: 출혈',
   // 동작 라이브러리(motion_library.js, 기본 꺼짐)의 앞무게 자세표에서 상단(上段)은 쓰지 않는다: 긴 자루·앞무게 칼이 칼끝을 뒤로 눕힌
@@ -712,6 +713,7 @@ const qinggang = finalizeSpec('qinggang', {
   nameKo: '청강검', nameEn: 'Qinggang Sword',
   desc: '쇠도 진흙처럼 벤다던 전설의 검.\n가볍고 빠른 한손 양날검.',
   grip: 'one-hand', material: 'steel',
+  school: 'chinese', // 유파(schools.js TRADITIONS): 틀은 한손 두루(독일이 기본)지만 劍 — 10/8 ① 구조 (중국 유파 = 전 지안 꾸러미 그대로)
   enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
   tier: 'epic',
   ability: '창천: 무기 절단',
