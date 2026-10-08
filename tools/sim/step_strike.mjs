@@ -8,6 +8,7 @@ const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith
 const weapon = String(args.weapon ?? 'longsword');
 const fams = String(args.fams ?? 'vert,diagR').split(',');
 const DIST = +(args.dist ?? 1.35);
+const SHORT = +(args.short ?? 1); // --short=0.5 : 손가락 획을 시작점에서 끝점까지의 이 비율만 긋는다(짧은 세로 획 보상 실험, 10/8)
 const CAP = args.cap != null ? +args.cap : null; // --cap=N : 이 무기의 손목 서보 상한 덮어쓰기(arm_arc_gauge 와 같음)
 if (CAP != null) { const { getWeapon } = await import('../../src/weapons.js'); getWeapon(weapon).controlOverrides.maxAimTorque = CAP; }
 class Passive { update() {} }
@@ -32,7 +33,7 @@ function runCase(fam, move) {
   let walked = 0;
   if (move !== 0) { for (let i = 0; i < 4 / DT; i++) { P.move.set(0, move); E.move.set(0, 0); G.step(); walked++; if ((move > 0 && gap(G) <= DIST) || (move < 0 && gap(G) >= DIST)) break; } }
   const gapAtStart = gap(G); const vP = P.bodies.pelvis.linvel(); const bodyV = +vP.x.toFixed(2);
-  const tgt = F.end; let tipMax = 0;
+  const tgt = SHORT < 1 ? [F.ch[0] + SHORT * (F.end[0] - F.ch[0]), F.ch[1] + SHORT * (F.end[1] - F.ch[1])] : F.end; let tipMax = 0;
   const n = Math.round((Math.hypot(tgt[0] - F.ch[0], tgt[1] - F.ch[1]) / F.v + 0.8) / DT);
   for (let i = 0; i < n; i++) {
     const off = P.handOffset; const dx = tgt[0] - off.x, dy = tgt[1] - off.y, d = Math.hypot(dx, dy), st = F.v * DT;
@@ -52,7 +53,7 @@ function runCaseAt(fam, move, gStart) {
   const hits = []; G.combat.hooks.onWound = (att, vic, r) => { if (att === P) hits.push({ type: r.type, zone: r.zone, E: +r.energy.toFixed(0), speed: +r.speed.toFixed(2), mEff: +r.mEff.toFixed(2), sev: +r.severity.toFixed(2), pass: r.pass, gap: +gap(G).toFixed(2) }); };
   for (let i = 0; i < 4 / DT; i++) { P.move.set(0, move); E.move.set(0, 0); G.step(); if (gap(G) <= gStart) break; }
   const gapAtStart = gap(G); const bodyV = +P.bodies.pelvis.linvel().x.toFixed(2);
-  const tgt = F.end; let tipMax = 0;
+  const tgt = SHORT < 1 ? [F.ch[0] + SHORT * (F.end[0] - F.ch[0]), F.ch[1] + SHORT * (F.end[1] - F.ch[1])] : F.end; let tipMax = 0;
   const n = Math.round((Math.hypot(tgt[0] - F.ch[0], tgt[1] - F.ch[1]) / F.v + 0.8) / DT);
   for (let i = 0; i < n; i++) {
     const off = P.handOffset; const dx = tgt[0] - off.x, dy = tgt[1] - off.y, d = Math.hypot(dx, dy), st = F.v * DT;

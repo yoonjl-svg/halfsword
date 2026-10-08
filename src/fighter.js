@@ -914,7 +914,13 @@ export class Fighter {
     const amp = SKILL_BODY.holdAmount + (1 - SKILL_BODY.holdAmount) * act;
     const spd = SKILL_BODY.holdSpeed + (1 - SKILL_BODY.holdSpeed) * act;
     const s = sk.level;
+    let dropV = 0, pitchV = 0; // 내려앉기 몫(10/8 16:05, BODY.dropArc·pitchArc): 손가락이 가운데 아래로 내려간 만큼 골반 낮춤(m)·가슴 숙임(rad) — 세로 베기의 몸 몫(사람은 내려베며 무릎·엉덩이·상체가 함께 내려간다). 자세 지도의 drop·pitch 에 더하고 ex 밖
     let arc = 0; // 몸의 호 몫(rad): 순서 결합 ex 가 보는 turn 에는 넣지 않는다 — ex 는 '손이 닿는 데 필요한 만큼' 으로 되돌리는 보정이라 호를 상쇄한다(10/8 03:55 dbg)
+    if ((BODY.dropArc > 0 || BODY.pitchArc > 0) && this.r2pOn()) {
+      const below = Math.max(0, -sk.aim.y); // 걸러진 손 목표가 가운데(y 0) 아래로 간 만큼(패드 단위, 0.5 ≈ 알버)
+      dropV = below * BODY.dropArc * act;
+      pitchV = below * BODY.pitchArc * act;
+    }
     if ((BODY.trunkArc > 0 || BODY.handFollow > 0 || BODY.trunkFollow > 0) && this.r2pOn()) {
       // 획 방향 = 손 목표 속도의 가로 성분(부드러운 부호: |vx| 0.5 m/s 에서 ±1, 세로 획은 0 근처). 가로로 움직이는 동안만 갱신 — 손가락이 끝 자리에 서면(follow-through 가 필요한 바로 그때) 마지막 방향을 지킨다
       const vx = sk.vel.x;
@@ -985,6 +991,8 @@ export class Fighter {
         piT += (G.pitch * gw - piT) * wi;
         dT += ((G.drop - 0.06) * gw - dT) * wi;
       }
+      piT += pitchV; // 내려앉기(10/8): 섞기 뒤에 더해 어느 자세표에서도 같은 양
+      dT += dropV;
       const arcSpd = BODY.trunkArc > 0 && this.r2pOn() ? 1 + (BODY.trunkArcSpeed - 1) * act : 1; // WA2 보조(trunkArcSpeed): 휘두르는 동안만 몸이 더 빨리 따라간다 (기본 1 = 오늘)
       follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd * arcSpd);
       follow('chestYaw', cT, SKILL_BODY.chest * spd * arcSpd);
@@ -999,8 +1007,8 @@ export class Fighter {
       const arcO = arc !== 0 ? arc * (1 - sk.thrustPose.w) : 0; // 찌르기 자세 동안은 v2 가지처럼 호를 줄인다 (검토 2-7)
       follow('pelvisYaw', arcO !== 0 ? pT0 + PELVIS_SHARE * arcO : pT0, SKILL_BODY.pelvis * spd * arcSpd0);
       follow('chestYaw', arcO !== 0 ? cT0 + arcO : cT0, SKILL_BODY.chest * spd * arcSpd0);
-      follow('pitch', G.pitch * gw, SKILL_BODY.chest * spd);
-      follow('drop', (G.drop - 0.06) * gw, SKILL_BODY.pelvis * spd);
+      follow('pitch', G.pitch * gw + pitchV, SKILL_BODY.chest * spd); // 내려앉기(10/8): 옛 가지(AI)에도 더한다 — 0 이면 식 그대로
+      follow('drop', (G.drop - 0.06) * gw + dropV, SKILL_BODY.pelvis * spd);
     }
     this.pelvisYawOffset = bp.pelvisYaw;
     this.pelvisDropOffset = bp.drop;
@@ -2690,6 +2698,22 @@ export class Fighter {
     aim.applyQuaternion(this.yaw);
     // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
     if (v2) corrStep(this, aim, sv);
+    if (ARM.vertLead > 0 && this.r2pOn()) {
+      // 세로 follow-through(10/8 16:10, ARM.vertLead): 빠른 내려긋기 동안 서보 목표를 더 아래로 — 짧은 손가락 획도 칼끝은 몸통까지 내려가게. 손가락이 멈추면 τ 0.15 s 로 풀린다
+      // 2 판(16:12): 긋는 내내가 아니라 **빠른 내려긋기가 가운데 위에서 짧게 멈췄을 때만** — 긋는 중엔 최고 하강 속도를 기억하고, 손가락이 그 30 % 아래로 느려졌는데 아직 패드 가운데 위(y > −0.15)면
+      //  칼끝을 기억한 속도 × 값 만큼 더 내려 보낸다(관성 이월). 끝까지 그은 획(y < −0.15)엔 걸지 않는다 — 1 판은 전 구간에 걸어 끝까지 그은 세로가 몸 아래로 지나갔다
+      const vy = this.skill.vel.y, ay = this.skill.aim.y, dtl = this.lastDt || 1 / 120;
+      if (vy < -0.3 && this.skill.swinging) this.vertPeakDown = Math.max(this.vertPeakDown || 0, -vy);
+      const stoppedShort = (this.vertPeakDown || 0) > 1 && -vy < 0.3 * this.vertPeakDown && ay > -0.15;
+      const want = stoppedShort ? Math.min(0.5, this.vertPeakDown * ARM.vertLead) : 0;
+      this.vertLeadAmt = want > (this.vertLeadAmt || 0) ? want : (this.vertLeadAmt || 0) * Math.max(0, 1 - dtl / 0.25);
+      if (!this.skill.swinging && this.skill.activity < 0.05) this.vertPeakDown = 0; // 쉬면 기억 지움
+      else if (vy > 0.3) this.vertPeakDown = 0; // 올리기 시작하면 지움
+      if (this.vertLeadAmt > 1e-3) {
+        const h = Math.hypot(aim.x, aim.z);
+        if (h > 1e-3) { const ang = Math.atan2(aim.y, h) - this.vertLeadAmt; const c = Math.cos(ang); aim.set((aim.x / h) * c, Math.sin(ang), (aim.z / h) * c); }
+      }
+    } else this.vertLeadAmt = 0;
     const mapAim = _holdMap.copy(aim); // 자세 지도 방향(빈손 짝힘·보정은 늘 이것을 본다)
     if (BODY.trunkFollow > 0 || BODY.handFollow > 0 || ARM.servoLagRelease > 0) { // WA2-2 follow-through·서보 풀어주기가 읽는 '칼이 겨눔보다 뒤처진 각'(rad): 칼날 축 ↔ 자세 지도 방향 (hold 와 무관하게 지도 기준)
       rot(sword, _q1);
