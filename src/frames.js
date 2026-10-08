@@ -256,7 +256,7 @@ export const OVERLAY = {
   thrust: { lunge: { step: 0.6, reach: 0.08, body: { pelvisYaw: -35, chestYaw: -45, pitch: 12, drop: 0.16 }, src: '카포 페로 런지 [해석] · 걸음 길이 [추정]' } },
 };
 
-/** 막기 덧씌우기 (시제품): 검술 층 update 뒤에 thrustPose(덧씌우기 칸)를 막기 자세로 채운다. 찌르기(tap)·사격 중엔 건드리지 않는다 */
+/** 막기 덧씌우기 (시제품): 검술 층 update 뒤에 thrustPose(덧씌우기 칸)를 막기 자세로 채운다. 찌르기(tap)·손잡이 찍기(pom)·사격 중엔 건드리지 않는다 */
 export function installCover(fighter, ai, covers) {
   const sk = fighter.skill;
   if (!sk || sk._cover) return;
@@ -270,7 +270,7 @@ export function installCover(fighter, ai, covers) {
   sk.update = (dt) => {
     const r = upd(dt);
     const st = sk._cover;
-    if (sk.tap || fighter.weapon?.gun) {
+    if (sk.tap || sk.pom || fighter.weapon?.gun) {
       st.w = 0;
       return r;
     }

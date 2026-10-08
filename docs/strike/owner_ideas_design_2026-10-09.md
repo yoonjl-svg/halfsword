@@ -139,6 +139,8 @@ step: { lat: 0.3, fwd: 0.4, when: 'strike' }   // lat: 오른쪽 + (m, 몸 기�
 
 ## 3. 손잡이 찍기 (3])
 
+> **시제품 있음 → `docs/strike/pommel_strike_2026-10-09.md`** (10/9, 가지 `…/pommel-strike-2q36ha`, 기본 끔 — `skill.pommel()` · closeQuarters `then: 'pommel'` · `tools/sim/pommel_trial.mjs`).
+
 ### 3-1. 지금 자루가 맞나 (코드)
 | 무엇 | 어디 | 내용 |
 |---|---|---|

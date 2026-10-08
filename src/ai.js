@@ -943,12 +943,16 @@ export class AI {
     this.closeWasBarge = !!me.barge;
     this.closeShoves = me.shoves;
     const up = me.state === 'stand' && foe.alive && foe.state === 'stand' && s.state === 'stand' && !foe.revival;
+    // then 'pommel'(손잡이 찍기 시제품): 인물표에 쓰거나 CLOSE.pommelAll(주소 ?pommel=1)이면 persona.close 가 있는 모두. 기본 = 인물표 그대로
+    const then = CLOSE.pommelAll ? 'pommel' : C.then;
     let cut = false;
     if (ended) {
       this.closeWant = false;
       // then 'cut': 밀고 곧장 벤다. 'recover' 는 손에서 가까운 기술, 'shove' 는 느린 이유 목록에 없어 바로 친다
-      cut = ended !== 'refused' && C.then === 'cut' && up && this.mode !== 'attack' && this.startAttack(this.pickTech(s, 'recover'), 'shove', { noFeint: true, fastChamber: true });
+      cut = ended !== 'refused' && then === 'cut' && up && this.mode !== 'attack' && this.startAttack(this.pickTech(s, 'recover'), 'shove', { noFeint: true, fastChamber: true });
       if (cut) this.closeEv.cut++;
+      // then 'pommel': 밀고 곧장 폼멜로 찍는다 (베기 대신). 못 찍었으면(멀어짐·공격 중) 아래 E4 로 다시 굴린다
+      else if (ended !== 'refused' && then === 'pommel' && up) cut = this.closePommel('shove');
     }
     const inside = me.foeDistance() <= CLOSE.reach(me.armed ? me.weapon : null); // 실제 가슴 거리 (플레이어와 같은 안쪽)
     this.closeInside = inside;
@@ -966,6 +970,8 @@ export class AI {
     }
     const roll = (ev) => {
       if (this.closeWant) return;
+      // persona.close.pommel(확률, 시제품 — 인물표엔 아직 없음): 들어섬(E1)·칼 맞물림(E2)에서 밀지 않고 곧장 찍기를 먼저 굴린다
+      if (C.pommel > 0 && ev !== 'E4' && Math.random() < C.pommel && this.closePommel(ev)) return;
       this.closeEv[ev]++;
       if (Math.random() < C.rate) {
         this.closeWant = true;
@@ -983,6 +989,19 @@ export class AI {
     if (bind && !this.closeBind) roll('E2');
     this.closeBind = bind;
     if (ended && ended !== 'refused' && !cut) roll('E4'); // then 'none'(또는 벨 수 없었음): 여전히 안쪽이면 다시 굴린다
+  }
+
+  /**
+   * 손잡이 찍기 (시제품, skill.pommel · config.js POMMEL): 붙은 거리(CLOSE.pommelDist 안)에서 폼멜로 찍는다. 공격 중이면 하지 않는다.
+   *  기술 고르기·공격 상태는 건드리지 않는다 (덧씌우기가 손·칼끝을 맡는 동안 AI 의 손길은 그 아래에 깔린다). 시작했으면 true
+   */
+  closePommel(ev) {
+    const me = this.me;
+    if (this.mode === 'attack' || me.foeDistance() > CLOSE.pommelDist || !me.skill.pommel()) return false;
+    this.closeEv.pommel = (this.closeEv.pommel ?? 0) + 1;
+    this.stats.pommels = (this.stats.pommels ?? 0) + 1;
+    this.lastPommel = ev; // 무엇 뒤에 찍었나 ('shove' 밀치기 끝 | 'E1' | 'E2') — 재기용
+    return true;
   }
 
   /** 지금 베기 시작하면 칼이 닿을 때쯤의 거리 (서로 다가오는 빠르기 × 베는 시간, 멈춰 서는 몫은 뺀다) */

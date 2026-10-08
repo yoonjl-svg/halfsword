@@ -24,7 +24,7 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, BODY, GAIT } from './config.js';
+import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
 
@@ -128,6 +128,9 @@ export class Skill {
     this.sinceThrust = Infinity; // 바로 앞 찌르기가 끝난 뒤 지난 시간 (탭 연타 억제 — THRUST.bindRest)
     this.thrustPush = false; // 지금 칼끝을 뻗는 구간인가 (겨눈 뒤 ~ 뻗고 버티기 끝). combat.js 가 팔 유효 질량을 이때만 싣는다
     this.flowing = false; // 흐름(SKILL.flow) 중인가 — 끄면 늘 false
+    // 손잡이 찍기(시제품, pommel()): 진행 중인 찍기와 센 수. 찌르기와 같은 덧씌우기 칸(thrustPose)을 쓴다 — 둘은 함께 돌지 않는다
+    this.pom = null;
+    this.pommels = 0;
     const b = THRUST.body;
     this.thrustPose = { w: 0, hand: [0, 0, 0], dir: [1, 0, 0], pelvisYaw: b.pelvisYaw * D2R, chestYaw: b.chestYaw * D2R, pitch: b.pitch * D2R, drop: b.drop };
   }
@@ -141,7 +144,7 @@ export class Skill {
    */
   thrust({ step = true } = {}) {
     const f = this.f;
-    if (this.tap || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
+    if (this.tap || this.pom || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
     // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 쏘지 않는다 (gun.js)
     if (f.weapon?.gun) return gunCanFire(f, { now: true }); // 권총: 찌르는 동작 없이 사격 자세(gunPose, 자동 조준 + 흔들림)의 지금 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
     // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽]). 검술 보정이 다 걸려 있으면 자세 지도의 손, 덜 걸려 있으면(보정 약·끔)
@@ -293,6 +296,111 @@ export class Skill {
       if (t >= K.aim) tp.dir = [P.x, P.y, P.z];
     }
     const b = T.body;
+    pose.pelvisYaw = b.pelvisYaw * D2R;
+    pose.chestYaw = b.chestYaw * D2R;
+    pose.pitch = b.pitch * D2R;
+    pose.drop = b.drop;
+  }
+
+  /**
+   * 손잡이 찍기 (Knaufschlag, 시제품 — 사장님 아이디어 3], docs/strike/pommel_strike_2026-10-09.md, config.js POMMEL).
+   *  붙은 거리에서 칼자루를 가슴 높이로 당기며 칼끝을 위·뒤로 세우고(chamber), 폼멜을 상대 얼굴(또는 윗가슴)로 내지른 뒤(drive·hold)
+   *  자세로 돌아온다(recover). 손 자리만 옮기는 길(패드 점)로는 안 된다 — 자세 지도는 손과 칼끝 방향을 함께 정해서 손을 앞으로 내밀면
+   *  칼끝도 앞으로 돈다(베기·찌르기가 된다). 그래서 탭 찌르기처럼 덧씌우기 칸(thrustPose)에 손·칼끝·몸을 w 만큼 덮는다.
+   *  combat 은 그대로: 자루(part 'hilt')가 닿으면 지금처럼 둔타로 센다. 찌르기·찍기 중이거나 서 있지 않으면 받지 않는다
+   * @param opt.target 'head' | 'chest' (기본 POMMEL.target)
+   * @param opt.step false 면 내딛지 않는다 (기본: POMMEL.step 만큼 한 걸음 — 팔만으로는 붙은 거리에서도 폼멜이 얼굴에 못 닿는다, 문서 탐침)
+   * @returns 시작했으면 true
+   */
+  pommel({ target = POMMEL.target, step = true } = {}) {
+    const f = this.f;
+    if (this.tap || this.pom || !f.alive || !f.armed || !f.foe || f.weapon?.gun || f.state !== 'stand') return false;
+    const g = f.handBase || f.guardPose.hand; // 지금 손 목표 (덧씌우기 전, driveSword 가 매 스텝 적는다)
+    this.pom = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], head: target === 'head' && !headOff(f.foe), go: null };
+    this.pommels++;
+    // 한 걸음 내딛으며 찍는다 (찌르기와 같은 요청 꼴: gait lunge 0.3 s — 당기는 동안 발이 나가 내지를 때 딛는다)
+    if (step && POMMEL.step > 0 && f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: POMMEL.step, duration: 0.3 });
+    return true;
+  }
+
+  /** 매 스텝: 손잡이 찍기 자세(thrustPose) 갱신 */
+  updatePommel(dt) {
+    const p = this.pom;
+    const pose = this.thrustPose;
+    const f = this.f;
+    const P = POMMEL;
+    p.t += dt;
+    const end = P.chamber + P.drive + P.hold;
+    if (p.t >= end + P.recover || !f.alive || !f.armed || !f.foe) {
+      this.pom = null;
+      pose.w = 0;
+      return;
+    }
+    // 넘어지면 더 내지르지 않고 지금 덮은 정도에서 돌아온다 (찌르기 tp.abort 와 같은 꼴)
+    if (!p.abort && f.state !== 'stand') p.abort = { t: p.t, w: pose.w };
+    if (p.abort) {
+      const r = (p.t - p.abort.t) / P.recover;
+      if (r >= 1) {
+        this.pom = null;
+        pose.w = 0;
+      } else pose.w = p.abort.w * (1 - r);
+      return;
+    }
+    const t = p.t;
+    pose.w = t < P.chamber ? t / P.chamber : t < end ? 1 : 1 - (t - end) / P.recover;
+    // 칼끝: 위·뒤 (몸 기준, 옆 0). 폼멜은 손에서 −dir 쪽 knob 거리
+    const el = P.elev * D2R;
+    const dx = -Math.cos(el);
+    const dy = Math.sin(el);
+    pose.dir[0] = dx;
+    pose.dir[1] = dy;
+    pose.dir[2] = 0;
+    // 칼끝을 옆으로 돌려 세우기(POMMEL.side > 0): 당기는 동안 칼끝 목표를 칼 든 쪽 옆(+옆)으로 먼저 보냈다가 위·뒤로 —
+    //  앞을 겨누던 칼끝이 상대 앞(팔·머리)을 올려 쓸지 않고 내 옆으로 돌아 선다. 0 = 곧장 (덧씌우기 w 가 섞는 길)
+    if (P.side > 0 && t < P.chamber) {
+      const a = 1 - t / P.chamber;
+      pose.dir[0] = dx * (1 - a);
+      pose.dir[1] = dy * (1 - a) + 0.3 * a;
+      pose.dir[2] = P.side * a;
+      const n = Math.hypot(pose.dir[0], pose.dir[1], pose.dir[2]);
+      for (let k = 0; k < 3; k++) pose.dir[k] /= n;
+    }
+    // 당긴 자리 C: 가슴 앞 몸 가까이, 옆은 시작 손의 절반
+    const h0 = p.h0;
+    const C0 = P.pull[0];
+    const C1 = P.pull[1];
+    const C2 = h0[2] * 0.5;
+    if (t < P.chamber || !p.go) {
+      // 목표: 폼멜 가운데가 상대 머리(가슴)에 오도록 손 자리 = 목표 + dir·knob, 그 너머로 past (당긴 자리 → 손 자리 방향).
+      //  내지르기 시작하면(t ≥ chamber) 붙잡는다 — 찌르기 칼끝 방향을 붙잡는 것과 같은 까닭(계속 고치면 손이 옆으로 쓸린다)
+      const c = f.bodies.chest.translation();
+      _c.set(c.x, c.y, c.z);
+      _yawInv.copy(f.yaw).invert();
+      const foe = f.foe;
+      const T = _p.copy(foe.bodies[p.head && !headOff(foe) ? 'head' : 'chest'].translation()).sub(_c).applyQuaternion(_yawInv);
+      T.x += dx * P.knob;
+      T.y += dy * P.knob;
+      _q.set(T.x - C0, T.y - C1, T.z - C2);
+      const n = _q.length();
+      if (n > 1e-6) T.addScaledVector(_q, P.past / n);
+      if (t >= P.chamber) p.go = [T.x, T.y, T.z];
+      else p.aim = [T.x, T.y, T.z];
+    }
+    const H = p.go ?? p.aim;
+    if (t < P.chamber) {
+      const a = t / P.chamber;
+      const k = a * a * (3 - 2 * a);
+      pose.hand[0] = h0[0] + (C0 - h0[0]) * k;
+      pose.hand[1] = h0[1] + (C1 - h0[1]) * k;
+      pose.hand[2] = h0[2] + (C2 - h0[2]) * k;
+    } else {
+      const s = Math.min(1, (t - P.chamber) / P.drive);
+      const k = s * s * (3 - 2 * s);
+      pose.hand[0] = C0 + (H[0] - C0) * k;
+      pose.hand[1] = C1 + (H[1] - C1) * k;
+      pose.hand[2] = C2 + (H[2] - C2) * k;
+    }
+    const b = P.body;
     pose.pelvisYaw = b.pelvisYaw * D2R;
     pose.chestYaw = b.chestYaw * D2R;
     pose.pitch = b.pitch * D2R;
@@ -739,6 +847,9 @@ export class Skill {
     if (this.tap) {
       this.updateThrust(dt);
       this.activity = Math.max(this.activity, this.thrustPose.w); // 찌르는 동안엔 몸도 벨 때처럼 빠르게 따라온다
+    } else if (this.pom) {
+      this.updatePommel(dt); // 손잡이 찍기 (시제품, 부를 때만)
+      this.activity = Math.max(this.activity, this.thrustPose.w);
     } else if (this.f.weapon?.gun) this.thrustPose.w = gunPose(this.f, this.thrustPose); // 권총: 한 손 사격 자세를 덧씌운다 (gun.js)
   }
 }

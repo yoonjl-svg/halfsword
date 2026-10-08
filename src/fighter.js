@@ -2636,10 +2636,12 @@ export class Fighter {
     if (th.w > 0) handLocal.lerp(_v6.set(th.hand[0], th.hand[1], th.hand[2]), th.w);
     // 바짝 붙으면 손을 접는다 (closeReach). 근접 밀치기 중엔 접기를 lift 만큼 푼다: x' = 접은 x + (x − 접은 x)·lift.
     //  lift 0 이면 오늘 줄 그대로 (같은 float). 손이 자세 깊이에 남아 코등이·칼 팔뚝이 상대 몸통에 닿는다
+    //  손잡이 찍기(skill.pom, 시제품) 동안은 덧씌운 정도(th.w)만큼도 푼다 — 붙은 거리에서 폼멜을 앞으로 내지르는 동작이라. 찍기가 없으면 오늘 줄 그대로
     const foldX = Math.min(handLocal.x, this.closeReach());
-    handLocal.x = foldX + (handLocal.x - foldX) * this.lift;
+    handLocal.x = foldX + (handLocal.x - foldX) * (this.skill.pom ? Math.max(this.lift, th.w) : this.lift);
     // 누르기: 손 목표 앞뒤를 상대 가슴 앞면(d − 0.11, 가슴 반두께 partDefs chest)으로 closeW 만큼. 높이·옆은 손가락이 둔 그대로
-    if (this.closeW > 0 && this.foe) handLocal.x += (this.foeDistance() - 0.11 - handLocal.x) * this.closeW;
+    //  (손잡이 찍기 동안은 덧씌운 정도만큼 덜 — 밀치기 끝에 곧장 찍으면 남은 누르기가 손을 상대 가슴 앞면에 붙잡지 않게)
+    if (this.closeW > 0 && this.foe) handLocal.x += (this.foeDistance() - 0.11 - handLocal.x) * (this.skill.pom ? this.closeW * (1 - th.w) : this.closeW);
     const c = chest.translation();
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
