@@ -17,9 +17,13 @@ if (process.env.SCHOOL_ART === '1') {
 }
 if (process.env.SCHOOL_REST) for (const t of ['japanese', 'chinese']) TRADITIONS[t].rest = process.env.SCHOOL_REST;
 if (process.env.SCHOOL_TECHK === 'B') TRADITIONS.chinese.techK = CHINESE_TECHK_B;
+if (process.env.SCHOOL_NEWTECH) { // 유파 새 기술 후보를 AI 에 열어 재기: SCHOOL_NEWTECH=tsubameGaeshi,yaoji (SCHOOL_ART=1 + PARTS 에 newTech 필요)
+  const names = process.env.SCHOOL_NEWTECH.split(',');
+  for (const t of ['japanese', 'chinese']) for (const x of TRADITIONS[t].newTech ?? []) if (names.includes(x.name)) x.ai = true;
+}
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
-import { applyMotionLibrary, motionFor, MOTION } from '../../src/motion_library.js';
+import { applyMotionLibrary, motionFor, MOTION, installFlow } from '../../src/motion_library.js';
 MOTION.lib = false; // 점검 도구: 본판 스위치(10/8 기본 켬)를 끄고 아래에서 직접 입힌다 → 끔/켬 A/B 그대로. duel 의 'main' 은 본판 길(스위치 켬, 생성자가 입힘)을 그대로 잰다
 for (const k of (process.env.MOTION_SKIP ?? '').split(',').filter(Boolean)) MOTION.skip.add(k);
 if (process.env.USE_PARRY === '1') MOTION.useParry = true;
@@ -196,6 +200,7 @@ if (mode === 'poses') {
       const Y = xFirst ? G.enemy : G.player;
       const XA = xFirst ? G.ai2 : G.ai;
       if (process.env.TWIST_MUL) X.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율 (라이브러리와 별개)
+      if (process.env.FORCE_FLOW === '1') installFlow(X); // 점검: 무기 쪽에만 흐름(이어 베기) — 두손 보통 틀(카타나 대리 = 롱소드)에 켜면 어떻게 되나
       if (useTable) applyMotionLibrary(X, { overlay: process.env.NO_OVERLAY !== '1', flow: process.env.NO_FLOW !== '1', noTwist: process.env.NOTWIST === '1', ai: XA, cover: process.env.COVER === '1' });
       let res = 'D';
       let lastTech = null;
@@ -223,7 +228,7 @@ if (mode === 'poses') {
   const n = 2 * N;
   const [lo, hi] = wilson(Wn, n);
   const pc = (v) => `${Math.round(100 * v)}%`;
-  const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${k} ${v}`).join(', ');
+  const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => `${k} ${v}`).join(', ');
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
 } else if (mode === 'tap') {
   // 탭 찌르기 한 번 (상대는 치움): 칼끝이 내 가슴에서 앞으로 가장 멀리 간 거리, 그때까지 걸린 시간, 칼끝 최고 속도, 몸 낮춤.

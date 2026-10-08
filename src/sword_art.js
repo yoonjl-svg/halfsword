@@ -109,6 +109,14 @@ function applySchoolArt(school, tradition, frame, style) {
     });
     out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
   }
+  if (SCHOOL_ART.newTech && T.newTech) { // 유파 새 기술(길이 측정된 것만 ai:true — 기본은 모두 ai:false 자료)
+    const have = new Set(out.tech.map((t) => t.name));
+    const add = T.newTech.filter((t) => t.ai !== false && !have.has(t.name));
+    if (add.length) {
+      const tech = [...out.tech, ...add];
+      out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
+    }
+  }
   const C = SCHOOL_ART.counter ? T.counterArt : null;
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
   return out;
