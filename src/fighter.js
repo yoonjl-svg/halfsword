@@ -1993,8 +1993,21 @@ export class Fighter {
     const chest = this.bodies.chest;
     const push = (fx, fy, fz) => {
       const up = BODY.upperShare; // 가슴(+머리·팔)이 몸무게에서 차지하는 비율
-      pelvis.addForce({ x: fx * (1 - up), y: fy, z: fz * (1 - up) }, true);
+      // R2′ 걸음 조율 채널 A (GAIT.pushAtFoot, 확인표 181, 10/8): 수평 추진력의 골반 몫을 딛은 발 자리(발바닥 가운데 x·z, 골반 높이)에 하중 비율대로 건다 — 크기·방향은 같고 점만 옮기므로
+      //  직진은 그대로, 발이 몸 중심선에서 옆으로 치우친 만큼 yaw 짝힘이 저절로 생긴다(오른발이 밀면 왼쪽으로 돈다 = 사람의 베는 걸음). 두 발 대칭이면 서로 지워져 오늘과 같다. 수직 받침 fy 와 가슴 몫은 오늘 자리. 0 = 오늘(바이트 동일)
+      const paf = hybrid && GAIT.pushAtFoot > 0 && loadSum > 1e-3 && (fx !== 0 || fz !== 0) ? Math.min(1, GAIT.pushAtFoot) : 0;
+      pelvis.addForce({ x: fx * (1 - up) * (1 - paf), y: fy, z: fz * (1 - up) * (1 - paf) }, true);
       chest.addForce({ x: fx * up, y: 0, z: fz * up }, true);
+      if (paf > 0) {
+        const py = pelvis.translation().y;
+        for (const k of ['F', 'B']) {
+          const w = load[k] / loadSum;
+          if (w <= 0) continue;
+          const l = G.legs[k];
+          const pt = l.stance ? l.pinC : l.plant;
+          pelvis.addForceAtPoint({ x: fx * (1 - up) * paf * w, y: 0, z: fz * (1 - up) * paf * w }, { x: pt.x, y: py, z: pt.z }, true);
+        }
+      }
       if (loadSum < 1e-3 || BODY.footReaction === 0) return;
       for (const [k, shin] of [['F', 'shinF'], ['B', 'shinB']]) {
         const w = load[k] / loadSum;

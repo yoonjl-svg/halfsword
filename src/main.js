@@ -51,9 +51,13 @@ if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.
 // ?r2p=1 : R2′ 팔 단계 권고 묶음 한 번에(10/8 WA6 뒤: trunkArc 2(가운데 기준 호, 10/8 WA5) · trunkFollow 0.5 · 한손 servoLead 0.5 — 몸의 호·몸 follow·한손 겨눔 앞세움만. 손목 hold(swing arc)·손 follow 는 베는 자리를 깨서(한손 무기 포함, step_strike 04:45) 묶음에서 뺐다; 실험은 ?swing=arc ?handFollow= 로 따로).
 //  ?r2p=legs 는 chain legs(발 힘쌍 A)까지, ?r2p=all 은 AI 에도. 개별 인자가 뒤에 오면 그것이 덮는다
 const r2pAll = params.getAll('r2p'); // ?r2p=1&r2p=legs 처럼 여러 번 와도 전부 적용 (legs·all 은 1 을 포함한다)
-if (r2pAll.some((v) => v === '1' || v === 'legs' || v === 'all')) { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 0.5; /* 10/8 WA5: 1 이면 두 손 무기 AI 첫 베기 25 → 17/30 (몸이 더 돌아 칼이 짧아짐), 0.5 면 24/30 */ CONFIG.ARM.servoLead = 0.5; /* 10/8 T2 (c): 한손 서보 겨눔 앞세움 — 모르겐슈테른 8.8 → 9.7 m/s, 두 손 무기엔 안 걸림 */ if (r2pAll.includes('legs')) CONFIG.BODY.chain = 'legs'; if (r2pAll.includes('all')) CONFIG.BODY.r2pScope = 'all'; }
+if (r2pAll.some((v) => v === '1' || v === 'legs' || v === 'all')) { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 0.5; /* 10/8 WA5: 1 이면 두 손 무기 AI 첫 베기 25 → 17/30 (몸이 더 돌아 칼이 짧아짐), 0.5 면 24/30 */ CONFIG.ARM.servoLead = 0.5; /* 10/8 T2 (c): 한손 서보 겨눔 앞세움 — 모르겐슈테른 8.8 → 9.7 m/s, 두 손 무기엔 안 걸림 */ if (r2pAll.includes('legs')) { CONFIG.BODY.chain = 'legs'; CONFIG.GAIT.pushAtFoot = 1; CONFIG.GAIT.cutStep = 1; } /* 10/8 T3: legs 는 걸음 조율 채널 A·B 와 함께 */ if (r2pAll.includes('all')) CONFIG.BODY.r2pScope = 'all'; }
 const r2pScope = params.get('r2pScope');
 if (r2pScope === 'player' || r2pScope === 'all') CONFIG.BODY.r2pScope = r2pScope;
+const pushAtFoot = +params.get('pushAtFoot');
+if (pushAtFoot >= 0 && params.has('pushAtFoot')) CONFIG.GAIT.pushAtFoot = pushAtFoot;
+const cutStep = +params.get('cutStep');
+if (cutStep >= 0 && params.has('cutStep')) CONFIG.GAIT.cutStep = cutStep;
 const servoLagRelease = +params.get('servoLagRelease');
 if (servoLagRelease >= 0 && params.has('servoLagRelease')) CONFIG.ARM.servoLagRelease = servoLagRelease;
 const servoLead = +params.get('servoLead');

@@ -24,7 +24,7 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, BODY } from './config.js';
+import { SKILL, WEAPON, THRUST, BODY, GAIT } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
 
@@ -624,7 +624,15 @@ export class Skill {
       const d = f.foeDistance();
       // 쓰러진 상대를 내려찍을 때(finish.js)는 내딛지 않는다: 마무리 자세가 거리를 맞추고, 내딛으면 칼이 누운 몸을 지나 발밑에 떨어진다
       // R2′ 'legs' (확인표 126): 매 베기 앞걸음(lunge)을 끈다 — 걸음은 균형(capture point·stumble·settle)에서만. 대안 156(거리식)은 둘째 탐색판
-      if (BODY.chain !== 'legs' && d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) this.lunge = SKILL.lungeTime;
+      if (d > SKILL.lungeMin && d < SKILL.lungeMax && !(f.finish?.amt > 0.5)) {
+        if (BODY.chain !== 'legs') this.lunge = SKILL.lungeTime;
+        else if (GAIT.cutStep > 0 && f.gait?.active) {
+          // R2′ 걸음 조율 채널 B(확인표 182, 10/8): legs 에서 꺼 두었던 베기 앞걸음을 '발 고르기 걸음' 으로 — 획 방향의 반대 발이 나가고(오른쪽 → 왼쪽 베기 = 왼발) 획 시작 쪽 발이 민다
+          //  (채널 A 가 그 밀기를 yaw 짝힘으로 바꾼다). 세로 획(|가로 속도| ≤ 0.3)은 gait 의 발 고르기 그대로. 걸음 길이·시간은 AI 기술 걸음과 같은 0.6·lungeTime
+          const vx = Math.abs(this.vel.x) > 0.3 ? this.vel.x : this.aimVel.x; // 획 첫 틱엔 걸러진 속도(aimVel)가 아직 작아 날 속도(vel)로 방향을 읽는다
+          f.gait.requestStep({ kind: 'pass', leg: vx < -0.3 ? 'left' : vx > 0.3 ? 'right' : null, fwd: 0.6, duration: SKILL.lungeTime });
+        }
+      }
     }
     this.quiet = swinging ? 0 : this.quiet + dt;
 

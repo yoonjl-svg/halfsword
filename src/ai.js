@@ -20,7 +20,7 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE } from './config.js';
+import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE, GAIT } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
@@ -1504,7 +1504,13 @@ export class AI {
     if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
     // 이번 프레임의 조이스틱(me.move)은 아직 지난 프레임 값(발을 멈추려고 뒤로 살짝 당긴 값)일 수 있어서 거절될 수 있다
     //  → 받아 줄 때까지 다음 프레임에 다시 부탁한다
-    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3 })) this.requestedStep = true;
+    let leg = null;
+    if (GAIT.cutStep > 0 && BODY.chain === 'legs' && this.tech?.kind !== 'thrust' && this.tech?.path?.length) {
+      // R2′ 채널 B(확인표 182): 기술 길의 가로 변위 부호로 획 반대쪽 발을 고른다 (플레이어의 skill.js 와 같은 규칙; |변위| ≤ 0.2 패드면 안 고름)
+      const dx = this.tech.path[this.tech.path.length - 1][0] - this.tech.from[0];
+      leg = dx < -0.2 ? 'left' : dx > 0.2 ? 'right' : null;
+    }
+    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3, leg })) this.requestedStep = true;
   }
 }
 

@@ -216,6 +216,8 @@ export const GAIT = {
   heelHurry: 0.3,
   hurrySpeed: 1.2, // 그렇게 서두르는 건 이보다 빨리(m/s) 가려 할 때만
   requestSteps: true, // 기술 걸음(requestStep)을 받는다
+  pushAtFoot: 0, // R2′ 걸음 조율 채널 A(docs/strike/r2p_step_channel_2026-10-08.md §3-A, 확인표 181): 1 = 수평 추진력의 골반 몫을 딛은 발 자리(발바닥 가운데 x·z, 골반 높이)에 하중 비율대로 건다 → 발의 옆 치우침만큼 yaw 짝힘이 저절로(오른발이 밀면 왼쪽으로). 크기·방향은 그대로, 수직 받침·가슴 몫은 오늘 자리. 0 = 오늘(바이트 동일). ?r2p=legs 가 1 로 켠다
+  cutStep: 0, // 채널 B(§3-B, 확인표 182): 1 = chain legs 에서 베기 시작 때(오늘 lunge 창 SKILL.lungeMin~Max) 획 방향의 반대 발을 내딛는 걸음을 부탁한다(requestStep leg; 가로 속도 ±0.3 m/s 안이면 발을 고르지 않음) — 획 시작 쪽 발이 밀어 골반을 돌린다. AI 도 기술 길의 가로 변위(±0.2 패드) 부호로 같은 규칙. anchor 에선 안 읽음. 0 = 오늘(바이트 동일)
   pinK: 20000, // 발바닥 정지 마찰 스프링(N/m). 0 = 끔 (물리 엔진 마찰만)
   pinD: 250,
   pinYawK: 300, // 발이 땅 위에서 도는 것을 붙잡는 힘 (N·m/rad)

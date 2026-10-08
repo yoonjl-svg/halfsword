@@ -217,7 +217,7 @@ export class Gait {
     if (this.f.feetHeld) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다)
     if (this.f.move.y < -0.1) return false;
-    this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0 };
+    this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0, leg: o.leg ?? null }; // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
     return true;
   }
 
@@ -400,7 +400,8 @@ export class Gait {
       }
       if (this.req && !next) {
         const front = this.frontLeg(fwd);
-        next = this.req.kind === 'lunge' ? front : front === 'F' ? 'B' : 'F';
+        const pick = this.req.leg === 'right' ? (this.legs.F.side > 0 ? 'F' : 'B') : this.req.leg === 'left' ? (this.legs.F.side < 0 ? 'F' : 'B') : null; // 채널 B: 획 방향의 반대 발
+        next = pick ?? (this.req.kind === 'lunge' ? front : front === 'F' ? 'B' : 'F');
         kind = 'req';
         Tstep = this.req.duration;
       } else if (walkNow && !next) {
