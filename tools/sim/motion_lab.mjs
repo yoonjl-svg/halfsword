@@ -28,6 +28,12 @@ if (UQ_SET) for (const [tn, t] of Object.entries(TRADITIONS)) for (const x of t.
   if (tn === 'german') { if (on) uqX.push(x); continue; } // 독일: 전역 ai 는 그대로(끔) — 시험 쪽에만
   x.ai = on;
 }
+// 기술 걸음 (10/9 비껴 들어가 베기): STEP_WHEN=strike|approach = 유파 고유 동작의 step.when 을 모두 이것으로 (재기용), STEP_OFF=1 = step 칸을 모두 지움(같은 길, 걸음만 없음)
+if (process.env.STEP_WHEN || process.env.STEP_OFF === '1') for (const t of Object.values(TRADITIONS)) for (const x of t.unique ?? []) {
+  if (!x.step) continue;
+  if (process.env.STEP_OFF === '1') delete x.step;
+  else x.step = { ...x.step, when: process.env.STEP_WHEN };
+}
 if (process.env.SCHOOL_NEWTECH) {
   const names = process.env.SCHOOL_NEWTECH.split(',');
   for (const t of Object.values(TRADITIONS)) for (const x of [...(t.unique ?? []), ...(t.spare ?? [])]) if (names.includes(x.name)) x.ai = true;
@@ -229,6 +235,30 @@ if (mode === 'poses') {
   const pasRolls = {};
   let pasSkipped = 0;
   let pasList = null;
+  // 기술 걸음 계기 (10/9 비껴 들어가 베기 — docs/strike/school_step_2026-10-09.md): step 칸 있는 기술과 같은 길의 공용 동작(대조)을 친 때마다
+  //  ① 시작(걸음 받은 때, 없으면 베기 시작)과 ② 닿는 때(맞힘·맺힘 첫 프레임, 없으면 손이 길 끝에 닿은 때)의 '상대 칼 줄에서 내 가슴까지 수평 거리'(m)와
+  //  '상대 정면과 상대→나 방향의 각'(도), 결과(맞힘/막힘/헛침 — 그 베기가 끝날 때 ai 의 hitLanded·bound, ai.js afterStrike 와 같은 가름), 걸음 받음/부탁(ai.js stats.techStep), 걸음 받은 뒤(대조는 베기 시작 뒤) 1 s 안 넘어짐. 넷째 줄 — 그 기술이 꾸러미에 없으면 찍지 않는다
+  const stepRec = {}; // 이름 → newRec()
+  let stepNames = null; // 잴 이름: step 기술 + 같은 길의 공용 동작
+  const stepAgg = {};
+  const newRec = () => ({ n: 0, off0: 0, ang0: 0, off1: 0, ang1: 0, falls: 0, steps: 0, landed: 0, parried: 0, missed: 0, lat: 0, fwd: 0 });
+  const startOf = (me, nm, o, a, t0) => { // 시작 자리: 가슴 위치·몸 오른쪽·앞
+    const c = me.bodies.chest.translation();
+    return { name: nm, off0: o, ang0: a, done: false, t0, cx: c.x, cz: c.z, r: me.right(new THREE.Vector3()), f: me.forward(new THREE.Vector3()) };
+  };
+  const _sa = new THREE.Vector3(), _sb = new THREE.Vector3(), _sf = new THREE.Vector3();
+  const lineOff = (me, foe) => { // 상대 칼(자루 → 칼끝) 수평 줄에서 내 가슴까지 거리, 상대 정면과 상대→나 사이 각(도)
+    const c = me.bodies.chest.translation();
+    foe.bladePoint(0, _sa);
+    foe.bladePoint(1, _sb);
+    const dx = _sb.x - _sa.x, dz = _sb.z - _sa.z;
+    const L2 = dx * dx + dz * dz;
+    const off = L2 < 1e-6 ? Math.hypot(c.x - _sa.x, c.z - _sa.z) : Math.abs((c.x - _sa.x) * dz - (c.z - _sa.z) * dx) / Math.sqrt(L2);
+    const fp = foe.bodies.chest.translation();
+    foe.forward(_sf);
+    const ang = Math.abs(Math.atan2(_sf.x * (c.z - fp.z) - _sf.z * (c.x - fp.x), _sf.x * (c.x - fp.x) + _sf.z * (c.z - fp.z))) * 180 / Math.PI;
+    return [off, ang];
+  };
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
       const seed = (xFirst ? 1000 : 2000) + s;
@@ -248,8 +278,49 @@ if (mode === 'poses') {
       if (useTable) applyMotionLibrary(X, { overlay: process.env.NO_OVERLAY !== '1', flow: process.env.NO_FLOW !== '1', noTwist: process.env.NOTWIST === '1', ai: XA, cover: process.env.COVER === '1' });
       let res = 'D';
       let lastTech = null;
+      if (XA && !stepNames) {
+        const T = XA.school.tech;
+        const same = (a, b) => a.from === b.from && JSON.stringify(a.path) === JSON.stringify(b.path);
+        stepNames = T.filter((t) => t.step).flatMap((t) => [t.name, ...T.filter((u) => !u.step && same(u, t)).map((u) => u.name)]);
+      }
+      let cur = null; // 지금 재는 베기 { name, off0, ang0, done }
+      let stepN0 = 0, fallUntil = -1, fallName = null;
       for (let i = 0; i < 40 / DT; i++) {
         G.step();
+        if (stepNames?.length && XA) {
+          const nm = XA.tech?.name;
+          if ((XA.techStepN ?? 0) !== stepN0) { // 기술 걸음을 다리가 받았다 → 시작 자리를 여기서
+            stepN0 = XA.techStepN;
+            fallUntil = G.t + 1;
+            fallName = nm;
+            (stepRec[nm] ??= newRec()).steps++;
+            const [o, a] = lineOff(X, Y);
+            cur = startOf(X, nm, o, a, XA.attackT);
+          }
+          if (fallUntil > 0 && X.state !== 'stand') { (stepRec[fallName] ??= newRec()).falls++; fallUntil = -1; }
+          if (fallUntil > 0 && G.t > fallUntil) fallUntil = -1;
+          const live = cur && XA.mode === 'attack' && XA.tech?.name === cur.name && XA.attackT >= cur.t0;
+          if (cur && !live) { // 이 베기가 끝났다(다른 기술·다른 마음) → 결과를 센다 (닿기 전에 거뒀으면 세지 않는다)
+            if (cur.done) { const R = stepRec[cur.name]; R[cur.hl ? 'landed' : cur.bd ? 'parried' : 'missed']++; }
+            cur = null;
+          }
+          if (!cur && XA.mode === 'attack' && XA.phase === 'strike' && stepNames.includes(nm)) {
+            const [o, a] = lineOff(X, Y);
+            cur = startOf(X, nm, o, a, XA.attackT);
+            if (fallUntil < 0) { fallUntil = G.t + 1; fallName = nm; } // 대조(공용 동작)도 베기 시작 뒤 1 s 넘어짐을 센다
+          }
+          if (cur && !cur.done && (XA.hitLanded || XA.bound || XA.phase === 'follow')) {
+            const [o, a] = lineOff(X, Y);
+            const R = (stepRec[cur.name] ??= newRec());
+            R.n++; R.off0 += cur.off0; R.ang0 += cur.ang0; R.off1 += o; R.ang1 += a;
+            const c = X.bodies.chest.translation(); // 시작부터 닿을 때까지 가슴이 옮긴 거리 — 시작 때 몸 기준 옆(오른쪽 +)·앞
+            const sg = Math.sign(XA.tech?.step?.lat ?? 1) || 1; // 기술 걸음 쪽을 + 로 (공용 동작은 오른쪽 +)
+            R.lat += sg * ((c.x - cur.cx) * cur.r.x + (c.z - cur.cz) * cur.r.z);
+            R.fwd += (c.x - cur.cx) * cur.f.x + (c.z - cur.cz) * cur.f.z;
+            cur.done = true;
+          }
+          if (cur?.done) { cur.hl = XA.hitLanded; cur.bd = XA.bound; }
+        }
         const tn = XA?.tech?.name;
         if (tn && tn !== lastTech && XA.phase === 'strike') used[tn] = (used[tn] ?? 0) + 1;
         if (tn && tn !== lastTech && XA.phase === 'strike' && XA.feint) feintUsed[XA.feint.name] = (feintUsed[XA.feint.name] ?? 0) + 1; // 속임수(가짜 기술 이름으로 위에 세어진 것 가운데)
@@ -272,6 +343,10 @@ if (mode === 'poses') {
       for (const [k, v] of Object.entries(XA?.stats.passives ?? {})) pasFired[k] = (pasFired[k] ?? 0) + v;
       for (const [k, v] of Object.entries(XA?.stats.passiveRolls ?? {})) pasRolls[k] = (pasRolls[k] ?? 0) + v;
       pasSkipped += XA?.stats.passiveSkipped ?? 0;
+      for (const [k, v] of Object.entries(XA?.stats.techStep ?? {})) {
+        const A = (stepAgg[k] ??= { req: 0, ok: 0 });
+        for (const f of Object.keys(A)) A[f] += v[f] ?? 0;
+      }
     }
   }
   const n = 2 * N;
@@ -283,6 +358,18 @@ if (mode === 'poses') {
   console.log(`  속임수: ${fmt(feintUsed)} · 맞받아 베기: ${fmt(counterUsed)}`); // 둘째 줄 (10/9 고유 동작 단계 — 첫 줄은 전과 같다)
   // 셋째 줄 (10/9 패시브 단계): 시험 쪽 패시브 — 이름 낸 수/굴린 수, 기술 없음 건너뜀
   console.log(`  패시브 [${(pasList ?? []).join(',') || '없음'}]: ${(pasList ?? []).map((k) => `${k} ${pasFired[k] ?? 0}/${pasRolls[k] ?? 0}`).join(', ') || '-'}${pasSkipped ? ` · 건너뜀 ${pasSkipped}` : ''}`);
+  if (stepNames?.length) {
+    // 넷째 줄 (10/9 기술 걸음): 이름 쓴 수 · 걸음 받음/부탁 · 결과 맞힘/막힘/헛침 · 칼 줄 거리 시작→닿을 때(m) · 상대 정면 각 시작→닿을 때(도) · 걸음(대조는 베기 시작) 뒤 1 s 넘어짐 · 시작→닿을 때 가슴 옮김(시작 때 몸 기준, 걸음 쪽 +)
+    const f2 = (v) => v.toFixed(2);
+    const cell = (k) => {
+      const R = stepRec[k];
+      const A = stepAgg[k];
+      const geo = R?.n ? ` · 줄 ${f2(R.off0 / R.n)}→${f2(R.off1 / R.n)} m · 각 ${(R.ang0 / R.n).toFixed(0)}→${(R.ang1 / R.n).toFixed(0)}° · 가슴 옮김 옆 ${f2(R.lat / R.n)} 앞 ${f2(R.fwd / R.n)} m (n ${R.n})` : '';
+      const st = (A ? ` · 걸음 받음 ${A.ok}/${A.req}` : '') + ` · 1 s 안 넘어짐 ${R?.falls ?? 0}` + (R?.n ? ` · 맞힘/막힘/헛침 ${R.landed}/${R.parried}/${R.missed}` : '');
+      return `${k} ${used[k] ?? 0}${st}${geo}`;
+    };
+    console.log(`  기술 걸음: ${stepNames.map(cell).join(' | ')}`);
+  }
 } else if (mode === 'tap') {
   // 탭 찌르기 한 번 (상대는 치움): 칼끝이 내 가슴에서 앞으로 가장 멀리 간 거리, 그때까지 걸린 시간, 칼끝 최고 속도, 몸 낮춤.
   //  자세(패드)마다 한 번씩: 쟁기·긴 자세·황소. 라이브러리 끔/켬(켬이면 무기 방식의 덧씌우기 — 찌르기 방식은 런지)

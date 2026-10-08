@@ -34,6 +34,7 @@ const FEAR_TREMOR = 0.03;
 
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
+const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): 닿는 거리여도 내딛는 시간 (보통 내딛기의 최대와 같다)
 // 무기별 간격 실측표(MEASURED)는 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과 schools.js MEASURES 두 벌).
 //  간격을 무기에 맞춰 늘이고 줄이는 일은 sword_art.js 가 한다. 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 —
 //  도구(proto_weapons·r2p_ai_*·shove_check)가 이 이름으로 읽고 고쳐 쓴다(같은 객체)
@@ -785,6 +786,8 @@ export class AI {
     this.stepT = 0;
     this.path.length = 0;
     this.pointBlocked = false;
+    this.techStepTry = false; // 기술 걸음을 이번 공격에 부탁해 봤나 (재기만)
+    this.sideStepT = null; // 기술 걸음 'approach'(비껴 딛고 친다): 걸음을 부탁한 뒤 흐른 시간. null = 아직 (step 칸 없는 기술은 읽지 않는다)
     this.passiveAtk = null; // 패시브가 시작했으면 부른 쪽이 다시 적는다
     this.pendingPassive = null;
     this.standoffArmed = true;
@@ -836,6 +839,8 @@ export class AI {
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
+      // 기술 걸음 'approach'(유파 고유 동작 step 칸): 닿기 조금 전에 먼저 비껴 딛고, 발이 닿으면 곧장 친다 (step 칸 없는 기술은 이 줄을 지나치기만 한다)
+      if (t.step?.when === 'approach' && !this.feint && this.approachStep(dt, s, th, d)) return;
       if (this.timer <= 0 && this.contactDist() <= this.need) {
         // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
         this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
@@ -916,6 +921,8 @@ export class AI {
   stepTime() {
     if (this.why === 'stop') return 0; // 상대가 달려오고 있다: 내가 들어갈 필요가 없다 (옆으로 비켜 선다)
     if (this.pointBlocked) return 0; // 칼끝부터 쳐서 비킨다. 들어가는 것은 그다음 칼(이어 치기)에서
+    // 기술 걸음 'strike'(step 칸): 닿는 거리여도 딛는다 — 거리를 줄이려는 게 아니라 상대 칼끝 줄에서 벗어나려는 걸음
+    if (this.tech.step?.when === 'strike') return STEP_T;
     const short = this.contactDist() - this.M.contact - this.tech.reach * this.reachScale;
     return clamp(short * 0.8, 0, 0.3);
   }
@@ -1610,6 +1617,11 @@ export class AI {
         const gap = this.contactDist() - (this.need ?? this.M.contact);
         fwd = this.foeClosing > 0.5 || gap <= 0 ? -0.21 : clamp(gap * 3, 0.25, 0.45);
         if (this.chasing) fwd = d > this.M.contact ? 1 : -0.21; // 도망치는 빈손 상대는 뛰어서 쫓는다
+        if (this.sideStepT != null) {
+          // 비껴 딛는 중: 스틱도 그쪽으로 (gait 의 몸 목표가 옆으로도 가게), 뒤로는 당기지 않는다
+          side = Math.sign(this.tech.step.lat);
+          fwd = Math.max(fwd, 0);
+        }
       } else {
         // 손이 먼저, 발이 뒤따른다. 이미 가까우면 내딛지 않는다 (몸이 부딪친다)
         let stepping = false;
@@ -1620,6 +1632,7 @@ export class AI {
         }
         if (stepping) {
           fwd = 1;
+          if (this.tech.step?.when === 'strike') side = Math.sign(this.tech.step.lat); // 기술 걸음: 스틱도 비껴 딛는 쪽으로
           this.gaitStep();
         } else {
           // 내디디지 않을 때는 발을 멈춰 세운다 (다가오던 관성으로 상대 몸에 부딪치지 않게).
@@ -1708,7 +1721,55 @@ export class AI {
       const dx = this.tech.path[this.tech.path.length - 1][0] - this.tech.from[0];
       leg = dx < -0.2 ? 'left' : dx > 0.2 ? 'right' : null;
     }
+    const st = this.tech?.step;
+    if (st?.when === 'strike') {
+      if (this.techStepRequest(st)) this.requestedStep = true;
+      return;
+    }
     if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3, leg })) this.requestedStep = true;
+  }
+
+  // ───────────────────────── 기술 걸음 (10/9 — 사장님 '비껴 들어가 베기', docs/strike/school_step_2026-10-09.md) ─────────────────────────
+  //  유파 고유 동작(TECH 꼴)의 step 칸 { lat, fwd, when, dur? }: lat = 몸 기준 오른쪽 +(m, 왼쪽은 −) · fwd = 앞(m) · when 'strike'(베기 시작 0.04 s 뒤 —
+  //   지금 내딛기 자리) | 'approach'(닿기 전에 먼저 비껴 딛고, 발이 닿으면 친다) · dur = 발이 떠 있는 시간(기본 0.35 s).
+  //  딛는 발: 비껴 가는 쪽 발. 그 발이 앞발이면 그대로 내딛고(lunge), 뒷발이면 앞발을 지나 그쪽 앞으로(pass).
+  //  step 칸이 없는 기술은 이 자리들을 읽지 않는다(난수·부름 모두 전과 같다). 재기: stats.techStep[이름] = { req(부탁한 공격 수), ok(받은 걸음 수) } — 결과·자리는 도구(motion_lab duel)가 잰다
+
+  /** 기술 걸음 하나를 다리에 부탁한다 (받으면 true) */
+  techStepRequest(st) {
+    const g = this.me.gait;
+    if (!g?.requestStep || !g.active || this.me.state !== 'stand') return false;
+    const front = g.frontLeg(this.me.forward(_v2));
+    const lead = Math.sign(g.legs[front].side) === Math.sign(st.lat); // 비껴 가는 쪽 발이 앞발인가
+    const S = this.techStepStat();
+    if (!this.techStepTry) S.req++; // 공격 한 번에 한 번 센다 (못 받으면 다음 프레임에 다시 부탁한다)
+    this.techStepTry = true;
+    if (!g.requestStep({ kind: lead ? 'lunge' : 'pass', fwd: st.fwd, side: st.lat, duration: st.dur ?? 0.35 })) return false;
+    S.ok++;
+    this.techStepN = (this.techStepN ?? 0) + 1; // 받은 기술 걸음 수 — 도구가 바뀐 때를 보고 걸음 뒤 넘어짐을 잰다
+    return true;
+  }
+
+  techStepStat() {
+    const T = (this.stats.techStep ??= {});
+    return (T[this.tech.name] ??= { req: 0, ok: 0 });
+  }
+
+  /** 'approach' 기술 걸음: 닿기 fwd 만큼 전에 비껴 딛기를 부탁하고, 발이 닿을 때까지(최대 0.7 s) 손을 준비 자세에 둔 채 기다렸다 친다. 이 프레임을 맡았으면 true */
+  approachStep(dt, s, th, d) {
+    const st = this.tech.step;
+    if (this.sideStepT == null) {
+      if (this.timer > 0 || this.contactDist() > this.need + st.fwd) return false;
+      if (!this.techStepRequest(st)) return false; // 못 받았다(뒤로 당긴 스틱 등) → 보통 다가가기 (닿으면 보통대로 친다)
+      this.sideStepT = 0;
+      return true;
+    }
+    this.sideStepT += dt;
+    if (th && this.noticedThreat(th) && this.respond(th, d)) return true;
+    if (this.me.gait?.req && this.sideStepT < 0.7) return true; // 아직 발이 떠 있다
+    this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
+    this.startStrike();
+    return true;
   }
 }
 
