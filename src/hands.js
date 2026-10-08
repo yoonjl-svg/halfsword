@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { resolveSwordArt } from './sword_art.js';
 
 // 레이피어 자세별 손 돌림 α (동작 PM 쥠 규칙 ① 끝 줄, 10/8 디렉터): 프리마(지붕) +180 · 세콘다(어깨 지붕·황소) +90 · 테르차(쟁기·긴 자세·옆·…) 0 · 콰르타(왼쪽 자세) −90.
 //  자세는 fighter.guardPose.nearest(guards.js guardAt 이 매 스텝 고른 가장 가까운 자세 번호, 표 순서 = GUARDS 순서)로 읽고, 표 이름에 교본 이름(Prima·Seconda·Terza·Quarta)이 있으면 그것이 우선.
@@ -67,24 +68,8 @@ function fistGeometry(thetaDeg = 0) {
   return g;
 }
 
-/** 무기별 앞손 쥠 (동작 PM 쥠 규칙 ①): α·β·θ (도). 빈손: 'grip'(두손, 같은 α로 폼멜), 'fist'(가볍게 쥔 주먹), 'open'(편 손) */
-const GRIPS = {
-  _two: { a: 0, b: 15, t: 0, off: 'grip' }, // 두손 악수 쥠 (롱소드·엑스칼리버·라이트세이버·에스톡·츠바이핸더)
-  monohoshizao: { a: 0, b: 20, t: 0, off: 'grip' },
-  frozen_tuna: { a: 0, b: 0, t: 0, off: 'grip' }, // 몽둥이 망치 쥠
-  sabre: { a: 0, b: 15, t: 60, off: 'fist' }, // 엄지를 칼등에
-  falchion: { a: 0, b: 5, t: 0, off: 'fist' },
-  rapier: { a: 0, b: 25, t: 70, off: 'open' }, // 집게 쥠 (테르차, 엄지 위)
-  qinggang: { a: 0, b: 15, t: 0, off: 'fist' },
-  tree_branch: { a: 0, b: 0, t: 0, off: 'fist' },
-  rubber_chicken: { a: 0, b: 0, t: 0, off: 'fist' },
-  morgenstern: { a: 0, b: 0, t: 0, off: 'fist' },
-  pistol: { a: 0, b: 0, t: 0, off: 'open' },
-  _one: { a: 0, b: 15, t: 0, off: 'fist' },
-};
-function gripFor(weapon, cfg) {
-  return GRIPS[weapon?.id] ?? (cfg?.twoHand ? GRIPS._two : GRIPS._one);
-}
+// 무기별 앞손 쥠 (동작 PM 쥠 규칙 ①: α·β·θ, 빈손 grip·fist·open)의 표는 frames.js HAND_GRIPS 로 옮겼고, 무기마다 고르는 일은
+//  검술 풀이(sword_art.js resolveSwordArt → fighter.swordArt.grip)가 한다 (10/8 ① 구조 — 값 그대로)
 
 // 편 손 (아래팔 그룹 기준: +y = 어깨 쪽, −y = 손목 쪽, +x = 앞): 손목 끝에서 이어지는 납작한 손 + 앞쪽으로 벌린 엄지
 let _open = null;
@@ -128,7 +113,7 @@ export function attachHands(f) {
   sphO.parent.add(openO);
   sphS.visible = sphO.visible = false;
   // 쥔 주먹 (칼 그룹, 자루 틀에 고정 — 쥠 규칙의 α 돌림·β 비스듬)
-  const G = gripFor(f.weapon, f.weaponCfg);
+  const G = (f.swordArt ?? resolveSwordArt(f.weapon)).grip; // 쥠 모양: 검술 풀이가 고른 것 (무기 예외 또는 쥠 종류 기본값)
   const fistS = new THREE.Mesh(fistGeometry(G.t), matS);
   fistS.rotation.set(G.b * D2R, G.a * D2R, 0, 'YXZ');
   const fistO = new THREE.Mesh(fistGeometry(0), matO); // 빈손: 같은 α, 엄지 감음, 덜 비스듬
@@ -147,7 +132,7 @@ export function attachHands(f) {
   sphO.parent.add(armFistO);
   armFistO.visible = false;
   const offFist = G.off === 'fist';
-  const rapier = f.weapon?.id === 'rapier';
+  const rapier = G.turn === 'posture'; // 자세별 손 돌림 (레이피어 — frames.js HAND_GRIPS turn)
   let aCur = G.a; // 지금 손 돌림(도) — 레이피어만 자세에 따라 움직인다
   let tPrev = 0;
 

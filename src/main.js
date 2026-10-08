@@ -6,7 +6,6 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
 import { PHYSICS, ARENA, CAMERA } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
-import { GUARDS } from './guards.js';
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
@@ -1387,8 +1386,8 @@ function updateGuardName(dt) {
   if (g !== guardShown && (g === 'gun' || g >= 0)) {
     guardShown = g;
     guardName.innerHTML = '';
-    const T = player.guardPose.table; // 무기별·라이브러리 자세표가 있으면 그 이름(상단·팔상·3번 자세…). 마무리 자세(g ≥ 14)는 늘 GUARDS
-    const info = gun ? GUN_STANCE : T && g < T.length ? T[g] : GUARDS[g];
+    // 자세 이름: 검술 풀이(sword_art.js resolveSwordArt)의 names — 무기별·라이브러리 자세표가 있으면 그 이름(상단·팔상·3번 자세…), 마무리 자세(g ≥ 14)는 늘 GUARDS
+    const info = gun ? GUN_STANCE : player.swordArt.names[g];
     const b = document.createElement('b');
     b.textContent = info.name;
     const d = document.createElement('span');

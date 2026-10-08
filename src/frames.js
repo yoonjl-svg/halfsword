@@ -91,7 +91,7 @@ export const FRAME_GUARDS = {
   //  그 자리를 지나는 베기 길이 모두 휘어 세이버 35% → 10%, 나뭇가지 40% → 15%. 둘을 빼면 38%·42% 로 돌아온다)
   // D 사격: 사격 자세는 gun.js gunPose 가 따로 덧씌운다 (자세표는 한손 표 그대로)
   gun: {},
-  // E 자루 무기: 로스터에 없다. 아래 POLE_GUARDS(마이어 봉)를 쓴다 — 표를 만들 때 채운다(아래 frameTable). 점검: tools/sim/staff_proto.mjs
+  // E 자루 무기: 로스터에 없다. 아래 POLE_GUARDS(마이어 봉)를 쓴다 — 표를 만들 때 채운다(아래 buildFrameTable). 점검: tools/sim/staff_proto.mjs
   pole: {},
 };
 
@@ -128,10 +128,11 @@ export function frameTableWithCovers(frame, style = null) {
   return table(frame === 'one' || frame === 'gun' ? GUARD_BASE_ONE : GUARD_BASE, o);
 }
 
-/** 몸 틀(+싸움 방식)의 자세표 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로).
- *  base: 바탕 표 — 본판(10/8)은 검객이 이미 쥔 무기별 표(fighter.guardPose.table: 동작 PM 10/1 한손 찌르기·세이버·두손 찌르기 표)를 넘겨 그 위에 덮는다.
- *  없으면 옛 바탕(한손·총 = 세이버 표, 그 밖 = 롱소드 표 — 무기 PM 이 96판을 잰 조건) */
-export function frameTable(frame, style = null, skip = [], base = null) {
+/** 몸 틀(+싸움 방식)의 자세표 만들기 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로).
+ *  base: 바탕 표 — 본판(10/8)은 검객이 이미 쥔 무기별 표(동작 PM 10/1 한손 찌르기·세이버·두손 찌르기 표)를 넘겨 그 위에 덮는다.
+ *  없으면 옛 바탕(한손·총 = 세이버 표, 그 밖 = 롱소드 표 — 무기 PM 이 96판을 잰 조건).
+ *  고르는 곳은 sword_art.js resolveSwordArt 한 곳 (옛 이름 frameTable 은 motion_library.js 에서 그것을 거쳐 이 함수를 부른다) */
+export function buildFrameTable(frame, style = null, skip = [], base = null) {
   const o = { ...(frame === 'pole' ? POLE_GUARDS : FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}) };
   for (const k of MOTION.skip) delete o[k];
   for (const k of skip) delete o[k];
@@ -228,6 +229,25 @@ export const LIB_PARRY = {
   rapier: { highL: [0.52, 0.03], highR: [-0.52, 0.03], highC: [0.42, 0.42], lowL: [0.55, -0.26], lowR: [-0.4, -0.42], thrust: [-0.22, 0.26] },
   qinggang: { highL: [-0.4, -0.42], highR: [-0.22, 0.26], highC: [0.42, 0.42], lowL: [0.42, 0.42], lowR: [-0.4, -0.42], thrust: [-0.4, -0.42] },
   tree_branch: { highL: [-0.18, -0.28], highR: [0, 0.03], highC: [0.18, -0.28], lowL: [0.52, 0.03], lowR: [-0.4, 0.42], thrust: [-0.52, 0.03] },
+};
+
+// ── 2c) 쥠 모양 (벙어리장갑 손 hands.js — 겉모습만. 10/8 ① 구조: hands.js GRIPS 에서 값 그대로 옮김, 고르기는 sword_art.js) ──
+//  동작 PM 쥠 규칙 ①(docs/motion/grip_rules_2026-10-02.md)의 앞손 α·β·θ (도): α = 주먹 마디 줄이 향하는 쪽(0 = 앞날), β = 비스듬(0 망치 쥠, + 악수 쥠),
+//  θ = 엄지(0 감음, 90 자루를 따라 칼끝 쪽으로 폄). 빈손 off: 'grip'(두손, 같은 α로 폼멜), 'fist'(가볍게 쥔 주먹), 'open'(편 손).
+//  _two·_one = 쥠 종류 기본값(두 손·한 손), 그 밖은 무기 예외. turn 'posture' = 자세마다 주먹을 자루 축 둘레로 돌린다(레이피어 프리마·세콘다·테르차·콰르타, hands.js)
+export const HAND_GRIPS = {
+  _two: { a: 0, b: 15, t: 0, off: 'grip' }, // 두손 악수 쥠 (롱소드·엑스칼리버·라이트세이버·에스톡·츠바이핸더)
+  monohoshizao: { a: 0, b: 20, t: 0, off: 'grip' },
+  frozen_tuna: { a: 0, b: 0, t: 0, off: 'grip' }, // 몽둥이 망치 쥠
+  sabre: { a: 0, b: 15, t: 60, off: 'fist' }, // 엄지를 칼등에
+  falchion: { a: 0, b: 5, t: 0, off: 'fist' },
+  rapier: { a: 0, b: 25, t: 70, off: 'open', turn: 'posture' }, // 집게 쥠 (테르차, 엄지 위) · 자세별 손 돌림(10/8)
+  qinggang: { a: 0, b: 15, t: 0, off: 'fist' },
+  tree_branch: { a: 0, b: 0, t: 0, off: 'fist' },
+  rubber_chicken: { a: 0, b: 0, t: 0, off: 'fist' },
+  morgenstern: { a: 0, b: 0, t: 0, off: 'fist' },
+  pistol: { a: 0, b: 0, t: 0, off: 'open' },
+  _one: { a: 0, b: 15, t: 0, off: 'fist' },
 };
 
 // ── 3) 덧씌우는 동작 (skill.js THRUST 값 위에 덮어쓸 몫) ────────

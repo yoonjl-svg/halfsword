@@ -14,10 +14,9 @@ import { BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, 
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
-import { guardAt, finishAt, guardBaseOne, guardBaseTwo } from './guards.js';
-import { MOTION, applyMotionLibrary } from './motion_library.js'; // 동작 라이브러리(본판 스위치 SKILL.motionLib)
+import { guardAt, finishAt } from './guards.js';
+import { resolveSwordArt, applySwordArt } from './sword_art.js'; // 검술 풀이: 자세표·동작 라이브러리·덧씌우기·쥠·HUD 이름을 한 곳에서 (10/8 ① 구조)
 import { corrStep } from './corr.js';
-import { classifyStyle } from './weapon_class.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
@@ -536,15 +535,15 @@ export class Fighter {
     this.weaponSpecId = spec.id; // 기록용(절단 발생률 표의 무기 열)
     this.weaponBroken = false;
     this.guardPose.oneHand = this.bodyGuard.oneHand = !!spec.oneHandStance; // 한손 무기는 한손 자세표 (guards.js: 칼 든 어깨를 앞으로, 손을 더 뻗는다. weapons.js oneHandStance)
-    // 무기 종류별 자세표 (동작 PM 10/1 docs/motion/one_hand_guards_2026-10-01.md·two_hand_thrust_guards_2026-10-01.md, 사장님 10/1 21:45 승인):
-    //  한손 → 찌르기 표(레이피어·청강검: 칼끝 늘 상대 쪽, 손목 베기) / 세이버 표(세이버·팔쉬온·나뭇가지·고무 닭: 감는 자세는 팔꿈치 굽힘),
-    //  두손 찌르기 칼(에스톡) → 두손 찌르기 표(감기 자세 9개가 칼끝 상대 쪽). 그 밖의 두손 무기는 표를 두지 않아 예전 교본 표 그대로(바이트 같음).
-    //  동작 라이브러리(motion_library.js, 10/8 부터 본판 기본 켬)는 아래에서 이 표를 바탕으로 몸 틀 자세만 덮는다
-    const gStyle = classifyStyle(spec);
-    this.guardPose.table = this.bodyGuard.table = spec.oneHandStance ? guardBaseOne(gStyle) : gStyle === 'thrust' ? guardBaseTwo(gStyle) : undefined;
-    // 동작 라이브러리(무기 PM, 사장님 10/8 18:50 본판 기본 — 확인표 34): 몸 틀 자세표를 위 무기별 표 위에 덮고(앞무게 상단·팔상·중단·협, 한손 3번·2번 자세), 찌르기 무기 런지·앞무게 흐름을 덧씌운다.
-    //  롱소드류(두손 두루)·총은 바뀌는 것 없음. 끄면(SKILL.motionLib 0) 이 줄은 돌지 않아 바이트 동일. AI 기술 목록은 ai.js 생성자 libSchool
-    if (MOTION.lib) applyMotionLibrary(this, { cover: false });
+    // 검술 풀이 (sword_art.js resolveSwordArt — 10/8 ① 구조: 전엔 이 자리에서 표를 고르고 applyMotionLibrary 를 불렀다. 값은 그대로):
+    //  자세표 = 무기 종류별 표(동작 PM 10/1, 사장님 10/1 21:45 승인 — 한손 → 찌르기/세이버 표, 두손 찌르기 칼 → 두손 찌르기 표, 그 밖 → 교본 표)
+    //  위에 동작 라이브러리 몸 틀 표(무기 PM, 사장님 10/8 18:50 본판 기본 — 확인표 34: 앞무게 상단·팔상·중단·협, 한손 3번·2번 자세)를 덮은 것.
+    //  라이브러리가 켜져 있으면 찌르기 무기 런지·앞무게 흐름도 덧씌운다. 롱소드류(두손 두루)·총은 바뀌는 것 없음. 끄면(SKILL.motionLib 0) 바이트 동일.
+    //  AI 기술 목록·간격은 ai.js 생성자가 같은 함수(인물을 넘겨)로 읽는다. 손 모양(hands.js)·HUD 이름(main.js)은 this.swordArt 를 읽는다
+    const art = resolveSwordArt(spec);
+    this.swordArt = art;
+    this.guardPose.table = this.bodyGuard.table = art.table;
+    if (art.lib) applySwordArt(this, art, { cover: false });
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
     //  씨앗은 판 시드(o.breakSeed, 시뮬 하니스가 넘긴다) — 몇 번째로 돌리든 같은 시드면 같은 굴림이 나온다.
     //  시드가 없으면(실제 게임) "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림.
