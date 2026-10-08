@@ -146,6 +146,62 @@ const CHINESE_NAMES = {
   '왼쪽 쟁기': { name: '좌협세 (左夾勢)', desc: '왼쪽에 끼고 가운데를 찌른다', src: '무도 권2 p043/35' },
   '왼쪽 바꿈': { name: '과좌세 (跨左勢)', desc: '왼편을 걸쳐 쓸어 아래로 친다', src: '무비지 쪽171/0585 · 자리 [해석]' },
 };
+
+// ── 서양·무유파 이름 (10/9, docs/motion/schools/names_west_none_2026-10-09.md §2-3·§3-4·§4 그대로 — 사장님 결정: 이베리아는 포르투갈어 철자(피게이레두),
+//    '베기 이름 + 준비' 다섯 자리도 원문 낱말). 이름·설명·출처만(HUD) — 판에 닿지 않는다
+// 이베리아 (몬탄테 — 츠바이핸더, 앞무게 틀). 이름 14 자리 — 피게이레두 1651 원문 낱말 + 자리 근거 7, 자리 [해석] 7.
+//  피 단Ⅰ = 단순 규칙 Ⅰ, 피 복Ⅱ = 복합 규칙 Ⅱ (Myers·Hick 전사). 고디뉴 = Arte de Esgrima 1599 fol (PDF 쪽 = 2×fol − 7)
+const IBERIAN_NAMES = {
+  '지붕 (Vom Tag)': { name: '머리 위 (altibaxo)', desc: '칼을 이마 위로 들고 칼끝은 뒤로 · 곧게 내려친다', src: '피 단Ⅸ·복ⅩⅤ altibaxo · 고디뉴 fol.113r de arriba abajo · 자리 [해석]' },
+  '어깨 지붕 (Vom Tag)': { name: '탈류 준비 (talho)', desc: '칼을 오른 어깨에 메어 칼끝은 뒤로 · 오른쪽 위에서 비스듬히 내려벤다', src: '피 단Ⅲ talho · 고디뉴 fol.113r tajo · 자리 [해석]' },
+  '황소 (Ochs)': { name: '귀 앞 겨눔 (orelha direyta)', desc: '칼자루를 오른 귀 앞에, 칼끝은 앞 · 여기서 앞으로 탈류', src: '피 복Ⅱ' },
+  '긴 자세 (Langort)': { name: '곧은 자세 (postura recta)', desc: '칼을 얼굴 앞 가운데에 곧게 · 베기마다 여기 멈춘다', src: '피 단Ⅰ·단Ⅱ·복Ⅶ · 손 높이는 [해석]' },
+  '옆 자세': { name: '가로 탈류 (talho orizontal)', desc: '칼을 오른쪽에 가로로 눕힌다 · 가로로 벤다', src: '피 단Ⅺ' },
+  '쟁기 (Pflug)': { name: '비낀 자세 (postura obtusa)', desc: '오른손을 허리띠 앞에, 칼은 오른 대각으로 비껴 · 찌르기를 받아 탈류로 쳐낸다', src: '피 단ⅩⅣ·복ⅩⅣ' },
+  '바꿈 (Wechsel)': { name: '아래 탈류 (talho de baxo)', desc: '칼끝을 오른쪽 아래로 · 아래에서 위로 탈류를 올린다', src: '피 단Ⅰ·단Ⅸ · 자리 [해석]' },
+  '옆 지킴 (Nebenhut)': { name: '뒤 탈류 (talho por detras)', desc: '칼을 오른 허리 뒤로 숨긴다 · 뒤에서 앞으로 탈류', src: '피 단Ⅰ·단Ⅲ · 자리 [해석] (대안 고디뉴 fol.117v tajo rastero)' },
+  '바보 (Alber)': { name: '칼끝 땅에 (ponta no chão)', desc: '칼끝을 앞 땅으로 · 첫 규칙이 여기서 시작한다', src: '피 단Ⅰ' },
+  '왼쪽 어깨 지붕': { name: '레베스 준비 (revez)', desc: '머리 위로 넘긴 칼을 왼 어깨에 떨군다 · 왼쪽에서 감아 벤다', src: '피 복Ⅱ revez cingido · 고디뉴 fol.113r' },
+  '왼쪽 황소': { name: '왼 높이 비낌 (linha obtusa)', desc: '칼을 머리 앞 왼쪽 높이에 비껴 멈춘다', src: '피 복ⅩⅤ · 칼끝 방향 [해석]' },
+  '왼쪽 옆 자세': { name: '가로 레베스 (revez orizontal)', desc: '칼을 왼쪽에 가로로 · 왼쪽에서 가로로 벤다', src: '피 단Ⅺ' },
+  '왼쪽 쟁기': { name: '왼 비낀 자세 (postura obtusa)', desc: '칼을 왼 대각으로 비껴 · 찌르기를 레베스로 쳐낸다', src: '피 복ⅩⅣ 둘째 postura' },
+  '왼쪽 바꿈': { name: '아래 레베스 (revez de baxo)', desc: '칼끝을 왼쪽 아래로 · 아래에서 위로 레베스를 올린다', src: '피 복ⅩⅤ · 자리 [해석]' },
+};
+// 독일 두삭 가지 (한손 베기 — 세이버·팔쉬온). 이름 14 자리 — 마이어 1570 두삭 편 원문 이름 12 + 쉬운 말 2.
+//  롱소드와 같은 독일 유파라 TRADITIONS.german.names 가 아니라 가지에 둔다 (6절 — sword_art.js 가 가지 이름을 읽어야 함)
+const DUSSACK_NAMES = {
+  '지붕 (Vom Tag)': { name: '망루 (Wacht)', desc: '칼을 머리 위로 · 위에서 곧게 내려벤다', src: '마이어 1570 Ⅱ.20r.2' },
+  '어깨 지붕 (Vom Tag)': { name: '분노 자세 (Zornhut)', desc: '칼을 오른 어깨에 메어 칼날은 뒤로 · 비스듬히 내려벤다', src: '마이어 Ⅱ.2r.2·Ⅱ.29r.1 · 꼴은 장검 Ⅰ.7v.3 [해석]' },
+  '황소 (Ochs)': { name: '황소 (Stier)', desc: '칼자루를 머리 오른쪽에, 칼끝은 상대 얼굴 · 위에서 찌른다', src: '마이어 Ⅱ.22r.3' },
+  '긴 자세 (Langort)': { name: '긴 자세 (Langort)', desc: '팔을 쭉 뻗어 칼끝으로 겨눈다 · 막기가 끝나는 자리', src: '마이어 Ⅱ.2r.2·Ⅱ.16r' },
+  '옆 자세': { name: '가운데 지킴 (Mittelhut)', desc: '칼을 오른 옆 뒤로 눕힌다 · 가로로 벤다(가운데 베기)', src: '마이어 Ⅱ.2r.2·Ⅱ.43r.2 · 오른쪽 꼴 [해석]' },
+  '쟁기 (Pflug)': { name: '멧돼지 (Eber)', desc: '칼자루를 오른 허리 아래에, 칼끝은 상대 얼굴 · 아래에서 찌르고 올려벤다', src: '마이어 Ⅱ.41r.3 · 자리 [해석] (레크퀴흐너 Eber = Pflug)' },
+  '바꿈 (Wechsel)': { name: '바꿈 (Wechsel)', desc: '칼끝을 오른쪽 아래 땅으로 · 올려베기 준비', src: '마이어 Ⅱ.45v.2' },
+  '옆 지킴 (Nebenhut)': { name: '옆 지킴', desc: '칼을 오른 허리 뒤로 숨긴다', src: '두삭 편에 없음 (쉬운 말)' },
+  '바보 (Alber)': { name: '보루 (Bastei)', desc: '칼끝을 앞 땅으로 멀리 · 아래를 막고 올려친다', src: '마이어 Ⅱ.47v.4 「gleich dem Olber」' },
+  '왼쪽 어깨 지붕': { name: '왼 분노 자세 (Zornhut)', desc: '칼을 왼 어깨에 메어 칼날은 뒤로 · 왼쪽에서 비스듬히 내려벤다', src: '마이어 Ⅱ.29r.1 「zu beiden seiten」' },
+  '왼쪽 황소': { name: '왼 황소 (Stier)', desc: '칼자루를 머리 왼쪽에, 칼끝은 상대 얼굴', src: '마이어 Ⅱ.2r.2' },
+  '왼쪽 옆 자세': { name: '왼 가운데 지킴 (Mittelhut)', desc: '가로 베기가 끝나 칼이 왼 옆에 눕는다 · 되받아 가로로', src: '마이어 Ⅱ.43r.2' },
+  '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '칼자루를 왼 허리에, 칼끝은 상대 얼굴', src: '원전 없음 (마이어 Ⅱ.41r.3: Eber 는 오른쪽만)' },
+  '왼쪽 바꿈': { name: '왼 바꿈 (Wechsel)', desc: '칼끝을 왼쪽 아래로 · 분노 베기가 끝나는 자리', src: '마이어 Ⅱ.45v.2 「zu beiden seiten」' },
+};
+// 무유파 (둔기·총 — 냉동 참치·나뭇가지·고무 닭·모르겐슈테른·권총). 쉬운 말 14 — 역사 낱말 없음. 앞무게 표·한손 표에 같은 말
+const NONE_NAMES = {
+  '지붕 (Vom Tag)': { name: '머리 위', desc: '머리 위로 높이 든다 · 내려친다', src: '쉬운 말' },
+  '어깨 지붕 (Vom Tag)': { name: '오른 어깨 메기', desc: '오른 어깨에 메어 끝을 뒤로 · 비스듬히 내려친다', src: '쉬운 말' },
+  '황소 (Ochs)': { name: '머리 옆 겨눔', desc: '손을 머리 오른쪽에, 끝은 상대 얼굴', src: '쉬운 말' },
+  '긴 자세 (Langort)': { name: '앞으로 겨눔', desc: '끝을 상대에게 곧게 겨눈다 · 쉴 때 돌아오는 자리', src: '쉬운 말' },
+  '옆 자세': { name: '오른쪽 젖히기', desc: '오른쪽 뒤로 젖혀 둔다 · 옆으로 후려친다', src: '쉬운 말' },
+  '쟁기 (Pflug)': { name: '허리 겨눔', desc: '손을 오른 허리에, 끝은 상대 얼굴', src: '쉬운 말' },
+  '바꿈 (Wechsel)': { name: '오른 아래로 내림', desc: '끝을 오른쪽 아래로 · 올려친다', src: '쉬운 말' },
+  '옆 지킴 (Nebenhut)': { name: '오른 뒤로 숨김', desc: '오른 허리 뒤로 숨겨 길이를 감춘다', src: '쉬운 말' },
+  '바보 (Alber)': { name: '앞으로 늘어뜨림', desc: '끝을 앞 아래로 늘어뜨린다 · 머리를 비워 끌어들인다', src: '쉬운 말' },
+  '왼쪽 어깨 지붕': { name: '왼 어깨 메기', desc: '왼 어깨에 메어 끝을 뒤로 · 반대쪽으로 비스듬히 내려친다', src: '쉬운 말' },
+  '왼쪽 황소': { name: '왼 머리 옆 겨눔', desc: '손을 머리 왼쪽에, 끝은 상대 얼굴', src: '쉬운 말' },
+  '왼쪽 옆 자세': { name: '왼쪽 젖히기', desc: '왼쪽 뒤로 젖혀 둔다 · 반대쪽으로 후려친다', src: '쉬운 말' },
+  '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '손을 왼 허리에, 끝은 상대 얼굴', src: '쉬운 말' },
+  '왼쪽 바꿈': { name: '왼 아래로 내림', desc: '끝을 왼쪽 아래로 · 내려친 끝, 여기서 되올린다', src: '쉬운 말' },
+};
 // 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0 · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
 const CHINESE_TECHK = { '*': { zwerch: 2.0, zwerchL: 2.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };
 // 안 B (초습 쪽, ≈ 1.6 : 1) — 안 A + 찌르기 ×1.87 (= 2.8 ÷ 1.5). 재기용으로만 내보낸다(기본에 이어 두지 않음 — 도구가 TRADITIONS.chinese.techK 를 이것으로 바꿔 끼운다)
@@ -300,14 +356,14 @@ export const TECH_NAMES = {
 //  비교용 `?schoolRest=pflugR`(= 안 B, 쟁기 자리 = SKILL.homeGuard — 10/9 00:49 까지의 판)
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
-  //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5 } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES },
+  //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로) · 이름은 DUSSACK_NAMES (sword_art.js schoolNames 가 가지 이름을 먼저 읽는다)
+  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES },
   // 이탈리아 물러남(10/9 패시브 단계 — Ritirata): 몰리면 테르차(긴 자세)로 칼끝을 겨눈 채 물러난다, 그 밖엔 긴 자세·쟁기 (전 독일 값 황소 · 쟁기·긴 자세).
   //  레이피어 간 보는 자세(WATCH_GUARDS)에 긴 자세가 있다 — 재기 손잡이 motion_lab SCHOOL_RITIRATA=0 (전 값)
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
   italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES },
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
@@ -316,7 +372,7 @@ export const TRADITIONS = {
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
   chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES },
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
-  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, techNames: TECH_NAMES.none, unique: [], passives: [] }, // 무유파: 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
+  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [] }, // 무유파: 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
