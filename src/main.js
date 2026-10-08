@@ -64,6 +64,8 @@ const getupLead = +params.get('getupLead');
 if (getupLead >= 0 && params.has('getupLead')) CONFIG.BODY.getupLead = getupLead; // 일어서기 다리 차례(10/8 18:26 본판 기본 1·lag 0.5, 확인표 194): `?getupLead=0` = 전 물리(두 다리 함께)
 const motionLib = +params.get('motionLib');
 if (motionLib >= 0 && params.has('motionLib')) CONFIG.SKILL.motionLib = motionLib; // 동작 라이브러리(무기 PM) 본판 스위치 — 10/8 18:50 기본 1(사장님 '적용', 확인표 34). `?motionLib=0` = 전 물리
+const schoolArt = +params.get('schoolArt');
+if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 0 = 이름만(오늘 판). `?schoolArt=1` = 유파 가중치·쉴 자세·맞받아치기 켬 — 사장님 확인 전
 const getupLag = +params.get('getupLag');
 if (getupLag >= 0 && params.has('getupLag')) CONFIG.BODY.getupLag = getupLag; // 뒷다리가 기다리는 몫(riseTime 비율, 기본 0.5)
 const pushAtFoot = +params.get('pushAtFoot');

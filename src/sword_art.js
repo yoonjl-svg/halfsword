@@ -14,25 +14,31 @@
 //   baseTable    무기 종류별 자세표 (동작 PM 10/1: 한손 → 찌르기/세이버 표, 두손 찌르기 → 두손 찌르기 표, 그 밖 → 없음 = 교본 표)
 //   libTable     동작 라이브러리 몸 틀 표 (바탕 표 위에 덮음, 고칠 것이 없으면 null) — lib 일 때만
 //   table        실제로 쓰는 표 = libTable ?? 바탕 표 (fighter.guardPose.table·bodyGuard.table)
-//   names        자세 번호(0~15, 마무리 자세 둘 포함) → 자세 칸(name·desc) — main.js HUD
+//   names        자세 번호(0~15, 마무리 자세 둘 포함) → 자세 칸(name·desc) — main.js HUD. 유파 이름(TRADITIONS[tradition].names)이 있으면
+//                바탕 자리 이름(GUARDS[i].name)으로 맞춰 이름·설명만 덮는다(10/9 ②③ — 늘 켬, 표는 건드리지 않는다: 판에 닿지 않음)
 //   overlays     덧씌우기: lunge(찌르기 방식 런지) · flow(앞무게 이어 베기) · noTwist(날 없는 무기 — 기본 안 씀) · cover(막기 덧씌우기 — 기본 안 씀)
 //   caps         손목 서보 상한 (쥠 종류 기본값 또는 무기 명시값 — weapons.js 가 정한 그대로, 읽기만)
 //   school       AI 가 쥐는 꾸러미: 인물이 고른 것(persona.school, 없으면 롱소드 = 독일) + lib 이면 몸 틀·방식 가중치·새 기술·속임수·간 보는 자세
 //   tech·feints·parry·watch  그 꾸러미의 기술·속임수·막기 자리·간 보는 자세
 //   measure      그 꾸러미로 이 무기를 쥘 때의 간격 (꾸러미 간격을 무기 실측 비율로 늘이고 줄임) · measureFor(다른 무기) = 상대 칼 어림용
-//   restGuard    쉴 자세 (보정 v2 ③ 되돌아옴 겨눔의 목표) — 지금은 모든 유파가 SKILL.homeGuard(쟁기 자리): 자리만
+//   restGuard    쉴 자세 (보정 v2 ③ 되돌아옴 겨눔의 목표 — skill.js 가 pad 를 읽는다, 플레이어만) — SKILL.schoolArt 1 이고 유파 rest 가 있으면 그 패드,
+//                아니면 SKILL.homeGuard(쟁기 자리). 일본·중국 기본 rest 'pflugR' 은 homeGuard 와 같은 자리(안 B) — 안 A 'langort' 는 사장님 확인 전
 //   tradition    유파 전통 열쇠 (인물이 꾸러미를 고르면 그 꾸러미의 것, 아니면 무기의 것 — schools.js traditionOf)
 //   lib          동작 라이브러리를 입히나 (본판 스위치 MOTION.lib — 도구는 opts.lib 로 직접)
 //   motion       옛 motionFor 모양 (도구·fighter.motion 호환)
 //  school·measure·motion 은 처음 읽을 때 만든다: 검객 생성자는 몸 쪽만 읽어 유파 병합(기억해 두는 꾸러미)을 건드리지 않는다 — 전과 같은 차례.
 //  주의: 지금 기본 AI(인물 없음)는 무기 유파와 상관없이 롱소드(독일) 꾸러미 + 그 무기 간격 비율을 쓴다 — 오늘 그대로(무기 유파 꾸러미로 바꾸면 판이 바뀐다)
+//  유파 자료 (10/9 ②③, SKILL.schoolArt 1 일 때만 — schools.js '유파 자료' 머리말): 꾸러미에 유파 기술 가중치(techK)·맞받아치기(counterArt)를 덮는다.
+//   어느 유파의 것을 덮나 = art.tradition — 인물이 꾸러미를 골랐으면 그 꾸러미의 유파, 아니면 무기의 유파(traditionOf).
+//   그래서 인물 없는 기본 AI 가 모노호시자오를 쥐면 독일 꾸러미 위에 일본 가중치가 얹힌다(꾸러미는 오늘 그대로 독일 — 그것은 바꾸지 않았다, 사장님 확인 전).
+//   이름 덮기는 스위치와 상관없이 늘 한다(HUD 만)
 // ─────────────────────────────────────────────────────────────
 import { SKILL } from './config.js';
 import { GUARDS, guardBaseOne, guardBaseTwo } from './guards.js';
 import { classifyStyle } from './weapon_class.js';
-import { TECH, WATCH_GUARDS } from './ai_techniques.js';
+import { G, TECH, WATCH_GUARDS } from './ai_techniques.js';
 import { MOTION, buildFrameTable, styleTech, styleFeints, frameWatchGuards, weightTech, NEW_TECH, OVERLAY, COVERS, LIB_PARRY, HAND_GRIPS, installLunge, installFlow, installCover } from './frames.js';
-import { TRADITIONS, traditionOf, schoolOf } from './schools.js';
+import { TRADITIONS, SCHOOL_ART, traditionOf, schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
 import { MEASURED, WEAPON_BASELINE } from './weapon_measured.js';
 
@@ -51,15 +57,26 @@ function guardNames(T) {
   return GUARDS.map((g, i) => (T && i < T.length ? T[i] : g));
 }
 
+/** 유파 이름 덮기 (10/9 ②③): 바탕 자리 이름 GUARDS[i].name 으로 맞춘다(틀 표의 보이는 이름이 아니라). 새 칸을 만들어 이름·설명·출처만 바꾸고 표는 그대로 둔다 */
+function schoolNames(names, tradition) {
+  const over = TRADITIONS[tradition]?.names;
+  if (!over) return names;
+  return names.map((row, i) => {
+    const o = GUARDS[i] && over[GUARDS[i].name];
+    return o ? { ...row, name: o.name, desc: o.desc ?? row.desc, src: o.src } : row;
+  });
+}
+
 /** 쥠 모양 (전 hands.js gripFor): 무기 예외가 있으면 그것, 없으면 쥠 종류 기본값(두 손·한 손) */
 function gripOf(spec) {
   const shape = HAND_GRIPS[spec.id] ?? (spec.twoHand ? HAND_GRIPS._two : HAND_GRIPS._one);
   return { kind: spec.grip ?? null, ...shape };
 }
 
-/** 쉴 자세: 지금은 모든 유파가 SKILL.homeGuard(쟁기 자리) — 유파 rest 가 생기면 여기서 고른다(사장님 10/8 21:5x '유파가 정한다') */
+/** 쉴 자세 (사장님 10/8 21:5x '유파가 정한다'): SKILL.schoolArt 1 이고 SCHOOL_ART.rest 이고 유파 rest(G 패드 열쇠)가 있으면 그 패드, 아니면 SKILL.homeGuard(쟁기 자리) */
 function restGuardOf(names, tradition) {
-  const pad = SKILL.homeGuard;
+  const key = SKILL.schoolArt && SCHOOL_ART.rest ? TRADITIONS[tradition]?.rest : null;
+  const pad = key && G[key] ? G[key] : SKILL.homeGuard;
   let index = -1;
   let best = Infinity;
   for (let i = 0; i < GUARDS.length; i++) {
@@ -70,7 +87,29 @@ function restGuardOf(names, tradition) {
       index = i;
     }
   }
-  return { pad, index, guard: names[index] ?? null, tradition, fromTradition: TRADITIONS[tradition]?.rest ?? null };
+  return { pad, index, guard: names[index] ?? null, tradition, fromTradition: TRADITIONS[tradition]?.rest ?? null, applied: !!(key && G[key]) };
+}
+
+/**
+ * 유파 자료를 꾸러미에 덮는다 (10/9 ②③ — SKILL.schoolArt 1 일 때만 부른다). 받은 꾸러미는 고치지 않고 새 꾸러미를 돌려준다(라이브러리 병합 기억을 지킨다).
+ *  가중치(SCHOOL_ART.weights): 유파 techK 에서 '몸 틀:싸움 방식' → '몸 틀:*' → '*' 차례로 처음 맞는 칸 하나 — 기술 이름 곱 × (찌르기면 thrust 곱), base 에 곱한다.
+ *  맞받아치기(SCHOOL_ART.counter): 유파 counterArt — 그 이름이 모두 이 꾸러미 기술에 있을 때만(없는 기술을 고르면 AI 가 멈춘다)
+ */
+function applySchoolArt(school, tradition, frame, style) {
+  const T = TRADITIONS[tradition];
+  if (!school || !T) return school;
+  let out = school;
+  const K = SCHOOL_ART.weights && T.techK ? T.techK[`${frame}:${style}`] ?? T.techK[`${frame}:*`] ?? T.techK['*'] ?? null : null;
+  if (K) {
+    const tech = school.tech.map((t) => {
+      const k = (K[t.name] ?? 1) * (t.kind === 'thrust' ? K.thrust ?? 1 : 1);
+      return k === 1 ? t : { ...t, base: t.base * k };
+    });
+    out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
+  }
+  const C = SCHOOL_ART.counter ? T.counterArt : null;
+  if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
+  return out;
 }
 
 const _libSchools = new Map();
@@ -155,9 +194,9 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   const skip = w.motionSkip ?? [];
   const libTable = lib ? buildFrameTable(frame, style, skip, libBase) : null;
   const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
-  const names = guardNames(table);
   const pkgId = 'school' in opts ? null : persona?.school;
   const tradition = (pkgId != null ? schoolOf(pkgId).tradition : null) ?? traditionOf(w);
+  const names = schoolNames(guardNames(table), tradition);
   const art = {
     id: w.id ?? null,
     frame,
@@ -173,10 +212,11 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
     tradition,
     lib,
   };
-  // AI 꾸러미: 인물이 고른 꾸러미(없으면 롱소드) → lib 이면 몸 틀·방식 몫을 더한다 (전 ai.js schoolOf + libSchool)
+  // AI 꾸러미: 인물이 고른 꾸러미(없으면 롱소드) → lib 이면 몸 틀·방식 몫을 더한다 (전 ai.js schoolOf + libSchool) → 스위치를 켜면 유파 자료(art.tradition 의 것)
   lazy(art, 'school', () => {
     const pkg = 'school' in opts ? opts.school : schoolOf(persona?.school);
-    return lib ? mergeLibSchool(pkg, spec) : pkg;
+    const s = lib ? mergeLibSchool(pkg, spec) : pkg;
+    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style) : s;
   });
   lazy(art, 'tech', () => art.school.tech);
   lazy(art, 'feints', () => art.school.feints);

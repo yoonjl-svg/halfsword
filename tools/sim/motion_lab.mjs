@@ -6,8 +6,17 @@
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
-import { SCHOOLS } from '../../src/schools.js';
-import { STRIKE, GAIT } from '../../src/config.js';
+import { SCHOOLS, SCHOOL_ART, TRADITIONS, CHINESE_TECHK_B } from '../../src/schools.js';
+import { STRIKE, GAIT, SKILL } from '../../src/config.js';
+// 유파 자료 (10/9 ②③ — 켜는 곳은 이 도구뿐, src 기본은 끔): SCHOOL_ART=1 → SKILL.schoolArt 1.
+//  SCHOOL_ART_PARTS=weights,rest,counter (켤 몫만, 없으면 셋 다) · SCHOOL_REST=langort (일본·중국 쉴 자세 안 A) · SCHOOL_TECHK=B (중국 가중치 안 B)
+if (process.env.SCHOOL_ART === '1') {
+  SKILL.schoolArt = 1;
+  const parts = process.env.SCHOOL_ART_PARTS ? process.env.SCHOOL_ART_PARTS.split(/[,|]/) : null;
+  if (parts) for (const k of Object.keys(SCHOOL_ART)) SCHOOL_ART[k] = parts.includes(k);
+}
+if (process.env.SCHOOL_REST) for (const t of ['japanese', 'chinese']) TRADITIONS[t].rest = process.env.SCHOOL_REST;
+if (process.env.SCHOOL_TECHK === 'B') TRADITIONS.chinese.techK = CHINESE_TECHK_B;
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
 import { applyMotionLibrary, motionFor, MOTION } from '../../src/motion_library.js';

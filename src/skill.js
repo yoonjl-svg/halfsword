@@ -655,14 +655,16 @@ export class Skill {
         // 한손 무기(guardPose.oneHand)는 옛 보정처럼 homeGuard 로 (사장님 탐색판 3·4차 '나뭇가지 기본 자세가 몸통 오른쪽으로 쭉 편 것처럼 고정'):
         //  pad*(가슴 앞 가운데)의 한손 자세표는 팔을 끝까지 뻗고 45° 옆으로 선 3번 자세(찌르기 자세)라, 쉼 무게(bodyPose.idle)가 그리로 끌면
         //  벤 뒤마다 팔이 곧게 뻗은 채 굳는다. homeGuard 의 한손 쟁기는 칼끝이 상대 얼굴을 겨누니(guards.js) ③ 의 겨눔은 그대로다. 걷기·진행 p 는 같다
+        //  쉴 자리(home) = 유파 쉴 자세(sword_art.js restGuard.pad — 10/9 ②③, 스위치 SKILL.schoolArt 0 이면 SKILL.homeGuard 그대로)
         const ps = (this.recoverDest ||= [0, 0]);
+        const home = f.swordArt?.restGuard?.pad ?? SKILL.homeGuard;
         if (f.guardPose?.oneHand) {
-          ps[0] = SKILL.homeGuard[0];
-          ps[1] = SKILL.homeGuard[1];
+          ps[0] = home[0];
+          ps[1] = home[1];
         } else {
           padStar(f, ps);
-          ps[0] = SKILL.homeGuard[0] + (ps[0] - SKILL.homeGuard[0]) * L;
-          ps[1] = SKILL.homeGuard[1] + (ps[1] - SKILL.homeGuard[1]) * L;
+          ps[0] = home[0] + (ps[0] - home[0]) * L;
+          ps[1] = home[1] + (ps[1] - home[1]) * L;
         }
         this.recoverD0 = Math.hypot(ps[0] - off.x, ps[1] - off.y);
         this.recoverP = 0;
@@ -689,13 +691,14 @@ export class Skill {
     } else if (this.recovering) {
       if (f.inputActive || !canRecover) this.recovering = false; // 다시 조작하면 바로 조작이 우선
       else {
-        const hx = SKILL.homeGuard[0] - off.x;
-        const hy = SKILL.homeGuard[1] - off.y;
+        const home = f.swordArt?.restGuard?.pad ?? SKILL.homeGuard; // 유파 쉴 자세 (10/9 ②③, 스위치 끔 = homeGuard)
+        const hx = home[0] - off.x;
+        const hy = home[1] - off.y;
         const d = Math.hypot(hx, hy);
         // 휘두르기로 오인되지 않게 휘두르기 기준 속도보다 느리게 옮긴다
         const step = SKILL.recoverSpeed * dt;
         if (d <= step) {
-          off.set(SKILL.homeGuard[0], SKILL.homeGuard[1]);
+          off.set(home[0], home[1]);
           this.recovering = false;
         } else {
           off.x += (hx / d) * step;
