@@ -190,5 +190,5 @@ W_ID=qinggang W_STYLE=cut node tools/sim/qinggang_swing_wrap.mjs motion_lab.mjs 
 (sha = 출력에서 rapier 경고 줄 "using deprecated parameters…" 을 뺀 sha256 앞 8 자.)
 
 ### 남은 것 (사장님·PM 몫)
-- 사장님 확인표 220 — 섞은 표 기본(`mixed`)으로 둘지, 안 B(`cut`)·그 전(`thrust`)인지. 10/1 동작 연구 문서에는 한 줄 덧붙임만 했다(승인 표 자체는 그대로).
+- 사장님 확인표 237 — 섞은 표 기본(`mixed`)으로 둘지, 안 B(`cut`)·그 전(`thrust`)인지. 10/1 동작 연구 문서에는 한 줄 덧붙임만 했다(승인 표 자체는 그대로).
 - 청강검 AI 45 % (96 판)가 에픽(power 1.1·절단 ×3) 무기로 센지(세이버 58 %와 비교)는 캐릭터 PM 몫. 플레이어 청강검의 베기가 세이버급으로 빨라진다 — 손으로 쳐 볼 것.
