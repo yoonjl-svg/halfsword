@@ -58,9 +58,11 @@ function guardNames(T) {
   return GUARDS.map((g, i) => (T && i < T.length ? T[i] : g));
 }
 
-/** 유파 이름 덮기 (10/9 ②③): 바탕 자리 이름 GUARDS[i].name 으로 맞춘다(틀 표의 보이는 이름이 아니라). 새 칸을 만들어 이름·설명·출처만 바꾸고 표는 그대로 둔다 */
-function schoolNames(names, tradition) {
-  const over = TRADITIONS[tradition]?.names;
+/** 유파 이름 덮기 (10/9 ②③): 바탕 자리 이름 GUARDS[i].name 으로 맞춘다(틀 표의 보이는 이름이 아니라). 새 칸을 만들어 이름·설명·출처만 바꾸고 표는 그대로 둔다.
+ *  가지 이름이 먼저(열쇠 '몸 틀:싸움 방식' — 독일 두삭 one:cut), 없으면 유파 이름 (10/9 서양·무유파 이름) */
+function schoolNames(names, tradition, frame, style) {
+  const T = TRADITIONS[tradition];
+  const over = T?.branches?.[`${frame}:${style}`]?.names ?? T?.names;
   if (!over) return names;
   return names.map((row, i) => {
     const o = GUARDS[i] && over[GUARDS[i].name];
@@ -228,7 +230,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
   const pkgId = 'school' in opts ? null : persona?.school;
   const tradition = (pkgId != null ? schoolOf(pkgId).tradition : null) ?? traditionOf(w);
-  const names = schoolNames(guardNames(table), tradition);
+  const names = schoolNames(guardNames(table), tradition, frame, style);
   const art = {
     id: w.id ?? null,
     frame,
