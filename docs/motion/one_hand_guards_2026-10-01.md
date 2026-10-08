@@ -5,6 +5,7 @@
 - **점검**: 모든 자세의 손이 칼 든 어깨에서 0.21~0.55 m 안이다(팔 0.565 m). 어깨 들림 면은 110° 이하로, 사람 수평 모음 130~140° 안이다(`corr_v2_shoulder_note`). 어깨는 가슴 기준 [0, 0.1, ±0.2]에 가슴 돌림을 넣어 계산했다.
 - **고르기**: `guardBaseOne(style)`이 표를 고른다. style은 weapon_class.js `classifyStyle`이다.
   - `thrust`·`versatile`(레이피어·청강검)은 **찌르기 표**를 쓴다.
+    - 10/9: 두루(청강검)는 섞은 표(`ONE_HAND_VERSATILE` — 찌르기 표 겨눔 6 곳 + 세이버 표 감는 8 곳, 손잡이 `SKILL.oneVersatileTable`, 사장님 확인 전) — `docs/strike/qinggang_floor_2026-10-09.md` § 고침. 레이피어는 찌르기 표 그대로.
   - `cut`·`blunt`(세이버·팔쉬온·나뭇가지·고무 닭)은 **세이버 표**를 쓴다.
   - `GUARD_BASE_ONE`은 예전 이름 그대로 세이버 표이고, `guardAt`의 `out.oneHand` 기본값도 세이버 표다. 찌르기 칼은 fighter 쪽에서 `out.table = guardBaseOne(style)`로 넘기면 된다(디렉터 몫).
 - **바꾸지 않은 것**: 두손 `BASE`·`GUARDS`, 패드 자리, 자세 수·순서, 마무리 자세 2개. 쟁기·긴 자세는 두 표 모두 지금 한손 값 그대로다(클립 시작 자세). 그래서 세이버·레이피어 클립 70벌이 그대로 검사를 통과한다(X1 두 표 대조 포함).
