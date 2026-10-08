@@ -119,3 +119,21 @@
 2. ~~직접 촬영~~ — **사장님 답(9/29): 하지 않는다. 계획에서 뺐다.**
 3. **번역서 구입** — Forgeng 역 Meyer. **사장님이 사 주시기로 함(9/29).** → 9/29 밤: 무료 Garber 영역 + 1570 독일어 원문(sprechfenster.org, §0-3)을 교차해 **대신하기로 함 — 유료 번역은 없어도 된다.** 사장님이 독일어 원본 파일도 주시기로 함. 받는 형태(제안): 전자책 PDF·EPUB 을 사장님 구글 드라이브 비공개 폴더에 두고 파일 이름·링크를 전달 → 드라이브 연결로 읽는다. **저작물이라 파일은 저장소에 절대 넣지 않고**, 읽고 정리한 메모(짧은 인용·쪽수)만 이 문서와 `longsword_cuts.md` 에 남긴다.
 4. ~~웹 본문 읽기 막힘~~ — **사장님이 9/29 밤 여심.** 원문 대조를 다시 하는 중(§0-1·§0-3).
+
+## 10/8 유파 자료 — 핵심 원전의 온라인 위치 (디렉터, 사장님 "pdf 위치 정도는 네가 찾아줘야지")
+열어 본 것은 ✅, 위치만 확인한 것은 ○, 못 찾은 것은 ✗. 전부 퍼블릭 도메인 원전이거나 공식 공개본. (번역·교정본은 저작권이 따로 있으니 인용만)
+
+| 유파 | 자료 | 위치 | 상태·메모 |
+|---|---|---|---|
+| 일본 | **日本剣道形解説書** (全日本剣道連盟 공식 PDF, 4.3 MB) | https://www.kendo.or.jp/wp/wp-content/uploads/2020/12/nippon_kendo_kata_manual.pdf (연맹 자료실 https://www.kendo.or.jp/knowledge/library/) | ✅ 내려받음. 다섯 자세(上段·中段·下段·八相·脇構え)와 太刀 7 本·小太刀 3 本 — 자세표 수치 근거 |
+| 일본 | **五輪書 原本** (1939 教材社 刊, 43 쪽, NDL 퍼블릭 도메인 표시) | 뷰어 https://dl.ndl.go.jp/pid/1071527 · IIIF 쪽 이미지 https://dl.ndl.go.jp/api/iiif/1071527/R0000001/full/full/0/default.jpg (R0000001~R0000043) | ○ 쪽 이미지 열림(755 KB/쪽). 원칙·자세(五方の構え)·니텐이치류 |
+| 일본 | 兵法家伝書 (柳生宗矩) | NDL 『柳生論語』(PID 1101146) 는 개인 송신 한정(국외 불가); ウィキソース 없음 | ✗ 무료 온라인 없음 — 岩波文庫 인쇄본뿐. 우선순위 낮음 |
+| 중국·조선 | **武備志 卷八十六 劍 (劍訣歌·朝鮮勢法 24 세)** (1621, 北京大學圖書館 스캔 119 쪽) | https://archive.org/details/02092344.cn (PDF 1.9 MB + OCR txt) · 쪽 뷰어 https://sourcelibrary.org/book/wubei-zhi-vol-35/overview (朝鮮勢法 4~45 쪽) | ✅ 항목 확인. 일부 글자 흐림·낙장 주의. 예도(銳刀)의 원전 |
+| 조선(일본·중국 둘 다) | **武藝圖譜通志** (1790) — 왜검(일본 4 유파)·쌍수도·예도·본국검 | 소장: 장서각 K3-275(한문 4 책)·3-276(언해), 규장각. 무료 공식 스캔은 **못 찾음**. 대안: chineselongsword.com 전권 753 쪽 $0.01(https://www.chineselongsword.com/product-page/muyedobotongji, 출처 불명·사이트 주석 포함) + 영역 장별 $3.9~8.9; 교보 전자책(노병일, 본국검·예도 원문 스캔 수록, 유료) | ✗/○ 사장님 결정: $0.01 전권 받아 보기 vs 국역본 구입 vs 도서관 영인본(1981 경문사·1989 홍문각) |
+| 이베리아 | **Godinho, Arte de Esgrima (1599, MS PBA 58)** 137 fol. | 포르투갈 국립도서관 https://purl.pt/27089 (기록 https://bndigital.bnportugal.gov.pt/idurl/1/88574, PDF 내려받기 단추, Public Domain Mark) · Wiktenauer https://wiktenauer.com/wiki/Domingo_Luis_Godinho | ○ 기록 확인(직접 PDF 링크는 뷰어 경유). 몬탄테는 6 부 |
+| 이탈리아 | **Capo Ferro, Gran Simulacro (1610)** Getty 스캔 144 쪽, 도판 43 | https://archive.org/download/gri_33125009485448/gri_33125009485448.pdf (14.4 MB) · https://wiktenauer.com/wiki/Capoferro | ✅ 내려받기 확인(200 OK) |
+| 독일 | **Meyer 1570** Garber 영역 + 독일어 원문 나란히 | https://sprechfenster.org/meyer/1570/ (9/29 이미 대조) · Wiktenauer Ringeck/Döbringer 번역 | ✅ 기존 §0-3 |
+| 영국·세이버(독일 두삭에 빌림) | 기존 §(Angelo 1798·Hutton 1889·Burton 1876) | 기존 표 | 그대로 |
+
+- 규칙: 자료는 세션 밖 scratchpad/sources 에 두고(저장소에 PDF 를 넣지 않는다), 유파 자료 파일에는 "출처: 책·쪽" 만 적는다. 번역은 인용 범위 안에서만.
+
