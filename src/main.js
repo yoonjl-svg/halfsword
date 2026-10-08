@@ -62,9 +62,9 @@ if (vertLead >= 0 && params.has('vertLead')) CONFIG.ARM.vertLead = vertLead;
 const anchorYawMax = +params.get('anchorYawMax');
 if (anchorYawMax >= 0 && params.has('anchorYawMax')) CONFIG.BODY.anchorYawMax = anchorYawMax; // 실험(10/8 15:10): 닻 yaw 모터 토크 상한 N·m, 0 = 오늘
 const getupLead = +params.get('getupLead');
-if (getupLead >= 0 && params.has('getupLead')) CONFIG.BODY.getupLead = getupLead; // 실험(10/8 18:00, 확인표 194): 일어서기 다리 차례 — 1 = 앞다리 먼저, 뒷다리 뒤따름. 0 = 오늘(두 다리 함께)
+if (getupLead >= 0 && params.has('getupLead')) CONFIG.BODY.getupLead = getupLead; // 일어서기 다리 차례(10/8 18:26 본판 기본 1·lag 0.5, 확인표 194): `?getupLead=0` = 전 물리(두 다리 함께)
 const getupLag = +params.get('getupLag');
-if (getupLag >= 0 && params.has('getupLag')) CONFIG.BODY.getupLag = getupLag; // 뒷다리가 기다리는 몫(riseTime 비율)
+if (getupLag >= 0 && params.has('getupLag')) CONFIG.BODY.getupLag = getupLag; // 뒷다리가 기다리는 몫(riseTime 비율, 기본 0.5)
 const pushAtFoot = +params.get('pushAtFoot');
 if (pushAtFoot >= 0 && params.has('pushAtFoot')) CONFIG.GAIT.pushAtFoot = pushAtFoot;
 const cutStep = +params.get('cutStep');

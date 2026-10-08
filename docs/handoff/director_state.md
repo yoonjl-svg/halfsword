@@ -159,3 +159,4 @@
 - (10/8 17:02 추가) (c) 끝: 'all' 범위는 AI 간격 보정 −0.05(BODY.r2pAiContact, 'all' 에서만) 와 함께면 균형(72 판 P 33/E 27). 기본 범위 사장님 선택 대기(178·193). 'all' 기준 fights12 970317a1. 다음: 18:20 짧은 보고.
 - (10/8 17:25 추가) 사장님: 범위 'all' + AI 간격 보정 본판(새 기준 fights12 970317a1 · live c2072cd1 · ft d65cc1df; 옛 범위 ?r2pScope=player 415c3c7e), 기각 깃발 4 종 코드 삭제. R2′ 팔 단계 오늘 일정 끝. 다음: 18:20 짧은 보고 → devmeet 23:22 → 22:00 보고.
 - (10/8 18:05 추가) 사장님 17:50 "두 다리로 동시에 일어나는 모습" → 원인 applyPose K 의 한 비율 kneelAmount; 시제품 `BODY.getupLead`(기본 0, `?getupLead=1&getupLag=0.4~0.6`) 확인표 194 사장님 확인 전; 도구 `tools/sim/getup_probe.mjs`; 기록 `docs/strike/getup_lead_2026-10-08.md`. 기준 sha 셋 끔 동일.
+- (10/8 18:30 추가) 사장님 18:26 "0.5로 켜" → `BODY.getupLead 1 · getupLag 0.5` 본판 기본(확인표 194 답, 두 검객). 새 기준 fights12 `578402e1`(dead 7/12·downs 1.3) · live c2072cd1 · ft d65cc1df 그대로; 전 물리 `?getupLead=0` = 970317a1.
