@@ -908,7 +908,7 @@ const treeBranch = finalizeSpec('tree_branch', {
   nameKo: '나뭇가지', nameEn: 'Tree Branch',
   desc: '길에서 주운 나뭇가지. 날이 없다.\n세게 부딪히면 부러진다. 행운을 빈다.',
   grip: 'one-hand', material: 'wood',
-  hiltLength: 0.15, bladeLength: 0.8,
+  hiltLength: 0.15, bladeLength: 0.71, // 사장님 10/8 15:00 '지금보다 10 % 정도 짧게': 0.8 → 0.71 (전체 0.95 → 0.86 m, 질량 0.25 → 0.22 같은 굵기). 겉모습 yT(weapon_looks drawTreeBranch) 도 같이
   tier: 'trash', // 감독 등급: 쓰레기 → power 0.7·durability 0.4·fragility 0.2 (60초 경합에 60% 부러진다)
   edged: false, // 날이 없어 항상 둔기 판정 (총 타격 배율은 power 0.7)
   // 겉모습은 부품(자루·밑동·몸통 상자)마다 따로 그리지 않고 decorate 가 한 줄기로 통째로 그린다 — 따로 그리면
@@ -918,11 +918,11 @@ const treeBranch = finalizeSpec('tree_branch', {
     const L = this.bladeLength;
     const grip = boxInertia(0.05, 0.02, 0.08, 0.018);
     const pommel = sphereInertia(0.02, 0.015); // 뭉툭한 밑동
-    const blade = bladeInertia(0.25, L, 0.55, 0.29, 0.036, 0.03); // 울퉁불퉁, 거의 균일한 막대
+    const blade = bladeInertia(0.22, L, 0.55, 0.29, 0.036, 0.03); // 울퉁불퉁, 거의 균일한 막대 (0.25 → 0.22: 10/8 10 % 단축)
     return [
       partTuple(['box', 0.02, 0.08, 0.018], 0, 0.05, 0, grip.Ie, grip.It, 0x5a4530),
       partTuple(['ball', 0.015], -0.1, 0.02, 0, pommel.Ie, pommel.It, 0x5a4530),
-      partTuple(['box', 0.018, L / 2, 0.015], 0.15 + L / 2, 0.25, blade.comY, blade.Ie, blade.It, 0x6b4423, false),
+      partTuple(['box', 0.018, L / 2, 0.015], 0.15 + L / 2, 0.22, blade.comY, blade.Ie, blade.It, 0x6b4423, false),
     ];
   },
   decorate(group) {

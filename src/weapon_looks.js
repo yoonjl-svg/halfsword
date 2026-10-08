@@ -650,7 +650,7 @@ const castAll = (obj) => {
 // ─────────────────────────────────────────────────────────────
 export function drawTreeBranch(group) {
   const yB = -0.112;
-  const yT = 0.952;
+  const yT = 0.862; // 꼭대기 = hiltLength 0.15 + bladeLength 0.71 + 0.002 (10/8 사장님 10 % 단축; 전엔 0.952)
   const span = yT - yB;
   const BARK_D = lin(0x35251a);
   const BARK_L = lin(0x94764f);
