@@ -32,6 +32,8 @@ export function applyWeaponMeasure(ai, weaponId) {
 //   clinch = contact × 1.25/1.62, 베는 시간 날것)으로 전 무기를 한 번에 재어 파일에 쓰고, 손 표(src/weapon_measured.js)와 나란히 찍는다.
 //   비교란: 손 표를 바꾸지 않는다. 걸음이 든 reach 는 시작 정지(ARENA.startHold) 안에서 내딛기가 거절되어 contact 와 같게 나온다 —
 //   `node tools/sim/with_config.mjs ARENA.startHold=0 weapon_measures.mjs --gen --out=…` 로 따로 잰다.
+//   --down (10/9 검토): 칼날 70% 가 내려오는 동안만 센다 — 레이피어·에스톡처럼 준비 자세에서 칼이 앞으로 누운 무기가
+//   휘두르기 시작에 머리 높이를 '올라가며' 지나는 순간을 닿는 순간으로 세지 않게 (docs/strike/weapon_measures_review_2026-10-09.md)
 //   마지막 칸은 손 표의 CUT_TIME_30 을 손 표의 날것으로 다시 셈한 값(0.30 × 날것 ÷ 롱소드 날것, 둘째 자리)과 견준다
 if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const fs = await import('node:fs');
@@ -45,7 +47,8 @@ if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
   const out = path.resolve(root, outArg ? outArg.slice(6) : 'data/weapon_measured.gen.json');
   const ids = args.filter((a) => !a.startsWith('--'));
-  const res = measureAll(ids.length ? ids : Object.keys(WEAPONS));
+  const down = args.includes('--down');
+  const res = measureAll(ids.length ? ids : Object.keys(WEAPONS), { down });
   const f2 = (v) => (v == null ? '-' : v.toFixed(2));
   const cell = (hand, gen) => (hand == null ? `- / ${f2(gen)}` : `${f2(hand)} / ${f2(gen)}${Math.abs(hand - gen) >= 0.005 ? ' ≠' : ''}`);
   const diffs = [];
@@ -58,7 +61,7 @@ if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const file = {
     note: '생성 측정값 (비교란 — 게임은 src/weapon_measured.js 손 표를 읽는다). node tools/sim/weapon_measures.mjs --gen',
     method: 'weapon_measure.mjs measureAll: zornhau 0.35 s 를 혼자 휘둘러 칼날 70% 가 머리 높이(1.45~1.75 m)를 지나는 가장 먼 앞 거리 × (1.62 / 롱소드 raw), reach 는 같은 베기 + 앞으로 걷기, clinch = contact × 1.25/1.62, cutTime 날것',
-    conditions: { 'ARENA.startHold': ARENA.startHold },
+    conditions: down ? { 'ARENA.startHold': ARENA.startHold, down: true } : { 'ARENA.startHold': ARENA.startHold },
     longswordRaw: +res.longswordRaw.toFixed(4),
     calibration: +res.calibration.toFixed(4),
     rows: '__ROWS__',
@@ -68,7 +71,7 @@ if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const rowsText = `{\n${Object.entries(rows).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(',\n')}\n }`;
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(file, null, 1).replace('"__ROWS__"', rowsText) + '\n');
-  console.log(`생성 측정값 → ${path.relative(root, out)} (보정 배율 ${res.calibration.toFixed(4)}, 롱소드 raw ${res.longswordRaw.toFixed(3)} m, 시작 정지 ${ARENA.startHold} s)`);
+  console.log(`생성 측정값 → ${path.relative(root, out)} (보정 배율 ${res.calibration.toFixed(4)}, 롱소드 raw ${res.longswordRaw.toFixed(3)} m, 시작 정지 ${ARENA.startHold} s${down ? ', 내려오는 동안만' : ''})`);
   console.log('| 무기 | contact 손 / 생성 | reach 손 / 생성 | clinch 손 / 생성 | 베는 시간 날것 손 / 생성 | 0.30 기준 손 / 날것으로 셈 |');
   console.log('|---|---|---|---|---|---|');
   for (const r of res.rows) {

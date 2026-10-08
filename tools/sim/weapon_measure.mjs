@@ -38,7 +38,10 @@ function lerp(a, b, t) {
 
 /** weaponId로 혼자 zornhau를 한 번 휘두르며 칼날 70% 지점이 머리 높이를 지나는 순간의
  * 최대 전방 거리(가슴 기준)와 그때까지 걸린 시간을 잰다. lunge=true면 내딛기를 더한다. */
-export function measureSwing(weaponId, { lunge = false } = {}) {
+//  down=true (10/9 검토 docs/strike/weapon_measures_review_2026-10-09.md): 칼날 70% 지점이 '내려오는' 동안만 센다.
+//   기본(false)은 전과 같다. 한손·찌르기 무기(레이피어·에스톡)는 준비 0.5 s 동안 칼이 머리 위로 안 올라가고 앞으로 누운 채라,
+//   휘두르기 시작에 칼이 머리 높이를 '올라가며' 지나는 순간(0.09 s)을 닿는 순간으로 잘못 셌다.
+export function measureSwing(weaponId, { lunge = false, down = false } = {}) {
   const G = newRound({ weapon: weaponId, weapon2: weaponId, seed: 1 });
   G.park();
   const att = G.player;
@@ -49,6 +52,7 @@ export function measureSwing(weaponId, { lunge = false } = {}) {
   let atT = 0;
   let startChest = null;
   let startFwd = null;
+  let prevY = null;
   for (let i = 0; i < 3 / DT; i++) {
     phaseT += DT;
     if (phase === 'chamber') {
@@ -75,7 +79,9 @@ export function measureSwing(weaponId, { lunge = false } = {}) {
     G.step();
     if (phase === 'swing') {
       const p = att.bladePoint(0.7);
-      if (p.y > HEAD_Y_LO && p.y < HEAD_Y_HI) {
+      const falling = prevY == null || p.y < prevY;
+      prevY = p.y;
+      if (p.y > HEAD_Y_LO && p.y < HEAD_Y_HI && (!down || falling)) {
         const forwardDist = (p.x - startChest.x) * startFwd.x + (p.z - startChest.z) * startFwd.z;
         if (forwardDist > maxFwd) {
           maxFwd = forwardDist;
@@ -88,14 +94,14 @@ export function measureSwing(weaponId, { lunge = false } = {}) {
 }
 
 /** 무기 여럿을 한 번에: 롱소드 raw 로 보정 배율을 정하고 무기마다 선 채·내디디며 한 번씩 휘두른다 (값은 직접 실행과 같다) */
-export function measureAll(ids = Object.keys(WEAPONS)) {
+export function measureAll(ids = Object.keys(WEAPONS), { down = false } = {}) {
   // 보정 배율: 롱소드의 raw contact가 정확히 1.62가 되도록 맞춘다
-  const longswordRaw = measureSwing('longsword', { lunge: false }).raw;
+  const longswordRaw = measureSwing('longsword', { lunge: false, down }).raw;
   const CALIBRATION = 1.62 / longswordRaw;
   const rows = [];
   for (const id of ids) {
-    const c = measureSwing(id, { lunge: false });
-    const r = measureSwing(id, { lunge: true });
+    const c = measureSwing(id, { lunge: false, down });
+    const r = measureSwing(id, { lunge: true, down });
     const contact = +(c.raw * CALIBRATION).toFixed(2);
     const reach = +(r.raw * CALIBRATION).toFixed(2);
     const clinch = +(contact * CLINCH_RATIO).toFixed(2);
