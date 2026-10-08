@@ -8,6 +8,8 @@ const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith
 const weapon = String(args.weapon ?? 'longsword');
 const fams = String(args.fams ?? 'vert,diagR').split(',');
 const DIST = +(args.dist ?? 1.35);
+const CAP = args.cap != null ? +args.cap : null; // --cap=N : 이 무기의 손목 서보 상한 덮어쓰기(arm_arc_gauge 와 같음)
+if (CAP != null) { const { getWeapon } = await import('../../src/weapons.js'); getWeapon(weapon).controlOverrides.maxAimTorque = CAP; }
 class Passive { update() {} }
 function placeEnemy(G, dist) { // 상대를 주인공 정면 dist 로 (몸 전체 평행이동, G.park 과 같은 식)
   const P = G.player, E = G.enemy; const pp = P.pelvisPos, ep = E.pelvisPos;

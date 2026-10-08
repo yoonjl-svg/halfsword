@@ -2675,7 +2675,7 @@ export class Fighter {
     // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
     if (v2) corrStep(this, aim, sv);
     const mapAim = _holdMap.copy(aim); // 자세 지도 방향(빈손 짝힘·보정은 늘 이것을 본다)
-    if (BODY.trunkFollow > 0 || BODY.handFollow > 0) { // WA2-2 follow-through 가 읽는 '칼이 겨눔보다 뒤처진 각'(rad): 칼날 축 ↔ 자세 지도 방향 (hold 와 무관하게 지도 기준)
+    if (BODY.trunkFollow > 0 || BODY.handFollow > 0 || ARM.servoLagRelease > 0) { // WA2-2 follow-through·서보 풀어주기가 읽는 '칼이 겨눔보다 뒤처진 각'(rad): 칼날 축 ↔ 자세 지도 방향 (hold 와 무관하게 지도 기준)
       rot(sword, _q1);
       const bl = _lagB.set(0, 1, 0).applyQuaternion(_q1);
       this.aimLagMap = Math.atan2(_lagC.crossVectors(bl, mapAim).length(), bl.dot(mapAim));
@@ -2720,7 +2720,10 @@ export class Fighter {
     const sinA = axis.length();
     const angle = Math.atan2(sinA, blade.dot(aim));
     const torque = new THREE.Vector3();
+    const oneHandR2p = !this.weaponCfg.twoHand && this.r2pOn(); // 실험 길(서보 풀어주기·겨눔 앞세움)은 한손 무기·R2′ 범위 안에서만
+    const leadK = ARM.servoLead > 0 && oneHandR2p ? 1 + ARM.servoLead : 1; // 실험(T2 길 (c)): 서보 목표 각을 (1 + servoLead) 배로 앞세움(스프링·제동 판단 모두). 1 = 오늘
     if (sinA > 1e-5) torque.copy(axis).multiplyScalar((this.weaponCfg.aimStiffness * angle) / sinA);
+    if (leadK !== 1) torque.multiplyScalar(leadK);
     // 칼날(날 선 쪽)이 휘두르는 방향을 향하도록 비틀림 유지.
     // 칼이 거의 멈춰 있으면 칼 면이 몸 오른쪽을 보게 둔다.
     const flat = new THREE.Vector3(0, 0, 1).applyQuaternion(_q1);
@@ -2780,6 +2783,10 @@ export class Fighter {
     wAim.addScaledVector(blade, -wAim.dot(blade));
     // 손목(두 손)의 힘은 사람 수준으로 제한된다 → 칼을 순식간에 돌리지 못하고, 칼의 무게와 관성이 느껴진다
     let cap = this.weaponCfg.maxAimTorque * str;
+    if (ARM.servoLagRelease > 0 && oneHandR2p && this.aimLagMap > 0) {
+      // 실험(사장님 10/8 12:05): 한손 무거운 머리가 겨눔보다 뒤처진 동안은 서보가 머리에 맞서 제동하지 않도록 상한을 풀어 준다 — 뒤처짐 90° 에서 0, 활동 0 이면 오늘 그대로
+      cap *= 1 - Math.min(1, this.skill.activity) * Math.min(1, this.aimLagMap / (Math.PI / 2));
+    }
     // 놓아주기: 칼이 목표를 향해 날아가는 동안엔 붙잡지 않는다(관성으로 간다). 남은 각도가 "멈출 수 있는 거리"
     //  (각속도² / (2 × 최대 제동 각가속도)) 안으로 들어오면 그때부터 제동한다. 한 번 제동을 시작하면 이어 간다.
     let damp = this.weaponCfg.aimDamping;
@@ -2793,7 +2800,7 @@ export class Fighter {
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
         const tap = this.skill.tap;
         const fr = this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
-        if (angle > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
+        if (angle * leadK > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
           this.wristBrakeAng = angle;
