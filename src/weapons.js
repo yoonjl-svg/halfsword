@@ -943,7 +943,7 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
   // 날이 없는 무기는 몸통·팔다리를 때려도 판정상 아무 효과가 없다(fighter.applyWound: 머리·목만
   // 기절 효과가 있다) → 고무 닭이 이길 수 있는 유일한 길은 머리를 맞히는 것뿐이라, mBlunt를
   // 크게 올려도 몸통 타격은 여전히 무해하고 "머리에 제대로 맞으면 그래도 어질하다"만 세진다.
-  edged: false, mBlunt: 2.6,
+  edged: false, mBlunt: 1.6, // 2.6 → 1.6: 사장님 10/8 14:50(둔타 계수 정리 — 참치 2.6 · 모르겐슈테른 1.6 · 고무 닭 1.6 · 나뭇가지 1)
   controlOverrides: { aimStiffness: 34 }, // 물렁해서 정확히 겨누기 어렵다 (토크는 양손 가정으로 22)
   // 겉모습: 두 다리를 쥐고 휘두르는 고무 닭 — 주먹 아래 발가락, 위로 오동통한 몸통·주름진 긴 목·벌린 부리의
   //  머리(칼끝 쪽). 부품마다 따로 그리지 않고 decorate 가 한 덩어리로 그린다 (weapon_looks.js drawRubberChicken)
@@ -976,7 +976,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
   // mBlunt 2.2 → 2.8 (10라운드: hybrid 롱소드 상대 192판 12% → 17%, 모든 무기 목표 15~85%. 스펙 조정은 최소로)
   tier: 'mystery', // 사장님 결정: ??? 등급 (계수는 커먼 그대로, 카드에 드물게 나온다 — 등급 전체 5%)
-  edged: false, mBlunt: 2.8, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리)
+  edged: false, mBlunt: 2.6, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리). mBlunt 2.8 → 2.6: 사장님 10/8 14:50(모르겐슈테른 1.6 과 함께 둔타 계수 정리)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
   // 겉모습: 꼬리자루를 쥔 참치 — 주먹 아래 초승달 꼬리, 칼끝 쪽 머리. 역그늘 색·노란 토막지느러미·서리와 얼음막.
@@ -1073,7 +1073,7 @@ const morgenstern = finalizeSpec('morgenstern', {
   grip: 'one-hand', material: 'steel', // 틀 C 한손 → 세이버 자세표 guardBaseOne('blunt'); 대안 'hand-and-half'(B 앞무게) — 줄 133. 재질 steel: 자루에 쇠 보강띠·소리는 쇠 (줄 146)
   tier: 'rare', // 등급표 기본값 power 1.05 · durability 0.85 · fragility 0.032 — 줄 136 (확인만)
   edged: false, // 날 없음 → 늘 둔기 (classifyStyle 'blunt')
-  mBlunt: 1.3, // 둔타 E 배율 — 줄 134 (시제품 1.8 · 참치 2.8 · 나뭇가지 1; 질량·속도는 물리가 담으니 낮게 시작해 측정으로)
+  mBlunt: 1.6, // 둔타 E 배율 — 줄 134. **사장님 10/8 14:50: 1.3 → 1.6**(값별 48 판: 1.3 6 % · 1.6 15 % · 1.8/2.2 13 % — 1.6 위로는 사정이 상한). 같은 날 참치 2.8 → 2.6, 고무 닭 2.6 → 1.6, 나뭇가지 1(기본) 그대로
   spike: true, mThrust: 0.35, mCut: 0, // 가시 = 약한 찌르기 — 줄 135 (mCut 은 베기 길이 없어 안 읽힌다, 0 으로 적어 둔다)
   ignoreArmorDamage: true, // 사장님 10/8 00:10 '갑옷 방어력 완전 무시' — 판정만(투구 둔타 k = 1, 가시 찌르기·마무리에 판금·투구 문턱 안 씀); 쇠에 튕기는 물리·투구 벗김·판 닳음은 그대로 (확인표 168). 라이트세이버 ignoreArmor(물리까지)와 다름
   controlOverrides: { maxAimTorque: 28 }, // 사장님 10/8 12:05 '그렇게 해'(한손 무거운 머리의 손실 — 어느 길을 열어도 됨) → 길 (a) 손목 서보 상한 22 → 28 (츠바이핸더와 같은 값; 확인표 169 재개, '사장님 확인 전'). 서보가 포화해 머리가 손목 지시를 못 따라가는 손실(docs/strike/r2p_arm_arc_2026-10-08.md §2i)을 메우는 조정값 — 물리 근거는 약하다(한손 손아귀 22 를 넘긴다). 33 은 더 세지만 사선이 1.05 m 밖에서 빗나가 보류
