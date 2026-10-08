@@ -35,7 +35,7 @@
 //   withdraw 물러날 때 겨누는 자세 이름: pressed(몰아치는 상대에게), calm(그 밖에, 둘 중 하나를 무작위로)
 //   pose     그 밖의 고정 손 위치: cover(쓰러졌을 때 머리 위로 가리기), point(칼끝으로 겨누기)
 //   tradition 이 꾸러미의 유파 전통 열쇠 (TRADITIONS) — 10/8 더함, 읽기만(AI 동작은 읽지 않는다)
-//  유파 자료 칸(names·techNames·techK·rest·counterArt·unique·spare)은 꾸러미에 들어가지 않는다(pack 이 고르는 열쇠 밖) — sword_art.js 가 TRADITIONS 에서 직접 읽는다
+//  유파 자료 칸(names·techNames·techK·rest·counterArt·unique·spare·passives)은 꾸러미에 들어가지 않는다(pack 이 고르는 열쇠 밖) — sword_art.js 가 TRADITIONS 에서 직접 읽는다
 // ─────────────────────────────────────────────────────────────
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS, HIGH_GUARDS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
@@ -200,6 +200,62 @@ const IBERIAN_UNIQUE = [
   { name: 'rodaCounter', counter: { highR: ['talhoReves', 'zornhauL', 'oberhau', 'zornhau'], default: ['talhoReves', 'zornhau', 'oberhau', 'zornhauL'] }, src: '몬탄테 규칙 1 탈류·레베스를 받는 자리에서 [원전 2차] · 맞받아치기에 씀 [해석]' },
 ];
 
+// ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
+//  능동 고유 동작(unique)은 AI 가 빈틈을 보고 고르는 길이고, 패시브(passives)는 상황(사건)이 오면 저절로 나오는 반응이다.
+//  꼴: { name, nameKo, when: 사건 열쇠(하나 또는 여럿), cond: 사건 안의 조건(없으면 늘), do: 행동 하나, p: 발동 확률, src, ai:false = 자료만 }
+//   사건 열쇠 — landed 맞힘 · missed 헛침 · parried 내 칼이 막힘 · bindDef 막는 중 칼 맞닿음 · threat 상대 칼이 들어옴 ·
+//    foeRaise 상대가 칼을 듦 · foeCharge 상대가 달려듦 · foeRecover 상대가 헛치고 자세 잡기 전 · foeStepIn 상대가 간격 안으로 걸어 듦 ·
+//    pressed 몰아치는 상대에게 물러남 · standoff 둘 다 간 보기(위협 없음 2 s 넘게, 상대 손 느림)
+//   cond — thrust(들어오는 칼이 찌르기)·cut(베기)·line(들어오는 줄 목록)·myThrust(방금 내 기술이 찌르기)
+//   do — tech(그 기술로 곧장, 목록이면 손에서 가까운 것 — far 면 먼 것, alt = 없을 때 대신) · chain(이어 치기 차례) · withdraw(그 자세로 겨누며 물러남, time) ·
+//    counter(이 위협의 맞받아치기 목록) · parry/void(막기/피하기) · feint(속임수 이름) · prefer(기술 고르기 가중치: thrust·fast·presses) · why(공격 까닭) · at:'end'(물러남 끝에)
+//  실제 확률 = p × (0.5 + 0.5 × 읽는 눈 L.read). 한 사건에 한 번만 굴린다. 그 사건의 패시브가 없는 유파는 난수를 하나도 더 쓰지 않는다(독일 끔 → 롱소드 관문 바이트 같음).
+//  p 값은 모두 사장님 확인 전(확인표). 발동 자리는 ai.js passiveFor 를 부르는 곳들
+// 독일 (리히테나워·마이어) — **셋 다 ai:false**(롱소드 AI = 사장님 주 상대. 수만 재서 아침 결정 — motion_lab SCHOOL_PASSIVE_GERMAN=1 로 시험 쪽만 켬)
+const GERMAN_PASSIVES = [
+  // 받아 찌르기: 들어오는 찌르기를 피하지 않고 쟁기·황소 자리로 받으며 그대로 찌른다
+  { name: 'absetzen', nameKo: 'Absetzen (받아 찌르기)', ai: false, when: 'threat', cond: { thrust: true }, do: { counter: ['stichPflug', 'stichOchs'] }, p: 0.7, src: 'Zettel 「Absetzen」 · Ringeck 주해 [원전 2차]' },
+  // 겹치기: 막혀 칼이 맞물리면 물러나지 않고 상대 칼 뒤로 곧장 가로베기 (zwerch·zwerchL 가운데 손에서 가까운 쪽)
+  { name: 'duplieren', nameKo: 'Duplieren (겹치기)', ai: false, when: 'parried', do: { tech: ['zwerch', 'zwerchL'], why: 'follow' }, p: 0.6, src: 'Ringeck 주해 Duplieren [원전 2차] · 가로베기로 [해석]' },
+  // 넘어 치기: 낮은 베기는 막지 않고 위에서 내려친다
+  { name: 'ueberlaufen', nameKo: 'Überlaufen (넘어 치기)', ai: false, when: 'threat', cond: { line: ['lowL', 'lowR'] }, do: { counter: ['oberhau', 'zornhau'] }, p: 0.6, src: 'Zettel 「Überlaufen」 · Ringeck 주해 [원전 2차]' },
+];
+// 이탈리아 (카포 페로, 레이피어). 물러남(Ritirata — 테르차 = 긴 자세로 칼끝을 겨눈 채 물러남)은 패시브가 아니라 유파 withdraw 값으로 넣었다(TRADITIONS.italian)
+const ITALIAN_PASSIVES = [
+  // 상대 박자(칼을 들거나 달려드는 순간)에 찌른다 — 무거운 베기 말고. 치기 가지를 늘 고르고, 기술 고르기는 'windup'(빠른 기술) 셈에 찌르기 ×3
+  //  (stop 셈은 찌르기를 0.3 으로 깎아 뜻과 어긋난다 — 공격 까닭만 stop: 조금 일찍 치고 내딛지 않는다)
+  { name: 'contratempo', nameKo: 'contratempo (박자 찌르기)', when: ['foeRaise', 'foeCharge'], do: { prefer: { thrust: 3.0 }, why: 'stop' }, p: 0.8, src: 'Capo Ferro 1610 「contratempo」 [원전 2차]' },
+  // 칼이 맞물리면 빼서 반대편으로 찌른다 (stichPflug ↔ stichPflugL, 지금 손에서 먼 쪽)
+  { name: 'cavazione', nameKo: 'cavazione (맞물림에서 빼 찌름)', when: ['parried', 'bindDef'], do: { tech: ['stichPflug', 'stichPflugL'], far: true, why: 'riposte' }, p: 0.7, src: 'Capo Ferro 1610 「si caverà」 PDF 80쪽 [원전 2차]' },
+];
+// 이베리아 (몬탄테, 츠바이핸더)
+const IBERIAN_PASSIVES = [
+  // 베어서 막기: 들어오는 베기를 가만히 받지 않고 그쪽으로 탈류를 친다 (맞받아치기 굴림 없이 곧장)
+  { name: 'talhoParry', nameKo: '베어서 막기 (talho)', when: 'threat', cond: { cut: true }, do: { counter: ['zornhau', 'zornhauL', 'talhoReves'] }, p: 0.8, src: '몬탄테 규칙 — 받기보다 벤다 (Godinho 1599 · Figueiredo 1651 요약) [원전 2차]' },
+  // 이어 돌기: 헛치거나 막혀도 멈추지 않고 반대 어깨로 흘러 벤다
+  { name: 'seguirRoda', nameKo: '이어 돌기', when: ['missed', 'parried'], do: { chain: ['talhoReves'] }, p: 0.9, src: '몬탄테 규칙 1 [원전 2차]' },
+  // 돌려 물러남: 몰아치는 상대에게 가로로 한 번 베고 물러난다
+  { name: 'rodaRetirada', nameKo: '돌려 물러남', when: 'pressed', do: { tech: ['zwerch', 'zwerchL'], why: 'press' }, p: 0.5, src: '[해석]' },
+];
+// 일본 (카타나 가족, 모노호시자오)
+const JAPANESE_PASSIVES = [
+  // 残心: 맞힌 뒤 이어 치지 않고 中段(긴 자세)으로 칼끝을 겨눈 채 길게 물러난다. 일본 간 보는 자세(높은 자세)에 긴 자세가 없어 그 자세 하나만 빌려 쓴다(ai.js passiveGuard)
+  { name: 'zanshin', nameKo: '残心', when: 'landed', do: { withdraw: 'langort', time: 1.2 }, p: 1.0, src: '兵法家伝書 p18/18 「殘心之事 懸待ともに用」 [원문] · 검도형 각 本 끝 残心 [원문]' },
+  // 出端: 상대가 칼을 들거나 걸어 드는 순간 먼저 친다 — 치기 가지를 늘 고르고, 빠른 기술 ×2 · 누르는 베기 ×1.5
+  { name: 'debana', nameKo: '出端 (데바나)', when: ['foeRaise', 'foeStepIn'], do: { prefer: { fast: 2.0, presses: 1.5 } }, p: 1.0, src: '兵法家伝書 p16/15 「一ッ上れば、つけて打」 [원문] · 오륜서 表4 [원문]' },
+  // 返し: 받은 칼을 그대로 되받아 벤다 — 燕返し 길(없으면 정수리 베기)
+  { name: 'kaeshi', nameKo: '返し (카에시)', when: 'bindDef', do: { tech: 'tsubameGaeshi', alt: 'oberhau', why: 'riposte' }, p: 0.8, src: '오륜서 表2 [원문]' },
+];
+// 중국 (조선세법, 청강검)
+const CHINESE_PASSIVES = [
+  // 斂翅: 몰려 물러나다가 물러남 끝에 갑자기 들어가며 腰擊 (속임수 꼴 고유 동작 lianchi 와 이름만 같다 — 이것은 물러남에 붙는 패시브)
+  { name: 'lianchi', nameKo: '斂翅 (패한 척 물러났다 腰擊)', when: 'pressed', do: { tech: ['zwerch', 'zwerchL'], why: 'press', at: 'end' }, p: 0.5, src: '무비지 쪽174/0588 「佯北誘賺… 倒退進步腰擊」 [원문]' },
+  // 刺→擊 고리: 찌른 뒤(맞든 헛치든) 곧장 腰擊 (yaoji 길, 없으면 zwerch)
+  { name: 'ciji', nameKo: '刺→擊 고리', when: ['missed', 'landed'], cond: { myThrust: true }, do: { chain: ['yaoji'], alt: 'zwerch' }, p: 0.8, src: '무비지 쪽158/0572 「向前進步腰擊」 [원문]' },
+  // 看守: 상대가 머뭇거리면 기미를 따라 굴려 친다
+  { name: 'kanshou', nameKo: '看守 (간수)', when: 'standoff', do: { tech: ['zwerch', 'zwerchL'], why: 'open' }, p: 0.4, src: '무도 권2 p039/31 「相機隨勢滾殺」 [원문]' },
+];
+
 // ── 공용 동작 이름 (techNames — 10/9 고유 동작 단계, 자료만) ──
 //  공용 동작 = TECH 12 + 라이브러리 셋(talhoReves·wristCut·molinello). 동작은 같고 유파 말만 다르다. HUD 는 기술 이름을 보이지 않는다(코드 없음) — 문서·갤러리용
 const nm = (name, src) => (src ? { name, src } : { name });
@@ -245,20 +301,22 @@ export const TECH_NAMES = {
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5 } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE },
+  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5 } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES },
+  // 이탈리아 물러남(10/9 패시브 단계 — Ritirata): 몰리면 테르차(긴 자세)로 칼끝을 겨눈 채 물러난다, 그 밖엔 긴 자세·쟁기 (전 독일 값 황소 · 쟁기·긴 자세).
+  //  레이피어 간 보는 자세(WATCH_GUARDS)에 긴 자세가 있다 — 재기 손잡이 motion_lab SCHOOL_RITIRATA=0 (전 값)
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
-  italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE },
+  italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE },
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
-  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE },
+  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE, passives: JAPANESE_PASSIVES },
   // 중국: 청강검·지안(스펙 school). 기술 목록 = 지금 지안 꾸러미 그대로 (기술별 reach 보정은 청강검 실측 — ③ 단계에서 무기 쪽으로 가를 후보), 그 위에 유파 자료.
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
-  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE },
+  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES },
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
-  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, techNames: TECH_NAMES.none, unique: [] }, // 무유파: 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
+  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, techNames: TECH_NAMES.none, unique: [], passives: [] }, // 무유파: 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다

@@ -32,6 +32,25 @@ if (process.env.SCHOOL_NEWTECH) {
   const names = process.env.SCHOOL_NEWTECH.split(',');
   for (const t of Object.values(TRADITIONS)) for (const x of [...(t.unique ?? []), ...(t.spare ?? [])]) if (names.includes(x.name)) x.ai = true;
 }
+// 패시브 고유 동작 (10/9 — docs/strike/school_passive_2026-10-09.md): duel 의 시험 쪽(X) AI 만 패시브 목록을 갈아 끼운다(상대 롱소드 AI 는 그대로).
+//  SCHOOL_PASSIVE=off(없음)|all(유파 기본, 없을 때와 같음)|이름,이름(유파 기본 가운데 그것만) · SCHOOL_PASSIVE_GERMAN=1 = 독일 셋(ai:false)을 시험 쪽에만 켬
+//  SCHOOL_RITIRATA=0 = 이탈리아 물러남 자세(Ritirata, 유파 withdraw 값)를 전 값(독일 황소 · 쟁기·긴 자세)으로 — 기준선 대조
+const PASSIVE_SET = process.env.SCHOOL_PASSIVE ?? null;
+const PASSIVE_GERMAN = process.env.SCHOOL_PASSIVE_GERMAN === '1';
+if (process.env.SCHOOL_RITIRATA === '0') {
+  const old = { pressed: 'ochsR', calm: ['pflugR', 'langort'] };
+  TRADITIONS.italian.withdraw = old;
+  for (const k of Object.keys(SCHOOLS)) if (SCHOOLS[k].tradition === 'italian') SCHOOLS[k] = { ...SCHOOLS[k], withdraw: old };
+}
+/** 시험 쪽 AI 의 패시브 목록 (환경 변수가 없으면 null = 손대지 않음) */
+function passiveList(ai) {
+  if (PASSIVE_SET == null && !PASSIVE_GERMAN) return null;
+  const tn = ai.art.tradition;
+  let list = (TRADITIONS[tn]?.passives ?? []).filter((x) => x.ai !== false || (PASSIVE_GERMAN && tn === 'german'));
+  if (PASSIVE_SET === 'off') list = [];
+  else if (PASSIVE_SET && PASSIVE_SET !== 'all') list = list.filter((x) => PASSIVE_SET.split(',').includes(x.name));
+  return list;
+}
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
 import { applyMotionLibrary, motionFor, MOTION, installFlow } from '../../src/motion_library.js';
@@ -206,6 +225,10 @@ if (mode === 'poses') {
   const used = {};
   const feintUsed = {};
   const counterUsed = {};
+  const pasFired = {};
+  const pasRolls = {};
+  let pasSkipped = 0;
+  let pasList = null;
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
       const seed = (xFirst ? 1000 : 2000) + s;
@@ -217,6 +240,9 @@ if (mode === 'poses') {
       const X = xFirst ? G.player : G.enemy;
       const Y = xFirst ? G.enemy : G.player;
       const XA = xFirst ? G.ai2 : G.ai;
+      const pl = XA ? passiveList(XA) : null;
+      if (pl) XA.passives = pl;
+      if (XA && !pasList) pasList = XA.passives.map((x) => x.name);
       if (process.env.TWIST_MUL) X.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율 (라이브러리와 별개)
       if (process.env.FORCE_FLOW === '1') installFlow(X); // 점검: 무기 쪽에만 흐름(이어 베기) — 두손 보통 틀(카타나 대리 = 롱소드)에 켜면 어떻게 되나
       if (useTable) applyMotionLibrary(X, { overlay: process.env.NO_OVERLAY !== '1', flow: process.env.NO_FLOW !== '1', noTwist: process.env.NOTWIST === '1', ai: XA, cover: process.env.COVER === '1' });
@@ -243,6 +269,9 @@ if (mode === 'poses') {
       if (res === 'W') Wn++;
       else if (res === 'L') L++;
       else D++;
+      for (const [k, v] of Object.entries(XA?.stats.passives ?? {})) pasFired[k] = (pasFired[k] ?? 0) + v;
+      for (const [k, v] of Object.entries(XA?.stats.passiveRolls ?? {})) pasRolls[k] = (pasRolls[k] ?? 0) + v;
+      pasSkipped += XA?.stats.passiveSkipped ?? 0;
     }
   }
   const n = 2 * N;
@@ -252,6 +281,8 @@ if (mode === 'poses') {
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
   const fmt = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || '-';
   console.log(`  속임수: ${fmt(feintUsed)} · 맞받아 베기: ${fmt(counterUsed)}`); // 둘째 줄 (10/9 고유 동작 단계 — 첫 줄은 전과 같다)
+  // 셋째 줄 (10/9 패시브 단계): 시험 쪽 패시브 — 이름 낸 수/굴린 수, 기술 없음 건너뜀
+  console.log(`  패시브 [${(pasList ?? []).join(',') || '없음'}]: ${(pasList ?? []).map((k) => `${k} ${pasFired[k] ?? 0}/${pasRolls[k] ?? 0}`).join(', ') || '-'}${pasSkipped ? ` · 건너뜀 ${pasSkipped}` : ''}`);
 } else if (mode === 'tap') {
   // 탭 찌르기 한 번 (상대는 치움): 칼끝이 내 가슴에서 앞으로 가장 멀리 간 거리, 그때까지 걸린 시간, 칼끝 최고 속도, 몸 낮춤.
   //  자세(패드)마다 한 번씩: 쟁기·긴 자세·황소. 라이브러리 끔/켬(켬이면 무기 방식의 덧씌우기 — 찌르기 방식은 런지)
