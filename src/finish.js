@@ -19,7 +19,7 @@
 //   힘껏 내려찍음")는 fin.plunge 만 읽는다: 몸 점 T, 칼끝이 들어갈 끝 tip, 칼 방향 dir, 닿는 곳(inside·short·walk)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { MEASURED } from './ai.js';
+import { MEASURED } from './weapon_measured.js'; // 무기별 간격 실측 한 곳 (10/8 ① 구조 — 전엔 ai.js 에서 읽었다, 같은 객체)
 import { ARM } from './config.js';
 
 export const FINISH = {
@@ -84,7 +84,7 @@ export const FINISH = {
 };
 
 // 칼 길이에 따른 마무리 거리: 누운 몸(어깨 아래 약 1.2m)까지 수평으로 닿는 거리는 칼이 짧을수록 훨씬 짧아진다.
-//  무기 실측 사거리(ai.js MEASURED 의 contact — 칼날 70% 지점이 머리 높이에 닿는 가슴 기준 거리)를 반지름으로 보고
+//  무기 실측 사거리(weapon_measured.js MEASURED 의 contact — 칼날 70% 지점이 머리 높이에 닿는 가슴 기준 거리)를 반지름으로 보고
 //  √(contact² − DROP²) 를 롱소드 값으로 나눈 배율을 FINISH.ideal·range, FINISH.plungeAt, AI 가 다가서는 거리에 곱한다.
 //  롱소드보다 긴 칼은 1 (롱소드에 맞춘 값 그대로). 측정: 청강검은 누운 몸까지 0.7~0.9m 에서만 들어갔다(롱소드 1.35m 넘어서도)
 const DROP = 1.2;

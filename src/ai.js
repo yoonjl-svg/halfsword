@@ -23,9 +23,8 @@ import * as THREE from 'three';
 import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE, GAIT } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
-import { schoolOf } from './schools.js';
-import { libSchool } from './motion_library.js';
-import { getWeapon } from './weapons.js';
+import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
+import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 
@@ -34,38 +33,10 @@ const FEAR_TREMOR = 0.03;
 
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
-// school.measure의 간격 상수를 잴 때 쓴 롱소드 칼 길이(칼자루+칼날, m) — measured 표에 없는
-// 무기(미래에 추가될 무기)에 대한 안전장치 비율 계산에만 쓴다.
-const WEAPON_BASELINE = 0.13 + 1.05;
-// 무기 PM의 실측(tools/sim/weapon_measure.mjs, docs/weapons.md §2 — 혼자 zornhau 한 번을 휘두르며
-// 칼날 70% 지점이 머리 높이를 지나는 순간의 실제 간격을 잰 값)을 롱소드 기준(같은 표의 롱소드 raw
-// 값)으로 나눈 비율. 칼날+자루 길이만 단순 비례하는 것보다 훨씬 정확하다 — 실제 팔·몸 뻗음까지
-// 담겨 있어서, 짧은 칼(환두대도 등)이 순수 길이비보다 실제로는 덜 불리하다는 게 이 표로 드러났다.
-// excalibur_replica는 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 비율을 쓴다.
-export const MEASURED = {
-  // id: [contact, reach, clinch, cutTime] raw — tools/sim/weapon_measures.mjs 와 같은 값 (감독 확정 14종 로스터).
-  //  10라운드 B: 한손 뻗기(guards.js) 뒤 hybrid(게임 기본)로 다시 잰 값 (tools/sim/hybrid.mjs weapon_measure.mjs). 에스톡은 유효 간격(× 0.914)
-  //  (finish.js 도 읽는다: 쓰러진 상대까지 닿는 거리 배율 downReachK)
-  //  cutTime 은 보정 없는 raw(롱소드 0.41)라 비율로만 쓴다.
-  longsword: [1.57, 1.8, 1.25, 0.41], // 10/8 16:35: 1.62/1.9 → 1.57/1.8 — schools.js 롱소드 measure 와 함께(다른 무기는 이 값에 대한 비율로 간격을 받으니 같이 바꿔야 그대로다)
-  zweihander: [1.71, 2.08, 1.32, 0.48],
-  estoc: [1.57, 1.99, 1.22, 0.42],
-  sabre: [1.39, 1.58, 1.07, 0.36],
-  rapier: [1.54, 1.68, 1.19, 0.29],
-  falchion: [1.37, 1.56, 1.06, 0.33],
-  monohoshizao: [1.58, 1.87, 1.22, 0.47],
-  qinggang: [1.35, 1.52, 1.04, 0.33],
-  excalibur: [1.55, 1.83, 1.2, 0.4],
-  excalibur_replica: [1.55, 1.83, 1.2, 0.4],
-  lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
-  tree_branch: [1.46, 1.61, 1.13, 0.29],
-  rubber_chicken: [0.88, 1.24, 0.68, 0.18],
-  frozen_tuna: [1.36, 1.63, 1.05, 0.44],
-  // 모르겐슈테른 (레어 둔기, 확인표 줄 144): hybrid weapon_measure.mjs 실측 contact 0.88 · clinch 0.68 · cutTime 0.39 raw (머리가 무거워 0.35 s 베기에서 70 % 지점이 늦게 머리 높이를 지난다).
-  //  reach 는 같은 날 도구가 모든 무기에서 내딛기 몫을 못 재어(롱소드도 1.62 = contact) 같은 틀(C 한손) 세이버의 reach/contact 비 1.58/1.39 로 유도한 값 [D]
-  morgenstern: [0.88, 1.0, 0.68, 0.39],
-};
-const LS_MEASURED = MEASURED.longsword;
+// 무기별 간격 실측표(MEASURED)는 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과 schools.js MEASURES 두 벌).
+//  간격을 무기에 맞춰 늘이고 줄이는 일은 sword_art.js 가 한다. 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 —
+//  도구(proto_weapons·r2p_ai_*·shove_check)가 이 이름으로 읽고 고쳐 쓴다(같은 객체)
+export { MEASURED };
 
 // 감정 판정(Emotions)·텀 상수·고유 능력 배율표는 emotions.js 에 (플레이어와 같은 규칙)
 export class AI {
@@ -92,34 +63,22 @@ export class AI {
     this.closeWasBarge = false;
     this.closeShoves = 0; // 지난 스텝까지 본 me.shoves (같은 스텝에 발사·거절된 것도 끝으로 읽는다)
     this.closeEv = { E1: 0, E2: 0, E4: 0, won: 0, cut: 0 }; // 굴린 사건 수·이긴 수·이어 벤 수 (재기용)
-    this.school = schoolOf(this.persona.school);
-    this.school = libSchool(this.school, me.weapon); // 동작 라이브러리(본판 10/8): 몸 틀·방식의 기술 가중치·새 기술·속임수·간 보는 자세를 더한 꾸러미 (끄면 그대로)
-    // 간격 상수 (가슴과 가슴 사이 수평 거리, m). school.measure는 롱소드로 잰 값이라, 칼이 그보다 짧거나
-    // 길면 그 비율만큼 줄이거나 늘린다 — 안 그러면 짧은 칼을 쥔 쪽이 롱소드 간격에서 공격을 걸었다가
-    // 정작 닿지도 못하고 상대 롱소드에만 맞는다 (무기 밸런스 시뮬로 확인한 근본 원인).
+    // 검술 풀이 (sword_art.js resolveSwordArt — 10/8 ① 구조: 전엔 이 자리에서 schoolOf + libSchool + 간격 늘이고 줄이기를 따로 했다. 값은 그대로):
+    //  유파 꾸러미 = 인물이 고른 것(persona.school, 없으면 롱소드 = 독일) + 동작 라이브러리(본판 10/8)의 몸 틀·방식 기술 가중치·새 기술·속임수·간 보는 자세(끄면 그대로).
+    //  간격 상수 (가슴과 가슴 사이 수평 거리, m): 꾸러미 measure 는 그 꾸러미를 잰 무기(대부분 롱소드)의 값이라, 칼이 그보다 짧거나 길면
+    //  실측 비율만큼 줄이거나 늘린다 — 안 그러면 짧은 칼을 쥔 쪽이 롱소드 간격에서 공격을 걸었다가 정작 닿지도 못하고 상대 롱소드에만 맞는다
+    //  (무기 밸런스 시뮬로 확인한 근본 원인). 인물 꾸러미(청강검·나뭇가지·복제품)는 measure 가 이미 그 무기 실측이라 같은 무기면 1배 그대로
+    const art = resolveSwordArt(me.weapon, this.persona);
+    this.art = art;
+    this.school = art.school;
     const baseM = this.school.measure;
-    // 실측 표에 있으면 축마다 다른 실측 비율을, 없으면(미래에 무기가 늘어날 때 대비) 칼 길이 비율로
-    // 대충이라도 스케일한다. 기준은 "이 유파 measure를 잰 무기"(school.weapon, 대부분 롱소드) — 캐릭터
-    // 유파 꾸러미(청강검·나뭇가지·복제품)는 measure가 이미 그 무기 실측이라, 롱소드 기준으로 또 줄이면
-    // 두 번 줄어든다(병합 때 확인한 회귀). 같은 무기면 정확히 1배(그대로)가 되게 한다.
-    const schoolWid = getWeapon(this.school.weapon ?? 'longsword').id; // 옛 id(jian 등)는 별칭으로 정식 id 로
-    const schoolM = MEASURED[schoolWid] ?? LS_MEASURED;
-    const scaledM = (w) => {
-      if (!w || w.id === schoolWid) return baseM;
-      const m = MEASURED[w.id];
-      if (m) {
-        return { ...baseM, contact: baseM.contact * (m[0] / schoolM[0]), reach: baseM.reach * (m[1] / schoolM[1]), clinch: baseM.clinch * (m[2] / schoolM[2]), cutTime: baseM.cutTime * (m[3] / schoolM[3]) }; // 베는 시간도 같은 비율로 (전엔 모든 무기가 롱소드 0.3 그대로)
-      }
-      const s = (w.bladeLength + w.hiltLength) / WEAPON_BASELINE;
-      return { ...baseM, contact: baseM.contact * s, reach: baseM.reach * s, clinch: baseM.clinch * s };
-    };
-    this.M = scaledM(me.weapon);
+    this.M = art.measure;
     // 10/8 17:00 (c): 이 몸이 R2′ 묶음(몸의 호)을 쓰면 칼이 더 멀리·일찍 지나가 간격을 BODY.r2pAiContact 만큼 당긴다(72 판 'all': contact 1.57 → 1.52 가 E 승 14 → 27, P 28 → 33). 묶음 없는 AI(기본 'player' 범위의 상대)엔 0 — 바이트 동일
     if (BODY.r2pScope === 'all' && BODY.trunkArc > 0 && BODY.r2pAiContact) this.M = { ...this.M, contact: this.M.contact + BODY.r2pAiContact }; // 'player' 범위에선 시뮬의 AI 조종 P 에도 안 걸어 기준 sha 를 지킨다
     // 상대 칼 길이로도 따로 잰다: foeReach(아래)는 "내가 아니라 상대가" 닿는 거리를 어림하는 값이라, 내
     // 무기가 아니라 상대 무기 기준으로 스케일해야 한다 (짧은 칼을 든 쪽이 상대의 롱소드 간격을 실제보다
     // 가깝게 어림해 그대로 걸어 들어가는 일을 막는다)
-    this.foeM = scaledM(foe.weapon);
+    this.foeM = art.measureFor(foe.weapon);
     // TECH[].reach(기술마다 다른 "이 기술은 기본 간격보다 얼마나 더/덜 닿는가" 보정)도 롱소드로 잰
     // 값이라, 짧은 칼은 이 보정을 그대로 더하면 실제보다 더 닿는다고 착각한다(무기 PM 인수인계 문서
     // docs/weapons.md §5에 남아 있던 미해결 항목) — M.contact와 같은 비율로 같이 줄인다.

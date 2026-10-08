@@ -128,3 +128,81 @@ src/sword_art.js         resolveSwordArt()
 - 권고: **PM 세션 재가동은 안 한다.** 긴 문맥을 다시 읽는 비용과 재설명·병합 왕복이 작업보다 비싸고, 이 일은 1 주일짜리 유한한 일이다. 대신 ① 핵심 코드(resolveSwordArt·생성기·검사)는 디렉터가 직접, ② 유파 자료 파일(일본·중국의 자세 이름·기술·출처)은 **새 3 등급 읽기 담당**에게 좁은 지시서(동작 PM 의 sources.md·grip_rules 를 입력으로)로 한 번에 받아 디렉터가 판정(건당 몇 달러), ③ "전통답게 보이나"는 유파마다 한 번만 2 등급 독립 검산 또는 동작 PM 을 **읽기 전용 소견 1 통**으로(필요할 때만). 새 '검술 PM' 상설 역할은 두지 않는다 — 구조가 끝나면 다음 무기·유파는 자료 추가뿐이라 상설 사람이 필요 없다.
 - 토큰 절약 수칙: 측정은 배경 시뮬(토큰 0), 워크플로 금지, 문서는 단계 끝에 한 번, 유파 자료는 표 하나로 받아 바로 파일로.
 
+
+## 13. ① 구조 구현 기록 (10/8 22:27 → 23:1x, 2 등급 작업자 — 가지 `worktree-agent-a75ed431378f2a187`, 커밋 6, main 푸시 없음)
+
+**한 줄**: 바꾼 것은 구조뿐이고 숫자·판은 바이트까지 같다. 다섯 자리에서 따로 하던 결정을 `resolveSwordArt(spec, persona)` 한 함수로 모았고, 유파는 전통 열쇠 여섯(내용)과 꾸러미(내용 + 간격)로 갈랐고, 간격 실측 세 벌은 한 파일로, 틀 층 자료는 frames.js 로 옮겼다. 생성기·검사 묶음은 비교란으로만 붙였다(본판 숫자 교체 없음, 문턱 없음).
+
+### 13-1. 옮긴 것
+
+| 무엇 | 전 | 이제 |
+|---|---|---|
+| 무기별 간격 실측 (contact·reach·clinch·베는 시간) | ai.js `MEASURED`(날것 베는 시간) · schools.js `MEASURES`(롱소드 0.30 기준) · 인물 꾸러미 measure 글자 · tools/sim/weapon_measures.mjs `WEAPON_MEASURES` — 세 벌 | **src/weapon_measured.js** `MEASURED` · `CUT_TIME_30` · `schoolMeasure(id)` · `WEAPON_BASELINE` (숫자 그대로). ai.js 는 옛 이름 `MEASURED` 를 다시 내보낸다(도구가 고쳐 쓰는 같은 객체). finish.js·schools.js·도구 표가 여기서 읽는다 |
+| 유파 내용 (간 보는 자세·기술·속임수·막기 자리·맞받아치기·물러남·고정 손) | 무기 id 꾸러미마다 롱소드 꾸러미를 복사 | **schools.js `TRADITIONS`** — german·italian·iberian·japanese·chinese·none, 간격 없음. 지금은 독일 내용 + 중국 = 전 지안 꾸러미, 나머지 넷은 독일 내용의 자리. 독일에 두삭 가지(`branches['one:cut'].thrustK` 0.5 = 전 세이버·팔쉬온 weakThrust) |
+| 무기 → 유파 | (없음 — 무기 id 꾸러미) | `traditionOf(spec)`: 앞무게 → iberian · 한손 둔기·총 → none · 한손 찌르기 → italian · 그 밖(두손 두루·두손 찌르기·한손 베기·자루) → german. 스펙 `school` 이 덮는다 — weapons.js 두 줄: 모노호시자오 `japanese`, 청강검 `chinese` |
+| 무기 꾸러미 조립 | 무기 줄 + 둔기 목록(noThrust) + 세이버·팔쉬온 목록(weakThrust) + 모노호시자오 덧붙이기 | `weaponSchool(spec)`: 유파 내용 → 날 없는 무기 찌르기 빼기(싸움 방식 규칙) → 유파 가지 → 무기 예외(`WEAPON_OVER.monohoshizao` 높은 자세·물러남) + `schoolMeasure` |
+| 인물 꾸러미 | schools.js | 그대로 — longsword(기본·이졸데·마르그레테, german) · tree_branch(브란, none + 기술별 reach 표) · jian/qinggang(랴오, chinese) · excalibur_replica(하인리히, german + 기술별 reach 표) |
+| `SCHOOLS[id]` | 16 열쇠 | 같은 16 열쇠·같은 차례·같은 값 + 읽기만 하는 `tradition` 열쇠 (총은 전처럼 없음 → 롱소드) |
+| 틀 층 자료 (자세표·기술·덧씌우기·막기 자리·본판 스위치 `MOTION`) | motion_library.js | **src/frames.js** — 옮기기만. 바뀐 이름: `weight` → `weightTech`, 만들기 `frameTable` → `buildFrameTable`, 덧씌우기 설치 셋 내보냄. motion_library.js 는 옛 이름 겉면(`export * from './frames.js'`) |
+| 쥠 모양 표 | hands.js `GRIPS` + `gripFor` | frames.js `HAND_GRIPS` (값 그대로, 레이피어 자세별 돌림은 `turn: 'posture'` — 전 `weapon.id === 'rapier'`) |
+| 결정 | fighter.js 생성자 표 분기 + `applyMotionLibrary` · ai.js `schoolOf` + `libSchool` + `scaledM` · hands.js `gripFor` · main.js HUD 이름 | **src/sword_art.js `resolveSwordArt(spec, persona, opts)`** — 검객 `this.swordArt`(인물 없음), AI `this.art`(인물), 손 모양 `swordArt.grip`, HUD `swordArt.names` |
+
+결과 칸: `{ frame, style, grip, table, names, tech, feints, parry, watch, overlays, caps, measure, measureFor, restGuard, school, tradition, lib, baseTable, libTable, motion }`. `school`·`measure`·`motion` 은 처음 읽을 때 만든다 — 검객 생성자는 몸 쪽만 읽으므로 유파 병합 기억(꾸러미 id × 무기 id)을 건드리지 않는다(전과 같은 차례).
+
+**옛 이름**: `applyMotionLibrary`·`motionFor`·`libSchool`·`frameTable`(motion_library.js) 은 안에서 `resolveSwordArt` 를 부르는 호환 겉면이다. `schoolOf`·`SCHOOLS[id]` 는 그대로(꾸러미 찾기; 무기 꾸러미는 풀이의 유파 결정과 같은 `traditionOf` 로 조립 — 도구가 새 열쇠를 끼우는 것도 그대로 통함). `guardBaseOne/Two`(guards.js) 는 그대로 둔다: 싸움 방식 → 표를 고르는 잎 함수라 풀이가 이것을 부른다(반대로 부르면 모듈 순환이고, 두손 두루 칼에선 값도 다르다 — `guardBaseTwo('versatile')` 은 교본 표, 풀이의 baseTable 은 없음). 무기 → 표 결정만 fighter.js 에서 풀이로 옮겼다.
+
+### 13-2. 일부러 그대로 둔 것 (다음 단계 몫)
+- **기본 AI(인물 없음)는 무기 유파와 상관없이 롱소드(독일) 꾸러미 + 그 무기 간격 비율** — 오늘 그대로. 무기 유파 꾸러미를 기본으로 쓰면 베는 시간 둥글림부터 판이 바뀐다(츠바이핸더: 꾸러미 0.35 대 0.30 × 0.48/0.41 = 0.351). 결과의 `tradition` 은 무기 쪽(인물이 꾸러미를 고르면 그 꾸러미 쪽), `school.tradition` 은 실제로 쥔 꾸러미 쪽이다.
+- 쉴 자세 `restGuard` 는 자리만 — 모든 유파 `rest: null` = SKILL.homeGuard(쟁기 자리). 유파별 값(§9-2)은 ③ 되돌아옴 겨눔을 고칠 때.
+- 일본 = 이베리아 내용. 모노호시자오 높은 자세는 무기 예외로 남겼다(② 에서 上段 으로 일본 쪽에 옮길 후보).
+- 중국 = 지안 꾸러미 그대로 — 그 기술별 reach 표가 청강검 실측이라 다른 중국 무기가 오면 무기 쪽으로 갈라야 한다(③).
+- 참치는 이번 지시대로 이베리아(앞무게 때리기). §4 기본값 줄과 ⑤ 단계에선 무유파 쪽으로도 적혀 있다 — ⑤ 이름 정리 때 정한다.
+- 기술별 reach 보정 표 셋(나뭇가지·지안·복제품)은 인물/유파 꾸러미 안에 그대로 — weapon_measured 로 옮길 후보.
+- 몸 참여 배율(§9-1) 자리는 만들지 않았다(이번 단계 새 수 금지 — 쓰게 되면 확인표).
+
+### 13-3. 관문 (전 = 시작 커밋 b4b4096 사본, 후 = 커밋마다 / 4·5 커밋 뒤)
+
+| 관문 | 전 | 후 |
+|---|---|---|
+| fights12 | `578402e1` | `578402e1` (커밋 1·2·3·4·6 뒤 매번) |
+| live_battery | `c2072cd1` | `c2072cd1` |
+| finish_thrust 1 --stand | `d65cc1df` | `d65cc1df` |
+| corr_s0 --limits=on,off --scenes=a,b | IDENTICAL 12 | IDENTICAL 12 (출력 글도 시간 줄 빼고 같음) |
+| weapon_smoke | OK 16 | OK 16, 출력 바이트 같음 (커밋마다) |
+| motion_lab duel 24 main (승/패/무) | 츠바이핸더 15/24/9 · 레이피어 19/24/5 · 참치 24/21/3 · 세이버 28/17/3 · 에스톡 15/29/4 · 나뭇가지 10/37/1 | 같음 — 12 줄 출력 바이트 같음(쓴 기술 횟수까지) |
+| motion_lab duel 24 off | 11/28/9 · 7/33/8 · 18/24/6 · 22/24/2 · 5/31/12 · 10/37/1 | 같음 (바이트) |
+| 결정 덤프(검산 스크립트) | 16 무기 + 자루 시제품 둘 × 인물 꾸러미(없음·롱소드·브란·랴오·지안·하인리히·캐릭터 6 + 주운 팔쉬온·무기 id) × 라이브러리 끔/켬: 검객 표·덧씌우기·fighter.motion·HUD 이름, AI 꾸러미·M·foeM·reachScale, 옛 이름 API(motionFor·libSchool·frameTable·applyMotionLibrary 다시 입히기), SCHOOLS·MEASURED·도구 표 | 4452 줄 같음 (새 `tradition` 열쇠만 뺌) · 쥠 모양 18/18 같음 |
+| 브라우저 | — | vite build 통과, 5 판(레이피어·츠바이핸더·롱소드·청강검·권총, 상대 다른 무기) 콘솔 오류 0, HUD 이름 = 쥔 표(3번 자세 (Terza)·중단 (中段)·사격 자세) |
+
+### 13-4. 생성기 출력과 손 표 (비교란 — 손 표 그대로)
+`node tools/sim/weapon_measures.mjs --gen` → data/weapon_measured.gen.json (시작 정지 2 s: 내딛기가 거절되어 reach = contact), `with_config.mjs ARENA.startHold=0 … --out=data/weapon_measured.gen.hold0.json` → reach 만 아래 맨 오른쪽 칸.
+
+| 무기 | 손 표 contact / reach / clinch / 날것 베는 시간 | 생성 (정지 2 s) | 생성 reach (정지 0) |
+|---|---|---|---|
+| longsword | 1.57 / 1.80 / 1.25 / 0.41 | 1.62 / 1.62 / 1.25 / 0.28 | 1.73 |
+| zweihander | 1.71 / 2.08 / 1.32 / 0.48 | 1.79 / 1.79 / 1.38 / 0.46 | 2.16 |
+| estoc | 1.57 / 1.99 / 1.22 / 0.42 | 1.89 / 1.89 / 1.46 / 0.33 | 2.09 |
+| sabre | 1.39 / 1.58 / 1.07 / 0.36 | 1.47 / 1.47 / 1.13 / 0.28 | 1.60 |
+| rapier | 1.54 / 1.68 / 1.19 / 0.29 | 1.63 / 1.63 / 1.26 / 0.09 | 1.66 |
+| falchion | 1.37 / 1.56 / 1.06 / 0.33 | 1.44 / 1.44 / 1.11 / 0.26 | 1.58 |
+| monohoshizao | 1.58 / 1.87 / 1.22 / 0.47 | 1.55 / 1.55 / 1.20 / 0.31 | 1.66 |
+| qinggang | 1.35 / 1.52 / 1.04 / 0.33 | 1.49 / 1.49 / 1.15 / 0.11 | 1.63 |
+| excalibur (·replica 같음) | 1.55 / 1.83 / 1.20 / 0.40 | 1.72 / 1.72 / 1.33 / 0.29 | 1.81 |
+| lightsaber | 1.46 / 1.65 / 1.13 / 0.24 | 1.66 / 1.66 / 1.28 / 0.24 | 1.75 |
+| tree_branch | 1.46 / 1.61 / 1.13 / 0.29 | 1.44 / 1.44 / 1.11 / 0.23 | 1.56 |
+| rubber_chicken | 0.88 / 1.24 / 0.68 / 0.18 | 1.08 / 1.08 / 0.83 / 0.23 | 1.19 |
+| frozen_tuna | 1.36 / 1.63 / 1.05 / 0.44 | 1.41 / 1.41 / 1.09 / 0.37 | 1.64 |
+| morgenstern | 0.88 / 1.00 / 0.68 / 0.39 | 1.01 / 1.01 / 0.78 / 0.43 | 1.30 |
+| pistol | (없음) | 0.84 / 0.84 / 0.65 / 0.25 | 0.98 |
+
+- 다른 칸 58 개(정지 2 s) · 59 개(정지 0, 보정 배율도 1.3108 → 1.2689). 손 표는 10라운드 hybrid 물리에서 잰 값 + 손질(롱소드 1.57/1.8 은 10/8 16:35 AI 박자 재조정, 에스톡은 유효 간격 × 0.914, 모르겐슈테른 reach 는 세이버 비로 유도)이라 그 뒤 물리(서보 상한 26·R2′ 묶음 'all'·한손 자세표 10/1)에서 다시 재면 거의 모든 칸이 달라진다. 큰 것: 에스톡 contact +0.32, 고무 닭 +0.20, 라이트세이버 +0.20, 엑스칼리버 +0.17; 레이피어·청강검 날것 베는 시간 0.09·0.11 은 칼끝이 처음부터 앞을 겨누는 한손 찌르기 표라 휘두르기 시작하자마자 가장 먼 점이 나오는 것으로 보인다(확인 안 함) — 분노의 베기 한 번으로 재는 이 측정법이 맞지 않는 무기 후보.
+- 손 표 안의 일관성: `CUT_TIME_30` 15 줄은 날것으로 다시 셈한 값(0.30 × 날것 ÷ 0.41, 둘째 자리)과 모두 같다.
+- 바꿀지(생성 값을 본판으로)는 이번 단계 밖 — 바꾸면 무기마다 AI 간격이 움직여 48 판 표와 사장님 확인이 필요하다.
+
+### 13-5. 검사 묶음 뼈대 `tools/sim/weapon_check.mjs <무기>`
+§5 의 7 검사 중 되는 것: 1 자세 닿기(motion_lab poses 본판 표) · 3 베기 속도(swings) · 5 결투(duel 24 main) · 6 스모크 + 기준선 셋 sha. 2 베는 길 모양 · 4 날 맞춤 성공률 · 7 스크린샷은 TODO 줄. 문턱 없음. 예 (레이피어, 89 s, 동시 4): 손 평균 2.2 cm · 최대 5.3 cm(2번 자세) · 칼끝 평균 5.1° · 최대 15.7°(3번 자세) / 베기 7 개 평균 8.1 m/s · 찌르기 5 개 4.9 m/s / 19·24·5 (40 %) / 스모크 통과 / 기준선 셋 같음. 츠바이핸더 `--quick` 10 s: 손 최대 20.4 cm(옆 자세) — 앞무게 칼이 자세를 못 버티는 자리(§5 문턱 후보 손 5 cm 를 넘는다; 비교란).
+
+### 13-6. 시간 (시계, KST)
+- 22:27 시작 — 읽기(설계서·코드 지도) · 전 기준선을 시작 커밋 사본에서 다시 잼(관문 다섯 22:33~35, 결투 12 줄 22:36~41, 3 동시) · 결정 덤프 스크립트 22:42
+- 22:45 커밋 1 (간격 한 곳) → 22:49 커밋 2 (유파 전통 열쇠) → 22:51 커밋 3 (frames.js) → 23:04 커밋 4 (resolveSwordArt; 결투 12 줄 22:57~23:03 배경, 브라우저 23:03) → 23:06 커밋 5 (생성기) → 23:1x 커밋 6 (검사 묶음·문서)
+- 실제 약 50 분 (측정 포함). 예상(§6 ① 0.5~1 일)보다 훨씬 짧다 — 바꾼 것이 구조뿐이고 검산(덤프 대조)이 결투보다 먼저 어긋남을 잡아 줘서 결투는 두 번(전·후)만 돌렸다.

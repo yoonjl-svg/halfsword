@@ -1,0 +1,71 @@
+// ─────────────────────────────────────────────────────────────
+//  무기별 간격 실측 — 한 곳 (검술 보정 v2 확장 ① 구조, 10/8 docs/strike/sword_art_layers_design_2026-10-08.md §13)
+//
+//  전엔 같은 숫자가 두 벌이었다: ai.js MEASURED(날것 베는 시간) · schools.js MEASURES(롱소드 0.30 기준 베는 시간).
+//  둘 다 여기로 옮겼다 — 숫자는 한 글자도 바꾸지 않았다. 유파(schools.js)는 이제 간격을 갖지 않고 여기서 읽는다.
+//
+//  MEASURED[id] = [contact, reach, clinch, cutTime 날것] (m·s)
+//   contact  베기가 머리·목에 제대로 닿는 거리 (칼날 70% 지점, 가슴과 가슴 사이)
+//   reach    서 있다가 휘두르며 한 걸음 내디디면 닿는 거리 = 이 안은 위험하다
+//   clinch   너무 붙음: 칼을 제대로 못 쓴다 → 떨어진다
+//   cutTime  베기를 시작해서 닿기까지 걸린 시간 — 보정 없는 날것(롱소드 0.41)이라 비율로만 쓴다
+//  무기 PM 의 실측(tools/sim/weapon_measure.mjs, docs/weapons.md §2 — 혼자 분노의 베기를 휘둘러 칼날 70% 지점이 머리 높이를
+//   지나는 순간의 간격). 10라운드 B: 한손 뻗기(guards.js) 뒤 hybrid(게임 기본)로 다시 잰 값. 에스톡은 유효 간격(× 0.914).
+//  읽는 곳: sword_art.js(AI 간격을 무기 비율로 늘이고 줄인다) · finish.js(쓰러진 상대까지 닿는 거리 배율 downReachK) ·
+//   ai.js(옛 이름 MEASURED 로 다시 내보낸다 — 도구가 고쳐 쓴다) · tools/sim/weapon_measures.mjs(도구 표)
+//
+//  CUT_TIME_30[id] = 유파 꾸러미 measure.cutTime — 날것을 롱소드 0.30 기준 비율로 고친 값 (0.30 × 날것 ÷ 0.41, 둘째 자리)
+//   (ai.js 가 롱소드 유파에 다른 무기를 쥐여 줄 때와 같은 기준). 전 schools.js MEASURES 넷째 칸 그대로
+//
+//  생성기: `node tools/sim/weapon_measures.mjs --gen` 이 같은 측정으로 전 무기를 한 번에 재어 data/weapon_measured.gen.json 에 쓰고
+//   이 표와 나란히 찍는다(비교란 — 이 표를 바꾸지 않는다).
+// ─────────────────────────────────────────────────────────────
+
+export const MEASURED = {
+  longsword: [1.57, 1.8, 1.25, 0.41], // 10/8 16:35: 1.62/1.9 → 1.57/1.8 (두 손 서보 상한 26 뒤 AI 박자 재조정, 확인표 192) — 다른 무기는 이 값에 대한 비율로 간격을 받는다
+  zweihander: [1.71, 2.08, 1.32, 0.48],
+  estoc: [1.57, 1.99, 1.22, 0.42], // 균형 재분배(칼날 0.72·폼멜 0.6kg) 후 재실측 1.75 → 유효 간격(칼 중간이 닿는 안쪽)
+  sabre: [1.39, 1.58, 1.07, 0.36],
+  rapier: [1.54, 1.68, 1.19, 0.29],
+  falchion: [1.37, 1.56, 1.06, 0.33],
+  monohoshizao: [1.58, 1.87, 1.22, 0.47], // 균형 재분배(칼날 0.72·츠카 0.3kg) 후 재실측
+  qinggang: [1.35, 1.52, 1.04, 0.33],
+  excalibur: [1.55, 1.83, 1.2, 0.4],
+  excalibur_replica: [1.55, 1.83, 1.2, 0.4], // 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 값
+  lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
+  tree_branch: [1.46, 1.61, 1.13, 0.29],
+  rubber_chicken: [0.88, 1.24, 0.68, 0.18],
+  frozen_tuna: [1.36, 1.63, 1.05, 0.44],
+  // 모르겐슈테른 (레어 둔기, 확인표 줄 144): hybrid weapon_measure.mjs 실측 contact 0.88 · clinch 0.68 · cutTime 0.39 날것 (머리가 무거워 0.35 s 베기에서 70 % 지점이 늦게 머리 높이를 지난다).
+  //  reach 는 같은 날 도구가 모든 무기에서 내딛기 몫을 못 재어(롱소드도 1.62 = contact) 같은 틀(C 한손) 세이버의 reach/contact 비 1.58/1.39 로 유도한 값 [D]
+  morgenstern: [0.88, 1.0, 0.68, 0.39],
+};
+
+// 유파 꾸러미의 베는 시간 (롱소드 0.30 기준) — 나뭇가지·청강검·복제품 줄은 전 schools.js 인물 꾸러미(브란·랴오·하인리히)의 measure 값
+export const CUT_TIME_30 = {
+  longsword: 0.3,
+  zweihander: 0.35,
+  estoc: 0.31,
+  sabre: 0.26,
+  rapier: 0.21,
+  falchion: 0.24,
+  monohoshizao: 0.34,
+  qinggang: 0.24,
+  excalibur: 0.29,
+  excalibur_replica: 0.29,
+  lightsaber: 0.18,
+  tree_branch: 0.21,
+  rubber_chicken: 0.13,
+  frozen_tuna: 0.32,
+  morgenstern: 0.29, // 0.30 × 0.39/0.41
+};
+
+/** 유파 꾸러미에 넣는 간격 한 벌 (새 객체): 거리 셋은 MEASURED, 베는 시간은 CUT_TIME_30. 표에 없는 무기는 null */
+export function schoolMeasure(id) {
+  const m = MEASURED[id];
+  if (!m || CUT_TIME_30[id] == null) return null;
+  return { contact: m[0], reach: m[1], clinch: m[2], cutTime: CUT_TIME_30[id] };
+}
+
+// 표에 없는 무기(미래에 추가될 무기)에 대한 안전장치: 롱소드 칼 길이(칼자루+칼날, m)에 대한 길이 비율로만 대충 스케일한다 (sword_art.js measureFor)
+export const WEAPON_BASELINE = 0.13 + 1.05;
