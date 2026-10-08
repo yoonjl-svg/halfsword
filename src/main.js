@@ -78,6 +78,11 @@ const cutStep = +params.get('cutStep');
 if (cutStep >= 0 && params.has('cutStep')) CONFIG.GAIT.cutStep = cutStep;
 const servoLead = +params.get('servoLead');
 if (servoLead >= 0 && params.has('servoLead')) CONFIG.ARM.servoLead = servoLead;
+// 손잡이 찍기 시제품(10/9, docs/strike/pommel_strike_2026-10-09.md): `?pommel=1` = persona.close 가 있는 AI 는 밀치기 뒤 베기 대신 폼멜로 찍는다(CLOSE.pommelAll).
+//  `?pommel=tap` = 그에 더해 플레이어가 붙은 거리(CLOSE.pommelDist)에서 탭하면 찌르기 대신 찍는다. 없으면 오늘 그대로
+const pommelKnob = params.get('pommel');
+if (pommelKnob === '1' || pommelKnob === 'tap') CONFIG.CLOSE.pommelAll = true;
+const pommelTap = pommelKnob === 'tap';
 const trunkArc = +params.get('trunkArc');
 if (trunkArc >= 0 && params.has('trunkArc')) CONFIG.BODY.trunkArc = trunkArc;
 const trunkFollow = +params.get('trunkFollow');
@@ -1440,7 +1445,7 @@ function frame(now) {
     player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
     // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust). 권총은 손가락이 닿는 순간 쏜다 (쏘는 타이밍이 실력이라 뗄 때까지 늦추지 않는다)
     input.tapOnDown = !!player.weapon?.gun;
-    if (input.consumeTaps() > 0 && player.alive) player.skill.thrust();
+    if (input.consumeTaps() > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();
     const m = input.move;
