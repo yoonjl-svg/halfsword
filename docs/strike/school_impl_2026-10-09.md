@@ -12,7 +12,7 @@
 | 기술 가중치 `techK` | sword_art.js `applySchoolArt` (꾸러미 lazy, 라이브러리 병합 뒤) | 안 씀 | 씀 (`SCHOOL_ART.weights`) | 열쇠 '몸 틀:싸움 방식' → '몸 틀:*' → '*' 처음 맞는 칸 하나, `thrust` = 찌르기 기술 모두. 받은 꾸러미를 고치지 않고 새 꾸러미 |
 | 쉴 자세 `rest` | sword_art.js `restGuardOf` → `art.restGuard.pad` → skill.js ③ 되돌아옴 | `SKILL.homeGuard` | 유파 rest 패드 (`SCHOOL_ART.rest`) | 일본·중국 기본 `'pflugR'`(안 B) = homeGuard 와 같은 자리 → 켜도 바이트 그대로. 안 A `'langort'` 는 확인표 198 |
 | 맞받아치기 `counterArt` (중국만) | sword_art.js `applySchoolArt` | 안 씀 | 씀 (`SCHOOL_ART.counter`) | `{ default: ['stichPflug', 'zwerch', 'zornhau'] }` (초안 §8). 열쇠를 `counter` 로 두지 않았다: 꾸러미 조립(`pack`)이 유파의 `counter` 를 그대로 가져가 끔에서도 판이 바뀐다 |
-| 새 기술 `newTech` | schools.js `JAPANESE_NEW_TECH`(tsubameGaeshi·omote5·kote)·`CHINESE_NEW_TECH`(yaoji·zuoyi) | **자료만** | 자료만 | 모두 `ai: false` + `src`. 어디에도 이어 두지 않았고 재지 않았다. kote 길 = zuoyi 길(한 길, 이름만 둘) |
+| 새 기술 `newTech` (→ 10/9 고유 동작 단계에서 `unique` 로 이름 바꿈, `school_unique_2026-10-09.md`) | schools.js `JAPANESE_NEW_TECH`(tsubameGaeshi·omote5·kote)·`CHINESE_NEW_TECH`(yaoji·zuoyi) — 지금 `JAPANESE_UNIQUE`·`JAPANESE_SPARE`·`CHINESE_UNIQUE` | **자료만** | 자료만 | 모두 `ai: false` + `src`. 어디에도 이어 두지 않았고 재지 않았다. kote 길 = zuoyi 길(한 길, 이름만 둘) |
 | 한 칼 자세(높은 자세 간 보기·물러남) | `WEAPON_OVER.monohoshizao` → `TRADITIONS.japanese.guards·withdraw` | 늘 (전과 같음) | 같음 | 일본 무기가 모노호시자오 하나라 바이트 그대로. **뒤에 오는 카타나는 이것을 물려받는다 — 넣을 때 48 판으로 다시 잰다.** `WEAPON_OVER` 는 빈 객체로 자리만 남김 |
 | 중국 가중치 안 B | `CHINESE_TECHK_B` (내보내기만) | 안 씀 | 안 씀 (도구만 바꿔 끼움) | 안 A + 찌르기 ×1.87 |
 | 스위치 | config.js `SKILL.schoolArt: 0` · main.js `?schoolArt=` · schools.js `SCHOOL_ART = { weights, rest, counter }`(재기 전용, 기본 모두 true) | | | 도구: motion_lab `SCHOOL_ART=1`·`SCHOOL_ART_PARTS=weights,rest,counter`·`SCHOOL_REST=langort`·`SCHOOL_TECHK=B` (src 기본은 건드리지 않음) |

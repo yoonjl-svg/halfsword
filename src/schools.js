@@ -9,7 +9,10 @@
 //      무기 → 유파 기본값은 틀·방식에서 자동(traditionOf), 스펙에 school 이 있으면 그것(모노호시자오 japanese, 청강검 chinese).
 //      지금(① 구조)은 독일 말고는 자리만이다: 이탈리아·이베리아·일본·무유파는 독일 내용 그대로, 중국은 전 지안 꾸러미 그대로
 //      (전엔 모든 무기 꾸러미가 롱소드 꾸러미 위에 간격만 바꾼 것이었다 — 판이 바이트까지 같게 그 내용을 그대로 옮겼다).
-//      ②③ 단계(10/9, docs/strike/school_impl_2026-10-09.md): 일본·중국에 유파 자료(names·techK·rest·counterArt·newTech)를 더했다 — 아래 '유파 자료' 머리말.
+//      ②③ 단계(10/9, docs/strike/school_impl_2026-10-09.md): 일본·중국에 유파 자료(names·techK·rest·counterArt·unique)를 더했다 — 아래 '유파 자료' 머리말.
+//      고유 동작 단계(10/9, docs/strike/school_unique_2026-10-09.md — 사장님 10/9 01:5x '새 베기 길을 열어야 유파의 의미가 있지'):
+//       공용 동작(TECH 12 + 라이브러리 talhoReves·wristCut·molinello)은 모든 유파가 같이 쓰고 이름만 유파 말로(techNames),
+//       유파마다 고유 동작 셋(unique — 독일·이탈리아·이베리아·일본·중국, 무유파는 없음)을 더한다. 아래 '공용 동작 이름'·'고유 동작' 머리말.
 //      자세 이름·쉴 자세는 늘, 가중치·맞받아치기·새 기술(燕返し)은 SKILL.schoolArt(기본 1, 사장님 10/9 01:5x) 일 때. 값(가중치 수)은 사장님 확인 전 — 켜는 것만 결정됨
 //   ② SCHOOLS — AI 가 쥐는 꾸러미 (옛 계약 그대로: 유파 내용 + 그 꾸러미를 잰 무기 weapon + 간격 measure). 열쇠도 옛 그대로:
 //      인물 꾸러미(longsword 기본·tree_branch 브란·qinggang/jian 랴오·excalibur_replica 하인리히 — 캐릭터 PM, 지금처럼 유지)와
@@ -32,7 +35,7 @@
 //   withdraw 물러날 때 겨누는 자세 이름: pressed(몰아치는 상대에게), calm(그 밖에, 둘 중 하나를 무작위로)
 //   pose     그 밖의 고정 손 위치: cover(쓰러졌을 때 머리 위로 가리기), point(칼끝으로 겨누기)
 //   tradition 이 꾸러미의 유파 전통 열쇠 (TRADITIONS) — 10/8 더함, 읽기만(AI 동작은 읽지 않는다)
-//  유파 자료 칸(names·techK·rest·counterArt·newTech)은 꾸러미에 들어가지 않는다(pack 이 고르는 열쇠 밖) — sword_art.js 가 TRADITIONS 에서 직접 읽는다
+//  유파 자료 칸(names·techNames·techK·rest·counterArt·unique·spare)은 꾸러미에 들어가지 않는다(pack 이 고르는 열쇠 밖) — sword_art.js 가 TRADITIONS 에서 직접 읽는다
 // ─────────────────────────────────────────────────────────────
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS, HIGH_GUARDS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
@@ -80,8 +83,11 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //   techK      기술 base 곱. 열쇠 = '몸 틀:싸움 방식' → '몸 틀:*' → '*' 차례로 처음 맞는 한 칸만. 칸 안의 'thrust' = 찌르기 기술(kind 'thrust') 모두
 //   rest       쉴 자세 = G 패드 열쇠 (보정 v2 ③ 되돌아옴 겨눔의 목표 — 플레이어만 쓴다. AI 는 autoGuard 가 꺼져 있어 읽지 않는다)
 //   counterArt 맞받아 베기 목록 (꾸러미 counter 꼴). 열쇠를 counter 로 두지 않은 까닭: 꾸러미 조립(pack)이 유파의 counter 를 그대로 가져가 끔에서도 판이 바뀐다
-//   newTech    새 기술 후보 (TECH 꼴 + ai:false + src) — AI 는 쓰지 않는다. 자료·갤러리용, 재지 않았다
-//  techK·counterArt·newTech 는 SKILL.schoolArt(기본 1 — 사장님 10/9 01:5x '스위치 켜') 일 때 sword_art.js 가 입힌다 (0 = 10/9 01:49 까지의 판). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
+//   unique     고유 동작 셋 (사장님 '고유 동작' — 옛 이름 newTech). 꼴 셋: TECH 꼴 길(kind cut·thrust) · { feint: FEINTS 꼴(fake·at·then·open) } ·
+//              { counter: { 줄: [기술 이름…] } }. 모두 src(출처 표시 [원전]·[원전 2차]·[해석]·[추정]). ai:false = 자료만(AI 에 안 넣음)
+//   spare      고유 셋에 들지 못한 후보 (ai:false 자료, 갤러리·문서용) — 일본 表5
+//   techNames  공용 동작 이름 (기술 이름 → { name, src }) — 자료만(HUD 는 기술 이름을 보이지 않는다)
+//  techK·counterArt·unique 는 SKILL.schoolArt(기본 1 — 사장님 10/9 01:5x '스위치 켜') 일 때 sword_art.js 가 입힌다 (0 = 10/9 01:49 까지의 판). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
 
 // 일본 (카타나 가족: 지금 모노호시자오 = 앞무게 틀, 뒤에 올 카타나 = 두손 보통 틀). 이름 14 자리 — 원전 이름 + 자리 근거 7, 원전 이름 + 자리 [해석] 3, 원전 없음 4(쉬운 말)
 const JAPANESE_NAMES = {
@@ -106,13 +112,20 @@ const JAPANESE_TECHK = {
   'two:*': { oberhau: 1.3, zornhau: 1.2, zornhauL: 1.2, zwerch: 0.8, zwerchL: 0.8, thrust: 0.8 },
   'heavy:cut': { zwerch: 0.8, zwerchL: 0.8 },
 };
-// 일본 새 기술 후보 (초안 §6. 수는 [추정]). 燕返し 는 AI 에 열림 — 사장님 10/9 01:5x(48 판 52 → 56 % 소음 폭, 실제 사용 2/430: '있거나 없거나면 없을 이유도 없다'). 나머지는 ai:false 자료
+// 일본 고유 동작 셋 (초안 §6. 수는 [추정]). 燕返し 는 AI 에 열림 — 사장님 10/9 01:5x(48 판 52 → 56 % 소음 폭, 실제 사용 2/430: '있거나 없거나면 없을 이유도 없다').
 //  燕返し 길은 초안 안 3-가 그대로(지붕 → 곧장 바보까지 내려벤 뒤 오른 황소로 퍼올림). 다른 꼴(왼쪽 바꿈을 지나 왼 황소로)은 안 쓴 후보로 문서에만
-const JAPANESE_NEW_TECH = [
+//  고유 동작 단계(10/9): 小手·跨虎 연타를 더해 셋. 表5 는 남은 후보(JAPANESE_SPARE, ai:false). 켜고 끈 까닭·수는 docs/strike/school_unique_2026-10-09.md
+const JAPANESE_UNIQUE = [
   { name: 'tsubameGaeshi', from: G.tag, path: [[0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR], open: 'H', kind: 'cut', reach: -0.05, base: 0.8, presses: true, chain: 2, src: '이름 [전승] · 동작 오륜서 表2 R0000015/23 「打ちはづしたる太刀其儘置きて…下よりすくひ上げて打つ」 [원문] · 길의 수 [추정]' },
-  { name: 'omote5', ai: false, from: G.sideR, path: [[0.3, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'H', kind: 'cut', reach: -0.05, base: 0.6, presses: true, chain: 1, src: '오륜서 水の巻 表5 「我右の肩に横に構へて…上段に振り上げ、上より直ちにきる」 R0000016/24 [원문] · 길의 수 [추정]' },
   // 小手 — 길은 중국 zuoyi 와 같은 것 하나로 둔다(두 초안이 같은 꼴이라 적음). 유파마다 이름만 다르다
-  { name: 'kote', ai: false, from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, src: '검도형 2본·6본 小手 (읽기 담당 표) · 오륜서 「手をはる」 [원문] · 길은 중국 zuoyi 와 같음 [추정]' },
+  { name: 'kote', from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, src: '검도형 2본·6본 小手 (읽기 담당 표) · 오륜서 「手をはる」 [원문] · 길은 중국 zuoyi 와 같음 [추정]' },
+  // 跨虎 연타 — 발을 바꿔 디디며 앞으로 거듭 친다. 원문은 네 번이지만 길 하나에 넷을 넣으면 몰리넬로처럼 가운데가 오래 빈다 → 두 번(袈裟 → 왼쪽으로 들어 올려 真向).
+  //  나머지 이음은 앞무게 흐름(installFlow — 내리치기를 ×3 먼저 고른다)이 맡는다. 오른 어깨 → 왼쪽 바꿈 → 지붕 → 바보
+  { name: 'kokoRenda', from: G.tagR, path: [[0.12, 0.14], G.wechselL, [-0.14, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'UL', kind: 'cut', reach: 0.05, base: 0.9, presses: true, chain: 2, src: '왜검 運光流 「作跨虎勢 兩手前一打 右手左脚前一打 右手右脚前一打 右手右脚前一跳前一打」 무도 권2 p076~p087/68~79 [원문] · 네 번 → 두 번으로 줄임 [해석] · 길의 수 [추정]' },
+];
+// 일본 남은 후보 (고유 셋에 들지 못함 — ai:false 자료)
+const JAPANESE_SPARE = [
+  { name: 'omote5', ai: false, from: G.sideR, path: [[0.3, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'H', kind: 'cut', reach: -0.05, base: 0.6, presses: true, chain: 1, src: '오륜서 水の巻 表5 「我右の肩に横に構へて…上段に振り上げ、上より直ちにきる」 R0000016/24 [원문] · 길의 수 [추정]' },
 ];
 
 // 중국 (劍 — 지금 청강검 = 한손 두루 틀, 한손 찌르기 자세표 위). 이름 14 자리 — 조선세법 24 세 12 + 세 안 자세 이름(直符送書) 1 + 원전 없음 1.
@@ -137,13 +150,93 @@ const CHINESE_NAMES = {
 const CHINESE_TECHK = { '*': { zwerch: 2.0, zwerchL: 2.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };
 // 안 B (초습 쪽, ≈ 1.6 : 1) — 안 A + 찌르기 ×1.87 (= 2.8 ÷ 1.5). 재기용으로만 내보낸다(기본에 이어 두지 않음 — 도구가 TRADITIONS.chinese.techK 를 이것으로 바꿔 끼운다)
 export const CHINESE_TECHK_B = { '*': { ...CHINESE_TECHK['*'], thrust: 1.87 } };
-// 중국 새 기술 후보 (ai:false — 초안 §4 그대로: 刺·擊 고리. 수는 [추정])
-const CHINESE_NEW_TECH = [
+// 중국 고유 동작 셋 (초안 §4: 刺·擊 고리 둘 + 斂翅. 수는 [추정])
+const CHINESE_UNIQUE = [
   // 찌른 뒤(긴 자세) 오른쪽으로 당겨 가로로 — 坦腹·左夾 → 腰擊
-  { name: 'yaoji', ai: false, from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.3, chain: 1, src: '조선세법 「向前進步腰擊」 무비지 쪽158/0572·쪽170/0584 [원문]' },
+  { name: 'yaoji', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.3, chain: 1, src: '조선세법 「向前進步腰擊」 무비지 쪽158/0572·쪽170/0584 [원문]' },
   // 찌른 뒤 치켜 올렸다 눌러 손을 침 — 逆鱗刺 → 左翼擊 「上挑下壓 直殺虎口」
-  { name: 'zuoyi', ai: false, from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, src: '조선세법 左翼勢 무비지 쪽156/0570·쪽173/0587 [원문]' },
+  { name: 'zuoyi', from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, src: '조선세법 左翼勢 무비지 쪽156/0570·쪽173/0587 [원문]' },
+  // 斂翅 — 패한 척 물러났다가 갑자기 腰擊. 속임수 꼴: 찌르는 척(坦腹)하다 칼을 옆 뒤로 거둬들이고(물러나는 척) 오른 옆에서 허리를 가로 벤다.
+  //  속임수는 가짜 몫 동안 발을 내딛지 않는다 — 몸이 실제로 물러나는 것은 그리지 못한다(손만 거둬들임) [해석]
+  { name: 'lianchi', feint: { name: '斂翅 (찌르는 척 → 거둬 腰擊)', fake: 'stichPflug', at: 0.3, then: [G.nebenR, G.sideR, [0.0, 0.1], G.sideL], open: 'UL' }, src: '조선세법 斂翅勢 무비지 쪽174/0588 · 무도 권2 p045/37 「法能佯北誘賺 … 倒退進步腰擊」 [원문] · 물러남을 손 거둠으로 [해석]' },
 ];
+
+// ── 고유 동작 (10/9 — 사장님 01:5x '각 유파마다 강점과 특징을 살릴 고유 동작', docs/strike/school_unique_2026-10-09.md) ──
+//  유파마다 셋. 패드 자리·칼끝 각·몸 돌림은 그대로 — 새 길은 14 자리 패드와 닿는 범위 안의 빈 패드 점을 잇는 것뿐.
+//  base 는 꾸러미에 들어간 뒤 값 그대로다(라이브러리의 틀·방식 곱 — 앞무게 내리치기 ×1.4, 찌르기 방식 찌르기 ×1.8 — 을 거치지 않는다: applySchoolArt 가 그 뒤에 더한다).
+//  그래서 같은 유파 무기의 비슷한 공용 동작 실제 base 에 맞춰 적었다. 수는 모두 [추정], 사장님 확인 전
+
+// 독일 (리히테나워·마이어 다섯 비밀 베기 가운데 TECH 에 없는 둘 + 맺은 뒤 거듭 치기). **셋 다 ai:false** — 롱소드 AI(사장님 주 상대)를 바꾸므로 수를 보시고 정한다
+const GERMAN_UNIQUE = [
+  // 굽은 베기: 오른 어깨에서 팔을 엇걸어 왼쪽 아래로 — 칼끝을 상대 손 위로 던진다(몸통보다 가까운 손을 노려 reach +0.2). 황소를 깬다
+  { name: 'krumphau', ai: false, from: G.tagR, path: [[0.3, 0.3], [0.0, 0.05], G.pflugL], open: 'UL', kind: 'cut', reach: 0.2, base: 0.6, src: 'Zettel 「Krump auf behende, wirf den Ort auf die Hände」 · Ringeck 주해 42절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/krumphau_*.json 출처] · 길의 수 [추정]' },
+  // 사팔뜨기 베기: 오른 어깨에서 손을 뒤집어 뒷날로 위에서 상대 칼·오른 어깨를 치고, 팔을 뻗어 칼끝으로 겨눈 채 끝낸다(긴 자세). 쟁기·찌르기를 깬다
+  { name: 'schielhau', ai: false, from: G.tagR, path: [[0.22, 0.36], [0.06, 0.2], G.langort], open: 'UR', kind: 'cut', reach: 0.05, base: 0.7, presses: true, src: 'Zettel 「Schieler bricht, was Büffel schlägt oder sticht」 · Ringeck 주해 58~59절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/schielhau_*.json 출처] · 길의 수 [추정]' },
+  // 거듭 치기(Duplieren): 분노의 베기가 맺힌 자리(긴 자세 위)에서 멈추지 않고 칼자루를 들어 엇걸어, 상대 칼 뒤(칼과 사람 사이)로 머리를 다시 친다
+  { name: 'duplieren', ai: false, from: G.tagR, path: [[0.12, 0.14], [-0.08, 0.3], [0.12, 0.22], G.pflugL], open: 'UL', kind: 'cut', reach: 0, base: 0.8, presses: true, chain: 2, src: 'Ringeck 주해 Duplieren(분노의 베기 뒤 맺음이 단단하면 칼과 사람 사이로 머리를 친다) [원전 2차] · 길 [해석] · 수 [추정]' },
+];
+
+// 이탈리아 (카포 페로 1610 — 레이피어, 한손 찌르기). 찌르기 방식 꾸러미의 실제 찌르기 base(stichPflug 0.63·stichAlber 0.54)에 맞춤
+const ITALIAN_UNIQUE = [
+  // 임브로카타: 프리마(지붕 자리)에서 손을 돌리지 않은 채 상대 왼 어깨에서 오른 무릎 쪽으로 내리꽂는 찌르기
+  { name: 'imbroccata', from: G.tag, path: [[0.12, 0.3], [0.04, -0.06]], open: 'UL', kind: 'thrust', reach: 0.1, base: 0.55, src: 'Capo Ferro 1610 용어 풀이 「l\'imbroccata si parte dalla prima guardia, & và à ferire dalla spalla sinistra dell\'avversario fino al suo ginocchio dritto … e vuol esser buttata」 PDF 53쪽 [원문] · 길의 수 [추정]' },
+  // 파사타 소토(아래로 빠져 찌르기): 몸을 낮춰 상대 칼 밑으로 — 몸 낮추기는 기술 꼴로 못 그린다(찌르기 방식 런지 덧씌우기가 이미 0.16 m 낮춘다).
+  //  그래서 낮은 오른쪽(바꿈 자리)에서 아래로 처져 올려 찌르는 길로 둔다. 상대 칼이 높을 때(아래 빈틈 ×1.8) 고르기 쉽다
+  { name: 'passataSotto', from: G.wechselR, path: [[0.2, -0.36], [0.04, -0.16]], open: 'LL', kind: 'thrust', reach: 0.15, base: 0.5, src: 'Capo Ferro 1610 「punta in falso, che vien di giù in su, verso il petto … ritrovandosi la spada in guardia bassa」 PDF 53쪽 [원문] · 이름 passata sotto [원전 2차] · 몸 낮춤 없음 = 런지 덧씌우기 몫 [해석]' },
+  // 카바치오네(칼끝 돌려 빼기): 높이 찌르는 척(황소) → 상대 칼 밑으로 칼끝을 돌려 반대쪽에서 곧게 찌른다 — 속임수 꼴
+  { name: 'cavazione', feint: { name: 'cavazione (위 찌르는 척 → 밑으로 돌려 찌름)', fake: 'stichOchs', at: 0.5, then: [[0.12, 0.0], [-0.08, -0.04], G.langort], open: 'C' }, src: 'Capo Ferro 1610 「in quell\'istante si caverà, & stringerà caminando innanzi … si ferirà di quarta di punta nel petto」 PDF 80쪽 [원문] · 속임수 꼴 [해석]' },
+];
+
+// 이베리아 (몬탄테 — 츠바이핸더. 탈류→레베스(규칙 1)는 frames.js NEW_TECH.heavy 에 그대로 둔다: 옮기면 무유파 참치가 잃는다).
+//  앞무게 꾸러미의 실제 base(zornhau 1.96·oberhau 1.12·talhoReves 1.1)에 맞춤. 고디뉴 1599 사본은 손글씨라 못 읽었다 → 몬탄테 규칙 요약 [원전 2차]
+const IBERIAN_UNIQUE = [
+  // 둥근 베기(redondo·molinete): 머리 위로 칼을 돌려 가로베기를 두 번 — 오른 어깨 → 오른 옆 → 왼 옆 → 머리 위로 넘겨 → 오른 옆 → 왼 옆. 둘러싸였을 때 사방을 쓴다
+  //  시작은 오른 어깨 지붕(앞무게가 간 보는 높은 자세) — 처음(오른 옆 자세 시작·base 0.6)엔 혼자 켜면 48 판에 한 번도 안 골랐다. 어깨로 옮겨도 0 →
+  //  같은 자리의 분노의 베기(1.96)에 밀린 것이라 base 를 같은 몬탄테 여러 칼 길 talhoReves 와 같은 1.1 로 (10/9 잼)
+  { name: 'redondo', from: G.tagR, path: [G.sideR, [0.0, 0.1], G.sideL, [-0.3, 0.45], [0.3, 0.45], G.sideR, [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0.05, base: 1.1, chain: 2, src: '몬탄테 규칙의 머리 위 돌려 베기(redondo·molinete) — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 길 [해석] · 수 [추정]' },
+  // 내려 올려 베기(altibaixo): 지붕에서 곧게 내려베고(altabaixo) 같은 줄로 곧장 되올려 다시 지붕 — 흐름이 다음 내려베기로 잇는다
+  { name: 'altibaixo', from: G.tag, path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], open: 'H', kind: 'cut', reach: 0, base: 0.9, presses: true, chain: 2, src: '몬탄테 altabaixo(위에서 아래로) + 되올림 — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 되올림 [해석] · 수 [추정]' },
+  // 바퀴로 받기: 맞받아 베기를 탈류→레베스(8자)로 — 몬탄테는 받는 칼도 멈추지 않고 돌린다. 맞받아치기 목록 꼴(같은 거리면 앞 이름이 이긴다)
+  { name: 'rodaCounter', counter: { highR: ['talhoReves', 'zornhauL', 'oberhau', 'zornhau'], default: ['talhoReves', 'zornhau', 'oberhau', 'zornhauL'] }, src: '몬탄테 규칙 1 탈류·레베스를 받는 자리에서 [원전 2차] · 맞받아치기에 씀 [해석]' },
+];
+
+// ── 공용 동작 이름 (techNames — 10/9 고유 동작 단계, 자료만) ──
+//  공용 동작 = TECH 12 + 라이브러리 셋(talhoReves·wristCut·molinello). 동작은 같고 유파 말만 다르다. HUD 는 기술 이름을 보이지 않는다(코드 없음) — 문서·갤러리용
+const nm = (name, src) => (src ? { name, src } : { name });
+export const TECH_NAMES = {
+  german: {
+    zornhau: nm('분노의 베기 (Zornhau)', 'Zettel·Meyer 1570 4장'), zornhauL: nm('왼 분노의 베기'), oberhau: nm('정수리 베기 (Oberhau·Scheitelhau 꼴)', 'Meyer 1570 4장'), zwerch: nm('가로베기 (Zwerchhau)', 'Zettel 「Zwerch benimmt, was vom Tag dar kommt」'), zwerchL: nm('왼 가로베기'),
+    unterhau: nm('올려베기 (Unterhau)', 'Meyer 1570'), unterhauL: nm('왼 올려베기'), stichPflug: nm('쟁기 찌르기 (Pflug)'), stichPflugL: nm('왼 쟁기 찌르기'), stichOchs: nm('황소 찌르기 (Ochs)'), stichOchsL: nm('왼 황소 찌르기'), stichAlber: nm('바보 찌르기 (Alber)'),
+    talhoReves: nm('분노의 베기 좌우 이어 (Zornhau 8자)', '[해석]'), wristCut: nm('손 베기 (Abschneiden 꼴)', '[해석]'), molinello: nm('돌려 베기 (Radschlag 꼴)', '[해석]'),
+  },
+  italian: {
+    zornhau: nm('mandritto squalembrato (오른쪽 사선 내려베기)', 'Capo Ferro 용어 풀이 [원전 2차]'), zornhauL: nm('riverso squalembrato (왼쪽 사선)'), oberhau: nm('fendente (곧게 내려베기)'), zwerch: nm('mandritto tondo (가로)'), zwerchL: nm('riverso tondo'),
+    unterhau: nm('montante (올려베기 — 이탈리아 말)'), unterhauL: nm('riverso montante'), stichPflug: nm('stoccata (terza 에서 아래로부터)', 'Capo Ferro PDF 53쪽 「la stoccata … si parta dalla terza」 [원문]'), stichPflugL: nm('punta riversa (quarta 에서)', 'Capo Ferro PDF 53쪽 [원문]'),
+    stichOchs: nm('punta dritta alta (seconda)', '[해석]'), stichOchsL: nm('punta riversa alta'), stichAlber: nm('stoccata bassa', '[해석]'),
+    talhoReves: nm('mandritto e riverso'), wristCut: nm('stramazzone (손목 끝 베기)', '[원전 2차]'), molinello: nm('molinello', '[원전 2차]'),
+  },
+  iberian: {
+    zornhau: nm('talho (오른쪽 사선)', '몬탄테 규칙 [원전 2차]'), zornhauL: nm('revés (왼쪽 사선)', '[원전 2차]'), oberhau: nm('altabaixo (위에서 아래로)', '[원전 2차]'), zwerch: nm('talho horizontal', '[해석]'), zwerchL: nm('revés horizontal', '[해석]'),
+    unterhau: nm('talho de baixo (올려베기)', '[해석]'), unterhauL: nm('revés de baixo', '[해석]'), stichPflug: nm('estocada'), stichPflugL: nm('estocada (왼쪽)'), stichOchs: nm('estocada alta'), stichOchsL: nm('estocada alta (왼쪽)'), stichAlber: nm('estocada baixa'),
+    talhoReves: nm('talho e revés (규칙 1)', '몬탄테 규칙 1 [원전 2차]'), wristCut: nm('talho curto (손 베기)', '[해석]'), molinello: nm('molinete', '[원전 2차]'),
+  },
+  japanese: {
+    zornhau: nm('袈裟 (けさ) 斬り', '이름 [전승] · 오륜서 「筋かひにきる」 R16/24 [원문]'), zornhauL: nm('左袈裟'), oberhau: nm('真向 (정수리 베기) · 正面打ち', '검도형 p06/5 · 오륜서 表2·表5'), zwerch: nm('胴 (どう)', '검도형 7본 右胴'), zwerchL: nm('逆胴'),
+    unterhau: nm('切り上げ', '오륜서 「下より…手をはる」'), unterhauL: nm('逆袈裟', '이름 [전승]'), stichPflug: nm('突き (청안에서)', '검도형 3·4·7본'), stichPflugL: nm('突き (왼 허리에서)'), stichOchs: nm('突き (머리 옆에서)'), stichOchsL: nm('突き (왼 머리 옆에서)'), stichAlber: nm('突き (하단에서)'),
+    talhoReves: nm('左右垂劍打', '무도 권2 p142/134 교전 [원문] · 이름 붙임 [해석]'), wristCut: nm('片手小手', '[해석]'), molinello: nm('손목 돌려 베기 (원전 없음)'),
+  },
+  chinese: {
+    zornhau: nm('과우격 (跨右擊)', '무비지 跨右 「撩剪下殺」 [원문] · 자리 [해석]'), zornhauL: nm('과좌격 (跨左擊)', '무비지 쪽171/0585 「掃掠下殺」'), oberhau: nm('표두격 (豹頭擊)', '무비지 쪽157/0571 「霹擊上殺」'), zwerch: nm('요격 (腰擊)', '무비지 쪽166/0580 「劍中之首擊」'), zwerchL: nm('좌요격 (左腰擊)', '본국검 p036/28'),
+    unterhau: nm('요략 (撩掠)', '무도 권2 p038/30 「遮駕下殺」'), unterhauL: nm('흔격 (掀擊)', '「掀抵上殺」 [원문] · 자리 [해석]'), stichPflug: nm('탄복자 (坦腹刺)', '무비지 쪽158/0572'), stichPflugL: nm('좌협자 (左夾刺)', '무도 권2 p043/35'),
+    stichOchs: nm('역린자 (逆鱗刺)', '무비지 쪽173/0587'), stichOchsL: nm('우협자 (右夾刺)', '[해석]'), stichAlber: nm('점검 (點劍)', '무비지 쪽155/0569'),
+    talhoReves: nm('과좌·과우 번갈아', '[해석]'), wristCut: nm('어거 (御車) 손 깎기', '무비지 쪽161/0575 「削殺雙手」'), molinello: nm('살화개정 (撒花蓋頂)', '검결가 쪽151/0565 「右滾花六劍」'),
+  },
+  none: {
+    zornhau: nm('사선 내려치기'), zornhauL: nm('왼 사선 내려치기'), oberhau: nm('내려치기'), zwerch: nm('가로 휘두르기'), zwerchL: nm('왼 가로 휘두르기'), unterhau: nm('올려치기'), unterhauL: nm('왼 올려치기'),
+    stichPflug: nm('허리에서 찌르기'), stichPflugL: nm('왼 허리에서 찌르기'), stichOchs: nm('머리 옆에서 찌르기'), stichOchsL: nm('왼 머리 옆에서 찌르기'), stichAlber: nm('아래에서 찌르기'),
+    talhoReves: nm('좌우 이어 치기'), wristCut: nm('손 치기'), molinello: nm('돌려 치기'),
+  },
+};
 
 // 유파 전통 여섯 (사장님 10/8 20:xx: 유파 5 + 무유파). rest = 쉴 자세(보정 v2 ③ 되돌아옴 겨눔의 목표) — 사장님 10/8 21:5x '유파가 정한다'
 //  (독일 쟁기/긴 자세 · 이탈리아 테르차 · 이베리아 중단형 · 일본 中段 · 중국 中平 · 무유파 앞으로 겨눔). null = SKILL.homeGuard(쟁기 자리) 그대로.
@@ -152,24 +245,24 @@ const CHINESE_NEW_TECH = [
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5 } }, rest: null },
-  // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계
-  italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, rest: null },
-  // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격)
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null },
+  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5 } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE },
+  // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
+  italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE },
+  // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
-  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, newTech: JAPANESE_NEW_TECH },
+  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE },
   // 중국: 청강검·지안(스펙 school). 기술 목록 = 지금 지안 꾸러미 그대로 (기술별 reach 보정은 청강검 실측 — ③ 단계에서 무기 쪽으로 가를 후보), 그 위에 유파 자료.
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
-  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, newTech: CHINESE_NEW_TECH },
+  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE },
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
-  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null },
+  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, techNames: TECH_NAMES.none, unique: [] }, // 무유파: 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
-export const SCHOOL_ART = { weights: true, rest: true, counter: true, newTech: true }; // newTech: 유파 새 기술 가운데 ai:false 가 아닌 것(지금은 燕返し 하나 — 사장님 10/9 01:5x '없을 이유도 없다')을 꾸러미에 더함. 나머지 후보는 ai:false 자료(재면 motion_lab SCHOOL_NEWTECH= 로 켬)
+export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬
 
 /**
  * 무기 → 유파 기본값 (틀·방식에서 자동). 스펙에 school 이 있으면 그것 (모노호시자오 japanese · 청강검 chinese).

@@ -29,7 +29,7 @@
 //  school·measure·motion 은 처음 읽을 때 만든다: 검객 생성자는 몸 쪽만 읽어 유파 병합(기억해 두는 꾸러미)을 건드리지 않는다 — 전과 같은 차례.
 //  기본 AI(인물 없음)는 그 무기의 유파 꾸러미(schools.js weaponSchool: 무기 유파 내용 + 그 무기 간격)를 쥔다 — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율; 롱소드는 같은 꾸러미라 관문 동일,
 //   다른 무기는 docs/strike/motion_lib_main_2026-10-08.md §3 '본판(켬)' 열(motion_lab duel main = 무기 꾸러미)이 곧 기본 AI 의 수치). 꾸러미가 없는 무기(총)는 롱소드 꾸러미
-//  유파 자료 (10/9 ②③, SKILL.schoolArt 1 일 때만 — schools.js '유파 자료' 머리말): 꾸러미에 유파 기술 가중치(techK)·맞받아치기(counterArt)를 덮는다 (쉴 자세·이름은 늘).
+//  유파 자료 (10/9 ②③, SKILL.schoolArt 1 일 때만 — schools.js '유파 자료' 머리말): 꾸러미에 유파 기술 가중치(techK)·고유 동작(unique)·맞받아치기(counterArt)를 덮는다 (쉴 자세·이름은 늘).
 //   어느 유파의 것을 덮나 = art.tradition — 인물이 꾸러미를 골랐으면 그 꾸러미의 유파, 아니면 무기의 유파(traditionOf).
 //   그래서 인물 없는 기본 AI 가 모노호시자오를 쥐면 독일 꾸러미 위에 일본 가중치가 얹힌다(꾸러미는 오늘 그대로 독일 — 그것은 바꾸지 않았다, 사장님 확인 전).
 //   이름 덮기는 스위치와 상관없이 늘 한다(HUD 만)
@@ -95,6 +95,8 @@ function restGuardOf(names, tradition) {
 /**
  * 유파 자료를 꾸러미에 덮는다 (10/9 ②③ — SKILL.schoolArt 1 일 때만 부른다). 받은 꾸러미는 고치지 않고 새 꾸러미를 돌려준다(라이브러리 병합 기억을 지킨다).
  *  가중치(SCHOOL_ART.weights): 유파 techK 에서 '몸 틀:싸움 방식' → '몸 틀:*' → '*' 차례로 처음 맞는 칸 하나 — 기술 이름 곱 × (찌르기면 thrust 곱), base 에 곱한다.
+ *  고유 동작(SCHOOL_ART.unique — 옛 이름 newTech): 유파 unique 가운데 ai:false 아닌 것을 mergeUnique 로 — 길·속임수는 가중치 뒤(유파 가중치를 받지 않는다),
+ *   맞받아치기 꼴은 counterArt 뒤(같은 줄이면 고유 동작이 이긴다).
  *  맞받아치기(SCHOOL_ART.counter): 유파 counterArt — 그 이름이 모두 이 꾸러미 기술에 있을 때만(없는 기술을 고르면 AI 가 멈춘다)
  */
 function applySchoolArt(school, tradition, frame, style) {
@@ -109,16 +111,36 @@ function applySchoolArt(school, tradition, frame, style) {
     });
     out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
   }
-  if (SCHOOL_ART.newTech && T.newTech) { // 유파 새 기술(길이 측정된 것만 ai:true — 기본은 모두 ai:false 자료)
-    const have = new Set(out.tech.map((t) => t.name));
-    const add = T.newTech.filter((t) => t.ai !== false && !have.has(t.name));
-    if (add.length) {
-      const tech = [...out.tech, ...add];
-      out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
-    }
-  }
+  const uq = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false) : [];
+  if (uq.length) out = mergeUnique(out, uq.filter((u) => !u.counter)); // 고유 동작(길·속임수) — 맞받아치기 꼴은 유파 counterArt 뒤에
   const C = SCHOOL_ART.counter ? T.counterArt : null;
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
+  if (uq.length) out = mergeUnique(out, uq.filter((u) => u.counter));
+  return out;
+}
+
+/**
+ * 고유 동작을 꾸러미에 더한다 (10/9 고유 동작 단계 — applySchoolArt 와 도구 motion_lab 이 같이 쓴다). 받은 꾸러미는 고치지 않는다.
+ *  꼴 셋: 길(TECH 꼴, kind cut·thrust) → tech 끝에 · { feint } → feints 끝에(가짜 기술이 이 꾸러미에 있을 때만) ·
+ *  { counter: { 줄: [이름…] } } → 그 줄을 바꿈(이름이 모두 이 꾸러미 기술에 있을 때만 — 없는 기술을 고르면 AI 가 멈춘다).
+ *  같은 이름의 기술이 이미 있으면 건너뛴다. ai 표시는 보지 않는다(거르는 것은 부르는 쪽)
+ */
+export function mergeUnique(school, list) {
+  if (!school || !list?.length) return school;
+  let out = school;
+  const have = new Set(out.tech.map((t) => t.name));
+  const paths = list.filter((u) => !u.feint && !u.counter && !have.has(u.name));
+  if (paths.length) {
+    const tech = [...out.tech, ...paths];
+    out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
+  }
+  const feints = list.filter((u) => u.feint && out.techByName[u.feint.fake] && !out.feints.some((f) => f.name === u.feint.name)).map((u) => u.feint);
+  if (feints.length) out = { ...out, feints: [...out.feints, ...feints] };
+  for (const u of list) {
+    if (!u.counter) continue;
+    const lines = Object.entries(u.counter).filter(([, names]) => names.every((n) => out.techByName[n]));
+    if (lines.length) out = { ...out, counter: { ...out.counter, ...Object.fromEntries(lines) } };
+  }
   return out;
 }
 
