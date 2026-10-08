@@ -81,8 +81,8 @@ export const BODY = {
   trunkArcSpeed: 1, // WA2 보조: 호가 켜진 동안(trunkArc > 0, activity) 몸 자세 따라가기 빠르기(SKILL_BODY.pelvis·chest) 배수 — 1 = 오늘. 몸이 느려 손 속도에 안 실리는지 가르는 계측용
   r2pScope: 'player', // R2′ 팔 단계 묶음(ARM.swing arc·trunkArc·trunkFollow·handFollow)을 누구에게 거나: 'player'(index 0, 기본) | 'all'. AI(옛 보정)는 겨눔을 서보에 기대고 있어 묶음을 그대로 걸면 베기가 빗나가 치명도가 23 → 8/36 로 떨어진다(10/8 WA4 측정) — AI 적용은 별도 항목(WA5)
   handFollow: 0, // [실험용, 권고 묶음에서 뺌 10/8 04:45 — 베는 자리를 깬다(한손 무기도 세로 머리 → 팔 36 J, 사선 빗나감)] WA2-2 손의 follow-through(설계 §2c; 한손 무기만): 휘두르는 동안 칼(머리)이 겨눔보다 뒤처진 각(rad) × 이 값(패드 m/rad)만큼 손 목표를 획 방향으로 더 보낸다 — 손가락이 끝 자리에 서도 손은 머리가 따라올 때까지 호를 이어 간다(무거운 한손 무기의 휘두름). 0 = 오늘(바이트 동일). 확인표 177
-  trunkFollow: 0, // WA2-2 follow-through(docs/strike/r2p_arm_arc_2026-10-08.md §2c): 휘두르는 동안 칼(머리)이 겨눔 방향보다 뒤처진 각(rad)만큼 몸 돌림을 더 유지한다 — 획 방향으로 trunkFollow × 뒤처짐 × activity × 0.35 rad. 손이 끝 자리에 닿아도 무거운 머리가 따라올 때까지 몸이 계속 돈다. 0 = 오늘(바이트 동일). 값은 계측 뒤 — 확인표 176
-  trunkArc: 0, // R2′ 팔 단계 WA2 '몸의 호'(docs/strike/r2p_arm_arc_2026-10-08.md §4): 휘두르는 동안 몸 돌림(보정 v2 updateBodyPose 의 −x·0.35)을 획 시작 자리에서의 손가락 가로 이동량 × 이 배수만큼 더 튼다(골반 몫 0.5·가슴 1 비율 그대로, 서 있을 때·쉼 자세는 그대로). 0 = 오늘(바이트 동일). 골반은 chain 'legs' 면 발 사이 힘쌍(§9-4 A)으로, 'anchor' 면 닻 모터로 돈다. 값은 계측 뒤 — 확인표 174
+  trunkFollow: 0, // WA2-2 follow-through(docs/strike/r2p_arm_arc_2026-10-08.md §2c, 10/8 WA5 §2j 로 고침): 휘두르는 동안 칼(머리)이 겨눔보다 획 방향으로 **뒤처진** 각(fighter.aimLagBehind, 부호 있음 — 앞서 넘어간 칼엔 0)만큼 몸 돌림을 더 유지한다(× activity × 0.35 rad) — 무거운 머리가 따라올 때까지 몸이 멈추지 않는다. 0 = 오늘(바이트 동일), 권고 0.5(1 이면 두 손 무기 AI 첫 베기 25 → 17/30; 확인표 176). 한손 손 follow 는 handFollow
+  trunkArc: 0, // R2′ 팔 단계 WA2 '몸의 호'(docs/strike/r2p_arm_arc_2026-10-08.md §4, 10/8 WA5 §2j 로 고침): 휘두르는 동안 자세 지도의 몸 돌림(보정 v2 updateBodyPose 의 −x·0.35) 기울기를 (1 + 값·activity) 배로 — 호는 손가락 자리 x 그 자체에 비례(획 시작점과 무관, x = 0 에서 0: 오른쪽에서 감으면 코일됐다가 베며 풀린다)해 베는 자리가 그대로다. 골반은 PELVIS_SHARE 몫, 순서 결합 ex 밖. 0 = 오늘(바이트 동일), 권고 2(?r2p=1; 확인표 174). R2′ 범위(r2pScope) 안에서만
   chainSpineZeta: 0.5, // 확인표 125 ('legs' 만, 첫 탐색판의 유일한 새 수): 척추 비틀기(y) 축 감쇠비. d_y = ζ·2·√(k·I_up) → 복부 ≈66·가슴 ≈57 N·m·s/rad (오늘 180·160 = ζ ≈1.4). x·z 축·강성(129)은 그대로
 };
 
