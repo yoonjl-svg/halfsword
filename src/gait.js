@@ -463,8 +463,11 @@ export class Gait {
         if (k < 1) want.multiplyScalar(k);
       }
     }
-    // 기술 걸음 동안엔 몸도 그만큼 따라 나간다
-    if (swing && swing.kind === 'req' && this.req) want.addScaledVector(fwd, (this.req.fwd * 0.8) / (swing.T + 0.15));
+    // 기술 걸음 동안엔 몸도 그만큼 따라 나간다. 옆(side, 유파 고유 동작의 비껴 딛기 — 10/9)도 같은 꼴로 — side 0 이면 더하지 않는다(전과 바이트 같음)
+    if (swing && swing.kind === 'req' && this.req) {
+      want.addScaledVector(fwd, (this.req.fwd * 0.8) / (swing.T + 0.15));
+      if (this.req.side) want.addScaledVector(rgt, (this.req.side * 0.8) / (swing.T + 0.15));
+    }
     // ④ 좌우 무게 옮기기: 한 발로 서는 동안 무게중심을 딛은 발 쪽으로 (want에 속도로 더한다)
     this.sway.set(0, 0, 0);
     if (swing && swing.kind !== 'catch') {
