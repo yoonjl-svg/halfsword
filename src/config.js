@@ -42,6 +42,7 @@ export const BODY = {
   uprightStiffness: 2500, // 몸을 똑바로 세우는 힘 (평형감각, N·m/rad)
   uprightDamping: 330, // 감쇠: 출렁이지 않고 딱 멈추는 값(감쇠비 ≈ 1)
   uprightAssist: 1.0, // 위 보조 힘의 비율
+  anchorYawMax: 0, // [실험, 사장님 10/8 15:10] 닻 yaw 모터(골반을 heading+pelvisYawOffset 으로 돌리는 숨은 힘)의 토크 상한(N·m). 모터에 상한 API 가 없어 이번 스텝 요구 토크(k·e − d·ω)가 상한을 넘으면 그 비율로 강성·감쇠를 함께 낮춘다 → 토크 ≈ 상한. 사람 두 발 서기 땅 yaw 용량 40~80(M1), 오늘 최고 215. 0 = 오늘(무한, 바이트 동일). ?anchorYawMax=
   footReaction: 0, // 체중·추진력의 반작용을 발에 싣는 비율 (실험 중: 1이면 걷다 넘어진다)
   upperShare: 0.15, // 걸을 때 미는 힘 중 가슴 쪽에 주는 비율 (크면 상체가 앞으로 꺾인다)
   accelLean: 0, // 가속할 때 몸 전체를 앞으로 숙이는 정도 (허리 근육이 대신 버틴다)

@@ -2077,7 +2077,27 @@ export class Fighter {
       //  10/2~10/6 의 W1b 는 raw 4(= 닻 z, 앞뒤 숙임)를 0·0 으로 잠그고 yaw 는 2500·330 그대로 둔 잘못된 구현이었다 — 그때의 W2 수치는 K1 측정이 아니다.
       if (BODY.chain === 'legs' && ax === MOTOR_AXES[2]) continue;
       const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
-      raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, BODY.uprightStiffness * assist * r, BODY.uprightDamping * assist * r);
+      let kk = BODY.uprightStiffness * assist * r, dd = BODY.uprightDamping * assist * r;
+      if (ax === MOTOR_AXES[2] && BODY.anchorYawMax > 0 && this.state === 'stand') {
+        // R2′ 닻 yaw 토크 상한(실험, 사장님 10/8 15:10; config BODY.anchorYawMax): 모터엔 상한 API 가 없어 이번 스텝의 요구 토크(k·e − d·ω, 아래 chainDbg.anchorTau 와 같은 식)가
+        //  상한을 넘으면 그 비율만큼 강성·감쇠를 함께 낮춘다 → 이 스텝의 모터 토크 ≈ 상한(한 스텝 뒤처진 근사, 묵시 풀이라 안정). 0 = 오늘(무한)
+        const ap = _cv1.set(1, 0, 0).applyQuaternion(rot(pelvis, _cq1));
+        const psi = Math.hypot(ap.x, ap.z) > 0.3 ? Math.atan2(-ap.z, ap.x) : this.heading;
+        const psiStar = this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading;
+        const e = Math.atan2(Math.sin(psiStar - psi), Math.cos(psiStar - psi));
+        // 감쇠는 닻에 대한 **상대** 각속도에 걸린다 — 닻(운동학 몸체)도 목표 yaw 를 따라 도니 ω_pelvis 만 쓰면 요구 토크를 10 배 넘게 부풀린다(10/8 15:25 디버그: 세계 ω 4 rad/s × 330 = 1300 N·m 로 읽힘, 장부 실측 최고 233)
+        const wA = this.anchorYawPsiPrev == null ? 0 : Math.atan2(Math.sin(psiStar - this.anchorYawPsiPrev), Math.cos(psiStar - this.anchorYawPsiPrev)) / dt;
+        this.anchorYawPsiPrev = psiStar;
+        const tau = kk * e - dd * (pelvis.angvel().y - wA); // 요구 토크(상대 각속도 감쇠) — 잔차 장부 r_V 와 상관 0.99·비 1.2(chain_ledger τ̂ 와 같은 식). 묵시 모터라 한 스텝 뒤처진 근사: 실측 최고는 상한의 1.3~2 배까지 샌다(10/8 15:30 보정표)
+        const sc = Math.min(1, BODY.anchorYawMax / Math.max(1e-6, Math.abs(tau)));
+        kk *= sc;
+        dd *= sc;
+        this.anchorYawTau = tau; // 측정용: 요구 토크(상한 전)
+        this.anchorYawPeak = Math.max(this.anchorYawPeak || 0, Math.abs(tau));
+        this.anchorYawN = (this.anchorYawN || 0) + 1;
+        if (sc < 1) this.anchorYawSat = (this.anchorYawSat || 0) + 1;
+      }
+      raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, kk, dd);
     }
     if (this.chainDbg) {
       // 탐색판 HUD(측정만): 선언한 걷기 밀기 힘(골반 (1−up)·가슴 up)과 닻 yaw 토크 재계산(k·e + d·ω; legs 는 yaw 모터 미설정이라 0)

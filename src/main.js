@@ -55,6 +55,8 @@ if (r2pAll.includes('off') || r2pAll.includes('0')) { CONFIG.BODY.trunkArc = 0; 
 if (r2pAll.some((v) => v === '1' || v === 'legs' || v === 'all')) { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 0.5; /* 10/8 WA5: 1 이면 두 손 무기 AI 첫 베기 25 → 17/30 (몸이 더 돌아 칼이 짧아짐), 0.5 면 24/30 */ CONFIG.ARM.servoLead = 0.5; /* 10/8 T2 (c): 한손 서보 겨눔 앞세움 — 모르겐슈테른 8.8 → 9.7 m/s, 두 손 무기엔 안 걸림 */ if (r2pAll.includes('legs')) { CONFIG.BODY.chain = 'legs'; CONFIG.GAIT.pushAtFoot = 1; CONFIG.GAIT.cutStep = 1; } /* 10/8 T3: legs 는 걸음 조율 채널 A·B 와 함께 */ if (r2pAll.includes('all')) CONFIG.BODY.r2pScope = 'all'; }
 const r2pScope = params.get('r2pScope');
 if (r2pScope === 'player' || r2pScope === 'all') CONFIG.BODY.r2pScope = r2pScope;
+const anchorYawMax = +params.get('anchorYawMax');
+if (anchorYawMax >= 0 && params.has('anchorYawMax')) CONFIG.BODY.anchorYawMax = anchorYawMax; // 실험(10/8 15:10): 닻 yaw 모터 토크 상한 N·m, 0 = 오늘
 const pushAtFoot = +params.get('pushAtFoot');
 if (pushAtFoot >= 0 && params.has('pushAtFoot')) CONFIG.GAIT.pushAtFoot = pushAtFoot;
 const cutStep = +params.get('cutStep');

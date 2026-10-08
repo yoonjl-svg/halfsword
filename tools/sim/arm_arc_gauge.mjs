@@ -5,7 +5,7 @@
 //  --held=1(기본) 손가락이 닿은 채(놀이 조건) · --v=6 손가락 빠르기 · --move=1 걸으며 · 선행 시간(골반·가슴·손 → 칼끝 최고)은 칼끝 최고 '이전' 창에서 잰다(손 최고치는 전체 창)
 //  실행: node tools/sim/arm_arc_gauge.mjs [--weapons=longsword,morgenstern,zweihander] [--fams=diagR,vert,horizR] [--strokes=6] [--cap=22] [--stiff=60] [--move=0|1|-1] [--json]
 import { newRound } from './harness_m.mjs';
-import { DT, THREE } from './jelly_harness.mjs';
+import { DT, THREE, CONFIG } from './jelly_harness.mjs';
 import { FAM } from './corr_lib.mjs';
 import { getWeapon } from '../../src/weapons.js';
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v] = a.slice(2).split('='); return [k, v ?? true]; }));
@@ -34,7 +34,7 @@ for (const weapon of weapons) {
   if (STIFF != null) getWeapon(weapon).controlOverrides.aimStiffness = STIFF;
   for (const fam of fams) {
     const F = VFING ? { ...FAM[fam], v: VFING } : FAM[fam];
-    const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed: 7, AIClass: Passive }); const P = G.player;
+    const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed: 7, AIClass: Passive }); const P = G.player; globalThis.__gaugeP = P;
     G.park(); P.skill.level = 0.7;
     P.handOffset.set(F.ch[0], F.ch[1]);
     for (let i = 0; i < Math.round(1.5 / DT); i++) { P.move.set(0, 0); G.step(); }
@@ -83,5 +83,6 @@ for (const weapon of weapons) {
   const S = { weapon, n: rows.length, tipMax: med(rows.map((r) => r.tipMax)), tAcc: med(rows.map((r) => r.tAcc)), Et: med(rows.map((r) => r.Et)), wrist: med(rows.map((r) => sh(r, 'Ew'))), hand: med(rows.map((r) => sh(r, 'Eh'))), grav: med(rows.map((r) => sh(r, 'Eg'))), sat: med(rows.map((r) => r.sat)), tauMax: med(rows.map((r) => r.tauMax)), cap: med(rows.map((r) => r.cap)), handMax: med(rows.map((r) => r.handMax)), pelW: med(rows.map((r) => r.pelW)), chW: med(rows.map((r) => r.chW)), leadPel: med(rows.map((r) => r.leadPel)), leadCh: med(rows.map((r) => r.leadCh)), leadHand: med(rows.map((r) => r.leadHand)), EwNeg: med(rows.map((r) => r.EwNeg)), negFrac: med(rows.map((r) => r.negFrac)), brakeLead: med(rows.map((r) => r.brakeLead).filter((v) => v != null)), brakeN: rows.filter((r) => r.brakeLead != null).length };
   out.push({ summary: S, rows });
   console.log(`${weapon.padEnd(12)} 획 ${S.n}: 칼끝 최고 중앙 ${S.tipMax.toFixed(1)} m/s · 손 최고 ${S.handMax.toFixed(1)} m/s · 가속 ${(S.tAcc * 1000).toFixed(0)} ms · 얻은 KE ${S.Et.toFixed(0)} J · 몫 손목 ${(S.wrist * 100).toFixed(0)} % / 손(팔 호) ${(S.hand * 100).toFixed(0)} % / 중력 ${(S.grav * 100).toFixed(0)} % · 손목 포화 ${(S.sat * 100).toFixed(0)} % 스텝 · |τ| 최고 ${S.tauMax.toFixed(1)} / 상한 ${S.cap.toFixed(1)} N·m · 골반 ω ${S.pelW.toFixed(1)} · 가슴 ω ${S.chW.toFixed(1)} rad/s · 칼끝 최고보다 앞선 시간 골반 ${S.leadPel} / 가슴 ${S.leadCh} / 손 ${S.leadHand} ms · 서지 않은 스텝 ${falls} · 골반 최저 ${minPelY.toFixed(2)} m · [WA3] 칼끝 최고 전 손목 제동 일 ${S.EwNeg.toFixed(1)} J(음의 일 스텝 비율 ${(S.negFrac * 100).toFixed(0)} %) · 제동 플래그 시작 = 칼끝 최고 ${S.brakeLead >= 0 ? S.brakeLead + ' ms 전' : (-S.brakeLead) + ' ms 뒤'} (${S.brakeN}/${S.n} 획)`);
+  { const Pq = globalThis.__gaugeP; if (Pq?.anchorYawN) console.log(`${''.padEnd(12)} [닻] yaw 요구 토크 최고 ${(Pq.anchorYawPeak || 0).toFixed(0)} N·m · 상한 ${CONFIG.BODY.anchorYawMax} 에 걸린 스텝 ${((100 * (Pq.anchorYawSat || 0)) / Pq.anchorYawN).toFixed(0)} % (서 있는 전 구간)`); } // 10/8 닻 토크 상한 실험
   if (args.json) console.log(JSON.stringify(rows));
 }
