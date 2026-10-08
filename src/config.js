@@ -82,6 +82,7 @@ export const BODY = {
   dropArc: 0, // [실험 16:05 — 효과 없음(세로 14.4 → 14.6, 사선 −5 %), 보류] 내려앉기 — 휘두르는 동안 손가락이 가운데 아래로 내려간 만큼(패드 단위) × 값(m) × activity 만큼 골반을 낮춘다(자세 지도 drop 에 더함, R2′ 범위만). 0 = 오늘(바이트 동일). ?dropArc=
   pitchArc: 0, // [실험 16:05 — 보류, dropArc 와 같음] 내려앉기의 숙임 — 같은 양 × 값(rad) 만큼 가슴을 앞으로 숙인다(자세 지도 pitch 에 더함). 0 = 오늘. ?pitchArc=
   trunkArcSpeed: 1, // WA2 보조: 호가 켜진 동안(trunkArc > 0, activity) 몸 자세 따라가기 빠르기(SKILL_BODY.pelvis·chest) 배수 — 1 = 오늘. 몸이 느려 손 속도에 안 실리는지 가르는 계측용
+  r2pAiContact: -0.05, // (c) 10/8 17:00: 묶음을 쓰는 AI 의 유파 간격 contact 보정(m). 'all' 범위에서만 걸림(player 범위의 상대 AI 는 묶음이 없어 0) — 확인표 193, 사장님 확인 전
   r2pScope: 'player', // R2′ 팔 단계 묶음(ARM.swing arc·trunkArc·trunkFollow·handFollow)을 누구에게 거나: 'player'(index 0, 기본) | 'all'. AI(옛 보정)는 겨눔을 서보에 기대고 있어 묶음을 그대로 걸면 베기가 빗나가 치명도가 23 → 8/36 로 떨어진다(10/8 WA4 측정) — AI 적용은 별도 항목(WA5)
   handFollow: 0, // [실험용, 권고 묶음에서 뺌 10/8 04:45 — 베는 자리를 깬다(한손 무기도 세로 머리 → 팔 36 J, 사선 빗나감)] WA2-2 손의 follow-through(설계 §2c; 한손 무기만): 휘두르는 동안 칼(머리)이 겨눔보다 뒤처진 각(rad) × 이 값(패드 m/rad)만큼 손 목표를 획 방향으로 더 보낸다 — 손가락이 끝 자리에 서도 손은 머리가 따라올 때까지 호를 이어 간다(무거운 한손 무기의 휘두름). 0 = 오늘(바이트 동일). 확인표 177
   trunkFollow: 0.5, // WA2-2 follow-through(docs/strike/r2p_arm_arc_2026-10-08.md §2c, 10/8 WA5 §2j 로 고침): 휘두르는 동안 칼(머리)이 겨눔보다 획 방향으로 **뒤처진** 각(fighter.aimLagBehind, 부호 있음 — 앞서 넘어간 칼엔 0)만큼 몸 돌림을 더 유지한다(× activity × 0.35 rad) — 무거운 머리가 따라올 때까지 몸이 멈추지 않는다. **기본 0.5 — 사장님 10/8 14:40**(0 = 전 물리 = `?r2p=off`; 1 이면 두 손 무기 AI 첫 베기 25 → 17/30; 확인표 176). 한손 손 follow 는 handFollow

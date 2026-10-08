@@ -112,6 +112,8 @@ export class AI {
       return { ...baseM, contact: baseM.contact * s, reach: baseM.reach * s, clinch: baseM.clinch * s };
     };
     this.M = scaledM(me.weapon);
+    // 10/8 17:00 (c): 이 몸이 R2′ 묶음(몸의 호)을 쓰면 칼이 더 멀리·일찍 지나가 간격을 BODY.r2pAiContact 만큼 당긴다(72 판 'all': contact 1.57 → 1.52 가 E 승 14 → 27, P 28 → 33). 묶음 없는 AI(기본 'player' 범위의 상대)엔 0 — 바이트 동일
+    if (BODY.r2pScope === 'all' && BODY.trunkArc > 0 && BODY.r2pAiContact) this.M = { ...this.M, contact: this.M.contact + BODY.r2pAiContact }; // 'player' 범위에선 시뮬의 AI 조종 P 에도 안 걸어 기준 sha 를 지킨다
     // 상대 칼 길이로도 따로 잰다: foeReach(아래)는 "내가 아니라 상대가" 닿는 거리를 어림하는 값이라, 내
     // 무기가 아니라 상대 무기 기준으로 스케일해야 한다 (짧은 칼을 든 쪽이 상대의 롱소드 간격을 실제보다
     // 가깝게 어림해 그대로 걸어 들어가는 일을 막는다)
