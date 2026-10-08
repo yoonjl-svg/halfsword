@@ -36,7 +36,7 @@ await RAPIER.init();
 
 // 테스트용 URL 파라미터: ?weapon=monohoshizao&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
-const params = new URLSearchParams(location.search);
+const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도(…?r2p=1?weapon=…) 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
 const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica');
@@ -50,8 +50,8 @@ if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.
 // 테스트용 R2′ 팔 단계 탐색 인자(10/8, 사장님 비교용·이번 실행만): ?swing=arc (WA1 손목 hold+release) · ?trunkArc=4&trunkArcSpeed=2 (WA2 몸의 호) · ?chain=legs (골반 = 발 힘쌍 A)
 // ?r2p=1 : R2′ 팔 단계 권고 묶음 한 번에(10/8 WA6 뒤: trunkArc 2 · trunkFollow 1 — 몸의 호와 몸 follow 만. 손목 hold(swing arc)·손 follow 는 베는 자리를 깨서(한손 무기 포함, step_strike 04:45) 묶음에서 뺐다; 실험은 ?swing=arc ?handFollow= 로 따로).
 //  ?r2p=legs 는 chain legs(발 힘쌍 A)까지, ?r2p=all 은 AI 에도. 개별 인자가 뒤에 오면 그것이 덮는다
-const r2p = params.get('r2p');
-if (r2p === '1' || r2p === 'legs' || r2p === 'all') { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 1; if (r2p === 'legs') CONFIG.BODY.chain = 'legs'; if (r2p === 'all') CONFIG.BODY.r2pScope = 'all'; }
+const r2pAll = params.getAll('r2p'); // ?r2p=1&r2p=legs 처럼 여러 번 와도 전부 적용 (legs·all 은 1 을 포함한다)
+if (r2pAll.some((v) => v === '1' || v === 'legs' || v === 'all')) { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 1; if (r2pAll.includes('legs')) CONFIG.BODY.chain = 'legs'; if (r2pAll.includes('all')) CONFIG.BODY.r2pScope = 'all'; }
 const r2pScope = params.get('r2pScope');
 if (r2pScope === 'player' || r2pScope === 'all') CONFIG.BODY.r2pScope = r2pScope;
 const swingParam = params.get('swing');
