@@ -106,6 +106,7 @@ try {
   delete settings.legWeight; // 없앤 설정 ('다리로 체중 받치기'는 이제 늘 켜짐)
   delete settings.corr; // 없앤 설정 ('보정 방식' 옛/새: 사장님 10/1 22:05 위임 → 디렉터 결정, 새 보정이 유일한 보정 — CONFIG.SKILL.corr)
   delete settings.corrTip; // 없앤 설정 ('끝점 겨눔': 같은 결정으로 끔 — CONFIG.SKILL.corrTip. 플레이어 보정 옵션은 '검술 보정 세기'(skill) 하나)
+  settings.skill = DEFAULTS.skill; // 검술 보정은 한 단계(0.7)만 — 사장님 10/8 21:5x "플레이어에겐 끔 약 보통 강 같은 구분이 필요 없어. 한 단계로 기본 적용": 메뉴를 뺐고 저장된 옛 값(0·0.4·1)도 무시한다. AI 는 인물 숫자(persona.level.skill)
 } catch {
   /* 저장소를 못 쓰면 기본값으로 */
 }
