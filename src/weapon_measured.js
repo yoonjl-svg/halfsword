@@ -39,6 +39,9 @@ export const MEASURED = {
   // 모르겐슈테른 (레어 둔기, 확인표 줄 144): hybrid weapon_measure.mjs 실측 contact 0.88 · clinch 0.68 · cutTime 0.39 날것 (머리가 무거워 0.35 s 베기에서 70 % 지점이 늦게 머리 높이를 지난다).
   //  reach 는 같은 날 도구가 모든 무기에서 내딛기 몫을 못 재어(롱소드도 1.62 = contact) 같은 틀(C 한손) 세이버의 reach/contact 비 1.58/1.39 로 유도한 값 [D]
   morgenstern: [0.88, 1.0, 0.68, 0.39],
+  // 打刀 (제안 가지 10/9, 사장님 확인 전): `with_config ARENA.startHold=0 weapon_measures.mjs --gen --down` 생성 값(contact 1.41 · reach 1.53 · clinch 1.09 · 날것 0.27 s,
+  //  같은 생성의 롱소드 1.62/1.73/1.25/0.28)을 롱소드 손 값(1.57/1.8/1.25/0.41)에 비율로 붙인 값 — docs/strike/weapon_measures_review_2026-10-09.md §4 '비율값' 규칙
+  uchigatana: [1.37, 1.59, 1.09, 0.4],
 };
 
 // 유파 꾸러미의 베는 시간 (롱소드 0.30 기준) — 나뭇가지·청강검·복제품 줄은 전 schools.js 인물 꾸러미(브란·랴오·하인리히)의 measure 값
@@ -58,6 +61,7 @@ export const CUT_TIME_30 = {
   rubber_chicken: 0.13,
   frozen_tuna: 0.32,
   morgenstern: 0.29, // 0.30 × 0.39/0.41
+  uchigatana: 0.29, // 0.30 × 0.27/0.28 (같은 생성의 롱소드 날것에 대한 비율)
 };
 
 /** 유파 꾸러미에 넣는 간격 한 벌 (새 객체): 거리 셋은 MEASURED, 베는 시간은 CUT_TIME_30. 표에 없는 무기는 null */
