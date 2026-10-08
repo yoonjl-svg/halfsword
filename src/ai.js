@@ -24,6 +24,7 @@ import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE, GAIT } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
+import { libSchool } from './motion_library.js';
 import { getWeapon } from './weapons.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
@@ -92,6 +93,7 @@ export class AI {
     this.closeShoves = 0; // 지난 스텝까지 본 me.shoves (같은 스텝에 발사·거절된 것도 끝으로 읽는다)
     this.closeEv = { E1: 0, E2: 0, E4: 0, won: 0, cut: 0 }; // 굴린 사건 수·이긴 수·이어 벤 수 (재기용)
     this.school = schoolOf(this.persona.school);
+    this.school = libSchool(this.school, me.weapon); // 동작 라이브러리(본판 10/8): 몸 틀·방식의 기술 가중치·새 기술·속임수·간 보는 자세를 더한 꾸러미 (끄면 그대로)
     // 간격 상수 (가슴과 가슴 사이 수평 거리, m). school.measure는 롱소드로 잰 값이라, 칼이 그보다 짧거나
     // 길면 그 비율만큼 줄이거나 늘린다 — 안 그러면 짧은 칼을 쥔 쪽이 롱소드 간격에서 공격을 걸었다가
     // 정작 닿지도 못하고 상대 롱소드에만 맞는다 (무기 밸런스 시뮬로 확인한 근본 원인).

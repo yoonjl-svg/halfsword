@@ -11,6 +11,7 @@ import { STRIKE, GAIT } from '../../src/config.js';
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
 import { applyMotionLibrary, motionFor, MOTION } from '../../src/motion_library.js';
+MOTION.lib = false; // 점검 도구: 본판 스위치(10/8 기본 켬)를 끄고 아래에서 직접 입힌다 → 끔/켬 A/B 그대로. duel 의 'main' 은 본판 길(스위치 켬, 생성자가 입힘)을 그대로 잰다
 for (const k of (process.env.MOTION_SKIP ?? '').split(',').filter(Boolean)) MOTION.skip.add(k);
 if (process.env.USE_PARRY === '1') MOTION.useParry = true;
 if (process.env.COVER_IN) MOTION.coverIn = +process.env.COVER_IN;
@@ -156,7 +157,9 @@ if (mode === 'poses') {
   }
 } else if (mode === 'duel') {
   const N = +rest[0] || 6;
-  const on = rest[1] === 'on' || rest[1] === 'tech' || rest[1] === 'table'; // on = 둘 다, tech = 기술 목록만, table = 자세표만
+  const mainPath = rest[1] === 'main'; // 본판 길: MOTION.lib 켬 → Fighter·AI 생성자가 입힌다(자세표 바탕 = 무기별 표, 유파 = libSchool 병합). 끔(off)과 나란히 재는 데 쓴다
+  if (mainPath) MOTION.lib = true;
+  const on = rest[1] === 'on' || rest[1] === 'tech' || rest[1] === 'table' || mainPath; // on = 둘 다, tech = 기술 목록만, table = 자세표만
   const useTech = rest[1] === 'on' || rest[1] === 'tech';
   const useTable = rest[1] === 'on' || rest[1] === 'table';
   const m = motionFor(W);
@@ -169,7 +172,7 @@ if (mode === 'poses') {
   const school0 = useTech || !useTable ? null : key; void school0;
   // 기술만: 라이브러리 기술 목록 · 자세표만: 자세표 + 그 표의 막기 자리 · 켬: 둘 다
   if (!useTech && useTable) SCHOOLS[key] = { ...base, id: key, ...(m.parry && process.env.NO_PARRY !== '1' ? { parry: { ...base.parry, ...m.parry } } : {}) };
-  const school = useTech || useTable ? key : SCHOOLS[id] ? id : 'longsword';
+  const school = useTech || useTable ? key : SCHOOLS[id] ? id : 'longsword'; // main: 유파 그대로(생성자 libSchool 이 더한다)
   let Wn = 0, L = 0, D = 0, nan = 0, tSum = 0, tN = 0;
   const used = {};
   for (let s = 1; s <= N; s++) {
@@ -212,7 +215,7 @@ if (mode === 'poses') {
   const [lo, hi] = wilson(Wn, n);
   const pc = (v) => `${Math.round(100 * v)}%`;
   const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${k} ${v}`).join(', ');
-  console.log(`${id} 라이브러리 ${on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
+  console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
 } else if (mode === 'tap') {
   // 탭 찌르기 한 번 (상대는 치움): 칼끝이 내 가슴에서 앞으로 가장 멀리 간 거리, 그때까지 걸린 시간, 칼끝 최고 속도, 몸 낮춤.
   //  자세(패드)마다 한 번씩: 쟁기·긴 자세·황소. 라이브러리 끔/켬(켬이면 무기 방식의 덧씌우기 — 찌르기 방식은 런지)

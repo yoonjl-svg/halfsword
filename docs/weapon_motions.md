@@ -3,7 +3,7 @@
 사장님 지시(자율 작업): "분류에 이어 동작 개발까지 쭉. 무기 유형별로 n개가 필요하다를 판단하고, 필요한 만큼 자료를 모아라. 당장 현행 시스템에 다 적용되지 못해도 다음 버전 게임에 중요하게 쓰인다."
 
 - 분류: `docs/weapon_types.md`, 코드 `src/weapon_class.js` (몸 틀 × 싸움 방식, 무기 스펙에 `frame`·`style`).
-- 동작 라이브러리 코드: `src/motion_library.js`. 게임 기본은 **꺼짐**이다. 켜는 곳은 점검 도구 `tools/sim/motion_lab.mjs` 뿐이다.
+- 동작 라이브러리 코드: `src/motion_library.js`. **10/8 18:50 부터 게임 본판에 켜져 있다**(사장님 결정, 확인표 34; 스위치 `SKILL.motionLib`, `?motionLib=0` = 전 물리). 잇는 법·측정: `docs/handoff/motion_library_integration.md`, `docs/strike/motion_lib_main_2026-10-08.md`. 점검 도구 `tools/sim/motion_lab.mjs` 는 스위치를 끄고 직접 입혀 끔/켬/본판을 나란히 잰다.
 - 자료:
   - 무기-검술 연구의 조사: 브랜치 `claude/pm-weapons` `docs/weapon_motion_research.md`
   - 한손·자루 무기 조사: `docs/weapon_motion_sources_one_pole.md`

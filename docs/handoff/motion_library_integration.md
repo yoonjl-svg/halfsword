@@ -1,5 +1,10 @@
 # 동작 라이브러리를 게임에 잇는 법 (다음 버전용 — 무기 PM)
 
+> **10/8 18:50 본판에 이었다(디렉터, 사장님 '적용').** 실제로 넣은 꼴은 아래 §1~§6 의 손 잇기 대신 **스위치 하나 + 두 자리**다: `config.SKILL.motionLib`(= `MOTION.lib`, 기본 1)
+> ① `Fighter` 생성자가 무기별 표를 만든 바로 뒤 `applyMotionLibrary(this, { cover: false })` — 몸 틀 자세표를 **10/1 무기별 표(한손 찌르기·세이버·두손 찌르기) 위에** 덮고(`frameTable(…, base)`), 찌르기 무기 런지·앞무게 흐름 덧씌우기.
+> ② `AI` 생성자가 `libSchool(school, weapon)` — 유파 꾸러미의 기술 목록을 그대로 둔 채 몸 틀·방식 가중치·새 기술(탈류→레베스·손목 베기)·속임수·간 보는 자세를 더한다(A 두루·총은 그대로).
+> ③ `main.js` 자세 이름 HUD 는 `guardPose.table` 의 이름을 읽는다. 막기 덧씌우기(§6)·막기 자리(LIB_PARRY)는 기본 끔 그대로. 측정: `docs/strike/motion_lib_main_2026-10-08.md`.
+
 지금은 `src/motion_library.js` 를 점검 도구만 켠다. 게임에 넣을 때는 아래 이음을 **`MOTION.lib` 스위치 하나**에 걸어 둔다. 끄면 지금 게임 그대로(바이트 동일) 가게 한다.
 - 이미 넣은 것: `guards.js` guardAt 이 `out.table` 을 읽는다(한 줄).
 - 근거·측정: `docs/weapon_motions.md`

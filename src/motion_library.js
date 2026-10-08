@@ -9,7 +9,8 @@
 //   2) 기술 목록 (싸움 방식별 + 몸 틀 덧붙임): AI 가 고르는 기술(ai_techniques.js TECH 모양 — 시작 자세, 손이 지나갈 점들, 노리는 빈틈).
 //   3) 덧씌우는 동작 (몸 틀·방식별): 찌르기의 런지처럼 검술 층(skill.js)이 덧씌우는 것 — THRUST 값 덮어쓰기로 준다.
 //
-//  지금 게임은 이 파일을 읽지 않는다(MOTION.lib 이 꺼져 있고, 켜는 곳은 점검 도구뿐). 켜려면 applyMotionLibrary(fighter).
+//  본판(10/8 18:50 사장님 '적용', 확인표 34): MOTION.lib(= config SKILL.motionLib, 기본 1)이 켜져 있으면 Fighter 생성자가 applyMotionLibrary(this) 로 자세표·런지·흐름을 입히고,
+//  AI 생성자가 libSchool(school, weapon) 로 유파 꾸러미에 기술·속임수·간 보는 자세를 더한다(막기 덧씌우기 COVERS·막기 자리 LIB_PARRY 는 기본 끔 그대로). `?motionLib=0` = 전 물리.
 //  숫자 근거: [원전]·[해석]·[추정] 표시는 docs/weapon_motions.md 에 있다. 여기 적은 값은 모두 몸 크기(키 1.75 m)에 맞춘 추정이다.
 // ─────────────────────────────────────────────────────────────
 import { GUARD_BASE, GUARD_BASE_ONE } from './guards.js';
@@ -17,7 +18,10 @@ import { TECH, FEINTS, G, WATCH_GUARDS, TECH_BY_NAME } from './ai_techniques.js'
 import { THRUST, SKILL } from './config.js';
 
 export const MOTION = {
-  lib: false, // 게임 기본은 끔. 점검 도구(tools/sim/motion_lab.mjs)가 켠다
+  // 본판 스위치 = config SKILL.motionLib (사장님 10/8 18:50 '적용', 확인표 34 — 기본 켬). 켜져 있으면 Fighter 생성자가 applyMotionLibrary 를, AI 생성자가 libSchool 을 부른다.
+  //  점검 도구(motion_lab·motion_league)는 MOTION.lib = false 로 끄고 직접 입혀 끔/켬을 나란히 잰다. `?motionLib=0` = 전 물리(바이트 동일)
+  get lib() { return !!SKILL.motionLib; },
+  set lib(v) { SKILL.motionLib = v ? 1 : 0; },
   coverIn: 0.08, // 막기 덧씌우기: 덮는 시간(초)
   coverOut: 0.15, // 걷는 시간(초)
   useParry: false, // 무기별 막기 자리(LIB_PARRY)를 AI 에 끼울까 — 기본 끔: 바뀐 자세표(막기 자세 포함)로 잰 값이라 지금 표와 맞지 않는다
@@ -119,13 +123,15 @@ export function frameTableWithCovers(frame, style = null) {
   return table(frame === 'one' || frame === 'gun' ? GUARD_BASE_ONE : GUARD_BASE, o);
 }
 
-/** 몸 틀(+싸움 방식)의 자세표 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로) */
-export function frameTable(frame, style = null, skip = []) {
+/** 몸 틀(+싸움 방식)의 자세표 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로).
+ *  base: 바탕 표 — 본판(10/8)은 검객이 이미 쥔 무기별 표(fighter.guardPose.table: 동작 PM 10/1 한손 찌르기·세이버·두손 찌르기 표)를 넘겨 그 위에 덮는다.
+ *  없으면 옛 바탕(한손·총 = 세이버 표, 그 밖 = 롱소드 표 — 무기 PM 이 96판을 잰 조건) */
+export function frameTable(frame, style = null, skip = [], base = null) {
   const o = { ...(frame === 'pole' ? POLE_GUARDS : FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}) };
   for (const k of MOTION.skip) delete o[k];
   for (const k of skip) delete o[k];
-  if (!Object.keys(o).length && frame !== 'one') return null;
-  return table(frame === 'one' || frame === 'gun' ? GUARD_BASE_ONE : GUARD_BASE, o);
+  if (!Object.keys(o).length && (base || frame !== 'one')) return null;
+  return table(base ?? (frame === 'one' || frame === 'gun' ? GUARD_BASE_ONE : GUARD_BASE), o);
 }
 
 // E 자루 무기 자세표 초안 (docs/pole_frame_design.md) — 데이터만. 두 손 간격·뒤로 뻗은 자루·미끄러지는 쥔 점 물리가 먼저라 아무 데서도 읽지 않는다.
@@ -225,18 +231,47 @@ export const OVERLAY = {
   thrust: { lunge: { step: 0.6, reach: 0.08, body: { pelvisYaw: -35, chestYaw: -45, pitch: 12, drop: 0.16 }, src: '카포 페로 런지 [해석] · 걸음 길이 [추정]' } },
 };
 
+const _libSchools = new Map();
+/**
+ * 유파 꾸러미에 라이브러리 몫을 더한다 (AI 생성자가 부른다 — 본판 스위치 MOTION.lib, 10/8). 캐릭터 PM·무기 담당이 고른 기술 간격·가중치·간격표(measure)는 그대로 두고,
+ *  몸 틀·방식의 가중치(앞무게: 내리치는 베기 ×1.4 · 찌르기 방식: 찌르기 ×1.8·베기 ×0.7 · 베기 방식: 찌르기 ×0.5 — 유파가 이미 손본 목록(세이버·팔쉬온 weakThrust)이면 건너뜀)와
+ *  새 기술(탈류→레베스·손목 베기, styleTech 와 같은 규칙), 속임수(styleFeints), 간 보는 자세(frameWatchGuards — 유파가 따로 고른 것은 그대로)를 덧붙인다.
+ *  A 두손 두루(롱소드류)·총·자루는 그대로. 꾸러미는 무기마다 한 번 만들어 둔다(결정적)
+ */
+export function libSchool(school, weapon) {
+  if (!MOTION.lib || !school || school.lib) return school;
+  const frame = weapon?.frame ?? 'two';
+  const style = weapon?.style ?? 'versatile';
+  if ((frame === 'two' && style === 'versatile') || frame === 'gun' || frame === 'pole') return school;
+  const key = `${school.id}|${weapon?.id}`;
+  const hit = _libSchools.get(key);
+  if (hit) return hit;
+  let t = school.tech;
+  const plain = t === TECH; // 손보지 않은 롱소드 기술 목록
+  if (style === 'cut' && plain) t = weight(t, (x) => x.kind === 'thrust', 0.5);
+  if (style === 'thrust') t = weight(weight(t, (x) => x.kind === 'thrust', 1.8), (x) => x.kind === 'cut', 0.7);
+  if (style === 'blunt') t = t.filter((x) => x.kind !== 'thrust');
+  if (frame === 'heavy') t = weight(t, (x) => x.presses, 1.4);
+  const have = new Set(t.map((x) => x.name));
+  const add = (NEW_TECH[frame] ?? []).filter((x) => x.ai !== false && !have.has(x.name) && !(style === 'blunt' && x.name === 'wristCut') && (style !== 'thrust' || x.kind === 'thrust'));
+  t = [...t, ...add];
+  const out = { ...school, lib: true, tech: t, techByName: Object.fromEntries(t.map((x) => [x.name, x])), feints: styleFeints(style, frame), guards: school.guards === WATCH_GUARDS ? frameWatchGuards(frame) : school.guards };
+  _libSchools.set(key, out);
+  return out;
+}
+
 /**
  * 한 검객에게 라이브러리를 입힌다 (점검 도구가 부른다). 무기 스펙의 frame·style 을 읽는다.
  *  반환: { frame, style, table, tech, feints, watch, overlay }
  */
-export function motionFor(weapon) {
+export function motionFor(weapon, base = null) {
   const frame = weapon.frame ?? 'two';
   const style = weapon.style ?? 'versatile';
-  return { frame, style, table: frameTable(frame, style, weapon.motionSkip ?? []), tech: styleTech(style, frame), feints: styleFeints(style, frame), watch: frameWatchGuards(frame), overlay: OVERLAY[style] ?? null, parry: MOTION.useParry ? LIB_PARRY[weapon.id] ?? null : null, noTwist: style === 'blunt', flow: frame === 'heavy', counter: frame === 'pole' ? { default: styleTech(style, frame).map((t) => t.name) } : null }; // counter: 유파 맞받아치기 목록을 바꿔야 하는 틀(자루)만
+  return { frame, style, table: frameTable(frame, style, weapon.motionSkip ?? [], base), tech: styleTech(style, frame), feints: styleFeints(style, frame), watch: frameWatchGuards(frame), overlay: OVERLAY[style] ?? null, parry: MOTION.useParry ? LIB_PARRY[weapon.id] ?? null : null, noTwist: style === 'blunt', flow: frame === 'heavy', counter: frame === 'pole' ? { default: styleTech(style, frame).map((t) => t.name) } : null }; // counter: 유파 맞받아치기 목록을 바꿔야 하는 틀(자루)만
 }
 export function applyMotionLibrary(fighter, { overlay = true, flow = true, noTwist = false, ai = null, cover = true } = {}) {
-  const m = motionFor(fighter.weapon ?? {});
-  fighter.guardPose.table = fighter.bodyGuard.table = m.table ?? undefined;
+  const m = motionFor(fighter.weapon ?? {}, fighter.guardPose?.table ?? null); // 바탕 = 검객이 쥔 무기별 표 (없으면 옛 바탕)
+  if (m.table) fighter.guardPose.table = fighter.bodyGuard.table = m.table; // 고칠 것이 없으면(롱소드류·총) 무기별 표를 그대로 둔다
   fighter.motion = m;
   if (overlay && m.overlay?.lunge) installLunge(fighter, m.overlay.lunge);
   // 날 세우기(손목 비틀기)를 끈다: 날 없는 무기(④ 때리기)는 어느 면으로 맞아도 같다.

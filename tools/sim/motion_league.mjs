@@ -10,7 +10,8 @@ import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { SCHOOLS } from '../../src/schools.js';
-import { applyMotionLibrary, motionFor } from '../../src/motion_library.js';
+import { applyMotionLibrary, motionFor, MOTION } from '../../src/motion_library.js';
+MOTION.lib = false; // 점검 도구: 본판 스위치(10/8 기본 켬)를 끄고 lib(P)·lib(E) 로 직접 입힌다
 import { report } from './weapon_league.mjs';
 import { registerPoleWeapons } from './pole_specs.mjs';
 

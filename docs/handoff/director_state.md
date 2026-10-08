@@ -160,3 +160,4 @@
 - (10/8 17:25 추가) 사장님: 범위 'all' + AI 간격 보정 본판(새 기준 fights12 970317a1 · live c2072cd1 · ft d65cc1df; 옛 범위 ?r2pScope=player 415c3c7e), 기각 깃발 4 종 코드 삭제. R2′ 팔 단계 오늘 일정 끝. 다음: 18:20 짧은 보고 → devmeet 23:22 → 22:00 보고.
 - (10/8 18:05 추가) 사장님 17:50 "두 다리로 동시에 일어나는 모습" → 원인 applyPose K 의 한 비율 kneelAmount; 시제품 `BODY.getupLead`(기본 0, `?getupLead=1&getupLag=0.4~0.6`) 확인표 194 사장님 확인 전; 도구 `tools/sim/getup_probe.mjs`; 기록 `docs/strike/getup_lead_2026-10-08.md`. 기준 sha 셋 끔 동일.
 - (10/8 18:30 추가) 사장님 18:26 "0.5로 켜" → `BODY.getupLead 1 · getupLag 0.5` 본판 기본(확인표 194 답, 두 검객). 새 기준 fights12 `578402e1`(dead 7/12·downs 1.3) · live c2072cd1 · ft d65cc1df 그대로; 전 물리 `?getupLead=0` = 970317a1.
+- (10/8 19:05 추가) 사장님 18:50 "적용": 레이피어 자세별 손 돌림(hands.js) + 무기 PM 기술 라이브러리 본판 켬(`SKILL.motionLib 1`, Fighter/AI 생성자, 확인표 34 답). 관문 켬=끔 동일(롱소드 장면). 11 무기 결투표 `docs/strike/motion_lib_main_2026-10-08.md` §3(채우는 중). 손 v1·v2 는 10/2 부터 켜져 있었음(외형 PM 상태 파일 정정).

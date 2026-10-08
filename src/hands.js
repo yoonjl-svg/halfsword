@@ -8,7 +8,7 @@
 //   · 쥠 방식: 동작 PM 쥠 규칙(docs/motion/grip_rules_2026-10-02.md, 가지 claude/pm-motion-research)의 무기별 α·β·θ.
 //     자루 틀: y = 자루 축(칼끝 +), z = 앞날, x = 칼 면. α = 주먹 마디 줄이 향하는 쪽(0 = 앞날), β = 비스듬(0 망치 쥠, + 악수 쥠),
 //     θ = 엄지(0 감음, 90 자루를 따라 칼끝 쪽으로 폄 — 세이버 60·레이피어 70). 쥠은 손에 고정이라 주먹은 자루에 붙어 같이 돈다
-//     (아래팔은 손목 공 관절이 이어 준다). 레이피어의 자세별 α 돌림은 아직 넣지 않았다(자세 이름을 겉모습에서 읽는 고리가 없다).
+//     (아래팔은 손목 공 관절이 이어 준다). 레이피어의 자세별 α 돌림(프리마·세콘다·테르차·콰르타)은 guardPose.nearest 로 읽어 넣었다(10/8, 아래 rapierPostureA).
 //     h(코등이에서 손까지)는 물리 손목 자리(칼 원점)에 손을 두는 것으로 대신한다 — 손을 옮기면 아래팔과 떨어져 보인다.
 //   · 색·재질은 원래 손 구체의 재질을 그대로 쓴다(맨손 살색·하인리히 쇠장갑 등 outfits 가 정한 그대로).
 //   · 손 하나 삼각형 약 200, 그리기 호출 손마다 1(손바닥+엄지를 한 지오메트리로 합침).
@@ -16,6 +16,21 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+
+// 레이피어 자세별 손 돌림 α (동작 PM 쥠 규칙 ① 끝 줄, 10/8 디렉터): 프리마(지붕) +180 · 세콘다(어깨 지붕·황소) +90 · 테르차(쟁기·긴 자세·옆·…) 0 · 콰르타(왼쪽 자세) −90.
+//  자세는 fighter.guardPose.nearest(guards.js guardAt 이 매 스텝 고른 가장 가까운 자세 번호, 표 순서 = GUARDS 순서)로 읽고, 표 이름에 교본 이름(Prima·Seconda·Terza·Quarta)이 있으면 그것이 우선.
+//  겉모습만: 주먹을 자루 축 둘레로 돌린다(물리·판정 그대로). 자세가 바뀔 때 540°/s 로 돌아가 튀지 않는다
+const RAPIER_A_BY_INDEX = [180, 90, 90, 0, 0, 0, 0, 0, 0, -90, -90, -90, -90, -90];
+function rapierPostureA(f) {
+  const i = f.guardPose?.nearest;
+  if (!(i >= 0) || i >= RAPIER_A_BY_INDEX.length) return 0;
+  const name = f.guardPose?.table?.[i]?.name ?? '';
+  if (name.includes('Prima')) return 180;
+  if (name.includes('Seconda')) return 90;
+  if (name.includes('Terza')) return 0;
+  if (name.includes('Quarta')) return -90;
+  return RAPIER_A_BY_INDEX[i];
+}
 
 /** 지오메트리를 변환해서 돌려준다 (scale → rotate → translate) */
 function bake(geo, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1]) {
@@ -132,12 +147,26 @@ export function attachHands(f) {
   sphO.parent.add(armFistO);
   armFistO.visible = false;
   const offFist = G.off === 'fist';
+  const rapier = f.weapon?.id === 'rapier';
+  let aCur = G.a; // 지금 손 돌림(도) — 레이피어만 자세에 따라 움직인다
+  let tPrev = 0;
 
   const api = {
     update() {
       const armed = !!f.armed && !!f.sword;
       fistS.visible = armed;
       openS.visible = !armed;
+      if (rapier && armed) {
+        const now = typeof performance !== 'undefined' ? performance.now() : 0;
+        const dt = tPrev ? Math.min(0.1, (now - tPrev) / 1000) : 0;
+        tPrev = now;
+        const want = G.a + rapierPostureA(f);
+        let d = want - aCur;
+        d -= Math.round(d / 360) * 360; // 가까운 쪽으로
+        const step = 540 * dt;
+        aCur += Math.abs(d) <= step ? d : Math.sign(d) * step;
+        fistS.rotation.y = aCur * D2R;
+      }
       const twoHold = armed && !!f.gripping;
       fistO.visible = twoHold;
       armFistO.visible = !twoHold && armed && offFist;

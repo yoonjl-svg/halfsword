@@ -63,6 +63,8 @@ const anchorYawMax = +params.get('anchorYawMax');
 if (anchorYawMax >= 0 && params.has('anchorYawMax')) CONFIG.BODY.anchorYawMax = anchorYawMax; // 실험(10/8 15:10): 닻 yaw 모터 토크 상한 N·m, 0 = 오늘
 const getupLead = +params.get('getupLead');
 if (getupLead >= 0 && params.has('getupLead')) CONFIG.BODY.getupLead = getupLead; // 일어서기 다리 차례(10/8 18:26 본판 기본 1·lag 0.5, 확인표 194): `?getupLead=0` = 전 물리(두 다리 함께)
+const motionLib = +params.get('motionLib');
+if (motionLib >= 0 && params.has('motionLib')) CONFIG.SKILL.motionLib = motionLib; // 동작 라이브러리(무기 PM) 본판 스위치 — 10/8 18:50 기본 1(사장님 '적용', 확인표 34). `?motionLib=0` = 전 물리
 const getupLag = +params.get('getupLag');
 if (getupLag >= 0 && params.has('getupLag')) CONFIG.BODY.getupLag = getupLag; // 뒷다리가 기다리는 몫(riseTime 비율, 기본 0.5)
 const pushAtFoot = +params.get('pushAtFoot');
@@ -1385,7 +1387,8 @@ function updateGuardName(dt) {
   if (g !== guardShown && (g === 'gun' || g >= 0)) {
     guardShown = g;
     guardName.innerHTML = '';
-    const info = gun ? GUN_STANCE : GUARDS[g];
+    const T = player.guardPose.table; // 무기별·라이브러리 자세표가 있으면 그 이름(상단·팔상·3번 자세…). 마무리 자세(g ≥ 14)는 늘 GUARDS
+    const info = gun ? GUN_STANCE : T && g < T.length ? T[g] : GUARDS[g];
     const b = document.createElement('b');
     b.textContent = info.name;
     const d = document.createElement('span');
