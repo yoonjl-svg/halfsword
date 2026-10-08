@@ -23,13 +23,14 @@
 // ─────────────────────────────────────────────────────────────
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS } from './ai_techniques.js';
 import { HIGH_GUARDS } from './ai_techniques.js'; // 10라운드 6-7 덧붙이기 (아래 끝)
+import { schoolMeasure } from './weapon_measured.js'; // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다 (10/8 ① 구조)
 
 export const SCHOOLS = {
   // 독일식 롱소드 (리히테나워 전통). 값은 모두 예전 ai.js 의 MEASURE·PARRY·counterTech()·startWithdraw() 그대로
   longsword: {
     id: 'longsword',
     weapon: 'longsword',
-    measure: { contact: 1.57, reach: 1.8, clinch: 1.25, cutTime: 0.3 }, // 10/8 16:35 두 손 서보 상한 26 뒤 AI 박자 재조정(사장님 '그렇게 해'): 빠른 칼이 옛 간격(1.62/2.0)에선 0.05~0.19 m 짧게 지나가 첫 베기 25 → 20/30 → 1.57/1.8 에서 28/32(확인표 192). 전 1.62/2.0
+    measure: schoolMeasure('longsword'), // { contact 1.57, reach 1.8, clinch 1.25, cutTime 0.3 } — 10/8 16:35 두 손 서보 상한 26 뒤 AI 박자 재조정(사장님 '그렇게 해'): 빠른 칼이 옛 간격(1.62/2.0)에선 0.05~0.19 m 짧게 지나가 첫 베기 25 → 20/30 → 1.57/1.8 에서 28/32(확인표 192). 전 1.62/2.0
     guards: WATCH_GUARDS,
     tech: TECH,
     techByName: TECH_BY_NAME,
@@ -66,7 +67,7 @@ SCHOOLS.tree_branch = {
   ...L,
   id: 'tree_branch',
   weapon: 'tree_branch',
-  measure: { contact: 1.46, reach: 1.61, clinch: 1.13, cutTime: 0.21 }, // 10라운드 hybrid 재실측, 베는 시간은 롱소드 0.30 기준 비율 (전 1.44/1.64/1.11/0.33)
+  measure: schoolMeasure('tree_branch'), // 1.46/1.61/1.13/0.21 — 10라운드 hybrid 재실측, 베는 시간은 롱소드 0.30 기준 비율 (전 1.44/1.64/1.11/0.33)
   tech: branchTech,
   techByName: byName(branchTech),
   feints: noThrustFeints,
@@ -80,13 +81,13 @@ SCHOOLS.jian = {
   ...L,
   id: 'jian',
   weapon: 'jian',
-  measure: { contact: 1.35, reach: 1.52, clinch: 1.04, cutTime: 0.24 }, // 청강검과 같은 칼 — 10라운드 hybrid 재실측 (전 1.32/1.55/1.02/0.38)
+  measure: schoolMeasure('qinggang'), // 1.35/1.52/1.04/0.24 — 청강검과 같은 칼, 10라운드 hybrid 재실측 (전 1.32/1.55/1.02/0.38)
   tech: jianTech,
   techByName: byName(jianTech),
 };
 
 // 청강검(에픽): 물리는 지안이지만 양손 가정(토크 22) 뒤 무기 담당이 다시 잰 measure (전 1.32/1.55/1.02/0.38)
-SCHOOLS.qinggang = { ...SCHOOLS.jian, id: 'qinggang', weapon: 'qinggang', measure: { contact: 1.35, reach: 1.52, clinch: 1.04, cutTime: 0.24 } }; // 10라운드 hybrid 재실측 (전 1.37/1.61/1.06/0.36)
+SCHOOLS.qinggang = { ...SCHOOLS.jian, id: 'qinggang', weapon: 'qinggang', measure: schoolMeasure('qinggang') }; // 10라운드 hybrid 재실측 (전 1.37/1.61/1.06/0.36)
 
 // 엑스칼리버 복제품: 황동 장식에 칼날이 두껍고 무거워(1.50kg·1.00m) 롱소드보다 간격이 아주 조금 좁다. 자세·기술은 롱소드 그대로
 const replicaTech = withReach(TECH, { zornhau: 0, unterhau: -0.04, zornhauL: -0.03, unterhauL: -0.07, stichPflug: 0.08, stichPflugL: 0.08, stichOchs: 0.08, stichOchsL: 0.08, stichAlber: 0.03 });
@@ -94,7 +95,7 @@ SCHOOLS.excalibur_replica = {
   ...L,
   id: 'excalibur_replica',
   weapon: 'excalibur_replica',
-  measure: { contact: 1.55, reach: 1.83, clinch: 1.2, cutTime: 0.29 }, // 10라운드 hybrid 재실측 (전 1.59/1.86/1.23/0.42)
+  measure: schoolMeasure('excalibur_replica'), // 1.55/1.83/1.2/0.29 — 10라운드 hybrid 재실측 (전 1.59/1.86/1.23/0.42)
   tech: replicaTech,
   techByName: byName(replicaTech),
 };
@@ -104,22 +105,11 @@ SCHOOLS.excalibur_replica = {
 //  찌르기가 약한 무기(팔쉬온·세이버)는 찌르기 기술의 기본 가중치를 낮춘다
 //  10라운드: 게임 기본(hybrid)으로 다시 잰 값(ai.js MEASURED 와 같은 거리). 베는 시간은 raw 가 아니라 롱소드 0.30 기준 비율
 //  (0.30 × 무기 raw ÷ 롱소드 raw 0.41 — ai.js scaledM 이 롱소드 유파에 다른 무기를 쥐여 줄 때와 같은 기준)
-const MEASURES = {
-  zweihander: [1.71, 2.08, 1.32, 0.35],
-  estoc: [1.57, 1.99, 1.22, 0.31],
-  sabre: [1.39, 1.58, 1.07, 0.26],
-  rapier: [1.54, 1.68, 1.19, 0.21],
-  falchion: [1.37, 1.56, 1.06, 0.24],
-  monohoshizao: [1.58, 1.87, 1.22, 0.34],
-  excalibur: [1.55, 1.83, 1.2, 0.29],
-  lightsaber: [1.46, 1.65, 1.13, 0.18],
-  rubber_chicken: [0.88, 1.24, 0.68, 0.13],
-  frozen_tuna: [1.36, 1.63, 1.05, 0.32],
-  morgenstern: [0.88, 1.0, 0.68, 0.29], // 레어 둔기 (확인표 줄 143·144): 실측 contact/clinch, reach 는 세이버 비로 유도, 베는 시간 0.30 × 0.39/0.41
-};
+//  간격 숫자는 weapon_measured.js(MEASURED·CUT_TIME_30)로 옮겼다 — 전 이 자리의 MEASURES 표 그대로
+const MEASURED_WEAPONS = ['zweihander', 'estoc', 'sabre', 'rapier', 'falchion', 'monohoshizao', 'excalibur', 'lightsaber', 'rubber_chicken', 'frozen_tuna', 'morgenstern'];
 const weakThrust = (tech, k) => tech.map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * k } : t));
-for (const [id, [contact, reach, clinch, cutTime]] of Object.entries(MEASURES)) {
-  SCHOOLS[id] = { ...L, id, weapon: id, measure: { contact, reach, clinch, cutTime } };
+for (const id of MEASURED_WEAPONS) {
+  SCHOOLS[id] = { ...L, id, weapon: id, measure: schoolMeasure(id) };
 }
 // 날이 없는 것(고무 닭·참치)은 찌르기 없음. 곡도·반달칼은 찌르기를 덜 믿는다
 //  모르겐슈테른도 날이 없어 찌르기 기술 없음 — 가시 찌르기는 플레이어 탭만 (AI 찌르기는 thrustStyle 없는 무기에서 힘이 안 실려 30 J 도 못 낸다, 줄 143 제안대로 7기술)

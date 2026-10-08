@@ -26,6 +26,7 @@ import { padDist } from './ai_techniques.js';
 import { schoolOf } from './schools.js';
 import { libSchool } from './motion_library.js';
 import { getWeapon } from './weapons.js';
+import { MEASURED, WEAPON_BASELINE } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 
@@ -34,37 +35,9 @@ const FEAR_TREMOR = 0.03;
 
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
-// school.measure의 간격 상수를 잴 때 쓴 롱소드 칼 길이(칼자루+칼날, m) — measured 표에 없는
-// 무기(미래에 추가될 무기)에 대한 안전장치 비율 계산에만 쓴다.
-const WEAPON_BASELINE = 0.13 + 1.05;
-// 무기 PM의 실측(tools/sim/weapon_measure.mjs, docs/weapons.md §2 — 혼자 zornhau 한 번을 휘두르며
-// 칼날 70% 지점이 머리 높이를 지나는 순간의 실제 간격을 잰 값)을 롱소드 기준(같은 표의 롱소드 raw
-// 값)으로 나눈 비율. 칼날+자루 길이만 단순 비례하는 것보다 훨씬 정확하다 — 실제 팔·몸 뻗음까지
-// 담겨 있어서, 짧은 칼(환두대도 등)이 순수 길이비보다 실제로는 덜 불리하다는 게 이 표로 드러났다.
-// excalibur_replica는 엑스칼리버와 칼날·자루 치수가 완전히 같아 같은 비율을 쓴다.
-export const MEASURED = {
-  // id: [contact, reach, clinch, cutTime] raw — tools/sim/weapon_measures.mjs 와 같은 값 (감독 확정 14종 로스터).
-  //  10라운드 B: 한손 뻗기(guards.js) 뒤 hybrid(게임 기본)로 다시 잰 값 (tools/sim/hybrid.mjs weapon_measure.mjs). 에스톡은 유효 간격(× 0.914)
-  //  (finish.js 도 읽는다: 쓰러진 상대까지 닿는 거리 배율 downReachK)
-  //  cutTime 은 보정 없는 raw(롱소드 0.41)라 비율로만 쓴다.
-  longsword: [1.57, 1.8, 1.25, 0.41], // 10/8 16:35: 1.62/1.9 → 1.57/1.8 — schools.js 롱소드 measure 와 함께(다른 무기는 이 값에 대한 비율로 간격을 받으니 같이 바꿔야 그대로다)
-  zweihander: [1.71, 2.08, 1.32, 0.48],
-  estoc: [1.57, 1.99, 1.22, 0.42],
-  sabre: [1.39, 1.58, 1.07, 0.36],
-  rapier: [1.54, 1.68, 1.19, 0.29],
-  falchion: [1.37, 1.56, 1.06, 0.33],
-  monohoshizao: [1.58, 1.87, 1.22, 0.47],
-  qinggang: [1.35, 1.52, 1.04, 0.33],
-  excalibur: [1.55, 1.83, 1.2, 0.4],
-  excalibur_replica: [1.55, 1.83, 1.2, 0.4],
-  lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
-  tree_branch: [1.46, 1.61, 1.13, 0.29],
-  rubber_chicken: [0.88, 1.24, 0.68, 0.18],
-  frozen_tuna: [1.36, 1.63, 1.05, 0.44],
-  // 모르겐슈테른 (레어 둔기, 확인표 줄 144): hybrid weapon_measure.mjs 실측 contact 0.88 · clinch 0.68 · cutTime 0.39 raw (머리가 무거워 0.35 s 베기에서 70 % 지점이 늦게 머리 높이를 지난다).
-  //  reach 는 같은 날 도구가 모든 무기에서 내딛기 몫을 못 재어(롱소드도 1.62 = contact) 같은 틀(C 한손) 세이버의 reach/contact 비 1.58/1.39 로 유도한 값 [D]
-  morgenstern: [0.88, 1.0, 0.68, 0.39],
-};
+// 무기별 간격 실측표(MEASURED)와 표에 없는 무기의 길이 기준(WEAPON_BASELINE)은 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과
+//  schools.js MEASURES 두 벌). 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 — 도구(proto_weapons·r2p_ai_*·shove_check)가 이 이름으로 읽고 고쳐 쓴다(같은 객체)
+export { MEASURED };
 const LS_MEASURED = MEASURED.longsword;
 
 // 감정 판정(Emotions)·텀 상수·고유 능력 배율표는 emotions.js 에 (플레이어와 같은 규칙)
