@@ -1,0 +1,18 @@
+{
+ "weapon": "sabre",
+ "tag": "after",
+ "pad": [
+  0.55,
+  -0.26
+ ],
+ "frames": 90,
+ "elev": -45,
+ "az": 46.9,
+ "off": 64.2,
+ "errors": [],
+ "shots": [
+  "docs/handoff/onehand_tip2_after_sabre_neben_held_game.png",
+  "docs/handoff/onehand_tip2_after_sabre_neben_held_side.png"
+ ],
+ "held": true
+}
