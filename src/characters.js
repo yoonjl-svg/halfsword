@@ -359,7 +359,7 @@ export const CHARACTERS = [
   {
     id: 'tome',
     name: '토메 비달',
-    epithet: '',
+    epithet: '볼로냐의 사서',
     weapon: 'rapier', // 이탈리아 유파 (traditionOf: 한손 찌르기)
     voice: 'liao', // 목소리: 샛별 쪽 짝 그대로 (랴오의 녹음)
     ai: { level: 'normal', persona: { school: 'rapier', pers: {} } },

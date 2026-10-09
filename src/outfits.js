@@ -1887,6 +1887,190 @@ const OMARI_ROUND = {
   footF: omariFootRound, footB: omariFootRound,
 };
 
+// ── 토메 비달 v2 (10/10 사장님 "사서 좋고 칭호도 써. 안경도 넣어"): 볼로냐 콜레지오 디 스파냐 도서관의 스페인 사람 사서, 1600 년 무렵 ──
+//  v1(포도주색 더블릿·리넨 깃·놋 단추·은발·수염·장화)을 그대로 입고, 그 위에
+//   · 소매 없는 앞트임 학자 겉옷(ropa): 따뜻한 먹색. 가운데가 트여 더블릿·깃·단추가 보인다. 가슴·배·골반은 둥근 네모 단면의 통을
+//     가운데만 비우고 두르며, 허벅지는 다리마다 따라가는 판(바깥·뒤만 덮고 안쪽·앞 가운데는 열림 — 미나미 v4 하카마처럼 부위마다 나눔)으로
+//     무릎 바로 위까지. 트인 자리 가장자리에 어두운 포도주색 안단. 위팔 꼭대기에 둥근 어깨 둘레(brahones)
+//   · 다리 없는 끈 안경(안경다리는 1720~30 년대에야 생긴다): 둥근 뿔빛 테 둘 + 코 위 다리, 테 바깥에서 검은 비단 끈이 귀 위로 둘러 뒤통수로
+//   · 겉옷 위 허리띠 왼쪽(빈손 쪽)에 쇠 열쇠 꾸러미, 그 뒤에 뿔 잉크통(놋 뚜껑)과 가죽 펜 통 · 오른 소맷부리에 잉크 얼룩 하나
+//  몸·질량·관절·충돌체·무기는 그대로(겉모습만). 겉옷 판은 단단한 조각이라 부위를 따라 움직일 뿐 늘어지지 않는다.
+const ROPA = 0x1c191b; // 따뜻한 먹색 겉옷
+const ROPA_FACING = 0x4a2230; // 트인 자리 안단 · 어깨 둘레 테 (어두운 포도주)
+const SPECS_HORN = 0x2b2420; // 안경테 (어두운 뿔)
+const SPECS_CORD = 0x151314; // 검은 비단 끈
+const KEY_IRON = 0x5d5a55;
+const INK_HORN = 0x6b5a45;
+const PEN_LEATHER = 0x3b2a22;
+const KEY_IRON_OPTS = { metalness: 0.55, roughness: 0.5, steel: 0.5 };
+/** 둥근 네모(초타원 |x/rx|^n + |z/rz|^n = 1) 위에서 방향 a(0 = 앞, π/2 = +z)의 점까지 거리 — 각을 고르게 나누면 평평한 면에도 꼭짓점이 고르게 간다 */
+const seRadius = (a, rx, rz, n) => 1 / Math.pow(Math.pow(Math.abs(Math.cos(a)) / rx, n) + Math.pow(Math.abs(Math.sin(a)) / rz, n), 1 / n);
+/**
+ * 열린 천 띠: 고리(row)마다 각 a 를 range(row) = [a0, a1] 사이로 segs 칸 나누고 section(a, row) → [x, z] 를 잇는다.
+ * 양 끝을 잇지 않아 앞이 트인 겉옷·한쪽만 덮는 다리 판을 만든다. 양면으로 칠한다. hem(y, a) 를 주면 고리 높이를 각마다 바꾼다(옷단 기울이기)
+ */
+function arcLoft(ys, segs, range, section, hem) {
+  const vertices = [], uv = [], indices = [];
+  ys.forEach((y, row) => {
+    const [a0, a1] = range(row);
+    for (let k = 0; k <= segs; k++) {
+      const a = a0 + ((a1 - a0) * k) / segs;
+      const [x, z] = section(a, row);
+      vertices.push(x, hem ? hem(y, a) : y, z);
+      uv.push(k / segs, row / (ys.length - 1));
+    }
+  });
+  const w = segs + 1;
+  for (let r = 0; r < ys.length - 1; r++) for (let k = 0; k < segs; k++) {
+    const n = r * w + k;
+    indices.push(n, n + w, n + 1, n + 1, n + w, n + w + 1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+const ROPA_N = 8; // 몸통 상자 모서리가 뚫고 나오지 않을 만큼 네모진 단면
+/**
+ * 몸통 한 부위의 겉옷 통 + 트인 자리 안단. rows = [[y, rx, rz, w, fold], ...] (w = 앞 트임 반폭, fold = 등 쪽 세로 주름 깊이 비율).
+ * 아래 부위의 통은 위 부위 통 안으로 들어가 겹친다(기와처럼) — 허리를 굽혀도 틈이 덜 보이게
+ */
+function ropaTorso(g, rows, hem) {
+  const ys = rows.map((r) => r[0]);
+  const at = (a, row, k = 1) => {
+    const [, rx, rz, , fold = 0] = rows[row];
+    // 등(뒤 ±60° 안)에만 부드러운 세로 주름: 판판한 판이 아니라 늘어진 천으로 읽히게
+    const r = seRadius(a, rx, rz, ROPA_N) * k * (1 + fold * smooth01(-0.35, -0.75, Math.cos(a)) * Math.sin(a * 11));
+    return [Math.cos(a) * r, Math.sin(a) * r];
+  };
+  const open = (row, extra = 0) => Math.atan2(rows[row][3] + extra, rows[row][1]);
+  addMerged(g, [arcLoft(ys, 56, (row) => [open(row), Math.PI * 2 - open(row)], at, hem)], ROPA, { ...CLOTH, side: THREE.DoubleSide });
+  // 안단: 트인 가장자리에서 1.6 cm, 겉옷보다 살짝 바깥
+  const facing = [];
+  for (const s of [-1, 1]) {
+    facing.push(arcLoft(ys, 2, (row) => (s > 0 ? [open(row), open(row, 0.016)] : [-open(row, 0.016), -open(row)]), (a, row) => at(a, row, 1.012), hem));
+  }
+  addMerged(g, facing, ROPA_FACING, { ...CLOTH, side: THREE.DoubleSide });
+}
+/** 허벅지 겉옷 판: 다리 바깥·뒤만 덮고(앞 가장자리 = 다리 축 바로 앞, 안쪽은 열림) 무릎 바로 위에서 끝난다. 아래로 조금 퍼지고 부드러운 주름 */
+function ropaThigh(g, look, d) {
+  const side = Math.sign(d?.pos?.[2] || 1); // 다리 바깥쪽(+z/−z)
+  const ys = [0.2, 0.12, 0.03, -0.06, -0.13, -0.172];
+  const u = (row) => row / (ys.length - 1);
+  const section = (a, row, k = 1) => {
+    const t = u(row);
+    const fold = 1 + 0.05 * Math.sin(a * 5 + 0.6) * smooth01(0.1, 1, t);
+    const rx = (0.086 + 0.03 * t) * fold * k, rz = (0.088 + 0.032 * t) * fold * k;
+    return [Math.cos(a) * rx, side * (Math.sin(a) * rz + 0.008 * t)];
+  };
+  // 뒤쪽 끝(약 250°)은 다리 사이 가운데까지 와서 뒤에서 보면 두 판이 맞닿는다(반바지처럼 갈라져 보이지 않게)
+  const shell = arcLoft(ys, 28, () => [-0.04, 4.38], section);
+  hangingClothShading(addMerged(g, [shell], ROPA, { ...CLOTH, side: THREE.DoubleSide }).material);
+  // 앞 가장자리 안단 (몸통 안단과 이어진다)
+  addMerged(g, [arcLoft(ys, 2, () => [-0.04, 0.16], (a, row) => section(a, row, 1.012))], ROPA_FACING, { ...CLOTH, side: THREE.DoubleSide });
+}
+/** 위팔: v1 소매 그대로 + 꼭대기에 둥근 어깨 둘레(겉옷 진동에 단 brahones) */
+function ropaUpperArm(g) {
+  sleeveVolume(g, 1.12, 1.03);
+  addMerged(g, [
+    bake(new THREE.TorusGeometry(0.053, 0.017, 6, 18), [0, 0.09, 0], [Math.PI / 2, 0, 0]),
+    bake(new THREE.TorusGeometry(0.06, 0.012, 5, 18), [0, 0.068, 0], [Math.PI / 2, 0, 0]),
+  ], ROPA, CLOTH);
+}
+/** 머리: v1 얼굴·은발·수염 + 끈 안경 */
+function librarianHead(g, look) {
+  TOME_RAPIER.head(g, look);
+  const RY = 0.01, RZ = 0.036, RX = 0.104, R = 0.019;
+  // 둥근 테 둘(눈을 감싸고 눈썹 아래에서 멈춘다) + 코 위를 넘는 다리 + 끈을 맨 작은 귀
+  addMerged(g, [
+    ...[-1, 1].map((s) => bake(new THREE.TorusGeometry(R, 0.0034, 6, 22), [RX, RY, s * RZ], [0, Math.PI / 2, 0])),
+    taperedTube([[RX, RY + 0.004, -(RZ - R)], [RX + 0.007, RY + 0.01, 0], [RX, RY + 0.004, RZ - R]], [0.003, 0.0032, 0.003], 8, 4),
+    ...[-1, 1].map((s) => ball(0.0042, 6, 4, [RX - 0.002, RY + 0.002, s * (RZ + R + 0.002)])),
+  ], SPECS_HORN, { roughness: 0.45, metalness: 0.1 });
+  // 검은 비단 끈: 테 바깥에서 관자놀이를 지나 귀 위로 둘러 뒤통수에서 만난다 (머리카락 겉에서 2~4 mm)
+  addMerged(g, [-1, 1].map((s) => taperedTube([
+    [RX - 0.003, RY + 0.002, s * (RZ + R + 0.003)], [0.085, 0.02, s * 0.081], [0.05, 0.028, s * 0.101], [0.0, 0.031, s * 0.108],
+    [-0.05, 0.026, s * 0.105], [-0.09, 0.014, s * 0.079], [-0.116, 0.006, s * 0.031], [-0.119, 0.005, 0],
+  ], [0.0021, 0.0021, 0.0021, 0.0021, 0.0021, 0.0021, 0.0021, 0.0021], 26, 4)), SPECS_CORD, CLOTH);
+  // 알은 넣지 않는다: 옅은 투명 원판은 대결 거리에서 보이지 않고 그리기 수만 는다 (테만)
+}
+/** 배: v1 더블릿 겉면·앞 솔기 + 겉옷 + 겉옷 위 허리띠(놋 고리) + 왼쪽 허리 열쇠 꾸러미 · 잉크통 · 펜 통 */
+function librarianAbdomen(g) {
+  clothBase(g, TOME_WINE);
+  addMerged(g, [box(0.005, 0.09, 0.006, [0.114, 0.031, -0.062]), box(0.005, 0.09, 0.006, [0.114, 0.031, 0.062])], TOME_SEAM, CLOTH);
+  ropaTorso(g, [[0.095, 0.124, 0.182, 0.078, 0.02], [0.0, 0.125, 0.184, 0.08, 0.022], [-0.09, 0.126, 0.186, 0.082, 0.025]]);
+  // 허리띠: 겉옷 바깥을 두르고 트인 앞을 가로지른다
+  const belt = clothLoft([-0.026, -0.06], 48, (a) => { const r = seRadius(a, 0.131, 0.19, ROPA_N); return [Math.cos(a) * r, Math.sin(a) * r]; });
+  const L = -1; // 왼쪽(빈손 쪽) = −z
+  // 열쇠 꾸러미: 띠 아래 고리 하나에 큰 쇠 열쇠 셋이 부채처럼 늘어진다 (손잡이 고리 · 자루 · 이빨)
+  const ring = [0.085, -0.071, L * 0.2];
+  const iron = [bake(new THREE.TorusGeometry(0.016, 0.0032, 5, 16), ring)];
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1);
+  [-0.32, 0.02, 0.36].forEach((ang, i) => {
+    const len = [0.085, 0.1, 0.09][i];
+    const key = [
+      bake(new THREE.TorusGeometry(0.012, 0.0036, 5, 12), [0, -0.014, 0]),
+      cyl(0.0043, 0.0043, len, 6, false, [0, -0.026 - len / 2, 0]),
+      box(0.016, 0.019, 0.005, [0.009, -0.021 - len, 0]),
+      box(0.008, 0.007, 0.0055, [0.007, -0.011 - len, 0]),
+    ];
+    Q.setFromEuler(new THREE.Euler(0, 0, ang));
+    P.set(ring[0], ring[1] - 0.013, ring[2] + L * 0.005 * (i - 1));
+    M.compose(P, Q, S);
+    for (const k of key) iron.push(k.applyMatrix4(M));
+  });
+  addMerged(g, iron, KEY_IRON, KEY_IRON_OPTS);
+  // 잉크통(뿔) + 펜 통(가죽): 열쇠 뒤, 띠에서 짧은 끈으로
+  const horn = [-0.064, -0.112, L * 0.205];
+  addMerged(g, [cyl(0.0105, 0.0145, 0.05, 10, false, horn, [0, 0, -0.12])], INK_HORN, { roughness: 0.55, metalness: 0.05 });
+  const pen = [-0.1, -0.118, L * 0.203];
+  // 펜 통 · 매단 끈 · 허리띠는 같은 가죽 (한 메쉬)
+  addMerged(g, [
+    belt,
+    cyl(0.0098, 0.0098, 0.115, 8, false, pen, [0, 0, 0.22]),
+    cyl(0.011, 0.011, 0.018, 8, false, [pen[0] + 0.0115, pen[1] + 0.05, pen[2]], [0, 0, 0.22]),
+    taperedTube([[-0.064, -0.058, L * 0.195], [-0.066, -0.075, L * 0.204], [-0.064, -0.084, L * 0.205]], [0.0022, 0.0022, 0.0022], 6, 4),
+    taperedTube([[-0.092, -0.058, L * 0.195], [-0.089, -0.052, L * 0.2], [-0.087, -0.062, L * 0.203]], [0.0022, 0.0022, 0.0022], 6, 4),
+  ], PEN_LEATHER, { ...CLOTH, side: THREE.DoubleSide });
+  addMerged(g, [
+    box(0.008, 0.03, 0.04, [0.133, -0.043, -0.028]),
+    cyl(0.0155, 0.0155, 0.008, 10, false, [horn[0] + 0.003, horn[1] + 0.028, horn[2]], [0, 0, -0.12]),
+  ], BRASS, BRASS_OPTS);
+}
+const TOME_LIBRARIAN = {
+  ...TOME_RAPIER,
+  chest(g, look) {
+    TOME_RAPIER.chest(g, look);
+    // 목 둘레는 깃이 보이게 좁게 여미고, 어깨 위로 비스듬히 내려와 가슴·등을 덮는다
+    ropaTorso(g, [
+      [0.163, 0.084, 0.102, 0.058],
+      [0.152, 0.116, 0.162, 0.074],
+      [0.13, 0.134, 0.2, 0.082],
+      [0.0, 0.135, 0.201, 0.082, 0.012],
+      [-0.16, 0.136, 0.203, 0.08, 0.025],
+    ]);
+  },
+  abdomen: librarianAbdomen,
+  pelvis(g, look) {
+    TOME_RAPIER.pelvis(g, look);
+    // 옷단: 앞은 −0.13(다리를 들어도 덜 걸리게), 옆·뒤로 갈수록 −0.19 까지 내려와 더블릿 자락 뒤판을 덮는다
+    ropaTorso(g, [[0.1, 0.12, 0.18, 0.082, 0.02], [0.0, 0.126, 0.19, 0.088, 0.03], [-0.1, 0.133, 0.2, 0.093, 0.04], [-0.13, 0.136, 0.205, 0.095, 0.045]],
+      (y, a) => (y < -0.11 ? y - 0.06 * (0.5 - 0.5 * Math.cos(a)) : y));
+  },
+  head: librarianHead,
+  uarmS: ropaUpperArm,
+  uarmO: ropaUpperArm,
+  farmS(g) {
+    tomeCuff(g);
+    // 오른 소맷부리 바깥에 잉크 얼룩 하나
+    addMerged(g, [bake(new THREE.SphereGeometry(0.0075, 8, 5), [0.006, -0.099, 0.0535], [0.3, 0, 0], [1.5, 1, 0.28])], 0x1b1a26, CLOTH);
+  },
+  thighF: ropaThigh,
+  thighB: ropaThigh,
+};
+
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
@@ -1905,6 +2089,7 @@ export const OUTFITS = {
   margarethe_dragon_helm: MARGARETHE_DRAGON_HELM,
   margarethe_dragon_horned: MARGARETHE_DRAGON_HORNED,
   tome_rapier: TOME_RAPIER,
+  tome_librarian: TOME_LIBRARIAN,
   omari_seafarer: OMARI_SEAFARER,
   minami_shrine: MINAMI_SHRINE,
   minami_grove: MINAMI_GROVE,

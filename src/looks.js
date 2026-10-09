@@ -413,6 +413,16 @@ export const LOOK_ARCHIVE = {
       grip: 0x422830, hilt: 0xb6a681, accent: 0xc1a36e,
       outfit: 'tome_rapier',
     },
+    // v2 (10/10 사장님 "사서 좋고 칭호도 써. 안경도 넣어"): 볼로냐 콜레지오 디 스파냐 도서관의 스페인 사람 사서(1600 년 무렵).
+    //  v1 옷·얼굴 그대로 + 먹색 앞트임 학자 겉옷 · 끈 안경 · 열쇠 꾸러미·잉크통·펜 통 (outfits.js TOME_LIBRARIAN). 색 값은 v1 과 같다
+    v2: {
+      tunic: 0x632b3c, quilt: 0x632b3c, sleeve: 0x632b3c,
+      straps: null, belt: 0x35272a, hoseUpper: 0x35343b, hoseLower: 0x35343b,
+      shoes: 0x302627, skin: 0xd3a484, hands: 0xd3a484,
+      helmet: null, metal: 0xb7a37a, hair: 0xbec1bd, headband: null,
+      grip: 0x422830, hilt: 0xb6a681, accent: 0xc1a36e,
+      outfit: 'tome_librarian',
+    },
   },
   omari: {
     v1: {
@@ -576,7 +586,7 @@ export const CHARACTER_LOOK_VERSION = {
   liao: 'v6',
   heinrich: 'v2',
   margarethe: 'v3',
-  tome: 'v1',
+  tome: 'v2',
   omari: 'v2',
   minami: 'v5',
 };
