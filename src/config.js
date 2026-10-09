@@ -712,7 +712,8 @@ export const JOINTS = {
     hard: { hard: true },
     soft: { soft: true },
     reach: { reach: true },
-    anat: { soft: true }, // 권고 = ⓑ (위팔 돌림·손목 끝 스프링, 팔꿈치 몫 끔) — 측정·까닭 docs/motion/joint_range_2026-10-09.md §5·§6
+    playerReach: { playerReach: true },
+    anat: { soft: true, playerReach: true, twistK: 60 }, // 권고 = ⓑ (위팔 돌림·손목 끝 스프링, 팔꿈치 몫 끔) + 플레이어 칼만 ⓒ (사장님 10/9 18:4x '좋습니다') + 위팔 비틀기 서보 60 (사장님 18:5x '기본에 넣어') — 측정·까닭 docs/motion/joint_range_2026-10-09.md §5·§6·§8
   },
   // ⓐ 엔진 한도 (Rapier: 팔꿈치 경첩 한도, 위팔 돌림 = 칼 어깨 공 관절 x 축 한도, 손목 굽힘·폄 = 밧줄)
   elbowMin: 0, // 칼 팔꿈치 굽힘 최소 (0 = 곧게까지 · 과신전 금지는 오늘도 0)
@@ -731,4 +732,8 @@ export const JOINTS = {
   dWrist: 0.4, // N·m·s/rad
   // ⓒ 손 목표 자르기: 어깨에서 (위팔 + 아래팔) × reachFrac 안 (0.975 ≈ 팔꿈치 최소 25° 굽힘·리치 −1.4 cm, 0.92 ≈ 46°·−4.6 cm — 0.92 는 48 판에서 승률이 떨어져 0.975)
   reachFrac: 0.975,
+  // 플레이어 칼만 ⓒ (묶음 playerReach·anat): 사람 손가락이 모는 칼(skill.corr 'v2')의 손 목표를 팔 길이 × 이 값 안으로. AI 는 1 그대로 (확인표 320)
+  playerReachFrac: 0.975,
+  // 위팔 비틀기 서보 강성 (N·m/rad) 덮어쓰기. null = 묶음의 twistK, 그것도 없으면 25(오늘). 감쇠 0.8·상한 20 N·m 도 같은 배율 (fighter.js manualMuscle, 확인표 321)
+  twistK: null,
 };

@@ -171,18 +171,26 @@ function anatJointDefs(defs) {
   return defs;
 }
 /** ⓒ 손 목표 자르기: armIK·armU 가 손 목표 거리를 자르는 위 끝 (m). 끔이면 오늘 그대로 위팔 + 아래팔 − 여유 */
-function ikReach(a, b) {
-  return jm().reach ? Math.min(a + b - IK_MARGIN, (a + b) * JOINTS.reachFrac) : a + b - IK_MARGIN;
+//  player: 사람 손가락이 모는 칼인가 (playerArm). 'anat' 의 playerReach 는 플레이어 칼에만 playerReachFrac 로 자른다 (AI 는 원래 거의 안 뻗고, 걸면 레이피어 승률 −14 — 기록 §7·§8)
+function ikReach(a, b, player = false) {
+  if (jm().reach) return Math.min(a + b - IK_MARGIN, (a + b) * JOINTS.reachFrac);
+  if (player && jm().playerReach) return Math.min(a + b - IK_MARGIN, (a + b) * JOINTS.playerReachFrac);
+  return a + b - IK_MARGIN;
 }
+/** 사람 손가락이 모는 칼인가: skill.autoGuard 는 플레이어만 true (main.js newRound · 시뮬 입력 길 corr_lib inputPump). skill.corr 로 가르면
+ *  corr_s0 (모든 파이터 corr old/v2 바꿔 끼움)의 '설정 0 동일'이 깨져서 쓰지 않는다 */
+const playerArm = (f) => f.skill?.autoGuard === true;
+/** 위팔 비틀기 서보 강성 (N·m/rad): JOINTS.twistK 가 있으면 그것, 없으면 켠 묶음의 twistK, 둘 다 없으면 25 (오늘 값). 감쇠·상한은 같은 배율 (manualMuscle) */
+const twistK = () => JOINTS.twistK ?? jm().twistK ?? 25;
 /**
  * armIK 의 위팔 방향 u (가슴 틀): 손 목표 T(가슴 틀)·어깨 S 에서 armIK 와 같은 식 (같은 IK_POLE·IK_DMIN·IK_MARGIN·ARM 길이). out 에 쓴다.
  *  보정 v2 순서 결합(Fighter.corrTrunkTurn)이 '이 가슴 yaw 면 칼 어깨가 어디를 향하나'를 몸을 움직이지 않고 묻는 데 쓴다
  */
-function armU(T, S, side, out) {
+function armU(T, S, side, out, player = false) {
   const a = ARM.upper;
   const b = ARM.fore;
   const D = _au1.copy(T).sub(S);
-  const d = THREE.MathUtils.clamp(D.length(), IK_DMIN, ikReach(a, b));
+  const d = THREE.MathUtils.clamp(D.length(), IK_DMIN, ikReach(a, b, player));
   const Dn = D.normalize();
   const pole = _au2.set(IK_POLE[0], IK_POLE[1], side * IK_POLE[2]).normalize();
   const pDir = pole.addScaledVector(Dn, -pole.dot(Dn));
@@ -863,7 +871,7 @@ export class Fighter {
       const [p0, p1] = HUMAN.shoulderPlane;
       // 밧줄 밖 = 두 반공간 중 하나라도 u·n < 0 (n 은 shoulderOn 의 rope(c) 방향) = 면 각 φ 가 [p0, p1] 밖 (밖이 아니면 null)
       const phiOut = (psi) => {
-        const u = armU(tc(psi), sh, side, _ct4);
+        const u = armU(tc(psi), sh, side, _ct4, playerArm(this));
         const outside = [p1 - 90, p0 + 90].some((c) => Math.sin(c * HD) * u.x + side * Math.cos(c * HD) * u.z < 0);
         return outside ? Math.atan2(u.x, side * u.z) / HD : null;
       };
@@ -2609,7 +2617,9 @@ export class Fighter {
     if (tlen > cap) _mT.setLength(cap);
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
-    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTw * 25 - wTw * 0.8, -20, 20) + twistFF);
+    //  관절 가동 범위 교정 (JOINTS twistK, 10/9 2차): 강성 25 → twistK 로 올리면 감쇠 0.8·상한 20 도 같은 배율 (25 = 오늘 그대로, 같은 float)
+    const twR = twistK() / 25;
+    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTw * 25 * twR - wTw * 0.8 * twR, -20 * twR, 20 * twR) + twistFF);
     j.child.addTorque(vecArg(_mT), true);
     j.parent.addTorque({ x: -_mT.x, y: -_mT.y, z: -_mT.z }, true);
   }
@@ -2960,7 +2970,7 @@ export class Fighter {
     const b = ARM.fore; // 아래팔 + 손목까지
     const D = T.sub(S);
     const Dl = D.length();
-    const dMax = ikReach(a, b); // 끔 = 위팔 + 아래팔 − 여유 (JOINTS reach ⓒ 면 팔 길이 × reachFrac — 팔이 늘 살짝 굽은 채로 뻗는다)
+    const dMax = ikReach(a, b, playerArm(this)); // 끔 = 위팔 + 아래팔 − 여유 (JOINTS reach ⓒ 면 팔 길이 × reachFrac — 팔이 늘 살짝 굽은 채로 뻗는다)
     this.armFull = Dl >= dMax; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
     const d = THREE.MathUtils.clamp(Dl, IK_DMIN, dMax);
     const Dn = D.normalize();

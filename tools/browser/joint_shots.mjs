@@ -3,7 +3,7 @@
 //  시간은 playwright 가짜 시계로 한 프레임(17 ms)씩 → 두 번의 실행이 같은 프레임에서 같은 손가락 자리다. 상대는 가만히 선다(AI 멈춤).
 //  카메라: 칼 든 쪽 옆에서 (매 프레임 따라감). 각은 tools/sim/joint_range.mjs armAngles 를 그대로 부른다.
 //  실행: vite 개발 서버를 띄운 뒤
-//    node tools/browser/joint_shots.mjs http://127.0.0.1:5173 <출력 폴더> [무기=longsword] [켬 모드=anat] [장 수=4]
+//    node tools/browser/joint_shots.mjs http://127.0.0.1:5173 <출력 폴더> [무기=longsword] [켬 모드=anat] [장 수=4] [전 모드=off]
 //   출력: <폴더>/joint_range_before_<n>.png · joint_range_after_<n>.png · joint_shots.json (프레임마다 각)
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
@@ -15,6 +15,7 @@ const out = process.argv[3] || '.';
 const W = process.argv[4] || 'longsword';
 const ON = process.argv[5] || 'anat';
 const NSHOT = +(process.argv[6] || 4);
+const OFF = process.argv[7] || 'off'; // 견줄 '전' 모드 (10/9 2차: 기본이 anat 이 된 뒤 플레이어 ⓒ 만 견줄 때 soft)
 fs.mkdirSync(out, { recursive: true });
 const FRAME = 17; // ms
 const G = { tagR: [0.42, 0.42], tagL: [-0.4, 0.42], wechselL: [-0.4, -0.42], wechselR: [0.38, -0.44], nebenR: [0.55, -0.26], mid: [0.12, 0.14], midL: [-0.1, 0.14] };
@@ -140,14 +141,15 @@ async function pass(mode, shotAt, tag) {
 }
 
 // 1) 끔으로 한 번: 범위를 가장 크게 벗어난 순간 고르기
-const A = await pass('off', null, 'probe');
-const bad = (r) => Math.max((r.twistLag ?? 0) - 45, Math.abs(r.wristFE ?? 0) - 70, -(r.elbow ?? 0) - 5, (r.shRot ?? 0) - 90, -70 - (r.shRot ?? 0), 10 - (r.elbow ?? 90));
+const A = await pass(OFF, null, 'probe');
+// JS_PICK=straight 이면 팔꿈치가 가장 곧은 프레임만 고른다 (플레이어 ⓒ 전/후)
+const bad = process.env.JS_PICK === 'straight' ? (r) => 10 - (r.elbow ?? 90) : (r) => Math.max((r.twistLag ?? 0) - 45, Math.abs(r.wristFE ?? 0) - 70, -(r.elbow ?? 0) - 5, (r.shRot ?? 0) - 90, -70 - (r.shRot ?? 0), 10 - (r.elbow ?? 90));
 const cand = A.rows.filter((r) => r.i > 60).map((r) => ({ i: r.i, b: bad(r) })).sort((x, y) => y.b - x.b);
 const pick = [];
 for (const c of cand) if (pick.length < NSHOT && c.b > 0 && pick.every((p) => Math.abs(p - c.i) > 12)) pick.push(c.i);
 pick.sort((x, y) => x - y);
 // 2) 같은 프레임에서 끔·켬을 찍는다
-const B = await pass('off', pick, 'before');
+const B = await pass(OFF, pick, 'before');
 const C = await pass(ON, pick, 'after');
 const sum = (rows) => {
   const n = rows.length;
@@ -156,7 +158,7 @@ const sum = (rows) => {
 };
 const rec = { weapon: W, on: ON, picked: pick, probeSameAsBefore: JSON.stringify(A.rows) === JSON.stringify(B.rows), before: sum(B.rows), after: sum(C.rows), shots: [...B.shots, ...C.shots], errors, rows: { before: B.rows, after: C.rows } };
 fs.writeFileSync(path.join(out, 'joint_shots.json'), JSON.stringify(rec, null, 1));
-console.log(`joint_shots ${W} 끔 vs ${ON}: 고른 프레임 ${pick.join(', ')} · 끔 다시 그어도 같음 ${rec.probeSameAsBefore}`);
+console.log(`joint_shots ${W} ${OFF} vs ${ON}: 고른 프레임 ${pick.join(', ')} · 끔 다시 그어도 같음 ${rec.probeSameAsBefore}`);
 console.log(`  끔: ${JSON.stringify(rec.before)}`);
 console.log(`  켬: ${JSON.stringify(rec.after)}`);
 console.log(`  그림 ${rec.shots.length} 장 · 콘솔 오류 ${errors.length}${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
