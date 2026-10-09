@@ -384,19 +384,21 @@ const ITALIAN_SECRET = {
   nameKo: 'Passata in contratempo (박자 밑 찌르기)',
   when: ['foeRaise', 'foeCharge'],
   cond: { dist: 'italianDist' },
-  do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'pass' } },
+  do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'pass', push: 'stepPush' } }, // push: 10/9 4차 걸음 밀기
   src: 'Capo Ferro 1610 contratempo · passata sotto 「punta in falso, che vien di giù in su」 PDF 53쪽 [원문·원전 2차] · 뒷발 지나 보내기(passata) [원전 2차] · 걸음 수 [추정]',
 };
 // 이베리아 Molinete altibaixo (휘돌려 내려치기): 끊기지 않은 베기 셋 뒤, 옆으로 비껴 딛으며 칼을 한 바퀴 휘돌려(몰리넬로 고리) 지붕에서 곧게 내려친다
 const IBERIAN_SECRET = {
-  name: 'molineteAltibaixo',
-  nameKo: 'Molinete altibaixo (휘돌려 내려치기)',
+  name: 'molineteTalho',
+  nameKo: 'Molinete talho (휘돌려 사선 베기 · 가칭)',
   when: 'combo',
   // 길 = 라이브러리 몰리넬로 고리(낮은 오른쪽 → 옆 지킴 → 오른 어깨) → 지붕 → 고유 altibaixo 길(내려베고 되올림). 서보 힘 창은 지붕에 닿은 뒤부터(내려치는 마지막 구간 — powerFrom = 지난 길 점 수)
   //  10/9 후속(디렉터 '휘돌림이 가속이 되게'): 첫 꼴(지금 손 → 낮은 오른쪽 → 옆 지킴 → 오른 어깨 → 지붕 → 내려침, 한 길)은 붙은 거리에서 고리가 상대 다리를 스치고
   //   내려침이 거의 안 닿았다(비기 상처 대부분 고리 도중의 약한 둔타). → 고리는 몸 뒤(오른 어깨 → 옆 지킴 → 오른 어깨 → 지붕)로 준비(windup) 동안 돌고, 그동안 옆 뒤로 비껴 딛어
   //   틈을 만들고(iberianBack), 닿는 거리에서 지붕부터 내려친다(path) — 내려치기 전체에 힘 창. 단계별 J 는 문서 §9
-  do: { loop: [G.tagR, G.nebenR, G.tagR, G.tag], path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], powerFrom: 0, side: 'iberianLat', open: 'H', reach: 0, power: 'iberianPower', loopHand: 'iberianLoopHand', strength: 'iberianStrength', sideBack: 'iberianBack', release: { dist: 'iberianRelease', maxHold: 'releaseMaxHold' } },
+  //  10/9 4차(디렉터 — 더 유용하고 컨셉에 맞는 쪽): 지붕 대기 없이 고리(옆 지킴 → 오른 어깨)를 계속 돌다가, 터뜨림 창에 들면 고리 꼭대기(오른 어깨)에서 멈춤 없이
+  //   사선(탈류 = 분노의 베기 줄)으로 내려친다. 곧은 내려침(altibaixo)은 보통 真向 과 같은 값이라(§10-4) 바꿈. 이름 가칭
+  do: { loop: [G.nebenR, G.tagR], path: [[0.12, 0.14], G.wechselL], powerFrom: 0, side: 'iberianLat', open: 'H', reach: 0, power: 'iberianPower', loopHand: 'iberianLoopHand', strength: 'iberianStrength', sideBack: 'iberianBack', release: { dist: 'iberianRelease', maxHold: 'releaseMaxHold' } },
   src: '몬탄테 molinete·altabaixo — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 둥근 걸음(옆으로 비껴 딛음) [원전 2차] · 고리 → 내려치기로 잇기 [해석]',
 };
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
@@ -410,7 +412,8 @@ const JAPANESE_SECRET = {
   do: {
     back: { fwd: 'japaneseBack', guard: G.nebenR },
     // 真向: 脇構え → 오른 위로 들어 → 上段 → 가운데로 내려 팔을 다 뻗은 점(가운데일수록 손이 앞으로 — 깊이 최대) → 곧 굽혀 회수(청안 쪽)
-    tech: { name: 'goNoSenMen', from: G.nebenR, path: [[0.42, 0.3], G.tag, [0.0, 0.2], [0.0, 0.02], [0.12, -0.2]], open: 'H', kind: 'cut', reach: 'japaneseReach', base: 1, presses: true },
+    tech: { name: 'goNoSenMen', from: G.nebenR, path: [[0.42, 0.3], G.tag, [0.0, 0.14], [0.04, -0.45]], // 10/9 4차(사장님 '좋습니다'): 끝 점을 상대 몸을 지나 아래로 — 팔을 다 뻗는 끝점에서 감속하기 전에 닿게 (전: … [0, 0.2] → [0, 0.02] → [0.12, −0.2])
+    open: 'H', kind: 'cut', reach: 'japaneseReach', base: 1, presses: true },
     step: { lat: 0, fwd: 'japaneseStep', when: 'strike', kind: 'lunge', push: 'stepPush' },
     zanshin: 'langort',
     release: { dist: 'japaneseRelease', maxHold: 'releaseMaxHold' }, // 10/9 3차: 脇構え 로 담은 채 닿는 거리 창에 들 때까지 붙잡았다 터뜨림
