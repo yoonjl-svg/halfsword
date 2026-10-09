@@ -56,6 +56,7 @@ export class AI {
     this.me = me;
     this.foe = foe;
     this.sense = new Senses(me, foe);
+    me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
     this.persona = persona || {};
     // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)
     if (this.persona.close) me.canShove = true;
@@ -2368,6 +2369,12 @@ export class AI {
     const st = this.tech?.step;
     if (st?.when === 'strike') {
       if (this.techStepRequest(st)) this.requestedStep = true;
+      return;
+    }
+    // 유파 걸음 베기 걸음(10/10, gait.P.cutStep — 일본 후미코미·중국 진보 = 앞발 lunge + 뒷발 끌어붙임, 이베리아 큰 pass): 찌르기·칸 없는 유파는 전과 같다
+    const cs = this.tech?.kind !== 'thrust' ? g.P?.cutStep : null;
+    if (cs) {
+      if (g.requestStep({ kind: cs.kind, fwd: cs.fwd, hold: 0.3, leg, draw: !!cs.draw })) this.requestedStep = true;
       return;
     }
     if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3, leg })) this.requestedStep = true;

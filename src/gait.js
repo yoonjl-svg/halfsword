@@ -21,6 +21,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { BODY, GAIT } from './config.js';
+import { TRADITIONS } from './schools.js';
 
 const A_LEN = 0.43; // 허벅지 (엉덩이 → 무릎)
 const B_LEN = 0.42; // 정강이 (무릎 → 발목)
@@ -103,9 +104,35 @@ function mkLeg(k, side) {
   };
 }
 
+/**
+ * 유파 걸음 (10/10 비싼 층 — docs/strike/school_gait_design_2026-10-10.md): 무기의 유파(fighter.swordArt.tradition) 걸음 칸
+ *  TRADITIONS[t].gait 를 GAIT 위에 덮은 값. 칸이 없는 유파(독일·무유파)와 GAIT.school 0(`?schoolGait=0`)은 **GAIT 객체 그 자체** →
+ *  읽는 값·연산이 한 비트도 안 바뀐다. 칸이 있으면 GAIT 를 프로토타입으로 둔 객체(덮지 않은 열쇠는 전역 값 — with_config·주소 손잡이도 그대로 따라감).
+ *  byFrame[틀]: 그 몸 틀(swordArt.frame)만 더 덮는 값(일본 앞무게 = 모노호시자오). 플레이어도 같은 걸음(사장님 10/10 05:1x '플레이어도 유파 영향') —
+ *  player: 플레이어 쪽(fighter.index 0 이고 AI 가 몰지 않을 때)만 다시 덮는 값(조작감 완화용)
+ */
+export function gaitParams(f, isPlayer = false) {
+  if (!GAIT.school) return GAIT;
+  const art = f.swordArt;
+  const g = TRADITIONS[art?.tradition]?.gait;
+  if (!g) return GAIT;
+  const P = Object.create(GAIT);
+  const put = (o) => {
+    if (!o) return;
+    for (const k of Object.keys(o)) if (k !== 'byFrame' && k !== 'player') P[k] = o[k];
+  };
+  put(g);
+  put(g.byFrame?.[art.frame]);
+  if (isPlayer) put(g.player);
+  P.tradition = art.tradition;
+  return P;
+}
+
 export class Gait {
   constructor(fighter) {
     this.f = fighter;
+    this.P = gaitParams(fighter); // 유파 걸음 값 (칸 없으면 GAIT 그 자체)
+    this._art = fighter.swordArt;
     const s = fighter.side;
     this.legs = { F: mkLeg('F', s), B: mkLeg('B', -s) };
     this.active = false;
@@ -155,7 +182,7 @@ export class Gait {
     this.sinceEnter = 0;
     const p = this.f.bodies.pelvis.translation();
     // 일어선 직후: 골반 높이 목표는 지금 높이에서 출발해 천천히 자세 높이로 간다 (한 번에 바꾸면 솟았다가 주저앉는다)
-    this.hNomF = this.levH ? clamp(p.y, GAIT.guardHeight - 0.03, GAIT.walkHeight) : undefined;
+    this.hNomF = this.levH ? clamp(p.y, this.P.guardHeight - 0.03, this.P.walkHeight) : undefined;
     this.h = p.y;
     this.hv = this.levH ? clamp(this.f.bodies.pelvis.linvel().y, -0.3, 0.3) : 0;
     this.sinceTD = 0;
@@ -221,6 +248,15 @@ export class Gait {
     if (this.f.move.y < -0.1 && o.kind !== 'retreat') return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0, leg: o.leg ?? null }; // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
     if (o.push) this.req.push = o.push;
+    if (o.draw) this.req.draw = true; // 유파 걸음(10/10): 디딘 뒤 뒷발 끌어붙임 걸음 하나 (일본 히키츠케·중국 체보)
+    // 유파 걸음 follow 안에서는 지나 딛는 기술 걸음(플레이어 베기 걸음·근접 걸음 등 'pass')을 그 유파 꼴로 (P.passAs — 앞발 lunge + 끌어붙임: 앞뒤 발이 안 바뀐다)
+    const pa = this.follow && o.kind === 'pass' ? this.P.passAs : null;
+    if (pa) {
+      this.req.kind = pa.kind;
+      this.req.fwd *= pa.fwdK ?? 1;
+      this.req.leg = null;
+      if (pa.draw) this.req.draw = true;
+    }
     return true;
   }
 
@@ -253,6 +289,17 @@ export class Gait {
    */
   update(dt, want, fwd, rgt) {
     const f = this.f;
+    // 유파 걸음 값: 무기(검술 풀이)가 바뀌었거나 조종이 바뀌었으면(AI 가 몰면 aiControlled) 다시 고른다 — 칸 없는 유파는 늘 GAIT 그대로
+    const pl = !f.aiControlled;
+    if (this._art !== f.swordArt || this._pl !== pl) {
+      this._art = f.swordArt;
+      this._pl = pl;
+      this.P = gaitParams(f, pl);
+    }
+    // 유파 걸음 follow(앞발 먼저·뒷발 따라붙임): 상대 가슴이 P.followIn 안일 때만 (나가는 문턱은 0.3 m 더 — 들락날락 막기). 칸 없는 유파는 셈하지 않는다
+    //  빨리 갈 땐(걸러진 빠르기 > P.followVmax) 지나 딛는다 — 펜싱·검도도 멀리서 빨리 좁힐 땐 아유미아시. follow 그대로 빨리 가면 뒤에 남은 발이 안 닿아 허둥지둥 옮겨 딛는다
+    if (this.P.footwork === 'follow') this.follow = f.foeDistance() < this.P.followIn + (this.follow ? 0.3 : 0) && this.speedF < (this.P.followVmax ?? Infinity) * (this.follow ? 1.15 : 1);
+    else this.follow = false;
     if (!this.active) this.enter();
     else this.sense();
     // 넘겨받기: 일어선 직후엔 발을 펜싱 자세로 고쳐 딛을 때까지 보조 힘을 유지한다
@@ -325,11 +372,11 @@ export class Gait {
     // 걸음 박자: 느리면 한 걸음 약 0.55초, 빠를수록 잦아지고 보폭이 길어진다
     const vLat = Math.abs(want.x * rgt.x + want.z * rgt.z);
     //  (비스듬히 물러날 땐 옆으로 옮기는 보폭을 줄인다: 뒤에 남는 발이 옆으로 멀어져 다리가 벌어진 채 골반이 주저앉는다)
-    const sideStride = GAIT.sideStride * (1 - GAIT.backSideCut * backness);
-    const cad = Math.max(GAIT.cadence0 + GAIT.cadenceK * Math.max(0, speed - 1), speed / GAIT.maxStride, (2 * vLat) / sideStride, GAIT.cadence0 * 0.9);
-    const T = walkNow ? 1 / cad : GAIT.settleT / (1 - GAIT.dsFrac);
+    const sideStride = this.P.sideStride * (1 - GAIT.backSideCut * backness);
+    const cad = Math.max(this.P.cadence0 + this.P.cadenceK * Math.max(0, speed - 1), speed / this.P.maxStride, (2 * vLat) / sideStride, this.P.cadence0 * 0.9);
+    const T = walkNow ? 1 / cad : GAIT.settleT / (1 - this.P.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
-    const Tds = this.stepT * GAIT.dsFrac;
+    const Tds = this.stepT * this.P.dsFrac;
     const Tsw = this.stepT - Tds;
 
     const L = this.legs;
@@ -408,11 +455,29 @@ export class Gait {
         next = pick ?? (this.req.kind === 'lunge' ? front : front === 'F' ? 'B' : 'F');
         kind = 'req';
         Tstep = this.req.duration;
+      } else if (this.drawPending && !next) {
+        // 유파 걸음(10/10): 베며 내딛은(lunge) 뒤 뒷발을 앞발 뒤 자세 자리로 끌어붙인다 — 일본 히키츠케·중국 체보 (ai.js gaitStep 의 cutStep.draw)
+        const front = this.frontLeg(fwd);
+        next = front === 'F' ? 'B' : 'F';
+        kind = 'draw';
+        Tstep = this.P.drawT ?? 0.3;
+        this.drawPending = null;
+      } else if (walkNow && !next && this.follow) {
+        // 유파 걸음 follow(10/10 — 가까이선 앞발이 늘 앞, 오쿠리아시·체보·카포 페로의 곧은 걸음): 가는 쪽에 있는 발이 먼저 나가고 다른 발이 따라붙는다.
+        //  방금 가는 쪽 발을 디뎠으면 다른 발(따라붙음), 아니면 가는 쪽 발. 디딜 자리는 target() 의 follow 가지(걷는 동안에도 펜싱 자세)
+        const df = (L.F.plant.x - L.B.plant.x) * want.x + (L.F.plant.z - L.B.plant.z) * want.z;
+        const ahead = df > 0 ? 'F' : 'B';
+        const trail = ahead === 'F' ? 'B' : 'F';
+        //  (뒤에 남은 발이 엉덩이에서 P.trailReach 넘게 멀어졌으면 그 발부터 따라붙인다 — 다리가 안 닿아 허둥지둥 옮겨 딛기(catch) 전에)
+        const tl = L[trail];
+        const far = Math.hypot(tl.hip.x - tl.plant.x, tl.hip.z - tl.plant.z) > (this.P.trailReach ?? Infinity);
+        next = far || (this.lastTD === ahead && this.sinceTD < this.stepT * 1.5) ? trail : ahead;
+        this.trailStep = next !== ahead;
       } else if (walkNow && !next) {
         // 걷기 시작: 가려는 쪽에서 뒤에 있는 발부터 (앞발부터 내딛으면 몸이 달아난다). 걷는 중: 번갈아
         //  (앞뒤로 걷기 시작할 땐 방금 디딘 발이라도 뒤에 있는 발부터: 앞발부터 내딛으면 뒷발이 닿지 않을 만큼 멀어진다)
         const fore = Math.abs(want.x * fwd.x + want.z * fwd.z) > vLat;
-        if (this.walkT > this.stepT * 1.2 || (this.sinceTD < this.stepT && !(GAIT.startRear && fore))) next = this.lastTD === 'F' ? 'B' : 'F';
+        if (this.walkT > this.stepT * 1.2 || (this.sinceTD < this.stepT && !(this.P.startRear && fore))) next = this.lastTD === 'F' ? 'B' : 'F';
         else {
           const df = (L.F.plant.x - L.B.plant.x) * want.x + (L.F.plant.z - L.B.plant.z) * want.z;
           next = df > 0 ? 'B' : 'F';
@@ -440,6 +505,8 @@ export class Gait {
         const l = L[next];
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
+        // follow 의 따라붙는 발·끌어붙임(draw)은 발을 더 낮게 (중국 체보·일본 스리아시 — P.dragLift, 없으면 그대로)
+        if (this.P.dragLift != null && (kind === 'draw' || (kind === 'walk' && this.follow && this.trailStep))) l.lift = this.P.dragLift;
         this.target(l, want, fwd, rgt, Tstep);
         // 자세 고치기: 멀리 옮길수록 천천히 (휙 옮기면 딛을 때 미끄러진다)
         //  몸을 돌리느라 발을 돌려 딛는 걸음은 짧고 빠르게 (돌아서는 동안 몸이 발을 기다리지 않게)
@@ -453,6 +520,7 @@ export class Gait {
       this.req.age += dt;
       if (this.req.age > 1) this.req = null;
     }
+    if (this.drawPending && (this.drawPending.t += dt) > 0.6) this.drawPending = null; // 끌어붙임을 못 하고 0.6 s 지나면 버린다
 
     // 한 발로 서 있는데 몸이 그 발에서 너무 멀어지면(다리가 곧 닿지 않는다) 내딛는 발이 닿을 때까지 덜 나간다
     //  (계속 밀고 나가면 뒤에 남은 발이 발끝으로 끌린다)
@@ -477,7 +545,7 @@ export class Gait {
     if (swing && swing.kind !== 'catch') {
       const u = clamp(swing.t / swing.T, 0, 1);
       const st = swing === L.F ? L.B : L.F;
-      const amp = GAIT.sway * (walkNow ? 1 : 0.5) * (1 - this.lev);
+      const amp = this.P.sway * (walkNow ? 1 : 0.5) * (1 - this.lev);
       const vs = ((amp * Math.PI) / swing.T) * Math.cos(Math.PI * u) * st.side;
       this.sway.set(rgt.x * vs, 0, rgt.z * vs);
       want.add(this.sway);
@@ -486,7 +554,7 @@ export class Gait {
     if (!walkNow && !swing) {
       const c = f.com;
       if (c) {
-        const w = GAIT.weightFront;
+        const w = this.P.weightFront;
         const front = this.frontLeg(fwd);
         const a = L[front].plant;
         const b = L[front === 'F' ? 'B' : 'F'].plant;
@@ -507,13 +575,22 @@ export class Gait {
     //  옆걸음(옆으로 가는 몫이 절반 넘을 때)은 무릎을 조금 굽힌 채 (펜싱 발놀림처럼): 발을 옆으로 벌려 딛으면 어차피 골반이 내려간다
     this.runW = walkNow ? clamp((speed - GAIT.runFrom) / 0.5, 0, 1) : 0; // 뛰듯 가는 정도 (0 ~ 1)
     const walkH =
-      GAIT.walkHeight -
+      this.P.walkHeight -
       GAIT.walkHeightFast * clamp((speed - 0.8) / 0.8, 0, 1) -
       GAIT.runDrop * this.runW -
       GAIT.sideLow * clamp((speed > 1e-3 ? vLat / speed : 0) * 2 - 1, 0, 1);
     // 걷기 ↔ 서기 높이는 천천히 바꾼다 (한 번에 낮추면 다리를 오므려 두 발이 땅에서 뜬다)
     const sd = f.secretStance; // 비기 자세 (10/10 — 발도 웅크림·런지, secret_instant.js stanceTick): 골반을 더 낮추고 그 동안은 빨리 바꾼다. 없으면 오늘 그대로
-    const hNomT = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop) - (sd ? sd.drop : 0);
+    const P = this.P;
+    let hNomT;
+    if (P === GAIT) hNomT = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop) - (sd ? sd.drop : 0);
+    else {
+      // 유파 걸음(10/10): 바탕 높이(P.guardHeight·walkHeight)를 낮추고, 자세표·덧씌우기 낮춤(drop)과 합친 낮춤을 전역 기본 높이 기준 GAIT.lowMax 까지로.
+      //  비기 자세(sd) 동안은 유파 바탕을 쓰지 않고 전역 기본 높이 위에 비기 낮춤 그대로(비기 값이 그 높이에 맞춰 정해짐 — 상한 밖, 확인표 507)
+      const def = walkNow ? walkH + (GAIT.walkHeight - P.walkHeight) : GAIT.guardHeight;
+      if (sd) hNomT = def - hurt - Math.max(0, drop) - sd.drop;
+      else hNomT = def - Math.min(GAIT.lowMax, def - (walkNow ? walkH : P.guardHeight) + Math.max(0, drop)) - hurt;
+    }
     const hr = (sd ? sd.rate : GAIT.heightRate) * dt;
     this.hNomF = this.hNomF === undefined ? hNomT : this.hNomF + clamp(hNomT - this.hNomF, -hr, hr);
     const hNom = this.hNomF;
@@ -544,10 +621,10 @@ export class Gait {
     //  보폭이 짧아 골반이 거의 출렁이지 않는 것을 보탠다. 앞다리 무릎을 더 꺾지 않고 골반을 내린다
     //  (앞으로 걸을 때만: 옆걸음·뒷걸음은 따로 디딜 때 골반을 내린다)
     //  (걷기 시작 직후엔 조금씩 켠다: 두 발로 딛고 선 채 출발할 때 한꺼번에 내려앉으면 두 발이 다 뜨고, 뒷발이 세게 다시 딛으며 미끄러진다)
-    if (walkNow && hLow < hGeo && GAIT.dsLow > 0 && speed > 1e-3) {
+    if (walkNow && hLow < hGeo && this.P.dsLow > 0 && speed > 1e-3) {
       const fore = clamp((foreFrac - 0.3) / 0.4, 0, 1);
       const easeIn = clamp(this.walkT / GAIT.dsLowIn, 0, 1);
-      hGeo -= (hGeo - hLow) * GAIT.dsLow * fore * easeIn * Math.max(GAIT.dsLowFast, clamp((GAIT.bobUntil - speed) / 0.5, 0, 1));
+      hGeo -= (hGeo - hLow) * this.P.dsLow * fore * easeIn * Math.max(GAIT.dsLowFast, clamp((GAIT.bobUntil - speed) / 0.5, 0, 1));
     }
     this.hNom = hNom;
     // 보조 힘이 많이 받칠 땐(넘겨받는 중·붙잡기 반사) 다리가 닿지 않아도 골반을 제 높이에 둔다
@@ -556,9 +633,9 @@ export class Gait {
     const levT = Math.max(this.levC, this.levH * GAIT.handH);
     let hT = THREE.MathUtils.lerp(clamp(Math.min(hNom, hGeo), hNom - GAIT.maxDip, hNom), hNom, levT);
     // 천천히 걸을 땐 보폭이 짧아 골반이 거의 출렁이지 않는다 → 두 발로 딛는 동안 살짝 내려앉았다가 한 발로 설 때 올라온다
-    if (walkNow && GAIT.bobAdd > 0) {
+    if (walkNow && this.P.bobAdd > 0) {
       const up = swing && swing.kind !== 'settle' ? Math.sin(Math.PI * clamp(swing.t / swing.T, 0, 1)) : 0;
-      hT -= GAIT.bobAdd * (1 - up) * clamp((GAIT.bobUntil - speed) / 0.5, 0, 1);
+      hT -= this.P.bobAdd * (1 - up) * clamp((GAIT.bobUntil - speed) / 0.5, 0, 1);
     }
     // 옆걸음·뒷걸음: 발을 디딜 때마다 골반을 살짝 내려 무릎이 무게를 받게 한다
     //  (옆걸음은 다리를 벌린 채, 뒷걸음은 발끝부터 디뎌 뒤꿈치를 든 채 무게를 받아서 저절로는 무릎이 굽지 않는다)
@@ -629,8 +706,8 @@ export class Gait {
     const h = this.headAhead();
     const fx = Math.cos(h);
     const fz = -Math.sin(h);
-    const x = l.k === 'F' ? GAIT.guardLength * (1 - GAIT.weightFront) : -GAIT.guardLength * GAIT.weightFront;
-    const z = l.side * GAIT.guardWidth * 0.5;
+    const x = l.k === 'F' ? this.P.guardLength * (1 - this.P.weightFront) : -this.P.guardLength * this.P.weightFront;
+    const z = l.side * this.P.guardWidth * 0.5;
     // 오른쪽 = (-fz, 0, fx)
     return out.set(c.x + fx * x - fz * z, ANKLE_H, c.z + fz * x + fx * z);
   }
@@ -664,7 +741,7 @@ export class Gait {
     l.p1.copy(l.p0);
     l.v0.set(this.vf.x * GAIT.liftCarry, 0, this.vf.z * GAIT.liftCarry);
     l.yaw0 = l.footYaw;
-    l.lift = kind === 'settle' ? GAIT.liftSettle : GAIT.lift;
+    l.lift = kind === 'settle' ? this.P.liftSettle : this.P.lift;
     // 걷는 중엔 발을 든 시간 내내 옮긴다 (일찍 도착하면 몸이 따라올 때까지 발이 몸 앞 멀리 떠 있어야 한다)
     //  (다리가 닿지 않아 크게 옮기는 발(catch)은 조금 일찍 도착해 제자리에서 내려 딛는다: 움직이는 채로 닿으면 미끄러진다)
     l.hFrac = kind === 'settle' ? GAIT.hFrac : kind === 'catch' ? GAIT.hFracCatch : 1;
@@ -684,27 +761,78 @@ export class Gait {
       const r = this.req;
       const base = r.kind === 'lunge' || r.kind === 'retreat' ? l.p0 : other.plant;
       const x = r.kind === 'lunge' || r.kind === 'retreat' ? r.fwd : Math.max(0.3, r.fwd - 0.1);
-      const z = r.side + (r.kind === 'pass' ? l.side * GAIT.guardWidth : 0);
+      const z = r.side + (r.kind === 'pass' ? l.side * this.P.guardWidth : 0);
       out.set(base.x + fwd.x * x + rgt.x * z, ANKLE_H, base.z + fwd.z * x + rgt.z * z);
       l.yaw1 = this.headAhead();
+    } else if (l.kind === 'draw') {
+      // 끌어붙임(유파 걸음): 뒷발을 앞발 뒤 펜싱 자세 자리(앞뒤 P.guardLength, 좌우 P.guardWidth)로
+      const fx = Math.cos(this.headAhead());
+      const fz = -Math.sin(this.headAhead());
+      const z = (l.side - other.side) * this.P.guardWidth * 0.5;
+      out.set(other.plant.x - fx * this.P.guardLength - fz * z, ANKLE_H, other.plant.z - fz * this.P.guardLength + fx * z);
+      l.yaw1 = this.guardYaw(l);
+    } else if (this.follow) {
+      // follow(유파 걸음): 몸이 닿을 곳(아래 walk 가지와 같은 Raibert 몫)을 가운데로 펜싱 자세 자리에 딛는다 — 걷는 동안에도 앞발이 앞, 두 발이 서로 지나가지 않는다
+      const v = this.vf;
+      const Tst = this.stepT * (1 + this.P.dsFrac);
+      const px = p.x + v.x * remain;
+      const pz = p.z + v.z * remain;
+      const cx = px + want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
+      const cz = pz + want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
+      const h = this.headAhead();
+      const fx = Math.cos(h);
+      const fz = -Math.sin(h);
+      const x = l.k === 'F' ? this.P.guardLength * (1 - this.P.weightFront) : -this.P.guardLength * this.P.weightFront;
+      const z = l.side * this.P.guardWidth * 0.5;
+      out.set(cx + fx * x - fz * z, ANKLE_H, cz + fz * x + fx * z);
+      l.yaw1 = this.guardYaw(l);
+      const dx = out.x - px;
+      const dz = out.z - pz;
+      const d = Math.hypot(dx, dz);
+      if (d > this.P.maxReach) {
+        out.x = px + (dx / d) * this.P.maxReach;
+        out.z = pz + (dz / d) * this.P.maxReach;
+      }
     } else {
       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
       const v = this.vf;
-      const Tst = this.stepT * (1 + GAIT.dsFrac);
+      const Tst = this.stepT * (1 + this.P.dsFrac);
       const px = p.x + v.x * remain;
       const pz = p.z + v.z * remain;
       const ox = want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
       const oz = want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
-      const wd = GAIT.width;
+      const wd = this.P.width;
       out.set(px + ox + rgt.x * l.side * wd, ANKLE_H, pz + oz + rgt.z * l.side * wd);
       l.yaw1 = this.headAhead();
+      l.cross = false;
+      if (this.P.crossSide || this.P.arcYaw) {
+        // 이베리아 둥근 걸음(10/10 유파 걸음 ⑤ — 몬탄테 둥근 걸음 [원전 2차]): 옆으로 돌 때(옆 몫이 크면) 발끝을 도는 쪽으로 틀어 딛고(arcYaw),
+        //  뒤따르는 발(가는 쪽 반대편 발)은 딛고 있는 발 앞으로 엇갈려 그 너머에 딛는다(crossSide) — 다리 꼬임 막기(minWidth)는 이 걸음만 건너뛴다
+        const wl = want.x * rgt.x + want.z * rgt.z;
+        const sp = Math.hypot(want.x, want.z);
+        const latF = sp > 0.05 ? Math.abs(wl) / sp : 0;
+        if (latF > (this.P.crossFrom ?? 0.7)) {
+          const dir = Math.sign(wl);
+          if (this.P.arcYaw) l.yaw1 += -dir * this.P.arcYaw * latF; // 오른쪽(+)으로 돌면 발끝을 오른쪽으로 (yaw 는 왼쪽이 +)
+          if (this.P.crossSide && l.side * dir < 0) {
+            const olat = (other.plant.x - px) * rgt.x + (other.plant.z - pz) * rgt.z;
+            const lat0 = (out.x - px) * rgt.x + (out.z - pz) * rgt.z;
+            const add = olat + dir * this.P.crossSide - lat0;
+            if (add * dir > 0) {
+              out.addScaledVector(rgt, add);
+              out.addScaledVector(fwd, this.P.crossFwd ?? 0.12);
+              l.cross = true;
+            }
+          }
+        }
+      }
       // 너무 멀리 뻗지 않게
       const dx = out.x - px;
       const dz = out.z - pz;
       const d = Math.hypot(dx, dz);
-      if (d > GAIT.maxReach) {
-        out.x = px + (dx / d) * GAIT.maxReach;
-        out.z = pz + (dz / d) * GAIT.maxReach;
+      if (d > this.P.maxReach) {
+        out.x = px + (dx / d) * this.P.maxReach;
+        out.z = pz + (dz / d) * this.P.maxReach;
       }
     }
     // 발을 돌려 딛는 각도는 엉덩이·발목이 비틀 수 있는 만큼만 (더 돌려 디디면 디딘 뒤 다리가 발을 되돌려 비틀어 미끄러진다)
@@ -714,8 +842,8 @@ export class Gait {
     }
     // 다리가 꼬이지 않게: 딛은 발에서 자기 쪽으로 최소 간격
     const lat = (out.x - other.plant.x) * rgt.x + (out.z - other.plant.z) * rgt.z;
-    const need = GAIT.minWidth - lat * l.side;
-    if (need > 0) out.addScaledVector(rgt, need * l.side);
+    const need = this.P.minWidth - lat * l.side;
+    if (need > 0 && !(l.cross && l.kind === 'walk')) out.addScaledVector(rgt, need * l.side);
   }
 
   touchdown(l, speed) {
@@ -731,7 +859,10 @@ export class Gait {
     l.tLand = 0;
     this.sinceTD = 0;
     this.lastTD = l.k;
-    if (l.kind === 'req') this.req = null;
+    if (l.kind === 'req') {
+      if (this.req?.draw) this.drawPending = { t: 0 }; // 유파 걸음: 다음 걸음에 뒷발 끌어붙임
+      this.req = null;
+    }
     this.f.footstep = Math.max(this.f.footstep, clamp(speed / GAIT.moveSpeed, 0.15, 1));
   }
 
@@ -834,7 +965,7 @@ export class Gait {
         else l.desV.set(0, 0, 0);
         l.relOk = true;
         l.des.copy(_a);
-        this.legIK(l, l.hip, _a, yaw, GAIT.toeUp * Math.sin(Math.PI * u));
+        this.legIK(l, l.hip, _a, yaw, this.P.toeUp * Math.sin(Math.PI * u));
       }
     }
   }
