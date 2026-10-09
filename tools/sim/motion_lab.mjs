@@ -84,6 +84,20 @@ function swFlush(ai) {
     if (ok) this._pkE = 0;
     return ok;
   };
+  // 닿기까지 시간 (10/9 4차 — 사장님 '비기는 통상보다 훨씬 빨라야'): 칼이 나간 때(startStrike)·비기를 낸 때(secretGo)에 시계를 찍고, 그 공격의 첫 상처까지 ms
+  const ss = AI.prototype.startStrike;
+  AI.prototype.startStrike = function (...a) {
+    this._ssT = this.sense.t;
+    this._hitDone = false;
+    return ss.apply(this, a);
+  };
+  const sg = AI.prototype.secretGo;
+  AI.prototype.secretGo = function (...a) {
+    const t = this.sense.t;
+    const ok = sg.apply(this, a);
+    if (ok) this._fireT = t;
+    return ok;
+  };
   const af = AI.prototype.afterStrike;
   AI.prototype.afterStrike = function (...a) {
     if (!this.hitLanded && !this.bound && this._missTo) this._missTo.push(this._pkE ?? 0);
@@ -282,6 +296,7 @@ if (mode === 'poses') {
   let XAm = null;
   const techE = {};
   const geo = {}; // 닿는 순간 기하 (기술별)
+  const hitMs = {}; // 기술별 칼 나감 → 첫 상처 ms (비기는 낸 때 → 첫 상처도)
   const estAll = [];
   const woundAll = [];
   // 기술 걸음 계기 (10/9 비껴 들어가 베기 — docs/strike/school_step_2026-10-09.md): step 칸 있는 기술과 같은 길의 공용 동작(대조)을 친 때마다
@@ -351,6 +366,14 @@ if (mode === 'poses') {
         }
         if (sr && process.env.SECRET_SEG === '1') console.log(`  [비기 상처] ${sr.S.name} ${XA.phase} 남은 길 ${XA.path.length} ${r.type} ${r.energy.toFixed(0)} J 칼끝 ${(0.5 * (X.swordProps?.m ?? 1.5) * X.tipVel.lengthSq()).toFixed(0)} J · 거리 ${XA.d.toFixed(2)} (contact ${XA.M.contact.toFixed(2)} reach ${XA.M.reach.toFixed(2)})`); // 비기 상처가 길 어디서 났나 (점검)
         const tn = XA.mode === 'attack' ? `${XA.tech?.name ?? '?'}${sr ? '★' : ''}` : `(${XA.mode})`;
+        if (XA.mode === 'attack' && XA.phase !== 'windup' && XA.phase !== 'approach' && !XA._hitDone && XA._ssT != null) {
+          XA._hitDone = true;
+          const H = (hitMs[tn] ??= { n: 0, ms: 0, fire: 0, fn: 0, v: 0 });
+          H.n++;
+          H.ms += (XA.sense.t - XA._ssT) * 1000;
+          H.v += X.tipVel.length();
+          if (sr && XA._fireT != null) { H.fire += (XA.sense.t - XA._fireT) * 1000; H.fn++; }
+        }
         (techE[tn] ??= []).push(r.energy);
         if (XA.mode === 'attack') {
           XA._sw ??= { tn, max: 0 };
@@ -493,6 +516,8 @@ if (mode === 'poses') {
     console.log(`  맞힘 에너지 (상처 J 평균/최대 n): ${rows.filter(([k]) => keep.has(k)).map(([k, a]) => `${k} ${avg(a).toFixed(0)}/${mx(a).toFixed(0)} n${a.length}`).join(', ') || '-'}`);
     const swRows = Object.entries(swingMax).filter(([k]) => k.endsWith('★') || ['oberhau', 'zornhau', 'altibaixo', 'zornhauL', 'stichPflug', 'passataSotto'].includes(k));
     console.log(`  한 칼 최고 상처 (J 평균/최대 n칼): ${swRows.sort((a, b) => b[1].length - a[1].length).map(([k, a]) => `${k} ${avg(a).toFixed(0)}/${mx(a).toFixed(0)} n${a.length}`).join(', ') || '-'}`);
+    const hm = Object.entries(hitMs).filter(([k, h]) => k.endsWith('★') || h.n >= 5).sort((a, b) => b[1].n - a[1].n).slice(0, 12);
+    console.log(`  닿기까지 (칼 나감 → 첫 상처 ms · 그때 칼끝 m/s, 비기는 낸 때 → 첫 상처 ms): ${hm.map(([k, h]) => `${k} ${(h.ms / h.n).toFixed(0)} ms · ${(h.v / h.n).toFixed(1)} m/s${h.fn ? ` · 낸 때부터 ${(h.fire / h.fn).toFixed(0)} ms` : ''} (n${h.n})`).join(' | ') || '-'}`);
     console.log(`  닿는 순간 (거리 m · 칼 팔꿈치 굽힘 ° · 칼끝 속도/그 공격 최고 · 터뜨린 때 닿을 거리): ${Object.entries(geo).sort((a, b) => b[1].n - a[1].n).map(([k, g]) => `${k} ${(g.d / g.n).toFixed(2)} m · ${(g.elb / g.n).toFixed(0)}° · ${(g.r / g.n).toFixed(2)}${g.relN ? ` · 터뜨림 ${(g.rel / g.relN).toFixed(2)}` : ''} (n${g.n})`).join(' | ') || '-'} · 맞닿기 ${XAm?.contact?.toFixed(2) ?? '-'} reach ${XAm?.reach?.toFixed(2) ?? '-'}`);
     const pq = (a, q) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(q * b.length))] : 0; };
     console.log(`  헛친 칼 칼끝 추정 ½mv² (공격 최고, 맞힘·맞물림 없음): 시험 쪽 n ${missE.X.length} p50 ${pq(missE.X, 0.5).toFixed(0)} · p75 ${pq(missE.X, 0.75).toFixed(0)} J · 상대(롱소드) n ${missE.Y.length} p25 ${pq(missE.Y, 0.25).toFixed(0)} · p50 ${pq(missE.Y, 0.5).toFixed(0)} · p75 ${pq(missE.Y, 0.75).toFixed(0)} J`);
