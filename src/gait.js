@@ -248,6 +248,15 @@ export class Gait {
     if (this.f.move.y < -0.1 && o.kind !== 'retreat') return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0, leg: o.leg ?? null }; // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
     if (o.push) this.req.push = o.push;
+    if (o.draw) this.req.draw = true; // 유파 걸음(10/10): 디딘 뒤 뒷발 끌어붙임 걸음 하나 (일본 히키츠케·중국 체보)
+    // 유파 걸음 follow 안에서는 지나 딛는 기술 걸음(플레이어 베기 걸음·근접 걸음 등 'pass')을 그 유파 꼴로 (P.passAs — 앞발 lunge + 끌어붙임: 앞뒤 발이 안 바뀐다)
+    const pa = this.follow && o.kind === 'pass' ? this.P.passAs : null;
+    if (pa) {
+      this.req.kind = pa.kind;
+      this.req.fwd *= pa.fwdK ?? 1;
+      this.req.leg = null;
+      if (pa.draw) this.req.draw = true;
+    }
     return true;
   }
 
@@ -287,6 +296,10 @@ export class Gait {
       this._pl = pl;
       this.P = gaitParams(f, pl);
     }
+    // 유파 걸음 follow(앞발 먼저·뒷발 따라붙임): 상대 가슴이 P.followIn 안일 때만 (나가는 문턱은 0.3 m 더 — 들락날락 막기). 칸 없는 유파는 셈하지 않는다
+    //  빨리 갈 땐(걸러진 빠르기 > P.followVmax) 지나 딛는다 — 펜싱·검도도 멀리서 빨리 좁힐 땐 아유미아시. follow 그대로 빨리 가면 뒤에 남은 발이 안 닿아 허둥지둥 옮겨 딛는다
+    if (this.P.footwork === 'follow') this.follow = f.foeDistance() < this.P.followIn + (this.follow ? 0.3 : 0) && this.speedF < (this.P.followVmax ?? Infinity) * (this.follow ? 1.15 : 1);
+    else this.follow = false;
     if (!this.active) this.enter();
     else this.sense();
     // 넘겨받기: 일어선 직후엔 발을 펜싱 자세로 고쳐 딛을 때까지 보조 힘을 유지한다
@@ -442,6 +455,24 @@ export class Gait {
         next = pick ?? (this.req.kind === 'lunge' ? front : front === 'F' ? 'B' : 'F');
         kind = 'req';
         Tstep = this.req.duration;
+      } else if (this.drawPending && !next) {
+        // 유파 걸음(10/10): 베며 내딛은(lunge) 뒤 뒷발을 앞발 뒤 자세 자리로 끌어붙인다 — 일본 히키츠케·중국 체보 (ai.js gaitStep 의 cutStep.draw)
+        const front = this.frontLeg(fwd);
+        next = front === 'F' ? 'B' : 'F';
+        kind = 'draw';
+        Tstep = this.P.drawT ?? 0.3;
+        this.drawPending = null;
+      } else if (walkNow && !next && this.follow) {
+        // 유파 걸음 follow(10/10 — 가까이선 앞발이 늘 앞, 오쿠리아시·체보·카포 페로의 곧은 걸음): 가는 쪽에 있는 발이 먼저 나가고 다른 발이 따라붙는다.
+        //  방금 가는 쪽 발을 디뎠으면 다른 발(따라붙음), 아니면 가는 쪽 발. 디딜 자리는 target() 의 follow 가지(걷는 동안에도 펜싱 자세)
+        const df = (L.F.plant.x - L.B.plant.x) * want.x + (L.F.plant.z - L.B.plant.z) * want.z;
+        const ahead = df > 0 ? 'F' : 'B';
+        const trail = ahead === 'F' ? 'B' : 'F';
+        //  (뒤에 남은 발이 엉덩이에서 P.trailReach 넘게 멀어졌으면 그 발부터 따라붙인다 — 다리가 안 닿아 허둥지둥 옮겨 딛기(catch) 전에)
+        const tl = L[trail];
+        const far = Math.hypot(tl.hip.x - tl.plant.x, tl.hip.z - tl.plant.z) > (this.P.trailReach ?? Infinity);
+        next = far || (this.lastTD === ahead && this.sinceTD < this.stepT * 1.5) ? trail : ahead;
+        this.trailStep = next !== ahead;
       } else if (walkNow && !next) {
         // 걷기 시작: 가려는 쪽에서 뒤에 있는 발부터 (앞발부터 내딛으면 몸이 달아난다). 걷는 중: 번갈아
         //  (앞뒤로 걷기 시작할 땐 방금 디딘 발이라도 뒤에 있는 발부터: 앞발부터 내딛으면 뒷발이 닿지 않을 만큼 멀어진다)
@@ -474,6 +505,8 @@ export class Gait {
         const l = L[next];
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
+        // follow 의 따라붙는 발·끌어붙임(draw)은 발을 더 낮게 (중국 체보·일본 스리아시 — P.dragLift, 없으면 그대로)
+        if (this.P.dragLift != null && (kind === 'draw' || (kind === 'walk' && this.follow && this.trailStep))) l.lift = this.P.dragLift;
         this.target(l, want, fwd, rgt, Tstep);
         // 자세 고치기: 멀리 옮길수록 천천히 (휙 옮기면 딛을 때 미끄러진다)
         //  몸을 돌리느라 발을 돌려 딛는 걸음은 짧고 빠르게 (돌아서는 동안 몸이 발을 기다리지 않게)
@@ -487,6 +520,7 @@ export class Gait {
       this.req.age += dt;
       if (this.req.age > 1) this.req = null;
     }
+    if (this.drawPending && (this.drawPending.t += dt) > 0.6) this.drawPending = null; // 끌어붙임을 못 하고 0.6 s 지나면 버린다
 
     // 한 발로 서 있는데 몸이 그 발에서 너무 멀어지면(다리가 곧 닿지 않는다) 내딛는 발이 닿을 때까지 덜 나간다
     //  (계속 밀고 나가면 뒤에 남은 발이 발끝으로 끌린다)
@@ -730,6 +764,35 @@ export class Gait {
       const z = r.side + (r.kind === 'pass' ? l.side * this.P.guardWidth : 0);
       out.set(base.x + fwd.x * x + rgt.x * z, ANKLE_H, base.z + fwd.z * x + rgt.z * z);
       l.yaw1 = this.headAhead();
+    } else if (l.kind === 'draw') {
+      // 끌어붙임(유파 걸음): 뒷발을 앞발 뒤 펜싱 자세 자리(앞뒤 P.guardLength, 좌우 P.guardWidth)로
+      const fx = Math.cos(this.headAhead());
+      const fz = -Math.sin(this.headAhead());
+      const z = (l.side - other.side) * this.P.guardWidth * 0.5;
+      out.set(other.plant.x - fx * this.P.guardLength - fz * z, ANKLE_H, other.plant.z - fz * this.P.guardLength + fx * z);
+      l.yaw1 = this.guardYaw(l);
+    } else if (this.follow) {
+      // follow(유파 걸음): 몸이 닿을 곳(아래 walk 가지와 같은 Raibert 몫)을 가운데로 펜싱 자세 자리에 딛는다 — 걷는 동안에도 앞발이 앞, 두 발이 서로 지나가지 않는다
+      const v = this.vf;
+      const Tst = this.stepT * (1 + this.P.dsFrac);
+      const px = p.x + v.x * remain;
+      const pz = p.z + v.z * remain;
+      const cx = px + want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
+      const cz = pz + want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
+      const h = this.headAhead();
+      const fx = Math.cos(h);
+      const fz = -Math.sin(h);
+      const x = l.k === 'F' ? this.P.guardLength * (1 - this.P.weightFront) : -this.P.guardLength * this.P.weightFront;
+      const z = l.side * this.P.guardWidth * 0.5;
+      out.set(cx + fx * x - fz * z, ANKLE_H, cz + fz * x + fx * z);
+      l.yaw1 = this.guardYaw(l);
+      const dx = out.x - px;
+      const dz = out.z - pz;
+      const d = Math.hypot(dx, dz);
+      if (d > this.P.maxReach) {
+        out.x = px + (dx / d) * this.P.maxReach;
+        out.z = pz + (dz / d) * this.P.maxReach;
+      }
     } else {
       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
       const v = this.vf;
@@ -774,7 +837,10 @@ export class Gait {
     l.tLand = 0;
     this.sinceTD = 0;
     this.lastTD = l.k;
-    if (l.kind === 'req') this.req = null;
+    if (l.kind === 'req') {
+      if (this.req?.draw) this.drawPending = { t: 0 }; // 유파 걸음: 다음 걸음에 뒷발 끌어붙임
+      this.req = null;
+    }
     this.f.footstep = Math.max(this.f.footstep, clamp(speed / GAIT.moveSpeed, 0.15, 1));
   }
 

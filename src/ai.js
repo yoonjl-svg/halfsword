@@ -2371,6 +2371,12 @@ export class AI {
       if (this.techStepRequest(st)) this.requestedStep = true;
       return;
     }
+    // 유파 걸음 베기 걸음(10/10, gait.P.cutStep — 일본 후미코미·중국 진보 = 앞발 lunge + 뒷발 끌어붙임, 이베리아 큰 pass): 찌르기·칸 없는 유파는 전과 같다
+    const cs = this.tech?.kind !== 'thrust' ? g.P?.cutStep : null;
+    if (cs) {
+      if (g.requestStep({ kind: cs.kind, fwd: cs.fwd, hold: 0.3, leg, draw: !!cs.draw })) this.requestedStep = true;
+      return;
+    }
     if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3, leg })) this.requestedStep = true;
   }
 

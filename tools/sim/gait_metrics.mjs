@@ -62,7 +62,7 @@ function runWeapon(id) {
   A.tradition = traditionOf(W);
   for (let s = 1; s <= N; s++) {
     for (const xFirst of [true, false]) {
-      const seed = (xFirst ? 1000 : 2000) + s;
+      const seed = (xFirst ? 1000 : 2000) + s + (+process.env.SEED0 || 0); // SEED0=24: 씨앗 1025~1048·2025~2048 (새 48 판 — motion_lab DUEL_SEED0 과 같은 꼴)
       const x = { weapon: id, persona: { school } };
       const y = { weapon: 'longsword', persona: { school: 'longsword' } };
       const P = xFirst ? x : y;
