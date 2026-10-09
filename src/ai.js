@@ -28,8 +28,8 @@ import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸�
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
-import { requestInstant } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { requestInstant, requestIai, requestSweep, iaiReadyPose } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -216,6 +216,7 @@ export class AI {
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
+    this.iaiArm = this.secret?.do?.instant ? new IaiArm() : null; // 일본 발도 대기 (10/10 02:4x — 상대 간격 밖 iaiArmTime 초)
     this.binds = this.secret?.when === 'bindCount' ? new BindCount() : null; // 이베리아 맺힘 셈 (10/10 — secret.js, 플레이어 창과 같은 셈)
     this.lastAtkT = -Infinity; // 마지막으로 공격 꼴이던 때 (중국 chineseRest)
     this.restBefore = Infinity; // 이번 공격을 시작하기 전 내 공격 없이 지난 시간 (s)
@@ -351,7 +352,7 @@ export class AI {
     if (hurt) {
       // 생각보다 멀리서 맞았으면 상대 칼이 더 멀리 닿는다고 고쳐 생각한다
       if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.foeM.reach, 2.5);
-      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff') this.startWithdraw(0.8); // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
+      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
     this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * 0.03; // 천천히 원래 생각으로
 
@@ -403,6 +404,11 @@ export class AI {
     else if (this.mode === 'secret') this.secretUpdate(dt, s, d);
     else this.withdraw(dt, s, d, th);
 
+    // 일본 발도 대기 (10/10 02:4x): 상대 간격 밖에 iaiArmTime 초 머물면 웅크린 발도 대기 자세 (간격 안·공격·막기면 풀림). 고노센은 이 자세에서만 (cond.armed)
+    if (this.iaiArm && SECRET.iai) {
+      this.iaiArm.tick(dt, d > this.foeReach && !kneeling, this.mode === 'attack' || this.mode === 'defend' || (!!this.secretRun && this.secretRun.stage !== 'instant'));
+      iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt);
+    }
     this.moveHand(dt);
     this.moveFeet(dt, d);
     if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
@@ -1613,7 +1619,7 @@ export class AI {
 
   /** 비기 조건 (cond) — 굴림 없음 */
   secretCond(S, ctx, d) {
-    return secretCond(S, ctx, d, { reach: this.M.reach, foeReach: this.foeReach, clinch: this.M.clinch }); // 플레이어 창과 같은 함수 (secret.js)
+    return secretCond(S, ctx, d, { reach: this.M.reach, foeReach: this.foeReach, clinch: this.M.clinch, contact: this.M.contact, armed: !!this.iaiArm?.armed }); // 플레이어 창과 같은 함수 (secret.js) · armed: 발도 대기 (일본)
   }
 
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
@@ -1644,10 +1650,23 @@ export class AI {
         run.instant = true;
         run.t = 0;
         const end = D.tech.path[D.tech.path.length - 1];
-        requestInstant(this.me, { endPad: end });
+        if (SECRET.iai) requestIai(this.me); // 10/10 발도: 대기 자세(왼 허리)에서 곧장 가로로 (secret_instant.js)
+        else requestInstant(this.me, { endPad: end });
         this.hand.set(end[0], end[1]);
         this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
       }
+      ok = true;
+    } else if (D.path && SECRET.iberianSweep) {
+      // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝 + 머리 위 큰 고리 + 사선 — 이번 스텝 끝부터 SECRET.iberianSweepTime 동안 (secret_instant.js, 발도와 같은 틀)
+      this.mode = 'secret';
+      this.phase = 'ready';
+      this.path.length = 0;
+      this.stepT = 0;
+      run.stage = 'instant';
+      run.instant = true;
+      run.t = 0;
+      requestSweep(this.me, { side: this.pers.circleDir });
+      this.secretBursts = (this.secretBursts ?? 0) + 1;
       ok = true;
     } else if (D.path) {
       // 이베리아 휘돌려 내려치기: 지금 손 자리에서(준비 자세로 가지 않음) 옆으로 비껴 딛고('approach' 기술 걸음 — 발이 닿으면) 고리 → 지붕 → 내려치기.
@@ -1863,8 +1882,8 @@ export class AI {
     if (run.stage === 'instant') {
       // 순간 베기 결과를 기다린다 (요청한 스텝 끝에 실행됨): 맞았으면 맞힘으로 세고 곧장 경직
       const R = this.me.instantResult;
-      const end = run.S.do.tech.path[run.S.do.tech.path.length - 1];
-      this.hand.set(end[0], end[1]);
+      const end = run.S.do.tech ? run.S.do.tech.path[run.S.do.tech.path.length - 1] : null;
+      if (end) this.hand.set(end[0], end[1]);
       this.handSpeed = L.parrySpeed;
       if (!R) return;
       if (!R.ok) {
@@ -1878,7 +1897,7 @@ export class AI {
     }
     if (run.stage === 'stiff') {
       run.t -= dt;
-      const p = run.S.do.stiffPose && run.instant ? this.secretVal(run.S.do.stiffPose) : this.school.pose.point; // 순간 베기 경직: 칼끝을 떨어뜨린 자세 (보이는 경직)
+      const p = run.S.do.stiffPose && run.instant && !SECRET.iai ? this.secretVal(run.S.do.stiffPose) : this.school.pose.point; // 순간 베기 경직: 칼끝을 떨어뜨린 자세 (보이는 경직)
       this.hand.set(p[0], p[1]);
       this.handSpeed = L.chamberSpeed * SECRET.stiffHand;
       if (run.t > 0) return;

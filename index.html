@@ -71,6 +71,9 @@
       #techCue[data-kind="secretReady"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #ffd6a8; letter-spacing: .04em; }
       #techCue[data-kind="secretReady"] small { color: #ffe3c4; font-size: 14px; }
       #techCue[data-kind="secretReady"].show { opacity: .55; }
+      /* 고노센 준비 (10/10): 흐리게, 작게 */
+      #techCue[data-kind="secretArm"] b { font-size: clamp(16px, 4.4vw, 22px); font-weight: 700; color: #cfe0f0; }
+      #techCue[data-kind="secretArm"].show { opacity: .45; }
       /* 경직 (10/10 사장님 '있는 것도 몰랐다'): 또렷이 — 비기 알림만큼 크게, 잿빛 푸른 글씨 */
       #techCue[data-kind="stiff"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #b9c7d6; letter-spacing: .2em; }
       #techCue[data-kind="stiff"] small { color: #d6dde6; font-size: 14px; }
@@ -290,6 +293,8 @@
         <div class="row"><span>자세 이름 보기</span><button class="toggle" data-setting="guardNames" aria-label="자세 이름 보기"></button></div>
         <div class="row"><span>유파 기술 알림</span><button class="toggle" data-setting="techCue" aria-label="유파 기술 알림"></button></div>
         <div class="row"><span>모든 기술 이름 표시 (디버그)</span><button class="toggle" data-setting="techCueAll" aria-label="모든 기술 이름 표시"></button></div>
+        <div class="row"><span>비기 화면 번쩍임</span><button class="toggle" data-setting="secretFlash" aria-label="비기 화면 번쩍임"></button></div>
+        <div class="row"><span>비기 카메라 연출</span><button class="toggle" data-setting="secretCam" aria-label="비기 카메라 연출"></button></div>
         <div class="row"><span>픽셀 모드 (실험)</span><button class="toggle" data-setting="pixel" aria-label="픽셀 모드"></button></div>
         <div class="row"><span>화면 갱신 60 fps 묶기</span><button class="toggle" data-setting="fpsCap" aria-label="화면 갱신 60 fps 묶기"></button></div>
         <div class="row"><span>피 표현</span><button class="toggle" data-setting="blood" aria-label="피 표현"></button></div>

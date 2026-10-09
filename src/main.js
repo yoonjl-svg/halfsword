@@ -71,7 +71,11 @@ if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolAr
 if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 : 0; // 유파 비기(10/9 유파 설계 v3): 기본 1, `?secret=0` = 비기 없는 판 (docs/strike/school_secret_2026-10-09.md)
 if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerSecret') ? 1 : 0; // 플레이어 비기(10/9 23:5x): 기본 1, `?playerSecret=0` = 끔 (docs/strike/player_secret_2026-10-09.md)
 if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 0; // 일본 비기 순간 베기(10/10, secret_instant.js): 기본 1, `?instant=0` = 10/9 길(담았다 터뜨림) 대조
-const SECRET_SLOWMO = params.get('slowMo') !== '0'; // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
+const SECRET_SLOWMO = params.get('slowMo') !== '0';
+if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
+// 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
+//  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다
+const TEMPO = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1) || 1)); // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
 const oneVersatile = params.get('oneVersatile');
@@ -111,7 +115,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, techCue: true, techCueAll: false, trail: true, fpsCap: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, techCue: true, techCueAll: false, trail: true, fpsCap: true, secretFlash: true, secretCam: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -481,6 +485,9 @@ function newRound(weaponId) {
   secretSlow = 0;
   secretBurstsSeen = 0;
   secretOpenSeen = 0;
+  secretArcSeen[0] = player?.instantArc?.id ?? 0;
+  secretArcSeen[1] = enemy?.instantArc?.id ?? 0;
+  camSwing.t = -1;
   // 플레이어 감정 (emotions.js): 상대 AI와 같은 규칙으로 겁먹고 화내고 물고 늘어진다. ?emo=0 이면 끔, ?emo=0.5 면 문턱값 셋 다 0.5
   const emoParam = params.get('emo');
   const emoTh = emoParam === '0' ? 0 : emoParam ? +emoParam || 0.3 : 0.3;
@@ -521,6 +528,35 @@ let playerSecret = null;
 let secretSlow = 0;
 let secretBurstsSeen = 0;
 let secretOpenSeen = 0;
+// 비기 화면 연출 (10/10 발도 섬광 · 이베리아 카메라): 본 잔상 수 · 카메라 돌림 { t, sign }
+const secretArcSeen = [0, 0];
+const camSwing = { t: -1, sign: 1 };
+const flashEl = document.createElement('div');
+flashEl.id = 'secretFlash';
+flashEl.style.cssText = 'position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:5;transition:opacity .12s ease-out';
+document.body.appendChild(flashEl);
+/** 비기 화면 연출: 새 발도 잔상이면 아주 짧게 화면 번쩍(설정 '비기 화면 번쩍임'), 새 이베리아 휩쓸기면 카메라를 사이드스텝 쪽으로 (설정 '비기 카메라 연출') */
+function watchSecretFx() {
+  [player, enemy].forEach((f, i) => {
+    const A = f?.instantArc;
+    if (!A || A.id === secretArcSeen[i]) return;
+    secretArcSeen[i] = A.id;
+    if (A.kind === 'iai' && settings.secretFlash) {
+      flashEl.style.transition = 'none';
+      flashEl.style.opacity = '0.32';
+      requestAnimationFrame(() => {
+        flashEl.style.transition = 'opacity .12s ease-out';
+        flashEl.style.opacity = '0';
+      });
+    }
+    if (A.kind === 'sweep' && settings.secretCam && A.side) {
+      // 사이드스텝 쪽 = 카메라 오른쪽(+) 또는 왼쪽(−)
+      const right = { x: -camDir.z, z: camDir.x };
+      camSwing.sign = A.side[0] * right.x + A.side[2] * right.z >= 0 ? 1 : -1;
+      camSwing.t = 0;
+    }
+  });
+}
 
 // 디버그용 통계 (브라우저 콘솔에서 game.stats 로 확인)
 const stats = { hits: [], clashes: 0, simTime: 0, passes: 0 };
@@ -1378,6 +1414,22 @@ function updateCamera(dt) {
     .addScaledVector(camDir, -(CAMERA.back + CAMERA.openBack * open))
     .addScaledVector(right, CAMERA.shoulder)
     .setY(camH);
+  // 비기 카메라 연출 (10/10 이베리아 사이드스텝 사선 베기): 내 쪽 무게중심을 축으로 SECRET.camSwing ° 를 camSwingIn 초에 돌렸다가 camSwingOut 초에 되돌림 (부드럽게)
+  if (camSwing.t >= 0) {
+    camSwing.t += dt;
+    const S = CONFIG.SECRET;
+    const ti = S.camSwingIn;
+    const to = S.camSwingOut;
+    const w = camSwing.t < ti ? THREE.MathUtils.smoothstep(camSwing.t, 0, ti) : 1 - THREE.MathUtils.smoothstep(camSwing.t, ti, ti + to);
+    if (camSwing.t > ti + to) camSwing.t = -1;
+    else {
+      const ang = camSwing.sign * S.camSwing * (Math.PI / 180) * w;
+      const ox = camTarget.x - a.x;
+      const oz = camTarget.z - a.z;
+      camTarget.x = a.x + ox * Math.cos(ang) - oz * Math.sin(ang);
+      camTarget.z = a.z + ox * Math.sin(ang) + oz * Math.cos(ang);
+    }
+  }
   // 경기장 바깥 돌벽을 뚫고 나가지 않게
   const r = Math.hypot(camTarget.x, camTarget.z);
   if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
@@ -1439,8 +1491,8 @@ const techCueEl = $('techCue');
 //  10/9 유파 비기(docs/strike/school_secret_2026-10-09.md): kind 'secret' — 꼬리표 '비기', 글씨 더 크게·다른 색(index.html), 2.0 초
 //  10/9 23:5x 플레이어 비기: kind 'secretReady'(창이 열림 — 흐린 '비기' 꼬리표, 글씨 크기는 비기 알림과 같게 — 사장님 '테스트 중엔 크게') · 'stiff'(내 비기 뒤 경직, 흐리게).
 //   내 비기를 낸 알림('secret', who 'me')은 실행이 끝날 때까지, AI 비기 알림은 그 비기(連環 세 수 등)가 끝날 때까지 떠 있다
-const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', stiff: '비기 뒤' };
-const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0, secretReady: 0.5, stiff: 0.3 };
+const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', stiff: '비기 뒤', secretArm: '비기' };
+const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0, secretReady: 0.5, stiff: 0.3, secretArm: 0.3 };
 let techCueSeen = null;
 let techAllSeen = null;
 let techCueTimer = 0;
@@ -1476,6 +1528,12 @@ function updateTechCue(dt) {
     }
   }
   const pPhase = player?.skill?.secretPhase ?? null;
+  // 고노센 준비 (10/10 02:4x): 플레이어는 자세를 바꾸지 않고, 상대 간격 밖 iaiArmTime 초가 차면 흐린 '고노센 준비'만 (창·실행·경직 알림이 덮는다)
+  const pArmed = !!(CONFIG.SECRET.iai && playerSecret?.S?.do?.instant && playerSecret.iaiArm?.armed);
+  if (pArmed && !pPhase && !playerSecret.open && !(techCueEl.dataset.who === 'me' && techCueTimer > 0 && techCueEl.dataset.kind !== 'secretArm')) {
+    if (techCueEl.dataset.kind !== 'secretArm' || techCueTimer <= 0) showTechCue({ text: '고노센 준비', kind: 'secretArm', who: 'me', schoolKo: `내 ${TRADITIONS[player?.swordArt?.tradition]?.nameKo ?? ''}` });
+    techCueTimer = Math.max(techCueTimer, 0.2);
+  }
   const kNow = techCueEl.dataset.kind;
   const mine = techCueEl.dataset.who === 'me';
   if (pPhase === 'stiff' && !(mine && kNow === 'stiff')) showPlayerCue(playerSecret?.S, 'stiff');
@@ -1589,7 +1647,7 @@ function frame(now) {
       slowMo -= dt;
       scale = Math.min(scale, 0.25); // 결정타 슬로모션
     } else if (roundOver) scale = Math.min(scale, 0.5);
-    acc += dt * scale;
+    acc += dt * scale * TEMPO; // 전체 빠르기 (?tempo, 기본 1)
     simWant = (frameMs / 1000) * scale;
     const physT0 = perf ? performance.now() : 0;
     let steps = 0;
@@ -1662,6 +1720,7 @@ function frame(now) {
   if (perf) perf.frame(now, frameMs, physMs, renderMs, physSteps, capped, simWant, simGot, paint);
   trail.enabled = settings.trail && state === 'fight';
   if (paint) trail.draw(now / 1000, !input.isTouchDevice);
+  watchSecretFx(); // 비기 화면 연출 (발도 번쩍임 · 이베리아 카메라)
   updateTechCue(dt); // 유파 기술 알림 — 싸움이 아닐 때(메뉴·일시정지)도 불러 숨긴다
 }
 
@@ -1685,6 +1744,7 @@ window.game = {
   get ai() {
     return ai;
   },
+  tempo: TEMPO, // 전체 빠르기 손잡이 (?tempo)
   get playerSecret() {
     return playerSecret; // 플레이어 비기 창 (open · opened · S) — 브라우저 스모크(tools/browser/player_secret_shots.mjs)가 읽는다
   },

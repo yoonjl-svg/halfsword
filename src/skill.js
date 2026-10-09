@@ -27,7 +27,7 @@ import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
-import { requestInstant } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -460,10 +460,17 @@ export class Skill {
       run.stage = 'instant';
       run.instant = true;
       run.end = D.tech.path[D.tech.path.length - 1];
-      requestInstant(f, { endPad: run.end });
+      if (SECRET.iai) requestIai(f, { player: true }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime)
+      else requestInstant(f, { endPad: run.end });
       this.secretBursts++;
     } else if (D.back) {
       run.stage = 'back'; // 일본 後の先 ①: 물러서며 脇構え 로 끌어 담기
+    } else if (D.path && SECRET.iberianSweep) {
+      // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝(스틱이 옆을 누르면 그쪽, 아니면 오른쪽) + 머리 위 큰 고리 + 사선 — AI 와 같은 실행부
+      run.stage = 'instant';
+      run.instant = true;
+      requestSweep(f, { side: Math.abs(f.stickX ?? 0) > 0.3 ? Math.sign(f.stickX) : 1 });
+      this.secretBursts++;
     } else if (D.path) {
       // 이베리아: 몸 뒤 고리를 돌다(준비) 터뜨림 창에 들면 고리 꼭대기에서 사선으로
       run.loop = (D.loop ?? []).map((p) => p.slice());
@@ -708,7 +715,7 @@ export class Skill {
     // 경직: 칼 조작 무시 — 손은 끝 자리에 그대로 (main.js 가 입력을 막고 '경직'을 흐리게 띄운다)
     if (run.stage === 'stiff') {
       // 순간 베기 경직: 칼끝을 떨어뜨린 자세로 천천히 (보이는 경직 — AI 와 같은 stiffPose)
-      if (run.instant && D.stiffPose) {
+      if (run.instant && D.stiffPose && !SECRET.iai) {
         const P = secVal(D.stiffPose);
         this.secretMove(P[0], P[1], AI_LEVELS.normal.chamberSpeed * SECRET.stiffHand, dt);
       }

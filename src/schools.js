@@ -409,7 +409,7 @@ const JAPANESE_SECRET = {
   // 10/9 사장님 추가 지시: 헛스윙을 본 뒤가 아니라 한 박자 빠르게 — 상대가 '내 비기는 닿고 상대는 명백히 안 닿을 간격에서 무의미하게 허점을 노출하는 공격 동작'을
   //  시작하는 순간(칼을 듦·달려듦, 지금 모습). 헛침(foeRecover)은 같은 창에서 보조 사건(칼끝 추정 에너지 문턱 whiff)
   when: ['foeRaise', 'foeCharge', 'foeRecover'],
-  cond: { window: true, whiff: 'japaneseWhiffJ' }, // window: foeReach + japaneseFoeMargin < d ≤ reach + japaneseReach + japaneseFar (ai.js secretCond)
+  cond: { window: true, whiff: 'japaneseWhiffJ', armed: true }, // armed: 10/10 02:4x 발도 대기(상대 간격 밖 SECRET.iaiArmTime 초)에서만 — SECRET.iai 일 때 // window: foeReach + japaneseFoeMargin < d ≤ reach + japaneseReach + japaneseFar (ai.js secretCond)
   do: {
     back: { fwd: 'japaneseBack', guard: G.nebenR },
     // 真向: 脇構え → 오른 위로 들어 → 上段 → 가운데로 내려 팔을 다 뻗은 점(가운데일수록 손이 앞으로 — 깊이 최대) → 곧 굽혀 회수(청안 쪽)
