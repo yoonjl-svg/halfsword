@@ -91,22 +91,27 @@ export class AI {
     this.setLevel(levelName);
     // 성격: 사람마다 다르다 (같은 난이도라도 판마다 다른 검객). persona가 정해 둔 값이 있으면 그대로 쓴다
     const P = this.persona.pers || {};
+    // 유파 기질 (10/9 — schools.js *_TEMPER, docs/strike/school_temper_2026-10-09.md): 성격 칸의 기본 범위를 유파마다 둔다.
+    //  [lo, hi] 면 rand 한 번, 숫자면 그대로. 유파에 없는 칸은 예전 기본값. 인물 값(P)이 늘 먼저 — 그때는 예전처럼 굴리지 않는다.
+    //  rand 호출 차례는 예전 그대로(margin → aggr → circleDir → circleRate → rhythm → vor → patienceTime) → 독일·무유파 바이트 동일
+    const TP = TRADITIONS[this.art.tradition]?.temper ?? {};
+    const draw = (v) => (Array.isArray(v) ? rand(v[0], v[1]) : v);
     const guardPref = {};
     for (const g of this.school.guards) guardPref[g.name] = P.guardPref && g.name in P.guardPref ? P.guardPref[g.name] : rand(0.4, 1.6);
     const techPref = {};
     for (const t of this.school.tech) techPref[t.name] = P.techPref && t.name in P.techPref ? P.techPref[t.name] : rand(0.6, 1.4);
     this.pers = {
-      margin: P.margin ?? rand(0.2, 0.5), // 간격 밖에 얼마나 여유를 두고 서는지 (m)
-      aggr: P.aggr ?? rand(0.85, 1.2), // 공격 성향
+      margin: P.margin ?? draw(TP.margin ?? [0.2, 0.5]), // 간격 밖에 얼마나 여유를 두고 서는지 (m)
+      aggr: P.aggr ?? draw(TP.aggr ?? [0.85, 1.2]), // 공격 성향
       circleDir: P.circleDir ?? (Math.random() < 0.5 ? -1 : 1), // 즐겨 도는 방향
-      circleRate: P.circleRate ?? rand(0.15, 0.4), // 옆걸음 빠르기 (천천히: 빙빙 도는 춤이 되지 않게)
-      rhythm: P.rhythm ?? rand(2.4, 4.5), // 자세를 바꾸는 박자 (초). 검객은 한 자세를 차분히 지킨다 (자주 바꾸면 춤추는 것처럼 보인다)
-      vor: P.vor ?? rand(0.15, 0.6), // 달려드는 상대를 맞받아 베는 쪽(1)인가, 물러나 헛치게 하는 쪽(0)인가
-      patienceTime: P.patienceTime ?? rand(7, 12), // 인내심이 바닥나는 데 걸리는 시간 (초)
+      circleRate: P.circleRate ?? draw(TP.circleRate ?? [0.15, 0.4]), // 옆걸음 빠르기 (천천히: 빙빙 도는 춤이 되지 않게)
+      rhythm: P.rhythm ?? draw(TP.rhythm ?? [2.4, 4.5]), // 자세를 바꾸는 박자 (초). 검객은 한 자세를 차분히 지킨다 (자주 바꾸면 춤추는 것처럼 보인다)
+      vor: P.vor ?? draw(TP.vor ?? [0.15, 0.6]), // 달려드는 상대를 맞받아 베는 쪽(1)인가, 물러나 헛치게 하는 쪽(0)인가
+      patienceTime: P.patienceTime ?? draw(TP.patienceTime ?? [7, 12]), // 인내심이 바닥나는 데 걸리는 시간 (초)
       // 자세 옮기기 버릇: 새 자세가 지금 자세에서 멀수록 이 값만큼 무겁게 깎인다.
       //  크면(예: 5) 가까운 자세만 고집하는 신중한 검객, 작으면(예: 0.5) 먼 자세로도 서슴없이 뛰는 변덕스러운 검객
-      guardStick: P.guardStick ?? 2.5,
-      guardSpeed: P.guardSpeed ?? 0.9, // 간 보는 동안 자세를 잡는 손 빠르기 (m/s): 크면 자세를 휙휙 바꾸는 사람, 작으면 느긋한 사람
+      guardStick: P.guardStick ?? draw(TP.guardStick ?? 2.5),
+      guardSpeed: P.guardSpeed ?? draw(TP.guardSpeed ?? 0.9), // 간 보는 동안 자세를 잡는 손 빠르기 (m/s): 크면 자세를 휙휙 바꾸는 사람, 작으면 느긋한 사람
       // 베기의 정확도 (0~1): 1이면 기술의 길을 그대로 긋는다(머리·목에 닿는다). 낮을수록 한 번 벨 때마다 손이 옆·위아래로
       //  빗나가(최대 ±0.2·(1−정확도) m) 팔·다리에 걸리거나 칼 면으로 때린다 — "절대 실력" 축
       precision: P.precision ?? 1,
