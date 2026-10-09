@@ -395,56 +395,132 @@ def poseidon_night():
     return pal, t, band, center, 'T'
 
 
-def loggia():
-    # 석재 상감: 녹색 대리석·상아색 돌의 팔엽 로제트와 기하 테두리.
-    pal = dict(SHARED, B='#302326', I='#ddd0ae', V='#53746a', R='#96504c')
-    t = canvas(TW, TH, 'B')
-    flower = ['...II...', '..IVVI..', '.IVIIVI.', 'IVIBBIVI', 'IVIBBIVI', '.IVIIVI.', '..IVVI..', '...II...']
-    stamp(t, flower, 8, 8)
-    stamp(t, ['.R.', 'RIR', '.R.'], 16, 0)
-    stamp(t, ['.R.', 'RIR', '.R.'], 16, 16)
-    sym_tile(t)
-    band = band_rows(['IVVVVI', 'VI..IV', 'VI..IV', 'IVVVVI'], 'B')
-    center = disc(14, 6, 'B', 'I', 'O')
+def diamond_lattice(t, key):
+    """포세이돈과 같은 마름모 격자 (한 칸 굵기, 꼭짓점이 조각 가장자리 가운데)"""
+    for y in range(TH // 2):
+        for x in range(TW):
+            if abs(x + 0.5 - 8) + abs(y + 0.5 - 8) == 8:
+                t[y][x] = key
+
+
+def disc_bg(center, fill, ring):
     for y in range(14):
         for x in range(14):
-            dx, dy = x + .5 - 7, y + .5 - 7
-            d = math.hypot(dx, dy)
-            if 1 < d < 5.3:
-                center[y][x] = 'I' if abs(math.cos(4 * math.atan2(dy, dx))) > .55 else 'V'
-            elif d <= 1:
-                center[y][x] = 'R'
-    return pal, t, band, center, 'I'
+            d = math.hypot(x + 0.5 - 7, y + 0.5 - 7)
+            if d <= 7:
+                center[y][x] = fill
+            if 6 < d <= 7:
+                center[y][x] = ring
+
+
+# ── 10/10 2차: 새 무대 셋의 뒷면을 기존 넷의 꼴(격자 + 두 무늬 번갈아, 강한 대비)에 맞춰 다시 그렸다 ──
+def loggia():
+    # 붉은 회랑 = 볼로냐의 붉은 주랑: 붉은 벽돌빛 바탕에 크림 마름모 격자, 주랑 아치(크림 기둥·금 쐐기돌)와
+    # 볼로냐 시 문장의 흰 바탕 붉은 십자 원판을 번갈아. 띠는 둥근 아치가 이어진 주랑, 가운데는 시 문장(넷으로 나눈 방패:
+    # 흰 바탕 붉은 십자 · 푸른 바탕 금빛 LIBERTAS 사선 — 180° 돌려도 같은 꼴이라 카드 대칭 규칙과 맞는다).
+    pal = dict(SHARED, B='#74291f', C='#ead6aa', K='#b9785a', W='#f3ede0', R='#c8352b', N='#2a4378')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    arch = ['..CGGC..', '.CCNNCC.', 'CCNNNNCC', 'CNNNNNNC', 'CCNNNNCC', '.CNNNNC.', '.CNNNNC.', 'CC....CC']  # 아치 안은 저녁 하늘빛 청색
+    cross = ['.WRRW.', 'WWRRWW', 'RRRRRR', 'RRRRRR', 'WWRRWW', '.WRRW.']
+    stamp(t, arch, 8, 8)
+    stamp(t, cross, 16, 16)
+    stamp(t, cross, 16, 0)
+    sym_tile(t)
+    band = band_rows(['.CCCC.', 'CC..CC', 'C....C', 'C....C'], 'B')  # 둥근 아치 주랑
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            if math.hypot(dx, dy) > 5.2:
+                continue
+            if (dx < 0) == (dy < 0):  # 1·4 칸: 흰 바탕 붉은 십자
+                qx, qy = dx + 2.6 if dx < 0 else dx - 2.6, dy + 2.6 if dy < 0 else dy - 2.6
+                center[y][x] = 'R' if (abs(qx) < 0.6 or abs(qy) < 0.6) else 'W'
+            else:  # 2·3 칸: 푸른 바탕, 금빛 사선(LIBERTAS 자리)
+                center[y][x] = 'N'
+    for y in range(14):  # 금빛 사선: 각 푸른 칸의 왼위 → 오른아래
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            if center[y][x] == 'N':
+                ox = dx - (2.6 if dx > 0 else -2.6)
+                oy = dy - (2.6 if dy > 0 else -2.6)
+                if abs(ox - oy) < 0.75:
+                    center[y][x] = 'G'
+    return pal, t, band, center, 'N'
 
 
 def corsair():
-    # 맞바람을 받는 삼각 돛, 바닷물과 굵은 꼬임 로프.
-    pal = dict(SHARED, B='#19383e', S='#c68e62', W='#76aaa7', H='#6e4931')
+    # 산호 항구: 짙은 바다빛 바탕에 옅은 청록 물결 줄(한 조각에 넷), 삼각돛배와 산호 가지(분홍·주황)를 번갈아.
+    # 띠는 꼬인 밧줄(그대로), 가운데는 나침반 장미(180° 대칭).
+    pal = dict(SHARED, B='#123a45', T='#5fb0aa', S='#e07a4a', L='#f2d2a8', H='#5a3a26', P='#f08c8c', Q='#f2a24c', W='#e6f3ec')
     t = canvas(TW, TH, 'B')
-    sail = ['...G....', '..SG....', '.SSG....', 'SSSGS...', 'SSSGSS..', 'HHHHHHHH', '.HHHHHH.', '..WWWW..']
-    stamp(t, sail, 8, 8)
-    stamp(t, ['W...W.', '.WWW.W'], 16, 0)
-    stamp(t, ['W...W.', '.WWW.W'], 16, 16)
+    wave = [0, 0, 1, 1, 1, 0, 0, -1, -1, -1, 0, 0, 1, 1, 0, -1]
+    for x in range(TW):
+        for y0 in (2, 13):
+            t[y0 + wave[x]][x] = 'T'
+    ship = ['...G....', '..LG....', '.SLG....', 'SSSGS...', 'SSSGSS..', 'HHHHHHHH', '.HHHHHH.']
+    coral = ['P.Q.P.', '.PPP.Q', '..PPP.', '.PPP..', 'Q.PPP.', '.P.Q.P']
+    stamp(t, ship, 8, 8)
+    stamp(t, coral, 16, 16)
+    stamp(t, coral, 16, 0)
     sym_tile(t)
-    band = band_rows(['gGGggG', 'GggGGg', 'GggGGg', 'gGGggG'], 'B')
-    center = disc(14, 6, 'B', 'W', 'O')
-    stamp(center, ['....G.....', '...SG.....', '..SSG.....', '.SSSG.....', 'SSSSGSS...', 'HHHHHHHHHH'], 7, 4, False)
-    return pal, t, band, center, 'S'
+    band = band_rows(['gGGggG', 'GggGGg', 'GggGGg', 'gGGggG'], 'B')  # 꼬인 밧줄
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            a = math.atan2(dy, dx)
+            # 여덟 끝 별: 네 큰 끝(흰), 네 작은 끝(청록) — 끝으로 갈수록 가늘다
+            k = (a / (math.pi / 4)) % 2
+            off4 = min(k, 2 - k)  # 0 = 큰 끝 방향(동서남북), 1 = 사이 방향
+            big = abs(((a + math.pi / 4) % (math.pi / 2)) - math.pi / 4)
+            if big < 0.55 * (1 - d / 5.8):
+                center[y][x] = 'W'
+            elif abs(big - math.pi / 4) < 0.4 * (1 - d / 4.2):
+                center[y][x] = 'T'
+            if d <= 1.0:
+                center[y][x] = 'G'
+    return pal, t, band, center, 'T'
 
 
 def sacred_grove():
-    # 신목의 갈라진 수피, 금줄과 흰 시데. 작은 화면에서도 큰 형태를 유지.
-    pal = dict(SHARED, B='#1c3025', L='#72936a', W='#dddccb', T='#886d49')
+    # 신목의 숲: 짙은 숲빛 바탕에 아사노하(삼잎) 격자를 단순화한 마름모 + 바퀴살, 구름 소나무(크림 잎 덩어리·적송 줄기)와
+    # 시데(번개꼴 흰 종이)를 번갈아. 가운데는 신사의 문장 '도모에'(쉼표 꼴 소용돌이) — 카드가 180° 대칭이어야 해서
+    # 셋(미츠도모에) 대신 둘(후타츠도모에)을 쓴다. 띠는 금줄과 종이(그대로).
+    pal = dict(SHARED, B='#16302a', L='#335a48', C='#ece2c2', R='#c4703e', W='#fbf9f0', T='#8a6a44')
     t = canvas(TW, TH, 'B')
-    tree = ['...LL...', '..LLLL..', '.LLLLLL.', 'LLLLLLLL', '..TTTT..', '..TgTT..', '.TT..TT.', 'TT....TT']
-    stamp(t, tree, 8, 8)
-    stamp(t, ['.W..', 'WWW.', '..WW', '..W.'], 16, 0)
-    stamp(t, ['.W..', 'WWW.', '..WW', '..W.'], 16, 16)
+    diamond_lattice(t, 'L')
+    for y in range(TH // 2):  # 아사노하의 잎맥: 마름모 꼭짓점에서 가운데로 가는 짧은 살 (무늬 자리는 비움)
+        for x in range(TW):
+            px, py = x + 0.5, y + 0.5
+            for vx, vy in [(8, 0.5), (8, 15.5), (0.5, 8), (15.5, 8)]:
+                if (abs(px - vx) < 0.6 or abs(py - vy) < 0.6) and math.hypot(px - vx, py - vy) < 3.2 and t[y][x] == 'B':
+                    t[y][x] = 'L'
+    pine = ['...CCC..', '..CCCCC.', '....R...', 'CCC.R...', 'CCCCRCC.', '...RRCCC', '..R.....', '.RR.....']  # 층진 잎 덩어리·기운 적송 줄기
+    shide = ['WW....', '.WWW..', '...W..', '..W...', '..WWW.', '....WW']
+    stamp(t, pine, 8, 8)
+    stamp(t, shide, 16, 16)
+    stamp(t, shide, 16, 0)
     sym_tile(t)
-    band = band_rows(['TTggTT', 'gTTTTg', 'gW..Wg', 'WW..WW'], 'B')
-    center = disc(14, 6, 'B', 'L', 'O')
-    stamp(center, ['....TT....', '...TTTT...', '..TTgTTT..', 'TTTTTTTTTT', 'gGgGgGgGgG', '..W....W..', '.WWW..WWW.'], 7, 3.5, False)
-    return pal, t, band, center, 'L'
+    band = band_rows(['TTggTT', 'gTTTTg', 'gW..Wg', 'WW..WW'], 'B')  # 금줄과 종이
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.4:
+                continue
+            a = math.atan2(dy, dx)
+            # 후타츠도모에: 크림 원판을 S 자로 감긴 가는 틈이 두 쉼표로 가른다(틈 = 두 갈래 소용돌이 sin(a − k·d) ≈ 0)
+            center[y][x] = 'B' if abs(math.sin(a - 0.6 * d)) < 0.3 and d > 0.6 else 'C'
+    return pal, t, band, center, 'R'
 
 
 if __name__ == '__main__':
