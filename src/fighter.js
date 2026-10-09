@@ -182,6 +182,8 @@ function ikReach(a, b, player = false) {
 const playerArm = (f) => f.skill?.autoGuard === true;
 /** 위팔 비틀기 서보 강성 (N·m/rad): JOINTS.twistK 가 있으면 그것, 없으면 켠 묶음의 twistK, 둘 다 없으면 25 (오늘 값). 감쇠·상한은 같은 배율 (manualMuscle) */
 const twistK = () => JOINTS.twistK ?? jm().twistK ?? 25;
+/** 날 세우기 힘(twistScale) 배율: JOINTS.edgeK 가 있으면 그것, 없으면 켠 묶음의 edgeK, 둘 다 없으면 1 */
+const edgeK = () => JOINTS.edgeK ?? jm().edgeK ?? 1;
 /**
  * armIK 의 위팔 방향 u (가슴 틀): 손 목표 T(가슴 틀)·어깨 S 에서 armIK 와 같은 식 (같은 IK_POLE·IK_DMIN·IK_MARGIN·ARM 길이). out 에 쓴다.
  *  보정 v2 순서 결합(Fighter.corrTrunkTurn)이 '이 가슴 yaw 면 칼 어깨가 어디를 향하나'를 몸을 움직이지 않고 묻는 데 쓴다
@@ -683,6 +685,8 @@ export class Fighter {
     // 미처 정렬되지 못하는 경우가 있어, 그런 무기는 weapons.js의 controlOverrides.twistScale로
     // 개별 조정할 수 있게 한다 (없으면 실제 관성 비율 그대로).
     this.twistScale = spec.id === 'longsword' ? 1 : (this.weaponCfg.twistScale ?? pI.y / TWIST_I_BASE);
+    // 관절 가동 범위 교정 (JOINTS edgeK, 10/9 3차): 위팔 비틀기 서보를 세게(twistK) 하면 날 세우기 힘이 상대적으로 밀려 칼 면으로 맞았다 → 같은 묶음에서 날 세우기 힘도 배율 (1 = 오늘 그대로)
+    if (edgeK() !== 1) this.twistScale *= edgeK();
     this.handTarget = new THREE.Vector3();
     this.tipPrev = null;
     this.tipVel = new THREE.Vector3();

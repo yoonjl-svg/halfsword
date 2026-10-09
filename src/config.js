@@ -736,4 +736,6 @@ export const JOINTS = {
   playerReachFrac: 0.975,
   // 위팔 비틀기 서보 강성 (N·m/rad) 덮어쓰기. null = 묶음의 twistK, 그것도 없으면 25(오늘). 감쇠 0.8·상한 20 N·m 도 같은 배율 (fighter.js manualMuscle, 확인표 321)
   twistK: null,
+  // 날 세우기 힘(fighter twistScale) 배율 덮어쓰기. null = 묶음의 edgeK, 그것도 없으면 1 (확인표 323)
+  edgeK: null,
 };

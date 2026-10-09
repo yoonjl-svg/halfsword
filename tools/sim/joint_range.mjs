@@ -30,6 +30,7 @@ const { isMain, simPath } = NODE ? await import('./is_main.mjs') : { isMain: () 
 const R2D = 180 / Math.PI;
 const SETTLE_S = 0.5;
 const SPIN = 80; // rad/s
+const BLADE_SPIN = 60; // rad/s 칼날 축 둘레 (정상 날 세우기는 10~30)
 export const LIMITS = {
   elbowHyper: { lo: -5, src: '팔꿈치 과신전 > 5° (Norkin & White 0~5)' },
   elbowFlex: { hi: 145, src: '팔꿈치 굽힘 > 145° (AAOS 150 · Soucie 2011 약 144)' },
@@ -106,6 +107,8 @@ export function armAngles(f) {
   } else o.wristFE = o.wristDev = o.wrist = null;
   const wu = B.uarmS.angvel(), wf = B.farmS.angvel();
   o.spin = Math.max(Math.hypot(wu.x, wu.y, wu.z), Math.hypot(wf.x, wf.y, wf.z));
+  // 칼날 축 둘레 돌림 빠르기 (rad/s, 날 세우기 힘이 안정 한계를 넘으면 이 축이 팽이처럼 돈다 — 10/9 3차)
+  if (f.sword && f.armed !== false) { const ws = f.sword.angvel(); const bq = qrot(Q(f.sword.rotation()), [0, 1, 0]); o.bladeSpin = Math.abs(ws.x * bq[0] + ws.y * bq[1] + ws.z * bq[2]); } else o.bladeSpin = null;
   // 빈팔 팔꿈치 (두 손 무기는 칼자루 끝을 쥔다): 뼈가 몸 −y 를 따라 누움, 같은 경첩 z
   if (B.uarmO && B.farmO && !f.severed?.some?.((x) => x.limb === 'armO')) {
     const qo = Q(B.uarmO.rotation());
@@ -167,6 +170,7 @@ export class JointCounter {
     P.elbowSum += o.elbow;
     if (P.elbows.length < 400000) P.elbows.push(o.elbow);
     if (o.spin > SPIN) this.spin++;
+    if (o.bladeSpin != null && o.bladeSpin > BLADE_SPIN) this.bladeSpinN = (this.bladeSpinN ?? 0) + 1;
     const mx = (k, v) => { if (v != null) this.max[k] = Math.max(this.max[k] ?? -Infinity, v); };
     mx('hyper', -o.elbow);
     mx('shBack', o.shBack);
@@ -175,6 +179,7 @@ export class JointCounter {
     mx('wristFE', o.wristFE == null ? null : Math.abs(o.wristFE));
     mx('wrist', o.wrist);
     mx('spin', o.spin);
+    mx('bladeSpin', o.bladeSpin);
     return o;
   }
   json() {
@@ -186,7 +191,7 @@ export class JointCounter {
       const P = this.ph[p];
       out[p] = { steps: P.n, anyPct: pct(P.any, P.n), straightPct: pct(P.straight, P.n), straightOPct: pct(P.straightO, P.nO), twistLagPct: pct(P.twistLag, P.nT), cmdStraightPct: pct(P.cmdStraight, P.n), elbowMed: med(P.elbows), elbowP5: qtl(P.elbows, 0.05), elbowP95: qtl(P.elbows, 0.95), out: Object.fromEntries(Object.entries(P.out).map(([k, c]) => [k, pct(c, P.n)])) };
     }
-    return { phases: out, spinSteps: this.spin, nanSteps: this.nan, max: Object.fromEntries(Object.entries(this.max).map(([k, v]) => [k, +v.toFixed(1)])) };
+    return { phases: out, spinSteps: this.spin, nanSteps: this.nan, bladeSpinSteps: this.bladeSpinN ?? 0, max: Object.fromEntries(Object.entries(this.max).map(([k, v]) => [k, +v.toFixed(1)])) };
   }
   table(title) {
     const J = this.json();
@@ -199,7 +204,7 @@ export class JointCounter {
       L.push(`| ${PH_KO[p]} | ${r.steps} | ${r.anyPct} | ${r.straightPct} | ${r.cmdStraightPct} | ${r.straightOPct} | ${r.twistLagPct} | ${r.elbowMed ?? '-'} | ${keys.map((k) => r.out[k] ?? 0).join(' | ')} |`);
     }
     L.push(`최대: 과신전 ${J.max.hyper ?? '-'}° · 어깨 폄 ${J.max.shBack ?? '-'}° · 안쪽 돌림 ${J.max.shRotIn ?? '-'}° · 바깥 돌림 ${J.max.shRotOut ?? '-'}° · 손목 굽힘·폄 ${J.max.wristFE ?? '-'}° · 아래팔-칼 ${J.max.wrist ?? '-'}° · 팔 각속도 ${J.max.spin ?? '-'} rad/s`);
-    L.push(`관절 폭발(팔 각속도 > ${SPIN} rad/s) ${J.spinSteps} 스텝 · NaN ${J.nanSteps} 스텝`);
+    L.push(`관절 폭발(팔 각속도 > ${SPIN} rad/s) ${J.spinSteps} 스텝 · 칼날 축 팽이(> ${BLADE_SPIN} rad/s) ${J.bladeSpinSteps} 스텝, 최대 ${J.max.bladeSpin ?? '-'} rad/s · NaN ${J.nanSteps} 스텝`);
     L.push(Object.entries(LIMITS).map(([k, v]) => `${k} = ${v.src}`).join(' · '));
     return L.join('\n');
   }
