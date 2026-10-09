@@ -547,7 +547,16 @@ export class Gait {
       GAIT.sideLow * clamp((speed > 1e-3 ? vLat / speed : 0) * 2 - 1, 0, 1);
     // 걷기 ↔ 서기 높이는 천천히 바꾼다 (한 번에 낮추면 다리를 오므려 두 발이 땅에서 뜬다)
     const sd = f.secretStance; // 비기 자세 (10/10 — 발도 웅크림·런지, secret_instant.js stanceTick): 골반을 더 낮추고 그 동안은 빨리 바꾼다. 없으면 오늘 그대로
-    const hNomT = (walkNow ? walkH : this.P.guardHeight) - hurt - Math.max(0, drop) - (sd ? sd.drop : 0);
+    const P = this.P;
+    let hNomT;
+    if (P === GAIT) hNomT = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop) - (sd ? sd.drop : 0);
+    else {
+      // 유파 걸음(10/10): 바탕 높이(P.guardHeight·walkHeight)를 낮추고, 자세표·덧씌우기 낮춤(drop)과 합친 낮춤을 전역 기본 높이 기준 GAIT.lowMax 까지로.
+      //  비기 자세(sd) 동안은 유파 바탕을 쓰지 않고 전역 기본 높이 위에 비기 낮춤 그대로(비기 값이 그 높이에 맞춰 정해짐 — 상한 밖, 확인표 507)
+      const def = walkNow ? walkH + (GAIT.walkHeight - P.walkHeight) : GAIT.guardHeight;
+      if (sd) hNomT = def - hurt - Math.max(0, drop) - sd.drop;
+      else hNomT = def - Math.min(GAIT.lowMax, def - (walkNow ? walkH : P.guardHeight) + Math.max(0, drop)) - hurt;
+    }
     const hr = (sd ? sd.rate : GAIT.heightRate) * dt;
     this.hNomF = this.hNomF === undefined ? hNomT : this.hNomF + clamp(hNomT - this.hNomF, -hr, hr);
     const hNom = this.hNomF;

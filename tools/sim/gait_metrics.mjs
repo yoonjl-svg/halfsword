@@ -20,11 +20,13 @@
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
-import { SCHOOLS, traditionOf } from '../../src/schools.js';
+import { SCHOOLS, TRADITIONS, traditionOf } from '../../src/schools.js';
 import { GAIT } from '../../src/config.js';
 import { wilson } from './ref_duel.mjs';
 import { writeFileSync } from 'node:fs';
 
+// 재기 손잡이: GAIT_JSON='{"italian":{"guardWidth":0.17}}' → 그 유파 걸음 칸(TRADITIONS[t].gait)에 덮어 잰다(값 고르기용, src 는 그대로)
+if (process.env.GAIT_JSON) for (const [t, o] of Object.entries(JSON.parse(process.env.GAIT_JSON))) TRADITIONS[t].gait = { ...(TRADITIONS[t].gait ?? {}), ...o };
 const args = process.argv.slice(2);
 const N = +args[0] || 24;
 const ids = args.slice(1).length ? args.slice(1) : ['longsword', 'rapier', 'zweihander', 'monohoshizao', 'uchigatana', 'qinggang', 'sabre'];
