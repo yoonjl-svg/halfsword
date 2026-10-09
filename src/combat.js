@@ -25,6 +25,7 @@ import * as THREE from 'three';
 import { STRIKE, ANATOMY, STEEL, ARMOR } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
+import { runInstants } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10 — 물리 원칙의 예외)
 
 // 전투 사건 갈고리 (gun.js GUN_HOOKS 와 같은 식): 비어 있으면 아무 일도 없다. 판정·난수와 무관
 //  onDecapitate(f, headBody): 참수된 순간 한 번 (fighter.applyWound, die 뒤) — 사운드 PM 이 소리를 건다
@@ -94,6 +95,7 @@ export class Combat {
 
   filterContactPair(c1, c2) {
     const pr = this.pairOf(c1, c2);
+    if (pr && pr.w.fighter.instantGhost > 0) return 0; // 순간 베기 직후(SECRET.instantNoCollide): 몸 안에 놓인 칼이 튀지 않게 내 칼 ↔ 상대 몸 충돌 끔
     if (!pr || pr.w.part !== 'blade') return 1; // 1 = 평소처럼 부딪힘
     const key = `${pr.wc}:${pr.vc}`;
     let cut = this.cutting.get(key);
@@ -433,6 +435,7 @@ export class Combat {
     // 보정 v2 사건: 떨어짐 = 이번 스텝에 가르는 쌍·접촉힘 타격·칼끼리 닿음이 하나도 없음 (v2 공격자만 적는다)
     for (const f of this.fighters) if (f.skill?.corr === 'v2' && f.bladeTouch && f.touchStep !== this.stepNo) f.bladeTouch = false;
     for (const f of this.fighters) if (f.weapon?.gun) updateGun(f, world, this, dt); // 권총(??? 등급): 걸어 둔 한 발 쏘기·장전 (gun.js)
+    runInstants(this); // 비기 순간 베기: 걸어 둔 것 실행 (요청이 없으면 아무 일도 없다)
   }
 
   /**

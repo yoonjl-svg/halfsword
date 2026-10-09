@@ -363,7 +363,7 @@ const CHINESE_PASSIVES = [
 //  유파마다 하나(무유파 없음). 버릇(passives)보다 먼저 본다. 꼴: { name, nameKo, when, cond, do, src } — 칸의 수 대신 적힌 문자열은 SECRET 의 열쇠(ai.js 가 그때 읽는다)
 //   when — threat(상대 칼이 들어옴) · foeRaise/foeCharge(상대가 칼을 듦/달려듦) · foeRecover(상대가 헛치고 자세 잡기 전): 이 셋은 지금 모습(반응 지연 0)으로 본다 ·
 //          combo(끊기지 않은 내 베기 SECRET.comboN 번 뒤) · firstHit(들어가며 친 내 첫 베기가 닿음)
-//   cond — lethal(들어오는 칼의 추정 에너지 ½·m·v² ≥ SECRET.lethalJ) · line(들어오는 줄 목록) · range 'counter'(맞받아 벨 거리) · dist(내 간격 끝 reach 기준 거리 창)
+//   cond — lethal(10/10: 들어오는 칼끝 길이 앞 SECRET.lethalLook 초 안에 내 머리·목 곁 lethalDist 안을 지남 — 전: 칼끝 추정 에너지 ≥ lethalJ) · line(들어오는 줄 목록) · range 'counter'(맞받아 벨 거리) · dist(내 간격 끝 reach 기준 거리 창)
 //   do — break(줄마다 그 줄을 깨는 기술) · bind(칼이 맞물리면 곧장 이을 기술) · tech(기술 — 이름이면 꾸러미의 것, 객체면 비기 길) · step(기술 걸음 덧씌움, kind·push 칸 더함) ·
 //        path(지금 손에서 곧장 가는 새 길) · powerFrom(서보 힘 창을 이 길 점부터) · side(옆걸음) · back(① 물러서며 끌어 담기) · zanshin(맞혔으면 그 자세로 残心) · next(첫 수 뒤 두 수의 차례)
 
@@ -372,7 +372,7 @@ const GERMAN_SECRET = {
   name: 'versetzen',
   nameKo: 'Versetzen (받아 베기)',
   when: 'threat',
-  cond: { lethal: true, line: ['highL', 'highR', 'highC', 'thrust'], range: 'counter' },
+  cond: { lethal: true, range: 'counter' }, // 10/10: lethal = 궤적(칼끝 길이 내 머리·목 곁 SECRET.lethalDist 안, 칼끝 ≥ lethalSpeed — secret.js lethalPath). 줄 조건(high*·thrust)은 궤적이 맡아 뺌 (전: line ['highL','highR','highC','thrust'] · lethalJ 136 → 247 J)
   // 높은 베기(지붕 Vom Tag 에서) → Zwerch · 높은 찌르기(황소 Ochs) → Krumphau · 가운데·낮은 찌르기(쟁기 Pflug) → Schielhau · 낮은 베기(바보 Alber 쪽) → Scheitelhau(정수리)
   //  (낮은 줄은 지금 cond 의 line 밖 — 자료로 둔다, 사장님 결정 후보)
   do: { break: { highL: ['zwerch', 'zwerchL'], highR: ['zwerch', 'zwerchL'], highC: ['zwerch', 'zwerchL'], thrustHigh: ['krumphau'], thrust: ['schielhau'], lowL: ['oberhau'], lowR: ['oberhau'] }, bind: 'duplieren' },
@@ -391,8 +391,8 @@ const ITALIAN_SECRET = {
 const IBERIAN_SECRET = {
   name: 'molineteTalho',
   nameKo: 'Molinete talho (휘돌려 사선 베기 · 가칭)',
-  when: 'combo',
-  cond: { touch: true }, // 10/9 23:5x 발동 줄이기: 이어진 베기 SECRET.comboN 번의 마지막이 닿았을 때(맞힘·맞물림)만 [확인 전] — comboN 4 는 AI 이어 치기 상한(2~3)에 걸려 48 판 1 번뿐이라 3 으로 두고 이 조건을 더함
+  when: 'bindCount', // 10/10 01:2x 사장님 안: 내 베기가 피해 없이 칼끼리만 부딪힌 횟수가 SECRET.iberianBinds(3) 가 되면 다음 공격이 비기 (secret.js BindCount)
+  // (전 10/9 23:5x: when 'combo' — 끊기지 않은 베기 comboN 3 번 + 셋째 칼이 닿음 cond.touch. 그 전: comboN 3 만) // 10/9 23:5x 발동 줄이기: 이어진 베기 SECRET.comboN 번의 마지막이 닿았을 때(맞힘·맞물림)만 [확인 전] — comboN 4 는 AI 이어 치기 상한(2~3)에 걸려 48 판 1 번뿐이라 3 으로 두고 이 조건을 더함
   // 길 = 라이브러리 몰리넬로 고리(낮은 오른쪽 → 옆 지킴 → 오른 어깨) → 지붕 → 고유 altibaixo 길(내려베고 되올림). 서보 힘 창은 지붕에 닿은 뒤부터(내려치는 마지막 구간 — powerFrom = 지난 길 점 수)
   //  10/9 후속(디렉터 '휘돌림이 가속이 되게'): 첫 꼴(지금 손 → 낮은 오른쪽 → 옆 지킴 → 오른 어깨 → 지붕 → 내려침, 한 길)은 붙은 거리에서 고리가 상대 다리를 스치고
   //   내려침이 거의 안 닿았다(비기 상처 대부분 고리 도중의 약한 둔타). → 고리는 몸 뒤(오른 어깨 → 옆 지킴 → 오른 어깨 → 지붕)로 준비(windup) 동안 돌고, 그동안 옆 뒤로 비껴 딛어
@@ -422,6 +422,8 @@ const JAPANESE_SECRET = {
     strength: 'japaneseStrength', // 보조 힘·속도: 베기 구간만 몸의 힘 배율
     lead: 'japaneseLead', // 앞당김(m): 脇 → 上段 → 真向 길이 길어 닿기 전에 상대가 더 다가온다 — 그만큼 일찍 친다
     hand: 'japaneseHand', // 손 속도 배율 (공통 handSpeed 대신)
+    instant: true, // 10/10: SECRET.instant 면 순간 베기(secret_instant.js) — 위 back·release 는 쓰지 않고 tech.path 끝 자세로 곧장. 0 이면 10/9 길
+    stiffPose: 'instantStiffPose', // 경직 동안 칼끝을 떨어뜨린 손 자리 (보이는 경직)
   },
   src: '검도 용어 後の先(상대가 먼저 일으킨 치기를 받아 이김)·引き技(물러서며 침) [전승 — 원문 쪽 없음] · 脇構え 자리 검도형 p11/10 [원문] · 이름은 가칭 · 길·걸음 수 [추정]',
 };
@@ -430,7 +432,7 @@ const CHINESE_SECRET = {
   name: 'lianhuanSanji',
   nameKo: '連環三擊 (연환삼격 · 가칭)',
   when: 'firstHit',
-  cond: { landed: true }, // 10/9 23:5x 발동 줄이기: 첫 칼이 맞았을 때만 (막힘 제외)
+  cond: { landed: true, rest: 'chineseRest' }, // 첫 칼이 맞았을 때만 (막힘 제외 — 10/9 23:5x) · 그 앞에 내 공격 없이 SECRET.chineseRest 초 이상 (10/10 01:2x 사장님 '쉬었다가'의 값)
   // 10/9 23:5x 사장님 '중국 비기는 꽤 자주 나오는데 어떤 상황이 벌어지는지 전혀 모르겠더라. 타격도 크지 않고 동작이 화려한 것도 아니어서' → 보이는 삼연격:
   //  첫 칼이 맞으면 큰 호의 세 수를 이음새 0 으로(flowInto) — 腰擊(허리 가로베기, 오른 옆 → 왼 옆 끝까지) → 撩掠(왼 아래에서 오른 위로 걷어 올려 베기) → 坦腹刺(쟁기로 내려 배를 찌름).
   //  수마다 반걸음 進步(앞발 lunge — 'chineseStep'). 세 이름은 조선세법 腰擊勢·撩掠勢·坦腹勢 [원문 이름 · 셋을 한 동작으로 잇기 [해석]] · 길의 수 [추정]

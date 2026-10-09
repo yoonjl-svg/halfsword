@@ -365,7 +365,15 @@ if (mode === 'poses') {
           if (sr?.releaseD != null) { G2.rel += sr.releaseD; G2.relN++; }
         }
         if (sr && process.env.SECRET_SEG === '1') console.log(`  [비기 상처] ${sr.S.name} ${XA.phase} 남은 길 ${XA.path.length} ${r.type} ${r.energy.toFixed(0)} J 칼끝 ${(0.5 * (X.swordProps?.m ?? 1.5) * X.tipVel.lengthSq()).toFixed(0)} J · 거리 ${XA.d.toFixed(2)} (contact ${XA.M.contact.toFixed(2)} reach ${XA.M.reach.toFixed(2)})`); // 비기 상처가 길 어디서 났나 (점검)
-        const tn = XA.mode === 'attack' ? `${XA.tech?.name ?? '?'}${sr ? '★' : ''}` : `(${XA.mode})`;
+        // 순간 베기 (10/10 — secret_instant.js): 비기를 낸 그 스텝 끝에 상처가 난다 — 'goNoSenInstant★' 로 세고 낸 때 → 상처 ms 를 잰다
+        const inst = !!(sr?.instant && sr.stage === 'instant');
+        const tn = inst ? 'goNoSenInstant★' : XA.mode === 'attack' ? `${XA.tech?.name ?? '?'}${sr ? '★' : ''}` : `(${XA.mode})`;
+        if (inst && !sr.instHitDone && XA._fireT != null) {
+          sr.instHitDone = true;
+          const H = (hitMs[tn] ??= { n: 0, ms: 0, fire: 0, fn: 0, v: 0 });
+          const ms = (XA.sense.t - XA._fireT) * 1000;
+          H.n++; H.ms += ms; H.fire += ms; H.fn++;
+        }
         if (XA.mode === 'attack' && XA.phase !== 'windup' && XA.phase !== 'approach' && !XA._hitDone && XA._ssT != null) {
           XA._hitDone = true;
           const H = (hitMs[tn] ??= { n: 0, ms: 0, fire: 0, fn: 0, v: 0 });
@@ -375,7 +383,7 @@ if (mode === 'poses') {
           if (sr && XA._fireT != null) { H.fire += (XA.sense.t - XA._fireT) * 1000; H.fn++; }
         }
         (techE[tn] ??= []).push(r.energy);
-        if (XA.mode === 'attack') {
+        if (XA.mode === 'attack' || inst) {
           XA._sw ??= { tn, max: 0 };
           XA._sw.max = Math.max(XA._sw.max, r.energy);
         }

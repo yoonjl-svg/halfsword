@@ -70,6 +70,7 @@ const schoolArt = +params.get('schoolArt');
 if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 1(사장님 10/9 01:5x '스위치 켜') = 유파 가중치·맞받아치기·새 기술(燕返し) 켬. `?schoolArt=0` = 그 전 판(이름·쉴 자세는 늘)
 if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 : 0; // 유파 비기(10/9 유파 설계 v3): 기본 1, `?secret=0` = 비기 없는 판 (docs/strike/school_secret_2026-10-09.md)
 if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerSecret') ? 1 : 0; // 플레이어 비기(10/9 23:5x): 기본 1, `?playerSecret=0` = 끔 (docs/strike/player_secret_2026-10-09.md)
+if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 0; // 일본 비기 순간 베기(10/10, secret_instant.js): 기본 1, `?instant=0` = 10/9 길(담았다 터뜨림) 대조
 const SECRET_SLOWMO = params.get('slowMo') !== '0'; // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
@@ -1438,7 +1439,7 @@ const techCueEl = $('techCue');
 //  10/9 유파 비기(docs/strike/school_secret_2026-10-09.md): kind 'secret' — 꼬리표 '비기', 글씨 더 크게·다른 색(index.html), 2.0 초
 //  10/9 23:5x 플레이어 비기: kind 'secretReady'(창이 열림 — 흐린 '비기' 꼬리표, 글씨 크기는 비기 알림과 같게 — 사장님 '테스트 중엔 크게') · 'stiff'(내 비기 뒤 경직, 흐리게).
 //   내 비기를 낸 알림('secret', who 'me')은 실행이 끝날 때까지, AI 비기 알림은 그 비기(連環 세 수 등)가 끝날 때까지 떠 있다
-const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', stiff: '' };
+const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', stiff: '비기 뒤' };
 const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0, secretReady: 0.5, stiff: 0.3 };
 let techCueSeen = null;
 let techAllSeen = null;
@@ -1459,7 +1460,7 @@ function showTechCue(c) {
 function showPlayerCue(S, kind) {
   if (state !== 'fight' || !S) return;
   const T = TRADITIONS[player?.swordArt?.tradition];
-  showTechCue({ text: kind === 'stiff' ? '경직' : S.nameKo ?? S.name, kind, who: 'me', schoolKo: kind === 'stiff' ? '' : `내 ${T?.nameKo ?? ''}` });
+  showTechCue({ text: kind === 'stiff' ? '경직' : S.nameKo ?? S.name, kind, who: 'me', schoolKo: `내 ${T?.nameKo ?? ''}` });
 }
 function updateTechCue(dt) {
   // 플레이어 비기 창이 새로 열림 · 경직 시작
@@ -1478,6 +1479,13 @@ function updateTechCue(dt) {
   const kNow = techCueEl.dataset.kind;
   const mine = techCueEl.dataset.who === 'me';
   if (pPhase === 'stiff' && !(mine && kNow === 'stiff')) showPlayerCue(playerSecret?.S, 'stiff');
+  // 상대 비기 경직도 또렷이 (10/10 사장님 '경직은 … 있는 것도 몰랐다'): AI 비기가 경직이면 '경직' (상대 꼬리표)
+  const aiStiff = state === 'fight' && ai?.secretRun?.stage === 'stiff' && !!enemy?.alive;
+  if (aiStiff && !(kNow === 'stiff' && !mine) && !(mine && techCueTimer > 0)) {
+    const T = TRADITIONS[ai.art?.tradition];
+    showTechCue({ text: '경직', kind: 'stiff', who: 'foe', schoolKo: `상대 ${T?.nameKo ?? ''}` });
+  }
+  if (techCueEl.dataset.who !== 'me' && techCueEl.dataset.kind === 'stiff' && aiStiff) techCueTimer = Math.max(techCueTimer, 0.15);
   if (mine && kNow === 'secretReady') techCueTimer = playerSecret?.open ? Math.max(techCueTimer, 0.1) : Math.min(techCueTimer, 0); // 창이 열린 동안만 (게임 시간 창 — 화면이 느려도 맞게)
   if (mine && kNow === 'secret' && pPhase === 'run') techCueTimer = Math.max(techCueTimer, 0.3); // 내 비기는 실행이 끝날 때까지
   if (mine && kNow === 'stiff' && pPhase === 'stiff') techCueTimer = Math.max(techCueTimer, 0.15);
