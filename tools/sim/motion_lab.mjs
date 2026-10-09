@@ -230,6 +230,11 @@ if (mode === 'poses') {
     school = k2;
   }
   let Wn = 0, L = 0, D = 0, nan = 0, tSum = 0, tN = 0;
+  // 기질 계기 (10/9 유파 기질 — docs/strike/school_temper_2026-10-09.md): 시험 쪽(X) AI 가 간 볼 때(mode 'watch')의 겉으로 보이는 버릇. 읽기만 한다(난수·물리에 손대지 않음)
+  //  간 보기 시간·거리 칸(0.05 m, 중앙값용 — 평균은 상대가 쓰러졌을 때 등 멀리 선 몇 초에 끌려간다) · 옆걸음 시간(|move.x| > 0.05)·|move.x| 합 ·
+  //  간 보기가 이어지는 동안 자세 바뀐 수(막기·공격 뒤 돌아오며 바뀐 것은 뺌) · 간격 끝(상대 칼 닿는 거리 foeReach + 0.5 m) 안에 든 때부터 첫 공격까지 걸린 시간
+  //  간격 가까이(상대 칼 닿는 거리 + 1 m 안)에서 간 볼 때 상대 칼 닿는 거리 밖에 둔 여유(d − foeReach)의 시간 평균 — 성격 margin 이 바로 보이는 값
+  const tmp = { wT: 0, cT: 0, cX: 0, gN: 0, rT: 0, rN: 0, rCut: 0, nT: 0, nD: 0, hist: new Array(200).fill(0) };
   const used = {};
   const feintUsed = {};
   const counterUsed = {};
@@ -289,8 +294,26 @@ if (mode === 'poses') {
       }
       let cur = null; // 지금 재는 베기 { name, off0, ang0, done }
       let stepN0 = 0, fallUntil = -1, fallName = null;
+      let gPrev = null, wPrev = false, rIn = -1; // 기질 계기: 지난 스텝 자세 이름·간 보기였나 · 간격 끝 안에 든 시각(없으면 −1)
       for (let i = 0; i < 40 / DT; i++) {
         G.step();
+        if (XA) { // 기질 계기 (읽기만)
+          const d = XA.d, w = XA.mode === 'watch';
+          if (w && G.t > 2) {
+            tmp.wT += DT; tmp.hist[Math.min(199, Math.floor(d * 20))] += DT;
+            if (d < XA.foeReach + 1) { tmp.nT += DT; tmp.nD += (d - XA.foeReach) * DT; }
+            const mx = Math.abs(X.move.x);
+            if (mx > 0.05) tmp.cT += DT;
+            tmp.cX += mx * DT;
+          }
+          const gn = XA.guard?.name ?? null;
+          if (w && wPrev && G.t > 2 && gPrev && gn && gn !== gPrev) tmp.gN++;
+          gPrev = gn; wPrev = w;
+          const edge = XA.foeReach + 0.5;
+          if (rIn < 0 && w && d < edge) rIn = G.t;
+          else if (rIn >= 0 && XA.mode === 'attack') { tmp.rT += G.t - rIn; tmp.rN++; rIn = -1; }
+          else if (rIn >= 0 && d > edge + 0.3) { tmp.rCut++; rIn = -1; } // 치지 않고 다시 멀어짐
+        }
         if (stepNames?.length && XA) {
           const nm = XA.tech?.name;
           if ((XA.techStepN ?? 0) !== stepN0) { // 기술 걸음을 다리가 받았다 → 시작 자리를 여기서
@@ -365,6 +388,10 @@ if (mode === 'poses') {
   // 고유 동작 줄 (10/9 13:xx 패시브 확정 — docs/strike/passive_fire_2026-10-09.md): 시험 쪽 유파 고유 동작(길·속임수, 켠 것)이 칼을 낸 수
   const uqT = TRADITIONS[uqTrad]?.unique ?? [];
   console.log(`  고유 동작 [${uqTrad ?? '-'}]: ${uqT.filter((u) => !u.counter && u.ai !== false).map((u) => (u.feint ? `${u.name} ${feintUsed[u.feint.name] ?? 0}` : `${u.name} ${used[u.name] ?? 0}`)).join(', ') || '-'}`);
+  // 기질 줄 (10/9 유파 기질): 간 보는 거리 중앙값 · 옆걸음 비율(|move.x| > 0.05)·평균 |move.x| · 간 보는 1 분당 자세 바꿈 · 간격 끝 안에 든 뒤 첫 공격까지(초, n · 치지 않고 물러난 수)
+  let med = 0;
+  for (let i = 0, acc = 0; i < tmp.hist.length; i++) if ((acc += tmp.hist[i]) >= tmp.wT / 2) { med = (i + 0.5) / 20; break; }
+  console.log(`  기질: 간 보기 거리 ${tmp.wT ? med.toFixed(2) : '-'} m (간격 가까이 여유 ${tmp.nT ? (tmp.nD / tmp.nT).toFixed(2) : '-'} m, ${tmp.wT ? pc(tmp.nT / tmp.wT) : '-'}) · 옆걸음 ${tmp.wT ? pc(tmp.cT / tmp.wT) : '-'} (|x| ${tmp.wT ? (tmp.cX / tmp.wT).toFixed(2) : '-'}) · 자세 바꿈 ${tmp.wT ? (tmp.gN / (tmp.wT / 60)).toFixed(1) : '-'}/분 · 간격 끝 → 첫 공격 ${tmp.rN ? (tmp.rT / tmp.rN).toFixed(2) : '-'} s (n ${tmp.rN}, 물러남 ${tmp.rCut}) · 간 보기 ${tmp.wT.toFixed(0)} s`);
   if (stepNames?.length) {
     // 넷째 줄 (10/9 기술 걸음): 이름 쓴 수 · 걸음 받음/부탁 · 결과 맞힘/막힘/헛침 · 칼 줄 거리 시작→닿을 때(m) · 상대 정면 각 시작→닿을 때(도) · 걸음(대조는 베기 시작) 뒤 1 s 넘어짐 · 시작→닿을 때 가슴 옮김(시작 때 몸 기준, 걸음 쪽 +)
     const f2 = (v) => v.toFixed(2);

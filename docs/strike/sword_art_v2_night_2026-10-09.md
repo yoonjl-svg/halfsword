@@ -85,4 +85,5 @@
 - 비낀 뒤 베기의 발-손 박자(발이 먼저 닿는 걸음 시작)와 균형 — R2′ 걸음 몫과 함께.
 - 중국 腰擊: 04:37 자료(×3·腰擊勢 간 보기·몰릴 때 sideR)로 공용 腰擊 6 → 11 %(96 판). 남은 후보 坦腹勢에서 시작하는 腰擊 길(yaojiNear), 斂翅 패시브가 0~2 번만 나오는 물러남 끝 거리 조건(ai.js).
 - 생성기 vs 손 간격 표 58 칸, 샛별 되돌아옴 속도 0.75 비교(`with_config SKILL.recoverSpeed=0.75`).
+- 유파 기질 (10/9 13:2x, 2 등급 — `school_temper_2026-10-09.md`): AI 성격 기본 범위를 유파마다(`TRADITIONS[t].temper`, 독일·무유파 = 예전 그대로 → 관문 바이트 같음). 일본 자세 바꿈 25 → 17/분 등 박자가 가장 잘 보이고, margin 은 holdDist 식에 묻혀 거의 안 보임. 이베리아 처음 안은 −17 점이라 반쯤 되돌림. 확인표 254~258.
 - 기록: 설계서 `sword_art_layers_design_2026-10-08.md` §13~§17, `school_impl`·`school_unique`·`school_passive`·`school_step`·`qinggang_floor`·`pommel_count`·`owner_ideas_design`·`names_west_none` 문서들, decisions 10/9 00:32~03:57.
