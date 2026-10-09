@@ -433,7 +433,7 @@ export const LOOK_ARCHIVE = {
       outfit: 'omari_seafarer_round',
     },
   },
-  // 미나미: 샛별 저장소 인물 외형을 이름만 바꿔 가져옴 (10/10). v1 신사 옷 → v2 숲 옷 → v3 숲 옷 + 긴 양갈래 머리 → v4 하카마·다스키
+  // 미나미: 샛별 저장소 인물 외형을 이름만 바꿔 가져옴 (10/10). v1 신사 옷 → v2 숲 옷 → v3 숲 옷 + 긴 양갈래 머리 → v4 하카마·다스키 → v5 무녀(흰 다스키·낮게 묶은 머리)
   minami: {
     v1: {
       tunic: 0xe9e5d5, quilt: 0xe9e5d5, sleeve: 0xe9e5d5,
@@ -467,6 +467,16 @@ export const LOOK_ARCHIVE = {
       helmet: null, metal: 0xb3a07a, hair: 0x242723, headband: null,
       grip: 0x514638, hilt: 0xa39474, accent: 0x627b5c,
       outfit: 'minami_hakama', hairStyle: 'long-twintails',
+    },
+    // v5 (10/10 사장님 "검객이 아니라 신녀·무녀", "이끼색 하카마는 그대로"): 흰 다스키 · 뒤로 낮게 하나로 묶은 머리(흰 종이 + 붉고 흰 끈) ·
+    //  걷은 소매 끝 붉은 꿰맴 끈. 하카마·얼굴·깃·허리띠는 v4 그대로
+    v5: {
+      tunic: 0xe9e5d5, quilt: 0xe9e5d5, sleeve: 0xe9e5d5,
+      straps: null, belt: 0x9a4234, hoseUpper: 0x3f5747, hoseLower: 0x3f5747,
+      shoes: 0x554837, skin: 0xe2bd9d, hands: 0xe2bd9d,
+      helmet: null, metal: 0xb3a07a, hair: 0x242723, headband: null,
+      grip: 0x514638, hilt: 0xa39474, accent: 0x627b5c,
+      outfit: 'minami_miko', hairStyle: 'low-tail',
     },
   },
 
@@ -568,7 +578,7 @@ export const CHARACTER_LOOK_VERSION = {
   margarethe: 'v3',
   tome: 'v1',
   omari: 'v2',
-  minami: 'v4',
+  minami: 'v5',
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
