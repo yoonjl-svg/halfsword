@@ -64,6 +64,9 @@
       #techCue b { display: block; font-size: clamp(18px, 5vw, 26px); font-weight: 800; letter-spacing: .02em; color: #f6e7c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       #techCue small { display: block; font-size: 13px; font-weight: 600; color: #efe2c4; margin-top: 2px; white-space: nowrap; }
       #techCue[data-kind="unique"] b { color: #ffd98a; }
+      /* 유파 비기 (10/9): 더 크게, 붉은 금빛 — 꼬리표 '비기', 2.0 초 */
+      #techCue[data-kind="secret"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #ff9d5c; letter-spacing: .04em; }
+      #techCue[data-kind="secret"] small { color: #ffc9a0; font-size: 14px; }
       /* 설정 '모든 기술 이름 표시'(디버그, 기본 끔 — 10/9 13:xx): 공용 기술은 작고 흐리게 */
       #techCue[data-kind="all"] b { font-size: clamp(15px, 4vw, 19px); font-weight: 600; color: #d9cfb8; }
       #techCue[data-kind="all"] small { opacity: .7; }

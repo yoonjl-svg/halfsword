@@ -14,6 +14,11 @@
 //       공용 동작(TECH 12 + 라이브러리 talhoReves·wristCut·molinello)은 모든 유파가 같이 쓰고 이름만 유파 말로(techNames),
 //       유파마다 고유 동작 셋(unique — 독일·이탈리아·이베리아·일본·중국, 무유파는 없음)을 더한다. 아래 '공용 동작 이름'·'고유 동작' 머리말.
 //      자세 이름·쉴 자세는 늘, 가중치·맞받아치기·새 기술(燕返し)은 SKILL.schoolArt(기본 1, 사장님 10/9 01:5x) 일 때. 값(가중치 수)은 사장님 확인 전 — 켜는 것만 결정됨
+//      유파 설계 v3 (10/9 사장님 승인 — docs/strike/school_secret_2026-10-09.md): 유파 하나 = 세 층
+//       ㉠ 기질 — 평소 몸가짐(temper: 간격·돌기·자세 박자·맞받기 성향, AI 성격 범위) + 반응 버릇(passives: 사건이 오면 p 로 굴려 나오는 작은 반응)
+//       ㉡ 비기 — secret 하나: 조건이 차면 그 유파의 대표 동작을 '완벽 실행'(굴림 없음, 결과는 물리). 독일 Versetzen · 이탈리아 Passata in contratempo ·
+//          이베리아 Molinete altibaixo · 일본 後の先(가칭) · 중국 連環三擊(가칭). 무유파는 없음. 버릇보다 먼저 본다
+//       ㉢ 동작 — 공용 동작(TECH 12 + 라이브러리 셋, 이름만 유파 말 techNames) + 고유 동작(unique)
 //   ② SCHOOLS — AI 가 쥐는 꾸러미 (옛 계약 그대로: 유파 내용 + 그 꾸러미를 잰 무기 weapon + 간격 measure). 열쇠도 옛 그대로:
 //      인물 꾸러미(longsword 기본·tree_branch 브란·qinggang/jian 랴오·excalibur_replica 하인리히 — 캐릭터 PM, 지금처럼 유지)와
 //      무기 id 꾸러미(weaponSchool: 무기의 유파 + 그 무기 간격 + 무기 예외). 도구가 SCHOOLS[id]·schoolOf(id) 로 읽고 새 열쇠를 끼운다.
@@ -35,7 +40,7 @@
 //   withdraw 물러날 때 겨누는 자세 이름: pressed(몰아치는 상대에게), calm(그 밖에, 둘 중 하나를 무작위로)
 //   pose     그 밖의 고정 손 위치: cover(쓰러졌을 때 머리 위로 가리기), point(칼끝으로 겨누기)
 //   tradition 이 꾸러미의 유파 전통 열쇠 (TRADITIONS) — 10/8 더함, 읽기만(AI 동작은 읽지 않는다)
-//  유파 자료 칸(names·techNames·techK·rest·counterArt·unique·spare·passives)은 꾸러미에 들어가지 않는다(pack 이 고르는 열쇠 밖) — sword_art.js 가 TRADITIONS 에서 직접 읽는다
+//  유파 자료 칸(names·techNames·techK·rest·counterArt·unique·spare·passives·temper·secret)은 꾸러미에 들어가지 않는다(pack 이 고르는 열쇠 밖) — sword_art.js 가 TRADITIONS 에서 직접 읽는다
 // ─────────────────────────────────────────────────────────────
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS, HIGH_GUARDS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
@@ -222,7 +227,8 @@ const ITALIAN_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.05
 const IBERIAN_TEMPER = { ...GERMAN_TEMPER, margin: [0.28, 0.55], circleRate: [0.25, 0.5], rhythm: [2.2, 4.0], guardStick: 2.0, vor: [0.22, 0.65] };
 // 일본 (한 칼 — 上段·八相에서 기다림) [추정 — 사장님 확인 전]: 간격 끝(一足一刀)에서 오래 기다린다·적게 돎·자세를 오래 지키고 고집·손 느긋함·
 //  먼저 치지 않다가 들어오는 순간(出鼻·先の先)을 맞받는다·참을성 김
-const JAPANESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.3, 0.5], circleRate: [0.1, 0.25], rhythm: [4.0, 7.0], guardStick: 4.0, guardSpeed: 0.7, patienceTime: [9, 14], vor: [0.5, 0.9] };
+//  vor 0.5~0.9 → 0.2~0.5 (10/9 유파 설계 v3 — 사장님 '물러서는 백스텝을 잘 쓰게': 달려드는 상대를 맞받기보다 물러나 헛치게 한다. 헛친 뒤는 비기 後の先 몫)
+const JAPANESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.3, 0.5], circleRate: [0.1, 0.25], rhythm: [4.0, 7.0], guardStick: 4.0, guardSpeed: 0.7, patienceTime: [9, 14], vor: [0.2, 0.5] };
 // 중국 (조선세법) [추정 — 사장님 확인 전]: 좁은 간격·몰아붙임(進步 — 걸어 들어가며 잇달아 친다)·자세를 자주 바꿈(勢 가 이어진다)·참을성 짧음·공격 성향 높음
 const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2, 0.4], rhythm: [2.0, 3.5], aggr: [1.0, 1.3], patienceTime: [6, 10] };
 // 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0(10/9 腰擊 쓰임에서 ×3.0) · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
@@ -311,50 +317,117 @@ const IBERIAN_UNIQUE = [
 //  p 값은 모두 사장님 확인 전(확인표). 발동 자리는 ai.js passiveFor 를 부르는 곳들
 // 독일 (리히테나워·마이어) — 켬(사장님 10/9 12:xx '우선 다 켜봐'). **10/9 13:xx 재편**(docs/strike/passive_fire_2026-10-09.md — 사장님 '패시브가 거의 안 나온다·개념이 달라야'):
 //  받기·따라가기·겹치기 셋으로 — Absetzen·Überlaufen(맞받아치기 둘, 준비 자세 거리 규칙에 걸려 거의 못 냄)을 Indes 하나로 합치고, 상대가 헛친 뒤를 따라 들어가는 Nachreisen 을 더했다
+//  10/9 유파 설계 v3(사장님 승인 '제안대로' — docs/strike/school_secret_2026-10-09.md): Indes p 0.7 → 0.35 · Nachreisen 0.8 → 0.4 · Duplieren 0.6 → 0.4. 결정적 받기는 비기 Versetzen 이 맡는다
 const GERMAN_PASSIVES = [
   // 맞받기(Indes): 들어오는 칼을 막지 않고 그 줄에 맞서 가운데를 차지하며 그대로 친다 — 찌르기는 쟁기·황소로 받아 찌르고(옛 Absetzen),
   //  낮은 베기는 위에서 넘어 치고(옛 Überlaufen), 높은 베기는 분노의 베기·정수리 베기로 맞받는다. 굴려 나오면 확정(준비 자세가 멀면 빠르게 거친다 — ai.js passiveThreat)
-  { name: 'indes', nameKo: 'Indes (맞받기)', when: 'threat', do: { counter: { thrust: ['stichPflug', 'stichOchs'], lowL: ['oberhau', 'zornhau'], lowR: ['oberhau', 'zornhau'], highL: ['zornhau', 'zornhauL', 'oberhau'], highR: ['zornhau', 'zornhauL', 'oberhau'], highC: ['zornhau', 'zornhauL', 'oberhau'] } }, p: 0.7, src: 'Zettel 「Indes」·「Absetzen」·「Überlaufen」 · Ringeck 주해 [원전 2차] · 줄마다 기술 [해석]' },
+  { name: 'indes', nameKo: 'Indes (맞받기)', when: 'threat', do: { counter: { thrust: ['stichPflug', 'stichOchs'], lowL: ['oberhau', 'zornhau'], lowR: ['oberhau', 'zornhau'], highL: ['zornhau', 'zornhauL', 'oberhau'], highR: ['zornhau', 'zornhauL', 'oberhau'], highC: ['zornhau', 'zornhauL', 'oberhau'] } }, p: 0.35, src: 'Zettel 「Indes」·「Absetzen」·「Überlaufen」 · Ringeck 주해 [원전 2차] · 줄마다 기술 [해석]' },
   // 따라 들어가기(Nachreisen): 상대가 헛치고 칼을 다시 들기 전(seize 의 recovering)에 따라 들어가며 친다 — 준비 자세를 빠르게 거치고(chamber) 내디딘다
-  { name: 'nachreisen', nameKo: 'Nachreisen (따라 들어가기)', when: 'foeRecover', do: { tech: ['zornhau', 'oberhau', 'stichPflug'], why: 'recover', chamber: true }, p: 0.8, src: 'Zettel 「Nachreisen」 · Ringeck 주해 [원전 2차]' },
+  { name: 'nachreisen', nameKo: 'Nachreisen (따라 들어가기)', when: 'foeRecover', do: { tech: ['zornhau', 'oberhau', 'stichPflug'], why: 'recover', chamber: true }, p: 0.4, src: 'Zettel 「Nachreisen」 · Ringeck 주해 [원전 2차]' },
   // 겹치기: 막혀 칼이 맞물리면 물러나지 않고 상대 칼 뒤로 곧장 가로베기 (zwerch·zwerchL 가운데 손에서 가까운 쪽)
-  { name: 'duplieren', nameKo: 'Duplieren (겹치기)', when: 'parried', do: { tech: ['zwerch', 'zwerchL'], why: 'follow' }, p: 0.6, src: 'Ringeck 주해 Duplieren [원전 2차] · 가로베기로 [해석]' },
+  { name: 'duplieren', nameKo: 'Duplieren (겹치기)', when: 'parried', do: { tech: ['zwerch', 'zwerchL'], why: 'follow' }, p: 0.4, src: 'Ringeck 주해 Duplieren [원전 2차] · 가로베기로 [해석]' },
 ];
 // 이탈리아 (카포 페로, 레이피어). 물러남(Ritirata — 테르차 = 긴 자세로 칼끝을 겨눈 채 물러남)은 패시브가 아니라 유파 withdraw 값으로 넣었다(TRADITIONS.italian)
+//  10/9 유파 설계 v3(사장님 승인 '제안대로'): contratempo(박자 찌르기) 패시브는 지웠다 — 비기 Passata in contratempo 가 상대 박자를 맡는다. cavazione p 0.7 → 0.5
 const ITALIAN_PASSIVES = [
-  // 상대 박자(칼을 들거나 달려드는 순간)에 찌른다 — 무거운 베기 말고. 치기 가지를 늘 고르고, 기술 고르기는 'windup'(빠른 기술) 셈에 찌르기 ×3
-  //  (stop 셈은 찌르기를 0.3 으로 깎아 뜻과 어긋난다 — 공격 까닭만 stop: 조금 일찍 치고 내딛지 않는다)
-  { name: 'contratempo', nameKo: 'contratempo (박자 찌르기)', when: ['foeRaise', 'foeCharge'], do: { prefer: { thrust: 3.0 }, why: 'stop' }, p: 0.8, src: 'Capo Ferro 1610 「contratempo」 [원전 2차]' },
   // 칼이 맞물리면 빼서 반대편으로 찌른다 (stichPflug ↔ stichPflugL, 지금 손에서 먼 쪽)
-  { name: 'cavazione', nameKo: 'cavazione (맞물림에서 빼 찌름)', when: ['parried', 'bindDef'], do: { tech: ['stichPflug', 'stichPflugL'], far: true, why: 'riposte' }, p: 0.7, src: 'Capo Ferro 1610 「si caverà」 PDF 80쪽 [원전 2차]' },
+  { name: 'cavazione', nameKo: 'cavazione (맞물림에서 빼 찌름)', when: ['parried', 'bindDef'], do: { tech: ['stichPflug', 'stichPflugL'], far: true, why: 'riposte' }, p: 0.5, src: 'Capo Ferro 1610 「si caverà」 PDF 80쪽 [원전 2차]' },
 ];
 // 이베리아 (몬탄테, 츠바이핸더)
+//  10/9 유파 설계 v3(사장님 승인 '제안대로'): 베어서 막기 p 0.8 → 0.4 · 이어 돌기 0.9 그대로 · 돌려 물러남 지움(48 판에 거의 안 났다 — 몰린 물러남 자체가 드묾)
 const IBERIAN_PASSIVES = [
   // 베어서 막기: 들어오는 베기를 가만히 받지 않고 그쪽으로 탈류를 친다 (맞받아치기 굴림 없이 곧장)
-  { name: 'talhoParry', nameKo: '베어서 막기 (talho)', when: 'threat', cond: { cut: true }, do: { counter: ['zornhau', 'zornhauL', 'talhoReves'] }, p: 0.8, src: '몬탄테 규칙 — 받기보다 벤다 (Godinho 1599 · Figueiredo 1651 요약) [원전 2차]' },
+  { name: 'talhoParry', nameKo: '베어서 막기 (talho)', when: 'threat', cond: { cut: true }, do: { counter: ['zornhau', 'zornhauL', 'talhoReves'] }, p: 0.4, src: '몬탄테 규칙 — 받기보다 벤다 (Godinho 1599 · Figueiredo 1651 요약) [원전 2차]' },
   // 이어 돌기: 헛치거나 막혀도 멈추지 않고 반대 어깨로 흘러 벤다
   { name: 'seguirRoda', nameKo: '이어 돌기', when: ['missed', 'parried'], do: { chain: ['talhoReves'] }, p: 0.9, src: '몬탄테 규칙 1 [원전 2차]' },
-  // 돌려 물러남: 몰아치는 상대에게 가로로 한 번 베고 물러난다
-  { name: 'rodaRetirada', nameKo: '돌려 물러남', when: 'pressed', do: { tech: ['zwerch', 'zwerchL'], why: 'press' }, p: 0.5, src: '[해석]' },
 ];
-// 일본 (카타나 가족, 모노호시자오)
+// 일본 (카타나 가족, 모노호시자오). 10/9 유파 설계 v3(사장님 승인 '제안대로'): 残心 1.0 그대로 · 出端 1.0 → 0.6(비기 後の先 조건이 차면 비기가 먼저) · 返し 0.8 → 0.5
 const JAPANESE_PASSIVES = [
   // 残心: 맞힌 뒤 이어 치지 않고 中段(긴 자세)으로 칼끝을 겨눈 채 길게 물러난다. 일본 간 보는 자세(높은 자세)에 긴 자세가 없어 그 자세 하나만 빌려 쓴다(ai.js passiveGuard)
   { name: 'zanshin', nameKo: '残心', when: 'landed', do: { withdraw: 'langort', time: 1.2 }, p: 1.0, src: '兵法家伝書 p18/18 「殘心之事 懸待ともに用」 [원문] · 검도형 각 本 끝 残心 [원문]' },
   // 出端: 상대가 칼을 들거나 걸어 드는 순간 먼저 친다 — 치기 가지를 늘 고르고, 빠른 기술 ×2 · 누르는 베기 ×1.5
-  { name: 'debana', nameKo: '出端 (데바나)', when: ['foeRaise', 'foeStepIn'], do: { prefer: { fast: 2.0, presses: 1.5 } }, p: 1.0, src: '兵法家伝書 p16/15 「一ッ上れば、つけて打」 [원문] · 오륜서 表4 [원문]' },
+  { name: 'debana', nameKo: '出端 (데바나)', when: ['foeRaise', 'foeStepIn'], do: { prefer: { fast: 2.0, presses: 1.5 } }, p: 0.6, src: '兵法家伝書 p16/15 「一ッ上れば、つけて打」 [원문] · 오륜서 表4 [원문]' },
   // 返し: 받은 칼을 그대로 되받아 벤다 — 燕返し 길(없으면 정수리 베기)
-  { name: 'kaeshi', nameKo: '返し (카에시)', when: 'bindDef', do: { tech: 'tsubameGaeshi', alt: 'oberhau', why: 'riposte' }, p: 0.8, src: '오륜서 表2 [원문]' },
+  { name: 'kaeshi', nameKo: '返し (카에시)', when: 'bindDef', do: { tech: 'tsubameGaeshi', alt: 'oberhau', why: 'riposte' }, p: 0.5, src: '오륜서 表2 [원문]' },
 ];
 // 중국 (조선세법, 청강검)
+//  10/9 유파 설계 v3(사장님 승인 '제안대로'): 斂翅(물러남 끝 腰擊)·看守(대치에서 굴려 침) 패시브는 지웠다 — 이어 치는 결은 비기 連環三擊 로 올렸다(斂翅 속임수 고유 동작 lianchi 는 그대로). 刺→擊 0.8 그대로
 const CHINESE_PASSIVES = [
-  // 斂翅: 몰려 물러나다가 물러남 끝에 갑자기 들어가며 腰擊 (속임수 꼴 고유 동작 lianchi 와 이름만 같다 — 이것은 물러남에 붙는 패시브)
-  { name: 'lianchi', nameKo: '斂翅 (패한 척 물러났다 腰擊)', when: 'pressed', do: { tech: ['zwerch', 'zwerchL'], why: 'press', at: 'end' }, p: 0.5, src: '무비지 쪽174/0588 「佯北誘賺… 倒退進步腰擊」 [원문]' },
   // 刺→擊 고리: 찌른 뒤(맞든 헛치든) 곧장 腰擊 (yaoji 길, 없으면 zwerch)
   { name: 'ciji', nameKo: '刺→擊 고리', when: ['missed', 'landed'], cond: { myThrust: true }, do: { chain: ['yaoji'], alt: 'zwerch' }, p: 0.8, src: '무비지 쪽158/0572 「向前進步腰擊」 [원문]' },
-  // 看守: 상대가 머뭇거리면 기미를 따라 굴려 친다
-  { name: 'kanshou', nameKo: '看守 (간수)', when: 'standoff', do: { tech: ['zwerch', 'zwerchL'], why: 'open' }, p: 0.4, src: '무도 권2 p039/31 「相機隨勢滾殺」 [원문]' },
 ];
+
+// ── 비기 (10/9 유파 설계 v3 — 사장님 승인, docs/strike/school_secret_2026-10-09.md) ──
+//  비기(secret) = 조건이 차면 그 유파의 대표 동작을 '완벽 실행'한다. **굴림이 없다**(조건이 차면 확정 — 버릇 passives 와 다른 점). 결과는 보장하지 않는다(맞고 안 맞고는 물리).
+//  완벽 실행 = 반응 지연 0 · 정확도 1 · 손 속도 최대 · 걸음 결심(비기 동안 막기로 거두지 않음) · 서보 힘 창 — 수는 config.js SECRET, 실행은 ai.js secretScan·secretFor·secretGo.
+//  유파마다 하나(무유파 없음). 버릇(passives)보다 먼저 본다. 꼴: { name, nameKo, when, cond, do, src } — 칸의 수 대신 적힌 문자열은 SECRET 의 열쇠(ai.js 가 그때 읽는다)
+//   when — threat(상대 칼이 들어옴) · foeRaise/foeCharge(상대가 칼을 듦/달려듦) · foeRecover(상대가 헛치고 자세 잡기 전): 이 셋은 지금 모습(반응 지연 0)으로 본다 ·
+//          combo(끊기지 않은 내 베기 SECRET.comboN 번 뒤) · firstHit(들어가며 친 내 첫 베기가 닿음)
+//   cond — lethal(들어오는 칼의 추정 에너지 ½·m·v² ≥ SECRET.lethalJ) · line(들어오는 줄 목록) · range 'counter'(맞받아 벨 거리) · dist(내 간격 끝 reach 기준 거리 창)
+//   do — break(줄마다 그 줄을 깨는 기술) · bind(칼이 맞물리면 곧장 이을 기술) · tech(기술 — 이름이면 꾸러미의 것, 객체면 비기 길) · step(기술 걸음 덧씌움, kind·push 칸 더함) ·
+//        path(지금 손에서 곧장 가는 새 길) · powerFrom(서보 힘 창을 이 길 점부터) · side(옆걸음) · back(① 물러서며 끌어 담기) · zanshin(맞혔으면 그 자세로 残心) · next(첫 수 뒤 두 수의 차례)
+
+// 독일 Versetzen (받아 베기): 치명적인 칼이 높이·찌르기로 들어오면 그 줄을 깨는 비밀 베기로 한 박자에 받아내며 친다. 칼이 맞물리면 Duplieren 으로 잇는다
+const GERMAN_SECRET = {
+  name: 'versetzen',
+  nameKo: 'Versetzen (받아 베기)',
+  when: 'threat',
+  cond: { lethal: true, line: ['highL', 'highR', 'highC', 'thrust'], range: 'counter' },
+  // 높은 베기(지붕 Vom Tag 에서) → Zwerch · 높은 찌르기(황소 Ochs) → Krumphau · 가운데·낮은 찌르기(쟁기 Pflug) → Schielhau · 낮은 베기(바보 Alber 쪽) → Scheitelhau(정수리)
+  //  (낮은 줄은 지금 cond 의 line 밖 — 자료로 둔다, 사장님 결정 후보)
+  do: { break: { highL: ['zwerch', 'zwerchL'], highR: ['zwerch', 'zwerchL'], highC: ['zwerch', 'zwerchL'], thrustHigh: ['krumphau'], thrust: ['schielhau'], lowL: ['oberhau'], lowR: ['oberhau'] }, bind: 'duplieren' },
+  src: 'Zettel 「Vier sind der Versetzen」(네 비밀 베기가 네 자세를 깬다: Krump → Ochs · Zwerch → Vom Tag · Schieler → Pflug · Scheitel → Alber) · Ringeck 주해 [원전 2차] · 줄 읽기를 자세로 [해석]',
+};
+// 이탈리아 Passata in contratempo: 상대가 칼을 들거나 달려드는 박자에, 높은 칼 밑으로 뒷발을 지나 보내며 찌른다 (고유 passata sotto 길 + 런지)
+const ITALIAN_SECRET = {
+  name: 'passataContratempo',
+  nameKo: 'Passata in contratempo (박자 밑 찌르기)',
+  when: ['foeRaise', 'foeCharge'],
+  cond: { dist: 'italianDist' },
+  do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'pass' } },
+  src: 'Capo Ferro 1610 contratempo · passata sotto 「punta in falso, che vien di giù in su」 PDF 53쪽 [원문·원전 2차] · 뒷발 지나 보내기(passata) [원전 2차] · 걸음 수 [추정]',
+};
+// 이베리아 Molinete altibaixo (휘돌려 내려치기): 끊기지 않은 베기 셋 뒤, 옆으로 비껴 딛으며 칼을 한 바퀴 휘돌려(몰리넬로 고리) 지붕에서 곧게 내려친다
+const IBERIAN_SECRET = {
+  name: 'molineteAltibaixo',
+  nameKo: 'Molinete altibaixo (휘돌려 내려치기)',
+  when: 'combo',
+  // 길 = 라이브러리 몰리넬로 고리(낮은 오른쪽 → 옆 지킴 → 오른 어깨) → 지붕 → 고유 altibaixo 길(내려베고 되올림). 서보 힘 창은 지붕에 닿은 뒤부터(내려치는 마지막 구간 — powerFrom = 지난 길 점 수)
+  do: { path: [[0.25, -0.35], G.nebenR, G.tagR, G.tag, [0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], powerFrom: 4, side: 'iberianLat', open: 'H', reach: 0 },
+  src: '몬탄테 molinete·altabaixo — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 둥근 걸음(옆으로 비껴 딛음) [원전 2차] · 고리 → 내려치기로 잇기 [해석]',
+};
+// 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
+const JAPANESE_SECRET = {
+  name: 'goNoSen',
+  nameKo: '後の先 (고노센 · 가칭)',
+  when: 'foeRecover',
+  cond: { dist: 'japaneseDist' },
+  do: {
+    back: { fwd: 'japaneseBack', guard: G.nebenR },
+    // 真向: 脇構え → 오른 위로 들어 → 上段 → 가운데로 내려 팔을 다 뻗은 점(가운데일수록 손이 앞으로 — 깊이 최대) → 곧 굽혀 회수(청안 쪽)
+    tech: { name: 'goNoSenMen', from: G.nebenR, path: [[0.42, 0.3], G.tag, [0.0, 0.2], [0.0, 0.02], [0.12, -0.2]], open: 'H', kind: 'cut', reach: 'japaneseReach', base: 1, presses: true },
+    step: { lat: 0, fwd: 'japaneseStep', when: 'strike', kind: 'lunge', push: 'stepPush' },
+    zanshin: 'langort',
+  },
+  src: '검도 용어 後の先(상대가 먼저 일으킨 치기를 받아 이김)·引き技(물러서며 침) [전승 — 원문 쪽 없음] · 脇構え 자리 검도형 p11/10 [원문] · 이름은 가칭 · 길·걸음 수 [추정]',
+};
+// 중국 連環三擊 (가칭): 들어가며 친 첫 칼이 닿으면 멈추지 않고 두 수를 물 흐르듯 더 잇는다 — 조선세법의 세 끝 이음(腰擊 → 逆鱗刺 → 左翼擊 → 逆鱗刺)
+const CHINESE_SECRET = {
+  name: 'lianhuanSanji',
+  nameKo: '連環三擊 (연환삼격 · 가칭)',
+  when: 'firstHit',
+  // 첫 수(이미 닿은 칼)의 무리 → 이을 두 수. 목록이면 그때 손에서 가까운 것
+  do: {
+    next: {
+      yao: [['stichOchs'], ['zuoyi']], // 腰擊 「向前進步逆鱗」 쪽166/0580 → 逆鱗刺 「寃步左翼擊」 쪽173/0587 → 左翼擊
+      niLin: [['zuoyi'], ['stichOchs']], // 逆鱗刺 → 左翼擊 → 逆鱗刺 (左翼勢 「寃步逆鱗刺」 쪽156/0570)
+      zuoYi: [['stichOchs'], ['zuoyi']], // 左翼擊 → 逆鱗刺 → 左翼擊
+      default: [['zwerch', 'zwerchL', 'yaoji'], ['stichOchs']], // 찌르기(坦腹·左夾 「進步腰擊」 쪽158·170) 와 그 밖 → 腰擊 → 逆鱗刺
+    },
+    group: { zwerch: 'yao', zwerchL: 'yao', yaoji: 'yao', chebuYaoji: 'yao', stichOchs: 'niLin', zuoyi: 'zuoYi' },
+  },
+  src: '조선세법 세 끝 이음 — 腰擊勢 「進步逆鱗」 무비지 쪽166/0580 · 逆鱗勢 「寃(掣)步左翼擊」 쪽173/0587 · 左翼勢 「寃步逆鱗刺」 쪽156/0570 · 坦腹勢 「進步腰擊」 쪽158/0572 [원문] · 검결가 「滾手連環」 쪽151 [원문] · 세 수를 한 동작으로 잇기 [해석] · 이름 가칭',
+};
 
 // ── 공용 동작 이름 (techNames — 10/9 고유 동작 단계, 자료만) ──
 //  공용 동작 = TECH 12 + 라이브러리 셋(talhoReves·wristCut·molinello). 동작은 같고 유파 말만 다르다. HUD 는 기술 이름을 보이지 않는다(코드 없음) — 문서·갤러리용
@@ -401,24 +474,24 @@ export const TECH_NAMES = {
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로) · 이름은 DUSSACK_NAMES (sword_art.js schoolNames 가 가지 이름을 먼저 읽는다)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER },
+  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, secret: GERMAN_SECRET },
   // 이탈리아 물러남(10/9 패시브 단계 — Ritirata): 몰리면 테르차(긴 자세)로 칼끝을 겨눈 채 물러난다, 그 밖엔 긴 자세·쟁기 (전 독일 값 황소 · 쟁기·긴 자세).
   //  레이피어 간 보는 자세(WATCH_GUARDS)에 긴 자세가 있다 — 재기 손잡이 motion_lab SCHOOL_RITIRATA=0 (전 값)
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
-  italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES, temper: ITALIAN_TEMPER },
+  italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES, temper: ITALIAN_TEMPER, secret: ITALIAN_SECRET },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER },
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, secret: IBERIAN_SECRET },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
-  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE, passives: JAPANESE_PASSIVES, temper: JAPANESE_TEMPER },
+  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE, passives: JAPANESE_PASSIVES, temper: JAPANESE_TEMPER, secret: JAPANESE_SECRET },
   // 중국: 청강검·지안(스펙 school). 기술 목록 = 지금 지안 꾸러미 그대로 (기술별 reach 보정은 청강검 실측 — ③ 단계에서 무기 쪽으로 가를 후보), 그 위에 유파 자료.
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
   //  물러남(10/9 腰擊 쓰임): 몰려 물러날 때 腰擊勢(옆 자세)로 거둔다 — 斂翅 「佯北誘賺… 倒退進步腰擊」(무비지 쪽174/0588 [원문]): 물러나며 腰擊을 들고 있다가 들어가 벤다.
   //   그 밖(calm)은 독일 그대로(쟁기·긴 자세 — 坦腹·中平, 찌르기 쪽). 전엔 독일 값(pressed 황소)이라 기술을 고를 때 손이 옆 자세 0.2 m 안에 있던 적이 48 판 pickTech 502 번 가운데 0 번
-  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER },
+  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, secret: CHINESE_SECRET },
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
-  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER }, // 무유파: 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
+  none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다

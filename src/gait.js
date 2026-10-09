@@ -211,13 +211,16 @@ export class Gait {
   /**
    * 기술이 걸음을 부탁한다 (AI의 베며 내딛기). kind: 'pass'(뒷발이 앞으로 나간다) | 'lunge'(앞발을 내딛는다)
    * fwd: 몸 기준 앞으로(m), side: 오른쪽으로(m), duration: 발이 떠 있는 시간(초)
+   *  'retreat'(유파 비기 — 10/9 일본 後の先 ① 빠른 백스텝): 뒷발을 fwd(음수)만큼 뒤로 딛고 몸도 따라 물러난다. 물러나는 스틱이어도 받는다
+   *  push: 기술 걸음 동안 몸이 따라 나가는 배율 (없으면 1 — 전과 같다. 일본 後の先 ② '앞발을 강하게')
    */
   requestStep(o = {}) {
     if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
     if (this.f.feetHeld) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다
-    // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다)
-    if (this.f.move.y < -0.1) return false;
+    // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다). 뒤로 딛는 걸음(retreat)은 예외
+    if (this.f.move.y < -0.1 && o.kind !== 'retreat') return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0, leg: o.leg ?? null }; // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
+    if (o.push) this.req.push = o.push;
     return true;
   }
 
@@ -465,7 +468,7 @@ export class Gait {
     }
     // 기술 걸음 동안엔 몸도 그만큼 따라 나간다. 옆(side, 유파 고유 동작의 비껴 딛기 — 10/9)도 같은 꼴로 — side 0 이면 더하지 않는다(전과 바이트 같음)
     if (swing && swing.kind === 'req' && this.req) {
-      want.addScaledVector(fwd, (this.req.fwd * 0.8) / (swing.T + 0.15));
+      want.addScaledVector(fwd, (this.req.fwd * 0.8 * (this.req.push ?? 1)) / (swing.T + 0.15)); // push: 유파 비기의 강한 걸음 (없으면 ×1 — 같은 수)
       if (this.req.side) want.addScaledVector(rgt, (this.req.side * 0.8) / (swing.T + 0.15));
     }
     // ④ 좌우 무게 옮기기: 한 발로 서는 동안 무게중심을 딛은 발 쪽으로 (want에 속도로 더한다)
@@ -675,10 +678,10 @@ export class Gait {
       this.guardSpot(l, out);
       l.yaw1 = this.guardYaw(l);
     } else if (l.kind === 'req' && this.req) {
-      // 기술 걸음. lunge: 앞발을 fwd만큼 내딛는다. pass: 뒷발이 앞발을 지나 그 앞에 딛는다 (앞뒤 발이 바뀐다)
+      // 기술 걸음. lunge: 앞발을 fwd만큼 내딛는다. pass: 뒷발이 앞발을 지나 그 앞에 딛는다 (앞뒤 발이 바뀐다). retreat: 뒷발을 fwd(음수)만큼 뒤로 (유파 비기 백스텝)
       const r = this.req;
-      const base = r.kind === 'lunge' ? l.p0 : other.plant;
-      const x = r.kind === 'lunge' ? r.fwd : Math.max(0.3, r.fwd - 0.1);
+      const base = r.kind === 'lunge' || r.kind === 'retreat' ? l.p0 : other.plant;
+      const x = r.kind === 'lunge' || r.kind === 'retreat' ? r.fwd : Math.max(0.3, r.fwd - 0.1);
       const z = r.side + (r.kind === 'pass' ? l.side * GAIT.guardWidth : 0);
       out.set(base.x + fwd.x * x + rgt.x * z, ANKLE_H, base.z + fwd.z * x + rgt.z * z);
       l.yaw1 = this.headAhead();
