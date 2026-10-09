@@ -2,12 +2,13 @@
 //  상대 인물 하나를 ?foe=<id> 로 세우고, 상대 AI 를 멈춘 채 1.2 초 서 있게 한 뒤 물리를 멈추고
 //  상대 가슴 기준 정면·3/4·옆·뒤 네 방향에서 찍는다(내 인물은 감춤). 이어 새 판에서 AI 를 켠 채 싸우는 장면 한 장.
 //  실행: vite 개발 서버를 띄운 뒤
-//    node tools/browser/char_polish_shots.mjs http://127.0.0.1:5173 <인물 id> <접두어(예: minami_before)> [출력 폴더(기본 docs/handoff)] [무대(기본 arena)]
+//    node tools/browser/char_polish_shots.mjs http://127.0.0.1:5173 <인물 id[:외형 판]> <접두어(예: minami_before)> [출력 폴더(기본 docs/handoff)] [무대(기본 arena)]
 //  출력: <접두어>_front.png · _threeq.png · _side.png · _back.png · _fight.png (각 640×800)
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
-const foe = process.argv[3] || 'minami';
+const foeArg = process.argv[3] || 'minami'; // 'minami:v4' 꼴이면 그 외형 판으로 (?look=)
+const foe = foeArg.split(':')[0];
 const prefix = process.argv[4] || `${foe}_shot`;
 const out = process.argv[5] || 'docs/handoff';
 const stage = process.argv[6] || 'arena';
@@ -21,7 +22,7 @@ async function open(fight) {
   page.on('pageerror', (e) => errors.push('pageerror: ' + e));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
-  await page.goto(`${base}/?stage=${stage}&foe=${foe}&weapon=longsword&foeWeapon=${FOE_WEAPON[foe] || 'longsword'}&emo=0`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?stage=${stage}&${foeArg.includes(':') ? `look=${foeArg}` : `foe=${foe}`}&weapon=longsword&foeWeapon=${FOE_WEAPON[foe] || 'longsword'}&emo=0`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000 }).catch((e) => { console.log(errors.join('\n')); throw e; });
   await page.getByText('싸움 시작').click();
   if (!fight) await page.evaluate(() => { window.game.ai.update = () => {}; });

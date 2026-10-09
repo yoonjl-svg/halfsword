@@ -1691,6 +1691,9 @@ function sleeveSection(t, a, inset = 1) {
 }
 /** 위팔: 둥글게 부푼 서양식 소매 대신 네모나게 늘어지는 일본 소매를 다스키로 걷어 올린 꼴 — 옆에서 보면 사다리꼴, 팔꿈치에서 끝난다 */
 function japaneseSleeve(g) {
+  japaneseSleeveTied(g, TASUKI);
+}
+function japaneseSleeveTied(g, cordColor) {
   const ys = [0.15, 0.11, 0.06, 0.0, -0.06, -0.12, -0.165];
   const t = (y) => (0.15 - y) / 0.315;
   const main = g.children[0];
@@ -1698,7 +1701,7 @@ function japaneseSleeve(g) {
   reshapeMain(main, clothLoft(ys, 36, (a, k, row) => sleeveSection(t(ys[row]), a)));
   // 네모난 소맷부리 안쪽의 엷은 단(속옷 깃 색)과 겨드랑이 쪽 다스키 고리
   addMerged(g, [clothLoft([-0.148, -0.168], 36, (a, k, row) => sleeveSection(t([-0.148, -0.168][row]), a, 1.025))], LINEN_SHADE, { ...CLOTH, side: THREE.DoubleSide });
-  addMerged(g, [bake(new THREE.TorusGeometry(0.066, 0.0065, 5, 20), [-0.008, 0.1, 0], [Math.PI / 2, 0, 0.12], [1.08, 1, 1.0])], TASUKI, CLOTH);
+  addMerged(g, [bake(new THREE.TorusGeometry(0.066, 0.0065, 5, 20), [-0.008, 0.1, 0], [Math.PI / 2, 0, 0.12], [1.08, 1, 1.0])], cordColor, CLOTH);
 }
 /** 아래팔: 소매를 걷어 맨팔 — 팔꿈치 쪽이 굵고 손목으로 가늘어진다. 팔꿈치 위에 걷어 접힌 흰 속소매 한 겹 */
 function tiedForearm(g, look) {
@@ -1706,26 +1709,26 @@ function tiedForearm(g, look) {
   addMerged(g, [cyl(0.05, 0.047, 0.03, 16, true, [0, 0.085, 0])], LINEN, { ...CLOTH, side: THREE.DoubleSide });
 }
 /** 가슴: 다스키 — 어깨를 넘어 겨드랑이를 돌고 등에서 X 자로 엇갈린다. 엇갈린 자리에 작은 매듭 */
-function tasukiCords(g) {
-  const r = 0.0068, cords = [];
+function tasukiCords(g, color = TASUKI, r = 0.0068) {
+  const cords = [];
   for (const s of [-1, 1]) {
     // 어깨 고리: 등 위 → 어깨 너머 → 앞 어깨 → 겨드랑이 밑 → 등 아래 (같은 쪽)
     cords.push(taperedTube([[-0.126, 0.132, s * 0.148], [-0.06, 0.147, s * 0.163], [0.05, 0.147, s * 0.165], [0.126, 0.118, s * 0.163], [0.128, 0.02, s * 0.172], [0.07, -0.035, s * 0.191], [-0.07, -0.04, s * 0.191], [-0.127, -0.03, s * 0.168]], [r, r, r, r, r, r, r, r], 28, 5));
     // 등의 X: 이쪽 어깨 위에서 반대쪽 겨드랑이 밑으로
     cords.push(taperedTube([[-0.126, 0.132, s * 0.148], [-0.131, 0.05, 0], [-0.127, -0.03, -s * 0.168]], [r, r, r], 14, 5));
   }
-  addMerged(g, cords, TASUKI, CLOTH);
+  addMerged(g, cords, color, CLOTH);
   addMerged(g, [
     bake(new THREE.SphereGeometry(0.016, 8, 6), [-0.134, 0.05, 0], null, [0.6, 1, 1.2]),
     taperedTube([[-0.136, 0.045, 0.008], [-0.14, 0.0, 0.022], [-0.138, -0.035, 0.03]], [0.006, 0.006, 0.004], 8, 4),
     taperedTube([[-0.136, 0.045, -0.006], [-0.141, 0.005, -0.016], [-0.139, -0.025, -0.026]], [0.006, 0.006, 0.004], 8, 4),
-  ], TASUKI, CLOTH);
+  ], color, CLOTH);
 }
 const MINAMI_HAKAMA = {
   ...MINAMI_GROVE,
   chest(g, look) {
     MINAMI_GROVE.chest(g, look);
-    tasukiCords(g);
+    tasukiCords(g, TASUKI, 0.0068);
   },
   pelvis(g) {
     // 옛 앞치마 같은 앞판(세이지·이끼색 조각)은 빼고, 허리 밑 하카마 윗단 + 그대로의 끈·종이 장식
@@ -1741,6 +1744,78 @@ const MINAMI_HAKAMA = {
   farmS: tiedForearm, farmO: tiedForearm,
   thighF: hakamaThigh, thighB: hakamaThigh,
   shinF: hakamaShin, shinB: hakamaShin,
+};
+
+// ── 미나미 v5 (10/10 사장님 "검객이 아니라 신녀·무녀"): 흰 다스키 · 뒤로 낮게 하나로 묶은 머리(흰 종이 감싸기 + 붉고 흰 끈) ·
+//    걷은 소매 끝의 붉은 꿰맴 끈(소데쿠쿠리). 하카마(이끼색·사다리꼴·주름)·얼굴·깃·허리띠는 v4 그대로 ──
+const MIKO_WHITE = 0xf4f1e8;
+const MIKO_PAPER = 0xfbfaf4;
+const MIKO_RED = 0xb8352b;
+/** 머리: 앞머리·뺨 옆 머리는 v2·v3 그대로, 나머지는 모두 뒤로 쓸어 목덜미 아래 한 점으로 모은다 */
+function mikoLowTailHead(g, look) {
+  quietFace(g, look, 'minami');
+  const hair = [];
+  for (const side of [-1, 1]) {
+    hair.push(shrineHairLock([[0.024, 0.104, side * 0.02], [0.073, 0.076, side * 0.047], [0.075, 0.02, side * 0.079], [0.043, -0.046, side * 0.094]], [0.035, 0.039, 0.026, 0.003]));
+    hair.push(shrineHairLock([[0.011, 0.052, side * 0.092], [0.001, -0.017, side * 0.113], [0.012, -0.109, side * 0.113], [0.037, -0.154, side * 0.09]], [0.029, 0.035, 0.026, 0.003], 0.012));
+    // 옆머리를 귀 위로 넘겨 뒤통수 아래 묶은 자리로 — 머리 겉면에 바짝 붙인 가는 가닥 하나
+    hair.push(shrineHairLock([[0.01, 0.07, side * 0.088], [-0.05, 0.035, side * 0.093], [-0.092, -0.045, side * 0.058], [-0.103, -0.112, side * 0.012]], [0.03, 0.034, 0.026, 0.012], 0.006));
+  }
+  // 뒤통수~목덜미를 덮는 머리 덩어리: 아래로 갈수록 좁아져 묶은 자리로 모인다 (사이로 살이 비치지 않게)
+  const back = new THREE.SphereGeometry(0.106, 18, 12);
+  const p = back.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i), narrow = 1 - 0.55 * smooth01(0.0, -0.106, y);
+    p.setXYZ(i, Math.min(p.getX(i), 0.02) * 0.95, y * 1.08, p.getZ(i) * narrow);
+  }
+  back.computeVertexNormals();
+  hair.push(bake(back, [-0.012, -0.012, 0]));
+  addMerged(g, hair, look.hair, { ...CLOTH, roughness: 1, metalness: 0 });
+}
+/** 가슴(등): 목덜미 아래 묶은 자리 → 흰 종이(다케나가) 감싸기 · 붉고 흰 끈(미즈히키) · 등 가운데까지 늘어진 한 줄기 */
+function mikoLowTailLengths(g, look) {
+  const hair = [];
+  for (let i = 0; i < 4; i++) {
+    const z = (i - 1.5) * 0.012;
+    hair.push(shrineHairLock([[-0.135, 0.19, z * 0.6], [-0.15, 0.1, z], [-0.155, -0.02, z * 1.15], [-0.15, -0.13 + Math.abs(i - 1.5) * 0.012, z * 0.8]], [0.034, 0.044, 0.04, 0.006], 0.014));
+  }
+  addMerged(g, hair, look.hair, { ...CLOTH, roughness: 1, metalness: 0 });
+  // 흰 종이: 묶은 다발을 감싼 접힌 종이 띠(아래로 조금 넓어진다)와 접힌 금 한 줄
+  addMerged(g, [bake(new THREE.CylinderGeometry(0.024, 0.028, 0.075, 12, 1, false), [-0.15, 0.125, 0], [0, 0, 0.1], [1, 1, 1.15])], MIKO_PAPER, CLOTH);
+  addMerged(g, [box(0.002, 0.07, 0.004, [-0.177, 0.124, 0], [0, 0, 0.1])], LINEN_SHADE, CLOTH);
+  // 붉고 흰 끈: 종이 위아래를 감는 가는 고리 넷(붉·흰 번갈아)과 작은 나비 매듭
+  const ring = (y, r) => bake(new THREE.TorusGeometry(r, 0.0032, 4, 16), [-0.15 + (0.125 - y) * 0.1, y, 0], [Math.PI / 2, 0, 0.1], [1, 1, 1.15]);
+  addMerged(g, [ring(0.159, 0.0255), ring(0.093, 0.0292)], MIKO_RED, CLOTH);
+  addMerged(g, [ring(0.152, 0.026), ring(0.1, 0.0288)], MIKO_WHITE, CLOTH);
+  addMerged(g, [
+    taperedTube([[-0.172, 0.157, 0], [-0.183, 0.17, 0.018], [-0.178, 0.157, 0.03], [-0.172, 0.157, 0]], [0.003, 0.004, 0.003, 0.003], 10, 4),
+    taperedTube([[-0.172, 0.157, 0], [-0.183, 0.17, -0.018], [-0.178, 0.157, -0.03], [-0.172, 0.157, 0]], [0.003, 0.004, 0.003, 0.003], 10, 4),
+  ], MIKO_RED, CLOTH);
+}
+/** 위팔: v4 의 네모 소매(흰 다스키 고리) + 걷은 소맷부리를 꿰맨 붉은 끈 띠와 늘어진 끈 끝 두 가닥(소데쿠쿠리) */
+function mikoSleeve(g) {
+  japaneseSleeveTied(g, MIKO_WHITE);
+  const t = (y) => (0.15 - y) / 0.315;
+  addMerged(g, [clothLoft([-0.152, -0.16], 36, (a, k, row) => sleeveSection(t([-0.152, -0.16][row]), a, 1.045))], MIKO_RED, { ...CLOTH, side: THREE.DoubleSide });
+  // 끈 끝: 소매 자락 아래 모서리(팔을 들면 아래쪽)에서 늘어진다
+  addMerged(g, [-1, 1].map((s) => taperedTube([[-0.152, -0.157, s * 0.012], [-0.162, -0.172, s * 0.017], [-0.168, -0.19, s * 0.02], [-0.172, -0.206, s * 0.018]], [0.0035, 0.0035, 0.003, 0.0025], 10, 4)), MIKO_RED, CLOTH);
+  addMerged(g, [-1, 1].map((s) => ball(0.0062, 6, 4, [-0.173, -0.209, s * 0.018])), MIKO_RED, CLOTH);
+}
+const MINAMI_MIKO = {
+  ...MINAMI_HAKAMA,
+  head: mikoLowTailHead,
+  chest(g, look) {
+    MINAMI_SHRINE.chest(g, look);
+    // v2~v4 와 같은 안깃 줄·겨드랑이 솔기·잎 장식 (MINAMI_GROVE.chest 에서 머리만 뺀 것)
+    addMerged(g, [
+      box(0.005, 0.253, 0.012, [0.135, 0.013, 0.037], [0.52, 0, 0]),
+      ...[-1, 1].map((s) => box(0.004, 0.204, 0.006, [0.122, -0.025, s * 0.142], [s * 0.04, 0, 0])),
+    ], 0xafa991, CLOTH);
+    shrineLeafSprig(g, 0.127, -0.052, -0.084, 0.58, 0xa3ac8b);
+    mikoLowTailLengths(g, look);
+    tasukiCords(g, MIKO_WHITE, 0.0075);
+  },
+  uarmS: mikoSleeve, uarmO: mikoSleeve,
 };
 
 // ── 오마리 v2: 팔다리만 둥글고 끝으로 갈수록 가늘게 (옷 디자인·색은 v1 그대로) ──
@@ -1834,6 +1909,7 @@ export const OUTFITS = {
   minami_shrine: MINAMI_SHRINE,
   minami_grove: MINAMI_GROVE,
   minami_hakama: MINAMI_HAKAMA,
+  minami_miko: MINAMI_MIKO,
   omari_seafarer_round: OMARI_ROUND,
 };
 
