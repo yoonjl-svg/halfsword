@@ -524,6 +524,7 @@ export const SKILL = {
   oneVersatileTable: 'mixed', // 한손 두루 무기(청강검) 자세표 손잡이(10/9, **사장님 확인 전** — 10/1 승인 표는 '찌르기 표: 레이피어·청강검'): 'mixed' = 섞은 표(찌르기 표의 겨눔 6 곳 + 세이버 표의 감는 8 곳 — guards.js ONE_HAND_VERSATILE, 안 A) · 'thrust' = 그 전 판(찌르기 표, 바이트 동일) · 'cut' = 세이버 표 통째(안 B). 레이피어·세이버·팔쉬온·날 없는 한손 무기는 바뀌지 않는다. AI·플레이어 둘 다 (`?oneVersatile=`, docs/strike/qinggang_floor_2026-10-09.md)
   schoolRest: '', // 유파 쉴 자세 비교 손잡이(10/9): '' = 유파 값(일본·중국 'langort' = 中段·中平, 사장님 안 A) · 'pflugR' = 안 B(쟁기 자리, 10/9 00:49 까지의 판). 유파 rest 가 있는 무기(모노호시자오·청강검)만 바뀐다, 플레이어 ③ 되돌아옴만 (`?schoolRest=`)
   schoolArt: 1, // **기본 1 — 사장님 10/9 01:5x '스위치 켜'**(확인표 195 답): 유파 자료(schools.js TRADITIONS 일본·중국 — ②③ 단계 10/9) — 유파 기술 가중치(techK)·맞받아치기(counterArt)·고유 동작(unique — 옛 newTech. 10/9 고유 동작 단계: 이탈리아·이베리아·일본·중국 셋씩 켬, 독일 셋은 ai:false — docs/strike/school_unique_2026-10-09.md)을 AI 꾸러미에 입힌다. 이름·쉴 자세는 스위치와 상관없이 늘. 0 = 10/9 01:49 까지의 판(`?schoolArt=0`). 롱소드류(독일)는 고유 동작이 꺼져 있어 바뀌지 않는다 (docs/strike/school_impl_2026-10-09.md)
+  schoolSecret: 1, // 유파 비기(10/9 — docs/strike/school_secret_2026-10-09.md, 사장님 승인 '유파 설계 v3'): 조건이 차면 그 유파의 대표 동작을 완벽 실행(굴림 없음 — 값은 아래 SECRET). schoolArt 1 일 때만. 0 = 비기 없는 판(`?secret=0`, motion_lab SCHOOL_SECRET=off)
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 
@@ -534,6 +535,44 @@ export const SKILL = {
   enterStep: 0.45,
   enterMin: 1.1, // 이미 이보다 가까우면 들어가지 않는다 (m)
   enterCool: 1.0, // 한 번 들어간 뒤 다시 들어가기까지 (초)
+};
+
+// ── 유파 비기 (10/9 — 사장님 승인 '유파 설계 v3: 기질·비기·동작', docs/strike/school_secret_2026-10-09.md) ──
+//  비기 = 조건이 차면 그 유파의 대표 동작을 '완벽 실행'한다. 굴림이 없다(조건이 차면 확정). 결과는 보장하지 않는다 — 맞고 안 맞고는 물리가 정한다.
+//  완벽 실행 = 반응 지연 0(상대를 늦게 보지 않고 지금 모습으로 조건을 본다 — ai.js secretScan) · 정확도 1(pers.precision 을 그 한 번만 1) ·
+//   손 속도 최대(fastChamber + handSpeed 배율) · 걸음 결심(비기 동안 위협이 와도 막기로 거두지 않는다) · 서보 힘 창(그 한 번의 베기 구간만 칼을 미는 힘 × power — fighter.powerMul).
+//  끝나면 경직(stiff s: 공격·응답 없음, 손 빠르기 ×0.5, 걸음 없음 — 핸디캡). 횟수 제한 없음(사장님 결정). 수는 모두 사장님 확인 전(확인표 263~)
+export const SECRET = {
+  power: 1.3, // 서보 힘 창: 비기 베기 동안 칼을 미는 손목 힘 배율 (fighter.js driveSword 의 str 에 곱함)
+  handSpeed: 1.3, // 손 속도 배율: 비기의 준비(빠른 준비 parrySpeed)·베기(strikeSpeed) 손 빠르기에 곱함
+  stepPush: 1.8, // 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8
+  stiff: { german: 0.3, italian: 0.3, iberian: 0.3, japanese: 0.8, chinese: 0.3 }, // 비기 직후 경직 (s)
+  stiffHand: 0.5, // 경직 동안 손 빠르기 배율
+  lethalJ: 136, // 독일 Versetzen 문턱: 들어오는 칼의 추정 에너지 ½·m·v²(칼 질량·칼끝 속도, J). 롱소드 48 판(비기 끔 SCHOOL_SECRET=alloff)에서 맞은 칼(양쪽 상처 1786)의 때린 칼끝 추정 에너지 분포 75 % 지점 (p50 47 · p90 247)
+  comboN: 3, // 이베리아: 끊기지 않은 내 베기 이 수 뒤
+  iberianLat: 0.4, // 이베리아 옆걸음 (m, 방향 = 성격의 즐겨 도는 쪽 circleDir)
+  italianDist: [-0.1, 0.4], // 이탈리아: 내 간격 끝(reach) 기준 거리 창 (m)
+  italianStep: 0.5, // 이탈리아: 뒷발 지나 보내기 걸음 (m, 'strike')
+  japaneseDist: [0, 0.8], // (10/9 첫 꼴의 헛침 거리 창 — 지금은 쓰지 않음, japaneseFoeMargin·japaneseFar 창으로 바꿈)
+  japaneseFoeMargin: 0.2, // 일본 창: 상대 칼 닿는 거리(foeReach) + 이 여유 밖이어야 (상대 공격이 명백히 안 닿음, m)
+  japaneseFar: 0.4, // 일본 창: 내 간격 끝 + 기술 reach(japaneseReach) + 이 몫(강한 내딛음) 안이어야 (내 後の先 은 닿음, m)
+  japaneseBack: -0.15, // 일본 ① 짧은 백스텝 (m — 반 걸음 이하: 한 박자 빠른 발동이라 길게 물러날 틈이 없음. 첫 꼴 −0.35)
+  japaneseStep: 0.6, // 일본 ② 앞발 내딛기 (m)
+  japaneseReach: 0.3, // 일본 ② 真向 의 닿는 거리 보정 (m — 기술 reach 칸)
+  japanesePower: 2.0, // 일본 後の先 서보 힘 창 (공통 power 대신). 10/9 후속 사다리 1.3 → 1.6 → 2.0 (문서 §9)
+  japaneseHand: 1.5, // 일본 後の先 손 속도 배율 (공통 handSpeed 대신). 10/9 후속 1.3 → 1.5
+  japaneseWhiffJ: 67, // 일본: 상대가 헛친 칼의 칼끝 추정 에너지 ½·m·v² 문턱 (J) — 진짜 헛스윙만. 롱소드 48 판 헛친 공격(맞힘·맞물림 없음, 양쪽 373)의 공격 최고 칼끝 추정 에너지 중앙값 (p50 63·71 J)
+  iberianPower: 1.6, // 이베리아 마지막 내려치기 서보 힘 창. 10/9 후속 1.3 → 1.6
+  iberianLoopHand: 1.0, // 이베리아 고리 구간 손 속도 배율 (고리는 준비(windup)로 돈다 — 베기 빠르기 strikeSpeed × 이 값). 10/9 후속: 1.6 은 더 약했다(문서 §9)
+  iberianStrength: 1.5, // 이베리아 내려치기 구간 보조 힘(몸의 힘 배율 — 손목 힘·손목 빠르기 한계 √·팔 힘)
+  iberianBack: -0.3, // 이베리아 옆걸음의 앞뒤 (m, 음수 = 뒷발을 비껴 뒤로 'retreat' — 붙은 거리에서 휘돌릴 틈을 만든다)
+  japaneseStrength: 1.5, // 일본 後の先 베기 구간 보조 힘(몸의 힘 배율)
+  japaneseLead: 0, // 일본 後の先 앞당김 (m — 칠 거리에 더함)
+  // 터뜨림 창 (10/9 3차 — 막는 것은 힘이 아니라 닿는 거리): 준비를 마친 비기가 '닿을 때 거리'(지금 거리 − 다가오는 빠르기 × releaseT)가 창(내 간격 끝 reach 기준)에 들 때까지 붙잡았다 터뜨린다
+  releaseT: 0.25, // 터뜨려서 닿기까지 (s)
+  releaseMaxHold: 0.6, // 붙잡는 최대 (s) — 지나면 창보다 가까우면 치고 멀면 거둔다
+  japaneseRelease: [0.2, 0.5], // 일본 창 (m, reach + …) — 실측으로 고름(문서 §10: [0, 0.3] 보다 한 칼 J 가 큼)
+  iberianRelease: [0.3, 0.55], // 이베리아 창 (m, reach + …) — 실측으로 고름(문서 §10: 셋 가운데 zornhau 대비 가장 높음)
 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

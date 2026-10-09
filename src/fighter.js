@@ -337,6 +337,7 @@ export class Fighter {
     this.closeWV = 0;
     this.armFull = false; // 칼 든 팔이 이번 IK 에서 다 펴졌나 (목표가 팔 길이 밖)
     this.strength = o.strength ?? 1;
+    this.powerMul = 1; // 서보 힘 창 (유파 비기 — ai.js 가 비기 베기 동안만 SECRET.power 로 둔다). 1 = 그대로 (driveSword)
     this.gaitPhase = 0;
     this.gaitWeight = 0; // 0 = 서 있음, 1 = 걷는 중 (부드럽게 바뀜)
     this.stanceDrop = 0; // 딛는 다리가 기울어진 만큼 골반을 낮춰 발이 땅에 닿게 한다
@@ -2741,7 +2742,7 @@ export class Fighter {
       this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
       return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     }
-    const str = this.strength * mus * (0.35 + 0.65 * this.armHealth);
+    const str = this.strength * (this.powerMul ?? 1) * mus * (0.35 + 0.65 * this.armHealth); // powerMul: 유파 비기의 서보 힘 창 (1 이면 그대로)
     const forearm = this.bodies.farmS;
 
     // 칼끝 방향: 손 위치가 곧 검술의 자세(가드)다.

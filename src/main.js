@@ -66,6 +66,7 @@ const motionLib = +params.get('motionLib');
 if (motionLib >= 0 && params.has('motionLib')) CONFIG.SKILL.motionLib = motionLib; // 동작 라이브러리(무기 PM) 본판 스위치 — 10/8 18:50 기본 1(사장님 '적용', 확인표 34). `?motionLib=0` = 전 물리
 const schoolArt = +params.get('schoolArt');
 if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 1(사장님 10/9 01:5x '스위치 켜') = 유파 가중치·맞받아치기·새 기술(燕返し) 켬. `?schoolArt=0` = 그 전 판(이름·쉴 자세는 늘)
+if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 : 0; // 유파 비기(10/9 유파 설계 v3): 기본 1, `?secret=0` = 비기 없는 판 (docs/strike/school_secret_2026-10-09.md)
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
 const oneVersatile = params.get('oneVersatile');
@@ -1421,8 +1422,9 @@ function updateGuardName(dt) {
 //  10/9 13:xx(docs/strike/passive_fire_2026-10-09.md): 고유 동작은 칼이 실제로 나갈 때(ai.js startStrike) 적히고 1.5 초, 패시브는 결정할 때 1.2 초.
 //  설정 '모든 기술 이름 표시'(techCueAll, 디버그 — 기본 끔, 사장님 검토용): 그 밖의 기술도 칼이 나갈 때 흐리게(enemy.techAll). 패시브·고유 동작 알림이 떠 있으면 덮지 않는다
 const techCueEl = $('techCue');
-const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술' };
-const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0 };
+//  10/9 유파 비기(docs/strike/school_secret_2026-10-09.md): kind 'secret' — 꼬리표 '비기', 글씨 더 크게·다른 색(index.html), 2.0 초
+const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기' };
+const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0 };
 let techCueSeen = null;
 let techAllSeen = null;
 let techCueTimer = 0;
@@ -1442,7 +1444,8 @@ function updateTechCue(dt) {
   const live = state === 'fight' && !!settings.techCue && !!enemy?.alive;
   if (c && c !== techCueSeen) {
     techCueSeen = c;
-    if (live) showTechCue(c);
+    const holdSecret = techCueTimer > 0 && techCueEl.dataset.kind === 'secret' && c.kind !== 'secret'; // 비기 알림(2.0 s)은 패시브·고유 동작 알림이 덮지 않는다
+    if (live && !holdSecret) showTechCue(c);
   }
   const a = enemy?.techAll ?? null;
   if (a && a !== techAllSeen) {
