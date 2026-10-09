@@ -423,8 +423,17 @@ export const LOOK_ARCHIVE = {
       grip: 0x463327, hilt: 0xa88a55, accent: 0x193b4b,
       outfit: 'omari_seafarer',
     },
+    // v2 (10/10 디렉터 평가·사장님 승인): 팔다리가 네모 막대처럼 뭉툭한 것만 — 둥글고 끝으로 갈수록 가는 팔다리·둥근 코 장화. 색·옷은 v1 그대로
+    v2: {
+      tunic: 0xe4d4b4, quilt: 0xe4d4b4, sleeve: 0xe4d4b4,
+      straps: null, belt: 0x813848, hoseUpper: 0x665a4b, hoseLower: 0x3b3733,
+      shoes: 0x302b27, skin: 0x71452f, hands: 0x71452f,
+      helmet: null, metal: 0xb9975b, hair: 0x241d1b, headband: null,
+      grip: 0x463327, hilt: 0xa88a55, accent: 0x193b4b,
+      outfit: 'omari_seafarer_round',
+    },
   },
-  // 미나미: 샛별 저장소 인물 외형을 이름만 바꿔 가져옴 (10/10). v1 신사 옷 → v2 숲 옷 → v3 숲 옷 + 긴 양갈래 머리
+  // 미나미: 샛별 저장소 인물 외형을 이름만 바꿔 가져옴 (10/10). v1 신사 옷 → v2 숲 옷 → v3 숲 옷 + 긴 양갈래 머리 → v4 하카마·다스키
   minami: {
     v1: {
       tunic: 0xe9e5d5, quilt: 0xe9e5d5, sleeve: 0xe9e5d5,
@@ -449,6 +458,15 @@ export const LOOK_ARCHIVE = {
       helmet: null, metal: 0xb3a07a, hair: 0x242723, headband: null,
       grip: 0x514638, hilt: 0xa39474, accent: 0x627b5c,
       outfit: 'minami_grove', hairStyle: 'long-twintails',
+    },
+    // v4 (10/10 디렉터 평가·사장님 승인): 아래로 퍼지는 하카마(앞 칼주름, 무릎 가로줄 없음) · 네모난 일본 소매를 다스키로 걷어 묶음. 머리·얼굴은 v3 그대로
+    v4: {
+      tunic: 0xe9e5d5, quilt: 0xe9e5d5, sleeve: 0xe9e5d5,
+      straps: null, belt: 0x9a4234, hoseUpper: 0x3f5747, hoseLower: 0x3f5747,
+      shoes: 0x554837, skin: 0xe2bd9d, hands: 0xe2bd9d,
+      helmet: null, metal: 0xb3a07a, hair: 0x242723, headband: null,
+      grip: 0x514638, hilt: 0xa39474, accent: 0x627b5c,
+      outfit: 'minami_hakama', hairStyle: 'long-twintails',
     },
   },
 
@@ -549,8 +567,8 @@ export const CHARACTER_LOOK_VERSION = {
   heinrich: 'v2',
   margarethe: 'v3',
   tome: 'v1',
-  omari: 'v1',
-  minami: 'v3',
+  omari: 'v2',
+  minami: 'v4',
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
