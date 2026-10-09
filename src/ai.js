@@ -238,6 +238,8 @@ export class AI {
     // 패시브 확정(10/9 13:xx, docs/strike/passive_fire_2026-10-09.md): 패시브가 낸 공격의 걸쇠(0.5 s)와 미룬 패시브의 남은 시간을 줄인다
     if (this.passiveLock && (this.passiveLock.left -= dt) <= 0) this.passiveLock = null;
     if (this.pendingPassive?.left != null && (this.pendingPassive.left -= dt) <= 0) this.pendingPassive = null;
+    // 물러남 끝까지 미룬 것(left null)인데 물러남이 끊겼으면(막기·피하기로 꼴이 바뀜) 그때부터 0.5 s 만 남긴다 — 끝없이 남아 한참 뒤 공격 기회를 가로채지 않게
+    if (this.pendingPassive && this.pendingPassive.left == null && this.mode !== 'withdraw') this.pendingPassive.left = 0.5;
 
     // 부활하는 동안(revive.js): 싸우지 않고 기다린다. 끝나면 집념으로 다시 싸운다
     if (me.revival) {

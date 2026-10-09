@@ -233,7 +233,7 @@ const CHINESE_UNIQUE = [
 //  base 는 꾸러미에 들어간 뒤 값 그대로다(라이브러리의 틀·방식 곱 — 앞무게 내리치기 ×1.4, 찌르기 방식 찌르기 ×1.8 — 을 거치지 않는다: applySchoolArt 가 그 뒤에 더한다).
 //  그래서 같은 유파 무기의 비슷한 공용 동작 실제 base 에 맞춰 적었다. 수는 모두 [추정], 사장님 확인 전
 
-// 독일 (리히테나워·마이어 다섯 비밀 베기 가운데 TECH 에 없는 둘 + 맺은 뒤 거듭 치기). **셋 다 ai:false** — 롱소드 AI(사장님 주 상대)를 바꾸므로 수를 보시고 정한다
+// 독일 (리히테나워·마이어 다섯 비밀 베기 가운데 TECH 에 없는 둘 + 맺은 뒤 거듭 치기 + 비껴 가로베기). 10/9 12:2x 사장님 '우선 다 켜봐' → 넷 다 켬(전엔 ai:false — 롱소드 AI 를 바꾸므로 수를 보시고 정하기로 했던 것)
 const GERMAN_UNIQUE = [
   // fit 칸(10/9 13:xx — 사장님 '고유 동작이 잘 안 보인다·개념이 달라야', docs/strike/passive_fire_2026-10-09.md): 상대 자세가 그 기술이 깨는 꼴일 때 pickTech 의 fit 에 곱한다
   //  (열쇠 = foeClass 의 online·high·low·left·right + parried 바로 앞 내 공격이 막힘). 칸이 없으면 셈은 전과 같다. 수는 모두 사장님 확인 전 — 작게 둔다
@@ -245,7 +245,7 @@ const GERMAN_UNIQUE = [
   { name: 'duplieren', nameKo: 'Duplieren (겹치기)', from: G.tagR, path: [[0.12, 0.14], [-0.08, 0.3], [0.12, 0.22], G.pflugL], open: 'UL', kind: 'cut', reach: 0, base: 0.8, presses: true, chain: 2, fit: { parried: 1.5 }, src: 'Ringeck 주해 Duplieren(분노의 베기 뒤 맺음이 단단하면 칼과 사람 사이로 머리를 친다) [원전 2차] · 길 [해석] · 수 [추정]' },
   // 비껴 가로베기 Zwerch mit Abtritt (10/9 — 사장님 '대각선 옆으로 빠르게 살짝 돌아 걸어 들어가면서 옆에서 베기', docs/strike/school_step_2026-10-09.md): 가로베기 길 + step 칸 하나 —
   //  step { lat: 몸 기준 오른쪽 +(m, 왼쪽 −), fwd: 앞(m), when: 'strike'(베기 시작과 함께 비껴 딛음) | 'approach'(먼저 비껴 딛고 발이 닿으면 벰) }. base 는 같은 길 공용 동작의 꾸러미 실제 값. 수는 모두 [추정]
-  //  딛는 발은 비껴 가는 쪽 발(앞발이면 내딛고, 뒷발이면 앞발을 지나 그쪽 앞으로 — ai.js techStepRequest). **ai 끔** — 롱소드 AI(사장님 결정 몫)
+  //  딛는 발은 비껴 가는 쪽 발(앞발이면 내딛고, 뒷발이면 앞발을 지나 그쪽 앞으로 — ai.js techStepRequest). 켬(10/9 12:2x 사장님 '우선 다 켜봐' — 전엔 ai 끔, 롱소드 AI 결정 몫)
   //  길: 처음엔 공용 zwerch(오른 옆 시작·base 0.25)였으나 롱소드 AI 는 그 자리를 거의 안 가서 48 판에 공용 zwerch 도 이것도 0 번 →
   //  리히테나워 Zwerch 처럼 오른 어깨 지붕에서 머리 높이로 가로 [추정], base 는 같은 자리 고유 동작 schielhau 와 같은 0.7 (10/9 잼)
   { name: 'zwerchAbtritt', nameKo: 'Zwerch mit Abtritt (비껴 딛는 가로베기)', from: G.tagR, path: [[0.3, 0.22], [0.0, 0.2], [-0.45, 0.2]], open: 'UL', kind: 'cut', reach: 0, base: 0.7, step: { lat: -0.3, fwd: 0.35, when: 'strike' }, src: 'Meyer 1570 장검 — 삼각 걸음(Triangel)으로 비껴 딛으며 Zwerch(오른쪽에서 칠 때 왼발을 왼쪽 앞으로) [원전 2차] · Zettel 「Zwerch benimmt, was vom Tag dar kommt」 [원전 2차] · 수 [추정]' },
