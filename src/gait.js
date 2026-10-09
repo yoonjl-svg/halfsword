@@ -804,6 +804,28 @@ export class Gait {
       const wd = this.P.width;
       out.set(px + ox + rgt.x * l.side * wd, ANKLE_H, pz + oz + rgt.z * l.side * wd);
       l.yaw1 = this.headAhead();
+      l.cross = false;
+      if (this.P.crossSide || this.P.arcYaw) {
+        // 이베리아 둥근 걸음(10/10 유파 걸음 ⑤ — 몬탄테 둥근 걸음 [원전 2차]): 옆으로 돌 때(옆 몫이 크면) 발끝을 도는 쪽으로 틀어 딛고(arcYaw),
+        //  뒤따르는 발(가는 쪽 반대편 발)은 딛고 있는 발 앞으로 엇갈려 그 너머에 딛는다(crossSide) — 다리 꼬임 막기(minWidth)는 이 걸음만 건너뛴다
+        const wl = want.x * rgt.x + want.z * rgt.z;
+        const sp = Math.hypot(want.x, want.z);
+        const latF = sp > 0.05 ? Math.abs(wl) / sp : 0;
+        if (latF > (this.P.crossFrom ?? 0.7)) {
+          const dir = Math.sign(wl);
+          if (this.P.arcYaw) l.yaw1 += -dir * this.P.arcYaw * latF; // 오른쪽(+)으로 돌면 발끝을 오른쪽으로 (yaw 는 왼쪽이 +)
+          if (this.P.crossSide && l.side * dir < 0) {
+            const olat = (other.plant.x - px) * rgt.x + (other.plant.z - pz) * rgt.z;
+            const lat0 = (out.x - px) * rgt.x + (out.z - pz) * rgt.z;
+            const add = olat + dir * this.P.crossSide - lat0;
+            if (add * dir > 0) {
+              out.addScaledVector(rgt, add);
+              out.addScaledVector(fwd, this.P.crossFwd ?? 0.12);
+              l.cross = true;
+            }
+          }
+        }
+      }
       // 너무 멀리 뻗지 않게
       const dx = out.x - px;
       const dz = out.z - pz;
@@ -821,7 +843,7 @@ export class Gait {
     // 다리가 꼬이지 않게: 딛은 발에서 자기 쪽으로 최소 간격
     const lat = (out.x - other.plant.x) * rgt.x + (out.z - other.plant.z) * rgt.z;
     const need = this.P.minWidth - lat * l.side;
-    if (need > 0) out.addScaledVector(rgt, need * l.side);
+    if (need > 0 && !(l.cross && l.kind === 'walk')) out.addScaledVector(rgt, need * l.side);
   }
 
   touchdown(l, speed) {

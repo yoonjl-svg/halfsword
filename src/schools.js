@@ -241,7 +241,7 @@ const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58,
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3 };
 //  ⓑ 이베리아 (몬탄테): 좌우로 번갈아 베며 앞뒤로 걷기·둥근 걸음 [원전 2차] · 넓게 서서 큰 칼의 원심력을 받는다 [해석] — 수는 [추정]
-const IBERIAN_GAIT = { guardHeight: 0.885, walkHeight: 0.96, guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, maxStride: 0.68, cadence0: 1.85, cadenceK: 0.45, width: 0.13, minWidth: 0.16, lift: 0.08, sway: 0.025 };
+const IBERIAN_GAIT = { guardHeight: 0.885, walkHeight: 0.96, guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, maxStride: 0.68, cadence0: 1.85, cadenceK: 0.45, width: 0.13, minWidth: 0.16, lift: 0.08, sway: 0.025, arcYaw: 0.35, crossSide: 0.08, crossFwd: 0.12, crossFrom: 0.5 };
 //  ⓒ 일본: 스리아시·오쿠리아시 [원문 검도형 p24·p06] · 늘 걷듯이·뜬발을 꺼림 [원문 고린노쇼 p20] — 낮고 안정, 짧은 앞뒤 간격. 앞무게 틀(모노호시자오 — 큰 칼)은 byFrame.heavy: 앞뒤 조금 길게, 발 놀림은 번갈아 걷기(고린노쇼 음양의 발 [원문] — follow 는 48×2 판 옮겨 딛기 1.73 → 3.2~4.2/판, 잣대 ×1.5 밖)
 //  follow 는 상대 가슴 followIn 안 + 걸러진 빠르기 followVmax 아래에서만(빨리 좁힐 땐 지나 딛기), 뒤에 남은 발이 엉덩이에서 trailReach 넘으면 그 발부터 따라붙임.
 //  cutStep = AI 베기 걸음(ai.js gaitStep) · passAs = follow 안에서 들어온 'pass' 기술 걸음(플레이어 베기 걸음 등)을 바꿀 꼴 · draw = 디딘 뒤 뒷발 끌어붙임(drawT s)

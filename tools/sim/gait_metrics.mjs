@@ -49,7 +49,7 @@ function newAgg() {
     standT: 0,
     watch: { t: 0, pel: 0, h: 0, both: 0, width: 0, sep: 0, sideT: 0, moveT: 0, pelArr: [] },
     falls: 0, fallsStep: 0, fallsSelf: 0, fallsSelfStep: 0,
-    wobT: 0, catchT: 0, // 휘청 시간(offBalance > GAIT.hurryFrom) · 붙잡기 반사 시간(gait.levC > 0.3)
+    wobT: 0, catchT: 0, followT: 0, // 휘청 시간(offBalance > GAIT.hurryFrom) · 붙잡기 반사 시간(gait.levC > 0.3)
     lunges: 0,
   };
 }
@@ -119,12 +119,13 @@ function runWeapon(id) {
               const ux = travel > 1e-4 ? dx / travel : _f.x;
               const uz = travel > 1e-4 ? dz / travel : _f.z;
               const len = (l.plant.x - other.plant.x) * ux + (l.plant.z - other.plant.z) * uz;
-              const rec = { len, travel, fwd, lat, lift: o.maxSole - o.sole0, dur: G.t - o.t0, early: G.t - o.t0 < 0.85 * o.T };
+              const rec = { len, travel, fwd, lat, lift: o.maxSole - o.sole0, dur: G.t - o.t0, early: G.t - o.t0 < 0.85 * o.T, cross: ((l.plant.x - other.plant.x) * _r.x + (l.plant.z - other.plant.z) * _r.z) * l.side < 0 };
               (A.steps[o.kind] ??= []).push(rec);
               if (o.kind === 'walk' && g.walking) A.walkSteps++;
               open[k] = null;
             }
           }
+          if (g.follow) A.followT += DT;
           if (g.walking) {
             A.walkT += DT;
             const v = X.bodies.pelvis.linvel();
@@ -178,6 +179,7 @@ const out = {};
 console.log(`걸음 계기 · 자리마다 ${N} 판 (상대 롱소드 AI, motion_lab duel main 과 같은 판) · GAIT.lift ${GAIT.lift} · guardHeight ${GAIT.guardHeight} · guardLength ${GAIT.guardLength} · guardWidth ${GAIT.guardWidth}`);
 const rows = [];
 const rows2 = [];
+const extra = []; // GM_EXTRA=1: follow 시간 몫 · 엇갈린 walk 걸음(디딘 발이 딛고 있던 발의 반대편) · 끌어붙임(draw) 걸음 수·길이 — 기본 출력은 그대로
 for (const id of ids) {
   const t0 = Date.now();
   const A = runWeapon(id);
@@ -192,6 +194,7 @@ for (const id of ids) {
   const nStep = all.length;
   const rq = A.steps.req ?? [];
   rows.push(`| ${id} (${A.tradition}) | ${A.W}·${A.L}·${A.D} ${pc(A.W / A.games)} (${pc(lo)}~${pc(hi)}) | ${f2(avg(len))} / ${f2(pct(len, 0.9))} / ${f2(mx(len))} | ${f2(avg(trav))} / ${f2(mx(trav))} | ${f2(A.walkSteps / A.walkT)} | ${f2(A.walkV / A.walkT)} | ${f3(w.pel / w.t)} (목표 ${f3(w.h / w.t)}) | ${f3(w.width / w.both)} | ${f3(w.sep / w.both)} | ${pc(side / wk.length)} · ${pc(w.sideT / w.moveT)} | ${f3(avg(wk.map((s) => s.lift)))} / ${f3(avg(all.map((s) => s.lift)))} | ${(A.falls / A.games).toFixed(2)} · 걸음 중 ${pc(A.fallsStep / A.falls)} · 안 맞고 ${A.fallsSelf} (걸음 중 ${A.fallsSelfStep}) · 걸음 1000 당 ${f2((1000 * A.fallsSelfStep) / nStep)} |`);
+  if (process.env.GM_EXTRA === '1') extra.push(`| ${id} | ${pc(A.followT / A.standT)} | ${wk.filter((s) => s.cross).length} (${pc(wk.filter((s) => s.cross).length / wk.length)}) | ${(A.steps.draw ?? []).length} | ${f2(avg((A.steps.draw ?? []).map((s) => s.travel)))} |`);
   rows2.push(`| ${id} | ${wk.length} · ${(A.steps.settle ?? []).length} · ${rq.length} · ${(A.steps.catch ?? []).length} | ${f2(A.walkT / A.standT)} | ${f2(avg(rq.map((s) => s.travel)))} / ${f2(mx(rq.map((s) => s.travel)))} | ${A.lunges} | ${f2(avg(wk.map((s) => s.dur)))} | ${f3(pct(w.pelArr, 0.1))} ~ ${f3(pct(w.pelArr, 0.9))} | ${pc(A.wobT / A.standT)} · ${pc(A.catchT / A.standT)} · ${pc(wk.filter((s) => s.early).length / wk.length)} · ${f2(A.steps.catch.length / A.games)} | ${((Date.now() - t0) / 1000).toFixed(0)} s |`);
   process.stderr.write(`${id} 끝 ${((Date.now() - t0) / 1000).toFixed(0)} s\n`);
 }
@@ -202,6 +205,12 @@ console.log('');
 console.log('| 무기 | 걸음 수 walk · settle · req · catch | 걷는 시간 몫 | 기술 걸음(req) 발 옮긴 거리 평균 / 최대 m | 런지 수 | walk 걸음 발 뜬 시간 s | 간 볼 때 골반 높이 p10 ~ p90 m | 휘청 · 붙잡기 반사 · 일찍 디딤 · catch 걸음/판 | 잰 시간 |');
 console.log('|---|---|---|---|---|---|---|---|---|');
 console.log(rows2.join('\n'));
+if (extra.length) {
+  console.log('');
+  console.log('| 무기 | follow 시간 몫 | 엇갈린 walk 걸음 | 끌어붙임 걸음 | 끌어붙임 발 옮긴 거리 m |');
+  console.log('|---|---|---|---|---|');
+  console.log(extra.join('\n'));
+}
 if (process.env.JSON) {
   for (const A of Object.values(out)) A.watch.pelArr = undefined;
   writeFileSync(process.env.JSON, JSON.stringify(out));
