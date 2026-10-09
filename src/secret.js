@@ -121,8 +121,9 @@ function segPoint(ax, ay, az, bx, by, bz, px, py, pz) {
  * 상대 사건 (S.when 의 threat·foeRaise·foeCharge·foeRecover) 을 지금 모습 s0 로 본다. { on, ctx } — 사건이 없거나 S 가 상대 사건 비기가 아니면 on false.
  *  ctx: threat 면 threatNow 의 값, 아니면 { ev: 'raise' | 'recover', tipE? }
  */
-export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null) {
+export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex = null) {
   const W = [].concat(S.when);
+  if (W.includes('inside')) return insideEvent(s0, c, d0, ex);
   if (W.includes('threat')) {
     const ctx = threatNow(sense, foe, s0, c, r, d0, foeReach);
     if (ctx && S.cond?.lethal && me) lethalPath(ctx, s0, me);
@@ -144,6 +145,22 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null) {
     return { on: true, ctx: { ev: 'recover', tipE: foeRecentTipE(sense, foe, 0.6) } }; // 진짜 헛스윙인가 — 그 휘두름의 칼끝 추정 에너지 (cond.whiff)
   }
   return { on: false, ctx: null };
+}
+
+/**
+ * 이베리아 '호 안쪽' 사건 (10/10 04:4x 사장님 — 전 BindCount 맺힘 셋을 바꿈): 상대 몸통(가슴)이 내 칼 호 안쪽까지 밀고 들어옴 —
+ *  거리 d0 < 내 reach − SECRET.iberianInside 이고, 상대가 다가오는 중(가슴이 나 쪽으로 SECRET.iberianInsideClosing m/s 넘게)이거나 그 거리에 SECRET.iberianInsideDwell 초 머묾.
+ *  ex = { reach, dt, st } — st.insideT 에 머문 시간을 센다 (AI secretEv · 플레이어 창 ev 칸, 같은 셈). 굴림 없음
+ */
+function insideEvent(s0, c, d0, ex) {
+  if (!ex || !(ex.reach > 0)) return { on: false, ctx: null };
+  const st = ex.st;
+  const inside = d0 < ex.reach - SECRET.iberianInside;
+  st.insideT = inside ? (st.insideT ?? 0) + (ex.dt ?? 0) : 0;
+  if (!inside) return { on: false, ctx: null };
+  const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0);
+  const on = closing > SECRET.iberianInsideClosing || st.insideT >= SECRET.iberianInsideDwell;
+  return on ? { on, ctx: { ev: 'inside', closing, dwell: st.insideT } } : { on: false, ctx: null };
 }
 
 /** 비기 조건 (cond) — 굴림 없음. view = { reach, foeReach, clinch } */
@@ -328,7 +345,7 @@ export class PlayerSecretWatch {
     // 상대 사건 (AI secretScan 과 같은 꼴: 사건 한 번에 한 번, 0.3 s 그치면 다시 건다)
     const r = me.right(_r);
     const E = this.ev;
-    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me);
+    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: V.reach, dt, st: E }); // ex: 이베리아 호 안쪽 (reach · 머문 시간)
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;

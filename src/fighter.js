@@ -2332,7 +2332,7 @@ export class Fighter {
     const setZ = (name, a) => J[name].target.setFromAxisAngle(Z_AXIS, a);
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
     const armO = this.limbs.armO;
-    setZ('uarmO', 0.5 * armO);
+    setZ('uarmO', (this.secretStance?.offArm ?? 0.5) * armO); // 비기 런지: 빈팔을 뒤로 뻗어 균형 (secretStance.offArm, 없으면 오늘 그대로)
     setZ('farmO', 1.0 * armO);
     // (칼 든 팔은 driveSword의 역운동학이 정한다)
     // 척추: 걷는 방향으로 살짝 숙이고, 몸통을 다치면 웅크리고, 칼 든 손 쪽으로 허리를 튼다
@@ -2341,7 +2341,7 @@ export class Fighter {
     const sk = this.skill;
     const bp = this.bodyPose;
     const gw = this.guardWeight();
-    const bend = (this.lean || 0) - Math.min(0.45, gut * 0.3) - 0.2 * kn - bp.pitch;
+    const bend = (this.lean || 0) - Math.min(0.45, gut * 0.3) - 0.2 * kn - bp.pitch - (this.secretStance?.pitch ?? 0); // secretStance: 비기 자세(발도 웅크림·런지 — secret_instant.js stanceTick) 몸통 숙임
     this.hunch = Math.max(0, -bend); // 일부러 앞으로 숙인 각도(라디안): 넘어짐 판정에서 뺀다
     // 가슴을 트는 각도(정면 기준): 검술 자세 지도 + (보정이 약할수록) 손이 있는 쪽으로.
     // 허리(척추)는 그중 골반이 이미 튼 만큼을 뺀 나머지만 튼다

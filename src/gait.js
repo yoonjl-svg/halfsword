@@ -399,7 +399,8 @@ export class Gait {
         //  (일어선 직후처럼 "딛은" 발이 실제로는 떠 있으면 그 발부터 딛는다: 다른 발을 들면 두 발 다 떠 버린다)
         //  (서 있는 중에도 딛은 발이 발끝까지 땅에서 떠 무게가 없으면 (골반이 들려 다리가 닿지 않음) 그 발을 다시 딛는다: 공중에 뜬 채 끌려가지 않게)
         const air = l.soleY > GAIT.airFoot && (this.levH > 0 || (l.toeY > GAIT.airFoot * 0.75 && (l.N || 0) < 0.05 * this.Mg));
-        if (hx * hx + hz * hz > GAIT.reachMax * GAIT.reachMax || air) next = next || k;
+        const rm = f.secretStance?.reach ?? GAIT.reachMax; // 비기 자세(런지·발도)는 넓게 벌린 발을 그대로 둔다 (secretStance.reach)
+        if (hx * hx + hz * hz > rm * rm || air) next = next || k;
       }
       if (this.req && !next) {
         const front = this.frontLeg(fwd);
@@ -511,8 +512,9 @@ export class Gait {
       GAIT.runDrop * this.runW -
       GAIT.sideLow * clamp((speed > 1e-3 ? vLat / speed : 0) * 2 - 1, 0, 1);
     // 걷기 ↔ 서기 높이는 천천히 바꾼다 (한 번에 낮추면 다리를 오므려 두 발이 땅에서 뜬다)
-    const hNomT = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop);
-    const hr = GAIT.heightRate * dt;
+    const sd = f.secretStance; // 비기 자세 (10/10 — 발도 웅크림·런지, secret_instant.js stanceTick): 골반을 더 낮추고 그 동안은 빨리 바꾼다. 없으면 오늘 그대로
+    const hNomT = (walkNow ? walkH : GAIT.guardHeight) - hurt - Math.max(0, drop) - (sd ? sd.drop : 0);
+    const hr = (sd ? sd.rate : GAIT.heightRate) * dt;
     this.hNomF = this.hNomF === undefined ? hNomT : this.hNomF + clamp(hNomT - this.hNomF, -hr, hr);
     const hNom = this.hNomF;
     let hGeo = Infinity;
