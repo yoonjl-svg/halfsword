@@ -445,7 +445,7 @@ export function pickCharacterWeapon(char, rnd = Math.random) {
   const alt = char.weaponAlt;
   if (!alt || rnd() >= alt.chance) return char.weapon;
   if (alt.pick === 'shortest_common') {
-    const pool = WEAPON_LIST.filter((w) => w.tier === 'common' && w.edged);
+    const pool = WEAPON_LIST.filter((w) => w.tier === 'common' && w.edged && w.strayPick !== false); // strayPick false = 주울 칼 후보에서 뺌 (打刀 제안 가지)
     if (pool.length) return pool.reduce((a, b) => (b.bladeLength < a.bladeLength ? b : a)).id;
   }
   return alt.pick in WEAPONS ? alt.pick : char.weapon;

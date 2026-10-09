@@ -698,6 +698,81 @@ const monohoshizao = finalizeSpec('monohoshizao', {
 });
 
 // ═════════════════════════════════════════════════════════════
+//  9b) 우치가타나 (打刀, uchigatana) — 보통 크기 카타나 (커먼). 10/9 카타나·劍 로스터 제안서
+//      (docs/weapons/katana_jian_roster_proposal_2026-10-09.md §2-2) 의 스펙 초안 그대로 넣은 **제안 가지** 무기다
+//      (사장님 확인 전 — docs/weapons/uchigatana_proposal_2026-10-09.md).
+//      허리띠에 날을 위로 꽂는 칼. 에도 정치수 약 70 cm, 흔한 실물 칼날 68~73 cm·휨 1.5~2 cm·츠카 단 채 1.1~1.4 kg [원전 2차 요약].
+//      칼날 0.71 m·총 1.10 kg (츠카 0.26 · 카시라 0.06 · 츠바 0.12 · 칼날 0.66, 칼날 무게중심 0.40) [추정 — 위 범위 안에서]
+//      → 무게중심 손에서 0.338 m, 관성 0.221 (롱소드 0.272 보다 가볍게 돈다) = 자동으로도 두손 보통(two)이지만,
+//      80 cm 명도가 앞무게 경계(관성 0.3)에 걸리므로 카타나 가족은 frame 'two' 를 직접 적어 고정한다(제안서 §0-3).
+//      방식은 두루(찌르기 0.9 > 0.85) — 일본 가중치(two:* 真向 ×1.3 · 袈裟 ×1.2 · 胴 ×0.8 · 突き ×0.8)가 처음 일하는 무기.
+//      겉모습은 모노호시자오의 칼 꼴(외날·시노기·하몬·키사키)을 칼날 0.71 m 로 그대로 쓰고, 금 장식을 뺀 커먼 마감.
+// ═════════════════════════════════════════════════════════════
+const uchigatana = finalizeSpec('uchigatana', {
+  nameKo: '打刀 (우치가타나)', nameEn: 'Uchigatana',
+  desc: '무사가 허리에 꽂던 보통 크기의 카타나.\n한 칼에 내려벤다.',
+  grip: 'two-hand', material: 'steel',
+  school: 'japanese', // 일본 유파: 이름표·가중치(two:*)·고유 동작·패시브를 traditionOf 로 받는다
+  frame: 'two', // 경계 고정 (제안서 §0-3: 카타나 가족이 무게 몇십 g 차이로 앞무게로 넘어가지 않게)
+  style: 'versatile', // 두루 (제안서 §7-2 권고) — 자동 판정도 두루지만 가족 안에서 묶으려고 적는다
+  tier: 'common',
+  strayPick: false, // 브란이 '주워 온 커먼 칼'(characters.js shortest_common) 후보에서 뺀다 — 칼날 0.71 m 로 가장 짧아 팔쉬온 자리를 빼앗기 때문 (사장님 확인 전)
+  hiltLength: 0.25, bladeLength: 0.71, gripAlong: -0.2,
+  mCut: 1.2, mThrust: 0.9, mBlunt: 0.95,
+  partMesh: swordKit({
+    blade: { edge: 'single', width: (t) => 1 - 0.28 * t, thick: 0.0035, ridge: 0.3, hamon: true, curve: 0.008, tip: 'kissaki', tipLen: 0.05, overshoot: 0.008 },
+    grip: { style: 'plain', color: 0xe8e2d0 },
+    pommel: { style: 'cap', color: 0x2b2e33 },
+    guard: { style: 'disc', color: 0x2b2e33 },
+  }),
+  buildParts(look) {
+    const L = this.bladeLength;
+    const grip = boxInertia(0.26, 0.014, 0.13, 0.017); // 츠카
+    const pommel = sphereInertia(0.06, 0.014); // 카시라
+    const cross = boxInertia(0.12, 0.04, 0.005, 0.04); // 츠바 (커먼 철 츠바라 모노호시자오보다 무겁다)
+    const blade = bladeInertia(0.66, L, 0.4, 0.26, 0.03, 0.007);
+    return [
+      partTuple(['box', 0.014, 0.13, 0.017], 0, 0.26, 0, grip.Ie, grip.It, look.grip),
+      partTuple(['ball', 0.014], -0.15, 0.06, 0, pommel.Ie, pommel.It, look.hilt),
+      partTuple(['box', 0.04, 0.005, 0.04], 0.24, 0.12, 0, cross.Ie, cross.It, look.hilt),
+      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.66, blade.comY, blade.Ie, blade.It, 0xc9d1d6, true),
+    ];
+  },
+  // 커먼 마감 (물리 무관, 콜라이더에서 ~1cm 안): 모노호시자오의 츠카 꼴(검은 비단 끈 X 감기 + 흰 사메)·츠카 연장·후치를 같은 식으로,
+  //  금 테두리는 없고 하바키는 구리. 츠카 연장 = 콜라이더(±0.13)와 츠바(0.24)·카시라(-0.15) 사이
+  decorate(group) {
+    const iron = metalMat(0x2b2e33, { rough: 0.45 });
+    const copper = metalMat(0xa0623a, { rough: 0.35 });
+    const habaki = addMesh(group, new THREE.BoxGeometry(0.034, 0.03, 0.011), copper, [0, 0.262, 0]);
+    habaki.castShadow = true;
+    const silk = new THREE.MeshStandardMaterial({ color: 0x1b1d2e, roughness: 0.85 });
+    const same = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.7 });
+    for (const [yc, h] of [[0.181, 0.102], [-0.135, 0.012]]) {
+      const ext = addMesh(group, new THREE.CylinderGeometry(0.0132, 0.0132, h, 14), same, [0, yc, 0]);
+      ext.scale.z = 1.2;
+      ext.castShadow = true;
+    }
+    const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.231, 0]);
+    fuchi.scale.z = 1.2;
+    const step = 0.034;
+    const strip = new THREE.BoxGeometry(0.0062, step * 0.78, 0.0022);
+    for (let y = -0.12; y <= 0.205; y += step) {
+      for (const sz of [-1, 1]) {
+        for (const lean of [-1, 1]) {
+          const st = addMesh(group, strip, silk, [0, y, sz * 0.0162]);
+          st.rotation.z = lean * 0.72;
+          st.castShadow = true;
+        }
+      }
+      for (const sx of [-1, 1]) {
+        const knot = addMesh(group, new THREE.BoxGeometry(0.0026, 0.007, 0.022), silk, [sx * 0.0133, y + step / 2, 0]);
+        knot.castShadow = true;
+      }
+    }
+  },
+});
+
+// ═════════════════════════════════════════════════════════════
 //  10) 청강검 (靑鋼劍, qinggang, 옛 id 'jian') — 랴오의 검. 감독 결정으로 지안(중국 검)을 에픽 등급 "청강검"으로
 //      바꿨다(삼국지 조조의 보검 — "쇠도 진흙처럼 벤다"). 물리는 지안 자료 그대로: 0.8~0.9kg, 칼날 대개 70~80cm,
 //      균형점 자료가 서로 어긋나(~10cm vs ~20cm) 절충 [I]-leaning. 한손이라 누르는 힘이 약하다(12N·m).
@@ -1116,6 +1191,7 @@ export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol, morgenstern,
+  uchigatana, // 제안 가지 (10/9, 사장님 확인 전) — 끝에 둬서 다른 무기의 목록 순서를 바꾸지 않는다
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
