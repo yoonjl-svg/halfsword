@@ -2,15 +2,21 @@
 // and camera remain authoritative. All trunks, roots, gates and large rocks stay
 // outside the 10.5m camera orbit; the 6.5m fighting floor has only flush stones.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rng, h3, Kit, canvasTex, UP } from './stage_kit.js';
 
 const TAU = Math.PI * 2;
 const HERO = { x: 21, z: -3 };
 const PINE_HEIGHT = 21, PINE_RADIUS = 2.55;
+// 숲 안개 (10/10): 지수 안개. 카메라에서 10m(싸우는 자리) 약 4%, 30m(신목) 약 28%, 60m 약 73% 흐려진다.
+//  싸움꾼 재질은 안개를 받지 않는다(fighter_light.js). 하늘색은 안개색보다 조금 밝게
+const GROVE_FOG = { color: 0xa6bcbd, density: 0.019, sky: 0xb3c7c6 };
 const C = {
   earth: 0xd3cbb1, moss: 0x6a8a7a, deepMoss: 0x3f6e60,
   stone: 0x96a399, bark: 0x927a60, barkDark: 0x645f52,
   leaf: 0x416b61, leafLit: 0x8d9e77, leafDeep: 0x294f49,
+  // 적송(赤松): 줄기 아래는 어두운 회갈색, 위로 갈수록 붉은 갈색. 잎은 짙은 청록 (10/10 소나무 작업)
+  pineFoot: 0x4a4038, pineRed: 0xb4643f, needle: 0x34665a, needleLit: 0x58876a, needleDeep: 0x26504a,
   rope: 0xd1bf8e, paper: 0xf3f0dc, vermilion: 0xa54f38,
 };
 
@@ -70,7 +76,7 @@ function soilTexture() {
   });
 }
 
-// Scalloped umbrella pads keep broad needle masses legible on a phone. The
+// Low undergrowth cushions (the forest crowns now use cloudPadGeometry below). The
 // undersides are dark and open space remains below every horizontal branch tier.
 function canopyGeometry(detailed) {
   const g=new THREE.IcosahedronGeometry(1,detailed?1:0),p=g.attributes.position,colors=[];
@@ -78,6 +84,44 @@ function canopyGeometry(detailed) {
   g.computeVertexNormals();
   for(let i=0;i<p.count;i++) { const ny=g.attributes.normal.getY(i),light=0.79+Math.max(0,ny)*0.21;colors.push(light,light,light); }
   g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));return g;
+}
+
+// 적송의 잎 덩어리: 납작한 다면체 여러 개를 구름처럼 뭉쳐 한 모양으로 합친다. 가운데가 두툼하고
+// 가장자리는 울퉁불퉁하며 아랫면은 판판하고 어둡다(정점 색). 덩어리 하나 = 그리기 한 번(인스턴스).
+function cloudPadGeometry(seed, detail, lumps) {
+  const r = rng(seed), parts = [];
+  const add = (x, y, z, sx, sy, sz) => {
+    const g = detail < 0 ? new THREE.OctahedronGeometry(1, 0) : new THREE.IcosahedronGeometry(1, detail), p = g.attributes.position, k = parts.length;
+    for (let i = 0; i < p.count; i++) {
+      const px = p.getX(i), py = p.getY(i), pz = p.getZ(i), f = 0.86 + h3(px, py, pz, 311 + seed + k) * 0.28;
+      p.setXYZ(i, x + px * f * sx, y + py * (py < 0 ? 0.45 : 1) * f * sy, z + pz * f * sz);
+    }
+    parts.push(g);
+  };
+  add(0, 0.05, 0, 0.62, 0.3, 0.6);
+  for (let i = 0; i < lumps - 2; i++) {
+    const a = i / (lumps - 2) * TAU + (r() - 0.5) * 0.7, d = 0.46 + r() * 0.2;
+    add(Math.cos(a) * d, (r() - 0.45) * 0.08, Math.sin(a) * d * 0.9, 0.34 + r() * 0.16, 0.17 + r() * 0.08, 0.32 + r() * 0.14);
+  }
+  add((r() - 0.5) * 0.3, 0.2, (r() - 0.5) * 0.3, 0.38, 0.19, 0.34);
+  const g = mergeGeometries(parts, false); for (const part of parts) part.dispose();
+  const p = g.attributes.position, colors = [];
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const light = 0.66 + 0.46 * THREE.MathUtils.smoothstep(y, -0.12, 0.32) + (h3(x * 3, y * 3, z * 3, seed) - 0.5) * 0.16;
+    colors.push(light * 0.96, light, light * 0.97);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); g.computeVertexNormals(); return g;
+}
+
+// 숲 바닥 높이 (ground 와 같은 식). 둘레의 소나무 밑동을 땅에 묻는 데 쓴다 — 물리와는 상관없다
+function groundHeight(x, z) {
+  const rad = Math.hypot(x, z);
+  let y = rad <= 12 ? -0.055 : -0.055 + THREE.MathUtils.smoothstep(rad, 12, 25) * (0.23 + Math.sin(x * 0.17) * Math.cos(z * 0.22) * 0.4);
+  y += THREE.MathUtils.smoothstep(rad, 32, 56) * (1.7 + Math.sin(x * 0.073 + z * 0.055) * 1.25) * (1 - Math.exp(-Math.pow((x - 28) / 6, 2)));
+  const bank = Math.abs(x - (27.5 + Math.sin(z * 0.12) * 2.4));
+  if (Math.abs(z) < 37 && bank < 2.3) y = THREE.MathUtils.lerp(0.005, y, THREE.MathUtils.smoothstep(bank, 1.1, 2.3));
+  return y;
 }
 
 function pineCenter(t,height,seed,hero) {
@@ -190,13 +234,9 @@ function ground(scene, texture) {
       const rootLight = Math.exp(-Math.pow((x - 15.3) / 4.0, 2) - Math.pow((z + 2.5) / 3.1, 2));
       const canopyShadow = forest * (0.2 + 0.17 * (0.5 + 0.5 * Math.sin(x * 0.38 + z * 0.64)));
       tmp.multiplyScalar((0.87 + shade * 0.2 + h3(x, 0, z, 79) * 0.055) * (1 - nearRoot * 0.18 - canopyShadow) + rootLight * 0.38);
-      // Flat at and well beyond the duel boundary. Terrain only rises deep in forest.
-      let y = rad <= 12 ? -0.055 : -0.055 + THREE.MathUtils.smoothstep(rad, 12, 25) * (0.23 + Math.sin(x * 0.17) * Math.cos(z * 0.22) * 0.4);
-      // A low distant ridge closes the forest horizon; the foreground and stream
-      // banks remain at their existing elevations. No extra mesh or physics.
-      y += THREE.MathUtils.smoothstep(rad, 32, 56) * (1.7 + Math.sin(x * 0.073 + z * 0.055) * 1.25) * (1 - Math.exp(-Math.pow((x - 28) / 6, 2)));
-      const bank = Math.abs(x - (27.5 + Math.sin(z * 0.12) * 2.4));
-      if (Math.abs(z) < 37 && bank < 2.3) y = THREE.MathUtils.lerp(0.005, y, THREE.MathUtils.smoothstep(bank, 1.1, 2.3));
+      // Flat at and well beyond the duel boundary. Terrain only rises deep in forest;
+      // a low distant ridge closes the horizon and the stream banks stay low (groundHeight).
+      const y = groundHeight(x, z);
       pos.push(x, y, z); uv.push(x * 0.35, z * 0.35); colors.push(tmp.r, tmp.g, tmp.b);
       if (j < rings && i < segments) { const k = j * (segments + 1) + i; indices.push(k, k + 1, k + segments + 1, k + 1, k + segments + 2, k + segments + 1); }
     }
@@ -206,51 +246,118 @@ function ground(scene, texture) {
   const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: texture, vertexColors: true, roughness: 1 })); mesh.receiveShadow = true; mesh.name = 'grove-flat-duel-earth'; scene.add(mesh);
 }
 
-function pine(K, foliage, r, x, z, height, radius, hero = false) {
-  const trunkSeed = Math.floor(r() * 200), knotKit = hero ? new Kit(4783) : null;
-  put(K, hero ? 'heroBark' : 'bark', trunkGeometry(height, radius, trunkSeed, hero), hero ? C.bark : C.barkDark, [x, 0, z], [0, 0, 0], 1, { noise: 0.035, vary: 0.12 });
-  if (hero) {
-    for (let i = 0; i < 11; i++) {
-      const a = i / 11 * TAU + 0.15, len = 5.0 + r() * 1.45;
-      const p0 = [x + Math.cos(a) * radius * 0.64, 1.55 + r() * 0.8, z + Math.sin(a) * radius * 0.64];
-      const p1 = [x + Math.cos(a) * radius * 1.23, 0.28, z + Math.sin(a) * radius * 1.23];
-      const p2 = [x + Math.cos(a + 0.1) * len, 0.02, z + Math.sin(a + 0.1) * len];
-      const root = put(K, 'bark', buttressRoot(a, len + (i % 3) * 0.15, p0[1] + 0.25, 0.68 + (i % 4) * 0.13), C.bark, [0, 0, 0], [0, 0, 0], 1, { noise: 0.04 });
-      const col = root.attributes.color, pos = root.attributes.position, normal = root.attributes.normal, moss = new THREE.Color(0x576a45);
-      for (let k = 0; k < col.count; k++) {
-        const mix = THREE.MathUtils.smoothstep(normal.getY(k), 0.2, 0.9) * (0.18 + 0.3 * (0.5 + 0.5 * Math.sin(pos.getX(k) * 2.2 + pos.getZ(k))));
-        col.setXYZ(k, THREE.MathUtils.lerp(col.getX(k), moss.r, mix), THREE.MathUtils.lerp(col.getY(k), moss.g, mix), THREE.MathUtils.lerp(col.getZ(k), moss.b, mix));
-      }
+// 줄기 정점 색: 아래(밑동~가지 없는 몸통 아래쪽)는 어두운 회갈색, 위로 갈수록 적송의 붉은 갈색
+function redPineBark(g, y0, height, lo = 0.12, hi = 0.62) {
+  const col = g.attributes.color, pos = g.attributes.position, foot = new THREE.Color(C.pineFoot), red = new THREE.Color(C.pineRed), c = new THREE.Color();
+  for (let k = 0; k < col.count; k++) {
+    c.copy(foot).lerp(red, THREE.MathUtils.smoothstep((pos.getY(k) - y0) / height, lo, hi));
+    col.setXYZ(k, col.getX(k) * c.r, col.getY(k) * c.g, col.getZ(k) * c.b);
+  }
+}
+
+function pine(K, foliage, r, x, z, height, radius) {
+  const trunkSeed = Math.floor(r() * 200), knotKit = new Kit(4783);
+  const trunk = put(K, 'heroBark', trunkGeometry(height, radius, trunkSeed, true), 0xffffff, [x, 0, z], [0, 0, 0], 1, { noise: 0.035, vary: 0.04 });
+  redPineBark(trunk, 0, height, 0.06, 0.42);
+  for (let i = 0; i < 11; i++) {
+    const a = i / 11 * TAU + 0.15, len = 5.0 + r() * 1.45;
+    const p0 = [x + Math.cos(a) * radius * 0.64, 1.55 + r() * 0.8, z + Math.sin(a) * radius * 0.64];
+    const root = put(K, 'bark', buttressRoot(a, len + (i % 3) * 0.15, p0[1] + 0.25, 0.68 + (i % 4) * 0.13), C.pineFoot, [0, 0, 0], [0, 0, 0], 1, { noise: 0.04 });
+    const col = root.attributes.color, pos = root.attributes.position, normal = root.attributes.normal, moss = new THREE.Color(0x576a45);
+    for (let k = 0; k < col.count; k++) {
+      const mix = THREE.MathUtils.smoothstep(normal.getY(k), 0.2, 0.9) * (0.18 + 0.3 * (0.5 + 0.5 * Math.sin(pos.getX(k) * 2.2 + pos.getZ(k))));
+      col.setXYZ(k, THREE.MathUtils.lerp(col.getX(k), moss.r, mix), THREE.MathUtils.lerp(col.getY(k), moss.g, mix), THREE.MathUtils.lerp(col.getZ(k), moss.b, mix));
     }
   }
-  const count=hero?9:5;
-  for(let j=0;j<count;j++) {
-    const t=hero?0.30+Math.floor(j/3)*0.24+(j%3)*0.015:0.42+j/count*0.43,base=pineCenter(t,height,trunkSeed,hero);
-    const a=(hero?j*2.1:j*2.39996+trunkSeed)+r()*0.25,len=(hero?11.5:height*0.32)*(1.26-t)*(0.82+r()*0.28);
-    const p0=[x+base.x,base.y,z+base.z];
-    const p1=[p0[0]+Math.cos(a)*len*0.36,p0[1]-len*0.11,p0[2]+Math.sin(a)*len*0.36];
-    const p2=[p0[0]+Math.cos(a+0.13)*len*0.76,p0[1]+len*0.045,p0[2]+Math.sin(a+0.13)*len*0.76];
-    const br=radius*(1-t)*(hero?0.53:0.4);
-    branch(K,p0,p1,br,br*0.72);branch(K,p1,p2,br*0.72,br*0.32);
-    if(hero) {
-      // Angled open cylinder rims leave wedge gaps when merely touching. Small
-      // bark knots overlap both rims; keep this fix local to the sacred pine.
-      put(knotKit,'bark',new THREE.IcosahedronGeometry(1,1),C.bark,p1,[0,0,0],br*0.84,{noise:0.035,vary:0.04});
-      put(knotKit,'bark',new THREE.IcosahedronGeometry(1,1),C.bark,p2,[0,0,0],br*0.43,{noise:0.035,vary:0.04});
-    }
-    for(const side of [-1,1]) {
-      const end=[p2[0]+Math.cos(a+side*0.52)*len*0.38,p2[1]+len*(0.035+side*0.012),p2[2]+Math.sin(a+side*0.52)*len*0.38];
-      branch(K,p2,end,br*0.34,0.035);
-      for(let k=0;k<(hero?3:1);k++) {
-        const f=k/(hero?3:1),width=(hero?2.5:1.65)*(0.88+r()*0.25);
-        foliage.push({x:THREE.MathUtils.lerp(p2[0],end[0],f)+(r()-0.5)*0.8,y:THREE.MathUtils.lerp(p2[1],end[1],f)+0.28,z:THREE.MathUtils.lerp(p2[2],end[2],f)+(r()-0.5)*0.8,width,detail:hero,a:a+side*0.3,tilt:(r()-0.5)*0.25,color:r()<0.3?C.leafLit:r()<0.4?C.leafDeep:C.leaf});
+  // 신목: 굵은 가지가 층층이 옆으로 길게 뻗고, 끝마다 넓고 납작한 구름 덩어리가 얹힌다 (아래쪽 몸통은 비워 둔다)
+  const tiers = [0.36, 0.5, 0.63, 0.75, 0.86], perTier = [3, 3, 3, 2, 2];
+  let n = 0;
+  tiers.forEach((t, ti) => {
+    for (let k = 0; k < perTier[ti]; k++, n++) {
+      const base = pineCenter(t, height, trunkSeed, true), a = n * 2.39996 + 0.4 + r() * 0.3;
+      const len = (13.5 - ti * 2.1) * (0.85 + r() * 0.25), br = radius * (1 - t) * 0.5;
+      const p0 = [x + base.x, base.y, z + base.z];
+      const p1 = [p0[0] + Math.cos(a) * len * 0.4, p0[1] + len * 0.05, p0[2] + Math.sin(a) * len * 0.4];
+      const p2 = [p0[0] + Math.cos(a + 0.16) * len * 0.8, p0[1] + len * 0.09 - 0.4, p0[2] + Math.sin(a + 0.16) * len * 0.8];
+      const red = C.pineRed;
+      branch(K, p0, p1, br, br * 0.68, red); branch(K, p1, p2, br * 0.68, br * 0.3, red);
+      put(knotKit, 'bark', new THREE.IcosahedronGeometry(1, 1), red, p1, [0, 0, 0], br * 0.72, { noise: 0.035, vary: 0.04 });
+      put(knotKit, 'bark', new THREE.IcosahedronGeometry(1, 1), red, p2, [0, 0, 0], br * 0.34, { noise: 0.035, vary: 0.04 });
+      const w = (4.2 - ti * 0.45) * (0.88 + r() * 0.22);
+      foliage.push({ kind: 'hero', x: p2[0], y: p2[1] + 0.35, z: p2[2], sx: w, sy: w * 0.62, sz: w * 0.78, a: a + 0.3, tilt: (r() - 0.5) * 0.12, color: r() < 0.3 ? C.needleLit : C.needle });
+      for (const side of [-1, 1]) {
+        const end = [p2[0] + Math.cos(a + side * 0.75) * len * 0.3, p2[1] + 0.25, p2[2] + Math.sin(a + side * 0.75) * len * 0.3];
+        branch(K, p1, end, br * 0.36, 0.05, red);
+        const v = w * (0.55 + r() * 0.15);
+        foliage.push({ kind: 'pad' + (n + side + 2) % 3, x: end[0], y: end[1] + 0.3, z: end[2], sx: v, sy: v * 0.62, sz: v * 0.8, a: a + side, tilt: (r() - 0.5) * 0.12, color: r() < 0.35 ? C.needleDeep : C.needle });
       }
     }
+  });
+  const tip = pineCenter(1, height, trunkSeed, true);
+  for (let k = 0; k < 3; k++) {
+    const a = k / 3 * TAU + 0.5, w = 3.4 - k * 0.3;
+    foliage.push({ kind: 'hero', x: x + tip.x + Math.cos(a) * 1.6, y: tip.y - 0.6 + k * 0.5, z: z + tip.z + Math.sin(a) * 1.6, sx: w, sy: w * 0.7, sz: w * 0.8, a, tilt: 0, color: k === 2 ? C.needleLit : C.needle });
   }
-  const tip=pineCenter(1,height,trunkSeed,hero);
-  foliage.push({x:x+tip.x,y:tip.y,z:z+tip.z,width:hero?3.2:2.05,detail:hero,a:r()*TAU,tilt:0,color:C.leaf});
-  if(knotKit) K.bins.bark.push(...knotKit.bins.bark);
+  K.bins.bark.push(...knotKit.bins.bark);
   return trunkSeed;
+}
+
+// 둘레의 적송: 곧은 키 큰 것 · 기운 것 · 낮게 퍼진 것. 줄기는 위로 갈수록 가늘어지며 살짝 굽고,
+// 아래쪽은 가지 없이 길다. 위쪽에 층층이 가지가 옆으로 뻗고 그 끝에 넓고 납작한 구름 덩어리가 얹힌다.
+const PINE_KINDS = {
+  tall:   { hScale: 1.0,  clear: 0.46, top: 0.92, tiers: [4, 5], reach: [0.24, 0.1],  rise: 0.2,  pad: [3.0, 1.9], lean: [0.0, 0.06] },
+  lean:   { hScale: 0.88, clear: 0.46, top: 0.9,  tiers: [3, 4], reach: [0.28, 0.13], rise: 0.16, pad: [3.1, 2.0], lean: [0.22, 0.36] },
+  spread: { hScale: 0.5,  clear: 0.38, top: 0.86, tiers: [4, 4], reach: [0.55, 0.3],  rise: 0.07, pad: [3.5, 2.4], lean: [0.03, 0.12] },
+};
+function pineAxis(t, P) {
+  const s = P.lean * P.h * (t - 0.4 * t * t), w = Math.sin(t * Math.PI * 1.6 + P.phase) * P.wob * P.h * t;
+  return new THREE.Vector3(Math.cos(P.dir) * s - Math.sin(P.dir) * w, P.h * t, Math.sin(P.dir) * s + Math.cos(P.dir) * w);
+}
+function forestTrunkGeometry(P, radius, far) {
+  const sides = far ? 6 : 8, levels = far ? 6 : 9, pos = [], uv = [], indices = [];
+  for (let j = 0; j <= levels; j++) {
+    const t = j / levels, c = pineAxis(t, P), rad = radius * (1 - 0.8 * Math.pow(t, 0.85)) * (1 + 0.3 * Math.exp(-t * P.h / 0.6));
+    for (let i = 0; i <= sides; i++) {
+      const a = i / sides * TAU, f = 1 + 0.07 * Math.sin(a * 3 + j * 1.7 + P.phase);
+      pos.push(c.x + Math.cos(a) * rad * f, c.y, c.z + Math.sin(a) * rad * f); uv.push(i / sides, t * P.h * 0.12);
+      if (j < levels && i < sides) { const n = j * (sides + 1) + i; indices.push(n, n + sides + 1, n + 1, n + 1, n + sides + 1, n + sides + 2); }
+    }
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(indices); geo.computeVertexNormals(); return geo;
+}
+function forestPine(K, foliage, seed, x, z, height, radius, kind) {
+  const r = rng(seed), S = PINE_KINDS[kind], out = Math.atan2(z, x);
+  const P = { h: height * S.hScale * (0.92 + r() * 0.16), lean: S.lean[0] + r() * (S.lean[1] - S.lean[0]), dir: kind === 'lean' ? out + (r() - 0.5) * 1.6 : r() * TAU, wob: 0.012 + r() * 0.02, phase: r() * TAU };
+  // 40m 밖(안개에 거의 묻히는 자리)은 층을 하나 덜고 줄기·가지 면 수를 줄여 삼각형을 아낀다
+  const far = Math.hypot(x, z) > 40, rad = radius * (kind === 'spread' ? 1.35 : 1), y0 = groundHeight(x, z) - 0.25;
+  const trunk = put(K, 'bark', forestTrunkGeometry(P, rad, far), 0xffffff, [x, y0, z], [0, 0, 0], 1, { noise: 0.04, vary: 0.12 });
+  redPineBark(trunk, y0, P.h);
+  const tiers = S.tiers[0] + Math.floor(r() * (S.tiers[1] - S.tiers[0] + 1)) - (far ? 1 : 0);
+  let a = r() * TAU;
+  for (let k = 0; k < tiers; k++) {
+    const tt = tiers > 1 ? k / (tiers - 1) : 0, t = S.clear + (S.top - S.clear) * tt + (r() - 0.5) * 0.03;
+    const c = pineAxis(t, P), base = [x + c.x, y0 + c.y, z + c.z];
+    a += kind === 'lean' ? 0 : 2.39996 + (r() - 0.5) * 0.5;
+    const ang = kind === 'lean' ? P.dir + (k % 2 ? -1 : 1) * (0.5 + r() * 1.3) : a;
+    const len = P.h * (S.reach[0] + (S.reach[1] - S.reach[0]) * tt) * (0.8 + r() * 0.4);
+    const br = rad * (1 - t) * 0.55 + 0.03, color = C.pineRed;
+    // 아래 층은 맞은편으로 짧은 가지를 하나 더 낸다 (층마다 덩어리가 한쪽에만 붙어 보이지 않게)
+    const arms = tt < 0.6 && !far ? [[ang, 1], [ang + Math.PI + (r() - 0.5) * 1.2, 0.68]] : [[ang, 1]];
+    for (const [aa, f] of arms) {
+      const L = len * f;
+      const mid = [base[0] + Math.cos(aa) * L * 0.5, base[1] - L * 0.04, base[2] + Math.sin(aa) * L * 0.5];
+      const end = [base[0] + Math.cos(aa + 0.12) * L, base[1] + L * S.rise, base[2] + Math.sin(aa + 0.12) * L];
+      branch(K, base, mid, br * f, br * f * 0.65, color, 'bark', far ? 4 : 5); branch(K, mid, end, br * f * 0.65, br * f * 0.3, color, 'bark', far ? 4 : 5);
+      const w = (S.pad[0] + (S.pad[1] - S.pad[0]) * tt) * (0.82 + r() * 0.3) * (0.6 + 0.4 * f);
+      foliage.push({ kind: far ? 'padFar' : 'pad' + (seed + k) % 3, x: end[0], y: end[1] + w * 0.12, z: end[2], sx: w, sy: w * 0.6, sz: w * (0.72 + r() * 0.2), a: aa + (r() - 0.5) * 0.6, tilt: (r() - 0.5) * 0.15, color: r() < 0.28 ? C.needleLit : r() < 0.35 ? C.needleDeep : C.needle });
+      if (kind === 'spread' && f === 1) { // 낮게 퍼진 소나무의 긴 가지는 가운데쯤에 작은 덩어리를 하나 더
+        const v = w * 0.6;
+        foliage.push({ kind: far ? 'padFar' : 'pad' + (seed + k + 1) % 3, x: mid[0], y: mid[1] + v * 0.3, z: mid[2], sx: v, sy: v * 0.6, sz: v * 0.8, a: aa + 1, tilt: 0, color: C.needleDeep });
+      }
+    }
+  }
+  const tip = pineAxis(1, P), w = S.pad[1] * (kind === 'spread' ? 1.15 : 1.05) * (0.9 + r() * 0.2);
+  foliage.push({ kind: far ? 'padFar' : 'pad' + seed % 3, x: x + tip.x, y: y0 + tip.y, z: z + tip.z, sx: w, sy: w * (kind === 'spread' ? 0.55 : 0.8), sz: w * 0.85, a: r() * TAU, tilt: 0, color: C.needleLit });
 }
 
 function sacredRope(K, trunkSeed) {
@@ -371,6 +478,42 @@ function distantMist(scene) {
   }
 }
 
+// 땅에 낮게 깔린 물안개: 결투장(반지름 9m 안)은 비워 둔 고리 판 넉 장. 캔버스로 만든 부드러운 노이즈가
+// 판마다 다른 방향으로 천천히 흐른다. 판은 결투장 둘레만 덮어 겹쳐 그리는 넓이를 줄였다.
+const MIST = { layers: [[0.22, 0.4, 0.9], [0.55, 0.3, 1.3], [0.95, 0.22, 1.7], [1.5, 0.14, 2.3]], inner: 9, outer: 64, color: 0xc3d3d2 };
+function groundMist(scene) {
+  const r = rng(55117);
+  const noise = canvasTex(256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 46; i++) {
+      const x = r() * w, y = r() * h, rad = 20 + r() * 50, a = 0.1 + r() * 0.2;
+      for (const dx of [-w, 0, w]) for (const dy of [-h, 0, h]) { // 이음매 없이 이어 붙도록 아홉 자리에 같이 그린다
+        const g = ctx.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rad);
+        g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g; ctx.fillRect(x + dx - rad, y + dy - rad, rad * 2, rad * 2);
+      }
+    }
+  });
+  noise.colorSpace = THREE.NoColorSpace;
+  const layers = [];
+  for (const [y, opacity, scale] of MIST.layers) {
+    const g = new THREE.RingGeometry(MIST.inner, MIST.outer, 48, 3), p = g.attributes.position, alpha = [];
+    for (let i = 0; i < p.count; i++) { // 안쪽 가장자리·바깥 가장자리에서 옅어진다 (정점 색으로 투명도)
+      const d = Math.hypot(p.getX(i), p.getY(i)), k = THREE.MathUtils.smoothstep(d, MIST.inner, MIST.inner + 7) * (1 - THREE.MathUtils.smoothstep(d, MIST.outer - 22, MIST.outer));
+      alpha.push(k, k, k);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(alpha, 3));
+    const map = layers.length ? noise.clone() : noise; map.repeat.set(scale, scale); map.needsUpdate = true;
+    const material = new THREE.MeshBasicMaterial({ color: MIST.color, alphaMap: map, vertexColors: true, transparent: true, opacity, depthWrite: false });
+    // 정점 색은 투명도에만 쓴다: 색은 MIST.color 그대로, 알파에 정점 색(밝기)을 곱한다
+    material.onBeforeCompile = shader => { shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', 'diffuseColor.a *= vColor.r;'); };
+    material.customProgramCacheKey = () => 'grove-ground-mist-v1';
+    const mesh = new THREE.Mesh(g, material); mesh.rotation.x = -Math.PI / 2; mesh.position.y = y; mesh.renderOrder = 2; mesh.name = 'grove-ground-mist'; scene.add(mesh);
+    layers.push({ map, dir: r() * TAU, speed: 0.004 + r() * 0.005 });
+  }
+  return { update(time) { for (const L of layers) L.map.offset.set(Math.cos(L.dir) * L.speed * time, Math.sin(L.dir) * L.speed * time); } };
+}
+
 // A single quiet sika deer, beyond both the arena and camera orbit. Feet never
 // translate: breathing and head/ear attention are idle motion, not a sliding walk.
 function groveDeer(scene) {
@@ -421,7 +564,7 @@ function groveDeer(scene) {
 export function buildSacredGrove(scene, { hemi, sun } = {}) {
   const r = rng(197719), K = new Kit(88291), foliage = [], windClock = { value: 0 };
   const sunOffset = { x: -5.5, y: 10, z: -4.5 };
-  scene.background = new THREE.Color(0xbbceca); scene.fog = new THREE.Fog(0x9fbab5, 23, 102);
+  scene.background = new THREE.Color(GROVE_FOG.sky); scene.fog = new THREE.FogExp2(GROVE_FOG.color, GROVE_FOG.density); // 무대를 떠나면 stages.js restore() 가 처음 안개로 되돌린다
   if (hemi) { hemi.color.set(0xc7dddf); hemi.groundColor.set(0x66796b); hemi.intensity = 1.2; }
   if (sun) { sun.color.set(0xffe8ba); sun.intensity = 1.65; sun.position.set(sunOffset.x, sunOffset.y, sunOffset.z); }
   const soil = soilTexture(), bark = barkTexture(), heroBark = heroBarkTexture(bark);
@@ -440,7 +583,7 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
     const size = 0.5 + r() * 1.45;
     put(K, 'stone', new THREE.DodecahedronGeometry(1, 0), C.stone, [x, size * 0.26, z], [r() * 0.3, r() * TAU, r() * 0.3], [size, size * 0.65, size * 0.8], { rough: 0.12, noise: 0.12, snow: 0.86, snowColor: C.moss });
   }
-  const trunkSeed = pine(K, foliage, r, HERO.x, HERO.z, PINE_HEIGHT, PINE_RADIUS, true);
+  const trunkSeed = pine(K, foliage, r, HERO.x, HERO.z, PINE_HEIGHT, PINE_RADIUS);
   sacredRope(K, trunkSeed); torii(K); rootGarden(K);
 
   // Trees grow in uneven families, with a diagonal opening behind the pine.
@@ -451,12 +594,14 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
     const x = stand[0] + Math.cos(a) * d, z = stand[1] + Math.sin(a) * d;
     if (Math.hypot(x,z) < 17.5) continue;
     if (Math.hypot(x - HERO.x, z - HERO.z) < 10 || Math.hypot(x - 13.8, z - 13.7) < 5) continue;
-    const h = 12 + (i % 4) * 2.1 + r() * 4.5;
-    pine(K, foliage, r, x, z, h, 0.28 + r() * 0.47);
+    const h = 12 + (i % 4) * 2.1 + r() * 4.5, pick = r(), d0 = Math.hypot(x, z);
+    // 변형 셋을 씨앗으로 섞는다. 낮게 퍼진 것은 결투장에서 먼 자리(22m 밖)에만
+    const kind = pick < 0.45 || (pick >= 0.72 && d0 < 22) ? 'tall' : pick < 0.72 ? 'lean' : 'spread';
+    forestPine(K, foliage, 7001 + i * 13, x, z, h, 0.28 + r() * 0.47, kind);
   }
   for (let i = 0; i < 8; i++) {
     const x = 35 + (i % 4) * 8.4 + r() * 3, z = -29 - Math.floor(i / 4) * 12 - r() * 8;
-    pine(K, foliage, r, x, z, 16 + r() * 9, 0.4 + r() * 0.3);
+    forestPine(K, foliage, 9001 + i * 17, x, z, 16 + r() * 9, 0.4 + r() * 0.3, i % 3 === 1 ? 'lean' : 'tall');
   }
 
   // Low growth follows patches of trees and leaves irregular open seams, rather
@@ -466,24 +611,26 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
     const x = stand[0] + Math.cos(a) * d, z = stand[1] + Math.sin(a) * d;
     if (Math.hypot(x,z) < 18.5) continue;
     if (Math.hypot(x - HERO.x, z - HERO.z) < 7 || Math.hypot(x - 13.8, z - 13.7) < 5) continue;
-    for (let j = 0; j < 2; j++) foliage.push({ x:x+(r()-0.5)*2.4, y:0.3+r()*1.0, z:z+(r()-0.5)*2.4, width:0.68+r()*0.88, a:r()*TAU, tilt:(r()-0.5)*1.2, color:r()<0.3?C.leaf:C.leafDeep });
+    for (let j = 0; j < 2; j++) { const w = 0.68 + r() * 0.88; foliage.push({ kind:'shrub', x:x+(r()-0.5)*2.4, y:0.3+r()*1.0, z:z+(r()-0.5)*2.4, sx:w*1.65, sy:w*0.95, sz:w*1.1, a:r()*TAU, tilt:(r()-0.5)*1.2, color:r()<0.3?C.leaf:C.leafDeep }); }
   }
 
   const canopyMat = quietWind(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }), windClock);
-  // Only the sacred tree needs the 80-triangle needle cushions. Ordinary forest
-  // crowns and undergrowth keep a 20-triangle silhouette in one separate batch.
+  // 잎 덩어리는 모양 여섯 가지(둘레 소나무 셋 · 먼 소나무 · 신목 · 덤불)를 각각 인스턴스 한 묶음으로 그린다 (그리기 호출 6번).
+  //  신목만 80삼각형 다면체를 뭉친 고운 덩어리, 둘레는 20삼각형 다면체 뭉치, 40m 밖(안개 속)은 8삼각형 팔면체 뭉치.
+  const shapes = { pad0: () => cloudPadGeometry(11, 0, 5), pad1: () => cloudPadGeometry(23, 0, 6), pad2: () => cloudPadGeometry(37, 0, 5), padFar: () => cloudPadGeometry(71, -1, 6), hero: () => cloudPadGeometry(53, 1, 7), shrub: () => canopyGeometry(false) };
   const dummy = new THREE.Object3D(), color = new THREE.Color();
-  for (const detailed of [false,true]) {
-    const selected=foliage.filter(f=>Boolean(f.detail)===detailed);
-    const leaves=new THREE.InstancedMesh(canopyGeometry(detailed),canopyMat,selected.length);
-    selected.forEach((f,i)=>{
-      dummy.position.set(f.x,f.y,f.z);dummy.rotation.set(f.tilt*0.22,f.a,-0.04);
-      dummy.scale.set(f.width*1.65,f.width*0.95,f.width*1.1);dummy.updateMatrix();leaves.setMatrixAt(i,dummy.matrix);leaves.setColorAt(i,color.set(f.color));
+  for (const [kind, make] of Object.entries(shapes)) {
+    const selected = foliage.filter(f => f.kind === kind);
+    if (!selected.length) continue;
+    const leaves = new THREE.InstancedMesh(make(), canopyMat, selected.length);
+    selected.forEach((f, i) => {
+      dummy.position.set(f.x, f.y, f.z); dummy.rotation.set(f.tilt * 0.22, f.a, -0.04);
+      dummy.scale.set(f.sx, f.sy, f.sz); dummy.updateMatrix(); leaves.setMatrixAt(i, dummy.matrix); leaves.setColorAt(i, color.set(f.color));
     });
-    leaves.name=detailed?'grove-pine-hero-cushions':'grove-pine-forest-cushions';leaves.castShadow=false;leaves.computeBoundingSphere();leaves.boundingSphere.radius+=0.2;scene.add(leaves);
+    leaves.name = `grove-pine-${kind}`; leaves.castShadow = false; leaves.computeBoundingSphere(); leaves.boundingSphere.radius += 0.2; scene.add(leaves);
   }
   plants(scene, r);
-  const water = stream(scene, K, r); distantMist(scene);
+  const water = stream(scene, K, r); distantMist(scene); const mist = groundMist(scene);
   const deer = groveDeer(scene);
 
   const materials = {
@@ -518,7 +665,7 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
     fighterLight: { color: 0xf1edda, rimColor: 0xdbeadf, level: 0.84, rim: 1.08 },
     update(dt) {
       const step = Math.min(Math.max(Number.isFinite(dt) ? dt : 0, 0), 0.1); time += step; gust *= Math.exp(-step * 1.6);
-      water.offset.y = time * 0.012; windClock.value = time; deer.update(time);
+      water.offset.y = time * 0.012; windClock.value = time; deer.update(time); mist.update(time);
       // Sound follows a real visible wind phase; no timers survive stage clearing.
       const boughWind = Math.sin(time * 0.38 + HERO.x * 0.12 + HERO.z * 0.17);
       const paperWind = Math.sin(time * 0.67 + HERO.z * 0.73);
