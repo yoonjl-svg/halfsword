@@ -393,21 +393,30 @@ const IBERIAN_SECRET = {
   nameKo: 'Molinete altibaixo (휘돌려 내려치기)',
   when: 'combo',
   // 길 = 라이브러리 몰리넬로 고리(낮은 오른쪽 → 옆 지킴 → 오른 어깨) → 지붕 → 고유 altibaixo 길(내려베고 되올림). 서보 힘 창은 지붕에 닿은 뒤부터(내려치는 마지막 구간 — powerFrom = 지난 길 점 수)
-  do: { path: [[0.25, -0.35], G.nebenR, G.tagR, G.tag, [0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], powerFrom: 4, side: 'iberianLat', open: 'H', reach: 0 },
+  //  10/9 후속(디렉터 '휘돌림이 가속이 되게'): 첫 꼴(지금 손 → 낮은 오른쪽 → 옆 지킴 → 오른 어깨 → 지붕 → 내려침, 한 길)은 붙은 거리에서 고리가 상대 다리를 스치고
+  //   내려침이 거의 안 닿았다(비기 상처 대부분 고리 도중의 약한 둔타). → 고리는 몸 뒤(오른 어깨 → 옆 지킴 → 오른 어깨 → 지붕)로 준비(windup) 동안 돌고, 그동안 옆 뒤로 비껴 딛어
+  //   틈을 만들고(iberianBack), 닿는 거리에서 지붕부터 내려친다(path) — 내려치기 전체에 힘 창. 단계별 J 는 문서 §9
+  do: { loop: [G.tagR, G.nebenR, G.tagR, G.tag], path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], powerFrom: 0, side: 'iberianLat', open: 'H', reach: 0, power: 'iberianPower', loopHand: 'iberianLoopHand', strength: 'iberianStrength', sideBack: 'iberianBack' },
   src: '몬탄테 molinete·altabaixo — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 둥근 걸음(옆으로 비껴 딛음) [원전 2차] · 고리 → 내려치기로 잇기 [해석]',
 };
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
 const JAPANESE_SECRET = {
   name: 'goNoSen',
   nameKo: '後の先 (고노센 · 가칭)',
-  when: 'foeRecover',
-  cond: { dist: 'japaneseDist' },
+  // 10/9 사장님 추가 지시: 헛스윙을 본 뒤가 아니라 한 박자 빠르게 — 상대가 '내 비기는 닿고 상대는 명백히 안 닿을 간격에서 무의미하게 허점을 노출하는 공격 동작'을
+  //  시작하는 순간(칼을 듦·달려듦, 지금 모습). 헛침(foeRecover)은 같은 창에서 보조 사건(칼끝 추정 에너지 문턱 whiff)
+  when: ['foeRaise', 'foeCharge', 'foeRecover'],
+  cond: { window: true, whiff: 'japaneseWhiffJ' }, // window: foeReach + japaneseFoeMargin < d ≤ reach + japaneseReach + japaneseFar (ai.js secretCond)
   do: {
     back: { fwd: 'japaneseBack', guard: G.nebenR },
     // 真向: 脇構え → 오른 위로 들어 → 上段 → 가운데로 내려 팔을 다 뻗은 점(가운데일수록 손이 앞으로 — 깊이 최대) → 곧 굽혀 회수(청안 쪽)
     tech: { name: 'goNoSenMen', from: G.nebenR, path: [[0.42, 0.3], G.tag, [0.0, 0.2], [0.0, 0.02], [0.12, -0.2]], open: 'H', kind: 'cut', reach: 'japaneseReach', base: 1, presses: true },
     step: { lat: 0, fwd: 'japaneseStep', when: 'strike', kind: 'lunge', push: 'stepPush' },
     zanshin: 'langort',
+    power: 'japanesePower', // 서보 힘 창 배율 (SECRET 열쇠 — 공통 power 대신)
+    strength: 'japaneseStrength', // 보조 힘·속도: 베기 구간만 몸의 힘 배율
+    lead: 'japaneseLead', // 앞당김(m): 脇 → 上段 → 真向 길이 길어 닿기 전에 상대가 더 다가온다 — 그만큼 일찍 친다
+    hand: 'japaneseHand', // 손 속도 배율 (공통 handSpeed 대신)
   },
   src: '검도 용어 後の先(상대가 먼저 일으킨 치기를 받아 이김)·引き技(물러서며 침) [전승 — 원문 쪽 없음] · 脇構え 자리 검도형 p11/10 [원문] · 이름은 가칭 · 길·걸음 수 [추정]',
 };

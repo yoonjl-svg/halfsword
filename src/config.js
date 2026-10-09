@@ -545,7 +545,7 @@ export const SKILL = {
 export const SECRET = {
   power: 1.3, // 서보 힘 창: 비기 베기 동안 칼을 미는 손목 힘 배율 (fighter.js driveSword 의 str 에 곱함)
   handSpeed: 1.3, // 손 속도 배율: 비기의 준비(빠른 준비 parrySpeed)·베기(strikeSpeed) 손 빠르기에 곱함
-  stepPush: 1.3, // 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게')
+  stepPush: 1.8, // 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8
   stiff: { german: 0.3, italian: 0.3, iberian: 0.3, japanese: 0.8, chinese: 0.3 }, // 비기 직후 경직 (s)
   stiffHand: 0.5, // 경직 동안 손 빠르기 배율
   lethalJ: 136, // 독일 Versetzen 문턱: 들어오는 칼의 추정 에너지 ½·m·v²(칼 질량·칼끝 속도, J). 롱소드 48 판(비기 끔 SCHOOL_SECRET=alloff)에서 맞은 칼(양쪽 상처 1786)의 때린 칼끝 추정 에너지 분포 75 % 지점 (p50 47 · p90 247)
@@ -553,10 +553,21 @@ export const SECRET = {
   iberianLat: 0.4, // 이베리아 옆걸음 (m, 방향 = 성격의 즐겨 도는 쪽 circleDir)
   italianDist: [-0.1, 0.4], // 이탈리아: 내 간격 끝(reach) 기준 거리 창 (m)
   italianStep: 0.5, // 이탈리아: 뒷발 지나 보내기 걸음 (m, 'strike')
-  japaneseDist: [0, 0.8], // 일본: 내 간격 끝(reach) 기준 거리 창 (m)
-  japaneseBack: -0.35, // 일본 ① 빠른 백스텝 (m)
+  japaneseDist: [0, 0.8], // (10/9 첫 꼴의 헛침 거리 창 — 지금은 쓰지 않음, japaneseFoeMargin·japaneseFar 창으로 바꿈)
+  japaneseFoeMargin: 0.2, // 일본 창: 상대 칼 닿는 거리(foeReach) + 이 여유 밖이어야 (상대 공격이 명백히 안 닿음, m)
+  japaneseFar: 0.4, // 일본 창: 내 간격 끝 + 기술 reach(japaneseReach) + 이 몫(강한 내딛음) 안이어야 (내 後の先 은 닿음, m)
+  japaneseBack: -0.15, // 일본 ① 짧은 백스텝 (m — 반 걸음 이하: 한 박자 빠른 발동이라 길게 물러날 틈이 없음. 첫 꼴 −0.35)
   japaneseStep: 0.6, // 일본 ② 앞발 내딛기 (m)
   japaneseReach: 0.3, // 일본 ② 真向 의 닿는 거리 보정 (m — 기술 reach 칸)
+  japanesePower: 2.0, // 일본 後の先 서보 힘 창 (공통 power 대신). 10/9 후속 사다리 1.3 → 1.6 → 2.0 (문서 §9)
+  japaneseHand: 1.5, // 일본 後の先 손 속도 배율 (공통 handSpeed 대신). 10/9 후속 1.3 → 1.5
+  japaneseWhiffJ: 67, // 일본: 상대가 헛친 칼의 칼끝 추정 에너지 ½·m·v² 문턱 (J) — 진짜 헛스윙만. 롱소드 48 판 헛친 공격(맞힘·맞물림 없음, 양쪽 373)의 공격 최고 칼끝 추정 에너지 중앙값 (p50 63·71 J)
+  iberianPower: 1.6, // 이베리아 마지막 내려치기 서보 힘 창. 10/9 후속 1.3 → 1.6
+  iberianLoopHand: 1.0, // 이베리아 고리 구간 손 속도 배율 (고리는 준비(windup)로 돈다 — 베기 빠르기 strikeSpeed × 이 값). 10/9 후속: 1.6 은 더 약했다(문서 §9)
+  iberianStrength: 1.5, // 이베리아 내려치기 구간 보조 힘(몸의 힘 배율 — 손목 힘·손목 빠르기 한계 √·팔 힘)
+  iberianBack: -0.3, // 이베리아 옆걸음의 앞뒤 (m, 음수 = 뒷발을 비껴 뒤로 'retreat' — 붙은 거리에서 휘돌릴 틈을 만든다)
+  japaneseStrength: 1.5, // 일본 後の先 베기 구간 보조 힘(몸의 힘 배율)
+  japaneseLead: 0, // 일본 後の先 앞당김 (m — 칠 거리에 더함)
 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

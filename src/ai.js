@@ -901,10 +901,24 @@ export class AI {
       // 준비 자세로 (다가가며)
       this.hand.set(t.from[0], t.from[1]);
       this.handSpeed = this.fastChamber ? L.parrySpeed : L.chamberSpeed;
-      if (this.secretRun) this.handSpeed *= SECRET.handSpeed; // 비기: 손 속도 최대
+      if (this.secretRun) this.handSpeed *= this.secretVal(this.secretRun.S.do.hand ?? 'handSpeed'); // 비기: 손 속도 최대
+      const LP = this.secretRun?.loop;
+      if (LP?.length) {
+        // 이베리아 휘돌림: 준비 자세(지붕 쪽)로 곧장 가지 않고 고리 점들을 차례로 돌아 들어간다 (베기 빠르기 × loopHand — 칼을 한 바퀴 휘돌림)
+        this.hand.set(LP[0][0], LP[0][1]);
+        this.handSpeed = L.strikeSpeed * this.secretVal(this.secretRun.S.do.loopHand ?? 'handSpeed');
+        if (padDist([me.handOffset.x, me.handOffset.y], LP[0]) < 0.05) LP.shift();
+        const LS = this.secretRun.loopStep;
+        const g = me.gait;
+        if (LS && this.attackT < 0.3 && g?.requestStep && g.active && me.state === 'stand') {
+          // 휘돌리는 동안 옆(뒤)으로 비껴 딛는다 — 받을 때까지 0.3 s 안에서 다시 부탁
+          const lead = Math.sign(g.legs[g.frontLeg(me.forward(_v2))].side) === Math.sign(LS.lat);
+          if (g.requestStep({ kind: LS.kind ?? (lead ? 'lunge' : 'pass'), fwd: LS.fwd, side: LS.lat, duration: 0.35 })) this.secretRun.loopStep = null;
+        }
+      }
       // 준비하는 동안 상대 칼이 들어오면: 숙련자는 공격을 거두고 막는다 (패시브가 낸 공격은 걸쇠 0.5 s 동안 거두지 않는다 — passiveLock)
       if (th && !this.actLocked && this.noticedThreat(th) && this.respond(th, d)) return;
-      if (padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
+      if (!LP?.length && padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
         this.phase = 'approach';
         this.timer = this.quick ? 0 : L.windup * 0.25; // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
       }
@@ -915,6 +929,7 @@ export class AI {
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
+      if (this.secretRun?.S.do.lead) this.need += this.secretVal(this.secretRun.S.do.lead); // 비기 앞당김: 긴 길(脇 → 上段 → 真向)이 닿기까지 다가오는 상대를 셈 — 그만큼 일찍 친다
       // 기술 걸음 'approach'(유파 고유 동작 step 칸): 닿기 조금 전에 먼저 비껴 딛고, 발이 닿으면 곧장 친다 (step 칸 없는 기술은 이 줄을 지나치기만 한다)
       if (t.step?.when === 'approach' && !this.feint && this.approachStep(dt, s, th, d)) return;
       if (this.timer <= 0 && this.contactDist() <= this.need) {
@@ -927,7 +942,8 @@ export class AI {
       if (th && !this.actLocked && this.noticedThreat(th) && this.respond(th, d)) return;
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
       const keep = 1 + 0.5 * this.obsession; // 물고 늘어질 땐 접근을 쉽게 포기하지 않는다
-      if (this.attackT > (this.chasing ? 3 : 1.4) * keep || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep) this.abortAttack();
+      const hold = this.secretRun?.S.do.loop ? 1 : 0; // 이베리아 비기: 고리를 준비로 도는 몫만큼 1 s 더 버틴다 (다른 공격·비기는 0 — 같은 수)
+      if (this.attackT > (this.chasing ? 3 : 1.4) * keep + hold || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep + hold) this.abortAttack();
     } else if (this.phase === 'strike') {
       this.handSpeed = L.strikeSpeed;
       if (this.secretRun) this.secretStrike(dt); // 비기: 손 속도 배율 · 서보 힘 창 · 재기
@@ -945,6 +961,7 @@ export class AI {
       this.timer -= dt;
       if (this.secretRun) {
         me.powerMul = 1; // 서보 힘 창은 베기 길 동안만
+        this.secretStrength(1);
         this.secretTrack();
       }
       this.checkBind();
@@ -1539,15 +1556,18 @@ export class AI {
     if (W.includes('threat')) {
       ctx = this.threatNow(s0, c, r, d0);
       on = !!ctx;
-    } else if (W.includes('foeRecover')) {
-      // seize 의 recovering 과 같은 꼴(방금 크게 휘두르고 손이 멎음) — 늦지 않게 지금 모습으로
-      on = this.sense.recentHandSpeed(0, 0.6) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8;
     } else {
-      // preThreat 의 raising·charging 과 같은 꼴 — 지금 모습으로
+      // preThreat 의 raising·charging 과 같은 꼴 — 지금 모습으로. 거리 창(cond.window)이 있는 비기(일본)는 preThreat 의 '가까움' 문턱 대신 그 창이 거리를 맡는다
       const closing = Math.max(0, -(s0.vx * dx + s0.vz * dz) / d0);
       const raising = W.includes('foeRaise') && s0.hvy > 1.6 && s0.hy > 0.05;
       const charging = W.includes('foeCharge') && closing > 0.9;
-      on = (raising || charging) && d0 < this.foeReach + closing * 0.4 + 0.3;
+      on = (raising || charging) && (!!S.cond?.window || d0 < this.foeReach + closing * 0.4 + 0.3);
+      if (on) ctx = { ev: 'raise' };
+      // seize 의 recovering 과 같은 꼴(방금 크게 휘두르고 손이 멎음) — 늦지 않게 지금 모습으로 (일본은 들어 올림 다음 차례의 보조 사건)
+      if (!on && W.includes('foeRecover') && this.sense.recentHandSpeed(0, 0.6) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8) {
+        on = true;
+        ctx = { ev: 'recover', tipE: this.foeRecentTipE(0.6) }; // 진짜 헛스윙인가 — 그 휘두름의 칼끝 추정 에너지 (cond.whiff)
+      }
     }
     if (!on) {
       E.off += dt;
@@ -1560,6 +1580,20 @@ export class AI {
     if (!this.secretGo(S, { th: ctx, s: s0, d: d0 })) return false;
     E.armed = false;
     return true;
+  }
+
+  /** 상대 칼끝 추정 에너지 ½·m·v² 의 최고 (지금부터 span 초 앞까지, 지금 모습 — 반응 지연 0) */
+  foeRecentTipE(span) {
+    const B = this.sense.buf;
+    const N = B.length;
+    let best = 0;
+    for (let b = 0; b <= Math.min(N - 1, Math.round(span * 120)); b++) {
+      const s = B[(this.sense.head - b + N * 2) % N];
+      if (s.t < 0) break;
+      const v2 = s.tvx * s.tvx + s.tvy * s.tvy + s.tvz * s.tvz;
+      if (v2 > best) best = v2;
+    }
+    return 0.5 * (this.foe.swordProps?.m ?? 1.5) * best;
   }
 
   /** 비기를 낼 수 있는 꼴: 간 보기·물러남·막기, 또는 공격 준비·다가가기(패시브 걸쇠가 아닐 때) */
@@ -1619,6 +1653,11 @@ export class AI {
     const C = S.cond;
     if (!C) return true;
     if (C.lethal && !(ctx && ctx.E >= SECRET.lethalJ)) return false;
+    if (C.whiff && ctx?.ev === 'recover' && !(ctx.tipE >= this.secretVal(C.whiff))) return false; // 일본 보조 사건(헛침): 상대가 헛친 칼이 제대로 휘두른 칼이었나
+    if (C.window) {
+      // 일본 後の先 창: 상대 공격은 명백히 안 닿고(상대 칼 닿는 거리 foeReach + 여유 밖) 내 後の先 은 닿는다(내 간격 끝 + 기술 reach + 강한 내딛음 몫 안)
+      if (d <= this.foeReach + SECRET.japaneseFoeMargin || d > this.M.reach + SECRET.japaneseReach + SECRET.japaneseFar) return false;
+    }
     if (C.line && !C.line.includes(ctx?.line)) return false;
     if (C.range === 'counter' && !this.counterRange(d)) return false;
     if (C.dist) {
@@ -1656,9 +1695,17 @@ export class AI {
       //  옆 방향 = 성격의 즐겨 도는 쪽(circleDir — 굴림 없음). 앞으로 내딛기는 보통 베기와 같다(stepTime)
       const hand = [this.me.handOffset.x, this.me.handOffset.y];
       const lat = this.secretVal(D.side ?? 0) * this.pers.circleDir;
-      const t = { name: S.name, nameKo: S.nameKo, from: hand, path: D.path, open: D.open ?? 'H', kind: 'cut', reach: D.reach ?? 0, base: 1, presses: true, ...(lat ? { step: { lat, fwd: 0, when: 'approach' } } : {}) };
+      const back = this.secretVal(D.sideBack ?? 0); // 옆걸음의 앞뒤 (음수 = 뒷발을 비껴 뒤로 — 돌아 빠지며 휘돌릴 틈을 만든다, gait 'retreat')
+      // loop 칸이 있으면: 고리는 준비(windup)로 돌고(attack 의 windup 이 loop 점을 차례로), 베기 길은 지붕 쪽 준비 자세(from)에서 내려치기만 — 닿는 거리에서 친다
+      const from = D.loop ? D.loop[D.loop.length - 1] : hand;
+      //  loop 이면 옆걸음은 고리를 도는 동안(곧장 — 빠지며 휘돌려 틈을 만든다), 아니면 'approach'(먼저 비껴 딛고 친다)
+      const t = { name: S.name, nameKo: S.nameKo, from, path: D.path, open: D.open ?? 'H', kind: 'cut', reach: D.reach ?? 0, base: 1, presses: true, ...(lat && !D.loop ? { step: { lat, fwd: back, when: 'approach', ...(back < 0 ? { kind: 'retreat' } : {}) } } : {}) };
       run.powerFrom = D.powerFrom ?? 0;
-      ok = this.startAttack(t, 'secret', { ...opt, skipChamber: true });
+      if (D.loop) {
+        run.loop = D.loop.map((p) => p.slice());
+        if (lat) run.loopStep = { lat, fwd: back, kind: back < 0 ? 'retreat' : null };
+      }
+      ok = this.startAttack(t, 'secret', { ...opt, skipChamber: !D.loop });
     } else if (D.next) {
       // 중국 連環三擊: 이미 닿은 첫 칼 뒤에 두 수 — 차례는 첫 수의 무리로
       const g = D.group?.[this.tech?.name] ?? 'default';
@@ -1690,11 +1737,21 @@ export class AI {
   /** 비기 베기 길 동안 (attack strike): 손 속도 배율 · 서보 힘 창 · 맞힘·칼끝 에너지 재기 */
   secretStrike(dt) {
     const run = this.secretRun;
-    this.handSpeed *= SECRET.handSpeed;
+    const D = run.S.do;
     run.t += dt;
-    const done = (run.pathN ?? this.path.length) - this.path.length; // 지난 길 점 수 (이베리아 — 지붕에 닿은 뒤부터 힘)
-    this.me.powerMul = run.powerFrom == null || done >= run.powerFrom ? SECRET.power : 1;
+    const done = (run.pathN ?? this.path.length) - this.path.length; // 지난 길 점 수 (이베리아 — 고리를 지난 뒤부터 힘)
+    const powered = run.powerFrom == null || done >= run.powerFrom;
+    // 손 속도·힘 배율은 비기마다(do.hand·do.loopHand·do.power — SECRET 열쇠, 없으면 공통 handSpeed·power). 이베리아는 고리 동안 loopHand, 내려치기에 hand·power
+    this.handSpeed *= this.secretVal(powered ? D.hand ?? 'handSpeed' : D.loopHand ?? D.hand ?? 'handSpeed');
+    this.me.powerMul = powered ? this.secretVal(D.power ?? 'power') : 1;
+    // 보조 힘·속도(do.strength — 사장님 '필요하다면 보조 속도와 힘 제공'): 그 베기 구간만 몸의 힘(me.strength)을 올린다 — 손목 힘·손목 빠르기 한계(√힘)·팔 힘이 함께 오른다
+    if (D.strength) this.secretStrength(powered ? this.secretVal(D.strength) : 1);
     this.secretTrack();
+  }
+
+  /** 보조 힘: 몸의 힘을 난이도 값 × k 로 (k 1 = 되돌림). 비기가 끝나거나 끊기면 늘 1 로 */
+  secretStrength(k) {
+    this.me.strength = this.level.strength * k;
   }
 
   /** 비기 칼의 재기 (베기 길·따라 지나감 동안): 맞혔나 · 칼끝 추정 에너지 최고 */
@@ -1790,6 +1847,7 @@ export class AI {
       st.Emax = Math.max(st.Emax, run.peakE);
     }
     this.me.powerMul = 1;
+    if (run.S.do.strength) this.secretStrength(1);
     this.mode = 'secret';
     this.phase = 'ready';
     this.path.length = 0;
@@ -1810,7 +1868,7 @@ export class AI {
       const B = run.S.do.back;
       run.t += dt;
       this.hand.set(B.guard[0], B.guard[1]);
-      this.handSpeed = L.parrySpeed * SECRET.handSpeed;
+      this.handSpeed = L.parrySpeed * this.secretVal(run.S.do.hand ?? 'handSpeed');
       const g = this.me.gait;
       if (!run.stepAsked && run.t < 0.25 && g?.requestStep && g.active && this.me.state === 'stand') {
         if (g.requestStep({ kind: 'retreat', fwd: this.secretVal(B.fwd), side: 0, duration: 0.3 })) run.stepAsked = true;
@@ -1845,6 +1903,7 @@ export class AI {
     const run = this.secretRun;
     this.secretRun = null;
     this.me.powerMul = 1;
+    if (run?.S.do.strength) this.secretStrength(1);
     if (run && run.landed && run.stage !== 'stiff') {
       const st = this.secretStat(run.S);
       st.landed++;
@@ -2260,7 +2319,7 @@ export class AI {
   approachStep(dt, s, th, d) {
     const st = this.tech.step;
     if (this.sideStepT == null) {
-      if (this.timer > 0 || this.contactDist() > this.need + st.fwd) return false;
+      if (this.timer > 0 || this.contactDist() > this.need + Math.max(0, st.fwd)) return false; // (뒤로 딛는 걸음은 앞당겨 딛지 않는다 — 전 기술은 fwd ≥ 0 이라 같음)
       if (!this.techStepRequest(st)) return false; // 못 받았다(뒤로 당긴 스틱 등) → 보통 다가가기 (닿으면 보통대로 친다)
       this.sideStepT = 0;
       return true;

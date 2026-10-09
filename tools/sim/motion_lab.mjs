@@ -64,7 +64,32 @@ function passiveList(ai) {
 const SECRET_X_OFF = process.env.SCHOOL_SECRET === 'off';
 if (process.env.SCHOOL_SECRET === 'alloff') SKILL.schoolSecret = 0;
 if (process.env.SECRET_LETHAL) SECRET.lethalJ = +process.env.SECRET_LETHAL;
-if (process.env.SECRET_JSON) Object.assign(SECRET, JSON.parse(process.env.SECRET_JSON)); // 비기 수 갈아 끼우기 (재기용, 예: '{"italianDist":[0,0.2]}')
+if (process.env.SECRET_JSON) Object.assign(SECRET, JSON.parse(process.env.SECRET_JSON));
+// SECRET_DO_JSON = '{"iberian":{"powerFrom":3,"path":[…]}}' — 유파 비기 do 칸 덮기 (재기용, 양쪽)
+if (process.env.SECRET_DO_JSON) for (const [t, o] of Object.entries(JSON.parse(process.env.SECRET_DO_JSON))) if (TRADITIONS[t]?.secret) TRADITIONS[t].secret = { ...TRADITIONS[t].secret, do: { ...TRADITIONS[t].secret.do, ...o } };
+// 헛친 칼 계기 (10/9 비기 후속 — 일본 後の先 '진짜 헛스윙' 문턱): 공격마다 칼끝 추정 에너지 최고를 재고, 맞힘도 맞물림도 없이 끝난 공격(afterStrike 'missed')만 모은다. 읽기만
+const missE = { X: [], Y: [] };
+// 한 칼 최고 상처 (10/9 비기 후속): 한 번의 공격(startAttack 하나)이 낸 상처 가운데 가장 센 것 — 한 칼이 여러 부위를 스쳐 생기는 약한 덤 상처를 빼고 '그 칼의 파괴력'을 본다. 시험 쪽만
+const swingMax = {};
+function swFlush(ai) {
+  const w = ai._sw;
+  ai._sw = null;
+  if (w && w.max > 0 && ai._swOn) (swingMax[w.tn] ??= []).push(w.max);
+}
+{
+  const sa = AI.prototype.startAttack;
+  AI.prototype.startAttack = function (...a) {
+    swFlush(this);
+    const ok = sa.apply(this, a);
+    if (ok) this._pkE = 0;
+    return ok;
+  };
+  const af = AI.prototype.afterStrike;
+  AI.prototype.afterStrike = function (...a) {
+    if (!this.hitLanded && !this.bound && this._missTo) this._missTo.push(this._pkE ?? 0);
+    return af.apply(this, a);
+  };
+} // 비기 수 갈아 끼우기 (재기용, 예: '{"italianDist":[0,0.2]}')
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
 import { applyMotionLibrary, motionFor, MOTION, installFlow } from '../../src/motion_library.js';
@@ -297,6 +322,10 @@ if (mode === 'poses') {
       if (XA && !pasList) pasList = XA.passives.map((x) => x.name);
       if (XA && !uqTrad) uqTrad = XA.art.tradition; // 고유 동작 줄
       if (XA && SECRET_X_OFF) XA.secret = null; // 대조: 시험 쪽만 비기 없음
+      const YA = xFirst ? G.ai : G.ai2;
+      if (XA) XA._missTo = missE.X;
+      if (XA) XA._swOn = true;
+      if (YA) YA._missTo = missE.Y;
       if (XA && !secName) secName = XA.secret?.name ?? '-';
       const tipRing = new Map([[X, []], [Y, []]]); // 칼끝 추정 에너지 최근 0.2 s
       G.onWound = (att, vic, r) => {
@@ -306,8 +335,13 @@ if (mode === 'poses') {
         if (att !== X || !XA) return;
         const sr = XA.secretRun;
         if (sr) (secWound[sr.S.name] ??= []).push(r.energy);
+        if (sr && process.env.SECRET_SEG === '1') console.log(`  [비기 상처] ${sr.S.name} ${XA.phase} 남은 길 ${XA.path.length} ${r.type} ${r.energy.toFixed(0)} J 칼끝 ${(0.5 * (X.swordProps?.m ?? 1.5) * X.tipVel.lengthSq()).toFixed(0)} J · 거리 ${XA.d.toFixed(2)} (contact ${XA.M.contact.toFixed(2)} reach ${XA.M.reach.toFixed(2)})`); // 비기 상처가 길 어디서 났나 (점검)
         const tn = XA.mode === 'attack' ? `${XA.tech?.name ?? '?'}${sr ? '★' : ''}` : `(${XA.mode})`;
         (techE[tn] ??= []).push(r.energy);
+        if (XA.mode === 'attack') {
+          XA._sw ??= { tn, max: 0 };
+          XA._sw.max = Math.max(XA._sw.max, r.energy);
+        }
       };
       if (process.env.TWIST_MUL) X.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율 (라이브러리와 별개)
       if (process.env.FORCE_FLOW === '1') installFlow(X); // 점검: 무기 쪽에만 흐름(이어 베기) — 두손 보통 틀(카타나 대리 = 롱소드)에 켜면 어떻게 되나
@@ -326,8 +360,11 @@ if (mode === 'poses') {
         G.step();
         for (const [f, ring] of tipRing) { // 칼끝 추정 에너지 ½·m·v² (0.2 s = 24 스텝)
           const v = f.tipVel;
-          ring.push(0.5 * (f.swordProps?.m ?? 1.5) * (v.x * v.x + v.y * v.y + v.z * v.z));
+          const e = 0.5 * (f.swordProps?.m ?? 1.5) * (v.x * v.x + v.y * v.y + v.z * v.z);
+          ring.push(e);
           if (ring.length > 24) ring.shift();
+          const A = f === X ? XA : f === Y ? (xFirst ? G.ai : G.ai2) : null;
+          if (A && A.mode === 'attack') A._pkE = Math.max(A._pkE ?? 0, e);
         }
         if (XA) { // 기질 계기 (읽기만)
           const d = XA.d, w = XA.mode === 'watch';
@@ -396,6 +433,7 @@ if (mode === 'poses') {
           break;
         }
       }
+      if (XA) swFlush(XA);
       if (res === 'W') Wn++;
       else if (res === 'L') L++;
       else D++;
@@ -439,7 +477,10 @@ if (mode === 'poses') {
     const keep = new Set(rows.slice(0, 12).map(([k]) => k));
     for (const [k] of rows) if (k.endsWith('★') || k === 'oberhau' || k === 'altibaixo') keep.add(k);
     console.log(`  맞힘 에너지 (상처 J 평균/최대 n): ${rows.filter(([k]) => keep.has(k)).map(([k, a]) => `${k} ${avg(a).toFixed(0)}/${mx(a).toFixed(0)} n${a.length}`).join(', ') || '-'}`);
+    const swRows = Object.entries(swingMax).filter(([k]) => k.endsWith('★') || ['oberhau', 'zornhau', 'altibaixo', 'zornhauL', 'stichPflug', 'passataSotto'].includes(k));
+    console.log(`  한 칼 최고 상처 (J 평균/최대 n칼): ${swRows.sort((a, b) => b[1].length - a[1].length).map(([k, a]) => `${k} ${avg(a).toFixed(0)}/${mx(a).toFixed(0)} n${a.length}`).join(', ') || '-'}`);
     const pq = (a, q) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(q * b.length))] : 0; };
+    console.log(`  헛친 칼 칼끝 추정 ½mv² (공격 최고, 맞힘·맞물림 없음): 시험 쪽 n ${missE.X.length} p50 ${pq(missE.X, 0.5).toFixed(0)} · p75 ${pq(missE.X, 0.75).toFixed(0)} J · 상대(롱소드) n ${missE.Y.length} p25 ${pq(missE.Y, 0.25).toFixed(0)} · p50 ${pq(missE.Y, 0.5).toFixed(0)} · p75 ${pq(missE.Y, 0.75).toFixed(0)} J`);
     console.log(`  에너지 분포 (맞은 칼 양쪽 n ${estAll.length}): 칼끝 추정 ½mv² p50 ${pq(estAll, 0.5).toFixed(0)} · p75 ${pq(estAll, 0.75).toFixed(0)} · p90 ${pq(estAll, 0.9).toFixed(0)} J · 상처 J p50 ${pq(woundAll, 0.5).toFixed(0)} · p75 ${pq(woundAll, 0.75).toFixed(0)} · p90 ${pq(woundAll, 0.9).toFixed(0)}`);
   }
   // 기질 줄 (10/9 유파 기질): 간 보는 거리 중앙값 · 옆걸음 비율(|move.x| > 0.05)·평균 |move.x| · 간 보는 1 분당 자세 바꿈 · 간격 끝 안에 든 뒤 첫 공격까지(초, n · 치지 않고 물러난 수)
