@@ -709,7 +709,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
 //      겉모습은 모노호시자오의 칼 꼴(외날·시노기·하몬·키사키)을 칼날 0.71 m 로 그대로 쓰고, 금 장식을 뺀 커먼 마감.
 // ═════════════════════════════════════════════════════════════
 const uchigatana = finalizeSpec('uchigatana', {
-  nameKo: '打刀 (우치가타나)', nameEn: 'Uchigatana',
+  nameKo: '우치가타나', nameEn: 'Uchigatana',
   desc: '무사가 허리에 꽂던 보통 크기의 카타나.\n한 칼에 내려벤다.',
   grip: 'two-hand', material: 'steel',
   school: 'japanese', // 일본 유파: 이름표·가중치(two:*)·고유 동작·패시브를 traditionOf 로 받는다
