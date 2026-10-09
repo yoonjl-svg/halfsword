@@ -84,13 +84,48 @@ export function foeRecentTipE(sense, foe, span) {
 }
 
 /**
+ * 치명적인 칼인가 — 궤적 (10/10 사장님 '치명성을 J 로 판단하는 게 이상하다. 목을 노리는 궤적 같은 걸로는?' → 디렉터 안 승인):
+ *  들어오는 상대 칼끝(지금 모습 s)의 위치·속도로 앞 SECRET.lethalLook 초를 곧게 내다본 선분이 내 머리(공 r 0.1)·목(가슴 → 머리 사이 점, r 0.06)
+ *  겉에서 얼마나 가까이 지나나(ctx.lethalD, m)와 칼끝 빠르기(ctx.tipSp, m/s)를 ctx 에 적는다. 판정은 secretCond (lethalDist·lethalSpeed)
+ */
+function lethalPath(ctx, s, me) {
+  const T = SECRET.lethalLook;
+  const ax = s.tx;
+  const ay = s.ty;
+  const az = s.tz;
+  const bx = ax + s.tvx * T;
+  const by = ay + s.tvy * T;
+  const bz = az + s.tvz * T;
+  const h = me.bodies.head.translation();
+  const ch = me.bodies.chest.translation();
+  const nx = ch.x + (h.x - ch.x) * 0.6;
+  const ny = ch.y + (h.y - ch.y) * 0.6;
+  const nz = ch.z + (h.z - ch.z) * 0.6;
+  const dHead = segPoint(ax, ay, az, bx, by, bz, h.x, h.y, h.z) - 0.1;
+  const dNeck = segPoint(ax, ay, az, bx, by, bz, nx, ny, nz) - 0.06;
+  ctx.lethalD = Math.min(dHead, dNeck);
+  ctx.tipSp = Math.hypot(s.tvx, s.tvy, s.tvz);
+}
+
+/** 선분 a–b 와 점 p 사이 거리 */
+function segPoint(ax, ay, az, bx, by, bz, px, py, pz) {
+  const ux = bx - ax;
+  const uy = by - ay;
+  const uz = bz - az;
+  const L2 = ux * ux + uy * uy + uz * uz;
+  const t = L2 > 1e-9 ? clamp(((px - ax) * ux + (py - ay) * uy + (pz - az) * uz) / L2, 0, 1) : 0;
+  return Math.hypot(ax + ux * t - px, ay + uy * t - py, az + uz * t - pz);
+}
+
+/**
  * 상대 사건 (S.when 의 threat·foeRaise·foeCharge·foeRecover) 을 지금 모습 s0 로 본다. { on, ctx } — 사건이 없거나 S 가 상대 사건 비기가 아니면 on false.
  *  ctx: threat 면 threatNow 의 값, 아니면 { ev: 'raise' | 'recover', tipE? }
  */
-export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach) {
+export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null) {
   const W = [].concat(S.when);
   if (W.includes('threat')) {
     const ctx = threatNow(sense, foe, s0, c, r, d0, foeReach);
+    if (ctx && S.cond?.lethal && me) lethalPath(ctx, s0, me);
     return { on: !!ctx, ctx };
   }
   if (!(W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge'))) return { on: false, ctx: null };
@@ -115,7 +150,7 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach) {
 export function secretCond(S, ctx, d, view) {
   const C = S.cond;
   if (!C) return true;
-  if (C.lethal && !(ctx && ctx.E >= SECRET.lethalJ)) return false;
+  if (C.lethal && !(ctx && ctx.tipSp >= SECRET.lethalSpeed && ctx.lethalD <= SECRET.lethalDist)) return false; // 10/10: J 문턱(옛 lethalJ 247) 대신 궤적 — 칼끝 길이 내 머리·목 곁을 지남 (lethalPath)
   if (C.whiff && ctx?.ev === 'recover' && !(ctx.tipE >= secretVal(C.whiff))) return false; // 일본 보조 사건(헛침): 상대가 헛친 칼이 제대로 휘두른 칼이었나
   if (C.window) {
     // 일본 後の先 창: 상대 공격은 명백히 안 닿고(상대 칼 닿는 거리 foeReach + 여유 밖) 내 後の先 은 닿는다(내 간격 끝 + 기술 reach + 강한 내딛음 몫 안)
@@ -128,6 +163,51 @@ export function secretCond(S, ctx, d, view) {
     if (d < view.reach + w[0] || d > view.reach + w[1]) return false;
   }
   return true;
+}
+
+/**
+ * 중국 연환삼격 조건 (10/10 01:2x 사장님 '쉬었다가 들어가며' → 정확한 값): 내 공격 없이 SECRET.chineseRest 초 이상 지난 뒤 들어가며 친 첫 칼이
+ *  맞았나 (cond.landed 면 맞물림 제외). rest = 그 칼을 시작하기 전 내 공격 없이 지난 시간 (s). AI(secretFirstHit)·플레이어 창이 같은 함수
+ */
+export function firstHitOk(S, rest, landed, bound) {
+  if (S.cond?.rest != null && !(rest >= secretVal(S.cond.rest))) return false;
+  return landed || (!S.cond?.landed && bound);
+}
+
+/**
+ * 이베리아 맺힘 셈 (10/10 01:2x 사장님 '내 베기가 피해를 주지 못하고 칼끼리만 부딪힌 횟수가 3 회가 되면 다음 공격이 비기' — 세는 법 디렉터 정의):
+ *  내 베기 공격이 상대 칼과 닿고(맺힘·막힘) 상처를 못 내고 끝나면 +1 · 내 공격이 상처를 내면 0 · SECRET.iberianReset 초 동안 내 칼이 상대 칼에
+ *  닿지 않으면 0 · 헛친 베기(아무것도 안 닿음)는 그대로 · 비기를 내면 0. n ≥ SECRET.iberianBinds 면 ready. AI·플레이어 같은 셈
+ */
+export class BindCount {
+  constructor() {
+    this.n = 0;
+    this.quiet = 0; // 내 칼이 상대 칼에 닿지 않은 시간
+  }
+  /** 매 스텝: 칼끼리 닿아 있나 */
+  tick(dt, touching) {
+    this.quiet = touching ? 0 : this.quiet + dt;
+    if (this.quiet >= SECRET.iberianReset) this.n = 0;
+  }
+  /** 내 베기 공격 하나가 끝남 */
+  strike(landed, bound) {
+    if (landed) this.n = 0;
+    else if (bound) this.n++;
+  }
+  get ready() {
+    return this.n >= SECRET.iberianBinds;
+  }
+  reset() {
+    this.n = 0;
+  }
+}
+
+/** 두 칼이 닿아 있나: 칼끼리 부딪힘(combat.bladeClash 가 적는 fighter.feel.touching — 실제 접촉 충격) 또는 ai.js checkBind 와 같은 기하(칼날 0.1 지점 ~ 칼끝 선분 사이 < 0.07 m) */
+export function bladesTouch(me, foe) {
+  if (!me.armed || !foe.armed) return false;
+  if (me.feel?.touching) return true;
+  if (!me.tipPrev || !foe.tipPrev) return false;
+  return segDist(me.bladePoint(0.1, _a), me.tipPrev, foe.bladePoint(0.1, _b), foe.tipPrev) < 0.07;
 }
 
 /** 내 베기 사건 비기(combo·firstHit)의 거리: 이어 치기 거리 안 (ai.js secretCombo·secretFirstHit 와 같은 식) */
@@ -152,6 +232,7 @@ export class PlayerSecretWatch {
     this.ev = { armed: true, off: 0 };
     this.open = null; // 열린 창 { S, ctx, t }
     this.combo = 0;
+    this.binds = new BindCount(); // 이베리아 맺힘 셈 (10/10)
     this.gap = Infinity; // 마지막 베기 끝에서 지난 시간
     this.swing = null; // 지금 베기 { first, landed }
     this.prevFoePain = foe.pain;
@@ -188,18 +269,24 @@ export class PlayerSecretWatch {
     const V = this.view();
     // 내 베기 덩이
     const sw = me.skill.swinging && !busy;
-    if (sw && !this.swing) this.swing = { first: this.gap > SECRET.playerChainGap, landed: false, bound: false };
+    if (sw && !this.swing) this.swing = { first: this.gap > SECRET.playerChainGap, rest: this.gap, landed: false, bound: false, w0: foe.wounds?.length ?? 0 };
     if (this.swing && painUp) this.swing.landed = true;
-    if (this.swing && !this.swing.bound && me.tipPrev && foe.tipPrev && segDist(me.bladePoint(0.1, _a), me.tipPrev, foe.bladePoint(0.1, _b), foe.tipPrev) < 0.07) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
+    const touch = bladesTouch(me, foe);
+    if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
+    if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
       this.swing = null;
       this.combo = this.gap > SECRET.playerChainGap ? 1 : this.combo + 1;
       this.gap = 0;
+      if (S.when === 'bindCount') {
+        this.binds.strike(SECRET.iberianHurt === 'wound' ? (foe.wounds?.length ?? 0) > w.w0 : w.landed, w.bound); // '피해' = 벤 상처(iberianHurt 'wound') 또는 아픔 +0.05
+        if (!busy && !this.open && this.binds.ready) this.openWindow(null, SECRET.iberianWindow); // 셋째 맺힘 → 다음 공격 입력이 비기 (창 iberianWindow)
+      }
       if (!busy && !this.open && chainRange(d0, V)) {
-        if (S.when === 'combo' && this.combo >= SECRET.comboN && (!S.cond?.touch || w.landed || w.bound)) this.openWindow(null);
-        if (S.when === 'firstHit' && w.first && (w.landed || (!S.cond?.landed && w.bound))) this.openWindow(null);
+        if (S.when === 'combo' && this.combo >= SECRET.comboN && (!S.cond?.touch || w.landed || w.bound)) this.openWindow(null); // (10/10 이베리아는 bindCount 로 바뀜 — 옛 길)
+        if (S.when === 'firstHit' && firstHitOk(S, w.rest, w.landed, w.bound)) this.openWindow(null);
       }
     } else if (!sw) this.gap += dt;
     if (me.jolt > 0.5) this.combo = 0; // 맞아 흔들림 = 끊김
@@ -207,7 +294,7 @@ export class PlayerSecretWatch {
     // 상대 사건 (AI secretScan 과 같은 꼴: 사건 한 번에 한 번, 0.3 s 그치면 다시 건다)
     const r = me.right(_r);
     const E = this.ev;
-    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach);
+    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me);
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
@@ -220,8 +307,8 @@ export class PlayerSecretWatch {
     this.openWindow(ctx);
   }
 
-  openWindow(ctx) {
-    this.open = { S: this.S, ctx, t: SECRET.playerWindow };
+  openWindow(ctx, t = SECRET.playerWindow) {
+    this.open = { S: this.S, ctx, t };
     this.opened++;
   }
 
@@ -229,7 +316,10 @@ export class PlayerSecretWatch {
   fire() {
     const o = this.open;
     this.open = null;
-    if (o) this.combo = 0;
+    if (o) {
+      this.combo = 0;
+      this.binds.reset(); // 비기를 내면 0
+    }
     return o;
   }
 }

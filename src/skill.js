@@ -27,6 +27,7 @@ import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
+import { requestInstant } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -454,6 +455,13 @@ export class Skill {
       if (!t) return false;
       run.queue.push(t);
       run.bind = D.bind ? byName[D.bind] ?? null : null;
+    } else if (D.back && SECRET.instant && D.instant) {
+      // 일본 순간 베기 (10/10): 물러남·담기 없이 곧장 — 이번 스텝 끝(combat.afterStep)에 내딛음·끝 자세·쓸린 자리 상처 (secret_instant.js, AI 와 같은 실행부)
+      run.stage = 'instant';
+      run.instant = true;
+      run.end = D.tech.path[D.tech.path.length - 1];
+      requestInstant(f, { endPad: run.end });
+      this.secretBursts++;
     } else if (D.back) {
       run.stage = 'back'; // 일본 後の先 ①: 물러서며 脇構え 로 끌어 담기
     } else if (D.path) {
@@ -591,6 +599,18 @@ export class Skill {
     const handMul = secVal(D.hand ?? 'handSpeed');
     const g = f.gait;
     const ask = (o) => !!(g?.requestStep && g.active && g.requestStep(o));
+    if (run.stage === 'instant') {
+      const R = f.instantResult;
+      if (!R) return;
+      if (!R.ok) return this.secretEnd();
+      run.landed = R.hit;
+      if (run.landed) this.secretStats[run.S.name].landed++;
+      f.secretHit = 1;
+      run.stage = 'stiff';
+      run.t = 0;
+      run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+      return;
+    }
     if (run.stage === 'back') {
       const B = D.back;
       this.secretMove(B.guard[0], B.guard[1], L.parrySpeed * handMul, dt);
@@ -686,7 +706,14 @@ export class Skill {
       return;
     }
     // 경직: 칼 조작 무시 — 손은 끝 자리에 그대로 (main.js 가 입력을 막고 '경직'을 흐리게 띄운다)
-    if (run.stage === 'stiff' && run.t >= run.stiffT) this.secretEnd();
+    if (run.stage === 'stiff') {
+      // 순간 베기 경직: 칼끝을 떨어뜨린 자세로 천천히 (보이는 경직 — AI 와 같은 stiffPose)
+      if (run.instant && D.stiffPose) {
+        const P = secVal(D.stiffPose);
+        this.secretMove(P[0], P[1], AI_LEVELS.normal.chamberSpeed * SECRET.stiffHand, dt);
+      }
+      if (run.t >= run.stiffT) this.secretEnd();
+    }
   }
 
   /** 비기를 끝낸다 (끝·끊김): 힘·판정 배율·몸의 힘을 되돌리고 조작으로. dropped = 터뜨림 창을 못 만나 거둠 */

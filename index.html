@@ -71,8 +71,10 @@
       #techCue[data-kind="secretReady"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #ffd6a8; letter-spacing: .04em; }
       #techCue[data-kind="secretReady"] small { color: #ffe3c4; font-size: 14px; }
       #techCue[data-kind="secretReady"].show { opacity: .55; }
-      #techCue[data-kind="stiff"] b { font-size: clamp(16px, 4.4vw, 22px); font-weight: 700; color: #cfc6b4; }
-      #techCue[data-kind="stiff"].show { opacity: .5; }
+      /* 경직 (10/10 사장님 '있는 것도 몰랐다'): 또렷이 — 비기 알림만큼 크게, 잿빛 푸른 글씨 */
+      #techCue[data-kind="stiff"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #b9c7d6; letter-spacing: .2em; }
+      #techCue[data-kind="stiff"] small { color: #d6dde6; font-size: 14px; }
+      #techCue[data-kind="stiff"].show { opacity: .95; }
       /* 설정 '모든 기술 이름 표시'(디버그, 기본 끔 — 10/9 13:xx): 공용 기술은 작고 흐리게 */
       #techCue[data-kind="all"] b { font-size: clamp(15px, 4vw, 19px); font-weight: 600; color: #d9cfb8; }
       #techCue[data-kind="all"] small { opacity: .7; }

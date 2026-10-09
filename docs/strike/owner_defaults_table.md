@@ -394,3 +394,27 @@
 |---|---|---|---|---|---|---|
 | 350 | 새 세 무대의 순서 자리: `STAGE_ORDER` 대성당 **뒤**에 붉은 회랑(loggia) → 산호 항구(corsair) → 신목의 숲(sacred_grove) | src/stages.js `STAGE_ORDER` | 기존 여섯 무대 순서·상대를 그대로 두고 기본 진행(이기면 다음 무대)에서 세 사람을 만나게 함 | 앞으로 당기면 기존 여정 순서가 바뀜. 빼면 `?stage=`·무작위(`?foe=random`·어두운 홀)로만 만남 | 사장님 선택 | |
 | 351 | 새 세 인물의 실력 묶음 `ai.level 'normal'`(샛별 쪽 값 그대로), `persona.level` 덮어쓰기 없음 | src/characters.js tome·omari·minami | 플레이 기질을 안 가져오면서도 난이도 칸을 비워 두지 않음 | 'easy'/'hard' 로 바꾸면 그 묶음 숫자(AI_LEVELS)를 씀 | 디렉터 판단 | |
+
+### 비기 v4 — 독일 궤적 · 일본 순간 베기 · 중국 쉼 · 이베리아 맺힘 셈 (10/10 01:0x·01:2x 사장님 결정, …/secret-v4-2q36ha, docs/strike/school_secret_2026-10-09.md §13)
+
+| 번호 | 값 | 어디에(파일·라운드) | 무엇을 막거나 하는가 | 없애면/바꾸면 생기는 일 | 디렉터 의견(유지/제거/사장님 선택) | 답 |
+|---|---|---|---|---|---|---|
+| 370 | 독일 치명 판정 = **궤적**: 상대 칼끝 위치·속도로 앞 `SECRET.lethalLook` **0.25 s** 내다본 선분 | secret.js `lethalPath`·`secretCond` (AI·플레이어) | 사장님 '치명성을 J 로 판단하는 게 이상하다 — 목을 노리는 궤적' | — | 사장님 승인 안 · 값 확인 전 | |
+| 371 | 그 선분이 내 머리(공 r 0.1)·목(가슴 → 머리 0.6 지점, r 0.06) 겉에서 `lethalDist` **0.15 m** 안 | 같은 곳 | 머리·목을 노리는 칼만 | 0.05(속도 4)면 48 판 70 번 | 확인 전 | |
+| 372 | 칼끝 빠르기 하한 `lethalSpeed` **10 m/s** — 사다리 4 → 130 번 · 8 → 62 · 10 → 54(판마다 1.13) · 12 → 36 | config.js SECRET | 느리게 다가오는 칼 거르기 + 빈도 목표 0.5~1.2 | 4(지시의 예)면 판마다 2.7 | 확인 전 | |
+| 373 | `lethalJ` 247 J · 줄 조건(high*·thrust)을 독일 조건에서 뺌(값은 기록용) | config.js · schools.js GERMAN_SECRET cond | 궤적이 맡음 | 낮은 줄 → 정수리 베기 표가 이제 쓰임 | 확인 전 | |
+| 374 | **일본 순간 베기** `SECRET.instant` **1** · `?instant=0` · SECRET_JSON 의 instant 0 — 물러남·담기·붙잡기 없이 그 스텝 끝에 실행 (**물리 원칙의 예외**, src/secret_instant.js 한 곳) | secret_instant.js · ai.js `secretGo`·`secretUpdate` · skill.js `secret()` · combat.js afterStep | 사장님 '전광석화처럼 · 순간이동해서 꽂히고 궤적이 잔상으로' | 0 이면 10/9 길(낸 때 → 상처 1.0~1.2 s) | 사장님 승인 안 · 값 확인 전 | |
+| 375 | 내딛음 `instantStep` **0.6 m** — 몸 강체 전부·골반 닻·다리 걸음 자리 평행 이동(속도 유지), 맞닿기 거리에서 멈추고 clinch 안 금지 | secret_instant.js `shiftFighter` | 지시 ① | — | 확인 전 | |
+| 376 | 끝 자세 `instantEndPad` **[0.04, −0.45]**(真向 길 끝) — 그 패드의 서보 목표(armIK·칼끝 목표)대로 칼 쪽 팔·칼·(두 손이면) 빈팔을 놓음, 각속도 0 · 속도 = 가슴 | secret_instant.js `poseEnd` | 지시 ② (관절 기준점이 맞게) | — | 확인 전 | |
+| 377 | 쓸린 자리 `instantSlices` **12** 조각(上段 → 끝, 올리는 길은 그리기만) · 닿음 `instantTouch` **0.02 m**(칼날 선분 ↔ 공·캡슐·상자 콜라이더 겉) | secret_instant.js `runInstant`·`segToCollider` | 지시 ③ | — | 확인 전 | |
+| 378 | 순간 베기 에너지 `instantJ` **150 J** × hitMul — 시작값 260(보통 베기 한 칼 최대의 1.5 배)은 승률 +21·+23(띠 밖), 150 은 +17·+19, 100 도 같은 승패 | config.js SECRET · secret_instant.js `instantWound`(combat.analyze 의 칼 속도를 그 에너지가 나오게 고름) | 지시 ③ | — | 확인 전 | |
+| 379 | 충돌 끔 `instantNoCollide` **0.15 s** — 내 칼 ↔ 상대 몸 (combat.filterContactPair) | combat.js · secret_instant.js | 지시 ④ (몸 안에 놓인 칼이 튀지 않게) | — | 확인 전 | |
+| 380 | 잔상 `instantArcLife` **0.5 s**(실시간) · 밝은 상아빛 더하기 섞기 · 칼끝 쪽 8 % 넓힘 | sword_trail.js | 지시 ⑤ | 뒤 카메라에선 쓸린 면이 선으로 보임(결정 후보 4) | 확인 전 | |
+| 381 | 일본 경직 `SECRET.stiff.japanese` 0.8 → **1.5 s** · 경직 손 목표 `instantStiffPose` **[0.06, −0.56]**(칼끝 떨어뜨림) · '경직' 크게 또렷이(불투명 0.95), 상대 경직도 띄움 | config.js · ai.js `secretUpdate` · skill.js · main.js `updateTechCue` · index.html | 사장님 '경직은 더 길어도 된다, 있는 것도 몰랐다' | `?instant=0` 에도 1.5 s | 확인 전 | |
+| 382 | 중국 `chineseRest` **0.5 s** — 내 공격 없이 이만큼 지난 뒤 들어가며 친 첫 칼이 맞으면. 48 판: 0.5 → 31 번(0.65) · 0.7 → 21 · 1.0 → 17 · 1.5 → 12 · 2.0 → 8 | config.js · schools.js CHINESE_SECRET cond.rest · secret.js `firstHitOk` | 사장님 01:2x '쉬었다가'의 값 | 지시의 1.0~2.0 은 모두 목표 아래 | 확인 전 | |
+| 383 | 이베리아 조건 = **맺힘 셈** `iberianBinds` **3** (사장님 안): 내 베기가 상대 칼과 닿고 피해 없이 끝나면 +1 · 피해 0 · 헛침 그대로 · 비기 내면 0 → AI 는 다음 새 공격이 비기 | secret.js `BindCount` · ai.js `startAttack`·`afterStrike` · schools.js IBERIAN_SECRET when 'bindCount' | 사장님 01:2x | 옛 조건(이어 베기 3 + 셋째 칼 닿음)은 지움 | 사장님 안 · 확인 전 | |
+| 384 | 이베리아 셈 0 으로: 칼끼리 `iberianReset` **4 s** 안 닿음 (8 s·∞ 로 해도 빈도 같음) | config.js | 디렉터 정의 | — | 확인 전 | |
+| 385 | 이베리아 '피해' = **벤 상처**(이 칼이 살을 가름, `iberianHurt 'wound'`) — 'pain'(아픔 +0.05)이면 48 판 1~7 번 | config.js · ai.js · secret.js | 해석 — AI 베기가 칼에 닿으면 대개 몸에도 스쳐 아픔이 오름 | 'wound' 29 번(판마다 0.6) | 해석 · 확인 전 | |
+| 386 | 이베리아 '칼끼리 부딪힘' = checkBind 기하(< 0.07 m) **또는 실제 접촉**(`fighter.feel.touching`) | secret.js `bladesTouch` | 해석 — 기하만이면 피해 = 벤 상처여도 10~13 번 | — | 해석 · 확인 전 | |
+| 387 | 이베리아 플레이어 창 `iberianWindow` **1.5 s** | config.js · secret.js `openWindow` | 지시 | — | 확인 전 | |
+| 388 | 브라우저 시험만: 잔상 8 s · 창 5 s · 상대 비기가 150 s(벽) 안에 안 나오면 직접 냄 · 순간 베기 사진은 옆 카메라 | tools/browser/secret_instant_shots.mjs | 소프트웨어 GL 이 느림 | 게임 값은 그대로 | 투명성 | |

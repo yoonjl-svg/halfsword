@@ -14,7 +14,7 @@
 //           물리 스텝 뒤 swordTrails.sample(PHYSICS.timestep); 프레임마다 swordTrails.update();
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SWORD_TRAIL } from './config.js';
+import { SWORD_TRAIL, SECRET } from './config.js';
 
 const TONES = {
   normal: null, // 칼날 재질 색 × dim
@@ -54,12 +54,38 @@ export function createSwordTrails(scene) {
   mesh.renderOrder = 3;
   scene.add(mesh);
 
+  // 비기 순간 베기 잔상 (10/10 — secret_instant.js 가 f.instantArc 에 쓸린 호의 조각마다 칼자루·칼끝 점): 호 전체를 한 번에 밝게, SECRET.instantArcLife 초(실시간) 동안 옅어지며.
+  //  보통 잔상(어둡고 짧게)과 다른 비기 색(밝은 상아빛)·더하기 섞기. 칼날 폭 그대로에 칼끝 쪽으로 조금 더 넓혀(arcWiden) 굵게 보인다. 물리·판정 무관(읽기만)
+  const ARC_MAX = MAX_FIGHTERS * 40 * 6;
+  const apos = new Float32Array(ARC_MAX * 3);
+  const acol = new Float32Array(ARC_MAX * 4);
+  const ageo = new THREE.BufferGeometry();
+  ageo.setAttribute('position', new THREE.BufferAttribute(apos, 3).setUsage(THREE.DynamicDrawUsage));
+  ageo.setAttribute('color', new THREE.BufferAttribute(acol, 4).setUsage(THREE.DynamicDrawUsage));
+  ageo.setDrawRange(0, 0);
+  const amesh = new THREE.Mesh(ageo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  amesh.name = 'secretArc';
+  amesh.frustumCulled = false;
+  amesh.renderOrder = 4;
+  amesh.visible = false;
+  scene.add(amesh);
+  const ARC_COL = new THREE.Color(0xffe9c4);
+  const arcs = Array.from({ length: MAX_FIGHTERS }, () => ({ id: 0, pts: null, t0: 0 }));
+
   const slots = Array.from({ length: MAX_FIGHTERS }, makeSlot);
   let now = 0; // 게임 시간 (스텝 합)
 
   /** 물리 스텝 뒤에 한 번: 두 검객의 칼자루·칼끝을 기록한다 */
   const sample = (dt) => {
     now += dt;
+    for (let k = 0; k < slots.length; k++) {
+      const A = slots[k].f?.instantArc;
+      if (A && A.id !== arcs[k].id) {
+        arcs[k].id = A.id;
+        arcs[k].pts = A.pts;
+        arcs[k].t0 = performance.now();
+      }
+    }
     for (const s of slots) {
       const f = s.f;
       if (!s.on || !f || !f.sword || !f.armed) {
@@ -134,6 +160,55 @@ export function createSwordTrails(scene) {
         put(s.hx[i1], s.hy[i1], s.hz[i1], w1 * hf);
       }
     }
+    // 비기 순간 베기 호
+    let an = 0;
+    const arcLife = (SECRET.instantArcLife ?? 0.5) * 1000;
+    const nowMs = performance.now();
+    const aput = (x, y, z, a) => {
+      const o = an * 3;
+      apos[o] = x;
+      apos[o + 1] = y;
+      apos[o + 2] = z;
+      const c = an * 4;
+      acol[c] = ARC_COL.r * a;
+      acol[c + 1] = ARC_COL.g * a;
+      acol[c + 2] = ARC_COL.b * a;
+      acol[c + 3] = a;
+      an++;
+    };
+    for (const A of arcs) {
+      if (!A.pts) continue;
+      const age = nowMs - A.t0;
+      if (age >= arcLife) {
+        A.pts = null;
+        continue;
+      }
+      const w = 0.95 * (1 - age / arcLife);
+      const P = A.pts;
+      const tipOf = (q) => {
+        // 칼끝 쪽으로 8 % 더 (굵게)
+        return [q[3] + (q[3] - q[0]) * 0.08, q[4] + (q[4] - q[1]) * 0.08, q[5] + (q[5] - q[2]) * 0.08];
+      };
+      for (let q = 0; q < P.length - 1 && an + 6 <= ARC_MAX; q++) {
+        const a = P[q];
+        const b = P[q + 1];
+        const ta = tipOf(a);
+        const tb = tipOf(b);
+        const h = w * 0.35;
+        aput(a[0], a[1], a[2], h);
+        aput(ta[0], ta[1], ta[2], w);
+        aput(tb[0], tb[1], tb[2], w);
+        aput(a[0], a[1], a[2], h);
+        aput(tb[0], tb[1], tb[2], w);
+        aput(b[0], b[1], b[2], h);
+      }
+    }
+    ageo.setDrawRange(0, an);
+    amesh.visible = an > 0;
+    if (an > 0) {
+      ageo.attributes.position.needsUpdate = true;
+      ageo.attributes.color.needsUpdate = true;
+    }
     geo.setDrawRange(0, n);
     mesh.visible = n > 0;
     if (n > 0) {
@@ -153,6 +228,8 @@ export function createSwordTrails(scene) {
       s.head = 0;
       s.tone = null;
       s.on = trailFor(f?.weapon);
+      arcs[i].pts = null;
+      arcs[i].id = f?.instantArc?.id ?? 0;
       // 띠 색: 그 칼날 재질 색 × dim (청강검이면 그 색조) — 늘 칼보다 어둡다
       const bc = f?.bladeMesh?.material?.color;
       s.base.copy(bc ?? STEEL).multiplyScalar(SWORD_TRAIL.dim);
@@ -164,6 +241,7 @@ export function createSwordTrails(scene) {
   };
   const clear = () => {
     for (const s of slots) s.n = 0;
+    for (const A of arcs) A.pts = null;
     geo.setDrawRange(0, 0);
     mesh.visible = false;
   };

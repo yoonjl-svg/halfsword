@@ -28,7 +28,8 @@ import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸�
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
-import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { requestInstant } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -214,7 +215,10 @@ export class AI {
     this.secret = SKILL.schoolArt && SKILL.schoolSecret ? TRADITIONS[art.tradition]?.secret ?? null : null;
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
-    this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 비기 — 공격 꼴을 벗어나면 0)
+    this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
+    this.binds = this.secret?.when === 'bindCount' ? new BindCount() : null; // 이베리아 맺힘 셈 (10/10 — secret.js, 플레이어 창과 같은 셈)
+    this.lastAtkT = -Infinity; // 마지막으로 공격 꼴이던 때 (중국 chineseRest)
+    this.restBefore = Infinity; // 이번 공격을 시작하기 전 내 공격 없이 지난 시간 (s)
     this.defBindSeen = false; // bindDef: 한 번 막는 동안 처음 맞닿음에만
     this.guard = this.pickGuard(null);
   }
@@ -364,6 +368,12 @@ export class AI {
     this.closeQuarters(s, d);
     // 유파 비기 (10/9): 끊기지 않은 베기 수는 공격 꼴을 벗어나면 0 · 비기가 아니면 서보 힘 창은 1 · 상대 사건 비기는 지금 모습(반응 지연 0)으로 본다 — 패시브보다 먼저
     if (this.mode !== 'attack') this.combo = 0;
+    if (this.mode === 'attack') this.lastAtkT = this.sense.t;
+    if (this.binds) {
+      const bt = bladesTouch(me, foe);
+      this.binds.tick(dt, bt);
+      if (bt && this.mode === 'attack') this.atkClash = true; // 이 공격 동안 칼끼리 부딪힘 (맺힘 셈 — checkBind 의 기하보다 넓게, 실제 접촉도)
+    }
     if (!this.secretRun && me.powerMul !== 1) me.powerMul = 1;
     if (!this.secretRun && me.secretHit !== 1) me.secretHit = 1; // 결정타 판정 배율도 비기 밖에선 1
     if (kneeling && this.secretRun) this.secretAbort();
@@ -808,6 +818,11 @@ export class AI {
   startAttack(tech, why, opt = {}) {
     if (!tech || !this.me.armed) return false; // 칼이 없으면 칠 수 없다
     if (this.secretRun && !opt.secret) this.secretAbort(); // 비기가 아닌 공격이 시작되면 비기는 끝 (보통은 걸쇠로 오지 않는다)
+    if (!opt.chain && !opt.secret) this.restBefore = this.sense.t - this.lastAtkT; // 중국 연환삼격: 이번 칼 앞에 쉰 시간
+    this.atkClash = false;
+    this.atkWounds0 = this.foe.wounds?.length ?? 0; // 이베리아 '피해' = 이 칼이 상대에게 낸 벤 상처 (SECRET.iberianHurt 'wound')
+    // 이베리아 (10/10): 맺힘 셋이 차 있으면 다음 공격(이어 치기 아닌 새 공격)이 비기 — 못 내면 원래 공격 그대로
+    if (this.binds?.ready && !opt.chain && !opt.secret && !opt.passive && !this.secretRun && this.mode !== 'secret' && this.me.state === 'stand' && this.secretGo(this.secret)) return true;
     // 미룬 패시브(斂翅 물러남 끝 등 — 10/9 13:xx): 그 패시브가 나기 전에 내 공격 기회(되받기·seize·맞받기)가 오면 그 기회를 패시브가 가져간다
     //  (이어 치기·흐름·패시브가 낸 공격은 건드리지 않는다). 못 내면 원래 공격 그대로
     const PP = this.pendingPassive;
@@ -1156,6 +1171,7 @@ export class AI {
     }
     if (this.secret) {
       this.combo++;
+      if (this.binds) this.binds.strike(SECRET.iberianHurt === 'wound' ? (this.foe.wounds?.length ?? 0) > (this.atkWounds0 ?? 0) : this.hitLanded, this.bound || this.atkClash); // 이베리아 맺힘 셈: 칼끼리 닿고 피해 없음 +1 · 피해 0 · 헛침 그대로
       if (this.secretCombo(d) || this.secretFirstHit(d)) return;
     }
     // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
@@ -1564,7 +1580,7 @@ export class AI {
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach); // 사건 판정은 플레이어 창과 같은 함수 (secret.js)
+    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me); // 사건 판정은 플레이어 창과 같은 함수 (secret.js)
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
@@ -1622,6 +1638,16 @@ export class AI {
       this.path.length = 0;
       this.stepT = 0;
       run.stage = 'back';
+      // 10/10 순간 베기 (SECRET.instant): 물러남·담기·붙잡기 없이 곧장 — 이번 스텝 끝(combat.afterStep)에 내딛음·끝 자세·쓸린 자리 상처 (secret_instant.js)
+      if (SECRET.instant && D.instant) {
+        run.stage = 'instant';
+        run.instant = true;
+        run.t = 0;
+        const end = D.tech.path[D.tech.path.length - 1];
+        requestInstant(this.me, { endPad: end });
+        this.hand.set(end[0], end[1]);
+        this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
+      }
       ok = true;
     } else if (D.path) {
       // 이베리아 휘돌려 내려치기: 지금 손 자리에서(준비 자세로 가지 않음) 옆으로 비껴 딛고('approach' 기술 걸음 — 발이 닿으면) 고리 → 지붕 → 내려치기.
@@ -1662,6 +1688,7 @@ export class AI {
       return false;
     }
     this.secretStat(S).fired++;
+    this.binds?.reset(); // 이베리아: 비기를 내면 맺힘 셈 0
     this.setTechCue(S.nameKo ?? S.name, 'secret');
     return true;
   }
@@ -1751,7 +1778,7 @@ export class AI {
   /** 중국 firstHit: 들어가며 친 첫 칼(이어 치기·맞받기·되받기 아님)이 닿았다(맞힘 또는 맞물림) */
   secretFirstHit(d, tally) {
     const S = this.secret;
-    if (S.when !== 'firstHit' || this.secretRun || this.chain !== 0 || !(this.hitLanded || (!S.cond?.landed && this.bound))) return false; // cond.landed: 맞았을 때만 (막힘 제외 — 10/9 23:5x 발동 줄이기)
+    if (S.when !== 'firstHit' || this.secretRun || this.chain !== 0 || !firstHitOk(S, this.restBefore, this.hitLanded, this.bound)) return false; // 맞았을 때만(cond.landed) · 그 앞에 내 공격 없이 chineseRest 초 이상 (secret.js — 플레이어 창과 같은 함수)
     const w = this.why;
     if (w === 'counter' || w === 'riposte' || w === 'follow' || w === 'flow' || w === 'secret' || this.passiveAtk) return false;
     if (!this.foe.alive || d > this.M.reach + 0.1 || d < this.M.clinch - 0.5) return false;
@@ -1833,9 +1860,25 @@ export class AI {
       this.secretRelease(dt);
       return;
     }
+    if (run.stage === 'instant') {
+      // 순간 베기 결과를 기다린다 (요청한 스텝 끝에 실행됨): 맞았으면 맞힘으로 세고 곧장 경직
+      const R = this.me.instantResult;
+      const end = run.S.do.tech.path[run.S.do.tech.path.length - 1];
+      this.hand.set(end[0], end[1]);
+      this.handSpeed = L.parrySpeed;
+      if (!R) return;
+      if (!R.ok) {
+        this.secretAbort();
+        return;
+      }
+      run.landed = R.hit;
+      run.peakE = R.energy; // (순간 베기는 칼끝 추정 대신 그 상처 에너지 J)
+      this.secretStiffen();
+      return;
+    }
     if (run.stage === 'stiff') {
       run.t -= dt;
-      const p = this.school.pose.point;
+      const p = run.S.do.stiffPose && run.instant ? this.secretVal(run.S.do.stiffPose) : this.school.pose.point; // 순간 베기 경직: 칼끝을 떨어뜨린 자세 (보이는 경직)
       this.hand.set(p[0], p[1]);
       this.handSpeed = L.chamberSpeed * SECRET.stiffHand;
       if (run.t > 0) return;
