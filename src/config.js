@@ -666,7 +666,7 @@ export const SWORD_TRAIL = {
  *  각은 도. 해부학 출처: AAOS "Joint Motion: Method of Measuring and Recording"(1965) · Norkin & White "Measurement of Joint Motion" · Soucie 외 2011 (Haemophilia 17:500)
  */
 export const JOINTS = {
-  mode: (typeof process !== 'undefined' && process.env?.JOINTS) || 'off',
+  mode: (typeof process !== 'undefined' && process.env?.JOINTS) || 'anat', // 기본 켬 'anat' (10/9 17:5x 디렉터 — 사장님 '두 가지 모두 수행'·'겪어 봐야 판단'. 전 판 = `?joints=off` / JOINTS=off). 값은 확인표 290~298 사장님 확인 전
   // 묶음마다 켜는 몫 (hard = 엔진 한도, soft = 끝 스프링, reach = 손 목표 자르기)
   presets: {
     off: {},
