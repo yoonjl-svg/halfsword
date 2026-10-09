@@ -75,7 +75,7 @@ const SECRET_SLOWMO = params.get('slowMo') !== '0';
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
 //  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다
-const TEMPO = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1) || 1)); // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
+const TEMPO = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1.1) || 1.1)); // 기본 1.1 (사장님 10/10 05:1x '기본 템포 1.1로'), 전 값 `?tempo=1` // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
 const oneVersatile = params.get('oneVersatile');
@@ -1647,7 +1647,7 @@ function frame(now) {
       slowMo -= dt;
       scale = Math.min(scale, 0.25); // 결정타 슬로모션
     } else if (roundOver) scale = Math.min(scale, 0.5);
-    acc += dt * scale * TEMPO; // 전체 빠르기 (?tempo, 기본 1)
+    acc += dt * scale * TEMPO; // 전체 빠르기 (?tempo, 기본 1.1)
     simWant = (frameMs / 1000) * scale;
     const physT0 = perf ? performance.now() : 0;
     let steps = 0;
