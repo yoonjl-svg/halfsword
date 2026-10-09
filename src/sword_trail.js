@@ -54,22 +54,37 @@ export function createSwordTrails(scene) {
   mesh.renderOrder = 3;
   scene.add(mesh);
 
-  // 비기 순간 베기 잔상 (10/10 — secret_instant.js 가 f.instantArc 에 쓸린 호의 조각마다 칼자루·칼끝 점): 호 전체를 한 번에 밝게, SECRET.instantArcLife 초(실시간) 동안 옅어지며.
-  //  보통 잔상(어둡고 짧게)과 다른 비기 색(밝은 상아빛)·더하기 섞기. 칼날 폭 그대로에 칼끝 쪽으로 조금 더 넓혀(arcWiden) 굵게 보인다. 물리·판정 무관(읽기만)
-  const ARC_MAX = MAX_FIGHTERS * 40 * 6;
+  // 비기 잔상 (10/10 — secret_instant.js 가 f.instantArc 에 쓸린 호의 조각마다 칼자루·칼끝 점: 순간 베기·발도·이베리아 휩쓸기): 호 전체를 한 번에, SECRET.instantArcLife 초(실시간) 동안 옅어지며.
+  //  10/10 03:0x 사장님 '잔상 색은 통일해' → 색 값은 **보통 띠와 같다**(그 칼의 base = 칼날 재질 색 × dim, 같은 보통 섞기). 비기는 더 짙고(불투명) 오래 남고, 칼끝 쪽으로 8 % 넓혀 굵다.
+  //  베는 순간 0.08 s 흰 섬광 선(칼끝 길, 더하기 섞기)만 흰색. 물리·판정 무관(읽기만)
+  const ARC_MAX = MAX_FIGHTERS * 240 * 6;
   const apos = new Float32Array(ARC_MAX * 3);
   const acol = new Float32Array(ARC_MAX * 4);
   const ageo = new THREE.BufferGeometry();
   ageo.setAttribute('position', new THREE.BufferAttribute(apos, 3).setUsage(THREE.DynamicDrawUsage));
   ageo.setAttribute('color', new THREE.BufferAttribute(acol, 4).setUsage(THREE.DynamicDrawUsage));
   ageo.setDrawRange(0, 0);
-  const amesh = new THREE.Mesh(ageo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  const amesh = new THREE.Mesh(ageo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
   amesh.name = 'secretArc';
   amesh.frustumCulled = false;
   amesh.renderOrder = 4;
   amesh.visible = false;
   scene.add(amesh);
-  const ARC_COL = new THREE.Color(0xffe9c4);
+  // 섬광 선 (흰색, 더하기 섞기, 0.08 s)
+  const FL_MAX = MAX_FIGHTERS * 240 * 6;
+  const fpos = new Float32Array(FL_MAX * 3);
+  const fcol = new Float32Array(FL_MAX * 4);
+  const fgeo = new THREE.BufferGeometry();
+  fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3).setUsage(THREE.DynamicDrawUsage));
+  fgeo.setAttribute('color', new THREE.BufferAttribute(fcol, 4).setUsage(THREE.DynamicDrawUsage));
+  fgeo.setDrawRange(0, 0);
+  const fmesh = new THREE.Mesh(fgeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  fmesh.name = 'secretFlash';
+  fmesh.frustumCulled = false;
+  fmesh.renderOrder = 5;
+  fmesh.visible = false;
+  scene.add(fmesh);
+  const FLASH_MS = 80;
   const arcs = Array.from({ length: MAX_FIGHTERS }, () => ({ id: 0, pts: null, t0: 0 }));
 
   const slots = Array.from({ length: MAX_FIGHTERS }, makeSlot);
@@ -164,26 +179,60 @@ export function createSwordTrails(scene) {
     let an = 0;
     const arcLife = (SECRET.instantArcLife ?? 0.5) * 1000;
     const nowMs = performance.now();
+    let fn = 0;
+    let ac = null; // 이 호의 색 = 그 칼의 보통 띠 색
     const aput = (x, y, z, a) => {
       const o = an * 3;
       apos[o] = x;
       apos[o + 1] = y;
       apos[o + 2] = z;
       const c = an * 4;
-      acol[c] = ARC_COL.r * a;
-      acol[c + 1] = ARC_COL.g * a;
-      acol[c + 2] = ARC_COL.b * a;
+      acol[c] = ac.r;
+      acol[c + 1] = ac.g;
+      acol[c + 2] = ac.b;
       acol[c + 3] = a;
       an++;
     };
-    for (const A of arcs) {
+    const fput = (x, y, z, a) => {
+      const o = fn * 3;
+      fpos[o] = x;
+      fpos[o + 1] = y;
+      fpos[o + 2] = z;
+      const c = fn * 4;
+      fcol[c] = a;
+      fcol[c + 1] = a;
+      fcol[c + 2] = a;
+      fcol[c + 3] = a;
+      fn++;
+    };
+    for (let k = 0; k < arcs.length; k++) {
+      const A = arcs[k];
       if (!A.pts) continue;
       const age = nowMs - A.t0;
       if (age >= arcLife) {
         A.pts = null;
         continue;
       }
+      ac = slots[k].tone ?? slots[k].base;
       const w = 0.95 * (1 - age / arcLife);
+      // 섬광 선: 칼끝 길(칼날 0.9 → 1.05) 흰색, 처음 FLASH_MS 동안
+      if (age < FLASH_MS) {
+        const fw = 1 - age / FLASH_MS;
+        const Q = A.pts;
+        const at = (q, t) => [q[0] + (q[3] - q[0]) * t, q[1] + (q[4] - q[1]) * t, q[2] + (q[5] - q[2]) * t];
+        for (let q = 0; q < Q.length - 1 && fn + 6 <= FL_MAX; q++) {
+          const a0 = at(Q[q], 0.9);
+          const a1 = at(Q[q], 1.05);
+          const b0 = at(Q[q + 1], 0.9);
+          const b1 = at(Q[q + 1], 1.05);
+          fput(a0[0], a0[1], a0[2], fw * 0.3);
+          fput(a1[0], a1[1], a1[2], fw);
+          fput(b1[0], b1[1], b1[2], fw);
+          fput(a0[0], a0[1], a0[2], fw * 0.3);
+          fput(b1[0], b1[1], b1[2], fw);
+          fput(b0[0], b0[1], b0[2], fw * 0.3);
+        }
+      }
       const P = A.pts;
       const tipOf = (q) => {
         // 칼끝 쪽으로 8 % 더 (굵게)
@@ -202,6 +251,12 @@ export function createSwordTrails(scene) {
         aput(tb[0], tb[1], tb[2], w);
         aput(b[0], b[1], b[2], h);
       }
+    }
+    fgeo.setDrawRange(0, fn);
+    fmesh.visible = fn > 0;
+    if (fn > 0) {
+      fgeo.attributes.position.needsUpdate = true;
+      fgeo.attributes.color.needsUpdate = true;
     }
     ageo.setDrawRange(0, an);
     amesh.visible = an > 0;

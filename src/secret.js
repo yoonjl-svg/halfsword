@@ -151,10 +151,12 @@ export function secretCond(S, ctx, d, view) {
   const C = S.cond;
   if (!C) return true;
   if (C.lethal && !(ctx && ctx.tipSp >= SECRET.lethalSpeed && ctx.lethalD <= SECRET.lethalDist)) return false; // 10/10: J 문턱(옛 lethalJ 247) 대신 궤적 — 칼끝 길이 내 머리·목 곁을 지남 (lethalPath)
+  if (C.armed && SECRET.iai && !view.armed) return false; // 일본 발도: 발도 대기에서만 (IaiArm)
+  if (C.armed && SECRET.iai && view.contact != null && d > view.contact + SECRET.iaiStep + SECRET.iaiMargin) return false; // 발도가 닿는 거리: 내디딤(iaiStep) 뒤 맞닿기 + 여유 안
   if (C.whiff && ctx?.ev === 'recover' && !(ctx.tipE >= secretVal(C.whiff))) return false; // 일본 보조 사건(헛침): 상대가 헛친 칼이 제대로 휘두른 칼이었나
   if (C.window) {
     // 일본 後の先 창: 상대 공격은 명백히 안 닿고(상대 칼 닿는 거리 foeReach + 여유 밖) 내 後の先 은 닿는다(내 간격 끝 + 기술 reach + 강한 내딛음 몫 안)
-    if (d <= view.foeReach + SECRET.japaneseFoeMargin || d > view.reach + SECRET.japaneseReach + SECRET.japaneseFar) return false;
+    if (!(C.armed && SECRET.iai) && (d <= view.foeReach + SECRET.japaneseFoeMargin || d > view.reach + SECRET.japaneseReach + SECRET.japaneseFar)) return false; // (발도는 아래 대기·닿는 거리가 창을 맡는다)
   }
   if (C.line && !C.line.includes(ctx?.line)) return false;
   if (C.range === 'counter' && !(d < view.reach + 0.3 && d > view.clinch + 0.1)) return false; // ai.js counterRange 와 같은 식
@@ -202,6 +204,35 @@ export class BindCount {
   }
 }
 
+/**
+ * 일본 발도 대기 (10/10 02:4x 사장님 '뒤로 몇 초 이상 물러서면?'): 상대 간격 밖(상대 칼 닿는 거리 밖)에 SECRET.iaiArmTime 초 이상 계속 머물면 armed.
+ *  간격 안으로 들어가거나 공격·막기(busy)면 풀린다. AI 는 이때 웅크린 발도 대기 자세(secret_instant.js iaiReadyPose), 플레이어는 '고노센 준비' 표시만.
+ *  고노센(cond.armed)은 armed 일 때만 — SECRET.iai 일 때. AI·플레이어 같은 셈
+ */
+export class IaiArm {
+  constructor() {
+    this.t = 0;
+    this.armed = false;
+  }
+  tick(dt, outside, busy) {
+    if (busy) {
+      this.t = 0;
+      this.armed = false;
+      return;
+    }
+    if (outside) {
+      this.t += dt;
+      this.grace = SECRET.iaiArmGrace;
+      this.armed = this.t >= SECRET.iaiArmTime;
+      return;
+    }
+    // 간격 안: 대기 자세는 iaiArmGrace 초 뒤에 풀린다 (달려드는 상대가 간격 안으로 막 들어온 순간을 받을 수 있게)
+    if (this.armed && (this.grace -= dt) > 0) return;
+    this.t = 0;
+    this.armed = false;
+  }
+}
+
 /** 두 칼이 닿아 있나: 칼끼리 부딪힘(combat.bladeClash 가 적는 fighter.feel.touching — 실제 접촉 충격) 또는 ai.js checkBind 와 같은 기하(칼날 0.1 지점 ~ 칼끝 선분 사이 < 0.07 m) */
 export function bladesTouch(me, foe) {
   if (!me.armed || !foe.armed) return false;
@@ -233,6 +264,7 @@ export class PlayerSecretWatch {
     this.open = null; // 열린 창 { S, ctx, t }
     this.combo = 0;
     this.binds = new BindCount(); // 이베리아 맺힘 셈 (10/10)
+    this.iaiArm = new IaiArm(); // 일본 발도 대기 (10/10 02:4x — 플레이어는 표시만)
     this.gap = Infinity; // 마지막 베기 끝에서 지난 시간
     this.swing = null; // 지금 베기 { first, landed }
     this.prevFoePain = foe.pain;
@@ -243,7 +275,7 @@ export class PlayerSecretWatch {
   view() {
     const art = this.me.swordArt;
     const M = art.measure;
-    return { reach: M.reach, clinch: M.clinch, foeReach: art.measureFor(this.foe.weapon).reach + 0.05 };
+    return { reach: M.reach, clinch: M.clinch, contact: M.contact, foeReach: art.measureFor(this.foe.weapon).reach + 0.05, armed: this.iaiArm.armed };
   }
 
   /** 매 물리 스텝. busy = 플레이어 비기 실행 중(창을 새로 열지 않는다) */
@@ -259,6 +291,7 @@ export class PlayerSecretWatch {
       this.open = null;
       this.swing = null;
       this.combo = 0;
+      this.iaiArm.tick(0, false, true);
       return;
     }
     const c = me.bodies.chest.translation();
@@ -274,6 +307,7 @@ export class PlayerSecretWatch {
     const touch = bladesTouch(me, foe);
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
+    if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;

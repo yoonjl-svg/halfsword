@@ -25,7 +25,15 @@ import * as THREE from 'three';
 import { STRIKE, ANATOMY, STEEL, ARMOR } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
-import { runInstants } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10 — 물리 원칙의 예외)
+import { runInstants } from './secret_instant.js';
+
+/** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
+const IAI_GHOST_PARTS = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']);
+function iaiGhostPair(a, b) {
+  if (!a || !b || a.fighter === b.fighter) return false;
+  const g = (x) => x.fighter.instantGhost > 0 && (x.kind === 'weapon' || IAI_GHOST_PARTS.has(x.part));
+  return g(a) || g(b);
+} // 일본 비기 순간 베기 (10/10 — 물리 원칙의 예외)
 
 // 전투 사건 갈고리 (gun.js GUN_HOOKS 와 같은 식): 비어 있으면 아무 일도 없다. 판정·난수와 무관
 //  onDecapitate(f, headBody): 참수된 순간 한 번 (fighter.applyWound, die 뒤) — 사운드 PM 이 소리를 건다
@@ -96,6 +104,7 @@ export class Combat {
   filterContactPair(c1, c2) {
     const pr = this.pairOf(c1, c2);
     if (pr && pr.w.fighter.instantGhost > 0) return 0; // 순간 베기 직후(SECRET.instantNoCollide): 몸 안에 놓인 칼이 튀지 않게 내 칼 ↔ 상대 몸 충돌 끔
+    if (!pr && (this.fighters[0]?.instantGhost > 0 || this.fighters[1]?.instantGhost > 0) && iaiGhostPair(this.info.get(c1), this.info.get(c2))) return 0; // 발도(운동학 팔·칼) 동안: 내 칼 ↔ 상대 칼, 내 칼 팔 ↔ 상대 몸·칼 충돌도 끔
     if (!pr || pr.w.part !== 'blade') return 1; // 1 = 평소처럼 부딪힘
     const key = `${pr.wc}:${pr.vc}`;
     let cut = this.cutting.get(key);
