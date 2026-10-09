@@ -13,7 +13,7 @@
 //  (mergeGeometries) 재질 하나당 메쉬 하나만 만든다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { weaponEnv } from './weapon_looks.js';
 
 const _m4 = new THREE.Matrix4();
@@ -1523,6 +1523,295 @@ function groveShrineShin(g) {
   addMerged(g, [hem], 0x9baa8c, CLOTH);
 }
 
+// ═════════════════════ 겉모습 다듬기 (10/10): 미나미 v4 · 오마리 v2 ═════════════════════
+// 둘 다 부위의 대표 메쉬(상처 자국이 붙는 겉면)의 꼴만 바꾼다. 대표 메쉬의 종류(Capsule/Box)와 치수 값
+// (geometry.parameters — effects.js surfaceNormal 이 읽는다)은 원래 그대로 되돌려 두고, 손 구체·몸·질량·
+// 관절·충돌체는 건드리지 않는다. 다른 인물의 팔다리에는 쓰이지 않는다.
+
+/** 대표 메쉬의 꼴을 geo 로 바꾸되 종류·치수 값은 원래 것을 남긴다 */
+function reshapeMain(main, geo) {
+  const keep = { ...main.geometry.parameters };
+  main.geometry.copy(geo);
+  main.geometry.parameters = keep;
+  main.geometry.computeBoundingBox();
+  main.geometry.computeBoundingSphere();
+  geo.dispose();
+}
+
+/**
+ * 둥글게 깎은 팔다리: 같은 치수의 캡슐을 둘레를 더 잘게 다시 만든 뒤, 길이 방향 자리 t(0 = 위·몸 쪽, 1 = 아래·먼 쪽)마다
+ * 앞뒤(x)·옆(z) 굵기 배율과 앞쪽 내밂을 준다. 네모 막대처럼 보이던 10각 굵기 일정한 캡슐을 끝으로 갈수록 가는 꼴로.
+ */
+function roundLimb(g, profile, capTop = 1, capBottom = 1) {
+  const main = g.children[0];
+  const { radius, height } = main.geometry.parameters;
+  const geo = new THREE.CapsuleGeometry(radius, height, 6, 20);
+  const pos = geo.attributes.position;
+  geo.computeBoundingBox();
+  const min = geo.boundingBox.min.y, max = geo.boundingBox.max.y;
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.max(0, Math.min(1, (max - pos.getY(i)) / (max - min)));
+    // 끝 반구를 길게 늘이면(cap > 1) 관절 너머 이웃 도막과 겹쳐 무릎·팔꿈치가 구슬처럼 잘록해 보이지 않는다
+    const y = pos.getY(i), h = height / 2;
+    if (y > h) pos.setY(i, h + (y - h) * capTop);
+    else if (y < -h) pos.setY(i, -h + (y + h) * capBottom);
+    const v = profile(t); // 배율 하나(둥근 단면) 또는 [앞뒤, 옆, 앞쪽 내밂]
+    const [sx, sz, dx = 0] = typeof v === 'number' ? [v, v, 0] : v;
+    pos.setXYZ(i, pos.getX(i) * sx + dx * radius, pos.getY(i), pos.getZ(i) * sz);
+  }
+  geo.computeVertexNormals();
+  reshapeMain(main, geo);
+  return main;
+}
+const smooth01 = (a, b, t) => { const u = Math.max(0, Math.min(1, (t - a) / (b - a))); return u * u * (3 - 2 * u); };
+/** 세 점(위·가운데·아래)을 지나는 부드러운 배율 곡선 */
+const curve3 = (top, mid, bottom, at = 0.4) => (t) => (t < at ? top + (mid - top) * smooth01(0, at, t) : mid + (bottom - mid) * smooth01(at, 1, t));
+
+/**
+ * 고리(row)마다 단면을 잇는 천 통. section(a, k, row) → [x, z]. 위·아래는 열어 두고 양면으로 칠한다.
+ * 이음매(첫 점)는 뒤쪽(a = π)에 둔다 — 앞쪽 주름에 법선 끊김이 생기지 않게.
+ */
+function clothLoft(ys, sides, section) {
+  const vertices = [], uv = [], indices = [];
+  ys.forEach((y, row) => {
+    for (let k = 0; k < sides; k++) {
+      const a = Math.PI + (k / sides) * Math.PI * 2;
+      const [x, z] = section(a, k, row);
+      vertices.push(x, y, z);
+      uv.push(k / sides, row / (ys.length - 1));
+    }
+  });
+  for (let r = 0; r < ys.length - 1; r++) for (let k = 0; k < sides; k++) {
+    const n = r * sides + k, m = r * sides + ((k + 1) % sides);
+    indices.push(n, n + sides, m, m, n + sides, m + sides);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// ── 미나미 v4: 아래로 퍼지는 하카마 · 네모난 일본 소매 · 다스키 ──
+const HAKAMA_MOSS = 0x3f5747;
+const HAKAMA_SIDES = 48;
+// 서 있는 자세 세계 높이로 적은 하카마 바깥선(사다리꼴): 허리 1.05 m 에서 옷단 0.09 m 로 갈수록 넓다.
+//  out = 다리 축에서 바깥 가장자리까지(옆), rx = 앞뒤 반폭. 안쪽 가장자리는 두 다리가 가운데서 살짝 겹치게(축에서 0.09)
+const HAKAMA_LINE = (y) => {
+  const t = Math.max(0, Math.min(1, (0.95 - y) / 0.86)); // 0 = 허벅지 위 0.95 m, 1 = 옷단 0.09 m
+  return { out: 0.098 + 0.067 * t, rx: 0.128 + 0.03 * t };
+};
+/**
+ * 늘어진 천 음영: 법선의 위아래 성분을 줄여, 허벅지·정강이 도막이 앞뒤로 기울어도 밝기가 거의 같게 한다.
+ * (무릎을 굽힌 자세에서 위 도막은 하늘을, 아래 도막은 땅을 향해 무릎에 가로 띠처럼 밝기가 끊겨 보였다.)
+ * 좌우로 꺾인 칼주름 음영은 그대로 남는다. 셰이더 한 줄, 그리는 데만 쓰인다.
+ */
+function hangingClothShading(mat) {
+  mat.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace('#include <normal_vertex>', `{
+      vec3 upV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+      transformedNormal = normalize(transformedNormal - dot(transformedNormal, upV) * upV * 0.8);
+    }
+    #include <normal_vertex>`);
+  };
+  mat.customProgramCacheKey = () => 'hanging-cloth';
+  return mat;
+}
+/** 다리 한 도막의 하카마: 부위 좌표 y(위→아래) 고리마다 사다리꼴 바깥선을 따르고, 앞쪽엔 칼주름(톱니) 세 줄 */
+function flaredHakamaLeg(g, d, yTop, yBottom, grow, pleatAt) {
+  const side = Math.sign(d?.pos?.[2] || 1); // 다리 바깥쪽(+z/−z)
+  const cy = d?.pos?.[1] ?? 0.5; // 부위 가운데의 서 있는 높이
+  const rows = 7, ys = [];
+  for (let i = 0; i < rows; i++) ys.push(yTop + ((yBottom - yTop) * i) / (rows - 1));
+  const geo = clothLoft(ys, HAKAMA_SIDES, (a, k, row) => {
+    const { out, rx } = HAKAMA_LINE(cy + ys[row]);
+    const rz = (out + 0.09) / 2, off = (out - 0.09) / 2;
+    const c = Math.cos(a), s = Math.sin(a);
+    // 앞쪽 ±50° 안: 4칸마다 한 번 꺾이는 칼주름. 바깥쪽을 향해 접힌다
+    const w = smooth01(0.55, 0.75, c);
+    const step = (k % 4) / 3;
+    const fold = (1 + w * 0.12 * (step - 0.5) * pleatAt(row / (rows - 1))) * grow(row / (rows - 1));
+    return [c * rx * fold, (s * rz + off) * fold];
+  });
+  // 위 식은 단면을 +z 쪽 다리 기준으로 만든다 → 반대쪽 다리는 z 를 뒤집는다
+  if (side < 0) {
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setZ(i, -p.getZ(i));
+    geo.index.array.reverse();
+  }
+  // 칼주름의 꺾인 면이 폰 거리에서도 읽히게 면마다 따로 칠한다(각진 음영)
+  const flat = geo.toNonIndexed();
+  geo.dispose();
+  flat.computeVertexNormals();
+  const main = g.children[0];
+  main.material.color.setHex(HAKAMA_MOSS);
+  main.material.side = THREE.DoubleSide;
+  main.material.roughness = 0.95;
+  main.material.metalness = 0;
+  hangingClothShading(main.material);
+  reshapeMain(main, flat);
+}
+function hakamaThigh(g, look, d) {
+  // 엉덩이 위(골반 통 안)부터 무릎 아래까지 겹쳐 내려온다. 무릎 쪽 끝은 정강이 도막보다 3% 크고, 겹치는 자리에선
+  // 주름 깊이를 줄여(톱니 옷단이 무릎에 가로줄로 읽히지 않게) 두 도막 겉선이 거의 맞물린다
+  flaredHakamaLeg(g, d, 0.235, -0.245, (u) => 1 + 0.03 * smooth01(0.6, 1, u), (u) => 1 - 0.65 * smooth01(0.75, 1, u));
+}
+function hakamaShin(g, look, d) {
+  // 무릎 위부터 발목(버선이 보이게)까지. 위쪽 끝은 허벅지 도막 안으로 3% 들어간다. 가로 옷단 띠 없음
+  flaredHakamaLeg(g, d, 0.24, -0.2, (u) => 1 - 0.03 * (1 - smooth01(0, 0.3, u)), (u) => 0.35 + 0.65 * smooth01(0, 0.25, u));
+}
+/** 골반: 허리띠 밑에서 다리 도막으로 이어지는 하카마 윗단(둥근 네모 단면, 앞쪽 칼주름 다섯 줄) */
+function hakamaWaist(g) {
+  const ys = [0.07, 0.02, -0.04, -0.09, -0.13];
+  const sides = 64;
+  const geo = clothLoft(ys, sides, (a, k, row) => {
+    const t = row / (ys.length - 1);
+    const rx = 0.12 + 0.012 * t, rz = 0.185 + 0.015 * t, n = 6 - 2 * t;
+    const c = Math.cos(a), s = Math.sin(a);
+    const se = (v, r) => Math.sign(v) * Math.pow(Math.abs(v), 2 / n) * r;
+    let x = se(c, rx), z = se(s, rz);
+    if (c > 0.3 && Math.abs(z) < 0.15) {
+      const step = ((k + 2) % 4) / 3;
+      x += 0.008 * (step - 0.5) * smooth01(0.3, 0.6, c);
+    }
+    return [x, z];
+  });
+  hangingClothShading(addMerged(g, [geo], HAKAMA_MOSS, { ...CLOTH, side: THREE.DoubleSide }).material);
+}
+
+const TASUKI = SHRINE_RED;
+/** 위팔 소매 단면: 어깨 쪽은 둥글고, 팔꿈치 쪽으로 갈수록 팔 뒤쪽(−x, 팔을 들면 아래쪽)으로 길게 늘어진 네모가 된다 */
+function sleeveSection(t, a, inset = 1) {
+  const cx = -0.047 * t, rx = (0.06 + 0.052 * t) * inset, rz = (0.057 + 0.015 * t) * inset;
+  const n = 2 + 5 * smooth01(0, 0.6, t);
+  const c = Math.cos(a), s = Math.sin(a);
+  const bunch = 1 + 0.05 * Math.max(0, Math.sin(t * Math.PI * 3)) * (1 - t); // 다스키로 걷어 올려 어깨 쪽에 생긴 가로 주름
+  return [cx + Math.sign(c) * Math.pow(Math.abs(c), 2 / n) * rx * bunch, Math.sign(s) * Math.pow(Math.abs(s), 2 / n) * rz * bunch];
+}
+/** 위팔: 둥글게 부푼 서양식 소매 대신 네모나게 늘어지는 일본 소매를 다스키로 걷어 올린 꼴 — 옆에서 보면 사다리꼴, 팔꿈치에서 끝난다 */
+function japaneseSleeve(g) {
+  const ys = [0.15, 0.11, 0.06, 0.0, -0.06, -0.12, -0.165];
+  const t = (y) => (0.15 - y) / 0.315;
+  const main = g.children[0];
+  main.material.side = THREE.DoubleSide;
+  reshapeMain(main, clothLoft(ys, 36, (a, k, row) => sleeveSection(t(ys[row]), a)));
+  // 네모난 소맷부리 안쪽의 엷은 단(속옷 깃 색)과 겨드랑이 쪽 다스키 고리
+  addMerged(g, [clothLoft([-0.148, -0.168], 36, (a, k, row) => sleeveSection(t([-0.148, -0.168][row]), a, 1.025))], LINEN_SHADE, { ...CLOTH, side: THREE.DoubleSide });
+  addMerged(g, [bake(new THREE.TorusGeometry(0.066, 0.0065, 5, 20), [-0.008, 0.1, 0], [Math.PI / 2, 0, 0.12], [1.08, 1, 1.0])], TASUKI, CLOTH);
+}
+/** 아래팔: 소매를 걷어 맨팔 — 팔꿈치 쪽이 굵고 손목으로 가늘어진다. 팔꿈치 위에 걷어 접힌 흰 속소매 한 겹 */
+function tiedForearm(g, look) {
+  roundLimb(g, curve3(1.08, 1.04, 0.8, 0.35)).material.color.setHex(look.skin);
+  addMerged(g, [cyl(0.05, 0.047, 0.03, 16, true, [0, 0.085, 0])], LINEN, { ...CLOTH, side: THREE.DoubleSide });
+}
+/** 가슴: 다스키 — 어깨를 넘어 겨드랑이를 돌고 등에서 X 자로 엇갈린다. 엇갈린 자리에 작은 매듭 */
+function tasukiCords(g) {
+  const r = 0.0068, cords = [];
+  for (const s of [-1, 1]) {
+    // 어깨 고리: 등 위 → 어깨 너머 → 앞 어깨 → 겨드랑이 밑 → 등 아래 (같은 쪽)
+    cords.push(taperedTube([[-0.126, 0.132, s * 0.148], [-0.06, 0.147, s * 0.163], [0.05, 0.147, s * 0.165], [0.126, 0.118, s * 0.163], [0.128, 0.02, s * 0.172], [0.07, -0.035, s * 0.191], [-0.07, -0.04, s * 0.191], [-0.127, -0.03, s * 0.168]], [r, r, r, r, r, r, r, r], 28, 5));
+    // 등의 X: 이쪽 어깨 위에서 반대쪽 겨드랑이 밑으로
+    cords.push(taperedTube([[-0.126, 0.132, s * 0.148], [-0.131, 0.05, 0], [-0.127, -0.03, -s * 0.168]], [r, r, r], 14, 5));
+  }
+  addMerged(g, cords, TASUKI, CLOTH);
+  addMerged(g, [
+    bake(new THREE.SphereGeometry(0.016, 8, 6), [-0.134, 0.05, 0], null, [0.6, 1, 1.2]),
+    taperedTube([[-0.136, 0.045, 0.008], [-0.14, 0.0, 0.022], [-0.138, -0.035, 0.03]], [0.006, 0.006, 0.004], 8, 4),
+    taperedTube([[-0.136, 0.045, -0.006], [-0.141, 0.005, -0.016], [-0.139, -0.025, -0.026]], [0.006, 0.006, 0.004], 8, 4),
+  ], TASUKI, CLOTH);
+}
+const MINAMI_HAKAMA = {
+  ...MINAMI_GROVE,
+  chest(g, look) {
+    MINAMI_GROVE.chest(g, look);
+    tasukiCords(g);
+  },
+  pelvis(g) {
+    // 옛 앞치마 같은 앞판(세이지·이끼색 조각)은 빼고, 허리 밑 하카마 윗단 + 그대로의 끈·종이 장식
+    clothBase(g, HAKAMA_MOSS);
+    hakamaWaist(g);
+    addMerged(g, [taperedTube([[0.13, 0.078, -0.093], [0.136, 0.01, -0.117], [0.142, -0.07, -0.112]], [0.004, 0.004, 0.003], 8, 4)], 0xc4b68c, CLOTH);
+    addMerged(g, [
+      clothPanel(0.143, [[0.021, -0.116], [-0.01, -0.096], [-0.029, -0.116], [-0.055, -0.099], [-0.062, -0.111], [-0.027, -0.133], [-0.01, -0.115], [0.015, -0.131]], 0.003),
+      clothPanel(0.143, [[-0.054, -0.109], [-0.077, -0.089], [-0.093, -0.106], [-0.12, -0.09], [-0.126, -0.103], [-0.094, -0.121], [-0.077, -0.106], [-0.059, -0.122]], 0.003),
+    ], LINEN, { ...CLOTH, side: THREE.DoubleSide });
+  },
+  uarmS: japaneseSleeve, uarmO: japaneseSleeve,
+  farmS: tiedForearm, farmO: tiedForearm,
+  thighF: hakamaThigh, thighB: hakamaThigh,
+  shinF: hakamaShin, shinB: hakamaShin,
+};
+
+// ── 오마리 v2: 팔다리만 둥글고 끝으로 갈수록 가늘게 (옷 디자인·색은 v1 그대로) ──
+function omariSleeveRound(g) {
+  // 셔츠 소매: 어깨에서 살짝 부풀었다가 팔꿈치로 모인다
+  roundLimb(g, curve3(1.16, 1.24, 0.94, 0.4), 1, 1.5);
+  addMerged(g, [cyl(0.0505, 0.0485, 0.037, 16, true, [0, -0.096, 0])], LINEN_SHADE, CLOTH);
+}
+function omariForearmRound(g, look) {
+  // 맨팔: 팔꿈치 아래 근육이 조금 불룩하고 손목으로 가늘어진다
+  roundLimb(g, curve3(1.08, 1.14, 0.8, 0.3), 1.3, 1).material.color.setHex(look.skin);
+  addMerged(g, [cyl(0.0505, 0.05, 0.039, 16, true, [0, 0.081, 0])], look.sleeve, CLOTH);
+  addMerged(g, [cyl(0.0385, 0.037, 0.029, 16, true, [0, -0.087, 0])], 0x514139, CLOTH);
+}
+function omariThighRound(g) {
+  // 바지: 엉덩이 쪽이 넓고 무릎으로 가늘다. 앞쪽 허벅지가 조금 둥글게 나온다
+  roundLimb(g, (t) => [curve3(1.24, 1.16, 0.84, 0.35)(t), curve3(1.2, 1.1, 0.84, 0.35)(t), 0.06 * Math.sin(t * Math.PI)], 1, 1.7);
+}
+function omariBootRound(g) {
+  // 장화: 무릎 아래 종아리가 불룩하고 발목으로 가늘어지는 통. 위 접단은 종아리 위로 살짝 벌어지고, 앞 솔기는 앞면 곡선을 따른다
+  const prof = (t) => [curve3(1.08, 1.2, 0.76, 0.3)(t), curve3(1.06, 1.16, 0.78, 0.3)(t), -0.04 * Math.sin(t * Math.PI)];
+  roundLimb(g, prof, 1.2, 1);
+  const R = 0.05, H = 0.42; // 정강이 캡슐 겉 반지름·전체 길이 (partDefs shinF capsule 0.16/0.05)
+  const at = (y) => { const t = (H / 2 - y) / H; const [sx, , dx] = prof(t); return { x: R * sx + dx * R, t }; };
+  const cuff = clothLoft([0.152, 0.13, 0.095], 24, (a, k, row) => {
+    const y = [0.152, 0.13, 0.095][row];
+    const { t } = at(y);
+    const [sx, sz, dx] = prof(t);
+    const flare = 1.12 - 0.05 * row;
+    return [Math.cos(a) * R * sx * flare + dx * R, Math.sin(a) * R * sz * flare];
+  });
+  addMerged(g, [cuff], 0x5b4c3e, { ...CLOTH, side: THREE.DoubleSide });
+  const seam = [0.08, 0.02, -0.04, -0.1, -0.15].map((y) => [at(y).x + 0.002, y, 0]);
+  addMerged(g, [taperedTube(seam, [0.0035, 0.0035, 0.0035, 0.0035, 0.003], 12, 4)], 0x67594a, CLOTH);
+}
+/** 발: 상자 신발 대신 둥근 코의 장화 발. 대표 메쉬는 같은 치수의 상자(면 수만 늘림)를 깎아 만든다 */
+function omariFootRound(g) {
+  const main = g.children[0];
+  const { width, height, depth } = main.geometry.parameters; // 0.25 × 0.075 × 0.11
+  const geo = new THREE.BoxGeometry(width, height, depth, 12, 4, 6);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i) / (width / 2), y = p.getY(i) / (height / 2), z = p.getZ(i) / (depth / 2); // -1..1
+    // 옆에서 본 꼴: 발목 쪽은 높고 발끝으로 갈수록 발등이 낮아진다(발끝 높이 = 원래의 55%)
+    const yTop = 1 - 0.9 * smooth01(-0.15, 1, x);
+    const yr = -1 + ((y + 1) / 2) * (yTop + 1);
+    // 위에서 본 꼴: 발끝은 반원으로, 뒤꿈치는 모서리를 굴린다
+    const toe = x > 0.4 ? Math.sqrt(Math.max(0.12, 1 - ((x - 0.4) / 0.6) ** 2)) : 1;
+    const heel = x < -0.65 ? Math.sqrt(Math.max(0.36, 1 - ((x + 0.65) / 0.35) ** 2)) : 1;
+    // 단면: 윗모서리를 둥글게
+    const top = smooth01(-0.2, 1, y);
+    const zr = z * toe * heel * (1 - 0.3 * top * Math.abs(z) ** 3);
+    p.setXYZ(i, p.getX(i), yr * (height / 2), zr * (depth / 2));
+  }
+  // 면끼리 꼭짓점을 이어 매끈하게 칠한다(상자 모서리 음영이 남지 않게)
+  geo.deleteAttribute('normal');
+  geo.deleteAttribute('uv');
+  const smoothGeo = mergeVertices(geo, 1e-5);
+  geo.dispose();
+  smoothGeo.computeVertexNormals();
+  reshapeMain(main, smoothGeo);
+}
+const OMARI_ROUND = {
+  ...OMARI_SEAFARER,
+  uarmS: omariSleeveRound, uarmO: omariSleeveRound,
+  farmS: omariForearmRound, farmO: omariForearmRound,
+  thighF: omariThighRound, thighB: omariThighRound,
+  shinF: omariBootRound, shinB: omariBootRound,
+  footF: omariFootRound, footB: omariFootRound,
+};
+
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
@@ -1544,6 +1833,8 @@ export const OUTFITS = {
   omari_seafarer: OMARI_SEAFARER,
   minami_shrine: MINAMI_SHRINE,
   minami_grove: MINAMI_GROVE,
+  minami_hakama: MINAMI_HAKAMA,
+  omari_seafarer_round: OMARI_ROUND,
 };
 
 /** dressPart가 부위 하나를 다 그린 뒤 불린다. look.outfit이 가리키는 세트에 그 부위용 함수가 있으면 얹는다. */
