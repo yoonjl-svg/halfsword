@@ -661,29 +661,30 @@ export const SWORD_TRAIL = {
  * 칼 팔 관절 가동 범위 교정 (시제품, 기본 끔 — 사장님 10/9 '관절이 구체인형처럼 덜렁거린다·해부학 범위를 벗어난다·칠 때 팔을 살짝 굽힌다').
  *  기록·측정: docs/motion/joint_range_2026-10-09.md · 계기 tools/sim/joint_range.mjs. 새 값은 모두 사장님 확인 전 (확인표 290~).
  *  mode: 'off' = 오늘 그대로(바이트 동일) · 'hard' ⓐ 엔진 관절 한도 · 'soft' ⓑ 범위 끝 되돌림 스프링 · 'reach' ⓒ 손 목표를 팔 길이 × reachFrac 안으로 ·
- *        'comp' ⓓ = ⓐ + 손목 서보 보정 · 'anat' = 권고 묶음. 주소 `?joints=anat|hard|soft|reach|comp`, 시뮬 환경 변수 `JOINTS=anat`
+ *        'anat' = 권고 묶음. 주소 `?joints=anat|hard|soft|reach`, 시뮬 환경 변수 `JOINTS=anat`.
+ *        ⓓ 손목 서보 보정(comp)은 ⓑ 가 속도·J 를 잃지 않아 지웠다 — 잰 판은 커밋 b899336 (기록 문서 §5)
  *  각은 도. 해부학 출처: AAOS "Joint Motion: Method of Measuring and Recording"(1965) · Norkin & White "Measurement of Joint Motion" · Soucie 외 2011 (Haemophilia 17:500)
  */
 export const JOINTS = {
   mode: (typeof process !== 'undefined' && process.env?.JOINTS) || 'off',
-  // 묶음마다 켜는 몫 (hard = 엔진 한도, soft = 끝 스프링, reach = 손 목표 자르기, comp = 서보 보정)
+  // 묶음마다 켜는 몫 (hard = 엔진 한도, soft = 끝 스프링, reach = 손 목표 자르기)
   presets: {
     off: {},
     hard: { hard: true },
     soft: { soft: true },
     reach: { reach: true },
-    comp: { hard: true, comp: true },
-    anat: { soft: true }, // 권고 = ⓑ (10/9 48 판·혼자 베기 측정: 범위 밖 −42~−56 %, 베기 J·칼날 속도 손실 없음, 승률 띠 안) — 까닭 docs/motion/joint_range_2026-10-09.md
+    anat: { soft: true }, // 권고 = ⓑ (위팔 돌림·손목 끝 스프링, 팔꿈치 몫 끔) — 측정·까닭 docs/motion/joint_range_2026-10-09.md §5·§6
   },
-  // ⓐ 엔진 한도 (Rapier: 팔꿈치 경첩 한도, 위팔 돌림 = 칼 어깨 공 관절 x 축 한도, 손목 굽힘·폄·어깨 폄 = 밧줄)
+  // ⓐ 엔진 한도 (Rapier: 팔꿈치 경첩 한도, 위팔 돌림 = 칼 어깨 공 관절 x 축 한도, 손목 굽힘·폄 = 밧줄)
   elbowMin: 0, // 칼 팔꿈치 굽힘 최소 (0 = 곧게까지 · 과신전 금지는 오늘도 0)
   elbowMax: 145, // 칼 팔꿈치 굽힘 최대 (AAOS 150 · Soucie 약 144). 오늘 HUMAN.elbow 150
   twist: [-70, 90], // 위팔 돌림 [안쪽, 바깥쪽] (AAOS 안쪽 70 · 바깥쪽 90). 기준 = 팔을 앞으로 뻗고 팔꿈치 경첩 축이 옆(아래팔이 위로 접힘)
-  wristFE: 70, // 손목 굽힘·폄 (칼날이 아래팔 경첩 면 밖으로 나가는 각) 한쪽 (AAOS 굽힘 80 · 폄 70)
-  shoulderExt: 60, // 칼 어깨 폄(위팔이 가슴 관상면 뒤로) (AAOS 60)
+  wristFE: 70, // 손목 굽힘·폄 (칼날이 아래팔 경첩 면 밖으로 나가는 각) 한쪽 (AAOS 굽힘 80 · 폄 70). 어깨 폄 60 은 48 판 최대 45° 라 한도를 더하지 않았다
   // ⓑ 끝 스프링: 범위 끝 zone 도 앞부터 되돌림 (가운데는 힘 0 → 휘두르는 속도에 손대지 않음)
   zone: 15,
-  elbowSoft: 15, // 이 굽힘 아래로 펴지면 되돌림 시작 (도) — '쭉 뻗지 않는다'
+  // 팔꿈치 몫: 이 굽힘 아래로 펴지면 되돌림 (도). 0 = 끔(권고). 15 로 재니 플레이어 베기 맞음 E 가 110·101 → 97·91 J 로 줄었다
+  //  (곧은 팔이 칼 뒤에 싣는 유효 질량을 굽힘이 덜어 낸다 — 기록 §5). 쭉 뻗음은 ⓒ(명령을 바꿈)로 다룬다
+  elbowSoft: 0,
   kElbow: 60, // N·m/rad
   kTwist: 30, // N·m/rad (위팔 돌림. 비틀기 축 관성이 작아 안정 한계 안)
   dTwist: 0.3, // N·m·s/rad
@@ -691,6 +692,4 @@ export const JOINTS = {
   dWrist: 0.4, // N·m·s/rad
   // ⓒ 손 목표 자르기: 어깨에서 (위팔 + 아래팔) × reachFrac 안 (0.975 ≈ 팔꿈치 최소 25° 굽힘·리치 −1.4 cm, 0.92 ≈ 46°·−4.6 cm — 0.92 는 48 판에서 승률이 떨어져 0.975)
   reachFrac: 0.975,
-  // ⓓ 서보 보정: 손목 서보 상한 배율 (한도로 잃는 칼끝 속도를 손목으로 되찾기)
-  compGain: 1.1,
 };

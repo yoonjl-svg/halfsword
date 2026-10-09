@@ -2677,18 +2677,10 @@ export class Fighter {
     }
   }
 
-  /** 관절 가동 범위 교정 ⓓ (JOINTS comp, 시제품): 한도로 잃는 칼끝 속도를 손목 서보 상한 compGain 배로 되찾는다 (이 싸움꾼의 weaponCfg 한 번만) */
-  jointComp() {
-    if (!jm().comp || this.jointCompDone) return;
-    this.jointCompDone = true;
-    this.weaponCfg.maxAimTorque *= JOINTS.compGain;
-  }
-
   // ── 칼 조종: 팔 근육(어깨·팔꿈치)이 손을 목표로 옮기고, 손목 근육이 칼끝 방향을 맞춘다 ──
   //  예전처럼 손을 보이지 않는 줄로 끌지 않는다. 손이 갈 곳 → 어깨·팔꿈치 각도(역운동학, IK)를 계산해서
   //  관절 근육의 목표로 준다. 칼의 무게와 관성은 팔과 몸통이 그대로 버틴다.
   driveSword() {
-    this.jointComp(); // 관절 가동 범위 교정 ⓓ 서보 이득 보정 (JOINTS comp 일 때만, 끔이면 아무것도 안 함)
     const sword = this.sword;
     const chest = this.bodies.chest;
     const mus = this.muscle;

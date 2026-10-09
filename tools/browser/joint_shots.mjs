@@ -73,8 +73,11 @@ async function pass(mode, shotAt, tag) {
       g.freeCam = true; // 판이 시작되며 풀려도 매 프레임 다시
       if (P) {
         const c = P.bodies.chest.translation();
-        const fw = P.forward(new T.Vector3());
-        const side = new T.Vector3(fw.z, 0, -fw.x); // 칼 든 쪽 (탐침: (−fw.z, 0, fw.x) 는 빈팔 쪽이었다)
+        // 가슴 틀 기준 (겨눈 자세에서 몸이 옆으로 돌아 서서 heading 기준 옆은 등·배를 비춘다): 가슴 칼 쪽(+z)·앞(+x) 을 수평으로
+        const r = P.bodies.chest.rotation();
+        const qc = new T.Quaternion(r.x, r.y, r.z, r.w);
+        const fw = new T.Vector3(1, 0, 0).applyQuaternion(qc).setY(0).normalize();
+        const side = new T.Vector3(0, 0, P.side ?? 1).applyQuaternion(qc).setY(0).normalize();
         g.camera.position.set(c.x, c.y, c.z).addScaledVector(side, 2.2).addScaledVector(fw, 0.45).add(new T.Vector3(0, 0.1, 0));
         g.camera.up.set(0, 1, 0);
         g.camera.lookAt(c.x + fw.x * 0.45, c.y - 0.05, c.z + fw.z * 0.45);
