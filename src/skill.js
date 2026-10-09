@@ -24,7 +24,7 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL } from './config.js';
+import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
 
@@ -45,6 +45,10 @@ const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
 const _pt = new THREE.Vector3();
 const _ph = new THREE.Vector3(); // pad* 의 손 자리 (fighter.padHand)
+const _sf = new THREE.Vector3();
+const _sr = new THREE.Vector3();
+const secVal = (v) => (typeof v === 'string' ? SECRET[v] : v); // 비기 칸 값: 문자열이면 SECRET 열쇠 (ai.js secretVal 과 같음)
+const padD = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
 /**
  * 보정 v2 ③ pad*: 칼끝이 상대 가슴을 향하는 패드 = fighter.js guardDir 의 닫힌 역 (az → x, el → y, 같은 조각 식·같은 끝값).
@@ -77,8 +81,8 @@ function padStar(f, out) {
   return out;
 }
 
-/** 두 선분(p1–q1, p2–q2) 사이 가장 가까운 거리 (칼날끼리 맞닿았나 — 칼 길 잡기) */
-function segDist(p1, q1, p2, q2) {
+/** 두 선분(p1–q1, p2–q2) 사이 가장 가까운 거리 (칼날끼리 맞닿았나 — 칼 길 잡기 · 플레이어 비기 창의 맞물림 secret.js) */
+export function segDist(p1, q1, p2, q2) {
   _d1.subVectors(q1, p1);
   _d2.subVectors(q2, p2);
   _r.subVectors(p1, p2);
@@ -131,6 +135,10 @@ export class Skill {
     // 손잡이 찍기(시제품, pommel()): 진행 중인 찍기와 센 수. 찌르기와 같은 덧씌우기 칸(thrustPose)을 쓴다 — 둘은 함께 돌지 않는다
     this.pom = null;
     this.pommels = 0;
+    // 플레이어 비기(secret(), 10/9 23:5x — docs/strike/player_secret_2026-10-09.md): 진행 중인 비기(sec)·센 수. 실행 동안 손 목표(handOffset)를 비기 길로 옮긴다 — 입력은 main.js 가 막는다
+    this.sec = null;
+    this.secretStats = {}; // 이름 → { fired, landed }
+    this.secretBursts = 0; // 비기가 터뜨려진 수 (main.js 연출이 바뀐 것을 본다)
     const b = THRUST.body;
     this.thrustPose = { w: 0, hand: [0, 0, 0], dir: [1, 0, 0], pelvisYaw: b.pelvisYaw * D2R, chestYaw: b.chestYaw * D2R, pitch: b.pitch * D2R, drop: b.drop };
   }
@@ -407,6 +415,298 @@ export class Skill {
     pose.drop = b.drop;
   }
 
+  // ───────────────────────── 플레이어 비기 (10/9 23:5x — docs/strike/player_secret_2026-10-09.md) ─────────────────────────
+  //  사장님 '인간 플레이어로서는 비기를 아예 못 쓰겠어' → 창(secret.js PlayerSecretWatch, main.js)이 열린 동안 공격 입력이 오면 secret() 로 완벽 실행.
+  //  pommel() 시제품과 같은 꼴(칼을 잠깐 대본대로 움직이고 끝나면 조작으로) — 다만 덧씌우기 칸 대신 손 목표(handOffset)를 AI 와 같은 패드 길로 옮긴다
+  //  (ai.js moveHand 와 같은 '제한 속도로 목표점 쫓기'). 길·걸음·터뜨림 창·경직은 AI 비기(ai.js secretGo·secretRelease·secretStiffen)와 같은 칸을 읽는다.
+  //  반응 지연 0(창이 이미 지금 모습으로 봤다) · 정확도 1(길 그대로) · 손 속도 배율(do.hand·loopHand 또는 SECRET.handSpeed) · 서보 힘 창(powerMul) · 몸의 힘(do.strength) ·
+  //  결정타 판정 배율(secretHit = SECRET.hitMul, 베기 길·따라 지나감 동안) · 경직(SECRET.stiff — 그동안 칼 조작 무시). 손 빠르기 바탕은 AI 보통 난이도(AI_LEVELS.normal)
+
+  /**
+   * 플레이어 비기 시작. o = { S(유파 비기 schools.js *_SECRET), ctx(창을 연 상대 사건 — 독일은 들어오는 줄) }. 시작했으면 true
+   */
+  secret(o) {
+    const f = this.f;
+    if (this.sec || this.tap || this.pom || !o?.S || !f.alive || !f.armed || f.state !== 'stand' || !f.foe) return false;
+    const S = o.S;
+    const D = S.do;
+    const school = f.swordArt?.school;
+    const byName = school?.techByName ?? {};
+    const hand = [f.handOffset.x, f.handOffset.y];
+    const nearest = (names) => {
+      let best = null;
+      let bd = 1e9;
+      for (const n of [].concat(names ?? [])) {
+        const t = byName[n];
+        if (t && padD(hand, t.from) < bd) {
+          bd = padD(hand, t.from);
+          best = t;
+        }
+      }
+      return best;
+    };
+    const run = { S, ctx: o.ctx ?? null, tr: f.swordArt.tradition, stage: null, t: 0, queue: [], cur: null, path: [], landed: false, bound: false, str0: f.strength, painFoe: f.foe.pain, painMe: f.pain };
+    if (D.break) {
+      // 독일 Versetzen: 들어오는 줄을 깨는 비밀 베기 (창을 연 위협의 줄)
+      const th = run.ctx ?? {};
+      const key = th.line === 'thrust' ? (th.high ? 'thrustHigh' : 'thrust') : th.line;
+      const t = nearest(D.break[key]) ?? nearest(school?.counter?.[th.line] ?? school?.counter?.default);
+      if (!t) return false;
+      run.queue.push(t);
+      run.bind = D.bind ? byName[D.bind] ?? null : null;
+    } else if (D.back) {
+      run.stage = 'back'; // 일본 後の先 ①: 물러서며 脇構え 로 끌어 담기
+    } else if (D.path) {
+      // 이베리아: 몸 뒤 고리를 돌다(준비) 터뜨림 창에 들면 고리 꼭대기에서 사선으로
+      run.loop = (D.loop ?? []).map((p) => p.slice());
+      run.tech = { name: S.name, from: D.loop ? D.loop[D.loop.length - 1] : hand, path: D.path, kind: 'cut', reach: D.reach ?? 0 };
+      const lat = secVal(D.side ?? 0) * (Math.abs(f.stickX ?? 0) > 0.3 ? Math.sign(f.stickX) : 1); // 옆걸음 쪽: 스틱이 옆을 누르고 있으면 그쪽, 아니면 오른쪽 [해석]
+      const back = secVal(D.sideBack ?? 0);
+      if (lat) run.loopStep = { kind: back < 0 ? 'retreat' : 'pass', fwd: back, side: lat };
+      run.stage = 'loop';
+    } else if (D.seq) {
+      // 중국 連環三擊: 세 수를 이음새 0 으로 (첫 수부터 흐름 — 지금 손에서 곧장)
+      for (const t of D.seq) run.queue.push({ ...t, step: t.step ? { ...t.step, fwd: secVal(t.step.fwd) } : undefined });
+      run.flow = true;
+    } else if (D.tech) {
+      // 이탈리아 Passata in contratempo: 고유 passata sotto 길 + 뒷발 지나 보내기
+      const base = byName[D.tech];
+      if (!base) return false;
+      run.queue.push(D.step ? { ...base, step: { ...D.step, fwd: secVal(D.step.fwd), push: secVal(D.step.push) } } : base);
+    } else return false;
+    this.sec = run;
+    this.recovering = false;
+    this.cutPending = true;
+    const st = (this.secretStats[S.name] ??= { fired: 0, landed: 0 });
+    st.fired++;
+    if (!run.stage) this.secretNextMove();
+    return true;
+  }
+
+  /** 다음 수: 대기열의 기술로. 흐름(連環)이면 지금 손에서 물레 점·준비 자세를 지나 곧장 벤다(ai.js flowInto 와 같은 길), 아니면 준비 자세로 빠르게 옮긴 뒤 */
+  secretNextMove() {
+    const run = this.sec;
+    const t = run.queue.shift();
+    if (!t) return false;
+    run.cur = t;
+    run.bound = false;
+    if (run.flow) {
+      const h = [this.f.handOffset.x, this.f.handOffset.y];
+      const mx = (h[0] + t.from[0]) / 2;
+      run.path = [[THREE.MathUtils.clamp(mx + Math.sign(mx || h[0] || 1) * 0.12, -0.6, 0.6), (h[1] + t.from[1]) / 2], t.from.slice()];
+      this.secretStrikeStart(true);
+    } else {
+      run.stage = 'chamber';
+      run.t = 0;
+    }
+    return true;
+  }
+
+  /** 베기 길을 연다: 길 점 · 걸음 · 터뜨림(연출 수) · 찌르기 무기의 찌르기 */
+  secretStrikeStart(keepPath) {
+    const f = this.f;
+    const run = this.sec;
+    const t = run.cur;
+    if (!keepPath) run.path = [];
+    for (const p of t.path) run.path.push(p.slice());
+    run.stage = 'strike';
+    run.t = 0;
+    run.stepAsked = false;
+    if (!run.burst) {
+      run.burst = true;
+      this.secretBursts++; // 결정타 연출 (main.js 가 화면 시간을 잠깐 늦춘다)
+    }
+    // 걸음: 기술 걸음 칸이 있으면 그것(일본 앞발 lunge·이탈리아 뒷발 pass·중국 반걸음), 없으면 닿기에 모자랄 때 한 걸음 (AI stepTime 과 같은 뜻)
+    const M = f.swordArt.measure;
+    run.wantStep = t.step
+      ? { kind: t.step.kind ?? 'lunge', fwd: t.step.fwd, side: t.step.lat ?? 0, duration: t.step.dur ?? 0.35, ...(t.step.push ? { push: t.step.push } : {}) }
+      : f.foeDistance() - M.contact - (t.reach ?? 0) > 0.05
+        ? { kind: t.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, duration: 0.35 }
+        : null;
+    // 찌르기 무기(레이피어·에스톡)의 찌르기 기술은 AI 처럼 칼끝 찌르기 덧씌우기로 (ai.js startStrike)
+    if (t.kind === 'thrust' && f.weaponCfg.thrustStyle && !this.tap) this.thrust({ step: false });
+  }
+
+  /** 손 목표를 tx, ty 로 제한 속도 v(m/s 패드)로 (ai.js moveHand 와 같은 꼴). 닿았으면 true */
+  secretMove(tx, ty, v, dt) {
+    const off = this.f.handOffset;
+    const dx = tx - off.x;
+    const dy = ty - off.y;
+    const dd = Math.hypot(dx, dy);
+    const step = v * dt;
+    if (dd > step) {
+      off.x += (dx / dd) * step;
+      off.y += (dy / dd) * step;
+      return false;
+    }
+    off.set(tx, ty);
+    return true;
+  }
+
+  /** 지금 터뜨리면 닿을 때 거리 (ai.js secretDistAtHit 와 같은 식 — 지금 모습) */
+  secretDistAtHit() {
+    const f = this.f;
+    const c = f.bodies.chest.translation();
+    const fc = f.foe.bodies.chest.translation();
+    const dx = fc.x - c.x;
+    const dz = fc.z - c.z;
+    const d0 = Math.max(0.01, Math.hypot(dx, dz));
+    const fv = f.foe.bodies.pelvis.linvel();
+    const mv = f.bodies.pelvis.linvel();
+    const foeIn = -(fv.x * dx + fv.z * dz) / d0;
+    const myIn = (mv.x * dx + mv.z * dz) / d0;
+    return d0 - (Math.max(0, foeIn) + Math.max(0, myIn) * 0.7) * SECRET.releaseT;
+  }
+
+  /** 터뜨림 창 (do.release): 창에 들거나 이미 창보다 가까우면 true(터뜨림), maxHold 가 지나면 가까우면 치고 멀면 거둠('drop') */
+  secretRelease(dt) {
+    const run = this.sec;
+    const R = run.S.do.release;
+    const [lo, hi] = secVal(R.dist);
+    const reach = this.f.swordArt.measure.reach;
+    run.holdT = (run.holdT ?? 0) + dt;
+    const dc = this.secretDistAtHit();
+    // 창 안이면 터뜨린다. 창보다 이미 가까우면(상대가 달려듦) 기다리지 않고 곧장 — AI 는 maxHold 까지 기다리지만, 플레이어는 그 사이 맞아 끊기는 일이 잦았다(브라우저 시험) [해석]
+    if (dc <= reach + hi && (dc >= reach + lo || this.f.foeDistance() < reach + lo)) return true;
+    if (run.holdT > secVal(R.maxHold)) return dc > reach + hi ? 'drop' : true;
+    return false;
+  }
+
+  /** 매 스텝 (skill.update 머리): 비기 단계 */
+  updateSecret(dt) {
+    const f = this.f;
+    const run = this.sec;
+    const D = run.S.do;
+    const L = AI_LEVELS.normal;
+    run.t += dt;
+    const foe = f.foe;
+    if (!f.alive || !f.armed || f.state !== 'stand' || !foe) return this.secretEnd();
+    // 맞힘 (AI 와 같은 눈: 상대 아픔 +0.05)
+    if (foe.pain > run.painFoe + 0.05 && (run.stage === 'strike' || run.stage === 'follow')) run.landed = true;
+    run.painFoe = foe.pain;
+    const hurt = f.pain > run.painMe + 0.05;
+    run.painMe = f.pain;
+    // 준비·붙잡는 동안 맞으면 비기는 끊긴다 (AI 는 물러남) — 베기 길·경직 동안은 그대로
+    if (hurt && (run.stage === 'chamber' || run.stage === 'back' || run.stage === 'hold' || run.stage === 'loop')) return this.secretEnd();
+    const handMul = secVal(D.hand ?? 'handSpeed');
+    const g = f.gait;
+    const ask = (o) => !!(g?.requestStep && g.active && g.requestStep(o));
+    if (run.stage === 'back') {
+      const B = D.back;
+      this.secretMove(B.guard[0], B.guard[1], L.parrySpeed * handMul, dt);
+      if (!run.stepAsked && run.t < 0.25) run.stepAsked = ask({ kind: 'retreat', fwd: secVal(B.fwd), side: 0, duration: 0.3 });
+      const handIn = padD([f.handOffset.x, f.handOffset.y], B.guard) < 0.06;
+      if ((handIn && (!g?.req || run.t > 0.6) && run.t > 0.15) || run.t > 0.8) {
+        run.stage = 'hold';
+        run.t = 0;
+        run.holdT = 0;
+      }
+      return;
+    }
+    if (run.stage === 'hold') {
+      const B = D.back;
+      this.secretMove(B.guard[0], B.guard[1], L.parrySpeed, dt);
+      const r = this.secretRelease(dt);
+      if (r === 'drop') return this.secretEnd(true);
+      if (r) {
+        const T = D.tech;
+        run.cur = { ...T, reach: secVal(T.reach), step: { ...D.step, fwd: secVal(D.step.fwd), push: secVal(D.step.push) } };
+        this.secretStrikeStart();
+      }
+      return;
+    }
+    if (run.stage === 'loop') {
+      // 이베리아 고리: 점을 차례로 (베기 빠르기 × loopHand), 처음 0.3 s 안에 옆(뒤)으로 비껴 딛기
+      if (run.loopStep && run.t < 0.3 && ask({ ...run.loopStep, duration: 0.35 })) run.loopStep = null;
+      const LP = run.loop;
+      if (LP.length) {
+        if (this.secretMove(LP[0][0], LP[0][1], L.strikeSpeed * secVal(D.loopHand ?? 'handSpeed'), dt)) LP.shift();
+        return;
+      }
+      const r = this.secretRelease(dt);
+      if (r === 'drop') return this.secretEnd(true);
+      if (r) {
+        run.cur = run.tech;
+        this.secretStrikeStart();
+        return;
+      }
+      run.loop = D.loop.map((p) => p.slice()); // 몬탄테는 멈추지 않고 돈다 — 고리 되풀이
+      return;
+    }
+    if (run.stage === 'chamber') {
+      const t = run.cur;
+      if (this.secretMove(t.from[0], t.from[1], L.parrySpeed * handMul, dt) || run.t > 0.6) this.secretStrikeStart();
+      return;
+    }
+    if (run.stage === 'strike') {
+      f.powerMul = secVal(D.power ?? 'power');
+      f.secretHit = SECRET.hitMul;
+      if (D.strength) f.strength = run.str0 * secVal(D.strength);
+      if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);
+      // 칼끼리 맞물림 (ai.js checkBind 와 같은 기하)
+      if (!run.bound && f.tipPrev && foe.tipPrev && segDist(f.bladePoint(0.1, _sf), f.tipPrev, foe.bladePoint(0.1, _sr), foe.tipPrev) < 0.07) run.bound = true;
+      if (run.path.length) {
+        const P = run.path[0];
+        // 상대가 옆으로 비껴 있으면 그만큼 손을 옮겨 겨눈다 (ai.js moveHand 와 같음)
+        const c = f.bodies.chest.translation();
+        const fc = foe.bodies.chest.translation();
+        const r = f.right(_sr);
+        const lat = (fc.x - c.x) * r.x + (fc.z - c.z) * r.z;
+        const tx = THREE.MathUtils.clamp(P[0] + THREE.MathUtils.clamp(lat, -0.4, 0.4) * 0.5, -0.6, 0.6);
+        if (this.secretMove(tx, P[1], L.strikeSpeed * handMul, dt)) run.path.shift();
+        return;
+      }
+      // 길 끝: 대기열(連環 다음 수)로 곧장, 독일은 맞물렸고 못 맞혔으면 Duplieren 한 번, 아니면 따라 지나감
+      if (run.queue.length) {
+        this.secretNextMove();
+        return;
+      }
+      if (run.bind && run.bound && !run.landed && !run.bindDone) {
+        run.bindDone = true;
+        run.flow = true;
+        run.queue.push(run.bind);
+        this.secretNextMove();
+        return;
+      }
+      run.stage = 'follow';
+      run.t = 0;
+      f.powerMul = 1;
+      if (D.strength) f.strength = run.str0;
+      return;
+    }
+    if (run.stage === 'follow') {
+      // 손은 끝 자세에 닿았지만 칼은 아직 지나가는 중 — 판정 배율은 칼이 지나갈 때까지
+      if ((run.t >= 0.3 && f.tipVel.length() < 6) || run.t > 0.5) {
+        f.secretHit = 1;
+        if (run.landed) this.secretStats[run.S.name].landed++;
+        run.stage = 'stiff';
+        run.t = 0;
+        run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+      }
+      return;
+    }
+    // 경직: 칼 조작 무시 — 손은 끝 자리에 그대로 (main.js 가 입력을 막고 '경직'을 흐리게 띄운다)
+    if (run.stage === 'stiff' && run.t >= run.stiffT) this.secretEnd();
+  }
+
+  /** 비기를 끝낸다 (끝·끊김): 힘·판정 배율·몸의 힘을 되돌리고 조작으로. dropped = 터뜨림 창을 못 만나 거둠 */
+  secretEnd(dropped) {
+    const f = this.f;
+    const run = this.sec;
+    this.sec = null;
+    f.powerMul = 1;
+    f.secretHit = 1;
+    if (run && run.str0 != null) f.strength = run.str0;
+    if (dropped) this.secretDropped = (this.secretDropped ?? 0) + 1;
+    this.prev.copy(f.handOffset); // 손 목표 속도가 튀지 않게
+    this.anchor.copy(f.handOffset);
+  }
+
+  /** 지금 비기 단계 (main.js HUD·입력 막기): null | 'run' | 'stiff' */
+  get secretPhase() {
+    return !this.sec ? null : this.sec.stage === 'stiff' ? 'stiff' : 'run';
+  }
+
   /**
    * 찍기 (쓰러진 상대에게 탭, 사장님 9/30: "닿을 때까지 걸어들어가 … 양손을 번쩍 드는 동시에 칼날을 아래로 돌려잡고 힘껏 내려찍음").
    * finish.js 가 매 스텝 정한 fin.plunge(몸 점 T, 칼 방향 dir, 닿는 곳 inside·short)를 읽는다. 매 스텝 차례로:
@@ -661,6 +961,7 @@ export class Skill {
     const f = this.f;
     const L = this.level;
     this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
+    if (this.sec) this.updateSecret(dt); // 플레이어 비기: 손 목표를 비기 길로 (이 스텝의 거르기·몸 따라가기는 아래 그대로)
     const off = f.handOffset;
     const R = WEAPON.reach;
     if (off.length() > R) off.setLength(R);
@@ -753,7 +1054,7 @@ export class Skill {
     // 보정 v2 사건: 손 뗌 = 손가락이 화면에서 떨어진 스텝 (handHeld 참 → 거짓, main.js — 입력 쪽 사건이라 공포 떨림에 속지 않음)
     this.lift = !!this.heldPrev && !f.handHeld;
     this.heldPrev = !!f.handHeld;
-    const canRecover = this.autoGuard && L >= 0.35 && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel');
+    const canRecover = this.autoGuard && !this.sec && L >= 0.35 && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel'); // 비기 실행 중엔 자세로 돌아가지 않는다 (비기 길이 손을 쥔다)
     // 보정 v2 ③ 되돌아옴 겨눔 (s > 0, 선 자세·총 아님·상대 있음): 걷는 목적지만 바꾼다 dest = lerp(homeGuard, pad*, s). 무릎은 오늘 걷기
     const v2r = this.corr === 'v2' && L > 0 && f.state === 'stand' && !f.weapon?.gun && !!f.foe;
     if (canRecover && this.cutPending && !swinging && !f.handHeld && this.idle > SKILL.recoverDelay) {
@@ -835,7 +1136,7 @@ export class Skill {
       // 보정 v2 쉼 무게의 목표 (fighter.updateBodyPose 가 SKILL_BODY 따라가기로 쫓고 driveSword 가 손·칼끝을 그만큼 옛 자세 지도 쪽으로 섞는다):
       //  손가락이 닿았거나 움직이거나 휘두르는 중 = 0 (날것), 되돌아오는 동안 = 걷기 진행 recoverP (무릎 걷기는 진행 값이 없어 끝날 때까지 0),
       //  벤 뒤 되돌아옴을 기다리는 동안 = 0, 그 밖(쉼, 되돌아옴 끝) = 1. 새 수·시계 없음 — 있는 사건만 읽는다
-      this.idleGoal = f.handHeld || f.inputActive || swinging ? 0 : this.recovering ? (this.recoverD0 != null ? this.recoverP : 0) : this.cutPending && canRecover ? 0 : 1;
+      this.idleGoal = f.handHeld || f.inputActive || swinging || this.sec ? 0 : this.recovering ? (this.recoverD0 != null ? this.recoverP : 0) : this.cutPending && canRecover ? 0 : 1;
     }
     if (this.lunge > 0) {
       this.lunge -= dt;

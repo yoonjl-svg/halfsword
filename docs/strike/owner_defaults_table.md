@@ -350,6 +350,27 @@
 | 323 | 날 세우기 힘 배율 `JOINTS.edgeK` 기본 **null(= 1, 오늘 그대로)** — 플래그만 | config.js `JOINTS.edgeK` · fighter.js 생성자 `twistScale *= edgeK` | 비틀기 60 에서 모노호시자오가 칼 면으로 맞는 것(×날 세움 J −33 %, 2/8 기술)을 되돌리려 함 | 1.8 이면 101 % 로 돌아오지만 칼날 축 떨림 27 → 2719 스텝, 2.0 이상 발산 — 기본에 넣지 않음, 디렉터 결정으로 넘김 (docs/motion/joint_range_2026-10-09.md §8-4) | 디렉터 결정 대기 | |
 | 324 | 비틀기 40 + 날 세우기 1.3 / 1.6 대조 | 같은 문서 §8-4 | 같은 목적 | 1.3: 떨림 없음, ×날 세움 롱소드 84 %·모노호시자오 66 % / 1.6: 회복, 떨림 889 스텝·레이피어 승률 −19 | 기각 제안 | |
 | 325 | 계기 문턱 (측정 정의): 칼날 축 팽이 > 60 rad/s | tools/sim/joint_range.mjs | 날 세우기 힘이 안정 한계를 넘는지 보는 선 | 바꾸면 표의 스텝 수만 바뀜 | 투명성 | |
+| **(플레이어 비기)** | **10/9 23:5x 플레이어 비기 · 결정타 · 발동 줄이기 (가지 …/player-secret-2q36ha, docs/strike/player_secret_2026-10-09.md)** | | | | | |
+| 330 | 플레이어 비기 켬 `SKILL.playerSecret` **1** · `?playerSecret=0` 끔 — 내 무기 유파(검술 풀이 tradition)의 비기 조건이 차면 창이 열리고 그 안의 공격 입력이 비기 완벽 실행 | config.js SKILL · secret.js `PlayerSecretWatch`·`playerSecretOf` · skill.js `secret()` · main.js | 사장님 23:3x '인간 플레이어로서는 비기를 아예 못 쓰겠어' | 0 이면 전과 같음(플레이어 비기 없음) | 제안 · 사장님 확인 전 | |
+| 331 | 플레이어 창 `SECRET.playerWindow` **0.5 s** | config.js SECRET | 조건이 찬 뒤 공격 입력을 받는 때 | 길면 쉬움·짧으면 반응 시험 | 제안 · 사장님 확인 전 | |
+| 332 | '공격 입력' = 화면 톡(찌르기 입력) 또는 그 프레임 끌기 빠르기 ≥ `SKILL.swingSpeed` 1.5 m/s(패드) — 그 입력은 비기에 먹힘 | main.js 손 입력 자리 | 지시 '공격 입력을 아무것이나' | — | 해석 · 확인 전 | |
+| 333 | 실행·경직 동안 칼 입력(끌기·톡) 무시, 발 스틱은 플레이어 것(AI 는 붙잡는 동안 발도 맞춤) · 경직 '경직' 흐리게 | main.js · skill.js `updateSecret` | 지시 '그동안 플레이어 입력은 무시' | 발까지 막으면 AI 와 같음 | 해석 · 확인 전 | |
+| 334 | 플레이어 비기 손 빠르기 바탕 = AI 보통(`AI_LEVELS.normal` 준비 4.5 · 베기 11 m/s) × 비기 배율(1.5 등) | skill.js `updateSecret` | AI 와 같은 '완벽 실행' | 어려움 값(13)이면 더 빠름 | 제안 · 확인 전 | |
+| 335 | 플레이어 내 베기 사건: 베기 덩이 = `skill.swinging` 켜짐 → 꺼짐, 쉼 `SECRET.playerChainGap` **0.6 s** 넘으면 끊김 · 맞음 = 상대 아픔 +0.05 · 맞물림 = 칼날 선분 < 0.07 m | secret.js `PlayerSecretWatch.update` | 이베리아 이어진 베기·중국 '들어가며 친 첫 베기'를 플레이어 쪽으로 세기 | — | 해석 · 확인 전 | |
+| 336 | 플레이어 터뜨림 창(일본·이베리아): AI 와 같은 창이되 **창보다 이미 가까우면 곧장** 터뜨림(AI 는 maxHold 까지 기다림) | skill.js `secretRelease` | 브라우저 시험에서 기다리는 동안 맞아 끊김 | AI 와 같게 하면 끊김이 잦음 | 해석 · 확인 전 | |
+| 337 | 플레이어 준비·붙잡기·고리 동안 맞으면 비기 끊김 (베기 길·경직 동안은 그대로) | skill.js `updateSecret` | AI 의 '맞으면 물러남 = 끊김'과 같은 뜻 | — | 해석 · 확인 전 | |
+| 338 | 이베리아 플레이어 옆걸음 쪽: 스틱을 옆으로 누르고 있으면 그쪽, 아니면 오른쪽 | skill.js `secret()` | AI 는 성격의 즐겨 도는 쪽 | — | 해석 · 확인 전 | |
+| 339 | 창이 열릴 때 진동 `SECRET.playerVibrate` **50 ms** (navigator.vibrate, 없으면 생략) | main.js `updateTechCue` | 지시 | — | 제안 · 확인 전 | |
+| 340 | **결정타 판정** `SECRET.hitMul` **1.3** — 비기 베기 길·따라 지나감 동안 공격자 `secretHit` 를 상처 에너지에 곱함(AI·플레이어). 물리 그대로. 고리·물러서기·붙잡기·경직 동안 상처는 곱하지 않음 | config.js SECRET · combat.js `analyze` · fighter.js `secretHit` · ai.js `secretStrike`·`secretStiffen`·`secretAbort` · skill.js | 사장님 23:5x '판정에 약간의 어드밴티지 — 모든 비기' | 비기 한 칼: 모노호시자오 54 → 70 · 打刀 49 → 71 · 레이피어 52 → 63 J (§6-2) | 제안 · 사장님 확인 전 | |
+| 341 | **결정타 연출** `SECRET.slowMo { scale 0.4, dur 0.25 s }` — 비기 첫 칼이 나가는 순간 화면 시간 배율(실시간 0.25 s) · `?slowMo=0` 끔 | config.js SECRET · main.js 프레임 배율 · ai.js `startStrike`·skill.js `secretStrikeStart`(터뜨림 수) | 같은 지시 '모션 연출' | 시뮬 도구에 닿지 않음 | 제안 · 사장님 확인 전 | |
+| 342 | 독일 `lethalJ` 136 → **247 J**(같은 분포 90 % 지점) | config.js SECRET | 지시 '발동은 좀 줄되' | 48 판 53 → 7 번(판마다 0.15) — 너무 드묾(결정 후보 5) | 제안 · 사장님 확인 전 | |
+| 343 | 이탈리아 창 `italianDist` [0, 0.2] → **[0, 0.15]** | config.js SECRET | 같은 지시 | 아래 344 와 함께 95 → 56 번 | 제안 · 확인 전 | |
+| 344 | 이탈리아 결심한 공격 `cond.commit` — 칼을 드는 사건은 상대 손(패드) ≥ `italianCommit` **4.5 m/s** 일 때만(달려듦은 그대로). 사다리 2.5 → 84 · 3.5 → 64 · 4.5 → 56 번 | schools.js ITALIAN_SECRET · secret.js `secretEvent` · config.js | 지시 '상대 공격이 결심된 것일 때만' | 레이피어 승률 75 → 73 % | 제안 · 확인 전 | |
+| 345 | 이베리아 `comboN` **3 그대로** + `cond.touch`(셋째 베기가 닿음 — 맞힘·맞물림). 지시 3 → 4 는 48 판 1 번(AI 이어 치기 상한 2~3) | config.js · schools.js IBERIAN_SECRET · ai.js `secretCombo` · secret.js | 같은 지시 | 86 → 44 번 · 비기 한 칼(배율 빼고) 78 → 45 J · 승률 −10 (결정 후보 3) | 지시와 다름 · 사장님 확인 전 | |
+| 346 | 중국 `cond.landed` — 첫 칼이 맞았을 때만(막힘 제외) | schools.js CHINESE_SECRET · ai.js `secretFirstHit` · secret.js | 같은 지시 | 73 → 51 번 | 제안 · 확인 전 | |
+| 347 | **連環三擊 세 수** `do.seq`: 腰擊(오른 옆 → 왼 옆 끝까지) → 撩掠(왼 아래 → 오른 위 걷어 올림) → 坦腹刺(쟁기 → 긴 자세 찌르기), 수마다 반걸음 進步 `chineseStep` **0.25 m**(앞발 lunge), 이음새 0. 이름 조선세법 세 이름 [원문 이름 · 잇기 해석] | schools.js CHINESE_SECRET · ai.js `secretGo`·`secretNext` · config.js | 사장님 '동작이 화려한 것도 아니어서' | 51 번 가운데 셋째 수까지 48 · 세 수 0.4 s 안 | 제안 · 사장님 확인 전 | |
+| 348 | 알림: 비기 알림은 그 비기가 끝날 때까지(AI 경직 전·내 비기 실행 끝) · 내 창 'secretReady' 는 비기 알림과 **같은 크기**(최대 34 px)·흐리게 0.55 · '경직' 흐리게 · 내 알림은 설정 '유파 기술 알림' 끔이어도 뜨고 상대 알림이 덮지 않음 | main.js `updateTechCue`·`showPlayerCue` · index.html | 사장님 '알림 글씨가 크게 뜨는 건 테스트 중엔 그대로' | — | 제안 · 확인 전 | |
+| 349 | 일본 발동 그대로(여유 0.2) — 모노호시자오 판마다 **2.1**(목표 1.2 위) · 打刀 1.2 | config.js `japaneseFoeMargin` | 지시 '일본 그대로' | 줄이려면 결심한 공격 문턱을 일본에도 (결정 후보 4) | 투명성 · 결정 후보 | |
 
 ## 부록: 한도가 아닌 값 (승인 필요 없음, 투명성용)
 - R0 `wristStable`·`wristStableK 0.9`: 수치 안정. 손목 제동이 한 스텝에 목표를 지나치지 않게 하고, 빨라지는 쪽은 건드리지 않습니다. (감사 D-001 로 47행에도 올림)

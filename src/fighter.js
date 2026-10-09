@@ -348,6 +348,7 @@ export class Fighter {
     this.armFull = false; // 칼 든 팔이 이번 IK 에서 다 펴졌나 (목표가 팔 길이 밖)
     this.strength = o.strength ?? 1;
     this.powerMul = 1; // 서보 힘 창 (유파 비기 — ai.js 가 비기 베기 동안만 SECRET.power 로 둔다). 1 = 그대로 (driveSword)
+    this.secretHit = 1; // 결정타 판정 배율 (유파 비기 — 비기 베기 동안 SECRET.hitMul, combat.js 가 상처 에너지에 곱한다). 1 = 그대로
     this.gaitPhase = 0;
     this.gaitWeight = 0; // 0 = 서 있음, 1 = 걷는 중 (부드럽게 바뀜)
     this.stanceDrop = 0; // 딛는 다리가 기울어진 만큼 골반을 낮춰 발이 땅에 닿게 한다

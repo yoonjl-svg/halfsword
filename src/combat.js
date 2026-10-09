@@ -157,7 +157,9 @@ export class Combat {
     let ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
-    let energy = ephys * STRIKE.energyScale;
+    // 결정타 (10/9 23:5x — 유파 비기, AI·플레이어 공통): 비기 베기 동안 공격자 secretHit(SECRET.hitMul)를 상처 에너지에 곱한다. 물리(속도·질량)는 그대로, 판정만. 1 이면 그대로
+    const hk = att.secretHit ?? 1;
+    let energy = ephys * STRIKE.energyScale * hk;
     let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 
     let type = 'blunt';
@@ -180,7 +182,7 @@ export class Combat {
           assisted = { mEff, ephys, energy };
           mEff = mFree + STRIKE.thrustAssist;
           ephys = 0.5 * mEff * speed * speed;
-          energy = ephys * STRIKE.energyScale;
+          energy = ephys * STRIKE.energyScale * hk;
         }
       } else if (isBlade) {
         const perp = rel.clone().addScaledVector(axis, -rel.dot(axis));

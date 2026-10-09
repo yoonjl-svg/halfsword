@@ -30,6 +30,8 @@ import { createRenderCap } from './render_cap.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
+import { PlayerSecretWatch } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
+import { TRADITIONS } from './schools.js';
 
 await RAPIER.init();
 
@@ -67,6 +69,8 @@ if (motionLib >= 0 && params.has('motionLib')) CONFIG.SKILL.motionLib = motionLi
 const schoolArt = +params.get('schoolArt');
 if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 1(사장님 10/9 01:5x '스위치 켜') = 유파 가중치·맞받아치기·새 기술(燕返し) 켬. `?schoolArt=0` = 그 전 판(이름·쉴 자세는 늘)
 if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 : 0; // 유파 비기(10/9 유파 설계 v3): 기본 1, `?secret=0` = 비기 없는 판 (docs/strike/school_secret_2026-10-09.md)
+if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerSecret') ? 1 : 0; // 플레이어 비기(10/9 23:5x): 기본 1, `?playerSecret=0` = 끔 (docs/strike/player_secret_2026-10-09.md)
+const SECRET_SLOWMO = params.get('slowMo') !== '0'; // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
 const oneVersatile = params.get('oneVersatile');
@@ -472,6 +476,10 @@ function newRound(weaponId) {
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
   const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...currentFoe.ai.persona, school: foeWeapon } : currentFoe?.ai.persona;
   ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, persona) : new AI(enemy, player, settings.difficulty);
+  playerSecret = new PlayerSecretWatch(player, enemy); // 내 무기 유파의 비기 (스위치 끔·무유파·권총이면 S = null — 아무 일도 없다)
+  secretSlow = 0;
+  secretBurstsSeen = 0;
+  secretOpenSeen = 0;
   // 플레이어 감정 (emotions.js): 상대 AI와 같은 규칙으로 겁먹고 화내고 물고 늘어진다. ?emo=0 이면 끔, ?emo=0.5 면 문턱값 셋 다 0.5
   const emoParam = params.get('emo');
   const emoTh = emoParam === '0' ? 0 : emoParam ? +emoParam || 0.3 : 0.3;
@@ -507,6 +515,11 @@ const playerTremor = { x: 0, y: 0, ax: 0, ay: 0, t: 0 }; // 공포 손 떨림 (�
 let clashCooldown = 0;
 let clashStopCooldown = 0; // 칼끼리 부딪혀 멈칫한 뒤 다시 멈칫하기까지 (초)
 let slowMo = 0; // 결정타 슬로모션 남은 시간
+// 플레이어 비기 (10/9 23:5x — docs/strike/player_secret_2026-10-09.md): 창(PlayerSecretWatch — 판마다 새로) · 결정타 연출 시계 · 본 터뜨림 수 · 본 창 수
+let playerSecret = null;
+let secretSlow = 0;
+let secretBurstsSeen = 0;
+let secretOpenSeen = 0;
 
 // 디버그용 통계 (브라우저 콘솔에서 game.stats 로 확인)
 const stats = { hits: [], clashes: 0, simTime: 0, passes: 0 };
@@ -1423,8 +1436,10 @@ function updateGuardName(dt) {
 //  설정 '모든 기술 이름 표시'(techCueAll, 디버그 — 기본 끔, 사장님 검토용): 그 밖의 기술도 칼이 나갈 때 흐리게(enemy.techAll). 패시브·고유 동작 알림이 떠 있으면 덮지 않는다
 const techCueEl = $('techCue');
 //  10/9 유파 비기(docs/strike/school_secret_2026-10-09.md): kind 'secret' — 꼬리표 '비기', 글씨 더 크게·다른 색(index.html), 2.0 초
-const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기' };
-const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0 };
+//  10/9 23:5x 플레이어 비기: kind 'secretReady'(창이 열림 — 흐린 '비기' 꼬리표, 글씨 크기는 비기 알림과 같게 — 사장님 '테스트 중엔 크게') · 'stiff'(내 비기 뒤 경직, 흐리게).
+//   내 비기를 낸 알림('secret', who 'me')은 실행이 끝날 때까지, AI 비기 알림은 그 비기(連環 세 수 등)가 끝날 때까지 떠 있다
+const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', stiff: '' };
+const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0, secretReady: 0.5, stiff: 0.3 };
 let techCueSeen = null;
 let techAllSeen = null;
 let techCueTimer = 0;
@@ -1436,26 +1451,55 @@ function showTechCue(c) {
   tag.textContent = `${c.schoolKo ? `${c.schoolKo} · ` : ''}${TECH_CUE_KIND[c.kind] ?? ''}`;
   techCueEl.append(b, tag);
   techCueEl.dataset.kind = c.kind;
+  techCueEl.dataset.who = c.who ?? 'foe';
   techCueEl.classList.add('show');
   techCueTimer = TECH_CUE_TIME[c.kind] ?? 1.2;
 }
+/** 플레이어 비기 알림: kind 'secretReady' | 'secret' | 'stiff' (싸움 중이면 설정과 상관없이 — 비기 창은 조작이다) */
+function showPlayerCue(S, kind) {
+  if (state !== 'fight' || !S) return;
+  const T = TRADITIONS[player?.swordArt?.tradition];
+  showTechCue({ text: kind === 'stiff' ? '경직' : S.nameKo ?? S.name, kind, who: 'me', schoolKo: kind === 'stiff' ? '' : `내 ${T?.nameKo ?? ''}` });
+}
 function updateTechCue(dt) {
+  // 플레이어 비기 창이 새로 열림 · 경직 시작
+  if (playerSecret && playerSecret.opened !== secretOpenSeen) {
+    secretOpenSeen = playerSecret.opened;
+    if (playerSecret.open) {
+      showPlayerCue(playerSecret.S, 'secretReady');
+      try {
+        navigator.vibrate?.(CONFIG.SECRET.playerVibrate); // 짧은 진동 (지원 안 하면 생략)
+      } catch {
+        /* 생략 */
+      }
+    }
+  }
+  const pPhase = player?.skill?.secretPhase ?? null;
+  const kNow = techCueEl.dataset.kind;
+  const mine = techCueEl.dataset.who === 'me';
+  if (pPhase === 'stiff' && !(mine && kNow === 'stiff')) showPlayerCue(playerSecret?.S, 'stiff');
+  if (mine && kNow === 'secretReady') techCueTimer = playerSecret?.open ? Math.max(techCueTimer, 0.1) : Math.min(techCueTimer, 0); // 창이 열린 동안만 (게임 시간 창 — 화면이 느려도 맞게)
+  if (mine && kNow === 'secret' && pPhase === 'run') techCueTimer = Math.max(techCueTimer, 0.3); // 내 비기는 실행이 끝날 때까지
+  if (mine && kNow === 'stiff' && pPhase === 'stiff') techCueTimer = Math.max(techCueTimer, 0.15);
+  if (!mine && kNow === 'secret' && ai?.secretRun && ai.secretRun.stage !== 'stiff') techCueTimer = Math.max(techCueTimer, 0.3); // AI 비기 알림은 그 비기가 끝날 때까지 (連環三擊 세 수)
   const c = enemy?.techCue ?? null;
   const live = state === 'fight' && !!settings.techCue && !!enemy?.alive;
   if (c && c !== techCueSeen) {
     techCueSeen = c;
     const holdSecret = techCueTimer > 0 && techCueEl.dataset.kind === 'secret' && c.kind !== 'secret'; // 비기 알림(2.0 s)은 패시브·고유 동작 알림이 덮지 않는다
-    if (live && !holdSecret) showTechCue(c);
+    const holdMine = techCueTimer > 0 && techCueEl.dataset.who === 'me'; // 내 비기 창·실행 알림은 상대 알림이 덮지 않는다
+    if (live && !holdSecret && !holdMine) showTechCue(c);
   }
   const a = enemy?.techAll ?? null;
   if (a && a !== techAllSeen) {
     techAllSeen = a;
     // 디버그: 모든 기술 이름 (패시브·고유 동작 알림이 떠 있는 동안은 덮지 않는다)
-    const busy = techCueTimer > 0 && techCueEl.dataset.kind !== 'all';
+    const busy = techCueTimer > 0 && (techCueEl.dataset.kind !== 'all' || techCueEl.dataset.who === 'me');
     if (live && settings.techCueAll && !busy) showTechCue(a);
   }
   techCueTimer -= dt;
-  if (!live || techCueTimer <= 0) techCueEl.classList.remove('show');
+  const liveMine = state === 'fight' && techCueEl.dataset.who === 'me'; // 내 비기 알림은 설정 '유파 기술 알림'과 상관없이
+  if (!(live || liveMine) || techCueTimer <= 0) techCueEl.classList.remove('show');
 }
 
 // ── 게임 루프 ──
@@ -1480,17 +1524,30 @@ function frame(now) {
     const d = input.consumeHandDelta();
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
     const inScale = hitStop > 0 ? 0.25 : 1;
+    // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust). 권총은 손가락이 닿는 순간 쏜다 (쏘는 타이밍이 실력이라 뗄 때까지 늦추지 않는다)
+    input.tapOnDown = !!player.weapon?.gun;
+    let taps = input.consumeTaps();
+    // 플레이어 비기 (10/9 23:5x): 창이 열려 있을 때 공격 입력(톡 = 찌르기, 휘두르기만큼 빠른 끌기 = 베기)이 오면 그 입력 대신 비기 완벽 실행.
+    //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 그대로 내 것
+    const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
+    let secBusy = !!player.skill.secretPhase;
+    if (playerSecret?.open && !secBusy && player.alive && (taps > 0 || swipe)) {
+      const o = playerSecret.fire();
+      if (player.skill.secret(o)) {
+        secBusy = true;
+        showPlayerCue(o.S, 'secret');
+      }
+    }
+    if (secBusy) taps = 0;
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
-    if (player.alive && !player.weapon?.gun) {
+    if (player.alive && !player.weapon?.gun && !secBusy) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
-    player.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
-    // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust). 권총은 손가락이 닿는 순간 쏜다 (쏘는 타이밍이 실력이라 뗄 때까지 늦추지 않는다)
-    input.tapOnDown = !!player.weapon?.gun;
-    if (input.consumeTaps() > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
+    player.inputActive = !secBusy && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
+    if (taps > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();
     const m = input.move;
@@ -1509,6 +1566,16 @@ function frame(now) {
       hitStop -= dt;
       scale = 0.12;
     }
+    // 결정타 연출 (10/9 23:5x — CONFIG.SECRET.slowMo): AI·플레이어 비기가 터뜨려진 순간(터뜨림 수가 바뀜) 화면 시간을 잠깐 늦춘다 — 물리 스텝 dt 는 그대로, 스텝 수만 준다
+    const bursts = (ai?.secretBursts ?? 0) + player.skill.secretBursts;
+    if (bursts !== secretBurstsSeen) {
+      secretBurstsSeen = bursts;
+      if (SECRET_SLOWMO) secretSlow = CONFIG.SECRET.slowMo.dur;
+    }
+    if (secretSlow > 0) {
+      secretSlow -= dt;
+      scale = Math.min(scale, CONFIG.SECRET.slowMo.scale);
+    }
     if (slowMo > 0) {
       slowMo -= dt;
       scale = Math.min(scale, 0.25); // 결정타 슬로모션
@@ -1523,6 +1590,7 @@ function frame(now) {
       player.faceTarget = enemy.bodies.pelvis.translation();
       enemy.faceTarget = player.bodies.pelvis.translation();
       ai.update(PHYSICS.timestep);
+      playerSecret?.update(PHYSICS.timestep, !!player.skill.sec); // 플레이어 비기 창: 조건(AI 와 같은 함수)이 차면 창을 연다
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);
       tickDebris(PHYSICS.timestep); // 흩어지는 칼·방어구 조각 (겉모습만, 게임 시간 — 멈칫·슬로모션을 따른다)
@@ -1607,6 +1675,9 @@ window.game = {
   },
   get ai() {
     return ai;
+  },
+  get playerSecret() {
+    return playerSecret; // 플레이어 비기 창 (open · opened · S) — 브라우저 스모크(tools/browser/player_secret_shots.mjs)가 읽는다
   },
   get combat() {
     return combat;
