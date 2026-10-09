@@ -104,7 +104,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, techCue: true, trail: true, fpsCap: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, techCue: true, techCueAll: false, trail: true, fpsCap: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -1417,26 +1417,38 @@ function updateGuardName(dt) {
 //  상대 AI 가 유파 패시브를 내거나 유파 고유 동작을 시작하면 ai.js 가 enemy.techCue 에 적는다 → 화면 가운데에 이름 한 줄 + 작은 유파 꼬리표를 잠깐.
 //  상대 것만(플레이어는 AI 가 없다). 새 알림이 옛 것을 덮는다. 싸움 중이 아니거나(메뉴·일시정지) 상대가 죽었거나 설정 '유파 기술 알림'을 끄면 숨긴다.
 //  자세 이름(#guardName)과 따로 논다. docs/strike/tech_cue_2026-10-09.md
+//  10/9 13:xx(docs/strike/passive_fire_2026-10-09.md): 고유 동작은 칼이 실제로 나갈 때(ai.js startStrike) 적히고 1.5 초, 패시브는 결정할 때 1.2 초.
+//  설정 '모든 기술 이름 표시'(techCueAll, 디버그 — 기본 끔, 사장님 검토용): 그 밖의 기술도 칼이 나갈 때 흐리게(enemy.techAll). 패시브·고유 동작 알림이 떠 있으면 덮지 않는다
 const techCueEl = $('techCue');
-const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작' };
+const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술' };
+const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0 };
 let techCueSeen = null;
+let techAllSeen = null;
 let techCueTimer = 0;
+function showTechCue(c) {
+  techCueEl.innerHTML = '';
+  const b = document.createElement('b');
+  b.textContent = c.text;
+  const tag = document.createElement('small');
+  tag.textContent = `${c.schoolKo ? `${c.schoolKo} · ` : ''}${TECH_CUE_KIND[c.kind] ?? ''}`;
+  techCueEl.append(b, tag);
+  techCueEl.dataset.kind = c.kind;
+  techCueEl.classList.add('show');
+  techCueTimer = TECH_CUE_TIME[c.kind] ?? 1.2;
+}
 function updateTechCue(dt) {
   const c = enemy?.techCue ?? null;
   const live = state === 'fight' && !!settings.techCue && !!enemy?.alive;
   if (c && c !== techCueSeen) {
     techCueSeen = c;
-    if (live) {
-      techCueEl.innerHTML = '';
-      const b = document.createElement('b');
-      b.textContent = c.text;
-      const tag = document.createElement('small');
-      tag.textContent = `${c.schoolKo ? `${c.schoolKo} · ` : ''}${TECH_CUE_KIND[c.kind] ?? ''}`;
-      techCueEl.append(b, tag);
-      techCueEl.dataset.kind = c.kind;
-      techCueEl.classList.add('show');
-      techCueTimer = 1.2;
-    }
+    if (live) showTechCue(c);
+  }
+  const a = enemy?.techAll ?? null;
+  if (a && a !== techAllSeen) {
+    techAllSeen = a;
+    // 디버그: 모든 기술 이름 (패시브·고유 동작 알림이 떠 있는 동안은 덮지 않는다)
+    const busy = techCueTimer > 0 && techCueEl.dataset.kind !== 'all';
+    if (live && settings.techCueAll && !busy) showTechCue(a);
   }
   techCueTimer -= dt;
   if (!live || techCueTimer <= 0) techCueEl.classList.remove('show');

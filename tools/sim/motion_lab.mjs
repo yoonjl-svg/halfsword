@@ -38,6 +38,8 @@ if (process.env.SCHOOL_NEWTECH) {
   const names = process.env.SCHOOL_NEWTECH.split(',');
   for (const t of Object.values(TRADITIONS)) for (const x of [...(t.unique ?? []), ...(t.spare ?? [])]) if (names.includes(x.name)) x.ai = true;
 }
+// 고유 동작 상황 선호 (10/9 13:xx — docs/strike/passive_fire_2026-10-09.md): UNIQUE_FIT=0 = 모든 유파 고유 동작의 fit 칸을 지운다(양쪽 AI 모두 — 대조용)
+if (process.env.UNIQUE_FIT === '0') for (const t of Object.values(TRADITIONS)) for (const x of t.unique ?? []) delete x.fit;
 // 패시브 고유 동작 (10/9 — docs/strike/school_passive_2026-10-09.md): duel 의 시험 쪽(X) AI 만 패시브 목록을 갈아 끼운다(상대 롱소드 AI 는 그대로).
 //  SCHOOL_PASSIVE=off(없음)|all(유파 기본, 없을 때와 같음)|이름,이름(유파 기본 가운데 그것만) · SCHOOL_PASSIVE_GERMAN=1 = 독일 셋(ai:false)을 시험 쪽에만 켬
 //  SCHOOL_RITIRATA=0 = 이탈리아 물러남 자세(Ritirata, 유파 withdraw 값)를 전 값(독일 황소 · 쟁기·긴 자세)으로 — 기준선 대조
@@ -235,6 +237,7 @@ if (mode === 'poses') {
   const pasRolls = {};
   let pasSkipped = 0;
   let pasList = null;
+  let uqTrad = null; // 고유 동작 줄 (10/9 13:xx)
   // 기술 걸음 계기 (10/9 비껴 들어가 베기 — docs/strike/school_step_2026-10-09.md): step 칸 있는 기술과 같은 길의 공용 동작(대조)을 친 때마다
   //  ① 시작(걸음 받은 때, 없으면 베기 시작)과 ② 닿는 때(맞힘·맺힘 첫 프레임, 없으면 손이 길 끝에 닿은 때)의 '상대 칼 줄에서 내 가슴까지 수평 거리'(m)와
   //  '상대 정면과 상대→나 방향의 각'(도), 결과(맞힘/막힘/헛침 — 그 베기가 끝날 때 ai 의 hitLanded·bound, ai.js afterStrike 와 같은 가름), 걸음 받음/부탁(ai.js stats.techStep), 걸음 받은 뒤(대조는 베기 시작 뒤) 1 s 안 넘어짐. 넷째 줄 — 그 기술이 꾸러미에 없으면 찍지 않는다
@@ -273,6 +276,7 @@ if (mode === 'poses') {
       const pl = XA ? passiveList(XA) : null;
       if (pl) XA.passives = pl;
       if (XA && !pasList) pasList = XA.passives.map((x) => x.name);
+      if (XA && !uqTrad) uqTrad = XA.art.tradition; // 고유 동작 줄
       if (process.env.TWIST_MUL) X.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율 (라이브러리와 별개)
       if (process.env.FORCE_FLOW === '1') installFlow(X); // 점검: 무기 쪽에만 흐름(이어 베기) — 두손 보통 틀(카타나 대리 = 롱소드)에 켜면 어떻게 되나
       if (useTable) applyMotionLibrary(X, { overlay: process.env.NO_OVERLAY !== '1', flow: process.env.NO_FLOW !== '1', noTwist: process.env.NOTWIST === '1', ai: XA, cover: process.env.COVER === '1' });
@@ -358,6 +362,9 @@ if (mode === 'poses') {
   console.log(`  속임수: ${fmt(feintUsed)} · 맞받아 베기: ${fmt(counterUsed)}`); // 둘째 줄 (10/9 고유 동작 단계 — 첫 줄은 전과 같다)
   // 셋째 줄 (10/9 패시브 단계): 시험 쪽 패시브 — 이름 낸 수/굴린 수, 기술 없음 건너뜀
   console.log(`  패시브 [${(pasList ?? []).join(',') || '없음'}]: ${(pasList ?? []).map((k) => `${k} ${pasFired[k] ?? 0}/${pasRolls[k] ?? 0}`).join(', ') || '-'}${pasSkipped ? ` · 건너뜀 ${pasSkipped}` : ''}`);
+  // 고유 동작 줄 (10/9 13:xx 패시브 확정 — docs/strike/passive_fire_2026-10-09.md): 시험 쪽 유파 고유 동작(길·속임수, 켠 것)이 칼을 낸 수
+  const uqT = TRADITIONS[uqTrad]?.unique ?? [];
+  console.log(`  고유 동작 [${uqTrad ?? '-'}]: ${uqT.filter((u) => !u.counter && u.ai !== false).map((u) => (u.feint ? `${u.name} ${feintUsed[u.feint.name] ?? 0}` : `${u.name} ${used[u.name] ?? 0}`)).join(', ') || '-'}`);
   if (stepNames?.length) {
     // 넷째 줄 (10/9 기술 걸음): 이름 쓴 수 · 걸음 받음/부탁 · 결과 맞힘/막힘/헛침 · 칼 줄 거리 시작→닿을 때(m) · 상대 정면 각 시작→닿을 때(도) · 걸음(대조는 베기 시작) 뒤 1 s 넘어짐 · 시작→닿을 때 가슴 옮김(시작 때 몸 기준, 걸음 쪽 +)
     const f2 = (v) => v.toFixed(2);

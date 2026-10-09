@@ -235,6 +235,9 @@ export class AI {
     const foe = this.foe;
     this.sense.record(dt);
     const L = this.level;
+    // 패시브 확정(10/9 13:xx, docs/strike/passive_fire_2026-10-09.md): 패시브가 낸 공격의 걸쇠(0.5 s)와 미룬 패시브의 남은 시간을 줄인다
+    if (this.passiveLock && (this.passiveLock.left -= dt) <= 0) this.passiveLock = null;
+    if (this.pendingPassive?.left != null && (this.pendingPassive.left -= dt) <= 0) this.pendingPassive = null;
 
     // 부활하는 동안(revive.js): 싸우지 않고 기다린다. 끝나면 집념으로 다시 싸운다
     if (me.revival) {
@@ -493,6 +496,7 @@ export class AI {
     const L = this.level;
     this.phase = 'ready';
     if (th && this.respond(th, d)) return;
+    if (this.pendingPassive?.left != null && this.passivePending(s, d)) return; // 미룬 패시브 (물러남 끝 斂翅 · 간격 밖에서 굴려 나온 돌려 물러남)
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
@@ -721,14 +725,15 @@ export class AI {
     const recovering = swung && Math.hypot(s.hvx, s.hvy) < 1.8;
     const pressing = d < 1.5 && this.foeClosing > 0.1;
     if (!recovering && !pressing) return false;
-    // 패시브 foeRecover (지금 목록엔 없다 — 자리만): 있으면 이 굴림 앞에 한 번
+    // 패시브 foeRecover (독일 Nachreisen — 10/9 13:xx): 있으면 이 굴림 앞에 한 번
     const P = recovering && this.passives.length ? this.passiveFor('foeRecover') : null;
     if (P && this.passiveRoll(P) && this.passiveGo(P, s, 'recover')) return true;
     if (Math.random() > (recovering ? 0.3 + 0.5 * L.read : 0.1 + 0.35 * L.read)) return false;
     return this.startAttack(this.pickTech(s, 'recover'), recovering ? 'recover' : 'press', { noFeint: true });
   }
 
-  /** 기술 고르기: 노리는 빈틈 × 상대 자세 × 준비 자세까지의 거리 × 성격. prefer(패시브, 이 한 번만): { thrust, fast, presses } 곱 — 없으면 전과 같은 셈 */
+  /** 기술 고르기: 노리는 빈틈 × 상대 자세 × 준비 자세까지의 거리 × 성격. prefer(패시브, 이 한 번만): { thrust, fast, presses } 곱 — 없으면 전과 같은 셈.
+   *  고유 동작의 fit 칸({ online·high·low·left·right·parried: 곱 }) — parried 는 바로 앞 내 공격이 막혔나(bound, 다음 startAttack 이 지우기 전) */
   pickTech(s, why, prefer) {
     const L = this.level;
     const cls = this.foeClass(s);
@@ -758,6 +763,8 @@ export class AI {
       if (why === 'windup' || why === 'stepin') fit *= t.fast ? 1.6 : 1; // 짧은 순간: 빠른 기술
       if (why === 'stop') fit *= t.presses ? 2 : t.kind === 'thrust' ? 0.3 : 1; // 달려드는 몸을 맞받는다: 무거운 베기
       if (t.presses) fit *= 1 + 0.6 * this.anger; // 화나면 무거운 베기(분노의 베기·내려베기)만 찾는다
+      // 고유 동작 상황 선호(schools.js unique 의 fit 칸, 10/9 13:xx): 상대 자세가 그 기술이 깨는 꼴이면 곱한다. 칸이 없으면 지나친다(셈 그대로)
+      if (t.fit) for (const k in t.fit) if (k === 'parried' ? this.bound && !this.hitLanded : cls[k]) fit *= t.fit[k];
       w *= Math.pow(fit, 0.3 + 0.7 * L.read);
       if (prefer) w *= (t.kind === 'thrust' ? prefer.thrust ?? 1 : 1) * (t.fast ? prefer.fast ?? 1 : 1) * (t.presses ? prefer.presses ?? 1 : 1);
       // 준비 자세가 멀면 크게 들어 올려야 한다 (속내가 드러나고 늦다) → 짧은 기회일수록 지금 자세에서 바로 친다
@@ -778,6 +785,13 @@ export class AI {
   /** 공격 시작. why: 어떤 기회였나 (recover/stepin/finish/patience/counter/...) */
   startAttack(tech, why, opt = {}) {
     if (!tech || !this.me.armed) return false; // 칼이 없으면 칠 수 없다
+    // 미룬 패시브(斂翅 물러남 끝 등 — 10/9 13:xx): 그 패시브가 나기 전에 내 공격 기회(되받기·seize·맞받기)가 오면 그 기회를 패시브가 가져간다
+    //  (이어 치기·흐름·패시브가 낸 공격은 건드리지 않는다). 못 내면 원래 공격 그대로
+    const PP = this.pendingPassive;
+    if (PP && !opt.passive && !opt.chain && !opt.noPending) {
+      this.pendingPassive = null;
+      if (this.passiveGo(PP.P, null, PP.why ?? why)) return true;
+    }
     const L = this.level;
     const hand = [this.me.handOffset.x, this.me.handOffset.y];
     this.mode = 'attack';
@@ -793,7 +807,7 @@ export class AI {
     this.techStepTry = false; // 기술 걸음을 이번 공격에 부탁해 봤나 (재기만)
     this.sideStepT = null; // 기술 걸음 'approach'(비껴 딛고 친다): 걸음을 부탁한 뒤 흐른 시간. null = 아직 (step 칸 없는 기술은 읽지 않는다)
     this.passiveAtk = null; // 패시브가 시작했으면 부른 쪽이 다시 적는다
-    this.pendingPassive = null;
+    this.passiveLock = null; // 패시브가 시작했으면 passiveFired 가 다시 건다
     this.standoffArmed = true;
     if (!opt.chain) this.stats.attacks++;
     // 속임수: 먼저 다른 곳을 치는 척하다가 바꾼다 (상대가 잘 막을수록 자주)
@@ -818,16 +832,37 @@ export class AI {
     //  빠르게 움직여야 한다. 느린 chamberSpeed로 챔버하면 정작 순간을 놓친다
     this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? L.windup * 0.15 : 0;
-    // 기술 알림: 유파 고유 동작을 시작하면 그 이름 (속임수를 골랐으면 속임수 이름으로 찾는다 — 그때 tech 는 가짜 기술). 패시브가 시작했으면 passiveFired 가 덮어쓴다
-    const U = this.uniqueByName.size ? this.uniqueByName.get(this.feint ? this.feint.name : tech.name) : null;
-    if (U) this.setTechCue(U.nameKo ?? U.feint?.name ?? U.name, 'unique');
+    // 기술 알림: 고유 동작 이름은 칼이 실제로 나갈 때(startStrike — 10/9 13:xx 옮김). 패시브 이름은 passiveFired 가 여기(결정)에서
     return true;
+  }
+
+  /** 패시브가 낸 공격의 걸쇠 (0.5 s): 준비·다가가는 동안 새 위협에 공격을 거두지 않는다 (맞는 것은 물리 그대로 끊는다) */
+  get passiveLocked() {
+    return !!this.passiveLock && this.mode === 'attack';
   }
 
   /** 기술 알림을 몸에 적는다 (me.techCue — main.js 가 상대 것만 화면 가운데에 잠깐 보인다). 새 것이 옛 것을 덮는다. 난수·결정과 상관없음 */
   setTechCue(text, kind) {
     const T = TRADITIONS[this.art.tradition];
     this.me.techCue = { text, kind, school: this.art.tradition, schoolKo: T?.nameKo ?? '', t: performance.now() };
+  }
+
+  /**
+   * 칼이 나가는 순간의 기술 알림 (startStrike): 유파 고유 동작이면 그 이름(kind 'unique' — 속임수면 속임수 이름으로 찾는다, 그때 tech 는 가짜 기술).
+   *  패시브가 낸 공격이면 패시브 이름이 이미 떠 있어 덮지 않는다. 그 밖의 기술은 me.techAll 에만 적는다 — 설정 '모든 기술 이름 표시'(디버그, 기본 끔)일 때
+   *  main.js 가 흐리게 보인다(공용 동작은 유파 말 이름 TECH_NAMES, 없으면 코드 이름). 난수·결정과 상관없음
+   */
+  strikeCue(t) {
+    if (this.passiveAtk) return;
+    const key = this.feint ? this.feint.name : t.name;
+    const U = this.uniqueByName.size ? this.uniqueByName.get(key) : null;
+    if (U) {
+      this.setTechCue(U.nameKo ?? U.feint?.name ?? U.name, 'unique');
+      return;
+    }
+    const T = TRADITIONS[this.art.tradition];
+    const text = this.feint ? this.feint.name : T?.techNames?.[t.name]?.name ?? t.name;
+    this.me.techAll = { text, kind: 'all', school: this.art.tradition, schoolKo: T?.nameKo ?? '', t: performance.now() };
   }
 
   attack(dt, s, d, th) {
@@ -839,8 +874,8 @@ export class AI {
       // 준비 자세로 (다가가며)
       this.hand.set(t.from[0], t.from[1]);
       this.handSpeed = this.fastChamber ? L.parrySpeed : L.chamberSpeed;
-      // 준비하는 동안 상대 칼이 들어오면: 숙련자는 공격을 거두고 막는다
-      if (th && this.noticedThreat(th) && this.respond(th, d)) return;
+      // 준비하는 동안 상대 칼이 들어오면: 숙련자는 공격을 거두고 막는다 (패시브가 낸 공격은 걸쇠 0.5 s 동안 거두지 않는다 — passiveLock)
+      if (th && !this.passiveLocked && this.noticedThreat(th) && this.respond(th, d)) return;
       if (padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
         this.phase = 'approach';
         this.timer = this.quick ? 0 : L.windup * 0.25; // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
@@ -861,7 +896,7 @@ export class AI {
         return;
       }
 
-      if (th && this.noticedThreat(th) && this.respond(th, d)) return;
+      if (th && !this.passiveLocked && this.noticedThreat(th) && this.respond(th, d)) return;
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
       const keep = 1 + 0.5 * this.obsession; // 물고 늘어질 땐 접근을 쉽게 포기하지 않는다
       if (this.attackT > (this.chasing ? 3 : 1.4) * keep || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep) this.abortAttack();
@@ -894,6 +929,7 @@ export class AI {
     const t = this.tech;
     this.phase = 'strike';
     this.path.length = 0;
+    this.strikeCue(t); // 기술 알림 (고유 동작 — 칼이 실제로 나가는 순간)
     if (this.feint) {
       // 속임수: 가짜 기술의 앞부분만 가다가(내딛지 않고) 진짜 길로 바꾼다
       const f = this.feint;
@@ -1119,7 +1155,7 @@ export class AI {
    */
   flowInto(t, why, chain) {
     const hand = [this.me.handOffset.x, this.me.handOffset.y];
-    if (!this.startAttack(t, why, { chain, noFeint: true, skipChamber: true })) return false;
+    if (!this.startAttack(t, why, { chain, noFeint: true, skipChamber: true, noPending: true })) return false;
     this.stats.flows = (this.stats.flows ?? 0) + 1;
     this.startStrike();
     const mx = (hand[0] + t.from[0]) / 2;
@@ -1173,12 +1209,14 @@ export class AI {
     // 패시브 pressed (몰려 물러남 한 번에 한 번): 곧장 베고 물러나거나(돌려 물러남), 물러남 끝에 들어가 벤다(斂翅 at:'end')
     const P = pressed && this.passives.length && !this.pendingPassive ? this.passiveFor('pressed') : null;
     if (P && P.name !== fromPassive && this.passiveRoll(P)) {
-      if (P.do.at === 'end') this.pendingPassive = P;
+      if (P.do.at === 'end') this.pendingPassive = { P, why: 'press', left: null }; // 물러남 끝까지 (left null = 시간 안 셈)
       else if (P.do.withdraw) {
         this.guard = this.passiveGuard(P.do.withdraw) ?? this.guard;
         if (P.do.time) this.timer = P.do.time;
         this.passiveFired(P);
-      } else if (this.foe.alive && this.d < this.M.reach + 0.2 && this.d > this.M.clinch) this.passiveGo(P, null, 'press');
+      } else if (!(this.foe.alive && this.d < this.M.reach + 0.2 && this.d > this.M.clinch && this.passiveGo(P, null, 'press'))) {
+        this.pendingPassive = { P, why: 'press', left: 0.5 }; // 간격 밖 → 확정: 0.5 s 안에 낼 수 있으면 낸다 (10/9 13:xx)
+      }
     }
   }
 
@@ -1187,6 +1225,7 @@ export class AI {
     this.phase = 'ready';
     this.timer -= dt;
     if (th && this.respond(th, d)) return;
+    if (this.pendingPassive?.left != null && this.passivePending(s, d)) return; // 미룬 패시브 (시간이 도는 것만 — 물러남 끝 것은 아래 끝에서)
     if (this.seize(s, d, dt)) return;
     if (d < this.M.reach + 0.2) {
       // 아직 상대 칼이 닿는 거리: 상대가 칼을 든 쪽에서 올 베기를 가리며 물러난다 (준비 자세를 읽는다)
@@ -1200,11 +1239,12 @@ export class AI {
     if ((this.timer <= 0 && d > this.M.reach) || d > this.holdDist() - 0.05 || this.timer < -1) {
       this.mode = 'watch';
       this.guardTimer = rand(0.3, 0.8);
-      // 패시브 斂翅 꼴: 물러남 끝에 갑자기 들어가며 벤다 (굴림은 물러남을 시작할 때 이미 했다)
-      const P = this.pendingPassive;
-      if (P) {
-        this.pendingPassive = null;
-        if (this.foe.alive && s.state === 'stand') this.passiveGo(P, s, 'press');
+      // 패시브 斂翅 꼴: 물러남 끝에 갑자기 들어가며 벤다 (굴림은 물러남을 시작할 때 이미 했다).
+      //  지금 못 내면(상대가 서 있지 않음 등) 0.5 s 동안 간 보기에서 다시 본다 (10/9 13:xx — 막기·물러남이 끼어도 지워지지 않게)
+      const PP = this.pendingPassive;
+      if (PP) {
+        if (PP.left == null) PP.left = 0.5;
+        this.passivePending(s, d);
       }
     }
   }
@@ -1248,10 +1288,11 @@ export class AI {
     if (Math.random() > L.guardChance) return false; // 못 봤거나 늦었다
     this.defLine = th.line;
     // 패시브 threat (이 위협에 한 번 — threatSeen 과 같은 번호): 맞받아치기 목록 바꿈·막기·피하기 강제. 없으면 난수 없이 아래 그대로
+    //  맞받아치기 꼴(counter)은 간격(맞받아 벨 거리) 안에서만 굴린다 — 굴려 나오면 확정이라 굴림이 곧 낸 수가 되게 (10/9 13:xx)
     const P = this.passives.length ? this.passiveFor('threat', th) : null;
-    if (P && this.passiveRoll(P) && this.passiveThreat(P, th, d)) return true;
+    if (P && (!P.do.counter || this.counterRange(d)) && this.passiveRoll(P) && this.passiveThreat(P, th, d)) return true;
     // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다 (겁먹으면 엄두를 못 낸다)
-    if (Math.random() < L.counter * (1 - 0.8 * this.fear) && d < this.M.reach + 0.3 && d > this.M.clinch + 0.1) {
+    if (Math.random() < L.counter * (1 - 0.8 * this.fear) && this.counterRange(d)) {
       const t = this.counterTech(th);
       if (t && this.startAttack(t, 'counter', { noFeint: true, skipChamber: true })) {
         this.stats.counters++;
@@ -1292,6 +1333,11 @@ export class AI {
       const riposte = d < this.M.reach + 0.25 && d > this.M.clinch + 0.1 && this.foe.alive && Math.random() < L.followUp;
       if (!(riposte && this.startAttack(this.pickTech(s, 'recover'), 'riposte', { noFeint: true }))) this.startWithdraw(0.6);
     }
+  }
+
+  /** 맞받아 벨 거리: 간격 끝 + 0.3 m 안이고 붙은 거리(clinch + 0.1)보다 멀다 */
+  counterRange(d) {
+    return d < this.M.reach + 0.3 && d > this.M.clinch + 0.1;
   }
 
   /** 맞받아 베기에 쓸 기술: 들어오는 줄에 맞서 가운데를 차지하며 베는 기술 (지금 손에서 가까운 것). list = 패시브가 준 목록(이 꾸러미에 없는 이름은 건너뜀) */
@@ -1444,7 +1490,9 @@ export class AI {
     const F = (this.stats.passives ??= {});
     F[P.name] = (F[P.name] ?? 0) + 1;
     this.passiveAtk = this.mode === 'attack' ? P.name : null;
-    this.setTechCue(P.nameKo ?? P.name, 'passive'); // 기술 알림 (패시브가 낸 고유 동작보다 앞선다 — startAttack 뒤에 불린다)
+    // 확정(10/9 13:xx): 패시브가 낸 공격은 0.5 s 동안 새 위협에 거두지 않는다 (attack 의 respond 확인을 건너뜀 — 맞는 것은 물리 그대로)
+    this.passiveLock = this.passiveAtk ? { left: 0.5, name: P.name } : null;
+    this.setTechCue(P.nameKo ?? P.name, 'passive'); // 기술 알림 (패시브가 낸 공격은 칼이 나갈 때 고유 동작 이름으로 덮지 않는다 — strikeCue)
   }
 
   /** do.tech·do.chain 의 기술: 이름(들) 가운데 이 꾸러미에 있는 것 — 손에서 가까운 것(far 면 먼 것). 없으면 alt, 그것도 없으면 null */
@@ -1482,7 +1530,7 @@ export class AI {
       if (!s) return false;
       // 기술 고르기 셈: 짧은 순간 셈('windup' — 빠른 기술)에 prefer 곱. 'stop' 셈은 찌르기를 0.3 으로 깎아 contratempo 뜻과 어긋나 쓰지 않는다
       const t = this.pickTech(s, why === 'stop' ? 'windup' : why, D.prefer);
-      if (!t || !this.startAttack(t, reason, { chain, noFeint: true, fastChamber: true })) return false;
+      if (!t || !this.startAttack(t, reason, { chain, noFeint: true, fastChamber: true, passive: true })) return false;
       this.passiveFired(P);
       return true;
     }
@@ -1497,7 +1545,8 @@ export class AI {
       this.stats.passiveSkipped = (this.stats.passiveSkipped ?? 0) + 1; // 그 기술이 이 꾸러미에 없다 → 건너뜀
       return false;
     }
-    if (!this.startAttack(t, reason, { chain, noFeint: true, skipChamber: true, fastChamber: true })) return false;
+    // chamber(독일 Nachreisen): 지금 손에서 곧장이 아니라 준비 자세를 빠르게 거쳐 친다 (보통 'recover' 공격처럼 — 내디딤은 stepTime 그대로)
+    if (!this.startAttack(t, reason, { chain, noFeint: true, skipChamber: !D.chamber, fastChamber: true, passive: true })) return false;
     if (feint) {
       this.feint = feint;
       this.stats.feints++;
@@ -1506,17 +1555,21 @@ export class AI {
     return true;
   }
 
-  /** threat 패시브: counter(이 위협의 맞받아치기 목록 — 굴림 없이 곧장) · parry/void(막기·피하기 강제) · tech */
+  /**
+   * threat 패시브: counter(이 위협의 맞받아치기 목록 — 굴림 없이 곧장) · parry/void(막기·피하기 강제) · tech.
+   *  counter 는 확정(10/9 13:xx — 전엔 보통 맞받아치기와 같은 '준비 자세가 손에서 0.3 m 안' 문턱에 걸려 Überlaufen 174 굴림에 7 번만 났다):
+   *  목록(줄마다 목록이면 이 위협의 줄 것) 가운데 손에서 가까운 것을 거리 문턱 없이, 준비 자세가 멀면 빠르게 거쳐(fastChamber) 친다. 간격은 respond 가 굴리기 전에 봤다
+   */
   passiveThreat(P, th, d) {
     const D = P.do;
     if (D.counter) {
-      if (!(d < this.M.reach + 0.3 && d > this.M.clinch + 0.1)) return false;
-      if (!D.counter.some((n) => this.school.techByName[n])) {
+      const list = Array.isArray(D.counter) ? D.counter : D.counter[th.line] ?? D.counter.default;
+      if (!list || !list.some((n) => this.school.techByName[n])) {
         this.stats.passiveSkipped = (this.stats.passiveSkipped ?? 0) + 1;
         return false;
       }
-      const t = this.counterTech(th, D.counter);
-      if (!t || !this.startAttack(t, 'counter', { noFeint: true, skipChamber: true })) return false; // 준비 자세가 멀면 제때 못 친다 → 보통 판단으로
+      const t = this.passiveTech({ tech: list });
+      if (!t || !this.startAttack(t, 'counter', { noFeint: true, fastChamber: true, passive: true })) return false;
       this.stats.counters++;
       this.passiveFired(P);
       return true;
@@ -1535,6 +1588,17 @@ export class AI {
       return true;
     }
     return this.passiveGo(P, null, 'counter');
+  }
+
+  /**
+   * 미룬 패시브(pendingPassive = { P, why, left }): 물러남 끝 斂翅, 간격 밖에서 굴려 나온 돌려 물러남. left 가 도는 동안(0.5 s) 간 보기·물러남에서
+   *  상대가 서 있고 간 보는 거리 + 0.4 m 안이면 낸다. 냈으면 true (그 사이 내 공격 기회가 먼저 오면 startAttack 이 이 패시브로 바꾼다)
+   */
+  passivePending(s, d) {
+    const PP = this.pendingPassive;
+    if (!PP || !this.foe.alive || s.state !== 'stand' || d > this.holdDist() + 0.4 || d < this.M.clinch) return false;
+    this.pendingPassive = null;
+    return this.passiveGo(PP.P, s, PP.why);
   }
 
   /** watch 의 판단 박자: standoff(위협 없음 2 s 넘게 · 상대 손 1 m/s 아래 · 간격 끝 가까이)와 foeStepIn(기회 종류 'stepin') — 사건마다 한 번 */
@@ -1798,7 +1862,7 @@ export class AI {
       return true;
     }
     this.sideStepT += dt;
-    if (th && this.noticedThreat(th) && this.respond(th, d)) return true;
+    if (th && !this.passiveLocked && this.noticedThreat(th) && this.respond(th, d)) return true;
     if (this.me.gait?.req && this.sideStepT < 0.7) return true; // 아직 발이 떠 있다
     this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
     this.startStrike();

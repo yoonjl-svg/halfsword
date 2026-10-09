@@ -64,6 +64,10 @@
       #techCue b { display: block; font-size: clamp(18px, 5vw, 26px); font-weight: 800; letter-spacing: .02em; color: #f6e7c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       #techCue small { display: block; font-size: 13px; font-weight: 600; color: #efe2c4; margin-top: 2px; white-space: nowrap; }
       #techCue[data-kind="unique"] b { color: #ffd98a; }
+      /* 설정 '모든 기술 이름 표시'(디버그, 기본 끔 — 10/9 13:xx): 공용 기술은 작고 흐리게 */
+      #techCue[data-kind="all"] b { font-size: clamp(15px, 4vw, 19px); font-weight: 600; color: #d9cfb8; }
+      #techCue[data-kind="all"] small { opacity: .7; }
+      #techCue[data-kind="all"].show { opacity: .62; }
       #techCue.show { opacity: .95; transform: translate(-50%, -50%) scale(1); transition: opacity .15s, transform .15s; }
       /* 무기 등급 색 (예전 룰렛 색 그대로): 쓰레기 회색 · 커먼 밝은 상아 · 레어 파랑 · 에픽 보라 · 레전드 금빛.
          --tc = 글자 색, --tg = 은은한 빛 */
@@ -274,6 +278,7 @@
         <div class="row"><span>조작 흔적 보기</span><button class="toggle" data-setting="trail" aria-label="조작 흔적 보기"></button></div>
         <div class="row"><span>자세 이름 보기</span><button class="toggle" data-setting="guardNames" aria-label="자세 이름 보기"></button></div>
         <div class="row"><span>유파 기술 알림</span><button class="toggle" data-setting="techCue" aria-label="유파 기술 알림"></button></div>
+        <div class="row"><span>모든 기술 이름 표시 (디버그)</span><button class="toggle" data-setting="techCueAll" aria-label="모든 기술 이름 표시"></button></div>
         <div class="row"><span>픽셀 모드 (실험)</span><button class="toggle" data-setting="pixel" aria-label="픽셀 모드"></button></div>
         <div class="row"><span>화면 갱신 60 fps 묶기</span><button class="toggle" data-setting="fpsCap" aria-label="화면 갱신 60 fps 묶기"></button></div>
         <div class="row"><span>피 표현</span><button class="toggle" data-setting="blood" aria-label="피 표현"></button></div>
