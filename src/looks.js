@@ -151,15 +151,6 @@ export const LOOK_ARCHIVE = {
       hilt: 0x9aa3ad,
       outfit: 'isolde_longhair',
     },
-    // v3: the same adult body and waist-length black hair, with shaped locks,
-    // a folded blouse collar, gathered cuffs and a divided pleated skirt.
-    v3: {
-      tunic: 0xe6ded0, quilt: 0xd8cdb8, sleeve: 0xe6ded0,
-      straps: null, belt: 0x363844, hoseUpper: 0x33363f, hoseLower: 0x2b2e36,
-      shoes: 0x3a2f28, skin: 0xe3b98f, hands: 0xe3b98f,
-      helmet: null, metal: 0x9aa3ad, hair: 0x191820, headband: null,
-      grip: 0x2e1c12, hilt: 0x9aa3ad, outfit: 'isolde_tailored',
-    },
   },
 
   // ── 3. 랴오 쓰위엔: v0(어두운 방랑 검객) → v1(방랑 낭인 — 장발+안대) ──
@@ -433,15 +424,15 @@ export const LOOK_ARCHIVE = {
       outfit: 'omari_seafarer',
     },
   },
-  // 영만 is the user-confirmed name; nineteen-year-old adult proportions stay native.
-  yeongman: {
+  // 미나미: 샛별 저장소 인물 외형을 이름만 바꿔 가져옴 (10/10). v1 신사 옷 → v2 숲 옷 → v3 숲 옷 + 긴 양갈래 머리
+  minami: {
     v1: {
       tunic: 0xe9e5d5, quilt: 0xe9e5d5, sleeve: 0xe9e5d5,
       straps: null, belt: 0x9a4234, hoseUpper: 0x3b5344, hoseLower: 0x536c56,
       shoes: 0x554837, skin: 0xe2bd9d, hands: 0xe2bd9d,
       helmet: null, metal: 0xb3a07a, hair: 0x242723, headband: null,
       grip: 0x514638, hilt: 0xa39474, accent: 0x627b5c,
-      outfit: 'yeongman_shrine',
+      outfit: 'minami_shrine',
     },
     v2: {
       tunic: 0xe9e5d5, quilt: 0xe9e5d5, sleeve: 0xe9e5d5,
@@ -449,7 +440,7 @@ export const LOOK_ARCHIVE = {
       shoes: 0x554837, skin: 0xe2bd9d, hands: 0xe2bd9d,
       helmet: null, metal: 0xb3a07a, hair: 0x242723, headband: null,
       grip: 0x514638, hilt: 0xa39474, accent: 0x627b5c,
-      outfit: 'yeongman_grove',
+      outfit: 'minami_grove',
     },
     v3: {
       tunic: 0xe9e5d5, quilt: 0xe9e5d5, sleeve: 0xe9e5d5,
@@ -457,7 +448,7 @@ export const LOOK_ARCHIVE = {
       shoes: 0x554837, skin: 0xe2bd9d, hands: 0xe2bd9d,
       helmet: null, metal: 0xb3a07a, hair: 0x242723, headband: null,
       grip: 0x514638, hilt: 0xa39474, accent: 0x627b5c,
-      outfit: 'yeongman_grove', hairStyle: 'long-twintails',
+      outfit: 'minami_grove', hairStyle: 'long-twintails',
     },
   },
 
@@ -553,13 +544,13 @@ export const LOOK_ARCHIVE = {
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
   bran: 'v1',
-  isolde: 'v2', // User prefers the original; v3 stays in the visual archive only.
+  isolde: 'v2',
   liao: 'v6',
   heinrich: 'v2',
   margarethe: 'v3',
   tome: 'v1',
   omari: 'v1',
-  yeongman: 'v3',
+  minami: 'v3',
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

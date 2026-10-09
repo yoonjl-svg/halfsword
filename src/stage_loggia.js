@@ -111,7 +111,7 @@ function pavingTexture() {
       }
       ctx.restore();
     }
-    // Opus sectile: cut marble petals, a sixteen-point compass, and a linked
+    // 석재 상감(sectile): cut marble petals, a sixteen-point compass, and a linked
     // diamond band. No raised geometry or decorative physics inside the arena.
     annulus(5.8, 6.35, stone[2]);
     annulus(5.72, 5.8, stone[3]);

@@ -240,7 +240,7 @@ ROWS.push(
   ['화전 터: 까마귀들이 날아오름', '참나무의 까마귀들이 놀라 "푸드득 까악" (배경이 onEvent(\'crows\') 로 알릴 때)', [0.3, 0.8], at('clearing', (s, v) => ((s._crowsT = 0), s.stageEvent?.('crows', { amp: v }))), ['조금', '많이']],
   ['어두운 홀: 칼 부딪힘', '돌 홀의 울림 (성당보다 짧고 어둡다)', [4, 8, 12], at('darkhall', (s, v) => s.clash(v, 1))],
   ['어두운 홀: 큰 타격', '박쥐가 놀라 "푸드득", 세면 벽난로 불길', [0.3, 0.6, 1], at('darkhall', (s, v) => ((s._gustT = 0), s.gust?.(v)))],
-  ['배경 소리 바꾸기', '포세이돈 / 밤의 포세이돈 / 화전 터(비) / 화전 터 1안(비 없음) / 산사 / 성 안뜰 / 대성당 / 어두운 홀. 켜 두면 계속 깔린다', ['poseidon', 'poseidon_night', 'clearing', 'clearing_a_dry', 'temple', 'castle', 'cathedral', 'darkhall'], (s, v) => (s.setStage?.(v), s.ambience?.()), ['포세이돈', '밤 포세이돈', '화전 터', '화전 1안(마름)', '산사', '성', '성당', '홀']],
+  ['배경 소리 바꾸기', '포세이돈 / 밤의 포세이돈 / 화전 터(비) / 화전 터 1안(비 없음) / 산사 / 성 안뜰 / 대성당 / 어두운 홀 / 붉은 회랑 / 산호 항구 / 신목의 숲(뒤 셋은 샛별 저장소의 무대). 켜 두면 계속 깔린다', ['poseidon', 'poseidon_night', 'clearing', 'clearing_a_dry', 'temple', 'castle', 'cathedral', 'darkhall', 'loggia', 'corsair', 'sacred_grove'], (s, v) => (s.setStage?.(v), s.ambience?.()), ['포세이돈', '밤 포세이돈', '화전 터', '화전 1안(마름)', '산사', '성', '성당', '홀', '회랑', '항구', '신목']],
 );
 
 // ── 캐릭터별 죽음: 머리를 맞아 기절 / 피가 빠짐 / 목을 베임. 0.7초 뒤 몸이 쓰러지는 소리가 따라온다 ──

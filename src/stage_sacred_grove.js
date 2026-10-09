@@ -1,4 +1,4 @@
-// Yeongman's sacred pine grove. The level is visual only: the existing flat arena
+// 미나미의 신목의 숲 (sacred pine grove). The level is visual only: the existing flat arena
 // and camera remain authoritative. All trunks, roots, gates and large rocks stay
 // outside the 10.5m camera orbit; the 6.5m fighting floor has only flush stones.
 import * as THREE from 'three';
