@@ -279,7 +279,9 @@ if (mode === 'poses') {
   const secAgg = {};
   const secWound = {};
   let secName = null;
+  let XAm = null;
   const techE = {};
+  const geo = {}; // 닿는 순간 기하 (기술별)
   const estAll = [];
   const woundAll = [];
   // 기술 걸음 계기 (10/9 비껴 들어가 베기 — docs/strike/school_step_2026-10-09.md): step 칸 있는 기술과 같은 길의 공용 동작(대조)을 친 때마다
@@ -327,6 +329,7 @@ if (mode === 'poses') {
       if (XA) XA._swOn = true;
       if (YA) YA._missTo = missE.Y;
       if (XA && !secName) secName = XA.secret?.name ?? '-';
+      if (XA && !XAm) XAm = { ...XA.M };
       const tipRing = new Map([[X, []], [Y, []]]); // 칼끝 추정 에너지 최근 0.2 s
       G.onWound = (att, vic, r) => {
         const est = Math.max(0, ...(tipRing.get(att) ?? [0]));
@@ -335,6 +338,17 @@ if (mode === 'poses') {
         if (att !== X || !XA) return;
         const sr = XA.secretRun;
         if (sr) (secWound[sr.S.name] ??= []).push(r.energy);
+        if (XA.mode === 'attack' && ['oberhau', 'zornhau', 'zornhauL', 'talhoReves'].includes(XA.tech?.name) || (sr && XA.mode === 'attack')) {
+          // 닿는 순간 기하 (10/9 3차): 가슴 거리 · 칼 팔꿈치 굽힘(위팔·아래팔 길이 축 사이 각) · 닿는 칼끝 속도 / 이 공격의 칼끝 최고 속도
+          const ua = new THREE.Vector3(1, 0, 0).applyQuaternion(q4(X.bodies.uarmS.rotation()));
+          const fa = new THREE.Vector3(1, 0, 0).applyQuaternion(q4(X.bodies.farmS.rotation()));
+          const elb = deg(ua.angleTo(fa));
+          const pkV = Math.sqrt((2 * (XA._pkE ?? 0)) / (X.swordProps?.m ?? 1.5));
+          const ratio = pkV > 0 ? X.tipVel.length() / pkV : 0;
+          const G2 = (geo[`${XA.tech?.name ?? '?'}${sr ? '★' : ''}`] ??= { n: 0, d: 0, elb: 0, r: 0, rel: 0, relN: 0 });
+          G2.n++; G2.d += XA.d; G2.elb += elb; G2.r += ratio;
+          if (sr?.releaseD != null) { G2.rel += sr.releaseD; G2.relN++; }
+        }
         if (sr && process.env.SECRET_SEG === '1') console.log(`  [비기 상처] ${sr.S.name} ${XA.phase} 남은 길 ${XA.path.length} ${r.type} ${r.energy.toFixed(0)} J 칼끝 ${(0.5 * (X.swordProps?.m ?? 1.5) * X.tipVel.lengthSq()).toFixed(0)} J · 거리 ${XA.d.toFixed(2)} (contact ${XA.M.contact.toFixed(2)} reach ${XA.M.reach.toFixed(2)})`); // 비기 상처가 길 어디서 났나 (점검)
         const tn = XA.mode === 'attack' ? `${XA.tech?.name ?? '?'}${sr ? '★' : ''}` : `(${XA.mode})`;
         (techE[tn] ??= []).push(r.energy);
@@ -479,6 +493,7 @@ if (mode === 'poses') {
     console.log(`  맞힘 에너지 (상처 J 평균/최대 n): ${rows.filter(([k]) => keep.has(k)).map(([k, a]) => `${k} ${avg(a).toFixed(0)}/${mx(a).toFixed(0)} n${a.length}`).join(', ') || '-'}`);
     const swRows = Object.entries(swingMax).filter(([k]) => k.endsWith('★') || ['oberhau', 'zornhau', 'altibaixo', 'zornhauL', 'stichPflug', 'passataSotto'].includes(k));
     console.log(`  한 칼 최고 상처 (J 평균/최대 n칼): ${swRows.sort((a, b) => b[1].length - a[1].length).map(([k, a]) => `${k} ${avg(a).toFixed(0)}/${mx(a).toFixed(0)} n${a.length}`).join(', ') || '-'}`);
+    console.log(`  닿는 순간 (거리 m · 칼 팔꿈치 굽힘 ° · 칼끝 속도/그 공격 최고 · 터뜨린 때 닿을 거리): ${Object.entries(geo).sort((a, b) => b[1].n - a[1].n).map(([k, g]) => `${k} ${(g.d / g.n).toFixed(2)} m · ${(g.elb / g.n).toFixed(0)}° · ${(g.r / g.n).toFixed(2)}${g.relN ? ` · 터뜨림 ${(g.rel / g.relN).toFixed(2)}` : ''} (n${g.n})`).join(' | ') || '-'} · 맞닿기 ${XAm?.contact?.toFixed(2) ?? '-'} reach ${XAm?.reach?.toFixed(2) ?? '-'}`);
     const pq = (a, q) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(q * b.length))] : 0; };
     console.log(`  헛친 칼 칼끝 추정 ½mv² (공격 최고, 맞힘·맞물림 없음): 시험 쪽 n ${missE.X.length} p50 ${pq(missE.X, 0.5).toFixed(0)} · p75 ${pq(missE.X, 0.75).toFixed(0)} J · 상대(롱소드) n ${missE.Y.length} p25 ${pq(missE.Y, 0.25).toFixed(0)} · p50 ${pq(missE.Y, 0.5).toFixed(0)} · p75 ${pq(missE.Y, 0.75).toFixed(0)} J`);
     console.log(`  에너지 분포 (맞은 칼 양쪽 n ${estAll.length}): 칼끝 추정 ½mv² p50 ${pq(estAll, 0.5).toFixed(0)} · p75 ${pq(estAll, 0.75).toFixed(0)} · p90 ${pq(estAll, 0.9).toFixed(0)} J · 상처 J p50 ${pq(woundAll, 0.5).toFixed(0)} · p75 ${pq(woundAll, 0.75).toFixed(0)} · p90 ${pq(woundAll, 0.9).toFixed(0)}`);

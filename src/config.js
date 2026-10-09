@@ -568,6 +568,11 @@ export const SECRET = {
   iberianBack: -0.3, // 이베리아 옆걸음의 앞뒤 (m, 음수 = 뒷발을 비껴 뒤로 'retreat' — 붙은 거리에서 휘돌릴 틈을 만든다)
   japaneseStrength: 1.5, // 일본 後の先 베기 구간 보조 힘(몸의 힘 배율)
   japaneseLead: 0, // 일본 後の先 앞당김 (m — 칠 거리에 더함)
+  // 터뜨림 창 (10/9 3차 — 막는 것은 힘이 아니라 닿는 거리): 준비를 마친 비기가 '닿을 때 거리'(지금 거리 − 다가오는 빠르기 × releaseT)가 창(내 간격 끝 reach 기준)에 들 때까지 붙잡았다 터뜨린다
+  releaseT: 0.25, // 터뜨려서 닿기까지 (s)
+  releaseMaxHold: 0.6, // 붙잡는 최대 (s) — 지나면 창보다 가까우면 치고 멀면 거둔다
+  japaneseRelease: [0.2, 0.5], // 일본 창 (m, reach + …) — 실측으로 고름(문서 §10: [0, 0.3] 보다 한 칼 J 가 큼)
+  iberianRelease: [0.3, 0.55], // 이베리아 창 (m, reach + …) — 실측으로 고름(문서 §10: 셋 가운데 zornhau 대비 가장 높음)
 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

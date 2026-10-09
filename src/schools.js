@@ -396,7 +396,7 @@ const IBERIAN_SECRET = {
   //  10/9 후속(디렉터 '휘돌림이 가속이 되게'): 첫 꼴(지금 손 → 낮은 오른쪽 → 옆 지킴 → 오른 어깨 → 지붕 → 내려침, 한 길)은 붙은 거리에서 고리가 상대 다리를 스치고
   //   내려침이 거의 안 닿았다(비기 상처 대부분 고리 도중의 약한 둔타). → 고리는 몸 뒤(오른 어깨 → 옆 지킴 → 오른 어깨 → 지붕)로 준비(windup) 동안 돌고, 그동안 옆 뒤로 비껴 딛어
   //   틈을 만들고(iberianBack), 닿는 거리에서 지붕부터 내려친다(path) — 내려치기 전체에 힘 창. 단계별 J 는 문서 §9
-  do: { loop: [G.tagR, G.nebenR, G.tagR, G.tag], path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], powerFrom: 0, side: 'iberianLat', open: 'H', reach: 0, power: 'iberianPower', loopHand: 'iberianLoopHand', strength: 'iberianStrength', sideBack: 'iberianBack' },
+  do: { loop: [G.tagR, G.nebenR, G.tagR, G.tag], path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], powerFrom: 0, side: 'iberianLat', open: 'H', reach: 0, power: 'iberianPower', loopHand: 'iberianLoopHand', strength: 'iberianStrength', sideBack: 'iberianBack', release: { dist: 'iberianRelease', maxHold: 'releaseMaxHold' } },
   src: '몬탄테 molinete·altabaixo — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 둥근 걸음(옆으로 비껴 딛음) [원전 2차] · 고리 → 내려치기로 잇기 [해석]',
 };
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
@@ -413,6 +413,7 @@ const JAPANESE_SECRET = {
     tech: { name: 'goNoSenMen', from: G.nebenR, path: [[0.42, 0.3], G.tag, [0.0, 0.2], [0.0, 0.02], [0.12, -0.2]], open: 'H', kind: 'cut', reach: 'japaneseReach', base: 1, presses: true },
     step: { lat: 0, fwd: 'japaneseStep', when: 'strike', kind: 'lunge', push: 'stepPush' },
     zanshin: 'langort',
+    release: { dist: 'japaneseRelease', maxHold: 'releaseMaxHold' }, // 10/9 3차: 脇構え 로 담은 채 닿는 거리 창에 들 때까지 붙잡았다 터뜨림
     power: 'japanesePower', // 서보 힘 창 배율 (SECRET 열쇠 — 공통 power 대신)
     strength: 'japaneseStrength', // 보조 힘·속도: 베기 구간만 몸의 힘 배율
     lead: 'japaneseLead', // 앞당김(m): 脇 → 上段 → 真向 길이 길어 닿기 전에 상대가 더 다가온다 — 그만큼 일찍 친다

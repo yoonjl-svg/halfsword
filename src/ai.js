@@ -918,11 +918,17 @@ export class AI {
       }
       // 준비하는 동안 상대 칼이 들어오면: 숙련자는 공격을 거두고 막는다 (패시브가 낸 공격은 걸쇠 0.5 s 동안 거두지 않는다 — passiveLock)
       if (th && !this.actLocked && this.noticedThreat(th) && this.respond(th, d)) return;
+      // 비기 터뜨림 창 (10/9 3차 — do.release): 고리를 마친 뒤 거리가 창에 들 때까지 고리를 되풀이하며 붙잡고, 들면 그 순간 내려친다
+      if (this.secretRun?.S.do.release && !LP?.length && padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.05) {
+        if (this.secretRelease(dt)) return;
+        this.secretRun.loop = this.secretRun.S.do.loop.map((p) => p.slice()); // 몬탄테는 멈추지 않고 돈다 — 고리 되풀이
+        return;
+      }
       if (!LP?.length && padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
         this.phase = 'approach';
         this.timer = this.quick ? 0 : L.windup * 0.25; // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
       }
-      if (this.attackT > 1.2) this.abortAttack();
+      if (this.attackT > 1.2 + (this.secretRun?.S.do.release ? 2 : 0)) this.abortAttack(); // 터뜨림 창 비기는 붙잡는 몫만큼 더 (maxHold 가 먼저 끝낸다)
     } else if (this.phase === 'approach') {
       this.hand.set(t.from[0], t.from[1]);
       this.timer -= dt;
@@ -1876,12 +1882,19 @@ export class AI {
       const handIn = padDist([this.me.handOffset.x, this.me.handOffset.y], B.guard) < 0.06;
       const footDone = !g?.req || run.t > 0.6;
       if ((handIn && footDone && run.t > 0.15) || run.t > 0.8) {
-        const D = run.S.do;
-        const t = { ...D.tech, reach: this.secretVal(D.tech.reach), step: { ...D.step, fwd: this.secretVal(D.step.fwd), push: this.secretVal(D.step.push) } };
-        run.stage = 'strike';
-        run.t = 0;
-        if (!this.startAttack(t, 'secret', { noFeint: true, fastChamber: true, skipChamber: true, noPending: true, secret: true })) this.secretAbort();
+        if (run.S.do.release) {
+          run.stage = 'hold'; // 脇構え 로 담은 채 거리가 터뜨림 창에 들 때까지 붙잡는다 (10/9 3차)
+          run.t = 0;
+          run.holdT = 0;
+        } else this.secretMen();
       }
+      return;
+    }
+    if (run.stage === 'hold') {
+      const B = run.S.do.back;
+      this.hand.set(B.guard[0], B.guard[1]);
+      this.handSpeed = L.parrySpeed;
+      this.secretRelease(dt);
       return;
     }
     if (run.stage === 'stiff') {
@@ -1896,6 +1909,73 @@ export class AI {
       if (zan) this.startWithdraw(1.2, zan); // 残心: 맞혔으면 중단(中段)으로 칼끝을 겨눈 채 길게 물러난다
       else this.startWithdraw(0.6, this.school.withdraw.calm[0]); // 한 번 주고받았으니 다시 간을 본다 (자세 굴림 없음)
     }
+  }
+
+  /** 일본 後の先 ②: 真向 공격을 열고(脇構え 에서 곧장) 곧바로 친다 — release 창에서 부를 때는 그 순간 터뜨린다 */
+  secretMen(now) {
+    const run = this.secretRun;
+    const D = run.S.do;
+    const t = { ...D.tech, reach: this.secretVal(D.tech.reach), step: { ...D.step, fwd: this.secretVal(D.step.fwd), push: this.secretVal(D.step.push) } };
+    run.stage = 'strike';
+    run.t = 0;
+    if (!this.startAttack(t, 'secret', { noFeint: true, fastChamber: true, skipChamber: true, noPending: true, secret: true })) {
+      this.secretAbort();
+      return false;
+    }
+    if (now) this.startStrike();
+    return true;
+  }
+
+  /**
+   * 터뜨림 창 (do.release = { dist: SECRET 열쇠 [lo, hi] — 내 간격 끝 reach 기준, maxHold: SECRET 열쇠 s }): 준비를 마친 비기가 붙잡고 있다가
+   *  닿을 때 거리(지금 모습 거리 − 서로 다가오는 빠르기 × SECRET.releaseT)가 창에 들면 그 순간 터뜨린다. maxHold 가 지나면 창 위 끝보다 가까우면 치고, 멀면 거둔다.
+   *  발: 붙잡는 동안 secretHoldFeet 가 잔걸음으로 맞춘다(moveFeet). 터뜨렸으면 true
+   */
+  secretRelease(dt) {
+    const run = this.secretRun;
+    const R = run.S.do.release;
+    const [lo, hi] = this.secretVal(R.dist);
+    run.holdStart ??= this.sense.t; // 붙잡기 시작 (이베리아는 고리 끝마다 보니 시계로 잰다)
+    run.holdT = this.sense.t - run.holdStart;
+    const dc = this.secretDistAtHit();
+    run.holdDc = dc;
+    run.holdLo = this.M.reach + lo;
+    run.holdHi = this.M.reach + hi;
+    const inWin = dc >= run.holdLo && dc <= run.holdHi;
+    const timeUp = run.holdT > this.secretVal(R.maxHold);
+    if (!inWin && !timeUp) return false;
+    if (!inWin && dc > run.holdHi) {
+      // 멀다 — 거둔다 (경직 없음)
+      this.stats.secretHeld = (this.stats.secretHeld ?? 0) + 1;
+      this.secretAbort();
+      this.startWithdraw(0.4, this.school.withdraw.calm[0]);
+      return true;
+    }
+    run.releaseD = dc;
+    if (run.S.do.back) return this.secretMen(true);
+    // 이베리아: 지붕에서 곧장 내려친다 (내딛기는 보통 베기처럼 stepTime)
+    this.startStrike();
+    return true;
+  }
+
+  /** 지금 터뜨리면 닿을 때 거리: 지금 모습(반응 지연 0) 거리 − (상대가 다가오는 빠르기 + 내가 다가가는 빠르기 × 0.7) × SECRET.releaseT */
+  secretDistAtHit() {
+    const s0 = this.sense.seen(0);
+    const c = this.me.bodies.chest.translation();
+    const dx = s0.cx - c.x;
+    const dz = s0.cz - c.z;
+    const d0 = Math.max(0.01, Math.hypot(dx, dz));
+    const foeIn = -(s0.vx * dx + s0.vz * dz) / d0;
+    return d0 - (Math.max(0, foeIn) + Math.max(0, this.myClosing) * 0.7) * SECRET.releaseT;
+  }
+
+  /** 붙잡는 동안의 발 (moveFeet): 창보다 멀면 반걸음 앞으로, 가까우면 이베리아는 맞닿기 거리 밖으로 물러나고(고리가 스치지 않게) 일본은 가만히 */
+  secretHoldFeet() {
+    const run = this.secretRun;
+    if (run.holdDc == null) return run.S.do.back ? 0 : -0.21;
+    if (run.holdDc > run.holdHi) return 0.3;
+    if (!run.S.do.back && this.d < this.M.contact + 0.1) return -0.6;
+    return run.S.do.back ? 0 : -0.21;
   }
 
   /** 비기를 끊는다 (맞아 물러남·쓰러짐·다른 공격·공격 거둠): 경직 없이 비기만 지운다 */
@@ -2167,6 +2247,7 @@ export class AI {
         //  저절로 앞으로 내딛지 않게 (AI는 발을 스스로 정한다)
         const want = this.chasing ? this.M.contact : this.M.reach + 0.2;
         fwd = d > want && this.foeClosing < 0.5 ? clamp((d - want) * 1.5, 0.25, this.chasing ? 1 : 0.8) : -0.21;
+        if (this.secretRun?.S.do.release) fwd = this.secretHoldFeet(); // 비기 터뜨림 창: 고리를 돌며 간격을 맞춘다
       } else if (this.phase === 'approach') {
         // 성큼성큼이 아니라 미끄러지듯 (빨리 달려들면 베는 동안 멈추지 못하고 상대 몸에 부딪친다).
         //  상대가 다가오고 있으면 제자리에서 기다린다 (뒤로 살짝 당겨 검술 층의 자동 내딛기도 막는다)
@@ -2207,7 +2288,7 @@ export class AI {
       fwd = this.defVoid ? -1 : -0.3; // 막을 때도 살짝 물러선다 (앞으로 쏠리지 않게)
     } else if (this.mode === 'secret') {
       // 비기 꼴 (일본 後の先): ① 물러서며 끌어 담기 — 뒤로 (뒷발 걸음은 gait 'retreat' 가 딛는다) · 경직 — 걸음 없음
-      fwd = this.secretRun?.stage === 'back' ? -0.3 : 0;
+      fwd = this.secretRun?.stage === 'back' ? -0.3 : this.secretRun?.stage === 'hold' ? this.secretHoldFeet() : 0;
     } else {
       // 간 보기: 상대 칼이 닿는 거리 바로 밖을 지킨다
       const hold = this.holdDist();
