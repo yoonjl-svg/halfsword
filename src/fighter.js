@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
@@ -160,6 +160,20 @@ export function humanJointDefs(defs, s) {
   }
   return defs;
 }
+// ─────────────────────────────────────────────────────────────
+//  칼 팔 관절 가동 범위 교정 (config JOINTS, 시제품 기본 끔 — docs/motion/joint_range_2026-10-09.md). jm() = 켠 묶음의 몫 ({} = 끔 → 오늘 그대로)
+// ─────────────────────────────────────────────────────────────
+const jm = () => JOINTS.presets[JOINTS.mode] ?? {};
+/** ⓐ 엔진 한도: 칼 팔꿈치 경첩 한도를 [elbowMin, elbowMax] 로 (몸이 만들어질 때·절단 뒤 수동 관절이 같은 표를 읽는다) */
+function anatJointDefs(defs) {
+  if (!jm().hard) return defs;
+  for (const jd of defs) if (jd.c === 'farmS') jd.lim = [JOINTS.elbowMin * HD, JOINTS.elbowMax * HD];
+  return defs;
+}
+/** ⓒ 손 목표 자르기: armIK·armU 가 손 목표 거리를 자르는 위 끝 (m). 끔이면 오늘 그대로 위팔 + 아래팔 − 여유 */
+function ikReach(a, b) {
+  return jm().reach ? Math.min(a + b - IK_MARGIN, (a + b) * JOINTS.reachFrac) : a + b - IK_MARGIN;
+}
 /**
  * armIK 의 위팔 방향 u (가슴 틀): 손 목표 T(가슴 틀)·어깨 S 에서 armIK 와 같은 식 (같은 IK_POLE·IK_DMIN·IK_MARGIN·ARM 길이). out 에 쓴다.
  *  보정 v2 순서 결합(Fighter.corrTrunkTurn)이 '이 가슴 yaw 면 칼 어깨가 어디를 향하나'를 몸을 움직이지 않고 묻는 데 쓴다
@@ -168,7 +182,7 @@ function armU(T, S, side, out) {
   const a = ARM.upper;
   const b = ARM.fore;
   const D = _au1.copy(T).sub(S);
-  const d = THREE.MathUtils.clamp(D.length(), IK_DMIN, a + b - IK_MARGIN);
+  const d = THREE.MathUtils.clamp(D.length(), IK_DMIN, ikReach(a, b));
   const Dn = D.normalize();
   const pole = _au2.set(IK_POLE[0], IK_POLE[1], side * IK_POLE[2]).normalize();
   const pDir = pole.addScaledVector(Dn, -pole.dot(Dn));
@@ -456,6 +470,7 @@ export class Fighter {
     if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
     if (BODY.legTorque === 'human') humanLegTorque(jdefs);
     if (HL) humanJointDefs(jdefs, this.side);
+    anatJointDefs(jdefs); // 관절 가동 범위 교정 ⓐ (JOINTS, 끔이면 그대로)
     for (const jd of jdefs) {
       const P = new THREE.Vector3(...jd.at);
       const rp = this.localRot[jd.p];
@@ -472,6 +487,9 @@ export class Fighter {
       const raw = joint.rawSet;
       if (jd.manual) {
         // 엔진 모터·각도 제한 없음 (driveJoints에서 직접 회전력을 건다)
+        // 관절 가동 범위 교정 ⓐ (JOINTS hard): 칼 어깨 x 축(= 위팔 비틀기, 기준 = 팔 앞으로 뻗고 경첩 축 옆) 한도만 엔진에 건다. 축 한도는 쿼터니언 x 성분이라
+        //  위팔을 많이 들수록(흔듦 θ) 실제 허용 돌림이 넓어지는 근사다 (흔듦 90° 에서 70° → 약 108°) — 기록 docs/motion/joint_range_2026-10-09.md
+        if (jm().hard && jd.c === 'uarmS') raw.jointSetLimits(joint.handle, MOTOR_AXES[0], JOINTS.twist[0] * HD, JOINTS.twist[1] * HD);
       } else if (jd.type === 'hinge') {
         joint.setLimits(jd.lim[0], jd.lim[1]);
         raw.jointConfigureMotorModel(joint.handle, HINGE_AXIS, 1); // 1 = 힘(N·m) 기준
@@ -1195,6 +1213,7 @@ export class Fighter {
     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
     this.driveJoints(); // 모든 관절 근육을 움직인다
     this.elbowGravity();
+    if (jm().soft) this.anatSoft(); // 관절 가동 범위 교정 ⓑ 범위 끝 되돌림 (JOINTS, 끔이면 부르지 않는다)
     this.trackBlade(dt);
     if (this.chainDbg) this.chainProbe(dt); // 탐색판 HUD 측정만 (public/r2p/?chain=…)
 
@@ -1435,6 +1454,7 @@ export class Fighter {
     if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
     if (BODY.legTorque === 'human') humanLegTorque(jdefs);
     if (BODY.humanLimits) humanJointDefs(jdefs, this.side);
+    anatJointDefs(jdefs);
     return jdefs.find((jd) => jd.c === childName) || null;
   }
 
@@ -1751,6 +1771,8 @@ export class Fighter {
     const rope = (deg, a1, a2) => this.world.createImpulseJoint(R.JointData.rope(len(deg), a1, a2), this.bodies.farmS, this.sword, true);
     // 손목 W = 아래팔 몸체 (0.13, 0, 0) = 칼 몸체 원점 (위 gripJoint)
     this.gripCone = [rope(HUMAN.gripFlex, { x: 0.13 + K, y: 0, z: 0 }, { x: 0, y: L, z: 0 }), rope(HUMAN.forearmRoll, { x: 0.13, y: 0, z: K }, { x: 0, y: 0, z: L })];
+    // 관절 가동 범위 교정 ⓐ (JOINTS hard): 손목 굽힘·폄 ±wristFE — 칼날 축이 아래팔 경첩 축 ±z 와 이루는 각 ≤ 90 + wristFE (밧줄 둘, 같은 기하)
+    if (jm().hard) for (const sz of [1, -1]) this.gripCone.push(rope(90 + JOINTS.wristFE, { x: 0.13, y: 0, z: sz * K }, { x: 0, y: L, z: 0 }));
   }
 
   /**
@@ -2591,6 +2613,70 @@ export class Fighter {
     j.parent.addTorque({ x: -_mT.x, y: -_mT.y, z: -_mT.z }, true);
   }
 
+  /**
+   * 관절 가동 범위 교정 ⓑ (JOINTS soft, 시제품): 범위 끝 zone 안에서만 되돌리는 스프링·감쇠 — 가운데 범위는 힘 0 이라 휘두르는 속도에 손대지 않는다.
+   *  인대·관절낭이 끝에서 버티는 몫이라 근육 상한(j.max·손목 서보 상한) 밖이다. 각 정의는 tools/sim/joint_range.mjs 와 같다.
+   *   (1) 칼 팔꿈치: 굽힘 < elbowSoft 이면 굽히는 쪽으로 kElbow·(elbowSoft − 굽힘) + 펴지는 속도 감쇠(kElbow·0.05). 축 = 위팔 z(경첩)
+   *   (2) 위팔 돌림 (들림 120° 아래): 늘어뜨린 팔 기준 최단 호로 옮긴 옆 축과 경첩 축 사이 각이 [안쪽 + zone, 바깥 − zone] 밖이면 위팔 축 둘레로 되돌림 (반작용 = 가슴)
+   *   (3) 손목 굽힘·폄: |asin(칼날·z_아래팔)| > wristFE − zone 이면 칼날을 경첩 면 쪽으로 (반작용 = 아래팔)
+   */
+  anatSoft() {
+    if (this.state === 'dead' || this.detachedParts?.has('farmS') || this.detachedParts?.has('uarmS')) return;
+    const up = this.bodies.uarmS;
+    const fa = this.bodies.farmS;
+    const chest = this.bodies.chest;
+    const u = _ja1.set(1, 0, 0).applyQuaternion(rot(up, _jq1));
+    const zU = _ja2.set(0, 0, 1).applyQuaternion(_jq1);
+    const fx = _ja3.set(1, 0, 0).applyQuaternion(rot(fa, _jq2));
+    const wu = up.angvel();
+    const wf = fa.angvel();
+    const torque = (b, ax, t) => b.addTorque({ x: ax.x * t, y: ax.y * t, z: ax.z * t }, true);
+    // (1) 팔꿈치
+    const flex = Math.atan2(_ja4.crossVectors(u, fx).dot(zU), u.dot(fx));
+    const e0 = JOINTS.elbowSoft * HD;
+    if (flex < e0) {
+      const wRel = (wf.x - wu.x) * zU.x + (wf.y - wu.y) * zU.y + (wf.z - wu.z) * zU.z; // + = 굽히는 쪽
+      const t = JOINTS.kElbow * (e0 - flex) + JOINTS.kElbow * 0.05 * Math.max(0, -wRel);
+      torque(fa, zU, t);
+      torque(up, zU, -t);
+    }
+    // (2) 위팔 돌림
+    rot(chest, _jq3);
+    const down = _ja4.set(0, -1, 0).applyQuaternion(_jq3);
+    if (u.dot(down) > Math.cos(120 * HD)) {
+      const r = _ja5.set(0, 0, this.side).applyQuaternion(_jq3).applyQuaternion(_jq4.setFromUnitVectors(down, u));
+      const tw = this.side * Math.atan2(_ja6.crossVectors(r, zU).dot(u), r.dot(zU));
+      const lo = (JOINTS.twist[0] + JOINTS.zone) * HD;
+      const hi = (JOINTS.twist[1] - JOINTS.zone) * HD;
+      const ex = tw < lo ? lo - tw : tw > hi ? hi - tw : 0;
+      if (ex !== 0) {
+        const wc = chest.angvel();
+        const wTw = this.side * ((wu.x - wc.x) * u.x + (wu.y - wc.y) * u.y + (wu.z - wc.z) * u.z);
+        const t = this.side * (JOINTS.kTwist * ex - (Math.sign(wTw) === -Math.sign(ex) ? JOINTS.dTwist * wTw : 0));
+        torque(up, u, t);
+        torque(chest, u, -t);
+      }
+    }
+    // (3) 손목 굽힘·폄
+    if (this.armed && this.sword) {
+      const b = _ja4.set(0, 1, 0).applyQuaternion(rot(this.sword, _jq3));
+      const zF = _ja5.set(0, 0, 1).applyQuaternion(_jq2);
+      const fe = Math.asin(THREE.MathUtils.clamp(b.dot(zF), -1, 1));
+      const w0 = (JOINTS.wristFE - JOINTS.zone) * HD;
+      if (Math.abs(fe) > w0) {
+        const ax = _ja6.crossVectors(zF, b).multiplyScalar(Math.sign(fe));
+        if (ax.lengthSq() > 1e-9) {
+          ax.normalize();
+          const ws = this.sword.angvel();
+          const wOut = -((ws.x - wf.x) * ax.x + (ws.y - wf.y) * ax.y + (ws.z - wf.z) * ax.z); // + = 범위 밖으로
+          const t = JOINTS.kWrist * (Math.abs(fe) - w0) + JOINTS.dWrist * Math.max(0, wOut);
+          torque(this.sword, ax, t);
+          torque(fa, ax, -t);
+        }
+      }
+    }
+  }
+
   // ── 칼 조종: 팔 근육(어깨·팔꿈치)이 손을 목표로 옮기고, 손목 근육이 칼끝 방향을 맞춘다 ──
   //  예전처럼 손을 보이지 않는 줄로 끌지 않는다. 손이 갈 곳 → 어깨·팔꿈치 각도(역운동학, IK)를 계산해서
   //  관절 근육의 목표로 준다. 칼의 무게와 관성은 팔과 몸통이 그대로 버틴다.
@@ -2873,8 +2959,9 @@ export class Fighter {
     const b = ARM.fore; // 아래팔 + 손목까지
     const D = T.sub(S);
     const Dl = D.length();
-    this.armFull = Dl >= a + b - IK_MARGIN; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
-    const d = THREE.MathUtils.clamp(Dl, IK_DMIN, a + b - IK_MARGIN);
+    const dMax = ikReach(a, b); // 끔 = 위팔 + 아래팔 − 여유 (JOINTS reach ⓒ 면 팔 길이 × reachFrac — 팔이 늘 살짝 굽은 채로 뻗는다)
+    this.armFull = Dl >= dMax; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
+    const d = THREE.MathUtils.clamp(Dl, IK_DMIN, dMax);
     const Dn = D.normalize();
     // 팔꿈치는 아래·뒤·바깥쪽을 향한다
     const pole = _ik3.set(IK_POLE[0], IK_POLE[1], this.side * IK_POLE[2]).normalize();
@@ -3284,6 +3371,17 @@ function toRotVec(q, out) {
   return out.set(q.x, q.y, q.z).multiplyScalar((sgn * angle) / s);
 }
 const _qa = new THREE.Quaternion();
+// 관절 가동 범위 교정 ⓑ (anatSoft) 전용 scratch
+const _ja1 = new THREE.Vector3();
+const _ja2 = new THREE.Vector3();
+const _ja3 = new THREE.Vector3();
+const _ja4 = new THREE.Vector3();
+const _ja5 = new THREE.Vector3();
+const _ja6 = new THREE.Vector3();
+const _jq1 = new THREE.Quaternion();
+const _jq2 = new THREE.Quaternion();
+const _jq3 = new THREE.Quaternion();
+const _jq4 = new THREE.Quaternion();
 const _qk = new THREE.Quaternion();
 const _eu = new THREE.Euler();
 const _bloodColor = new THREE.Color(0x5a0808);

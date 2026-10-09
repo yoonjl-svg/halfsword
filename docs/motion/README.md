@@ -24,6 +24,7 @@
 | 런지·흐름 사람 기준 | [`lunge_flow.md`](lunge_flow.md), [`flow_table.md`](flow_table.md) · [`lunge_table.md`](lunge_table.md) (자동 생성) | 런지 몸 낮춤(게임 다리로 계산한 표), 흐름에서 칼을 세우지 않는 손목 — 디렉터·무기 PM 에게 |
 | 우리 캐릭터 기록 | `docs/motion/records/*.json` | 지금 게임의 팔 베기(`record_game.mjs`), 디렉터 시험판의 팔·결심 베기(`record_wbs.mjs`) — 헤드리스 |
 | 기준 ↔ 게임 모양 비교 | [`compare_game.md`](compare_game.md) (자동 생성), [`review_wbs_trial.md`](review_wbs_trial.md) | 관절 위치만으로 같은 식으로 잰 표, 시험판 소견 |
+| 칼 팔 관절 가동 범위 (10/9) | [`joint_range_2026-10-09.md`](joint_range_2026-10-09.md) · `tools/sim/joint_range.mjs` · `tools/browser/joint_shots.mjs` | 해부학 범위 밖 비율(공격/간 보기/넘어짐)·교정 시제품 ⓐ~ⓓ(`JOINTS`, 기본 끔)·권고 ⓑ 끝 스프링, 속도·J·승률 측정과 전/후 그림 |
 
 ## 무엇을 만들었나
 
