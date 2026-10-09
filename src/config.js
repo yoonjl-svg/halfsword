@@ -551,7 +551,7 @@ export const SECRET = {
   lethalJ: 136, // 독일 Versetzen 문턱: 들어오는 칼의 추정 에너지 ½·m·v²(칼 질량·칼끝 속도, J). 롱소드 48 판(비기 끔 SCHOOL_SECRET=alloff)에서 맞은 칼(양쪽 상처 1786)의 때린 칼끝 추정 에너지 분포 75 % 지점 (p50 47 · p90 247)
   comboN: 3, // 이베리아: 끊기지 않은 내 베기 이 수 뒤
   iberianLat: 0.4, // 이베리아 옆걸음 (m, 방향 = 성격의 즐겨 도는 쪽 circleDir)
-  italianDist: [-0.1, 0.4], // 이탈리아: 내 간격 끝(reach) 기준 거리 창 (m)
+  italianDist: [0, 0.2], // 이탈리아: 내 간격 끝(reach) 기준 거리 창 (m). 10/9 18:3x 디렉터: [−0.1, 0.4] 는 관절 켬 뒤 48 판 레이피어 83 %(+25, 띠 ±20 밖)라 [0, 0.2] 로 좁힘(2 등급 대조 56 %) — 사장님 확인 전(확인표 289)
   italianStep: 0.5, // 이탈리아: 뒷발 지나 보내기 걸음 (m, 'strike')
   japaneseDist: [0, 0.8], // (10/9 첫 꼴의 헛침 거리 창 — 지금은 쓰지 않음, japaneseFoeMargin·japaneseFar 창으로 바꿈)
   japaneseFoeMargin: 0.2, // 일본 창: 상대 칼 닿는 거리(foeReach) + 이 여유 밖이어야 (상대 공격이 명백히 안 닿음, m)
