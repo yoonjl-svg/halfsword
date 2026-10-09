@@ -805,4 +805,29 @@ export const JOINTS = {
   twistK: null,
   // 날 세우기 힘(fighter twistScale) 배율 덮어쓰기. null = 묶음의 edgeK, 그것도 없으면 1 (확인표 323)
   edgeK: null,
+  // 날 세우기 방식 (10/10 날 세우기 — docs/motion/edge_alignment_2026-10-10.md, 확인표 520~522). 'torque' = 명시 돌림힘(10/9 까지 그대로, 끔 — `?edge=off`·EDGE=off 도 이것)
+  //  · 'motor' = 모터 ⓐ (칼날 축 둘레 1 자유도를 엔진 관절 모터와 같은 암시적(뒤 오일러) PD 로 풀어 돌림힘으로 — Rapier 공 관절 모터는 칼날 축 하나만 못 잡아 직접 품) · 'ff' = 각속도 앞먹임 ⓑ (명시 돌림힘 + 목표 각속도 항) · 'pre' = ⓐ + 미리 돌리기 ⓒ (명령 겨눔 각속도로 앞으로 칠 방향을 읽어 날을 먼저 돌림)
+  edge: (() => {
+    const v = (typeof location !== 'undefined' && location.search && new URLSearchParams(location.search).get('edge')) || (typeof process !== 'undefined' && process.env?.EDGE) || 'torque'; // 기본 = 오늘(명시 돌림힘). 10/10 후보 ⓐ~ⓓ 어느 것도 칼 면 비율을 줄이지 못해 켜지 않음 (문서 §4)
+    return v === 'off' ? 'torque' : v;
+  })(),
+  edgeMotorK: 3, // 모터 강성 = 오늘 날 세우기 강성(4·twistScale N·m/rad) × 이 값 (암시적이라 안정 한계가 없다)
+  edgeMotorD: 3, // 모터 감쇠 = 오늘 감쇠(0.12·twistScale N·m·s/rad) × 이 값 (감쇠비 그대로)
+  edgeClamp: 1.2, // 한 스텝 모터 목표가 지금 각에서 벗어나는 최대 (rad) — 큰 어긋남에서 스프링 몫이 오늘 sin 꼴처럼 포화
+  edgeWMax: 30, // 모터 ⓐ·ⓒ 가 미는 칼날 축 각속도 상한 (rad/s) — 손목 굴림 빠르기 (계기 '팽이' 문턱 60 의 절반)
+  edgeTauK: 2, // 모터 ⓐ·ⓒ 돌림힘 상한 = 오늘 날 세우기 최대(4·twistScale N·m) × 이 값
+  edgeRel: false, // 새 방식에서 날 방향을 상대 가슴에 대한 칼 속도로 읽나 (false = 제 칼 속도, 오늘과 같은 뜻)
+  edgeMove0: 0.5, edgeMove1: 2.5, // 새 방식에서 쉼(칼 면 오른쪽) → 날 세움으로 섞는 칼날 빠르기 (m/s, 오늘 0.5~2.5)
+  edgeFF: 1, // 모터 ⓐ·ⓒ 감쇠가 향하는 목표 굴림 빠르기 몫 (1 = 목표를 따라가는 감쇠, 0 = 멈춤 감쇠 — 10/9 첫 꼴)
+  edgeAt: 'tip70', // 날 방향을 읽는 속도: 'tip70' = 칼날 70 % 지점 제 속도(오늘) · 'near' = 상대 부위가 edgeNear 안이면 가장 가까운 칼날 점의 상대 속도로 섞음
+  edgeNear: 0.5, // (m) 'near' 가 다 섞이는 거리는 이 값의 절반 안
+  edgeArm: 0, // ⓓ 팔 나눔: 날 세우기 어긋남의 위팔 축 몫 × 이 값을 위팔 비틀기 서보 목표에 더한다 (0 = 끔. 'torque' 에선 쓰지 않음)
+  edgeLead: 1, // ⓒ 미리 돌리기: 명령 겨눔 각속도(서보 목표가 도는 빠르기) × 칼날 70 % 반지름 = 곧 낼 칼날 속도를 이 무게로 지금 속도에 더해 날 방향을 읽는다
+  // 한손 칼끝 고침 (10/10 — docs/motion/onehand_tip_2026-10-10.md, 확인표 523~525): 'fix' = guards.js 세이버 표 감는 자리 다섯의 칼끝을 분명히 위·아래로 + 한손 칼 손 매핑(fighter guardDir)의 옆 패드 칼끝 접기
+  //  · 'off' = 전 값 (`?onetip=off`·ONETIP=off)
+  oneTip: (typeof location !== 'undefined' && location.search && new URLSearchParams(location.search).get('onetip')) || (typeof process !== 'undefined' && process.env?.ONETIP) || 'fix',
+  oneTipAz: [26, 46], // 접기를 섞기 시작 → 다 거는 방위 |az| (°, 손 매핑 guardDir: 패드 x 0.32 → 0.52) — 그 안쪽은 상대를 겨누는 자리라 그대로
+  oneTipFold: -14, // 가르는 올림각 (°): 이 위면 위로, 아래면 아래로 접는다 (±5° 는 섞음 — 패드 y −0.12 쯤)
+  oneTipUp: 55, // 위로 접을 때 올림각 하한 (°) — 마이어 1570 두삭 Wacht·Entrüst 처럼 칼끝이 분명히 위
+  oneTipDown: -45, // 아래로 접을 때 올림각 상한 (°) — 두삭 Eber·Nebenhut 처럼 칼끝이 분명히 아래
 };

@@ -140,6 +140,102 @@ async function pass(mode, shotAt, tag) {
   return { rows, shots };
 }
 
+// ── 한손 칼끝 그림 (10/10 한손 칼끝 — docs/motion/onehand_tip_2026-10-10.md): JS_MODE=tip · JS_STAGE=<무대 id, 기본 arena> · JS_W·JS_H=창 크기 · JS_PREFIX=파일 이름 머리(기본 onehand_tip)
+//   node tools/browser/joint_shots.mjs <주소> <폴더> <무기> <꼬리표 before|after> [패드 x,y — 없으면 쉴 자세 = 유파 쉴 자세 패드 또는 SKILL.homeGuard]
+//   판 시작 뒤 손 패드를 그 자리에 두고(상대 멈춤) 150 프레임 들고 있다가 세 각도로 찍는다: 옆(칼 든 쪽) · 앞(상대 쪽에서) · 게임 카메라(그대로).
+//   각 = tools/sim/joint_range.mjs tipAngles (올림각 · 상대 방향 대비 방위). 출력 onehand_tip_<꼬리표>_<무기>_{side,front,game}.png · tip_<무기>_<꼬리표>.json
+if (process.env.JS_MODE === 'tip') {
+  const tag = ON;
+  const padArg = process.argv[6] ? process.argv[6].split(',').map(Number) : null;
+  const page = await browser.newPage({ viewport: { width: +(process.env.JS_W || 640), height: +(process.env.JS_H || 480) } });
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.clock.install({ time: new Date('2026-10-09T12:00:00') });
+  await page.clock.pauseAt(new Date('2026-10-09T12:00:01'));
+  await page.goto(`${base}/?foe=default&stage=${process.env.JS_STAGE || 'arena'}&weapon=${W}&foeWeapon=longsword${process.env.JS_QS ? '&' + process.env.JS_QS : ''}`, { waitUntil: 'networkidle' });
+  for (let i = 0; i < 300 && !(await page.evaluate(() => !!window.game?.player?.sword)); i++) await page.waitForTimeout(100);
+  await page.clock.runFor(200);
+  await page.evaluate(async (padArg) => {
+    const g = window.game;
+    document.getElementById('btnStart').click();
+    const { tipAngles } = await import('/tools/sim/joint_range.mjs');
+    window.__tip = { rows: [] };
+    const wire = () => {
+      const P = g.player;
+      if (!P || P.__tipWired) return;
+      P.__tipWired = true;
+      if (g.ai) g.ai.update = () => {};
+      const pad = padArg ?? P.swordArt?.restGuard?.pad ?? [0.18, -0.28];
+      window.__tip.pad = pad;
+      const st = P.step.bind(P);
+      P.step = (dt) => {
+        P.handOffset?.set?.(pad[0], pad[1]);
+        P.skill.aimRaw?.set?.(pad[0], pad[1]);
+        if (window.__tipHeld) P.handHeld = true; // JS_HELD=1: 손가락을 화면에 둔 채 (쉼 무게 0 — 보정 v2 날것 매핑)
+        st(dt);
+        window.__tip.last = tipAngles(P);
+      };
+    };
+    window.__tipWire = wire;
+    wire();
+    window.__tipCam = 'game';
+    const T = g.THREE;
+    const cam = () => {
+      const P = g.player;
+      if (P && window.__tipCam !== 'game') {
+        g.freeCam = true;
+        const c = P.bodies.chest.translation();
+        const f = P.foe?.bodies?.chest?.translation?.() ?? { x: c.x + 1, y: c.y, z: c.z };
+        const fw = new T.Vector3(f.x - c.x, 0, f.z - c.z).normalize();
+        const side = new T.Vector3(-fw.z, 0, fw.x).multiplyScalar(P.side ?? 1); // 몸 틀 +z (칼 든 쪽)
+        if (window.__tipCam === 'side') g.camera.position.set(c.x, c.y, c.z).addScaledVector(side, 2.3).addScaledVector(fw, 0.5).add(new T.Vector3(0, 0.05, 0));
+        else g.camera.position.set(c.x, c.y, c.z).addScaledVector(fw, 2.4).addScaledVector(side, 0.35).add(new T.Vector3(0, 0.1, 0));
+        g.camera.up.set(0, 1, 0);
+        g.camera.lookAt(c.x + fw.x * 0.5, c.y - 0.1, c.z + fw.z * 0.5);
+      } else if (g) g.freeCam = false;
+      requestAnimationFrame(cam);
+    };
+    cam();
+    const lab = document.createElement('div');
+    lab.id = 'jrLabel';
+    lab.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99999;font:14px/1.35 sans-serif;color:#fff;background:rgba(0,0,0,.6);padding:6px 8px;border-radius:4px;white-space:pre';
+    document.body.appendChild(lab);
+  }, padArg);
+  if (process.env.JS_HELD === '1') await page.evaluate(() => (window.__tipHeld = true));
+  for (let i = 0; i < 600; i++) {
+    await page.clock.runFor(FRAME);
+    const st = await page.evaluate(() => (window.__tipWire(), window.game.state + '|' + (window.game.draw?.stage ?? '')));
+    if (st.startsWith('fight')) break;
+    if (st.startsWith('draw|choose')) await page.evaluate(() => document.querySelector('#draw .wcard[data-i="0"]')?.click());
+  }
+  await page.evaluate(() => window.__tipWire());
+  await page.addStyleTag({ content: 'body *{visibility:hidden!important} canvas,#jrLabel{visibility:visible!important}' });
+  const rows = [];
+  for (let k = 0; k < 150; k++) {
+    await page.clock.runFor(FRAME);
+    const a = await page.evaluate(() => window.__tip.last);
+    if (a && k >= 60) rows.push(a);
+  }
+  const avg = (key) => +(rows.reduce((t, r) => t + (r[key] ?? 0), 0) / Math.max(1, rows.length)).toFixed(1);
+  const rec = { weapon: W, tag, pad: await page.evaluate(() => window.__tip.pad), frames: rows.length, elev: avg('elev'), az: avg('az'), off: avg('off'), errors };
+  const shots = [];
+  for (const view of (process.env.JS_VIEWS || 'side,front,game').split(',')) { // JS_VIEWS=side,front: 찍을 각도만
+    await page.evaluate((v) => (window.__tipCam = v), view);
+    await page.clock.runFor(FRAME * 3);
+    const a = await page.evaluate(() => window.__tip.last);
+    await page.evaluate((t) => (document.getElementById('jrLabel').textContent = t), `${tag} · ${W} · 쉴 패드 (${rec.pad.join(', ')}) · ${view === 'side' ? '옆' : view === 'front' ? '앞(상대 쪽)' : '게임 카메라'}\n칼끝 올림각 ${a?.elev?.toFixed(1)}° · 상대 방향 대비 방위 ${a?.az?.toFixed(1)}°\n(90 프레임 평균 ${rec.elev}° · ${rec.az}°)`);
+    const f = path.join(out, `${process.env.JS_PREFIX || 'onehand_tip'}_${tag}_${W}${process.env.JS_PADTAG ? '_' + process.env.JS_PADTAG : ''}${process.env.JS_HELD === '1' ? '_held' : ''}_${view}.png`); // JS_PADTAG: 파일 이름에 자세 꼬리표
+    fs.writeFileSync(f, await page.screenshot());
+    shots.push(f);
+  }
+  rec.shots = shots;
+  rec.held = process.env.JS_HELD === '1';
+  fs.writeFileSync(path.join(out, `tip_${W}_${tag}${process.env.JS_PADTAG ? '_' + process.env.JS_PADTAG : ''}${rec.held ? '_held' : ''}.json`), JSON.stringify(rec, null, 1));
+  console.log(JSON.stringify(rec));
+  await browser.close();
+  process.exit(0);
+}
+
 // 1) 끔으로 한 번: 범위를 가장 크게 벗어난 순간 고르기
 const A = await pass(OFF, null, 'probe');
 // JS_PICK=straight 이면 팔꿈치가 가장 곧은 프레임만 고른다 (플레이어 ⓒ 전/후)

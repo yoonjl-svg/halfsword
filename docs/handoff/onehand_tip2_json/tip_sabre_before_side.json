@@ -1,0 +1,18 @@
+{
+ "weapon": "sabre",
+ "tag": "before",
+ "pad": [
+  0.52,
+  0.03
+ ],
+ "frames": 90,
+ "elev": -3.8,
+ "az": 44.9,
+ "off": 48.1,
+ "errors": [],
+ "shots": [
+  "docs/handoff/onehand_tip2_before_sabre_side_game.png",
+  "docs/handoff/onehand_tip2_before_sabre_side_side.png"
+ ],
+ "held": false
+}

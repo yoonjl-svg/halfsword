@@ -210,20 +210,243 @@ export class JointCounter {
   }
 }
 
+// ── 칼 면 맞음 계기 (10/10 날 세우기 — docs/motion/edge_alignment_2026-10-10.md) ──
+//  상처(맞음)마다 '날 각' = 칼날 방향(칼 몸 x)과 맞는 순간 상대 속도의 칼날 축에 수직인 몫이 이루는 각 (0 = 날이 똑바로 섬, 90 = 칼 면).
+//  판정(combat.js analyze)과 같은 벡터: S = 스텝 전 칼 상태, r.dir = 상대 속도 방향, r.bladeAxis = 칼날 축. 칼 면 맞음 = 날 각 > EDGE_FLAT (확인표 520).
+//  세는 맞음: 날 있는 무기의 칼날 부품('blade')이 새 상처를 낸 것(같은 부위 쿨다운 중 가르기 저항은 뺌), 찌르기(stab)는 칼 축으로 들어가 날 각이 없어 뺀다
+export const EDGE_FLAT = 45; // °
+export function edgeAngleOf(S, r) {
+  const ax = r.bladeAxis, d = r.dir;
+  const q = [S.q.x, S.q.y, S.q.z, S.q.w];
+  const e = qrot(q, [1, 0, 0]);
+  const a = [ax.x, ax.y, ax.z];
+  const v = [d.x, d.y, d.z];
+  const k = dot(v, a);
+  const p = [v[0] - a[0] * k, v[1] - a[1] * k, v[2] - a[2] * k];
+  const pl = Math.hypot(p[0], p[1], p[2]);
+  if (pl < 1e-3) return null;
+  return Math.acos(Math.min(1, Math.abs(dot(p, e)) / pl)) * R2D;
+}
+export class EdgeCounter {
+  constructor() { this.by = new Map(); }
+  add(key, ang, r, eScale, edgeAlign, own = null, att = null) {
+    if (!this.by.has(key)) this.by.set(key, { n: 0, flat: 0, judgedFlat: 0, angs: [], e: 0, eq: 0, ownFlat: 0, ownN: 0, v: 0 });
+    const B = this.by.get(key);
+    B.n++;
+    B.v += r.speed; // 맞는 순간 상대 속도 (m/s)
+    if (ang > EDGE_FLAT) B.flat++;
+    // 갈래: 칼 면 맞음 가운데 '제 칼 속도로 재도 칼 면'(날 세우기가 못 따라감)인 몫. 나머지는 제 칼은 날이 섰는데 상대 몸 움직임·막는 칼에 닿아 칼 면이 된 것
+    if (ang > EDGE_FLAT && own != null) { B.ownN++; if (own > EDGE_FLAT) B.ownFlat++; }
+    // 칼 면 맞음의 까닭 (제 칼 속도로도 칼 면인 것만): 굴림 목표가 아직 쉼(칼 면 오른쪽) 쪽인가(섞기 moving < 0.5) · 목표는 날인데 칼이 못 따라갔나(어긋남 > 45°)
+    if (ang > EDGE_FLAT && own != null && own > EDGE_FLAT && att) { B.cRest = (B.cRest || 0) + ((att.edgeMoving ?? 1) < 0.5 ? 1 : 0); B.cLag = (B.cLag || 0) + ((att.edgeMoving ?? 1) >= 0.5 && (att.edgeLag ?? 0) > Math.PI / 4 ? 1 : 0);
+      // 그 가운데 손목 굴림 밧줄(아래팔 z ↔ 칼 z, HUMAN.forearmRoll 80°)이 끝 10° 안인 것 — 아래팔 엎침·뒤침이 다 써서 못 돈 몫
+      if ((att.edgeMoving ?? 1) >= 0.5 && (att.edgeLag ?? 0) > Math.PI / 4 && att.bodies?.farmS && att.sword) {
+        const zf = qrot(Q(att.bodies.farmS.rotation()), [0, 0, 1]), zs = qrot(Q(att.sword.rotation()), [0, 0, 1]);
+        if (Math.acos(Math.max(-1, Math.min(1, dot(zf, zs)))) * R2D > 70) B.cRope = (B.cRope || 0) + 1;
+      }
+    }
+    const al = Math.cos(ang / R2D);
+    if (al <= edgeAlign) B.judgedFlat++;
+    B.angs.push(ang);
+    // 빠르기 갈래 (맞는 순간 상대 속도): < 3 m/s · 3~8 · ≥ 8 — [맞음, 칼 면]
+    const sb = r.speed < 3 ? 0 : r.speed < 8 ? 1 : 2;
+    (B.sp ||= [[0, 0], [0, 0], [0, 0]])[sb][0]++;
+    if (ang > EDGE_FLAT) B.sp[sb][1]++;
+    const e = r.ephys * eScale; // 칼날이 실은 에너지 (게임 J, 판정 energy 와 같은 배율 — 둔기 배율 전)
+    B.e += e;
+    B.eq += al > edgeAlign ? e * (0.4 + 0.6 * ((al - edgeAlign) / (1 - edgeAlign))) : 0; // × 날 세움 (판정 quality 와 같은 식, 칼 면이면 0)
+  }
+  json() {
+    const o = {};
+    for (const [k, B] of this.by) {
+      const s = [...B.angs].sort((x, y) => x - y);
+      o[k] = { speedBins: B.sp ? B.sp.map(([n, f]) => `${n}:${n ? ((100 * f) / n).toFixed(0) : 0}%`).join(' ') : null, ownFlatOfFlatPct: B.ownN ? +((100 * B.ownFlat) / B.ownN).toFixed(1) : null, hits: B.n, flatPct: B.n ? +((100 * B.flat) / B.n).toFixed(1) : 0, judgedFlatPct: B.n ? +((100 * B.judgedFlat) / B.n).toFixed(1) : 0, angMed: s.length ? +s[Math.floor(s.length / 2)].toFixed(1) : null, eMean: B.n ? +(B.e / B.n).toFixed(1) : 0, eqMean: B.n ? +(B.eq / B.n).toFixed(1) : 0, vMean: B.n ? +(B.v / B.n).toFixed(2) : 0, ownFlatRest: B.cRest || 0, ownFlatLag: B.cLag || 0, ownFlatLagRope: B.cRope || 0, ownFlatN: B.ownFlat };
+    }
+    return o;
+  }
+  table() {
+    const L = [`| 때린 쪽 | 칼날 맞음 | 칼 면 (> ${EDGE_FLAT}°) % | 판정 칼 면 (둔기) % | 날 각 중앙 ° | 칼날 J 평균 | × 날 세움 J 평균 | 맞는 속도 평균 m/s | 칼 면 중 제 칼 속도로도 칼 면 % | 빠르기별 맞음:칼 면 % (<3 · 3~8 · ≥8 m/s) |`, '|---|---|---|---|---|---|---|---|---|---|'];
+    for (const [k, r] of Object.entries(this.json())) L.push(`| ${k} | ${r.hits} | ${r.flatPct} | ${r.judgedFlatPct} | ${r.angMed ?? '-'} | ${r.eMean} | ${r.eqMean} | ${r.vMean} | ${r.ownFlatOfFlatPct ?? '-'} | ${r.speedBins ?? '-'} |`);
+    return L.join('\n');
+  }
+}
+
+// ── 칼끝 방향 계기 (10/10 한손 칼끝 — docs/motion/onehand_tip_2026-10-10.md) ──
+//  올림각 = 칼날 축(자루 → 칼끝)이 수평면과 이루는 각 (+ 위, − 땅 쪽) · 방위 = 칼날 축의 수평 몫과 '내 가슴 → 상대 가슴' 수평 방향 사이 각
+//  (0 = 상대를 겨눔, 90 = 옆, 180 = 내 쪽, 부호 + = 칼 든 쪽) · 겨눔 어긋남 = 칼날 축과 '칼 원점 → 상대 가슴' 사이 3 차원 각
+export function tipAngles(f) {
+  if (!f.sword || f.armed === false || !f.foe) return null;
+  const b = qrot(Q(f.sword.rotation()), [0, 1, 0]);
+  const c = f.bodies.chest.translation(), fc = f.foe.bodies.chest.translation(), sp = f.sword.translation();
+  const fx = fc.x - c.x, fz = fc.z - c.z, fl = Math.hypot(fx, fz) || 1;
+  const hx = b[0], hz = b[2], hl = Math.hypot(hx, hz);
+  const elev = Math.asin(Math.max(-1, Math.min(1, b[1]))) * R2D;
+  // 수평 부호: 몸 틀 +z = 앞 × 위 = (−fz, 0, fx)/fl, 칼 든 쪽 = +z × side (armAngles 의 toC 와 같은 뜻)
+  const s = f.side ?? 1;
+  const az = hl > 1e-3 ? Math.atan2(s * (hx * -fz + hz * fx), hx * fx + hz * fz) * R2D : null;
+  const tx = fc.x - sp.x, ty = fc.y - sp.y, tz = fc.z - sp.z, tl = Math.hypot(tx, ty, tz) || 1;
+  const off = Math.acos(Math.max(-1, Math.min(1, (b[0] * tx + b[1] * ty + b[2] * tz) / tl))) * R2D;
+  return { elev, az, off };
+}
+export class TipCounter {
+  constructor() { this.by = new Map(); }
+  add(key, o) {
+    if (!o) return;
+    if (!this.by.has(key)) this.by.set(key, { n: 0, el: 0, azAbs: 0, az: 0, off: 0, back: 0, down: 0, both: 0, lying: 0 });
+    const B = this.by.get(key);
+    B.n++;
+    B.el += o.elev;
+    if (o.az != null) { B.az += o.az; B.azAbs += Math.abs(o.az); if (Math.abs(o.az) > 90) B.back++; }
+    B.off += o.off;
+    if (o.elev < -30) B.down++;
+    if (o.elev < -15 && o.az != null && Math.abs(o.az) > 90) B.both++; // 땅 쪽이면서 내 쪽
+    if (o.elev < 45 && o.az != null && Math.abs(o.az) > 90) B.lying++; // 누운 채 내 쪽 (사장님 지적의 꼴: 칼끝이 분명히 위도 아니면서 상대 반대쪽 = 거꾸로 든 꼴)
+  }
+  json() {
+    const o = {};
+    for (const [k, B] of this.by) o[k] = { frames: B.n, elev: +(B.el / B.n).toFixed(1), az: +(B.az / B.n).toFixed(1), azAbs: +(B.azAbs / B.n).toFixed(1), off: +(B.off / B.n).toFixed(1), backPct: +((100 * B.back) / B.n).toFixed(1), downPct: +((100 * B.down) / B.n).toFixed(1), bothPct: +((100 * B.both) / B.n).toFixed(1), lyingPct: +((100 * B.lying) / B.n).toFixed(1) };
+    return o;
+  }
+  table() {
+    const L = ['| 무기 · 자세 | 프레임 | 올림각 ° | 방위 ° (+ 칼 든 쪽) | |방위| ° | 겨눔 어긋남 ° | 내 쪽(|방위| > 90°) % | 땅 쪽(올림 < −30°) % | 땅 쪽 · 내 쪽(올림 < −15° · |방위| > 90°) % | **누운 채 내 쪽**(올림 < 45° · |방위| > 90°) % |', '|---|---|---|---|---|---|---|---|---|---|'];
+    for (const [k, r] of Object.entries(this.json()).sort()) L.push(`| ${k} | ${r.frames} | ${r.elev} | ${r.az} | ${r.azAbs} | ${r.off} | ${r.backPct} | ${r.downPct} | ${r.bothPct} | ${r.lyingPct} |`);
+    return L.join('\n');
+  }
+}
+
 // ── CLI: 다른 시뮬을 감싸 센다 ──
 if (isMain(import.meta.url)) {
   const fs = await import('node:fs');
   const { Fighter } = await import('../../src/fighter.js');
   const cfg = await import('../../src/config.js');
+  const { Combat } = await import('../../src/combat.js');
+  const { GUARDS } = await import('../../src/guards.js');
   const byW = new Map(); // 무기 id → JointCounter
+  const edges = new EdgeCounter(); // 칼 면 맞음 (때린 쪽 무기 · 이름)
+  const tips = new TipCounter();
+  const hitWhere = {}; // 무기 → { 칼날 몫·부위: [맞음, 칼 면] }
+  const lagSt = {}; // 무기 → [움직이는 스텝, 어긋남 > 45° 스텝, 어긋남 합(rad)] // 한손 무기 간 보기 칼끝 (무기 · 가까운 자세)
   const cache = Fighter.prototype.cacheState;
   Fighter.prototype.cacheState = function (...a) {
     const id = this.weapon?.id ?? '?';
     if (!byW.has(id)) byW.set(id, new JointCounter());
     byW.get(id).add(this);
+    // 날 세우기 따라감 (움직이는 칼 — 섞기 moving ≥ 0.99 인 스텝): 칼 면 ↔ 굴림 목표 어긋남 > 45° 인 스텝 몫
+    if (this.armed !== false && this.state === 'stand' && (this.edgeMoving ?? 0) >= 0.99) { const L = (lagSt[id] ||= [0, 0, 0]); L[0]++; if ((this.edgeLag ?? 0) > Math.PI / 4) L[1]++; L[2] += this.edgeLag ?? 0; }
+    if (this.guardPose?.oneHand && this.state === 'stand' && phaseOf(this) === 'watch' && (this.fightT ?? 1) >= SETTLE_S) {
+      const gi = this.guardPose.nearest;
+      tips.add(`${id} · ${GUARDS[gi]?.name ?? gi}`, tipAngles(this));
+    }
     return cache.apply(this, a);
   };
+  // 칼끼리 닿은 스텝 (bladeClash 에 닿은 짝이 있던 스텝) — 칼 면 맞음이 칼에 걸려 미끄러진 뒤인가를 가른다
+  let stepN = 0, clashStep = -1e9;
+  const afterStep = Combat.prototype.afterStep;
+  Combat.prototype.afterStep = function (...a) { stepN++; return afterStep.apply(this, a); };
+  const bladeClash = Combat.prototype.bladeClash;
+  Combat.prototype.bladeClash = function (world, pairs) { if (pairs.length) clashStep = stepN; return bladeClash.call(this, world, pairs); };
+  const strike = Combat.prototype.strike;
+  Combat.prototype.strike = function (pr, point, passing) {
+    const att = pr.w.fighter, vic = pr.v.fighter;
+    const key = `${att.index}:${pr.v.part}`;
+    const fresh = !vic.hitCooldowns.has(key);
+    const S = att.cache?.sword;
+    const r = strike.call(this, pr, point, passing);
+    if (fresh && r && S && vic.hitCooldowns.has(key) && pr.w.part === 'blade' && att.weaponCfg.edged && r.type !== 'stab') {
+      const ang = edgeAngleOf(S, r);
+      if (ang != null) {
+        // 맞은 자리 칼날 몫 t (0 = 코등이, 1 = 칼끝) · 맞은 부위 — 칼 면 맞음이 어디서 나나
+        const iq = [-S.q.x, -S.q.y, -S.q.z, S.q.w];
+        const ly = qrot(iq, [point.x - S.p.x, point.y - S.p.y, point.z - S.p.z])[1];
+        const tb = Math.max(0, Math.min(1, (ly - att.weaponCfg.hiltLength) / att.weaponCfg.bladeLength));
+        const wk = att.weapon?.id ?? '?';
+        const H = (hitWhere[wk] ||= {});
+        const bk = `t${tb < 0.4 ? 'lo' : tb < 0.75 ? 'mid' : 'hi'}`;
+        (H[bk] ||= [0, 0])[0]++; if (ang > EDGE_FLAT) H[bk][1]++;
+        const ck = stepN - clashStep <= 15 ? 'clash≤15스텝' : 'clash 없음';
+        (H[ck] ||= [0, 0])[0]++; if (ang > EDGE_FLAT) H[ck][1]++;
+        const pk = `p:${pr.v.part}`;
+        (H[pk] ||= [0, 0])[0]++; if (ang > EDGE_FLAT) H[pk][1]++;
+        const w = att.weapon?.id ?? '?';
+        const hv = att.hitPointVel;
+        const own = hv && hv.lengthSq() > 0.25 ? edgeAngleOf(S, { bladeAxis: r.bladeAxis, dir: hv.clone().normalize() }) : null; // 제 칼 70 % 지점 속도로 잰 날 각
+        edges.add(w, ang, r, cfg.STRIKE.energyScale, cfg.STRIKE.edgeAlign, own, att);
+        edges.add(`${w} · ${att.name}`, ang, r, cfg.STRIKE.energyScale, cfg.STRIKE.edgeAlign, own, att);
+      }
+    }
+    return r;
+  };
   const [script, ...rest] = process.argv.slice(2);
+  if (script === 'rest') {
+    // 플레이어 쉴 자세 칼끝 (skill.js ③ 되돌아옴의 목적지 = 유파 쉴 자세 패드, 없으면 SKILL.homeGuard): 보정 v2·autoGuard·숙련 0.7 (main.js 와 같음),
+    //  상대는 시작 거리에 멈춰 선다. 3 s 들고 마지막 1.5 s 평균. node tools/sim/joint_range.mjs rest sabre falchion rapier qinggang longsword
+    const { newRound, DT } = await import('./harness_m.mjs');
+    const T = new TipCounter();
+    const info = [];
+    //  REST_PAD=x,y: 다른 패드 하나(판 시작 = 0.15,0) · REST_PAD=all: 쉴 자세 + 바탕 자세 14 곳 패드마다 (손을 그 자리에 둔 채 — 벤 뒤 손가락을 든 채 멈춘 꼴)
+    const jobs = [];
+    for (const w of rest.length ? rest : ['sabre', 'falchion', 'rapier', 'qinggang']) {
+      if (process.env.REST_PAD === 'all') { jobs.push([w, null]); for (const g of GUARDS) if (!g.finish) jobs.push([w, g]); }
+      else jobs.push([w, process.env.REST_PAD ? { pad: process.env.REST_PAD.split(',').map(Number) } : null]);
+    }
+    // REST_CUTS=1: 쉴 자세에서 손가락으로 벤 뒤 손을 떼고(되돌아옴 ③) 2.5 s 동안의 칼끝 — 사장님이 보는 '벤 사이' 꼴. 벤 길 = live_battery CUTS 와 그 거울
+    if (process.env.REST_CUTS === '1') {
+      const CUTS = { oberhau: [[0.02, 0.52], [0.0, -0.45]], zornhau: [[0.42, 0.42], [-0.4, -0.42]], zwerch: [[0.52, 0.06], [-0.5, 0.06]], unterhau: [[0.38, -0.44], [-0.3, 0.26]], zornhauL: [[-0.4, 0.42], [0.38, -0.44]], zwerchL: [[-0.5, 0.06], [0.52, 0.06]], unterhauL: [[-0.4, -0.42], [0.3, 0.26]] };
+      for (const w of rest.length ? rest : ['sabre', 'falchion', 'rapier', 'qinggang']) for (const [cn, [a, b]] of Object.entries(CUTS)) {
+        const G = newRound({ walls: false, weapon: w, weapon2: 'longsword', seed: 7 });
+        G.ai.update = () => {};
+        const P = G.player;
+        P.skill.autoGuard = true;
+        const pad = [a[0], a[1]];
+        const setP = () => { P.handOffset.set(pad[0], pad[1]); };
+        P.handOffset.set(pad[0], pad[1]);
+        for (const k of ['aim', 'aimRaw', 'prev']) P.skill[k]?.set?.(pad[0], pad[1]);
+        let phase = 'settle', t0 = 0;
+        G.before = (t) => {
+          P.inputActive = false;
+          P.handHeld = phase === 'cut' || (phase === 'release' && process.env.REST_HOLD === '1'); // REST_HOLD=1: 벤 뒤 손가락을 화면에 둔 채(되돌아옴 없음) — 벤 끝 자세
+          if (phase === 'settle' && t > 1.2) { phase = 'cut'; P.handHeld = true; }
+          if (phase === 'cut') {
+            const dx = b[0] - pad[0], dy = b[1] - pad[1], d = Math.hypot(dx, dy), st = 13 * DT;
+            if (d > st) { pad[0] += (dx / d) * st; pad[1] += (dy / d) * st; } else { pad[0] = b[0]; pad[1] = b[1]; phase = 'release'; t0 = t; }
+            P.handOffset.x = pad[0]; P.handOffset.y = pad[1];
+            P.inputActive = true;
+          }
+        };
+        void setP;
+        for (let t = 0; t < 5; t += DT) {
+          G.step();
+          if (phase === 'release' && G.t - t0 > 0.3) T.add(`${w} · ${cn} 뒤 ${process.env.REST_HOLD === '1' ? '손가락 든 채' : '되돌아옴'}`, tipAngles(P));
+        }
+        info.push(`${w} ${cn}: 끝 패드 (${P.skill.aim.x.toFixed(2)}, ${P.skill.aim.y.toFixed(2)}) · 가까운 자세 ${GUARDS[P.guardPose.nearest]?.name}`);
+      }
+    }
+    for (const [w, gd] of process.env.REST_CUTS === '1' ? [] : jobs) {
+      const G = newRound({ walls: false, weapon: w, weapon2: 'longsword', seed: 7 });
+      G.ai.update = () => {};
+      const P = G.player;
+      P.skill.autoGuard = true;
+      const home = gd ? gd.pad : P.swordArt?.restGuard?.pad ?? cfg.SKILL.homeGuard;
+      P.handOffset.set(home[0], home[1]);
+      for (const k of ['aim', 'aimRaw', 'prev']) P.skill[k]?.set?.(home[0], home[1]);
+      let cmdEl = 0, n = 0;
+      // REST_HELD=1: 손가락을 그 패드에 둔 채 (쉼 무게 0 — 보정 v2 날것 매핑, 사장님 화면의 '옆 자세' 가 이 꼴)
+      if (process.env.REST_HELD === '1') G.before = () => { P.handHeld = true; P.handOffset.set(home[0], home[1]); };
+      for (let t = 0; t < 3; t += DT) {
+        G.step();
+        if (t > 1.5) {
+          T.add(`${w} · ${gd?.name ? `패드 ${gd.name}` : '쉴 자세 패드'} (${home.map((v) => v.toFixed(2)).join(', ')})${process.env.REST_HELD === '1' ? ' 손가락 둠' : ''}`, tipAngles(P));
+          cmdEl += Math.asin(Math.max(-1, Math.min(1, P.debug.aim.y))) * R2D;
+          n++;
+        }
+      }
+      if (!gd) info.push(`${w}: 가까운 자세 ${GUARDS[P.guardPose.nearest]?.name} · 쉼 무게 ${P.bodyPose.idle.toFixed(2)} · 보정 무게 gw ${P.guardWeight().toFixed(2)} · 명령 칼끝 올림각 ${(cmdEl / n).toFixed(1)}° · 한손 ${!!P.guardPose.oneHand}`);
+    }
+    console.log(`플레이어 쉴 자세 칼끝 (JOINTS.mode ${cfg.JOINTS.mode}, edge ${cfg.JOINTS.edge ?? '-'})`);
+    console.log(T.table());
+    for (const l of info) console.log('  ' + l);
+    process.exit(0);
+  }
   if (!script) {
     console.error('사용법: node tools/sim/joint_range.mjs <시뮬.mjs> [인자...]');
     process.exit(2);
@@ -235,7 +458,10 @@ if (isMain(import.meta.url)) {
     const mode = cfg.JOINTS?.mode ?? 'off';
     process.stderr.write(`\n──── joint_range (${script}${rest.length ? ' ' + rest.join(' ') : ''}) · JOINTS.mode ${mode} ────\n`);
     for (const [id, C] of byW) process.stderr.write(C.table(`무기 ${id} (양쪽 싸움꾼 합)`) + '\n');
-    if (process.env.JR_JSON) fs.writeFileSync(process.env.JR_JSON, JSON.stringify({ script, args: rest, mode, weapons: Object.fromEntries([...byW].map(([id, C]) => [id, C.json()])) }, null, 1));
+    process.stderr.write(`칼 면 맞음 (날 각 > ${EDGE_FLAT}°, JOINTS.edge ${cfg.JOINTS?.edge ?? '-'})\n` + edges.table() + '\n');
+    for (const [id, L] of Object.entries(lagSt)) process.stderr.write(`날 세우기 따라감 ${id}: 움직이는 스텝 ${L[0]} · 어긋남 > 45° ${((100 * L[1]) / L[0]).toFixed(1)}% · 평균 ${((L[2] / L[0]) * R2D).toFixed(1)}°\n`);
+    if (tips.by.size) process.stderr.write('한손 무기 간 보기 칼끝 (가까운 자세별 평균)\n' + tips.table() + '\n');
+    if (process.env.JR_JSON) fs.writeFileSync(process.env.JR_JSON, JSON.stringify({ script, args: rest, mode, edge: cfg.JOINTS?.edge ?? null, weapons: Object.fromEntries([...byW].map(([id, C]) => [id, C.json()])), edges: edges.json(), tips: tips.json(), lag: lagSt, where: hitWhere }, null, 1));
   };
   process.on('exit', report);
   process.argv = [process.argv[0], simPath(script), ...rest];
