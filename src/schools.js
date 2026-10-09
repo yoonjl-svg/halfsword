@@ -124,8 +124,8 @@ const JAPANESE_UNIQUE = [
   { name: 'kokoRenda', from: G.tagR, path: [[0.12, 0.14], G.wechselL, [-0.14, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'UL', kind: 'cut', reach: 0.05, base: 0.9, presses: true, chain: 2, src: '왜검 運光流 「作跨虎勢 兩手前一打 右手左脚前一打 右手右脚前一打 右手右脚前一跳前一打」 무도 권2 p076~p087/68~79 [원문] · 네 번 → 두 번으로 줄임 [해석] · 길의 수 [추정]' },
   // 開き斬り(体捌き): 오른쪽 앞으로 비스듬히 몸을 열어 딛고(먼저 비킴) 왼 어깨에서 逆袈裟 쪽으로 — 길 = 공용 zornhauL, base = 앞무게 꾸러미 zornhauL 1.4.
   //  step 칸 뜻은 아래 GERMAN_UNIQUE 의 zwerchAbtritt 주석 (lat 오른쪽 + m · fwd 앞 m · when)
-  //  걸음 기술 다섯은 모두 ai:false — 디렉터 10/9 03:5x: 48 판 측정에서 걸음이 승률을 깎음(세 무기 144 판 40 대 51 %: 'strike' 걸음은 닿기 전 가슴이 옆으로 0.01 m 도 못 가고, 'approach' 걸음은 옆으로 가지만 넘어짐이 늘음). 사장님 결정 전. 재기: motion_lab SCHOOL_UNIQUE=이름
-  { name: 'hirakiGiri', ai: false, from: G.tagL, path: [[-0.1, 0.14], G.wechselR], open: 'UR', kind: 'cut', reach: -0.05, base: 1.4, presses: true, step: { lat: 0.3, fwd: 0.3, when: 'approach' }, src: '開き(체捌き)·斜めに開いて斬る [전승] · 오륜서 水の巻 「足づかひ」(陰陽の足) 항목 [원문 — 쪽 확인 전] · 길은 공용 逆袈裟 · 수 [추정]' },
+  //  걸음 기술 다섯: 48 판 측정에서 걸음이 승률을 깎았으나(세 무기 144 판 40 대 51 %) **사장님 10/9 12:xx "우선 다 켜봐. 내가 겪어 봐야 판단"** 으로 켬. 끄려면 ai:false (재기: motion_lab SCHOOL_UNIQUE=이름)
+  { name: 'hirakiGiri', from: G.tagL, path: [[-0.1, 0.14], G.wechselR], open: 'UR', kind: 'cut', reach: -0.05, base: 1.4, presses: true, step: { lat: 0.3, fwd: 0.3, when: 'approach' }, src: '開き(체捌き)·斜めに開いて斬る [전승] · 오륜서 水の巻 「足づかひ」(陰陽の足) 항목 [원문 — 쪽 확인 전] · 길은 공용 逆袈裟 · 수 [추정]' },
 ];
 // 일본 남은 후보 (고유 셋에 들지 못함 — ai:false 자료)
 const JAPANESE_SPARE = [
@@ -225,7 +225,7 @@ const CHINESE_UNIQUE = [
   { name: 'lianchi', feint: { name: '斂翅 (찌르는 척 → 거둬 腰擊)', fake: 'stichPflug', at: 0.3, then: [G.nebenR, G.sideR, [0.0, 0.1], G.sideL], open: 'UL' }, src: '조선세법 斂翅勢 무비지 쪽174/0588 · 무도 권2 p045/37 「法能佯北誘賺 … 倒退進步腰擊」 [원문] · 물러남을 손 거둠으로 [해석]' },
   // 掣步 腰擊: 앞발을 왼쪽 앞으로 비껴 딛고(뒷발 끌어붙임) 찌른 자리(긴 자세)에서 오른쪽으로 당겨 허리를 가로 벤다 — 길 = 위 yaoji, base = yaoji × 1.1.
   //  처음엔 공용 zwerch 길(오른 옆 시작·base 0.5)이었으나 48 판에 한 번도 안 골랐다(청강검 손이 오른 옆에 거의 안 감) → 원문 「向前進步腰擊」(찌른 뒤 腰擊)대로 yaoji 길로 (10/9 잼)
-  { name: 'chebuYaoji', ai: false, from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.25, fwd: 0.25, when: 'strike' }, src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
+  { name: 'chebuYaoji', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.25, fwd: 0.25, when: 'strike' }, src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
 ];
 
 // ── 고유 동작 (10/9 — 사장님 01:5x '각 유파마다 강점과 특징을 살릴 고유 동작', docs/strike/school_unique_2026-10-09.md) ──
@@ -236,17 +236,17 @@ const CHINESE_UNIQUE = [
 // 독일 (리히테나워·마이어 다섯 비밀 베기 가운데 TECH 에 없는 둘 + 맺은 뒤 거듭 치기). **셋 다 ai:false** — 롱소드 AI(사장님 주 상대)를 바꾸므로 수를 보시고 정한다
 const GERMAN_UNIQUE = [
   // 굽은 베기: 오른 어깨에서 팔을 엇걸어 왼쪽 아래로 — 칼끝을 상대 손 위로 던진다(몸통보다 가까운 손을 노려 reach +0.2). 황소를 깬다
-  { name: 'krumphau', ai: false, from: G.tagR, path: [[0.3, 0.3], [0.0, 0.05], G.pflugL], open: 'UL', kind: 'cut', reach: 0.2, base: 0.6, src: 'Zettel 「Krump auf behende, wirf den Ort auf die Hände」 · Ringeck 주해 42절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/krumphau_*.json 출처] · 길의 수 [추정]' },
+  { name: 'krumphau', from: G.tagR, path: [[0.3, 0.3], [0.0, 0.05], G.pflugL], open: 'UL', kind: 'cut', reach: 0.2, base: 0.6, src: 'Zettel 「Krump auf behende, wirf den Ort auf die Hände」 · Ringeck 주해 42절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/krumphau_*.json 출처] · 길의 수 [추정]' },
   // 사팔뜨기 베기: 오른 어깨에서 손을 뒤집어 뒷날로 위에서 상대 칼·오른 어깨를 치고, 팔을 뻗어 칼끝으로 겨눈 채 끝낸다(긴 자세). 쟁기·찌르기를 깬다
-  { name: 'schielhau', ai: false, from: G.tagR, path: [[0.22, 0.36], [0.06, 0.2], G.langort], open: 'UR', kind: 'cut', reach: 0.05, base: 0.7, presses: true, src: 'Zettel 「Schieler bricht, was Büffel schlägt oder sticht」 · Ringeck 주해 58~59절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/schielhau_*.json 출처] · 길의 수 [추정]' },
+  { name: 'schielhau', from: G.tagR, path: [[0.22, 0.36], [0.06, 0.2], G.langort], open: 'UR', kind: 'cut', reach: 0.05, base: 0.7, presses: true, src: 'Zettel 「Schieler bricht, was Büffel schlägt oder sticht」 · Ringeck 주해 58~59절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/schielhau_*.json 출처] · 길의 수 [추정]' },
   // 거듭 치기(Duplieren): 분노의 베기가 맺힌 자리(긴 자세 위)에서 멈추지 않고 칼자루를 들어 엇걸어, 상대 칼 뒤(칼과 사람 사이)로 머리를 다시 친다
-  { name: 'duplieren', ai: false, from: G.tagR, path: [[0.12, 0.14], [-0.08, 0.3], [0.12, 0.22], G.pflugL], open: 'UL', kind: 'cut', reach: 0, base: 0.8, presses: true, chain: 2, src: 'Ringeck 주해 Duplieren(분노의 베기 뒤 맺음이 단단하면 칼과 사람 사이로 머리를 친다) [원전 2차] · 길 [해석] · 수 [추정]' },
+  { name: 'duplieren', from: G.tagR, path: [[0.12, 0.14], [-0.08, 0.3], [0.12, 0.22], G.pflugL], open: 'UL', kind: 'cut', reach: 0, base: 0.8, presses: true, chain: 2, src: 'Ringeck 주해 Duplieren(분노의 베기 뒤 맺음이 단단하면 칼과 사람 사이로 머리를 친다) [원전 2차] · 길 [해석] · 수 [추정]' },
   // 비껴 가로베기 Zwerch mit Abtritt (10/9 — 사장님 '대각선 옆으로 빠르게 살짝 돌아 걸어 들어가면서 옆에서 베기', docs/strike/school_step_2026-10-09.md): 가로베기 길 + step 칸 하나 —
   //  step { lat: 몸 기준 오른쪽 +(m, 왼쪽 −), fwd: 앞(m), when: 'strike'(베기 시작과 함께 비껴 딛음) | 'approach'(먼저 비껴 딛고 발이 닿으면 벰) }. base 는 같은 길 공용 동작의 꾸러미 실제 값. 수는 모두 [추정]
   //  딛는 발은 비껴 가는 쪽 발(앞발이면 내딛고, 뒷발이면 앞발을 지나 그쪽 앞으로 — ai.js techStepRequest). **ai 끔** — 롱소드 AI(사장님 결정 몫)
   //  길: 처음엔 공용 zwerch(오른 옆 시작·base 0.25)였으나 롱소드 AI 는 그 자리를 거의 안 가서 48 판에 공용 zwerch 도 이것도 0 번 →
   //  리히테나워 Zwerch 처럼 오른 어깨 지붕에서 머리 높이로 가로 [추정], base 는 같은 자리 고유 동작 schielhau 와 같은 0.7 (10/9 잼)
-  { name: 'zwerchAbtritt', ai: false, from: G.tagR, path: [[0.3, 0.22], [0.0, 0.2], [-0.45, 0.2]], open: 'UL', kind: 'cut', reach: 0, base: 0.7, step: { lat: -0.3, fwd: 0.35, when: 'strike' }, src: 'Meyer 1570 장검 — 삼각 걸음(Triangel)으로 비껴 딛으며 Zwerch(오른쪽에서 칠 때 왼발을 왼쪽 앞으로) [원전 2차] · Zettel 「Zwerch benimmt, was vom Tag dar kommt」 [원전 2차] · 수 [추정]' },
+  { name: 'zwerchAbtritt', from: G.tagR, path: [[0.3, 0.22], [0.0, 0.2], [-0.45, 0.2]], open: 'UL', kind: 'cut', reach: 0, base: 0.7, step: { lat: -0.3, fwd: 0.35, when: 'strike' }, src: 'Meyer 1570 장검 — 삼각 걸음(Triangel)으로 비껴 딛으며 Zwerch(오른쪽에서 칠 때 왼발을 왼쪽 앞으로) [원전 2차] · Zettel 「Zwerch benimmt, was vom Tag dar kommt」 [원전 2차] · 수 [추정]' },
 ];
 
 // 이탈리아 (카포 페로 1610 — 레이피어, 한손 찌르기). 찌르기 방식 꾸러미의 실제 찌르기 base(stichPflug 0.63·stichAlber 0.54)에 맞춤
@@ -259,7 +259,7 @@ const ITALIAN_UNIQUE = [
   // 카바치오네(칼끝 돌려 빼기): 높이 찌르는 척(황소) → 상대 칼 밑으로 칼끝을 돌려 반대쪽에서 곧게 찌른다 — 속임수 꼴
   { name: 'cavazione', feint: { name: 'cavazione (위 찌르는 척 → 밑으로 돌려 찌름)', fake: 'stichOchs', at: 0.5, then: [[0.12, 0.0], [-0.08, -0.04], G.langort], open: 'C' }, src: 'Capo Ferro 1610 「in quell\'istante si caverà, & stringerà caminando innanzi … si ferirà di quarta di punta nel petto」 PDF 80쪽 [원문] · 속임수 꼴 [해석]' },
   // 인콰르타타: 오른쪽으로 비켜 딛으며(뒷발을 돌려 몸을 상대 칼 줄에서 뺌) 쟁기에서 찌른다 — 먼저 비키고 찌름('approach'). 길 = 공용 stichPflug, base = 레이피어 꾸러미 stichPflug 0.63
-  { name: 'inquartata', ai: false, from: G.pflugR, path: [[0.06, -0.1], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 0.63, fast: true, step: { lat: 0.3, fwd: 0.15, when: 'approach' }, src: 'Capo Ferro 1610 inquartata(몸을 상대 칼 줄에서 빼며 찌름) [원전 2차 — 원문 쪽 못 찾음] · 길은 공용 쟁기 찌르기 · 수 [추정]' },
+  { name: 'inquartata', from: G.pflugR, path: [[0.06, -0.1], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 0.63, fast: true, step: { lat: 0.3, fwd: 0.15, when: 'approach' }, src: 'Capo Ferro 1610 inquartata(몸을 상대 칼 줄에서 빼며 찌름) [원전 2차 — 원문 쪽 못 찾음] · 길은 공용 쟁기 찌르기 · 수 [추정]' },
 ];
 
 // 이베리아 (몬탄테 — 츠바이핸더. 탈류→레베스(규칙 1)는 frames.js NEW_TECH.heavy 에 그대로 둔다: 옮기면 무유파 참치가 잃는다).
@@ -274,7 +274,7 @@ const IBERIAN_UNIQUE = [
   // 바퀴로 받기: 맞받아 베기를 탈류→레베스(8자)로 — 몬탄테는 받는 칼도 멈추지 않고 돌린다. 맞받아치기 목록 꼴(같은 거리면 앞 이름이 이긴다)
   { name: 'rodaCounter', counter: { highR: ['talhoReves', 'zornhauL', 'oberhau', 'zornhau'], default: ['talhoReves', 'zornhau', 'oberhau', 'zornhauL'] }, src: '몬탄테 규칙 1 탈류·레베스를 받는 자리에서 [원전 2차] · 맞받아치기에 씀 [해석]' },
   // 돌아 들며 탈류(talho rodeado): 오른쪽 앞으로 둥글게 돌아 딛으며 오른 어깨에서 사선 내려베기 — 길 = 공용 zornhau(talho), base = 앞무게 꾸러미 zornhau 1.96
-  { name: 'talhoRodeado', ai: false, from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '몬탄테 규칙의 둥근 걸음(원을 그리며 나아감) — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 이름 붙임 [해석] · 수 [추정]' },
+  { name: 'talhoRodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '몬탄테 규칙의 둥근 걸음(원을 그리며 나아감) — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
@@ -291,11 +291,11 @@ const IBERIAN_UNIQUE = [
 // 독일 (리히테나워·마이어) — **셋 다 ai:false**(롱소드 AI = 사장님 주 상대. 수만 재서 아침 결정 — motion_lab SCHOOL_PASSIVE_GERMAN=1 로 시험 쪽만 켬)
 const GERMAN_PASSIVES = [
   // 받아 찌르기: 들어오는 찌르기를 피하지 않고 쟁기·황소 자리로 받으며 그대로 찌른다
-  { name: 'absetzen', nameKo: 'Absetzen (받아 찌르기)', ai: false, when: 'threat', cond: { thrust: true }, do: { counter: ['stichPflug', 'stichOchs'] }, p: 0.7, src: 'Zettel 「Absetzen」 · Ringeck 주해 [원전 2차]' },
+  { name: 'absetzen', nameKo: 'Absetzen (받아 찌르기)', when: 'threat', cond: { thrust: true }, do: { counter: ['stichPflug', 'stichOchs'] }, p: 0.7, src: 'Zettel 「Absetzen」 · Ringeck 주해 [원전 2차]' },
   // 겹치기: 막혀 칼이 맞물리면 물러나지 않고 상대 칼 뒤로 곧장 가로베기 (zwerch·zwerchL 가운데 손에서 가까운 쪽)
-  { name: 'duplieren', nameKo: 'Duplieren (겹치기)', ai: false, when: 'parried', do: { tech: ['zwerch', 'zwerchL'], why: 'follow' }, p: 0.6, src: 'Ringeck 주해 Duplieren [원전 2차] · 가로베기로 [해석]' },
+  { name: 'duplieren', nameKo: 'Duplieren (겹치기)', when: 'parried', do: { tech: ['zwerch', 'zwerchL'], why: 'follow' }, p: 0.6, src: 'Ringeck 주해 Duplieren [원전 2차] · 가로베기로 [해석]' },
   // 넘어 치기: 낮은 베기는 막지 않고 위에서 내려친다
-  { name: 'ueberlaufen', nameKo: 'Überlaufen (넘어 치기)', ai: false, when: 'threat', cond: { line: ['lowL', 'lowR'] }, do: { counter: ['oberhau', 'zornhau'] }, p: 0.6, src: 'Zettel 「Überlaufen」 · Ringeck 주해 [원전 2차]' },
+  { name: 'ueberlaufen', nameKo: 'Überlaufen (넘어 치기)', when: 'threat', cond: { line: ['lowL', 'lowR'] }, do: { counter: ['oberhau', 'zornhau'] }, p: 0.6, src: 'Zettel 「Überlaufen」 · Ringeck 주해 [원전 2차]' },
 ];
 // 이탈리아 (카포 페로, 레이피어). 물러남(Ritirata — 테르차 = 긴 자세로 칼끝을 겨눈 채 물러남)은 패시브가 아니라 유파 withdraw 값으로 넣었다(TRADITIONS.italian)
 const ITALIAN_PASSIVES = [

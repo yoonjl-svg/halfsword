@@ -270,7 +270,7 @@ export const CHARACTERS = [
         },
         whole: { sPref: 0.75, sSpread: 0.2, windRate: 0.7, windLen: [0.3, 0.6], punish: { windup: 0.45, overrun: 0.6, thrown: 0.55 }, evade: 0.3 }, // 마이어식 큰 감기, 다만 계산된 것 — 감기를 들고 있다 거두는 속임수. 물러나지 않고 마주 걸어 들어가 되받는다
         idle: { guard: 'tag', gesture: 'pointFace' }, // 시작 2초: 칼끝을 상대 얼굴에 한 번 겨눈 뒤 지붕 자세로 (설정집 버릇)
-        close: { rate: 0.6, kind: 'barge', then: 'cut' }, // 물러나지 않고 몸으로 밀고 들어가 칼자루로 누른다
+        close: { rate: 0.6, kind: 'barge', then: 'pommel' }, // 물러나지 않고 몸으로 밀고 들어가 칼자루로 누른다 → 밀고 나서 손잡이로 찍는다(skill.pommel 시제품 — 사장님 10/9 12:xx '우선 다 켜봐'; 전엔 'cut', 폼멜은 얼굴에 2~3 J 라 넘어뜨리는 것은 돌리는 칼 면)
       },
     },
     look: getLook('heinrich'),

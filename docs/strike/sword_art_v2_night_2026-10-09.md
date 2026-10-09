@@ -18,17 +18,18 @@
 ```
 - 틀은 몸놀림(무게·길이)만, 유파는 이름·취향·고유 길만 — 자세 자리·칼끝 각·몸 돌림은 유파가 옮기지 않는다(사장님 규칙).
 - 롱소드 장면 관문 다섯(fights12 578402e1 · live c2072cd1 · ft d65cc1df · corr 12/12 · smoke 16/16)은 밤새 **바이트 동일** — 독일 몫은 전부 기본 끔이라.
+- **10/9 12:2x 사장님 "우선 다 켜봐"**: 독일 고유 3·패시브 3, 걸음 기술 5, 하인리히 손잡이 찍기, 打刀 을 모두 켬 → 새 기준 fights12 **64a21f64**(dead 8/12 · downs 1.4 · opened 10.2; 전 578402e1 7/12·1.3·8.8), live c2072cd1·ft d65cc1df 그대로, corr 12/12, smoke 17/17.
 
 ## 2. 유파별 한 줄
 | 유파 | 무기 | 이름표 출처 | 고유 동작 3 (켬) | 패시브 3 (켬) | 쉴 자세 |
 |---|---|---|---|---|---|
-| 독일 | 롱소드·엑스칼리버·라이트세이버·에스톡 + 두삭 가지(세이버·팔쉬온) | 리히테나워 이름 그대로 / 두삭 = 마이어 1570 Ⅱ.2r.2 (Wacht·Zornhut·Stier·Mittelhut·Eber·Bastei…) | Krumphau·Schielhau·Duplieren **끔** | Absetzen·Duplieren·Überlaufen **끔** | 쟁기(homeGuard) |
+| 독일 | 롱소드·엑스칼리버·라이트세이버·에스톡 + 두삭 가지(세이버·팔쉬온) | 리히테나워 이름 그대로 / 두삭 = 마이어 1570 Ⅱ.2r.2 (Wacht·Zornhut·Stier·Mittelhut·Eber·Bastei…) | Krumphau·Schielhau·Duplieren **켬(12:2x)** | Absetzen·Duplieren·Überlaufen **켬(12:2x)** | 쟁기(homeGuard) |
 | 이탈리아 | 레이피어 | 틀 이름(Terza·Seconda·Quarta) | imbroccata·passata sotto·cavazione(속임수) 켬 | contratempo·cavazione·Ritirata(langort 물러남) 켬 | 쟁기 |
 | 이베리아 | 츠바이핸더 | 피게이레두 1651 (postura recta/obtusa·talho/revez…) | redondo·altibaixo·바퀴로 받기(맞받아치기) 켬 | 베어서 막기·이어 돌기·돌려 물러남 켬 | 쟁기 |
 | 일본 | 모노호시자오(카타나 가족) | 검도형·오륜서·무예도보통지 (上段·八相·中段·脇構え·下段…) | 燕返し·小手·跨虎 연타 켬 | 残心·出端·返し 켬 | **中段**(안 A) |
 | 중국 | 청강검(劍) | 《무비지》 조선세법 24 세 (豹頭·腰擊·坦腹…, 쉴 자세 直符送書) | yaoji·zuoyi·斂翅(속임수) 켬 | 斂翅·刺擊 고리·看守 켬 | **直符送書**(안 A) |
 | 무유파 | 참치·나뭇가지·고무 닭·모르겐슈테른·총 | 쉬운 말(머리 위·어깨 메기·앞으로 겨눔…) | 없음(공용만) | 없음 | 쟁기 |
-- 비껴 들어가 베기(걸음 칸) 다섯(zwerchAbtritt·inquartata·talhoRodeado·開き斬り·掣步腰擊)은 넣었으나 **모두 끔** — §4.
+- 비껴 들어가 베기(걸음 칸) 다섯(zwerchAbtritt·inquartata·talhoRodeado·開き斬り·掣步腰擊)은 측정이 반대였으나 **12:2x 사장님 지시로 켬**(겪어 보고 판단) — §4.
 
 ## 3. 48 판 표 (지금 main, 04:0x 측정)
 측정 03:59~04:07, main 4c79477(손잡이 찍기 시제품 병합 뒤에도 꾸러미·관문 동일). `node tools/sim/hybrid.mjs motion_lab.mjs duel <무기> 24 main`, 승/패/무, 어제 18:55 본판 열과 비교.
