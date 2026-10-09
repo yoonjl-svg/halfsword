@@ -158,7 +158,7 @@ let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상�
 let auras = []; // 진짜 엑스칼리버의 일렁임·빛 (aura.js)
 /** 캐릭터의 목소리 id: 변형(광기의 하인리히 등, characters.js CHARACTER_VARIANTS)은 원래 캐릭터의 목소리를 쓴다 */
 function voiceOf(ch) {
-  return ch?.variantOf || ch?.id || 'generic';
+  return ch?.voice || ch?.variantOf || ch?.id || 'generic'; // voice: 다른 인물의 녹음을 빌려 쓰는 인물 (샛별 저장소에서 가져온 셋)
 }
 function pickFoe() {
   if (foeParam === 'stage') return CHARACTERS_BY_ID[STAGE_FOE[stages.id]] || randomCharacter(currentFoe?.id); // 이번 판 무대의 검객
@@ -774,7 +774,7 @@ function showFoeIntro(ch) {
   if (!ch) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
-  el.querySelector('span').textContent = `“${randomLine(ch, 'intro')}”`; // 시작 대사 3종 중 하나
+  { const line = randomLine(ch, 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸)
   el.querySelector('em').textContent = '';
   el.classList.add('show');
 }
@@ -803,7 +803,7 @@ const cardEls = [...drawEl.querySelectorAll('.wcard')];
 //  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
 //  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
 //  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
-const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a' }; // 테마 → 바탕색
+const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025' }; // 테마 → 바탕색 (뒤 셋은 샛별 저장소의 무대)
 const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
 const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
 let cardBack = 'classic';
@@ -1513,6 +1513,7 @@ const renderCap = createRenderCap();
 
 function frame(now) {
   requestAnimationFrame(frame);
+  sound.setPaused(state !== 'fight' && state !== 'draw'); // 샛별 저장소 무대 셋의 배경음·세부음만 메뉴·일시정지 동안 줄인다 (stage_detail_sound.js)
   const frameMs = now - last;
   let dt = Math.min(0.1, frameMs / 1000);
   last = now;

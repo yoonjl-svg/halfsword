@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  상대 캐릭터 5인: 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
+//  상대 캐릭터 8인(다섯 + 샛별 저장소에서 가져온 셋, 아래 6~8): 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
 //
 //  ai.persona가 ai.js의 AI 클래스에 그대로 전달된다:
 //   - level: AI_LEVELS(난이도) 숫자 위에 캐릭터별로 덮어쓰는 값 (반응 시간·막기 확률·읽는 눈·힘 등)
@@ -348,6 +348,46 @@ export const CHARACTERS = [
       win: ['거기서 서둘렀다. 그게 전부야.', '…콘라트, 오늘은 서두르지 않았어.', '가르치는 근육도 아직 벨 줄 아는군.'],
       lose: ['…서둘렀나. 제자들에게 말해야겠군.', '좋은 검객이었다. 서두르지 마라.'],
     },
+  },
+
+  // ───────────────────────────────────────────── 6~8. 샛별 저장소에서 가져온 세 사람 (사장님 지시 10/9 23:4x·10/10 새벽) ─────────────────────────────────────────────
+  //  외형(looks.js·outfits.js)과 소리(목소리 voice — 샛별 쪽 짝 그대로)만 가져왔다. 무기는 사장님 지시대로
+  //  (토메 비달 = 레이피어 · 미나미('영만'에서 이름 바꿈) = 모노호시자오 · 오마리 = 츠바이핸더 — 샛별 설정은 펄션).
+  //  플레이 기질(persona.level·pers·idle·close·whole)과 설정 문구(별명·나이·출신·이야기·대사)는 가져오지 않았다(디렉터 판단).
+  //  pers 가 비어 있어 유파 기질(schools.js TRADITIONS[유파].temper)이 쓰인다. 실력 묶음은 기본 'normal'.
+  //  기록: docs/characters/import_saetbyeol_2026-10-09.md
+  {
+    id: 'tome',
+    name: '토메 비달',
+    epithet: '',
+    weapon: 'rapier', // 이탈리아 유파 (traditionOf: 한손 찌르기)
+    voice: 'liao', // 목소리: 샛별 쪽 짝 그대로 (랴오의 녹음)
+    ai: { level: 'normal', persona: { school: 'rapier', pers: {} } },
+    look: getLook('tome'),
+    lookVersion: CHARACTER_LOOK_VERSION.tome,
+    lines: {},
+  },
+  {
+    id: 'omari',
+    name: '오마리',
+    epithet: '',
+    weapon: 'zweihander', // 이베리아 유파 (사장님: 이베리아 비기를 볼 수 있게. 샛별 설정은 펄션)
+    voice: 'bran', // 목소리: 샛별 쪽 짝 그대로 (브란의 녹음)
+    ai: { level: 'normal', persona: { school: 'zweihander', pers: {} } },
+    look: getLook('omari'),
+    lookVersion: CHARACTER_LOOK_VERSION.omari,
+    lines: {},
+  },
+  {
+    id: 'minami',
+    name: '미나미',
+    epithet: '',
+    weapon: 'monohoshizao', // 일본 유파
+    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    ai: { level: 'normal', persona: { school: 'monohoshizao', pers: {} } },
+    look: getLook('minami'),
+    lookVersion: CHARACTER_LOOK_VERSION.minami,
+    lines: {},
   },
 ];
 

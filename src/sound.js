@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────
 import { SOUND, VITALS } from './config.js';
 import { drawnSlash, DRAWN_SLASH } from './slash_draw.js';
+import { StageDetailSound, hasStageDetails } from './stage_detail_sound.js';
 
 // 무기 재질 쌍 API(Sound.impact)가 알아듣는 재질 이름들. 다른 무기를 추가하는 쪽에서 이 목록을 참고한다
 export const MATERIALS = ['steel', 'armor', 'flesh', 'wood', 'plasma', 'rubber', 'frozen'];
@@ -1612,6 +1613,9 @@ const SAMPLES = {
 // 배경(스테이지)마다 다른 것: 발소리 녹음(step), 쓰러질 때 바닥 알갱이(grit), 전투 소리가 벽에 되울리는 방(room).
 // room: reverbIR 모양 + 쇳소리(metal)·몸 소리(flesh)를 울림으로 보내는 양. 바깥(포세이돈·산사)은 울림 없음
 const STAGE_SOUND = {
+  loggia: { step: 'stepStone', grit: 'stepStone', room: { dur: 0.65, rt: 0.45, e0: 0.04, e1: 0.09, lp: 4500, metal: 0.16, flesh: 0.06 } },
+  corsair: { step: 'step', grit: 'step' }, // 다져진 모래흙 선착장: 돌 판석 대신 모래가 눌리는 발소리
+  sacred_grove: { step: 'stepGravel', grit: 'stepGravel' },
   poseidon: { step: 'step' },
   poseidon_night: { step: 'step', night: true }, // 밤의 포세이돈 (하인리히 재등장): 같은 바다·바람에 네 귀퉁이 화로·횃대의 불을 더하고 바람을 어둡게
   temple: { step: 'stepGravel', grit: 'stepGravel' },
@@ -1647,7 +1651,18 @@ export class Sound {
   /** 소리 켜기/끄기: 끄면 새 소리를 안 내고, 울리고 있던 꼬리(울림·고리 소리)도 바로 줄인다 */
   set on(v) {
     this._on = !!v;
+    if (!this._on) this._stageDetails?.stopVoices();
     if (this.master) this.master.gain.setTargetAtTime(this._on ? SOUND.volume : 0, this.ctx.currentTime, 0.02);
+  }
+
+  /** Only the new stage ambience/details pause here; existing combat buses are unchanged. */
+  setPaused(paused) {
+    this._stagePaused = !!paused;
+    this._stageDetails?.setPaused(this._stagePaused);
+  }
+
+  _details() {
+    return this._stageDetails ??= new StageDetailSound(this, makeRng);
   }
 
   /**
@@ -2580,6 +2595,7 @@ export class Sound {
    */
   ambience() {
     if (this._amb || !this.ctx || !this.master) return;
+    if (hasStageDetails(this.stage)) return this._amb = this._details().ambience();
     const amb = { temple: this._ambTemple, castle: this._ambCastle, cathedral: this._ambCathedral, darkhall: this._ambHall, poseidon_night: this._ambPoseidon, clearing: this._ambClearing, clearing_a: this._ambClearing, clearing_a_dry: this._ambClearing }[this.stage];
     if (amb) return amb.call(this);
     return this._ambPoseidon();
@@ -2688,6 +2704,7 @@ export class Sound {
     const next = id in STAGE_SOUND ? id : 'poseidon';
     if (next === this.stage) return;
     this.stage = next;
+    this._stageDetails?.setStage(next);
     for (const t of this._timers) clearTimeout(t);
     this._timers.clear();
     this._applyRoom();
@@ -2696,6 +2713,11 @@ export class Sound {
     const old = this._amb;
     if (!old) return;
     this._amb = null;
+    if (old.detail) {
+      this._ambTau = 0.9;
+      this.ambience();
+      return; // StageDetailSound owns and disconnects its retired nodes.
+    }
     const t = this.ctx.currentTime;
     // 옛것이 줄어드는 만큼 새것이 차오르게 (줄 때 1초, 찰 때 0.5초 뒤부터 0.9초) → 가운데가 푹 꺼지지 않는다
     old.out.gain.setTargetAtTime(0, t + 0.3, 1);
@@ -2958,7 +2980,7 @@ export class Sound {
     for (const n of [pine, low, w1, w2, w3]) n.start(t);
     this._amb = { out, nodes: [pine, low, w1, w2, w3], wind: pg, windBase: 0.007 };
     // 풍경은 9~26초마다, 산새는 14~40초마다
-    this._every(9000, 26000, () => this.windChime());
+    if (this.stage !== 'loggia') this._every(9000, 26000, () => this.windChime());
     this._every(14000, 40000, () => this.bird());
   }
 
@@ -3120,6 +3142,8 @@ export class Sound {
    */
   stageEvent(name, data = {}) {
     if (!this._on || !this.ctx) return;
+    // {kind, amp:0..1, pos:{x,y,z}, seed, time}: fired by a visible wind/cloth/water peak.
+    if (name === 'stageDetail' && hasStageDetails(this.stage)) return this._details().event(data);
     if (name === 'crows') return this._crowsUp(data); // 화전 터: 참나무의 까마귀들이 날아오른다 (외형 PM이 onEvent('crows') 로 알린다)
     if (name !== 'bell' || this.stage !== 'castle') return;
     if (!this._spaced('bell')) return; // 30차: 한 번 흔들리면 양 끝마다 치던 종을 10초에 한 번만 (사장님 "간격을 좀 두자")
@@ -3232,6 +3256,7 @@ export class Sound {
 
   gust(amount) {
     if (!this._on || !this.ctx || this.stage === 'poseidon' || amount < 0.15) return;
+    if (hasStageDetails(this.stage)) return; // New stages sound at their visual peaks through stageDetail.
     const now = this.ctx.currentTime;
     if (this._gustT && now - this._gustT < 0.6) return; // 연타에 소리가 겹겹이 쌓이지 않게
     this._gustT = now;

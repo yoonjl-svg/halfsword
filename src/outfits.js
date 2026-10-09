@@ -47,6 +47,9 @@ const cone = (r, h, segs, pos, rot) => bake(new THREE.ConeGeometry(r, h, segs), 
 function addMerged(parent, pieces, color, matOpts) {
   if (!pieces.length) return null;
   const geo = mergeGeometries(pieces, false);
+  // mergeGeometries copies the attributes; temporary construction pieces never
+  // become scene objects and must not outlive the merged geometry.
+  for (const piece of pieces) piece.dispose();
   // 금속판은 무기와 같은 반사 환경(하늘·바다·모래)을 비춘다 — 장면에 반사 환경이 없어서, 금속성이 높은
   // 판은 비출 게 없어 거의 검게 보였다(하인리히 은빛 갑옷이 짙은 회색으로 나오던 원인).
   // 환경 텍스처는 여기서(isolatedVisual 안) 처음 만들어져 전역 난수를 건드리지 않는다
@@ -923,6 +926,603 @@ export function setHelmetWear(helm, wear01) {
   for (const c of helm.userData.cracks || []) c.visible = broken;
 }
 
+// ═════════════════════ Native newcomers: tailored cloth, never armor ═════════════════════
+// Keep dressPart's representative mesh alive: wounds, pallor and severing continue
+// to use it. Only the stock quilt/collar/skirt decorations are replaced. No body,
+// collider, joint or hand geometry is changed by these outfits.
+const LINEN = 0xe9e2ce;
+const LINEN_SHADE = 0xcac4af;
+const BRASS = 0xb99b62;
+const CLOTH = { roughness: 0.95, metalness: 0 };
+const BRASS_OPTS = { roughness: 0.48, metalness: 0.45, steel: 0.6 };
+
+function clothBase(g, color, frontColor) {
+  const main = g.children[0];
+  // Torso extras each own their materials/geometries; the representative first
+  // child stays in place so fighter.partMesh and later decal children stay valid.
+  for (const child of g.children.slice(1)) {
+    g.remove(child);
+    child.geometry?.dispose();
+    if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+    else child.material?.dispose();
+  }
+  main.material.color.setHex(color);
+  main.material.roughness = 0.96;
+  main.material.metalness = 0;
+  if (frontColor) {
+    // Cloth panels are colors on the actual wound surface, not a second opaque
+    // torso. Keep BoxGeometry type/parameters for effects.js's surface normals.
+    const { width, height, depth } = main.geometry.parameters;
+    const geo = new THREE.BoxGeometry(width, height, depth, 1, 14, 18);
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      c.setHex(pos.getX(i) > width * 0.49 ? frontColor(pos.getY(i), pos.getZ(i)) : color);
+      c.toArray(colors, i * 3);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    main.geometry.dispose();
+    main.geometry = geo;
+    main.material.color.setHex(0xffffff);
+    main.material.vertexColors = true;
+    main.material.needsUpdate = true;
+  }
+  return main;
+}
+
+// Shape only the existing cloth capsule; the native hand sphere is untouched.
+function sleeveVolume(g, proximal, distal) {
+  const geo = g.children[0].geometry;
+  const pos = geo.attributes.position;
+  geo.computeBoundingBox();
+  const min = geo.boundingBox.min.y, max = geo.boundingBox.max.y;
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.max(0, Math.min(1, (max - pos.getY(i)) / (max - min)));
+    const s = proximal + (distal - proximal) * t;
+    pos.setXYZ(i, pos.getX(i) * s, pos.getY(i), pos.getZ(i) * s);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+}
+
+// A thin sewn panel, authored as a polygon in Y/Z at a constant forward X.
+// Indexed position/normal/uv attributes share the existing primitive merge path.
+function clothPanel(x, yz, thickness = 0.006) {
+  const vertices = [];
+  const uv = [];
+  const indices = [];
+  for (const dx of [-thickness / 2, thickness / 2]) for (const [y, z] of yz) {
+    vertices.push(x + dx, y, z);
+    uv.push(z, y);
+  }
+  const n = yz.length;
+  for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(yz.map(([y, z]) => new THREE.Vector2(y, z)), []))
+    indices.push(a, c, b, n + a, n + b, n + c);
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    indices.push(i, j, n + j, i, n + j, n + i);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function clothBand(rx, rz, y, h, color, g) {
+  // Torso shells are rectangular: an elliptical belt would disappear into their
+  // corners. The small neck collar stays round; waist bands enclose the box.
+  if (rx > 0.1) return addMerged(g, [box(rx * 2, h, rz * 2, [0, y, 0])], color, CLOTH);
+  return addMerged(g, [bake(new THREE.CylinderGeometry(1, 1, h, 16, 1, true), [0, y, 0], null, [rx, 1, rz])], color, { ...CLOTH, side: THREE.DoubleSide });
+}
+
+function clothNeck(g, look) {
+  addMerged(g, [cyl(0.041, 0.049, 0.065, 12, false, [0, 0.174, 0])], look.skin, CLOTH);
+}
+
+function quietFace(g, look, kind) {
+  // The stock spherical cap cuts through the eye line. A shaped hairline keeps
+  // the forehead open while the sides and nape remain covered.
+  const cap = g.children[4];
+  if (cap?.isMesh && cap.geometry.type === 'SphereGeometry') {
+    const geo = new THREE.SphereGeometry(0.107, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.64);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const a = Math.atan2(p.getZ(i), p.getX(i));
+      const t = Math.floor(i / 21) / 12;
+      const theta = t * Math.PI * (0.64 - 0.23 * Math.max(0, Math.cos(a)));
+      p.setXYZ(i, 0.107 * Math.sin(theta) * Math.cos(a), 0.107 * Math.cos(theta), 0.107 * Math.sin(theta) * Math.sin(a));
+    }
+    geo.computeVertexNormals();
+    cap.geometry.dispose();
+    cap.geometry = geo;
+    cap.position.set(-0.008, 0.004, 0);
+    cap.rotation.set(0, 0, 0);
+  }
+  // Smaller brow/eye detail gives each adult a distinct expression while leaving
+  // the original face sphere, nose volume and hand/body proportions unchanged.
+  const eyes = g.children.slice(1, 3);
+  for (const eye of eyes) {
+    eye.scale.y = kind === 'tome' ? 0.48 : kind === 'omari' ? 0.68 : 0.57;
+    eye.scale.z = kind === 'minami' ? 0.88 : 1;
+  }
+  const brow = [-1, 1].map((s) => box(0.007, kind === 'tome' ? 0.009 : 0.005, 0.034, [0.094, 0.035, s * 0.035], [s * (kind === 'tome' ? 0.12 : 0.05), 0, 0]));
+  addMerged(g, brow, kind === 'tome' ? 0x90968f : look.hair, CLOTH);
+  // Ears and a restrained lower lip help three-quarter/profile reading.
+  addMerged(g, [-1, 1].map((s) => bake(new THREE.SphereGeometry(0.016, 8, 6), [-0.008, -0.004, s * 0.094], null, [0.7, 1.35, 0.5])), look.skin, CLOTH);
+  addMerged(g, [box(0.004, 0.004, kind === 'omari' ? 0.038 : 0.029, [0.092, -0.049, 0])], kind === 'omari' ? 0x4d2c25 : kind === 'tome' ? 0x906956 : 0xac786a, CLOTH);
+}
+
+const TOME_WINE = 0x632b3c;
+const TOME_SEAM = 0x8b4d58;
+const TOME_RAPIER = {
+  chest(g, look) {
+    clothBase(g, TOME_WINE);
+    clothNeck(g, look);
+    // A small standing linen collar with two tapered falls; no ruff hiding the face.
+    clothBand(0.078, 0.083, 0.151, 0.044, LINEN, g);
+    addMerged(g, [
+      clothPanel(0.127, [[0.14, -0.008], [0.11, -0.076], [0.022, -0.026]]),
+      clothPanel(0.128, [[0.14, 0.008], [0.11, 0.076], [0.035, 0.026]]),
+      clothPanel(0.125, [[0.089, -0.023], [0.089, 0.023], [-0.063, 0.014], [-0.063, -0.014]]),
+    ], LINEN, CLOTH);
+    addMerged(g, [
+      box(0.005, 0.26, 0.007, [0.124, -0.006, -0.086]),
+      box(0.005, 0.26, 0.007, [0.124, -0.006, 0.086]),
+      box(0.006, 0.011, 0.074, [0.125, 0.016, 0.121], [0.06, 0, 0]),
+      box(0.006, 0.011, 0.26, [-0.122, -0.105, 0]),
+    ], TOME_SEAM, CLOTH);
+    addMerged(g, [-0.096, -0.045, 0.006].map((y) => ball(0.007, 6, 4, [0.127, y, -0.047])), BRASS, BRASS_OPTS);
+  },
+  abdomen(g) {
+    clothBase(g, TOME_WINE);
+    clothBand(0.118, 0.166, -0.043, 0.036, 0x36292b, g);
+    addMerged(g, [box(0.012, 0.025, 0.035, [0.12, -0.043, -0.028])], BRASS, BRASS_OPTS);
+    addMerged(g, [box(0.005, 0.09, 0.006, [0.114, 0.031, -0.062]), box(0.005, 0.09, 0.006, [0.114, 0.031, 0.062])], TOME_SEAM, CLOTH);
+  },
+  pelvis(g) {
+    clothBase(g, TOME_WINE);
+    // Split short doublet skirts: restrained flare, clear legs, no rigid long cape.
+    addMerged(g, [
+      clothPanel(0.11, [[0.016, -0.158], [0.016, -0.023], [-0.171, -0.034], [-0.153, -0.177]]),
+      clothPanel(0.11, [[0.016, 0.023], [0.016, 0.158], [-0.153, 0.177], [-0.171, 0.034]]),
+      clothPanel(-0.108, [[0.013, -0.157], [0.013, 0.157], [-0.15, 0.168], [-0.182, 0.027], [-0.12, 0], [-0.182, -0.027], [-0.15, -0.168]]),
+    ], TOME_WINE, { ...CLOTH, side: THREE.DoubleSide });
+    addMerged(g, [-1, 1].map((s) => box(0.007, 0.013, 0.142, [0.115, -0.151, s * 0.102], [s * -0.09, 0, 0])), TOME_SEAM, CLOTH);
+  },
+  head(g, look) {
+    quietFace(g, look, 'tome');
+    const swept = [];
+    for (let i = 0; i < 5; i++) {
+      const z = (i - 2) * 0.035;
+      swept.push(taperedTube([[0.065, 0.076, z], [0.009, 0.106, z + 0.01], [-0.061, 0.084, z + 0.006], [-0.09, 0.023, z]], [0.018, 0.023, 0.015, 0.006], 7, 5));
+    }
+    swept.push(bake(new THREE.SphereGeometry(0.034, 10, 7), [0.085, -0.07, 0], null, [0.6, 0.95, 0.7]));
+    swept.push(taperedTube([[0.101, -0.038, -0.034], [0.113, -0.035, -0.012], [0.113, -0.035, 0.012], [0.101, -0.038, 0.034]], [0.004, 0.007, 0.007, 0.003], 8, 5));
+    for (const s of [-1, 1]) swept.push(box(0.016, 0.048, 0.014, [0.011, -0.015, s * 0.093], [0, 0, -0.14]));
+    addMerged(g, swept, look.hair, CLOTH);
+    addMerged(g, [-1, 1].map((s) => taperedTube([[0.091, 0.004, s * 0.055], [0.088, -0.004, s * 0.063], [0.08, -0.008, s * 0.069]], [0.0015, 0.0015, 0.001], 4, 3)), 0xad816a, CLOTH);
+  },
+  uarmS(g) { sleeveVolume(g, 1.12, 1.03); },
+  uarmO(g) { sleeveVolume(g, 1.12, 1.03); },
+  farmS(g) { tomeCuff(g); },
+  farmO(g) { tomeCuff(g); },
+  shinF: tomeBoot,
+  shinB: tomeBoot,
+  footF: tomeShoe,
+  footB: tomeShoe,
+};
+function tomeCuff(g) {
+  addMerged(g, [cyl(0.05, 0.054, 0.045, 12, true, [0, -0.09, 0])], LINEN, { ...CLOTH, side: THREE.DoubleSide });
+  addMerged(g, [cyl(0.051, 0.05, 0.008, 12, true, [0, -0.067, 0])], TOME_SEAM, CLOTH);
+}
+function tomeBoot(g) {
+  g.children[0].material.color.setHex(0x302627);
+  addMerged(g, [cyl(0.056, 0.052, 0.029, 12, true, [0, 0.092, 0])], 0x4c3935, CLOTH);
+}
+function tomeShoe(g) {
+  addMerged(g, [box(0.044, 0.006, 0.084, [0.021, 0.04, 0]), box(0.018, 0.011, 0.028, [0.021, 0.045, 0])], BRASS, BRASS_OPTS);
+}
+
+const OMARI_BLUE = 0x193b4b;
+const OMARI_EDGE = 0x47616a;
+const OMARI_SASH = 0x813848;
+const OMARI_SEAFARER = {
+  chest(g, look) {
+    clothBase(g, OMARI_BLUE, (y, z) => Math.abs(z) > 0.088 ? OMARI_BLUE : y > 0.005 && Math.abs(z) < (y - 0.005) * 0.54 ? look.skin : look.tunic);
+    clothNeck(g, look);
+    // Folded ivory shirt opening inside a sleeveless, ocean-blue coat.
+    addMerged(g, [-1, 1].map((s) => clothPanel(0.126, [[0.136, s * 0.07], [0.104, s * 0.095], [-0.012, s * 0.025], [0.018, s * 0.01]])), LINEN, CLOTH);
+    addMerged(g, [-1, 1].map((s) => box(0.006, 0.28, 0.013, [0.124, 0, s * 0.094])), OMARI_EDGE, CLOTH);
+    addMerged(g, [-1, 1].flatMap((s) => [ball(0.007, 6, 4, [0.13, -0.074, s * 0.117]), ball(0.007, 6, 4, [0.13, 0.036, s * 0.117])]), BRASS, BRASS_OPTS);
+    // One small diagonal seam carries the coat silhouette around the shoulders.
+    addMerged(g, [-1, 1].map((s) => box(0.21, 0.011, 0.024, [-0.001, 0.142, s * 0.146])), OMARI_EDGE, CLOTH);
+  },
+  abdomen(g, look) {
+    clothBase(g, OMARI_BLUE, (_, z) => Math.abs(z) < 0.078 ? look.tunic : OMARI_BLUE);
+    clothBand(0.121, 0.17, -0.024, 0.087, OMARI_SASH, g);
+    addMerged(g, [box(0.007, 0.008, 0.302, [0.121, -0.011, 0]), box(0.007, 0.007, 0.288, [0.122, -0.045, 0])], 0xa55c60, CLOTH);
+  },
+  pelvis(g) {
+    clothBase(g, 0x665a4b);
+    addMerged(g, [
+      clothPanel(0.11, [[0.087, -0.169], [0.073, -0.104], [-0.184, -0.081], [-0.228, -0.165]]),
+      clothPanel(0.11, [[0.073, 0.104], [0.087, 0.169], [-0.228, 0.165], [-0.184, 0.081]]),
+      clothPanel(-0.112, [[0.088, -0.165], [0.088, 0.165], [-0.208, 0.175], [-0.25, 0.024], [-0.155, 0], [-0.25, -0.024], [-0.208, -0.175]]),
+    ], OMARI_BLUE, { ...CLOTH, side: THREE.DoubleSide });
+    addMerged(g, [
+      clothPanel(0.124, [[0.086, 0.112], [0.077, 0.157], [-0.212, 0.181], [-0.183, 0.129]]),
+      clothPanel(0.131, [[0.07, 0.1], [0.057, 0.142], [-0.14, 0.098], [-0.133, 0.071]]),
+    ], OMARI_SASH, CLOTH);
+    addMerged(g, [box(0.028, 0.035, 0.05, [0.128, 0.075, 0.131])], 0xa15a5c, CLOTH);
+  },
+  head(g, look) {
+    quietFace(g, look, 'omari');
+    const hair = [];
+    for (const s of [-1, 1]) for (let i = 0; i < 2; i++) {
+      const z = s * (0.072 + i * 0.015);
+      hair.push(taperedTube([[-0.021 - i * 0.026, 0.045, z], [-0.037 - i * 0.026, -0.041, z * 1.1], [-0.039 - i * 0.026, -0.125 + i * 0.016, z * 0.91]], [0.014, 0.013, 0.008], 9, 6));
+      for (let j = 0; j < 4; j++) hair.push(bake(new THREE.SphereGeometry(0.012, 6, 4), [-0.034 - i * 0.026, -0.016 - j * 0.025, z * 1.04], null, [0.9, 1.1, 1]));
+    }
+    hair.push(bake(new THREE.SphereGeometry(0.048, 10, 7), [0.064, -0.067, 0], null, [0.56, 0.71, 1]));
+    hair.push(taperedTube([[0.098, -0.036, -0.029], [0.109, -0.033, 0], [0.098, -0.036, 0.029]], [0.005, 0.009, 0.005], 6, 5));
+    addMerged(g, hair, look.hair, CLOTH);
+    // A low, folded three-corner seafarer's hat, sewn cloth/leather, no helmet tag.
+    // The shallow crown and raised rim leave the eyes and face fully visible.
+    const brim = new THREE.RingGeometry(0.103, 0.198, 24, 2).rotateX(-Math.PI / 2);
+    const p = brim.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const a = Math.atan2(p.getZ(i), p.getX(i));
+      const r = 0.79 + 0.21 * Math.cos(3 * a);
+      const radial = (Math.hypot(p.getX(i), p.getZ(i)) - 0.103) / 0.095;
+      const lift = 0.023 + 0.044 * (0.5 - 0.5 * Math.cos(3 * a)) * radial;
+      p.setXYZ(i, p.getX(i) * r, p.getY(i) + lift, p.getZ(i) * r);
+    }
+    brim.computeVertexNormals();
+    // Seat the entire soft hat 3.5cm lower on the hairline; the earlier raised
+    // crown left a visible strip of sky between the side hair and hat band.
+    addMerged(g, [bake(brim, [-0.012, 0.042, 0], [0.03, 0.12, -0.04]), bake(new THREE.SphereGeometry(0.108, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), [-0.016, 0.056, 0], null, [1.1, 0.62, 1.07])], 0x302e2c, { ...CLOTH, side: THREE.DoubleSide });
+    addMerged(g, [bake(new THREE.CylinderGeometry(0.113, 0.116, 0.018, 18, 1, true), [-0.016, 0.064, 0], null, [1, 1, 1.02])], OMARI_SASH, CLOTH);
+    const rim = [];
+    for (let j = 0; j < 3; j++) {
+      const pts = [];
+      for (let k = 0; k <= 8; k++) {
+        const a = j * Math.PI * 2 / 3 + k * Math.PI * 2 / 24;
+        const r = 0.198 * (0.79 + 0.21 * Math.cos(3 * a));
+        pts.push([Math.cos(a) * r, 0.03 + 0.044 * (0.5 - 0.5 * Math.cos(3 * a)), Math.sin(a) * r]);
+      }
+      rim.push(bake(taperedTube(pts, [0.003, 0.003], 12, 4), [-0.012, 0.042, 0], [0.03, 0.12, -0.04]));
+    }
+    addMerged(g, rim, 0x8d7653, CLOTH);
+    addMerged(g, [bake(new THREE.TorusGeometry(0.015, 0.0032, 5, 12), [0.003, -0.027, 0.106]), ball(0.006, 6, 4, [0.004, -0.013, 0.107])], BRASS, BRASS_OPTS);
+  },
+  uarmS: omariSleeve,
+  uarmO: omariSleeve,
+  farmS: omariForearm,
+  farmO: omariForearm,
+  thighF(g) { sleeveVolume(g, 1.21, 1.03); },
+  thighB(g) { sleeveVolume(g, 1.21, 1.03); },
+  shinF: omariBoot,
+  shinB: omariBoot,
+};
+function omariSleeve(g) {
+  sleeveVolume(g, 1.2, 1.15);
+  addMerged(g, [cyl(0.061, 0.061, 0.037, 12, true, [0, -0.096, 0])], LINEN_SHADE, CLOTH);
+}
+function omariForearm(g, look) {
+  g.children[0].material.color.setHex(look.skin);
+  addMerged(g, [cyl(0.051, 0.053, 0.039, 12, true, [0, 0.081, 0])], look.sleeve, CLOTH);
+  addMerged(g, [cyl(0.046, 0.046, 0.029, 12, true, [0, -0.087, 0])], 0x514139, CLOTH);
+}
+function omariBoot(g) {
+  addMerged(g, [cyl(0.059, 0.056, 0.06, 12, true, [0, 0.124, 0])], 0x5b4c3e, CLOTH);
+  addMerged(g, [box(0.005, 0.16, 0.007, [0.053, -0.003, 0])], 0x67594a, CLOTH);
+}
+
+const SHRINE_MOSS = 0x3b5344;
+const SHRINE_SAGE = 0x627b5c;
+const SHRINE_RED = 0x9a4234;
+const MINAMI_SHRINE = {
+  chest(g, look) {
+    clothBase(g, LINEN);
+    clothNeck(g, look);
+    // Crossed collar, narrow sage inner edge and an unadorned ivory shoulder.
+    addMerged(g, [box(0.006, 0.292, 0.037, [0.124, 0.006, 0.017], [0.52, 0, 0]), box(0.006, 0.169, 0.029, [0.125, 0.065, -0.038], [-0.5, 0, 0])], LINEN_SHADE, CLOTH);
+    addMerged(g, [box(0.007, 0.286, 0.019, [0.128, 0.006, 0.018], [0.52, 0, 0]), box(0.007, 0.162, 0.017, [0.129, 0.065, -0.038], [-0.5, 0, 0])], LINEN, CLOTH);
+    addMerged(g, [box(0.004, 0.22, 0.006, [0.133, 0.034, 0.041], [0.52, 0, 0])], SHRINE_SAGE, CLOTH);
+  },
+  abdomen(g) {
+    clothBase(g, LINEN);
+    clothBand(0.12, 0.17, -0.027, 0.088, SHRINE_RED, g);
+    clothBand(0.122, 0.172, -0.024, 0.009, 0xcbac83, g);
+    addMerged(g, [box(0.007, 0.064, 0.058, [0.124, -0.027, 0.006]), box(0.027, 0.05, 0.11, [-0.121, -0.026, 0])], 0xb25948, CLOTH);
+    addMerged(g, [taperedTube([[0.128, -0.023, -0.031], [0.145, -0.044, -0.064], [0.135, -0.054, -0.014]], [0.003, 0.003, 0.003], 7, 4)], 0xdbc9a6, CLOTH);
+  },
+  pelvis(g) {
+    clothBase(g, SHRINE_MOSS);
+    addMerged(g, [
+      clothPanel(0.112, [[0.079, -0.16], [0.079, -0.018], [-0.185, -0.04], [-0.159, -0.177]]),
+      clothPanel(0.112, [[0.079, 0.018], [0.079, 0.16], [-0.159, 0.177], [-0.185, 0.04]]),
+    ], SHRINE_SAGE, CLOTH);
+    addMerged(g, [
+      clothPanel(0.117, [[0.079, -0.154], [0.079, -0.091], [-0.147, -0.108], [-0.171, -0.172]]),
+      clothPanel(0.117, [[0.079, 0.091], [0.079, 0.154], [-0.171, 0.172], [-0.147, 0.108]]),
+    ], SHRINE_MOSS, CLOTH);
+    // A short doubled cord and two folded paper offerings; no long rigid charms.
+    addMerged(g, [taperedTube([[0.123, 0.078, -0.093], [0.126, 0.01, -0.117], [0.132, -0.07, -0.112]], [0.004, 0.004, 0.003], 8, 4)], 0xc4b68c, CLOTH);
+    addMerged(g, [
+      clothPanel(0.133, [[0.021, -0.116], [-0.01, -0.096], [-0.029, -0.116], [-0.055, -0.099], [-0.062, -0.111], [-0.027, -0.133], [-0.01, -0.115], [0.015, -0.131]], 0.003),
+      clothPanel(0.133, [[-0.054, -0.109], [-0.077, -0.089], [-0.093, -0.106], [-0.12, -0.09], [-0.126, -0.103], [-0.094, -0.121], [-0.077, -0.106], [-0.059, -0.122]], 0.003),
+    ], LINEN, { ...CLOTH, side: THREE.DoubleSide });
+  },
+  head(g, look) {
+    quietFace(g, look, 'minami');
+    addMerged(g, [
+      taperedTube([[0.06, 0.078, -0.066], [0.018, 0.105, -0.079], [-0.061, 0.069, -0.074], [-0.093, 0.029, -0.035]], [0.017, 0.022, 0.024, 0.021], 9, 6),
+      taperedTube([[0.064, 0.078, 0.069], [0.031, 0.079, 0.093], [0.009, -0.008, 0.097], [0.026, -0.084, 0.079]], [0.02, 0.021, 0.014, 0.003], 9, 5),
+      taperedTube([[0.03, 0.079, -0.09], [0.006, 0.001, -0.1], [0.019, -0.075, -0.086]], [0.017, 0.015, 0.003], 8, 5),
+      bake(new THREE.SphereGeometry(0.04, 10, 7), [-0.113, 0.044, 0], null, [0.8, 0.91, 1.06]),
+      taperedTube([[-0.119, 0.042, 0], [-0.135, -0.028, 0.009], [-0.131, -0.13, 0.014], [-0.156, -0.203, 0.005]], [0.025, 0.03, 0.025, 0.005], 12, 7),
+    ], look.hair, CLOTH);
+    addMerged(g, [box(0.044, 0.014, 0.063, [-0.12, 0.044, 0]), clothPanel(-0.133, [[0.043, 0.017], [-0.044, 0.03], [-0.054, 0.014], [0.043, 0.003]])], SHRINE_RED, CLOTH);
+    // A single branch pin with two leaves: modest natural detail, no antlers.
+    addMerged(g, [taperedTube([[-0.055, 0.077, -0.061], [-0.078, 0.113, -0.089], [-0.071, 0.139, -0.114]], [0.003, 0.003, 0.0015], 7, 4)], 0x8c7751, CLOTH);
+    addMerged(g, [
+      bake(new THREE.SphereGeometry(0.018, 6, 4), [-0.081, 0.118, -0.111], [0.45, 0.3, 0.3], [0.27, 1.2, 0.56]),
+      bake(new THREE.SphereGeometry(0.017, 6, 4), [-0.069, 0.137, -0.113], [-0.4, 0.3, -0.3], [0.28, 0.95, 0.56]),
+    ], SHRINE_SAGE, CLOTH);
+  },
+  uarmS: shrineSleeve,
+  uarmO: shrineSleeve,
+  farmS: shrineForearm,
+  farmO: shrineForearm,
+  thighF: shrineThigh,
+  thighB: shrineThigh,
+  shinF: shrineShin,
+  shinB: shrineShin,
+  footF: shrineSandal,
+  footB: shrineSandal,
+};
+function shrineSleeve(g) {
+  sleeveVolume(g, 1.1, 1.4);
+  addMerged(g, [cyl(0.073, 0.074, 0.015, 12, true, [0, -0.092, 0])], LINEN_SHADE, CLOTH);
+}
+function shrineForearm(g) {
+  sleeveVolume(g, 1.42, 1.08);
+  addMerged(g, [cyl(0.05, 0.05, 0.032, 12, true, [0, -0.094, 0])], SHRINE_SAGE, CLOTH);
+  addMerged(g, [cyl(0.051, 0.051, 0.008, 12, true, [0, -0.094, 0])], LINEN, CLOTH);
+}
+function shrineThigh(g) {
+  // The divided lower garment stays on each thigh/shin. Straight cloth hems and
+  // shallow pleats replace the capsule silhouette without spanning a joint.
+  shrinePleats(g, 0.091, 0.104, 0.42);
+}
+function shrineShin(g) {
+  shrinePleats(g, 0.104, 0.084, 0.41);
+  addMerged(g, [cyl(0.092, 0.089, 0.017, 20, true, [0, -0.146, 0])], LINEN, CLOTH);
+}
+function shrinePleats(g, rt, rb, h) {
+  const geo = new THREE.CylinderGeometry(rt, rb, h, 20, 1, false);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const a = Math.atan2(p.getZ(i), p.getX(i));
+    const fold = 1 + 0.046 * Math.cos(a * 10);
+    p.setXYZ(i, p.getX(i) * fold, p.getY(i), p.getZ(i) * fold);
+  }
+  geo.computeVertexNormals();
+  // Retain the original CapsuleGeometry identity/parameters used for radial
+  // wound normals. The representative mesh itself and its material stay alive.
+  g.children[0].geometry.copy(geo);
+  geo.dispose();
+}
+function shrineSandal(g) {
+  // Native shoe dimensions retained; ivory tabi upper and a quiet woven strap.
+  g.children[0].material.color.setHex(LINEN);
+  addMerged(g, [box(0.252, 0.012, 0.113, [0, -0.033, 0]), box(0.023, 0.009, 0.101, [0.022, 0.041, 0]), box(0.076, 0.009, 0.013, [0.065, 0.041, 0])], 0x6a5940, CLOTH);
+}
+
+// Minami v2 keeps the shrine outfit's native body/wound surfaces. The longer
+// half-up hair is split at the nape: only short locks follow the head, while the
+// loose lower hair follows the upper torso. Nothing changes mass or collision.
+function shrineHairLock(points, widths, depth = 0.011) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  const vertices = [], indices = [], rings = 10, sides = 8;
+  for (let i = 0; i <= rings; i++) {
+    const t = i / rings, at = curve.getPoint(t), u = t * (widths.length - 1);
+    const j = Math.min(widths.length - 2, Math.floor(u));
+    const width = THREE.MathUtils.lerp(widths[j], widths[j + 1], u - j);
+    for (let k = 0; k < sides; k++) {
+      const a = k / sides * Math.PI * 2;
+      vertices.push(at.x + Math.cos(a) * depth * Math.min(1, width / 0.015), at.y, at.z + Math.sin(a) * width / 2);
+      if (i < rings) {
+        const n = i * sides + k, next = i * sides + (k + 1) % sides;
+        indices.push(n, next, n + sides, next, next + sides, n + sides);
+      }
+    }
+  }
+  for (let k = 1; k < sides - 1; k++) {
+    indices.push(0, k + 1, k);
+    const end = rings * sides;
+    indices.push(end, end + k, end + k + 1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(vertices.length / 3 * 2), 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function shrineLeafSprig(g, x, y, z, scale, color) {
+  const p = (dy, dz) => [x, y + dy * scale, z + dz * scale];
+  const shapes = [taperedTube([p(-0.048, 0), p(0, 0.01), p(0.05, 0.004)], [0.002 * scale, 0.002 * scale, 0.001 * scale], 7, 4)];
+  for (let i = 0; i < 4; i++) {
+    const yy = -0.031 + i * 0.022, s = i % 2 ? -1 : 1;
+    shapes.push(clothPanel(x + 0.001, [[y + yy * scale, z + 0.007 * scale], [y + (yy + 0.01) * scale, z + s * 0.032 * scale], [y + (yy + 0.025) * scale, z + s * 0.017 * scale]], 0.002));
+  }
+  addMerged(g, shapes, color, CLOTH);
+}
+
+function groveHakama(g, top, bottom, height) {
+  // Deep, broad folds read as cloth at phone distance; the two trouser legs
+  // still follow their own ragdoll parts and do not bridge the knees.
+  const geo = new THREE.CylinderGeometry(top, bottom, height, 24, 4, false);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const a = Math.atan2(p.getZ(i), p.getX(i));
+    const fold = 1 + 0.063 * Math.cos(a * 6);
+    p.setXYZ(i, p.getX(i) * fold * 0.96, p.getY(i), p.getZ(i) * fold);
+  }
+  geo.computeVertexNormals();
+  g.children[0].geometry.copy(geo);
+  geo.dispose();
+}
+
+// User-selected v3: two low, long bunches tied with red ribbon. The upper
+// gather follows the head; overlapping lower lengths follow the chest instead
+// of swinging a rigid waist-long sheet through the body when the head turns.
+// This is a visual layer, with no hair simulation, collider or body scaling.
+function shrineTwinTailHead(g, look) {
+  quietFace(g, look, 'minami');
+  const hair = [], ribbons = [];
+  for (const side of [-1, 1]) {
+    // Preserve the open fringe and short face-framing locks from v2.
+    hair.push(shrineHairLock([[0.024, 0.104, side * 0.02], [0.073, 0.076, side * 0.047], [0.075, 0.02, side * 0.079], [0.043, -0.046, side * 0.094]], [0.035, 0.039, 0.026, 0.003]));
+    hair.push(shrineHairLock([[0.011, 0.052, side * 0.092], [0.001, -0.017, side * 0.113], [0.012, -0.109, side * 0.113], [0.037, -0.154, side * 0.09]], [0.029, 0.035, 0.026, 0.003], 0.012));
+    // Sweep each half of the nape into its own knot, behind the ear.
+    for (let i = 0; i < 3; i++) {
+      hair.push(shrineHairLock([[-0.07 - i * 0.013, 0.072 - i * 0.015, side * 0.022], [-0.097, 0.013, side * 0.075], [-0.089, -0.05, side * 0.123]], [0.038, 0.048, 0.044], 0.012));
+    }
+    hair.push(shrineHairLock([[-0.087, -0.043, side * 0.127], [-0.116, -0.116, side * 0.16], [-0.152, -0.202, side * 0.172]], [0.045, 0.072, 0.07], 0.023));
+    // A broad small bow with two tapered ribbon ends at each side, not one
+    // central half-up bow. Both front and rear cameras can read the red ties.
+    const x = -0.101, y = -0.04, z = side * 0.138;
+    const panel = (points) => clothPanel(x, points.map(([dy, dz]) => [y + dy, z + side * dz]), 0.009);
+    ribbons.push(
+      panel([[0.004, 0], [0.035, 0.054], [0.002, 0.063], [-0.008, 0.008]]),
+      panel([[0.004, 0], [0.026, -0.027], [-0.003, -0.036], [-0.008, -0.005]]),
+      panel([[-0.005, -0.003], [-0.078, 0.007], [-0.069, 0.024], [-0.079, 0.035], [0.002, 0.011]]),
+      panel([[-0.003, 0.003], [-0.052, 0.054], [-0.037, 0.058], [-0.038, 0.073], [0.004, 0.016]]),
+      box(0.036, 0.024, 0.026, [x, y, z]),
+    );
+  }
+  addMerged(g, hair, look.hair, { ...CLOTH, roughness: 1, metalness: 0 });
+  addMerged(g, ribbons, SHRINE_RED, CLOTH);
+}
+
+function shrineTwinTailLengths(g, look) {
+  const hair = [], sheen = [];
+  for (const side of [-1, 1]) {
+    // Leave the middle of the back open: the pair remains identifiable below
+    // the red ties and hangs toward the waist, with individual tapered ends.
+    for (let i = 0; i < 3; i++) {
+      const offset = (i - 1) * 0.019;
+      hair.push(shrineHairLock([
+        [-0.151 + i * 0.004, 0.201, side * (0.169 + offset)],
+        [-0.168 + i * 0.004, 0.062, side * (0.191 + offset)],
+        [-0.18 + i * 0.004, -0.123, side * (0.21 + offset)],
+        [-0.165 + i * 0.004, -0.316 + Math.abs(i - 1) * 0.033, side * (0.194 + offset * 0.7)],
+      ], [0.035, 0.045, 0.042, 0.003], 0.016));
+    }
+    sheen.push(shrineHairLock([[-0.196, 0.103, side * 0.188], [-0.198, -0.071, side * 0.214], [-0.185, -0.228, side * 0.2]], [0.004, 0.006, 0.002], 0.001));
+  }
+  addMerged(g, hair, look.hair, { ...CLOTH, roughness: 1, metalness: 0 });
+  addMerged(g, sheen, 0x383d32, { ...CLOTH, roughness: 1, metalness: 0 });
+}
+
+const MINAMI_GROVE = {
+  ...MINAMI_SHRINE,
+  head(g, look) {
+    if (look.hairStyle === 'long-twintails') return shrineTwinTailHead(g, look);
+    quietFace(g, look, 'minami');
+    const hair = [];
+    // An open centre fringe and tapered cheek locks keep the youthful face
+    // visible. The swept upper locks gather at one small red half-up knot.
+    for (const s of [-1, 1]) {
+      hair.push(shrineHairLock([[0.024, 0.104, s * 0.02], [0.073, 0.076, s * 0.047], [0.075, 0.02, s * 0.079], [0.043, -0.046, s * 0.094]], [0.035, 0.039, 0.026, 0.003]));
+      hair.push(shrineHairLock([[0.011, 0.052, s * 0.092], [0.001, -0.017, s * 0.113], [0.012, -0.109, s * 0.113], [0.037, -0.154, s * 0.09]], [0.029, 0.035, 0.026, 0.003], 0.012));
+      hair.push(taperedTube([[-0.017, 0.075, s * 0.073], [-0.075, 0.06, s * 0.063], [-0.117, 0.018, s * 0.025]], [0.009, 0.01, 0.009], 10, 6));
+    }
+    for (let i = 0; i < 5; i++) {
+      const z = (i - 2) * 0.035;
+      hair.push(shrineHairLock([[-0.075, 0.071, z * 0.8], [-0.111, -0.005, z], [-0.142, -0.119, z * 1.06], [-0.154, -0.192 + Math.abs(i - 2) * 0.008, z * 1.07]], [0.04, 0.046, 0.045, 0.035], 0.008));
+    }
+    addMerged(g, hair, look.hair, { ...CLOTH, roughness: 1, metalness: 0 });
+    addMerged(g, [
+      clothPanel(-0.13, [[0.025, -0.005], [0.042, -0.043], [0.011, -0.04], [0.016, 0]]),
+      clothPanel(-0.13, [[0.025, 0.005], [0.038, 0.039], [0.008, 0.043], [0.016, 0]]),
+      clothPanel(-0.137, [[0.021, -0.008], [-0.049, -0.033], [-0.059, -0.019], [0.016, 0.008]]),
+      box(0.02, 0.016, 0.021, [-0.134, 0.021, 0]),
+    ], SHRINE_RED, CLOTH);
+    // A small pale-green leaf pin, rather than a crown or projecting antlers.
+    addMerged(g, [taperedTube([[0, 0.073, -0.108], [-0.018, 0.114, -0.112], [-0.041, 0.137, -0.099]], [0.0025, 0.0025, 0.001], 7, 4)], 0x8c7751, CLOTH);
+    addMerged(g, [
+      bake(new THREE.SphereGeometry(0.017, 6, 4), [-0.011, 0.108, -0.119], [0.4, 0.2, 0.4], [0.25, 1.1, 0.58]),
+      bake(new THREE.SphereGeometry(0.016, 6, 4), [-0.031, 0.129, -0.108], [-0.35, 0.3, -0.3], [0.25, 1.1, 0.58]),
+    ], 0x7e9469, CLOTH);
+  },
+  chest(g, look) {
+    MINAMI_SHRINE.chest(g, look);
+    // A sewn inner lapel and underarm seams give the light robe a clear fold.
+    addMerged(g, [
+      box(0.005, 0.253, 0.012, [0.135, 0.013, 0.037], [0.52, 0, 0]),
+      ...[-1, 1].map((s) => box(0.004, 0.204, 0.006, [0.122, -0.025, s * 0.142], [s * 0.04, 0, 0])),
+    ], 0xafa991, CLOTH);
+    if (look.hairStyle === 'long-twintails') {
+      shrineTwinTailLengths(g, look);
+    } else {
+      const hair = [];
+      for (let i = 0; i < 5; i++) {
+        const z = (i - 2) * 0.036;
+        hair.push(shrineHairLock([[-0.147, 0.182, z], [-0.151, 0.094, z * 1.05], [-0.142, -0.032, z * 1.13], [-0.144, -0.135 + Math.abs(i - 2) * 0.018, z * 0.94]], [0.047, 0.05, 0.046, 0.009], 0.008));
+      }
+      addMerged(g, hair, look.hair, { ...CLOTH, roughness: 1, metalness: 0 });
+    }
+    shrineLeafSprig(g, 0.127, -0.052, -0.084, 0.58, 0xa3ac8b);
+  },
+  abdomen(g) {
+    MINAMI_SHRINE.abdomen(g);
+    // Fine doubled rope follows the belt rather than hovering across the body.
+    addMerged(g, [-1, 1].map((s) => taperedTube([[0.126, -0.017 + s * 0.003, -0.155], [0.133, -0.032 + s * 0.003, -0.07], [0.134, -0.023 + s * 0.003, 0.075], [0.126, -0.017 + s * 0.003, 0.154]], [0.0024, 0.0024, 0.0024, 0.0024], 12, 4)), 0xd6c49d, CLOTH);
+  },
+  pelvis(g) {
+    MINAMI_SHRINE.pelvis(g);
+    addMerged(g, [-1, 1].map((s) => clothPanel(0.122, [[0.073, s * 0.076], [0.073, s * 0.083], [-0.16, s * 0.109], [-0.164, s * 0.103]], 0.003)), 0x718363, CLOTH);
+  },
+  uarmS: groveShrineSleeve, uarmO: groveShrineSleeve,
+  farmS: groveShrineForearm, farmO: groveShrineForearm,
+  thighF: groveShrineThigh, thighB: groveShrineThigh,
+  shinF: groveShrineShin, shinB: groveShrineShin,
+};
+function groveShrineSleeve(g) {
+  sleeveVolume(g, 1.12, 1.55);
+  addMerged(g, [cyl(0.078, 0.079, 0.014, 12, true, [0, -0.089, 0])], LINEN_SHADE, CLOTH);
+}
+function groveShrineForearm(g) {
+  sleeveVolume(g, 1.52, 1.07);
+  addMerged(g, [cyl(0.06, 0.05, 0.046, 12, true, [0, -0.091, 0])], 0x9baa8c, CLOTH);
+  addMerged(g, [cyl(0.061, 0.06, 0.006, 12, true, [0, -0.071, 0]), cyl(0.0518, 0.0508, 0.006, 12, true, [0, -0.111, 0])], LINEN, CLOTH);
+}
+function groveShrineThigh(g) {
+  groveHakama(g, 0.092, 0.115, 0.42);
+}
+function groveShrineShin(g) {
+  groveHakama(g, 0.114, 0.088, 0.41);
+  // The hem repeats the trouser's six-fold section, avoiding a floating ring.
+  const hem = new THREE.CylinderGeometry(0.091, 0.09, 0.018, 24, 1, true);
+  const p = hem.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const a = Math.atan2(p.getZ(i), p.getX(i)), fold = 1 + 0.063 * Math.cos(a * 6);
+    p.setXYZ(i, p.getX(i) * fold * 0.96, p.getY(i) - 0.183, p.getZ(i) * fold);
+  }
+  hem.computeVertexNormals();
+  addMerged(g, [hem], 0x9baa8c, CLOTH);
+}
+
 export const OUTFITS = {
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
@@ -940,6 +1540,10 @@ export const OUTFITS = {
   margarethe_dragon: MARGARETHE_DRAGON,
   margarethe_dragon_helm: MARGARETHE_DRAGON_HELM,
   margarethe_dragon_horned: MARGARETHE_DRAGON_HORNED,
+  tome_rapier: TOME_RAPIER,
+  omari_seafarer: OMARI_SEAFARER,
+  minami_shrine: MINAMI_SHRINE,
+  minami_grove: MINAMI_GROVE,
 };
 
 /** dressPart가 부위 하나를 다 그린 뒤 불린다. look.outfit이 가리키는 세트에 그 부위용 함수가 있으면 얹는다. */
@@ -948,6 +1552,8 @@ export function decorateOutfit(dressTo, d, look) {
   const fn = set && set[d.name];
   if (!fn) return;
   const before = dressTo.children.length;
+  dressTo.userData.outfit = look.outfit;
+  dressTo.userData.outfitPart = d.name;
   fn(dressTo, look, d);
   // 방어구 부위: 이 부위에 얹은 판금 메쉬들을 userData.armor로 알려 둔다. 오너 결정("판금도 피해를
   // 줄여 주고, 닳고, 완전히 부서지면 사라진다"): look.armor === 'plate'이고 ARMOR.on이면 fighter.js가 이
