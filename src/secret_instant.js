@@ -17,7 +17,8 @@
 //  난수 없음. 비기가 아니면(요청 없음) 아무 일도 없다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, ARM, STRIKE } from './config.js';
+import { SECRET, ARM, STRIKE, GAIT } from './config.js';
+const GAIT_REACH = GAIT.reachMax;
 
 const _qc = new THREE.Quaternion();
 const _q1 = new THREE.Quaternion();
@@ -44,6 +45,7 @@ export function runInstants(combat) {
     if (f.iaiReq) startIai(f, combat);
     if (f.iai) stepIai(f, combat);
     if (f.iaiHoldT > 0 || f.iaiFade > 0) holdIai(f, combat.dt || 1 / 120);
+    stanceTick(f, combat.dt || 1 / 120);
   }
 }
 
@@ -411,7 +413,7 @@ function placeIai(f, H, D, now) {
   th.dir[0] = Dy.x;
   th.dir[1] = Dy.y;
   th.dir[2] = Dy.z;
-  const EB = f.iai.body;
+  const EB = f.iai.bodyAt ? f.iai.bodyAt(f.iai.u ?? 0) : f.iai.body; // 휩쓸기: 몸 비틀기가 길을 따라 (감기 → 돌리기)
   th.pelvisYaw = EB.pelvisYaw * D2R;
   th.chestYaw = EB.chestYaw * D2R;
   th.pitch = EB.pitch * D2R;
@@ -488,6 +490,7 @@ function startIai(f, combat) {
   const T = req.player || far ? SECRET.iaiPlayerTime : SECRET.iaiTime; // 대기 자세(손이 왼 허리)면 곧장 가로, 아니면 왼 허리를 거쳐
   f.iai = { kind: 'iai', J: SECRET.instantJ, body: SECRET.iaiPath.E.body, hold: SECRET.stiff.japanese, pose: (I, u) => iaiPose(I, u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
   setKinematic(f, true);
+  if (f.gait?.active && SECRET.iaiDrawStep > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.iaiDrawStep, duration: 0.3 }); // 발도 순간 앞발을 크게 (10/10 04:2x)
   f.instantGhost = Math.ceil((T + SECRET.instantNoCollide) / (combat.dt || 1 / 120)) + 1;
   const P0 = f.iai.pose(f.iai, 0);
   f.iai.prev = placeIai(f, P0.H, P0.D, true);
@@ -507,6 +510,7 @@ function stepIai(f, combat) {
   if (ds > 1e-5) shiftFighter(f, I.dx * ds, I.dz * ds);
   I.t += dt;
   const u = Math.min(1, I.t / I.T);
+  I.u = u;
   const P = I.pose(I, u);
   const cur = placeIai(f, P.H, P.D, false);
   // 베는 몫(u ≥ ab): 잔상 점·쓸린 자리 맞음
@@ -522,7 +526,13 @@ function stepIai(f, combat) {
       const D = I.prev.D.clone().lerp(cur.D, w).normalize();
       const tip = B.clone().addScaledVector(D, f.weaponCfg.bladeLength);
       I.arc.pts.push([B.x, B.y, B.z, tip.x, tip.y, tip.z]);
-      if (!I.hit && foe.alive && foe.state !== 'dead') {
+      // 이베리아 휩쓸기: 몸보다 먼저 상대 칼에 닿으면 막힘 — 맞음 판정을 멈추고 상대를 밀어낸다 (sweepShove), 칼은 그 자리에서 멈춤
+      if (I.block && !I.hit && !I.blocked && foe.armed && foe.sword && segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist) {
+        I.blocked = true;
+        I.uEnd = Math.max(I.ab, u - (1 - w) * (dt / I.T));
+        sweepShove(f, foe);
+      }
+      if (!I.hit && !I.blocked && foe.alive && foe.state !== 'dead') {
         let best = null;
         for (const [h, info] of f.colliderInfo) {
           if (info.fighter !== foe || info.kind === 'weapon' || info.detached) continue;
@@ -541,7 +551,7 @@ function stepIai(f, combat) {
     }
   }
   I.prev = cur;
-  if (u >= 1) endIai(f, combat);
+  if (u >= 1 || I.blocked) endIai(f, combat);
 }
 
 function endIai(f, combat) {
@@ -561,8 +571,9 @@ function endIai(f, combat) {
     b.setAngvel({ x: 0, y: 0, z: 0 }, true);
   }
   // 따라 베기 끝 자세를 경직 동안 붙잡는다 (앞으로 뻗은 채 굳음)
-  const K = { body: I.body };
-  const E = I.pose(I, 1);
+  const uE = I.uEnd ?? 1; // 막힌 휩쓸기는 막힌 자리에서 굳는다
+  const K = { body: I.bodyAt ? I.bodyAt(uE) : I.body };
+  const E = I.pose(I, uE);
   const th = f.skill.thrustPose;
   th.w = 1;
   th.hand[0] = E.H.x;
@@ -576,6 +587,7 @@ function endIai(f, combat) {
   th.pitch = K.body.pitch * D2R;
   th.drop = K.body.drop;
   f.iaiHoldT = I.hold;
+  f.iaiHoldKind = I.kind;
   f.iaiFade = 0;
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
   f.tipPrev = f.bladePoint(1, new THREE.Vector3());
@@ -583,7 +595,7 @@ function endIai(f, combat) {
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
   const res = I.res;
-  f.instantResult = { ok: true, hit: !!res, energy: res?.energy ?? 0, part: I.hit?.info.part ?? null, zone: res?.zone ?? null, type: res?.type ?? null, step: I.slide, iai: I.kind };
+  f.instantResult = { ok: true, hit: !!res, energy: res?.energy ?? 0, part: I.hit?.info.part ?? null, zone: res?.zone ?? null, type: res?.type ?? null, step: I.slide, iai: I.kind, blocked: !!I.blocked };
   f.iai = null;
 }
 
@@ -621,6 +633,8 @@ export function iaiReadyPose(f, on, dt) {
   }
   const w0 = f.iaiReadyW ?? 0;
   if (!on && w0 <= 0) return;
+  // 대기에 들어가는 순간 앞발을 내딛어 발을 넓게 (GIF 첫 장면 — 10/10 04:2x)
+  if (on && w0 <= 0 && f.gait?.active && SECRET.stance.iai.step > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.stance.iai.step, duration: 0.35 });
   const w = on ? Math.min(1, w0 + dt / 0.35) : Math.max(0, w0 - dt / 0.12);
   f.iaiReadyW = w;
   const R = SECRET.iaiReady;
@@ -653,29 +667,48 @@ export function requestSweep(f, opt = {}) {
   f.instantResult = null;
 }
 
-/** 휩쓸기 길의 u(0~1) 자리 (몸 기준): 올림 → 머리 위 고리 한 바퀴 → 오른 어깨 위 → 사선으로 왼 허리 앞 */
+/** 휩쓸기 길의 u(0~1) 자리 (몸 기준): 지금 손 → 오른 어깨 뒤로 멀리 감기(wind) → 가운데를 지나 왼쪽 끝까지 한 번 가로 (고리 없음 — 10/10 04:4x) */
 function sweepPose(I, u) {
   const P = SECRET.iberianSweepPath;
-  if (u < P.raise) {
-    // 지금 손 → 머리 위 고리 시작
-    const v = u / P.raise;
-    const H = I.A.H.clone().lerp(new THREE.Vector3(...P.loopC).add(new THREE.Vector3(Math.cos(P.loopFrom * D2R) * P.loopR, 0, Math.sin(P.loopFrom * D2R) * P.loopR)), v);
-    const D0 = dirOf(P.loopFrom, P.loopEl);
-    const q = new THREE.Quaternion().setFromUnitVectors(I.A.D, D0);
-    return { H, D: I.A.D.clone().applyQuaternion(new THREE.Quaternion().slerp(q, v)).normalize() };
+  if (u < P.wind) {
+    const v = u / P.wind;
+    const k = v * v * (3 - 2 * v);
+    const H = I.A.H.clone().lerp(new THREE.Vector3(...P.w0.hand), k);
+    const q = new THREE.Quaternion().setFromUnitVectors(I.A.D, I.DW);
+    return { H, D: I.A.D.clone().applyQuaternion(new THREE.Quaternion().slerp(q, k)).normalize() };
   }
-  if (u < P.cut) {
-    // 머리 위 큰 고리: 손은 머리 위 작은 원, 칼은 위로 기운 채 한 바퀴 (loopFrom → loopFrom + loopTurn)
-    const v = (u - P.raise) / (P.cut - P.raise);
-    const a = P.loopFrom + P.loopTurn * v;
-    const H = new THREE.Vector3(...P.loopC).add(new THREE.Vector3(Math.cos(a * D2R) * P.loopR, 0, Math.sin(a * D2R) * P.loopR));
-    return { H, D: dirOf(a, P.loopEl) };
-  }
-  // 사선: 고리 끝(오른 어깨 위, 칼끝 뒤 위) → 가운데(앞 아래) → 왼 허리 앞(왼 아래)
-  const v = (u - P.cut) / (1 - P.cut);
-  const [A, B, w] = v < 0.5 ? [P.c0, P.c1, v / 0.5] : [P.c1, P.c2, (v - 0.5) / 0.5];
+  // 가로: 감은 자리 → 가운데 → 왼쪽 끝 (칼날 가로 각 165° → 10° → −100°, 한 호)
+  const v = (u - P.wind) / (1 - P.wind);
+  const [A, B, w] = v < 0.55 ? [P.w0, P.c1, v / 0.55] : [P.c1, P.c2, (v - 0.55) / 0.45];
   const H = new THREE.Vector3(...A.hand).lerp(new THREE.Vector3(...B.hand), w);
   return { H, D: dirOf(A.yaw + (B.yaw - A.yaw) * w, A.el + (B.el - A.el) * w) };
+}
+
+/** 휩쓸기 동안 몸 비틀기 (덧씌우기 칸 몸 값): 감기에서 오른쪽으로 감고(w0.body) → 베며 몸 전체를 왼쪽으로 돌린다(body) */
+function sweepBody(u) {
+  const P = SECRET.iberianSweepPath;
+  const A = P.w0.body;
+  const B = P.body;
+  const k = u < P.wind ? 0 : Math.min(1, (u - P.wind) / (1 - P.wind));
+  const t = u < P.wind ? u / P.wind : 1;
+  const mix = (key) => (u < P.wind ? A[key] * t : A[key] + (B[key] - A[key]) * k);
+  return { pelvisYaw: mix('pelvisYaw'), chestYaw: mix('chestYaw'), pitch: mix('pitch'), drop: mix('drop') };
+}
+
+/** 이베리아 휩쓸기가 막혔다 (내 칼이 상대 칼에 몸보다 먼저 닿음): 상대 가슴·골반에 나에게서 먼 쪽으로 충격량 SECRET.iberianShove (물리 — 넘어짐 보장 없음) */
+function sweepShove(f, foe) {
+  const c = f.bodies.chest.translation();
+  const fc = foe.bodies.chest.translation();
+  let dx = fc.x - c.x;
+  let dz = fc.z - c.z;
+  const d = Math.hypot(dx, dz) || 1;
+  dx /= d;
+  dz /= d;
+  const J = SECRET.iberianShove;
+  for (const [n, k] of [['chest', 0.6], ['pelvis', 0.4]]) {
+    const b = foe.bodies[n];
+    if (b) b.applyImpulse({ x: dx * J * k, y: 0, z: dz * J * k }, true);
+  }
 }
 
 /** 휩쓸기 시작 (startIai 가 req.sweep 이면 부른다) */
@@ -689,10 +722,10 @@ function startSweep(f, combat, req) {
   const d = Math.max(1e-3, Math.hypot(dx, dz));
   dx /= d;
   dz /= d;
-  // 옆(즐겨 도는 쪽) + 닿기에 모자라면 앞 [해석]: 옆 = 앞을 칼 든 쪽으로 90° (yaw 틀 z+)
+  // 옆(즐겨 도는 쪽)으로 비켜 딛으며 반걸음 뒤(SECRET.iberianSweepBack — 호 안쪽으로 붙은 상대와 틈을 벌림, 10/10 04:4x) [해석]: 옆 = 앞을 칼 든 쪽으로 90° (yaw 틀 z+)
   const rx = -dz * req.side; // 오른쪽(칼 든 쪽) = (−앞z, 앞x)
   const rz = dx * req.side;
-  const fwd = Math.min(clamp(d - M.contact, 0, SECRET.iberianSweepSide), Math.max(0, d - M.clinch));
+  const fwd = -Math.min(SECRET.iberianSweepBack, Math.max(0, M.reach - d)); // 뒤로 — 내 간격 끝을 넘지 않게
   const side = SECRET.iberianSweepSide;
   const yaw = f.yaw.clone();
   const inv = yaw.clone().invert();
@@ -702,8 +735,8 @@ function startSweep(f, combat, req) {
   f.iaiRopes = { grip: !!f.gripCone, shoulder: !!f.shoulderRopes };
   ropes(f, false);
   f.iai = {
-    kind: 'sweep', slideShare: SECRET.iberianSweepSlideShare, J: SECRET.iberianSweepJ, body: SECRET.iberianSweepPath.body, hold: SECRET.stiff.iberian ?? 0.3, pose: sweepPose,
-    t: 0, T: SECRET.iberianSweepTime, ab: SECRET.iberianSweepPath.cut, A: { H: AH, D: AD }, yaw,
+    kind: 'sweep', slideShare: SECRET.iberianSweepSlideShare, J: SECRET.iberianSweepJ, body: SECRET.iberianSweepPath.body, bodyAt: sweepBody, hold: SECRET.stiff.iberian ?? 0.3, pose: sweepPose,
+    t: 0, T: SECRET.iberianSweepTime, ab: SECRET.iberianSweepPath.wind, A: { H: AH, D: AD }, DW: dirOf(SECRET.iberianSweepPath.w0.yaw, SECRET.iberianSweepPath.w0.el), yaw, block: true, blocked: false,
     slide: 1, dx: dx * fwd + rx * side, dz: dz * fwd + rz * side, sideW: [rx, 0, rz],
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null,
   };
@@ -711,4 +744,59 @@ function startSweep(f, combat, req) {
   f.instantGhost = Math.ceil((f.iai.T + SECRET.instantNoCollide) / (combat.dt || 1 / 120)) + 1;
   const P0 = sweepPose(f.iai, 0);
   f.iai.prev = placeIai(f, P0.H, P0.D, true);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  비기 자세 (10/10 04:2x 사장님 '고노센은 기술은 좋은데 자세가 어정쩡 — 발도술처럼 다리를 많이 굽히고 숙여야. 이탈리아도 마찬가지, 런지 자세 봐봐'):
+//   f.secretStance = { drop(골반 더 낮춤 m), pitch(몸통 앞 숙임 rad), rate(골반 높이 바꾸는 빠르기 m/s), offArm?(빈팔 어깨 목표 — 뒤로 뻗기) } 를
+//   gait.js(골반 목표 높이 hNomT·빠르기)와 fighter.js applyPose(몸통 숙임 bend · 빈팔)가 읽는다. 무게 w 로 켜고(inTime) 끈다(outTime) — 없으면 null(오늘 그대로).
+//   일본 'iai': 발도 대기(iaiReadyW) · 발도 · 뻗은 경직 동안 / 이탈리아 'lunge': Passata 찌르기 시작부터 f.lungeT 초.
+//   무릎은 낮춘 골반과 딛은 발 사이 다리 IK(gait)가 굽힌다 — 앞발을 멀리 딛을수록 앞무릎이 깊고 뒷다리는 펴진다
+// ─────────────────────────────────────────────────────────────
+function stanceTick(f, dt) {
+  const ST = SECRET.stance;
+  let key = null;
+  let want = 0;
+  if ((f.iai && f.iai.kind === 'iai') || ((f.iaiHoldT > 0 || f.iaiFade > 0) && f.iaiHoldKind === 'iai')) {
+    key = 'iai';
+    want = 1;
+  } else if ((f.iaiReadyW ?? 0) > 0) {
+    key = 'iai';
+    want = f.iaiReadyW;
+  } else if (f.lungeT > 0) {
+    key = 'lunge';
+    want = 1;
+    f.lungeT -= dt;
+  }
+  if (!f.alive || f.state !== 'stand') {
+    key = null;
+    want = 0;
+  }
+  const cur = (f._stance ??= { key: null, w: 0 });
+  if (key && (cur.key === key || cur.w <= 0)) {
+    cur.key = key;
+    const S = ST[key];
+    const tin = key === 'iai' && f.iai ? 0.06 : S.inTime; // 발도 순간은 곧장 낮게
+    cur.w = cur.w < want ? Math.min(want, cur.w + dt / tin) : Math.max(want, cur.w - dt / S.outTime);
+  } else if (cur.key) cur.w = Math.max(0, cur.w - dt / ST[cur.key].outTime);
+  if (!cur.key || cur.w <= 0) {
+    cur.w = 0;
+    cur.key = null;
+    if (f.secretStance) f.secretStance = null;
+    return;
+  }
+  const S = ST[cur.key];
+  const st = (f.secretStance ??= {});
+  // 발도·뻗은 경직 동안은 덧씌우기 칸 몸(iaiPath.E.body — 낮춤·숙임)이 함께 얹히니 그만큼 뺀 값(S.draw)으로 — 합이 대기 자세 깊이 안팎 (10/10 캡처: 둘을 다 얹으면 골반 0.58 m 쪼그려 앉음·숙임 54°)
+  const drawing = cur.key === 'iai' && S.draw && (f.iai?.kind === 'iai' || ((f.iaiHoldT > 0 || f.iaiFade > 0) && f.iaiHoldKind === 'iai'));
+  st.drop = (drawing ? S.draw.drop : S.drop) * cur.w;
+  st.pitch = (drawing ? S.draw.pitch : S.pitch) * D2R * cur.w;
+  st.rate = S.rate;
+  st.offArm = S.offArm != null ? 0.5 + (S.offArm - 0.5) * cur.w : undefined;
+  st.reach = S.reach != null ? GAIT_REACH + (S.reach - GAIT_REACH) * cur.w : undefined;
+}
+
+/** 런지 자세를 켠다 (이탈리아 Passata 찌르기 시작 — AI startStrike·플레이어 secretStrikeStart) */
+export function startLunge(f) {
+  f.lungeT = SECRET.stance.lunge.time;
 }

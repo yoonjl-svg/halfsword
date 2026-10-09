@@ -28,7 +28,7 @@ import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸�
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
-import { requestInstant, requestIai, requestSweep, iaiReadyPose } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -1040,6 +1040,7 @@ export class AI {
     if (this.secretRun && !this.secretRun.burst) {
       // 결정타 연출 (10/9 23:5x): 비기가 터뜨려지는 순간(그 비기의 첫 칼이 나감) — main.js 가 이 수가 바뀌면 화면 시간을 잠깐 늦춘다. 물리·난수와 상관없음
       this.secretRun.burst = true;
+      if (this.secretRun.S.do.stance === 'lunge') startLunge(this.me); // 이탈리아 런지 자세 (10/10 04:2x)
       this.secretBursts = (this.secretBursts ?? 0) + 1;
     }
     // 베기가 끝나면 손은 끝 자세에 머문다 (이어 베기는 칼의 관성과 검술 층이 만든다)
@@ -1257,7 +1258,10 @@ export class AI {
     this.stats.flows = (this.stats.flows ?? 0) + 1;
     this.startStrike();
     const mx = (hand[0] + t.from[0]) / 2;
-    this.path.unshift([clamp(mx + Math.sign(mx || hand[0] || 1) * 0.12, -0.6, 0.6), (hand[1] + t.from[1]) / 2], t.from.slice());
+    if (t.pre) {
+      this.path.unshift(...t.pre.map((p) => p.slice()), t.from.slice()); // 연환삼격 이음새 고리 (10/10 04:4x — 물레 점 대신 머리 위 한 바퀴)
+      if (this.secretRun) this.secretRun.powerFrom = 0; // 고리 동안은 힘 창 밖 — secretStrike 가 do.loopHand 빠르기로 (베기 길 점부터 힘·판정 배율)
+    } else this.path.unshift([clamp(mx + Math.sign(mx || hand[0] || 1) * 0.12, -0.6, 0.6), (hand[1] + t.from[1]) / 2], t.from.slice());
     return true;
   }
 
@@ -1579,14 +1583,14 @@ export class AI {
   secretScan(dt, c, r) {
     const S = this.secret;
     const W = [].concat(S.when);
-    const foeEv = W.includes('threat') || W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge');
+    const foeEv = W.includes('threat') || W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge') || W.includes('inside'); // inside: 이베리아 호 안쪽 (10/10 04:4x)
     if (!foeEv) return false;
     const E = this.secretEv;
     const s0 = this.sense.seen(0);
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me); // 사건 판정은 플레이어 창과 같은 함수 (secret.js)
+    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { reach: this.M.reach, dt, st: E }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
@@ -1892,6 +1896,7 @@ export class AI {
       }
       run.landed = R.hit;
       run.peakE = R.energy; // (순간 베기는 칼끝 추정 대신 그 상처 에너지 J)
+      if (R.blocked) { const T = this.secretStat(run.S); T.blocked = (T.blocked ?? 0) + 1; } // 이베리아 휩쓸기가 막혀 밀어냄 (재기)
       this.secretStiffen();
       return;
     }

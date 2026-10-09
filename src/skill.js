@@ -27,7 +27,7 @@ import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
-import { requestInstant, requestIai, requestSweep } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, startLunge } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -508,7 +508,7 @@ export class Skill {
     if (run.flow) {
       const h = [this.f.handOffset.x, this.f.handOffset.y];
       const mx = (h[0] + t.from[0]) / 2;
-      run.path = [[THREE.MathUtils.clamp(mx + Math.sign(mx || h[0] || 1) * 0.12, -0.6, 0.6), (h[1] + t.from[1]) / 2], t.from.slice()];
+      run.path = t.pre ? [...t.pre.map((p) => p.slice()), t.from.slice()] : [[THREE.MathUtils.clamp(mx + Math.sign(mx || h[0] || 1) * 0.12, -0.6, 0.6), (h[1] + t.from[1]) / 2], t.from.slice()]; // 연환삼격 이음새 고리 (ai.js flowInto 와 같은 길)
       this.secretStrikeStart(true);
     } else {
       run.stage = 'chamber';
@@ -530,6 +530,7 @@ export class Skill {
     if (!run.burst) {
       run.burst = true;
       this.secretBursts++; // 결정타 연출 (main.js 가 화면 시간을 잠깐 늦춘다)
+      if (run.S.do.stance === 'lunge') startLunge(f); // 이탈리아 런지 자세 (10/10 04:2x)
     }
     // 걸음: 기술 걸음 칸이 있으면 그것(일본 앞발 lunge·이탈리아 뒷발 pass·중국 반걸음), 없으면 닿기에 모자랄 때 한 걸음 (AI stepTime 과 같은 뜻)
     const M = f.swordArt.measure;
@@ -666,9 +667,10 @@ export class Skill {
       return;
     }
     if (run.stage === 'strike') {
-      f.powerMul = secVal(D.power ?? 'power');
-      f.secretHit = SECRET.hitMul;
-      if (D.strength) f.strength = run.str0 * secVal(D.strength);
+      const inLoop = !!run.cur?.pre && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
+      f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power');
+      f.secretHit = inLoop ? 1 : SECRET.hitMul;
+      if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);
       // 칼끼리 맞물림 (ai.js checkBind 와 같은 기하)
       if (!run.bound && f.tipPrev && foe.tipPrev && segDist(f.bladePoint(0.1, _sf), f.tipPrev, foe.bladePoint(0.1, _sr), foe.tipPrev) < 0.07) run.bound = true;
@@ -680,7 +682,7 @@ export class Skill {
         const r = f.right(_sr);
         const lat = (fc.x - c.x) * r.x + (fc.z - c.z) * r.z;
         const tx = THREE.MathUtils.clamp(P[0] + THREE.MathUtils.clamp(lat, -0.4, 0.4) * 0.5, -0.6, 0.6);
-        if (this.secretMove(tx, P[1], L.strikeSpeed * handMul, dt)) run.path.shift();
+        if (this.secretMove(tx, P[1], L.strikeSpeed * (inLoop ? secVal(D.loopHand ?? 'handSpeed') : handMul), dt)) run.path.shift();
         return;
       }
       // 길 끝: 대기열(連環 다음 수)로 곧장, 독일은 맞물렸고 못 맞혔으면 Duplieren 한 번, 아니면 따라 지나감

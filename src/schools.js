@@ -384,14 +384,17 @@ const ITALIAN_SECRET = {
   nameKo: 'Passata in contratempo (박자 밑 찌르기)',
   when: ['foeRaise', 'foeCharge'],
   cond: { dist: 'italianDist', commit: 'italianCommit' }, // commit: 칼을 드는 사건은 결심한 공격(손 빠르기 문턱)만 — 10/9 23:5x 발동 줄이기
-  do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'pass', push: 'stepPush' } }, // push: 10/9 4차 걸음 밀기
+  do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'lunge', push: 'stepPush' }, stance: 'lunge' }, // 10/10 04:2x 런지 사진: 앞발을 멀리(lunge — 전: 뒷발 지나 보내기 pass), 찌르는 동안 런지 자세(SECRET.stance.lunge) // push: 10/9 4차 걸음 밀기
   src: 'Capo Ferro 1610 contratempo · passata sotto 「punta in falso, che vien di giù in su」 PDF 53쪽 [원문·원전 2차] · 뒷발 지나 보내기(passata) [원전 2차] · 걸음 수 [추정]',
 };
 // 이베리아 Molinete altibaixo (휘돌려 내려치기): 끊기지 않은 베기 셋 뒤, 옆으로 비껴 딛으며 칼을 한 바퀴 휘돌려(몰리넬로 고리) 지붕에서 곧게 내려친다
 const IBERIAN_SECRET = {
   name: 'molineteTalho',
-  nameKo: 'Molinete talho (휘돌려 사선 베기 · 가칭)',
-  when: 'bindCount', // 10/10 01:2x 사장님 안: 내 베기가 피해 없이 칼끼리만 부딪힌 횟수가 SECRET.iberianBinds(3) 가 되면 다음 공격이 비기 (secret.js BindCount)
+  nameKo: 'Talho de través (비켜 서며 크게 가로 베기 · 가칭)', // 10/10 04:4x 고리를 뺀 큰 가로 베기 (전: 'Molinete talho (휘돌려 사선 베기)') — 안 이름 molineteTalho 는 재기 칸 이름이라 그대로
+  // 10/10 04:4x 사장님: 상대가 내 칼 호 안쪽으로 밀고 들어오면(가슴 거리 < reach − SECRET.iberianInside, 다가오는 중이거나 SECRET.iberianInsideDwell 초 머묾 — secret.js insideEvent)
+  //  옆으로 비켜 딛으며(반걸음 뒤 섞음) 칼을 오른 어깨 뒤로 멀리 감았다가 몸 전체를 돌려 크게 한 번 가로로 쓸어 벤다(secret_instant.js sweepPose — 고리 없음). 막히면 밀어냄(SECRET.iberianShove)
+  when: 'inside',
+  // (전 10/10 01:2x: when 'bindCount') 사장님 안: 내 베기가 피해 없이 칼끼리만 부딪힌 횟수가 SECRET.iberianBinds(3) 가 되면 다음 공격이 비기 (secret.js BindCount)
   // (전 10/9 23:5x: when 'combo' — 끊기지 않은 베기 comboN 3 번 + 셋째 칼이 닿음 cond.touch. 그 전: comboN 3 만) // 10/9 23:5x 발동 줄이기: 이어진 베기 SECRET.comboN 번의 마지막이 닿았을 때(맞힘·맞물림)만 [확인 전] — comboN 4 는 AI 이어 치기 상한(2~3)에 걸려 48 판 1 번뿐이라 3 으로 두고 이 조건을 더함
   // 길 = 라이브러리 몰리넬로 고리(낮은 오른쪽 → 옆 지킴 → 오른 어깨) → 지붕 → 고유 altibaixo 길(내려베고 되올림). 서보 힘 창은 지붕에 닿은 뒤부터(내려치는 마지막 구간 — powerFrom = 지난 길 점 수)
   //  10/9 후속(디렉터 '휘돌림이 가속이 되게'): 첫 꼴(지금 손 → 낮은 오른쪽 → 옆 지킴 → 오른 어깨 → 지붕 → 내려침, 한 길)은 붙은 거리에서 고리가 상대 다리를 스치고
@@ -439,9 +442,10 @@ const CHINESE_SECRET = {
   //  (전: 첫 칼의 무리로 두 수 — 아래 next·group 은 자료로 남김, seq 가 있으면 seq)
   do: {
     seq: [
-      { name: 'lianhuanYao', nameKo: '요격 (腰擊)', from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
-      { name: 'lianhuanLiao', nameKo: '요략 (撩掠) · 걷어 올려 베기', from: [-0.46, -0.4], path: [[-0.22, -0.3], [0.08, -0.06], [0.44, 0.38]], open: 'UR', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
-      { name: 'lianhuanTanfu', nameKo: '탄복자 (坦腹刺)', from: G.pflugR, path: [[0.08, -0.14], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      { name: 'lianhuanYao', nameKo: '요격 (腰擊)', pre: [[-0.3, 0.42], [0.08, 0.58], [0.46, 0.4]], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      // pre (10/10 04:4x 사장님 '현란한 고리 궤적은 중국 연환삼격으로 — 세 수 이음새에 고리, 검무처럼'): 앞 수 끝에서 다음 수 준비 자세(from)로 가는 동안 손이 머리 위로 한 바퀴 도는 패드 점 (물레 점 대신 — ai.js flowInto · skill.js secretNextMove)
+      { name: 'lianhuanLiao', nameKo: '요략 (撩掠) · 걷어 올려 베기', pre: [[-0.42, 0.4], [0.02, 0.56], [0.42, 0.42], [0.1, 0.3], [-0.3, 0.1]], from: [-0.46, -0.4], path: [[-0.22, -0.3], [0.08, -0.06], [0.44, 0.38]], open: 'UR', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      { name: 'lianhuanTanfu', nameKo: '탄복자 (坦腹刺)', pre: [[0.1, 0.56], [-0.4, 0.42], [-0.2, 0.15], [0.2, 0.0]], from: G.pflugR, path: [[0.08, -0.14], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
     ],
     next: {
       yao: [['stichOchs'], ['zuoyi']], // 腰擊 「向前進步逆鱗」 쪽166/0580 → 逆鱗刺 「寃步左翼擊」 쪽173/0587 → 左翼擊
@@ -450,6 +454,7 @@ const CHINESE_SECRET = {
       default: [['zwerch', 'zwerchL', 'yaoji'], ['stichOchs']], // 찌르기(坦腹·左夾 「進步腰擊」 쪽158·170) 와 그 밖 → 腰擊 → 逆鱗刺
     },
     group: { zwerch: 'yao', zwerchL: 'yao', yaoji: 'yao', chebuYaoji: 'yao', stichOchs: 'niLin', zuoyi: 'zuoYi' },
+    loopHand: 'chineseLoopHand', // 이음새 고리(pre) 손 빠르기 = 베기 빠르기 × 이 값 (10/10 04:4x — 수마다 ≈0.5 s 검무)
   },
   src: '조선세법 세 끝 이음 — 腰擊勢 「進步逆鱗」 무비지 쪽166/0580 · 逆鱗勢 「寃(掣)步左翼擊」 쪽173/0587 · 左翼勢 「寃步逆鱗刺」 쪽156/0570 · 坦腹勢 「進步腰擊」 쪽158/0572 [원문] · 검결가 「滾手連環」 쪽151 [원문] · 세 수를 한 동작으로 잇기 [해석] · 이름 가칭',
 };

@@ -296,6 +296,9 @@ if (mode === 'poses') {
   let XAm = null;
   const techE = {};
   const geo = {}; // 닿는 순간 기하 (기술별)
+  const falls = { all: 0, secret: 0, stance: 0 }; // 넘어짐 계기 (10/10 자세) — stance: 비기 자세(f.secretStance) 동안·뒤 1 s
+  const breaks = { me: 0, foe: 0 }; // 칼 부러짐 계기 (10/10 2단계): 시험 쪽 · 상대
+  const seqT = {}; // 여러 수 비기(연환삼격) 수마다 걸린 시간 (s): 수 이름 → [합, n] — 다음 수 시작 또는 비기 끝까지
   const hitMs = {}; // 기술별 칼 나감 → 첫 상처 ms (비기는 낸 때 → 첫 상처도)
   const estAll = [];
   const woundAll = [];
@@ -401,8 +404,22 @@ if (mode === 'poses') {
       let cur = null; // 지금 재는 베기 { name, off0, ang0, done }
       let stepN0 = 0, fallUntil = -1, fallName = null;
       let gPrev = null, wPrev = false, rIn = -1; // 기질 계기: 지난 스텝 자세 이름·간 보기였나 · 간격 끝 안에 든 시각(없으면 −1)
+      let xPrevState = X.state; // 넘어짐 계기 (10/10 자세): 시험 쪽이 서 있다가 쓰러지거나 무릎 꿇은 수 · 비기 동안·직후(1 s) 몫
       for (let i = 0; i < 40 / DT; i++) {
         G.step();
+        if (xPrevState === 'stand' && (X.state === 'down' || X.state === 'getup')) {
+          falls.all++;
+          if (XA?.secretRun || (XA && XA._secEnd != null && G.t - XA._secEnd < 1)) falls.secret++;
+          if (X.secretStance || (X._stEnd != null && G.t - X._stEnd < 1)) falls.stance++;
+        }
+        if (X.secretStance) X._stEnd = G.t;
+        { const run = XA?.secretRun; const tn = run && XA.secret?.do?.seq ? XA.tech?.name : null; // 수 바뀜 = 다음 수 시작
+          if (XA && XA._seqCur && XA._seqCur.n !== tn) { const A = (seqT[XA._seqCur.n] ??= [0, 0]); A[0] += G.t - XA._seqCur.t; A[1]++; XA._seqCur = null; }
+          if (XA && tn && !XA._seqCur) XA._seqCur = { n: tn, t: G.t }; }
+        if (XA?.secretRun) XA._secEnd = G.t;
+        xPrevState = X.state;
+        if (X.weaponBroken && !X._brkSeen) { X._brkSeen = true; breaks.me++; }
+        if (X.foe?.weaponBroken && !X.foe._brkSeen) { X.foe._brkSeen = true; breaks.foe++; }
         for (const [f, ring] of tipRing) { // 칼끝 추정 에너지 ½·m·v² (0.2 s = 24 스텝)
           const v = f.tipVel;
           const e = 0.5 * (f.swordProps?.m ?? 1.5) * (v.x * v.x + v.y * v.y + v.z * v.z);
@@ -491,6 +508,7 @@ if (mode === 'poses') {
         A.landed += v.landed;
         A.E += v.E;
         A.Emax = Math.max(A.Emax, v.Emax);
+        A.blocked = (A.blocked ?? 0) + (v.blocked ?? 0);
       }
       for (const [k, v] of Object.entries(XA?.stats.techStep ?? {})) {
         const A = (stepAgg[k] ??= { req: 0, ok: 0 });
@@ -503,6 +521,9 @@ if (mode === 'poses') {
   const pc = (v) => `${Math.round(100 * v)}%`;
   const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, process.env.USED_ALL === '1' ? 99 : 14).map(([k, v]) => `${k} ${v}`).join(', ');
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
+  console.log(`  넘어짐 (시험 쪽 서 있다 쓰러짐·무릎): 모두 ${falls.all} · 비기 동안·뒤 1 s ${falls.secret} · 비기 자세 동안·뒤 1 s ${falls.stance}`);
+  console.log(`  칼 부러짐: 시험 쪽 ${breaks.me} · 상대 ${breaks.foe}`);
+  if (Object.keys(seqT).length) console.log(`  비기 수마다 시간 (s, 다음 수 시작·끝까지): ${Object.entries(seqT).map(([k, [t, n]]) => `${k} ${(t / n).toFixed(2)} (n${n})`).join(' · ')}`);
   const fmt = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || '-';
   console.log(`  속임수: ${fmt(feintUsed)} · 맞받아 베기: ${fmt(counterUsed)}`); // 둘째 줄 (10/9 고유 동작 단계 — 첫 줄은 전과 같다)
   // 셋째 줄 (10/9 패시브 단계): 시험 쪽 패시브 — 이름 낸 수/굴린 수, 기술 없음 건너뜀
@@ -516,7 +537,7 @@ if (mode === 'poses') {
     const W = secWound[secName] ?? [];
     const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
     const mx = (a) => (a.length ? Math.max(...a) : 0);
-    console.log(`  비기 [${secName ?? '-'}]: ${secName && secName !== '-' ? `낸 ${A.fired} / 맞힘 ${A.landed} · 상처 에너지 평균 ${avg(W).toFixed(0)} J · 최대 ${mx(W).toFixed(0)} J (상처 ${W.length}) · 칼끝 추정 평균 ${A.landed ? (A.E / A.landed).toFixed(0) : '-'} J · 최대 ${A.Emax.toFixed(0)} J` : '-'}`);
+    console.log(`  비기 [${secName ?? '-'}]: ${secName && secName !== '-' ? `낸 ${A.fired} / 맞힘 ${A.landed}${A.blocked ? ` · 막혀 밀어냄 ${A.blocked}` : ''} · 상처 에너지 평균 ${avg(W).toFixed(0)} J · 최대 ${mx(W).toFixed(0)} J (상처 ${W.length}) · 칼끝 추정 평균 ${A.landed ? (A.E / A.landed).toFixed(0) : '-'} J · 최대 ${A.Emax.toFixed(0)} J` : '-'}`);
     // 기술별 맞힘 에너지 (상처 J): 상처 수 많은 순 12 + 비기(★)·真向(oberhau)·altibaixo 는 늘
     const rows = Object.entries(techE).sort((a, b) => b[1].length - a[1].length);
     const keep = new Set(rows.slice(0, 12).map(([k]) => k));
