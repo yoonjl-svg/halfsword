@@ -56,6 +56,7 @@ export class AI {
     this.me = me;
     this.foe = foe;
     this.sense = new Senses(me, foe);
+    me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
     this.persona = persona || {};
     // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)
     if (this.persona.close) me.canShove = true;

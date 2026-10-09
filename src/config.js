@@ -115,6 +115,7 @@ export const CLOSE = {
 
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
 export const GAIT = {
+  school: 1, // 유파 걸음 (10/10 비싼 층, docs/strike/school_gait_design_2026-10-10.md): 1 = 무기 유파의 TRADITIONS[t].gait 를 덮음(독일·무유파는 칸 없음 = 그대로), 0 = 모든 유파 같은 걸음(전 판). `?schoolGait=0`
   footExtra: 2, // 딛은 발 무게에 더하는 몫(kg): 신발·쇠 발싸개. 딛은 발의 물리 계산이 더 잘 수렴한다 (내딛는 발은 원래 무게)
   assist: 0.2, // 10/1 21:10 사장님 결정(디렉터 권고): 0.3 → 0.2. 보이지 않는 힘이 받쳐 주는 몸무게 비율 (나머지는 다리 관절 → 발 → 땅). 0이면 다리가 전부. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 놀 수 있는 칸 (손맛 바닥 통과 = legs asis 10 칸) 중 실전 동작 유사도 1 위 58.5 (docs/strike/support_optimum_2026-10-01.md)
   handover: 0.6,
