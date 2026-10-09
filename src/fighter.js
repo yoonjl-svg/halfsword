@@ -311,6 +311,7 @@ export class Fighter {
     this.canShove = false;
     this.stickX = 0; // 스틱 원값 (감정 배수·검술 층 덮어쓰기 전). 플레이어는 main.js, AI 는 moveFeet 가 쓴다
     this.stickY = 0;
+    this.techCue = null; // 기술 알림 { text, kind:'passive'|'unique', school, schoolKo, t } — AI 가 유파 패시브·고유 동작을 낼 때 적고, main.js 가 상대 것만 화면 가운데에 보인다 (10/9)
     this.closeArmed = false; // 걸쇠: 안쪽에서 스틱을 안 밀면 켜지고, 밀면 발사
     this.barge = null; // 밀치는 중 { phase: 'step'|'press', L, stepOk, d0, req(걸음 요청), bent(누르기 중 팔이 굽어 있었나) } (발사 ~ 누르기 끝)
     this.bargeEnd = null; // 마지막 밀치기가 끝난 까닭 (refused·dropped·apart·release·armFull·state·swing·thrust)

@@ -198,6 +198,10 @@ export class AI {
     this.passiveAtk = null; // 지금 공격을 시작한 패시브 이름 (startAttack 이 지운다)
     this.pendingPassive = null; // 물러남 끝에 낼 패시브 (斂翅 꼴 at:'end')
     this.stepinArmed = true; // foeStepIn: 상대가 걸어 드는 한 번에 한 번만 굴린다
+    // 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 … 화면 중앙에 기술명', docs/strike/tech_cue_2026-10-09.md):
+    //  이 유파 고유 동작(길·속임수) 이름 표 — 꾸러미에 실제로 들어간 것(SKILL.schoolArt 켬 · ai:false 아님)만. 읽기만 하고 결정에는 안 쓴다(난수 없음)
+    const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter) : [];
+    this.uniqueByName = new Map(UQ.map((u) => [u.feint ? u.feint.name : u.name, u]));
     this.standoffArmed = true; // standoff: 대치 한 번에 한 번만 굴린다
     this.defBindSeen = false; // bindDef: 한 번 막는 동안 처음 맞닿음에만
     this.guard = this.pickGuard(null);
@@ -814,7 +818,16 @@ export class AI {
     //  빠르게 움직여야 한다. 느린 chamberSpeed로 챔버하면 정작 순간을 놓친다
     this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? L.windup * 0.15 : 0;
+    // 기술 알림: 유파 고유 동작을 시작하면 그 이름 (속임수를 골랐으면 속임수 이름으로 찾는다 — 그때 tech 는 가짜 기술). 패시브가 시작했으면 passiveFired 가 덮어쓴다
+    const U = this.uniqueByName.size ? this.uniqueByName.get(this.feint ? this.feint.name : tech.name) : null;
+    if (U) this.setTechCue(U.nameKo ?? U.feint?.name ?? U.name, 'unique');
     return true;
+  }
+
+  /** 기술 알림을 몸에 적는다 (me.techCue — main.js 가 상대 것만 화면 가운데에 잠깐 보인다). 새 것이 옛 것을 덮는다. 난수·결정과 상관없음 */
+  setTechCue(text, kind) {
+    const T = TRADITIONS[this.art.tradition];
+    this.me.techCue = { text, kind, school: this.art.tradition, schoolKo: T?.nameKo ?? '', t: performance.now() };
   }
 
   attack(dt, s, d, th) {
@@ -1431,6 +1444,7 @@ export class AI {
     const F = (this.stats.passives ??= {});
     F[P.name] = (F[P.name] ?? 0) + 1;
     this.passiveAtk = this.mode === 'attack' ? P.name : null;
+    this.setTechCue(P.nameKo ?? P.name, 'passive'); // 기술 알림 (패시브가 낸 고유 동작보다 앞선다 — startAttack 뒤에 불린다)
   }
 
   /** do.tech·do.chain 의 기술: 이름(들) 가운데 이 꾸러미에 있는 것 — 손에서 가까운 것(far 면 먼 것). 없으면 alt, 그것도 없으면 null */

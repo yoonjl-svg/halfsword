@@ -104,7 +104,7 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, trail: true, fpsCap: true };
+const DEFAULTS = { difficulty: 'normal', pixel: false, blood: true, sound: true, invertTilt: false, moveMode: 'stick', skill: '0.7', guardNames: true, techCue: true, trail: true, fpsCap: true };
 const settings = { ...DEFAULTS };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('gladiator-settings') || '{}'));
@@ -1413,6 +1413,35 @@ function updateGuardName(dt) {
   if (guardTimer <= 0) guardName.classList.remove('show');
 }
 
+// ── 유파 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 상태 메시지처럼 화면 중앙에 기술명 출력해') ──
+//  상대 AI 가 유파 패시브를 내거나 유파 고유 동작을 시작하면 ai.js 가 enemy.techCue 에 적는다 → 화면 가운데에 이름 한 줄 + 작은 유파 꼬리표를 잠깐.
+//  상대 것만(플레이어는 AI 가 없다). 새 알림이 옛 것을 덮는다. 싸움 중이 아니거나(메뉴·일시정지) 상대가 죽었거나 설정 '유파 기술 알림'을 끄면 숨긴다.
+//  자세 이름(#guardName)과 따로 논다. docs/strike/tech_cue_2026-10-09.md
+const techCueEl = $('techCue');
+const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작' };
+let techCueSeen = null;
+let techCueTimer = 0;
+function updateTechCue(dt) {
+  const c = enemy?.techCue ?? null;
+  const live = state === 'fight' && !!settings.techCue && !!enemy?.alive;
+  if (c && c !== techCueSeen) {
+    techCueSeen = c;
+    if (live) {
+      techCueEl.innerHTML = '';
+      const b = document.createElement('b');
+      b.textContent = c.text;
+      const tag = document.createElement('small');
+      tag.textContent = `${c.schoolKo ? `${c.schoolKo} · ` : ''}${TECH_CUE_KIND[c.kind] ?? ''}`;
+      techCueEl.append(b, tag);
+      techCueEl.dataset.kind = c.kind;
+      techCueEl.classList.add('show');
+      techCueTimer = 1.2;
+    }
+  }
+  techCueTimer -= dt;
+  if (!live || techCueTimer <= 0) techCueEl.classList.remove('show');
+}
+
 // ── 게임 루프 ──
 // 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다
 const perf = params.get('fps') ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
@@ -1540,6 +1569,7 @@ function frame(now) {
   if (perf) perf.frame(now, frameMs, physMs, renderMs, physSteps, capped, simWant, simGot, paint);
   trail.enabled = settings.trail && state === 'fight';
   if (paint) trail.draw(now / 1000, !input.isTouchDevice);
+  updateTechCue(dt); // 유파 기술 알림 — 싸움이 아닐 때(메뉴·일시정지)도 불러 숨긴다
 }
 
 // 메뉴 뒤 배경으로 보일 첫 판을 미리 만들어 둔다
