@@ -16,6 +16,11 @@ const PALETTE = {
   gold: 0xc4a06a,
   roof: 0xa9543c,
   green: 0x2e4739,
+  // 10/10 2차: Bologna's portico red — red-ochre plaster and brick behind pale stone columns.
+  plaster: 0xb35d3e,
+  plasterShade: 0x8c4a34,
+  brick: 0x9c5236,
+  libertasBlue: 0x24365f,
 };
 
 function plasterTexture() {
@@ -138,6 +143,82 @@ function pavingTexture(sunOffset) {
       polygon([root, tip, radial(rm, a + half)], PAVE.rayB, false);
     }
 
+    // ④' 양각·음각 (10/10 2차): same stone colour, relief only — each motif is
+    //    drawn as a pair of strokes offset toward and away from the sun
+    //    (sunOffset), so the lit and shaded lips read as carving (±4~7%).
+    //    Groove (음각): the lip nearer the sun is in shadow. Raised (양각): lit.
+    const toward = Math.hypot(sunOffset.x, sunOffset.z);
+    const tx = sunOffset.x / toward * 0.03, ty = sunOffset.z / toward * 0.03;
+    const HI = 'rgba(255,250,236,0.32)', LO = 'rgba(72,52,36,0.1)';
+    const relief = (draw, raised = false, k = 1, width = 0.07) => {
+      for (const [sgn, col] of [[1, raised ? HI : LO], [-1, raised ? LO : HI]]) {
+        ctx.save();
+        ctx.translate(tx * sgn, ty * sgn);
+        ctx.globalAlpha = k;
+        ctx.strokeStyle = ctx.fillStyle = col;
+        ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        draw();
+        ctx.restore();
+      }
+    };
+    const circle = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); };
+    // (a) Outer slabs, chequerwise: a circle with a square set in it — the plain
+    //     Renaissance 'circle and square' pavement figure. Grooves.
+    for (let row = 0; row < 20; row++) {
+      const y = -15 + row * 1.5 + 0.75;
+      for (let x = -15 - (row % 2) * 0.75 + 0.75, col = 0; x < 15; x += 1.5, col++) {
+        if ((row + col) % 2 || Math.hypot(x, y) < 10.15 || Math.abs(Math.max(Math.abs(x), Math.abs(y)) - 11.1) < 0.8) continue;
+        relief(() => {
+          circle(x, y, 0.5);
+          ctx.beginPath(); ctx.moveTo(x, y - 0.5); ctx.lineTo(x + 0.5, y); ctx.lineTo(x, y + 0.5); ctx.lineTo(x - 0.5, y); ctx.closePath(); ctx.stroke();
+        }, false, 1, 0.06);
+      }
+    }
+    // (b) The square frame: a raised running guilloche (two interlaced waves).
+    for (let side = 0; side < 4; side++) {
+      relief(() => {
+        ctx.rotate(side * Math.PI / 2);
+        for (const ph of [0, Math.PI]) {
+          ctx.beginPath();
+          for (let t = -10.9; t <= 10.9; t += 0.05) ctx.lineTo(t, -11.1 + Math.sin(t * Math.PI * 2 + ph) * 0.12);
+          ctx.stroke();
+        }
+      }, true, 1, 0.045);
+    }
+    // (c) The inscription band (9.0–9.4 m): the guards of Achille Marozzo's
+    //     Opera Nova (Bologna, 1536), cut in Roman capitals, between two raised fillets.
+    relief(() => { circle(0, 0, 8.98); circle(0, 0, 9.42); }, true, 1, 0.04);
+    const words = 'CODA LVNGA E STRETTA · PORTA DI FERRO STRETTA · GVARDIA ALTA · GVARDIA DI TESTA · GVARDIA DI FACCIA · CINGHIARA PORTA DI FERRO · BECCA CESA · BECCA POSSA · GVARDIA D\'INTRARE · CODA LVNGA E ALTA · OPERA NOVA · BOLOGNA MDXXXVI · ';
+    relief(() => {
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (let i = 0; i < words.length; i++) {
+        const a = -Math.PI / 2 + i / words.length * Math.PI * 2;
+        ctx.save();
+        ctx.translate(Math.cos(a) * 9.2, Math.sin(a) * 9.2);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.scale(0.01, 0.01);
+        ctx.font = 'bold 25px serif';
+        ctx.fillText(words[i], 0, 0);
+        ctx.restore();
+      }
+    }, false, 1);
+    // (d) Corner medallions: the cross of the city arms, raised in a ring.
+    for (const [x, y] of [[-11.1, -11.1], [11.1, -11.1], [11.1, 11.1], [-11.1, 11.1]]) {
+      relief(() => {
+        circle(x, y, 0.3);
+        ctx.beginPath(); ctx.moveTo(x - 0.2, y); ctx.lineTo(x + 0.2, y); ctx.moveTo(x, y - 0.2); ctx.lineTo(x, y + 0.2); ctx.stroke();
+      }, true, 1, 0.05);
+    }
+    // (e) The duel centre, barely there: a ring and two interlaced squares.
+    relief(() => {
+      circle(0, 0, 1.22);
+      for (const rot of [0, Math.PI / 4]) {
+        ctx.beginPath();
+        for (let k = 0; k < 4; k++) { const a = rot + k * Math.PI / 2; ctx.lineTo(Math.cos(a) * 1.08, Math.sin(a) * 1.08); }
+        ctx.closePath(); ctx.stroke();
+      }
+    }, false, 0.5, 0.05);
+
     // ⑤ Age: broad soft mottling, foot-worn lighter middle, dusty darker edges.
     for (let i = 0; i < 70; i++) {
       const x = (random() - 0.5) * 29, y = (random() - 0.5) * 29;
@@ -212,20 +293,22 @@ function skyTexture() {
   const random = rng(231);
   return canvasTex(512, 256, (ctx, w, h) => {
     const sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#7b9dba');
-    sky.addColorStop(0.34, '#a6bdcc');
-    sky.addColorStop(0.44, '#d5cbd0');
-    sky.addColorStop(0.5, '#e8ceb0');
-    sky.addColorStop(0.58, '#c7b8a0');
-    sky.addColorStop(1, '#b3b3a2');
+    // Late-autumn dusk: violet-blue overhead, rose, then an amber band at the horizon.
+    sky.addColorStop(0, '#4f5b86');
+    sky.addColorStop(0.26, '#7f7fa6');
+    sky.addColorStop(0.4, '#c98f8c');
+    sky.addColorStop(0.47, '#eba06c');
+    sky.addColorStop(0.51, '#f3bf7c');
+    sky.addColorStop(0.58, '#b98c74');
+    sky.addColorStop(1, '#8f7a6c');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, w, h);
     for (let i = 0; i < 26; i++) {
       const x = random() * w;
       const y = 55 + random() * 45;
       const cloud = ctx.createRadialGradient(x, y, 0, x, y, 55);
-      cloud.addColorStop(0, 'rgba(255,235,203,0.13)');
-      cloud.addColorStop(1, 'rgba(255,235,203,0)');
+      cloud.addColorStop(0, i % 3 ? 'rgba(255,170,120,0.2)' : 'rgba(120,96,128,0.18)');
+      cloud.addColorStop(1, 'rgba(255,170,120,0)');
       ctx.fillStyle = cloud;
       ctx.save();
       ctx.translate(x, y);
@@ -233,6 +316,74 @@ function skyTexture() {
       ctx.translate(-x, -y);
       ctx.fillRect(x - 60, y - 60, 120, 120);
       ctx.restore();
+    }
+  });
+}
+
+// Banner atlas, three 128×384 columns (top of canvas = top of banner):
+//  0 · the city arms of Bologna — quarterly, 1st and 4th white with a red cross,
+//      2nd and 3rd blue with LIBERTAS in gold on a bend, under a blue chief with
+//      gold lilies and a red label (the chief of Anjou); a red tail below.
+//  1 · a blue banner with LIBERTAS in gold, red head band.
+//  2 · the fencing school's red banner with crossed gold swords.
+function bannerTexture() {
+  return canvasTex(384, 384, (ctx) => {
+    const W = 128, H = 384;
+    const gold = '#d8b25e', red = '#9d2a2f', white = '#efe7d6', blue = '#24365f';
+    const border = (x0) => {
+      ctx.strokeStyle = gold; ctx.lineWidth = 6; ctx.strokeRect(x0 + 5, 5, W - 10, H - 10);
+      ctx.fillStyle = gold; ctx.fillRect(x0, 0, W, 16); // hanging sleeve
+    };
+    const libertas = (cx, cy, size, angle) => {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
+      ctx.fillStyle = gold; ctx.font = `bold ${size}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('LIBERTAS', 0, 0);
+      ctx.restore();
+    };
+    // 0: arms
+    {
+      const x0 = 0, top = 16, q = W / 2, qh = 104;
+      ctx.fillStyle = red; ctx.fillRect(x0, 0, W, H);
+      for (const [ix, iy] of [[0, 0], [1, 1]]) {
+        ctx.fillStyle = white; ctx.fillRect(x0 + ix * q, top + iy * qh, q, qh);
+        ctx.fillStyle = red; ctx.fillRect(x0 + ix * q + q / 2 - 6, top + iy * qh, 12, qh); ctx.fillRect(x0 + ix * q, top + iy * qh + qh / 2 - 6, q, 12);
+      }
+      for (const [ix, iy] of [[1, 0], [0, 1]]) {
+        const x = x0 + ix * q, y = top + iy * qh;
+        ctx.fillStyle = blue; ctx.fillRect(x, y, q, qh);
+        ctx.fillStyle = '#2d4378'; ctx.fillRect(x, y, q, 22); // chief
+        ctx.fillStyle = gold; for (let k = 0; k < 3; k++) ctx.fillRect(x + 9 + k * 18, y + 6, 6, 8);
+        ctx.fillStyle = red; ctx.fillRect(x + 4, y + 16, q - 8, 3); // label
+        ctx.save(); ctx.beginPath(); ctx.rect(x, y + 22, q, qh - 22); ctx.clip();
+        libertas(x + q / 2, y + 22 + (qh - 22) / 2, 12, -0.9);
+        ctx.restore();
+      }
+      ctx.fillStyle = gold; ctx.fillRect(x0, top + 2 * qh, W, 5);
+      border(x0);
+    }
+    // 1: blue LIBERTAS
+    {
+      const x0 = W;
+      ctx.fillStyle = blue; ctx.fillRect(x0, 0, W, H);
+      ctx.fillStyle = red; ctx.fillRect(x0, 16, W, 40);
+      libertas(x0 + W / 2, 215, 30, Math.PI / 2);
+      border(x0);
+    }
+    // 2: school banner
+    {
+      const x0 = 2 * W;
+      ctx.fillStyle = red; ctx.fillRect(x0, 0, W, H);
+      ctx.strokeStyle = gold; ctx.lineCap = 'round';
+      for (const d of [-1, 1]) {
+        ctx.save(); ctx.translate(x0 + W / 2, 170); ctx.rotate(d * 0.62);
+        ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(0, -95); ctx.lineTo(0, 70); ctx.stroke(); // blade
+        ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(-18, 70); ctx.lineTo(18, 70); ctx.stroke(); // quillons
+        ctx.beginPath(); ctx.arc(0, 78, 12, 0.2, Math.PI - 0.2); ctx.lineWidth = 4; ctx.stroke(); // knuckle ring
+        ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(0, 74); ctx.lineTo(0, 100); ctx.stroke(); // grip
+        ctx.restore();
+      }
+      ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x0 + W / 2, 300, 22, 0, Math.PI * 2); ctx.stroke();
+      border(x0);
     }
   });
 }
@@ -309,20 +460,20 @@ function loggiaShade(x, y, z) {
 export function buildLoggia(scene, { hemi, sun } = {}) {
   const random = rng(64091);
   const kit = new Kit(1947);
-  const fogColor = 0xd7c5ae;
-  // A low west sun over the open balustrade (24° high): long shadows run east
-  // across the court, and the same direction is baked into the floor texture.
-  const sunOffset = { x: -10, y: 5.2, z: 2.6 };
+  const fogColor = 0xcfa58e; // warm dusk haze
+  // Late-autumn sunset over the open west balustrade (17° high): long shadows
+  // run east across the court, and the same direction is baked into the floor.
+  const sunOffset = { x: -10.5, y: 3.3, z: 2.6 };
   scene.background = new THREE.Color(fogColor);
   scene.fog = new THREE.Fog(fogColor, 27, 125);
   if (hemi) {
-    hemi.color.set(0xb8c8df);
-    hemi.groundColor.set(0xd7c8ae);
-    hemi.intensity = 1.18;
+    hemi.color.set(0xa7abd0); // cool twilight sky in the shade
+    hemi.groundColor.set(0xcf9e7e); // red walls and warm stone bounce
+    hemi.intensity = 1.32;
   }
   if (sun) {
-    sun.color.set(0xffd7a9);
-    sun.intensity = 1.95;
+    sun.color.set(0xffb37a); // low amber sun
+    sun.intensity = 2.15;
     sun.position.set(sunOffset.x, sunOffset.y, sunOffset.z);
   }
   const sky = new THREE.Mesh(
@@ -348,7 +499,7 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
   put('ground', new THREE.PlaneGeometry(160, 160), 0xb4ac8f, [0, -0.036, 0], [-Math.PI / 2, 0, 0]);
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(30, 30),
-    new THREE.MeshStandardMaterial({ map: pavingTexture(sunOffset), roughness: 0.92, color: 0xfff7e8 }),
+    new THREE.MeshStandardMaterial({ map: pavingTexture(sunOffset), roughness: 0.92, color: 0xfff1de }),
   );
   // Mipmaps (CanvasTexture default) plus stronger anisotropic filtering keep the
   // remaining joints from crawling when the low camera sees the floor edge-on.
@@ -392,10 +543,10 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
     // Real rear archways and shadowed piers reveal the light garden beyond.
     // Nothing seals the openings with a flat dark plane.
     for (const x of centers) {
-      put('stone', archPanel(1.96, 4.1, 2.5, 6.75, 0.45), 0x8e958e, [x, 0, -3.75], undefined, 1, stone);
+      put('stone', archPanel(1.96, 4.1, 2.5, 6.75, 0.45), PALETTE.plasterShade, [x, 0, -3.75], undefined, 1, stone);
       put('stone', archBand(1.96, 2.16, 0.14), 0xb7b9a3, [x, 4.1, -3.48], undefined, 1, stone);
       for (const side of [-1, 1]) {
-        put('stone', cyl(0.24, 0.29, 4.12, 10), 0x8d958c, [x + side * 2.46, 2.06, -3.75], undefined, 1, stone);
+        put('stone', cyl(0.24, 0.29, 4.12, 10), 0xb5a68c, [x + side * 2.46, 2.06, -3.75], undefined, 1, stone);
         block('stone', 0.8, 0.2, 0.74, 0xaab09c, [x + side * 2.46, 4.15, -3.75]);
       }
       block('ground', 4.4, 0.06, 6, 0xa5a98a, [x, -0.05, -7]);
@@ -407,7 +558,7 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
     block('trim', width + 0.32, 0.16, 0.3, PALETTE.sand, [mid, 6.76, 0.42]);
     put('roof', roofGeometry(width + 0.9, 4.1, 0.78), PALETTE.roof, [mid, 7.32, -1.18]);
     for (const x of centers) {
-      put('stone', archPanel(2.16, 4.35, 2.5, 6.81, 0.62), PALETTE.ivory, [x, 0, 0], undefined, 1, stone);
+      put('stone', archPanel(2.16, 4.35, 2.5, 6.81, 0.62), PALETTE.plaster, [x, 0, 0], undefined, 1, stone);
       put('stone', archBand(2.16, 2.4, 0.13), PALETTE.light, [x, 4.35, 0.38], undefined, 1, stone);
       block('stone', 0.27, 0.4, 0.2, PALETTE.light, [x, 6.64, 0.51]);
       // Stone benches sit in shade between the front and rear colonnades.
@@ -433,12 +584,12 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
   // circular oculus above it, backed by a distant terracotta hill town.
   kit.push([14.48, 0, 0], -Math.PI / 2);
   for (const side of [-1, 1]) {
-    block('stone', 1.48, 4.85, 1.2, PALETTE.ivory, [side * 3.75, 2.425, -0.1]);
+    block('stone', 1.48, 4.85, 1.2, PALETTE.brick, [side * 3.75, 2.425, -0.1]);
     column(side * 3.68 - 0.3, 0.71, 5.03, 0.29);
     column(side * 3.68 + 0.3, 0.71, 5.03, 0.29);
     block('stone', 1.32, 0.22, 1.3, PALETTE.light, [side * 3.7, 5.08, 0.32]);
   }
-  put('stone', archPanel(3, 4.85, 4.5, 8.45, 1.15), PALETTE.ivory, [0, 0, -0.08], undefined, 1, stone);
+  put('stone', archPanel(3, 4.85, 4.5, 8.45, 1.15), PALETTE.plaster, [0, 0, -0.08], undefined, 1, stone);
   put('stone', archBand(3, 3.34, 0.22), PALETTE.light, [0, 4.85, 0.6], undefined, 1, stone);
   for (let i = 0; i < 15; i++) {
     const angle = (i + 0.5) / 15 * Math.PI;
@@ -454,7 +605,7 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
   const oculus = new THREE.Path();
   oculus.absarc(0, 10.04, 1.05, 0, Math.PI * 2, true);
   attic.holes.push(oculus);
-  put('stone', new THREE.ExtrudeGeometry(attic, { depth: 0.75, bevelEnabled: false, curveSegments: 32 }), PALETTE.ivory, [0, 0, -0.38], undefined, 1, stone);
+  put('stone', new THREE.ExtrudeGeometry(attic, { depth: 0.75, bevelEnabled: false, curveSegments: 32 }), PALETTE.brick, [0, 0, -0.38], undefined, 1, stone);
   put('stone', new THREE.TorusGeometry(1.13, 0.115, 8, 48), PALETTE.light, [0, 10.04, 0.48], undefined, 1, stone);
   put('trim', new THREE.TorusGeometry(1.29, 0.035, 6, 48), PALETTE.gold, [0, 10.04, 0.42]);
   for (const side of [-1, 1]) {
@@ -498,7 +649,24 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
     put('leaves', new THREE.SphereGeometry(0.7, 12, 8), 0x526044, [x, 1.14, z], undefined, [1, 0.75, 1]);
     for (let i = 0; i < 7; i++) {
       const angle = i * Math.PI * 2 / 7;
-      put('flowers', new THREE.IcosahedronGeometry(0.1, 0), i % 2 ? 0xba6970 : 0xe7bfab, [x + Math.cos(angle) * 0.48, 1.4 + random() * 0.14, z + Math.sin(angle) * 0.48]);
+      const bloom = (x < 0 ? [0x6e7fc6, 0xe9e2d0] : [0xe0ad45, 0xc4683a])[i % 2]; // blue/white west, ochre/rust east
+      put('flowers', new THREE.IcosahedronGeometry(0.1, 0), bloom, [x + Math.cos(angle) * 0.48, 1.4 + random() * 0.14, z + Math.sin(angle) * 0.48]);
+    }
+  }
+
+  // Late-autumn litter: flat dry leaves blown against the arcade steps, the
+  // balustrade and the pots — all outside the 9.6 m ring, never in the duel.
+  {
+    const leafColors = [0x9a5a2a, 0xb87a35, 0x7a4a2a, 0xc79a45, 0x8a3f25];
+    const drifts = [[-13.6, -6, 2.6], [-13.8, 7, 2.2], [-6, -13.4, 2.4], [7.5, -13.5, 2.0], [3, 13.6, 2.6], [-9.3, 11.1, 1.2], [8.6, -11.25, 1.2], [12.9, 9.6, 1.8], [-11.5, -11.8, 1.6]];
+    for (let i = 0; i < 150; i++) {
+      const [cx, cz, spread] = drifts[i % drifts.length];
+      const a = random() * Math.PI * 2, r = Math.sqrt(random()) * spread;
+      const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r * 0.6;
+      if (Math.hypot(x, z) < 9.6 || Math.abs(x) > 14.1 || Math.abs(z) > 14.1) continue;
+      const leaf = new THREE.CircleGeometry(1, 5);
+      leaf.scale(1, 0.55, 1);
+      put('flowers', leaf, leafColors[i % 5], [x, -0.012 + random() * 0.01, z], [-Math.PI / 2 + (random() - 0.5) * 0.4, random() * Math.PI * 2, 0], 0.1 + random() * 0.07, { vary: 0.2, noise: 0.05 });
     }
   }
 
@@ -511,19 +679,30 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
     const depth = 4 + random() * 3;
     const height = 3.5 + random() * 6;
     kit.push([Math.cos(angle) * radius, -1.4, Math.sin(angle) * radius], -angle - Math.PI / 2);
-    block('town', width, height, depth, [0xc8ac85, 0xd4b796, 0xb99f83, 0xd7bea1][i % 4], [0, height / 2, 0]);
+    block('town', width, height, depth, [0xc0673f, 0xd08a52, 0xb4553a, 0xd8a862, 0xc77a4c][i % 5], [0, height / 2, 0]);
     put('roof', roofGeometry(width + 0.6, depth + 0.7, 1.15), i % 2 ? 0xab6450 : PALETTE.roof, [0, height + 0.03, 0]);
     block('trim', width + 0.15, 0.16, depth + 0.18, PALETTE.sand, [0, height - 0.1, 0]);
-    for (let y = 2.0; y < height - 0.8; y += 2.05) for (let x = -width / 2 + 0.95; x < width / 2 - 0.4; x += 1.75) block('distantDark', 0.48, 0.94, 0.06, 0x655d51, [x, y, depth / 2 + 0.04]);
+    for (let y = 2.0; y < height - 0.8; y += 2.05) for (let x = -width / 2 + 0.95; x < width / 2 - 0.4; x += 1.75) block('distantDark', 0.48, 0.94, 0.06, (i + Math.round(x)) % 3 ? 0x4e6a50 : 0x5d5249, [x, y, depth / 2 + 0.04]); // green shutters
     if (i % 3 === 0) block('town', 0.55, 1.4, 0.65, 0xbd9c77, [width * 0.22, height + 0.7, 0]);
     kit.pop();
   }
-  kit.push([38, -1.4, -7], 0);
-  block('town', 4.2, 16.4, 4.2, 0xc3a482, [0, 8.2, 0]);
-  block('trim', 4.8, 0.27, 4.8, PALETTE.sand, [0, 16.4, 0]);
-  put('roof', new THREE.ConeGeometry(3.75, 2.0, 4), PALETTE.roof, [0, 17.5, 0], [0, Math.PI / 4, 0]);
-  for (const x of [-1, 1]) block('distantDark', 0.68, 2.0, 0.07, 0x6c6559, [x, 14.6, 2.13]);
-  for (const z of [-1, 1]) block('distantDark', 0.07, 2.0, 0.68, 0x6c6559, [-2.13, 14.6, z]);
+  // Bologna's two towers, seen over the north-east roofs (off the gate axis): the tall
+  // Asinelli and the short, leaning Garisenda, both bare brick.
+  kit.push([46, -1.4, -17], 0.2);
+  block('town', 3.6, 34, 3.6, PALETTE.brick, [0, 17, 0]);
+  block('town', 4.3, 3.2, 4.3, 0xa65a3c, [0, 1.6, 0]);
+  block('trim', 4.0, 0.3, 4.0, 0xb98a68, [0, 34.1, 0]);
+  for (const [x, z] of [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6], [0, -1.6], [0, 1.6], [-1.6, 0], [1.6, 0]]) block('town', 0.55, 0.8, 0.55, PALETTE.brick, [x, 34.6, z]);
+  for (const y of [9, 17, 25, 31]) block('distantDark', 0.5, 1.3, 0.07, 0x4a3a32, [0, y, -1.83]);
+  kit.pop();
+  kit.push([42.5, -1.4, -11.8], 0.1);
+  {
+    const lean = new THREE.Matrix4().makeRotationZ(0.07); // ~4°
+    const g = box(3.9, 19, 3.9);
+    g.translate(0, 9.5, 0);
+    g.applyMatrix4(lean);
+    put('town', g, 0xa45a3d, [0, 0, 0]);
+  }
   kit.pop();
   for (let i = 0; i < 15; i++) {
     const angle = i / 15 * Math.PI * 2;
@@ -535,7 +714,7 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
 
   // Burgundy silk is confined to the distant arcade. All four banners share
   // one merged draw and a small vertex animation; their top edge stays fixed.
-  function banner(position, rotation, width = 1.15, height = 3.5) {
+  function banner(position, rotation, width = 1.15, height = 3.5, slot = 0) {
     const geometry = new THREE.PlaneGeometry(width, height, 8, 16);
     const p = geometry.attributes.position;
     const uv = geometry.attributes.uv;
@@ -546,21 +725,19 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
       p.setY(i, p.getY(i) - Math.sin(u * Math.PI) * 0.13 * (1 - v));
     }
     geometry.computeVertexNormals();
-    const cloth = put('cloth', geometry, PALETTE.burgundy, position, [0, rotation, 0], 1, { vary: 0.03, noise: 0.025 });
-    const colors = cloth.attributes.color;
+    // The banner atlas (bannerTexture) carries the colour; vertex colour only
+    // keeps a slight shading variation. Each banner reads its own atlas column.
+    const cloth = put('cloth', geometry, 0xffffff, position, [0, rotation, 0], 1, { vary: 0.03, noise: 0.025 });
     const mergedUV = cloth.attributes.uv;
-    const gold = new THREE.Color(PALETTE.gold);
-    for (let i = 0; i < colors.count; i++) {
-      const v = mergedUV.getY(i);
-      const u = mergedUV.getX(i);
-      if ((v > 0.085 && v < 0.14) || u < 0.055 || u > 0.945) colors.setXYZ(i, gold.r, gold.g, gold.b);
-    }
+    for (let i = 0; i < mergedUV.count; i++) mergedUV.setX(i, (slot + 0.02 + mergedUV.getX(i) * 0.96) / 3);
   }
   // Three banners, each a different size and height (the matching pair at the
   // gate read as repetition; one gate banner and the south twin were removed).
-  banner([13.27, 3.35, -4.37], -Math.PI / 2);
-  banner([-5.0, 4.15, -14.02], 0, 0.82, 2.2);
-  banner([-5.0, 3.75, 14.02], Math.PI, 1.0, 2.8);
+  // 10/10 2차 colours: the city arms of Bologna at the gate, a blue LIBERTAS
+  // banner, and the fencing school's red banner with gold crossed swords.
+  banner([13.27, 3.35, -4.37], -Math.PI / 2, 1.15, 3.5, 0);
+  banner([-5.0, 4.15, -14.02], 0, 0.82, 2.2, 1);
+  banner([-5.0, 3.75, 14.02], Math.PI, 1.0, 2.8, 2);
 
   const standard = (options = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, ...options });
   const meshes = {};
@@ -577,7 +754,7 @@ export function buildLoggia(scene, { hemi, sun } = {}) {
     wood: standard(),
     leaves: standard({ flatShading: true, roughness: 1 }),
     flowers: standard({ flatShading: true }),
-    cloth: standard({ side: THREE.DoubleSide, roughness: 1 }),
+    cloth: standard({ side: THREE.DoubleSide, roughness: 1, map: bannerTexture() }),
   };
   materials.balustrade = materials.stone; // same material, separate non-casting mesh
   for (const [bin, material] of Object.entries(materials)) {

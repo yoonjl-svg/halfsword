@@ -382,6 +382,9 @@ function merchantShip(K, pos, rotation) {
 // horizon. The open fire basket is unlit in daytime, not a modern glass lantern.
 function beaconIsland(K, stoneOpt) {
   const r = rng(512890);
+  // 10/10 2차: the whole island moved from ~(147, 115) to ~(75, 173) — about 66°
+  // right of the sea axis and ~190 m out — so the beacon no longer sits behind the merchant ship.
+  K.push([-72, 0, 58]);
   for (let i = 0; i < 13; i++) {
     const x = 150 + (r() - 0.5) * 26, z = 110 + (r() - 0.5) * 42;
     const size = 7 + r() * 9;
@@ -410,6 +413,7 @@ function beaconIsland(K, stoneOpt) {
     limb(K, 'hull', [Math.cos(a) * 0.9, 15.0, Math.sin(a) * 0.9], [Math.cos(a) * 1.35, 16.6, Math.sin(a) * 1.35], 0.06, 0.045, 0x4c594c, {}, 4);
   }
   K.put('hull', new THREE.TorusGeometry(1.35, 0.055, 4, 12), 0x4c594c, [0, 16.6, 0], [Math.PI / 2, 0, 0]);
+  K.pop();
   K.pop();
 }
 
@@ -1094,8 +1098,14 @@ export function buildCorsair(scene, lights = {}) {
       limb(K, 'rope', prev, next, 0.078, 0.078, C.rope, { noise: 0.025 }, 6); prev = next;
     }
   }
-  merchantShip(K, [82, -2.65, 43], 0.55);
-  dhow(K, [95, -2.3, -61], 0.7, 0.46);
+  // 10/10 2차: both distant hulls sit deeper (1.85 m / 0.45 m) so the narrow,
+  // inward-sloping lowest strakes are under water, and each has a dark band of
+  // shaded water hugging the hull so the waterline reads as contact, not a gap.
+  merchantShip(K, [82, -4.5, 43], 0.55);
+  dhow(K, [95, -2.75, -61], 0.7, 0.46);
+  for (const [x, z, rot, len, beam] of [[82, 43, 0.55, 50, 12.5], [95, -61, 0.7, 13.5, 4.2]]) {
+    K.put('hull', new THREE.CircleGeometry(1, 24), 0x174a49, [x, -2.28, z], [-Math.PI / 2, rot, 0], [beam / 2, len / 2, 1], { vary: 0, noise: 0.03 });
+  }
   beaconIsland(K, stoneOpt);
   for (let i = 0; i < 13; i++) {
     const z = 28 + i * 3.1, h = 3 + r() * 5;
