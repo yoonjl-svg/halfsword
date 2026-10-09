@@ -383,7 +383,7 @@ const ITALIAN_SECRET = {
   name: 'passataContratempo',
   nameKo: 'Passata in contratempo (박자 밑 찌르기)',
   when: ['foeRaise', 'foeCharge'],
-  cond: { dist: 'italianDist' },
+  cond: { dist: 'italianDist', commit: 'italianCommit' }, // commit: 칼을 드는 사건은 결심한 공격(손 빠르기 문턱)만 — 10/9 23:5x 발동 줄이기
   do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'pass', push: 'stepPush' } }, // push: 10/9 4차 걸음 밀기
   src: 'Capo Ferro 1610 contratempo · passata sotto 「punta in falso, che vien di giù in su」 PDF 53쪽 [원문·원전 2차] · 뒷발 지나 보내기(passata) [원전 2차] · 걸음 수 [추정]',
 };
@@ -392,6 +392,7 @@ const IBERIAN_SECRET = {
   name: 'molineteTalho',
   nameKo: 'Molinete talho (휘돌려 사선 베기 · 가칭)',
   when: 'combo',
+  cond: { touch: true }, // 10/9 23:5x 발동 줄이기: 이어진 베기 SECRET.comboN 번의 마지막이 닿았을 때(맞힘·맞물림)만 [확인 전] — comboN 4 는 AI 이어 치기 상한(2~3)에 걸려 48 판 1 번뿐이라 3 으로 두고 이 조건을 더함
   // 길 = 라이브러리 몰리넬로 고리(낮은 오른쪽 → 옆 지킴 → 오른 어깨) → 지붕 → 고유 altibaixo 길(내려베고 되올림). 서보 힘 창은 지붕에 닿은 뒤부터(내려치는 마지막 구간 — powerFrom = 지난 길 점 수)
   //  10/9 후속(디렉터 '휘돌림이 가속이 되게'): 첫 꼴(지금 손 → 낮은 오른쪽 → 옆 지킴 → 오른 어깨 → 지붕 → 내려침, 한 길)은 붙은 거리에서 고리가 상대 다리를 스치고
   //   내려침이 거의 안 닿았다(비기 상처 대부분 고리 도중의 약한 둔타). → 고리는 몸 뒤(오른 어깨 → 옆 지킴 → 오른 어깨 → 지붕)로 준비(windup) 동안 돌고, 그동안 옆 뒤로 비껴 딛어
@@ -429,8 +430,17 @@ const CHINESE_SECRET = {
   name: 'lianhuanSanji',
   nameKo: '連環三擊 (연환삼격 · 가칭)',
   when: 'firstHit',
-  // 첫 수(이미 닿은 칼)의 무리 → 이을 두 수. 목록이면 그때 손에서 가까운 것
+  cond: { landed: true }, // 10/9 23:5x 발동 줄이기: 첫 칼이 맞았을 때만 (막힘 제외)
+  // 10/9 23:5x 사장님 '중국 비기는 꽤 자주 나오는데 어떤 상황이 벌어지는지 전혀 모르겠더라. 타격도 크지 않고 동작이 화려한 것도 아니어서' → 보이는 삼연격:
+  //  첫 칼이 맞으면 큰 호의 세 수를 이음새 0 으로(flowInto) — 腰擊(허리 가로베기, 오른 옆 → 왼 옆 끝까지) → 撩掠(왼 아래에서 오른 위로 걷어 올려 베기) → 坦腹刺(쟁기로 내려 배를 찌름).
+  //  수마다 반걸음 進步(앞발 lunge — 'chineseStep'). 세 이름은 조선세법 腰擊勢·撩掠勢·坦腹勢 [원문 이름 · 셋을 한 동작으로 잇기 [해석]] · 길의 수 [추정]
+  //  (전: 첫 칼의 무리로 두 수 — 아래 next·group 은 자료로 남김, seq 가 있으면 seq)
   do: {
+    seq: [
+      { name: 'lianhuanYao', nameKo: '腰擊 (요격)', from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      { name: 'lianhuanLiao', nameKo: '撩掠 (요략 — 걷어 올려 베기)', from: [-0.46, -0.4], path: [[-0.22, -0.3], [0.08, -0.06], [0.44, 0.38]], open: 'UR', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      { name: 'lianhuanTanfu', nameKo: '坦腹刺 (탄복자)', from: G.pflugR, path: [[0.08, -0.14], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+    ],
     next: {
       yao: [['stichOchs'], ['zuoyi']], // 腰擊 「向前進步逆鱗」 쪽166/0580 → 逆鱗刺 「寃步左翼擊」 쪽173/0587 → 左翼擊
       niLin: [['zuoyi'], ['stichOchs']], // 逆鱗刺 → 左翼擊 → 逆鱗刺 (左翼勢 「寃步逆鱗刺」 쪽156/0570)

@@ -67,6 +67,12 @@
       /* 유파 비기 (10/9): 더 크게, 붉은 금빛 — 꼬리표 '비기', 2.0 초 */
       #techCue[data-kind="secret"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #ff9d5c; letter-spacing: .04em; }
       #techCue[data-kind="secret"] small { color: #ffc9a0; font-size: 14px; }
+      /* 플레이어 비기 (10/9 23:5x): 창이 열림 — 비기 알림과 같은 크기(사장님 '테스트 중엔 크게'), 흐리게 · 경직 — 작고 흐리게 */
+      #techCue[data-kind="secretReady"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #ffd6a8; letter-spacing: .04em; }
+      #techCue[data-kind="secretReady"] small { color: #ffe3c4; font-size: 14px; }
+      #techCue[data-kind="secretReady"].show { opacity: .55; }
+      #techCue[data-kind="stiff"] b { font-size: clamp(16px, 4.4vw, 22px); font-weight: 700; color: #cfc6b4; }
+      #techCue[data-kind="stiff"].show { opacity: .5; }
       /* 설정 '모든 기술 이름 표시'(디버그, 기본 끔 — 10/9 13:xx): 공용 기술은 작고 흐리게 */
       #techCue[data-kind="all"] b { font-size: clamp(15px, 4vw, 19px); font-weight: 600; color: #d9cfb8; }
       #techCue[data-kind="all"] small { opacity: .7; }

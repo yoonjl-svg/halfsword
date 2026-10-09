@@ -525,6 +525,7 @@ export const SKILL = {
   schoolRest: '', // 유파 쉴 자세 비교 손잡이(10/9): '' = 유파 값(일본·중국 'langort' = 中段·中平, 사장님 안 A) · 'pflugR' = 안 B(쟁기 자리, 10/9 00:49 까지의 판). 유파 rest 가 있는 무기(모노호시자오·청강검)만 바뀐다, 플레이어 ③ 되돌아옴만 (`?schoolRest=`)
   schoolArt: 1, // **기본 1 — 사장님 10/9 01:5x '스위치 켜'**(확인표 195 답): 유파 자료(schools.js TRADITIONS 일본·중국 — ②③ 단계 10/9) — 유파 기술 가중치(techK)·맞받아치기(counterArt)·고유 동작(unique — 옛 newTech. 10/9 고유 동작 단계: 이탈리아·이베리아·일본·중국 셋씩 켬, 독일 셋은 ai:false — docs/strike/school_unique_2026-10-09.md)을 AI 꾸러미에 입힌다. 이름·쉴 자세는 스위치와 상관없이 늘. 0 = 10/9 01:49 까지의 판(`?schoolArt=0`). 롱소드류(독일)는 고유 동작이 꺼져 있어 바뀌지 않는다 (docs/strike/school_impl_2026-10-09.md)
   schoolSecret: 1, // 유파 비기(10/9 — docs/strike/school_secret_2026-10-09.md, 사장님 승인 '유파 설계 v3'): 조건이 차면 그 유파의 대표 동작을 완벽 실행(굴림 없음 — 값은 아래 SECRET). schoolArt 1 일 때만. 0 = 비기 없는 판(`?secret=0`, motion_lab SCHOOL_SECRET=off)
+  playerSecret: 1, // 플레이어 비기(10/9 23:3x 사장님 '인간 플레이어로서는 비기를 아예 못 쓰겠어' — docs/strike/player_secret_2026-10-09.md): 내 무기 유파의 비기 조건이 차면 짧은 창(SECRET.playerWindow)이 열리고 그 안의 공격 입력이 비기 완벽 실행. 0 = 끔(`?playerSecret=0`)
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 
@@ -548,10 +549,10 @@ export const SECRET = {
   stepPush: 2.0, // 10/9 4차 1.8 → 2.0 (일본·이탈리아 비기 걸음). 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8
   stiff: { german: 0.3, italian: 0.3, iberian: 0.3, japanese: 0.8, chinese: 0.3 }, // 비기 직후 경직 (s)
   stiffHand: 0.5, // 경직 동안 손 빠르기 배율
-  lethalJ: 136, // 독일 Versetzen 문턱: 들어오는 칼의 추정 에너지 ½·m·v²(칼 질량·칼끝 속도, J). 롱소드 48 판(비기 끔 SCHOOL_SECRET=alloff)에서 맞은 칼(양쪽 상처 1786)의 때린 칼끝 추정 에너지 분포 75 % 지점 (p50 47 · p90 247)
-  comboN: 3, // 이베리아: 끊기지 않은 내 베기 이 수 뒤
+  lethalJ: 247, // 10/9 23:5x 발동 줄이기(사장님 '발동은 좀 줄되 결정타일 수 있어야') 136 → 247 = 같은 분포의 90 % 지점 [확인 전]. 전: 136 — 독일 Versetzen 문턱: 들어오는 칼의 추정 에너지 ½·m·v²(칼 질량·칼끝 속도, J). 롱소드 48 판(비기 끔 SCHOOL_SECRET=alloff)에서 맞은 칼(양쪽 상처 1786)의 때린 칼끝 추정 에너지 분포 75 % 지점 (p50 47 · p90 247)
+  comboN: 3, // 이베리아: 끊기지 않은 내 베기 이 수 뒤. 10/9 23:5x 발동 줄이기 지시 3 → 4 를 재 보니 48 판 1 번(AI 이어 치기 상한 maxChain 2~3 에 걸림) → 3 그대로 + 마지막 베기가 닿음(schools.js cond.touch) [확인 전]
   iberianLat: 0.4, // 이베리아 옆걸음 (m, 방향 = 성격의 즐겨 도는 쪽 circleDir)
-  italianDist: [0, 0.2], // 이탈리아: 내 간격 끝(reach) 기준 거리 창 (m). 10/9 18:3x 디렉터: [−0.1, 0.4] 는 관절 켬 뒤 48 판 레이피어 83 %(+25, 띠 ±20 밖)라 [0, 0.2] 로 좁힘(2 등급 대조 56 %) — 사장님 확인 전(확인표 289)
+  italianDist: [0, 0.15], // 10/9 23:5x 발동 줄이기 [0, 0.2] → [0, 0.15] + 결심한 공격만(italianCommit) [확인 전]. 전: 이탈리아: 내 간격 끝(reach) 기준 거리 창 (m). 10/9 18:3x 디렉터: [−0.1, 0.4] 는 관절 켬 뒤 48 판 레이피어 83 %(+25, 띠 ±20 밖)라 [0, 0.2] 로 좁힘(2 등급 대조 56 %) — 사장님 확인 전(확인표 289)
   italianStep: 0.5, // 이탈리아: 뒷발 지나 보내기 걸음 (m, 'strike')
   japaneseDist: [0, 0.8], // (10/9 첫 꼴의 헛침 거리 창 — 지금은 쓰지 않음, japaneseFoeMargin·japaneseFar 창으로 바꿈)
   japaneseFoeMargin: 0.2, // 일본 창: 상대 칼 닿는 거리(foeReach) + 이 여유 밖이어야 (상대 공격이 명백히 안 닿음, m)
@@ -573,6 +574,15 @@ export const SECRET = {
   releaseMaxHold: 0.6, // 붙잡는 최대 (s) — 지나면 창보다 가까우면 치고 멀면 거둔다
   japaneseRelease: [0, 0.3], // 일본 창 (m, reach + …) — 실측으로 고름. 10/9 4차(아래로 지나가는 真向 길 · 손 1.5): [0, 0.3] 이 [0.2, 0.5] 보다 두 무기 모두 한 칼 J 가 큼(문서 §11) — 3차엔 [0.2, 0.5]
   iberianRelease: [0.3, 0.55], // 이베리아 창 (m, reach + …) — 실측으로 고름(문서 §10: 셋 가운데 zornhau 대비 가장 높음)
+  chineseStep: 0.25, // 중국 連環三擊 수마다 반걸음 進步 (m, 앞발 lunge) [확인 전]
+  italianCommit: 4.5, // 이탈리아: 상대가 칼을 드는 사건은 손(패드)이 이 빠르기(m/s) 이상일 때만 — 결심한 공격(들어 올림 사건 문턱 hvy 1.6 위). 달려듦은 그대로. 48 판 레이피어 2.5 → 84 번 · 3.5 → 64 · 4.5 → 56(판마다 1.17) [확인 전]
+  // 결정타 (10/9 23:5x 사장님 '사실성을 다소 저해하더라도 모션 연출이나 판정에 약간의 어드밴티지 — 모든 비기'): AI·플레이어 공통. 물리(속도·힘)는 그대로, 상처 판정·화면만
+  hitMul: 1.3, // 판정 어드밴티지: 비기 베기(베기 길·따라 지나감 동안)가 낸 상처 에너지 배율 (combat.js analyze — 공격자 fighter.secretHit) [확인 전]
+  slowMo: { scale: 0.4, dur: 0.25 }, // 연출: 비기가 터뜨려지는 순간 화면 시간 배율 scale 을 dur 초(실시간) 동안 (main.js 프레임 dt — 물리 스텝 dt 는 그대로, 스텝 수만 준다). `?slowMo=0` 끔 [확인 전]
+  // 플레이어 비기 (SKILL.playerSecret)
+  playerWindow: 0.5, // 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
+  playerChainGap: 0.6, // 플레이어 베기 덩이 사이 쉼이 이 초보다 길면 끊김 (이베리아 이어진 베기 셈 · 중국 '들어가며 친 첫 베기') [해석]
+  playerVibrate: 50, // 창이 열릴 때 진동 (ms, navigator.vibrate — 없으면 생략)
 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

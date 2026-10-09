@@ -28,6 +28,7 @@ import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸�
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
+import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -364,6 +365,7 @@ export class AI {
     // 유파 비기 (10/9): 끊기지 않은 베기 수는 공격 꼴을 벗어나면 0 · 비기가 아니면 서보 힘 창은 1 · 상대 사건 비기는 지금 모습(반응 지연 0)으로 본다 — 패시브보다 먼저
     if (this.mode !== 'attack') this.combo = 0;
     if (!this.secretRun && me.powerMul !== 1) me.powerMul = 1;
+    if (!this.secretRun && me.secretHit !== 1) me.secretHit = 1; // 결정타 판정 배율도 비기 밖에선 1
     if (kneeling && this.secretRun) this.secretAbort();
     if (this.secret && !kneeling && !this.secretRun) this.secretScan(dt, c, r);
 
@@ -1014,6 +1016,11 @@ export class AI {
       }
     }
     if (this.secretRun) this.secretRun.pathN = this.path.length; // 비기 서보 힘 창의 길 점 세기 (이베리아 powerFrom)
+    if (this.secretRun && !this.secretRun.burst) {
+      // 결정타 연출 (10/9 23:5x): 비기가 터뜨려지는 순간(그 비기의 첫 칼이 나감) — main.js 가 이 수가 바뀌면 화면 시간을 잠깐 늦춘다. 물리·난수와 상관없음
+      this.secretRun.burst = true;
+      this.secretBursts = (this.secretBursts ?? 0) + 1;
+    }
     // 베기가 끝나면 손은 끝 자세에 머문다 (이어 베기는 칼의 관성과 검술 층이 만든다)
     const end = this.path[this.path.length - 1];
     this.hand.set(end[0], end[1]);
@@ -1537,7 +1544,7 @@ export class AI {
 
   /** 칸 값: 문자열이면 SECRET 의 열쇠 (schools.js 는 수를 갖지 않는다) */
   secretVal(v) {
-    return typeof v === 'string' ? SECRET[v] : v;
+    return secretVal(v);
   }
 
   /** 비기 재기 칸 */
@@ -1557,24 +1564,7 @@ export class AI {
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    let ctx = null;
-    let on = false;
-    if (W.includes('threat')) {
-      ctx = this.threatNow(s0, c, r, d0);
-      on = !!ctx;
-    } else {
-      // preThreat 의 raising·charging 과 같은 꼴 — 지금 모습으로. 거리 창(cond.window)이 있는 비기(일본)는 preThreat 의 '가까움' 문턱 대신 그 창이 거리를 맡는다
-      const closing = Math.max(0, -(s0.vx * dx + s0.vz * dz) / d0);
-      const raising = W.includes('foeRaise') && s0.hvy > 1.6 && s0.hy > 0.05;
-      const charging = W.includes('foeCharge') && closing > 0.9;
-      on = (raising || charging) && (!!S.cond?.window || d0 < this.foeReach + closing * 0.4 + 0.3);
-      if (on) ctx = { ev: 'raise' };
-      // seize 의 recovering 과 같은 꼴(방금 크게 휘두르고 손이 멎음) — 늦지 않게 지금 모습으로 (일본은 들어 올림 다음 차례의 보조 사건)
-      if (!on && W.includes('foeRecover') && this.sense.recentHandSpeed(0, 0.6) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8) {
-        on = true;
-        ctx = { ev: 'recover', tipE: this.foeRecentTipE(0.6) }; // 진짜 헛스윙인가 — 그 휘두름의 칼끝 추정 에너지 (cond.whiff)
-      }
-    }
+    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach); // 사건 판정은 플레이어 창과 같은 함수 (secret.js)
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
@@ -1590,16 +1580,7 @@ export class AI {
 
   /** 상대 칼끝 추정 에너지 ½·m·v² 의 최고 (지금부터 span 초 앞까지, 지금 모습 — 반응 지연 0) */
   foeRecentTipE(span) {
-    const B = this.sense.buf;
-    const N = B.length;
-    let best = 0;
-    for (let b = 0; b <= Math.min(N - 1, Math.round(span * 120)); b++) {
-      const s = B[(this.sense.head - b + N * 2) % N];
-      if (s.t < 0) break;
-      const v2 = s.tvx * s.tvx + s.tvy * s.tvy + s.tvz * s.tvz;
-      if (v2 > best) best = v2;
-    }
-    return 0.5 * (this.foe.swordProps?.m ?? 1.5) * best;
+    return foeRecentTipE(this.sense, this.foe, span);
   }
 
   /** 비기를 낼 수 있는 꼴: 간 보기·물러남·막기, 또는 공격 준비·다가가기(패시브 걸쇠가 아닐 때) */
@@ -1611,66 +1592,12 @@ export class AI {
 
   /** threat() 와 같은 셈을 지금 모습으로 (위협 번호는 건드리지 않는다): { line, thrust, sp, E(칼끝 추정 에너지 ½·m·v²), high(상대 손이 높음) } 또는 null */
   threatNow(s, c, r, d) {
-    if (d > this.foeReach + 0.9) return null;
-    let hit = null;
-    for (let k = 0; k < 2; k++) {
-      const px = k ? s.mx : s.tx;
-      const py = k ? s.my : s.ty;
-      const pz = k ? s.mz : s.tz;
-      const vx = k ? s.mvx : s.tvx;
-      const vy = k ? s.mvy : s.tvy;
-      const vz = k ? s.mvz : s.tvz;
-      const sp = Math.hypot(vx, vy, vz);
-      if (sp < 3.5) continue;
-      const rx = px - c.x;
-      const ry = py - c.y;
-      const rz = pz - c.z;
-      const vh2 = vx * vx + vz * vz;
-      const tc = clamp(vh2 > 1e-3 ? -(rx * vx + rz * vz) / vh2 : 0, 0, 0.45);
-      const hx = rx + vx * tc;
-      const hy = ry + vy * tc;
-      const hz = rz + vz * tc;
-      if (Math.hypot(hx, hz) > 0.55 || hy < -1.3 || hy > 0.75) continue;
-      if (!hit || tc < hit.tc) hit = { tc, hx, hy, hz, vx, vy, vz, sp };
-    }
-    if (!hit) return null;
-    const lat = hit.hx * r.x + hit.hz * r.z;
-    const bx = s.tx - s.mx;
-    const by = s.ty - s.my;
-    const bz = s.tz - s.mz;
-    const along = (bx * hit.vx + by * hit.vy + bz * hit.vz) / ((Math.hypot(bx, by, bz) || 1) * hit.sp);
-    const thrust = along > 0.75;
-    let line;
-    if (thrust) line = 'thrust';
-    else {
-      const ch = this.sense.seen(0.15); // 어디서 칼을 들었었나 (threat 와 같은 0.15 s 앞 — 반응 지연만 뺐다)
-      if (ch.hy > 0.15) line = ch.hx > 0.15 ? 'highL' : ch.hx < -0.15 ? 'highR' : 'highC';
-      else if (ch.hy < -0.2) line = ch.hx >= 0 ? 'lowL' : 'lowR';
-      else if (hit.hy > -0.1) line = lat > 0.12 ? 'highR' : lat < -0.12 ? 'highL' : 'highC';
-      else line = lat >= 0 ? 'lowR' : 'lowL';
-    }
-    const m = this.foe.swordProps?.m ?? 1.5;
-    const v2 = s.tvx * s.tvx + s.tvy * s.tvy + s.tvz * s.tvz;
-    return { line, thrust, sp: hit.sp, E: 0.5 * m * v2, high: s.hy > 0.15 };
+    return threatNow(this.sense, this.foe, s, c, r, d, this.foeReach);
   }
 
   /** 비기 조건 (cond) — 굴림 없음 */
   secretCond(S, ctx, d) {
-    const C = S.cond;
-    if (!C) return true;
-    if (C.lethal && !(ctx && ctx.E >= SECRET.lethalJ)) return false;
-    if (C.whiff && ctx?.ev === 'recover' && !(ctx.tipE >= this.secretVal(C.whiff))) return false; // 일본 보조 사건(헛침): 상대가 헛친 칼이 제대로 휘두른 칼이었나
-    if (C.window) {
-      // 일본 後の先 창: 상대 공격은 명백히 안 닿고(상대 칼 닿는 거리 foeReach + 여유 밖) 내 後の先 은 닿는다(내 간격 끝 + 기술 reach + 강한 내딛음 몫 안)
-      if (d <= this.foeReach + SECRET.japaneseFoeMargin || d > this.M.reach + SECRET.japaneseReach + SECRET.japaneseFar) return false;
-    }
-    if (C.line && !C.line.includes(ctx?.line)) return false;
-    if (C.range === 'counter' && !this.counterRange(d)) return false;
-    if (C.dist) {
-      const w = this.secretVal(C.dist);
-      if (d < this.M.reach + w[0] || d > this.M.reach + w[1]) return false;
-    }
-    return true;
+    return secretCond(S, ctx, d, { reach: this.M.reach, foeReach: this.foeReach, clinch: this.M.clinch }); // 플레이어 창과 같은 함수 (secret.js)
   }
 
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
@@ -1712,6 +1639,11 @@ export class AI {
         if (lat) run.loopStep = { lat, fwd: back, kind: back < 0 ? 'retreat' : null };
       }
       ok = this.startAttack(t, 'secret', { ...opt, skipChamber: !D.loop });
+    } else if (D.seq) {
+      // 중국 連環三擊 (10/9 23:5x '보이는 삼연격'): 첫 칼이 맞은 뒤 큰 호의 세 수(腰擊 → 撩掠 → 坦腹刺)를 이음새 0 으로 — 수마다 반걸음 進步
+      run.queue = D.seq.map((t) => ({ ...t, step: t.step ? { ...t.step, fwd: this.secretVal(t.step.fwd) } : undefined }));
+      run.first = { tech: this.tech?.name, landed: this.hitLanded };
+      ok = this.secretNext();
     } else if (D.next) {
       // 중국 連環三擊: 이미 닿은 첫 칼 뒤에 두 수 — 차례는 첫 수의 무리로
       const g = D.group?.[this.tech?.name] ?? 'default';
@@ -1750,6 +1682,7 @@ export class AI {
     // 손 속도·힘 배율은 비기마다(do.hand·do.loopHand·do.power — SECRET 열쇠, 없으면 공통 handSpeed·power). 이베리아는 고리 동안 loopHand, 내려치기에 hand·power
     this.handSpeed *= this.secretVal(powered ? D.hand ?? 'handSpeed' : D.loopHand ?? D.hand ?? 'handSpeed');
     this.me.powerMul = powered ? this.secretVal(D.power ?? 'power') : 1;
+    this.me.secretHit = powered ? SECRET.hitMul : 1; // 결정타 판정 어드밴티지: 상처 에너지 배율 (combat.js) — 따라 지나감까지, 경직·끊김에서 1
     // 보조 힘·속도(do.strength — 사장님 '필요하다면 보조 속도와 힘 제공'): 그 베기 구간만 몸의 힘(me.strength)을 올린다 — 손목 힘·손목 빠르기 한계(√힘)·팔 힘이 함께 오른다
     if (D.strength) this.secretStrength(powered ? this.secretVal(D.strength) : 1);
     this.secretTrack();
@@ -1808,7 +1741,8 @@ export class AI {
   secretNext() {
     const run = this.secretRun;
     while (run.queue.length) {
-      const t = this.passiveTech({ tech: run.queue.shift() });
+      const q = run.queue.shift();
+      const t = Array.isArray(q) ? this.passiveTech({ tech: q }) : q; // 이름 목록이면 꾸러미의 것, 객체면 비기 길 그대로 (連環三擊 세 수)
       if (t && this.flowInto(t, 'secret', this.chain + 1, { secret: true })) return true;
     }
     return false;
@@ -1817,7 +1751,7 @@ export class AI {
   /** 중국 firstHit: 들어가며 친 첫 칼(이어 치기·맞받기·되받기 아님)이 닿았다(맞힘 또는 맞물림) */
   secretFirstHit(d, tally) {
     const S = this.secret;
-    if (S.when !== 'firstHit' || this.secretRun || this.chain !== 0 || !(this.hitLanded || this.bound)) return false;
+    if (S.when !== 'firstHit' || this.secretRun || this.chain !== 0 || !(this.hitLanded || (!S.cond?.landed && this.bound))) return false; // cond.landed: 맞았을 때만 (막힘 제외 — 10/9 23:5x 발동 줄이기)
     const w = this.why;
     if (w === 'counter' || w === 'riposte' || w === 'follow' || w === 'flow' || w === 'secret' || this.passiveAtk) return false;
     if (!this.foe.alive || d > this.M.reach + 0.1 || d < this.M.clinch - 0.5) return false;
@@ -1829,6 +1763,7 @@ export class AI {
   secretCombo(d) {
     const S = this.secret;
     if (S.when !== 'combo' || this.combo < SECRET.comboN || !this.foe.alive || d > this.M.reach + 0.1 || d < this.M.clinch - 0.5) return false;
+    if (S.cond?.touch && !(this.hitLanded || this.bound)) return false; // cond.touch: 마지막 베기가 닿음(맞힘·맞물림) — 10/9 23:5x 발동 줄이기
     if (!this.secretGo(S)) return false;
     this.combo = 0;
     return true;
@@ -1853,6 +1788,7 @@ export class AI {
       st.Emax = Math.max(st.Emax, run.peakE);
     }
     this.me.powerMul = 1;
+    this.me.secretHit = 1;
     if (run.S.do.strength) this.secretStrength(1);
     this.mode = 'secret';
     this.phase = 'ready';
@@ -1983,6 +1919,7 @@ export class AI {
     const run = this.secretRun;
     this.secretRun = null;
     this.me.powerMul = 1;
+    this.me.secretHit = 1;
     if (run?.S.do.strength) this.secretStrength(1);
     if (run && run.landed && run.stage !== 'stiff') {
       const st = this.secretStat(run.S);
