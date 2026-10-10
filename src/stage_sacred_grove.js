@@ -272,7 +272,10 @@ function ground(scene, texture) {
       const nearRoot = 1 - THREE.MathUtils.smoothstep(Math.hypot(x - HERO.x, z - HERO.z), 3.6, 7.4);
       const rootLight = Math.exp(-Math.pow((x - 15.3) / 4.0, 2) - Math.pow((z + 2.5) / 3.1, 2));
       const canopyShadow = forest * (0.2 + 0.17 * (0.5 + 0.5 * Math.sin(x * 0.38 + z * 0.64)));
-      tmp.multiplyScalar((0.87 + shade * 0.2 + h3(x, 0, z, 79) * 0.055) * (1 - nearRoot * 0.18 - canopyShadow) + rootLight * 0.3);
+      // 숲 덩어리 밑은 수관 그늘: 짙은 이끼로 어둡게 (10/11 2차)
+      let under = 0; for (const [gx, gz, R] of GROVES) under = Math.max(under, 1 - THREE.MathUtils.smoothstep(Math.hypot(x - gx, z - gz), R * 0.55, R + 2.5));
+      tmp.lerp(dark, under * 0.4);
+      tmp.multiplyScalar((0.87 + shade * 0.2 + h3(x, 0, z, 79) * 0.055) * (1 - nearRoot * 0.18 - canopyShadow - under * 0.22) + rootLight * 0.3);
       // 나무 사이로 든 아침 햇살 얼룩: 숲 바닥(12~34 m)에 따뜻한 빛 조각, 결투장 안은 아주 옅게
       const flecks = THREE.MathUtils.smoothstep(Math.sin(x * 0.47 + Math.sin(z * 0.36) * 2.1) * Math.sin(z * 0.53 - x * 0.18 + 1.3), 0.45, 0.9);
       const band = THREE.MathUtils.smoothstep(rad, 11, 15) * (1 - THREE.MathUtils.smoothstep(rad, 30, 38));
@@ -351,7 +354,14 @@ const PINE_KINDS = {
   tall:   { hScale: 1.0,  clear: 0.46, top: 0.92, tiers: [4, 5], reach: [0.24, 0.1],  rise: 0.2,  pad: [3.0, 1.9], lean: [0.0, 0.06] },
   lean:   { hScale: 0.88, clear: 0.46, top: 0.9,  tiers: [3, 4], reach: [0.28, 0.13], rise: 0.16, pad: [3.1, 2.0], lean: [0.22, 0.36] },
   spread: { hScale: 0.5,  clear: 0.38, top: 0.86, tiers: [4, 4], reach: [0.55, 0.3],  rise: 0.07, pad: [3.5, 2.4], lean: [0.03, 0.12] },
+  // 숲 덩어리 안쪽 나무 (10/11 2차): 곧고 높은 줄기, 가지는 위쪽에만 짧게, 덩어리가 커서 이웃 나무와 이어져 지붕이 된다
+  grove:  { hScale: 1.0,  clear: 0.58, top: 0.94, tiers: [2, 2], reach: [0.2, 0.1],   rise: 0.14, pad: [3.6, 2.7], lean: [0.0, 0.05] },
 };
+// 숲 덩어리 (10/11 2차, 사장님 "나무를 좀 모아서 부분적인 밀도를 올려"): 결투장에서 보이는 중경(20~38 m)에 여덟.
+//  안은 줄기 사이 1.6 m 남짓으로 빽빽해 줄기가 겹쳐 보이고 수관이 이어져 지붕을 이룬다. 가장자리 나무는 낮고
+//  바깥으로 기울며 아래 가지까지 달려 숲 벽을 닫는다. 덩어리 사이는 트인 풀밭·이끼로 남긴다 (화전 터의 듬성한 들판과 갈리게).
+//  신목 둘레 13.5 m · 신목 뒤 하늘 자리 · 도리이 둘레는 1차대로 비운다. [x, z, 반지름(m), 그루, 키 배율]
+const GROVES = [[6, -27, 7.5, 18, 1.1], [-13, -26, 5.5, 10, 1.0], [31, -21, 6, 12, 1.05], [36, 13, 5, 8, 1.0], [25, 27, 7, 14, 1.1], [-3, 28, 6.5, 13, 1.2], [-26, -12, 7.5, 15, 1.05], [-21, 19, 5.5, 9, 0.9]];
 function pineAxis(t, P) {
   const s = P.lean * P.h * (t - 0.4 * t * t), w = Math.sin(t * Math.PI * 1.6 + P.phase) * P.wob * P.h * t;
   return new THREE.Vector3(Math.cos(P.dir) * s - Math.sin(P.dir) * w, P.h * t, Math.sin(P.dir) * s + Math.cos(P.dir) * w);
@@ -373,7 +383,7 @@ function forestPine(K, foliage, seed, x, z, height, radius, kind, leanDir) {
   const r = rng(seed), S = PINE_KINDS[kind], out = leanDir ?? Math.atan2(z, x);
   const P = { h: height * S.hScale * (0.92 + r() * 0.16), lean: S.lean[0] + r() * (S.lean[1] - S.lean[0]), dir: kind === 'lean' ? out + (r() - 0.5) * 1.6 : r() * TAU, wob: 0.012 + r() * 0.02, phase: r() * TAU };
   // 36 m 밖(대기에 흐려지기 시작하는 자리)은 층을 하나 덜고 줄기·가지 면 수를 줄여 삼각형을 아낀다
-  const far = Math.hypot(x, z) > 36, rad = radius * (kind === 'spread' ? 1.35 : 1), y0 = groundHeight(x, z) - 0.25;
+  const far = Math.hypot(x, z) > (kind === 'grove' ? 30 : 36), rad = radius * (kind === 'spread' ? 1.35 : 1), y0 = groundHeight(x, z) - 0.25;
   const trunk = put(K, 'bark', forestTrunkGeometry(P, rad, far), 0xffffff, [x, y0, z], [0, 0, 0], 1, { noise: 0.04, vary: 0.12 });
   redPineBark(trunk, y0, P.h);
   const tiers = S.tiers[0] + Math.floor(r() * (S.tiers[1] - S.tiers[0] + 1)) - (far ? 1 : 0);
@@ -386,7 +396,7 @@ function forestPine(K, foliage, seed, x, z, height, radius, kind, leanDir) {
     const len = P.h * (S.reach[0] + (S.reach[1] - S.reach[0]) * tt) * (0.8 + r() * 0.4);
     const br = rad * (1 - t) * 0.55 + 0.03, color = C.pineRed;
     // 아래 층은 맞은편으로 짧은 가지를 하나 더 낸다 (층마다 덩어리가 한쪽에만 붙어 보이지 않게)
-    const arms = tt < 0.6 && !far ? [[ang, 1], [ang + Math.PI + (r() - 0.5) * 1.2, 0.68]] : [[ang, 1]];
+    const arms = tt < 0.6 && !far && kind !== 'grove' ? [[ang, 1], [ang + Math.PI + (r() - 0.5) * 1.2, 0.68]] : [[ang, 1]];
     for (const [aa, f] of arms) {
       const L = len * f;
       const mid = [base[0] + Math.cos(aa) * L * 0.5, base[1] - L * 0.04, base[2] + Math.sin(aa) * L * 0.5];
@@ -460,10 +470,10 @@ function plants(scene, r) {
     }
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-  const mesh = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ color: 0x8aa766, roughness: 1, side: THREE.DoubleSide }), 180);
+  const mesh = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ color: 0x8aa766, roughness: 1, side: THREE.DoubleSide }), 140); // 10/11 2차 180 → 140 (숲 덩어리 그리기 몫)
   const dummy = new THREE.Object3D(), c = new THREE.Color();
   const clumps = [[13.8,-6.8],[16.7,3.1],[22.5,4.6],[18.5,-10.1],[-15,-5],[-12,12],[3,18],[-9,-18],[28,13],[5,-27],[28,-18],[-28,6]];
-  for (let i = 0; i < 180; i++) {
+  for (let i = 0; i < 140; i++) {
     const center = clumps[i % clumps.length], a = r() * TAU, rad = Math.sqrt(r()) * (i < 60 ? 1.8 : 3.6);
     let x = center[0] + Math.cos(a) * rad, z = center[1] + Math.sin(a) * rad;
     const d = Math.hypot(x, z); if (d < 12.15) { x *= 12.15 / d; z *= 12.15 / d; }
@@ -545,24 +555,27 @@ function distantHaze(scene) {
   mesh.position.y = 5; mesh.name = 'grove-forest-haze'; scene.add(mesh);
 }
 
-// 나무 사이로 기울어 드는 오후 빛줄기: 해 방향으로 기운 긴 띠를 십자로 겹친 것 열 개를 한 메쉬로(그리기 한 번).
-//  더하기 섞기라 아주 옅게만 밝힌다. 밑동은 결투장에서 20~33 m, 해 쪽 숲에만(카메라에서 늘 10 m 넘게 떨어진다) — 위끝은 해 쪽 바깥으로 기울어
+// 나무 사이로 기울어 드는 오후 빛줄기: 해 방향으로 기운 긴 띠를 십자로 겹친 것 여덟 개를 한 메쉬로(그리기 한 번).
+//  더하기 섞기라 아주 옅게만 밝힌다. 밑동은 해 쪽 숲 덩어리 가장자리(수관 지붕 끝, 결투장에서 20 m 넘게 — 카메라에서 늘 10 m 넘게 떨어진다),
+//  밑동 쪽은 옅게 시작해 땅에서 빛기둥처럼 빛나지 않는다 (10/11 2차) — 위끝은 해 쪽 바깥으로 기울어
 //  결투장 위 허공에는 걸리지 않는다. 카메라 궤도(10.5 m) 안에 들지 않는다
 function lightShafts(scene, r) {
   const sun = new THREE.Vector3(SUN_OFFSET.x, SUN_OFFSET.y, SUN_OFFSET.z).normalize(), sunA = Math.atan2(sun.z, sun.x);
   const pos = [], col = [], warm = new THREE.Color(0xffe2a6);
   const u = new THREE.Vector3().crossVectors(sun, UP).normalize(), w2 = new THREE.Vector3().crossVectors(sun, u).normalize();
+  // 밑동은 해 쪽 숲 덩어리 가장자리 (수관 지붕 끝에서 트인 곳으로 드는 빛, 짙은 숲 벽 앞에서 읽힌다) — 결투장에서 20 m 넘게
+  const sunGroves = GROVES.filter(([gx, gz]) => Math.cos(Math.atan2(gz, gx) - sunA) > 0.6);
   let made = 0;
-  for (let tries = 0; made < 10 && tries < 80; tries++) {
-    const a = sunA + (r() - 0.5) * 1.8, d = 20 + r() * 13, x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (Math.hypot(x - HERO.x, z - HERO.z) < 7 || Math.hypot(x - 13.8, z - 13.7) < 4) continue;
-    const len = 14 + r() * 8, width = 0.9 + r() * 1.4, peak = 0.018 + r() * 0.016, foot = new THREE.Vector3(x, groundHeight(x, z), z);
+  for (let tries = 0; made < 8 && tries < 80; tries++) {
+    const [gx, gz, R] = sunGroves[tries % sunGroves.length], ga = r() * TAU, gd = R * (0.75 + r() * 0.5), x = gx + Math.cos(ga) * gd, z = gz + Math.sin(ga) * gd;
+    if (Math.hypot(x, z) < 20 || Math.hypot(x - HERO.x, z - HERO.z) < 7 || Math.hypot(x - 13.8, z - 13.7) < 4) continue;
+    const len = 15 + r() * 7, width = 0.8 + r() * 1.1, peak = 0.022 + r() * 0.016, foot = new THREE.Vector3(x, groundHeight(x, z), z);
     for (const side of [u, w2]) {
       const L = 5, cols = [-1, 0, 1];
       const ring = [];
       for (let j = 0; j <= L; j++) {
         const t = j / L, wide = width * (0.75 + t * 0.7), c = foot.clone().addScaledVector(sun, t * len);
-        const fade = THREE.MathUtils.smoothstep(t, 0, 0.18) * (1 - THREE.MathUtils.smoothstep(t, 0.45, 1));
+        const fade = THREE.MathUtils.smoothstep(t, 0.04, 0.42) * (1 - THREE.MathUtils.smoothstep(t, 0.55, 1)); // 밑동은 옅게 (땅에서 빛기둥처럼 빛나지 않게)
         ring.push(cols.map((k) => ({ p: c.clone().addScaledVector(side, k * wide), f: fade * (k === 0 ? 1 : 0) * peak })));
       }
       for (let j = 0; j < L; j++) for (let k = 0; k < 2; k++) {
@@ -673,10 +686,8 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
   //  신목 둘레 13.5 m 와 결투장에서 본 신목 뒤 통로(신목 너머 반폭 6.5 m)는 비워 신목 실루엣이 맑은 대기에 뜬다.
   //  안개가 다 덮는 78 m 밖에는 심지 않는다. 무리: [x, z, 그루, 퍼짐(m), 키 배율]
   const stands = [
-    [-19, -8, 7, 6.5, 1.05], [-17, 18, 5, 5, 0.8], [1, 26, 7, 7, 1.2], [17, 25, 3, 3, 0.75], [35, 15, 6, 6, 1.0],
-    [39, -18, 6, 7.5, 1.15], [7, -31, 7, 8, 0.95], [-27, -28, 6, 6, 1.25], [-43, 12, 6, 9, 0.9], [-6, -21, 2, 1.8, 0.7],
-    [-23, 3, 2, 2, 0.65], [24, 34, 4, 8, 1.1], [52, 30, 4, 9, 1.0], [-38, 40, 4, 10, 1.1], [-14, -50, 5, 10, 1.05],
-    [52, -36, 3, 9, 1.0], [-55, -14, 3, 9, 0.95], [5, 52, 4, 9, 1.0], [60, -6, 3, 10, 1.05], [29, -33, 5, 6, 1.0],
+    [-6, -21, 2, 1.8, 0.7], [-23, 3, 2, 2, 0.65], [-45, 10, 3, 9, 0.9], [52, 30, 1, 9, 1.0], [-38, 40, 2, 10, 1.1],
+    [-14, -50, 2, 10, 1.05], [52, -36, 1, 9, 1.0], [-55, -14, 2, 9, 0.95], [5, 52, 1, 9, 1.0], [60, -6, 1, 10, 1.05],
   ];
   const trunks = [], heroDir = Math.atan2(HERO.z, HERO.x), heroDist = Math.hypot(HERO.x, HERO.z);
   const freeSpot = (x, z) => {
@@ -688,9 +699,27 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
     return trunks.every(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) > tr);
   };
   let tree = 0;
-  stands.forEach(([sx, sz, count, spread, hs], si) => {
+  // 숲 덩어리: 안쪽은 키 큰 'grove' 나무를 촘촘히, 가장자리(바깥 30 %)는 낮고 바깥으로 기운 나무로 벽을 닫는다
+  GROVES.forEach(([gx, gz, R, count, hs]) => {
+    for (let n = 0, tries = 0; n < count && tries < count * 12; tries++) {
+      const a = r() * TAU, d = Math.sqrt(r()) * R, x = gx + Math.cos(a) * d, z = gz + Math.sin(a) * d;
+      const edge = d / R, rim = edge > 0.7;
+      if (!freeSpot(x, z)) continue;
+      const out = Math.atan2(z - gz, x - gx) + (r() - 0.5) * 0.6;
+      if (rim) forestPine(K, foliage, 7001 + tree * 13, x, z, 17 * hs * (0.5 + r() * 0.35), 0.24 + r() * 0.2, r() < 0.6 ? 'lean' : 'tall', out);
+      else forestPine(K, foliage, 7001 + tree * 13, x, z, 17 * hs * (0.82 + r() * 0.36), 0.3 + r() * 0.22, 'grove', out);
+      trunks.push([x, z, rim ? 1.5 : 1.6]); n++; tree++;
+    }
+    // 수관 지붕: 덩어리 위에 넓고 납작한 잎 덩어리를 겹쳐 얹어 나무 사이 하늘을 메운다 (인스턴스라 그리기 호출은 늘지 않는다)
+    const roof = Math.round(R * R * 0.2), top = 17 * hs;
+    for (let k = 0; k < roof; k++) {
+      const a = r() * TAU, d = Math.sqrt(r()) * R * 0.78, x = gx + Math.cos(a) * d, z = gz + Math.sin(a) * d, w = 4.4 + r() * 1.8;
+      foliage.push({ kind: Math.hypot(x, z) > 26 ? 'padFar' : 'pad' + k % 3, x, y: groundHeight(x, z) + top * (0.8 + r() * 0.16), z, sx: w, sy: w * 0.42, sz: w * (0.75 + r() * 0.2), a: r() * TAU, tilt: (r() - 0.5) * 0.1, color: r() < 0.4 ? C.needleDeep : r() < 0.25 ? C.needleLit : C.needle });
+    }
+  });
+  // 덩어리 사이 트인 곳의 외톨이·쌍둥이 몇 그루와, 안개 속 먼 숲 그림자(간단한 꼴)
+  stands.forEach(([sx, sz, count, spread, hs]) => {
     for (let n = 0, tries = 0; n < count && tries < count * 8; tries++) {
-      // 반은 무리 안 아무 데나, 반은 바로 앞 나무 곁(1.7~2.6 m)에 붙여 쌍둥이·셋 묶음을 만든다
       const prev = trunks.length && n > 0 && r() < 0.45 ? trunks[trunks.length - 1] : null;
       const a = r() * TAU, d = prev ? 1.7 + r() * 0.9 : Math.sqrt(r()) * spread;
       const x = (prev ? prev[0] : sx) + Math.cos(a) * d, z = (prev ? prev[1] : sz) + Math.sin(a) * d;
@@ -703,11 +732,12 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
       trunks.push([x, z, young ? 1.4 : 2.0]); n++; tree++;
     }
   });
+  const clumps = [...GROVES, ...GROVES, ...stands]; // 덤불은 숲 덩어리 둘레에 두 몫
 
   // Low growth follows patches of trees and leaves irregular open seams, rather
   // than a continuous row of identical green boulders around the clearing.
   for (let i = 0; i < 115; i++) {
-    const stand = stands[i % stands.length], a = r() * TAU, d = Math.sqrt(r()) * 8.5;
+    const stand = clumps[i % clumps.length], a = r() * TAU, d = Math.sqrt(r()) * 8.5;
     const x = stand[0] + Math.cos(a) * d, z = stand[1] + Math.sin(a) * d;
     if (Math.hypot(x,z) < 18.5 || Math.hypot(x,z) > 50) continue; // 50 m 밖 덤불은 대기에 묻힌다
     if (Math.hypot(x - HERO.x, z - HERO.z) < 7 || Math.hypot(x - 13.8, z - 13.7) < 5) continue;
@@ -717,7 +747,7 @@ export function buildSacredGrove(scene, { hemi, sun } = {}) {
   const canopyMat = quietWind(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }), windClock);
   // 잎 덩어리는 모양 여섯 가지(둘레 소나무 셋 · 먼 소나무 · 신목 · 덤불)를 각각 인스턴스 한 묶음으로 그린다 (그리기 호출 6번).
   //  신목만 80삼각형 다면체를 뭉친 고운 덩어리, 둘레는 20삼각형 다면체 뭉치, 40m 밖(안개 속)은 8삼각형 팔면체 뭉치.
-  const shapes = { pad0: () => cloudPadGeometry(11, 0, 5), pad1: () => cloudPadGeometry(23, 0, 6), pad2: () => cloudPadGeometry(37, 0, 5), padFar: () => cloudPadGeometry(71, -1, 6), hero: () => cloudPadGeometry(53, 1, 7), shrub: () => canopyGeometry(false) };
+  const shapes = { pad0: () => cloudPadGeometry(11, 0, 5), pad1: () => cloudPadGeometry(23, 0, 5), pad2: () => cloudPadGeometry(37, 0, 5), padFar: () => cloudPadGeometry(71, -1, 6), hero: () => cloudPadGeometry(53, 1, 7), shrub: () => canopyGeometry(false) };
   const dummy = new THREE.Object3D(), color = new THREE.Color();
   for (const [kind, make] of Object.entries(shapes)) {
     const selected = foliage.filter(f => f.kind === kind);
