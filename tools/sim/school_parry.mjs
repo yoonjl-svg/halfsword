@@ -3,7 +3,7 @@
 //  한 자리를 들고 버틴다. 다른 점: 본판 길로 잰다(생성자가 유파 자세표를 입힘) · 14 패드에 독일 표의 highL 자리 [−0.3, 0.1] 를 더한다 ·
 //  줄마다 그 유파 꾸러미의 막기 자리(art.school.parry)와 독일 막기 자리(GERMAN = longsword 꾸러미)를 표시한다.
 //  막음 = 그 판에 치는 쪽 상처가 0. 고르는 기준은 원전이고 이 수는 보고용이다.
-//   node tools/sim/school_parry.mjs <무기id>      (PARRY_GAPS=1.3,1.45,1.6,1.75 · PARRY_SEEDS=7 — 판 수 = 간격 × 씨앗)
+//   node tools/sim/school_parry.mjs <무기id>      (PARRY_GAPS=1.3,1.45,1.6,1.75 · PARRY_SEEDS=7 — 판 수 = 간격 × 씨앗 · PARRY_ONLY=1 = 유파·독일 자리만)
 import { newRound, DT } from './harness_m.mjs';
 import { MOTION } from '../../src/motion_library.js';
 import { TECH, G as PAD } from '../../src/ai_techniques.js';
@@ -25,7 +25,8 @@ const own = art.school.parry;
 const ger = SCHOOLS.longsword.parry;
 const names = art.names;
 const padKey = (p) => Object.entries(PAD).find(([, v]) => v[0] === p[0] && v[1] === p[1])?.[0] ?? `[${p}]`;
-const CANDS = [...GUARD_BASE.map((g, i) => ({ pad: g.pad, label: `${padKey(g.pad)} ${names[i]?.name ?? g.name}` })), { pad: [-0.3, 0.1], label: '[-0.3,0.1] (독일 highL 자리)' }];
+const CANDS0 = [...GUARD_BASE.map((g, i) => ({ pad: g.pad, label: `${padKey(g.pad)} ${names[i]?.name ?? g.name}` })), { pad: [-0.3, 0.1], label: '[-0.3,0.1] (독일 highL 자리)' }];
+const ONLY = process.env.PARRY_ONLY === '1'; // 유파·독일 자리만 (빠른 판)
 const setPad = (P, x, y) => {
   P.handOffset.set(x, y);
   P.skill.aimRaw?.set?.(x, y);
@@ -36,6 +37,7 @@ console.log(`${id} (${art.tradition}) 막기 점검 — 판 ${GAPS.length * SEED
 for (const [line, tn] of LINES) {
   const tech = TECH.find((t) => t.name === tn);
   const rows = [];
+  const CANDS = ONLY ? CANDS0.filter((c) => same(c.pad, own[line]) || same(c.pad, ger[line])) : CANDS0;
   for (const c of CANDS) {
     let hit = 0, clash = 0, n = 0;
     for (const gap of GAPS) for (const seed of SEEDS) {
