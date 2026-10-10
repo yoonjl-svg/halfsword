@@ -21,7 +21,7 @@ export const CHARACTERS = [
   {
     id: 'bran',
     name: '브란 오소리', // 사장님 10/11 01:0x '오소리 브란은 브란 오소리로 바꾸자'
-    epithet: '나무꾼',
+    epithet: '가장', // 사장님 10/11 01:1x (전 '나무꾼')
     age: 34,
     origin: '검은숲 변두리 화전민 마을',
     backstory:
@@ -406,7 +406,7 @@ export const CHARACTERS = [
   {
     id: 'minami',
     name: '미나미',
-    epithet: '금줄의 무녀', // 사장님 10/10 19:4x
+    epithet: '수호자', // 사장님 10/11 01:1x (전 '금줄의 무녀' 10/10 19:4x)
     weapon: 'monohoshizao', // 일본 유파
     voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
     ai: { level: 'normal', persona: { school: 'monohoshizao', pers: {} } },
@@ -434,7 +434,7 @@ export const CHARACTERS = [
     // 샛별 6e71ba2(처음) · 5277832(외형 v2) · c21bd19(눈) — 엑스칼리버 진품의 주인이라는 그쪽 설정. 이름은 그쪽 사용자 확정
     id: 'artoria',
     name: '아르토리아',
-    epithet: '돌아온 맹세',
+    epithet: '왕', // 사장님 10/11 01:1x (전 '돌아온 맹세')
     age: 24,
     origin: '브리튼 · 바다 너머의 잃어버린 왕국',
     backstory: '금빛 검을 지녔다는 소문을 따라 바다를 건넌 기사. 왕관도 군대도 없이 돌아왔지만, 엑스칼리버는 여전히 그녀의 손에서 빛난다. 이름을 빌린 이들을 벌하기보다, 그 이름이 지켜야 했던 사람들을 찾는다.',
@@ -492,7 +492,7 @@ export const CHARACTERS = [
     // 샛별 27888f2(처음) · 4c5ce4d(여행자 옷·머리) · dcad882(짚신). id 는 그쪽 처음 이름의 흔적(복식 모듈 이름과 같게 둠)
     id: 'renji',
     name: '김씨',
-    epithet: '칼을 뽑지 않는 낭인',
+    epithet: '걷는 남자', // 사장님 10/11 01:1x (전 '칼을 뽑지 않는 낭인')
     age: 32,
     origin: '북쪽 항구와 산길',
     backstory: '형이 남긴 검을 허리에 차고 떠도는 낭인. 그 검으로 사람을 베지 않겠다는 약속 때문에, 항구에서 얻은 낯선 철퇴로 호위 일을 한다. 삿갓 아래 마른 찻잎을 넣고 다니며 길에서 만난 이에게 먼저 차를 권한다.',
