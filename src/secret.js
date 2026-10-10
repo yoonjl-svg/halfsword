@@ -353,6 +353,16 @@ export function montanteFlowSeq(hand, dir, D, f = null) {
  *  v5 '머리 위로 넘김'과 같은 문)을 둔다. AI 는 준비 동안 옆 자세를 잡고 있으니 곧장 벤다
  */
 /**
+ * 길목 경계 선 (10/11 v6 4차 — 디렉터 '북부 대공의 검 경계는 스위치로'): 준비(밖)·순간(넘음)을 재는 가슴 거리.
+ *  SECRET.gilmokEdge 'reach'(기본) = 무기 간격 끝(검술 풀이 measure.reach) · 'cut' = 이 한 칼의 칼끝이 실제로 닿는 앞 거리 + 디딤 —
+ *  덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength) + 디딤(do.step.fwd 0.3). 칼 길이·손 자리에서 계산(탐침 값 아님)
+ */
+export function gilmokLine(f, reach, D) {
+  if (SECRET.gilmokEdge !== 'cut') return reach;
+  return SECRET.iaiPath.M.hand[0] + (f.weaponCfg?.bladeLength ?? 0) + (D?.step?.fwd ?? 0);
+}
+
+/**
  * 길목 한 칼의 디딤 (10/11 v6 3차 — 디렉터 '디딤을 그 순간 상대와의 간격에 맞추세요'): 디딤 = (그 순간 상대 가슴 거리 − 이 한 칼의 칼끝 앞 거리)를
  *  [st.fwd 0.3 (talhoRodeado), st.max 0.6 (japaneseStep)] 로 자름 — 기하로 정하는 값. 칼끝 앞 거리 = 덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength).
  *  f 가 없으면(도구) st.fwd 그대로
@@ -486,7 +496,7 @@ export class PlayerSecretWatch {
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
-    if (S.do?.gilmok) this.gilArm.tick(dt, d0 > V.reach, sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
+    if (S.do?.gilmok) this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
@@ -507,7 +517,7 @@ export class PlayerSecretWatch {
     // 상대 사건 (AI secretScan 과 같은 꼴: 사건 한 번에 한 번, 0.3 s 그치면 다시 건다)
     const r = me.right(_r);
     const E = this.ev;
-    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: V.reach, dt, st: E, armed: this.gilArm.armed }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비)
+    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비)
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;

@@ -18,7 +18,6 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SECRET, ARM, STRIKE, GAIT } from './config.js';
-import { IBERIAN_TABLE } from './guards.js'; // 길목 감음 자세 (10/11 v6 3차 — 이베리아 자세표 옆 자세 값)
 const GAIT_REACH = GAIT.reachMax;
 
 const _qc = new THREE.Quaternion();
@@ -808,6 +807,8 @@ export function startLunge(f) {
 //   가운데 = 손 앞 0.5 · 위 0.1 · 칼날 수평(앞 0°, 높이 −3°) — 팔을 앞으로 뻗어 칼끝이 상대 몸통 높이로 지난다 ·
 //   끝 = 손을 반대쪽 앞으로 다 뻗고 칼날 반대쪽 75° · 몸 돌림(칼 든 어깨가 앞).
 //   1차(덧씌우기 없음 — 자세 지도의 패드 길만): 옆 자세에서 칼이 몸 뒤로 감겨 칼끝이 앞 1.3 m · 가슴 +0.8~1.5 m(상대 머리 위)에서 그쳐 48 판 맞힘 0.
+//  감는 토막(gilmokWind — 플레이어가 옆 자세 밖에서 창을 받은 때)에는 덧씌우지 않는다 (10/11 v6 4차): 3차에 자세표 옆 자세를 덧씌웠더니 플레이어 칼이 2/2 헛쳤다 —
+//   덧씌우기를 빼면 2/2 넓적다리에 닿는다(2차와 같음). 남은 낮음의 원인은 감음 토막의 떨어지는 힘(손을 미리 옆 자세에 두면 칼끝이 가슴 +0.1~0.3 m — 탐침)
 //  seg: 'mid'(가운데 토막) | 'end'(끝 토막·따라 지나감·경직) | null(끔 — 0.12 s 에 걷음, iaiReadyPose 끄는 빠르기와 같음) · s: +1 오른쪽에서 탈류 · −1 왼쪽에서 레베스
 // ─────────────────────────────────────────────────────────────
 const _gh = new THREE.Vector3();
@@ -824,23 +825,6 @@ export function gilmokCutPose(f, seg, s, dt) {
   f.gilCutW = w;
   th.w = w;
   if (!seg) return; // 걷는 동안은 마지막 목표 그대로
-  if (seg === 'wind') {
-    // 감음 (10/11 v6 3차): 손이 옆 자세 밖에서 창을 받은 때(플레이어)의 감는 토막 — 이베리아 자세표 옆 자세('옆 자세' · '왼쪽 옆 자세') 값을 그대로 덧씌운다.
-    //  덧씌우기 없이 감으면 칼이 머리 위(칼끝 가슴 +0.9 m)를 돌아 떨어지는 힘이 한 칼로 이어져 칼자루가 가슴 −0.26 m 까지 처지고 넓적다리를 벴다(플레이어 탐침)
-    const T = IBERIAN_TABLE[s > 0 ? '옆 자세' : '왼쪽 옆 자세'];
-    th.hand[0] = T.hand[0];
-    th.hand[1] = T.hand[1];
-    th.hand[2] = T.hand[2];
-    const Dw = dirOf(T.blade[1], T.blade[0]);
-    th.dir[0] = Dw.x;
-    th.dir[1] = Dw.y;
-    th.dir[2] = Dw.z;
-    th.pelvisYaw = T.pelvisYaw * D2R;
-    th.chestYaw = T.chestYaw * D2R;
-    th.pitch = T.pitch * D2R;
-    th.drop = T.drop;
-    return;
-  }
   const K = SECRET.iaiPath;
   const P = seg === 'mid' ? K.M : K.E;
   // 발도는 왼 허리 → 칼 든 쪽(+)으로 벤다. 길목 탈류(s +1)는 칼 든 쪽 → 반대쪽(−)이라 옆 자리·옆 각을 −s 로 뒤집는다
@@ -871,8 +855,6 @@ export function gilmokCutPose(f, seg, s, dt) {
 
 /** 길목 한 칼의 토막 이름 → gilmokCutPose 의 seg · s (그 밖이면 seg null) */
 export function gilmokSeg(name, stiff) {
-  const w = /^gilmokWind([RL])$/.exec(name ?? '');
-  if (w) return { seg: 'wind', s: w[1] === 'R' ? 1 : -1 };
   const m = /^gilmok(Talho|Revez)(End)?$/.exec(name ?? '');
   if (!m) return { seg: null, s: 1 };
   return { seg: m[2] || stiff ? 'end' : 'mid', s: m[1] === 'Talho' ? 1 : -1 };
