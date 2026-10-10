@@ -45,7 +45,7 @@
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS, HIGH_GUARDS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
 import { schoolMeasure } from './weapon_measured.js';
-import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.table) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
+import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.guardTable) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
 
 /** 기술 목록을 복사하면서 기술별 reach(닿는 거리 보정, m)를 무기에 맞게 바꾼다 (표에 없는 기술은 롱소드 값 그대로) */
 const withReach = (tech, reach) => tech.map((t) => (t.name in reach ? { ...t, reach: reach[t.name] } : t));
@@ -565,8 +565,8 @@ export const TRADITIONS = {
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
   italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES, temper: ITALIAN_TEMPER, gait: ITALIAN_GAIT, secret: ITALIAN_SECRET },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
-  // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(table — guards.js IBERIAN_TABLE, 앞무게 틀 위)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, table: { heavy: IBERIAN_TABLE }, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, secret: IBERIAN_SECRET },
+  // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(guardTable — guards.js IBERIAN_TABLE, 앞무게 틀 표를 고른 뒤 덮음)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, secret: IBERIAN_SECRET },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
@@ -594,7 +594,7 @@ const ITALIAN_OFFARM = { guard: [0.35, 0.18, 0.12], lunge: [0.3, 0.36, 0.04] };
 TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
-export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].table, sword_art.js) — false = 앞무게 틀 표 그대로
+export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
 
 /**
  * 무기 → 유파 기본값 (틀·방식에서 자동). 스펙에 school 이 있으면 그것 (모노호시자오 japanese · 청강검 chinese).

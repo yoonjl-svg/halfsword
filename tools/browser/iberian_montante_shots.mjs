@@ -10,6 +10,7 @@ const dir = process.argv[3] || '.';
 const PREFIX = process.env.PREFIX || 'iberian_montante';
 const GUARD = process.env.GUARD || 'langort'; // 대기 캡처를 찍을 자세 이름 (없으면 간 보기 아무 자세)
 const STRIKE_MS = +(process.env.STRIKE_MS || 120);
+const WAIT = +(process.env.WAIT_MS || 300000); // 실시간 기다림 한도 (ms) — 기계가 바쁘면 판 시간이 느리게 간다
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const errors = [];
@@ -85,13 +86,13 @@ async function waitFor(page, pred, ms, step = 40) {
 {
   const page = await open('?weapon=longsword&foeWeapon=zweihander');
   await page.evaluate(() => { window.game.player.applyWound = () => {}; window.game.enemy.applyWound = () => {}; }); // 시험만: 캡처가 끝날 때까지 둘 다 죽지 않게
-  let r = await waitFor(page, (x) => x.sim > 2.5 && x.mode === 'watch' && (!GUARD || x.guard === GUARD) , 45000);
-  if (!(r.mode === 'watch')) r = await waitFor(page, (x) => x.mode === 'watch', 20000);
+  let r = await waitFor(page, (x) => x.sim > 2.5 && x.mode === 'watch' && (!GUARD || x.guard === GUARD), WAIT);
+  if (!(r.mode === 'watch')) r = await waitFor(page, (x) => x.mode === 'watch', WAIT);
   await page.waitForTimeout(250);
   r = await probe(page);
   await three(page, 'guard');
   out.guard = r;
-  r = await waitFor(page, (x) => x.mode === 'attack' && x.phase === 'strike', 60000, 15);
+  r = await waitFor(page, (x) => x.mode === 'attack' && x.phase === 'strike', WAIT, 15);
   await page.waitForTimeout(STRIKE_MS);
   r = await probe(page);
   await three(page, 'cut');

@@ -193,11 +193,11 @@ export function guardBaseTwo(style) {
 }
 
 // ── 이베리아 몬탄테 자세표 (10/10 사장님 '레이피어 고증하듯이 이베리아도 고증해' — docs/motion/iberian_montante_2026-10-10.md) ──
-//  앞무게 틀 표(frames.js FRAME_GUARDS.heavy) 위에 유파 이베리아(츠바이핸더)일 때만 덮는다 — 다른 앞무게(모노호시자오·참치)·두손 무기는 바이트 그대로.
-//  열쇠 = 바탕 자리 이름(교본 이름), 값 = frames.js remake 꼴(hand [앞, 위, 칼 든 쪽] m · blade [올려본 각, 옆 각] ° · yaw·pitch °). 적지 않은 칸은 바탕 교본 값.
+//  유파 자세표(TRADITIONS.iberian.guardTable)로 앞무게 틀 표(frames.js FRAME_GUARDS.heavy)를 고른 **뒤에** 적힌 자리만 덮는다 — 다른 앞무게(모노호시자오·참치)·두손 무기는 바이트 그대로.
+//  열쇠 = 바탕 자리 이름(GUARDS name 글자 그대로), 값 = { hand [앞, 위, 칼 든 쪽] m · blade [올려본 각, 옆 각] ° · pelvisYaw·chestYaw·pitch ° · drop m } (덮는 함수 applySchoolGuardTable).
 //  Destreza 말: postura recta = 칼을 얼굴 앞에 곧게 · linha obtusa = 칼끝이 수평 위로 든 비낀 줄(acute = 아래) — 피게이레두는 데스트레자 사범(곤살루 바르보자 문하)
 //  피 단Ⅰ = 피게이레두 1651 단순 규칙 Ⅰ, 피 복ⅩⅣ = 복합 규칙 ⅩⅣ (Myers·Hick 영역, Wiktenauer). 손 높이·각 숫자는 원문에 없다 → [해석] [모두 사장님 확인 전 — 확인표 660~]
-//  끄기: schools.js SCHOOL_ART.table = false (도구) → 전 값(앞무게 틀 표 그대로). 덮는 곳은 frames.js buildFrameTable 의 유파 칸(sword_art.js 가 유파를 넘긴다)
+//  끄기: schools.js SCHOOL_ART.table = false (도구) → 전 값(앞무게 틀 표 그대로). 부르는 곳은 sword_art.js resolveSwordArt (무기 틀 표를 만든 뒤)
 export const IBERIAN_TABLE = {
   // 곧은 자세: 베기마다 몬탄테를 얼굴 앞에 멈춘다 — 「stopping with the montante in right angle in front of the face」(단Ⅰ) · 「the point forward and the hands high in front of the eyes」(단Ⅱ)
   //  · 「always you will stop the montante in front of the face」(복Ⅶ) · 몸은 곧게(「place your body straight」 단Ⅰ). 손 = 눈 아래 얼굴 앞, 칼끝 앞으로 조금 들어 [해석]
@@ -213,6 +213,35 @@ export const IBERIAN_TABLE = {
   // 칼끝 땅에: 「your body straight with the left foot in front, the montante with the point on the ground」 — 모든 규칙이 여기서 시작해 여기로 끝난다(단Ⅰ)
   '바보 (Alber)': { hand: [0.38, -0.33, 0.02], blade: [-55, 0], pelvisYaw: 0, chestYaw: 0, pitch: 4, drop: 0.05, src: '피 단Ⅰ [원문] · 각 [해석]' },
 };
+
+/**
+ * 유파 자세표 덮기 (10/10 — 사장님 13:4x '규칙을 풀어': 유파마다 자기 자세표(원전 값)를 가져도 된다). 무기 틀 표를 고른 **뒤에** 적힌 자리만 덮는다.
+ *  table: 무기 틀 표(GUARDS 와 같은 차례 — 없으면 교본 표 BASE) · tradition: 유파 칸 객체 TRADITIONS[t] (guards.js 가 schools.js 를 부르면 순환이라 객체를 받는다)
+ *  tradition.guardTable 이 없으면 table 을 그대로 돌려준다(전과 같음). 자리 열쇠는 바탕 이름(GUARDS[i].name) — 틀 표가 이름을 바꿔도(상단·추단…) 맞는다.
+ *  보이는 이름·설명은 바꾸지 않는다(HUD 이름은 TRADITIONS[t].names)
+ */
+export function applySchoolGuardTable(table, tradition) {
+  const over = tradition?.guardTable;
+  if (!over) return table;
+  const src = table ?? BASE;
+  return src.map((g, i) => {
+    const o = BASE[i] && over[BASE[i].name];
+    if (!o) return g;
+    const out = { ...g };
+    if (o.hand) out.hand = o.hand;
+    if (o.blade) {
+      const el = o.blade[0] * D2R, az = o.blade[1] * D2R;
+      out.blade = o.blade;
+      out.dir = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
+    }
+    if (o.pelvisYaw != null) out.pelvisYaw = o.pelvisYaw * D2R;
+    if (o.chestYaw != null) out.chestYaw = o.chestYaw * D2R;
+    if (o.pitch != null) out.pitch = o.pitch * D2R;
+    if (o.drop != null) out.drop = o.drop;
+    if (o.src) out.src = o.src;
+    return out;
+  });
+}
 
 const SIGMA2 = 0.15 * 0.15;
 
