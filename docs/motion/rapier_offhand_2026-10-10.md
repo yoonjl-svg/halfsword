@@ -117,7 +117,7 @@
 - `node tools/sim/fights12.mjs` ('deprecated parameters' 줄 뺀 sha256 앞 8) = `5480fbd3` ✓
 - `node tools/sim/live_battery.mjs` = `e7ee3d96` ✓
 - `node tools/sim/finish_thrust.mjs 1 --stand` = `433ac984` ✓
-- `node tools/sim/corr_s0.mjs --limits=on,off --scenes=a,b` 동일성 모두 통과 ✓
+- `node tools/sim/corr_s0.mjs --limits=on,off --scenes=a,b` IDENTICAL 12/12 ✓
 - `node tools/sim/weapon_smoke.mjs` OK 17/17 ✓
 - `npx vite build` ✓ · `node tools/text/name_policy.mjs` 위반 0 ✓
 
