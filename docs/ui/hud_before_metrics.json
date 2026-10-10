@@ -1,0 +1,3291 @@
+{
+ "portrait_menu": {
+  "note": "real: 처음 메뉴(.overlay .card — 제목·.sub·.row·.seg·.toggle·.primary·.howto)"
+ },
+ "portrait_draw": {
+  "note": "real: 무기 뽑기 (foeIntro b·i·span·em + 카드 뒷면·번호 배지)",
+  "#foeIntro b": {
+   "box": [
+    98,
+    64,
+    195,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    98,
+    90,
+    195,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    98,
+    110,
+    195,
+    34
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#foeIntro em": {
+   "box": [
+    98,
+    149,
+    195,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(255, 217, 138)",
+   "op": 0.95,
+   "text": "무기 카드를 한 장 고르세요"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  ".drawRow": {
+   "box": [
+    16,
+    175,
+    358,
+    661
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "엑스칼리버\n레전드\n금빛 기운이 감도는 진짜 왕의 검.\n청강검\n에픽\n쇠도 "
+  }
+ },
+ "portrait_cards": {
+  "note": "real: 카드 앞면 (.wwho·.wname·.wsub·.wtier·.wdesc·.wabil, 등급 색)",
+  "#foeIntro b": {
+   "box": [
+    98,
+    64,
+    195,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    98,
+    90,
+    195,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    98,
+    110,
+    195,
+    34
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  ".drawRow": {
+   "box": [
+    16,
+    175,
+    358,
+    661
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "내 무기\n엑스칼리버\n레전드\n금빛 기운이 감도는 진짜 왕의 검.\n청강검\n에"
+  }
+ },
+ "portrait_start": {
+  "note": "real: Battle toast + hint + foeIntro",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#toast": {
+   "box": [
+    142,
+    473,
+    106,
+    33
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#foeIntro b": {
+   "box": [
+    115,
+    64,
+    160,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    115,
+    90,
+    160,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    115,
+    110,
+    160,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_fight": {
+  "note": "real: techCue passive(enemy.techCue 경로) · injected: guardName 글(실제 자세표), emoMsg",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    121,
+    241,
+    147,
+    23
+   ],
+   "font": "800 19.5px",
+   "color": "rgb(246, 231, 196)",
+   "op": 0.95,
+   "text": "Indes (맞받기)"
+  },
+  "#techCue small": {
+   "box": [
+    121,
+    267,
+    147,
+    16
+   ],
+   "font": "600 13px",
+   "color": "rgb(239, 226, 196)",
+   "op": 0.95,
+   "text": "독일 · 패시브"
+  },
+  "#toast": {
+   "box": [
+    142,
+    473,
+    106,
+    33
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0.95,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    115,
+    64,
+    160,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    115,
+    90,
+    160,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    115,
+    110,
+    160,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_foe_secret": {
+  "note": "real: techCue secret(상대) · injected: guardName",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    46,
+    237,
+    297,
+    30
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(255, 157, 92)",
+   "op": 0.95,
+   "text": "Versetzen (받아 베기)"
+  },
+  "#techCue small": {
+   "box": [
+    46,
+    269,
+    297,
+    17
+   ],
+   "font": "600 14px",
+   "color": "rgb(255, 201, 160)",
+   "op": 0.95,
+   "text": "독일 · 비기"
+  },
+  "#toast": {
+   "box": [
+    142,
+    473,
+    106,
+    33
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    115,
+    64,
+    160,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    115,
+    90,
+    160,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    115,
+    110,
+    160,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_cue_secretReady": {
+  "note": "injected: techCue data-kind=secretReady",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    46,
+    237,
+    297,
+    30
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(255, 214, 168)",
+   "op": 0.55,
+   "text": "Versetzen (받아 베기)"
+  },
+  "#techCue small": {
+   "box": [
+    46,
+    269,
+    297,
+    17
+   ],
+   "font": "600 14px",
+   "color": "rgb(255, 227, 196)",
+   "op": 0.55,
+   "text": "내 독일 · 비기"
+  },
+  "#toast": {
+   "box": [
+    142,
+    473,
+    106,
+    33
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    115,
+    64,
+    160,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    115,
+    90,
+    160,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    115,
+    110,
+    160,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_cue_secretArm": {
+  "note": "injected: techCue data-kind=secretArm",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    148,
+    243,
+    94,
+    21
+   ],
+   "font": "700 17.16px",
+   "color": "rgb(207, 224, 240)",
+   "op": 0.45,
+   "text": "고노센 준비"
+  },
+  "#techCue small": {
+   "box": [
+    148,
+    265,
+    94,
+    16
+   ],
+   "font": "600 13px",
+   "color": "rgb(239, 226, 196)",
+   "op": 0.45,
+   "text": "내 일본 · 비기"
+  },
+  "#toast": {
+   "box": [
+    142,
+    473,
+    106,
+    33
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    115,
+    64,
+    160,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    115,
+    90,
+    160,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    115,
+    110,
+    160,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_cue_stiff": {
+  "note": "injected: techCue data-kind=stiff",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    134,
+    237,
+    123,
+    30
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0.95,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    134,
+    269,
+    123,
+    17
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0.95,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    142,
+    473,
+    106,
+    33
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    115,
+    64,
+    160,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    115,
+    90,
+    160,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    115,
+    110,
+    160,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_result": {
+  "note": "injected: toast 패배 + foeIntro 승리 대사",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    136,
+    238,
+    118,
+    29
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    136,
+    269,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    165,
+    471,
+    59,
+    38
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "패배"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    131,
+    64,
+    128,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "하인리히"
+  },
+  "#foeIntro i": {
+   "box": [
+    131,
+    90,
+    128,
+    0
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": ""
+  },
+  "#foeIntro span": {
+   "box": [
+    131,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“은화! 은화 어딨어!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_pause": {
+  "note": "real: 일시정지 창",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    136,
+    238,
+    118,
+    29
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    136,
+    269,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    165,
+    471,
+    59,
+    38
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "패배"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    131,
+    64,
+    128,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히"
+  },
+  "#foeIntro i": {
+   "box": [
+    131,
+    90,
+    128,
+    0
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": ""
+  },
+  "#foeIntro span": {
+   "box": [
+    131,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“은화! 은화 어딨어!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_result_card": {
+  "note": "injected: 결과 창 글(menuTitle·menuSub·btnStart)",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    136,
+    238,
+    118,
+    29
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    136,
+    269,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    165,
+    471,
+    59,
+    38
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "패배"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    131,
+    64,
+    128,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히"
+  },
+  "#foeIntro i": {
+   "box": [
+    131,
+    90,
+    128,
+    0
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": ""
+  },
+  "#foeIntro span": {
+   "box": [
+    131,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“은화! 은화 어딨어!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_rotate": {
+  "note": "real: #rotate 안내 (세로 터치 화면에서 실제로 뜨는 것)",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    136,
+    238,
+    118,
+    29
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    136,
+    269,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    165,
+    471,
+    59,
+    38
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "패배"
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    131,
+    64,
+    128,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히"
+  },
+  "#foeIntro i": {
+   "box": [
+    131,
+    90,
+    128,
+    0
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": ""
+  },
+  "#foeIntro span": {
+   "box": [
+    131,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“은화! 은화 어딨어!”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_bg": {
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": ""
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": ""
+  },
+  "#techCue b": {
+   "box": [
+    136,
+    238,
+    118,
+    29
+   ],
+   "font": "900 24.96px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": ""
+  },
+  "#techCue small": {
+   "box": [
+    136,
+    269,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": ""
+  },
+  "#toast": {
+   "box": [
+    165,
+    471,
+    59,
+    38
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  },
+  "#emoMsg": {
+   "box": [
+    135,
+    767,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": ""
+  },
+  "#foeIntro b": {
+   "box": [
+    131,
+    64,
+    128,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": ""
+  },
+  "#foeIntro i": {
+   "box": [
+    131,
+    90,
+    128,
+    0
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": ""
+  },
+  "#foeIntro span": {
+   "box": [
+    131,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": ""
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "portrait_overlap": {
+  "note": "real: toast·hint·foeIntro(시작) · injected: emoMsg(브란 시작 분노와 같은 글), techCue passive, guardName",
+  "#guardName b": {
+   "box": [
+    212,
+    12,
+    164,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    212,
+    32,
+    164,
+    30
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    55,
+    241,
+    279,
+    23
+   ],
+   "font": "800 19.5px",
+   "color": "rgb(246, 231, 196)",
+   "op": 0.95,
+   "text": "Nachreisen (따라 들어가기)"
+  },
+  "#techCue small": {
+   "box": [
+    55,
+    267,
+    279,
+    16
+   ],
+   "font": "600 13px",
+   "color": "rgb(239, 226, 196)",
+   "op": 0.95,
+   "text": "독일 · 패시브"
+  },
+  "#toast": {
+   "box": [
+    142,
+    473,
+    106,
+    33
+   ],
+   "font": "800 28px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    80,
+    767,
+    230,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0.95,
+   "text": "오소리 브란의 분노가 폭발한다"
+  },
+  "#hint": {
+   "box": [
+    98,
+    766,
+    195,
+    66
+   ],
+   "font": "400 13px",
+   "color": "rgb(184, 168, 142)",
+   "op": 1,
+   "text": "왼쪽 아래 조이스틱으로 걷기 · 나머지 화면을 끌어서 휘두르고 톡 쳐서 "
+  },
+  "#foeIntro b": {
+   "box": [
+    98,
+    64,
+    195,
+    25
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "오소리 브란"
+  },
+  "#foeIntro i": {
+   "box": [
+    98,
+    90,
+    195,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": "나무꾼"
+  },
+  "#foeIntro span": {
+   "box": [
+    98,
+    110,
+    195,
+    34
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“은화 열 닢! 열 닢이라고 했지?”"
+  },
+  "#topButtons": {
+   "box": [
+    176,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    714,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_menu": {
+  "note": "real: 처음 메뉴(.overlay .card — 제목·.sub·.row·.seg·.toggle·.primary·.howto)"
+ },
+ "landscape_draw": {
+  "note": "real: 무기 뽑기 (foeIntro b·i·span·em + 카드 뒷면·번호 배지)",
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    328,
+    93,
+    189,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#foeIntro em": {
+   "box": [
+    328,
+    116,
+    189,
+    16
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(255, 217, 138)",
+   "op": 0.95,
+   "text": "무기 카드를 한 장 고르세요"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  ".drawRow": {
+   "box": [
+    16,
+    142,
+    812,
+    240
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "엑스칼리버\n레전드\n금빛 기운이 감도는 진짜 왕의 검.\n청강검\n에픽\n쇠도 "
+  }
+ },
+ "landscape_cards": {
+  "note": "real: 카드 앞면 (.wwho·.wname·.wsub·.wtier·.wdesc·.wabil, 등급 색)",
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    328,
+    93,
+    189,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“베인다! 베인다! 하하하!”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  ".drawRow": {
+   "box": [
+    16,
+    142,
+    812,
+    240
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "내 무기\n엑스칼리버\n레전드\n금빛 기운이 감도는 진짜 왕의 검.\n청강검\n에"
+  }
+ },
+ "landscape_start": {
+  "note": "real: Battle toast + hint + foeIntro",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#toast": {
+   "box": [
+    311,
+    192,
+    223,
+    69
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    310,
+    93,
+    224,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_fight": {
+  "note": "real: techCue passive(enemy.techCue 경로) · injected: guardName 글(실제 자세표), emoMsg",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    324,
+    97,
+    196,
+    31
+   ],
+   "font": "800 26px",
+   "color": "rgb(246, 231, 196)",
+   "op": 0.95,
+   "text": "Indes (맞받기)"
+  },
+  "#techCue small": {
+   "box": [
+    324,
+    130,
+    196,
+    16
+   ],
+   "font": "600 13px",
+   "color": "rgb(239, 226, 196)",
+   "op": 0.95,
+   "text": "독일 · 패시브"
+  },
+  "#toast": {
+   "box": [
+    311,
+    192,
+    223,
+    69
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0.95,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    310,
+    93,
+    224,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_foe_secret": {
+  "note": "real: techCue secret(상대) · injected: guardName",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    220,
+    91,
+    405,
+    41
+   ],
+   "font": "900 34px",
+   "color": "rgb(255, 157, 92)",
+   "op": 0.95,
+   "text": "Versetzen (받아 베기)"
+  },
+  "#techCue small": {
+   "box": [
+    220,
+    134,
+    405,
+    17
+   ],
+   "font": "600 14px",
+   "color": "rgb(255, 201, 160)",
+   "op": 0.95,
+   "text": "독일 · 비기"
+  },
+  "#toast": {
+   "box": [
+    311,
+    192,
+    223,
+    69
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    310,
+    93,
+    224,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_cue_secretReady": {
+  "note": "injected: techCue data-kind=secretReady",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    220,
+    91,
+    405,
+    41
+   ],
+   "font": "900 34px",
+   "color": "rgb(255, 214, 168)",
+   "op": 0.55,
+   "text": "Versetzen (받아 베기)"
+  },
+  "#techCue small": {
+   "box": [
+    220,
+    134,
+    405,
+    17
+   ],
+   "font": "600 14px",
+   "color": "rgb(255, 227, 196)",
+   "op": 0.55,
+   "text": "내 독일 · 비기"
+  },
+  "#toast": {
+   "box": [
+    311,
+    192,
+    223,
+    69
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    310,
+    93,
+    224,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_cue_secretArm": {
+  "note": "injected: techCue data-kind=secretArm",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    362,
+    99,
+    120,
+    26
+   ],
+   "font": "700 22px",
+   "color": "rgb(207, 224, 240)",
+   "op": 0.45,
+   "text": "고노센 준비"
+  },
+  "#techCue small": {
+   "box": [
+    362,
+    127,
+    120,
+    16
+   ],
+   "font": "600 13px",
+   "color": "rgb(239, 226, 196)",
+   "op": 0.45,
+   "text": "내 일본 · 비기"
+  },
+  "#toast": {
+   "box": [
+    311,
+    192,
+    223,
+    69
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    310,
+    93,
+    224,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_cue_stiff": {
+  "note": "injected: techCue data-kind=stiff",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    361,
+    91,
+    123,
+    41
+   ],
+   "font": "900 34px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0.95,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    361,
+    134,
+    123,
+    17
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0.95,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    311,
+    192,
+    223,
+    69
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    328,
+    64,
+    127,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히 도른"
+  },
+  "#foeIntro i": {
+   "box": [
+    455,
+    71,
+    62,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0,
+   "text": "미치광이"
+  },
+  "#foeIntro span": {
+   "box": [
+    310,
+    93,
+    224,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“이름 따위 필요 없다. 넌 곧 잊힌다.”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_result": {
+  "note": "injected: toast 패배 + foeIntro 승리 대사",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    363,
+    92,
+    118,
+    39
+   ],
+   "font": "900 34px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    363,
+    133,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    359,
+    186,
+    125,
+    80
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "패배"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    382,
+    64,
+    80,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "하인리히"
+  },
+  "#foeIntro span": {
+   "box": [
+    358,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“은화! 은화 어딨어!”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_pause": {
+  "note": "real: 일시정지 창",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    363,
+    92,
+    118,
+    39
+   ],
+   "font": "900 34px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    363,
+    133,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    359,
+    186,
+    125,
+    80
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "패배"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    382,
+    64,
+    80,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히"
+  },
+  "#foeIntro span": {
+   "box": [
+    358,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“은화! 은화 어딨어!”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_result_card": {
+  "note": "injected: 결과 창 글(menuTitle·menuSub·btnStart)",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    363,
+    92,
+    118,
+    39
+   ],
+   "font": "900 34px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": "경직"
+  },
+  "#techCue small": {
+   "box": [
+    363,
+    133,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": "상대 독일 · 비기 뒤"
+  },
+  "#toast": {
+   "box": [
+    359,
+    186,
+    125,
+    80
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 0,
+   "text": "패배"
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": "분노가 폭발한다"
+  },
+  "#foeIntro b": {
+   "box": [
+    382,
+    64,
+    80,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": "하인리히"
+  },
+  "#foeIntro span": {
+   "box": [
+    358,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0,
+   "text": "“은화! 은화 어딨어!”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_bg": {
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0,
+   "text": ""
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0,
+   "text": ""
+  },
+  "#techCue b": {
+   "box": [
+    363,
+    92,
+    118,
+    39
+   ],
+   "font": "900 34px",
+   "color": "rgb(185, 199, 214)",
+   "op": 0,
+   "text": ""
+  },
+  "#techCue small": {
+   "box": [
+    363,
+    133,
+    118,
+    16
+   ],
+   "font": "600 14px",
+   "color": "rgb(214, 221, 230)",
+   "op": 0,
+   "text": ""
+  },
+  "#toast": {
+   "box": [
+    359,
+    186,
+    125,
+    80
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  },
+  "#emoMsg": {
+   "box": [
+    362,
+    313,
+    120,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0,
+   "text": ""
+  },
+  "#foeIntro b": {
+   "box": [
+    382,
+    64,
+    80,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": ""
+  },
+  "#foeIntro span": {
+   "box": [
+    358,
+    93,
+    128,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": ""
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ },
+ "landscape_overlap": {
+  "note": "real: toast·hint·foeIntro(시작) · injected: emoMsg(브란 시작 분노와 같은 글), techCue passive, guardName",
+  "#guardName b": {
+   "box": [
+    662,
+    12,
+    168,
+    19
+   ],
+   "font": "800 15px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.92,
+   "text": "긴 자세 (Langort)"
+  },
+  "#guardName span": {
+   "box": [
+    662,
+    32,
+    168,
+    15
+   ],
+   "font": "400 11.5px",
+   "color": "rgb(228, 216, 191)",
+   "op": 0.78,
+   "text": "팔을 쭉 뻗어 칼끝으로 겨눈 자세"
+  },
+  "#techCue b": {
+   "box": [
+    236,
+    97,
+    372,
+    31
+   ],
+   "font": "800 26px",
+   "color": "rgb(246, 231, 196)",
+   "op": 0.95,
+   "text": "Nachreisen (따라 들어가기)"
+  },
+  "#techCue small": {
+   "box": [
+    236,
+    130,
+    372,
+    16
+   ],
+   "font": "600 13px",
+   "color": "rgb(239, 226, 196)",
+   "op": 0.95,
+   "text": "독일 · 패시브"
+  },
+  "#toast": {
+   "box": [
+    311,
+    192,
+    223,
+    69
+   ],
+   "font": "800 59.08px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Battle"
+  },
+  "#emoMsg": {
+   "box": [
+    307,
+    313,
+    230,
+    21
+   ],
+   "font": "700 16px",
+   "color": "rgb(255, 122, 92)",
+   "op": 0.95,
+   "text": "오소리 브란의 분노가 폭발한다"
+  },
+  "#hint": {
+   "box": [
+    211,
+    330,
+    422,
+    48
+   ],
+   "font": "400 13px",
+   "color": "rgb(184, 168, 142)",
+   "op": 1,
+   "text": "왼쪽 아래 조이스틱으로 걷기 · 나머지 화면을 끌어서 휘두르고 톡 쳐서 "
+  },
+  "#foeIntro b": {
+   "box": [
+    344,
+    64,
+    107,
+    24
+   ],
+   "font": "800 20px",
+   "color": "rgb(243, 230, 200)",
+   "op": 0.95,
+   "text": "오소리 브란"
+  },
+  "#foeIntro i": {
+   "box": [
+    451,
+    71,
+    49,
+    15
+   ],
+   "font": "400 12.5px",
+   "color": "rgb(217, 201, 166)",
+   "op": 0.95,
+   "text": "나무꾼"
+  },
+  "#foeIntro span": {
+   "box": [
+    344,
+    93,
+    156,
+    17
+   ],
+   "font": "400 13.5px",
+   "color": "rgb(239, 227, 200)",
+   "op": 0.95,
+   "text": "“자세? 힘이 최고야.”"
+  },
+  "#topButtons": {
+   "box": [
+    403,
+    8,
+    38,
+    38
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": "Ⅱ"
+  },
+  "#moveStick": {
+   "box": [
+    20,
+    260,
+    110,
+    110
+   ],
+   "font": "400 16px",
+   "color": "rgb(243, 233, 216)",
+   "op": 1,
+   "text": ""
+  }
+ }
+}
