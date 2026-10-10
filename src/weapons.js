@@ -1064,7 +1064,7 @@ const rubberChicken = finalizeSpec('rubber_chicken', {
 // ═════════════════════════════════════════════════════════════
 const frozenTuna = finalizeSpec('frozen_tuna', {
   nameKo: '냉동 참치', nameEn: 'Frozen Tuna',
-  desc: '얼어 붙은 참치.\n절대 부서지지 않는다.',
+  desc: '얼어붙은 참치.\n절대 부서지지 않는다.',
   grip: 'two-hand', material: 'frozen',
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
