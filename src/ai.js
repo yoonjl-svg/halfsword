@@ -29,7 +29,7 @@ import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧�
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
-import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -420,14 +420,34 @@ export class AI {
     }
     // 이베리아 길목 지키기 준비 (10/11 v6): 상대가 내 칼끝 거리(reach) 밖에 gilmokArmTime 초 머물면 칼을 몸 옆으로 감아 뒤로 둔 옆 자세(가로 탈류·가로 레베스)로 길목을 지킨다.
     //  쪽 = 준비가 켜질 때 지금 간 보는 자세의 쪽(가운데면 오른쪽 — 피 단Ⅰ 탈류부터). 간 보기·물러남 동안만 손 목표를 덮는다(자세 고르기는 그대로 — 풀리면 그 자세로 돌아감)
+    //  10/11 v6 2차 (디렉터 — 사장님이 낮은 자세를 '큰 차별성'으로 보심): 준비 동안 기본은 **낮은 자세**(아래 탈류·아래 레베스·칼끝 땅에 — 지금 자세가 낮지 않으면 손에서 가장
+    //   가까운 낮은 자세)로 기다리고, **상대가 다가오는 중일 때만**(foeClosing > SECRET.iberianInsideClosing 0.3 — 재사용) 그 쪽 옆 자세로 감는다. 감은 뒤 최소 gilmokArmGrace 0.5 s
+    //   유지(깜빡이지 않게 — 재사용). 감는 모습이 곧 길목의 예고다. 쪽 = 낮은 자세의 쪽(아래 레베스면 왼쪽, 아니면 오른쪽 — 피 단Ⅰ 탈류부터)
     if (this.gilArm) {
       const was = this.gilArm.armed;
       this.gilArm.tick(dt, d > this.M.reach && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun);
-      if (this.gilArm.armed && !was) this.gilSide = (this.guard?.pad?.[0] ?? 0) < -0.05 ? -1 : 1;
-      if (this.gilArm.armed && (this.mode === 'watch' || this.mode === 'withdraw')) {
-        const p = this.secret.do.side[this.gilSide];
-        this.hand.set(p[0], p[1]);
+      const A = this.gilArm.armed && (this.mode === 'watch' || this.mode === 'withdraw');
+      if (this.gilArm.armed && !was) {
+        const LOW = ['wechselR', 'wechselL', 'alber'];
+        if (!LOW.includes(this.guard?.name)) {
+          const hand = [this.me.handOffset.x, this.me.handOffset.y];
+          let best = null;
+          for (const g of this.school.guards) if (LOW.includes(g.name) && (!best || padDist(hand, g.pad) < padDist(hand, best.pad))) best = g;
+          if (best) this.guard = best;
+        }
+        this.gilSide = this.guard?.name === 'wechselL' ? -1 : 1;
+        this.gilWindT = 0;
       }
+      if (A) {
+        // 감는 거리: preThreat '가까움'과 같은 꼴(간격 + 다가옴 × 0.4 + 0.3)을 내 칼끝 거리로 — 먼 데서 걸어오는 동안은 낮게 기다린다
+        if (this.foeClosing > SECRET.iberianInsideClosing && d < this.M.reach + this.foeClosing * 0.4 + 0.3) this.gilWindT = SECRET.gilmokArmGrace;
+        else this.gilWindT = Math.max(0, (this.gilWindT ?? 0) - dt);
+        const p = this.gilWindT > 0 ? this.secret.do.side[this.gilSide] : this.guard.pad;
+        this.hand.set(p[0], p[1]);
+        this.handSpeed = this.gilWindT > 0 ? L.parrySpeed : this.pers.guardSpeed; // 감기는 받아 막기 빠르기, 낮게 기다리기는 간 보기 빠르기
+      } else this.gilWindT = 0;
+      const g = this.secretRun ? gilmokSeg(this.tech?.name, this.secretRun.stage === 'stiff') : { seg: null, s: 1 };
+      gilmokCutPose(me, g.seg, g.s, dt); // 한 칼의 덧씌우기 자세 (secret_instant.js — 팔을 앞으로 뻗어 몸통 높이)
     }
     this.moveHand(dt);
     this.moveFeet(dt, d);

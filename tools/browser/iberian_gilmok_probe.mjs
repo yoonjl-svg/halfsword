@@ -121,7 +121,7 @@ if (mode === 'press') {
   const t0 = await sim();
   let armAt = null, openAt = null, fired = false, k = 0, fireAt = null, cutShot = false;
   while ((await sim()) - t0 < 60) {
-    const st = await page.evaluate(() => { const g = window.game; const ps = g.playerSecret; const s = g.player.skill.sec; return { arm: !!ps.gilArm?.armed, open: !!ps.open, d: g.player.foeDistance(), sec: s ? { st: s.stage, n: s.cur?.name ?? null } : null, t: g.stats.simTime, alive: g.player.alive && g.enemy.alive }; });
+    const st = await page.evaluate(() => { const g = window.game; const ps = g.playerSecret; const s = g.player.skill.sec; return { arm: !!ps.gilArm?.armed, open: !!ps.open, d: g.player.foeDistance(), sec: s ? { st: s.stage, n: s.cur?.name ?? null } : null, t: g.stats.simTime, alive: g.player.alive && g.enemy.alive, w: g.enemy.wounds?.length ?? 0, w0: window.__w0 ?? null }; });
     if (!st.alive) break;
     // 너무 붙으면(준비 전) 다시 물러남
     if (!st.arm && !st.open && !fired && st.d < S.reach + 0.2) await page.keyboard.down('KeyS');
@@ -134,21 +134,23 @@ if (mode === 'press') {
     if (st.open && openAt == null) {
       openAt = st.t;
       await shoot(++k, '창 열림 (경계 넘음)');
-      await page.evaluate(() => (window.__fireT = window.game.stats.simTime));
+      await page.evaluate(() => { window.__fireT = window.game.stats.simTime; window.__w0 = window.game.enemy.wounds?.length ?? 0; });
       await swipe(-14, 0);
       fired = true;
       fireAt = st.t;
     }
-    if (st.sec && /End$/.test(st.sec.n ?? '') && !cutShot) {
+    if (fired && st.w0 != null && st.w > st.w0 && !cutShot) { // 한 칼이 닿은 순간 (상대 상처가 늘어난 첫 순간)
       cutShot = true;
-      await shoot(++k, '한 칼 (둘러 베기)');
+      await shoot(++k, '한 칼이 닿은 순간');
     }
     if (fired && !st.sec && st.t - fireAt > 0.3) break;
     await page.waitForTimeout(15);
   }
   await page.keyboard.up('KeyS');
   const rec = await page.evaluate(() => ({ rec: window.__rec, fireT: window.__fireT ?? null }));
-  Object.assign(out, { armAt, openAt, t0, fireT: rec.fireT });
+  const hit = await page.evaluate(() => ({ wounds: (window.game.enemy.wounds?.length ?? 0) - (window.__w0 ?? 0), E: (window.game.enemy.wounds ?? []).slice(window.__w0 ?? 0).map((w) => `${w.part}:${(+w.severity).toFixed(2)}`), landed: Object.values(window.game.player.skill.secretStats ?? {}).reduce((a, b) => a + (b.landed ?? 0), 0) }));
+  console.log(`HIT 한 칼 뒤 상대 상처 ${hit.wounds} (${hit.E.join(",")} 부위:세기) · 비기 맞힘 ${hit.landed}`);
+  Object.assign(out, { armAt, openAt, t0, fireT: rec.fireT, hit });
   const R = rec.fireT ? rec.rec.filter((x) => x.t >= rec.fireT - 0.3 && x.t <= rec.fireT + 1.5) : [];
   out.series = R;
   const run = R.filter((x) => x.st && x.st !== 'stiff');

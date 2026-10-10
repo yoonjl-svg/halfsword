@@ -27,7 +27,7 @@ import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
-import { requestInstant, requestIai, requestSweep, startLunge } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 
 const D2R = Math.PI / 180;
@@ -1037,6 +1037,11 @@ export class Skill {
     const L = this.level;
     this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     if (this.sec) this.updateSecret(dt); // 플레이어 비기: 손 목표를 비기 길로 (이 스텝의 거르기·몸 따라가기는 아래 그대로)
+    if (this.sec?.S?.do?.gilmok || f.gilCutW > 0) {
+      // 이베리아 길목 한 칼의 덧씌우기 자세 (10/11 v6 2차 — AI 와 같은 함수 secret_instant.js gilmokCutPose): 팔을 앞으로 뻗어 몸통 높이로 둘러 벰
+      const g = this.sec ? gilmokSeg(this.sec.cur?.name, this.sec.stage === 'stiff') : { seg: null, s: 1 };
+      gilmokCutPose(f, g.seg, g.s, dt);
+    }
     const off = f.handOffset;
     const R = WEAPON.reach;
     if (off.length() > R) off.setLength(R);

@@ -51,7 +51,7 @@ for (let seed = 1; seed <= N; seed++) {
       me.forward(_f);
       const tp = me.tipPrev ?? me.bladePoint(1, new THREE.Vector3());
       const rx = tp.x - c.x, ry = tp.y - c.y, rz = tp.z - c.z;
-      rec.push({ t: G.t - t0, v: me.tipVel.length(), x: me.side * (rx * _r.x + rz * _r.z), y: ry, fw: rx * _f.x + rz * _f.z, n: sr ? (sr.stage === 'stiff' ? 'stiff' : ai.tech?.name) : null, ph: ai.phase, pl: ai.path.length, hx: me.handOffset.x, hy: me.handOffset.y, ax: me.skill.aim.x, ay: me.skill.aim.y });
+      rec.push({ t: G.t - t0, v: me.tipVel.length(), fd: me.foeDistance(), x: me.side * (rx * _r.x + rz * _r.z), y: ry, fw: rx * _f.x + rz * _f.z, n: sr ? (sr.stage === 'stiff' ? 'stiff' : ai.tech?.name) : null, ph: ai.phase, pl: ai.path.length, hx: me.handOffset.x, hy: me.handOffset.y, ax: me.skill.aim.x, ay: me.skill.aim.y });
       if (process.env.TRACE == seed && rec.length % 4 === 1) { const q = rec[rec.length - 1]; console.log(`  t ${q.t.toFixed(3)} ${q.n} pl ${q.pl} 손 [${q.hx.toFixed(2)},${q.hy.toFixed(2)}] aim [${q.ax.toFixed(2)},${q.ay.toFixed(2)}] 칼끝 옆 ${q.x.toFixed(2)} 위 ${q.y.toFixed(2)} 앞 ${q.fw.toFixed(2)} v ${q.v.toFixed(1)} 거리 ${me.foeDistance().toFixed(2)}`); }
       if (sr?.stage === 'stiff' && !run) { run = 'stiff'; stiffN++; }
       if (!sr) break;
@@ -72,6 +72,11 @@ for (let seed = 1; seed <= N; seed++) {
     s.ymin = Math.min(s.ymin, r.y); s.ymax = Math.max(s.ymax, r.y);
   }
   const runRec = rec.filter((r) => r.n && r.n !== 'stiff' && r.v != null);
+  // 10/11 v6 2차: 칼끝이 가운데 선(옆 0)을 지날 때 — 앞 거리(가슴 기준) · 높이(가슴 기준) · 그때 상대 가슴 거리
+  for (let k = 1; k < runRec.length; k++) {
+    const a = runRec[k - 1], b = runRec[k];
+    if (a.x * b.x <= 0 && a.x !== b.x) { (globalThis.__mid ??= []).push({ fw: b.fw, y: b.y, fd: b.fd }); console.log(`  가운데 선: 칼끝 앞 ${b.fw.toFixed(2)} m · 높이 ${b.y.toFixed(2)} m · 상대 가슴 ${b.fd.toFixed(2)} m · ${b.n}`); break; }
+  }
   const T = runRec.length ? runRec[runRec.length - 1].t : 0;
   tot.push(T);
   console.log(`seed ${seed}: 흐름 ${T.toFixed(2)} s · 상처 ${woundsE} · ` + segs.map((s) => `${s.n} ${(s.t1 - s.t0 + DT).toFixed(2)}s v ${s.vmax.toFixed(1)}/${s.vmin.toFixed(1)} 옆 ${s.xmin.toFixed(2)}~${s.xmax.toFixed(2)} 높이 ${s.ymin.toFixed(2)}~${s.ymax.toFixed(2)}${s.J.length ? ' J ' + s.J.join(',') : ''}`).join(' | '));
