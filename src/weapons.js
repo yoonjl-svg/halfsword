@@ -925,7 +925,7 @@ const excalibur = finalizeSpec('excalibur', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur',
   desc: '금빛 기운이 감도는 진짜 왕의 검.',
   grip: 'two-hand', material: 'steel',
-  tier: 'legend', // 감독 등급: 레전드 → power 1.2·durability 1.0. 진품은 플레이어 전용(docs/characters.md)
+  tier: 'legend', // 감독 등급: 레전드 → power 1.2·durability 1.0. 진품은 플레이어 카드와 아르토리아(사장님 10/10 20:3x '진품 그대로') — 하인리히는 복제품
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
   mCut: 1.2, mThrust: 1.2, mBlunt: 1.1,
   partMesh: excaliburPartMesh,
