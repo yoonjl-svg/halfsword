@@ -300,6 +300,7 @@ if (mode === 'poses') {
   const geo = {}; // 닿는 순간 기하 (기술별)
   const offHit = { X: 0, Y: 0, Xall: 0 }; // 빈팔 맞음 계기 (10/10 빈팔 고증): 시험 쪽 빈팔(uarmO·farmO)에 난 상처 수 · 상대 빈팔 · 시험 쪽 모든 상처
   const falls = { all: 0, secret: 0, stance: 0 }; // 넘어짐 계기 (10/10 자세) — stance: 비기 자세(f.secretStance) 동안·뒤 1 s
+  const stiffHit = { stiff: 0, after: 0, n: 0 }; // 경직 계기 (10/10 20:5x 경직 멈춤): 시험 쪽이 비기 경직 동안 · 비기 끝난 뒤 1 s 안에 맞은 상처 수 · 경직 든 수 (읽기만)
   const breaks = { me: 0, foe: 0 }; // 칼 부러짐 계기 (10/10 2단계): 시험 쪽 · 상대
   const seqT = {}; // 여러 수 비기(연환삼격) 수마다 걸린 시간 (s): 수 이름 → [합, n] — 다음 수 시작 또는 비기 끝까지
   const hitMs = {}; // 기술별 칼 나감 → 첫 상처 ms (비기는 낸 때 → 첫 상처도)
@@ -354,6 +355,7 @@ if (mode === 'poses') {
       const tipRing = new Map([[X, []], [Y, []]]); // 칼끝 추정 에너지 최근 0.2 s
       G.onWound = (att, vic, r, _pt, pr) => {
         { const pt = pr?.v?.part; const oa = pt === 'uarmO' || pt === 'farmO'; if (vic === X) { offHit.Xall++; if (oa) offHit.X++; } else if (oa) offHit.Y++; }
+        if (vic === X && XA) { if (XA.secretRun?.stage === 'stiff') stiffHit.stiff++; else if (!XA.secretRun && XA._secEnd != null && G.t - XA._secEnd < 1) stiffHit.after++; }
         const est = Math.max(0, ...(tipRing.get(att) ?? [0]));
         estAll.push(est);
         woundAll.push(r.energy);
@@ -421,6 +423,7 @@ if (mode === 'poses') {
           if (XA && XA._seqCur && XA._seqCur.n !== tn) { const A = (seqT[XA._seqCur.n] ??= [0, 0]); A[0] += G.t - XA._seqCur.t; A[1]++; XA._seqCur = null; }
           if (XA && tn && !XA._seqCur) XA._seqCur = { n: tn, t: G.t }; }
         if (XA?.secretRun) XA._secEnd = G.t;
+        if (XA) { const st = XA.secretRun?.stage === 'stiff'; if (st && !XA._stfWas) stiffHit.n++; XA._stfWas = st; }
         xPrevState = X.state;
         if (X.weaponBroken && !X._brkSeen) { X._brkSeen = true; breaks.me++; }
         if (X.foe?.weaponBroken && !X.foe._brkSeen) { X.foe._brkSeen = true; breaks.foe++; }
@@ -528,6 +531,7 @@ if (mode === 'poses') {
   const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, process.env.USED_ALL === '1' ? 99 : 14).map(([k, v]) => `${k} ${v}`).join(', ');
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
   console.log(`  넘어짐 (시험 쪽 서 있다 쓰러짐·무릎): 모두 ${falls.all} · 비기 동안·뒤 1 s ${falls.secret} · 비기 자세 동안·뒤 1 s ${falls.stance}`);
+  console.log(`  경직 (시험 쪽): 든 수 ${stiffHit.n} · 경직 동안 맞은 상처 ${stiffHit.stiff} · 비기 끝난 뒤 1 s 안 맞은 상처 ${stiffHit.after}`);
   console.log(`  칼 부러짐: 시험 쪽 ${breaks.me} · 상대 ${breaks.foe}`);
   console.log(`  빈팔 맞음 (uarmO·farmO 상처): 시험 쪽 ${offHit.X} / 시험 쪽 모든 상처 ${offHit.Xall} · 상대(롱소드) ${offHit.Y}`);
   if (Object.keys(seqT).length) console.log(`  비기 수마다 시간 (s, 다음 수 시작·끝까지): ${Object.entries(seqT).map(([k, [t, n]]) => `${k} ${(t / n).toFixed(2)} (n${n})`).join(' · ')}`);

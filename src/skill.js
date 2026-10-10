@@ -421,7 +421,7 @@ export class Skill {
   //  pommel() 시제품과 같은 꼴(칼을 잠깐 대본대로 움직이고 끝나면 조작으로) — 다만 덧씌우기 칸 대신 손 목표(handOffset)를 AI 와 같은 패드 길로 옮긴다
   //  (ai.js moveHand 와 같은 '제한 속도로 목표점 쫓기'). 길·걸음·터뜨림 창·경직은 AI 비기(ai.js secretGo·secretRelease·secretStiffen)와 같은 칸을 읽는다.
   //  반응 지연 0(창이 이미 지금 모습으로 봤다) · 정확도 1(길 그대로) · 손 속도 배율(do.hand·loopHand 또는 SECRET.handSpeed) · 서보 힘 창(powerMul) · 몸의 힘(do.strength) ·
-  //  결정타 판정 배율(secretHit = SECRET.hitMul, 베기 길·따라 지나감 동안) · 경직(SECRET.stiff — 그동안 칼 조작 무시). 손 빠르기 바탕은 AI 보통 난이도(AI_LEVELS.normal)
+  //  결정타 판정 배율(secretHit = SECRET.hitMul, 베기 길·따라 지나감 동안) · 경직(SECRET.stiff — 그동안 칼·발 조작이 안 듣고 칼은 그 자리에 멈춤: holdStiff, 10/10 20:5x). 손 빠르기 바탕은 AI 보통 난이도(AI_LEVELS.normal)
 
   /**
    * 플레이어 비기 시작. o = { S(유파 비기 schools.js *_SECRET), ctx(창을 연 상대 사건 — 독일은 들어오는 줄) }. 시작했으면 true
@@ -714,13 +714,9 @@ export class Skill {
       }
       return;
     }
-    // 경직: 칼 조작 무시 — 손은 끝 자리에 그대로 (main.js 가 입력을 막고 '경직'을 흐리게 띄운다)
+    // 경직: 칼·발 조작이 안 듣는다 — 칼은 경직이 시작된 자리에 멈춤 (update → holdStiff), main.js 가 칼 입력·스틱을 막는다.
+    //  (전: 순간 베기는 칼끝을 떨어뜨린 stiffPose 쪽으로 손 빠르기 ×stiffHand — 사장님 10/10 20:5x '손 빠르기 줄이지 말고 잠깐 아예 못 움직이게'로 없앰)
     if (run.stage === 'stiff') {
-      // 순간 베기 경직: 칼끝을 떨어뜨린 자세로 천천히 (보이는 경직 — AI 와 같은 stiffPose)
-      if (run.instant && D.stiffPose && !SECRET.iai) {
-        const P = secVal(D.stiffPose);
-        this.secretMove(P[0], P[1], AI_LEVELS.normal.chamberSpeed * SECRET.stiffHand, dt);
-      }
       if (run.t >= run.stiffT) this.secretEnd();
     }
   }
@@ -992,6 +988,34 @@ export class Skill {
     else this.lunge = SKILL.lungeTime;
   }
 
+  /**
+   * 비기 경직 (사장님 10/10 20:5x '손 빠르기 줄이지 말고 잠깐 아예 못 움직이게'): 걸러진 손 목표(aim — 서보가 쫓는 자리)를 경직이 시작된 자리에 붙든다.
+   *  손 목표(handOffset)·가죽끈·이어 베기·거르기를 모두 그 자리로 맞추고 속도는 0 → 칼이 처지거나 흔들리지 않고 서보가 그 자리를 붙든다.
+   *  휘두름(내딛기)·들어가며 막기·흐름·자세로 돌아가기 없음. 몸은 물리대로(맞고 밀림·균형 걸음은 gait 몫)
+   */
+  holdStiff(dt) {
+    const f = this.f;
+    const off = f.handOffset;
+    if (!this.stiffHeld) off.copy(this.aim); // 경직이 시작된 자리
+    this.stiffHeld = true;
+    this.prev.copy(off);
+    this.anchor.copy(off);
+    this.aimRaw.copy(off);
+    this.aim.copy(off);
+    this.vel.set(0, 0);
+    this.follow.set(0, 0);
+    this.aimVel.set(0, 0);
+    this.swinging = false;
+    this.flowing = false;
+    this.lunge = 0;
+    this.activity += (0 - this.activity) * Math.min(1, dt / 0.4);
+    this.quiet += dt;
+    this.idle = f.inputActive ? 0 : this.idle + dt;
+    this.lift = !!this.heldPrev && !f.handHeld;
+    this.heldPrev = !!f.handHeld;
+    if (this.corr === 'v2' && this.level > 0) this.idleGoal = 0;
+  }
+
   update(dt) {
     if (dt <= 0) return;
     const f = this.f;
@@ -1001,6 +1025,8 @@ export class Skill {
     const off = f.handOffset;
     const R = WEAPON.reach;
     if (off.length() > R) off.setLength(R);
+    if (this.sec?.stage === 'stiff' || f.secretStiff) return this.holdStiff(dt); // 비기 경직 (플레이어 sec · AI 는 ai.js moveHand 가 secretStiff 를 켠다)
+    this.stiffHeld = false;
 
     // 손 목표 속도 (손가락 떨림을 거르기 위해 살짝 부드럽게)
     const rx = (off.x - this.prev.x) / dt;

@@ -1570,7 +1570,7 @@ export class AI {
   //  완벽 실행 = 실행만: 반응 지연 0(상대 사건을 지금 모습 sense.seen(0) 으로 본다 — secretScan) · 정확도 1(startStrike) · 손 속도 최대(빠른 준비 + SECRET.handSpeed) ·
   //   걸음 결심(actLocked — 비기 동안 막기로 거두지 않는다) · 서보 힘 창(베기 길 동안만 me.powerMul = SECRET.power). 맞고 안 맞고는 물리가 정한다.
   //  자리: 상대 사건(threat·foeRaise·foeCharge·foeRecover)은 update 의 secretScan(모드 분기 앞 = 패시브 자리들보다 먼저) · 내 베기 사건(combo·firstHit)은
-  //   베기 길 끝(secretStrikeEnd)과 afterStrike(패시브 굴림 앞). 끝나면 경직(SECRET.stiff — 공격·응답 없음, 손 빠르기 ×stiffHand, 걸음 없음).
+  //   베기 길 끝(secretStrikeEnd)과 afterStrike(패시브 굴림 앞). 끝나면 경직(SECRET.stiff — 공격·응답 없음, 칼은 그 자리에 멈춤, 걸음 없음 — 10/10 20:5x).
   //  재기: stats.secrets[이름] = { fired 낸 수, landed 맞힌 수(그 비기의 칼 가운데 하나라도 맞힘), E 맞힌 비기의 칼끝 추정 에너지 합 ½·m·v²(J), Emax }
 
   /** 칸 값: 문자열이면 SECRET 의 열쇠 (schools.js 는 수를 갖지 않는다) */
@@ -1833,7 +1833,7 @@ export class AI {
     this.secretStiffen();
   }
 
-  /** 비기 직후 경직: 공격·응답 없음, 손 빠르기 ×stiffHand, 걸음 없음 (mode 'secret' stage 'stiff') */
+  /** 비기 직후 경직: 공격·응답 없음, 칼(손 목표)은 경직이 시작된 자리에 멈춤, 걸음 없음 (mode 'secret' stage 'stiff' — 사장님 10/10 20:5x '손 빠르기 줄이지 말고 잠깐 아예 못 움직이게': moveHand·moveFeet 가 막고 검술 층(skill.js update)이 걸러진 손 목표를 붙든다) */
   secretStiffen() {
     const run = this.secretRun;
     const st = this.secretStat(run.S);
@@ -1851,6 +1851,7 @@ export class AI {
     this.stepT = 0;
     run.stage = 'stiff';
     run.t = SECRET.stiff[run.tr] ?? 0.3;
+    this.hand.set(this.me.handOffset.x, this.me.handOffset.y); // 경직이 시작된 자리 (끝나면 물러남이 새 목표를 준다)
   }
 
   /** mode 'secret': 일본 ① 물러서며 끌어 담기 → ② 공격 열기 · 경직 → 残心(일본, 맞혔으면) 또는 물러남 */
@@ -1906,10 +1907,7 @@ export class AI {
       return;
     }
     if (run.stage === 'stiff') {
-      run.t -= dt;
-      const p = run.S.do.stiffPose && run.instant && !SECRET.iai ? this.secretVal(run.S.do.stiffPose) : this.school.pose.point; // 순간 베기 경직: 칼끝을 떨어뜨린 자세 (보이는 경직)
-      this.hand.set(p[0], p[1]);
-      this.handSpeed = L.chamberSpeed * SECRET.stiffHand;
+      run.t -= dt; // 칼·발은 moveHand·moveFeet 가 멈춰 둔다 (전: 겨눔 자세 쪽으로 손 빠르기 ×stiffHand — 순간 베기는 칼끝 떨어뜨린 stiffPose 쪽으로. 10/10 20:5x 없앰)
       if (run.t > 0) return;
       const zan = run.landed ? run.S.do.zanshin : null;
       this.secretRun = null;
@@ -2192,6 +2190,9 @@ export class AI {
   /** 손을 목표 쪽으로 제한 속도로 옮긴다 (AI가 순간적으로 칼을 옮기지 못하게) */
   moveHand(dt) {
     const off = this.me.handOffset;
+    // 비기 경직 (사장님 10/10 20:5x '잠깐 아예 못 움직이게'): 손 목표를 그대로 둔다 — 떨림도 없음. 검술 층(skill.js update)이 secretStiff 를 보고 걸러진 목표까지 붙든다
+    this.me.secretStiff = this.secretRun?.stage === 'stiff';
+    if (this.me.secretStiff) return;
     if (this.feintHold > 0) {
       this.feintHold -= dt;
       if (this.feintHold <= 0) this.stepT = this.stepTime(); // 이제 진짜로 내디디며 친다
@@ -2354,6 +2355,7 @@ export class AI {
       side = 0;
     }
     if (!this.foe.alive) fwd = side = 0;
+    if (this.secretRun?.stage === 'stiff') fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x)
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
