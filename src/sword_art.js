@@ -37,7 +37,7 @@
 import { SKILL } from './config.js';
 import { GUARDS, guardBaseOne, guardBaseTwo, applySchoolGuardTable } from './guards.js';
 import { classifyStyle } from './weapon_class.js';
-import { G, TECH, WATCH_GUARDS } from './ai_techniques.js';
+import { G, TECH, WATCH_GUARDS, FEINTS } from './ai_techniques.js';
 import { MOTION, buildFrameTable, styleTech, styleFeints, frameWatchGuards, weightTech, NEW_TECH, OVERLAY, COVERS, LIB_PARRY, HAND_GRIPS, installLunge, installFlow, installCover } from './frames.js';
 import { TRADITIONS, SCHOOL_ART, traditionOf, schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
@@ -154,6 +154,11 @@ const _libSchools = new Map();
  *  새 기술(탈류→레베스·손목 베기, styleTech 와 같은 규칙), 속임수(styleFeints), 간 보는 자세(frameWatchGuards — 유파가 따로 고른 것은 그대로)를 덧붙인다.
  *  A 두손 두루(롱소드류)·총·자루는 그대로. 꾸러미는 (꾸러미 id, 무기 id) 마다 한 번 만들어 둔다(결정적)
  */
+/** 유파가 따로 고른 속임수 목록 (10/10 일본 — TRADITIONS[t].feints 가 독일 FEINTS 가 아닌 유파). 없으면 null → 틀 규칙(styleFeints) 그대로 = 전과 같음 */
+function ownFeints(school) {
+  const f = TRADITIONS[school.tradition]?.feints;
+  return f && f !== FEINTS && school.feints === f ? f : null;
+}
 function mergeLibSchool(school, weapon) {
   if (!school || school.lib) return school;
   const frame = weapon?.frame ?? 'two';
@@ -171,7 +176,7 @@ function mergeLibSchool(school, weapon) {
   const have = new Set(t.map((x) => x.name));
   const add = (NEW_TECH[frame] ?? []).filter((x) => x.ai !== false && !have.has(x.name) && !(style === 'blunt' && x.name === 'wristCut') && (style !== 'thrust' || x.kind === 'thrust'));
   t = [...t, ...add];
-  const out = { ...school, lib: true, tech: t, techByName: Object.fromEntries(t.map((x) => [x.name, x])), feints: styleFeints(style, frame), guards: school.guards === WATCH_GUARDS ? frameWatchGuards(frame) : school.guards };
+  const out = { ...school, lib: true, tech: t, techByName: Object.fromEntries(t.map((x) => [x.name, x])), feints: ownFeints(school) ?? styleFeints(style, frame), guards: school.guards === WATCH_GUARDS ? frameWatchGuards(frame) : school.guards };
   _libSchools.set(key, out);
   return out;
 }
