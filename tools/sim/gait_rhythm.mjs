@@ -11,6 +11,7 @@
 //   골반 박자 출렁임: 한 짝(같은 발 디딤 → 다음 같은 발 디딤)을 12 칸으로 나눠 칸마다 골반 높이(구간 평균을 뺀) 평균 → 그 곡선의 높낮이 차 cm 와,
 //                  그 곡선이 전체 출렁임을 설명하는 몫(%) — 박자에 맞춘 오르내림이면 크다. 표준편차 = 걷는 구간(첫 0.3 s 뺌) 골반 높이
 //   멈춤        : 놓은 뒤 마지막 디딤까지 s (남은 발이 끌려와 서는 시간)·그 사이 걸음 수·골반 0.1 m/s 아래로 멈추는 s
+//   골반 걸음 · 멈춘 뒤 = 걷는 구간 · 놓고 0.8 s 뒤부터 골반 높이 평균 m · 무릎 = 딛은 다리 무릎 굽힘(허벅지·정강이 사이 각) p95·최대 ° · 일찍 디딤 = walk 디딤 가운데 정한 발 뜬 시간 85 % 전에 디딘 몫
 //  실행: node tools/sim/gait_rhythm.mjs [무기id ...]   (GAIT_JSON='{"italian":{...}}' 로 유파 걸음 칸 덮어 재기, RHY_STICK=1 이면 스틱 1.0 만)
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { GAIT } from '../../src/config.js';
@@ -23,6 +24,10 @@ const NEARS = [2.3, 2.5, 2.7];
 const FWD_FROM = 2.75;
 const _f = new THREE.Vector3();
 const _r = new THREE.Vector3();
+const _qa = new THREE.Quaternion();
+const _qb = new THREE.Quaternion();
+const _ua = new THREE.Vector3();
+const _ub = new THREE.Vector3();
 
 function run(id, near, stick) {
   const G = newRound({ walls: true, seed: 7, weapon: id, weapon2: 'longsword' });
@@ -48,7 +53,7 @@ function run(id, near, stick) {
     }
     for (const k of ['F', 'B']) {
       const l = g.legs[k];
-      if (!prev[k] && l.stance) ph.tds.push({ t, k, kind: l.kind, x: l.plant.x, z: l.plant.z, follow: !!g.follow });
+      if (!prev[k] && l.stance) ph.tds.push({ t, k, kind: l.kind, x: l.plant.x, z: l.plant.z, follow: !!g.follow, early: l.kind === 'walk' && l.t < 0.85 * l.T });
       if (prev[k] && !l.stance && l.kind === 'catch') catches++;
       prev[k] = l.stance;
     }
@@ -64,6 +69,20 @@ function run(id, near, stick) {
     s.dF = Math.hypot(g.legs.F.hip.x - g.legs.F.plant.x, g.legs.F.hip.z - g.legs.F.plant.z);
     s.dB = Math.hypot(g.legs.B.hip.x - g.legs.B.plant.x, g.legs.B.hip.z - g.legs.B.plant.z);
     s.h = g.h;
+    // 무릎 굽힘(허벅지·정강이 사이 각, °) — 딛은 다리 중 큰 쪽
+    let kn = 0;
+    for (const k of ['F', 'B']) {
+      const l = g.legs[k];
+      if (!l.stance) continue;
+      const a = P.bodies[l.thigh].rotation();
+      const b = P.bodies[l.shin].rotation();
+      _qa.set(a.x, a.y, a.z, a.w);
+      _qb.set(b.x, b.y, b.z, b.w);
+      _ua.set(0, 1, 0).applyQuaternion(_qa);
+      _ub.set(0, 1, 0).applyQuaternion(_qb);
+      kn = Math.max(kn, (Math.acos(Math.max(-1, Math.min(1, _ua.dot(_ub)))) * 180) / Math.PI);
+    }
+    s.knee = kn;
     s.hN = g.hNom;
     ph.samples.push(s);
   };
@@ -174,13 +193,16 @@ function analyse(ph) {
   const at = (tt) => ph.samples.find((s) => s.t >= tt) ?? ph.samples[ph.samples.length - 1];
   const dist = (s) => (s.px - s0.px) * dir.x + (s.pz - s0.pz) * dir.z;
   const followShare = W.length ? W.filter((d) => d.follow).length / W.length : 0;
-  return { n: W.length, pairRatio, cv, lrRatio, asym, dragT, dragD, bobAmp, expl, pStd, lastTD, nAfter: after.length, stopT, d08: dist(at(ph.t0 + 0.8)), d16: dist(at(ph.release)), d12: dist(at(ph.t0 + 1.2)), followShare, ivs: iv, aMean: mean(ab.a), bMean: mean(ab.b) };
+  const knees = ph.samples.map((x) => x.knee).sort((a, b) => a - b);
+  const idle = ph.samples.filter((x) => x.t > ph.release + 0.8);
+  const early = W.filter((d) => d.kind === 'walk');
+  return { kneeP95: knees[Math.floor(0.95 * (knees.length - 1))], kneeMax: knees[knees.length - 1], pelWalk: pm, pelIdle: idle.length ? idle.reduce((a, x) => a + x.py, 0) / idle.length : NaN, earlyFrac: early.length ? early.filter((d) => d.early).length / early.length : NaN, n: W.length, pairRatio, cv, lrRatio, asym, dragT, dragD, bobAmp, expl, pStd, lastTD, nAfter: after.length, stopT, d08: dist(at(ph.t0 + 0.8)), d16: dist(at(ph.release)), d12: dist(at(ph.t0 + 1.2)), followShare, ivs: iv, aMean: mean(ab.a), bMean: mean(ab.b) };
 }
 
 const f2 = (v) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 const f1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : '-');
-console.log('| 무기 | 스틱 | 방향 | 디딤 수 | 짝 박자 비 a/b (a·b s) | 간격 CV | 좌우 박자 비 | 디딤 비대칭 | 끌림 s · m | 골반 박자 출렁임 cm (설명 %) · 표준편차 cm | 0.8 s · 1.2 s 거리 m | 놓고 마지막 디딤 s (걸음) · 멈춤 s | follow 몫 | 옮겨 딛기 · 넘어짐 |');
-console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+console.log('| 무기 | 스틱 | 방향 | 디딤 수 | 짝 박자 비 a/b (a·b s) | 간격 CV | 좌우 박자 비 | 디딤 비대칭 | 끌림 s · m | 골반 박자 출렁임 cm (설명 %) · 표준편차 cm | 0.8 s · 1.2 s 거리 m | 놓고 마지막 디딤 s (걸음) · 멈춤 s | follow 몫 | 옮겨 딛기 · 넘어짐 | 골반 걸음 · 멈춘 뒤 m | 무릎 p95 · 최대 ° | 일찍 디딤 |');
+console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 const avg = (rs, fn) => {
   const v = rs.map(fn).filter(Number.isFinite);
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : NaN;
@@ -194,7 +216,7 @@ for (const id of ids) {
       const c = runs.reduce((a, r) => a + r.catches, 0);
       const fl = runs.reduce((a, r) => a + r.falls, 0);
       console.log(
-        `| ${id} | ${stick} | ${name} | ${f1(avg(rs, (x) => x.n))} | ${f2(avg(rs, (x) => x.pairRatio))} (${f2(avg(rs, (x) => x.aMean))}·${f2(avg(rs, (x) => x.bMean))}) | ${f2(avg(rs, (x) => x.cv))} | ${f2(avg(rs, (x) => x.lrRatio))} | ${f2(avg(rs, (x) => x.asym))} | ${f2(avg(rs, (x) => x.dragT))} · ${f2(avg(rs, (x) => x.dragD))} | ${f1(100 * avg(rs, (x) => x.bobAmp))} (${Math.round(100 * avg(rs, (x) => x.expl))}) · ${f1(100 * avg(rs, (x) => x.pStd))} | ${f2(avg(rs, (x) => x.d08))} · ${f2(avg(rs, (x) => x.d12))} | ${f2(avg(rs, (x) => x.lastTD))} (${f1(avg(rs, (x) => x.nAfter))}) · ${f2(avg(rs, (x) => x.stopT))} | ${Math.round(100 * avg(rs, (x) => x.followShare))}% | ${pi === 0 ? `${c} · ${fl}` : ''} |`,
+        `| ${id} | ${stick} | ${name} | ${f1(avg(rs, (x) => x.n))} | ${f2(avg(rs, (x) => x.pairRatio))} (${f2(avg(rs, (x) => x.aMean))}·${f2(avg(rs, (x) => x.bMean))}) | ${f2(avg(rs, (x) => x.cv))} | ${f2(avg(rs, (x) => x.lrRatio))} | ${f2(avg(rs, (x) => x.asym))} | ${f2(avg(rs, (x) => x.dragT))} · ${f2(avg(rs, (x) => x.dragD))} | ${f1(100 * avg(rs, (x) => x.bobAmp))} (${Math.round(100 * avg(rs, (x) => x.expl))}) · ${f1(100 * avg(rs, (x) => x.pStd))} | ${f2(avg(rs, (x) => x.d08))} · ${f2(avg(rs, (x) => x.d12))} | ${f2(avg(rs, (x) => x.lastTD))} (${f1(avg(rs, (x) => x.nAfter))}) · ${f2(avg(rs, (x) => x.stopT))} | ${Math.round(100 * avg(rs, (x) => x.followShare))}% | ${pi === 0 ? `${c} · ${fl}` : ''} | ${avg(rs, (x) => x.pelWalk).toFixed(3)} · ${avg(rs, (x) => x.pelIdle).toFixed(3)} | ${Math.round(avg(rs, (x) => x.kneeP95))} · ${Math.round(Math.max(...rs.map((x) => x.kneeMax)))} | ${Math.round(100 * avg(rs, (x) => x.earlyFrac))}% |`,
       );
       if (process.env.RHY_TRACE) {
         const ph = runs[0].phases[pi];

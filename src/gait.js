@@ -460,7 +460,7 @@ export class Gait {
         //  (일어선 직후처럼 "딛은" 발이 실제로는 떠 있으면 그 발부터 딛는다: 다른 발을 들면 두 발 다 떠 버린다)
         //  (서 있는 중에도 딛은 발이 발끝까지 땅에서 떠 무게가 없으면 (골반이 들려 다리가 닿지 않음) 그 발을 다시 딛는다: 공중에 뜬 채 끌려가지 않게)
         const air = l.soleY > GAIT.airFoot && (this.levH > 0 || (l.toeY > GAIT.airFoot * 0.75 && (l.N || 0) < 0.05 * this.Mg));
-        const rm = f.secretStance?.reach ?? GAIT.reachMax; // 비기 자세(런지·발도)는 넓게 벌린 발을 그대로 둔다 (secretStance.reach)
+        const rm = f.secretStance?.reach ?? this.P.reachMax; // 비기 자세(런지·발도)는 넓게 벌린 발을 그대로 둔다 (secretStance.reach). 유파 칸 reachMax(10/10 일본 낮은 자세 — 골반이 낮으면 다리가 옆으로 더 닿는다), 없으면 GAIT 그대로
         if (hx * hx + hz * hz > rm * rm || air) next = next || k;
       }
       if (this.req && !next) {
