@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b1410" />
+    <link rel="icon" href="data:," />
+    <title>Stillness 테스트</title>
+    <!-- 테스트 전용 경로 (사장님 10/10 16:5x): 무기·캐릭터를 고르고 상대·무대는 무작위. docs/test_route_2026-10-10.md -->
+    <style>
+      :root {
+        --ink: #f3e9d8;
+        --dim: #b8a88e;
+        --panel: rgba(24, 18, 14, 0.88);
+        --line: rgba(243, 233, 216, 0.18);
+        --accent: #d9a441;
+        --bg: #1b1410;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; background: var(--bg); color: var(--ink); }
+      html { overflow-x: hidden; } /* body 에 두면 body 가 스크롤 상자가 되어 아래 '시작' 줄이 붙지 않는다 */
+      body {
+        font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+        min-height: 100vh; min-height: 100dvh;
+      }
+      main {
+        max-width: 880px; margin: 0 auto;
+        padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+      }
+      h1 { font-size: 20px; margin: 4px 0 2px; letter-spacing: 0.02em; }
+      .lead { color: var(--dim); font-size: 13px; margin: 0 0 14px; line-height: 1.5; }
+      h2 { font-size: 15px; margin: 18px 0 8px; display: flex; align-items: baseline; gap: 8px; }
+      h2 small { color: var(--dim); font-weight: 400; font-size: 12px; }
+      h3 { font-size: 12px; color: var(--accent); margin: 10px 0 6px; font-weight: 700; letter-spacing: 0.04em; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
+      .grid.big { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+      .pick {
+        display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; min-width: 0;
+        padding: 8px 10px; text-align: left; font: inherit; color: var(--ink);
+        background: var(--panel); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+      }
+      .pick[aria-pressed='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: rgba(217, 164, 65, 0.12); }
+      .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .pick .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .pick b { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+      .pick span { font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+      .pick b small { display: block; font-size: 12px; font-weight: 400; color: var(--dim); }
+      .grid.big .pick { min-height: 72px; }
+      .grid.big .pick b { font-size: 15px; }
+      .thumb {
+        flex: none; width: 40px; height: 40px; border-radius: 6px;
+        background: radial-gradient(closest-side, var(--tg), transparent) center / contain no-repeat;
+      }
+      .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+      .grid.big .thumb { width: 52px; height: 52px; }
+      .tier { color: var(--tc); font-weight: 700; }
+      /* 등급 색: index.html 의 [data-tier] 와 같은 값 */
+      [data-tier] { --tc: #fff3c4; --tg: rgba(255,236,190,.28); }
+      [data-tier="trash"] { --tc: #b8b6b0; --tg: rgba(190,188,180,.2); }
+      [data-tier="rare"] { --tc: #8cc4ff; --tg: rgba(110,170,255,.45); }
+      [data-tier="epic"] { --tc: #d6a8ff; --tg: rgba(190,130,255,.5); }
+      [data-tier="legend"] { --tc: #ffd24a; --tg: rgba(255,210,74,.6); }
+      [data-tier="mystery"] { --tc: #8fe3c6; --tg: rgba(120,220,190,.45); }
+      .pick[data-tier] { border-left: 3px solid var(--tc); }
+      .mark { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); color: var(--dim); font-size: 15px; font-weight: 700; }
+      .pick[aria-pressed='true'] .mark { color: #1b1410; background: var(--accent); border-color: var(--accent); }
+      .note { color: var(--dim); font-size: 12px; line-height: 1.55; margin: 10px 0 0; }
+      .bar {
+        position: sticky; bottom: 0; margin-top: 18px; z-index: 1;
+        padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        background: rgba(27, 20, 16, 0.96); border-top: 1px solid var(--line);
+      }
+      .bar-in { max-width: 880px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+      #summary { flex: 1; min-width: 0; font-size: 13px; color: var(--dim); line-height: 1.4; overflow-wrap: anywhere; }
+      #summary b { color: var(--ink); }
+      #btnGo {
+        flex: none; min-height: 48px; min-width: 120px; padding: 0 22px; font: inherit; font-size: 17px; font-weight: 800;
+        border: 0; border-radius: 8px; background: var(--accent); color: #1b1410; cursor: pointer;
+      }
+      .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--dim); font-size: 13px; text-decoration: none; }
+      .back:hover { color: var(--ink); }
+      @media (orientation: landscape) and (max-height: 500px) {
+        h1 { font-size: 17px; }
+        h2 { margin-top: 12px; }
+        .lead { margin-bottom: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>테스트 경로</h1>
+      <p class="lead">무기와 캐릭터를 고르세요. 상대와 무대는 판마다 무작위로 바뀌고, 이기든 지든 다음 판으로 넘어갑니다.</p>
+
+      <h2>무기 <small id="weaponCount"></small></h2>
+      <h3>오늘 바뀐 무기</h3>
+      <div class="grid big" id="weaponsNew" role="group" aria-label="오늘 바뀐 무기"></div>
+      <h3>나머지 무기</h3>
+      <div class="grid" id="weaponsRest" role="group" aria-label="나머지 무기"></div>
+
+      <h2>캐릭터 <small>겉모습만 바뀝니다 · 유파·비기는 무기를 따릅니다</small></h2>
+      <div class="grid" id="heroes" role="group" aria-label="캐릭터"></div>
+      <p class="note" id="heroNote"></p>
+
+      <a class="back" href="./index.html">← 본판으로</a>
+    </main>
+    <div class="bar">
+      <div class="bar-in">
+        <div id="summary"></div>
+        <button id="btnGo" type="button">시작</button>
+      </div>
+    </div>
+    <script type="module" src="/src/test_pick.js"></script>
+  </body>
+</html>
