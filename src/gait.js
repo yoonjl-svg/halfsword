@@ -22,6 +22,14 @@
 import * as THREE from 'three';
 import { BODY, GAIT } from './config.js';
 import { TRADITIONS } from './schools.js';
+import { GUARD_BASE } from './guards.js';
+
+// 자세 이름 → 바탕 자세표 차례 (유파 걸음 P.guardLow — 몸 틀 자세표도 같은 패드 자리·같은 순서라 bodyGuard.nearest 와 견줄 수 있다)
+const _guardIdx = new Map();
+const guardIdx = (name) => {
+  if (!_guardIdx.has(name)) _guardIdx.set(name, GUARD_BASE.findIndex((g) => g.name === name));
+  return _guardIdx.get(name);
+};
 
 const A_LEN = 0.43; // 허벅지 (엉덩이 → 무릎)
 const B_LEN = 0.42; // 정강이 (무릎 → 발목)
@@ -296,6 +304,12 @@ export class Gait {
       this._pl = pl;
       this.P = gaitParams(f, pl);
     }
+    // 유파 옆 빠르기(P.sideMul — 10/10 이베리아 데스트레사 둥근 걸음, 사장님 '사이드스텝 이동량 증가' · 확인표 623): 조종 스틱에 옆 몫이 있을 때 가려는 속도의 옆 몫을 배율만큼.
+    //  몸의 일이라 플레이어·AI 같이(기질 circleRate 는 그대로 — 두 번 곱하지 않음). 칸 없으면 셈하지 않는다(바이트 같음)
+    if (this.P.sideMul && !f.feetHeld && f.move.x) {
+      const wl = want.x * rgt.x + want.z * rgt.z;
+      want.addScaledVector(rgt, wl * (this.P.sideMul - 1));
+    }
     // 유파 걸음 follow(앞발 먼저·뒷발 따라붙임): 상대 가슴이 P.followIn 안일 때만 (나가는 문턱은 0.3 m 더 — 들락날락 막기). 칸 없는 유파는 셈하지 않는다
     //  빨리 갈 땐(걸러진 빠르기 > P.followVmax) 지나 딛는다 — 펜싱·검도도 멀리서 빨리 좁힐 땐 아유미아시. follow 그대로 빨리 가면 뒤에 남은 발이 안 닿아 허둥지둥 옮겨 딛는다
     if (this.P.footwork === 'follow') this.follow = f.foeDistance() < this.P.followIn + (this.follow ? 0.3 : 0) && this.speedF < (this.P.followVmax ?? Infinity) * (this.follow ? 1.15 : 1);
@@ -469,6 +483,10 @@ export class Gait {
         next = pick ?? (this.req.kind === 'lunge' ? front : front === 'F' ? 'B' : 'F');
         kind = 'req';
         Tstep = this.req.duration;
+        // 활 자세(P.bow — 10/10 중국): 앞으로 내딛는 기술 걸음(進步 — AI 베기 걸음·플레이어 베기 걸음·連環三擊 반걸음)이면 디딜 때 골반을 낮춰 앞무릎을 굽힌다
+        this.bowReq = !!this.P.bow && this.req.fwd > 0 && (this.req.kind === 'lunge' || this.req.kind === 'pass');
+      } else if (this.drawPending && !next && this.P.bow && this.drawPending.t < this.P.bow.hold) {
+        // 활 자세 버팀(P.bow.hold s): 내딛은 앞무릎을 굽힌 채 뒷다리를 뻗어 둔다 — 그 뒤에 뒷발을 끌어붙인다(체보). 그동안 다른 발은 들지 않는다
       } else if (this.drawPending && !next) {
         // 유파 걸음(10/10): 베며 내딛은(lunge) 뒤 뒷발을 앞발 뒤 자세 자리로 끌어붙인다 — 일본 히키츠케·중국 체보 (ai.js gaitStep 의 cutStep.draw)
         const front = this.frontLeg(fwd);
@@ -494,6 +512,13 @@ export class Gait {
           else Tstep = Tsw * (PR.lead ?? 1);
           if (next) this.pairStep = this.trailStep ? 'trail' : 'lead';
         }
+      } else if (walkNow && !next && this.P.sideLead && speed > 0.05 && vLat / speed > (this.P.crossFrom ?? 0.7)) {
+        // 옆으로 갈 땐 가는 쪽 발이 먼저, 다른 발이 따라붙는다(P.sideLead — 10/10 이베리아: 에텐하르트 1675 둥근 걸음 '그 발이 제 쪽으로' ·
+        //  피게이레두 1651 복합 규칙 XII '오른발을 오른쪽으로 … 왼발이 따라붙는다', 확인표 621). 옆 몫 문턱은 둥근 걸음 발끝 틀기와 같은 P.crossFrom.
+        //  방금 가는 쪽 발을 디뎠으면 다른 발(따라붙음), 아니면 가는 쪽 발 — 걷기 시작 첫 걸음도 가는 쪽 발(뒤따르는 발부터 들면 다리 꼬임 막기에 걸려 헛걸음)
+        const dir = Math.sign(want.x * rgt.x + want.z * rgt.z);
+        const lead = L.F.side * dir > 0 ? 'F' : 'B';
+        next = this.lastTD === lead && this.lastTDKind === 'walk' && this.sinceTD < this.stepT * 1.5 ? (lead === 'F' ? 'B' : 'F') : lead; // (멈춘 채 자세 고쳐 딛은 발은 '방금 디딘 이끄는 발'로 치지 않는다)
       } else if (walkNow && !next) {
         // 걷기 시작: 가려는 쪽에서 뒤에 있는 발부터 (앞발부터 내딛으면 몸이 달아난다). 걷는 중: 번갈아
         //  (앞뒤로 걷기 시작할 땐 방금 디딘 발이라도 뒤에 있는 발부터: 앞발부터 내딛으면 뒷발이 닿지 않을 만큼 멀어진다)
@@ -557,6 +582,15 @@ export class Gait {
       if (this.req.age > 1) this.req = null;
     }
     if (this.drawPending && (this.drawPending.t += dt) > 0.6) this.drawPending = null; // 끌어붙임을 못 하고 0.6 s 지나면 버린다
+    // 활 자세 무게(P.bow): 앞으로 내딛는 기술 걸음의 뒤 절반(앞발이 땅에 닿을 무렵부터 — 한 발로 떠 있는 동안 낮추면 앞발 위로 주저앉는다) + 디딘 뒤 hold s
+    //  (끌어붙이는 발을 들면 끝) 1 쪽으로 inTime, 아니면 0 쪽으로 outTime. 칸 없으면 셈하지 않는다
+    if (this.P.bow) {
+      const B = this.P.bow;
+      if (this.bowAfter > 0) this.bowAfter -= dt;
+      if (swing && swing.kind === 'draw') this.bowAfter = 0;
+      const on = (swing && swing.kind === 'req' && this.bowReq && swing.t > 0.5 * swing.T) || this.bowAfter > 0;
+      this.bowW = clamp((this.bowW || 0) + (on ? dt / B.inTime : -dt / B.outTime), 0, 1);
+    } else this.bowW = 0;
 
     // 짝걸음 몸 박자(pair.leadV·trailV·restV): 이끄는 발이 나가는 동안엔 몸이 덜 나가고(앞발 하나로 버티는 동안 다리가 늘어나 골반이 주저앉지 않게),
     //  이끄는 발을 디딘 뒤 따라붙는 발이 오는 동안 몸이 실려 가고, 짝 사이 쉼엔 조금 덜 — 펜싱 걸음처럼 몸이 짝마다 밀려 간다. 칸 없으면 셈하지 않는다
@@ -635,10 +669,17 @@ export class Gait {
       // 유파 걸음(10/10): 바탕 높이(P.guardHeight·walkHeight)를 낮추고, 자세표·덧씌우기 낮춤(drop)과 합친 낮춤을 전역 기본 높이 기준 GAIT.lowMax 까지로.
       //  비기 자세(sd) 동안은 유파 바탕을 쓰지 않고 전역 기본 높이 위에 비기 낮춤 그대로(비기 값이 그 높이에 맞춰 정해짐 — 상한 밖, 확인표 507)
       const def = walkNow ? walkH + (GAIT.walkHeight - P.walkHeight) : GAIT.guardHeight;
+      // 유파 낮춤 더하기 (10/10 중국, 상한 GAIT.lowMax 안): 그 자세에 있을 때(P.guardLow — 간수세 虎蹲) · 활 자세(P.bow, 무게 bowW). 칸 없으면 0
+      const gl = P.guardLow && f.bodyGuard?.nearest === guardIdx(P.guardLow.guard) ? P.guardLow.drop : 0;
       if (sd) hNomT = def - hurt - Math.max(0, drop) - sd.drop;
-      else hNomT = def - Math.min(GAIT.lowMax, def - (walkNow ? walkH : P.guardHeight) + Math.max(0, drop)) - hurt;
+      else hNomT = def - Math.min(GAIT.lowMax, def - (walkNow ? walkH : P.guardHeight) + Math.max(0, drop) + gl) - hurt;
+      // 활 자세: 걷는 중이어도 멈춘 높이(전역 guardHeight) 기준으로 낮춘다(걷는 높이 기준이면 상한에 걸려 덜 내려간다) — 낮춤 합계는 같은 lowMax 안, 무게 bowW 만큼 섞음
+      if (!sd && this.bowW > 0) {
+        const hb = GAIT.guardHeight - Math.min(GAIT.lowMax, GAIT.guardHeight - P.guardHeight + Math.max(0, drop) + gl + P.bow.drop) - hurt;
+        hNomT += (Math.min(hNomT, hb) - hNomT) * this.bowW;
+      }
     }
-    const hr = (sd ? sd.rate : GAIT.heightRate) * dt;
+    const hr = (sd ? sd.rate : this.bowW > 0 ? Math.max(GAIT.heightRate, P.bow.rate) : GAIT.heightRate) * dt;
     this.hNomF = this.hNomF === undefined ? hNomT : this.hNomF + clamp(hNomT - this.hNomF, -hr, hr);
     const hNom = this.hNomF;
     let hGeo = Infinity;
@@ -909,6 +950,7 @@ export class Gait {
     l.tLand = 0;
     this.sinceTD = 0;
     this.lastTD = l.k;
+    this.lastTDKind = l.kind; // 옆걸음 가는 쪽 발 먼저(P.sideLead)가 읽는다
     if (this.P.pair) {
       // 짝걸음: 이끄는 발만 딛은 채면 짝이 열려 있다(pairOpen — 멈출 때 따라붙는 발을 곧 딛게), 따라붙는 발을 디디면 닫는다
       this.pairOpen = l.kind === 'walk' && this.follow && this.pairStep === 'lead' ? l.k : null;
@@ -916,6 +958,8 @@ export class Gait {
     }
     if (l.kind === 'req') {
       if (this.req?.draw) this.drawPending = { t: 0 }; // 유파 걸음: 다음 걸음에 뒷발 끌어붙임
+      if (this.bowReq) this.bowAfter = this.P.bow.hold; // 활 자세: 디딘 뒤 hold s 버팀
+      this.bowReq = false;
       this.req = null;
     }
     this.f.footstep = Math.max(this.f.footstep, clamp(speed / GAIT.moveSpeed, 0.15, 1));
