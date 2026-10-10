@@ -16,7 +16,9 @@ import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { weaponEnv } from './weapon_looks.js';
 import { createRenjiOutfit } from './outfit_renji.js'; // 김씨 복식 (샛별 저장소에서 가져옴)
-import { createEiraOutfit } from './outfit_eira.js'; // 에이라 린드 복식 (샛별 저장소에서 가져옴)
+import { createEiraOutfit } from './outfit_eira.js'; // 에이라 린드(지금 투야나 니콜라예바) 복식 v1 (샛별 저장소에서 가져옴)
+import { createSamiraOutfit } from './outfit_samira.js'; // 사미라 v2 앙가르카 (디자인 리뷰 10/10)
+import { createTuyanaOutfit } from './outfit_tuyana.js'; // 투야나 v2 겨울 사제복 (디자인 리뷰 10/10)
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -2624,7 +2626,9 @@ const CROWN_ROSE_UNIFORM = Object.fromEntries(Object.entries(CROWN_BLUE_UNIFORM)
 ]));
 
 // 김씨·에이라 복식 모듈(outfit_renji.js·outfit_eira.js)이 쓰는 도우미 묶음 — 샛별 쪽과 같은 이름·같은 열쇠
-export const newOutfitHelpers = { THREE, bake, box, cyl, ball, cone, addMerged, CLOTH, quietFace, isoldeLock, artoriaCloth, sleeveVolume, clothNeck };
+export const newOutfitHelpers = { THREE, bake, box, cyl, ball, cone, addMerged, CLOTH, quietFace, isoldeLock, artoriaCloth, sleeveVolume, clothNeck,
+  // 디자인 리뷰 10/10 (사미라 v2·투야나 v2 복식 모듈)이 더 쓰는 것 — 열쇠만 늘림, 기존 모듈은 그대로
+  taperedTube, clothPanel, reshapeMain, hangingClothShading, roseUniformHead };
 
 export const OUTFITS = {
   // 샛별 저장소에서 가져온 인물 넷 (10/10) — 위 머리말
@@ -2632,6 +2636,8 @@ export const OUTFITS = {
   crown_rose_uniform: CROWN_ROSE_UNIFORM,
   renji_wanderer: createRenjiOutfit(newOutfitHelpers),
   eira_winter_priest: createEiraOutfit(newOutfitHelpers),
+  samira_angarkha: createSamiraOutfit(newOutfitHelpers), // 사미라 v2 (디자인 리뷰 10/10)
+  tuyana_winter_priest: createTuyanaOutfit(newOutfitHelpers), // 투야나 v2 (디자인 리뷰 10/10)
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,

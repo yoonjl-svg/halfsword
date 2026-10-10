@@ -604,6 +604,18 @@ export const LOOK_ARCHIVE = {
       outfit: 'crown_rose_uniform', armor: null,
       tailoring: 'soft-shoulders', stockEyes: true, stockFace: true, originalTorsoWidth: true, highWaist: true,
     },
+    // v2 (디자인 리뷰 10/10, 사장님 '다리가 짧아 보이고 몸통이 넓적'): 앙가르카(겹여밈 긴 웃옷, 가슴 밑 띠·무릎 위 옆트임 자락) + 추리다르 + 뾰족 장화.
+    //  허리선을 가슴 밑(1.20 m)으로 올리고, 무릎 아래는 바지·장화가 거의 한 색. 색: 장밋빛 그대로 + 가라앉은 금빛 단 + 짙은 자두색 띠·다리. 머리·얼굴은 v1 그대로.
+    //  손은 흰 장갑 대신 맨손(제복 느낌을 덜고 옷과 맞춤). 방어구 없음(v1 과 같음). 옷 모듈 src/outfit_samira.js
+    v2: {
+      tunic: 0x922e40, quilt: 0x922e40, sleeve: 0x922e40,
+      straps: null, belt: 0x33232c, hoseUpper: 0x2c2530, hoseLower: 0x2c2530,
+      shoes: 0x231d25, skin: 0xb7754e, hands: 0xb7754e,
+      helmet: null, metal: 0xa7acb1, hair: 0xc78f98, headband: null,
+      grip: 0x313b46, hilt: 0xb6a47e, accent: 0xb39a5f,
+      outfit: 'samira_angarkha', armor: null,
+      stockEyes: true, stockFace: true,
+    },
   },
   // 김씨 (샛별 id renji) — 샛별 v2 (= v1, 27888f2·4c5ce4d·dcad882): 삿갓·여행자 옷·짚신. 삿갓만 아주 약한 투구
   renji: {
@@ -615,7 +627,7 @@ export const LOOK_ARCHIVE = {
       outfit: 'renji_wanderer', armor: null, stockEyes: true,
     },
   },
-  // 에이라 린드 — 샛별 v1 (27888f2): 남색 겨울 사제복·흰 깃·은빛 머리. 방어구 없음
+  // 투야나 니콜라예바 (id eira, 전 이름 에이라 린드) — v1 = 샛별 v1 (27888f2): 남색 겨울 사제복·흰 깃·은빛 머리. 방어구 없음
   eira: {
     v1: {
       tunic: 0x252e44, quilt: 0x293249, sleeve: 0x252e44, straps: null,
@@ -623,6 +635,15 @@ export const LOOK_ARCHIVE = {
       skin: 0xe5cbb9, hands: 0xe5cbb9, helmet: null, metal: 0xa7a7af, hair: 0xc4d6e8,
       headband: null, grip: 0x333342, hilt: 0xa7a7af, accent: 0xe4e5e9,
       outfit: 'eira_winter_priest', armor: null, stockEyes: true,
+    },
+    // v2 (디자인 리뷰 10/10, 사장님 '사제복에 디테일이 너무 없어서 뭔지 모르겠어' + 사장님 그림(모티브)): 발목까지 A 자 남색 사제복 · 앞 트임 흰 속치마 ·
+    //  흰 어깨 망토 + 높은 흰 깃 + 검은 리본 · 접은 흰 소매 끝 · 손목 붕대 · 끈 장화 · 물결치는 긴 은발 · 금빛 눈. 방어구 없음(v1 과 같음). 옷 모듈 src/outfit_tuyana.js
+    v2: {
+      tunic: 0x222c48, quilt: 0x222c48, sleeve: 0x222c48, straps: null,
+      belt: 0x222c48, hoseUpper: 0x222c48, hoseLower: 0x222c48, shoes: 0x1b1c22,
+      skin: 0xe9d3c5, hands: 0xe9d3c5, helmet: null, metal: 0xa7a7af, hair: 0xc9cbe0,
+      headband: null, grip: 0x333342, hilt: 0xa7a7af, accent: 0xf1f0ec,
+      outfit: 'tuyana_winter_priest', armor: null, stockEyes: true, eyeColor: 0x4a3518,
     },
   },
 };
@@ -638,9 +659,9 @@ export const CHARACTER_LOOK_VERSION = {
   omari: 'v2',
   minami: 'v5',
   artoria: 'v1', // 샛별 저장소에서 가져온 넷 (10/10)
-  samira: 'v1',
+  samira: 'v2', // 디자인 리뷰 10/10 — 옛 판 ?look=samira:v1
   renji: 'v1',
-  eira: 'v1',
+  eira: 'v2', // 디자인 리뷰 10/10 — 옛 판 ?look=eira:v1
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

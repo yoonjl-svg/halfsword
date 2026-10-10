@@ -12,7 +12,7 @@ const foe = foeArg.split(':')[0];
 const prefix = process.argv[4] || `${foe}_shot`;
 const out = process.argv[5] || 'docs/handoff';
 const stage = process.argv[6] || 'arena';
-const FOE_WEAPON = { minami: 'monohoshizao', omari: 'zweihander', tome: 'rapier' }; // characters.js 의 무기 그대로
+const FOE_WEAPON = { minami: 'monohoshizao', omari: 'zweihander', tome: 'rapier', artoria: 'excalibur', samira: 'pistol', renji: 'morgenstern', eira: 'rapier', isolde: 'saber', liao: 'qinggang', heinrich: 'excalibur_replica', bran: 'tree_branch' }; // characters.js 의 무기 그대로
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
 const nextFrames = (page, n = 3) => page.evaluate((n) => new Promise((ok) => { const f = () => (--n <= 0 ? ok() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
@@ -23,10 +23,10 @@ async function open(fight) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   await page.goto(`${base}/?stage=${stage}&${foeArg.includes(':') ? `look=${foeArg}` : `foe=${foe}`}&weapon=longsword&foeWeapon=${FOE_WEAPON[foe] || 'longsword'}&emo=0`, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000 }).catch((e) => { console.log(errors.join('\n')); throw e; });
-  await page.getByText('싸움 시작').click();
+  await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 600000 }).catch((e) => { console.log(errors.join('\n')); throw e; });
+  await page.getByText('싸움 시작').click({ timeout: 300000 }); // 기다림을 넉넉히: 여러 작업자가 같은 기계에서 돌릴 때(부하 30+) 느려진다
   if (!fight) await page.evaluate(() => { window.game.ai.update = () => {}; });
-  await page.waitForFunction((t) => window.game.state === 'fight' && window.game.stats.simTime > t, fight ? 4.0 : 1.2, { timeout: 180000 });
+  await page.waitForFunction((t) => window.game.state === 'fight' && window.game.stats.simTime > t, fight ? 4.0 : 1.2, { timeout: 900000 });
   await page.addStyleTag({ content: 'body > :not(#game), #moveStick, #moveKnob { display: none !important; visibility: hidden !important; }' });
   return page;
 }

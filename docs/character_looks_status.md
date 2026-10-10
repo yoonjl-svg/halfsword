@@ -4,6 +4,13 @@
 커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
 (요청받지 않아 아직 만들지 않음).
 
+## round 16 — 사장님 디자인 리뷰(10/10 21:0x): 새 인물 넷 리뷰 + 사미라 v2 · 투야나 v2
+
+- 자세한 것: `docs/characters/new_four_review_2026-10-10.md` (가지 `…/looks-review-2q36ha`).
+- **사미라 v2**(`samira_angarkha`, v1 보관 `?look=samira:v1`): 앙가르카 + 추리다르 — 허리선 가슴 밑으로, 다리 한 색, 세로 금선·옆트임, 몸통 장식 덜기.
+- **투야나 v2**(`tuyana_winter_priest`, v1 보관 `?look=eira:v1`): 사장님 그림(모티브)대로 A 자 긴 사제복·앞 트임 흰 속치마·흰 어깨 망토·검은 리본·흰 접단 소매·붕대·끈 장화·물결 은발.
+- 아르토리아·김씨: 꼭 고칠 것 없음 — 제안만. 물리·방어구 판정 그대로.
+
 ## round 15 — 오너 결정: 랴오 v6 확정
 
 - 오너 "v6으로 하자". `CHARACTER_LOOK_VERSION.liao = 'v6'`(이미 기본값이라 코드 변경 없음). v5·v7·v8은 보관.
