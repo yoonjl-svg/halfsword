@@ -15,6 +15,7 @@ const STRIKE_MS = +(process.env.STRIKE_MS || 120);
 const WAIT = +(process.env.WAIT_MS || 300000);
 const GUARD = process.env.GUARD || null;
 const QUERY = process.env.QUERY ? `&${process.env.QUERY}` : '';
+const WEAPON = process.env.WEAPON || 'zweihander'; // 10/10 아이스 쥠 — 다른 앞무게 칼도 같은 장면으로
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const errors = [];
@@ -25,7 +26,7 @@ page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text());
 });
-await page.goto(`${base}/?weapon=longsword&foeWeapon=zweihander${QUERY}`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=longsword&foeWeapon=${WEAPON}${QUERY}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
 await page.getByText('싸움 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 60000 });

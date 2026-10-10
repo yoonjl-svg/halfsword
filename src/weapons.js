@@ -1399,21 +1399,28 @@ const sain = finalizeSpec('sain', {
 
 const ice = finalizeSpec('ice', {
   nameKo: '아이스', nameEn: 'Ice',
-  desc: '세 줄의 홈과 황동 장식을 지닌 북부 가문의 검.\n전체 168 cm, 질량 3.5 kg의 양손검.', // 사장님 10/10 20:0x: '스타크의 대검' → '북부 가문의 검' (이름 '아이스'는 일반명사로 그대로)
+  desc: '세 줄의 홈과 황동 장식을 지닌 북부 가문의 검.\n전체 172 cm, 질량 3.5 kg의 양손검.', // 사장님 10/10 20:0x: '스타크의 대검' → '북부 가문의 검' (이름 '아이스'는 일반명사로 그대로)
   grip: 'two-hand', material: 'steel', tier: 'rare',
-  hiltLength: 0.20, bladeLength: 1.25, gripAlong: -0.20,
+  hiltLength: 0.20, bladeLength: 1.25, gripAlong: -0.22,
+  // 쥠 (10/10 23:5x 사장님 지시 '이베리아 유파는 츠바이핸더처럼 쥐는 걸 기본으로 해서 아이스도 그렇게 — 0.22~0.24 사이', 확인표 825·826 — 몬탄테 문서 §17):
+  //  손 사이 0.20 → 0.22 m. 왼손은 폼멜 목(츠바이핸더 §15 규칙: 폼멜 끝 = 왼손 − 0.048 → 폼멜 가운데 −0.238, 공 반지름 0.030),
+  //  자루 상자는 위 끝(0.185, 날밑 바로 밑) 그대로 아래로만 늘림(아래 끝 = 폼멜 가운데 + 0.015 — 전 꼴과 같은 겹침) → 가운데 −0.019 · 반 길이 0.204.
+  //  0.22 를 고른 까닭: 오른손이 날밑 아랫면에서 0.17 m 아래로 이미 멀어(츠바이핸더 0.11) 날밑 밑 자루가 길다 — 0.22 면 날밑 아랫면~폼멜 끝 0.438 m 로
+  //  같은 시대 톨레도 몬탄테 자루(0.413·0.400 — 문서 §10-2)에 가장 가깝다(0.24 면 0.458). 오른손을 날밑 가까이 옮기려면 칼 원점이 칼날 쪽으로 가야 하는데,
+  //  손~칼끝 1.45 m 를 지키면 칼날을 늘려야 하고(겉모양 바뀜) 칼날을 지키면 손~칼끝이 준다 — 둘 다 지킬 것이라 오른손은 그대로 두었다.
+  //  칼날·날밑·홈 겉모양·부품 질량(자루 .30 · 폼멜 .70 · 날밑 .35 · 칼날 2.15)·칼날 무게중심·관성·서보 26 그대로. 전체 길이 168 → 172 cm(자루가 3.8 cm 늘어남)
   mCut: 1.10, mThrust: 0.85, mBlunt: 1.15,
   // 손목 서보 상한: 두 손 쥠 기본값 26 (샛별 쪽 28 덮개는 뺐다 — 위 머리말 · 우리 츠바이핸더와 같은 값)
   partMesh: icePartMesh, decorate: iceDecorate,
   buildParts() {
     const L = this.bladeLength;
-    const grip = boxInertia(0.30, 0.022, 0.185, 0.020);
+    const grip = boxInertia(0.30, 0.022, 0.204, 0.020);
     const pommel = sphereInertia(0.70, 0.030);
     const guard = boxInertia(0.35, 0.14, 0.015, 0.022);
     const blade = bladeInertia(2.15, L, 0.33, 0.25, 0.09, 0.009);
     return [
-      partTuple(['box', 0.022, 0.185, 0.020], 0, 0.30, 0, grip.Ie, grip.It, ICE_COLORS.grip),
-      partTuple(['ball', 0.030], -0.20, 0.70, 0, pommel.Ie, pommel.It, ICE_COLORS.metal),
+      partTuple(['box', 0.022, 0.204, 0.020], -0.019, 0.30, 0, grip.Ie, grip.It, ICE_COLORS.grip),
+      partTuple(['ball', 0.030], -0.238, 0.70, 0, pommel.Ie, pommel.It, ICE_COLORS.metal),
       partTuple(['box', 0.14, 0.015, 0.022], 0.185, 0.35, 0, guard.Ie, guard.It, ICE_COLORS.metal),
       partTuple(['box', 0.045, L / 2, 0.0045], this.hiltLength + L / 2, 2.15,
         blade.comY, blade.Ie, blade.It, ICE_COLORS.blade, true),
