@@ -769,7 +769,7 @@
 | 846 | **일본 왼 어깨 → 사타이켄 (左戴劍)** (전 '왼 어깨 (자세 아님)') | schools.js JAPANESE_GUARDTABLE '왼쪽 어깨 지붕' | 무도 권2 p096·p097 千柳流 「左手左脚戴劍」 [원문 이름] · 꼴 = 핫소 거울 [추정] | HUD 만 (값 그대로) | 사장님 확인 전 | |
 | 847 | 시험 도구: `school_parry.mjs` 덧씌운 자리 후보 · `tools/browser/school_parry_shots.mjs`(AI 막기 자세 캡처) | tools/ | 재기 | 게임 값 안 바꿈 | — | |
 | 848 | **중국 덮는 자세 = 거정세 몸꼴** (쓰러져 머리 가림 — 패드 G.tag 그대로, 몸꼴 덧씌움 `parryCover.down`; 전 표두세 몸꼴) | schools.js TRADITIONS.chinese.pose·parryCover · frames.js installCover | 사장님 10/11 01:5x '그럼 거정세로 바꿔야지' · 擧鼎格 「鼎格上殺」 平擡 | 쓰러진 몸 근육 0.10 < 서보 문턱 0.12 라 다리 잃은 몸 말고는 판에 안 닿음(48 판 바이트 같음) — `docs/strike/school_slots2_2026-10-11.md` | 사장님 답대로 | |
-| 849 | 중국 highR 막기 = 표두세 자리 (거정세 덧씌움 뺌) — **사장님 10/11 03:3x 승인, main 54ba5d1** | schools.js TRADITIONS.chinese.parryCover | 擧鼎格 = 「上殺」 짝(highC) · 오른 위 사선은 표두세로 [해석] | 막음 highR 2~3 → 4/4 (네 칼) · 넓은 점검(dbf0be7) 고정 4 608 판 highR 표두 60 대 거정 51 % · 싸움 승률 갈림 없음 | 사장님 선택 → 채택 | 채택 |
+| 849 | 중국 highR 막기 = 표두세 자리 (거정세 덧씌움 뺌) — **사장님 10/11 03:1x 승인, main 54ba5d1** | schools.js TRADITIONS.chinese.parryCover | 擧鼎格 = 「上殺」 짝(highC) · 오른 위 사선은 표두세로 [해석] | 막음 highR 2~3 → 4/4 (네 칼) · 넓은 점검(dbf0be7) 고정 4 608 판 highR 표두 60 대 거정 51 % · 싸움 승률 갈림 없음 | 사장님 선택 → 채택 | 채택 |
 
 ### 이베리아 비기 v5 — 멈추지 않는 흐름 (10/11 01:5x 사장님 '그렇게 하자' — 가지 `…/ib-secret-2q36ha`, docs/strike/iberian_secret_v5_2026-10-11.md) — 사장님 확인 전
 
