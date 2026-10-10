@@ -244,6 +244,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
     caps: { grip: w.grip ?? null, maxAimTorque: w.controlOverrides?.maxAimTorque ?? null, fromGrip: !!w.capFromGrip },
     restGuard: restGuardOf(names, tradition),
     tradition,
+    offArm: TRADITIONS[tradition]?.offArm ?? null, // 유파 빈팔 자세 (10/10 고증 — schools.js offArm, fighter.js applyPose 가 읽는다). 칸 없는 유파 = null(오늘 그대로)
     lib,
   };
   // AI 꾸러미: 인물이 고른 꾸러미(없으면 롱소드) → lib 이면 몸 틀·방식 몫을 더한다 (전 ai.js schoolOf + libSchool) → 스위치를 켜면 유파 자료(art.tradition 의 것)

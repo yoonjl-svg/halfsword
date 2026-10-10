@@ -539,6 +539,19 @@ export const TRADITIONS = {
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
 
+// 이탈리아 빈팔 (10/10 사장님 '정확히 고증대로' — 원전 대조 docs/motion/rapier_offhand_2026-10-10.md). fighter.js applyPose 가 sword_art.js art.offArm 으로 읽는다.
+//  칸 = 빈손이 갈 자리(가슴 몸체 기준 m: [앞, 위(가슴 중심에서), 바깥(빈손 쪽)]) → 빈팔 역운동학(offArmIK, 팔꿈치는 아래·뒤·바깥).
+//  칸 없는 유파(독일·이베리아·일본·중국·무유파) = 오늘 그대로(어깨 앞 0.5 rad · 팔꿈치 1.0 rad — 손이 허리~명치).
+//  guard: 간 보기·대기 — 손을 몸 앞 가슴~턱 높이에, 팔꿈치는 굽혀 옆구리 쪽으로
+//   Capo Ferro 1610 §75 「the upper arm … in line with the left knee, and meets the bend of the left flank; and its forearm … somewhat tucked in」 · 판 6 C [원문·도판]
+//   Giganti 1606 그림 2·3·4 (손을 가슴~얼굴 앞, 손바닥 상대 쪽) · Fabris 1606 판 10·12·14·17 (손을 얼굴·가슴 앞에 들어 굽힘), [23] 「the left hand, which is held before the face」 [원문·도판]
+//  lunge: 비기 Passata in contratempo 의 런지 자세(SECRET.stance.lunge 무게만큼 guard → lunge, 이 칸이 있으면 stance.lunge.offArm 대신) — 손을 얼굴 앞으로
+//   Capo Ferro 판 11 C · 판 14 D (몸을 낮춰 상대 칼 밑으로 contra tempo 찌르기 — [39]·[42] 「only with a lowering of the body」: 빈손은 이마·얼굴 앞, 손바닥 밖) [도판]
+//   (보통 찌르기의 크게 내딛음은 판 5·10 D·16 C·18 C·19 C 와 §77 「the left arm … makes a straight line with the right arm」 = 빈팔을 뒤로 곧게 뻗음 — 이 게임에선 런지 자세가 비기 하나에만 걸려 쓰지 않는다)
+//   [모두 사장님 확인 전 — owner_defaults_table 600~]
+const ITALIAN_OFFARM = { guard: [0.35, 0.18, 0.12], lunge: [0.3, 0.36, 0.04] };
+TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
+
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬
 

@@ -2350,8 +2350,12 @@ export class Fighter {
     const setZ = (name, a) => J[name].target.setFromAxisAngle(Z_AXIS, a);
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
     const armO = this.limbs.armO;
-    setZ('uarmO', (this.secretStance?.offArm ?? 0.5) * armO); // 비기 런지: 빈팔을 뒤로 뻗어 균형 (secretStance.offArm, 없으면 오늘 그대로)
-    setZ('farmO', 1.0 * armO);
+    const OA = this.swordArt?.offArm; // 유파 빈팔 (10/10 고증 — schools.js offArm: 이탈리아만). 없으면 아래 두 줄 그대로
+    if (OA && this.armed && this.state === 'stand') this.offArmSchool(OA, armO);
+    else {
+      setZ('uarmO', (this.secretStance?.offArm ?? 0.5) * armO); // 비기 런지: 빈팔을 뒤로 뻗어 균형 (secretStance.offArm, 없으면 오늘 그대로)
+      setZ('farmO', 1.0 * armO);
+    }
     // (칼 든 팔은 driveSword의 역운동학이 정한다)
     // 척추: 걷는 방향으로 살짝 숙이고, 몸통을 다치면 웅크리고, 칼 든 손 쪽으로 허리를 튼다
     this.daze = Math.max(0, (this.daze || 0) - dt * 0.12);
@@ -3190,6 +3194,26 @@ export class Fighter {
     J.farmO.target.setFromAxisAngle(Z_AXIS, flex);
   }
 
+  /**
+   * 유파 빈팔 (10/10 고증 — schools.js offArm): 빈손을 가슴 몸체 기준 자리 [앞, 위, 바깥]로 보낸다(offArmIK).
+   *  런지 자세(secret_instant.js stanceTick 의 _stance 무게) 동안 guard → lunge 로 옮긴다. 다친 팔은 오늘처럼 그만큼 늘어진다
+   */
+  offArmSchool(OA, armO) {
+    const J = this.jointByName;
+    const st = this._stance;
+    const w = st?.key === 'lunge' && OA.lunge ? st.w : 0;
+    const g = OA.guard, l = OA.lunge ?? g;
+    const P = _oaP.set(g[0] + (l[0] - g[0]) * w, g[1] + (l[1] - g[1]) * w, -this.side * (g[2] + (l[2] - g[2]) * w));
+    const chest = this.bodies.chest;
+    const c = chest.translation();
+    P.applyQuaternion(rot(chest, _oaQ)).add(_oaC.set(c.x, c.y, c.z));
+    this.offArmIK(P);
+    if (armO < 1) {
+      J.uarmO.target.slerp(_oaI, 1 - armO);
+      J.farmO.target.slerp(_oaI, 1 - armO);
+    }
+  }
+
   // 칼끝/타격 지점 속도 추적 (데미지 계산용)
   trackBlade(dt) {
     const tip = this.bladePoint(1, new THREE.Vector3());
@@ -3472,6 +3496,10 @@ const _ik5 = new THREE.Vector3();
 const _ik6 = new THREE.Vector3();
 const _ik7 = new THREE.Vector3();
 const _ikM = new THREE.Matrix4();
+const _oaP = new THREE.Vector3(); // 유파 빈팔 (offArmSchool)
+const _oaC = new THREE.Vector3();
+const _oaQ = new THREE.Quaternion();
+const _oaI = new THREE.Quaternion();
 const _qp = new THREE.Quaternion();
 const _qc = new THREE.Quaternion();
 const _qt2 = new THREE.Quaternion();
