@@ -5,6 +5,7 @@
 //  실행: npx vite build && npx vite preview --port 4193 --strictPort &
 //        PREFIX=montante_grip_after node tools/browser/montante_grip_shots.mjs http://127.0.0.1:4193 docs/handoff
 //  GUARD=ochsR: 대기 장면을 AI 간 보는 자세가 그 이름일 때로 (10/10 빈손 ① — 높은 자세에서 쥔 손) · QUERY='montanteHand=old': 주소 인자 덧붙임 (10/10 오른손 날밑 — 옛 꼴 비교)
+//  10/10 20:4x 중간 쥠: 기본 = 'mid', 세 꼴 나란히 = QUERY='montanteHand=old|mid|guard' · PREFIX=zw_mid_<꼴> (docs/handoff/zw_mid_*.png, 문서 §15)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:4193';
