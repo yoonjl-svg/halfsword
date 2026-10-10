@@ -250,9 +250,10 @@ const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58,
 //   활 자세 bow (弓箭步) — **조선세법 원문이 아니다**: 쪽157 豹頭勢 역자 주 25 「궁전보로 머리를 내려침」에 기댄 해석(사장님 '중국 특색이 강화될 수 있으면 넣기'). 앞으로 내딛는
 //    기술 걸음(進步 — AI 베기 걸음 cutStep·플레이어 베기 걸음·連環三擊 반걸음)을 디딜 때 골반을 drop 만큼 낮춰 앞무릎을 굽히고 뒷다리는 뒤에 뻗은 채 hold s 버틴 뒤
 //    뒷발을 끌어붙인다(체보). 몸통 숙임은 더하지 않는다(곧추섬 — 이탈리아 런지와 다름). 낮춤은 유파 바탕·자세표 낮춤과 합쳐 GAIT.lowMax 0.16 안(비기 자세 통로 아님).
-//    rate = 내려가고 올라오는 골반 빠르기 m/s · inTime/outTime = 무게 켜고 끄는 시간 s (확인표 629~)
+//    rate = 내려가고 올라오는 골반 빠르기 m/s · inTime/outTime = 무게 켜고 끄는 시간 s · front = 버팀 동안 무게를 앞발 쪽 몫으로(엉덩이가 앞발 위 — 뒷다리 펴짐) (확인표 629~)
 const CHINESE_GUARD_LOW = { guard: '옆 지킴 (Nebenhut)', drop: 0.04 };
-const CHINESE_BOW = { drop: 0.14, rate: 1.2, inTime: 0.12, outTime: 0.35, hold: 0.25 };
+//    tech: 기술마다 버팀 — 표두격(oberhau, 豹頭擊 「霹擊上殺」 — 역주 25 가 붙은 豹頭勢 의 내려치기, 원문 발 꼴 左脚左手·掣步)은 더 오래 버텨 활 자세가 분명히 보이게
+const CHINESE_BOW = { drop: 0.14, rate: 1.2, inTime: 0.12, outTime: 0.35, hold: 0.25, front: 0.8, tech: { oberhau: { hold: 0.45 } } };
 const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW };
 //  ⓑ 이베리아 (몬탄테): 좌우로 번갈아 베며 앞뒤로 걷기·둥근 걸음 [원전 2차] · 넓게 서서 큰 칼의 원심력을 받는다 [해석] — 수는 [추정]
 //  10/10 데스트레사 고증 (docs/strike/school_gait_iberian_chinese_2026-10-10.md, 사장님 12:5x~13:0x '고증대로 · 사이드스텝이 더 원활하고 이동량 증가'):

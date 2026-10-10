@@ -256,7 +256,8 @@ export class Gait {
     if (this.f.move.y < -0.1 && o.kind !== 'retreat') return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0, leg: o.leg ?? null }; // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
     if (o.push) this.req.push = o.push;
-    if (o.draw) this.req.draw = true; // 유파 걸음(10/10): 디딘 뒤 뒷발 끌어붙임 걸음 하나 (일본 히키츠케·중국 체보)
+    if (o.draw) this.req.draw = true;
+    if (o.tech) this.req.tech = o.tech; // 기술 이름 (중국 활 자세 P.bow.tech 가 읽는다 — 다른 유파는 안 읽음) // 유파 걸음(10/10): 디딘 뒤 뒷발 끌어붙임 걸음 하나 (일본 히키츠케·중국 체보)
     // 유파 걸음 follow 안에서는 지나 딛는 기술 걸음(플레이어 베기 걸음·근접 걸음 등 'pass')을 그 유파 꼴로 (P.passAs — 앞발 lunge + 끌어붙임: 앞뒤 발이 안 바뀐다)
     const pa = this.follow && o.kind === 'pass' ? this.P.passAs : null;
     if (pa) {
@@ -485,7 +486,7 @@ export class Gait {
         Tstep = this.req.duration;
         // 활 자세(P.bow — 10/10 중국): 앞으로 내딛는 기술 걸음(進步 — AI 베기 걸음·플레이어 베기 걸음·連環三擊 반걸음)이면 디딜 때 골반을 낮춰 앞무릎을 굽힌다
         this.bowReq = !!this.P.bow && this.req.fwd > 0 && (this.req.kind === 'lunge' || this.req.kind === 'pass');
-      } else if (this.drawPending && !next && this.P.bow && this.drawPending.t < this.P.bow.hold) {
+      } else if (this.drawPending && !next && this.P.bow && this.bowAfter > 0) {
         // 활 자세 버팀(P.bow.hold s): 내딛은 앞무릎을 굽힌 채 뒷다리를 뻗어 둔다 — 그 뒤에 뒷발을 끌어붙인다(체보). 그동안 다른 발은 들지 않는다
       } else if (this.drawPending && !next) {
         // 유파 걸음(10/10): 베며 내딛은(lunge) 뒤 뒷발을 앞발 뒤 자세 자리로 끌어붙인다 — 일본 히키츠케·중국 체보 (ai.js gaitStep 의 cutStep.draw)
@@ -632,10 +633,12 @@ export class Gait {
       want.add(this.sway);
     }
     // ⑤ 가만히 서 있을 땐 무게중심을 두 발 사이(앞발 쪽으로 조금)에 둔다 → 서서 미끄러지지 않는다
-    if (!walkNow && !swing) {
+    //  (활 자세(P.bow) 버팀 동안은 걷는 중이어도 무게를 앞발 쪽 P.bow.front 로 옮긴다 — 엉덩이가 앞발 위로 가 뒷다리가 펴진다. 칸 없으면 전과 같다)
+    const bowHold = this.P.bow?.front != null && this.bowW > 0 && !swing;
+    if ((!walkNow && !swing) || bowHold) {
       const c = f.com;
       if (c) {
-        const w = this.P.weightFront;
+        const w = bowHold ? this.P.weightFront + (this.P.bow.front - this.P.weightFront) * this.bowW : this.P.weightFront;
         const front = this.frontLeg(fwd);
         const a = L[front].plant;
         const b = L[front === 'F' ? 'B' : 'F'].plant;
@@ -958,7 +961,7 @@ export class Gait {
     }
     if (l.kind === 'req') {
       if (this.req?.draw) this.drawPending = { t: 0 }; // 유파 걸음: 다음 걸음에 뒷발 끌어붙임
-      if (this.bowReq) this.bowAfter = this.P.bow.hold; // 활 자세: 디딘 뒤 hold s 버팀
+      if (this.bowReq) this.bowAfter = this.P.bow.tech?.[this.req?.tech]?.hold ?? this.P.bow.hold; // 활 자세: 디딘 뒤 hold s 버팀 (기술마다 다르면 P.bow.tech — 표두격)
       this.bowReq = false;
       this.req = null;
     }

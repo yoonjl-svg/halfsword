@@ -5,6 +5,7 @@
 //   플레이어 = W 로 다가간 뒤 D(오른쪽 옆) · AI = 츠바이핸더 AI 가 간 보기에서 옆으로 돌 때.
 //  중국: 앞으로 내딛는 기술 걸음(req)을 디딘 뒤 0.08~0.2 s 일시정지 → 옆에서. 플레이어 = 다가간 뒤 베기 걸음과 같은 부탁(lunge 0.5 + 끌어붙임 — 플레이어 베기 걸음
 //   'pass' 가 follow 안에서 바뀌는 꼴)을 1.5 s 마다 · AI = 청강검 AI 의 베기 걸음(cutStep).
+//  표두격(chinese_bow_pyodu, AI 만): 청강검 AI 가 표두격(oberhau, 豹頭擊)을 골라 베기 걸음을 디딘 뒤 0.12~0.3 s — 활 자세 버팀이 가장 긴 기술. 시험만 AI 기술 선호를 표두격으로 몰아준다.
 //  시험만: 찍는 몸이 죽지 않게 상처를 끈다(걸음·물리 그대로).
 //  실행: npx vite build && npx vite preview --port 4189 --strictPort &
 //        node tools/browser/iberchina_shots.mjs http://127.0.0.1:4189 docs/handoff
@@ -61,14 +62,17 @@ async function arm(page, who, want, before) {
         if (!sw || sw.kind !== 'walk') return res;
         u = sw.t / sw.T;
         ok = u > 0.4 && u < 0.7 && Math.abs(f.move.x) > 0.15 && Math.abs(f.move.x) > Math.abs(f.move.y);
+      } else if (want === 'pyodu') {
+        // 표두격(oberhau) 베기 걸음을 디딘 뒤 0.12~0.3 s (AI 가 고른 기술 이름으로)
+        ok = g.ai?.tech?.name === 'oberhau' && G.lastTDKind === 'req' && G.sinceTD > 0.12 && G.sinceTD < 0.3;
       } else {
         ok = G.lastTDKind === 'req' && G.sinceTD > 0.08 && G.sinceTD < 0.2;
       }
       if (!ok) return res;
       const pv = f.bodies.pelvis.translation();
-      const a = G.legs.F.stance ? G.legs.F.plant : G.legs.F.ankle;
-      const b = G.legs.B.stance ? G.legs.B.plant : G.legs.B.ankle;
-      g._shot = { who, want, before: !!before, kind: sw?.kind ?? null, cross: !!sw?.cross, u: u == null ? null : +u.toFixed(2), pelvisY: +pv.y.toFixed(3), feet: +Math.hypot(a.x - b.x, a.z - b.z).toFixed(2), bowW: +(G.bowW || 0).toFixed(2), d: +f.foeDistance().toFixed(2), tradition: G.P?.tradition ?? null, sim: +g.stats.simTime.toFixed(2) };
+      const fa = G.legs.F.stance ? G.legs.F.plant : G.legs.F.ankle;
+      const fb = G.legs.B.stance ? G.legs.B.plant : G.legs.B.ankle;
+      g._shot = { who, want, tech: who === 'enemy' ? g.ai?.tech?.name ?? null : null, before: !!before, kind: sw?.kind ?? null, cross: !!sw?.cross, u: u == null ? null : +u.toFixed(2), pelvisY: +pv.y.toFixed(3), feet: +Math.hypot(fa.x - fb.x, fa.z - fb.z).toFixed(2), bowW: +(G.bowW || 0).toFixed(2), d: +f.foeDistance().toFixed(2), tradition: G.P?.tradition ?? null, sim: +g.stats.simTime.toFixed(2) };
       window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyP' }));
       return res;
     };
@@ -106,6 +110,7 @@ async function shoot(page, who, path, view) {
 const CASES = [
   { key: 'iberian_side', weapon: 'zweihander', want: 'side', view: 'back', trad: 'iberian' },
   { key: 'chinese_bow', weapon: 'qinggang', want: 'bow', view: 'side', trad: 'chinese' },
+  { key: 'chinese_bow_pyodu', weapon: 'qinggang', want: 'pyodu', view: 'side', trad: 'chinese', aiOnly: true }, // 표두격 내려치기 (AI)
 ];
 for (const C of CASES) {
   if (process.env.ONLY && !process.env.ONLY.split(',').includes(C.key)) continue;
@@ -115,13 +120,15 @@ for (const C of CASES) {
     {
       const page = await open(`?weapon=longsword&foeWeapon=${C.weapon}`);
       await arm(page, 'enemy', C.want, bv);
+      // 표두격 장면: 시험만 — AI 의 표두격(oberhau) 선호를 크게 해 자주 고르게 한다(48 판에 10 번뿐이라)
+      if (C.want === 'pyodu') await page.evaluate(() => { const P = window.game.ai.pers.techPref; for (const k of Object.keys(P)) P[k] = k === 'oberhau' ? 30 : 0.05; });
       const s = await waitShot(page, 300000);
       if (s) await shoot(page, 'enemy', `${dir}/${C.key}_${phase}_ai.png`, C.view);
       out[`${C.key}_${phase}_ai`] = s;
       await page.context().close();
     }
     // 플레이어
-    {
+    if (!C.aiOnly) {
       const page = await open(`?weapon=${C.weapon}&foeWeapon=longsword`);
       await arm(page, 'player', C.want, bv);
       await page.keyboard.down('KeyW');
