@@ -2753,6 +2753,7 @@ export const OUTFITS = {
   tuyana_winter_priest: createTuyanaOutfit(newOutfitHelpers), // 투야나 v2 (디자인 리뷰 10/10)
   tuyana_winter_priest_chotki: createTuyanaOutfit(newOutfitHelpers, { chotki: true }), // 투야나 v3 왼손목 추트키 (외형 다듬기 2차 10/10)
   tuyana_winter_priest_dangle: createTuyanaOutfit(newOutfitHelpers, { dangle: true }), // 투야나 v4 늘어져 흔들리는 긴 추트키 (외형 3차 10/11)
+  tuyana_winter_priest_thick: createTuyanaOutfit(newOutfitHelpers, { dangle: true, thick: true }), // 투야나 v5 추트키 매듭 굵게 (10/11 01:4x)
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,

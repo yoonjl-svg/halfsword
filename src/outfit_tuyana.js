@@ -11,7 +11,9 @@
 //  v4 (opts.dangle, 사장님 10/11 00:4x '묵주가 잘 안보여. 들지 말고 긴 묵주를 손목에 감아 늘어뜨리게 해. 살짝 달랑거리게'): 손목에 두 바퀴 감고
 //   남은 고리(약 27 cm, 매듭 지름 1.3 cm · 십자가 4.5 × 2.6 cm · 술 4 cm)를 아래로 늘어뜨린다. 두 마디 진자(겉모습만 — 물리 몸·충돌체 없음, 난수 없음):
 //   그릴 때마다(onBeforeRender, 한 번 그리는 동안 한 번만) 손목 자리를 따라가며 무게로 늦게 흔들린다. 게임 판정·시뮬과 무관(그리기 전용).
+//  v5 (opts.thick, 사장님 10/11 01:4x '투야나 매듭 굵기 키워'): v4 그대로 + 매듭 지름 1.3 → 2.0 cm · 줄 3.8 → 5.6 mm · 십자가 4.5 × 2.6 → 5.5 × 3.2 cm · 술 4 → 5 cm (진자 그대로)
 export function createTuyanaOutfit(h, opts = {}) {
+  const TK = !!opts.thick;
   const { THREE, bake, box, cyl, ball, addMerged, CLOTH, isoldeLock, artoriaCloth, sleeveVolume, taperedTube, reshapeMain, hangingClothShading } = h;
   const NAVY = 0x222c48; // 그림의 남색 (v1 0x202a40 보다 아주 조금 푸르게)
   const NAVY_EDGE = 0x18203a;
@@ -304,12 +306,14 @@ export function createTuyanaOutfit(h, opts = {}) {
     const KNOT = 0x0e0e12, CORD = 0x1a1a20, CROSS = 0xc9ccd2;
     const KNOT_MAT = { ...CLOTH, roughness: 1 };
     const turns = [], cord = [];
-    for (const [y, r] of [[-0.104, 0.0475], [-0.118, 0.047]]) {
-      for (let i = 0; i < 22; i++) {
-        const a = (i / 22) * Math.PI * 2 + y * 40;
-        turns.push(bake(new THREE.SphereGeometry(0.0062, 7, 5), [Math.cos(a) * r, y, Math.sin(a) * r], null, [1, 0.85, 1]));
+    const KR = TK ? 0.0095 : 0.0062, CR = TK ? 0.0028 : 0.0019; // 손목 매듭 반지름 · 줄 반지름
+    for (const [y, r] of TK ? [[-0.1, 0.05], [-0.12, 0.0495]] : [[-0.104, 0.0475], [-0.118, 0.047]]) {
+      const nK = TK ? 17 : 22;
+      for (let i = 0; i < nK; i++) {
+        const a = (i / nK) * Math.PI * 2 + y * 40;
+        turns.push(bake(new THREE.SphereGeometry(KR, 8, 6), [Math.cos(a) * r, y, Math.sin(a) * r], null, [1, 0.85, 1]));
       }
-      cord.push(bake(new THREE.TorusGeometry(r, 0.0019, 4, 28), [0, y, 0], [Math.PI / 2, 0, 0]));
+      cord.push(bake(new THREE.TorusGeometry(r, CR, 4, 28), [0, y, 0], [Math.PI / 2, 0, 0]));
     }
     addMerged(fabric(g), turns, KNOT, KNOT_MAT);
     addMerged(fabric(g), cord, CORD, CLOTH);
@@ -319,23 +323,28 @@ export function createTuyanaOutfit(h, opts = {}) {
       const knots = [], lines = [];
       for (const sd of [-1, 1]) {
         const a = [sd * w0, 0, 0], b = [sd * w1, -len, 0];
-        lines.push(taperedTube([a, [(a[0] + b[0]) / 2, -len / 2, 0.002], b], [0.0019, 0.0019, 0.0019], 8, 4));
-        for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; knots.push(ball(0.0065, 7, 5, [a[0] + (b[0] - a[0]) * u, -len * u, 0])); }
+        lines.push(taperedTube([a, [(a[0] + b[0]) / 2, -len / 2, 0.002], b], [CR, CR, CR], 8, 4));
+        for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; knots.push(ball(TK ? 0.01 : 0.0065, 8, 6, [a[0] + (b[0] - a[0]) * u, -len * u, 0])); }
       }
       return { knots, lines };
     };
     const layerA = fabric(g);
-    const pivotA = new THREE.Group(); pivotA.name = 'tuyana-chotki-a'; pivotA.position.set(0, -0.118, -0.05); layerA.add(pivotA);
-    const sa = strand(L1, 0.013, 0.011, 6);
+    const pivotA = new THREE.Group(); pivotA.name = 'tuyana-chotki-a'; pivotA.position.set(0, TK ? -0.12 : -0.118, TK ? -0.054 : -0.05); layerA.add(pivotA);
+    const sa = TK ? strand(L1, 0.017, 0.015, 5) : strand(L1, 0.013, 0.011, 6);
     const meshA = addMerged(pivotA, sa.knots, KNOT, KNOT_MAT);
     addMerged(pivotA, sa.lines, CORD, CLOTH);
     const pivotB = new THREE.Group(); pivotB.name = 'tuyana-chotki-b'; pivotB.position.set(0, -L1, 0); pivotA.add(pivotB);
-    const sb = strand(L2 - 0.012, 0.011, 0.002, 4);
-    sb.knots.push(ball(0.0085, 8, 6, [0, -L2 + 0.006, 0])); // 모이는 큰 매듭
+    const sb = TK ? strand(L2 - 0.014, 0.015, 0.003, 3) : strand(L2 - 0.012, 0.011, 0.002, 4);
+    sb.knots.push(ball(TK ? 0.013 : 0.0085, 8, 6, [0, -L2 + 0.006, 0])); // 모이는 큰 매듭
     addMerged(pivotB, sb.knots, KNOT, KNOT_MAT);
     addMerged(pivotB, sb.lines, CORD, CLOTH);
-    addMerged(pivotB, [box(0.007, 0.045, 0.007, [0, -L2 - 0.024, 0]), box(0.026, 0.007, 0.007, [0, -L2 - 0.014, 0])], CROSS, { roughness: 0.35, metalness: 0.55 });
-    addMerged(pivotB, [bake(new THREE.ConeGeometry(0.011, 0.04, 8), [0, -L2 - 0.066, 0]), ball(0.006, 6, 5, [0, -L2 - 0.048, 0])], KNOT, KNOT_MAT);
+    if (TK) {
+      addMerged(pivotB, [box(0.01, 0.055, 0.01, [0, -L2 - 0.034, 0]), box(0.032, 0.01, 0.01, [0, -L2 - 0.022, 0])], CROSS, { roughness: 0.35, metalness: 0.55 });
+      addMerged(pivotB, [bake(new THREE.ConeGeometry(0.015, 0.05, 8), [0, -L2 - 0.091, 0]), ball(0.008, 6, 5, [0, -L2 - 0.066, 0])], KNOT, KNOT_MAT);
+    } else {
+      addMerged(pivotB, [box(0.007, 0.045, 0.007, [0, -L2 - 0.024, 0]), box(0.026, 0.007, 0.007, [0, -L2 - 0.014, 0])], CROSS, { roughness: 0.35, metalness: 0.55 });
+      addMerged(pivotB, [bake(new THREE.ConeGeometry(0.011, 0.04, 8), [0, -L2 - 0.066, 0]), ball(0.006, 6, 5, [0, -L2 - 0.048, 0])], KNOT, KNOT_MAT);
+    }
     // 두 마디 진자: 끝점 둘을 베를레 적분 + 길이 고정. 손목이 움직이면 고리가 늦게 따라온다
     const down = new THREE.Vector3(0, -1, 0), anchor = new THREE.Vector3(), q = new THREE.Quaternion(), dir = new THREE.Vector3();
     const p1 = new THREE.Vector3(), p1o = new THREE.Vector3(), p2 = new THREE.Vector3(), p2o = new THREE.Vector3(), tmp = new THREE.Vector3();

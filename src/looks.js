@@ -721,6 +721,14 @@ export const LOOK_ARCHIVE = {
       headband: null, grip: 0x333342, hilt: 0xa7a7af, accent: 0xf1f0ec,
       outfit: 'tuyana_winter_priest_dangle', armor: null, stockEyes: true, eyeColor: 0x4a3518,
     },
+    // v5 (10/11 01:4x, 사장님 '투야나 매듭 굵기 키워'): v4 + 매듭 지름 2.0 cm · 줄·십자가·술 함께 키움 (흔들림 그대로)
+    v5: {
+      tunic: 0x222c48, quilt: 0x222c48, sleeve: 0x222c48, straps: null,
+      belt: 0x222c48, hoseUpper: 0x222c48, hoseLower: 0x222c48, shoes: 0x1b1c22,
+      skin: 0xe9d3c5, hands: 0xe9d3c5, helmet: null, metal: 0xa7a7af, hair: 0xc9cbe0,
+      headband: null, grip: 0x333342, hilt: 0xa7a7af, accent: 0xf1f0ec,
+      outfit: 'tuyana_winter_priest_thick', armor: null, stockEyes: true, eyeColor: 0x4a3518,
+    },
   },
 };
 
@@ -737,7 +745,7 @@ export const CHARACTER_LOOK_VERSION = {
   artoria: 'v3', // 외형 3차 10/11 — 옛 판 ?look=artoria:v2 · v1
   samira: 'v4', // 외형 3차 10/11 (이름 마야 라토르) — 옛 판 ?look=samira:v3 · v2 · v1
   renji: 'v3', // 외형 3차 10/11 — 옛 판 ?look=renji:v2(바지·행전) · v1
-  eira: 'v4', // 외형 3차 10/11 — 옛 판 ?look=eira:v3 · v2 · v1
+  eira: 'v5', // 10/11 01:4x 매듭 굵게 — 옛 판 ?look=eira:v4 · v3 · v2 · v1
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
