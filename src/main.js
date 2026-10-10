@@ -1670,7 +1670,7 @@ function frame(now) {
     input.tapOnDown = !!player.weapon?.gun;
     let taps = input.consumeTaps();
     // 플레이어 비기 (10/9 23:5x): 창이 열려 있을 때 공격 입력(톡 = 찌르기, 휘두르기만큼 빠른 끌기 = 베기)이 오면 그 입력 대신 비기 완벽 실행.
-    //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 그대로 내 것
+    //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 실행 동안 내 것, 경직 동안은 안 듣는다 (사장님 10/10 20:5x '잠깐 아예 못 움직이게' — 칼은 skill.js holdStiff 가 멈춰 둔다)
     const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
     let secBusy = !!player.skill.secretPhase;
     if (playerSecret?.open && !secBusy && player.alive && (taps > 0 || swipe)) {
@@ -1694,9 +1694,10 @@ function frame(now) {
     watchEmotions();
     const m = input.move;
     const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
-    player.move.set(player.alive ? m.x * emv : 0, player.alive ? m.y * emv : 0);
-    player.stickX = player.alive ? m.x : 0; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
-    player.stickY = player.alive ? m.y : 0;
+    const feet = player.alive && player.skill.secretPhase !== 'stiff'; // 비기 경직: 스틱이 안 듣는다 (걸음·근접 밀치기 없음 — 몸은 물리대로)
+    player.move.set(feet ? m.x * emv : 0, feet ? m.y * emv : 0);
+    player.stickX = feet ? m.x : 0; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
+    player.stickY = feet ? m.y : 0;
     updateGuardName(dt);
     // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다
     const mouseMode = !input.isTouchDevice;
