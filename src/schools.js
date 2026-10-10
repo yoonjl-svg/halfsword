@@ -233,20 +233,20 @@ const CHINESE_NAMES = {
 // 이베리아 (몬탄테 — 츠바이핸더, 앞무게 틀). 이름 14 자리 — 피게이레두 1651 원문 낱말 + 자리 근거 7, 자리 [해석] 7.
 //  피 단Ⅰ = 단순 규칙 Ⅰ, 피 복Ⅱ = 복합 규칙 Ⅱ (Myers·Hick 전사). 고디뉴 = Arte de Esgrima 1599 fol (PDF 쪽 = 2×fol − 7)
 const IBERIAN_NAMES = {
-  '지붕 (Vom Tag)': { name: '머리 위 (altibaxo)', desc: '칼을 이마 위로 들고 칼끝은 뒤로 · 곧게 내려친다', src: '피 단Ⅸ·복ⅩⅤ altibaxo · 고디뉴 fol.113r de arriba abajo · 자리 [해석]' },
-  '어깨 지붕 (Vom Tag)': { name: '탈류 준비 (talho)', desc: '칼을 오른 어깨에 메어 칼끝은 뒤로 · 오른쪽 위에서 비스듬히 내려벤다', src: '피 단Ⅲ talho · 고디뉴 fol.113r tajo · 자리 [해석]' },
+  '지붕 (Vom Tag)': { name: '머리 위 (altibaxo)', desc: '두 손을 머리 위로(날밑이 머리를 덮음), 칼은 어깨 뒤로 넘어가는 길 · 곧게 내려친다', src: '피 단Ⅸ·복ⅩⅤ altibaxo · 머리 위로 넘김 피 복Ⅱ·복ⅩⅥ · 고 규칙 3·4·5 · 고디뉴 fol.113r de arriba abajo · 자리 [해석]' },
+  '어깨 지붕 (Vom Tag)': { name: '탈류 준비 (talho)', desc: '손은 머리 오른쪽 높이, 칼은 오른 어깨 뒤로 늘어뜨려 칼끝은 땅 쪽 · 뒤에서 감아 비스듬히 벤다', src: '피 단Ⅰ·단Ⅲ talho por detras · 고 규칙 4·6 · 고디뉴 fol.113r tajo · 자리 [해석]' },
   '황소 (Ochs)': { name: '귀 앞 겨눔 (orelha direyta)', desc: '칼자루를 오른 귀 앞 높이에, 칼끝은 오른 대각으로 들어 · 올려 벤 레베스가 멈추는 자리', src: '피 복Ⅱ·복ⅩⅤ (10/10 자세표 고증)' },
   '긴 자세 (Langort)': { name: '곧은 자세 (postura recta)', desc: '칼을 얼굴 앞 가운데에 곧게 · 베기마다 여기 멈춘다', src: '피 단Ⅰ·단Ⅱ·복Ⅶ · 손 높이는 [해석]' },
-  '옆 자세': { name: '가로 탈류 (talho orizontal)', desc: '칼을 오른쪽에 가로로 눕힌다 · 가로로 벤다', src: '피 단Ⅺ' },
+  '옆 자세': { name: '가로 탈류 (talho orizontal)', desc: '칼을 오른쪽 몸 가운데 높이에 눕혀 뒤로 감는다 · 가로로 벤다', src: '피 단Ⅺ·복Ⅺ · 고 규칙 9' },
   '쟁기 (Pflug)': { name: '비낀 자세 (postura obtusa)', desc: '오른손을 허리띠 앞에, 칼은 오른 대각으로 비껴 · 찌르기를 받아 탈류로 쳐낸다', src: '피 단ⅩⅣ·복ⅩⅣ' },
-  '바꿈 (Wechsel)': { name: '아래 탈류 (talho de baxo)', desc: '칼끝을 오른쪽 아래로 · 아래에서 위로 탈류를 올린다', src: '피 단Ⅰ·단Ⅸ · 자리 [해석]' },
-  '옆 지킴 (Nebenhut)': { name: '뒤 탈류 (talho por detras)', desc: '칼을 오른 허리 뒤로 숨긴다 · 뒤에서 앞으로 탈류', src: '피 단Ⅰ·단Ⅲ · 자리 [해석] (대안 고디뉴 fol.117v tajo rastero)' },
+  '바꿈 (Wechsel)': { name: '아래 탈류 (talho de baxo)', desc: '오른쪽으로 떨어진 칼, 칼끝은 오른쪽 아래 뒤로 · 뒤에서 아래에서 위로 탈류를 올린다', src: '피 단Ⅰ·복Ⅰ · 자리 [해석]' },
+  '옆 지킴 (Nebenhut)': { name: '뒤 탈류 (talho por detras)', desc: '칼이 오른 옆구리를 휘감아 뒤로 · 뒤에서 앞으로 탈류', src: '피 단Ⅲ·복ⅩⅤ · 고 규칙 8 · 자리 [해석] (대안 고디뉴 fol.117v tajo rastero)' },
   '바보 (Alber)': { name: '칼끝 땅에 (ponta no chão)', desc: '몸을 곧게, 칼끝을 앞 땅으로 · 모든 규칙이 여기서 시작해 여기로 끝난다', src: '피 단Ⅰ' },
-  '왼쪽 어깨 지붕': { name: '레베스 준비 (revez)', desc: '머리 위로 넘긴 칼을 왼 어깨에 떨군다 · 왼쪽에서 감아 벤다', src: '피 복Ⅱ revez cingido · 고디뉴 fol.113r' },
+  '왼쪽 어깨 지붕': { name: '레베스 준비 (revez)', desc: '머리 위로 넘긴 칼을 왼 어깨에 떨군다 · 왼쪽에서 감아 벤다', src: '피 복Ⅱ revez cingido · 복ⅩⅤ · 고 규칙 4 · 고디뉴 fol.113r' },
   '왼쪽 황소': { name: '왼 높이 비낌 (linha obtusa)', desc: '칼을 머리 앞 왼쪽 높이에 비껴 멈춘다', src: '피 복ⅩⅤ · 칼끝 방향 [해석]' },
-  '왼쪽 옆 자세': { name: '가로 레베스 (revez orizontal)', desc: '칼을 왼쪽에 가로로 · 왼쪽에서 가로로 벤다', src: '피 단Ⅺ' },
+  '왼쪽 옆 자세': { name: '가로 레베스 (revez orizontal)', desc: '오른팔이 엇갈려 칼을 왼쪽 몸 가운데 높이에 뒤로 감는다 · 왼쪽에서 가로로 벤다', src: '피 단Ⅺ·복Ⅰ·복Ⅺ · 고 규칙 9' },
   '왼쪽 쟁기': { name: '왼 비낀 자세 (postura obtusa)', desc: '칼을 왼 대각으로 비껴 · 찌르기를 레베스로 쳐낸다', src: '피 복ⅩⅣ 둘째 postura' },
-  '왼쪽 바꿈': { name: '아래 레베스 (revez de baxo)', desc: '칼끝을 왼쪽 아래로 · 아래에서 위로 레베스를 올린다', src: '피 복ⅩⅤ · 자리 [해석]' },
+  '왼쪽 바꿈': { name: '아래 레베스 (revez de baxo)', desc: '왼쪽으로 떨군 칼(오른팔이 왼팔 위로 엇갈림), 칼끝은 왼쪽 아래 뒤로 · 아래에서 위로 레베스를 올린다', src: '피 복Ⅰ·복ⅩⅤ · 자리 [해석]' },
 };
 // 독일 두삭 가지 (한손 베기 — 세이버·팔쉬온). 이름 14 자리 — 마이어 1570 두삭 편 원문 이름 12 + 쉬운 말 2.
 //  롱소드와 같은 독일 유파라 TRADITIONS.german.names 가 아니라 가지에 둔다 (6절 — sword_art.js 가 가지 이름을 읽어야 함)
