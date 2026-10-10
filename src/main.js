@@ -835,7 +835,7 @@ function showFoeIntro(ch) {
   if (!ch) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
-  { const line = randomLine(ch, 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸)
+  { const line = randomLine(ch, ch.lines?.introStray && foeWeaponId !== ch.weapon ? 'introStray' : 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸)
   el.querySelector('em').textContent = '';
   el.classList.add('show');
 }

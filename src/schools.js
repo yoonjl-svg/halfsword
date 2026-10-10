@@ -524,7 +524,7 @@ const ITALIAN_SECRET = {
 // 이베리아 Molinete altibaixo (휘돌려 내려치기): 끊기지 않은 베기 셋 뒤, 옆으로 비껴 딛으며 칼을 한 바퀴 휘돌려(몰리넬로 고리) 지붕에서 곧게 내려친다
 const IBERIAN_SECRET = {
   name: 'molineteTalho',
-  nameKo: '비켜 서며 크게 가로베기 (talho de través) · 가칭', // 10/10 04:4x 고리를 뺀 큰 가로 베기 (전: 'Molinete talho (휘돌려 사선 베기)') — 안 이름 molineteTalho 는 재기 칸 이름이라 그대로
+  nameKo: '비켜 서며 크게 가로베기 (talho de través)', // 이름은 가칭(사장님 확인 전) — 화면에선 '· 가칭' 꼬리를 뺌 (10/10 17:1x 문구 정리) // 10/10 04:4x 고리를 뺀 큰 가로 베기 (전: 'Molinete talho (휘돌려 사선 베기)') — 안 이름 molineteTalho 는 재기 칸 이름이라 그대로
   // 10/10 04:4x 사장님: 상대가 내 칼 호 안쪽으로 밀고 들어오면(가슴 거리 < reach − SECRET.iberianInside, 다가오는 중이거나 SECRET.iberianInsideDwell 초 머묾 — secret.js insideEvent)
   //  옆으로 비켜 딛으며(반걸음 뒤 섞음) 칼을 오른 어깨 뒤로 멀리 감았다가 몸 전체를 돌려 크게 한 번 가로로 쓸어 벤다(secret_instant.js sweepPose — 고리 없음). 막히면 밀어냄(SECRET.iberianShove)
   when: 'inside',
@@ -542,7 +542,7 @@ const IBERIAN_SECRET = {
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
 const JAPANESE_SECRET = {
   name: 'goNoSen',
-  nameKo: '고노센 · 가칭',
+  nameKo: '고노센', // 이름은 가칭(사장님 확인 전) — 화면에선 '· 가칭' 꼬리를 뺌 (10/10 17:1x 문구 정리)
   // 10/9 사장님 추가 지시: 헛스윙을 본 뒤가 아니라 한 박자 빠르게 — 상대가 '내 비기는 닿고 상대는 명백히 안 닿을 간격에서 무의미하게 허점을 노출하는 공격 동작'을
   //  시작하는 순간(칼을 듦·달려듦, 지금 모습). 헛침(foeRecover)은 같은 창에서 보조 사건(칼끝 추정 에너지 문턱 whiff)
   when: ['foeRaise', 'foeCharge', 'foeRecover'],
