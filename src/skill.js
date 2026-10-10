@@ -28,6 +28,7 @@ import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
 import { requestInstant, requestIai, requestSweep, startLunge } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -465,6 +466,12 @@ export class Skill {
       this.secretBursts++;
     } else if (D.back) {
       run.stage = 'back'; // 일본 後の先 ①: 물러서며 脇構え 로 끌어 담기
+    } else if (D.flow) {
+      // 이베리아 멈추지 않는 흐름 (10/11 — schools.js IBERIAN_SECRET): 비기를 낸 끌기의 방향(o.dir — main.js, 톡이면 걸러진 손 목표 속도)을 이어받아
+      //  지금 손에서 곧장 번갈아 올려베기 → 머리 위 돌려 큰 한 칼. 칼 길·빠르기는 비기가 맡고 발(스틱)은 플레이어 것 (AI 와 같은 수 — secret.js montanteFlowSeq)
+      const dir = o.dir && Math.hypot(o.dir[0], o.dir[1]) > 1e-6 ? o.dir : [this.aimVel.x, this.aimVel.y];
+      for (const t of montanteFlowSeq(hand, dir, D)) run.queue.push(t);
+      run.flow = true;
     } else if (D.path && SECRET.iberianSweep) {
       // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝(스틱이 옆을 누르면 그쪽, 아니면 오른쪽) + 머리 위 큰 고리 + 사선 — AI 와 같은 실행부
       run.stage = 'instant';
@@ -505,6 +512,7 @@ export class Skill {
     if (!t) return false;
     run.cur = t;
     run.bound = false;
+    run.segHit = false;
     if (run.flow) {
       const h = [this.f.handOffset.x, this.f.handOffset.y];
       const mx = (h[0] + t.from[0]) / 2;
@@ -598,7 +606,7 @@ export class Skill {
     const foe = f.foe;
     if (!f.alive || !f.armed || f.state !== 'stand' || !foe) return this.secretEnd();
     // 맞힘 (AI 와 같은 눈: 상대 아픔 +0.05)
-    if (foe.pain > run.painFoe + 0.05 && (run.stage === 'strike' || run.stage === 'follow')) run.landed = true;
+    if (foe.pain > run.painFoe + 0.05 && (run.stage === 'strike' || run.stage === 'follow')) run.landed = run.segHit = true; // segHit: 이 토막이 맞힘 (이베리아 흐름 문 — 10/11)
     run.painFoe = foe.pain;
     const hurt = f.pain > run.painMe + 0.05;
     run.painMe = f.pain;
@@ -667,7 +675,7 @@ export class Skill {
       return;
     }
     if (run.stage === 'strike') {
-      const inLoop = !!run.cur?.pre && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
+      const inLoop = !!run.cur?.pre?.length && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
       f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power');
       f.secretHit = inLoop ? 1 : SECRET.hitMul;
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
@@ -687,6 +695,12 @@ export class Skill {
       }
       // 길 끝: 대기열(連環 다음 수)로 곧장, 독일은 맞물렸고 못 맞혔으면 Duplieren 한 번, 아니면 따라 지나감
       if (run.queue.length) {
+        // 이베리아 흐름 (10/11): 실제 칼이 토막 끝 자리에 갈 때까지 기다린다 (flowGate, 최대 FLOW_GATE_MAX, 이 토막이 맞혔으면 곧장 — ai.js secretStrikeEnd 와 같음)
+        if (run.cur?.gate) {
+          run.gateT = (run.gateT ?? 0) + dt;
+          if (!flowGate(f, run.cur.gate) && !run.segHit && run.gateT < FLOW_GATE_MAX) return; // 이 토막이 맞혔으면 기다리지 않는다
+          run.gateT = 0;
+        }
         this.secretNextMove();
         return;
       }

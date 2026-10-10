@@ -51,10 +51,17 @@ const heroes = [
   ...CHARACTERS.map((c) => ({ id: c.id, name: c.name, sub: c.epithet || '—', armour: armourLine(c.look) })),
 ];
 
+// 이베리아 비기 판 (10/11 — docs/strike/iberian_secret_v5_2026-10-11.md): 새 '멈추지 않는 흐름'(기본) · 옛 v4 '비켜 서며 크게 가로베기' — 시작 주소의 ibSecret 로 (main.js)
+const IB_SECRETS = [
+  { id: 'flow', name: '새 · 멈추지 않는 흐름', sub: '번갈아 올려베기 둘 → 머리 위로 넘겨 둘러 베는 큰 한 칼 (10/11)' },
+  { id: 'v4', name: '옛 · 비켜 서며 가로베기', sub: '휩쓸기 v4 (10/10) — 견주어 보기' },
+];
+
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
   hero: heroes.some((h) => h.id === saved.hero) ? saved.hero : 'player',
+  ibSecret: IB_SECRETS.some((x) => x.id === saved.ibSecret) ? saved.ibSecret : 'flow',
 };
 
 function weaponButton(w, big) {
@@ -119,6 +126,23 @@ function heroButton(h) {
   return b;
 }
 
+function ibSecretButton(x) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'pick';
+  b.dataset.id = x.id;
+  const txt = document.createElement('span');
+  txt.className = 'txt';
+  const name = document.createElement('b');
+  name.textContent = x.name;
+  const sub = document.createElement('span');
+  sub.textContent = x.sub;
+  txt.append(name, sub);
+  b.append(txt);
+  b.addEventListener('click', () => select('ibSecret', x.id));
+  return b;
+}
+
 function select(kind, id) {
   pick[kind] = id;
   savePick(pick);
@@ -128,6 +152,7 @@ function select(kind, id) {
 function render() {
   for (const el of document.querySelectorAll('#weaponsNew .pick, #weaponsRest .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.weapon));
   for (const el of document.querySelectorAll('#heroes .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.hero));
+  for (const el of document.querySelectorAll('#ibSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibSecret));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -141,6 +166,7 @@ function render() {
 
 function startUrl() {
   const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: 'random', stage: 'random' });
+  if (pick.ibSecret === 'v4') q.set('ibSecret', 'v4');
   return `./index.html?${q.toString()}`;
 }
 
@@ -150,6 +176,7 @@ for (const id of NEW_WEAPONS) {
 }
 for (const w of weapons) if (!NEW_WEAPONS.includes(w.id)) $('weaponsRest').append(weaponButton(w, false));
 for (const h of heroes) $('heroes').append(heroButton(h));
+for (const x of IB_SECRETS) $('ibSecret').append(ibSecretButton(x));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +

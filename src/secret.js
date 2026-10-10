@@ -258,6 +258,90 @@ export function bladesTouch(me, foe) {
   return segDist(me.bladePoint(0.1, _a), me.tipPrev, foe.bladePoint(0.1, _b), foe.tipPrev) < 0.07;
 }
 
+/**
+ * 이베리아 멈추지 않는 흐름의 수 (10/11 — schools.js IBERIAN_SECRET do.flow, AI ai.js secretGo · 플레이어 skill.js secret 같은 함수). 난수 없음.
+ *  hand = 지금 손 패드 [x, y] · dir = 지금 칼(손)이 움직이는 쪽 [x, y] (플레이어는 비기를 낸 끌기, 없으면 걸러진 손 목표 속도 — 크기는 안 봄) · D = do 칸.
+ *  첫 쪽 s(+1 오른쪽 = 탈류부터 · −1 왼쪽 = 레베스부터)는 지금 흐름이 정한다 — 칼을 그대로 그쪽으로 떨어뜨려 감고(피 복Ⅰ) 거기서 올린다:
+ *   ① 올려 베는 중(dir 위로)이면 그 올려베기를 첫 수로 이어 끝까지 · ② 옆·아래로 가는 중이면 그 쪽으로 · ③ 멈춰 있으면 손이 있는 쪽, 가운데면 오른쪽(피 단Ⅰ 탈류부터).
+ *  내려 베는 중이면 꺾지 않고 곧장 그 쪽 아래로, 아니면 바깥 옆([s × 0.5, …])을 돌아 떨어진다.
+ *  수 = 한 방향 한 토막 (떨어뜨림 → 올려베기 → 떨어뜨림 → 올려베기 … → 머리 위로 넘김 → 둘러 베는 큰 한 칼). 토막 끝마다 gate(flowGate — 실제 칼이 그 자리에 갔나)가 있어
+ *   손 목표가 먼저 끝나도 칼이 따라오기 전엔 다음 토막을 열지 않는다 — 무거운 칼이 명령을 못 따라와 번갈아 베기가 한쪽에서 뭉개지던 것(탐침: 칼끝 옆 폭 0.23 m)을 막는다.
+ *  토막 = { name, nameKo, from, pre: [](이음새 물레 점 없음 — 앞 토막 끝에서 곧장), path, gate?, open, kind, reach, base }
+ */
+export function montanteFlowSeq(hand, dir, D) {
+  const hx = hand[0];
+  const hy = hand[1];
+  const len = Math.hypot(dir?.[0] ?? 0, dir?.[1] ?? 0);
+  const ux = len > 1e-6 ? dir[0] / len : 0;
+  const uy = len > 1e-6 ? dir[1] / len : 0;
+  const side = (v) => (v < 0 ? -1 : 1);
+  const P = (o, s) => o[s].slice();
+  const rising = uy > 0.5; // ① 올려 베는 중
+  let s;
+  if (rising) s = Math.abs(ux) > 0.2 ? -side(ux) : side(hx); // 올라가는 쪽의 반대가 시작 쪽
+  else if (Math.abs(ux) > 0.3) s = side(ux); // ② 그 쪽으로 가는 중
+  else s = Math.abs(hx) > 0.1 ? side(hx) : 1; // ③ 멈춰 있음
+  const seq = [];
+  let at = [hx, hy];
+  const push = (t) => {
+    seq.push({ kind: 'cut', reach: 0, base: 1, ...t, from: at.slice(), pre: [] });
+    at = t.path[t.path.length - 1].slice();
+  };
+  const fall = (sd, path) => push({ name: sd > 0 ? 'flowFallR' : 'flowFallL', nameKo: sd > 0 ? '오른쪽으로 떨어뜨림 (altibaxo)' : '왼쪽으로 떨어뜨림 (altibaxo de revez)', path, gate: { low: sd }, open: 'H' });
+  const rise = (sd, path) => push({ name: sd > 0 ? 'flowTalhoBaixo' : 'flowRevezBaixo', nameKo: sd > 0 ? '올려 탈류 (talho de baxo)' : '올려 레베스 (revez de baxo)', path, gate: { cross: -sd }, open: sd > 0 ? 'LL' : 'LR' }); // 빈틈 = unterhau · unterhauL
+  const mid = (sd) => [sd * D.riseMid, -0.08];
+  // 첫 토막: 지금 손에서 곧장 (순간이동·멈춤 없음)
+  if (rising) {
+    rise(s, hy > -0.08 || hx * s < 0 ? [P(D.high, -s)] : [mid(s), P(D.high, -s)]); // 이미 올라가는 중 — 가운데 점을 지났으면 높이 비낌으로 곧장
+  } else {
+    if (uy < -0.3 || Math.hypot(hx - D.low[s][0], hy - D.low[s][1]) < 0.15) fall(s, [P(D.low, s)]); // 내려 베는 중(또는 이미 아래) — 꺾지 않고 그 쪽 아래로
+    else fall(s, [[s * D.fall[0], Math.min(0.1, Math.max(-0.2, hy * 0.5))], P(D.low, s)]); // 옆·멈춤 — 바깥 옆을 돌아 떨어뜨림
+    rise(s, [mid(s), P(D.high, -s)]);
+  }
+  let cur = s;
+  for (let i = 1; i < (D.rise ?? 2); i++) {
+    const n = -cur;
+    fall(n, [[n * D.fall[0], D.fall[1]], P(D.low, n)]); // 앞 토막 끝(높이 비낌, n 쪽)에서 그 쪽으로 떨어뜨려 감고
+    rise(n, [mid(n), P(D.high, -n)]); // 거기서 올림
+    cur = n;
+  }
+  // 큰 한 칼: 마지막 올려베기 끝(높이 비낌, c 쪽)에서 머리 위로 넘겨 어깨 뒤로 그 쪽 옆에 떨어뜨리고(피 복Ⅱ 「pass it over the head and behind the shoulders, such that it falls over the left arm」)
+  //  몸 가운데 높이로 반대쪽 끝까지 둘러 벤다(circling — 피 복Ⅱ 「circling revez」·단Ⅺ·복Ⅺ 「revez orizontal cingido」 · 고 규칙 9 「in mittlerer Höhe」). 길 = redondo 앞 절반 · zwerch(L) 줄
+  const c = -cur;
+  push({ name: c > 0 ? 'flowOverR' : 'flowOverL', nameKo: '머리 위로 넘김', path: [[c * D.over[0], D.over[1]], P(D.side, c)], gate: { side: c, behind: true }, open: 'H' });
+  push({ name: c > 0 ? 'flowTalhoCingido' : 'flowRevezCingido', nameKo: c > 0 ? '둘러 베는 탈류 (talho cingido)' : '둘러 베는 레베스 (revez cingido)', path: [D.cutMid.slice(), P(D.side, -c)], open: c > 0 ? 'UL' : 'UR' }); // 빈틈 = zwerch · zwerchL
+  return seq;
+}
+
+/** 흐름 토막 문을 기다리는 최대 (s) — 따라 지나감(손이 끝 자세에 닿은 뒤 칼이 지나가길 기다림)의 바탕 시간과 같은 값 (ai.js follow timer 0.3 · skill.js follow run.t ≥ 0.3).
+ *  탐침(tools/sim/iberian_flow_probe.mjs): 0.5 면 막힌 토막에서 칼끝이 0 가까이 멎은 채 0.5 s 씩 서 흐름이 끊겨 보였다(플레이어 2.4~2.7 s) — 0.3 (1.6~1.9 s) */
+export const FLOW_GATE_MAX = 0.3;
+const _gc = new THREE.Vector3();
+const _gr = new THREE.Vector3();
+const _gf = new THREE.Vector3();
+/**
+ * 흐름 토막 문 (montanteFlowSeq 의 gate): 실제 칼끝(물리)이 그 토막의 끝 자리에 갔나 — 몸 기준(가슴 원점), 문턱은 모두 0(가슴 높이 · 몸 가운데 · 가슴 앞뒤):
+ *  low: s — 칼끝이 s 쪽(칼 든 쪽 +)이고 가슴보다 아래 (그 쪽으로 떨어졌다) · cross: s — 칼끝이 s 쪽이고 가슴보다 위 (올려 벤 칼이 반대쪽으로 건너갔다) ·
+ *  behind(+ side: s) — 칼끝이 가슴보다 뒤(이고 s 쪽) (머리 위로 넘겨 어깨 뒤로 그 쪽에 떨어졌다). AI·플레이어 같은 함수.
+ *  그 토막이 상대 몸을 맞혔으면 부른 쪽이 기다리지 않고 넘긴다 — 맞은 칼은 문 자리에 못 가지만 흐름은 멈추지 않는다(피 복Ⅶ 「in each step you must give a blow」).
+ *  (칼끼리 닿음으로 넘기는 것은 재 보고 뺐다 — 붙은 거리에선 상대 칼이 늘 곁에 있어 문이 바로 열려 토막이 0.1 s 로 뭉개졌다)
+ */
+export function flowGate(f, g) {
+  const tp = f.tipPrev ?? f.bladePoint(1, _gc);
+  const c = f.bodies.chest.translation();
+  f.right(_gr);
+  f.forward(_gf);
+  const rx = tp.x - c.x;
+  const ry = tp.y - c.y;
+  const rz = tp.z - c.z;
+  const lat = f.side * (rx * _gr.x + rz * _gr.z);
+  const fw = rx * _gf.x + rz * _gf.z;
+  if (g.low != null) return lat * g.low > 0 && ry < 0;
+  if (g.cross != null) return lat * g.cross > 0 && ry > 0;
+  if (g.behind) return fw < 0 && (g.side == null || lat * g.side > 0);
+  return true;
+}
+
 /** 내 베기 사건 비기(combo·firstHit)의 거리: 이어 치기 거리 안 (ai.js secretCombo·secretFirstHit 와 같은 식) */
 export function chainRange(d, view) {
   return d <= view.reach + 0.1 && d >= view.clinch - 0.5;

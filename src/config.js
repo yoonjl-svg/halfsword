@@ -623,7 +623,11 @@ export const SECRET = {
   iaiStep: 0.6, // 발도 동안 몸이 미끄러지는 최대 (m — 순간 베기 instantStep 과 같은 한도). 맞닿기 거리에서 멈추고 clinch 안 금지
   iaiSlideShare: 0.5, // 그 미끄러짐을 발도 시간의 이 몫 안에 마친다 (칼이 가운데를 지나기 전)
   iaiMargin: 0.15, // 발도 창 위 끝: 상대와 거리 ≤ 맞닿기 + iaiStep + 이 여유 (m)
-  // 이베리아 휩쓸기 (10/10 02:5x 사장님 '이베리아 비기도 새 동작을 크게 — 뭐가 나가는지 전혀 알 수 없었다') · 비기 카메라 [모두 확인 전]
+  // 이베리아 비기 판 (10/11 01:5x 사장님 '이베리아 비기를 몬탄테 흐름으로 다시 설계' — docs/strike/iberian_secret_v5_2026-10-11.md) [사장님 확인 전]:
+  //  'flow' = 멈추지 않는 흐름(지금 칼의 방향을 이어받아 좌우 번갈아 올려베기 둘 → 머리 위로 돌려 큰 한 칼, 물리 서보 길 — schools.js IBERIAN_SECRET · secret.js montanteFlowSeq) ·
+  //  'v4' = 10/10 04:4x 판(비켜 서며 크게 가로베기 — 아래 iberianSweep 휩쓸기, schools.js IBERIAN_SECRET_V4). 주소 `?ibSecret=v4` · 시뮬 `with_config.mjs SECRET.iberianSecret=v4`
+  iberianSecret: 'flow',
+  // 이베리아 휩쓸기 (10/10 02:5x 사장님 '이베리아 비기도 새 동작을 크게 — 뭐가 나가는지 전혀 알 수 없었다') · 비기 카메라 [모두 확인 전] — 10/11 부터 iberianSecret 'v4' 일 때만
   iberianSweep: 1, // 1 = 사이드스텝(반걸음 뒤 섞음) + 오른 어깨 뒤로 감았다 크게 한 번 가로 베기 (발도와 같은 스텝마다 자리 지정 틀 — 10/10 04:4x, 전 02:5x 머리 위 고리 + 사선), 0 = 10/9 고리·사선 길
   iberianSweepTime: 0.25, // 전체 (s)
   iberianSweepSlideShare: 0.9, // 사이드스텝을 휩쓸기 시간의 이 몫에 걸쳐 (감기·베기 내내 옆으로)

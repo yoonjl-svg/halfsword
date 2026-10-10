@@ -74,6 +74,7 @@ if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 
 if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerSecret') ? 1 : 0; // 플레이어 비기(10/9 23:5x): 기본 1, `?playerSecret=0` = 끔 (docs/strike/player_secret_2026-10-09.md)
 if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 0; // 일본 비기 순간 베기(10/10, secret_instant.js): 기본 1, `?instant=0` = 10/9 길(담았다 터뜨림) 대조
 const SECRET_SLOWMO = params.get('slowMo') !== '0';
+if (params.get('ibSecret') === 'v4' || params.get('ibSecret') === 'flow') CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'flow'(멈추지 않는 흐름), `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기 (docs/strike/iberian_secret_v5_2026-10-11.md)
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
@@ -1675,6 +1676,7 @@ function frame(now) {
     let secBusy = !!player.skill.secretPhase;
     if (playerSecret?.open && !secBusy && player.alive && (taps > 0 || swipe)) {
       const o = playerSecret.fire();
+      if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
       if (player.skill.secret(o)) {
         secBusy = true;
         showPlayerCue(o.S, 'secret');
