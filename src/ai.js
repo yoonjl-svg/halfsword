@@ -1062,6 +1062,7 @@ export class AI {
     if (this.pointBlocked && !this.secretRun) return 0; // 칼끝부터 쳐서 비킨다. 들어가는 것은 그다음 칼(이어 치기)에서 (비기는 걸음 결심 — 그대로 딛는다)
     // 기술 걸음 'strike'(step 칸): 닿는 거리여도 딛는다 — 거리를 줄이려는 게 아니라 상대 칼끝 줄에서 벗어나려는 걸음
     if (this.tech.step?.when === 'strike') return STEP_T;
+    if (this.me.gait?.P?.bow?.tech?.[this.tech.name]?.fwd) return STEP_T; // 중국 표두격: 닿는 거리여도 반걸음 내딛으며 친다(활 자세 — gait P.bow.tech). 칸 없으면 안 탐
     const short = this.contactDist() - this.M.contact - this.tech.reach * this.reachScale;
     return clamp(short * 0.8, 0, 0.3);
   }
@@ -2271,6 +2272,9 @@ export class AI {
         else if (this.stepT > 0) {
           this.stepT -= dt;
           stepping = d > this.M.contact - 0.1;
+          // 중국 활 자세가 기술마다 정해진 수(P.bow.tech — 표두격)는 가까워도(붙기 전까지) 반걸음 내딛으며 친다 (그 칸의 fwd). 칸 없으면 전과 같다
+          const bt = this.me.gait?.P?.bow?.tech?.[this.tech?.name];
+          if (!stepping && bt?.fwd && d > this.M.clinch) stepping = true;
         }
         if (stepping) {
           fwd = 1;
@@ -2374,7 +2378,9 @@ export class AI {
     // 유파 걸음 베기 걸음(10/10, gait.P.cutStep — 일본 후미코미·중국 진보 = 앞발 lunge + 뒷발 끌어붙임, 이베리아 큰 pass): 찌르기·칸 없는 유파는 전과 같다
     const cs = this.tech?.kind !== 'thrust' ? g.P?.cutStep : null;
     if (cs) {
-      if (g.requestStep({ kind: cs.kind, fwd: cs.fwd, hold: 0.3, leg, draw: !!cs.draw, tech: this.tech?.name })) this.requestedStep = true; // tech: 기술 이름(중국 활 자세가 표두격 oberhau 에서 더 오래 버팀 — gait P.bow.tech)
+      const bt = g.P.bow?.tech?.[this.tech?.name]; // 중국 표두격: 가까우면 반걸음(bt.fwd), 멀면 보통 베기 걸음
+      const fw = bt?.fwd && this.foe && this.me.foeDistance() < this.M.contact - 0.1 ? bt.fwd : cs.fwd;
+      if (g.requestStep({ kind: cs.kind, fwd: fw, hold: 0.3, leg, draw: !!cs.draw, tech: this.tech?.name })) this.requestedStep = true; // tech: 기술 이름(중국 활 자세가 표두격 oberhau 에서 더 오래 버팀 — gait P.bow.tech)
       return;
     }
     if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3, leg })) this.requestedStep = true;
