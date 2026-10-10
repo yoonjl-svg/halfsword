@@ -4,6 +4,7 @@
 //  대기 = 간 보기 2.5 s 뒤 빈손이 칼자루를 쥔(gripping) 때, 베기 = 공격 'strike' 들어서 STRIKE_MS 뒤
 //  실행: npx vite build && npx vite preview --port 4193 --strictPort &
 //        PREFIX=montante_grip_after node tools/browser/montante_grip_shots.mjs http://127.0.0.1:4193 docs/handoff
+//  GUARD=ochsR: 대기 장면을 AI 간 보는 자세가 그 이름일 때로 (10/10 빈손 ① — 높은 자세에서 쥔 손) · QUERY='montanteHand=old': 주소 인자 덧붙임 (10/10 오른손 날밑 — 옛 꼴 비교)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:4193';
@@ -11,6 +12,8 @@ const dir = process.argv[3] || '.';
 const PREFIX = process.env.PREFIX || 'montante_grip';
 const STRIKE_MS = +(process.env.STRIKE_MS || 120);
 const WAIT = +(process.env.WAIT_MS || 300000);
+const GUARD = process.env.GUARD || null;
+const QUERY = process.env.QUERY ? `&${process.env.QUERY}` : '';
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const errors = [];
@@ -21,7 +24,7 @@ page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text());
 });
-await page.goto(`${base}/?weapon=longsword&foeWeapon=zweihander`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=longsword&foeWeapon=zweihander${QUERY}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
 await page.getByText('싸움 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 60000 });
@@ -73,7 +76,7 @@ async function waitFor(pred, ms, step = 40) {
   }
   return r;
 }
-let r = await waitFor((x) => x.sim > 2.5 && x.mode === 'watch' && x.gripping, WAIT);
+let r = await waitFor((x) => x.sim > 2.5 && x.mode === 'watch' && x.gripping && (!GUARD || x.guard === GUARD), WAIT);
 await freeze(true);
 await shot('hands', `${dir}/${PREFIX}_hands.png`);
 await shot('guard', `${dir}/${PREFIX}_guard.png`);
