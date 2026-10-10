@@ -285,7 +285,9 @@ export function installCover(fighter, ai, covers) {
       st.own = false; // 찌르기·찍기·사격이 칸을 가져갔다 — 지우지 않는다
       return r;
     }
-    const want = ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : null;
+    // 칸 down (10/11 중국 덮는 자세 — 사장님 01:5x '거정세로 바꿔야지'): 완전히 쓰러져 칼을 머리 위로 들어 가리는 동안(ai.js 'down' 가지 — 손은 pose.cover 패드)도 그 몸꼴로 덮는다.
+    //  칸 없는 꾸러미(지금 중국 말고 모두)는 전과 같다. 쓰러진 몸은 근육이 0.1 이라(fighter.js — driveSword 문턱 0.12 밑) 다리를 잃은 몸이 아니면 손·칼 서보가 거의 돌지 않는다
+    const want = D.down && fighter.state === 'down' ? D.down : ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : null;
     if (want) st.last = want;
     st.w = Math.max(0, Math.min(1, st.w + (want ? dt / MOTION.coverIn : -dt / MOTION.coverOut))); // 덮는 시간·걷는 시간 (MOTION)
     const c = st.last;
