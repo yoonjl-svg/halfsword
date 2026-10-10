@@ -1,0 +1,79 @@
+// 유파 막기 자리 물리 점검 (10/10 빌린 칸 걷어내기 — docs/strike/school_borrow_clear_2026-10-10.md §1)
+//  motion_lab parry 와 같은 방법: 치는 쪽 = 롱소드(스크립트로 기술 길을 11 m/s 로), 막는 쪽 = 이 무기(본판 길 — MOTION.lib 켬, 유파 자세표 그대로)가
+//  한 자리를 들고 버틴다. 다른 점: 본판 길로 잰다(생성자가 유파 자세표를 입힘) · 14 패드에 독일 표의 highL 자리 [−0.3, 0.1] 를 더한다 ·
+//  줄마다 그 유파 꾸러미의 막기 자리(art.school.parry)와 독일 막기 자리(GERMAN = longsword 꾸러미)를 표시한다.
+//  막음 = 그 판에 치는 쪽 상처가 0. 고르는 기준은 원전이고 이 수는 보고용이다.
+//   node tools/sim/school_parry.mjs <무기id>      (PARRY_GAPS=1.3,1.45,1.6,1.75 · PARRY_SEEDS=7 — 판 수 = 간격 × 씨앗)
+import { newRound, DT } from './harness_m.mjs';
+import { MOTION } from '../../src/motion_library.js';
+import { TECH, G as PAD } from '../../src/ai_techniques.js';
+import { GUARD_BASE } from '../../src/guards.js';
+import { SCHOOLS } from '../../src/schools.js';
+import { WEAPONS } from '../../src/weapons.js';
+import { resolveSwordArt } from '../../src/sword_art.js';
+
+const id = process.argv[2] ?? 'rapier';
+const W = WEAPONS[id];
+if (!W) throw new Error(`무기 없음: ${id}`);
+MOTION.lib = true; // 본판 길
+const GAPS = (process.env.PARRY_GAPS ?? '1.3,1.45,1.6,1.75').split(',').map(Number);
+const SEEDS = (process.env.PARRY_SEEDS ?? '7').split(',').map(Number);
+const LINES = [['highL', 'zornhau'], ['highR', 'zornhauL'], ['highC', 'oberhau'], ['lowL', 'unterhau'], ['lowR', 'unterhauL'], ['thrust', 'stichPflug']];
+const SPD = 11;
+const art = resolveSwordArt(W, null);
+const own = art.school.parry;
+const ger = SCHOOLS.longsword.parry;
+const names = art.names;
+const padKey = (p) => Object.entries(PAD).find(([, v]) => v[0] === p[0] && v[1] === p[1])?.[0] ?? `[${p}]`;
+const CANDS = [...GUARD_BASE.map((g, i) => ({ pad: g.pad, label: `${padKey(g.pad)} ${names[i]?.name ?? g.name}` })), { pad: [-0.3, 0.1], label: '[-0.3,0.1] (독일 highL 자리)' }];
+const setPad = (P, x, y) => {
+  P.handOffset.set(x, y);
+  P.skill.aimRaw?.set?.(x, y);
+};
+const same = (a, b) => a && b && a[0] === b[0] && a[1] === b[1];
+const out = {};
+console.log(`${id} (${art.tradition}) 막기 점검 — 판 ${GAPS.length * SEEDS.length} / 자리 · 간격 ${GAPS} · 씨앗 ${SEEDS}`);
+for (const [line, tn] of LINES) {
+  const tech = TECH.find((t) => t.name === tn);
+  const rows = [];
+  for (const c of CANDS) {
+    let hit = 0, clash = 0, n = 0;
+    for (const gap of GAPS) for (const seed of SEEDS) {
+      const Gm = newRound({ walls: false, weapon: 'longsword', weapon2: id, seed, gap });
+      Gm.ai.update = () => {};
+      const A = Gm.player, D = Gm.enemy;
+      setPad(D, c.pad[0], c.pad[1]);
+      setPad(A, tech.from[0], tech.from[1]);
+      for (let t = 0; t < 0.8; t += DT) Gm.step();
+      const pts = tech.path.map((q) => q.slice());
+      let cur = tech.from.slice();
+      const w0 = Gm.wounds.length, c0 = Gm.clashes ?? 0;
+      for (let t = 0; t < 1.0; t += DT) {
+        if (pts.length) {
+          const [tx, ty] = pts[0];
+          const dx = tx - cur[0], dy = ty - cur[1], dd = Math.hypot(dx, dy), st = SPD * DT;
+          if (dd > st) cur = [cur[0] + (dx / dd) * st, cur[1] + (dy / dd) * st];
+          else (cur = [tx, ty]), pts.shift();
+        }
+        setPad(A, cur[0], cur[1]);
+        if (tech.kind === 'thrust' && t < DT) A.skill.thrust({ step: false });
+        Gm.step();
+      }
+      if (Gm.wounds.slice(w0).some((w) => w.att === A)) hit++;
+      clash += (Gm.clashes ?? 0) - c0;
+      n++;
+    }
+    rows.push({ ...c, block: n - hit, n, clash });
+  }
+  out[line] = rows;
+  const mark = (r) => `${same(r.pad, own[line]) ? ' ◀유파' : ''}${same(r.pad, ger[line]) ? ' ◁독일' : ''}`;
+  const sorted = [...rows].sort((a, b) => b.block - a.block || b.clash - a.clash);
+  console.log(`\n${line} (${tn}): 유파 자리 ${padKey(own[line])} · 독일 자리 ${padKey(ger[line])}`);
+  for (const r of sorted) console.log(`  ${r.block}/${r.n} 막음 · 칼 부딪침 ${r.clash} · ${r.label}${mark(r)}`);
+}
+const pick = (line, p) => out[line].find((r) => same(r.pad, p));
+console.log('\n| 줄 | 독일 자리 막음 | 유파 자리 막음 |');
+for (const [line] of LINES) {
+  const g = pick(line, ger[line]), o = pick(line, own[line]);
+  console.log(`| ${line} | ${padKey(ger[line])} ${g ? `${g.block}/${g.n}` : '-'} | ${padKey(own[line])} ${o ? `${o.block}/${o.n}` : '-'} |`);
+}

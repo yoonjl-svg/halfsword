@@ -168,11 +168,19 @@ const JAPANESE_FEINTS = [
   { name: '갓토츠', fake: 'stichAlber', at: 0.6, then: [[0.0, 0.32], G.tag, [0.0, 0.14], G.alber], open: 'H', src: '오륜서 水の巻 p34 「喝咄」 [원문] · 길·수 [추정]' },
   { name: '니노코시', fake: 'oberhau', at: 0.4, then: [[0.0, 0.36], G.tag, [0.0, 0.14], G.alber], open: 'H', src: '오륜서 水の巻 p26-27 「二のこしの拍子」 [원문] · 길·수 [추정]' },
 ];
-// 일본 막기 자리 (10/10): 패드 자리(물리로 부딪쳐 고른 롱소드 값)는 그대로 두고, 그 자리의 몸꼴이 위 자세표의 원전 받는 꼴이 된다 —
-//  highR 황소 자리 = 히키나가시(오륜서 三つの受 1, 전 '황소 막기' = 롱소드 고유) · highC 긴 자세 자리 = 추단에서 스리아게(검도형 5본 「左鎬で摺り上げ」) ·
-//  thrust 왼쪽 쟁기 자리 = 사사에(검도형 7본 「物打の鎬で…支える」) · lowR 쟁기 자리 = 히라세이간 · lowL 왼쪽 쟁기 자리 = 사사에 · highL [−0.3, 0.1] = 우케나가시·히다리와키 사이 (소태도 2본 왼쪽 흘림 [해석]).
-//  값(패드)은 독일 GERMAN.parry 그대로 — 바뀌는 것은 몸꼴뿐
-const JAPANESE_PARRY = { ...GERMAN.parry };
+// 일본 막기 자리 (10/10 빌린 칸 걷어내기 — docs/strike/school_borrow_clear_2026-10-10.md §1). 전엔 패드가 독일 GERMAN.parry 그대로(롱소드 표로 '공격 5 × 자세 13'을
+//  물리 탐색해 고른 자리)이고 몸꼴만 받는 꼴이었다. 이제 줄마다 원전의 받는 꼴을 찾아 그 꼴이 있는 위 자세표의 자리를 고른다(패드 자리 G 는 그대로 — 고르기만):
+//   highR 히키나가시(황소 자리) — 오륜서 p32-33 三つの受 (1) 「敵の太刀を我が右の肩へ引流して受くべし」 [원문] (그대로)
+//   highL 우케나가시(왼쪽 황소 자리) — 검도형 p17 소태도 2본 「左足を左斜め前に…体を左に開き 右鎬で受け流し」 [원문] · 줄 대응 [해석] (전 [−0.3, 0.1] — 독일 표의 빈 자리)
+//   highC 추단에서 스리아게(긴 자세 자리) — 검도형 p11 5본 「左足からひく」と同時に「左鎬で摺り上げ」 [원문] (그대로)
+//   lowL 히다리와키(왼쪽 옆 자세 자리) — 오륜서 p21·p24 表4 「左の脇に横に構へて、敵の打ちかくる手を下よりはるべし」 [원문] · 줄 대응 [해석] (전 왼쪽 쟁기)
+//   lowR 게단(바보 자리) — 오륜서 p23-24 表3 「太刀を下段に持ち…敵の打ちかく所を下より手をはる」 [원문] · 검도형 3본 相下段 [원문] · 줄 대응 [해석] (전 쟁기 = 히라세이간, 받는 꼴 아님)
+//   thrust 사사에(왼쪽 쟁기 자리) — 검도형 p13~14 7본 「諸手を伸ばし…物打の鎬で打太刀の刀を支える」 [원문] (그대로)
+//  값은 사장님 확인 전 (확인표 790)
+const JAPANESE_PARRY = { highL: G.ochsL, highR: G.ochsR, highC: G.langort, lowL: G.sideL, lowR: G.alber, thrust: G.pflugL };
+// 일본 맞받아 베기 (counter — 독일 목록 그대로 둠, 확인표 795): 목록이 고르는 길은 袈裟(zornhau)·逆袈裟 쪽(zornhauL)·真向(oberhau) — 다섯 원전 모두의 기본 베기(점검표 A-2 '기본').
+//  오륜서 p32 「敵の太刀を受くる、はる、あたる…皆々敵を切る縁也」 · p35 張り受 「打太刀をはりて、はるより早く敵を打つ」 [원문] — 받는 칼이 곧 베는 칼이라는 뜻이 맞받아 베기와 같다.
+//  기본(공통) 동작이라 유파 몫(counterArt)을 따로 두지 않는다
 // 일본 기술 가중치 (초안 §5-2): 두손 보통(카타나) 真向 ×1.3 · 袈裟 ×1.2 · 胴 ×0.8 · 突き ×0.8.
 //  앞무게(모노호시자오)는 胴 ×0.8 만 — 내리치기는 틀의 presses ×1.4, 찌르기는 라이브러리의 ×0.5 를 그대로 둔다(그래서 thrust 칸이 없다)
 const JAPANESE_TECHK = {
@@ -647,7 +655,7 @@ export const TRADITIONS = {
   // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(guardTable — guards.js IBERIAN_TABLE, 앞무게 틀 표를 고른 뒤 덮음)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
   iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, secret: IBERIAN_SECRET },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
-  //  간 보는 자세 = JAPANESE_WATCH(10/10 원전 — 추단 위주 + 조단·핫소, 전 HIGH_GUARDS 의 황소 둘 뺌) · 자세표 = JAPANESE_GUARDTABLE · 속임수 = JAPANESE_FEINTS(Umschlagen 둘 → 갓토츠·니노코시) · 막기 = JAPANESE_PARRY(자리 그대로, 몸꼴이 받는 꼴).
+  //  간 보는 자세 = JAPANESE_WATCH(10/10 원전 — 추단 위주 + 조단·핫소, 전 HIGH_GUARDS 의 황소 둘 뺌) · 자세표 = JAPANESE_GUARDTABLE · 속임수 = JAPANESE_FEINTS(Umschlagen 둘 → 갓토츠·니노코시) · 막기 = JAPANESE_PARRY(10/10 빌린 칸 걷어내기 — 줄마다 원전 받는 꼴의 자리).
   //  물러남 = 한 칼 자세(上段·八相 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
   japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: JAPANESE_WATCH, guardTable: JAPANESE_GUARDTABLE, feints: JAPANESE_FEINTS, ownFeints: true, parry: JAPANESE_PARRY, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE, passives: JAPANESE_PASSIVES, temper: JAPANESE_TEMPER, gait: JAPANESE_GAIT, secret: JAPANESE_SECRET },
@@ -784,10 +792,80 @@ TRADITIONS.chinese.guards = CHINESE_WATCH;
 TRADITIONS.chinese.feints = FEINTS.filter((f) => !/^(오른쪽→왼쪽|왼쪽→오른쪽)$/.test(f.name));
 TRADITIONS.chinese.ownFeints = true;
 
-// 중국 막기 자리 — 바꾸지 않음 (독일 표 그대로, 확인표 704). 오른 위로 오는 칼을 받는 자리(highR)는 황소 패드지만, 그 자리의 꼴은 이제 위 자세표의 역린세
+// (옛 기록 — 10/10 빌린 칸 걷어내기에서 아래 블록이 원전 막기 자리로 바꿈, 확인표 793) 중국 막기 자리 — 바꾸지 않음 (독일 표 그대로, 확인표 704). 오른 위로 오는 칼을 받는 자리(highR)는 황소 패드지만, 그 자리의 꼴은 이제 위 자세표의 역린세
 //  (손 어깨 높이·칼끝 목 줄 — 롱소드 황소 꼴이 아님)라 '황소 막기'는 남지 않는다. 원전 막기 擧鼎格 「鼎格上殺」(솥 들듯 칼을 머리 위로 가로 들어 막음, 무비지 쪽154/0568 ·
 //  무도 p035/27 그림)을 왕관 자리(G.kron)로 넣어 보았으나 14 자리 섞기로는 그 자리가 표두세(칼을 세워 듦)에 끌려 칼이 가로로 눕지 않고(꼴이 원전과 다름)
 //  청강검 48 판 44 → 31 % — 근거 꼴을 그릴 수 없어 넣지 않는다(문서 §3)
+
+// ── 빌린 칸 걷어내기 (10/10 사장님 21:3x '롱소드에서 빌려 쓰는 동작부터 해결해야 올바른 밸런스 보정이 가능' — docs/strike/school_borrow_clear_2026-10-10.md) ──
+//  유파마다 아직 독일(GERMAN) 값이던 칸을 그 유파 원전 값으로: 막기 자리(parry) · 덮는 자세(pose.cover — 쓰러져 머리를 가림, 독일 = 왕관 Krone) ·
+//  속임수(Umschlagen 둘 = 롱소드 고유) · 물러남 · 쉴 자세 · 가중치. 패드 자리(G)는 기술 길의 열쇠라 옮기지 않고 '어느 자리를 고르나'만 바꾼다
+//  (그 자리의 몸꼴은 이미 유파 자세표 guardTable 이 정한다). 고르는 기준은 원전, 물리 막음 비율은 보고만(tools/sim/school_parry.mjs). 값은 모두 사장님 확인 전 (확인표 790~)
+//  일본 막기 자리는 위 JAPANESE_PARRY. 덮는 자세: 일본 — 조단 자리(두 손 이마 위). 소태도 1본 仕太刀 「右手頭上·刃先後ろ, 左鎬で受け流し」(검도형 p16 — 머리 위에서 받음) [원문] · 자리 [해석]
+TRADITIONS.japanese.pose = { ...GERMAN.pose, cover: G.tag };
+
+// 이탈리아 막기 자리 (카포 페로 1610 — Wiktenauer 영역 단락 [n]·권고 n·판 번호). 막기는 칼끝을 곧게 두고 forte 로 받는다:
+//  [115] 「While I strike, I necessarily parry together, inasmuch as I strike in the straight line」 · 권고 21 「all the parries require an extended arm」 · 권고 15 「parry with the true edge … with the forte」 [원문]
+//   highL(상대 mandritto → 내 안쪽 위) 4번 자세 Quarta(왼쪽 쟁기 자리) — 판 48 「parries the enemy's sword in quarta with a beat of the right foot」 · 판 73 「quarta defends against any blow」(둥근 방패 판) [원문] · 줄 대응 [해석] (전 [−0.3, 0.1])
+//   highR(riverso → 내 바깥 위) 2번 자세 Seconda(황소 자리) — 판 41·45 「meeting the enemy's sword on the outside, lowering his point in seconda」 [원문] (자리 그대로)
+//   highC(머리로 떨어지는 칼) 뻗은 3번 자세(긴 자세 자리) — [115] 곧은 줄로 치면 막힌다 [원문] · 칼만 판에 머리 막기가 없어 원칙에서 [해석] (자리 그대로)
+//   lowL 4번 자세(안쪽) · lowR 3번 자세 Terza(바깥) — 판 69 「parry with your sword in terza to the outside」 · [12] 「the guard of terza for resting in defense」 [원문] · 줄 대응 [해석] (자리 그대로)
+//   thrust 4번 자세 — 판 48 (안쪽으로 오는 칼을 quarta 로 받음) · 판 35 「parried the enemy's sword to the outside with the false or the true edge」 [원문] (자리 그대로)
+TRADITIONS.italian.parry = { highL: G.pflugL, highR: G.ochsR, highC: G.langort, lowL: G.pflugL, lowR: G.pflugR, thrust: G.pflugL };
+// 덮는 자세: 1번 자세(지붕 자리) — 판 64 「parry the said blow in prima with the sword in guardia di testa」(망토와 함께, 칼만 판엔 머리 막기 없음) [원문] · 자리 [해석]
+TRADITIONS.italian.pose = { ...GERMAN.pose, cover: G.tag };
+// 속임수: Umschlagen 둘(롱소드 고유)을 뺀다 — 남김 위→다리 · 찌르기→베기(권고 22 「these feints strike directly at the opposite of that at which they gesture」 [원문] = 기본 속임).
+//  카포 페로의 칼만 속임(판 45·46 「disengaged the sword by way of a feint」)은 이미 고유 동작 cavazione 다 — 새로 지어 넣지 않는다
+TRADITIONS.italian.feints = FEINTS.filter((f) => !/^(오른쪽→왼쪽|왼쪽→오른쪽)$/.test(f.name));
+TRADITIONS.italian.ownFeints = true;
+// 쉴 자세: 3번 자세 Terza(쟁기 자리) — [6] 「one single guard, which is the low guard called terza」 · [12] 「the guard of terza for resting in defense」 [원문].
+//  전 null = SKILL.homeGuard 와 같은 패드라 판은 그대로(이름에 근거만 붙음)
+TRADITIONS.italian.rest = 'pflugR';
+// 가중치(① 기본 동작의 작은 가중치): stoccata(쟁기 찌르기 — 3번 자세에서 나가는 찌르기) ×1.2.
+//  권고 31 「The stoccata needs to be sent from the guard of terza」 · [6] 테르차가 단 하나의 자세 [원문] · 수 [추정]. 찌르기 ×1.8·베기 ×0.7 은 무기 틀(한손 찌르기) 몫 그대로
+TRADITIONS.italian.techK = { 'one:thrust': { stichPflug: 1.2 } };
+// HUD 이름 나머지 아홉 자리 (전: 자세표 다섯 밖은 독일 이름 그대로 — '어깨 지붕 (Vom Tag)'·'바꿈 (Wechsel)'·'바보 (Alber)' 등, 점검표 §9 ② 이름 빌림).
+//  카포 페로는 자세를 테르차 하나로 친다([6]·[99]) — 원전 대응이 없는 자리는 쉬운 말 + '자세 아님'(일본 왼 어깨와 같은 꼴), 바보 자리만 원문 이름 guardia bassa. 판에 닿지 않음(HUD 만)
+const IT_NOGUARD = 'Capo Ferro 1610 [6]·[99] — 자세는 테르차 하나 · 원전 대응 없음 → 쉬운 말 · 손 위치는 한손 찌르기 틀 값';
+TRADITIONS.italian.names = {
+  ...ITALIAN_NAMES,
+  '어깨 지붕 (Vom Tag)': { name: '오른 높은 겨눔 (자세 아님)', desc: '손을 오른 어깨 앞 높이에, 칼끝은 상대 쪽 · 지나는 자리', src: IT_NOGUARD },
+  '옆 자세': { name: '오른 바깥 겨눔 (자세 아님)', desc: '손을 오른 바깥 가슴 높이에, 칼끝은 상대 쪽 · 지나는 자리', src: IT_NOGUARD },
+  '바꿈 (Wechsel)': { name: '오른 낮은 겨눔 (자세 아님)', desc: '손을 오른 허리 아래에, 칼끝은 상대 쪽 조금 아래 · 밑으로 들어가 찌르기(passata sotto)가 여기서 나간다', src: IT_NOGUARD },
+  '옆 지킴 (Nebenhut)': { name: '오른 허리 겨눔 (자세 아님)', desc: '손을 오른 허리 곁으로 당기고 칼끝은 상대 쪽 · 지나는 자리', src: IT_NOGUARD },
+  '바보 (Alber)': { name: '낮은 자세 (guardia bassa)', desc: '팔을 앞으로 내리고 칼끝을 낮게 상대 쪽으로 · 밑으로 들어가 찌른 칼이 머무는 자리', src: 'Capo Ferro 1610 「ritrovandosi la spada in guardia bassa」 PDF 53쪽 [원문] · 손 위치는 한손 찌르기 틀 값' },
+  '왼쪽 어깨 지붕': { name: '왼 높은 겨눔 (자세 아님)', desc: '손을 왼 어깨 앞 높이에, 칼끝은 상대 쪽 · 지나는 자리', src: IT_NOGUARD },
+  '왼쪽 황소': { name: '왼 머리 높이 겨눔 (자세 아님)', desc: '손을 머리 높이 안쪽에, 칼끝은 상대 쪽 · 지나는 자리', src: IT_NOGUARD },
+  '왼쪽 옆 자세': { name: '왼 가슴 겨눔 (자세 아님)', desc: '손을 안쪽 가슴 높이에, 칼끝은 상대 쪽 · 지나는 자리', src: IT_NOGUARD },
+  '왼쪽 바꿈': { name: '왼 낮은 겨눔 (자세 아님)', desc: '손을 안쪽 허리 아래에, 칼끝은 상대 쪽 조금 아래 · 지나는 자리', src: IT_NOGUARD },
+};
+
+// 이베리아 막기 자리 (피게이레두 1651 — Myers·Hick 영역). 몬탄테는 베어서 쳐낸다: 「deflect it with a talho … or else deflect with a revez, according to which side」(단ⅩⅣ) ·
+//  「all the deflections, parries and attacks of the montante must be helped by the movements of the body」(복Ⅵ) [원문 영역]
+//   highL 왼 높이 비낌(왼쪽 황소 자리) — 왼쪽으로 오는 칼을 탈류로 쳐내면 그 칼이 「high in front of the head on the left side, in obtuse line」(복ⅩⅤ)에 멈춘다 [원문 영역] · 줄 대응 [해석] (전 [−0.3, 0.1])
+//   highR 오른 높이 비낌(황소 자리) — 레베스로 쳐낸 끝 「high along the right diagonal in an obtuse line」(복ⅩⅤ) [원문 영역] · 줄 대응 [해석] (자리 그대로)
+//   highC 곧은 자세(긴 자세 자리) — 머리 막기 말은 원전에 없음. 베기마다 「in front of the face」(단Ⅰ·단Ⅱ) 가 가장 가까운 기본 꼴 [추정] (자리 그대로)
+//   lowL·lowR 왼 비낀 자세(왼쪽 쟁기 자리) — 낮은 공격은 「deflect it with the montante moving in acute angle along the left diagonal」(복ⅩⅣ) [원문 영역] · 자리 [해석] (lowR 전 쟁기)
+//   thrust 비낀 자세(쟁기 자리) — 「the montante in obtuse angle along the right diagonal … to deflect the thrust aimed at the left breast with a talho」(복ⅩⅣ 첫 자세) [원문 영역] (전 왼쪽 쟁기)
+TRADITIONS.iberian.parry = { highL: G.ochsL, highR: G.ochsR, highC: G.langort, lowL: G.pflugL, lowR: G.pflugL, thrust: G.pflugR };
+// 덮는 자세: 곧은 자세(긴 자세 자리 — 손을 눈 앞 높이). 머리 가리기는 두 원전 모두 말이 없다(머리 위로 넘김은 공격 꼴뿐, 복Ⅱ·복ⅩⅥ). 「the point forward and the hands high in front of the eyes」(단Ⅱ) [원문 영역] · 덮는 꼴로 씀 [추정]
+TRADITIONS.iberian.pose = { ...GERMAN.pose, cover: G.langort };
+// 속임수: Umschlagen 둘을 뺀다 — 피게이레두 32 규칙·고디뉴 몬탄테 장에 속임은 없다. 남김 위→다리 · 찌르기→베기(기본)
+TRADITIONS.iberian.feints = FEINTS.filter((f) => !/^(오른쪽→왼쪽|왼쪽→오른쪽)$/.test(f.name));
+TRADITIONS.iberian.ownFeints = true;
+// 물러남 (전 독일 값: 몰리면 황소 · 그 밖 쟁기·긴 자세): 규칙을 '풀며' 물러날 때 「removing backward the left foot with a talho equal to the first」(단Ⅰ) — 베기 끝은 얼굴 앞(곧은 자세) ·
+//  「retreating backward until you place your body as it began the rule」(복Ⅰ) — 규칙의 시작 = 몸을 곧게, 칼끝을 땅에(단Ⅰ) [원문 영역]
+TRADITIONS.iberian.withdraw = { pressed: 'langort', calm: ['langort', 'alber'] };
+
+// 중국 막기 자리 (조선세법 — 24 세 가운데 格·洗, 무비지 국역 쪽/원서 쪽 · 무도 권2 p). 전: 독일 표 그대로(위 옛 기록 — 擧鼎格 을 왕관 자리로 넣어 본 일은 chinese_guards 문서 §3)
+//   highC·highR 표두세 자리(칼을 머리 위로 높이 듦) — 擧鼎勢 「卽擧鼎格, 法能鼎格上殺」(쪽154/0568 · 무도 p035/27 그림 '칼을 머리 위로 들어 막음') [원문] ·
+//     원전 꼴(가로 든 칼)이 표에 없어 가장 가까운 자리 [해석] (전 긴 자세 · 황소)
+//   highL 봉두세 자리(왼쪽 황소 — 칼을 머리 높이에 비껴) — 鳳頭勢 「卽鳳頭洗, 法能洗刺剪殺」(쪽176/0590 · 무도 p046/38) — 洗 = 씻어 쳐냄 [원문] · 왼쪽 줄 [해석] (전 [−0.3, 0.1])
+//   lowL·lowR 요략세 자리(바꿈 — 칼을 낮게 앞으로, 칼끝 왼쪽) — 撩掠勢 「卽撩掠格, 法能遮駕下殺 蔽左護右」(무도 p038/30) [원문] (전 쟁기 둘)
+//   thrust 직부송서 자리(긴 자세 — 두 손 앞으로) — 御車勢 「卽御車格, 法能駕御中殺」(쪽161/0575 · 무도 p038 그림 '두 손 앞쪽으로') [원문] · 御車 자세가 표에 없어 가장 가까운 자리 [해석] (전 왼쪽 쟁기)
+TRADITIONS.chinese.parry = { highL: G.ochsL, highR: G.tag, highC: G.tag, lowL: G.wechselR, lowR: G.wechselR, thrust: G.langort };
+// 덮는 자세: 표두세 자리 — 擧鼎格(칼을 머리 위로 들어 막음)과 같은 까닭 [원문 · 자리 해석]
+TRADITIONS.chinese.pose = { ...GERMAN.pose, cover: G.tag };
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
