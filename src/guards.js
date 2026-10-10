@@ -217,6 +217,37 @@ export const IBERIAN_TABLE = {
   '왼쪽 쟁기': { hand: [0.3, -0.22, -0.04], blade: [40, -20], pelvisYaw: -10, chestYaw: -10, pitch: 4, drop: 0.07, src: '피 복ⅩⅣ [원문] · 각 [해석]' },
   // 칼끝 땅에: 「your body straight with the left foot in front, the montante with the point on the ground」 — 모든 규칙이 여기서 시작해 여기로 끝난다(단Ⅰ)
   '바보 (Alber)': { hand: [0.38, -0.33, 0.02], blade: [-55, 0], pelvisYaw: 0, chestYaw: 0, pitch: 4, drop: 0.05, src: '피 단Ⅰ [원문] · 각 [해석]' },
+  // ── 지나는 자리 8 (10/10 23:3x 사장님 '빌려온 자세 다 고치고' — 문서 §16, 확인표 820~). 전: 앞무게 틀 값(일본 검도 조단·핫소·왼 핫소·와키가마에) · 교본 표 값(롱소드 옆 자세 둘·바꿈 둘).
+  //  원전 바탕: 피게이레두의 베기는 '뒤에서(por detras) 아래에서 위로' 올리고, 머리 위로 넘겨 어깨 뒤로(복Ⅱ 「por sima da cabeça às espaldas」), 몸에 둘러 감고(cingido — 복Ⅱ·복Ⅺ·복ⅩⅢ·복ⅩⅤ),
+  //  내려 벤 칼(altabaxo)은 그 쪽에 떨어져 멈췄다가 거기서 다시 올라간다(복Ⅰ 「deyxará cair o Montante pela parte dereyta … e da parte donde veo o Montante a parar se dará hũ talho de baxo para sima」).
+  //  고디뉴: 베기가 지나 머리 위로 돌아 칼끝은 땅으로, 날밑이 머리를 덮은 채 다음 베기를 감는다(규칙 4·5) · 칼이 갈비를 휘감고 온몸이 돈다(규칙 8) · 탈류는 높이 감아 위에서 아래로(규칙 3) · 가로는 몸 가운데 높이(규칙 9).
+  //  패드 자리는 그대로(기술 길의 열쇠), 손·칼끝·몸만. 손 높이·각 숫자는 원문에 없다 → [해석]
+  //  (10/11 00:2x 규칙 — 원전에 꼴 글이 없는 자리: 기존 자료에서 추론 / 유파 일관성으로 직접 개발, 칸마다 어느 쪽인지 적음.) 꼴 글이 있는 자리 = 어깨 둘(고 규칙 4)·머리 위(피 복Ⅱ) ·
+  //   원문의 베기 흐름에서 꼴을 추론한 자리 = 바꿈 둘(피 복Ⅰ)·옆 자세·옆 지킴(피 복Ⅺ·고 규칙 8·9) · 유파 일관성(거울)으로 만든 자리 = 왼 옆 자세. 왼 바꿈 옆 각은 직접 판단(아래)
+  // 머리 위(altibaxo): 머리 위로 넘기는 자리 — 손은 머리 위(날밑이 머리를 덮음, 고 규칙 4·5), 칼은 어깨 뒤로 넘어가는 중(피 복Ⅱ·복ⅩⅥ). 곧게 내려베기(altabaxo)는 몸을 곧게(피 단Ⅰ)
+  //  (처음 안 손 [0.10, 0.50] · 135° 는 손이 21 cm 못 미치고 정수리 베기에서 빈손을 놓쳐(쥔 6 %) 손을 앞으로·칼을 덜 눕힘 — tools/sim/montante_pass.mjs)
+  '지붕 (Vom Tag)': { hand: [0.16, 0.45, 0.02], blade: [125, 0], pelvisYaw: 5, chestYaw: 5, pitch: 0, drop: 0.05, src: '피 복Ⅱ·복ⅩⅥ 머리 위로 넘김 · 고 규칙 3·4·5 [원문] · 손 높이·각 125° [해석]' },
+  // 탈류 준비: 손은 머리 오른쪽 높이, 칼은 오른 어깨 뒤로 늘어뜨려 칼끝은 땅 쪽 — '뒤에서(por detras)' 감는 자리(피 단Ⅰ·단Ⅲ) · 「zum Tajo aufgezogen … Ort zum Boden … Parierstange den Kopf deckt」(고 규칙 4)
+  //  · 어깨에서 감음(고 규칙 6 「bei der Schulter aufgezogen」) · 「cingir o montante com o braço dereyto」(피 복ⅩⅤ)
+  //  칼끝 −15°: −30°(고디뉴 '땅으로' 끝) 은 분노의 베기 지표 166 → 97 J(날 맞춤 82) 로 휘어 −15° 로 — 여전히 땅 쪽, 어깨 뒤 [해석]
+  '어깨 지붕 (Vom Tag)': { hand: [0.08, 0.36, 0.18], blade: [-15, 150], pelvisYaw: 30, chestYaw: 40, pitch: 0, drop: 0.06, src: '피 단Ⅰ·단Ⅲ·복ⅩⅤ · 고 규칙 4·6 [원문] · 손·각 [해석]' },
+  // 레베스 준비: 머리 위로 넘긴 칼이 어깨 뒤로 「falls over the left arm to give a circling revez」(피 복Ⅱ) · 「cingindo o montante ao hombro esquerdo」(피 복ⅩⅤ) · 「talho para o hombro esquerdo」(피 단Ⅰ 끝)
+  //  · 「aufgezogen zu einem Reves … Ort zum Boden … Parierstange deckt deinen Kopf」(고 규칙 4) · 오른팔이 왼팔 위로 엇갈림(피 복Ⅰ 「cruzando o braço direito sobre o esquerdo」)
+  '왼쪽 어깨 지붕': { hand: [0.06, 0.36, -0.1], blade: [-30, -150], pelvisYaw: -25, chestYaw: -30, pitch: 0, drop: 0.06, src: '피 복Ⅰ·복Ⅱ·복ⅩⅤ·단Ⅰ · 고 규칙 4 [원문] · 손·각 [해석]' },
+  // 가로 탈류: 칼을 오른쪽 몸 가운데 높이에 눕혀 뒤로 감아 둔다 — 「talho orizontal」(피 단Ⅺ·복Ⅺ) · 「in mittlerer Höhe」(고 규칙 9) · 가로 베기를 몸에 둘러 감음(피 복Ⅺ 「revez orizontal cingido」)
+  '옆 자세': { hand: [0.14, 0.04, 0.26], blade: [10, 130], pelvisYaw: 35, chestYaw: 45, pitch: 2, drop: 0.06, src: '피 단Ⅺ·복Ⅺ · 고 규칙 9 [원문] · 손·각 [해석]' },
+  // 가로 레베스: 거울 — 오른팔이 왼팔 위로 엇갈려(피 복Ⅰ) 왼쪽 몸 가운데 높이, 칼은 왼쪽 뒤로 감김(피 복Ⅺ 「revez orizontal cingido」)
+  '왼쪽 옆 자세': { hand: [0.18, 0.04, -0.14], blade: [10, -130], pelvisYaw: -30, chestYaw: -40, pitch: 2, drop: 0.06, src: '피 단Ⅺ·복Ⅰ·복Ⅺ · 고 규칙 9 [원문] · 손·각 [해석]' },
+  // 아래 탈류: 오른쪽으로 떨어진 칼이 멈춘 자리, 거기서 '뒤에서 아래에서 위로' 탈류를 올린다 — 「deyxará cair o Montante pela parte dereyta … e da parte donde veo o Montante a parar se dará hũ talho de baxo para sima」(피 복Ⅰ)
+  //  · 「talho por detras, de baxo para sima」(피 단Ⅰ). 칼끝은 오른쪽 아래 뒤로(뒤에서 올라오는 길의 시작) [해석]
+  '바꿈 (Wechsel)': { hand: [0.2, -0.3, 0.22], blade: [-50, 130], pelvisYaw: 25, chestYaw: 30, pitch: 4, drop: 0.07, src: '피 단Ⅰ·복Ⅰ [원문] · 손·각 [해석]' },
+  // 뒤 탈류: 칼이 오른 갈비를 휘감은 자리 — 「umgürtet das Montante die gesamten Rippen, auch den gesamten Körper herumdrehend」(고 규칙 8) · 「cingir o montante com o braço dereyto」(피 복ⅩⅤ) · 뒤에서 앞으로 탈류(피 단Ⅲ 「talho por detraz」)
+  //  갈비 높이(손 위 −0.12)·칼 수평은 몸에 걸려 칼끝 오차 85°·빈손 0 % — 아래 갈비 높이(−0.18)·칼 −15° 로 [해석]
+  '옆 지킴 (Nebenhut)': { hand: [0.08, -0.18, 0.26], blade: [-15, 160], pelvisYaw: 40, chestYaw: 50, pitch: 3, drop: 0.07, src: '고 규칙 8 · 피 단Ⅲ·복ⅩⅤ [원문] · 손·각 [해석]' },
+  // 아래 레베스: 왼쪽으로 떨궈(오른팔이 왼팔 위로 엇갈려) 내려 벤 칼이 멈춘 자리, 거기서 레베스를 아래에서 위로 — 「deyxará cair o montante pella parte esquerda cruzando o braço deryeto sobre o esquerdo, e se dará hũ altabaxo de revez …
+  //  e da parte donde ficou o montante se dará hũ revez de baxo para sima」(피 복Ⅰ) · 「altibaxo pella mesma parte esquerda cingindo o montante ao hombro esquerdo」(피 복ⅩⅤ)
+  //  옆 각 −110°(오른쪽 130° 보다 덜 뒤): 엇갈린 오른팔이 왼 허리로 오면 칼이 덜 뒤로 돈다 [해석] — −130° 는 왼 올려베기 날 맞춤 101 → 40 J
+  '왼쪽 바꿈': { hand: [0.24, -0.28, -0.1], blade: [-50, -110], pelvisYaw: -25, chestYaw: -35, pitch: 6, drop: 0.07, src: '피 복Ⅰ·복ⅩⅤ [원문] · 손·각 [해석]' },
 };
 
 /**

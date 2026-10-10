@@ -334,7 +334,8 @@ export function icePartMesh(index, isBlade, shape) {
 export function iceDecorate(group) {
   const steel = metalMat(0x7d858b, { rough: 0.27, metal: 0.78 });
   const brass = metalMat(ICE_COLORS.metal, { rough: 0.30, metal: 0.82 });
-  for (const [y, radius, material] of [[-0.174, 0.0135, brass], [0.173, 0.018, steel]]) {
+  // 자루 아래 황동 띠: 자루 아래 끝 + 0.011 (10/10 아이스 쥠 넓힘 — 자루 아래 끝 −0.185 → −0.223, weapons.js ice 머리말) · 위 띠 그대로
+  for (const [y, radius, material] of [[-0.212, 0.0135, brass], [0.173, 0.018, steel]]) {
     mesh(group, new THREE.CylinderGeometry(radius, radius, 0.018, 16), material, [0, y, 0]);
   }
 }
