@@ -37,11 +37,13 @@ const S = await page.evaluate(() => {
     step0(dt);
     const sec = p.skill.sec;
     const ps = g.playerSecret;
-    const c = p.bodies.chest.translation(); const tp = p.tipPrev ?? p.bladePoint(1); const r = p.right(new g.THREE.Vector3()); const fwv = p.forward(new g.THREE.Vector3()); const rx = tp.x - c.x, rz = tp.z - c.z; rec.push({ x: +(p.side * (rx * r.x + rz * r.z)).toFixed(3), y: +(tp.y - c.y).toFixed(3), fw: +(rx * fwv.x + rz * fwv.z).toFixed(3), t: +g.stats.simTime.toFixed(4), v: +p.tipVel.length().toFixed(3), st: sec?.stage ?? null, n: sec?.cur?.name ?? (sec ? sec.S.name : null), d: +p.foeDistance().toFixed(2), arm: !!ps?.gilArm?.armed, open: !!ps?.open, cue: document.getElementById('techCue')?.textContent?.slice(0, 40) ?? '' });
+    const c = p.bodies.chest.translation(); const tp = p.tipPrev ?? p.bladePoint(1); const r = p.right(new g.THREE.Vector3()); const fwv = p.forward(new g.THREE.Vector3()); const rx = tp.x - c.x, rz = tp.z - c.z; rec.push({ cx: +c.x.toFixed(3), cz: +c.z.toFixed(3), x: +(p.side * (rx * r.x + rz * r.z)).toFixed(3), y: +(tp.y - c.y).toFixed(3), fw: +(rx * fwv.x + rz * fwv.z).toFixed(3), t: +g.stats.simTime.toFixed(4), v: +p.tipVel.length().toFixed(3), st: sec?.stage ?? null, n: sec?.cur?.name ?? (sec ? sec.S.name : null), d: +p.foeDistance().toFixed(2), arm: !!ps?.gilArm?.armed, open: !!ps?.open, cue: document.getElementById('techCue')?.textContent?.slice(0, 40) ?? '' });
   };
+  const rq = p.gait.requestStep.bind(p.gait); window.__req = []; p.gait.requestStep = (o) => { const r = rq(o); window.__req.push({ t: +g.stats.simTime.toFixed(3), kind: o.kind, fwd: o.fwd, ok: r, seg: p.skill.sec?.cur?.name ?? null, moveY: +p.move.y.toFixed(2) }); return r; }; // 10/11 v6 6차: 디딤이 실제로 나가나
   const M = p.swordArt.measure;
   return { S: g.playerSecret.S?.name, reach: M.reach, contact: M.contact };
 });
+if (process.env.EDGE) await page.evaluate((e) => (window.game.config.SECRET.gilmokEdge = e), process.env.EDGE); // EDGE=cut: 길목 경계 스위치 (10/11 v6 6차)
 console.log(`판 ${ver} 비기 ${S.S} reach ${S.reach.toFixed(2)} contact ${S.contact.toFixed(2)} 대본 ${mode}`);
 const swipe = (dx, dy, id = 81) =>
   page.evaluate(
@@ -168,8 +170,9 @@ if (mode === 'press') {
     s.t1 = x.t;
     s.vmax = Math.max(s.vmax, x.v);
   }
+  { const RQ = await page.evaluate(() => window.__req.filter((q) => q.t >= (window.__fireT ?? 0) - 0.05)); console.log('REQ ' + JSON.stringify(RQ)); const O = R.find((x) => x.t >= rec.fireT); if (O) console.log(`OPEN 낸 때 칼끝 옆 ${O.x} · 높이 ${O.y} · 앞 ${O.fw} · 빠르기 ${O.v} m/s`); const C0 = await page.evaluate(() => null); }
   console.log('SEGS ' + segs.map((s) => `${s.key} ${(s.t1 - s.t0).toFixed(2)}s 최고 ${s.vmax.toFixed(1)}`).join(' | '));
-  { const RR = R.filter((x) => x.st === 'strike' && /gilmok/.test(x.n ?? '')); for (let q = 1; q < RR.length; q++) if (RR[q - 1].x * RR[q].x <= 0 && RR[q - 1].x !== RR[q].x) { console.log(`MID 가운데 선: 칼끝 앞 ${RR[q].fw.toFixed(2)} m · 높이 ${RR[q].y.toFixed(2)} m · 상대 가슴 ${RR[q].d.toFixed(2)} m · ${RR[q].n}`); break; } } // 10/11 v6 5차
+  { const RR = R.filter((x) => x.st === 'strike' && /gilmok/.test(x.n ?? '')); for (let q = 1; q < RR.length; q++) if (RR[q - 1].x * RR[q].x <= 0 && RR[q - 1].x !== RR[q].x) { { const F0 = R.find((x) => x.t >= rec.fireT); console.log(`MID 가운데 선: 칼끝 앞 ${RR[q].fw.toFixed(2)} m · 높이 ${RR[q].y.toFixed(2)} m · 상대 가슴 ${RR[q].d.toFixed(2)} m · ${RR[q].n} · 낸 뒤 ${(RR[q].t - rec.fireT).toFixed(2)} s · 몸 옮김 ${F0 ? Math.hypot(RR[q].cx - F0.cx, RR[q].cz - F0.cz).toFixed(2) : "-"} m`); } break; } } // 10/11 v6 5차
   console.log(`SUMMARY hold: 물러선 뒤 준비까지 ${armAt != null ? (armAt - t0).toFixed(2) : '-'} s · 창까지 ${openAt != null ? (openAt - t0).toFixed(2) : '-'} s · 비기 ${run.length} 스텝 · 칼끝 최고 ${run.length ? Math.max(...run.map((x) => x.v)).toFixed(1) : '-'} m/s`);
 }
 fs.writeFileSync(`${dir}/ibgil_${mode}_${ver}.json`, JSON.stringify(out));
