@@ -2,7 +2,7 @@
 //  상대는 제자리에 세워 둔다(AI 를 멈춤 — 상대 거리로 follow 문턱이 켜지게). 플레이어(index 0)는 AI 없이 스틱(fighter.move)만.
 //  차례: 시작 정지 뒤 앞으로 밀어 상대 가슴 near m 까지(near = 2.3·2.5·2.7·2.9 네 번 — 걸음 박자의 다른 자리에서 시작하게, 넷의 평균)(다가가는 시간) → 0.8 s 쉼 → 뒤·앞·왼·오른 각 0.8 s(그 방향 빠르기가 최고의 절반에 닿는 시간·0.8 s 동안 간 거리) → 놓음(0.1 m/s 아래로 멈추는 시간).
 //  넘어짐·옮겨 딛기(catch)·follow 시간 몫도 센다. 읽기만 — 물리·난수는 게임 그대로. 판 하나는 결정적.
-//  실행: node tools/sim/player_gait_feel.mjs [무기id ...]
+//  실행: node tools/sim/player_gait_feel.mjs [무기id ...]   (PGF_NEARS=… 출발 자리 바꾸기, PGF_ON=1 켬만)
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { GAIT } from '../../src/config.js';
 import { TRADITIONS } from '../../src/schools.js';
@@ -85,10 +85,10 @@ function run(id, school, near = 2.4) {
 const f2 = (v) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 console.log('| 무기 | 유파 걸음 | 다가가기 5.6 → 2.3~2.9 m s | 뒤 (반 빠르기 s · 0.8 s 거리 m) | 앞 | 왼 | 오른 | 놓고 멈춤 s | 옮겨 딛기 · 넘어짐 | follow 몫 |');
 console.log('|---|---|---|---|---|---|---|---|---|---|');
-const NEARS = [2.3, 2.5, 2.7, 2.9];
+const NEARS = process.env.PGF_NEARS ? process.env.PGF_NEARS.split(',').map(Number) : [2.3, 2.5, 2.7, 2.9]; // PGF_NEARS=2.2,2.4,… → 더 많은 출발 자리(옮겨 딛기처럼 드문 수를 덜 흔들리게)
 const mean = (rs, fn) => rs.reduce((a, r) => a + fn(r), 0) / rs.length;
 for (const id of ids) {
-  for (const school of [0, 1]) {
+  for (const school of process.env.PGF_ON ? [1] : [0, 1]) {
     const rs = NEARS.map((n) => run(id, school, n));
     const r = { approach: mean(rs, (x) => x.approach), stop: mean(rs, (x) => x.stop), catches: rs.reduce((a, x) => a + x.catches, 0), falls: rs.reduce((a, x) => a + x.falls, 0), followShare: mean(rs, (x) => x.followShare), res: {} };
     for (const k of ['뒤', '앞', '왼', '오른']) r.res[k] = { rise: mean(rs, (x) => x.res[k].rise), dist: mean(rs, (x) => x.res[k].dist) };

@@ -237,7 +237,13 @@ const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2,
 //  기질(temper)은 '어디로 가려 하나'(AI 스틱), 걸음은 '그걸 어떤 발로 하나'(gait.js) — 빠르기(moveSpeed·sideFactor·backFactor)는 여기 두지 않는다(기질 스틱과 곱해짐).
 //  독일·무유파: 칸 없음 = 지금 걸음(바이트 같음). 값은 모두 사장님 확인 전 (확인표 500~)
 //  ⓐ 이탈리아 (카포 페로): 곧은 선 위 좁은 너비·무게 조금 뒤·뒷무릎 굽힘 [원전 2차] · 짧고 잦은 걸음(파브리스) [원전 2차] — 수는 [추정]
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 } };
+//  짝걸음 pair (10/10 사장님 '다리를 저는 것처럼 — 리듬감·탄력감이 없다' · '동작이 빨라야 해'): follow 를 앞뒤로 갈 때 '따·닥' 두 박 한 짝으로 — gait.js update ③.
+//   이끄는 발(가는 쪽 발) Tsw × lead → 두 발 디딤 Tds × inner 만에 따라붙는 발 Tsw × trail('착') → 짝 사이 쉼(한 짝 = 걸음 두 개 시간이 되게).
+//   stride = 한 짝에 한 발이 옮기는 거리 상한(넘으면 박자를 올림 — 빠를수록 짝이 잦아짐) · len = 걷는 동안 앞뒤 간격 배율(멈추면 펜싱 자세 간격)
+//   leadV·trailV·restV = 이끄는 발이 나가는 동안·따라붙는 동안·쉼 동안 몸이 나가는 빠르기 배율(한 짝 평균 1 로 나눔 — 몸이 짝마다 밀려 감)
+//   stop = 이끄는 발만 딛고 멈추면 따라붙는 발을 곧(자세 고치기 기다림 없이) 짧게 딛고 선다. 값은 gait_rhythm.mjs 로 고름 — 사장님 확인 전 (확인표 580~)
+const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.7, leadV: 0.6, trailV: 1.6, restV: 1.1, stop: true };
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 } };
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3 };
 //  ⓑ 이베리아 (몬탄테): 좌우로 번갈아 베며 앞뒤로 걷기·둥근 걸음 [원전 2차] · 넓게 서서 큰 칼의 원심력을 받는다 [해석] — 수는 [추정]
@@ -245,7 +251,10 @@ const IBERIAN_GAIT = { guardHeight: 0.885, walkHeight: 0.96, guardLength: 0.62, 
 //  ⓒ 일본: 스리아시·오쿠리아시 [원문 검도형 p24·p06] · 늘 걷듯이·뜬발을 꺼림 [원문 고린노쇼 p20] — 낮고 안정, 짧은 앞뒤 간격. 앞무게 틀(모노호시자오 — 큰 칼)은 byFrame.heavy: 앞뒤 조금 길게, 발 놀림은 번갈아 걷기(고린노쇼 음양의 발 [원문] — follow 는 48×2 판 옮겨 딛기 1.73 → 3.2~4.2/판, 잣대 ×1.5 밖)
 //  follow 는 상대 가슴 followIn 안 + 걸러진 빠르기 followVmax 아래에서만(빨리 좁힐 땐 지나 딛기), 뒤에 남은 발이 엉덩이에서 trailReach 넘으면 그 발부터 따라붙임.
 //  cutStep = AI 베기 걸음(ai.js gaitStep) · passAs = follow 안에서 들어온 'pass' 기술 걸음(플레이어 베기 걸음 등)을 바꿀 꼴 · draw = 디딘 뒤 뒷발 끌어붙임(drawT s)
-const JAPANESE_GAIT = { guardHeight: 0.875, walkHeight: 0.93, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.025, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.035 } };
+//  낮춤 (10/10 사장님 '충분히 낮은 느낌이 아님' → '최대한 내려봐. AI 승률보다 플레이어 조작감'): 골반 멈춤 0.75 · 걸음 0.818 = 전역 기본(0.9·0.978)보다 15·16 cm —
+//   낮춤 합계 상한 GAIT.lowMax 0.16 까지(플레이어 자세표 낮춤 ~1 cm 를 더하면 멈춤도 0.16). 낮아진 만큼 다리가 옆으로 더 닿으므로 reachMax 0.55 → 0.7(넘으면 옮겨 딛기),
+//   발이 땅에 일찍 걸리지 않게 발 들기 AI 0.025 → 0.035 · 플레이어 0.035 → 0.05 — gait_rhythm.mjs·player_gait_feel.mjs·gait_metrics.mjs 로 고름 (확인표 590~)
+const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 } };
 // 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0(10/9 腰擊 쓰임에서 ×3.0) · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
 //  腰擊 ×2.0 → ×3.0 (10/9 腰擊 쓰임 — docs/strike/chinese_yaoji_2026-10-09.md): ×2 로는 공용 腰擊(zwerch·zwerchL)이 휘두름의 6 % — 옆 자세에 손이 있어도 base 0.5 가 분노의 베기(1.4)에 졌다
 const CHINESE_TECHK = { '*': { zwerch: 3.0, zwerchL: 3.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };
