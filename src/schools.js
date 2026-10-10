@@ -951,6 +951,12 @@ TRADITIONS.chinese.parryCover = { highR: CHINESE_PARRY_SLOTS.geojeong, highC: CH
 //  (전: 표두세 자리에 이름만 擧鼎 — 칼을 세운 표두세 몸꼴이라 원전 꼴과 어긋났다) — docs/strike/school_slots2_2026-10-11.md
 TRADITIONS.chinese.pose = { ...GERMAN.pose, cover: CHINESE_PARRY_SLOTS.geojeong.pad };
 TRADITIONS.chinese.parryCover = { ...TRADITIONS.chinese.parryCover, down: CHINESE_PARRY_SLOTS.geojeong };
+// [선택 판 — 사장님 답 뒤 병합] highR(오른 위 사선 zornhauL) = 표두세 자리 그대로(덧씌우지 않음): 擧鼎格 은 원문에서 「鼎格上殺」 — 위에서 곧게 떨어지는 칼의 짝이라 highC(oberhau)에 맞고
+//  (막음 1 → 2~3/4), 오른 위 사선은 가로 든 칼 옆으로 미끄러져 4 → 2~3/4 로 줄었다. 칼을 세운 표두세(豹頭勢 — 무비지 쪽157/0571)가 그 사선을 받는 꼴로 [해석] — docs/strike/school_slots2_2026-10-11.md
+{
+  const { highR, ...rest } = TRADITIONS.chinese.parryCover;
+  TRADITIONS.chinese.parryCover = rest;
+}
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
