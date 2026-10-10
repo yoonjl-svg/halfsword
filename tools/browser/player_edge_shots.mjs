@@ -115,17 +115,18 @@ async function pass(mode, tag, shootFlatOnly) {
   const hits = [];
   const shots = [];
   let fi = 0;
+  let stroke = 0; // 대본 획 번호 (전·후 같은 획끼리 견준다)
   const frame = async (label) => {
     await page.clock.runFor(FRAME);
     const fh = await page.evaluate(() => { const h = window.__pe.frameHits; window.__pe.frameHits = []; return h; });
     for (const h of fh) {
-      hits.push({ i: fi, label, ...h });
+      hits.push({ i: fi, stroke, label, ...h });
       const flat = h.ang > 45;
-      if (shots.length < NSHOT * 3 && (!shootFlatOnly || flat)) {
-        await page.evaluate((t) => (document.getElementById('peLabel').textContent = t), `${tag} (playerEdge=${mode}) · ${W} · 프레임 ${fi}\n날 각 ${h.ang}° ${flat ? '= 칼 면' : '= 날'} · ${h.part} · ${h.J} J · ${h.v} m/s`);
+      if (shots.length < NSHOT * 6 && (!shootFlatOnly || flat)) {
+        await page.evaluate((t) => (document.getElementById('peLabel').textContent = t), `${tag} (playerEdge=${mode}) · ${W} · 획 ${stroke} · 프레임 ${fi}\n날 각 ${h.ang}° ${flat ? '= 칼 면' : '= 날'} · ${h.part} · ${h.J} J · ${h.v} m/s`);
         const f = path.join(out, `player_edge_${tag}_${W}_${shots.length + 1}.png`);
         fs.writeFileSync(f, await page.screenshot());
-        shots.push({ f, i: fi, ...h });
+        shots.push({ f, i: fi, stroke, ...h });
       }
     }
     fi++;
@@ -135,6 +136,7 @@ async function pass(mode, tag, shootFlatOnly) {
       await page.evaluate(() => { const s = window.__pe; s.held = false; s.moved = false; s.pad = null; });
       for (let k = 0; k < a; k++) await frame('손 뗌');
       await page.evaluate(() => { const P = window.game.player; window.__pe.pad = [P.handOffset.x, P.handOffset.y]; });
+      stroke++;
       continue;
     }
     for (;;) {
@@ -155,7 +157,7 @@ async function pass(mode, tag, shootFlatOnly) {
   return { hits, shots };
 }
 
-const B = await pass('off', 'before', true);
+const B = await pass('off', 'before', false);
 const C = await pass(ON, 'after', false);
 const pct = (h) => (h.length ? +((100 * h.filter((x) => x.ang > 45).length) / h.length).toFixed(1) : null);
 const rec = { weapon: W, on: ON, before: { hits: B.hits.length, flatPct: pct(B.hits), list: B.hits }, after: { hits: C.hits.length, flatPct: pct(C.hits), list: C.hits }, shots: [...B.shots, ...C.shots], errors };
