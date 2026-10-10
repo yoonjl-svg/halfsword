@@ -5,8 +5,8 @@
 //  싸우는 바닥·물리는 그대로(장식만). 그림자: 물가 나무(wood)만 드리운다. docs/stages.md '얼어붙은 만'
 // East-Siberian inland lake, winter predawn. Visual ice only: no physics changes.
 import * as THREE from 'three';
-import { Kit, canvasTex, rng, box } from './stage_kit.js';
-import { buildFrozenBayShore } from './stage_frozen_bay_shore.js';
+import { Kit, canvasTex, rng, box, cyl, limb } from './stage_kit.js';
+import { buildFrozenBayShore, bankHeight, CHAPEL } from './stage_frozen_bay_shore.js';
 
 function iceTexture() {
   const r = rng(101071);
@@ -193,6 +193,113 @@ function pierLantern(scene, pierPos) {
   scene.add(grp);
 }
 
+/**
+ * 바이칼 겨울 표식 셋 (10/11 3차 — 디렉터 의견에 사장님 동의 01:0x: '북쪽 어딘가의 얼어붙은 호수'까지만 읽히고 동시베리아는 약하다,
+ *  넓게 보면 눈 둑에 둘러싸인 작은 못 같다). 결투 빙판·눈 둑·등불·가루눈은 그대로.
+ *  ① 얼음 언덕(토로스): 깨진 청록 얼음판이 밀려 올라와 비스듬히 겹쳐 쌓인 능선 — 눈 둑 고리 바깥 12~24 m (카메라 궤도 10.5 m 밖)
+ *  ② 먼 눈 덮인 산맥: 맞은편 기슭(181 m) 너머 215~232 m 에 바이칼 둘레 산맥처럼 눈 쓴 능선을 지평선에 길게.
+ *     안개(62~205 m)에 묻히지 않게 안개를 끄고 먼 빛(옅은 회청 몸 · 새벽빛 받은 분홍빛 흰 눈머리)을 꼭짓점 색에 구웠다 — 분홍 새벽 하늘에 실루엣
+ *  ③ 통나무 정교회 예배당(투야나의 교구): 선착장 뒤 둑 위 낙엽송 사이에 작게 — 통나무 벽·눈 덮인 박공지붕·양파 지붕 하나·팔단 십자
+ */
+function baikalBackdrop(scene) {
+  const r = rng(101091);
+  const out = { torosSlabs: 0 };
+  // ① 토로스 — 능선 여섯, 능선마다 얼음판 9~16 장
+  const k = new Kit(101093);
+  const ridges = [[0.35, 15, 2.6], [1.15, 13, 3.4], [2.9, 19, 4.2], [3.7, 14, 2.8], [4.6, 21, 5.0], [5.5, 16, 3.0]]; // [각도, 거리, 길이]
+  for (const [a, d, len] of ridges) {
+    const cx = Math.cos(a) * d, cz = Math.sin(a) * d, dir = a + Math.PI / 2 + (r() - 0.5) * 0.6; // 능선은 대략 둘레 방향
+    const n = 9 + Math.floor(r() * 8);
+    for (let i = 0; i < n; i++) {
+      const t = (i / (n - 1) - 0.5) * len;
+      const crest = 1 - (2 * t / len) ** 2; // 가운데가 높다
+      const w = 0.6 + r() * 1.1, h = 0.6 + r() * 0.9, th = 0.08 + r() * 0.08;
+      const side = r() < 0.5 ? -1 : 1;
+      const tilt = side * (0.18 + r() * 0.5); // 비스듬히 기대 선 판 (곧추설수록 날카롭게 읽힌다)
+      const x = cx + Math.cos(dir) * t + Math.cos(dir + Math.PI / 2) * side * 0.15 * r();
+      const z = cz + Math.sin(dir) * t + Math.sin(dir + Math.PI / 2) * side * 0.15 * r();
+      const hh = h * (0.55 + crest * 0.75), y = hh * 0.42;
+      k.put('toros', box(w, hh, th), r() < 0.3 ? 0x7cc6cf : r() < 0.5 ? 0x5fb0bf : 0x93d2da,
+        [x, y, z], [tilt, -dir + (r() - 0.5) * 0.4, (r() - 0.5) * 0.3], 1, { rough: 0.03, vary: 0.12, noise: 0.06, snow: 0.55, snowColor: 0xe4ecf1 });
+      out.torosSlabs++;
+    }
+    // 능선 밑동에 부서진 얼음 부스러기와 바람에 쌓인 눈
+    for (let i = 0; i < 6; i++) {
+      const t = (r() - 0.5) * len * 1.1;
+      k.put('toros', box(0.25 + r() * 0.4, 0.06 + r() * 0.08, 0.2 + r() * 0.3), 0x8ccbd4, [cx + Math.cos(dir) * t + (r() - 0.5) * 0.8, 0.04, cz + Math.sin(dir) * t + (r() - 0.5) * 0.8], [0, r() * 3, (r() - 0.5) * 0.3], 1, { vary: 0.1, noise: 0.04, snow: 0.7, snowColor: 0xe4ecf1 });
+    }
+  }
+  const toros = k.mesh('toros', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.25, metalness: 0.05, transparent: true, opacity: 0.88, emissive: 0x0c2a33 }), { cast: false, receive: true });
+  toros.name = 'frozen-bay-toros'; scene.add(toros);
+  for (const g of k.bins.toros) g.dispose();
+  // ② 먼 눈 덮인 산맥 — 띠 하나(바탕 · 몸 · 눈선 · 능선 네 줄), 맞은편(+x) 쪽이 가장 높다. 몸은 하늘보다 조금 짙은 회청, 눈은 능선 가까이만
+  const pos = [], col = [];
+  const body = new THREE.Color(0x76869a), body2 = new THREE.Color(0x7f8ea1), snowline = new THREE.Color(0xa9afbf), snow = new THREE.Color(0xd6c9d1), cc = new THREE.Color();
+  const N = 220, crest = [];
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const across = Math.max(0, Math.cos(a)) ** 0.7; // 맞은편(a=0, +x)이 1, 뒤쪽은 낮은 구릉 뒤로 조금만
+    const peaks = Math.abs(Math.sin(a * 19 + 1.3)) ** 1.6 * 0.55 + Math.abs(Math.sin(a * 47 + 0.4)) ** 2 * 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(a * 6 + 2));
+    crest.push(5 + across * 19 * peaks + (r() < 0.12 ? r() * 4 * across : 0));
+  }
+  crest[N] = crest[0];
+  const P = (i, row) => {
+    const a = (i / N) * Math.PI * 2, h = crest[i];
+    const rad = [233, 229, 225, 222][row], y = [-2, h * 0.5, h * 0.8, h][row];
+    return [Math.cos(a) * rad, y, Math.sin(a) * rad];
+  };
+  for (let i = 0; i < N; i++) for (let row = 0; row < 3; row++) {
+    const v = [[i, row], [i, row + 1], [i + 1, row], [i + 1, row], [i, row + 1], [i + 1, row + 1]];
+    for (const [ii, rr] of v) {
+      pos.push(...P(ii, rr));
+      const tall = crest[ii] > 12; // 높은 봉우리만 눈머리를 쓴다
+      cc.copy([body, body2, tall ? snowline : body2, tall ? snow : snowline][rr]);
+      if (rr === 2 && tall && Math.sin(ii * 1.7) > 0.3) cc.lerp(snow, 0.5); // 눈선이 골짜기 따라 들쭉날쭉
+      col.push(cc.r, cc.g, cc.b);
+    }
+  }
+  const mg = new THREE.BufferGeometry();
+  mg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  mg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const mountains = new THREE.Mesh(mg, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide }));
+  mountains.name = 'frozen-bay-far-range'; scene.add(mountains);
+  // ③ 통나무 예배당
+  const c = new Kit(101097);
+  const base = bankHeight(CHAPEL.x, CHAPEL.z) - 0.35;
+  c.push([CHAPEL.x, base, CHAPEL.z], CHAPEL.rotY);
+  const LOG = 0x5b4636, LOG2 = 0x6a5240, W = 3.0, L = 4.2, H = 2.6, LR = 0.13;
+  for (let i = 0; i < Math.round(H / (LR * 1.8)); i++) { // 통나무를 쌓은 네 벽 (모서리에서 통나무 끝이 엇갈려 삐죽)
+    const y = LR + i * LR * 1.8, col = i % 2 ? LOG : LOG2;
+    for (const sx of [-1, 1]) limb(c, 'log', [sx * W / 2, y, -L / 2 - 0.25], [sx * W / 2, y, L / 2 + 0.25], LR, LR, col, { noise: 0.06 }, 6);
+    for (const sz of [-1, 1]) limb(c, 'log', [-W / 2 - 0.25, y + LR * 0.9, sz * L / 2], [W / 2 + 0.25, y + LR * 0.9, sz * L / 2], LR, LR, col, { noise: 0.06 }, 6);
+  }
+  c.put('log', box(W, H, L), 0x3f3128, [0, H / 2, 0]); // 안쪽 벽(통나무 틈 사이 어둠)
+  c.put('log', box(0.8, 1.5, 0.08), 0x2a211b, [0, 0.85, L / 2 + LR + 0.02]); // 문
+  // 눈 덮인 박공지붕 (판자 둘) + 지붕 끝
+  for (const sx of [-1, 1]) {
+    c.put('roof', box(W / 2 + 0.55, 0.12, L + 0.9), 0x4b3a2e, [sx * (W / 4 + 0.12), H + 0.75, 0], [0, 0, -sx * 0.62], 1, { noise: 0.05, snow: 0.95, snowColor: 0xe8eef3 });
+  }
+  // 지붕 마루 위 팔각 북 + 양파 지붕 + 팔단 십자
+  const drumY = H + 1.45;
+  c.put('log', cyl(0.45, 0.5, 0.9, 8), LOG, [0, drumY + 0.45, -0.3]);
+  const onion = new THREE.LatheGeometry([[0, 0], [0.55, 0.05], [0.72, 0.35], [0.66, 0.7], [0.38, 1.05], [0.12, 1.35], [0.04, 1.55], [0, 1.6]].map(([x, y]) => new THREE.Vector2(x, y)), 10);
+  c.put('dome', onion, 0x3c4a3e, [0, drumY + 0.9, -0.3], undefined, 1, { vary: 0, noise: 0.05, snow: 0.35, snowColor: 0xe8eef3 });
+  const cy = drumY + 2.5, CR = 0x2c2a26; // 팔단 십자: 세로대 · 위 짧은 가로대 · 큰 가로대 · 아래 비스듬한 발판
+  c.put('cross', box(0.07, 1.25, 0.07), CR, [0, cy + 0.45, -0.3]);
+  c.put('cross', box(0.32, 0.06, 0.06), CR, [0, cy + 0.88, -0.3]);
+  c.put('cross', box(0.62, 0.07, 0.07), CR, [0, cy + 0.66, -0.3]);
+  c.put('cross', box(0.42, 0.06, 0.06), CR, [0, cy + 0.2, -0.3], [0, 0, 0.42]);
+  c.pop();
+  const mats = { log: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), roof: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }),
+    dome: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }), cross: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) };
+  for (const [bin, mat] of Object.entries(mats)) {
+    const m = c.mesh(bin, mat, { cast: false, receive: true });
+    m.name = 'frozen-bay-chapel-' + bin; scene.add(m);
+    for (const g of c.bins[bin]) g.dispose();
+  }
+  return out;
+}
+
 function dawnSky(scene) {
   const tex = canvasTex(8, 256, (ctx, w, h) => {
     const g = ctx.createLinearGradient(0,0,0,h);
@@ -223,12 +330,13 @@ export function buildFrozenBay(scene, { hemi, sun }) {
   const shore = buildFrozenBayShore(scene);
   duelGround(scene);
   pierLantern(scene, shore.pierPos);
+  const baikal = baikalBackdrop(scene);
   const drift = powder(scene);
   const r = rng(101073); let time = 0, nextIce = 7, nextPier = 19;
   const stage = {
     sunOffset,
     fighterLight: { color: 0xc8dbed, rimColor: 0xe7c8cf, rim: 1.35, level: .55 }, // rim 1.1 → 1.35 (무대 리뷰 10/10: 남색 옷 윤곽)
-    stats: shore.stats,
+    stats: { ...shore.stats, ...baikal },
     excite() {}, // Combat impacts must not manufacture thermal ice cracks or booms.
     update(dt) {
       if (!Number.isFinite(dt) || dt <= 0) return;

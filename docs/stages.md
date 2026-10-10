@@ -464,6 +464,12 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
   - 전/후 (폰 가로 844×390, 같은 경기 카메라): [1차 눈 바닥](handoff/stage_sb_frozen_bay_phone.png) → [2차 빙판](handoff/stage_sb2_frozen_bay_after_phone.png) · [2차 다른 각도](handoff/stage_sb2_frozen_bay_after_view.png).
   - 카드 뒷면 `px_frozen_bay_*`: 먹청 얼음빛 바탕에 옅은 얼음 균열 마름모 격자, 얼음 결정(흰 여섯 갈래 별)과 금 간 얼음 조각을 번갈아, 띠는 고드름, 가운데는 흰 균열이 간 둥근 얼음판. [실제 카드 화면](handoff/cardbacks_game_frozen_bay_sb2.png)
   - **3차 카드 뒷면** (10/11, 디렉터 판단 — 사장님이 맡김): 바탕 가득한 눈송이가 '눈'으로 읽혀 이졸데의 눈 덮인 성 안뜰과 겹쳤다 → 바탕 무늬를 **얼음 언덕(토로스 — 밀려 솟은 얼음 판 줄)과 곧추선 날카로운 얼음 조각 무리**로 바꿨다. 가운데 금 간 얼음판·고드름 띠·금 간 얼음 조각은 그대로, 상대 칸 회색 조각도 다시 뽑음. 정교회 팔단 십자 배지는 넣지 않았다 — 아래 비스듬한 가로대 탓에 180° 돌리면 다른 꼴이 되어 카드 대칭 규칙과 안 맞는다. 전/후: [2차](handoff/cardbacks_game_frozen_bay_sb2.png) → [3차](handoff/cardbacks_game_frozen_bay.png)
+- **3차 — 바이칼 표식 (디렉터 의견에 사장님 동의 10/11 01:0x, 가지 `…/stages-sb3-2q36ha`)**: '북쪽 어딘가의 얼어붙은 호수'까지만 읽히고 동시베리아(바이칼)는 약했고, 넓게 보면 눈 둑에 둘러싸인 작은 못 같았다. 결투 빙판·남색 사제복 읽힘·등불·가루눈은 그대로, `baikalBackdrop()` 로 셋을 더했다:
+  - **얼음 언덕(토로스)**: 깨진 청록 얼음판(반투명 0.88, 윗면에 눈)이 비스듬히 겹쳐 솟은 능선 여섯(판 9~16 장씩, 높이 약 1~1.6 m) — 눈 둑 고리 바깥 13~21 m, 카메라 궤도 10.5 m 밖. 밑동엔 부서진 얼음 부스러기.
+  - **먼 눈 덮인 산맥**: 맞은편 기슭(181 m) 너머 222~233 m 에 지평선을 따라 길게, 맞은편(+x)이 가장 높고(약 24 m) 뒤쪽은 낮은 구릉 뒤로 조금만. 안개(62~205 m)에 묻히지 않게 안개를 끄고, 하늘보다 조금 짙은 회청 몸 · 높은 봉우리만 새벽빛 받은 분홍빛 흰 눈머리를 꼭짓점 색에 구웠다 — 분홍 새벽 하늘에 실루엣이 읽힌다. 낮은 구릉은 그대로(산맥 앞 겹).
+  - **통나무 정교회 예배당**(투야나의 교구): 선착장 뒤 둑 위 낙엽송 사이(−21.4, 27.2)에 작게 — 모서리에서 엇갈려 삐죽한 통나무 벽, 눈 덮인 박공지붕, 팔각 북 위 양파 지붕 하나(짙은 녹회색, 눈 조금), 팔단 십자(세로대 · 위 짧은 가로대 · 큰 가로대 · 아래 비스듬한 발판). 숲은 그 자리를 비운다(`CHAPEL`).
+  - 그리기 양 (같은 판 `stage_cost.mjs`·헤드리스): 전 257 호출·154,042 삼각형·투명 2 → **후 267 호출·161,338 삼각형·투명 3** (같은 판 성 안뜰 230·72,653 / 신목의 숲 256·183,072 — 범위 안).
+  - 전/후: 폰 경기 화면 [전](handoff/stage_sb3_frozen_bay_before_phone.png) → [후](handoff/stage_sb3_frozen_bay_after_phone.png) · 넓은 장면 [전](handoff/stage_sb3_frozen_bay_before_wide.png) → [후](handoff/stage_sb3_frozen_bay_after_wide.png) · [예배당 쪽](handoff/stage_sb3_frozen_bay_after_chapel.png).
 - 캡처: [경기 카메라 900×600 (투야나 v1 옷)](handoff/stage_sb_frozen_bay_fight.png) · [폰 가로 844×390 (투야나 v2 겨울 사제복, main 2b00b00 뒤)](handoff/stage_sb_frozen_bay_phone.png) · [멀리서](handoff/stage_sb_frozen_bay_wide.png).
 
 ## 청람잔도 (`qinglan`) — 김씨의 무대
