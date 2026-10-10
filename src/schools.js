@@ -914,8 +914,11 @@ TRADITIONS.chinese.parrySlots = CHINESE_PARRY_SLOTS;
 //   highL 봉두세(왼쪽 황소 — 이미 원전 꼴 鳳頭洗, 그대로) · lowR 요략세(바꿈 — 이미 원전 꼴 撩掠格, 그대로)
 TRADITIONS.chinese.parry = { ...TRADITIONS.chinese.parry, highR: CHINESE_PARRY_SLOTS.geojeong.pad, highC: CHINESE_PARRY_SLOTS.geojeong.pad, thrust: CHINESE_PARRY_SLOTS.eogeo.pad, lowL: CHINESE_PARRY_SLOTS.yoryak.pad };
 TRADITIONS.chinese.parryCover = { highR: CHINESE_PARRY_SLOTS.geojeong, highC: CHINESE_PARRY_SLOTS.geojeong, thrust: CHINESE_PARRY_SLOTS.eogeo, lowL: CHINESE_PARRY_SLOTS.yoryak };
-// 덮는 자세: 표두세 자리 — 擧鼎格(칼을 머리 위로 들어 막음)과 같은 까닭 [원문 · 자리 해석]
-TRADITIONS.chinese.pose = { ...GERMAN.pose, cover: G.tag };
+// 덮는 자세(쓰러져 머리를 가림): 거정세 — 擧鼎格 「鼎格上殺」 칼을 머리 위로 가로 들어 위에서 오는 칼을 받는다 [원문]. 패드는 거정세 자리(G.tag)로 손이 가고,
+//  몸꼴(머리 위 가로 든 칼)은 막기 때와 같이 덧씌운다(parryCover.down — frames.js installCover). 10/11 사장님 01:5x '덮는 자세가 지금은 빌려 쓰고 있나? 그럼 거정세로 바꿔야지'
+//  (전: 표두세 자리에 이름만 擧鼎 — 칼을 세운 표두세 몸꼴이라 원전 꼴과 어긋났다) — docs/strike/school_slots2_2026-10-11.md
+TRADITIONS.chinese.pose = { ...GERMAN.pose, cover: CHINESE_PARRY_SLOTS.geojeong.pad };
+TRADITIONS.chinese.parryCover = { ...TRADITIONS.chinese.parryCover, down: CHINESE_PARRY_SLOTS.geojeong };
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
