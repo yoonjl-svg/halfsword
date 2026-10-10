@@ -137,6 +137,7 @@ async function pass(mode, tag, shootFlatOnly) {
       for (let k = 0; k < a; k++) await frame('손 뗌');
       await page.evaluate(() => { const P = window.game.player; window.__pe.pad = [P.handOffset.x, P.handOffset.y]; });
       stroke++;
+      if (process.env.PE_DEBUG) console.log(tag, 'stroke', stroke, await page.evaluate(() => { const g = window.game, P = g.player; return { state: g.state, d: P.foeDistance().toFixed(2), want: window.__peDist?.toFixed(2), ps: P.state, es: g.enemy?.state, wired: !!P.__peWired, t: P.fightT?.toFixed(2) }; }));
       continue;
     }
     for (;;) {
