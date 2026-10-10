@@ -4,6 +4,12 @@
 커밋 `94178db`, 푸시 완료. PR: GitHub 새 PR 화면(가지 `…/pm-character-looks`)
 (요청받지 않아 아직 만들지 않음).
 
+## round 17 — 사장님 답(10/10 23:5x · 10/11 00:1x): 새 인물 넷 다듬기 2차
+
+- 자세한 것: `docs/characters/looks_polish_2026-10-10.md` (가지 `…/looks-polish-2q36ha`).
+- 사미라 v3(흰 두파타·흰 깃·흰 수 띠·팔찌·귀걸이, 자락 5 cm 짧게) · 투야나 v3(왼손목 추트키) · 김씨 v2(하카마 → 바지·행전, 칼 천으로 싸기, 먹빛 한 단계) · 아르토리아 v2(망토 둥글게 감쌈·앞자락 겹침).
+- 옛 판: `?look=samira:v2` · `?look=eira:v2` · `?look=renji:v1` · `?look=artoria:v1`. 물리·방어구 판정 그대로.
+
 ## round 16 — 사장님 디자인 리뷰(10/10 21:0x): 새 인물 넷 리뷰 + 사미라 v2 · 투야나 v2
 
 - 자세한 것: `docs/characters/new_four_review_2026-10-10.md` (가지 `…/looks-review-2q36ha`).

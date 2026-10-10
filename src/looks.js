@@ -592,6 +592,16 @@ export const LOOK_ARCHIVE = {
       outfit: 'artoria_silver_v2', armor: 'plate',
       tailoring: 'soft-shoulders', stockEyes: true, eyeColor: 0x418f87, originalTorsoWidth: true,
     },
+    // v2 (외형 다듬기 2차 10/10, 사장님 '망토 다듬어'): 망토가 어깨를 둥글게 감싸고 아래로 퍼짐 · 앞자락 두 장이 가운데서 겹침. 색·판금·판정(armor 'plate') 그대로
+    v2: {
+      tunic: 0x222a32, quilt: 0x222a32, sleeve: 0x242c34,
+      straps: null, belt: 0x263338, hoseUpper: 0x1a222b, hoseLower: 0x202a33,
+      shoes: 0x53626c, skin: 0xe4c7ad, hands: 0xd3dce0,
+      helmet: null, metal: 0xc1d0da, hair: 0xe7e9e5, headband: null,
+      grip: 0x20343c, hilt: 0xc8b378, accent: 0x2c7778,
+      outfit: 'artoria_silver_v3', armor: 'plate',
+      tailoring: 'soft-shoulders', stockEyes: true, eyeColor: 0x418f87, originalTorsoWidth: true,
+    },
   },
   // 사미라 미르자 (샛별 id crown_boss) — 샛별 v8 (= v4 장밋빛 제복·높이 묶은 장밋빛 머리 + 다듬기·얼굴·허리 표시, b8b1344·df0a9d6·27888f2·4c5ce4d). 방어구 없음
   samira: {
@@ -616,6 +626,17 @@ export const LOOK_ARCHIVE = {
       outfit: 'samira_angarkha', armor: null,
       stockEyes: true, stockFace: true,
     },
+    // v3 (외형 다듬기 2차 10/10, 사장님 '빨강 단일톤 — 흰 악세서리나 디테일로 포인트, 치마는 조금 더 짧게'): 왼어깨 흰 두파타 · 흰 선 깃 · 옷단 위 흰 수 띠 ·
+    //  소매 끝 흰 띠 · 흰 팔찌 둘 · 진주 귀걸이 (흰색 0xefece4) · 자락 5 cm 짧게(옷단 0.635 m). 다리·색·머리는 v2 그대로
+    v3: {
+      tunic: 0x922e40, quilt: 0x922e40, sleeve: 0x922e40,
+      straps: null, belt: 0x33232c, hoseUpper: 0x2c2530, hoseLower: 0x2c2530,
+      shoes: 0x231d25, skin: 0xb7754e, hands: 0xb7754e,
+      helmet: null, metal: 0xa7acb1, hair: 0xc78f98, headband: null,
+      grip: 0x313b46, hilt: 0xb6a47e, accent: 0xefece4,
+      outfit: 'samira_angarkha_v3', armor: null,
+      stockEyes: true, stockFace: true,
+    },
   },
   // 김씨 (샛별 id renji) — 샛별 v2 (= v1, 27888f2·4c5ce4d·dcad882): 삿갓·여행자 옷·짚신. 삿갓만 아주 약한 투구
   renji: {
@@ -625,6 +646,16 @@ export const LOOK_ARCHIVE = {
       skin: 0xd7b995, hands: 0xd7b995, helmet: 'kasa', metal: 0x777178, hair: 0x241d16, // helmet 'kasa': 삿갓이 아주 약한 투구 (사장님 지시 10/10 20:0x, config.js ARMOR.helmets.kasa) — 샛별은 null(장식)
       headband: null, grip: 0x33252d, hilt: 0x8b7872, accent: 0x65408a,
       outfit: 'renji_wanderer', armor: null, stockEyes: true,
+    },
+    // v2 (외형 다듬기 2차 10/10, 사장님 '보라 허리띠와 머플러는 그대로, 가장 왜색이 짙은 곳만 원포인트로 — 고려 방랑 무사 쪽으로 · 먹빛 아주 조금만 밝혀'):
+    //  하카마 → 통 넉넉한 바지(0x283044) + 정강이 행전(무명 0xa39a88). 웃옷 먹빛 0x17191e → 0x20232a. 보라 띠·목 천·삿갓(helmet 'kasa' 판정 그대로)·봇짐·짚신·소매·칼 그대로.
+    //  옷 모듈 src/outfit_renji_baji.js
+    v2: {
+      tunic: 0x20232a, quilt: 0x2a2930, sleeve: 0x20232a, straps: null,
+      belt: 0x65408a, hoseUpper: 0x283044, hoseLower: 0x283044, shoes: 0x27222b,
+      skin: 0xd7b995, hands: 0xd7b995, helmet: 'kasa', metal: 0x777178, hair: 0x241d16,
+      headband: null, grip: 0x33252d, hilt: 0x8b7872, accent: 0x65408a,
+      outfit: 'renji_baji', armor: null, stockEyes: true,
     },
   },
   // 투야나 니콜라예바 (id eira, 전 이름 에이라 린드) — v1 = 샛별 v1 (27888f2): 남색 겨울 사제복·흰 깃·은빛 머리. 방어구 없음
@@ -645,6 +676,14 @@ export const LOOK_ARCHIVE = {
       headband: null, grip: 0x333342, hilt: 0xa7a7af, accent: 0xf1f0ec,
       outfit: 'tuyana_winter_priest', armor: null, stockEyes: true, eyeColor: 0x4a3518,
     },
+    // v3 (외형 다듬기 2차 10/10, 사장님 '왼손에 묵주 같은 걸'): v2 + 왼손목(빈손)에 정교회 기도 매듭줄(추트키 — 검은 털실 매듭 고리·작은 은빛 십자가·검은 술). 겉모습만
+    v3: {
+      tunic: 0x222c48, quilt: 0x222c48, sleeve: 0x222c48, straps: null,
+      belt: 0x222c48, hoseUpper: 0x222c48, hoseLower: 0x222c48, shoes: 0x1b1c22,
+      skin: 0xe9d3c5, hands: 0xe9d3c5, helmet: null, metal: 0xa7a7af, hair: 0xc9cbe0,
+      headband: null, grip: 0x333342, hilt: 0xa7a7af, accent: 0xf1f0ec,
+      outfit: 'tuyana_winter_priest_chotki', armor: null, stockEyes: true, eyeColor: 0x4a3518,
+    },
   },
 };
 
@@ -658,10 +697,10 @@ export const CHARACTER_LOOK_VERSION = {
   tome: 'v2',
   omari: 'v2',
   minami: 'v5',
-  artoria: 'v1', // 샛별 저장소에서 가져온 넷 (10/10)
-  samira: 'v2', // 디자인 리뷰 10/10 — 옛 판 ?look=samira:v1
-  renji: 'v1',
-  eira: 'v2', // 디자인 리뷰 10/10 — 옛 판 ?look=eira:v1
+  artoria: 'v2', // 외형 다듬기 2차 10/10 — 옛 판 ?look=artoria:v1
+  samira: 'v3', // 외형 다듬기 2차 10/10 — 옛 판 ?look=samira:v2 · v1
+  renji: 'v2', // 외형 다듬기 2차 10/10 — 옛 판 ?look=renji:v1
+  eira: 'v3', // 외형 다듬기 2차 10/10 — 옛 판 ?look=eira:v2 · v1
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
