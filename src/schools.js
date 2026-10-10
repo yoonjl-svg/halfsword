@@ -553,7 +553,7 @@ export const IBERIAN_SECRET_V4 = {
   do: { loop: [G.nebenR, G.tagR], path: [[0.12, 0.14], G.wechselL], powerFrom: 0, side: 'iberianLat', open: 'H', reach: 0, power: 'iberianPower', loopHand: 'iberianLoopHand', strength: 'iberianStrength', sideBack: 'iberianBack', release: { dist: 'iberianRelease', maxHold: 'releaseMaxHold' } },
   src: '몬탄테 molinete·altabaixo — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 둥근 걸음(옆으로 비껴 딛음) [원전 2차] · 고리 → 내려치기로 잇기 [해석]',
 };
-// 이베리아 멈추지 않는 흐름 (10/11 01:5x 사장님 '이베리아 비기를 몬탄테 흐름으로 다시 설계' — docs/strike/iberian_secret_v5_2026-10-11.md, SECRET.iberianSecret 'flow' 기본):
+// 이베리아 멈추지 않는 흐름 (10/11 01:5x 사장님 '이베리아 비기를 몬탄테 흐름으로 다시 설계' — docs/strike/iberian_secret_v5_2026-10-11.md, SECRET.iberianSecret 'flow' — 10/11 03:3x 부터 v6 길목 지키기가 기본, 이것은 `?ibSecret=flow`):
 //  사장님 10/11 00:2x '인간 플레이어로서 흐름이 너무 끊기고 컨셉과 동작이 어색해. 유파 꾸러미에서 따로 노는 느낌' → v4 휩쓸기(정해진 자세로 감고 크게 한 번 — 스텝마다 자리 지정)를 걷어 내고
 //  지금 휘두르던 칼의 방향을 이어받아(그쪽으로 떨어뜨려 감고) 좌우 번갈아 아래에서 위로 올려베기 둘 → 머리 위로 넘겨 어깨 뒤로 돌린 칼로 몸 가운데 높이를 둘러 베는 큰 한 칼. 셋을 이음새 없이(물리 서보 길, 순간이동 없음)
 //  잇고, 경직은 흐름이 끝난 뒤에만. 길은 이베리아 꾸러미의 것 그대로 — 올려베기 = 고유 동작 talhoRevezBaixo 의 두 반(unterhau·unterhauL 줄), 떨어뜨려 감기 = 그 길의 [∓0.5, 0] 점,
@@ -582,6 +582,32 @@ const IBERIAN_SECRET = {
     cutMid: [0.0, 0.1], // 둘러 베는 큰 한 칼의 가운데 점 = zwerch · zwerchL 길 그대로 (몸 가운데 높이)
   },
   src: '피게이레두 1651 단Ⅰ·복Ⅰ·복Ⅶ(번갈아 아래에서 위로)·복Ⅱ(머리 위로 넘겨 둘러 벰)·단Ⅺ·복Ⅺ(가로를 몸에 감음)·복ⅩⅤ(올려 벤 뒤 떨어뜨려 감음) [원문·원문 영역] · 고디뉴 1599 규칙 4·5 「alles ein einziges Tempo」·규칙 9(몸 가운데 높이) [원문 독일어 역] · 셋을 한 흐름으로 잇기 · 지금 칼의 방향을 이어받기 [해석] · 수 [추정] · 이름 가칭',
+};
+// 이베리아 길목 지키기 (10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — v6 기본, docs/strike/iberian_secret_v6_2026-10-11.md · SECRET.iberianSecret 'gilmok'):
+//  사장님 10/11 03:1x '인간이 플레이할 때 비기가 너무 자주 나와 … 일본의 경우를 보면, 노리고 쓰면 한 판에 2-3회 시도할 수 있는데, 타이밍상 실패하기도 하고, 실제 발동은 1-2회,
+//   정확히 안 들어가면 카운터로 손실도 보는 … 그런 컨셉이 좋아보여' → 틀을 일본 고노센과 같게: 준비 → 순간 → 한 칼 → 틀리면 경직.
+//  일본이 '때(상대의 공격)'를 노린다면 이베리아는 '자리(내 칼끝 선)'를 지킨다:
+//   ① 준비: 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.gilmokArmTime 초(유예 gilmokArmGrace) 머물고 공격·막기 중이 아님 (secret.js IaiArm 같은 셈). AI 는 그동안 칼을 몸 옆으로
+//      감아 뒤로 둔 옆 자세(가로 탈류 G.sideR · 가로 레베스 G.sideL — 자세표 '옆 자세'·'왼쪽 옆 자세', 피 단Ⅺ·복Ⅺ · 고 규칙 9)를 잡는다. 플레이어는 '길목 지키기 준비' 표시만
+//   ② 순간: 상대 가슴이 그 경계를 다가오며 넘어 들어오는 그 스텝 (secret.js gilmokEvent — 안에 머무는 것은 세지 않는다). 창을 열면(AI 는 내면) 준비가 풀린다 — 한 번 준비에 한 번 기회
+//   ③ 한 칼: 감아 둔 쪽에서 몸 가운데 높이로 반대쪽 끝까지 둘러 벰 (secret.js gilmokSeq — 길은 v5 마지막 칼 = zwerch·zwerchL 줄, 물리 서보 길) · 힘 창·보조 힘 = 이베리아 값 재사용
+//   ④ 끝나면 경직 SECRET.stiff.iberian 0.5 s 그대로 (맞히면 결정타 SECRET.hitMul 그대로). v4 의 '막히면 밀어냄'(iberianShove)은 넣지 않았다 — 실패 대가를 지우지 않게
+//  근거: 피 단Ⅶ 「This rule serves to deter people in a street and impede them moving from one end to another」·복Ⅶ [원문 영역] — 몬탄테는 자리를 지키는 칼 [해석] ·
+//   단Ⅺ 「talho orizontal」·복Ⅺ 「revez orizontal cingido」 [원문] · 고 규칙 9 「Tajos … in mittlerer Höhe zu einer der Seiten」 [원문 독일어 역]. 경계 넘음을 순간으로 삼는 것·준비 셈은 [해석] · 수 [추정] · 이름 가칭
+//  걸음: 넣지 않음 — 상대가 경계를 넘어 들어오는 중이라 칼이 닿는 동안 거리가 더 줄어든다(피 복Ⅶ 「in each step you must give a blow」는 밀고 드는 무리를 쫓을 때의 걸음) [해석]
+const IBERIAN_SECRET_GILMOK = {
+  name: 'gilmok',
+  nameKo: '길목 지키기', // 이름은 가칭(사장님 확인 전 — 사장님이 고른 안 이름 그대로)
+  when: 'gilmok',
+  do: {
+    flow: true, // 실행은 v5 흐름 틀(토막 queue · 문 · 힘 창)을 그대로 쓴다 — 토막이 하나(또는 감음 + 하나)
+    gilmok: true, // 수 = secret.js gilmokSeq · 준비 셈(IaiArm 'gilmok') · AI 준비 자세
+    power: 'iberianPower', // 1.6 — v5·10/9 이베리아 값 재사용 (새 값 아님)
+    strength: 'iberianStrength', // 1.5 — 같음
+    side: { 1: G.sideR, '-1': G.sideL }, // 감아 둔 칼 = 옆 자세 (이베리아 자세표 '옆 자세' 가로 탈류 · '왼쪽 옆 자세' 가로 레베스)
+    cutMid: [0.0, 0.1], // 둘러 베는 칼의 가운데 점 = zwerch·zwerchL 길 그대로 (몸 가운데 높이 — v5 cutMid 와 같음)
+  },
+  src: '피게이레두 1651 단Ⅶ·복Ⅶ(길목을 막는 규칙)·단Ⅺ·복Ⅺ(가로를 몸에 감아 둘러 벰) [원문·원문 영역] · 고디뉴 1599 규칙 9(몸 가운데 높이) [원문 독일어 역] · 준비 → 경계 넘음 순간 → 한 칼 틀 [해석] · 수 [추정] · 이름 가칭',
 };
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
 const JAPANESE_SECRET = {
@@ -689,7 +715,7 @@ export const TRADITIONS = {
   italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES, temper: ITALIAN_TEMPER, gait: ITALIAN_GAIT, secret: ITALIAN_SECRET },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
   // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(guardTable — guards.js IBERIAN_TABLE, 앞무게 틀 표를 고른 뒤 덮음)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, get secret() { return this.secretSet ?? (SECRET.iberianSecret === 'v4' ? IBERIAN_SECRET_V4 : IBERIAN_SECRET); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.iberianSecret 'flow' 기본 · 'v4' 옛 판 — 읽는 때(AI·플레이어 창이 생길 때) 고른다
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, get secret() { return this.secretSet ?? (SECRET.iberianSecret === 'v4' ? IBERIAN_SECRET_V4 : SECRET.iberianSecret === 'flow' ? IBERIAN_SECRET : IBERIAN_SECRET_GILMOK); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.iberianSecret 'gilmok' 기본(v6 길목 지키기) · 'flow' v5 · 'v4' 옛 판 — 읽는 때(AI·플레이어 창이 생길 때) 고른다
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세 = JAPANESE_WATCH(10/10 원전 — 추단 위주 + 조단·핫소, 전 HIGH_GUARDS 의 황소 둘 뺌) · 자세표 = JAPANESE_GUARDTABLE · 속임수 = JAPANESE_FEINTS(Umschlagen 둘 → 갓토츠·니노코시) · 막기 = JAPANESE_PARRY(10/10 빌린 칸 걷어내기 — 줄마다 원전 받는 꼴의 자리).
   //  물러남 = 한 칼 자세(上段·八相 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).

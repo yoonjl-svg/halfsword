@@ -2,6 +2,8 @@
 //  츠바이핸더(또는 argv[2]) AI 가 서 있는 롱소드 몸(입력 없음)에게 다가가 닿는 거리에 들면 비기를 직접 낸다(secretGo — 조건을 기다리지 않음).
 //  씨앗마다 물리 스텝 기록: 칼끝 빠르기 · 칼끝 자리(몸 기준 옆 x · 높이 y) · 수 이름 · 단계. 수마다 칼끝 최고 빠르기 · 칼끝이 지난 옆 범위(좌우로 실제로 오갔나) · 이음새 칼끝 빠르기 바닥 · 맞힘.
 //  WHO=player: 플레이어 몸(검술 층 skill.secret — 게임과 같은 보정·autoGuard)이 비기를 낸다. 상대 롱소드 AI 는 멈춤, 시작 거리 1.9 m. DIR=x,y = 비기를 낸 끌기 방향(기본 −1,−0.6 = 왼 아래)
+//  10/11 v6 길목 지키기(판 gilmok): AI 는 내기 전 ARM 초(기본 1.0) 동안 손 목표를 준비 자세(옆 자세 — ai.js 길목 준비와 같은 덮기)에 둔 뒤 낸다(ARM=0 = 덮지 않음).
+//   CMP=<기술 이름>(예 zwerch): 비기 대신 그 보통 기술을 같은 자리에서 낸다(startAttack — 손 속도·힘 창·보조 힘 없음) — 칼끝 빠르기 견줌
 //  실행: node tools/sim/hybrid.mjs iberian_flow_probe.mjs [무기 zweihander] [씨앗 수 6]
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { SECRET, SKILL } from '../../src/config.js';
@@ -23,16 +25,24 @@ for (let seed = 1; seed <= N; seed++) {
   const ai = PL ? { M: me.swordArt.measure, secretFree: () => !me.skill.sec, get secretRun() { const s = me.skill.sec; return s ? { stage: s.stage } : null; }, get tech() { return me.skill.sec?.cur ?? null; }, phase: '-', path: { get length() { return me.skill.sec?.path?.length ?? 0; } }, stats: { secrets: {} }, secret: playerSecretOf(me) } : G.ai;
   let run = null;
   const rec = [];
+  const GIL = !PL && ai.secret?.do?.gilmok;
+  const ARM = +(process.env.ARM ?? 1.0);
+  let armT = 0;
+  const CMP = process.env.CMP ? ai.school.techByName[process.env.CMP] : null;
+  if (GIL && ARM > 0) { const mh = ai.moveHand.bind(ai); ai.moveHand = (dt) => { if (t0 == null && armT > 0) { const p = ai.secret.do.side[1]; ai.hand.set(p[0], p[1]); ai.handSpeed = 0.9; } return mh(dt); }; const sa = ai.startAttack.bind(ai); ai.startAttack = (t, why, o) => (t0 == null && why !== 'secret' && why !== 'test' ? false : sa(t, why, o)); } // 준비 동안 AI 가 스스로 치지 않게
   let t0 = null;
   let woundsE = 0;
   G.onWound = (att, vic, r) => { if (att === me && t0 != null) { woundsE++; rec.push({ wound: r.energy, zone: r.zone, t: G.t - t0 }); } };
   for (let i = 0; i < 120 * 14; i++) {
     G.step();
-    if (t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < ai.M.reach - 0.1 && ai.secretFree() && !ai.secretRun) {
-      if (PL ? me.skill.secret({ S: ai.secret, ctx: null, dir: DIR }) : ai.secretGo(ai.secret)) { t0 = G.t; fired++; }
+    const near = t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < ai.M.reach - 0.1 && ai.secretFree() && !ai.secretRun;
+    if (t0 == null && (armT > 0 || near) && GIL && ARM > 0 && armT < ARM) { armT += DT; continue; }
+    if (near) {
+      if (CMP) { if (ai.startAttack(CMP, 'test', { noFeint: true })) { t0 = G.t; fired++; } }
+      else if (PL ? me.skill.secret({ S: ai.secret, ctx: null, dir: DIR }) : ai.secretGo(ai.secret)) { t0 = G.t; fired++; }
     }
     if (t0 != null) {
-      const sr = ai.secretRun;
+      const sr = CMP ? (ai.mode === 'attack' ? { stage: 'strike' } : null) : ai.secretRun;
       const c = me.bodies.chest.translation();
       me.right(_r);
       me.forward(_f);

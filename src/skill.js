@@ -694,13 +694,14 @@ export class Skill {
         return;
       }
       // 길 끝: 대기열(連環 다음 수)로 곧장, 독일은 맞물렸고 못 맞혔으면 Duplieren 한 번, 아니면 따라 지나감
+      // 이베리아 흐름 (10/11): 실제 칼이 토막 끝 자리에 갈 때까지 기다린다 (flowGate, 최대 FLOW_GATE_MAX, 이 토막이 맞혔으면 곧장 — ai.js secretStrikeEnd 와 같음).
+      //  v6 길목 지키기의 한 칼은 마지막 토막에도 문이 있다(칼끝이 반대쪽으로 건너감) — v5 의 마지막 토막은 문이 없어 전과 같다
+      if (run.cur?.gate) {
+        run.gateT = (run.gateT ?? 0) + dt;
+        if (!flowGate(f, run.cur.gate) && !run.segHit && run.gateT < FLOW_GATE_MAX) return; // 이 토막이 맞혔으면 기다리지 않는다
+        run.gateT = 0;
+      }
       if (run.queue.length) {
-        // 이베리아 흐름 (10/11): 실제 칼이 토막 끝 자리에 갈 때까지 기다린다 (flowGate, 최대 FLOW_GATE_MAX, 이 토막이 맞혔으면 곧장 — ai.js secretStrikeEnd 와 같음)
-        if (run.cur?.gate) {
-          run.gateT = (run.gateT ?? 0) + dt;
-          if (!flowGate(f, run.cur.gate) && !run.segHit && run.gateT < FLOW_GATE_MAX) return; // 이 토막이 맞혔으면 기다리지 않는다
-          run.gateT = 0;
-        }
         this.secretNextMove();
         return;
       }

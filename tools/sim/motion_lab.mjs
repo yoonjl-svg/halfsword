@@ -293,6 +293,7 @@ if (mode === 'poses') {
   // 비기·에너지 계기 (10/9 유파 비기): 시험 쪽 비기 stats.secrets 합 · 비기 동안 X 가 낸 상처 에너지(combat J) · 기술별 맞힘 에너지(상처 J) ·
   //  맞은 칼의 칼끝 추정 에너지 ½·m·v²(때린 쪽 칼끝 속도의 0.2 s 안 최고, 양쪽) — 독일 비기 문턱 lethalJ 를 고르는 분포. 읽기만 (난수·물리 무관)
   const secAgg = {};
+  const gil = { arms: 0, wins: 0, games: 0, armT: 0 }; // 길목 지키기 (10/11 v6 — 읽기만)
   const secWound = {};
   let secName = null;
   let XAm = null;
@@ -444,6 +445,7 @@ if (mode === 'poses') {
             if (mx > 0.05) tmp.cT += DT;
             tmp.cX += mx * DT;
           }
+          if (w && G.t > 2 && XA.gilArm?.armed) gil.armT += DT; // 길목 준비(옆 자세) 동안의 간 보기 시간
           const gn = XA.guard?.name ?? null;
           if (w && G.t > 2 && gn) gDwell[gn] = (gDwell[gn] ?? 0) + DT;
           if (w && G.t > 2 && process.env.GUARD_DWELL === '1') { const ni = X.guardPose?.nearest; const nn = (ni >= 0 ? X.guardPose.table?.[ni]?.name : null) ?? '-'; dwellN[nn] = (dwellN[nn] ?? 0) + DT; }
@@ -511,6 +513,7 @@ if (mode === 'poses') {
       for (const [k, v] of Object.entries(XA?.stats.passives ?? {})) pasFired[k] = (pasFired[k] ?? 0) + v;
       for (const [k, v] of Object.entries(XA?.stats.passiveRolls ?? {})) pasRolls[k] = (pasRolls[k] ?? 0) + v;
       pasSkipped += XA?.stats.passiveSkipped ?? 0;
+      if (XA?.gilArm) { gil.arms += XA.gilArm.ons; gil.wins += XA.stats.gilWins ?? 0; gil.games++; } // 길목 (10/11 v6): 준비 켜진 수 · 창(경계 넘음 사건) 수
       for (const [k, v] of Object.entries(XA?.stats.secrets ?? {})) {
         const A = (secAgg[k] ??= { fired: 0, landed: 0, E: 0, Emax: 0 });
         A.fired += v.fired;
@@ -548,6 +551,7 @@ if (mode === 'poses') {
     const W = secWound[secName] ?? [];
     const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
     const mx = (a) => (a.length ? Math.max(...a) : 0);
+    if (gil.games) console.log(`  길목 지키기 (판마다): 준비 ${(gil.arms / gil.games).toFixed(2)} · 창(경계 넘음) ${(gil.wins / gil.games).toFixed(2)} · 낸 ${(A.fired / gil.games).toFixed(2)} · 맞힘 ${(A.landed / gil.games).toFixed(2)} (모두 준비 ${gil.arms} · 창 ${gil.wins}) · 간 보기 중 준비 자세 몫 ${tmp.wT ? pc(gil.armT / tmp.wT) : '-'}`);
     console.log(`  비기 [${secName ?? '-'}]: ${secName && secName !== '-' ? `낸 ${A.fired} / 맞힘 ${A.landed}${A.blocked ? ` · 막혀 밀어냄 ${A.blocked}` : ''} · 상처 에너지 평균 ${avg(W).toFixed(0)} J · 최대 ${mx(W).toFixed(0)} J (상처 ${W.length}) · 칼끝 추정 평균 ${A.landed ? (A.E / A.landed).toFixed(0) : '-'} J · 최대 ${A.Emax.toFixed(0)} J` : '-'}`);
     // 기술별 맞힘 에너지 (상처 J): 상처 수 많은 순 12 + 비기(★)·真向(oberhau)·altibaixo 는 늘
     const rows = Object.entries(techE).sort((a, b) => b[1].length - a[1].length);

@@ -124,6 +124,7 @@ function segPoint(ax, ay, az, bx, by, bz, px, py, pz) {
 export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex = null) {
   const W = [].concat(S.when);
   if (W.includes('inside')) return insideEvent(s0, c, d0, ex);
+  if (W.includes('gilmok')) return gilmokEvent(s0, c, d0, ex);
   if (W.includes('threat')) {
     const ctx = threatNow(sense, foe, s0, c, r, d0, foeReach);
     if (ctx && S.cond?.lethal && me) lethalPath(ctx, s0, me);
@@ -161,6 +162,23 @@ function insideEvent(s0, c, d0, ex) {
   const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0);
   const on = closing > SECRET.iberianInsideClosing || st.insideT >= SECRET.iberianInsideDwell;
   return on ? { on, ctx: { ev: 'inside', closing, dwell: st.insideT } } : { on: false, ctx: null };
+}
+
+/**
+ * 이베리아 길목 지키기 사건 (10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — v6): 준비(ex.armed — IaiArm 'gilmok' 셈)된 채, 상대 가슴이 내 칼끝 거리(reach) 경계를
+ *  **다가오며 넘어 들어오는 그 순간** — 지난 스텝 거리 ≥ reach 이고 이번 스텝 거리 < reach, 그리고 상대 가슴이 나 쪽으로 SECRET.iberianInsideClosing m/s 넘게 다가옴
+ *  (v4·v5 '호 안쪽'의 다가옴 문턱 0.3 을 그대로 다시 씀 — 새 값 아님. 내가 걸어 들어가 경계를 넘은 것은 상대가 '길목에 들어온' 것이 아니다).
+ *  안에 머무는 것은 세지 않는다(v5 '호 안쪽'은 상태라 맞붙은 거리 내내 창이 열렸다). ex = { reach, dt, st, armed } — st.gilPrevD 에 지난 거리를 적는다. 굴림 없음
+ *  근거: 피 단Ⅶ 「This rule serves to deter people in a street and impede them moving from one end to another」 [원문 영역] — 몬탄테는 자리(길목)를 지키는 칼 [해석]
+ */
+function gilmokEvent(s0, c, d0, ex) {
+  if (!ex || !(ex.reach > 0)) return { on: false, ctx: null };
+  const st = ex.st;
+  const prev = st.gilPrevD;
+  st.gilPrevD = d0;
+  if (!ex.armed || prev == null || !(prev >= ex.reach && d0 < ex.reach)) return { on: false, ctx: null };
+  const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0);
+  return closing > SECRET.iberianInsideClosing ? { on: true, ctx: { ev: 'gilmok', closing } } : { on: false, ctx: null };
 }
 
 /** 비기 조건 (cond) — 굴림 없음. view = { reach, foeReach, clinch } */
@@ -226,10 +244,15 @@ export class BindCount {
  *  간격 안으로 들어가거나 공격·막기(busy)면 풀린다. AI 는 이때 웅크린 발도 대기 자세(secret_instant.js iaiReadyPose), 플레이어는 '고노센 준비' 표시만.
  *  고노센(cond.armed)은 armed 일 때만 — SECRET.iai 일 때. AI·플레이어 같은 셈
  */
+//  10/11 이베리아 길목 지키기(v6)도 같은 셈을 쓴다 — 열쇠만 다르다(new IaiArm('gilmokArmTime', 'gilmokArmGrace'), outside = 내 칼끝 거리 reach 밖). 일본은 열쇠 없이 부르니 전과 같다.
+//  ons = 준비가 켜진 수 (재기 — 판정에는 안 씀) · consume() = 창을 열었거나 비기를 냄 → 준비가 풀림 (길목: 한 번 준비에 한 번 기회)
 export class IaiArm {
-  constructor() {
+  constructor(timeKey = 'iaiArmTime', graceKey = 'iaiArmGrace') {
     this.t = 0;
     this.armed = false;
+    this.timeKey = timeKey;
+    this.graceKey = graceKey;
+    this.ons = 0;
   }
   tick(dt, outside, busy) {
     if (busy) {
@@ -239,12 +262,18 @@ export class IaiArm {
     }
     if (outside) {
       this.t += dt;
-      this.grace = SECRET.iaiArmGrace;
-      this.armed = this.t >= SECRET.iaiArmTime;
+      this.grace = SECRET[this.graceKey];
+      const was = this.armed;
+      this.armed = this.t >= SECRET[this.timeKey];
+      if (this.armed && !was) this.ons++;
       return;
     }
     // 간격 안: 대기 자세는 iaiArmGrace 초 뒤에 풀린다 (달려드는 상대가 간격 안으로 막 들어온 순간을 받을 수 있게)
     if (this.armed && (this.grace -= dt) > 0) return;
+    this.t = 0;
+    this.armed = false;
+  }
+  consume() {
     this.t = 0;
     this.armed = false;
   }
@@ -269,6 +298,7 @@ export function bladesTouch(me, foe) {
  *  토막 = { name, nameKo, from, pre: [](이음새 물레 점 없음 — 앞 토막 끝에서 곧장), path, gate?, open, kind, reach, base }
  */
 export function montanteFlowSeq(hand, dir, D) {
+  if (D.gilmok) return gilmokSeq(hand, D); // v6 길목 지키기: 한 칼 (아래)
   const hx = hand[0];
   const hy = hand[1];
   const len = Math.hypot(dir?.[0] ?? 0, dir?.[1] ?? 0);
@@ -313,6 +343,31 @@ export function montanteFlowSeq(hand, dir, D) {
   return seq;
 }
 
+/**
+ * 이베리아 길목 지키기의 한 칼 (10/11 v6 — schools.js IBERIAN_SECRET_GILMOK do.gilmok, AI·플레이어 같은 함수). 난수 없음.
+ *  감아 둔 쪽 s(손이 있는 쪽 — 가운데면 오른쪽 = 탈류, 피 단Ⅰ)에서 몸 전체를 돌려 몸 가운데 높이(고 규칙 9 「in mittlerer Höhe」)로 반대쪽 끝까지 둘러 벤다.
+ *  길 = v5 마지막 칼(flowTalhoCingido/flowRevezCingido: cutMid [0, 0.1] → 반대쪽 옆 자세) = 꾸러미 zwerch·zwerchL 줄. 물리 서보 길(순간이동·스텝마다 자리 지정 없음).
+ *  손이 그 쪽 옆 자세(D.side[s])에서 패드 거리 0.15 밖이면(v5 montanteFlowSeq 의 '이미 아래' 판정 0.15 그대로 — 새 값 아님)(플레이어 — 준비 자세를 잡지 않고 창을 받은 때) 먼저 그 쪽으로 감는 토막(문 = 칼끝이 그 쪽 · 가슴보다 뒤 —
+ *  v5 '머리 위로 넘김'과 같은 문)을 둔다. AI 는 준비 동안 옆 자세를 잡고 있으니 곧장 벤다
+ */
+export function gilmokSeq(hand, D) {
+  const hx = hand[0];
+  const s = Math.abs(hx) > 0.05 ? (hx < 0 ? -1 : 1) : 1;
+  const P = (o, k) => o[k].slice();
+  const seq = [];
+  let at = hand.slice();
+  const push = (t) => {
+    seq.push({ kind: 'cut', reach: 0, base: 1, ...t, from: at.slice(), pre: [] });
+    at = t.path[t.path.length - 1].slice();
+  };
+  const side = P(D.side, s);
+  if (Math.hypot(hand[0] - side[0], hand[1] - side[1]) > 0.15) push({ name: s > 0 ? 'gilmokWindR' : 'gilmokWindL', nameKo: s > 0 ? '가로 탈류로 감음' : '가로 레베스로 감음', path: [side], gate: { side: s, behind: true }, open: 'H' });
+  // 문 past: 칼끝이 반대쪽으로 건너갈 때까지(최대 FLOW_GATE_MAX) 손은 끝 자리를 당기고 힘 창을 쥔다 — 옆 자세에서 칼이 몸 뒤로 감겨 있어 칼끝이 손보다 0.3 s 늦게 앞으로 온다(탐침:
+  //  문이 없으면 손 목표가 먼저 끝나 칼이 경직 동안에야 건너갔다)
+  push({ name: s > 0 ? 'gilmokTalho' : 'gilmokRevez', nameKo: s > 0 ? '길목 둘러 베기 (talho orizontal cingido)' : '길목 둘러 베기 (revez orizontal cingido)', path: [D.cutMid.slice(), P(D.side, -s)], gate: { past: -s }, open: s > 0 ? 'UL' : 'UR' }); // 빈틈 = zwerch · zwerchL
+  return seq;
+}
+
 /** 흐름 토막 문을 기다리는 최대 (s) — 따라 지나감(손이 끝 자세에 닿은 뒤 칼이 지나가길 기다림)의 바탕 시간과 같은 값 (ai.js follow timer 0.3 · skill.js follow run.t ≥ 0.3).
  *  탐침(tools/sim/iberian_flow_probe.mjs): 0.5 면 막힌 토막에서 칼끝이 0 가까이 멎은 채 0.5 s 씩 서 흐름이 끊겨 보였다(플레이어 2.4~2.7 s) — 0.3 (1.6~1.9 s) */
 export const FLOW_GATE_MAX = 0.3;
@@ -339,6 +394,7 @@ export function flowGate(f, g) {
   if (g.low != null) return lat * g.low > 0 && ry < 0;
   if (g.cross != null) return lat * g.cross > 0 && ry > 0;
   if (g.behind) return fw < 0 && (g.side == null || lat * g.side > 0);
+  if (g.past != null) return lat * g.past > 0; // v6 길목 한 칼: 칼끝이 반대쪽(past)으로 건너갔다
   return true;
 }
 
@@ -366,6 +422,8 @@ export class PlayerSecretWatch {
     this.combo = 0;
     this.binds = new BindCount(); // 이베리아 맺힘 셈 (10/10)
     this.iaiArm = new IaiArm(); // 일본 발도 대기 (10/10 02:4x — 플레이어는 표시만)
+    this.gilArm = new IaiArm('gilmokArmTime', 'gilmokArmGrace'); // 이베리아 길목 지키기 준비 (10/11 v6 — 플레이어는 표시만, AI 와 같은 셈)
+    this.gilWins = 0; // 길목 창 수 (재기)
     this.gap = Infinity; // 마지막 베기 끝에서 지난 시간
     this.swing = null; // 지금 베기 { first, landed }
     this.prevFoePain = foe.pain;
@@ -393,6 +451,7 @@ export class PlayerSecretWatch {
       this.swing = null;
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
+      this.gilArm.tick(0, false, true);
       return;
     }
     const c = me.bodies.chest.translation();
@@ -409,6 +468,7 @@ export class PlayerSecretWatch {
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
+    if (S.do?.gilmok) this.gilArm.tick(dt, d0 > V.reach, sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
@@ -429,7 +489,7 @@ export class PlayerSecretWatch {
     // 상대 사건 (AI secretScan 과 같은 꼴: 사건 한 번에 한 번, 0.3 s 그치면 다시 건다)
     const r = me.right(_r);
     const E = this.ev;
-    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: V.reach, dt, st: E }); // ex: 이베리아 호 안쪽 (reach · 머문 시간)
+    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: V.reach, dt, st: E, armed: this.gilArm.armed }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비)
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
@@ -439,6 +499,10 @@ export class PlayerSecretWatch {
     if (!E.armed || s0.state !== 'stand' || this.open) return;
     if (!secretCond(S, ctx, d0, V)) return;
     E.armed = false;
+    if (ctx?.ev === 'gilmok') {
+      this.gilArm.consume(); // 한 번 준비에 한 번 기회 — 창을 놓치면 다시 간격 밖에서 준비해야 한다
+      this.gilWins++;
+    }
     this.openWindow(ctx);
   }
 
