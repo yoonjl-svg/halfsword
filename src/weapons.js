@@ -12,6 +12,7 @@
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import { classifyWeapon } from './weapon_class.js';
+import { MONTANTE } from './config.js';
 import * as THREE from 'three';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 
@@ -384,6 +385,16 @@ const longsword = finalizeSpec('longsword', {
 //     2.892kg·칼날 117cm [M]. 균형점 실측 자료를 못 찾아(연구 노트 §14) 롱소드 가문의
 //     비율로 크기만 올려서 추정 [I]
 // ═════════════════════════════════════════════════════════════
+// 오른손 날밑 가까이 (사장님 10/10 14:5x '넣어' — 고디뉴 1599 몬탄테 규칙 3 「ergreife das Montante mit der rechten Hand nahe der Parierstange」,
+//  확인표 683·689~692, docs/motion/iberian_montante_2026-10-10.md §12). 칼 원점 = 오른손 주먹 가운데. 손~칼끝 1.36 m·폼멜·왼손(gripAlong −0.30)은 그대로 두고
+//  칼날을 아래로 늘려(1.17 → 1.26 m = 톨레도 몬탄테 Cleveland 1916.1509 칼날 126.4 · 1916.1507 126 cm) 날밑을 오른손 바로 위로 내린다:
+//  손 → 칼날 밑동(hiltLength) 0.19 → 0.10 · 날밑 가운데 0.175 → 0.085(아랫면 0.065 = 주먹 반 폭 0.045 + 여유 0.02) · 오른손 위 빈 자루(0.155 m)는 없어진다.
+//  칼날 1.7 kg 의 질량 분포는 전 꼴 그대로(손에서 칼날 무게중심 0.588 m · 그 둘레 관성 같음 — 늘어난 9 cm 는 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
+//  자루 상자는 날밑 밑(0.07)~폼멜(−0.31) 0.38 m, 자루 질량 0.26 kg 그대로(합 2.9 kg 그대로). MONTANTE.hand 'old' = 전 꼴 (`?montanteHand=old`)
+const ZW_OLD = MONTANTE.hand === 'old';
+const ZW = ZW_OLD
+  ? { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: -0.075, gripH: 0.235, com: 0.34, gyr: 0.253 }
+  : { hilt: 0.1, blade: 1.26, crossY: 0.085, gripY: -0.12, gripH: 0.19, com: (0.19 + 0.34 * 1.17 - 0.1) / 1.26, gyr: (0.253 * 1.17) / 1.26 };
 const zweihander = finalizeSpec('zweihander', {
   nameKo: '츠바이핸더 (대형 양손검)', nameEn: 'Zweihänder',
   desc: '정예 용병이 쓰던 거대한 양손검.\n느리지만 맞으면 묵직하게 부순다.',
@@ -392,8 +403,8 @@ const zweihander = finalizeSpec('zweihander', {
   // 쥠 (사장님 10/10 '쥠은 고증대로 넓혀', 확인표 680~): 고디뉴 몬탄테 규칙 3 '오른손 날밑 가까이, 왼손 폼멜 가까이'.
   //  자루 길이는 같은 시대 톨레도 몬탄테 두 자루 실측(Cleveland 1916.1509 · 1916.1507: 날밑~폼멜 끝 0.40~0.42 m)으로 —
   //  오른손(칼 원점)에서 폼멜 끝까지 0.41 − 0.065(날밑 쥔 주먹 반 폭 + 날밑 두께) ≈ 0.35 m. 왼손은 폼멜 목(−0.30, 손 사이 0.30 m).
-  //  hiltLength(손~칼날 밑동)·칼날·코등이는 그대로라 닿는 거리·칼날 관성은 안 바뀐다 (docs/motion/iberian_montante_2026-10-10.md '쥠')
-  hiltLength: 0.19, bladeLength: 1.17, gripAlong: -0.3,
+  //  그때(10/10 14:1x)는 hiltLength(손~칼날 밑동)·칼날·코등이를 그대로 두었고, 오른손을 날밑으로 올린 것은 10/10 14:5x '넣어'(위 ZW, §12)
+  hiltLength: ZW.hilt, bladeLength: ZW.blade, gripAlong: -0.3,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
   // 손목 서보 상한: 두 손 쥠 기본값(26)을 쓴다. 예전 28 덮개는 '자루가 길어 손 사이 지렛대가 커서'를 대신 넣은 값이었는데,
   //  쥠을 넓혀(손 사이 0.18 → 0.30 m) 그 지렛대가 빈손 스프링으로 물리에 직접 들어가서 뺐다 (48 판 28: 46 %·넘어짐 45 / 26: 48 %·33, 확인표 680~)
@@ -406,16 +417,17 @@ const zweihander = finalizeSpec('zweihander', {
   }),
   buildParts(look) {
     const L = this.bladeLength;
-    // 자루: 코등이 밑(0.16)에서 폼멜(−0.31)까지 0.47 m (전엔 ±0.16 = 0.32 m, 폼멜 −0.16). 부품 질량은 그대로(합 2.9 kg)
-    const grip = boxInertia(0.26, 0.02, 0.235, 0.02);
+    // 자루: 코등이 밑에서 폼멜(−0.31)까지 — 오른손 날밑(기본) 0.07 → 0.38 m · 옛 꼴 0.16 → 0.47 m (10/10 14:1x 넓힘 전엔 ±0.16 = 0.32 m). 부품 질량은 그대로(합 2.9 kg)
+    //  날밑: 가운데 ZW.crossY (기본 0.085, 옛 0.175) · 칼날: 손 위 ZW.hilt 부터 — 칼날 질량 분포(무게중심 자리·그 둘레 관성)는 두 꼴이 같다 (위 ZW 머리말)
+    const grip = boxInertia(0.26, 0.02, ZW.gripH, 0.02);
     const pommel = sphereInertia(0.62, 0.038);
     const cross = boxInertia(0.32, 0.14, 0.02, 0.026);
-    const blade = bladeInertia(1.7, L, 0.34, 0.253, 0.056, 0.018);
+    const blade = bladeInertia(1.7, L, ZW.com, ZW.gyr, 0.056, 0.018);
     return [
-      partTuple(['box', 0.02, 0.235, 0.02], -0.075, 0.26, 0, grip.Ie, grip.It, look.grip),
+      partTuple(['box', 0.02, ZW.gripH, 0.02], ZW.gripY, 0.26, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.038], -0.31, 0.62, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.14, 0.02, 0.026], 0.175, 0.32, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.028, L / 2, 0.009], 0.19 + L / 2, 1.7, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
+      partTuple(['box', 0.14, 0.02, 0.026], ZW.crossY, 0.32, 0, cross.Ie, cross.It, look.hilt),
+      partTuple(['box', 0.028, L / 2, 0.009], this.hiltLength + L / 2, 1.7, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];
   },
   // 레어 등급 마감 (전부 물리 무관, 콜라이더에서 ~1cm 안):
