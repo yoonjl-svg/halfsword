@@ -171,7 +171,7 @@ function mergeLibSchool(school, weapon) {
   const have = new Set(t.map((x) => x.name));
   const add = (NEW_TECH[frame] ?? []).filter((x) => x.ai !== false && !have.has(x.name) && !(style === 'blunt' && x.name === 'wristCut') && (style !== 'thrust' || x.kind === 'thrust'));
   t = [...t, ...add];
-  const out = { ...school, lib: true, tech: t, techByName: Object.fromEntries(t.map((x) => [x.name, x])), feints: styleFeints(style, frame), guards: school.guards === WATCH_GUARDS ? frameWatchGuards(frame) : school.guards };
+  const out = { ...school, lib: true, tech: t, techByName: Object.fromEntries(t.map((x) => [x.name, x])), feints: TRADITIONS[school.tradition]?.ownFeints ? school.feints : styleFeints(style, frame), guards: school.guards === WATCH_GUARDS ? frameWatchGuards(frame) : school.guards };
   _libSchools.set(key, out);
   return out;
 }
