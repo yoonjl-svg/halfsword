@@ -9,7 +9,7 @@
     menu   — 설정·일시정지·결과 창
     swatch — 오렌지 후보를 실제 배경(하늘·모래·돌기둥) 위에
   찍기: node tools/ui/hud_shots.mjs mockup - docs/ui
-  글은 지금 게임 문구 그대로다 (문구는 편집자 몫). 여기 :root 토큰이 구현할 때 index.html :root 로 옮길 값이다.
+  글은 편집자 문구 정리(10/10) 뒤의 게임 문구와 짜임(첫 줄 한국어 · 둘째 줄 원어 · 꼬리표 `[내|상대] 유파 · 종류`)을 따른다. 여기 :root 토큰이 구현할 때 index.html :root 로 옮길 값이다.
 -->
 <html lang="ko">
 <head>
@@ -171,9 +171,9 @@
   const PORT = o === 'portrait';
 
   const rstack = (slots) => H(`<div class="hud" id="rstack" data-role="R 오른쪽 위">${slots}</div>`);
-  const guard = `<div class="slot guard" data-role="R1 자세"><b>긴 자세 (Langort)</b><small>팔을 쭉 뻗어 칼끝으로 겨눈 자세</small></div>`;
-  const tech = `<div class="slot tech" data-role="R2 패시브·고유 동작"><b>Nachreisen (따라 들어가기)</b><small>상대 · 독일 · 패시브</small></div>`;
-  const secret = `<div class="slot secret" data-role="R3 비기"><b>Versetzen (받아 베기)</b><small>상대 · 독일 · 비기</small></div>`;
+  const guard = `<div class="slot guard" data-role="R1 자세"><b>긴 자세</b><small>Langort · 팔을 쭉 뻗어 칼끝으로 겨눈 자세</small></div>`;
+  const tech = `<div class="slot tech" data-role="R2 패시브·고유 동작"><b>따라 들어가기</b><small>Nachreisen · 상대 독일 · 패시브</small></div>`;
+  const secret = `<div class="slot secret" data-role="R3 비기"><b>받아 베기</b><small>Versetzen · 상대 독일 · 비기</small></div>`;
   const lstack = (guide) => H(`<div class="hud" id="lstack" data-role="L 인물"><span class="nm">오소리 브란</span><span class="ep">나무꾼</span><div class="ln">“젠장! 이런 막대기 뿐이라니.”</div>${guide ? `<div class="gd">${guide}</div>` : ''}</div>`);
 
   if (scene === 'hud') {

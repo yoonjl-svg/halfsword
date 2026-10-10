@@ -29,7 +29,8 @@ console.log(`WEAPON ${weapon} secret ${S}`);
 const probe = () =>
   page.evaluate(() => {
     const g = window.game;
-    const el = document.getElementById('techCue');
+    // 10/10 글자 체계: 내 비기 알림은 #secretSlot(R3) — 창 열림은 가운데 #stateCue(C)에도, 경직은 #stateCue. 보이는 칸 하나를 읽는다 (없으면 R3)
+    const el = [...document.querySelectorAll('#secretSlot, #stateCue, #techSlot')].find((e) => e.classList.contains('show')) ?? document.getElementById('secretSlot');
     return {
       sim: +g.stats.simTime.toFixed(2),
       state: g.state,
@@ -38,7 +39,7 @@ const probe = () =>
       stage: g.player.skill.sec?.stage ?? null,
       bursts: g.player.skill.secretBursts,
       stats: g.player.skill.secretStats,
-      cue: { show: el.classList.contains('show'), kind: el.dataset.kind, who: el.dataset.who, op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim() },
+      cue: { slot: el.id, show: el.classList.contains('show'), kind: el.dataset.kind, who: el.dataset.who, op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim() },
       d: +g.player.foeDistance().toFixed(2),
       dropped: g.player.skill.secretDropped ?? 0,
       pain: +g.player.pain.toFixed(2),

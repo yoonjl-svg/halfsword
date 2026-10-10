@@ -4,6 +4,7 @@
 //  실행: npx vite build && npx vite preview --port 4317 --strictPort &
 //        node tools/ui/hud_shots.mjs before  http://127.0.0.1:4317 docs/ui     → hud_before_{portrait,landscape}_<장면>.png + hud_bg_<방향>.png(글자 없는 배경) + 잰 값 JSON
 //        node tools/ui/hud_shots.mjs mockup  - docs/ui                          → tools/ui/hud_mockup.html 을 배경 위에 얹어 hud_mockup_{portrait,landscape}.png
+//        node tools/ui/hud_shots.mjs after   http://127.0.0.1:4317 docs/ui     → 구현 뒤 같은 장면 hud_after_*.png (새 칸 #techSlot·#secretSlot·#stateCue, 배경은 다시 찍지 않는다)
 //  저장소에 넣을 때는 PNG 를 256 색으로 줄였다 (PIL quantize MEDIANCUT · 디더 없음 — 21 MB → 9 MB).
 //  띄우기는 tools/browser/*.mjs 와 같다 (설치된 Chromium + swiftshader GL). 소프트웨어 GL 은 느리다 — 장면 하나에 수십 초.
 import { chromium } from 'playwright';
@@ -12,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const MODE = process.argv[2] || 'before';
+const AFTER = MODE === 'after';
 const base = process.argv[3] && process.argv[3] !== '-' ? process.argv[3] : 'http://127.0.0.1:4317';
 const dir = process.argv[4] || 'docs/ui';
 const ONLY = (process.env.ORIENT || 'portrait,landscape').split(',');
@@ -32,7 +34,7 @@ async function newPage(o) {
 
 // 글자 요소의 자리·글꼴·색을 잰다 (보이는 것만)
 const MEASURE = () => {
-  const sel = ['#guardName b', '#guardName span', '#techCue b', '#techCue small', '#toast', '#emoMsg', '#hint', '#foeIntro b', '#foeIntro i', '#foeIntro span', '#foeIntro em', '#topButtons', '#moveStick', '.drawRow'];
+  const sel = ['#guardName b', '#guardName span', '#guardName small', '#techCue > b', '#techCue > small', '#techSlot b', '#secretSlot b', '#stateCue b', '#toast', '#emoMsg', '#hint', '#foeIntro b', '#foeIntro i', '#foeIntro span', '#foeIntro em', '#topButtons', '#moveStick', '.drawRow'];
   const out = {};
   for (const s of sel) {
     const el = document.querySelector(s);
@@ -57,14 +59,38 @@ async function openFight(o, q) {
 }
 
 async function shot(page, o, name, note) {
-  const file = path.join(dir, `hud_before_${o}_${name}.png`);
+  const file = path.join(dir, `hud_${AFTER ? 'after' : 'before'}_${o}_${name}.png`);
   await page.screenshot({ path: file });
   metrics[`${o}_${name}`] = { note, ...(await page.evaluate(MEASURE)) };
   console.log('SHOT', file, note);
 }
 
 // 요소를 지금 모습 그대로 붙잡는다 (게임 루프가 show 를 떼지 못하게) — 이 캡처 페이지 안에서만
-const PIN = `window.__pin = (id) => { const el = document.getElementById(id); el.classList.remove = () => {}; return el; };`;
+const PIN = `window.__pin = (id) => { const el = document.getElementById(id); el.classList.remove = () => {}; return el; };
+window.__after = ${AFTER};
+// '한국어 (원어)' → [한국어, 원어] (main.js splitName 과 같은 규칙)
+window.__split = (s) => { const m = /^(.*?)\\s*\\(([^()]*)\\)\\s*(.*)$/.exec(s); if (!m || !m[1]) return [s, '']; const r = m[3].replace(/^·\\s*/, ''); return !r || m[3].startsWith('·') ? [m[1], [m[2], r].filter(Boolean).join(' · ')] : [m[1] + ' ' + r, m[2]]; };
+// 자세 칸에 글 넣기 (지금: b + span 한 줄 이름 / 뒤: b 한국어 + small 원어 · 설명)
+window.__guard = (info) => { const gn = __pin('guardName'); if (__after) { const [a, b] = __split(info.name); gn.innerHTML = '<b>' + a + '</b><small>' + [b, info.desc].filter(Boolean).join(' · ') + '</small>'; } else gn.innerHTML = '<b>' + info.name + '</b><span>' + info.desc + '</span>'; gn.classList.add('show'); };
+// 기술 알림 넣기 (지금: #techCue 한 칸 / 뒤: 종류에 따라 R2 #techSlot · R3 #secretSlot · C #stateCue, 다른 칸은 비운다)
+window.__cue = (kind, text, tag) => {
+  const who = tag.startsWith('내') ? 'me' : 'foe';
+  const put = (id, b, sm) => { const el = __pin(id); el.innerHTML = '<b>' + b + '</b><small>' + sm + '</small>'; el.dataset.kind = kind; el.dataset.who = who; el.classList.add('show'); };
+  if (!__after) return put('techCue', text, tag);
+  const [a, b] = __split(text);
+  const slot = { passive: 'techSlot', unique: 'techSlot', secret: 'secretSlot', secretReady: 'secretSlot', secretArm: 'secretSlot', stiff: 'stateCue' }[kind];
+  for (const id of ['secretSlot', 'stateCue']) if (id !== slot) document.getElementById(id).className = id === 'stateCue' ? '' : 'slot';
+  if (kind === 'stiff') return put('stateCue', text, tag);
+  const sm = (b ? '<span class="o">' + b + '</span><span class="t">&nbsp;· ' : '<span class="t">') + tag + '</span>'; // main.js paintSlot 과 같은 짜임
+  put(slot, a, sm);
+  if (kind === 'secretReady') put('stateCue', a, '<span class="t">' + tag + '</span>');
+};`;
+// 장면 글 (편집자 문구 정리 뒤 서양 유파 이름은 '한국어 (원어)')
+const TXT = AFTER
+  ? { passive: '맞받기 (Indes)', secret: '받아 베기 (Versetzen)', nach: '따라 들어가기 (Nachreisen)', tagP: '상대 독일 · 패시브', tagMe: '내 독일 · 비기', tagArm: '내 일본 · 비기', tagStiff: '상대 독일 · 비기' }
+  : { passive: 'Indes (맞받기)', secret: 'Versetzen (받아 베기)', nach: 'Nachreisen (따라 들어가기)', tagP: '독일 · 패시브', tagMe: '내 독일 · 비기', tagArm: '내 일본 · 비기', tagStiff: '상대 독일 · 비기 뒤' };
+const R2 = AFTER ? 'techSlot' : 'techCue';
+const R3 = AFTER ? 'secretSlot' : 'techCue';
 
 async function before(o) {
   // 1) 무기 뽑기: 상대 소개(이름·칭호·한마디) + 안내 em + 카드 세 장
@@ -100,51 +126,42 @@ async function before(o) {
   // 3) 싸움 중: 자세 이름(실제 자세표 글) + 상대 패시브 알림(실제 경로 enemy.techCue) + 감정 알림(DOM 직접)
   await page.waitForFunction(() => window.game.player.fightT > 2.4, null, { timeout: 120000 });
   await page.evaluate(PIN);
-  await page.evaluate(() => {
+  await page.evaluate((t) => {
     const g = window.game;
-    g.enemy.techCue = { text: 'Indes (맞받기)', kind: 'passive', schoolKo: '독일', t: -11 };
-  });
-  await page.waitForFunction(() => document.getElementById('techCue').classList.contains('show'), null, { timeout: 30000 });
-  await page.evaluate(() => {
+    g.enemy.techCue = { text: t, kind: 'passive', schoolKo: '독일', t: -11 };
+  }, TXT.passive);
+  await page.waitForFunction((id) => document.getElementById(id).classList.contains('show'), R2, { timeout: 30000 });
+  await page.evaluate((r2) => {
     const g = window.game;
-    __pin('techCue');
-    const gn = __pin('guardName');
-    const info = g.player.swordArt.names[3] ?? { name: '황소 (Ochs)', desc: '칼자루는 머리 옆, 칼끝은 상대 얼굴 · 찌르기 준비' };
-    gn.innerHTML = `<b>${info.name}</b><span>${info.desc}</span>`;
-    gn.classList.add('show');
+    __pin(r2);
+    __guard(g.player.swordArt.names[3] ?? { name: '황소 (Ochs)', desc: '칼자루는 머리 옆, 칼끝은 상대 얼굴 · 찌르기 준비' });
     const em = __pin('emoMsg');
     em.textContent = '분노가 폭발한다';
     em.dataset.emotion = 'anger';
     em.classList.add('show');
     for (const id of ['toast', 'hint', 'foeIntro']) document.getElementById(id).classList.remove('show');
-  });
+  }, R2);
   await page.waitForTimeout(500);
   await shot(page, o, 'fight', 'real: techCue passive(enemy.techCue 경로) · injected: guardName 글(실제 자세표), emoMsg');
 
   // 4) 상대 비기 (실제 경로 kind secret) — 자세 이름 그대로
-  await page.evaluate(() => {
-    const el = document.getElementById('techCue');
-    delete el.classList.remove; // 다시 게임이 쓰게
-    window.game.enemy.techCue = { text: 'Versetzen (받아 베기)', kind: 'secret', schoolKo: '독일', t: -12 };
-  });
-  await page.waitForFunction(() => document.getElementById('techCue').dataset.kind === 'secret', null, { timeout: 30000 });
-  await page.evaluate(() => { __pin('techCue'); document.getElementById('emoMsg').style.opacity = '0'; });
+  await page.evaluate(([t, r3]) => {
+    const el = document.getElementById(r3);
+    delete el.classList.remove; // 다시 게임이 쓰게 (뒤: R2 패시브는 붙잡은 채 — 패시브·비기 두 칸이 함께 보인다)
+    window.game.enemy.techCue = { text: t, kind: 'secret', schoolKo: '독일', t: -12 };
+  }, [TXT.secret, R3]);
+  await page.waitForFunction((id) => document.getElementById(id).dataset.kind === 'secret' && document.getElementById(id).classList.contains('show'), R3, { timeout: 30000 });
+  await page.evaluate((r3) => { __pin(r3); document.getElementById('emoMsg').style.opacity = '0'; }, R3);
   await page.waitForTimeout(400);
   await shot(page, o, 'foe_secret', 'real: techCue secret(상대) · injected: guardName');
 
   // 5) 내 비기 창(secretReady) · 고노센 준비(secretArm) · 경직(stiff) — DOM 직접 (같은 칸에 섞여 뜨는 모습)
   for (const [kind, text, tag] of [
-    ['secretReady', 'Versetzen (받아 베기)', '내 독일 · 비기'],
-    ['secretArm', '고노센 준비', '내 일본 · 비기'],
-    ['stiff', '경직', '상대 독일 · 비기 뒤'],
+    ['secretReady', TXT.secret, TXT.tagMe],
+    ['secretArm', '고노센 준비', TXT.tagArm],
+    ['stiff', '경직', TXT.tagStiff],
   ]) {
-    await page.evaluate(([kind, text, tag]) => {
-      const el = document.getElementById('techCue');
-      el.innerHTML = `<b>${text}</b><small>${tag}</small>`;
-      el.dataset.kind = kind;
-      el.dataset.who = tag.startsWith('내') ? 'me' : 'foe';
-      el.classList.add('show');
-    }, [kind, text, tag]);
+    await page.evaluate(([kind, text, tag]) => __cue(kind, text, tag), [kind, text, tag]);
     await page.waitForTimeout(400);
     await shot(page, o, `cue_${kind}`, `injected: techCue data-kind=${kind}`);
   }
@@ -194,13 +211,15 @@ async function before(o) {
   await page.waitForTimeout(500);
   for (const id of ['toast', 'foeIntro']) await page.evaluate((id) => (document.getElementById(id).style.opacity = ''), id);
 
-  // 7) 글자 없는 배경 (목업 바탕): 글자 요소만 숨기고 일시정지 버튼·조이스틱은 둔다
-  await page.evaluate(() => {
+  // 7) 글자 없는 배경 (목업 바탕): 글자 요소만 숨기고 일시정지 버튼·조이스틱은 둔다 (구현 뒤 캡처에서는 다시 찍지 않는다)
+  if (!AFTER) await page.evaluate(() => {
     for (const id of ['guardName', 'techCue', 'toast', 'emoMsg', 'hint', 'foeIntro']) document.getElementById(id).style.visibility = 'hidden';
   });
-  await page.waitForTimeout(300);
-  await page.screenshot({ path: path.join(dir, `hud_bg_${o}.png`) });
-  metrics[`${o}_bg`] = await page.evaluate(MEASURE);
+  if (!AFTER) {
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(dir, `hud_bg_${o}.png`) });
+    metrics[`${o}_bg`] = await page.evaluate(MEASURE);
+  }
   await page.context().close();
 
   // 8) 겹침: 개울가 브란(분노로 시작) 판의 시작 — Battle + 안내 + 소개 + 감정 + 상대 패시브 + 자세 이름이 한꺼번에
@@ -208,20 +227,13 @@ async function before(o) {
   await page.getByText('싸움 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.evaluate(PIN);
-  await page.evaluate(() => {
-    for (const id of ['toast', 'hint', 'foeIntro', 'emoMsg', 'guardName', 'techCue']) __pin(id);
+  await page.evaluate(([nach, tagP]) => {
+    for (const id of ['toast', 'hint', 'foeIntro', 'emoMsg']) __pin(id);
     const em = document.getElementById('emoMsg');
     if (!em.classList.contains('show')) { em.textContent = '오소리 브란의 분노가 폭발한다'; em.dataset.emotion = 'anger'; em.classList.add('show'); }
-    const c = document.getElementById('techCue');
-    c.innerHTML = '<b>Nachreisen (따라 들어가기)</b><small>독일 · 패시브</small>';
-    c.dataset.kind = 'passive';
-    c.classList.add('show');
-    const g = window.game;
-    const info = g.player.swordArt.names[0];
-    const gn = document.getElementById('guardName');
-    gn.innerHTML = `<b>${info.name}</b><span>${info.desc}</span>`;
-    gn.classList.add('show');
-  });
+    __cue('passive', nach, tagP);
+    __guard(window.game.player.swordArt.names[0]);
+  }, [TXT.nach, TXT.tagP]);
   await page.waitForTimeout(400);
   await shot(page, o, 'overlap', 'real: toast·hint·foeIntro(시작) · injected: emoMsg(브란 시작 분노와 같은 글), techCue passive, guardName');
   await page.context().close();
@@ -247,7 +259,7 @@ async function mockup(o) {
   }
 }
 
-for (const o of ONLY) await (MODE === 'mockup' ? mockup(o) : before(o));
+for (const o of ONLY) await (MODE === 'mockup' ? mockup(o) : before(o)); // before · after 는 같은 장면 (after = 새 칸)
 fs.writeFileSync(path.join(process.env.METRICS_DIR || dir, `hud_${MODE}_metrics.json`), JSON.stringify(metrics, null, 1));
 console.log('ERRORS', JSON.stringify(errors));
 await browser.close();

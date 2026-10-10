@@ -793,19 +793,37 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
 });
 refreshSettingsUI();
 
+// ── 화면 글자 시계 (10/10 글자 체계 — docs/ui/hud_type_system_2026-10-10.md §7): 판 알림·안내·소개·감정 줄을 게임 시간으로 센다 ──
+//  예전엔 벽시계(setTimeout)라 일시정지해도 혼자 사라졌다. 게임 루프가 싸움·무기 뽑기 동안만 tickHudTimers(dt) 를 부른다 (일시정지·메뉴면 같이 멈춘다)
+const hudTimers = new Map(); // 열쇠 → { t 남은 초, fn }
+/** sec 초(게임 시간) 뒤에 fn. 같은 열쇠는 새것이 덮는다. fn 없이 부르면 지운다 */
+function hudLater(key, sec, fn) {
+  if (fn && sec > 0) hudTimers.set(key, { t: sec, fn });
+  else hudTimers.delete(key);
+}
+function tickHudTimers(dt) {
+  for (const [k, v] of hudTimers) {
+    v.t -= dt;
+    if (v.t <= 0) {
+      hudTimers.delete(k);
+      v.fn();
+    }
+  }
+  tickEmoMsg(dt);
+}
+
 let lastFoeLine = ''; // 이번 판 끝에 상대가 한 말 (결과 화면에도 적는다)
 /** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 */
 function showFoeLine(ch, line) {
   lastFoeLine = line;
   if (!line) return;
   const el = $('foeIntro');
-  clearTimeout(showFoeIntro.t);
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = '';
   el.querySelector('span').textContent = `“${line}”`;
   el.querySelector('em').textContent = '';
   el.classList.add('show');
-  showFoeIntro.t = setTimeout(() => el.classList.remove('show'), 3400);
+  hudLater('foeIntro', 3.4, () => el.classList.remove('show'));
 }
 
 // 이번 상대 소개 (이름 · 별명 · 한마디). 큰 글씨 알림(toast)과 따로, 작게 보여 준다.
@@ -813,7 +831,7 @@ function showFoeLine(ch, line) {
 //  (대사와 겹쳐 읽기 어렵다는 오너 의견: 내 무기와 상대 무기는 카드 두 장이 보여 준다)
 function showFoeIntro(ch) {
   const el = $('foeIntro');
-  clearTimeout(showFoeIntro.t);
+  hudLater('foeIntro');
   if (!ch) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
@@ -974,17 +992,17 @@ function layoutDraw() {
   drawEl.style.setProperty('--ch', `${ch}px`);
   // 번호 배지(높이 22px)의 가운데: 픽셀 뒷면은 아래 원판(아래에서 3칸 띄운 10칸 원판)의 가운데, classic 은 아래에서 10px
   drawEl.style.setProperty('--kb', cardBack === 'classic' ? '10px' : `${Math.max(4, 8 * px - 11)}px`);
-  // 글자 크기: 큰 카드(PC)는 크게, 가로로 든 폰은 중간, 좁거나 낮은 카드는 최소(이름 16px·설명 12px)
-  const big = cw >= 205 && ch >= 300;
-  const mid = cw >= 150 && !low;
-  drawEl.style.setProperty('--name', big ? '20px' : mid ? '17px' : '16px');
-  drawEl.style.setProperty('--desc', big ? '14px' : mid ? '12.5px' : '12px');
+  // 글자 크기 (10/10 글자 체계 두 단계): 큰 카드 = 이름 title 20 · 설명 body 15, 그 밖 = 이름 body 15 · 설명 caption 12
+  //  큰 카드 = 폭 205 · 높이 260 이상 (가로 폰 844×390 에서 카드가 230×277 — 소개가 왼쪽 위로 비켜서 커진 카드)
+  const big = cw >= 205 && ch >= 260;
+  drawEl.style.setProperty('--name', big ? '20px' : '15px');
+  drawEl.style.setProperty('--desc', big ? '15px' : '12px');
   drawEl.classList.toggle('wide', big);
   drawEl.classList.toggle('low', low);
-  fitCardText(parseFloat(big ? 14 : mid ? 12.5 : 12));
+  fitCardText(big ? 15 : 12);
 }
 
-/** 설명이 긴 카드(건슬링어의 리볼버처럼 인용문이 붙은 것)가 있으면 세 장의 설명 글자를 함께, 그 카드가 들어올 때까지 조금씩 줄인다 (최소 원래의 70%, 세 장 크기는 같게) */
+/** 설명이 긴 카드(건슬링어의 리볼버처럼 인용문이 붙은 것)가 있으면 세 장의 설명 글자를 함께, 그 카드가 들어올 때까지 조금씩 줄인다 (6 % 씩, 바닥 11px — 세 장 크기는 같게) */
 function fitCardText(base) {
   const faces = cardEls.map((el) => {
     const face = el.querySelector('.wface');
@@ -995,7 +1013,10 @@ function fitCardText(base) {
   // 넘침 = 마지막 글줄의 아래가 카드 안쪽 여백(아래 padding)에서 4px 위(금테에 글자가 물리지 않게)를 넘는다. 앞면은 뒤집혀 있어 화면 좌표 대신 배치 좌표로 잰다
   const over = ({ face, last }) => last().offsetTop + last().offsetHeight > face.clientHeight - parseFloat(getComputedStyle(face).paddingBottom) - 4;
   drawEl.style.setProperty('--desc', `${base}px`);
-  for (let k = 1; k <= 5 && faces.some(over); k++) drawEl.style.setProperty('--desc', `${(base * (1 - 0.06 * k)).toFixed(2)}px`);
+  for (let k = 1, px = base; k <= 5 && px > 11 && faces.some(over); k++) {
+    px = Math.max(11, base * (1 - 0.06 * k));
+    drawEl.style.setProperty('--desc', `${px.toFixed(2)}px`);
+  }
 }
 
 /** i번째 카드를 고른다 (누르기 · 1/2 키). 상대 칸(맨 오른쪽)은 고를 수 없다: 누르면 살짝 흔들릴 뿐 */
@@ -1071,8 +1092,7 @@ function closeDraw() {
 function showToast(text, ms = 1200) {
   toast.textContent = text;
   toast.classList.add('show');
-  clearTimeout(showToast.t);
-  if (ms) showToast.t = setTimeout(() => toast.classList.remove('show'), ms);
+  hudLater('toast', ms / 1000, ms ? () => toast.classList.remove('show') : null);
 }
 
 // 이동 방식에 맞게 조이스틱 / 영점 버튼을 보이거나 숨긴다
@@ -1088,8 +1108,7 @@ function applyMoveMode() {
 function showHint(text, ms = 3500) {
   hint.textContent = text;
   hint.classList.add('show');
-  clearTimeout(showHint.t);
-  showHint.t = setTimeout(() => hint.classList.remove('show'), ms);
+  hudLater('hint', ms / 1000, () => hint.classList.remove('show'));
 }
 
 async function startFight() {
@@ -1148,11 +1167,11 @@ function beginFight() {
   state = 'fight';
   input.enabled = true;
   emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
+  clearEmoMsg();
   applyMoveMode();
   if (currentFoe) {
     // 소개(이름 · 대사)는 조금 더 두었다가 걷는다 (무기 이름은 적지 않는다: 카드가 이미 보여 줬다)
-    clearTimeout(showFoeIntro.t);
-    showFoeIntro.t = setTimeout(() => $('foeIntro').classList.remove('show'), 2600);
+    hudLater('foeIntro', 2.6, () => $('foeIntro').classList.remove('show'));
   }
   showToast('Battle', 900);
   showHint(
@@ -1259,14 +1278,41 @@ function watchEmotions() {
     }
   }
 }
+//  감정 줄 (E): 줄 세우기 — 앞 것이 EMO_MIN 초는 보인 뒤에 다음 것으로 (최대 2 개 기다림, 넘치면 오래된 것을 버린다). 시계는 게임 시간
+const EMO_MIN = 1.2;
+const emoQueue = [];
+let emoCur = null; // { text, emo, sec, age }
 function showEmoMsg(text, emo, ms = 2000) {
+  const m = { text, emo, sec: ms / 1000, age: 0 };
+  if (emoCur && emoCur.age < EMO_MIN) {
+    emoQueue.push(m);
+    if (emoQueue.length > 2) emoQueue.shift();
+    return;
+  }
+  playEmoMsg(m);
+}
+function playEmoMsg(m) {
   const el = $('emoMsg');
   if (!el) return;
-  el.textContent = text;
-  el.dataset.emotion = emo;
+  emoCur = m;
+  el.textContent = m.text;
+  el.dataset.emotion = m.emo;
   el.classList.add('show');
-  clearTimeout(showEmoMsg.t);
-  showEmoMsg.t = setTimeout(() => el.classList.remove('show'), ms);
+}
+function tickEmoMsg(dt) {
+  if (!emoCur) return;
+  emoCur.age += dt;
+  if (emoQueue.length && emoCur.age >= EMO_MIN) return playEmoMsg(emoQueue.shift());
+  if (emoCur.age >= emoCur.sec) {
+    emoCur = null;
+    $('emoMsg')?.classList.remove('show');
+  }
+}
+/** 감정 줄을 비운다 (새 판) */
+function clearEmoMsg() {
+  emoQueue.length = 0;
+  emoCur = null;
+  $('emoMsg')?.classList.remove('show');
 }
 
 // ── 부활 (이졸데, src/revive.js · revive_fx.js): 연출이 알리는 때에 소리·알림 ──
@@ -1387,6 +1433,9 @@ function checkRoundEnd(dt) {
     $('btnResume').style.display = 'none';
     testRoute.resultLabel($('btnStart'));
     reviveFx.reset(); // 결과 화면: 부활 연출이 남아 있으면 치운다 (상대가 일어서는 동안 내가 죽었을 때)
+    hudLater('foeIntro');
+    $('foeIntro').classList.remove('show'); // 화면 글자 시계는 게임 시간이라 결과 창 뒤에 남지 않게 여기서 걷는다 (대사는 결과 창 부제에 있다)
+    clearEmoMsg();
     showMenu();
   }
 }
@@ -1476,10 +1525,12 @@ function updateGuardName(dt) {
     guardName.innerHTML = '';
     // 자세 이름: 검술 풀이(sword_art.js resolveSwordArt)의 names — 무기별·라이브러리 자세표가 있으면 그 이름(상단·팔상·3번 자세…), 마무리 자세(g ≥ 14)는 늘 GUARDS
     const info = gun ? GUN_STANCE : player.swordArt.names[g];
+    // 두 줄 (10/10 글자 체계 · 문구 규칙 §4-5): 첫 줄 = 한국어 이름(괄호 앞), 둘째 줄 = 원어(괄호 안) · 설명 — 넘치면 … (CSS)
+    const [main, sub] = splitName(info.name);
     const b = document.createElement('b');
-    b.textContent = info.name;
-    const d = document.createElement('span');
-    d.textContent = info.desc;
+    b.textContent = main;
+    const d = document.createElement('small');
+    d.textContent = [sub, info.desc].filter(Boolean).join(' · ');
     guardName.append(b, d);
     guardName.classList.add('show');
     guardTimer = 1.6;
@@ -1490,39 +1541,80 @@ function updateGuardName(dt) {
 }
 
 // ── 유파 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 상태 메시지처럼 화면 중앙에 기술명 출력해') ──
-//  상대 AI 가 유파 패시브를 내거나 유파 고유 동작을 시작하면 ai.js 가 enemy.techCue 에 적는다 → 화면 가운데에 이름 한 줄 + 작은 유파 꼬리표를 잠깐.
-//  상대 것만(플레이어는 AI 가 없다). 새 알림이 옛 것을 덮는다. 싸움 중이 아니거나(메뉴·일시정지) 상대가 죽었거나 설정 '유파 기술 알림'을 끄면 숨긴다.
-//  자세 이름(#guardName)과 따로 논다. docs/strike/tech_cue_2026-10-09.md
-//  10/9 13:xx(docs/strike/passive_fire_2026-10-09.md): 고유 동작은 칼이 실제로 나갈 때(ai.js startStrike) 적히고 1.5 초, 패시브는 결정할 때 1.2 초.
-//  설정 '모든 기술 이름 표시'(techCueAll, 디버그 — 기본 끔, 사장님 검토용): 그 밖의 기술도 칼이 나갈 때 흐리게(enemy.techAll). 패시브·고유 동작 알림이 떠 있으면 덮지 않는다
-const techCueEl = $('techCue');
-//  10/9 유파 비기(docs/strike/school_secret_2026-10-09.md): kind 'secret' — 꼬리표 '비기', 글씨 더 크게·다른 색(index.html), 2.0 초
-//  10/9 23:5x 플레이어 비기: kind 'secretReady'(창이 열림 — 흐린 '비기' 꼬리표, 글씨 크기는 비기 알림과 같게 — 사장님 '테스트 중엔 크게') · 'stiff'(내 비기 뒤 경직, 흐리게).
-//   내 비기를 낸 알림('secret', who 'me')은 실행이 끝날 때까지, AI 비기 알림은 그 비기(連環 세 수 등)가 끝날 때까지 떠 있다
-const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', stiff: '비기 뒤', secretArm: '비기' };
+//  상대 AI 가 유파 패시브를 내거나 유파 고유 동작을 시작하면 ai.js 가 enemy.techCue 에 적는다 → 이름 + 꼬리표를 잠깐. docs/strike/tech_cue_2026-10-09.md
+//  10/10 글자 체계 (사장님 16:3x '우측 상단 자세 이름 아래에 영역을 지정해서 패시브와 비기는 따로' — docs/ui/hud_type_system_2026-10-10.md §3):
+//   칸 셋으로 나눈다 — R2 패시브·고유 동작(·디버그 기술) = 자세 칸 바로 아래, R3 비기(상대 비기 · 내 비기 실행·창 열림 · 고노센 준비) = 그 아래,
+//   C 상태 = 화면 가운데 위 (경직 — 나·상대, 그리고 내 비기 창이 열린 동안 비기 이름 — 사장님 10/9 '테스트 중엔 크게').
+//   칸이 나뉘어 예전의 '덮지 않기' 예외가 둘만 남는다: R3 은 내 것 우선(상대 비기는 1 개 기다림), C 는 상대 경직 우선.
+//   칸 서식: 첫 줄 = 한국어 이름(괄호 앞), 둘째 줄 = 원어(괄호 안) · 꼬리표 `[내|상대] 유파 · 종류` (문구 규칙 docs/ui/hud_copy_rules_2026-10-10.md §4-4·4-5).
+//  설정 '유파 기술 알림'(techCue)을 끄면 상대 것만 숨긴다 — 내 비기 알림은 조작이라 그대로. '모든 기술 이름 보기'(techCueAll, 디버그)는 R2 에 흐리게.
+//  시간은 게임 루프 dt (passive 1.2 · unique 1.5 · secret 2.0 s, 비기는 실행이 끝날 때까지)
+const techCueEl = $('techCue'); // R2 · R3 · C 를 담는 겉 칸 (예전 도구가 숨기거나 dataset.kind 를 읽는다 — 마지막에 띄운 알림의 kind·who 를 적어 둔다)
+const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', stiff: '비기', secretArm: '비기' };
 const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0, secretReady: 0.5, stiff: 0.3, secretArm: 0.3 };
+const TECH_SLOT_OF = { passive: 'r2', unique: 'r2', all: 'r2', secret: 'r3', secretReady: 'r3', secretArm: 'r3', stiff: 'c' };
+const techSlots = { r2: { el: $('techSlot'), t: 0, cue: null }, r3: { el: $('secretSlot'), t: 0, cue: null }, c: { el: $('stateCue'), t: 0, cue: null } };
+let r3Wait = null; // 내 비기가 R3 을 쓰는 동안 온 상대 비기 하나 { cue, t }
 let techCueSeen = null;
 let techAllSeen = null;
-let techCueTimer = 0;
-function showTechCue(c) {
-  techCueEl.innerHTML = '';
+/** '한국어 (원어)' → [한국어, 원어]. 괄호 뒤 말은 '· …' 이면 둘째 줄로, 아니면 첫 줄 뒤에 (예: '자→격 (刺→擊) 고리' → ['자→격 고리', '刺→擊']) */
+function splitName(s) {
+  const m = /^(.*?)\s*\(([^()]*)\)\s*(.*)$/.exec(s ?? '');
+  if (!m || !m[1]) return [s ?? '', ''];
+  const rest = m[3].replace(/^·\s*/, '');
+  if (!rest || m[3].startsWith('·')) return [m[1], [m[2], rest].filter(Boolean).join(' · ')];
+  return [`${m[1]} ${rest}`, m[2]];
+}
+/** 꼬리표 `[내|상대] 유파 · 종류` (문구 규칙 §4-4) */
+const cueTag = (c) => `${c.who === 'me' ? '내' : '상대'}${c.schoolKo ? ` ${c.schoolKo}` : ''} · ${TECH_CUE_KIND[c.kind] ?? ''}`;
+const mineBusy = (S) => S.t > 0 && S.cue?.who === 'me' && S.cue.kind !== 'secretArm'; // 내 비기 창·실행 (고노센 준비는 덮을 수 있다)
+function paintSlot(S, c, time) {
+  const [main, sub] = splitName(c.text);
   const b = document.createElement('b');
-  b.textContent = c.text;
+  b.textContent = c.kind === 'stiff' ? c.text : main;
+  // 둘째 줄 = 원어 · 꼬리표. 좁으면 원어 쪽만 … 으로 줄고 꼬리표('내/상대 …')는 늘 다 보인다 (CSS .o · .t)
   const tag = document.createElement('small');
-  tag.textContent = `${c.schoolKo ? `${c.schoolKo} · ` : ''}${TECH_CUE_KIND[c.kind] ?? ''}`;
-  techCueEl.append(b, tag);
+  const t = document.createElement('span');
+  t.className = 't';
+  t.textContent = cueTag(c);
+  if (sub && c.kind !== 'stiff') {
+    const o = document.createElement('span');
+    o.className = 'o';
+    o.textContent = sub;
+    t.textContent = `\u00a0· ${t.textContent}`;
+    tag.append(o);
+  }
+  tag.append(t);
+  S.el.replaceChildren(b, tag);
+  S.el.dataset.kind = c.kind;
+  S.el.dataset.who = c.who ?? 'foe';
+  S.el.classList.add('show');
+  S.t = time;
+  S.cue = c;
   techCueEl.dataset.kind = c.kind;
   techCueEl.dataset.who = c.who ?? 'foe';
-  techCueEl.classList.add('show');
-  techCueTimer = TECH_CUE_TIME[c.kind] ?? 1.2;
+}
+function showTechCue(c) {
+  const k = TECH_SLOT_OF[c.kind] ?? 'r2';
+  const S = techSlots[k];
+  const time = TECH_CUE_TIME[c.kind] ?? 1.2;
+  const me = c.who === 'me';
+  if (k === 'r3') {
+    if (!me && mineBusy(S)) return void (r3Wait = { cue: c, t: time }); // 내 비기가 먼저 — 상대 비기는 기다린다
+    if (me && c.kind !== 'secretArm' && S.t > 0 && S.cue?.who !== 'me' && S.cue?.kind === 'secret') r3Wait = { cue: S.cue, t: S.t }; // 보이던 상대 비기는 남은 시간만큼 기다린다
+  }
+  if (k === 'c' && me && S.t > 0 && S.cue?.who !== 'me') return; // 상대 경직이 먼저 (칠 기회)
+  paintSlot(S, c, time);
+  if (c.kind === 'secretReady' && !(techSlots.c.t > 0 && techSlots.c.cue?.who !== 'me')) paintSlot(techSlots.c, c, time); // 내 비기 창: 가운데에도 (테스트 동안 크게)
 }
 /** 플레이어 비기 알림: kind 'secretReady' | 'secret' | 'stiff' (싸움 중이면 설정과 상관없이 — 비기 창은 조작이다) */
 function showPlayerCue(S, kind) {
   if (state !== 'fight' || !S) return;
   const T = TRADITIONS[player?.swordArt?.tradition];
-  showTechCue({ text: kind === 'stiff' ? '경직' : S.nameKo ?? S.name, kind, who: 'me', schoolKo: `내 ${T?.nameKo ?? ''}` });
+  showTechCue({ text: kind === 'stiff' ? '경직' : S.nameKo ?? S.name, kind, who: 'me', schoolKo: T?.nameKo ?? '' });
 }
 function updateTechCue(dt) {
+  const { r2, r3, c: cs } = techSlots;
   // 플레이어 비기 창이 새로 열림 · 경직 시작
   if (playerSecret && playerSecret.opened !== secretOpenSeen) {
     secretOpenSeen = playerSecret.opened;
@@ -1536,44 +1628,52 @@ function updateTechCue(dt) {
     }
   }
   const pPhase = player?.skill?.secretPhase ?? null;
-  // 고노센 준비 (10/10 02:4x): 플레이어는 자세를 바꾸지 않고, 상대 간격 밖 iaiArmTime 초가 차면 흐린 '고노센 준비'만 (창·실행·경직 알림이 덮는다)
+  // 고노센 준비 (10/10 02:4x): 상대 간격 밖 iaiArmTime 초가 차면 R3 에 흐린 '고노센 준비' (R3 이 비었거나 이미 그것일 때만)
   const pArmed = !!(CONFIG.SECRET.iai && playerSecret?.S?.do?.instant && playerSecret.iaiArm?.armed);
-  if (pArmed && !pPhase && !playerSecret.open && !(techCueEl.dataset.who === 'me' && techCueTimer > 0 && techCueEl.dataset.kind !== 'secretArm')) {
-    if (techCueEl.dataset.kind !== 'secretArm' || techCueTimer <= 0) showTechCue({ text: '고노센 준비', kind: 'secretArm', who: 'me', schoolKo: `내 ${TRADITIONS[player?.swordArt?.tradition]?.nameKo ?? ''}` });
-    techCueTimer = Math.max(techCueTimer, 0.2);
+  if (pArmed && !pPhase && !playerSecret.open && (r3.t <= 0 || r3.cue?.kind === 'secretArm')) {
+    if (r3.cue?.kind !== 'secretArm' || r3.t <= 0) showTechCue({ text: '고노센 준비', kind: 'secretArm', who: 'me', schoolKo: TRADITIONS[player?.swordArt?.tradition]?.nameKo ?? '' });
+    r3.t = Math.max(r3.t, 0.2);
   }
-  const kNow = techCueEl.dataset.kind;
-  const mine = techCueEl.dataset.who === 'me';
-  if (pPhase === 'stiff' && !(mine && kNow === 'stiff')) showPlayerCue(playerSecret?.S, 'stiff');
-  // 상대 비기 경직도 또렷이 (10/10 사장님 '경직은 … 있는 것도 몰랐다'): AI 비기가 경직이면 '경직' (상대 꼬리표)
+  if (pPhase === 'stiff' && !(cs.t > 0 && cs.cue?.who === 'me' && cs.cue.kind === 'stiff')) showPlayerCue(playerSecret?.S, 'stiff');
+  // 상대 비기 경직도 또렷이 (10/10 사장님 '경직은 … 있는 것도 몰랐다'): AI 비기가 경직이면 가운데 '경직' (상대 꼬리표)
   const aiStiff = state === 'fight' && ai?.secretRun?.stage === 'stiff' && !!enemy?.alive;
-  if (aiStiff && !(kNow === 'stiff' && !mine) && !(mine && techCueTimer > 0)) {
-    const T = TRADITIONS[ai.art?.tradition];
-    showTechCue({ text: '경직', kind: 'stiff', who: 'foe', schoolKo: `상대 ${T?.nameKo ?? ''}` });
-  }
-  if (techCueEl.dataset.who !== 'me' && techCueEl.dataset.kind === 'stiff' && aiStiff) techCueTimer = Math.max(techCueTimer, 0.15);
-  if (mine && kNow === 'secretReady') techCueTimer = playerSecret?.open ? Math.max(techCueTimer, 0.1) : Math.min(techCueTimer, 0); // 창이 열린 동안만 (게임 시간 창 — 화면이 느려도 맞게)
-  if (mine && kNow === 'secret' && pPhase === 'run') techCueTimer = Math.max(techCueTimer, 0.3); // 내 비기는 실행이 끝날 때까지
-  if (mine && kNow === 'stiff' && pPhase === 'stiff') techCueTimer = Math.max(techCueTimer, 0.15);
-  if (!mine && kNow === 'secret' && ai?.secretRun && ai.secretRun.stage !== 'stiff') techCueTimer = Math.max(techCueTimer, 0.3); // AI 비기 알림은 그 비기가 끝날 때까지 (連環三擊 세 수)
+  if (aiStiff && !(cs.t > 0 && cs.cue?.kind === 'stiff' && cs.cue.who !== 'me')) showTechCue({ text: '경직', kind: 'stiff', who: 'foe', schoolKo: TRADITIONS[ai.art?.tradition]?.nameKo ?? '' });
+  // 떠 있는 동안 늘이기 (게임 시간 — 화면이 느려도 맞게)
+  if (cs.cue?.kind === 'stiff' && cs.cue.who !== 'me' && aiStiff) cs.t = Math.max(cs.t, 0.15);
+  for (const S of [r3, cs]) if (S.cue?.kind === 'secretReady') S.t = playerSecret?.open ? Math.max(S.t, 0.1) : Math.min(S.t, 0); // 창이 열린 동안만
+  if (r3.cue?.who === 'me' && r3.cue.kind === 'secret' && pPhase === 'run') r3.t = Math.max(r3.t, 0.3); // 내 비기는 실행이 끝날 때까지
+  if (cs.cue?.who === 'me' && cs.cue.kind === 'stiff' && pPhase === 'stiff') cs.t = Math.max(cs.t, 0.15);
+  if (r3.cue?.who !== 'me' && r3.cue?.kind === 'secret' && ai?.secretRun && ai.secretRun.stage !== 'stiff') r3.t = Math.max(r3.t, 0.3); // AI 비기 알림은 그 비기가 끝날 때까지 (連環三擊 세 수)
+  const live = state === 'fight' && !!settings.techCue && !!enemy?.alive && !roundOver;
+  const liveMine = state === 'fight' && !roundOver; // 내 비기 알림은 설정 '유파 기술 알림'과 상관없이
   const c = enemy?.techCue ?? null;
-  const live = state === 'fight' && !!settings.techCue && !!enemy?.alive;
   if (c && c !== techCueSeen) {
     techCueSeen = c;
-    const holdSecret = techCueTimer > 0 && techCueEl.dataset.kind === 'secret' && c.kind !== 'secret'; // 비기 알림(2.0 s)은 패시브·고유 동작 알림이 덮지 않는다
-    const holdMine = techCueTimer > 0 && techCueEl.dataset.who === 'me'; // 내 비기 창·실행 알림은 상대 알림이 덮지 않는다
-    if (live && !holdSecret && !holdMine) showTechCue(c);
+    if (live) showTechCue(c);
   }
   const a = enemy?.techAll ?? null;
   if (a && a !== techAllSeen) {
     techAllSeen = a;
     // 디버그: 모든 기술 이름 (패시브·고유 동작 알림이 떠 있는 동안은 덮지 않는다)
-    const busy = techCueTimer > 0 && (techCueEl.dataset.kind !== 'all' || techCueEl.dataset.who === 'me');
-    if (live && settings.techCueAll && !busy) showTechCue(a);
+    if (live && settings.techCueAll && !(r2.t > 0 && r2.cue?.kind !== 'all')) showTechCue(a);
   }
-  techCueTimer -= dt;
-  const liveMine = state === 'fight' && techCueEl.dataset.who === 'me'; // 내 비기 알림은 설정 '유파 기술 알림'과 상관없이
-  if (!(live || liveMine) || techCueTimer <= 0) techCueEl.classList.remove('show');
+  let any = false;
+  for (const S of [r2, r3, cs]) {
+    S.t -= dt;
+    const vis = S.t > 0 && (S.cue?.who === 'me' ? liveMine : live);
+    if (!vis) S.el.classList.remove('show');
+    any ||= vis;
+  }
+  // 기다리던 상대 비기: 내 비기가 R3 을 비우면 남은 시간만큼
+  if (r3Wait) {
+    r3Wait.t -= dt;
+    if (r3Wait.t <= 0 || !live) r3Wait = null;
+    else if (!mineBusy(r3)) {
+      paintSlot(r3, r3Wait.cue, r3Wait.t);
+      r3Wait = null;
+    }
+  }
+  techCueEl.classList.toggle('show', any);
 }
 
 // ── 게임 루프 ──
@@ -1730,6 +1830,7 @@ function frame(now) {
   if (paint) trail.draw(now / 1000, !input.isTouchDevice);
   watchSecretFx(); // 비기 화면 연출 (발도 번쩍임 · 이베리아 카메라)
   updateTechCue(dt); // 유파 기술 알림 — 싸움이 아닐 때(메뉴·일시정지)도 불러 숨긴다
+  if (state === 'fight' || state === 'draw') tickHudTimers(dt); // 화면 글자 시계 (일시정지·메뉴면 멈춘다)
 }
 
 // 메뉴 뒤 배경으로 보일 첫 판을 미리 만들어 둔다

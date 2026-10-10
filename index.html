@@ -17,11 +17,59 @@
         --accent: #d9a441;
         --red: #b3261e;
         --blue: #3f6fb5;
+        /* ── 화면 글자 체계 (10/10 — docs/ui/hud_type_system_2026-10-10.md) ── */
+        /* 크기 4 단계: 판 알림 / 이름·상태·창 제목 / 칸 첫 줄·대사·알림·창 줄 / 칸 둘째 줄·칭호·안내·카드 설명·배지 */
+        --font-ui: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+        --fs-display: clamp(32px, 9vmin, 56px);
+        --fs-title: 20px;
+        --fs-body: 15px;
+        --fs-caption: 12px;
+        --lh-tight: 1.25;
+        --lh-text: 1.4;
+        --ls-display: .06em;
+        --ls-label: .04em;
+        /* 외곽선 표준 하나 (모든 HUD 글자 — 밝은 하늘·모래 위에서도 윤곽이 선다). 큰 판 알림만 굵은 판 */
+        --outline-c: #0d0907;
+        --hud-outline: 1px 0 0 var(--outline-c), -1px 0 0 var(--outline-c), 0 1px 0 var(--outline-c), 0 -1px 0 var(--outline-c), 0 1px 3px rgba(13, 9, 7, .85), 0 0 8px rgba(13, 9, 7, .5);
+        --hud-outline-display: 0 2px 0 var(--outline-c), 0 0 2px var(--outline-c), 0 3px 10px rgba(13, 9, 7, .7);
+        /* 색: 자세(지금 색) · 기술 칸(오렌지, 사장님 견본 #B96648 계열) · 인물 · 시스템 · 감정 */
+        --hud-guard: #f3e6c8;
+        --hud-guard-sub: #e4d8bf;
+        --hud-tech: #c8714e;
+        --hud-tech-sub: #e3a382;
+        --hud-secret: var(--hud-tech); /* 비기를 다른 오렌지로 가르려면 이 한 줄: #de7c46 */
+        --hud-name: #f3e6c8;
+        --hud-epithet: #d9c9a6;
+        --hud-line: #efe3c8;
+        --hud-sys: #f3e9d8;
+        --hud-state: #b9c7d6;
+        --hud-guide: #e2d6bf;
+        --hud-guide-bg: rgba(13, 9, 7, .5);
+        --emo-fear: #b9c8de;
+        --emo-anger: #f0604c;
+        --emo-obsession: #f2c75a;
+        --emo-revive: #fff1c8;
+        /* 무기 등급 (예전 룰렛 색 그대로) */
+        --tier-trash: #b8b6b0; --tier-common: #fff3c4; --tier-rare: #8cc4ff; --tier-epic: #d6a8ff; --tier-legend: #ffd24a; --tier-mystery: #8fe3c6;
+        --foe: #b0473b;
+        /* 자리: 안전 영역 · 왼쪽 위/오른쪽 위 칸 폭 (가운데 일시정지 단추 38px 양옆 10px 비움) */
+        --safe-t: max(12px, env(safe-area-inset-top));
+        --safe-r: max(14px, env(safe-area-inset-right));
+        --safe-l: max(14px, env(safe-area-inset-left));
+        --safe-b: max(12px, env(safe-area-inset-bottom));
+        --side-w: min(34vw, 300px);
+        --slot-gap: 6px;
+        --hint-b: var(--safe-b);
+        --notice-up: 34px;
+      }
+      @media (orientation: portrait) {
+        /* 세로: 칸 폭은 일시정지 단추까지 · 안내는 조이스틱(아래 20 + 110px) 위로 · 안내가 두 줄이라 알림 줄을 더 위로 */
+        :root { --side-w: calc(50vw - 43px); --hint-b: calc(var(--safe-b) + 130px); --notice-up: 54px; }
       }
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       html, body {
         margin: 0; height: 100%; overflow: hidden; background: #1b1410; color: var(--ink);
-        font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+        font-family: var(--font-ui);
         touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none;
       }
       #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -39,78 +87,90 @@
       #emotion[data-emotion="obsession"] { background: radial-gradient(ellipse at center, rgba(220,170,40,0) 55%, rgba(220,170,40,.4) 88%, rgba(140,90,0,.75) 100%); }
       #topButtons { position: fixed; top: max(8px, env(safe-area-inset-top)); z-index: 2; left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
       #topButtons.show { display: flex; }
-      .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; }
+      .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; } /* 글리프 단추 (Ⅱ · ◎) — 글자 단계 밖 */
 
-      #toast { position: fixed; left: 50%; top: 58%; transform: translate(-50%, -50%); font-size: clamp(28px, 7vw, 64px); font-weight: 800; letter-spacing: .06em; text-shadow: 0 3px 0 #000; pointer-events: none; opacity: 0; transition: opacity .3s; }
-      #toast.show { opacity: 1; }
-      /* 감정이 켜지는 순간의 한 줄 알림: 화면 아래쪽 가운데, 감정 색 */
-      #emoMsg { position: fixed; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 44px); transform: translateX(-50%); font-size: 16px; font-weight: 700; letter-spacing: .02em; pointer-events: none; opacity: 0; transition: opacity .35s; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,.7); white-space: nowrap; }
-      #emoMsg.show { opacity: .95; }
-      #emoMsg[data-emotion="fear"] { color: #b9c8de; }
-      #emoMsg[data-emotion="anger"] { color: #ff7a5c; }
-      #emoMsg[data-emotion="obsession"] { color: #f2c75a; }
-      #emoMsg[data-emotion="revive"] { color: #fff1c8; text-shadow: 0 1px 2px #000, 0 0 10px rgba(255,205,110,.85), 0 0 22px rgba(255,190,80,.45); } /* 부활: 하늘에서 내린 빛 (src/revive_fx.js) */
+      /* ── 게임 화면 글자 (10/10 글자 체계): 칸마다 자리 하나 · 서식 하나 · 외곽선 하나. 시간은 main.js 가 게임 시간으로 센다 ── */
+      /* D 판 알림 (Battle · 승리 · 패배): 가운데 */
+      #toast { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); font-size: var(--fs-display); font-weight: 800; line-height: 1; letter-spacing: var(--ls-display); color: var(--hud-sys); text-shadow: var(--hud-outline-display); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .3s; }
+      #toast.show { opacity: 1; transition-duration: .2s; }
+      /* E 알림 줄 (감정 · 부활): 아래 가운데, 안내 위. 한 줄, 넘치면 … */
+      #emoMsg { position: fixed; left: 50%; bottom: calc(var(--hint-b) + var(--notice-up)); transform: translateX(-50%); max-width: min(64vw, 480px); font-size: var(--fs-body); font-weight: 700; line-height: var(--lh-tight); color: var(--hud-sys); text-shadow: var(--hud-outline); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0; transition: opacity .35s; }
+      #emoMsg.show { opacity: 1; transition-duration: .2s; }
+      #emoMsg[data-emotion="fear"] { color: var(--emo-fear); }
+      #emoMsg[data-emotion="anger"] { color: var(--emo-anger); }
+      #emoMsg[data-emotion="obsession"] { color: var(--emo-obsession); }
+      #emoMsg[data-emotion="revive"] { color: var(--emo-revive); text-shadow: var(--hud-outline), 0 0 10px rgba(255,205,110,.85), 0 0 22px rgba(255,190,80,.45); } /* 부활: 하늘에서 내린 빛 (src/revive_fx.js) */
+      /* H 안내 (조작 안내 · 영점 · 센서): 아래 가운데 알약 — 바탕이 있으니 외곽선 없음. 가로 한 줄(…), 세로 두 줄 */
+      #hint { position: fixed; bottom: var(--hint-b); left: 50%; transform: translateX(-50%); max-width: min(64vw, 520px); font-size: var(--fs-caption); font-weight: 500; line-height: var(--lh-text); color: var(--hud-guide); background: var(--hud-guide-bg); padding: 6px 12px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0; transition: opacity .3s; }
+      #hint.show { opacity: 1; transition-duration: .2s; }
+      @media (orientation: portrait) { #hint { white-space: normal; text-align: center; width: max-content; max-width: calc(100vw - 2 * var(--safe-l)); word-break: keep-all; border-radius: 14px; } }
 
-      #hint { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--dim); background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; pointer-events: none; display: none; text-align: center; max-width: calc(100% - 32px); }
-      #hint.show { display: block; }
-      /* 지금 검술 자세: 오른쪽 위 구석 (가운데 일시정지 버튼과 겹치지 않게) */
-      #guardName { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); max-width: 42vw; text-align: right; pointer-events: none; opacity: 0; transition: opacity .25s; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.6); }
-      #guardName b { display: block; font-size: 15px; font-weight: 800; color: #f3e6c8; }
-      #guardName span { display: block; font-size: 11.5px; color: #e4d8bf; opacity: .85; margin-top: 1px; }
-      #guardName.show { opacity: .92; }
-      /* 유파 기술 알림 (main.js updateTechCue): 상대가 유파 패시브·고유 동작을 내면 화면 가운데 위쪽에 한 줄 + 작은 유파 꼬리표, 1.2 초.
-         자리를 차지하지 않는 고정 칸이라 레이아웃이 흔들리지 않는다. 폭 480 px 에서도 한 줄 (넘치면 … 으로 자름) */
-      #techCue { position: fixed; left: 50%; top: 31%; transform: translate(-50%, -50%) scale(.96); max-width: calc(100vw - 32px); text-align: center; line-height: 1.2; pointer-events: none; opacity: 0; transition: opacity .35s, transform .35s; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,.7); }
-      #techCue b { display: block; font-size: clamp(18px, 5vw, 26px); font-weight: 800; letter-spacing: .02em; color: #f6e7c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      #techCue small { display: block; font-size: 13px; font-weight: 600; color: #efe2c4; margin-top: 2px; white-space: nowrap; }
-      #techCue[data-kind="unique"] b { color: #ffd98a; }
-      /* 유파 비기 (10/9): 더 크게, 붉은 금빛 — 꼬리표 '비기', 2.0 초 */
-      #techCue[data-kind="secret"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #ff9d5c; letter-spacing: .04em; }
-      #techCue[data-kind="secret"] small { color: #ffc9a0; font-size: 14px; }
-      /* 플레이어 비기 (10/9 23:5x): 창이 열림 — 비기 알림과 같은 크기(사장님 '테스트 중엔 크게'), 흐리게 · 경직 — 작고 흐리게 */
-      #techCue[data-kind="secretReady"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #ffd6a8; letter-spacing: .04em; }
-      #techCue[data-kind="secretReady"] small { color: #ffe3c4; font-size: 14px; }
-      #techCue[data-kind="secretReady"].show { opacity: .55; }
-      /* 고노센 준비 (10/10): 흐리게, 작게 */
-      #techCue[data-kind="secretArm"] b { font-size: clamp(16px, 4.4vw, 22px); font-weight: 700; color: #cfe0f0; }
-      #techCue[data-kind="secretArm"].show { opacity: .45; }
-      /* 경직 (10/10 사장님 '있는 것도 몰랐다'): 또렷이 — 비기 알림만큼 크게, 잿빛 푸른 글씨 */
-      #techCue[data-kind="stiff"] b { font-size: clamp(22px, 6.4vw, 34px); font-weight: 900; color: #b9c7d6; letter-spacing: .2em; }
-      #techCue[data-kind="stiff"] small { color: #d6dde6; font-size: 14px; }
-      #techCue[data-kind="stiff"].show { opacity: .95; }
-      /* 설정 '모든 기술 이름 표시'(디버그, 기본 끔 — 10/9 13:xx): 공용 기술은 작고 흐리게 */
-      #techCue[data-kind="all"] b { font-size: clamp(15px, 4vw, 19px); font-weight: 600; color: #d9cfb8; }
-      #techCue[data-kind="all"] small { opacity: .7; }
-      #techCue[data-kind="all"].show { opacity: .62; }
-      #techCue.show { opacity: .95; transform: translate(-50%, -50%) scale(1); transition: opacity .15s, transform .15s; }
-      /* 무기 등급 색 (예전 룰렛 색 그대로): 쓰레기 회색 · 커먼 밝은 상아 · 레어 파랑 · 에픽 보라 · 레전드 금빛.
-         --tc = 글자 색, --tg = 은은한 빛 */
-      [data-tier] { --tc: #fff3c4; --tg: rgba(255,236,190,.28); }
-      [data-tier="trash"] { --tc: #b8b6b0; --tg: rgba(190,188,180,.2); }
-      [data-tier="rare"] { --tc: #8cc4ff; --tg: rgba(110,170,255,.45); }
-      [data-tier="epic"] { --tc: #d6a8ff; --tg: rgba(190,130,255,.5); }
-      [data-tier="legend"] { --tc: #ffd24a; --tg: rgba(255,210,74,.6); }
-      [data-tier="mystery"] { --tc: #8fe3c6; --tg: rgba(120,220,190,.45); } /* ??? 등급 (사장님 결정): 다른 등급과 겹치지 않는 옅은 청록 */
-
-      /* 이번 상대 소개: 가운데 위 (일시정지 버튼 아래), 작게. 무기 카드(#draw)보다 위에 보인다 */
-      #foeIntro { position: fixed; z-index: 2; left: 50%; top: calc(max(12px, env(safe-area-inset-top)) + 52px); transform: translateX(-50%); max-width: min(70vw, 520px); text-align: center; line-height: 1.25; pointer-events: none; opacity: 0; transition: opacity .4s; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,.7); }
-      #foeIntro b { display: block; font-size: 20px; font-weight: 800; color: #f3e6c8; }
-      #foeIntro i { display: block; font-size: 12.5px; font-style: normal; color: #d9c9a6; margin-top: 1px; }
-      #foeIntro span { display: block; font-size: 13.5px; color: #efe3c8; margin-top: 4px; }
-      /* 아랫줄: 무기 카드를 고르는 동안만 "무기 카드를 한 장 고르세요" (무기 이름은 카드에만 보인다) */
-      #foeIntro em { display: block; font-size: 12.5px; font-style: normal; color: #ffd98a; margin-top: 6px; word-break: keep-all; }
-      #foeIntro em:empty { display: none; }
-      #foeIntro.show { opacity: .95; }
-      /* 가로로 든 폰(낮은 화면): 별명을 이름 옆에 붙여 한 줄을 아낀다 (무기 카드 자리가 넓어진다) */
-      @media (max-height: 430px) {
-        #foeIntro b, #foeIntro i { display: inline; }
-        #foeIntro i:not(:empty)::before { content: ' · '; }
+      /* 칸 하나 = 첫 줄(이름, 한국어) + 둘째 줄(원어 · 설명 또는 꼬리표). 자세 · 패시브 · 비기는 서식이 같고 색만 다르다 */
+      .slot { position: fixed; right: var(--safe-r); width: var(--side-w); text-align: right; pointer-events: none; text-shadow: var(--hud-outline); opacity: 0; transition: opacity .25s, translate .25s; }
+      .slot.show { opacity: 1; transition-duration: .15s; }
+      .slot b { display: block; font-size: var(--fs-body); font-weight: 800; line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .slot small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; font-size: var(--fs-caption); font-weight: 500; line-height: 1.35; margin-top: 1px; word-break: keep-all; }
+      /* R1 자세 (오른쪽 위 첫 칸, 높이 52px — 설명 두 줄까지) */
+      #guardName { top: var(--safe-t); height: 52px; }
+      #guardName b { color: var(--hud-guard); }
+      #guardName small { color: var(--hud-guard-sub); -webkit-line-clamp: 2; }
+      /* 기술 알림 묶음 (main.js updateTechCue): R2 · R3 · C 를 담는 겉 칸 — 자리를 차지하지 않는다 (숨기면 셋 다 숨는다) */
+      #techCue { position: fixed; inset: 0; pointer-events: none; }
+      /* R2 패시브·고유 동작 · R3 비기: 자세 칸 바로 아래 고정 칸 (비어도 자리는 그대로 — 아래 칸이 위로 뛰지 않는다) */
+      #techSlot { top: calc(var(--safe-t) + 52px + var(--slot-gap)); height: 40px; }
+      #secretSlot { top: calc(var(--safe-t) + 92px + 2 * var(--slot-gap)); height: 40px; }
+      #techSlot, #secretSlot { translate: 6px 0; }
+      #techSlot.show, #secretSlot.show { translate: 0 0; }
+      #techSlot b { color: var(--hud-tech); }
+      #secretSlot b { color: var(--hud-secret); }
+      #techSlot small, #secretSlot small { color: var(--hud-tech-sub); }
+      /* 기술 칸 둘째 줄: 원어(.o)는 좁으면 … 으로 줄고 꼬리표(.t — '내/상대 유파 · 종류')는 늘 다 보인다 */
+      #techSlot small, #secretSlot small, #stateCue small { display: flex; white-space: nowrap; }
+      #techSlot small, #secretSlot small { justify-content: flex-end; }
+      #stateCue small { justify-content: center; }
+      .slot small .o, #stateCue small .o { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      .slot small .t, #stateCue small .t { flex: none; }
+      #techSlot[data-kind="all"].show { opacity: .62; } /* 설정 '모든 기술 이름 보기'(디버그): 공용 기술은 흐리게 */
+      #secretSlot[data-kind="secretArm"].show { opacity: .6; } /* 고노센 준비 — 준비된 상태라 흐리게 */
+      #secretSlot[data-kind="secretReady"].show { animation: slotPulse .6s ease-in-out infinite alternate; } /* 내 비기 창이 열림 — 지금 누를 때 */
+      @keyframes slotPulse { from { opacity: .7; } to { opacity: 1; } }
+      /* C 상태 (경직 · 내 비기 창): 가운데 위 — 상대 머리 위쯤 */
+      #stateCue { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%) scale(.96); max-width: calc(100vw - 32px); text-align: center; text-shadow: var(--hud-outline); opacity: 0; transition: opacity .2s, transform .2s; }
+      #stateCue.show { opacity: 1; transform: translate(-50%, -50%) scale(1); transition-duration: .1s; }
+      #stateCue b { display: block; font-size: var(--fs-title); font-weight: 800; line-height: var(--lh-tight); letter-spacing: .2em; color: var(--hud-state); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      #stateCue small { display: block; font-size: var(--fs-caption); font-weight: 500; margin-top: 2px; color: var(--hud-guard-sub); white-space: nowrap; }
+      #stateCue[data-kind="secretReady"] b { color: var(--hud-secret); letter-spacing: .04em; }
+      #stateCue[data-kind="secretReady"] small { color: var(--hud-tech-sub); }
+      @media (prefers-reduced-motion: reduce) {
+        #techSlot, #secretSlot { translate: none; }
+        #stateCue, #stateCue.show { transform: translate(-50%, -50%); }
+        #secretSlot[data-kind="secretReady"].show { animation: none; }
       }
+      /* 무기 등급 색: --tc = 글자 색, --tg = 은은한 빛 */
+      [data-tier] { --tc: var(--tier-common); --tg: rgba(255,236,190,.28); }
+      [data-tier="trash"] { --tc: var(--tier-trash); --tg: rgba(190,188,180,.2); }
+      [data-tier="rare"] { --tc: var(--tier-rare); --tg: rgba(110,170,255,.45); }
+      [data-tier="epic"] { --tc: var(--tier-epic); --tg: rgba(190,130,255,.5); }
+      [data-tier="legend"] { --tc: var(--tier-legend); --tg: rgba(255,210,74,.6); }
+      [data-tier="mystery"] { --tc: var(--tier-mystery); --tg: rgba(120,220,190,.45); } /* ??? 등급 (사장님 결정): 다른 등급과 겹치지 않는 옅은 청록 */
+
+      /* L 인물 (이름 · 칭호 · 대사 · 카드 안내): 왼쪽 위 — 오른쪽 위 칸과 거울. 무기 카드(#draw)보다 위에 보인다 */
+      #foeIntro { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .4s; text-shadow: var(--hud-outline); }
+      #foeIntro.show { opacity: 1; transition-duration: .3s; }
+      #foeIntro b { font-size: var(--fs-title); font-weight: 800; line-height: var(--lh-tight); color: var(--hud-name); word-break: keep-all; }
+      #foeIntro i { font-size: var(--fs-caption); font-style: normal; font-weight: 500; letter-spacing: var(--ls-label); color: var(--hud-epithet); margin-left: 6px; }
+      #foeIntro span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 4px; font-size: var(--fs-body); font-weight: 500; line-height: var(--lh-text); color: var(--hud-line); word-break: keep-all; }
+      #foeIntro span:empty { display: none; }
+      /* 아랫줄: 무기 카드를 고르는 동안만 "무기 카드를 한 장 고르세요" (무기 이름은 카드에만 보인다) */
+      #foeIntro em { display: block; margin-top: 6px; font-size: var(--fs-caption); font-style: normal; font-weight: 700; letter-spacing: var(--ls-label); color: var(--accent); word-break: keep-all; }
+      #foeIntro em:empty { display: none; }
+      /* 세로(좁은 칸): 칭호를 이름 아래 줄로 */
+      @media (orientation: portrait) { #foeIntro b { display: block; } #foeIntro i { display: block; margin: 1px 0 0; } }
 
       /* ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장. 왼쪽 두 장은 내가 고르는 카드, 맨 오른쪽은 상대 무기 칸(회색, 못 고른다) →
          내 카드를 누르면 뒤집혀 이번 판 무기가 나오고, 남은 내 카드가 어둡게 뒤집힌 뒤 상대 카드가 뒤집혀 상대 무기를 보여 준다 (main.js 무기 뽑기) ──
          카드 크기(--cw, --ch)와 위치(--top)는 판이 열릴 때 main.js 가 화면에 맞춰 한 번 정한다. 움직임은 CSS 변환만 쓴다 */
-      #draw { position: fixed; inset: 0; z-index: 1; display: none; --top: 150px; --cw: 200px; --ch: 290px; --gap: 14px; --name: 17px; --desc: 12.5px; --kb: 10px; }
+      #draw { position: fixed; inset: 0; z-index: 1; display: none; --top: 150px; --cw: 200px; --ch: 290px; --gap: 14px; --name: 15px; --desc: 12px; --kb: 10px; }
       #draw.show { display: block; }
       #draw::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 62%, rgba(16,10,6,.62), rgba(16,10,6,.28) 72%); animation: drawFade .35s ease-out backwards; transition: opacity .4s; }
       #draw.fly::before { opacity: 0; }
@@ -146,7 +206,7 @@
           var(--b-bg);
         background-blend-mode: normal; image-rendering: pixelated; image-rendering: crisp-edges; }
       /* 번호 배지 (PC: 누를 키 1·2). 뒷면 그림 아래쪽 홈에 맞춰 main.js 가 --kb 로 높이를 정한다 */
-      .wback .wkey { position: absolute; left: 50%; bottom: var(--kb); transform: translateX(-50%); min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; border: 1px solid rgba(217,164,65,.7); background: rgba(20,13,8,.72); color: #e9c47a; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; white-space: nowrap; }
+      .wback .wkey { position: absolute; left: 50%; bottom: var(--kb); transform: translateX(-50%); min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; border: 1px solid rgba(217,164,65,.7); background: rgba(20,13,8,.72); color: #e9c47a; font-size: var(--fs-caption); font-weight: 700; line-height: 20px; text-align: center; white-space: nowrap; }
       body.touch .wback .wkey:not(.wfoe) { display: none; }
       /* 상대 무기 칸 (맨 오른쪽): 모양은 같고 회색으로 어둡게, 번호 대신 "상대" (폰에서도 보인다). 누를 수 없다 (살짝 흔들릴 뿐).
          회색은 filter 대신 배경 섞기(color)로 만든다: 뒤집히는 카드에 filter 를 걸면 사파리에서 뒷면 숨기기가 풀릴 수 있다 */
@@ -162,36 +222,35 @@
         background-blend-mode: normal, color, normal, normal, normal;
         box-shadow: 0 8px 20px rgba(0,0,0,.5), inset 0 0 0 5px rgba(8,6,5,.9), inset 0 0 0 6px rgba(200,194,182,.28); }
       /* "상대" 배지: 붉은 빛 없이 글자만 희게 (오너 결정 — 붉으면 너무 튄다, 회색 글자는 안 읽힌다) */
-      .wback .wkey.wfoe { border-color: rgba(236,232,225,.45); background: rgba(12,10,9,.7); color: #f7f4ef; font-size: 12px; letter-spacing: .06em; padding: 0 9px 0 10px; }
+      .wback .wkey.wfoe { border-color: rgba(236,232,225,.45); background: rgba(12,10,9,.7); color: #f7f4ef; font-size: var(--fs-caption); letter-spacing: var(--ls-label); padding: 0 9px 0 10px; }
       .wcard.nope .wcardInner { animation: nope .3s ease-in-out; }
       /* 앞면: 작은 그림 · 이름(등급 색) · 등급 · 설명 */
       .wface { transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; padding: 8px 9px 10px; text-align: center;
         border: 1px solid var(--tc); background: linear-gradient(172deg, #30241a, #17110c 70%); box-shadow: 0 8px 20px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.6); }
       /* 누구 무기인지: 고른 카드 "내 무기"(금빛), 상대 카드 "상대 무기"(검붉은 빛). 못 고른 카드에는 없다 */
-      .wwho { display: none; flex: none; font-size: 11px; font-weight: 700; letter-spacing: .08em; line-height: 1; padding: 3px 8px 2px 9px; border-radius: 999px; margin-bottom: 1px; color: #1b1410; background: #d9a441; }
+      .wwho { display: none; flex: none; font-size: var(--fs-caption); font-weight: 700; letter-spacing: var(--ls-label); line-height: 1; padding: 3px 8px 2px 9px; border-radius: 999px; margin-bottom: 1px; color: #1b1410; background: var(--accent); }
       .wcard.picked .wwho, .wcard.foe .wwho { display: block; }
       .wcard.foe .wwho { color: #fbe9e2; background: #93372d; }
       .wthumb { flex: 1 1 auto; min-height: 36px; width: 100%; background-position: center; background-repeat: no-repeat; background-size: contain, 100% 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,.55)); }
-      .wname { display: block; font-size: var(--name); font-weight: 800; line-height: 1.15; color: var(--tc); text-shadow: 0 0 10px var(--tg), 0 1px 1px #000; margin-top: 2px; word-break: keep-all; }
-      .wsub { display: block; font-size: 12px; line-height: 1.25; color: #cfc0a2; word-break: keep-all; }
+      .wname { display: block; font-size: var(--name); font-weight: 800; line-height: var(--lh-tight); color: var(--tc); text-shadow: 0 0 10px var(--tg), 0 1px 1px #000; margin-top: 2px; word-break: keep-all; }
+      .wsub { display: block; font-size: var(--fs-caption); line-height: var(--lh-tight); color: #cfc0a2; word-break: keep-all; }
       .wsub:empty { display: none; }
-      .wtier { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .12em; line-height: 1; color: var(--tc); border: 1px solid var(--tc); border-radius: 999px; padding: 3px 8px 2px 9px; margin: 4px 0; opacity: .9; }
+      .wtier { display: inline-block; font-size: var(--fs-caption); font-weight: 700; letter-spacing: var(--ls-label); line-height: 1; color: var(--tc); border: 1px solid var(--tc); border-radius: 999px; padding: 3px 8px 2px 9px; margin: 4px 0; opacity: .9; }
       /* 설명: 두 줄 글을 이어서 흘려 쓰고 줄 길이를 고르게 맞춘다 (카드 폭이 화면마다 달라 줄을 억지로 꺾으면 한두 글자만 남은 줄이 생긴다) */
-      .wdesc { display: block; margin: 0; font-size: var(--desc); line-height: 1.34; color: #ece1cb; word-break: keep-all; text-wrap: balance; }
-      .wabil { display: block; margin: 2px 0 0; font-size: var(--desc); line-height: 1.3; color: var(--tc); word-break: keep-all; text-wrap: balance; } .wabil:empty { display: none; } /* 에픽 특수 능력 한 줄 */
-      #draw.wide .wsub { font-size: 13px; }
-      #draw.wide .wtier { font-size: 13px; margin: 6px 0; }
+      .wdesc { display: block; margin: 0; font-size: var(--desc); line-height: var(--lh-text); color: #ece1cb; word-break: keep-all; text-wrap: balance; }
+      .wabil { display: block; margin: 2px 0 0; font-size: var(--desc); line-height: var(--lh-text); color: var(--tc); word-break: keep-all; text-wrap: balance; } .wabil:empty { display: none; } /* 에픽 특수 능력 한 줄 */
+      #draw.wide .wtier { margin: 6px 0; }
       #draw.low .wface { padding: 6px 7px 7px; }
       #draw.low .wthumb { min-height: 28px; }
       #draw.low .wtier { margin: 2px 0; }
       /* 고른 카드: 살짝 들리고 금빛 테두리. 못 고른 카드: 작아지고 어둡게 (무엇을 놓쳤는지는 보인다) */
       .wcard.picked { transform: translateY(-1%) scale(1.03); z-index: 1; }
-      .wcard.picked .wface { box-shadow: 0 0 0 2px #d9a441, 0 10px 26px rgba(0,0,0,.55), 0 0 24px var(--tg); }
+      .wcard.picked .wface { box-shadow: 0 0 0 2px var(--accent), 0 10px 26px rgba(0,0,0,.55), 0 0 24px var(--tg); }
       .wcard.missed { transform: scale(.92); }
       .wcard.missed .wface::after { content: ''; position: absolute; inset: 0; background: rgba(14,9,6,.36); }
       .wcard.missed .wthumb { filter: grayscale(.7); }
       /* 상대 카드가 뒤집히면 제 색으로: 검붉은 테두리 (내 카드의 금빛 테두리와 짝) */
-      .wcard.foe.flipped .wface { box-shadow: 0 0 0 2px #b0473b, 0 10px 26px rgba(0,0,0,.55), 0 0 24px var(--tg); }
+      .wcard.foe.flipped .wface { box-shadow: 0 0 0 2px var(--foe), 0 10px 26px rgba(0,0,0,.55), 0 0 24px var(--tg); }
       /* 진짜 엑스칼리버: 앞면이 보이면 금빛으로 일렁인다 (빛 층의 불투명도만 움직인다) */
       .wcard.grand::before { content: ''; position: absolute; inset: 0; border-radius: 10px; box-shadow: 0 0 30px 8px rgba(255,205,70,.75), 0 0 8px 2px rgba(255,236,160,.9); opacity: 0; transition: opacity .3s .2s; pointer-events: none; }
       .wcard.grand.flipped::before { opacity: 1; animation: grandPulse 1.1s .5s ease-in-out infinite alternate; }
@@ -221,35 +280,37 @@
       .overlay { position: fixed; inset: 0; z-index: 3; display: none; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(ellipse at center, rgba(27,20,16,.55), rgba(27,20,16,.92)); }
       .overlay.show { display: flex; }
       .card { width: min(460px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; touch-action: pan-y; }
-      h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: .04em; }
-      h2 { margin: 0 0 12px; font-size: 22px; }
-      .sub { color: var(--dim); font-size: 13px; margin: 0 0 16px; line-height: 1.5; }
-      .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+      /* 창 (시작·일시정지·결과 — 10/10 글자 체계): 제목 title · 부제·줄·단추 body · 고르개·안내 caption */
+      h1 { margin: 0 0 4px; font-size: var(--fs-title); font-weight: 800; line-height: var(--lh-tight); letter-spacing: var(--ls-label); }
+      h2 { margin: 0 0 12px; font-size: var(--fs-title); }
+      .sub { color: var(--dim); font-size: var(--fs-body); margin: 0 0 14px; line-height: var(--lh-text); }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-body); }
       .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-      .seg button { background: transparent; color: var(--dim); border: 0; padding: 6px 10px; font-size: 13px; }
+      .seg button { background: transparent; color: var(--dim); border: 0; padding: 6px 10px; font-size: var(--fs-caption); }
       .seg button.on { background: var(--accent); color: #1b1410; font-weight: 700; }
       .toggle { width: 44px; height: 24px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,.4); position: relative; }
       .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--dim); transition: left .15s; }
       .toggle.on { background: var(--accent); }
       .toggle.on::after { left: 22px; background: #1b1410; }
-      .primary { width: 100%; margin-top: 16px; padding: 14px; font-size: 17px; font-weight: 800; border: 0; border-radius: 8px; background: var(--accent); color: #1b1410; }
-      .secondary { width: 100%; margin-top: 8px; padding: 11px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); }
+      .primary { width: 100%; margin-top: 14px; padding: 13px; font-size: var(--fs-body); font-weight: 800; border: 0; border-radius: 8px; background: var(--accent); color: #1b1410; }
+      .secondary { width: 100%; margin-top: 8px; padding: 11px; font-size: var(--fs-body); border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); }
       .actions { position: sticky; bottom: -20px; margin: 0 -20px -20px; padding: 0 20px 20px; background: var(--panel); }
-      .howto { font-size: 13px; color: var(--dim); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
-      .minor { color: var(--accent); font-size: 12px; margin-left: 6px; }
+      .howto { font-size: var(--fs-caption); color: var(--dim); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
+      .minor { color: var(--accent); font-size: var(--fs-caption); margin-left: 6px; }
 
       /* 가로로 든 폰처럼 화면 높이가 낮을 때는 메뉴를 촘촘하게 */
+      /* 가로로 든 폰처럼 낮은 화면: 글자는 줄이지 않고 설정 줄을 두 열로 (제목·부제·단추·안내는 두 열을 가로지른다) */
       @media (max-height: 500px) {
-        .card { padding: 12px 16px; width: min(560px, 100%); }
-        h1 { font-size: 20px; }
+        .card { padding: 12px 18px; width: min(760px, 100%); display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-content: start; }
+        .card > :not(.row) { grid-column: 1 / -1; }
         .sub { margin-bottom: 8px; }
-        .row { padding: 4px 0; font-size: 13px; }
-        .primary { margin-top: 10px; padding: 10px; font-size: 16px; }
+        .row { min-height: 36px; padding: 2px 0; }
+        .primary { margin-top: 10px; padding: 10px; }
         .secondary { padding: 8px; }
         .howto { display: none; }
-        .actions { bottom: -12px; margin: 0 -16px -12px; padding: 0 16px 12px; }
+        .actions { bottom: -12px; margin: 0 -18px -12px; padding: 0 18px 12px; }
       }
-      #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; background: #1b1410; font-size: 18px; padding: 24px; z-index: 10; }
+      #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; background: #1b1410; font-size: var(--fs-title); line-height: var(--lh-text); padding: 24px; z-index: 10; }
       @media (orientation: portrait) and (pointer: coarse) { #rotate.enabled { display: flex; } }
     </style>
   </head>
@@ -275,8 +336,9 @@
         <div class="wcard foe" data-i="2" role="img"><span class="wcardInner"><span class="wback"></span><span class="wface"><small class="wwho">상대 무기</small><span class="wthumb"></span><b class="wname"></b><small class="wsub"></small><span class="wtier"></span><span class="wdesc"></span><span class="wabil"></span></span></span></div>
       </div>
     </div>
-    <div id="guardName"></div>
-    <div id="techCue" aria-live="polite"></div>
+    <!-- 오른쪽 위: R1 자세 · (#techCue 안) R2 패시브·고유 동작 · R3 비기 — 고정 칸. 가운데 위: C 상태(경직 · 내 비기 창) -->
+    <div id="guardName" class="slot"></div>
+    <div id="techCue"><div id="techSlot" class="slot" aria-live="polite"></div><div id="secretSlot" class="slot" aria-live="polite"></div><div id="stateCue" aria-live="polite"></div></div>
     <div id="moveStick" aria-label="이동 조이스틱"><div id="moveKnob"></div></div>
 
     <div class="overlay show" id="menu">
