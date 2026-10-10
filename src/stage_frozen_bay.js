@@ -6,7 +6,7 @@
 // East-Siberian inland lake, winter predawn. Visual ice only: no physics changes.
 import * as THREE from 'three';
 import { Kit, canvasTex, rng, box, cyl, limb } from './stage_kit.js';
-import { buildFrozenBayShore, bankHeight, CHAPEL } from './stage_frozen_bay_shore.js';
+import { buildFrozenBayShore, CHAPEL } from './stage_frozen_bay_shore.js';
 
 function iceTexture() {
   const r = rng(101071);
@@ -199,7 +199,7 @@ function pierLantern(scene, pierPos) {
  *  ① 얼음 언덕(토로스): 깨진 청록 얼음판이 밀려 올라와 비스듬히 겹쳐 쌓인 능선 — 눈 둑 고리 바깥 12~24 m (카메라 궤도 10.5 m 밖)
  *  ② 먼 눈 덮인 산맥: 맞은편 기슭(181 m) 너머 215~232 m 에 바이칼 둘레 산맥처럼 눈 쓴 능선을 지평선에 길게.
  *     안개(62~205 m)에 묻히지 않게 안개를 끄고 먼 빛(옅은 회청 몸 · 새벽빛 받은 분홍빛 흰 눈머리)을 꼭짓점 색에 구웠다 — 분홍 새벽 하늘에 실루엣
- *  ③ 통나무 정교회 예배당(투야나의 교구): 선착장 뒤 둑 위 낙엽송 사이에 작게 — 통나무 벽·눈 덮인 박공지붕·양파 지붕 하나·팔단 십자
+ *  ③ 통나무 정교회 예배당(투야나의 교구): 만 어귀 너머 맞은편 기슭에 멀리 작게(10/11 4차, 처음엔 선착장 뒤 둑 위) — 통나무 벽·눈 덮인 박공지붕·양파 지붕 하나·팔단 십자
  */
 function baikalBackdrop(scene) {
   const r = rng(101091);
@@ -263,37 +263,37 @@ function baikalBackdrop(scene) {
   mg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   const mountains = new THREE.Mesh(mg, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide }));
   mountains.name = 'frozen-bay-far-range'; scene.add(mountains);
-  // ③ 통나무 예배당
+  // ③ 통나무 예배당 — 10/11 4차: 만 어귀 너머 맞은편 기슭 능선(약 188 m, 중경과 원경 사이)에 작게. 그 거리는 안개(62~205 m)에 거의 묻히므로
+  //  안개를 끄고 먼 빛을 입힌 짙은 회청 실루엣으로 칠했다(산맥과 같은 방식) — 분홍 새벽 하늘에 겨우 읽힐 만큼. 십자는 멀리서도 끝이 보이게 굵게
   const c = new Kit(101097);
-  const base = bankHeight(CHAPEL.x, CHAPEL.z) - 0.35;
-  c.push([CHAPEL.x, base, CHAPEL.z], CHAPEL.rotY);
-  const LOG = 0x5b4636, LOG2 = 0x6a5240, W = 3.0, L = 4.2, H = 2.6, LR = 0.13;
+  c.push([CHAPEL.x, CHAPEL.y, CHAPEL.z], CHAPEL.rotY);
+  const LOG = 0x4d5868, LOG2 = 0x535e6e, W = 3.0, L = 4.2, H = 2.6, LR = 0.13;
   for (let i = 0; i < Math.round(H / (LR * 1.8)); i++) { // 통나무를 쌓은 네 벽 (모서리에서 통나무 끝이 엇갈려 삐죽)
     const y = LR + i * LR * 1.8, col = i % 2 ? LOG : LOG2;
     for (const sx of [-1, 1]) limb(c, 'log', [sx * W / 2, y, -L / 2 - 0.25], [sx * W / 2, y, L / 2 + 0.25], LR, LR, col, { noise: 0.06 }, 6);
     for (const sz of [-1, 1]) limb(c, 'log', [-W / 2 - 0.25, y + LR * 0.9, sz * L / 2], [W / 2 + 0.25, y + LR * 0.9, sz * L / 2], LR, LR, col, { noise: 0.06 }, 6);
   }
-  c.put('log', box(W, H, L), 0x3f3128, [0, H / 2, 0]); // 안쪽 벽(통나무 틈 사이 어둠)
-  c.put('log', box(0.8, 1.5, 0.08), 0x2a211b, [0, 0.85, L / 2 + LR + 0.02]); // 문
+  c.put('log', box(W, H, L), 0x434d5b, [0, H / 2, 0]); // 안쪽 벽(통나무 틈 사이 어둠)
+  c.put('log', box(0.8, 1.5, 0.08), 0x353d48, [0, 0.85, L / 2 + LR + 0.02]); // 문
   // 눈 덮인 박공지붕 (판자 둘) + 지붕 끝
   for (const sx of [-1, 1]) {
-    c.put('roof', box(W / 2 + 0.55, 0.12, L + 0.9), 0x4b3a2e, [sx * (W / 4 + 0.12), H + 0.75, 0], [0, 0, -sx * 0.62], 1, { noise: 0.05, snow: 0.95, snowColor: 0xe8eef3 });
+    c.put('roof', box(W / 2 + 0.55, 0.12, L + 0.9), 0x4a5361, [sx * (W / 4 + 0.12), H + 0.75, 0], [0, 0, -sx * 0.62], 1, { noise: 0.05, snow: 0.95, snowColor: 0xa9b3c1 });
   }
   // 지붕 마루 위 팔각 북 + 양파 지붕 + 팔단 십자
   const drumY = H + 1.45;
   c.put('log', cyl(0.45, 0.5, 0.9, 8), LOG, [0, drumY + 0.45, -0.3]);
   const onion = new THREE.LatheGeometry([[0, 0], [0.55, 0.05], [0.72, 0.35], [0.66, 0.7], [0.38, 1.05], [0.12, 1.35], [0.04, 1.55], [0, 1.6]].map(([x, y]) => new THREE.Vector2(x, y)), 10);
-  c.put('dome', onion, 0x3c4a3e, [0, drumY + 0.9, -0.3], undefined, 1, { vary: 0, noise: 0.05, snow: 0.35, snowColor: 0xe8eef3 });
-  const cy = drumY + 2.5, CR = 0x2c2a26; // 팔단 십자: 세로대 · 위 짧은 가로대 · 큰 가로대 · 아래 비스듬한 발판
-  c.put('cross', box(0.07, 1.25, 0.07), CR, [0, cy + 0.45, -0.3]);
-  c.put('cross', box(0.32, 0.06, 0.06), CR, [0, cy + 0.88, -0.3]);
-  c.put('cross', box(0.62, 0.07, 0.07), CR, [0, cy + 0.66, -0.3]);
-  c.put('cross', box(0.42, 0.06, 0.06), CR, [0, cy + 0.2, -0.3], [0, 0, 0.42]);
+  c.put('dome', onion, 0x48525f, [0, drumY + 0.9, -0.3], undefined, 1, { vary: 0, noise: 0.05, snow: 0.35, snowColor: 0xa9b3c1 });
+  const cy = drumY + 2.5, CR = 0x3b4350; // 팔단 십자: 세로대 · 위 짧은 가로대 · 큰 가로대 · 아래 비스듬한 발판
+  c.put('cross', box(0.16, 1.35, 0.16), CR, [0, cy + 0.45, -0.3]);
+  c.put('cross', box(0.4, 0.13, 0.13), CR, [0, cy + 0.92, -0.3]);
+  c.put('cross', box(0.8, 0.15, 0.15), CR, [0, cy + 0.66, -0.3]);
+  c.put('cross', box(0.55, 0.13, 0.13), CR, [0, cy + 0.15, -0.3], [0, 0, 0.42]);
   c.pop();
-  const mats = { log: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), roof: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }),
-    dome: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }), cross: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) };
+  const mats = { log: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }), roof: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }),
+    dome: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }), cross: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }) };
   for (const [bin, mat] of Object.entries(mats)) {
-    const m = c.mesh(bin, mat, { cast: false, receive: true });
+    const m = c.mesh(bin, mat, { cast: false, receive: false });
     m.name = 'frozen-bay-chapel-' + bin; scene.add(m);
     for (const g of c.bins[bin]) g.dispose();
   }

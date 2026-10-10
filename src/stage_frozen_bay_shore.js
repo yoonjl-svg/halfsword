@@ -1,12 +1,14 @@
-// 얼어붙은 만의 물가(눈 덮인 둑·낙엽송·선착장·먼 구릉) — 샛별 저장소에서 가져옴(b17a3c3). 바꾼 것: 숲을 무리 짓기(woodedBanks, 무대 리뷰 10/10) · 예배당 자리 비우기와 shoreRadius·bankHeight·CHAPEL 내보내기(10/11 3차). 짓는 곳은 stage_frozen_bay.js
+// 얼어붙은 만의 물가(눈 덮인 둑·낙엽송·선착장·먼 구릉) — 샛별 저장소에서 가져옴(b17a3c3). 바꾼 것: 숲을 무리 짓기(woodedBanks, 무대 리뷰 10/10) · shoreRadius·bankHeight·CHAPEL 내보내기(10/11 3차, 예배당은 10/11 4차에 맞은편 기슭으로). 짓는 곳은 stage_frozen_bay.js
 // Static shores for Eira's inland frozen bay. +X remains the open lake;
 // all scenery is beyond the duel/camera space and creates no physics bodies.
 import * as THREE from 'three';
 import { Kit, rng, box, cyl, limb } from './stage_kit.js';
 
 const TAU = Math.PI * 2;
-/** 통나무 정교회 예배당 자리 (stage_frozen_bay.js baikalBackdrop, 10/11 3차) — 선착장 뒤 둑 위. 숲이 여기는 비운다 */
-export const CHAPEL = { x: -21.4, z: 27.2, rotY: 2.25 };
+/** 통나무 정교회 예배당 자리 (stage_frozen_bay.js baikalBackdrop) — 10/11 01:4x 사장님 '좀 더 멀리 작게 … 자연이 강조되도록. 그만큼 안식이 멀다는 뜻이기도.
+ *  원경까진 아니고 중경과 원경 사이': 선착장 뒤 둑 위(−21.4, 27.2)에서 만 어귀 너머 맞은편 기슭 능선(약 188 m, 먼 산맥 222 m 보다 앞)으로 옮겼다.
+ *  가까운 숲은 그 자리를 다시 채운다(비우지 않음). 맞은편 기슭엔 숲이 없어 새 자리는 따로 비울 것이 없다 */
+export const CHAPEL = { x: 179.6, z: 55.6, y: 1.7, rotY: 1.3 };
 const BANK_ROWS = [0, 0.8, 2.8, 8, 19, 35];
 const BANK_HEIGHTS = [0.12, 0.57, 1.05, 1.55, 1.9, 2.2];
 const C = {
@@ -181,7 +183,7 @@ function woodedBanks(K, r) {
       const depth = Math.max(4, cdepth + (r() - 0.5) * 9);
       const d = shoreRadius(a) + depth;
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (Math.hypot(x + 10, z - 24) < 4 || Math.hypot(x - CHAPEL.x, z - CHAPEL.z) < 6) continue; // 선착장 · 통나무 예배당 자리 비움
+      if (Math.hypot(x + 10, z - 24) < 4) continue;
       const h = (4.5 + r() * 6.5) * tall + (k === 0 ? 2 : 0);
       if (i % 9 === 0) { pine(K, r, x, z, h * 0.85); pines++; }
       else { bareLarch(K, r, x, z, h, depth < 16); larches++; }
