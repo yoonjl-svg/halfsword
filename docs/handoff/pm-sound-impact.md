@@ -1,10 +1,10 @@
-# 사운드 PM 인수인계 — 몸 소리·죽음 목소리 (claude/pm-sound-impact)
+# 사운드 PM 인수인계 — 몸 소리·죽음 목소리 (…/pm-sound-impact)
 
 > **지금 상태와 다음 할 일은 [`sound_pm_handoff.md`](sound_pm_handoff.md)를 먼저 읽는다.** 이 문서는 차수별 변경 기록이다(앞부분의 합치기·바뀐 파일은 옛 브랜치 기준).
 
 ## 합치기
 
-- 브랜치 `claude/pm-sound-impact`는 `claude/first-game-development-2q36ha`의 `5c82cae` 위에 쌓였다.
+- 브랜치 `…/pm-sound-impact`는 `…/first-game-development-2q36ha`의 `5c82cae` 위에 쌓였다.
   - `b8d953d` 몸 소리 (합성)
   - `f03e2ff` 오너가 GitHub 웹으로 올린 원본 음원 (wav·zip·7z, 약 17MB)
   - `9442c19` 녹음 목소리 적용, 원본 음원 삭제

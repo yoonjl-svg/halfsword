@@ -1,6 +1,6 @@
 # 자루 무기(몸 틀 E) 동작 원전 조사 — 봉 · 창 · 미늘창/폴액스 · 일본 창술/나기나타
 
-작성일 2026-09-28. 무기 PM 지시(같은 7항목 형식, 조사만, `src` 수정 없음)에 대한 답. 앞선 조사 `docs/weapon_motion_research.md`(①~⑥)와 무기 PM의 출처 노트 `docs/weapon_motion_sources_one_pole.md` §4, 설계 초안 `docs/pole_frame_design.md`(둘 다 `claude/pm-weapons-balance`)를 바탕으로 하고, **거기에 없던 것만 더한다.** 이미 적힌 내용(마이어 6가드의 기본 뜻, 실버 길이 공식, 피오레 6 posta 이름)은 반복하지 않고 확인 결과와 고칠 점만 적는다.
+작성일 2026-09-28. 무기 PM 지시(같은 7항목 형식, 조사만, `src` 수정 없음)에 대한 답. 앞선 조사 `docs/weapon_motion_research.md`(①~⑥)와 무기 PM의 출처 노트 `docs/weapon_motion_sources_one_pole.md` §4, 설계 초안 `docs/pole_frame_design.md`(둘 다 `…/pm-weapons-balance`)를 바탕으로 하고, **거기에 없던 것만 더한다.** 이미 적힌 내용(마이어 6가드의 기본 뜻, 실버 길이 공식, 피오레 6 posta 이름)은 반복하지 않고 확인 결과와 고칠 점만 적는다.
 
 ## 0. 읽기 전에 — 근거 수준
 

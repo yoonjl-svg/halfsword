@@ -1,6 +1,6 @@
 # 캐릭터 PM 상태 (늘 최신)
 
-세션 `session_01HSrct4UE9qVgfTi4hd59qi` · 브랜치 `claude/pm-characters` · 디렉터 `session_014nJCzE4hyxiYc9innhSUng` · 갱신 2026-09-29
+세션 `session_01HSrct4UE9qVgfTi4hd59qi` · 브랜치 `…/pm-characters` · 디렉터 `session_014nJCzE4hyxiYc9innhSUng` · 갱신 2026-09-29
 
 ## 맡은 일
 - 캐릭터 5명 + 변형(`src/characters.js`): 시트·성격 수치(persona.level/pers)·감정 문턱값·대사·**온몸 타격 기질(persona.whole)**

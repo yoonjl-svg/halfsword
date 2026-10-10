@@ -254,7 +254,7 @@
 
 ## 감정층 이후 재측정 (AI 전술 병합 + 공포 파일럿, 45초 판, 시드 1~8)
 
-(`node tools/sim/characters_eval.mjs rr 8`, 브랜치 `claude/pm-characters` `b6f6f71` 기준)
+(`node tools/sim/characters_eval.mjs rr 8`, 브랜치 `…/pm-characters` `b6f6f71` 기준)
 
 **공포가 실제로 켜지는가** — 캐릭터별 판 평균 세기 / 판 최고 세기 평균 / 공포가 0.3을 넘은 판 비율:
 
@@ -392,7 +392,7 @@
 2안 의도대로: 마르그레테 ~69%, 브란 ~30%, 가운데 셋 48~53%. 극단 셀은 랴오 대 마르그레테 13:88 하나
 (8시드 오차 ±12%p). 브란 대 마르그레테는 25:75로 "격차는 있되 브란이 넷에 한 번은 잡는" 정도다.
 
-## 무기 로스터 연결 (`claude/pm-weapons` 84a6a61 병합, `5b4cb90`~)
+## 무기 로스터 연결 (`…/pm-weapons` 84a6a61 병합, `5b4cb90`~)
 
 무기 담당의 실측 measure를 `schools.js`에 넣고 캐릭터마다 `persona.school`을 무기에 맞췄다. 시뮬
 (`characters_eval`·`duel_pair`·`skill_eval`)이 캐릭터의 무기를 실제로 들려 준다.
@@ -709,7 +709,7 @@ AI 대결 승률은 밸런스 참고용일 뿐이라(감독) 브란의 낮은 �
 ## 디렉터 알림 (08:27) — 사장 결정·분담
 
 - **브란은 지금대로 둔다(사장 결정)**: 나뭇가지 브란이 약한 것은 의도. 팔쉬온을 든 10% 브란은 더미 3/4 처치, 랴오와 2승 2패(디렉터 `tools/sim/bran_falchion_probe.mjs`).
-- **외형 전담 PM 신설**(브랜치 `claude/pm-character-looks`): 갑주·머리·수염·안대·옷을 새로 만든다. 사장 지시 외형 — 마르그레테 갈색 머리·먹색 판금·치마 같은
+- **외형 전담 PM 신설**(브랜치 `…/pm-character-looks`): 갑주·머리·수염·안대·옷을 새로 만든다. 사장 지시 외형 — 마르그레테 갈색 머리·먹색 판금·치마 같은
   하체(용기사 느낌) / 하인리히 은빛 중갑·은발·짧은 은색 턱수염 / 랴오 장발·애꾸눈 / 이졸데 세이버풍 평복·검은 머리 / 브란 베이지~갈색 농부 옷·금발.
   외형 데이터는 src/looks.js·src/outfits.js에 두고 characters.js에서는 look 참조 한 줄만 바뀐다 → **캐릭터 PM은 characters.js의 look 블록을 건드리지
   않는다.** 대사·감정·AI·힘은 그대로 캐릭터 PM 담당. 설정집(character_lore·profiles·characters.md)의 외모 서술은 외형 PM 보고가 오면 그때 갱신한다.

@@ -27,7 +27,7 @@ L.push('# 기준 동작 ↔ 게임 동작 모양 비교 (자동 생성)');
 L.push('');
 L.push('> `node tools/motion/compare.mjs` 가 만든다. 관절 위치만으로 같은 식으로 잰다(`tools/motion/lib/shape_metrics.mjs`) — 기준 클립과 게임 기록의 측정 방법이 같다.');
 L.push('> 가슴 돌림 = 어깨선, 골반 돌림 = 엉덩이선. 베기 창 = 칼끝 최고 앞뒤 0.35 s (손·칼끝 길은 이 창 안). 사슬 순서 = 칼끝 최고 기준 ms (− 가 앞).');
-L.push('> 기록: 지금 게임 = `record_game.mjs`(main, 손가락을 AI 기술 길로), 시험판 = `record_wbs.mjs`(claude/wbs-impl, tseq.mjs 와 같은 조건, 손가락 12 m/s).');
+L.push('> 기록: 지금 게임 = `record_game.mjs`(main, 손가락을 AI 기술 길로), 시험판 = `record_wbs.mjs`(…/wbs-impl, tseq.mjs 와 같은 조건, 손가락 12 m/s).');
 L.push('> **사람 값은 참고이지 한도가 아니다.** 게임이 기준보다 크거나 빠른 것은 문제가 아니고, 작거나 느린 것이 "모자람"이다.');
 L.push('');
 // 기록 조건 (디렉터 요청: 커밋·시드·Hz·무기). 기록 파일의 cond 를 그대로 옮긴다

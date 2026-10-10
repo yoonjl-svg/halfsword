@@ -41,7 +41,7 @@
 
 ## 아직 없는 것 (무기 PM에게)
 
-- `claude/pm-weapons` 브랜치·세션이 아직 저장소에 없다. 생기면 이 문서와 `src/schools.js`를 기준으로
+- `…/pm-weapons` 브랜치·세션이 아직 저장소에 없다. 생기면 이 문서와 `src/schools.js`를 기준으로
   무기별 `measure` 실측치를 보내 주면, 캐릭터 PM이 꾸러미를 붙이고 캐릭터의 `school`을 바꾼다.
 - 지금 캐릭터 다섯의 `weapon`(`branch`·`jian`·`excalibur` 등)은 로스터 id만 적어 둔 것이고, 유파는 전부
   `longsword` 꾸러미다.

@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const outDir = process.env.CLIPS_DIR || '/tmp/motion_clips/'; // 영상은 저장소에 넣지 않는다(파일이 크다) — 장면 띠(jpg)만 docs/handoff 에
-const tmp = fs.mkdtempSync('/tmp/claude-motionclips-');
+const tmp = fs.mkdtempSync('/tmp/motionclips-');
 fs.mkdirSync(outDir, { recursive: true });
 const FFMPEG = process.env.FFMPEG || '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });

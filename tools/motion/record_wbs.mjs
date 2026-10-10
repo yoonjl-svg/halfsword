@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-//  디렉터 온몸 베기 구현(claude/wbs-impl)을 기준 동작과 같은 관절 형식으로 기록 (동작 연구 PM)
+//  디렉터 온몸 베기 구현(…/wbs-impl)을 기준 동작과 같은 관절 형식으로 기록 (동작 연구 PM)
 //
-//   git worktree add --detach <경로> origin/claude/wbs-impl && ln -s $PWD/node_modules <경로>/node_modules
+//   git worktree add --detach <경로> origin/…/wbs-impl && ln -s $PWD/node_modules <경로>/node_modules
 //   node tools/motion/record_wbs.mjs --root=<경로> [--v=12] [--hz=60]
 //     → docs/motion/records/wbs_<무리>_<arm|commit>.json (+ records/index.json)
 //
@@ -25,7 +25,7 @@ const arg = (k, d) => {
   return a ? a.slice(k.length + 3) : d;
 };
 const WROOT = resolve(arg('root', ''));
-if (!arg('root')) throw new Error('--root=<claude/wbs-impl 체크아웃 경로> 가 필요하다');
+if (!arg('root')) throw new Error('--root=<…/wbs-impl 체크아웃 경로> 가 필요하다');
 const V = +arg('v', 12);
 const HZ = +arg('hz', 60);
 const PRE = 0.6;
@@ -137,7 +137,7 @@ for (const fam of Object.keys(FAM)) {
       kind: mode === 'arm' ? 'wbs-arm' : 'wbs-commit',
       source: `디렉터 온몸 베기 구현 ${rev} (${mode === 'arm' ? '팔 베기, WHOLE.commit 끔' : '결심 베기, WHOLE.commit 켬'}), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 ${V} m/s 획, 입력 ${HZ} Hz, 칼 충돌 끔. 결심 ${commits}번`,
       cond: {
-        code: `claude/wbs-impl ${rev}`,
+        code: `…/wbs-impl ${rev}`,
         seed: SEED,
         physicsHz: Math.round(1 / DT),
         recordHz: Math.round(1 / DT),

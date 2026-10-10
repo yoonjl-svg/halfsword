@@ -5,7 +5,7 @@
 - 분류: `docs/weapon_types.md`, 코드 `src/weapon_class.js` (몸 틀 × 싸움 방식, 무기 스펙에 `frame`·`style`).
 - 동작 라이브러리 코드: `src/motion_library.js`. **10/8 18:50 부터 게임 본판에 켜져 있다**(사장님 결정, 확인표 34; 스위치 `SKILL.motionLib`, `?motionLib=0` = 전 물리). 잇는 법·측정: `docs/handoff/motion_library_integration.md`, `docs/strike/motion_lib_main_2026-10-08.md`. 점검 도구 `tools/sim/motion_lab.mjs` 는 스위치를 끄고 직접 입혀 끔/켬/본판을 나란히 잰다.
 - 자료:
-  - 무기-검술 연구의 조사: 브랜치 `claude/pm-weapons` `docs/weapon_motion_research.md`
+  - 무기-검술 연구의 조사: 브랜치 `…/pm-weapons` `docs/weapon_motion_research.md`
   - 한손·자루 무기 조사: `docs/weapon_motion_sources_one_pole.md`
 - 자료의 한계: 이 환경에서는 원전 페이지(Wiktenauer·HROARR·위키백과 등)를 직접 열 수 없었다. 검색 요약으로만 확인했다. 표시는 다음과 같다.
   - **[원전 2차]**: 검색 요약이 이름을 댄 원전에서 확인

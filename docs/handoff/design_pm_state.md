@@ -1,6 +1,6 @@
 # 기획 PM 상태 파일 (후임이 가장 먼저 읽는다)
 
-- 갱신: 2026-09-30 17:00 KST. 세션 session_01QRwbXg6zS4784iUVd3XGV5, 브랜치 `claude/pm-design`, 환경 env_01YG7HgthZqrnM2wyk4jrLkh.
+- 갱신: 2026-09-30 17:00 KST. 세션 session_01QRwbXg6zS4784iUVd3XGV5, 브랜치 `…/pm-design`, 환경 env_01YG7HgthZqrnM2wyk4jrLkh.
 - 읽는 순서: 이 파일 → `docs/handoff/design_pm_charter.md` → `docs/handoff/director_state.md`(세션 명단·운영 규칙) → `docs/decisions.md` → 내 산출물 `docs/design/*`.
 - 디렉터 세션: session_014nJCzE4hyxiYc9innhSUng. 알릴 때는 매번 새 트리거(create_trigger + persistent_session_id, 일정 없음) → fire_trigger.
 - 보고 규칙(사장님 9/30 15:20, 디렉터 전달): 기획 PM은 정기 보고를 하지 않는다(토큰 절약). 18:00 cron은 지웠다. 산출물이 끝났을 때만 디렉터에게 트리거 한 줄, 사장님께 여쭐 것이 있을 때만 직접 여쭙는다.

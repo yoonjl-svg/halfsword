@@ -139,4 +139,4 @@
 - 미 육군 FM 23-25 *Bayonet* (1943): https://www.ibiblio.org/hyperwar/USA/ref/FM/FM23-25/index.html ; 영국 *Bayonet Training Manual* (Gutenberg 57186)
 - 스웻넘 놓고 찌르기 +2피트, 와일드 "dart": Wikipedia Quarterstaff, HROARR "English Quarterstaff, circa 1600"
 - Sword STEM, "How Fast Do Swords Move? – Try 1"(롱소드 날 약 20 m/s): https://swordstem.com/2018/08/22/how-fast-do-swords-move-try-1/
-- 이 저장소: `tools/sim/staff_proto.mjs`(claude/pm-weapons-balance), `src/config.js` SKILL, `src/skill.js`
+- 이 저장소: `tools/sim/staff_proto.mjs`(…/pm-weapons-balance), `src/config.js` SKILL, `src/skill.js`

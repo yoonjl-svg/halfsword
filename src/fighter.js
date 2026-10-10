@@ -135,7 +135,7 @@ function humanLegTorque(jdefs) {
 const HD = Math.PI / 180;
 export const HUMAN = {
   // 척추 비틀림(어깨선 − 엉덩이선) °, + = 칼 든 어깨가 뒤로. 한쪽 45 대칭 (10/1 동작 PM 교정, docs/motion/corr_v2_shoulder_note_2026-10-01.md
-  //  origin/claude/pm-motion-research 922058d: 문헌 AAOS 가슴허리 돌림 한쪽 약 45, 왼쪽 벌 클립 −41°. 예전 −29~46 은 오른쪽 클립만 잰 값)
+  //  origin/…/pm-motion-research 922058d: 문헌 AAOS 가슴허리 돌림 한쪽 약 45, 왼쪽 벌 클립 −41°. 예전 −29~46 은 오른쪽 클립만 잰 값)
   spineTwist: [-45, 45],
   shoulderPlane: [-45, 130], // 칼 어깨 들림 면 °: 수평 벌림 약 45 · 수평 모음(몸 앞 가로지름) 약 130 (봉투 문헌 칸, AAOS)
   shoulderElev: 180, // 칼 어깨 들림 ° (굽힘·벌림 180, AAOS)

@@ -23,8 +23,8 @@
   - `src/fighter.js`
   - main.js의 갑옷·판정 코드(`r.plate`). 소리 호출만 디렉터 요청으로 고친다.
     - (방어구 병합에서 반영됨: `PLATE_PARTS`는 없어졌고 `onWound`가 `r.plate`로 `plateBlock`·`plateBreak`를 부른다 — `pm-sound-impact.md` 7차 덧붙임)
-- **브랜치**: `claude/pm-sound-impact`에만 커밋·푸시한다. **main에 직접 푸시하지 않는다.** PR은 요청이 있을 때만 만든다.
-  - 디렉터가 병합하면 브랜치를 main에서 다시 시작한다: `git fetch origin && git checkout -B claude/pm-sound-impact origin/main`, 그다음 푸시는 `--force-with-lease`.
+- **브랜치**: `…/pm-sound-impact`에만 커밋·푸시한다. **main에 직접 푸시하지 않는다.** PR은 요청이 있을 때만 만든다.
+  - 디렉터가 병합하면 브랜치를 main에서 다시 시작한다: `git fetch origin && git checkout -B …/pm-sound-impact origin/main`, 그다음 푸시는 `--force-with-lease`.
 - **커밋 메시지**: 영어로 쓴다. 끝에는 세션이 주는 attribution 줄을 넣는다. 코드·커밋에 모델 이름을 쓰지 않는다.
 - **주석**: 한국어로, 기존 톤(쉬운 말, 소리를 의성어로)을 따른다.
 - **음원 라이선스**:
@@ -39,7 +39,7 @@
 ## 2. 디렉터와 연락하기
 
 - SendMessage는 디렉터 세션에 닿지 않는다. **트리거로 보낸다**:
-  - `mcp__Claude_Code_Remote__create_trigger`에 `persistent_session_id`(디렉터 세션 id)와 `run_once_at`(몇 분 뒤)을 준다.
+  - 원격 세션 도구의 `create_trigger`에 `persistent_session_id`(디렉터 세션 id)와 `run_once_at`(몇 분 뒤)을 준다.
   - **디렉터 세션 id** (2026-09-29 11:16 KST, 은퇴 디렉터의 알림 — 사장님 지시): 진짜 디렉터 = `session_014nJCzE4hyxiYc9innhSUng`("Stillness game director handoff", 사장님이 직접 만든 세션). 옛 디렉터 `session_01KcYCh6UfKjrR4m8QjPcEbM`는 은퇴했고 더 보내지 않는다. 디렉터 인계서는 main `docs/director_handoff.md`(`940f665`).
     - 혼선 기록: 같은 날 09:59에 옛 디렉터가 `session_01NDJVGN7xsXPq19Yzry3BvH`("디렉터 · Stillness 총괄 (새)")을 새 디렉터라고 알렸으나, 이는 옛 디렉터가 만든 중복 세션이었고 보관됐다. 그쪽으로 보낸 인수 보고는 014n에 다시 보냈다.
     - 보고 전에 `get_session`으로 살아 있는지(RUNNING, 제목) 한 번 보는 습관은 유지한다.
@@ -226,7 +226,7 @@
 
 ## 8. 새 세션 첫 할 일 체크리스트
 
-1. `git fetch origin && git checkout -B claude/pm-sound-impact origin/main`
+1. `git fetch origin && git checkout -B …/pm-sound-impact origin/main`
 2. 이 문서와 `pm-sound-impact.md`의 9~14차를 훑는다.
 3. 네트워크 확인(5장 1번). 결과를 오너에게 한 줄로 알린다.
 4. 되면 슈바르츠 녹음 후보를 찾아 들려준다. 안 되면 오너에게 받을 파일(사이트·검색어·파일)을 골라 준다.

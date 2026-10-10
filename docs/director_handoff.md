@@ -13,7 +13,7 @@
 **한 줄 요약:** Half Sword 같은 모바일 웹 물리 롱소드 결투 게임 "Stillness(적막)"입니다. 디렉터는 사장님 말씀을 받아 PM 세션들에 일을 나누고, 결과를 검토·병합·배포하고, 한국어로 보고합니다.
 
 - 저장소: `yoonjl-svg/halfsword` (로컬 `/home/user/halfsword`). Three.js + Rapier3D(액티브 랙돌) + Vite.
-- 개발 브랜치: `claude/first-game-development-2q36ha`. 배포는 이 브랜치를 main에 그대로 올리는 것입니다(= main과 같은 커밋 `249f59b`).
+- 개발 브랜치: `…/first-game-development-2q36ha`. 배포는 이 브랜치를 main에 그대로 올리는 것입니다(= main과 같은 커밋 `249f59b`).
 - **푸시는 한 디렉터만 합니다.** 옛 디렉터는 인계가 확인되면 배포를 멈추기로 했습니다. 같은 브랜치에 둘이 푸시하면 충돌이 납니다.
 - main에 올리면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드해 GitHub Pages에 올립니다. 몇 분 걸리고, 사장님께는 "새로고침" 안내를 붙입니다.
 - 라이브: https://yoonjl-svg.github.io/halfsword/
@@ -48,7 +48,7 @@
 - 문서(모두 사장님 확인 전 초안):
   - `docs/whole_body_redesign.md`: 온몸 타격 재설계, 사장님께 여쭐 26문항 (`d08ac65`)
   - `docs/pm_roles_charter.md`: PM 역할 분담안, 사장님이 정하실 것 7가지 (`249f59b`, 09:53)
-- 원격 `claude/wbs-impl`: 온몸 타격 구현 브랜치. 사장님 허락("푸시도 허락하마", 09:46)으로 올렸습니다. 끝 커밋은 `d781ab9`입니다.
+- 원격 `…/wbs-impl`: 온몸 타격 구현 브랜치. 사장님 허락("푸시도 허락하마", 09:46)으로 올렸습니다. 끝 커밋은 `d781ab9`입니다.
 
 ---
 
@@ -76,20 +76,20 @@
 
 **배포 순서** (개발 브랜치에서 커밋한 뒤)
 ```
-git push -u origin claude/first-game-development-2q36ha
-git push origin claude/first-game-development-2q36ha:main
+git push -u origin …/first-game-development-2q36ha
+git push origin …/first-game-development-2q36ha:main
 ```
 - PM 작업은 브랜치를 통째로 병합하지 않습니다. 필요한 커밋을 개발 브랜치로 체리픽하거나, 워크트리에서 검증한 패치를 가져옵니다.
-- 정해진 브랜치(개발 브랜치와 main) 말고 다른 원격 브랜치에 푸시할 때는 사장님 허락을 받습니다. `claude/wbs-impl`은 9/29 09:46에 허락받았습니다.
+- 정해진 브랜치(개발 브랜치와 main) 말고 다른 원격 브랜치에 푸시할 때는 사장님 허락을 받습니다. `…/wbs-impl`은 9/29 09:46에 허락받았습니다.
 
 **커밋 끝 줄**
-- 커밋 메시지 끝에는 **자기 세션의 안내(system reminder)가 알려 주는 두 줄**(Co-Authored-By 한 줄 + Claude-Session 주소 한 줄)을 그대로 붙입니다. 세션마다 주소가 다릅니다. 예는 `git log -3 origin/main`에서 봅니다.
-- **코드, 문서, 커밋 본문 어디에도 AI 모델 이름을 쓰지 않습니다.** 끝 줄만 예외입니다. 문서를 올리기 전에 모델 이름으로 grep 해서 0건인지 확인합니다(브랜치 이름 `claude/…`는 괜찮습니다). 영문·한글 표기를 함께 보는 명령은 `docs/handoff/director_state.md` 운영 규칙에 있습니다.
+- 커밋 메시지 끝에는 **자기 세션의 안내(system reminder)가 알려 주는 두 줄**(공동 저자 한 줄 + 세션 주소 한 줄)을 그대로 붙입니다. 세션마다 주소가 다릅니다. 예는 `git log -3 origin/main`에서 봅니다.
+- **코드, 문서, 커밋 본문 어디에도 AI 모델 이름을 쓰지 않습니다.** 끝 줄만 예외입니다. 문서를 올리기 전에 모델 이름으로 grep 해서 0건인지 확인합니다(브랜치 이름은 `…/<이름>` 꼴로 적습니다). 영문·한글 표기를 함께 보는 명령은 `docs/handoff/director_state.md` 운영 규칙에 있습니다.
 - Stop 훅(`~/.claude/stop-hook-git-check.sh`)은 커밋하지 않은 변경이 있으면 커밋·푸시하라고 조릅니다. 워크플로가 커밋 안 된 변경을 검증하는 중이면 커밋하지 말고 까닭만 짧게 답합니다. 검증이 끝나면 커밋합니다.
 
 **PM에게 말하기 (트리거)**
 - **매번 새 트리거를 만듭니다.**
-  - `mcp__Claude_Code_Remote__create_trigger`에 `persistent_session_id`로 PM 세션 id를 주고, 일정(cron)은 비웁니다.
+  - 원격 세션 도구의 `create_trigger`에 `persistent_session_id`로 PM 세션 id를 주고, 일정(cron)은 비웁니다.
   - `name`은 "디렉터 → ○○ PM: 요지"입니다.
   - `prompt`는 "[디렉터 → ○○ PM] …"으로 시작하고, 필요하면 "답장은 필요 없습니다."를 붙입니다.
   - 만든 뒤 `fire_trigger(trigger_id)`로 보냅니다.
@@ -133,11 +133,11 @@ git push origin claude/first-game-development-2q36ha:main
 ### 새 디렉터 (만들었음)
 - id: `session_014nJCzE4hyxiYc9innhSUng`. 지금 명단과 상태는 `docs/handoff/director_state.md`가 우선합니다(이 장은 9/29 09:55 기록).
 - 사장님 지정: 모델은 사장님이 고르신 것("…로"), 울트라코드("새 디렉터도 울트라코드야")
-- 브랜치: 같은 개발 브랜치 `claude/first-game-development-2q36ha` → main
+- 브랜치: 같은 개발 브랜치 `…/first-game-development-2q36ha` → main
 
 ### 옛 디렉터 (은퇴)
 - id: `session_01KcYCh6UfKjrR4m8QjPcEbM` ("첫 게임 개발 계획 (디렉터)")
-- 브랜치: `claude/first-game-development-2q36ha` → main
+- 브랜치: `…/first-game-development-2q36ha` → main
 - 노력·권한: 울트라코드, auto
 - 맡은 일: 통합, 병합, 배포, 큰 기능 구현 워크플로, 사장님 보고
 - 상태:
@@ -148,7 +148,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 ### 무기 PM
 - id: `session_013j34LYEUYoaeS5xUme2DTq` ("PM · 무기 밸런스·외형". 9/29 01:20 무렵 사장님이 ASS에서 PM으로 승급)
-- 브랜치: `claude/pm-weapons-balance`. main을 `786775a`까지 병합했고, main에 없는 커밋이 많습니다.
+- 브랜치: `…/pm-weapons-balance`. main을 `786775a`까지 병합했고, main에 없는 커밋이 많습니다.
 - 노력·권한: max, auto
 - 맡은 일:
   - 무기 밸런스와 겉모습, 리볼버 점검 도구(`gun_recoil.mjs`)
@@ -166,7 +166,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 ### 무기-검술 연구 ASS
 - id: `session_01QoWtSqxGN5jYBMudxkqo1x`
-- 브랜치: `claude/pm-weapons` (main보다 163커밋 뒤, 문서만)
+- 브랜치: `…/pm-weapons` (main보다 163커밋 뒤, 문서만)
 - 노력·권한: high
 - 맡은 일:
   - 교본·모션캡처 원전 조사
@@ -178,7 +178,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 ### 캐릭터 PM
 - id: `session_01HSrct4UE9qVgfTi4hd59qi` ("PM · 캐릭터 개발")
-- 브랜치: `claude/pm-characters` (main을 `24f6c0c`까지 병합)
+- 브랜치: `…/pm-characters` (main을 `24f6c0c`까지 병합)
 - 노력·권한: xhigh
 - 맡은 일:
   - 캐릭터 5명과 변형(`src/characters.js`), 성격·AI 수치(persona), 감정, 대사
@@ -191,7 +191,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 ### 외형 PM
 - id: `session_01HNkUuYHag8VSg6xpgbkGVR` ("PM · 캐릭터 외형 (모델링)")
-- 브랜치: `claude/pm-character-looks` (main보다 7커밋 뒤)
+- 브랜치: `…/pm-character-looks` (main보다 7커밋 뒤)
 - 노력·권한: xhigh
 - 맡은 일:
   - 캐릭터 모델, 스테이지 배경, 픽셀 카드 뒷면
@@ -202,7 +202,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 ### 사운드 PM
 - id: `session_018mZ2Hqp8QUttYxEroMCesF` ("미들 소딩 사운드 PM 인수인계")
-- 브랜치: `claude/pm-sound-impact` (main보다 10커밋 뒤)
+- 브랜치: `…/pm-sound-impact` (main보다 10커밋 뒤)
 - 노력·권한: high
 - 맡은 일:
   - 모든 소리(`src/sound.js`, 들어보기 페이지 `sounds.html`)
@@ -214,7 +214,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 ### 인체 동작 연구 PM (새로 만듦)
 - id: `session_013YFFvQRnDedG7CTF1eVknA` ("PM · 인체 동작 연구 (온몸 타격)". 9/29 09:19 생성)
-- 브랜치: `claude/pm-motion-research` (아직 origin에 없음)
+- 브랜치: `…/pm-motion-research` (아직 origin에 없음)
 - 노력·권한: max (사장님이 앱에서 바꾸신 것을 확인), auto
 - 맡은 일:
   - "몸이 어떻게 움직이나": 기준 동작 클립 JSON, 비교 화면(막대 인형), 평가 기준
@@ -225,8 +225,8 @@ git push origin claude/first-game-development-2q36ha:main
 
 ### 그만둔 세션 (참고만)
 - 옛 사운드 PM `session_01VseBCVHqMdVGpQX26yZjVK`: 새 사운드 PM으로 교체됐습니다.
-- 입력 관성 PM `session_011Y1tEx2nczJtgrE3X5QvQs`: `claude/pm-input-feel`, 인계서 `docs/handoff/pm-input-feel.md`.
-- AI 전술 ASS `session_01RbynLMyPNv1hLyqf3dqXro`: `claude/pm-ai-tactics`, `docs/handover-ai-tactics.md`.
+- 입력 관성 PM `session_011Y1tEx2nczJtgrE3X5QvQs`: `…/pm-input-feel`, 인계서 `docs/handoff/pm-input-feel.md`.
+- AI 전술 ASS `session_01RbynLMyPNv1hLyqf3dqXro`: `…/pm-ai-tactics`, `docs/handover-ai-tactics.md`.
 - 밸런스-외형 연구 ASS `session_01MwDbKxgRm6cac7UKL2A7WK`: 인계서를 끝냈습니다.
 
 **경계:**
@@ -373,7 +373,7 @@ git push origin claude/first-game-development-2q36ha:main
 - 9/29 09:38: "밸런스 PM을 디렉터로 승급하는 건?"
   - 디렉터는 좋은 선택지라고 답하면서 조건을 붙였습니다. 무기 PM 자리를 후임에게 넘기고, 견제 장치를 유지하고, 기억을 정리하는 것입니다.
 - 9/29 09:45 ✅ 결정: "그럼 새 디렉터를 세우자. [모델]로. 지금까지의 경과와 현재 주요 이슈를 상세하게 넘겨. 각 하위 세션의 정보도."
-- 9/29 09:46 ✅ "푸시도 허락하마" → `wbs-impl`을 `claude/wbs-impl`로 올렸습니다.
+- 9/29 09:46 ✅ "푸시도 허락하마" → `wbs-impl`을 `…/wbs-impl`로 올렸습니다.
 - 9/29 09:50 ✅ "새 디렉터도 울트라코드야"
 
 ---
@@ -381,8 +381,8 @@ git push origin claude/first-game-development-2q36ha:main
 ## 5. 진행 중인 일과 남은 일 (우선순위 순)
 
 1. ⏳ **디렉터 교체** (사장님 결정 09:45: 새 디렉터 세션, 울트라코드)
-   - ✅ `wbs-impl`을 원격 `claude/wbs-impl`로 올렸습니다(09:46, 사장님 허락).
-   - ✅ 재설계 측정 도구를 `claude/wbs-impl`의 `tools/redesign_probes/`에 옮겼습니다(`d781ab9`, 경로는 옛 스크래치패드 기준이라 쓰기 전에 고쳐야 함).
+   - ✅ `wbs-impl`을 원격 `…/wbs-impl`로 올렸습니다(09:46, 사장님 허락).
+   - ✅ 재설계 측정 도구를 `…/wbs-impl`의 `tools/redesign_probes/`에 옮겼습니다(`d781ab9`, 경로는 옛 스크래치패드 기준이라 쓰기 전에 고쳐야 함).
    - ✅ 역할 분담안을 main `docs/pm_roles_charter.md`로 올렸습니다(`249f59b`).
    - ⏳ 옛 디렉터가 할 일:
      1. 이 인계서를 검토해 main `docs/director_handoff.md`로 올립니다(모델 이름 삭제).
@@ -394,7 +394,7 @@ git push origin claude/first-game-development-2q36ha:main
      1. 이 인계서, `docs/whole_body_redesign.md`, `docs/pm_roles_charter.md`를 읽습니다.
      2. 설정 파일(울트라코드)을 만들고, `get_session`으로 울트라코드와 auto를 확인합니다.
      3. 개발 서버를 띄우고 smoke로 main을 확인합니다.
-     4. `claude/wbs-impl`을 가져와 워크트리를 만듭니다.
+     4. `…/wbs-impl`을 가져와 워크트리를 만듭니다.
      5. 사장님께 "인계받았다 + 지금 답을 기다리는 것 목록"을 짧게 보고합니다.
    - 옛 디렉터 컨테이너에만 있는 것(스크래치패드 시험 스크립트, 회귀 기준 파일, 옛 워크트리 40여 개)은 새 세션에 없습니다. 필요하면 다시 만듭니다.
 
@@ -425,7 +425,7 @@ git push origin claude/first-game-development-2q36ha:main
      - `wbs-impl 4b5c56a`(옛 main `59c10bd` 위)를 빌드한 것이라 이졸데 부활, 새 리볼버 등은 없습니다.
      - 스위치 '온몸 베기 (시험)'는 처음부터 켜져 있고, 쟁기 자동 끌어올리기는 꺼져 있습니다.
      - 재설계가 들어갈 때까지 그대로 둡니다.
-   - **구현 브랜치:** 원격 `claude/wbs-impl`(끝 `d781ab9`). 옛 디렉터 컨테이너에서는 `/home/user/hs-wbs`, 로컬 이름 `wbs-impl`입니다.
+   - **구현 브랜치:** 원격 `…/wbs-impl`(끝 `d781ab9`). 옛 디렉터 컨테이너에서는 `/home/user/hs-wbs`, 로컬 이름 `wbs-impl`입니다.
      - R0 `b7fdf1a`, R1 `1e366bf`/`fcae067`, R2 `127a5cd`/`3820ed6`/`8f74a74`
      - main 병합 `784dac6`, `e08968d`(main `b23a0c3`까지)
      - 시험판 설정 `342d395`, `4b5c56a`
@@ -443,7 +443,7 @@ git push origin claude/first-game-development-2q36ha:main
    - 13:00: 출처 조사 1차, Zornhau·Oberhau 기준 동작 JSON v0, 비교 화면(`tools/motion/viewer.html`) 첫 판
    - 18:00: 다섯 베기 × 좌우 × 세 크기 전체, 관절·시간 사양표, 평가 기준 5항목 초안
    - 받으면 할 일:
-     1. 브랜치 `claude/pm-motion-research`를 가져와 봅니다.
+     1. 브랜치 `…/pm-motion-research`를 가져와 봅니다.
      2. 비교 화면을 사장님이 보실 수 있게 링크로 전합니다(필요하면 main에 올리거나 아티팩트로).
      3. 재설계 문서 §7-1 몫과 맞는지 확인합니다.
    - 모캡 원파일의 이용권이나 비용, 저자 협의가 필요하면 사장님께 먼저 여쭙니다(Q20).
@@ -556,7 +556,7 @@ git push origin claude/first-game-development-2q36ha:main
 
 **개발 서버** (배경 작업으로 띄우고, 재시작하면 다시 띄움)
 - main: `cd /home/user/halfsword && npx vite --port 5173 --strictPort`. 지금 떠 있습니다.
-- 온몸 워크트리: `cd /home/user/hs-wbs && npx vite --port 5174 --strictPort`. 새 컨테이너라면 `git worktree add /home/user/hs-wbs origin/claude/wbs-impl`(또는 `-b` 로컬 브랜치)로 만듭니다.
+- 온몸 워크트리: `cd /home/user/hs-wbs && npx vite --port 5174 --strictPort`. 새 컨테이너라면 `git worktree add /home/user/hs-wbs origin/…/wbs-impl`(또는 `-b` 로컬 브랜치)로 만듭니다.
 - 총 워크트리(끝난 일): `cd /home/user/hs-gun && npx vite --port 5176 --strictPort`
 - 새 워크트리를 만들 때:
   ```
@@ -594,7 +594,7 @@ git push origin claude/first-game-development-2q36ha:main
   - 파일을 고친 직후에는 vite 재로딩 때문에 `requestfailed`나 "Execution context destroyed"가 뜹니다. 다시 돌립니다.
   - 세로 화면은 "폰을 가로로 돌려주세요"만 보이므로 가로(844×390 등)로 봅니다.
 
-**스크래치패드 시험 스크립트** (`/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/`)
+**스크래치패드 시험 스크립트** (`<scratchpad>/`, 옛 디렉터 세션 9fbda44b…)
 - `desc/`:
   - `check3.mjs`: 카드 글 맞춤. 인자는 `out sizes query tag`.
   - `journey.mjs`: 승패에 따른 무대 넘김
@@ -602,7 +602,7 @@ git push origin claude/first-game-development-2q36ha:main
   - `pistol.mjs`, `order.mjs`, `clearing.mjs`, `mad.mjs`, `madfx.mjs`, `fitdbg.mjs`, `breaksnd.mjs`, `revsnd.mjs`
 - `gun/`: `tremor_probe.mjs`, `kick.mjs`, `jitter.mjs`, `aishots.mjs`, 회귀 기준 파일
 - `wbspeed/`:
-  - 재설계 측정 도구(`mx/`, `costs/`, `ccdprobe*.mjs`, `wriststab.mjs`). 이 도구들은 `claude/wbs-impl`의 `tools/redesign_probes/`로 옮겨 두었습니다(`d781ab9`).
+  - 재설계 측정 도구(`mx/`, `costs/`, `ccdprobe*.mjs`, `wriststab.mjs`). 이 도구들은 `…/wbs-impl`의 `tools/redesign_probes/`로 옮겨 두었습니다(`d781ab9`).
   - 시험판 빌드 원본 `src_4b5c56a/`, 빌드 결과 `preview_dist/`
 - **이 파일들은 이 컨테이너 안에만 있습니다.** 다른 세션(예: 무기 PM)은 볼 수 없습니다. 필요하면 사장님께 여쭌 뒤 `tools/`에 올리거나 다시 만듭니다.
 
@@ -621,8 +621,8 @@ git push origin claude/first-game-development-2q36ha:main
   3. Verify: 회귀, 브라우저, 세기 측정, 반박 코드 검토
   4. Fix
   5. 디렉터가 diff를 읽고 커밋, 배포, PM 알림, 사장님 보고
-- 스크립트: `/root/.claude/projects/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/workflows/scripts/*.js`
-- 결과: `/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/tasks/<task>.output`
+- 스크립트: `<옛 디렉터 세션 9fbda44b… 의 작업 폴더>/workflows/scripts/*.js`
+- 결과: `<scratchpad>/../tasks/<task>.output` (옛 디렉터 세션 9fbda44b…)
 - 재시작 뒤에는 `Workflow({scriptPath})`로 다시 불러 캐시에서 이어 갑니다.
 - 워크플로 프롬프트에 사장님 규칙을 꼭 넣습니다: 제한은 여쭙기, 난이도 테스트 없음, 모델 이름 없음, 커밋·푸시는 디렉터가.
 

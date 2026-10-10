@@ -1,6 +1,6 @@
-# 소견 — 온몸 베기 시험판(claude/wbs-impl)의 몸 모양 (동작 연구 PM)
+# 소견 — 온몸 베기 시험판(…/wbs-impl)의 몸 모양 (동작 연구 PM)
 
-- 작성: 2026-09-29. 대상: `claude/wbs-impl` d781ab9(= /wb/ 시험판 4b5c56a 의 온몸 베기 층 + 측정 도구). 게임 코드는 읽기만 했다.
+- 작성: 2026-09-29. 대상: `…/wbs-impl` d781ab9(= /wb/ 시험판 4b5c56a 의 온몸 베기 층 + 측정 도구). 게임 코드는 읽기만 했다.
 - 재는 법: `node tools/motion/record_wbs.mjs --root=<wbs-impl 체크아웃>` — 디렉터 측정 도구 `tools/redesign_probes/tseq.mjs` 와 같은 조건
   (hybrid, 롱소드, skill 0.7, 2.0 m, 쟁기 → 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔).
   팔 베기 = `WHOLE.commit` 끔, 결심 베기 = 켬(두 번 다 결심 2단계가 걸림).
@@ -44,7 +44,7 @@
 ## 재현
 
 ```bash
-git worktree add --detach /tmp/wbs origin/claude/wbs-impl && ln -s $PWD/node_modules /tmp/wbs/node_modules
+git worktree add --detach /tmp/wbs origin/…/wbs-impl && ln -s $PWD/node_modules /tmp/wbs/node_modules
 WBS_REV=d781ab9 node tools/motion/record_wbs.mjs --root=/tmp/wbs    # → docs/motion/records/wbs_*.json
 node tools/motion/record_game.mjs                                   # → docs/motion/records/game_*.json (main)
 node tools/motion/compare.mjs                                       # → docs/motion/compare_game.md

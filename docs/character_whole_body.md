@@ -1,6 +1,6 @@
 # 검객별 온몸 타격 기질 — 기질 → 값 초안 (`persona.whole`)
 
-캐릭터 PM · 2026-09-29 (사장님 답 13:00 KST 반영) · 상태: **초안, 게임은 아직 읽지 않음**. 값은 `src/characters.js`의 `ai.persona.whole`에 브랜치(`claude/pm-characters`)로만
+캐릭터 PM · 2026-09-29 (사장님 답 13:00 KST 반영) · 상태: **초안, 게임은 아직 읽지 않음**. 값은 `src/characters.js`의 `ai.persona.whole`에 브랜치(`…/pm-characters`)로만
 있고, 디렉터가 R5에서 `ai.js`(planStrike / opportunity / 방어 선택)에 연결한다. 동작 PM의 "캐릭터별 감기 모습 범위"는 아직 없으므로
 감기 길이는 초 단위 제안이고, 범위가 오면 그 안으로 다시 맞춘다.
 

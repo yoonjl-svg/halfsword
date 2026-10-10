@@ -12,7 +12,7 @@ const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const outDir = process.env.CLIPS_DIR || '/tmp/motion_clips/';
 const SECONDS = +(process.env.SECONDS || 9);
 const POLE = process.env.POLE || 'proto_staff'; // proto_staff | proto_spear (tools/sim/pole_specs.mjs)
-const tmp = fs.mkdtempSync('/tmp/claude-staffclip-');
+const tmp = fs.mkdtempSync('/tmp/staffclip-');
 fs.mkdirSync(outDir, { recursive: true });
 const FFMPEG = process.env.FFMPEG || '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });

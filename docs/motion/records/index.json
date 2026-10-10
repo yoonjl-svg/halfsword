@@ -133,7 +133,7 @@
    "file": "wbs_diagR_arm.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (팔 베기, WHOLE.commit 끔), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 0번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,
@@ -159,7 +159,7 @@
    "file": "wbs_diagR_commit.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (결심 베기, WHOLE.commit 켬), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 2번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,
@@ -185,7 +185,7 @@
    "file": "wbs_horizR_arm.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (팔 베기, WHOLE.commit 끔), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 0번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,
@@ -211,7 +211,7 @@
    "file": "wbs_horizR_commit.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (결심 베기, WHOLE.commit 켬), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 2번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,
@@ -237,7 +237,7 @@
    "file": "wbs_riseR_arm.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (팔 베기, WHOLE.commit 끔), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 0번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,
@@ -263,7 +263,7 @@
    "file": "wbs_riseR_commit.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (결심 베기, WHOLE.commit 켬), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 2번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,
@@ -289,7 +289,7 @@
    "file": "wbs_vert_arm.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (팔 베기, WHOLE.commit 끔), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 0번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,
@@ -315,7 +315,7 @@
    "file": "wbs_vert_commit.json",
    "source": "디렉터 온몸 베기 구현 d781ab9 (결심 베기, WHOLE.commit 켬), tseq.mjs 조건: hybrid, 롱소드, skill 0.7, 2.0 m, 감기 자리 1.2 m/s + 1 s 머묾 → 끝 자리 12 m/s 획, 입력 60 Hz, 칼 충돌 끔. 결심 2번",
    "cond": {
-    "code": "claude/wbs-impl d781ab9",
+    "code": "…/wbs-impl d781ab9",
     "seed": 7,
     "physicsHz": 120,
     "recordHz": 120,

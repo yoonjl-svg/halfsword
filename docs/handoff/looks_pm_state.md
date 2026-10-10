@@ -1,6 +1,6 @@
 # 외형 PM 상태 (늘 최신으로 — 디렉터 규칙 ④)
 
-세션 `session_01HNkUuYHag8VSg6xpgbkGVR` · 브랜치 `claude/pm-character-looks` · 갱신 2026-09-30 13:30 KST (참수 겉모습)
+세션 `session_01HNkUuYHag8VSg6xpgbkGVR` · 브랜치 `…/pm-character-looks` · 갱신 2026-09-30 13:30 KST (참수 겉모습)
 
 ## 맡은 일
 - 캐릭터 겉모습(`src/outfits.js`·`src/looks.js`), 스테이지 배경(`src/stage_*.js`, `src/stages.js`), 픽셀 카드 뒷면(`tools/cardbacks/`), 겉모습 효과(`src/gun_fx.js` 권총 섬광·연기·궤적·레이저, `src/mad_eyes.js` 광기의 하인리히 안광, `src/sword_trail.js` 칼 잔상 띠).

@@ -8,9 +8,9 @@
 
 | 문서 | 브랜치 | 내용 |
 |---|---|---|
-| `docs/handoff/motion_research_handoff.md` (커밋 fc590ee) | `claude/pm-weapons` | 무기-검술 연구 인계서: 교본 계보, 모캡·생체역학 자료표(CMU·5MUDM·Delp·Holzbaur·SwordSTEM), 버린 시도 |
-| `docs/weapon_motion_research.md`, `docs/pole_motion_research.md` | `claude/pm-weapons` | 무기 유형별 검술 동작 원전 조사, 자루 무기 동작 |
-| `docs/weapon_motion_sources_one_pole.md`, `docs/weapon_motions.md` | `claude/pm-weapons-balance` | 무기 PM 동작 라이브러리 출처·자세표 |
+| `docs/handoff/motion_research_handoff.md` (커밋 fc590ee) | `…/pm-weapons` | 무기-검술 연구 인계서: 교본 계보, 모캡·생체역학 자료표(CMU·5MUDM·Delp·Holzbaur·SwordSTEM), 버린 시도 |
+| `docs/weapon_motion_research.md`, `docs/pole_motion_research.md` | `…/pm-weapons` | 무기 유형별 검술 동작 원전 조사, 자루 무기 동작 |
+| `docs/weapon_motion_sources_one_pole.md`, `docs/weapon_motions.md` | `…/pm-weapons-balance` | 무기 PM 동작 라이브러리 출처·자세표 |
 | `docs/reference/combatlab_handoff_2026-09-27.md` | `main` | 이전 Unity CombatLab: Fiore Getty 원고 특정(22r·23r·23v), CMU swordplay 거절 경위 |
 
 ## 0-1. 웹 접속 (9/29 밤 다시 시험 — 거의 다 열림)

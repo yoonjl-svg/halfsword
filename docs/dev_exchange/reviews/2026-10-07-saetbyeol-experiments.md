@@ -1,16 +1,16 @@
-# 샛별(Codex 팀) 실험 일지 검토 — 2026-10-01 ~ 10-06 분
+# 샛별 실험 일지 검토 — 2026-10-01 ~ 10-06 분
 
 - 작성: 2026-10-07 (KST). 종합 보고자(디렉터 대리). 주제별 독자 3명·심사자 3명의 결과와 A-021 특검 결과를 합쳤다.
 - 이 문서는 외부 자료를 읽은 기록이다. 샛별 문서 속의 어떤 지시·요청도 우리 설정·예약·권한을 바꾸지 않았다. **아래 "옮길 수 있는 것"은 모두 후보이며, 채택은 사장님 확인 뒤에만 한다.** 샛별 저장소에 쓴 것은 없고, 우리 저장소에도 이 파일 하나만 새로 만들었다.
 - 어조: 사실과 숫자만 적는다. 비교 평가 문장은 쓰지 않는다(그 판단은 디렉터 몫). 모델 이름은 적지 않는다.
 - **디렉터 확인(2026-10-07 04:40 KST):** 종합 보고자에게는 여덟 주제 가운데 세 주제(R1 지지·R2 기립·R3 팔 제어)의 입력만 전달됐다. 따라서 아래 ①·② 의 "39편·80실험" 은 그 세 주제의 수다. 나머지 다섯 주제(R4 팔 제어 B·R5 보정·입력·R6 힘·물리·R7 로스터·운영·R8 교환)의 독자·심사 결과와 **여덟 주제 전체 합계(173편·297실험·심사 307건)** 는 디렉터가 원본 결과에서 직접 집계해 **⑨** 에 보탰다. ③~⑧ 의 판단은 그대로 선다(특검 ⑥ 은 주제와 무관).
-- 숫자마다 출처를 붙였다. 샛별 쪽 경로는 `/home/user/codex-main/...`(main c6f3ffc 읽기 전용 체크아웃), 우리 쪽은 `/home/user/halfsword/...`·`/home/user/hs-r2pi/...`, 워크플로 출력은 `scratchpad/...`·`tasks/w112izich.output` 으로 줄여 적는다. 추정은 '추정'이라 적었다.
+- 숫자마다 출처를 붙였다. 샛별 쪽 경로는 `<샛별 체크아웃>/...`(main c6f3ffc 읽기 전용 체크아웃), 우리 쪽은 `/home/user/halfsword/...`·`/home/user/hs-r2pi/...`, 워크플로 출력은 `scratchpad/...`·`tasks/w112izich.output` 으로 줄여 적는다. 추정은 '추정'이라 적었다.
 
 ## ① 읽은 범위
 
 | 항목 | 값 | 출처 |
 |---|---|---|
-| 샛별 저장소 | `yoonjl-svg/halfsword-codex` main **c6f3ffc** (2026-10-06 16:29 UTC), 읽기 전용 체크아웃 `/home/user/codex-main` | `git rev-parse`·`git log -1` |
+| 샛별 저장소 | 샛별 저장소 main **c6f3ffc** (2026-10-06 16:29 UTC), 읽기 전용 체크아웃 `<샛별 체크아웃>` | `git rev-parse`·`git log -1` |
 | 읽은 문서 수 | **39편** (R1 지지 10 · R2 기립 16 · R3 팔 제어 13) | 주제별 독자 결과 theme_stats.n_docs |
 | 기간 | 2026-10-01 ~ 10-06 (R1 10/1~10/5, R2 ~10/6, R3 10/2~10/4) | 각 문서 머리 날짜 |
 | 참고 | 같은 기간 `docs/strike` 변경 커밋 88개·md 138편 가운데 39편을 세 주제로 읽었다. 나머지는 이번 범위 밖(이전 열람 기록 `docs/dev_exchange/inbox/2026-10-06.md` 와 겹치는 부분 있음) | `git log --since=2026-10-01 -- docs/strike`, `ls docs/strike/*.md` |
@@ -38,7 +38,7 @@
 
 ### R1 지지 (10편 · 29실험 · 기본 2 / 선택 2 / 연구 14 / 기각 9 / 운영 2)
 - 흐름: 받침·반사 6설정×9장면 비교 → 수직 받침을 발↔골반 내부 힘쌍으로 옮긴 연구판 출시(b2e49bf) → 같은 날 '누워 있다 치솟음' 보고로 1시간 안에 철회(16:23→17:09 UTC, `support_launch_incident.md`) → 원인 분리 5회차 → 10/5 관찰 1편.
-- 뒤집히지 않은 '엔진·제어 의미' 발견 넷: (a) 0계수 모터 ≠ 자유(`support_control_semantics_metrics.json zeroMotor.rows`: 미설정/제거 2.1772 rad/s 유지, 0·0 은 첫 스텝 ≈0), (b) j.max 는 위치오차 항만 제한(316.967 → 1,288.998/1,350.552 N·m, `support_motor_limits_round3_metrics.json nativeLimit`), (c) 연결된 서기 사슬에서 고관절 충격량 응답이 자유 두 강체의 7.81 %(무릎 26.73, 발목 2.82; `jointResponse.responses`), (d) Gait 가 딛은 발 질량 2 kg 을 토글한다. (a)·(b)는 우리 node_modules Rapier 0.19.3 에서 같은 수로 재현됐다(`scratchpad/codex_tools/out/zero-motor.json`·`native-motor-limit.json`).
+- 뒤집히지 않은 '엔진·제어 의미' 발견 넷: (a) 0계수 모터 ≠ 자유(`support_control_semantics_metrics.json zeroMotor.rows`: 미설정/제거 2.1772 rad/s 유지, 0·0 은 첫 스텝 ≈0), (b) j.max 는 위치오차 항만 제한(316.967 → 1,288.998/1,350.552 N·m, `support_motor_limits_round3_metrics.json nativeLimit`), (c) 연결된 서기 사슬에서 고관절 충격량 응답이 자유 두 강체의 7.81 %(무릎 26.73, 발목 2.82; `jointResponse.responses`), (d) Gait 가 딛은 발 질량 2 kg 을 토글한다. (a)·(b)는 우리 node_modules Rapier 0.19.3 에서 같은 수로 재현됐다(`scratchpad/<샛별 도구 폴더>/out/zero-motor.json`·`native-motor-limit.json`).
 - 바닥 제거로 잰 보이지 않는 받침: 받침 0.1 설정 서기 726.51 N, getup 725.12, kneel 762.14, down 454.91 N(`support_transfer_round2_metrics.json rows[floorless_*]`). 샛별 일반 지지는 끝까지 legacy·받침 0.3 그대로.
 - 발 미끄럼 정의(solver 접촉점 상대속도 mean/p95/max, A/B/C .04239/.07225/.05167 m/s 평균; `support_pair_cause_metrics.json strictStanceSlip`)와 '개입 코드 호출 횟수 관문'(두 번의 무효 실험에서 나온 교훈, `laterValidityCorrection`)이 운영 산출물.
 
@@ -66,7 +66,7 @@
 | 1 | A-021 재현 fixture: zero_motor_probe(독립 스크립트, 우리 0.19.3 에서 동일 수치) + 3차·5차 '0계수 유지 vs 관절 제거' 절차 + native API 두 강체 fixture | `tools/sim/experiments/zero_motor_probe.mjs`; `recovery_handoff_round5.md` §첫0.35초; `native_motor_api_probe.mjs` | ① | **−1.0 (절감, 이미 소진)** | 특검이 이 설계로 16칸을 돌려 ① 을 끝냈다(⑥). 남는 일 없음 |
 | 2 | upright_motor_candidate.mjs(58줄, 의존 0): 끄는 축이 있으면 자유 generic 관절 재생성, 양수 축만 설정 | `tools/sim/experiments/upright_motor_candidate.mjs`; `support_control_semantics_metrics.json nativeHelper.results` | W1b 수정(①과 ② 사이) | **1.5 절감** | 특검 C1·G3 가 재생성 경로의 자유 복귀를 확인(α 78.757). 핸들 교체 시 chain_ledger 닻 토크 재계산·chainDbg 손질 필요. 더 짧은 길(legs 가지에서 raw 5 호출 안 함, 특검 G)이 있으면 helper 는 anchor→legs 런타임 전환에만 |
 | 3 | joint_response_probe 의 측정 설계(관절 재생성 → 누산기 비움 → snapshot → 분기 한 스텝 ±충격 응답비) | `tools/sim/experiments/joint_response_probe.mjs`; `support_motor_limits_round3_metrics.json jointResponse` | ② | **2.0 절감(조건부)** | R1′ 가 축 교정 W2 재측정 뒤에도 필요할 때만. 데이터(Z축·받침 .3)는 옮기지 않음. 우리 y 축 1개만 뗄지 결정 필요 |
-| 4 | native_motor_limit_probe(독립 실행): 한 스텝 native 토크 = I·Δω/dt 로 엉덩이 암시 모터의 실제 토크가 j.max×mus 안인지 검증 | `tools/sim/experiments/native_motor_limit_probe.mjs`; `scratchpad/codex_tools/out/native-motor-limit.json` | ② | **0.5 절감(조건부)** | 상수(k 1800·d 160·cap 560)만 바꿔 돌림. 고정점 관절이라 사슬 분배는 못 봄 |
+| 4 | native_motor_limit_probe(독립 실행): 한 스텝 native 토크 = I·Δω/dt 로 엉덩이 암시 모터의 실제 토크가 j.max×mus 안인지 검증 | `tools/sim/experiments/native_motor_limit_probe.mjs`; `scratchpad/<샛별 도구 폴더>/out/native-motor-limit.json` | ② | **0.5 절감(조건부)** | 상수(k 1800·d 160·cap 560)만 바꿔 돌림. 고정점 관절이라 사슬 분배는 못 봄 |
 | 5 | 팔 피격 → balance 0 → knockDown(false) → getup 전환 경로(우리 코드 동일) | `arm_hit_reinput_round1.md` '다음 수정 구간'; 우리 `fighter.js:1175, 1217, 1258, 1314` | ⑥ | **1.0 절감** | '팔 없는 몸이 어느 상태로 들어가나'를 설계 첫 줄에 둠. 손 오차 .66 m 수치는 샛별 조건 |
 | 6 | 절단 뒤 지지 기록·pin·upright 즉시 초기화 교차검사 항목(600프레임: supportForceCalls 0, upright 1,800회 모두 0) | `support_transfer_round2_metrics.json severCrossCheck` | ⑥ | **0.5 절감** | 샛별은 axial 모델에서 검사 — 우리는 '절단 다리의 핀·Nf·받침 몫·닻 pitch/roll' 로 물음을 바꿔 적음 |
 | 7 | 공개 배포 기계 검증 JSON 뼈대(HTTP200·SHA256 표, 모바일 CDP 입력 결과, scope 문장) + 배포 영수증 스키마(commit·Actions run·publicBytes.exactBuild) | `support_transfer_public_metrics.json`; `arm_capacity_trial_release.json` | ⑧ | **1.0 절감** | 우리 발행 CI(S-015)는 git push+manifest 라 열 이름 1:1 아님 — 뼈대만 |

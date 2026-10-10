@@ -16,7 +16,7 @@
 
 ## 2. 유사도 잣대 — PM 그대로
 
-- 출처: 동작 PM `docs/motion/duel_similarity_metric_2026-10-01.md` + `tools/motion/duel_similarity.mjs` (`stillness-duel-similarity/1`), origin/claude/pm-motion-research **eb1b72b**. 바이트 그대로 복사 (sha256 759917ad… · af3e6614…). 특징·기준 띠·폭·무게·장면 무게·합산·빠진 값 규칙 모두 PM 것. 우리가 정한 것은 날 측정 → 특징 값 대응 (창·문턱·평활) 뿐, 기준 칸 한 칸 배관 시험으로만 고정.
+- 출처: 동작 PM `docs/motion/duel_similarity_metric_2026-10-01.md` + `tools/motion/duel_similarity.mjs` (`stillness-duel-similarity/1`), origin/…/pm-motion-research **eb1b72b**. 바이트 그대로 복사 (sha256 759917ad… · af3e6614…). 특징·기준 띠·폭·무게·장면 무게·합산·빠진 값 규칙 모두 PM 것. 우리가 정한 것은 날 측정 → 특징 값 대응 (창·문턱·평활) 뿐, 기준 칸 한 칸 배관 시험으로만 고정.
 - 얼림: metricSha **06415e39d60c** (`cat opt/metric.mjs opt/features.mjs $(find opt/pm -type f | sort) | sha256sum | cut -c1-12`), 칸을 하나도 채점하기 전에. 두 판사·중재가 다시 셈 같음. 고침 뒤 **0609e6293508** (검토 뒤 10/1): 판 전체가 빈 까닭 (밀치기 발사 없음) 을 `features.missing` 이유에 같이 적게만 고침 — 20 칸 s1·s2·모음 total·특징 점수 모두 같음, 이유 60 줄만 바뀜 (opt/fix/compare.out).
 - 점수: 특징 = 띠 안 1, 밖은 exp(−½ (d/w)²). 장면 = 특징 무게 평균. total = 100 × 장면 무게 평균 (베기 셋 각 1/6, 서기 0.15, 걷기 0.15, 밀림 0.2).
 
