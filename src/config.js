@@ -322,6 +322,7 @@ export const STEEL = {
   // 칼끼리 새로 부딪힌 순간 칼이 손 안에서 길이 축으로 도는 빠르기의 한도(rad/s, 부딪히기 전보다 빨라진 몫만).
   //  손아귀가 칼자루를 잡으니 코등이에 걸려 튕겨도 날이 휙 뒤집히지 않는다 (combat.js gripTwist)
   gripTwistMax: 40,
+  gripTwistMaxPlayer: null, // 플레이어 칼(사람 손가락)만 다른 손아귀 한도 (rad/s, null = gripTwistMax 그대로) — 10/10 실험 스위치, 사장님 확인 전 (docs/motion/player_edge_2026-10-10.md)
 };
 
 // 부딪힌 충격이 몸에 전해지는 방식 (fighter.js)
@@ -846,4 +847,10 @@ export const JOINTS = {
   oneTipFold: -14, // 가르는 올림각 (°): 이 위면 위로, 아래면 아래로 접는다 (±5° 는 섞음 — 패드 y −0.12 쯤)
   oneTipUp: 55, // 위로 접을 때 올림각 하한 (°) — 마이어 1570 두삭 Wacht·Entrüst 처럼 칼끝이 분명히 위
   oneTipDown: -45, // 아래로 접을 때 올림각 상한 (°) — 두삭 Eber·Nebenhut 처럼 칼끝이 분명히 아래
+  // 플레이어 칼 날 세우기 (10/10 사장님 '인간 플레이어 쪽' — docs/motion/player_edge_2026-10-10.md, 확인표 560~): 사람 손가락이 모는 칼(skill.autoGuard)에만 걸린다. AI 칼은 그대로
+  //  'off' = 10/10 오전까지(제 칼 70 % 지점 속도만, `?playerEdge=off`·PLAYER_EDGE=off) · 'input' = 손가락 속도로 겨눔이 곧 돌 쪽을 날 방향에 더함 · 'goal' = 거른 손 목표가 아직 따라갈 몫(손가락이 끌어 둔 자리까지 겨눔이 돌 쪽) · 'both' = 둘 다
+  //  기본 'goal' (확인표 561, 사장님 폰 확인 전): player_edge 계기 9 무기 씨앗 셋 칼 면 23.4 → 20.1 % · × 날 세움 J 12.8 → 13.9 · 팽이 773 → 661 스텝 (문서 §4)
+  playerEdge: (typeof location !== 'undefined' && location.search && new URLSearchParams(location.search).get('playerEdge')) || (typeof process !== 'undefined' && process.env?.PLAYER_EDGE) || 'goal',
+  playerEdgeLead: 1, // 입력 미리 돌리기 무게: 예측한 칼날 70 % 지점 속도 × 이 값을 지금 속도에 더한다
+  playerEdgeMode: null, // 플레이어 칼만 다른 날 세우기 방식 ('motor'·'ff'·'pre', null = edge 와 같음) — 실험 스위치
 };
