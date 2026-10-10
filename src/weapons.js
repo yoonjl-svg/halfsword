@@ -397,16 +397,24 @@ const longsword = finalizeSpec('longsword', {
 //     2.892kg·칼날 117cm [M]. 균형점 실측 자료를 못 찾아(연구 노트 §14) 롱소드 가문의
 //     비율로 크기만 올려서 추정 [I]
 // ═════════════════════════════════════════════════════════════
-// 오른손 날밑 가까이 (사장님 10/10 14:5x '넣어' — 고디뉴 1599 몬탄테 규칙 3 「ergreife das Montante mit der rechten Hand nahe der Parierstange」,
-//  확인표 683·689~692, docs/motion/iberian_montante_2026-10-10.md §12). 칼 원점 = 오른손 주먹 가운데. 손~칼끝 1.36 m·폼멜·왼손(gripAlong −0.30)은 그대로 두고
-//  칼날을 아래로 늘려(1.17 → 1.26 m = 톨레도 몬탄테 Cleveland 1916.1509 칼날 126.4 · 1916.1507 126 cm) 날밑을 오른손 바로 위로 내린다:
-//  손 → 칼날 밑동(hiltLength) 0.19 → 0.10 · 날밑 가운데 0.175 → 0.085(아랫면 0.065 = 주먹 반 폭 0.045 + 여유 0.02) · 오른손 위 빈 자루(0.155 m)는 없어진다.
-//  칼날 1.7 kg 의 질량 분포는 전 꼴 그대로(손에서 칼날 무게중심 0.588 m · 그 둘레 관성 같음 — 늘어난 9 cm 는 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
-//  자루 상자는 날밑 밑(0.07)~폼멜(−0.31) 0.38 m, 자루 질량 0.26 kg 그대로(합 2.9 kg 그대로). MONTANTE.hand 'old' = 전 꼴 (`?montanteHand=old`)
-const ZW_OLD = MONTANTE.hand === 'old';
-const ZW = ZW_OLD
-  ? { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: -0.075, gripH: 0.235, com: 0.34, gyr: 0.253 }
-  : { hilt: 0.1, blade: 1.26, crossY: 0.085, gripY: -0.12, gripH: 0.19, com: (0.19 + 0.34 * 1.17 - 0.1) / 1.26, gyr: (0.253 * 1.17) / 1.26 };
+// 쥠 세 꼴 (MONTANTE.hand, config.js — docs/motion/iberian_montante_2026-10-10.md §10·§12·§15). 칼 원점 = 오른손 주먹 가운데, 손~칼끝 1.36 m 는 모두 같다.
+//  'mid'(기본 — 사장님 10/10 20:4x '초기 그립과 지금의 중간', 확인표 760~): 손 사이 0.24 m(gripAlong −0.24) · 오른손 주먹 가운데 ~ 날밑 아랫면 0.11 m ·
+//    hiltLength(손 → 칼날 밑동) 0.145 · 칼날 1.215 · 날밑 가운데 0.13 · 폼멜 가운데 −0.25(왼손 폼멜 목, 폼멜 끝 −0.288) · 자루 상자 날밑 밑 0.115 ~ −0.25.
+//    날밑 아랫면 ~ 폼멜 끝 0.398 m (톨레도 몬탄테 Cleveland 1916.1509 · 1916.1507 자루 41.3 · 40.0 cm 안).
+//  'guard'(10/10 14:5x '넣어' — 고디뉴 1599 규칙 3 '오른손 날밑 가까이', §12): 손 사이 0.30 · 날밑 0.065 m · hiltLength 0.10 · 칼날 1.26 · 폼멜 −0.31 — `?montanteHand=guard`
+//  'old'(10/10 아침 꼴 — §10 넓힘 전): 손 사이 0.18 · 날밑 0.155 m · hiltLength 0.19 · 칼날 1.17 · 자루 ±0.16(0.32 m) · 폼멜 −0.16 · 서보 덮개 28 — `?montanteHand=old`
+//  'wide'(§10~§11 꼴 — 자루만 넓힘, 오른손은 아직 날밑에서 0.155 m): 손 사이 0.30 · hiltLength 0.19 · 칼날 1.17 · 폼멜 −0.31 — `?montanteHand=wide` (§12 의 옛 꼴 'old')
+//  칼날 1.7 kg 의 질량 분포는 네 꼴이 같다(손에서 칼날 무게중심 0.588 m · 그 둘레 관성 같음 — 칼날이 길어진 몫은 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
+//  자루 상자는 날밑 아랫면 0.005 위 ~ 폼멜 가운데, 부품 질량 그대로(자루 0.26 · 폼멜 0.62 · 날밑 0.32 · 칼날 1.7 = 2.9 kg)
+const ZW_BLADE_COM = 0.19 + 0.34 * 1.17; // 손에서 칼날 무게중심 (아침 꼴 값 — 모든 꼴이 지킨다)
+const zwShift = (hilt) => ({ com: (ZW_BLADE_COM - hilt) / (1.36 - hilt), gyr: (0.253 * 1.17) / (1.36 - hilt) });
+const ZW_FORMS = {
+  old: { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: 0, gripH: 0.16, pommelY: -0.16, gripAlong: -0.18, com: 0.34, gyr: 0.253, cap: 28 },
+  wide: { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: -0.075, gripH: 0.235, pommelY: -0.31, gripAlong: -0.3, com: 0.34, gyr: 0.253 },
+  guard: { hilt: 0.1, blade: 1.26, crossY: 0.085, gripY: -0.12, gripH: 0.19, pommelY: -0.31, gripAlong: -0.3, com: (0.19 + 0.34 * 1.17 - 0.1) / 1.26, gyr: (0.253 * 1.17) / 1.26 },
+  mid: { hilt: 0.145, blade: 1.215, crossY: 0.13, gripY: -0.0675, gripH: 0.1825, pommelY: -0.25, gripAlong: -0.24, ...zwShift(0.145) },
+};
+const ZW = ZW_FORMS[MONTANTE.hand] ?? ZW_FORMS.mid; // 모르는 이름은 기본(중간)
 const zweihander = finalizeSpec('zweihander', {
   nameKo: '츠바이핸더 (대형 양손검)', nameEn: 'Zweihänder',
   desc: '정예 용병이 쓰던 거대한 양손검.\n느리지만 맞으면 묵직하게 부순다.',
@@ -415,8 +423,10 @@ const zweihander = finalizeSpec('zweihander', {
   // 쥠 (사장님 10/10 '쥠은 고증대로 넓혀', 확인표 680~): 고디뉴 몬탄테 규칙 3 '오른손 날밑 가까이, 왼손 폼멜 가까이'.
   //  자루 길이는 같은 시대 톨레도 몬탄테 두 자루 실측(Cleveland 1916.1509 · 1916.1507: 날밑~폼멜 끝 0.40~0.42 m)으로 —
   //  오른손(칼 원점)에서 폼멜 끝까지 0.41 − 0.065(날밑 쥔 주먹 반 폭 + 날밑 두께) ≈ 0.35 m. 왼손은 폼멜 목(−0.30, 손 사이 0.30 m).
-  //  그때(10/10 14:1x)는 hiltLength(손~칼날 밑동)·칼날·코등이를 그대로 두었고, 오른손을 날밑으로 올린 것은 10/10 14:5x '넣어'(위 ZW, §12)
-  hiltLength: ZW.hilt, bladeLength: ZW.blade, gripAlong: -0.3,
+  //  그때(10/10 14:1x)는 hiltLength(손~칼날 밑동)·칼날·코등이를 그대로 두었고, 오른손을 날밑으로 올린 것은 10/10 14:5x '넣어'(§12).
+  //  10/10 20:4x '초기 그립과 지금의 중간' → 기본 'mid'(손 사이 0.24 · 날밑 0.11 m, 위 ZW, §15)
+  hiltLength: ZW.hilt, bladeLength: ZW.blade, gripAlong: ZW.gripAlong,
+  ...(ZW.cap ? { controlOverrides: { maxAimTorque: ZW.cap } } : {}), // 아침 꼴('old')만 서보 덮개 28 (§10 에서 뺌 — 확인표 682)
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
   // 손목 서보 상한: 두 손 쥠 기본값(26)을 쓴다. 예전 28 덮개는 '자루가 길어 손 사이 지렛대가 커서'를 대신 넣은 값이었는데,
   //  쥠을 넓혀(손 사이 0.18 → 0.30 m) 그 지렛대가 빈손 스프링으로 물리에 직접 들어가서 뺐다 (48 판 28: 46 %·넘어짐 45 / 26: 48 %·33, 확인표 680~)
@@ -429,15 +439,15 @@ const zweihander = finalizeSpec('zweihander', {
   }),
   buildParts(look) {
     const L = this.bladeLength;
-    // 자루: 코등이 밑에서 폼멜(−0.31)까지 — 오른손 날밑(기본) 0.07 → 0.38 m · 옛 꼴 0.16 → 0.47 m (10/10 14:1x 넓힘 전엔 ±0.16 = 0.32 m). 부품 질량은 그대로(합 2.9 kg)
-    //  날밑: 가운데 ZW.crossY (기본 0.085, 옛 0.175) · 칼날: 손 위 ZW.hilt 부터 — 칼날 질량 분포(무게중심 자리·그 둘레 관성)는 두 꼴이 같다 (위 ZW 머리말)
+    // 자루: 코등이 밑에서 폼멜(ZW.pommelY)까지 — 중간(기본) 0.115 → −0.25 (0.365 m) · 날밑 꼴 0.07 → −0.31 · 아침 꼴 ±0.16. 부품 질량은 그대로(합 2.9 kg)
+    //  날밑: 가운데 ZW.crossY · 칼날: 손 위 ZW.hilt 부터 — 칼날 질량 분포(무게중심 자리·그 둘레 관성)는 모든 꼴이 같다 (위 ZW 머리말)
     const grip = boxInertia(0.26, 0.02, ZW.gripH, 0.02);
     const pommel = sphereInertia(0.62, 0.038);
     const cross = boxInertia(0.32, 0.14, 0.02, 0.026);
     const blade = bladeInertia(1.7, L, ZW.com, ZW.gyr, 0.056, 0.018);
     return [
       partTuple(['box', 0.02, ZW.gripH, 0.02], ZW.gripY, 0.26, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.038], -0.31, 0.62, 0, pommel.Ie, pommel.It, look.hilt),
+      partTuple(['ball', 0.038], ZW.pommelY, 0.62, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.14, 0.02, 0.026], ZW.crossY, 0.32, 0, cross.Ie, cross.It, look.hilt),
       partTuple(['box', 0.028, L / 2, 0.009], this.hiltLength + L / 2, 1.7, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];

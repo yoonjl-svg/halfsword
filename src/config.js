@@ -475,11 +475,13 @@ export const BALANCE = {
   fallDelay: 0.25, // 이 시간(초) 동안 계속 벗어나 있으면 넘어짐
 };
 
-// 몬탄테(츠바이핸더) 오른손 자리 (10/10 사장님 '넣어' — 고디뉴 1599 몬탄테 규칙 3 '오른손 날밑 가까이', 확인표 683·689~692 ·
-//  docs/motion/iberian_montante_2026-10-10.md §12). 'guard' = 오른손 주먹이 날밑 바로 밑(기본: 칼날 1.26 · 손 → 칼날 밑동 0.10 m) ·
-//  'old' = 전 꼴(칼날 1.17 · 손 → 칼날 밑동 0.19 m, 오른손 위 빈 자루 0.155 m) — `?montanteHand=old` · MONTANTE_HAND=old. 손~칼끝·전체 길이·폼멜·왼손 자리는 둘 다 같다
+// 몬탄테(츠바이핸더) 쥠 꼴 (docs/motion/iberian_montante_2026-10-10.md §10·§12·§15 — 값은 weapons.js ZW_FORMS). 손~칼끝 1.36 m 는 모두 같다.
+//  'mid'(기본 — 사장님 10/10 20:4x '너무 고증을 쫓다 보니 대검의 맛이 사라졌어, 초기 그립과 지금의 중간', 확인표 760~): 손 사이 0.24 · 오른손 ~ 날밑 0.11 m · 칼날 1.215
+//  'guard'(10/10 14:5x 고디뉴 규칙 3 '오른손 날밑 가까이', 확인표 689~692): 손 사이 0.30 · 날밑 0.065 m · 칼날 1.26 — `?montanteHand=guard` · MONTANTE_HAND=guard
+//  'old'(10/10 아침 꼴): 손 사이 0.18 · 날밑 0.155 m · 칼날 1.17 · 자루 0.32 · 서보 덮개 28 — `?montanteHand=old` · MONTANTE_HAND=old
+//  'wide'(§10~§11 꼴, §12 의 옛 꼴): 손 사이 0.30 · 날밑 0.155 m · 칼날 1.17 — `?montanteHand=wide` · MONTANTE_HAND=wide
 export const MONTANTE = {
-  hand: (typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('montanteHand')) || (typeof process !== 'undefined' && process.env?.MONTANTE_HAND) || 'guard',
+  hand: (typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('montanteHand')) || (typeof process !== 'undefined' && process.env?.MONTANTE_HAND) || 'mid',
 };
 
 // 두 손 잡기: 빈손이 칼자루 끝을 쥐는 부드러운 스프링
