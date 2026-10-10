@@ -3,7 +3,7 @@
 //     물러나기 시작 0.3 s 뒤부터 0.08 s 간격으로 일시정지(P)해 옆에서 한 장씩(같은 카메라 자리) → gait_rhythm_{before|after}_NN.png. before = 짝걸음 끔(gait.P.pair = null, main 걸음).
 //     이어서 놓고 멈추는 순간들(놓은 뒤 0.1·0.3·0.6 s) → gait_rhythm_{before|after}_stop_N.png
 //  ② 일본 낮춤: 우치가타나 플레이어 대기(멈춘 뒤 1.5 s)·걷기(앞으로 0.5 스틱)·물러나기(뒤로 0.6 스틱), AI 우치가타나 간 보기 — 옆에서.
-//     before = 어제 높이(gait.P.guardHeight 0.875 · walkHeight 0.93 을 그 몸에 덮음), after = 빌드 기본값 → japanese_low_{before|after}_{idle|walk|back|ai}.png
+//     before = 어제 칸(골반 0.875·0.93 · reachMax 0.55 · 발 들기 0.025/플레이어 0.035 를 그 몸 gait.P 에 덮음), after = 빌드 기본값 → japanese_low_{before|after}_{idle|walk|back|ai}.png
 //  찍는 몸의 상처는 끈다(걸음·물리 그대로). 화면 왼쪽 위에 무엇·시각을 적는다.
 //  실행: npx vite build && npx vite preview --port 4189 --strictPort &
 //        node tools/browser/gait_rhythm_shots.mjs http://127.0.0.1:4189 docs/handoff
@@ -167,13 +167,14 @@ for (const mode of ['before', 'after']) {
 }
 
 // ② 일본 낮춤
-const OLD = { guardHeight: 0.875, walkHeight: 0.93 };
+const OLD = { guardHeight: 0.875, walkHeight: 0.93, reachMax: 0.55, lift: 0.025 }; // 어제(4e92fcc) 일본 칸
+const OLD_P = { ...OLD, lift: 0.035 }; // 어제 플레이어 칸
 for (const mode of ['before', 'after']) {
   if (process.env.ONLY && process.env.ONLY !== 'japanese') break;
   // 플레이어
   {
     const page = await open('?weapon=uchigatana&foeWeapon=longsword');
-    if (mode === 'before') await overP(page, 'player', OLD);
+    if (mode === 'before') await overP(page, 'player', OLD_P);
     await approach(page, 2.6, 1.5);
     const res = {};
     // 대기
