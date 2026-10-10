@@ -2,6 +2,7 @@
 //  docs/handoff/<PREFIX>_<자세>_{side,front,q34}.png (PREFIX 기본 rapier_guard — 전/후 비교는 PREFIX=rapier_guard_before 로 main 빌드에서)
 //  GUARDS = 붙잡을 자세 이름(ai.school.guards 의 name, 쉼표) — 기본 이탈리아 다섯. 시험만: ai.pickGuard 를 그 자세로 고정하고 플레이어는 맞지 않게 한다.
 //  자세마다 코등이 자리(칼 손 바로 앞 — 가슴 몸체 기준 앞·위·바깥 m, 땅에서 손 높이)·칼끝 올림각·방위(상대 쪽 0, 칼 든 쪽 +)·팔꿈치 굽힘·표 가장 가까운 자세 이름을 함께 적는다.
+//  WEAPON = 찍을 무기(기본 rapier — 10/10 중국 자세 고증은 WEAPON=qinggang PREFIX=chinese_guard GUARDS=nebenR,langort,…).
 //  PLAYER=1 이면 플레이어 레이피어 대기(손가락 없음 = 쉴 자세)도 같은 값을 잰다(캡처 player_rest).
 //  실행: npx vite build && npx vite preview --port 4192 --strictPort &
 //        node tools/browser/rapier_guard_shots.mjs http://127.0.0.1:4192 docs/handoff
@@ -10,6 +11,7 @@ import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:4192';
 const dir = process.argv[3] || '.';
 const PREFIX = process.env.PREFIX || 'rapier_guard';
+const WEAPON = process.env.WEAPON || 'rapier';
 const NAMES = (process.env.GUARDS || 'pflugR,langort,pflugL,ochsR,tag').split(',').filter(Boolean);
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
@@ -113,7 +115,7 @@ async function waitFor(page, who, pred, ms, step = 60) {
   return r;
 }
 for (const nm of NAMES) {
-  const page = await open('?weapon=longsword&foeWeapon=rapier', nm);
+  const page = await open(`?weapon=longsword&foeWeapon=${WEAPON}`, nm);
   // 간 보기에 들고 1.5 s 더 (손이 자세에 붙게)
   let r = await waitFor(page, 'enemy', (x) => x.sim > 2.5 && x.mode === 'watch', 60000);
   const t1 = r.sim + 1.5;
@@ -123,7 +125,7 @@ for (const nm of NAMES) {
   await page.context().close();
 }
 if (process.env.PLAYER === '1') {
-  const page = await open('?weapon=rapier&foeWeapon=longsword', null);
+  const page = await open(`?weapon=${WEAPON}&foeWeapon=longsword`, null);
   const r = await waitFor(page, 'player', (x) => x.sim > 3.0, 90000);
   await three(page, 'player', 'player_rest');
   out.player_rest = r;

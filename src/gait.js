@@ -678,7 +678,8 @@ export class Gait {
       else hNomT = def - Math.min(GAIT.lowMax, def - (walkNow ? walkH : P.guardHeight) + Math.max(0, drop) + gl) - hurt;
       // 활 자세: 걷는 중이어도 멈춘 높이(전역 guardHeight) 기준으로 낮춘다(걷는 높이 기준이면 상한에 걸려 덜 내려간다) — 낮춤 합계는 같은 lowMax 안, 무게 bowW 만큼 섞음
       if (!sd && this.bowW > 0) {
-        const hb = GAIT.guardHeight - Math.min(GAIT.lowMax, GAIT.guardHeight - P.guardHeight + Math.max(0, drop) + gl + P.bow.drop) - hurt;
+        //  상한은 활 자세 칸 lowMax 가 있으면 그것 (10/10 14:2x 사장님 '0.16 은 규칙이 아니라 기준, 판단은 디렉터' → 활 자세만 밖으로 — 대기·걸음 낮춤은 GAIT.lowMax 그대로)
+        const hb = GAIT.guardHeight - Math.min(P.bow.lowMax ?? GAIT.lowMax, GAIT.guardHeight - P.guardHeight + Math.max(0, drop) + gl + P.bow.drop) - hurt;
         hNomT += (Math.min(hNomT, hb) - hNomT) * this.bowW;
       }
     }

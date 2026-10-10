@@ -284,7 +284,7 @@ export function weaponMatOpts(material, isBlade, tier) {
 // 감독 확정: 한손 무기도 "양손으로 잡고 휘두른다"고 가정한다(현실의 한손검 이점 — 가벼운 몸놀림·빠른 자세 전환 — 을 지금 다
 //  구현할 수 없으니 그 대신). 그래픽·grip 표시는 그대로 두고 손목·팔 힘 한계만 두손 값(22 N·m)으로 통일. 한손 값 12 는
 //  Delp 1996 손목 굴곡 토크 실측(평균 12.2 N·m)이었고, 22 는 양손·팔 전체 기여 추정치 [D].
-const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 26 }; // two-hand 22 → 26: 사장님 10/8 16:20 '그렇게 해'(확인표 191) — 두 손 짝힘은 한 손 손목보다 세다(츠바이핸더 28 선례). 세로 베기(서보 포화 91 %) 14.4 → 14.8 m/s, 자리 에너지 86 → 116 J. 무기별 명시값(츠바이핸더 28·참치 16)은 그대로. `?twoHandCap=22` = 전 값(setGripTorque)
+const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 26 }; // two-hand 22 → 26: 사장님 10/8 16:20 '그렇게 해'(확인표 191) — 두 손 짝힘은 한 손 손목보다 세다(츠바이핸더 28 선례). 세로 베기(서보 포화 91 %) 14.4 → 14.8 m/s, 자리 에너지 86 → 116 J. 무기별 명시값(참치 16)은 그대로 — 츠바이핸더 28 은 10/10 쥠 넓힘에서 뺌(확인표 682). `?twoHandCap=22` = 전 값(setGripTorque)
 
 // ── 찌르기 무기의 찌르기 장점 (감독 확정 수치 mCut·mThrust·power 와 별개의 장치) ──
 //  베기가 약한(mThrust > mCut) 에스톡·레이피어는 "톡 쳐서 찌르기"가 자연스러운 싸움법이 되도록 찌를 때만 이점을 준다.
@@ -389,11 +389,14 @@ const zweihander = finalizeSpec('zweihander', {
   desc: '정예 용병이 쓰던 거대한 양손검.\n느리지만 맞으면 묵직하게 부순다.',
   grip: 'two-hand', material: 'steel',
   tier: 'rare', // 감독 확정: 레어 — 도펠죌트너(정예 용병)만 다루던 특수 대검. power 1.05, 파손 계수 0.032
-  hiltLength: 0.19, bladeLength: 1.17, gripAlong: -0.18,
+  // 쥠 (사장님 10/10 '쥠은 고증대로 넓혀', 확인표 680~): 고디뉴 몬탄테 규칙 3 '오른손 날밑 가까이, 왼손 폼멜 가까이'.
+  //  자루 길이는 같은 시대 톨레도 몬탄테 두 자루 실측(Cleveland 1916.1509 · 1916.1507: 날밑~폼멜 끝 0.40~0.42 m)으로 —
+  //  오른손(칼 원점)에서 폼멜 끝까지 0.41 − 0.065(날밑 쥔 주먹 반 폭 + 날밑 두께) ≈ 0.35 m. 왼손은 폼멜 목(−0.30, 손 사이 0.30 m).
+  //  hiltLength(손~칼날 밑동)·칼날·코등이는 그대로라 닿는 거리·칼날 관성은 안 바뀐다 (docs/motion/iberian_montante_2026-10-10.md '쥠')
+  hiltLength: 0.19, bladeLength: 1.17, gripAlong: -0.3,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
-  // 자루가 길어(0.16m 반경) 손 사이 지렛대가 롱소드보다 커서, 같은 손 힘으로도 더 큰 돌림힘을
-  // 낼 수 있다 (안 그러면 2.9kg 칼이 22N·m 한도 그대로라 너무 굼떠서 전혀 못 이긴다 — 시뮬로 확인)
-  controlOverrides: { maxAimTorque: 28 },
+  // 손목 서보 상한: 두 손 쥠 기본값(26)을 쓴다. 예전 28 덮개는 '자루가 길어 손 사이 지렛대가 커서'를 대신 넣은 값이었는데,
+  //  쥠을 넓혀(손 사이 0.18 → 0.30 m) 그 지렛대가 빈손 스프링으로 물리에 직접 들어가서 뺐다 (48 판 28: 46 %·넘어짐 45 / 26: 48 %·33, 확인표 680~)
   // 양날 대검: 넓은 칼몸, 긴 피홈, 창끝 칼끝. 배 모양 폼멜, 긴 곧은 코등이 (리카소·갈고리는 decorate)
   partMesh: swordKit({
     blade: { edge: 'double', width: (t) => 1 - 0.3 * t, thick: 0.0045, tip: 'spear', tipLen: 0.12, fuller: { to: 0.45, width: 0.2, depth: 0.5 } },
@@ -403,13 +406,14 @@ const zweihander = finalizeSpec('zweihander', {
   }),
   buildParts(look) {
     const L = this.bladeLength;
-    const grip = boxInertia(0.26, 0.02, 0.16, 0.02);
+    // 자루: 코등이 밑(0.16)에서 폼멜(−0.31)까지 0.47 m (전엔 ±0.16 = 0.32 m, 폼멜 −0.16). 부품 질량은 그대로(합 2.9 kg)
+    const grip = boxInertia(0.26, 0.02, 0.235, 0.02);
     const pommel = sphereInertia(0.62, 0.038);
     const cross = boxInertia(0.32, 0.14, 0.02, 0.026);
     const blade = bladeInertia(1.7, L, 0.34, 0.253, 0.056, 0.018);
     return [
-      partTuple(['box', 0.02, 0.16, 0.02], 0, 0.26, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.038], -0.16, 0.62, 0, pommel.Ie, pommel.It, look.hilt),
+      partTuple(['box', 0.02, 0.235, 0.02], -0.075, 0.26, 0, grip.Ie, grip.It, look.grip),
+      partTuple(['ball', 0.038], -0.31, 0.62, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.14, 0.02, 0.026], 0.175, 0.32, 0, cross.Ie, cross.It, look.hilt),
       partTuple(['box', 0.028, L / 2, 0.009], 0.19 + L / 2, 1.7, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];
