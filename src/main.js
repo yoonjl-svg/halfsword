@@ -1141,8 +1141,7 @@ function beginFight() {
   input.enabled = true;
   emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
   clearEmoMsg();
-  stackClear(techStack);
-  stackClear(stateStack);
+  techClear();
   applyMoveMode();
   if (currentFoe) {
     // 소개(이름 · 대사)는 조금 더 두었다가 걷는다 (무기 이름은 적지 않는다: 카드가 이미 보여 줬다)
@@ -1218,9 +1217,15 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('blur', pause);
 
-// ── 감정이 켜지는 순간: ③ 경직·상태 묶음에 상태 이름 (10/10 19:2x 사장님 '경직과 상태(공포 집념 분노) 출력' — §13) ──
-//  예전 아래 가운데 감정 문장('오소리 브란의 분노가 폭발한다')은 버렸다: 첫 줄 상태 이름 · 둘째 줄 누구(`상대 · 오소리 브란` / `나`).
-//  집념은 사장님 결정 '주어 없이'를 이 꼴에 맞춰 이름 없이 `상대` (나는 `나`). 화면 가장자리 색(#emotion)은 그대로
+// ── 감정이 켜지는 순간 한 줄 알림 (아래 가운데 감정 줄 #emoMsg) ──
+//  10/10 20:3x 사장님 '상태 3종은 전처럼 화면 중앙에 뜨게 · 감정 문장 가운데로 복귀' (docs/ui/hud_type_system_2026-10-10.md §14) — v2 의 오른쪽 위 ③ 경직·상태 묶음은 없앴다.
+//  상대: "오소리 브란이 공포에 잠식된다" / 주인공: 주어 없이 "공포에 잠식된다" (10/10 문구 정리: 다른 감정 줄과 같은 현재형) (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
+//  색은 상태 3종 한 색(--hud-state, 사장님 19:2x '상태 3종은 모두 같은 색으로 통일')
+const EMO_TEXT = {
+  fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식된다',
+  obsession: (who) => (who ? '집념을 보인다' : '집념이 생긴다'), // 사장님 결정: 주어 없이 — 상대는 "집념을 보인다", 주인공은 "집념이 생긴다"
+  anger: (who) => (who ? `${who}의 ` : '') + '분노가 폭발한다',
+};
 /** 받침이 있으면 a(이), 없으면 b(가) */
 function josa(word, a, b) {
   const c = word.charCodeAt(word.length - 1);
@@ -1230,17 +1235,17 @@ function josa(word, a, b) {
 const emoSeen = { player: null, enemy: null };
 function watchEmotions() {
   const pairs = [
-    ['player', playerEmo?.emotion ?? null],
-    ['enemy', ai?.emotion ?? null],
+    ['player', playerEmo?.emotion ?? null, null],
+    ['enemy', ai?.emotion ?? null, currentFoe?.name || '상대'],
   ];
-  for (const [k, emo] of pairs) {
+  for (const [k, emo, who] of pairs) {
     if (emo !== emoSeen[k]) {
       emoSeen[k] = emo;
-      if (emo && STATE_NAME[emo] && state === 'fight' && !roundOver) showStateCue(emo, k === 'player');
+      if (emo && EMO_TEXT[emo] && state === 'fight' && !roundOver) showEmoMsg(EMO_TEXT[emo](who), emo);
     }
   }
 }
-//  알림 줄 (E, 아래 가운데 — 이제 부활 알림만): 줄 세우기 — 앞 것이 EMO_MIN 초는 보인 뒤에 다음 것으로 (최대 2 개 기다림, 넘치면 오래된 것을 버린다). 시계는 게임 시간
+//  감정 줄 (E, 아래 가운데 — 감정 문장 · 부활 알림): 줄 세우기 — 앞 것이 EMO_MIN 초는 보인 뒤에 다음 것으로 (최대 2 개 기다림, 넘치면 오래된 것을 버린다). 시계는 게임 시간
 const EMO_MIN = 1.2;
 const emoQueue = [];
 let emoCur = null; // { text, emo, sec, age }
@@ -1504,20 +1509,21 @@ function updateGuardName(dt) {
 
 // ── 유파 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 상태 메시지처럼 화면 중앙에 기술명 출력해') ──
 //  상대 AI 가 유파 패시브를 내거나 유파 고유 동작을 시작하면 ai.js 가 enemy.techCue 에 적는다 → 이름 + 꼬리표를 잠깐. docs/strike/tech_cue_2026-10-09.md
-//  10/10 19:2x 사장님 답 (docs/ui/hud_type_system_2026-10-10.md §13): 오른쪽 위를 세 묶음으로 — ① 자세(#guardName) ② 패시브·비기(#techSlot) ③ 경직·상태(#stateCue).
+//  10/10 20:3x 사장님 답 (docs/ui/hud_type_system_2026-10-10.md §14): 오른쪽 위는 두 묶음 — ① 자세(#guardName) ② 패시브·비기(#techSlot).
 //   ② = 상대 패시브 · 고유 동작 · 비기 · (디버그) 모든 기술, 내 비기 창 · 내 비기 · 고노센 준비. 첫 줄 한국어 이름(괄호 앞), 둘째 줄 원어 · 꼬리표 `[내|상대] 유파 · 종류` (문구 규칙 §4-4·4-5)
-//   ③ = 경직(나·상대) · 감정 상태(공포 · 집념 · 분노 — 나·상대). 첫 줄 상태 이름, 둘째 줄 누구(`상대 · 이름` / `나`, 집념은 사장님 결정대로 이름 없이 `상대`)
-//   가운데에는 판 알림만 남는다 (예전 가운데 칸의 경직·내 비기 창은 ②·③ 으로).
-//  묶음마다 줄 두 개 (stackPut): 알림마다 열쇠(key)·급함(pri)·시간(t). 같은 열쇠는 그 줄에서 바꿔 끼운다. 빈 줄이 있으면 위부터 채우고,
-//   떠 있는 줄은 사라질 때까지 움직이지 않는다. 두 줄이 다 차면 새 것이 더 급하면 덜 급한 줄을 밀어 줄 세우고, 아니면 새 것이 줄 선다(버리지 않는다 —
-//   다만 HUD_WAIT_MAX 초 넘게 기다린 것은 지난 일이라 버린다). 시간은 게임 루프 dt (passive 1.2 · unique 1.5 · secret 2.0 · 감정 2.0 s, 비기·경직은 끝날 때까지)
-const techCueEl = $('techCue'); // ②·③ 을 담는 겉 칸 (예전 도구가 숨기거나 dataset.kind 를 읽는다 — 마지막에 띄운 알림의 kind·who 를 적어 둔다)
+//   ② 는 자세 칸처럼 줄 하나 ('한줄만 뜨고 누적도 없음 (자세와 동일)'): 새 알림이 오면 그 자리에서 바꿔 끼운다 — 쌓기·줄 세우기·밀어내기 없음.
+//   예외 하나: 고노센 준비 · 디버그 기술(ambient)은 칸이 비었을 때만 뜬다 (예전부터 '자리가 없으면 띄우지 않는다' — 떠 있는 알림을 덮지 않는다).
+//   시간은 게임 루프 dt (passive 1.2 · unique 1.5 · secret 2.0 s, 비기 창은 열린 동안 · 비기는 끝날 때까지)
+//  v2 의 ③ 경직·상태 묶음(#stateCue)은 없앴다 ('경직과 상태는 그냥 빼버리자'): 감정 3종은 아래 가운데 감정 줄로 돌아갔고(watchEmotions), 경직 글은 STIFF_TEXT 스위치(기본 끔)
+const techCueEl = $('techCue'); // ② 를 담는 겉 칸 (예전 도구가 숨기거나 dataset.kind 를 읽는다 — 마지막에 띄운 알림의 kind·who 를 적어 둔다)
 const TECH_CUE_KIND = { passive: '패시브', unique: '고유 동작', all: '기술', secret: '비기', secretReady: '비기', secretArm: '비기' };
 const TECH_CUE_TIME = { passive: 1.2, unique: 1.5, all: 1.0, secret: 2.0, secretReady: 0.5, secretArm: 0.3 };
-const HUD_WAIT_MAX = 3;
-const STATE_NAME = { stiff: '경직', fear: '공포', obsession: '집념', anger: '분노' };
+// 경직 글 스위치 (10/10 20:3x 사장님 '경직과 상태는 그냥 빼버리자' — 경직 기능(물리·AI)은 그대로, 화면 글만 끔).
+//  true 로 바꾸면 경직이 시작될 때 아래 가운데 감정 줄에 '경직'(나) / '상대 경직'을 상태 색으로 한 번 띄운다 (디렉터가 사장님께 '가운데로 되살릴지' 여쭙는 중)
+const STIFF_TEXT = false;
 let techCueSeen = null;
 let techAllSeen = null;
+let stiffSeen = { me: false, foe: false };
 /** '한국어 (원어)' → [한국어, 원어]. 괄호 뒤 말은 '· …' 이면 둘째 줄로, 아니면 첫 줄 뒤에 (예: '자→격 (刺→擊) 고리' → ['자→격 고리', '刺→擊']) */
 function splitName(s) {
   const m = /^(.*?)\s*\(([^()]*)\)\s*(.*)$/.exec(s ?? '');
@@ -1528,19 +1534,15 @@ function splitName(s) {
 }
 /** 꼬리표 `[내|상대] 유파 · 종류` (문구 규칙 §4-4) */
 const cueTag = (c) => `${c.who === 'me' ? '내' : '상대'}${c.schoolKo ? ` ${c.schoolKo}` : ''} · ${TECH_CUE_KIND[c.kind] ?? ''}`;
-/** ③ 둘째 줄 '누구': 나 = `나`, 상대 = `상대 · 이름` (집념은 이름 없이 `상대` — 사장님 결정 '주어 없이') */
-const stateWho = (me, kind) => (me ? '나' : kind !== 'obsession' && currentFoe?.name ? `상대 · ${currentFoe.name}` : '상대');
-const makeStack = (el) => ({ el, lines: [...el.children].map((e) => ({ el: e, it: null })), wait: [] });
-const techStack = makeStack($('techSlot'));
-const stateStack = makeStack($('stateCue'));
-/** 줄 하나 그리기: 첫 줄 b, 둘째 줄 small = (원어 .o · ) 꼬리표 .t — 좁으면 원어 쪽만 … 으로 줄고 꼬리표는 늘 다 보인다 (CSS) */
+const techLine = { el: $('techSlot').querySelector('.slot'), it: null }; // ② 의 줄 하나
+/** 줄 그리기: 첫 줄 b, 둘째 줄 small = (원어 .o · ) 꼬리표 .t — 좁으면 원어 쪽만 … 으로 줄고 꼬리표는 늘 다 보인다 (CSS) */
 function paintLine(L, it) {
   const b = document.createElement('b');
   b.textContent = it.b;
   const small = document.createElement('small');
   const t = document.createElement('span');
   t.className = 't';
-  t.textContent = it.o ? ` · ${it.tag}` : it.tag;
+  t.textContent = it.o ? `\u00a0· ${it.tag}` : it.tag; // 앞 칸은 붙지 않는 빈칸 (flex 칸 첫 빈칸은 사라진다)
   if (it.o) {
     const o = document.createElement('span');
     o.className = 'o';
@@ -1556,76 +1558,37 @@ function paintLine(L, it) {
   techCueEl.dataset.kind = it.kind;
   techCueEl.dataset.who = it.who;
 }
-const stackHas = (S, key) => S.lines.some((L) => L.it?.key === key) || S.wait.some((w) => w.key === key);
-function stackPut(S, it) {
-  const same = S.lines.find((L) => L.it?.key === it.key);
-  if (same) return paintLine(same, it); // 같은 열쇠: 그 줄에서 바꿔 끼운다
-  S.wait = S.wait.filter((w) => w.key !== it.key);
-  const free = S.lines.find((L) => !L.it);
-  if (free) return paintLine(free, it);
-  const low = S.lines.reduce((x, L) => (L.it.pri < x.it.pri ? L : x));
-  if (it.pri > low.it.pri) {
-    if (!low.it.noWait) S.wait.push({ ...low.it, age: 0 }); // 밀린 줄은 남은 시간만큼 기다린다
-    paintLine(low, it);
-  } else if (!it.noWait) S.wait.push({ ...it, age: 0 });
-  S.wait.sort((x, y) => y.pri - x.pri);
-  if (S.wait.length > 3) S.wait.length = 3;
+/** ② 에 알림 하나: 그 자리에서 바꿔 끼운다 (ambient 는 칸이 비었을 때만) */
+function techPut(it) {
+  if (it.ambient && techLine.it) return;
+  paintLine(techLine, it);
 }
-function stackTick(S, dt, vis) {
-  for (const L of S.lines) {
-    const it = L.it;
-    if (!it) continue;
-    const h = it.hold?.(); // true = 그 일이 이어진다(시간을 늘린다) · 'end' = 끝났다(바로 내린다)
-    if (h === true) it.t = Math.max(it.t, 0.15);
-    else if (h === 'end') it.t = 0;
-    it.t -= dt;
-    if (it.t <= 0 || !vis(it)) {
-      L.it = null;
-      L.el.classList.remove('show');
-    }
-  }
-  for (const w of S.wait) w.age += dt;
-  S.wait = S.wait.filter((w) => w.age < HUD_WAIT_MAX && vis(w) && w.hold?.() !== 'end');
-  for (const L of S.lines) if (!L.it && S.wait.length) paintLine(L, S.wait.shift());
+function techTick(dt, vis) {
+  const it = techLine.it;
+  if (!it) return;
+  const h = it.hold?.(); // true = 그 일이 이어진다(시간을 늘린다) · 'end' = 끝났다(바로 내린다)
+  if (h === true) it.t = Math.max(it.t, 0.15);
+  else if (h === 'end') it.t = 0;
+  it.t -= dt;
+  if (it.t <= 0 || !vis(it)) techClear();
 }
-/** 묶음을 비운다 (새 판) */
-function stackClear(S) {
-  S.wait.length = 0;
-  for (const L of S.lines) {
-    L.it = null;
-    L.el.classList.remove('show');
-  }
+/** ② 를 비운다 (새 판 · 알림이 끝남) */
+function techClear() {
+  techLine.it = null;
+  techLine.el.classList.remove('show');
 }
-/** ② 패시브·비기 묶음에 기술 알림 하나 (c = { text, kind, who?, schoolKo }) */
+/** ② 패시브·비기 칸에 기술 알림 하나 (c = { text, kind, who?, schoolKo }) */
 function showTechCue(c, hold) {
   const me = c.who === 'me';
   const [main, sub] = splitName(c.text);
-  const arm = c.kind === 'secretArm';
-  stackPut(techStack, {
-    key: me ? 'mySecret' : c.kind === 'secret' ? 'foeSecret' : c.kind === 'all' ? 'foeAll' : 'foeTech',
-    pri: me ? (arm ? 0.5 : 3) : c.kind === 'secret' ? 2 : c.kind === 'all' ? 0 : 1, // 내 비기(조작) > 상대 비기 > 상대 패시브·고유 > 고노센 준비 > 디버그
-    noWait: arm || c.kind === 'all', // 고노센 준비·디버그는 자리가 없으면 띄우지 않는다 (줄 서지 않는다)
+  techPut({
+    ambient: c.kind === 'secretArm' || c.kind === 'all', // 고노센 준비·디버그는 칸이 비었을 때만 (떠 있는 알림을 덮지 않는다)
     t: TECH_CUE_TIME[c.kind] ?? 1.2,
     kind: c.kind,
     who: me ? 'me' : 'foe',
     b: main,
     o: sub,
     tag: cueTag(c),
-    hold,
-  });
-}
-/** ③ 경직·상태 묶음에 상태 하나 (kind = stiff | fear | obsession | anger) */
-function showStateCue(kind, me, hold) {
-  const stiff = kind === 'stiff';
-  stackPut(stateStack, {
-    key: `${me ? 'my' : 'foe'}${stiff ? 'Stiff' : 'Emo'}`,
-    pri: stiff ? (me ? 2 : 3) : 1, // 상대 경직(칠 기회) > 내 경직 > 감정
-    t: stiff ? 0.3 : 2.0,
-    kind,
-    who: me ? 'me' : 'foe',
-    b: STATE_NAME[kind],
-    o: '',
-    tag: stateWho(me, kind),
     hold,
   });
 }
@@ -1652,34 +1615,32 @@ function updateTechCue(dt) {
   const live = state === 'fight' && !!enemy?.alive && !roundOver;
   const liveMine = state === 'fight' && !roundOver;
   const pPhase = player?.skill?.secretPhase ?? null;
-  // 고노센 준비 (10/10 02:4x): 상대 간격 밖 iaiArmTime 초가 차면 ② 에 흐린 '고노센 준비' (내 비기 줄이 없을 때만 · 자리가 없으면 띄우지 않는다)
+  // 고노센 준비 (10/10 02:4x): 상대 간격 밖 iaiArmTime 초가 차면 ② 에 흐린 '고노센 준비' (칸이 비었을 때만)
   const pArmed = !!(CONFIG.SECRET.iai && playerSecret?.S?.do?.instant && playerSecret.iaiArm?.armed);
-  if (liveMine && pArmed && !pPhase && !playerSecret.open && !stackHas(techStack, 'mySecret')) {
+  if (liveMine && pArmed && !pPhase && !playerSecret.open && !techLine.it) {
     const armHold = () => (playerSecret?.iaiArm?.armed && !player?.skill?.secretPhase && !playerSecret.open ? true : 'end');
     showTechCue({ text: '고노센 준비', kind: 'secretArm', who: 'me', schoolKo: TRADITIONS[player?.swordArt?.tradition]?.nameKo ?? '' }, armHold);
   }
-  // 경직 (10/10 사장님 '경직은 … 있는 것도 몰랐다' · 19:2x '경직도 오른쪽 상단으로'): 나·상대 모두 ③ 에, 경직이 이어지는 동안
-  if (liveMine && pPhase === 'stiff' && !stackHas(stateStack, 'myStiff')) showStateCue('stiff', true, () => (player?.skill?.secretPhase === 'stiff' ? true : 'end'));
-  const aiStiff = () => state === 'fight' && ai?.secretRun?.stage === 'stiff' && !!enemy?.alive;
-  if (live && aiStiff() && !stackHas(stateStack, 'foeStiff')) showStateCue('stiff', false, () => (aiStiff() ? true : 'end'));
+  // 경직 글 (STIFF_TEXT, 기본 끔): 켜면 경직이 시작될 때 감정 줄에 한 번
+  const myStiff = liveMine && pPhase === 'stiff';
+  const foeStiff = live && ai?.secretRun?.stage === 'stiff';
+  if (STIFF_TEXT && myStiff && !stiffSeen.me) showEmoMsg('경직', 'stiff', 1200);
+  if (STIFF_TEXT && foeStiff && !stiffSeen.foe) showEmoMsg('상대 경직', 'stiff', 1200);
+  stiffSeen = { me: myStiff, foe: foeStiff };
   const c = enemy?.techCue ?? null;
   if (c && c !== techCueSeen) {
     techCueSeen = c;
-    // 상대 비기 알림은 그 비기가 끝날 때까지 (連環三擊 세 수) — 경직에 들면 ③ 이 이어받는다
+    // 상대 비기 알림은 그 비기가 끝날 때까지 (連環三擊 세 수) — 경직에 들면 남은 시간만
     if (live) showTechCue(c, c.kind === 'secret' ? () => !!ai?.secretRun && ai.secretRun.stage !== 'stiff' : null);
   }
   const a = enemy?.techAll ?? null;
   if (a && a !== techAllSeen) {
     techAllSeen = a;
-    if (live && TECH_CUE_ALL) showTechCue(a); // 디버그 (?techCueAll=1): 빈 줄이 있을 때만 흐리게
+    if (live && TECH_CUE_ALL) showTechCue(a); // 디버그 (?techCueAll=1): 칸이 비었을 때만 흐리게
   }
   const vis = (it) => (it.who === 'me' ? liveMine : live);
-  if (!(state === 'paused' && pauseOpen)) {
-    // 일시정지 창이 덮은 동안은 멈춘다 (창을 닫으면 이어서)
-    stackTick(techStack, dt, vis);
-    stackTick(stateStack, dt, vis);
-  }
-  techCueEl.classList.toggle('show', techStack.lines.some((L) => L.it) || stateStack.lines.some((L) => L.it));
+  if (!(state === 'paused' && pauseOpen)) techTick(dt, vis); // 일시정지 창이 덮은 동안은 멈춘다 (창을 닫으면 이어서)
+  techCueEl.classList.toggle('show', !!techLine.it);
 }
 
 // ── 게임 루프 ──

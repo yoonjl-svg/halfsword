@@ -32,22 +32,22 @@
         --outline-c: #0d0907;
         --hud-outline: 1px 0 0 var(--outline-c), -1px 0 0 var(--outline-c), 0 1px 0 var(--outline-c), 0 -1px 0 var(--outline-c), 0 1px 3px rgba(13, 9, 7, .85), 0 0 8px rgba(13, 9, 7, .5);
         --hud-outline-display: 0 2px 0 var(--outline-c), 0 0 2px var(--outline-c), 0 3px 10px rgba(13, 9, 7, .7);
-        /* 색 (10/10 19:2x 사장님 답 — §13): 오른쪽 위 세 묶음은 서식 하나에 색만 다르다.
-           ① 자세 = 크림(지금 색) · ② 패시브·비기 = 옅은 오렌지('너무 진하고 튄다 → 더 옅게', 예전 #C8714E) · ③ 경직·상태 = 옅은 붉은색(경직·공포·집념·분노 한 색)
+        /* 색 (10/10 19:2x 사장님 답 — §13, 20:3x '③ 묶음 없앰' — §14): 오른쪽 위 두 묶음은 서식 하나에 색만 다르다.
+           ① 자세 = 크림(지금 색) · ② 패시브·비기 = 옅은 오렌지('너무 진하고 튄다 → 더 옅게', 예전 #C8714E — 20:3x 'B 옅지 않아' 그대로)
+           상태 3종(공포·집념·분노) = 옅은 붉은색 한 색 — 이제 아래 가운데 감정 문장(#emoMsg)의 색
            후보 견본: docs/ui/hud_v2_swatch_landscape.png — 오렌지 A #D5997B · B #DAAE95(기본) · C #E0C2AE / 붉은색 R1 #E48E8B(기본) · R2 #E59EA3 · R3 #E58A80 */
         --hud-guard: #f3e6c8;
         --hud-guard-sub: #e4d8bf;
         --hud-tech: #daae95;
         --hud-tech-sub: #e6cdbc;
         --hud-state: #e48e8b;
-        --hud-state-sub: #e8bcba;
         --hud-name: #f3e6c8;
         --hud-epithet: #d9c9a6;
         --hud-line: #efe3c8;
         --hud-sys: #f3e9d8;
         --hud-guide: #e2d6bf;
         --hud-guide-bg: rgba(13, 9, 7, .5);
-        --emo-revive: #fff1c8; /* 부활 알림 (아래 가운데 — 상태 3종이 아니라 빛 효과와 함께 그 자리에 남는다) */
+        --emo-revive: #fff1c8; /* 부활 알림 (아래 가운데 감정 줄 — 상태 3종과 달리 빛 효과와 함께) */
         /* 무기 등급 (예전 룰렛 색 그대로) */
         --tier-trash: #b8b6b0; --tier-common: #fff3c4; --tier-rare: #8cc4ff; --tier-epic: #d6a8ff; --tier-legend: #ffd24a; --tier-mystery: #8fe3c6;
         --foe: #b0473b;
@@ -95,14 +95,15 @@
       /* E 알림 줄 (부활): 아래 가운데, 안내 위. 한 줄, 넘치면 … (감정 상태는 오른쪽 위 ③ 묶음으로 옮겼다) */
       #emoMsg { position: fixed; left: 50%; bottom: calc(var(--hint-b) + var(--notice-up)); transform: translateX(-50%); max-width: min(64vw, 480px); font-size: var(--fs-body); font-weight: 700; line-height: var(--lh-tight); color: var(--hud-sys); text-shadow: var(--hud-outline); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0; transition: opacity .35s; }
       #emoMsg.show { opacity: 1; transition-duration: .2s; }
+      #emoMsg[data-emotion="fear"], #emoMsg[data-emotion="obsession"], #emoMsg[data-emotion="anger"], #emoMsg[data-emotion="stiff"] { color: var(--hud-state); } /* 상태 3종 한 색 (경직은 main.js STIFF_TEXT 를 켰을 때만) */
       #emoMsg[data-emotion="revive"] { color: var(--emo-revive); text-shadow: var(--hud-outline), 0 0 10px rgba(255,205,110,.85), 0 0 22px rgba(255,190,80,.45); } /* 부활: 하늘에서 내린 빛 (src/revive_fx.js) */
       /* H 안내 (조작 안내): 아래 가운데 알약 — 바탕이 있으니 외곽선 없음. 가로 한 줄(…), 세로 두 줄 */
       #hint { position: fixed; bottom: var(--hint-b); left: 50%; transform: translateX(-50%); max-width: min(64vw, 520px); font-size: var(--fs-caption); font-weight: 500; line-height: var(--lh-text); color: var(--hud-guide); background: var(--hud-guide-bg); padding: 6px 12px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0; transition: opacity .3s; }
       #hint.show { opacity: 1; transition-duration: .2s; }
       @media (orientation: portrait) { #hint { white-space: normal; text-align: center; width: max-content; max-width: calc(100vw - 2 * var(--safe-l)); word-break: keep-all; border-radius: 14px; } }
 
-      /* 오른쪽 위 세 묶음 (10/10 19:2x 사장님 답 — docs/ui/hud_type_system_2026-10-10.md §13): ① 자세 · ② 패시브·비기 · ③ 경직·상태.
-         줄 하나(.slot) = 첫 줄 b(이름 · 상태, 15/800) + 둘째 줄 small(원어 · 설명 · 꼬리표 · 누구, 12/500). 서식·외곽선은 하나, 색만 묶음마다 다르다 */
+      /* 오른쪽 위 두 묶음 (10/10 19:2x 사장님 답 §13 → 20:3x §14 — docs/ui/hud_type_system_2026-10-10.md): ① 자세 · ② 패시브·비기 — 둘 다 줄 하나.
+         줄 하나(.slot) = 첫 줄 b(이름, 15/800) + 둘째 줄 small(원어 · 설명 · 꼬리표, 12/500). 서식·외곽선은 하나, 색만 묶음마다 다르다 */
       .slot { text-align: right; text-shadow: var(--hud-outline); opacity: 0; transition: opacity .25s, translate .25s; }
       .slot.show { opacity: 1; transition-duration: .15s; }
       .slot b { display: block; font-size: var(--fs-body); font-weight: 800; line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -112,19 +113,15 @@
       #guardName { top: var(--safe-t); height: 52px; }
       #guardName b { color: var(--hud-guard); }
       #guardName small { color: var(--hud-guard-sub); -webkit-line-clamp: 2; }
-      /* ②·③ 을 담는 겉 칸 (main.js updateTechCue) — 자리를 차지하지 않는다 (숨기면 둘 다 숨는다) */
+      /* ② 를 담는 겉 칸 (main.js updateTechCue) — 자리를 차지하지 않는다 (숨기면 ② 가 숨는다) */
       #techCue { position: fixed; inset: 0; pointer-events: none; }
-      /* ②·③: 줄 두 개짜리 고정 칸 (각 40px — 비어도 자리는 그대로, 아래 묶음이 뛰지 않는다).
-         새 알림은 비어 있는 첫 줄(위부터)에 들어가고, 떠 있는 줄은 사라질 때까지 움직이지 않는다 */
+      /* ② 패시브·비기: 줄 하나(40px) — 자세 칸처럼 새 알림이 오면 그 자리에서 바꿔 끼운다 */
       .stack .slot { height: 40px; translate: 6px 0; }
       .stack .slot.show { translate: 0 0; }
       #techSlot { top: calc(var(--safe-t) + 52px + var(--slot-gap)); }
-      #stateCue { top: calc(var(--safe-t) + 132px + 2 * var(--slot-gap)); }
       #techSlot b { color: var(--hud-tech); }
       #techSlot small { color: var(--hud-tech-sub); }
-      #stateCue b { color: var(--hud-state); }
-      #stateCue small { color: var(--hud-state-sub); }
-      /* 둘째 줄: 원어(.o)는 좁으면 … 으로 줄고 꼬리표·누구(.t)는 늘 다 보인다 */
+      /* 둘째 줄: 원어(.o)는 좁으면 … 으로 줄고 꼬리표(.t)는 늘 다 보인다 */
       .stack small { display: flex; justify-content: flex-end; white-space: nowrap; }
       .stack small .o { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
       .stack small .t { flex: none; }
@@ -268,7 +265,7 @@
       /* 메뉴 */
       .overlay { position: fixed; inset: 0; z-index: 3; display: none; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(ellipse at center, rgba(27,20,16,.55), rgba(27,20,16,.92)); }
       .overlay.show { display: flex; }
-      .card { width: min(460px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; touch-action: pan-y; }
+      .card { width: min(340px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; touch-action: pan-y; }
       /* 창 (시작·일시정지·결과 — 10/10 글자 체계): 제목 title · 부제·줄·단추 body · 고르개·안내 caption */
       h1 { margin: 0 0 4px; font-size: var(--fs-title); font-weight: 800; line-height: var(--lh-tight); letter-spacing: var(--ls-label); }
       h2 { margin: 0 0 12px; font-size: var(--fs-title); }
@@ -286,12 +283,13 @@
       .actions { position: sticky; bottom: -20px; margin: 0 -20px -20px; padding: 0 20px 20px; background: var(--panel); }
       .howto { font-size: var(--fs-caption); color: var(--dim); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
       .minor { color: var(--accent); font-size: var(--fs-caption); margin-left: 6px; }
+      .actions + .howto { margin-top: 28px; } /* 단추 줄(.actions)의 아래 여백 -20px 만큼 끌려 올라가 첫 줄이 단추 줄 바탕 밑에 가리던 것 (10/10 20:3x 창 정리 때 고침) */
 
-      /* 가로로 든 폰처럼 화면 높이가 낮을 때는 메뉴를 촘촘하게 */
-      /* 가로로 든 폰처럼 낮은 화면: 글자는 줄이지 않고 설정 줄을 두 열로 (제목·부제·단추·안내는 두 열을 가로지른다) */
+      /* 설정 창 (시작·일시정지·결과가 함께 쓰는 #menu): 남은 설정이 둘(상대 난이도 · 60 fps 제한)이라 한 열 · 좁은 폭 (10/10 20:3x 사장님 '2열로 넓을 필요가 없어졌어' — §14).
+         폭은 위 .card (460 → 340px). 테스트 경로(test=1)가 붙이는 '테스트 고르기로' 단추(.secondary 100%)·안내 한 줄도 이 폭을 따른다 */
+      /* 가로로 든 폰처럼 낮은 화면: 글자는 줄이지 않고 여백만 촘촘하게 (한 열 그대로) */
       @media (max-height: 500px) {
-        .card { padding: 12px 18px; width: min(760px, 100%); display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-content: start; }
-        .card > :not(.row) { grid-column: 1 / -1; }
+        .card { padding: 12px 18px; }
         .sub { margin-bottom: 8px; }
         .row { min-height: 36px; padding: 2px 0; }
         .primary { margin-top: 10px; padding: 10px; }
@@ -324,9 +322,9 @@
         <div class="wcard foe" data-i="2" role="img"><span class="wcardInner"><span class="wback"></span><span class="wface"><small class="wwho">상대 무기</small><span class="wthumb"></span><b class="wname"></b><small class="wsub"></small><span class="wtier"></span><span class="wdesc"></span><span class="wabil"></span></span></span></div>
       </div>
     </div>
-    <!-- 오른쪽 위 세 묶음: ① 자세 · (#techCue 안) ② 패시브·비기 · ③ 경직·상태 — ②·③ 은 줄 두 개짜리 고정 칸 -->
+    <!-- 오른쪽 위 두 묶음: ① 자세 · (#techCue 안) ② 패시브·비기 — 둘 다 줄 하나 (10/10 20:3x, §14) -->
     <div id="guardName" class="slot"></div>
-    <div id="techCue"><div id="techSlot" class="stack" aria-live="polite"><div class="slot"></div><div class="slot"></div></div><div id="stateCue" class="stack" aria-live="polite"><div class="slot"></div><div class="slot"></div></div></div>
+    <div id="techCue"><div id="techSlot" class="stack" aria-live="polite"><div class="slot"></div></div></div>
     <div id="moveStick" aria-label="이동 조이스틱"><div id="moveKnob"></div></div>
 
     <div class="overlay show" id="menu">

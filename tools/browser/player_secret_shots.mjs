@@ -29,8 +29,8 @@ console.log(`WEAPON ${weapon} secret ${S}`);
 const probe = () =>
   page.evaluate(() => {
     const g = window.game;
-    // 10/10 19:2x: 내 비기 창·실행은 ② 패시브·비기 묶음(#techSlot), 경직은 ③ 경직·상태 묶음(#stateCue) — 줄마다 .slot. 보이는 줄 하나를 읽는다 (내 것 먼저)
-    const lines = [...document.querySelectorAll('#techSlot .slot, #stateCue .slot')].filter((e) => e.classList.contains('show'));
+    // 10/10 20:3x: 내 비기 창·실행은 ② 패시브·비기(#techSlot) 줄 하나. 경직 글은 화면에 없다 (main.js STIFF_TEXT 끔)
+    const lines = [...document.querySelectorAll('#techSlot .slot')].filter((e) => e.classList.contains('show'));
     const el = lines.find((e) => e.dataset.who === 'me') ?? lines[0] ?? document.querySelector('#techSlot .slot');
     return {
       sim: +g.stats.simTime.toFixed(2),

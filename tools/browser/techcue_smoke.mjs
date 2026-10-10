@@ -1,5 +1,5 @@
-// 유파 기술 알림(#techCue, 10/9) 브라우저 확인: 상대 무기를 정해 싸움을 띄우고 알림 칸이 보이는 순간 스크린샷 한 장. 두 줄 쌓기도 본다
-//  10/10 19:2x: #techCue 는 겉 칸 — ② 패시브·비기 묶음 #techSlot(자세 아래) · ③ 경직·상태 묶음 #stateCue(그 아래), 묶음마다 줄 두 개(.slot).
+// 유파 기술 알림(#techCue, 10/9) 브라우저 확인: 상대 무기를 정해 싸움을 띄우고 알림 칸이 보이는 순간 스크린샷 한 장. 바꿔 끼우기도 본다
+//  10/10 20:3x: #techCue 는 겉 칸 — ② 패시브·비기 #techSlot(자세 아래)에 줄 하나(.slot), 새 알림은 그 자리에서 바꿔 끼운다 (③ 경직·상태 묶음은 없앴다).
 //  설정 '유파 기술 알림'은 없어졌다(늘 켬)
 //  실행: npx vite build && npx vite preview --port 4173 --strictPort &
 //        node tools/browser/techcue_smoke.mjs http://127.0.0.1:4173 <스크린샷 폴더> ['?weapon=longsword&foeWeapon=monohoshizao'] [벽시계 한도 ms]
@@ -22,7 +22,8 @@ await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60
 const pre = await page.evaluate(() => ({
   el: !!document.getElementById('techCue'),
   row: document.querySelectorAll('#menu [data-setting="techCue"]').length, // 0 이어야 한다 (설정 줄 지움)
-  slots: ['techSlot', 'stateCue'].map((id) => document.querySelectorAll(`#${id} .slot`).length),
+  slots: document.querySelectorAll('#techSlot .slot').length, // 1 이어야 한다 (줄 하나)
+  stateCue: !!document.getElementById('stateCue'), // false 여야 한다 (③ 묶음 없앰)
   menuShown: document.getElementById('techCue').classList.contains('show'),
 }));
 console.log('PRE ' + JSON.stringify(pre));
@@ -35,7 +36,7 @@ let lastCue = null;
 while (Date.now() - t0 < wallMax) {
   await page.waitForTimeout(120);
   const r = await page.evaluate(() => {
-    const el = [...document.querySelectorAll('#techSlot .slot, #stateCue .slot')].find((e) => e.classList.contains('show')) ?? document.querySelector('#techSlot .slot');
+    const el = document.querySelector('#techSlot .slot');
     const c = window.game.enemy?.techCue;
     return { slot: el.parentElement.id, show: el.classList.contains('show'), op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim(), cue: c ? `${c.text}/${c.kind}` : null, cueT: c?.t ?? null, sim: +window.game.stats.simTime.toFixed(2), state: window.game.state, eAlive: !!window.game.enemy?.alive, passives: window.game.ai?.stats?.passives ?? null };
   });
@@ -48,7 +49,7 @@ while (Date.now() - t0 < wallMax) {
   if (r.state !== 'fight') { found = { ended: r }; break; }
 }
 console.log('FOUND ' + JSON.stringify(found) + ` wall ${((Date.now() - t0) / 1000).toFixed(0)}s`);
-// 두 줄 쌓기: 상대 고유 동작 + 상대 비기를 잇달아 적어 ② 묶음에 두 줄이 함께 서는지 본다 (AI 를 건드리지 않는 화면 쪽 확인)
+// 바꿔 끼우기: 상대 고유 동작 + 상대 비기를 잇달아 적어 ② 의 줄 하나가 비기로 바뀌는지 본다 (AI 를 건드리지 않는 화면 쪽 확인)
 const tog = await page.evaluate(async () => {
   const g = window.game;
   const lines = [...document.querySelectorAll('#techSlot .slot')];
