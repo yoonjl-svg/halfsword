@@ -25,6 +25,7 @@ import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
+import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
@@ -78,6 +79,10 @@ export class AI {
     const art = resolveSwordArt(me.weapon, this.persona);
     this.art = art;
     this.school = art.school;
+    // 유파 막기 자리 몸꼴 (10/11 — schools.js TRADITIONS[유파].parryCover, 지금 중국만): 막는 동안(mode 'defend', 피하기 아님)만 그 줄의 막기 자세로 손·칼끝·몸을 덮는다.
+    //  14 자리 섞기에 넣으면 그 자리를 지나는 베기 길이 휘고 원전 꼴(가로 든 칼)이 섞여 사라져서 덧씌우기로 둔다(frames.js COVERS 와 같은 까닭). 칸 없는 유파는 아무것도 안 붙인다(바이트 그대로)
+    const pc = TRADITIONS[art.tradition]?.parryCover;
+    if (pc) installCover(me, this, pc);
     const baseM = this.school.measure;
     this.M = art.measure;
     // 10/8 17:00 (c): 이 몸이 R2′ 묶음(몸의 호)을 쓰면 칼이 더 멀리·일찍 지나가 간격을 BODY.r2pAiContact 만큼 당긴다(72 판 'all': contact 1.57 → 1.52 가 E 승 14 → 27, P 28 → 33). 묶음 없는 AI(기본 'player' 범위의 상대)엔 0 — 바이트 동일

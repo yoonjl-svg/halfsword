@@ -865,6 +865,27 @@ TRADITIONS.iberian.withdraw = { pressed: 'langort', calm: ['langort', 'alber'] }
 //   lowL·lowR 요략세 자리(바꿈 — 칼을 낮게 앞으로, 칼끝 왼쪽) — 撩掠勢 「卽撩掠格, 法能遮駕下殺 蔽左護右」(무도 p038/30) [원문] (전 쟁기 둘)
 //   thrust 직부송서 자리(긴 자세 — 두 손 앞으로) — 御車勢 「卽御車格, 法能駕御中殺」(쪽161/0575 · 무도 p038 그림 '두 손 앞쪽으로') [원문] · 御車 자세가 표에 없어 가장 가까운 자리 [해석] (전 왼쪽 쟁기)
 TRADITIONS.chinese.parry = { highL: G.ochsL, highR: G.tag, highC: G.tag, lowL: G.wechselR, lowR: G.wechselR, thrust: G.langort };
+// 중국 막기 자리 (10/11 사장님 00:2x '1] 중국 막기. 새 자세 자리 만들어' — docs/strike/school_slots_2026-10-11.md §1). 위 줄의 표두세·직부송서 자리는 원전 꼴이 표에 없어 고른
+//  가장 가까운 자리였다([해석]). 이제 막기 자리 = 이름 + 패드(손이 가는 곳) + 그 자리 몸꼴(손·칼끝·몸)로 둔다. 몸꼴은 14 자리 섞기에 넣지 않고 AI 가 그 줄을 칼로 막는 동안만
+//  덧씌운다(ai.js 생성자 → frames.js installCover): 섞기에 넣으면 ① 패드 반지름(0.62) 안 머리 위 자리가 모두 표두세(0.10~0.12 m 거리)에 끌려 칼이 가로로 눕지 않고(10/10 G.kron 시험 — chinese_guards §3)
+//  ② 그 자리를 지나는 베기 길(표두격·우익격)이 휜다. 공용 패드 G·14 자세 차례·기술 길 열쇠·다른 유파 표는 그대로 — 패드는 있던 자리를 쓴다(손이 가는 길만 정함, 몸꼴은 덧씌우기가 정함).
+//  hand [앞, 위, 칼 든 쪽] m (가슴 중심) · blade [올려본 각, 옆 각] ° (옆 − = 칼 반대쪽) · yaw ° (− = 칼 든 어깨가 앞) · pitch ° · drop m. 수는 모두 [해석]/[추정] — 사장님 확인 전 (확인표 840~)
+const CHINESE_PARRY_SLOTS = {
+  // 擧鼎勢 「卽擧鼎格, 法能鼎格上殺. 左脚右手平擡勢」(무비지 쪽154/0568) · 무도 권2 p035/27 그림 '칼을 머리 위로 들어 막는 격, 두 손 위로 듦' [원문·그림 해석] —
+  //  솥(鼎)을 들어 올리듯, 平擡(평대 = 평평하게 들어 올림): 칼자루를 머리 위 오른쪽에 들고 칼날은 머리 위를 가로질러 왼쪽으로 수평 [해석].
+  //  손 높이 = 세이버 지붕(표두세 자리) 손 높이 그대로 0.46 m · 앞 0.26 m(칼 든 어깨에서 0.46 m — 팔 길이 0.565 안), 칼은 수평에서 5° 들고 옆 −85°(칼끝이 왼쪽, 앞으로 5°) [추정].
+  //  몸 = 표두세 자리(세이버 지붕) 몸 값 그대로 — 원문이 몸 돌림을 말하지 않음(손발 짝 보류와 같은 까닭)
+  geojeong: { name: '거정세 (擧鼎勢)', desc: '솥을 들어 올리듯 칼을 머리 위로 가로 들어 위에서 오는 칼을 받는다 · 거정격', pad: G.tag, hand: [0.26, 0.46, 0.1], blade: [5, -85], pelvisYaw: 5, chestYaw: -10, pitch: 0, drop: 0.05, src: '무비지 쪽154/0568 「擧鼎格 … 鼎格上殺 … 平擡勢」 · 무도 권2 p035/27 그림 [원문·그림 해석] · 수 [추정]' },
+  // 御車勢 「卽御車格, 法能駕御中殺 削殺兩手. 左脚右手衝鋒勢. 向前退步鳳頭洗」(무비지 쪽161/0575 · 역주24 '말고삐 당기듯 상하로 끄덕이는 형상') · 무도 권2 p038/30 그림 '두 손 앞쪽으로' [원문·그림 해석] —
+  //  수레를 몰듯(駕御) 가운데를 다스린다: 고삐를 쥔 듯 손을 가슴 앞으로 내밀되 팔은 다 펴지 않고(직부송서 0.68 → 0.40 m), 칼끝은 衝鋒(칼끝이 앞을 찌를 듯)으로 앞 위로 세워(30°)
+  //  가운데로 오는 찌르기를 위아래로 눌러 다스린다 [해석]. 退步(물러나며) — 숙임은 직부송서보다 적게(10 → 4°) [해석]. 몸 돌림은 직부송서(찌르기 표 긴 자세)보다 덜 틂 [추정]
+  eogeo: { name: '어거세 (御車勢)', desc: '고삐를 쥔 듯 손을 가슴 앞으로 내밀고 칼끝을 앞 위로 세워 가운데로 오는 칼을 위아래로 눌러 다스린다 · 어거격', pad: G.langort, hand: [0.4, 0.06, 0.06], blade: [30, -4], pelvisYaw: -20, chestYaw: -35, pitch: 4, drop: 0.06, src: '무비지 쪽161/0575 「御車格 … 駕御中殺 … 衝鋒勢」 역주24 · 무도 권2 p038/30 그림 [원문·그림 해석] · 수 [추정]' },
+};
+TRADITIONS.chinese.parrySlots = CHINESE_PARRY_SLOTS;
+//  줄 → 자리: highC·highR 거정세(擧鼎格 「上殺」 — 위에서 오는 칼) · thrust 어거세(御車格 「中殺」 — 가운데로 오는 칼) ·
+//   highL 봉두세(왼쪽 황소 — 이미 원전 꼴 鳳頭洗, 그대로) · lowL·lowR 요략세(바꿈 — 이미 원전 꼴 撩掠格, 그대로)
+TRADITIONS.chinese.parry = { ...TRADITIONS.chinese.parry, highR: CHINESE_PARRY_SLOTS.geojeong.pad, highC: CHINESE_PARRY_SLOTS.geojeong.pad, thrust: CHINESE_PARRY_SLOTS.eogeo.pad };
+TRADITIONS.chinese.parryCover = { highR: CHINESE_PARRY_SLOTS.geojeong, highC: CHINESE_PARRY_SLOTS.geojeong, thrust: CHINESE_PARRY_SLOTS.eogeo };
 // 덮는 자세: 표두세 자리 — 擧鼎格(칼을 머리 위로 들어 막음)과 같은 까닭 [원문 · 자리 해석]
 TRADITIONS.chinese.pose = { ...GERMAN.pose, cover: G.tag };
 

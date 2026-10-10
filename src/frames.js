@@ -257,7 +257,9 @@ export const OVERLAY = {
   thrust: { lunge: { step: 0.6, reach: 0.08, body: { pelvisYaw: -35, chestYaw: -45, pitch: 12, drop: 0.16 }, src: '카포 페로 런지 [해석] · 걸음 길이 [추정]' } },
 };
 
-/** 막기 덧씌우기 (시제품): 검술 층 update 뒤에 thrustPose(덧씌우기 칸)를 막기 자세로 채운다. 찌르기(tap)·손잡이 찍기(pom)·사격 중엔 건드리지 않는다 */
+/** 막기 덧씌우기 (시제품): 검술 층 update 뒤에 thrustPose(덧씌우기 칸)를 막기 자세로 채운다. 찌르기(tap)·손잡이 찍기(pom)·사격 중엔 건드리지 않는다.
+ *  10/11 중국 막기 자리(schools.js CHINESE_PARRY_SLOTS)가 처음 본판에서 쓴다 — 그래서 덧씌우기 칸을 '내가 채운 동안'만 비운다(own):
+ *   같은 칸을 쓰는 다른 몫(비기 순간 베기 secret_instant 의 경직 자세 등)이 칸을 쓰는 동안 0 으로 지우지 않게. 칸을 놓을 때 몸 값(골반·가슴·숙임·낮춤)도 받기 전 값으로 되돌린다 */
 export function installCover(fighter, ai, covers) {
   const sk = fighter.skill;
   if (!sk || sk._cover) return;
@@ -266,23 +268,35 @@ export function installCover(fighter, ai, covers) {
     const az = o.blade[1] * D2R;
     return [k, { ...o, dir: [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)] }];
   }));
-  sk._cover = { w: 0, last: null };
+  sk._cover = { w: 0, last: null, own: false, keep: null };
   const upd = sk.update.bind(sk);
+  const release = (st, pose) => {
+    if (!st.own) return;
+    st.own = false;
+    pose.w = 0;
+    if (st.keep) Object.assign(pose, st.keep);
+  };
   sk.update = (dt) => {
     const r = upd(dt);
     const st = sk._cover;
+    const pose = sk.thrustPose;
     if (sk.tap || sk.pom || fighter.weapon?.gun) {
       st.w = 0;
+      st.own = false; // 찌르기·찍기·사격이 칸을 가져갔다 — 지우지 않는다
       return r;
     }
     const want = ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : null;
     if (want) st.last = want;
     st.w = Math.max(0, Math.min(1, st.w + (want ? dt / MOTION.coverIn : -dt / MOTION.coverOut))); // 덮는 시간·걷는 시간 (MOTION)
     const c = st.last;
-    const pose = sk.thrustPose;
     if (!c || st.w <= 0) {
-      if (pose.w && !sk.tap) pose.w = 0;
+      release(st, pose);
       return r;
+    }
+    if (!st.own) {
+      if (pose.w > 0) return r; // 다른 몫이 칸을 쓰는 중 — 막기 자세를 얹지 않는다
+      st.own = true;
+      st.keep = { pelvisYaw: pose.pelvisYaw, chestYaw: pose.chestYaw, pitch: pose.pitch, drop: pose.drop };
     }
     for (let k = 0; k < 3; k++) {
       pose.hand[k] = c.hand[k];
