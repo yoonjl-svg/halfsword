@@ -96,7 +96,7 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //   spare      고유 셋에 들지 못한 후보 (ai:false 자료, 갤러리·문서용) — 일본 表5
 //   techNames  공용 동작 이름 (기술 이름 → { name, src }) — 자료만(HUD 는 기술 이름을 보이지 않는다)
 //   guardTable 유파 자세표 (10/10 풀림): 바탕 자리 이름 → { hand, blade, pelvisYaw, chestYaw, pitch, drop, name?, desc?, src? } — 무기 틀 표를 고른 뒤 적힌 자리만 덮는다
-//              (guards.js applySchoolGuardTable, 지금은 ai.js 생성자가 AI 검객에만 — 그 무기의 유파 것일 때). 간 보는 자세 목록은 guards, HUD 이름은 names
+//              (guards.js applySchoolGuardTable — sword_art.js resolveSwordArt 가 부름: 플레이어·AI 같은 표). 간 보는 자세 목록은 guards(칸 w = 빈도 곱), HUD 이름은 names
 //  techK·counterArt·unique 는 SKILL.schoolArt(기본 1 — 사장님 10/9 01:5x '스위치 켜') 일 때 sword_art.js 가 입힌다 (0 = 10/9 01:49 까지의 판). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
 
 // 일본 (카타나 가족: 지금 모노호시자오 = 앞무게 틀, 뒤에 올 카타나 = 두손 보통 틀). 이름 14 자리 — 원전 이름 + 자리 근거 7, 원전 이름 + 자리 [해석] 3, 원전 없음 4(쉬운 말)
@@ -615,7 +615,8 @@ TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 �
 //  guardTable 꼴 (guards.js applySchoolGuardTable). hand [앞, 위, 칼 든 쪽] m (가슴 중심) · blade [올려본 각, 옆 각] ° · yaw ° (− = 칼 든 어깨가 앞) · pitch ° (+ 숙임, − 뒤로 기댐) · drop m.
 //  원전에 없는 지붕(팔꿈치를 접어 손을 머리 위에 두고 칼끝을 내리찍는 꼴 = 파브리스 판 1 '칼을 뽑은 채의 프리마', [19] 「not very secure … the body entirely exposed owing to the height of the sword」)은
 //  파브리스가 고쳐 세운 프리마(판 2, [20] 「body bent, arm extended, with the sword in front with the point as straight as possible」)로 바꾼다.
-//  name 은 칸 이름(hands.js 손 돌림이 Prima·Seconda·Terza·Quarta 를 읽음 — AI 검객 표). 플레이어 HUD 이름(names)은 플레이어 표를 바꿀 때 같이 — 이번엔 안 넣음. 값은 모두 사장님 확인 전 (확인표 640~)
+//  sword_art.js 가 무기 틀 표를 고른 뒤 덮는다 — 플레이어·AI 레이피어 같은 표(이탈리아 유파 = 한손 찌르기). HUD 이름은 ITALIAN_NAMES(names), 같은 이름을 칸 name 에도 적는다(hands.js 손 돌림이 표 칸 이름의 Prima·Seconda·Terza·Quarta 를 읽음).
+//  값은 모두 사장님 확인 전 (확인표 640~)
 const ITALIAN_GUARD_TABLE = {
   // 1번 자세: 팔을 앞·위로 뻗어 손은 얼굴 높이, 칼끝은 곧게 상대 쪽(조금 처짐), 몸을 앞으로 숙임 — imbroccata 가 여기서 나간다(Capo Ferro [31])
   '지붕 (Vom Tag)': { name: '1번 자세 (Prima)', desc: '팔을 앞·위로 뻗어 손을 얼굴 높이에, 칼끝은 곧게 상대에게 · 몸을 숙인다 · 팔이 쉬 지친다', hand: [0.5, 0.28, 0.12], blade: [-8, -4], pelvisYaw: -40, chestYaw: -50, pitch: 12, drop: 0.12, src: 'Fabris 1606 [20] 판 2 [원문·도판] · 수 [추정]' },
@@ -628,7 +629,9 @@ const ITALIAN_GUARD_TABLE = {
   // 4번 자세: 손바닥을 위로 돌려 안쪽 줄에 팔을 뻗음, 칼끝 곧게 — 파브리스 '뻗은 콰르타'. 카포 페로는 자세가 아니라 치는 꼴이라 했다([99])
   '왼쪽 쟁기': { name: '4번 자세 (Quarta)', desc: '손바닥을 위로 돌려 팔을 안쪽 줄로 뻗는다 · 칼끝은 곧게 상대에게', hand: [0.55, 0.04, 0.02], blade: [0, 4], pelvisYaw: -40, chestYaw: -50, pitch: 6, drop: 0.12, src: 'Fabris 1606 [32] 판 14 [원문·도판] · Capo Ferro [99] (자세 아님) · 수 [추정]' },
 };
+const ITALIAN_NAMES = Object.fromEntries(Object.entries(ITALIAN_GUARD_TABLE).map(([k, v]) => [k, { name: v.name, desc: v.desc, src: v.src }])); // HUD 자세 이름 (sword_art.js schoolNames)
 TRADITIONS.italian.guardTable = ITALIAN_GUARD_TABLE; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
+TRADITIONS.italian.names = ITALIAN_NAMES;
 
 // 이탈리아 간 보는 자세 (10/10 사장님 '저 대기자세 이상하지 않아? … 저게 맞아?' — 원전 대조 docs/motion/rapier_guards_2026-10-10.md §1).
 //  전엔 롱소드 목록(WATCH_GUARDS: 지붕·어깨 지붕·황소 둘·쟁기 둘·긴 자세·바보·바꿈) 그대로였다. 원전 셋이 기다리는 자세는 테르차다:

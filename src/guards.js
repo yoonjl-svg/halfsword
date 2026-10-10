@@ -171,42 +171,6 @@ const BASE_ONE_SABRE = oneHandTable(ONE_HAND_SABRE);
 const BASE_ONE_VERSATILE = oneHandTable(ONE_HAND_VERSATILE);
 const BASE_TWO_THRUST = oneHandTable(TWO_HAND_THRUST);
 
-// 유파 자세표 덮기 (10/10 사장님 13:4x '규칙을 풀어' — 유파마다 자기 자세표(원전 값)를 가져도 된다. 이탈리아 레이피어 고증 docs/motion/rapier_guards_2026-10-10.md 와
-//  이베리아(몬탄테) 작업이 같이 쓰는 한 장치). guardTable = TRADITIONS[t].guardTable (schools.js):
-//   { '<바탕 자리 이름 (GUARDS[i].name 글자 그대로)>': { hand, blade, pelvisYaw, chestYaw, pitch, drop, name?, desc?, src? } } — 각도는 도, 길이는 m (RAW 와 같은 뜻).
-//  무기 틀 표(검객이 쥔 표)를 고른 **뒤에** 적힌 자리만 덮는다. 적지 않은 자리·적지 않은 칸은 무기 틀 값 그대로. 패드 자리·자세 수·순서는 그대로라 기술 길(from·path)은 끊기지 않는다.
-//  name 을 적으면 그 칸 이름(hands.js 레이피어 손 돌림이 Prima·Seconda·Terza·Quarta 를 읽음)도 바꾼다. 바탕 표·guardTable 마다 한 번 만들어 둔다(같은 객체)
-const D2R_SG = Math.PI / 180;
-const _schoolTables = new WeakMap();
-export function applySchoolGuardTable(table, guardTable) {
-  if (!table || !guardTable) return table;
-  let byBase = _schoolTables.get(guardTable);
-  if (!byBase) _schoolTables.set(guardTable, (byBase = new WeakMap()));
-  const hit = byBase.get(table);
-  if (hit) return hit;
-  const out = table.map((g, i) => {
-    const o = i < NBASE ? guardTable[GUARDS[i].name] : null; // 자리 열쇠 = 바탕 자리 이름 (틀 표가 보이는 이름을 바꿔도 맞게)
-    if (!o) return g;
-    const r = { ...g };
-    if (o.name != null) r.name = o.name;
-    if (o.desc != null) r.desc = o.desc;
-    if (o.src != null) r.src = o.src;
-    if (o.hand) r.hand = o.hand;
-    if (o.blade) {
-      const el = o.blade[0] * D2R_SG, az = o.blade[1] * D2R_SG;
-      r.blade = o.blade;
-      r.dir = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
-    }
-    if (o.pelvisYaw != null) r.pelvisYaw = o.pelvisYaw * D2R_SG;
-    if (o.chestYaw != null) r.chestYaw = o.chestYaw * D2R_SG;
-    if (o.pitch != null) r.pitch = o.pitch * D2R_SG;
-    if (o.drop != null) r.drop = o.drop;
-    return r;
-  });
-  byBase.set(table, out);
-  return out;
-}
-
 /** 동작 라이브러리(motion_library.js)가 몸 틀별 자세표를 만들 때 바탕으로 쓰는 표 (교본 자세 NBASE 개, 같은 패드 자리) */
 export const GUARD_BASE = BASE;
 export const GUARD_BASE_ONE = BASE_ONE_SABRE;
@@ -254,7 +218,8 @@ export const IBERIAN_TABLE = {
  * 유파 자세표 덮기 (10/10 — 사장님 13:4x '규칙을 풀어': 유파마다 자기 자세표(원전 값)를 가져도 된다). 무기 틀 표를 고른 **뒤에** 적힌 자리만 덮는다.
  *  table: 무기 틀 표(GUARDS 와 같은 차례 — 없으면 교본 표 BASE) · tradition: 유파 칸 객체 TRADITIONS[t] (guards.js 가 schools.js 를 부르면 순환이라 객체를 받는다)
  *  tradition.guardTable 이 없으면 table 을 그대로 돌려준다(전과 같음). 자리 열쇠는 바탕 이름(GUARDS[i].name) — 틀 표가 이름을 바꿔도(상단·추단…) 맞는다.
- *  보이는 이름·설명은 바꾸지 않는다(HUD 이름은 TRADITIONS[t].names)
+ *  보이는 이름·설명은 바꾸지 않는다(HUD 이름은 TRADITIONS[t].names). 단 칸에 name·desc 가 적혀 있으면 그 칸 이름도 바꾼다 — 10/10 이탈리아 레이피어 고증:
+ *   hands.js 레이피어 손 돌림이 표 칸 이름의 Prima·Seconda·Terza·Quarta 를 읽기 때문(이베리아 칸엔 name 이 없어 그대로)
  */
 export function applySchoolGuardTable(table, tradition) {
   const over = tradition?.guardTable;
@@ -275,6 +240,8 @@ export function applySchoolGuardTable(table, tradition) {
     if (o.pitch != null) out.pitch = o.pitch * D2R;
     if (o.drop != null) out.drop = o.drop;
     if (o.src) out.src = o.src;
+    if (o.name) out.name = o.name; // 10/10 이탈리아: 칸 이름 (hands.js 손 돌림) — name 없는 칸(이베리아)은 그대로
+    if (o.desc) out.desc = o.desc;
     return out;
   });
 }
