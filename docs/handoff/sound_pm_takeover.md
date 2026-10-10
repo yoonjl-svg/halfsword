@@ -4,7 +4,7 @@
 
 ## 1. 인수 확인
 
-- 브랜치 `claude/pm-sound-impact` = main `00c560d` + 인계서 커밋 `1f31d47`(`sound_pm_handoff.md`). `git merge origin/main`은 "이미 최신"이다.
+- 브랜치 `…/pm-sound-impact` = main `00c560d` + 인계서 커밋 `1f31d47`(`sound_pm_handoff.md`). `git merge origin/main`은 "이미 최신"이다.
 - 읽은 것:
   - `pm-sound-impact.md` 전부(1~14차)
   - `sound_pm_handoff.md`

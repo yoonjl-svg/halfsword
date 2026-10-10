@@ -1,6 +1,6 @@
 # 인수인계서 — 조작감 PM: 입력 쪽 동역학 ("칼이 춤춘다" 문제)
 
-- 브랜치: `claude/pm-input-feel` (기준: `claude/first-game-development-2q36ha`의 `23dda69`)
+- 브랜치: `…/pm-input-feel` (기준: `…/first-game-development-2q36ha`의 `23dda69`)
 - 결과 커밋: `fd1f2c9` (가죽끈 필터 + dance.mjs 지표 확장), 이 문서와 함께 주석 정정 커밋 1개
 - 상태: 푸시 완료, PR 없음 (디렉터가 검토·병합 예정). `main`에는 손대지 않음
 

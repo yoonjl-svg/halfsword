@@ -1,6 +1,6 @@
 # 무기 PM 상태 (늘 최신 — 디렉터 9/29 규칙 ④)
 
-- 세션: `session_013j34LYEUYoaeS5xUme2DTq` · 브랜치 `claude/pm-weapons-balance` · 디렉터 `session_014nJCzE4hyxiYc9innhSUng`
+- 세션: `session_013j34LYEUYoaeS5xUme2DTq` · 브랜치 `…/pm-weapons-balance` · 디렉터 `session_014nJCzE4hyxiYc9innhSUng`
 - 보고: 하루 한 번 18:00 KST, 10줄 안, 끝남/진행 중/안 함 + 커밋 해시. 막혔을 때만 그 전에. 일이 없으면 "대기" 한 줄.
 - 역할(main `docs/pm_roles_charter.md` 부록 B): 무기가 "무엇을 하나"(무기 값·자세표·기술 길·판정 제안). 몸 동작은 동작 PM, `schools.js`·`ai.js` 는 캐릭터 PM·디렉터(무기 PM은 값만 제안). 제한·상한·조건은 제안만.
 

@@ -1,7 +1,7 @@
 # 캐릭터·무기 설정 전반 점검 (사장 검토용)
 
-- 기준: `claude/pm-characters` @ `3f068fa` — main `acbc411`(카드 앞면 되돌림)까지 병합한 상태. 무기 담당(`claude/pm-weapons` 3417156),
-  무기 밸런스 담당(`claude/pm-weapons-balance`, docs/weapons_balance_status.md), 외형 담당(`claude/pm-character-looks` 6eae50b, docs/character_looks.md),
+- 기준: `…/pm-characters` @ `3f068fa` — main `acbc411`(카드 앞면 되돌림)까지 병합한 상태. 무기 담당(`…/pm-weapons` 3417156),
+  무기 밸런스 담당(`…/pm-weapons-balance`, docs/weapons_balance_status.md), 외형 담당(`…/pm-character-looks` 6eae50b, docs/character_looks.md),
   디렉터 브랜치, 소리 담당의 최신 커밋과 문서를 모두 읽고 정리했다.
 - 읽는 순서: ① 게임 컨셉 → ② 캐릭터 5인(최초 의도 vs 지금) → ③ 이후에 더해진 설정 → ④ 무기 → ⑤ 인게임에 실제로 뜨는 글·소리 전집 → ⑥ 사장 결정이 필요한 것.
 - 표기: **[의도]** 최초 설계(2026-09-27 첫 커밋 `edc4792`, docs/characters.md 첫 판) / **[지금]** 현재 코드 / **[간극]** 둘의 차이와 그 이유.

@@ -15,7 +15,7 @@ for (let r = 0; r < plan.length; r++) {
   await page.waitForTimeout(500);
   const info = await page.evaluate(() => `${window.game.stage.id}/${document.querySelector('#foeIntro b')?.textContent}`);
   const act = plan[r];
-  if (r === 4) await page.screenshot({ path: '/tmp/claude-0/-home-user-halfsword/9fbda44b-c017-5e21-91ef-deb2c6dbddd3/scratchpad/desc/night_live.png' });
+  if (r === 4) await page.screenshot({ path: `${process.env.SCRATCH || '/tmp'}/desc/night_live.png` });
   if (act === 'R') {
     await page.tap('#btnPause');
     await page.waitForFunction(() => document.getElementById('menu').classList.contains('show'), null, { timeout: 20000 });

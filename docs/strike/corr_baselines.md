@@ -38,7 +38,7 @@ fights12 는 바이트 관문 전용 (`tools/sim/README.md` '소음 폭'). sha25
 - envelope_check 로 감싸도 stdout 그대로: fights12 켬 5613b5b9 · 끔 12223139, live_battery 켬 37f25f76 · 끔 2f453e0b.
 
 ## 6. 10/1 척추 ±45° 대칭 (fix2 C, 동작 PM 교정) — 1·3 의 한도 켬 줄을 바꾼다
-- **까닭: 10/1 척추 ±45° 대칭(동작 PM 교정)**. `HUMAN.spineTwist` −29~46° → −45~45° (복부 : 가슴 = 0.5 : 0.6 그대로). 예전 값은 오른쪽 클립만 잰 것 — 동작 PM 노트 `docs/motion/corr_v2_shoulder_note_2026-10-01.md` (origin/claude/pm-motion-research `922058d`): AAOS 가슴허리 돌림 한쪽 약 45, 왼쪽 클립 −41°. 확인표 108행.
+- **까닭: 10/1 척추 ±45° 대칭(동작 PM 교정)**. `HUMAN.spineTwist` −29~46° → −45~45° (복부 : 가슴 = 0.5 : 0.6 그대로). 예전 값은 오른쪽 클립만 잰 것 — 동작 PM 노트 `docs/motion/corr_v2_shoulder_note_2026-10-01.md` (origin/…/pm-motion-research `922058d`): AAOS 가슴허리 돌림 한쪽 약 45, 왼쪽 클립 −41°. 확인표 108행.
 - 한도 값만 바뀐 것이라 한도 끔·새 보정 0 은 그대로여야 하고 그대로다.
 
 | 명령 | 옛 | 새 sha | 두 번 |

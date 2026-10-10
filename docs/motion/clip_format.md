@@ -160,7 +160,7 @@
   id, cut, kind: 'game-arm' | 'wbs-arm' | 'wbs-commit',
   source: '어느 코드·조건으로 쟀나 (사람이 읽는 한 줄)',
   cond: {                                       // 같은 조건을 기계가 읽는 꼴로 (compare_game.md '기록 조건' 표)
-    code,                                       // 'src/ 001249b' | 'claude/wbs-impl d781ab9' ('+고침' = 안 올린 고침이 있었음)
+    code,                                       // 'src/ 001249b' | '…/wbs-impl d781ab9' ('+고침' = 안 올린 고침이 있었음)
     seed, physicsHz, recordHz, inputHz,         // 시드 · 물리 스텝 · 기록 · 손가락 입력 Hz
     weapon, gait, skill,                        // 'longsword' · BODY.weightMode · 숙련도
     gap,                                        // 두 사람 거리 m (null = 상대 치움)

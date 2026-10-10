@@ -25,9 +25,9 @@
 
 ## 3. 가지(branch)
 - `main`: 본판. 배포는 main 푸시 때 자동(GitHub Pages).
-- `claude/first-game-development-2q36ha`: 디렉터 개발 가지(= main + 문서).
-- `claude/pm-*`: PM(동작 연구·무기·캐릭터·외형·사운드·기획) 가지. 본판에는 병합된 것만.
-- `claude/wbs-impl`, `wbs-diag`: 온몸 타격 R2(보류)와 그 진단 도구. 검수 대상이 아니라 참고.
+- `…/first-game-development-2q36ha`: 디렉터 개발 가지(= main + 문서).
+- `…/pm-*`: PM(동작 연구·무기·캐릭터·외형·사운드·기획) 가지. 본판에는 병합된 것만.
+- `…/wbs-impl`, `wbs-diag`: 온몸 타격 R2(보류)와 그 진단 도구. 검수 대상이 아니라 참고.
 - `feat-corr`, `feat-support`: 진행 중인 탐색(검술 보정 v2, 보이지 않는 받침 줄이기). 바뀌는 중.
 
 ## 4. 돌려 보기

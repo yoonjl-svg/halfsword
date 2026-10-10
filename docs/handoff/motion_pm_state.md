@@ -1,7 +1,7 @@
 # 인체 동작 연구 PM — 상태 (늘 최신으로 둔다)
 
 - 갱신: 2026-09-30 18:00 (KST). 9/30 정기 보고 보냄(trig_01W494HgL6ALUudV5ssAweB3) — 지금 대기. 새 세션은 이 파일만 읽고 이어받는다.
-- 세션: `session_013YFFvQRnDedG7CTF1eVknA` · 브랜치 `claude/pm-motion-research`. **`docs/motion`·`tools/motion` 만 건드리면 디렉터가 검토 없이 main 에 병합한다.** 새 일을 시작하기 전에 main 을 한 번 병합해 둔다.
+- 세션: `session_013YFFvQRnDedG7CTF1eVknA` · 브랜치 `…/pm-motion-research`. **`docs/motion`·`tools/motion` 만 건드리면 디렉터가 검토 없이 main 에 병합한다.** 새 일을 시작하기 전에 main 을 한 번 병합해 둔다.
 - 디렉터: `session_014nJCzE4hyxiYc9innhSUng` ("Stillness game director handoff", 사장님 확정). `01NDJ…`(보관됨)·`01Kc…`(은퇴)에는 보내지 않는다.
 - 역할: main `docs/pm_roles_charter.md` 부록 A (9/29부터 기본값 시행).
 
@@ -23,7 +23,7 @@
 | 채점 함수 `score.mjs` (`stillness-motion-score/1`, 정의 `score.md`): 손 오차·위상 오차·최고 순서·칼 방향·동작 범위 → 0~1. compare.mjs 가 같은 함수로 `compare_game.md` 채점 표를 만든다 | `tools/motion` |
 | 세이버 moulinet 크게 벌 v0 8개 + 레이피어 런지 2개 (한손: 빈손 채널, 게임 한손 자세표). `build_onehand.mjs` PROPOSAL, `onehand_table.md` | `docs/motion/clips/sabre`, `docs/motion/clips/rapier` |
 | 클립 검사기 `validate_clip.mjs` (규칙 = `clip_format.md` §6, 코드 = `lib/clip_rules.mjs` 브라우저에서도 돎). 빌드 도구 넷이 끝에서 스스로 돌린다. 70벌 모두 통과 | `tools/motion` |
-| 게임 기록 `stillness-motion-record/1`: 지금 게임 팔 베기 5 (hybrid 걸음, 2 s 서 있기), 시험판 팔·결심 베기 8 (claude/wbs-impl d781ab9) | `docs/motion/records` |
+| 게임 기록 `stillness-motion-record/1`: 지금 게임 팔 베기 5 (hybrid 걸음, 2 s 서 있기), 시험판 팔·결심 베기 8 (…/wbs-impl d781ab9) | `docs/motion/records` |
 | 문서: README(처음 볼 곳) · longsword_cuts · spec_table(자동, §7 복귀·시작·끝 자세) · evaluation · targets(초안) · clip_format(clip/2, 재설계 atlas 채널 대조 §3-6) · compare_game(자동) · review_wbs_trial · lunge_flow · flow_table/lunge_table(자동) · weapon_body · sources | `docs/motion` |
 | 비교 화면 (막대 인형 + 게임 기록 겹치기 + 다섯 기준) | `tools/motion/viewer.html` (vite), 공개 페이지 https://claude.ai/artifact/9WQuMAwtePPqLZjM5o49cC (9/29 v19: 롱소드·츠바이핸더·세이버·레이피어, 원문 대조 반영) — 게시본은 viewer.html 의 `BEGIN-ARTIFACT`…`END-BODY` 사이를 떼어 `MOTION_DATA_BASE = './'` 로 바꾸고 clips·records 를 옆에 둔 것 |
 
@@ -54,7 +54,7 @@ node tools/motion/build_clips.mjs     # 클립 48 + index.json + spec_table.md (
 node tools/motion/build_flow.mjs      # 8자 흐름 2 + flow_table.md (build_clips 뒤)
 node tools/motion/build_lunge.mjs     # 런지 찌르기 2 + lunge_table.md (build_clips 뒤)
 node tools/motion/record_game.mjs     # 지금 게임 기록 (hybrid, 2 s 서 있기)
-WBS_REV=d781ab9 node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>
+WBS_REV=d781ab9 node tools/motion/record_wbs.mjs --root=<…/wbs-impl 체크아웃>
 node tools/motion/compare.mjs         # compare_game.md
 node tools/motion/qa_clips.mjs        # 겹침 검사 (칼 ↔ 몸, 아래팔 ↔ 몸통)
 node tools/motion/build_zweihander.mjs # 츠바이핸더 크게 벌 8 + zweihander_table.md (build_clips 뒤)

@@ -1,8 +1,8 @@
 # 인수인계서 · AI 검객 전술 개선 세션 → 무기·검술 연구 세션
 
-- 작성: 2026-09-27, AI 전술 세션(`claude/pm-ai-tactics`) 종료 시점
+- 작성: 2026-09-27, AI 전술 세션(`…/pm-ai-tactics`) 종료 시점
 - 대상: 무기 제원·검술(유파) 연구를 잇는 세션
-- 관련 브랜치: `claude/pm-ai-tactics`(감독 검토 대기, 6커밋), `claude/pm-characters`(캐릭터 PM), `claude/pm-weapons`(무기 PM)
+- 관련 브랜치: `…/pm-ai-tactics`(감독 검토 대기, 6커밋), `…/pm-characters`(캐릭터 PM), `…/pm-weapons`(무기 PM)
 - 손댄 파일: `src/ai.js`만. `ai_sense.js`, `ai_techniques.js`, `config.js AI_LEVELS`는 읽기만 했고 바꾸지 않았다.
 
 ---
@@ -52,7 +52,7 @@ school = {
 
 ---
 
-## 3. 이번 세션에서 바꾼 것 (브랜치 `claude/pm-ai-tactics`, 커밋 순서대로)
+## 3. 이번 세션에서 바꾼 것 (브랜치 `…/pm-ai-tactics`, 커밋 순서대로)
 
 | 커밋 | 약점 | 변경 | 근거 |
 |---|---|---|---|
@@ -91,7 +91,7 @@ school = {
 - fights12는 시드 고정이라 "같은 코드 → 같은 결과"는 보장된다. 회귀 기준선을 남기려면 코드 해시와 함께 기록하라.
 
 ### 5.2 무기별 실측이 먼저다
-- `MEASURE`, `TECH.reach/base`, `PARRY`는 전부 **물리 실측값**이지 이론값이 아니다. 새 무기(에스톡·츠바이핸더 등, `claude/pm-weapons`에서 quick-test 진행 중)는 같은 절차로 표를 다시 만들어야 AI가 거리 판단을 한다. 이론 리치를 넣으면 헛베거나 몸으로 부딪친다.
+- `MEASURE`, `TECH.reach/base`, `PARRY`는 전부 **물리 실측값**이지 이론값이 아니다. 새 무기(에스톡·츠바이핸더 등, `…/pm-weapons`에서 quick-test 진행 중)는 같은 절차로 표를 다시 만들어야 AI가 거리 판단을 한다. 이론 리치를 넣으면 헛베거나 몸으로 부딪친다.
 - 실측 도구: `tools/sim/harness_m.mjs`로 두 파이터를 세우고 `eval_m.mjs passive`의 `GUARDS`처럼 상대를 고정 자세로 세운 뒤 거리·기술을 스윕하면 된다. 별도 스크립트는 없으니 만들어야 한다(§7).
 
 ### 5.3 "인간 같음"은 손잡이가 아니라 굴절이다
@@ -142,9 +142,9 @@ TRACE=1 node tools/sim/eval_m.mjs aggro new normal 1 1 15   # 스텝별 모드/�
 
 ---
 
-## 9. 무기·검술 세션 통합 판정 (2026-09-27, `claude/pm-weapons`에서 흡수)
+## 9. 무기·검술 세션 통합 판정 (2026-09-27, `…/pm-weapons`에서 흡수)
 
-이 인수인계서는 `claude/pm-weapons` 세션이 이어받았다. 위 §3의 여섯 수정은 모두 `origin/main`에
+이 인수인계서는 `…/pm-weapons` 세션이 이어받았다. 위 §3의 여섯 수정은 모두 `origin/main`에
 이미 들어가 있어(merge-base `06dfddf`, main의 `ai.js`가 그 위에 유파·감정층을 얹은 상태) 다시 손대지
 않는다. 아래는 §2·§5·§7 항목마다 "이미 해결됨 / 이 세션이 맡음 / 다른 담당"을 갈라 둔 것이다.
 이미 다른 쪽에서 해결되거나 새로 판정된 항목은 재작업하지 않고 과정 기록으로만 남긴다.

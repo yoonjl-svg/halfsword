@@ -1,6 +1,6 @@
 # 구조 지도 — 무엇이 물리에서 나오고 무엇이 규칙인가
 
-- 작성: 기획 PM, 2026-09-30 (KST). 기준 main `851d0af`(코드는 `93543d9`까지 같다), 구현 브랜치 `claude/wbs-impl` `0454220`. 코드는 읽기만 했다.
+- 작성: 기획 PM, 2026-09-30 (KST). 기준 main `851d0af`(코드는 `93543d9`까지 같다), 구현 브랜치 `…/wbs-impl` `0454220`. 코드는 읽기만 했다.
 - 정정 1차(9/30 16:50): 디렉터 사실 확인 `docs/design/structure_map_review_2026-09-30.md`(main `4e50775`)를 반영했다. 틀렸던 것 셋(Q1 해석, 넘어짐 갈래, W4 출하 형태)과 부정확 15건, 빠진 것, 대기 브랜치(§6.1)를 고쳐 넣었다.
 - 이 문서의 수치는 모두 "지금 코드에 있는 값"의 인용이다. 바꾸자는 제안이 아니다. 제안은 §8 "사장님 질문"에만 있다.
 
@@ -231,8 +231,8 @@
 
 | 항목 | 어디에 | 상태(9/30) | 구조에 미치는 뜻 |
 |---|---|---|---|
-| 온몸 타격 R0·R1 | `claude/wbs-impl` `ea783ac` | 끝남. R0 5항목(Q10 튐 검사 등) + R1 팔 베기 지연(ARM.lead 기본 끔, holdSpeed 0.6은 손가락 검객만). /wb/ 시험판 전달됨 | main 팔 베기의 지연·판정 누락을 고친 바탕 |
-| 온몸 타격 R2 | `claude/wbs-impl` `src/strike/{gesture,atlas,drive,drive_arm,puppet}.js` (hs-wbs `0454220`, W5 가지 hs-r2-w5 `38d10f8` 미병합) | W1~W3 끝. W4는 관문 실패, W4b 승자 없음, W4c에서 **DRIVE.hands 기본 false(몸통만, trunkOnly)로 출하** — 기본 경로에서 drive_arm의 손 추적은 꺼져 있고 칼 든 손은 R1 손가락 매핑을 쓴다(?hand=wind로 비교). W5(옛 결심 경로·미승인 제한 12개 삭제, ffFilter 기본 켬, 관문·시험판) 진행. 첫 시험판 10/2 밤 목표 | 검술 층 옆에 새 층: 손가락 궤적 → 싣기 S·방향·위상 φ(gesture) → 사람 클립 아틀라스(atlas) → 몸통·골반·다리 시간표와 앞먹임 토크(drive). S=0이면 지금 게임과 바이트 동일이 관문. R2가 푸는 보이지 않는 힘은 닻 yaw 하나(1−0.9·S). AI는 이 층을 읽지 않는다(R5에서) |
+| 온몸 타격 R0·R1 | `…/wbs-impl` `ea783ac` | 끝남. R0 5항목(Q10 튐 검사 등) + R1 팔 베기 지연(ARM.lead 기본 끔, holdSpeed 0.6은 손가락 검객만). /wb/ 시험판 전달됨 | main 팔 베기의 지연·판정 누락을 고친 바탕 |
+| 온몸 타격 R2 | `…/wbs-impl` `src/strike/{gesture,atlas,drive,drive_arm,puppet}.js` (hs-wbs `0454220`, W5 가지 hs-r2-w5 `38d10f8` 미병합) | W1~W3 끝. W4는 관문 실패, W4b 승자 없음, W4c에서 **DRIVE.hands 기본 false(몸통만, trunkOnly)로 출하** — 기본 경로에서 drive_arm의 손 추적은 꺼져 있고 칼 든 손은 R1 손가락 매핑을 쓴다(?hand=wind로 비교). W5(옛 결심 경로·미승인 제한 12개 삭제, ffFilter 기본 켬, 관문·시험판) 진행. 첫 시험판 10/2 밤 목표 | 검술 층 옆에 새 층: 손가락 궤적 → 싣기 S·방향·위상 φ(gesture) → 사람 클립 아틀라스(atlas) → 몸통·골반·다리 시간표와 앞먹임 토크(drive). S=0이면 지금 게임과 바이트 동일이 관문. R2가 푸는 보이지 않는 힘은 닻 yaw 하나(1−0.9·S). AI는 이 층을 읽지 않는다(R5에서) |
 | 온몸 타격 R4 반동 | 예정 | R2 뒤 | Q1이 실제로 들어올 자리: 몸 이동 서보·닻·끝 자세 버티기를 S만큼 풀기 |
 | Q10 30 m/s 폐기 | wbs-impl R0 (`STRIKE.glitchFilter`) | main엔 아직 `speed > 30 → null` | 온몸 베기가 빨라지면 main 판정이 버릴 수 있다 — R2 병합 때 함께 온다 |
 | 참수 | main `a6acc44` | 끝남. 후속: 외형 PM 단면·피, 사운드 PM onDecapitate 훅 | 물리 귀결(위 §3.1). 참수당하면 부활하지 않는다 |
@@ -289,4 +289,4 @@
 ## 부록 B. 이 지도를 만들며 읽은 것
 - 문서: `docs/handoff/design_pm_charter.md`, `docs/handoff/director_state.md`(세션 명단·운영 규칙), `docs/decisions.md`, `docs/pm_roles_charter.md`, `docs/director_handoff.md`, `docs/strike/r2_impl_spec.md` §2·§10, `tools/sim/README.md`, `docs/motion/clips/index.json`.
 - 코드(main `851d0af`): `config.js, combat.js, skill.js, guards.js, schools.js, characters.js, ai.js, ai_techniques.js, ai_sense.js, emotions.js` 직접 읽음. `fighter.js, gait.js, main.js, arena.js, input.js, finish.js, revive.js, effects.js, debris.js, weapons.js, weapon_class.js, motion_library.js, gun.js, stages.js, stage_*.js, outfits.js, looks.js, sound.js` 는 보조 읽기 에이전트 셋의 조사로 요약받아 config·decisions와 대조.
-- 구현 브랜치 `claude/wbs-impl` `0454220`은 파일 목록만 확인(내용은 명세로 갈음).
+- 구현 브랜치 `…/wbs-impl` `0454220`은 파일 목록만 확인(내용은 명세로 갈음).

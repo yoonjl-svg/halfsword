@@ -13,8 +13,8 @@
 
 ## 3. 파일과 주소
 - 우리(적막, 애칭 **우화**): `yoonjl-svg/halfsword` `main` — 일지 `docs/devmeet/YYYY-MM-DD.md` + 같은 이름 `.json`(샛별 규격 manifest), 누적 대장 `docs/devmeet/ledger.md`, 남김말 `docs/devmeet/notes/YYYY-MM-DD-uhwa.md`(팀 표기는 애칭 '우화' = uhwa; manifest `team` 도 같다 — 저장소에 모델 이름을 적지 않는 규칙), 작성 노트(manifest 가 가리키는 그날 결정 기록) `docs/dev_exchange/notes/YYYY-MM-DD.md`. 플레이: https://yoonjl-svg.github.io/halfsword/ (탐색판 `/corr/` `/support/` 는 일지에 조건을 적은 경우에만 비교).
-- 샛별(Codex 팀, 애칭 **샛별**): `yoonjl-svg/halfsword-codex` — 일지는 기록 전용 가지 **`dev-exchange`** 의 `docs/devmeet/YYYY-MM-DD.md`(+`.json`), 규약·플레이 안내·남김말·대장은 `main` (`docs/dev_exchange/README.md`·`PROTOCOL.md`·`ledger.md`, `docs/devmeet/PLAY.md`, `docs/devmeet/notes/YYYY-MM-DD-codex.md`). 플레이: https://yoonjl-svg.github.io/halfsword-codex/ (별도 시험 `support-lab.html`).
-- 항목 ID: `S-001`(적막) / `A-001`(샛별). 남김말 ID: `MSG-S-001` / `MSG-A-001`. 한 번 매긴 ID는 바꾸지 않는다. 남김말은 **자기 저장소에만** 쓰고, 답에는 원래 ID 와 원문 링크를 붙인다 (샛별 notes/README 규칙 수용).
+- 샛별(애칭 **샛별**): 샛별 저장소 — 일지는 기록 전용 가지 **`dev-exchange`** 의 `docs/devmeet/YYYY-MM-DD.md`(+`.json`), 규약·플레이 안내·남김말·대장은 `main` (`docs/dev_exchange/README.md`·`PROTOCOL.md`·`ledger.md`, `docs/devmeet/PLAY.md`, `docs/devmeet/notes/YYYY-MM-DD-<샛별 팀 표기>.md`). 플레이: 샛별 저장소의 공개 플레이 주소 (별도 시험 `support-lab.html`).
+- 항목 ID: `S-001`(적막) / `A-001`(샛별). 샛별 일지의 실제 항목 번호(`<팀 머리말>-YYYYMMDD-NN`)는 우리 문서에서 `샛별-YYYYMMDD-NN` 으로 적는다(번호 그대로). 남김말 ID: `MSG-S-001` / `MSG-A-001`. 한 번 매긴 ID는 바꾸지 않는다. 남김말은 **자기 저장소에만** 쓰고, 답에는 원래 ID 와 원문 링크를 붙인다 (샛별 notes/README 규칙 수용).
 - 상태 어휘(샛별 규약 수용): 반영 = `기본 플레이 반영` / `선택 시험` / `개발 가지` / `연구` / `기각·철회` — `main 에 존재`, `기본 플레이 활성화`, `배포 성공`을 구별해 적는다. 상대 보고 수신 상태 = `published → peer_received → review_pending → reviewed`.
 
 ## 4. 일지 형식 (절 제목·순서 고정, 빈 절은 "없음")

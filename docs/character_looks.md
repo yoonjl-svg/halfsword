@@ -15,7 +15,7 @@
 
 ## 파일 분담
 
-캐릭터 PM(`claude/pm-characters`, AI·감정·대사 담당)과 `src/characters.js`를 같이 건드리므로,
+캐릭터 PM(`…/pm-characters`, AI·감정·대사 담당)과 `src/characters.js`를 같이 건드리므로,
 그 파일에서는 캐릭터마다 `look:`/`lookVersion:` 두 줄만 바꿨다(다른 줄 재배열·재포맷 없음).
 겉모습 데이터는 전부 `src/looks.js`(`LOOK_ARCHIVE`)와 새 파일 `src/outfits.js`에 있다.
 

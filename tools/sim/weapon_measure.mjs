@@ -1,5 +1,5 @@
 // 무기별 간격 상수(measure: contact/reach/clinch/cutTime) 실측 도구, 2차 버전.
-// 캐릭터 PM의 유파 꾸러미 계약(docs/school_contract.md, claude/pm-characters)에 맞춰 잰다.
+// 캐릭터 PM의 유파 꾸러미 계약(docs/school_contract.md, …/pm-characters)에 맞춰 잰다.
 //
 // 1차 시도(상대에게 실제로 맞혀서 이분 탐색)는 몸이 손 목표를 따라가며 흔들리는 탓에 거리에
 // 비례해 깔끔히 명중/불명중이 갈리지 않아 버렸다(같은 파일의 git 기록 참고). 이번엔 상대를

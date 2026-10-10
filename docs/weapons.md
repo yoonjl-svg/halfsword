@@ -1,11 +1,11 @@
 # 무기 로스터 → 유파 꾸러미(schools.js) 연동 자료
 
-캐릭터 PM 쪽 `docs/school_contract.md`(claude/pm-characters) 계약에 맞춰 정리한 자료.
+캐릭터 PM 쪽 `docs/school_contract.md`(…/pm-characters) 계약에 맞춰 정리한 자료.
 `src/ai.js`·`src/schools.js`·`src/characters.js`는 건드리지 않았다 — 숫자만 여기 남긴다.
 
-- 이 브랜치: `claude/pm-weapons`. `origin/main`(유파·캐릭터·소리 통합)을 `b43285f`에서 합쳐
+- 이 브랜치: `…/pm-weapons`. `origin/main`(유파·캐릭터·소리 통합)을 `b43285f`에서 합쳐
   두었고, 등급·복제품·별칭·실전용 롱소드는 그다음 커밋(이 문서를 갱신한 커밋)에 있다 —
-  정확한 해시는 `git log -1 origin/claude/pm-weapons`.
+  정확한 해시는 `git log -1 origin/…/pm-weapons`.
 - 무기 물리(질량·형태·재질·손목 힘 한계 등)는 `src/weapons.js`의 `WEAPONS` 객체가 정한다.
   `fighter.js`는 이 스펙으로 칼을 만들 뿐, `src/ai.js`는 그대로(원래 파일로 되돌려 두었다) —
   전역 `MEASURE` 상수 하나만 쓰는 옛 방식 그대로다. 무기별 간격은 여기 표를 그대로

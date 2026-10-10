@@ -1,6 +1,6 @@
 # 사운드 PM 상태 (늘 최신으로)
 
-갱신: 2026-09-30 (30차 뒤). 브랜치 `claude/pm-sound-impact`. 디렉터 `session_014nJCzE4hyxiYc9innhSUng`. 자세한 규칙은 `sound_pm_handoff.md`, 작업 기록은 `pm-sound-impact.md`.
+갱신: 2026-09-30 (30차 뒤). 브랜치 `…/pm-sound-impact`. 디렉터 `session_014nJCzE4hyxiYc9innhSUng`. 자세한 규칙은 `sound_pm_handoff.md`, 작업 기록은 `pm-sound-impact.md`.
 
 ## 맡은 일
 - 모든 소리: `src/sound.js`(엔진·합성·녹음 로딩·BodySounds), `src/soundgen.js`(일꾼), `src/soundlab.js` + `sounds.html`(들어보기), `public/sfx/**`(CC0 위주, 출처 `LICENSE.txt`), `config.js` SOUND 블록.

@@ -1,4 +1,4 @@
-// 둔기 부위 효과표 시제품 — 연구 세션 claude/pm-weapons docs/pole_strike_effects.md ①-3 [추정 문턱]. 게임 코드는 그대로 두고
+// 둔기 부위 효과표 시제품 — 연구 세션 …/pm-weapons docs/pole_strike_effects.md ①-3 [추정 문턱]. 게임 코드는 그대로 두고
 //  맞는 쪽 파이터의 applyWound 만 감싼다. 찌름(poke) = 둔기 타격 방향이 무기 축과 나란함(|cos| > 0.7). 에너지는 판정 에너지(×2 포함)
 //  zoneEffects(맞는 파이터, 기록 객체) — 부르는 쪽은 매 스텝 Y._zoneT 를 줄여 0 이 되면 Y.strength = Y._str0 로 되돌린다 (zoneTick)
 //  단독 실행: 무기 X 대 롱소드, 부위 효과표를 두 쪽 다 켠다/끈다 (게임에 넣으면 칼의 둔기 타격 — 날이 못 든 타격·칼 면 — 에도 걸린다)

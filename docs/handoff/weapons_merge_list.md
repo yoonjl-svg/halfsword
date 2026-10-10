@@ -1,6 +1,6 @@
 # 무기 PM → main 병합 목록 (디렉터 9/29 지시 2·4)
 
-브랜치 `claude/pm-weapons-balance` (main `940f665`까지 병합한 상태 기준). 디렉터가 경로마다 `git diff origin/main origin/claude/pm-weapons-balance -- <경로>` 로 떠서 올린다. 브랜치 통째 병합은 하지 않는다.
+브랜치 `…/pm-weapons-balance` (main `940f665`까지 병합한 상태 기준). 디렉터가 경로마다 `git diff origin/main origin/…/pm-weapons-balance -- <경로>` 로 떠서 올린다. 브랜치 통째 병합은 하지 않는다.
 
 - 표시: **게임 바뀜 없음** = 게임이 읽지 않거나 기본 꺼짐. **⚠ 게임에 닿음** = 실제 판이 달라진다(따로 결정).
 - 검증 명령(공통): 아래 세 개가 올리기 전과 **바이트 동일**이어야 한다(⚠ 항목만 예외 — 권총·라이트세이버 줄).

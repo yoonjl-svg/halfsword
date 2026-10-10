@@ -1,6 +1,6 @@
 # 인체 동작 연구 — 롱소드 베기 기준 동작 (동작 연구 PM)
 
-- 작성: 2026-09-29, 인체 동작 연구 PM (session_013YFFvQRnDedG7CTF1eVknA, 브랜치 `claude/pm-motion-research`).
+- 작성: 2026-09-29, 인체 동작 연구 PM (session_013YFFvQRnDedG7CTF1eVknA, 브랜치 `…/pm-motion-research`).
 - 목적: 사장님 정의 "온몸 타격은 훨씬 빠르고 세지는 대신 반동과 허점이 생긴다 … 모션과 동작도 같이 커져야 한다 … 팔이 몸 앞에 갇혀 있으면 안 된다 … 준비 동작이 필요하다"를 **사람 몸이 실제로 어떻게 움직이는가**의 수치로 바꿔, 디렉터의 구현 트랙(`docs/whole_body_redesign.md` §7)이 따라갈 기준 동작을 낸다.
 - 게임 코드(`src/`)는 건드리지 않았다. 여기 있는 것은 전부 참고 자료·도구다.
 
@@ -112,7 +112,7 @@ node tools/motion/build_clips.mjs --print --seq --over   # 파일 없이 요약�
 node tools/motion/build_flow.mjs             # 8자 흐름 클립 2개 + index.json 에 끼움 + flow_table.md (build_clips 뒤에 돌린다)
 node tools/motion/build_lunge.mjs            # 런지 찌르기 클립 2개 + index.json 에 끼움 + lunge_table.md (--step= --drop= 로 걸음·낮춤)
 node tools/motion/record_game.mjs            # 지금 게임 팔 베기 기록 (zornhau·oberhau·zwerchhau·mittelhau·unterhau)
-node tools/motion/record_wbs.mjs --root=<claude/wbs-impl 체크아웃>   # 시험판 팔·결심 베기 기록 (review_wbs_trial.md 재현)
+node tools/motion/record_wbs.mjs --root=<…/wbs-impl 체크아웃>   # 시험판 팔·결심 베기 기록 (review_wbs_trial.md 재현)
 node tools/motion/compare.mjs                # 기준 ↔ 게임 모양 비교표 + 채점 표 → docs/motion/compare_game.md
 node tools/motion/start_table.mjs            # 시작 자세 표 → docs/motion/start_poses.md
 node tools/motion/score.mjs <기준.json> <기록.json>   # 채점 한 벌 (JSON, score.md)
@@ -142,6 +142,6 @@ npm run dev                                   # → http://localhost:5173/tools/
 
 ## 무기 PM 과 나눈 일
 
-- 무기 PM(`claude/pm-weapons-balance`, `docs/weapon_motions.md`·`src/motion_library.js`) = **무기가 무엇을 하나**: 몸 틀별 자세표, 싸움 방식별 기술 길, 덧씌우기(런지·흐름·날 세우기) 값.
+- 무기 PM(`…/pm-weapons-balance`, `docs/weapon_motions.md`·`src/motion_library.js`) = **무기가 무엇을 하나**: 몸 틀별 자세표, 싸움 방식별 기술 길, 덧씌우기(런지·흐름·날 세우기) 값.
 - 동작 연구 PM(여기) = **몸이 어떻게 움직이나**: 사람 기준 동작, 관절·시간 사양, 운동 사슬, 평가 기준, 비교 화면.
 - 겹치는 자리(무기 PM §6-3): 런지 몸 낮춤과 흐름의 손목 제동. 여기서는 사람 기준 수치만 낸다(펜싱 런지: 길이 1.24 m(0.88~1.86), 엉덩이 속도 1.97 m/s, 몸통 앞기울기 17.5° — `sources.md`). 게임 값에 넣는 것은 무기 PM·디렉터 몫이다.

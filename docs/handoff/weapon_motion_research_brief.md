@@ -1,8 +1,8 @@
 # 작업 지시서 — 무기 유형별 검술 동작 원전 조사 (무기 PM → 무기-검술 연구)
 
-- **보낸 이:** 무기 PM (세션 `session_013j34LYEUYoaeS5xUme2DTq`, 브랜치 `claude/pm-weapons-balance`). 사장님이 무기 PM으로 승급시키고 이 조사를 직접 지시하라고 하셨다.
-- **받는 이:** 무기-검술 연구 (브랜치 `claude/pm-weapons`).
-- **배경 문서:** `claude/pm-weapons-balance` 의 `docs/weapon_types.md`. `git fetch origin claude/pm-weapons-balance && git show origin/claude/pm-weapons-balance:docs/weapon_types.md` 로 먼저 읽는다.
+- **보낸 이:** 무기 PM (세션 `session_013j34LYEUYoaeS5xUme2DTq`, 브랜치 `…/pm-weapons-balance`). 사장님이 무기 PM으로 승급시키고 이 조사를 직접 지시하라고 하셨다.
+- **받는 이:** 무기-검술 연구 (브랜치 `…/pm-weapons`).
+- **배경 문서:** `…/pm-weapons-balance` 의 `docs/weapon_types.md`. `git fetch origin …/pm-weapons-balance && git show origin/…/pm-weapons-balance:docs/weapon_types.md` 로 먼저 읽는다.
   - 무기 15종을 **몸 틀 4가지**(A 양손 보통 · B 양손 앞무게 · C 한손 · D 사격)와 **싸움 방식 5가지**(① 두루 · ② 베기 · ③ 찌르기 · ④ 때리기 · ⑤ 사격)로 나눴다.
   - 칸마다 맞는 동작을 게임(Three.js + Rapier 물리 검객)에 재현하려 한다. 그 동작의 **원전 근거**가 필요하다.
 
@@ -26,7 +26,7 @@
 7. **믿을 정도:** [원전] 원전에 적힌 것 · [해석] 원전을 읽어 추론 · [추정] 원전이 없어 물리로 추정. 셋을 섞지 않고 표시한다.
 
 ## 지킬 것
-- **조사만 한다.** `src/` 코드는 고치지 않는다. 결과는 `claude/pm-weapons` 에 `docs/weapon_motion_research.md` 로 커밋·푸시한다. 그림이 필요하면 `docs/weapon_motion_research/` 아래에 둔다.
+- **조사만 한다.** `src/` 코드는 고치지 않는다. 결과는 `…/pm-weapons` 에 `docs/weapon_motion_research.md` 로 커밋·푸시한다. 그림이 필요하면 `docs/weapon_motion_research/` 아래에 둔다.
 - 한국어로 쓴다. 문서·커밋에 모델 이름을 적지 않는다.
 - 웹 검색이 막히면 막혔다고 적고, 아는 원전 지식은 [해석]/[추정] 표시로 쓴다. 지어낸 인용·쪽수는 금지한다.
 - 1·2번이 끝나면 먼저 중간 보고를 하고, 나머지를 이어서 한다.

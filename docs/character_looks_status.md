@@ -1,7 +1,7 @@
 # 캐릭터 모델링 PM 보고 — round 1 (+ round 2·3·4 추가분)
 
-브랜치: `claude/pm-character-looks` (base `claude/first-game-development-2q36ha` @ `a085d9d`), 최신
-커밋 `94178db`, 푸시 완료. PR: https://github.com/yoonjl-svg/halfsword/pull/new/claude/pm-character-looks
+브랜치: `…/pm-character-looks` (base `…/first-game-development-2q36ha` @ `a085d9d`), 최신
+커밋 `94178db`, 푸시 완료. PR: GitHub 새 PR 화면(가지 `…/pm-character-looks`)
 (요청받지 않아 아직 만들지 않음).
 
 ## round 16 — 사장님 디자인 리뷰(10/10 21:0x): 새 인물 넷 리뷰 + 사미라 v2 · 투야나 v2

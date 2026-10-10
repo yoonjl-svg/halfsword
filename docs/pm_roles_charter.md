@@ -312,8 +312,8 @@
 6. 출처
 - sources.md 한 곳에 모읍니다.
 - 먼저 읽고 링크할 것
-  - 연구 ASS의 motion_research_handoff.md와 weapon_motion_research.md(claude/pm-weapons).
-  - 무기 PM의 weapon_motion_sources_one_pole.md(claude/pm-weapons-balance).
+  - 연구 ASS의 motion_research_handoff.md와 weapon_motion_research.md(…/pm-weapons).
+  - 무기 PM의 weapon_motion_sources_one_pole.md(…/pm-weapons-balance).
   - main의 combatlab 인계서(Fiore 기록).
 - 다른 사람의 문서는 옮기거나 고치지 않습니다.
 - 이미 막힌 원문 사이트(EGRESS_BLOCKED)는 목록으로 적고 다시 시도하지 않습니다.
