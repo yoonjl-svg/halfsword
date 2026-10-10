@@ -201,11 +201,16 @@ export function guardBaseTwo(style) {
 export const IBERIAN_TABLE = {
   // 곧은 자세: 베기마다 몬탄테를 얼굴 앞에 멈춘다 — 「stopping with the montante in right angle in front of the face」(단Ⅰ) · 「the point forward and the hands high in front of the eyes」(단Ⅱ)
   //  · 「always you will stop the montante in front of the face」(복Ⅶ) · 몸은 곧게(「place your body straight」 단Ⅰ). 손 = 눈 아래 얼굴 앞, 칼끝 앞으로 조금 들어 [해석]
-  '긴 자세 (Langort)': { hand: [0.4, 0.22, 0.04], blade: [20, 0], pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0.06, src: '피 단Ⅰ·단Ⅱ·복Ⅰ·복Ⅶ [원문] · 손 높이·칼끝 20° [해석]' },
+  //  칼끝 20 → 30° (10/10 14:5x 사장님 '빈손 놓침 ①만 고쳐' — 확인표 684·686~, 문서 §11): 손 뒤 0.30 m 의 폼멜(왼손 쥘 자리)이 가슴 겉면(앞 0.11)에 붙어 있어
+  //   자세를 옮길 때 가슴 안으로 들어가 왼손이 놓쳤다. 칼끝을 10° 더 들어 폼멜을 가슴 밖·아래로 — 손 자리는 그대로(「hands high in front of the eyes」), 칼끝은 여전히 앞(「the point forward」) [해석]
+  '긴 자세 (Langort)': { hand: [0.4, 0.22, 0.04], blade: [30, 0], pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0.06, src: '피 단Ⅰ·단Ⅱ·복Ⅰ·복Ⅶ [원문] · 손 높이·칼끝 30° [해석]' },
   // 오른 높이 비낌: 레베스를 아래에서 올려 「ending with the montante high along the right diagonal in an obtuse line」(복ⅩⅤ) · 「raise the montante with the point forward in front of the right ear」(복Ⅱ)
-  '황소 (Ochs)': { hand: [0.3, 0.3, 0.18], blade: [30, 15], pelvisYaw: 15, chestYaw: 20, pitch: 2, drop: 0.06, src: '피 복Ⅱ·복ⅩⅤ [원문] · 각 [해석]' },
+  //  올려본 각 30 → 45° (10/10 14:5x 빈손 ①, 문서 §11): 놓침 ① 의 가장 큰 자리 — 30° 에선 폼멜이 가슴 안(가슴 몸체 앞 0.04 m)으로 들어갔다.
+  //   'obtuse line' = 칼끝이 수평 위(0~90°)로 든 줄이라 45° 도 원문 안 — 그 가운데 [해석]. 손 자리·옆 각은 그대로
+  '황소 (Ochs)': { hand: [0.3, 0.3, 0.18], blade: [45, 15], pelvisYaw: 15, chestYaw: 20, pitch: 2, drop: 0.06, src: '피 복Ⅱ·복ⅩⅤ [원문] · 각 45° [해석]' },
   // 왼 높이 비낌: 탈류를 아래에서 올려 「bringing the montante to stop high in front of the head on the left side, in obtuse line along the diagonal」(복ⅩⅤ)
-  '왼쪽 황소': { hand: [0.3, 0.3, -0.08], blade: [30, -15], pelvisYaw: -15, chestYaw: -20, pitch: 2, drop: 0.06, src: '피 복ⅩⅤ [원문] · 각 [해석]' },
+  //  올려본 각 30 → 45° (10/10 빈손 ①, 문서 §11): 같은 원문 줄(복ⅩⅤ 'obtuse line')의 거울 — 오른쪽과 같게
+  '왼쪽 황소': { hand: [0.3, 0.3, -0.08], blade: [45, -15], pelvisYaw: -15, chestYaw: -20, pitch: 2, drop: 0.06, src: '피 복ⅩⅤ [원문] · 각 45° [해석]' },
   // 비낀 자세: 「the montante in obtuse angle along the right diagonal, such that the right hand rests in front of the belt to deflect the thrust」(복ⅩⅣ 첫 자세)
   '쟁기 (Pflug)': { hand: [0.3, -0.22, 0.1], blade: [40, 20], pelvisYaw: 10, chestYaw: 10, pitch: 4, drop: 0.07, src: '피 복ⅩⅣ [원문] · 각 [해석]' },
   // 왼 비낀 자세: 「the montante in obtuse angle along the left diagonal to deflect by revez the thrusts aimed at the right side」(복ⅩⅣ 둘째 자세)

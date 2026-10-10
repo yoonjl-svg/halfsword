@@ -471,6 +471,13 @@ export const BALANCE = {
   fallDelay: 0.25, // 이 시간(초) 동안 계속 벗어나 있으면 넘어짐
 };
 
+// 몬탄테(츠바이핸더) 오른손 자리 (10/10 사장님 '넣어' — 고디뉴 1599 몬탄테 규칙 3 '오른손 날밑 가까이', 확인표 683·689~692 ·
+//  docs/motion/iberian_montante_2026-10-10.md §12). 'guard' = 오른손 주먹이 날밑 바로 밑(기본: 칼날 1.26 · 손 → 칼날 밑동 0.10 m) ·
+//  'old' = 전 꼴(칼날 1.17 · 손 → 칼날 밑동 0.19 m, 오른손 위 빈 자루 0.155 m) — `?montanteHand=old` · MONTANTE_HAND=old. 손~칼끝·전체 길이·폼멜·왼손 자리는 둘 다 같다
+export const MONTANTE = {
+  hand: (typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('montanteHand')) || (typeof process !== 'undefined' && process.env?.MONTANTE_HAND) || 'guard',
+};
+
 // 두 손 잡기: 빈손이 칼자루 끝을 쥐는 부드러운 스프링
 export const GRIP = {
   on: true,

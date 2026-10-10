@@ -113,6 +113,7 @@ function runRound(weapon, foeMode, seed, acc, sw) {
   sw.cur = S;
   sw.P = P;
   let stepAcc = 0, notStand = 0, t = 0;
+  let gPrev = null; // 빈손 쥠 계기 (10/10 몬탄테 — montante_offhand.mjs 와 같은 정의): 지난 스텝 gripping (서 있지 않으면 null)
   const pending = { taps: 0 };
   const startStroke = () => {
     const st = makeStroke(rand, wlen);
@@ -225,6 +226,14 @@ function runRound(weapon, foeMode, seed, acc, sw) {
         const c = P.bodies.chest.translation();
         if (!Number.isFinite(c.x) || !Number.isFinite(ws.x)) acc.nan++;
         acc.steps++;
+        // 빈손 쥠: 서 있음(stand · 두 손 칼 · muscle > 0.3 · 빈팔 > 0.3) 동안 쥔 스텝 · 쥠 참 → 거짓 = 놓침
+        if (P.weaponCfg.twoHand && P.state === 'stand' && P.muscle > 0.3 && P.limbs.armO > 0.3) {
+          const g = !!P.gripping;
+          acc.gStand++;
+          if (g) acc.gHeld++;
+          if (gPrev === true && !g) acc.gDrop++;
+          gPrev = g;
+        } else gPrev = null;
       }
     }
     S.tPhase += FRAME;
@@ -310,7 +319,7 @@ Combat.prototype.strike = function (pr, point, passing) {
   return r;
 };
 
-const newAcc = () => ({ strokes: 0, strokeHits: 0, kind: {}, n: 0, flat: 0, e: 0, eq: 0, v: 0, angs: [], stab: { n: 0, e: 0 }, phase: {}, cause: {}, part: {}, sp: [[0, 0], [0, 0], [0, 0]], inN: 0, inFlat: 0, inNflat: 0, inFixable: 0, corrWin: 0, flatCorrWin: 0, spinSteps: 0, spinMax: 0, armSpin: 0, nan: 0, steps: 0 });
+const newAcc = () => ({ strokes: 0, strokeHits: 0, kind: {}, n: 0, flat: 0, e: 0, eq: 0, v: 0, angs: [], stab: { n: 0, e: 0 }, phase: {}, cause: {}, part: {}, sp: [[0, 0], [0, 0], [0, 0]], inN: 0, inFlat: 0, inNflat: 0, inFixable: 0, corrWin: 0, flatCorrWin: 0, spinSteps: 0, spinMax: 0, armSpin: 0, nan: 0, steps: 0, gStand: 0, gHeld: 0, gDrop: 0 });
 let tNow = 0;
 sw.t = () => tNow;
 const origStep = Fighter.prototype.cacheState;
@@ -325,7 +334,7 @@ for (const w of WEAPONS) {
     sw.acc = acc;
     for (let r = 0; r < ROUNDS; r++) runRound(w, foe, 1000 + SEED0 + r * 17 + FOES.indexOf(foe) * 101, acc, sw);
     per[foe] = acc;
-    for (const k of ['strokes', 'strokeHits', 'n', 'flat', 'e', 'eq', 'v', 'inN', 'inFlat', 'inNflat', 'inFixable', 'corrWin', 'flatCorrWin', 'spinSteps', 'armSpin', 'nan', 'steps']) tot[k] += acc[k];
+    for (const k of ['strokes', 'strokeHits', 'n', 'flat', 'e', 'eq', 'v', 'inN', 'inFlat', 'inNflat', 'inFixable', 'corrWin', 'flatCorrWin', 'spinSteps', 'armSpin', 'nan', 'steps', 'gStand', 'gHeld', 'gDrop']) tot[k] += acc[k];
     tot.spinMax = Math.max(tot.spinMax, acc.spinMax);
     tot.angs.push(...acc.angs);
     tot.stab.n += acc.stab.n; tot.stab.e += acc.stab.e;
@@ -344,12 +353,14 @@ for (const w of WEAPONS) {
       speedBins: A.sp.map(([n, f]) => `${n}:${pct(f, n) ?? 0}%`).join(' '),
       inputFlatPct: pct(A.inFlat, A.inN), inputN: A.inN, flatButInputEdge: `${A.inFixable}/${A.inNflat}`, corrWinPct: pct(A.corrWin, A.n), flatInCorrWin: A.flatCorrWin,
       spinSteps: A.spinSteps, spinMax: Math.round(A.spinMax), armSpin: A.armSpin, nan: A.nan, steps: A.steps, kind: A.kind,
+      gripHeldPct: A.gStand ? +((100 * A.gHeld) / A.gStand).toFixed(1) : null, gripDrops: A.gDrop,
     };
   };
   out[w] = { all: sum(tot), ...Object.fromEntries(Object.entries(per).map(([k, v]) => [k, sum(v)])) };
   if (!args.quiet) {
     const a = out[w].all;
     process.stderr.write(`${w}: 칼날 맞음 ${a.hits} · 칼 면 ${a.flatPct}% · J ${a.eMean} (× 날 ${a.eqMean}) · 맞힘률 ${a.hitRate}% (${a.strokes} 획) · 찌르기 ${a.stab.n} (${a.stab.eMean} J) · 팽이 ${a.spinSteps} (${a.spinMax}) · 폭발 ${a.armSpin} · NaN ${a.nan}\n`);
+    if (a.gripHeldPct != null) process.stderr.write(`   빈손 쥔 몫 ${a.gripHeldPct}% · 놓침 ${a.gripDrops}\n`);
     process.stderr.write(`   갈래 ${JSON.stringify(a.cause)} · 때 ${JSON.stringify(a.phase)} · 입력 예측 날 각 칼 면 ${a.inputFlatPct}% (칼 면 중 입력으론 날 ${a.flatButInputEdge}) · 보정 창 ${a.corrWinPct}%\n`);
     for (const f of FOES) { const b = out[w][f]; process.stderr.write(`   ${f}: ${b.hits} 맞음 · 칼 면 ${b.flatPct}% · J ${b.eMean} · 맞힘률 ${b.hitRate}%\n`); }
   }
