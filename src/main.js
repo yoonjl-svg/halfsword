@@ -740,8 +740,8 @@ let roundOverTime = 0;
 let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
 
 $('howto').innerHTML = input.isTouchDevice
-  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>폰을 앞뒤로 기울이면 전진·후퇴, 좌우로 기울이면 옆걸음.</li><li>◎ 버튼: 지금 각도를 "똑바로"로 다시 맞춰요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>'
-  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>W A S D (또는 방향키) 로 걸어요.</li><li>Esc 로 마우스 잠금 해제, P 로 일시정지.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점!</li>';
+  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>폰을 앞뒤로 기울이면 전진·후퇴, 좌우로 기울이면 옆걸음.</li><li>◎ 버튼: 지금 각도를 ‘똑바로’로 다시 맞춰요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>'
+  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>WASD 또는 방향키로 걸어요.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>';
 
 // 기울기 센서를 못 쓸 때의 임시 대체(이번 실행에만): 저장된 선호(settings.moveMode)는 덮어쓰지 않는다 — 다음에 센서가 되면 기울기로 돌아온다 (10/8 입력 수명주기)
 let sensorMoveFallback = null;
@@ -1105,7 +1105,7 @@ async function startFight() {
           sensorMoveFallback = 'stick'; // 저장 선호는 그대로 두고 이번 실행만 조이스틱으로
           input.resetTransient();
           refreshSettingsUI();
-          showHint('기울기 센서를 쓸 수 없어서 조이스틱으로 바꿨어요.');
+          showHint('기울기 센서를 쓸 수 없어 조이스틱으로 바꿨어요');
         } else {
           input.calibrateTilt();
         }
@@ -1152,10 +1152,10 @@ function beginFight() {
   showToast('Battle', 900);
   showHint(
     !input.isTouchDevice
-      ? '클릭해서 마우스 잠금 · WASD 이동 · 클릭하면 찌르기'
+      ? '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기'
       : moveModeValue() === 'tilt'
-        ? '끌어서 칼 휘두르기 · 톡 치면 찌르기 · 앞뒤/좌우로 기울여서 걷기'
-        : '왼쪽 아래 조이스틱으로 걷기 · 나머지 화면을 끌어서 휘두르고 톡 쳐서 찌르기',
+        ? '끌어서 휘두르기 · 톡 쳐서 찌르기 · 기울여서 걷기'
+        : '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기',
   );
 }
 
@@ -1204,7 +1204,7 @@ $('btnPause').addEventListener('pointerdown', (event) => {
 });
 $('btnCalib').addEventListener('click', () => {
   input.calibrateTilt();
-  showHint('지금 각도를 기준으로 맞췄어요.', 1500);
+  showHint('지금 각도를 기준으로 맞췄어요', 1500);
 });
 window.addEventListener('keydown', (e) => {
   if (state === 'draw') {
@@ -1228,9 +1228,9 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('blur', pause);
 // ── 감정이 켜지는 순간 한 줄 알림 ──
-//  상대: "오소리 브란이 공포에 잠식되었다" / 주인공: 주어 없이 "공포에 잠식되었다" (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
+//  상대: "오소리 브란이 공포에 잠식된다" / 주인공: 주어 없이 "공포에 잠식된다" (10/10 문구 정리: 다른 감정 줄과 같은 현재형) (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
 const EMO_TEXT = {
-  fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식되었다',
+  fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식된다',
   obsession: (who) => (who ? '집념을 보인다' : '집념이 생긴다'), // 사장님 결정: 주어 없이 — 상대는 "집념을 보인다", 주인공은 "집념이 생긴다"
   anger: (who) => (who ? `${who}의 ` : '') + '분노가 폭발한다',
 };
