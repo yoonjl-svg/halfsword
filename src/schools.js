@@ -414,7 +414,13 @@ const ITALIAN_UNIQUE = [
 //  · 높이 비낌 좌우(황소 자리): 올려 벤 탈류·레베스가 멈추는 자리(피 복ⅩⅤ)·오른 귀 앞(피 복Ⅱ)
 //  · 비낀 자세 좌우(쟁기 자리): 찌르기·던지는 무기·자루 무기를 받는 자리(피 단ⅩⅣ·복ⅩⅣ)
 //  · 칼끝 땅에(바보 자리): 모든 규칙의 시작·끝(피 단Ⅰ) — 수련 자세라 적게
-//  뺀 것: 지붕·어깨 지붕(상단·팔상 — 원전에 기다리는 자세로 없음. 피게이레두 탈류는 '뒤에서(por detras)' 감아 치는 지나는 자리) · 바꿈(원전 없음)
+//  · 아래 탈류·아래 레베스(바꿈 자리 좌우 — 10/11 사장님 03:2x '칼을 아래로 떨어트린 준비 동작을 지금은 안 쓰고 있나? 꽤 큰 차별성 같은데'): 곧은 자세 다음으로 잦게.
+//    근거 [해석]: 피 단Ⅰ(모든 규칙은 칼끝 땅에서 시작해 끝남) · 피 복Ⅰ 「from where the montante comes to a stop you will give a talho from low to high」 · 복Ⅶ 「always from low to high」 [원문 영역] —
+//    떨어진 칼이 멈춘 자리에서 원전의 바탕 베기(아래에서 위로)가 곧장 나간다. **10/10 판단(바꿈 = '원전에 기다리는 자세로 없음' → 뺌)과 다른 해석이다**: 원전은 이 자리를 '멈춘 자리'로
+//    적었을 뿐 '기다린다'고 적지 않았다 — 멈춘 자리에서 다음 칼을 기다리는 것을 기다리는 자세로 읽었다. w 1.6·1.5 는 사장님 확인 전(확인표 875) — 가까운 자세 고집(guardStick 2.0)을
+//    넘어 실제로 고르게(10/10 칼끝 땅에 w 0.4 는 고른 몫 0~8 %). threat·high·low 는 칼끝 땅에(alber)와 같은 수(칼끝이 상대를 겨누지 않는 낮은 자세)
+//    낮은 자세에서 상대가 칼을 들면 패시브 '올려 맞받기'(IBERIAN_PASSIVES contraBaixo)
+//  뺀 것: 지붕·어깨 지붕(상단·팔상 — 원전에 기다리는 자세로 없음. 피게이레두 탈류는 '뒤에서(por detras)' 감아 치는 지나는 자리)
 const IBERIAN_GUARDS = [
   { name: 'langort', pad: G.langort, threat: 0.9, high: 0.5, low: 0.3, w: 2.0 },
   { name: 'ochsR', pad: G.ochsR, threat: 0.7, high: 0.6, low: 0.2, w: 1.2 },
@@ -422,6 +428,8 @@ const IBERIAN_GUARDS = [
   { name: 'pflugR', pad: G.pflugR, threat: 0.6, high: 0.2, low: 0.8, w: 0.8 },
   { name: 'pflugL', pad: G.pflugL, threat: 0.5, high: 0.2, low: 0.8, w: 0.6 },
   { name: 'alber', pad: G.alber, threat: 0.1, high: 0, low: 1, w: 0.4 },
+  { name: 'wechselR', pad: G.wechselR, threat: 0.1, high: 0, low: 1, w: 1.6 }, // 아래 탈류 (10/11 — 위 머리말)
+  { name: 'wechselL', pad: G.wechselL, threat: 0.1, high: 0, low: 1, w: 1.5 }, // 아래 레베스
 ];
 // 기술 가중치 (applySchoolArt — 앞무게 꾸러미 base 에 곱한다. 고유 동작은 받지 않는다):
 //  피게이레두 32 규칙의 낱말 셈 — talho 91 · revez 80 · 찌르기(estocada) 42(준비·찌름 두 번 셈 → 실제 ≈ 21) · altibaxo 9 · 가로(orizontal) 5 · '아래에서 위로' 18.
@@ -487,6 +495,15 @@ const IBERIAN_PASSIVES = [
   { name: 'talhoParry', nameKo: '베어서 막기 (talho)', when: 'threat', cond: { cut: true }, do: { counter: ['zornhau', 'zornhauL', 'talhoReves'] }, p: 0.4, src: '몬탄테 규칙 — 받기보다 벤다 (Godinho 1599 · Figueiredo 1651 요약) [원전 2차]' },
   // 이어 돌기: 헛치거나 막혀도 멈추지 않고 반대 어깨로 흘러 벤다
   { name: 'seguirRoda', nameKo: '이어 돌기', when: ['missed', 'parried'], do: { chain: ['talhoReves'] }, p: 0.9, src: '몬탄테 규칙 1 [원전 2차]' },
+  // 올려 맞받기 (가칭 — 10/11 사장님 03:2x '안2는 꼭 비기가 아니어라도 굉장히 좋은 설정인데 고유 동작으로 넣는 건 어떤가'): 낮은 자세(아래 탈류·아래 레베스·칼끝 땅에)에서 기다리다
+  //  상대가 내 칼이 닿는 거리에서 칼을 드는 순간(foeRaise — ai.js preThreat 의 거리 d < reach + 0.3 그대로) 한 걸음 들며 그 쪽 아래에서 위로 크게 올려 벤다(talho/revez de baxo para sima).
+  //  길 = 고유 동작 talhoRevezBaixo 의 한 반 = 꾸러미 unterhau(아래 탈류 → [0.04, −0.08] → 왼 높이 비낌) · unterhauL(거울) — 손에서 가까운 쪽. 벤 칼은 높이 비낌(머리 위)으로 넘어가
+  //  헛치거나 막히면 '이어 돌기'(위)가 흐름을 잇는다(새 고리 없음). 성공 보장 없음 — 상대 칼이 먼저 떨어지면 내가 맞는다(물리).
+  //  cond.low: 지금 간 보는 자세가 목록에 있고 손이 그 자세 자리(0.15 패드 안 — v5 montanteFlowSeq '이미 아래' 판정 재사용)에 있음 (길목 준비 옆 자세로 덮였으면 아님)
+  //  걸음 fwd 0.3 = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용 · p 0.6 = 일본 데바나(foeRaise 패시브) p 재사용 — 둘 다 사장님 확인 전(확인표 876·877)
+  //  근거: 피 복Ⅰ 「from where the montante comes to a stop you will give a talho from low to high」 · 복Ⅶ 「in each step you must give a blow, always from low to high」 [원문 영역] ·
+  //   상대가 칼을 드는 순간을 받는 것은 [해석] · 수 [추정]
+  { name: 'contraBaixo', nameKo: '올려 맞받기', when: 'foeRaise', cond: { low: ['wechselR', 'wechselL', 'alber'] }, do: { tech: ['unterhau', 'unterhauL'], step: { lat: 0, fwd: 0.3, when: 'strike' }, as: 'contraBaixo' }, p: 0.6, src: '피게이레두 1651 복Ⅰ·복Ⅶ(아래에서 위로 · 걸음마다 한 칼) [원문 영역] · 칼을 드는 순간을 받기 [해석] · 수 [추정] · 이름 가칭' },
 ];
 // 일본 (카타나 가족, 모노호시자오). 10/9 유파 설계 v3(사장님 승인 '제안대로'): 残心 1.0 그대로 · 出端 1.0 → 0.6(비기 後の先 조건이 차면 비기가 먼저) · 返し 0.8 → 0.5
 const JAPANESE_PASSIVES = [

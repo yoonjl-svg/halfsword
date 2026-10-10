@@ -2056,6 +2056,7 @@ export class AI {
         if (c.cut && (!ctx || ctx.thrust)) continue;
         if (c.line && !c.line.includes(ctx?.line)) continue;
         if (c.myThrust && this.tech?.kind !== 'thrust') continue;
+        if (c.low && !(this.mode === 'watch' && c.low.includes(this.guard?.name) && padDist([this.me.handOffset.x, this.me.handOffset.y], this.guard.pad) < 0.15)) continue; // 이베리아 올려 맞받기 (10/11): 지금 낮은 자세로 기다리는 중
       }
       return P;
     }
@@ -2125,6 +2126,7 @@ export class AI {
       t = feint ? this.school.techByName[feint.fake] ?? null : null;
     } else if (D.tech || D.chain) t = this.passiveTech(D);
     else return false;
+    if (t && (D.step || D.as)) t = { ...t, name: D.as ?? t.name, nameKo: P.nameKo ?? t.nameKo, step: D.step ?? t.step }; // 이베리아 올려 맞받기 (10/11): 꾸러미 길에 걸음을 덧씌우고 이름을 따로 (재기)
     if (!t) {
       this.stats.passiveSkipped = (this.stats.passiveSkipped ?? 0) + 1; // 그 기술이 이 꾸러미에 없다 → 건너뜀
       return false;
