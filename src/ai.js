@@ -30,7 +30,7 @@ import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -1623,6 +1623,7 @@ export class AI {
   secretFree() {
     const m = this.mode;
     if (m === 'watch' || m === 'withdraw' || m === 'defend') return true;
+    if (m === 'attack' && this.phase === 'follow' && this.secret?.do?.flow && !this.passiveLocked) return true; // 이베리아 흐름 (10/11): 손은 끝 자세에 닿고 칼이 아직 지나가는 중 — 그 칼을 이어받는다
     return m === 'attack' && (this.phase === 'windup' || this.phase === 'approach') && !this.passiveLocked;
   }
 
@@ -1670,6 +1671,13 @@ export class AI {
         this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
       }
       ok = true;
+    } else if (D.flow) {
+      // 이베리아 멈추지 않는 흐름 (10/11 — schools.js IBERIAN_SECRET): 지금 손 자리·움직임(걸러진 손 목표 속도)을 이어받아 번갈아 올려베기 → 머리 위 돌려 큰 한 칼.
+      //  수마다 flowInto(이음새 없이 — 앞 수 끝에서 곧장). 칼이 지나가던 공격(follow)을 이어받으면 그 칼의 맞힘·막힘을 여기서 센다(afterStrike 를 건너뜀)
+      if (this.mode === 'attack' && this.phase === 'follow') this.secretTally();
+      const v = this.me.skill.aimVel;
+      run.queue = montanteFlowSeq([this.me.handOffset.x, this.me.handOffset.y], [v.x, v.y], D);
+      ok = this.secretNext();
     } else if (D.path && SECRET.iberianSweep) {
       // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝 + 머리 위 큰 고리 + 사선 — 이번 스텝 끝부터 SECRET.iberianSweepTime 동안 (secret_instant.js, 발도와 같은 틀)
       this.mode = 'secret';
@@ -1766,6 +1774,12 @@ export class AI {
     if (!run) return this.secretFirstHit(d, true);
     if (this.hitLanded) run.landed = true;
     if (run.queue?.length) {
+      // 이베리아 흐름 (10/11): 손 목표는 토막 끝에 닿았어도 실제 칼이 그 자리에 갈 때까지(flowGate, 최대 FLOW_GATE_MAX — 맞혔으면 곧장) 다음 토막을 열지 않는다 — 기다리는 동안 손은 끝 자리를 당긴다
+      if (this.tech?.gate) {
+        run.gateT0 ??= this.sense.t;
+        if (!flowGate(this.me, this.tech.gate) && !this.hitLanded && this.sense.t - run.gateT0 < FLOW_GATE_MAX) return true; // 이 토막이 맞혔으면 기다리지 않는다
+        run.gateT0 = null;
+      }
       this.secretTally();
       return this.secretNext();
     }

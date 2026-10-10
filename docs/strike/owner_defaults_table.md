@@ -770,3 +770,15 @@
 | 847 | 시험 도구: `school_parry.mjs` 덧씌운 자리 후보 · `tools/browser/school_parry_shots.mjs`(AI 막기 자세 캡처) | tools/ | 재기 | 게임 값 안 바꿈 | — | |
 | 848 | **중국 덮는 자세 = 거정세 몸꼴** (쓰러져 머리 가림 — 패드 G.tag 그대로, 몸꼴 덧씌움 `parryCover.down`; 전 표두세 몸꼴) | schools.js TRADITIONS.chinese.pose·parryCover · frames.js installCover | 사장님 10/11 01:5x '그럼 거정세로 바꿔야지' · 擧鼎格 「鼎格上殺」 平擡 | 쓰러진 몸 근육 0.10 < 서보 문턱 0.12 라 다리 잃은 몸 말고는 판에 안 닿음(48 판 바이트 같음) — `docs/strike/school_slots2_2026-10-11.md` | 사장님 답대로 | |
 | 849 | **(선택 판 — 가지 맨 끝, 사장님 답 뒤)** 중국 highR 막기 = 표두세 자리 (거정세 덧씌움 뺌) | schools.js TRADITIONS.chinese.parryCover | 擧鼎格 = 「上殺」 짝(highC) · 오른 위 사선은 표두세로 [해석] | 막음 highR 2~3 → 4/4 (네 칼) | 사장님 선택 | |
+
+### 이베리아 비기 v5 — 멈추지 않는 흐름 (10/11 01:5x 사장님 '그렇게 하자' — 가지 `…/ib-secret-2q36ha`, docs/strike/iberian_secret_v5_2026-10-11.md) — 사장님 확인 전
+
+| 번호 | 값 | 어디에(파일·라운드) | 무엇을 막거나 하는가 | 없애면/바꾸면 생기는 일 | 디렉터 의견(유지/제거/사장님 선택) | 답 |
+|---|---|---|---|---|---|---|
+| 860 | **이베리아 비기 = 멈추지 않는 흐름** (`SECRET.iberianSecret` 'flow' 기본, 옛 휩쓸기 `?ibSecret=v4`) — 지금 칼 방향을 이어받아 떨어뜨림 → 올려베기 → 떨어뜨림 → 올려베기 → 머리 위로 넘김 → 둘러 베는 큰 한 칼, 경직 0.5 s 는 끝에만 | schools.js IBERIAN_SECRET · secret.js montanteFlowSeq · ai.js · skill.js | 피 복Ⅰ·복Ⅱ·복Ⅶ·복ⅩⅤ·단Ⅺ [원문 영역] · 고 규칙 4·5·9 — 셋을 한 흐름으로 [해석] | 48 판 츠바이핸더 35 → 27 % · 아이스 27 → 25 % · 비기 동안·뒤 넘어짐 2 → 9 · 3 → 16 (문서 §8) | 사장님 확인 전 | |
+| 861 | 올려베기 수 `do.rise` **2** (탈류·레베스 한 쌍) | schools.js IBERIAN_SECRET.do | 피 복Ⅶ 번갈아 · talhoRevezBaixo 와 같은 둘 [해석] | 3 이면 흐름 ≈ 0.5 s 더 | 사장님 선택 | |
+| 862 | 흐름의 서보 힘 창·보조 힘 = **SECRET.iberianPower 1.6 · iberianStrength 1.5 재사용** (10/9 휘돌려 사선 베기 값 — 새 값 아님) | schools.js IBERIAN_SECRET.do.power·strength | 공통 1.3 이면 아래에서 위로 올리는 토막이 높이 비낌까지 못 올라 문에서 멎음 (탐침 칼끝 최고 AI 9.5~13 → 11~18 m/s) | 공통으로: 48 판 23 % · 넘어짐 6 · 상처 평균 45 J | 사장님 확인 전 | |
+| 863 | **흐름 토막 문** (`secret.js flowGate`): 실제 칼끝이 토막 끝 자리(쪽 · 가슴 위아래 · 앞뒤 — 문턱 0)에 가야 다음 토막. 최대 **0.3 s**(따라 지나감 바탕 시간과 같은 값) · 그 토막이 맞혔으면 곧장 | secret.js FLOW_GATE_MAX · ai.js secretStrikeEnd · skill.js | 무거운 칼이 손 목표를 못 따라와 번갈아 베기가 한쪽에서 뭉개짐(칼끝 옆 폭 0.23 m) | 0.5 면 막힌 토막에서 0.5 s 씩 멎음 · 칼끼리 닿음으로 넘기면 플레이어 토막이 0.1 s 로 뭉개짐 | 사장님 확인 전 | |
+| 864 | 조건 **'호 안쪽' 그대로** (iberianInside 0.7 — 10/10 사장님 답) | secret.js insideEvent | 피 단Ⅶ 「deter people in a street」·복Ⅶ 「until the people stop」 — 밀고 드는 사람을 멈추는 규칙 | 맺힘 셋(BindCount)은 자료로만 | 유지 | |
+| 865 | AI 가 **제 베기 follow(손은 끝, 칼은 지나가는 중)에도** 흐름 비기를 냄 — 지나가던 칼을 이어받음 (흐름 비기만, 다른 유파 그대로) | ai.js secretFree | 흐름 이어받기 [해석] | 빼면 간 보기·물러남·막기·준비에서만 | 사장님 확인 전 | |
+| 866 | 시험 도구: `tools/sim/iberian_flow_probe.mjs`(흐름 탐침 — AI·플레이어) · `tools/sim/iberian_flow_pads.mjs`(패드 자리마다 칼끝·문) · `tools/browser/iberian_flow_probe.mjs`·`iberian_flow_chart.mjs`(플레이어 칼끝 그래프·세 순간) · 테스트 경로 '이베리아 비기' 고르기 | tools/ · test.html | 재기·견주기 | 게임 값 안 바꿈 | — | |

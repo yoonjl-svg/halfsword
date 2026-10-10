@@ -876,6 +876,8 @@ MONTANTE_HAND=guard node tools/sim/hybrid.mjs motion_lab.mjs duel zweihander 24 
 
 ## 21. 비기 단서 (사장님 10/11 '이베리아 비기 — 흐름이 끊기고 따로 노는 느낌' 메모 — 이번엔 비기를 건드리지 않음)
 
+→ 이 단서로 다시 설계한 비기: `docs/strike/iberian_secret_v5_2026-10-11.md` (10/11, 멈추지 않는 흐름 — 1·2·3 을 씀, 4 바퀴 돌기는 쓰지 않음).
+
 원전을 읽으며 본, 몬탄테 흐름에 맞는 비기 재료:
 1. **멈추지 않는 좌우 번갈아 올려베기** — 「in each step you must give a blow, always from low to high, alternating talho and revez, until the people stop」(피 복Ⅶ) [원문 영역]. 걸음마다 한 칼, 아래에서 위로, 탈류·레베스를 번갈아 사람들이 멈출 때까지. 지금 고유 동작 `talhoRevezBaixo` 의 끝없는 꼴.
 2. **올려 벤 뒤 같은 쪽으로 떨어뜨려 감고 다시 올림** — 피 복ⅩⅤ(탈류 올림 → 왼 높이 비낌 → 왼쪽으로 altibaxo 하며 왼 어깨에 감음 → 레베스 올림 → 오른 높이 비낌 → altibaxo 로 오른팔에 감음). §16 의 아래 자리 꼴(떨어져 감긴 칼)과 같은 길이라 지금 표와 맞는다.

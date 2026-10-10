@@ -419,7 +419,7 @@ if (mode === 'poses') {
           if (X.secretStance || (X._stEnd != null && G.t - X._stEnd < 1)) falls.stance++;
         }
         if (X.secretStance) X._stEnd = G.t;
-        { const run = XA?.secretRun; const tn = run && XA.secret?.do?.seq ? XA.tech?.name : null; // 수 바뀜 = 다음 수 시작
+        { const run = XA?.secretRun; const tn = run && (XA.secret?.do?.seq || XA.secret?.do?.flow) ? XA.tech?.name : null; // 수 바뀜 = 다음 수 시작 (이베리아 흐름 10/11 도)
           if (XA && XA._seqCur && XA._seqCur.n !== tn) { const A = (seqT[XA._seqCur.n] ??= [0, 0]); A[0] += G.t - XA._seqCur.t; A[1]++; XA._seqCur = null; }
           if (XA && tn && !XA._seqCur) XA._seqCur = { n: tn, t: G.t }; }
         if (XA?.secretRun) XA._secEnd = G.t;
