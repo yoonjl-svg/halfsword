@@ -31,6 +31,15 @@ TOKENS = {
     '--emo-anger (제안)': '#f0604c',
     '--emo-obsession': '#f2c75a',
     '--emo-revive': '#fff1c8',
+    # 10/10 19:2x 사장님 답 (§13): ② 패시브·비기 옅은 오렌지 후보 · ③ 경직·상태 옅은 붉은색 후보
+    '② A #D5997B': '#d5997b',
+    '② B #DAAE95 (기본 --hud-tech)': '#daae95',
+    '② C #E0C2AE': '#e0c2ae',
+    '② 둘째 줄 #E6CDBC (기본 --hud-tech-sub)': '#e6cdbc',
+    '③ R1 #E48E8B (기본 --hud-state)': '#e48e8b',
+    '③ R2 #E59EA3': '#e59ea3',
+    '③ R3 #E58A80': '#e58a80',
+    '③ 둘째 줄 #E8BCBA (기본 --hud-state-sub)': '#e8bcba',
 }
 OUTLINE = '#0d0907'
 

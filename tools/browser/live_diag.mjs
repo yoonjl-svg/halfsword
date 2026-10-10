@@ -377,7 +377,7 @@ function pageHarness(o) {
 
 // ───────── 칸 설정 ─────────
 function cellSettings(c) {
-  return { pixel: false, sound: false, skill: c.skill, fpsCap: true };
+  return { skill: c.skill, fpsCap: true }; // 10/10: 픽셀·소리 설정 줄은 없어졌다(픽셀 = 주소 ?pixel=1, 소리 = 늘 켬 → 아래 blockBody 에서 game.sound.on = false)
 }
 function cellQuery(c) {
   const q = new URLSearchParams({ weapon: L.PROGRAMME.fight.weapon, foe: L.PROGRAMME.fight.foe, stage: 'poseidon' });
@@ -441,6 +441,7 @@ async function blockBody(ctx, c, cell, pacing, block, log, T0) {
   const url = `${URL0}/?${cellQuery(c)}`;
   await page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000, polling: 50 });
+  await page.evaluate(() => (window.game.sound.on = false)); // 진단은 소리 없이 (예전 설정 sound:false 와 같게)
   await page.evaluate((n) => { for (let i = 0; i < n; i++) window.__frame(16); }, MENU_FRAMES);
   // 판을 세우기 전: 그리기 거르기는 RENDER.fpsCap 을 아주 작게 (칸 스위치는 없다 — 설정 칸은 --url 의 빌드·주소 인자 몫)
   const toggles = await page.evaluate(([c, rskip]) => {

@@ -31,8 +31,7 @@ for (const [w, h] of SIZES.filter(([w]) => !process.env.ONLY || process.env.ONLY
     const page = await browser.newPage({ viewport: { width: w, height: h }, hasTouch: touch, isMobile: touch });
     page.on('pageerror', (e) => errors.push(`${w}×${h} pageerror: ${e}`));
     page.on('console', (m) => m.type() === 'error' && errors.push(`${w}×${h} console: ${m.text()}`));
-    await page.addInitScript((px) => localStorage.setItem('gladiator-settings', JSON.stringify({ pixel: px })), mode === 'pixel');
-    await page.goto(`${base}/?stage=poseidon&foe=heinrich`, { waitUntil: 'load' });
+    await page.goto(`${base}/?stage=poseidon&foe=heinrich${mode === 'pixel' ? '&pixel=1' : ''}`, { waitUntil: 'load' }); // 픽셀 모드는 주소 인자로만 (10/10 설정 줄 지움)
     await page.waitForFunction('window.game && window.game.enemy', { timeout: 30000 });
     await page.evaluate(() => document.getElementById('btnStart').click());
     await page.waitForFunction('window.game.draw && window.game.draw.stage === "choose"', { timeout: 15000 });
