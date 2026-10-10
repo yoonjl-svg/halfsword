@@ -30,7 +30,7 @@ import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { gilmokLine, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -428,20 +428,13 @@ export class AI {
       this.gilArm.tick(dt, d > gilmokLine(me, this.M.reach, this.secret.do) && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun);
       const A = this.gilArm.armed && (this.mode === 'watch' || this.mode === 'withdraw');
       if (this.gilArm.armed && !was) {
-        const LOW = ['wechselR', 'wechselL', 'alber'];
-        if (!LOW.includes(this.guard?.name)) {
-          const hand = [this.me.handOffset.x, this.me.handOffset.y];
-          let best = null;
-          for (const g of this.school.guards) if (LOW.includes(g.name) && (!best || padDist(hand, g.pad) < padDist(hand, best.pad))) best = g;
-          if (best) this.guard = best;
-        }
+        this.guard = gilmokLowGuard(this.school.guards, this.guard, [this.me.handOffset.x, this.me.handOffset.y]); // secret.js — 플레이어와 같은 규칙
         this.gilSide = this.guard?.name === 'wechselL' ? -1 : 1;
         this.gilWindT = 0;
       }
       if (A) {
-        // 감는 거리: preThreat '가까움'과 같은 꼴(간격 + 다가옴 × 0.4 + 0.3)을 내 칼끝 거리로 — 먼 데서 걸어오는 동안은 낮게 기다린다
-        if (this.foeClosing > SECRET.iberianInsideClosing && d < this.M.reach + this.foeClosing * 0.4 + 0.3) this.gilWindT = SECRET.gilmokArmGrace;
-        else this.gilWindT = Math.max(0, (this.gilWindT ?? 0) - dt);
+        // 감는 거리: preThreat '가까움'과 같은 꼴(간격 + 다가옴 × 0.4 + 0.3)을 내 칼끝 거리로 — 먼 데서 걸어오는 동안은 낮게 기다린다 (secret.js gilmokWindT)
+        this.gilWindT = gilmokWindT(this.gilWindT, this.foeClosing, d, this.M.reach, dt);
         const p = this.gilWindT > 0 ? this.secret.do.side[this.gilSide] : this.guard.pad;
         this.hand.set(p[0], p[1]);
         this.handSpeed = this.gilWindT > 0 ? L.parrySpeed : this.pers.guardSpeed; // 감기는 받아 막기 빠르기, 낮게 기다리기는 간 보기 빠르기
