@@ -10,7 +10,11 @@
 //  v3 (opts.v3, 사장님 10/10 23:5x '빨강 단일톤 — 흰 악세서리·디테일로 포인트, 치마 조금 더 짧게'): 왼어깨에 걸쳐 앞뒤로 늘어뜨린 흰 두파타 ·
 //   흰 선 깃 · 자락 옷단 위 흰 수 띠 · 소매 끝 흰 띠 · 흰 팔찌 둘 · 진주 귀걸이 · 자락 5 cm 짧게(옷단 0.585 → 0.635 m). 다리는 v2 그대로 짙게.
 export function createSamiraOutfit(h, opts = {}) {
-  const V3 = !!opts.v3;
+  const V3 = !!opts.v3 || !!opts.v4;
+  // v4 (opts.v4, 사장님 10/11 00:4x '상체를 슬림하게 해선지 종종 팔이 상체와 떨어져 움직이는 모습이 나와'): v3 그대로 + 어깨만 되돌림 —
+  //  가슴 위끝 앞뒤 폭 0.315 → 0.34 m(가슴 밑 폭은 v2·v3 와 같은 0.252 m 로 두어 허리 가늘기 그대로) · 처진 어깨 4 → 1.5 cm ·
+  //  어깨 관절 자리(가슴 좌표 0, 0.10, ±0.2)에 몸판 색 둥근 어깨(삼각근) — 팔이 어느 쪽으로 돌아도 관절 둘레를 덮어 틈이 안 보인다. 소매도 v1 굵기(0.92 → 0.98)로
+  const V4 = !!opts.v4;
   const WHITE = 0xefece4; // v3 흰 포인트 (두파타·수 띠·팔찌) — 순백 대신 아주 옅은 상아
   const { THREE, bake, box, cyl, ball, addMerged, CLOTH, artoriaCloth, sleeveVolume, clothNeck, taperedTube, reshapeMain, roseUniformHead } = h;
   const CRIMSON = 0x922e40; // v1 장밋빛 제복과 같은 색 — 인물 색은 그대로
@@ -66,7 +70,7 @@ export function createSamiraOutfit(h, opts = {}) {
   }
 
   // ── 가슴: 위(어깨) → 아래(가슴 밑)로 좁아지는 몸판 + 겹여밈 선 + 낮은 선 깃 + 가슴 밑 띠 ──
-  const CH_W = 0.22, CH_H = 0.28, CH_D = 0.315, CH_TAPER = 0.8;
+  const CH_W = 0.22, CH_H = 0.28, CH_D = V4 ? 0.34 : 0.315, CH_TAPER = V4 ? 0.252 / 0.34 : 0.8;
   const chS = (y) => THREE.MathUtils.lerp(CH_TAPER, 1, (y + CH_H / 2) / CH_H);
   const bust = (y, z) => Math.exp(-Math.pow((y - 0.012) / 0.07, 2) - Math.pow((Math.abs(z) - 0.068) / 0.058, 2));
   const chestFront = (y, z) => (CH_W / 2) * chS(y) + bust(y, z) * 0.016 + 0.003; // 몸판 앞면 x (가운데 쪽 |z| < 0.11 에서)
@@ -76,11 +80,15 @@ export function createSamiraOutfit(h, opts = {}) {
       if (p.getX(i) > 0.02) p.setX(i, p.getX(i) + bust(p.getY(i), p.getZ(i)) * 0.016);
       // 처진 어깨선: 목 옆에서 어깨 끝으로 위끝을 낮춘다(위로 갈수록) — 네모난 어깨 모서리가 덜 넓적해 보이게
       const y = p.getY(i), up = THREE.MathUtils.smoothstep(y, 0.03, 0.14), out = Math.max(0, (Math.abs(p.getZ(i)) - 0.05) / 0.11);
-      p.setY(i, y - 0.04 * up * Math.pow(out, 1.4));
+      p.setY(i, y - (V4 ? 0.015 : 0.04) * up * Math.pow(out, 1.4));
     }
     geo.computeVertexNormals();
     torsoMain(g, geo);
     clothNeck(g, look);
+    if (V4) {
+      // 둥근 어깨: 관절 중심에 두어 위팔이 앞·위·옆으로 돌아도 위팔 뿌리와 몸판 사이를 메운다(겉모습만, 충돌체 아님)
+      addMerged(fabric(g), [-1, 1].map((s) => bake(new THREE.SphereGeometry(0.056, 16, 12), [0, 0.1, s * 0.192], null, [1, 0.92, 1])), CRIMSON, { ...CLOTH, roughness: 0.9 });
+    }
     // 낮은 선 깃(반다갈라) + 금빛 테
     addMerged(fabric(g), [cyl(0.055, 0.062, 0.034, 18, true, [0, 0.163, 0])], V3 ? WHITE : CRIMSON, DS);
     addMerged(fabric(g), [cyl(0.0555, 0.0555, 0.004, 18, true, [0, 0.181, 0])], GOLD, CLOTH);
@@ -235,7 +243,7 @@ export function createSamiraOutfit(h, opts = {}) {
   // ── 팔: 붙는 긴 소매 + 손목 금빛 단 ──
   function upperArm(g) {
     const m = g.children[0].material; m.color.setHex(CRIMSON); m.roughness = 0.9; m.metalness = 0;
-    sleeveVolume(g, 0.92, 0.9);
+    sleeveVolume(g, V4 ? 0.98 : 0.92, V4 ? 0.94 : 0.9);
   }
   function forearm(g) {
     const m = g.children[0].material; m.color.setHex(CRIMSON); m.roughness = 0.9; m.metalness = 0;

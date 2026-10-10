@@ -2378,9 +2378,12 @@ const ARTORIA_OUTFIT_V2 = {
 // ── 아르토리아 v2 (외형 다듬기 2차 10/10, 사장님 '망토 다듬어'): v1(artoria_silver_v2) 위에서 망토와 앞자락만 바꾼다 — 판금·판금 판정 부위(armorParts)·머리 그대로.
 //  망토: 등 뒤에 납작한 판으로 비스듬히 뻗던 것을 → 목둘레에서 시작해 어깨 뒤를 둥글게 감싸고(어깨 끝을 넘어 옆까지) 아래로 퍼지며 떨어지게. 굵은 주름 일곱.
 //  앞자락: 다리마다 반 원통(앞 → 옆 → 뒤)이라 정면에서 두 장이 떨어진 띠로 보이던 것을 → 안쪽 앞뒤로 35° 씩 더 둘러 가운데서 겹치게(앞 가운데 좁은 트임 하나로 읽힘).
-function artoriaCapeV3(g) {
+// folds(아르토리아 v3, 사장님 10/11 00:4x '바뀐 망토 좋은데 주름 넣어'): 같은 망토 꼴에 세로 주름을 또렷하게 — 주름 일곱 → 아홉, 깊이 3.5 % → 어깨 아래 2.5 % · 옷단 14.5 %,
+//  골은 뾰족하게·마루는 둥글게(천이 접힌 꼴), 골마다 정점 색으로 그늘(마루 1.0 → 골 0.5). 세로 칸 28 → 72 로 늘려 굴곡이 각지지 않게.
+function artoriaCapeV3(g, folds = false) {
   const layer = artoriaCloth(g);
-  const rows = 12, columns = 28, vertices = [], uv = [], indices = [];
+  const rows = folds ? 16 : 12, columns = folds ? 72 : 28, vertices = [], uv = [], indices = [], colors = [];
+  const foldWave = (u) => { const w = Math.cos(u * Math.PI * 4.5); return Math.sign(w) * Math.pow(Math.abs(w), w < 0 ? 0.55 : 1.6); }; // 골(−1) 뾰족, 마루(+1) 둥글
   const sm = (x) => { const u = THREE.MathUtils.clamp(x, 0, 1); return u * u * (3 - 2 * u); };
   // t: 0 목둘레 → 1 옷단, u: −1 ~ 1 (왼 앞 끝 → 등 가운데 → 오른 앞 끝)
   const at = (t, u) => {
@@ -2388,12 +2391,16 @@ function artoriaCapeV3(g) {
     const rx = 0.085 + 0.075 * wrap + 0.07 * t, rz = 0.1 + 0.2 * wrap + 0.03 * t;
     const reach = Math.PI * (0.62 - 0.08 * wrap); // 등 가운데에서 양옆으로 감싸는 각
     const phi = Math.PI + u * reach;
-    const fold = 1 + t * (0.035 * Math.cos(u * Math.PI * 3.5) + 0.01);
+    const fold = folds ? 1 + (0.025 + 0.12 * t) * sm((t - 0.06) / 0.2) * foldWave(u) + 0.015 * t : 1 + t * (0.035 * Math.cos(u * Math.PI * 3.5) + 0.01);
     const y = 0.165 - wrap * 0.04 - t * 0.76 - 0.03 * u * u * wrap + (1 - wrap) * 0.0;
     return [Math.cos(phi) * rx * fold - 0.02 * t, y, Math.sin(phi) * rz * fold];
   };
+  const teal = new THREE.Color(ARTORIA_TEAL);
   for (let r = 0; r <= rows; r++) for (let c = 0; c <= columns; c++) {
-    vertices.push(...at(r / rows, c / columns * 2 - 1)); uv.push(c / columns, r / rows);
+    const t = r / rows, u = c / columns * 2 - 1;
+    vertices.push(...at(t, u)); uv.push(c / columns, r / rows);
+    const shade = folds ? 1 - 0.5 * sm((t - 0.06) / 0.2) * Math.max(0, -foldWave(u)) - 0.06 * sm((t - 0.06) / 0.2) * (1 - Math.abs(foldWave(u))) : 1;
+    colors.push(teal.r * shade, teal.g * shade, teal.b * shade);
     if (r < rows && c < columns) {
       const i = r * (columns + 1) + c;
       indices.push(i, i + columns + 1, i + 1, i + 1, i + columns + 1, i + columns + 2);
@@ -2402,10 +2409,12 @@ function artoriaCapeV3(g) {
   const cape = new THREE.BufferGeometry();
   cape.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
   cape.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  if (folds) cape.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   cape.setIndex(indices); cape.computeVertexNormals();
-  addMerged(layer, [cape], ARTORIA_TEAL, { ...CLOTH, side: THREE.DoubleSide }).name = 'artoria-cape';
+  addMerged(layer, [cape], folds ? 0xffffff : ARTORIA_TEAL, { ...CLOTH, side: THREE.DoubleSide, ...(folds ? { vertexColors: true } : {}) }).name = 'artoria-cape';
   const borders = [-1, 1].map((u) => taperedTube([0, 0.1, 0.25, 0.5, 0.75, 1].map((t) => at(t, u)), Array(6).fill(0.0022), 24, 4));
-  borders.push(taperedTube(Array.from({ length: 15 }, (_, i) => at(1, i / 7 - 1)), Array(15).fill(0.0022), 56, 4));
+  const hemN = folds ? 73 : 15;
+  borders.push(taperedTube(Array.from({ length: hemN }, (_, i) => at(1, i / ((hemN - 1) / 2) - 1)), Array(hemN).fill(0.0022), folds ? 220 : 56, 4));
   // 목둘레 금빛 테 + 앞 여밈 고리 둘(어깨 앞 끝)
   borders.push(taperedTube(Array.from({ length: 9 }, (_, i) => at(0, i / 4 - 1)), Array(9).fill(0.003), 32, 4));
   addMerged(layer, borders, ARTORIA_GOLD, CLOTH);
@@ -2452,6 +2461,22 @@ const ARTORIA_OUTFIT_V3 = {
     addMerged(g, [artoriaPanel(0.192, [[0.074, 0], [0.038, 0.015], [0.016, 0], [0.038, -0.015]], 0.005)], ARTORIA_TEAL, ARTORIA_METAL);
   },
   thighF(g) { artoriaSkirtV3(g, 1); }, thighB(g) { artoriaSkirtV3(g, -1); },
+};
+// 아르토리아 v3 (외형 3차 10/11): v2 세트 그대로 + 망토 세로 주름만 또렷하게 (artoriaCapeV3 folds)
+const ARTORIA_OUTFIT_V4 = {
+  ...ARTORIA_OUTFIT_V3,
+  armorParts: new Set(ARTORIA_OUTFIT_V3.armorParts),
+  chest(g, look) {
+    artoriaSoftBase(g, 0.028, 0.96);
+    const fabric = artoriaCloth(g); clothNeck(fabric, look); artoriaCapeV3(g, true);
+    const hairLayer = artoriaCloth(g, 'artoria-hair');
+    addMerged(hairLayer, [-1, 1].map((s) => isoldeLock([[0.13, 0.15, s * 0.145], [0.175, 0.06, s * 0.15], [0.164, -0.067, s * 0.17]], [0.03, 0.032, 0.002], 0.012)), look.hair, CLOTH);
+    addMerged(g, [bake(artoriaRoundedBox(0.256, 0.249, 0.39, 0.043, 0.91), [-0.005, 0.008, 0]),
+      artoriaPanel(0.13, [[0.129, -0.151], [0.157, -0.069], [0.128, 0], [0.157, 0.069], [0.129, 0.151], [-0.065, 0.137], [-0.144, 0], [-0.065, -0.137]], 0.039),
+      cyl(0.065, 0.078, 0.028, 12, true, [0, 0.155, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+    addMerged(g, [artoriaPanel(0.165, [[0.08, -0.118], [0.099, 0], [0.08, 0.118], [0.014, 0.105], [-0.065, 0], [0.014, -0.105]], 0.027)], 0xe0e7e9, ARTORIA_METAL);
+    addMerged(g, [artoriaPanel(0.192, [[0.074, 0], [0.038, 0.015], [0.016, 0], [0.038, -0.015]], 0.005)], ARTORIA_TEAL, ARTORIA_METAL);
+  },
 };
 
 
@@ -2716,14 +2741,18 @@ export const OUTFITS = {
   // 샛별 저장소에서 가져온 인물 넷 (10/10) — 위 머리말
   artoria_silver_v2: ARTORIA_OUTFIT_V2,
   artoria_silver_v3: ARTORIA_OUTFIT_V3, // 아르토리아 v2 — 망토·앞자락 (외형 다듬기 2차 10/10)
+  artoria_silver_v4: ARTORIA_OUTFIT_V4, // 아르토리아 v3 — 망토 주름 (외형 3차 10/11)
   crown_rose_uniform: CROWN_ROSE_UNIFORM,
   renji_wanderer: RENJI_V1,
   renji_baji: createRenjiBajiOutfit(newOutfitHelpers, RENJI_V1), // 김씨 v2 하카마 → 바지·행전 (외형 다듬기 2차 10/10)
+  renji_wrapped_sword: createRenjiBajiOutfit(newOutfitHelpers, RENJI_V1, { hakama: true }), // 김씨 v3 = v1 옷 + 밝힌 먹빛 + 흰 천 칼 (외형 3차 10/11)
+  samira_angarkha_v4: createSamiraOutfit(newOutfitHelpers, { v4: true }), // 마야(id samira) v4 어깨 틈 메움 (외형 3차 10/11)
   eira_winter_priest: createEiraOutfit(newOutfitHelpers),
   samira_angarkha: createSamiraOutfit(newOutfitHelpers), // 사미라 v2 (디자인 리뷰 10/10)
   samira_angarkha_v3: createSamiraOutfit(newOutfitHelpers, { v3: true }), // 사미라 v3 흰 포인트·짧은 자락 (외형 다듬기 2차 10/10)
   tuyana_winter_priest: createTuyanaOutfit(newOutfitHelpers), // 투야나 v2 (디자인 리뷰 10/10)
   tuyana_winter_priest_chotki: createTuyanaOutfit(newOutfitHelpers, { chotki: true }), // 투야나 v3 왼손목 추트키 (외형 다듬기 2차 10/10)
+  tuyana_winter_priest_dangle: createTuyanaOutfit(newOutfitHelpers, { dangle: true }), // 투야나 v4 늘어져 흔들리는 긴 추트키 (외형 3차 10/11)
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,
@@ -2793,7 +2822,7 @@ export function polishOutfit(g, d, look) {
   if (d.name === 'chest' || d.name === 'abdomen') {
     const main = g.children[0], p = main.geometry.parameters;
     // Round the garment, keeping its widest ribcage/shoulder span unchanged.
-    if (p?.width && p.height && p.depth && !['crown_rose_uniform', 'artoria_silver_v2', 'artoria_silver_v3'].includes(look.outfit)) {
+    if (p?.width && p.height && p.depth && !['crown_rose_uniform', 'artoria_silver_v2', 'artoria_silver_v3', 'artoria_silver_v4'].includes(look.outfit)) {
       // The uniform and silver under-armor already have fitted surfaces.
       replace(main, artoriaRoundedBox(p.width, p.height, p.depth,
         d.name === 'chest' ? 0.045 : 0.03));
@@ -2825,7 +2854,7 @@ export function polishOutfit(g, d, look) {
       for (let i = 0; i < p.count; i++) {
         // Silver caps must retain their height above the existing upper-arm
         // sleeve; flattening them exposed its rounded tip through the armor.
-        const height = look.outfit === 'artoria_silver_v2' || look.outfit === 'artoria_silver_v3' ? 1 : 0.88;
+        const height = ['artoria_silver_v2', 'artoria_silver_v3', 'artoria_silver_v4'].includes(look.outfit) ? 1 : 0.88;
         p.setXYZ(i, p.getX(i) * 0.94, 0.075 + (p.getY(i) - 0.075) * height, p.getZ(i) * 0.94);
       }
       geo.computeVertexNormals(); replace(mesh, geo);

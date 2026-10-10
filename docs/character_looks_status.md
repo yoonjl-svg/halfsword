@@ -4,6 +4,12 @@
 커밋 `94178db`, 푸시 완료. PR: GitHub 새 PR 화면(가지 `…/pm-character-looks`)
 (요청받지 않아 아직 만들지 않음).
 
+## round 18 — 사장님 답(10/11 00:4x): 새 인물 넷 외형 3차
+
+- 자세한 것: `docs/characters/looks_polish3_2026-10-11.md` (가지 `…/looks-polish3-2q36ha`).
+- 사미라 → 이름 '마야 라토르'(id samira 그대로) + v4 어깨 틈 메움 · 김씨 v3(v1 옷 + 밝힌 먹빛 + 흰 천 칼) · 투야나 v4(늘어져 흔들리는 긴 추트키) · 아르토리아 v3(망토 주름).
+- 옛 판: `?look=samira:v3` · `?look=renji:v2` · `?look=eira:v3` · `?look=artoria:v2`. 물리·방어구 판정 그대로.
+
 ## round 17 — 사장님 답(10/10 23:5x · 10/11 00:1x): 새 인물 넷 다듬기 2차
 
 - 자세한 것: `docs/characters/looks_polish_2026-10-10.md` (가지 `…/looks-polish-2q36ha`).

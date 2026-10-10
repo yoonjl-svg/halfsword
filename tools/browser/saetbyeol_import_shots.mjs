@@ -81,7 +81,7 @@ for (const c of CASES) {
   watch(page, errors);
   await page.goto(`${base}/test.html`, { waitUntil: 'networkidle' });
   const txt = await page.evaluate(() => document.body.innerText);
-  const want = ['간장', '막야', '사인검', '아이스', '아르토리아', '사미라 미르자', '김씨', '에이라 린드'];
+  const want = ['간장', '막야', '사인검', '아이스', '아르토리아', '마야 라토르', '김씨', '투야나 니콜라예바'];
   const missing = want.filter((w) => !txt.includes(w));
   if (missing.length) errors.push('test.html 에 없음: ' + missing.join(', '));
   await page.screenshot({ path: `${out}/saetbyeol_import_test_list.png`, fullPage: true });

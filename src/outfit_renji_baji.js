@@ -7,13 +7,16 @@
 //  그대로: 보라 허리띠·늘어진 띠 끝 · 목에 두른 보라 천 · 삿갓(투구 그룹, look.helmet 'kasa' 판정 그대로) · 머리 · 봇짐·멜빵·짚신 · 넓은 소매.
 //  먹빛 한 단계만: 웃옷 0x17191e → 0x20232a, 바지(하카마 남색 0x202637) → 0x283044. 소매 끝 검붉은 물들임은 같은 비율로 밝힘.
 //  겉모습만: 대표 메쉬는 같은 메쉬·같은 종류·같은 치수 값으로 꼴만 바꾼다 — 몸·질량·관절·충돌체·손 구체 그대로. +X 앞 · +Y 위 · +Z 오른쪽.
-export function createRenjiBajiOutfit(h, v1) {
+//  v3 (opts.hakama, 사장님 10/11 00:4x '김씨 원래가 낫다. 이전 턴의 모습에 칼만 흰 천으로 감싸. 밝힌 먹빛은 유지.'): v1 옷 그대로(하카마·넓은 소매) +
+//   v2 의 밝힌 먹빛(웃옷·소매) + 허리 칼을 바랜 흰 무명(0xd6cfbf)으로 싸서 끈으로 묶음. 바지·행전 판(v2)은 ?look=renji:v2 로만 남김.
+export function createRenjiBajiOutfit(h, v1, opts = {}) {
+  const HAKAMA = !!opts.hakama;
   const { THREE, bake, cyl, ball, addMerged, CLOTH, artoriaCloth, taperedTube, reshapeMain } = h;
   const INK_V1 = 0x17191e, NAVY_V1 = 0x202637;
   const INK = 0x20232a, FOLD = 0x2a2930, CUFF = 0x2d2930;
   const BAJI = 0x283044; // 바지
   const HAENGJEON = 0xa39a88, HJ_TIE = 0x5c5446, HJ_FOLD = 0x8a816f; // 행전(무명) · 끈 · 접힌 금
-  const SWORD_WRAP = 0x6f6758, SWORD_CORD = 0x3f362c; // 칼 싸개(닳은 무명, 보라와 겹치지 않는 회갈색) · 끈
+  const SWORD_WRAP = HAKAMA ? 0xd6cfbf : 0x6f6758, SWORD_CORD = 0x3f362c; // 칼 싸개: v2 닳은 무명 회갈 · v3 바랜 흰 무명 · 끈
   const cloth = { ...CLOTH, metalness: 0, roughness: 0.96 };
   const DS = { ...cloth, side: THREE.DoubleSide };
   const layer = (g) => artoriaCloth(g, 'renji-cloth');
@@ -52,6 +55,7 @@ export function createRenjiBajiOutfit(h, v1) {
   // ── 골반: v1 그대로(보라 띠 끝·허리 칼) — 하카마 윗단만 감추고 웃옷 아랫단(엉덩이까지)을 둔다 ──
   function pelvis(g, look, d) {
     v1.pelvis(g, look, d);
+    if (HAKAMA) { lighten(g); wrapSword(g); return; } // v3: 하카마 윗단 그대로
     g.traverse((n) => { if (n.isMesh && n !== g.children[0] && n.material?.color?.getHex() === NAVY_V1) n.visible = false; }); // 하카마 윗단(주름 통·앞판)
     lighten(g);
     const main = g.children[0]; main.material.color.setHex(BAJI);
@@ -117,8 +121,8 @@ export function createRenjiBajiOutfit(h, v1) {
     head: v1.head, chest: wrapV1(v1.chest), abdomen: wrapV1(v1.abdomen), pelvis,
     uarmS: wrapV1(v1.uarmS), uarmO: wrapV1(v1.uarmO),
     farmS: wrapV1(v1.farmS), farmO: wrapV1(v1.farmO),
-    thighF: thigh, thighB: thigh,
-    shinF: shin, shinB: shin,
+    thighF: HAKAMA ? v1.thighF : thigh, thighB: HAKAMA ? v1.thighB : thigh,
+    shinF: HAKAMA ? v1.shinF : shin, shinB: HAKAMA ? v1.shinB : shin,
     footF: v1.footF, footB: v1.footB,
   };
 }
