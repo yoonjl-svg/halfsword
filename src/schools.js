@@ -951,7 +951,7 @@ TRADITIONS.chinese.parryCover = { highR: CHINESE_PARRY_SLOTS.geojeong, highC: CH
 //  (전: 표두세 자리에 이름만 擧鼎 — 칼을 세운 표두세 몸꼴이라 원전 꼴과 어긋났다) — docs/strike/school_slots2_2026-10-11.md
 TRADITIONS.chinese.pose = { ...GERMAN.pose, cover: CHINESE_PARRY_SLOTS.geojeong.pad };
 TRADITIONS.chinese.parryCover = { ...TRADITIONS.chinese.parryCover, down: CHINESE_PARRY_SLOTS.geojeong };
-// [선택 판 — 사장님 답 뒤 병합] highR(오른 위 사선 zornhauL) = 표두세 자리 그대로(덧씌우지 않음): 擧鼎格 은 원문에서 「鼎格上殺」 — 위에서 곧게 떨어지는 칼의 짝이라 highC(oberhau)에 맞고
+// highR(오른 위 사선 zornhauL) = 표두세 자리 그대로(덧씌우지 않음 — 사장님 10/11 03:3x 승인, 넓은 점검 docs/strike/chinese_parry_study_2026-10-11.md: 고정 4 608 판 highR 표두 60 대 거정 51 %): 擧鼎格 은 원문에서 「鼎格上殺」 — 위에서 곧게 떨어지는 칼의 짝이라 highC(oberhau)에 맞고
 //  (막음 1 → 2~3/4), 오른 위 사선은 가로 든 칼 옆으로 미끄러져 4 → 2~3/4 로 줄었다. 칼을 세운 표두세(豹頭勢 — 무비지 쪽157/0571)가 그 사선을 받는 꼴로 [해석] — docs/strike/school_slots2_2026-10-11.md
 {
   const { highR, ...rest } = TRADITIONS.chinese.parryCover;
