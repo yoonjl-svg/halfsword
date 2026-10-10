@@ -555,6 +555,9 @@ export class AI {
     this.phase = 'ready';
     if (th && this.respond(th, d)) return;
     if (this.pendingPassive?.left != null && this.passivePending(s, d)) return; // 미룬 패시브 (물러남 끝 斂翅 · 간격 밖에서 굴려 나온 돌려 물러남)
+    // 이베리아 길목 지키기 준비 (10/11 v6): 준비된 동안은 먼저 치지도(기회·패시브) 낌새에 앞질러 치거나 물러나지도(preThreat·seize) 않고 칼끝 거리 선을 지킨다 —
+    //  48 판 첫 측정: 이 걸쇠 없이는 상대가 칼끝 거리에 들자마자 내가 먼저 공격을 열어 준비가 풀려 창 0 번. 들어오는 칼(위 respond)은 그대로 받는다. 자세 손은 update 끝에서 옆 자세로 덮는다
+    if (this.gilArm?.armed) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
@@ -592,6 +595,7 @@ export class AI {
     m += (1 - this.me.vigor) * 0.3; // 다쳐서 힘이 빠지면 더 조심스럽게 선다
     if (!this.me.armed) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
+    if (this.gilArm?.armed && !this.chasing) return Math.max(this.foeReach + Math.max(0.08, m), this.M.reach + 0.08); // 이베리아 길목 준비 (10/11): 내 칼끝 거리 선 밖에 선다 (여유 0.08 = 위 최소 여유 그대로)
     return (this.chasing ? this.M.contact : this.foeReach) + Math.max(0.08, m);
   }
 

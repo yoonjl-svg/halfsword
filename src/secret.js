@@ -165,8 +165,9 @@ function insideEvent(s0, c, d0, ex) {
 }
 
 /**
- * 이베리아 길목 지키기 사건 (10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — v6): 준비(ex.armed — IaiArm 'gilmok' 셈)된 채, 상대 가슴이 내 칼끝 거리(reach) 경계를
- *  **다가오며 넘어 들어오는 그 순간** — 지난 스텝 거리 ≥ reach 이고 이번 스텝 거리 < reach, 그리고 상대 가슴이 나 쪽으로 SECRET.iberianInsideClosing m/s 넘게 다가옴
+ * 이베리아 길목 지키기 사건 (10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — v6): 준비(ex.armed — IaiArm 'gilmok' 셈, 칼끝 거리 reach 밖에서 쌓임)된 채, 상대 가슴이 내 칼끝 거리
+ *  (ex.reach)를 **다가오며 넘어 들어오는 그 순간** — 지난 스텝 거리 ≥ reach 이고 이번 스텝 거리 < reach, 그리고 상대 가슴이 나 쪽으로 SECRET.iberianInsideClosing m/s 넘게 다가옴.
+ *  (경계를 맞닿기 contact 로 옮겨 봤다: 48 판에서 상대 롱소드 AI 가 reach 와 contact 사이(1.85~1.96 m)에 서서 유예 0.5 s 안에 contact 를 넘지 않아 창 0 — 되돌림)
  *  (v4·v5 '호 안쪽'의 다가옴 문턱 0.3 을 그대로 다시 씀 — 새 값 아님. 내가 걸어 들어가 경계를 넘은 것은 상대가 '길목에 들어온' 것이 아니다).
  *  안에 머무는 것은 세지 않는다(v5 '호 안쪽'은 상태라 맞붙은 거리 내내 창이 열렸다). ex = { reach, dt, st, armed } — st.gilPrevD 에 지난 거리를 적는다. 굴림 없음
  *  근거: 피 단Ⅶ 「This rule serves to deter people in a street and impede them moving from one end to another」 [원문 영역] — 몬탄테는 자리(길목)를 지키는 칼 [해석]
@@ -176,7 +177,8 @@ function gilmokEvent(s0, c, d0, ex) {
   const st = ex.st;
   const prev = st.gilPrevD;
   st.gilPrevD = d0;
-  if (!ex.armed || prev == null || !(prev >= ex.reach && d0 < ex.reach)) return { on: false, ctx: null };
+  const B = ex.reach;
+  if (!ex.armed || prev == null || !(prev >= B && d0 < B)) return { on: false, ctx: null };
   const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0);
   return closing > SECRET.iberianInsideClosing ? { on: true, ctx: { ev: 'gilmok', closing } } : { on: false, ctx: null };
 }
@@ -362,9 +364,13 @@ export function gilmokSeq(hand, D) {
   };
   const side = P(D.side, s);
   if (Math.hypot(hand[0] - side[0], hand[1] - side[1]) > 0.15) push({ name: s > 0 ? 'gilmokWindR' : 'gilmokWindL', nameKo: s > 0 ? '가로 탈류로 감음' : '가로 레베스로 감음', path: [side], gate: { side: s, behind: true }, open: 'H' });
-  // 문 past: 칼끝이 반대쪽으로 건너갈 때까지(최대 FLOW_GATE_MAX) 손은 끝 자리를 당기고 힘 창을 쥔다 — 옆 자세에서 칼이 몸 뒤로 감겨 있어 칼끝이 손보다 0.3 s 늦게 앞으로 온다(탐침:
-  //  문이 없으면 손 목표가 먼저 끝나 칼이 경직 동안에야 건너갔다)
-  push({ name: s > 0 ? 'gilmokTalho' : 'gilmokRevez', nameKo: s > 0 ? '길목 둘러 베기 (talho orizontal cingido)' : '길목 둘러 베기 (revez orizontal cingido)', path: [D.cutMid.slice(), P(D.side, -s)], gate: { past: -s }, open: s > 0 ? 'UL' : 'UR' }); // 빈틈 = zwerch · zwerchL
+  // 한 칼을 두 토막으로 (길은 그대로 — cutMid → 반대쪽 옆 자세): 옆 자세에서 칼이 몸 뒤로 감겨 있어 칼끝이 손보다 늦게 온다. 탐침(tools/sim/iberian_flow_probe.mjs):
+  //   ① 문이 없으면 손 목표가 먼저 끝나 칼이 경직 동안에야 건너갔다 ② 끝에만 문(반대쪽)을 두면 손이 가운데를 0.03 s 에 지나 칼끝이 앞으로 오지 않고 머리 위 뒤로 돌아 건너갔다(칼끝 앞 ≤ 0.06 m · 상처 0).
+  //   → 가운데 점에 문 front(칼끝이 가슴보다 앞) — 칼끝이 앞으로 돌아 나온 뒤 반대쪽으로 둘러 벤다(문 past: 칼끝이 반대쪽). 문마다 최대 FLOW_GATE_MAX, 맞히면 곧장 (v5 문과 같음)
+  const nm = s > 0 ? 'gilmokTalho' : 'gilmokRevez';
+  const ko = s > 0 ? '길목 둘러 베기 (talho orizontal cingido)' : '길목 둘러 베기 (revez orizontal cingido)';
+  push({ name: nm, nameKo: ko, path: [D.cutMid.slice()], gate: { front: true }, open: s > 0 ? 'UL' : 'UR', ...(D.step ? { step: { ...D.step } } : {}) }); // 빈틈 = zwerch · zwerchL · 걸음(D.step)은 첫 토막에
+  push({ name: nm + 'End', nameKo: ko, path: [P(D.side, -s)], gate: { past: -s }, open: s > 0 ? 'UL' : 'UR' });
   return seq;
 }
 
@@ -395,6 +401,7 @@ export function flowGate(f, g) {
   if (g.cross != null) return lat * g.cross > 0 && ry > 0;
   if (g.behind) return fw < 0 && (g.side == null || lat * g.side > 0);
   if (g.past != null) return lat * g.past > 0; // v6 길목 한 칼: 칼끝이 반대쪽(past)으로 건너갔다
+  if (g.front) return fw > 0; // v6 길목 한 칼 가운데: 칼끝이 가슴보다 앞으로 돌아 나왔다
   return true;
 }
 

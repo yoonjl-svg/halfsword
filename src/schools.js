@@ -589,7 +589,8 @@ const IBERIAN_SECRET = {
 //  일본이 '때(상대의 공격)'를 노린다면 이베리아는 '자리(내 칼끝 선)'를 지킨다:
 //   ① 준비: 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.gilmokArmTime 초(유예 gilmokArmGrace) 머물고 공격·막기 중이 아님 (secret.js IaiArm 같은 셈). AI 는 그동안 칼을 몸 옆으로
 //      감아 뒤로 둔 옆 자세(가로 탈류 G.sideR · 가로 레베스 G.sideL — 자세표 '옆 자세'·'왼쪽 옆 자세', 피 단Ⅺ·복Ⅺ · 고 규칙 9)를 잡는다. 플레이어는 '길목 지키기 준비' 표시만
-//   ② 순간: 상대 가슴이 그 경계를 다가오며 넘어 들어오는 그 스텝 (secret.js gilmokEvent — 안에 머무는 것은 세지 않는다). 창을 열면(AI 는 내면) 준비가 풀린다 — 한 번 준비에 한 번 기회
+//   ② 순간: 상대 가슴이 그 경계(reach)를 다가오며 넘어 들어오는 그 스텝 (secret.js gilmokEvent — 안에 머무는 것은 세지 않는다). 창을 열면(AI 는 내면) 준비가 풀린다 — 한 번 준비에 한 번 기회.
+//      AI 는 준비된 동안 먼저 치지 않고 칼끝 거리 선 밖에 선다(ai.js watch·holdDist — 길목을 지킴)
 //   ③ 한 칼: 감아 둔 쪽에서 몸 가운데 높이로 반대쪽 끝까지 둘러 벰 (secret.js gilmokSeq — 길은 v5 마지막 칼 = zwerch·zwerchL 줄, 물리 서보 길) · 힘 창·보조 힘 = 이베리아 값 재사용
 //   ④ 끝나면 경직 SECRET.stiff.iberian 0.5 s 그대로 (맞히면 결정타 SECRET.hitMul 그대로). v4 의 '막히면 밀어냄'(iberianShove)은 넣지 않았다 — 실패 대가를 지우지 않게
 //  근거: 피 단Ⅶ 「This rule serves to deter people in a street and impede them moving from one end to another」·복Ⅶ [원문 영역] — 몬탄테는 자리를 지키는 칼 [해석] ·
@@ -605,7 +606,9 @@ const IBERIAN_SECRET_GILMOK = {
     power: 'iberianPower', // 1.6 — v5·10/9 이베리아 값 재사용 (새 값 아님)
     strength: 'iberianStrength', // 1.5 — 같음
     side: { 1: G.sideR, '-1': G.sideL }, // 감아 둔 칼 = 옆 자세 (이베리아 자세표 '옆 자세' 가로 탈류 · '왼쪽 옆 자세' 가로 레베스)
-    cutMid: [0.0, 0.1], // 둘러 베는 칼의 가운데 점 = zwerch·zwerchL 길 그대로 (몸 가운데 높이 — v5 cutMid 와 같음)
+    // 둘러 베는 칼의 가운데 점: 지시는 v5 cutMid [0, 0.1](= zwerch 길). 탐침(맞닿기에서 낸 8 번): [0, 0.1] 이면 칼끝이 상대 머리 위(내 가슴 +1.2~1.5 m)로 지나 맞힘 1/8 →
+    //  [0, −0.1] 맞힘 8/8(아픔 눈) — 손을 0.2 낮춤 [추정 · 사장님 확인 전 — 확인표 873]. 끝 점(반대쪽 옆 자세)은 그대로
+    cutMid: [0.0, -0.1],
   },
   src: '피게이레두 1651 단Ⅶ·복Ⅶ(길목을 막는 규칙)·단Ⅺ·복Ⅺ(가로를 몸에 감아 둘러 벰) [원문·원문 영역] · 고디뉴 1599 규칙 9(몸 가운데 높이) [원문 독일어 역] · 준비 → 경계 넘음 순간 → 한 칼 틀 [해석] · 수 [추정] · 이름 가칭',
 };

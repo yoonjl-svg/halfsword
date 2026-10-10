@@ -17,6 +17,8 @@ const _f = new THREE.Vector3();
 const agg = {};
 let fired = 0, landed = 0, stiffN = 0;
 const tot = [];
+if (process.env.STEPF) { const { TRADITIONS } = await import("../../src/schools.js"); TRADITIONS.iberian.secret.do.step = +process.env.STEPF ? { lat: 0, fwd: +process.env.STEPF, when: "strike" } : null; } // STEPF=m: 길목 한 칼 걸음 시험
+if (process.env.CUTMID) { const { TRADITIONS } = await import("../../src/schools.js"); TRADITIONS.iberian.secret.do.cutMid = process.env.CUTMID.split(",").map(Number); } // CUTMID=x,y: 길목 한 칼 가운데 점 시험
 for (let seed = 1; seed <= N; seed++) {
   const PL = WHO === 'player';
   const G = PL ? newRound({ walls: false, weapon: id, weapon2: 'longsword', seed, gap: +(process.env.GAP || 1.9) }) : newRound({ walls: false, weapon: 'longsword', weapon2: id, seed });
@@ -34,9 +36,10 @@ for (let seed = 1; seed <= N; seed++) {
   let woundsE = 0;
   G.onWound = (att, vic, r) => { if (att === me && t0 != null) { woundsE++; rec.push({ wound: r.energy, zone: r.zone, t: G.t - t0 }); } };
   for (let i = 0; i < 120 * 14; i++) {
+    if (process.env.WALK && !PL) G.player.move.set(0, t0 == null && armT >= ARM ? +process.env.WALK : 0); // WALK=v: 준비가 찬 뒤 상대(입력 없는 롱소드 몸)가 앞으로 걸어 든다 (스틱 v)
     G.step();
-    const near = t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < ai.M.reach - 0.1 && ai.secretFree() && !ai.secretRun;
-    if (t0 == null && (armT > 0 || near) && GIL && ARM > 0 && armT < ARM) { armT += DT; continue; }
+    const near = t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < (process.env.FIRE === "contact" ? ai.M.contact : ai.M.reach - 0.1) && ai.secretFree() && !ai.secretRun;
+    if (t0 == null && (armT > 0 || near || (process.env.WALK && G.t > 2.6)) && GIL && ARM > 0 && armT < ARM) { armT += DT; continue; }
     if (near) {
       if (CMP) { if (ai.startAttack(CMP, 'test', { noFeint: true })) { t0 = G.t; fired++; } }
       else if (PL ? me.skill.secret({ S: ai.secret, ctx: null, dir: DIR }) : ai.secretGo(ai.secret)) { t0 = G.t; fired++; }
@@ -49,7 +52,7 @@ for (let seed = 1; seed <= N; seed++) {
       const tp = me.tipPrev ?? me.bladePoint(1, new THREE.Vector3());
       const rx = tp.x - c.x, ry = tp.y - c.y, rz = tp.z - c.z;
       rec.push({ t: G.t - t0, v: me.tipVel.length(), x: me.side * (rx * _r.x + rz * _r.z), y: ry, fw: rx * _f.x + rz * _f.z, n: sr ? (sr.stage === 'stiff' ? 'stiff' : ai.tech?.name) : null, ph: ai.phase, pl: ai.path.length, hx: me.handOffset.x, hy: me.handOffset.y, ax: me.skill.aim.x, ay: me.skill.aim.y });
-      if (process.env.TRACE == seed && rec.length % 4 === 1) { const q = rec[rec.length - 1]; console.log(`  t ${q.t.toFixed(3)} ${q.n} pl ${q.pl} 손 [${q.hx.toFixed(2)},${q.hy.toFixed(2)}] aim [${q.ax.toFixed(2)},${q.ay.toFixed(2)}] 칼끝 옆 ${q.x.toFixed(2)} 위 ${q.y.toFixed(2)} 앞 ${q.fw.toFixed(2)} v ${q.v.toFixed(1)}`); }
+      if (process.env.TRACE == seed && rec.length % 4 === 1) { const q = rec[rec.length - 1]; console.log(`  t ${q.t.toFixed(3)} ${q.n} pl ${q.pl} 손 [${q.hx.toFixed(2)},${q.hy.toFixed(2)}] aim [${q.ax.toFixed(2)},${q.ay.toFixed(2)}] 칼끝 옆 ${q.x.toFixed(2)} 위 ${q.y.toFixed(2)} 앞 ${q.fw.toFixed(2)} v ${q.v.toFixed(1)} 거리 ${me.foeDistance().toFixed(2)}`); }
       if (sr?.stage === 'stiff' && !run) { run = 'stiff'; stiffN++; }
       if (!sr) break;
     }
