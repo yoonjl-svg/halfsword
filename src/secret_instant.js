@@ -807,8 +807,12 @@ export function startLunge(f) {
 //   가운데 = 손 앞 0.5 · 위 0.1 · 칼날 수평(앞 0°, 높이 −3°) — 팔을 앞으로 뻗어 칼끝이 상대 몸통 높이로 지난다 ·
 //   끝 = 손을 반대쪽 앞으로 다 뻗고 칼날 반대쪽 75° · 몸 돌림(칼 든 어깨가 앞).
 //   1차(덧씌우기 없음 — 자세 지도의 패드 길만): 옆 자세에서 칼이 몸 뒤로 감겨 칼끝이 앞 1.3 m · 가슴 +0.8~1.5 m(상대 머리 위)에서 그쳐 48 판 맞힘 0.
+//  감는 토막(gilmokWind — 플레이어가 옆 자세 밖에서 창을 받은 때)에는 덧씌우지 않는다 (10/11 v6 4차): 3차에 자세표 옆 자세를 덧씌웠더니 플레이어 칼이 2/2 헛쳤다 —
+//   덧씌우기를 빼면 2/2 넓적다리에 닿는다(2차와 같음). 남은 낮음의 원인은 감음 토막의 떨어지는 힘(손을 미리 옆 자세에 두면 칼끝이 가슴 +0.1~0.3 m — 탐침)
 //  seg: 'mid'(가운데 토막) | 'end'(끝 토막·따라 지나감·경직) | null(끔 — 0.12 s 에 걷음, iaiReadyPose 끄는 빠르기와 같음) · s: +1 오른쪽에서 탈류 · −1 왼쪽에서 레베스
 // ─────────────────────────────────────────────────────────────
+const _gh = new THREE.Vector3();
+const _gt = new THREE.Vector3();
 export function gilmokCutPose(f, seg, s, dt) {
   const th = f.skill.thrustPose;
   if (iaiBusy(f) || f.skill.tap || f.skill.pom) {
@@ -827,7 +831,18 @@ export function gilmokCutPose(f, seg, s, dt) {
   th.hand[0] = P.hand[0];
   th.hand[1] = P.hand[1];
   th.hand[2] = -s * P.hand[2];
-  const D = dirOf(-s * P.yaw, P.el);
+  // 높이 각 (10/11 v6 3차 — 디렉터 '칼끝이 가운데 선에서 상대 몸통 높이를 지나게'): 발도 길의 고정 각(el) 대신 그 순간의 칼자루 높이·칼 길이로 계산 —
+  //  sin(el) = (상대 가슴 몸체 높이 − 내 칼자루 높이) / (칼자루 → 칼끝 길이). 기하에서 나오는 값(고르는 수 없음). 2차(고정 −3°): 칼끝이 츠바이핸더 가슴 −0.13~+0.35 ·
+  //  북부 대공의 검 +0.53~0.65 m 로 뜨고, 플레이어는 넓적다리·정강이로 지났다. 상대가 없으면 발도 길 각 그대로
+  let el = P.el;
+  const foe = f.foe;
+  if (foe?.bodies?.chest) {
+    const hp = f.bladePoint(0, _gh);
+    const tp = f.bladePoint(1, _gt);
+    const L = hp.distanceTo(tp);
+    if (L > 0) el = Math.asin(THREE.MathUtils.clamp((foe.bodies.chest.translation().y - hp.y) / L, -1, 1)) / D2R;
+  }
+  const D = dirOf(-s * P.yaw, el);
   th.dir[0] = D.x;
   th.dir[1] = D.y;
   th.dir[2] = D.z;

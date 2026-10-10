@@ -655,6 +655,7 @@ export const SECRET = {
   // 이베리아 길목 지키기 준비 (10/11 v6 — secret.js IaiArm 같은 셈, 열쇠만 다름) [사장님 확인 전 — 확인표 870·871]: 상대 가슴이 내 칼끝 거리(reach) 밖에 이 초 이상 계속 머물고
   //  내가 공격·막기 중이 아니면 준비(armed). 시작값은 일본 iaiArmTime·iaiArmGrace 와 같은 수 — 일본 값을 바꿔도 따라 바뀌지 않게 새 열쇠
   gilmokArmTime: 1.5,
+  gilmokEdge: 'reach', // 길목 경계 선 (10/11 v6 4차 — 스위치, 사장님 답 기다림): 'reach' = 무기 간격 끝 · 'cut' = 한 칼의 칼끝 앞 거리 + 디딤 (secret.js gilmokLine) — 시뮬 with_config.mjs SECRET.gilmokEdge=cut
   gilmokArmGrace: 0.5, // 경계 안으로 들어와도 준비가 이 초 동안은 남는다 (일본 iaiArmGrace 와 같은 뜻)
   // 발도 길 열쇠 (몸 기준 — 가슴 원점, x 앞 · y 위 · z 칼 든 쪽, 칼날 가로 각 yaw ° 앞 0 → 칼 든 쪽 +, 높이 각 el °)
   iaiPath: {

@@ -30,7 +30,7 @@ import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { gilmokLine, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -425,7 +425,7 @@ export class AI {
     //   유지(깜빡이지 않게 — 재사용). 감는 모습이 곧 길목의 예고다. 쪽 = 낮은 자세의 쪽(아래 레베스면 왼쪽, 아니면 오른쪽 — 피 단Ⅰ 탈류부터)
     if (this.gilArm) {
       const was = this.gilArm.armed;
-      this.gilArm.tick(dt, d > this.M.reach && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun);
+      this.gilArm.tick(dt, d > gilmokLine(me, this.M.reach, this.secret.do) && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun);
       const A = this.gilArm.armed && (this.mode === 'watch' || this.mode === 'withdraw');
       if (this.gilArm.armed && !was) {
         const LOW = ['wechselR', 'wechselL', 'alber'];
@@ -615,7 +615,7 @@ export class AI {
     m += (1 - this.me.vigor) * 0.3; // 다쳐서 힘이 빠지면 더 조심스럽게 선다
     if (!this.me.armed) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
-    if (this.gilArm?.armed && !this.chasing) return Math.max(this.foeReach + Math.max(0.08, m), this.M.reach + 0.08); // 이베리아 길목 준비 (10/11): 내 칼끝 거리 선 밖에 선다 (여유 0.08 = 위 최소 여유 그대로)
+    if (this.gilArm?.armed && !this.chasing) return Math.max(this.foeReach + Math.max(0.08, m), gilmokLine(this.me, this.M.reach, this.secret.do) + 0.08); // 이베리아 길목 준비 (10/11): 내 칼끝 거리 선 밖에 선다 (여유 0.08 = 위 최소 여유 그대로)
     return (this.chasing ? this.M.contact : this.foeReach) + Math.max(0.08, m);
   }
 
@@ -1636,7 +1636,7 @@ export class AI {
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { reach: this.M.reach, dt, st: E, armed: !!this.gilArm?.armed }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비)
+    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { reach: this.gilArm ? gilmokLine(this.me, this.M.reach, S.do) : this.M.reach, dt, st: E, armed: !!this.gilArm?.armed }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비)
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
@@ -1714,7 +1714,7 @@ export class AI {
       //  수마다 flowInto(이음새 없이 — 앞 수 끝에서 곧장). 칼이 지나가던 공격(follow)을 이어받으면 그 칼의 맞힘·막힘을 여기서 센다(afterStrike 를 건너뜀)
       if (this.mode === 'attack' && this.phase === 'follow') this.secretTally();
       const v = this.me.skill.aimVel;
-      run.queue = montanteFlowSeq([this.me.handOffset.x, this.me.handOffset.y], [v.x, v.y], D);
+      run.queue = montanteFlowSeq([this.me.handOffset.x, this.me.handOffset.y], [v.x, v.y], D, this.me); // f: 길목 디딤을 그 순간 간격으로 (secret.js gilmokSeq)
       ok = this.secretNext();
     } else if (D.path && SECRET.iberianSweep) {
       // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝 + 머리 위 큰 고리 + 사선 — 이번 스텝 끝부터 SECRET.iberianSweepTime 동안 (secret_instant.js, 발도와 같은 틀)

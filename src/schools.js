@@ -628,7 +628,7 @@ const IBERIAN_SECRET_GILMOK = {
     cutMid: [0.0, -0.1],
     // 한 칼과 함께 디딤 (10/11 v6 2차 — 디렉터 '뻗음 + 높이 + 디딤을 함께'): 앞 0.3 m = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용 (첫 토막에 — secret.js gilmokSeq) ·
     //  피 복Ⅶ 「in each step you must give a blow」 [원문 영역]. 팔 뻗음·몸통 높이는 덧씌우기 자세(secret_instant.js gilmokCutPose — 발도 길 SECRET.iaiPath 의 M·E 재사용)
-    step: { lat: 0, fwd: 0.3, when: 'strike' },
+    step: { lat: 0, fwd: 0.3, when: 'strike' }, // 10/11 3차: 간격에 맞춘 디딤(max: 0.6 을 두면 (상대 가슴 거리 − 칼끝 앞 거리)를 [0.3, 0.6] 로 자름 — secret.js gilmokStep)은 48 판 맞힘 츠바이핸더 23 → 19 % · 북부 대공의 검 8 → 2 % 로 나아지지 않아 끔
   },
   src: '피게이레두 1651 단Ⅶ·복Ⅶ(길목을 막는 규칙)·단Ⅺ·복Ⅺ(가로를 몸에 감아 둘러 벰) [원문·원문 영역] · 고디뉴 1599 규칙 9(몸 가운데 높이) [원문 독일어 역] · 준비 → 경계 넘음 순간 → 한 칼 틀 [해석] · 수 [추정] · 이름 가칭',
 };

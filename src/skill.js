@@ -470,7 +470,7 @@ export class Skill {
       // 이베리아 멈추지 않는 흐름 (10/11 — schools.js IBERIAN_SECRET): 비기를 낸 끌기의 방향(o.dir — main.js, 톡이면 걸러진 손 목표 속도)을 이어받아
       //  지금 손에서 곧장 번갈아 올려베기 → 머리 위 돌려 큰 한 칼. 칼 길·빠르기는 비기가 맡고 발(스틱)은 플레이어 것 (AI 와 같은 수 — secret.js montanteFlowSeq)
       const dir = o.dir && Math.hypot(o.dir[0], o.dir[1]) > 1e-6 ? o.dir : [this.aimVel.x, this.aimVel.y];
-      for (const t of montanteFlowSeq(hand, dir, D)) run.queue.push(t);
+      for (const t of montanteFlowSeq(hand, dir, D, f)) run.queue.push(t);
       run.flow = true;
     } else if (D.path && SECRET.iberianSweep) {
       // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝(스틱이 옆을 누르면 그쪽, 아니면 오른쪽) + 머리 위 큰 고리 + 사선 — AI 와 같은 실행부
