@@ -44,7 +44,8 @@
 // ─────────────────────────────────────────────────────────────
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS, HIGH_GUARDS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
-import { schoolMeasure } from './weapon_measured.js'; // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
+import { schoolMeasure } from './weapon_measured.js';
+import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.table) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
 
 /** 기술 목록을 복사하면서 기술별 reach(닿는 거리 보정, m)를 무기에 맞게 바꾼다 (표에 없는 기술은 롱소드 값 그대로) */
 const withReach = (tech, reach) => tech.map((t) => (t.name in reach ? { ...t, reach: reach[t.name] } : t));
@@ -163,13 +164,13 @@ const CHINESE_NAMES = {
 const IBERIAN_NAMES = {
   '지붕 (Vom Tag)': { name: '머리 위 (altibaxo)', desc: '칼을 이마 위로 들고 칼끝은 뒤로 · 곧게 내려친다', src: '피 단Ⅸ·복ⅩⅤ altibaxo · 고디뉴 fol.113r de arriba abajo · 자리 [해석]' },
   '어깨 지붕 (Vom Tag)': { name: '탈류 준비 (talho)', desc: '칼을 오른 어깨에 메어 칼끝은 뒤로 · 오른쪽 위에서 비스듬히 내려벤다', src: '피 단Ⅲ talho · 고디뉴 fol.113r tajo · 자리 [해석]' },
-  '황소 (Ochs)': { name: '귀 앞 겨눔 (orelha direyta)', desc: '칼자루를 오른 귀 앞에, 칼끝은 앞 · 여기서 앞으로 탈류', src: '피 복Ⅱ' },
+  '황소 (Ochs)': { name: '귀 앞 겨눔 (orelha direyta)', desc: '칼자루를 오른 귀 앞 높이에, 칼끝은 오른 대각으로 들어 · 올려 벤 레베스가 멈추는 자리', src: '피 복Ⅱ·복ⅩⅤ (10/10 자세표 고증)' },
   '긴 자세 (Langort)': { name: '곧은 자세 (postura recta)', desc: '칼을 얼굴 앞 가운데에 곧게 · 베기마다 여기 멈춘다', src: '피 단Ⅰ·단Ⅱ·복Ⅶ · 손 높이는 [해석]' },
   '옆 자세': { name: '가로 탈류 (talho orizontal)', desc: '칼을 오른쪽에 가로로 눕힌다 · 가로로 벤다', src: '피 단Ⅺ' },
   '쟁기 (Pflug)': { name: '비낀 자세 (postura obtusa)', desc: '오른손을 허리띠 앞에, 칼은 오른 대각으로 비껴 · 찌르기를 받아 탈류로 쳐낸다', src: '피 단ⅩⅣ·복ⅩⅣ' },
   '바꿈 (Wechsel)': { name: '아래 탈류 (talho de baxo)', desc: '칼끝을 오른쪽 아래로 · 아래에서 위로 탈류를 올린다', src: '피 단Ⅰ·단Ⅸ · 자리 [해석]' },
   '옆 지킴 (Nebenhut)': { name: '뒤 탈류 (talho por detras)', desc: '칼을 오른 허리 뒤로 숨긴다 · 뒤에서 앞으로 탈류', src: '피 단Ⅰ·단Ⅲ · 자리 [해석] (대안 고디뉴 fol.117v tajo rastero)' },
-  '바보 (Alber)': { name: '칼끝 땅에 (ponta no chão)', desc: '칼끝을 앞 땅으로 · 첫 규칙이 여기서 시작한다', src: '피 단Ⅰ' },
+  '바보 (Alber)': { name: '칼끝 땅에 (ponta no chão)', desc: '몸을 곧게, 칼끝을 앞 땅으로 · 모든 규칙이 여기서 시작해 여기로 끝난다', src: '피 단Ⅰ' },
   '왼쪽 어깨 지붕': { name: '레베스 준비 (revez)', desc: '머리 위로 넘긴 칼을 왼 어깨에 떨군다 · 왼쪽에서 감아 벤다', src: '피 복Ⅱ revez cingido · 고디뉴 fol.113r' },
   '왼쪽 황소': { name: '왼 높이 비낌 (linha obtusa)', desc: '칼을 머리 앞 왼쪽 높이에 비껴 멈춘다', src: '피 복ⅩⅤ · 칼끝 방향 [해석]' },
   '왼쪽 옆 자세': { name: '가로 레베스 (revez orizontal)', desc: '칼을 왼쪽에 가로로 · 왼쪽에서 가로로 벤다', src: '피 단Ⅺ' },
@@ -313,19 +314,49 @@ const ITALIAN_UNIQUE = [
   { name: 'inquartata', nameKo: 'inquartata (비껴서며 찌르기)', from: G.pflugR, path: [[0.06, -0.1], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 0.63, fast: true, step: { lat: 0.3, fwd: 0.15, when: 'approach' }, src: 'Capo Ferro 1610 inquartata(몸을 상대 칼 줄에서 빼며 찌름) [원전 2차 — 원문 쪽 못 찾음] · 길은 공용 쟁기 찌르기 · 수 [추정]' },
 ];
 
+// ── 이베리아 몬탄테 고증 (10/10 사장님 '레이피어 고증하듯이 이베리아도 고증해. 대검 크기나 무게 중심 때문에 롱소드와는 많이 달랐을 것' —
+//    docs/motion/iberian_montante_2026-10-10.md). 원전: 피게이레두 Memorial da Prattica do Montante 1651 (단순·복합 규칙 32, Myers·Hick 영역 — Wiktenauer) ·
+//    고디뉴 Arte de Esgrima 1599 몬탄테 장(독일어 역 — Wiktenauer 'Arte de Esgrima (MS PBA 58)'). 수는 모두 [추정], 사장님 확인 전(확인표 660~)
+// 간 보는 자세: 원전이 기다리는/멈추는 자리로 적은 것만. w = 자세 고르기 가중치 곱(ai.js pickGuard — 칸 없는 유파는 1, 전과 같음)
+//  · 곧은 자세(긴 자세 자리): 베기마다 얼굴 앞에 멈춘다 — '얼굴 앞' 14 번(피 단Ⅰ·단Ⅱ·복Ⅰ·복Ⅶ…) → 가장 잦게
+//  · 높이 비낌 좌우(황소 자리): 올려 벤 탈류·레베스가 멈추는 자리(피 복ⅩⅤ)·오른 귀 앞(피 복Ⅱ)
+//  · 비낀 자세 좌우(쟁기 자리): 찌르기·던지는 무기·자루 무기를 받는 자리(피 단ⅩⅣ·복ⅩⅣ)
+//  · 칼끝 땅에(바보 자리): 모든 규칙의 시작·끝(피 단Ⅰ) — 수련 자세라 적게
+//  뺀 것: 지붕·어깨 지붕(상단·팔상 — 원전에 기다리는 자세로 없음. 피게이레두 탈류는 '뒤에서(por detras)' 감아 치는 지나는 자리) · 바꿈(원전 없음)
+const IBERIAN_GUARDS = [
+  { name: 'langort', pad: G.langort, threat: 0.9, high: 0.5, low: 0.3, w: 2.0 },
+  { name: 'ochsR', pad: G.ochsR, threat: 0.7, high: 0.6, low: 0.2, w: 1.2 },
+  { name: 'ochsL', pad: G.ochsL, threat: 0.6, high: 0.6, low: 0.2, w: 1.0 },
+  { name: 'pflugR', pad: G.pflugR, threat: 0.6, high: 0.2, low: 0.8, w: 0.8 },
+  { name: 'pflugL', pad: G.pflugL, threat: 0.5, high: 0.2, low: 0.8, w: 0.6 },
+  { name: 'alber', pad: G.alber, threat: 0.1, high: 0, low: 1, w: 0.4 },
+];
+// 기술 가중치 (applySchoolArt — 앞무게 꾸러미 base 에 곱한다. 고유 동작은 받지 않는다):
+//  피게이레두 32 규칙의 낱말 셈 — talho 91 · revez 80 · 찌르기(estocada) 42(준비·찌름 두 번 셈 → 실제 ≈ 21) · altibaxo 9 · 가로(orizontal) 5 · '아래에서 위로' 18.
+//  → 탈류:레베스 ≈ 1.1:1 (지금 오른쪽이 두 배) · 올려베기(talho/revez de baxo para sima)가 원전의 바탕 베기 · 찌르기 ≈ 베기의 1/8 —
+//   찌르기는 「over the right arm」(탈류 끝)·「over the left arm」(레베스 끝)·「pommel on the right shoulder」 — 모두 높은 손에서(황소 자리 찌르기).
+//  고디뉴 1599: 상대가 하나(방패 아님)면 「nur mit einem Stich … Fingernägel oben … unten」 찌르기로 지켜도 된다(규칙 6 주) · 몬탄테끼리는 탈류·레베스 없이 찌르기만(장 1 주) — 맞대결은 찌르기를 더 믿는다
+const IBERIAN_TECHK = {
+  'heavy:*': { zornhauL: 1.4, unterhau: 1.3, unterhauL: 2.2, zwerch: 2.5, zwerchL: 2.5, stichOchs: 8, stichOchsL: 8, stichPflug: 1.5, stichPflugL: 1.5, stichAlber: 0.5 },
+};
+
 // 이베리아 (몬탄테 — 츠바이핸더. 탈류→레베스(규칙 1)는 frames.js NEW_TECH.heavy 에 그대로 둔다: 옮기면 무유파 참치가 잃는다).
-//  앞무게 꾸러미의 실제 base(zornhau 1.96·oberhau 1.12·talhoReves 1.1)에 맞춤. 고디뉴 1599 사본은 손글씨라 못 읽었다 → 몬탄테 규칙 요약 [원전 2차]
+//  앞무게 꾸러미의 실제 base(zornhau 1.96·oberhau 1.12·talhoReves 1.1)에 맞춤. 10/10 고증: 피게이레두 영역·고디뉴 몬탄테 장 독일어 역을 읽고 src 를 원문 자리로 고침(길·수는 그대로)
 const IBERIAN_UNIQUE = [
   // 둥근 베기(redondo·molinete): 머리 위로 칼을 돌려 가로베기를 두 번 — 오른 어깨 → 오른 옆 → 왼 옆 → 머리 위로 넘겨 → 오른 옆 → 왼 옆. 둘러싸였을 때 사방을 쓴다
   //  시작은 오른 어깨 지붕(앞무게가 간 보는 높은 자세) — 처음(오른 옆 자세 시작·base 0.6)엔 혼자 켜면 48 판에 한 번도 안 골랐다. 어깨로 옮겨도 0 →
   //  같은 자리의 분노의 베기(1.96)에 밀린 것이라 base 를 같은 몬탄테 여러 칼 길 talhoReves 와 같은 1.1 로 (10/9 잼)
-  { name: 'redondo', nameKo: 'redondo (머리 위 돌려 베기)', from: G.tagR, path: [G.sideR, [0.0, 0.1], G.sideL, [-0.3, 0.45], [0.3, 0.45], G.sideR, [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0.05, base: 1.1, chain: 2, src: '몬탄테 규칙의 머리 위 돌려 베기(redondo·molinete) — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 길 [해석] · 수 [추정]' },
+  { name: 'redondo', nameKo: 'redondo (머리 위 돌려 베기)', from: G.tagR, path: [G.sideR, [0.0, 0.1], G.sideL, [-0.3, 0.45], [0.3, 0.45], G.sideR, [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0.05, base: 1.1, chain: 2, src: '피 복Ⅱ 「pass it over the head and behind the shoulders, such that it falls over the left arm to give a circling revez」 · 고디뉴 규칙 4·5 탈류가 「läuft durch bis er über deinem Kopf dreht」 [원문 영역] · 길 [해석] · 수 [추정]' },
   // 내려 올려 베기(altibaixo): 지붕에서 곧게 내려베고(altabaixo) 같은 줄로 곧장 되올려 다시 지붕 — 흐름이 다음 내려베기로 잇는다
-  { name: 'altibaixo', nameKo: 'altibaixo (위아래 사슬)', from: G.tag, path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], open: 'H', kind: 'cut', reach: 0, base: 0.9, presses: true, chain: 2, src: '몬탄테 altabaixo(위에서 아래로) + 되올림 — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 되올림 [해석] · 수 [추정]' },
+  { name: 'altibaixo', nameKo: 'altibaixo (위아래 사슬)', from: G.tag, path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], open: 'H', kind: 'cut', reach: 0, base: 0.9, presses: true, chain: 2, src: '피 단Ⅸ 「letting the montante fall to the same right side you will give on that side an altibaxo」·복Ⅰ·복ⅩⅤ(altibaxo 뒤 곧장 올려 벰) [원문 영역] · 되올림 [해석] · 수 [추정]' },
   // 바퀴로 받기: 맞받아 베기를 탈류→레베스(8자)로 — 몬탄테는 받는 칼도 멈추지 않고 돌린다. 맞받아치기 목록 꼴(같은 거리면 앞 이름이 이긴다)
   { name: 'rodaCounter', counter: { highR: ['talhoReves', 'zornhauL', 'oberhau', 'zornhau'], default: ['talhoReves', 'zornhau', 'oberhau', 'zornhauL'] }, src: '몬탄테 규칙 1 탈류·레베스를 받는 자리에서 [원전 2차] · 맞받아치기에 씀 [해석]' },
   // 돌아 들며 탈류(talho rodeado): 오른쪽 앞으로 둥글게 돌아 딛으며 오른 어깨에서 사선 내려베기 — 길 = 공용 zornhau(talho), base = 앞무게 꾸러미 zornhau 1.96
-  { name: 'talhoRodeado', nameKo: 'talho rodeado (둥근 걸음 탈류)', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '몬탄테 규칙의 둥근 걸음(원을 그리며 나아감) — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 이름 붙임 [해석] · 수 [추정]' },
+  // 규칙 Ⅰ 올려 베기 둘(talho e revez de baxo para sima): 「a talho from behind, from low to high … stopping with the montante … in front of the face. From there you will remove
+  //  the montante to give a revez cutting from behind with the other edge … also from low to high」(피 단Ⅰ — 「whoever performs it well will be able to perform them all」).
+  //  오른 아래 → 올려 탈류 → 왼 높이 비낌(피 복ⅩⅤ 멈춤 자리) → 왼쪽으로 떨궈(「let fall the montante to the left」 피 복Ⅰ) → 왼 아래 → 올려 레베스 → 오른 높이 비낌. chain 2 = 흐름이 이어 돈다
+  { name: 'talhoRevezBaixo', nameKo: 'talho e revez de baxo (규칙 Ⅰ 올려 베기)', from: G.wechselR, path: [[0.04, -0.08], G.ochsL, [-0.5, 0.0], G.wechselL, [-0.04, -0.08], G.ochsR], open: 'LL', kind: 'cut', reach: 0, base: 0.9, chain: 2, src: '피게이레두 1651 단순 규칙 Ⅰ·복합 규칙 Ⅰ·Ⅶ(「always from low to high, alternating talho and revez」) [원문 영역] · 길의 수 [추정]' },
+  { name: 'talhoRodeado', nameKo: 'talho rodeado (둥근 걸음 탈류)', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
@@ -534,7 +565,8 @@ export const TRADITIONS = {
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
   italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES, temper: ITALIAN_TEMPER, gait: ITALIAN_GAIT, secret: ITALIAN_SECRET },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, rest: null, names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, secret: IBERIAN_SECRET },
+  // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(table — guards.js IBERIAN_TABLE, 앞무게 틀 위)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, table: { heavy: IBERIAN_TABLE }, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, secret: IBERIAN_SECRET },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
@@ -562,7 +594,7 @@ const ITALIAN_OFFARM = { guard: [0.35, 0.18, 0.12], lunge: [0.3, 0.36, 0.04] };
 TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
 
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
-export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬
+export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].table, sword_art.js) — false = 앞무게 틀 표 그대로
 
 /**
  * 무기 → 유파 기본값 (틀·방식에서 자동). 스펙에 school 이 있으면 그것 (모노호시자오 japanese · 청강검 chinese).

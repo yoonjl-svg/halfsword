@@ -226,10 +226,11 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   const hasBase = 'base' in opts;
   const libBase = hasBase ? opts.base : baseTable ?? null;
   const skip = w.motionSkip ?? [];
-  const libTable = lib ? buildFrameTable(frame, style, skip, libBase) : null;
-  const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
   const pkgId = 'school' in opts ? null : persona?.school;
   const tradition = (pkgId != null ? schoolOf(pkgId).tradition : null) ?? traditionOf(w);
+  const tradTable = SCHOOL_ART.table ? TRADITIONS[tradition]?.table?.[frame] ?? null : null; // 유파 자세표 (10/10 이베리아 몬탄테 고증 — 없는 유파는 null = 전과 같음)
+  const libTable = lib ? buildFrameTable(frame, style, skip, libBase, tradTable) : null;
+  const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
   const names = schoolNames(guardNames(table), tradition, frame, style);
   const art = {
     id: w.id ?? null,
@@ -263,7 +264,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   lazy(art, 'motion', () => ({
     frame,
     style,
-    table: lib ? libTable : buildFrameTable(frame, style, skip, libBase),
+    table: lib ? libTable : buildFrameTable(frame, style, skip, libBase, tradTable),
     tech: styleTech(style, frame),
     feints: styleFeints(style, frame),
     watch: frameWatchGuards(frame),

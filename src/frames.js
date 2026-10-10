@@ -131,9 +131,10 @@ export function frameTableWithCovers(frame, style = null) {
 /** 몸 틀(+싸움 방식)의 자세표 만들기 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로).
  *  base: 바탕 표 — 본판(10/8)은 검객이 이미 쥔 무기별 표(동작 PM 10/1 한손 찌르기·세이버·두손 찌르기 표)를 넘겨 그 위에 덮는다.
  *  없으면 옛 바탕(한손·총 = 세이버 표, 그 밖 = 롱소드 표 — 무기 PM 이 96판을 잰 조건).
+ *  over: 유파 자세표(같은 열쇠 — 자리 칸을 통째로 바꾼다. 이베리아 몬탄테 guards.js IBERIAN_TABLE). 없으면 전과 같음
  *  고르는 곳은 sword_art.js resolveSwordArt 한 곳 (옛 이름 frameTable 은 motion_library.js 에서 그것을 거쳐 이 함수를 부른다) */
-export function buildFrameTable(frame, style = null, skip = [], base = null) {
-  const o = { ...(frame === 'pole' ? POLE_GUARDS : FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}) };
+export function buildFrameTable(frame, style = null, skip = [], base = null, over = null) {
+  const o = { ...(frame === 'pole' ? POLE_GUARDS : FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}), ...(over ?? {}) }; // over = 유파 자세표 (10/10 이베리아 — schools.js TRADITIONS[유파].table[몸 틀], sword_art.js 가 넘긴다. 없으면 전과 같음)
   for (const k of MOTION.skip) delete o[k];
   for (const k of skip) delete o[k];
   if (!Object.keys(o).length && (base || frame !== 'one')) return null;
