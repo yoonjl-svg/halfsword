@@ -42,7 +42,7 @@
 //   tradition 이 꾸러미의 유파 전통 열쇠 (TRADITIONS) — 10/8 더함, 읽기만(AI 동작은 읽지 않는다)
 //  유파 자료 칸(names·techNames·techK·rest·counterArt·unique·spare·passives·temper·secret)은 꾸러미에 들어가지 않는다(pack 이 고르는 열쇠 밖) — sword_art.js 가 TRADITIONS 에서 직접 읽는다
 // ─────────────────────────────────────────────────────────────
-import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS, HIGH_GUARDS } from './ai_techniques.js';
+import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
 import { schoolMeasure } from './weapon_measured.js';
 import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.guardTable) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
@@ -99,23 +99,80 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //              (guards.js applySchoolGuardTable — sword_art.js resolveSwordArt 가 부름: 플레이어·AI 같은 표). 간 보는 자세 목록은 guards(칸 w = 빈도 곱), HUD 이름은 names
 //  techK·counterArt·unique 는 SKILL.schoolArt(기본 1 — 사장님 10/9 01:5x '스위치 켜') 일 때 sword_art.js 가 입힌다 (0 = 10/9 01:49 까지의 판). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
 
-// 일본 (카타나 가족: 지금 모노호시자오 = 앞무게 틀, 뒤에 올 카타나 = 두손 보통 틀). 이름 14 자리 — 원전 이름 + 자리 근거 7, 원전 이름 + 자리 [해석] 3, 원전 없음 4(쉬운 말)
-const JAPANESE_NAMES = {
-  '지붕 (Vom Tag)': { name: '조단', desc: '두 손을 머리 위로, 왼발 앞 · 위에서 한 칼로 내려벤다', src: '검도형 p06/5·p22 十一 · 오륜서 R15/23 表2' },
-  '어깨 지붕 (Vom Tag)': { name: '핫소', desc: '조단에서 오른 주먹을 오른 어깨까지 내린 꼴 · 날은 상대 쪽, 왼발 앞', src: '검도형 p10/9' },
-  '황소 (Ochs)': { name: '머리 옆 겨눔', desc: '칼자루를 머리 오른쪽에, 칼끝은 상대 얼굴', src: '원전 없음 (霞 [전승] 은 후보로만)' },
-  '긴 자세 (Langort)': { name: '추단', desc: '칼끝을 상대 얼굴 한가운데에, 손은 몸 가운데 · 쉴 자세 안 A', src: '검도형 p02/1·p06/5·p32 · 오륜서 R14/21·R15/22' },
-  '옆 자세': { name: '미기와키', desc: '칼을 오른쪽에 가로로 눕힌다 · 받아서 조단으로 올려 곧장 내려벤다(오모테 5)', src: '오륜서 R14/21·R16/24 表5' },
-  '쟁기 (Pflug)': { name: '세이간', desc: '칼자루를 오른 허리에, 칼끝은 상대 얼굴 · 손이 낮은 추단 · 쉴 자세 안 B', src: '검도형 p15/14 [이름] · 자리 [해석]' },
-  '바꿈 (Wechsel)': { name: '우게조', desc: '칼끝을 오른쪽 아래로 감춘다 · 여기서 올려벤다(키리아게)', src: '무도 권2 p144/136' },
-  '옆 지킴 (Nebenhut)': { name: '와키가마에', desc: '왼 반신, 칼을 오른 옆에 두고 칼끝은 뒤로 · 칼 길이를 감춘다', src: '검도형 p11/10' },
-  '바보 (Alber)': { name: '게단', desc: '칼끝을 상대 무릎 높이로 내린다 · 아래에서 상대 손을 친다', src: '검도형 p04/3·p15/14 · 오륜서 R15/23 表3' },
-  '왼쪽 어깨 지붕': { name: '왼 어깨 (핫소 거울)', desc: '칼을 왼 어깨에 세움 · 왼쪽 사선 베기 준비', src: '원전 없음 (左八相 [전승] 은 후보로만)' },
-  '왼쪽 황소': { name: '왼 머리 옆 겨눔', desc: '칼자루를 머리 왼쪽에, 칼끝은 상대 얼굴', src: '원전 없음' },
-  '왼쪽 옆 자세': { name: '히다리와키', desc: '칼을 왼쪽에 가로로 · 아래에서 상대 손을 치고 어깨 위로 비스듬히 벤다(오모테 4)', src: '오륜서 R14/21·R16/24 表4' },
-  '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '칼자루를 왼 허리에, 칼끝은 상대 얼굴', src: '원전 없음' },
-  '왼쪽 바꿈': { name: '사조', desc: '칼끝을 왼쪽 아래로 · 케사가 끝나는 자리, 여기서 갸쿠케사로 되올린다', src: '무도 권2 p068/60 (읽기 담당 표)' },
+// 일본 자세표 (10/10 사장님 '유파마다 자기 자세·동작을 원전대로' · 13:4x '규칙을 풀어' · 14:0x 세 갈래 — docs/motion/japanese_guards_2026-10-10.md).
+//  guardTable 꼴 (guards.js applySchoolGuardTable — sword_art.js 가 무기 틀 표를 고른 뒤 적힌 자리만 덮는다: 플레이어·AI 같은 표, 모노호시자오(앞무게)·우치가타나(두손 보통) 둘 다).
+//  hand [앞, 위, 칼 든 쪽] m (가슴 중심) · blade [올려본 각, 옆 각] ° (옆 + = 칼 든 쪽) · yaw ° (+ = 칼 든 어깨가 뒤 = 왼발 앞) · pitch ° (+ 숙임) · drop m.
+//  원전 다섯 묶음: 검도형 = 日本剣道形解説書(쪽 = 그림 번호 pNN, docs/motion/schools/kendo_kata.md) · 오륜서 = 原本五輪書 1939 水の巻(인쇄 쪽, gorin_no_sho.md) ·
+//   무도 권2 = 武藝圖譜通志 권2 왜검·교전(muyedobotongji_vol2.md). 원전은 손 높이·각을 수로 적지 않는다(검도형 '불확실 1') → 수는 모두 [해석]/[추정].
+//  몸: 오륜서 身のなり p18 「腰のかゞまざる樣に腹をはり」(허리를 굽히지 않는다) → 숙임(pitch) 0 안팎(롱소드 표 3~12°). 칼은 길이가 달라도 꼴이 같아(검도형은 칼 길이를 가리지 않는다) 한 표를 두 틀에 같이 쓴다.
+//  14 자리 판정: 원전 자세 10(조단·핫소·추단·미기와키·와키가마에·게단·히다리와키 + 받는 꼴 셋 히키나가시·우케나가시·사사에) · 원전 이름 + 꼴 [해석] 3(히라세이간·우게조·사조) ·
+//   원전 없음 1(왼 어깨 — 왼 케사가 지나는 자리, 간 보는 자세에서 뺌). 롱소드 고유 황소 둘은 오륜서·검도형의 '받는 꼴'로 바꿨다(패드 자리는 기술 길의 열쇠라 그대로).
+//  값은 모두 사장님 확인 전 (확인표 720~)
+const JAPANESE_GUARDTABLE = {
+  // 조단(諸手左上段): 두 손을 이마 위로 — 「両腕の間から相手の全体が見えるぐらいまで上げ、剣先が両拳より下がらないように」 · 왼발 앞(打太刀 「左足から」) → 칼 든 어깨가 뒤
+  '지붕 (Vom Tag)': { name: '조단', desc: '두 손을 이마 위로 들고 칼끝은 뒤로 비스듬히, 왼발 앞 · 상대가 치려는 박자에 한 칼로 내려벤다', hand: [0.18, 0.55, 0.06], blade: [100, 0], pelvisYaw: 25, chestYaw: 30, pitch: 0, drop: 0.05, src: '검도형 p22 留意点 十一·p06 1본 打太刀 「諸手左上段」 [원문] · 오륜서 p23 表2 「上段に構へ、敵打ちかくる所、一度に敵を打つ」 [원문] · 수 = 롱소드 지붕 값(칼 100° — 칼끝이 두 주먹보다 위, 모노호시자오 motionSkip 과 같은 값. 105°·손 낮춤은 48 판 −8 %p) [해석]' },
+  // 핫소: 「諸手左上段の構えから、そのまま右拳を右肩のあたりまで下ろした形」 · 날밑은 입 높이, 입에서 주먹 하나 · 「刃先は相手に向ける」 · 「左足を踏み出し」 · 「やや半身」은 지움(부록 9) → 몸을 크게 틀지 않는다
+  '어깨 지붕 (Vom Tag)': { name: '핫소', desc: '조단에서 오른 주먹을 오른 어깨까지 내린 꼴 · 날밑은 입 높이, 칼은 서고 날은 상대 쪽, 왼발 앞', hand: [0.12, 0.22, 0.2], blade: [70, 165], pelvisYaw: 35, chestYaw: 45, pitch: 2, drop: 0.06, src: '검도형 p10/9 八相の構え 본문·p33 부록9 [원문] · 수 = 앞무게 틀 핫소 값(frames.js — 칼 70° 세움, 날밑 입 아래) [해석]' },
+  // 히키나가시(오른 어깨로 끌어 흘려 받기): 「我太刀にて敵の目をつく樣にして、敵の太刀を我が右の肩へ引流して受くべし」 — 칼끝은 상대 눈, 손은 오른 어깨 앞.
+  //  같은 자리가 오륜서 表4 올려베기의 끝(「我肩の上へ筋かひにきるべし」 — 키리아게가 여기서 끝난다) · 막기 자리(highR)가 이 꼴이 된다. 전 '머리 옆 겨눔'(황소 = 롱소드 고유)
+  '황소 (Ochs)': { name: '히키나가시', desc: '칼끝으로 상대 눈을 찌를 듯 겨누며 손을 오른 어깨 앞으로 끌어 상대 칼을 흘려 받는다 · 왼쪽에서 올려벤 칼이 끝나는 자리', hand: [0.28, 0.29, 0.22], blade: [-15, -12], pelvisYaw: 25, chestYaw: 30, pitch: 0, drop: 0.07, src: '오륜서 p32-33 「三つの受」 (1) [원문] · p24 表4 [원문] · 수 = 바탕 자리 값(손 오른 어깨 앞·칼끝 눈 높이 — 이 자리는 올려베기 끝·찌르기 시작이라 손 옮김은 48 판 −8 %p·넘어짐 +6) [해석]' },
+  // 추단(中段 = 晴眼): 「剣先を顔の中心(両眼の間)につける」 · 「中段は構への本意也…大將の座也」 · 각 본이 「相中段」에서 시작해 돌아온다 · 오른발 앞(2본 「右足から」), 몸은 바로(반신 아님).
+  //  손은 배꼽 앞 — 롱소드 긴 자세처럼 팔을 다 뻗지 않는다(초안 §4 '뻗은 中段' 고침). 찌르기 다섯 길의 끝 자리이자 쉴 자세(rest 'langort')
+  '긴 자세 (Langort)': { name: '추단', desc: '칼끝을 상대 두 눈 사이에 두고 두 손은 배꼽 앞 · 오른발 앞, 몸은 바로 · 자세의 본뜻, 쉴 자세', hand: [0.36, -0.12, 0.03], blade: [15, 0], pelvisYaw: -5, chestYaw: -5, pitch: 0, drop: 0.06, src: '검도형 p05·p33 부록 (3)(4)·p02 명칭 통일 [원문] · 오륜서 p21 「五方の構」·p22 表1 「太刀先を敵の顏へ付けて」 [원문] · 수 [해석]' },
+  // 미기와키(右脇): 「我右の肩に横に構へて、敵打ちかくる所の位をうけ、我太刀の下の横より筋かひに、上段に振り上げ、上より直ちにきるべし」 — 어깨 높이에 칼을 가로로(롱소드 옆 자세는 가슴 높이)
+  '옆 자세': { name: '미기와키', desc: '칼을 오른 어깨 높이에 가로로 눕힌다 · 받아서 조단으로 올려 곧장 내려벤다(오모테 5) · 위나 옆이 막힌 곳의 자세', hand: [0.14, 0.16, 0.24], blade: [0, 115], pelvisYaw: 30, chestYaw: 40, pitch: 0, drop: 0.06, src: '오륜서 p21 「右のわきに構ゆる事」·p24-25 表5 [원문] · 수 [해석]' },
+  // 히라세이간(平正眼): 검도형 부록에 5본 仕太刀 칼날 방향의 한 설로 나온다 — 손을 조금 오른쪽·낮게, 칼끝은 상대 왼눈, 칼날을 오른쪽으로 비튼 낮은 추단 [해석].
+  //  오륜서 有構無構 「上段も時に隨ひ少し下る心なれば中段となり…下段もをりにふれ少し上ぐれば中段となる」 — 추단에서 조금 내린 꼴. 전 '세이간'(쟁기 값 그대로 — 손 허리, 칼끝 30° 위)
+  '쟁기 (Pflug)': { name: '히라세이간', desc: '추단에서 손을 조금 오른쪽·아래로 내리고 칼끝은 상대 왼눈 · 칼날을 오른쪽으로 비튼다', hand: [0.32, -0.22, 0.1], blade: [20, -8], pelvisYaw: 5, chestYaw: 5, pitch: 0, drop: 0.06, src: '검도형 p33 부록10 9.(1) 「平正眼」 [원문 — 한 설] · 오륜서 p25-26 有構無構 [원문] · 자리·수 [해석]' },
+  // 우게조(右下藏): 교전 「垂劍一打右下藏」·유피류 「右下藏右手右脚戴劍」 — 친 칼을 오른쪽 아래로 감추었다 다시 머리 위로 인다. 감춤이라 칼끝을 롱소드 바꿈(40°)보다 뒤로
+  '바꿈 (Wechsel)': { name: '우게조', desc: '친 칼을 오른쪽 아래로 감춘다 · 여기서 올려베거나(키리아게) 다시 머리 위로 든다', hand: [0.22, -0.32, 0.18], blade: [-40, 60], pelvisYaw: 15, chestYaw: 20, pitch: 2, drop: 0.07, src: '무도 권2 p144/136 교전·p110/102 유피류 [원문 이름] · 꼴·수 [해석]' },
+  // 와키가마에: 「右足を後ろにし、左半身となり、刀を右脇にとり剣先を後ろにし、刃先は右斜め下…剣先は下段の構えより少し下げた位置…刀身が相手から見えないように」
+  '옆 지킴 (Nebenhut)': { name: '와키가마에', desc: '오른발을 뒤로 왼 반신, 칼을 오른 옆에 두고 칼끝은 뒤 아래로 · 칼 길이를 상대에게 감춘다', hand: [0.05, -0.25, 0.2], blade: [-30, 165], pelvisYaw: 45, chestYaw: 55, pitch: 0, drop: 0.07, src: '검도형 p11/10 脇構え 본문 [원문] · 4본 仕太刀 시작·7본 残心 · 수 [해석]' },
+  // 게단: 칼끝을 「相手の左膝頭から三ないし六センチ下」로 · 오륜서 表3 「太刀を下段に持ち、提げたる心にて、敵の打ちかく所を下より手をはる」 — 손은 추단 그대로, 칼끝만 내린다.
+  //  1.7 m 앞 상대 무릎으로 셈하면 약 −22° (롱소드 바보 −40°는 땅을 겨눔) · 3본 「右足から」
+  '바보 (Alber)': { name: '게단', desc: '손은 추단 그대로 두고 칼끝을 상대 무릎 조금 아래로 내린다 · 아래에서 상대 손을 친다', hand: [0.34, -0.2, 0.03], blade: [-22, 4], pelvisYaw: -5, chestYaw: -5, pitch: 0, drop: 0.06, src: '검도형 p04/3 注2·p08 3본 「相下段」 [원문] · 오륜서 p23-24 表3 [원문] · 각 [해석: 무릎까지 셈]' },
+  // 왼 어깨: 원전 없음(검도형 핫소는 오른쪽만, 左八相은 [전승]) — 왼 케사(zornhauL·히라키기리)가 지나는 자리라 표에는 둔다(핫소 거울), 간 보는 자세에서는 뺀다
+  '왼쪽 어깨 지붕': { name: '왼 어깨 (자세 아님)', desc: '칼을 왼 어깨에 세운다 · 왼쪽 사선 베기가 지나는 자리 (원전 자세 아님)', hand: [0.16, 0.22, -0.12], blade: [70, -165], pelvisYaw: -30, chestYaw: -40, pitch: 2, drop: 0.06, src: '원전 없음 — 앞무게 틀 왼 핫소 값 그대로(핫소 거울) [추정]' },
+  // 우케나가시(왼쪽): 소태도 2본 「左足を左斜め前に、右足をその後ろに」 몸을 왼쪽으로 열며 「右鎬で受け流し」 — 상대 칼을 왼쪽 위에서 칼 옆면으로 흘린다.
+  //  같은 자리가 오른 아래에서 올려벤(갸쿠케사) 칼의 끝. 전 '왼 머리 옆 겨눔'(왼쪽 황소 = 롱소드 고유)
+  '왼쪽 황소': { name: '우케나가시', desc: '몸을 왼쪽으로 열며 칼을 왼쪽 위로 들어 상대 칼을 칼 옆면으로 흘린다 · 오른쪽 아래에서 올려벤 칼이 끝나는 자리', hand: [0.28, 0.29, -0.12], blade: [-15, 12], pelvisYaw: -20, chestYaw: -30, pitch: 0, drop: 0.07, src: '검도형 p17 소태도 2본 [원문] · 꼴·수 [해석] — 손·칼끝은 바탕 자리 값(히키나가시 거울)' },
+  // 히다리와키(左脇): 「左の脇に横に構へて、敵の打ちかくる手を下よりはるべし…我肩の上へ筋かひにきるべし」 — 왼 옆구리에 가로로(오른쪽과 달리 어깨가 아니라 옆구리)
+  '왼쪽 옆 자세': { name: '히다리와키', desc: '칼을 왼 옆구리에 가로로 · 아래에서 상대 손을 치고 내 어깨 위로 비스듬히 벤다(오모테 4)', hand: [0.18, 0.0, -0.16], blade: [0, -115], pelvisYaw: -30, chestYaw: -40, pitch: 0, drop: 0.06, src: '오륜서 p21·p24 表4 [원문] · 수 [해석]' },
+  // 사사에(받침): 7본 仕太刀 「左足から体をひく」と同時に 「諸手を伸ばし」 칼끝을 왼쪽 아래로 비스듬히, 「物打の鎬で打太刀の刀を支える」 — 찌르기를 받는 꼴. 막기 자리(thrust)가 이 꼴이 된다. 전 '왼 허리 겨눔'(원전 없음)
+  '왼쪽 쟁기': { name: '사사에', desc: '두 손을 뻗어 칼끝을 왼쪽 아래로 비스듬히 · 칼 옆면으로 상대 찌르기를 받친다 (7본)', hand: [0.42, -0.14, -0.02], blade: [-10, -20], pelvisYaw: -10, chestYaw: -10, pitch: 0, drop: 0.06, src: '검도형 p13~14 7본 仕太刀 [원문] · 수 [해석]' },
+  // 사조(左藏): 토유류 「右手左脚左藏」·교전 「甲乙各左藏」 — 왼쪽으로 감춤 · 케사가 끝나는 자리(1본 「打ち下ろした剣先は下段の構えよりやや低くなる」)
+  '왼쪽 바꿈': { name: '사조', desc: '칼끝을 왼쪽 아래로 감춘다 · 케사가 끝나는 자리, 여기서 갸쿠케사로 되올린다', hand: [0.3, -0.3, -0.08], blade: [-40, -45], pelvisYaw: -20, chestYaw: -25, pitch: 3, drop: 0.07, src: '무도 권2 p068/60 토유류·p134/126 교전 [원문 이름, 읽기 담당 표] · 검도형 p06 1본 注1 · 꼴·수 [해석]' },
 };
+const JAPANESE_NAMES = Object.fromEntries(Object.entries(JAPANESE_GUARDTABLE).map(([k, v]) => [k, { name: v.name, desc: v.desc, src: v.src }])); // HUD 자세 이름 (sword_art.js schoolNames)
+// 일본 간 보는 자세 (10/10 — 전 HIGH_GUARDS: 지붕·어깨 지붕 + 황소 둘(롱소드 고유), 수는 롱소드 WATCH_GUARDS 값).
+//  원전이 기다리는 자세: 오륜서 p21 다섯(上·中·下·右脇·左脇) 가운데 「中段は構への本意也…大將の座也」, 좌우 옆은 「うへのつまりて脇一方つまりたる所などの構へ」(막힌 곳 몫).
+//   검도형 일곱 본의 시작 자세(두 사람 14): 추단 6 · 조단 3 · 게단 3 · 핫소 1 · 와키가마에 1 (p06~p14, 원본 설명 p15 「相上段·相中段·相下段·陰陽の構·上段晴眼·晴眼下段·相晴眼」).
+//  w = 자세 빈도 곱 (ai.js pickGuard — 이탈리아·이베리아와 같은 칸). threat·high·low 는 WATCH_GUARDS 와 같은 뜻 — 게단은 칼끝이 상대 무릎을 겨눠 threat 를 조금(롱소드 바보 0.1 → 0.3).
+//  '박자와 한 칼'(사장님 '그래 좋아'): 추단에서 상대 박자를 보고, 조단·핫소에서 한 칼로 내려벤다 — 높은 자세 둘은 그대로 두 번째·세 번째로 잦다. 값은 사장님 확인 전 (확인표 720~)
+const JAPANESE_WATCH = [
+  { name: 'langort', pad: G.langort, threat: 1, high: 0.4, low: 0.3, w: 2.5 }, // 추단 — 자세의 본뜻 (오륜서 p21 · 검도형 6/14)
+  { name: 'tag', pad: G.tag, threat: 0.1, high: 1, low: 0, w: 2 }, // 조단 (검도형 1본·5본 · 오륜서 表2)
+  { name: 'alber', pad: G.alber, threat: 0.3, high: 0, low: 1, w: 1 }, // 게단 (검도형 3본·6본 · 오륜서 表3)
+  { name: 'tagR', pad: G.tagR, threat: 0.1, high: 1, low: 0, w: 1 }, // 핫소 (검도형 4본 打太刀)
+  { name: 'nebenR', pad: G.nebenR, threat: 0, high: 0.6, low: 0.4, w: 0.5 }, // 와키가마에 (검도형 4본 仕太刀 — 칼 길이를 감춘다)
+  { name: 'sideR', pad: G.sideR, threat: 0.1, high: 0.5, low: 0.3, w: 0.25 }, // 미기와키 (오륜서 表5 — 막힌 곳 몫)
+  { name: 'sideL', pad: G.sideL, threat: 0.1, high: 0.3, low: 0.5, w: 0.25 }, // 히다리와키 (오륜서 表4 — 막힌 곳 몫)
+];
+// 일본 속임수 (10/10 — 전 독일 FEINTS 넷: 그중 '오른쪽→왼쪽'·'왼쪽→오른쪽'은 칼을 머리 위로 넘기는 Umschlagen = 롱소드 고유).
+//  남김(기본): '위→다리'·'찌르기→베기'. 바꿈: Umschlagen 둘 → 오륜서의 두 박자 치기 둘 (가짜 길·바꿀 길 꼴은 FEINTS 와 같다 — fake·at·then·open)
+//   갓토츠(喝咄): 「下より敵を突くやうに上げて返して打事…喝と突きあげ、咄と打込む」「切先上ぐる心にして」 — 게단에서 찌르듯 칼끝을 올렸다가 되돌려 머리를 내려친다
+//   니노코시(二のこしの拍子): 「我打つと見せて、敵の張手たむる所を打ち、ひきてたむる所を打つ」 — 내려치는 척, 상대가 받으려다 힘이 풀리는 순간 다시 들어 내려친다
+//  수(at·길 점)는 [추정], 사장님 확인 전 (확인표 720~)
+const JAPANESE_FEINTS = [
+  ...FEINTS.filter((f) => f.name === '위→다리' || f.name === '찌르기→베기'),
+  { name: '갓토츠', fake: 'stichAlber', at: 0.6, then: [[0.0, 0.32], G.tag, [0.0, 0.14], G.alber], open: 'H', src: '오륜서 水の巻 p34 「喝咄」 [원문] · 길·수 [추정]' },
+  { name: '니노코시', fake: 'oberhau', at: 0.4, then: [[0.0, 0.36], G.tag, [0.0, 0.14], G.alber], open: 'H', src: '오륜서 水の巻 p26-27 「二のこしの拍子」 [원문] · 길·수 [추정]' },
+];
+// 일본 막기 자리 (10/10): 패드 자리(물리로 부딪쳐 고른 롱소드 값)는 그대로 두고, 그 자리의 몸꼴이 위 자세표의 원전 받는 꼴이 된다 —
+//  highR 황소 자리 = 히키나가시(오륜서 三つの受 1, 전 '황소 막기' = 롱소드 고유) · highC 긴 자세 자리 = 추단에서 스리아게(검도형 5본 「左鎬で摺り上げ」) ·
+//  thrust 왼쪽 쟁기 자리 = 사사에(검도형 7본 「物打の鎬で…支える」) · lowR 쟁기 자리 = 히라세이간 · lowL 왼쪽 쟁기 자리 = 사사에 · highL [−0.3, 0.1] = 우케나가시·히다리와키 사이 (소태도 2본 왼쪽 흘림 [해석]).
+//  값(패드)은 독일 GERMAN.parry 그대로 — 바뀌는 것은 몸꼴뿐
+const JAPANESE_PARRY = { ...GERMAN.parry };
 // 일본 기술 가중치 (초안 §5-2): 두손 보통(카타나) 真向 ×1.3 · 袈裟 ×1.2 · 胴 ×0.8 · 突き ×0.8.
 //  앞무게(모노호시자오)는 胴 ×0.8 만 — 내리치기는 틀의 presses ×1.4, 찌르기는 라이브러리의 ×0.5 를 그대로 둔다(그래서 thrust 칸이 없다)
 const JAPANESE_TECHK = {
@@ -590,9 +647,10 @@ export const TRADITIONS = {
   // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(guardTable — guards.js IBERIAN_TABLE, 앞무게 틀 표를 고른 뒤 덮음)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
   iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, secret: IBERIAN_SECRET },
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
-  //  간 보는 자세·물러남 = 한 칼 자세(上段·八相에서 기다렸다 들어오는 순간 벤다 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
+  //  간 보는 자세 = JAPANESE_WATCH(10/10 원전 — 추단 위주 + 조단·핫소, 전 HIGH_GUARDS 의 황소 둘 뺌) · 자세표 = JAPANESE_GUARDTABLE · 속임수 = JAPANESE_FEINTS(Umschlagen 둘 → 갓토츠·니노코시) · 막기 = JAPANESE_PARRY(자리 그대로, 몸꼴이 받는 꼴).
+  //  물러남 = 한 칼 자세(上段·八相 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).
   //  맞받아치기 후보(초안 §12 counter: 真向 먼저)는 이번엔 넣지 않았다(지시 범위 밖 — 문서에 후보로)
-  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: HIGH_GUARDS, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE, passives: JAPANESE_PASSIVES, temper: JAPANESE_TEMPER, gait: JAPANESE_GAIT, secret: JAPANESE_SECRET },
+  japanese: { id: 'japanese', nameKo: '일본', ...GERMAN, guards: JAPANESE_WATCH, guardTable: JAPANESE_GUARDTABLE, feints: JAPANESE_FEINTS, ownFeints: true, parry: JAPANESE_PARRY, withdraw: { pressed: 'tagR', calm: ['tagR', 'tag'] }, rest: 'langort', names: JAPANESE_NAMES, techK: JAPANESE_TECHK, techNames: TECH_NAMES.japanese, unique: JAPANESE_UNIQUE, spare: JAPANESE_SPARE, passives: JAPANESE_PASSIVES, temper: JAPANESE_TEMPER, gait: JAPANESE_GAIT, secret: JAPANESE_SECRET },
   // 중국: 청강검·지안(스펙 school). 기술 목록 = 지금 지안 꾸러미 그대로 (기술별 reach 보정은 청강검 실측 — ③ 단계에서 무기 쪽으로 가를 후보), 그 위에 유파 자료.
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
   //  물러남(10/9 腰擊 쓰임): 몰려 물러날 때 腰擊勢(옆 자세)로 거둔다 — 斂翅 「佯北誘賺… 倒退進步腰擊」(무비지 쪽174/0588 [원문]): 물러나며 腰擊을 들고 있다가 들어가 벤다.
