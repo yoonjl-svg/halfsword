@@ -2,6 +2,8 @@
 //  츠바이핸더(또는 argv[2]) AI 가 서 있는 롱소드 몸(입력 없음)에게 다가가 닿는 거리에 들면 비기를 직접 낸다(secretGo — 조건을 기다리지 않음).
 //  씨앗마다 물리 스텝 기록: 칼끝 빠르기 · 칼끝 자리(몸 기준 옆 x · 높이 y) · 수 이름 · 단계. 수마다 칼끝 최고 빠르기 · 칼끝이 지난 옆 범위(좌우로 실제로 오갔나) · 이음새 칼끝 빠르기 바닥 · 맞힘.
 //  WHO=player: 플레이어 몸(검술 층 skill.secret — 게임과 같은 보정·autoGuard)이 비기를 낸다. 상대 롱소드 AI 는 멈춤, 시작 거리 1.9 m. DIR=x,y = 비기를 낸 끌기 방향(기본 −1,−0.6 = 왼 아래)
+//  10/11 v6 길목 지키기(판 gilmok): AI 는 내기 전 ARM 초(기본 1.0) 동안 손 목표를 준비 자세(옆 자세 — ai.js 길목 준비와 같은 덮기)에 둔 뒤 낸다(ARM=0 = 덮지 않음).
+//   CMP=<기술 이름>(예 zwerch): 비기 대신 그 보통 기술을 같은 자리에서 낸다(startAttack — 손 속도·힘 창·보조 힘 없음) — 칼끝 빠르기 견줌
 //  실행: node tools/sim/hybrid.mjs iberian_flow_probe.mjs [무기 zweihander] [씨앗 수 6]
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { SECRET, SKILL } from '../../src/config.js';
@@ -15,6 +17,8 @@ const _f = new THREE.Vector3();
 const agg = {};
 let fired = 0, landed = 0, stiffN = 0;
 const tot = [];
+if (process.env.STEPF) { const { TRADITIONS } = await import("../../src/schools.js"); TRADITIONS.iberian.secret.do.step = +process.env.STEPF ? { lat: 0, fwd: +process.env.STEPF, when: "strike" } : null; } // STEPF=m: 길목 한 칼 걸음 시험
+if (process.env.CUTMID) { const { TRADITIONS } = await import("../../src/schools.js"); TRADITIONS.iberian.secret.do.cutMid = process.env.CUTMID.split(",").map(Number); } // CUTMID=x,y: 길목 한 칼 가운데 점 시험
 for (let seed = 1; seed <= N; seed++) {
   const PL = WHO === 'player';
   const G = PL ? newRound({ walls: false, weapon: id, weapon2: 'longsword', seed, gap: +(process.env.GAP || 1.9) }) : newRound({ walls: false, weapon: 'longsword', weapon2: id, seed });
@@ -23,23 +27,32 @@ for (let seed = 1; seed <= N; seed++) {
   const ai = PL ? { M: me.swordArt.measure, secretFree: () => !me.skill.sec, get secretRun() { const s = me.skill.sec; return s ? { stage: s.stage } : null; }, get tech() { return me.skill.sec?.cur ?? null; }, phase: '-', path: { get length() { return me.skill.sec?.path?.length ?? 0; } }, stats: { secrets: {} }, secret: playerSecretOf(me) } : G.ai;
   let run = null;
   const rec = [];
+  const GIL = !PL && ai.secret?.do?.gilmok;
+  const ARM = +(process.env.ARM ?? 1.0);
+  let armT = 0;
+  const CMP = process.env.CMP ? ai.school.techByName[process.env.CMP] : null;
+  if (GIL && ARM > 0) { const mh = ai.moveHand.bind(ai); ai.moveHand = (dt) => { if (t0 == null && armT > 0) { const p = ai.secret.do.side[1]; ai.hand.set(p[0], p[1]); ai.handSpeed = 0.9; } return mh(dt); }; const sa = ai.startAttack.bind(ai); ai.startAttack = (t, why, o) => (t0 == null && why !== 'secret' && why !== 'test' ? false : sa(t, why, o)); } // 준비 동안 AI 가 스스로 치지 않게
   let t0 = null;
   let woundsE = 0;
   G.onWound = (att, vic, r) => { if (att === me && t0 != null) { woundsE++; rec.push({ wound: r.energy, zone: r.zone, t: G.t - t0 }); } };
   for (let i = 0; i < 120 * 14; i++) {
+    if (process.env.WALK && !PL) G.player.move.set(0, t0 == null && armT >= ARM ? +process.env.WALK : 0); // WALK=v: 준비가 찬 뒤 상대(입력 없는 롱소드 몸)가 앞으로 걸어 든다 (스틱 v)
     G.step();
-    if (t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < ai.M.reach - 0.1 && ai.secretFree() && !ai.secretRun) {
-      if (PL ? me.skill.secret({ S: ai.secret, ctx: null, dir: DIR }) : ai.secretGo(ai.secret)) { t0 = G.t; fired++; }
+    const near = t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < (process.env.FIRE === "contact" ? ai.M.contact : ai.M.reach - 0.1) && ai.secretFree() && !ai.secretRun;
+    if (t0 == null && (armT > 0 || near || (process.env.WALK && G.t > 2.6)) && GIL && ARM > 0 && armT < ARM) { armT += DT; continue; }
+    if (near) {
+      if (CMP) { if (ai.startAttack(CMP, 'test', { noFeint: true })) { t0 = G.t; fired++; } }
+      else if (PL ? me.skill.secret({ S: ai.secret, ctx: null, dir: DIR }) : ai.secretGo(ai.secret)) { t0 = G.t; fired++; }
     }
     if (t0 != null) {
-      const sr = ai.secretRun;
+      const sr = CMP ? (ai.mode === 'attack' ? { stage: 'strike' } : null) : ai.secretRun;
       const c = me.bodies.chest.translation();
       me.right(_r);
       me.forward(_f);
       const tp = me.tipPrev ?? me.bladePoint(1, new THREE.Vector3());
       const rx = tp.x - c.x, ry = tp.y - c.y, rz = tp.z - c.z;
-      rec.push({ t: G.t - t0, v: me.tipVel.length(), x: me.side * (rx * _r.x + rz * _r.z), y: ry, fw: rx * _f.x + rz * _f.z, n: sr ? (sr.stage === 'stiff' ? 'stiff' : ai.tech?.name) : null, ph: ai.phase, pl: ai.path.length, hx: me.handOffset.x, hy: me.handOffset.y, ax: me.skill.aim.x, ay: me.skill.aim.y });
-      if (process.env.TRACE == seed && rec.length % 4 === 1) { const q = rec[rec.length - 1]; console.log(`  t ${q.t.toFixed(3)} ${q.n} pl ${q.pl} 손 [${q.hx.toFixed(2)},${q.hy.toFixed(2)}] aim [${q.ax.toFixed(2)},${q.ay.toFixed(2)}] 칼끝 옆 ${q.x.toFixed(2)} 위 ${q.y.toFixed(2)} 앞 ${q.fw.toFixed(2)} v ${q.v.toFixed(1)}`); }
+      rec.push({ t: G.t - t0, v: me.tipVel.length(), fd: me.foeDistance(), x: me.side * (rx * _r.x + rz * _r.z), y: ry, fw: rx * _f.x + rz * _f.z, n: sr ? (sr.stage === 'stiff' ? 'stiff' : ai.tech?.name) : null, ph: ai.phase, pl: ai.path.length, hx: me.handOffset.x, hy: me.handOffset.y, ax: me.skill.aim.x, ay: me.skill.aim.y });
+      if (process.env.TRACE == seed && rec.length % 4 === 1) { const q = rec[rec.length - 1]; console.log(`  t ${q.t.toFixed(3)} ${q.n} pl ${q.pl} 손 [${q.hx.toFixed(2)},${q.hy.toFixed(2)}] aim [${q.ax.toFixed(2)},${q.ay.toFixed(2)}] 칼끝 옆 ${q.x.toFixed(2)} 위 ${q.y.toFixed(2)} 앞 ${q.fw.toFixed(2)} v ${q.v.toFixed(1)} 거리 ${me.foeDistance().toFixed(2)}`); }
       if (sr?.stage === 'stiff' && !run) { run = 'stiff'; stiffN++; }
       if (!sr) break;
     }
@@ -59,6 +72,11 @@ for (let seed = 1; seed <= N; seed++) {
     s.ymin = Math.min(s.ymin, r.y); s.ymax = Math.max(s.ymax, r.y);
   }
   const runRec = rec.filter((r) => r.n && r.n !== 'stiff' && r.v != null);
+  // 10/11 v6 2차: 칼끝이 가운데 선(옆 0)을 지날 때 — 앞 거리(가슴 기준) · 높이(가슴 기준) · 그때 상대 가슴 거리
+  for (let k = 1; k < runRec.length; k++) {
+    const a = runRec[k - 1], b = runRec[k];
+    if (a.x * b.x <= 0 && a.x !== b.x) { (globalThis.__mid ??= []).push({ fw: b.fw, y: b.y, fd: b.fd }); console.log(`  가운데 선: 칼끝 앞 ${b.fw.toFixed(2)} m · 높이 ${b.y.toFixed(2)} m · 상대 가슴 ${b.fd.toFixed(2)} m · ${b.n}`); break; }
+  }
   const T = runRec.length ? runRec[runRec.length - 1].t : 0;
   tot.push(T);
   console.log(`seed ${seed}: 흐름 ${T.toFixed(2)} s · 상처 ${woundsE} · ` + segs.map((s) => `${s.n} ${(s.t1 - s.t0 + DT).toFixed(2)}s v ${s.vmax.toFixed(1)}/${s.vmin.toFixed(1)} 옆 ${s.xmin.toFixed(2)}~${s.xmax.toFixed(2)} 높이 ${s.ymin.toFixed(2)}~${s.ymax.toFixed(2)}${s.J.length ? ' J ' + s.J.join(',') : ''}`).join(' | '));

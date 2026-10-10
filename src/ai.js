@@ -29,7 +29,7 @@ import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧�
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
-import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -225,6 +225,7 @@ export class AI {
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
     this.iaiArm = this.secret?.do?.instant ? new IaiArm() : null; // 일본 발도 대기 (10/10 02:4x — 상대 간격 밖 iaiArmTime 초)
+    this.gilArm = this.secret?.do?.gilmok ? new IaiArm('gilmokArmTime', 'gilmokArmGrace') : null; // 이베리아 길목 지키기 준비 (10/11 v6 — 내 칼끝 거리 밖 gilmokArmTime 초, 같은 셈)
     this.binds = this.secret?.when === 'bindCount' ? new BindCount() : null; // 이베리아 맺힘 셈 (10/10 — secret.js, 플레이어 창과 같은 셈)
     this.lastAtkT = -Infinity; // 마지막으로 공격 꼴이던 때 (중국 chineseRest)
     this.restBefore = Infinity; // 이번 공격을 시작하기 전 내 공격 없이 지난 시간 (s)
@@ -417,6 +418,37 @@ export class AI {
       this.iaiArm.tick(dt, d > this.foeReach && !kneeling, this.mode === 'attack' || this.mode === 'defend' || (!!this.secretRun && this.secretRun.stage !== 'instant'));
       iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt);
     }
+    // 이베리아 길목 지키기 준비 (10/11 v6): 상대가 내 칼끝 거리(reach) 밖에 gilmokArmTime 초 머물면 칼을 몸 옆으로 감아 뒤로 둔 옆 자세(가로 탈류·가로 레베스)로 길목을 지킨다.
+    //  쪽 = 준비가 켜질 때 지금 간 보는 자세의 쪽(가운데면 오른쪽 — 피 단Ⅰ 탈류부터). 간 보기·물러남 동안만 손 목표를 덮는다(자세 고르기는 그대로 — 풀리면 그 자세로 돌아감)
+    //  10/11 v6 2차 (디렉터 — 사장님이 낮은 자세를 '큰 차별성'으로 보심): 준비 동안 기본은 **낮은 자세**(아래 탈류·아래 레베스·칼끝 땅에 — 지금 자세가 낮지 않으면 손에서 가장
+    //   가까운 낮은 자세)로 기다리고, **상대가 다가오는 중일 때만**(foeClosing > SECRET.iberianInsideClosing 0.3 — 재사용) 그 쪽 옆 자세로 감는다. 감은 뒤 최소 gilmokArmGrace 0.5 s
+    //   유지(깜빡이지 않게 — 재사용). 감는 모습이 곧 길목의 예고다. 쪽 = 낮은 자세의 쪽(아래 레베스면 왼쪽, 아니면 오른쪽 — 피 단Ⅰ 탈류부터)
+    if (this.gilArm) {
+      const was = this.gilArm.armed;
+      this.gilArm.tick(dt, d > this.M.reach && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun);
+      const A = this.gilArm.armed && (this.mode === 'watch' || this.mode === 'withdraw');
+      if (this.gilArm.armed && !was) {
+        const LOW = ['wechselR', 'wechselL', 'alber'];
+        if (!LOW.includes(this.guard?.name)) {
+          const hand = [this.me.handOffset.x, this.me.handOffset.y];
+          let best = null;
+          for (const g of this.school.guards) if (LOW.includes(g.name) && (!best || padDist(hand, g.pad) < padDist(hand, best.pad))) best = g;
+          if (best) this.guard = best;
+        }
+        this.gilSide = this.guard?.name === 'wechselL' ? -1 : 1;
+        this.gilWindT = 0;
+      }
+      if (A) {
+        // 감는 거리: preThreat '가까움'과 같은 꼴(간격 + 다가옴 × 0.4 + 0.3)을 내 칼끝 거리로 — 먼 데서 걸어오는 동안은 낮게 기다린다
+        if (this.foeClosing > SECRET.iberianInsideClosing && d < this.M.reach + this.foeClosing * 0.4 + 0.3) this.gilWindT = SECRET.gilmokArmGrace;
+        else this.gilWindT = Math.max(0, (this.gilWindT ?? 0) - dt);
+        const p = this.gilWindT > 0 ? this.secret.do.side[this.gilSide] : this.guard.pad;
+        this.hand.set(p[0], p[1]);
+        this.handSpeed = this.gilWindT > 0 ? L.parrySpeed : this.pers.guardSpeed; // 감기는 받아 막기 빠르기, 낮게 기다리기는 간 보기 빠르기
+      } else this.gilWindT = 0;
+      const g = this.secretRun ? gilmokSeg(this.tech?.name, this.secretRun.stage === 'stiff') : { seg: null, s: 1 };
+      gilmokCutPose(me, g.seg, g.s, dt); // 한 칼의 덧씌우기 자세 (secret_instant.js — 팔을 앞으로 뻗어 몸통 높이)
+    }
     this.moveHand(dt);
     this.moveFeet(dt, d);
     if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
@@ -543,6 +575,9 @@ export class AI {
     this.phase = 'ready';
     if (th && this.respond(th, d)) return;
     if (this.pendingPassive?.left != null && this.passivePending(s, d)) return; // 미룬 패시브 (물러남 끝 斂翅 · 간격 밖에서 굴려 나온 돌려 물러남)
+    // 이베리아 길목 지키기 준비 (10/11 v6): 준비된 동안은 먼저 치지도(기회·패시브) 낌새에 앞질러 치거나 물러나지도(preThreat·seize) 않고 칼끝 거리 선을 지킨다 —
+    //  48 판 첫 측정: 이 걸쇠 없이는 상대가 칼끝 거리에 들자마자 내가 먼저 공격을 열어 준비가 풀려 창 0 번. 들어오는 칼(위 respond)은 그대로 받는다. 자세 손은 update 끝에서 옆 자세로 덮는다
+    if (this.gilArm?.armed) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
@@ -580,6 +615,7 @@ export class AI {
     m += (1 - this.me.vigor) * 0.3; // 다쳐서 힘이 빠지면 더 조심스럽게 선다
     if (!this.me.armed) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
+    if (this.gilArm?.armed && !this.chasing) return Math.max(this.foeReach + Math.max(0.08, m), this.M.reach + 0.08); // 이베리아 길목 준비 (10/11): 내 칼끝 거리 선 밖에 선다 (여유 0.08 = 위 최소 여유 그대로)
     return (this.chasing ? this.M.contact : this.foeReach) + Math.max(0.08, m);
   }
 
@@ -1593,24 +1629,26 @@ export class AI {
   secretScan(dt, c, r) {
     const S = this.secret;
     const W = [].concat(S.when);
-    const foeEv = W.includes('threat') || W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge') || W.includes('inside'); // inside: 이베리아 호 안쪽 (10/10 04:4x)
+    const foeEv = W.includes('threat') || W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge') || W.includes('inside') || W.includes('gilmok'); // inside: 이베리아 호 안쪽 (10/10 04:4x) · gilmok: 길목 경계 넘음 (10/11 v6)
     if (!foeEv) return false;
     const E = this.secretEv;
     const s0 = this.sense.seen(0);
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { reach: this.M.reach, dt, st: E }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽
+    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { reach: this.M.reach, dt, st: E, armed: !!this.gilArm?.armed }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비)
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
       return false;
     }
     E.off = 0;
+    if (ctx?.ev === 'gilmok') this.stats.gilWins = (this.stats.gilWins ?? 0) + 1; // 길목 창 (경계 넘음 사건 — 준비된 채) 수 (재기)
     if (!E.armed || !this.secretFree() || !this.foe.alive || s0.state !== 'stand' || !this.me.armed) return false;
     if (!this.secretCond(S, ctx, d0)) return false;
     if (!this.secretGo(S, { th: ctx, s: s0, d: d0 })) return false;
     E.armed = false;
+    this.gilArm?.consume(); // 길목: 한 번 준비에 한 번
     return true;
   }
 
@@ -1623,7 +1661,7 @@ export class AI {
   secretFree() {
     const m = this.mode;
     if (m === 'watch' || m === 'withdraw' || m === 'defend') return true;
-    if (m === 'attack' && this.phase === 'follow' && this.secret?.do?.flow && !this.passiveLocked) return true; // 이베리아 흐름 (10/11): 손은 끝 자세에 닿고 칼이 아직 지나가는 중 — 그 칼을 이어받는다
+    if (m === 'attack' && this.phase === 'follow' && this.secret?.do?.flow && !this.secret.do.gilmok && !this.passiveLocked) return true; // 이베리아 흐름 (10/11): 손은 끝 자세에 닿고 칼이 아직 지나가는 중 — 그 칼을 이어받는다
     return m === 'attack' && (this.phase === 'windup' || this.phase === 'approach') && !this.passiveLocked;
   }
 
@@ -1773,13 +1811,14 @@ export class AI {
     const run = this.secretRun;
     if (!run) return this.secretFirstHit(d, true);
     if (this.hitLanded) run.landed = true;
+    // 이베리아 흐름 (10/11): 손 목표는 토막 끝에 닿았어도 실제 칼이 그 자리에 갈 때까지(flowGate, 최대 FLOW_GATE_MAX — 맞혔으면 곧장) 다음 토막을 열지 않는다 — 기다리는 동안 손은 끝 자리를 당긴다.
+    //  v6 길목 지키기의 한 칼은 마지막 토막에도 문이 있다(칼끝이 반대쪽으로 건너갈 때까지 힘 창을 쥔 채 당김) — v5 의 마지막 토막은 문이 없어 전과 같다
+    if (run.queue && this.tech?.gate) {
+      run.gateT0 ??= this.sense.t;
+      if (!flowGate(this.me, this.tech.gate) && !this.hitLanded && this.sense.t - run.gateT0 < FLOW_GATE_MAX) return true; // 이 토막이 맞혔으면 기다리지 않는다
+      run.gateT0 = null;
+    }
     if (run.queue?.length) {
-      // 이베리아 흐름 (10/11): 손 목표는 토막 끝에 닿았어도 실제 칼이 그 자리에 갈 때까지(flowGate, 최대 FLOW_GATE_MAX — 맞혔으면 곧장) 다음 토막을 열지 않는다 — 기다리는 동안 손은 끝 자리를 당긴다
-      if (this.tech?.gate) {
-        run.gateT0 ??= this.sense.t;
-        if (!flowGate(this.me, this.tech.gate) && !this.hitLanded && this.sense.t - run.gateT0 < FLOW_GATE_MAX) return true; // 이 토막이 맞혔으면 기다리지 않는다
-        run.gateT0 = null;
-      }
       this.secretTally();
       return this.secretNext();
     }
@@ -2037,6 +2076,7 @@ export class AI {
         if (c.cut && (!ctx || ctx.thrust)) continue;
         if (c.line && !c.line.includes(ctx?.line)) continue;
         if (c.myThrust && this.tech?.kind !== 'thrust') continue;
+        if (c.low && !(this.mode === 'watch' && c.low.includes(this.guard?.name) && padDist([this.me.handOffset.x, this.me.handOffset.y], this.guard.pad) < 0.15)) continue; // 이베리아 올려 맞받기 (10/11): 지금 낮은 자세로 기다리는 중
       }
       return P;
     }
@@ -2106,6 +2146,7 @@ export class AI {
       t = feint ? this.school.techByName[feint.fake] ?? null : null;
     } else if (D.tech || D.chain) t = this.passiveTech(D);
     else return false;
+    if (t && (D.step || D.as)) t = { ...t, name: D.as ?? t.name, nameKo: P.nameKo ?? t.nameKo, step: D.step ?? t.step }; // 이베리아 올려 맞받기 (10/11): 꾸러미 길에 걸음을 덧씌우고 이름을 따로 (재기)
     if (!t) {
       this.stats.passiveSkipped = (this.stats.passiveSkipped ?? 0) + 1; // 그 기술이 이 꾸러미에 없다 → 건너뜀
       return false;

@@ -626,7 +626,9 @@ export const SECRET = {
   // 이베리아 비기 판 (10/11 01:5x 사장님 '이베리아 비기를 몬탄테 흐름으로 다시 설계' — docs/strike/iberian_secret_v5_2026-10-11.md) [사장님 확인 전]:
   //  'flow' = 멈추지 않는 흐름(지금 칼의 방향을 이어받아 좌우 번갈아 올려베기 둘 → 머리 위로 돌려 큰 한 칼, 물리 서보 길 — schools.js IBERIAN_SECRET · secret.js montanteFlowSeq) ·
   //  'v4' = 10/10 04:4x 판(비켜 서며 크게 가로베기 — 아래 iberianSweep 휩쓸기, schools.js IBERIAN_SECRET_V4). 주소 `?ibSecret=v4` · 시뮬 `with_config.mjs SECRET.iberianSecret=v4`
-  iberianSecret: 'flow',
+  //  'gilmok' = 10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — 기본 (docs/strike/iberian_secret_v6_2026-10-11.md): 간격 밖에 gilmokArmTime 초 버텨 준비(칼을 몸 옆으로 감음) →
+  //   상대 가슴이 내 칼끝 거리(reach) 경계를 다가오며 넘는 순간 → 몸 가운데 높이로 둘러 베는 한 칼 → 경직. 'flow' 는 v5(주소 `?ibSecret=flow`)
+  iberianSecret: 'gilmok',
   // 이베리아 휩쓸기 (10/10 02:5x 사장님 '이베리아 비기도 새 동작을 크게 — 뭐가 나가는지 전혀 알 수 없었다') · 비기 카메라 [모두 확인 전] — 10/11 부터 iberianSecret 'v4' 일 때만
   iberianSweep: 1, // 1 = 사이드스텝(반걸음 뒤 섞음) + 오른 어깨 뒤로 감았다 크게 한 번 가로 베기 (발도와 같은 스텝마다 자리 지정 틀 — 10/10 04:4x, 전 02:5x 머리 위 고리 + 사선), 0 = 10/9 고리·사선 길
   iberianSweepTime: 0.25, // 전체 (s)
@@ -650,6 +652,10 @@ export const SECRET = {
   camSwingOut: 0.5, // 되돌리는 시간 (s)
   iaiArmTime: 1.5, // 지시 시작값 2.0 — 48 판 모노호시자오 2.0: 25 번·승률 83 % / 1.5: 27 번·75 %, 打刀 15 번·54 % / 16 번·40 % → 1.5
   iaiArmGrace: 0.5, // 간격 안으로 들어와도 대기 자세가 이 초 동안은 남는다 (달려드는 상대가 막 들어온 순간을 받게 — 공격·막기면 곧장 풀림) [해석] // 상대 간격 밖에 이 초 이상 머물면 발도 대기 (AI 는 자세, 플레이어는 '고노센 준비' 표시만). 간격 안·공격·막기면 풀림
+  // 이베리아 길목 지키기 준비 (10/11 v6 — secret.js IaiArm 같은 셈, 열쇠만 다름) [사장님 확인 전 — 확인표 870·871]: 상대 가슴이 내 칼끝 거리(reach) 밖에 이 초 이상 계속 머물고
+  //  내가 공격·막기 중이 아니면 준비(armed). 시작값은 일본 iaiArmTime·iaiArmGrace 와 같은 수 — 일본 값을 바꿔도 따라 바뀌지 않게 새 열쇠
+  gilmokArmTime: 1.5,
+  gilmokArmGrace: 0.5, // 경계 안으로 들어와도 준비가 이 초 동안은 남는다 (일본 iaiArmGrace 와 같은 뜻)
   // 발도 길 열쇠 (몸 기준 — 가슴 원점, x 앞 · y 위 · z 칼 든 쪽, 칼날 가로 각 yaw ° 앞 0 → 칼 든 쪽 +, 높이 각 el °)
   iaiPath: {
     B: { hand: [0.2, -0.28, -0.12], yaw: -120, el: -8 }, // 왼 허리에서 뽑는 자리 (칼끝 왼 뒤)

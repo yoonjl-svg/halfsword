@@ -51,9 +51,10 @@ const heroes = [
   ...CHARACTERS.map((c) => ({ id: c.id, name: c.name, sub: c.epithet || '—', armour: armourLine(c.look) })),
 ];
 
-// 이베리아 비기 판 (10/11 — docs/strike/iberian_secret_v5_2026-10-11.md): 새 '멈추지 않는 흐름'(기본) · 옛 v4 '비켜 서며 크게 가로베기' — 시작 주소의 ibSecret 로 (main.js)
+// 이베리아 비기 판 (10/11 — docs/strike/iberian_secret_v6_2026-10-11.md): 새 '길목 지키기'(v6 기본) · v5 '멈추지 않는 흐름' · 옛 v4 '비켜 서며 크게 가로베기' — 시작 주소의 ibSecret 로 (main.js)
 const IB_SECRETS = [
-  { id: 'flow', name: '새 · 멈추지 않는 흐름', sub: '번갈아 올려베기 둘 → 머리 위로 넘겨 둘러 베는 큰 한 칼 (10/11)' },
+  { id: 'gilmok', name: '새 · 길목 지키기', sub: '칼끝 거리 밖에서 준비 → 상대가 경계를 넘어 드는 순간 둘러 베는 한 칼 (v6)' },
+  { id: 'flow', name: 'v5 · 멈추지 않는 흐름', sub: '번갈아 올려베기 둘 → 머리 위로 넘겨 둘러 베는 큰 한 칼 (10/11)' },
   { id: 'v4', name: '옛 · 비켜 서며 가로베기', sub: '휩쓸기 v4 (10/10) — 견주어 보기' },
 ];
 
@@ -61,7 +62,7 @@ const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
   hero: heroes.some((h) => h.id === saved.hero) ? saved.hero : 'player',
-  ibSecret: IB_SECRETS.some((x) => x.id === saved.ibSecret) ? saved.ibSecret : 'flow',
+  ibSecret: IB_SECRETS.some((x) => x.id === saved.ibSecret) ? saved.ibSecret : 'gilmok',
 };
 
 function weaponButton(w, big) {
@@ -166,7 +167,7 @@ function render() {
 
 function startUrl() {
   const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: 'random', stage: 'random' });
-  if (pick.ibSecret === 'v4') q.set('ibSecret', 'v4');
+  if (pick.ibSecret !== 'gilmok') q.set('ibSecret', pick.ibSecret); // 기본(길목 지키기)이 아니면 판을 주소에
   return `./index.html?${q.toString()}`;
 }
 

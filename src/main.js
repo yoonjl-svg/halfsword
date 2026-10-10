@@ -74,7 +74,7 @@ if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 
 if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerSecret') ? 1 : 0; // 플레이어 비기(10/9 23:5x): 기본 1, `?playerSecret=0` = 끔 (docs/strike/player_secret_2026-10-09.md)
 if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 0; // 일본 비기 순간 베기(10/10, secret_instant.js): 기본 1, `?instant=0` = 10/9 길(담았다 터뜨림) 대조
 const SECRET_SLOWMO = params.get('slowMo') !== '0';
-if (params.get('ibSecret') === 'v4' || params.get('ibSecret') === 'flow') CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'flow'(멈추지 않는 흐름), `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기 (docs/strike/iberian_secret_v5_2026-10-11.md)
+if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
@@ -1617,10 +1617,12 @@ function updateTechCue(dt) {
   const liveMine = state === 'fight' && !roundOver;
   const pPhase = player?.skill?.secretPhase ?? null;
   // 고노센 준비 (10/10 02:4x): 상대 간격 밖 iaiArmTime 초가 차면 ② 에 흐린 '고노센 준비' (칸이 비었을 때만)
-  const pArmed = !!(CONFIG.SECRET.iai && playerSecret?.S?.do?.instant && playerSecret.iaiArm?.armed);
+  //  10/11 이베리아 길목 지키기(v6): 내 칼끝 거리 밖 gilmokArmTime 초가 차면 같은 자리·꼴로 '길목 지키기 준비' (secret.js PlayerSecretWatch.gilArm)
+  const arm = CONFIG.SECRET.iai && playerSecret?.S?.do?.instant ? playerSecret.iaiArm : playerSecret?.S?.do?.gilmok ? playerSecret.gilArm : null;
+  const pArmed = !!arm?.armed;
   if (liveMine && pArmed && !pPhase && !playerSecret.open && !techLine.it) {
-    const armHold = () => (playerSecret?.iaiArm?.armed && !player?.skill?.secretPhase && !playerSecret.open ? true : 'end');
-    showTechCue({ text: '고노센 준비', kind: 'secretArm', who: 'me', schoolKo: TRADITIONS[player?.swordArt?.tradition]?.nameKo ?? '' }, armHold);
+    const armHold = () => (arm.armed && !player?.skill?.secretPhase && !playerSecret.open ? true : 'end');
+    showTechCue({ text: arm === playerSecret.gilArm ? '길목 지키기 준비' : '고노센 준비', kind: 'secretArm', who: 'me', schoolKo: TRADITIONS[player?.swordArt?.tradition]?.nameKo ?? '' }, armHold);
   }
   // 경직 글 (STIFF_TEXT, 기본 끔): 켜면 경직이 시작될 때 감정 줄에 한 번
   const myStiff = liveMine && pPhase === 'stiff';
