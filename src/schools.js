@@ -607,6 +607,24 @@ export const TRADITIONS = {
 const ITALIAN_OFFARM = { guard: [0.35, 0.18, 0.12], lunge: [0.3, 0.36, 0.04] };
 TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
 
+// 이탈리아 간 보는 자세 (10/10 사장님 '저 대기자세 이상하지 않아? … 저게 맞아?' — 원전 대조 docs/motion/rapier_guards_2026-10-10.md §1).
+//  전엔 롱소드 목록(WATCH_GUARDS: 지붕·어깨 지붕·황소 둘·쟁기 둘·긴 자세·바보·바꿈) 그대로였다. 원전 셋이 기다리는 자세는 테르차다:
+//   Capo Ferro 1610 [6] 「I do not hold to be good other than one single guard, which is the low guard called terza」 · [99] 「prima and seconda are not guards … quarta … is a way of striking」
+//   Fabris 1606 [28] 고쳐 세운 테르차 「one of the best guards」 · [32] 뻗은 콰르타 「beyond comparison more cautious than all the others」 · [20]·[22] 프리마·세콘다는 팔이 쉬 지침
+//   Giganti 1606 [13] 「two sorts of guards」 — 그림 2·3 모두 팔을 앞으로 뻗은 낮은 자세(테르차·콰르타 꼴)
+//  자리 = guards.js ITALIAN_RAPIER 의 원전 자세 (쟁기 자리 = 3번 · 긴 자세 = 뻗은 3번 · 왼쪽 쟁기 = 4번 · 황소 = 2번 · 지붕 = 1번). 원전에 없는 어깨 지붕·왼쪽 황소·바보·바꿈은 뺀다
+//   (기술이 그 자리에서 시작하면 — passata sotto 는 바꿈 자리 — 준비 자세로 거쳐 가는 것은 전과 같다: 길 자리는 표에 그대로 있다).
+//  w = 자세 빈도 곱 (ai.js pickGuard 가 성격 가중치에 곱한다 — 이베리아 IBERIAN_GUARDS 와 같은 칸, 칸 없는 목록은 그대로). threat·high·low 는 WATCH_GUARDS 와 같은 뜻 — 1번 자세는 칼끝이 상대를 겨누어 threat 를 올림.
+//  값은 모두 사장님 확인 전 (확인표 640~)
+const ITALIAN_WATCH = [
+  { name: 'pflugR', it: 'terza', pad: G.pflugR, threat: 0.9, high: 0.2, low: 0.8, w: 4 }, // 3번 자세 — 주 자세 (Capo Ferro 단 하나의 자세)
+  { name: 'langort', it: 'terza distesa', pad: G.langort, threat: 1, high: 0.3, low: 0.3, w: 1.5 }, // 뻗은 3번 자세 (Fabris [28])
+  { name: 'pflugL', it: 'quarta', pad: G.pflugL, threat: 0.8, high: 0.2, low: 0.8, w: 1 }, // 4번 자세 (Fabris [32])
+  { name: 'ochsR', it: 'seconda', pad: G.ochsR, threat: 0.8, high: 0.6, low: 0.2, w: 0.5 }, // 2번 자세 (Fabris [22], 지침)
+  { name: 'tag', it: 'prima', pad: G.tag, threat: 0.6, high: 1, low: 0, w: 0.25 }, // 1번 자세 (Fabris [20], 가장 지침 — imbroccata 준비)
+];
+TRADITIONS.italian.guards = ITALIAN_WATCH; // 꾸러미(weaponSchool·pack)가 아래에서 이 목록을 가져간다 — 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로
+
 // 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
 

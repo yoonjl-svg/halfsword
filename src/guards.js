@@ -171,6 +171,46 @@ const BASE_ONE_SABRE = oneHandTable(ONE_HAND_SABRE);
 const BASE_ONE_VERSATILE = oneHandTable(ONE_HAND_VERSATILE);
 const BASE_TWO_THRUST = oneHandTable(TWO_HAND_THRUST);
 
+// 이탈리아 레이피어 자세표 (10/10 사장님 '저 대기자세 이상하지 않아? … 왜 팔을 저렇게 높이 들고 칼끝을 내리지' · '정확히 고증대로 해'
+//  — 원전 대조 docs/motion/rapier_guards_2026-10-10.md §1). 이탈리아 유파 AI 가 한손 찌르기 칼(레이피어)을 쥘 때만 ai.js 생성자가 검객 표 위에 덮는다
+//  (italianTable). 플레이어·다른 유파·청강검(중국)·에스톡(두손)·ONE_HAND_THRUST 자체는 그대로. 패드 자리·자세 수·순서는 바탕 표와 같아
+//  기술 길(from·path)은 끊기지 않는다 — 자리의 손·칼끝·몸만 원전 자세로 바꾼다. 이름(name)은 HUD·hands.js 손 돌림(Prima·Seconda·Terza·Quarta)이 읽는다.
+//  hand [앞, 위, 칼 든 쪽] m (가슴 중심) · blade [올려본 각, 옆 각] ° · yaw ° (− = 칼 든 어깨가 앞) · pitch ° (+ 앞으로 숙임, − 뒤로 기댐) · drop m. 값은 모두 사장님 확인 전 (확인표 640~)
+//  원전에 없는 지붕(Vom Tag — 팔꿈치를 접어 손을 머리 위에 두고 칼끝을 내리찍는 꼴 = 파브리스 판 1 '칼을 뽑은 채의 프리마', [19] 「not very secure … the body entirely exposed owing to the height of the sword」)은
+//  파브리스가 고쳐 세운 프리마(판 2, [20] 「body bent, arm extended, with the sword in front with the point as straight as possible」)로 바꾼다
+export const ITALIAN_RAPIER = {
+  // 1번 자세: 팔을 앞·위로 뻗어 손은 얼굴 높이, 칼끝은 곧게 상대 쪽(조금 처짐), 몸을 앞으로 숙임 — imbroccata 가 여기서 나간다(Capo Ferro [31])
+  '지붕 (Vom Tag)': { name: '1번 자세 (Prima)', desc: '팔을 앞·위로 뻗어 손을 얼굴 높이에, 칼끝은 곧게 상대에게 · 몸을 숙인다 · 팔이 쉬 지친다', hand: [0.5, 0.28, 0.12], blade: [-8, -4], pelvisYaw: -40, chestYaw: -50, pitch: 12, drop: 0.12, src: 'Fabris 1606 [20] 판 2 [원문·도판] · 지친다 [20] · 수 [추정]' },
+  // 2번 자세: 팔을 뻗어 손은 어깨~턱 높이, 손등 위(손톱 아래), 칼끝 곧게 — 몸을 숙여 머리가 칼 팔 뒤
+  '황소 (Ochs)': { name: '2번 자세 (Seconda)', desc: '팔을 뻗어 손을 어깨 높이에, 손바닥을 아래로 · 칼끝은 곧게 상대에게', hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Fabris 1606 [21]·[22] 판 3·4 [원문·도판] · Capo Ferro [16] 「even with the shoulder」 · 수 [추정]' },
+  // 3번 자세 (주 자세): 칼 팔을 조금 굽혀 팔꿈치는 몸의 굽은 곳·오른 무릎 줄, 손은 높지도 낮지도 않게 몸 가운데, 칼끝은 상대 몸 가운데. 몸은 옆으로 세워 뒤로 기댐
+  '쟁기 (Pflug)': { name: '3번 자세 (Terza)', desc: '칼 팔을 조금 굽혀 손을 몸 가운데 높이에, 칼끝은 상대 몸 가운데 · 몸을 옆으로 세워 뒤로 기댄다 · 여기서 stoccata', hand: [0.5, -0.06, 0.18], blade: [6, -4], pelvisYaw: -50, chestYaw: -60, pitch: -3, drop: 0.12, src: 'Capo Ferro 1610 [6]·[74]·[97]·[98] 판 6 [원문·도판] · [67] 몸 뒤로 · Giganti 1606 [13] 그림 2·3 · 수 [추정]' },
+  // 뻗은 3번 자세: 찌르기 끝(모든 찌르기 길의 끝 자리)이라 손·칼끝은 그대로 두고 이름만 — 파브리스의 팔 뻗은 테르차(판 10)
+  '긴 자세 (Langort)': { name: '뻗은 3번 자세 (Terza)', desc: '팔을 곧게 뻗어 칼끝으로 상대 얼굴을 겨눈다 · 찌르기가 끝나는 자리', src: 'Fabris 1606 [28] 판 10 [원문·도판] · 손 위치는 R2 한손 뻗기 값 그대로' },
+  // 4번 자세: 손바닥을 위로 돌려 안쪽 줄에 팔을 뻗음, 칼끝 곧게 — 파브리스 '뻗은 콰르타'. 카포 페로는 자세가 아니라 치는 꼴이라 했다([99])
+  '왼쪽 쟁기': { name: '4번 자세 (Quarta)', desc: '손바닥을 위로 돌려 팔을 안쪽 줄로 뻗는다 · 칼끝은 곧게 상대에게', hand: [0.55, 0.04, 0.02], blade: [0, 4], pelvisYaw: -40, chestYaw: -50, pitch: 6, drop: 0.12, src: 'Fabris 1606 [32] 판 14 [원문·도판] · Capo Ferro [99] (자세 아님) · 수 [추정]' },
+};
+const D2R_IT = Math.PI / 180;
+const _italianTables = new WeakMap();
+/** 이탈리아 레이피어 자세표: 바탕 표(검객이 쥔 표)의 같은 자리를 ITALIAN_RAPIER 로 덮는다 (바탕 표마다 한 번 만들어 둔다 — 같은 객체) */
+export function italianTable(base) {
+  if (!base) return base;
+  const hit = _italianTables.get(base);
+  if (hit) return hit;
+  const out = base.map((g, i) => {
+    const o = i < NBASE ? ITALIAN_RAPIER[GUARDS[i].name] : null; // 자리 열쇠 = 바탕 자리 이름 (틀 표가 보이는 이름을 바꿔도 맞게)
+    if (!o) return g;
+    const r = { ...g, name: o.name, desc: o.desc, src: o.src };
+    if (o.hand) {
+      const el = o.blade[0] * D2R_IT, az = o.blade[1] * D2R_IT;
+      Object.assign(r, { hand: o.hand, blade: o.blade, dir: [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)], pelvisYaw: o.pelvisYaw * D2R_IT, chestYaw: o.chestYaw * D2R_IT, pitch: o.pitch * D2R_IT, drop: o.drop });
+    }
+    return r;
+  });
+  _italianTables.set(base, out);
+  return out;
+}
+
 /** 동작 라이브러리(motion_library.js)가 몸 틀별 자세표를 만들 때 바탕으로 쓰는 표 (교본 자세 NBASE 개, 같은 패드 자리) */
 export const GUARD_BASE = BASE;
 export const GUARD_BASE_ONE = BASE_ONE_SABRE;
