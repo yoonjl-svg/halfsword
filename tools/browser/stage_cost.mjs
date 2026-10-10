@@ -4,7 +4,7 @@
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 const base = process.argv[2] || 'http://127.0.0.1:5173';
-const ids = process.argv.slice(3).length ? process.argv.slice(3) : ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove'];
+const ids = process.argv.slice(3).length ? process.argv.slice(3) : ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan'];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const rows = [];
 let errs = 0;

@@ -22,6 +22,8 @@ import { weaponEnv } from './weapon_looks.js';
 import { buildLoggia } from './stage_loggia.js';
 import { buildCorsair } from './stage_corsair.js';
 import { buildSacredGrove } from './stage_sacred_grove.js';
+import { buildFrozenBay } from './stage_frozen_bay.js';
+import { buildQinglan } from './stage_qinglan.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
@@ -38,6 +40,9 @@ const BUILDERS = {
   loggia: buildLoggia, // 붉은 회랑: 쌍기둥 아치·붉은 천·사이프러스·석재 상감 바닥 (stage_loggia.js) — 토메 비달의 무대
   corsair: buildCorsair, // 산호 항구: 산호석 성문·삼각 돛배·푸른 바다 (stage_corsair.js) — 오마리의 무대
   sacred_grove: buildSacredGrove, // 신목의 숲: 거대한 신목·금줄과 흰 종이·이끼 (stage_sacred_grove.js) — 미나미의 무대
+  // 샛별 저장소에서 가져온 두 무대 더 (사장님 10/10 20:4x '얼어붙은 만이 린드, 청람잔도가 김씨 전용 스테이지' — 지오메트리·재질·조명·소리 그대로, docs/stages.md)
+  frozen_bay: buildFrozenBay, // 얼어붙은 만: 동시베리아 내륙 호수의 겨울 새벽, 먹청색 얼음·눈 덮인 물가·낙엽송·선착장 (stage_frozen_bay.js) — 투야나 니콜라예바(id eira, 전 이름 에이라 린드)의 무대
+  qinglan: buildQinglan, // 청람잔도: 초여름 맑은 정오, 큰 강 협곡 위 바위 쉼터·돌계단 잔도·작은 샘 (stage_qinglan.js) — 김씨의 무대
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
@@ -45,13 +50,17 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 // 판마다 나오는 순서 (오너 결정: 하인리히 → 브란 → 랴오 → 이졸데 → 밤의 포세이돈(하인리히 재등장·흑화) → 마르그레테 의 고향 순).
 //  이졸데는 한 번 쓰러져도 젊은 수련생의 투지로 다시 일어선다(오너 결정: 약한 게 아니다). 대성당 다음 판은 다시 포세이돈부터
 //  10/10 사장님 지시로 샛별 저장소의 세 무대를 대성당 뒤에 이었다(기존 여섯 순서는 그대로): 붉은 회랑(토메 비달) → 산호 항구(오마리) → 신목의 숲(미나미)
-export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove'];
+//  10/10 20:4x 두 무대를 그 뒤에 더 이었다(앞 아홉 순서·자리는 그대로): 얼어붙은 만(투야나) → 청람잔도(김씨). 까닭: 이미 있는 판 순서를 하나도 안 밀고,
+//   눈 내리는 성 안뜰(4번째)과 겨울 얼음만이 붙지 않게 멀리 두고, 숲(신목) → 겨울 새벽(얼음만) → 여름 한낮(잔도) → 다시 바닷가(포세이돈)로 계절·빛이 번갈아 바뀐다
+export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
-export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami' };
+export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji' };
 // 그 무대 검객 후보 (사장님 10/10 20:0x — 샛별 저장소에서 가져온 넷의 무대 짝. 무대마다 한 명뿐인 STAGE_FOE 짝을 밀어내지 않고 후보로 더한다, 확인표 752).
 //  여정(foe=stage)에서 그 무대를 열 때 [본디 짝, ...후보] 가운데 하나를 고르게 고른다 → 본디 짝은 그 무대에서 절반만 나온다.
 //  졌을 때 같은 무대를 다시 열면 같은 상대(아래 stageFoeId 의 prevId). STAGE_FOE 자체는 그대로다
-export const STAGE_FOE_EXTRA = { loggia: ['artoria'], cathedral: ['samira'], temple: ['renji'], castle: ['eira'] };
+//  10/10 20:4x: 김씨·투야나(eira)는 전용 무대(청람잔도·얼어붙은 만, 위 STAGE_FOE 정식 짝)가 생겨 산사·성 안뜰 후보에서 뺐다 → 랴오·이졸데는 다시 늘 나온다.
+//   아르토리아(회랑)·사미라(대성당)는 그대로 후보 — 본디 짝과 반반(사장님 '무대 후보 비율은 반반')
+export const STAGE_FOE_EXTRA = { loggia: ['artoria'], cathedral: ['samira'] };
 /** 이번 판 무대의 검객 id: 후보가 없으면 STAGE_FOE 그대로(난수 안 씀). 지난 상대(prevId)가 이 무대 후보면 그 사람 그대로(진 뒤 다시 싸우기) */
 export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
   const base = STAGE_FOE[stageId];
