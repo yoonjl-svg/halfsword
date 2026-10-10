@@ -32,6 +32,7 @@ import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { TRADITIONS } from './schools.js';
+import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 
 await RAPIER.init();
 
@@ -42,6 +43,7 @@ const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&'))
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
 const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica');
 const FIXED_WEAPON = params.get('weapon');
+const testRoute = createTestRoute(params); // 인자가 없으면 아무것도 바꾸지 않는다
 // 테스트용 ?morgTorque=33 : 모르겐슈테른 손목 겨눔 토크 상한(기본 22 = 한손 무기 공통, 확인표 169)을 이번 실행에만 바꾼다 — 사장님 비교용, 저장하지 않는다
 const morgTorque = +params.get('morgTorque');
 if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = morgTorque;
@@ -167,6 +169,8 @@ function voiceOf(ch) {
   return ch?.voice || ch?.variantOf || ch?.id || 'generic'; // voice: 다른 인물의 녹음을 빌려 쓰는 인물 (샛별 저장소에서 가져온 셋)
 }
 function pickFoe() {
+  const testFoe = testRoute.pickFoe(currentFoe?.id, foeRandomEachRound); // test=1 · foe=random: 고른 인물은 상대에서 뺀다
+  if (testFoe) return testFoe;
   if (foeParam === 'stage') return CHARACTERS_BY_ID[STAGE_FOE[stages.id]] || randomCharacter(currentFoe?.id); // 이번 판 무대의 검객
   if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
   if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
@@ -231,16 +235,16 @@ function useStage(id) {
  *  지거나 도중에 "처음부터 다시"를 누르면 같은 배경 — 상대도 배경을 따르니 같은 상대와 다시 싸운다 (사장님 결정)
  */
 function nextRoundStage() {
-  const advance = stageFought && lastRoundWon;
+  const advance = stageFought && testRoute.advance(lastRoundWon); // test=1: 이기든 지든 다음 판으로
   lastRoundWon = false;
-  if (advance && useStage(STAGE_PIN || nextStage(stages.id))) {
+  if (advance && useStage(STAGE_PIN || testRoute.nextStage(stages.id) || nextStage(stages.id))) {
     clearFlying(); // 지난 판에 흩어지던 칼·방어구 조각과 벗겨진 투구가 새 배경에 남지 않게
     stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게)
     sound.setStage(stages.id); // 배경 소리가 3초에 걸쳐 바뀐다 (발소리·쓰러짐의 바닥 소리도 배경을 따른다)
   }
   stageFought = true;
 }
-useStage(STAGE_PIN || nextStage());
+useStage(STAGE_PIN || testRoute.nextStage(null) || nextStage());
 // ── (배경 끝) ─────────────────────────────────────────────────────────────
 
 // ── 화면 크기 / 픽셀 모드 ──
@@ -310,7 +314,7 @@ let foeWeaponId = 'longsword'; // 이번 판 상대 무기 (prepareRound 가 정
 function prepareRound() {
   currentFoe = pickFoe();
   // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브란은 10% 확률로 주워 온 커먼 칼)
-  foeWeaponId = params.get('foeWeapon') || FIXED_WEAPON || (currentFoe ? pickCharacterWeapon(currentFoe) : 'longsword');
+  foeWeaponId = params.get('foeWeapon') || testRoute.foeWeapon(currentFoe) || FIXED_WEAPON || (currentFoe ? pickCharacterWeapon(currentFoe) : 'longsword');
   // 이번 판에 나오는 목소리만 미리 만든다 (시작 단추를 누르기 전에는 소리 장치가 없어 그냥 넘어간다)
   sound.prepareVoices(['player', voiceOf(currentFoe)]);
 }
@@ -444,6 +448,7 @@ function newRound(weaponId) {
     heading: 0,
     look: LOOKS.player,
     weapon: weaponId,
+    ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
   if (currentFoe) {
@@ -1194,6 +1199,7 @@ function resume() {
 }
 
 $('btnStart').addEventListener('click', startFight);
+testRoute.mount(document, getWeapon(FIXED_WEAPON || 'longsword').nameKo); // test=1: 메뉴에 '테스트 고르기로'
 $('btnResume').addEventListener('click', resume);
 $('btnPause').addEventListener('click', pause);
 // 두 번째 손가락은 click 을 믿을 수 없다(첫 손가락이 칼·조이스틱을 쥔 채) → 터치의 pointerdown 으로도 멈춘다 (10/8 입력 수명주기)
@@ -1379,6 +1385,7 @@ function checkRoundEnd(dt) {
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 상대' : '다시 싸우기';
     $('btnResume').style.display = 'none';
+    testRoute.resultLabel($('btnStart'));
     reviveFx.reset(); // 결과 화면: 부활 연출이 남아 있으면 치운다 (상대가 일어서는 동안 내가 죽었을 때)
     showMenu();
   }
