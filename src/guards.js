@@ -218,7 +218,8 @@ export const IBERIAN_TABLE = {
  * 유파 자세표 덮기 (10/10 — 사장님 13:4x '규칙을 풀어': 유파마다 자기 자세표(원전 값)를 가져도 된다). 무기 틀 표를 고른 **뒤에** 적힌 자리만 덮는다.
  *  table: 무기 틀 표(GUARDS 와 같은 차례 — 없으면 교본 표 BASE) · tradition: 유파 칸 객체 TRADITIONS[t] (guards.js 가 schools.js 를 부르면 순환이라 객체를 받는다)
  *  tradition.guardTable 이 없으면 table 을 그대로 돌려준다(전과 같음). 자리 열쇠는 바탕 이름(GUARDS[i].name) — 틀 표가 이름을 바꿔도(상단·추단…) 맞는다.
- *  보이는 이름·설명은 바꾸지 않는다(HUD 이름은 TRADITIONS[t].names)
+ *  보이는 이름·설명은 바꾸지 않는다(HUD 이름은 TRADITIONS[t].names). 단 칸에 name·desc 가 적혀 있으면 그 칸 이름도 바꾼다 — 10/10 이탈리아 레이피어 고증:
+ *   hands.js 레이피어 손 돌림이 표 칸 이름의 Prima·Seconda·Terza·Quarta 를 읽기 때문(이베리아 칸엔 name 이 없어 그대로)
  */
 export function applySchoolGuardTable(table, tradition) {
   const over = tradition?.guardTable;
@@ -239,6 +240,8 @@ export function applySchoolGuardTable(table, tradition) {
     if (o.pitch != null) out.pitch = o.pitch * D2R;
     if (o.drop != null) out.drop = o.drop;
     if (o.src) out.src = o.src;
+    if (o.name) out.name = o.name; // 10/10 이탈리아: 칸 이름 (hands.js 손 돌림) — name 없는 칸(이베리아)은 그대로
+    if (o.desc) out.desc = o.desc;
     return out;
   });
 }
