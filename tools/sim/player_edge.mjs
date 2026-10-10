@@ -17,7 +17,7 @@
 //   입력 때 (맞음마다): wind 감는 중 · early 긋기 첫 0.1 s · cut 긋는 중 · rev 되긋기 꺾은 뒤 0.15 s · hold 긋고 댄 채 멈춤 · post 뗀 뒤 0.35 s 안(긋기 관성) · lift 그 뒤(되돌아옴) · tap 찌르기 획
 //   입력 예측 날 각: 손가락 속도(skill.vel)로 겨눔(guardDir)이 도는 쪽 = 칼이 곧 갈 쪽 ↔ 칼날 방향 각 (입력이 미리 알려 주는 날 방향)
 //
-//   node tools/sim/player_edge.mjs [무기,…|all] [--foes=stand,block,ai] [--rounds=6] [--secs=24] [--json=<파일>] [--quiet]
+//   node tools/sim/player_edge.mjs [무기,…|all] [--foes=stand,block,ai] [--rounds=6] [--secs=24] [--seed0=0] [--json=<파일>] [--quiet]
 //   설정 바꿈은 with_config.mjs 로 감싼다 (예: node tools/sim/with_config.mjs JOINTS.playerEdge=off player_edge.mjs longsword)
 //  src 는 읽기만 (하니스 몫: AI 멈춤·공격 막음·죽지 않음 — live_twin passive 와 같은 종류)
 // ─────────────────────────────────────────────────────────────
@@ -40,6 +40,7 @@ const WEAPONS = !pos[0] || pos[0] === 'all' ? ALL : pos[0].split(',');
 const FOES = String(args.foes ?? 'stand,block,ai').split(',');
 const ROUNDS = +(args.rounds ?? 6);
 const SECS = +(args.secs ?? 24);
+const SEED0 = +(args.seed0 ?? 0); // 씨앗 밀기 (잡음 폭 재기: --seed0=5000 등)
 const FRAME = 1 / 60;
 const R2D = 180 / Math.PI;
 const { STRIKE, SKILL, INPUT } = CONFIG;
@@ -322,7 +323,7 @@ for (const w of WEAPONS) {
   for (const foe of FOES) {
     const acc = newAcc();
     sw.acc = acc;
-    for (let r = 0; r < ROUNDS; r++) runRound(w, foe, 1000 + r * 17 + FOES.indexOf(foe) * 101, acc, sw);
+    for (let r = 0; r < ROUNDS; r++) runRound(w, foe, 1000 + SEED0 + r * 17 + FOES.indexOf(foe) * 101, acc, sw);
     per[foe] = acc;
     for (const k of ['strokes', 'strokeHits', 'n', 'flat', 'e', 'eq', 'v', 'inN', 'inFlat', 'inNflat', 'inFixable', 'corrWin', 'flatCorrWin', 'spinSteps', 'armSpin', 'nan', 'steps']) tot[k] += acc[k];
     tot.spinMax = Math.max(tot.spinMax, acc.spinMax);
