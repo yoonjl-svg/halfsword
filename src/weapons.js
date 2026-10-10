@@ -15,6 +15,7 @@ import { classifyWeapon } from './weapon_class.js';
 import { MONTANTE } from './config.js';
 import * as THREE from 'three';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
+import { SAIN_COLORS, ICE_COLORS, sainPartMesh, sainDecorate, icePartMesh, iceDecorate } from './rare_sword_details.js'; // 사인검·아이스 겉모습 (샛별 저장소에서 가져옴 6e71ba2·4a425f9)
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -57,22 +58,33 @@ export const TIER_DRAW = { common: 40, rare: 27, epic: 16, legend: 5, trash: 7, 
  * 서로 다른 무기 n장을 뽑는다. pool: 뽑을 수 있는 무기 id 목록, exclude: 되도록 빼는 id(지난 판 무기).
  *  빈 등급(뽑을 무기가 없는 등급)은 건너뛰고 남은 등급끼리 비율을 다시 맞춘다. rnd: 0~1 난수 (기본 Math.random)
  */
+//  묶음 (drawGroup, 샛별 저장소에서 가져옴 b4464ef weapon_draw.js — 간장·막야): 같은 drawGroup 무기는 등급 안에서 한 칸으로 센다.
+//   그 칸이 뽑히면 묶음 안에서 하나를 고르고(난수 한 번 더), 같은 판에 묶음의 다른 무기는 나오지 않는다. 지난 판 무기를 뺄 때도 묶음째 뺀다.
+//   묶음 없는 무기(지금 간장·막야 말고 전부)는 전과 같은 난수 수·같은 결과다.
 export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random } = {}) {
-  let left = pool.filter((id) => id !== exclude);
-  if (left.length < n) left = [...pool];
+  const groupOf = (id) => getWeapon(id).drawGroup || id;
+  const exGroup = exclude == null ? null : groupOf(exclude);
+  let left = pool.filter((id) => groupOf(id) !== exGroup);
+  if (new Set(left.map(groupOf)).size < n) left = [...pool];
   const out = [];
   while (out.length < n && left.length) {
     const byTier = {};
-    for (const id of left) (byTier[getWeapon(id).tier] ||= []).push(id);
+    for (const id of left) {
+      const slots = (byTier[getWeapon(id).tier] ||= new Map());
+      const g = groupOf(id);
+      if (!slots.has(g)) slots.set(g, []);
+      slots.get(g).push(id);
+    }
     const tiers = Object.keys(byTier).filter((t) => (TIER_DRAW[t] ?? 0) > 0);
     const total = tiers.reduce((a, t) => a + TIER_DRAW[t], 0);
     let r = rnd() * total;
     let t = tiers[tiers.length - 1];
     for (const k of tiers) if ((r -= TIER_DRAW[k]) < 0) { t = k; break; }
-    const ids = byTier[t] ?? left;
-    const id = ids[Math.floor(rnd() * ids.length)];
+    const slots = byTier[t] ? [...byTier[t].entries()] : left.map((id) => [groupOf(id), [id]]);
+    const [g, members] = slots[Math.floor(rnd() * slots.length)];
+    const id = members.length === 1 ? members[0] : members[Math.floor(rnd() * members.length)];
     out.push(id);
-    left = left.filter((x) => x !== id);
+    left = left.filter((x) => groupOf(x) !== g);
   }
   return out;
 }
@@ -232,7 +244,7 @@ function curvedBlade(build) {
  * 등급 마감: 같은 재질이라도 등급이 겉면에서 한눈에 읽히게 한다 (감독 지시 — 물리에는 영향 없음).
  *  쓰레기 = 더 칙칙하고 거칠게(광 없음), 커먼 = 있는 그대로(회귀 기준이라 절대 안 바꾼다),
  *  레어 = 손질된 마감(광이 돌기 시작), 에픽 = 고운 세공 + 은은한 광택(sheen), 레전드 = 최상급 연마.
- *  레전드에 자체 발광은 안 준다 — 진짜 엑스칼리버의 표식은 aura.js 오라 하나뿐이어야 해서
+ *  레전드에 자체 발광은 안 준다 — 레전드 등급의 표식은 aura.js 기운 하나여야 해서 (사장님 10/10 20:0x "빛 나는 건 레전드 등급 특성" — 전엔 "진짜 엑스칼리버의 표식")
  *  (복제품이 finishTier 'legend'로 같은 마감을 받아도 눈으로 구분이 안 되게).
  *  이미 자체 발광이 있는 재질(플라스마 칼날)의 emissive는 건드리지 않는다.
  */
@@ -931,7 +943,7 @@ const excaliburReplica = finalizeSpec('excalibur_replica', {
   desc: '일단은 왕의 검 엑스칼리버, 라고 쓰여 있다.',
   grip: 'two-hand', material: 'steel',
   tier: 'common', // 제원·등급은 커먼 (power 1.0)
-  finishTier: 'legend', // 겉면 마감만 진품과 동일 (등급 마감으로도 구분되면 안 된다 — 오라가 유일한 표식)
+  finishTier: 'legend', // 겉면 마감만 진품과 동일 (등급 마감으로도 구분되면 안 된다 — 기운이 표식: 기운 = 레전드 등급의 표식, 이 복제품은 커먼이라 없다)
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
   partMesh: excaliburPartMesh,
   buildParts: excaliburParts,
@@ -1200,6 +1212,200 @@ const morgenstern = finalizeSpec('morgenstern', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  18) 간장·막야 (레전드 한 쌍) — 샛별 저장소에서 가져옴 (b4464ef 처음 · 3f1af8c 오라 색 · 5b021f5 5 cm 단축, 기준 5a4e96c).
+//      춘추 시대 전설의 부부 검(간장이 만들고 막야가 몸을 던졌다는 이야기). 유물 실측이 아니라 전설 각색 제원이다 — 전부 [I].
+//      제원(샛별 쪽 사용자 승인값 그대로): 간장 전체 95 cm(칼날 72)·0.95 kg / 막야 전체 91 cm(칼날 68)·1.12 kg (짧은 막야가 더 무겁다).
+//       참고: 지안은 0.8~0.9 kg · 칼날 70~80 cm (docs/weapons_research.md 표, 제작사 자료 [I]-leaning — 청강검 0.85 kg 이 이 값) —
+//       간장 칼날은 그 띠 안이고 무게는 조금 위, 막야는 칼날이 짧은데 1.12 kg 이라 띠 위쪽 끝을 25 % 넘는다(전설 각색).
+//      부품 배치·무게중심 비율(0.36)·회전 반경(0.25)은 청강검 [I] 을 그대로 물려받는다 (손 원점·자루·호심 코등이·원반 폼멜 같은 자리).
+//      레전드 → power 1.2 · 파손 0 (불괴). 특수 능력 없음. mCut·mThrust 1.15, mBlunt 0.95 (샛별 값 그대로).
+//      유파: 중국 (청강검과 같은 劍 — school 'chinese'). 뽑기: 두 자루가 한 묶음(drawGroup) — 레전드가 나오면 엑스칼리버 한 칸 · 간장/막야 한 칸
+//       으로 나누고, 묶음이 뽑히면 둘 중 하나를 고른다(drawWeaponCards). 같은 판 두 장에 둘이 함께 나오지 않는다.
+//      오라: aura.js AURA_PROFILES — 간장(어두운 칼몸)에 흰 아지랑이, 막야(밝은 칼몸)에 먹빛 아지랑이 (엑스칼리버와 같은 세기 0.5).
+//      우리 쪽에서 바꾼 것: school 'chinese' 를 적음 · 카드 설명의 길이를 단축 뒤 값(100/96 → 95/91 cm)으로 바로잡음 (샛별 쪽은 단축 전 글자가 남아 있었다).
+// ═════════════════════════════════════════════════════════════
+const LEGENDARY_JIAN = {
+  ganjiang: { blade: 0.72, bladeMass: 0.64, gripMass: 0.11, pommelMass: 0.14, guardMass: 0.06,
+    halfWidth: 0.015, thick: 0.0034, steel: 0x62625d, grip: 0x201e1b, metal: 0x9a8255, pattern: 0xa48d64 },
+  moye: { blade: 0.68, bladeMass: 0.745, gripMass: 0.12, pommelMass: 0.18, guardMass: 0.075,
+    halfWidth: 0.016, thick: 0.0038, steel: 0xe3eaed, grip: 0xc9c9be, metal: 0xb9c5c7, pattern: 0x849fa8 },
+};
+
+function legendaryJianParts() {
+  const d = LEGENDARY_JIAN[this.id], L = this.bladeLength;
+  const grip = boxInertia(d.gripMass, 0.015, 0.09, 0.015);
+  const pommel = sphereInertia(d.pommelMass, 0.02);
+  const guard = boxInertia(d.guardMass, 0.035, 0.008, 0.012);
+  const blade = bladeInertia(d.bladeMass, L, 0.36, 0.25, 2 * d.halfWidth, 0.009);
+  return [
+    partTuple(['box', 0.015, 0.09, 0.015], 0, d.gripMass, 0, grip.Ie, grip.It, d.grip),
+    partTuple(['ball', 0.02], -0.09, d.pommelMass, 0, pommel.Ie, pommel.It, d.metal),
+    partTuple(['box', 0.035, 0.008, 0.012], 0.11, d.guardMass, 0, guard.Ie, guard.It, d.metal),
+    partTuple(['box', d.halfWidth, L / 2, 0.0045], 0.12 + L / 2, d.bladeMass,
+      blade.comY, blade.Ie, blade.It, d.steel, true),
+  ];
+}
+
+// 紋은 칼면 위 얇은 삼각형 선 한 벌로 그린다. 텍스처·발광·충돌·새 강체는 없다.
+function legendaryJianDecorate(group) {
+  const d = LEGENDARY_JIAN[this.id], L = this.bladeLength;
+  const metal = metalMat(d.metal, { rough: 0.23 });
+  const dark = this.id === 'ganjiang';
+  const guard = addMesh(group, new THREE.OctahedronGeometry(0.034, 0), metal, [0, 0.11, 0]);
+  guard.scale.set(1.06, 0.35, 0.52);
+  guard.castShadow = true;
+  const collar = addMesh(group, new THREE.CylinderGeometry(0.012, 0.014, 0.036, 8), metal, [0, 0.144, 0]);
+  collar.scale.set(1.2, 1, 0.55);
+  collar.castShadow = true;
+  // 자루 목띠와 이중 원반 상감.
+  for (const y of [-0.065, 0.073]) {
+    const ring = addMesh(group, new THREE.TorusGeometry(0.016, 0.0014, 5, 16), metal, [0, y, 0]);
+    ring.rotation.x = Math.PI / 2;
+  }
+  for (const side of [-1, 1]) {
+    addMesh(group, new THREE.TorusGeometry(0.014, 0.0008, 5, 20), metal, [0, -0.09, side * 0.008]);
+    const seal = addMesh(group, new THREE.OctahedronGeometry(0.006, 0), metal, [0, -0.09, side * 0.008]);
+    seal.scale.set(1, 1, 0.3);
+    const heart = addMesh(group, new THREE.TorusGeometry(0.007, 0.0007, 5, 16), metal, [0, 0.11, side * 0.017]);
+    heart.scale.y = 0.62;
+  }
+  const vertices = [];
+  const surface = (x, y, side) => {
+    const t = (y - 0.12) / L;
+    return [x, y, side * (d.thick * (1 - 0.35 * t) + 0.00012)];
+  };
+  const stroke = (a, b) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+    if (len < 1e-6) return;
+    const nx = -dy / len * 0.00014, ny = dx / len * 0.00014;
+    for (const side of [-1, 1]) {
+      const p = surface(a[0] + nx, a[1] + ny, side);
+      const q = surface(a[0] - nx, a[1] - ny, side);
+      const r = surface(b[0] - nx, b[1] - ny, side);
+      const s = surface(b[0] + nx, b[1] + ny, side);
+      vertices.push(...p, ...q, ...r, ...p, ...r, ...s);
+    }
+  };
+  if (dark) {
+    // 귀갑문: 두 줄의 육각 세공이 칼끝 방향으로 가늘어진다.
+    for (let y = 0.195; y < 0.12 + L - 0.105; y += 0.023) {
+      const taper = 1 - 0.25 * (y - 0.12) / L;
+      for (const x of [-0.0046, 0.0046]) {
+        const points = Array.from({ length: 7 }, (_, k) => {
+          const a = k * Math.PI / 3;
+          return [(x + Math.cos(a) * 0.0045) * taper, y + Math.sin(a) * 0.0115];
+        });
+        for (let k = 0; k < 6; k++) stroke(points[k], points[k + 1]);
+      }
+    }
+  } else {
+    // 흐르는 담금질 결: 날선을 가리지 않는 다섯 줄의 은은한 물결.
+    for (let line = -2; line <= 2; line++) {
+      let prev;
+      for (let k = 0; k <= 80; k++) {
+        const t = k / 80, y = 0.185 + t * (L - 0.165);
+        const x = (line * 0.0032 + Math.sin(t * 5 * Math.PI + line * 0.65) * 0.0012) * (1 - 0.3 * t);
+        const point = [x, y];
+        if (prev) stroke(prev, point);
+        prev = point;
+      }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.computeVertexNormals();
+  addMesh(group, geo, metalMat(d.pattern, { rough: 0.42, metal: 0.6, side: THREE.DoubleSide }));
+}
+
+function legendaryJianSpec(id, nameKo, nameEn, desc) {
+  const d = LEGENDARY_JIAN[id];
+  return finalizeSpec(id, {
+    nameKo, nameEn, desc, grip: 'one-hand', material: 'steel', tier: 'legend',
+    school: 'chinese', // 중국 유파 (청강검과 같은 劍)
+    enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js) — 우리 관례: 짧은 한손 칼(세이버·팔쉬온·청강검)은 다 켠다. 샛별 쪽엔 빠져 있었다(청강검엔 있음)
+    drawGroup: 'ganjiang_moye', hiltLength: 0.12, bladeLength: d.blade,
+    mCut: 1.15, mThrust: 1.15, mBlunt: 0.95,
+    partMesh: swordKit({
+      blade: { edge: 'double', width: (t) => 1 - 0.25 * t, thick: d.thick,
+        tip: 'spear', tipLen: 0.075, overshoot: 0 },
+      grip: { style: 'cord' }, pommel: { style: 'disc' }, guard: { style: 'none' }, metal: d.metal,
+    }),
+    buildParts: legendaryJianParts, decorate: legendaryJianDecorate,
+  });
+}
+
+const ganjiang = legendaryJianSpec('ganjiang', '간장', 'Ganjiang',
+  '어두운 회금빛 칼몸에 귀갑문을 새긴 명검.\n길이 95cm, 질량 0.95kg의 한손 양날검.');
+const moye = legendaryJianSpec('moye', '막야', 'Moye',
+  '밝은 은강철에 물결 같은 결이 흐르는 명검.\n길이 91cm, 질량 1.12kg의 한손 양날검.');
+
+// ═════════════════════════════════════════════════════════════
+//  19) 사인검 (레어) — 샛별 저장소에서 가져옴 (6e71ba2, 기준 5a4e96c). 조선 왕실의 벽사 의례검(네 寅이 겹친 때 만든다).
+//      [M] 국립중앙박물관 덕수1968 철제 금은입사 사인참사검 전체 100 cm (칼날 길이·질량·단면은 공개 실측 없음) ·
+//      국립고궁박물관 창덕26673-1 현존 71 cm·폭 3.5 cm(자루 결실). 그래서 전체 100 cm 만 [M], 나머지는 게임 각색 [I]:
+//      칼날 0.75 m · 질량 1.0 kg(자루 .10 · 폼멜 .16 · 코등이 .09 · 칼날 .65) · 한손 쥠 · 무게중심 비율 0.36·회전 반경 0.25(청강검과 같은 [I]).
+//      의례검이라 실전 성능 근거는 없다 — mCut 1.10 · mThrust 1.0 · mBlunt 0.95 는 샛별 쪽 시작값.
+//      겉모습(rare_sword_details.js): 꽃잎 폼멜·판형 코등이·북두칠성 금입사와 전서 리듬의 기하(유물 27 자 복제 아님)·은입사 선.
+//      유파: 중국 (school 'chinese') — 우리 중국 유파의 바탕 글이 《무비지》의 조선세법·본국검이라(schools.js 중국 절) 조선 검에 그대로 맞는다.
+//  20) 아이스 (레어) — 샛별 저장소에서 가져옴 (6e71ba2 · 4a425f9 겉모습, 기준 5a4e96c). 소설 속 북부 영주 가문의 대검(창작물의 검).
+//      [I] 전부 게임 설계: 전체 168 cm(소설 6 ft = 183 cm 에서 샛별 쪽 사용자 지시로 15 cm 줄임) · 칼날 1.25 m · 폭 9 cm · 3.5 kg.
+//       비교 [M]: Met 14.25.935 양손검 전체 168.9 cm · 2.78 kg / Cleveland 1919.68 전체 191.5 cm · 3.95 kg — 같은 길이 실물보다 약 0.7 kg(26 %) 무겁다.
+//       부품 질량 자루 .30 · 폼멜 .70 · 코등이 .35 · 칼날 2.15 kg, 칼날 무게중심 비율 0.33·회전 반경 0.25 [I].
+//      mCut 1.10 · mThrust 0.85 · mBlunt 1.15 = 츠바이핸더 배율 그대로(샛별 쪽 결정). 유파는 앞무게 틀 자동 → 이베리아.
+//      우리 쪽에서 바꾼 것: 손목 서보 상한 28 덮개를 뺐다 → 두 손 쥠 기본값 26 (우리 츠바이핸더도 10/10 쥠 넓힘 때 28 을 뺐다, 확인표 682.
+//       샛별 쪽 근거가 '지금 대검과 같은 28' 이었으니 우리 대검 값 26 이 같은 뜻). 쥠 자리(손 사이 0.20 m, 오른손은 날밑 0.185 m 아래)는 샛별 그대로 —
+//       우리 츠바이핸더의 고디뉴 쥠(오른손 날밑·손 사이 0.30 m)으로 바꿀지는 사장님 확인 전(docs/import/saetbyeol_new_2026-10-10.md).
+// ═════════════════════════════════════════════════════════════
+const sain = finalizeSpec('sain', {
+  nameKo: '사인검', nameEn: 'Sain Sword',
+  desc: '별자리와 금은 명문을 새긴 의례검.\n전체 100cm, 질량 1kg의 한손 양날검.',
+  grip: 'one-hand', material: 'steel', tier: 'rare',
+  school: 'chinese', // 중국 유파 — 바탕 글이 조선세법·본국검 (위 머리말)
+  enterParry: true, // 들어가며 막기 (짧은 한손 칼 관례 — 간장·막야와 같은 까닭)
+  hiltLength: 0.125, bladeLength: 0.75, gripAlong: -0.12,
+  mCut: 1.10, mThrust: 1.0, mBlunt: 0.95,
+  partMesh: sainPartMesh, decorate: sainDecorate,
+  buildParts() {
+    const L = this.bladeLength;
+    const grip = boxInertia(0.10, 0.016, 0.1, 0.014);
+    const pommel = sphereInertia(0.16, 0.025);
+    const guard = boxInertia(0.09, 0.04, 0.01, 0.013);
+    const blade = bladeInertia(0.65, L, 0.36, 0.25, 0.035, 0.009);
+    return [
+      partTuple(['box', 0.016, 0.1, 0.014], 0, 0.10, 0, grip.Ie, grip.It, SAIN_COLORS.grip),
+      partTuple(['ball', 0.025], -0.1, 0.16, 0, pommel.Ie, pommel.It, SAIN_COLORS.metal),
+      partTuple(['box', 0.04, 0.01, 0.013], 0.11, 0.09, 0, guard.Ie, guard.It, SAIN_COLORS.metal),
+      partTuple(['box', 0.0175, L / 2, 0.0045], this.hiltLength + L / 2, 0.65,
+        blade.comY, blade.Ie, blade.It, SAIN_COLORS.blade, true),
+    ];
+  },
+});
+
+const ice = finalizeSpec('ice', {
+  nameKo: '아이스', nameEn: 'Ice',
+  desc: '세 줄의 홈과 황동 장식을 지닌 북부 가문의 검.\n전체 168cm, 질량 3.5kg의 양손검.', // 사장님 10/10 20:0x: '스타크의 대검' → '북부 가문의 검' (이름 '아이스'는 일반명사로 그대로)
+  grip: 'two-hand', material: 'steel', tier: 'rare',
+  hiltLength: 0.20, bladeLength: 1.25, gripAlong: -0.20,
+  mCut: 1.10, mThrust: 0.85, mBlunt: 1.15,
+  // 손목 서보 상한: 두 손 쥠 기본값 26 (샛별 쪽 28 덮개는 뺐다 — 위 머리말 · 우리 츠바이핸더와 같은 값)
+  partMesh: icePartMesh, decorate: iceDecorate,
+  buildParts() {
+    const L = this.bladeLength;
+    const grip = boxInertia(0.30, 0.022, 0.185, 0.020);
+    const pommel = sphereInertia(0.70, 0.030);
+    const guard = boxInertia(0.35, 0.14, 0.015, 0.022);
+    const blade = bladeInertia(2.15, L, 0.33, 0.25, 0.09, 0.009);
+    return [
+      partTuple(['box', 0.022, 0.185, 0.020], 0, 0.30, 0, grip.Ie, grip.It, ICE_COLORS.grip),
+      partTuple(['ball', 0.030], -0.20, 0.70, 0, pommel.Ie, pommel.It, ICE_COLORS.metal),
+      partTuple(['box', 0.14, 0.015, 0.022], 0.185, 0.35, 0, guard.Ie, guard.It, ICE_COLORS.metal),
+      partTuple(['box', 0.045, L / 2, 0.0045], this.hiltLength + L / 2, 2.15,
+        blade.comY, blade.Ie, blade.It, ICE_COLORS.blade, true),
+    ];
+  },
+});
+
 // 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
 //  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
@@ -1208,6 +1414,7 @@ export const WEAPONS = {
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol, morgenstern,
   uchigatana, // 제안 가지 (10/9, 사장님 확인 전) — 끝에 둬서 다른 무기의 목록 순서를 바꾸지 않는다
+  ganjiang, moye, sain, ice, // 샛별 저장소에서 가져옴 (10/10, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)

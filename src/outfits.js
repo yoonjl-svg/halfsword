@@ -15,6 +15,8 @@
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { weaponEnv } from './weapon_looks.js';
+import { createRenjiOutfit } from './outfit_renji.js'; // 김씨 복식 (샛별 저장소에서 가져옴)
+import { createEiraOutfit } from './outfit_eira.js'; // 에이라 린드 복식 (샛별 저장소에서 가져옴)
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -2071,7 +2073,565 @@ const TOME_LIBRARIAN = {
   thighB: ropaThigh,
 };
 
+// ───────────────────────────────────────────── 샛별 저장소에서 가져온 인물 넷의 복식 (10/10, 기준 5a4e96c) ─────────────────────────────────────────────
+//  아르토리아(artoria_silver_v2 — 6e71ba2 처음 · 5277832 다듬기) · 사미라 미르자(crown_rose_uniform — 59680c9 푸른 제복 · b8b1344 장밋빛) ·
+//  김씨(renji_wanderer — outfit_renji.js, 27888f2·4c5ce4d·dcad882) · 에이라 린드(eira_winter_priest — outfit_eira.js, 27888f2).
+//  모두 강체 부위에 붙는 장식뿐이다(몸·질량·관절·손·충돌체·상처 면 그대로). 바이트 그대로 옮기고 아래 두 가지만 우리 쪽에 맞췄다:
+//   · 납작한 머리 다발 isoldeLock — 샛별 쪽 이졸데 v3(우리는 안 가져옴) 칸에 있던 도우미라 여기에 따로 둔다(이름은 그쪽과 같게)
+//   · 쓰지 않는 옛 판(왕관 기사 v1·v2·푸른 제복 등록, 아르토리아 v1 등록)은 등록하지 않는다 — 아르토리아 v1·푸른 제복 정의는 v2·장밋빛이 물려 써서 둔다
+//  표면 다듬기 polishOutfit(아래, fighter.js 가 판금 경계를 잡은 뒤 부른다)은 look.stockEyes·tailoring 표시가 있는 인물만 건드린다 — 기존 인물은 표시가 없어 그대로.
+function isoldeLock(points, widths, depth = 0.007) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  const rings = 14, sides = 8, vertices = [], indices = [];
+  for (let i = 0; i <= rings; i++) {
+    const t = i / rings, at = curve.getPoint(t), u = t * (widths.length - 1);
+    const j = Math.min(widths.length - 2, Math.floor(u));
+    const width = THREE.MathUtils.lerp(widths[j], widths[j + 1], u - j);
+    const thickness = depth * Math.min(1, width / 0.012);
+    for (let k = 0; k < sides; k++) {
+      const a = k / sides * Math.PI * 2;
+      vertices.push(at.x + Math.cos(a) * thickness, at.y, at.z + Math.sin(a) * width / 2);
+      if (i < rings) {
+        const n = i * sides + k, next = i * sides + (k + 1) % sides;
+        indices.push(n, next, n + sides, next, next + sides, n + sides);
+      }
+    }
+  }
+  for (let k = 1; k < sides - 1; k++) {
+    indices.push(0, k + 1, k);
+    const end = rings * sides;
+    indices.push(end, end + k, end + k + 1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(vertices.length / 3 * 2), 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// Artoria uses the native adult body and hands. Cloth is attached beneath the
+// representative part mesh so the existing armor-wear list contains metal only.
+const ARTORIA_SILVER = 0xc5d2da;
+const ARTORIA_EDGE = 0x829aa8;
+const ARTORIA_TEAL = 0x28797b;
+const ARTORIA_INK = 0x19242c;
+const ARTORIA_GOLD = 0xbba475;
+const ARTORIA_METAL = { metalness: 0.68, roughness: 0.32, steel: 0.9 };
+function artoriaCloth(g, name = 'artoria-cloth') {
+  const holder = g.children[0];
+  let layer = holder.children.find((o) => o.name === name);
+  if (!layer) { layer = new THREE.Group(); layer.name = name; holder.add(layer); }
+  return layer;
+}
+function artoriaPanel(x, yz, ridge = 0) {
+  const geo = clothPanel(x, yz, 0.012);
+  const p = geo.attributes.position;
+  const w = Math.max(...yz.map((v) => Math.abs(v[1])));
+  for (let i = 0; i < p.count; i++) p.setX(i, p.getX(i) + ridge * Math.max(0, 1 - Math.abs(p.getZ(i)) / w));
+  geo.computeVertexNormals();
+  return geo;
+}
+function artoriaRobe(g, lower = false) {
+  const layer = artoriaCloth(g), h = lower ? 0.38 : 0.46;
+  const top = lower ? 0.134 : 0.106, bottom = lower ? 0.15 : 0.14;
+  const start = 2.12, sweep = Math.PI * 2 - 1.08;
+  // Open toward +X. Two independently attached skirt halves expose the greaves
+  // and preserve knee articulation instead of hiding both legs in one rigid cone.
+  const skirt = new THREE.CylinderGeometry(top, bottom, h, 20, 4, true, start, sweep);
+  skirt.scale(0.91, 1, 1);
+  addMerged(layer, [skirt], ARTORIA_INK, { ...CLOTH, side: THREE.DoubleSide });
+  const lining = new THREE.CylinderGeometry(top * 0.976, bottom * 0.976, h * 0.99, 20, 2, true, start, sweep);
+  lining.scale(0.91, 1, 1);
+  addMerged(layer, [lining], ARTORIA_TEAL, { ...CLOTH, side: THREE.DoubleSide });
+  const seams = [], bands = [];
+  for (const a of [start, start + sweep]) {
+    const p = [[Math.sin(a) * top * 0.91, h / 2, Math.cos(a) * top],
+      [Math.sin(a) * (top + bottom) * 0.455, 0, Math.cos(a) * (top + bottom) / 2],
+      [Math.sin(a) * bottom * 0.91, -h / 2, Math.cos(a) * bottom]];
+    seams.push(taperedTube(p, [0.0027, 0.0027, 0.0027], 7, 4));
+    const inward = a === start ? 0.08 : -0.08;
+    bands.push(bake(new THREE.CylinderGeometry(top * 1.01, bottom * 1.01, h, 8, 1, true, a + inward, inward > 0 ? 0.16 : -0.16), null, null, [0.91, 1, 1]));
+  }
+  addMerged(layer, seams, ARTORIA_GOLD, CLOTH);
+  addMerged(layer, bands, 0x3b8684, { ...CLOTH, side: THREE.DoubleSide });
+}
+function artoriaShoulder(g, large) {
+  const r = large ? 0.106 : 0.085, plates = [];
+  for (let i = 0; i < 3; i++) plates.push(bake(new THREE.SphereGeometry(r - i * 0.009, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.65), [0, 0.074 - i * 0.048, 0], null, [1.13, 0.71, large ? 1.22 : 1.05]));
+  addMerged(g, plates, ARTORIA_SILVER, ARTORIA_METAL);
+  addMerged(g, [cyl(r * 0.98, r * 1.03, 0.012, 10, true, [0, 0.015, 0])], ARTORIA_EDGE, ARTORIA_METAL);
+  addMerged(g, [cyl(r * 1.02, r * 1.025, 0.005, 10, true, [0, 0.023, 0])], ARTORIA_GOLD, ARTORIA_METAL);
+  addMerged(g, [cyl(0.053, 0.05, 0.155, 10, false, [0, -0.035, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+}
+function artoriaForearm(g) {
+  addMerged(g, [cyl(0.056, 0.047, 0.205, 10, false, [0, 0.005, 0]),
+    cyl(0.061, 0.049, 0.049, 10, true, [0, -0.089, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+  addMerged(g, [artoriaPanel(0.05, [[0.091, -0.027], [0.117, 0], [0.091, 0.027], [-0.08, 0.032], [-0.1, 0], [-0.08, -0.032]], 0.016)], 0xdce3e5, ARTORIA_METAL);
+  addMerged(g, [cyl(0.0615, 0.0605, 0.008, 10, true, [0, -0.07, 0])], ARTORIA_EDGE, ARTORIA_METAL);
+}
+function artoriaShin(g) {
+  artoriaRobe(g, true);
+  addMerged(g, [cyl(0.06, 0.052, 0.29, 10, false, [0, 0, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+  addMerged(g, [artoriaPanel(0.056, [[0.205, 0], [0.16, 0.052], [0.09, 0.051], [-0.165, 0.031], [-0.196, 0], [-0.165, -0.031], [0.09, -0.051], [0.16, -0.052]], 0.025)], 0xd8e1e4, ARTORIA_METAL);
+  addMerged(g, [cyl(0.062, 0.061, 0.012, 10, true, [0, 0.115, 0])], ARTORIA_EDGE, ARTORIA_METAL);
+}
+function artoriaFoot(g) {
+  addMerged(g, [box(0.265, 0.067, 0.12, [0.009, 0.009, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+  addMerged(g, [-0.062, -0.011, 0.042, 0.092].map((x) => box(0.012, 0.006, 0.123, [x, 0.046, 0])), ARTORIA_EDGE, ARTORIA_METAL);
+}
+const ARTORIA_OUTFIT = {
+  armorParts: new Set(['chest', 'abdomen', 'pelvis', 'uarmS', 'uarmO', 'farmS', 'farmO', 'shinF', 'shinB', 'footF', 'footB']),
+  head(g, look) {
+    quietFace(g, look, 'artoria');
+    const hair = [];
+    for (const s of [-1, 1]) {
+      hair.push(isoldeLock([[0.015, 0.085, s * 0.055], [0.087, 0.071, s * 0.06], [0.106, 0.025, s * 0.082], [0.081, -0.023, s * 0.09]], [0.052, 0.052, 0.035, 0.002], 0.015));
+      hair.push(isoldeLock([[0.006, 0.067, s * 0.09], [0.028, -0.01, s * 0.112], [0.07, -0.14, s * 0.131], [0.12, -0.224, s * 0.145]], [0.036, 0.043, 0.04, 0.022], 0.014));
+    }
+    hair.push(isoldeLock([[0.002, 0.099, -0.01], [0.084, 0.074, -0.012], [0.104, 0.037, 0.009]], [0.045, 0.034, 0.003], 0.012));
+    hair.push(bake(new THREE.SphereGeometry(0.055, 10, 7), [-0.11, -0.002, 0], null, [0.7, 1.1, 1]));
+    for (let i = -1; i <= 1; i++) hair.push(isoldeLock([[-0.121, -0.016, i * 0.024], [-0.14, -0.095, i * 0.031], [-0.131, -0.216, i * 0.037]], [0.038, 0.043, 0.004], 0.012));
+    const hairMesh = addMerged(g, hair, look.hair, { ...CLOTH, roughness: 0.84 }); hairMesh.name = 'artoria-hair';
+    addMerged(g, [box(0.02, 0.016, 0.09, [-0.126, -0.026, 0])], ARTORIA_TEAL, CLOTH);
+    if (look.eyeColor == null) {
+      // Retain the old layered eyes only in the archived appearances.
+      addMerged(g, [-1, 1].map((s) => box(0.007, 0.016, 0.025, [0.101, 0.012, s * 0.035])), 0x418f87, CLOTH);
+      addMerged(g, [-1, 1].map((s) => box(0.006, 0.013, 0.008, [0.107, 0.012, s * 0.035])), 0x162d30, CLOTH);
+      addMerged(g, [-1, 1].map((s) => box(0.003, 0.004, 0.004, [0.111, 0.016, s * 0.033])), 0xeaf3e9, CLOTH);
+    }
+  },
+  chest(g, look) {
+    const fabric = artoriaCloth(g); clothNeck(fabric, look);
+    const cape = addMerged(fabric, [clothPanel(-0.153, [[0.151, -0.1], [0.167, -0.234], [0.075, -0.31], [-0.192, -0.285], [-0.184, -0.063]])], ARTORIA_TEAL, { ...CLOTH, side: THREE.DoubleSide }); cape.name = 'artoria-cape';
+    addMerged(fabric, [clothPanel(-0.158, [[0.135, -0.225], [0.125, -0.237], [-0.19, -0.271], [-0.185, -0.259]])], ARTORIA_GOLD, CLOTH);
+    const hairLayer = artoriaCloth(g, 'artoria-hair');
+    addMerged(hairLayer, [-1, 1].map((s) => isoldeLock([[0.13, 0.15, s * 0.145], [0.175, 0.06, s * 0.15], [0.164, -0.067, s * 0.17]], [0.03, 0.032, 0.002], 0.012)), look.hair, CLOTH);
+    addMerged(g, [box(0.025, 0.235, 0.374, [-0.121, 0.006, 0]), ...[-1, 1].map((s) => box(0.255, 0.224, 0.024, [0, 0, s * 0.187]))], ARTORIA_EDGE, ARTORIA_METAL);
+    addMerged(g, [artoriaPanel(0.137, [[0.146, -0.17], [0.17, -0.072], [0.126, 0], [0.17, 0.072], [0.146, 0.17], [-0.079, 0.151], [-0.153, 0], [-0.079, -0.151]], 0.038)], ARTORIA_SILVER, ARTORIA_METAL);
+    addMerged(g, [artoriaPanel(0.159, [[0.091, -0.139], [0.112, 0], [0.091, 0.139], [0.014, 0.128], [-0.071, 0], [0.014, -0.128]], 0.03)], 0xe0e7e9, ARTORIA_METAL);
+    addMerged(g, [artoriaPanel(0.192, [[0.079, 0], [0.04, 0.017], [0.015, 0], [0.04, -0.017]], 0.005)], ARTORIA_TEAL, ARTORIA_METAL);
+    addMerged(g, [cyl(0.065, 0.08, 0.034, 10, true, [0, 0.164, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+  },
+  abdomen(g) {
+    const fabric = artoriaCloth(g);
+    addMerged(fabric, [clothPanel(-0.136, [[0.094, -0.064], [0.095, -0.281], [-0.124, -0.257], [-0.1, -0.05]])], ARTORIA_TEAL, CLOTH);
+    for (let i = 0; i < 3; i++) addMerged(g, [artoriaPanel(0.123 + i * 0.005, [[0.096 - i * 0.051, -0.16], [0.096 - i * 0.051, 0.16], [0.036 - i * 0.051, 0.163], [0.021 - i * 0.051, 0], [0.036 - i * 0.051, -0.163]], 0.02)], i % 2 ? ARTORIA_EDGE : ARTORIA_SILVER, ARTORIA_METAL);
+  },
+  pelvis(g) {
+    const fabric = artoriaCloth(g);
+    addMerged(fabric, [clothPanel(-0.131, [[0.088, -0.051], [0.092, -0.255], [-0.19, -0.228], [-0.169, -0.075]])], ARTORIA_TEAL, CLOTH);
+    addMerged(g, [-1, 1].map((s) => artoriaPanel(0.12, [[0.072, s * 0.036], [0.088, s * 0.159], [-0.051, s * 0.203], [-0.134, s * 0.153], [-0.096, s * 0.063]], 0.015)), ARTORIA_SILVER, ARTORIA_METAL);
+    addMerged(g, [box(0.25, 0.022, 0.34, [0, 0.06, 0])], ARTORIA_GOLD, ARTORIA_METAL);
+  },
+  uarmS(g) { artoriaShoulder(g, false); },
+  uarmO(g) { artoriaShoulder(g, true); },
+  farmS: artoriaForearm, farmO: artoriaForearm,
+  thighF(g) { artoriaRobe(g); }, thighB(g) { artoriaRobe(g); },
+  shinF: artoriaShin, shinB: artoriaShin,
+  footF: artoriaFoot, footB: artoriaFoot,
+};
+
+// 아르토리아 전용 보완. 물리 부위와 손은 유지하고, 옷의 외곽만 다듬는다.
+function artoriaRoundedBox(w, h, d, radius, taper = 1) {
+  const geo = new THREE.BoxGeometry(w, h, d, 4, 4, 4), p = geo.attributes.position;
+  const core = new THREE.Vector3(w / 2 - radius, h / 2 - radius, d / 2 - radius);
+  const v = new THREE.Vector3(), near = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    near.set(THREE.MathUtils.clamp(v.x, -core.x, core.x), THREE.MathUtils.clamp(v.y, -core.y, core.y), THREE.MathUtils.clamp(v.z, -core.z, core.z));
+    v.sub(near).normalize().multiplyScalar(radius).add(near);
+    const scale = THREE.MathUtils.lerp(taper, 1, (v.y + h / 2) / h);
+    p.setXYZ(i, v.x * scale, v.y, v.z * scale);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+function artoriaSoftBase(g, radius = 0.018, taper = 1) {
+  const main = g.children[0], { width, height, depth } = main.geometry.parameters;
+  if (width && height && depth) {
+    const geo = artoriaRoundedBox(width, height, depth, radius, taper);
+    main.geometry.dispose(); main.geometry = geo;
+  }
+  // 기존 갑옷 수집 인덱스를 지키기 위해 기본 장식은 삭제하지 않고 숨긴다.
+  for (const extra of g.children.slice(1)) extra.visible = false;
+}
+function artoriaCapeV2(g) {
+  const layer = artoriaCloth(g);
+  const rows = 8, columns = 18, vertices = [], uv = [], indices = [];
+  const at = (t, u) => [-0.15 - 0.075 * t - 0.035 * (1 - u * u)
+    + Math.sin((u + 0.1) * Math.PI * 3) * (0.008 + t * 0.02),
+    0.151 - t * 0.795 - 0.025 * (1 - u * u) * t,
+    -0.117 + u * (0.147 + t * 0.066)];
+  for (let r = 0; r <= rows; r++) for (let c = 0; c <= columns; c++) {
+    vertices.push(...at(r / rows, c / columns * 2 - 1)); uv.push(c / columns, r / rows);
+    if (r < rows && c < columns) {
+      const i = r * (columns + 1) + c;
+      indices.push(i, i + columns + 1, i + 1, i + 1, i + columns + 1, i + columns + 2);
+    }
+  }
+  const cape = new THREE.BufferGeometry();
+  cape.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  cape.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  cape.setIndex(indices); cape.computeVertexNormals();
+  addMerged(layer, [cape], ARTORIA_TEAL, { ...CLOTH, side: THREE.DoubleSide }).name = 'artoria-cape';
+  const borders = [-1, 1].map((u) => taperedTube([0, 0.33, 0.67, 1].map((t) => at(t, u)), [0.0022, 0.0022, 0.0022, 0.0022], 12, 4));
+  borders.push(taperedTube([-1, -0.66, -0.33, 0, 0.33, 0.66, 1].map((u) => at(1, u)), Array(7).fill(0.0022), 24, 4));
+  addMerged(layer, borders, ARTORIA_GOLD, CLOTH);
+}
+function artoriaSkirtV2(g, side) {
+  const layer = artoriaCloth(g), rings = 8, arcs = 16, vertices = [], uv = [], indices = [];
+  // 허벅지에 붙은 좌우 자락은 무릎에서 끊기지 않고 아래로 넓어진다.
+  // 정면 중앙을 비워 은빛 정강이와 발의 위치가 경기 거리에서도 읽히게 한다.
+  const at = (t, a) => {
+    const fold = 1 + 0.035 * Math.cos(a * 6), spread = Math.pow(t, 0.8);
+    return [Math.cos(a) * (0.103 + spread * 0.103) * fold - t * 0.02,
+      0.205 - t * 0.755 + Math.sin(a) * t * 0.015,
+      side * Math.sin(a) * (0.092 + spread * 0.115) * fold];
+  };
+  for (let y = 0; y <= rings; y++) for (let a = 0; a <= arcs; a++) {
+    vertices.push(...at(y / rings, a / arcs * Math.PI)); uv.push(a / arcs, y / rings);
+    if (y < rings && a < arcs) {
+      const i = y * (arcs + 1) + a;
+      indices.push(i, i + 1, i + arcs + 1, i + 1, i + arcs + 2, i + arcs + 1);
+    }
+  }
+  const shell = new THREE.BufferGeometry();
+  shell.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  shell.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  shell.setIndex(side > 0 ? indices : indices.toReversed()); shell.computeVertexNormals();
+  addMerged(layer, [shell], ARTORIA_INK, { ...CLOTH, side: THREE.DoubleSide });
+  const strips = [], hems = [];
+  for (const a of [0.025, Math.PI - 0.025]) {
+    const points = [0, 0.35, 0.7, 1].map((t) => at(t, a));
+    strips.push(isoldeLock(points, [0.022, 0.03, 0.04, 0.04], 0.004));
+    hems.push(taperedTube(points.map((p) => [p[0] + 0.004, p[1], p[2] + side * 0.017]), [0.0022, 0.0022, 0.0022, 0.0022], 10, 4));
+  }
+  addMerged(layer, strips, ARTORIA_TEAL, CLOTH);
+  addMerged(layer, hems, ARTORIA_GOLD, CLOTH);
+}
+function artoriaShoulderV2(g, large) {
+  const r = large ? 0.107 : 0.087;
+  const plates = [0, 1, 2].map((i) => bake(new THREE.SphereGeometry(r - i * 0.014, 12, 7, 0, Math.PI * 2, 0, Math.PI * 0.66), [0, 0.075 - i * 0.04, 0], null, [1.08, 0.77, large ? 1.2 : 1.04]));
+  plates.push(cyl(0.055, 0.045, 0.153, 12, false, [0, -0.034, 0]));
+  addMerged(g, plates, ARTORIA_SILVER, ARTORIA_METAL);
+  addMerged(g, [cyl(r * 0.91, r * 0.96, 0.006, 12, true, [0, 0.023, 0])], ARTORIA_GOLD, ARTORIA_METAL);
+}
+function artoriaForearmV2(g) {
+  addMerged(g, [cyl(0.055, 0.045, 0.207, 12, false, [0, 0.005, 0]),
+    bake(new THREE.SphereGeometry(0.052, 12, 8), [0.005, 0.009, 0], null, [1.04, 1.95, 0.93]),
+    cyl(0.049, 0.045, 0.026, 12, true, [0, -0.09, 0])], 0xd8e1e4, ARTORIA_METAL);
+  addMerged(g, [cyl(0.0495, 0.0485, 0.006, 12, true, [0, -0.08, 0])], ARTORIA_EDGE, ARTORIA_METAL);
+}
+function artoriaShinV2(g) {
+  addMerged(g, [cyl(0.063, 0.0555, 0.356, 12, false, [0, 0, 0]),
+    bake(new THREE.SphereGeometry(0.0555, 12, 8), [0, -0.158, 0], null, [1, 0.92, 1]),
+    bake(new THREE.SphereGeometry(0.057, 12, 8), [0.024, 0.132, 0], null, [0.9, 1.17, 1.08]),
+    artoriaPanel(0.059, [[0.174, 0], [0.119, 0.042], [-0.16, 0.027], [-0.186, 0], [-0.16, -0.027], [0.119, -0.042]], 0.012)], 0xd8e1e4, ARTORIA_METAL);
+  addMerged(g, [cyl(0.059, 0.0585, 0.008, 12, true, [0, -0.1, 0])], ARTORIA_EDGE, ARTORIA_METAL);
+}
+function artoriaFootV2(g) {
+  artoriaSoftBase(g, 0.018);
+  const shell = artoriaRoundedBox(0.269, 0.067, 0.119, 0.025);
+  const p = shell.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const toe = THREE.MathUtils.clamp((p.getX(i) + 0.02) / 0.15, 0, 1);
+    p.setXYZ(i, p.getX(i), p.getY(i) * (1 - toe * 0.17), p.getZ(i) * (1 - toe * 0.22));
+  }
+  shell.computeVertexNormals();
+  addMerged(g, [bake(shell, [0.01, 0.009, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+  addMerged(g, [0.0, 0.052, 0.098].map((x) => taperedTube([[x, 0.026, -0.043], [x, 0.042, 0], [x, 0.026, 0.043]], [0.0025, 0.0025, 0.0025], 6, 4)), ARTORIA_EDGE, ARTORIA_METAL);
+}
+const ARTORIA_OUTFIT_V2 = {
+  armorParts: new Set(ARTORIA_OUTFIT.armorParts),
+  head: ARTORIA_OUTFIT.head,
+  chest(g, look) {
+    artoriaSoftBase(g, 0.028, 0.96);
+    const fabric = artoriaCloth(g); clothNeck(fabric, look); artoriaCapeV2(g);
+    const hairLayer = artoriaCloth(g, 'artoria-hair');
+    addMerged(hairLayer, [-1, 1].map((s) => isoldeLock([[0.13, 0.15, s * 0.145], [0.175, 0.06, s * 0.15], [0.164, -0.067, s * 0.17]], [0.03, 0.032, 0.002], 0.012)), look.hair, CLOTH);
+    addMerged(g, [bake(artoriaRoundedBox(0.256, 0.249, 0.39, 0.043, 0.91), [-0.005, 0.008, 0]),
+      artoriaPanel(0.13, [[0.129, -0.151], [0.157, -0.069], [0.128, 0], [0.157, 0.069], [0.129, 0.151], [-0.065, 0.137], [-0.144, 0], [-0.065, -0.137]], 0.039),
+      cyl(0.065, 0.078, 0.028, 12, true, [0, 0.155, 0])], ARTORIA_SILVER, ARTORIA_METAL);
+    addMerged(g, [artoriaPanel(0.165, [[0.08, -0.118], [0.099, 0], [0.08, 0.118], [0.014, 0.105], [-0.065, 0], [0.014, -0.105]], 0.027)], 0xe0e7e9, ARTORIA_METAL);
+    addMerged(g, [artoriaPanel(0.192, [[0.074, 0], [0.038, 0.015], [0.016, 0], [0.038, -0.015]], 0.005)], ARTORIA_TEAL, ARTORIA_METAL);
+  },
+  abdomen(g) {
+    artoriaSoftBase(g, 0.027, 0.93);
+    addMerged(g, [0, 1, 2].map((i) => bake(artoriaRoundedBox(0.24, 0.063, 0.328 - i * 0.009, 0.02), [0, 0.068 - i * 0.058, 0])), ARTORIA_SILVER, ARTORIA_METAL);
+  },
+  pelvis(g) {
+    artoriaSoftBase(g, 0.024);
+    addMerged(g, [-1, 1].map((s) => artoriaPanel(0.123, [[0.071, s * 0.039], [0.079, s * 0.147], [-0.04, s * 0.185], [-0.129, s * 0.148], [-0.098, s * 0.067]], 0.012)), ARTORIA_SILVER, ARTORIA_METAL);
+    addMerged(g, [bake(artoriaRoundedBox(0.254, 0.022, 0.338, 0.01), [0, 0.059, 0])], ARTORIA_GOLD, ARTORIA_METAL);
+  },
+  uarmS(g) { artoriaShoulderV2(g, false); }, uarmO(g) { artoriaShoulderV2(g, true); },
+  farmS: artoriaForearmV2, farmO: artoriaForearmV2,
+  thighF(g) { artoriaSkirtV2(g, 1); }, thighB(g) { artoriaSkirtV2(g, -1); },
+  shinF: artoriaShinV2, shinB: artoriaShinV2,
+  footF: artoriaFootV2, footB: artoriaFootV2,
+};
+
+
+// Blue uniform: tailoring, a pleated skirt and equipment give the clothing a
+// silhouette of its own. No invisible crown/plate protection beneath this suit.
+const UNIFORM_BLUE = 0x285f8e, UNIFORM_NAVY = 0x192d49, UNIFORM_LIGHT = 0xe4e6df;
+function uniformTorso(g, taper = 1) {
+  artoriaSoftBase(g, 0.05, taper);
+  g.children[0].material.roughness = 0.9;
+  g.children[0].material.metalness = 0;
+}
+function uniformLine(g, points, color, width = 0.0018) {
+  return addMerged(g, [taperedTube(points, points.map(() => width), points.length * 5, 4)], color, CLOTH);
+}
+function uniformHair(g, look) {
+  const layer = artoriaCloth(g, 'uniform-hair'), locks = [];
+  // Parted fringe ends above the game's original small black eyes.
+  for (let i = -3; i <= 3; i++) {
+    const z = i * 0.023;
+    locks.push(isoldeLock([[0.034, 0.103, z * 0.65], [0.087, 0.079, z], [0.104, 0.041, z * 1.03], [0.102, 0.023 + ((i + 3) % 3) * 0.004, z * 1.05 + 0.013]], [0.034, 0.035, 0.027, 0.003], 0.009));
+  }
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 3; i++) locks.push(isoldeLock([
+      [0.003 - i * 0.035, 0.071, s * 0.094], [0.005 - i * 0.047, -0.01, s * 0.114],
+      [0.016 - i * 0.039, -0.105, s * 0.119], [0.045 - i * 0.036, -0.157 + i * 0.018, s * 0.096],
+    ], [0.032, 0.048, 0.038, 0.005], 0.01));
+  }
+  // A continuous nape, not separate long locks meeting across a moving neck.
+  for (let i = -2; i <= 2; i++) locks.push(isoldeLock([
+    [-0.07, 0.071, i * 0.036], [-0.111, -0.024, i * 0.043], [-0.103, -0.117, i * 0.043],
+  ], [0.041, 0.05, 0.011], 0.012));
+  addMerged(layer, locks, look.hair, { ...CLOTH, roughness: 0.87 });
+  const braids = [];
+  for (let strand = 0; strand < 3; strand++) {
+    const pts = Array.from({ length: 25 }, (_, i) => {
+      const t = i / 24, a = t * Math.PI * 7 + strand * Math.PI * 2 / 3;
+      return [-0.025 + 0.012 * Math.cos(a), 0.029 - t * 0.294, -0.124 - t * 0.015 + 0.014 * Math.sin(a)];
+    });
+    braids.push(taperedTube(pts, pts.map((_, i) => 0.012 - i / 24 * 0.003), 48, 6));
+  }
+  addMerged(layer, braids, look.hair, CLOTH);
+  addMerged(layer, [cyl(0.018, 0.017, 0.012, 10, false, [-0.025, -0.238, -0.137]),
+    box(0.023, 0.012, 0.036, [-0.012, 0.034, -0.13], [0.2, 0, -0.15])], UNIFORM_NAVY, CLOTH);
+  addMerged(layer, [ball(0.006, 8, 6, [0.004, 0.035, -0.13])], 0xbbad89, CLOTH);
+}
+function uniformSkirt(g) {
+  // Each half follows its own thigh, so a lunge does not leave a rigid skirt
+  // standing in front of the legs. Overlap at the centre hides the rest seam.
+  const geo = new THREE.CylinderGeometry(0.087, 0.139, 0.266, 40, 5, true);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const a = Math.atan2(p.getZ(i), p.getX(i)), t = (0.133 - p.getY(i)) / 0.266;
+    const fold = 1 + (0.027 + t * 0.055) * Math.cos(a * 10);
+    p.setXYZ(i, p.getX(i) * fold * 1.04, p.getY(i) + 0.045, p.getZ(i) * fold);
+  }
+  geo.computeVertexNormals();
+  addMerged(g, [geo], UNIFORM_NAVY, { ...CLOTH, side: THREE.DoubleSide }).name = 'uniform-pleats';
+  const hem = new THREE.CylinderGeometry(0.1385, 0.1395, 0.01, 40, 1, true), h = hem.attributes.position;
+  for (let i = 0; i < h.count; i++) {
+    const a = Math.atan2(h.getZ(i), h.getX(i)), fold = 1 + 0.082 * Math.cos(a * 10);
+    h.setXYZ(i, h.getX(i) * fold * 1.04, h.getY(i) - 0.08, h.getZ(i) * fold);
+  }
+  hem.computeVertexNormals(); addMerged(g, [hem], 0x4b6989, { ...CLOTH, side: THREE.DoubleSide });
+}
+function uniformCuff(g) {
+  sleeveVolume(g, 1.04, 1);
+  addMerged(g, [cyl(0.048, 0.046, 0.052, 16, true, [0, -0.083, 0])], UNIFORM_NAVY, { ...CLOTH, side: THREE.DoubleSide });
+  addMerged(g, [cyl(0.049, 0.049, 0.004, 16, true, [0, -0.058, 0]), cyl(0.047, 0.047, 0.004, 16, true, [0, -0.109, 0])], UNIFORM_LIGHT, CLOTH);
+  addMerged(g, [-0.071, -0.091].map(y => ball(0.004, 8, 6, [0.05, y, 0])), 0xb9a67b, CLOTH);
+}
+function uniformBoot(g) {
+  g.children[0].material.color.setHex(UNIFORM_LIGHT);
+  addMerged(g, [cyl(0.054, 0.056, 0.071, 16, true, [0, 0.118, 0])], UNIFORM_NAVY, { ...CLOTH, side: THREE.DoubleSide });
+  addMerged(g, [cyl(0.057, 0.057, 0.007, 16, true, [0, 0.084, 0])], 0x536375, CLOTH);
+  addMerged(g, [cyl(0.053, 0.053, 0.015, 16, true, [0, 0.05, 0]), cyl(0.052, 0.052, 0.015, 16, true, [0, 0.008, 0])], 0xbec4c4, CLOTH);
+  addMerged(g, [box(0.008, 0.02, 0.022, [0.055, 0.05, 0]), box(0.008, 0.02, 0.022, [0.054, 0.008, 0])], 0xc1b38b, { metalness: 0.25, roughness: 0.6 });
+  uniformLine(g, [[0.048, 0.071, -0.026], [0.054, -0.04, -0.021], [0.037, -0.142, -0.012]], 0xa6b1b7, 0.0012);
+}
+function uniformShoe(g) {
+  artoriaSoftBase(g, 0.03);
+  const body = g.children[0]; body.material.color.setHex(UNIFORM_LIGHT);
+  const sole = artoriaRoundedBox(0.245, 0.017, 0.107, 0.008);
+  addMerged(g, [bake(sole, [0, -0.028, 0])], UNIFORM_NAVY, CLOTH);
+  uniformLine(g, [[0.113, 0.003, -0.04], [0.12, 0.017, 0], [0.113, 0.003, 0.04]], 0xb9c1c6, 0.0014);
+}
+const CROWN_BLUE_UNIFORM = {
+  head(g, look) { quietFace(g, look, 'uniform'); uniformHair(g, look); },
+  chest(g, look) {
+    uniformTorso(g, 0.87);
+    const base = g.children[0].geometry, p = base.attributes.position;
+    for (let i = 0; i < p.count; i++) if (p.getX(i) > 0.01) {
+      const fullness = Math.exp(-Math.pow((p.getY(i) - 0.018) / 0.075, 2) - Math.pow((Math.abs(p.getZ(i)) - 0.074) / 0.064, 2));
+      p.setX(i, p.getX(i) + fullness * 0.012);
+    }
+    base.computeVertexNormals(); clothNeck(g, look);
+    addMerged(g, [cyl(0.072, 0.08, 0.046, 18, true, [0, 0.157, 0])], UNIFORM_NAVY, { ...CLOTH, side: THREE.DoubleSide });
+    addMerged(g, [cyl(0.073, 0.073, 0.003, 18, true, [0, 0.18, 0])], UNIFORM_LIGHT, CLOTH);
+    const shoulder = [];
+    for (const s of [-1, 1]) shoulder.push(bake(artoriaRoundedBox(0.142, 0.018, 0.061, 0.008), [-0.002, 0.135, s * 0.142]));
+    addMerged(g, shoulder, UNIFORM_NAVY, CLOTH);
+    for (const s of [-1, 1]) uniformLine(g, [[0.071, 0.143, s * 0.121], [0.071, 0.141, s * 0.17], [-0.06, 0.141, s * 0.171]], UNIFORM_LIGHT, 0.0021);
+    // Flat cross belt: a ribbon resting on the tunic, not a cylindrical rope.
+    addMerged(g, [clothPanel(0.14, [[0.13, -0.143], [0.13, -0.119], [-0.134, 0.11], [-0.134, 0.086]], 0.003)], UNIFORM_LIGHT, CLOTH);
+    uniformLine(g, [[0.124, 0.128, 0.011], [0.142, 0.029, 0.011], [0.113, -0.133, 0.011]], 0x183b61, 0.002);
+    addMerged(g, [0.103, 0.047, -0.011, -0.075, -0.122].map(y => ball(0.0045, 8, 6, [y < -0.05 ? 0.125 : 0.143, y, 0.012])), 0xc0ab78, CLOTH);
+    addMerged(g, [box(0.008, 0.009, 0.025, [0.081, 0.158, 0]), ball(0.005, 8, 6, [0.085, 0.169, 0])], 0xc0ab78, CLOTH);
+    for (const s of [-1, 1]) uniformLine(g, [[0.105, 0.097, s * 0.135], [0.129, 0.004, s * 0.101], [0.103, -0.125, s * 0.095]], 0x416c99, 0.0014);
+  },
+  abdomen(g, look) {
+    uniformTorso(g, 0.94);
+    // Overlapping tailored waist joins the independently moving chest/hips.
+    // The visual overlap does not add a collider or constrain the spine.
+    const waist = new THREE.CylinderGeometry(1, 1, 0.245, 32, 8, false), wp = waist.attributes.position;
+    for (let i = 0; i < wp.count; i++) {
+      const t = Math.abs(wp.getY(i) / 0.1225);
+      wp.setXYZ(i, wp.getX(i) * (0.107 + 0.015 * t), wp.getY(i), wp.getZ(i) * (0.151 + 0.012 * t));
+    }
+    waist.computeVertexNormals(); g.children[0].geometry.copy(waist); waist.dispose();
+    // Samira v8 raises the belt assembly by 7 cm; archived cuts retain it.
+    const beltRise = look.highWaist ? 0.07 : 0, beltY = -0.039 + beltRise;
+    const strap = clothPanel(0.119, look.highWaist
+      ? [[0.082, 0.088], [0.082, 0.112], [beltY, 0.124], [beltY, 0.1]]
+      : [[0.082, 0.088], [0.082, 0.112], [-0.069, 0.15], [-0.069, 0.125]], 0.003);
+    if (look.highWaist) {
+      // Tuck the shortened lower end under the curved belt, keeping the
+      // upper overlap with the chest strap at its existing position.
+      const p = strap.attributes.position;
+      for (let i = 0; i < p.count; i++) if (p.getY(i) < 0.04) {
+        p.setX(i, 0.121 * Math.sqrt(1 - Math.pow(p.getZ(i) / 0.166, 2)) - 0.002 + p.getX(i) - 0.119);
+      }
+      strap.computeVertexNormals();
+    }
+    addMerged(g, [strap], UNIFORM_LIGHT, CLOTH);
+    const belt = new THREE.CylinderGeometry(1, 1, 0.036, 32, 1, true); belt.scale(0.121, 1, 0.166); belt.translate(0, beltY, 0);
+    addMerged(g, [belt], 0x40372f, { ...CLOTH, side: THREE.DoubleSide });
+    addMerged(g, [box(0.012, 0.03, 0.043, [0.124, beltY, -0.012])], 0xb6b8af, { metalness: 0.35, roughness: 0.5 });
+    addMerged(g, [box(0.014, 0.018, 0.026, [0.129, beltY, -0.012])], 0x514838, CLOTH);
+    const pouches = [-0.092, -0.139].map(z => bake(artoriaRoundedBox(0.036, 0.057, 0.035, 0.009), [0.12, -0.047 + beltRise, z]));
+    addMerged(g, pouches, 0x635545, CLOTH);
+    addMerged(g, [-0.092, -0.139].map(z => box(0.038, 0.012, 0.038, [0.12, -0.023 + beltRise, z])), 0x817057, CLOTH);
+  },
+  pelvis(g, look) {
+    uniformTorso(g, 1);
+    // Jacket skirt ends above the distinct dark pleats, flared slightly at hips.
+    const skirt = new THREE.CylinderGeometry(1, 1.12, 0.135, 32, 4, true), p = skirt.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const a = Math.atan2(p.getZ(i), p.getX(i));
+      p.setXYZ(i, p.getX(i) * 0.117, p.getY(i) - 0.054 + 0.014 * Math.cos(a * 2), p.getZ(i) * 0.17);
+    }
+    skirt.computeVertexNormals(); addMerged(g, [skirt], UNIFORM_BLUE, { ...CLOTH, side: THREE.DoubleSide });
+    uniformLine(g, [[0.119, 0.055, 0.012], [0.126, -0.036, 0.012], [0.129, -0.105, 0.012]], 0x193c60);
+    addMerged(g, [ball(0.0045, 8, 6, [0.133, -0.055, 0.012])], 0xc0ab78, CLOTH);
+    const beltRise = look.highWaist ? 0.07 : 0;
+    addMerged(g, [bake(artoriaRoundedBox(0.04, 0.118, 0.079, 0.012), [0.03, -0.02 + beltRise, 0.189])], 0x494437, CLOTH);
+    addMerged(g, [box(0.048, 0.023, 0.082, [0.03, 0.032 + beltRise, 0.189])], 0x786b50, CLOTH);
+    if (look.highWaist) addMerged(g, [0.012, 0.048].map(x =>
+      box(0.014, 0.094, 0.009, [x, 0.146, 0.169], [-0.3, 0, 0])), 0x40372f, CLOTH);
+  },
+  uarmS(g) { sleeveVolume(g, 1.055, 1.01); }, uarmO(g) { sleeveVolume(g, 1.055, 1.01); },
+  farmS: uniformCuff, farmO: uniformCuff,
+  thighF: uniformSkirt, thighB: uniformSkirt,
+  shinF: uniformBoot, shinB: uniformBoot, footF: uniformShoe, footB: uniformShoe,
+};
+
+// Rose/red revision keeps the blue uniform available in the look archive.
+function roseUniformHead(g, look) {
+  quietFace(g, look, 'uniform');
+  // Keep the old tapered face only in archived appearances.
+  if (!look.stockFace) {
+    // Shape only the visible face. The head body/collider and wound mesh identity remain.
+    const face = g.children[0].geometry, p = face.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const y = p.getY(i), jaw = Math.max(0, Math.min(1, -y / 0.1));
+      p.setXYZ(i, p.getX(i) * (0.97 - jaw * 0.07), y * 1.08, p.getZ(i) * (0.88 - jaw * 0.16));
+    }
+    face.computeVertexNormals();
+    for (const eye of g.children.slice(1, 3)) {
+      eye.position.set(0.091, 0.020, Math.sign(eye.position.z) * 0.030);
+      eye.scale.z = 0.90;
+    }
+    g.children[3].scale.set(0.72, 0.72, 0.70);
+    g.children[3].position.set(0.095, -0.010, 0);
+  }
+  const cap = g.children[4], shell = new THREE.SphereGeometry(1, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.64);
+  const hp = shell.attributes.position;
+  for (let i = 0; i < hp.count; i++) {
+    const a = Math.atan2(hp.getZ(i), hp.getX(i));
+    const t = Math.floor(i / 25) / 14, theta = t * Math.PI * (0.64 - 0.31 * Math.max(0, Math.cos(a)));
+    hp.setXYZ(i, (look.stockFace ? 0.107 : 0.104) * Math.sin(theta) * Math.cos(a), 0.115 * Math.cos(theta), (look.stockFace ? 0.107 : 0.094) * Math.sin(theta) * Math.sin(a));
+  }
+  shell.computeVertexNormals(); cap.geometry.dispose(); cap.geometry = shell;
+  cap.position.set(0, 0, 0); cap.scale.set(1, 1, 1);
+  if (!look.stockFace) g.children[5].scale.set(0.96, 1.08, 0.86);
+  g.children[5].material.color.setHex(0x79515a);
+  if (!look.stockFace) {
+    // The old ears intersected the cap at its rim; give each ear a clean lower edge.
+    g.children[6].visible = false;
+    addMerged(g, [-1, 1].map(s => bake(new THREE.SphereGeometry(0.013, 10, 7),
+      [-0.006, -0.026, s * 0.088], null, [0.65, 1.1, 0.45])), look.skin, CLOTH);
+    g.children[7].scale.set(0.91, 1.08, 0.80);
+  }
+  const layer = artoriaCloth(g, 'uniform-hair'), locks = [];
+  // A broken, higher fringe leaves the existing small eyes unobscured.
+  for (let i = -2; i <= 2; i++) {
+    const z = i * 0.026;
+    locks.push(isoldeLock([[0.015, 0.108, z * 0.65], [0.074, 0.086, z],
+      [0.095, 0.060, z + 0.008], [0.097, 0.039 + Math.abs(i) * 0.006, z + 0.013]],
+    [0.022, 0.027, 0.020, 0.002], 0.006));
+  }
+  for (const s of [-1, 1]) {
+    locks.push(isoldeLock([[0.018, 0.025, s * 0.085], [-0.025, 0.074, s * 0.081],
+      [-0.049, 0.100, s * 0.043], [-0.060, 0.103, -0.025]], [0.025, 0.029, 0.024, 0.012], 0.008));
+    locks.push(isoldeLock([[0.042, 0.065, s * 0.076], [0.050, 0.012, s * 0.081],
+      [0.049, -0.052, s * 0.077], [0.041, -0.078, s * 0.064]], [0.016, 0.018, 0.012, 0.0015], 0.005));
+  }
+  locks.push(bake(new THREE.SphereGeometry(0.026, 12, 8), [-0.058, 0.097, -0.025], null, [1, 0.65, 1]));
+  addMerged(layer, locks, look.hair, CLOTH);
+  const curve = new THREE.CatmullRomCurve3([
+    [-0.060, 0.100, -0.025], [-0.108, 0.117, -0.034], [-0.151, 0.045, -0.043],
+    [-0.179, -0.105, -0.055], [-0.186, -0.280, -0.072], [-0.187, -0.422, -0.090],
+  ].map(v => new THREE.Vector3(...v)));
+  const braids = [];
+  for (let strand = 0; strand < 3; strand++) {
+    const pts = Array.from({ length: 49 }, (_, i) => {
+      const t = i / 48, a = t * Math.PI * 13 + strand * Math.PI * 2 / 3;
+      const c = curve.getPoint(t), radius = 0.015 * (1 - 0.64 * t);
+      return [c.x + radius * Math.cos(a), c.y, c.z + radius * Math.sin(a)];
+    });
+    braids.push(taperedTube(pts, pts.map((_, i) => 0.012 - i / 48 * 0.007), 72, 6));
+  }
+  addMerged(layer, braids, look.hair, CLOTH);
+  // Visible high tie, two ribbon loops and narrow hanging tails.
+  addMerged(layer, [ball(0.017, 10, 6, [-0.078, 0.108, -0.027]),
+    bake(new THREE.SphereGeometry(0.031, 10, 6), [-0.086, 0.113, 0.002], [0.25, 0, 0], [0.25, 0.45, 1]),
+    bake(new THREE.SphereGeometry(0.031, 10, 6), [-0.086, 0.113, -0.057], [-0.25, 0, 0], [0.25, 0.45, 1]),
+    clothPanel(-0.119, [[0.104, -0.013], [0.106, 0.001], [-0.002, 0.037], [0.011, 0.014]], 0.002),
+    clothPanel(-0.119, [[0.102, -0.042], [0.106, -0.056], [-0.001, -0.086], [0.010, -0.063]], 0.002),
+    cyl(0.012, 0.011, 0.018, 10, false, [-0.187, -0.391, -0.085])], 0x592736, CLOTH);
+}
+const roseUniformColors = new Map([
+  [UNIFORM_BLUE, 0x922e40], [UNIFORM_NAVY, 0x24232a], [0x4b6989, 0x91374a],
+  [0x183b61, 0x541c28], [0x193c60, 0x541c28], [0x416c99, 0xb04c5a], [0x536375, 0x5c5258],
+]);
+const CROWN_ROSE_UNIFORM = Object.fromEntries(Object.entries(CROWN_BLUE_UNIFORM).map(([part, decorate]) => [part,
+  part === 'head' ? roseUniformHead : (g, look) => {
+    decorate(g, look);
+    g.traverse(node => { if (node.isMesh) for (const material of [node.material].flat()) {
+      const color = roseUniformColors.get(material.color?.getHex());
+      if (color !== undefined) material.color.setHex(color);
+    } });
+  },
+]));
+
+// 김씨·에이라 복식 모듈(outfit_renji.js·outfit_eira.js)이 쓰는 도우미 묶음 — 샛별 쪽과 같은 이름·같은 열쇠
+export const newOutfitHelpers = { THREE, bake, box, cyl, ball, cone, addMerged, CLOTH, quietFace, isoldeLock, artoriaCloth, sleeveVolume, clothNeck };
+
 export const OUTFITS = {
+  // 샛별 저장소에서 가져온 인물 넷 (10/10) — 위 머리말
+  artoria_silver_v2: ARTORIA_OUTFIT_V2,
+  crown_rose_uniform: CROWN_ROSE_UNIFORM,
+  renji_wanderer: createRenjiOutfit(newOutfitHelpers),
+  eira_winter_priest: createEiraOutfit(newOutfitHelpers),
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,
@@ -2120,6 +2680,64 @@ export function decorateOutfit(dressTo, d, look) {
     // 판금 밑의 누비 속옷: armor 목록 밖(판이 아니다). 완전 파손 때 setPlateWear 가 보이게 한다
     const under = set.underCloth?.(dressTo, d.name);
     if (under?.length) dressTo.userData.underCloth = under;
+  }
+}
+
+/** 표면만 다듬기 (샛별 저장소에서 가져옴 fe29ce4·c21bd19·df0a9d6·b8b1344): fighter.js 가 판금 경계(armorBoxes)를 잡은 뒤 부른다 — 몸·충돌체·판금 판정 범위는 그대로.
+ *  stockEyes = quietFace 가 눌러 둔 눈을 기본 크기로(eyeColor 가 있으면 눈 색) · tailoring 'soft-shoulders' = 몸통 모서리 둥글리기·견장 눌러 펴기·위팔 판 6 % 좁히기.
+ *  표시 없는 인물은 아무 일도 없다. 샛별 쪽의 마르그레테 가슴판 다듬기 가지는 우리 마르그레테가 그 표시를 안 써서 뺐다. */
+export function polishOutfit(g, d, look) {
+  if (look.stockEyes && d.name === 'head') {
+    for (const eye of g.children.slice(1, 3)) {
+      eye.scale.set(1, 1, 1);
+      if (look.eyeColor != null) eye.material.color.setHex(look.eyeColor);
+    }
+  }
+  if (look.tailoring !== 'soft-shoulders') return;
+  const replace = (mesh, geo) => {
+    mesh.geometry.dispose(); mesh.geometry = geo;
+    geo.computeBoundingBox(); geo.computeBoundingSphere();
+  };
+  if (d.name === 'chest' || d.name === 'abdomen') {
+    const main = g.children[0], p = main.geometry.parameters;
+    // Round the garment, keeping its widest ribcage/shoulder span unchanged.
+    if (p?.width && p.height && p.depth && !['crown_rose_uniform', 'artoria_silver_v2'].includes(look.outfit)) {
+      // The uniform and silver under-armor already have fitted surfaces.
+      replace(main, artoriaRoundedBox(p.width, p.height, p.depth,
+        d.name === 'chest' ? 0.045 : 0.03));
+    }
+    if (look.outfit === 'crown_rose_uniform' && d.name === 'chest') {
+      // Flatten the two epaulettes about their own centres, not the shoulders.
+      for (const mesh of g.children.slice(1)) {
+        if (!mesh.geometry || !mesh.visible) continue;
+        mesh.geometry.computeBoundingBox(); const b = mesh.geometry.boundingBox;
+        if (b.min.y < 0.12 || b.max.y - b.min.y > 0.025 || b.max.z - b.min.z < 0.035 || b.max.x - b.min.x < 0.1) continue;
+        const geo = mesh.geometry.clone(), a = geo.attributes.position;
+        for (let i = 0; i < a.count; i++) {
+          const z = a.getZ(i), centre = Math.sign(z) * 0.142;
+          a.setY(i, 0.132 + (a.getY(i) - 0.135) * 0.6);
+          a.setZ(i, centre + (z - centre) * 0.82);
+        }
+        geo.computeVertexNormals(); replace(mesh, geo);
+      }
+    }
+    // Candidate1 still read as broad slabs. User-authorized second step: only
+    // the visible ribcage is 8% narrower, blending into a 4% narrower waist.
+    // Anchors, capsules, mass and the captured armor coverage stay unchanged.
+    if (!look.originalTorsoWidth) g.scale.z *= d.name === 'chest' ? 0.92 : 0.96;
+  }
+  if (d.name === 'uarmS' || d.name === 'uarmO') {
+    for (const mesh of g.userData.armor || []) {
+      const geo = mesh.geometry.clone(), p = geo.attributes.position;
+      // All overlapping cap layers use the same transform to keep their seams.
+      for (let i = 0; i < p.count; i++) {
+        // Silver caps must retain their height above the existing upper-arm
+        // sleeve; flattening them exposed its rounded tip through the armor.
+        const height = look.outfit === 'artoria_silver_v2' ? 1 : 0.88;
+        p.setXYZ(i, p.getX(i) * 0.94, 0.075 + (p.getY(i) - 0.075) * height, p.getZ(i) * 0.94);
+      }
+      geo.computeVertexNormals(); replace(mesh, geo);
+    }
   }
 }
 

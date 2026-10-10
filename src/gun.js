@@ -348,7 +348,7 @@ export function updateGun(f, world, combat, dt) {
     g.reloading = true;
     g.cool = GUN.reload;
     sound('onReloadStart', f);
-  } else g.cool = GUN.cooldown;
+  } else g.cool = GUN.cooldown * (f.gunCooldownK ?? 1); // gunCooldownK: 인물 핸디캡(사미라 1.5 — 사장님 지시 10/10 20:0x, ai.js persona.gunCooldownK). 없으면 1 (그대로)
   fire(f, world, combat);
 }
 

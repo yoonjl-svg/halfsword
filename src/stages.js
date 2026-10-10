@@ -48,6 +48,19 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami' };
+// 그 무대 검객 후보 (사장님 10/10 20:0x — 샛별 저장소에서 가져온 넷의 무대 짝. 무대마다 한 명뿐인 STAGE_FOE 짝을 밀어내지 않고 후보로 더한다, 확인표 752).
+//  여정(foe=stage)에서 그 무대를 열 때 [본디 짝, ...후보] 가운데 하나를 고르게 고른다 → 본디 짝은 그 무대에서 절반만 나온다.
+//  졌을 때 같은 무대를 다시 열면 같은 상대(아래 stageFoeId 의 prevId). STAGE_FOE 자체는 그대로다
+export const STAGE_FOE_EXTRA = { loggia: ['artoria'], cathedral: ['samira'], temple: ['renji'], castle: ['eira'] };
+/** 이번 판 무대의 검객 id: 후보가 없으면 STAGE_FOE 그대로(난수 안 씀). 지난 상대(prevId)가 이 무대 후보면 그 사람 그대로(진 뒤 다시 싸우기) */
+export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
+  const base = STAGE_FOE[stageId];
+  const extra = STAGE_FOE_EXTRA[stageId];
+  if (!extra?.length) return base;
+  const pool = base ? [base, ...extra] : [...extra];
+  if (prevId && pool.includes(prevId)) return prevId;
+  return pool[Math.floor(rnd() * pool.length)];
+}
 
 /** prev 다음 판의 배경. prev 가 순서에 없으면(처음, 또는 순서 밖 배경) 맨 앞(포세이돈)부터 */
 export function nextStage(prev = null) {

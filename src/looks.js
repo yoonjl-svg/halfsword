@@ -577,6 +577,54 @@ export const LOOK_ARCHIVE = {
       armor: 'plate',
     },
   },
+
+  // ───── 샛별 저장소에서 가져온 인물 넷 (10/10, 기준 5a4e96c) — 그쪽 최종 판을 우리 v1 로 (색 값·표시 그대로) ─────
+  //  표시 칸(outfits.js polishOutfit 이 읽는다, 겉모습만): stockEyes = 눈 기본 크기 · eyeColor = 눈 색 · tailoring 'soft-shoulders' = 몸통·어깨 표면 다듬기 ·
+  //   originalTorsoWidth = 몸통 폭 줄이기를 하지 않음 · stockFace = 얼굴 기본 꼴 · highWaist = 허리띠를 7 cm 올림
+  // 아르토리아 — 샛별 v5 (= v2 색·artoria_silver_v2 + 다듬기·눈 표시, 5277832·c21bd19·27888f2). 판금 11 부위(가슴·배·골반·위팔·아래팔·정강이·발)
+  artoria: {
+    v1: {
+      tunic: 0x222a32, quilt: 0x222a32, sleeve: 0x242c34,
+      straps: null, belt: 0x263338, hoseUpper: 0x1a222b, hoseLower: 0x202a33,
+      shoes: 0x53626c, skin: 0xe4c7ad, hands: 0xd3dce0,
+      helmet: null, metal: 0xc1d0da, hair: 0xe7e9e5, headband: null,
+      grip: 0x20343c, hilt: 0xc8b378, accent: 0x2c7778,
+      outfit: 'artoria_silver_v2', armor: 'plate',
+      tailoring: 'soft-shoulders', stockEyes: true, eyeColor: 0x418f87, originalTorsoWidth: true,
+    },
+  },
+  // 사미라 미르자 (샛별 id crown_boss) — 샛별 v8 (= v4 장밋빛 제복·높이 묶은 장밋빛 머리 + 다듬기·얼굴·허리 표시, b8b1344·df0a9d6·27888f2·4c5ce4d). 방어구 없음
+  samira: {
+    v1: {
+      tunic: 0x922e40, quilt: 0x922e40, sleeve: 0x922e40,
+      straps: null, belt: 0x40372f, hoseUpper: 0xe4e6df, hoseLower: 0xe4e6df,
+      shoes: 0xe4e6df, skin: 0xb7754e, hands: 0xe4e6df,
+      helmet: null, metal: 0xa7acb1, hair: 0xc78f98, headband: null,
+      grip: 0x313b46, hilt: 0xb6a47e, accent: 0xe4e6df,
+      outfit: 'crown_rose_uniform', armor: null,
+      tailoring: 'soft-shoulders', stockEyes: true, stockFace: true, originalTorsoWidth: true, highWaist: true,
+    },
+  },
+  // 김씨 (샛별 id renji) — 샛별 v2 (= v1, 27888f2·4c5ce4d·dcad882): 삿갓·여행자 옷·짚신. 삿갓만 아주 약한 투구
+  renji: {
+    v1: {
+      tunic: 0x242329, quilt: 0x29262d, sleeve: 0x242329, straps: null,
+      belt: 0x65408a, hoseUpper: 0x202537, hoseLower: 0x202537, shoes: 0x27222b,
+      skin: 0xd7b995, hands: 0xd7b995, helmet: 'kasa', metal: 0x777178, hair: 0x241d16, // helmet 'kasa': 삿갓이 아주 약한 투구 (사장님 지시 10/10 20:0x, config.js ARMOR.helmets.kasa) — 샛별은 null(장식)
+      headband: null, grip: 0x33252d, hilt: 0x8b7872, accent: 0x65408a,
+      outfit: 'renji_wanderer', armor: null, stockEyes: true,
+    },
+  },
+  // 에이라 린드 — 샛별 v1 (27888f2): 남색 겨울 사제복·흰 깃·은빛 머리. 방어구 없음
+  eira: {
+    v1: {
+      tunic: 0x252e44, quilt: 0x293249, sleeve: 0x252e44, straps: null,
+      belt: 0x292c35, hoseUpper: 0xc3c4c8, hoseLower: 0x252630, shoes: 0x252630,
+      skin: 0xe5cbb9, hands: 0xe5cbb9, helmet: null, metal: 0xa7a7af, hair: 0xc4d6e8,
+      headband: null, grip: 0x333342, hilt: 0xa7a7af, accent: 0xe4e5e9,
+      outfit: 'eira_winter_priest', armor: null, stockEyes: true,
+    },
+  },
 };
 
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
@@ -589,6 +637,10 @@ export const CHARACTER_LOOK_VERSION = {
   tome: 'v2',
   omari: 'v2',
   minami: 'v5',
+  artoria: 'v1', // 샛별 저장소에서 가져온 넷 (10/10)
+  samira: 'v1',
+  renji: 'v1',
+  eira: 'v1',
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

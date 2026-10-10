@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  상대 캐릭터 8인(다섯 + 샛별 저장소에서 가져온 셋, 아래 6~8): 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
+//  상대 캐릭터 12인(다섯 + 샛별 저장소에서 가져온 셋 6~8 · 넷 9~12): 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
 //
 //  ai.persona가 ai.js의 AI 클래스에 그대로 전달된다:
 //   - level: AI_LEVELS(난이도) 숫자 위에 캐릭터별로 덮어쓰는 값 (반응 시간·막기 확률·읽는 눈·힘 등)
@@ -247,6 +247,7 @@ export const CHARACTERS = [
     weaknesses: '인내심이 짧아(patienceTime 짧음) 판이 길어지면 먼저 무리하게 들어온다. 확신이 너무 강해 같은 유인책(가짜 공격)에 두 번 걸리면 오히려 더 큰 동작으로 반응해 큰 빈틈을 남긴다.',
     // 진짜 엑스칼리버는 이 세계에 있고 플레이어 몫이다. AI 하인리히에겐 겉모습만 같은 복제품(제원 = 롱소드)을
     //  준다 — 밸런스 때문. 로스터에 'excalibur_replica'(외형 excalibur, 제원 longsword)를 부탁해 둔다
+    //  (10/10: 샛별 저장소에서 가져온 아르토리아도 진품을 든다 — 그쪽 설정 '진품은 플레이어와 아르토리아', 하인리히는 복제품 그대로)
     weapon: 'excalibur_replica',
     ai: {
       level: 'normal',
@@ -422,6 +423,127 @@ export const CHARACTERS = [
       win: ['…이제 안개가 걷혀요.', '숲이 조용해졌어요.', '당신 몫까지 빌어 둘게요.'],
       lose: ['숲을… 부탁해요.', '…안개가 짙어져요.'],
     },
+  },
+
+  // ───────────────────────────────────────────── 9~12. 샛별 저장소에서 가져온 네 사람 (사장님 지시 10/10 19:2x, 기준 5a4e96c) ─────────────────────────────────────────────
+  //  이번엔 '정보'까지 가져온다: 외형(looks.js·outfits.js) · 목소리 짝(voice — 그쪽도 새 녹음 없이 기존 녹음을 빌림) · 설정 문구 · 대사 · 플레이 기질(persona).
+  //  리뷰(docs/import/saetbyeol_new_2026-10-10.md)와 사장님 답(10/10 20:0x)대로 맞춘 것만 바꿨다 — 칸마다 주석. 무대 짝: 그쪽 무대(얼어붙은 호수 만·청람산·왕관의 성소)는
+  //  이번 범위 밖 — 우리 무대의 '검객 후보'로 더했다(stages.js STAGE_FOE_EXTRA: 회랑 아르토리아 · 대성당 사미라 · 산사 김씨 · 성 안뜰 에이라, 본디 짝과 반반). 기본 회전(무작위 상대)에도 든다.
+  {
+    // 샛별 6e71ba2(처음) · 5277832(외형 v2) · c21bd19(눈) — 엑스칼리버 진품의 주인이라는 그쪽 설정. 이름은 그쪽 사용자 확정
+    id: 'artoria',
+    name: '아르토리아',
+    epithet: '돌아온 맹세',
+    age: 24,
+    origin: '브리튼 · 바다 너머의 잃어버린 왕국',
+    backstory: '금빛 검을 지녔다는 소문을 따라 바다를 건넌 기사. 왕관도 군대도 없이 돌아왔지만, 엑스칼리버는 여전히 그녀의 손에서 빛난다. 이름을 빌린 이들을 벌하기보다, 그 이름이 지켜야 했던 사람들을 찾는다.',
+    want: '검에 걸었던 맹세를 끝까지 지키고, 흩어진 사람들을 고향으로 돌려보내는 것.',
+    school: '엑스칼리버의 실제 소유자라는 게임 속 창작 설정. 기존 양손검 자세와 엑스칼리버 유파(독일)를 사용한다.',
+    signatureMoves: '몸 가까이 검을 되찾고, 짧은 준비에서 크게 비스듬히 벤다.',
+    favoriteGuards: '오른쪽 어깨와 쟁기. 칼끝으로 길을 닫고 다음 베기를 준비한다.',
+    temperament: '말은 적지만 상대를 얕보지 않는다. 잃어버린 것보다 지켜야 할 것을 먼저 본다.',
+    movementNotes: '절제된 양손검 동작과 안정된 준비 자세. 외형을 이유로 별도 힘 보너스를 주지 않는다.',
+    weaknesses: '큰 베기가 빗나간 뒤 몸 가까이 파고드는 연속 압박에는 빈틈이 생긴다.',
+    weapon: 'excalibur', // 진품(레전드, 금빛 기운) — 하인리히는 복제품 그대로. 플레이어도 카드로 진품을 뽑을 수 있다(그쪽과 같음). AI 가 진품을 드는 것은 사장님 답 대기(10/10 20:0x)
+    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    ai: { level: 'normal', persona: {
+      school: 'excalibur',
+      level: { reaction: 0.26, guardChance: 0.7, counter: 0.35, feint: 0.2, followUp: 0.42, read: 0.75, discipline: 0.88, strength: 1, aggression: 0.8, windup: 0.7, skill: 0.82 },
+      pers: { precision: 0.85, guardStick: 2.5, fearful: 0.2, angry: 0.2, dogged: 0.45, guardSpeed: 0.85, rhythm: 2.6, margin: 0.22, aggr: 0.85, vor: 0.45, patienceTime: 4.5, circleRate: 0.22,
+        guardPref: { tagR: 1.6, pflugR: 1.5, ochsR: 1.1, langort: 1.2 },
+        techPref: { zornhau: 1.5, oberhau: 1.25, zornhauL: 1.2, stichPflug: 1.1 } },
+      idle: { guard: 'pflugR', gesture: 'still' }, close: { rate: 0.25, kind: 'barge', then: 'cut' },
+    } },
+    look: getLook('artoria'),
+    lookVersion: CHARACTER_LOOK_VERSION.artoria,
+    taunt: '이 검에 걸었던 맹세는, 아직 끝나지 않았습니다.',
+    lines: { intro: ['이 검에 걸었던 맹세는, 아직 끝나지 않았습니다.', '왕관은 잃었어도, 지킬 것은 남았습니다.', '당신의 검으로 답해 주십시오.'], win: ['검을 거두세요. 여기서 끝냅시다.', '이름보다 무거운 것은, 그 이름의 약속입니다.', '나는 아직 돌아갈 곳이 있습니다.'] },
+  },
+  {
+    // 샛별 id 'crown_boss'(4ac5909 왕관 기사 → 59680c9 푸른 제복 → 37b9f54 리볼버 → b8b1344 장밋빛). 우리엔 왕관도 마지막 보스 자리도 없어 id 를 이름으로 바꿈
+    id: 'samira',
+    name: '사미라 미르자',
+    epithet: '붉은 봉인의 전령',
+    age: 28,
+    origin: '인도 · 서해안의 항구 도시',
+    backstory: '인도 서해안의 항구에서 출발한 군의 전령. 폭풍으로 철수 명령을 제때 전하지 못한 뒤, 돌아오지 못한 동료들의 이름과 봉인된 명령서를 품고 다닌다. 지금은 먼 성소의 마지막 문을 지키며, 그 문을 넘어갈 사람만큼은 헛되이 보내지 않으려 한다.',
+    want: '끝내 전하지 못한 마지막 소식을 남은 가족에게 돌려주고, 자신의 임무를 마치는 것.',
+    school: '기존 리볼버의 조준·사격·장전을 사용하는 창작 인물(무유파).',
+    signatureMoves: '간격을 벌리고 조준이 맞는 순간 사격한 뒤, 여섯 발을 소진하면 장전한다.',
+    favoriteGuards: '한손으로 총구를 겨누며 다음 발을 준비한다.',
+    temperament: '말과 움직임이 적고, 다가오는 상대를 차분히 기다린다.',
+    movementNotes: '기존 총기 제어와 몸 규격을 그대로 사용한다.',
+    weaknesses: '장전 중의 빈틈과 총구 안쪽으로 파고드는 근거리 압박.',
+    weapon: 'pistol', // 건슬링어의 리볼버(??? 등급) — 그쪽 '전용 리볼버'는 새 무기가 아니라 이 권총이다. AI 는 gun.js(간격 벌려 쏘기)
+    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    ai: { level: 'hard', persona: { // 그쪽 '마지막 문지기' 자리라 hard — 우리 기본 회전에선 다른 인물보다 세다(사장님 확인 전)
+      gunCooldownK: 1.5, // 핸디캡: 사격 사이 쿨타임 1.5 배 (GUN.cooldown 0.7 → 1.05 s) — 사장님 지시 10/10 20:0x (기본 무작위 상대에서 빼는 대신, 확인표 750)
+      level: { reaction: 0.16, guardChance: 0.88, counter: 0.55, feint: 0.15, followUp: 0.65, read: 0.9, discipline: 0.95, strength: 1.1, aggression: 0.9, windup: 0.36, strikeSpeed: 13, skill: 0.95 },
+      pers: { precision: 0.95, guardStick: 4, fearful: 0.08, angry: 0.12, dogged: 0.4, guardSpeed: 0.7, rhythm: 4, margin: 0.3, aggr: 0.95, vor: 0.45, patienceTime: 6, circleRate: 0.18 },
+      idle: { guard: 'langort', gesture: 'still' },
+    } },
+    look: getLook('samira'),
+    lookVersion: CHARACTER_LOOK_VERSION.samira,
+    taunt: '이 문을 넘을 이유는 있겠지요.',
+    lines: { intro: ['이 문을 넘을 이유는 있겠지요.', '이번엔 아무도 헛되이 보내지 않겠습니다.'], win: ['서두르지 마세요. 돌아갈 길은 남아 있습니다.', '무기를 거두세요. 전할 말이 아직 있잖아요.'] },
+  },
+  {
+    // 샛별 27888f2(처음) · 4c5ce4d(여행자 옷·머리) · dcad882(짚신). id 는 그쪽 처음 이름의 흔적(복식 모듈 이름과 같게 둠)
+    id: 'renji',
+    name: '김씨',
+    epithet: '칼을 뽑지 않는 낭인',
+    age: 32,
+    origin: '북쪽 항구와 산길',
+    backstory: '형이 남긴 검을 허리에 차고 떠도는 낭인. 그 검으로 사람을 베지 않겠다는 약속 때문에, 항구에서 얻은 낯선 철퇴로 호위 일을 한다. 삿갓 아래 마른 찻잎을 넣고 다니며 길에서 만난 이에게 먼저 차를 권한다.',
+    want: '형의 검과 유품을 바다 건너 남은 가족에게 돌려주는 것.',
+    school: '기존 둔기 동작을 사용하는 창작 낭인(무유파). 허리의 검은 장식이며 실제 전투에는 모르겐슈테른만 사용한다.',
+    signatureMoves: '철퇴를 몸 가까이 거두었다가 짧게 내려친다.',
+    favoriteGuards: '오른쪽 어깨와 옆 지킴.',
+    temperament: '무뚝뚝하지만 약속한 일은 끝까지 한다. 허리의 검을 이야기할 때만 말이 짧아진다.',
+    movementNotes: '둔기 꾸러미가 철퇴 길이(weapon_measured.js 실측)에 맞춰 간격을 잡는다.',
+    weaknesses: '짧은 철퇴가 닿기 전의 거리와 빗나간 뒤의 빈틈.',
+    weapon: 'morgenstern', // 레어 둔기 → 무유파
+    voice: 'liao', // 목소리: 샛별 쪽 짝 그대로 (랴오의 녹음)
+    ai: { level: 'normal', persona: {
+      school: 'morgenstern', // 그쪽은 옛 꾸러미 이름 'tree_branch'(나뭇가지 간격) — 우리는 무기 id 꾸러미(무유파 + 철퇴 실측 간격)
+      level: { skill: 0.76, discipline: 0.84, strength: 1, aggression: 0.8 },
+      pers: { precision: 0.8, guardStick: 2.7, fearful: 0.22, angry: 0.2, dogged: 0.4, rhythm: 2.8, aggr: 0.84, vor: 0.45,
+        guardPref: { tagR: 1.7, wechselR: 1.3 }, techPref: { oberhau: 1.4, zornhau: 1.4 } },
+      idle: { guard: 'tagR', gesture: 'still' },
+    } },
+    look: getLook('renji'),
+    lookVersion: CHARACTER_LOOK_VERSION.renji,
+    taunt: '검은 두고 간다. 이걸로 하지.',
+    lines: { intro: ['검은 두고 간다. 이걸로 하지.', '차가 식기 전에 끝내자.'], win: ['검을 뽑을 일은 없었군.', '이제 길을 비켜 주겠나.'] },
+  },
+  {
+    // 샛별 27888f2
+    id: 'eira',
+    name: '에이라 린드',
+    epithet: '눈길의 사제',
+    age: 26,
+    origin: '동시베리아 내륙 · 얼어붙은 호수 교구', // 이름·출신 글은 사장님 답 대기(10/10 20:0x — 동시베리아 이름으로 바꿀지), 지금은 샛별 글 그대로
+    backstory: '긴 겨울이면 마을 사이를 걸어 약과 편지를 나르는 순회 사제. 돌아오지 못한 사람들의 이름을 작은 종 안쪽에 새긴다. 얼어붙은 길에서 자신과 짐을 지키려 레이피어를 배웠다. 봄을 믿지만, 봄이 모든 사람에게 제때 오지 않는다는 것도 안다.',
+    want: '올겨울에도 가장 먼 마을의 등불이 꺼지지 않게 하는 것.',
+    school: '기존 레이피어 유파(이탈리아)를 사용하는 창작 사제. 특정 종교의 실제 전투 전통을 재현한 것은 아니다.',
+    signatureMoves: '칼끝으로 길을 막고 상대가 다가오면 짧게 찌른다.',
+    favoriteGuards: '쟁기와 긴 자세.',
+    temperament: '차분하고 실용적이다. 위로할 말을 고르기 전에 젖은 장갑부터 벗겨 준다.',
+    movementNotes: '기존 레이피어의 간격과 찌르기 동작을 사용한다.',
+    weaknesses: '칼끝 안쪽으로 깊게 붙는 압박.',
+    weapon: 'rapier', // 이탈리아 유파
+    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    ai: { level: 'normal', persona: {
+      school: 'rapier',
+      level: { skill: 0.78, discipline: 0.88, strength: 1, aggression: 0.75 },
+      pers: { precision: 0.85, guardStick: 3.2, fearful: 0.25, angry: 0.1, dogged: 0.3, rhythm: 3.2, aggr: 0.78, vor: 0.35,
+        guardPref: { pflugR: 1.8, langort: 1.8 }, techPref: { stichPflug: 2, stichOchs: 1.5 } },
+      idle: { guard: 'pflugR', gesture: 'still' },
+    } },
+    look: getLook('eira'),
+    lookVersion: CHARACTER_LOOK_VERSION.eira,
+    taunt: '눈이 더 쌓이기 전에 지나가야 해요.',
+    lines: { intro: ['눈이 더 쌓이기 전에 지나가야 해요.', '칼을 거두면, 불가에 자리가 있어요.'], win: ['숨을 고르세요. 아직 따뜻해질 수 있어요.', '여기서 잠들면 안 돼요.'] },
   },
 ];
 

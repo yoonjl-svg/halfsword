@@ -60,6 +60,8 @@ export class AI {
     this.persona = persona || {};
     // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)
     if (this.persona.close) me.canShove = true;
+    // 권총 사격 사이 쿨타임 배율 (persona.gunCooldownK — 사미라 1.5, 사장님 지시 10/10 20:0x 핸디캡). 없는 인물은 몸에 아무것도 안 붙인다
+    if (this.persona.gunCooldownK) me.gunCooldownK = this.persona.gunCooldownK;
     if (this.persona.close?.kind === 'kick') me.closeStepKind = 'pass'; // 랴오 발차기 = 뒷발이 지나 딛는 몸 부딪기 (발차기 명령·발 충돌이 없다)
     this.closeWant = false; // 밀기로 정함 (사건마다 한 번 rate 굴림)
     this.closeBind = false; // 칼이 맞물려 있나 (checkBind 와 같은 기하, 읽기만)
