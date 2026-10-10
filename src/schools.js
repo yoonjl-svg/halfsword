@@ -880,12 +880,21 @@ const CHINESE_PARRY_SLOTS = {
   //  수레를 몰듯(駕御) 가운데를 다스린다: 고삐를 쥔 듯 손을 가슴 앞으로 내밀되 팔은 다 펴지 않고(직부송서 0.68 → 0.40 m), 칼끝은 衝鋒(칼끝이 앞을 찌를 듯)으로 앞 위로 세워(30°)
   //  가운데로 오는 찌르기를 위아래로 눌러 다스린다 [해석]. 退步(물러나며) — 숙임은 직부송서보다 적게(10 → 4°) [해석]. 몸 돌림은 직부송서(찌르기 표 긴 자세)보다 덜 틂 [추정]
   eogeo: { name: '어거세 (御車勢)', desc: '고삐를 쥔 듯 손을 가슴 앞으로 내밀고 칼끝을 앞 위로 세워 가운데로 오는 칼을 위아래로 눌러 다스린다 · 어거격', pad: G.langort, hand: [0.4, 0.06, 0.06], blade: [30, -4], pelvisYaw: -20, chestYaw: -35, pitch: 4, drop: 0.06, src: '무비지 쪽161/0575 「御車格 … 駕御中殺 … 衝鋒勢」 역주24 · 무도 권2 p038/30 그림 [원문·그림 해석] · 수 [추정]' },
+  // 요략세 — 아래 왼쪽(lowL)을 받는 자리 (사장님 00:2x '왼쪽 요격세로 막되 이름은 요략세로 써. 왜 그렇게 했는지 주석만 남기고'):
+  //  원전은 이 줄을 撩掠格 「遮駕下殺 蔽左護右」(왼쪽을 가리고 오른쪽을 지킴 — 무도 권2 p038/30)로 받는다. 그러나 한손 검의 요략세 꼴(바꿈 자리 — 칼을 낮게 앞으로 수평)은 우리 물리에서
+  //  이 줄(아래에서 왼쪽으로 올려베기)을 0/8 막고, 15 자리 가운데 막는 자리는 왼 요격세(본국검 左腰擊 「左劒洗左項」 — 洗 씻어 침) 2/8 하나뿐이었다(10/10 막기 점검).
+  //  그래서 받는 꼴이 가장 가까운 왼 요격세 자리(패드·몸꼴)를 쓰고 이름은 원전 막는 이름 요략세를 둔다. 몸꼴은 아래 자세표 '왼쪽 옆 자세' 칸을 그대로 가리킨다(그 칸이 바뀌면 함께 바뀜)
+  yoryak: { name: '요략세 (撩掠勢)', desc: '칼을 왼 허리 높이에 옆으로 눕혀 아래 왼쪽에서 오는 칼을 가려 받는다 · 요략격 「왼쪽을 가리고 오른쪽을 지킨다」', pad: G.sideL, from: '왼쪽 옆 자세', src: '무도 권2 p038/30 「撩掠格 … 蔽左護右」 [원문 이름] · 몸꼴 = 왼 요격세(본국검 무도 권3 p036/28) — 요략세 꼴은 막음 0/8 이라 받는 꼴이 가까운 자리 [해석]' },
 };
+{
+  const l = CHINESE_GUARDTABLE[CHINESE_PARRY_SLOTS.yoryak.from]; // 왼 요격세 칸 (손·칼끝·몸 — drop 은 무기 틀 값 0.06: 한손 두루 표 '왼쪽 옆 자세')
+  Object.assign(CHINESE_PARRY_SLOTS.yoryak, { hand: l.hand, blade: l.blade, pelvisYaw: l.pelvisYaw, chestYaw: l.chestYaw, pitch: l.pitch, drop: l.drop ?? 0.06 });
+}
 TRADITIONS.chinese.parrySlots = CHINESE_PARRY_SLOTS;
-//  줄 → 자리: highC·highR 거정세(擧鼎格 「上殺」 — 위에서 오는 칼) · thrust 어거세(御車格 「中殺」 — 가운데로 오는 칼) ·
-//   highL 봉두세(왼쪽 황소 — 이미 원전 꼴 鳳頭洗, 그대로) · lowL·lowR 요략세(바꿈 — 이미 원전 꼴 撩掠格, 그대로)
-TRADITIONS.chinese.parry = { ...TRADITIONS.chinese.parry, highR: CHINESE_PARRY_SLOTS.geojeong.pad, highC: CHINESE_PARRY_SLOTS.geojeong.pad, thrust: CHINESE_PARRY_SLOTS.eogeo.pad };
-TRADITIONS.chinese.parryCover = { highR: CHINESE_PARRY_SLOTS.geojeong, highC: CHINESE_PARRY_SLOTS.geojeong, thrust: CHINESE_PARRY_SLOTS.eogeo };
+//  줄 → 자리: highC·highR 거정세(擧鼎格 「上殺」 — 위에서 오는 칼) · thrust 어거세(御車格 「中殺」 — 가운데로 오는 칼) · lowL 요략세(몸꼴 왼 요격세, 위 까닭) ·
+//   highL 봉두세(왼쪽 황소 — 이미 원전 꼴 鳳頭洗, 그대로) · lowR 요략세(바꿈 — 이미 원전 꼴 撩掠格, 그대로)
+TRADITIONS.chinese.parry = { ...TRADITIONS.chinese.parry, highR: CHINESE_PARRY_SLOTS.geojeong.pad, highC: CHINESE_PARRY_SLOTS.geojeong.pad, thrust: CHINESE_PARRY_SLOTS.eogeo.pad, lowL: CHINESE_PARRY_SLOTS.yoryak.pad };
+TRADITIONS.chinese.parryCover = { highR: CHINESE_PARRY_SLOTS.geojeong, highC: CHINESE_PARRY_SLOTS.geojeong, thrust: CHINESE_PARRY_SLOTS.eogeo, lowL: CHINESE_PARRY_SLOTS.yoryak };
 // 덮는 자세: 표두세 자리 — 擧鼎格(칼을 머리 위로 들어 막음)과 같은 까닭 [원문 · 자리 해석]
 TRADITIONS.chinese.pose = { ...GERMAN.pose, cover: G.tag };
 
