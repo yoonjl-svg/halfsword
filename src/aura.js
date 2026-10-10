@@ -12,15 +12,70 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 
-// 무기별 기운 (샛별 저장소에서 가져옴 b4464ef·3f1af8c — 간장·막야): 셋 다 엑스칼리버와 같은 판·세기(0.5)를 쓰고 색만 다르다.
+// 무기별 기운 (샛별 저장소에서 가져옴 b4464ef·3f1af8c — 간장·막야): 셋 다 엑스칼리버와 같은 판·세기(0.5)를 쓴다. 간장·막야는 10/10 에셋 리뷰 뒤 보이게 손봄(아래 프로필 칸·입자).
 //  막야의 먹빛은 음수 빛이 아니라 옅은 검은 아지랑이(점 조명·칼날 발광 없음). 복제품·보통 무기는 기운이 없다.
 //  기운 = 레전드 등급의 표식 (사장님 10/10 20:0x). 9/29 의 "진짜 엑스칼리버의 유일한 표식"을 고쳐 적음. 기운은 무기 id 표(이 표)로 붙는다 — 등급만 보고 저절로 붙지는 않는다.
 //  복제품(excalibur_replica)은 등급이 커먼이라 기운이 없다(겉면 마감 finishTier 만 레전드) — 동작 그대로
+//  간장·막야 보이게 (10/10 에셋 리뷰 §1 — 막야 먹빛이 화면에서 거의 안 보이고, 간장 흰빛은 폰 경기 화면에서 약했다):
+//   AURA_STRENGTH 0.5 와 엑스칼리버 줄은 그대로 두고, 두 줄에만 프로필 칸을 더했다(빈 칸 = 엑스칼리버와 같은 값 → 엑스칼리버는 같은 식 그대로).
+//   gain = 아지랑이 투명도 배율(기본 1) · fall = 칼날 가장자리에서 옅어지는 거리(m, 기본 0.022) · halfW = 판 절반 폭(m, 기본 0.11 — fall 을 키우면 판 끝에서 잘리지 않게 같이 키움)
+//   rim = 아지랑이 바깥 테 색(기본 없음) · rimA = 테 투명도(AURA_STRENGTH 를 곱하기 전) · rimAt = 칼날 가장자리에서 테 한가운데까지(m) · rimW = 테 두께(m)
+//   간장: 흰 아지랑이를 넓고 조금 진하게 + 바깥에 아주 옅은 푸른 흰 테(눈밭 위에서도 윤곽). 점 조명은 그대로, 칼날 발광은 없음(어두운 칼몸 그대로).
+//   막야: 먹빛은 그대로 진하게(보통 섞기라 밝은 바닥 위에서 먹 그림자) + 바깥에 옅은 회청빛 테(어두운 무대에서 윤곽). 점 조명·칼날 발광 없음 — 먹은 빛을 내지 않는다.
 export const AURA_PROFILES = Object.freeze({
   excalibur: { tone: 'gold', color: [1.0, 0.82, 0.45], light: 0xffd98a, emissive: 0xffe2a0 },
-  ganjiang: { tone: 'white', color: [0.92, 0.96, 1.0], light: 0xf3f7ff, emissive: null },
-  moye: { tone: 'ink', color: [0.035, 0.029, 0.045], light: null, emissive: null },
+  ganjiang: { tone: 'white', color: [0.92, 0.96, 1.0], light: 0xf3f7ff, emissive: null,
+    gain: 1.6, fall: 0.032, halfW: 0.16, rim: [0.80, 0.88, 1.0], rimA: 0.55, rimAt: 0.05, rimW: 0.02,
+    motes: { n: 20, size: 0.03, alpha: 1.1, color: [0.95, 0.97, 1.0], rim: [0.80, 0.88, 1.0], far: 0.0 } },
+  moye: { tone: 'ink', color: [0.035, 0.029, 0.045], light: null, emissive: null,
+    gain: 2.2, fall: 0.03, halfW: 0.16, rim: [0.56, 0.66, 0.76], rimA: 0.9, rimAt: 0.05, rimW: 0.02,
+    motes: { n: 28, size: 0.06, alpha: 1.4, color: [0.035, 0.029, 0.045], rim: [0.56, 0.66, 0.76], far: 0.6 } },
 });
+//   motes = 칼날 둘레에서 피어올라 옅어지는 작은 입자(간장 흰 불티 · 막야 먹 연기). 판 두 장은 플레이어 등 뒤 카메라(칼끝이 화면 안쪽을 향함)에서
+//    옆으로 누워 거의 안 보여서, 어느 쪽에서 봐도 보이는 점 입자를 더한다. n 개수 · size 지름(m) · alpha 투명도(AURA_STRENGTH 곱하기 전) ·
+//    color 가운데 색 · rim 가장자리 색 · far = 화면에서 몇 픽셀로 작아졌을 때 가장자리 색을 섞는 몫(막야: 먹 + 회청 → 어두운 무대·눈밭 둘 다에서 읽히는 먹회색 점)
+const AURA_DEFAULTS = { gain: 1, fall: 0.022, halfW: 0.11, rim: null, rimA: 0, rimAt: 0.05, rimW: 0.02, motes: null };
+
+const MOTE_VERT = /* glsl */ `
+  attribute float aSeed;
+  uniform float uTime;
+  uniform float uStrength;
+  uniform float uLen;   // 칼날 길이 (m)
+  uniform float uSize;  // 입자 지름 (m)
+  uniform float uViewH; // 그리는 화면 높이 (px)
+  uniform float uAlpha;
+  varying float vA;
+  varying float vFar;
+  void main() {
+    float sp = 0.22 + 0.16 * fract(aSeed * 7.13);
+    float ph = fract(uTime * sp + aSeed);                    // 한 입자의 한살이 0 → 1
+    float ang = aSeed * 43.7 + uTime * (fract(aSeed * 3.7) - 0.5) * 0.8;
+    float rad = 0.012 + ph * 0.05;                            // 칼날 곁에서 나와 바깥으로 번진다
+    float y = (fract(aSeed * 12.9898) - 0.5) * uLen * 0.9 + ph * 0.07; // 칼끝 쪽으로 조금 흐른다
+    vec3 p = vec3(cos(ang) * rad, y, sin(ang) * rad);
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_Position = projectionMatrix * mv;
+    float px = uSize * projectionMatrix[1][1] * 0.5 * uViewH / max(-mv.z, 0.05);
+    gl_PointSize = max(px, 2.5);                              // 멀리서도 2.5 px 아래로는 안 작아진다 (폰 경기 화면)
+    vFar = clamp((9.0 - px) / 6.0, 0.0, 1.0);
+    vA = sin(ph * 3.14159) * uAlpha * uStrength;
+  }
+`;
+const MOTE_FRAG = /* glsl */ `
+  uniform vec3 uColor;
+  uniform vec3 uRim;
+  uniform float uFarMix;
+  varying float vA;
+  varying float vFar;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float soft = exp(-d * d * 3.5);                           // 가장자리가 흐린 둥근 점 (먹이 번진 듯)
+    vec3 near = mix(uColor, uRim, smoothstep(0.4, 1.0, d) * 0.8);
+    vec3 far = mix(uColor, uRim, uFarMix);
+    gl_FragColor = vec4(mix(near, far, vFar), min(soft * vA, 0.95));
+  }
+`;
 // 기운 세기 (사장님 9/29 "너무 세, 지금의 절반으로": 1 → 0.5) — 아지랑이 투명도·점 조명·칼날 발광에 모두 곱한다
 const AURA_STRENGTH = 0.5;
 
@@ -37,6 +92,12 @@ const FRAG = /* glsl */ `
   uniform vec3 uColor;
   uniform float uHalfW; // 판 절반 폭 (m)
   uniform float uEdge;  // 칼날 절반 폭 (m): 빛은 칼날 가장자리에서 가장 밝고 바깥으로 옅어진다
+  uniform float uGain;  // 프로필 투명도 배율 (엑스칼리버 1)
+  uniform float uFall;  // 옅어지는 거리 (m, 엑스칼리버 0.022)
+  uniform vec3 uRim;    // 바깥 테 색 (간장·막야)
+  uniform float uRimA;  // 테 투명도 (0 = 테 없음 — 엑스칼리버)
+  uniform float uRimAt; // 칼날 가장자리에서 테 한가운데까지 (m)
+  uniform float uRimW;  // 테 두께 (m)
   varying vec2 vUv;
   float wave(vec2 p) {
     return sin(p.y * 38.0 - uTime * 3.1 + sin(p.x * 9.0 + uTime * 1.7) * 1.6) * 0.5 + 0.5;
@@ -44,12 +105,16 @@ const FRAG = /* glsl */ `
   void main() {
     float d = abs(vUv.x - 0.5) * 2.0 * uHalfW;           // 칼날 중심에서 떨어진 거리 (m)
     float out_ = max(d - uEdge, 0.0);                     // 칼날 가장자리 바깥으로 나간 거리
-    float across = exp(-out_ / 0.022);
+    float across = exp(-out_ / uFall);
     float along = smoothstep(0.0, 0.06, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
     // 위로 흐르는 아지랑이: 세로 무늬가 칼끝 쪽으로 천천히 흘러가며 흔들린다
     float flick = mix(0.45, 1.0, wave(vUv)) * mix(0.75, 1.0, sin(uTime * 0.9) * 0.5 + 0.5);
-    float a = across * along * flick * 0.55 * uStrength;
-    gl_FragColor = vec4(uColor, a);
+    float a = min(across * along * flick * 0.55 * uStrength * uGain, 0.9);
+    // 바깥 테: 아지랑이 둘레의 옅은 띠 (같은 흐름 무늬를 조금 어긋나게 — 테가 띠처럼 굳어 보이지 않게). 아지랑이 아래에 깔고 겹쳐 섞는다
+    float rb = (out_ - uRimAt) / uRimW;
+    float r = exp(-rb * rb) * along * mix(0.55, 1.0, wave(vUv + vec2(0.31, 0.17))) * uRimA * uStrength;
+    float ao = a + r * (1.0 - a);
+    gl_FragColor = vec4((uColor * a + uRim * r * (1.0 - a)) / max(ao, 1e-4), ao);
   }
 `;
 
@@ -63,13 +128,20 @@ export function attachAura(fighter) {
   const L = fighter.weaponCfg.bladeLength;
   const midY = hilt + L / 2;
 
+  const look = { ...AURA_DEFAULTS, ...profile };
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uStrength: { value: AURA_STRENGTH },
       uColor: { value: new THREE.Color(...profile.color) },
-      uHalfW: { value: 0.11 },
+      uHalfW: { value: look.halfW },
       uEdge: { value: 0.026 },
+      uGain: { value: look.gain },
+      uFall: { value: look.fall },
+      uRim: { value: new THREE.Color(...(look.rim || [0, 0, 0])) },
+      uRimA: { value: look.rim ? look.rimA : 0 },
+      uRimAt: { value: look.rimAt },
+      uRimW: { value: look.rimW },
     },
     vertexShader: VERT,
     fragmentShader: FRAG,
@@ -78,7 +150,7 @@ export function attachAura(fighter) {
     blending: THREE.NormalBlending, // 더하기 섞기는 밝은 모래·하늘 위에서 사라져 보여서, 보통 섞기로 옅은 금빛 막을 씌운다
     side: THREE.DoubleSide,
   });
-  const geo = new THREE.PlaneGeometry(0.22, L * 1.05);
+  const geo = new THREE.PlaneGeometry(2 * look.halfW, L * 1.05);
   const group = new THREE.Group();
   group.name = 'legendaryAura';
   group.userData.legendaryAura = { weapon: fighter.weapon.id, tone: profile.tone, strength: AURA_STRENGTH };
@@ -91,6 +163,30 @@ export function attachAura(fighter) {
   }
   const light = profile.light === null ? null : new THREE.PointLight(profile.light, 1.2 * AURA_STRENGTH, 2.0, 2);
   if (light) group.add(light);
+  let moteGeo = null, moteMat = null;
+  if (look.motes) {
+    const mo = look.motes;
+    moteGeo = new THREE.BufferGeometry();
+    moteGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(mo.n * 3), 3));
+    moteGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(Float32Array.from({ length: mo.n }, (_, i) => (i * 0.6180339887) % 1), 1));
+    moteMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }, uStrength: { value: AURA_STRENGTH }, uLen: { value: L }, uSize: { value: mo.size }, uViewH: { value: 720 },
+        uAlpha: { value: mo.alpha }, uColor: { value: new THREE.Color(...mo.color) }, uRim: { value: new THREE.Color(...mo.rim) }, uFarMix: { value: mo.far },
+      },
+      vertexShader: MOTE_VERT,
+      fragmentShader: MOTE_FRAG,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+    });
+    const motes = new THREE.Points(moteGeo, moteMat);
+    motes.frustumCulled = false; // 자리는 셰이더가 정한다 (위치 버퍼는 0)
+    motes.renderOrder = 3;
+    const view = new THREE.Vector2();
+    motes.onBeforeRender = (renderer) => { moteMat.uniforms.uViewH.value = renderer.getDrawingBufferSize(view).y; };
+    group.add(motes);
+  }
   entry.group.add(group);
   // 칼날 자체도 은은하게 빛난다 (밝은 낮에도 보이도록 자체 발광)
   const bladeMat = fighter.bladeMesh?.material;
@@ -101,6 +197,7 @@ export function attachAura(fighter) {
   return {
     update(t) {
       mat.uniforms.uTime.value = t;
+      if (moteMat) moteMat.uniforms.uTime.value = t;
       const breath = Math.sin(t * 1.3) * 0.5 + 0.5;
       if (light) light.intensity = (0.8 + 0.5 * breath + 0.12 * Math.sin(t * 4.7)) * AURA_STRENGTH;
       if (bladeMat && profile.emissive !== null) bladeMat.emissiveIntensity = (0.18 + 0.22 * breath) * AURA_STRENGTH;
@@ -113,6 +210,8 @@ export function attachAura(fighter) {
       }
       geo.dispose();
       mat.dispose();
+      moteGeo?.dispose();
+      moteMat?.dispose();
     },
   };
 }

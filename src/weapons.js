@@ -1233,7 +1233,7 @@ const morgenstern = finalizeSpec('morgenstern', {
 //      레전드 → power 1.2 · 파손 0 (불괴). 특수 능력 없음. mThrust 1.15, mBlunt 0.95 (샛별 값 그대로) · mCut 1.15 → 1.25 (10/10 사장님 — 청강검과 같게, 아래 칸 주석).
 //      유파: 중국 (청강검과 같은 劍 — school 'chinese'). 뽑기: 두 자루가 한 묶음(drawGroup) — 레전드가 나오면 엑스칼리버 한 칸 · 간장/막야 한 칸
 //       으로 나누고, 묶음이 뽑히면 둘 중 하나를 고른다(drawWeaponCards). 같은 판 두 장에 둘이 함께 나오지 않는다.
-//      오라: aura.js AURA_PROFILES — 간장(어두운 칼몸)에 흰 아지랑이, 막야(밝은 칼몸)에 먹빛 아지랑이 (엑스칼리버와 같은 세기 0.5).
+//      오라: aura.js AURA_PROFILES — 간장(어두운 칼몸)에 흰 아지랑이, 막야(밝은 칼몸)에 먹빛 아지랑이 (엑스칼리버와 같은 세기 0.5. 10/10 리뷰 뒤 폭·테·입자를 더해 폰 화면에서 보이게).
 //      우리 쪽에서 바꾼 것: school 'chinese' 를 적음 · 카드 설명의 길이를 단축 뒤 값(100/96 → 95/91 cm)으로 바로잡음 (샛별 쪽은 단축 전 글자가 남아 있었다).
 // ═════════════════════════════════════════════════════════════
 const LEGENDARY_JIAN = {
@@ -1348,10 +1348,12 @@ function legendaryJianSpec(id, nameKo, nameEn, desc) {
   });
 }
 
+// 카드 문구 (10/10 에셋 리뷰 §1-3): 카드 한 칸에 둘 중 하나가 뜨는 한 쌍이라 첫 줄에 짝 이름을 넣고, 길이 표기는 사인검·아이스와 같은 '전체 N cm'
+//  (화면 문구 규칙 docs/ui/hud_copy_rules_2026-10-10.md §4-7 숫자와 단위 사이 한 칸 · §4-6 카드 설명 두 문장 40 자 안 — 36.5)
 const ganjiang = legendaryJianSpec('ganjiang', '간장', 'Ganjiang',
-  '어두운 회금빛 칼몸에 귀갑문을 새긴 명검.\n길이 95cm, 질량 0.95kg의 한손 양날검.');
+  '막야와 한 쌍인 회금빛 귀갑문 명검.\n전체 95 cm, 질량 0.95 kg의 한손 양날검.');
 const moye = legendaryJianSpec('moye', '막야', 'Moye',
-  '밝은 은강철에 물결 같은 결이 흐르는 명검.\n길이 91cm, 질량 1.12kg의 한손 양날검.');
+  '간장과 한 쌍인 은빛 물결무늬 명검.\n전체 91 cm, 질량 1.12 kg의 한손 양날검.');
 
 // ═════════════════════════════════════════════════════════════
 //  19) 사인검 (레어) — 샛별 저장소에서 가져옴 (6e71ba2, 기준 5a4e96c). 조선 왕실의 벽사 의례검(네 寅이 겹친 때 만든다).
@@ -1372,7 +1374,7 @@ const moye = legendaryJianSpec('moye', '막야', 'Moye',
 // ═════════════════════════════════════════════════════════════
 const sain = finalizeSpec('sain', {
   nameKo: '사인검', nameEn: 'Sain Sword',
-  desc: '별자리와 금은 명문을 새긴 의례검.\n전체 100cm, 질량 1kg의 한손 양날검.',
+  desc: '별자리와 금은 명문을 새긴 의례검.\n전체 100 cm, 질량 1 kg의 한손 양날검.',
   grip: 'one-hand', material: 'steel', tier: 'rare',
   school: 'chinese', // 중국 유파 — 바탕 글이 조선세법·본국검 (위 머리말)
   enterParry: true, // 들어가며 막기 (짧은 한손 칼 관례 — 간장·막야와 같은 까닭)
@@ -1397,7 +1399,7 @@ const sain = finalizeSpec('sain', {
 
 const ice = finalizeSpec('ice', {
   nameKo: '아이스', nameEn: 'Ice',
-  desc: '세 줄의 홈과 황동 장식을 지닌 북부 가문의 검.\n전체 168cm, 질량 3.5kg의 양손검.', // 사장님 10/10 20:0x: '스타크의 대검' → '북부 가문의 검' (이름 '아이스'는 일반명사로 그대로)
+  desc: '세 줄의 홈과 황동 장식을 지닌 북부 가문의 검.\n전체 168 cm, 질량 3.5 kg의 양손검.', // 사장님 10/10 20:0x: '스타크의 대검' → '북부 가문의 검' (이름 '아이스'는 일반명사로 그대로)
   grip: 'two-hand', material: 'steel', tier: 'rare',
   hiltLength: 0.20, bladeLength: 1.25, gripAlong: -0.20,
   mCut: 1.10, mThrust: 0.85, mBlunt: 1.15,
