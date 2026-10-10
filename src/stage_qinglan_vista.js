@@ -1,10 +1,10 @@
 // 청람잔도의 먼 경치 — 협곡 위로 솟은 거대한 바위 기둥 무리(남중국 화강암·사암 봉우리 — 황산·장자제 같은 꼴)와
-//  그 뒤 태산처럼 넓고 무거운 산덩이, 협곡 허리의 엷은 구름 띠. 가까운 절벽·잔도는 stage_qinglan.js, 발아래 큰 강 협곡은 stage_qinglan_gorge.js.
+//  그 뒤 태산처럼 넓고 무거운 산덩이. 가까운 절벽·잔도는 stage_qinglan.js, 발아래 큰 강 협곡은 stage_qinglan_gorge.js.
 //  사장님 디자인 리뷰(10/10 21:0x '잔도 느낌이 안 나 … 기암절벽의 스케일이 남다른 태산') 로 다시 지었고,
 //  10/11 00:1x '발아래 거의 뭐가 안 보인다' 로 불투명 구름 바다를 걷어 내고 샛별 초기 판의 큰 강 협곡을 발아래에 들였다.
-//  모두 장식(물리 없음). 그림자를 드리우지 않는다(멀어서 해 그림자 범위 밖). 투명 재질은 구름 띠 하나뿐.
+//  10/11 3차: 협곡 허리의 엷은 구름 띠도 뺐다(한낮). 모두 장식(물리 없음). 그림자를 드리우지 않는다(멀어서 해 그림자 범위 밖). 투명 재질 없음.
 import * as THREE from 'three';
-import { Kit, rng, canvasTex, limb } from './stage_kit.js';
+import { Kit, rng, limb } from './stage_kit.js';
 import { overRiver } from './stage_qinglan_gorge.js';
 
 export const CLOUD_Y = -48; // 구름 띠·바위 기둥 밑동의 기준 높이 (싸우는 바닥 = 0). 발아래 강은 약 -62 m (stage_qinglan_gorge.js)
@@ -97,22 +97,6 @@ export function cliffPine(K, x, y, z, scale, seed, dir = null) {
   K.pop();
 }
 
-/** 구름 띠 질감: 투명 바탕에 흰 뭉게구름 덩이 */
-function cloudTexture(seed) {
-  const r = rng(seed);
-  return canvasTex(512, 512, (g, w, h) => {
-    for (let i = 0; i < 260; i++) {
-      const x = r() * w, y = r() * h, rad = 18 + r() * 70;
-      for (const [dx, dy] of [[0, 0], [w, 0], [-w, 0], [0, h], [0, -h]]) {
-        const grad = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rad);
-        grad.addColorStop(0, `rgba(255,255,255,${0.16 + r() * 0.12})`);
-        grad.addColorStop(1, 'rgba(255,255,255,0)');
-        g.fillStyle = grad; g.fillRect(x + dx - rad, y + dy - rad, rad * 2, rad * 2);
-      }
-    }
-  });
-}
-
 /** 태산 같은 넓은 산덩이: 앞뒤 두 줄 능선으로 된 큰 띠. 안개가 멀리 있는 만큼 옅게 만든다 */
 function massif(pos, col, a0, a1, dist, height, seed, color) {
   const r = rng(seed);
@@ -191,12 +175,6 @@ export function buildQinglanVista(scene) {
     mesh.name = 'qinglan-vista-pine-' + bin; scene.add(mesh);
     for (const g of K.bins[bin]) g.dispose();
   }
-  // ④ 엷은 구름 띠 하나 (반투명) — 협곡 허리에 낮게 걸친다. 10/11 사장님 '발아래 거의 뭐가 안 보인다' 로 불투명 구름 바다와 띠 하나를 뺐다
-  //  (발아래는 stage_qinglan_gorge.js 의 큰 강 협곡). 마루 바로 밑(60 m 안)은 비워 강이 곧장 내려다보이게
-  {
-    const tex = cloudTexture(615229); tex.repeat.set(5, 5);
-    const band = new THREE.Mesh(new THREE.RingGeometry(60, 620, 40, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
-    band.rotation.x = -Math.PI / 2; band.position.y = CLOUD_Y + 14; band.name = 'qinglan-mist-band'; band.renderOrder = 1; scene.add(band);
-  }
+  // (④ 구름 띠: 10/11 3차에 뺐다 — 골짜기 허리의 구름은 아침 안개로 읽혔다. 사장님 '좀 아침같네. 한낮보다는')
   return { stats: { pillars: tops.length, pines, triangles: pos.length / 9 } };
 }

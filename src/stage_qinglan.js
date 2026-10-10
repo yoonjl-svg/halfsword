@@ -238,14 +238,14 @@ function plankRoads(K) {
     const rise = s > 0 ? 0.16 : -0.11;
     let prevPost = null;
     let i = 0;
-    for (let ax = DECK_HALF + 0.1; ax < 118; ax += 0.34, i++) {
+    for (let ax = DECK_HALF + 0.1; ax < 118; ax += ax < 40 ? 0.34 : 0.62, i++) { // 40 m 밖은 널을 두 배 넓게(멀어서 같은 꼴, 삼각형 절반 — 10/11 3차)
       const x = s * ax, y = (ax - DECK_HALF) * rise + (s > 0 ? Math.max(0, ax - 60) * 0.12 : 0);
       const ang = Math.atan2(wallSlope(x), 1); // 벽을 따라 돈다 (판자 방향)
       const wz = wallZ(x) + 0.15;
       const nx = -Math.sin(ang), nz = Math.cos(ang); // 벽에서 바깥
       const w = 1.7;
       const cx = x + nx * w / 2, cz = wz + nz * w / 2;
-      K.put('road', box(0.3, 0.06, w), i % 7 === 3 ? 0x6e665a : 0x7d7466, [cx, y, cz], [0, -ang, 0], 1, { vary: 0.18, noise: 0.05 });
+      K.put('road', box(ax < 40 ? 0.3 : 0.58, 0.06, w), i % 7 === 3 ? 0x6e665a : 0x7d7466, [cx, y, cz], [0, -ang, 0], 1, { vary: 0.18, noise: 0.05 });
       if (i % 5 === 0) {
         // 벽에 박은 들보(받침)와 아래 버팀대
         K.put('road', box(0.12, 0.12, w + 0.4), DARK, [x + nx * (w / 2 - 0.15), y - 0.1, wz + nz * (w / 2 - 0.15)], [0, -ang, 0]);
@@ -284,7 +284,8 @@ function sky(scene) {
   // 한낮의 맑은 하늘: 위는 짙은 하늘색, 지평선은 옅은 푸른빛 (노을·새벽 색 없음)
   const tex = canvasTex(8, 256, (g, w, h) => {
     const grad = g.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#3f8fd0'); grad.addColorStop(0.38, '#7fb9e2'); grad.addColorStop(0.5, '#c9e2ef'); grad.addColorStop(1, '#d9e9f0');
+    // 10/11 3차(사장님 '좀 아침같네. 한낮보다는'): 지평선의 옅은 흰빛(아침 안개 하늘)을 걷고 한낮의 짙고 맑은 푸른색으로, 채도를 올렸다
+    grad.addColorStop(0, '#1c64c4'); grad.addColorStop(0.3, '#3d86d8'); grad.addColorStop(0.46, '#7ab4e6'); grad.addColorStop(0.5, '#9cc8ec'); grad.addColorStop(1, '#a8cfee');
     g.fillStyle = grad; g.fillRect(0, 0, w, h);
   });
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -305,10 +306,12 @@ function smallBird(scene) {
 
 export function buildQinglan(scene, { hemi, sun }) {
   // 초여름 한낮(12~1시): 높이 뜬 해, 맑고 밝은 하늘, 옅은 공기 원근(멀수록 푸르스름 — 안개는 멀리서 옅게만)
-  scene.background = new THREE.Color(0xc9e2ef);
-  scene.fog = new THREE.Fog(0xc4dcea, 45, 1000); // 400 m 에서 약 0.37 — 먼 봉우리가 가려지지 않고 푸르스름해질 만큼만
-  hemi.color.setHex(0xd8ebff); hemi.groundColor.setHex(0x6f7a66); hemi.intensity = 1.6;
-  sun.color.setHex(0xfff8ee); sun.intensity = 2.6;
+  // 10/11 3차: 한낮으로 — 대기를 줄여 먼 능선까지 또렷하게(안개 80~2000 m: 400 m 에서 약 0.17, 2차 0.37), 햇빛은 밝은 중성 백색(2차 0xfff8ee 노르스름),
+  //  반구광은 덜 푸르게(2차 0xd8ebff). 골짜기 허리 구름 띠는 stage_qinglan_vista.js 에서 뺐다(골짜기 안개는 아침에 끼고 한낮이면 걷힌다)
+  scene.background = new THREE.Color(0x9cc8ec);
+  scene.fog = new THREE.Fog(0xa9cdea, 80, 2000);
+  hemi.color.setHex(0xe4eefa); hemi.groundColor.setHex(0x76806c); hemi.intensity = 1.5;
+  sun.color.setHex(0xffffff); sun.intensity = 2.75;
   sky(scene);
   const vista = buildQinglanVista(scene);
   scene.add(cliffWall());
@@ -336,7 +339,7 @@ export function buildQinglan(scene, { hemi, sun }) {
     wood: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }),
     leaf: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide, flatShading: true }),
   };
-  const CAST = new Set(['rail', 'railIron', 'stone']); // 마루 위 가까운 것만 그림자를 드리운다
+  const CAST = new Set(['rail', 'stone']); // 마루 위 가까운 것만 그림자를 드리운다 (쇠사슬 railIron 은 10/11 3차에 뺐다: 사슬 고리 9 천여 삼각형이 그림자 그리기에 한 번 더 들어가는데, 한낮이라 그림자가 발밑에 짧아 사슬 그림자는 거의 안 보인다)
   for (const [name, mat] of Object.entries(mats)) {
     const mesh = K.mesh(name, mat, { cast: CAST.has(name), receive: name !== 'leaf' && name !== 'wood' });
     if (!mesh) { mat.dispose(); continue; }
@@ -350,8 +353,8 @@ export function buildQinglan(scene, { hemi, sun }) {
   const bird = smallBird(scene), rr = rng(801319);
   let time = 0, nextDrip = 3.2, nextBird = 11, birdStart = -100, birdCalled = false;
   const stage = {
-    sunOffset: { x: 3, y: 16, z: 2.5 }, // 한낮: 해가 거의 머리 위 — 짧고 진한 그림자
-    fighterLight: { color: 0xeef3ea, rimColor: 0xcfe4f0, rim: 0.8, level: 0.35 },
+    sunOffset: { x: 1.2, y: 20, z: 1 }, // 한낮 12~1시: 해가 거의 머리 위(고도 약 86°, 2차 77°) — 그림자가 발밑에 짧고 진하다
+    fighterLight: { color: 0xf4f4f2, rimColor: 0xdde9f2, rim: 0.8, level: 0.35 },
     stats: { ...vista.stats, gorge },
     excite() {},
     update(dt) {

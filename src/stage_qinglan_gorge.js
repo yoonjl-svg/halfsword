@@ -117,7 +117,7 @@ function paintTerrain(g, side, far = false) {
     color.multiplyScalar(0.94 + strata + Math.sin(x * 0.09 + z * 0.11) * 0.035);
     const green = forest.clone().lerp(meadow, patch * 0.35);
     color.lerp(green, greenery);
-    color.lerp(haze, THREE.MathUtils.smoothstep(x, 125, 445) * (far ? 0.7 : 0.57));
+    color.lerp(haze, THREE.MathUtils.smoothstep(x, 125, 445) * (far ? 0.7 : 0.57) * 0.4); // 10/11 3차: 꼭짓점 색에 구운 먼 안개를 0.4 배로(한낮, 먼 능선까지 또렷하게)
     colors.setXYZ(i, color.r, color.g, color.b);
   }
 }
@@ -137,7 +137,7 @@ function canyonSides(K) {
   // Continuous mountain ribbons replace independent domes or tower stacks.
   // Their tall, fractured inner faces rise into broad, uneven forested ridges.
   for (const side of [-1, 1]) {
-    const g = geometryGrid(156, 44, (u, v) => {
+    const g = geometryGrid(128, 36, (u, v) => { // 10/11 3차: 156×44 → 128×36 (발아래 멀리라 화면 차이 없이 삼각형 약 2/3)
       const x = X0 + u * (X1 - X0) + Math.sin(u * 67 + v * 3) * Math.sin(v * Math.PI) * 0.8;
       const d = v * 135;
       return terrainPoint(x, d, side);
@@ -145,7 +145,7 @@ function canyonSides(K) {
     const placed = K.put('mountains', g, 0xa2a79f, undefined, undefined, 1, { noise: 0, vary: 0 });
     paintTerrain(placed, side);
 
-    const banks = geometryGrid(150, 10, (u, v) => {
+    const banks = geometryGrid(120, 8, (u, v) => {
       const x = X0 + u * (X1 - X0);
       return bankPoint(x,v,side);
     }, side > 0);
@@ -154,7 +154,7 @@ function canyonSides(K) {
     for (let i = 0; i < pos.count; i++) {
       const patch = Math.sin(pos.getX(i) * 0.09 + Math.sin(pos.getZ(i) * 0.13) * 1.6);
       c.set(0x969888).lerp(new THREE.Color(0x4f713b), 0.44 + patch * 0.38);
-      c.lerp(new THREE.Color(0x9eb5b5), THREE.MathUtils.smoothstep(pos.getX(i), 150, 445) * 0.5);
+      c.lerp(new THREE.Color(0x9eb5b5), THREE.MathUtils.smoothstep(pos.getX(i), 150, 445) * 0.2);
       col.setXYZ(i, c.r, c.g, c.b);
     }
   }
@@ -187,7 +187,7 @@ function greatRiver(K) {
     const x = p.getX(i), z = p.getZ(i);
     const edge = Math.abs(z - riverZ(x)) / riverHalfWidth(x);
     color.copy(deep).lerp(jade, 0.14 + edge * edge * 0.29 + Math.sin(x * 0.09 + z * 0.11) * 0.05);
-    color.lerp(haze, THREE.MathUtils.smoothstep(x, 170, 440) * 0.35);
+    color.lerp(haze, THREE.MathUtils.smoothstep(x, 170, 440) * 0.14);
     c.setXYZ(i, color.r, color.g, color.b);
   }
   const r = rng(641083);

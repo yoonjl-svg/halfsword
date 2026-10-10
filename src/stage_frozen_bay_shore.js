@@ -1,10 +1,12 @@
-// 얼어붙은 만의 물가(눈 덮인 둑·낙엽송·선착장·먼 구릉) — 샛별 저장소에서 가져옴(b17a3c3). 바꾼 것: 숲을 무리 짓기(woodedBanks, 무대 리뷰 10/10). 짓는 곳은 stage_frozen_bay.js
+// 얼어붙은 만의 물가(눈 덮인 둑·낙엽송·선착장·먼 구릉) — 샛별 저장소에서 가져옴(b17a3c3). 바꾼 것: 숲을 무리 짓기(woodedBanks, 무대 리뷰 10/10) · 예배당 자리 비우기와 shoreRadius·bankHeight·CHAPEL 내보내기(10/11 3차). 짓는 곳은 stage_frozen_bay.js
 // Static shores for Eira's inland frozen bay. +X remains the open lake;
 // all scenery is beyond the duel/camera space and creates no physics bodies.
 import * as THREE from 'three';
 import { Kit, rng, box, cyl, limb } from './stage_kit.js';
 
 const TAU = Math.PI * 2;
+/** 통나무 정교회 예배당 자리 (stage_frozen_bay.js baikalBackdrop, 10/11 3차) — 선착장 뒤 둑 위. 숲이 여기는 비운다 */
+export const CHAPEL = { x: -21.4, z: 27.2, rotY: 2.25 };
 const BANK_ROWS = [0, 0.8, 2.8, 8, 19, 35];
 const BANK_HEIGHTS = [0.12, 0.57, 1.05, 1.55, 1.9, 2.2];
 const C = {
@@ -23,7 +25,7 @@ class ShoreKit extends Kit {
   }
 }
 
-function shoreRadius(a) {
+export function shoreRadius(a) {
   return 29 + 7 * Math.sin(a * 2 + 0.7) + 3 * Math.cos(a * 3 - 0.3)
     + 0.65 * Math.sin(a * 11);
 }
@@ -33,7 +35,7 @@ function bankRowHeight(a, j) {
     + 0.1 * Math.cos(a * 17));
 }
 
-function bankHeight(x, z) {
+export function bankHeight(x, z) {
   const a = (Math.atan2(z, x) + TAU) % TAU;
   const depth = Math.hypot(x, z) - shoreRadius(a);
   for (let j = 0; j < BANK_ROWS.length - 1; j++) {
@@ -179,7 +181,7 @@ function woodedBanks(K, r) {
       const depth = Math.max(4, cdepth + (r() - 0.5) * 9);
       const d = shoreRadius(a) + depth;
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (Math.hypot(x + 10, z - 24) < 4) continue;
+      if (Math.hypot(x + 10, z - 24) < 4 || Math.hypot(x - CHAPEL.x, z - CHAPEL.z) < 6) continue; // 선착장 · 통나무 예배당 자리 비움
       const h = (4.5 + r() * 6.5) * tall + (k === 0 ? 2 : 0);
       if (i % 9 === 0) { pine(K, r, x, z, h * 0.85); pines++; }
       else { bareLarch(K, r, x, z, h, depth < 16); larches++; }
