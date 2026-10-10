@@ -29,8 +29,9 @@ console.log(`WEAPON ${weapon} secret ${S}`);
 const probe = () =>
   page.evaluate(() => {
     const g = window.game;
-    // 10/10 글자 체계: 내 비기 알림은 #secretSlot(R3) — 창 열림은 가운데 #stateCue(C)에도, 경직은 #stateCue. 보이는 칸 하나를 읽는다 (없으면 R3)
-    const el = [...document.querySelectorAll('#secretSlot, #stateCue, #techSlot')].find((e) => e.classList.contains('show')) ?? document.getElementById('secretSlot');
+    // 10/10 19:2x: 내 비기 창·실행은 ② 패시브·비기 묶음(#techSlot), 경직은 ③ 경직·상태 묶음(#stateCue) — 줄마다 .slot. 보이는 줄 하나를 읽는다 (내 것 먼저)
+    const lines = [...document.querySelectorAll('#techSlot .slot, #stateCue .slot')].filter((e) => e.classList.contains('show'));
+    const el = lines.find((e) => e.dataset.who === 'me') ?? lines[0] ?? document.querySelector('#techSlot .slot');
     return {
       sim: +g.stats.simTime.toFixed(2),
       state: g.state,
@@ -39,7 +40,7 @@ const probe = () =>
       stage: g.player.skill.sec?.stage ?? null,
       bursts: g.player.skill.secretBursts,
       stats: g.player.skill.secretStats,
-      cue: { slot: el.id, show: el.classList.contains('show'), kind: el.dataset.kind, who: el.dataset.who, op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim() },
+      cue: { slot: el.parentElement.id, show: el.classList.contains('show'), kind: el.dataset.kind, who: el.dataset.who, op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim() },
       d: +g.player.foeDistance().toFixed(2),
       dropped: g.player.skill.secretDropped ?? 0,
       pain: +g.player.pain.toFixed(2),

@@ -5,6 +5,7 @@
 //        node tools/ui/hud_shots.mjs before  http://127.0.0.1:4317 docs/ui     → hud_before_{portrait,landscape}_<장면>.png + hud_bg_<방향>.png(글자 없는 배경) + 잰 값 JSON
 //        node tools/ui/hud_shots.mjs mockup  - docs/ui                          → tools/ui/hud_mockup.html 을 배경 위에 얹어 hud_mockup_{portrait,landscape}.png
 //        node tools/ui/hud_shots.mjs after   http://127.0.0.1:4317 docs/ui     → 구현 뒤 같은 장면 hud_after_*.png (새 칸 #techSlot·#secretSlot·#stateCue, 배경은 다시 찍지 않는다)
+//        node tools/ui/hud_shots.mjs v2      http://127.0.0.1:4317 docs/ui     → 10/10 19:2x 세 묶음 hud_v2_*.png (설정 창 · 판 시작 · 패시브+비기 · 경직+상태 · 겹침 · 색 견본)
 //  저장소에 넣을 때는 PNG 를 256 색으로 줄였다 (PIL quantize MEDIANCUT · 디더 없음 — 21 MB → 9 MB).
 //  띄우기는 tools/browser/*.mjs 와 같다 (설치된 Chromium + swiftshader GL). 소프트웨어 GL 은 느리다 — 장면 하나에 수십 초.
 import { chromium } from 'playwright';
@@ -13,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const MODE = process.argv[2] || 'before';
-const AFTER = MODE === 'after';
+const AFTER = MODE === 'after' || MODE === 'v2';
 const base = process.argv[3] && process.argv[3] !== '-' ? process.argv[3] : 'http://127.0.0.1:4317';
 const dir = process.argv[4] || 'docs/ui';
 const ONLY = (process.env.ORIENT || 'portrait,landscape').split(',');
@@ -239,6 +240,70 @@ async function before(o) {
   await page.context().close();
 }
 
+// v2 (10/10 19:2x 사장님 답 — §13): 오른쪽 위 세 묶음 · 가운데 판 알림만 · 줄인 설정 창 · 색 후보 견본 → hud_v2_<방향>_<장면>.png
+//  전(같은 장면의 v1)은 hud_after_<방향>_<장면>.png — python3 tools/ui/hud_compare.py docs/ui v2 로 나란히
+async function v2(o) {
+  const file = (name) => path.join(dir, `hud_v2_${o}_${name}.png`);
+  const snap = async (page, name, note) => {
+    await page.screenshot({ path: file(name) });
+    metrics[`${o}_${name}`] = { note, ...(await page.evaluate(MEASURE)) };
+    console.log('SHOT', file(name), note);
+  };
+  // 1) 설정 창 (처음 메뉴) → 2) 판 시작: 판 알림 '결투' + 안내 + 소개
+  let page = await openFight(o, '?stage=poseidon&weapon=longsword');
+  await page.waitForTimeout(600);
+  await snap(page, 'menu', 'real: 처음 메뉴 (설정 줄 둘)');
+  await page.getByText('싸움 시작').click();
+  await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
+  await page.waitForTimeout(150);
+  await snap(page, 'start', 'real: 판 시작 toast(대면) + hint + foeIntro');
+  // 3) 상대 패시브 + 상대 비기: 실제 경로(enemy.techCue)로 잇달아 → ② 묶음에 두 줄
+  await page.waitForFunction(() => window.game.player.fightT > 2.4, null, { timeout: 120000 });
+  await page.evaluate(PIN);
+  await page.evaluate(() => (window.__pinEl = (el) => ((el.classList.remove = () => {}), el)));
+  await page.evaluate((t) => (window.game.enemy.techCue = { text: t, kind: 'passive', schoolKo: '독일', t: -11 }), TXT.passive);
+  await page.waitForFunction(() => document.querySelector('#techSlot .slot.show'), null, { timeout: 30000 });
+  await page.evaluate((t) => (window.game.enemy.techCue = { text: t, kind: 'secret', schoolKo: '독일', t: -12 }), TXT.secret);
+  await page.waitForFunction(() => document.querySelectorAll('#techSlot .slot.show').length === 2, null, { timeout: 30000 });
+  await page.evaluate(() => {
+    document.querySelectorAll('#techSlot .slot').forEach(__pinEl);
+    __pin('techCue');
+    __guard(window.game.player.swordArt.names[3] ?? { name: '황소 (Ochs)', desc: '칼자루는 머리 옆, 칼끝은 상대 얼굴 · 찌르기 준비' });
+    for (const id of ['toast', 'hint', 'foeIntro']) document.getElementById(id).classList.remove('show');
+  });
+  await page.waitForTimeout(500);
+  await snap(page, 'foe_secret', 'real: 상대 패시브 + 상대 비기 (② 두 줄) · injected: 자세 글');
+  // 4) 경직 + 상태: ③ 묶음에 '경직 / 상대 · 이름' + '분노 / 나' (DOM 직접 — main.js paintLine 과 같은 짜임) · ② 는 붙잡은 채
+  await page.evaluate(() => {
+    const name = document.querySelector('#foeIntro b')?.textContent || '상대';
+    const L = [...document.querySelectorAll('#stateCue .slot')].map(__pinEl);
+    const put = (el, b, t, kind, who) => { el.innerHTML = `<b>${b}</b><small><span class="t">${t}</span></small>`; el.dataset.kind = kind; el.dataset.who = who; el.classList.add('show'); };
+    put(L[0], '경직', `상대 · ${name}`, 'stiff', 'foe');
+    put(L[1], '분노', '나', 'anger', 'me');
+  });
+  await page.waitForTimeout(400);
+  await snap(page, 'state', 'real: ② 상대 패시브·비기 · injected: ③ 경직(상대) + 분노(나), 자세 글');
+  await page.context().close();
+  // 5) 겹침: 개울가 브란(분노로 시작) 판의 시작 — 실제 경로로 ③ 에 '분노 / 상대 · 오소리 브란'
+  page = await openFight(o, '?stage=clearing&weapon=longsword');
+  await page.getByText('싸움 시작').click();
+  await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
+  await page.evaluate(PIN);
+  await page.evaluate(() => { for (const id of ['toast', 'hint', 'foeIntro']) __pin(id); });
+  await page.waitForFunction(() => document.querySelector('#stateCue .slot.show'), null, { timeout: 60000 }).catch(() => console.log('NOTE: 브란 분노가 아직 안 떴다'));
+  await page.evaluate(() => { document.querySelectorAll('#stateCue .slot').forEach((el) => (el.classList.remove = () => {})); });
+  await page.waitForTimeout(400);
+  await snap(page, 'overlap', 'real: 판 시작 toast·hint·foeIntro + ③ 브란 분노(실제 경로)');
+  await page.context().close();
+  // 6) 색 후보 견본 (실제 배경 hud_bg_<방향>.png 위, 외곽선 있음)
+  page = await newPage(o);
+  await page.goto(pathToFileURL(path.join(here, 'hud_mockup.html')).href + `?o=${o}&scene=swatch2`, { waitUntil: 'load' });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: file('swatch') });
+  console.log('SHOT', file('swatch'));
+  await page.context().close();
+}
+
 async function mockup(o) {
   // hud = 모든 역할 한 화면(hud_mockup_<방향>.png) · map 화면 지도 · cards 카드 화면 · menu 창 · swatch 오렌지 후보
   for (const scene of (process.env.SCENES || 'hud,map,cards,menu,swatch').split(',')) {
@@ -259,7 +324,7 @@ async function mockup(o) {
   }
 }
 
-for (const o of ONLY) await (MODE === 'mockup' ? mockup(o) : before(o)); // before · after 는 같은 장면 (after = 새 칸)
+for (const o of ONLY) await (MODE === 'mockup' ? mockup(o) : MODE === 'v2' ? v2(o) : before(o)); // before · after 는 같은 장면 (after = 새 칸) · v2 = 10/10 19:2x 세 묶음
 fs.writeFileSync(path.join(process.env.METRICS_DIR || dir, `hud_${MODE}_metrics.json`), JSON.stringify(metrics, null, 1));
 console.log('ERRORS', JSON.stringify(errors));
 await browser.close();

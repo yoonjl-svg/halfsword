@@ -693,8 +693,6 @@ export const AI_LEVELS = {
 export const INPUT = {
   touchSensitivity: 2.6, // 화면 높이만큼 끌었을 때 손이 움직이는 거리(m)
   mouseSensitivity: 0.0045, // 마우스 1픽셀당 손 이동 거리(m)
-  tiltFullDeg: 22, // 이 각도만큼 기울이면 최고 속도
-  tiltDeadDeg: 4, // 이 각도 이하 기울임은 무시
   // 탭 = 찌르기 (skill.js thrust). 칼 쪽 화면을 짧게 톡 치면(이 시간 안에 떼고, 이만큼도 안 움직이면) 찌른다.
   //  더 길게 누르거나(누르고 있기) 더 움직이면(끌기) 예전 그대로다
   tapMs: 180, // 손가락 탭: 누른 시간 한도 (ms)

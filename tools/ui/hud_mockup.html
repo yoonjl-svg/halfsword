@@ -2,12 +2,13 @@
 <!--
   HUD 글자 체계 목업 (10/10 — docs/ui/hud_type_system_2026-10-10.md)
   실제 게임 배경 캡처(docs/ui/hud_bg_<방향>.png — 글자만 숨긴 화면, 일시정지 단추·조이스틱은 그대로) 위에 새 체계의 글자를 HTML 로 얹는다.
-  주소: hud_mockup.html?o=portrait|landscape&scene=hud|map|cards|menu|swatch
+  주소: hud_mockup.html?o=portrait|landscape&scene=hud|map|cards|menu|swatch|swatch2
     hud    — 싸움 중 모든 역할을 한꺼번에 (실제로는 동시에 다 뜨지 않는다)
     map    — 화면 지도 (역할 칸의 자리와 크기)
     cards  — 무기 카드 화면 (앞면 세 장 + 상대 소개)
     menu   — 설정·일시정지·결과 창
     swatch — 오렌지 후보를 실제 배경(하늘·모래·돌기둥) 위에
+    swatch2 — 10/10 19:2x: 옅은 오렌지(② 패시브·비기) · 옅은 붉은색(③ 경직·상태) 후보를 실제 배경 위에 (외곽선 있음)
   찍기: node tools/ui/hud_shots.mjs mockup - docs/ui
   글은 편집자 문구 정리(10/10) 뒤의 게임 문구와 짜임(첫 줄 한국어 · 둘째 줄 원어 · 꼬리표 `[내|상대] 유파 · 종류`)을 따른다. 여기 :root 토큰이 구현할 때 index.html :root 로 옮길 값이다.
 -->
@@ -236,6 +237,29 @@
       const yy = innerHeight * y + (PORT ? Math.floor(i / 2) * 64 : 0);
       H(`<div class="sw" style="left:${x}px;top:${yy}px;color:${c}">Versetzen<small style="color:${c}">${t}</small></div>`);
       H(`<div class="sw raw" style="left:${x}px;top:${yy + 34}px;color:${c}">외곽선 없음</div>`);
+    }));
+  }
+
+  if (scene === 'swatch2') {
+    // 10/10 19:2x 사장님 답 (§13): ② 패시브·비기 옅은 오렌지 후보 셋 + ③ 경직·상태 옅은 붉은색 후보 셋 (+ 예전 #C8714E · ① 자세 크림 비교).
+    //  실제 배경의 하늘·돌기둥·모래 자리에, 외곽선 표준을 두르고 게임과 같은 두 줄 짜임(15/800 · 12/500)으로
+    const C = [
+      ['#f3e6c8', '#e4d8bf', '① 자세', '황소', 'Ochs · 찌르기 준비'],
+      ['#c8714e', '#e3a382', '예전 #C8714E', '맞받기', 'Indes · 상대 독일 · 패시브'],
+      ['#d5997b', '#e3bfab', 'A #D5997B', '맞받기', 'Indes · 상대 독일 · 패시브'],
+      ['#daae95', '#e6cdbc', 'B #DAAE95 (기본)', '받아 베기', 'Versetzen · 상대 독일 · 비기'],
+      ['#e0c2ae', '#ead9cc', 'C #E0C2AE', '받아 베기', 'Versetzen · 상대 독일 · 비기'],
+      ['#e48e8b', '#e8bcba', 'R1 #E48E8B (기본)', '분노', '상대 · 오소리 브란'],
+      ['#e59ea3', '#e9c3c6', 'R2 #E59EA3', '경직', '상대 · 하인리히'],
+      ['#e58a80', '#e7b7b1', 'R3 #E58A80', '집념', '나'],
+    ];
+    const ys = PORT ? [0.03, 0.36, 0.69] : [0.03, 0.36, 0.66];
+    const cols = PORT ? 2 : 4;
+    const cw = (innerWidth - 24) / cols;
+    ys.forEach((y) => C.forEach(([c, cs, label, b, sm], i) => {
+      const x = 12 + (i % cols) * cw;
+      const yy = innerHeight * y + Math.floor(i / cols) * (PORT ? 64 : 54);
+      H(`<div class="sw" style="left:${x}px;top:${yy}px;color:${c};font-size:15px">${b}<small style="color:${cs}">${sm}</small><small style="color:#f3e9d8;opacity:.8;font-size:10px">${label}</small></div>`);
     }));
   }
 </script>

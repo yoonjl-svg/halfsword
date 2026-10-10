@@ -24,11 +24,10 @@ async function open(stage, { pixel = false, tag }) {
   page.on('console', (m) => m.type() === 'error' && errors.push(`${tag} console: ${m.text()}`));
   page.on('requestfailed', (r) => errors.push(`${tag} requestfailed: ${r.url()}`));
   page.on('response', (r) => r.status() >= 400 && errors.push(`${tag} http ${r.status()}: ${r.url()}`));
-  await page.addInitScript((px) => localStorage.setItem('gladiator-settings', JSON.stringify({ pixel: px })), pixel);
   // 가짜 시계: 처음부터 멈춰 두고 runFor 로만 돌린다 (install 만 하면 실제 시간대로 흘러, 찍고 재는 동안에도 게임이 흐른다)
   await page.clock.install({ time: new Date('2026-09-28T12:00:00') });
   await page.clock.pauseAt(new Date('2026-09-28T12:00:01'));
-  await page.goto(`${base}/?foe=isolde&stage=${stage}&weapon=longsword`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?foe=isolde&stage=${stage}&weapon=longsword${pixel ? '&pixel=1' : ''}`, { waitUntil: 'networkidle' }); // 픽셀 모드는 주소 인자로만 (10/10 설정 줄 지움)
   for (let i = 0; i < 300 && !(await page.evaluate(() => !!window.game?.player?.sword)); i++) await page.waitForTimeout(100);
   await page.clock.runFor(200);
   await page.evaluate(() => document.getElementById('btnStart').click());
