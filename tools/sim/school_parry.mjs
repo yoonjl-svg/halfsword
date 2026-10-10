@@ -3,7 +3,7 @@
 //  한 자리를 들고 버틴다. 다른 점: 본판 길로 잰다(생성자가 유파 자세표를 입힘) · 14 패드에 독일 표의 highL 자리 [−0.3, 0.1] 를 더한다 ·
 //  줄마다 그 유파 꾸러미의 막기 자리(art.school.parry)와 독일 막기 자리(GERMAN = longsword 꾸러미)를 표시한다.
 //  막음 = 그 판에 치는 쪽 상처가 0. 고르는 기준은 원전이고 이 수는 보고용이다.
-//   node tools/sim/school_parry.mjs <무기id>      (PARRY_GAPS=1.3,1.45,1.6,1.75 · PARRY_SEEDS=7 — 판 수 = 간격 × 씨앗 · PARRY_ONLY=1 = 유파·독일 자리만)
+//   node tools/sim/school_parry.mjs <무기id>      (PARRY_GAPS=1.3,1.45,1.6,1.75 · PARRY_SEEDS=7 — 판 수 = 간격 × 씨앗 · PARRY_ONLY=1 = 유파·독일 자리만 · PARRY_LINES=lowL,thrust = 그 줄만)
 import { newRound, DT } from './harness_m.mjs';
 import { MOTION } from '../../src/motion_library.js';
 import { TECH, G as PAD } from '../../src/ai_techniques.js';
@@ -34,10 +34,15 @@ const setPad = (P, x, y) => {
 const same = (a, b) => a && b && a[0] === b[0] && a[1] === b[1];
 const out = {};
 console.log(`${id} (${art.tradition}) 막기 점검 — 판 ${GAPS.length * SEEDS.length} / 자리 · 간격 ${GAPS} · 씨앗 ${SEEDS}`);
+const LSEL = process.env.PARRY_LINES ? process.env.PARRY_LINES.split(',') : null; // 줄 고르기 (예: lowL,thrust)
 for (const [line, tn] of LINES) {
+  if (LSEL && !LSEL.includes(line)) continue;
   const tech = TECH.find((t) => t.name === tn);
   const rows = [];
-  const CANDS = ONLY ? CANDS0.filter((c) => same(c.pad, own[line]) || same(c.pad, ger[line])) : CANDS0;
+  // 유파·독일 자리가 표 패드와 꼭 같지 않으면(예: G.sideL [−0.52, 0.06] — 표 자리는 [−0.52, 0.03]) 그 자리를 따로 더한다
+  const extra = [own[line], ger[line]].filter((p, i, a) => a.findIndex((q) => same(q, p)) === i && !CANDS0.some((c) => same(c.pad, p))).map((p) => ({ pad: p, label: `${padKey(p)} (G 자리, 가까운 표 자리 섞임)` }));
+  const ALL = [...CANDS0, ...extra];
+  const CANDS = ONLY ? ALL.filter((c) => same(c.pad, own[line]) || same(c.pad, ger[line])) : ALL;
   for (const c of CANDS) {
     let hit = 0, clash = 0, n = 0;
     for (const gap of GAPS) for (const seed of SEEDS) {
@@ -76,6 +81,7 @@ for (const [line, tn] of LINES) {
 const pick = (line, p) => out[line].find((r) => same(r.pad, p));
 console.log('\n| 줄 | 독일 자리 막음 | 유파 자리 막음 |');
 for (const [line] of LINES) {
+  if (!out[line]) continue;
   const g = pick(line, ger[line]), o = pick(line, own[line]);
   console.log(`| ${line} | ${padKey(ger[line])} ${g ? `${g.block}/${g.n}` : '-'} | ${padKey(own[line])} ${o ? `${o.block}/${o.n}` : '-'} |`);
 }
