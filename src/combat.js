@@ -688,7 +688,9 @@ function gripTwist(f) {
   const ax = _gt.set(0, 1, 0).applyQuaternion(rotQ(sw)); // 칼 길이 축 (월드)
   const w = sw.angvel();
   const wAx = w.x * ax.x + w.y * ax.y + w.z * ax.z;
-  const lim = Math.max(Math.abs(f.cache.sword.w.dot(ax)), STEEL.gripTwistMax);
+  // 플레이어 칼만 다른 손아귀 한도 (STEEL.gripTwistMaxPlayer, 기본 null = 같음 — docs/motion/player_edge_2026-10-10.md, 사장님 확인 전 실험 스위치)
+  const gmax = STEEL.gripTwistMaxPlayer != null && f.skill?.autoGuard === true ? STEEL.gripTwistMaxPlayer : STEEL.gripTwistMax;
+  const lim = Math.max(Math.abs(f.cache.sword.w.dot(ax)), gmax);
   if (Math.abs(wAx) <= lim) return;
   const dw = wAx - Math.sign(wAx) * lim; // 손아귀가 받아 없애는 축 각속도
   sw.setAngvel({ x: w.x - ax.x * dw, y: w.y - ax.y * dw, z: w.z - ax.z * dw }, true);
