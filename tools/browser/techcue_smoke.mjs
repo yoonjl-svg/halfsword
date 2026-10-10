@@ -1,4 +1,5 @@
-// 유파 기술 알림(#techCue, 10/9) 브라우저 확인: 상대 무기를 정해 싸움을 띄우고 #techCue 가 보이는 순간 스크린샷 한 장. 설정 끔/켬도 본다
+// 유파 기술 알림(#techCue, 10/9) 브라우저 확인: 상대 무기를 정해 싸움을 띄우고 알림 칸이 보이는 순간 스크린샷 한 장. 설정 끔/켬도 본다
+//  10/10 글자 체계: #techCue 는 겉 칸 — 패시브·고유 동작은 #techSlot(R2, 오른쪽 위 자세 아래), 비기는 #secretSlot(R3), 경직은 #stateCue(C, 가운데 위)
 //  실행: npx vite build && npx vite preview --port 4173 --strictPort &
 //        node tools/browser/techcue_smoke.mjs http://127.0.0.1:4173 <스크린샷 폴더> ['?weapon=longsword&foeWeapon=monohoshizao'] [벽시계 한도 ms]
 //  소프트웨어 GL 은 느리다(벽 10 s ≈ 게임 1~2 s) — 한도를 넉넉히. playwright 는 저장소 의존성에 없다 (npm i --no-save playwright)
@@ -20,6 +21,7 @@ await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60
 const pre = await page.evaluate(() => ({
   el: !!document.getElementById('techCue'),
   row: [...document.querySelectorAll('#menu [data-setting="techCue"]')].map((el) => `${el.closest('.row').innerText.trim()}:${el.classList.contains('on') ? 'on' : 'off'}:${el.offsetWidth ? 'visible' : 'hidden'}`),
+  slots: ['techSlot', 'secretSlot', 'stateCue'].map((id) => !!document.getElementById(id)),
   menuShown: document.getElementById('techCue').classList.contains('show'),
 }));
 console.log('PRE ' + JSON.stringify(pre));
@@ -32,9 +34,9 @@ let lastCue = null;
 while (Date.now() - t0 < wallMax) {
   await page.waitForTimeout(120);
   const r = await page.evaluate(() => {
-    const el = document.getElementById('techCue');
+    const el = [...document.querySelectorAll('#techSlot, #secretSlot, #stateCue')].find((e) => e.classList.contains('show')) ?? document.getElementById('techSlot');
     const c = window.game.enemy?.techCue;
-    return { show: el.classList.contains('show'), op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim(), cue: c ? `${c.text}/${c.kind}` : null, cueT: c?.t ?? null, sim: +window.game.stats.simTime.toFixed(2), state: window.game.state, eAlive: !!window.game.enemy?.alive, passives: window.game.ai?.stats?.passives ?? null };
+    return { slot: el.id, show: el.classList.contains('show'), op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim(), cue: c ? `${c.text}/${c.kind}` : null, cueT: c?.t ?? null, sim: +window.game.stats.simTime.toFixed(2), state: window.game.state, eAlive: !!window.game.enemy?.alive, passives: window.game.ai?.stats?.passives ?? null };
   });
   if (r.cue && r.cueT !== lastCue) { lastCue = r.cueT; seen.push(`${r.cue}@${r.sim}`); }
   if (r.show && r.op > 0.6) {
@@ -48,7 +50,7 @@ console.log('FOUND ' + JSON.stringify(found) + ` wall ${((Date.now() - t0) / 100
 // 설정 끔/켬 + 일시정지: 같은 꼴의 알림을 직접 적어 숨김/보임을 본다 (AI 를 건드리지 않는 화면 쪽 확인)
 const tog = await page.evaluate(async () => {
   const g = window.game;
-  const el = document.getElementById('techCue');
+  const el = document.getElementById('techSlot'); // 패시브·고유 동작 칸 (R2)
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const out = {};
   if (g.state !== 'fight' || !g.enemy?.alive) return { skipped: g.state };
