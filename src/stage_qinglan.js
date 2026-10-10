@@ -1,15 +1,18 @@
 // 청람잔도 (`qinglan`) — 김씨(renji)의 무대. 초여름 한낮(12~1시), 깎아지른 화강암 절벽에 매달린 잔도(棧道).
 //  처음엔 샛별 저장소에서 가져온 꼴(6dfd771 → 3d3ec11: 큰 강 협곡 위 바위 쉼터) 그대로였고, 사장님 디자인 리뷰
-//  (10/10 21:0x "'잔도' 느낌이 안 나 … 기암절벽의 스케일이 남다른 태산") · 덧붙임('12~1시 한낮, 초여름') 로 다시 지었다:
-//   - 싸우는 바닥 = 절벽 면에 박은 나무 들보·쇠 받침 위의 넓은 판자 마루 (물리 바닥·경계 벽은 다른 무대와 같다 — 장식만)
-//   - 앞 가장자리 = 쇠사슬 난간, 그 너머는 발아래 아득한 낭떠러지와 흰 구름 바다
-//   - 양 끝에서 절벽을 따라 이어지는 좁은 판자 잔도(오르막·내리막), 벽의 쇠사슬 손잡이, 벽의 붉은 마애 글씨(태산 꼴)
-//   - 먼 경치(stage_qinglan_vista.js): 구름 위로 솟은 거대한 바위 기둥 세 겹 + 태산 같은 산덩이 — 옅은 공기 원근
+//  (10/10 21:0x "'잔도' 느낌이 안 나 … 기암절벽의 스케일이 남다른 태산") · 덧붙임('12~1시 한낮, 초여름') 로 다시 지었고,
+//  10/11 00:1x ("글씨 너무 흉측하다. 없애. 나무 마루바닥이 너무 현대적 … 발아래에는 지금 거의 뭐가 안 보이잖아. 초기 맵 풍경 선택적으로 이식") 로 2차:
+//   - 싸우는 바닥 = 절벽 구멍에 박은 통나무 들보 위에 거칠게 다듬은 두꺼운 널(폭·길이 들쭉날쭉, 틈, 바랜 회갈색, 이끼·밧줄, 뒤 구석은 바위 턱)
+//     (물리 바닥·경계 벽은 다른 무대와 같다 — 겉모습만)
+//   - 앞 가장자리 = 통나무 기둥과 쇠사슬 난간, 그 너머 발아래 멀리 옥빛 큰 강이 굽이치는 협곡(stage_qinglan_gorge.js — 샛별 초기 판에서 골라 옮김)
+//   - 양 끝에서 절벽을 따라 이어지는 좁은 판자 잔도(오르막·내리막), 벽의 쇠사슬 손잡이. 마애 글씨는 없앴다
+//   - 먼 경치(stage_qinglan_vista.js): 협곡 위로 솟은 거대한 바위 기둥 + 태산 같은 산덩이, 협곡 허리의 엷은 구름 띠 — 옅은 공기 원근
 //  소리: 샘 낙수(springDrip)·새(cliffBird)는 샛별 것 그대로(stage_detail_sound.js), 자리만 새 꼴에 맞췄다.
-//  그림자: 마루 난간(가까운 것)만 드리운다. 마루·벽은 받는다. docs/stages.md '청람잔도'
+//  그림자: 마루 난간(가까운 것)·돌만 드리운다. 마루·벽은 받는다. docs/stages.md '청람잔도'
 import * as THREE from 'three';
 import { Kit, rng, h3, canvasTex, box, cyl, limb } from './stage_kit.js';
 import { buildQinglanVista, wallZ, wallSlope, cliffPine, CLOUD_Y } from './stage_qinglan_vista.js';
+import { buildQinglanGorge } from './stage_qinglan_gorge.js';
 
 const TAU = Math.PI * 2;
 const DECK_HALF = 13.2; // 마루 양 끝 x
@@ -24,55 +27,32 @@ class OwnedKit extends Kit {
   }
 }
 
-/** 판자 질감 (4 m × 4 m 한 장): 절벽에서 바깥쪽으로 놓인 판자, 판 사이 틈, 닳은 결, 쇠못 */
-function plankMap() {
+/** 나뭇결 질감 (회색조, 꼭짓점 색에 곱한다): 결이 u(가로) 방향으로 흐르고 갈라진 틈·옹이가 있다. 널마다 box 투사(uv: 'box')로 붙인다 */
+function grainMap() {
   const r = rng(801301);
-  const tex = canvasTex(1024, 1024, (g, w, h) => {
-    g.fillStyle = '#2a241d'; g.fillRect(0, 0, w, h);
-    const n = 14, bw = w / n;
-    for (let i = 0; i < n; i++) {
-      const x0 = i * bw;
-      let y = -r() * 200;
-      while (y < h) {
-        const len = 260 + r() * 420;
-        const tone = 118 + r() * 38;
-        g.fillStyle = `rgb(${tone},${tone * 0.9 | 0},${tone * 0.74 | 0})`;
-        g.fillRect(x0 + 3, y + 3, bw - 6, len - 6);
-        for (let k = 0; k < 14; k++) { // 나뭇결
-          g.strokeStyle = `rgba(${r() < 0.5 ? '70,55,40' : '205,190,160'},${0.08 + r() * 0.1})`;
-          g.lineWidth = 1 + r() * 2;
-          const gx = x0 + 6 + r() * (bw - 12);
-          g.beginPath(); g.moveTo(gx, y + 4); g.bezierCurveTo(gx + (r() - 0.5) * 8, y + len * 0.3, gx + (r() - 0.5) * 8, y + len * 0.7, gx + (r() - 0.5) * 6, y + len - 4); g.stroke();
-        }
-        g.fillStyle = 'rgba(40,36,34,.9)'; // 들보에 박은 쇠못
-        for (const yy of [y + 18, y + len - 22]) for (const xx of [x0 + bw * 0.28, x0 + bw * 0.72]) { g.beginPath(); g.arc(xx, yy, 3.2, 0, TAU); g.fill(); }
-        y += len;
-      }
+  const tex = canvasTex(512, 512, (g, w, h) => {
+    g.fillStyle = '#d6d2cb'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 260; i++) { // 결 (가로로 길게, 조금씩 물결)
+      const y = r() * h, a = 1 + r() * 3, ph = r() * 6;
+      g.strokeStyle = r() < 0.6 ? `rgba(70,62,54,${0.08 + r() * 0.16})` : `rgba(255,252,245,${0.08 + r() * 0.12})`;
+      g.lineWidth = 0.8 + r() * 2.2;
+      g.beginPath();
+      for (let x = -8; x <= w + 8; x += 16) { const yy = y + Math.sin(x * 0.02 + ph) * a; x < 0 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+      g.stroke();
     }
-    // 가운데로 지나다니며 밝게 닳은 자리
-    const grad = g.createLinearGradient(0, 0, w, 0);
-    grad.addColorStop(0, 'rgba(255,240,215,0)'); grad.addColorStop(0.5, 'rgba(255,240,215,.08)'); grad.addColorStop(1, 'rgba(255,240,215,0)');
-    g.fillStyle = grad; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 26; i++) { // 비바람에 갈라진 틈
+      const x = r() * w, y = r() * h, len = 40 + r() * 160;
+      g.strokeStyle = 'rgba(40,34,30,.55)'; g.lineWidth = 1.5 + r() * 2;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + len, y + (r() - 0.5) * 6); g.stroke();
+    }
+    for (let i = 0; i < 9; i++) { // 옹이
+      const x = r() * w, y = r() * h, rx = 6 + r() * 9;
+      g.fillStyle = 'rgba(60,50,42,.5)'; g.beginPath(); g.ellipse(x, y, rx, rx * 0.55, 0, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(60,50,42,.3)'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(x, y, rx * 1.9, rx * 0.9, 0, 0, TAU); g.stroke();
+    }
   });
-  tex.repeat.set(0.25, 0.25);
+  tex.colorSpace = THREE.NoColorSpace; // 밝기 곱셈용 (색은 꼭짓점 색이 정한다)
   return tex;
-}
-
-/** 붉은 마애 글씨 (태산 바위 글씨 꼴): 투명 바탕, alphaTest 로 그린다(정렬 필요 없음) */
-function inscription() {
-  const tex = canvasTex(256, 768, (g, w, h) => {
-    g.clearRect(0, 0, w, h);
-    g.fillStyle = '#a3241c';
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = 'bold 168px "Noto Serif CJK SC","Noto Serif CJK KR","Songti SC","SimSun",serif';
-    ['青', '嵐', '棧', '道'].forEach((c, i) => g.fillText(c, w / 2, 96 + i * 180));
-  });
-  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-  const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 7.8), mat);
-  m.position.set(3.6, 5.6, wallZ(3.6) + 0.04);
-  m.name = 'qinglan-inscription';
-  return m;
 }
 
 /** 절벽 벽: 가운데는 마루 뒤에 곧게 서고 양끝은 앞으로 휘어 감싸는 큰 반원 화강암 벽. 세로 결·물 얼룩·바위틈 초록 */
@@ -86,9 +66,9 @@ function cliffWall() {
   us.sort((a, b) => a - b);
   const ROWS = [-260, -180, -125, -88, -62, -44, -31, -22, -15, -10, -6.5, -4, -2, -0.6, 0.6, 2, 3.6, 5.4, 7.5, 10, 13, 17, 22, 28, 36, 46, 58, 73, 90, 110, 132, 156, 180];
   const topY = (x) => { const ax = Math.abs(x); return ax < 60 ? 180 : THREE.MathUtils.lerp(180, CLOUD_Y - 30, THREE.MathUtils.smoothstep(ax, 60, 150)); };
-  // 마루 둘레(|x|<16, -3<y<12): 마루와 닿는 띠(-1.5<y<1.6)와 마애 글씨 자리만 판판하고, 나머지는 안쪽으로만 얕게 패인다(마루 뒤에 틈이 안 보이게)
+  // 마루 둘레(|x|<16, -3<y<12): 마루와 닿는 띠(-1.5<y<1.6)만 판판하고(10/11 마애 글씨를 없애 그 자리도 거친 바위로), 나머지는 안쪽으로만 얕게 패인다(마루 뒤에 틈이 안 보이게)
   const inNear = (x, y) => Math.abs(x) < 16 && y > -3 && y < 12;
-  const flat = (x, y) => (y > -1.5 && y < 1.6) || (Math.abs(x - 3.6) < 1.8 && y > 1.2 && y < 10);
+  const flat = (x, y) => y > -1.5 && y < 1.6;
   const jit = (x, y0) => [(h3(x, y0, 1, 3) - 0.5) * (Math.abs(x) < 30 ? 1.1 : 3), (h3(x, y0, 2, 5) - 0.5) * Math.min(6, Math.abs(y0) * 0.25 + 0.4)];
   const P = (x0, yy) => {
     const [jx, jy] = inNear(x0, yy) && flat(x0, yy) ? [0, 0] : jit(x0, yy); // 격자가 보이지 않게 꼭짓점을 흔든다(판판한 자리는 그대로)
@@ -143,43 +123,83 @@ function chain(K, bin, a, b, sag, color) {
 }
 
 /** 마루: 판자 바닥(질감 한 장) + 앞 가장자리 들보 + 밑의 들보·버팀대(절벽에 박힘) + 쇠사슬 난간 + 붉은 천·자물쇠 */
+/** x 에서 마루 앞 가장자리 안쪽인 z 범위의 x 한계 (줄 z 에서 널이 갈 수 있는 |x|) */
+const rowHalf = (z) => (z <= 0 ? DECK_HALF : Math.min(DECK_HALF, 13.8 * Math.sqrt(Math.max(0, 1 - (z / 10.8) ** 2))));
+
+/**
+ * 옛 잔도 마루 (10/11 사장님 '나무 마루바닥이 너무 현대적'): 절벽 구멍에 박은 통나무 들보 위에, 절벽과 나란히 거칠게 다듬은 두꺼운 널을 얹었다.
+ *  널 폭 0.24~0.46 m · 길이 1.3~3.6 m 가 줄마다 들쭉날쭉하고 사이가 벌어져(틈 2~6 cm) 밑의 어둠과 들보가 보인다. 비바람에 바랜 회갈색,
+ *  절벽 가까이·구석엔 이끼, 뒤 양 구석은 바위 턱이 마루를 대신한다. 널 윗면은 y 0 ± 1 cm (물리 바닥은 그대로 평평한 판정 면)
+ */
 function deck(K, scene) {
+  const r = rng(801323);
+  const WOOD = 0x6a5d4e, DARK = 0x3d3530, IRON = 0x2e2f31, ROPE = 0x8b7c5e;
+  const BOARD = [0x8b8173, 0x7d7466, 0x948a7a, 0x726a5e, 0x857a68, 0x9a9282];
+  // 밑 어둠: 널 틈으로 보이는 그늘 (마루 꼴 한 장, 10 cm 아래)
   const shape = new THREE.Shape();
   shape.moveTo(-DECK_HALF, -DECK_BACK);
   for (let i = 0; i <= 48; i++) { const x = -DECK_HALF + (2 * DECK_HALF * i) / 48; shape.lineTo(x, -deckFront(x)); }
   shape.lineTo(DECK_HALF, -DECK_BACK);
   shape.closePath();
-  const floorGeo = new THREE.ShapeGeometry(shape, 1);
-  floorGeo.rotateX(-Math.PI / 2); // shape y → -z
-  const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ map: plankMap(), roughness: 0.92, color: 0xd8cfc0 }));
-  floor.receiveShadow = true; floor.name = 'qinglan-deck'; scene.add(floor);
-  const WOOD = 0x5e4a36, DARK = 0x3d3027, IRON = 0x2e2f31;
-  // 앞 가장자리 들보 (마루 두께가 보이게)
+  const under = new THREE.ShapeGeometry(shape, 1);
+  under.rotateX(-Math.PI / 2);
+  K.put('beam', under, 0x1f1b18, [0, -0.13, 0], undefined, 1, { vary: 0, noise: 0.02 });
+  // 바위 턱 (뒤 양 구석: 샘 돌확·돌 등 자리) — 윗면 y 0~2 cm, 거친 모서리
+  const ledge = (x, z, w, d) => K.put('stone', box(w, 0.6, d), 0x8d8f86, [x, -0.29 + r() * 0.02, z], [0, (r() - 0.5) * 0.12, 0], 1, { rough: 0.09, noise: 0.08, uv: 'box', uvScale: 0.5 });
+  ledge(-11.2, -10.2, 4.2, 2.6); ledge(-12.6, -7.9, 1.8, 2.2); ledge(11.4, -10.3, 3.8, 2.4); ledge(12.5, -8.4, 1.6, 1.8);
+  const onLedge = (x, z) => (x < -9.2 && z < -9.0) || (x < -11.6 && z < -6.8) || (x > 9.6 && z < -9.1) || (x > 11.7 && z < -7.5);
+  // 널: 절벽과 나란히(x 방향) 줄지어 놓는다
+  let z = DECK_BACK + 0.05;
+  let boards = 0;
+  while (z < 10.9) {
+    const wz = 0.24 + r() * 0.22, cz = z + wz / 2;
+    const half = rowHalf(cz + wz / 2);
+    if (half < 0.6) break;
+    let x = -half - r() * 0.15;
+    while (x < half) {
+      const len = 1.3 + r() * 2.3, x1 = Math.min(x + len, half + r() * 0.2);
+      if (x1 - x > 0.35 && !onLedge((x + x1) / 2, cz)) {
+        const t = 0.09 + r() * 0.05, cx = (x + x1) / 2;
+        const mossy = Math.abs(cx) > 9 || cz < -10 ? r() < 0.4 : r() < 0.05; // 절벽 가까이·구석일수록 이끼 낀 널 (옅게)
+        const col = mossy ? 0x7a7b63 : BOARD[Math.floor(r() * BOARD.length)];
+        K.put('deck', box(x1 - x, t, wz), col, [cx, -t / 2 + (r() - 0.5) * 0.02, cz], [(r() - 0.5) * 0.02, (r() - 0.5) * 0.03, (r() - 0.5) * 0.012], 1,
+          { rough: 0.012, noise: 0.07, vary: 0.16, uv: 'box', uvScale: 0.55 });
+        boards++;
+      }
+      x = x1 + 0.02 + r() * 0.05;
+    }
+    z += wz + 0.02 + r() * 0.04;
+  }
+  // 앞 가장자리 통나무 (마루 두께가 보이게, 거친 껍질)
   const edge = [];
   for (let i = 0; i <= 40; i++) { const x = -DECK_HALF + (2 * DECK_HALF * i) / 40; edge.push([x, deckFront(x)]); }
   for (let i = 0; i < edge.length - 1; i++) {
     const [x0, z0] = edge[i], [x1, z1] = edge[i + 1];
-    limb(K, 'beam', [x0, -0.17, z0 + 0.05], [x1, -0.17, z1 + 0.05], 0.2, 0.2, DARK, { noise: 0.04 }, 4);
+    limb(K, 'beam', [x0, -0.2, z0 + 0.08], [x1, -0.2, z1 + 0.08], 0.17, 0.17, 0x584c40, { noise: 0.08, rough: 0.02 }, 7);
   }
-  for (const s of [-1, 1]) limb(K, 'beam', [s * DECK_HALF, -0.17, DECK_BACK], [s * DECK_HALF, -0.17, deckFront(DECK_HALF) + 0.05], 0.2, 0.2, DARK, {}, 4);
-  // 밑의 들보: 절벽에서 바깥으로 나온 굵은 들보 + 비스듬한 버팀대 (절벽 밑 7~9 m 에 박힘)
+  for (const s of [-1, 1]) limb(K, 'beam', [s * DECK_HALF, -0.2, DECK_BACK], [s * DECK_HALF, -0.2, deckFront(DECK_HALF) + 0.05], 0.17, 0.17, 0x584c40, { noise: 0.08, rough: 0.02 }, 7);
+  // 밑의 통나무 들보: 절벽 구멍(어두운 네모)에서 바깥으로 나와 앞 가장자리 밖으로 끝이 삐죽 나온다 + 비스듬한 버팀대(절벽 밑 7~9 m)
   for (let x = -DECK_HALF + 0.6; x <= DECK_HALF - 0.5; x += 2.2) {
-    const zf = deckFront(x) - 0.25;
-    K.put('beam', box(0.3, 0.34, zf - DECK_BACK + 0.6), WOOD, [x, -0.45, (zf + DECK_BACK) / 2 - 0.3], undefined, 1, { noise: 0.06 });
-    limb(K, 'beam', [x, -0.6, zf - 0.4], [x, -8.5 + 0.3 * Math.sin(x), wallZ(x) + 0.3], 0.13, 0.15, WOOD, { noise: 0.06 }, 5);
-    K.put('iron', box(0.36, 0.08, 0.36), IRON, [x, -0.25, zf - 0.1]);
+    const zf = deckFront(x);
+    const zb = wallZ(x) - 0.4, zt = zf + 0.35 + r() * 0.25;
+    limb(K, 'beam', [x, -0.36, zb], [x + (r() - 0.5) * 0.1, -0.36, zt], 0.19, 0.17, WOOD, { noise: 0.08, rough: 0.025 }, 7);
+    K.put('beam', box(0.5, 0.5, 0.06), 0x16130f, [x, -0.36, wallZ(x) + 0.02]); // 절벽에 판 들보 구멍
+    limb(K, 'beam', [x, -0.55, zf - 0.6], [x, -8.5 + 0.3 * Math.sin(x), wallZ(x) + 0.3], 0.12, 0.14, WOOD, { noise: 0.08 }, 6);
+    // 들보 끝을 동여맨 밧줄 두 바퀴
+    for (const dz of [-0.12, 0.05]) K.put('rope', new THREE.TorusGeometry(0.2, 0.028, 4, 10), ROPE, [x, -0.36, zf - 0.2 + dz], [0, 0, 0], 1, { vary: 0.1, noise: 0.05 });
   }
-  // 쇠사슬 난간: 가장자리 안쪽 0.25 m 에 나무 기둥(쇠 머리), 기둥 사이 사슬 두 줄
+  // 난간: 가장자리 안쪽 0.25 m 에 껍질 벗긴 통나무 기둥(쇠 머리), 밑동을 밧줄로 동여맸다. 기둥 사이 쇠사슬 두 줄
   const posts = [];
   for (let i = 0; i <= 18; i++) {
     const t = i / 18, a = Math.PI * (1 - t);
     let x = Math.cos(a) * 13.3; x = THREE.MathUtils.clamp(x, -DECK_HALF + 0.25, DECK_HALF - 0.25);
     const z = deckFront(x) - 0.28;
     posts.push([x, z]);
-    K.put('rail', box(0.14, 1.12, 0.14), WOOD, [x, 0.56, z], [0, -a, 0], 1, { rough: 0.01, noise: 0.06 });
-    K.put('railIron', cyl(0.1, 0.1, 0.08, 6), IRON, [x, 1.15, z]);
+    const lean = (r() - 0.5) * 0.06;
+    limb(K, 'rail', [x, -0.25, z], [x + lean, 1.12, z + lean], 0.085, 0.07, 0x6e6252, { noise: 0.08, rough: 0.012 }, 6);
+    K.put('railIron', cyl(0.085, 0.085, 0.07, 6), IRON, [x + lean, 1.15, z + lean]);
+    K.put('rope', new THREE.TorusGeometry(0.1, 0.022, 4, 9), ROPE, [x, 0.1, z], [Math.PI / 2, 0, 0], 1, { vary: 0.1, noise: 0.05 });
   }
-  const r = rng(801327);
   for (let i = 0; i < posts.length - 1; i++) {
     const [x0, z0] = posts[i], [x1, z1] = posts[i + 1];
     chain(K, 'railIron', [x0, 1.02, z0], [x1, 1.02, z1], 0.16, IRON);
@@ -225,7 +245,7 @@ function plankRoads(K) {
       const nx = -Math.sin(ang), nz = Math.cos(ang); // 벽에서 바깥
       const w = 1.7;
       const cx = x + nx * w / 2, cz = wz + nz * w / 2;
-      K.put('road', box(0.3, 0.06, w), i % 7 === 3 ? 0x6b5a46 : 0x7a6650, [cx, y, cz], [0, -ang, 0], 1, { vary: 0.18, noise: 0.05 });
+      K.put('road', box(0.3, 0.06, w), i % 7 === 3 ? 0x6e665a : 0x7d7466, [cx, y, cz], [0, -ang, 0], 1, { vary: 0.18, noise: 0.05 });
       if (i % 5 === 0) {
         // 벽에 박은 들보(받침)와 아래 버팀대
         K.put('road', box(0.12, 0.12, w + 0.4), DARK, [x + nx * (w / 2 - 0.15), y - 0.1, wz + nz * (w / 2 - 0.15)], [0, -ang, 0]);
@@ -292,7 +312,7 @@ export function buildQinglan(scene, { hemi, sun }) {
   sky(scene);
   const vista = buildQinglanVista(scene);
   scene.add(cliffWall());
-  scene.add(inscription());
+  const gorge = buildQinglanGorge(scene); // 발아래 큰 강 협곡 (샛별 초기 판에서 골라 옮김, 10/11)
   const K = new OwnedKit(801311);
   deck(K, scene);
   plankRoads(K);
@@ -301,6 +321,8 @@ export function buildQinglan(scene, { hemi, sun }) {
   const pinesAt = [[-15.5, 7.5], [16.5, 9], [-21, -6], [22, -9], [-34, 13], [30, 16], [-45, -14], [41, 4], [10, 14.5], [-8, 18], [55, 26], [-60, 6]];
   pinesAt.forEach(([x, y], i) => cliffPine(K, x, y, wallZ(x) + 0.3, 1.1 + r() * 0.7, 81260 + i * 7, Math.atan2(1, -wallSlope(x)) + (x > 0 ? -0.4 : 0.4))); // 벽 법선 쪽으로 눕는다
   const mats = {
+    deck: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, map: grainMap() }),
+    rope: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }),
     beam: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }),
     rail: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }),
     railIron: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.5 }),
@@ -330,7 +352,7 @@ export function buildQinglan(scene, { hemi, sun }) {
   const stage = {
     sunOffset: { x: 3, y: 16, z: 2.5 }, // 한낮: 해가 거의 머리 위 — 짧고 진한 그림자
     fighterLight: { color: 0xeef3ea, rimColor: 0xcfe4f0, rim: 0.8, level: 0.35 },
-    stats: vista.stats,
+    stats: { ...vista.stats, gorge },
     excite() {},
     update(dt) {
       if (!Number.isFinite(dt) || dt <= 0) return;

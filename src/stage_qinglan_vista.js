@@ -1,12 +1,13 @@
-// 청람잔도의 먼 경치 — 구름 바다 위로 솟은 거대한 바위 기둥 무리(남중국 화강암·사암 봉우리 — 황산·장자제 같은 꼴)와
-//  그 뒤 태산처럼 넓고 무거운 산덩이. 가까운 절벽·잔도는 stage_qinglan.js.
-//  사장님 디자인 리뷰(10/10 21:0x '잔도 느낌이 안 나 … 기암절벽의 스케일이 남다른 태산') 로 다시 지었다.
-//  처음 꼴(샛별 저장소 3d3ec11: 큰 강 협곡)은 docs/stages.md '청람잔도' 의 전/후 캡처에 남겼다.
-//  모두 장식(물리 없음). 그림자를 드리우지 않는다(멀어서 해 그림자 범위 밖). 투명 재질은 안개 띠 둘뿐.
+// 청람잔도의 먼 경치 — 협곡 위로 솟은 거대한 바위 기둥 무리(남중국 화강암·사암 봉우리 — 황산·장자제 같은 꼴)와
+//  그 뒤 태산처럼 넓고 무거운 산덩이, 협곡 허리의 엷은 구름 띠. 가까운 절벽·잔도는 stage_qinglan.js, 발아래 큰 강 협곡은 stage_qinglan_gorge.js.
+//  사장님 디자인 리뷰(10/10 21:0x '잔도 느낌이 안 나 … 기암절벽의 스케일이 남다른 태산') 로 다시 지었고,
+//  10/11 00:1x '발아래 거의 뭐가 안 보인다' 로 불투명 구름 바다를 걷어 내고 샛별 초기 판의 큰 강 협곡을 발아래에 들였다.
+//  모두 장식(물리 없음). 그림자를 드리우지 않는다(멀어서 해 그림자 범위 밖). 투명 재질은 구름 띠 하나뿐.
 import * as THREE from 'three';
 import { Kit, rng, canvasTex, limb } from './stage_kit.js';
+import { overRiver } from './stage_qinglan_gorge.js';
 
-export const CLOUD_Y = -48; // 구름 바다 높이 (싸우는 바닥 = 0)
+export const CLOUD_Y = -48; // 구름 띠·바위 기둥 밑동의 기준 높이 (싸우는 바닥 = 0). 발아래 강은 약 -62 m (stage_qinglan_gorge.js)
 const TAU = Math.PI * 2;
 
 // Kit 은 넣은 모양을 복사한다 — 원본은 바로 푼다
@@ -96,17 +97,15 @@ export function cliffPine(K, x, y, z, scale, seed, dir = null) {
   K.pop();
 }
 
-/** 구름 바다 질감: 흰 뭉게구름 덩이와 옅은 푸른 그늘 */
-function cloudTexture(seed, alpha) {
+/** 구름 띠 질감: 투명 바탕에 흰 뭉게구름 덩이 */
+function cloudTexture(seed) {
   const r = rng(seed);
   return canvasTex(512, 512, (g, w, h) => {
-    if (!alpha) { g.fillStyle = '#dfe9ee'; g.fillRect(0, 0, w, h); }
     for (let i = 0; i < 260; i++) {
       const x = r() * w, y = r() * h, rad = 18 + r() * 70;
       for (const [dx, dy] of [[0, 0], [w, 0], [-w, 0], [0, h], [0, -h]]) {
         const grad = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rad);
-        const shade = i % 5 === 0;
-        grad.addColorStop(0, alpha ? `rgba(255,255,255,${0.16 + r() * 0.12})` : shade ? 'rgba(170,190,205,.32)' : 'rgba(255,255,255,.55)');
+        grad.addColorStop(0, `rgba(255,255,255,${0.16 + r() * 0.12})`);
         grad.addColorStop(1, 'rgba(255,255,255,0)');
         g.fillStyle = grad; g.fillRect(x + dx - rad, y + dy - rad, rad * 2, rad * 2);
       }
@@ -142,7 +141,7 @@ export function buildQinglanVista(scene) {
   const tops = [];
   // ① 바위 기둥 무리: 열린 쪽(절벽 벽 앞)에 세 겹 — 가까운 겹 45~110 m, 가운데 130~230 m, 먼 겹 260~470 m
   //  가까운 겹은 자리를 손으로 골랐다: 싸움 카메라가 처음 보는 쪽(+x, 조금 오른쪽)은 비워 구름 바다와 먼 겹이 보이게 하고, 양옆에서 화면을 잡는다
-  const NEAR = [[0.78, 92, 8, 58], [1.3, 125, 6.5, 82], [1.95, 98, 9, 38], [2.55, 135, 7.5, 66], [-0.42, 150, 8.5, 48], [3.45, 118, 7, 52]];
+  const NEAR = [[0.3, 96, 8, 58], [1.3, 125, 6.5, 82], [1.95, 98, 9, 38], [2.55, 135, 7.5, 66], [-0.42, 150, 8.5, 48], [3.45, 118, 7, 52]];
   const layers = [
     { list: NEAR },
     { n: 12, d0: 175, d1: 285, r0: 8, r1: 15, h0: 30, h1: 120 },
@@ -152,12 +151,12 @@ export function buildQinglanVista(scene) {
     const spots = L.list ?? Array.from({ length: L.n }, (_, i) => [-0.55 + (Math.PI + 1.1) * ((i + 0.2 + r() * 0.6) / L.n), L.d0 + r() * (L.d1 - L.d0), L.r0 + r() * (L.r1 - L.r0), L.h0 + r() * (L.h1 - L.h0)]); // -0.55 ~ π+0.55 (절벽이 없는 쪽)
     for (const [a, d, rb, top] of spots) {
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (z < wallZ(x) + 14) continue; // 절벽 벽 뒤로 들어가지 않게
+      if (z < wallZ(x) + 14 || overRiver(x, z, rb + 6)) continue; // 절벽 벽 뒤로 들어가지 않게 · 강 한가운데 서지 않게
       tops.push({ ...pillar(pos, col, x, z, rb, top, 7000 + tops.length * 31), near: L === layers[0] });
       // 큰 기둥 곁의 가는 기둥 (무리 지어 선다)
       if (r() < 0.6) {
         const ox = x + Math.cos(a + 1.6) * rb * 2.1, oz = z + Math.sin(a + 1.6) * rb * 2.1;
-        if (oz > wallZ(ox) + 14) pillar(pos, col, ox, oz, rb * 0.45, top * 0.55 + CLOUD_Y * 0.1, 9100 + tops.length * 17);
+        if (oz > wallZ(ox) + 14 && !overRiver(ox, oz, rb)) pillar(pos, col, ox, oz, rb * 0.45, top * 0.55 + CLOUD_Y * 0.1, 9100 + tops.length * 17);
       }
     }
   }
@@ -192,14 +191,12 @@ export function buildQinglanVista(scene) {
     mesh.name = 'qinglan-vista-pine-' + bin; scene.add(mesh);
     for (const g of K.bins[bin]) g.dispose();
   }
-  // ④ 구름 바다 (불투명 바닥) + 안개 띠 둘 (반투명, 기둥 허리에 걸린다)
-  const seaTex = cloudTexture(615227, false); seaTex.repeat.set(7, 7);
-  const sea = new THREE.Mesh(new THREE.CircleGeometry(640, 48), new THREE.MeshBasicMaterial({ map: seaTex, color: 0xffffff }));
-  sea.rotation.x = -Math.PI / 2; sea.position.y = CLOUD_Y; sea.name = 'qinglan-cloud-sea'; scene.add(sea);
-  for (const [y, inner, op, rep, seed] of [[CLOUD_Y + 14, 30, 0.75, 5, 615229], [CLOUD_Y + 27, 70, 0.45, 4, 615233]]) {
-    const tex = cloudTexture(seed, true); tex.repeat.set(rep, rep);
-    const band = new THREE.Mesh(new THREE.RingGeometry(inner, 620, 40, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide }));
-    band.rotation.x = -Math.PI / 2; band.position.y = y; band.name = 'qinglan-mist-band'; band.renderOrder = 1; scene.add(band);
+  // ④ 엷은 구름 띠 하나 (반투명) — 협곡 허리에 낮게 걸친다. 10/11 사장님 '발아래 거의 뭐가 안 보인다' 로 불투명 구름 바다와 띠 하나를 뺐다
+  //  (발아래는 stage_qinglan_gorge.js 의 큰 강 협곡). 마루 바로 밑(60 m 안)은 비워 강이 곧장 내려다보이게
+  {
+    const tex = cloudTexture(615229); tex.repeat.set(5, 5);
+    const band = new THREE.Mesh(new THREE.RingGeometry(60, 620, 40, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
+    band.rotation.x = -Math.PI / 2; band.position.y = CLOUD_Y + 14; band.name = 'qinglan-mist-band'; band.renderOrder = 1; scene.add(band);
   }
   return { stats: { pillars: tops.length, pines, triangles: pos.length / 9 } };
 }

@@ -1,6 +1,6 @@
 // 얼어붙은 만 (`frozen_bay`) — 투야나 니콜라예바(id eira, 전 이름 에이라 린드)의 무대. 샛별 저장소에서 가져옴(b17a3c3, 기준 5a4e96c).
 //  우리 쪽에서 더한 것(무대 리뷰 10/10 — 폰 화면에서 남색 사제복이 먹청색 얼음에 묻히고 결투장 경계가 없었다): duelGround() —
-//  눈을 쓸어 둔 밝은 회청 결투 자리 + 쓸어 모은 눈 둑 고리(경계) + 앞 바닥의 납작한 눈 무더기·얼어붙은 갈대 + 선착장 등불 + 바닥을 스치는 가루눈.
+//  둘레보다 밝고 맑은 청백 얼음 결투 자리(10/11 사장님: 눈 바닥 → 다시 빙판) + 쓸어 모은 눈 둑 고리(경계) + 앞 바닥의 납작한 눈 무더기·얼어붙은 갈대 + 선착장 등불 + 바닥을 스치는 가루눈.
 //  샛별 기록 이름은 '새벽의 얼음만'. 화면 이름은 사장님 말(10/10 20:4x)대로 '얼어붙은 만'. 물가는 stage_frozen_bay_shore.js, 소리는 stage_detail_sound.js·sound.js.
 //  싸우는 바닥·물리는 그대로(장식만). 그림자: 물가 나무(wood)만 드리운다. docs/stages.md '얼어붙은 만'
 // East-Siberian inland lake, winter predawn. Visual ice only: no physics changes.
@@ -75,26 +75,50 @@ function iceDetails(scene) {
   for (const bin of Object.values(k.bins)) for (const g of bin) g.dispose();
 }
 
-/** 결투 자리 (우리 쪽에서 더함): 반지름 7.3 m 안은 얇게 남긴 눈(밝은 회청, 빗자루 결), 그 둘레에 쓸어 모은 눈 둑 고리(높이 0.3 m 안팎 — 카메라 궤도 안이라 납작하게),
- *  둑 밖 얼음엔 납작한 눈 무더기·쓸린 눈 결, 조금 먼 곳에 얼어붙은 갈대 무리. 물리는 그대로(장식만) */
+/** 결투 자리 (우리 쪽에서 더함): 반지름 8.6 m 안은 둘레보다 밝고 맑은 청백 얼음(반들한 결·흰 균열·얇게 날린 가루눈 줄),
+ *  그 둘레에 쓸어 모은 눈 둑 고리(높이 0.3 m 안팎 — 카메라 궤도 안이라 납작하게), 둑 밖 얼음엔 납작한 눈 무더기·쓸린 눈 결,
+ *  조금 먼 곳에 얼어붙은 갈대 무리. 물리는 그대로(장식만).
+ *  10/11 사장님 '빙판이 다 눈길이 되어서 아쉬운데 — 이졸데 맵과 겹쳐서': 10/10 의 밝은 눈 바닥을 다시 빙판으로. 남색 사제복이 묻히지 않게
+ *  둘레의 먹청 얼음(#325568)보다 한참 밝은 청백 얼음(#9cc0d4 언저리)으로 한다 */
 function duelGround(scene) {
   const r = rng(101081);
-  // ① 쓸어 둔 눈 바닥: 원판 하나, 가장자리는 투명하게 녹아 얼음으로 (질감 알파) — 투명 물체 하나
-  const snowTex = canvasTex(512, 512, (g, w, h) => {
+  // ① 맑은 청백 얼음판: 원판 하나, 가장자리는 둘레의 먹청 얼음으로 녹아든다 (질감 알파) — 투명 물체 하나
+  const iceTex = canvasTex(1024, 1024, (g, w, h) => {
     const cx = w / 2, R = w / 2;
     const grad = g.createRadialGradient(cx, cx, 0, cx, cx, R);
-    grad.addColorStop(0, 'rgba(176,193,206,1)'); grad.addColorStop(0.78, 'rgba(168,186,200,1)'); grad.addColorStop(0.9, 'rgba(150,172,190,.75)'); grad.addColorStop(1, 'rgba(120,150,172,0)');
+    grad.addColorStop(0, 'rgba(162,196,214,1)'); grad.addColorStop(0.7, 'rgba(150,186,206,1)'); grad.addColorStop(0.88, 'rgba(118,158,184,.8)'); grad.addColorStop(1, 'rgba(80,120,150,0)');
     g.fillStyle = grad; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 520; i++) { // 빗자루로 둥글게 쓴 결
-      const rad = r() * R * 0.9, a0 = r() * Math.PI * 2, len = 0.15 + r() * 0.5;
-      g.strokeStyle = r() < 0.5 ? `rgba(214,226,234,${0.12 + r() * 0.15})` : `rgba(110,136,158,${0.08 + r() * 0.1})`;
-      g.lineWidth = 1 + r() * 2.5;
-      g.beginPath(); g.arc(cx, cx, rad, a0, a0 + len); g.stroke();
+    g.save(); g.beginPath(); g.arc(cx, cx, R * 0.97, 0, Math.PI * 2); g.clip();
+    for (let i = 0; i < 70; i++) { // 맑게 비치는 깊은 얼음 얼룩 (구름 낀 결)
+      const x = r() * w, y = r() * h, rad = 30 + r() * 110;
+      const gg = g.createRadialGradient(x, y, 0, x, y, rad);
+      gg.addColorStop(0, i % 3 ? 'rgba(110,150,178,.22)' : 'rgba(205,226,236,.22)'); gg.addColorStop(1, 'rgba(120,160,186,0)');
+      g.fillStyle = gg; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
     }
+    const crack = (x, y, a, n, len, wid) => { // 흰 균열 (꺾이며 뻗고 가지 친다)
+      for (let i = 0; i < n; i++) {
+        a += (r() - 0.5) * 0.8;
+        const nx = x + Math.cos(a) * len * (0.6 + r() * 0.8), ny = y + Math.sin(a) * len * (0.6 + r() * 0.8);
+        g.strokeStyle = 'rgba(62,98,124,.35)'; g.lineWidth = wid * 2.6; g.beginPath(); g.moveTo(x + 1.5, y + 1.5); g.lineTo(nx + 1.5, ny + 1.5); g.stroke();
+        g.strokeStyle = 'rgba(240,248,252,.85)'; g.lineWidth = wid; g.beginPath(); g.moveTo(x, y); g.lineTo(nx, ny); g.stroke();
+        if (i % 3 === 1 && wid > 1.2) crack(nx, ny, a + (r() < 0.5 ? 1 : -1) * 0.9, 3, len * 0.55, wid * 0.6);
+        x = nx; y = ny;
+      }
+    };
+    for (let i = 0; i < 9; i++) crack(r() * w, r() * h, r() * Math.PI * 2, 6 + Math.floor(r() * 6), 30 + r() * 30, 1.4 + r() * 1.6);
+    for (let i = 0; i < 160; i++) { // 얼음 속 작은 기포
+      g.fillStyle = `rgba(230,242,248,${0.25 + r() * 0.35})`; g.beginPath(); g.arc(r() * w, r() * h, 1 + r() * 2.5, 0, Math.PI * 2); g.fill();
+    }
+    for (let i = 0; i < 46; i++) { // 바람에 얇게 날린 가루눈 줄 (한 방향)
+      const x = r() * w, y = r() * h, len = 60 + r() * 220;
+      g.strokeStyle = `rgba(236,244,248,${0.1 + r() * 0.16})`; g.lineWidth = 2 + r() * 6;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + len, y + len * 0.18); g.stroke();
+    }
+    g.restore();
   });
-  snowTex.wrapS = snowTex.wrapT = THREE.ClampToEdgeWrapping;
-  const snow = new THREE.Mesh(new THREE.CircleGeometry(8.6, 48), new THREE.MeshStandardMaterial({ map: snowTex, transparent: true, depthWrite: false, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 }));
-  snow.rotation.x = -Math.PI / 2; snow.position.y = 0.01; snow.receiveShadow = true; snow.renderOrder = 1; snow.name = 'frozen-bay-duel-snow'; scene.add(snow);
+  iceTex.wrapS = iceTex.wrapT = THREE.ClampToEdgeWrapping;
+  const ice = new THREE.Mesh(new THREE.CircleGeometry(8.6, 48), new THREE.MeshStandardMaterial({ map: iceTex, transparent: true, depthWrite: false, roughness: 0.42, metalness: 0.04, polygonOffset: true, polygonOffsetFactor: -1 }));
+  ice.rotation.x = -Math.PI / 2; ice.position.y = 0.01; ice.receiveShadow = true; ice.renderOrder = 1; ice.name = 'frozen-bay-duel-ice'; scene.add(ice);
   // ② 눈 둑 고리 (+ 둑 밖 눈 무더기·갈대) — 꼭짓점 색 한 재질
   const k = new Kit(101083);
   const ring = [], N = 72;

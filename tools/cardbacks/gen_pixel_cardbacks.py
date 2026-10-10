@@ -523,9 +523,71 @@ def sacred_grove():
     return pal, t, band, center, 'R'
 
 
+# ── 10/11: 샛별 저장소에서 가져온 두 무대 (사장님 10/11 00:1x '카드 뒷면 만들어') — 같은 꼴(격자 + 두 무늬 번갈아 + 띠 + 가운데 원판) ──
+def frozen_bay():
+    # 얼어붙은 만: 먹청 얼음빛 바탕에 옅은 얼음 균열 마름모 격자, 얼음 결정(흰 여섯 갈래 별)과 금 간 얼음 조각(청백, 흰 균열)을 번갈아
+    # (조각 가장자리에 놓는 무늬는 sym_tile 이 아래 절반을 돌려 덮으므로 스스로 180° 대칭이어야 한다).
+    # 띠는 고드름(바깥에서 안으로 드리운다), 가운데는 흰 균열이 간 둥근 얼음판(균열이 가운데를 지나 180° 대칭).
+    pal = dict(SHARED, B='#18293a', K='#3f6580', W='#eef4f8', I='#9fc3d8', D='#5d86a3')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    crystal = ['...W...', '.W.W.W.', '..WWW..', 'WWWIWWW', '..WWW..', '.W.W.W.', '...W...']
+    shard = ['..II..', '.IWII.', 'IIWIII', 'IIIWII', '.IIWI.', '..II..']
+    stamp(t, crystal, 8, 8)
+    stamp(t, shard, 16, 16)
+    stamp(t, shard, 16, 0)
+    sym_tile(t)
+    band = band_rows(['IIIIII', 'IWIIWI', '.W..W.', '.W....'], 'B')  # 처마 끝 고드름
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            center[y][x] = 'I' if d > 1.2 else 'W'
+            a = math.atan2(dy, dx)
+            # 가운데에서 뻗는 흰 균열 셋(+ 180° 짝) — 곧게, 조금 꺾인다
+            for k in range(3):
+                ak = k * math.pi / 3 + 0.35 + 0.12 * math.sin(d * 1.3)
+                if abs(math.sin(a - ak)) * d < 0.55:
+                    center[y][x] = 'W'
+            if 4.6 < d <= 5.6 and center[y][x] == 'I':
+                center[y][x] = 'D'  # 얼음판 가장자리의 짙은 물빛
+    return pal, t, band, center, 'I'
+
+
+def qinglan():
+    # 청람잔도: 짙은 옥빛 바탕에 옅은 마름모 격자, 머리에 소나무를 인 바위 봉우리(회백 바위·초록 솔)와
+    # 절벽에 박은 받침 위 판자 잔도(갈색 널·쇠사슬)를 번갈아. 띠는 판자와 늘어진 사슬,
+    # 가운데는 초록 골짜기를 S 자로 굽이치는 옥빛 강(S 자는 180° 돌려도 같은 꼴이라 카드 대칭 규칙과 맞는다).
+    pal = dict(SHARED, B='#16332f', K='#2f5a52', S='#c3c4b6', P='#5f9a4e', H='#9a7550', J='#8fd0bf', E='#3f7a46')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    peak = ['.P......', 'PPP..P..', '.S..PPP.', '.S...S..', '.SS..SS.', 'SSS..SS.', 'SSS.SSSS', 'SSSSSSSS']  # 솔을 인 바위 기둥 둘
+    road = ['.gg.gg', 'HHHHHH', 'gHgHgH', 'HgHgHg', 'HHHHHH', 'gg.gg.']  # 사슬 사이 판자 (스스로 180° 대칭)
+    stamp(t, peak, 8, 8)
+    stamp(t, road, 16, 16)
+    stamp(t, road, 16, 0)
+    sym_tile(t)
+    band = band_rows(['HHgHHg', 'HHgHHg', 'g....g', '.g..g.'], 'B')  # 판자 잔도와 늘어진 사슬
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            # 초록 골짜기 원판 위에 S 자 옥빛 강: 강 가운데 줄 x = 2.4·sin(y·0.55) 꼴, 폭 1.6 칸
+            center[y][x] = 'J' if abs(dx - 2.6 * math.sin(dy * 0.6)) < 1.0 else 'E'
+    return pal, t, band, center, 'J'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)
