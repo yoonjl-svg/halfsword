@@ -113,4 +113,4 @@
 5. 공용 한 줄 `ownFeints`(sword_art.js mergeLibSchool) — 다른 유파도 자기 속임수 목록을 가지려면 같은 칸.
 
 ## 10. 시계
-시작 14:37 KST · 끝 15:40 KST (약 1 시간).
+시작 14:37 KST · 끝 15:38 KST (약 1 시간).
