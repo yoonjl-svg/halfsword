@@ -280,6 +280,7 @@ if (mode === 'poses') {
   //  간 보기가 이어지는 동안 자세 바뀐 수(막기·공격 뒤 돌아오며 바뀐 것은 뺌) · 간격 끝(상대 칼 닿는 거리 foeReach + 0.5 m) 안에 든 때부터 첫 공격까지 걸린 시간
   //  간격 가까이(상대 칼 닿는 거리 + 1 m 안)에서 간 볼 때 상대 칼 닿는 거리 밖에 둔 여유(d − foeReach)의 시간 평균 — 성격 margin 이 바로 보이는 값
   const tmp = { wT: 0, cT: 0, cX: 0, gN: 0, rT: 0, rN: 0, rCut: 0, nT: 0, nD: 0, hist: new Array(200).fill(0) };
+  const gDwell = {}; // GUARD_DWELL=1: 간 보기 동안 자세(XA.guard.name)마다 머문 시간 (10/10 이베리아 고증 — 읽기만, 줄은 켤 때만)
   const used = {};
   const feintUsed = {};
   const counterUsed = {};
@@ -440,6 +441,7 @@ if (mode === 'poses') {
             tmp.cX += mx * DT;
           }
           const gn = XA.guard?.name ?? null;
+          if (w && G.t > 2 && gn) gDwell[gn] = (gDwell[gn] ?? 0) + DT;
           if (w && wPrev && G.t > 2 && gPrev && gn && gn !== gPrev) tmp.gN++;
           gPrev = gn; wPrev = w;
           const edge = XA.foeReach + 0.5;
@@ -559,6 +561,7 @@ if (mode === 'poses') {
   let med = 0;
   for (let i = 0, acc = 0; i < tmp.hist.length; i++) if ((acc += tmp.hist[i]) >= tmp.wT / 2) { med = (i + 0.5) / 20; break; }
   console.log(`  기질: 간 보기 거리 ${tmp.wT ? med.toFixed(2) : '-'} m (간격 가까이 여유 ${tmp.nT ? (tmp.nD / tmp.nT).toFixed(2) : '-'} m, ${tmp.wT ? pc(tmp.nT / tmp.wT) : '-'}) · 옆걸음 ${tmp.wT ? pc(tmp.cT / tmp.wT) : '-'} (|x| ${tmp.wT ? (tmp.cX / tmp.wT).toFixed(2) : '-'}) · 자세 바꿈 ${tmp.wT ? (tmp.gN / (tmp.wT / 60)).toFixed(1) : '-'}/분 · 간격 끝 → 첫 공격 ${tmp.rN ? (tmp.rT / tmp.rN).toFixed(2) : '-'} s (n ${tmp.rN}, 물러남 ${tmp.rCut}) · 간 보기 ${tmp.wT.toFixed(0)} s`);
+  if (process.env.GUARD_DWELL === '1') { const tot = Object.values(gDwell).reduce((a, b) => a + b, 0) || 1; console.log(`  자세 머묾 (간 보기 몫): ${Object.entries(gDwell).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${pc(v / tot)}`).join(' · ')}`); }
   if (stepNames?.length) {
     // 넷째 줄 (10/9 기술 걸음): 이름 쓴 수 · 걸음 받음/부탁 · 결과 맞힘/막힘/헛침 · 칼 줄 거리 시작→닿을 때(m) · 상대 정면 각 시작→닿을 때(도) · 걸음(대조는 베기 시작) 뒤 1 s 넘어짐 · 시작→닿을 때 가슴 옮김(시작 때 몸 기준, 걸음 쪽 +)
     const f2 = (v) => v.toFixed(2);

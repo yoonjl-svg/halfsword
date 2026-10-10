@@ -35,7 +35,7 @@
 //   이름 덮기는 스위치와 상관없이 늘 한다(HUD 만)
 // ─────────────────────────────────────────────────────────────
 import { SKILL } from './config.js';
-import { GUARDS, guardBaseOne, guardBaseTwo } from './guards.js';
+import { GUARDS, guardBaseOne, guardBaseTwo, applySchoolGuardTable } from './guards.js';
 import { classifyStyle } from './weapon_class.js';
 import { G, TECH, WATCH_GUARDS } from './ai_techniques.js';
 import { MOTION, buildFrameTable, styleTech, styleFeints, frameWatchGuards, weightTech, NEW_TECH, OVERLAY, COVERS, LIB_PARRY, HAND_GRIPS, installLunge, installFlow, installCover } from './frames.js';
@@ -226,10 +226,11 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   const hasBase = 'base' in opts;
   const libBase = hasBase ? opts.base : baseTable ?? null;
   const skip = w.motionSkip ?? [];
-  const libTable = lib ? buildFrameTable(frame, style, skip, libBase) : null;
-  const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
   const pkgId = 'school' in opts ? null : persona?.school;
   const tradition = (pkgId != null ? schoolOf(pkgId).tradition : null) ?? traditionOf(w);
+  const schoolTable = (t) => (SCHOOL_ART.table ? applySchoolGuardTable(t, TRADITIONS[tradition]) : t); // 유파 자세표 (10/10 이베리아 몬탄테 고증 — guardTable 없는 유파는 그대로 = 전과 같음)
+  const libTable = lib ? schoolTable(buildFrameTable(frame, style, skip, libBase)) : null;
+  const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
   const names = schoolNames(guardNames(table), tradition, frame, style);
   const art = {
     id: w.id ?? null,
@@ -263,7 +264,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   lazy(art, 'motion', () => ({
     frame,
     style,
-    table: lib ? libTable : buildFrameTable(frame, style, skip, libBase),
+    table: lib ? libTable : schoolTable(buildFrameTable(frame, style, skip, libBase)),
     tech: styleTech(style, frame),
     feints: styleFeints(style, frame),
     watch: frameWatchGuards(frame),

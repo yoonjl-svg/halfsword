@@ -669,6 +669,7 @@ export class AI {
     for (const g of guards) {
       if (g === this.guard) continue;
       let w = this.pers.guardPref[g.name];
+      if (g.w != null) w *= g.w; // 유파 자세 가중치 (10/10 이베리아 몬탄테 고증 — schools.js IBERIAN_GUARDS 의 w. 칸 없는 자세는 전과 같음)
       if (cls) {
         // 상대가 칼을 높이 들면 칼끝으로 겨누는 자세(들어오면 찔린다)나 아래 자세, 낮추면 위에서 내려칠 자세
         if (cls.high) w *= 1 + L.read * (g.threat * 0.8 + g.low * 0.4);
