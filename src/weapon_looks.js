@@ -68,7 +68,7 @@ export function weaponEnv() {
 }
 
 // 등급별 마감: 등급이 높을수록 더 곱게 갈아 거울처럼 비친다. 쓰레기는 녹슬고 흐릿하다.
-//  (레전드에 자체 발광은 없다 — 진짜 엑스칼리버의 표식은 aura.js 오라 하나뿐이어야 한다)
+//  (레전드에 자체 발광은 없다 — 레전드 등급의 표식은 aura.js 기운이다. 사장님 10/10 20:0x, 전엔 "진짜 엑스칼리버의 표식")
 export const FINISH = {
   trash: { blade: 0.62, hilt: 0.75, metal: 0.55, env: 0.5 },
   common: { blade: 0.3, hilt: 0.42, metal: 0.9, env: 1.0 },

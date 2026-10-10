@@ -22,7 +22,7 @@ import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './we
 import { breakWeaponLook } from './weapon_looks.js';
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
-import { decorateOutfit, setHelmetWear, setPlateWear } from './outfits.js';
+import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
 import { reviveOf, tryRevive, reviveTick } from './revive.js';
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
@@ -483,6 +483,8 @@ export class Fighter {
         this.plateBoxes[d.name] = armorBoxes(group, dressTo, d.kind !== 'chest' && d.kind !== 'abdomen');
         if (d.kind !== 'arm') this.plateGait.push(d.name);
       }
+      // 표면만 다듬기 (샛별 저장소에서 가져옴 fe29ce4): 판금 경계를 잡은 뒤 — look.stockEyes·tailoring 표시가 있는 인물만(새 인물 넷). 몸·관절·충돌체는 안 건드린다
+      isolatedVisual(() => polishOutfit(dressTo, d, o.look), 0);
       if (d.kind === 'head') {
         this.faceMat = mesh.material;
         this.skinColor = mesh.material.color.clone();

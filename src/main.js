@@ -17,7 +17,7 @@ import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
-import { Stages, nextStage, STAGE_IDS, STAGE_FOE } from './stages.js';
+import { Stages, nextStage, STAGE_IDS, stageFoeId } from './stages.js';
 import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
@@ -171,7 +171,7 @@ function voiceOf(ch) {
 function pickFoe() {
   const testFoe = testRoute.pickFoe(currentFoe?.id, foeRandomEachRound); // test=1 · foe=random: 고른 인물은 상대에서 뺀다
   if (testFoe) return testFoe;
-  if (foeParam === 'stage') return CHARACTERS_BY_ID[STAGE_FOE[stages.id]] || randomCharacter(currentFoe?.id); // 이번 판 무대의 검객
+  if (foeParam === 'stage') return CHARACTERS_BY_ID[stageFoeId(stages.id, currentFoe?.id)] || randomCharacter(currentFoe?.id); // 이번 판 무대의 검객 (짝 + 후보 STAGE_FOE_EXTRA — 10/10)
   if (foeRandomEachRound) return randomCharacter(currentFoe?.id); // 같은 상대가 두 번 연속 나오지 않게
   if (foeParam && CHARACTERS_BY_ID[foeParam]) return CHARACTERS_BY_ID[foeParam];
   return currentFoe; // 고정 지정이 없으면 같은 상대를 계속 쓴다
