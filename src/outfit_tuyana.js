@@ -6,7 +6,9 @@
 //  안쪽 가장자리는 두 다리가 가운데서 겹쳐 한 벌로 읽힌다. 무릎(0.53 m)부터 앞 가운데가 갈라져 흰 속치마가 보인다.
 //  겉모습만: 대표 메쉬(상처가 붙는 겉면)는 같은 메쉬·같은 종류·같은 치수 값으로 꼴만 바꾼다(reshapeMain) — 몸·질량·관절·충돌체·손 구체 그대로.
 //  +X 앞 · +Y 위 · +Z 오른쪽 (부위 좌표).
-export function createTuyanaOutfit(h) {
+//  v3 (opts.chotki, 사장님 10/10 23:5x '왼손에 묵주 같은 걸'): 왼손목(빈손 farmO)에 정교회 기도 매듭줄(추트키 — 검은 털실 매듭 고리 + 작은 십자가 + 술)을
+//   감아 늘어뜨린다. 겉모습만(물리 몸 없음). 빈손 아래팔은 쉴 때 아래로 늘어지므로(−y = 손 쪽) 고리는 손등 바깥(−z)을 따라 손 아래로.
+export function createTuyanaOutfit(h, opts = {}) {
   const { THREE, bake, box, cyl, ball, addMerged, CLOTH, isoldeLock, artoriaCloth, sleeveVolume, taperedTube, reshapeMain, hangingClothShading } = h;
   const NAVY = 0x222c48; // 그림의 남색 (v1 0x202a40 보다 아주 조금 푸르게)
   const NAVY_EDGE = 0x18203a;
@@ -266,7 +268,35 @@ export function createTuyanaOutfit(h) {
   }
   // ── 팔: 넓은 남색 소매 + 접어 올린 넓은 흰 소매 끝 + 손목·손바닥 붕대 ──
   function upperArm(g) { setMain(g, NAVY); sleeveVolume(g, 1.05, 1.14); }
-  function forearm(g) {
+  /** 추트키: 손목 둘레 매듭 고리 + 아래로 늘어진 짧은 고리 + 십자가 + 술 */
+  function chotki(g) {
+    const KNOT = 0x101014, CORD = 0x1c1c22, CROSS = 0xbfc3c8;
+    const ringY = -0.113, r = 0.0465, knots = [], cord = [];
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2;
+      knots.push(bake(new THREE.SphereGeometry(0.0052, 7, 5), [Math.cos(a) * r, ringY + 0.003 * Math.sin(a * 2), Math.sin(a) * r], null, [1, 0.85, 1]));
+    }
+    cord.push(bake(new THREE.TorusGeometry(r, 0.0018, 4, 28), [0, ringY, 0], [Math.PI / 2, 0, 0]));
+    // 늘어진 고리: 손목 바깥(−z)에서 두 가닥이 손 옆을 따라 내려와 손 아래에서 모인다 — 가닥마다 매듭
+    const bottom = [0, ringY - 0.044, -0.05]; // 손 길이 안쪽에서 모인다 — 손에 감아 쥔 꼴로 읽히게(손끝 너머로 막대처럼 뻗지 않게)
+    for (const s of [-1, 1]) {
+      const pts = [[s * 0.014, ringY, -r], [s * 0.013, ringY - 0.016, -0.051], [s * 0.007, ringY - 0.031, -0.053], bottom];
+      cord.push(taperedTube(pts, [0.0018, 0.0018, 0.0018, 0.0018], 16, 4));
+      for (let k = 1; k <= 5; k++) {
+        const u = k / 6, i = Math.min(2, Math.floor(u * 3)), f = u * 3 - i;
+        const p0 = pts[i], p1 = pts[i + 1];
+        knots.push(ball(0.0048, 7, 5, p0.map((v, j) => v + (p1[j] - v) * f)));
+      }
+    }
+    knots.push(ball(0.0062, 8, 6, bottom)); // 모이는 매듭
+    addMerged(fabric(g), knots, KNOT, { ...CLOTH, roughness: 1 });
+    addMerged(fabric(g), cord, CORD, CLOTH);
+    // 작은 십자가(세로 2.4 cm · 가로 1.3 cm)와 그 아래 검은 술
+    const cy = bottom[1] - 0.017, cz = bottom[2] - 0.004;
+    addMerged(fabric(g), [box(0.0045, 0.024, 0.0045, [0, cy, cz]), box(0.013, 0.0045, 0.0045, [0, cy + 0.004, cz])], CROSS, { roughness: 0.4, metalness: 0.5 });
+    addMerged(fabric(g), [bake(new THREE.ConeGeometry(0.0075, 0.024, 8), [0, cy - 0.026, cz]), ball(0.005, 6, 5, [0, cy - 0.014, cz])], KNOT, { ...CLOTH, roughness: 1 });
+  }
+  function forearm(g, look, d) {
     setMain(g, NAVY); sleeveVolume(g, 1.16, 1.3);
     // 접어 올린 흰 소매 끝: 아래로 조금 넓어지는 통 + 위 가장자리(접힌 금) + 안쪽 남색 안감
     addMerged(fabric(g), [cyl(0.061, 0.064, 0.068, 16, true, [0, -0.072, 0])], WHITE, DS);
@@ -278,6 +308,7 @@ export function createTuyanaOutfit(h) {
       return cyl(Math.max(r, 0.03), Math.max(r, 0.03), 0.009, 14, true, [0, y, 0], [i % 2 ? 0.18 : -0.18, 0, 0.1]);
     });
     addMerged(fabric(g), wraps, BANDAGE, DS);
+    if (opts.chotki && d?.name === 'farmO') chotki(g); // 왼손(칼 안 든 손)만
   }
   return {
     head, chest, abdomen, pelvis,

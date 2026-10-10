@@ -7,7 +7,11 @@
 //   ④ 몸통 덜 넓적: 견장·어깨 판·가슴 X 띠·허리 주머니를 뺌, 가슴 겉면을 위(어깨) → 아래(가슴 밑)로 좁힘(아래 82 %), 배는 가슴 밑에서 가장 가늘다
 //  겉모습만: 대표 메쉬(상처가 붙는 겉면)는 같은 메쉬·같은 종류·같은 치수 값(geometry.parameters)으로 꼴만 바꾼다 — 몸·질량·관절·충돌체·손 구체 그대로.
 //  +X 앞 · +Y 위 · +Z 오른쪽 (부위 좌표). 머리는 v1 과 같다(roseUniformHead — 높이 묶은 땋은 머리).
-export function createSamiraOutfit(h) {
+//  v3 (opts.v3, 사장님 10/10 23:5x '빨강 단일톤 — 흰 악세서리·디테일로 포인트, 치마 조금 더 짧게'): 왼어깨에 걸쳐 앞뒤로 늘어뜨린 흰 두파타 ·
+//   흰 선 깃 · 자락 옷단 위 흰 수 띠 · 소매 끝 흰 띠 · 흰 팔찌 둘 · 진주 귀걸이 · 자락 5 cm 짧게(옷단 0.585 → 0.635 m). 다리는 v2 그대로 짙게.
+export function createSamiraOutfit(h, opts = {}) {
+  const V3 = !!opts.v3;
+  const WHITE = 0xefece4; // v3 흰 포인트 (두파타·수 띠·팔찌) — 순백 대신 아주 옅은 상아
   const { THREE, bake, box, cyl, ball, addMerged, CLOTH, artoriaCloth, sleeveVolume, clothNeck, taperedTube, reshapeMain, roseUniformHead } = h;
   const CRIMSON = 0x922e40; // v1 장밋빛 제복과 같은 색 — 인물 색은 그대로
   const CRIMSON_DEEP = 0x6e2131; // 겹친 자락 그늘
@@ -42,6 +46,24 @@ export function createSamiraOutfit(h) {
     return main;
   }
   const line = (g, pts, color, r = 0.0022) => addMerged(fabric(g), [taperedTube(pts, pts.map(() => r), pts.length * 6, 5)], color, CLOTH);
+  // v3 흰 두파타(숄): 왼어깨(−z)에 걸쳐 앞·뒤로 늘어진 넓은 천 한 장. 가슴 도막은 어깨를 넘는 한 가닥, 배·골반 도막은 앞뒤 두 가닥으로 이어 받는다
+  const DUP_W = 0.066;
+  function dupatta(g, front, back, overShoulder, yTop = 0.08, yBot = -0.08, zTop = -0.085, zBot = -0.078, ends = false) {
+    const pieces = [];
+    if (overShoulder) {
+      const pts = [[front(-0.14, -0.08) + 0.008, -0.14, -0.08], [front(-0.06, -0.09) + 0.008, -0.06, -0.09], [front(0.03, -0.105) + 0.008, 0.03, -0.105],
+        [0.1, 0.1, -0.125], [0.03, 0.135, -0.138], [-0.05, 0.13, -0.138], [-0.104, 0.07, -0.128],
+        [back(0.0) - 0.006, 0.0, -0.118], [back(-0.14) - 0.006, -0.14, -0.108]];
+      pieces.push(h.isoldeLock(pts, Array(pts.length).fill(DUP_W), 0.004));
+    } else {
+      const f = [0, 0.5, 1].map((u) => { const y = yTop + (yBot - yTop) * u, z = zTop + (zBot - zTop) * u; return [front(y) + 0.008, y, z]; });
+      const b = [0, 0.5, 1].map((u) => { const y = yTop + (yBot - yTop) * u, z = zTop - 0.03 + (zBot - zTop) * u; return [back(y) - 0.008, y, z]; });
+      pieces.push(h.isoldeLock(f, [DUP_W, DUP_W, DUP_W * 0.96], 0.004), h.isoldeLock(b, [DUP_W, DUP_W, DUP_W * 0.96], 0.004));
+      if (ends) for (const [x, y, z] of [f[2], b[2]]) for (const dz of [-0.02, 0, 0.02]) pieces.push(cyl(0.004, 0.006, 0.02, 6, false, [x, y - 0.012, z + dz]));
+    }
+    addMerged(fabric(g), pieces, WHITE, DS).name = 'samira-dupatta';
+    if (overShoulder) line(g, [[front(-0.14, -0.08) + 0.011, -0.14, -0.08 + DUP_W / 2], [front(-0.06, -0.09) + 0.011, -0.06, -0.09 + DUP_W / 2], [front(0.03, -0.105) + 0.011, 0.03, -0.105 + DUP_W / 2]], GOLD, 0.0016);
+  }
 
   // ── 가슴: 위(어깨) → 아래(가슴 밑)로 좁아지는 몸판 + 겹여밈 선 + 낮은 선 깃 + 가슴 밑 띠 ──
   const CH_W = 0.22, CH_H = 0.28, CH_D = 0.315, CH_TAPER = 0.8;
@@ -60,7 +82,7 @@ export function createSamiraOutfit(h) {
     torsoMain(g, geo);
     clothNeck(g, look);
     // 낮은 선 깃(반다갈라) + 금빛 테
-    addMerged(fabric(g), [cyl(0.055, 0.062, 0.034, 18, true, [0, 0.163, 0])], CRIMSON, DS);
+    addMerged(fabric(g), [cyl(0.055, 0.062, 0.034, 18, true, [0, 0.163, 0])], V3 ? WHITE : CRIMSON, DS);
     addMerged(fabric(g), [cyl(0.0555, 0.0555, 0.004, 18, true, [0, 0.181, 0])], GOLD, CLOTH);
     // 앙가르카 겹여밈: 목 왼쪽에서 오른쪽 옆구리로 휘어 내려가는 자락 끝 — 겹친 자락(짙은 그늘 면) + 금빛 단
     const edge = [[0.165, -0.03], [0.12, 0.0], [0.06, 0.04], [0.0, 0.075], [-0.06, 0.098], [-0.12, 0.108]];
@@ -83,6 +105,7 @@ export function createSamiraOutfit(h) {
     addMerged(fabric(g), tieAt.map(([y, z]) => ball(0.006, 8, 6, [chestFront(y, z) + 0.004, y, z])), GOLD, CLOTH);
     addMerged(fabric(g), tieAt.flatMap(([y, z]) => [-1, 1].map((s) =>
       taperedTube([[chestFront(y, z) + 0.004, y, z], [chestFront(y, z) + 0.006, y - 0.02, z + s * 0.006], [chestFront(y, z) + 0.006, y - 0.038, z + s * 0.008]], [0.0018, 0.0016, 0.0012], 10, 4))), GOLD, CLOTH);
+    if (V3) dupatta(g, (y, z) => chestFront(y, z), (y) => -(CH_W / 2) * chS(y) - 0.004, true);
     // 어깨 솔기(세로로 읽히는 가는 선만 — 견장 없음)
     for (const s of [-1, 1]) line(g, [[0.06, 0.138, s * 0.15], [0.0, 0.142, s * 0.158], [-0.06, 0.138, s * 0.15]], CRIMSON_DEEP, 0.0018);
   }
@@ -107,6 +130,7 @@ export function createSamiraOutfit(h) {
     for (const dz of [-0.008, 0.012]) addMerged(fabric(g), [taperedTube([[0.105, sashY - 0.01, kz + dz], [abFront(0) + 0.006, 0, kz + dz * 1.4], [abFront(-0.08) + 0.007, -0.08, kz + dz * 1.8]], [0.009, 0.0085, 0.0085], 12, 4)], SASH, CLOTH);
     // 앞 가운데 여밈 선(금) — 띠 아래부터 골반으로 이어진다
     line(g, [[abFront(0.045), 0.045, -0.004], [abFront(-0.02), -0.02, -0.004], [abFront(-0.082), -0.082, -0.004]], GOLD);
+    if (V3) dupatta(g, abFront, (y) => -abFront(y), false, 0.085, -0.082, -0.08, -0.077);
   }
 
   // ── 골반: 웃옷 자락 윗단(서 있을 때 1.06 → 0.80 m, 엉덩이에서 살짝 퍼짐) + 앞 가운데 금선 + 띠 끝 ──
@@ -127,6 +151,7 @@ export function createSamiraOutfit(h) {
     const kz = 0.045;
     for (const dz of [-0.008, 0.012]) addMerged(fabric(g), [taperedTube([[fx(0.085) + 0.004, 0.085, kz + dz * 1.8], [fx(-0.03) + 0.006, -0.03, kz + dz * 2.1], [fx(-0.12) + 0.007, -0.12, kz + dz * 2.3]], [0.0085, 0.0082, 0.008], 12, 4)], SASH, CLOTH);
     addMerged(fabric(g), [-0.008, 0.012].map((dz) => cyl(0.0095, 0.012, 0.022, 8, false, [fx(-0.13) + 0.007, -0.13, kz + dz * 2.3])), GOLD, CLOTH); // 띠 끝 술
+    if (V3) dupatta(g, fx, (y) => -fx(y), false, 0.086, -0.16, -0.077, -0.072, true); // 두파타 끝: 엉덩이 아래(서 있을 때 0.81 m)에서 술
   }
 
   // ── 허벅지: 웃옷 자락(무릎 위까지, 옆트임) — 다리마다 한 쪽. 트임 가장자리·옷단에 금선 ──
@@ -137,7 +162,7 @@ export function createSamiraOutfit(h) {
     // 바지 허벅지: 무릎 쪽으로 가늘어지고 끝 반구를 늘여 정강이와 겹친다 (무릎이 구슬처럼 끊겨 보이지 않게)
     limb(main, (t) => 1.02 - t * 0.2, 1, 1.5);
     main.material.color.setHex(LEG); main.material.roughness = 0.9;
-    const top = 0.205, bot = -0.13, rt = 0.098, rb = 0.128, slit = 0.4; // 트임 반각(rad)
+    const top = 0.205, bot = V3 ? -0.08 : -0.13, rt = 0.098, rb = V3 ? 0.121 : 0.128, slit = 0.4; // 트임 반각(rad) · v3 자락 5 cm 짧게
     const t0 = (side > 0 ? 0 : Math.PI) + slit, span = Math.PI * 2 - slit * 2;
     const geo = new THREE.CylinderGeometry(rt, rb, top - bot, 30, 4, true, t0, span), p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
@@ -156,6 +181,12 @@ export function createSamiraOutfit(h) {
     const hem = new THREE.CylinderGeometry(rb + 0.002, rb + 0.002, 0.006, 30, 1, true, t0, span);
     hem.scale(1.05, 1, 1); hem.translate(0, bot + 0.004, 0);
     addMerged(fabric(g), [hem], GOLD, DS);
+    if (V3) {
+      // 옷단 위 흰 수 띠(1.6 cm) — 자락 끝을 밝게 끊어 다리(짙은 색)와 갈린다
+      const band = new THREE.CylinderGeometry(rb + 0.0025, rb + 0.0018, 0.016, 30, 1, true, t0, span);
+      band.scale(1.05, 1, 1); band.translate(0, bot + 0.017, 0);
+      addMerged(fabric(g), [band], WHITE, DS);
+    }
   }
   // ── 정강이: 추리다르(발목으로 가늘게, 발목 위 잔주름 두 겹) + 장화 목 ──
   /** 팔다리 대표 메쉬를 같은 치수 캡슐로 다시 만들고 길이 방향 t(0 위 → 1 아래)마다 굵기 배율, 끝 반구 늘임 */
@@ -210,10 +241,22 @@ export function createSamiraOutfit(h) {
     const m = g.children[0].material; m.color.setHex(CRIMSON); m.roughness = 0.9; m.metalness = 0;
     sleeveVolume(g, 0.92, 0.86);
     addMerged(fabric(g), [cyl(0.0415, 0.0425, 0.016, 16, true, [0, -0.088, 0])], GOLD, DS);
-    addMerged(fabric(g), [cyl(0.04, 0.041, 0.008, 16, true, [0, -0.074, 0])], CRIMSON_DEEP, DS);
+    addMerged(fabric(g), [cyl(0.04, 0.041, 0.008, 16, true, [0, -0.074, 0])], V3 ? WHITE : CRIMSON_DEEP, DS);
+    if (V3) {
+      addMerged(fabric(g), [cyl(0.0405, 0.0415, 0.012, 16, true, [0, -0.072, 0])], WHITE, DS); // 소매 끝 흰 띠
+      // 흰 팔찌 둘 (손목, 손 구체 위)
+      addMerged(fabric(g), [-0.101, -0.109].map((y) => bake(new THREE.TorusGeometry(0.035, 0.0032, 6, 20), [0, y, 0], [Math.PI / 2, 0, 0])), WHITE, { roughness: 0.45, metalness: 0 });
+    }
+  }
+  function head(g, look) {
+    roseUniformHead(g, look);
+    if (!V3) return;
+    // 진주 귀걸이: 귓불 아래 작은 흰 구슬 + 금 고리
+    addMerged(g, [-1, 1].map((s) => ball(0.0068, 10, 8, [-0.006, -0.036, s * 0.098])), WHITE, { roughness: 0.35, metalness: 0 });
+    addMerged(g, [-1, 1].map((s) => bake(new THREE.TorusGeometry(0.0045, 0.0012, 4, 10), [-0.006, -0.026, s * 0.097], [0, 0, 0])), GOLD, { roughness: 0.5, metalness: 0.3 });
   }
   return {
-    head: roseUniformHead,
+    head,
     chest, abdomen, pelvis,
     uarmS: upperArm, uarmO: upperArm,
     farmS: forearm, farmO: forearm,
