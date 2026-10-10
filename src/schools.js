@@ -82,7 +82,9 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
   .map((t) => (t.kind === 'thrust' ? { ...t, base: t.base * 1.5 } : t));
 
 // ── 유파 자료 (②③ 단계 10/9 — 일본·중국. 출처: docs/motion/schools/school_japanese_draft.md·school_chinese_draft.md, 값은 모두 사장님 확인 전) ──
-//  사장님 결정: 유파는 패드 자리·칼끝 각·몸 돌림을 옮기지 않는다 — 바꾸는 것은 이름·가중치·이어 치기·쉴 자세·맞받아치기·취향뿐.
+//  (옛 규칙 — 10/9: 유파는 패드 자리·칼끝 각·몸 돌림을 옮기지 않는다 — 바꾸는 것은 이름·가중치·이어 치기·쉴 자세·맞받아치기·취향뿐.)
+//  **10/10 13:4x 사장님 "규칙을 풀어" → 풀림**: 유파마다 자기 자세표(원전 값)를 가져도 된다 — guardTable 칸(아래 머리말·guards.js applySchoolGuardTable).
+//   플레이어 '휘두르는 동안 손은 손가락이 그은 길' 원칙은 그대로. 패드 자리(G)는 기술 길의 열쇠라 그대로 두고 그 자리의 손·칼끝·몸만 바꾼다.
 //  비슷한 시대 전통끼리 섞는 것은 된다(출처를 적는다). 새 상한·문턱은 없다.
 //   names      바탕 자리 이름(guards.js GUARDS[i].name 글자 그대로) → { name, desc, src }. HUD 자세 이름만 바꾼다(판에 닿지 않음 — 늘 켬).
 //              자세표(table)는 건드리지 않는다: frames.js 가 표를 덮을 때 바탕 이름(g.name)을 열쇠로 쓰기 때문
@@ -93,6 +95,8 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //              { counter: { 줄: [기술 이름…] } }. 모두 src(출처 표시 [원전]·[원전 2차]·[해석]·[추정]). ai:false = 자료만(AI 에 안 넣음)
 //   spare      고유 셋에 들지 못한 후보 (ai:false 자료, 갤러리·문서용) — 일본 表5
 //   techNames  공용 동작 이름 (기술 이름 → { name, src }) — 자료만(HUD 는 기술 이름을 보이지 않는다)
+//   guardTable 유파 자세표 (10/10 풀림): 바탕 자리 이름 → { hand, blade, pelvisYaw, chestYaw, pitch, drop, name?, desc?, src? } — 무기 틀 표를 고른 뒤 적힌 자리만 덮는다
+//              (guards.js applySchoolGuardTable, 지금은 ai.js 생성자가 AI 검객에만 — 그 무기의 유파 것일 때). 간 보는 자세 목록은 guards, HUD 이름은 names
 //  techK·counterArt·unique 는 SKILL.schoolArt(기본 1 — 사장님 10/9 01:5x '스위치 켜') 일 때 sword_art.js 가 입힌다 (0 = 10/9 01:49 까지의 판). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
 
 // 일본 (카타나 가족: 지금 모노호시자오 = 앞무게 틀, 뒤에 올 카타나 = 두손 보통 틀). 이름 14 자리 — 원전 이름 + 자리 근거 7, 원전 이름 + 자리 [해석] 3, 원전 없음 4(쉬운 말)
@@ -293,7 +297,7 @@ const CHINESE_UNIQUE = [
 ];
 
 // ── 고유 동작 (10/9 — 사장님 01:5x '각 유파마다 강점과 특징을 살릴 고유 동작', docs/strike/school_unique_2026-10-09.md) ──
-//  유파마다 셋. 패드 자리·칼끝 각·몸 돌림은 그대로 — 새 길은 14 자리 패드와 닿는 범위 안의 빈 패드 점을 잇는 것뿐.
+//  유파마다 셋. 패드 자리는 그대로 — 새 길은 14 자리 패드와 닿는 범위 안의 빈 패드 점을 잇는 것뿐 (10/9 규칙. 10/10 13:4x 사장님 "규칙을 풀어" 뒤로는 자리의 손·칼끝·몸은 유파 guardTable 로 바꿀 수 있다).
 //  base 는 꾸러미에 들어간 뒤 값 그대로다(라이브러리의 틀·방식 곱 — 앞무게 내리치기 ×1.4, 찌르기 방식 찌르기 ×1.8 — 을 거치지 않는다: applySchoolArt 가 그 뒤에 더한다).
 //  그래서 같은 유파 무기의 비슷한 공용 동작 실제 base 에 맞춰 적었다. 수는 모두 [추정], 사장님 확인 전
 
@@ -607,12 +611,31 @@ export const TRADITIONS = {
 const ITALIAN_OFFARM = { guard: [0.35, 0.18, 0.12], lunge: [0.3, 0.36, 0.04] };
 TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
 
+// 이탈리아 레이피어 자세표 (10/10 사장님 '저 대기자세 이상하지 않아? … 왜 팔을 저렇게 높이 들고 칼끝을 내리지' · '정확히 고증대로 해' — docs/motion/rapier_guards_2026-10-10.md §1·§2).
+//  guardTable 꼴 (guards.js applySchoolGuardTable). hand [앞, 위, 칼 든 쪽] m (가슴 중심) · blade [올려본 각, 옆 각] ° · yaw ° (− = 칼 든 어깨가 앞) · pitch ° (+ 숙임, − 뒤로 기댐) · drop m.
+//  원전에 없는 지붕(팔꿈치를 접어 손을 머리 위에 두고 칼끝을 내리찍는 꼴 = 파브리스 판 1 '칼을 뽑은 채의 프리마', [19] 「not very secure … the body entirely exposed owing to the height of the sword」)은
+//  파브리스가 고쳐 세운 프리마(판 2, [20] 「body bent, arm extended, with the sword in front with the point as straight as possible」)로 바꾼다.
+//  name 은 칸 이름(hands.js 손 돌림이 Prima·Seconda·Terza·Quarta 를 읽음 — AI 검객 표). 플레이어 HUD 이름(names)은 플레이어 표를 바꿀 때 같이 — 이번엔 안 넣음. 값은 모두 사장님 확인 전 (확인표 640~)
+const ITALIAN_GUARD_TABLE = {
+  // 1번 자세: 팔을 앞·위로 뻗어 손은 얼굴 높이, 칼끝은 곧게 상대 쪽(조금 처짐), 몸을 앞으로 숙임 — imbroccata 가 여기서 나간다(Capo Ferro [31])
+  '지붕 (Vom Tag)': { name: '1번 자세 (Prima)', desc: '팔을 앞·위로 뻗어 손을 얼굴 높이에, 칼끝은 곧게 상대에게 · 몸을 숙인다 · 팔이 쉬 지친다', hand: [0.5, 0.28, 0.12], blade: [-8, -4], pelvisYaw: -40, chestYaw: -50, pitch: 12, drop: 0.12, src: 'Fabris 1606 [20] 판 2 [원문·도판] · 수 [추정]' },
+  // 2번 자세: 팔을 뻗어 손은 어깨 높이, 손등 위(손톱 아래), 칼끝 곧게 — 몸을 숙여 머리가 칼 팔 뒤
+  '황소 (Ochs)': { name: '2번 자세 (Seconda)', desc: '팔을 뻗어 손을 어깨 높이에, 손바닥을 아래로 · 칼끝은 곧게 상대에게', hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Fabris 1606 [21]·[22] 판 3·4 [원문·도판] · Capo Ferro [16] 「even with the shoulder」 · 수 [추정]' },
+  // 3번 자세 (주 자세): 칼 팔을 조금 굽혀 팔꿈치는 몸의 굽은 곳·오른 무릎 줄, 손은 높지도 낮지도 않게 몸 가운데, 칼끝은 상대 몸 가운데. 몸은 옆으로 세워 뒤로 기댐
+  '쟁기 (Pflug)': { name: '3번 자세 (Terza)', desc: '칼 팔을 조금 굽혀 손을 몸 가운데 높이에, 칼끝은 상대 몸 가운데 · 몸을 옆으로 세워 뒤로 기댄다 · 여기서 stoccata', hand: [0.5, -0.06, 0.18], blade: [6, -4], pelvisYaw: -50, chestYaw: -60, pitch: -3, drop: 0.12, src: 'Capo Ferro 1610 [6]·[74]·[97]·[98] 판 6 [원문·도판] · [67] 몸 뒤로 · Giganti 1606 [13] 그림 2·3 · 수 [추정]' },
+  // 뻗은 3번 자세: 찌르기 끝(모든 찌르기 길의 끝 자리)이라 손·칼끝은 무기 틀 값 그대로, 이름만 — 파브리스의 팔 뻗은 테르차(판 10)
+  '긴 자세 (Langort)': { name: '뻗은 3번 자세 (Terza)', desc: '팔을 곧게 뻗어 칼끝으로 상대 얼굴을 겨눈다 · 찌르기가 끝나는 자리', src: 'Fabris 1606 [28] 판 10 [원문·도판] · 손 위치는 R2 한손 뻗기 값 그대로' },
+  // 4번 자세: 손바닥을 위로 돌려 안쪽 줄에 팔을 뻗음, 칼끝 곧게 — 파브리스 '뻗은 콰르타'. 카포 페로는 자세가 아니라 치는 꼴이라 했다([99])
+  '왼쪽 쟁기': { name: '4번 자세 (Quarta)', desc: '손바닥을 위로 돌려 팔을 안쪽 줄로 뻗는다 · 칼끝은 곧게 상대에게', hand: [0.55, 0.04, 0.02], blade: [0, 4], pelvisYaw: -40, chestYaw: -50, pitch: 6, drop: 0.12, src: 'Fabris 1606 [32] 판 14 [원문·도판] · Capo Ferro [99] (자세 아님) · 수 [추정]' },
+};
+TRADITIONS.italian.guardTable = ITALIAN_GUARD_TABLE; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
+
 // 이탈리아 간 보는 자세 (10/10 사장님 '저 대기자세 이상하지 않아? … 저게 맞아?' — 원전 대조 docs/motion/rapier_guards_2026-10-10.md §1).
 //  전엔 롱소드 목록(WATCH_GUARDS: 지붕·어깨 지붕·황소 둘·쟁기 둘·긴 자세·바보·바꿈) 그대로였다. 원전 셋이 기다리는 자세는 테르차다:
 //   Capo Ferro 1610 [6] 「I do not hold to be good other than one single guard, which is the low guard called terza」 · [99] 「prima and seconda are not guards … quarta … is a way of striking」
 //   Fabris 1606 [28] 고쳐 세운 테르차 「one of the best guards」 · [32] 뻗은 콰르타 「beyond comparison more cautious than all the others」 · [20]·[22] 프리마·세콘다는 팔이 쉬 지침
 //   Giganti 1606 [13] 「two sorts of guards」 — 그림 2·3 모두 팔을 앞으로 뻗은 낮은 자세(테르차·콰르타 꼴)
-//  자리 = guards.js ITALIAN_RAPIER 의 원전 자세 (쟁기 자리 = 3번 · 긴 자세 = 뻗은 3번 · 왼쪽 쟁기 = 4번 · 황소 = 2번 · 지붕 = 1번). 원전에 없는 어깨 지붕·왼쪽 황소·바보·바꿈은 뺀다
+//  자리 = 위 ITALIAN_GUARD_TABLE 의 원전 자세 (쟁기 자리 = 3번 · 긴 자세 = 뻗은 3번 · 왼쪽 쟁기 = 4번 · 황소 = 2번 · 지붕 = 1번). 원전에 없는 어깨 지붕·왼쪽 황소·바보·바꿈은 뺀다
 //   (기술이 그 자리에서 시작하면 — passata sotto 는 바꿈 자리 — 준비 자세로 거쳐 가는 것은 전과 같다: 길 자리는 표에 그대로 있다).
 //  w = 자세 빈도 곱 (ai.js pickGuard 가 성격 가중치에 곱한다 — 이베리아 IBERIAN_GUARDS 와 같은 칸, 칸 없는 목록은 그대로). threat·high·low 는 WATCH_GUARDS 와 같은 뜻 — 1번 자세는 칼끝이 상대를 겨누어 threat 를 올림.
 //  값은 모두 사장님 확인 전 (확인표 640~)

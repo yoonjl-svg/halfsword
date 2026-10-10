@@ -23,9 +23,9 @@ import * as THREE from 'three';
 import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
-import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
+import { TRADITIONS, traditionOf } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives) · 유파 자세표(guardTable)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
-import { italianTable } from './guards.js'; // 이탈리아 레이피어 자세표 (10/10 고증 — docs/motion/rapier_guards_2026-10-10.md)
+import { applySchoolGuardTable } from './guards.js'; // 유파 자세표 덮기 (10/10 — schools.js TRADITIONS[t].guardTable)
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
@@ -77,10 +77,12 @@ export class AI {
     const art = resolveSwordArt(me.weapon, this.persona);
     this.art = art;
     this.school = art.school;
-    // 이탈리아 레이피어 자세 (10/10 사장님 '저 대기자세 이상하지 않아?' · '정확히 고증대로 해' — docs/motion/rapier_guards_2026-10-10.md): 이탈리아 유파 AI 가
-    //  한손 찌르기 칼을 쥐면 검객 표의 같은 자리를 원전 자세(1·2·3·4번 자세)로 덮는다 (guards.js italianTable — 패드 자리 그대로라 기술 길은 이어진다).
-    //  플레이어(사람 손가락 → 자세)는 이번엔 그대로 (skill.js·fighter.js 쪽 다음 일). 그 밖 유파·무기는 이 줄을 지나지 않는다
-    if (art.tradition === 'italian' && art.frame === 'one' && art.style === 'thrust' && me.guardPose?.table) me.guardPose.table = me.bodyGuard.table = italianTable(me.guardPose.table);
+    // 유파 자세표 (10/10 사장님 13:4x '규칙을 풀어' · 이탈리아 레이피어 고증 '저 대기자세 이상하지 않아?' — docs/motion/rapier_guards_2026-10-10.md):
+    //  유파 칸 guardTable 이 있고 그 표가 이 무기의 유파 것이면(인물 꾸러미가 다른 유파 무기를 쥔 경우 = 덮지 않음) 검객 표의 적힌 자리만 원전 자세로 덮는다
+    //  (guards.js applySchoolGuardTable — 패드 자리 그대로라 기술 길은 이어진다). 이번엔 AI 검객만: 플레이어(사람 손가락 → 자세)는 그대로 (skill.js·fighter.js 쪽 다음 일).
+    //  지금 칸이 있는 유파는 이탈리아(레이피어)뿐 — 그 밖 유파·무기는 이 줄을 지나지 않는다
+    const GT = TRADITIONS[art.tradition]?.guardTable;
+    if (GT && me.guardPose?.table && traditionOf(me.weapon ?? {}) === art.tradition) me.guardPose.table = me.bodyGuard.table = applySchoolGuardTable(me.guardPose.table, GT);
     const baseM = this.school.measure;
     this.M = art.measure;
     // 10/8 17:00 (c): 이 몸이 R2′ 묶음(몸의 호)을 쓰면 칼이 더 멀리·일찍 지나가 간격을 BODY.r2pAiContact 만큼 당긴다(72 판 'all': contact 1.57 → 1.52 가 E 승 14 → 27, P 28 → 33). 묶음 없는 AI(기본 'player' 범위의 상대)엔 0 — 바이트 동일
