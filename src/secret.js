@@ -299,8 +299,8 @@ export function bladesTouch(me, foe) {
  *   손 목표가 먼저 끝나도 칼이 따라오기 전엔 다음 토막을 열지 않는다 — 무거운 칼이 명령을 못 따라와 번갈아 베기가 한쪽에서 뭉개지던 것(탐침: 칼끝 옆 폭 0.23 m)을 막는다.
  *  토막 = { name, nameKo, from, pre: [](이음새 물레 점 없음 — 앞 토막 끝에서 곧장), path, gate?, open, kind, reach, base }
  */
-export function montanteFlowSeq(hand, dir, D) {
-  if (D.gilmok) return gilmokSeq(hand, D); // v6 길목 지키기: 한 칼 (아래)
+export function montanteFlowSeq(hand, dir, D, f = null) {
+  if (D.gilmok) return gilmokSeq(hand, D, f); // v6 길목 지키기: 한 칼 (아래)
   const hx = hand[0];
   const hy = hand[1];
   const len = Math.hypot(dir?.[0] ?? 0, dir?.[1] ?? 0);
@@ -352,7 +352,18 @@ export function montanteFlowSeq(hand, dir, D) {
  *  손이 그 쪽 옆 자세(D.side[s])에서 패드 거리 0.15 밖이면(v5 montanteFlowSeq 의 '이미 아래' 판정 0.15 그대로 — 새 값 아님)(플레이어 — 준비 자세를 잡지 않고 창을 받은 때) 먼저 그 쪽으로 감는 토막(문 = 칼끝이 그 쪽 · 가슴보다 뒤 —
  *  v5 '머리 위로 넘김'과 같은 문)을 둔다. AI 는 준비 동안 옆 자세를 잡고 있으니 곧장 벤다
  */
-export function gilmokSeq(hand, D) {
+/**
+ * 길목 한 칼의 디딤 (10/11 v6 3차 — 디렉터 '디딤을 그 순간 상대와의 간격에 맞추세요'): 디딤 = (그 순간 상대 가슴 거리 − 이 한 칼의 칼끝 앞 거리)를
+ *  [st.fwd 0.3 (talhoRodeado), st.max 0.6 (japaneseStep)] 로 자름 — 기하로 정하는 값. 칼끝 앞 거리 = 덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength).
+ *  f 가 없으면(도구) st.fwd 그대로
+ */
+function gilmokStep(st, f) {
+  if (!f?.foe || st.max == null) return { lat: st.lat, fwd: st.fwd, when: st.when };
+  const tip = SECRET.iaiPath.M.hand[0] + (f.weaponCfg?.bladeLength ?? 0);
+  return { lat: st.lat, fwd: clamp(f.foeDistance() - tip, st.fwd, st.max), when: st.when };
+}
+
+export function gilmokSeq(hand, D, f = null) {
   const hx = hand[0];
   const s = Math.abs(hx) > 0.05 ? (hx < 0 ? -1 : 1) : 1;
   const P = (o, k) => o[k].slice();
@@ -369,7 +380,7 @@ export function gilmokSeq(hand, D) {
   //   → 가운데 점에 문 front(칼끝이 가슴보다 앞) — 칼끝이 앞으로 돌아 나온 뒤 반대쪽으로 둘러 벤다(문 past: 칼끝이 반대쪽). 문마다 최대 FLOW_GATE_MAX, 맞히면 곧장 (v5 문과 같음)
   const nm = s > 0 ? 'gilmokTalho' : 'gilmokRevez';
   const ko = s > 0 ? '길목 둘러 베기 (talho orizontal cingido)' : '길목 둘러 베기 (revez orizontal cingido)';
-  push({ name: nm, nameKo: ko, path: [D.cutMid.slice()], gate: { front: true }, open: s > 0 ? 'UL' : 'UR', ...(D.step ? { step: { ...D.step } } : {}) }); // 빈틈 = zwerch · zwerchL · 걸음(D.step)은 첫 토막에
+  push({ name: nm, nameKo: ko, path: [D.cutMid.slice()], gate: { front: true }, open: s > 0 ? 'UL' : 'UR', ...(D.step ? { step: gilmokStep(D.step, f) } : {}) }); // 빈틈 = zwerch · zwerchL · 걸음(D.step)은 첫 토막에
   push({ name: nm + 'End', nameKo: ko, path: [P(D.side, -s)], gate: { past: -s }, open: s > 0 ? 'UL' : 'UR' });
   return seq;
 }

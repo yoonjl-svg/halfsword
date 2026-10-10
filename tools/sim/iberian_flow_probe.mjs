@@ -34,7 +34,7 @@ for (let seed = 1; seed <= N; seed++) {
   if (GIL && ARM > 0) { const mh = ai.moveHand.bind(ai); ai.moveHand = (dt) => { if (t0 == null && armT > 0) { const p = ai.secret.do.side[1]; ai.hand.set(p[0], p[1]); ai.handSpeed = 0.9; } return mh(dt); }; const sa = ai.startAttack.bind(ai); ai.startAttack = (t, why, o) => (t0 == null && why !== 'secret' && why !== 'test' ? false : sa(t, why, o)); } // 준비 동안 AI 가 스스로 치지 않게
   let t0 = null;
   let woundsE = 0;
-  G.onWound = (att, vic, r) => { if (att === me && t0 != null) { woundsE++; rec.push({ wound: r.energy, zone: r.zone, t: G.t - t0 }); } };
+  G.onWound = (att, vic, r, _p, pr) => { if (att === me && t0 != null) { woundsE++; const pt = pr?.v?.part ?? ''; const pk = /thigh|shin|foot|leg/i.test(pt) ? '다리' : /arm|hand/i.test(pt) ? '팔' : /head|neck/i.test(pt) ? '머리·목' : '몸통'; (globalThis.__parts ??= {})[pk] = (globalThis.__parts[pk] ?? 0) + 1; rec.push({ wound: r.energy, zone: r.zone, t: G.t - t0 }); } };
   for (let i = 0; i < 120 * 14; i++) {
     if (process.env.WALK && !PL) G.player.move.set(0, t0 == null && armT >= ARM ? +process.env.WALK : 0); // WALK=v: 준비가 찬 뒤 상대(입력 없는 롱소드 몸)가 앞으로 걸어 든다 (스틱 v)
     G.step();
@@ -83,4 +83,6 @@ for (let seed = 1; seed <= N; seed++) {
   for (const s of segs) { const A = (agg[s.n] ??= { n: 0, t: 0, v: 0, vmin: 0, xr: 0 }); A.n++; A.t += s.t1 - s.t0 + DT; A.v += s.vmax; A.vmin += s.vmin; A.xr += s.xmax - s.xmin; }
 }
 console.log(`\n${id} · ${WHO} · 판 ${SECRET.iberianSecret} · 낸 ${fired} · 맞힘 ${landed} · 경직 ${stiffN} · 흐름 평균 ${(tot.reduce((a, b) => a + b, 0) / Math.max(1, tot.length)).toFixed(2)} s`);
+if (globalThis.__mid?.length) { const M = globalThis.__mid; const av = (k) => (M.reduce((a, b) => a + b[k], 0) / M.length).toFixed(2); console.log(`  가운데 선 평균 (n ${M.length}): 칼끝 앞 ${av('fw')} m · 높이 ${av('y')} m (${Math.min(...M.map((m) => m.y)).toFixed(2)}~${Math.max(...M.map((m) => m.y)).toFixed(2)}) · 상대 가슴 ${av('fd')} m`); } // 10/11 v6 3차
+if (globalThis.__parts) console.log(`  맞힌 자리(상처 수): ${Object.entries(globalThis.__parts).map(([k, v]) => `${k} ${v}`).join(' · ')}`);
 for (const [k, A] of Object.entries(agg)) console.log(`  ${k}: n ${A.n} · ${(A.t / A.n).toFixed(2)} s · 칼끝 최고 ${(A.v / A.n).toFixed(1)} · 바닥 ${(A.vmin / A.n).toFixed(1)} m/s · 칼끝 옆 폭 ${(A.xr / A.n).toFixed(2)} m`);

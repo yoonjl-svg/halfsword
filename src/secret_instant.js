@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SECRET, ARM, STRIKE, GAIT } from './config.js';
+import { IBERIAN_TABLE } from './guards.js'; // 길목 감음 자세 (10/11 v6 3차 — 이베리아 자세표 옆 자세 값)
 const GAIT_REACH = GAIT.reachMax;
 
 const _qc = new THREE.Quaternion();
@@ -809,6 +810,8 @@ export function startLunge(f) {
 //   1차(덧씌우기 없음 — 자세 지도의 패드 길만): 옆 자세에서 칼이 몸 뒤로 감겨 칼끝이 앞 1.3 m · 가슴 +0.8~1.5 m(상대 머리 위)에서 그쳐 48 판 맞힘 0.
 //  seg: 'mid'(가운데 토막) | 'end'(끝 토막·따라 지나감·경직) | null(끔 — 0.12 s 에 걷음, iaiReadyPose 끄는 빠르기와 같음) · s: +1 오른쪽에서 탈류 · −1 왼쪽에서 레베스
 // ─────────────────────────────────────────────────────────────
+const _gh = new THREE.Vector3();
+const _gt = new THREE.Vector3();
 export function gilmokCutPose(f, seg, s, dt) {
   const th = f.skill.thrustPose;
   if (iaiBusy(f) || f.skill.tap || f.skill.pom) {
@@ -821,13 +824,41 @@ export function gilmokCutPose(f, seg, s, dt) {
   f.gilCutW = w;
   th.w = w;
   if (!seg) return; // 걷는 동안은 마지막 목표 그대로
+  if (seg === 'wind') {
+    // 감음 (10/11 v6 3차): 손이 옆 자세 밖에서 창을 받은 때(플레이어)의 감는 토막 — 이베리아 자세표 옆 자세('옆 자세' · '왼쪽 옆 자세') 값을 그대로 덧씌운다.
+    //  덧씌우기 없이 감으면 칼이 머리 위(칼끝 가슴 +0.9 m)를 돌아 떨어지는 힘이 한 칼로 이어져 칼자루가 가슴 −0.26 m 까지 처지고 넓적다리를 벴다(플레이어 탐침)
+    const T = IBERIAN_TABLE[s > 0 ? '옆 자세' : '왼쪽 옆 자세'];
+    th.hand[0] = T.hand[0];
+    th.hand[1] = T.hand[1];
+    th.hand[2] = T.hand[2];
+    const Dw = dirOf(T.blade[1], T.blade[0]);
+    th.dir[0] = Dw.x;
+    th.dir[1] = Dw.y;
+    th.dir[2] = Dw.z;
+    th.pelvisYaw = T.pelvisYaw * D2R;
+    th.chestYaw = T.chestYaw * D2R;
+    th.pitch = T.pitch * D2R;
+    th.drop = T.drop;
+    return;
+  }
   const K = SECRET.iaiPath;
   const P = seg === 'mid' ? K.M : K.E;
   // 발도는 왼 허리 → 칼 든 쪽(+)으로 벤다. 길목 탈류(s +1)는 칼 든 쪽 → 반대쪽(−)이라 옆 자리·옆 각을 −s 로 뒤집는다
   th.hand[0] = P.hand[0];
   th.hand[1] = P.hand[1];
   th.hand[2] = -s * P.hand[2];
-  const D = dirOf(-s * P.yaw, P.el);
+  // 높이 각 (10/11 v6 3차 — 디렉터 '칼끝이 가운데 선에서 상대 몸통 높이를 지나게'): 발도 길의 고정 각(el) 대신 그 순간의 칼자루 높이·칼 길이로 계산 —
+  //  sin(el) = (상대 가슴 몸체 높이 − 내 칼자루 높이) / (칼자루 → 칼끝 길이). 기하에서 나오는 값(고르는 수 없음). 2차(고정 −3°): 칼끝이 츠바이핸더 가슴 −0.13~+0.35 ·
+  //  북부 대공의 검 +0.53~0.65 m 로 뜨고, 플레이어는 넓적다리·정강이로 지났다. 상대가 없으면 발도 길 각 그대로
+  let el = P.el;
+  const foe = f.foe;
+  if (foe?.bodies?.chest) {
+    const hp = f.bladePoint(0, _gh);
+    const tp = f.bladePoint(1, _gt);
+    const L = hp.distanceTo(tp);
+    if (L > 0) el = Math.asin(THREE.MathUtils.clamp((foe.bodies.chest.translation().y - hp.y) / L, -1, 1)) / D2R;
+  }
+  const D = dirOf(-s * P.yaw, el);
   th.dir[0] = D.x;
   th.dir[1] = D.y;
   th.dir[2] = D.z;
@@ -840,6 +871,8 @@ export function gilmokCutPose(f, seg, s, dt) {
 
 /** 길목 한 칼의 토막 이름 → gilmokCutPose 의 seg · s (그 밖이면 seg null) */
 export function gilmokSeg(name, stiff) {
+  const w = /^gilmokWind([RL])$/.exec(name ?? '');
+  if (w) return { seg: 'wind', s: w[1] === 'R' ? 1 : -1 };
   const m = /^gilmok(Talho|Revez)(End)?$/.exec(name ?? '');
   if (!m) return { seg: null, s: 1 };
   return { seg: m[2] || stiff ? 'end' : 'mid', s: m[1] === 'Talho' ? 1 : -1 };
