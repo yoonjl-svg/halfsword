@@ -85,7 +85,7 @@ const shot = async (page, who, view, path) => {
     const L = Math.hypot(fx, fz) || 1;
     fx /= L; fz /= L;
     const rx = -fz, rz = fx;
-    const s = f.side; // 칼 든 쪽에서 (칼 팔이 보이게)
+    const s = -f.side; // 빈손 쪽에서 (옆으로 선 몸의 앞가슴·칼 팔이 판 그림처럼 보이게)
     const ang = { side: [0, 1], front: [0.82, 0.57], q34: [0.5, 0.87] }[view];
     const R = 2.3;
     const cx = fx * ang[0] + rx * s * ang[1], cz = fz * ang[0] + rz * s * ang[1];

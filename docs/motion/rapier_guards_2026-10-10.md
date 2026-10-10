@@ -1,0 +1,137 @@
+# 이탈리아 레이피어 간 보는 자세 고증 (10/10)
+
+가지 `claude/rapier-guards-2q36ha` (origin/main 0e31368 에서). 사장님 10/10 13:0x (레이피어 AI 대기 캡처를 보고) "저 대기자세 이상하지 않아? 송곳이나 식칼도 아니고… 왜 팔을 저렇게 높이 들고 칼끝을 내리지. 저게 맞아?" · 앞서 "정확히 고증대로 해."
+
+**결론**: 사장님 지적이 맞다. 그 자세는 롱소드 지붕(Vom Tag) 자리를 한손 찌르기 표에 옮긴 값(손 앞 0.32 · 위 0.38 · 칼끝 −25°)이고, 원전에서 가장 가까운 것은 파브리스 판 1 "칼을 뽑은 채의 프리마"인데 파브리스 스스로 "그다지 안전하지 않다… 칼이 높아 몸이 다 드러난다"([19])고 하고 팔을 앞으로 뻗은 프리마(판 2)로 고쳐 세운다. 카포 페로는 **테르차 하나만** 자세로 친다([6]·[98]) — 프리마·세콘다는 "자세가 아니다", 콰르타는 "치는 꼴"([99]). 디렉터 기억(테르차가 카포 페로의 주 자세 · 프리마는 팔을 앞·위로 뻗는 꼴)은 원문과 맞다. 한 가지만 고친다: 카포 페로의 테르차는 손이 "무릎~허리 줄"이 아니라 **몸 가운데("높지도 낮지도 않게")** 이고, "칼자루를 무릎 바깥에 두는" 흔한 테르차([16])는 자기 테르차가 아니라고 못박는다([98]).
+
+## 1. 원전 대조
+
+원문은 Wiktenauer 번역문(단락 번호 [n])과 판 그림을 직접 열어 보았다. 손바닥 방향은 파브리스 [2]의 정의(손을 돌리는 넷)를 따랐다. 판 번호는 Wiktenauer 파일 번호(Fabris = `Scienza_d'Arme_(Fabris)_0NN.jpg`, 판 n 이 단락 [n+18])이다.
+
+| 자세 | 손 높이 | 팔 앞뒤 · 팔꿈치 | 칼끝 (올림 · 옆) | 손바닥(손톱) | 몸 · 발 | 기다리는 자세로? | 출처 |
+|---|---|---|---|---|---|---|---|
+| 프리마 — 칼 뽑은 채 | 머리보다 높이 | 칼을 뒤로 당기고(「too much withdrawn」) 팔꿈치 굽힘 | 위에서 상대 쪽으로 내려옴 | 칼 뽑을 때 손 그대로(가장 엎은 손) | 몸 숙임 | **아니오** — 「not very secure … body entirely exposed owing to the height of the sword」, 물러날 때만 | Fabris [19] 판 1 |
+| 프리마 — 고쳐 세움 | 얼굴 높이 | **팔을 앞·위로 뻗음** | 「as straight as possible」(저절로 조금 처짐) | 〃 | 몸 숙임, 발을 붙임 | 쓸 수 있으나 「so laborious for the arm, that you cannot long endure」 | Fabris [20] 판 2 · Capo Ferro [16] 「posted over the shoulder」 · [99] 자세 아님 |
+| 세콘다 | 어깨 높이(프리마보다 조금 낮음) | 팔 뻗음(판 5 는 팔을 접어 몸을 아주 낮춤) | 곧게 상대 쪽 | 손을 조금 아래로 돌림(손톱 아래) | 몸 숙임, 발 조금 넓게 | 쓸 수 있음 — 프리마보다 덜 지침 | Fabris [21]·[22]·[23] 판 3·4·5 · Capo Ferro [16] 「even with the shoulder」 · [99] 자세 아님 |
+| **테르차 — 카포 페로** | **몸 가운데(높지도 낮지도 않게)** | 칼 팔을 **조금 굽힘**: 위팔은 비스듬히 아래로, 팔꿈치는 몸의 굽은 곳·오른 무릎 줄, 아래팔을 조금 당겨 칼과 한 줄 · 「fully extended」 반대 | 늘 상대 몸 가운데(가까운 쪽) — 판 6 은 조금 올라감 | 돌리지 않은 손(자연) | 몸은 굽혀 **뒤로 기댐**(오른 넓적다리와 거의 한 줄, 왼 어깨는 왼발 줄) · 오른발 앞 보통 걸음 | **예 — 단 하나의 자세** 「I do not hold to be good other than one single guard … terza」 | Capo Ferro [6]·[67]·[74]·[82]·[97]·[98] 판 6 |
+| 테르차 — 흔한 정의 | 칼자루를 오른 무릎 바깥 | — | 위로 꺾임 | 자연 | — | 카포 페로: 자기 테르차 아님 · 파브리스: 「the hand is too low and the point inclined upwards at an angle」 | Capo Ferro [16]·[98] · Fabris [27] 판 9 |
+| 테르차 — 파브리스 고쳐 세움 | 가슴 높이 | 팔 뻗음 | 곧게 상대 쪽 | 「the hand should not be turned at all」 | 옆구리를 뒤로 뺌 | **예** — 「one of the best guards」 | Fabris [28] 판 10 |
+| 테르차 — 뒤로 기댐 | 낮음 | 팔 뻗음 | 비스듬히 땅 쪽 | 자연 | 몸·무릎을 굽혀 뒤로 | 연습할 만함(뻗은 테르차에서 빠지는 자세) | Fabris [29] 판 11 |
+| 콰르타 — 팔 꺾음 | 가슴 | 팔에 각 | 상대 쪽 | 손바닥 위(손톱 위) | — | 바깥이 많이 드러남 | Fabris [31] 판 13 |
+| **콰르타 — 뻗음** | 어깨~가슴 | 팔 곧게 뻗음 | 곧게 상대 쪽 | 손바닥 위 | — | **예** — 「beyond comparison more cautious than all the others」 | Fabris [32] 판 14 · Capo Ferro [16] 「hilt is inside the thigh」 · [99] 「a way of striking, and not of guarding」 |
+| 기간티 간 보는 자세 | 허리~가슴 | 칼 팔을 뻗어 단단히(「sword arm extended and strong」), 상대 칼 위에 얹어 묶음 | 상대 얼굴 쪽으로 올라감 | 그림 2 콰르타 꼴 · 그림 3 테르차 꼴 | 오른발 앞 넓게 | 예 — 「two sorts of guards」(자세·맞자세) | Giganti [13] 그림 2·3 |
+
+주로 기다리는 자세: **테르차**(카포 페로는 이것만 · 파브리스 [28] · 기간티 그림 3), 다음이 뻗은 콰르타(파브리스 [32] · 기간티 그림 2). 프리마·세콘다는 파브리스만 자세로 쓰고 팔이 지친다고 적는다.
+
+출처 (한 줄씩):
+- Capo Ferro 본문(영어·이탈리아어 [n]): https://wiktenauer.com/wiki/Ridolfo_Capo_Ferro — 용어 [16] 'Of the Guards' · 쓰임 [6] 'Of the Most Secure Guard' · 7장 [67] · 8장 [74]·[82] · 10장 [97]·[98]·[99] · 찌르기 [31] (stoccata 는 terza 에서, imbroccata 는 prima 에서)
+- CF 판 6 (간 보는 두 사람, C·D): https://wiktenauer.com/images/e/ef/Capo_Ferro_1652_06.png
+- Fabris 본문: https://wiktenauer.com/wiki/Salvator_Fabris — [2] 네 자세의 정의 · [19]~[35]
+- Fabris 판 1·2·3·4·5·9·10·11·13·14: https://wiktenauer.com/images/thumb/…/Scienza_d%27Arme_%28Fabris%29_001.jpg … _014.jpg (Wiktenauer 'File:Scienza_d'Arme_(Fabris)_0NN.jpg')
+- Giganti 본문: https://wiktenauer.com/wiki/Nicoletto_Giganti — [13] 'Guards, or Postures'
+- Giganti 그림 2·3: https://wiktenauer.com/images/0/07/Giganti_02.png · https://wiktenauer.com/images/a/a1/Giganti_03.png
+
+못 한 것: 원본 판본 쪽수(PDF)는 대조하지 않았다(번역문 단락 번호·판 번호로만). 파브리스 판은 800 px 축소본으로 보았다. 손 높이·각도의 수는 판에서 읽은 어림이다.
+
+## 2. 바꾼 것 (이탈리아 AI 만)
+
+장치 (10/10 13:4x 사장님 "규칙을 풀어" 뒤 디렉터가 이베리아 작업과 맞춘 꼴):
+- `src/schools.js` `ITALIAN_GUARD_TABLE` → **`TRADITIONS.italian.guardTable`** = { 바탕 자리 이름(guards.js GUARDS name 그대로): { hand, blade, pelvisYaw, chestYaw, pitch, drop, name?, desc?, src? } }. `ITALIAN_WATCH` → `TRADITIONS.italian.guards`(간 보는 자세 목록). 이탈리아 줄은 걸음 작업과 겹치지 않게 그대로 두고 아래에서 더함. 주석의 옛 규칙('유파는 패드 자리·칼끝 각·몸 돌림을 옮기지 않는다')은 풀린 날짜·원문으로 고쳐 적음.
+- `src/guards.js` **`applySchoolGuardTable(table, guardTable)`** (덮는 함수 한 곳): 무기 틀 표를 고른 뒤 적힌 자리만 덮는다(적지 않은 자리·칸은 무기 틀 값 그대로). 패드 자리·순서는 그대로라 기술 길(from·path)은 끊기지 않는다. `ONE_HAND_THRUST`(청강검 두루 표·에스톡 등과 공유)는 바이트 그대로.
+- `src/ai.js` 생성자: 유파 칸 guardTable 이 있고 그 무기의 유파 것이면(`traditionOf(무기) === 유파` — 인물 꾸러미가 다른 유파 무기를 쥔 경우는 덮지 않음) **AI 검객 표만** 덮는다. `pickGuard` 는 자세 칸 `freq` 를 성격 가중치에 곱한다(칸 없는 목록 = 그대로, 난수 차례 그대로).
+- HUD 이름 `TRADITIONS.italian.names` 는 넣지 않았다: 그것은 플레이어 HUD 를 바꾸는데 플레이어 표는 이번에 안 바꿔 이름과 자세가 어긋난다. 이름은 guardTable 칸의 name(AI 검객 표 칸 이름 — hands.js 손 돌림이 Prima·Seconda·Terza·Quarta 를 읽음)으로. 플레이어 표를 바꿀 때 names 로 옮긴다.
+- 플레이어 레이피어는 그대로(§5).
+
+| 자리 (바탕 이름) | 전 (손 앞·위·옆 m · 칼끝 올림·옆 ° · 골반/가슴 yaw · 숙임) | 후 이름 | 후 값 | 근거 |
+|---|---|---|---|---|
+| 지붕 | 0.32 · 0.38 · 0.10 · −25 · −6 · −20/−35 · 4 | 1번 자세 (Prima) | **0.50 · 0.28 · 0.12 · −8 · −4 · −40/−50 · 12** · 낮춤 0.12 | Fabris [20] 판 2 |
+| 황소 | 0.40 · 0.24 · 0.17 · −15 · −10 · −15/−30 · 3 | 2번 자세 (Seconda) | **0.55 · 0.16 · 0.20 · −4 · −4 · −45/−55 · 10** · 0.12 | Fabris [22] 판 4 |
+| 쟁기 | (2번 자세) 0.50 · 0.08 · 0.24 · −3 · −3 · −50/−60 · 2 | **3번 자세 (Terza)** | **0.50 · −0.06 · 0.18 · +6 · −4 · −50/−60 · −3(뒤로)** · 0.12 | Capo Ferro [6]·[67]·[74]·[98] 판 6 |
+| 긴 자세 | (3번 자세) 0.68 · 0.08 · 0.10 · −3 · 0 | 뻗은 3번 자세 (Terza) | 값 그대로(모든 찌르기 길의 끝 자리) | Fabris [28] 판 10 |
+| 왼쪽 쟁기 | (안쪽 막기 Quarta) 0.42 · −0.20 · −0.04 · +22 · +12 · −25/−40 · 5 | 4번 자세 (Quarta) | **0.55 · 0.04 · 0.02 · 0 · +4 · −40/−50 · 6** · 0.12 | Fabris [32] 판 14 |
+
+간 보는 자세 목록 (전: 롱소드 9 개 — 지붕·어깨 지붕·황소 둘·쟁기 둘·긴 자세·바보·바꿈):
+
+| 자리 | 원전 자세 | freq | threat · high · low |
+|---|---|---|---|
+| pflugR | 3번 자세 (Terza) — 주 자세 | **4** | 0.9 · 0.2 · 0.8 |
+| langort | 뻗은 3번 자세 | **1.5** | 1 · 0.3 · 0.3 |
+| pflugL | 4번 자세 (Quarta) | **1** | 0.8 · 0.2 · 0.8 |
+| ochsR | 2번 자세 (Seconda) | **0.5** | 0.8 · 0.6 · 0.2 |
+| tag | 1번 자세 (Prima) | **0.25** | **0.6**(전 0.1 — 칼끝이 상대를 겨눔) · 1 · 0 |
+
+뺀 것: 어깨 지붕·왼쪽 황소·바보·바꿈(원전에 대응 자세 없음 — 지붕 자리는 원전 프리마로 바꿔 남김). 표에서 지운 것은 아니라 그 자리에서 시작하는 기술(passata sotto = 바꿈 자리)은 전처럼 준비 자세로 거쳐 간다. 물러남 자세(withdraw: 긴 자세·쟁기)는 목록에 있다.
+
+기술 길: 패드가 그대로라 길은 같다. 1번 자세에서 imbroccata(Capo Ferro [31] 「sent from the guard of prima」), 3번 자세(쟁기 자리)에서 stoccata = stichPflug·inquartata(Capo Ferro [31] 「the stoccata needs to be sent from the guard of terza」), 2번 자세(황소 자리)에서 cavazione 속임수(가짜 stichOchs), 4번 자세에서 punta riversa = stichPflugL(Capo Ferro [31] 「sent from quarta」). 비기 Passata in contratempo(바꿈 자리 시작)는 48 판 두 벌 모두 54~61 번 났다(아래).
+
+## 3. 48 판 (레이피어 대 롱소드, 본판 길 `GUARD_DWELL=1 node tools/sim/hybrid.mjs motion_lab.mjs duel rapier 24 main`)
+
+전 = 0e31368 (같은 도구 줄 — 계기 줄은 `GUARD_DWELL=1` 일 때만 찍혀 다른 출력은 그대로).
+
+| 판 | 승 / 패 / 무 | 승률 (95 %) | 넘어짐 모두 · 비기 자세 동안·뒤 1 s | 비기 낸 / 맞힘 | 쓴 기술 위 셋 |
+|---|---|---|---|---|---|
+| 전 · 시드 1~24 | 22 / 21 / 5 | 46 % (33~60) | 31 · 6 | 58 / 32 | stichPflug 120 · inquartata 82 · passataSotto 75 |
+| **후** · 시드 1~24 | 26 / 20 / 2 | 54 % (40~67) | 29 · 8 | 59 / 29 | stichPflug 111 · inquartata 96 · passataSotto 79 |
+| 전 · 시드 25~48 (`DUEL_SEED0=24`) | 31 / 13 / 4 | 65 % (50~77) | 30 · 7 | 61 / 39 | stichPflug 146 · inquartata 72 · passataSotto 71 |
+| **후** · 시드 25~48 | 20 / 24 / 4 | 42 % (29~56) | 33 · 4 | 54 / 32 | stichPflug 104 · passataSotto 76 · inquartata 72 |
+| 96 판 합 | 전 53 승 / 후 46 승 | 전 55 % · 후 48 % (차 −7 점, 표준오차 약 7 점) | 전 61 · 후 62 | 전 119/71 · 후 113/61 | |
+
+AI 가 간 볼 때(2 s 뒤) 머문 비율 — 96 판 합 (고른 자세 · 괄호는 몸이 실제로 가장 가까이 있던 표 자세):
+
+| 자세 | 전 | 후 |
+|---|---|---|
+| 지붕 → 1번 자세 (Prima) | 18 % (지붕 16 %) | **0 %** (0 %) |
+| 어깨 지붕 | 17 % (14 %) | 목록에서 뺌 (0 %) |
+| 황소 → 2번 자세 (Seconda) | 20 % (황소 20 %) | 2 % (3 %) |
+| 쟁기 → 3번 자세 (Terza) | 17 % (전 이름 2번 자세 15 %) | **55 %** (47 %) |
+| 긴 자세 → 뻗은 3번 자세 | 20 % (전 이름 3번 자세 22 %) | 36 % (38 %) |
+| 왼쪽 쟁기 → 4번 자세 (Quarta) | 4 % (6 %) | 9 % (11 %) |
+| 왼쪽 황소 · 바꿈 · 바보 | 7 % | 뺌 (2 %) |
+
+읽기: 손을 머리 위에 접고 칼끝을 내리던 시간(지붕·어깨 지붕 ≈ 35 %)이 없어지고, 간 보는 시간의 90 % 남짓이 테르차(주 자세 + 뻗은 것)다. 승률은 시드 1~24 에선 오르고 25~48 에선 내려 합하면 −7 점 — 표준오차 안이지만 내려간 쪽이라 사장님 확인 줄에 적는다(§6).
+
+## 4. 관문 (마지막 커밋에서)
+
+| 관문 | 기준 (0e31368) | 후 |
+|---|---|---|
+| `node tools/sim/fights12.mjs` ('deprecated parameters' 뺀 sha256 앞 8) | 5480fbd3 | **5480fbd3** |
+| `live_battery` | e7ee3d96 | **e7ee3d96** |
+| `finish_thrust 1 --stand` | 433ac984 | **433ac984** |
+| `duel qinggang 24 main` · `duel estoc 24 main` (전 = 0e31368 스냅숏에서 같은 명령) | 59f06c91 · 086c1914 | **cmp 같음** · **cmp 같음** |
+| corr_s0 `--limits=on,off --scenes=a,b` | IDENTICAL 12/12 | **12/12** |
+| weapon_smoke | OK 17/17 | **17/17** |
+| `npx vite build` · `node tools/text/name_policy.mjs` | — | 통과 · **위반 0** |
+| 장치 정리(ITALIAN_RAPIER → guardTable) 전후 `duel rapier 24 main` | — | cmp 같음 (값 그대로 옮김) |
+| 캡처 콘솔 에러 (전·후 빌드) | — | 0 · 0 |
+
+## 5. 캡처
+
+`tools/browser/rapier_guard_shots.mjs <미리보기 주소> <폴더>` — AI 의 `pickGuard` 를 한 자세로 고정하고 공격을 막아(시험만) 간 보기 4 s 째를 빈손 쪽 옆·앞(상대 쪽 35°)·3/4 에서. 전은 0e31368 빌드에서 `GUARDS=tag,tagR,ochsR,pflugR,langort PREFIX=rapier_guard_before`. 콘솔 에러 0.
+
+- `docs/handoff/rapier_guard_compare.png` — 위 = 전 지붕(사장님이 본 자세), 아래 = 후 3번 자세(주 자세)
+- `docs/handoff/rapier_guard_before.png` — 전 AI 간 보는 자세 다섯(머문 비율 순)
+- `docs/handoff/rapier_guard_after.png` — 후 AI 간 보는 자세 다섯
+- `docs/handoff/rapier_guard_player_vs_terza.png` — 플레이어 쉼 대 AI 3번 자세
+
+캡처 때 잰 값 (몸 기준: 앞 = 바라보는 쪽, 위 = 가슴 중심에서, 옆 = 칼 든 쪽 + · 코등이 자리 m · 땅에서 높이 m · 칼끝 올림/옆 ° · 칼 팔꿈치 굽힘 °):
+
+| 자세 | 전 | 후 |
+|---|---|---|
+| 지붕 → 1번 자세 | 앞 0.42 · 위 +0.31 · 1.60 m · −25/−7 · 107° | 0.61 · +0.23 · 1.46 m · −10/−7 · 98° |
+| 어깨 지붕 | 0.48 · +0.14 · 1.43 m · −13/−11 · 121° | (목록에서 뺌) |
+| 황소 → 2번 자세 | 0.50 · +0.19 · 1.48 m · −19/−11 · 112° | 0.65 · +0.11 · 1.36 m · −8/−8 · 96° |
+| 쟁기 → 3번 자세 | (2번 자세) 0.61 · +0.02 · 1.27 m · −5/−9 · 105° | **0.58 · −0.10 · 1.15 m · +2/−13 · 97°** |
+| 긴 자세 (뻗은 3번) | 0.76 · +0.02 · 1.30 m · −8/−5 · 54° | 같음 |
+| 왼쪽 쟁기 → 4번 자세 | — | 0.63 · −0.01 · 1.23 m · −4/0 · 93° |
+| 플레이어 쉼 | 0.73 · +0.02 · 1.22 m · −8/−6 · 65° | 같음 (안 바꿈) |
+
+## 6. 플레이어 레이피어와 원전의 차이 (이번엔 안 바꿈 — 다음 일)
+
+플레이어 손가락 → 자세(skill.js·fighter.js guardDir)는 다른 작업자 영역이라 값만 쟀다. 플레이어가 손가락을 떼고 쉬는 자세는 지붕 꼴이 **아니라** 팔을 거의 곧게 뻗은 가슴 높이 겨눔(코등이 앞 0.73 · 위 +0.02 m, 팔꿈치 65°, 칼끝 −8°) — 원전으로는 파브리스의 고쳐 세운 테르차(판 10, 「one of the best guards」)에 가깝다. 카포 페로의 3번 자세(AI 측정 앞 0.58 · 위 −0.10 m · 팔꿈치 97° · 칼끝 +2°)와 견주면 손이 **12 cm 높고 15 cm 앞**, 팔꿈치가 32° 덜 굽고, 칼끝이 10° 낮다(카포 페로 [82] 「I cannot approve of having the arm fully extended in guard」 와 어긋남). 다음 일 제안: 플레이어 쉼 자세 목표(restGuard)를 이탈리아만 3번 자세 자리로 하고 표에 같은 guardTable 을 걸기(`sword_art.js` 표 고르는 자리에서 applySchoolGuardTable 을 부르면 플레이어·AI 함께) — 휘두르는 동안 손은 손가락이 그은 길(원칙 그대로), 쉼·되돌아옴만 원전 자세. 그때 HUD 이름을 `TRADITIONS.italian.names` 로 옮긴다.
+
+## 7. 사장님 확인 필요 (확인표 640~648)
+
+- 640 유파 자세표 칸(guardTable)·641 플레이어에도 걸지(지금은 AI 만) — **사장님 선택**
+- 642~646 자세 다섯의 손·칼끝·몸 값(판에서 읽은 어림 — [추정])
+- 647 간 보는 자세 목록·빈도(테르차 4 · 뻗은 테르차 1.5 · 콰르타 1 · 세콘다 0.5 · 프리마 0.25). 96 판 승률 55 → 48 %(−7 점, 표준오차 약 7 점 — 두 벌이 +8 · −23 점으로 갈림). 원전대로가 이기는 쪽이라는 보장은 없다: 테르차만 지키면 높은 칼(지붕·황소)에서 내리던 imbroccata·stichOchs 가 준비 자세를 거쳐야 한다. 더 재려면 빈도만 바꾼 대조(예: 세콘다 1 · 프리마 0.5)를 96 판씩.
+- 못 한 것: 카포 페로 「테르차 = 칼자루 무릎 바깥」(흔한 정의, [16])은 그가 버린 꼴이라 넣지 않음 · 파브리스의 몸을 아주 낮춘 자세들(판 5·11 등)은 넣지 않음.
