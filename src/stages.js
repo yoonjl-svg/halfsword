@@ -59,8 +59,9 @@ export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: '
 //  여정(foe=stage)에서 그 무대를 열 때 [본디 짝, ...후보] 가운데 하나를 고르게 고른다 → 본디 짝은 그 무대에서 절반만 나온다.
 //  졌을 때 같은 무대를 다시 열면 같은 상대(아래 stageFoeId 의 prevId). STAGE_FOE 자체는 그대로다
 //  10/10 20:4x: 김씨·투야나(eira)는 전용 무대(청람잔도·얼어붙은 만, 위 STAGE_FOE 정식 짝)가 생겨 산사·성 안뜰 후보에서 뺐다 → 랴오·이졸데는 다시 늘 나온다.
-//   아르토리아(회랑)·사미라(대성당)는 그대로 후보 — 본디 짝과 반반(사장님 '무대 후보 비율은 반반')
-export const STAGE_FOE_EXTRA = { loggia: ['artoria'], cathedral: ['samira'] };
+//   아르토리아·사미라는 후보 — 본디 짝과 반반(사장님 '무대 후보 비율은 반반')
+//  10/10 23:3x 사장님 '아르토리아는 대성당으로 반반, 사미라는 볼로냐 도서관으로 반반' → 짝을 바꿨다(대성당 = 마르그레테·아르토리아, 붉은 회랑 = 토메·사미라)
+export const STAGE_FOE_EXTRA = { cathedral: ['artoria'], loggia: ['samira'] };
 /** 이번 판 무대의 검객 id: 후보가 없으면 STAGE_FOE 그대로(난수 안 씀). 지난 상대(prevId)가 이 무대 후보면 그 사람 그대로(진 뒤 다시 싸우기) */
 export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
   const base = STAGE_FOE[stageId];
