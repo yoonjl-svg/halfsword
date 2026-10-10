@@ -482,3 +482,43 @@
 ### 13-7. 그림
 - 후: `docs/ui/hud_v2_{landscape,portrait}_{menu,start,foe_secret,state,overlap,swatch}.png` (`node tools/ui/hud_shots.mjs v2 …`). `foe_secret` = 실제 경로로 상대 패시브 + 상대 비기(② 두 줄), `state` = 거기에 ③ 경직(상대) + 분노(나)를 DOM 으로 넣은 것, `overlap` = 개울가 브란 판 시작(③ 분노는 실제 경로).
 - 전/후 나란히: `docs/ui/hud_v2_compare_{landscape,portrait}_{start,foe_secret,state,menu,overlap}.png` (전 = §12 의 `hud_after_*`, 경직은 전 `cue_stiff` ↔ 후 `state`). `python3 tools/ui/hud_compare.py docs/ui v2`.
+
+---
+
+## 14. 사장님 답 반영 (10/10 20:3x — 가지 `…/hud-v3-2q36ha`, 시작 33d9321)
+
+사장님 답 (그대로): "2. 패시브와 비기는 한줄만 뜨고 누적도 없음.(자세와 동일) 경직과 상태는 그냥 빼버리자. 상태 3종은 전처럼 화면 중앙에 뜨게. 3. 설정창이 저렇게 2열로 넓을 필요가 없어졌어. 4. B 옅지 않아. 5. 상태 쓰지 않는 대신 감정 문장 가운데로 복귀. 6. 비기 번쩍임과 연출 늘 켬 ok."
+
+### 14-1. 오른쪽 위는 두 묶음, 둘 다 줄 하나 (§13-1 을 바꾼다)
+| 묶음 | 칸 | 이제 |
+|---|---|---|
+| ① 자세 | `#guardName` | 그대로 |
+| ② 패시브·비기 | `#techSlot` — **줄 하나**(40px) | 자세 칸처럼 새 알림이 오면 그 자리에서 바꿔 끼운다. §13-1 의 쌓기·줄 세우기·밀어내기(`stackPut`·`stackTick`·급함)는 지웠다 (main.js `techPut`·`techTick`). 예외 하나: 고노센 준비·디버그 기술은 칸이 비었을 때만 뜬다(예전부터 '자리가 없으면 띄우지 않는다' — 떠 있는 알림을 덮지 않는다). 머묾·서식·색(B #DAAE95 · 둘째 줄 #E6CDBC)은 그대로 — 사장님 'B 옅지 않아' |
+| ③ 경직·상태 | — | **없앰** (`#stateCue` · `--hud-state-sub` 지움) |
+
+- 둘째 줄 꼬리표 앞 ` · ` 의 빈칸이 flex 칸 첫머리라 사라지던 것(`Versetzen· 상대`)을 붙지 않는 빈칸으로 고쳤다.
+
+### 14-2. 상태 3종은 감정 문장으로 아래 가운데 (사장님 2·5)
+- v2 직전(main 0a6729c · 1958cff)의 짜임 그대로: 감정 줄 `#emoMsg`(아래 가운데, 안내 위) · 문장 `EMO_TEXT`(편집자 정리 뒤 현재형) — 상대 `오소리 브란이 공포에 잠식된다` · `오소리 브란의 분노가 폭발한다` · 집념은 사장님 결정 '주어 없이' `집념을 보인다`, 나는 주어 없이 `공포에 잠식된다` · `분노가 폭발한다` · `집념이 생긴다`.
+- 줄 세우기도 그대로(최대 2 개 기다림 · 앞 것 최소 1.2 s · 새 판·결과 창에 비움).
+- 색: 사장님 19:2x '상태 3종은 한 색' 그대로 `--hud-state` #E48E8B (예전 감정별 색 `--emo-fear`·`--emo-anger`·`--emo-obsession` 은 되살리지 않았다).
+- 부활 알림(`…가 투지로 다시 일어선다`)은 같은 줄에 빛 효과(`--emo-revive` + 금빛 그늘) 그대로.
+
+### 14-3. 경직 글은 띄우지 않음 (사장님 2 '경직과 상태는 그냥 빼버리자')
+- 경직 기능(물리·AI·비기 뒤 칼 입력 막기)은 그대로, 화면 글만 끔.
+- 스위치: `src/main.js` 상수 **`STIFF_TEXT`** (기본 `false`). `true` 로 바꾸면 경직이 시작될 때 감정 줄(가운데)에 `경직`(나) / `상대 경직`을 상태 색으로 1.2 s 한 번 띄운다 — 디렉터가 사장님께 '경직 글을 가운데로 되살릴지' 여쭙는 중.
+
+### 14-4. 설정 창 (사장님 3·6)
+- 남은 설정이 둘(상대 난이도 · 화면 60 fps 제한)이라 **한 열 · 폭 340px**(예전 460px, 낮은 화면은 두 열 760px). 세로·가로 폰 같은 창, 낮은 화면은 여백만 촘촘하게.
+- 테스트 경로(`test=1`)의 '테스트 고르기로' 단추(폭 100%)와 안내 한 줄은 그 폭을 따른다 — 가로 폰에서도 안내가 한 줄에 든다.
+- 곁에 고친 것: 세로 창에서 조작 안내 첫 줄이 단추 줄 바탕 밑에 반쯤 가리던 것(단추 줄 아래 여백 -20px) — 안내 위 여백 28px.
+- 비기 화면 번쩍임 · 카메라 연출은 늘 켬 그대로 (사장님 6 'ok').
+
+### 14-5. 그림 · 도구
+- 후: `docs/ui/hud_v3_{landscape,portrait}_{menu,menu_test,start,foe_tech,emo}.png` (`node tools/ui/hud_shots.mjs v3 …`). `foe_tech` = 실제 경로로 상대 패시브 → 상대 비기(② 줄 하나가 비기로 바뀜), `emo` = 개울가 브란 판 시작(감정 줄 분노는 실제 경로), `menu_test` = 테스트 경로 창.
+- 전/후 나란히: `docs/ui/hud_v3_compare_{landscape,portrait}_{start,foe_tech,emo,menu,menu_test}.png` (전 = §13 의 `hud_v2_*` — `foe_secret` ↔ `foe_tech`, `overlap` ↔ `emo`). `python3 tools/ui/hud_compare.py docs/ui v3`.
+- 도구: `techcue_smoke.mjs`(줄 하나 · `#stateCue` 없음 · 바꿔 끼우기), `player_secret_shots.mjs`(② 만 읽음), `director_checks/bran.mjs`(감정 줄 `#emoMsg` 를 읽음).
+
+### 14-6. 관문 (화면만 바뀌어 모두 그대로)
+- fights12 `5480fbd3` · live_battery `e7ee3d96` · `finish_thrust 1 --stand` `433ac984`('deprecated parameters' 줄 뺌) · `corr_s0 --limits=on,off --scenes=a,b` IDENTICAL 12/12 · weapon_smoke 21/21 OK · `vite build` 통과 · `name_policy` 위반 0.
+- 브라우저: `hud_shots.mjs v3`(세로·가로 10 장) 콘솔 에러 0 · `techcue_smoke.mjs` 에러 0.

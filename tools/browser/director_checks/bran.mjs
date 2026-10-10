@@ -13,7 +13,7 @@ for (let r = 1; r <= 2; r++) {
   let seen = '';
   for (let i = 0; i < 40 && !seen; i++) {
     await page.waitForTimeout(100);
-    seen = await page.evaluate(() => [...document.querySelectorAll('#stateCue .slot.show')].map((e) => e.innerText.replace(/\s+/g, ' ').trim()).join(' / ')); // 10/10 19:2x: 감정은 오른쪽 위 ③ 경직·상태 묶음
+    seen = await page.evaluate(() => { const el = document.querySelector('#emoMsg.show'); return el ? el.textContent.trim() : ''; }); // 10/10 20:3x: 감정 문장은 아래 가운데 감정 줄로 돌아갔다
   }
   console.log('round', r, 'ai emotion', await page.evaluate(() => window.game.ai?.emotion), '| notice:', seen || '(none)');
   if (r === 1) await page.screenshot({ path: `${out}/bran_anger.png` });
