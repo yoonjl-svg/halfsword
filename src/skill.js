@@ -28,7 +28,7 @@ import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay } from './finish.js';
 import { requestInstant, requestIai, requestSweep, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
+import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -486,6 +486,13 @@ export class Skill {
       const back = secVal(D.sideBack ?? 0);
       if (lat) run.loopStep = { kind: back < 0 ? 'retreat' : 'pass', fwd: back, side: lat };
       run.stage = 'loop';
+    } else if (D.combo) {
+      // 막기 연환 (10/11): 창을 연 막기의 자리(ctx.slot)의 두 수 — 이음새 고리 없이 앞 수 끝에서 곧장 (AI ai.js secretGo 와 같은 칸)
+      const C = D.combo[run.ctx?.slot];
+      if (!C) return false;
+      for (const t of C.seq) run.queue.push({ ...t, step: t.step ? { ...t.step, fwd: secVal(t.step.fwd) } : undefined });
+      run.flow = true;
+      if (S.cond?.window === 'bind') run.gain = bindGain(run.ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창 (secret.js bindGain)
     } else if (D.seq) {
       // 중국 連環三擊: 세 수를 이음새 0 으로 (첫 수부터 흐름 — 지금 손에서 곧장)
       for (const t of D.seq) run.queue.push({ ...t, step: t.step ? { ...t.step, fwd: secVal(t.step.fwd) } : undefined });
@@ -676,8 +683,8 @@ export class Skill {
     }
     if (run.stage === 'strike') {
       const inLoop = !!run.cur?.pre?.length && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
-      f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power');
-      f.secretHit = inLoop ? 1 : SECRET.hitMul;
+      f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power') * (run.gain ?? 1); // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
+      f.secretHit = inLoop ? 1 : SECRET.hitMul * (run.gain ?? 1);
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);
       // 길목 디딤 (10/11 v6 6차): 걸음은 받아 줘도(다리) 플레이어 스틱이 0 이면 몸이 거의 안 따라갔다(브라우저: 가운데 선까지 몸 옮김 0.01~0.02 m). AI 는 내딛는 동안 스틱을

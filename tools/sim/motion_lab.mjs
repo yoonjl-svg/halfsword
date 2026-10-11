@@ -295,6 +295,7 @@ if (mode === 'poses') {
   const secAgg = {};
   const gil = { arms: 0, wins: 0, games: 0, armT: 0, free: {}, cbHit: 0, parts: {} }; // 길목 지키기 (10/11 v6 — 읽기만) · free: 길목 준비가 아닐 때 고른 자세 머문 시간 · cbHit: 올려 맞받기 동안·뒤 1 s 맞은 상처
   const secWound = {};
+  const pcAgg = { on: false, ok: 0, slot: 0, win: 0, binds: [] }; // 막기 연환 (10/11 — 비기 when 'parry' 일 때만 찍음): 막기 성공 · 그중 정한 자리 · 창 · 맞닿음 길이 (s)
   let secName = null;
   let XAm = null;
   const techE = {};
@@ -529,6 +530,7 @@ if (mode === 'poses') {
       for (const [k, v] of Object.entries(XA?.stats.passives ?? {})) pasFired[k] = (pasFired[k] ?? 0) + v;
       for (const [k, v] of Object.entries(XA?.stats.passiveRolls ?? {})) pasRolls[k] = (pasRolls[k] ?? 0) + v;
       pasSkipped += XA?.stats.passiveSkipped ?? 0;
+      if (XA?.secret?.when === 'parry') { pcAgg.on = true; pcAgg.ok += XA.stats.parryOk ?? 0; pcAgg.slot += XA.stats.parrySlot ?? 0; pcAgg.win += XA.stats.parryWin ?? 0; pcAgg.binds.push(...(XA.stats.pcBinds ?? [])); }
       if (XA?.gilArm) { gil.arms += XA.gilArm.ons; gil.wins += XA.stats.gilWins ?? 0; gil.games++; } // 길목 (10/11 v6): 준비 켜진 수 · 창(경계 넘음 사건) 수
       for (const [k, v] of Object.entries(XA?.stats.secrets ?? {})) {
         const A = (secAgg[k] ??= { fired: 0, landed: 0, E: 0, Emax: 0 });
@@ -551,6 +553,7 @@ if (mode === 'poses') {
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
   console.log(`  넘어짐 (시험 쪽 서 있다 쓰러짐·무릎): 모두 ${falls.all} · 비기 동안·뒤 1 s ${falls.secret} · 비기 자세 동안·뒤 1 s ${falls.stance}`);
   console.log(`  경직 (시험 쪽): 든 수 ${stiffHit.n} · 경직 동안 맞은 상처 ${stiffHit.stiff} · 비기 끝난 뒤 1 s 안 맞은 상처 ${stiffHit.after}`);
+  if (pcAgg.on) { const A = secAgg[secName] ?? { fired: 0, landed: 0 }; const b = [...pcAgg.binds].sort((x, y) => x - y); const q = (f) => (b.length ? b[Math.min(b.length - 1, Math.floor(f * b.length))].toFixed(2) : '-'); console.log(`  막기 연환 (시험 쪽, ${n} 판): 막기 성공 ${pcAgg.ok} · 정한 자세 ${pcAgg.slot} · 창 ${pcAgg.win} · 낸 ${A.fired} · 맞힘 ${A.landed} · 비기 뒤 맞은 상처 = 경직 줄 · 정한 자세 맞닿음 길이 (창 전에 떨어짐/갈라짐, n ${b.length}) p25 ${q(0.25)} · p50 ${q(0.5)} · p75 ${q(0.75)} · p90 ${q(0.9)} s`); }
   console.log(`  칼 부러짐: 시험 쪽 ${breaks.me} · 상대 ${breaks.foe}`);
   console.log(`  빈팔 맞음 (uarmO·farmO 상처): 시험 쪽 ${offHit.X} / 시험 쪽 모든 상처 ${offHit.Xall} · 상대(롱소드) ${offHit.Y}`);
   if (Object.keys(seqT).length) console.log(`  비기 수마다 시간 (s, 다음 수 시작·끝까지): ${Object.entries(seqT).map(([k, [t, n]]) => `${k} ${(t / n).toFixed(2)} (n${n})`).join(' · ')}`);

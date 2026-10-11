@@ -58,11 +58,22 @@ const IB_SECRETS = [
   { id: 'v4', name: '옛 · 비켜 서며 가로베기', sub: '휩쓸기 v4 (10/10) — 견주어 보기' },
 ];
 
+// 중국·독일 비기 판 (10/11 — docs/strike/parry_combo_secret_2026-10-11.md): 새 '막기 연환'(기본) · 옛 v1 — 시작 주소의 cnSecret·deSecret 로 (main.js)
+const CN_SECRETS = [
+  { id: 'parry', name: '새 · 연환 (막기 연환)', sub: '거정세·표두세로 쳐 낸 뒤 칼이 갈라진 직후 입력 → 반걸음씩 빠른 두 수' },
+  { id: 'v1', name: '옛 · 연환삼격', sub: '쉬었다 친 첫 칼이 맞으면 세 수 (10/10) — 견주어 보기' },
+];
+const DE_SECRETS = [
+  { id: 'parry', name: '새 · 감아 들기 (Indes)', sub: '황소 걸이로 받아 칼이 붙은 동안 입력 → 받은 칼을 타고 한 수 (오래 붙을수록 강함)' },
+  { id: 'v1', name: '옛 · 받아 베기 (Versetzen)', sub: '머리·목을 노리는 칼을 맞받아 벰 (10/10) — 견주어 보기' },
+];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
   hero: heroes.some((h) => h.id === saved.hero) ? saved.hero : 'player',
   ibSecret: IB_SECRETS.some((x) => x.id === saved.ibSecret) ? saved.ibSecret : 'gilmok',
+  cnSecret: CN_SECRETS.some((x) => x.id === saved.cnSecret) ? saved.cnSecret : 'parry',
+  deSecret: DE_SECRETS.some((x) => x.id === saved.deSecret) ? saved.deSecret : 'parry',
 };
 
 function weaponButton(w, big) {
@@ -127,7 +138,7 @@ function heroButton(h) {
   return b;
 }
 
-function ibSecretButton(x) {
+function ibSecretButton(x, kind = 'ibSecret') {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'pick';
@@ -140,7 +151,7 @@ function ibSecretButton(x) {
   sub.textContent = x.sub;
   txt.append(name, sub);
   b.append(txt);
-  b.addEventListener('click', () => select('ibSecret', x.id));
+  b.addEventListener('click', () => select(kind, x.id));
   return b;
 }
 
@@ -154,6 +165,8 @@ function render() {
   for (const el of document.querySelectorAll('#weaponsNew .pick, #weaponsRest .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.weapon));
   for (const el of document.querySelectorAll('#heroes .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.hero));
   for (const el of document.querySelectorAll('#ibSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibSecret));
+  for (const el of document.querySelectorAll('#cnSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.cnSecret));
+  for (const el of document.querySelectorAll('#deSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.deSecret));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -168,6 +181,8 @@ function render() {
 function startUrl() {
   const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: 'random', stage: 'random' });
   if (pick.ibSecret !== 'gilmok') q.set('ibSecret', pick.ibSecret); // 기본(길목 지키기)이 아니면 판을 주소에
+  if (pick.cnSecret !== 'parry') q.set('cnSecret', pick.cnSecret); // 기본(막기 연환)이 아니면
+  if (pick.deSecret !== 'parry') q.set('deSecret', pick.deSecret);
   return `./index.html?${q.toString()}`;
 }
 
@@ -178,6 +193,8 @@ for (const id of NEW_WEAPONS) {
 for (const w of weapons) if (!NEW_WEAPONS.includes(w.id)) $('weaponsRest').append(weaponButton(w, false));
 for (const h of heroes) $('heroes').append(heroButton(h));
 for (const x of IB_SECRETS) $('ibSecret').append(ibSecretButton(x));
+for (const x of CN_SECRETS) $('cnSecret').append(ibSecretButton(x, 'cnSecret'));
+for (const x of DE_SECRETS) $('deSecret').append(ibSecretButton(x, 'deSecret'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +

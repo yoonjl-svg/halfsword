@@ -30,7 +30,7 @@ import { createRenderCap } from './render_cap.js';
 import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
-import { PlayerSecretWatch } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
+import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { TRADITIONS } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 
@@ -74,6 +74,8 @@ if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 
 if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerSecret') ? 1 : 0; // 플레이어 비기(10/9 23:5x): 기본 1, `?playerSecret=0` = 끔 (docs/strike/player_secret_2026-10-09.md)
 if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 0; // 일본 비기 순간 베기(10/10, secret_instant.js): 기본 1, `?instant=0` = 10/9 길(담았다 터뜨림) 대조
 const SECRET_SLOWMO = params.get('slowMo') !== '0';
+if (['v1', 'parry'].includes(params.get('cnSecret'))) CONFIG.SECRET.cnSecret = params.get('cnSecret'); // 중국 비기 판(10/11): 기본 'parry'(막기 연환 — docs/strike/parry_combo_secret_2026-10-11.md), `?cnSecret=v1` = 連環三擊
+if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = params.get('deSecret'); // 독일 비기 판(10/11): 기본 'parry'(막기 연환 — 감아 들기), `?deSecret=v1` = Versetzen
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
@@ -1598,7 +1600,22 @@ function showTechCue(c, hold) {
 function showPlayerCue(S, kind) {
   if (state !== 'fight' || !S) return;
   const T = TRADITIONS[player?.swordArt?.tradition];
-  const hold = kind === 'secretReady' ? () => (playerSecret?.open ? true : 'end') : () => player?.skill?.secretPhase === 'run'; // 창: 열린 동안만 · 실행: 끝날 때까지
+  let hold = kind === 'secretReady' ? () => (playerSecret?.open ? true : 'end') : () => player?.skill?.secretPhase === 'run'; // 창: 열린 동안만 · 실행: 끝날 때까지
+  // 독일 감아 들기 (10/11 — 붙어 있는 동안 창): 붙은 시간 어드밴티지(secret.js bindGain)가 차오르는 것을 첫 줄 뒤 다섯 칸으로 (가볍게)
+  if (kind === 'secretReady' && S.cond?.window === 'bind') {
+    const base = hold;
+    const name = splitName(S.nameKo ?? S.name)[0];
+    hold = () => {
+      const o = playerSecret?.open;
+      const b = techLine.el.querySelector('b');
+      if (o?.ctx?.ev === 'parry' && b) {
+        const k = (bindGain(o.ctx.held ?? 0) - 1) / Math.max(1e-6, CONFIG.SECRET.deBindGain - 1);
+        const n = Math.round(5 * Math.min(1, Math.max(0, k)));
+        b.textContent = `${name} ${'▮'.repeat(n)}${'▯'.repeat(5 - n)}`;
+      }
+      return base();
+    };
+  }
   showTechCue({ text: S.nameKo ?? S.name, kind, who: 'me', schoolKo: T?.nameKo ?? '' }, hold);
 }
 function updateTechCue(dt) {
