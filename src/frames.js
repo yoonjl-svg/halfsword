@@ -259,7 +259,10 @@ export const OVERLAY = {
 
 /** 막기 덧씌우기 (시제품): 검술 층 update 뒤에 thrustPose(덧씌우기 칸)를 막기 자세로 채운다. 찌르기(tap)·손잡이 찍기(pom)·사격 중엔 건드리지 않는다.
  *  10/11 중국 막기 자리(schools.js CHINESE_PARRY_SLOTS)가 처음 본판에서 쓴다 — 그래서 덧씌우기 칸을 '내가 채운 동안'만 비운다(own):
- *   같은 칸을 쓰는 다른 몫(비기 순간 베기 secret_instant 의 경직 자세 등)이 칸을 쓰는 동안 0 으로 지우지 않게. 칸을 놓을 때 몸 값(골반·가슴·숙임·낮춤)도 받기 전 값으로 되돌린다 */
+ *   같은 칸을 쓰는 다른 몫(비기 순간 베기 secret_instant 의 경직 자세 등)이 칸을 쓰는 동안 0 으로 지우지 않게. 칸을 놓을 때 몸 값(골반·가슴·숙임·낮춤)도 받기 전 값으로 되돌린다
+ *  10/12 독일 왕관 꼴(schools.js GERMAN_KRON)이 더한 칸 둘 — 없는 자리(중국 셋)는 전과 같다:
+ *   face [앞, 위, 칼 든 쪽] — 칼 면이 볼 쪽. 덮는 동안 fighter.js driveSword 의 날 세우기 목표(쉴 때 '칼 면이 몸 오른쪽')를 덮는 무게만큼 이쪽으로 (st.face — 칸을 쥔 동안만 읽음)
+ *   watch true — 막기(mode 'defend') 말고도 주인이 그 줄을 가리는 동안(ai.coverLine — ai.js withdraw 의 coverFor · parry_button.js 기다림) 덮는다 */
 export function installCover(fighter, ai, covers) {
   const sk = fighter.skill;
   if (!sk || sk._cover) return;
@@ -268,7 +271,7 @@ export function installCover(fighter, ai, covers) {
     const az = o.blade[1] * D2R;
     return [k, { ...o, dir: [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)] }];
   }));
-  sk._cover = { w: 0, last: null, own: false, keep: null };
+  sk._cover = { w: 0, last: null, own: false, keep: null, face: null };
   const upd = sk.update.bind(sk);
   const release = (st, pose) => {
     if (!st.own) return;
@@ -287,7 +290,7 @@ export function installCover(fighter, ai, covers) {
     }
     // 칸 down (10/11 중국 덮는 자세 — 사장님 01:5x '거정세로 바꿔야지'): 완전히 쓰러져 칼을 머리 위로 들어 가리는 동안(ai.js 'down' 가지 — 손은 pose.cover 패드)도 그 몸꼴로 덮는다.
     //  칸 없는 꾸러미(지금 중국 말고 모두)는 전과 같다. 쓰러진 몸은 근육이 0.1 이라(fighter.js — driveSword 문턱 0.12 밑) 다리를 잃은 몸이 아니면 손·칼 서보가 거의 돌지 않는다
-    const want = D.down && fighter.state === 'down' ? D.down : ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : null;
+    const want = D.down && fighter.state === 'down' ? D.down : ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : ai.coverLine && D[ai.coverLine]?.watch ? D[ai.coverLine] : null;
     if (want) st.last = want;
     st.w = Math.max(0, Math.min(1, st.w + (want ? dt / MOTION.coverIn : -dt / MOTION.coverOut))); // 덮는 시간·걷는 시간 (MOTION)
     const c = st.last;
@@ -309,6 +312,7 @@ export function installCover(fighter, ai, covers) {
     pose.pitch = c.pitch * D2R;
     pose.drop = c.drop;
     pose.w = st.w;
+    st.face = c.face ?? null;
     sk.covers = (sk.covers ?? 0) + (want ? dt : 0);
     return r;
   };

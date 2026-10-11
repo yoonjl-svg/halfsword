@@ -44,6 +44,8 @@ const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): �
 export { MEASURED };
 
 // 감정 판정(Emotions)·텀 상수·고유 능력 배율표는 emotions.js 에 (플레이어와 같은 규칙)
+const COVER_LINES = ['highL', 'highR', 'highC', 'lowL', 'lowR']; // coverFor 가 돌려주는 막기 줄 (withdraw — coverLine)
+
 export class AI {
   /**
    * persona: 캐릭터마다 다른 개성을 주입한다 (characters.js). 안 주면(undefined) 예전과 똑같은
@@ -79,7 +81,7 @@ export class AI {
     const art = resolveSwordArt(me.weapon, this.persona);
     this.art = art;
     this.school = art.school;
-    // 유파 막기 자리 몸꼴 (10/11 — schools.js TRADITIONS[유파].parryCover, 지금 중국만): 막는 동안(mode 'defend', 피하기 아님)만 그 줄의 막기 자세로 손·칼끝·몸을 덮는다.
+    // 유파 막기 자리 몸꼴 (10/11 — schools.js TRADITIONS[유파].parryCover, 중국 · 독일 왕관 10/12): 막는 동안(mode 'defend', 피하기 아님)만 그 줄의 막기 자세로 손·칼끝·몸을 덮는다.
     //  14 자리 섞기에 넣으면 그 자리를 지나는 베기 길이 휘고 원전 꼴(가로 든 칼)이 섞여 사라져서 덧씌우기로 둔다(frames.js COVERS 와 같은 까닭). 칸 없는 유파는 아무것도 안 붙인다(바이트 그대로)
     const pc = TRADITIONS[art.tradition]?.parryCover;
     if (pc) installCover(me, this, pc);
@@ -260,6 +262,7 @@ export class AI {
     const me = this.me;
     const foe = this.foe;
     this.sense.record(dt);
+    this.coverLine = null; // 물러나며 가리는 줄 (withdraw 가 그 스텝에 정함 — frames.js installCover 의 watch 덮개가 읽음, 10/12 왕관)
     const L = this.level;
     // 패시브 확정(10/9 13:xx, docs/strike/passive_fire_2026-10-09.md): 패시브가 낸 공격의 걸쇠(0.5 s)와 미룬 패시브의 남은 시간을 줄인다
     if (this.passiveLock && (this.passiveLock.left -= dt) <= 0) this.passiveLock = null;
@@ -1453,6 +1456,7 @@ export class AI {
       const p = this.coverFor(s);
       this.hand.set(p[0], p[1]);
       this.handSpeed = L.parrySpeed * 0.7;
+      this.coverLine = p === this.school.pose.point ? null : (COVER_LINES.find((k) => this.school.parry[k] === p) ?? null); // 덮개 watch 칸(독일 왕관)이 이 줄을 같은 꼴로 덮는다 — 읽기만, 손 목표는 그대로
     } else {
       this.hand.set(this.guard.pad[0], this.guard.pad[1]);
       this.handSpeed = 1.4;
