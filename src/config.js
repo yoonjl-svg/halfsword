@@ -717,6 +717,7 @@ export const SECRET = {
   slowMo: { scale: 0.4, dur: 0.25 }, // 연출: 비기가 터뜨려지는 순간 화면 시간 배율 scale 을 dur 초(실시간) 동안 (main.js 프레임 dt — 물리 스텝 dt 는 그대로, 스텝 수만 준다). `?slowMo=0` 끔 [확인 전]
   // 플레이어 비기 (SKILL.playerSecret)
   playerWindow: 0.5, // 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
+  cnParryWindow: 1.0, // 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
   playerChainGap: 0.6, // 플레이어 베기 덩이 사이 쉼이 이 초보다 길면 끊김 (이베리아 이어진 베기 셈 · 중국 '들어가며 친 첫 베기') [해석]
   playerVibrate: 50, // 창이 열릴 때 진동 (ms, navigator.vibrate — 없으면 생략)
 };

@@ -704,7 +704,7 @@ const CHINESE_SECRET_PARRY = {
   nameKo: '연환 (連環)',
   when: 'parry',
   // 거정세(highC — 擧鼎格 「鼎格上殺」, 몸꼴 덧씌우기)·표두세(highR — 칼을 세운 표두세 자리) 둘만. 어거세(thrust)·요략세(lowL)·봉두세(highL)는 아님
-  cond: { slots: { highC: 'geojeong', highR: 'pyodu' }, window: 'apart', time: 'playerWindow' },
+  cond: { slots: { highC: 'geojeong', highR: 'pyodu' }, window: 'apart', time: 'cnParryWindow' }, // 창 길이 = SECRET.cnParryWindow (사장님 10/12 시험 1 s)
   do: {
     combo: {
       // 거정격 → 掣擊中殺 → 進步逆鱗: 擧鼎勢 「卽擧鼎格 … 向前掣擊中殺」(무비지 쪽154/0568 — 쳐 올려 막은 뒤 앞으로 당겨 베어 가운데를 친다) → 腰擊勢 「向前進步逆鱗」(쪽166/0580)
