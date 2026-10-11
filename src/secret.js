@@ -9,7 +9,7 @@
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SKILL } from './config.js';
+import { SECRET, SKILL, BIND } from './config.js';
 import { TRADITIONS } from './schools.js';
 import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
@@ -290,6 +290,41 @@ export function bladesTouch(me, foe) {
 }
 
 /**
+ * 넓은 뜻의 맞부딪힘 (자연 바인드 실험 2안 — BIND.natural, 사장님 10/11 20:3x '꼭 검을 맞댄 게 아니어도 밀착해서 힘을 경합하는 경우를 넓은 의미의 맞부딪힘으로 해석'):
+ *  칼날이 아닌 곳끼리 붙어 미는 접촉 — ① 내 팔·코등이·자루 ↔ 상대 팔·코등이·자루·몸통 (칼자루끼리 · 손과 칼자루 · 칼자루로 몸을 누름) ② 몸통끼리(가슴·배·골반).
+ *  칼날이 몸에 닿은 것(베기)·칼날끼리(bladesTouch 가 맡음)는 넣지 않는다. 근접 밀치기 누르기(fighter.closeStep)에서 칼이 엇걸린 채 누르는 것은 칼날끼리라 bladesTouch 로 이미 든다.
+ *  근거: Ringeck·Lew 「Ringen am Schwert」(칼을 쥔 씨름)·「Einlaufen」(뛰어들기 — 왕관에서 'rush in') [원전 2차]. Rapier 접촉을 읽기만 한다(물리 무관). 가슴 거리 1.5 m 밖은 묻지 않는다(팔이 닿을 수 없는 거리 — 셈 줄이기)
+ */
+const WIDE_ARMS = ['uarmS', 'farmS', 'uarmO', 'farmO'];
+const WIDE_TORSO = ['chest', 'abdomen', 'pelvis'];
+export function wideTouch(me, foe) {
+  const W = me.world;
+  if (!W || !foe?.bodies || !me.bodies) return false;
+  const a = me.bodies.chest.translation();
+  const b = foe.bodies.chest.translation();
+  if (Math.hypot(a.x - b.x, a.z - b.z) > 1.5) return false;
+  const hilts = (f) => (f.armed ? f.swordColliders.filter((c) => !f.bladeColliders.includes(c)) : []);
+  const cols = (f, names) => names.map((n) => f.bodies[n]?.collider(0)).filter(Boolean);
+  const touch = (A, B) => {
+    for (const x of A) for (const y of B) {
+      let hit = false;
+      W.contactPair(x, y, (m) => { if (m.numContacts() > 0) hit = true; });
+      if (hit) return true;
+    }
+    return false;
+  };
+  const mine = [...cols(me, WIDE_ARMS), ...hilts(me)];
+  const theirs = [...cols(foe, WIDE_ARMS), ...hilts(foe)];
+  return touch(mine, [...theirs, ...cols(foe, WIDE_TORSO)]) || touch(theirs, cols(me, WIDE_TORSO)) || touch(cols(me, WIDE_TORSO), cols(foe, WIDE_TORSO));
+}
+
+/** 바인드(맞부딪힘)인가: 칼끼리 닿음(bladesTouch) — 자연 바인드 실험(BIND.natural)이면 넓은 뜻의 맞부딪힘(wideTouch)도. 끄면 bladesTouch 그대로 */
+export function bindTouch(me, foe) {
+  if (bladesTouch(me, foe)) return true;
+  return !!BIND.natural && me.armed && foe.armed && wideTouch(me, foe);
+}
+
+/**
  * 이베리아 멈추지 않는 흐름의 수 (10/11 — schools.js IBERIAN_SECRET do.flow, AI ai.js secretGo · 플레이어 skill.js secret 같은 함수). 난수 없음.
  *  hand = 지금 손 패드 [x, y] · dir = 지금 칼(손)이 움직이는 쪽 [x, y] (플레이어는 비기를 낸 끌기, 없으면 걸러진 손 목표 속도 — 크기는 안 봄) · D = do 칸.
  *  첫 쪽 s(+1 오른쪽 = 탈류부터 · −1 왼쪽 = 레베스부터)는 지금 흐름이 정한다 — 칼을 그대로 그쪽으로 떨어뜨려 감고(피 복Ⅰ) 거기서 올린다:
@@ -552,7 +587,7 @@ export class PlayerSecretWatch {
     if (this.swing && painUp) this.swing.landed = true;
     const touch = bladesTouch(me, foe);
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
-    if (S.when === 'parry') this.parryTick(dt, touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11)
+    if (S.when === 'parry') this.parryTick(dt, BIND.natural ? bindTouch(me, foe) : touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11) · 자연 바인드 실험이면 넓은 맞부딪힘도 (bindTouch)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
     if (S.do?.gilmok) {
