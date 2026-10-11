@@ -659,7 +659,7 @@ export const SECRET = {
   //  'chest' = 상대 가슴 몸체(3차 · 13f6795 까지) · 'head' = 머리 몸체 가운데 · 'headTop' = 머리 꼭대기(머리 가운데 + 머리 반지름 fighter.headR). 둘러 베는 동안 칼날이 명령보다 20° 넘게 처지는 것을 겨눔으로 받는다
   //  10/11 §18 측정: AI 48 판은 headTop 이 맞힘 23 → 65 %(츠바이핸더)·8 → 15 %(북부 대공의 검)로 오르나, 플레이어 브라우저는 head·headTop 모두 칼이 머리 위로 넘어가 0/7 헛침(chest 는 2/2 넓적다리) —
   //  플레이어 쪽만 높이 겨눔에서 AI 와 갈리는 까닭을 못 찾아 기본은 'chest' 그대로 둠(디렉터 판단 기다림 — 확인표 890). 시험: with_config.mjs SECRET.gilmokAim=headTop · 브라우저 `?gilAim=headTop`
-  gilmokAim: 'chest',
+  gilmokAim: 'headTop', // 사장님 결정 10/11 13:5x '최대한 위를 겨누고 쳐' — §19 플레이어 날 세우기 앞당김 고친 뒤 적용(디렉터 17:4x): 플레이어 알맞게 낸 칼 머리·가슴에 닿음 · AI 48 판 츠바이핸더 맞힘 65 %·승률 81 %(밸런스 단계)
   gilmokEdge: 'reach', // 길목 경계 선 (10/11 v6 4차 — 스위치, 사장님 답 기다림): 'reach' = 무기 간격 끝 · 'cut' = 한 칼의 칼끝 앞 거리 + 디딤 (secret.js gilmokLine) — 시뮬 with_config.mjs SECRET.gilmokEdge=cut
   gilmokArmGrace: 0.5, // 경계 안으로 들어와도 준비가 이 초 동안은 남는다 (일본 iaiArmGrace 와 같은 뜻)
   // 발도 길 열쇠 (몸 기준 — 가슴 원점, x 앞 · y 위 · z 칼 든 쪽, 칼날 가로 각 yaw ° 앞 0 → 칼 든 쪽 +, 높이 각 el °)

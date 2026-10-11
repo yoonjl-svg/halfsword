@@ -3022,6 +3022,12 @@ export class Fighter {
     let vx = 0, vy = 0;
     if (mode === 'input' || mode === 'both') { vx += sk.vel.x; vy += sk.vel.y; }
     if (mode === 'goal' || mode === 'both') { const w = sk.filterW ?? 0; vx += (sk.aimRaw.x - sk.aim.x) * w; vy += (sk.aimRaw.y - sk.aim.y) * w; }
+    // 덧씌우기 자세(skill.thrustPose — 찌르기·손잡이 찍기·비기 길목 한 칼 등)가 칼끝 방향을 명령하는 동안은 패드 → guardDir 이 겨눔이 아니라 그 몫(1 − th.w)만 (10/11 v6 §19):
+    //  길목 한 칼은 패드 손 목표가 빠르게 옮겨 가는데 칼끝 방향은 덧씌우기(th.dir)가 쥔다 — 패드 길로 읽은 '곧 돌 쪽'이 날 방향에 더해져 높이 겨눔(머리)에서 칼이 위로 솟았다
+    //  (탐침 tools/sim/gilmok_pair_probe.mjs: 플레이어 +1.06 m 헛침 → 이 몫을 빼면 AI 와 같은 +0.2~0.3 m). AI 는 이 앞당김이 없다(playerArm 만). 지움 몫 = 지도 몸 돌림 호(arcO)와 같은 (1 − th.w)
+    const kw = 1 - (sk.thrustPose?.w ?? 0);
+    vx *= kw;
+    vy *= kw;
     if (Math.hypot(vx, vy) < 1e-3) return;
     const oneHand = !!this.guardPose?.oneHand;
     const h = 0.02;
