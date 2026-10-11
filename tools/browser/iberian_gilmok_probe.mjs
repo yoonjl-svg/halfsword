@@ -115,6 +115,7 @@ if (mode === 'press') {
   const R = rec.filter((x) => x.t >= t0 && x.t <= t1);
   const inside = R.filter((x) => x.d < S.reach).length / Math.max(1, R.length);
   const armT = R.filter((x) => x.arm).length / 120;
+  { const F1 = rec.find((x) => x.st); console.log(`PRESS 첫 비기: ${F1 ? `${(F1.t - t0).toFixed(2)} s (대본 시작 기준 — 음수면 걸어 드는 동안 · 상대 가슴 ${F1.d} m · 준비 ${F1.arm})` : '없음'} · 대본 동안 낸 수 ${new Set(R.filter((x) => x.st && x.st !== 'stiff').map((x) => Math.round(x.t * 2))).size ? '있음' : '0'}`); } // 10/11 §17: 준비 → 곧장 내기
   out.insideShare = inside;
   out.armT = armT;
   console.log(`SUMMARY press ${ver}: ${out.simT.toFixed(1)} s · 휘두르기 ${n} · 창 ${out.opened} · 낸 ${out.fired} · 칼끝 거리 안 몫 ${(100 * inside).toFixed(0)} % · 준비 켜진 시간 ${armT.toFixed(1)} s`);
