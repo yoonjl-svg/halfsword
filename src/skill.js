@@ -28,7 +28,7 @@ import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay, updateFinish } from './finish.js';
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
-import { requestInstant, requestIai, requestSweep, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 
 const D2R = Math.PI / 180;
@@ -499,6 +499,13 @@ export class Skill {
       if (!C) return false;
       for (const t of C.seq) run.queue.push({ ...t, step: t.step ? { ...t.step, fwd: secVal(t.step.fwd) } : undefined });
       run.flow = true;
+      if (D.fast && secVal(D.fast)) {
+        // 중국 빠른 연환 (10/12 — SECRET.cnFast): 두 수를 운동학 팔·칼로 길을 따라 (secret_instant.js requestCombo — AI 와 같은 실행부). 결과는 순간 베기와 같은 칸(instant)으로
+        run.stage = 'instant';
+        run.instant = true;
+        requestCombo(f, { moves: run.queue.splice(0) });
+        this.secretBursts++;
+      }
       if (S.cond?.window === 'bind') run.gain = bindGain(run.ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창 (secret.js bindGain)
     } else if (D.seq) {
       // 중국 連環三擊: 세 수를 이음새 0 으로 (첫 수부터 흐름 — 지금 손에서 곧장)

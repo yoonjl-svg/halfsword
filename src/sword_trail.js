@@ -98,7 +98,13 @@ export function createSwordTrails(scene) {
       if (A && A.id !== arcs[k].id) {
         arcs[k].id = A.id;
         arcs[k].pts = A.pts;
+        arcs[k].share = A.share ?? 1; // 잔상 세기 몫 (중국 빠른 연환 — SECRET.cnFastShare: 빠르기와 같은 비율, 사장님 10/12 01:2x). 그 밖 비기는 1
+        arcs[k].t0 = arcs[k].tf = performance.now();
+        arcs[k].n = A.pts.length;
+      } else if (A && A.kind === 'combo' && arcs[k].pts === A.pts && A.pts.length !== arcs[k].n) {
+        // 중국 빠른 연환: 두 수 길이(0.3~0.4 s)가 남는 시간(instantArcLife)에 가까워 — 그리는 동안은 옅어지지 않고 다 그린 때부터 같은 시간에 옅어진다 (섬광은 처음 그대로)
         arcs[k].t0 = performance.now();
+        arcs[k].n = A.pts.length;
       }
     }
     for (const s of slots) {
@@ -214,10 +220,12 @@ export function createSwordTrails(scene) {
         continue;
       }
       ac = slots[k].tone ?? slots[k].base;
-      const w = 0.95 * (1 - age / arcLife);
+      const sh = A.share ?? 1; // 잔상 세기 몫: 불투명도·섬광 밝기에 곱한다 (색·남는 시간·굵기는 그대로 — 고노센 잔상과 같은 체계)
+      const w = 0.95 * sh * (1 - age / arcLife);
       // 섬광 선: 칼끝 길(칼날 0.9 → 1.05) 흰색, 처음 FLASH_MS 동안
-      if (age < FLASH_MS) {
-        const fw = 1 - age / FLASH_MS;
+      const ageF = nowMs - (A.tf ?? A.t0);
+      if (ageF < FLASH_MS) {
+        const fw = sh * (1 - ageF / FLASH_MS);
         const Q = A.pts;
         const at = (q, t) => [q[0] + (q[3] - q[0]) * t, q[1] + (q[4] - q[1]) * t, q[2] + (q[5] - q[2]) * t];
         for (let q = 0; q < Q.length - 1 && fn + 6 <= FL_MAX; q++) {

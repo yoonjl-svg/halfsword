@@ -31,7 +31,7 @@ import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { FINISH } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
-import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, requestCombo, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -1890,7 +1890,22 @@ export class AI {
       run.queue = (C?.seq ?? []).map((t) => ({ ...t, step: t.step ? { ...t.step, fwd: this.secretVal(t.step.fwd) } : undefined }));
       run.slot = ctx.slot;
       if (S.cond?.window === 'bind') run.gain = bindGain(ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창을 키움 (secret.js bindGain)
-      ok = this.secretNext();
+      if (D.fast && this.secretVal(D.fast) && run.queue.length) {
+        // 중국 빠른 연환 (10/12 — SECRET.cnFast): 두 수를 운동학 팔·칼로 길을 따라 (secret_instant.js requestCombo — 플레이어와 같은 실행부). 결과는 순간 베기와 같은 칸(instant)
+        this.mode = 'secret';
+        this.phase = 'ready';
+        this.path.length = 0;
+        this.stepT = 0;
+        run.stage = 'instant';
+        run.instant = true;
+        run.t = 0;
+        const last = run.queue[run.queue.length - 1].path;
+        run.end = last[last.length - 1];
+        this.hand.set(run.end[0], run.end[1]);
+        requestCombo(this.me, { moves: run.queue.splice(0) });
+        this.secretBursts = (this.secretBursts ?? 0) + 1;
+        ok = true;
+      } else ok = this.secretNext();
     } else if (D.seq) {
       // 중국 連環三擊 (10/9 23:5x '보이는 삼연격'): 첫 칼이 맞은 뒤 큰 호의 세 수(腰擊 → 撩掠 → 坦腹刺)를 이음새 0 으로 — 수마다 반걸음 進步
       run.queue = D.seq.map((t) => ({ ...t, step: t.step ? { ...t.step, fwd: this.secretVal(t.step.fwd) } : undefined }));
@@ -2097,7 +2112,7 @@ export class AI {
     if (run.stage === 'instant') {
       // 순간 베기 결과를 기다린다 (요청한 스텝 끝에 실행됨): 맞았으면 맞힘으로 세고 곧장 경직
       const R = this.me.instantResult;
-      const end = run.S.do.tech ? run.S.do.tech.path[run.S.do.tech.path.length - 1] : null;
+      const end = run.S.do.tech ? run.S.do.tech.path[run.S.do.tech.path.length - 1] : (run.end ?? null); // run.end: 중국 빠른 연환 둘째 수 끝
       if (end) this.hand.set(end[0], end[1]);
       this.handSpeed = L.parrySpeed;
       if (!R) return;

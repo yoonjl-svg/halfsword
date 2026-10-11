@@ -79,6 +79,8 @@ const SECRET_SLOWMO = params.get('slowMo') !== '0';
 if (['v1', 'parry'].includes(params.get('cnSecret'))) CONFIG.SECRET.cnSecret = params.get('cnSecret'); // 중국 비기 판(10/11): 기본 'parry'(막기 연환 — docs/strike/parry_combo_secret_2026-10-11.md), `?cnSecret=v1` = 連環三擊
 if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = params.get('deSecret'); // 독일 비기 판(10/11): 기본 'parry'(막기 연환 — 감아 들기), `?deSecret=v1` = Versetzen
 if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
+for (const k of ['cnBongdu', 'cnBuffer', 'cnFast']) if (params.has(k)) CONFIG.SECRET[k] = +params.get(k) ? 1 : 0; // 중국 막기 연환 사람이 쓰게 (10/12 — docs/strike/cn_combo_play_2026-10-12.md): 봉두세 자리 · 미리 받기 · 빠른 연환. 기본 1, `?cnBongdu=0` · `?cnBuffer=0` · `?cnFast=0` = 전
+if (+params.get('cnFastShare') > 0) CONFIG.SECRET.cnFastShare = +params.get('cnFastShare'); // 빠른 연환 비율(빠르기·잔상 같이 — 기본 0.5): 사장님이 한 값만 바꿔 보시게 `?cnFastShare=0.65`
 if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
 if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 실험(10/11 — docs/strike/natural_bind_2026-10-11.md): 기본 0, `?bind=1` = 칼끼리 덜 튕기고 더 물림 · 막힌 칼을 노리던 자리로 밂 · 독일 느낌 · 넓은 맞부딪힘
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
@@ -1768,7 +1770,11 @@ function frame(now) {
         showPlayerCue(o.S, 'secret');
       }
     }
-    if (secBusy) taps = 0;
+    // 중국 막기 연환 미리 받기 (10/12 — SECRET.cnBuffer, secret.js canBuffer): 정한 자세로 막아 칼이 맞닿은 동안 온 공격 입력을 받아 두고(칼이 떨어지는 스텝에 곧장 연환),
+    //  받아 둔 동안은 칼 입력(끌기·톡)을 삼킨다 — 보통 공격·막기 풀림으로 새지 않게 (한 번 끈 손가락의 남은 움직임까지)
+    if (!secBusy && player.alive && (taps > 0 || swipe) && playerSecret?.canBuffer()) playerSecret.buffer([d.x, d.y]);
+    const bufHold = !secBusy && !!playerSecret?.bufferHold;
+    if (secBusy || bufHold) taps = 0;
     // 막기 버튼 (10/11): 누르는 동안 손은 막기가 쥔다 (느린 끌기는 버림). 누른 채 휘두르거나(swipe — 비기 입력과 같은 문턱) 톡 치면 그 공격이 끝날 때까지 놓는다 —
     //  공격이 끝남 = 검술 층의 휘두르기·찌르기가 꺼짐 (지난 스텝 값). 막기 연환 창이 열려 있었으면 위에서 이미 비기로 나갔다
     let guardHold = false;
@@ -1776,17 +1782,17 @@ function frame(now) {
       const G = playerGuard;
       G.held = (parryHold.btn != null || parryHold.key) && !roundOver;
       if (G.broken && (!G.held || (!player.skill.swinging && !player.skill.tap && !swipe && taps === 0))) G.broken = false;
-      if (G.held && (swipe || taps > 0)) G.broken = true;
+      if (G.held && !bufHold && (swipe || taps > 0)) G.broken = true;
       guardHold = G.held && !G.broken && !secBusy;
     }
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
-    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold) {
+    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold && !bufHold) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
-    player.inputActive = !secBusy && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
+    player.inputActive = !secBusy && !bufHold && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
     if (taps > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();
@@ -1832,6 +1838,11 @@ function frame(now) {
       enemy.faceTarget = player.bodies.pelvis.translation();
       ai.update(PHYSICS.timestep);
       playerSecret?.update(PHYSICS.timestep, !!player.skill.sec); // 플레이어 비기 창: 조건(AI 와 같은 함수)이 차면 창을 연다
+      if (playerSecret?.queued && !player.skill.sec && player.alive) {
+        // 미리 받은 입력 (중국 막기 연환 — 10/12): 칼이 떨어져 창이 열린 이 스텝에 곧장 (위 프레임 입력 길과 같은 함수)
+        const o = playerSecret.fire();
+        if (o && player.skill.secret(o)) showPlayerCue(o.S, 'secret');
+      }
       playerGuard?.step(PHYSICS.timestep); // 막기 버튼: 누르는 동안 AI 막기와 같은 판단·빠르기로 손 목표를 유파 막기 자리로
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);

@@ -43,7 +43,7 @@ export function runInstants(combat) {
     if (f.instantGhost > 0) f.instantGhost--;
     if (f.instantReq) runInstant(f, combat);
     if (f.iaiReq) startIai(f, combat);
-    if (f.iai) stepIai(f, combat);
+    if (f.iai) (f.iai.kind === 'combo' ? stepCombo : stepIai)(f, combat);
     if (f.iaiHoldT > 0 || f.iaiFade > 0) holdIai(f, combat.dt || 1 / 120);
     stanceTick(f, combat.dt || 1 / 120);
   }
@@ -281,7 +281,7 @@ function runInstant(f, combat) {
 }
 
 /** 쓸린 자리의 첫 부위에 기존 상처 함수(combat.analyze → applyWound)로 상처. 에너지 = instantJ × hitMul 이 나오게 분석 속도를 고른다 */
-function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ) {
+function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0) {
   const { i, best } = hit;
   const P = cut[i];
   const P0 = cut[i - 1];
@@ -295,6 +295,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ) {
   // 그 점이 쓸려 온 방향 (앞 조각의 같은 칼날 자리 → 이 조각)
   const prev = P0.B.clone().addScaledVector(P0.D, BL * t);
   const tang = point.clone().sub(prev);
+  const swept = tang.length(); // 그 점이 이 조각에 쓸려 온 길이 (m) — dtSub 가 있으면 빠르기 = swept / dtSub (중국 빠른 연환)
   if (tang.lengthSq() < 1e-8) tang.set(0, -1, 0);
   tang.normalize();
   const bladeInfo = f.colliderInfo.get(f.bladeColliders[0]?.handle);
@@ -308,9 +309,20 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ) {
   const target = J * SECRET.hitMul;
   const h0 = f.secretHit;
   f.secretHit = SECRET.hitMul;
+  let r = null;
+  if (dtSub > 0) {
+    // 중국 빠른 연환 (10/12): 에너지를 정하지 않고 쓸린 그 점의 실제 빠르기로 분석 (기존 상처 함수 그대로 — 판정 배율 hitMul 은 아래 secretHit)
+    S.v.copy(tang).multiplyScalar(swept / dtSub).add(Pst.v);
+    r = combat.analyze(pr, point, S, Pst);
+    f.secretHit = h0;
+    if (!r || r.energy < STRIKE.minEnergy) return null;
+    foe.hitCooldowns.set(`${f.index}:${best.info.part}`, STRIKE.hitCooldown);
+    if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) foe.applyWound({ ...r, part: best.info.part, passing: true });
+    combat.hooks.onWound?.(f, foe, r, point, pr);
+    return r;
+  }
   S.v.copy(tang).multiplyScalar(10).add(Pst.v);
   const r10 = combat.analyze(pr, point, S, Pst);
-  let r = null;
   if (r10 && r10.energy > 0) {
     const v = clamp(10 * Math.sqrt(target / r10.energy), 0.6, 29.5);
     S.v.copy(tang).multiplyScalar(v).add(Pst.v);
@@ -469,6 +481,7 @@ function startIai(f, combat) {
     return;
   }
   if (req.sweep) return startSweep(f, combat, req);
+  if (req.combo) return startCombo(f, combat, req);
   const M = f.swordArt.measure;
   const c = f.bodies.chest.translation();
   const fc = foe.bodies.chest.translation();
@@ -861,4 +874,250 @@ export function gilmokSeg(name, stiff) {
   const m = /^gilmok(Talho|Revez)(End)?$/.exec(name ?? '');
   if (!m) return { seg: null, s: 1 };
   return { seg: m[2] || stiff ? 'end' : 'mid', s: m[1] === 'Talho' ? 1 : -1 };
+}
+
+// ─────────────────────────────────────────────────────────────
+//  중국 빠른 연환 (10/12 사장님 01:1x '연격은 기술 자체의 시각적 효과도 잘 안 보여서 … 고노센 50% 정도의 빠르기와 잔상' · 01:2x '잔상도 고노센의 50%나 65%로' —
+//   docs/strike/cn_combo_play_2026-10-12.md §5). 서보는 손 빠르기 handSpeed 1.5 에서 포화돼 더 빨라지지 않는다 → 발도와 같은 틀(**물리 원칙의 예외** — 사장님 10/9 23:5x
+//   '모든 비기 모션·판정 어드밴티지'): 팔 사슬·칼을 스텝마다 길 위 자리에 놓는다(placeIai — 관절 기준점이 맞음, 칼 쪽 팔·칼 ↔ 상대 몸·칼 충돌 끔 instantGhost).
+//   길 = 막기 연환 두 수의 패드 길 그대로(schools.js CHINESE_SECRET_PARRY do.combo — 앞 수 끝에서 곧장): 지금 칼 → 첫 수 준비 자세(from) → 길 점 → 둘째 수 from → 길 점.
+//   패드 → 손 자리·칼날 방향 = 휘두를 때 서보가 쫓는 목표와 같은 식(fighter.js padPose). 빠르기 = 칼끝(칼자루 끝 + 칼날 방향 × 칼 길이) 평균이 같은 칼의 발도 베는 몫
+//   (iaiPath B→M→E 길이 / iaiTime)의 SECRET.cnFastShare 몫이 되게 토막마다 시간 = 칼끝 길이 / 그 빠르기 (새 시간 값 없음).
+//   맞음 = 발도처럼 쓸린 자리(스텝마다 칼날 선분 3 조각 · 길 점 토막만 — 준비 토막은 베는 길이 아님) · 수마다 한 번. 상처 에너지는 정하지 않는다 — 쓸린 그 점의 실제 빠르기로
+//   기존 상처 함수(combat.analyze, 판정 배율 hitMul) [발도는 칼끝 40 m/s 라 고정 J 를 썼다 — 연환은 그 절반이라 물리 빠르기 그대로가 자연스럽다]. 몸보다 먼저 상대 칼에 닿으면
+//   (이베리아 휩쓸기와 같은 거리) 그 수는 막힘 — 남은 길을 건너뛰고 다음 수로(밀어냄 없음). 걸음 = 수마다 반걸음(step.fwd) 몸 미끄러짐(발도와 같은 한도 — 맞닿기에서 멈추고
+//   clinch 안 금지) + 다리 걸음 요청. 잔상 = 발도와 같은 f.instantArc(kind 'combo', share — sword_trail.js 가 밝기·섬광을 share 배로). 끝나면 끝 자세를 경직 동안 붙잡는다(발도와 같음).
+// ─────────────────────────────────────────────────────────────
+const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 패드 m) — fighter.js BODY_TURN 과 같은 수 (이름만 붙인 재사용)
+
+/** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
+export function requestCombo(f, opt = {}) {
+  f.iaiReq = { combo: true, moves: opt.moves ?? [] };
+  f.instantResult = null;
+}
+
+/** 칼끝 자리 (몸 틀) = 손 자리 + 칼날 방향 × (칼자루 + 칼날) */
+function comboTip(f, H, D, out = new THREE.Vector3()) {
+  return out.copy(H).addScaledVector(D, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength);
+}
+
+/** 토막 안 u 자리: 손 lerp · 칼날 slerp (iaiPose 와 같은 보간) · 패드 x (몸 돌림) */
+function comboLerp(sg, u) {
+  const H = sg.A.H.clone().lerp(sg.B.H, u);
+  const q = new THREE.Quaternion().setFromUnitVectors(sg.A.D, sg.B.D);
+  const D = sg.A.D.clone().applyQuaternion(new THREE.Quaternion().slerp(q, u)).normalize();
+  return { H, D, px: sg.A.px + (sg.B.px - sg.A.px) * u };
+}
+
+/** 토막의 칼끝 길이 (8 조각) */
+function comboSegLen(f, sg) {
+  let L = 0;
+  let prev = comboTip(f, sg.A.H, sg.A.D);
+  for (let i = 1; i <= 8; i++) {
+    const P = comboLerp(sg, i / 8);
+    const t = comboTip(f, P.H, P.D);
+    L += t.distanceTo(prev);
+    prev = t;
+  }
+  return L;
+}
+
+/** 같은 칼의 발도 베는 몫 칼끝 빠르기 (m/s): iaiPath B → M → E 칼끝 길이 / iaiTime (대기 자세에서 곧장 가로 — 고노센 기본 시간) */
+export function iaiTipSpeed(f) {
+  let L = 0;
+  let prev = null;
+  for (let i = 0; i <= 24; i++) {
+    const P = iaiPose({ ab: 0 }, i / 24);
+    const t = comboTip(f, P.H, P.D);
+    if (prev) L += t.distanceTo(prev);
+    prev = t;
+  }
+  return L / SECRET.iaiTime;
+}
+
+/** 몸 돌림 (덧씌우기 칸 몸 값, °): 손이 있는 쪽으로 — 검술 층의 휘두를 때 몸 돌림과 같은 계수 (가슴 전부 · 골반 반) */
+function comboBody(px) {
+  const ch = (-px * COMBO_TURN) / D2R;
+  return { pelvisYaw: ch * 0.5, chestYaw: ch, pitch: 0, drop: 0 };
+}
+
+function startCombo(f, combat, req) {
+  const yaw = f.yaw.clone();
+  const inv = yaw.clone().invert();
+  const c = f.bodies.chest.translation();
+  const AH = tv(f.sword.translation(), new THREE.Vector3()).sub(tv(c, new THREE.Vector3())).applyQuaternion(inv);
+  const AD = f.bladePoint(1, new THREE.Vector3()).sub(f.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv);
+  const v = Math.max(1e-3, SECRET.cnFastShare * iaiTipSpeed(f));
+  const segs = [];
+  let cur = { H: AH, D: AD, px: f.handOffset.x };
+  req.moves.forEach((m, mi) => {
+    [m.from, ...m.path].forEach((p, k) => {
+      const B = { H: new THREE.Vector3(), D: new THREE.Vector3(), px: p[0], pad: p };
+      f.padPose(p[0], p[1], B.H, B.D);
+      const sg = { mi, cut: k > 0, A: cur, B };
+      sg.T = comboSegLen(f, sg) / v;
+      segs.push(sg);
+      cur = B;
+    });
+  });
+  if (!segs.length) {
+    f.instantResult = { ok: false, hit: false };
+    return;
+  }
+  const T = segs.reduce((a, sg) => a + sg.T, 0);
+  f.iai = {
+    kind: 'combo', moves: req.moves, segs, si: 0, ts: 0, t: 0, T, v, yaw, mi: -1, moveName: null, cutting: false, cur: null,
+    body: comboBody(f.handOffset.x), bodyAt: null, hold: SECRET.stiff[f.swordArt?.tradition] ?? 0.3,
+    off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
+    arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: SECRET.cnFastShare, pts: [] }, slide: null,
+  };
+  f.instantArc = f.iai.arc;
+  setKinematic(f, true);
+  f.instantGhost = Math.ceil((T + SECRET.instantNoCollide) / (combat.dt || 1 / 120)) + 1;
+  f.iai.prev = placeIai(f, AH, AD, true);
+}
+
+/** 새 수에 들어섬: 이름 · 수마다 한 번 맞음 · 반걸음(몸 미끄러짐 + 다리 걸음) */
+function comboMoveStart(f, I, mi) {
+  const m = I.moves[mi];
+  I.mi = mi;
+  I.moveName = m.name;
+  I.hitM = false;
+  I.blockM = false;
+  I.slide = null;
+  const st = m.step;
+  const fwd = typeof st?.fwd === 'number' ? st.fwd : 0;
+  if (!(fwd > 0) || !f.foe) return;
+  const M = f.swordArt.measure;
+  const c = f.bodies.chest.translation();
+  const fc = f.foe.bodies.chest.translation();
+  let dx = fc.x - c.x;
+  let dz = fc.z - c.z;
+  const d = Math.max(1e-3, Math.hypot(dx, dz));
+  dx /= d;
+  dz /= d;
+  const slide = Math.min(clamp(d - M.contact, 0, fwd), Math.max(0, d - M.clinch)); // 발도 미끄러짐과 같은 한도
+  const span = I.segs.filter((sg) => sg.mi === mi).reduce((a, sg) => a + sg.T, 0) * SECRET.iaiSlideShare; // 그 수 시간의 발도와 같은 몫 안에
+  if (slide > 1e-3 && span > 0) I.slide = { dx, dz, slide, t0: I.t, span, done: 0 };
+  if (f.gait?.active) f.gait.requestStep({ kind: st.kind ?? 'lunge', fwd, side: st.lat ?? 0, duration: st.dur ?? 0.35 });
+}
+
+function stepCombo(f, combat) {
+  const I = f.iai;
+  const dt = combat.dt || 1 / 120;
+  const foe = f.foe;
+  if (!f.alive || !f.armed || !foe) return endCombo(f, combat);
+  I.t += dt;
+  // 토막 넘기기 (길이 0 토막은 곧장)
+  while (I.si < I.segs.length && I.t >= I.ts + I.segs[I.si].T) {
+    I.ts += I.segs[I.si].T;
+    I.si++;
+  }
+  const done = I.si >= I.segs.length;
+  const sg = I.segs[Math.min(I.si, I.segs.length - 1)];
+  if (sg.mi !== I.mi) comboMoveStart(f, I, sg.mi);
+  // 반걸음 몸 미끄러짐 (발도와 같은 꼴 — 부드럽게 줄며)
+  const S = I.slide;
+  if (S) {
+    const x = Math.min(1, (I.t - S.t0) / S.span);
+    const want = S.slide * (1 - (1 - x) * (1 - x));
+    const ds = want - S.done;
+    if (ds > 1e-5) shiftFighter(f, S.dx * ds, S.dz * ds);
+    S.done = want;
+  }
+  const u = done ? 1 : sg.T > 0 ? clamp((I.t - I.ts) / sg.T, 0, 1) : 1;
+  const P = comboLerp(sg, u);
+  I.cutting = sg.cut;
+  I.body = comboBody(P.px);
+  I.cur = P;
+  const cur = placeIai(f, P.H, P.D, false);
+  const subs = 3;
+  for (let k = 1; k <= subs; k++) {
+    const w = k / subs;
+    const B = I.prev.B.clone().lerp(cur.B, w);
+    const D = I.prev.D.clone().lerp(cur.D, w).normalize();
+    const tip = B.clone().addScaledVector(D, f.weaponCfg.bladeLength);
+    I.arc.pts.push([B.x, B.y, B.z, tip.x, tip.y, tip.z]);
+    if (!sg.cut || I.hitM || I.blockM || !foe.alive || foe.state === 'dead') continue;
+    // 몸보다 먼저 상대 칼에 닿으면 이 수는 막힘 (이베리아 휩쓸기와 같은 거리 — 밀어냄 없음)
+    if (foe.armed && foe.sword && segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist) {
+      I.blockM = true;
+      I.blocked++;
+      continue;
+    }
+    let best = null;
+    for (const [h, info] of f.colliderInfo) {
+      if (info.fighter !== foe || info.kind === 'weapon' || info.detached) continue;
+      const col = f.world.getCollider(h);
+      if (!col) continue;
+      const r = segToCollider(B, tip, col);
+      if (r <= SECRET.instantTouch && (!best || r < best.r)) best = { h, info, col, r };
+    }
+    if (best) {
+      const prevW = Math.max(0, w - 1 / subs);
+      const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
+      I.hitM = true;
+      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs);
+      if (res) {
+        I.hits++;
+        I.E += res.energy;
+        I.Emax = Math.max(I.Emax, res.energy);
+        I.part = best.info.part;
+        I.zone = res.zone;
+        I.type = res.type;
+      }
+    }
+  }
+  I.prev = cur;
+  if (done) return endCombo(f, combat);
+  // 막힘: 이 수의 남은 길을 건너뛰고 다음 수 준비 토막을 지금 자리에서 (다음 수가 없으면 끝)
+  if (I.blockM) {
+    let n = I.si + 1;
+    while (n < I.segs.length && I.segs[n].mi === sg.mi) n++;
+    if (n >= I.segs.length) return endCombo(f, combat);
+    const nx = I.segs[n];
+    nx.A = { H: P.H.clone(), D: P.D.clone(), px: P.px };
+    nx.T = comboSegLen(f, nx) / I.v;
+    I.si = n;
+    I.ts = I.t;
+  }
+}
+
+function endCombo(f, combat) {
+  const I = f.iai;
+  setKinematic(f, false);
+  const v = tv(f.bodies.chest.linvel(), new THREE.Vector3());
+  for (const n of [...ARM_PARTS, ...(I.off ? OFF_PARTS : []), null]) {
+    const b = n ? f.bodies[n] : f.sword;
+    if (!b) continue;
+    b.setLinvel({ x: v.x, y: v.y, z: v.z }, true);
+    b.setAngvel({ x: 0, y: 0, z: 0 }, true);
+  }
+  // 끝 자세를 경직 동안 붙잡는다 (발도와 같음) · 손 목표도 지금 토막 끝 길 점으로 (붙잡기가 풀린 뒤 칼이 막기 자리로 튀어 돌아가지 않게)
+  const last = I.segs[Math.min(I.si, I.segs.length - 1)].B;
+  const E = I.cur ?? last;
+  const th = f.skill.thrustPose;
+  th.w = 1;
+  th.hand[0] = E.H.x;
+  th.hand[1] = E.H.y;
+  th.hand[2] = E.H.z;
+  th.dir[0] = E.D.x;
+  th.dir[1] = E.D.y;
+  th.dir[2] = E.D.z;
+  const K = I.body;
+  th.pelvisYaw = K.pelvisYaw * D2R;
+  th.chestYaw = K.chestYaw * D2R;
+  th.pitch = K.pitch * D2R;
+  th.drop = K.drop;
+  if (last.pad) snapAim(f, last.pad);
+  f.iaiHoldT = I.hold;
+  f.iaiHoldKind = 'combo';
+  f.iaiFade = 0;
+  f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
+  f.tipPrev = f.bladePoint(1, new THREE.Vector3());
+  f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
+  f.tipVel.set(0, 0, 0);
+  f.hitPointVel.set(0, 0, 0);
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t };
+  f.iai = null;
 }

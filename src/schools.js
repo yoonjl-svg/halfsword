@@ -704,9 +704,18 @@ const CHINESE_SECRET_PARRY = {
   name: 'lianhuanParry',
   nameKo: '연환 (連環)',
   when: 'parry',
-  // 거정세(highC — 擧鼎格 「鼎格上殺」, 몸꼴 덧씌우기)·표두세(highR — 칼을 세운 표두세 자리) 둘만. 어거세(thrust)·요략세(lowL)·봉두세(highL)는 아님
-  cond: { slots: { highC: 'geojeong', highR: 'pyodu' }, window: 'apart', time: 'cnParryWindow' }, // 창 길이 = SECRET.cnParryWindow (사장님 10/12 시험 1 s)
+  // 거정세(highC — 擧鼎格 「鼎格上殺」, 몸꼴 덧씌우기)·표두세(highR — 칼을 세운 표두세 자리)·봉두세(highL — 10/12 더함, SECRET.cnBongdu). 어거세(thrust)·요략세(lowL·lowR)는 아님
+  //  봉두세 (10/12 사장님 01:1x '타격 대부분이 가로로 들어오더라' — docs/strike/cn_combo_play_2026-10-12.md §2): 막기 버튼이 고른 줄을 재니 highL 25 % · highC 29 % · highR 10 % (네 상대 410 수) —
+  //   거정세·표두세 둘로는 높은 줄의 60 % 만 받았다. 봉두세 鳳頭勢 「法能洗刺剪殺」 = 씻어 쳐내고(洗) 찌르고(刺) 끊어 벤다(剪) — 막기 1 수 + 2 연격이 원문 그대로 [원문]
+  cond: {
+    get slots() {
+      return SECRET.cnBongdu ? { highC: 'geojeong', highR: 'pyodu', highL: 'bongdu' } : { highC: 'geojeong', highR: 'pyodu' }; // `?cnBongdu=0` = 전 두 자리
+    },
+    window: 'apart',
+    time: 'cnParryWindow', // 창 길이 = SECRET.cnParryWindow (사장님 10/12 시험 1 s)
+  },
   do: {
+    fast: 'cnFast', // 10/12 빠른 연환: SECRET.cnFast 면 두 수를 운동학 팔·칼로 길을 따라 돌린다 (secret_instant.js requestCombo — 발도와 같은 틀, 빠르기 = 발도의 SECRET.cnFastShare 몫)
     combo: {
       // 거정격 → 掣擊中殺 → 進步逆鱗: 擧鼎勢 「卽擧鼎格 … 向前掣擊中殺」(무비지 쪽154/0568 — 쳐 올려 막은 뒤 앞으로 당겨 베어 가운데를 친다) → 腰擊勢 「向前進步逆鱗」(쪽166/0580)
       geojeong: {
@@ -724,9 +733,19 @@ const CHINESE_SECRET_PARRY = {
           { name: 'pcZuoyi', nameKo: '좌익격 (左翼擊)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25 }, // 길 = 꾸러미 zuoyi 그대로 (逆鱗 끝 긴 자세에서 곧장)
         ],
       },
+      // 봉두세 → 刺 → 剪: 鳳頭勢 「鳳頭洗也. 法能洗刺剪殺」(무비지 쪽176/0590) — 洗(씻어 쳐냄) = 막기 1 수, 刺·剪 = 2 연격 [원문] ·
+      //  刺 = 봉두세 자리(왼쪽 황소 G.ochsL)에서 곧장 찌름 — 길 = 꾸러미 stichOchsL(우협자) 그대로 [해석] ·
+      //  剪 = 끊어 벰 — 右翼勢 「法能剪殺兩翼」(쪽168/0582)의 날개 치기를 찌른 끝 긴 자세에서 좌익격 길로 [해석] (표두세 둘째 수와 같은 길) · 걸음 = 반걸음 進步(같은 칸)
+      bongdu: {
+        nameKo: '봉두세 → 찌름(刺) → 끊어 벰(剪)',
+        seq: [
+          { name: 'pcFengCi', nameKo: '찌름 (刺)', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25 }, // 길 = 꾸러미 stichOchsL 그대로
+          { name: 'pcFengJian', nameKo: '끊어 벰 (剪)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25 }, // 길 = 꾸러미 zuoyi 그대로
+        ],
+      },
     },
   },
-  src: '擧鼎勢 「擧鼎格 … 向前掣擊中殺」 무비지 쪽154/0568 · 豹頭勢 「寃步挑刺」 쪽157/0571 · 腰擊勢 「進步逆鱗」 쪽166/0580 · 逆鱗勢 「掣步左翼擊」 쪽173/0587 · 검결가 「滾手連環」 쪽151 [원문] · 挑刺 = 역린자 · 쳐 낸 뒤 갈라져 잇기 [해석] · 길 [추정]',
+  src: '擧鼎勢 「擧鼎格 … 向前掣擊中殺」 무비지 쪽154/0568 · 豹頭勢 「寃步挑刺」 쪽157/0571 · 鳳頭勢 「法能洗刺剪殺」 쪽176/0590 · 右翼勢 「剪殺兩翼」 쪽168/0582 · 腰擊勢 「進步逆鱗」 쪽166/0580 · 逆鱗勢 「掣步左翼擊」 쪽173/0587 · 검결가 「滾手連環」 쪽151 [원문] · 挑刺 = 역린자 · 쳐 낸 뒤 갈라져 잇기 [해석] · 길 [추정]',
 };
 // 독일 막기 연환 — 감아 들기 (Indes · 10/11 19:1x 사장님 '두 수면 너무 비슷하니까 한 수로 … 오래 붙어 있었을수록 깊고 강한 공격'):
 //  걸이 막기(황소 Ochs — 칼자루를 머리 곁에 들고 칼끝을 상대 얼굴로 걸어 받음)로 받아 칼이 맞붙은 채 이어지는 동안(Indes — 맞붙은 그 사이) 받은 칼을 타고 감아 드는 한 수.

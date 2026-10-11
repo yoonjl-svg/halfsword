@@ -952,6 +952,15 @@ export class Fighter {
     return out.sub(c.S).multiplyScalar(c.k).add(c.S);
   }
 
+  /** 패드 (x, y) 가 휘두르는 동안 명령하는 손 목표·칼끝 방향 (몸 틀, 가슴 원점 — driveSword 의 날것 줄과 같은 식: 보정 v2 면 padHand, 칼끝 = guardDir).
+   *  쉼 무게·자세 지도 섞기·덧씌우기는 넣지 않는다. 중국 빠른 연환(secret_instant.js requestCombo)이 기술 길의 패드를 운동학 길로 옮길 때 읽는다 */
+  padPose(x, y, outH, outD) {
+    const sv = this.skill.level;
+    if (this.skill.corr === 'v2' && sv > 0) this.padHand(x, y, sv, outH);
+    else rawHand(x, y, outH);
+    return outD.set(...guardDir(x, y, !!this.guardPose?.oneHand)).normalize();
+  }
+
   /**
    * 몸의 자세 목표 (골반·가슴 틀기, 숙이기, 낮추기). 손가락 입력을 "거르기 전" 값으로 곧바로 따라가서
    * 손(걸러진 값)보다 먼저 움직인다 → 골반 → 가슴 → 팔 → 칼 순서로 힘이 이어진다 (실제 베기의 순서).

@@ -540,6 +540,7 @@ export class PlayerSecretWatch {
     this.sense = new Senses(me, foe);
     this.ev = { armed: true, off: 0 };
     this.open = null; // 열린 창 { S, ctx, t }
+    this.queued = null; // 미리 받은 입력으로 곧 낼 연환 { dir } (canBuffer — 중국 막기 연환, 10/12)
     this.combo = 0;
     this.binds = new BindCount(); // 이베리아 맺힘 셈 (10/10)
     this.iaiArm = new IaiArm(); // 일본 발도 대기 (10/10 02:4x — 플레이어는 표시만)
@@ -569,11 +570,12 @@ export class PlayerSecretWatch {
     this.prevFoePain = foe.pain;
     if (!S || !me.alive || !foe.alive || !me.armed || me.state !== 'stand') {
       this.open = null;
+      this.queued = null;
       this.swing = null;
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
       this.gilArm.tick(0, false, true);
-      if (this.pc) this.pc.pend = null;
+      if (this.pc) this.pc.pend = this.pc.buf = null;
       return;
     }
     const c = me.bodies.chest.translation();
@@ -705,12 +707,19 @@ export class PlayerSecretWatch {
       if (P.woundAge === 0 || (S.cond.window === 'bind' && !touch)) this.open = null; // 뚫림 · 독일: 칼이 떨어짐
       else if (S.cond.window === 'bind') o.ctx.held += dt; // 독일: 창이 열린 뒤 붙어 있는 시간 (어드밴티지 — bindGain · 화면 차오름)
     }
+    if (P.buf && (P.buf.t += dt) > secretVal(S.cond.time)) {
+      P.buf = null; // 미리 받은 입력: 떨어지지 않고 창 길이(cnParryWindow)보다 오래 붙어 있으면 버린다 (기다림은 그대로 — 떨어지면 창은 열린다)
+      P.bufDrop = (P.bufDrop ?? 0) + 1;
+    }
     if (P.pend) {
-      if (P.woundAge === 0 || attacking) P.pend = null;
+      if (P.woundAge === 0 || attacking) P.pend = P.buf = null;
       else if (S.cond.window === 'apart') {
         if (sep) {
-          if (!busy && !this.open) this.openWindow({ ev: 'parry', slot: P.pend.slot }, secretVal(S.cond.time));
-          P.pend = null;
+          if (!busy && !this.open) {
+            this.openWindow({ ev: 'parry', slot: P.pend.slot }, secretVal(S.cond.time));
+            if (P.buf) (this.queued = P.buf), (P.bufFired = (P.bufFired ?? 0) + 1); // 미리 받은 입력 → 이 스텝 곧장 연환 (main.js 가 update 뒤에 fire)
+          }
+          P.pend = P.buf = null;
         }
       } else if (!touch) P.pend = null;
       else if ((P.pend.t += dt) >= secretVal(S.cond.min)) {
@@ -731,6 +740,29 @@ export class PlayerSecretWatch {
     P.pend = { slot, t: 0 };
   }
 
+  /**
+   * 미리 받기 (10/12 사장님 01:1x '그런 공격을 운 좋게 막아도 인간 반사신경으로 커맨드 넣기 어려웠어' — SECRET.cnBuffer, docs/strike/cn_combo_play_2026-10-12.md §4):
+   *  중국 막기 연환(window 'apart')에서 정한 자세로 막아 칼이 맞닿아 있는 동안(pend) 온 공격 입력(톡·빠른 끌기 — main.js 의 비기 입력과 같은 문턱)을 취소 대신 받아 둔다.
+   *  그동안 그 입력은 보통 공격으로 새지 않는다(main.js 가 칼 입력을 삼킴 — bufferHold). 칼이 떨어지는 스텝에 창이 열리며 곧장 연환(내는 순간은 떨어진 뒤 — '떨어짐' 그대로).
+   *  창 길이(cond.time)보다 오래 붙어 있으면 버린다. 새 값 없음. 플레이어만 (AI 는 창 없이 곧장 — 전과 같음)
+   */
+  canBuffer() {
+    const P = this.pc;
+    return !!(SECRET.cnBuffer && this.S?.when === 'parry' && this.S.cond?.window === 'apart' && P?.pend && !P.buf && !this.open && !this.queued);
+  }
+
+  /** 입력을 받아 둔다 (dir = 그 끌기의 방향 — fire 의 o.dir 와 같은 꼴) */
+  buffer(dir) {
+    const P = this.pc;
+    P.buf = { dir, t: 0 };
+    P.bufN = (P.bufN ?? 0) + 1;
+  }
+
+  /** 받아 둔 입력이 있거나 곧 낼 차례 — main.js 가 그동안 칼 입력을 삼킨다 */
+  get bufferHold() {
+    return !!(this.pc?.buf || this.queued);
+  }
+
   openWindow(ctx, t = SECRET.playerWindow) {
     this.open = { S: this.S, ctx, t };
     this.opened++;
@@ -740,6 +772,8 @@ export class PlayerSecretWatch {
   fire() {
     const o = this.open;
     this.open = null;
+    if (o && this.queued) o.dir = this.queued.dir; // 미리 받은 입력의 끌기 방향
+    this.queued = null;
     if (o) {
       this.combo = 0;
       this.binds.reset(); // 비기를 내면 0
