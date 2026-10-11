@@ -31,12 +31,13 @@ function run(who) {
   const me = PL ? G.player : G.enemy;
   const foe = PL ? G.enemy : G.player;
   const S = PL ? playerSecretOf(me) : G.ai.secret;
+  if (process.env.FOEOLD && !PL) foe.skill.corr = 'old'; // FOEOLD=1: AI 쪽 상대(입력 없는 몸)도 AI 와 같은 옛 보정 — 두 장면의 상대 자세를 같게
   const side = S.do.side[SIDE];
   let t0 = null;
   if (PL) {
     G.ai.update = () => {}; // 상대 멈춤
     me.skill.corr = SKILL.corr;
-    me.skill.corrTip = SKILL.corrTip;
+    me.skill.corrTip = process.env.NOTIP ? false : SKILL.corrTip;
     me.skill.autoGuard = true;
   } else {
     const ai = G.ai;
@@ -126,7 +127,7 @@ function run(who) {
     });
     if (!stage) break;
   }
-  return { rows, wounds: G.wounds.filter((w) => w.att === me).map((w) => `${w.zone}:${w.energy.toFixed(0)}J@${(w.t - t0).toFixed(2)}`) };
+  return { clash: G.clashes, foeHand: [foe.handOffset.x.toFixed(2), foe.handOffset.y.toFixed(2)], rows, wounds: G.wounds.filter((w) => w.att === me).map((w) => `${w.zone}:${w.energy.toFixed(0)}J@${(w.t - t0).toFixed(2)}`) };
 }
 
 const A = run('ai');
@@ -157,9 +158,12 @@ const KEYS = [
   ['move', (r) => r.move, 2],
   ['tip', (r) => [r.tip.x, r.tip.y, r.tip.z], 3],
   ['foeY', (r) => [r.foeY], 1],
+  ['str', (r) => [r.str, r.pm], 2],
+  ['hip', (r) => [r.pelY], 1],
   ['hiltY', (r) => [r.hiltY], 1],
 ];
 console.log(`${id} · 씨앗 ${seed} · 거리 ${GAP} · 준비 ${ARM} s · 쪽 ${SIDE}${NAT ? ' · 제 준비·제 창' : ''}${WALK ? ' · 걸어 듦 ' + WALK : ''}`);
+console.log(`칼끼리 부딪힘 AI ${A.clash} · 플레이어 ${P.clash} · 상대 손 패드 AI 쪽 ${A.foeHand} · 플레이어 쪽 ${P.foeHand}`);
 console.log(`AI 상처 ${A.wounds.join(' ') || '없음'} · 플레이어 상처 ${P.wounds.join(' ') || '없음'}`);
 const n = Math.min(A.rows.length, P.rows.length);
 const first = {};
@@ -191,7 +195,7 @@ if (process.env.ROWS) {
   for (let k = 0; k < n; k += every) {
     const a = A.rows[k];
     const p = P.rows[k];
-    console.log(`t ${a.t.toFixed(3)} | ${a.name ?? '-'}/${a.stage} w ${a.w.toFixed(2)} pad ${f2(a.pad)}] aim ${f2(a.aim)}] tgt ${v3(a.tgt)} hand ${v3(a.hand)} bl ${v3(a.bl)} py ${a.pyC.toFixed(2)}/${a.pyA.toFixed(2)} cy ${a.cyC.toFixed(2)}/${a.cyA.toFixed(2)} dr ${a.dropC.toFixed(2)} mv ${a.mv.toFixed(2)} st ${f2(a.move)}] tip ${v3(a.tip)} hilt ${a.hiltY.toFixed(2)} idle ${a.idle.toFixed(2)}`);
-    console.log(`        | ${p.name ?? '-'}/${p.stage} w ${p.w.toFixed(2)} pad ${f2(p.pad)}] aim ${f2(p.aim)}] tgt ${v3(p.tgt)} hand ${v3(p.hand)} bl ${v3(p.bl)} py ${p.pyC.toFixed(2)}/${p.pyA.toFixed(2)} cy ${p.cyC.toFixed(2)}/${p.cyA.toFixed(2)} dr ${p.dropC.toFixed(2)} mv ${p.mv.toFixed(2)} st ${f2(p.move)}] tip ${v3(p.tip)} hilt ${p.hiltY.toFixed(2)} idle ${p.idle.toFixed(2)}`);
+    console.log(`t ${a.t.toFixed(3)} | ${a.name ?? '-'}/${a.stage} w ${a.w.toFixed(2)} pad ${f2(a.pad)}] aim ${f2(a.aim)}] tgt ${v3(a.tgt)} hand ${v3(a.hand)} bl ${v3(a.bl)} py ${a.pyC.toFixed(2)}/${a.pyA.toFixed(2)} cy ${a.cyC.toFixed(2)}/${a.cyA.toFixed(2)} dr ${a.dropC.toFixed(2)} mv ${a.mv.toFixed(2)} st ${f2(a.move)}] tip ${v3(a.tip)} hilt ${a.hiltY.toFixed(2)} idle ${a.idle.toFixed(2)} str ${a.str.toFixed(2)}/${a.pm.toFixed(2)}`);
+    console.log(`        | ${p.name ?? '-'}/${p.stage} w ${p.w.toFixed(2)} pad ${f2(p.pad)}] aim ${f2(p.aim)}] tgt ${v3(p.tgt)} hand ${v3(p.hand)} bl ${v3(p.bl)} py ${p.pyC.toFixed(2)}/${p.pyA.toFixed(2)} cy ${p.cyC.toFixed(2)}/${p.cyA.toFixed(2)} dr ${p.dropC.toFixed(2)} mv ${p.mv.toFixed(2)} st ${f2(p.move)}] tip ${v3(p.tip)} hilt ${p.hiltY.toFixed(2)} idle ${p.idle.toFixed(2)} str ${p.str.toFixed(2)}/${p.pm.toFixed(2)}`);
   }
 }
