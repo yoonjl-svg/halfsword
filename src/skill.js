@@ -1068,8 +1068,11 @@ export class Skill {
     const sp = this.vel.length();
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
     this.swinging = swinging;
+    // 플레이어 막기 버튼 (10/11 — parry_button.js): 버튼이 손 목표를 휘두르기 문턱보다 빠르게 옮기는 동안은 AI 막기(손이 parrySpeed 로 옮겨져 휘두르기로 잡힘)처럼
+    //  휘두르기 꼴의 거르기·몸 따라가기를 쓴다. 휘두르기 사건(swinging — 내딛기·베기 덩이·자세로 돌아가기)은 손가락 끌기만 (버튼이 prev 도 옮긴다). 버튼이 없으면 guardDrive 없음 → 그대로
+    const fast = swinging || this.guardDrive > SKILL.swingSpeed;
     // 휘두르는 중인 정도 (0~1): 휘두르기 시작하면 빨리 1로, 멈추면 천천히 0으로 (몸을 크게 쓰는 건 벨 때뿐)
-    this.activity += ((swinging ? 1 : 0) - this.activity) * Math.min(1, dt / (swinging ? 0.04 : 0.4));
+    this.activity += ((fast ? 1 : 0) - this.activity) * Math.min(1, dt / (fast ? 0.04 : 0.4));
 
     // 0) 가죽끈: anchor는 손가락(off)이 반경(inputDeadRadius)을 넘어야 그만큼만 끌려간다.
     //  반경 안의 떨림은 anchor를 전혀 움직이지 못한다 — 어디서 떨든(자세 경계라도) 걸러진다.
@@ -1109,7 +1112,7 @@ export class Skill {
     // 손 목표를 "딱 멈추는"(임계 감쇠) 2차 필터로 거른다: 목표가 순간이동해도 손은 가속·감속하며 간다.
     //  (사람의 손도 순간적으로 속도를 바꾸지 못한다. 목표가 튀면 근육이 그 충격을 몸통에 그대로 전해 출렁인다)
     // 휘두르는 순간엔 근육을 긴장시켜(공동 수축) 더 빠르고 단단하게 따라간다
-    const wT = swinging ? SKILL.aimFilterStrike : SKILL.aimFilter;
+    const wT = fast ? SKILL.aimFilterStrike : SKILL.aimFilter;
     this.filterW = (this.filterW ?? wT) + (wT - (this.filterW ?? wT)) * Math.min(1, dt * 30);
     const w = this.filterW;
     const ax = w * w * (this.aimRaw.x - this.aim.x) - 2 * w * this.aimVel.x;

@@ -24,8 +24,9 @@ export function secretVal(v) {
   return typeof v === 'string' ? SECRET[v] : v;
 }
 
-/** threat() 와 같은 셈을 지금 모습 s 로 (위협 번호는 건드리지 않는다): { line, thrust, sp, E(칼끝 추정 에너지 ½·m·v²), high(상대 손이 높음) } 또는 null */
-export function threatNow(sense, foe, s, c, r, d, foeReach) {
+/** threat() 와 같은 셈을 지금 모습 s 로 (위협 번호는 건드리지 않는다): { line, thrust, sp, E(칼끝 추정 에너지 ½·m·v²), high(상대 손이 높음) } 또는 null.
+ *  lag: s 를 몇 초 전 모습으로 넘겼나 (기본 0 — 비기 판정). 플레이어 막기 버튼(parry_button.js)은 AI 처럼 반응 지연만큼 늦은 모습을 넘기므로 '어디서 칼을 들었었나'도 그만큼 앞을 본다 (ai.js threat 의 reaction + 0.15) */
+export function threatNow(sense, foe, s, c, r, d, foeReach, lag = 0) {
   if (d > foeReach + 0.9) return null;
   let hit = null;
   for (let k = 0; k < 2; k++) {
@@ -58,7 +59,7 @@ export function threatNow(sense, foe, s, c, r, d, foeReach) {
   let line;
   if (thrust) line = 'thrust';
   else {
-    const ch = sense.seen(0.15); // 어디서 칼을 들었었나 (threat 와 같은 0.15 s 앞 — 반응 지연만 뺐다)
+    const ch = sense.seen(lag + 0.15); // 어디서 칼을 들었었나 (threat 와 같은 0.15 s 앞 — 반응 지연은 lag, 비기는 0)
     if (ch.hy > 0.15) line = ch.hx > 0.15 ? 'highL' : ch.hx < -0.15 ? 'highR' : 'highC';
     else if (ch.hy < -0.2) line = ch.hx >= 0 ? 'lowL' : 'lowR';
     else if (hit.hy > -0.1) line = lat > 0.12 ? 'highR' : lat < -0.12 ? 'highL' : 'highC';
