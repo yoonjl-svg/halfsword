@@ -297,11 +297,19 @@ const VOWELS = {
  *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 지금은 쓰는 캐릭터가 없다
  */
 export const VOICES = {
-  player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 3번 목소리
+  // ── 10/12 목소리 묶음 갱신 (사장님 지시로 샛별 저장소 77db8c5·1ea73c5·11860b0·04311ff·200269d 를 가져옴 — docs/import/saetbyeol_round2_2026-10-12.md) ──
+  //  soft_female: 조용한 젊은 목소리 — 보관해 둔 Reitanna 녹음 둘(CC0, docs/sound_reserve 와 같은 바이트). 에이라·아르토리아가 같이 쓴다
+  soft_female: { f0: 225, tract: 1.17, breath: 0.6, rough: 0.1, style: 'gasp', rec: { ko: ['voice/reitanna_gasp'], bleed: ['voice/reitanna_long_sigh'], hurt: ['voice/reitanna_gasp'], gain: 1, rate: 1 } },
+  //  tome: 랴오와 떼어 낸 묶음 — 기본 상대(generic)의 HaelDB 녹음을 파일 복사 없이 빌린다. 새 성우도, 예순넷 나이를 확인한 연기도 아니다. 토메·김씨가 같이 쓴다
+  tome: { f0: 124, tract: 1, breath: 0.45, rough: 0.3, style: 'exhale', rec: { ko: ['voice/generic_ko1', 'voice/generic_ko2'], bleed: ['voice/generic_bleed1', 'voice/generic_bleed2'], hurt: ['voice/generic_hurt1', 'voice/generic_hurt2'], gain: 0.7, rate: 1 } },
+  //  omari: 오마리 전용 — thebardofblasphemy 의 부상·죽음 연기(CC0). 기절·출혈은 짧게 자른 판(20% 뒤 다시 10%), 음높이·빠르기는 그대로
+  omari: { f0: 115, tract: 1, breath: 0.45, rough: 0.35, style: 'exhale', rec: { ko: ['voice/omari_ko1_short'], bleed: ['voice/omari_bleed1_short2'], hurt: 2, gain: 0.75, rate: 1 } },
+  //  player: 죽음은 조용한 날숨 하나(Sadiquecat 숨 녹음 편집, CC0) — death() 의 me 갈래가 작게 낸다. 상처 신음(hurt)은 HaelDB 3번 목소리 그대로
+  player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: ['voice/player_exhale'], bleed: ['voice/player_exhale'], hurt: 2 } },
   generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 첫 목소리 (전부 CC0)
   bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, hurt: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + 지친 신음 kanyonwyvern(CC0). 굵고 거친 목
   isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp', rec: { ko: 1, bleed: 1, hurt: 2, revive: 1, gain: 1.3 } }, // 짧게 맞는 소리 "흣"·"읏" 녹음(mvVoiceActing, CC0, 사장님 선택). 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
-  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 2, hurt: 2, gain: 0.6, rate: 0.95 } }, // 하인리히와 같은 배우(HaelDB 2번 목소리)를 작고 조금 낮게 — 설정상 하인리히와 닮은 사람(사장님). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
+  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 1, hurt: 2, gain: 0.6, rate: 0.95 } }, // (10/12: 출혈 2번 liao_bleed2 는 사장님이 고르지 않아 뺐다 — 파일은 남김) 하인리히와 같은 배우(HaelDB 2번 목소리)를 작고 조금 낮게 — 설정상 하인리히와 닮은 사람(사장님). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침, 전부 CC0)
   margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', rec: { ko: 1, bleed: 1, hurt: 1, gain: 1.1 } }, // 지친 날숨 섞인 낮은 "하아…" 녹음 하나를 두 죽음에 같이 쓴다(hisoul, CC0, 사장님 선택 — 노장이라). 음은 낮추지 않았다: 여성 녹음을 낮추면 익룡·괴수처럼 들렸고, 합성 날숨은 폰에서 뭉개졌다
 };
@@ -1910,9 +1918,11 @@ export class Sound {
       if (!rec) continue;
       for (const kind of ['ko', 'bleed', 'hurt', 'revive']) {
         const name = `voice:${id}:${kind}`;
-        if (this.samples[name]) continue;
+        if (this.samples[name]?.length) continue; // 앞서 받기에 실패한(빈) 목록은 다시 받아 본다
         this.samples[name] = [];
-        for (let n = 1; n <= (rec[kind] || 0); n++) await this.loadSample(name, `voice/${id}_${kind}${n}`);
+        // rec[kind] = 개수(voice/<id>_<kind><번호>) 또는 파일 목록(sfx 기준 경로 — 다른 묶음의 녹음을 복사 없이 빌려 쓴다)
+        const files = Array.isArray(rec[kind]) ? rec[kind] : Array.from({ length: rec[kind] || 0 }, (_, i) => `voice/${id}_${kind}${i + 1}`);
+        for (const file of files) await this.loadSample(name, file);
       }
     }
   }
@@ -2503,12 +2513,23 @@ export class Sound {
   /**
    * 죽음. voice = VOICES 의 id (캐릭터 id, 플레이어는 'player'), cause = fighter.causeOfDeath
    *  '기절'·'머리' → 짧게 뚝 끊기는 소리, '출혈'·'목' → 숨이 잦아드는 긴 소리 ('목'은 피 끓는 소리가 섞인다)
-   *  me = 플레이어 자신이 죽음: 목소리 대신 귀가 멍해지고(삐—) 온 소리가 먹먹해진다
+   *  me = 플레이어 자신이 죽음: 짧고 조용한 날숨 한 번(voice/player_exhale, 0.25) 뒤 귀가 멍해지고(삐—) 온 소리가 먹먹해진다.
+   *   (사장님 10/12 지시로 샛별 저장소 1ea73c5 를 가져옴: 비명·젖은 소리 대신 잦아들게. 이명·먹먹함은 그대로. 녹음을 못 받으면 합성 외침 없이 조용히)
    */
   death(voice, cause, { me = false, pos } = {}) {
     if (!this._on || !this.ctx) return;
     const kind = cause === '출혈' || cause === '목' ? 'bleed' : 'ko';
     const id = voice in VOICES ? voice : 'generic';
+    if (me || id === 'player') {
+      const rec = this.pickSample(`voice:player:${kind}`);
+      if (rec) {
+        const ev = this.event({ bus: this.fleshBus, gain: 0.25, bright: 2800, prio: 3, pos });
+        this.layer(ev, rec, { rate: 1 });
+        this.playerDeathVoice = ev; // 새 판(resetRound)에 끊는다
+      }
+      if (me) this.fadeOutWorld();
+      return;
+    }
     const ev = this.event({ bus: this.fleshBus, gain: me ? 0.7 : 0.9, prio: 3, pos });
     if (VOICES[id].mute) {
       // 목소리 없음 ("쿵"은 몸이 땅에 닿을 때 BodySounds 가 낸다). 목을 베였으면 피 끓는 소리만
@@ -3296,10 +3317,22 @@ export class Sound {
     if (amount > 0.5 && Math.random() < amount && this._spaced('chime')) this.windChime(amount);
   }
 
-  /** 새 판: 먹먹함을 푼다 */
+  /** 새 판: 먹먹함을 푼다 (지난 판 플레이어 죽음 날숨이 남아 있으면 끊는다) */
   resetRound() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
+    if (this.playerDeathVoice) {
+      this.playerDeathVoice.out.gain.cancelScheduledValues(t);
+      this.playerDeathVoice.out.gain.setValueAtTime(0, t);
+      for (const s of this.playerDeathVoice.srcs) {
+        try {
+          s.stop(t);
+        } catch {
+          /* 이미 끝났다 */
+        }
+      }
+      this.playerDeathVoice = null;
+    }
     this.muffle.frequency.cancelScheduledValues(t);
     this.muffle.frequency.setTargetAtTime(20000, t, 0.1);
   }

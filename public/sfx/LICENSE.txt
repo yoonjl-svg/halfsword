@@ -132,3 +132,55 @@ low-passed as noted, peak-normalized to -1 dBFS, not pitch-shifted:
                           https://freesound.org/people/_stubb/sounds/406582/
   wet2.mp3             <- magnuswaker, "Burst Flesh" (LP 3.5 kHz)
                           https://freesound.org/people/magnuswaker/sounds/581092/
+
+-------------------------------------------------------------------------------
+2026-10-12 voice update (imported on the owner's instruction from the Saetbyeol repository,
+commits 77db8c5, 1ea73c5, 11860b0, 04311ff, 200269d; files copied byte-for-byte):
+
+  voice/reitanna_gasp.mp3, voice/reitanna_long_sigh.mp3 — CC0 (public domain), Reitanna
+    "gasp.wav":      https://freesound.org/people/Reitanna/sounds/241563/
+    "long sigh.wav": https://freesound.org/people/Reitanna/sounds/242690/
+    Same bytes as docs/sound_reserve/ (kept there after the owner's approval).
+    70 Hz high-pass, peak -1 dBFS, mono MP3, no pitch shift.
+    Voice 'soft_female' (Eira, Artoria): gasp for hurt/KO, sigh for bleeding.
+  Voice 'tome' (Tome, Kim) reuses generic_* (HaelDB, CC0, listed above) at rate 1, gain 0.7.
+    Not a new actor and not a verified elderly performance.
+
+  voice/player_exhale.mp3 — CC0, Sadiquecat, "Catching breath (Genuine)"
+    https://freesound.org/people/Sadiquecat/sounds/792641/
+    <- existing breath/breath1.mp3 source, 0.88-1.78 s; low-pass 2800 Hz, 60 ms fade-in,
+    650 ms fade-out starting at 250 ms, mono 44.1 kHz MP3. No pitch shift.
+    The player's quiet death breath (gain 0.25). Tinnitus and muffling are unchanged.
+
+  voice/omari_hurt1.mp3, omari_hurt2.mp3, omari_ko1_short.mp3, omari_bleed1_short2.mp3
+    — CC0 1.0, thebardofblasphemy, "grunts of male death and pain"
+    https://opengameart.org/content/grunts-male-death-and-pain
+    https://creativecommons.org/publicdomain/zero/1.0/
+    https://opengameart.org/sites/default/files/death%20pain%20grunts.wav
+    Original SHA-256: 3f00fba827f20ff9ccea1bc07d2c21ab8d3a36e81b48a6005cf8459f02779586
+    omari_hurt1 <- 6.90-7.47 s; omari_hurt2 <- 8.31-9.26 s
+    omari_ko1_short <- 0.450-1.863 s; omari_bleed1_short2 <- 3.900-5.556 s
+      (the KO/bleed takes shortened by 20 %, then 10 % more, by trimming the tail)
+    Edits: high-pass 70 Hz, low-pass 6000 Hz, peak scaled to 0.8, 15 ms fade-in,
+    fade-out 100 ms (hurt/KO) / 150 ms (bleed), mono 44.1 kHz MP3. No pitch or tempo change.
+    The intermediate files (omari_ko1, omari_bleed1, omari_bleed1_short) were not imported.
+
+  liao_bleed2.mp3 stays on disk but is no longer selected (owner did not pick it).
+
+-------------------------------------------------------------------------------
+revolver/  — 2026-10-12, imported on the owner's instruction from the Saetbyeol repository
+(commits fe8b170, 666c07f, b6c83ab), copied byte-for-byte. CC0 1.0 (public domain).
+  open.wav, insert1-6.wav, close.wav <- AugustSandberg, "Revolver Reload" (Ruger GP100 .357)
+    https://freesound.org/people/AugustSandberg/sounds/508744/
+    https://creativecommons.org/publicdomain/zero/1.0/
+    Public HQ preview: https://cdn.freesound.org/previews/508/508744_1934171-hq.mp3
+    (preview SHA-256 05bcb3971d11396050ffbe24be9f9c49b29ceecf90630f982dec61c4a9a8755a)
+    Handling transients only, mono, 90 Hz high-pass / 9.5 kHz low-pass, 3 ms fade-in /
+    28 ms fade-out, peak 0.78, 48 kHz 16-bit WAV. No pitch shift, no synthesized layers.
+    Ranges, gains and per-file SHA-256: revolver/provenance.json, notes: revolver/README.md.
+  The gunshot itself is still synthesized in sound.js (SYNTH.gunshot), now 15 % louder.
+  The owner confirmed on 2026-10-12 00:5x that all revolver sound sources are clear, and that
+  any revolver file without source information was supplied by the owner directly
+  (none of the eight files above lacks source information).
+
+Thank you, Reitanna, Sadiquecat, thebardofblasphemy and AugustSandberg!
