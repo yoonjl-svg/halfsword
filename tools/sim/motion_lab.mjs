@@ -448,6 +448,18 @@ if (mode === 'poses') {
             tmp.cX += mx * DT;
           }
           if (w && G.t > 2 && XA.gilArm?.armed) gil.armT += DT; // 길목 준비(옆 자세) 동안의 간 보기 시간
+          if (process.env.GIL_MID === '1' && XA.gilArm) { // GIL_MID=1 (10/11 v6 §17 — 읽기만, 켤 때만 찍음): 길목 칼끝이 가운데 선(내 몸 틀 옆 0)을 지날 때 칼끝 앞·높이(가슴 기준) · 그때·낸 때 상대 가슴 거리
+            const nm = XA.secretRun ? XA.tech?.name ?? '' : '';
+            if (XA.secretRun && !XA._gm) XA._gm = { d0: X.foeDistance(), z: null, done: false };
+            if (!XA.secretRun) XA._gm = null;
+            const gm = XA._gm;
+            if (gm && !gm.done && /^gilmok(Talho|Revez)/.test(nm)) {
+              const c = X.bodies.chest.translation(), tp = X.bladePoint(1, new THREE.Vector3()), r = X.right(new THREE.Vector3()), f = X.forward(new THREE.Vector3());
+              const z = (tp.x - c.x) * r.x + (tp.z - c.z) * r.z;
+              if (gm.z != null && gm.z * z <= 0) { gm.done = true; (gil.mid ??= []).push({ fw: (tp.x - c.x) * f.x + (tp.z - c.z) * f.z, y: tp.y - c.y, d: X.foeDistance(), d0: gm.d0 }); }
+              gm.z = z;
+            }
+          }
           if (w && G.t > 2 && XA.gilArm && !XA.gilArm.armed && XA.guard) gil.free[XA.guard.name] = (gil.free[XA.guard.name] ?? 0) + DT;
           if (XA.mode === 'attack' && XA.tech?.name === 'contraBaixo') XA._cbEnd = G.t;
           const gn = XA.guard?.name ?? null;
@@ -556,6 +568,7 @@ if (mode === 'poses') {
     const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
     const mx = (a) => (a.length ? Math.max(...a) : 0);
     { const tot = Object.values(gil.free).reduce((a, b) => a + b, 0) || 1; if (Object.keys(gil.free).length) console.log(`  자세 머묾 (길목 준비 아닐 때 간 보기 몫): ${Object.entries(gil.free).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${pc(v / tot)}`).join(' · ')} · 올려 맞받기 동안·뒤 1 s 맞은 상처 ${gil.cbHit}`); }
+    if (gil.mid?.length) { const M = gil.mid, av = (k) => (M.reduce((a, b) => a + b[k], 0) / M.length).toFixed(2), rg = (k) => `${Math.min(...M.map((m) => m[k])).toFixed(2)}~${Math.max(...M.map((m) => m[k])).toFixed(2)}`; console.log(`  길목 가운데 선 (GIL_MID, n ${M.length}): 칼끝 앞 ${av('fw')} (${rg('fw')}) · 높이 ${av('y')} (${rg('y')}) · 그때 상대 ${av('d')} (${rg('d')}) · 낸 때 상대 ${av('d0')} (${rg('d0')}) m`); }
     if (gil.games) console.log(`  길목 지키기 (판마다): 준비 ${(gil.arms / gil.games).toFixed(2)} · 창(경계 넘음) ${(gil.wins / gil.games).toFixed(2)} · 낸 ${(A.fired / gil.games).toFixed(2)} · 맞힘 ${(A.landed / gil.games).toFixed(2)} (모두 준비 ${gil.arms} · 창 ${gil.wins}) · 간 보기 중 준비 자세 몫 ${tmp.wT ? pc(gil.armT / tmp.wT) : "-"} · 맞힌 자리(상처 수) ${Object.entries(gil.parts).map(([k, v]) => `${k} ${v}`).join(" · ") || "-"}`);
     console.log(`  비기 [${secName ?? '-'}]: ${secName && secName !== '-' ? `낸 ${A.fired} / 맞힘 ${A.landed}${A.blocked ? ` · 막혀 밀어냄 ${A.blocked}` : ''} · 상처 에너지 평균 ${avg(W).toFixed(0)} J · 최대 ${mx(W).toFixed(0)} J (상처 ${W.length}) · 칼끝 추정 평균 ${A.landed ? (A.E / A.landed).toFixed(0) : '-'} J · 최대 ${A.Emax.toFixed(0)} J` : '-'}`);
     // 기술별 맞힘 에너지 (상처 J): 상처 수 많은 순 12 + 비기(★)·真向(oberhau)·altibaixo 는 늘

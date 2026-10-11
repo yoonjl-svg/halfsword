@@ -680,6 +680,9 @@ export class Skill {
       f.secretHit = inLoop ? 1 : SECRET.hitMul;
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);
+      // 길목 디딤 (10/11 v6 6차): 걸음은 받아 줘도(다리) 플레이어 스틱이 0 이면 몸이 거의 안 따라갔다(브라우저: 가운데 선까지 몸 옮김 0.01~0.02 m). AI 는 내딛는 동안 스틱을
+      //  앞으로 민다(ai.js moveFeet — stepT 동안 fwd 1, 맞닿기 − 0.1 보다 멀 때) → 같게: 걸음을 받은 뒤 0.3 s(ai.js STEP_T) 동안 스틱 앞 1. 길목만 (다른 유파 플레이어 비기는 전과 같다)
+      if (D.gilmok && run.stepAsked && run.t < 0.04 + 0.3 && f.foeDistance() > f.swordArt.measure.contact - 0.1) f.move.y = Math.max(f.move.y, 1);
       // 칼끼리 맞물림 (ai.js checkBind 와 같은 기하)
       if (!run.bound && f.tipPrev && foe.tipPrev && segDist(f.bladePoint(0.1, _sf), f.tipPrev, foe.bladePoint(0.1, _sr), foe.tipPrev) < 0.07) run.bound = true;
       if (run.path.length) {

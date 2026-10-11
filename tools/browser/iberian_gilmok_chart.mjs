@@ -32,7 +32,7 @@ const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM 
 const page = await browser.newPage({ viewport: { width: W, height: H } });
 await page.setContent(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#fcfcfb;font-family:'Noto Sans KR',sans-serif">${svg}</body>`);
 await page.screenshot({ path: `${out}/iberian_gilmok_tipspeed.png` });
-const shots = [1, 2, 3].map((k) => `${src}/ibgil_hold_${k}.png`).filter((p) => fs.existsSync(p));
+const shots = [1, 2, 3, 4].map((k) => `${src}/ibgil_hold_${k}.png`).filter((p) => fs.existsSync(p));
 if (shots.length) {
   const imgs = shots.map((p) => `<img src="data:image/png;base64,${fs.readFileSync(p).toString('base64')}" style="width:420px;height:209px;object-fit:cover;display:block">`).join('');
   await page.setViewportSize({ width: 420 * shots.length, height: 209 });

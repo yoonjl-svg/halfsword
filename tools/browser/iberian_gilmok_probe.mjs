@@ -5,6 +5,7 @@
 //   hold — 간격 밖에서 버티다 상대가 들어올 때(판 gilmok 만): S 로 물러나 칼끝 거리 밖에 선다 → '길목 지키기 준비'가 뜬 때 · 창이 열린 때를 적고 → 창에서 끌기 한 번으로 낸다.
 //      준비 · 창 · 한 칼 세 순간을 멈춰 찍고, 물리 스텝마다 칼끝 빠르기를 적는다.
 //  실행: npx vite build && npx vite preview --port 4195 --strictPort &
+//        hold 의 낼 때: FIRE=window(창이 열린 순간, 기본) | early | right | late (사장님 결정 10/11 13:2x — 준비가 켜진 뒤 언제든 낼 수 있음) · RIGHT_D=1.75
 //        node tools/browser/iberian_gilmok_probe.mjs http://127.0.0.1:4195 <폴더> <press|hold> [gilmok|flow] [SIM 초 20]
 //  내놓는 것: <폴더>/ibgil_<대본>_<판>.json · ibgil_hold_<n>.png · 콘솔 SUMMARY · ERRORS. 끝 코드 0 = 콘솔 에러 0
 import { chromium } from 'playwright';
@@ -14,6 +15,8 @@ const dir = process.argv[3] || '.';
 const mode = process.argv[4] || 'press';
 const ver = process.argv[5] || 'gilmok';
 const SIM = +(process.argv[6] || 20);
+const FIRE = process.env.FIRE || 'window'; // hold 대본에서 낼 때 (아래)
+const RIGHT_D = +(process.env.RIGHT_D || 1.75);
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 420 }, hasTouch: true });
@@ -37,11 +40,13 @@ const S = await page.evaluate(() => {
     step0(dt);
     const sec = p.skill.sec;
     const ps = g.playerSecret;
-    rec.push({ t: +g.stats.simTime.toFixed(4), v: +p.tipVel.length().toFixed(3), st: sec?.stage ?? null, n: sec?.cur?.name ?? (sec ? sec.S.name : null), d: +p.foeDistance().toFixed(2), arm: !!ps?.gilArm?.armed, open: !!ps?.open, cue: document.getElementById('techCue')?.textContent?.slice(0, 40) ?? '' });
+    const c = p.bodies.chest.translation(); const tp = p.tipPrev ?? p.bladePoint(1); const r = p.right(new g.THREE.Vector3()); const fwv = p.forward(new g.THREE.Vector3()); const rx = tp.x - c.x, rz = tp.z - c.z; rec.push({ cx: +c.x.toFixed(3), cz: +c.z.toFixed(3), x: +(p.side * (rx * r.x + rz * r.z)).toFixed(3), y: +(tp.y - c.y).toFixed(3), fw: +(rx * fwv.x + rz * fwv.z).toFixed(3), t: +g.stats.simTime.toFixed(4), v: +p.tipVel.length().toFixed(3), st: sec?.stage ?? null, n: sec?.cur?.name ?? (sec ? sec.S.name : null), d: +p.foeDistance().toFixed(2), arm: !!ps?.gilArm?.armed, open: !!ps?.open, cue: document.getElementById('techCue')?.textContent?.slice(0, 40) ?? '' });
   };
+  const rq = p.gait.requestStep.bind(p.gait); window.__req = []; p.gait.requestStep = (o) => { const r = rq(o); window.__req.push({ t: +g.stats.simTime.toFixed(3), kind: o.kind, fwd: o.fwd, ok: r, seg: p.skill.sec?.cur?.name ?? null, moveY: +p.move.y.toFixed(2) }); return r; }; // 10/11 v6 6차: 디딤이 실제로 나가나
   const M = p.swordArt.measure;
   return { S: g.playerSecret.S?.name, reach: M.reach, contact: M.contact };
 });
+if (process.env.EDGE) await page.evaluate((e) => (window.game.config.SECRET.gilmokEdge = e), process.env.EDGE); // EDGE=cut: 길목 경계 스위치 (10/11 v6 6차)
 console.log(`판 ${ver} 비기 ${S.S} reach ${S.reach.toFixed(2)} contact ${S.contact.toFixed(2)} 대본 ${mode}`);
 const swipe = (dx, dy, id = 81) =>
   page.evaluate(
@@ -110,6 +115,7 @@ if (mode === 'press') {
   const R = rec.filter((x) => x.t >= t0 && x.t <= t1);
   const inside = R.filter((x) => x.d < S.reach).length / Math.max(1, R.length);
   const armT = R.filter((x) => x.arm).length / 120;
+  { const F1 = rec.find((x) => x.st); console.log(`PRESS 첫 비기: ${F1 ? `${(F1.t - t0).toFixed(2)} s (대본 시작 기준 — 음수면 걸어 드는 동안 · 상대 가슴 ${F1.d} m · 준비 ${F1.arm})` : '없음'} · 대본 동안 낸 수 ${new Set(R.filter((x) => x.st && x.st !== 'stiff').map((x) => Math.round(x.t * 2))).size ? '있음' : '0'}`); } // 10/11 §17: 준비 → 곧장 내기
   out.insideShare = inside;
   out.armT = armT;
   console.log(`SUMMARY press ${ver}: ${out.simT.toFixed(1)} s · 휘두르기 ${n} · 창 ${out.opened} · 낸 ${out.fired} · 칼끝 거리 안 몫 ${(100 * inside).toFixed(0)} % · 준비 켜진 시간 ${armT.toFixed(1)} s`);
@@ -119,25 +125,35 @@ if (mode === 'press') {
   await page.waitForFunction((r) => window.game.player.foeDistance() > r + 0.6, S.reach, { timeout: 60000 }).catch(() => {});
   await page.keyboard.up('KeyS');
   const t0 = await sim();
-  let armAt = null, openAt = null, fired = false, k = 0, fireAt = null, cutShot = false;
+  let armAt = null, openAt = null, fired = false, k = 0, fireAt = null, cutShot = false, lowShot = false, windShot = false;
   while ((await sim()) - t0 < 60) {
-    const st = await page.evaluate(() => { const g = window.game; const ps = g.playerSecret; const s = g.player.skill.sec; return { arm: !!ps.gilArm?.armed, open: !!ps.open, d: g.player.foeDistance(), sec: s ? { st: s.stage, n: s.cur?.name ?? null } : null, t: g.stats.simTime, alive: g.player.alive && g.enemy.alive, w: g.enemy.wounds?.length ?? 0, w0: window.__w0 ?? null }; });
+    const st = await page.evaluate(() => { const g = window.game; const ps = g.playerSecret; const s = g.player.skill.sec; return { arm: !!ps.gilArm?.armed, open: !!ps.open, d: g.player.foeDistance(), sec: s ? { st: s.stage, n: s.cur?.name ?? null } : null, t: g.stats.simTime, alive: g.player.alive && g.enemy.alive, w: g.enemy.wounds?.length ?? 0, w0: window.__w0 ?? null, wind: ps.gilPose?.windT ?? 0, low: ps.gilPose?.guard?.name ?? null, hand: [+g.player.handOffset.x.toFixed(2), +g.player.handOffset.y.toFixed(2)] }; });
     if (!st.alive) break;
     // 너무 붙으면(준비 전) 다시 물러남
     if (!st.arm && !st.open && !fired && st.d < S.reach + 0.2) await page.keyboard.down('KeyS');
     else await page.keyboard.up('KeyS');
-    if (st.arm && armAt == null) {
-      armAt = st.t;
-      await page.waitForTimeout(200);
-      await shoot(++k, '준비 (길목 지키기 준비 표시)');
+    if (st.arm && armAt == null) armAt = st.t;
+    // 10/11 v6 5차: 준비 중 손을 떼고 있으면 낮은 자세로 쉼 → 상대가 다가오면 옆 자세로 감음 — 두 모습을 찍는다
+    if (st.arm && armAt != null && !lowShot && st.t - armAt > 1.2 && !(st.wind > 0)) {
+      lowShot = true;
+      await shoot(++k, `준비 — 낮은 자세(${st.low}) 손 ${JSON.stringify(st.hand)}`);
     }
-    if (st.open && openAt == null) {
-      openAt = st.t;
-      await shoot(++k, '창 열림 (경계 넘음)');
+    if (st.arm && !windShot && st.wind > 0) {
+      windShot = true;
+      await page.waitForTimeout(250);
+      await shoot(++k, `준비 — 상대가 다가와 옆 자세로 감음 손 ${JSON.stringify(st.hand)}`);
+    }
+    if (st.open && openAt == null) openAt = st.t;
+    // 낼 때 (사장님 결정 10/11 13:2x — 준비가 켜진 뒤 언제든): FIRE=window(전과 같음 — 창이 열린 순간) · early(상대가 칼끝 거리 reach 보다 0.5 m 넘게 멀 때) ·
+    //  right(상대 가슴 ≤ RIGHT_D — 기본 1.75 = 이 한 칼의 가운데 선 칼끝 앞 1.6 m(§17 측정) + 0.15) · late(창 끝 무렵 — 창이 열리고 0.42 s, 유예 0.5 s 끝 무렵)
+    const can = (st.arm || st.open) && !fired && !st.sec;
+    const go = !can ? false : FIRE === 'early' ? st.arm && st.d > S.reach + 0.5 && armAt != null && st.t - armAt > 0.3 : FIRE === 'right' ? st.d <= RIGHT_D : FIRE === 'late' ? st.open && st.t - openAt >= 0.42 : st.open;
+    if (go) {
       await page.evaluate(() => { window.__fireT = window.game.stats.simTime; window.__w0 = window.game.enemy.wounds?.length ?? 0; });
       await swipe(-14, 0);
       fired = true;
       fireAt = st.t;
+      console.log(`FIRE ${FIRE}: 상대 가슴 ${st.d.toFixed(2)} m · 준비 ${st.arm} · 창 ${st.open}`);
     }
     if (fired && st.w0 != null && st.w > st.w0 && !cutShot) { // 한 칼이 닿은 순간 (상대 상처가 늘어난 첫 순간)
       cutShot = true;
@@ -162,7 +178,9 @@ if (mode === 'press') {
     s.t1 = x.t;
     s.vmax = Math.max(s.vmax, x.v);
   }
+  { const RQ = await page.evaluate(() => window.__req.filter((q) => q.t >= (window.__fireT ?? 0) - 0.05)); console.log('REQ ' + JSON.stringify(RQ)); const O = R.find((x) => x.t >= rec.fireT); if (O) console.log(`OPEN 낸 때 칼끝 옆 ${O.x} · 높이 ${O.y} · 앞 ${O.fw} · 빠르기 ${O.v} m/s`); const C0 = await page.evaluate(() => null); }
   console.log('SEGS ' + segs.map((s) => `${s.key} ${(s.t1 - s.t0).toFixed(2)}s 최고 ${s.vmax.toFixed(1)}`).join(' | '));
+  { const RR = R.filter((x) => x.st === 'strike' && /gilmok/.test(x.n ?? '')); for (let q = 1; q < RR.length; q++) if (RR[q - 1].x * RR[q].x <= 0 && RR[q - 1].x !== RR[q].x) { { const F0 = R.find((x) => x.t >= rec.fireT); console.log(`MID 가운데 선: 칼끝 앞 ${RR[q].fw.toFixed(2)} m · 높이 ${RR[q].y.toFixed(2)} m · 상대 가슴 ${RR[q].d.toFixed(2)} m · ${RR[q].n} · 낸 뒤 ${(RR[q].t - rec.fireT).toFixed(2)} s · 몸 옮김 ${F0 ? Math.hypot(RR[q].cx - F0.cx, RR[q].cz - F0.cz).toFixed(2) : "-"} m`); } break; } } // 10/11 v6 5차
   console.log(`SUMMARY hold: 물러선 뒤 준비까지 ${armAt != null ? (armAt - t0).toFixed(2) : '-'} s · 창까지 ${openAt != null ? (openAt - t0).toFixed(2) : '-'} s · 비기 ${run.length} 스텝 · 칼끝 최고 ${run.length ? Math.max(...run.map((x) => x.v)).toFixed(1) : '-'} m/s`);
 }
 fs.writeFileSync(`${dir}/ibgil_${mode}_${ver}.json`, JSON.stringify(out));

@@ -353,6 +353,23 @@ export function montanteFlowSeq(hand, dir, D, f = null) {
  *  v5 '머리 위로 넘김'과 같은 문)을 둔다. AI 는 준비 동안 옆 자세를 잡고 있으니 곧장 벤다
  */
 /**
+ * 길목 준비 자세 규칙 (10/11 v6 2차 AI · 5차 플레이어도 같은 함수): 준비가 켜질 때 기다릴 낮은 자세 — 지금 자세가 낮은 셋(아래 탈류·아래 레베스·칼끝 땅에)이면 그대로,
+ *  아니면 손에서 가장 가까운 낮은 자세. guards = 이 유파 간 보는 자세 목록 · cur = 지금 자세 · hand = 손 패드 [x, y]
+ */
+export const GILMOK_LOW = ['wechselR', 'wechselL', 'alber'];
+export function gilmokLowGuard(guards, cur, hand) {
+  if (GILMOK_LOW.includes(cur?.name)) return cur;
+  let best = null;
+  const dd = (g) => Math.hypot(hand[0] - g.pad[0], hand[1] - g.pad[1]); // ai_techniques.js padDist 와 같은 셈
+  for (const g of guards) if (GILMOK_LOW.includes(g.name) && (!best || dd(g) < dd(best))) best = g;
+  return best ?? cur;
+}
+/** 감는 시간 남음 (같은 규칙): 상대가 다가오는 중(> iberianInsideClosing)이고 가까우면(< reach + 다가옴 × 0.4 + 0.3 — preThreat '가까움' 꼴) gilmokArmGrace 로 다시 채우고, 아니면 줄인다. > 0 이면 옆 자세로 감음 */
+export function gilmokWindT(windT, closing, d, reach, dt) {
+  return closing > SECRET.iberianInsideClosing && d < reach + closing * 0.4 + 0.3 ? SECRET.gilmokArmGrace : Math.max(0, (windT ?? 0) - dt);
+}
+
+/**
  * 길목 경계 선 (10/11 v6 4차 — 디렉터 '북부 대공의 검 경계는 스위치로'): 준비(밖)·순간(넘음)을 재는 가슴 거리.
  *  SECRET.gilmokEdge 'reach'(기본) = 무기 간격 끝(검술 풀이 measure.reach) · 'cut' = 이 한 칼의 칼끝이 실제로 닿는 앞 거리 + 디딤 —
  *  덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength) + 디딤(do.step.fwd 0.3). 칼 길이·손 자리에서 계산(탐침 값 아님)
@@ -496,7 +513,11 @@ export class PlayerSecretWatch {
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
-    if (S.do?.gilmok) this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
+    if (S.do?.gilmok) {
+      const was = this.gilArm.armed;
+      this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
+      this.gilmokRest(dt, was, s0, c, d0, V, sw || busy);
+    }
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
@@ -534,6 +555,43 @@ export class PlayerSecretWatch {
     this.openWindow(ctx);
   }
 
+  /**
+   * 플레이어 길목 준비 자세 (10/11 v6 5차 — 디렉터): 준비(armed)이고 손가락을 떼고 있으면(handHeld 거짓 — 쉴 자세로 돌아가는 그 자리) 쉴 목표를 AI 준비 자세와 같은 규칙으로 —
+   *  기본은 낮은 자세(gilmokLowGuard — 손에서 가까운 아래 탈류·아래 레베스·칼끝 땅에), 상대가 다가오고 가까우면(gilmokWindT) 그 쪽 옆 자세로 감고 0.5 s 유지. 손 빠르기 =
+   *  쉴 자세로 돌아가는 빠르기 SKILL.recoverSpeed(휘두르기로 오인되지 않게 — 그대로). 손가락을 대고 있으면 플레이어 손 그대로(창에서는 감는 토막이 붙는 꼴).
+   *  까닭: 4차 원인 — 손이 옆 자세 밖에서 창을 받으면 감는 토막의 떨어지는 힘으로 칼끝이 처져 넓적다리를 벤다. 미리 옆 자세면 가슴 높이(탐침)
+   */
+  gilmokRest(dt, was, s0, c, d0, V, busy) {
+    const me = this.me;
+    const P = (this.gilPose ??= { guard: null, side: 1, windT: 0 });
+    if (!this.gilArm.armed) {
+      P.windT = 0;
+      return;
+    }
+    if (!was) {
+      const guards = TRADITIONS[me.swordArt?.tradition]?.guards ?? [];
+      P.guard = gilmokLowGuard(guards, null, [me.handOffset.x, me.handOffset.y]);
+      P.side = P.guard?.name === 'wechselL' ? -1 : 1;
+      P.windT = 0;
+    }
+    const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0); // 상대 가슴이 나 쪽으로 (지금 모습 — insideEvent·gilmokEvent 와 같은 셈)
+    P.windT = gilmokWindT(P.windT, closing, d0, V.reach, dt);
+    if (me.handHeld || busy || !P.guard) return;
+    const side = this.S.do.side[P.side];
+    const tgt = P.windT > 0 ? side : P.guard.pad;
+    const off = me.handOffset;
+    const hx = tgt[0] - off.x;
+    const hy = tgt[1] - off.y;
+    const d = Math.hypot(hx, hy);
+    const step = SKILL.recoverSpeed * dt;
+    if (d <= step) off.set(tgt[0], tgt[1]);
+    else {
+      off.x += (hx / d) * step;
+      off.y += (hy / d) * step;
+    }
+    me.skill.recovering = false; // 검술 층의 쉴 자세 걷기와 다투지 않게 (이 동안은 길목 준비 자세가 쉴 자리)
+  }
+
   openWindow(ctx, t = SECRET.playerWindow) {
     this.open = { S: this.S, ctx, t };
     this.opened++;
@@ -548,6 +606,21 @@ export class PlayerSecretWatch {
       this.binds.reset(); // 비기를 내면 0
     }
     return o;
+  }
+
+  /**
+   * 길목 준비에서 곧장 내기 (사장님 결정 10/11 13:2x — '발동 시점이 좀 늦어. 미리 쓸 수 있게 해야해. 너무 미리 써서 미스가 나는 게 그 반대보다 말이 돼'):
+   *  플레이어만, 길목 준비(gilArm.armed — 경계 안으로 들어온 뒤 유예 gilmokArmGrace 동안도 포함)가 켜져 있으면 창(경계 넘음 사건)을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼.
+   *  준비는 쓰면 풀린다(한 번 준비에 한 번). 너무 이르면 칼끝이 못 미쳐 헛치고, 늦으면 상대가 안쪽이라 걸린다 — 보정 없음(물리 그대로). 새 값 없음. AI 는 그대로 경계 넘음 순간에 낸다
+   *  돌려줌: { S, ctx } (fire() 와 같은 꼴) 또는 null
+   */
+  fireArmed() {
+    if (!this.S?.do?.gilmok || !this.gilArm.armed) return null;
+    this.gilArm.consume();
+    this.open = null;
+    this.combo = 0;
+    this.binds.reset();
+    return { S: this.S, ctx: { ev: 'gilmokArmed' } };
   }
 }
 
