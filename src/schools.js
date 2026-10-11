@@ -69,6 +69,7 @@ const GERMAN = {
     // 머리 위에서 곧게: 왕관(Kron — 칼자루를 머리 위로 높이 들어 코등이·칼자루로 받는다, 사장님 10/11 22:2x '독일 막기 자세에 왕관 넣어' 기본).
     //  Ringeck 주해 「… catch his strike on your hilt … this displacement is called "the crown". From there you can rush in」 [원전 2차 영역] · 자리 = G.kron [0.02, 0.4](덮는 자세로 쓰던 패드 — 지붕과 긴 자세 사이, 자세표 섞기로 칼이 서고 손이 머리 위) [해석]
     //  SKILL.deKron 0 = 전 자리(긴 자세 — 뻗은 칼 위로 떨어지게, 물리 탐색으로 고른 값). 읽을 때마다 스위치를 본다(게터 — 시뮬 with_config·주소 ?kron=0)
+    //  10/12 왕관 꼴: 이 패드는 손이 가는 길만 정하고, 손·칼끝·칼 면은 막기 자리 몸꼴 덧씌우기(아래 GERMAN_KRON — TRADITIONS.german.parryCover)가 준다 (SKILL.deKronShape 'pad' = 패드만)
     get highC() {
       return SKILL.deKron ? G.kron : G.langort;
     },
@@ -823,6 +824,27 @@ export const TRADITIONS = {
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
+
+// 독일 왕관 꼴 (Kron — 사장님 10/12 00:1x '왕관 꼴 만들어 일단', docs/strike/kron_shape_2026-10-12.md). 10/11 왕관은 패드 G.kron 뿐이라 손·칼끝은 14 자리 섞기(지붕·황소 둘·긴 자세)가
+//  정했고, 그 섞기가 지붕 쪽이라 칼이 거의 서고 칼 면이 옆(날이 앞뒤 — 코등이도 앞뒤)이었다. 진짜 왕관 꼴은 중국 거정세와 같은 막기 자리 몸꼴 덧씌우기(parryCover → frames.js installCover)로 준다.
+//  섞기에 새 자리를 넣지 않는 까닭: 머리 위 자리가 지붕(패드 0.12 거리)에 끌려 다시 섬(중국 擧鼎格 시험 — 확인표 704) · 그 자리를 지나는 베기 길(정수리 베기)이 휜다.
+//  원문: Ringeck 주해 「Wie die kron den schaÿtler bricht」 「… versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran, vnd laufft dir damit ein」 · 영역 「if he displaces with the hilt high over his head,
+//   this displacement is called the crown, and with it [he] runs-in to you」 [원전 2차 — Wiktenauer 'Sigmund ain Ringeck' 전사·영역, 사본 [12r.4] · 드레스덴 [33r.3] 「hoch ob sine~ haupt … die kron」 같은 말].
+//  정해진 것 = 칼자루가 머리 위 높이 · 위에서 떨어지는 칼을 칼자루(코등이) 가까이에서 받음. 나머지는 우리 해석 [해석]:
+//   손 = 머리 위로 높이, 팔은 거의 뻗음 (가슴 중심 위 0.60 m · 앞 0.16 m — 칼 든 어깨에서 0.546 m, 팔 0.565 의 97 %. 10/11 섞기 손 높이 0.505 보다 0.095 높음; 머리 꼭대기 = 가슴 중심 위 0.39) [추정]
+//   칼끝 = 위로 거의 세움, 앞으로 10° (blade [80, 0]) [추정] · 칼 면 = 상대 쪽(face [1, 0, 0] — 날은 좌우, 코등이가 머리 위에 가로로 걸림) [해석]
+//   몸 = 어깨를 거의 바로(두 팔을 머리 위로 똑같이 듦 — 골반 10° · 가슴 0°) · 숙임 0 · 낮춤 0.05 (지붕 값) [추정]
+//  watch: 물러나며 가리기(ai.js withdraw coverFor — 상대가 머리 위로 들면 이 줄)·플레이어 막기 버튼 기다림에도 같은 꼴 (10/11 G.kron 이 쓰이던 곳 그대로). 중국 칸은 watch 가 없어 그대로.
+//  숫자는 모두 사장님 확인 전 (확인표 917). 덧씌우기 빠르기는 중국과 같은 MOTION.coverIn·coverOut, 손 목표 빠르기는 parrySpeed 그대로(새 값 없음)
+export const GERMAN_KRON = { name: '왕관 (Kron)', desc: '칼자루를 머리 위로 높이 들고 코등이를 가로로 세워 위에서 떨어지는 칼을 코등이·밑동으로 받는다 · 거기서 뛰어든다', pad: G.kron, hand: [0.16, 0.6, 0.04], blade: [80, 0], face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
+// 독일만(롱소드·엑스칼리버·라이트세이버·에스톡·세이버·팔쉬온 — 독일 전통 무기 모두). 무유파(none)는 GERMAN 막기 패드를 같이 쓰지만 이 덧씌우기는 받지 않는다(유파 칸이 따로 — 바이트 그대로).
+//  읽을 때마다 스위치를 본다(게터): SKILL.deKron 0 → 없음(긴 자세 자리) · SKILL.deKronShape 'pad' → 없음(10/11 패드 꼴)
+Object.defineProperty(TRADITIONS.german, 'parryCover', {
+  get() {
+    return SKILL.deKron && SKILL.deKronShape !== 'pad' ? { highC: GERMAN_KRON } : undefined;
+  },
+  enumerable: true,
+});
 
 // 이탈리아 빈팔 (10/10 사장님 '정확히 고증대로' — 원전 대조 docs/motion/rapier_offhand_2026-10-10.md). fighter.js applyPose 가 sword_art.js art.offArm 으로 읽는다.
 //  칸 = 빈손이 갈 자리(가슴 몸체 기준 m: [앞, 위(가슴 중심에서), 바깥(빈손 쪽)]) → 빈팔 역운동학(offArmIK, 팔꿈치는 아래·뒤·바깥).

@@ -6,7 +6,7 @@
 //   · 들어오는 칼 읽기 = AI 와 같은 함수 secret.js threatNow (ai.js threat 와 같은 셈). 반응 지연은 넣지 않는다(lag 0 — 지금 모습, 플레이어 비기 창과 같은 눈):
 //     사람의 반응은 버튼을 누르는 때다(늦게 누르면 손이 막기 빠르기로 제때 못 닿음). AI 처럼 AI_LEVELS.normal.reaction 만큼 늦게 보는 판은 lag 로 잰다(기록 §4).
 //     한 공격(위협 번호 — 0.25 s 조용했다가 다시 오면 새 공격, ai.js threat 와 같은 규칙)에 한 번 줄을 정한다(ai.js respond).
-//   · 막기 자리 = 내 꾸러미 school.parry[줄] (없으면 pose.point — ai.js defend 그대로). 중국은 그 줄의 몸꼴 덧씌우기(parryCover — frames.js installCover, AI 와 같은 함수).
+//   · 막기 자리 = 내 꾸러미 school.parry[줄] (없으면 pose.point — ai.js defend 그대로). 중국·독일(왕관 — 10/12)은 그 줄의 몸꼴 덧씌우기(parryCover — frames.js installCover, AI 와 같은 함수).
 //   · 손 빠르기 = AI 막기 빠르기 L.parrySpeed (L = AI_LEVELS.normal — 플레이어 비기 손 빠르기 바탕과 같은 난이도, skill.js updateSecret). 손 목표를 그 빠르기로 옮긴다
 //     (ai.js moveHand 와 같은 꼴 — 순간이동 없음). 막혔는지는 물리.
 //   · 막기가 끝나는 때 = ai.js defend 의 '공격이 지나갔다'(위협 없음 0.12 s · 상대 손 2.5 m/s 밑 · 막기 0.3 s 지남) 또는 막기 시간 0.65 s (ai.js respond) — 끝나면 기다림.
@@ -44,6 +44,7 @@ export class PlayerParryGuard {
     this.mode = 'idle';
     this.defVoid = false;
     this.defLine = null;
+    this.coverLine = null; // 기다림에 가리는 줄 (installCover watch 칸 — 독일 왕관이 기다림에도 같은 꼴, 10/12)
     this.timer = 0;
     this.noThreat = Infinity;
     this.threatId = 0;
@@ -109,6 +110,7 @@ export class PlayerParryGuard {
       this.active = false;
       this.mode = 'idle';
       this.defLine = null;
+      this.coverLine = null;
       this.line = null;
       return false;
     }
@@ -139,6 +141,7 @@ export class PlayerParryGuard {
       p = AI.prototype.coverFor.call({ school: this.school }, s); // 기다림: AI 가 물러나며 가리는 자리 (같은 함수)
       this.line = p === this.school.pose.point ? 'point' : (LINES.find((k) => this.school.parry[k] === p) ?? 'point');
     }
+    this.coverLine = this.mode === 'idle' && this.line !== 'point' ? this.line : null;
     // 손 목표를 막기 빠르기로 (ai.js moveHand 와 같은 꼴)
     const off = me.handOffset;
     const dx = p[0] - off.x;

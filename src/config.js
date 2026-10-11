@@ -566,6 +566,7 @@ export const SKILL = {
   schoolSecret: 1, // 유파 비기(10/9 — docs/strike/school_secret_2026-10-09.md, 사장님 승인 '유파 설계 v3'): 조건이 차면 그 유파의 대표 동작을 완벽 실행(굴림 없음 — 값은 아래 SECRET). schoolArt 1 일 때만. 0 = 비기 없는 판(`?secret=0`, motion_lab SCHOOL_SECRET=off)
   playerSecret: 1, // 플레이어 비기(10/9 23:3x 사장님 '인간 플레이어로서는 비기를 아예 못 쓰겠어' — docs/strike/player_secret_2026-10-09.md): 내 무기 유파의 비기 조건이 차면 짧은 창(SECRET.playerWindow)이 열리고 그 안의 공격 입력이 비기 완벽 실행. 0 = 끔(`?playerSecret=0`)
   deKron: 1, // 독일 막기 자리 머리 위(highC) = 왕관(Kron, G.kron [0.02, 0.4] — 칼자루를 머리 위로 들어 코등이·칼자루로 받음). 사장님 10/11 22:2x '독일 막기 자세에 왕관 넣어' → 기본. 감아 들기(SECRET.deSecret 'parry')의 정한 자세에도 든다(왕관 → 뛰어들기). 0 = 전 자리(긴 자세)·정한 자세 황소 둘 (`?kron=0`, 시뮬 with_config.mjs SKILL.deKron=0) — docs/strike/natural_bind_2026-10-11.md · 확인표 910
+  deKronShape: 'true', // 왕관 꼴 (사장님 10/12 00:1x '왕관 꼴 만들어 일단'): 'true' = 진짜 왕관 꼴(칼자루를 머리 위로 높이 들고 코등이를 가로로 — schools.js GERMAN_KRON 덧씌우기 자리, 손·칼끝·칼 면을 직접 줌) · 'pad' = 10/11 꼴(패드만 — 자세표 섞기로 칼이 지붕처럼 섬, `?kronShape=pad`, 시뮬 with_config.mjs SKILL.deKronShape=pad). deKron 0 이면 읽지 않음 — docs/strike/kron_shape_2026-10-12.md · 확인표 917
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 

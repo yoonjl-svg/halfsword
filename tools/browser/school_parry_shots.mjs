@@ -2,7 +2,7 @@
 //  AI 의 update 를 시험용으로 바꾼다: 막는 중(mode 'defend', 피하기 아님, defLine = 그 줄)으로 두고 손은 꾸러미 막기 자리(art.school.parry[줄])로 —
 //  본판의 막기 덧씌우기(frames.js installCover — 유파 parryCover)가 그대로 돈다. 'pad:<G 열쇠>' 는 막지 않고 그 패드만 든다(자세표 몸꼴).
 //  시험만: 플레이어는 맞지 않고 치지 않는다. 콘솔 에러 0 을 본다.
-//   SHOTS=highC,thrust,lowL,pad:sideR,pad:sideL  WEAPON=qinggang  PREFIX=school_parry_after  VIEWS=front,side
+//   SHOTS=highC,thrust,lowL,pad:sideR,pad:sideL  WEAPON=qinggang  PREFIX=school_parry_after  VIEWS=front,side  QUERY=&kronShape=pad
 //   npx vite build && npx vite preview --port 4193 --strictPort &   node tools/browser/school_parry_shots.mjs http://127.0.0.1:4193 <폴더>
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -21,7 +21,7 @@ for (const sh of SHOTS) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror ' + e));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await page.goto(`${base}/?weapon=longsword&foeWeapon=${WEAPON}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?weapon=longsword&foeWeapon=${WEAPON}${process.env.QUERY ?? ''}`, { waitUntil: 'networkidle' }); // QUERY: 덧붙일 주소 (10/12 왕관 꼴 — '&kronShape=pad')
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
   await page.getByText('싸움 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.ai, null, { timeout: 60000 });

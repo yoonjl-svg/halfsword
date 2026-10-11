@@ -234,6 +234,7 @@ const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 const toV = (v) => _v3.set(v.x, v.y, v.z);
 const RIGHT_LOCAL = new THREE.Vector3(0, 0, 1);
+const _cvFace = new THREE.Vector3(); // 막기 자리 몸꼴 칼 면 (driveSword — 10/12 왕관)
 const rot = (b, out) => {
   const r = b.rotation();
   return out.set(r.x, r.y, r.z, r.w);
@@ -2944,6 +2945,23 @@ export class Fighter {
         flatTarget.normalize();
       }
       if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
+    }
+    // 막기 자리 몸꼴의 칼 면 (10/12 독일 왕관 — frames.js installCover 의 face, schools.js GERMAN_KRON): 덮개가 덧씌우기 칸을 쥔 동안 날 세우기 목표를 덮는 무게만큼
+    //  그 쪽(왕관 = 칼 면이 상대 쪽, 날·코등이가 좌우)으로. 고르는 법은 위와 같다(가까운 칼 면 → 아래팔 돌림 범위). face 없는 덮개(중국 셋)·덮지 않는 때는 지나치기만 한다
+    const cv = this.skill?._cover;
+    if (cv?.own && cv.face && this.skill.thrustPose.w > 0) {
+      const fw = _cvFace.set(cv.face[0], cv.face[1], this.side * cv.face[2]).applyQuaternion(this.yaw);
+      fw.addScaledVector(blade, -fw.dot(blade));
+      if (fw.lengthSq() > 1e-4) {
+        fw.normalize();
+        if (fw.dot(flat) < 0) fw.negate();
+        if (zf) rollSide(fw, zf);
+        if (flatTarget.dot(fw) < 0) flatTarget.negate();
+        flatTarget.lerp(fw, this.skill.thrustPose.w);
+        if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(fw);
+        flatTarget.normalize();
+        if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
+      }
     }
     // 칼날 축(길쭉한 방향)으로 도는 회전은 관성이 아주 작아서, 큰 힘을 주면
     // 계산이 폭주해 칼이 팽이처럼 돈다. 그래서 비틀림은 아주 약하게 따로 다룬다.
