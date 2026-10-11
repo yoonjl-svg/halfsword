@@ -16,7 +16,14 @@ export { RAPIER, THREE, CONFIG, AI };
 //  FINISH_ENTRY=low = 낮은 상대 진입 (downlow = 고친 판) ·FINISH_MODE=power25 = 즉사 대신 판정 에너지 × FINISH.power (FINISH_POWER=수 로 배율 바꿈)
 {
   const { FINISH } = await import('../../src/finish.js');
-  if (['low', 'downlow'].includes(process.env.FINISH_ENTRY)) FINISH.entry = process.env.FINISH_ENTRY;
+  if (['down', 'low', 'downlow', 'auto'].includes(process.env.FINISH_ENTRY)) FINISH.entry = process.env.FINISH_ENTRY;
+  // 10/12 약한 자세 겨눔 묶음: VITAL=0 = 끔 (진입 auto → down) · PLATE_NECK=1 = 판금 상대 찍기 목 겨눔 (10/1 C)
+  if (['0', '1'].includes(process.env.VITAL)) FINISH.vital = process.env.VITAL === '1';
+  if (['0', '1'].includes(process.env.PLATE_NECK)) FINISH.plateNeck = process.env.PLATE_NECK === '1';
+  {
+    const { VITAL } = await import('../../src/vital_target.js'); // 묶음 갈래: VITAL_AI=0|1 · VITAL_THRUST=0|1 · VITAL_PCUT=0|1
+    for (const [e, k] of [['VITAL_AI', 'aiCut'], ['VITAL_THRUST', 'thrust'], ['VITAL_PCUT', 'playerCut']]) if (['0', '1'].includes(process.env[e])) VITAL[k] = process.env[e] === '1';
+  }
   if (['power25', 'kill'].includes(process.env.FINISH_MODE)) FINISH.mode = process.env.FINISH_MODE; // 10/12 기본 power25 · kill = 전 즉사
   if (process.env.FINISH_POWER) FINISH.power = +process.env.FINISH_POWER;
 }

@@ -7,6 +7,9 @@
 //  칼끝 위치와 속도, 자세, 비틀거림. (상대 조종 입력을 몰래 읽지 않는다)
 // ─────────────────────────────────────────────────────────────
 
+import { FINISH } from './finish.js';
+import { captureVitalPose } from './vital_target.js';
+
 const N = 96; // 기록 개수 (1/120초마다 → 0.8초)
 
 function snap() {
@@ -80,6 +83,8 @@ export class Senses {
     s.balance = f.balance;
     s.armed = f.armed;
     s.vigor = f.vigor;
+    // 약한 자세 겨눔 (FINISH.vital, 10/12): 머리·목·가슴·칼 자리 사본 — AI 는 이것도 반응 시간만큼 늦게 본다 (끄면 기록하지 않는다)
+    s.vital = FINISH.vital ? captureVitalPose(f) : null;
   }
 
   /** delay초 전의 모습 (기록이 모자라면 가장 오래된 것) */

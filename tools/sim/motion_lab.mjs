@@ -276,6 +276,7 @@ if (mode === 'poses') {
     school = k2;
   }
   let Wn = 0, L = 0, D = 0, nan = 0, tSum = 0, tN = 0;
+  const endAgg = { causes: {}, decap: 0, low: 0, vital: 0, vitalAI: 0 }; // 끝난 모습 (10/12 약한 자세 겨눔 재기): 죽은 까닭 · 참수 · 진 쪽이 약한 자세(down·getup·kneel)에서 죽음 · AI 급소 공격 수
   // 기질 계기 (10/9 유파 기질 — docs/strike/school_temper_2026-10-09.md): 시험 쪽(X) AI 가 간 볼 때(mode 'watch')의 겉으로 보이는 버릇. 읽기만 한다(난수·물리에 손대지 않음)
   //  간 보기 시간·거리 칸(0.05 m, 중앙값용 — 평균은 상대가 쓰러졌을 때 등 멀리 선 몇 초에 끌려간다) · 옆걸음 시간(|move.x| > 0.05)·|move.x| 합 ·
   //  간 보기가 이어지는 동안 자세 바뀐 수(막기·공격 뒤 돌아오며 바뀐 것은 뺌) · 간격 끝(상대 칼 닿는 거리 foeReach + 0.5 m) 안에 든 때부터 첫 공격까지 걸린 시간
@@ -544,7 +545,14 @@ if (mode === 'poses') {
         if (![v.x, v.y, v.z].every(Number.isFinite)) { nan++; break; }
         const xd = X.state === 'dead';
         const yd = Y.state === 'dead';
+        if (!xd) X._lastState = X.state;
+        if (!yd) Y._lastState = Y.state;
         if (xd || yd) {
+          for (const F of [X, Y]) if (F.state === 'dead') {
+            endAgg.causes[F.causeOfDeath ?? '-'] = (endAgg.causes[F.causeOfDeath ?? '-'] ?? 0) + 1;
+            if (F.decapitated) endAgg.decap++;
+            if (['down', 'getup', 'kneel'].includes(F._lastState)) endAgg.low++;
+          }
           res = xd && yd ? 'D' : yd ? 'W' : 'L';
           tSum += G.t;
           tN++;
@@ -552,6 +560,7 @@ if (mode === 'poses') {
         }
       }
       if (XA) swFlush(XA);
+      endAgg.vitalAI += (XA?.stats.vital ?? 0) + (YA?.stats.vital ?? 0);
       if (res === 'W') Wn++;
       else if (res === 'L') L++;
       else D++;
@@ -579,6 +588,7 @@ if (mode === 'poses') {
   const pc = (v) => `${Math.round(100 * v)}%`;
   const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, process.env.USED_ALL === '1' ? 99 : 14).map(([k, v]) => `${k} ${v}`).join(', ');
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
+  console.log(`  끝난 모습 (두 쪽): 죽은 까닭 ${JSON.stringify(endAgg.causes)} · 참수 ${endAgg.decap} · 약한 자세(쓰러짐·일어남·무릎)에서 죽음 ${endAgg.low} · AI 급소 공격(약한 자세 겨눔) ${endAgg.vitalAI}`);
   console.log(`  넘어짐 (시험 쪽 서 있다 쓰러짐·무릎): 모두 ${falls.all} · 비기 동안·뒤 1 s ${falls.secret} · 비기 자세 동안·뒤 1 s ${falls.stance}`);
   console.log(`  경직 (시험 쪽): 든 수 ${stiffHit.n} · 경직 동안 맞은 상처 ${stiffHit.stiff} · 비기 끝난 뒤 1 s 안 맞은 상처 ${stiffHit.after}`);
   if (NB.on) { const q = (a, f) => { const b = [...a].sort((x, y) => x - y); return b.length ? (b[Math.min(b.length - 1, Math.floor(f * b.length))] * 1000).toFixed(0) : '-'; }; console.log(`  자연 바인드 (BIND.natural ${BIND.natural}, 시험 쪽 칼 맞닿음 덩이 n ${NB.lens.length}): p50 ${q(NB.lens, 0.5)} · p75 ${q(NB.lens, 0.75)} · p90 ${q(NB.lens, 0.9)} · 최대 ${q(NB.lens, 1)} ms · 0.3 s 넘음 ${NB.long} (판마다 ${(NB.long / n).toFixed(2)}) · 끝난 방식 ${JSON.stringify(NB.ends)} · 코등이 걸림 ${NB.hilt} · 넓은 맞부딪힘(칼날 밖) 덩이 ${NB.wide.length} (0.3 s 넘음 ${NB.wide.filter((x) => x >= 0.3).length}) · AI 결정(둘 다) ${JSON.stringify((NB.ais ?? []).reduce((o, A) => { for (const [k, v] of Object.entries(A.stats.natBind ?? {})) o[k] = (o[k] ?? 0) + v; return o; }, {}))} · 시험 쪽 공격 ${(NB.atk / (NB.t / 60)).toFixed(1)}/분 · 간 보기 몫 ${(100 * NB.watch / NB.t).toFixed(0)}%`); }

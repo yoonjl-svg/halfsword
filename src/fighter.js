@@ -18,6 +18,7 @@ import { guardAt, finishAt } from './guards.js';
 import { resolveSwordArt, applySwordArt } from './sword_art.js'; // 검술 풀이: 자세표·동작 라이브러리·덧씌우기·쥠·HUD 이름을 한 곳에서 (10/8 ① 구조)
 import { corrStep } from './corr.js';
 import { newFinish, updateFinish, FINISH } from './finish.js';
+import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
@@ -959,6 +960,25 @@ export class Fighter {
     if (this.skill.corr === 'v2' && sv > 0) this.padHand(x, y, sv, outH);
     else rawHand(x, y, outH);
     return outD.set(...guardDir(x, y, !!this.guardPose?.oneHand)).normalize();
+  }
+
+  /** 패드 (x, y) 가 명령하는 손 목표·칼끝 방향 — driveSword 의 쉼 무게·덧씌우기 앞 줄과 같은 식 (보정 v2 = padPose, 옛 보정 = 날것.lerp(자세 지도, gw)).
+   *  약한 자세 겨눔(vital_target.js strokeCrossing)이 베기 길이 목 앞을 지나는 높이를 잴 때 읽는다. 자세 지도는 제 scratch 로 부른다 (guardPose 를 건드리지 않는다) */
+  strokeCommand(x, y, outH, outD) {
+    if (this.skill.corr === 'v2' && this.skill.level > 0) return this.padPose(x, y, outH, outD);
+    rawHand(x, y, outH);
+    outD.set(...guardDir(x, y, !!this.guardPose?.oneHand));
+    const gw = this.guardWeight();
+    if (gw > 0) {
+      const S = (this._strokeG ||= {});
+      S.table = this.guardPose.table;
+      S.oneHand = this.guardPose.oneHand;
+      const G = guardAt(x, y, S, null);
+      outH.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
+      outD.lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), gw);
+      if (outD.lengthSq() < 0.04) outD.set(G.dir[0], G.dir[1], G.dir[2]);
+    }
+    return outD.normalize();
   }
 
   /**
@@ -2770,6 +2790,11 @@ export class Fighter {
     } else if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     // 탭 찌르기(skill.thrustPose)는 보정이 아니라 명령이라 검술 보정 세기(gw)와 무관하게 덧씌운다 — 보정 0 에서도 찌른다.
     //  찌르기는 지금 손 목표(handBase, 덧씌우기 전)에서 뻗어 나간다 (skill.thrust)
+    // 약한 자세 겨눔 (FINISH.vital, 10/12 — vital_target.js): 상대가 무릎 꿇음·일어나는 중이면 베기 길이 목 앞을 지나게 손 높이를 준비 (보정 0 이면 손대지 않는다)
+    if (FINISH.vital) {
+      if (this.index === 0) playerVitalUpdate(this, this.lastDt || 0);
+      vitalHand(this, handLocal);
+    }
     const hb = (this.handBase ||= [0, 0, 0]);
     hb[0] = handLocal.x;
     hb[1] = handLocal.y;
@@ -2833,6 +2858,7 @@ export class Fighter {
       if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
       aim.normalize();
     }
+    if (FINISH.vital) vitalAim(this, aim); // 약한 자세 겨눔: 칼 기울기 (높이만, 수평 방향 그대로)
     if (th.w > 0) {
       aim.lerp(_v6.set(th.dir[0], th.dir[1], th.dir[2]), th.w);
       if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);

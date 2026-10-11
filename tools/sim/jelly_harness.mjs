@@ -9,6 +9,18 @@ import { Combat } from '../../src/combat.js';
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
+// 마무리·약한 자세 겨눔 스위치 (10/12, harness_m.mjs 와 같은 환경 변수 — 안 주면 src 기본 그대로): FINISH_ENTRY=down|low|downlow|auto · FINISH_MODE=kill|power25 · VITAL=0|1 · PLATE_NECK=0|1
+{
+  const { FINISH } = await import('../../src/finish.js');
+  if (['down', 'low', 'downlow', 'auto'].includes(process.env.FINISH_ENTRY)) FINISH.entry = process.env.FINISH_ENTRY;
+  if (['power25', 'kill'].includes(process.env.FINISH_MODE)) FINISH.mode = process.env.FINISH_MODE;
+  if (['0', '1'].includes(process.env.VITAL)) FINISH.vital = process.env.VITAL === '1';
+  if (['0', '1'].includes(process.env.PLATE_NECK)) FINISH.plateNeck = process.env.PLATE_NECK === '1';
+  {
+    const { VITAL } = await import('../../src/vital_target.js'); // 묶음 갈래: VITAL_AI=0|1 · VITAL_THRUST=0|1 · VITAL_PCUT=0|1
+    for (const [e, k] of [['VITAL_AI', 'aiCut'], ['VITAL_THRUST', 'thrust'], ['VITAL_PCUT', 'playerCut']]) if (['0', '1'].includes(process.env[e])) VITAL[k] = process.env[e] === '1';
+  }
+}
 const { PHYSICS, ARENA } = CONFIG;
 export const DT = PHYSICS.timestep;
 
