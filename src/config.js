@@ -633,7 +633,7 @@ export const SECRET = {
   //  'parry' = 막기 연환(정한 자세의 막기가 성공하면 짧은 기회 안의 입력으로 빠른 2 연격 — schools.js *_SECRET_PARRY) · 'v1' = 그 전 판(중국 連環三擊 · 독일 Versetzen).
   //  주소 `?cnSecret=v1` · `?deSecret=v1` · 시뮬 `with_config.mjs SECRET.cnSecret=v1` · test.html 고르기
   cnSecret: 'parry',
-  deSecret: 'v1',
+  deSecret: 'parry',
   // 독일 감아 들기 (Indes — 붙어서 이긴다, 10/11 19:1x 사장님 '몇 초(0.n초?) 이상 붙어있으면 붙어있는 한 계속 발동 가능, 오래 붙어 있었을수록 깊고 강한 공격') [모두 사장님 확인 전]:
   deBindMin: 0.3, // 정한 걸이 막기 뒤 칼이 이 초 이상 맞붙어 이어지면 창이 열린다(붙어 있는 동안 계속). 시작값 = 이베리아 호 안쪽 머묾 iberianInsideDwell · 따라 지나감 0.3 과 같은 수
   deBindFull: 1.0, // 붙음이 이 초(맞닿은 때부터)에 이르면 어드밴티지 최대 (secret.js bindGain)
