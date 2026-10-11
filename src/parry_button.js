@@ -17,9 +17,15 @@
 //  손가락 빠르기와 섞이지 않게: 이 파일이 옮긴 손 목표만큼 검술 층의 지난 목표(skill.prev)도 옮겨, 휘두르기 판정(skill.swinging — 내딛기·베기 덩이·막기 연환의 '공격 중')은
 //   손가락 끌기만 본다. 대신 손이 휘두르기 문턱보다 빠르게 옮겨지는 동안은 AI 막기처럼 휘두르기 꼴의 거르기·몸 따라가기를 쓴다(skill.guardDrive).
 //  새 수 없음 — 모두 AI·검술 층에 있던 값.
+//  막기 거듦 (10/12 — SKILL.parryAssist, docs/strike/parry_assist_2026-10-12.md, 확인표 990~993 사장님 확인 전): 무거운 칼의 막기 바닥을 올린다. 누르는 동안만.
+//   ① 무게 보정: 롱소드(손 기준 휘두름 관성 iRef)보다 무거운 몫 w 만큼 손 빠르기·서보 힘(fighter.powerMul)을 보탠다 — 가벼운 칼은 그대로라 '가벼운 칼이 더 잘 막는다'는 남는다
+//   ② 일찍·다시 읽기: 들어오는 칼끝·타격점을 lead 초 앞으로 내다본 모습으로 threatNow 를 부른다(같은 함수 — 원통을 그만큼 앞으로 넓힘).
+//      한 공격 안에서 읽은 줄이 바뀌면 따라간다(reread — AI 는 한 번 정한 줄을 굳힌다)
+//   ③ 자리 덧힘: 막는 줄의 자리에 손이 닿아 있는 동안 서보 힘을 더 — 칼을 단단히 세워 맞고 밀리지 않게
+//   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS } from './config.js';
+import { AI_LEVELS, SKILL } from './config.js';
 import { Senses } from './ai_sense.js';
 import { threatNow } from './secret.js';
 import { TRADITIONS } from './schools.js';
@@ -51,6 +57,8 @@ export class PlayerParryGuard {
     this.threatSeen = -1;
     this.line = null; // 지금 손이 가는 자리의 줄 (defLine 또는 기다림의 coverFor 줄 · 'point')
     this.stats = { heldT: 0, threats: 0, lines: {}, waitT: 0 };
+    this.boost = false; // 막기 거듦이 me.powerMul 을 쥐고 있나
+    this._s2 = {}; // 일찍 읽기용 내다본 모습 (seen 사본)
     const pc = TRADITIONS[me.swordArt?.tradition]?.parryCover;
     if (pc) {
       const { down, ...covers } = pc; // 쓰러져 머리 가리기(down)는 AI 몫 — 플레이어 몸엔 막기 줄만
@@ -100,7 +108,11 @@ export class PlayerParryGuard {
     const c = me.bodies.chest.translation();
     const d = Math.max(0.01, Math.hypot(s.cx - c.x, s.cz - c.z));
     const foeReach = (me.swordArt?.measureFor?.(this.foe.weapon)?.reach ?? 1) + 0.05; // ai.js 생성자 foeReach 와 같은 셈 (PlayerSecretWatch.view 와 같음)
-    const th = this.foe.alive ? threatNow(this.sense, this.foe, s, c, me.right(_r), d, foeReach, this.lag) : null;
+    const A = SKILL.parryAssist ?? 0;
+    const AV = SKILL.parryAssistVals;
+    const w = A > 0 ? Math.min(AV.wMax, Math.max(0, (me.swordIhand ?? AV.iRef) / AV.iRef - 1)) : 0; // 롱소드보다 무거운 몫
+    const sr = A >= 2 && AV.lead > 0 ? this.ahead(s, AV.lead) : s; // ② 일찍 읽기
+    const th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
     if (th) {
       if (this.noThreat > 0.25) this.threatId++;
       this.noThreat = 0;
@@ -112,6 +124,7 @@ export class PlayerParryGuard {
       this.defLine = null;
       this.coverLine = null;
       this.line = null;
+      if (this.boost) (me.powerMul = 1), (this.boost = false);
       return false;
     }
     this.active = true;
@@ -123,6 +136,10 @@ export class PlayerParryGuard {
       this.timer = 0.65;
       this.stats.threats++;
       this.stats.lines[th.line] = (this.stats.lines[th.line] ?? 0) + 1;
+    } else if (A >= 2 && AV.reread && th && this.defLine && th.line !== this.defLine) {
+      // ② 다시 읽기: 한 공격 안에서도 지금 읽은 줄이 바뀌면 따라간다 (AI 는 한 번 정하면 그대로 — 준비 동작을 공격으로 읽고 줄을 잘못 굳히는 일, 기록 §3)
+      this.defLine = th.line;
+      this.stats.reread = (this.stats.reread ?? 0) + 1;
     }
     if (this.defLine) {
       // ai.js defend 의 끝: 공격이 지나갔다 (칼끝이 더는 오지 않고 손이 멈췄다) · 막기 시간이 다 됐다
@@ -147,7 +164,7 @@ export class PlayerParryGuard {
     const dx = p[0] - off.x;
     const dy = p[1] - off.y;
     const dd = Math.hypot(dx, dy);
-    const step = L.parrySpeed * dt;
+    const step = L.parrySpeed * (1 + (A >= 1 ? AV.speedK * w : 0)) * dt; // ① 무게 보정 (단계 0 이면 그대로)
     const k = dd > step ? step / dd : 1;
     const mx = dx * k;
     const my = dy * k;
@@ -158,8 +175,26 @@ export class PlayerParryGuard {
     sk.guardDrive = Math.hypot(mx, my) / dt; // 검술 층: 휘두르기 문턱보다 빠르면 AI 막기처럼 휘두르기 꼴의 거르기·몸 따라가기 (skill.js)
     sk.recovering = false;
     sk.cutPending = false;
+    if (A >= 1) {
+      // ① 서보 힘 · ③ 막는 줄의 자리에 닿아 있으면 더 (칼을 단단히 세움)
+      let pm = 1 + AV.powK * w;
+      if (A >= 3 && this.mode === 'defend' && Math.hypot(p[0] - off.x, p[1] - off.y) < AV.holdR) pm *= 1 + AV.holdK * (1 + w);
+      me.powerMul = pm;
+      this.boost = true;
+    } else if (this.boost) (me.powerMul = 1), (this.boost = false);
     me.inputActive = true; // 손을 쥐고 있다 — 쉼 무게·되돌아옴·끝점 붙잡음은 손가락이 움직일 때처럼 비킨다 (main.js 가 프레임마다 다시 정함)
     return true;
   }
 
+  /** 일찍 읽기 (막기 거듦 ②): 칼끝·타격점을 지금 속도로 lead 초 앞에 둔 모습 (나머지 칸은 그대로) */
+  ahead(s, lead) {
+    const o = Object.assign(this._s2, s);
+    o.tx = s.tx + s.tvx * lead;
+    o.ty = s.ty + s.tvy * lead;
+    o.tz = s.tz + s.tvz * lead;
+    o.mx = s.mx + s.mvx * lead;
+    o.my = s.my + s.mvy * lead;
+    o.mz = s.mz + s.mvz * lead;
+    return o;
+  }
 }

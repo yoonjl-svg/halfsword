@@ -6,6 +6,7 @@
 //            (진짜 입력 길 — main.js 의 '누른 채 휘두르기 → 막기를 놓고 공격, 창이 열려 있으면 비기').
 //  재는 것: 상대 공격(ai.afterStrike 한 번 = 한 수)마다 맞힘·막힘(칼끼리 맞물리고 안 맞음)·헛침 · 내 상처 수 · 막기 버튼이 정한 줄·자리 이름 ·
 //           막기 연환 창·낸·맞힘·수마다 칼끝 최고 m/s.
+//  QS='&parryAssist=0' 처럼 주소 뒤에 붙일 것 (10/12 막기 거듦 전/후 — docs/strike/parry_assist_2026-10-12.md). SUMMARY 끝에 그 기록의 셈(칼날 상처 없음 + 칼 맞물림 = 받아냄, 칼날 상처 = 베임)도 낸다
 //  실행: npx vite build && npx vite preview --port 4198 --strictPort &
 //        node tools/browser/parry_button_probe.mjs http://127.0.0.1:4198 <폴더> <qinggang|longsword|…> <none|button> [SIM 초 40]
 //  내놓는 것: <폴더>/pbtn_<무기>_<대본>_<n>.png (막기 자세 · 창 · 둘째 수) · 콘솔 SUMMARY · ERRORS. 끝 코드 0 = 콘솔 에러 0
@@ -27,7 +28,7 @@ page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text());
 });
-await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword&slowMo=0`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword&slowMo=0${process.env.QS ?? ''}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
 await page.getByText('싸움 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerGuard, null, { timeout: 60000 });
@@ -43,7 +44,10 @@ const S = await page.evaluate(
     const R = (window.__pb = { strikes: [], w0: p.wounds?.length ?? 0, blood0: p.blood, opened: [], combo: [], pause: null, shots: 0, defendSeen: false, openAt: null });
     const as0 = ai.afterStrike.bind(ai);
     ai.afterStrike = (d) => {
-      if (!ai.strikeTallied) R.strikes.push({ t: +g.stats.simTime.toFixed(2), r: ai.hitLanded ? 'landed' : ai.bound ? 'parried' : 'missed', guard: pg.active ? pg.line : null, gmode: pg.active ? pg.mode : null, dOff: pg.active ? +Math.hypot(p.handOffset.x - pg.padOf(pg.line)[0], p.handOffset.y - pg.padOf(pg.line)[1]).toFixed(2) : null, dAim: pg.active ? +Math.hypot(p.skill.aim.x - p.handOffset.x, p.skill.aim.y - p.handOffset.y).toFixed(2) : null, why: pg.active ? null : `${p.state}${p.armed ? '' : ' 칼없음'}${p.skill.sec ? ' 비기' : ''}${p.skill.tap ? ' 찌름' : ''}${pg.broken ? ' 풀림' : ''}${pg.held ? '' : ' 안누름'}` });
+      const wl = p.wounds?.length ?? 0;
+      const cut = (p.wounds ?? []).slice(R.wLast ?? R.w0).some((w) => w.type !== 'blunt');
+      R.wLast = wl;
+      if (!ai.strikeTallied) R.strikes.push({ cut, t: +g.stats.simTime.toFixed(2), r: ai.hitLanded ? 'landed' : ai.bound ? 'parried' : 'missed', guard: pg.active ? pg.line : null, gmode: pg.active ? pg.mode : null, dOff: pg.active ? +Math.hypot(p.handOffset.x - pg.padOf(pg.line)[0], p.handOffset.y - pg.padOf(pg.line)[1]).toFixed(2) : null, dAim: pg.active ? +Math.hypot(p.skill.aim.x - p.handOffset.x, p.skill.aim.y - p.handOffset.y).toFixed(2) : null, why: pg.active ? null : `${p.state}${p.armed ? '' : ' 칼없음'}${p.skill.sec ? ' 비기' : ''}${p.skill.tap ? ' 찌름' : ''}${pg.broken ? ' 풀림' : ''}${pg.held ? '' : ' 안누름'}` });
       return as0(d);
     };
     let wasOpen = false;
@@ -155,6 +159,8 @@ const r = await page.evaluate(() => {
 const c = { landed: 0, parried: 0, missed: 0 };
 for (const s of r.R.strikes) c[s.r]++;
 const n = r.R.strikes.length;
+const held = r.R.strikes.filter((s) => s.guard);
+const pa = { ok: held.filter((s) => !s.cut && s.r === 'parried').length, cut: held.filter((s) => s.cut).length };
 const byGuard = {};
 for (const s of r.R.strikes) {
   const key = s.guard ? `${s.gmode}:${s.guard}` : `-${s.why ?? ''}`;
@@ -168,7 +174,7 @@ console.log(`OPENED ${JSON.stringify(r.R.opened)}`);
 console.log(`COMBO ${JSON.stringify(r.R.combo)}`);
 console.log(`PC ${JSON.stringify(r.pc)}`);
 console.log(
-  `SUMMARY ${weapon} ${mode}: ${(t1 - t0).toFixed(1)} s · 상대 수 ${n} · 맞음 ${c.landed} · 막음 ${c.parried} · 헛침 ${c.missed} · 막아 낸 비율 ${n ? ((100 * c.parried) / n).toFixed(0) : '-'} % (막음/(맞음+막음) ${c.landed + c.parried ? ((100 * c.parried) / (c.landed + c.parried)).toFixed(0) : '-'} %) · 내 상처 ${r.wounds} · 피 ${r.blood} · 살아 있음 ${r.alive} · 창 ${r.windows} · 낸 ${r.fired} · 맞힘 ${r.landed} · 휘두르기 ${swipes}`,
+  `SUMMARY ${weapon} ${mode}: ${(t1 - t0).toFixed(1)} s · 상대 수 ${n} · 맞음 ${c.landed} · 막음 ${c.parried} · 헛침 ${c.missed} · 막아 낸 비율 ${n ? ((100 * c.parried) / n).toFixed(0) : '-'} % (막음/(맞음+막음) ${c.landed + c.parried ? ((100 * c.parried) / (c.landed + c.parried)).toFixed(0) : '-'} %) · 내 상처 ${r.wounds} · 피 ${r.blood} · 살아 있음 ${r.alive} · 창 ${r.windows} · 낸 ${r.fired} · 맞힘 ${r.landed} · 휘두르기 ${swipes} · 버튼이 쥔 수 ${held.length} 중 받아냄 ${pa.ok} · 베임 ${pa.cut} → ${pa.ok + pa.cut ? ((100 * pa.ok) / (pa.ok + pa.cut)).toFixed(0) : '-'} %`,
 );
 console.log(`ERRORS ${errors.length}${errors.length ? ' ' + errors.slice(0, 5).join(' | ') : ''}`);
 await browser.close();
