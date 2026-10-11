@@ -10,7 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS } from './config.js';
+import { BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Gait, hybridJointDefs } from './gait.js';
@@ -2364,7 +2364,8 @@ export class Fighter {
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
     const armO = this.limbs.armO;
     const OA = this.swordArt?.offArm; // 유파 빈팔 (10/10 고증 — schools.js offArm: 이탈리아만). 없으면 아래 두 줄 그대로
-    if (OA && this.armed && this.state === 'stand') this.offArmSchool(OA, armO);
+    if (this.iai?.oneHand && this.state === 'stand') this.offArmSchool({ guard: SECRET.iaiSayaHand }, armO); // 고노센 한 손 발도 (10/12 03:2x — secret_instant.js startIai): 빈손은 칼집을 뒤로 당기는 꼴 (鞘引き)
+    else if (OA && this.armed && this.state === 'stand') this.offArmSchool(OA, armO);
     else {
       setZ('uarmO', (this.secretStance?.offArm ?? 0.5) * armO); // 비기 런지: 빈팔을 뒤로 뻗어 균형 (secretStance.offArm, 없으면 오늘 그대로)
       setZ('farmO', 1.0 * armO);
@@ -3138,6 +3139,13 @@ export class Fighter {
    * 두 마디 팔 역운동학: 손(칼자루)이 target(월드)에 가도록 어깨·팔꿈치 목표 각도를 정한다.
    * 가슴 기준 좌표에서 계산하므로, 허리가 틀어져도 손은 목표를 향한다.
    */
+  /** 비기를 실행하는 중인가 (경직 빼고) — 그동안 칼 팔 역운동학이 팔 끝까지 편다 (SECRET.secretReach, 10/12). 플레이어 = skill.sec · AI = ai.js 가 스텝마다 적는 secretActing · 발도·연환·휩쓸기 = iai */
+  secretReaching() {
+    if (!SECRET.secretReach) return false;
+    const sec = this.skill?.sec;
+    return !!this.iai || !!(sec && sec.stage !== 'stiff') || !!this.secretActing;
+  }
+
   armIK(target) {
     const J = this.jointByName;
     const chest = this.bodies.chest;
@@ -3149,7 +3157,9 @@ export class Fighter {
     const b = ARM.fore; // 아래팔 + 손목까지
     const D = T.sub(S);
     const Dl = D.length();
-    const dMax = ikReach(a, b, playerArm(this)); // 끔 = 위팔 + 아래팔 − 여유 (JOINTS reach ⓒ 면 팔 길이 × reachFrac — 팔이 늘 살짝 굽은 채로 뻗는다)
+    // 끔 = 위팔 + 아래팔 − 여유 (JOINTS reach ⓒ 면 팔 길이 × reachFrac — 팔이 늘 살짝 굽은 채로 뻗는다).
+    //  비기 실행 동안(secretReaching — 경직 빼고, SECRET.secretReach)은 위팔 + 아래팔 그대로: 팔꿈치가 곧게(0°)까지 펴진다 (평소 여유 0.005 m 는 팔꿈치 15° · 플레이어 × 0.975 는 26°) — 사장님 10/12 03:0x
+    const dMax = this.secretReaching() ? a + b : ikReach(a, b, playerArm(this));
     this.armFull = Dl >= dMax; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
     const d = THREE.MathUtils.clamp(Dl, IK_DMIN, dMax);
     const Dn = D.normalize();
@@ -3187,6 +3197,7 @@ export class Fighter {
       (this.state === 'stand' || this.state === 'kneel' || this.state === 'getup') &&
       this.muscle > 0.3 &&
       this.limbs.armO > 0.3 &&
+      !this.iai?.oneHand && // 고노센 한 손 발도 동안은 빈손이 칼자루를 놓는다 (10/12 03:2x — 발도가 끝나면 다시 쥔다)
       GRIP.on;
     this.gripping = false;
     if (!want) return;

@@ -264,6 +264,7 @@ export class AI {
     const me = this.me;
     const foe = this.foe;
     this.sense.record(dt);
+    me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12)
     this.coverLine = null; // 물러나며 가리는 줄 (withdraw 가 그 스텝에 정함 — frames.js installCover 의 watch 덮개가 읽음, 10/12 왕관)
     const L = this.level;
     // 패시브 확정(10/9 13:xx, docs/strike/passive_fire_2026-10-09.md): 패시브가 낸 공격의 걸쇠(0.5 s)와 미룬 패시브의 남은 시간을 줄인다
