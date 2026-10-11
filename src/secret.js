@@ -607,6 +607,21 @@ export class PlayerSecretWatch {
     }
     return o;
   }
+
+  /**
+   * 길목 준비에서 곧장 내기 (사장님 결정 10/11 13:2x — '발동 시점이 좀 늦어. 미리 쓸 수 있게 해야해. 너무 미리 써서 미스가 나는 게 그 반대보다 말이 돼'):
+   *  플레이어만, 길목 준비(gilArm.armed — 경계 안으로 들어온 뒤 유예 gilmokArmGrace 동안도 포함)가 켜져 있으면 창(경계 넘음 사건)을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼.
+   *  준비는 쓰면 풀린다(한 번 준비에 한 번). 너무 이르면 칼끝이 못 미쳐 헛치고, 늦으면 상대가 안쪽이라 걸린다 — 보정 없음(물리 그대로). 새 값 없음. AI 는 그대로 경계 넘음 순간에 낸다
+   *  돌려줌: { S, ctx } (fire() 와 같은 꼴) 또는 null
+   */
+  fireArmed() {
+    if (!this.S?.do?.gilmok || !this.gilArm.armed) return null;
+    this.gilArm.consume();
+    this.open = null;
+    this.combo = 0;
+    this.binds.reset();
+    return { S: this.S, ctx: { ev: 'gilmokArmed' } };
+  }
 }
 
 /** 플레이어 무기의 유파 비기 (내 무기 전통 = 검술 풀이 tradition — schoolOf(w.id)). 스위치(SKILL.schoolArt·schoolSecret·playerSecret)가 꺼졌거나 무유파면 null */

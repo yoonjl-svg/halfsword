@@ -5,6 +5,7 @@
 //   hold — 간격 밖에서 버티다 상대가 들어올 때(판 gilmok 만): S 로 물러나 칼끝 거리 밖에 선다 → '길목 지키기 준비'가 뜬 때 · 창이 열린 때를 적고 → 창에서 끌기 한 번으로 낸다.
 //      준비 · 창 · 한 칼 세 순간을 멈춰 찍고, 물리 스텝마다 칼끝 빠르기를 적는다.
 //  실행: npx vite build && npx vite preview --port 4195 --strictPort &
+//        hold 의 낼 때: FIRE=window(창이 열린 순간, 기본) | early | right | late (사장님 결정 10/11 13:2x — 준비가 켜진 뒤 언제든 낼 수 있음) · RIGHT_D=1.75
 //        node tools/browser/iberian_gilmok_probe.mjs http://127.0.0.1:4195 <폴더> <press|hold> [gilmok|flow] [SIM 초 20]
 //  내놓는 것: <폴더>/ibgil_<대본>_<판>.json · ibgil_hold_<n>.png · 콘솔 SUMMARY · ERRORS. 끝 코드 0 = 콘솔 에러 0
 import { chromium } from 'playwright';
@@ -14,6 +15,8 @@ const dir = process.argv[3] || '.';
 const mode = process.argv[4] || 'press';
 const ver = process.argv[5] || 'gilmok';
 const SIM = +(process.argv[6] || 20);
+const FIRE = process.env.FIRE || 'window'; // hold 대본에서 낼 때 (아래)
+const RIGHT_D = +(process.env.RIGHT_D || 1.75);
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 420 }, hasTouch: true });
@@ -139,13 +142,17 @@ if (mode === 'press') {
       await page.waitForTimeout(250);
       await shoot(++k, `준비 — 상대가 다가와 옆 자세로 감음 손 ${JSON.stringify(st.hand)}`);
     }
-    if (st.open && openAt == null) {
-      openAt = st.t;
-      await shoot(++k, `창 열림 (경계 넘음) 손 ${JSON.stringify(st.hand)}`);
+    if (st.open && openAt == null) openAt = st.t;
+    // 낼 때 (사장님 결정 10/11 13:2x — 준비가 켜진 뒤 언제든): FIRE=window(전과 같음 — 창이 열린 순간) · early(상대가 칼끝 거리 reach 보다 0.5 m 넘게 멀 때) ·
+    //  right(상대 가슴 ≤ RIGHT_D — 기본 1.75 = 이 한 칼의 가운데 선 칼끝 앞 1.6 m(§17 측정) + 0.15) · late(창 끝 무렵 — 창이 열리고 0.42 s, 유예 0.5 s 끝 무렵)
+    const can = (st.arm || st.open) && !fired && !st.sec;
+    const go = !can ? false : FIRE === 'early' ? st.arm && st.d > S.reach + 0.5 && armAt != null && st.t - armAt > 0.3 : FIRE === 'right' ? st.d <= RIGHT_D : FIRE === 'late' ? st.open && st.t - openAt >= 0.42 : st.open;
+    if (go) {
       await page.evaluate(() => { window.__fireT = window.game.stats.simTime; window.__w0 = window.game.enemy.wounds?.length ?? 0; });
       await swipe(-14, 0);
       fired = true;
       fireAt = st.t;
+      console.log(`FIRE ${FIRE}: 상대 가슴 ${st.d.toFixed(2)} m · 준비 ${st.arm} · 창 ${st.open}`);
     }
     if (fired && st.w0 != null && st.w > st.w0 && !cutShot) { // 한 칼이 닿은 순간 (상대 상처가 늘어난 첫 순간)
       cutShot = true;

@@ -1676,8 +1676,10 @@ function frame(now) {
     //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 실행 동안 내 것, 경직 동안은 안 듣는다 (사장님 10/10 20:5x '잠깐 아예 못 움직이게' — 칼은 skill.js holdStiff 가 멈춰 둔다)
     const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
     let secBusy = !!player.skill.secretPhase;
-    if (playerSecret?.open && !secBusy && player.alive && (taps > 0 || swipe)) {
-      const o = playerSecret.fire();
+    // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
+    const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
+    if ((playerSecret?.open || gilReady) && !secBusy && player.alive && (taps > 0 || swipe)) {
+      const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();
       if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
       if (player.skill.secret(o)) {
         secBusy = true;

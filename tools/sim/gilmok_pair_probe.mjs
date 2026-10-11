@@ -7,7 +7,7 @@
 //  실행: node tools/sim/hybrid.mjs gilmok_pair_probe.mjs [무기 zweihander] [씨앗 1]   (GAP=2.0 · ARM=1.0 · S=1 탈류 · ROWS=1 이면 스텝 표 · EPS=0.03)
 import { newRound, DT, THREE, toBody, handPos, V, Q } from './harness_m.mjs';
 import { SKILL } from '../../src/config.js';
-import { playerSecretOf, gilmokLine } from '../../src/secret.js';
+import { playerSecretOf, gilmokLine, PlayerSecretWatch } from '../../src/secret.js';
 const id = process.argv[2] || 'zweihander';
 const seed = +(process.argv[3] || 1);
 const GAP = +(process.env.GAP || 2.0);
@@ -15,6 +15,7 @@ const ARM = +(process.env.ARM ?? 1.0);
 const SIDE = +(process.env.S || 1);
 const EPS = +(process.env.EPS || 0.03);
 const WALK = +(process.env.WALK || 0); // WALK=v: 준비가 찬 뒤 상대가 스틱 v 로 걸어 든다 → 경계(gilmokLine)를 넘는 스텝에 낸다 (게임 창과 같은 순간)
+const NAT = !!+(process.env.NATURAL || 0); // NATURAL=1: 손을 박지 않는다 — AI 는 제 준비 자세(ai.js 길목 준비)·제 창(secretScan), 플레이어는 PlayerSecretWatch(게임 창 · 준비 자세 gilmokRest)가 연 창에서 곧장 낸다. 상대는 WALK 로 걸어 듦
 const HELD = !!+(process.env.HELD || 0);
 const T0 = 2.6; // 몸이 선 뒤 (iberian_flow_probe 와 같은 바탕)
 
@@ -41,7 +42,7 @@ function run(who) {
     const ai = G.ai;
     const mh = ai.moveHand.bind(ai);
     ai.moveHand = (dt) => {
-      if (t0 == null && G.t >= T0) {
+      if (!NAT && t0 == null && G.t >= T0) {
         ai.hand.set(side[0], side[1]);
         ai.handSpeed = 0.9;
       }
@@ -51,10 +52,12 @@ function run(who) {
     ai.startAttack = (t, why, o) => (t0 == null && why !== 'secret' ? false : sa(t, why, o)); // 준비 동안 스스로 치지 않게
     const mf = ai.moveFeet.bind(ai);
     ai.moveFeet = (dt, d) => (t0 == null ? me.move.set(0, 0) : mf(dt, d)); // 낼 때까지 제자리 (같은 거리)
-    ai.secretScan = () => {}; // 스스로 비기를 내지 않게 (탐침이 낸다)
+    if (!NAT) ai.secretScan = () => {}; // 스스로 비기를 내지 않게 (탐침이 낸다)
   }
   // 플레이어 준비: 손 목표를 같은 빠르기(0.9 패드/s — AI 탐침 준비와 같음)로 옆 자세로, 손가락은 댄 채(handHeld — 쉴 자세로 돌아가지 않음)
-  if (PL)
+  const W = PL && NAT ? new PlayerSecretWatch(me, foe) : null;
+  if (W) G.before = () => W.update(DT, !!me.skill.sec); // main.js 와 같은 자리(ai.update 뒤 · player.step 앞)
+  else if (PL)
     G.before = () => {
       if (t0 != null || G.t < T0) return;
       me.handHeld = HELD; // HELD=1: 손가락 댄 채(날것 매핑) · 기본 0: 뗀 채(쉼 무게 1 — 옛 자세 지도, AI 와 같은 감긴 모습 · 가지 5차 준비 자세와 같은 꼴)
@@ -66,13 +69,14 @@ function run(who) {
   for (let i = 0; i < 120 * 8; i++) {
     if (WALK && t0 == null) foe.move.set(0, G.t >= T0 + ARM ? WALK : 0);
     G.step();
-    if (t0 == null && G.t >= T0 + ARM && (!WALK || me.foeDistance() < gilmokLine(me, me.swordArt.measure.reach, S.do))) {
-      const ok = PL ? me.skill.secret({ S, ctx: null, dir: [-SIDE, 0] }) : G.ai.secretGo(S);
+    const natGo = NAT && t0 == null && (PL ? !!W.open : !!G.ai.secretRun);
+    if (natGo || (!NAT && t0 == null && G.t >= T0 + ARM && (!WALK || me.foeDistance() < gilmokLine(me, me.swordArt.measure.reach, S.do)))) {
+      const ok = NAT ? (PL ? me.skill.secret({ ...W.fire(), dir: [-SIDE, 0] }) : true) : PL ? me.skill.secret({ S, ctx: null, dir: [-SIDE, 0] }) : G.ai.secretGo(S);
       if (!ok) return { fail: true };
       t0 = G.t;
       p0 = V(me.bodies.pelvis.translation());
-      if (PL) me.handHeld = true; // 낸 뒤에도 손가락은 댄 채 (끌기 한 번 — 브라우저 hold 대본과 같은 꼴)
-      continue;
+      if (PL && !NAT) me.handHeld = true; // 낸 뒤에도 손가락은 댄 채 (끌기 한 번 — 브라우저 hold 대본과 같은 꼴)
+      if (!NAT || PL) continue;
     }
     if (t0 == null) continue;
     const sk = me.skill;
@@ -155,7 +159,7 @@ const KEYS = [
   ['foeY', (r) => [r.foeY], 1],
   ['hiltY', (r) => [r.hiltY], 1],
 ];
-console.log(`${id} · 씨앗 ${seed} · 거리 ${GAP} · 준비 ${ARM} s · 쪽 ${SIDE}`);
+console.log(`${id} · 씨앗 ${seed} · 거리 ${GAP} · 준비 ${ARM} s · 쪽 ${SIDE}${NAT ? ' · 제 준비·제 창' : ''}${WALK ? ' · 걸어 듦 ' + WALK : ''}`);
 console.log(`AI 상처 ${A.wounds.join(' ') || '없음'} · 플레이어 상처 ${P.wounds.join(' ') || '없음'}`);
 const n = Math.min(A.rows.length, P.rows.length);
 const first = {};
