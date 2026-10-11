@@ -29,18 +29,21 @@ async function fight(page) {
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.addStyleTag({ content: '#toast { opacity: 0 !important; }' });
 }
+const shot = (page, name) => page.screenshot({ path: `${out}/${name}.jpg`, type: 'jpeg', quality: 70 }); // 작게 (jpeg)
+const ONLY = process.argv.find((a) => a.startsWith('--only='))?.split('=')[1]; // revolver | plunge | voices (없으면 모두)
 const simT = (page) => page.evaluate(() => window.game.stats.simTime);
 async function waitSim(page, secs) {
   const t0 = await simT(page);
-  while ((await simT(page)) < t0 + secs) await page.waitForTimeout(200);
+  const w0 = Date.now();
+  while ((await simT(page)) < t0 + secs && Date.now() - w0 < 60000) await page.waitForTimeout(200); // 판이 끝나면 게임 시계가 서므로 실제 60 초에서 멈춘다
 }
 
 // ① 리볼버
-{
+if (!ONLY || ONLY === 'revolver') {
   const { page, errors } = await open('/?test=1&weapon=longsword&hero=player&foe=samira&stage=cathedral');
   await fight(page);
   await waitSim(page, 3.5);
-  await page.screenshot({ path: `${out}/revolver_aim.png` });
+  await shot(page, 'revolver_aim');
   const s = await page.evaluate(() => {
     const e = window.game.enemy;
     return { foe: e.weapon.id, k: e.gunCooldownK ?? 1, ammo: e.gun?.ammo ?? null, what: e.gun?.what ?? null, sim: +window.game.stats.simTime.toFixed(1) };
@@ -51,13 +54,29 @@ async function waitSim(page, secs) {
 }
 
 // ② 내려찍기 (같은 장면, 스위치만 다르게)
-for (const [tag, q] of [['kill', ''], ['power25', '&finishMode=power25']]) {
+for (const [tag, q] of (ONLY && ONLY !== 'plunge' ? [] : [['kill', ''], ['power25', '&finishMode=power25']])) {
   const { page, errors } = await open(`/?test=1&weapon=longsword&hero=player&foe=isolde&stage=cathedral${q}`);
   await fight(page);
   await waitSim(page, 2.4);
+  // 서 있는 상대(AI 멈춤) 쪽으로 천천히 걸어가 가슴 사이 1.4 m 에 서고(W 키 × 0.3 — finish_shots.mjs 와 같은 꾀), 그 자리에서 크게 넘어뜨린다
   await page.evaluate(() => {
     const g = window.game;
     g.ai.update = () => {};
+    g.enemy.move.set(0, 0);
+    const mv = g.player.move;
+    const set = mv.set.bind(mv);
+    mv.set = (x, y) => set(x * 0.3, y * 0.3);
+  });
+  const gap = () => page.evaluate(() => { const a = window.game.player.bodies.chest.translation(); const b = window.game.enemy.bodies.chest.translation(); return Math.hypot(a.x - b.x, a.z - b.z); });
+  {
+    const t0 = await simT(page);
+    await page.keyboard.down('KeyW');
+    while ((await gap()) > 1.4 && (await simT(page)) < t0 + 8) await page.waitForTimeout(100);
+    await page.keyboard.up('KeyW');
+  }
+  await waitSim(page, 0.5);
+  await page.evaluate(() => {
+    const g = window.game;
     g.enemy.knockDown(true);
     g.enemy.downTime = 1e9;
     window.__hits = [];
@@ -70,22 +89,23 @@ for (const [tag, q] of [['kill', ''], ['power25', '&finishMode=power25']]) {
     };
   });
   await waitSim(page, 2.5);
-  // 찍기 자세(finish.on)가 켜질 때까지 천천히 걸어간다 (W 키 × 0.3 — finish_shots.mjs 와 같은 꾀), 켜지면 멈춰 선다
-  await page.evaluate(() => {
-    const mv = window.game.player.move;
-    const set = mv.set.bind(mv);
-    mv.set = (x, y) => set(x * 0.3, y * 0.3);
-  });
-  await page.keyboard.down('KeyW');
-  for (let i = 0; i < 200 && !(await page.evaluate(() => window.game.player.finish.on)); i++) await page.waitForTimeout(100);
-  await page.keyboard.up('KeyW');
+  // 찍기 자세(finish.on)가 아직 꺼져 있으면 조금 더 걸어간다 (게임 시간 4 초까지)
+  {
+    const t0 = await simT(page);
+    await page.keyboard.down('KeyW');
+    while (!(await page.evaluate(() => window.game.player.finish.on)) && (await simT(page)) < t0 + 4) await page.waitForTimeout(100);
+    await page.keyboard.up('KeyW');
+  }
   await waitSim(page, 0.6);
-  const tapped =await page.evaluate(() => window.game.player.skill.thrust() && !!window.game.player.skill.tap?.down);
+  const tapped = await page.evaluate(() => window.game.player.skill.thrust() && !!window.game.player.skill.tap?.down);
   // 찍기 시작(go)까지 기다렸다 한 장, 끝난 뒤 한 장
-  for (let i = 0; i < 150 && !(await page.evaluate(() => !!window.game.player.skill.tap?.go || !window.game.player.skill.tap)); i++) await page.waitForTimeout(100);
-  await page.screenshot({ path: `${out}/plunge_${tag}_go.png` });
+  {
+    const t0 = await simT(page);
+    while (!(await page.evaluate(() => !!window.game.player.skill.tap?.go || !window.game.player.skill.tap)) && (await simT(page)) < t0 + 3) await page.waitForTimeout(100);
+  }
+  await shot(page, `plunge_${tag}_go`);
   await waitSim(page, 2.5);
-  await page.screenshot({ path: `${out}/plunge_${tag}_after.png` });
+  await shot(page, `plunge_${tag}_after`);
   const s = await page.evaluate(() => ({ alive: window.game.enemy.alive, cause: window.game.enemy.causeOfDeath ?? null, hits: window.__hits.slice(0, 3) }));
   console.log('plunge', tag, 'tap→찍기', tapped, JSON.stringify(s), errors.length ? 'ERRORS:\n  ' + errors.join('\n  ') : 'ZERO console errors');
   fail += errors.length;
@@ -93,11 +113,11 @@ for (const [tag, q] of [['kill', ''], ['power25', '&finishMode=power25']]) {
 }
 
 // ③ 듣기 화면
-{
+if (!ONLY || ONLY === 'voices') {
   const { page, errors } = await open('/voices.html');
   await page.waitForFunction(() => document.querySelectorAll('#characters button').length > 0, null, { timeout: 30000 });
   const n = await page.evaluate(() => ({ cards: document.querySelectorAll('#characters section').length, buttons: document.querySelectorAll('#characters button').length }));
-  await page.screenshot({ path: `${out}/voices_page.png` });
+  await shot(page, 'voices_page');
   console.log('voices', JSON.stringify(n), errors.length ? 'ERRORS:\n  ' + errors.join('\n  ') : 'ZERO console errors');
   fail += errors.length;
   await page.close();
