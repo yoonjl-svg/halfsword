@@ -682,8 +682,11 @@ export class PlayerSecretWatch {
         P.pend = null;
       }
     }
-    if (!start || attacking || busy) return;
-    if (!(foeRecentTipSp(this.sense, 0.6) >= 3.5) || P.woundAge < 0.6) return;
+    if (!start) return;
+    P.edges = (P.edges ?? 0) + 1; // 재기: 새 맞닿음 · 그때 내가 휘두르던 중 · 상대 칼이 느림 · 상처 0.6 s 안
+    if (attacking || busy) return void (P.rejAtk = (P.rejAtk ?? 0) + 1);
+    if (!(foeRecentTipSp(this.sense, 0.6) >= 3.5)) return void (P.rejSlow = (P.rejSlow ?? 0) + 1);
+    if (P.woundAge < 0.6) return void (P.rejHurt = (P.rejHurt ?? 0) + 1);
     P.ok++;
     P.inParry = true;
     const slot = parrySlotOf(S, null, [me.handOffset.x, me.handOffset.y], me.swordArt?.school?.parry, P.lineAge < 0.6 ? P.line : null);
