@@ -31,6 +31,7 @@ import { createFighterLight } from './fighter_light.js';
 import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
+import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { TRADITIONS } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 
@@ -496,6 +497,7 @@ function newRound(weaponId) {
   const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...currentFoe.ai.persona, school: foeWeapon } : currentFoe?.ai.persona;
   ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, persona) : new AI(enemy, player, settings.difficulty);
   playerSecret = new PlayerSecretWatch(player, enemy); // 내 무기 유파의 비기 (스위치 끔·무유파·권총이면 S = null — 아무 일도 없다)
+  playerGuard = new PlayerParryGuard(player, enemy); // 막기 버튼 (누르는 동안만 손을 쥔다 — 권총·맨손이면 아무 일도 없다)
   secretSlow = 0;
   secretBurstsSeen = 0;
   secretOpenSeen = 0;
@@ -539,6 +541,9 @@ let clashStopCooldown = 0; // 칼끼리 부딪혀 멈칫한 뒤 다시 멈칫하
 let slowMo = 0; // 결정타 슬로모션 남은 시간
 // 플레이어 비기 (10/9 23:5x — docs/strike/player_secret_2026-10-09.md): 창(PlayerSecretWatch — 판마다 새로) · 결정타 연출 시계 · 본 터뜨림 수 · 본 창 수
 let playerSecret = null;
+// 플레이어 막기 버튼 (10/11 — src/parry_button.js · docs/strike/player_parry_button_2026-10-11.md): 판마다 새로. 누름 = 폰 '막기' 단추(오른쪽 아래) 또는 PC 키 F
+let playerGuard = null;
+const parryHold = { btn: null, key: false }; // btn = 단추를 누른 포인터 id
 let secretSlow = 0;
 let secretBurstsSeen = 0;
 let secretOpenSeen = 0;
@@ -751,8 +756,8 @@ let roundOverTime = 0;
 let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
 
 $('howto').innerHTML = input.isTouchDevice
-  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>왼쪽 아래 조이스틱으로 걸어요. 화면을 톡 치면 찔러요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>'
-  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>WASD 또는 방향키로 걸어요.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>';
+  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>왼쪽 아래 조이스틱으로 걸어요. 화면을 톡 치면 찔러요.</li><li>오른쪽 아래 막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받아요. 누른 채 휘두르면 바로 공격해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>'
+  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>WASD 또는 방향키로 걸어요. F를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받아요.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>';
 
 // 설정 창: 남은 설정(상대 난이도 · 화면 60 fps 제한)만 [data-setting] 줄이 있다
 function refreshSettingsUI() {
@@ -1093,6 +1098,7 @@ function showToast(text, ms = 1200) {
 // 터치 이동 조이스틱: 싸움 중에만 보인다 (무기 뽑기 동안에는 걸을 수 없으니 감춘다 — 카드 자리도 넓어진다)
 function applyMoveMode() {
   $('moveStick').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw');
+  $('btnParry').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw'); // 막기 단추: 조이스틱과 같은 때 (오른쪽 아래)
 }
 
 function showHint(text, ms = 3500) {
@@ -1206,6 +1212,7 @@ window.addEventListener('keydown', (e) => {
     if (k != null) pickCard(k);
     else if (e.code === 'Space' || e.code === 'Enter') skipReveal();
   }
+  if (e.code === 'KeyF') parryHold.key = true; // 막기 (누르는 동안 — keyup 이 놓음)
   if (e.code !== 'KeyP') return;
   if (state === 'fight' || state === 'draw') pause();
   else if (state === 'paused' && (!roundOver || pauseOpen)) resume(); // 자동 일시정지(화면 이탈)가 판 끝 느린 화면과 겹쳐도 P 로 돌아온다 (10/8 검토 11)
@@ -1220,6 +1227,35 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
 window.addEventListener('blur', pause);
+// 막기 단추·키 (누르는 동안): 단추는 포인터를 붙잡아 손가락이 밖으로 미끄러져도 뗄 때까지 누름 — 칼 끌기(캔버스)와 따로
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'KeyF') parryHold.key = false;
+});
+window.addEventListener('blur', () => {
+  parryHold.key = false;
+  parryHold.btn = null;
+});
+{
+  const b = $('btnParry');
+  const up = (e) => {
+    if (e.pointerId !== parryHold.btn) return;
+    parryHold.btn = null;
+    b.classList.remove('on');
+  };
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (parryHold.btn != null) return;
+    parryHold.btn = e.pointerId;
+    b.classList.add('on');
+    try {
+      b.setPointerCapture(e.pointerId);
+    } catch {
+      /* 생략 */
+    }
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, up);
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+}
 
 // ── 감정이 켜지는 순간 한 줄 알림 (아래 가운데 감정 줄 #emoMsg) ──
 //  10/10 20:3x 사장님 '상태 3종은 전처럼 화면 중앙에 뜨게 · 감정 문장 가운데로 복귀' (docs/ui/hud_type_system_2026-10-10.md §14) — v2 의 오른쪽 위 ③ 경직·상태 묶음은 없앴다.
@@ -1486,6 +1522,26 @@ const guardName = $('guardName');
 let guardShown = -1;
 let guardTimer = 0;
 function updateGuardName(dt) {
+  // 막기 버튼을 누르는 동안: ① 자세 칸에 지금 잡은 막기 자세 이름 (첫 줄 유파 이름 · 둘째 줄 원어 · 막기 / 막기 기다림). 자리가 바뀔 때마다 바꿔 끼운다
+  if (playerGuard?.active && player.alive) {
+    const key = `parry:${playerGuard.mode}:${playerGuard.line}`;
+    if (key !== guardShown) {
+      const info = playerGuard.nameOf(playerGuard.line);
+      if (info) {
+        guardShown = key;
+        const [main, sub] = splitName(info.name);
+        const b = document.createElement('b');
+        b.textContent = main;
+        const d = document.createElement('small');
+        d.textContent = [sub, playerGuard.mode === 'defend' ? '막기' : '막기 기다림'].filter(Boolean).join(' · ');
+        guardName.replaceChildren(b, d);
+        guardName.classList.add('show');
+      }
+    }
+    guardTimer = 1.6;
+    return;
+  }
+  if (String(guardShown).startsWith('parry:')) guardShown = -1; // 막기를 놓으면 보통 자세 이름으로
   const gun = player.weapon?.gun; // 권총: 칼 자세 대신 '사격 자세' 하나만 (gun.js GUN_STANCE)
   // 보정 v2 (s > 0): 날것 자세라 휘두르지도(quiet > 0) 되돌아오지도 않을 때만 이름을 보인다 (여쭘 20, 기존 깃발만)
   const sk = player.skill;
@@ -1705,8 +1761,18 @@ function frame(now) {
       }
     }
     if (secBusy) taps = 0;
+    // 막기 버튼 (10/11): 누르는 동안 손은 막기가 쥔다 (느린 끌기는 버림). 누른 채 휘두르거나(swipe — 비기 입력과 같은 문턱) 톡 치면 그 공격이 끝날 때까지 놓는다 —
+    //  공격이 끝남 = 검술 층의 휘두르기·찌르기가 꺼짐 (지난 스텝 값). 막기 연환 창이 열려 있었으면 위에서 이미 비기로 나갔다
+    let guardHold = false;
+    if (playerGuard) {
+      const G = playerGuard;
+      G.held = (parryHold.btn != null || parryHold.key) && !roundOver;
+      if (G.broken && (!G.held || (!player.skill.swinging && !player.skill.tap && !swipe && taps === 0))) G.broken = false;
+      if (G.held && (swipe || taps > 0)) G.broken = true;
+      guardHold = G.held && !G.broken && !secBusy;
+    }
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
-    if (player.alive && !player.weapon?.gun && !secBusy) {
+    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
@@ -1758,6 +1824,7 @@ function frame(now) {
       enemy.faceTarget = player.bodies.pelvis.translation();
       ai.update(PHYSICS.timestep);
       playerSecret?.update(PHYSICS.timestep, !!player.skill.sec); // 플레이어 비기 창: 조건(AI 와 같은 함수)이 차면 창을 연다
+      playerGuard?.step(PHYSICS.timestep); // 막기 버튼: 누르는 동안 AI 막기와 같은 판단·빠르기로 손 목표를 유파 막기 자리로
       player.step(PHYSICS.timestep);
       enemy.step(PHYSICS.timestep);
       tickDebris(PHYSICS.timestep); // 흩어지는 칼·방어구 조각 (겉모습만, 게임 시간 — 멈칫·슬로모션을 따른다)
@@ -1846,6 +1913,9 @@ window.game = {
     return ai;
   },
   tempo: TEMPO, // 전체 빠르기 손잡이 (?tempo)
+  get playerGuard() {
+    return playerGuard; // 막기 버튼 (held · active · mode · line · stats) — 브라우저 탐침(tools/browser/parry_button_probe.mjs)이 읽는다
+  },
   get playerSecret() {
     return playerSecret; // 플레이어 비기 창 (open · opened · S) — 브라우저 스모크(tools/browser/player_secret_shots.mjs)가 읽는다
   },
