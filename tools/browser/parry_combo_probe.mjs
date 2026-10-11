@@ -174,12 +174,12 @@ const r = await page.evaluate(() => {
   const g = window.game;
   const P = g.playerSecret.pc ?? {};
   const st = Object.values(g.player.skill.secretStats ?? {});
-  return { binds: window.__pc.binds, R: window.__pc, rej: { edges: P.edges ?? 0, atk: P.rejAtk ?? 0, slow: P.rejSlow ?? 0, hurt: P.rejHurt ?? 0 }, ok: P.ok ?? 0, slot: P.slot ?? 0, parryBinds: P.parryBinds ?? [], binds: (P.binds ?? []).length, windows: g.playerSecret.opened, landed: st.reduce((a, b) => a + (b.landed ?? 0), 0), fired: st.reduce((a, b) => a + (b.fired ?? 0), 0), vib: window.__vib };
+  return { tbinds: window.__pc.binds, R: window.__pc, rej: { edges: P.edges ?? 0, atk: P.rejAtk ?? 0, slow: P.rejSlow ?? 0, hurt: P.rejHurt ?? 0 }, ok: P.ok ?? 0, slot: P.slot ?? 0, parryBinds: P.parryBinds ?? [], binds: (P.binds ?? []).length, windows: g.playerSecret.opened, landed: st.reduce((a, b) => a + (b.landed ?? 0), 0), fired: st.reduce((a, b) => a + (b.fired ?? 0), 0), vib: window.__vib };
 });
 const pb = [...r.parryBinds].sort((a, b) => a - b);
 const q = (f) => (pb.length ? pb[Math.min(pb.length - 1, Math.floor(f * pb.length))].toFixed(2) : '-');
 console.log(`EDGES ${JSON.stringify(r.rej)}`);
-{ const b = r.binds.map((x) => x.s).sort((a, c) => a - c); const q2 = (f) => (b.length ? (b[Math.min(b.length - 1, Math.floor(f * b.length))] * 1000).toFixed(0) : '-'); console.log(`BINDS n ${b.length} p50 ${q2(0.5)} · p75 ${q2(0.75)} · p90 ${q2(0.9)} · 최대 ${q2(1)} ms · 0.3 s 넘음 ${b.filter((x) => x >= 0.3).length} (코등이 ${r.binds.filter((x) => x.s >= 0.3 && x.hilt).length})`); }
+{ const b = r.tbinds.map((x) => x.s).sort((a, c) => a - c); const q2 = (f) => (b.length ? (b[Math.min(b.length - 1, Math.floor(f * b.length))] * 1000).toFixed(0) : '-'); console.log(`BINDS n ${b.length} p50 ${q2(0.5)} · p75 ${q2(0.75)} · p90 ${q2(0.9)} · 최대 ${q2(1)} ms · 0.3 s 넘음 ${b.filter((x) => x >= 0.3).length} (코등이 ${r.tbinds.filter((x) => x.s >= 0.3 && x.hilt).length})`); }
 console.log(`OPENED ${JSON.stringify(r.R.opened)}`);
 console.log(`COMBO ${JSON.stringify(r.R.combo)}`);
 console.log(
