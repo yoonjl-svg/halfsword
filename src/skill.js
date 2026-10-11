@@ -24,9 +24,10 @@
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS } from './config.js';
+import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS, ARM } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { FINISH, armRay, updateFinish } from './finish.js';
+import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'; // 약한 자세 겨눔 탭 찌르기 (FINISH.vital, 10/12)
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
@@ -153,9 +154,9 @@ export class Skill {
    *  (검술 층이 따로 내딛기를 부탁하면 AI 가 "안 내딛는다"고 정한 때도 내딛고, 곧이어 AI 걸음이 그 부탁을 덮어써 두 번 내딛었다)
    * @returns 시작했으면 true
    */
-  thrust({ step = true } = {}) {
+  thrust({ step = true, vital = undefined, rangeCommit = false } = {}) {
     const f = this.f;
-    if (this.tap || this.pom || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
+    if (this.tap || this.pom || (this.vitalRange && !rangeCommit) || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
     // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 쏘지 않는다 (gun.js)
     if (f.weapon?.gun) return gunCanFire(f, { now: true }); // 권총: 찌르는 동작 없이 사격 자세(gunPose, 자동 조준 + 흔들림)의 지금 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
     // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽]). 검술 보정이 다 걸려 있으면 자세 지도의 손, 덜 걸려 있으면(보정 약·끔)
@@ -172,7 +173,40 @@ export class Skill {
     //  (겨누기·뻗기까지 빠르게 하면 팔이 손 목표를 따라가지 못해 오히려 덜 뻗는다 — 측정: 레이피어 탭 상처 60% → 20%)
     const ts = f.weaponCfg.thrustStyle;
     const K = { aim: THRUST.aim, extend: THRUST.extend, hold: THRUST.hold, recover: THRUST.recover * (ts?.recover ?? 1), reach: THRUST.reach + (ts?.reach ?? 0) };
-    this.tap = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], down, head: !down && this.aimRaw.y > THRUST.headPad, K };
+    // 약한 자세 겨눔 (FINISH.vital, 10/12 — vital_target.js, 샛별 저장소 ccea5855·07206655·8bbee803 의 뜻): 무릎 꿇음·일어나는 중인 상대는 목·얼굴·머리 한 점을 찌른다.
+    //  AI 는 늦게 본 점을 넘긴다(vital, 없으면 null). 플레이어(vital 안 넘김)는 지금 모습에서 고르고, 칼끝이 목표 바로 앞에 오는 간격이 아니면
+    //  먼저 걸어 맞춘 뒤(updateVitalRange) 찌른다. 점은 탭 때 세계 좌표로 고정 — 그 뒤 상대를 따라가지 않는다. 못 고르면 예전처럼 가슴·머리
+    let V = null;
+    if (!down && FINISH.vital && !f.weapon?.gun) {
+      if (vital !== undefined) V = vital;
+      else {
+        const walk = !rangeCommit && step !== false && f.state === 'stand';
+        V = playerVitalThrust(f, walk ? VITAL.rangeTravel : 0);
+        if (V && walk) {
+          const m = measureThrustRange(f, V.target);
+          if (m.valid && !(m.ready && m.aligned)) {
+            const c = f.bodies.chest.translation();
+            this.vitalRange = { age: 0, foe: f.foe, weapon: f.weapon?.id, origin: { x: c.x, z: c.z }, hand: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12] };
+            this.vitalRanges = (this.vitalRanges ?? 0) + 1;
+            return true;
+          }
+          if (!m.valid) V = playerVitalThrust(f, 0);
+        }
+      }
+    }
+    const h0 = rangeCommit && this.thrustPose.w > 0 ? this.thrustPose.hand.slice() : g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12];
+    this.tap = { t: 0, h0, down, head: !down && !V && this.aimRaw.y > THRUST.headPad, K };
+    if (rangeCommit) this.tap.w0 = this.thrustPose.w; // 간격 맞추기 자세에서 곧장 이어 간다 (덧씌우기를 0 으로 떨어뜨리지 않는다)
+    if (V) {
+      this.tap.vital = { target: V.target.toArray(), zone: V.zone, foe: f.foe };
+      if (VITAL.track) {
+        // 겨누는 동안(K.aim)은 상대 머리 몸체에 붙은 점으로 따라가고, 뻗기 시작하면 세계 점으로 고정한다 (보통 찌르기가 가슴을 따라가는 것과 같은 몫)
+        const hp = f.foe.bodies.head.translation();
+        const hq = f.foe.bodies.head.rotation();
+        this.tap.vital.local = V.target.clone().sub(_q.set(hp.x, hp.y, hp.z)).applyQuaternion(new THREE.Quaternion(hq.x, hq.y, hq.z, hq.w).invert()).toArray();
+      }
+      this.vitalThrusts = (this.vitalThrusts ?? 0) + 1;
+    }
     if (lowEntry && down) this.tap.foe = f.foe; // 낮은 상대 진입: 시작한 상대 (바뀌면 거둔다)
     // 칼 길 잡기(R6): 칼이 맞닿았으면 그 칼 선 (아니면 null). 바로 앞 찌르기가 끝나고 bindRest 초 안의 탭(연타)은 잡지 않는다
     this.tap.bound = down || this.sinceThrust < THRUST.bindRest ? null : this.boundAxis();
@@ -183,12 +217,71 @@ export class Skill {
       const tp = this.tap;
       tp.walkOk = step !== false && f.state === 'stand';
       if (tp.walkOk && (lowEntry ? f.finish.plunge.walk || f.finish.plunge.surfaceWalk : f.finish.plunge.walk)) tp.walking = true;
-    } else if (step && f.state === 'stand') {
-      // 한 걸음 내딛으며 찌른다
+    } else if (step && f.state === 'stand' && !rangeCommit) {
+      // 한 걸음 내딛으며 찌른다 (약한 자세 간격 맞추기 뒤엔 이미 걸었다 — 내딛지 않는다)
       if (f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
       else this.lunge = SKILL.lungeTime;
     }
     return true;
+  }
+
+  /**
+   * 약한 자세 탭 찌르기의 간격 맞추기 (샛별 저장소 8bbee803 의 뜻, FINISH.vital): 칼끝이 목표 바로 앞에 오는 거리(무기 길이 기준, measureThrustRange)까지
+   *  조이스틱처럼 앞뒤로 걷고, 그동안 칼을 목표 쪽으로 겨눈 자세(덧씌우기)를 잡는다. 거리·겨눔이 맞으면 그 자리에서 찌른다(thrust rangeCommit).
+   *  거둠: 조이스틱을 밂 · 상대·무기·자세가 바뀜 · 빈틈이 닫힘 · VITAL.rangeTimeout 초 · 1 m 넘게 걸음 · 무릎 꿇은 채 안 맞음. 새 힘·빠르기 없음
+   */
+  updateVitalRange(dt) {
+    const f = this.f;
+    const R = this.vitalRange;
+    const pose = this.thrustPose;
+    if (!R) {
+      // 거둔 뒤: 덧씌운 겨눔 자세를 0.12 s 에 내려놓는다
+      if (!this.tap) pose.w = Math.max(0, pose.w - dt / 0.12);
+      if (pose.w === 0 || this.tap) this.vitalRelease = false;
+      return;
+    }
+    R.age += dt;
+    const c = f.bodies.chest.translation();
+    const travel = Math.hypot(c.x - R.origin.x, c.z - R.origin.z);
+    // 사람의 뜻: 스틱 원값(main.js stickX·stickY)을 밀었거나 새로 칼을 끌었다 (inputActive). 이 함수·내딛기가 넣는 move 는 보지 않는다
+    const manual = Math.hypot(f.stickX ?? 0, f.stickY ?? 0) > VITAL.manualDead || !!f.inputActive;
+    const lost = !f.alive || !f.armed || f.weaponBroken || (f.state !== 'stand' && f.state !== 'kneel') || f.foe !== R.foe || f.weapon?.id !== R.weapon || this.pom;
+    const V = !manual && !lost ? playerVitalThrust(f, VITAL.rangeTravel) : null;
+    const m = V ? measureThrustRange(f, V.target) : null;
+    if (!V || !m.valid || R.age > VITAL.rangeTimeout || travel > 1 || (f.state === 'kneel' && !m.ready)) {
+      this.vitalRange = null;
+      this.vitalRelease = true;
+      this.lastVitalRange = manual ? 'manual' : lost ? 'lost' : !V ? 'closed' : R.age > VITAL.rangeTimeout ? 'timeout' : 'unreachable';
+      (this.vitalRangeEnds ||= {})[this.lastVitalRange] = (this.vitalRangeEnds[this.lastVitalRange] ?? 0) + 1; // 재기만
+      // 빈틈이 닫혔거나 못 맞췄으면 탭을 버리지 않고 그 자리에서 보통 찌르기 (사람이 거두지 않은 탭이 허공에 사라지지 않게 — 우리 쪽 고침)
+      if (!manual && !lost) this.thrust({ step: false, vital: null, rangeCommit: true });
+      return;
+    }
+    // 겨눔 자세: 손은 어깨에서 팔 길이 85 % 안, 칼끝은 칼자루 → 목표
+    const sh = new THREE.Vector3(ARM.shoulder[0], ARM.shoulder[1], ARM.shoulder[2] * (f.side ?? 1));
+    const off = new THREE.Vector3(...R.hand).sub(sh);
+    const ready = (ARM.upper + ARM.fore - ARM.slack) * 0.85;
+    if (off.length() > ready) R.hand = off.setLength(ready).add(sh).toArray();
+    const sp = f.sword.translation();
+    _yawInv.copy(f.yaw).invert();
+    const dir = V.target.clone().sub(_q.set(sp.x, sp.y, sp.z)).normalize().applyQuaternion(_yawInv);
+    pose.w = Math.min(1, pose.w + dt / 0.15);
+    for (let k = 0; k < 3; k++) (pose.hand[k] = R.hand[k]), (pose.dir[k] = dir.getComponent(k));
+    const b = THRUST.body;
+    pose.pelvisYaw = b.pelvisYaw * D2R;
+    pose.chestYaw = b.chestYaw * D2R;
+    pose.pitch = b.pitch * D2R;
+    pose.drop = b.drop;
+    this.thrustPush = false;
+    this.activity = Math.max(this.activity, pose.w);
+    if (m.ready && m.aligned) {
+      this.vitalRange = null;
+      f.move.y = 0;
+      this.lastVitalRange = 'committed';
+      this.thrust({ step: false, rangeCommit: true });
+    } else {
+      f.move.y = m.move;
+    }
   }
 
   /**
@@ -201,6 +294,17 @@ export class Skill {
     if (tp.down) {
       const T = f.finish.plunge.tip;
       return out.set(T[0], T[1], T[2]);
+    }
+    if (tp.vital) {
+      // 약한 자세 겨눔: 탭 때 고정한 세계 점 (VITAL.track: 겨누는 동안은 상대 머리에 붙은 점을 따라가다 뻗을 때 고정)
+      const V = tp.vital;
+      if (V.local && tp.t < tp.K.aim) {
+        const hp = f.foe.bodies.head.translation();
+        const hq = f.foe.bodies.head.rotation();
+        out.fromArray(V.local).applyQuaternion(_sq.set(hq.x, hq.y, hq.z, hq.w)).add(_u.set(hp.x, hp.y, hp.z));
+        V.target = out.toArray();
+      } else out.fromArray(V.target);
+      return out.sub(_c).applyQuaternion(_yawInv);
     }
     const foe = f.foe;
     // 떨어진 머리(참수)·죽은 상대의 머리는 겨누지 않는다: 가슴으로 (gun.js headOff)
@@ -251,7 +355,7 @@ export class Skill {
     }
     // 넘어졌거나(서 있지도 무릎 꿇지도 않음) 내리찌르던 상대가 일어나면 더 뻗지 않고 곧바로 돌아온다:
     //  지금 덧씌운 정도(w)에서 돌아오는 시간 동안 0으로 (한 스텝에 끊으면 칼이 튄다). 팔 유효 질량도 더는 싣지 않는다
-    if (!tp.abort && ((f.state !== 'stand' && f.state !== 'kneel') || (tp.down && (!f.finish.on || (tp.foe && tp.foe !== f.foe))))) {
+    if (!tp.abort && ((f.state !== 'stand' && f.state !== 'kneel') || (tp.down && (!f.finish.on || (tp.foe && tp.foe !== f.foe))) || (tp.vital && (tp.vital.foe !== f.foe || f.foe.decapitated)))) {
       tp.abort = { t: tp.t, w: pose.w };
     }
     if (tp.abort) {
@@ -271,7 +375,7 @@ export class Skill {
     this.thrustPush = t >= K.aim && t < end;
     if (tp.step && t < K.aim + K.extend && f.move.y > -0.2) f.move.y = Math.max(f.move.y, SKILL.lungeMove * this.level);
     // 덧씌우는 정도: 겨누며 빠르게 1로, 뻗은 뒤 자세로 돌아오며 0으로
-    pose.w = t < K.aim ? t / K.aim : t < end ? 1 : 1 - (t - end) / K.recover;
+    pose.w = t < K.aim ? (tp.w0 ? tp.w0 + (1 - tp.w0) * (t / K.aim) : t / K.aim) : t < end ? 1 : 1 - (t - end) / K.recover;
     const c = f.bodies.chest.translation();
     _c.set(c.x, c.y, c.z);
     _yawInv.copy(f.yaw).invert();
@@ -1271,7 +1375,8 @@ export class Skill {
       if (f.move.y > -0.2 && f.foeDistance() > SKILL.lungeMin) f.move.y = Math.max(f.move.y, SKILL.lungeMove * L);
     }
 
-    // 5) 탭 찌르기
+    // 5) 탭 찌르기 (약한 자세 간격 맞추기가 먼저 — FINISH.vital, 없으면 타지 않는다)
+    if (this.vitalRange || this.vitalRelease) this.updateVitalRange(dt);
     if (this.tap) {
       this.updateThrust(dt);
       this.activity = Math.max(this.activity, this.thrustPose.w); // 찌르는 동안엔 몸도 벨 때처럼 빠르게 따라온다

@@ -26,8 +26,15 @@ import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } fro
 export const FINISH = {
   // ── 10/12 샛별 가져오기 2차 스위치 (사장님 10/12 지시로 재 봄 — 기본은 둘 다 예전 그대로. 기본값은 디렉터가 병합 때 정한다)
   //  docs/import/saetbyeol_round2_2026-10-12.md · 주소 ?finishEntry=low · ?finishMode=power25 (main.js)
-  entry: 'down', // 'down' = 상대가 쓰러짐(state down)이면 연다(지금) · 'low' = 실제 몸 높이로 연다 (finish_entry.js LOW_FINISH, 샛별 저장소 b9d28ca6·080ea451 의 뜻)
+  entry: 'auto', // 'auto' (10/12 약한 자세 겨눔 묶음) = vital 이 켜져 있으면 'low', 꺼져 있으면 'down'(기본 — 전과 같음) · 주소 ?finishEntry=down|low|downlow 로 하나를 고른다
+  //  · 'down' = 상대가 쓰러짐(state down)이면 연다(전 기본) · 'low' = 실제 몸 높이로 연다 (finish_entry.js LOW_FINISH, 샛별 저장소 b9d28ca6·080ea451 의 뜻)
   //  · 'downlow' = 고친 판: 'down' 그대로 + 일어나는 중(getup)이라도 몸이 낮으면 연다 (finish_entry.js downLowTarget) — 확인표 954~956
+  // ── 10/12 약한 자세 겨눔 묶음 (사장님 10/12 02:3x 지시로 샛별 저장소 ccea5855 등의 뜻 — src/vital_target.js · docs/import/saetbyeol_vital_2026-10-12.md · 확인표 1001~1008, 사장님 확인 전)
+  //  기본 끔 (측정에서 '무릎 꿇은 상대를 결정적으로 끝냄'이 안 보여서 — 자연 결투 48 판 참수 26 → 22, 무 3 → 8, 띠 안. 문서 §4). ?vital=1 = 켬 (진입도 'low' 로)
+  vital: false, // 켜면: 무릎 꿇음·일어나는 중·넘어지는 중인 상대에게 베기는 목 가로, 찌르기는 목·얼굴·머리. 누운 몸은 내려찍기(entry 'auto' → 'low')
+  // 판금 상대 목 겨눔 (사장님 10/1 21:45 'C 를 확률 아닌 물리로'): 10/12 02:4x 사장님 '판금도 몸을 겨누게 하자. 목 말고 … 몸을 아무데나 찌르되 힘이 2.5배면
+  //  판금의 의미도 살고 내려찍기의 의미도 살겠지' → 기본 끔 (판금·맨몸 모두 몸통 선). ?plateNeck=1 = 전 목 겨눔 — 확인표 1000 (사장님 지시 10/12)
+  plateNeck: false,
   mode: 'power25', // 기본 'power25' — 사장님 10/12 00:5x '즉사 대신 2.5배가 갑옷 판정 등 사실적 기준에서 더 뛰어나 고친 거야' + 가져오기 2차 측정 추천 → 디렉터가 병합 때 켬(`?finishMode=kill` = 전 즉사). 'kill' = 찍기가 몸통·머리에 찌르기로 닿으면 즉사(지금, 사장님 9/30) · 'power25' = 즉사 대신 판정 에너지 × power 로 갑옷·상처 문턱을 그대로 거친다
   //  (샛별 저장소 7fd7f592. 맞아 죽은 상처는 부활 없음 — 살아남으면 보통 상처·출혈. 상한 없음) — 확인표 957~958
   power: 2.5, // 'power25' 때 찍기 찌르기의 판정 에너지 배율 (상한 없음 — 사장님 확인 전)
@@ -144,10 +151,10 @@ export function updateFinish(f, dt) {
     _yawInv.copy(f.yaw).invert();
     // 날 없는 무기(나뭇가지·고무 닭·참치)나 부러진 칼은 머리를 내려찍는다: 둔기로 몸통을 치면 멍만 들고, 머리 충격만 기절시킨다
     const blunt = !f.weaponCfg.edged || f.weaponBroken;
-    // 판금 상대 (사장님 10/1 21:45, C 를 확률 아닌 물리로): 날 있는 무기는 몸통 가운데 대신 목 — 투구 밑·가슴판 위, 갑옷이 없는 틈 — 한 점을
+    // 판금 상대 (사장님 10/1 21:45, C 를 확률 아닌 물리로 — 10/12 02:4x 부터 스위치 FINISH.plateNeck, 기본 끔): 날 있는 무기는 몸통 가운데 대신 목 — 투구 밑·가슴판 위, 갑옷이 없는 틈 — 한 점을
     //  겨누고 찍는다 (FINISH.neckAt). 나머지는 물리가 정한다 (combat.js finish: 목·맨머리면 즉사, 판·투구에 닿으면 멍만 들고 튕긴다).
     //  한 점이라 몸통 선 위의 점 고르기는 건너뛴다. 맨몸 상대·둔기는 예전 계산 그대로 (한 비트도 다르지 않다)
-    const neck = !blunt && !!foe.torsoPlated?.();
+    const neck = !blunt && FINISH.plateNeck && !!foe.torsoPlated?.(); // 10/12 사장님: 기본 끔 — 판금도 몸통 선 (FINISH.plateNeck)
     let ex = 0;
     let ez = 0;
     let el2 = 0;
