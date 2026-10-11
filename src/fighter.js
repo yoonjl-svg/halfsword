@@ -1338,9 +1338,9 @@ export class Fighter {
     }
   }
 
-  die(cause) {
+  die(cause, noRevive = false) { // noRevive: 즉사 대신 힘으로 들어간 찍기(FINISH.mode 'power25')가 낸 치명상 — 찍기 즉사처럼 되살아나지 않는다
     if (this.state === 'dead') return;
-    if (tryRevive(this, cause)) return; // 처음 죽음이면 투지로 다시 일어선다 (revive.js)
+    if (!noRevive && tryRevive(this, cause)) return; // 처음 죽음이면 투지로 다시 일어선다 (revive.js)
     this.causeOfDeath = cause;
     this.setState('dead');
   }
@@ -1425,9 +1425,9 @@ export class Fighter {
       // 참수 (COMBAT.decapitate): 칼이 목을 가르고 지나간 베기만. 튕긴 충돌·찌르기·둔기·총은 아니다
       const decap = COMBAT.decapitate && h.type === 'cut' && h.pass && h.passing;
       if (decap) this.decapitate(sev, bleed);
-      this.die('목');
+      this.die('목', !!h.finishPower);
       if (decap) COMBAT_HOOKS.onDecapitate?.(this, this.bodies.head);
-    } else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리');
+    } else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리', !!h.finishPower);
 
     // 팔다리 기능
     const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' }[h.part];

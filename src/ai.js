@@ -29,6 +29,8 @@ import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧�
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
+import { FINISH } from './finish.js';
+import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
@@ -324,7 +326,8 @@ export class AI {
     }
 
     // 쓰러진 상대: 서 있는 상대의 간격 대신 누운 몸을 내려칠 간격(finish.js FINISH.ai × 무기 배율, 파이터의 finish.gap)을 쓴다
-    const downGap = foe.state === 'down' && me.finish?.gap;
+    //  (낮은 상대 진입 FINISH.entry 'low', 기본 끔: state 이름 대신 실제 몸 높이 — finish_entry.js)
+    const downGap = (lowFinishOn(FINISH) ? lowFinishPosture(me, foe, lowFinishContinuing(me, foe)) : downLowTarget(FINISH, me, foe, lowFinishContinuing(me, foe))) && me.finish?.gap;
     if (downGap && !this.Mup) {
       this.Mup = this.M; // 서 있는 상대의 간격 (상대가 일어나면 되돌린다)
       this.M = { ...this.M, ...downGap };

@@ -356,7 +356,7 @@ export const CHARACTERS = [
   },
 
   // ───────────────────────────────────────────── 6~8. 샛별 저장소에서 가져온 세 사람 (사장님 지시 10/9 23:4x·10/10 새벽) ─────────────────────────────────────────────
-  //  외형(looks.js·outfits.js)과 소리(목소리 voice — 샛별 쪽 짝 그대로)만 가져왔다. 무기는 사장님 지시대로
+  //  외형(looks.js·outfits.js)과 소리(목소리 voice — 처음엔 샛별 쪽 짝 그대로, 10/12 그쪽 새 배정으로 갱신)만 가져왔다. 무기는 사장님 지시대로
   //  (토메 비달 = 레이피어 · 미나미('영만'에서 이름 바꿈) = 모노호시자오 · 오마리 = 츠바이핸더 — 샛별 설정은 펄션).
   //  플레이 기질(persona.level·pers·idle·close·whole)과 설정 문구(별명·나이·출신·이야기·대사)는 가져오지 않았다(디렉터 판단).
   //  pers 가 비어 있어 유파 기질(schools.js TRADITIONS[유파].temper)이 쓰인다. 실력 묶음은 기본 'normal'.
@@ -366,7 +366,7 @@ export const CHARACTERS = [
     name: '토메 비달',
     epithet: '아르키진나시오의 사서', // 사장님 10/10 08:0x: 아르키진나시오 도서관의 고문서 사서 — 시간을 넘는 설정(실제 도서관은 1801~)
     weapon: 'rapier', // 이탈리아 유파 (traditionOf: 한손 찌르기)
-    voice: 'liao', // 목소리: 샛별 쪽 짝 그대로 (랴오의 녹음)
+    voice: 'tome', // 목소리: 토메 묶음(기본 상대 녹음을 빌림, 김씨와 같이) — 10/12 사장님 지시로 샛별 저장소 77db8c5 배정을 가져옴 (전 'liao')
     ai: { level: 'normal', persona: { school: 'rapier', pers: {} } },
     look: getLook('tome'),
     lookVersion: CHARACTER_LOOK_VERSION.tome,
@@ -387,7 +387,7 @@ export const CHARACTERS = [
     name: '오마리',
     epithet: '빚 없는 선장', // 사장님 10/10 19:4x (샛별 저장소 칭호)
     weapon: 'zweihander', // 이베리아 유파 (사장님: 이베리아 비기를 볼 수 있게. 샛별 설정은 펄션)
-    voice: 'bran', // 목소리: 샛별 쪽 짝 그대로 (브란의 녹음)
+    voice: 'omari', // 목소리: 오마리 전용 녹음(CC0) — 10/12 사장님 지시로 샛별 저장소 1ea73c5·200269d 를 가져옴 (전 'bran')
     ai: { level: 'normal', persona: { school: 'zweihander', pers: {} } },
     look: getLook('omari'),
     lookVersion: CHARACTER_LOOK_VERSION.omari,
@@ -408,7 +408,7 @@ export const CHARACTERS = [
     name: '미나미',
     epithet: '수호자', // 사장님 10/11 01:1x (전 '금줄의 무녀' 10/10 19:4x)
     weapon: 'monohoshizao', // 일본 유파
-    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    voice: 'isolde', // 목소리: 이졸데의 녹음 (10/12 갱신 뒤에도 그대로 — 이졸데·마야와 같이)
     ai: { level: 'normal', persona: { school: 'monohoshizao', pers: {} } },
     look: getLook('minami'),
     lookVersion: CHARACTER_LOOK_VERSION.minami,
@@ -446,7 +446,7 @@ export const CHARACTERS = [
     movementNotes: '절제된 양손검 동작과 안정된 준비 자세. 외형을 이유로 별도 힘 보너스를 주지 않는다.',
     weaknesses: '큰 베기가 빗나간 뒤 몸 가까이 파고드는 연속 압박에는 빈틈이 생긴다.',
     weapon: 'excalibur', // 진품(레전드, 금빛 기운) — 사장님 10/10 20:3x '진품 그대로 들게 해'. 하인리히는 복제품 그대로, 플레이어도 카드로 진품을 뽑을 수 있다
-    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 에이라와 같이) — 10/12 사장님 지시로 샛별 저장소 04311ff 배정을 가져옴 (전 'isolde')
     ai: { level: 'normal', persona: {
       school: 'excalibur',
       level: { reaction: 0.26, guardChance: 0.7, counter: 0.35, feint: 0.2, followUp: 0.42, read: 0.75, discipline: 0.88, strength: 1, aggression: 0.8, windup: 0.7, skill: 0.82 },
@@ -476,7 +476,7 @@ export const CHARACTERS = [
     movementNotes: '기존 총기 제어와 몸 규격을 그대로 사용한다.',
     weaknesses: '장전 중의 빈틈과 총구 안쪽으로 파고드는 근거리 압박.',
     weapon: 'pistol', // 건슬링어의 리볼버(??? 등급) — 그쪽 '전용 리볼버'는 새 무기가 아니라 이 권총이다. AI 는 gun.js(간격 벌려 쏘기)
-    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    voice: 'isolde', // 목소리: 이졸데의 녹음 (10/12 갱신 뒤에도 그대로 — 이졸데·미나미와 같이)
     ai: { level: 'hard', persona: { // 그쪽 '마지막 문지기' 자리라 hard — 우리 기본 회전에선 다른 인물보다 세다(사장님 확인 전)
       gunCooldownK: 1.5, // 핸디캡: 사격 사이 쿨타임 1.5 배 (GUN.cooldown 0.7 → 1.05 s) — 사장님 지시 10/10 20:0x (기본 무작위 상대에서 빼는 대신, 확인표 750)
       level: { reaction: 0.16, guardChance: 0.88, counter: 0.55, feint: 0.15, followUp: 0.65, read: 0.9, discipline: 0.95, strength: 1.1, aggression: 0.9, windup: 0.36, strikeSpeed: 13, skill: 0.95 },
@@ -504,7 +504,7 @@ export const CHARACTERS = [
     movementNotes: '둔기 꾸러미가 철퇴 길이(weapon_measured.js 실측)에 맞춰 간격을 잡는다.',
     weaknesses: '짧은 철퇴가 닿기 전의 거리와 빗나간 뒤의 빈틈.',
     weapon: 'morgenstern', // 레어 둔기 → 무유파
-    voice: 'liao', // 목소리: 샛별 쪽 짝 그대로 (랴오의 녹음)
+    voice: 'tome', // 목소리: 토메 묶음(토메와 같이) — 10/12 사장님 지시로 샛별 저장소 04311ff 배정을 가져옴 (전 'liao')
     ai: { level: 'normal', persona: {
       school: 'morgenstern', // 그쪽은 옛 꾸러미 이름 'tree_branch'(나뭇가지 간격) — 우리는 무기 id 꾸러미(무유파 + 철퇴 실측 간격)
       level: { skill: 0.76, discipline: 0.84, strength: 1, aggression: 0.8 },
@@ -533,7 +533,7 @@ export const CHARACTERS = [
     movementNotes: '기존 레이피어의 간격과 찌르기 동작을 사용한다.',
     weaknesses: '칼끝 안쪽으로 깊게 붙는 압박.',
     weapon: 'rapier', // 이탈리아 유파
-    voice: 'isolde', // 목소리: 샛별 쪽 짝 그대로 (이졸데의 녹음)
+    voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 아르토리아와 같이) — 10/12 사장님 지시로 샛별 저장소 77db8c5 배정을 가져옴 (전 'isolde')
     ai: { level: 'normal', persona: {
       school: 'rapier',
       level: { skill: 0.78, discipline: 0.88, strength: 1, aggression: 0.75 },
