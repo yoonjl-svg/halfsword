@@ -76,6 +76,7 @@ if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 
 const SECRET_SLOWMO = params.get('slowMo') !== '0';
 if (['v1', 'parry'].includes(params.get('cnSecret'))) CONFIG.SECRET.cnSecret = params.get('cnSecret'); // 중국 비기 판(10/11): 기본 'parry'(막기 연환 — docs/strike/parry_combo_secret_2026-10-11.md), `?cnSecret=v1` = 連環三擊
 if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = params.get('deSecret'); // 독일 비기 판(10/11): 기본 'parry'(막기 연환 — 감아 들기), `?deSecret=v1` = Versetzen
+if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센

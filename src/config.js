@@ -544,6 +544,7 @@ export const SKILL = {
   schoolArt: 1, // **기본 1 — 사장님 10/9 01:5x '스위치 켜'**(확인표 195 답): 유파 자료(schools.js TRADITIONS 일본·중국 — ②③ 단계 10/9) — 유파 기술 가중치(techK)·맞받아치기(counterArt)·고유 동작(unique — 옛 newTech. 10/9 고유 동작 단계: 이탈리아·이베리아·일본·중국 셋씩 켬, 독일 셋은 ai:false — docs/strike/school_unique_2026-10-09.md)을 AI 꾸러미에 입힌다. 이름·쉴 자세는 스위치와 상관없이 늘. 0 = 10/9 01:49 까지의 판(`?schoolArt=0`). 롱소드류(독일)는 고유 동작이 꺼져 있어 바뀌지 않는다 (docs/strike/school_impl_2026-10-09.md)
   schoolSecret: 1, // 유파 비기(10/9 — docs/strike/school_secret_2026-10-09.md, 사장님 승인 '유파 설계 v3'): 조건이 차면 그 유파의 대표 동작을 완벽 실행(굴림 없음 — 값은 아래 SECRET). schoolArt 1 일 때만. 0 = 비기 없는 판(`?secret=0`, motion_lab SCHOOL_SECRET=off)
   playerSecret: 1, // 플레이어 비기(10/9 23:3x 사장님 '인간 플레이어로서는 비기를 아예 못 쓰겠어' — docs/strike/player_secret_2026-10-09.md): 내 무기 유파의 비기 조건이 차면 짧은 창(SECRET.playerWindow)이 열리고 그 안의 공격 입력이 비기 완벽 실행. 0 = 끔(`?playerSecret=0`)
+  deKron: 1, // 독일 막기 자리 머리 위(highC) = 왕관(Kron, G.kron [0.02, 0.4] — 칼자루를 머리 위로 들어 코등이·칼자루로 받음). 사장님 10/11 22:2x '독일 막기 자세에 왕관 넣어' → 기본. 감아 들기(SECRET.deSecret 'parry')의 정한 자세에도 든다(왕관 → 뛰어들기). 0 = 전 자리(긴 자세)·정한 자세 황소 둘 (`?kron=0`, 시뮬 with_config.mjs SKILL.deKron=0) — docs/strike/natural_bind_2026-10-11.md · 확인표 910
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 
