@@ -83,6 +83,10 @@ if (params.has('parryAssist')) CONFIG.SKILL.parryAssist = Math.max(0, Math.min(3
 if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
 for (const k of ['cnBongdu', 'cnBuffer', 'cnFast']) if (params.has(k)) CONFIG.SECRET[k] = +params.get(k) ? 1 : 0; // 중국 막기 연환 사람이 쓰게 (10/12 — docs/strike/cn_combo_play_2026-10-12.md): 봉두세 자리 · 미리 받기 · 빠른 연환. 기본 1, `?cnBongdu=0` · `?cnBuffer=0` · `?cnFast=0` = 전
 if (+params.get('cnFastShare') > 0) CONFIG.SECRET.cnFastShare = +params.get('cnFastShare'); // 빠른 연환 비율(빠르기·잔상 같이 — 기본 0.5): 사장님이 한 값만 바꿔 보시게 `?cnFastShare=0.65`
+if (params.has('cnPath')) CONFIG.SECRET.cnPath = +params.get('cnPath') ? 1 : 0; // 연환 길 그때 계산(10/12 03:0x): 기본 1, `?cnPath=0` = 패드 길
+if (['cutFirst', 'thrustFirst'].includes(params.get('cnGeojeongOrder'))) CONFIG.SECRET.cnGeojeongOrder = params.get('cnGeojeongOrder'); // 거정세 연환 순서: 기본 원문대로 벰 → 찌름
+if (params.has('secretReach')) CONFIG.SECRET.secretReach = +params.get('secretReach') ? 1 : 0; // 비기 동안 팔 끝까지 펴짐(10/12 03:0x·03:1x): 기본 1, `?secretReach=0` = 평소 제한
+if (params.has('iaiRise')) CONFIG.SECRET.iaiRise = +params.get('iaiRise') ? 1 : 0; // 고노센 올려베기·한 손(10/12 03:2x): 기본 1, `?iaiRise=0` = 가로 휩쓸기·두 손
 if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
 if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 실험(10/11 — docs/strike/natural_bind_2026-10-11.md): 기본 0, `?bind=1` = 칼끼리 덜 튕기고 더 물림 · 막힌 칼을 노리던 자리로 밂 · 독일 느낌 · 넓은 맞부딪힘
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기

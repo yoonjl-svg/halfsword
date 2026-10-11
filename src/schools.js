@@ -718,19 +718,23 @@ const CHINESE_SECRET_PARRY = {
     fast: 'cnFast', // 10/12 빠른 연환: SECRET.cnFast 면 두 수를 운동학 팔·칼로 길을 따라 돌린다 (secret_instant.js requestCombo — 발도와 같은 틀, 빠르기 = 발도의 SECRET.cnFastShare 몫)
     combo: {
       // 거정격 → 掣擊中殺 → 進步逆鱗: 擧鼎勢 「卽擧鼎格 … 向前掣擊中殺」(무비지 쪽154/0568 — 쳐 올려 막은 뒤 앞으로 당겨 베어 가운데를 친다) → 腰擊勢 「向前進步逆鱗」(쪽166/0580)
+      // 10/12 03:0x 길 그때 계산(dyn — SECRET.cnPath, secret_instant.js comboPlanDyn): 거정세만 원문 순서대로 당겨 벰 → 찌름 (SECRET.cnGeojeongOrder 'cutFirst').
+      //  掣擊中殺 = 머리 위에서 막은 칼을 앞으로 팔을 뻗어 가운데로 내리며 내 쪽으로 당겨 벰(오른 위 → 왼 아래 비스듬히) [해석] · 각 [추정] → 進步逆鱗 = 그 끝에서 몸통 가장 가까운 점으로 곧게 찌름(逆鱗 턱 밑은 겨누지 않음 [해석]).
+      //  'thrustFirst' 면 다른 두 자리처럼 찌름 → 찌른 곳에서 당겨 벰
       geojeong: {
         nameKo: '거정격 → 요격 → 역린자',
-        seq: [
-          { name: 'pcYao', nameKo: '요격 (腰擊)', pre: [], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: step25 }, // 길 = 연환삼격 腰擊 길 그대로
-          { name: 'pcNiLinL', nameKo: '역린자 (逆鱗刺)', pre: [], from: [-0.34, 0.02], path: [[-0.12, 0.06], [0.0, 0.12]], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25 }, // 腰擊 끝(왼쪽)에서 목을 올려 찌름 — 逆鱗 = 턱 밑 비늘 [해석] · 길 [추정]
-        ],
+        get seq() {
+          const cut = { name: 'pcYao', nameKo: '요격 (腰擊) · 당겨 벰', pre: [], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [-15, 30], el: [45, -40], from: 'prep' } }; // 패드 길 = 연환삼격 腰擊 길 그대로
+          const thrust = { name: 'pcNiLinL', nameKo: '역린자 (逆鱗刺)', pre: [], from: [-0.34, 0.02], path: [[-0.12, 0.06], [0.0, 0.12]], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust', back: true } }; // 패드 길: 腰擊 끝(왼쪽)에서 목을 올려 찌름 — 逆鱗 = 턱 밑 비늘 [해석] · 길 [추정]
+          return SECRET.cnGeojeongOrder === 'thrustFirst' ? [{ ...thrust, dyn: { kind: 'thrust' } }, { ...cut, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }] : [cut, thrust];
+        },
       },
       // 표두세 → 挑刺 → 掣步左翼擊: 豹頭勢 「… 寃步挑刺」(쪽157/0571 · 역주25) — 높이 든 칼에서 올려 찌름 = 逆鱗刺 [해석] → 逆鱗勢 「掣步左翼擊」(쪽173/0587)
       pyodu: {
         nameKo: '표두세 → 역린자 → 좌익격',
         seq: [
-          { name: 'pcNiLin', nameKo: '역린자 (逆鱗刺)', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25 }, // 길 = 꾸러미 stichOchs(역린자) 그대로
-          { name: 'pcZuoyi', nameKo: '좌익격 (左翼擊)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25 }, // 길 = 꾸러미 zuoyi 그대로 (逆鱗 끝 긴 자세에서 곧장)
+          { name: 'pcNiLin', nameKo: '역린자 (逆鱗刺)', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchs(역린자) 그대로 · dyn = 칼이 떨어진 자리에서 몸통 가장 가까운 점으로 곧게 (挑刺 — 높이 든 칼이라 대개 내려 찌름이 된다 [해석])
+          { name: 'pcZuoyi', nameKo: '좌익격 (左翼擊)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 掣步左翼擊: 찌른 곳에서 팔을 뻗은 채 내 왼쪽으로 크게 호 → 당겨 거둠 [해석] · 각 [추정]
         ],
       },
       // 봉두세 → 刺 → 剪: 鳳頭勢 「鳳頭洗也. 法能洗刺剪殺」(무비지 쪽176/0590) — 洗(씻어 쳐냄) = 막기 1 수, 刺·剪 = 2 연격 [원문] ·
@@ -739,8 +743,8 @@ const CHINESE_SECRET_PARRY = {
       bongdu: {
         nameKo: '봉두세 → 찌름(刺) → 끊어 벰(剪)',
         seq: [
-          { name: 'pcFengCi', nameKo: '찌름 (刺)', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25 }, // 길 = 꾸러미 stichOchsL 그대로
-          { name: 'pcFengJian', nameKo: '끊어 벰 (剪)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25 }, // 길 = 꾸러미 zuoyi 그대로
+          { name: 'pcFengCi', nameKo: '찌름 (刺)', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchsL 그대로 · dyn = 洗 뒤 곧장 몸통 가장 가까운 점으로 (刺)
+          { name: 'pcFengJian', nameKo: '끊어 벰 (剪)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: 1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 剪: 찌른 곳에서 팔을 뻗은 채 내 오른쪽(칼 든 쪽)으로 크게 호 → 당겨 거둠 — 표두세와 반대쪽 [해석] · 각 [추정]
         ],
       },
     },
