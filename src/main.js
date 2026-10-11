@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
 import { PHYSICS, ARENA, CAMERA } from './config.js';
+import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode (주소 ?finishEntry · ?finishMode)
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
@@ -82,6 +83,10 @@ if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // �
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
+// 마무리 스위치 (10/12 샛별 가져오기 2차 — docs/import/saetbyeol_round2_2026-10-12.md, 기본은 둘 다 끔):
+//  `?finishEntry=low` = 낮은 상대 진입(몸 높이로 내려찍기를 연다, finish_entry.js) · `?finishMode=power25` = 즉사 대신 판정 에너지 2.5 배 + 갑옷 판정
+if (['low', 'downlow'].includes(params.get('finishEntry'))) FINISH_SWITCH.entry = params.get('finishEntry'); // downlow = 고친 판 (큰 쓰러짐은 지금처럼 + 일어나는 중 낮은 몸)
+if (params.get('finishMode') === 'power25') FINISH_SWITCH.mode = 'power25';
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
 //  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다

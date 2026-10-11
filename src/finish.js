@@ -21,8 +21,16 @@
 import * as THREE from 'three';
 import { MEASURED } from './weapon_measured.js'; // 무기별 간격 실측 한 곳 (10/8 ① 구조 — 전엔 ai.js 에서 읽었다, 같은 객체)
 import { ARM } from './config.js';
+import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js';
 
 export const FINISH = {
+  // ── 10/12 샛별 가져오기 2차 스위치 (사장님 10/12 지시로 재 봄 — 기본은 둘 다 예전 그대로. 기본값은 디렉터가 병합 때 정한다)
+  //  docs/import/saetbyeol_round2_2026-10-12.md · 주소 ?finishEntry=low · ?finishMode=power25 (main.js)
+  entry: 'down', // 'down' = 상대가 쓰러짐(state down)이면 연다(지금) · 'low' = 실제 몸 높이로 연다 (finish_entry.js LOW_FINISH, 샛별 저장소 b9d28ca6·080ea451 의 뜻)
+  //  · 'downlow' = 고친 판: 'down' 그대로 + 일어나는 중(getup)이라도 몸이 낮으면 연다 (finish_entry.js downLowTarget) — 확인표 954~956
+  mode: 'kill', // 'kill' = 찍기가 몸통·머리에 찌르기로 닿으면 즉사(지금, 사장님 9/30) · 'power25' = 즉사 대신 판정 에너지 × power 로 갑옷·상처 문턱을 그대로 거친다
+  //  (샛별 저장소 7fd7f592. 맞아 죽은 상처는 부활 없음 — 살아남으면 보통 상처·출혈. 상한 없음) — 확인표 957~958
+  power: 2.5, // 'power25' 때 찍기 찌르기의 판정 에너지 배율 (상한 없음 — 사장님 확인 전)
   range: 1.7, // 누운 몸통이 내 가슴에서 이 수평 거리(m) 안이면 마무리 자세
   minFwd: 0.2, // 내 앞쪽으로 이만큼(m)은 있어야 한다 (발밑·등 뒤는 찍지 못한다)
   ideal: 0.85, // 몸통(골반~가슴 선)에서 겨눌 점: 내 앞 이 거리(m)에 가장 가까운 점
@@ -127,7 +135,10 @@ export function updateFinish(f, dt) {
   fin.k ??= downReachK(f.weapon?.id); // 무기 배율 (한 판 동안 같다)
   fin.gap ??= { contact: FINISH.ai.contact * fin.k, reach: FINISH.ai.reach * fin.k, clinch: FINISH.ai.clinch * fin.k }; // AI 가 읽는 간격
   let on = false;
-  if (foe && foe.state === 'down' && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
+  // 낮은 상대 진입 (FINISH.entry 'low'): state 이름 대신 몸 높이로 연다. 새로 시작해도 되나(canStart)는 이어 가기 여유 없이 따로 본다
+  const low = lowFinishOn(FINISH);
+  if (low) fin.canStart = false;
+  if (foe && (low ? lowFinishPosture(f, foe, lowFinishContinuing(f, foe)) : downLowTarget(FINISH, f, foe, lowFinishContinuing(f, foe))) && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
     const c = f.bodies.chest.translation();
     _c.set(c.x, c.y, c.z);
     _yawInv.copy(f.yaw).invert();
@@ -170,6 +181,12 @@ export function updateFinish(f, dt) {
         _tp.copy(_a).lerp(_b, sp);
       }
       aimPoses(f, fin, _t, _tp);
+      if (low) {
+        // 몸 겉면에 닿기만 하면 된다 — 몸 너머(sink) 끝은 짧은·부러진 칼에 멀 수 있다
+        const pl = fin.plunge;
+        on = pl.surfaceInside || pl.surfaceWalk;
+        fin.canStart = on && lowFinishPosture(f, foe, false);
+      }
     }
   }
   fin.on = on;
@@ -267,6 +284,12 @@ function aimPoses(f, fin, T, Tp) {
   //   그때 걸으면 몸 점이 발밑 뒤로 지나가 마무리가 꺼질 뿐이었다 (측정: 부러진 롱소드 0.66m 가 누운 몸을 넘어 걸어가 찍지 못함,
   //   팔쉬온 18판 중 4판) → 걷지 않고 선 자리에서 찍는다
   pl.walk = !pl.inside && Tp.x > _Hs[0] && _Hs[1] - Tp.y + FINISH.sink - L <= armRay(_Hs, DOWN, side);
+  if (lowFinishOn(FINISH)) {
+    // 낮은 상대 진입: 칼끝이 몸 겉면(몸 점 위 top)까지만 닿으면 되는 '겉면' 판 (안 · 걸어서 닿음 · 모자란 수평 거리)
+    pl.surfaceInside = pn - FINISH.top - L <= pl.Dmax;
+    pl.surfaceWalk = !pl.surfaceInside && Tp.x > _Hs[0] && _Hs[1] - Tp.y - FINISH.top - L <= armRay(_Hs, DOWN, side);
+    pl.surfaceShort = pl.surfaceInside ? 0 : Math.max(0, (pn - FINISH.top - L - pl.Dmax) / Math.max(1e-6, Math.hypot(u[0], u[2])));
+  }
   const tip = pl.tip;
   tip[0] = Tp.x + u[0] * FINISH.sink;
   tip[1] = Tp.y + u[1] * FINISH.sink;

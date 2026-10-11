@@ -26,6 +26,8 @@ import { STRIKE, ANATOMY, STEEL, ARMOR, BIND } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
+import { FINISH } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
+import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
 const IAI_GHOST_PARTS = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']);
@@ -221,7 +223,13 @@ export class Combat {
     //  찍기가 끝난 뒤·돌아오는 중 (thrustPush) · 자세 지도로 친 내려찍기·AI 내려베기 (tap 없음) · 베기·둔기·날 없는 무기 (stab) ·
     //  팔다리 (부위) · 내가 넘어졌을 때 (att.state) · 다른 상대 (att.foe). 판단만 한다 — 예측(predicting)·측정 도구가 불러도 부작용 없음
     const tp = att.skill?.tap;
-    let finish = type === 'stab' && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && vic.state === 'down' && FINISH_PARTS.has(pr.v.part);
+    // 낮은 상대 진입(FINISH.entry 'low', 기본 끔): 'down' 이름 대신 시작한 그 상대의 실제 몸 높이 (예측 중엔 스텝 전 저장값만 — 엔진을 부르지 않는다)
+    const finishTarget = lowFinishOn(FINISH) ? tp?.foe === vic && !tp.abort && !tp.ended && lowFinishPosture(att, vic, true, predicting) : downLowTarget(FINISH, att, vic, true, predicting);
+    let finish = type === 'stab' && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && finishTarget && FINISH_PARTS.has(pr.v.part);
+    // 즉사 대신 힘 (FINISH.mode 'power25', 기본 끔 — 샛별 저장소 7fd7f592): 찍기 찌르기는 즉사 표시(finish)를 끄고, 판정 에너지에 FINISH.power 를 곱해
+    //  갑옷·옷·살 문턱을 그대로 거친다. 문턱을 못 넘으면 보통처럼 멍(판금·투구가 막음). 치명상(목·머리)으로 죽으면 부활 없음(fighter.applyWound)
+    const finishPower = finish && FINISH.mode === 'power25';
+    if (finishPower) finish = false;
     // 투구: 머리 윗부분(눈썹 위)만 덮는다. 종류별 값은 ARMOR.helmets (케틀햇 = 예전 ANATOMY.helmet 그대로)
     const helmet = zone === 'head' && vic.hasHelmet && vicLocal.y > -0.01;
     const hs = helmet ? vic.helmetSpec || ARMOR.helmets.kettle : null;
@@ -279,6 +287,7 @@ export class Combat {
       // 투구: 찌그러지고 틈을 파고들어도 맨머리보다 약해지지는 않는다 (케틀햇은 가장 약할 때도 맨머리보다 세서 그대로)
       if (helmet) thr = Math.max(thr, type === 'cut' ? ANATOMY.head.cut : ANATOMY.head.stab);
       eff = energy * quality * wMult * emoDealt * emoTaken;
+      if (finishPower) eff *= FINISH.power; // 찍기 힘 배율 (상한 없음 — 사장님 확인 전, 확인표 958). 무기 속도·질량은 그대로, 판정 에너지에만 한 번
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
@@ -319,6 +328,7 @@ export class Combat {
       eff,
       bladeAxis: axis.clone(),
       finish, // 내려찍기 즉사 (사장님 결정 9/30, fighter.applyWound)
+      ...(finishPower ? { finishPower: FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기 (FINISH.mode 'power25' 때만 붙는다)
     };
   }
 

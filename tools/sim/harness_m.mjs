@@ -12,6 +12,14 @@ import { Combat } from '../../src/combat.js';
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
+// 마무리 스위치 (10/12, src 기본은 둘 다 끔 — docs/import/saetbyeol_round2_2026-10-12.md): 어느 시뮬 도구든 환경 변수로 켠다
+//  FINISH_ENTRY=low = 낮은 상대 진입 (downlow = 고친 판) ·FINISH_MODE=power25 = 즉사 대신 판정 에너지 × FINISH.power (FINISH_POWER=수 로 배율 바꿈)
+{
+  const { FINISH } = await import('../../src/finish.js');
+  if (['low', 'downlow'].includes(process.env.FINISH_ENTRY)) FINISH.entry = process.env.FINISH_ENTRY;
+  if (process.env.FINISH_MODE === 'power25') FINISH.mode = 'power25';
+  if (process.env.FINISH_POWER) FINISH.power = +process.env.FINISH_POWER;
+}
 const { PHYSICS, ARENA } = CONFIG;
 export const DT = PHYSICS.timestep;
 
