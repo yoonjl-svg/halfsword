@@ -701,7 +701,8 @@ export const SECRET = {
     E: { hand: [0.42, 0.12, 0.42], yaw: 75, el: 2, body: { pelvisYaw: -25, chestYaw: -35, pitch: 14, drop: 0.12 } }, // 오른 앞으로 다 뻗은 따라 베기 끝 — 경직 동안 이 자세로 굳음
   },
   // 발도 대기 자세 (덧씌우기 칸): 무릎을 굽혀 낮추고(drop), 두 손을 왼 허리 아래, 칼끝은 뒤로 낮게
-  iaiReady: { hand: [0.14, -0.36, -0.1], yaw: -125, el: -18, body: { pelvisYaw: 20, chestYaw: 25, pitch: 14, drop: 0.16 } },
+  //  10/12 미나미 칼 겹침: 전 hand [0.14, −0.36, −0.1] · yaw −125 · el −18 — 칼 뿌리가 뒷허벅지에 붙어(캡슐 틈 0.04 m) 하카마를 뚫어 보이거나 허벅지에 걸려 칼끝이 위로 튐 → 손 앞·조금 위, 칼끝을 덜 뒤·덜 아래로 (확인표 1010, docs/motion/minami_clip_2026-10-12.md)
+  iaiReady: { hand: [0.28, -0.32, -0.1], yaw: -115, el: -12, body: { pelvisYaw: 20, chestYaw: 25, pitch: 14, drop: 0.16 } },
   // 10/10 01:2x 사장님 결정 — 중국·이베리아 조건 (secret.js firstHitOk·BindCount, AI·플레이어 같음) [모두 확인 전]
   chineseRest: 0.5, // 중국 연환삼격: 내 공격 없이 이 초 이상 지난 뒤 들어가며 친 첫 칼이 맞으면. 48 판 청강검: 0.5 → 31 번(판마다 0.65) · 0.7 → 21 · 1.0 → 17 · 1.5 → 12 · 2.0 → 8 — 목표 0.5~1.2 안은 0.5 뿐
   // 10/10 04:4x 사장님 — 이베리아 조건을 '호 안쪽'으로 (secret.js insideEvent, AI·플레이어 같음). 아래 iberianBinds·iberianReset·iberianHurt 는 옛 BindCount 값(자료로 남김) [모두 확인 전]
