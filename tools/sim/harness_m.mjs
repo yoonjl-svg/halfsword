@@ -21,10 +21,8 @@ export { RAPIER, THREE, CONFIG, AI };
   if (['0', '1'].includes(process.env.VITAL)) FINISH.vital = process.env.VITAL === '1';
   if (['0', '1'].includes(process.env.PLATE_NECK)) FINISH.plateNeck = process.env.PLATE_NECK === '1';
   {
-    const { VITAL } = await import('../../src/vital_target.js'); // 묶음 갈래: VITAL_AI=0 · VITAL_THRUST=0 · VITAL_PCUT=0
-    if (process.env.VITAL_AI === '0') VITAL.aiCut = false;
-    if (process.env.VITAL_THRUST === '0') VITAL.thrust = false;
-    if (process.env.VITAL_PCUT === '0') VITAL.playerCut = false;
+    const { VITAL } = await import('../../src/vital_target.js'); // 묶음 갈래: VITAL_AI=0|1 · VITAL_THRUST=0|1 · VITAL_PCUT=0|1
+    for (const [e, k] of [['VITAL_AI', 'aiCut'], ['VITAL_THRUST', 'thrust'], ['VITAL_PCUT', 'playerCut']]) if (['0', '1'].includes(process.env[e])) VITAL[k] = process.env[e] === '1';
   }
   if (['power25', 'kill'].includes(process.env.FINISH_MODE)) FINISH.mode = process.env.FINISH_MODE; // 10/12 기본 power25 · kill = 전 즉사
   if (process.env.FINISH_POWER) FINISH.power = +process.env.FINISH_POWER;

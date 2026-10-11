@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  약한 자세 겨눔 (스위치 FINISH.vital — 낮은 상대 진입 FINISH.entry 'low' 와 한 묶음, 10/12)
 //   사장님 10/12 02:3x 지시로 샛별 저장소 ccea5855 · fdc6a4ed · 07206655 · 8bbee803 의 뜻을 우리 코드에 옮겼다.
-//   기록: docs/import/saetbyeol_vital_2026-10-12.md · 확인표 1001~1008 (사장님 확인 전). 기본 끔 (FINISH.vital false — 측정 §4)
+//   기록: docs/import/saetbyeol_vital_2026-10-12.md · 확인표 1001~1008 (사장님 확인 전). 추천 기본: 묶음 켬 · 찌르기 켬 · AI 목 가로 베기 끔 · 플레이어 베기 보정 끔 (측정 §4)
 //
 //  뜻: 상대가 무릎 꿇음·일어나는 중·넘어지는 중(kneel·getup·down)이고 실제로 몸이 낮거나 기울었으면
 //   · 베기는 목을 가로지르는 기술로 (AI: 기술 고르기를 목 가로 기술로 좁히고, 손 높이·칼 기울기를 목 높이로 준비)
@@ -18,10 +18,10 @@ import { FINISH } from './finish.js';
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js';
 
 export const VITAL = {
-  // 묶음 안 갈래 스위치 (FINISH.vital 이 켜져 있을 때만 읽는다 — 무엇이 얼마나 바꿨는지 나눠 재려고). 주소 ?vitalAi=0 · ?vitalThrust=0 · ?vitalCut=0
-  aiCut: true, // AI: 기술 고르기를 목 가로 베기로 좁히고 손 높이·칼 기울기를 목 높이로 준비
-  thrust: true, // 찌르기(AI·플레이어 탭): 목·얼굴·머리 점 + 플레이어 간격 맞추기
-  playerCut: true, // 플레이어: 느린 준비 동안 베기 길을 목 높이로 (겨눔 보정)
+  // 묶음 안 갈래 스위치 (FINISH.vital 이 켜져 있을 때만 읽는다 — 무엇이 얼마나 바꿨는지 나눠 재려고). 주소 ?vitalAi=0|1 · ?vitalThrust=0|1 · ?vitalCut=0|1
+  aiCut: false, // AI: 기술 고르기를 목 가로 베기로 좁히고 손 높이·칼 기울기를 목 높이로 준비 — 추천 끔 (자연 결투 48 판 참수 26 → 21~22, 무 3 → 5~8 · 첫 몸 접촉 목·머리 2/9). ?vitalAi=1
+  thrust: true, // 찌르기(AI·플레이어 탭): 목·얼굴·머리 점 + 플레이어 간격 맞추기 — 추천 켬. ?vitalThrust=0
+  playerCut: false, // 플레이어: 느린 준비 동안 베기 길을 목 높이로 (겨눔 보정) — 추천 끔 (장면 9 판 목·머리 2 → 2, 손 느낌만 바뀜). ?vitalCut=1
   faceLocalX: 0.075, // 얼굴 점: 머리 몸체 기준 앞 (m)
   faceLocalY: -0.025, // 얼굴 점: 머리 몸체 기준 아래 (m)
   guardRadius: 0.14, // 상대 칼이 목표 앞 마지막 길을 이만큼 안에서 가리면 겨누지 않는다 (m)
@@ -470,5 +470,7 @@ export function measureThrustRange(f, target) {
   const valid = proj > 0.25;
   const ready = valid && distance >= min && distance <= max;
   const move = !valid || ready ? 0 : Math.sign(error) * clamp((Math.abs(error) * 2) / Math.max(0.5, proj), 0.18, 0.65);
-  return { valid, ready, aligned: alignment >= VITAL.rangeAlignCos && lineMiss <= VITAL.rangeLineMiss, move, distance, min, max };
+  // 샛별 조건 그대로 (각 20° + 표적 선 7 cm). 우리 칼은 버티는 동안 약 6° 처져(선 12 cm) 가만히 무릎 꿇은 상대에선 2 s 를 넘기기 쉽다 → 보통 찌르기로 넘어감.
+  //  선 조건을 뺀 판을 재 봤다: 판금 크게 넘어뜨림 24 판 탭 마무리 8 → 4 · 급소 찌르기 헛침 31 → 36 % (맨몸 36 → 43 %) — 그래서 그대로 둠 (문서 §3)
+  return { valid, ready, aligned: alignment >= VITAL.rangeAlignCos && lineMiss <= VITAL.rangeLineMiss, move, distance, min, max, alignment, lineMiss };
 }

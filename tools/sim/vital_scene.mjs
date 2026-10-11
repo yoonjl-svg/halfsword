@@ -78,6 +78,7 @@ export function scene({ kind, seed, gap, padY = 0.15 }) {
   }
   const body = contacts.find((c) => c.zone);
   const first = !body ? '헛침' : body.zone === 'neck' || body.zone === 'head' ? '목머리' : body.zone === 'arm' ? '팔' : '딴몸';
+  if (process.env.VDBG) console.log('dbg', gap, P.skill.lastVitalRange, JSON.stringify(P.skill.vitalRangeEnds ?? {}), P.skill.vitalThrusts ?? 0);
   return { kind, seed, gap, padY, kneel: t0 != null, first, firstZone: body ? `${body.zone}/${body.type}` : '-', vitalWound: contacts.some((c) => (c.zone === 'neck' || c.zone === 'head') && c.sev > 0), decap, tDead, cap: P.vitalPlayer?.captures ?? 0, taps: P.skill.vitalThrusts ?? 0, vs: ai2?.stats?.vital ?? 0 };
 }
 
