@@ -686,6 +686,62 @@ const CHINESE_SECRET = {
   src: '조선세법 세 끝 이음 — 腰擊勢 「進步逆鱗」 무비지 쪽166/0580 · 逆鱗勢 「寃(掣)步左翼擊」 쪽173/0587 · 左翼勢 「寃步逆鱗刺」 쪽156/0570 · 坦腹勢 「進步腰擊」 쪽158/0572 [원문] · 검결가 「滾手連環」 쪽151 [원문] · 세 수를 한 동작으로 잇기 [해석] · 이름 가칭',
 };
 
+// ── 막기 연환 (10/11 18:3x 사장님 '중국 안2로 가자 … 중국과 독일 이런 컨셉으로' · 19:0x '독일·중국도 원리는 같되 컨셉 차가 있어야' — docs/strike/parry_combo_secret_2026-10-11.md) ──
+//  공통 원리: 유파가 정한 자세로 한 막기가 성공하면(막는 동안 칼끼리 맞닿고 그 막기에서 내 몸 상처 없음) 짧은 기회 안의 공격 입력 하나(AI 는 곧장)가 막기를 첫 수로 친 빠른 2 연격.
+//  컨셉 차 (일본 '때' · 이베리아 '자리' 처럼):
+//   독일 = 붙어서 이긴다 (Fühlen · Indes) — 걸이 막기 뒤 칼이 맞붙은 채 SECRET.deBindMin 초 이어지면 · 기회 = 칼이 붙어 있는 동안 계속 · 받은 칼을 타고 감아 드는 한 수(붙은 시간만큼 강해짐)
+//   중국 = 쳐 내고 흘려 연달아 (格 → 連擊) — 막은 칼을 쳐 내어 칼이 갈라진 뒤 · 기회 = 갈라진 직후 짧은 n 초 · 반걸음씩 들어가며 빈 곳으로 빠른 두 수
+//  꼴: when 'parry' · cond.slots { 줄: 자리 열쇠 } (막기 줄 = AI defLine, 패드 = 꾸러미 parry[줄]) · cond.window ('bind' = 칼이 붙은 동안 · 'apart' = 갈라진 뒤 cond.time 초 — SECRET 열쇠) ·
+//   do.combo { 자리 열쇠: { nameKo, seq: [수 — 중국 둘 · 독일 하나] } } — seq 의 수는 연환삼격 seq 꼴(pre: [] = 이음새 고리 없이 앞 수 끝에서 곧장). 판정은 secret.js parrySlotOf·PlayerSecretWatch, AI 는 ai.js parryCombo
+const step25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' }; // 수마다 반걸음 進步 (연환삼격과 같은 칸 — SECRET.chineseStep 0.25)
+const CHINESE_SECRET_PARRY = {
+  name: 'lianhuanParry',
+  nameKo: '연환 (連環)',
+  when: 'parry',
+  // 거정세(highC — 擧鼎格 「鼎格上殺」, 몸꼴 덧씌우기)·표두세(highR — 칼을 세운 표두세 자리) 둘만. 어거세(thrust)·요략세(lowL)·봉두세(highL)는 아님
+  cond: { slots: { highC: 'geojeong', highR: 'pyodu' }, window: 'apart', time: 'playerWindow' },
+  do: {
+    combo: {
+      // 거정격 → 掣擊中殺 → 進步逆鱗: 擧鼎勢 「卽擧鼎格 … 向前掣擊中殺」(무비지 쪽154/0568 — 쳐 올려 막은 뒤 앞으로 당겨 베어 가운데를 친다) → 腰擊勢 「向前進步逆鱗」(쪽166/0580)
+      geojeong: {
+        nameKo: '거정격 → 요격 → 역린자',
+        seq: [
+          { name: 'pcYao', nameKo: '요격 (腰擊)', pre: [], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: step25 }, // 길 = 연환삼격 腰擊 길 그대로
+          { name: 'pcNiLinL', nameKo: '역린자 (逆鱗刺)', pre: [], from: [-0.34, 0.02], path: [[-0.12, 0.06], [0.0, 0.12]], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25 }, // 腰擊 끝(왼쪽)에서 목을 올려 찌름 — 逆鱗 = 턱 밑 비늘 [해석] · 길 [추정]
+        ],
+      },
+      // 표두세 → 挑刺 → 掣步左翼擊: 豹頭勢 「… 寃步挑刺」(쪽157/0571 · 역주25) — 높이 든 칼에서 올려 찌름 = 逆鱗刺 [해석] → 逆鱗勢 「掣步左翼擊」(쪽173/0587)
+      pyodu: {
+        nameKo: '표두세 → 역린자 → 좌익격',
+        seq: [
+          { name: 'pcNiLin', nameKo: '역린자 (逆鱗刺)', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25 }, // 길 = 꾸러미 stichOchs(역린자) 그대로
+          { name: 'pcZuoyi', nameKo: '좌익격 (左翼擊)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25 }, // 길 = 꾸러미 zuoyi 그대로 (逆鱗 끝 긴 자세에서 곧장)
+        ],
+      },
+    },
+  },
+  src: '擧鼎勢 「擧鼎格 … 向前掣擊中殺」 무비지 쪽154/0568 · 豹頭勢 「寃步挑刺」 쪽157/0571 · 腰擊勢 「進步逆鱗」 쪽166/0580 · 逆鱗勢 「掣步左翼擊」 쪽173/0587 · 검결가 「滾手連環」 쪽151 [원문] · 挑刺 = 역린자 · 쳐 낸 뒤 갈라져 잇기 [해석] · 길 [추정]',
+};
+// 독일 막기 연환 — 감아 들기 (Indes · 10/11 19:1x 사장님 '두 수면 너무 비슷하니까 한 수로 … 오래 붙어 있었을수록 깊고 강한 공격'):
+//  걸이 막기(황소 Ochs — 칼자루를 머리 곁에 들고 칼끝을 상대 얼굴로 걸어 받음)로 받아 칼이 맞붙은 채 이어지는 동안(Indes — 맞붙은 그 사이) 받은 칼을 타고 감아 드는 한 수.
+//  막은 자리에 따라 한 수를 고르는 표: 오른 황소(높이, 칼 든 쪽)에서 맞붙음 → Duplieren(칼을 떼지 않고 상대 칼 뒤로 머리 — 위 빈틈) ·
+//   왼 걸이(칼을 왼쪽에 세워 받음)에서 맞붙음 → Mutieren(짧은 날로 감아 팔을 들고 바깥에서 상대 칼을 따라 아래 빈틈을 찌름).
+//  어드밴티지: 창이 열린 뒤 붙어 있던 시간만큼 판정 배율·서보 힘 창 × secret.js bindGain (SECRET.deBindFull 에 deBindGain 최대). 오래 버티는 위험(상대가 감거나 떼어 냄)은 물리 그대로.
+//  자리: highR 오른 황소(G.ochsR) · highL 왼 걸이(독일 막기 자리 [−0.3, 0.1] — '칼을 왼쪽에 세워 받는다', 왼쪽 황소 꼴) 둘만. 긴 자세(highC)·쟁기(lowL·lowR·thrust)는 아님
+const GERMAN_SECRET_PARRY = {
+  name: 'indesWinden',
+  nameKo: '감아 들기 (Indes)',
+  when: 'parry',
+  cond: { slots: { highR: 'ochsR', highL: 'ochsL' }, window: 'bind', min: 'deBindMin' },
+  do: {
+    combo: {
+      ochsR: { nameKo: '황소 걸이 → 겹치기 (Duplieren)', seq: [{ name: 'pcDuplieren', nameKo: '겹치기 (Duplieren)', pre: [], from: [0.22, 0.26], path: [[0.06, 0.28], [-0.14, 0.18], [-0.24, 0.04]], open: 'UL', kind: 'cut', reach: 0, base: 1 }] }, // 받은 칼 뒤로 머리 — 길 [추정]
+      ochsL: { nameKo: '왼 걸이 → 바꾸기 (Mutieren)', seq: [{ name: 'pcMutieren', nameKo: '바꾸기 (Mutieren)', pre: [], from: [-0.2, 0.3], path: [[-0.08, 0.02], [0.0, -0.12]], open: 'LR', kind: 'thrust', reach: 0.1, base: 1 }] }, // 팔을 들어 감고 아래로 찌름 — 길 [추정]
+    },
+  },
+  src: 'Ringeck 주해 Vor·Nach 「make the displacement simultaneously (Indes) and from the bind strike immediately at his nearest opening」 · Duplieren 「thrust the pommel … under your right arm … strike him behind his blade」 · Mutieren 「wind the short edge at his sword, raise your arms and thrust at the lower opening from the outside along his blade」 [원전 2차 영역] · Meyer Duplieren (맞붙은 칼을 떼지 않고 곧장 다른 쪽으로) [원전 2차] · 걸이 자리 = 황소 · 자리별 한 수 표 [해석] · 길 [추정]',
+};
+
 // ── 공용 동작 이름 (techNames — 10/9 고유 동작 단계, 자료만) ──
 //  공용 동작 = TECH 12 + 라이브러리 셋(talhoReves·wristCut·molinello). 동작은 같고 유파 말만 다르다. HUD 는 기술 이름을 보이지 않는다(코드 없음) — 문서·갤러리용
 const nm = (name, src) => (src ? { name, src } : { name });
@@ -731,7 +787,7 @@ export const TECH_NAMES = {
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로) · 이름은 DUSSACK_NAMES (sword_art.js schoolNames 가 가지 이름을 먼저 읽는다)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, secret: GERMAN_SECRET },
+  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, get secret() { return this.secretSet ?? (SECRET.deSecret === 'v1' ? GERMAN_SECRET : GERMAN_SECRET_PARRY); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.deSecret 'parry' 기본(막기 연환 — 감아 들기) · 'v1' 옛 Versetzen (`?deSecret=v1`)
   // 이탈리아 물러남(10/9 패시브 단계 — Ritirata): 몰리면 테르차(긴 자세)로 칼끝을 겨눈 채 물러난다, 그 밖엔 긴 자세·쟁기 (전 독일 값 황소 · 쟁기·긴 자세).
   //  레이피어 간 보는 자세(WATCH_GUARDS)에 긴 자세가 있다 — 재기 손잡이 motion_lab SCHOOL_RITIRATA=0 (전 값)
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
@@ -748,7 +804,7 @@ export const TRADITIONS = {
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
   //  물러남(10/9 腰擊 쓰임): 몰려 물러날 때 腰擊勢(옆 자세)로 거둔다 — 斂翅 「佯北誘賺… 倒退進步腰擊」(무비지 쪽174/0588 [원문]): 물러나며 腰擊을 들고 있다가 들어가 벤다.
   //   그 밖(calm)은 독일 그대로(쟁기·긴 자세 — 坦腹·中平, 찌르기 쪽). 전엔 독일 값(pressed 황소)이라 기술을 고를 때 손이 옆 자세 0.2 m 안에 있던 적이 48 판 pickTech 502 번 가운데 0 번
-  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, secret: CHINESE_SECRET },
+  chinese: { id: 'chinese', nameKo: '중국', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, get secret() { return this.secretSet ?? (SECRET.cnSecret === 'v1' ? CHINESE_SECRET : CHINESE_SECRET_PARRY); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.cnSecret 'parry' 기본(막기 연환 — 연환) · 'v1' 옛 連環三擊 (`?cnSecret=v1`)
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };

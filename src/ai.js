@@ -30,7 +30,7 @@ import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -1446,6 +1446,7 @@ export class AI {
     this.path.length = 0;
     this.stepT = 0;
     this.defBindSeen = false;
+    this.parryComboReset();
     // 2) 간격 끝에서 오는 공격, 찌르기는 물러나 헛치게 한다 (피하기). 가까우면 칼로 막는다
     const edge = d > this.foeReach - 0.35;
     const pVoid = edge || th.thrust ? 0.8 : 0.3;
@@ -1465,16 +1466,75 @@ export class AI {
     this.hand.set(p[0], p[1]);
     this.handSpeed = this.defVoid ? L.parrySpeed * 0.6 : L.parrySpeed;
     this.checkBind();
+    // 막기 연환 비기 (10/11 — schools.js *_SECRET_PARRY): 정한 자리로 받아 낸 막기 → 독일은 맞붙은 그 순간, 중국은 칼이 갈라진 순간 곧장. 버릇(bindDef)·흐름 되받기보다 먼저
+    if (this.secret?.when === 'parry' && !this.defVoid && this.parryCombo(d, dt)) return;
+    const pcWait = !!this.pcPend; // 기다리는 동안(중국 갈라짐 · 독일 붙음 이어짐)은 맞닿음에 거는 버릇·흐름 되받기를 걸지 않는다 (막기 연환이 그 자리를 맡음)
     // 패시브 bindDef (이번 막기의 처음 맞닿음에 한 번): 받은 칼로 곧장 (返し·cavazione)
-    if (this.passives.length && !this.defBindSeen && this.passiveBindDef(s, d)) return;
+    if (!pcWait && this.passives.length && !this.defBindSeen && this.passiveBindDef(s, d)) return;
     // 흐름(SKILL.flow): 칼로 받아 낸 순간(칼끼리 맞닿음) 받은 칼이 멈추지 않고 그대로 되받아 벤다
-    if (SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
+    if (!pcWait && SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
     const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
     if ((swingOver && this.timer < 0.35) || this.timer <= 0) {
       const riposte = d < this.M.reach + 0.25 && d > this.M.clinch + 0.1 && this.foe.alive && Math.random() < L.followUp;
       if (!(riposte && this.startAttack(this.pickTech(s, 'recover'), 'riposte', { noFeint: true }))) this.startWithdraw(0.6);
     }
+  }
+
+  /** 막기 연환 셈을 새 막기로 (막기에 들어갈 때 — respond·패시브 parry): 이 막기 동안의 내 상처 바탕 · 처음 맞닿음 봄 · 갈라짐 기다림 */
+  parryComboReset() {
+    this.pcW0 = this.me.wounds?.length ?? 0;
+    this.pcDone = false;
+    this.pcPend = null;
+  }
+
+  /**
+   * 막기 연환 (10/11 — schools.js *_SECRET_PARRY, 플레이어 창 secret.js PlayerSecretWatch.parryTick 과 같은 조건): 이 막기에서 칼끼리 처음 맞닿은 스텝에 한 번 —
+   *  그 사이 내 몸 상처 없음(막기 성공 · stats.parryOk) → 막은 줄(defLine)이 유파가 정한 자리이고 손이 그 자리 패드 0.15 안(secret.js parrySlotOf · stats.parrySlot) → 기다림(pcPend):
+   *   독일(window 'bind'): 칼이 맞붙은 채 cond.min 초(SECRET.deBindMin)가 이어지면 그 순간 곧장 (떨어지면 없던 일) ·
+   *   중국(window 'apart'): 칼이 갈라지는 스텝에 곧장. 기다리는 동안 상처면 없던 일. 냈으면 true. 굴림 없음
+   */
+  parryCombo(d, dt) {
+    const S = this.secret;
+    const me = this.me;
+    const touch = bladesTouch(me, this.foe);
+    const hurt = (me.wounds?.length ?? 0) > this.pcW0;
+    const P = this.pcPend;
+    if (P) {
+      if (hurt) this.pcPend = null;
+      else if (S.cond.window === 'apart') {
+        if (touch) {
+          P.t += dt;
+          return false;
+        }
+        this.pcPend = null;
+        (this.stats.pcBinds ??= []).push(P.t); // 맞닿은 때부터 갈라질 때까지 (재기)
+        return this.parryComboGo(S, P.slot, d, 0);
+      } else if (!touch) {
+        this.pcPend = null;
+        (this.stats.pcBinds ??= []).push(P.t); // deBindMin 전에 떨어진 붙음의 길이 (재기)
+      } else if ((P.t += dt) >= secretVal(S.cond.min)) {
+        this.pcPend = null;
+        return this.parryComboGo(S, P.slot, d, 0); // AI 는 창이 열린 순간 곧장 — 붙은 채 더 버티는 몫(어드밴티지)은 0
+      }
+      return false;
+    }
+    if (this.pcDone || !touch) return false;
+    this.pcDone = true;
+    if (hurt) return false;
+    this.stats.parryOk = (this.stats.parryOk ?? 0) + 1;
+    const slot = parrySlotOf(S, this.defLine, [me.handOffset.x, me.handOffset.y], this.school.parry);
+    if (!slot) return false;
+    this.stats.parrySlot = (this.stats.parrySlot ?? 0) + 1;
+    this.pcPend = { slot, t: 0 };
+    return false;
+  }
+
+  /** 막기 연환을 낸다 — 거리는 흐름 되받기(flowRiposte)와 같은 창. 창(기회) 수 stats.parryWin · held = 창이 열린 뒤 붙어 있던 시간 (독일 어드밴티지 — secret.js bindGain) */
+  parryComboGo(S, slot, d, held) {
+    this.stats.parryWin = (this.stats.parryWin ?? 0) + 1;
+    if (!this.foe.alive || d > this.M.reach + 0.25 || d < this.M.clinch + 0.1) return false;
+    return this.secretGo(S, { slot, held });
   }
 
   /** 맞받아 벨 거리: 간격 끝 + 0.3 m 안이고 붙은 거리(clinch + 0.1)보다 멀다 */
@@ -1737,6 +1797,13 @@ export class AI {
         if (lat) run.loopStep = { lat, fwd: back, kind: back < 0 ? 'retreat' : null };
       }
       ok = this.startAttack(t, 'secret', { ...opt, skipChamber: !D.loop });
+    } else if (D.combo) {
+      // 막기 연환 (10/11): 막은 자리(ctx.slot)의 두 수를 이음새 고리 없이 곧장 (pre [] — 앞 수 끝에서 다음 수 준비 자세로 바로), 걸음 칸은 SECRET 열쇠를 읽는다
+      const C = D.combo[ctx.slot];
+      run.queue = (C?.seq ?? []).map((t) => ({ ...t, step: t.step ? { ...t.step, fwd: this.secretVal(t.step.fwd) } : undefined }));
+      run.slot = ctx.slot;
+      if (S.cond?.window === 'bind') run.gain = bindGain(ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창을 키움 (secret.js bindGain)
+      ok = this.secretNext();
     } else if (D.seq) {
       // 중국 連環三擊 (10/9 23:5x '보이는 삼연격'): 첫 칼이 맞은 뒤 큰 호의 세 수(腰擊 → 撩掠 → 坦腹刺)를 이음새 0 으로 — 수마다 반걸음 進步
       run.queue = D.seq.map((t) => ({ ...t, step: t.step ? { ...t.step, fwd: this.secretVal(t.step.fwd) } : undefined }));
@@ -1780,8 +1847,8 @@ export class AI {
     const powered = run.powerFrom == null || done >= run.powerFrom;
     // 손 속도·힘 배율은 비기마다(do.hand·do.loopHand·do.power — SECRET 열쇠, 없으면 공통 handSpeed·power). 이베리아는 고리 동안 loopHand, 내려치기에 hand·power
     this.handSpeed *= this.secretVal(powered ? D.hand ?? 'handSpeed' : D.loopHand ?? D.hand ?? 'handSpeed');
-    this.me.powerMul = powered ? this.secretVal(D.power ?? 'power') : 1;
-    this.me.secretHit = powered ? SECRET.hitMul : 1; // 결정타 판정 어드밴티지: 상처 에너지 배율 (combat.js) — 따라 지나감까지, 경직·끊김에서 1
+    this.me.powerMul = powered ? this.secretVal(D.power ?? 'power') * (run.gain ?? 1) : 1; // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
+    this.me.secretHit = powered ? SECRET.hitMul * (run.gain ?? 1) : 1; // 결정타 판정 어드밴티지: 상처 에너지 배율 (combat.js) — 따라 지나감까지, 경직·끊김에서 1
     // 보조 힘·속도(do.strength — 사장님 '필요하다면 보조 속도와 힘 제공'): 그 베기 구간만 몸의 힘(me.strength)을 올린다 — 손목 힘·손목 빠르기 한계(√힘)·팔 힘이 함께 오른다
     if (D.strength) this.secretStrength(powered ? this.secretVal(D.strength) : 1);
     this.secretTrack();
@@ -2179,6 +2246,7 @@ export class AI {
       this.path.length = 0;
       this.stepT = 0;
       this.defBindSeen = false;
+      this.parryComboReset();
       this.defVoid = !!D.void || !this.me.armed;
       if (this.defVoid) this.stats.voids++;
       else this.stats.parries++;

@@ -629,6 +629,15 @@ export const SECRET = {
   //  'gilmok' = 10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — 기본 (docs/strike/iberian_secret_v6_2026-10-11.md): 간격 밖에 gilmokArmTime 초 버텨 준비(칼을 몸 옆으로 감음) →
   //   상대 가슴이 내 칼끝 거리(reach) 경계를 다가오며 넘는 순간 → 몸 가운데 높이로 둘러 베는 한 칼 → 경직. 'flow' 는 v5(주소 `?ibSecret=flow`)
   iberianSecret: 'gilmok',
+  // 중국·독일 비기 판 (10/11 18:3x 사장님 '중국 안2로 가자 … 중국과 독일 이런 컨셉으로' — docs/strike/parry_combo_secret_2026-10-11.md) [사장님 확인 전]:
+  //  'parry' = 막기 연환(정한 자세의 막기가 성공하면 짧은 기회 안의 입력으로 빠른 2 연격 — schools.js *_SECRET_PARRY) · 'v1' = 그 전 판(중국 連環三擊 · 독일 Versetzen).
+  //  주소 `?cnSecret=v1` · `?deSecret=v1` · 시뮬 `with_config.mjs SECRET.cnSecret=v1` · test.html 고르기
+  cnSecret: 'parry',
+  deSecret: 'v1', // 디렉터 10/11 21:0x: 독일 감아 들기는 지금 물리에서 칼이 0.3 s 넘게 붙지 않아(48 판 p90 0.09 s) 한 번도 안 열림 → 사장님 답 전까지 옛 Versetzen 기본 · 새 판은 ?deSecret=parry · test.html
+  // 독일 감아 들기 (Indes — 붙어서 이긴다, 10/11 19:1x 사장님 '몇 초(0.n초?) 이상 붙어있으면 붙어있는 한 계속 발동 가능, 오래 붙어 있었을수록 깊고 강한 공격') [모두 사장님 확인 전]:
+  deBindMin: 0.3, // 정한 걸이 막기 뒤 칼이 이 초 이상 맞붙어 이어지면 창이 열린다(붙어 있는 동안 계속). 시작값 = 이베리아 호 안쪽 머묾 iberianInsideDwell · 따라 지나감 0.3 과 같은 수
+  deBindFull: 1.0, // 붙음이 이 초(맞닿은 때부터)에 이르면 어드밴티지 최대 (secret.js bindGain)
+  deBindGain: 1.4, // 그때 판정 배율(hitMul)·서보 힘 창(power)에 곱하는 최대 배 (창이 열린 순간 1)
   // 이베리아 휩쓸기 (10/10 02:5x 사장님 '이베리아 비기도 새 동작을 크게 — 뭐가 나가는지 전혀 알 수 없었다') · 비기 카메라 [모두 확인 전] — 10/11 부터 iberianSecret 'v4' 일 때만
   iberianSweep: 1, // 1 = 사이드스텝(반걸음 뒤 섞음) + 오른 어깨 뒤로 감았다 크게 한 번 가로 베기 (발도와 같은 스텝마다 자리 지정 틀 — 10/10 04:4x, 전 02:5x 머리 위 고리 + 사선), 0 = 10/9 고리·사선 길
   iberianSweepTime: 0.25, // 전체 (s)

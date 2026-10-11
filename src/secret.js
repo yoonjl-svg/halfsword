@@ -443,6 +443,46 @@ export function flowGate(f, g) {
   return true;
 }
 
+/**
+ * 막기 연환의 자리 (10/11 — schools.js *_SECRET_PARRY cond.slots): 이 막기가 유파가 정한 자세로 한 막기인가 → 자리 열쇠 또는 null. 굴림 없음.
+ *  손(패드 [x, y])이 그 줄의 막기 자리 패드(꾸러미 parry[줄]) 0.15 안 — 0.15 는 v5·v6 '이미 그 자세' 판정(montanteFlowSeq·gilmokSeq)의 패드 폭 그대로(새 값 아님).
+ *  AI: line = 막은 줄(defLine) — 그 줄이 정한 줄이고 손이 그 자리에 있어야. 플레이어: line = null — 막기 자리가 없으니 손이 정한 자리 패드 가운데 가장 가까운 것(0.15 안).
+ *   두 자리가 같은 패드면(중국 거정세·표두세 = G.tag) hint(그때 들어오던 상대 칼의 줄 — threatNow)로 고르고, 없으면 cond.slots 의 뒤 것(중국: 표두세 — 플레이어 자세표에서 그 패드의 꼴)
+ */
+export function parrySlotOf(S, line, hand, parry, hint = null) {
+  const L = S?.cond?.slots;
+  if (!L || !parry) return null;
+  const dist = (ln) => (parry[ln] ? Math.hypot(hand[0] - parry[ln][0], hand[1] - parry[ln][1]) : Infinity);
+  if (line != null) return L[line] && dist(line) <= 0.15 ? L[line] : null;
+  if (hint && L[hint] && dist(hint) <= 0.15) return L[hint];
+  let best = null;
+  let bd = 0.15;
+  for (const ln of Object.keys(L)) if (dist(ln) <= bd) (bd = dist(ln)), (best = L[ln]);
+  return best;
+}
+
+/**
+ * 독일 막기 연환의 붙은 시간 어드밴티지 (10/11 19:1x 사장님 '오래 붙어 있었을수록 깊고 강한 공격'): held = 창이 열린 뒤(붙음이 SECRET.deBindMin 을 넘은 뒤) 낼 때까지 붙어 있던 시간 (s).
+ *  0 이면 1(다른 비기와 같은 판정 배율·힘 창), deBindFull − deBindMin 초에 SECRET.deBindGain(최대)까지 곧게 오른다 — 판정 배율(hitMul)과 서보 힘 창(power)에 곱한다 [확인 전]
+ */
+export function bindGain(held) {
+  const span = Math.max(1e-6, SECRET.deBindFull - SECRET.deBindMin);
+  return 1 + (SECRET.deBindGain - 1) * clamp(held / span, 0, 1);
+}
+
+/** 상대 칼끝 빠르기의 최고 (m/s, 지금부터 span 초 앞까지 — 지금 모습). 막기 연환의 '상대 칼이 들어오던 중' (foeRecentTipE 와 같은 버퍼 셈) */
+export function foeRecentTipSp(sense, span) {
+  const B = sense.buf;
+  const N = B.length;
+  let best = 0;
+  for (let b = 0; b <= Math.min(N - 1, Math.round(span * 120)); b++) {
+    const s = B[(sense.head - b + N * 2) % N];
+    if (s.t < 0) break;
+    best = Math.max(best, Math.hypot(s.tvx, s.tvy, s.tvz));
+  }
+  return best;
+}
+
 /** 내 베기 사건 비기(combo·firstHit)의 거리: 이어 치기 거리 안 (ai.js secretCombo·secretFirstHit 와 같은 식) */
 export function chainRange(d, view) {
   return d <= view.reach + 0.1 && d >= view.clinch - 0.5;
@@ -497,6 +537,7 @@ export class PlayerSecretWatch {
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
       this.gilArm.tick(0, false, true);
+      if (this.pc) this.pc.pend = null;
       return;
     }
     const c = me.bodies.chest.translation();
@@ -511,6 +552,7 @@ export class PlayerSecretWatch {
     if (this.swing && painUp) this.swing.landed = true;
     const touch = bladesTouch(me, foe);
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
+    if (S.when === 'parry') this.parryTick(dt, touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
     if (S.do?.gilmok) {
@@ -590,6 +632,67 @@ export class PlayerSecretWatch {
       off.y += (hy / d) * step;
     }
     me.skill.recovering = false; // 검술 층의 쉴 자세 걷기와 다투지 않게 (이 동안은 길목 준비 자세가 쉴 자리)
+  }
+
+  /**
+   * 플레이어 막기 연환 (10/11 — AI ai.js parryCombo 와 같은 뜻). 플레이어는 막기 모드가 없으니 '막기' = 내가 휘두르거나 찌르지 않는 동안(attacking 거짓)
+   *  상대 칼이 들어오던 중(지난 0.6 s 안 상대 칼끝 ≥ 3.5 m/s — 3.5 = threatNow 칼끝 하한, 0.6 = 일본 헛침 셈 foeRecentTipE 의 span) 칼끼리 새로 맞닿음.
+   *  막기 성공 = 그 0.6 s 안 내 몸 상처 없음 (pc.ok). 정한 자세 = 그 순간 손이 정한 자리 패드 0.15 안(parrySlotOf — pc.slot).
+   *  독일(window 'bind'): 붙음이 cond.min 초(SECRET.deBindMin) 이어지면 창이 열리고 칼이 붙어 있는 동안 계속 (떨어지면 닫힘 · ctx.held = 열린 뒤 붙은 시간 → bindGain) ·
+   *  중국(window 'apart'): 칼이 갈라지는 순간 창이 열려 cond.time 초.
+   *  창이 열린 동안 막기가 뚫려 상처가 나면 닫힘. 재기: pc.binds = 맞닿음이 이어진 시간들 (s) — 독일 창 길이 판단용
+   */
+  parryTick(dt, touch, attacking, s0, c, d0, V, busy) {
+    const me = this.me;
+    const S = this.S;
+    const P = (this.pc ??= { prev: false, nw: me.wounds?.length ?? 0, woundAge: Infinity, line: null, lineAge: Infinity, pend: null, ok: 0, slot: 0, bindT: 0, binds: [], parryBinds: [], inParry: false });
+    const nw = me.wounds?.length ?? 0;
+    P.woundAge = nw > P.nw ? 0 : P.woundAge + dt;
+    P.nw = nw;
+    P.lineAge += dt;
+    if (Math.hypot(s0.tvx, s0.tvy, s0.tvz) >= 3.5) {
+      const th = threatNow(this.sense, this.foe, s0, c, me.right(_r), d0, V.foeReach); // 들어오는 줄 (같은 패드 두 자리 고르기 — parrySlotOf hint)
+      if (th) (P.line = th.line), (P.lineAge = 0);
+    }
+    const start = touch && !P.prev;
+    const sep = !touch && P.prev;
+    P.prev = touch;
+    if (touch) P.bindT += dt;
+    else if (sep) {
+      P.binds.push(P.bindT);
+      if (P.inParry) P.parryBinds.push(P.bindT);
+      P.bindT = 0;
+      P.inParry = false;
+    }
+    const o = this.open;
+    if (o?.ctx?.ev === 'parry') {
+      if (P.woundAge === 0 || (S.cond.window === 'bind' && !touch)) this.open = null; // 뚫림 · 독일: 칼이 떨어짐
+      else if (S.cond.window === 'bind') o.ctx.held += dt; // 독일: 창이 열린 뒤 붙어 있는 시간 (어드밴티지 — bindGain · 화면 차오름)
+    }
+    if (P.pend) {
+      if (P.woundAge === 0 || attacking) P.pend = null;
+      else if (S.cond.window === 'apart') {
+        if (sep) {
+          if (!busy && !this.open) this.openWindow({ ev: 'parry', slot: P.pend.slot }, secretVal(S.cond.time));
+          P.pend = null;
+        }
+      } else if (!touch) P.pend = null;
+      else if ((P.pend.t += dt) >= secretVal(S.cond.min)) {
+        if (!busy && !this.open) this.openWindow({ ev: 'parry', slot: P.pend.slot, held: 0 }, Infinity); // 붙어 있는 동안 열림 (떨어지면 위에서 닫힘)
+        P.pend = null;
+      }
+    }
+    if (!start) return;
+    P.edges = (P.edges ?? 0) + 1; // 재기: 새 맞닿음 · 그때 내가 휘두르던 중 · 상대 칼이 느림 · 상처 0.6 s 안
+    if (attacking || busy) return void (P.rejAtk = (P.rejAtk ?? 0) + 1);
+    if (!(foeRecentTipSp(this.sense, 0.6) >= 3.5)) return void (P.rejSlow = (P.rejSlow ?? 0) + 1);
+    if (P.woundAge < 0.6) return void (P.rejHurt = (P.rejHurt ?? 0) + 1);
+    P.ok++;
+    P.inParry = true;
+    const slot = parrySlotOf(S, null, [me.handOffset.x, me.handOffset.y], me.swordArt?.school?.parry, P.lineAge < 0.6 ? P.line : null);
+    if (!slot) return;
+    P.slot++;
+    P.pend = { slot, t: 0 };
   }
 
   openWindow(ctx, t = SECRET.playerWindow) {
