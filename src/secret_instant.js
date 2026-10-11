@@ -840,7 +840,10 @@ export function gilmokCutPose(f, seg, s, dt) {
     const hp = f.bladePoint(0, _gh);
     const tp = f.bladePoint(1, _gt);
     const L = hp.distanceTo(tp);
-    if (L > 0) el = Math.asin(THREE.MathUtils.clamp((foe.bodies.chest.translation().y - hp.y) / L, -1, 1)) / D2R;
+    // 겨누는 몸 자리 (사장님 결정 10/11 13:5x — SECRET.gilmokAim): 가슴 · 머리 가운데 · 머리 꼭대기(+ 머리 반지름). 처지는 만큼 위를 겨눔 (AI·플레이어 같은 함수)
+    const A = SECRET.gilmokAim;
+    const ty = A === 'chest' || !foe.bodies.head ? foe.bodies.chest.translation().y : foe.bodies.head.translation().y + (A === 'headTop' ? foe.headR ?? 0 : 0);
+    if (L > 0) el = Math.asin(THREE.MathUtils.clamp((ty - hp.y) / L, -1, 1)) / D2R;
   }
   const D = dirOf(-s * P.yaw, el);
   th.dir[0] = D.x;

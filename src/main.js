@@ -75,6 +75,7 @@ if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerS
 if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 0; // 일본 비기 순간 베기(10/10, secret_instant.js): 기본 1, `?instant=0` = 10/9 길(담았다 터뜨림) 대조
 const SECRET_SLOWMO = params.get('slowMo') !== '0';
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
+if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).

@@ -26,7 +26,7 @@ page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text());
 });
-await page.goto(`${base}/?weapon=zweihander&foeWeapon=longsword&ibSecret=${ver}&slowMo=0`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=zweihander&foeWeapon=longsword&ibSecret=${ver}&slowMo=0${process.env.AIM ? '&gilAim=' + process.env.AIM : ''}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
 await page.getByText('싸움 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerSecret, null, { timeout: 60000 });
