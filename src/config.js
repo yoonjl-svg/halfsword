@@ -719,6 +719,11 @@ export const SECRET = {
   // 플레이어 비기 (SKILL.playerSecret)
   playerWindow: 0.5, // 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
   cnParryWindow: 1.0, // 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
+  // 중국 막기 연환 사람이 쓰게 (사장님 10/12 01:1x 플레이 시험 — docs/strike/cn_combo_play_2026-10-12.md) [모두 사장님 확인 전 — 확인표 970~]
+  cnBongdu: 1, // 1 = 봉두세(highL) 막기도 정한 자세 (schools.js CHINESE_SECRET_PARRY cond.slots — 오는 줄 25 %), 0 = 전 두 자리(거정세·표두세). `?cnBongdu=0`
+  cnBuffer: 1, // 1 = 정한 자세로 막아 칼이 맞닿은 동안 온 공격 입력을 미리 받아 두고 칼이 떨어지는 순간 연환 (secret.js PlayerSecretWatch.buffer — 플레이어만), 0 = 전(그 입력은 보통 공격 · 기다림 취소). `?cnBuffer=0`
+  cnFast: 1, // 1 = 연환 두 수를 운동학 팔·칼로 길을 따라 (발도와 같은 틀 — secret_instant.js requestCombo, AI·플레이어 같음) + 잔상, 0 = 전(서보 — 손 빠르기 handSpeed). `?cnFast=0`
+  cnFastShare: 0.5, // 빠른 연환의 비율 하나: 칼끝 평균 빠르기 = 고노센(발도 베는 몫 — 같은 칼의 길 길이 / iaiTime)의 이 몫 · 잔상 세기(밝기·섬광)도 고노센 잔상의 이 몫 (사장님 10/12 01:2x '잔상은 속도의 표시니까 잔상도 고노센의 50%나 65%로'). 전 연환(서보)은 발도의 약 14 % (수마다 9~24 %) — 50 % 에 한참 못 미쳐 → 0.5 (사장님 '그거 50% 정도' · 이미 그 정도면 0.65 였음). `?cnFastShare=`
   playerChainGap: 0.6, // 플레이어 베기 덩이 사이 쉼이 이 초보다 길면 끊김 (이베리아 이어진 베기 셈 · 중국 '들어가며 친 첫 베기') [해석]
   playerVibrate: 50, // 창이 열릴 때 진동 (ms, navigator.vibrate — 없으면 생략)
 };
