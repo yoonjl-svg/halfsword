@@ -47,7 +47,7 @@ for (const R of runs) {
     if (!Sx) break;
     let t0 = null;
     let st = null;
-    for (let i = 0; i < 120 * 10; i++) {
+    for (let i = 0; i < 120 * 20; i++) {
       G.step();
       const near = t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < A.M.reach - 0.1 && A.secretFree();
       if (near && A.secretGo(Sx, R.ctx)) {

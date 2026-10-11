@@ -27,7 +27,7 @@ for (const R of runs) {
     let prev = null;
     let w0 = 0;
     let hit = false;
-    for (let i = 0; i < 120 * 10; i++) {
+    for (let i = 0; i < 120 * 20; i++) {
       G.step();
       const near = t0 == null && G.t > 2.6 && me.state === 'stand' && G.player.state === 'stand' && me.foeDistance() < A.M.reach - 0.1 && A.secretFree();
       if (near && A.secretGo(S, R.slot ? { slot: R.slot, held: 0 } : {})) (t0 = G.t), fired++, (w0 = G.wounds.length);
