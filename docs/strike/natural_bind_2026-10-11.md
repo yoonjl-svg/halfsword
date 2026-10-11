@@ -1,0 +1,107 @@
+# 자연 바인드 실험 · 넓은 맞부딪힘 · 독일 왕관 막기 (10/11)
+
+가지 `…/natural-bind-2q36ha` · 바탕 main `626e273` · 커밋 `5258361`(왕관 — 기본) · `8018e3f`(자연 바인드 장치 — 스위치 뒤) · 이 기록.
+값은 모두 **사장님 확인 전** (확인표 910~917). 왕관만 사장님 10/11 22:2x 결정으로 기본.
+
+## 0. 사장님 말씀 (원문)
+- 10/11 20:3x: "독일 바인드. 1안과 2안이 있어. 1안. 바인드 동작을 만든다. 그러나 이 비기만을 위해 억지로 동작을 만드는 게 아니라 검이 맞부딪히면 서로의 관성이나 무게로 인해 자연스러운 경합이나 힘싸움이 벌어지도록 유도해야 함 - 우리 시스템에서 어떻게 가능할지 아이디어 필요. 가능만 하다면 더 현실적 전투로 업그레이드 됨. 2안. 꼭 검을 맞댄 게 아니어도 밀착해서 힘을 경합하는 경우를 넓은 의미의 '맞부딪힘'으로 해석."
+- 22:0x: "좋습니다. 근데 지금도 밀치기는 있지?" → 있다(플레이어 근접 밀치기 fighter.closeStep · AI 는 persona.close 인물만). 칼이 엇걸린 채 밀치기로 누르는 동안은 칼날끼리 맞닿음이라 이미 바인드로 센다(§2 ⑤).
+- 22:2x: "독일 막기 자세에 왕관 넣어" → 왕관은 기본(§1).
+
+## 1. 왕관 (Kron) — 기본 (커밋 5258361)
+
+| | 무엇 |
+|---|---|
+| 막기 자리 | 독일 꾸러미 parry.highC(머리 위에서 곧게 오는 칼 — oberhau 줄): 긴 자세 G.langort [0.0, 0.03] → **왕관 G.kron [0.02, 0.4]** (덮는 자세로 쓰던 패드 — 지붕 [0.02, 0.52] 과 황소 [±0.22, 0.26] 사이. 롱소드 자세표 섞기로 칼자루가 머리 위·칼이 섬) [해석] |
+| 감아 들기 정한 자세 | cond.slots 에 highC → 'kron' 더함 → 한 수 **왕관 → 뛰어들기 (Einlaufen)**: 머리 위에 걸친 칼에서 반걸음(SECRET.chineseStep 0.25 — 같은 값, 새 값 아님) 들어가며 머리로 짧게 내려 벰. 길 [[0.0, 0.2], [−0.02, −0.12]] [추정] |
+| 스위치 | `SKILL.deKron` 1 (기본) · 0 = 전 자리(긴 자세)·정한 자세 황소 둘 — 주소 `?kron=0` · 시뮬 `with_config.mjs SKILL.deKron=0` |
+| 쓰는 곳 | 독일 전통 무기 모두(롱소드·에스톡·세이버 등 — 꾸러미 parry 를 같이 씀). AI 막기(defend)·간 보기 중 덮기(watch — 상대가 머리 위로 들면 그 줄 막기 자리로)·플레이어 감아 들기 정한 자세 판정(parrySlotOf) |
+
+원전 근거
+- Ringeck 주해 「How the crown breaks the part cut」(Scheitelhau 단원): 상대가 칼자루를 높이 들어 받으면 "this parrying is called the crown and they rush in on you with it" [원전 2차 영역 — Wiktenauer Sigmund ain Ringeck, Trosclair 2022]. 지난 기록의 다른 영역 「this displacement is called "the crown". From there you can rush in」 와 같은 대목.
+- 곧 왕관은 **위에서 떨어지는 칼(정수리 베기)을 칼자루·코등이로 받는 막기**이고 거기서 **뛰어든다(Einlaufen)** — highC 줄 · 뛰어들기 한 수의 근거 [원전 2차]. 씨름(Ringen)까지는 우리 몸에 잡기·던지기가 없어 들어가며 짧게 치는 한 칼로 [해석].
+- 황소 걸이와 견줌: 황소는 원문에 '황소로 받아 감는다'가 없어 해석으로 골랐다(parry_combo 기록 §2). 왕관은 원문이 막기·뒤의 수를 함께 말한다 — 원전 거리가 더 가깝다.
+- 손·칼끝 자리 수: 패드 [0.02, 0.4] 는 손 위치 패드(몸 앞 평면, m) — 지붕 패드보다 0.12 낮음. 몸 기준 손·칼끝 방향은 guards.js 섞기(지붕·황소 둘·긴 자세)가 정한다 — 섞기 무게가 지붕 쪽이라 칼이 거의 서고(지붕 칼끝 100°) 손이 머리 앞 위 [해석·잰 값 아님]. 칼을 가로 눕히는 진짜 왕관 꼴(코등이를 가로로)은 따로 자세 자리가 필요 — 중국 거정세 시험(확인표 704)과 같은 까닭으로 넣지 않음 [추정].
+
+관문 (왕관만)
+
+| 관문 | 기대 | 왕관 켬 | 왕관 끔(`SKILL.deKron=0`) |
+|---|---|---|---|
+| fights12 | cc4e62b1 | **72662d47** | cc4e62b1 ✓ |
+| live_battery | e7ee3d96 | e7ee3d96 (그대로) | e7ee3d96 ✓ |
+| finish_thrust 1 --stand | 433ac984 | 433ac984 ✓ | — |
+| corr_s0 --limits=on,off --scenes=a,b | IDENTICAL 12/12 | ✓ | — |
+| weapon_smoke | OK 21/21 | ✓ | — |
+| vite build · name_policy | 0 · 위반 0 | ✓ | — |
+| duel longsword 24 main | 86029ced | bc2a661f (42 → 50 %) | 86029ced ✓ |
+| duel estoc · sabre 24 main | 16e2d20d · e1659bd5 | 9d23e21c (46 → 35 %) · a402cad7 (50 → 58 %) | — |
+
+- 상대 롱소드 AI 도 독일이라 모든 duel 출력이 바뀐다. 승률은 모두 95 % 띠 안 — 승률을 보고 고른 값 없음.
+
+## 2. 자연 바인드 실험 (커밋 8018e3f — `BIND.natural` 기본 0)
+
+켜는 법: 주소 `?bind=1` · 시뮬 `with_config.mjs BIND.natural=1 <스크립트>`. 끄면 오늘 물리와 바이트 같다(§5).
+
+### ① 칼끼리 닿는 면 (combat.js armSteel)
+- 칼 콜라이더(칼날·코등이·자루) 반발을 `BIND.restitution` 0.1 로(오늘 재질 0.7). 곱하기 규칙이라 칼끼리만 바뀐다(몸·땅은 0 이라 원래 0) — **칼끼리만 다르게 주기는 반발로는 된다.**
+- 마찰은 Rapier 결합 규칙이 평균이라 칼끼리만 바꿀 수 없다(칼 대 몸 마찰도 같이 바뀜) → 오늘 '맞댄 동안 반발 끄기'(armSteel)와 같은 때에만 칼 콜라이더 마찰을 `BIND.friction` 1.2 로(떨어지면 0.4 로 되돌림). 그동안 칼과 몸의 마찰도 평균 (1.2 + 0.25)/2 로 오른다 — 붙은 짧은 동안뿐.
+- 16 판 시험(같은 씨앗): 면만 바꿈(누르기 없음) → 0.3 s 넘는 맞닿음 판마다 0.50 → 1.19.
+
+### ② 닿은 뒤에도 미는 뜻 (ai.js natPress · natHoldDef)
+- 칼끼리 맞닿음은 대부분 **치는 쪽 손이 이미 길 끝에 닿은 뒤(phase follow)** 생긴다 — 손 목표가 무거운 칼보다 먼저 길 끝에 가 있어, 칼이 막히면 서보는 길 끝(상대 칼을 지나친 쪽)으로 당긴다. 탐침: 맞닿음 시작 때 치는 AI 단계 follow 16 · strike 3 (롱소드 5 판).
+- 그래서 베는 중·follow 단계에서 칼이 맞닿으면 손 목표를 **노리던 자리**(찌르기 = 길 끝, 베기 = 길의 가운데 점 — 칼이 상대 몸을 지나는 곳)로 되돌려 `BIND.pressSpeed` 0.2 m/s 로 밀고 거기서 멈춰 민다. 막는 쪽은 그 막기에서 칼이 붙어 있는 동안 막기를 끝내지 않는다(손은 막기 자리 그대로 — 서보가 민다).
+- 끝은 물리: 두 서보가 맞서는 동안 붙어 있고, 각·힘이 기울면 미끄러져 떨어진다 → 떨어지면 원래 손 빠르기로 길을 마저 간다. 상한 `BIND.holdMax` 1.5 s(서로 버티기만 하는 그림의 상한 — 새 상한이라 실험 안에서만).
+- 정한 동작은 없다 — 손 목표를 '길 끝'에서 '노리던 자리'로 바꾼 것뿐, 붙고 떨어짐은 칼 무게·서보·마찰이 정한다.
+- 16 판 시험: 누르기만(면 오늘 그대로) 0.50 → 1.50 · 둘 다 2.06.
+
+### ③ 강함·약함 · 느낌 (combat.js bindFeel · ai.js natPress)
+- 느낌 신호(읽기만): `feel.at` = 맞닿은 자리가 내 칼날 어디인가(코등이 0 → 칼끝 1, 음수 = 코등이·자루 위) · `feel.hilt` = 내 코등이·자루가 상대 칼에 닿음 · `feel.force` = 누르는 힘(N, 오늘도 있음).
+- 지렛대는 이미 물리에 있다: 서보는 손목(칼 원점)에 걸린 회전 힘(aimStiffness·각, 상한 있음)이라, 상대 칼이 내 칼 끝 쪽을 누르면 팔이 길어 내 칼이 쉽게 돌고 코등이 쪽을 누르면 거의 안 돈다 — 강함(Stärke)·약함(Schwäche)이 따로 만들지 않아도 따라 나온다.
+- 독일 AI(치는 쪽)만, 맞닿고 `BIND.feelT` 0.12 s 뒤 한 번: 상대가 세다(force ≥ `BIND.strongN` 150 N 이고 at ≥ 0.5 — 상대가 내 약한 쪽을 누름) → **감아 돌아감**(고유 동작 Duplieren, 없으면 가로베기) · 상대가 약하다(at < 0.5 — 내 강한 쪽으로 쥠) → **밀고 들어감**(노리던 자리로 원래 손 빠르기) · 그 밖 → 계속 민다.
+- 원전: 「About the feeling and about the word Indes」 "you shall immediately feel, whether they have bound soft or hard" · Indes "wrestles" [원전 2차 — Ringeck, Trosclair 2022] · Vor/Nach 주해 "From the hilt of the sword to the blade's centre the sword is 'strong'" · "The weak reaches from the middle of the blade to the point. Here you cannot hold opposed." [원전 2차 — Farrell · Bellinghausen–Rawlings] · 분노의 베기 놀이 "When he is weak at the sword then, thrust into his face along his blade" [원전 2차] — at 0.5 문턱(칼날 가운데)은 이 '가운데까지 강함'에서 [원전 2차]. strongN 150 은 [추정](맞닿음 지속 힘이 30~120 N, 부딪힌 순간 수백 N — 탐침).
+- 막는 쪽은 느낌 결정을 하지 않는다 — 독일 막는 쪽의 '맞붙은 그 사이'는 감아 들기 비기(SECRET.deSecret 'parry')가 맡는다(붙은 시간 → 창).
+
+### ④ 코등이 걸림
+- 칼 부품은 모두 콜라이더(코등이·자루 'hilt' 부품 포함)라 칼날을 타고 미끄러진 상대 칼이 코등이에 걸리는 것은 **오늘 물리에도 있다**. 측정: 0.3 s 넘는 맞닿음의 거의 모두가 코등이·자루가 낀 맞닿음(끔 46/49 · 켬 71/79 — 롱소드 48 판). **길게 붙는 바인드 = 코등이 걸림**이 지금 우리 물리의 모습.
+- 켬에서는 붙은 동안 마찰이 높아 코등이에 걸린 칼이 덜 빠진다.
+
+### ⑤ 넓은 뜻의 맞부딪힘 (secret.js wideTouch · bindTouch)
+- 칼날 밖 접촉을 바인드로 센다: 내 팔·코등이·자루 ↔ 상대 팔·코등이·자루·몸통 · 몸통끼리(가슴·배·골반). 칼날이 몸에 닿은 것(베기)은 넣지 않는다. Rapier 접촉을 읽기만.
+- 근접 밀치기 누르기에서 칼이 엇걸린 채 누르는 것은 칼날끼리 맞닿음이라 오늘도 bladesTouch 로 든다.
+- 독일 감아 들기 창 조건(AI ai.js parryCombo · 플레이어 secret.js parryTick)의 '붙음'을 켬일 때 bindTouch 로 — 칼날끼리 또는 넓은 맞부딪힘.
+- 근거: Ringeck 「Indes wrestles」(맞붙은 그 사이에 씨름도 든다) · 「Or run-through with the inverter and wrestle」 · 「If someone runs-in …」(뛰어들기) [원전 2차 — Trosclair]. 
+- 측정: 넓은 맞부딪힘(칼날 맞닿음이 없는 동안) 덩이는 드물다(롱소드 48 판 끔 17 · 켬 5, 0.3 s 넘는 것 0~1) — AI 끼리는 몸이 붙는 거리까지 거의 안 들어간다(롱소드 AI 는 persona.close 가 없어 밀치기를 안 함). 플레이어가 밀치기로 붙을 때의 몫.
+
+### 우리 물리로 안 되는 것
+- **칼끼리만 마찰 따로**: Rapier 결합 규칙(평균·최대·곱·최소)은 콜라이더마다 하나라, 칼–칼과 칼–몸을 다른 값으로 줄 수 없다(물리 훅의 접촉 고치기는 JS 판에 없음 — filterContactPair 만). → 붙은 동안만 바꾸는 꼴로 대신.
+- **칼날을 가로로 눕힌 진짜 왕관 꼴**: 자세표 섞기로는 머리 위 자리가 지붕(칼을 세움)에 끌린다(§1).
+- **칼을 쥔 씨름(잡기·던지기)**: 몸에 잡기가 없다 — 넓은 맞부딪힘은 '붙음' 셈과 뛰어들기 한 칼까지.
+
+## 3. 측정
+
+(아래 §3a~3c — 48 판 `node tools/sim/hybrid.mjs motion_lab.mjs duel <무기> 24 main`, `BIND_STATS=1` 이면 '자연 바인드' 줄을 더 찍음(끄면 출력 바이트 그대로). 상대 롱소드 AI. 맞닿음 = 시험 쪽 feel.touching 덩이(4 스텝 틈까지 한 덩이) — 간 보기 중 칼끝이 스친 것도 든다.)
+
+MEASURE_TABLES
+
+## 4. 바뀐 파일
+
+| 파일 | 무엇 |
+|---|---|
+| `src/config.js` | SKILL.deKron · BIND { natural, restitution, friction, pressSpeed, holdMax, feelT, strongN } |
+| `src/schools.js` | 독일 parry.highC 게터(왕관) · 감아 들기 cond.slots 게터 + combo.kron (뛰어들기) |
+| `src/combat.js` | armSteel: 켬이면 반발 BIND.restitution · 붙은 동안 마찰 BIND.friction · bindFeel(at·hilt·bindT) |
+| `src/ai.js` | natPress(치는 쪽 — strike·follow) · natHoldDef(막는 쪽 — defend 한 줄) · moveHand 손 목표(pressAim) · parryCombo 붙음 = bindTouch(켬일 때) |
+| `src/secret.js` | wideTouch · bindTouch · parryTick 붙음(켬일 때) |
+| `src/main.js` | `?kron=0` · `?bind=1` |
+| `tools/sim/motion_lab.mjs` | BIND_STATS=1 '자연 바인드' 줄 |
+| `tools/browser/parry_combo_probe.mjs` | QS(주소 덧붙임) · 대본 kron · 0.3 s 넘는 맞닿음 찍기 · BINDS 줄 |
+
+- **막기 버튼 작업(…/parry-button-2q36ha)과 겹치는 곳**: ai.js defend 에 한 줄(`if (BIND.natural && this.natHoldDef(dt)) return;` — swingOver 판정 바로 앞)과 parryCombo 의 touch 한 줄, moveHand 손 목표 갈래 하나. skill.js 는 건드리지 않았다. 끔이면 모두 지나치기만 한다.
+
+## 5. 관문 (자연 바인드)
+
+GATE_TABLE
+
+## 6. 사장님께 여쭐 것
+
+ASK_LIST

@@ -5,6 +5,7 @@
 //           (main.js 공격 입력과 같은 함수 — playerSecret.fire() → player.skill.secret()). 창 · 연격 두 순간을 멈춰 찍는다.
 //   other — 다른 꼴로 막기: 같은 대본, 손은 정한 자리가 아닌 패드(중국 긴 자세 · 독일 쟁기)
 //   press — 맞붙어 계속 휘두르기: 닿는 거리까지 걸어 든 뒤 0.35 s 마다 좌우로 끌기 (창이 자주 안 터지는지)
+//   QS='&deSecret=parry&bind=1': 주소에 덧붙임 (10/11 자연 바인드 — docs/strike/natural_bind_2026-10-11.md) · 대본 kron = 롱소드 왕관 자리 [0.02, 0.4] 로 막기 · 칼 맞닿음이 0.3 s 넘으면 덩이 두 개까지 'bind' 로 멈춰 찍는다(덩이 길이는 BINDS 줄)
 //   DEMO_MIN=s: 독일 deBindMin 을 그 판만 바꿔 장치(창 → 한 수 · 차오름)를 본다 — 판정 값이 아님
 //  실행: npx vite build && npx vite preview --port 4197 --strictPort &
 //        node tools/browser/parry_combo_probe.mjs http://127.0.0.1:4197 <폴더> <qinggang|longsword> <slot|other|press> [SIM 초 40]
@@ -17,7 +18,7 @@ const weapon = process.argv[4] || 'qinggang';
 const mode = process.argv[5] || 'slot';
 const SIM = +(process.argv[6] || 40);
 const REACT = +(process.env.REACT || 0.25);
-const PADS = { qinggang: { slot: [0.02, 0.52], other: [0.0, 0.03] }, longsword: { slot: [0.22, 0.26], other: [0.18, -0.28] } };
+const PADS = { qinggang: { slot: [0.02, 0.52], other: [0.0, 0.03] }, longsword: { slot: [0.22, 0.26], other: [0.18, -0.28], kron: [0.02, 0.4] } };
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 420 }, hasTouch: true });
@@ -35,7 +36,7 @@ await page.addInitScript(() => {
     /* 생략 */
   }
 });
-await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword&slowMo=0`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword&slowMo=0${process.env.QS ?? ''}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
 await page.getByText('싸움 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerSecret, null, { timeout: 60000 });
@@ -47,7 +48,10 @@ const S = await page.evaluate(
     const g = window.game;
     const p = g.player;
     const ps = g.playerSecret;
-    const R = (window.__pc = { opened: [], fired: 0, missed: 0, shots: [], combo: [], pause: null });
+    const R = (window.__pc = { opened: [], fired: 0, missed: 0, shots: [], combo: [], pause: null, binds: [], bindShots: 0 });
+    let tRun = -1;
+    let tGap = 0;
+    let tHilt = false;
     let openAt = null;
     let fireAt = null;
     let wasOpen = false;
@@ -60,11 +64,22 @@ const S = await page.evaluate(
       }
       step0(dt);
       const t = g.stats.simTime;
+      // 칼 맞닿음 덩이 (4 스텝 틈까지 한 덩이) — 0.3 s 를 넘는 순간 한 번 멈춰 찍는다(덩이 2 개까지)
+      if (p.feel?.touching) {
+        if (tRun < 0) (tRun = 0), (tHilt = false);
+        tRun += dt;
+        tGap = 0;
+        if (p.feel.hilt || g.enemy.feel?.hilt) tHilt = true;
+        if (tRun >= 0.3 && tRun - dt < 0.3 && R.bindShots < 2 && !R.pause) (R.bindShots++), (R.pause = 'bind');
+      } else if (tRun >= 0 && ++tGap > 4) {
+        R.binds.push({ s: +tRun.toFixed(3), hilt: tHilt });
+        tRun = -1;
+      }
       const open = ps.open?.ctx?.ev === 'parry';
       if (open && !wasOpen) {
         openAt = t;
         R.opened.push({ t: +t.toFixed(3), slot: ps.open.ctx.slot, cue: document.getElementById('techCue')?.textContent?.slice(0, 40) ?? '' });
-        if (R.shots.length < 1) R.pause = 'open';
+        if (!R.openShot) (R.openShot = 1), (R.pause = 'open');
       }
       if (!open && wasOpen && fireAt == null && openAt != null && t - openAt < REACT) R.missed++;
       wasOpen = open;
@@ -83,7 +98,7 @@ const S = await page.evaluate(
         c.moves ??= {};
         const n = sec.cur?.name ?? sec.stage;
         c.moves[n] = Math.max(c.moves[n] ?? 0, +p.tipVel.length().toFixed(2));
-        if (R.shots.length === 1 && t - fireAt > 0.12) R.pause = 'combo';
+        if (R.openShot && !R.comboShot && t - fireAt > 0.12) (R.comboShot = 1), (R.pause = 'combo');
       }
       if (!sec && fireAt != null) fireAt = null;
     };
@@ -159,11 +174,12 @@ const r = await page.evaluate(() => {
   const g = window.game;
   const P = g.playerSecret.pc ?? {};
   const st = Object.values(g.player.skill.secretStats ?? {});
-  return { R: window.__pc, rej: { edges: P.edges ?? 0, atk: P.rejAtk ?? 0, slow: P.rejSlow ?? 0, hurt: P.rejHurt ?? 0 }, ok: P.ok ?? 0, slot: P.slot ?? 0, parryBinds: P.parryBinds ?? [], binds: (P.binds ?? []).length, windows: g.playerSecret.opened, landed: st.reduce((a, b) => a + (b.landed ?? 0), 0), fired: st.reduce((a, b) => a + (b.fired ?? 0), 0), vib: window.__vib };
+  return { binds: window.__pc.binds, R: window.__pc, rej: { edges: P.edges ?? 0, atk: P.rejAtk ?? 0, slow: P.rejSlow ?? 0, hurt: P.rejHurt ?? 0 }, ok: P.ok ?? 0, slot: P.slot ?? 0, parryBinds: P.parryBinds ?? [], binds: (P.binds ?? []).length, windows: g.playerSecret.opened, landed: st.reduce((a, b) => a + (b.landed ?? 0), 0), fired: st.reduce((a, b) => a + (b.fired ?? 0), 0), vib: window.__vib };
 });
 const pb = [...r.parryBinds].sort((a, b) => a - b);
 const q = (f) => (pb.length ? pb[Math.min(pb.length - 1, Math.floor(f * pb.length))].toFixed(2) : '-');
 console.log(`EDGES ${JSON.stringify(r.rej)}`);
+{ const b = r.binds.map((x) => x.s).sort((a, c) => a - c); const q2 = (f) => (b.length ? (b[Math.min(b.length - 1, Math.floor(f * b.length))] * 1000).toFixed(0) : '-'); console.log(`BINDS n ${b.length} p50 ${q2(0.5)} · p75 ${q2(0.75)} · p90 ${q2(0.9)} · 최대 ${q2(1)} ms · 0.3 s 넘음 ${b.filter((x) => x >= 0.3).length} (코등이 ${r.binds.filter((x) => x.s >= 0.3 && x.hilt).length})`); }
 console.log(`OPENED ${JSON.stringify(r.R.opened)}`);
 console.log(`COMBO ${JSON.stringify(r.R.combo)}`);
 console.log(
