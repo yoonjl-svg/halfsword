@@ -8,7 +8,8 @@ import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { SCHOOLS, SCHOOL_ART, TRADITIONS, CHINESE_TECHK_B, traditionOf } from '../../src/schools.js';
 import { mergeUnique } from '../../src/sword_art.js';
-import { STRIKE, GAIT, SKILL, SECRET } from '../../src/config.js';
+import { STRIKE, GAIT, SKILL, SECRET, BIND } from '../../src/config.js';
+import { wideTouch as bindTouchW } from '../../src/secret.js'; // 자연 바인드 계기 (BIND_STATS=1 — 넓은 맞부딪힘 덩이, 읽기만)
 // 유파 자료 (10/9 ②③ — 켜는 곳은 이 도구뿐, src 기본은 끔): SCHOOL_ART=1 → SKILL.schoolArt 1.
 //  SCHOOL_ART_PARTS=weights,rest,counter (켤 몫만, 없으면 셋 다) · SCHOOL_REST=langort (일본·중국 쉴 자세 안 A) · SCHOOL_TECHK=B (중국 가중치 안 B)
 if (process.env.SCHOOL_ART === '1') {
@@ -295,6 +296,8 @@ if (mode === 'poses') {
   const secAgg = {};
   const gil = { arms: 0, wins: 0, games: 0, armT: 0, free: {}, cbHit: 0, parts: {} }; // 길목 지키기 (10/11 v6 — 읽기만) · free: 길목 준비가 아닐 때 고른 자세 머문 시간 · cbHit: 올려 맞받기 동안·뒤 1 s 맞은 상처
   const secWound = {};
+  // 자연 바인드 계기 (10/11 — BIND_STATS=1 일 때만 찍음, 읽기만): 칼끼리 맞닿음 덩이(시험 쪽 feel.touching, 4 스텝 틈까지 한 덩이) 길이 · 0.3 s 넘은 덩이의 끝난 방식(AI natEnd — 끝난 때 0.1 s 안) · 그중 코등이 걸림 · 넓은 맞부딪힘(2안) 덩이 · 시험 쪽 휘두르기(공격 시작) 수
+  const NB = { on: process.env.BIND_STATS === '1', lens: [], long: 0, ends: {}, hilt: 0, wide: [], atk: 0, t: 0, watch: 0 };
   const pcAgg = { on: false, ok: 0, slot: 0, win: 0, binds: [] }; // 막기 연환 (10/11 — 비기 when 'parry' 일 때만 찍음): 막기 성공 · 그중 정한 자리 · 창 · 맞닿음 길이 (s)
   let secName = null;
   let XAm = null;
@@ -415,8 +418,33 @@ if (mode === 'poses') {
       let stepN0 = 0, fallUntil = -1, fallName = null;
       let gPrev = null, wPrev = false, rIn = -1; // 기질 계기: 지난 스텝 자세 이름·간 보기였나 · 간격 끝 안에 든 시각(없으면 −1)
       let xPrevState = X.state; // 넘어짐 계기 (10/10 자세): 시험 쪽이 서 있다가 쓰러지거나 무릎 꿇은 수 · 비기 동안·직후(1 s) 몫
+      const hiltTouch = (A, B) => { let h = false; for (const c of A.swordColliders) if (!A.bladeColliders.includes(c)) for (const e of B.swordColliders) G.world.contactPair(c, e, (m) => { if (m.numContacts() > 0) h = true; }); return h; }; // 코등이·자루가 상대 칼에 닿음 (읽기만)
+      const nbS = { run: -1, gap: 0, hilt: false, wrun: -1, wgap: 0, mode: null };
+      if (NB.on) NB.ais = [...(NB.ais ?? []), XA, YA].filter(Boolean);
       for (let i = 0; i < 40 / DT; i++) {
         G.step();
+        if (NB.on && X.alive && Y.alive) {
+          NB.t += DT;
+          if (XA && XA.mode === 'watch') NB.watch += DT;
+          if (XA && XA.mode === 'attack' && nbS.mode !== 'attack') NB.atk++;
+          if (XA) nbS.mode = XA.mode;
+          const tch = !!X.feel?.touching;
+          if (tch) { if (nbS.run < 0) (nbS.run = 0), (nbS.hilt = false); nbS.run += DT; nbS.gap = 0; if (hiltTouch(X, Y) || hiltTouch(Y, X)) nbS.hilt = true; }
+          else if (nbS.run >= 0 && ++nbS.gap > 4) {
+            NB.lens.push(nbS.run);
+            if (nbS.run >= 0.3) {
+              NB.long++;
+              if (nbS.hilt) NB.hilt++;
+              const ends = [X.natEnd, Y.natEnd].filter((e) => e && G.t - e.t < 0.1 + nbS.gap * DT);
+              const why = ends.length ? ends[ends.length - 1].why : X.state !== 'stand' || Y.state !== 'stand' ? 'fall' : (XA?.mode !== 'attack' && YA?.mode !== 'attack') ? 'apart' : 'slip?';
+              NB.ends[why] = (NB.ends[why] ?? 0) + 1;
+            }
+            nbS.run = -1;
+          }
+          const w = !tch && bindTouchW(X, Y);
+          if (w) { if (nbS.wrun < 0) nbS.wrun = 0; nbS.wrun += DT; nbS.wgap = 0; }
+          else if (nbS.wrun >= 0 && ++nbS.wgap > 4) { NB.wide.push(nbS.wrun); nbS.wrun = -1; }
+        }
         if (xPrevState === 'stand' && (X.state === 'down' || X.state === 'getup')) {
           falls.all++;
           if (XA?.secretRun || (XA && XA._secEnd != null && G.t - XA._secEnd < 1)) falls.secret++;
@@ -553,6 +581,7 @@ if (mode === 'poses') {
   console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
   console.log(`  넘어짐 (시험 쪽 서 있다 쓰러짐·무릎): 모두 ${falls.all} · 비기 동안·뒤 1 s ${falls.secret} · 비기 자세 동안·뒤 1 s ${falls.stance}`);
   console.log(`  경직 (시험 쪽): 든 수 ${stiffHit.n} · 경직 동안 맞은 상처 ${stiffHit.stiff} · 비기 끝난 뒤 1 s 안 맞은 상처 ${stiffHit.after}`);
+  if (NB.on) { const q = (a, f) => { const b = [...a].sort((x, y) => x - y); return b.length ? (b[Math.min(b.length - 1, Math.floor(f * b.length))] * 1000).toFixed(0) : '-'; }; console.log(`  자연 바인드 (BIND.natural ${BIND.natural}, 시험 쪽 칼 맞닿음 덩이 n ${NB.lens.length}): p50 ${q(NB.lens, 0.5)} · p75 ${q(NB.lens, 0.75)} · p90 ${q(NB.lens, 0.9)} · 최대 ${q(NB.lens, 1)} ms · 0.3 s 넘음 ${NB.long} (판마다 ${(NB.long / n).toFixed(2)}) · 끝난 방식 ${JSON.stringify(NB.ends)} · 코등이 걸림 ${NB.hilt} · 넓은 맞부딪힘(칼날 밖) 덩이 ${NB.wide.length} (0.3 s 넘음 ${NB.wide.filter((x) => x >= 0.3).length}) · AI 결정(둘 다) ${JSON.stringify((NB.ais ?? []).reduce((o, A) => { for (const [k, v] of Object.entries(A.stats.natBind ?? {})) o[k] = (o[k] ?? 0) + v; return o; }, {}))} · 시험 쪽 공격 ${(NB.atk / (NB.t / 60)).toFixed(1)}/분 · 간 보기 몫 ${(100 * NB.watch / NB.t).toFixed(0)}%`); }
   if (pcAgg.on) { const A = secAgg[secName] ?? { fired: 0, landed: 0 }; const b = [...pcAgg.binds].sort((x, y) => x - y); const q = (f) => (b.length ? b[Math.min(b.length - 1, Math.floor(f * b.length))].toFixed(2) : '-'); console.log(`  막기 연환 (시험 쪽, ${n} 판): 막기 성공 ${pcAgg.ok} · 정한 자세 ${pcAgg.slot} · 창 ${pcAgg.win} · 낸 ${A.fired} · 맞힘 ${A.landed} · 비기 뒤 맞은 상처 = 경직 줄 · 정한 자세 맞닿음 길이 (창 전에 떨어짐/갈라짐, n ${b.length}) p25 ${q(0.25)} · p50 ${q(0.5)} · p75 ${q(0.75)} · p90 ${q(0.9)} s`); }
   console.log(`  칼 부러짐: 시험 쪽 ${breaks.me} · 상대 ${breaks.foe}`);
   console.log(`  빈팔 맞음 (uarmO·farmO 상처): 시험 쪽 ${offHit.X} / 시험 쪽 모든 상처 ${offHit.Xall} · 상대(롱소드) ${offHit.Y}`);

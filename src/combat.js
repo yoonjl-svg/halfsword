@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL, ARMOR } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
@@ -521,18 +521,45 @@ export class Combat {
       }
     }
     for (const f of [A.fighter, B.fighter]) if (f.skill?.corr === 'v2') (f.bladeTouch = true), (f.touchStep = this.stepNo); // 보정 v2: 칼끼리 닿음
+    if (BIND.natural) this.bindFeel(pairs, point, A.fighter, B.fighter, fresh);
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
+  }
+
+  /**
+   * 자연 바인드 실험의 '느낌' (BIND.natural — docs/strike/natural_bind_2026-10-11.md ③④, 읽기만 · 물리 무관): 맞닿은 자리가 내 칼날 어디인가
+   *  feel.at = 코등이 0 → 칼끝 1 (음수 = 코등이·자루 위 — 강함 Stärke 쪽일수록 작다) · feel.hilt = 이번 스텝 내 코등이·자루 콜라이더가 상대 칼에 닿음(코등이 걸림) ·
+   *  feel.bindT = 이어 붙은 시간(s, fe.time 과 같으나 실험 쪽 셈). AI(독일 느낌 결정)와 측정 도구가 읽는다
+   */
+  bindFeel(pairs, point, A, B, fresh) {
+    for (const f of [A, B]) {
+      const fe = f.feel;
+      if (!fe || !f.sword) continue;
+      const o = f.sword.translation();
+      const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(f.sword));
+      const along = _b.copy(point).sub(_c.set(o.x, o.y, o.z)).dot(ax);
+      fe.at = (along - f.weaponCfg.hiltLength) / Math.max(1e-6, f.weaponCfg.bladeLength);
+      let hilt = false;
+      for (const [h1, h2] of pairs) for (const h of [h1, h2]) { const I = this.info.get(h); if (I?.fighter === f && I.part === 'hilt') hilt = true; }
+      fe.hilt = hilt;
+      fe.bindT = fresh ? 0 : (fe.bindT ?? 0) + this.dt;
+    }
   }
 
   /** 칼끼리 맞댄 채(바인드)엔 반발을 끈다: 누를 때마다 접촉점이 새로 생기며 튕겨 떨리지 않게 */
   armSteel() {
     const armed = this.stepNo - this.bladeLast > STEEL.rearmSteps;
+    // 자연 바인드 실험 (BIND.natural ①): 처음 한 번 칼 반발을 BIND.restitution 으로 다시 건다 (끄면 이 줄을 지나치기만 한다)
+    if (BIND.natural && !this.natSurface) (this.natSurface = true), (this.steelArmed = null);
     if (armed === this.steelArmed) return;
     this.steelArmed = armed;
     // 무기마다 재질이 다를 수 있어(강철/나무/고무…) 되돌릴 때도 각자 자기 재질 반발값을 쓴다
     for (const f of this.fighters) {
-      const e = armed ? (f.restitution ?? STEEL.restitution) : 0;
-      for (const c of f.swordColliders || []) c.setRestitution(e);
+      const mat = f.restitution ?? STEEL.restitution;
+      const e = armed ? (BIND.natural ? Math.min(mat, BIND.restitution) : mat) : 0;
+      for (const c of f.swordColliders || []) {
+        c.setRestitution(e);
+        if (BIND.natural) c.setFriction(armed ? 0.4 : BIND.friction); // 붙어 있는 동안만 칼끼리 더 문다 (0.4 = fighter.js 칼 콜라이더 마찰 그대로)
+      }
     }
   }
 

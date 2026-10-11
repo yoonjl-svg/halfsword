@@ -20,7 +20,7 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET } from './config.js';
+import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -30,7 +30,7 @@ import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { requestInstant, requestIai, requestSweep, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -1015,6 +1015,7 @@ export class AI {
       this.handSpeed = L.strikeSpeed;
       if (this.secretRun) this.secretStrike(dt); // 비기: 손 속도 배율 · 서보 힘 창 · 재기
       this.checkBind();
+      if (BIND.natural && this.natPress(dt)) return; // 자연 바인드 실험 ②③: 막힌 칼을 노리던 자리로 밀고 · 독일은 느낌으로 감거나 밀고 들어감
       if (!this.path.length) {
         // 유파 비기 (10/9): 베기 길이 끝난 순간 — 비기가 이어 칠 수(連環·Duplieren)가 있으면 곧장, 첫 칼이 닿았으면 連環三擊 을 낸다
         if (this.secret && this.secretStrikeEnd(d)) return;
@@ -1032,9 +1033,87 @@ export class AI {
         this.secretTrack();
       }
       this.checkBind();
+      if (BIND.natural && this.natPress(dt)) return; // 자연 바인드 실험 ②③: 손이 길 끝에 먼저 닿고 무거운 칼이 아직 날아가다 막힌 때 (맞닿음 대부분이 이 단계)
       // 칼이 다 지나가고(칼끝이 느려지고) 나서 다음을 정한다
       if ((this.timer <= 0 && me.tipVel.length() < 6) || this.timer < -0.2) this.afterStrike(d);
     }
+  }
+
+  /**
+   * 자연 바인드 실험 ②③ (BIND.natural — docs/strike/natural_bind_2026-10-11.md). 베는 중(phase strike) 칼끼리 맞닿으면:
+   *  ② 미는 뜻 — 베기 길을 끝까지 따라가 칼을 지나쳐 버리지 않고, 손 빠르기를 BIND.pressSpeed 로 줄여 노리던 자리(길의 가운데 점 = 상대 빈틈)까지 밀고 거기서 멈춰 민다(pressAim — 손이 길 끝에 먼저 닿은 뒤 무거운 칼이 막힌 follow 단계도).
+   *   막는 쪽 칼이 버티면 두 서보가 맞서 칼이 붙어 있고, 힘·각이 한쪽으로 기울면 칼이 미끄러져 떨어진다(물리의 결과) → 떨어지면 원래 손 빠르기로 길을 마저 간다.
+   *  ③ 느낌 (독일만 — Lichtenauer 「Fühlen」·「Indes」·「Vor/Nach, Schwach/Stark」): 맞닿고 BIND.feelT 뒤 한 번 —
+   *   상대가 세다(누르는 힘 feel.force ≥ BIND.strongN 이고 맞닿은 자리가 내 칼 약한 쪽 feel.at ≥ 0.5) → 감아 돌아감(Duplieren — 고유 동작, 없으면 가로베기) ·
+   *   상대가 약하다(내 강한 쪽 at < 0.5 로 상대 칼을 쥠) → 밀고 들어감(밀기를 그치고 원래 빠르기로 빈틈까지) · 그 밖 → 계속 민다.
+   *  BIND.holdMax 를 넘도록 붙어 있으면 그만 밀고 길을 마저 간다(뗌). 끝난 방식은 me.natEnd = { why: slip|wind|push|release, t } (측정 도구가 읽는다). 비기 베기 동안은 하지 않는다.
+   *  돌려줌: 이번 스텝을 다른 공격(감기)이 가져갔으면 true
+   */
+  natPress(dt) {
+    const me = this.me;
+    this.pressAim = null;
+    if (this.secretRun) return false;
+    const touch = !!me.feel?.touching && me.armed && this.foe.armed;
+    let P = this.press;
+    if (P?.tech !== this.tech || P?.n !== this.stats.attacks) P = this.press = null; // 새 공격
+    if (!touch) {
+      if (P && !P.done && (P.gone += dt) > 0.034) {
+        P.done = true; // 떨어짐 (4 스텝 — STEEL.rearmSteps 와 같은 틈): 밀어붙이던 중이면 밀어냄, 아니면 칼이 미끄러져 풀림
+        this.natEndAs(P.push ? 'push' : 'slip');
+      }
+      return false;
+    }
+    if (!P) P = this.press = { tech: this.tech, n: this.stats.attacks, t: 0, gone: 0, felt: false, done: false, push: false };
+    if (P.done) return false;
+    P.gone = 0;
+    P.t += dt;
+    if (P.t > BIND.holdMax) {
+      P.done = true;
+      this.natEndAs('release');
+      return false;
+    }
+    if (this.art?.tradition === 'german' && !P.felt && P.t >= BIND.feelT) {
+      P.felt = true;
+      const at = me.feel.at ?? 1;
+      if (at >= 0.5 && me.feel.force >= BIND.strongN) {
+        const t = this.uniqueByName.get('duplieren') ?? this.school.techByName?.zwerch;
+        P.done = true;
+        if (t && this.startAttack(t, 'follow', { chain: this.chain + 1, noFeint: true, skipChamber: true, noPending: true })) {
+          this.natEndAs('wind');
+          return true;
+        }
+        this.natEndAs('release');
+        return false;
+      }
+      if (at < 0.5) P.push = true; // 상대가 약하다: 밀고 들어감 — 노리던 자리로 원래 손 빠르기로 (아래)
+    }
+    // 노리던 자리 = 찌르기는 길 끝(겨눈 곳), 베기는 길의 가운데 점(칼이 상대 몸을 지나는 곳) + 옆으로 비낀 상대 몫 (moveHand 와 같은 셈)
+    const T = this.tech?.path;
+    if (!T?.length) return false;
+    const a = this.tech.kind === 'thrust' ? T[T.length - 1] : T[Math.floor((T.length - 1) / 2)];
+    this.pressAim = [clamp(a[0] + clamp(this.foeLat, -0.4, 0.4) * 0.5, -0.6, 0.6), a[1]];
+    this.pressAimT = this.sense.t; // 이 스텝에만 (모드가 바뀐 뒤 묵은 목표를 쓰지 않게)
+    if (!P.push) this.handSpeed = Math.min(this.handSpeed, BIND.pressSpeed);
+    if (this.phase === 'follow') this.timer = Math.max(this.timer, 0.05); // 미는 동안은 다음을 정하지 않는다
+    return false;
+  }
+
+  /** 자연 바인드 끝난 방식 적기 (측정용 — 물리·난수 무관) */
+  natEndAs(why) {
+    this.me.natEnd = { why, t: this.sense.t };
+    const N = (this.stats.natBind ??= { slip: 0, wind: 0, push: 0, release: 0, hold: 0 });
+    N[why]++;
+  }
+
+  /** 자연 바인드 실험 ② 막는 쪽: 이 막기에서 칼이 맞붙어 있는 동안(BIND.holdMax 까지) 막기를 끝내지 않는다 — 손은 막는 자리 패드(defend 가 둔 그대로)를 지키며 서보가 민다 */
+  natHoldDef(dt) {
+    const me = this.me;
+    if (this.natDef?.id !== this.threatSeen) this.natDef = { id: this.threatSeen, t: 0 };
+    if (this.defVoid || !me.feel?.touching || !this.foe.armed) return false;
+    this.natDef.t += dt;
+    if (this.natDef.t > BIND.holdMax) return false;
+    this.timer = Math.max(this.timer, 0.05);
+    return true;
   }
 
   abortAttack() {
@@ -1473,6 +1552,7 @@ export class AI {
     if (!pcWait && this.passives.length && !this.defBindSeen && this.passiveBindDef(s, d)) return;
     // 흐름(SKILL.flow): 칼로 받아 낸 순간(칼끼리 맞닿음) 받은 칼이 멈추지 않고 그대로 되받아 벤다
     if (!pcWait && SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
+    if (BIND.natural && this.natHoldDef(dt)) return; // 자연 바인드 실험 ②: 칼이 맞붙어 있는 동안은 막는 자리를 지키며 민다 (BIND.holdMax 까지)
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
     const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
     if ((swingOver && this.timer < 0.35) || this.timer <= 0) {
@@ -1497,7 +1577,7 @@ export class AI {
   parryCombo(d, dt) {
     const S = this.secret;
     const me = this.me;
-    const touch = bladesTouch(me, this.foe);
+    const touch = BIND.natural ? bindTouch(me, this.foe) : bladesTouch(me, this.foe); // 자연 바인드 실험이면 넓은 맞부딪힘(2안)도 붙음으로 센다
     const hurt = (me.wounds?.length ?? 0) > this.pcW0;
     const P = this.pcPend;
     if (P) {
@@ -2322,7 +2402,10 @@ export class AI {
     const striking = this.mode === 'attack' && this.phase === 'strike' && this.path.length > 0;
     let tx = this.hand.x;
     let ty = this.hand.y;
-    if (striking) {
+    if (this.pressAim && this.pressAimT === this.sense.t && this.mode === 'attack') {
+      tx = this.pressAim[0]; // 자연 바인드 실험 ②: 칼이 막혀 있는 동안 손 목표 = 노리던 자리(상대 빈틈) — 길 끝까지 지나가지 않고 거기로 민다
+      ty = this.pressAim[1];
+    } else if (striking) {
       tx = this.path[0][0];
       ty = this.path[0][1];
       // 상대가 옆으로 비껴 있으면 그만큼 손을 옮겨 겨눈다

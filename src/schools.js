@@ -45,7 +45,7 @@
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
 import { schoolMeasure } from './weapon_measured.js';
-import { SECRET } from './config.js'; // 이베리아 비기 판 스위치 (10/11 — SECRET.iberianSecret)
+import { SECRET, SKILL } from './config.js'; // 이베리아 비기 판 스위치 (10/11 — SECRET.iberianSecret) · 독일 왕관 막기 자리 스위치 (SKILL.deKron)
 import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.guardTable) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
 
 /** 기술 목록을 복사하면서 기술별 reach(닿는 거리 보정, m)를 무기에 맞게 바꾼다 (표에 없는 기술은 롱소드 값 그대로) */
@@ -66,7 +66,12 @@ const GERMAN = {
   parry: {
     highL: [-0.3, 0.1], // 내 왼쪽 위 (상대 오른쪽 어깨에서 내려오는 분노의 베기): 칼을 왼쪽에 세워 받는다
     highR: G.ochsR, // 내 오른쪽 위: 오른쪽 황소
-    highC: G.langort, // 머리 위에서 곧게: 뻗은 칼 위로 떨어지게
+    // 머리 위에서 곧게: 왕관(Kron — 칼자루를 머리 위로 높이 들어 코등이·칼자루로 받는다, 사장님 10/11 22:2x '독일 막기 자세에 왕관 넣어' 기본).
+    //  Ringeck 주해 「… catch his strike on your hilt … this displacement is called "the crown". From there you can rush in」 [원전 2차 영역] · 자리 = G.kron [0.02, 0.4](덮는 자세로 쓰던 패드 — 지붕과 긴 자세 사이, 자세표 섞기로 칼이 서고 손이 머리 위) [해석]
+    //  SKILL.deKron 0 = 전 자리(긴 자세 — 뻗은 칼 위로 떨어지게, 물리 탐색으로 고른 값). 읽을 때마다 스위치를 본다(게터 — 시뮬 with_config·주소 ?kron=0)
+    get highC() {
+      return SKILL.deKron ? G.kron : G.langort;
+    },
     lowL: G.pflugL,
     lowR: G.pflugR,
     thrust: G.pflugL, // 찌르기: 왼쪽으로 비껴 누른다 (Absetzen)
@@ -727,14 +732,24 @@ const CHINESE_SECRET_PARRY = {
 //  막은 자리에 따라 한 수를 고르는 표: 오른 황소(높이, 칼 든 쪽)에서 맞붙음 → Duplieren(칼을 떼지 않고 상대 칼 뒤로 머리 — 위 빈틈) ·
 //   왼 걸이(칼을 왼쪽에 세워 받음)에서 맞붙음 → Mutieren(짧은 날로 감아 팔을 들고 바깥에서 상대 칼을 따라 아래 빈틈을 찌름).
 //  어드밴티지: 창이 열린 뒤 붙어 있던 시간만큼 판정 배율·서보 힘 창 × secret.js bindGain (SECRET.deBindFull 에 deBindGain 최대). 오래 버티는 위험(상대가 감거나 떼어 냄)은 물리 그대로.
-//  자리: highR 오른 황소(G.ochsR) · highL 왼 걸이(독일 막기 자리 [−0.3, 0.1] — '칼을 왼쪽에 세워 받는다', 왼쪽 황소 꼴) 둘만. 긴 자세(highC)·쟁기(lowL·lowR·thrust)는 아님
+//  자리: highR 오른 황소(G.ochsR) · highL 왼 걸이(독일 막기 자리 [−0.3, 0.1] — '칼을 왼쪽에 세워 받는다', 왼쪽 황소 꼴) · highC 왕관(Kron, SKILL.deKron 켬일 때 — 사장님 10/11 22:2x). 쟁기(lowL·lowR·thrust)는 아님
+//   왕관 → 뛰어들기 (Einlaufen): Ringeck 「this displacement is called "the crown". From there you can rush in」 [원전 2차 영역] — 칼자루로 받은 칼을 머리 위에 걸친 채 반걸음 들어가며 짧게 머리로 내려 벰.
+//   씨름(Ringen am Schwert)은 우리 몸에 없어(잡기·던지기 없음) 들어가며 짧게 치는 한 칼로 [해석] · 반걸음 = 중국 연환 반걸음과 같은 값(SECRET.chineseStep 0.25 — 새 값 아님) · 길 [추정]
+const deStep = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' };
 const GERMAN_SECRET_PARRY = {
   name: 'indesWinden',
   nameKo: '감아 들기 (Indes)',
   when: 'parry',
-  cond: { slots: { highR: 'ochsR', highL: 'ochsL' }, window: 'bind', min: 'deBindMin' },
+  cond: {
+    get slots() {
+      return SKILL.deKron ? { highR: 'ochsR', highL: 'ochsL', highC: 'kron' } : { highR: 'ochsR', highL: 'ochsL' };
+    },
+    window: 'bind',
+    min: 'deBindMin',
+  },
   do: {
     combo: {
+      kron: { nameKo: '왕관 → 뛰어들기 (Einlaufen)', seq: [{ name: 'pcKronEinlauf', nameKo: '뛰어들기 (Einlaufen)', pre: [], from: G.kron, path: [[0.0, 0.2], [-0.02, -0.12]], open: 'H', kind: 'cut', reach: -0.05, base: 1, step: deStep }] }, // 머리 위 걸친 칼에서 들어가며 머리로 — 길 [추정]
       ochsR: { nameKo: '황소 걸이 → 겹치기 (Duplieren)', seq: [{ name: 'pcDuplieren', nameKo: '겹치기 (Duplieren)', pre: [], from: [0.22, 0.26], path: [[0.06, 0.28], [-0.14, 0.18], [-0.24, 0.04]], open: 'UL', kind: 'cut', reach: 0, base: 1 }] }, // 받은 칼 뒤로 머리 — 길 [추정]
       ochsL: { nameKo: '왼 걸이 → 바꾸기 (Mutieren)', seq: [{ name: 'pcMutieren', nameKo: '바꾸기 (Mutieren)', pre: [], from: [-0.2, 0.3], path: [[-0.08, 0.02], [0.0, -0.12]], open: 'LR', kind: 'thrust', reach: 0.1, base: 1 }] }, // 팔을 들어 감고 아래로 찌름 — 길 [추정]
     },
