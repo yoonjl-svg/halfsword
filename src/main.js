@@ -1913,6 +1913,9 @@ window.game = {
     return ai;
   },
   tempo: TEMPO, // 전체 빠르기 손잡이 (?tempo)
+  get playerGuard() {
+    return playerGuard; // 막기 버튼 (held · active · mode · line · stats) — 브라우저 탐침(tools/browser/parry_button_probe.mjs)이 읽는다
+  },
   get playerSecret() {
     return playerSecret; // 플레이어 비기 창 (open · opened · S) — 브라우저 스모크(tools/browser/player_secret_shots.mjs)가 읽는다
   },

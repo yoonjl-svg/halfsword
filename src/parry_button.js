@@ -3,7 +3,8 @@
 //   기록 docs/strike/player_parry_button_2026-10-11.md)
 //
 //  누르고 있는 동안(main.js — 폰 오른쪽 아래 '막기' 단추 · PC 키 F) AI 막기(ai.js respond → defend)와 같은 판단으로 손(칼)을 유파 막기 자리로 옮긴다:
-//   · 들어오는 칼 읽기 = AI 와 같은 함수 secret.js threatNow (ai.js threat 와 같은 셈) — AI 처럼 반응 지연(AI_LEVELS.normal.reaction)만큼 늦은 모습으로 본다.
+//   · 들어오는 칼 읽기 = AI 와 같은 함수 secret.js threatNow (ai.js threat 와 같은 셈). 반응 지연은 넣지 않는다(lag 0 — 지금 모습, 플레이어 비기 창과 같은 눈):
+//     사람의 반응은 버튼을 누르는 때다(늦게 누르면 손이 막기 빠르기로 제때 못 닿음). AI 처럼 AI_LEVELS.normal.reaction 만큼 늦게 보는 판은 lag 로 잰다(기록 §4).
 //     한 공격(위협 번호 — 0.25 s 조용했다가 다시 오면 새 공격, ai.js threat 와 같은 규칙)에 한 번 줄을 정한다(ai.js respond).
 //   · 막기 자리 = 내 꾸러미 school.parry[줄] (없으면 pose.point — ai.js defend 그대로). 중국은 그 줄의 몸꼴 덧씌우기(parryCover — frames.js installCover, AI 와 같은 함수).
 //   · 손 빠르기 = AI 막기 빠르기 L.parrySpeed (L = AI_LEVELS.normal — 플레이어 비기 손 빠르기 바탕과 같은 난이도, skill.js updateSecret). 손 목표를 그 빠르기로 옮긴다
@@ -35,6 +36,7 @@ export class PlayerParryGuard {
     this.foe = foe;
     this.L = AI_LEVELS.normal;
     this.sense = new Senses(me, foe);
+    this.lag = 0; // 위협을 몇 초 전 모습으로 읽나 (0 = 지금. 재기: AI_LEVELS.normal.reaction 0.26 이면 AI 보통과 같은 눈)
     this.held = false; // 버튼·키를 누르고 있나 (main.js)
     this.broken = false; // 누른 채 공격 → 그 공격이 끝날 때까지 놓음 (main.js 가 켠다)
     this.active = false; // 이번 스텝 손을 쥐었나
@@ -93,11 +95,11 @@ export class PlayerParryGuard {
     const can = this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school;
     // 위협 읽기 (누르지 않아도 센다 — 누르는 순간 이미 오는 칼을 읽게. 번호는 ai.js threat 와 같은 규칙)
     const L = this.L;
-    const s = this.sense.seen(L.reaction);
+    const s = this.sense.seen(this.lag);
     const c = me.bodies.chest.translation();
     const d = Math.max(0.01, Math.hypot(s.cx - c.x, s.cz - c.z));
     const foeReach = (me.swordArt?.measureFor?.(this.foe.weapon)?.reach ?? 1) + 0.05; // ai.js 생성자 foeReach 와 같은 셈 (PlayerSecretWatch.view 와 같음)
-    const th = this.foe.alive ? threatNow(this.sense, this.foe, s, c, me.right(_r), d, foeReach, L.reaction) : null;
+    const th = this.foe.alive ? threatNow(this.sense, this.foe, s, c, me.right(_r), d, foeReach, this.lag) : null;
     if (th) {
       if (this.noThreat > 0.25) this.threatId++;
       this.noThreat = 0;
@@ -135,7 +137,7 @@ export class PlayerParryGuard {
       this.mode = 'idle';
       this.stats.waitT += dt;
       p = AI.prototype.coverFor.call({ school: this.school }, s); // 기다림: AI 가 물러나며 가리는 자리 (같은 함수)
-      this.line = LINES.find((k) => this.school.parry[k] === p) ?? 'point';
+      this.line = p === this.school.pose.point ? 'point' : (LINES.find((k) => this.school.parry[k] === p) ?? 'point');
     }
     // 손 목표를 막기 빠르기로 (ai.js moveHand 와 같은 꼴)
     const off = me.handOffset;
