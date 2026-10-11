@@ -23,7 +23,7 @@ function topY(f) {
   return Math.max(f.bodies.chest.translation().y, f.bodies.pelvis.translation().y);
 }
 
-export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = false, react = 0.3, knock = 0 }) {
+export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = false, react = 0.3, knock = 0, notap = false }) {
   const G = newRound({ seed, weapon, weapon2: 'longsword', AI2Class: AI, ...(plate ? { look2: PLATE } : {}) });
   const P = G.player;
   const E = G.enemy;
@@ -39,6 +39,9 @@ export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = fals
   const orig = C.strike.bind(C);
   C.strike = (pr, point, passing) => {
     const r = orig(pr, point, passing);
+    // 약한 자세 겨눔 (10/12): 급소 탭 찌르기가 뻗는 동안 상대 몸에 처음 닿은 곳 · AI 의 급소 공격(베기·찌르기)이 닿은 곳
+    if (cur && r && !cur.tap.down && pr.w.fighter === P && pr.v?.fighter === E && P.skill.tap === cur.tap) cur.contacts.push({ part: pr.v.part, zone: r.zone, type: r.type, sev: r.severity, eff: r.eff });
+    for (const vs of openV) if (r && pr.w.fighter === vs.att && pr.v?.fighter === vs.vic) vs.contacts.push({ part: pr.v.part, zone: r.zone, type: r.type, sev: r.severity });
     if (cur && r && pr.w.fighter === P && pr.v?.fighter === E && FIN_PARTS.has(pr.v.part)) {
       const tp = cur.tap;
       if (tp.down && tp.go && P.skill.tap === tp && P.skill.thrustPush) {
@@ -50,11 +53,27 @@ export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = fals
     if (r && pr.w.fighter === P && pr.v?.fighter === E && (E.state === 'down' || E.state === 'getup') && (r.type === 'cut' || r.type === 'stab') && r.severity > 0) lowHits++;
     return r;
   };
+  const openV = []; // 지금 지켜보는 AI 급소 공격 { att, vic, kind, zone, t0, contacts, decap, dead }
+  const vStrikes = []; // 닫힌 AI 급소 공격
+  const lastVS = new Map();
   const close = () => {
     if (!cur) return;
     const tp = cur.tap;
     let res;
-    if (!tp.down) res = '보통찌르기';
+    if (!tp.down && tp.vital) {
+      // 급소 찌르기: 첫 몸 접촉이 목·머리(얼굴 포함)면 '급소맞음', 다른 몸이면 '딴곳', 없으면 '헛침'. 이 탭 동안 죽으면 '끝'
+      const c0 = cur.contacts[0];
+      res = cur.killed ? '끝' : !c0 ? '헛침' : c0.zone === 'neck' || c0.zone === 'head' ? '급소맞음' : '딴곳';
+      taps.push({ pose: cur.pose, finOn: cur.finOn, res, top: cur.top, vital: tp.vital.zone, hit: c0 ? `${c0.zone}/${c0.type}` : '-' });
+      cur = null;
+      return;
+    }
+    if (!tp.down) {
+      // 보통 찌르기도 첫 몸 접촉을 적는다 (급소 찌르기와 견주려고)
+      const c0 = cur.contacts[0];
+      cur.plainHit = cur.killed ? '끝' : !c0 ? '헛침' : c0.zone === 'neck' || c0.zone === 'head' ? '급소맞음' : '딴곳';
+      res = '보통찌르기';
+    }
     else if (cur.killed) res = '끝';
     else if (!tp.go) res = '거둠';
     else if (!cur.contacts.some((c) => c.type === 'stab')) res = cur.contacts.length ? (cur.contacts.some((c) => c.plate || c.helmet) ? '막힘' : '헛찍음') : '헛찍음';
@@ -62,10 +81,12 @@ export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = fals
     else res = '막힘';
     // 막힘: 몸통·머리에 찌르기 판정은 났지만 판·투구에 막혀 멍으로 바뀜 (contacts 의 type 이 blunt 이고 plate/helmet)
     if (res === '헛찍음' && cur.contacts.some((c) => c.type === 'blunt' && (c.plate || c.helmet))) res = '막힘';
-    taps.push({ pose: cur.pose, finOn: cur.finOn, res, top: cur.top });
+    taps.push({ pose: cur.pose, finOn: cur.finOn, res, top: cur.top, plainHit: cur.plainHit });
     cur = null;
   };
   let knockT = 0;
+  let lastTap = null;
+  let rangeN = 0; // 간격 맞추기로 시작한 탭 (찌르기는 맞춘 뒤 나간다)
   for (let i = 0; i < secs / DT; i++) {
     // --knock=S: 상대가 서 있으면 S 초마다 크게 넘어뜨린다(knockDown(true) — 실제 쓰러짐 시간·일어나기 그대로). 자연 판에선 큰 쓰러짐이 드물어 '넘어지는 중·누움' 탭을 보려고
     knockT += DT;
@@ -76,24 +97,45 @@ export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = fals
     prevE = es;
     since += DT;
     if (cur && P.skill.tap !== cur.tap) close();
-    if (!cur && E.alive && (es === 'down' || es === 'getup') && since >= react && P.alive && P.armed && !P.skill.tap) {
+    const tapPose = () => {
       const top = topY(E);
-      const pose = es === 'getup' ? '일어나는중' : top > LOW_FINISH.enterHeight ? '넘어지는중' : '누움';
+      return { pose: es === 'getup' ? '일어나는중' : es === 'kneel' ? '무릎' : top > LOW_FINISH.enterHeight ? '넘어지는중' : '누움', top };
+    };
+    // 약한 자세 간격 맞추기(FINISH.vital) 뒤에 나간 찌르기도 탭으로 센다
+    if (!cur && P.skill.tap && P.skill.tap !== lastTap) cur = { tap: P.skill.tap, ...tapPose(), finOn: !!P.finish.on, contacts: [], killed: false };
+    if (!notap && !cur && E.alive && (es === 'down' || es === 'getup' || es === 'kneel') && since >= react && P.alive && P.armed && !P.skill.tap && !P.skill.vitalRange) {
+      const tp0 = tapPose();
       const finOn = !!P.finish.on;
-      if (P.skill.thrust()) cur = { tap: P.skill.tap, pose, finOn, top, contacts: [], killed: false };
+      if (P.skill.thrust()) {
+        if (P.skill.tap) cur = { tap: P.skill.tap, ...tp0, finOn, contacts: [], killed: false };
+        else rangeN++;
+      }
+    }
+    if (P.skill.tap) lastTap = P.skill.tap;
+    // AI 급소 공격 (ai.vitalStrike — startStrike 가 적는다): 0.8 s 동안 닿은 곳·참수, 3 s · 10 s 안에 상대가 죽었나
+    for (const [ai, att, vic] of [[G.ai2, P, E], [G.ai, E, P]]) {
+      const vsk = ai?.vitalStrike;
+      if (vsk && vsk !== lastVS.get(ai)) (lastVS.set(ai, vsk), openV.push({ att, vic, kind: vsk.kind, zone: vsk.zone, tech: vsk.tech, t0: G.t, contacts: [], decap: false, dead: null, vicPose: vic.state }));
     }
     // AI 쪽: 플레이어 down 구간
     if (P.state === 'down' && P.alive && !pDown) (pDown = { t0: G.t, wound: false, kill: false }), aiDown.push(pDown);
     // 탭 봇의 탭이 도는 동안엔 사람처럼 조이스틱을 놓는다: 플레이어 자리 AI 를 멈추고 이동 입력 0 (찍기의 걸어 들어가기는 skill 이 스스로 민다)
-    const bot = cur && P.skill.tap === cur.tap;
+    const bot = (cur && P.skill.tap === cur.tap) || !!P.skill.vitalRange;
     const ai2 = G.ai2;
-    if (bot) (G.ai2 = null), P.move.set(0, 0);
+    if (bot) (G.ai2 = null), P.move.set(0, 0), (P.stickX = P.stickY = 0); // 스틱 원값도 놓는다 (간격 맞추기는 스틱을 밀면 거둔다)
     const esBefore = E.state;
     const decBefore = !!E.decapitated;
     G.step();
     if (!decBefore && E.decapitated && (esBefore === 'down' || esBefore === 'getup')) decapLow = true;
     G.ai2 = ai2;
-    if (cur && cur.tap.down && cur.tap.go && !E.alive) cur.killed = true;
+    if (cur && ((cur.tap.down && cur.tap.go) || cur.tap.vital) && !E.alive) cur.killed = true;
+    for (let k = openV.length - 1; k >= 0; k--) {
+      const vs = openV[k];
+      const age = G.t - vs.t0;
+      if (age < 0.8 && vs.vic.decapitated) vs.decap = true;
+      if (vs.dead == null && (vs.vic.state === 'dead' || vs.vic.revival)) vs.dead = age;
+      if (age >= 10 || ((!P.alive || !E.alive) && vs.dead != null)) (vStrikes.push(vs), openV.splice(k, 1));
+    }
     if (pDown && !P.alive) pDown.kill = true;
     if (pDown && P.state !== 'down') pDown = null;
     if (!P.alive || !E.alive) {
@@ -103,8 +145,9 @@ export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = fals
     }
   }
   if (cur) close();
+  for (const vs of openV) vStrikes.push(vs); // 판이 끝나 10 s 를 다 못 본 것 (죽음 null 이면 안 죽음으로 센다)
   const win = !E.alive && P.alive ? 'P' : !P.alive && E.alive ? 'E' : 'D';
-  return { seed, win, t: G.t, causeE: E.causeOfDeath ?? null, causeP: P.causeOfDeath ?? null, decapE: !!E.decapitated, decapP: !!P.decapitated, taps, aiDown, lowHits, decapLow };
+  return { seed, win, t: G.t, causeE: E.causeOfDeath ?? null, causeP: P.causeOfDeath ?? null, decapE: !!E.decapitated, decapP: !!P.decapitated, taps, aiDown, lowHits, decapLow, vStrikes, rangeN, rangeEnds: P.skill.vitalRangeEnds ?? {} };
 }
 
 if (isMain(import.meta.url)) {
@@ -118,15 +161,37 @@ if (isMain(import.meta.url)) {
   const seed0 = +(opt.seed ?? 7100);
   const react = +(opt.react ?? 0.3);
   const knock = +(opt.knock ?? 0);
+  const notap = 'notap' in opt; // 탭 봇 없이 두 AI 만 (AI 급소 공격만 센다)
   const t0 = Date.now();
   const R = [];
-  for (let s = 0; s < n; s++) R.push(probeRound({ seed: seed0 + 37 * s, weapon, secs, plate, react, knock }));
+  for (let s = 0; s < n; s++) R.push(probeRound({ seed: seed0 + 37 * s, weapon, secs, plate, react, knock, notap }));
   const all = R.flatMap((r) => r.taps);
   const pc = (a, b) => (b ? `${((100 * a) / b).toFixed(0)}%` : '-');
-  console.log(`finish_probe ${weapon} 대 롱소드 AI · 상대 ${plate ? '판금' : '맨몸'} · ${n}판 × ${secs}s · entry=${FINISH.entry} mode=${FINISH.mode}${FINISH.mode === 'power25' ? ` ×${FINISH.power}` : ''} · react ${react}s${knock ? ` · ${knock}s 마다 크게 넘어뜨림` : ''}`);
+  console.log(`finish_probe ${weapon} 대 롱소드 AI · 상대 ${plate ? '판금' : '맨몸'} · ${n}판 × ${secs}s · entry=${FINISH.entry} mode=${FINISH.mode}${FINISH.mode === 'power25' ? ` ×${FINISH.power}` : ''} vital=${FINISH.vital ? 1 : 0} plateNeck=${FINISH.plateNeck ? 1 : 0} · react ${react}s${knock ? ` · ${knock}s 마다 크게 넘어뜨림` : ''}${notap ? ' · 탭 봇 없음' : ''}`);
   const RES = ['보통찌르기', '거둠', '헛찍음', '막힘', '상처', '끝'];
-  for (const pose of ['넘어지는중', '누움', '일어나는중', '모두']) {
-    const T = pose === '모두' ? all : all.filter((x) => x.pose === pose);
+  // 약한 자세 급소 찌르기 탭 (FINISH.vital)
+  const VT = all.filter((x) => x.vital);
+  if (VT.length || R.some((r) => r.rangeN)) {
+    const VR = ['급소맞음', '딴곳', '헛침', '끝'];
+    const RE = R.reduce((m, r) => { for (const k in r.rangeEnds) m[k] = (m[k] || 0) + r.rangeEnds[k]; return m; }, {});
+    console.log(`  급소 찌르기 탭 ${VT.length} (간격 맞추기로 시작 ${R.reduce((m, r) => m + r.rangeN, 0)}, 거둠 ${JSON.stringify(RE)}) · ${VR.map((k) => `${k} ${VT.filter((x) => x.res === k).length}`).join(' · ')} · 겨눈 곳 ${JSON.stringify(VT.reduce((m, x) => ((m[x.vital] = (m[x.vital] || 0) + 1), m), {}))} · 첫 접촉 ${JSON.stringify(VT.reduce((m, x) => ((m[x.hit] = (m[x.hit] || 0) + 1), m), {}))}`);
+  }
+  const PT = all.filter((x) => x.plainHit && x.pose !== '누움');
+  if (PT.length) console.log(`  보통 찌르기 탭 (누움 밖) ${PT.length} · ${['급소맞음', '딴곳', '헛침', '끝'].map((k) => `${k} ${PT.filter((x) => x.plainHit === k).length}`).join(' · ')}`);
+  const VS = R.flatMap((r) => r.vStrikes);
+  if (VS.length) {
+    for (const kind of ['cut', 'thrust']) {
+      const K = VS.filter((v) => v.kind === kind);
+      if (!K.length) continue;
+      const first = (v) => v.contacts.find((c) => c.part !== 'sword') ?? null;
+      const cls = (v) => { const c = first(v); return !c ? '헛침' : c.zone === 'neck' || c.zone === 'head' ? '목머리' : c.zone === 'arm' ? '팔' : '딴몸'; };
+      const C = K.reduce((m, v) => ((m[cls(v)] = (m[cls(v)] || 0) + 1), m), {});
+      const wound = K.filter((v) => v.contacts.some((c) => (c.zone === 'neck' || c.zone === 'head') && c.sev > 0)).length;
+      console.log(`  AI 급소 ${kind === 'cut' ? '베기(목 가로)' : '찌르기'} ${K.length} · 첫 몸 접촉 ${JSON.stringify(C)} · 목·머리 상처 ${wound} · 참수 ${K.filter((v) => v.decap).length} · 3 s 안 죽음 ${K.filter((v) => v.dead != null && v.dead <= 3).length} · 10 s 안 ${K.filter((v) => v.dead != null && v.dead <= 10).length} · 그때 상대 ${JSON.stringify(K.reduce((m, v) => ((m[v.vicPose] = (m[v.vicPose] || 0) + 1), m), {}))}`);
+    }
+  }
+  for (const pose of ['넘어지는중', '누움', '일어나는중', '무릎', '모두']) {
+    const T = (pose === '모두' ? all : all.filter((x) => x.pose === pose)).filter((x) => !x.vital);
     const c = Object.fromEntries(RES.map((k) => [k, T.filter((x) => x.res === k).length]));
     const fail = c['보통찌르기'] + c['거둠'] + c['헛찍음'];
     console.log(`  탭 ${pose.padEnd(5)} ${String(T.length).padStart(3)} · ${RES.map((k) => `${k} ${c[k]}`).join(' · ')} · 안나감+안박힘 ${fail} (${pc(fail, T.length)}) · 찍기자세(fin.on) ${T.filter((x) => x.finOn).length} · 몸 높이 가운데값 ${T.length ? [...T].sort((a, b) => a.top - b.top)[T.length >> 1].top.toFixed(2) : '-'} m (0.665 아래 ${T.filter((x) => x.top <= LOW_FINISH.enterHeight).length})`);

@@ -30,7 +30,9 @@ const FIN_PARTS = new Set(['chest', 'abdomen', 'pelvis', 'head']); // 내려찍�
 const R2D = 180 / Math.PI;
 // 탭 뒤 재는 시간 (초) — 걸어 들어가 찍는 찌르기도 들어가도록 넉넉히. 1.5초는 1.4·1.6m 에서 걸어 들어간 찍기를 잘랐다
 //  (찍기 v2 시제품: 탭→접촉 최대 2.27초, 1.5초면 80판 중 7판이 잘림). 바꾸기 전·후 같은 값으로 잰다
-const WIN = 3;
+// 재는 시간 (s). --win=10 이면 10 s 동안 보고 '3 s 안 · 10 s 안 죽음(출혈 포함)' 요약 줄을 더 찍는다 (10/12 — 기본 3 s 출력은 그대로)
+const WIN_ARG = process.argv.find((a) => a.startsWith('--win='));
+const WIN = WIN_ARG ? +WIN_ARG.split('=')[1] : 3;
 const HEAD_R = 0.1; // 머리 공 반지름 (fighter.js partDefs head) — 바꾸기 전 소스에는 fighter.headR 가 없어 여기서 읽는다
 const PLATE = CHARACTERS.find((c) => c.id === 'heinrich').look;
 
@@ -403,6 +405,16 @@ function report(rows, guards, dists, falls, tag) {
   if (miss.length) console.log(`상처 없음 ${miss.length}: ${miss.map((r) => `${r.guard}${r.dist}${r.fall[0]}:${r.tor ? `${r.tor.type}${f(r.tor.eff ?? r.tor.energy, 0)}/${f(r.tor.thr, 0)}J` : r.first ? `${r.first.part}` : '안닿음'}`).join(' ')}`);
   killBlock(rows, guards, dists, falls);
   if (rows.some((r) => r.plate)) armourBlock(rows);
+  if (WIN_ARG) {
+    const n = rows.length;
+    const d = rows.filter((r) => r.down);
+    const go = d.filter((r) => r.go);
+    const whiff = go.filter((r) => !r.fin || r.fin.kin !== 'stab');
+    const blocked = go.filter((r) => r.fin?.kin === 'stab' && r.fin.type === 'blunt' && (r.fin.plate || r.fin.helmet));
+    const zone = (r) => (r.fin ? `${r.fin.zone ?? r.fin.part}${r.fin.plate ? '(판)' : r.fin.helmet ? '(투구)' : ''}` : '-');
+    console.log(`요약 ${n}판 · 3 s 안 죽음 ${rows.filter((r) => r.tDeath != null && r.tDeath <= 3).length} · 10 s 안 죽음 ${rows.filter((r) => r.tDeath != null && r.tDeath <= 10).length} (출혈 포함) · 원인 ${JSON.stringify(count(rows.filter((r) => r.kill).map((r) => r.cause)))}`);
+    console.log(`  찍기 시작 ${d.length} · 거둠(내려찍기 전) ${d.length - go.length} · 헛찍음(몸통·머리에 찌르기로 안 닿음) ${whiff.length} · 판·투구에 막힘 ${blocked.length} · 상처 ${rows.filter((r) => r.wound).length} · 찍기 첫 부위 ${JSON.stringify(count(go.map(zone)))}`);
+  }
 }
 
 if (isMain(import.meta.url)) {

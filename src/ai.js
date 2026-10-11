@@ -31,6 +31,7 @@ import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { FINISH } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
+import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
@@ -339,6 +340,11 @@ export class AI {
 
     // ── 보기 (반응 시간만큼 늦게) ──
     const s = this.sense.seen(L.reaction + 0.04 * this.anger); // 화나면 눈이 조금 늦다
+    // 약한 자세 겨눔 (FINISH.vital, 10/12 — vital_target.js): 늦게 본 모습을 기술 고르기·공격 준비가 읽고, 손 높이·칼 기울기 보정을 한 스텝 옮긴다
+    if (FINISH.vital) {
+      this.vitalS = s;
+      aiVitalAdvance(this, dt);
+    }
     const c = me.bodies.chest.translation();
     // 몸의 움직임은 사람도 앞질러 내다본다 (걸어오는 사람이 지금 어디쯤인지): 본 위치 + 속도 × 반응 시간.
     //  칼을 휘두르기 시작하는 것처럼 갑자기 바뀌는 움직임은 내다볼 수 없다 → 그건 늦게 본다
@@ -826,9 +832,16 @@ export class AI {
     // 베기만 골라 쓰다 지는 일이 있었다 — 무기의 mThrust/mCut 배율 그대로 찌르기 기술 선호도에 곱한다.
     const cfg = this.me.weaponCfg;
     const thrustBias = cfg ? cfg.mThrust / cfg.mCut : 1;
+    // 약한 자세 겨눔 (FINISH.vital, 10/12 — 샛별 저장소 ccea5855 pickTech 의 뜻): 상대가 무릎 꿇음·일어나는 중이고 목이 열려 있으면
+    //  이 무기가 노릴 꼴(베기 / 찌르기 무기는 찌르기)만 보고, 베기면 목을 가로지르는 기술(neckCrossingTechnique)만 고른다. 끄면 이 줄을 타지 않는다
+    const vt = FINISH.vital ? aiVitalCandidate(this, s) : null;
+    const vKind = vt && this.school.tech.some((t) => t.kind === vt.kind) ? vt.kind : null;
+    const neckCut = vKind === 'cut' && this.school.tech.some(neckCrossingTechnique);
     let best = null;
     let bestW = -1;
     for (const t of this.school.tech) {
+      if (vKind && t.kind !== vKind) continue;
+      if (neckCut && !neckCrossingTechnique(t)) continue;
       let w = this.pers.techPref[t.name] * t.base;
       if (t.kind === 'thrust') w *= thrustBias;
       // 빈틈: 상대 칼이 높으면 아래·찌르기, 낮으면 위, 한쪽으로 치우치면 반대쪽
@@ -893,6 +906,8 @@ export class AI {
     this.stepT = 0;
     this.path.length = 0;
     this.pointBlocked = false;
+    // 약한 자세 겨눔 (FINISH.vital): 목 가로 베기면 길이 목 앞을 지나는 손 높이·칼 기울기를 준비한다 (찌르기는 목·얼굴·머리 점 — startStrike). 끄면 늘 null
+    this.vital = FINISH.vital && !opt.secret ? aiVitalPrepare(this, this.vitalS, tech) : null;
     this.techStepTry = false; // 기술 걸음을 이번 공격에 부탁해 봤나 (재기만)
     this.sideStepT = null; // 기술 걸음 'approach'(비껴 딛고 친다): 걸음을 부탁한 뒤 흐른 시간. null = 아직 (step 칸 없는 기술은 읽지 않는다)
     this.passiveAtk = null; // 패시브가 시작했으면 부른 쪽이 다시 적는다
@@ -902,7 +917,7 @@ export class AI {
     if (!opt.chain) this.stats.attacks++;
     // 속임수: 먼저 다른 곳을 치는 척하다가 바꾼다 (상대가 잘 막을수록 자주)
     this.feint = null;
-    if (!opt.noFeint && (why === 'patience' || why === 'open' || why === 'weak')) {
+    if (!this.vital && !opt.noFeint && (why === 'patience' || why === 'open' || why === 'weak')) { // 약한 자세 겨눔 중엔 속이지 않는다 (샛별 쪽 그대로)
       const want = L.feint * (1 + Math.min(2, this.foeParried * 0.4));
       if (Math.random() < want * (1 - this.anger)) { // 화나면 속임수를 안 쓴다 (곧장 친다)
         const byName = this.school.techByName;
@@ -965,6 +980,8 @@ export class AI {
     const me = this.me;
     const t = this.tech;
     this.attackT += dt;
+    // 약한 자세 겨눔: 준비하는 동안 다시 본다 (늦게 본 모습으로). 빈틈이 닫히면 보정만 내려놓고 하던 공격은 그대로 (치기 시작한 뒤엔 고정)
+    if (this.vital && !this.vital.started && (this.phase === 'windup' || this.phase === 'approach')) this.vital = aiVitalPrepare(this, s, t);
     if (this.phase === 'windup') {
       // 준비 자세로 (다가가며)
       this.hand.set(t.from[0], t.from[1]);
@@ -1176,7 +1193,14 @@ export class AI {
     // 찌르기 무기(weapons.js THRUST_STYLE: 에스톡·레이피어)는 찌르기 기술을 플레이어의 탭 찌르기와 같은 칼끝 찌르기로 한다
     //  (칼끝을 상대 가슴·머리로 맞추고 칼 선을 따라 뻗는다 — skill.js thrust). 다른 무기는 예전처럼 자세 지도의 길을 따라간다
     //  내딛기는 AI 가 정한다(stepTime·gaitStep) — 검술 층이 따로 내딛지 않게 step: false
-    if (t.kind === 'thrust' && !this.feint && this.me.weaponCfg.thrustStyle) this.me.skill.thrust({ step: false });
+    // 약한 자세 겨눔 (FINISH.vital): 치는 순간 보정·목표를 고정한다 (그 뒤 움직이는 상대를 따라가지 않는다). 찌르기는 탭 찌르기 길로 목·얼굴·머리 점을 찌른다
+    const V = this.vital;
+    if (V && !this.feint) {
+      V.started = true;
+      this.stats.vital = (this.stats.vital ?? 0) + 1;
+      this.vitalStrike = { t: this.sense.t, kind: V.kind, zone: V.zone, tech: t.name };
+    }
+    if (t.kind === 'thrust' && !this.feint && (this.me.weaponCfg.thrustStyle || V?.kind === 'thrust')) this.me.skill.thrust({ step: false, vital: V?.kind === 'thrust' ? V : null });
   }
 
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */

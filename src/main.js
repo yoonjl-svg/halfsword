@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
 import { PHYSICS, ARENA, CAMERA } from './config.js';
-import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode (주소 ?finishEntry · ?finishMode)
+import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode·vital·plateNeck (주소 ?finishEntry · ?finishMode · ?vital · ?plateNeck)
+import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨눔 갈래 스위치 (10/12)
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
@@ -93,7 +94,13 @@ if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.g
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 // 마무리 스위치 (10/12 샛별 가져오기 2차 — docs/import/saetbyeol_round2_2026-10-12.md, 기본은 둘 다 끔):
 //  `?finishEntry=low` = 낮은 상대 진입(몸 높이로 내려찍기를 연다, finish_entry.js) · `?finishMode=power25` = 즉사 대신 판정 에너지 2.5 배 + 갑옷 판정
-if (['low', 'downlow'].includes(params.get('finishEntry'))) FINISH_SWITCH.entry = params.get('finishEntry'); // downlow = 고친 판 (큰 쓰러짐은 지금처럼 + 일어나는 중 낮은 몸)
+if (['down', 'low', 'downlow', 'auto'].includes(params.get('finishEntry'))) FINISH_SWITCH.entry = params.get('finishEntry'); // downlow = 고친 판 (큰 쓰러짐은 지금처럼 + 일어나는 중 낮은 몸) · 기본 auto (10/12)
+//  10/12 약한 자세 겨눔 묶음 (docs/import/saetbyeol_vital_2026-10-12.md): `?vital=0` = 끔 (진입도 'down' 으로 — 추천 기본 켬) · `?plateNeck=1` = 판금 상대 찍기를 목 한 점으로 (10/1 C, 10/12 기본 끔)
+if (params.get('vital') === '0') FINISH_SWITCH.vital = false;
+if (params.get('vital') === '1') FINISH_SWITCH.vital = true;
+if (params.get('plateNeck') === '1') FINISH_SWITCH.plateNeck = true;
+if (params.get('plateNeck') === '0') FINISH_SWITCH.plateNeck = false;
+for (const [q, k] of [['vitalAi', 'aiCut'], ['vitalThrust', 'thrust'], ['vitalCut', 'playerCut']]) if (['0', '1'].includes(params.get(q))) VITAL_SWITCH[k] = params.get(q) === '1'; // 묶음 갈래: AI 목 가로 베기 · 찌르기 목·얼굴·머리 + 간격 맞추기 · 플레이어 베기 겨눔 보정
 if (['power25', 'kill'].includes(params.get('finishMode'))) FINISH_SWITCH.mode = params.get('finishMode'); // 10/12 기본 power25 · kill = 9/30 즉사
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).

@@ -21,7 +21,8 @@ export const LOW_FINISH = {
 };
 
 /** 스위치 (FINISH.entry) — finish.js 가 이 파일을 부르기 전에 읽어 넘긴다 */
-export const lowFinishOn = (FINISH) => FINISH?.entry === 'low';
+//  'auto' (10/12 약한 자세 겨눔 묶음): 약한 자세 겨눔(FINISH.vital)이 켜져 있으면 'low' — 무릎 꿇은·높은 몸은 겨눔이, 낮은 몸은 내려찍기가 맡는다
+export const lowFinishOn = (FINISH) => FINISH?.entry === 'low' || (FINISH?.entry === 'auto' && !!FINISH.vital);
 
 /**
  * 고친 판 (FINISH.entry 'downlow', 기본 끔): 큰 쓰러짐(down)은 지금처럼 이름으로 열고(넘어지는 중 탭도 그대로),
