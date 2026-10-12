@@ -601,7 +601,7 @@ export class Skill {
       // 막기 연환 (10/11): 창을 연 막기의 자리(ctx.slot)의 두 수 — 이음새 고리 없이 앞 수 끝에서 곧장 (AI ai.js secretGo 와 같은 칸)
       const C = D.combo[run.ctx?.slot];
       if (!C) return false;
-      for (const t of C.seq) run.queue.push({ ...t, step: t.step ? { ...t.step, fwd: secVal(t.step.fwd) } : undefined });
+      for (const t of C.seq) run.queue.push({ ...t, step: t.step ? { ...t.step, fwd: secVal(t.step.fwd) * (t.step.back ? -1 : 1) } : undefined }); // back = 반걸음 물러남 (10/12 3 연격 마지막 수)
       run.flow = true;
       if (D.fast && secVal(D.fast)) {
         // 중국 빠른 연환 (10/12 — SECRET.cnFast): 두 수를 운동학 팔·칼로 길을 따라 (secret_instant.js requestCombo — AI 와 같은 실행부). 결과는 순간 베기와 같은 칸(instant)으로

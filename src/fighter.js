@@ -2384,7 +2384,7 @@ export class Fighter {
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
     const armO = this.limbs.armO;
     const OA = this.swordArt?.offArm; // 유파 빈팔 (10/10 고증 — schools.js offArm: 이탈리아만). 없으면 아래 두 줄 그대로
-    if (this.iai?.oneHand && this.state === 'stand') this.offArmSchool({ guard: SECRET.iaiSayaHand }, armO); // 고노센 한 손 발도 (10/12 03:2x — secret_instant.js startIai): 빈손은 칼집을 뒤로 당기는 꼴 (鞘引き)
+    if ((this.iai?.oneHand || this.iaiOneHold) && this.state === 'stand') this.offArmSchool({ guard: SECRET.iaiSayaHand }, armO); // 고노센 한 손 발도 (10/12 03:2x — secret_instant.js startIai): 빈손은 칼집을 뒤로 당기는 꼴 (鞘引き)
     else if (OA && this.armed && this.state === 'stand') this.offArmSchool(OA, armO);
     else {
       setZ('uarmO', (this.secretStance?.offArm ?? 0.5) * armO); // 비기 런지: 빈팔을 뒤로 뻗어 균형 (secretStance.offArm, 없으면 오늘 그대로)
@@ -3223,7 +3223,7 @@ export class Fighter {
       (this.state === 'stand' || this.state === 'kneel' || this.state === 'getup') &&
       this.muscle > 0.3 &&
       this.limbs.armO > 0.3 &&
-      !this.iai?.oneHand && // 고노센 한 손 발도 동안은 빈손이 칼자루를 놓는다 (10/12 03:2x — 발도가 끝나면 다시 쥔다)
+      !(this.iai?.oneHand || this.iaiOneHold) && // 고노센 한 손 발도 동안(10/12 08:2x — 경직 붙잡기·풀기까지)은 빈손이 칼자루를 놓는다 (10/12 03:2x — 발도가 끝나면 다시 쥔다)
       GRIP.on;
     this.gripping = false;
     if (!want) return;

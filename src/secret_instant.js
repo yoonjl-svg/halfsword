@@ -17,7 +17,7 @@
 //  난수 없음. 비기가 아니면(요청 없음) 아무 일도 없다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, ARM, STRIKE, GAIT } from './config.js';
+import { SECRET, ARM, STRIKE, GAIT, ARENA } from './config.js';
 const GAIT_REACH = GAIT.reachMax;
 
 const _qc = new THREE.Quaternion();
@@ -627,6 +627,9 @@ function endIai(f, combat) {
   f.iaiHoldT = I.hold;
   f.iaiHoldKind = I.kind;
   f.iaiFade = 0;
+  // 10/12 08:2x 사장님 '공격 후 경직 자세에서 바로 왼손이 따라 잡으니까 한 손으로 팔을 쭉 벌려서 비기를 쓴 당위성이 사라져': 한 손 발도면 경직(붙잡기) 동안도
+  //  오른팔 한 손으로 뻗은 끝 자세를 두고 빈손은 칼집 자리(왼 허리 — iaiSayaHand)에 남긴다(잔심). 붙잡기가 풀리며(iaiFade) 칼이 가운데로 돌아온 뒤 빈손이 다시 쥔다 (holdIai)
+  f.iaiOneHold = !!I.oneHand;
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
   f.tipPrev = f.bladePoint(1, new THREE.Vector3());
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
@@ -655,6 +658,7 @@ function holdIai(f, dt) {
   if (f.iaiFade <= 0) {
     f.iaiFade = 0;
     th.w = 0;
+    f.iaiOneHold = false; // 한 손 발도 잔심 끝: 칼이 가운데로 돌아왔다 → 빈손이 다시 쥔다 (fighter.js offHand)
   }
 }
 
@@ -999,7 +1003,7 @@ function comboNext(f, I) {
   I.si = 0;
   I.ts = I.t;
   let span = I.segs.reduce((a, sg) => a + sg.T, 0);
-  if (I.slide && SECRET.cnPath && m.dyn && span > 0) {
+  if (I.slide && I.slide.slide > 0 && SECRET.cnPath && m.dyn && span > 0) {
     // 그때 계산 길 (10/12 03:0x): 길은 미끄러진 뒤의 상대 자리로 짜므로 몸 틀 칼끝 길이 짧아진다 — 칼끝이 땅에 대해 지나는 길 = 몸 틀 길 + 반걸음.
     //  그만큼 시간을 늘려 칼끝 빠르기를 같은 값(I.v)에 두고, 반걸음은 그 수 시간 내내 미끄러진다. (안 하면 찌름 길이 0.02 s 로 줄어 몸이 12 m/s 로 미끄러지며 그 빠르기가
     //  찌름에 실려 48 판 찌름 상처가 566~811 J 로 튀었다)
@@ -1008,7 +1012,8 @@ function comboNext(f, I) {
     for (const sg of I.segs) sg.T *= k;
     span *= k;
     I.slide.span = span;
-  } else if (I.slide) I.slide.span = Math.max(1e-3, span * SECRET.iaiSlideShare); // 패드 길: 그 수 시간의 발도와 같은 몫 안에 (10/12 01:1x 그대로)
+  } else if (I.slide && I.slide.slide < 0) I.slide.span = Math.max(1e-3, span); // 물러남(10/12 3 연격 마지막 수): 그 수 시간 내내 뒤로 — 벰은 옆으로 가로질러 칼끝 길은 그대로 둔다
+  else if (I.slide) I.slide.span = Math.max(1e-3, span * SECRET.iaiSlideShare); // 패드 길: 그 수 시간의 발도와 같은 몫 안에 (10/12 01:1x 그대로)
   return true;
 }
 
@@ -1100,11 +1105,23 @@ function comboPlanDyn(f, I, m, A) {
   const psi0 = Math.atan2(Dc.z, Dc.x);
   const eps0 = Math.asin(clamp(Dc.y, -1, 1));
   const N = 6;
+  const pull = D.pull !== false; // 10/12 3 연격: pull false = 손을 당기지 않고 뻗은 채 끝냄 (다음 벰이 그 자리에서 곧장 이어짐)
+  if (D.from === 'roll') {
+    // 10/12 3 연격 滾手 (검결가 「滾手連環」): 앞 수 끝(찌른 칼끝은 몸통 안)에서 손목을 굴려 칼끝을 들며 호 첫 자리 바깥으로 — 맞힘 없음.
+    //  (전 두 수의 벰은 찌른 칼끝에서 곧장 맞힘 토막으로 시작해 몸 안에서 첫 맞닿음이 잡혀 16 J 에 그쳤다 — 이제 바깥에서 들어와 몸을 가로지른다)
+    const pa = Math.atan2(A.D.z, A.D.x);
+    const ea = Math.asin(clamp(A.D.y, -1, 1));
+    const ps = psi0 + D.side * D.yaw[0] * D2R;
+    const es = eps0 + D.el[0] * D2R;
+    const pm = 0.5 * (pa + ps);
+    const em = Math.max(ea, es) + (D.roll ?? 0) * D2R;
+    push(S.clone().addScaledVector(comboDir(psi0 + 0.5 * (pm - psi0), eps0 + 0.5 * (em - eps0)), Lf), comboDir(pm, em), false);
+  }
   for (let j = 0; j <= N; j++) {
     const w = j / N;
     const psi = psi0 + D.side * (D.yaw[0] + (D.yaw[1] - D.yaw[0]) * w) * D2R;
     const eps = eps0 + (D.el[0] + (D.el[1] - D.el[0]) * w) * D2R;
-    const r = Lf * (w <= 2 / 3 ? 1 : 1 - 0.25 * ((w - 2 / 3) / (1 / 3)));
+    const r = Lf * (!pull || w <= 2 / 3 ? 1 : 1 - 0.25 * ((w - 2 / 3) / (1 / 3)));
     const H = S.clone().addScaledVector(comboDir(psi0 + 0.5 * (psi - psi0), eps0 + 0.5 * (eps - eps0)), r);
     push(H, comboDir(psi, eps), j > 0 || D.from === 'stab', j === N ? comboPad(H) : null);
   }
@@ -1126,7 +1143,7 @@ function comboMoveStart(f, I, mi) {
   I.slide = null;
   const st = m.step;
   const fwd = typeof st?.fwd === 'number' ? st.fwd : 0;
-  if (!(fwd > 0) || !f.foe) return;
+  if (!fwd || !f.foe) return;
   const M = f.swordArt.measure;
   const c = f.bodies.chest.translation();
   const fc = f.foe.bodies.chest.translation();
@@ -1135,8 +1152,15 @@ function comboMoveStart(f, I, mi) {
   const d = Math.max(1e-3, Math.hypot(dx, dz));
   dx /= d;
   dz /= d;
-  const slide = Math.min(clamp(d - M.contact, 0, fwd), Math.max(0, d - M.clinch)); // 발도 미끄러짐과 같은 한도
-  if (slide > 1e-3) I.slide = { dx, dz, slide, t0: I.t, span: 1, done: 0 };
+  let slide = fwd > 0 ? Math.min(clamp(d - M.contact, 0, fwd), Math.max(0, d - M.clinch)) : fwd; // 앞 = 발도 미끄러짐과 같은 한도 · 뒤(물러남 — 10/12 3 연격) = 반걸음 그대로
+  if (slide < 0) {
+    // 물러남은 경기장 테두리(ARENA.radius — 이미 있는 값)를 넘지 않게: 끝 자리 가슴이 반지름 밖이면 그 안까지만
+    const ex = c.x + dx * slide;
+    const ez = c.z + dz * slide;
+    if (Math.hypot(ex, ez) > ARENA.radius) slide = -Math.max(0, Math.min(-slide, ARENA.radius - Math.hypot(c.x, c.z)));
+  }
+  if (Math.abs(slide) > 1e-3) I.slide = { dx, dz, slide, t0: I.t, span: 1, done: 0 };
+
   if (f.gait?.active) f.gait.requestStep({ kind: st.kind ?? 'lunge', fwd, side: st.lat ?? 0, duration: st.dur ?? 0.35 });
 }
 
@@ -1168,7 +1192,7 @@ function stepCombo(f, combat) {
     const x = Math.min(1, (I.t - S.t0) / S.span);
     const want = S.slide * (1 - (1 - x) * (1 - x));
     const ds = want - S.done;
-    if (ds > 1e-5) shiftFighter(f, S.dx * ds, S.dz * ds);
+    if (Math.abs(ds) > 1e-5) shiftFighter(f, S.dx * ds, S.dz * ds);
     S.done = want;
   }
   const u = sg.T > 0 ? clamp((I.t - I.ts) / sg.T, 0, 1) : 1;

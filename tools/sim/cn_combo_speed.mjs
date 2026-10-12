@@ -2,6 +2,7 @@
 //  시험 AI 가 서 있는 롱소드 몸(입력 없음)에게 다가가 간격(reach − 0.1) 안에 들면 비기를 직접 낸다(secretGo — tools/sim/parry_combo_probe.mjs 와 같은 대본).
 //   중국 청강검: 막기 연환 자리마다(geojeong·pyodu) · 일본 打刀: 고노센(발도 — 대기 자세가 아니라 '왼 허리를 거쳐' 길, 베는 몫만 따로).
 //  잰 것: 수마다 칼끝이 지나간 길이(스텝마다 칼끝 자리 차의 합, m) · 걸린 시간(s) · 평균 = 길이/시간 · 칼끝 최고(m/s, 스텝 차/dt) · 그 수 동안 낸 상처 에너지(J).
+//  10/12 3 연격: 수마다 막힘(몸보다 먼저 상대 칼에 닿음) 수도 센다. 전 두 수 = with_config.mjs SECRET.cnCombo=2
 //  실행: node tools/sim/cn_combo_speed.mjs [씨앗 수 8]   ·   비교: node tools/sim/with_config.mjs SECRET.cnFast=0 cn_combo_speed.mjs 8
 import { newRound, DT, THREE } from './harness_m.mjs';
 const N = +(process.argv[2] || 8);
@@ -42,7 +43,7 @@ for (const R of runs) {
       else nm = A.tech?.name ?? '-';
       me.bladePoint(1, tp);
       if (nm !== cur?.n) {
-        cur = { n: nm, L: 0, T: 0, vmax: 0, E: 0 };
+        cur = { n: nm, L: 0, T: 0, vmax: 0, E: 0, blk: false };
         (agg[nm] ??= []).push(cur);
       } else if (prev) {
         const d = tp.distanceTo(prev);
@@ -50,6 +51,7 @@ for (const R of runs) {
         cur.T += DT;
         cur.vmax = Math.max(cur.vmax, d / DT);
       }
+      if (I?.kind === 'combo' && I.blockM && I.moveName && cur.n.startsWith(I.moveName)) cur.blk = true; // 10/12 상대 칼에 먼저 닿아 막힌 수
       prev = tp.clone();
       for (const w of G.wounds.slice(w0)) if (w.att === me) (cur.E += w.energy), (hit = true);
       w0 = G.wounds.length;
@@ -63,6 +65,6 @@ for (const R of runs) {
     const T = a.reduce((s, x) => s + x.T, 0);
     const av = (f) => (a.reduce((s, x) => s + f(x), 0) / a.length).toFixed(3);
     const hits = a.filter((x) => x.E > 0);
-    console.log(`  ${k}: 칼끝 길이 ${av((x) => x.L)} m · 시간 ${av((x) => x.T)} s · 평균 ${(L / Math.max(T, 1e-9)).toFixed(2)} m/s · 최고 ${av((x) => x.vmax)} m/s · 상처 ${hits.length} (평균 ${hits.length ? (hits.reduce((s, x) => s + x.E, 0) / hits.length).toFixed(0) : '-'} J) (n ${a.length})`);
+    console.log(`  ${k}: 칼끝 길이 ${av((x) => x.L)} m · 시간 ${av((x) => x.T)} s · 평균 ${(L / Math.max(T, 1e-9)).toFixed(2)} m/s · 최고 ${av((x) => x.vmax)} m/s · 막힘 ${a.filter((x) => x.blk).length} · 상처 ${hits.length} (평균 ${hits.length ? (hits.reduce((s, x) => s + x.E, 0) / hits.length).toFixed(0) : '-'} J) (n ${a.length})`);
   }
 }

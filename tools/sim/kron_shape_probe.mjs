@@ -3,16 +3,20 @@
 //  막는 쪽 AI 는 멈춰 두되 '막는 중'(mode 'defend' · defLine 'highC')으로 두어 본판과 같은 덧씌우기(frames.js installCover)가 걸리게 한다 — 'true' 꼴이면 왕관 몸꼴, 'pad' 꼴이면 덧씌우기 없음.
 //  꼴마다: 막음(치는 쪽 상처 0) · 칼날 상처 없음(벰·찌름 0 — 멍만) · 칼 부딪침 · 처음 맞닿은 자리(내 칼날 위 — 코등이 0 → 칼끝 1, combat.js bindFeel 과 같은 셈: 0.02 밑 = 코등이·자루, 0.5 밑 = 밑동(강한 쪽), 그 위 = 약한 쪽) ·
 //   치기 직전 자세(손 = 칼 원점, 가슴 기준 [앞, 위, 칼 쪽] m · 칼 올려본 각 · 칼 면이 상대 쪽을 보는 정도 |면·앞| — 1 = 칼 면이 상대 쪽(날 좌우), 0 = 칼 면이 옆(날 앞뒤)).
+//   10/12 높이 쓸기(docs/strike/kron_shape_2026-10-12.md §9): KRON_HAND=앞,위,칼쪽 · KRON_BLADE=올려본각,옆각 으로 GERMAN_KRON 손·칼끝을 바꿔 잼 · KRON_SHAPES=true 면 true 꼴만
 //   node tools/sim/kron_shape_probe.mjs [막는 무기 longsword]   (KRON_GAPS=1.25~1.8 0.05 간격 12 곳 · KRON_SEEDS=1 — 이 판은 멈춘 두 몸이라 씨앗을 바꿔도 같은 판이 나온다(10/12 확인), 간격을 넓게 본다) · KRON_DEBUG=1 판마다 한 줄
 import { newRound, DT, V, Q, toBody } from './harness_m.mjs';
 import * as THREE from '../../node_modules/three/build/three.module.js';
 import { SKILL } from '../../src/config.js';
 import { TECH, G as PAD } from '../../src/ai_techniques.js';
+import { GERMAN_KRON } from '../../src/schools.js';
 
 const id = process.argv[2] ?? 'longsword';
 const GAPS = process.env.KRON_GAPS ? process.env.KRON_GAPS.split(',').map(Number) : Array.from({ length: 12 }, (_, i) => +(1.25 + 0.05 * i).toFixed(2));
 const SEEDS = (process.env.KRON_SEEDS ?? '1').split(',').map(Number);
 const SPD = 11;
+if (process.env.KRON_HAND) GERMAN_KRON.hand = process.env.KRON_HAND.split(',').map(Number);
+if (process.env.KRON_BLADE) GERMAN_KRON.blade = process.env.KRON_BLADE.split(',').map(Number);
 const tech = TECH.find((t) => t.name === 'oberhau');
 const setPad = (P, x, y) => {
   P.handOffset.set(x, y);
@@ -20,7 +24,7 @@ const setPad = (P, x, y) => {
 };
 const D2 = 180 / Math.PI;
 const rows = [];
-for (const shape of ['true', 'pad']) {
+for (const shape of (process.env.KRON_SHAPES ?? 'true,pad').split(',')) {
   SKILL.deKron = 1;
   SKILL.deKronShape = shape;
   const r = { shape, n: 0, block: 0, noCut: 0, clash: 0, first: { hilt: 0, strong: 0, weak: 0, none: 0 }, at: [], hand: [0, 0, 0], el: 0, face: 0 };
