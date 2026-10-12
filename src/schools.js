@@ -666,7 +666,7 @@ const JAPANESE_SECRET = {
 // 중국 連環三擊 (가칭): 들어가며 친 첫 칼이 닿으면 멈추지 않고 두 수를 물 흐르듯 더 잇는다 — 조선세법의 세 끝 이음(腰擊 → 逆鱗刺 → 左翼擊 → 逆鱗刺)
 const CHINESE_SECRET = {
   name: 'lianhuanSanji',
-  nameKo: '연환삼격 (連環三擊) · 가칭',
+  nameKo: '옛 연환삼격 (첫 칼이 맞으면 잇는 판) · 가칭',
   when: 'firstHit',
   cond: { landed: true, rest: 'chineseRest' }, // 첫 칼이 맞았을 때만 (막힘 제외 — 10/9 23:5x) · 그 앞에 내 공격 없이 SECRET.chineseRest 초 이상 (10/10 01:2x 사장님 '쉬었다가'의 값)
   // 10/9 23:5x 사장님 '중국 비기는 꽤 자주 나오는데 어떤 상황이 벌어지는지 전혀 모르겠더라. 타격도 크지 않고 동작이 화려한 것도 아니어서' → 보이는 삼연격:
@@ -700,9 +700,10 @@ const CHINESE_SECRET = {
 //  꼴: when 'parry' · cond.slots { 줄: 자리 열쇠 } (막기 줄 = AI defLine, 패드 = 꾸러미 parry[줄]) · cond.window ('bind' = 칼이 붙은 동안 · 'apart' = 갈라진 뒤 cond.time 초 — SECRET 열쇠) ·
 //   do.combo { 자리 열쇠: { nameKo, seq: [수 — 중국 둘 · 독일 하나] } } — seq 의 수는 연환삼격 seq 꼴(pre: [] = 이음새 고리 없이 앞 수 끝에서 곧장). 판정은 secret.js parrySlotOf·PlayerSecretWatch, AI 는 ai.js parryCombo
 const step25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' }; // 수마다 반걸음 進步 (연환삼격과 같은 칸 — SECRET.chineseStep 0.25)
+const stepBack25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'retreat', back: true }; // 10/12 3 연격 마지막 수: 반걸음 물러남 退步·掣步 (같은 칸 SECRET.chineseStep — 부르는 쪽이 fwd 를 음수로 푼다)
 const CHINESE_SECRET_PARRY = {
   name: 'lianhuanParry',
-  nameKo: '연환 (連環)',
+  get nameKo() { return SECRET.cnCombo === 2 ? '연환 (連環)' : '연환삼격 (連環三擊)'; }, // 10/12 사장님 '3연격(이름 뭘로 하지?)' → 디렉터 제안 연환삼격(초기 계획 이름 · 검결가 「滾手連環」) · `?cnCombo=2` 전 두 수 판은 '연환'
   when: 'parry',
   // 거정세(highC — 擧鼎格 「鼎格上殺」, 몸꼴 덧씌우기)·표두세(highR — 칼을 세운 표두세 자리)·봉두세(highL — 10/12 더함, SECRET.cnBongdu). 어거세(thrust)·요략세(lowL·lowR)는 아님
   //  봉두세 (10/12 사장님 01:1x '타격 대부분이 가로로 들어오더라' — docs/strike/cn_combo_play_2026-10-12.md §2): 막기 버튼이 고른 줄을 재니 highL 25 % · highC 29 % · highR 10 % (네 상대 410 수) —
@@ -722,8 +723,11 @@ const CHINESE_SECRET_PARRY = {
       //  掣擊中殺 = 머리 위에서 막은 칼을 앞으로 팔을 뻗어 가운데로 내리며 내 쪽으로 당겨 벰(오른 위 → 왼 아래 비스듬히) [해석] · 각 [추정] → 進步逆鱗 = 그 끝에서 몸통 가장 가까운 점으로 곧게 찌름(逆鱗 턱 밑은 겨누지 않음 [해석]).
       //  'thrustFirst' 면 다른 두 자리처럼 찌름 → 찌른 곳에서 당겨 벰
       geojeong: {
-        nameKo: '거정격 → 요격 → 역린자',
+        get nameKo() {
+          return SECRET.cnCombo !== 2 ? CN3.names.geojeong : '거정격 → 요격 → 역린자';
+        },
         get seq() {
+          if (SECRET.cnCombo !== 2) return CN3.geojeong; // 10/12 08:2x 3 연격 (아래 CN3) — `?cnCombo=2` 면 아래 두 수 그대로
           const cut = { name: 'pcYao', nameKo: '요격 (腰擊) · 당겨 벰', pre: [], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [-15, 30], el: [45, -40], from: 'prep' } }; // 패드 길 = 연환삼격 腰擊 길 그대로
           const thrust = { name: 'pcNiLinL', nameKo: '역린자 (逆鱗刺)', pre: [], from: [-0.34, 0.02], path: [[-0.12, 0.06], [0.0, 0.12]], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust', back: true } }; // 패드 길: 腰擊 끝(왼쪽)에서 목을 올려 찌름 — 逆鱗 = 턱 밑 비늘 [해석] · 길 [추정]
           return SECRET.cnGeojeongOrder === 'thrustFirst' ? [{ ...thrust, dyn: { kind: 'thrust' } }, { ...cut, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }] : [cut, thrust];
@@ -731,25 +735,72 @@ const CHINESE_SECRET_PARRY = {
       },
       // 표두세 → 挑刺 → 掣步左翼擊: 豹頭勢 「… 寃步挑刺」(쪽157/0571 · 역주25) — 높이 든 칼에서 올려 찌름 = 逆鱗刺 [해석] → 逆鱗勢 「掣步左翼擊」(쪽173/0587)
       pyodu: {
-        nameKo: '표두세 → 역린자 → 좌익격',
-        seq: [
-          { name: 'pcNiLin', nameKo: '역린자 (逆鱗刺)', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchs(역린자) 그대로 · dyn = 칼이 떨어진 자리에서 몸통 가장 가까운 점으로 곧게 (挑刺 — 높이 든 칼이라 대개 내려 찌름이 된다 [해석])
-          { name: 'pcZuoyi', nameKo: '좌익격 (左翼擊)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 掣步左翼擊: 찌른 곳에서 팔을 뻗은 채 내 왼쪽으로 크게 호 → 당겨 거둠 [해석] · 각 [추정]
-        ],
+        get nameKo() {
+          return SECRET.cnCombo !== 2 ? CN3.names.pyodu : '표두세 → 역린자 → 좌익격';
+        },
+        get seq() {
+          return SECRET.cnCombo !== 2 ? CN3.pyodu : CN2.pyodu;
+        },
       },
       // 봉두세 → 刺 → 剪: 鳳頭勢 「鳳頭洗也. 法能洗刺剪殺」(무비지 쪽176/0590) — 洗(씻어 쳐냄) = 막기 1 수, 刺·剪 = 2 연격 [원문] ·
       //  刺 = 봉두세 자리(왼쪽 황소 G.ochsL)에서 곧장 찌름 — 길 = 꾸러미 stichOchsL(우협자) 그대로 [해석] ·
       //  剪 = 끊어 벰 — 右翼勢 「法能剪殺兩翼」(쪽168/0582)의 날개 치기를 찌른 끝 긴 자세에서 좌익격 길로 [해석] (표두세 둘째 수와 같은 길) · 걸음 = 반걸음 進步(같은 칸)
       bongdu: {
-        nameKo: '봉두세 → 찌름(刺) → 끊어 벰(剪)',
-        seq: [
-          { name: 'pcFengCi', nameKo: '찌름 (刺)', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchsL 그대로 · dyn = 洗 뒤 곧장 몸통 가장 가까운 점으로 (刺)
-          { name: 'pcFengJian', nameKo: '끊어 벰 (剪)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: 1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 剪: 찌른 곳에서 팔을 뻗은 채 내 오른쪽(칼 든 쪽)으로 크게 호 → 당겨 거둠 — 표두세와 반대쪽 [해석] · 각 [추정]
-        ],
+        get nameKo() {
+          return SECRET.cnCombo !== 2 ? CN3.names.bongdu : '봉두세 → 찌름(刺) → 끊어 벰(剪)';
+        },
+        get seq() {
+          return SECRET.cnCombo !== 2 ? CN3.bongdu : CN2.bongdu;
+        },
       },
     },
   },
   src: '擧鼎勢 「擧鼎格 … 向前掣擊中殺」 무비지 쪽154/0568 · 豹頭勢 「寃步挑刺」 쪽157/0571 · 鳳頭勢 「法能洗刺剪殺」 쪽176/0590 · 右翼勢 「剪殺兩翼」 쪽168/0582 · 腰擊勢 「進步逆鱗」 쪽166/0580 · 逆鱗勢 「掣步左翼擊」 쪽173/0587 · 검결가 「滾手連環」 쪽151 [원문] · 挑刺 = 역린자 · 쳐 낸 뒤 갈라져 잇기 [해석] · 길 [추정]',
+};
+// 10/12 01:1x~03:0x 두 수 (`?cnCombo=2` — 표두세·봉두세. 거정세는 위 seq 게터 안)
+const CN2 = {
+  pyodu: [
+          { name: 'pcNiLin', nameKo: '역린자 (逆鱗刺)', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchs(역린자) 그대로 · dyn = 칼이 떨어진 자리에서 몸통 가장 가까운 점으로 곧게 (挑刺 — 높이 든 칼이라 대개 내려 찌름이 된다 [해석])
+          { name: 'pcZuoyi', nameKo: '좌익격 (左翼擊)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 掣步左翼擊: 찌른 곳에서 팔을 뻗은 채 내 왼쪽으로 크게 호 → 당겨 거둠 [해석] · 각 [추정]
+  ],
+  bongdu: [
+          { name: 'pcFengCi', nameKo: '찌름 (刺)', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchsL 그대로 · dyn = 洗 뒤 곧장 몸통 가장 가까운 점으로 (刺)
+          { name: 'pcFengJian', nameKo: '끊어 벰 (剪)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: 1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 剪: 찌른 곳에서 팔을 뻗은 채 내 오른쪽(칼 든 쪽)으로 크게 호 → 당겨 거둠 — 표두세와 반대쪽 [해석] · 각 [추정]
+  ],
+};
+// ── 10/12 08:2x 3 연격 (사장님 '초기 계획대로 3연격 … 방어 자세 후 가장 자연스러운 최단거리 공격, 그다음 2연격이 어떻게 이어지는 게 물 흐르듯 … 반걸음 물러나도록' —
+//   docs/strike/cn_combo_play_2026-10-12.md §12). 기본(SECRET.cnCombo 3) · `?cnCombo=2` = 위 두 수.
+//  원리: ① 첫 수 = 막은 칼이 떨어진 자리에서 가장 짧은 공격(높이 막은 칼 → 곧게 찌름, 머리 위 칼 → 그대로 가운데로 내려 침) ·
+//   ② 둘째·셋째 = 다시 들지 않고 앞 수의 끝이 다음 수의 시작 — 손목을 굴려(滾手連環, 검결가 쪽151 [원문]) 좌우 '날개'(右翼勢 「剪殺兩翼」 쪽168 [원문])로 몸을 가로질러 벰 ·
+//   ③ 마지막 수는 반걸음 물러나며(退步 · 逆鱗勢 「掣步左翼擊」 쪽173 의 掣步 [원문 낱말 — '당기며 물러남' 으로 읽음 해석]) 당겨 벰(掣).
+//  벰은 몸을 가로지르게 짠다(호가 상대 몸통 가운데 줄을 지남): 전 두 수의 벰은 찌른 칼끝(몸통 안)에서 시작해 맞닿는 첫 스텝이 느린 자리라 16 J 에 그쳤다(§12.1).
+//   찌름 다음 벰은 'roll' — 칼끝을 들어 호 첫 자리 바깥으로 굴린 뒤(맞힘 없음) 가로지름. 벰 다음 벰은 'stab' — 앞 호 끝에서 곧장 되짚어 V 꼴(손목만 뒤집음).
+//  dyn.draw: 가로 각 yaw(°, + = 칼 든 쪽) · 높이 각 el · roll = 굴릴 때 칼끝을 드는 각 · pull false = 손을 당기지 않음(다음 수로 이어짐). 각 [추정]
+const CN3_CUT = (name, nameKo, from, path, dyn, step = step25) => ({ name, nameKo, pre: [], from, path, open: 'UL', kind: 'cut', reach: 0.2, base: 1, step, dyn: { kind: 'draw', side: 1, ...dyn } });
+const CN3_THRUST = (name, nameKo, from, path, step = step25) => ({ name, nameKo, pre: [], from, path, open: 'C', kind: 'thrust', reach: 0.1, base: 1, step, dyn: { kind: 'thrust' } });
+const CN3 = {
+  names: { geojeong: '거정격 → 중살 → 역린자 → 퇴보 요격', pyodu: '표두세 → 역린자 → 우익 → 철보 좌익격', bongdu: '봉두세 → 찌름(刺) → 끊어 벰(剪) → 물러 벰(殺)' },
+  // 거정세: 擧鼎格 → 掣擊中殺(머리 위 칼을 그대로 가운데로 내려 당겨 벰 — 오른 위 → 왼 아래, 전 첫 수 그대로) → 進步逆鱗(내려온 칼끝을 올려 몸통으로 곧게 — 腰擊勢 「向前進步逆鱗」 쪽166) →
+  //  退步 腰擊(굴려 오른 허리 높이로 → 반걸음 물러나며 오른쪽 → 왼쪽 가로로 허리를 당겨 벰 — 勢 이름 腰擊 [원문] · 셋째 수로 놓음 [해석])
+  geojeong: [
+    CN3_CUT('pcZhongSha', '중살 (中殺) · 내려 벰', G.sideR, [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], { yaw: [15, -30], el: [45, -40], from: 'prep' }, null),
+    CN3_THRUST('pcNiLinL', '역린자 (逆鱗刺)', [-0.34, 0.02], [[-0.12, 0.06], [0.0, 0.12]], null),
+    CN3_CUT('pcYaoBack', '퇴보 요격 (退步腰擊)', [0.3, -0.05], [[0.0, -0.08], [-0.35, -0.08]], { yaw: [32, -32], el: [0, -8], from: 'roll', roll: 20 }, stepBack25),
+  ],
+  // 표두세: 寃步挑刺(높이 든 칼에서 곧게 — 쪽157) → 右翼(굴려 오른 위로 → 오른 위 → 왼 아래 비껴 벰) → 掣步左翼擊(그 끝에서 손목만 뒤집어 왼 아래 → 오른 위로 올려 벰, 반걸음 물러나며 — 쪽173)
+  //  = 「剪殺兩翼」 두 날개 [원문] · 날개 순서·각 [해석·추정]
+  pyodu: [
+    CN3_THRUST('pcNiLin', '역린자 (逆鱗刺)', G.ochsR, [[0.08, 0.12], G.langort], null),
+    CN3_CUT('pcYouyi', '우익 (右翼)', [0.3, 0.25], [[0.0, 0.08], [-0.3, -0.12]], { yaw: [30, -30], el: [25, -20], from: 'roll', roll: 20, pull: false }, null),
+    CN3_CUT('pcZuoyiBack', '철보 좌익격 (掣步左翼擊)', [-0.3, -0.12], [[0.0, 0.05], [0.3, 0.22]], { yaw: [-30, 30], el: [-20, 15], from: 'stab' }, stepBack25),
+  ],
+  // 봉두세: 洗(막기) → 刺(곧게) → 剪(굴려 왼 아래로 → 왼 아래 → 오른 위 올려 벰) → 殺(손목만 뒤집어 오른 위 → 왼 아래로 내려 벰, 반걸음 물러나며) — 「洗刺剪殺」 네 낱말 그대로 [원문] ·
+  //  표두세(내려 → 올려)와 거꾸로 올려 → 내려 [해석] · 각 [추정]. 처음엔 왼 위 → 오른 아래로 짰으나 8 판 중 3 판이 상대 칼에 먼저 닿아 막혀(왼 위 = 상대 칼 쪽) 아래에서 올림
+  bongdu: [
+    CN3_THRUST('pcFengCi', '찌름 (刺)', G.ochsL, [[-0.08, 0.12], G.langort], null),
+    CN3_CUT('pcFengJian', '끊어 벰 (剪)', [-0.3, -0.12], [[0.0, 0.05], [0.3, 0.22]], { yaw: [-30, 30], el: [-25, 20], from: 'roll', roll: 20, pull: false }, null),
+    CN3_CUT('pcFengSha', '물러 벰 (殺)', [0.3, 0.22], [[0.0, 0.08], [-0.3, -0.12]], { yaw: [30, -30], el: [20, -25], from: 'stab' }, stepBack25),
+  ],
 };
 // 독일 막기 연환 — 감아 들기 (Indes · 10/11 19:1x 사장님 '두 수면 너무 비슷하니까 한 수로 … 오래 붙어 있었을수록 깊고 강한 공격'):
 //  걸이 막기(황소 Ochs — 칼자루를 머리 곁에 들고 칼끝을 상대 얼굴로 걸어 받음)로 받아 칼이 맞붙은 채 이어지는 동안(Indes — 맞붙은 그 사이) 받은 칼을 타고 감아 드는 한 수.
@@ -859,7 +910,10 @@ export const TRADITIONS = {
 //   몸 = 어깨를 거의 바로(두 팔을 머리 위로 똑같이 듦 — 골반 10° · 가슴 0°) · 숙임 0 · 낮춤 0.05 (지붕 값) [추정]
 //  watch: 물러나며 가리기(ai.js withdraw coverFor — 상대가 머리 위로 들면 이 줄)·플레이어 막기 버튼 기다림에도 같은 꼴 (10/11 G.kron 이 쓰이던 곳 그대로). 중국 칸은 watch 가 없어 그대로.
 //  숫자는 모두 사장님 확인 전 (확인표 917). 덧씌우기 빠르기는 중국과 같은 MOTION.coverIn·coverOut, 손 목표 빠르기는 parrySpeed 그대로(새 값 없음)
-export const GERMAN_KRON = { name: '왕관 (Kron)', desc: '칼자루를 머리 위로 높이 들고 코등이를 가로로 세워 위에서 떨어지는 칼을 코등이·밑동으로 받는다 · 거기서 뛰어든다', pad: G.kron, hand: [0.16, 0.6, 0.04], blade: [80, 0], face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
+// 왕관 손·칼끝 (10/12 08:2x 사장님 '막기의 효용이 가장 큰 자세이되, 원전의 설명을 해치지 않는 자세로' — docs/strike/kron_shape_2026-10-12.md §9):
+//  1 = 정적 막기 쓸기(손 높이 0.45~0.64 · 앞 0.08~0.24 · 칼 70~90° — 45 자리 × 간격 12, 다시 12)에서 '칼날 상처 없이 받음'이 가장 많은 자리 · 0 = 10/12 00:1x 값. SKILL.deKronH, `?kronH=0`
+const KRON_AT = { 1: { hand: [0.16, 0.5, 0.04], blade: [70, 0] }, 0: { hand: [0.16, 0.6, 0.04], blade: [80, 0] } };
+export const GERMAN_KRON = { name: '왕관 (Kron)', desc: '칼자루를 머리 위로 높이 들고 코등이를 가로로 세워 위에서 떨어지는 칼을 코등이·밑동으로 받는다 · 거기서 뛰어든다', pad: G.kron, get hand() { return this.handSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].hand; }, set hand(v) { this.handSet = v; }, get blade() { return this.bladeSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].blade; }, set blade(v) { this.bladeSet = v; }, face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
 // 독일만(롱소드·엑스칼리버·라이트세이버·에스톡·세이버·팔쉬온 — 독일 전통 무기 모두). 무유파(none)는 GERMAN 막기 패드를 같이 쓰지만 이 덧씌우기는 받지 않는다(유파 칸이 따로 — 바이트 그대로).
 //  읽을 때마다 스위치를 본다(게터): SKILL.deKron 0 → 없음(긴 자세 자리) · SKILL.deKronShape 'pad' → 없음(10/11 패드 꼴)
 Object.defineProperty(TRADITIONS.german, 'parryCover', {

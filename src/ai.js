@@ -1912,7 +1912,7 @@ export class AI {
     } else if (D.combo) {
       // 막기 연환 (10/11): 막은 자리(ctx.slot)의 두 수를 이음새 고리 없이 곧장 (pre [] — 앞 수 끝에서 다음 수 준비 자세로 바로), 걸음 칸은 SECRET 열쇠를 읽는다
       const C = D.combo[ctx.slot];
-      run.queue = (C?.seq ?? []).map((t) => ({ ...t, step: t.step ? { ...t.step, fwd: this.secretVal(t.step.fwd) } : undefined }));
+      run.queue = (C?.seq ?? []).map((t) => ({ ...t, step: t.step ? { ...t.step, fwd: this.secretVal(t.step.fwd) * (t.step.back ? -1 : 1) } : undefined })); // back = 반걸음 물러남 (10/12 3 연격 마지막 수)
       run.slot = ctx.slot;
       if (S.cond?.window === 'bind') run.gain = bindGain(ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창을 키움 (secret.js bindGain)
       if (D.fast && this.secretVal(D.fast) && run.queue.length) {

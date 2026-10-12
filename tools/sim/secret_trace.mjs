@@ -1,6 +1,8 @@
 // 비기 길 흔적 (10/12 — docs/strike/cn_combo_play_2026-10-12.md §11 그림). 읽기만.
 //  cn_combo_speed.mjs 와 같은 대본(시험 AI 가 서 있는 롱소드 몸에게 직접 냄)으로 낸 때부터 경직 전까지 스텝마다 — 낸 때의 몸 틀(가슴 원점 · x 앞 · y 위 · z 칼 든 쪽) 자리로:
 //   칼 어깨·팔꿈치·손목 · 빈팔 어깨·팔꿈치·손목 · 칼자루 끝(칼날 0)·칼끝 · 상대 가슴·골반 몸체 가운데. JSON 으로 쓴다 → tools/sim/secret_trace_draw.py 가 옆·앞 그림으로.
+//  10/12 3 연격: 프레임마다 수 번호 mi · 내 가슴·골반 mc·mp · 상대 머리 fh 도 쓴다 (tools/sim/cn_combo_trace_draw.py — 수 번호·물러남 그림).
+//   TRACE_STIFF=초 면 경직에 든 뒤에도 그만큼 더 쓴다(stage 'stiff' — 고노센 잔심 그림, tools/sim/iai_hold_draw.py).
 //  실행: node tools/sim/secret_trace.mjs <나갈 json> [씨앗 1]   ·   전: node tools/sim/with_config.mjs SECRET.cnPath=0 SECRET.secretReach=0 SECRET.iaiRise=0 secret_trace.mjs <json>
 import fs from 'node:fs';
 import { newRound, THREE } from './harness_m.mjs';
@@ -23,6 +25,7 @@ for (const R of runs) {
     let t0 = null;
     let c0 = null;
     let inv = null;
+    let stiffT = null;
     const fr = [];
     for (let i = 0; i < 120 * 20; i++) {
       G.step();
@@ -34,7 +37,13 @@ for (const R of runs) {
       }
       if (t0 == null) continue;
       const run = A.secretRun;
-      if (!run || run.stage === 'stiff' || G.t - t0 > 1.2) break;
+      const after = +(process.env.TRACE_STIFF || 0);
+      if (!run && !after) break;
+      if (run?.stage === 'stiff' || !run) {
+        if (!after) break;
+        stiffT ??= G.t;
+        if (G.t - stiffT > after) break;
+      } else if (G.t - t0 > 1.2) break;
       const B = (v) => v.sub(c0).applyQuaternion(inv).toArray().map((x) => +x.toFixed(3));
       const ua = me.bodies.uarmS;
       const fa = me.bodies.farmS;
@@ -50,6 +59,12 @@ for (const R of runs) {
         fc: B(V(G.player.bodies.chest.translation())),
         fp: B(V(G.player.bodies.pelvis.translation())),
         cut: !!me.iai?.cutting || me.iai?.kind === 'iai',
+        mi: me.iai?.kind === 'combo' ? me.iai.mi : -1,
+        stiff: stiffT != null,
+        grip: !!me.gripping,
+        mc: B(V(me.bodies.chest.translation())),
+        mp: B(V(me.bodies.pelvis.translation())),
+        fh: B(V(G.player.bodies.head.translation())),
         ...(me.bodies.uarmO && me.bodies.farmO
           ? (() => {
               const uo = me.bodies.uarmO;
