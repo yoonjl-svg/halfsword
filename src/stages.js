@@ -72,6 +72,20 @@ export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
   return pool[Math.floor(rnd() * pool.length)];
 }
 
+// 무대의 화면 이름 (10/14 왼쪽 위 '스테이지 3 · 산사' — docs/ui/hud_intro_2026-10-14.md). 이름은 docs/stages.md 의 무대 이름 그대로
+//  (보관용 1안 두 무대는 같은 화전 터). 번호는 STAGE_ORDER 의 자리 + 1, 순서표에 없는 무대(어두운 홀 등)는 이름만 (stageLabel)
+export const STAGE_NAME_KO = {
+  poseidon: '포세이돈 신전', clearing: '화전 터', clearing_a: '화전 터', clearing_a_dry: '화전 터', temple: '산사', castle: '성 안뜰',
+  poseidon_night: '밤의 포세이돈 신전', cathedral: '대성당', darkhall: '어두운 홀', loggia: '붉은 회랑', corsair: '산호 항구',
+  sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도',
+};
+/** 왼쪽 위 첫 줄: '스테이지 N · 이름' (순서표 밖이면 이름만) */
+export function stageLabel(id) {
+  const name = STAGE_NAME_KO[id] ?? id ?? '';
+  const i = STAGE_ORDER.indexOf(id);
+  return i >= 0 ? `스테이지 ${i + 1} · ${name}` : name;
+}
+
 /** prev 다음 판의 배경. prev 가 순서에 없으면(처음, 또는 순서 밖 배경) 맨 앞(포세이돈)부터 */
 export function nextStage(prev = null) {
   return STAGE_ORDER[(STAGE_ORDER.indexOf(prev) + 1) % STAGE_ORDER.length];
