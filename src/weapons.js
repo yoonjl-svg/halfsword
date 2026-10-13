@@ -16,6 +16,7 @@ import { MONTANTE } from './config.js';
 import * as THREE from 'three';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 import { SAIN_COLORS, ICE_COLORS, sainPartMesh, sainDecorate, icePartMesh, iceDecorate } from './rare_sword_details.js'; // 사인검·아이스 겉모습 (샛별 저장소에서 가져옴 6e71ba2·4a425f9)
+import { FLAMBERGE_MUSEUM, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -1430,6 +1431,52 @@ const ice = finalizeSpec('ice', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  21) 플랑베르주 (에픽) — 샛별 저장소 origin/main 325a5c38 의 flamberge_design.js 생김새를 옮겨 고침 (겉모습 src/flamberge_look.js).
+//      원형: 클리블랜드 미술관 1919.71 「Two-Handed Sword with Flamboyant Blade」, 독일 1550–1600 (박물관 열린 자료 CC0).
+//       실측 [M]: 전체 168.9 · 날 118.7(리카소 26.7 포함) · 코등이 50.5 · 손잡이(폼멜 포함) 49.2 cm. 무게는 자료에 없다 → 3.0 kg 은 우리 안 [I].
+//      그쪽 모델은 겉모습 시안뿐이라(질량·쥠·충돌체·등급·카드 없음) 아래 값은 모두 우리가 새로 정했다 — 확인표 1140~, docs/import/flamberge_port_2026-10-14.md.
+//      쥠 (이베리아 몬탄테 쥠 규칙 — 츠바이핸더 §15·북부 대공의 검 §17): 두 손. 오른손 주먹 가운데가 날밑 덩이 아랫면 0.065 m 밑
+//       (츠바이핸더 날밑 쥠과 같은 몫 = 주먹 반 폭 0.045 + 0.02) → hiltLength 0.085, 손 ~ 칼끝 1.272 m. 손 사이 0.24 m(츠바이핸더 중간 쥠과 같음).
+//       손잡이가 49.2 cm 로 길어 왼손은 폼멜 목이 아니라 아래 마디 위쪽(폼멜 끝에서 0.177 m — 두 마디 사이 잘록한 곳 바로 밑)에 온다.
+//      질량 3.0 kg [I]: 츠바이핸더 부품의 길이당 질량(자루 0.26/0.365 · 날밑 0.32/0.28 · 칼날 1.7/1.215 kg/m)을 이 칼 치수에 대고,
+//       폼멜은 그 청동 덩이 부피(49 cm³ × 8.8 g/cm³ = 0.43 kg) [D] → 자루 0.325 · 폼멜 0.43 · 날밑 0.58 · 칼날 1.665 kg (합 3.000).
+//       칼날 무게중심 비율 0.353 · 회전 반경 비 0.272 = 모델의 리카소 + 물결 날 부피 분포에서 셈 [D] (츠바이핸더 0.365·0.244 · 북부 대공의 검 0.33·0.25).
+//       (모델 겉부피 × 강철 밀도로 그대로 재면 3.5 kg 에 날밑이 1.3 kg 이고 칼날이 1.2 kg 이라 무게중심이 날밑 앞 6 cm 에 그친다 —
+//        코등이 판 두께 1.1 cm·칼날 단면 6.4 mm 가 사진 어림이라 질량 근거로 쓰지 않았다)
+//      배율은 츠바이핸더 그대로(베기 1.1 · 찌르기 0.85 · 둔타 1.15) → 자동 판정 앞무게·베기 → 이베리아 (독일로 지정하지 않는다 — 독일 유파엔 대검 가지가 없다).
+//      리카소(날 안 세운 26.7 cm)는 칼날 콜라이더 안에 겉모습으로만 둔다(츠바이핸더와 같은 방식 — 날 판정 그대로). 보조 갈고리(축에서 8.9 cm)는 콜라이더 밖 장식.
+//      코등이 콜라이더는 박물관 폭 그대로 50.5 cm(겉모습 약속 ~1 cm — 휜 끝 판만 1.2 cm 위로 나온다). 물결 날에 출혈·파손 특례 없음 · 특수 능력 없음.
+// ═════════════════════════════════════════════════════════════
+const FL = {
+  // 부품 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.385(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.187 m
+  y: [-0.1575, -0.385, 0.097, FLAMBERGE_HILT + FLAMBERGE_MUSEUM.blade / 2],
+  mass: { grip: 0.325, pommel: 0.43, guard: 0.58, blade: 1.665 },
+};
+const flamberge = finalizeSpec('flamberge', {
+  nameKo: '플랑베르주 (물결 날 양손검)', nameEn: 'Flamberge',
+  desc: '불꽃처럼 물결치는 날을 지닌 대검.\n전체 169 cm, 질량 3.0 kg의 양손검.',
+  grip: 'two-hand', material: 'steel', tier: 'epic',
+  hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_MUSEUM.blade, gripAlong: -0.24,
+  mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
+  // 손목 서보 상한: 두 손 쥠 기본값 26 (츠바이핸더·북부 대공의 검과 같다)
+  partMesh: flambergePartMesh(FL.y), decorate: flambergeDecorate,
+  buildParts() {
+    const L = this.bladeLength;
+    const M = FL.mass;
+    const grip = boxInertia(M.grip, 0.019, 0.2275, 0.0165);
+    const pommel = sphereInertia(M.pommel, 0.03);
+    const guard = boxInertia(M.guard, 0.2525, 0.03, 0.0155);
+    const blade = bladeInertia(M.blade, L, 0.353, 0.272, 0.04, 0.009);
+    return [
+      partTuple(['box', 0.019, 0.2275, 0.0165], FL.y[0], M.grip, 0, grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
+      partTuple(['ball', 0.03], FL.y[1], M.pommel, 0, pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
+      partTuple(['box', 0.2525, 0.03, 0.0155], FL.y[2], M.guard, 0, guard.Ie, guard.It, FLAMBERGE_COLORS.steel),
+      partTuple(['box', 0.02, L / 2, 0.0045], FL.y[3], M.blade, blade.comY, blade.Ie, blade.It, FLAMBERGE_COLORS.blade, true),
+    ];
+  },
+});
+
 // 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
 //  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
@@ -1439,6 +1486,7 @@ export const WEAPONS = {
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol, morgenstern,
   uchigatana, // 제안 가지 (10/9, 사장님 확인 전) — 끝에 둬서 다른 무기의 목록 순서를 바꾸지 않는다
   ganjiang, moye, sain, ice, // 샛별 저장소에서 가져옴 (10/10, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
+  flamberge, // 샛별 저장소 생김새를 옮겨 고침 (10/14, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)

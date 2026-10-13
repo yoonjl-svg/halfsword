@@ -9,9 +9,9 @@ import { TRADITIONS, traditionOf } from './schools.js';
 import { SECRET } from './config.js'; // 비기 판 기본값 = 본판(main) 기본값 (10/13 — 고른 판을 기억하지 않는다)
 
 const STORE_KEY = 'stillness.testRoute.v1';
-// 오늘(10/10) 사장님이 해 볼 무기: 츠바이핸더(이베리아 몬탄테 고증) · 우치가타나(일본 고증)
-const NEW_WEAPONS = ['zweihander', 'uchigatana'];
-const NEW_NOTE = { zweihander: '몬탄테 자세표·기술 (10/10)', uchigatana: '일본 자세 고증 (10/10)' };
+// 오늘(10/10) 사장님이 해 볼 무기: 츠바이핸더(이베리아 몬탄테 고증) · 우치가타나(일본 고증) · 10/14 플랑베르주(샛별 가져오기 3차 — 셋째에 두어 처음 고름은 그대로)
+const NEW_WEAPONS = ['zweihander', 'uchigatana', 'flamberge'];
+const NEW_NOTE = { zweihander: '몬탄테 자세표·기술 (10/10)', uchigatana: '일본 자세 고증 (10/10)', flamberge: '샛별 가져오기 3차 · 이베리아 (10/14)' };
 
 const $ = (id) => document.getElementById(id);
 
