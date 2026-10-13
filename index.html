@@ -174,12 +174,12 @@
 
       /* ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장. 왼쪽 두 장은 내가 고르는 카드, 맨 오른쪽은 상대 무기 칸(회색, 못 고른다) →
          내 카드를 누르면 뒤집혀 이번 판 무기가 나오고, 남은 내 카드가 어둡게 뒤집힌 뒤 상대 카드가 뒤집혀 상대 무기를 보여 준다 (main.js 무기 뽑기) ──
-         카드 크기(--cw, --ch)와 위치(--top)는 판이 열릴 때 main.js 가 화면에 맞춰 한 번 정한다. 움직임은 CSS 변환만 쓴다 */
-      #draw { position: fixed; inset: 0; z-index: 1; display: none; --top: 150px; --cw: 200px; --ch: 290px; --gap: 14px; --name: 15px; --desc: 12px; --kb: 10px; }
+         카드 크기(--cw, --ch)와 자리(--top · --padT · --padL)는 판이 열릴 때·화면 상자가 바뀔 때 main.js 가 정한다. 움직임은 CSS 변환만 쓴다 */
+      #draw { position: fixed; inset: 0; z-index: 1; display: none; --top: 150px; --padT: 0px; --padL: 0px; --cw: 200px; --ch: 290px; --gap: 14px; --name: 15px; --desc: 12px; --kb: 10px; }
       #draw.show { display: block; }
       #draw::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 62%, rgba(16,10,6,.62), rgba(16,10,6,.28) 72%); animation: drawFade .35s ease-out backwards; transition: opacity .4s; }
       #draw.fly::before { opacity: 0; }
-      .drawRow { position: absolute; top: var(--top); bottom: max(8px, env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: flex; align-items: center; justify-content: center; gap: var(--gap); }
+      .drawRow { position: absolute; top: var(--top); bottom: max(8px, env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: flex; align-items: flex-start; justify-content: flex-start; padding: var(--padT) 0 0 var(--padL); gap: var(--gap); } /* 카드 자리(--padT · --padL, 정수 px)는 main.js layoutDraw 가 정한다 */
       .wcard { position: relative; flex: none; width: var(--cw); height: var(--ch); padding: 0; margin: 0; border: 0; background: none; color: inherit; font: inherit; perspective: 900px; cursor: pointer; touch-action: manipulation; outline: none;
         transition: transform .45s cubic-bezier(.2,.8,.3,1), opacity .4s, translate .15s; animation: dealIn .42s cubic-bezier(.2,.8,.3,1) backwards; }
       .wcard:nth-child(2) { animation-delay: .07s; }
