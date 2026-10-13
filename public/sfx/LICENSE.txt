@@ -168,6 +168,98 @@ commits 77db8c5, 1ea73c5, 11860b0, 04311ff, 200269d; files copied byte-for-byte)
   liao_bleed2.mp3 stays on disk but is no longer selected (owner did not pick it).
 
 -------------------------------------------------------------------------------
+2026-10-13 voice update (imported on the owner's instruction from the Saetbyeol repository,
+commits 3f330f7, 87c8e77, b728e34, b75013b, 7b6b079, 9d1b56a — final state of its main;
+18 files copied byte-for-byte, SHA-256 below; notes: docs/import/saetbyeol_voice3_2026-10-13.md).
+Opponents: hurt 2 / KO 2 / bleed 2, hurt and KO use different recordings. The player keeps the
+single quiet death exhale (player_exhale) and the tinnitus. Bran, Heinrich and mad Heinrich
+are unchanged. Unless stated, edits are trim, 70 Hz high-pass, low-pass, level, short fades,
+mono 44.1 kHz MP3, and no pitch or tempo change.
+
+  CC0 1.0 (public domain) — AuraVoice, posted by Nocturnal_Vanguard, "Female Hurt Grunts & Groans"
+    https://opengameart.org/content/female-hurt-grunts-groans
+    https://creativecommons.org/publicdomain/zero/1.0/
+    Original OGG SHA-256: 80a9fb09203bb8feb065ba15197609b118cbe167c9a2264670a31ee22c384adb
+    Voice 'maya' (Maya Rathore):
+    voice/maya_hurt1_single.mp3  <- 5.565-6.095 s; 6500 Hz LP; 15 ms in / 55 ms out
+      b878699f33a2bc335f23be730c059a1db16bd362ce05bd8368e944ef1791e3d9
+    voice/maya_hurt2.mp3         <- 3.68-4.16 s; 6500 Hz LP
+      6b8c9f6911bc1b2e4aef271caf6af2d24acb8b6463a80a995a4755a4515d54b6
+    voice/maya_ko1.mp3           <- 0.30-1.18 s; 6500 Hz LP
+      118f8a54a94247cece911e96beafbe51e5e83b90028536e604d9247ea80d8439
+    voice/maya_ko2.mp3           <- 7.30-8.15 s; 6500 Hz LP
+      2bbc75e6c5740e71640a709cb504a9b39f7bf9ef5c46613abf05414a30c3acc1
+    voice/maya_bleed1_single.mp3 <- 4.925-5.520 s; 6500 Hz LP; pitch-preserving stretch
+      (rubberband tempo 0.892857, pitch 1); 25 ms in / 200 ms out
+      7a122bfa731bbdc6be2aeaedf8f1b6975f91d2d4a0703412b71778d9e31c3a38
+    voice/maya_bleed2_light.mp3  <- 9.805-10.285 s; same stretch; 350 Hz bell -1 dB (Q 0.7);
+      RMS matched; 25 ms in / 180 ms out
+      4f4a40699ff9a06e92827ad6ce6ed8f35d839e4c60885983075e5c09f7975b08
+    The single-breath files are non-overlapping excerpts of existing performances, not new
+    takes; bleed1_single and hurt1_single are the front and back of the same performance.
+
+  CC0 1.0 (public domain) — Cici Fyre (cicifyre), "RPG Voice Starter Pack"
+    https://opengameart.org/content/female-rpg-voice-starter-pack
+    https://creativecommons.org/publicdomain/zero/1.0/
+    voice/tuyana_hurt1.mp3 <- Type 2 / damaged1.wav, 0.00-0.34 s; 6000 Hz LP
+      2607613fd1842e057480a5a2c7b2d040d592e77d461895bb048a5842360c50a8
+    voice/tuyana_hurt2.mp3 <- Type 2 / damaged2.wav, 0.00-0.33 s; 6000 Hz LP
+      65a8551593b95fa1509c53e0e3821b9c3d8e86b51c15c6e08556b4da92262e13
+    voice/tuyana_ko2_exhale.mp3 <- Type 2 / healed2.wav, 0.125-0.500 s; 5000 Hz LP
+      900227553ad1744fcd4e7d2d73ffad6dda93a0d65e7b55bf5bf2aef17fc15a61
+    voice/margarethe_ko2_exhale.mp3 <- Type 3 / healed2.wav, 0.065-0.580 s; 4000 Hz LP
+      78203b5bfc91bc124513038018555d1c67f30319f1454604a87a92302d4b96f0
+    Supplementary actor. The source is labeled "healed", not death; the excerpts are the
+    fading part of the take.
+
+  CC0 1.0 (public domain) — Reitanna
+    "deep sigh and exhale.wav": https://freesound.org/people/Reitanna/sounds/351160/
+    voice/tuyana_bleed2_breath.mp3 <- preview MP3, 1.10-1.60 s; 4000 Hz LP; 25 ms in / 200 ms out
+      cc313fa786794ac4890e5eaa99371aa053853bd7816d18feec3a193e0a572e67
+    "long sigh.wav": https://freesound.org/people/Reitanna/sounds/242690/
+    voice/margarethe_bleed2_fade.mp3 <- 0.38-1.28 s; 3600 Hz LP; 25 ms in / 400 ms out
+      2e81721cb338010d2a44a4d9b46e521ed81be1d7634d1467492a691a07185b40
+      (an excerpt of the same sigh as reitanna_long_sigh, shared across voice banks)
+    Voice 'soft_female' (Tuyana, Artoria): KO = reitanna_gasp + tuyana_ko2_exhale,
+      bleed = reitanna_long_sigh + tuyana_bleed2_breath, hurt = tuyana_hurt1/2.
+    Voice 'margarethe' (Schwarz): KO1 now uses the existing reitanna_gasp (shared with Tuyana).
+
+  CC-BY 3.0 — SkyRae, "Female Warrior Grunts", "Grunts HD Deep.mp3"
+    https://opengameart.org/content/female-warrior-grunts
+    https://creativecommons.org/licenses/by/3.0/
+    voice/margarethe_hurt2.mp3 <- 0.15-0.57 s; 5500 Hz LP; 12 ms in / 45 ms out
+      024b0c89eef94830fbfae80adc9a36862f41fdc19222dd67599d2fbf83058df6
+    Modified excerpt of SkyRae's recording, distributed under CC-BY 3.0.
+    Changes: trimming, filtering, level, fades, mono MP3 encoding.
+    Attribution does not imply endorsement.
+
+  CC0 1.0 (public domain) — HaelDB, "Male Grunt/Yelling sounds"
+    https://opengameart.org/content/male-gruntyelling-sounds
+    voice/liao_ko2.mp3    <- 2yell1.wav, 0.39-0.82 s; 6000 Hz LP
+      e633819187a2c9cd16c443d8f2973ebb045c4aed40f8fff32c8aab58f915ceee
+    voice/liao_bleed3.mp3 <- 2yell8.wav, 0.14-1.32 s; 6000 Hz LP (not derived from 2yell9.wav)
+      8dc2e08c7b1c27deebb880f3035e1c547bfea5691609564cbf063dcc7dd99808
+    voice/tome_ko1_clean.mp3 <- yell12.wav, 0.144625-0.944625 s (same take as generic_ko1);
+      lowered by direct rate change 44.1 kHz -> 39290 Hz (SoXR resampling, no phase vocoder),
+      1.8 kHz bell -3 dB, 3 kHz shelf -2 dB, RMS matched, 128 kbps; 0.800 -> 0.898 s
+      5fea16e53a4e7ca9ce42b2993b1895a6869a9f26e4f65996234df9e74377b67f
+    Voice 'tome' (Tome, Kim) uses tome_ko1_clean for KO1 only; generic_ko1 is unchanged.
+
+  CC0 1.0 (public domain) — thebardofblasphemy, "grunts of male death and pain"
+    https://opengameart.org/content/grunts-male-death-and-pain
+    Original SHA-256: 3f00fba827f20ff9ccea1bc07d2c21ab8d3a36e81b48a6005cf8459f02779586
+    voice/omari_ko2.mp3    <- 17.40-18.69 s; 6000 Hz LP
+      bf86971a6d22779ae7d5844cc4c06316d741cda1171917b370f55d555edae83c
+    voice/omari_bleed2.mp3 <- 20.31-21.95 s; 6000 Hz LP
+      e215ca6df78f23dfc009c5f278619ff8e2085db6eb5db596cd25707c1626fce3
+
+  Voice 'isolde' (Isolde, Minami) adds no file: KO = isolde_ko1 + isolde_revive1,
+    bleed = isolde_bleed1 + isolde_ko1 (existing mvVoiceActing excerpts, CC0).
+  Not imported (discarded or not selected at the source): maya_hurt1, maya_bleed1, maya_bleed2,
+    maya_bleed2_single, margarethe_ko2, margarethe_bleed2, tuyana_bleed2_fade, tome_ko1_warm,
+    player_exhale2. margarethe_ko1.mp3 and liao_bleed2.mp3 stay on disk but are not selected.
+
+-------------------------------------------------------------------------------
 revolver/  — 2026-10-12, imported on the owner's instruction from the Saetbyeol repository
 (commits fe8b170, 666c07f, b6c83ab), copied byte-for-byte. CC0 1.0 (public domain).
   open.wav, insert1-6.wav, close.wav <- AugustSandberg, "Revolver Reload" (Ruger GP100 .357)
@@ -183,4 +275,5 @@ revolver/  — 2026-10-12, imported on the owner's instruction from the Saetbyeo
   any revolver file without source information was supplied by the owner directly
   (none of the eight files above lacks source information).
 
-Thank you, Reitanna, Sadiquecat, thebardofblasphemy and AugustSandberg!
+Thank you, Reitanna, Sadiquecat, thebardofblasphemy, AugustSandberg, AuraVoice,
+Nocturnal_Vanguard, Cici Fyre, SkyRae and HaelDB!

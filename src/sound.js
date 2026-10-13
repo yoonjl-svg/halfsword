@@ -297,21 +297,28 @@ const VOWELS = {
  *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 지금은 쓰는 캐릭터가 없다
  */
 export const VOICES = {
+  // ── 10/13 목소리 갱신 (사장님 지시로 샛별 저장소 3f330f7·87c8e77·b728e34·b75013b·7b6b079·9d1b56a 의 최종본을 가져옴 — docs/import/saetbyeol_voice3_2026-10-13.md) ──
+  //  상대는 피격2·기절2·출혈2, 피격과 기절은 서로 다른 녹음. 플레이어만 예외(조용한 사망음 하나 + 이명). 브란·하인리히·광기의 하인리히는 그대로
+  //  maya: 마야 라토르 전용 — AuraVoice(CC0). 출혈 1·2는 한 호흡 조각, 피격1은 원래 출혈1 뒤 조각, 출혈2만 350Hz -1dB. 음높이 그대로
+  maya: { f0: 210, tract: 1.13, breath: 0.4, rough: 0.2, style: 'exhale', rec: { hurt: ['voice/maya_hurt1_single', 'voice/maya_hurt2'], ko: 2, bleed: ['voice/maya_bleed1_single', 'voice/maya_bleed2_light'], gain: 1, rate: 1 } },
   // ── 10/12 목소리 묶음 갱신 (사장님 지시로 샛별 저장소 77db8c5·1ea73c5·11860b0·04311ff·200269d 를 가져옴 — docs/import/saetbyeol_round2_2026-10-12.md) ──
   //  soft_female: 조용한 젊은 목소리 — 보관해 둔 Reitanna 녹음 둘(CC0, docs/sound_reserve 와 같은 바이트). 에이라·아르토리아가 같이 쓴다
-  soft_female: { f0: 225, tract: 1.17, breath: 0.6, rough: 0.1, style: 'gasp', rec: { ko: ['voice/reitanna_gasp'], bleed: ['voice/reitanna_long_sigh'], hurt: ['voice/reitanna_gasp'], gain: 1, rate: 1 } },
+  //   10/13: 피격은 Cici Fyre(CC0) 둘로 기절과 분리. 기절2 = Cici 날숨, 출혈2 = Reitanna 날숨(351160, CC0) — 기절·출혈 네 녹음이 서로 다르다
+  soft_female: { f0: 225, tract: 1.17, breath: 0.6, rough: 0.1, style: 'gasp', rec: { ko: ['voice/reitanna_gasp', 'voice/tuyana_ko2_exhale'], bleed: ['voice/reitanna_long_sigh', 'voice/tuyana_bleed2_breath'], hurt: ['voice/tuyana_hurt1', 'voice/tuyana_hurt2'], gain: 1, rate: 1 } },
   //  tome: 랴오와 떼어 낸 묶음 — 기본 상대(generic)의 HaelDB 녹음을 파일 복사 없이 빌린다. 새 성우도, 예순넷 나이를 확인한 연기도 아니다. 토메·김씨가 같이 쓴다
-  tome: { f0: 124, tract: 1, breath: 0.45, rough: 0.3, style: 'exhale', rec: { ko: ['voice/generic_ko1', 'voice/generic_ko2'], bleed: ['voice/generic_bleed1', 'voice/generic_bleed2'], hurt: ['voice/generic_hurt1', 'voice/generic_hurt2'], gain: 0.7, rate: 1 } },
+  //   10/13: 기절1만 tome_ko1_clean(같은 HaelDB 연기, 톤을 낮추고 날카로운 울림을 줄인 판). 기본 상대의 generic_ko1 은 그대로
+  tome: { f0: 124, tract: 1, breath: 0.45, rough: 0.3, style: 'exhale', rec: { ko: ['voice/tome_ko1_clean', 'voice/generic_ko2'], bleed: ['voice/generic_bleed1', 'voice/generic_bleed2'], hurt: ['voice/generic_hurt1', 'voice/generic_hurt2'], gain: 0.7, rate: 1 } },
   //  omari: 오마리 전용 — thebardofblasphemy 의 부상·죽음 연기(CC0). 기절·출혈은 짧게 자른 판(20% 뒤 다시 10%), 음높이·빠르기는 그대로
-  omari: { f0: 115, tract: 1, breath: 0.45, rough: 0.35, style: 'exhale', rec: { ko: ['voice/omari_ko1_short'], bleed: ['voice/omari_bleed1_short2'], hurt: 2, gain: 0.75, rate: 1 } },
+  //   10/13: 같은 녹음의 다른 연기로 기절2·출혈2 보충(단축본은 그대로)
+  omari: { f0: 115, tract: 1, breath: 0.45, rough: 0.35, style: 'exhale', rec: { ko: ['voice/omari_ko1_short', 'voice/omari_ko2'], bleed: ['voice/omari_bleed1_short2', 'voice/omari_bleed2'], hurt: 2, gain: 0.75, rate: 1 } },
   //  player: 죽음은 조용한 날숨 하나(Sadiquecat 숨 녹음 편집, CC0) — death() 의 me 갈래가 작게 낸다. 상처 신음(hurt)은 HaelDB 3번 목소리 그대로
   player: { f0: 118, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: ['voice/player_exhale'], bleed: ['voice/player_exhale'], hurt: 2 } },
   generic: { f0: 124, tract: 1.0, breath: 0.35, rough: 0.3, style: 'grunt', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 첫 목소리 (전부 CC0)
   bran: { f0: 98, tract: 0.93, breath: 0.3, rough: 0.55, style: 'sob', rec: { ko: 2, bleed: 2, hurt: 2, rate: 0.92 } }, // Baradari(거칠고 낮음) + 지친 신음 kanyonwyvern(CC0). 굵고 거친 목
-  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp', rec: { ko: 1, bleed: 1, hurt: 2, revive: 1, gain: 1.3 } }, // 짧게 맞는 소리 "흣"·"읏" 녹음(mvVoiceActing, CC0, 사장님 선택). 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
-  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 1, bleed: 1, hurt: 2, gain: 0.6, rate: 0.95 } }, // (10/12: 출혈 2번 liao_bleed2 는 사장님이 고르지 않아 뺐다 — 파일은 남김) 하인리히와 같은 배우(HaelDB 2번 목소리)를 작고 조금 낮게 — 설정상 하인리히와 닮은 사람(사장님). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
+  isolde: { f0: 215, tract: 1.17, breath: 0.55, rough: 0.1, style: 'gasp', rec: { ko: ['voice/isolde_ko1', 'voice/isolde_revive1'], bleed: ['voice/isolde_bleed1', 'voice/isolde_ko1'], hurt: 2, revive: 1, gain: 1.3 } }, // 10/13: 기존 녹음 조각을 다시 써서 기절2·출혈2 보충(새 파일 없음, 이졸데·미나미 같이) — 짧게 맞는 소리 "흣"·"읏" 녹음(mvVoiceActing, CC0, 사장님 선택). 비명(450~525Hz)은 차분한 스물한 살 검사에게 부자연스러웠다
+  liao: { f0: 112, tract: 1.0, breath: 0.65, rough: 0.35, style: 'sigh', rec: { ko: 2, bleed: ['voice/liao_bleed1', 'voice/liao_bleed3'], hurt: 2, gain: 0.6, rate: 0.95 } }, // (10/13: 같은 목소리의 기절2·출혈2(liao_bleed3) 보충. 10/12 에 뺀 옛 출혈 2번 liao_bleed2 는 계속 쓰지 않는다 — 파일은 남김) 하인리히와 같은 배우(HaelDB 2번 목소리)를 작고 조금 낮게 — 설정상 하인리히와 닮은 사람(사장님). 예전 합성 한숨은 증기처럼 "치이익" 새어 기차 소리 같았다
   heinrich: { f0: 132, tract: 1.03, breath: 0.3, rough: 0.35, style: 'laugh', rec: { ko: 2, bleed: 2, hurt: 2 } }, // HaelDB 가장 높은 목소리(과장된 외침, 전부 CC0)
-  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', rec: { ko: 1, bleed: 1, hurt: 1, gain: 1.1 } }, // 지친 날숨 섞인 낮은 "하아…" 녹음 하나를 두 죽음에 같이 쓴다(hisoul, CC0, 사장님 선택 — 노장이라). 음은 낮추지 않았다: 여성 녹음을 낮추면 익룡·괴수처럼 들렸고, 합성 날숨은 폰에서 뭉개졌다
+  margarethe: { f0: 160, tract: 1.12, breath: 0.6, rough: 0.25, style: 'exhale', rec: { ko: ['voice/reitanna_gasp', 'voice/margarethe_ko2_exhale'], bleed: ['voice/margarethe_bleed1', 'voice/margarethe_bleed2_fade'], hurt: 2, gain: 1.1 } }, // 10/13: 출혈1·피격1(hisoul "하아…", CC0, 사장님 선택 — 노장이라)은 그대로. 기절1은 Reitanna 들숨(투야나와 공유), 기절2 = Cici 날숨, 출혈2 = Reitanna 잦아드는 한숨, 피격2 = SkyRae(CC-BY 3.0). 기절·출혈 네 녹음이 서로 다르다(margarethe_ko1 은 이제 쓰지 않는다). 음은 낮추지 않았다: 여성 녹음을 낮추면 익룡·괴수처럼 들렸고, 합성 날숨은 폰에서 뭉개졌다
 };
 
 /**
@@ -1918,10 +1925,11 @@ export class Sound {
       if (!rec) continue;
       for (const kind of ['ko', 'bleed', 'hurt', 'revive']) {
         const name = `voice:${id}:${kind}`;
-        if (this.samples[name]?.length) continue; // 앞서 받기에 실패한(빈) 목록은 다시 받아 본다
-        this.samples[name] = [];
         // rec[kind] = 개수(voice/<id>_<kind><번호>) 또는 파일 목록(sfx 기준 경로 — 다른 묶음의 녹음을 복사 없이 빌려 쓴다)
         const files = Array.isArray(rec[kind]) ? rec[kind] : Array.from({ length: rec[kind] || 0 }, (_, i) => `voice/${id}_${kind}${i + 1}`);
+        if (this.samples[name]?.length === files.length) continue; // 다 받은 목록만 건너뛴다
+        // 10/13 (샛별 저장소 3f330f7 고침): 일부만 받은 목록도 다시 받는다 — 하나 받았다고 다 받은 것이 아니다
+        this.samples[name] = [];
         for (const file of files) await this.loadSample(name, file);
       }
     }
