@@ -142,7 +142,8 @@ export class Skill {
     // 플레이어 비기(secret(), 10/9 23:5x — docs/strike/player_secret_2026-10-09.md): 진행 중인 비기(sec)·센 수. 실행 동안 손 목표(handOffset)를 비기 길로 옮긴다 — 입력은 main.js 가 막는다
     this.sec = null;
     this.secretStats = {}; // 이름 → { fired, landed }
-    this.uniq = null; // 플레이어 고유 동작 이어 주기 (unique_assist.js PlayerUniqueAssist — main.js 가 플레이어에게만, 열린 동작이 있을 때만 붙인다)
+    this.uniq = null; // 플레이어 고유 동작 강화 (unique_assist.js PlayerUniqueAssist — main.js 가 플레이어에게만, 열린 동작이 있을 때만 붙인다)
+    this.uniqBody = null; // 그 강화의 몸 덧씌우기 { pelvisYaw, chestYaw, pitch, drop } (덧씌우기 칸 몸 값과 같은 꼴 — fighter.js updateBodyPose 가 더한다). 없으면 null
     this.secretBursts = 0; // 비기가 터뜨려진 수 (main.js 연출이 바뀐 것을 본다)
     const b = THRUST.body;
     this.thrustPose = { w: 0, hand: [0, 0, 0], dir: [1, 0, 0], pelvisYaw: b.pelvisYaw * D2R, chestYaw: b.chestYaw * D2R, pitch: b.pitch * D2R, drop: b.drop };
@@ -1184,7 +1185,7 @@ export class Skill {
     const L = this.level;
     this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     if (this.sec) this.updateSecret(dt); // 플레이어 비기: 손 목표를 비기 길로 (이 스텝의 거르기·몸 따라가기는 아래 그대로)
-    if (this.uniq) this.uniq.drive(dt); // 플레이어 고유 동작 이어 주기 (unique_assist.js — main.js 가 플레이어에게만 붙인다, AI 는 없음): 이어 주는 중이면 손 목표를 그 길로
+    if (this.uniq) this.uniq.drive(dt); // 플레이어 고유 동작 강화 (unique_assist.js — main.js 가 플레이어에게만 붙인다, AI 는 없음): 몸 덧씌우기·끝 힘·걸음 (손 목표는 건드리지 않는다)
     if (this.sec?.S?.do?.gilmok || f.gilCutW > 0) {
       // 이베리아 길목 한 칼의 덧씌우기 자세 (10/11 v6 2차 — AI 와 같은 함수 secret_instant.js gilmokCutPose): 팔을 앞으로 뻗어 몸통 높이로 둘러 벰
       const g = this.sec ? gilmokSeg(this.sec.cur?.name, this.sec.stage === 'stiff') : { seg: null, s: 1 };
@@ -1206,7 +1207,7 @@ export class Skill {
     const sp = this.vel.length();
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
     this.swinging = swinging;
-    if (this.uniq) this.uniq.detect(dt, swinging); // 플레이어 고유 동작: 긋기 시작(시작 패드·처음 방향)을 읽고 해금된 고유 동작이 맞으면 이어 주기를 연다
+    if (this.uniq) this.uniq.detect(dt, swinging); // 플레이어 고유 동작: 긋기 시작(시작 패드·처음 방향)을 읽고 해금된 고유 동작이 맞으면 그 긋기에 강화를 얹는다 (잇는 동작은 이어 그은 긋기에 뒷몫)
     // 플레이어 막기 버튼 (10/11 — parry_button.js): 버튼이 손 목표를 휘두르기 문턱보다 빠르게 옮기는 동안은 AI 막기(손이 parrySpeed 로 옮겨져 휘두르기로 잡힘)처럼
     //  휘두르기 꼴의 거르기·몸 따라가기를 쓴다. 휘두르기 사건(swinging — 내딛기·베기 덩이·자세로 돌아가기)은 손가락 끌기만 (버튼이 prev 도 옮긴다). 버튼이 없으면 guardDrive 없음 → 그대로
     const fast = swinging || this.guardDrive > SKILL.swingSpeed;
