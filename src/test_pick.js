@@ -3,7 +3,7 @@
 //  '시작' → index.html?test=1&weapon=<id>&hero=<id|player>&foe=random&stage=random (그쪽 인자 뜻은 src/test_route.js)
 //  마지막 고른 무기·캐릭터는 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작).
 //  비기 판(이베리아·중국·독일)은 기억하지 않는다 — 10/13 사장님 'test 경로로는 아직 끊기지 않는 흐름이 발동' = 예전에 고른 v5 가 기억돼 있던 것. 열 때마다 본판 기본값에서 시작
-import { WEAPON_LIST, TIER_LABEL } from './weapons.js';
+import { WEAPON_LIST, TIER_LABEL, RETIRED_WEAPONS } from './weapons.js';
 import { CHARACTERS } from './characters.js';
 import { TRADITIONS, traditionOf } from './schools.js';
 import { SECRET } from './config.js'; // 비기 판 기본값 = 본판(main) 기본값 (10/13 — 고른 판을 기억하지 않는다)
@@ -47,7 +47,7 @@ function armourLine(look) {
   return a.length ? a.join('·') : '방어구 없음';
 }
 
-const weapons = WEAPON_LIST.map((w) => ({ id: w.id, name: w.nameKo, tier: w.tier, school: schoolLine(w) }));
+const weapons = WEAPON_LIST.filter((w) => !RETIRED_WEAPONS.has(w.id)).map((w) => ({ id: w.id, name: w.nameKo, tier: w.tier, school: schoolLine(w) })); // 빼 둔 무기(사장님 10/13 23:2x)는 고르기 화면에서도 뺀다
 const heroes = [
   { id: 'player', name: '기본 주인공', sub: '지금 플레이어 겉모습', armour: '투구' },
   ...CHARACTERS.map((c) => ({ id: c.id, name: c.name, sub: c.epithet || '—', armour: armourLine(c.look) })),

@@ -1456,6 +1456,9 @@ export const WEAPON_ALIASES = {
 export const DEFAULT_WEAPON = 'longsword';
 
 export const WEAPON_LIST = Object.values(WEAPONS);
+// 빼 둔 무기 (사장님 10/13 23:2x '독일 무기가 너무 많으니까 쓸데없는 걸 빼자 — 롱소드가 기본 양손 무기인데 에스톡·세이버·팔쉬온은 애매하고 별 특색도 없다'):
+//  주인공 무기 카드(main.js PLAYER_WEAPON_POOL)와 테스트 고르기 화면(test_pick.js)에서만 뺀다. 정의·코드는 남겨 되살리기 쉽게 — 시뮬·무기 점검(weapon_smoke)·브란의 '주워 온 칼'(characters.js shortest_common)은 그대로
+export const RETIRED_WEAPONS = new Set(['estoc', 'sabre', 'falchion']);
 
 /** id(또는 별칭)로 무기 사양을 찾는다. 모르는 id면 기본 무기(경고 한 번). */
 const warned = new Set();
