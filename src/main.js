@@ -1186,10 +1186,13 @@ function fitCardText(base) {
     const face = el.querySelector('.wface');
     const abil = el.querySelector('.wabil');
     const desc = el.querySelector('.wdesc');
-    return { face, last: () => (abil.textContent ? abil : desc) };
+    return { face, thumb: el.querySelector('.wthumb'), last: () => (abil.textContent ? abil : desc) };
   });
-  // 넘침 = 마지막 글줄의 아래가 카드 안쪽 여백(아래 padding)에서 4px 위(금테에 글자가 물리지 않게)를 넘는다. 앞면은 뒤집혀 있어 화면 좌표 대신 배치 좌표로 잰다
-  const over = ({ face, last }) => last().offsetTop + last().offsetHeight > face.clientHeight - parseFloat(getComputedStyle(face).paddingBottom) - 4;
+  // 넘침 = 그림 칸(.wthumb — 남은 높이를 채운다)이 가장 작게(min-height) 줄었는데도 마지막 글줄의 아래가 카드 안쪽 여백(아래 padding)에서 4px 위(금테에 글자가 물리지 않게)를 넘는다.
+  //  그림 칸이 아직 줄어들 수 있으면 넘침이 아니다 — 전에는 그림 칸이 글을 늘 아래로 밀어 언제나 넘침으로 읽혀 설명이 모든 화면에서 11px 까지 줄었다 (10/14 고침, 사장님 '폰은 12px, PC는 15px 고쳐').
+  //  앞면은 뒤집혀 있어 화면 좌표 대신 배치 좌표로 잰다
+  const over = ({ face, thumb, last }) => thumb.offsetHeight <= parseFloat(getComputedStyle(thumb).minHeight) + 0.5
+    && last().offsetTop + last().offsetHeight > face.clientHeight - parseFloat(getComputedStyle(face).paddingBottom) - 4;
   drawEl.style.setProperty('--desc', `${base}px`);
   for (let k = 1, px = base; k <= 5 && px > 11 && faces.some(over); k++) {
     px = Math.max(11, base * (1 - 0.06 * k));
