@@ -8,7 +8,8 @@
 //  시간은 playwright 가짜 시계로 한 프레임(1/60초)씩 돌린다 (느린 소프트웨어 렌더링에서도 같은 순간이 찍힌다)
 //  실행: vite 개발 서버를 띄운 뒤
 //    node tools/browser/finish_shots.mjs http://127.0.0.1:5173 <출력 폴더> [거리 m = 1.5] [--guard=쟁기|황소|지붕|바보]
-//  파일 이름: finish_<자세>_0_before_tap · _1_hover · _2_plunge · _3_after
+//  [--q=주소 값 (예: finishLift=0)] [--tag=파일 이름 덧말]
+//  파일 이름: finish_<자세>[_덧말]_0_before_tap · _1_hover · _2_plunge · _3_after
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -24,6 +25,8 @@ const PADS = { 쟁기: [0.18, -0.28], 황소: [0.22, 0.26], 지붕: [0.02, 0.52]
 const GUARD = argv.find((a) => a.startsWith('--guard='))?.split('=')[1] ?? '쟁기';
 if (!PADS[GUARD]) throw new Error(`자세 없음: ${GUARD} (${Object.keys(PADS)})`);
 const PAD = PADS[GUARD];
+const Q = argv.find((a) => a.startsWith('--q='))?.slice(4) ?? ''; // 덧붙일 주소 값 (10/13: --q=finishLift=0 = 전 동작 · --q=finishAim=chest)
+const TAG = argv.find((a) => a.startsWith('--tag='))?.slice(6) ?? ''; // 파일 이름 덧말
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
@@ -35,7 +38,7 @@ page.on('requestfailed', (r) => errors.push(`requestfailed: ${r.url()}`));
 page.on('response', (r) => r.status() >= 400 && errors.push(`http ${r.status()}: ${r.url()}`));
 await page.clock.install({ time: new Date('2026-09-30T12:00:00') });
 await page.clock.pauseAt(new Date('2026-09-30T12:00:01'));
-await page.goto(`${base}/?weapon=longsword`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=longsword${Q ? `&${Q}` : ''}`, { waitUntil: 'networkidle' });
 for (let i = 0; i < 300 && !(await page.evaluate(() => !!window.game?.player?.sword)); i++) await page.waitForTimeout(100);
 await page.clock.runFor(200);
 await page.evaluate(() => document.getElementById('btnStart').click());
@@ -120,7 +123,7 @@ const pre = await page.evaluate(() => {
   const pl = p.finish.plunge;
   return { fin: p.finish.on, amt: +p.finish.amt.toFixed(2), inside: pl.inside ?? null, short: +pl.short.toFixed(3) };
 });
-const name = (k) => `finish_${GUARD}_${k}`;
+const name = (k) => `finish_${GUARD}${TAG ? `_${TAG}` : ''}_${k}`;
 const files = [await shot(name('0_before_tap'))];
 const n0 = await page.evaluate(() => window.game.player.skill.thrusts);
 await page.touchscreen.tap(844 * 0.72, 390 * 0.42); // 칼 쪽(오른쪽) 화면을 한 번 톡
@@ -145,7 +148,7 @@ for (let t = 0; t < 4000; t += 17) {
   if (rec.tap && !hover && s.go) {
     hover = true;
     // 찍기 시작 = 겨눔이 선 프레임: 칼자루 높이(가슴 기준) 대 명령
-    rec.go = { t, ...s, cmdY: await page.evaluate(async () => (await import('/src/finish.js')).FINISH.hands?.[1] ?? null) };
+    rec.go = { t, ...s, cmdY: await page.evaluate(async () => ((m) => (m.finishHands ? m.finishHands() : m.FINISH.hands)?.[1] ?? null)(await import('/src/finish.js'))) };
     files.push(await shot(name('1_hover')));
   }
   if (s.push) pushed = true;

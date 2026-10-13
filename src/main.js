@@ -104,6 +104,10 @@ if (params.get('plateNeck') === '1') FINISH_SWITCH.plateNeck = true;
 if (params.get('plateNeck') === '0') FINISH_SWITCH.plateNeck = false;
 for (const [q, k] of [['vitalAi', 'aiCut'], ['vitalThrust', 'thrust'], ['vitalCut', 'playerCut']]) if (['0', '1'].includes(params.get(q))) VITAL_SWITCH[k] = params.get(q) === '1'; // 묶음 갈래: AI 목 가로 베기 · 찌르기 목·얼굴·머리 + 간격 맞추기 · 플레이어 베기 겨눔 보정
 if (['power25', 'kill'].includes(params.get('finishMode'))) FINISH_SWITCH.mode = params.get('finishMode'); // 10/12 기본 power25 · kill = 9/30 즉사
+// 10/13 내려찍기 동작 (docs/strike/finish_plunge_2026-10-13.md): `?finishLift=0` = 전 동작(더 높이 들기·찍는 동안 힘 배율 끔) · `?finishAim=chest` = 가슴 쪽 몸 점 (기본 torso = 몸통 선)
+if (params.get('finishLift') === '0') FINISH_SWITCH.lift = false;
+if (params.get('finishLift') === '1') FINISH_SWITCH.lift = true;
+if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = params.get('finishAim');
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
 //  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다
