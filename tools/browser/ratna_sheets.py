@@ -43,10 +43,11 @@ def label(im, text, size=18, pos=(8, 6), color=INK):
     return im
 
 
-def sheet(rows, cell, gap=6, head=None, head_h=0):
-    """rows: [[(png 또는 Image, 이름표)…]…] → 한 장"""
+def sheet(rows, cell, gap=6, head=None, head_h=0, strip=0):
+    """rows: [[(png 또는 Image, 이름표)…]…] → 한 장. strip > 0 이면 이름표를 그림 위가 아니라 그림 아래 띠(높이 strip)에 쓴다 (게임 화면 글과 겹치지 않게)"""
     w = len(rows[0]) * cell[0] + (len(rows[0]) + 1) * gap
-    h = head_h + len(rows) * cell[1] + (len(rows) + 1) * gap
+    ch = cell[1] + strip
+    h = head_h + len(rows) * ch + (len(rows) + 1) * gap
     out = Image.new('RGB', (w, h), PAPER)
     if head:
         label(out, head, 20, (gap + 4, 8), MARK)
@@ -54,9 +55,12 @@ def sheet(rows, cell, gap=6, head=None, head_h=0):
         for c, (src, text) in enumerate(row):
             im = src if isinstance(src, Image.Image) else img(src)
             im = im.resize(cell, Image.LANCZOS)
-            if text:
+            x, y = gap + c * (cell[0] + gap), head_h + gap + r * (ch + gap)
+            if text and not strip:
                 label(im, text, 17)
-            out.paste(im, (gap + c * (cell[0] + gap), head_h + gap + r * (cell[1] + gap)))
+            out.paste(im, (x, y))
+            if text and strip:
+                ImageDraw.Draw(out).text((x + 4, y + cell[1] + 3), text, font=font(16), fill=INK)
     return out
 
 
@@ -71,19 +75,13 @@ views = [[(f'views_{v}_{k}.png', f'{tag} · {ko}') for k, ko in (('front', '정�
 save(sheet(views, (360, 450)), 'ratna_views.webp')
 
 # 2) 폰 가로 게임 화면 (v4): 판 시작 소개 · 싸우는 중
-duel = []
-for k, ko in (('intro', '판 시작 1.0 s — 가운데 소개 글'), ('fight', '싸우는 중 6 s')):
-    im = img(f'duel_sacred_grove_v4_{k}.png')
-    duel.append(label(im.resize((1266, 585), Image.LANCZOS), f'844×390 폰 가로 · 신목의 숲 · {ko}', 22))
-out = Image.new('RGB', (1266, 585 * 2 + 6), PAPER)
-out.paste(duel[0], (0, 0))
-out.paste(duel[1], (0, 591))
-save(out, 'ratna_duel_phone.webp', 80)
+rows = [[(f'duel_sacred_grove_v4_{k}.png', f'844×390 폰 가로 · 신목의 숲 · {ko}')] for k, ko in (('intro', '판 시작 — 가운데 소개 글(이름 · 칭호 · 시작 대사)'), ('fight', '싸우는 중 6 s — 왼쪽 위 「라트나 · 자세 이름」'))]
+save(sheet(rows, (1266, 585), strip=26), 'ratna_duel_phone.webp', 80)
 
 # 3) 무대 셋 (싸우는 중, v3 · v4)
 stages = [('sacred_grove', '신목의 숲'), ('corsair', '산호 항구'), ('castle', '눈 내리는 성 안뜰')]
 rows = [[(f'duel_{s}_{v}_fight.png', f'{tag} · {ko}') for s, ko in stages] for v, tag in (('v3', '샛별 v3'), ('v4', '우리 v4'))]
-save(sheet(rows, (562, 260)), 'ratna_duel_stages.webp', 78)
+save(sheet(rows, (562, 260), strip=24), 'ratna_duel_stages.webp', 78)
 
 
 # 4) 바지 색 전/후 + 색 견본
@@ -101,8 +99,8 @@ def swatch(hexs, w=300, h=330):
 
 
 legs = [img('close_v3_legs.png').crop((120, 150, 520, 560)), img('close_v4_legs.png').crop((120, 150, 520, 560))]
-sw = swatch([('c29b45', '전 바지 (샛별 v2·v3) 41° · 채도 .51 · L* 66'), ('b68854', '후 바지 (v4) 32° · 채도 .40 · L* 60'),
-             ('d98a3a', '곰 석상 가슴 무늬 (감독 기준 색)'), ('8d673f', '후 솔기 (전 #9D7936)')], 330, 330)
+sw = swatch([('c29b45', '전 · 41° · 채도 .51 · L* 66'), ('b68854', '후 · 32° · 채도 .40 · L* 60'),
+             ('d98a3a', '곰 석상 가슴 무늬 (기준)'), ('8d673f', '후 솔기 (전 #9D7936)')], 330, 330)
 out = Image.new('RGB', (330 * 3 + 24, 330 + 12), PAPER)
 for i, (im, t) in enumerate(zip(legs, ('전 · 샛별 v3', '후 · v4 — 채도 한 단계 · 무릎 띠 뺌'))):
     out.paste(label(im.resize((330, 330), Image.LANCZOS), t, 17), (6 + i * 336, 6))
@@ -122,6 +120,6 @@ rows = [[(face_near[0], '전 · 샛별 v3 (가까이)'), (face_near[1], '후 · 
 save(sheet(rows, (320, 320)), 'ratna_face.webp')
 
 # 6) 원숭이 겹침 모음
-scenes = [('guard_revez', '레베스 준비'), ('guard_talho', '탈류 준비'), ('guard_altibaxo', '머리 위'), ('guard_revezOriz', '가로 레베스'), ('tech_zornhauL', '분노의 베기 왼쪽'), ('tech_redondo', '머리 위 돌려 베기')]
+scenes = [('guard_revez', '레베스 준비'), ('guard_talho', '탈류 준비'), ('guard_altibaxo', '머리 위'), ('guard_revezOriz', '가로 레베스'), ('tech_zornhauL', 'revez 왼쪽 사선'), ('tech_redondo', '머리 위 돌려 베기')]
 rows = [[(f'monkey_{v}_{s}.png', f'{tag} · {ko}') for s, ko in scenes] for v, tag in (('v3', 'v3 왼 어깨'), ('v4', 'v4 등 가방 위'))]
-save(sheet(rows, (240, 240)), 'ratna_monkey_check.webp')
+save(sheet(rows, (240, 240)), 'ratna_monkey_check.webp', 80)
