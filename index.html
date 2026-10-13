@@ -290,7 +290,7 @@
       .minor { color: var(--accent); font-size: var(--fs-caption); margin-left: 6px; }
       .actions + .howto { margin-top: 28px; } /* 단추 줄(.actions)의 아래 여백 -20px 만큼 끌려 올라가 첫 줄이 단추 줄 바탕 밑에 가리던 것 (10/10 20:3x 창 정리 때 고침) */
 
-      /* 설정 창 (시작·일시정지·결과가 함께 쓰는 #menu): 남은 설정이 둘(상대 난이도 · 60 fps 제한)이라 한 열 · 좁은 폭 (10/10 20:3x 사장님 '2열로 넓을 필요가 없어졌어' — §14).
+      /* 설정 창 (시작·일시정지·결과가 함께 쓰는 #menu): 남은 설정이 하나(60 fps 제한 — 상대 난이도는 10/13 에 뺐다)라 한 열 · 좁은 폭 (10/10 20:3x 사장님 '2열로 넓을 필요가 없어졌어' — §14).
          폭은 위 .card (460 → 340px). 테스트 경로(test=1)가 붙이는 '테스트 고르기로' 단추(.secondary 100%)·안내 한 줄도 이 폭을 따른다 */
       /* 가로로 든 폰처럼 낮은 화면: 글자는 줄이지 않고 여백만 촘촘하게 (한 열 그대로) */
       @media (max-height: 500px) {
@@ -337,11 +337,7 @@
       <div class="card">
         <h1 id="menuTitle">Stillness</h1>
         <p class="sub" id="menuSub">길 위에선 이름을 묻지 않는다.</p>
-        <div class="row"><span>상대 난이도</span>
-          <div class="seg" data-setting="difficulty">
-            <button data-v="easy">쉬움</button><button data-v="normal">보통</button><button data-v="hard">어려움</button>
-          </div>
-        </div>
+        <!-- 상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js · main.js) -->
         <!-- 검술 보정 단계 메뉴(끔·약·보통·강)는 뺐다 — 사장님 10/8 21:5x "플레이어에겐 구분이 필요 없어. 한 단계로 기본 적용": 보정은 늘 0.7 (main.js DEFAULTS.skill) -->
         <!-- 10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아': 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출은 늘 켬,
              모든 기술 이름(디버그 ?techCueAll=1) · 픽셀 모드(실험 ?pixel=1)는 주소 인자로만, 기울기 이동은 기능째 지웠다 (main.js DEFAULTS) -->

@@ -2,7 +2,8 @@
 //  상대 캐릭터 12인(다섯 + 샛별 저장소에서 가져온 셋 6~8 · 넷 9~12): 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
 //
 //  ai.persona가 ai.js의 AI 클래스에 그대로 전달된다:
-//   - level: AI_LEVELS(난이도) 숫자 위에 캐릭터별로 덮어쓰는 값 (반응 시간·막기 확률·읽는 눈·힘 등)
+//   - ai.proficiency: 숙련도 (사장님 결정 10/13 — 자기 유파 = 시트 값, 다른 유파 = 0). 실력 숫자 이름 ai.level 과 persona.proficiency 는 finishAI 가 채운다
+//   - level: AI_LEVELS(실력 숫자 — 숙련도가 고른 이름) 위에 캐릭터별로 덮어쓰는 값 (반응 시간·막기 확률·읽는 눈·힘 등)
 //   - pers:  성격(자세 취향·간격·박자·속임수) 위에 덮어쓰는 값. guardStick이 이번에 새로 생긴 핵심 손잡이:
 //            크면(예: 6) 가까운 자세만 고집하는 신중한 검객, 작으면(예: 0.6) 먼 자세로도 서슴없이
 //            건너뛰는 변덕스러운 검객이 된다. guardPref는 자세 이름별 선호도를 부분적으로 못박아 둔다.
@@ -14,7 +15,8 @@
 
 import { WEAPONS, WEAPON_LIST } from './weapons.js';
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
-import { AI_LEVELS } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산할 때만 읽는다 (config.js는 아무것도 import하지 않아 순환이 없다)
+import { AI_LEVELS, AI_PROFICIENCY } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산 · 숙련도 → 실력 숫자 이름 (config.js는 아무것도 import하지 않아 순환이 없다)
+import { traditionOf } from './schools.js'; // 인물의 유파 = 시트 무기의 유파 (숙련도 표 열쇠 — 10/13)
 
 export const CHARACTERS = [
   // ───────────────────────────────────────────── 1. 쉬움 : 촌뜨기 난동꾼 ─────────────────────────────────────────────
@@ -43,7 +45,7 @@ export const CHARACTERS = [
     // 감독 지시: 10% 확률로 커먼 등급 중 가장 짧은 칼을 들고 나온다 (어디서 주워 온 진짜 칼). 그때는 유파도 그 칼의 꾸러미를 쓴다
     weaponAlt: { chance: 0.1, pick: 'shortest_common' },
     ai: {
-      level: 'easy',
+      proficiency: 1, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
       persona: {
         school: 'tree_branch',
         startEmotion: { anger: 0.7 }, // 사장 지시: 서사대로 '분노' 상태로 결투를 시작한다 (은화 걸고 막대기 하나 들고 선 촌놈의 발끈)
@@ -117,7 +119,7 @@ export const CHARACTERS = [
     weaknesses: '패턴이 매우 일정해 몇 합만 겪으면 다음 자세를 짐작할 수 있다. 달려드는 상대를 맞받아치기보다 무조건 물러나려 해서(vor 낮음), 집요하게 몰아붙이면 구석으로 밀린다. 이어 치기가 약하다(followUp 낮음) — 한 번 맞히면 그걸로 끝인 경우가 많다.',
     weapon: 'longsword',
     ai: {
-      level: 'easy',
+      proficiency: 1, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
       persona: {
         school: 'longsword',
         level: { reaction: 0.31, guardChance: 0.6, counter: 0.12, feint: 0.05, followUp: 0.28, read: 0.62, discipline: 0.95, strength: 0.85, aggression: 0.68, windup: 0.82, skill: 0.56 },
@@ -183,7 +185,7 @@ export const CHARACTERS = [
     weaknesses: '정석 간격 관리를 안 배워 규율(discipline)이 낮다 — 덤벼들 때 살짝 과하게 들어오는 버릇이 있어, 그 순간을 미리 알고 맞받아치면(Vor) 잡을 수 있다. 힘 자체는 평범해 묵직한 반격 한 방에 균형이 잘 무너진다.',
     weapon: 'qinggang', // 청강검 (에픽 등급): 물리는 지안, 이름값대로 잘 벤다. 진품이냐 물으면 대답하지 않는다
     ai: {
-      level: 'normal',
+      proficiency: 3, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
       persona: {
         school: 'qinggang',
         level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 1.1, aggression: 1.05, windup: 0.5, strikeSpeed: 13, skill: 0.75 },
@@ -250,7 +252,7 @@ export const CHARACTERS = [
     //  (10/10: 샛별 저장소에서 가져온 아르토리아도 진품을 든다 — 그쪽 설정 '진품은 플레이어와 아르토리아', 하인리히는 복제품 그대로)
     weapon: 'excalibur_replica',
     ai: {
-      level: 'normal',
+      proficiency: 2, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
       persona: {
         school: 'excalibur_replica',
         level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.15, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
@@ -315,7 +317,7 @@ export const CHARACTERS = [
     weaknesses: '스스로 먼저 판을 깨지 않는다 — 상대가 절대 먼저 들어오지 않고 완벽하게 간격만 지키면 좀처럼 기회를 만들지 못한다(물론 그러면 판이 길어진다). 화려한 잔기술은 거의 안 쓴다(feint 낮음). 쉬지 않고 밀어붙이는 저돌형 앞에서는 "물러나 되받기" 성격이 맞받기로 덮어씌워져 서로 베이기 쉽다.',
     weapon: 'longsword',
     ai: {
-      level: 'hard',
+      proficiency: 3, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
       persona: {
         school: 'longsword',
         level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.1, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
@@ -367,7 +369,7 @@ export const CHARACTERS = [
     epithet: '아르키진나시오의 사서', // 사장님 10/10 08:0x: 아르키진나시오 도서관의 고문서 사서 — 시간을 넘는 설정(실제 도서관은 1801~)
     weapon: 'rapier', // 이탈리아 유파 (traditionOf: 한손 찌르기)
     voice: 'tome', // 목소리: 토메 묶음(기본 상대 녹음을 빌림, 김씨와 같이) — 10/12 사장님 지시로 샛별 저장소 77db8c5 배정을 가져옴 (전 'liao')
-    ai: { level: 'normal', persona: { school: 'rapier', pers: {} } },
+    ai: { proficiency: 2, persona: { school: 'rapier', pers: {} } },
     look: getLook('tome'),
     lookVersion: CHARACTER_LOOK_VERSION.tome,
     // 대사 (10/10 19:4x 사장님 — 작가 제안 docs/ui/character_voice_proposal_2026-10-10.md §4-1 그대로: 정중한 합쇼체, 책·기록·서가·여백 낱말, 서두르지 않음)
@@ -388,7 +390,7 @@ export const CHARACTERS = [
     epithet: '빚 없는 선장', // 사장님 10/10 19:4x (샛별 저장소 칭호)
     weapon: 'zweihander', // 이베리아 유파 (사장님: 이베리아 비기를 볼 수 있게. 샛별 설정은 펄션)
     voice: 'omari', // 목소리: 오마리 전용 녹음(CC0) — 10/12 사장님 지시로 샛별 저장소 1ea73c5·200269d 를 가져옴 (전 'bran')
-    ai: { level: 'normal', persona: { school: 'zweihander', pers: {} } },
+    ai: { proficiency: 1, persona: { school: 'zweihander', pers: {} } },
     look: getLook('omari'),
     lookVersion: CHARACTER_LOOK_VERSION.omari,
     // 대사 (10/10 19:4x 사장님 — 작가 제안 §4-2 그대로: 느낌표 없는 짧은 반말, 물때·닻·뭍·셈 같은 뱃사람 낱말)
@@ -409,7 +411,7 @@ export const CHARACTERS = [
     epithet: '수호자', // 사장님 10/11 01:1x (전 '금줄의 무녀' 10/10 19:4x)
     weapon: 'monohoshizao', // 일본 유파
     voice: 'isolde', // 목소리: 이졸데의 녹음 (이졸데와 같이. 10/13 기절2·출혈2 보충 — 마야는 10/13 에 따로 나감)
-    ai: { level: 'normal', persona: { school: 'monohoshizao', pers: {} } },
+    ai: { proficiency: 3, persona: { school: 'monohoshizao', pers: {} } },
     look: getLook('minami'),
     lookVersion: CHARACTER_LOOK_VERSION.minami,
     // 대사 (10/10 19:4x 사장님 — 작가 제안 §4-3 그대로: 짧고 단단한 해요체, 금줄·안개·피가 흙에 닿는 일, 겁 고백 없음)
@@ -447,7 +449,7 @@ export const CHARACTERS = [
     weaknesses: '큰 베기가 빗나간 뒤 몸 가까이 파고드는 연속 압박에는 빈틈이 생긴다.',
     weapon: 'excalibur', // 진품(레전드, 금빛 기운) — 사장님 10/10 20:3x '진품 그대로 들게 해'. 하인리히는 복제품 그대로, 플레이어도 카드로 진품을 뽑을 수 있다
     voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 에이라와 같이) — 10/12 사장님 지시로 샛별 저장소 04311ff 배정을 가져옴 (전 'isolde')
-    ai: { level: 'normal', persona: {
+    ai: { proficiency: 4, persona: {
       school: 'excalibur',
       level: { reaction: 0.26, guardChance: 0.7, counter: 0.35, feint: 0.2, followUp: 0.42, read: 0.75, discipline: 0.88, strength: 1, aggression: 0.8, windup: 0.7, skill: 0.82 },
       pers: { precision: 0.85, guardStick: 2.5, fearful: 0.2, angry: 0.2, dogged: 0.45, guardSpeed: 0.85, rhythm: 2.6, margin: 0.22, aggr: 0.85, vor: 0.45, patienceTime: 4.5, circleRate: 0.22,
@@ -477,7 +479,7 @@ export const CHARACTERS = [
     weaknesses: '장전 중의 빈틈과 총구 안쪽으로 파고드는 근거리 압박.',
     weapon: 'pistol', // 건슬링어의 리볼버(??? 등급) — 그쪽 '전용 리볼버'는 새 무기가 아니라 이 권총이다. AI 는 gun.js(간격 벌려 쏘기)
     voice: 'maya', // 목소리: 마야 전용 녹음(AuraVoice, CC0) — 10/13 사장님 지시로 샛별 저장소 3f330f7·b75013b·9d1b56a 배정을 가져옴 (전 'isolde')
-    ai: { level: 'hard', persona: { // 그쪽 '마지막 문지기' 자리라 hard — 우리 기본 회전에선 다른 인물보다 세다(사장님 확인 전)
+    ai: { proficiency: 1, persona: { // 숙련도 1 (사장님 결정 10/13 — 전: 그쪽 '마지막 문지기' 자리라 hard)
       gunCooldownK: 1.5, // 핸디캡: 사격 사이 쿨타임 1.5 배 (GUN.cooldown 0.7 → 1.05 s) — 사장님 지시 10/10 20:0x (기본 무작위 상대에서 빼는 대신, 확인표 750)
       level: { reaction: 0.16, guardChance: 0.88, counter: 0.55, feint: 0.15, followUp: 0.65, read: 0.9, discipline: 0.95, strength: 1.1, aggression: 0.9, windup: 0.36, strikeSpeed: 13, skill: 0.95 },
       pers: { precision: 0.95, guardStick: 4, fearful: 0.08, angry: 0.12, dogged: 0.4, guardSpeed: 0.7, rhythm: 4, margin: 0.3, aggr: 0.95, vor: 0.45, patienceTime: 6, circleRate: 0.18 },
@@ -505,7 +507,7 @@ export const CHARACTERS = [
     weaknesses: '짧은 철퇴가 닿기 전의 거리와 빗나간 뒤의 빈틈.',
     weapon: 'morgenstern', // 레어 둔기 → 무유파
     voice: 'tome', // 목소리: 토메 묶음(토메와 같이) — 10/12 사장님 지시로 샛별 저장소 04311ff 배정을 가져옴 (전 'liao')
-    ai: { level: 'normal', persona: {
+    ai: { proficiency: 2, persona: {
       school: 'morgenstern', // 그쪽은 옛 꾸러미 이름 'tree_branch'(나뭇가지 간격) — 우리는 무기 id 꾸러미(무유파 + 철퇴 실측 간격)
       level: { skill: 0.76, discipline: 0.84, strength: 1, aggression: 0.8 },
       pers: { precision: 0.8, guardStick: 2.7, fearful: 0.22, angry: 0.2, dogged: 0.4, rhythm: 2.8, aggr: 0.84, vor: 0.45,
@@ -534,7 +536,7 @@ export const CHARACTERS = [
     weaknesses: '칼끝 안쪽으로 깊게 붙는 압박.',
     weapon: 'rapier', // 이탈리아 유파
     voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 아르토리아와 같이) — 10/12 사장님 지시로 샛별 저장소 77db8c5 배정을 가져옴 (전 'isolde')
-    ai: { level: 'normal', persona: {
+    ai: { proficiency: 2, persona: {
       school: 'rapier',
       level: { skill: 0.78, discipline: 0.88, strength: 1, aggression: 0.75 },
       pers: { precision: 0.85, guardStick: 3.2, fearful: 0.25, angry: 0.1, dogged: 0.3, rhythm: 3.2, aggr: 0.78, vor: 0.35,
@@ -553,9 +555,41 @@ export const CHARACTERS = [
 //  (stages.js STAGE_FOE 짝·?foe=id). 원본 시트를 복사해 만들며, 원본은 건드리지 않는다.
 const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
 
-// 광기의 하인리히 실력 숫자 (사장 확정 2026-09-28: "능력치는 원래의 하인리히 +20%").
-//  출발점은 낮의 하인리히가 게임에서 실제로 받는 값 = AI_LEVELS[ai.level] 위에 persona.level을 덮은 것 (ai.js setLevel과 같은 병합).
-//  그래서 하인리히 시트에 없는 chamberSpeed·parrySpeed·predict도 normal 기본값에서 같이 올리고, 결과는 열다섯 키를 모두 적는다.
+// ── 숙련도 (사장님 결정 10/13 22:4x~23:0x — docs/strike/ai_proficiency_2026-10-13.md) ──
+//  "AI 상대는 숙련도 수치에 따라 쓸지 말지를 결정하게 하자. 지금 '난이도'를 그렇게 개편 … 각 검술의 숙련도가 있고 캐릭터마다 숙련도가 달라."
+//  시트 ai.proficiency = 자기 유파(시트 무기 weapon 의 유파 — schools.js traditionOf)의 숙련도. 다른 유파 = 0 (브란이 주워 온 칼처럼 다른 유파 무기를 들면 고유 동작 없음).
+//  무유파 무기(나뭇가지·권총·모르겐슈테른)는 고유 동작이 없어 숙련도는 실력 숫자에만 쓰인다.
+//  aiAtProficiency 가 ai.level(실력 숫자 이름 = config.js AI_PROFICIENCY.levels[숙련도])과 persona.proficiency({ 유파: 숙련도 } — ai.js·sword_art.js 가 고유 동작을 거르고, 5 에서만 비기)를 만든다.
+//  시트 기본값(finishAI — 도구는 지금처럼 ai.level·ai.persona 를 읽는다)과 시험 주소 ?foeProficiency=N(main.js)이 같은 함수를 쓴다.
+//  변형(mad: true — 사장님 10/13 "'광기의'는 궁극적으로 모든 캐릭터들에게 … 기본 캐릭터+1 의 숙련도와 추가 파워"): 변형 표시 하나 → 숙련도 +1(VARIANT_PLUS, 상한 AI_PROFICIENCY.max) ·
+//   실력 숫자 = 그 숙련도에서 원본이 받을 실효값 × MAD_SCALE(+20% — 사장님 9/28 확정을 추가 힘으로 그대로, 디렉터 해석). 다른 인물에게 변형을 만들 때도 madVariantAI(원본) 로
+const VARIANT_PLUS = 1;
+export function aiAtProficiency(c, p) {
+  const level = AI_PROFICIENCY.levels[p] ?? 'normal';
+  const persona = { ...c.ai.persona, proficiency: { [traditionOf(WEAPONS[c.weapon])]: p } };
+  if (c.mad) {
+    const base = CHARACTERS.find((x) => x.id === c.variantOf);
+    persona.level = scaledLevel({ level, persona: base.ai.persona }, MAD_SCALE);
+  }
+  return { level, persona };
+}
+/** 시트의 숙련도로 ai.level·ai.persona 를 채운다 (모듈을 읽을 때 한 번) */
+function finishAI(c) {
+  const { level, persona } = aiAtProficiency(c, c.ai.proficiency);
+  c.ai.level = level;
+  c.ai.persona = persona;
+}
+for (const c of CHARACTERS) finishAI(c);
+/** 변형의 ai: 원본 ai 깊은 복사 + 숙련도 +1 (실력 숫자·유파 표는 finishAI 가 변형 시트에서 채운다) */
+function madVariantAI(base) {
+  const ai = JSON.parse(JSON.stringify(base.ai));
+  ai.proficiency = Math.min(AI_PROFICIENCY.max, base.ai.proficiency + VARIANT_PLUS);
+  return ai;
+}
+
+// 광기의 하인리히 실력 숫자 (사장 확정 2026-09-28: "능력치는 원래의 하인리히 +20%" · 10/13 숙련도 개편 뒤: 원본 숙련도 +1 에서 받을 값 +20%).
+//  출발점은 낮의 하인리히가 그 숙련도에서 받을 값 = AI_LEVELS[숙련도의 이름] 위에 persona.level을 덮은 것 (ai.js setLevel과 같은 병합).
+//  그래서 하인리히 시트에 없는 chamberSpeed·parrySpeed·predict도 그 이름(지금 hard)의 기본값에서 같이 올리고, 결과는 열다섯 키를 모두 적는다.
 //  원본에서 그때그때 계산하므로 낮의 하인리히를 고치면 +20% 관계도 따라간다. 원본 시트·AI_LEVELS는 읽기만 한다.
 //  [방향, 상한]: +1 = 클수록 세다(×1.2), -1 = 작을수록 세다(시간이라 ÷1.2), 0 = 그대로. 상한 1 = 확률·0~1 값이라 1에서 자른다
 const MAD_SCALE = 1.2;
@@ -586,12 +620,10 @@ function scaledLevel(ai, scale) {
   }
   return out;
 }
-// 성격(pers)·유파(school)·난이도 이름('normal')은 하인리히 그대로 깊은 복사하고, persona.level만 바꿔 끼운다.
-//  지금 값: reaction .175 · windup .375 · chamberSpeed 3.6 · strikeSpeed 15.6 · parrySpeed 5.4 · guardChance .792 · predict .9 · counter .384 ·
-//   feint .552 · followUp .864 · read .864 · discipline .9 · strength 1.38 · aggression 1.15(그대로) · skill .984
+// 성격(pers)·유파(school)는 하인리히 그대로 깊은 복사하고(madVariantAI — 숙련도 2 → 3), persona.level 은 변형 시트를 읽을 때 finishAI 가 바꿔 끼운다.
+//  지금 값 (숙련도 3 = hard 위에 하인리히 persona.level, ×1.2 — 10/13 전엔 normal 위): docs/strike/ai_proficiency_2026-10-13.md 표.
 //  strikeSpeed·chamberSpeed·parrySpeed·strength는 손 목표 필터·관절 속도 한계에 막혀 체감은 +20%보다 작다 (docs/characters.md)
-const HEINRICH_MAD_AI = JSON.parse(JSON.stringify(HEINRICH.ai));
-HEINRICH_MAD_AI.persona.level = scaledLevel(HEINRICH.ai, MAD_SCALE);
+const HEINRICH_MAD_AI = madVariantAI(HEINRICH);
 // 온몸 타격 기질(초안, 캐릭터 PM): 낮보다 더 싣고 더 자주 감고, 물러날 줄을 모른다 — 비켜서기 대신 맞받는다
 HEINRICH_MAD_AI.persona.whole = { sPref: 0.9, sSpread: 0.1, windRate: 0.8, windLen: [0.25, 0.5], punish: { windup: 0.5, overrun: 0.65, thrown: 0.6 }, evade: 0.15 };
 HEINRICH_MAD_AI.persona.idle = { guard: 'langort', gesture: 'still' }; // 시작 2초: 칼끝을 겨눈 채 흔들림 없음
@@ -605,6 +637,7 @@ export const CHARACTER_VARIANTS = [
     ...HEINRICH,
     id: 'heinrich_mad',
     variantOf: 'heinrich',
+    mad: true, // 변형 표시 (10/13 일반 규칙): 숙련도 +1 · 실력 숫자 +20% — aiAtProficiency
     name: '광기의 하인리히 도른',
     epithet: '밤의 왕', // 사장 확정 (원본 별칭 '미치광이'와 겹치지 않는다)
     origin: '포세이돈 신전에서 쓰러진 뒤 그 자리를 떠나지 않았다. 밤이 되면 같은 자리에 다시 선다',
@@ -630,6 +663,8 @@ export const CHARACTER_VARIANTS = [
     eyes: 'madGlow', // 외형 담당과 맞춘 표식: 붉은 눈 + 안광 아우라
   },
 ];
+
+for (const c of CHARACTER_VARIANTS) finishAI(c);
 
 /** id → 시트. 다섯 명과 변형까지 (변형은 여정의 정해진 자리·?foe=id 로만 나온다) */
 export const CHARACTERS_BY_ID = Object.fromEntries([...CHARACTERS, ...CHARACTER_VARIANTS].map((c) => [c.id, c]));

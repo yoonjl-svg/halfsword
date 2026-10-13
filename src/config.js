@@ -764,12 +764,15 @@ export const SECRET = {
 export const UNIQUE_ASSIST = {
   on: 1, // 0 = 끔 (`?uniqueAssist=0` — 플레이어 칼은 지금처럼 손가락만 따른다)
   // 해금 (사장님 결정 10/13 22:3x): 성장은 주인공 하나 기준 — 여정(foe=stage)에서 무대를 깰 때마다(이겨서 다음 무대로) 깬 수 +1 (localStorage).
-  //  sealEvery 번 깰 때마다 인장 하나, 유파를 sealOrder 차례로 돌아가며(인장 k 의 유파 = sealOrder[(k−1) mod 5], 단계 = ⌊(k−1)/5⌋+1), sealMax 개(= 5 유파 × 4 단계)에서 끝.
-  //  유파 숙련도 = 그 유파 인장 수(0~4) → 손에 든 무기 유파의 1~n 단계 고유 동작이 열린다. 테스트 경로(?test=1)는 testStage(모두). `?uniqueStage=0..4` 는 모든 유파를 그 단계로, `?clears=N` 은 깬 수를 덮어쓴다
+  //  sealEvery 번 깰 때마다 인장 하나, 유파를 sealOrder 차례로 돌아가며(인장 k 의 유파 = sealOrder[(k−1) mod 5], 단계 = ⌊(k−1)/5⌋+1), sealMax 개(= 5 유파 × 5 단계)에서 끝.
+  //  유파 숙련도 = 그 유파 인장 수(0~5) → 손에 든 무기 유파의 1~n 단계 고유 동작이 열린다. 5 단계(secretStage) = 그 유파 비기 (사장님 결정 10/13 23:1x '숙련도 5단계를 만들고 거기서 비기를 배우게 하자' —
+  //   21~25 번째 인장 = 210·220·230·240·250 번. 그 전엔 플레이어 비기 창이 열리지 않는다 — main.js PlayerSecretWatch locked).
+  //  테스트 경로(?test=1)는 testStage(비기까지 모두). `?uniqueStage=0..5` 는 모든 유파를 그 단계로, `?clears=N` 은 깬 수를 덮어쓴다
   sealEvery: 10, // 사장님 결정 10/13
   sealOrder: ['german', 'iberian', 'italian', 'japanese', 'chinese'], // 사장님 결정 10/13 (독일 → 이베리아 → 이탈리아 → 일본 → 동방 → 다시 독일 2단계 …)
-  sealMax: 20, // 사장님 결정 10/13 (20 개 = 200 번에서 끝)
-  testStage: 4,
+  sealMax: 25, // 사장님 결정 10/13 23:1x (25 개 = 250 번에서 끝 — 전 20 개)
+  secretStage: 5, // 사장님 결정 10/13 23:1x: 숙련도 5 = 비기 (플레이어 비기 창 · AI 비기 둘 다 — AI_PROFICIENCY.secretAt)
+  testStage: 5, // 테스트 경로는 비기까지 모두 해금 (사장님 결정 10/13 23:1x — 전 4)
   // 긋기 읽기 (손이 빠르게 움직이기 시작하는 순간 — 검술 층의 휘두르기 문턱 SKILL.swingSpeed 를 넘는 스텝)
   padRadius: 0.15, // 시작 자리 = 가장 가까운 자세 패드(G.*), 이 거리(패드 m) 안일 때만 그 자세에서 시작한 긋기로 본다 (패드 사이 간격 0.25~0.4 의 절반쯤)
   angle: 40, // 허용 각(°): 처음 손 방향 ↔ 기본 동작 첫 방향 · 조건의 방향(위·아래·가로) · 이어 들어갈 고유 동작 길의 첫 방향
@@ -812,6 +815,20 @@ export const AI_LEVELS = {
   easy: { reaction: 0.38, windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 7.5, parrySpeed: 3.5, guardChance: 0.35, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.8, aggression: 0.6, skill: 0.4 },
   normal: { reaction: 0.26, windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
   hard: { reaction: 0.17, windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.85, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.15, aggression: 1.0, skill: 0.85 },
+};
+
+// AI 숙련도 (사장님 결정 10/13 22:4x~23:0x — '난이도'를 숙련도로 개편: "각 검술의 숙련도가 있고 캐릭터마다 숙련도가 달라", 메뉴의 상대 난이도는 뺌.
+//  docs/strike/ai_proficiency_2026-10-13.md). 숙련도(0~4)는 두 곳에 쓴다:
+//   ① 실력 숫자: 아래 levels[숙련도] = AI_LEVELS 이름 (인물별 persona.level 덮어쓰기는 그 위에 그대로) — 이 매핑은 사장님 확인 전 (확인표 끝).
+//      4·5 = hard: 지금 hard 보다 센 수가 없다 — 3 과의 차이는 네 번째 고유 동작(4)·비기(5)뿐. 0 = easy (시험 주소 ?foeProficiency=0 으로만 나온다)
+//   ② 고유 동작: 손에 든 무기 유파의 고유 동작 가운데 단계 ≤ 숙련도인 것만 (unique_assist.js PLAYER_UNIQUE 단계 — sword_art.js·ai.js)
+//   ③ 비기: 손에 든 무기 유파의 숙련도가 secretAt(5) 일 때만 그 유파 비기 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀' — ai.js). 지금 인물 값으론 아무도 안 쓴다(최고 아르토리아 4)
+//  ofLevel: 숙련도를 주지 않은 AI(인물 시트 없이 난이도 이름만 받는 도구·기본 상대)의 숙련도 = 난이도 이름에서. 기본 상대(?foe=default) = normal = 2
+export const AI_PROFICIENCY = {
+  levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'hard'],
+  max: 5,
+  secretAt: UNIQUE_ASSIST.secretStage,
+  ofLevel: { easy: 1, normal: 2, hard: 3 },
 };
 
 export const INPUT = {

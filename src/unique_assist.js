@@ -17,7 +17,7 @@
 //   · 손을 떼거나(터치) 멈추면(마우스) · 처음과 반대로 크게 그으면 곧장 놓아 준다(자유 조작). 두 번 잇는 동작의 뒷부분은 손가락이 계속 긋고 있을 때만.
 //   · 비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌고 있으면 발동하지 않고, 이어 주는 중에 그것들이 시작되면 곧장 물러난다.
 //  걸음 칸(step)이 있는 동작은 AI 기술 걸음(ai.js techStepRequest)과 같은 꼴로 다리에 걸음을 부탁한다. 발동하면 기술 이름 알림(main.js showTechCue 'unique' — AI 고유 동작 알림과 같은 칸).
-//  AI 쪽(ai.js 기술 고르기·꾸러미·고유 동작 사용·패시브, sword_art.js mergeUnique)은 이 파일을 읽지 않는다. 검술 층은 skill.uniq 가 있을 때만(플레이어 — main.js 가 붙임) 부른다.
+//  AI 쪽은 아래 표의 단계만 읽는다(aiUniqueStages — 숙련도 거르기 10/13, sword_art.js applySchoolArt · ai.js). 이어 주기는 플레이어 몫. 검술 층은 skill.uniq 가 있을 때만(플레이어 — main.js 가 붙임) 부른다.
 //  수는 config.js UNIQUE_ASSIST (확인표 1040~1047, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -71,6 +71,22 @@ export const PLAYER_UNIQUE = {
   ],
 };
 
+/**
+ * AI 숙련도 거르기 (사장님 결정 10/13 22:4x '숙련도 수치에 따라 쓸지 말지' — docs/strike/ai_proficiency_2026-10-13.md): 위 표를 AI 쪽에서 읽는 자리.
+ *  유파 tradition 의 { unique: 고유 동작 이름 → 단계, passive: 패시브 이름 → 단계 }. AI 는 단계 ≤ 숙련도인 것만 쓴다(sword_art.js applySchoolArt · ai.js).
+ *  표 이름이 그 유파 unique 의 이름이면 그 동작. path 로 길을 빌린 항목(동방 자→격 ciji → yaoji)은 AI 쪽에서 빌린 길(단독 동작 yaoji)과
+ *  같은 이름의 패시브(schools.js ciji 고리 — yaoji 이음) 둘 다. 표에 없는 것(이베리아 rodaCounter 맞받아치기 목록, 그 밖의 패시브)은 거르지 않는다
+ */
+export function aiUniqueStages(tradition) {
+  const unique = new Map();
+  const passive = new Map();
+  for (const e of PLAYER_UNIQUE[tradition] ?? []) {
+    unique.set(e.path ?? e.name, e.stage);
+    if (e.path) passive.set(e.name, e.stage);
+  }
+  return { unique, passive };
+}
+
 const D2R = Math.PI / 180;
 const _v = new THREE.Vector3();
 const _a = new THREE.Vector3();
@@ -118,9 +134,10 @@ export function uniqueDef(tradition, e) {
 
 // ── 해금 (사장님 결정 10/13 22:3x — 주인공 하나 기준) ──
 //  여정(foe=stage)에서 무대를 깰 때마다 깬 수 +1 (localStorage — 읽기·쓰기 실패해도 0 으로 그냥 동작). UNIQUE_ASSIST.sealEvery 번마다 인장 하나를
-//  sealOrder 유파 차례로 돌아가며 준다(sealMax 개에서 끝). 유파 숙련도 = 그 유파 인장 수(0~4) = 그 유파 무기를 들었을 때 열리는 고유 동작 단계.
-//  인장 이름(단계별 — 디렉터 안, 바뀔 수 있다: 여기 한 곳). 유파 이름은 TRADITIONS[유파].nameKo 를 그때 읽는다(글자를 박지 않는다)
-export const SEAL_NAMES = ['견습생', '숙련자', '전문가', '마스터'];
+//  sealOrder 유파 차례로 돌아가며 준다(sealMax 개에서 끝). 유파 숙련도 = 그 유파 인장 수(0~5) = 그 유파 무기를 들었을 때 열리는 고유 동작 단계.
+//  5 단계(UNIQUE_ASSIST.secretStage) = 그 유파 비기 (사장님 결정 10/13 23:1x — 21~25 번째 인장. 그 전엔 플레이어 비기 창이 안 열린다: main.js PlayerSecretWatch locked).
+//  인장 이름(단계별 — 사장님 결정 10/13 23:1x 1 견습생 · 2 숙련자 · 3 전문가 · 4 마스터 · 5 신: 여기 한 곳). 유파 이름은 TRADITIONS[유파].nameKo 를 그때 읽는다(글자를 박지 않는다)
+export const SEAL_NAMES = ['견습생', '숙련자', '전문가', '마스터', '신'];
 const CLEAR_KEY = 'stillness.journeyClears.v1';
 let clearsOverride = null; // 시험용 `?clears=N` (main.js setClearsOverride): 있으면 저장소 대신 이 값을 쓰고 깬 수도 여기에만 더한다
 export function setClearsOverride(n) {
@@ -162,27 +179,30 @@ export function sealAt(k) {
   const O = UA.sealOrder;
   return { k, school: O[(k - 1) % O.length], stage: Math.floor((k - 1) / O.length) + 1 };
 }
-/** 유파별 숙련도 (그 유파 인장 수 0~4) */
+/** 유파별 숙련도 (그 유파 인장 수 0~5) */
 export function masteryOf(clears) {
   const m = Object.fromEntries(UA.sealOrder.map((s) => [s, 0]));
   for (let k = 1; k <= sealCount(clears); k++) m[sealAt(k).school]++;
   return m;
 }
-/** 이번 판의 해금 단계 (손에 든 무기 유파): 주소 ?uniqueStage=0..4(모든 유파) > 테스트 경로(testStage) > 그 유파 숙련도 */
+/** 이번 판의 해금 단계 (손에 든 무기 유파): 주소 ?uniqueStage=0..5(모든 유파) > 테스트 경로(testStage) > 그 유파 숙련도. 5 = 비기까지 (secretStage) */
 export function uniqueStageFor(tradition, { test = false, param = null, clears = journeyClears() } = {}) {
   const p = param == null || param === '' ? NaN : Number(param);
-  if (Number.isInteger(p) && p >= 0 && p <= 4) return { stage: p, source: 'url' };
+  if (Number.isInteger(p) && p >= 0 && p <= UA.secretStage) return { stage: p, source: 'url' };
   if (test) return { stage: UA.testStage, source: 'test' };
   return { stage: masteryOf(clears)[tradition] ?? 0, source: 'seals' };
 }
-/** 인장 알림 한 줄: 「독일 견습생」 인장 — 비껴 딛는 가로베기 열림 (유파 이름은 TRADITIONS 에서 · 동작 이름은 괄호 앞) */
+/** 인장 알림 한 줄 (사장님 결정 10/13 23:1x '독일 유파 신 이렇게'): 「독일 유파 견습생」 인장 — 비껴 딛는 가로베기 열림 · 「동방 유파 신」 인장 — 비기 연환삼격 열림
+ *  (유파 이름은 TRADITIONS 에서 · 동작·비기 이름은 괄호 앞) */
 export function sealNotice(seal) {
   if (!seal) return '';
   const school = TRADITIONS[seal.school]?.nameKo ?? seal.school;
   const e = (PLAYER_UNIQUE[seal.school] ?? []).find((x) => x.stage === seal.stage);
   const U = e ? uniqueDef(seal.school, e) : null;
-  const move = U ? String(U.nameKo).replace(/\s*[(·].*$/, '') : '';
-  return `「${school} ${SEAL_NAMES[seal.stage - 1] ?? ''}」 인장${move ? ` — ${move} 열림` : ''}`;
+  const short = (t) => String(t).replace(/\s*[(·].*$/, '');
+  const secret = seal.stage >= UA.secretStage ? TRADITIONS[seal.school]?.secret : null;
+  const move = U ? short(U.nameKo) : secret?.nameKo ? `비기 ${short(secret.nameKo)}` : '';
+  return `「${school} 유파 ${SEAL_NAMES[seal.stage - 1] ?? ''}」 인장${move ? ` — ${move} 열림` : ''}`;
 }
 
 /**

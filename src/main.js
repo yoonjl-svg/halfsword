@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
-import { PHYSICS, ARENA, CAMERA } from './config.js';
+import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
 import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode·vital·plateNeck (주소 ?finishEntry · ?finishMode · ?vital · ?plateNeck)
 import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨눔 갈래 스위치 (10/12)
 import { Fighter, GROUND_GROUPS } from './fighter.js';
@@ -12,7 +12,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine, aiAtProficiency } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS } from './weapons.js';
 import { attachAura } from './aura.js';
@@ -96,7 +96,9 @@ if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.ibe
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 이어 주기(10/13): 기본 1, `?uniqueAssist=0` = 끔 (칼은 손가락만 따른다)
-const UNIQUE_STAGE_PARAM = params.get('uniqueStage'); // 고유 동작 해금 단계 덮어쓰기 `?uniqueStage=0..4` — 모든 유파를 그 단계로 (본판·테스트 경로 모두). 없으면 테스트 경로 4 · 본판은 손에 든 무기 유파의 인장 수
+const UNIQUE_STAGE_PARAM = params.get('uniqueStage'); // 고유 동작 해금 단계 덮어쓰기 `?uniqueStage=0..5` (5 = 비기까지) — 모든 유파를 그 단계로 (본판·테스트 경로 모두). 없으면 테스트 경로 4 · 본판은 손에 든 무기 유파의 인장 수
+const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..5` (실력 숫자 이름·고유 동작 거르기·5 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
+const FOE_PROF = /^[0-9]$/.test(FOE_PROF_PARAM ?? '') && +FOE_PROF_PARAM <= AI_PROFICIENCY.max ? +FOE_PROF_PARAM : null;
 setClearsOverride(params.get('clears')); // 시험용 `?clears=N`: 여정에서 깬 무대 수를 N 으로 (저장소는 건드리지 않는다 — 그 판 동안 깬 수도 여기에만 더함)
 // 마무리 스위치 (10/12 샛별 가져오기 2차 — docs/import/saetbyeol_round2_2026-10-12.md, 기본은 둘 다 끔):
 //  `?finishEntry=low` = 낮은 상대 진입(몸 높이로 내려찍기를 연다, finish_entry.js) · `?finishMode=power25` = 즉사 대신 판정 에너지 2.5 배 + 갑옷 판정
@@ -155,17 +157,18 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-//  메뉴에 남은 설정은 둘 — 상대 난이도 · 화면 60 fps 제한 (10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아' — docs/ui/hud_type_system_2026-10-10.md §13).
+//  메뉴에 남은 설정은 하나 — 화면 60 fps 제한 (10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아' — docs/ui/hud_type_system_2026-10-10.md §13).
+//  상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js). 저장된 옛 difficulty 값은 읽지 않는다.
 //  늘 켬으로 고정해 줄을 지운 것: 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출.
 //  주소 인자로만 켜는 것: 모든 기술 이름 보기(디버그, ?techCueAll=1) · 픽셀 모드(실험, ?pixel=1). 기울기 이동은 기능째 지웠다 (터치는 조이스틱만).
-const DEFAULTS = { difficulty: 'normal', skill: '0.7', fpsCap: true };
+const DEFAULTS = { skill: '0.7', fpsCap: true };
 const TECH_CUE_ALL = params.get('techCueAll') === '1'; // 디버그: 상대의 모든 기술 이름을 패시브·비기 묶음에 흐리게
 const PIXEL_MODE = params.get('pixel') === '1'; // 실험: 작은 해상도로 그려 크게 늘린다 (도트 그래픽처럼)
 const settings = { ...DEFAULTS };
 try {
   const saved = JSON.parse(localStorage.getItem('gladiator-settings') || '{}');
   // 남은 설정만 읽는다: 지운 설정(옛 legWeight · corr · corrTip · 위의 늘 켬 7 개 · 픽셀 · 기울기 moveMode·invertTilt)의 저장 값은 무시 — 끈 채 저장돼 있어도 켜진다
-  for (const k of ['difficulty', 'fpsCap']) if (k in saved) settings[k] = saved[k];
+  for (const k of ['fpsCap']) if (k in saved) settings[k] = saved[k];
   // 검술 보정은 한 단계(0.7)만 — 사장님 10/8 21:5x "플레이어에겐 끔 약 보통 강 같은 구분이 필요 없어. 한 단계로 기본 적용": 메뉴를 뺐고 저장된 옛 값(0·0.4·1)도 무시한다. AI 는 인물 숫자(persona.level.skill)
 } catch {
   /* 저장소를 못 쓰면 기본값으로 */
@@ -200,7 +203,7 @@ const lookvVersion = lookvParam != null ? (lookvParam.startsWith('v') ? lookvPar
 //  (없음)        : 무대마다 그곳이 고향인 검객 (stages.js STAGE_FOE, 오너 결정). 짝이 없는 무대는 무작위
 //  ?foe=<id>     : characters.js의 특정 캐릭터로 고정
 //  ?foe=random   : 판마다 무작위로 다른 캐릭터
-//  ?foe=default  : 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" (메뉴의 난이도 설정을 따른다)
+//  ?foe=default  : 예전처럼 LOOKS.enemy + 무작위 성격의 "기본 상대" (숙련도 2 = 실력 숫자 normal — 10/13 메뉴의 난이도 줄을 뺀 뒤)
 const foeParam = params.get('foe') || lookPreviewId || 'stage';
 const foeRandomEachRound = foeParam === 'random';
 let currentFoe = null; // 이번 판에 고른 캐릭터 (없으면 기본 상대)
@@ -523,14 +526,17 @@ function newRound(weaponId) {
   for (const f of [player, enemy]) { const h = attachHands(f); if (h) auras.push(h); } // 벙어리장갑 손 (외형 PM, hands.js — 겉모습만)
   swordTrails.attach([player, enemy]); // 칼 잔상 띠: 이번 판 두 검객 (지난 띠는 지운다)
   if (player.weapon?.gun || enemy.weapon?.gun) warmGunFx(renderer, camera); // 권총 효과 재질을 지금 무대 빛으로 미리 컴파일 (첫 발 멈칫 방지)
-  // 캐릭터를 골랐으면 그 캐릭터가 설계된 난이도(level)와 성격(persona)을 그대로 쓴다.
-  //  캐릭터가 없으면(기본 상대) 예전처럼 메뉴의 난이도 설정 + 무작위 성격을 쓴다
-  //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본)
-  const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...currentFoe.ai.persona, school: foeWeapon } : currentFoe?.ai.persona;
-  ai = currentFoe ? new AI(enemy, player, currentFoe.ai.level, persona) : new AI(enemy, player, settings.difficulty);
-  playerSecret = new PlayerSecretWatch(player, enemy); // 내 무기 유파의 비기 (스위치 끔·무유파·권총이면 S = null — 아무 일도 없다)
+  // 캐릭터를 골랐으면 그 캐릭터의 숙련도(실력 숫자 이름 level · 유파별 숙련도 persona.proficiency — characters.js)와 성격(persona)을 그대로 쓴다.
+  //  캐릭터가 없으면(기본 상대) 숙련도 2(= 실력 숫자 normal, AI_PROFICIENCY.ofLevel) + 무작위 성격 (10/13 메뉴 난이도 줄을 뺌)
+  //  ?foeProficiency=N 이면 그 판 상대의 숙련도를 N 으로 (시험)
+  //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본) — 숙련도 표는 시트 무기 유파 열쇠라 그 무기 유파는 0(고유 동작 없음)
+  const foeAI = currentFoe ? (FOE_PROF != null ? aiAtProficiency(currentFoe, FOE_PROF) : currentFoe.ai) : FOE_PROF != null ? { level: AI_PROFICIENCY.levels[FOE_PROF], persona: { proficiency: FOE_PROF } } : { level: 'normal', persona: null };
+  const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...foeAI.persona, school: foeWeapon } : foeAI.persona;
+  ai = new AI(enemy, player, foeAI.level, persona);
+  const uniqueStage = uniqueStageFor(player.swordArt?.tradition, { test: testRoute.active, param: UNIQUE_STAGE_PARAM }).stage; // 손에 든 무기 유파의 숙련도 (본판 = 인장 수 · 테스트 경로 5 · ?uniqueStage)
+  playerSecret = new PlayerSecretWatch(player, enemy, { locked: uniqueStage < CONFIG.UNIQUE_ASSIST.secretStage }); // 내 무기 유파의 비기 — 숙련도 5 에서만 (사장님 결정 10/13 23:1x '숙련도 5단계 … 거기서 비기를 배우게'). 그 전·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
   playerGuard = new PlayerParryGuard(player, enemy); // 막기 버튼 (누르는 동안만 손을 쥔다 — 권총·맨손이면 아무 일도 없다)
-  playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStageFor(player.swordArt?.tradition, { test: testRoute.active, param: UNIQUE_STAGE_PARAM }).stage }); // 고유 동작 이어 주기: 손에 든 무기 유파의 숙련도(인장 수)만큼 열림 (단계 0 · 무유파 · 끔이면 붙지 않음)
+  playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStage }); // 고유 동작 이어 주기: 손에 든 무기 유파의 숙련도(인장 수)만큼 열림 (단계 0 · 무유파 · 끔이면 붙지 않음)
   uniqueCueSeen = null;
   secretSlow = 0;
   secretBurstsSeen = 0;
@@ -796,7 +802,7 @@ $('howto').innerHTML = input.isTouchDevice
   ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>왼쪽 아래 조이스틱으로 걸어요. 화면을 톡 치면 찔러요.</li><li>오른쪽 아래 막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받아요. 누른 채 휘두르면 바로 공격해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>'
   : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>WASD 또는 방향키로 걸어요. F를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받아요.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>';
 
-// 설정 창: 남은 설정(상대 난이도 · 화면 60 fps 제한)만 [data-setting] 줄이 있다
+// 설정 창: 남은 설정(화면 60 fps 제한)만 [data-setting] 줄이 있다 (상대 난이도 줄은 10/13 에 뺐다)
 function refreshSettingsUI() {
   document.querySelectorAll('[data-setting]').forEach((el) => {
     const key = el.dataset.setting;
@@ -812,7 +818,6 @@ document.querySelectorAll('[data-setting]').forEach((el) => {
     el.querySelectorAll('button').forEach((b) =>
       b.addEventListener('click', () => {
         settings[key] = b.dataset.v;
-        if (key === 'difficulty' && ai && !currentFoe) ai.setLevel(settings.difficulty); // 캐릭터를 골랐으면 그 캐릭터의 난이도를 따로 지킨다
         saveSettings();
         refreshSettingsUI();
       }),
