@@ -25,6 +25,7 @@ import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩�
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
 import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
 import { reviveOf, tryRevive, reviveTick } from './revive.js';
+import { fighterWetlandMoveScale } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -292,6 +293,7 @@ export class Fighter {
    * @param {object} o
    * @param {number} o.index  0 = 플레이어, 1 = 상대
    * @param {number} o.x       시작 x 위치
+   * @param {number} [o.z]     시작 z 위치 (기본 0 — 잠든 습지만 옆으로 비켜 선다, main.js)
    * @param {number} o.heading 처음 바라보는 방향(라디안). 0 = +x
    * @param {object} o.look    겉모습(색, 투구 등) — looks.js 참고
    */
@@ -413,7 +415,7 @@ export class Fighter {
 
     const yaw = new THREE.Quaternion().setFromAxisAngle(UP, this.heading);
     this.yaw = yaw;
-    const origin = new THREE.Vector3(o.x, 0, 0);
+    const origin = new THREE.Vector3(o.x, 0, o.z ?? 0);
     const toWorld = (p) => new THREE.Vector3(...p).applyQuaternion(yaw).add(origin);
 
     const myBody = bodyBit(this.index);
@@ -2058,7 +2060,10 @@ export class Fighter {
     const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1) * (this.wearsPlate() ? ARMOR.moveMul : 1); // moveMul: 권총은 발이 빠르다 (weapons.js), 판금은 느리다 (config.js ARMOR)
     const st = this.stumble;
     const mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
-    const mv = this.state === 'stand' ? { x: mvIn.x * (1 - st.length()) + st.x, y: mvIn.y * (1 - st.length()) + st.y } : { x: 0, y: 0 };
+    // 진흙(잠든 습지 웅덩이)은 조종 입력만 줄인다 — 균형 잡는 걸음(stumble)·중력·공격은 그대로. 다른 무대는 정확히 1 (샛별 저장소 325a5c38 의 한 줄을 옮김)
+    const terrainScale = fighterWetlandMoveScale(this, p.x, p.z);
+    this.surfaceSpeedScale = terrainScale;
+    const mv = this.state === 'stand' ? { x: mvIn.x * terrainScale * (1 - st.length()) + st.x, y: mvIn.y * terrainScale * (1 - st.length()) + st.y } : { x: 0, y: 0 };
     if (this.state === 'stand' && this.daze > 0.2) {
       // 멍하면 발이 제멋대로 움찔거린다
       mv.x += Math.sin(this.stateTime * 3.1) * this.daze * 0.5;

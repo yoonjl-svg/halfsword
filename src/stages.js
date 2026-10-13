@@ -24,6 +24,7 @@ import { buildCorsair } from './stage_corsair.js';
 import { buildSacredGrove } from './stage_sacred_grove.js';
 import { buildFrozenBay } from './stage_frozen_bay.js';
 import { buildQinglan } from './stage_qinglan.js';
+import { buildSluice } from './stage_sluice.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
@@ -43,6 +44,8 @@ const BUILDERS = {
   // 샛별 저장소에서 가져온 두 무대 더 (사장님 10/10 20:4x '얼어붙은 만이 린드, 청람잔도가 김씨 전용 스테이지' — 지오메트리·재질·조명·소리 그대로, docs/stages.md)
   frozen_bay: buildFrozenBay, // 얼어붙은 만: 동시베리아 내륙 호수의 겨울 새벽, 먹청색 얼음·눈 덮인 물가·낙엽송·선착장 (stage_frozen_bay.js) — 투야나 니콜라예바(id eira, 전 이름 에이라 린드)의 무대
   qinglan: buildQinglan, // 청람잔도: 초여름 맑은 정오, 큰 강 협곡 위 바위 쉼터·돌계단 잔도·작은 샘 (stage_qinglan.js) — 김씨의 무대
+  // 샛별 저장소에서 가져온 무대 (사장님 10/14 02:3x — 진흙 감속 켬 · 가운데 말레이곰 석상 충돌 · 여정 밖, docs/import/sluice_port_2026-10-14.md)
+  sluice: buildSluice, // 잠든 습지: 비 그친 한낮의 열대 담수 침수림, 진흙 섬·얕은 물·옛 돌 수문, 가운데 말레이곰 석상 (stage_sluice.js) — 여정 밖: 테스트 경로 무대 고르기·?stage=sluice 로만
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
@@ -52,6 +55,7 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  10/10 사장님 지시로 샛별 저장소의 세 무대를 대성당 뒤에 이었다(기존 여섯 순서는 그대로): 붉은 회랑(토메 비달) → 산호 항구(오마리) → 신목의 숲(미나미)
 //  10/10 20:4x 두 무대를 그 뒤에 더 이었다(앞 아홉 순서·자리는 그대로): 얼어붙은 만(투야나) → 청람잔도(김씨). 까닭: 이미 있는 판 순서를 하나도 안 밀고,
 //   눈 내리는 성 안뜰(4번째)과 겨울 얼음만이 붙지 않게 멀리 두고, 숲(신목) → 겨울 새벽(얼음만) → 여름 한낮(잔도) → 다시 바닷가(포세이돈)로 계절·빛이 번갈아 바뀐다
+//  잠든 습지(sluice)는 순서표에 넣지 않았다 (10/14 감독 추천 '여정 밖' — 확인표 1119, 사장님 확인 전): 테스트 경로 무대 고르기·?stage=sluice 로만 연다
 export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji' };
@@ -77,7 +81,7 @@ export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
 export const STAGE_NAME_KO = {
   poseidon: '포세이돈 신전', clearing: '화전 터', clearing_a: '화전 터', clearing_a_dry: '화전 터', temple: '산사', castle: '성 안뜰',
   poseidon_night: '밤의 포세이돈 신전', cathedral: '대성당', darkhall: '어두운 홀', loggia: '붉은 회랑', corsair: '산호 항구',
-  sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도',
+  sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도', sluice: '잠든 습지',
 };
 /** 왼쪽 위 첫 줄: '스테이지 N · 이름' (순서표 밖이면 이름만) */
 export function stageLabel(id) {

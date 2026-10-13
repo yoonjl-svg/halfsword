@@ -96,7 +96,7 @@
   <body>
     <main>
       <h1>테스트 경로</h1>
-      <p class="lead">무기와 캐릭터를 고르세요. 상대와 무대는 판마다 무작위로 바뀌고, 이기든 지든 다음 판으로 넘어갑니다.</p>
+      <p class="lead">무기와 캐릭터를 고르세요. 상대와 무대는 판마다 무작위로 바뀌고(무대는 아래에서 여정 밖 무대로 고정할 수 있어요), 이기든 지든 다음 판으로 넘어갑니다.</p>
 
       <h2>무기 <small id="weaponCount"></small></h2>
       <h3>오늘 바뀐 무기</h3>
@@ -116,6 +116,9 @@
 
       <h2>독일 비기 <small>롱소드·에스톡·세이버 등 — 나와 상대 모두</small></h2>
       <div class="grid" id="deSecret" role="group" aria-label="독일 비기 판"></div>
+
+      <h2>무대 <small>기본은 무작위 · 여정 밖 무대는 여기서만</small></h2>
+      <div class="grid" id="stagePick" role="group" aria-label="무대"></div>
 
       <a class="back" href="./index.html">← 본판으로</a>
     </main>

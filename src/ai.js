@@ -28,6 +28,7 @@ import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸�
 import { aiUniqueStages } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
+import { routeAroundStageObstacle } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { FINISH } from './finish.js';
@@ -270,7 +271,13 @@ export class AI {
   }
 
   // ───────────────────────── 매 스텝 ─────────────────────────
+  /** 매 스텝: 싸움 판단(updateCombat) 뒤에 무대 장애물 돌아가기 — 스틱 입력의 방향만 바꾼다 (샛별 저장소 325a5c38 의 두 줄을 옮김) */
   update(dt) {
+    this.updateCombat(dt);
+    routeAroundStageObstacle(this);
+  }
+
+  updateCombat(dt) {
     const me = this.me;
     const foe = this.foe;
     this.sense.record(dt);

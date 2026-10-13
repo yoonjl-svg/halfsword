@@ -1,6 +1,7 @@
 // 테스트 고르기 화면 (test.html) — 사장님 10/10 16:5x "무기와 캐릭터 고르도록 해. 상대와 스테이지는 랜덤"
 //  무기: weapons.js WEAPON_LIST 전부 (오늘 바뀐 무기 묶음을 위에) · 캐릭터: characters.js CHARACTERS 전부 + 기본 주인공(LOOKS.player)
 //  '시작' → index.html?test=1&weapon=<id>&hero=<id|player>&foe=random&stage=random (그쪽 인자 뜻은 src/test_route.js)
+//  무대(10/14): 기본은 무작위(여정 무대 — 지금 그대로). 여정 밖 무대(잠든 습지)를 고르면 stage=<id> 로 그 무대에 고정된다 (기억하지 않는다)
 //  마지막 고른 무기·캐릭터는 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작).
 //  비기 판(이베리아·중국·독일)은 기억하지 않는다 — 10/13 사장님 'test 경로로는 아직 끊기지 않는 흐름이 발동' = 예전에 고른 v5 가 기억돼 있던 것. 열 때마다 본판 기본값에서 시작
 import { WEAPON_LIST, TIER_LABEL, RETIRED_WEAPONS } from './weapons.js';
@@ -69,6 +70,12 @@ const DE_SECRETS = [
   { id: 'v1', name: '기본 · 받아 베기 (Versetzen)', sub: '머리·목을 노리는 칼을 맞받아 벰 — 지금 본판 기본' },
   { id: 'parry', name: '시험 · 감아 들기 (Indes)', sub: '황소·왕관으로 받아 칼이 붙은 동안 입력 → 받은 칼을 타고 한 수 (붙음이 짧아 잘 안 열림)' },
 ];
+// 무대 (10/14 — 여정 밖 무대 잠든 습지를 여는 곳, docs/import/sluice_port_2026-10-14.md · 확인표 1119). 기본은 무작위(지금 그대로).
+//  stages.js 를 부르면 무대 짓는 코드가 이 화면에 다 딸려 오므로 이름만 여기 적는다 (stages.js STAGE_NAME_KO 와 같은 이름)
+const STAGE_PICKS = [
+  { id: 'random', name: '무작위 (여정 무대)', sub: '판마다 여정 무대 가운데 하나 — 지금 그대로' },
+  { id: 'sluice', name: '잠든 습지 (여정 밖)', sub: '새 무대 (10/14) — 가운데 말레이곰 석상 · 진흙 웅덩이 감속. 판이 바뀌어도 이 무대' },
+];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
@@ -76,6 +83,7 @@ const pick = {
   ibSecret: SECRET.iberianSecret, // 비기 판은 기억하지 않고 본판 기본값에서 (10/13)
   cnSecret: SECRET.cnSecret,
   deSecret: SECRET.deSecret,
+  stage: 'random', // 무대도 기억하지 않는다 (열 때마다 무작위에서 — 고른 무대가 남아 '왜 늘 습지인가' 헷갈리지 않게)
 };
 
 function weaponButton(w, big) {
@@ -169,6 +177,7 @@ function render() {
   for (const el of document.querySelectorAll('#ibSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibSecret));
   for (const el of document.querySelectorAll('#cnSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.cnSecret));
   for (const el of document.querySelectorAll('#deSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.deSecret));
+  for (const el of document.querySelectorAll('#stagePick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.stage));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -177,11 +186,12 @@ function render() {
   bw.textContent = w.name;
   const bh = document.createElement('b');
   bh.textContent = h.name;
-  s.append(bw, ' · ', bh, document.createElement('br'), '상대·무대 무작위');
+  const st = STAGE_PICKS.find((x) => x.id === pick.stage);
+  s.append(bw, ' · ', bh, document.createElement('br'), pick.stage === 'random' ? '상대·무대 무작위' : `상대 무작위 · 무대 ${st.name}`);
 }
 
 function startUrl() {
-  const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: 'random', stage: 'random' });
+  const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: 'random', stage: pick.stage }); // stage=<id> 면 main.js STAGE_PIN 으로 그 무대 고정
   if (pick.ibSecret !== SECRET.iberianSecret) q.set('ibSecret', pick.ibSecret); // 본판 기본값이 아니면 판을 주소에 (10/13 — 전엔 독일 기본을 'parry' 로 잘못 알아 감아 들기를 고를 수 없었다)
   if (pick.cnSecret !== SECRET.cnSecret) q.set('cnSecret', pick.cnSecret);
   if (pick.deSecret !== SECRET.deSecret) q.set('deSecret', pick.deSecret);
@@ -197,6 +207,7 @@ for (const h of heroes) $('heroes').append(heroButton(h));
 for (const x of IB_SECRETS) $('ibSecret').append(ibSecretButton(x));
 for (const x of CN_SECRETS) $('cnSecret').append(ibSecretButton(x, 'cnSecret'));
 for (const x of DE_SECRETS) $('deSecret').append(ibSecretButton(x, 'deSecret'));
+for (const x of STAGE_PICKS) $('stagePick').append(ibSecretButton(x, 'stage'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +

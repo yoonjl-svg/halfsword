@@ -37,6 +37,9 @@ import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버
 import { PlayerUniqueAssist, uniqueStageFor, setClearsOverride, addJourneyClear, sealNotice } from './unique_assist.js'; // 플레이어 고유 동작 이어 주기 (10/13 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
+import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
+import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
+import { setSupportFloor } from './gait.js'; // 발 체중 받침은 바닥 콜라이더 접촉만 (10/14 — 벽·석상에 발이 닿은 힘은 받침이 아님)
 
 await RAPIER.init();
 
@@ -336,6 +339,7 @@ const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
+let arenaStone = null; // 무대 고정 장애물 (잠든 습지 석상 — arena_obstacle.js, 다른 무대는 null)
 let bodySounds = [];
 /**
  * 흩어지던 조각(부러진 칼날 끝·투구·판금 — debris.js 한 곳)과 벗겨진 케틀햇(캐릭터 그룹 밖, 장면에 있다)을 치운다:
@@ -468,7 +472,8 @@ function newRound(weaponId) {
 
   // 바닥 + 원형 경계 벽 (보이지 않는 벽: 눈에 보이는 건 대리석 테두리)
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-  world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
+  const floor = world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
+  setSupportFloor(world, floor); // 발 체중 받침은 이 바닥 접촉만 센다 (gait.js groundForce — 벽·석상 접촉은 받침이 아님)
   const n = 32;
   const R = ARENA.radius + 0.25;
   for (let i = 0; i < n; i++) {
@@ -484,12 +489,15 @@ function newRound(weaponId) {
     );
   }
 
+  arenaStone = configureStageObstacle(RAPIER, world, stages.id, GROUND_GROUPS); // 잠든 습지: 가운데 석상 충돌체 (다른 무대 null)
+  const startZ = stageStartZ(stages.id); // 잠든 습지: 두 사람을 옆으로 비켜 세워 카메라 → 상대 시선이 석상에 막히지 않게 (다른 무대 0)
   const before = new Set(scene.children);
   const foeWeapon = foeWeaponId;
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
     name: '나',
     x: -ARENA.startGap / 2,
+    z: startZ,
     heading: 0,
     look: LOOKS.player,
     weapon: weaponId,
@@ -504,11 +512,16 @@ function newRound(weaponId) {
     index: 1,
     name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
+    z: startZ,
     heading: Math.PI,
     look: enemyLook,
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
     revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
   });
+  for (const f of [player, enemy]) {
+    configureWetlandMovement(f, stages.id); // 진흙 웅덩이 감속 (잠든 습지만)
+    f.arenaObstacle = arenaStone?.navigation ?? null; // AI 돌아가기가 읽는다 (석상 없으면 null — 아무 일 없음)
+  }
   // 진짜 엑스칼리버의 기운 (보여 주기만)
   for (const a of auras) a.dispose();
   auras = [player, enemy].map(attachAura).filter(Boolean);
@@ -990,7 +1003,7 @@ const cardEls = [...drawEl.querySelectorAll('.wcard')];
 //  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
 //  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
 //  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
-const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025', frozen_bay: '#18293a', qinglan: '#16332f' }; // 테마 → 바탕색 (뒤 다섯은 샛별 저장소의 무대 — 얼어붙은 만·청람잔도는 10/11 우리가 그림, tools/cardbacks/gen_pixel_cardbacks.py)
+const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025', frozen_bay: '#18293a', qinglan: '#16332f', sluice: '#182a22' }; // 테마 → 바탕색 (뒤 여섯은 샛별 저장소의 무대 — 얼어붙은 만·청람잔도는 10/11, 잠든 습지는 10/14 우리가 그림, tools/cardbacks/gen_pixel_cardbacks.py)
 const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
 const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
 let cardBack = 'classic';
@@ -1278,6 +1291,7 @@ function beginFight() {
   state = 'fight';
   input.enabled = true;
   emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
+  mudNoticeShown = false; // 진흙 알림도 판마다 한 번
   clearEmoMsg();
   techClear();
   applyMoveMode();
@@ -1440,6 +1454,14 @@ function tickEmoMsg(dt) {
     emoCur = null;
     $('emoMsg')?.classList.remove('show');
   }
+}
+// 잠든 습지 진흙 웅덩이 알림 (샛별 저장소 325a5c38 의 '진흙 · 발이 느려집니다' 를 옮겨 고침): 그쪽은 아래 가운데 새 칸에 밟는 동안 내내 띄웠지만,
+//  우리는 아래 가운데에 안내·알림 줄이 이미 있어(docs/ui/hud_type_system_2026-10-10.md) 알림 줄(E)로 판마다 처음 밟을 때 한 번만 (확인표 1116)
+let mudNoticeShown = false;
+function watchMudNotice() {
+  if (mudNoticeShown || !player?.alive || !((player.surfaceSpeedScale ?? 1) < 0.98)) return;
+  mudNoticeShown = true;
+  showEmoMsg('진흙 · 발이 느려집니다', 'mud', 2000);
 }
 /** 감정 줄을 비운다 (새 판) */
 function clearEmoMsg() {
@@ -1630,7 +1652,9 @@ function updateCamera(dt) {
   const r = Math.hypot(camTarget.x, camTarget.z);
   if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
   const k = 1 - Math.exp(-dt * 6);
+  clampStageCamera(a, camTarget, arenaStone?.navigation); // 잠든 습지: 카메라가 석상을 가로지르거나 안으로 들어가지 않게 (석상 없으면 그대로)
   camera.position.lerp(camTarget, k);
+  clampStageCamera(a, camera.position, arenaStone?.navigation);
   const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1);
   camLook.lerp(look, k);
   // 발걸음: 디딜 때 살짝 내려앉음
@@ -1931,6 +1955,7 @@ function frame(now) {
     if (taps > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();
+    watchMudNotice(); // 잠든 습지: 진흙을 처음 밟으면 알림 줄 한 번 (다른 무대는 배율 1 이라 안 뜬다)
     const m = input.move;
     const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
     const feet = player.alive && player.skill.secretPhase !== 'stiff'; // 비기 경직: 스틱이 안 듣는다 (걸음·근접 밀치기 없음 — 몸은 물리대로)
@@ -2097,12 +2122,23 @@ window.game = {
   get stage() {
     return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
   },
+  // 무대 고정 장애물 (잠든 습지 석상): 충돌체 수 · 돌아가기 반지름 — 시험 도구가 읽는다
+  get arenaObstacle() {
+    return arenaStone ? { colliderCount: arenaStone.handles.size, navigation: arenaStone.navigation } : null;
+  },
   setStage(id) {
     if (useStage(id)) {
       clearFlying();
       stages.warm(renderer, camera);
     }
     sound.setStage(stages.id);
+    // 판 도중에 무대를 바꾸면 석상 충돌체·진흙도 지금 세계에 맞춘다 (시작 자리는 다음 판부터)
+    if (world) arenaStone = configureStageObstacle(RAPIER, world, stages.id, GROUND_GROUPS, arenaStone);
+    for (const f of [player, enemy]) {
+      if (!f) continue;
+      configureWetlandMovement(f, stages.id);
+      f.arenaObstacle = arenaStone?.navigation ?? null;
+    }
   },
   AI,
   settings,
