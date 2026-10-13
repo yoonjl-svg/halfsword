@@ -302,19 +302,27 @@ function baikalBackdrop(scene) {
 }
 
 /** 예배당 앞에 앉아 결투를 지켜보는 북극곰 (10/13 23:0x 사장님 '그 앞에 북극곰이 앉아서 결투를 지켜보게').
- *  예배당 박공벽(결투장 쪽을 보는 벽 — 문은 반대쪽) 앞 BEAR 자리에 엉덩이를 깔고 앞다리를 곧게 세워 앉아 결투장 한가운데(0, 0)를 본다.
- *  앉은 키 약 1.66 m(실제 곰 크기). 예배당과 같은 Kit·같은 'log' 통에 합쳐 그리기 호출은 늘지 않는다(움직임 없음 — 188 m 에서 몇 픽셀이라 숨쉬기·고개 돌림이 안 보인다).
- *  예배당처럼 안개를 끄고 Lambert 꼭짓점 색으로: 털은 크림빛 흰색, 코·눈은 검게. 예배당 바닥(1.7 m)이 비탈 위라 곰은 벽보다 낮게 앉고,
- *  경기 카메라에선 어두운 예배당 바로 아래 기슭 띠 앞의 밝은 점(폰 가로 키 약 4 CSS px)으로 읽힌다.
- *  난수: Kit 제 것(밝기 흔들림)만 — 무대의 다른 흩뿌림 순서는 그대로 */
-const BEAR = { side: 0, front: 3.1, y: 0 }; // 예배당 기준(박공벽 앞쪽으로 front m, 옆으로 side m). y 는 월드 높이 — 비탈이 얼음(y 0)과 만나는 기슭 끝에 앉는다(예배당 바닥 1.7 m 는 비탈 위)
+ *  예배당 박공벽(결투장 쪽을 보는 벽 — 문은 반대쪽) 앞 눈 둔덕 위에 엉덩이를 깔고 앞다리를 곧게 세워 앉아 결투장 한가운데(0, 0)를 본다.
+ *  10/13 23:4x 사장님 결정('눈 둔덕 위에 올리고 1.5배로'): 1차는 기슭 끝(y 0)에 실제 크기(앉은 키 1.66 m)로 앉아 통나무 벽보다 낮았고
+ *  경기 카메라에서 기슭 띠 앞 점(폰 가로 키 약 4 CSS px)이었다 → 낮고 둥근 눈 둔덕(SNOW_MOUND, 꼭대기 ≈ 예배당 바닥 1.7 m)을 쌓고 곰을 1.5배(앉은 키 약 2.5 m)로
+ *  그 위에 앉혀 어두운 통나무 벽 앞에 실루엣이 서게 했다. 둔덕은 면마다 명암이 지는 평면 음영(무대 물가 눈 둑과 같은 결), 색은 예배당 지붕 눈과 같은 먼 빛 눈색.
+ *  예배당과 같은 Kit·같은 'log' 통에 합쳐 그리기 호출은 늘지 않는다 · 안개 끔 · 그림자 없음 · 움직임 없음(188 m 에서 몇 픽셀이라 숨쉬기·고개 돌림이 안 보인다).
+ *  털은 크림빛 흰색, 코·눈은 검게. 난수: Kit 제 것(밝기 흔들림)만 — 무대의 다른 흩뿌림 순서는 그대로 */
+const BEAR = { side: 0, front: 3.5, y: 1.62, scale: 1.5 }; // 예배당 기준(박공벽 앞쪽으로 front m, 옆으로 side m) · y 월드 높이(둔덕 위, 발이 조금 묻힘) · 크기 배율(1 = 앉은 키 1.66 m)
+const SNOW_MOUND = { front: 3.3, rx: 3.4, rz: 3.8, h: 1.9, y: -0.15, color: 0xa9b3c1 }; // 반구를 눌러 편 꼴: 옆 반지름 rx · 앞뒤 rz · 높이 h · 밑동 y(얼음 아래로 조금) — 꼭대기 1.75 m
 function chapelBear(c, out) {
   const fx = -Math.sin(CHAPEL.rotY), fz = -Math.cos(CHAPEL.rotY); // 예배당 -Z (박공벽이 보는 쪽)
   const sx = Math.cos(CHAPEL.rotY), sz = -Math.sin(CHAPEL.rotY);
-  const x = CHAPEL.x + fx * BEAR.front + sx * BEAR.side, z = CHAPEL.z + fz * BEAR.front + sz * BEAR.side;
-  out.bear = { x: +x.toFixed(2), y: BEAR.y, z: +z.toFixed(2), height: 1.66 };
   const n0 = c.bins.log.length;
-  c.push([x, BEAR.y, z], Math.atan2(-x, -z)); // 곰의 +Z 가 결투장 한가운데를 본다
+  // 눈 둔덕: 낮고 둥근 언덕 — 위 반구를 눌러 펴고, 면 법선(평면 음영)에 모서리를 조금 흔들어 눈 무더기 결
+  const mound = new THREE.SphereGeometry(1, 12, 4, 0, Math.PI * 2, 0, Math.PI / 2).toNonIndexed();
+  mound.computeVertexNormals();
+  const mx = CHAPEL.x + fx * SNOW_MOUND.front, mz = CHAPEL.z + fz * SNOW_MOUND.front;
+  c.put('log', mound, SNOW_MOUND.color, [mx, SNOW_MOUND.y, mz], [0, CHAPEL.rotY, 0], [SNOW_MOUND.rx, SNOW_MOUND.h, SNOW_MOUND.rz], { vary: 0, noise: 0.04, rough: 0.14 });
+  mound.dispose();
+  const x = CHAPEL.x + fx * BEAR.front + sx * BEAR.side, z = CHAPEL.z + fz * BEAR.front + sz * BEAR.side;
+  out.bear = { x: +x.toFixed(2), y: BEAR.y, z: +z.toFixed(2), height: +(1.66 * BEAR.scale).toFixed(2) };
+  c.push([x, BEAR.y, z], Math.atan2(-x, -z), BEAR.scale); // 곰의 +Z 가 결투장 한가운데를 본다 (아래 치수는 배율 1 기준)
   const FUR = 0xe6dcc4, FUR2 = 0xd6cdb8, DARK = 0x16181c;
   const ball = new THREE.SphereGeometry(1, 7, 5);
   const fur = { vary: 0, noise: 0.03 };
@@ -336,7 +344,7 @@ function chapelBear(c, out) {
   }
   ball.dispose();
   c.pop();
-  out.bear.triangles = c.bins.log.slice(n0).reduce((t, g) => t + g.attributes.position.count / 3, 0);
+  out.bear.triangles = c.bins.log.slice(n0).reduce((t, g) => t + g.attributes.position.count / 3, 0); // 둔덕 포함
 }
 
 function dawnSky(scene) {
