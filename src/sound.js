@@ -305,7 +305,7 @@ export const VOICES = {
   //  soft_female: 조용한 젊은 목소리 — 보관해 둔 Reitanna 녹음 둘(CC0, docs/sound_reserve 와 같은 바이트). 에이라·아르토리아가 같이 쓴다
   //   10/13: 피격은 Cici Fyre(CC0) 둘로 기절과 분리. 기절2 = Cici 날숨, 출혈2 = Reitanna 날숨(351160, CC0) — 기절·출혈 네 녹음이 서로 다르다
   soft_female: { f0: 225, tract: 1.17, breath: 0.6, rough: 0.1, style: 'gasp', rec: { ko: ['voice/reitanna_gasp', 'voice/tuyana_ko2_exhale'], bleed: ['voice/reitanna_long_sigh', 'voice/tuyana_bleed2_breath'], hurt: ['voice/tuyana_hurt1', 'voice/tuyana_hurt2'], gain: 1, rate: 1 } },
-  //  tome: 랴오와 떼어 낸 묶음 — 기본 상대(generic)의 HaelDB 녹음을 파일 복사 없이 빌린다. 새 성우도, 예순넷 나이를 확인한 연기도 아니다. 토메·김씨가 같이 쓴다
+  //  tome: 랴오와 떼어 낸 묶음 — 기본 상대(generic)의 HaelDB 녹음을 파일 복사 없이 빌린다. 새 성우도, 예순넷 나이를 확인한 연기도 아니다. 토메·김씨가 같이 쓴다 (10/14 여정 밖 인물 라트나도 — 사장님 '당분간 토메 묶음')
   //   10/13: 기절1만 tome_ko1_clean(같은 HaelDB 연기, 톤을 낮추고 날카로운 울림을 줄인 판). 기본 상대의 generic_ko1 은 그대로
   tome: { f0: 124, tract: 1, breath: 0.45, rough: 0.3, style: 'exhale', rec: { ko: ['voice/tome_ko1_clean', 'voice/generic_ko2'], bleed: ['voice/generic_bleed1', 'voice/generic_bleed2'], hurt: ['voice/generic_hurt1', 'voice/generic_hurt2'], gain: 0.7, rate: 1 } },
   //  omari: 오마리 전용 — thebardofblasphemy 의 부상·죽음 연기(CC0). 기절·출혈은 짧게 자른 판(20% 뒤 다시 10%), 음높이·빠르기는 그대로

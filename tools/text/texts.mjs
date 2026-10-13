@@ -310,7 +310,7 @@ export async function collectTexts({ characters = true } = {}) {
   // 인물 (10/10 이식 끝 — 검사기가 다른 글과 똑같이 본다)
   if (characters) {
     const C = await import('../../src/characters.js');
-    for (const ch of [...C.CHARACTERS, ...C.CHARACTER_VARIANTS]) {
+    for (const ch of [...C.CHARACTERS, ...C.CHARACTER_VARIANTS, ...(C.CHARACTER_GUESTS ?? [])]) { // 여정 밖 인물(10/14 라트나)도 같은 검사
       const wid = ch.weapon;
       const sc = (wid && weaponInfo[wid]?.school) || '';
       const at = (k) => `src/characters.js ${ch.id}.${k}`;

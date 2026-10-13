@@ -96,7 +96,7 @@
   <body>
     <main>
       <h1>테스트 경로</h1>
-      <p class="lead">무기와 캐릭터를 고르세요. 상대와 무대는 판마다 무작위로 바뀌고, 이기든 지든 다음 판으로 넘어갑니다.</p>
+      <p class="lead">무기와 캐릭터를 고르세요. 상대(무작위를 고르면)와 무대는 판마다 무작위로 바뀌고, 이기든 지든 다음 판으로 넘어갑니다.</p>
 
       <h2>무기 <small id="weaponCount"></small></h2>
       <h3>오늘 바뀐 무기</h3>
@@ -107,6 +107,9 @@
       <h2>캐릭터 <small>겉모습만 바뀝니다 · 유파·비기는 무기를 따릅니다</small></h2>
       <div class="grid" id="heroes" role="group" aria-label="캐릭터"></div>
       <p class="note" id="heroNote"></p>
+
+      <h2>상대 <small>무작위 = 본판 인물 · 여정 밖 인물은 여기서만</small></h2>
+      <div class="grid" id="foes" role="group" aria-label="상대"></div>
 
       <h2>이베리아 비기 <small>츠바이핸더·북부 대공의 검 — 나와 상대 모두</small></h2>
       <div class="grid" id="ibSecret" role="group" aria-label="이베리아 비기 판"></div>

@@ -740,6 +740,35 @@ export const LOOK_ARCHIVE = {
       outfit: 'tuyana_winter_priest_thick', armor: null, stockEyes: true, eyeColor: 0x4a3518,
     },
   },
+  // 라트나 위라세타쿤 (여정 밖 인물 — characters.js CHARACTER_GUESTS, 10/14) — 샛별 저장소 LOOK_ARCHIVE.ratna v1~v3 (d5b3151a · bf202a00 · ed736cf5, 값 그대로) + 우리 v4.
+  //  복식 모듈 하나(outfits.js ratna_ferryman = src/outfit_ratna.js)가 ratnaRevision 으로 판을 가른다. 방어구 없음
+  ratna: {
+    // v1 (샛별 d5b3151a): 청록 바지 · 회색 덩어리 머리 · 나무 노 · 수심추 · 방수 지도
+    v1: {
+      tunic: 0xded2b4, quilt: 0xb9a98a, sleeve: 0xa87350, straps: null,
+      belt: 0x884936, hoseUpper: 0x264e4d, hoseLower: 0xa87350, shoes: 0x45362b,
+      skin: 0xa87350, hands: 0xa87350, helmet: null, metal: 0xa18a53, hair: 0x34342f,
+      headband: null, grip: 0x493326, hilt: 0xa18a53, accent: 0x884936,
+      outfit: 'ratna_ferryman', armor: null, stockEyes: true, eyeColor: 0x302019,
+      originalTorsoWidth: true,
+    },
+  },
+};
+// 샛별 v2 (bf202a00): 왼 어깨 원숭이 · 가는 새치 · 밝은 황토 무릎바지 · 갈대·나무 밑창 신발 / v3 (ed736cf5): 솟은 나선 곱슬 · 원숭이를 목 쪽으로 3 cm
+LOOK_ARCHIVE.ratna.v2 = {
+  ...LOOK_ARCHIVE.ratna.v1,
+  hoseUpper: 0xc29b45, trouserSeam: 0x9d7936, shoes: 0xb8a071,
+  hair: 0x302e28, ratnaRevision: 2,
+};
+LOOK_ARCHIVE.ratna.v3 = { ...LOOK_ARCHIVE.ratna.v2, ratnaRevision: 3 };
+// v4 (우리 판, 사장님 승인 감독 디자인 수정 10/14 02:3x·03:0x — docs/import/ratna_port_2026-10-14.md): 머리 꼴·새치는 v3 그대로 ·
+//  등의 노 뺌 · 수염 잔 곱슬 매듭 · 무릎 다듬음 (모듈 쪽) ·
+//  바지 채도 한 단계 낮추고 곰 석상 가슴 무늬 주황금(#D98A3A) 계열로: 0xc29b45(색상 41° · 채도 0.51 · L* 66) → 0xb68854(32° · 0.40 · L* 60), 솔기 0x9d7936 → 0x8d673f ·
+//  얼굴만 은은하게: faceSkin 0xb48362(바탕 L* 53 → 59 — 목·팔·다리 살 0xa87350 그대로) + 같은 색 제빛 faceGlow 0.18 ·
+//  원숭이 자리 ratnaMonkey 'bag' = 등 가방 위 왼쪽(어깨 위는 칼·팔과 겹침 — outfit_ratna.js MONKEY_SEATS · 가방 BAG) — 값 모두 사장님 확인 전(확인표 1200~)
+LOOK_ARCHIVE.ratna.v4 = {
+  ...LOOK_ARCHIVE.ratna.v3,
+  hoseUpper: 0xb68854, trouserSeam: 0x8d673f, faceSkin: 0xb48362, faceGlow: 0.18, ratnaMonkey: 'bag', ratnaRevision: 4,
 };
 
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
@@ -756,6 +785,7 @@ export const CHARACTER_LOOK_VERSION = {
   samira: 'v4', // 외형 3차 10/11 (이름 마야 라토르) — 옛 판 ?look=samira:v3 · v2 · v1
   renji: 'v3', // 외형 3차 10/11 — 옛 판 ?look=renji:v2(바지·행전) · v1
   eira: 'v5', // 10/11 01:4x 매듭 굵게 — 옛 판 ?look=eira:v4 · v3 · v2 · v1
+  ratna: 'v4', // 10/14 여정 밖 인물 (우리 v4) — 샛별 판 ?look=ratna:v3 · v2 · v1
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

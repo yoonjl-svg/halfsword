@@ -7,6 +7,8 @@
 //   test=1          : ① 상대는 자기 무기(weapon= 가 상대에게 번지지 않게) ② 이기든 지든 다음 판으로(무대·상대 새로) ③ 메뉴에 '테스트 고르기로' 단추
 //                     ④ 무기 카드 뽑기는 weapon= 가 이미 건너뛴다(main.js startFight FIXED_WEAPON)
 //                     foe=random 이면 상대 후보에서 고른 인물은 뺀다(같은 겉모습 둘이 서지 않게)
+//                     foe=<인물 id> 면 판마다 그 인물(main.js pickFoe — CHARACTERS_BY_ID). 10/14 고르기 화면의 '상대' 줄 — 여정 밖 인물(CHARACTER_GUESTS, 라트나)은
+//                     무작위 후보(CHARACTERS)에 없고 여기서만 고른다
 //                   ⑤ 플레이어 고유 동작(unique_assist.js)이 모두 열린다 (UNIQUE_ASSIST.testStage 5 = 비기까지 — 본판은 여정 인장 수, 둘 다 ?uniqueStage=0..5 로 덮음)
 import { CHARACTERS, CHARACTERS_BY_ID, pickCharacterWeapon } from './characters.js';
 import { STAGE_ORDER } from './stages.js';
@@ -18,6 +20,8 @@ export function createTestRoute(params) {
   const heroId = params.get('hero');
   const hero = heroId && heroId !== 'player' ? CHARACTERS_BY_ID[heroId] || null : null;
   const stageRandom = params.get('stage') === 'random';
+  const foeId = params.get('foe');
+  const foeFixed = foeId && foeId !== 'random' ? CHARACTERS_BY_ID[foeId] || null : null; // 고른 상대 (메뉴 한 줄에만 — 고르기는 main.js pickFoe)
   return {
     active,
     hero,
@@ -64,7 +68,7 @@ export function createTestRoute(params) {
       const note = doc.createElement('p');
       note.id = 'testRouteNote';
       note.style.cssText = 'margin:-8px 0 12px;font-size:12px;color:var(--accent);line-height:1.4';
-      note.textContent = `테스트 경로 · ${weaponName} · ${hero ? hero.name : '기본 주인공'} · 상대·무대 무작위 · 고유 동작·비기 모두 열림`; // 고유 동작 해금: 테스트 경로는 모두 (main.js uniqueStageFor test — UNIQUE_ASSIST.testStage)
+      note.textContent = `테스트 경로 · ${weaponName} · ${hero ? hero.name : '기본 주인공'} · ${foeFixed ? `상대 ${foeFixed.name} · 무대 무작위` : '상대·무대 무작위'} · 고유 동작·비기 모두 열림`; // 고유 동작 해금: 테스트 경로는 모두 (main.js uniqueStageFor test — UNIQUE_ASSIST.testStage)
       actions.append(btn);
       doc.getElementById('menuSub')?.after(note); // 제목 아래 한 줄 (아래 단추 줄을 두껍게 하지 않게)
     },

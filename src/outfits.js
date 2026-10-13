@@ -20,6 +20,7 @@ import { createEiraOutfit } from './outfit_eira.js'; // 에이라 린드(지금 
 import { createSamiraOutfit } from './outfit_samira.js'; // 사미라 v2 앙가르카 (디자인 리뷰 10/10)
 import { createTuyanaOutfit } from './outfit_tuyana.js'; // 투야나 v2 겨울 사제복 (디자인 리뷰 10/10)
 import { createRenjiBajiOutfit } from './outfit_renji_baji.js'; // 김씨 v2 하카마 → 바지·행전 (외형 다듬기 2차 10/10)
+import { createRatnaOutfit } from './outfit_ratna.js'; // 라트나 위라세타쿤 복식 (샛별 저장소에서 가져옴 10/14 — 샛별 v1~v3 + 우리 v4)
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -2811,7 +2812,8 @@ const CROWN_ROSE_UNIFORM = Object.fromEntries(Object.entries(CROWN_BLUE_UNIFORM)
 // 김씨·에이라 복식 모듈(outfit_renji.js·outfit_eira.js)이 쓰는 도우미 묶음 — 샛별 쪽과 같은 이름·같은 열쇠
 export const newOutfitHelpers = { THREE, bake, box, cyl, ball, cone, addMerged, CLOTH, quietFace, isoldeLock, artoriaCloth, sleeveVolume, clothNeck,
   // 디자인 리뷰 10/10 (사미라 v2·투야나 v2 복식 모듈)이 더 쓰는 것 — 열쇠만 늘림, 기존 모듈은 그대로
-  taperedTube, clothPanel, reshapeMain, hangingClothShading, roseUniformHead };
+  taperedTube, clothPanel, reshapeMain, hangingClothShading, roseUniformHead,
+  artoriaRoundedBox }; // 라트나 복식 모듈(outfit_ratna.js, 10/14)이 더 쓰는 것 — 샛별 쪽 묶음과 같은 열쇠
 
 const RENJI_V1 = createRenjiOutfit(newOutfitHelpers); // 김씨 v1 (v2 가 하카마 밖 전부를 이어 받는다)
 
@@ -2833,6 +2835,7 @@ export const OUTFITS = {
   tuyana_winter_priest_chotki: createTuyanaOutfit(newOutfitHelpers, { chotki: true }), // 투야나 v3 왼손목 추트키 (외형 다듬기 2차 10/10)
   tuyana_winter_priest_dangle: createTuyanaOutfit(newOutfitHelpers, { dangle: true }), // 투야나 v4 늘어져 흔들리는 긴 추트키 (외형 3차 10/11)
   tuyana_winter_priest_thick: createTuyanaOutfit(newOutfitHelpers, { dangle: true, thick: true }), // 투야나 v5 추트키 매듭 굵게 (10/11 01:4x)
+  ratna_ferryman: createRatnaOutfit(newOutfitHelpers), // 라트나 (여정 밖 인물, 10/14) — 모듈 하나가 look.ratnaRevision 으로 샛별 v1~v3 · 우리 v4 를 가른다. 이름은 샛별 쪽 열쇠 그대로
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,
