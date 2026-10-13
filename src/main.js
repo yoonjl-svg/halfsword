@@ -96,7 +96,7 @@ if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.ibe
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
-else if (testRoute.active) CONFIG.UNIQUE_ASSIST.on = 0; // 테스트 경로는 기본 끔 (사장님 10/14 02:0x '테스트 경로는 꺼 둬' — 궤적을 빼앗던 이어 주기를 '궤적은 내 것, 발·몸·끝 힘을 더함'으로 다시 만듦 — 10/14 강화 판도 기본 끔 그대로, 사장님 확인용). `?uniqueAssist=1` 로 켬
+// 테스트 경로도 기본 켬 (사장님 10/14 03:1x '테스트에서 켜' — 10/14 02:0x 부터 '궤적은 내 것' 강화 판으로 다시 만드는 동안 꺼 두었던 것). 끄려면 `?uniqueAssist=0`
 if (params.has('uniqueEnhance')) CONFIG.UNIQUE_ASSIST.enhance = Math.max(0, +params.get('uniqueEnhance') || 0); // 고유 동작 강화 세기(10/14): 기본 1 · 0 = 기술 이름 알림만 · 0.5 = 절반 (걸음·몸·끝 힘 한꺼번에)
 const UNIQUE_STAGE_PARAM = params.get('uniqueStage'); // 고유 동작 해금 단계 덮어쓰기 `?uniqueStage=0..5` (5 = 비기까지) — 모든 유파를 그 단계로 (본판·테스트 경로 모두). 없으면 테스트 경로 4 · 본판은 손에 든 무기 유파의 인장 수
 const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..5` (실력 숫자 이름·고유 동작 거르기·5 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값

@@ -136,11 +136,11 @@
 6. 비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌면 발동하지 않고, 강화 중에 시작되면 곧장 물러난다(끝 힘 되돌림, 몸은 0.25 s 에 걷음) — 10/13 판과 같음.
 7. 새 수는 config.js `UNIQUE_ASSIST` 한 곳(enhance·bodyIn·bodyOut·powerAt·powerMax·endPower)과 표의 body·body2. 확인표 1078~1084, 모두 사장님 확인 전. 10/13 판 수 가운데 speedK·vMin·idleRelease·oppositeDeg·joinMax 는 이제 읽지 않는다(기록으로 둠).
 
-### 켜 보는 주소 (테스트 경로 기본은 그대로 끔 — 사장님 10/14 02:0x)
+### 켜 보는 주소 (테스트 경로도 기본 켬 — 사장님 10/14 03:1x '테스트에서 켜'. 02:0x~03:1x 동안은 끔이었다)
 
 | 주소 | 뜻 |
 |---|---|
-| `test.html` 에서 무기 고르고 들어간 판 주소 끝에 `&uniqueAssist=1` (예 `index.html?test=1&weapon=longsword&uniqueAssist=1`) | 강화 켬 · 모든 단계 열림 |
+| `test.html` 에서 무기 고르고 들어간 판 (예 `index.html?test=1&weapon=longsword`) | 강화 켬(기본) · 모든 단계 열림 |
 | 위에 `&uniqueEnhance=0` | 기술 이름 알림만 (걸음·몸·끝 힘 없음) |
 | 위에 `&uniqueEnhance=0.5` | 강화 절반 |
 | `index.html?weapon=longsword&uniqueStage=4` | 본판에서 켬 (본판은 기본 켬 · 단계는 인장 수) |
