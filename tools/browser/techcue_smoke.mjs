@@ -1,6 +1,7 @@
 // 유파 기술 알림(#techCue, 10/9) 브라우저 확인: 상대 무기를 정해 싸움을 띄우고 알림 칸이 보이는 순간 스크린샷 한 장. 바꿔 끼우기도 본다
 //  10/10 20:3x: #techCue 는 겉 칸 — ② 패시브·비기 #techSlot(자세 아래)에 줄 하나(.slot), 새 알림은 그 자리에서 바꿔 끼운다 (③ 경직·상태 묶음은 없앴다).
 //  설정 '유파 기술 알림'은 없어졌다(늘 켬)
+//  10/14: 상대 기술 알림은 왼쪽 위 둘째 줄 #stageInfo .foe ('AI 이름 · 기술 이름', data-kind = 기술 종류 · 평소 'guard') — 이 도구는 그 줄을 본다. ② #techSlot 은 내 것만
 //  실행: npx vite build && npx vite preview --port 4173 --strictPort &
 //        node tools/browser/techcue_smoke.mjs http://127.0.0.1:4173 <스크린샷 폴더> ['?weapon=longsword&foeWeapon=monohoshizao'] [벽시계 한도 ms]
 //  소프트웨어 GL 은 느리다(벽 10 s ≈ 게임 1~2 s) — 한도를 넉넉히. playwright 는 저장소 의존성에 없다 (npm i --no-save playwright)
@@ -36,9 +37,9 @@ let lastCue = null;
 while (Date.now() - t0 < wallMax) {
   await page.waitForTimeout(120);
   const r = await page.evaluate(() => {
-    const el = document.querySelector('#techSlot .slot');
+    const el = document.querySelector('#stageInfo .foe');
     const c = window.game.enemy?.techCue;
-    return { slot: el.parentElement.id, show: el.classList.contains('show'), op: +getComputedStyle(el).opacity, text: el.innerText.replace(/\s+/g, ' ').trim(), cue: c ? `${c.text}/${c.kind}` : null, cueT: c?.t ?? null, sim: +window.game.stats.simTime.toFixed(2), state: window.game.state, eAlive: !!window.game.enemy?.alive, passives: window.game.ai?.stats?.passives ?? null };
+    return { slot: el.parentElement.id, show: el.classList.contains('on') && !!el.dataset.kind && el.dataset.kind !== 'guard', op: +getComputedStyle(el.parentElement).opacity, text: el.innerText.replace(/\s+/g, ' ').trim(), cue: c ? `${c.text}/${c.kind}` : null, cueT: c?.t ?? null, sim: +window.game.stats.simTime.toFixed(2), state: window.game.state, eAlive: !!window.game.enemy?.alive, passives: window.game.ai?.stats?.passives ?? null };
   });
   if (r.cue && r.cueT !== lastCue) { lastCue = r.cueT; seen.push(`${r.cue}@${r.sim}`); }
   if (r.show && r.op > 0.6) {
@@ -49,10 +50,10 @@ while (Date.now() - t0 < wallMax) {
   if (r.state !== 'fight') { found = { ended: r }; break; }
 }
 console.log('FOUND ' + JSON.stringify(found) + ` wall ${((Date.now() - t0) / 1000).toFixed(0)}s`);
-// 바꿔 끼우기: 상대 고유 동작 + 상대 비기를 잇달아 적어 ② 의 줄 하나가 비기로 바뀌는지 본다 (AI 를 건드리지 않는 화면 쪽 확인)
+// 바꿔 끼우기: 상대 고유 동작 + 상대 비기를 잇달아 적어 왼쪽 위 둘째 줄이 비기로 바뀌는지 본다 (② #techSlot 에는 안 뜬다) (AI 를 건드리지 않는 화면 쪽 확인)
 const tog = await page.evaluate(async () => {
   const g = window.game;
-  const lines = [...document.querySelectorAll('#techSlot .slot')];
+  const lines = [document.querySelector('#stageInfo .foe'), ...document.querySelectorAll('#techSlot .slot')];
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   if (g.state !== 'fight' || !g.enemy?.alive) return { skipped: g.state };
   g.enemy.techCue = { text: '시험 고유 (Probe)', kind: 'unique', schoolKo: '일본', t: -1 };
@@ -61,7 +62,7 @@ const tog = await page.evaluate(async () => {
   await wait(300);
   return lines.map((el) => {
     const b = el.getBoundingClientRect();
-    return { show: el.classList.contains('show'), kind: el.dataset.kind, text: el.innerText.replace(/\s+/g, ' '), box: [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)] };
+    return { id: el.parentElement.id, show: el.classList.contains('show') || el.classList.contains('on'), kind: el.dataset.kind, text: el.innerText.replace(/\s+/g, ' '), box: [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)] };
   });
 });
 console.log('STACK ' + JSON.stringify(tog));

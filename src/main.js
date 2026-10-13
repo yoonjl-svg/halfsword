@@ -19,7 +19,7 @@ import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat } from './combat.js';
-import { Stages, nextStage, STAGE_IDS, stageFoeId } from './stages.js';
+import { Stages, nextStage, STAGE_IDS, stageFoeId, stageLabel } from './stages.js';
 import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
@@ -860,23 +860,109 @@ function showFoeLine(ch, line) {
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = '';
   el.querySelector('span').textContent = `“${line}”`;
-  el.querySelector('em').textContent = '';
   el.classList.add('show');
   hudLater('foeIntro', 3.4, () => el.classList.remove('show'));
 }
 
-// 이번 상대 소개 (이름 · 별명 · 한마디). 큰 글씨 알림(toast)과 따로, 작게 보여 준다.
-//  아랫줄(em)은 무기 뽑기에서 카드를 고르는 동안만 "무기 카드를 한 장 고르세요". 무기 이름은 글로 적지 않는다
-//  (대사와 겹쳐 읽기 어렵다는 오너 의견: 내 무기와 상대 무기는 카드 두 장이 보여 준다)
+// 이번 상대 소개 (이름 · 칭호 · 한마디) — 화면 가운데, 판 알림(toast) 바로 아래 (10/14 사장님 '사이즈 통일해서 예전처럼 시작 때 보이게 가운데로').
+//  세 줄 글자 크기는 하나(--fs-title), 색만 다르다: 이름 --hud-name · 칭호와 대사 --hud-epithet (index.html #foeIntro).
+//  판이 시작되는 순간(beginFight)부터 발이 풀릴 때(ARENA.startHold)까지만 보인다 — 무기 카드를 고르는 동안에는 띄우지 않는다.
+//  무기 이름은 글로 적지 않는다 (대사와 겹쳐 읽기 어렵다는 오너 의견: 내 무기와 상대 무기는 카드 두 장이 보여 준다)
 function showFoeIntro(ch) {
   const el = $('foeIntro');
   hudLater('foeIntro');
-  if (!ch) return el.classList.remove('show');
+  if (!ch || !(ARENA.startHold > 0)) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
   { const line = randomLine(ch, ch.lines?.introStray && foeWeaponId !== ch.weapon ? 'introStray' : 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸)
-  el.querySelector('em').textContent = '';
   el.classList.add('show');
+  hudLater('foeIntro', ARENA.startHold, () => el.classList.remove('show')); // 정지가 풀리는 순간 걷는다 (화면 글자 시계 = 게임 시간, player.fightT 와 같이 흐른다)
+}
+function hideFoeIntro() {
+  hudLater('foeIntro');
+  $('foeIntro').classList.remove('show');
+}
+
+// ── 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름 … 한 줄 띄워서 ai의 이름과 기술 이름'): docs/ui/hud_intro_2026-10-14.md ──
+//  첫 줄 = '스테이지 N · 무대 이름'(stages.js stageLabel — 순서표 밖 무대는 이름만), 한 줄 띄우고 둘째 줄 = 'AI 짧은 이름 · 자세 이름'.
+//  AI 가 패시브·고유 동작·비기를 내면 둘째 줄의 뒤쪽이 잠깐 그 기술 이름(한국어 이름만 — splitName 첫 몫)으로 바뀌었다가 자세로 돌아온다.
+//  무기 카드를 고르는 동안에도 두 줄 그대로 (카드 안내 글은 뺐다 — 사장님 10/14 00:4x '이 안내문 없어도 될 듯. 우린 미니멀 지향'). 무기 카드 줄은 이 칸 아래에서 시작한다 (layoutDraw)
+const stageInfo = $('stageInfo');
+const foeLineEl = stageInfo.querySelector('.foe');
+const foeLine = { name: '', pose: '', g: null, cand: null, candT: 0, tech: null, shown: '' };
+/** 인물의 짧은 이름: 이름 첫 낱말 (투야나 니콜라예바 → 투야나). 변형(광기의 하인리히 도른)은 본디 인물의 이름으로 */
+function shortName(ch) {
+  if (!ch) return '상대';
+  const base = ch.variantOf ? CHARACTERS_BY_ID[ch.variantOf] ?? ch : ch;
+  return String(base.name ?? '').trim().split(/\s+/)[0] || '상대';
+}
+/** 판을 열 때(startFight): 무대 줄을 쓰고 둘째 줄은 비운다 */
+function showStageInfo() {
+  stageInfo.querySelector('.stg').textContent = stageLabel(stages.id);
+  Object.assign(foeLine, { name: '', pose: '', g: null, cand: null, candT: 0, tech: null, shown: '' });
+  foeLineEl.classList.remove('on');
+  foeLineEl.replaceChildren();
+  stageInfo.classList.add('show');
+}
+/** 싸움 시작(beginFight): 둘째 줄을 AI 이름으로 연다 (자세 이름은 updateFoeLine 이 붙인다) */
+function startFoeLine(ch) {
+  foeLine.name = shortName(ch);
+  foeLine.shown = '';
+  foeLineEl.classList.add('on');
+  paintFoeLine();
+}
+function paintFoeLine() {
+  const t = foeLine.tech;
+  const tail = t ? t.text : foeLine.pose;
+  const key = `${foeLine.name}|${tail}|${t?.kind ?? ''}`;
+  if (key === foeLine.shown) return;
+  foeLine.shown = key;
+  const b = document.createElement('b');
+  b.textContent = foeLine.name;
+  const kids = [b];
+  if (tail) {
+    const s = document.createElement('span');
+    s.textContent = ` · ${tail}`;
+    if (t) s.className = 'tech';
+    kids.push(s);
+  }
+  foeLineEl.replaceChildren(...kids);
+  foeLineEl.dataset.kind = t ? t.kind : 'guard';
+}
+/** AI 의 기술 알림을 둘째 줄에 (c = enemy.techCue · techAll). hold: true = 이어 둔다 · 'end' = 바로 내린다 */
+function foeTechPut(c, hold) {
+  if (c.kind === 'all' && foeLine.tech) return; // 디버그 모든 기술(?techCueAll=1)은 비었을 때만
+  foeLine.tech = { text: splitName(c.text)[0], kind: c.kind, t: TECH_CUE_TIME[c.kind] ?? 1.2, hold };
+  paintFoeLine();
+}
+/** 매 프레임 (싸움 동안): AI 자세 이름을 따라가고 기술 알림 시간을 센다. 읽기만 한다 (AI·물리를 건드리지 않는다) */
+function updateFoeLine(dt, live) {
+  if (!foeLineEl.classList.contains('on')) return;
+  const t = foeLine.tech;
+  if (t) {
+    const h = t.hold?.();
+    if (h === true) t.t = Math.max(t.t, 0.15);
+    else if (h === 'end') t.t = 0;
+    t.t -= dt;
+    if (t.t <= 0 || !live) foeLine.tech = null;
+  }
+  // 자세: 플레이어 자세 칸(updateGuardName)과 같은 문턱 — 자세 무게가 반을 넘고 휘두르지 않을 때의 가장 가까운 자세. 0.25 s 머물러야 바꾼다 (지나가는 자세에 깜빡이지 않게)
+  const e = enemy;
+  if (e?.alive && e.guardPose) {
+    const gun = e.weapon?.gun;
+    const sk = e.skill;
+    const rest = !sk || !(sk.corr === 'v2' && sk.level > 0) || (sk.quiet > 0 && !sk.recovering);
+    const g = gun ? 'gun' : e.guardWeight?.() > 0.5 && rest ? e.guardPose.nearest : null;
+    if (g != null && g !== foeLine.g) {
+      if (g !== foeLine.cand) Object.assign(foeLine, { cand: g, candT: 0 });
+      foeLine.candT += dt;
+      if (foeLine.candT >= 0.25 || !foeLine.pose) {
+        const info = gun ? GUN_STANCE : e.swordArt?.names?.[g];
+        if (info?.name) Object.assign(foeLine, { g, pose: splitName(info.name)[0] });
+      }
+    } else if (g === foeLine.g) foeLine.cand = null;
+  }
+  paintFoeLine();
 }
 
 // ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장. 왼쪽 두 장이 내 카드, 맨 오른쪽은 상대 무기 칸(회색, 고를 수 없다) ──
@@ -1004,11 +1090,10 @@ function openDraw() {
   layoutDraw();
 }
 
-/** 카드 크기와 자리: 상대 소개 바로 아래부터 화면 아래까지, 세 장이 나란히 들어가게 (판이 열릴 때·화면이 바뀔 때 한 번) */
+/** 카드 크기와 자리: 왼쪽 위 칸(무대 줄 · 카드 안내) 바로 아래부터 화면 아래까지, 세 장이 나란히 들어가게 (판이 열릴 때·화면이 바뀔 때 한 번) */
 function layoutDraw() {
   if (!draw.stage) return;
-  const intro = $('foeIntro');
-  const introBottom = intro.classList.contains('show') ? intro.getBoundingClientRect().bottom : topButtons.getBoundingClientRect().bottom;
+  const introBottom = Math.max(stageInfo.classList.contains('show') ? stageInfo.getBoundingClientRect().bottom : 0, topButtons.getBoundingClientRect().bottom);
   drawEl.style.setProperty('--top', `${Math.round(introBottom + 10)}px`);
   const row = drawEl.querySelector('.drawRow').getBoundingClientRect();
   // 세로로 든 폰(좁고 높은 자리): 카드가 좁고 길어진다. 좁아도 낮은 자리(작은 가로 폰 568×320 등)는 가로 배치가 글이 더 잘 들어간다
@@ -1069,7 +1154,6 @@ function pickCard(i) {
   drawEl.classList.replace('choose', 'reveal');
   sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand }); // 두꺼운 카드 "촥" → 앞면이 드러나며 낮은 "둥" (레전드·에픽은 작은 반짝임)
   haptic(grand ? 1 : 0.35);
-  $('foeIntro').querySelector('em').textContent = ''; // "무기 카드를 한 장 고르세요"는 고르는 동안만
 }
 
 /** 뒤집힌 카드를 화면 읽기 프로그램이 무기 이름으로 읽게 한다 */
@@ -1169,7 +1253,9 @@ async function startFight() {
   toast.classList.remove('show');
   nextRoundStage(); // 배경: 첫 판은 메뉴 뒤 그대로, 그 다음 판부터는 정해진 순서로 다음 배경 (짓는 멈칫은 메뉴가 아직 떠 있는 동안)
   prepareRound(); // 이번 상대 · 상대 무기
-  showFoeIntro(currentFoe);
+  hideFoeIntro(); // 가운데 소개는 싸움이 시작될 때 (beginFight) — 카드를 고르는 동안에는 띄우지 않는다
+  showStageInfo(); // 왼쪽 위 무대 줄
+  startFoeLine(currentFoe); // 왼쪽 위 둘째 줄 (카드를 고르는 동안에도 — 상대 이름, 자세가 잡혀 있으면 자세 이름)
   if (FIXED_WEAPON) {
     // 테스트용 ?weapon= : 뽑기 없이 그 무기로 바로 싸움 시작
     newRound(FIXED_WEAPON);
@@ -1182,7 +1268,6 @@ async function startFight() {
   state = 'draw';
   input.enabled = false;
   applyMoveMode();
-  if (currentFoe) $('foeIntro').querySelector('em').textContent = input.isTouchDevice ? '무기 카드를 한 장 고르세요' : '무기 카드를 한 장 고르세요 (1 · 2)';
   openDraw();
 }
 
@@ -1195,10 +1280,8 @@ function beginFight() {
   clearEmoMsg();
   techClear();
   applyMoveMode();
-  if (currentFoe) {
-    // 소개(이름 · 대사)는 조금 더 두었다가 걷는다 (무기 이름은 적지 않는다: 카드가 이미 보여 줬다)
-    hudLater('foeIntro', 2.6, () => $('foeIntro').classList.remove('show'));
-  }
+  showFoeIntro(currentFoe); // 가운데 소개: 지금부터 발이 풀릴 때(ARENA.startHold)까지
+  startFoeLine(currentFoe); // 왼쪽 위 둘째 줄: AI 이름 · 자세 / 기술 (무기를 받아 판을 새로 세웠으니 자세를 처음부터 다시 읽는다)
   showToast(FIGHT_START_TEXT, 900);
   showHint(input.isTouchDevice ? '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기' : '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기');
 }
@@ -1489,8 +1572,7 @@ function checkRoundEnd(dt) {
     $('btnResume').style.display = 'none';
     testRoute.resultLabel($('btnStart'));
     reviveFx.reset(); // 결과 화면: 부활 연출이 남아 있으면 치운다 (상대가 일어서는 동안 내가 죽었을 때)
-    hudLater('foeIntro');
-    $('foeIntro').classList.remove('show'); // 화면 글자 시계는 게임 시간이라 결과 창 뒤에 남지 않게 여기서 걷는다 (대사는 결과 창 부제에 있다)
+    hideFoeIntro(); // 화면 글자 시계는 게임 시간이라 결과 창 뒤에 남지 않게 여기서 걷는다 (대사는 결과 창 부제에 있다)
     clearEmoMsg();
     showMenu();
   }
@@ -1619,7 +1701,8 @@ function updateGuardName(dt) {
 // ── 유파 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 상태 메시지처럼 화면 중앙에 기술명 출력해') ──
 //  상대 AI 가 유파 패시브를 내거나 유파 고유 동작을 시작하면 ai.js 가 enemy.techCue 에 적는다 → 이름 + 꼬리표를 잠깐. docs/strike/tech_cue_2026-10-09.md
 //  10/10 20:3x 사장님 답 (docs/ui/hud_type_system_2026-10-10.md §14): 오른쪽 위는 두 묶음 — ① 자세(#guardName) ② 패시브·비기(#techSlot).
-//   ② = 상대 패시브 · 고유 동작 · 비기 · (디버그) 모든 기술, 내 비기 창 · 내 비기 · 고노센 준비. 첫 줄 한국어 이름(괄호 앞), 둘째 줄 원어 · 꼬리표 `[내|상대] 유파 · 종류` (문구 규칙 §4-4·4-5)
+//   ② = 내 비기 창 · 내 비기 · 고노센 준비 · 내 고유 동작. 첫 줄 한국어 이름(괄호 앞), 둘째 줄 원어 · 꼬리표 `[내|상대] 유파 · 종류` (문구 규칙 §4-4·4-5)
+//   10/14: 상대 것(패시브 · 고유 동작 · 비기 · 디버그 모든 기술)은 왼쪽 위 둘째 줄 'AI 이름 · 기술 이름'으로 옮겼다 (foeTechPut · updateFoeLine)
 //   ② 는 자세 칸처럼 줄 하나 ('한줄만 뜨고 누적도 없음 (자세와 동일)'): 새 알림이 오면 그 자리에서 바꿔 끼운다 — 쌓기·줄 세우기·밀어내기 없음.
 //   예외 하나: 고노센 준비 · 디버그 기술(ambient)은 칸이 비었을 때만 뜬다 (예전부터 '자리가 없으면 띄우지 않는다' — 떠 있는 알림을 덮지 않는다).
 //   시간은 게임 루프 dt (passive 1.2 · unique 1.5 · secret 2.0 s, 비기 창은 열린 동안 · 비기는 끝날 때까지)
@@ -1759,17 +1842,19 @@ function updateTechCue(dt) {
     uniqueCueSeen = uc;
     if (liveMine) showTechCue(uc);
   }
+  // 상대 기술 알림 (패시브 · 고유 동작 · 비기 · 디버그 모든 기술)은 10/14 부터 왼쪽 위 둘째 줄 'AI 이름 · 기술 이름' (updateFoeLine) — ② 에는 내 것만
   const c = enemy?.techCue ?? null;
   if (c && c !== techCueSeen) {
     techCueSeen = c;
     // 상대 비기 알림은 그 비기가 끝날 때까지 (連環三擊 세 수) — 경직에 들면 남은 시간만
-    if (live) showTechCue(c, c.kind === 'secret' ? () => !!ai?.secretRun && ai.secretRun.stage !== 'stiff' : null);
+    if (live) foeTechPut(c, c.kind === 'secret' ? () => !!ai?.secretRun && ai.secretRun.stage !== 'stiff' : null);
   }
   const a = enemy?.techAll ?? null;
   if (a && a !== techAllSeen) {
     techAllSeen = a;
-    if (live && TECH_CUE_ALL) showTechCue(a); // 디버그 (?techCueAll=1): 칸이 비었을 때만 흐리게
+    if (live && TECH_CUE_ALL) foeTechPut(a); // 디버그 (?techCueAll=1): 둘째 줄에 기술이 없을 때만
   }
+  if (!(state === 'paused' && pauseOpen)) updateFoeLine(dt, live);
   const vis = (it) => (it.who === 'me' ? liveMine : live);
   if (!(state === 'paused' && pauseOpen)) techTick(dt, vis); // 일시정지 창이 덮은 동안은 멈춘다 (창을 닫으면 이어서)
   techCueEl.classList.toggle('show', !!techLine.it);

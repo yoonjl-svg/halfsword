@@ -43,7 +43,6 @@
         --hud-state: #e48e8b;
         --hud-name: #f3e6c8;
         --hud-epithet: #d9c9a6;
-        --hud-line: #efe3c8;
         --hud-sys: #f3e9d8;
         --hud-guide: #e2d6bf;
         --hud-guide-bg: rgba(13, 9, 7, .5);
@@ -141,18 +140,30 @@
       [data-tier="legend"] { --tc: var(--tier-legend); --tg: rgba(255,210,74,.6); }
       [data-tier="mystery"] { --tc: var(--tier-mystery); --tg: rgba(120,220,190,.45); } /* ??? 등급 (사장님 결정): 다른 등급과 겹치지 않는 옅은 청록 */
 
-      /* L 인물 (이름 · 칭호 · 대사 · 카드 안내): 왼쪽 위 — 오른쪽 위 칸과 거울. 무기 카드(#draw)보다 위에 보인다 */
-      #foeIntro { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .4s; text-shadow: var(--hud-outline); }
+      /* 인물 소개 (이름 · 칭호 · 대사): 화면 가운데, 판 알림(#toast) 바로 아래 (10/14 사장님 '사이즈 통일해서 예전처럼 시작 때 보이게 가운데로'
+         — docs/ui/hud_intro_2026-10-14.md). 세 줄 글자 크기는 하나(--fs-title), 색만 다르다: 이름 --hud-name · 칭호 = 대사 --hud-epithet.
+         판이 시작되는 순간부터 발이 풀릴 때(ARENA.startHold)까지, 그리고 상대의 승리·부활 대사(이름 + 대사) 때 (main.js showFoeIntro · showFoeLine) */
+      #foeIntro { position: fixed; z-index: 2; left: 50%; top: calc(46% + var(--fs-display) / 2 + 12px); transform: translateX(-50%); width: max-content; max-width: min(60vw, 520px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); font-size: var(--fs-title); line-height: var(--lh-tight); word-break: keep-all; }
       #foeIntro.show { opacity: 1; transition-duration: .3s; }
-      #foeIntro b { font-size: var(--fs-title); font-weight: 800; line-height: var(--lh-tight); color: var(--hud-name); word-break: keep-all; }
-      #foeIntro i { font-size: var(--fs-caption); font-style: normal; font-weight: 500; letter-spacing: var(--ls-label); color: var(--hud-epithet); margin-left: 6px; }
-      #foeIntro span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 4px; font-size: var(--fs-body); font-weight: 500; line-height: var(--lh-text); color: var(--hud-line); word-break: keep-all; }
+      #foeIntro b { font-weight: 800; color: var(--hud-name); }
+      #foeIntro i { font-style: normal; font-weight: 500; color: var(--hud-epithet); margin-left: .45em; }
+      #foeIntro i:empty { display: none; }
+      #foeIntro span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 4px; font-weight: 500; color: var(--hud-epithet); }
       #foeIntro span:empty { display: none; }
-      /* 아랫줄: 무기 카드를 고르는 동안만 "무기 카드를 한 장 고르세요" (무기 이름은 카드에만 보인다) */
-      #foeIntro em { display: block; margin-top: 6px; font-size: var(--fs-caption); font-style: normal; font-weight: 700; letter-spacing: var(--ls-label); color: var(--accent); word-break: keep-all; }
-      #foeIntro em:empty { display: none; }
-      /* 세로(좁은 칸): 칭호를 이름 아래 줄로 */
-      @media (orientation: portrait) { #foeIntro b { display: block; } #foeIntro i { display: block; margin: 1px 0 0; } }
+      @media (orientation: portrait) { #foeIntro { max-width: calc(100vw - 2 * var(--safe-l)); } }
+      /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름 … 한 줄 띄워서 ai의 이름과 기술 이름'): 오른쪽 위 칸과 거울.
+         첫 줄 .stg = '스테이지 N · 무대 이름' · 한 줄 띄우고 둘째 줄 .foe = 'AI 이름 · 자세 이름'(기술을 내면 잠깐 기술 이름 — 오른쪽 위 ② 와 같은 오렌지)
+         무기 카드를 고르는 동안에도 두 줄 그대로 — 카드 안내 글은 뺐다 (사장님 10/14 00:4x '미니멀 지향'). 카드 줄은 이 칸 아래에서 시작한다 (main.js layoutDraw) */
+      #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); font-size: var(--fs-body); font-weight: 800; line-height: var(--lh-tight); word-break: keep-all; }
+      #stageInfo.show { opacity: 1; }
+      #stageInfo .stg { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+      #stageInfo .foe { display: block; max-height: calc(2 * var(--fs-body) * var(--lh-tight)); overflow: hidden; } /* 두 줄까지 (b · span 이 한 줄에 이어져야 해서 -webkit-box 대신 높이로 자름) */
+      #stageInfo .stg { color: var(--hud-sys); }
+      #stageInfo .foe { margin-top: calc(var(--fs-body) * var(--lh-tight)); } /* 한 줄 띄움 */
+      #stageInfo .foe:not(.on) { display: none; }
+      #stageInfo .foe b { color: var(--hud-name); }
+      #stageInfo .foe span { color: var(--hud-guard-sub); }
+      #stageInfo .foe span.tech { color: var(--hud-tech); }
 
       /* ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장. 왼쪽 두 장은 내가 고르는 카드, 맨 오른쪽은 상대 무기 칸(회색, 못 고른다) →
          내 카드를 누르면 뒤집혀 이번 판 무기가 나오고, 남은 내 카드가 어둡게 뒤집힌 뒤 상대 카드가 뒤집혀 상대 무기를 보여 준다 (main.js 무기 뽑기) ──
@@ -317,7 +328,8 @@
     <div id="toast"></div>
     <div id="emoMsg"></div>
     <div id="hint"></div>
-    <div id="foeIntro"><b></b><i></i><span></span><em></em></div>
+    <div id="foeIntro"><b></b><i></i><span></span></div>
+    <div id="stageInfo" aria-live="polite"><div class="stg"></div><div class="foe"></div></div>
     <!-- 무기 뽑기 카드 세 장 (main.js 가 판마다 채운다. 단추 안이라 span 만 쓴다).
          왼쪽 두 장은 내가 고르는 카드(단추), 맨 오른쪽은 상대 무기 칸이라 누를 수도 초점을 받을 수도 없다(단추가 아니다) -->
     <div id="draw">

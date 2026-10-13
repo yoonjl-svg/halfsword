@@ -522,7 +522,7 @@ function startIai(f, combat) {
   const far = AH.distanceTo(new THREE.Vector3(...K.B.hand)) > 0.12 || AD.angleTo(DB) > 0.6;
   const T = req.player || far ? SECRET.iaiPlayerTime : SECRET.iaiTime; // 대기 자세(손이 왼 허리)면 곧장 가로, 아니면 왼 허리를 거쳐
   // 10/12 03:2x 사장님 '기술길이 좀 더 상승하게 … 사선 올려베기처럼' · '한 팔 완전히 쭉 뻗어서 써야 맞는 거 아냐?' (SECRET.iaiRise): 길 = 올려베기 iaiPathRise ·
-  //  한 손 = 칼 쪽 손만 쥐고 빈손은 칼을 놓고 왼 허리 뒤로 당김(鞘引き — fighter.js applyPose 가 iai.oneHand 를 읽어 빈팔을 SECRET.iaiSayaHand 로 · offHand 쥐기 쉼).
+  //  한 손 = 칼 쪽 손만 쥐고 빈손은 칼을 놓고 배 앞으로(10/14 — 전 왼 허리 뒤 鞘引き · fighter.js applyPose 가 iai.oneHand 를 읽어 빈팔을 SECRET.iaiSayaHand 로 · offHand 쥐기 쉼).
   //  틀이 무거운 칼(frame 'heavy' — 모노호시자오)은 한 손이 무리라 두 손 그대로 (무기 표에 이미 있는 틀 값을 읽음 — 새 규칙 없음). 다시 쥐기는 발도 뒤(경직 붙잡기) — iai 가 끝나면 offHand 가 다시 쥔다
   const rise = !!SECRET.iaiRise;
   const oneHand = rise && !!f.weaponCfg.twoHand && f.weapon?.frame !== 'heavy';
@@ -628,7 +628,7 @@ function endIai(f, combat) {
   f.iaiHoldKind = I.kind;
   f.iaiFade = 0;
   // 10/12 08:2x 사장님 '공격 후 경직 자세에서 바로 왼손이 따라 잡으니까 한 손으로 팔을 쭉 벌려서 비기를 쓴 당위성이 사라져': 한 손 발도면 경직(붙잡기) 동안도
-  //  오른팔 한 손으로 뻗은 끝 자세를 두고 빈손은 칼집 자리(왼 허리 — iaiSayaHand)에 남긴다(잔심). 붙잡기가 풀리며(iaiFade) 칼이 가운데로 돌아온 뒤 빈손이 다시 쥔다 (holdIai)
+  //  오른팔 한 손으로 뻗은 끝 자세를 두고 빈손은 배 앞(iaiSayaHand)에 남긴다(잔심). 붙잡기가 풀리며(iaiFade) 칼이 가운데로 돌아온 뒤 빈손이 다시 쥔다 (holdIai)
   f.iaiOneHold = !!I.oneHand;
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
   f.tipPrev = f.bladePoint(1, new THREE.Vector3());
