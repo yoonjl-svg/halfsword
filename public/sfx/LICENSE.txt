@@ -54,6 +54,8 @@ voice/  — death vocals and short hurt grunts, one small set per character (tri
                                https://freesound.org/people/mvVoiceActing/sounds/855460/
       isolde_revive1.mp3    <- mvVoiceActing, "girl damage" (6.55-7.02 s), the short intake of
                                breath when she gets back up
+      isolde_ko2.mp3        <- mvVoiceActing, "girl damage" (5.54-5.94 s), a short falling
+                               voiced grunt not used elsewhere (added 2026-10-13, see below)
 
 Thank you, HaelDB, Michel Baradari, kanyonwyvern, hisoul and mvVoiceActing!
 
@@ -253,8 +255,19 @@ mono 44.1 kHz MP3, and no pitch or tempo change.
     voice/omari_bleed2.mp3 <- 20.31-21.95 s; 6000 Hz LP
       e215ca6df78f23dfc009c5f278619ff8e2085db6eb5db596cd25707c1626fce3
 
-  Voice 'isolde' (Isolde, Minami) adds no file: KO = isolde_ko1 + isolde_revive1,
-    bleed = isolde_bleed1 + isolde_ko1 (existing mvVoiceActing excerpts, CC0).
+  Voice 'isolde' (Isolde, Minami): KO = isolde_ko1 + isolde_ko2, bleed = isolde_bleed1 +
+    isolde_ko1 (mvVoiceActing excerpts, CC0). isolde_revive1 is the revive breath only.
+
+  CC0 1.0 (public domain) — mvVoiceActing, "girl damage" (Freesound 855460); preview handed over
+    by Saetbyeol, cut here (not a copy of a Saetbyeol file)
+    https://freesound.org/people/mvVoiceActing/sounds/855460/
+    https://creativecommons.org/publicdomain/zero/1.0/
+    Public HQ preview MP3 SHA-256: ce834bc7c0755ec0b73dc3c93d38eddf7f51fd10b852be5e42ba4a6ae243ef7c
+    voice/isolde_ko2.mp3 <- 5.54-5.94 s (voice 5.59-5.71 s); decoded once to PCM, L+R mono,
+      70 Hz HP, 5 ms in / 80 ms out, peak-normalized to -1 dBFS, mono MP3 (VBR q4); not pitch-shifted
+      97f52164ca22b0989be61ed2c526af5d09d4c8744c0c81c0f7f568e711c7b37f
+    The only unused performance left in the take; bleed2 still reuses isolde_ko1.
+
   Not imported (discarded or not selected at the source): maya_hurt1, maya_bleed1, maya_bleed2,
     maya_bleed2_single, margarethe_ko2, margarethe_bleed2, tuyana_bleed2_fade, tome_ko1_warm,
     player_exhale2. margarethe_ko1.mp3 and liao_bleed2.mp3 stay on disk but are not selected.
