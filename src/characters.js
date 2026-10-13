@@ -408,7 +408,7 @@ export const CHARACTERS = [
     name: '미나미',
     epithet: '수호자', // 사장님 10/11 01:1x (전 '금줄의 무녀' 10/10 19:4x)
     weapon: 'monohoshizao', // 일본 유파
-    voice: 'isolde', // 목소리: 이졸데의 녹음 (10/12 갱신 뒤에도 그대로 — 이졸데·마야와 같이)
+    voice: 'isolde', // 목소리: 이졸데의 녹음 (이졸데와 같이. 10/13 기절2·출혈2 보충 — 마야는 10/13 에 따로 나감)
     ai: { level: 'normal', persona: { school: 'monohoshizao', pers: {} } },
     look: getLook('minami'),
     lookVersion: CHARACTER_LOOK_VERSION.minami,
@@ -476,7 +476,7 @@ export const CHARACTERS = [
     movementNotes: '기존 총기 제어와 몸 규격을 그대로 사용한다.',
     weaknesses: '장전 중의 빈틈과 총구 안쪽으로 파고드는 근거리 압박.',
     weapon: 'pistol', // 건슬링어의 리볼버(??? 등급) — 그쪽 '전용 리볼버'는 새 무기가 아니라 이 권총이다. AI 는 gun.js(간격 벌려 쏘기)
-    voice: 'isolde', // 목소리: 이졸데의 녹음 (10/12 갱신 뒤에도 그대로 — 이졸데·미나미와 같이)
+    voice: 'maya', // 목소리: 마야 전용 녹음(AuraVoice, CC0) — 10/13 사장님 지시로 샛별 저장소 3f330f7·b75013b·9d1b56a 배정을 가져옴 (전 'isolde')
     ai: { level: 'hard', persona: { // 그쪽 '마지막 문지기' 자리라 hard — 우리 기본 회전에선 다른 인물보다 세다(사장님 확인 전)
       gunCooldownK: 1.5, // 핸디캡: 사격 사이 쿨타임 1.5 배 (GUN.cooldown 0.7 → 1.05 s) — 사장님 지시 10/10 20:0x (기본 무작위 상대에서 빼는 대신, 확인표 750)
       level: { reaction: 0.16, guardChance: 0.88, counter: 0.55, feint: 0.15, followUp: 0.65, read: 0.9, discipline: 0.95, strength: 1.1, aggression: 0.9, windup: 0.36, strikeSpeed: 13, skill: 0.95 },
