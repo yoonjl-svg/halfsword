@@ -760,7 +760,7 @@ export const SECRET = {
   playerVibrate: 50, // 창이 열릴 때 진동 (ms, navigator.vibrate — 없으면 생략)
 };
 
-// ── 플레이어 고유 동작 이어 주기 (10/13 사장님 '플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 그 고유 동작의 궤적으로 이어 준다' ·
+// ── 플레이어 고유 동작 이어 주기 → 10/14 강화 (10/13 사장님 '플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 그 고유 동작의 궤적으로 이어 준다' ·
 //    '이질감보다는 자연스러운 향상' — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md). 플레이어만 (AI 는 읽지 않는다).
 //  표(어느 긋기가 어느 고유 동작을 여는가 — 사장님 확정 10/13 22:3x)·인장 이름은 unique_assist.js 한 곳. 해금 수(sealEvery·sealOrder·sealMax)는 사장님 결정, 그 밖의 수는 [추정] · 사장님 확인 전 (확인표 1040~1049)
 export const UNIQUE_ASSIST = {
@@ -792,7 +792,15 @@ export const UNIQUE_ASSIST = {
   //  두 번 잇는 동작(chain)의 뒷부분은 그 자리에서 손가락이 아직 휘두르기 빠르기로 긋고 있을 때만 (방향 조건이 있으면 그쪽으로)
   idleRelease: 0.1,
   oppositeDeg: 120,
-  chainWait: 0.15, // 두 번 잇는 동작: 뒷부분이 시작되는 자리에서 손가락이 그쪽으로 긋기 시작하기를 이만큼(s)까지 기다림 (손가락이 꺾이는 동안 잠깐 느려지는 것)
+  chainWait: 0.15, // 두 번 잇는 동작: 뒷부분이 시작되는 자리에서 손가락이 그쪽으로 긋기 시작하기를 이만큼(s)까지 기다림 (손가락이 꺾이는 동안 잠깐 느려지는 것). 10/14 강화 판: 앞 긋기가 끝나고 이 안에 플레이어가 다시 그어야 뒷몫 강화
+  // ── 10/14 강화 방식 (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다') — 위의 blend(기본 동작 발동 판단 join 에만)·joinMax·speedK·vMin·idleRelease·oppositeDeg 는
+  //    10/13 이어 주기(손 목표를 길로 끌던 판) 수라 지금은 blend 만 읽는다. 아래 수는 모두 [추정] · 사장님 확인 전 (owner_defaults_table.md 1078~1084). 몸 꼴 값은 unique_assist.js PLAYER_UNIQUE 의 body·body2 칸
+  enhance: 1, // 강화 세기 손잡이 하나: 몸 덧씌우기 × enhance · 끝 힘 1 + (endPower − 1) × enhance · 걸음 크기 × min(1, enhance). 0 = 기술 이름 알림만 (`?uniqueEnhance=0`)
+  bodyIn: 0.1, // 몸 꼴을 얹는 시간 상수(s) — 긋기가 고유 동작으로 읽힌 순간부터
+  bodyOut: 0.25, // 긋기가 끝난 뒤 몸 꼴을 걷는 시간 상수(s)
+  powerAt: 0.4, // 끝 힘이 들어가는 자리: 손 목표가 그 몫(앞 긋기 = 길 처음 ~ 잇는 자리 · 뒷몫 = 잇는 자리 ~ 끝) 길이의 이 비율 넘게 간 뒤
+  powerMax: 0.6, // 끝 힘은 강화가 시작되고 이 초까지만 (긋기가 길게 이어져도)
+  endPower: 1.12, // 끝 힘 배율 (팔 서보 힘 f.powerMul — 비기 힘 창 SECRET.power 1.3 과 같은 칸, 작게)
 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

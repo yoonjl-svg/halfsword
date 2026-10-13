@@ -1,24 +1,27 @@
 // ─────────────────────────────────────────────────────────────
-//  플레이어 고유 동작 이어 주기 (10/13 — docs/strike/unique_player_2026-10-13.md)
+//  플레이어 고유 동작 강화 (10/14 — docs/strike/unique_player_2026-10-13.md '10/14 강화 방식'. 10/13 판 '이어 주기'를 다시 만듦)
 //
-//  사장님 승인: "플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 그 고유 동작의 궤적으로 이어 준다."
-//  지향점: "고유 동작으로 기본 동작이 대체될 때 이질감이 느껴지기보다는 자연스러운 '향상'이라고 느끼면 좋겠네."
+//  사장님 승인 (10/13 22:0x): "플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 …" · 지향점: "자연스러운 '향상'이라고 느끼면 좋겠네."
+//  사장님 결정 (10/14 01:5x): 같은 고유 동작 표를 AI 와 플레이어에게 다르게 적용한다. AI 는 지금처럼 궤적을 따른다(ai.js — 이 파일은 표의 단계만 내준다).
+//   플레이어는 '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다' — 10/13 판(손 목표를 고유 동작 길로 끌고 그동안 손가락을 막음)이
+//   "원하는 위치로 칼이 안 가는 느낌 … 원하는 궤적으로 칼이 안 돌아"(사장님 10/14 01:xx) 였기 때문.
 //
-//  유파 고유 동작(schools.js *_UNIQUE)은 지금껏 AI 만 썼다(sword_art.js mergeUnique · ai.js uniqueByName). 플레이어 칼은 손가락을 따라가서 꺼낼 길이 없었다.
-//  여기서는 플레이어 긋기가 시작되는 순간(손 목표가 휘두르기 문턱 SKILL.swingSpeed 를 넘는 스텝 — 검술 층 skill.js 가 쓰는 같은 사건)에
+//  긋기 읽기는 10/13 판 그대로: 플레이어 긋기가 시작되는 순간(손 목표가 휘두르기 문턱 SKILL.swingSpeed 를 넘는 스텝 — 검술 층 skill.js 가 쓰는 같은 사건)에
 //   ① 시작 자리(가장 가까운 자세 패드 G.*)와 처음 방향(손 속도 방향)으로 기본 12 동작(ai_techniques.js TECH) 가운데 어느 긋기인지 고르고,
-//   ② 해금된 고유 동작 가운데 그 긋기(또는 아래 표의 조건)를 '향상'하는 것이 있으면,
-//   ③ 손 목표(handOffset — 서보 목표)를 그 고유 동작 길(path · 속임수면 feint.then)로 옮긴다. 비기 길 따라가기(skill.js secretMove)·AI 칼질(ai.js moveHand)과 같은
-//      '제한 빠르기로 길 점 쫓기'다 — 칼을 순간이동시키지 않는다. 실제 움직임은 근육·물리가 만든다.
-//  자연스러운 '향상'이 되도록:
-//   · 길에 들어가는 자리 = 지금 손. 손과 길의 어긋남은 남은 길의 앞 몫(UNIQUE_ASSIST.blend)에 걸쳐 0 으로 — 앞부분은 플레이어가 그은 방향 그대로이고
-//     (이어 들어갈 길 토막은 지금 손에서 본 첫 방향이 손가락 방향과 허용 각 안인 것만 고른다) 걸음·두 번째 칼·끝 자세 같은 나아짐은 뒷부분에서 나온다.
-//   · 빠르기 = 이 긋기에서 잰 손가락 빠르기(느리게 끌지 않는다 — 더 빨리 그으면 따라 빨라진다).
-//   · 손을 떼거나(터치) 멈추면(마우스) · 처음과 반대로 크게 그으면 곧장 놓아 준다(자유 조작). 두 번 잇는 동작의 뒷부분은 손가락이 계속 긋고 있을 때만.
-//   · 비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌고 있으면 발동하지 않고, 이어 주는 중에 그것들이 시작되면 곧장 물러난다.
-//  걸음 칸(step)이 있는 동작은 AI 기술 걸음(ai.js techStepRequest)과 같은 꼴로 다리에 걸음을 부탁한다. 발동하면 기술 이름 알림(main.js showTechCue 'unique' — AI 고유 동작 알림과 같은 칸).
-//  AI 쪽은 아래 표의 단계만 읽는다(aiUniqueStages — 숙련도 거르기 10/13, sword_art.js applySchoolArt · ai.js). 이어 주기는 플레이어 몫. 검술 층은 skill.uniq 가 있을 때만(플레이어 — main.js 가 붙임) 부른다.
-//  수는 config.js UNIQUE_ASSIST (확인표 1040~1047, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
+//   ② 해금된 고유 동작 가운데 그 긋기(또는 아래 표의 조건 · 길과 꼴이 맞는지 join)에 맞는 것이 있으면 그 긋기 동안 '강화'만 얹는다. 손 목표(handOffset)는 건드리지 않는다.
+//  강화 넷 (세기 손잡이 UNIQUE_ASSIST.enhance 하나 — 0 = 이름 알림만):
+//   · 발놀림 — 표의 step 칸(schools.js — zwerchAbtritt·inquartata·talhoRodeado·hirakiGiri·chebuYaoji)은 긋기와 함께 그 걸음을 딛는다(AI 기술 걸음 ai.js techStepRequest 와 같은 꼴의 gait 걸음 요청)
+//   · 몸 — 긋는 동안 표의 body(뒷몫은 body2)만큼 몸통 돌림·숙임·낮춤을 얹는다(덧씌우기 칸 몸 값과 같은 길 — skill.uniqBody → fighter.js updateBodyPose).
+//          값 = 고유 동작 몸 꼴 점검(10/12 …/body-audit-2q36ha)의 [추정]·[해석] 값의 절반 안팎
+//   · 끝 힘 — 긋기 뒷몫(손 목표가 그 몫 길이의 powerAt 넘게 간 뒤)에 팔 서보 힘을 조금 올린다(비기 힘 창 SECRET.power 와 같은 칸 f.powerMul)
+//   · 날 세우기 — 손 목표가 손가락 그대로라 플레이어 날 세우기(fighter.js inputEdgeLead)가 읽는 손 목표는 실제 칼 움직임과 같다. 덧씌운 몸 돌림 몫만 날이 늦게 따라가서
+//          그 빠르기(uniqBody.yawRate)를 날 세우기 앞당김에 더했다(10/14 탐침 — 문서)
+//  잇는 동작(chain 칸 — 머리 위 돌려 베기·코코 연타·위아래 사슬·번갈아 올려베기·겹치기)은 플레이어가 박자 창(chainWait) 안에 실제로 이어 그을 때만 그 긋기에 뒷몫 강화를 얹는다.
+//   자동으로 두 번째 칼을 내지 않는다. 앞 긋기 조건으로 여는 것(츠바메가에시·카바치오네·염시·자→격)은 그 긋기 자체가 이어 그은 것이다.
+//  비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌고 있으면 발동하지 않고, 강화 중에 그것들이 시작되면 곧장 물러난다.
+//  발동하면 기술 이름 알림(main.js showTechCue 'unique' — AI 고유 동작 알림과 같은 칸, '내 · 굽은 베기' 꼴).
+//  AI 쪽은 아래 표의 단계만 읽는다(aiUniqueStages — 숙련도 거르기 10/13, sword_art.js applySchoolArt · ai.js). body·body2 칸은 플레이어만.
+//  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA, SKILL } from './config.js';
@@ -37,37 +40,40 @@ import { segDist } from './skill.js';
 //  anchor 'start' = 고유 동작 길이 기본 긋기보다 짧아 손이 곧 지나쳐 버리는 것(코테·좌익격 — 끝 자리가 긴 자세 바로 밑): 길 토막을 긋기 시작 자리에 옮겨 놓고 그 위에서 잇는다
 //  chain = 두 번 잇는 동작: at = 뒷부분이 시작되는 길 점 번호(점 목록 = [from, ...path] 또는 [가짜 자리, ...then]) · dir = 그 자리에서 손가락이 그쪽으로 그어야 이음
 //  탭 찌르기도 '내 찌르기'로 센다(prev 'thrust' — 맞물림·any). 이베리아 rodaCounter(길 없는 맞받아치기 목록)는 플레이어 표에서 뺀다(AI 데이터는 그대로)
+//  body = 플레이어 강화의 몸 꼴 (10/14, 플레이어만 — AI 는 읽지 않는다) [골반 돌림 °, 가슴 돌림 °, 숙임 °, 낮춤 m] · body2 = 잇는 동작 뒷몫(플레이어가 이어 그은 긋기)의 몸 꼴(없으면 body).
+//   돌림 부호는 자세표(guards.js)와 같음(+ 오른쪽으로 감음 · − 왼쪽). 값 = 고유 동작 몸 꼴 점검(10/12 …/body-audit-2q36ha, 모두 [추정]·[해석])의 절반 안팎 — 사장님 확인 전.
+//   한 동작 안에서 두 방향으로 도는 것(머리 위 돌려 베기 +40 → −40 등)은 앞 긋기 = 앞 방향, 이어 그은 뒷몫 = 뒤 방향. 세기는 UNIQUE_ASSIST.enhance 로 한꺼번에
 export const PLAYER_UNIQUE = {
   german: [
-    { stage: 1, name: 'zwerchAbtritt', on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 가로베기
-    { stage: 2, name: 'krumphau', on: [{ tech: 'zornhau' }] }, // 굽은 베기 ← 분노의 베기
-    { stage: 3, name: 'duplieren', far: true, on: [{ prev: 'cut', when: 'bound' }], chain: { at: 1 } }, // 겹치기 ← 내 베기가 맞물린 뒤 다음 긋기 (맞물린 자리가 어디든 — 칼자루를 들어 다시 머리로)
-    { stage: 4, name: 'schielhau', on: [{ tech: 'stichOchs' }] }, // 곁눈 베기 ← 황소 찌르기
+    { stage: 1, name: 'zwerchAbtritt', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 가로베기
+    { stage: 2, name: 'krumphau', body: [-8, -10, 4, 0.015], on: [{ tech: 'zornhau' }] }, // 굽은 베기 ← 분노의 베기
+    { stage: 3, name: 'duplieren', far: true, body: [5, -3, 3, 0], on: [{ prev: 'cut', when: 'bound' }], chain: { at: 1 } }, // 겹치기 ← 내 베기가 맞물린 뒤 다음 긋기 (맞물린 자리가 어디든 — 칼자루를 들어 다시 머리로)
+    { stage: 4, name: 'schielhau', body: [12, 8, 2, 0.02], on: [{ tech: 'stichOchs' }] }, // 곁눈 베기 ← 황소 찌르기
   ],
   italian: [
-    { stage: 1, name: 'inquartata', on: [{ tech: 'stichPflugL' }] }, // 비껴서며 찌르기 ← 왼 쟁기 찌르기
-    { stage: 2, name: 'imbroccata', on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기
-    { stage: 3, name: 'cavazione', nameKo: '칼끝 돌려 빼기 (cavazione)', on: [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }] }, // 칼끝 돌려 빼기(속임 then 길) ← 내 찌르기가 맞물림 · 찌르다 꺾음
-    { stage: 4, name: 'passataSotto', on: [{ tech: 'stichPflug' }] }, // 밑으로 들어가 찌르기 ← 쟁기 찌르기 (런지 자세는 이탈리아 비기 몫 — 붙이지 않음)
+    { stage: 1, name: 'inquartata', body: [18, 10, 5, 0.025], on: [{ tech: 'stichPflugL' }] }, // 비껴서며 찌르기 ← 왼 쟁기 찌르기
+    { stage: 2, name: 'imbroccata', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기
+    { stage: 3, name: 'cavazione', nameKo: '칼끝 돌려 빼기 (cavazione)', body: [5, 8, 4, 0.02], on: [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }] }, // 칼끝 돌려 빼기(속임 then 길) ← 내 찌르기가 맞물림 · 찌르다 꺾음
+    { stage: 4, name: 'passataSotto', body: [8, 5, 12, 0.08], on: [{ tech: 'stichPflug' }] }, // 밑으로 들어가 찌르기 ← 쟁기 찌르기 (런지 자세는 이탈리아 비기 몫 — 붙이지 않음)
   ],
   iberian: [
-    { stage: 1, name: 'talhoRodeado', on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 분노의 베기
-    { stage: 2, name: 'altibaixo', on: [{ tech: 'oberhau' }], chain: { at: 2, dir: 'up' } }, // 위아래 사슬 ← 정수리 베기 (내려벤 뒤 위로 이어 그으면 되올림)
-    { stage: 3, name: 'redondo', on: [{ tech: 'zwerch' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 가로베기
-    { stage: 4, name: 'talhoRevezBaixo', on: [{ tech: 'unterhau' }], chain: { at: 2 } }, // 번갈아 올려베기 ← 올려베기
+    { stage: 1, name: 'talhoRodeado', body: [15, 8, 4, 0.02], on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 분노의 베기
+    { stage: 2, name: 'altibaixo', body: [8, 5, 10, 0.03], body2: [8, 5, 0, 0.03], on: [{ tech: 'oberhau' }], chain: { at: 2, dir: 'up' } }, // 위아래 사슬 ← 정수리 베기 (내려벤 뒤 위로 이어 그으면 되올림)
+    { stage: 3, name: 'redondo', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerch' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 가로베기
+    { stage: 4, name: 'talhoRevezBaixo', body: [8, 6, -2, 0.04], body2: [-8, -6, -2, 0], on: [{ tech: 'unterhau' }], chain: { at: 2 } }, // 번갈아 올려베기 ← 올려베기
   ],
   japanese: [
-    { stage: 1, name: 'hirakiGiri', on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 왼 분노의 베기
-    { stage: 2, name: 'kote', anchor: 'start', on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 가운데(긴 자세)에서 짧게 내려베기 (머리 위 시작 정수리 베기와는 시작 패드로 가름)
-    { stage: 3, name: 'tsubameGaeshi', on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시 ← 정수리 베기가 빗나가거나 막힌 뒤 위로 이어 그음
-    { stage: 4, name: 'kokoRenda', on: [{ tech: 'zornhau' }], chain: { at: 2 } }, // 코코 연타 ← 분노의 베기
+    { stage: 1, name: 'hirakiGiri', body: [-18, -12, 2, 0.02], on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 왼 분노의 베기
+    { stage: 2, name: 'kote', anchor: 'start', body: [5, 3, 4, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 가운데(긴 자세)에서 짧게 내려베기 (머리 위 시작 정수리 베기와는 시작 패드로 가름)
+    { stage: 3, name: 'tsubameGaeshi', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시 ← 정수리 베기가 빗나가거나 막힌 뒤 위로 이어 그음
+    { stage: 4, name: 'kokoRenda', body: [12, 8, 3, 0.015], body2: [-12, -8, 3, 0.015], on: [{ tech: 'zornhau' }], chain: { at: 2 } }, // 코코 연타 ← 분노의 베기
   ],
   chinese: [
-    { stage: 1, name: 'chebuYaoji', on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기
-    { stage: 2, name: 'zuoyi', anchor: 'start', on: [{ pad: 'langort', dir: 'down' }] }, // 좌익격 ← 코테와 같음
-    { stage: 3, name: 'lianchi', on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시(속임 then 길) ← 쟁기 찌르기를 시작했다가 짧은 창 안에 거둠
+    { stage: 1, name: 'chebuYaoji', body: [-15, -20, 1.5, 0.02], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기
+    { stage: 2, name: 'zuoyi', anchor: 'start', body: [5, 3, 5, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 좌익격 ← 코테와 같음
+    { stage: 3, name: 'lianchi', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시(속임 then 길) ← 쟁기 찌르기를 시작했다가 짧은 창 안에 거둠
     // 자→격 (刺→擊): 새 표 항목이지만 새 길은 없다 — yaoji 길(긴 자세 자리에서 시작하는 허리 베기). 출처는 schools.js ciji 패시브와 같은 「向前進步腰擊」
-    { stage: 4, name: 'ciji', path: 'yaoji', nameKo: '자→격 (刺→擊)', on: [{ prev: 'thrust', when: 'any', dir: 'horiz' }] }, // ← 내 찌르기(맞든 빗나가든) 뒤 짧은 창 안의 가로 긋기
+    { stage: 4, name: 'ciji', path: 'yaoji', nameKo: '자→격 (刺→擊)', body: [-15, -20, 1.5, 0.015], on: [{ prev: 'thrust', when: 'any', dir: 'horiz' }] }, // ← 내 찌르기(맞든 빗나가든) 뒤 짧은 창 안의 가로 긋기
   ],
 };
 
@@ -206,8 +212,9 @@ export function sealNotice(seal) {
 }
 
 /**
- * 플레이어 한 명의 고유 동작 이어 주기. 붙이면(f.skill.uniq = this) 검술 층이 매 스텝 drive(머리 — 이어 주는 중이면 손 목표를 길로) ·
- *  detect(휘두르기 판단 뒤 — 긋기 읽기·발동)를 부른다. main.js 는 프레임마다 feed(손가락 움직임)를 부르고, 이어 주는 동안(running)은 손가락을 손 목표에 더하지 않는다.
+ * 플레이어 한 명의 고유 동작 강화 (10/14 — 궤적은 손가락, 고유 동작은 손가락으로 못 하는 몫만). 붙이면(f.skill.uniq = this) 검술 층이 매 스텝
+ *  drive(머리 — 강화 몫 갱신: 몸 덧씌우기 · 끝 힘 · 걸음 다시 부탁) · detect(휘두르기 판단 뒤 — 긋기 읽기·발동·잇는 동작 읽기)를 부른다.
+ *  main.js 는 프레임마다 feed(손가락 움직임)를 부르고, 손가락 움직임은 늘 손 목표에 그대로 더한다(손 목표를 쥐지 않는다 — holdsHand 거짓).
  *  열린 동작이 없으면(단계 0 · 표에 없는 유파 · 스위치 끔) 붙지 않는다 → 검술 층은 전과 같다
  */
 export class PlayerUniqueAssist {
@@ -216,29 +223,35 @@ export class PlayerUniqueAssist {
     this.stage = stage;
     this.tradition = tradition;
     this.list = UA.on && !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter((e) => e.stage <= stage).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
-    this.r = null; // 이어 주는 중인 것
+    this.r = null; // 강화 중인 긋기 { e, U, part(1 앞 긋기 | 2 잇는 뒷몫), t, travel, len, stepAsked, chainable }
     this.t = 0;
     this.cur = null; // 지금 긋기 { tech, kind, pad, t0, dir, landed, bound, tEnd, unique }
     this.last = null; // 바로 앞 긋기 (끝난 것 — 결과는 다음 긋기가 시작될 때까지 계속 적는다)
+    this.chainFrom = null; // 뒷몫을 이을 수 있는 앞 긋기 { e, U, tEnd } — 플레이어가 박자 창(chainWait) 안에 이어 그으면 그 긋기가 뒷몫
     this.tapRec = null; // 진행 중인 탭 찌르기 (끝나면 last 로)
     this.wasSwing = false;
     this.quietT = 1;
     this.restPos = [f.handOffset.x, f.handOffset.y];
-    this.needRest = false; // 이어 주기가 끝난 뒤엔 한 번 쉬어야(휘두르기가 끊겨야) 다음 긋기를 읽는다 — 끝 자리에서 곧장 다른 동작으로 번지지 않게
     this.blocked = false; // main.js: 막기 버튼·미리 받기가 손을 쥐는 중
     this.painFoe = null;
     this.fv = new THREE.Vector2(); // 손가락 속도 (고른 값, 패드 m/s)
     this.fSpeed = 0;
     this.fIdle = 0;
-    this.fPeak = 0;
-    this.stats = { strokes: 0, techs: {}, fired: {}, ends: {} };
-    this.turnable = this.list.some((e) => e.on.some((c) => c.when === 'turn'));
+    this.body = [0, 0, 0, 0]; // 지금 얹은 몸 [골반 돌림 rad, 가슴 돌림 rad, 숙임 rad, 낮춤 m] (덧씌우기 칸 몸 값과 같은 부호 — fighter.js updateBodyPose)
+    this.powV = 0; // 내가 둔 끝 힘 배율 (f.powerMul 이 아직 이 값일 때만 되돌린다)
+    this.stats = { strokes: 0, techs: {}, fired: {}, ends: {}, steps: 0, power: 0 };
     f.uniqueCue = null;
+    f.skill.uniqBody = null;
     f.skill.uniq = this.list.length ? this : null;
   }
 
+  /** 강화 중인가 (손 목표는 쥐지 않는다) */
   get running() {
     return !!this.r;
+  }
+  /** 손 목표를 쥐나 — 이 판은 늘 거짓(손가락이 궤적을 낸다). 탐침·main.js 가 읽는다 */
+  get holdsHand() {
+    return false;
   }
 
   /** 프레임마다 (main.js): 이번 프레임 손가락 움직임(패드 m)·프레임 시간·손을 쥔 다른 동작이 있나 */
@@ -250,7 +263,6 @@ export class PlayerUniqueAssist {
     this.fv.y += (dy / dt - this.fv.y) * k;
     this.fSpeed = this.fv.length();
     this.fIdle = Math.abs(dx) + Math.abs(dy) > 1e-5 ? 0 : this.fIdle + dt;
-    this.fPeak = Math.max(this.fPeak, this.fSpeed);
   }
 
   /** 발동하지 않는 때: 다른 플레이어 동작이 돌거나 칼을 못 쓰는 때 */
@@ -282,6 +294,7 @@ export class PlayerUniqueAssist {
     this.cur.tEnd = tEnd;
     this.last = this.cur;
     this.cur = null;
+    if (this.r) this.end('done', tEnd);
   }
 
   /** 시작 자리·처음 방향 → 기본 동작 (시작 패드가 그 동작의 from 이고 첫 방향이 허용 각 안). { pad, tech, kind } */
@@ -318,9 +331,9 @@ export class PlayerUniqueAssist {
   }
 
   /**
-   * 길에 들어갈 자리: 길 토막마다 지금 손에서 가장 가까운 점 J, 어긋남 o = 손 − J 를 남은 길의 blend 몫에 걸쳐 0 으로 줄인 목표 점들.
-   *  지금 손에서 첫 목표 점으로 가는 방향이 손가락 방향과 허용 각 안인 토막만 — 그 가운데 어긋남이 가장 작은 것(같으면 앞 토막).
-   *  maxO = 어긋남 상한(조건으로 여는 동작만). 없으면 null
+   * 고유 동작 꼴과 맞나 (발동 판단만 — 손 목표는 옮기지 않는다): 길 토막마다 지금 손에서 가장 가까운 점 J, 어긋남 o = 손 − J 를 남은 길의 blend 몫에 걸쳐 0 으로 줄인 점들.
+   *  지금 손에서 첫 점으로 가는 방향이 손가락 방향과 허용 각 안인 토막만 — 그 가운데 어긋남이 가장 작은 것(같으면 앞 토막).
+   *  maxO = 어긋남 상한(조건으로 여는 동작만). 없으면 null. (10/13 이어 주기의 길 들어가기 판단을 그대로 — 발동 맞음/틀림이 전과 같게)
    */
   join(pts0, hand, dir, maxO, start = null) {
     let best = null;
@@ -350,13 +363,17 @@ export class PlayerUniqueAssist {
     return best;
   }
 
-  /** 열린 동작 가운데 이 긋기에 맞는 것: 앞 긋기 조건(더 좁은 것)이 먼저, 그 안에선 길과의 어긋남이 작은 것 */
+  /**
+   * 열린 동작 가운데 이 긋기에 맞는 것: 앞 긋기 조건(더 좁은 것)이 먼저, 그 안에선 길과의 어긋남이 작은 것.
+   *  10/14: 앞 긋기 조건으로 여는 것(겹치기·카바치오네·츠바메가에시·염시·자→격)은 표의 조건(앞 긋기·창·방향)만 본다 — 10/13 판의 '길까지 거리(joinMax)·길 첫 방향' 은
+   *  손을 그 길로 끌고 들어가기 위한 것이었다. 이제 손은 손가락이 둔 자리라(10/13 판은 앞 고유 동작이 손을 길 끝에 두었다) 그 판단이 뜻이 없다. 기본 동작으로 여는 것은 join 그대로
+   */
   choose(cur, hand, dir, now) {
     let best = null;
     for (const e of this.list) {
       if (!e.on.some((c) => this.condOk(c, cur, dir, now))) continue;
       const after = e.on.some((c) => c.prev);
-      const j = this.join(e.U.pts, hand, dir, after && !e.far ? UA.joinMax : Infinity, e.anchor === 'start' ? cur.start : null);
+      const j = after ? { o: 0 } : this.join(e.U.pts, hand, dir, Infinity, e.anchor === 'start' ? cur.start : null);
       if (!j) continue;
       const rank = after ? 0 : 1;
       if (!best || rank < best.rank || (rank === best.rank && j.o < best.j.o - 1e-6)) best = { e, j, rank };
@@ -364,14 +381,17 @@ export class PlayerUniqueAssist {
     return best;
   }
 
-  /** 기술 걸음 (ai.js techStepRequest 와 같은 꼴): 비껴 가는 쪽 발이 앞발이면 내딛고(lunge), 뒷발이면 앞발을 지나(pass). 받으면 true */
+  /** 기술 걸음 (ai.js techStepRequest 와 같은 꼴): 비껴 가는 쪽 발이 앞발이면 내딛고(lunge), 뒷발이면 앞발을 지나(pass). 받으면 true. 걸음 크기 × min(1, 세기) */
   askStep(st) {
     const f = this.f;
     const g = f.gait;
     if (!g?.requestStep || !g.active || f.state !== 'stand') return false;
+    const k = Math.min(1, UA.enhance);
     const front = g.frontLeg(f.forward(_v));
     const lead = Math.sign(g.legs[front].side) === Math.sign(st.lat);
-    return g.requestStep({ kind: st.kind ?? (lead ? 'lunge' : 'pass'), fwd: st.fwd, side: st.lat, duration: st.dur ?? 0.35 });
+    const ok = g.requestStep({ kind: st.kind ?? (lead ? 'lunge' : 'pass'), fwd: st.fwd * k, side: st.lat * k, duration: st.dur ?? 0.35 });
+    if (ok) this.stats.steps++;
+    return ok;
   }
 
   /** 새 긋기로 보는 꺾임 각: 시작한 지 turnWindow 안의 찌르기는 허용 각(꺾음 — 카바치오네·염시), 그 밖엔 turnDeg */
@@ -380,24 +400,29 @@ export class PlayerUniqueAssist {
     return c && c.kind === 'thrust' && now - c.t0 <= UA.turnWindow ? UA.angle : UA.turnDeg;
   }
 
-  /** 매 스텝, 검술 층이 휘두르기를 판단한 뒤: 긋기 시작을 읽고 맞으면 이어 주기를 연다 */
+  /** 길 점들 pts[a..b] 의 길이 (끝 힘이 들어가는 '뒷몫' 을 재는 잣대) */
+  static lenOf(pts, a = 0, b = pts.length - 1) {
+    let L = 0;
+    for (let i = a + 1; i <= b; i++) L += hyp(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    return L;
+  }
+
+  /** 매 스텝, 검술 층이 휘두르기를 판단한 뒤: 긋기 시작을 읽고 맞으면 강화를 연다 (잇는 동작의 뒷몫이 먼저) */
   detect(dt, swinging) {
-    this.t += dt;
     const now = this.t;
     this.track();
     const was = this.wasSwing;
     this.wasSwing = swinging;
     const f = this.f;
     const hand = [f.handOffset.x, f.handOffset.y];
+    if (this.r) this.r.travel += hyp(f.skill.vel.x, f.skill.vel.y) * dt; // 이 긋기에서 손 목표가 간 길 (끝 힘 '뒷몫' 판단)
     if (!swinging) {
       this.quietT += dt;
       if (this.cur && this.quietT >= UA.onsetQuiet) this.closeStroke(now - this.quietT);
-      if (!this.r && this.fSpeed < SKILL.swingSpeed) this.restPos = hand; // 시작 자리 = 손가락이 빨라지기 직전 자리 (검술 층 휘두르기 판단은 손 목표 속도를 고르느라 한두 프레임 늦다)
-      this.needRest = false;
+      if (this.fSpeed < SKILL.swingSpeed) this.restPos = hand; // 시작 자리 = 손가락이 빨라지기 직전 자리 (검술 층 휘두르기 판단은 손 목표 속도를 고르느라 한두 프레임 늦다)
       return;
     }
     this.quietT = 0;
-    if (this.r || this.needRest) return;
     const v = f.skill.vel;
     const sp = hyp(v.x, v.y);
     const dir = [v.x / sp, v.y / sp];
@@ -412,102 +437,88 @@ export class PlayerUniqueAssist {
     const cur = (this.cur = { tech: c.tech, kind: c.kind, pad: c.pad, t0: now, dir, start, landed: false, bound: false, tEnd: null, unique: null });
     this.stats.strokes++;
     this.stats.techs[c.tech ?? '-'] = (this.stats.techs[c.tech ?? '-'] ?? 0) + 1;
-    this.fPeak = Math.max(this.fSpeed, sp);
+    const C = this.chainFrom;
+    this.chainFrom = null;
     if (this.busy()) return;
+    // 잇는 동작의 뒷몫: 앞 긋기가 그 고유 동작이었고, 플레이어가 박자 창(chainWait) 안에 다시 그었고(방향 조건이 있으면 그쪽) — 자동으로 두 번째 칼을 내지 않는다
+    if (C && now - C.tEnd <= UA.chainWait && (!C.e.chain.dir || dirOk(dir, C.e.chain.dir))) return this.start(C.e, cur, 2);
     const pick = this.choose(cur, hand, dir, now);
-    if (pick) this.start(pick, cur);
+    if (pick) this.start(pick.e, cur, 1);
   }
 
-  start(pick, cur) {
+  /** 강화 시작: part 1 = 고유 동작으로 읽힌 긋기 · part 2 = 잇는 동작의 뒷몫 (플레이어가 이어 그은 긋기) */
+  start(e, cur, part) {
     const f = this.f;
-    const { e, j } = pick;
-    const ch = e.chain && j.k < e.chain.at ? e.chain.at - j.k - 1 : -1; // 목표 점 번호: 이 점에 닿으면 뒷부분을 이을지 본다
-    this.r = { e, U: e.U, tg: j.tg, i: 0, gateAt: ch, v: Math.max(UA.vMin, this.fPeak * UA.speedK), t: 0, held: !!f.handHeld, dir0: cur.dir, stepAsked: false };
-    cur.kind = e.U.kind;
-    cur.unique = e.U.name;
-    this.stats.fired[e.U.name] = (this.stats.fired[e.U.name] ?? 0) + 1;
-    f.uniqueCue = { text: e.U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: e.U.name, t: this.t };
-    if (e.U.step) this.r.stepAsked = this.askStep(e.U.step);
-    f.skill.cutPending = true;
-    f.skill.recovering = false;
+    const U = e.U;
+    const at = e.chain ? Math.min(e.chain.at, U.pts.length - 1) : U.pts.length - 1;
+    const len = part === 2 ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
+    this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
+    cur.kind = part === 2 ? cur.kind : U.kind;
+    cur.unique = U.name;
+    if (part === 2) {
+      this.stats.ends.chained = (this.stats.ends.chained ?? 0) + 1;
+      return;
+    }
+    this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
+    f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
+    if (U.step && UA.enhance > 0) this.r.stepAsked = this.askStep(U.step);
   }
 
-  /** 매 스텝, 검술 층 머리 (비기 updateSecret 자리 옆): 이어 주는 중이면 손 목표를 다음 길 점으로 */
+  /** 매 스텝, 검술 층 머리 (비기 updateSecret 자리 옆): 강화 몫 갱신 — 손 목표는 건드리지 않는다 */
   drive(dt) {
-    const R = this.r;
-    if (!R) return;
+    this.t += dt;
     const f = this.f;
-    R.t += dt;
-    if (this.busy()) return this.end('yield');
-    if (R.held ? !f.handHeld : this.fIdle > UA.idleRelease) return this.end('lift'); // 손을 뗌 (마우스는 멈춤)
-    const off = f.handOffset;
-    const T0 = R.tg[R.i];
-    const fd = [this.fv.x, this.fv.y];
-    // 반대로 크게 그음: 손가락이 처음 방향과 oppositeDeg 넘게 반대로, 휘두르기 빠르기 넘게 — 길도 그쪽으로 가는 중이 아닐 때 (되올림 같은 길의 꺾임을 따라 그은 것은 놓지 않는다)
-    const toChain = R.gateAt >= R.i && R.e.chain?.dir && dirOk(fd, R.e.chain.dir); // 뒷부분 쪽으로 미리 꺾는 손가락은 반대로 그은 것이 아니다
-    if (!toChain && this.fSpeed > SKILL.swingSpeed && angDeg(fd, R.dir0) > UA.oppositeDeg && angDeg(fd, [T0[0] - off.x, T0[1] - off.y]) > 90) return this.end('opposite');
-    // 찌르다 꺾음 (카바치오네·염시 같은 'turn' 조건): 이어 주던 찌르기가 시작되고 turnWindow 안에 손가락이 허용 각 넘게 꺾였고 그 조건의 동작이 맞으면 그리로 옮긴다
-    if (this.turnable && this.cur?.kind === 'thrust' && this.t - this.cur.t0 <= UA.turnWindow && this.fSpeed > SKILL.swingSpeed && angDeg(fd, R.dir0) > UA.angle) {
-      const now = this.t;
-      const hand = [off.x, off.y];
-      const d = [fd[0] / this.fSpeed, fd[1] / this.fSpeed];
-      const prevCur = this.cur;
-      const prevLast = this.last;
-      this.closeStroke(now);
-      const nc = { tech: null, kind: 'cut', pad: null, t0: now, dir: d, start: hand, landed: false, bound: false, tEnd: null, unique: null };
-      const pick = this.choose(nc, hand, d, now);
-      if (pick && pick.e !== R.e) {
-        this.end('turn');
-        this.cur = nc;
-        this.stats.strokes++;
-        this.start(pick, nc);
-        return this.drive(0);
-      }
-      this.cur = prevCur; // 맞는 것이 없으면 그대로 잇는다
-      this.cur.tEnd = null;
-      this.last = prevLast;
+    const R = this.r;
+    const E = UA.enhance;
+    if (R) {
+      R.t += dt;
+      if (this.busy()) this.end('yield');
+      else if (R.U.step && !R.stepAsked && E > 0 && R.t < 0.3) R.stepAsked = this.askStep(R.U.step); // 못 받았으면(뒤로 당긴 스틱 등) 잠깐 다시 부탁 (AI 와 같음)
     }
-    if (R.U.step && !R.stepAsked && R.t < 0.3) R.stepAsked = this.askStep(R.U.step); // 못 받았으면(뒤로 당긴 스틱 등) 잠깐 다시 부탁 (AI 와 같음)
-    R.v = Math.max(R.v, this.fSpeed * UA.speedK);
-    let left = R.v * dt;
-    while (left > 0 && R.i < R.tg.length) {
-      const T = R.tg[R.i];
-      const dx = T[0] - off.x;
-      const dy = T[1] - off.y;
-      const d = hyp(dx, dy);
-      if (d > left) {
-        off.x += (dx / d) * left;
-        off.y += (dy / d) * left;
-        left = 0;
-      } else {
-        off.set(T[0], T[1]);
-        left -= d;
-        if (R.i === R.gateAt && !R.chained) {
-          // 두 번 잇는 동작의 뒷부분: 손가락이 아직 긋고 있을 때만 (방향 조건이 있으면 그쪽으로) — 손가락이 꺾이는 동안 chainWait 초까지 그 자리에서 기다린다
-          const go = this.fSpeed >= SKILL.swingSpeed && (!R.e.chain.dir || dirOk(fd, R.e.chain.dir));
-          if (!go) {
-            R.waitT = (R.waitT ?? 0) + dt;
-            if (R.waitT > UA.chainWait) return this.end('chain');
-            return;
-          }
-          R.chained = true;
-        }
-        R.i++;
-      }
+    const r = this.r;
+    // ② 몸: 긋는 동안 표의 몸 꼴(body · 뒷몫은 body2)을 bodyIn 초에 얹고, 긋기가 끝나면 bodyOut 초에 걷는다 (덧씌우기 칸 몸 값 — fighter.js updateBodyPose 가 더한다)
+    const B = r && E > 0 ? (r.part === 2 ? r.e.body2 ?? r.e.body : r.e.body) : null;
+    const k = Math.min(1, dt / (B ? UA.bodyIn : UA.bodyOut));
+    let any = false;
+    for (let i = 0; i < 4; i++) {
+      const tgt = B ? B[i] * (i < 3 ? D2R : 1) * E : 0;
+      this.body[i] += (tgt - this.body[i]) * k;
+      if (Math.abs(this.body[i]) > 1e-4) any = true;
+      else if (!B) this.body[i] = 0;
     }
-    if (R.i >= R.tg.length) this.end('done');
+    const sk = f.skill;
+    if (any) {
+      const ub = (sk.uniqBody ??= { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 });
+      ub.pelvisYaw = this.body[0];
+      ub.yawRate = dt > 0 ? (this.body[1] - ub.chestYaw) / dt : 0; // 덧씌운 가슴 돌림의 빠르기 (rad/s) — 날 세우기 앞당김(fighter.js inputEdgeLead)이 읽는다
+      ub.chestYaw = this.body[1];
+      ub.pitch = this.body[2];
+      ub.drop = this.body[3];
+    } else if (sk.uniqBody) sk.uniqBody = null;
+    // ③ 끝 힘: 긋기 뒷몫(손 목표가 그 몫 길이의 powerAt 넘게 간 뒤 · 시작부터 powerMax 초까지)에 팔 서보 힘 × (1 + (endPower − 1)·세기) — 비기 힘 창 SECRET.power 와 같은 칸(f.powerMul)
+    const pv = r && E > 0 && r.travel >= UA.powerAt * r.len && r.t <= UA.powerMax ? 1 + (UA.endPower - 1) * E : 0;
+    if (pv) {
+      if (f.powerMul === 1 || f.powerMul === this.powV) {
+        if (!this.powV) this.stats.power++;
+        f.powerMul = pv;
+        this.powV = pv;
+      }
+    } else this.dropPower();
   }
 
-  /** 놓아 준다 (자유 조작으로): 손 목표 속도가 튀지 않게 (skill.js secretEnd 와 같음) */
-  end(why) {
-    const f = this.f;
+  /** 내가 둔 끝 힘을 걷는다 (다른 동작이 바꿔 놓았으면 그대로 둔다) */
+  dropPower() {
+    if (!this.powV) return;
+    if (this.f.powerMul === this.powV) this.f.powerMul = 1;
+    this.powV = 0;
+  }
+
+  /** 강화 끝: done = 긋기가 끝남(쉼·꺾음) · yield = 다른 동작에 내줌. 잇는 동작의 앞 긋기가 끝나면 뒷몫을 기다린다 */
+  end(why, tEnd = this.t) {
     const R = this.r;
     this.r = null;
-    // 반대로 그어 놓아 준 것은 그 꺾음이 곧 새 긋기다(찌르다 꺾음 → 카바치오네·염시) — 쉼을 기다리지 않는다. 다 이었거나·멈췄거나·다른 동작에 내준 것은 한 번 쉰 뒤
-    this.needRest = why !== 'opposite';
+    this.dropPower();
     this.stats.ends[why] = (this.stats.ends[why] ?? 0) + 1;
-    if (R?.chained) this.stats.ends.chained = (this.stats.ends.chained ?? 0) + 1;
-    f.skill.prev.copy(f.handOffset);
-    f.skill.anchor.copy(f.handOffset);
+    if (why === 'done' && R?.part === 1 && R.e.chain) this.chainFrom = { e: R.e, U: R.U, tEnd };
   }
 }

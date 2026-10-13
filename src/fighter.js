@@ -1049,6 +1049,15 @@ export class Fighter {
         piT += (th.pitch - piT) * kt;
         dT += (th.drop - 0.06 - dT) * kt;
       }
+      // 플레이어 고유 동작 강화의 몸 (10/14 — unique_assist.js skill.uniqBody, 플레이어만 · 없으면 null 이라 그대로): 덧씌우기 칸 몸 값과 같은 꼴로 더한다(골반은 절반).
+      //  손 목표·칼끝 방향은 건드리지 않는다 — 궤적은 손가락
+      const ub = sk.uniqBody;
+      if (ub) {
+        pT += -ub.pelvisYaw * 0.5;
+        cT += -ub.chestYaw;
+        piT += ub.pitch;
+        dT += ub.drop;
+      }
       // 마무리(쓰러진 상대 내려찍기)만 자세 당김 예외 (사장님 9/30 23:40): FINISH_GUARDS 몫만(finishAt, 보통 자세표·찌르기 덧씌우기 없음)을
       //  s·(마무리 무게 몫, fin.amt 포함) 로 명령
       if (this.finish.amt > 0) {
@@ -3084,6 +3093,16 @@ export class Fighter {
     const kw = 1 - (sk.thrustPose?.w ?? 0);
     vx *= kw;
     vy *= kw;
+    // 플레이어 고유 동작 강화의 몸 돌림 (10/14 — skill.uniqBody.yawRate, 플레이어만 · 없으면 그대로): 덧씌운 가슴 돌림이 바뀌는 빠르기(가슴 명령 cT 에 − 로 더함 → 위축 둘레 −yawRate)로
+    //  칼날 70 % 지점이 곧 낼 속도를 날 방향에 더한다 — 손가락 몫(위)만 읽으면 몸이 더 도는 몫을 날이 늦게 따라간다 (탐침 unique_enhance_measure feel: 날 각 23.4 → 22.2°, 부호를 뒤집으면 더 나빠짐 — 문서 §7)
+    const ub = sk.uniqBody;
+    if (ub?.yawRate) {
+      const w = -ub.yawRate;
+      const p = this.bladePoint(0.7, _pe0);
+      const c = this.bodies.chest.translation();
+      out.x += w * (p.z - c.z) * JOINTS.playerEdgeLead;
+      out.z += -w * (p.x - c.x) * JOINTS.playerEdgeLead;
+    }
     if (Math.hypot(vx, vy) < 1e-3) return;
     const oneHand = !!this.guardPose?.oneHand;
     const h = 0.02;

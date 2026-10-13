@@ -1,10 +1,11 @@
-// 플레이어 고유 동작 이어 주기 (10/13 — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md) 헤드리스 시험.
+// 플레이어 고유 동작 (10/13 이어 주기 → 10/14 강화 — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md) 헤드리스 시험.
 //  실제 src 를 그대로 돌린다(1/120 s 스텝). 손가락은 60 Hz 프레임마다 패드 m 움직임을 main.js 와 같은 차례로 넣는다:
-//   feed(손가락) → 이어 주는 중이 아니면 손 목표에 더함 → handHeld · inputActive → 물리 두 스텝. 상대는 AI 를 끄고 자세 하나로 서 있다.
+//   feed(손가락) → 손 목표에 더함(10/13 판은 이어 주는 중엔 안 더함 — holdsHand 가 없으면 running 으로 본다) → handHeld · inputActive → 물리 두 스텝. 상대는 AI 를 끄고 자세 하나로 서 있다.
 //  ① 기본 긋기 12 + 가운데 짧은 내려베기 — 유파 다섯 × 단계 4: 어느 고유 동작이 발동했나 (표대로면 맞음)
 //  ② 조건 긋기 (앞 긋기 뒤): 겹치기 · 카바치오네 · 츠바메가에시 · 염시 · 자→격 · 위아래 사슬 잇기 — 맞는 조건 / 틀린 조건(대조)
 //  ③ 무작위 긋기 (유파마다 N): 대본의 시작 자리·처음 방향으로 정답을 매겨 맞게/잘못/안 발동을 센다
 //  ④ 해금 0 · 스위치 끔(?uniqueAssist=0 과 같은 UNIQUE_ASSIST.on 0): 붙이지 않은 판과 칼 자취가 바이트 같은지 (sha256)
+//  ⑥ (10/14) 강화 판: 같은 손가락 입력에서 손 목표 궤적이 안 붙인 판과 같은가 · 강화 몫(걸음·몸·끝 힘)이 실제로 얹혔나 · 날 세우기 어긋남(칼날 방향 ↔ 칼 움직임) 끔과 견줌
 //  실행: node tools/sim/unique_assist_probe.mjs [무작위 수 (기본 60)]
 //        node tools/sim/unique_assist_probe.mjs sweep <유파> [기본 동작 이름] — 맞물림 쓸기(간격 × 상대 손 자리: 첫 긋기 칼끼리 가장 가까운 거리 · 맞물림 · 맞힘)
 import { RAPIER, THREE, CONFIG } from './jelly_harness.mjs';
@@ -66,7 +67,7 @@ function mk(weapon, { stage = 4, on = 1, attach = true, gap = 2.6, foeGuard = [0
   R.frame = (dx, dy, held) => {
     const u = player.skill.uniq;
     u?.feed(dx, dy, FRAME, false);
-    if (!u?.running) {
+    if (!(u ? u.holdsHand ?? u.running : false)) {
       player.handOffset.x += dx;
       player.handOffset.y += dy;
     }
@@ -253,7 +254,7 @@ scen('대조: 정수리 베기 헛침 뒤 1 s 쉬고 위로 (창 밖)', 'japanes
   R.to(G.ochsR, 4, true);
   R.wait(0.4, false);
 }, not('tsubameGaeshi'));
-// 이베리아 위아래 사슬: 내려벤 뒤 위로 이어 그음 → 뒷부분까지 / 뗌 → 앞부분만
+// 이베리아 위아래 사슬: 내려벤 뒤 위로 이어 그음 → 뒷몫 강화 / 뗌 → 앞 긋기만 (10/14: 뒷몫은 플레이어가 이어 그은 긋기에만 — 자동 두 번째 칼 없음)
 scen('정수리 베기 → 위로 이어 그음 (사슬 잇기)', 'iberian', { stage: 2, gap: 3.2 }, (R) => {
   R.place(G.tag);
   R.to([0.0, 0.14], 4, true);
@@ -333,13 +334,14 @@ scen('대조: 찌르기 없이 긴 자세에서 가로 긋기', 'chinese', { sta
   R.to([-0.45, 0.06], 4, true);
   R.wait(0.5, false);
 }, not('ciji'));
-// 놓아 주기: 반대로 크게 그음 · 막기 버튼 · 탭 찌르기
-scen('놓아 주기: 분노의 베기 이어 주는 중 반대로 그음', 'iberian', { stage: 1, gap: 3.2 }, (R) => {
+// 놓아 주기: 반대로 크게 그음 (10/14: 새 긋기 — 강화가 끝나고 칼은 손가락 그대로) · 탭 찌르기
+scen('반대로 그음: 분노의 베기 강화 중 반대로 그음 → 강화 끝 · 손 목표 = 손가락', 'iberian', { stage: 1, gap: 3.2 }, (R) => {
   R.place(G.tagR);
   R.to([0.3, 0.3], 4, true);
   R.to([0.42, 0.42], 4, true);
+  R.handErr = Math.hypot(R.player.handOffset.x - R.fx, R.player.handOffset.y - R.fy);
   R.wait(0.4, false);
-}, (g, R) => g.includes('talhoRodeado') && R.ends.includes('opposite'));
+}, (g, R) => g.includes('talhoRodeado') && R.ends.includes('done') && R.handErr < 1e-9);
 scen('놓아 주기: 이어 주는 중 탭 찌르기 (기존 동작이 먼저)', 'german', { stage: 2, gap: 3.2 }, (R) => {
   R.place(G.tagR);
   R.to([0.36, 0.36], 4, true);
@@ -441,6 +443,104 @@ for (const school of SCHOOLS) {
   const D = run({ stage: 4 });
   log(`${school}: 안 붙임 ${A.h} · 해금 0 ${B.h}(붙음 ${B.attached}) · 끔 ${C.h}(붙음 ${C.attached}) → ${A.h === B.h && A.h === C.h ? '같음' : '다름'} · (대조) 해금 4 ${D.h} 발동 ${D.fired}`);
 }
+// ── ⑥ (10/14) 강화 판: 손 목표 궤적 · 강화 몫 · 날 세우기 ──
+//  기본 긋기 13 마다 새 판에서(앞 긋기의 걸음·몸 차이가 번지지 않게) 같은 손가락(긋기 + 곧장 반쯤 되긋기 — 잇는 동작의 뒷몫 자리)을 안 붙인 판·붙인 판(단계 4)으로 돌려
+//  손가락이 닿은 프레임의 손 목표(handOffset) 차이 · 칼끝(가슴 기준 몸 방향 틀) 차이 · 날 각(칼날 방향 ↔ 칼날 70 % 지점 속도의 칼 축 수직 몫, 그 속도 > 3 m/s 스텝)을 견준다.
+//  날 각은 붙인 판이 강화 중인 스텝과 같은 스텝 번호의 안 붙인 판 (같은 손가락이라 같은 때)
+log('\n## ⑥ 강화 판: 같은 손가락 입력(긋기마다 새 판) — 손 목표 궤적 차이 · 강화 몫 · 날 세우기');
+const edgeAng = (f) => {
+  const v = f.hitPointVel;
+  if (!v || v.length() < 3) return null;
+  const q = f.sword.rotation();
+  const Q = new THREE.Quaternion(q.x, q.y, q.z, q.w);
+  const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(Q);
+  const e = new THREE.Vector3(1, 0, 0).applyQuaternion(Q);
+  const p = v.clone().addScaledVector(ax, -v.dot(ax));
+  if (p.length() < 1e-3) return null;
+  return (Math.acos(Math.min(1, Math.abs(p.normalize().dot(e)))) * 180) / Math.PI;
+};
+const yawInv = new THREE.Quaternion();
+const sixRun = (school, b, opt) => {
+  const R = mk(WEAPON[school], { gap: 2.0, ...opt });
+  const H = [];
+  const T = [];
+  const A = [];
+  const busy = [];
+  let bodyMax = 0;
+  let powMax = 1;
+  let on = false;
+  const st = R.step;
+  R.step = () => {
+    st();
+    if (!on) return;
+    A.push(edgeAng(R.player));
+    busy.push(!!R.uq?.running);
+    const ub = R.player.skill.uniqBody;
+    if (ub) bodyMax = Math.max(bodyMax, Math.abs(ub.chestYaw));
+    powMax = Math.max(powMax, R.player.powerMul ?? 1);
+  };
+  const fr = R.frame;
+  R.frame = (dx, dy, held) => {
+    fr(dx, dy, held);
+    if (!on || !held) return;
+    const P = R.player;
+    H.push([P.handOffset.x, P.handOffset.y]);
+    const s = P.sword.translation();
+    const c = P.bodies.chest.translation();
+    yawInv.copy(P.yaw).invert();
+    const tip = new THREE.Vector3(s.x - c.x, s.y - c.y, s.z - c.z).applyQuaternion(yawInv);
+    T.push([tip.x, tip.y, tip.z]);
+  };
+  R.place(b.from, 0.6);
+  on = true;
+  for (const p of b.path) R.to(p, 4, true);
+  const e = b.path[b.path.length - 1];
+  R.to([(b.from[0] + e[0]) / 2, (b.from[1] + e[1]) / 2], 4, true);
+  R.wait(0.15, true);
+  R.wait(0.3, false);
+  return { H, T, A, busy, bodyMax, powMax, S: R.uq?.stats, fired: R.fired.length };
+};
+const six = { n: 0, s2: 0, mx: 0, t2: 0, tmx: 0, eaOn: [], eaOff: [] };
+for (const school of SCHOOLS) {
+  const Z = { n: 0, s2: 0, mx: 0, t2: 0, tmx: 0, eaOn: [], eaOff: [], fired: 0, chained: 0, steps: 0, power: 0, bodyMax: 0, powMax: 1 };
+  for (const b of BASE) {
+    const on = sixRun(school, b, { stage: 4 });
+    if (!on.fired) continue;
+    const off = sixRun(school, b, { attach: false });
+    Z.fired += on.fired;
+    Z.chained += on.S?.ends?.chained ?? 0;
+    Z.steps += on.S?.steps ?? 0;
+    Z.power += on.S?.power ?? 0;
+    Z.bodyMax = Math.max(Z.bodyMax, on.bodyMax);
+    Z.powMax = Math.max(Z.powMax, on.powMax);
+    for (let i = 0; i < Math.min(off.H.length, on.H.length); i++) {
+      const d = Math.hypot(off.H[i][0] - on.H[i][0], off.H[i][1] - on.H[i][1]);
+      const dt = Math.hypot(off.T[i][0] - on.T[i][0], off.T[i][1] - on.T[i][1], off.T[i][2] - on.T[i][2]);
+      Z.n++;
+      Z.s2 += d * d;
+      Z.mx = Math.max(Z.mx, d);
+      Z.t2 += dt * dt;
+      Z.tmx = Math.max(Z.tmx, dt);
+    }
+    for (let i = 0; i < Math.min(off.A.length, on.A.length); i++) {
+      if (!on.busy[i] || on.A[i] == null || off.A[i] == null) continue;
+      Z.eaOn.push(on.A[i]);
+      Z.eaOff.push(off.A[i]);
+    }
+  }
+  for (const k of ['n', 's2', 't2']) six[k] += Z[k];
+  six.mx = Math.max(six.mx, Z.mx);
+  six.tmx = Math.max(six.tmx, Z.tmx);
+  six.eaOn.push(...Z.eaOn);
+  six.eaOff.push(...Z.eaOff);
+  const ea = (xs) => (xs.length ? `${(xs.reduce((x, y) => x + y, 0) / xs.length).toFixed(1)}° (칼 면 > 45° ${((100 * xs.filter((x) => x > 45).length) / xs.length).toFixed(0)} %)` : '-');
+  log(`${school}: 손 목표 차이 RMS ${Math.sqrt(Z.s2 / Math.max(1, Z.n)).toExponential(2)} · 최대 ${Z.mx.toExponential(2)} 패드 m · 칼끝 차이 RMS ${Math.sqrt(Z.t2 / Math.max(1, Z.n)).toFixed(3)} · 최대 ${Z.tmx.toFixed(3)} m (${Z.n} 프레임) · 발동 ${Z.fired} · 이음 ${Z.chained} · 걸음 ${Z.steps} · 끝 힘 창 ${Z.power} (최대 ×${Z.powMax.toFixed(2)}) · 몸 가슴 최대 ${((Z.bodyMax * 180) / Math.PI).toFixed(1)}° · 날 각(강화 중 ${Z.eaOn.length} 스텝) 붙임 ${ea(Z.eaOn)} / 안 붙임 ${ea(Z.eaOff)}`);
+}
+{
+  const ea = (xs) => (xs.length ? `${(xs.reduce((x, y) => x + y, 0) / xs.length).toFixed(1)}° (칼 면 > 45° ${((100 * xs.filter((x) => x > 45).length) / xs.length).toFixed(1)} %)` : '-');
+  log(`합: 손 목표 차이 RMS ${Math.sqrt(six.s2 / Math.max(1, six.n)).toExponential(2)} · 최대 ${six.mx.toExponential(2)} · 칼끝 차이 RMS ${Math.sqrt(six.t2 / Math.max(1, six.n)).toFixed(3)} · 최대 ${six.tmx.toFixed(3)} m · 날 각(${six.eaOn.length} 스텝) 붙임 ${ea(six.eaOn)} / 안 붙임 ${ea(six.eaOff)}`);
+}
+
 log('\n## ⑤ 해금 (사장님 결정 10/13 22:3x): 깬 수 → 인장 → 유파 숙련도');
 for (const c of [0, 9, 10, 19, 20, 49, 50, 51, 60, 99, 100, 150, 199, 200, 250]) log(`깬 수 ${c}: 인장 ${sealCount(c)} · 숙련도 ${JSON.stringify(masteryOf(c))}`);
 for (const k of [1, 2, 3, 4, 5, 6, 10, 11, 20]) log(`인장 ${k}: ${JSON.stringify(sealAt(k))} → ${sealNotice(sealAt(k))}`);

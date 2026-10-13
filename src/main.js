@@ -34,7 +34,7 @@ import { tickDebris, clearDebris, debrisCount } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
-import { PlayerUniqueAssist, uniqueStageFor, setClearsOverride, addJourneyClear, sealNotice } from './unique_assist.js'; // 플레이어 고유 동작 이어 주기 (10/13 — docs/strike/unique_player_2026-10-13.md)
+import { PlayerUniqueAssist, uniqueStageFor, setClearsOverride, addJourneyClear, sealNotice } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 
@@ -95,8 +95,9 @@ if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // �
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
-if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 이어 주기(10/13): 기본 1, `?uniqueAssist=0` = 끔 (칼은 손가락만 따른다)
-else if (testRoute.active) CONFIG.UNIQUE_ASSIST.on = 0; // 테스트 경로는 기본 끔 (사장님 10/14 02:0x '테스트 경로는 꺼 둬' — 궤적을 빼앗던 이어 주기를 '궤적은 내 것, 발·몸·끝 힘을 더함'으로 다시 만드는 동안). `?uniqueAssist=1` 로 켬
+if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
+else if (testRoute.active) CONFIG.UNIQUE_ASSIST.on = 0; // 테스트 경로는 기본 끔 (사장님 10/14 02:0x '테스트 경로는 꺼 둬' — 궤적을 빼앗던 이어 주기를 '궤적은 내 것, 발·몸·끝 힘을 더함'으로 다시 만듦 — 10/14 강화 판도 기본 끔 그대로, 사장님 확인용). `?uniqueAssist=1` 로 켬
+if (params.has('uniqueEnhance')) CONFIG.UNIQUE_ASSIST.enhance = Math.max(0, +params.get('uniqueEnhance') || 0); // 고유 동작 강화 세기(10/14): 기본 1 · 0 = 기술 이름 알림만 · 0.5 = 절반 (걸음·몸·끝 힘 한꺼번에)
 const UNIQUE_STAGE_PARAM = params.get('uniqueStage'); // 고유 동작 해금 단계 덮어쓰기 `?uniqueStage=0..5` (5 = 비기까지) — 모든 유파를 그 단계로 (본판·테스트 경로 모두). 없으면 테스트 경로 4 · 본판은 손에 든 무기 유파의 인장 수
 const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..5` (실력 숫자 이름·고유 동작 거르기·5 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
 const FOE_PROF = /^[0-9]$/.test(FOE_PROF_PARAM ?? '') && +FOE_PROF_PARAM <= AI_PROFICIENCY.max ? +FOE_PROF_PARAM : null;
@@ -541,7 +542,7 @@ function newRound(weaponId) {
   const uniqueStage = uniqueStageFor(player.swordArt?.tradition, { test: testRoute.active, param: UNIQUE_STAGE_PARAM }).stage; // 손에 든 무기 유파의 숙련도 (본판 = 인장 수 · 테스트 경로 5 · ?uniqueStage)
   playerSecret = new PlayerSecretWatch(player, enemy, { locked: uniqueStage < CONFIG.UNIQUE_ASSIST.secretStage }); // 내 무기 유파의 비기 — 숙련도 5 에서만 (사장님 결정 10/13 23:1x '숙련도 5단계 … 거기서 비기를 배우게'). 그 전·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
   playerGuard = new PlayerParryGuard(player, enemy); // 막기 버튼 (누르는 동안만 손을 쥔다 — 권총·맨손이면 아무 일도 없다)
-  playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStage }); // 고유 동작 이어 주기: 손에 든 무기 유파의 숙련도(인장 수)만큼 열림 (단계 0 · 무유파 · 끔이면 붙지 않음)
+  playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStage }); // 고유 동작 강화: 손에 든 무기 유파의 숙련도(인장 수)만큼 열림 (단계 0 · 무유파 · 끔이면 붙지 않음)
   uniqueCueSeen = null;
   secretSlow = 0;
   secretBurstsSeen = 0;
@@ -588,7 +589,7 @@ let slowMo = 0; // 결정타 슬로모션 남은 시간
 let playerSecret = null;
 // 플레이어 막기 버튼 (10/11 — src/parry_button.js · docs/strike/player_parry_button_2026-10-11.md): 판마다 새로. 누름 = 폰 '막기' 단추(오른쪽 아래) 또는 PC 키 F
 let playerGuard = null;
-// 플레이어 고유 동작 이어 주기 (10/13 — src/unique_assist.js): 판마다 새로 (열린 동작이 없으면 검술 층에 붙지 않는다 = 전과 같음) · 본 알림
+// 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — src/unique_assist.js): 판마다 새로 (열린 동작이 없으면 검술 층에 붙지 않는다 = 전과 같음) · 본 알림
 let playerUnique = null;
 let uniqueCueSeen = null;
 const parryHold = { btn: null, key: false }; // btn = 단추를 누른 포인터 id
@@ -1889,7 +1890,7 @@ function updateTechCue(dt) {
   if (STIFF_TEXT && myStiff && !stiffSeen.me) showEmoMsg('경직', 'stiff', 1200);
   if (STIFF_TEXT && foeStiff && !stiffSeen.foe) showEmoMsg('상대 경직', 'stiff', 1200);
   stiffSeen = { me: myStiff, foe: foeStiff };
-  // 내 고유 동작 (10/13 — 이어 주기가 발동한 순간 unique_assist.js 가 player.uniqueCue 에 적는다): 상대 고유 동작 알림과 같은 칸·꼴, 꼬리표 '내'
+  // 내 고유 동작 (10/13 — 고유 동작이 발동한 순간 unique_assist.js 가 player.uniqueCue 에 적는다): 상대 고유 동작 알림과 같은 칸·꼴, 꼬리표 '내'
   const uc = player?.uniqueCue ?? null;
   if (uc && uc !== uniqueCueSeen) {
     uniqueCueSeen = uc;
@@ -1968,12 +1969,11 @@ function frame(now) {
       if (G.held && !bufHold && (swipe || taps > 0)) G.broken = true;
       guardHold = G.held && !G.broken && !secBusy;
     }
-    // 고유 동작 이어 주기 (10/13): 손가락 움직임을 먼저 알린다(놓아 주기 판단 — 손 뗌·반대로 그음·계속 그음). 이어 주는 동안은 손 목표를 길이 쥔다 (손가락은 더하지 않는다)
-    const uq = player.skill.uniq;
-    uq?.feed(d.x, d.y, dt, guardHold || bufHold || !!playerGuard?.held);
-    const uniqBusy = !!uq?.running;
+    // 고유 동작 강화 (10/14 — 10/13 이어 주기를 다시 만듦): 손가락 움직임을 알린다(긋기 읽기 · 다른 동작이 손을 쥐는지). 손 목표는 쥐지 않는다 — 손가락은 늘 그대로 더한다
+    //  (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다')
+    player.skill.uniq?.feed(d.x, d.y, dt, guardHold || bufHold || !!playerGuard?.held);
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
-    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold && !bufHold && !uniqBusy) {
+    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold && !bufHold) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
@@ -2123,7 +2123,7 @@ window.game = {
     return playerGuard; // 막기 버튼 (held · active · mode · line · stats) — 브라우저 탐침(tools/browser/parry_button_probe.mjs)이 읽는다
   },
   get playerUnique() {
-    return playerUnique; // 고유 동작 이어 주기 (stage · list · stats · running) — 탐침 tools/browser/unique_assist_shots.mjs 가 읽는다
+    return playerUnique; // 고유 동작 강화 (stage · list · stats · running) — 탐침 tools/browser/unique_assist_shots.mjs 가 읽는다
   },
   get playerSecret() {
     return playerSecret; // 플레이어 비기 창 (open · opened · S) — 브라우저 스모크(tools/browser/player_secret_shots.mjs)가 읽는다

@@ -1,4 +1,6 @@
-// 플레이어 고유 동작 이어 주기 (10/13 — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md) 브라우저 확인.
+// 플레이어 고유 동작 (10/13 이어 주기 → 10/14 강화 — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md) 브라우저 확인.
+//  10/14: 테스트 경로는 기본 끔이라 test.html 경우엔 &uniqueAssist=1 을 붙인다. 긋기마다 걸음 수 · 이음(뒷몫) 수 · 긋기 끝 몸 덧씌우기(가슴 돌림 °)도 적는다.
+//   PNG 는 손을 뗀 곧바로(SHOT_WAIT ms, 기본 0 — 걸음·몸 꼴이 남아 있을 때) 찍는다
 //  실제 게임(index.html)을 띄워 터치 포인터 사건(pointerdown·move·up, pointerType 'touch')으로 긋는다 — 입력 길(input.js → main.js → 검술 층)이 그대로 돈다.
 //  긋기 시작 자리에 손을 놓는 것만 game.player.handOffset 으로 한다(시험 편의). 상대 AI 는 멈춰 둔다(game.ai.update 비움).
 //  주소 경우마다: 해금 단계 · 붙었나 · 긋기마다 발동한 고유 동작 · 내 기술 알림 칸(#techSlot) 글 · 발동했으면 PNG.
@@ -21,10 +23,11 @@ const STROKES = {
   unterhau: { from: G.wechselR, to: [[0.04, -0.08], [-0.22, 0.26]] },
 };
 const CASES = [
-  { label: 'test-longsword', q: '?test=1&weapon=longsword', strokes: ['zornhau', 'zwerch', 'oberhauUp'] },
-  { label: 'test-zweihander', q: '?test=1&weapon=zweihander&playerSecret=0', strokes: ['oberhauUp', 'zwerch', 'unterhau'] }, // 이베리아 길목 준비(멀리 서 있으면 켜짐)가 긋기를 비기로 가져가지 않게 — 비기가 먼저인 것은 test-zweihander-secret
-  { label: 'test-zweihander-secret', q: '?test=1&weapon=zweihander', strokes: ['oberhauUp'] },
-  { label: 'test-uchigatana', q: '?test=1&weapon=uchigatana&playerSecret=0', strokes: ['zornhauL', 'langortDown'] },
+  { label: 'test-longsword', q: '?test=1&weapon=longsword&uniqueAssist=1', strokes: ['zornhau', 'zwerch', 'oberhauUp'] },
+  { label: 'test-zweihander', q: '?test=1&weapon=zweihander&playerSecret=0&uniqueAssist=1', strokes: ['oberhauUp', 'zwerch', 'unterhau'] }, // 이베리아 길목 준비(멀리 서 있으면 켜짐)가 긋기를 비기로 가져가지 않게 — 비기가 먼저인 것은 test-zweihander-secret
+  { label: 'test-zweihander-secret', q: '?test=1&weapon=zweihander&uniqueAssist=1', strokes: ['oberhauUp'] },
+  { label: 'test-uchigatana', q: '?test=1&weapon=uchigatana&playerSecret=0&uniqueAssist=1', strokes: ['zornhauL', 'langortDown'] },
+  { label: 'test-default', q: '?test=1&weapon=longsword', strokes: ['zwerch'] }, // 테스트 경로 기본 = 끔 (10/14 02:0x)
   { label: 'main-stage4', q: '?weapon=longsword&uniqueStage=4', strokes: ['zornhau'] },
   { label: 'main-default', q: '?weapon=longsword', strokes: ['zornhau', 'zwerch'] },
   { label: 'main-clears60', q: '?weapon=longsword&clears=60', strokes: ['zornhau', 'zwerch'] },
@@ -119,6 +122,12 @@ for (const C of CASES) {
         }),
       { pts: S.to, v: S.v ?? 4 },
     );
+    const shotWait = +(process.env.SHOT_WAIT ?? 0);
+    const early = shotWait >= 0 ? await page.screenshot({ path: `${shotDir}/_tmp.png` }).then(() => true) : false;
+    const bodyEnd = await page.evaluate(() => {
+      const ub = window.game.player.skill.uniqBody;
+      return ub ? +((ub.chestYaw * 180) / Math.PI).toFixed(1) : 0;
+    });
     await page.waitForTimeout(400);
     const r = await page.evaluate((f0) => {
       const g = window.game;
@@ -127,14 +136,16 @@ for (const C of CASES) {
         .filter(([k, n]) => n > (f0[k] ?? 0))
         .map(([k]) => k);
       const el = [...document.querySelectorAll('#techSlot .slot')].find((e) => e.classList.contains('show'));
-      return { fired, ends: u?.stats?.ends ?? {}, cue: el ? { who: el.dataset.who, kind: el.dataset.kind, text: el.innerText.replace(/\s+/g, ' ').trim() } : null, techs: u?.stats?.techs ?? {} };
+      return { fired, ends: u?.stats?.ends ?? {}, steps: u?.stats?.steps ?? 0, power: u?.stats?.power ?? 0, cue: el ? { who: el.dataset.who, kind: el.dataset.kind, text: el.innerText.replace(/\s+/g, ' ').trim() } : null, techs: u?.stats?.techs ?? {} };
     }, before.fired);
     let png = null;
     if (r.fired.length) {
       png = `${shotDir}/${C.label}_${name}.png`;
-      await page.screenshot({ path: png });
+      if (early) fs.renameSync(`${shotDir}/_tmp.png`, png);
+      else await page.screenshot({ path: png });
     }
-    row.strokes.push({ name, frameMs: +frameMs.toFixed(1), ...r, png });
+    if (fs.existsSync(`${shotDir}/_tmp.png`)) fs.unlinkSync(`${shotDir}/_tmp.png`);
+    row.strokes.push({ name, frameMs: +frameMs.toFixed(1), bodyEnd, ...r, png });
   }
   if (C.label === 'main-default') {
     await page.screenshot({ path: `${shotDir}/${C.label}_nofire.png` });
