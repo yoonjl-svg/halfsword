@@ -15,7 +15,20 @@
     <meta name="apple-mobile-web-app-title" content="적막" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Stillness</title>
+    <!-- 화면 글꼴 (10/14 사장님 1안 '도트' — docs/ui/pixel_font_2026-10-14.md): 우리 파일만 쓴다(public/fonts — 오프라인 앱이라 바깥 글꼴 서버 없음, 출처·라이선스 public/fonts/README.md).
+         첫 화면(메뉴)에 쓰는 셋은 미리 받는다: 갈무리11 보통(부제·설정 줄) · 굵게('싸움 시작') · Jacquard 12 라틴(제목 'Stillness') -->
+    <link rel="preload" href="/fonts/Galmuri11.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Galmuri11-Bold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Jacquard12-latin.woff2" as="font" type="font/woff2" crossorigin />
     <style>
+      /* ── 화면 글꼴: 갈무리11 = 한글·작은 영문·숫자·기호 전부 (400 · 700 두 파일 — 800 은 700 파일로 그린다).
+         Jacquard 12 = 큰 영문 제목에만(--font-display), 라틴 글자에만 — 숫자·기호·빈칸은 갈무리로 (unicode-range = 두 파일에 실제로 든 라틴 글자) ── */
+      @font-face { font-family: 'Galmuri11'; src: url('/fonts/Galmuri11.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+      @font-face { font-family: 'Galmuri11'; src: url('/fonts/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+      @font-face { font-family: 'Jacquard 12'; src: url('/fonts/Jacquard12-latin.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap;
+        unicode-range: U+0041-005A, U+0061-007A, U+00C0-00D6, U+00D8-00F6, U+00F8-00FF, U+0131, U+0152-0153; }
+      @font-face { font-family: 'Jacquard 12'; src: url('/fonts/Jacquard12-latin-ext.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap;
+        unicode-range: U+0100-0107, U+010A-0113, U+0116-011B, U+011E-0123, U+0126-0127, U+012A-012B, U+012E-0130, U+0132-0133, U+0136-0137, U+0139-013E, U+0141-0148, U+014A-014D, U+0150-0151, U+0154-015B, U+015E-0161, U+0164-0165, U+016A-017E, U+0218-021B, U+0237, U+1E80-1E85, U+1E9E, U+1EF2-1EF3; }
       :root {
         --ink: #f3e9d8;
         --dim: #b8a88e;
@@ -26,7 +39,9 @@
         --blue: #3f6fb5;
         /* ── 화면 글자 체계 (10/10 — docs/ui/hud_type_system_2026-10-10.md) ── */
         /* 크기 4 단계: 판 알림 / 이름·상태·창 제목 / 칸 첫 줄·대사·알림·창 줄 / 칸 둘째 줄·칭호·안내·카드 설명·배지 */
-        --font-ui: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+        --font-ui: 'Galmuri11', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; /* 10/14 갈무리11 먼저 — 뒤 시스템 글꼴은 갈무리에 없는 글자(이모지 등)만 */
+        --font-display: 'Jacquard 12', 'Galmuri11', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; /* 큰 영문 제목에만 (메뉴 'Stillness') */
+        --fs-wordmark: 42px; /* 큰 영문 제목 크기: Jacquard 12 의 도트 격자(em 21 도트) 2 배 — 도트 하나 = 2px. 21px 은 지금 제목(20px 굵게)보다 작아 보인다 (사장님 확인 전) */
         --fs-display: clamp(32px, 9vmin, 56px);
         --fs-title: 20px;
         --fs-body: 15px;
@@ -72,6 +87,7 @@
         :root { --side-w: calc(50vw - 43px); --hint-b: calc(var(--safe-b) + 130px); --notice-up: 54px; }
       }
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      button, input, select, textarea { font-family: inherit; } /* 단추·입력 칸도 화면 글꼴을 물려받는다 (브라우저 기본은 시스템 글꼴) — 크기·굵기는 저마다의 줄 그대로 */
       html, body {
         margin: 0; height: 100%; overflow: hidden; background: #1b1410; color: var(--ink);
         font-family: var(--font-ui);
@@ -92,7 +108,7 @@
       #emotion[data-emotion="obsession"] { background: radial-gradient(ellipse at center, rgba(220,170,40,0) 55%, rgba(220,170,40,.4) 88%, rgba(140,90,0,.75) 100%); }
       #topButtons { position: fixed; top: max(8px, env(safe-area-inset-top)); z-index: 2; left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
       #topButtons.show { display: flex; }
-      .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; } /* 글리프 단추 (일시정지 Ⅱ) — 글자 단계 밖 */
+      .iconBtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 17px; font-family: revert; } /* 글리프 단추 (일시정지 Ⅱ) — 글자 단계 밖. 글꼴은 브라우저 기본 단추 글꼴 그대로(revert — 10/14): 갈무리의 Ⅱ 는 세리프 붙은 로마 숫자라 '멈춤' 그림으로 안 읽힌다 */
 
       /* ── 게임 화면 글자 (10/10 글자 체계): 칸마다 자리 하나 · 서식 하나 · 외곽선 하나. 시간은 main.js 가 게임 시간으로 센다 ── */
       /* D 판 알림 (판 시작 '대면' · 승리 · 패배): 가운데 — 가운데에는 이것만 뜬다 */
@@ -160,20 +176,20 @@
       @media (orientation: portrait) { #foeIntro { max-width: calc(100vw - 2 * var(--safe-l)); } }
       /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): 오른쪽 위 칸과 거울. 첫 줄 .stg = '스테이지 N · 무대 이름'.
          무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르세요' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
-         자리(칸 마지막 줄, 위 6px)·꼴·크기 그대로: --fs-caption · 700 · --ls-label · --accent. 카드를 고르면 .off 로 숨고 자리는 둔다 — main.js setDrawGuide).
+         자리(칸 마지막 줄, 위 6px)·꼴 그대로: 700 · --ls-label · --accent. 크기는 칸 전체 --fs-info 11px (10/14 04:1x 사장님 '왼쪽 위 11' — 갈무리11 격자는 12px 라 반쯤 흐림, docs/ui/pixel_font_2026-10-14.md). 카드를 고르면 .off 로 숨고 자리는 둔다 — main.js setDrawGuide).
          둘째 줄 'AI 이름 · 자세 / 기술'(.foe)은 10/14 03:3x 사장님 'AI 이름·기술명 표기는 아예 없앤다'로 걷어냈다. 카드 줄은 이 칸 아래에서 시작한다 (main.js layoutDraw) */
-      #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); font-size: var(--fs-caption); font-weight: 800; line-height: var(--lh-tight); word-break: keep-all; }
+      #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); --fs-info: 11px; font-size: var(--fs-info); font-weight: 800; line-height: var(--lh-tight); word-break: keep-all; }
       #stageInfo.show { opacity: 1; }
       #stageInfo .stg { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
       #stageInfo .stg { color: var(--hud-sys); }
-      #stageInfo em { display: block; margin-top: 6px; font-size: var(--fs-caption); font-style: normal; font-weight: 700; letter-spacing: var(--ls-label); color: var(--accent); word-break: keep-all; }
+      #stageInfo em { display: block; margin-top: 6px; font-size: var(--fs-info); font-style: normal; font-weight: 700; letter-spacing: var(--ls-label); color: var(--accent); word-break: keep-all; }
       #stageInfo em:empty { display: none; }
       #stageInfo em.off { visibility: hidden; }
 
       /* ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장. 왼쪽 두 장은 내가 고르는 카드, 맨 오른쪽은 상대 무기 칸(회색, 못 고른다) →
          내 카드를 누르면 뒤집혀 이번 판 무기가 나오고, 남은 내 카드가 어둡게 뒤집힌 뒤 상대 카드가 뒤집혀 상대 무기를 보여 준다 (main.js 무기 뽑기) ──
          카드 크기(--cw, --ch)와 자리(--top · --padT · --padL)는 판이 열릴 때·화면 상자가 바뀔 때 main.js 가 정한다. 움직임은 CSS 변환만 쓴다 */
-      #draw { position: fixed; inset: 0; z-index: 1; display: none; --top: 150px; --padT: 0px; --padL: 0px; --cw: 200px; --ch: 290px; --gap: 14px; --name: 15px; --desc: 12px; --kb: 10px; }
+      #draw { position: fixed; inset: 0; z-index: 1; display: none; --top: 150px; --padT: 0px; --padL: 0px; --cw: 200px; --ch: 290px; --gap: 14px; --name: 15px; --desc: 11px; --kb: 10px; } /* --desc 작은 카드 11px (사장님 10/14 04:1x '카드 설명 11 px로 해' — 큰 카드 15px 는 main.js layoutDraw) */
       #draw.show { display: block; }
       #draw::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 62%, rgba(16,10,6,.62), rgba(16,10,6,.28) 72%); animation: drawFade .35s ease-out backwards; transition: opacity .4s; }
       #draw.fly::before { opacity: 0; }
@@ -290,6 +306,9 @@
       /* 창 (시작·일시정지·결과 — 10/10 글자 체계): 제목 title · 부제·줄·단추 body · 고르개·안내 caption */
       h1 { margin: 0 0 4px; font-size: var(--fs-title); font-weight: 800; line-height: var(--lh-tight); letter-spacing: var(--ls-label); }
       h2 { margin: 0 0 12px; font-size: var(--fs-title); }
+      /* 큰 영문 제목 (첫 메뉴의 'Stillness' — 10/14 사장님 1안 '도트'): Jacquard 12 · 도트 격자 2 배(42px) · 굵기 400(굵은 판이 없어 브라우저가 흉내 내지 않게) ·
+         자간 0(도트가 반 칸씩 밀리지 않게) · 줄 높이 1(이 글꼴은 위아래 높이가 em 과 같아 기준선이 정수 px). 일시정지·승리·패배로 제목 글을 바꾸면 이 칸이 사라져 h1 그대로(갈무리11 20px) */
+      .wordmark { display: block; font-family: var(--font-display); font-size: var(--fs-wordmark); font-weight: 400; line-height: 1; letter-spacing: 0; }
       .sub { color: var(--dim); font-size: var(--fs-body); margin: 0 0 14px; line-height: var(--lh-text); }
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-body); }
       .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -352,7 +371,7 @@
 
     <div class="overlay show" id="menu">
       <div class="card">
-        <h1 id="menuTitle">Stillness</h1>
+        <h1 id="menuTitle"><span class="wordmark">Stillness</span></h1>
         <p class="sub" id="menuSub">길 위에선 이름을 묻지 않는다.</p>
         <!-- 상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js · main.js) -->
         <!-- 검술 보정 단계 메뉴(끔·약·보통·강)는 뺐다 — 사장님 10/8 21:5x "플레이어에겐 구분이 필요 없어. 한 단계로 기본 적용": 보정은 늘 0.7 (main.js DEFAULTS.skill) -->

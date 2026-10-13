@@ -7,7 +7,12 @@
     <link rel="icon" href="data:," />
     <title>Stillness 테스트</title>
     <!-- 테스트 전용 경로 (사장님 10/10 16:5x): 무기·캐릭터를 고르고 상대·무대는 무작위. docs/test_route_2026-10-10.md -->
+    <!-- 화면 글꼴: index.html 과 같은 갈무리11 (10/14 사장님 1안 '도트' — docs/ui/pixel_font_2026-10-14.md · public/fonts). 이 화면은 큰 영문 제목이 없어 Jacquard 12 는 싣지 않는다 -->
+    <link rel="preload" href="/fonts/Galmuri11.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Galmuri11-Bold.woff2" as="font" type="font/woff2" crossorigin />
     <style>
+      @font-face { font-family: 'Galmuri11'; src: url('/fonts/Galmuri11.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+      @font-face { font-family: 'Galmuri11'; src: url('/fonts/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
       :root {
         --ink: #f3e9d8;
         --dim: #b8a88e;
@@ -16,7 +21,7 @@
         --accent: #d9a441;
         --bg: #1b1410;
         /* 글자 체계 (index.html :root 와 같은 값 — docs/ui/hud_type_system_2026-10-10.md) */
-        --font-ui: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+        --font-ui: 'Galmuri11', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
         --fs-title: 20px;
         --fs-body: 15px;
         --fs-caption: 12px;
