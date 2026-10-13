@@ -411,7 +411,7 @@ export const CHARACTERS = [
     epithet: '수호자', // 사장님 10/11 01:1x (전 '금줄의 무녀' 10/10 19:4x)
     weapon: 'monohoshizao', // 일본 유파
     voice: 'isolde', // 목소리: 이졸데의 녹음 (이졸데와 같이. 10/13 기절2·출혈2 보충 — 마야는 10/13 에 따로 나감)
-    ai: { proficiency: 3, persona: { school: 'monohoshizao', pers: {} } },
+    ai: { proficiency: 5, persona: { school: 'monohoshizao', pers: {} } }, // 숙련도 5 = 일본 유파 신 — 고유 동작 넷 + 비기(고노센) (사장님 10/14 03:5x '미나미 숙련도 5로 해줘', 전 3)
     look: getLook('minami'),
     lookVersion: CHARACTER_LOOK_VERSION.minami,
     // 대사 (10/10 19:4x 사장님 — 작가 제안 §4-3 그대로: 짧고 단단한 해요체, 금줄·안개·피가 흙에 닿는 일, 겁 고백 없음)
