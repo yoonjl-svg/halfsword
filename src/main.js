@@ -1411,15 +1411,16 @@ function updatePlayerEmotion(dt) {
 
 // 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
 //  값이 바뀔 때만 스타일을 쓴다 (같은 값을 매 프레임 쓰지 않게 — 보이는 것은 같다)
-const hudLast = { opacity: null, filter: null };
+const hudLast = { opacity: null };
 function updateHud() {
   const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
   const pulse = player.bleed > 0.002 ? 0.15 * (0.5 + 0.5 * Math.sin(performance.now() / 180)) : 0;
   const v = Math.min(1, lost * 0.85 + Math.min(1, player.pain) * 0.35 + pulse);
   const opacity = v.toFixed(3);
-  const filter = player.consciousness < 0.6 ? `blur(${(0.6 - player.consciousness) * 6}px)` : '';
   if (opacity !== hudLast.opacity) $('vignette').style.opacity = hudLast.opacity = opacity;
-  if (filter !== hudLast.filter) $('vignette').style.filter = hudLast.filter = filter;
+  // 10/13 사장님 '붉은 화면이 될 때 화면 오른쪽 일부 영역이 바뀌지 않고 그대로' — 의식이 흐려질 때 붉은 테두리 자체에 걸던 blur 필터를 뺐다.
+  //  그 필터는 뒤의 장면이 아니라 이 테두리만 흐리게 해 보이는 차이가 거의 없었고, 휴대폰 사파리에서 화면 전체 크기 층에 매 프레임 바뀌는 필터를 걸면
+  //  층의 일부 조각이 다시 그려지지 않는 문제가 알려져 있다(데스크톱 크로미엄에서는 재현 안 됨 — 사장님 기기 확인 필요)
 }
 
 /** 판 끝 결과 글자: 결정타 슬로모션(slowMo)이 끝난 뒤에 한 번. 슬로모션 동안 참수·쓰러지는 장면을 글자가 가리지 않게 */

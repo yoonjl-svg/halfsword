@@ -1,10 +1,12 @@
 // 테스트 고르기 화면 (test.html) — 사장님 10/10 16:5x "무기와 캐릭터 고르도록 해. 상대와 스테이지는 랜덤"
 //  무기: weapons.js WEAPON_LIST 전부 (오늘 바뀐 무기 묶음을 위에) · 캐릭터: characters.js CHARACTERS 전부 + 기본 주인공(LOOKS.player)
 //  '시작' → index.html?test=1&weapon=<id>&hero=<id|player>&foe=random&stage=random (그쪽 인자 뜻은 src/test_route.js)
-//  마지막 고른 것은 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작)
+//  마지막 고른 무기·캐릭터는 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작).
+//  비기 판(이베리아·중국·독일)은 기억하지 않는다 — 10/13 사장님 'test 경로로는 아직 끊기지 않는 흐름이 발동' = 예전에 고른 v5 가 기억돼 있던 것. 열 때마다 본판 기본값에서 시작
 import { WEAPON_LIST, TIER_LABEL } from './weapons.js';
 import { CHARACTERS } from './characters.js';
 import { TRADITIONS, traditionOf } from './schools.js';
+import { SECRET } from './config.js'; // 비기 판 기본값 = 본판(main) 기본값 (10/13 — 고른 판을 기억하지 않는다)
 
 const STORE_KEY = 'stillness.testRoute.v1';
 // 오늘(10/10) 사장님이 해 볼 무기: 츠바이핸더(이베리아 몬탄테 고증) · 우치가타나(일본 고증)
@@ -60,20 +62,20 @@ const IB_SECRETS = [
 
 // 중국·독일 비기 판 (10/11 — docs/strike/parry_combo_secret_2026-10-11.md): 새 '막기 연환'(기본) · 옛 v1 — 시작 주소의 cnSecret·deSecret 로 (main.js)
 const CN_SECRETS = [
-  { id: 'parry', name: '새 · 연환 (막기 연환)', sub: '거정세·표두세로 쳐 낸 뒤 칼이 갈라진 직후 입력 → 반걸음씩 빠른 두 수' },
+  { id: 'parry', name: '새 · 연환삼격 (막기 연환)', sub: '거정세·표두세·봉두세로 막아 칼이 떨어진 직후 입력 → 찌름·두 벰, 셋째 수 반걸음 물러남 (10/12)' },
   { id: 'v1', name: '옛 · 연환삼격', sub: '쉬었다 친 첫 칼이 맞으면 세 수 (10/10) — 견주어 보기' },
 ];
 const DE_SECRETS = [
-  { id: 'parry', name: '새 · 감아 들기 (Indes)', sub: '황소 걸이로 받아 칼이 붙은 동안 입력 → 받은 칼을 타고 한 수 (오래 붙을수록 강함)' },
-  { id: 'v1', name: '옛 · 받아 베기 (Versetzen)', sub: '머리·목을 노리는 칼을 맞받아 벰 (10/10) — 견주어 보기' },
+  { id: 'v1', name: '기본 · 받아 베기 (Versetzen)', sub: '머리·목을 노리는 칼을 맞받아 벰 — 지금 본판 기본' },
+  { id: 'parry', name: '시험 · 감아 들기 (Indes)', sub: '황소·왕관으로 받아 칼이 붙은 동안 입력 → 받은 칼을 타고 한 수 (붙음이 짧아 잘 안 열림)' },
 ];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
   hero: heroes.some((h) => h.id === saved.hero) ? saved.hero : 'player',
-  ibSecret: IB_SECRETS.some((x) => x.id === saved.ibSecret) ? saved.ibSecret : 'gilmok',
-  cnSecret: CN_SECRETS.some((x) => x.id === saved.cnSecret) ? saved.cnSecret : 'parry',
-  deSecret: DE_SECRETS.some((x) => x.id === saved.deSecret) ? saved.deSecret : 'parry',
+  ibSecret: SECRET.iberianSecret, // 비기 판은 기억하지 않고 본판 기본값에서 (10/13)
+  cnSecret: SECRET.cnSecret,
+  deSecret: SECRET.deSecret,
 };
 
 function weaponButton(w, big) {
@@ -180,9 +182,9 @@ function render() {
 
 function startUrl() {
   const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: 'random', stage: 'random' });
-  if (pick.ibSecret !== 'gilmok') q.set('ibSecret', pick.ibSecret); // 기본(길목 지키기)이 아니면 판을 주소에
-  if (pick.cnSecret !== 'parry') q.set('cnSecret', pick.cnSecret); // 기본(막기 연환)이 아니면
-  if (pick.deSecret !== 'parry') q.set('deSecret', pick.deSecret);
+  if (pick.ibSecret !== SECRET.iberianSecret) q.set('ibSecret', pick.ibSecret); // 본판 기본값이 아니면 판을 주소에 (10/13 — 전엔 독일 기본을 'parry' 로 잘못 알아 감아 들기를 고를 수 없었다)
+  if (pick.cnSecret !== SECRET.cnSecret) q.set('cnSecret', pick.cnSecret);
+  if (pick.deSecret !== SECRET.deSecret) q.set('deSecret', pick.deSecret);
   return `./index.html?${q.toString()}`;
 }
 
