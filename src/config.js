@@ -794,7 +794,7 @@ export const UNIQUE_ASSIST = {
   oppositeDeg: 120,
   chainWait: 0.15, // 두 번 잇는 동작: 뒷부분이 시작되는 자리에서 손가락이 그쪽으로 긋기 시작하기를 이만큼(s)까지 기다림 (손가락이 꺾이는 동안 잠깐 느려지는 것). 10/14 강화 판: 앞 긋기가 끝나고 이 안에 플레이어가 다시 그어야 뒷몫 강화
   // ── 10/14 강화 방식 (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다') — 위의 blend(기본 동작 발동 판단 join 에만)·joinMax·speedK·vMin·idleRelease·oppositeDeg 는
-  //    10/13 이어 주기(손 목표를 길로 끌던 판) 수라 지금은 blend 만 읽는다. 아래 수는 모두 [추정] · 사장님 확인 전 (owner_defaults_table.md 1075~1081). 몸 꼴 값은 unique_assist.js PLAYER_UNIQUE 의 body·body2 칸
+  //    10/13 이어 주기(손 목표를 길로 끌던 판) 수라 지금은 blend 만 읽는다. 아래 수는 모두 [추정] · 사장님 확인 전 (owner_defaults_table.md 1078~1084). 몸 꼴 값은 unique_assist.js PLAYER_UNIQUE 의 body·body2 칸
   enhance: 1, // 강화 세기 손잡이 하나: 몸 덧씌우기 × enhance · 끝 힘 1 + (endPower − 1) × enhance · 걸음 크기 × min(1, enhance). 0 = 기술 이름 알림만 (`?uniqueEnhance=0`)
   bodyIn: 0.1, // 몸 꼴을 얹는 시간 상수(s) — 긋기가 고유 동작으로 읽힌 순간부터
   bodyOut: 0.25, // 긋기가 끝난 뒤 몸 꼴을 걷는 시간 상수(s)

@@ -134,7 +134,7 @@
 4. **잇는 동작**(위아래 사슬·머리 위 돌려 베기·번갈아 올려베기·코코 연타·겹치기·츠바메가에시)은 앞 긋기가 끝나고(쉼 0.06 s 또는 90° 넘게 꺾음) **`chainWait` 0.15 s 안에 플레이어가 실제로 다시 그은 긋기**에만 뒷몫 강화(`body2` 몸 · 끝 힘)를 얹는다. 방향 조건(`chain.dir` — 위아래 사슬은 위로)이 있으면 그쪽일 때만. 자동으로 두 번째 칼을 내지 않는다. 속임(칼끝 돌려 빼기·염시)·자→격·츠바메가에시·겹치기는 그 긋기 자체가 '이어 그은 것'이라 그 긋기에 강화.
 5. **세기 손잡이 하나** `UNIQUE_ASSIST.enhance` (기본 1): 몸 × enhance · 끝 힘 1 + 0.12 × enhance · 걸음 크기 × min(1, enhance). **0 = 기술 이름 알림만**. 주소 `?uniqueEnhance=0` · `0.5` 등.
 6. 비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌면 발동하지 않고, 강화 중에 시작되면 곧장 물러난다(끝 힘 되돌림, 몸은 0.25 s 에 걷음) — 10/13 판과 같음.
-7. 새 수는 config.js `UNIQUE_ASSIST` 한 곳(enhance·bodyIn·bodyOut·powerAt·powerMax·endPower)과 표의 body·body2. 확인표 1075~1081, 모두 사장님 확인 전. 10/13 판 수 가운데 speedK·vMin·idleRelease·oppositeDeg·joinMax 는 이제 읽지 않는다(기록으로 둠).
+7. 새 수는 config.js `UNIQUE_ASSIST` 한 곳(enhance·bodyIn·bodyOut·powerAt·powerMax·endPower)과 표의 body·body2. 확인표 1078~1084, 모두 사장님 확인 전. 10/13 판 수 가운데 speedK·vMin·idleRelease·oppositeDeg·joinMax 는 이제 읽지 않는다(기록으로 둠).
 
 ### 켜 보는 주소 (테스트 경로 기본은 그대로 끔 — 사장님 10/14 02:0x)
 
