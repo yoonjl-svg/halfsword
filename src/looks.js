@@ -612,6 +612,16 @@ export const LOOK_ARCHIVE = {
       outfit: 'artoria_silver_v4', armor: 'plate',
       tailoring: 'soft-shoulders', stockEyes: true, eyeColor: 0x418f87, originalTorsoWidth: true,
     },
+    // v4 (외형 4차 10/13, 사장님 '망토 주름 좀 더 넣을 수 있어?'): v3 망토 꼴 그대로 + 주름 12(큰 골 8 · 잔 골 4, 골마다 폭·깊이·길이 다름), 옷단 물결. 판금·판정 그대로
+    v4: {
+      tunic: 0x222a32, quilt: 0x222a32, sleeve: 0x242c34,
+      straps: null, belt: 0x263338, hoseUpper: 0x1a222b, hoseLower: 0x202a33,
+      shoes: 0x53626c, skin: 0xe4c7ad, hands: 0xd3dce0,
+      helmet: null, metal: 0xc1d0da, hair: 0xe7e9e5, headband: null,
+      grip: 0x20343c, hilt: 0xc8b378, accent: 0x2c7778,
+      outfit: 'artoria_silver_v5', armor: 'plate',
+      tailoring: 'soft-shoulders', stockEyes: true, eyeColor: 0x418f87, originalTorsoWidth: true,
+    },
   },
   // 마야 라토르 (id samira, 10/11 00:4x·01:0x 이름 바꿈 — 전 이름 사미라 미르자, 샛별 id crown_boss) — v1 = 샛별 v8 (= v4 장밋빛 제복·높이 묶은 장밋빛 머리 + 다듬기·얼굴·허리 표시, b8b1344·df0a9d6·27888f2·4c5ce4d). 방어구 없음
   samira: {
@@ -742,7 +752,7 @@ export const CHARACTER_LOOK_VERSION = {
   tome: 'v2',
   omari: 'v2',
   minami: 'v5',
-  artoria: 'v3', // 외형 3차 10/11 — 옛 판 ?look=artoria:v2 · v1
+  artoria: 'v4', // 외형 4차 10/13 망토 주름 — 옛 판 ?look=artoria:v3 · v2 · v1
   samira: 'v4', // 외형 3차 10/11 (이름 마야 라토르) — 옛 판 ?look=samira:v3 · v2 · v1
   renji: 'v3', // 외형 3차 10/11 — 옛 판 ?look=renji:v2(바지·행전) · v1
   eira: 'v5', // 10/11 01:4x 매듭 굵게 — 옛 판 ?look=eira:v4 · v3 · v2 · v1

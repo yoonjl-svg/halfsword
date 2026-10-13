@@ -81,6 +81,12 @@ const MOTE_FRAG = /* glsl */ `
 `;
 // 기운 세기 (사장님 9/29 "너무 세, 지금의 절반으로": 1 → 0.5) — 아지랑이 투명도·점 조명·칼날 발광에 모두 곱한다
 const AURA_STRENGTH = 0.5;
+// 점 조명만 따로 한 번 더 줄이는 몫 (사장님 10/13 23:0x '아르토리아 얼굴이 종종 아주 어둡게 변한다' — docs/character_looks_status.md round 19).
+//  점 조명은 칼날 가운데에 있고 거리 제곱으로 옅어져서, 0.55~0.8 m 떨어진 든 사람의 얼굴에 무대 빛(대성당 얼굴 앞 조도 ≈ 0.45)의 1.2~2 배를 비췄다
+//  → 칼을 머리 위·뒤로 들면(칼날이 얼굴 면 뒤로 가면) 그 빛이 통째로 꺼져 얼굴이 밝기 115~127 → 72~85 로 떨어졌다(얼굴만 '어둡게 변함').
+//  1 → 0.15: 얼굴에 닿는 몫이 무대 빛의 ⅓ 안쪽이 되어 칼이 어디 있든 얼굴 밝기가 크게 출렁이지 않는다. 손·코등이처럼 칼날 가까운 곳(0.3~0.5 m)엔 여전히 은은하게 닿는다.
+//  아지랑이·칼날 발광·입자는 그대로 (빛을 받지 않고 스스로 그린다)
+const AURA_LIGHT = 0.15;
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -164,7 +170,7 @@ export function attachAura(fighter) {
     m.renderOrder = 2;
     group.add(m);
   }
-  const light = profile.light === null ? null : new THREE.PointLight(profile.light, 1.2 * AURA_STRENGTH, 2.0, 2);
+  const light = profile.light === null ? null : new THREE.PointLight(profile.light, 1.2 * AURA_STRENGTH * AURA_LIGHT, 2.0, 2);
   if (light) group.add(light);
   let moteGeo = null, moteMat = null;
   if (look.motes) {
@@ -202,7 +208,7 @@ export function attachAura(fighter) {
       mat.uniforms.uTime.value = t;
       if (moteMat) moteMat.uniforms.uTime.value = t;
       const breath = Math.sin(t * 1.3) * 0.5 + 0.5;
-      if (light) light.intensity = (0.8 + 0.5 * breath + 0.12 * Math.sin(t * 4.7)) * AURA_STRENGTH;
+      if (light) light.intensity = (0.8 + 0.5 * breath + 0.12 * Math.sin(t * 4.7)) * AURA_STRENGTH * AURA_LIGHT;
       if (bladeMat && profile.emissive !== null) bladeMat.emissiveIntensity = (0.18 + 0.22 * breath) * AURA_STRENGTH;
     },
     dispose() {
