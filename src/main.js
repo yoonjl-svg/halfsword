@@ -293,9 +293,12 @@ useStage(STAGE_PIN || testRoute.nextStage(null) || nextStage());
 // ── (배경 끝) ─────────────────────────────────────────────────────────────
 
 // ── 화면 크기 / 픽셀 모드 ──
+//  크기는 캔버스의 실제 CSS 상자(#game, 화면 가득)에서 읽는다 — innerWidth/innerHeight 가 아니라. 홈 화면 앱(아이폰 standalone)은 처음 열 때·돌릴 때
+//  innerHeight 와 resize 이벤트가 늦거나 빠질 수 있다고 알려져 있어, 상자가 실제로 바뀌면 ResizeObserver 가 한 번 더 잰다 (docs/ui/app_layout_2026-10-14.md)
 function resize() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  if (!w || !h) return;
   if (PIXEL_MODE) {
     // 작은 해상도로 그린 뒤 크게 늘리면 도트 그래픽처럼 보인다
     const px = Math.max(3, Math.round(h / 180));
@@ -311,7 +314,8 @@ function resize() {
   camera.fov = w / h < 1.2 ? CAMERA.fov + 15 : CAMERA.fov;
   camera.updateProjectionMatrix();
 }
-window.addEventListener('resize', resize);
+window.addEventListener('resize', resize); // 화면 배율(devicePixelRatio)만 바뀌는 때도 여기로 온다
+if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(canvas); // resize 이벤트 없이 상자만 바뀌어도
 resize();
 
 // ── 물리 세계와 등장인물 ──
@@ -1043,6 +1047,7 @@ function nudgeFoeCard() {
 cardEls[FOE_CARD].addEventListener('animationend', (e) => e.animationName === 'nope' && cardEls[FOE_CARD].classList.remove('nope'));
 drawEl.addEventListener('pointerdown', skipReveal);
 window.addEventListener('resize', () => layoutDraw()); // 폰을 돌리거나 전체화면이 되면 카드 크기를 다시 맞춘다
+if (window.ResizeObserver) new ResizeObserver(() => layoutDraw()).observe(drawEl); // resize 이벤트 없이(늦게) 화면 상자만 바뀌어도 (홈 화면 앱)
 
 /**
  * 두 사람의 무기를 감추거나 보인다 (카드를 고르기 전에는 손에 칼이 보이면 안 된다).
@@ -1091,12 +1096,32 @@ function openDraw() {
   layoutDraw();
 }
 
-/** 카드 크기와 자리: 왼쪽 위 칸(무대 줄 · 카드 안내) 바로 아래부터 화면 아래까지, 세 장이 나란히 들어가게 (판이 열릴 때·화면이 바뀔 때 한 번) */
+/**
+ * 카드 크기와 자리 (판이 열릴 때 · 화면 상자가 바뀔 때): 카드 줄 칸(.drawRow) = 왼쪽 위 두 줄·멈춤 단추 아래부터 아래 안내 줄 위까지.
+ *  가로 화면은 카드 높이를 화면 높이의 DRAW_CARD_H 까지만 (사장님 10/14 '카드도 너무 커' — 확인 전 수) — 칸 안에서 화면 가운데에 가깝게 놓는다.
+ *  카드의 왼쪽·위는 정수 px 에 놓는다 (가운데 맞춤이 반 px 에 떨어지면 픽셀 뒷면이 흐려진다)
+ */
+const DRAW_CARD_H = 0.6;
+const DRAW_CARD_MIN_W = 150;
 function layoutDraw() {
   if (!draw.stage) return;
-  const introBottom = Math.max(stageInfo.classList.contains('show') ? stageInfo.getBoundingClientRect().bottom : 0, topButtons.getBoundingClientRect().bottom);
+  const H = drawEl.clientHeight || window.innerHeight;
+  if (!H) return; // 아직 보이지 않음 (ResizeObserver 가 보일 때 다시 부른다)
+  // 왼쪽 위 칸: 둘째 줄(AI 이름 · 자세)이 꺼져 있어도 켜진 높이(한 줄 띄움 + 한 줄)를 미리 비워 둔다 — 줄이 켜지며 카드에 덮이지 않게
+  let introBottom = topButtons.getBoundingClientRect().bottom;
+  if (stageInfo.classList.contains('show')) {
+    const lineH = parseFloat(getComputedStyle(stageInfo).fontSize) * 1.25; // --lh-tight
+    const stgBottom = stageInfo.querySelector('.stg').getBoundingClientRect().bottom;
+    introBottom = Math.max(introBottom, stageInfo.getBoundingClientRect().bottom, stgBottom + 2 * lineH);
+  }
+  // 아래 안내 줄(#hint) 자리: 카드가 사라진 뒤에 뜨지만, 카드도 그 위에서 끝나게
+  const hcs = getComputedStyle(hint);
+  const hintTop = H - parseFloat(hcs.bottom) - (parseFloat(hcs.lineHeight) || 17) - 12;
   drawEl.style.setProperty('--top', `${Math.round(introBottom + 10)}px`);
-  const row = drawEl.querySelector('.drawRow').getBoundingClientRect();
+  drawEl.style.setProperty('--padT', '0px');
+  drawEl.style.setProperty('--padL', '0px');
+  const box = drawEl.querySelector('.drawRow').getBoundingClientRect();
+  const row = { left: box.left, top: box.top, width: box.width, height: Math.max(0, Math.min(box.bottom, hintTop - 6) - box.top) };
   // 세로로 든 폰(좁고 높은 자리): 카드가 좁고 길어진다. 좁아도 낮은 자리(작은 가로 폰 568×320 등)는 가로 배치가 글이 더 잘 들어간다
   const narrow = row.width < 560 && row.height > row.width * 0.8;
   // 아주 낮은 자리(568×320 같은 작은 가로 폰, 소개가 두 줄일 때): 카드를 옆으로 넓혀(높이보다 넓게) 설명 줄 수를 줄이고,
@@ -1104,13 +1129,20 @@ function layoutDraw() {
   const low = !narrow && row.height < 180;
   const gap = narrow || low ? 10 : 14;
   let cw = Math.floor(Math.min(230, (row.width - 2 * gap) / 3, low ? row.height * 1.3 : row.height / (narrow ? 1.6 : 1.15)));
-  let ch = Math.floor(Math.min(cw * (narrow ? 2.1 : 1.5), row.height));
+  // 가로: 높이 상한 → 폭 (모양 2:3). 다만 폭은 DRAW_CARD_MIN_W 아래로 줄이지 않는다 (낮은 화면에서 앞면 설명 글이 넘치지 않게 — 카드가 조금 통통해진다)
+  if (!narrow && !low) cw = Math.min(cw, Math.max(DRAW_CARD_MIN_W, Math.floor((H * DRAW_CARD_H) / 1.5)));
+  let ch = Math.floor(Math.min(cw * (narrow ? 2.1 : 1.5), row.height, narrow || low ? Infinity : H * DRAW_CARD_H));
   // 픽셀 뒷면의 한 칸 = 게임 픽셀(픽셀 모드와 같은 크기, 큰 화면은 4까지). 카드 크기를 두 칸의 배수로 맞춰 가운데 정렬이 반 칸 어긋나지 않게
-  const px = cw < 130 ? 2 : Math.min(4, Math.max(3, Math.round(window.innerHeight / 180)));
+  const px = cw < 130 ? 2 : Math.min(4, Math.max(3, Math.round(H / 180)));
   if (cardBack !== 'classic') {
     cw = Math.floor(cw / (2 * px)) * 2 * px;
     ch = Math.floor(ch / (2 * px)) * 2 * px;
   }
+  // 자리: 가로는 칸 안 가운데, 세로는 화면 가운데에 가깝게(칸을 벗어나지 않게). 둘 다 정수 px
+  const padL = Math.max(0, Math.floor((row.width - 3 * cw - 2 * gap) / 2));
+  const padT = Math.max(0, Math.min(Math.round((H - ch) / 2 - row.top), Math.floor(row.height - ch)));
+  drawEl.style.setProperty('--padT', `${padT}px`);
+  drawEl.style.setProperty('--padL', `${padL}px`);
   drawEl.style.setProperty('--px', `${px}px`);
   drawEl.style.setProperty('--gap', `${gap}px`);
   drawEl.style.setProperty('--cw', `${cw}px`);
@@ -1118,13 +1150,33 @@ function layoutDraw() {
   // 번호 배지(높이 22px)의 가운데: 픽셀 뒷면은 아래 원판(아래에서 3칸 띄운 10칸 원판)의 가운데, classic 은 아래에서 10px
   drawEl.style.setProperty('--kb', cardBack === 'classic' ? '10px' : `${Math.max(4, 8 * px - 11)}px`);
   // 글자 크기 (10/10 글자 체계 두 단계): 큰 카드 = 이름 title 20 · 설명 body 15, 그 밖 = 이름 body 15 · 설명 caption 12
-  //  큰 카드 = 폭 205 · 높이 260 이상 (가로 폰 844×390 에서 카드가 230×277 — 소개가 왼쪽 위로 비켜서 커진 카드)
+  //  큰 카드 = 폭 205 · 높이 260 이상 (PC 1280×720 의 224×344 등. 가로 폰은 높이 상한 DRAW_CARD_H 때문에 이제 작은 카드 — 844×390 에서 156×234)
   const big = cw >= 205 && ch >= 260;
   drawEl.style.setProperty('--name', big ? '20px' : '15px');
   drawEl.style.setProperty('--desc', big ? '15px' : '12px');
   drawEl.classList.toggle('wide', big);
   drawEl.classList.toggle('low', low);
+  // 글자를 줄여도 설명이 넘치면(낮은 가로 화면의 긴 설명) 높이는 두고 폭만 두 칸씩 넓힌다
+  const step = cardBack !== 'classic' ? 2 * px : 2;
+  const cwMax = Math.floor(Math.min(230, (row.width - 2 * gap) / 3));
   fitCardText(big ? 15 : 12);
+  while (!narrow && cw + step <= cwMax && cardTextOverflows()) {
+    cw += step;
+    drawEl.style.setProperty('--cw', `${cw}px`);
+    drawEl.style.setProperty('--padL', `${Math.max(0, Math.floor((row.width - 3 * cw - 2 * gap) / 2))}px`);
+    fitCardText(big ? 15 : 12);
+  }
+}
+/** 앞면 글이 정말 넘치는가: 그림 칸이 가장 작게(min-height) 줄었는데도 마지막 글줄이 아래 여백에 닿는다 (그림 칸이 남은 높이를 채우므로 그림이 줄어들 수 있으면 넘침이 아니다) */
+function cardTextOverflows() {
+  return cardEls.some((el) => {
+    const face = el.querySelector('.wface');
+    const thumb = el.querySelector('.wthumb');
+    const abil = el.querySelector('.wabil');
+    const last = abil.textContent ? abil : el.querySelector('.wdesc');
+    if (thumb.offsetHeight > parseFloat(getComputedStyle(thumb).minHeight) + 0.5) return false;
+    return last.offsetTop + last.offsetHeight > face.clientHeight - parseFloat(getComputedStyle(face).paddingBottom);
+  });
 }
 
 /** 설명이 긴 카드(건슬링어의 리볼버처럼 인용문이 붙은 것)가 있으면 세 장의 설명 글자를 함께, 그 카드가 들어올 때까지 조금씩 줄인다 (6 % 씩, 바닥 11px — 세 장 크기는 같게) */
