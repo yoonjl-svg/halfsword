@@ -97,7 +97,7 @@ function watchTap(G, t0, fwd) {
     if (mine && pr.v && r) {
       const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.sword.rotation()));
       const along = r.dir && r.bladeAxis ? r.dir.dot(r.bladeAxis) : null;
-      log.push({ t: G.t, part: pr.v.part, zone: r.zone, type: r.type, kin: r0?.type ?? r.type, energy: r.energy, eff: r.eff, thr: r.thr, plate: r.plate, helmet: r.helmet, pass: r.pass, finish: !!r.finish, plunging, cool, along, axisEl: Math.asin(THREE.MathUtils.clamp(axis.y, -1, 1)) * R2D, grip: V(P.sword.translation()), pel: V(P.bodies.pelvis.translation()), push: P.skill.thrustPush });
+      log.push({ t: G.t, part: pr.v.part, zone: r.zone, type: r.type, kin: r0?.type ?? r.type, energy: r.energy, eff: r.eff, thr: r.thr, plate: r.plate, helmet: r.helmet, pass: r.pass, finish: !!r.finish, plunging, cool, along, axisEl: Math.asin(THREE.MathUtils.clamp(axis.y, -1, 1)) * R2D, grip: V(P.sword.translation()), pel: V(P.bodies.pelvis.translation()), push: P.skill.thrustPush, tipV: P.tipVel ? P.tipVel.length() : null });
     }
     return r;
   };
@@ -219,7 +219,7 @@ export function finishTrial({ guard, dist, fall, seed, weapon = 'longsword', pla
     wound: ws.length > 0, stab: ws.some((w) => w.type === 'stab'), sev: ws.reduce((m, w) => Math.max(m, w.severity), 0),
     kill, cause, tDeath, why,
     killBy: killBy ? { part: killBy.part, zone: killBy.zone, plate: killBy.plate, helmet: killBy.helmet, pass: killBy.pass, eff: killBy.eff, thr: killBy.thr } : null,
-    fin: fin ? { part: fin.part, zone: fin.zone, type: fin.type, kin: fin.kin, along: fin.along, energy: fin.energy, eff: fin.eff, thr: fin.thr, plate: fin.plate, helmet: fin.helmet, pass: fin.pass, finish: fin.finish, plunging: fin.plunging } : null,
+    fin: fin ? { part: fin.part, zone: fin.zone, type: fin.type, kin: fin.kin, along: fin.along, energy: fin.energy, eff: fin.eff, thr: fin.thr, plate: fin.plate, helmet: fin.helmet, pass: fin.pass, finish: fin.finish, plunging: fin.plunging, tipV: fin.tipV } : null,
     shadow: W.st.shadow, lowE: W.st.lowE, viol: W.st.viol, drops: W.st.drops,
     go: !!tp?.go, tapLeft: !!P.skill.tap, ended: tp?.ended ?? null, tEnd: tp?.tEnd ?? null,
     tTD: W.st.td != null ? W.st.td - t0 : null, tipV: tp?.go ? tipV : null,
@@ -242,7 +242,7 @@ function armAtGo(P, tp, tGo) {
   const miss = d.clone().addScaledVector(ax, -along).length();
   const headTop = V(P.bodies.head.translation()).y + (P.headR ?? HEAD_R) - c.y;
   return {
-    cmdY: FINISH.hands?.[1] ?? null,
+    cmdY: (FINISH.lift ? FINISH.liftHands : FINISH.hands)?.[1] ?? null, // 10/13 FINISH.lift: 더 높이 든 손 (없는 소스는 hands)
     x: G.x, y: G.y, z: G.z, headTop,
     bladeEl: Math.asin(THREE.MathUtils.clamp(-ax.y, -1, 1)) * R2D,
     lineAng: Math.acos(THREE.MathUtils.clamp(along / dn, -1, 1)) * R2D,
@@ -413,6 +413,9 @@ function report(rows, guards, dists, falls, tag) {
     const blocked = go.filter((r) => r.fin?.kin === 'stab' && r.fin.type === 'blunt' && (r.fin.plate || r.fin.helmet));
     const zone = (r) => (r.fin ? `${r.fin.zone ?? r.fin.part}${r.fin.plate ? '(판)' : r.fin.helmet ? '(투구)' : ''}` : '-');
     console.log(`요약 ${n}판 · 3 s 안 죽음 ${rows.filter((r) => r.tDeath != null && r.tDeath <= 3).length} · 10 s 안 죽음 ${rows.filter((r) => r.tDeath != null && r.tDeath <= 10).length} (출혈 포함) · 원인 ${JSON.stringify(count(rows.filter((r) => r.kill).map((r) => r.cause)))}`);
+    // 10/13 내려찍기 동작 (docs/strike/finish_plunge_2026-10-13.md): 찍는 중 첫 몸통·머리 찌르기 접촉의 칼끝 빠르기·판정 에너지(eff — 배율 뒤), 탭 → 찍기 시작(go) · 탭 → 첫 접촉
+    const hit = go.filter((r) => r.fin?.plunging && r.fin.kin === 'stab');
+    console.log(`  찍는 순간 (찍기 찌르기 접촉 ${hit.length}) 칼끝 ${f(avg(hit.map((r) => r.fin.tipV)), 1)} m/s · 판정 ${f(avg(hit.map((r) => r.fin.eff ?? r.fin.energy)), 0)} J (날것 ${f(avg(hit.map((r) => r.fin.energy)), 0)} J) · 탭→찍기 시작 ${f(avg(go.map((r) => r.arm?.tGo)))} s · 탭→몸통 ${f(avg(rows.filter((r) => r.tTor != null).map((r) => r.tTor)))} s · 찍기 시작 손 높이 ${f(avg(go.map((r) => r.arm?.y)))} m`);
     console.log(`  찍기 시작 ${d.length} · 거둠(내려찍기 전) ${d.length - go.length} · 헛찍음(몸통·머리에 찌르기로 안 닿음) ${whiff.length} · 판·투구에 막힘 ${blocked.length} · 상처 ${rows.filter((r) => r.wound).length} · 찍기 첫 부위 ${JSON.stringify(count(go.map(zone)))}`);
   }
 }

@@ -78,6 +78,19 @@ export const FINISH = {
   //   156/97 (시드 101: 159/97) 이고 예외 동안 위팔이 사람 범위 밖(φ 147~149°, 걷기·겨눔 스텝 93~95 %)이라 '한도 켠다' 와 어긋나 채택하지 않음.
   //   되돌리기: 이 값 하나를 [0.25, 0.35, 0] 로 (코드 길 변경 없음)
   hands: [0.35, 0.35, 0.1],
+  // ── 10/13 내려찍기 동작 (사장님 10/13 20:1x '더 높이 들었다가 더 빠르게(힘있게) 콱 찍으면 좋겠어 — 다른 유저들의 공통된 피드백'
+  //  · docs/strike/finish_plunge_2026-10-13.md · 확인표 1030~1035, 사장님 확인 전). 탭 마무리 찍기(skill.plungePose)만 읽는다 — 자세 지도 겨눔 자리(fin.hover)·서 있는 상대는 그대로.
+  //  물리는 그대로 거친다: 손 목표를 더 높이 두고, 찍는 동안(tap.go ~ 끝)만 팔 근육·손목 서보 힘에 배율을 곱한다. 칼이 실제로 빨리 내려와 판정 에너지가 커진다.
+  //  새 상한·쿨타임 없음 (어깨·팔꿈치 힘-속도 한계 shoulderVmax·elbowVmax·사람 관절 한도는 그대로). 주소 `?finishLift=0` = 전 동작 (finish_thrust 1 --stand 와 관문이 전과 같다)
+  lift: true,
+  liftHands: [0.35, 0.45, 0.1], // 찍기 겨눔 손 (가슴 기준 [앞, 위, 옆], m) — 전 hands [0.35, 0.35, 0.10] 보다 0.10 높게(머리 꼭대기 +0.38 위)
+  strikeArm: 1.6, // 찍는 동안 두 팔 근육(어깨·팔꿈치 서보 강도·힘 상한) 배율 — 비기 서보 힘 창(SECRET.power)과 같은 꼴, 찍기 전용
+  strikeWrist: 1.3, // 찍는 동안 손목 서보 힘 배율 (fighter.driveSword 의 str — 빨리 내려오는 칼을 몸 점 선에 붙잡는다)
+  // 찍을 몸 점 (10/13 사장님 물음 '골반에서 가슴 쪽으로 올려 찍으면 빗맞을 확률이 늘지 않나'): 'torso' = 몸통 선에서 내 앞 plungeAt 에 가장 가까운 점(지금 기본) ·
+  //  'chest' = 몸통 선의 가슴 쪽 chestS 지점(골반 0 → 가슴 몸체 중심 1). 주소 `?finishAim=chest` — 기본 전환은 디렉터·사장님 몫
+  //  측정(새 동작 위 160 판, 문서 §5): 헛찍음 맨몸 2 → 5 · 판금 2 → 2, 10 초 안 죽음 66 → 70 · 57 → 50 (3 초 몫은 목으로 미끄러진 찍기) → 지금은 torso 추천
+  aim: 'torso',
+  chestS: 1,
   // 내려찍을 몸 점: 몸통 선(골반 → 가슴)에서 내 앞 이 거리(m, × 무기 배율 k)에 가장 가까운 점. 칼 선이 가파르고(약 76°)
   //  팔이 선을 따라 뻗을 여유가 남는 곳. ideal(0.85, 겨눔 켜기·AI 간격)은 닿는 곳 끝자락이라 느린 끝 베기가 됐다.
   //  측정 (시제품, 몸 점 앞 거리별 찌르기): 0.5m 9/9 · 0.6 17/23 · 0.7 15/17 · 0.8 13/17 · 0.9 4/8
@@ -109,6 +122,17 @@ export function downReachK(id) {
   if (!m || id === 'longsword') return 1;
   const r = (c) => Math.sqrt(Math.max(0.09, c * c - DROP * DROP));
   return Math.min(1, r(m[0]) / r(MEASURED.longsword[0]));
+}
+
+/** 탭 마무리 찍기의 겨눔 손 (10/13 FINISH.lift — 끄면 전 FINISH.hands) */
+export function finishHands() {
+  return FINISH.lift ? FINISH.liftHands : FINISH.hands;
+}
+
+/** 찍는 동안(tap.go ~ 끝)만 곱하는 힘 배율 (10/13 FINISH.lift): key = 'strikeArm' | 'strikeWrist'. 그 밖엔 1 (곱해도 같은 float) */
+export function plungeBoost(f, key) {
+  const tp = f.skill?.tap;
+  return FINISH.lift && tp?.down && tp.go && !tp.ended && !tp.abort ? FINISH[key] : 1;
 }
 
 const D2R = Math.PI / 180;
@@ -185,7 +209,8 @@ export function updateFinish(f, dt) {
       if (neck) _tp.copy(_t);
       else {
         // 내려찍을 몸 점: 같은 몸통 선에서 내 앞 plungeAt 거리의 점에 가장 가까운 곳
-        const sp = el2 > 1e-6 ? THREE.MathUtils.clamp(((FINISH.plungeAt * fin.k - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
+        //  (10/13 FINISH.aim 'chest': 몸통 선의 가슴 쪽 chestS 지점 — 둔기는 머리 한 점이라 같다)
+        const sp = FINISH.aim === 'chest' && !blunt ? FINISH.chestS : el2 > 1e-6 ? THREE.MathUtils.clamp(((FINISH.plungeAt * fin.k - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
         _tp.copy(_a).lerp(_b, sp);
       }
       aimPoses(f, fin, _t, _tp);
@@ -264,7 +289,7 @@ function aimPoses(f, fin, T, Tp) {
   //  닿는 곳: 머리 위 손에서 칼 선을 따라 팔이 뻗을 수 있는 거리(Dmax) 안에서 칼끝이 몸 점 너머(sink)까지 들어가면 안.
   //  손이 몸 점보다 1.5m 위라 칼끝은 늘 몸 위에서 시작한다 — 손이 높으니 거리와 관계없이 같은 찍기
   const side = f.side ?? 1;
-  const hs = FINISH.hands;
+  const hs = finishHands(); // 10/13 FINISH.lift: 더 높이 든 손 (끄면 FINISH.hands)
   _Hs[0] = hs[0];
   _Hs[1] = hs[1];
   _Hs[2] = hs[2] * side;
@@ -323,7 +348,9 @@ function aimPoses(f, fin, T, Tp) {
     pd[2] = dz / n;
   }
   // 겨눔 자리(쟁기·옆 지킴 패드, AI 도 자세 지도로 읽는다) = 찍기 겨눔. 몸 기울기는 FINISH.hover 그대로
+  //  (10/13: 자세 지도 겨눔 자리는 전 FINISH.hands 그대로 — 높이 든 손은 탭 찍기만)
   const hh = H.hand;
   const hd = H.dir;
-  for (let k = 0; k < 3; k++) (hh[k] = _Hs[k]), (hd[k] = pd[k]);
+  const h0 = FINISH.hands;
+  for (let k = 0; k < 3; k++) (hh[k] = k === 2 ? h0[2] * side : h0[k]), (hd[k] = pd[k]);
 }

@@ -26,7 +26,7 @@
 import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS, ARM } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
-import { FINISH, armRay, updateFinish } from './finish.js';
+import { FINISH, armRay, updateFinish, finishHands } from './finish.js';
 import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'; // 약한 자세 겨눔 탭 찌르기 (FINISH.vital, 10/12)
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
@@ -1058,7 +1058,7 @@ export class Skill {
     // ── 4) 자세
     pose.w = tp.ended ? 1 - (tp.t - tp.tEnd) / K.recover : Math.min(1, tp.t / K.aim);
     if (!tp.go) {
-      const hs = FINISH.hands; // 머리 위 겨눔 손
+      const hs = finishHands(); // 머리 위 겨눔 손 (10/13 FINISH.lift: 더 높이 — 끄면 FINISH.hands)
       pose.hand[0] = hs[0];
       pose.hand[1] = hs[1];
       pose.hand[2] = hs[2] * side;

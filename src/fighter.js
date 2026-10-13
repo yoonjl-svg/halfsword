@@ -17,7 +17,7 @@ import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt, finishAt } from './guards.js';
 import { resolveSwordArt, applySwordArt } from './sword_art.js'; // 검술 풀이: 자세표·동작 라이브러리·덧씌우기·쥠·HUD 이름을 한 곳에서 (10/8 ① 구조)
 import { corrStep } from './corr.js';
-import { newFinish, updateFinish, FINISH } from './finish.js';
+import { newFinish, updateFinish, FINISH, plungeBoost } from './finish.js';
 import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
@@ -2417,12 +2417,14 @@ export class Fighter {
   driveJoints() {
     const legsMus = Math.max(0.15, this.muscle);
     const inv = this.lastDt > 0 ? 1 / this.lastDt : 0;
+    const armBoost = (this.armBoost = plungeBoost(this, 'strikeArm')); // 10/13 FINISH.lift (finish.js) — 중력 보상(manualMuscle)은 이 배율을 빼고 그대로
     for (const j of this.joints) {
       const n = j.name;
       const isLeg = n.startsWith('thigh') || n.startsWith('shin') || n.startsWith('foot');
       let mus = isLeg ? legsMus * (0.6 + 0.4 * this.legHealth) : Math.max(0.1, this.muscle);
       if (n === 'uarmO' || n === 'farmO') mus *= 0.15 + 0.85 * this.limbs.armO; // 다친 팔은 힘이 없다
       if (n === 'uarmS' || n === 'farmS') mus *= (0.3 + 0.7 * this.limbs.armS) * this.strength;
+      if (n === 'uarmS' || n === 'farmS' || n === 'uarmO' || n === 'farmO') mus *= armBoost; // 10/13 내려찍기: 찍는 동안만 두 팔 근육 × FINISH.strikeArm (그 밖엔 1)
       if (n.endsWith('F') && isLeg) mus *= 0.4 + 0.6 * this.limbs.legF;
       if (n.endsWith('B') && isLeg) mus *= 0.4 + 0.6 * this.limbs.legB;
       // gain: 다리가 체중을 싣는 걸음에서 딛은 다리는 근육을 더 단단히 쓴다 (gait.js)
@@ -2666,7 +2668,7 @@ export class Fighter {
     const wErr = _mW.sub(wT);
     _mT.addScaledVector(wErr.addScaledVector(boneAxis, -wErr.dot(boneAxis)), -d);
     // 중력 보상: 팔과 칼의 무게를 미리 알고 버틴다 (사람도 무게를 예상하고 힘을 준다 → 처지지 않는다)
-    const mus = k / j.k;
+    const mus = k / j.k / (this.armBoost ?? 1); // 10/13: 찍기 근육 배율(armBoost)은 무게를 더 버티는 데 쓰지 않는다 (1 이면 같은 float)
     this.gravityTorque([this.bodies.uarmS, this.bodies.farmS, this.armed ? this.sword : null], j.child, -0.15, _mG).multiplyScalar(-mus);
     // 팔꿈치를 굽히면 아래팔과 칼의 무게가 위팔을 길이 방향으로 비튼다 → 그 몫도 미리 버틴다
     //  (되먹임이 아닌 고정 보정이라 비틀기 축이 가벼워도 불안정해지지 않는다)
@@ -2824,7 +2826,7 @@ export class Fighter {
       this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
       return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     }
-    const str = this.strength * (this.powerMul ?? 1) * mus * (0.35 + 0.65 * this.armHealth); // powerMul: 유파 비기의 서보 힘 창 (1 이면 그대로)
+    const str = this.strength * (this.powerMul ?? 1) * plungeBoost(this, 'strikeWrist') * mus * (0.35 + 0.65 * this.armHealth); // powerMul: 유파 비기의 서보 힘 창 (1 이면 그대로) · plungeBoost: 10/13 찍는 동안 손목 힘 (그 밖엔 1)
     const forearm = this.bodies.farmS;
 
     // 칼끝 방향: 손 위치가 곧 검술의 자세(가드)다.

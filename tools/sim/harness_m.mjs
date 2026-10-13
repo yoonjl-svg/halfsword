@@ -26,6 +26,13 @@ export { RAPIER, THREE, CONFIG, AI };
   }
   if (['power25', 'kill'].includes(process.env.FINISH_MODE)) FINISH.mode = process.env.FINISH_MODE; // 10/12 기본 power25 · kill = 전 즉사
   if (process.env.FINISH_POWER) FINISH.power = +process.env.FINISH_POWER;
+  // 10/13 내려찍기 동작 (docs/strike/finish_plunge_2026-10-13.md): FINISH_LIFT=0 = 전 동작 · FINISH_AIM=chest|torso · 쓸기용 FINISH_LIFT_HANDS=x,y,z · FINISH_ARM=수 · FINISH_WRIST=수 · FINISH_CHEST_S=수
+  if (['0', '1'].includes(process.env.FINISH_LIFT)) FINISH.lift = process.env.FINISH_LIFT === '1';
+  if (['chest', 'torso'].includes(process.env.FINISH_AIM)) FINISH.aim = process.env.FINISH_AIM;
+  if (process.env.FINISH_LIFT_HANDS) FINISH.liftHands = process.env.FINISH_LIFT_HANDS.split(',').map(Number);
+  if (process.env.FINISH_ARM) FINISH.strikeArm = +process.env.FINISH_ARM;
+  if (process.env.FINISH_WRIST) FINISH.strikeWrist = +process.env.FINISH_WRIST;
+  if (process.env.FINISH_CHEST_S) FINISH.chestS = +process.env.FINISH_CHEST_S;
 }
 const { PHYSICS, ARENA } = CONFIG;
 export const DT = PHYSICS.timestep;
