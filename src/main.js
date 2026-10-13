@@ -1049,6 +1049,7 @@ cardEls[FOE_CARD].addEventListener('animationend', (e) => e.animationName === 'n
 drawEl.addEventListener('pointerdown', skipReveal);
 window.addEventListener('resize', () => layoutDraw()); // 폰을 돌리거나 전체화면이 되면 카드 크기를 다시 맞춘다
 if (window.ResizeObserver) new ResizeObserver(() => layoutDraw()).observe(drawEl); // resize 이벤트 없이(늦게) 화면 상자만 바뀌어도 (홈 화면 앱)
+document.fonts?.addEventListener?.('loadingdone', () => layoutDraw()); // 도트 글꼴(10/14)이 늦게 도착하면 글 넘침을 그 글꼴로 다시 잰다 (font-display: swap — 먼저 그린 시스템 글꼴로 잰 값을 버린다)
 
 /**
  * 두 사람의 무기를 감추거나 보인다 (카드를 고르기 전에는 손에 칼이 보이면 안 된다).
@@ -1150,22 +1151,23 @@ function layoutDraw() {
   drawEl.style.setProperty('--ch', `${ch}px`);
   // 번호 배지(높이 22px)의 가운데: 픽셀 뒷면은 아래 원판(아래에서 3칸 띄운 10칸 원판)의 가운데, classic 은 아래에서 10px
   drawEl.style.setProperty('--kb', cardBack === 'classic' ? '10px' : `${Math.max(4, 8 * px - 11)}px`);
-  // 글자 크기 (10/10 글자 체계 두 단계): 큰 카드 = 이름 title 20 · 설명 body 15, 그 밖 = 이름 body 15 · 설명 caption 12
+  // 글자 크기 (10/10 글자 체계 두 단계): 큰 카드 = 이름 title 20 · 설명 body 15, 그 밖 = 이름 body 15 · 설명 11 (사장님 10/14 04:1x '카드 설명 11 px로 해' — 전 caption 12.
+  //  11 은 줄이기 바닥(fitCardText)과 같아 더 줄지 않는다 — 넘치면 아래 '폭만 두 칸씩 넓힘'으로)
   //  큰 카드 = 폭 205 · 높이 260 이상 (PC 1280×720 의 224×344 등. 가로 폰은 높이 상한 DRAW_CARD_H 때문에 이제 작은 카드 — 844×390 에서 156×234)
   const big = cw >= 205 && ch >= 260;
   drawEl.style.setProperty('--name', big ? '20px' : '15px');
-  drawEl.style.setProperty('--desc', big ? '15px' : '12px');
+  drawEl.style.setProperty('--desc', big ? '15px' : '11px');
   drawEl.classList.toggle('wide', big);
   drawEl.classList.toggle('low', low);
   // 글자를 줄여도 설명이 넘치면(낮은 가로 화면의 긴 설명) 높이는 두고 폭만 두 칸씩 넓힌다
   const step = cardBack !== 'classic' ? 2 * px : 2;
   const cwMax = Math.floor(Math.min(230, (row.width - 2 * gap) / 3));
-  fitCardText(big ? 15 : 12);
+  fitCardText(big ? 15 : 11);
   while (!narrow && cw + step <= cwMax && cardTextOverflows()) {
     cw += step;
     drawEl.style.setProperty('--cw', `${cw}px`);
     drawEl.style.setProperty('--padL', `${Math.max(0, Math.floor((row.width - 3 * cw - 2 * gap) / 2))}px`);
-    fitCardText(big ? 15 : 12);
+    fitCardText(big ? 15 : 11);
   }
 }
 /** 앞면 글이 정말 넘치는가: 그림 칸이 가장 작게(min-height) 줄었는데도 마지막 글줄이 아래 여백에 닿는다 (그림 칸이 남은 높이를 채우므로 그림이 줄어들 수 있으면 넘침이 아니다) */
