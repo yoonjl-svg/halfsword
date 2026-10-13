@@ -1,11 +1,12 @@
 // 테스트 고르기 화면 (test.html) — 사장님 10/10 16:5x "무기와 캐릭터 고르도록 해. 상대와 스테이지는 랜덤"
 //  무기: weapons.js WEAPON_LIST 전부 (오늘 바뀐 무기 묶음을 위에) · 캐릭터: characters.js CHARACTERS 전부 + 기본 주인공(LOOKS.player)
-//  '시작' → index.html?test=1&weapon=<id>&hero=<id|player>&foe=random&stage=random (그쪽 인자 뜻은 src/test_route.js)
+//  상대: '무작위'(본판 회전 CHARACTERS — 판마다) 또는 여정 밖 인물(characters.js CHARACTER_GUESTS — 10/14 라트나, 무대보다 먼저 온 인물은 여기서만 고른다)
+//  '시작' → index.html?test=1&weapon=<id>&hero=<id|player>&foe=<random|인물 id>&stage=<random|무대 id> (그쪽 인자 뜻은 src/test_route.js)
 //  무대(10/14): 기본은 무작위(여정 무대 — 지금 그대로). 여정 밖 무대(잠든 습지)를 고르면 stage=<id> 로 그 무대에 고정된다 (기억하지 않는다)
-//  마지막 고른 무기·캐릭터는 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작).
+//  마지막 고른 무기·캐릭터·상대는 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작).
 //  비기 판(이베리아·중국·독일)은 기억하지 않는다 — 10/13 사장님 'test 경로로는 아직 끊기지 않는 흐름이 발동' = 예전에 고른 v5 가 기억돼 있던 것. 열 때마다 본판 기본값에서 시작
-import { WEAPON_LIST, TIER_LABEL, RETIRED_WEAPONS } from './weapons.js';
-import { CHARACTERS } from './characters.js';
+import { WEAPON_LIST, TIER_LABEL, RETIRED_WEAPONS, WEAPONS } from './weapons.js';
+import { CHARACTERS, CHARACTER_GUESTS } from './characters.js';
 import { TRADITIONS, traditionOf } from './schools.js';
 import { SECRET } from './config.js'; // 비기 판 기본값 = 본판(main) 기본값 (10/13 — 고른 판을 기억하지 않는다)
 
@@ -53,6 +54,11 @@ const heroes = [
   { id: 'player', name: '기본 주인공', sub: '지금 플레이어 겉모습', armour: '투구' },
   ...CHARACTERS.map((c) => ({ id: c.id, name: c.name, sub: c.epithet || '—', armour: armourLine(c.look) })),
 ];
+// 상대 (10/14 — 사장님 '라트나는 테스트 경로의 상대 고르기와 ?foe=ratna 로'): 무작위(본판 회전) + 여정 밖 인물. 여정 밖 인물은 본판 무작위 상대 목록에 없다
+const foes = [
+  { id: 'random', name: '무작위', sub: `본판 인물 ${CHARACTERS.length}명 · 판마다`, armour: '고른 캐릭터는 빼고' },
+  ...CHARACTER_GUESTS.map((c) => ({ id: c.id, name: c.name, sub: `${c.epithet} · 여정 밖`, armour: WEAPONS[c.weapon]?.nameKo ?? c.weapon })),
+];
 
 // 이베리아 비기 판 (10/11 — docs/strike/iberian_secret_v6_2026-10-11.md): 새 '길목 지키기'(v6 기본) · v5 '멈추지 않는 흐름' · 옛 v4 '비켜 서며 크게 가로베기' — 시작 주소의 ibSecret 로 (main.js)
 const IB_SECRETS = [
@@ -80,6 +86,7 @@ const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
   hero: heroes.some((h) => h.id === saved.hero) ? saved.hero : 'player',
+  foe: foes.some((f) => f.id === saved.foe) ? saved.foe : 'random',
   ibSecret: SECRET.iberianSecret, // 비기 판은 기억하지 않고 본판 기본값에서 (10/13)
   cnSecret: SECRET.cnSecret,
   deSecret: SECRET.deSecret,
@@ -126,14 +133,14 @@ function weaponButton(w, big) {
   return b;
 }
 
-function heroButton(h) {
+function heroButton(h, kind = 'hero') {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'pick';
   b.dataset.id = h.id;
   const mark = document.createElement('span');
   mark.className = 'mark';
-  mark.textContent = h.id === 'player' ? '나' : h.name.slice(0, 1);
+  mark.textContent = h.id === 'player' ? '나' : h.id === 'random' ? '?' : h.name.slice(0, 1);
   const txt = document.createElement('span');
   txt.className = 'txt';
   const name = document.createElement('b');
@@ -144,7 +151,7 @@ function heroButton(h) {
   arm.textContent = h.armour;
   txt.append(name, sub, arm);
   b.append(mark, txt);
-  b.addEventListener('click', () => select('hero', h.id));
+  b.addEventListener('click', () => select(kind, h.id));
   return b;
 }
 
@@ -174,6 +181,7 @@ function select(kind, id) {
 function render() {
   for (const el of document.querySelectorAll('#weaponsNew .pick, #weaponsRest .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.weapon));
   for (const el of document.querySelectorAll('#heroes .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.hero));
+  for (const el of document.querySelectorAll('#foes .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.foe));
   for (const el of document.querySelectorAll('#ibSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibSecret));
   for (const el of document.querySelectorAll('#cnSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.cnSecret));
   for (const el of document.querySelectorAll('#deSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.deSecret));
@@ -187,11 +195,14 @@ function render() {
   const bh = document.createElement('b');
   bh.textContent = h.name;
   const st = STAGE_PICKS.find((x) => x.id === pick.stage);
-  s.append(bw, ' · ', bh, document.createElement('br'), pick.stage === 'random' ? '상대·무대 무작위' : `상대 무작위 · 무대 ${st.name}`);
+  const f = foes.find((x) => x.id === pick.foe);
+  const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
+  const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
+  s.append(bw, ' · ', bh, document.createElement('br'), foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위');
 }
 
 function startUrl() {
-  const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: 'random', stage: pick.stage }); // stage=<id> 면 main.js STAGE_PIN 으로 그 무대 고정
+  const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: pick.foe, stage: pick.stage }); // stage=<id> 면 main.js STAGE_PIN 으로 그 무대 고정 · foe=<id> 면 그 상대 (main.js pickFoe)
   if (pick.ibSecret !== SECRET.iberianSecret) q.set('ibSecret', pick.ibSecret); // 본판 기본값이 아니면 판을 주소에 (10/13 — 전엔 독일 기본을 'parry' 로 잘못 알아 감아 들기를 고를 수 없었다)
   if (pick.cnSecret !== SECRET.cnSecret) q.set('cnSecret', pick.cnSecret);
   if (pick.deSecret !== SECRET.deSecret) q.set('deSecret', pick.deSecret);
@@ -204,6 +215,7 @@ for (const id of NEW_WEAPONS) {
 }
 for (const w of weapons) if (!NEW_WEAPONS.includes(w.id)) $('weaponsRest').append(weaponButton(w, false));
 for (const h of heroes) $('heroes').append(heroButton(h));
+for (const f of foes) $('foes').append(heroButton(f, 'foe'));
 for (const x of IB_SECRETS) $('ibSecret').append(ibSecretButton(x));
 for (const x of CN_SECRETS) $('cnSecret').append(ibSecretButton(x, 'cnSecret'));
 for (const x of DE_SECRETS) $('deSecret').append(ibSecretButton(x, 'deSecret'));
