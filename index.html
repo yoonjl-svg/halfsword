@@ -115,13 +115,14 @@
       .slot b { display: block; font-size: var(--fs-body); font-weight: 800; line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .slot small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; font-size: var(--fs-caption); font-weight: 500; line-height: 1.35; margin-top: 1px; word-break: keep-all; }
       #guardName, .stack { position: fixed; right: var(--safe-r); width: var(--side-w); pointer-events: none; }
-      /* ① 자세 (첫 칸, 높이 52px — 설명 두 줄까지) */
+      /* ① 자세 (첫 칸, 높이 52px — 설명 두 줄까지). 10/14 03:3x: 싸움 중에는 늘 보이고 자세가 바뀌면 바꿔 끼운다 (main.js updateGuardName · guardVisible) */
       #guardName { top: var(--safe-t); height: 52px; }
       #guardName b { color: var(--hud-guard); }
       #guardName small { color: var(--hud-guard-sub); -webkit-line-clamp: 2; }
       /* ② 를 담는 겉 칸 (main.js updateTechCue) — 자리를 차지하지 않는다 (숨기면 ② 가 숨는다) */
       #techCue { position: fixed; inset: 0; pointer-events: none; }
-      /* ② 패시브·비기: 줄 하나(40px) — 자세 칸처럼 새 알림이 오면 그 자리에서 바꿔 끼운다 */
+      /* ② 패시브·비기: 줄 하나(40px) — 자세 칸처럼 새 알림이 오면 그 자리에서 바꿔 끼운다. 10/14 03:1x: 마지막 기술이 계속 보인다(새 판에 비움),
+         비기 창·고노센 준비만 잠깐 덮었다가 마지막 기술로 돌아온다 (main.js techPut · techTick) */
       .stack .slot { height: 40px; translate: 6px 0; }
       .stack .slot.show { translate: 0 0; }
       #techSlot { top: calc(var(--safe-t) + 52px + var(--slot-gap)); }
@@ -131,7 +132,6 @@
       .stack small { display: flex; justify-content: flex-end; white-space: nowrap; }
       .stack small .o { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
       .stack small .t { flex: none; }
-      #techSlot .slot[data-kind="all"].show { opacity: .62; } /* 디버그 '모든 기술 이름'(?techCueAll=1): 공용 기술은 흐리게 */
       #techSlot .slot[data-kind="secretArm"].show { opacity: .6; } /* 고노센 준비 — 준비된 상태라 흐리게 */
       #techSlot .slot[data-kind="secretReady"].show { animation: slotPulse .6s ease-in-out infinite alternate; } /* 내 비기 창이 열림 — 지금 누를 때 */
       @keyframes slotPulse { from { opacity: .7; } to { opacity: 1; } }
@@ -158,19 +158,17 @@
       #foeIntro span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 4px; font-weight: 500; color: var(--hud-epithet); }
       #foeIntro span:empty { display: none; }
       @media (orientation: portrait) { #foeIntro { max-width: calc(100vw - 2 * var(--safe-l)); } }
-      /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름 … 한 줄 띄워서 ai의 이름과 기술 이름'): 오른쪽 위 칸과 거울.
-         첫 줄 .stg = '스테이지 N · 무대 이름' · 한 줄 띄우고 둘째 줄 .foe = 'AI 이름 · 자세 이름'(기술을 내면 잠깐 기술 이름 — 오른쪽 위 ② 와 같은 오렌지)
-         무기 카드를 고르는 동안에도 두 줄 그대로 — 카드 안내 글은 뺐다 (사장님 10/14 00:4x '미니멀 지향'). 카드 줄은 이 칸 아래에서 시작한다 (main.js layoutDraw) */
+      /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): 오른쪽 위 칸과 거울. 첫 줄 .stg = '스테이지 N · 무대 이름'.
+         무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르세요' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
+         자리(칸 마지막 줄, 위 6px)·꼴·크기 그대로: --fs-caption · 700 · --ls-label · --accent. 카드를 고르면 .off 로 숨고 자리는 둔다 — main.js setDrawGuide).
+         둘째 줄 'AI 이름 · 자세 / 기술'(.foe)은 10/14 03:3x 사장님 'AI 이름·기술명 표기는 아예 없앤다'로 걷어냈다. 카드 줄은 이 칸 아래에서 시작한다 (main.js layoutDraw) */
       #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); font-size: var(--fs-caption); font-weight: 800; line-height: var(--lh-tight); word-break: keep-all; }
       #stageInfo.show { opacity: 1; }
       #stageInfo .stg { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-      #stageInfo .foe { display: block; max-height: calc(2 * var(--fs-caption) * var(--lh-tight)); overflow: hidden; } /* 두 줄까지 (b · span 이 한 줄에 이어져야 해서 -webkit-box 대신 높이로 자름) */
       #stageInfo .stg { color: var(--hud-sys); }
-      #stageInfo .foe { margin-top: calc(var(--fs-caption) * var(--lh-tight)); } /* 한 줄 띄움 */
-      #stageInfo .foe:not(.on) { display: none; }
-      #stageInfo .foe b { color: var(--hud-name); }
-      #stageInfo .foe span { color: var(--hud-guard-sub); }
-      #stageInfo .foe span.tech { color: var(--hud-tech); }
+      #stageInfo em { display: block; margin-top: 6px; font-size: var(--fs-caption); font-style: normal; font-weight: 700; letter-spacing: var(--ls-label); color: var(--accent); word-break: keep-all; }
+      #stageInfo em:empty { display: none; }
+      #stageInfo em.off { visibility: hidden; }
 
       /* ── 무기 뽑기: 판이 열리면 엎어 둔 카드 세 장. 왼쪽 두 장은 내가 고르는 카드, 맨 오른쪽은 상대 무기 칸(회색, 못 고른다) →
          내 카드를 누르면 뒤집혀 이번 판 무기가 나오고, 남은 내 카드가 어둡게 뒤집힌 뒤 상대 카드가 뒤집혀 상대 무기를 보여 준다 (main.js 무기 뽑기) ──
@@ -336,7 +334,7 @@
     <div id="emoMsg"></div>
     <div id="hint"></div>
     <div id="foeIntro"><b></b><i></i><span></span></div>
-    <div id="stageInfo" aria-live="polite"><div class="stg"></div><div class="foe"></div></div>
+    <div id="stageInfo" aria-live="polite"><div class="stg"></div><em></em></div>
     <!-- 무기 뽑기 카드 세 장 (main.js 가 판마다 채운다. 단추 안이라 span 만 쓴다).
          왼쪽 두 장은 내가 고르는 카드(단추), 맨 오른쪽은 상대 무기 칸이라 누를 수도 초점을 받을 수도 없다(단추가 아니다) -->
     <div id="draw">
@@ -359,7 +357,7 @@
         <!-- 상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js · main.js) -->
         <!-- 검술 보정 단계 메뉴(끔·약·보통·강)는 뺐다 — 사장님 10/8 21:5x "플레이어에겐 구분이 필요 없어. 한 단계로 기본 적용": 보정은 늘 0.7 (main.js DEFAULTS.skill) -->
         <!-- 10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아': 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출은 늘 켬,
-             모든 기술 이름(디버그 ?techCueAll=1) · 픽셀 모드(실험 ?pixel=1)는 주소 인자로만, 기울기 이동은 기능째 지웠다 (main.js DEFAULTS) -->
+             픽셀 모드(실험 ?pixel=1)는 주소 인자로만, 기울기 이동은 기능째 지웠다 (main.js DEFAULTS). 모든 기술 이름(디버그 ?techCueAll=1)은 10/14 03:3x 상대 기술 표기와 함께 걷어냈다 -->
         <div class="row"><span>화면 60 fps 제한</span><button class="toggle" data-setting="fpsCap" aria-label="화면 60 fps 제한"></button></div>
         <!-- 시작 단추는 카드 아래에 붙여 둔다: 가로로 든 폰에서 설정 목록이 길어도 스크롤 없이 보인다 -->
         <div class="actions">

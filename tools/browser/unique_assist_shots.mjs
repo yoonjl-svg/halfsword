@@ -4,6 +4,9 @@
 //  실제 게임(index.html)을 띄워 터치 포인터 사건(pointerdown·move·up, pointerType 'touch')으로 긋는다 — 입력 길(input.js → main.js → 검술 층)이 그대로 돈다.
 //  긋기 시작 자리에 손을 놓는 것만 game.player.handOffset 으로 한다(시험 편의). 상대 AI 는 멈춰 둔다(game.ai.update 비움).
 //  주소 경우마다: 해금 단계 · 붙었나 · 긋기마다 발동한 고유 동작 · 내 기술 알림 칸(#techSlot) 글 · 발동했으면 PNG.
+//   10/14 03:1x 부터 ② 는 마지막 기술이 계속 보인다(시간으로 안 사라짐) — 그래서 칸 글(cue)만으로는 이 긋기가 낸 알림인지 모른다.
+//   cueNew = 이 긋기 동안 새 알림이 왔나(player.uniqueCue 가 바뀜). 안 걸린 긋기의 cue 는 앞 긋기의 기술이 남아 있는 것이다
+//   (docs/ui/hud_type_system_2026-10-10.md §15)
 //  실행: npx vite --port <빈 포트> --strictPort &   (5173·5174 는 쓰지 않는다)
 //        node tools/browser/unique_assist_shots.mjs http://127.0.0.1:<포트> <PNG 폴더>
 import { chromium } from 'playwright';
@@ -73,7 +76,7 @@ for (const C of CASES) {
       if (p.skill.uniq) p.skill.uniq.restPos = [from[0], from[1]];
     }, S.from);
     await page.waitForTimeout(1500);
-    const before = await page.evaluate(() => ({ fired: { ...(window.game.playerUnique?.stats?.fired ?? {}) } }));
+    const before = await page.evaluate(() => ({ fired: { ...(window.game.playerUnique?.stats?.fired ?? {}) }, cueRef: window.game.player.uniqueCue?.t ?? null }));
     // 터치 긋기: 프레임마다 한 번 pointermove (게임이 읽는 프레임 시간 기준 4 m/s 패드) → 끝에서 잠깐 쥐고 뗌
     const frameMs = await page.evaluate(
       ({ pts, v }) =>
@@ -129,15 +132,16 @@ for (const C of CASES) {
       return ub ? +((ub.chestYaw * 180) / Math.PI).toFixed(1) : 0;
     });
     await page.waitForTimeout(400);
-    const r = await page.evaluate((f0) => {
+    const r = await page.evaluate(({ fired: f0, cueRef }) => {
       const g = window.game;
       const u = g.playerUnique;
       const fired = Object.entries(u?.stats?.fired ?? {})
         .filter(([k, n]) => n > (f0[k] ?? 0))
         .map(([k]) => k);
       const el = [...document.querySelectorAll('#techSlot .slot')].find((e) => e.classList.contains('show'));
-      return { fired, ends: u?.stats?.ends ?? {}, steps: u?.stats?.steps ?? 0, power: u?.stats?.power ?? 0, cue: el ? { who: el.dataset.who, kind: el.dataset.kind, text: el.innerText.replace(/\s+/g, ' ').trim() } : null, techs: u?.stats?.techs ?? {} };
-    }, before.fired);
+      const cueNew = (g.player.uniqueCue?.t ?? null) !== cueRef; // 이 긋기 동안 새 알림 (아니면 cue 는 앞 기술이 남은 것)
+      return { fired, ends: u?.stats?.ends ?? {}, steps: u?.stats?.steps ?? 0, power: u?.stats?.power ?? 0, cueNew, cue: el ? { who: el.dataset.who, kind: el.dataset.kind, text: el.innerText.replace(/\s+/g, ' ').trim() } : null, techs: u?.stats?.techs ?? {} };
+    }, before);
     let png = null;
     if (r.fired.length) {
       png = `${shotDir}/${C.label}_${name}.png`;
