@@ -9,6 +9,7 @@
 //   정수리 양옆 위 납작한 컵 귀, 위가 곧고 넓은 가슴 말굽, 손목에서 꺾인 앞발 덩어리, 부드러운 법선(짧고 윤기 나는 털)으로 고쳤다.
 //   1c(감독 검수 · 사장님 10/14 03:5x '눈과 눈 주위가 중요'): 주둥이를 머리 고리에서 뽑아낸 한 덩어리(아래턱까지)로, 얼굴 황갈을 꼭짓점
 //   그러데이션으로(날카로운 테두리 없음), 눈을 작은 아몬드꼴·바깥 눈꼬리 처짐·쑥 들어간 눈두덩·짙은 테·반사점으로, 가슴 파임을 넓은 U 로 고쳤다.
+//   1d(감독 검수): 황갈 판을 주둥이·두 눈 바로 둘레·눈 위로 좁히고(볼·관자놀이 검정), 눈 1.3 배·윗눈꺼풀 짙은 선, 주둥이 15 % 짧고 넓게, 넓고 납작한 코.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { Kit } from './stage_kit.js';
@@ -34,7 +35,7 @@ export const BEAR_COLORS = Object.freeze({
   brow: 0xd2b088, // 두 눈을 감싸는 '안경'·눈 위 눈썹 자리 — 옅은 황갈 (이마 검정으로 부드럽게 녹아든다)
   nose: 0x66524d, // 큰 코 (사진은 짙은 회갈색 — 윗면이 조금 밝고 아래에 콧구멍 둘)
   nostril: 0x1d1514,
-  eye: 0x3a2317, // 짙은 갈색 눈동자
+  eye: 0x4a2c1c, // 짙은 갈색 눈동자 (가운데 동공은 더 짙게)
   eyeRim: 0x120c0a, // 눈 가장자리 얇은 짙은 테
   eyeShine: 0xf1ebdf, // 아주 작은 반사점
   claw: 0xcfc6b4, // 길고 아래로 휜 밝은 회백 발톱
@@ -92,18 +93,18 @@ const HEAD_CENTER = [HEAD_SHIFT, 0.921, 0.03]; // 몸 좌표 (Y = 1 − t)
 //  머리통은 둥근 고리라 그대로 두고 얼굴(주둥이·눈·무늬·귀)만 돌린다
 const HEAD_TURN = { yaw: 0.36, pitch: 0.02, roll: -0.02 }; // rad (확인표 1114)
 // 얼굴은 머리 고리를 머리 좌표 앞(+z)으로 밀어 깎는다 (주둥이·아래턱이 머리에서 솟은 한 덩어리 — 1c).
-//  주둥이: 바닥 타원(가운데 y −0.02, 반폭 0.052, 위로 0.05 = 두 눈 사이 콧등 · 아래로 0.052 = 턱 끝)에서 끝으로 갈수록 가늘어지는 짧은 원뿔꼴,
-//  끝까지 0.058 앞으로. 아래쪽(턱)은 덜 나온다. 다문 입선은 주둥이 아래쪽의 얕은 홈 (양 끝이 살짝 처짐)
-const SNOUT = { yc: -0.014, a: 0.05, chinA: 0.034, up: 0.046, down: 0.053, out: 0.058, flat: 0.24, chin: 0.3 };
+//  주둥이: 바닥 타원(가운데 y −0.014, 반폭 0.057 — 윗입술 자리가 넓다, 위로 0.046 = 두 눈 사이 콧등 · 아래로 0.053 = 턱 끝)에서 끝으로 갈수록
+//  가늘어지는 짧고 넓적한 원뿔꼴, 끝까지 0.049 앞으로(1d: 15 % 짧게). 아래쪽(턱)은 덜 나온다. 다문 입선은 주둥이 아래쪽의 얕은 홈 (양 끝이 살짝 처짐)
+const SNOUT = { yc: -0.014, a: 0.057, chinA: 0.04, up: 0.046, down: 0.053, out: 0.049, flat: 0.26, chin: 0.3 };
 const MOUTH = { y: -0.04, droop: 0.004, half: 0.031, depth: 0.0036, width: 0.0028 };
 // 눈 (감독 측정 10/14: 두 눈 사이 키의 0.073 · 눈 ~ 코 세로 0.034 · 눈 t 0.056): 작은 아몬드꼴, 바깥 눈꼬리가 살짝 처진다.
 //  쑥 들어간 눈 — 눈자리를 얕게 파고(socket) 위 눈두덩(brow)을 살짝 내밀어 눈 위에 그늘, 가장자리에 얇은 짙은 테, 짙은 갈색 눈동자에 반사점 하나
-const EYE = { x: 0.039, y: 0.028, w: 0.0215, h: 0.0124, droop: 0.0036, tilt: 0.12, rim: 1.24, shine: 0.0021, socket: 0.0042, brow: 0.0048 };
+const EYE = { x: 0.039, y: 0.028, w: 0.028, h: 0.0185, droop: 0.0045, tilt: 0.12, rim: 1.16, lid: 0.07, pupil: 0.5, shine: 0.0021, socket: 0.0048, brow: 0.0052 };
 const EAR = { x: 0.092, y: 0.04, z: -0.012, r: 0.0175, thick: 0.007 }; // 작고 납작한 컵 귀, 정수리 양옆 위 (사진 귀 가운데 (309, 62)·(396, 66))
 // 얼굴 황갈 자리 (머리 좌표, 좌우 대칭): 주둥이 덩어리 + 두 눈을 감싸는 '안경' + 콧등 + 눈 위 눈썹 자리 둘. 모두 부드러운 가장자리
-const SPECS = { rx: 0.022, ry: 0.0165 }; // 눈마다 감싸는 옅은 황갈 타원
-const BROWS = { x: 0.037, y: 0.047, rx: 0.021, ry: 0.0115 }; // 눈썹 자리 (콧등과 이어진다)
-const NOSE = { y: -0.004, w: 0.0215, h: 0.013, d: 0.019 }; // 큰 코 — 폭 0.043, 주둥이 끝 위 (사진 코 가운데 (376, 81), 눈 ~ 코 세로 키의 0.034)
+const SPECS = { x: 0.036, rx: 0.0175, ry: 0.016 }; // 눈마다 감싸는 옅은 황갈 타원 — 바깥 끝이 눈꼬리보다 조금만 넓게 (1d)
+const BROWS = { x: 0.034, y: 0.047, rx: 0.017, ry: 0.0115 }; // 눈썹 자리 (콧등과 이어진다)
+const NOSE = { y: -0.004, w: 0.0235, h: 0.0115, d: 0.012 }; // 넓고 납작한 코 — 폭 0.047, 위가 평평, 주둥이 끝 위 (사진 코 가운데 (376, 81), 눈 ~ 코 세로 키의 0.034)
 
 // 가슴 말굽: 사진에서 줄마다 잰 주황 칸 [t, 왼쪽 바깥, 왼쪽 안, 오른쪽 안, 오른쪽 바깥] (안쪽 둘이 null 이면 가운데가 이어진 줄).
 //  두꺼운 말굽: 두 팔 위 가장자리는 어깨선(t 0.19)에서 가로로 곧고, 바깥선은 아래로 갈수록 벌어져 t 0.24 에서 가장 넓다(0.18).
@@ -425,7 +426,16 @@ function headAndBody(kit) {
   const P = g.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < P.count; i++) {
-    v.fromBufferAttribute(P, i).applyMatrix4(TURN_INV);
+    v.fromBufferAttribute(P, i);
+    // 머리통도 고개를 따라 돈다: 머리 가운데를 지나는 세로축으로 고개 돌림만큼 비틀고 목(t 0.12 ~ 0.2)에서 0 으로 — 돌아간 쪽 볼의 검정이 가장자리에 남게 (1d)
+    const tw = HEAD_TURN.yaw * (1 - S(1 - v.y, 0.12, 0.2));
+    if (tw) {
+      const dx = v.x - HEAD_CENTER[0];
+      const dz = v.z - HEAD_CENTER[2];
+      v.x = HEAD_CENTER[0] + dx * Math.cos(tw) + dz * Math.sin(tw);
+      v.z = HEAD_CENTER[2] - dx * Math.sin(tw) + dz * Math.cos(tw);
+    }
+    v.applyMatrix4(TURN_INV);
     if (v.z > 0) {
       const f = faceShape(v.x, v.y);
       v.z += f.d * S(v.z, 0, 0.04);
@@ -458,17 +468,17 @@ function headAndBody(kit) {
     for (const side of [-1, 1]) {
       const dx = hp.x - side * EYE.x;
       const dy = hp.y - EYE.y;
-      te = Math.max(te, ss(Math.hypot(dx / SPECS.rx, dy / SPECS.ry), 1.18, 0.8));
+      te = Math.max(te, ss(Math.hypot((hp.x - side * SPECS.x) / SPECS.rx, dy / SPECS.ry), 1.22, 0.72));
       tb = Math.max(tb, ss(Math.hypot((hp.x - side * BROWS.x) / BROWS.rx, (hp.y - BROWS.y) / BROWS.ry), 1.25, 0.6));
-      lid = Math.max(lid, Math.exp(-((dx / 0.0105) ** 2)) * ss(dy, 0.002, 0.0065) * ss(dy, 0.0135, 0.008));
+      lid = Math.max(lid, Math.exp(-((dx / 0.0135) ** 2)) * ss(dy, 0.004, 0.0085) * ss(dy, 0.016, 0.0105)); // 윗눈꺼풀 위 그늘
     }
     const bw = 0.026 + 0.012 * ss(hp.y, 0.03, 0.048); // 콧등은 위로 갈수록 넓어져 눈썹 자리와 이어진다
     const bridge = ss(Math.abs(hp.x), bw, bw * 0.5) * ss(hp.y, 0.062, 0.048) * ss(hp.y, SNOUT.yc - 0.01, SNOUT.yc + 0.01); // 콧등이 두 눈 사이로 눈썹 높이까지
-    const T = Math.max(ss(f.r, 1.07, 0.88), te, bridge, tb) * ss(hp.y, 0.066, 0.057) * ss(hn.z, -0.25, 0.2);
+    const T = Math.max(ss(f.r, 1.08, 0.84), te, bridge, tb) * ss(hp.y, 0.068, 0.055) * ss(hn.z, -0.25, 0.2) * ss(Math.abs(hp.x), 0.067, 0.051); // 볼·관자놀이는 검정 (경계는 넓게 부드럽게)
     const c = brow.clone().lerp(muz, ss(f.r, 0.98, 0.6) * ss(hn.y, 0.35, -0.1)).lerp(tip, ss(f.r, 0.55, 0.12)); // 주둥이 옆은 황갈, 콧등·윗면은 옅게, 끝이 가장 밝게
     c.multiplyScalar(1 - 0.8 * f.mouth);
     const out = furC.lerp(c, T);
-    return out.multiplyScalar(1 - 0.4 * lid);
+    return out.multiplyScalar(1 - 0.45 * lid);
   });
   return { mesh: headMesh, local };
 }
@@ -485,21 +495,25 @@ function faceParts(kit, bodyMesh) {
   {
     const hit = onHead(0, NOSE.y);
     const at = hit ? hit.point : new THREE.Vector3(0, NOSE.y, 0.14);
-    const nose = new THREE.SphereGeometry(1, 18, 12);
-    const noseM = new THREE.Matrix4().compose(at.clone().add(new THREE.Vector3(0, 0.001, -NOSE.d * 0.45)), new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.3, 0, 0)), new THREE.Vector3(NOSE.w, NOSE.h, NOSE.d));
+    // 넓고 납작한 코: 둥근 네모 단면(위가 평평)을 앞뒤로 쌓은 덩어리, 코끝이 조금 아래로
+    const nose = loftZ([
+      [-0.012, NOSE.w * 0.86, NOSE.h * 0.9, 0, 0], [-0.004, NOSE.w, NOSE.h, 0, 0.0004], [0.004, NOSE.w * 0.97, NOSE.h * 0.96, 0, 0.0004],
+      [0.009, NOSE.w * 0.82, NOSE.h * 0.74, 0, -0.0004], [0.012, NOSE.w * 0.45, NOSE.h * 0.38, 0, -0.001],
+    ], 20, 0.55);
+    const noseM = new THREE.Matrix4().compose(at.clone().add(new THREE.Vector3(0, 0.001, -0.004)), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0, 0)), new THREE.Vector3(1, 1, 1));
     const out = kit.putM('bear', nose, C.nose, noseM, plain);
-    paint(out, (q, n) => 1 + 0.32 * Math.max(0, n.y) - 0.25 * Math.max(0, -n.y));
+    paint(out, (q, n) => 1 + 0.32 * Math.max(0, n.y) - 0.22 * Math.max(0, -n.y));
     const noseLocal = new THREE.Mesh(nose.clone().applyMatrix4(noseM), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
     nose.dispose();
     for (const side of [-1, 1]) {
-      // 콧구멍: 코 앞 아래쪽 겉면에 붙인 작은 짙은 쉼표꼴 둘
-      const hitN = hitOn(noseLocal, new THREE.Vector3(side * NOSE.w * 0.4, NOSE.y - NOSE.h * 0.32, 0.5), back);
+      // 콧구멍 둘: 코 앞면 아래쪽에 또렷한 짙은 쉼표꼴
+      const hitN = hitOn(noseLocal, new THREE.Vector3(side * NOSE.w * 0.45, NOSE.y - NOSE.h * 0.3, 0.5), back);
       if (!hitN) continue;
       const nz = hitN.face.normal.clone().normalize();
       const nx = new THREE.Vector3(1, 0, 0).addScaledVector(nz, -nz.x).normalize();
       const nb = new THREE.Matrix4().makeBasis(nx, new THREE.Vector3().crossVectors(nz, nx), nz);
-      const nm = new THREE.Matrix4().makeTranslation(hitN.point.x, hitN.point.y, hitN.point.z).multiply(nb).multiply(new THREE.Matrix4().makeRotationZ(side * 0.5)).multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.0006));
-      const nostril = new THREE.CircleGeometry(1, 10).scale(NOSE.w * 0.28, NOSE.h * 0.32, 1);
+      const nm = new THREE.Matrix4().makeTranslation(hitN.point.x, hitN.point.y, hitN.point.z).multiply(nb).multiply(new THREE.Matrix4().makeRotationZ(side * 0.45)).multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.0006));
+      const nostril = new THREE.CircleGeometry(1, 12).scale(NOSE.w * 0.34, NOSE.h * 0.4, 1);
       kit.putM('bear', nostril, C.nostril, nm, plain);
       nostril.dispose();
     }
@@ -520,9 +534,10 @@ function faceParts(kit, bodyMesh) {
         kit.putM('bear', geom, color, m, plain);
         geom.dispose();
       };
-      layer(almond(EYE.w * EYE.rim, EYE.h * 1.42, EYE.droop * 1.3, side), C.eyeRim, 0.0006);
+      layer(almond(EYE.w * EYE.rim, EYE.h * 1.5, EYE.droop * 1.3, side), C.eyeRim, 0.0006, 0, EYE.h * EYE.lid); // 테 — 위로 올려 윗눈꺼풀 선이 굵다
       layer(almond(EYE.w, EYE.h, EYE.droop, side), C.eye, 0.0012);
-      layer(new THREE.CircleGeometry(EYE.shine, 10), C.eyeShine, 0.0018, -side * EYE.w * 0.12, EYE.h * 0.18);
+      layer(new THREE.CircleGeometry(1, 14).scale(EYE.h * EYE.pupil, EYE.h * EYE.pupil * 1.05, 1), C.eyeRim, 0.0015, -side * EYE.w * 0.04, EYE.h * 0.02); // 동공
+      layer(new THREE.CircleGeometry(EYE.shine, 10), C.eyeShine, 0.0019, -side * EYE.w * 0.1, EYE.h * 0.2);
     }
     // 귀: 작고 납작한 컵 (앞·바깥을 보게, 정수리 양옆 위) — 납작한 원판 + 앞면 가운데 컵 안쪽을 어둡게
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2, side * 0.42, side * -0.5, 'YXZ'));
