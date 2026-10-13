@@ -4,12 +4,13 @@
 //   hero=<인물 id>  : 플레이어 겉모습(look) · 플레이어 이름을 그 인물로. 유파·비기·패시브는 지금 규칙대로 무기를 따르고,
 //                     인물의 AI 성격·부활·붉은 안광 같은 고유 능력은 주지 않는다. 투구·판금은 겉모습에 딸려 있어 함께 온다(fighter.js look.helmet·armor)
 //   stage=random    : 판을 열 때 무대를 STAGE_ORDER 안에서 무작위로 (같은 무대 연속 없음, 어두운 홀은 순서표에 없으니 안 나온다). 첫 판(메뉴 뒤)도 무작위
+//   stage=<무대 id> : 그 무대에 고정 (main.js STAGE_PIN — 10/14 고르기 화면에서 여정 밖 무대 잠든 습지를 고를 때)
 //   test=1          : ① 상대는 자기 무기(weapon= 가 상대에게 번지지 않게) ② 이기든 지든 다음 판으로(무대·상대 새로) ③ 메뉴에 '테스트 고르기로' 단추
 //                     ④ 무기 카드 뽑기는 weapon= 가 이미 건너뛴다(main.js startFight FIXED_WEAPON)
 //                     foe=random 이면 상대 후보에서 고른 인물은 뺀다(같은 겉모습 둘이 서지 않게)
 //                   ⑤ 플레이어 고유 동작(unique_assist.js)이 모두 열린다 (UNIQUE_ASSIST.testStage 5 = 비기까지 — 본판은 여정 인장 수, 둘 다 ?uniqueStage=0..5 로 덮음)
 import { CHARACTERS, CHARACTERS_BY_ID, pickCharacterWeapon } from './characters.js';
-import { STAGE_ORDER } from './stages.js';
+import { STAGE_ORDER, STAGE_NAME_KO } from './stages.js';
 
 export const TEST_PICK_URL = './test.html';
 
@@ -18,6 +19,7 @@ export function createTestRoute(params) {
   const heroId = params.get('hero');
   const hero = heroId && heroId !== 'player' ? CHARACTERS_BY_ID[heroId] || null : null;
   const stageRandom = params.get('stage') === 'random';
+  const stagePinned = !stageRandom && STAGE_NAME_KO[params.get('stage')] ? STAGE_NAME_KO[params.get('stage')] : null; // 고른 무대 이름 (메뉴 한 줄용)
   return {
     active,
     hero,
@@ -64,7 +66,7 @@ export function createTestRoute(params) {
       const note = doc.createElement('p');
       note.id = 'testRouteNote';
       note.style.cssText = 'margin:-8px 0 12px;font-size:12px;color:var(--accent);line-height:1.4';
-      note.textContent = `테스트 경로 · ${weaponName} · ${hero ? hero.name : '기본 주인공'} · 상대·무대 무작위 · 고유 동작·비기 모두 열림`; // 고유 동작 해금: 테스트 경로는 모두 (main.js uniqueStageFor test — UNIQUE_ASSIST.testStage)
+      note.textContent = `테스트 경로 · ${weaponName} · ${hero ? hero.name : '기본 주인공'} · ${stagePinned ? `상대 무작위 · 무대 ${stagePinned}` : '상대·무대 무작위'} · 고유 동작·비기 모두 열림`; // 고유 동작 해금: 테스트 경로는 모두 (main.js uniqueStageFor test — UNIQUE_ASSIST.testStage)
       actions.append(btn);
       doc.getElementById('menuSub')?.after(note); // 제목 아래 한 줄 (아래 단추 줄을 두껍게 하지 않게)
     },

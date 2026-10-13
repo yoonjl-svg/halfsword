@@ -1189,7 +1189,11 @@ export class Gait {
     J[l.foot].target.copy(_qS).multiply(_qW);
   }
 
-  /** 이 발이 지난 물리 스텝에 땅에서 받은 수직 힘(N): 물리 엔진의 접촉 충격량 ÷ 시간 */
+  /**
+   * 이 발이 지난 물리 스텝에 땅에서 받은 수직 힘(N): 물리 엔진의 접촉 충격량 ÷ 시간.
+   *  바닥 콜라이더(setSupportFloor 로 알린 것)와의 접촉만 체중 받침으로 센다 — 경계 벽·잠든 습지 석상에 발이 부딪힌 힘은 받침이 아니다
+   *  (10/14 디자인 결정 F, 확인표 1120). 바닥을 알리지 않은 세계(옛 도구)는 전처럼 고정 몸체 접촉을 모두 센다
+   */
   groundForce(l) {
     const f = this.f;
     const w = f.world;
@@ -1197,6 +1201,7 @@ export class Gait {
     _gf.imp = 0;
     _gf.col = col;
     _gf.w = w;
+    _gf.floor = SUPPORT_FLOOR.get(w) ?? -1;
     w.contactPairsWith(col, _gfPair);
     return f.lastDt > 0 ? _gf.imp / f.lastDt : 0;
   }
@@ -1330,12 +1335,21 @@ const _qK = new THREE.Quaternion();
 const _qW = new THREE.Quaternion();
 const _f = { x: 0, y: 0, z: 0 };
 // groundForce용 (매 스텝 함수를 새로 만들지 않게)
-const _gf = { imp: 0, col: null, w: null };
+const _gf = { imp: 0, col: null, w: null, floor: -1 };
 const _gfSum = (m) => {
   for (let i = 0, n = m.numContacts(); i < n; i++) _gf.imp += m.contactImpulse(i);
 };
 const _gfPair = (other) => {
+  if (_gf.floor >= 0) {
+    if (other.handle === _gf.floor) _gf.w.contactPair(_gf.col, other, _gfSum);
+    return;
+  }
   const b = other.parent();
   if (b && b.isFixed()) _gf.w.contactPair(_gf.col, other, _gfSum);
 };
+/** 물리 세계 → 체중을 받치는 바닥 콜라이더 핸들 (main.js newRound · 시뮬 jelly_harness 가 바닥을 만들 때 알린다) */
+const SUPPORT_FLOOR = new WeakMap();
+export function setSupportFloor(world, collider) {
+  SUPPORT_FLOOR.set(world, collider.handle);
+}
 const _p = { x: 0, y: 0, z: 0 };

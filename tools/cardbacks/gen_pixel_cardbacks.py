@@ -597,9 +597,43 @@ def qinglan():
     return pal, t, band, center, 'J'
 
 
+# ── 10/14: 잠든 습지 (샛별 저장소 무대를 옮김 — 그쪽엔 뒷면이 없어 새로 그림, docs/import/sluice_port_2026-10-14.md) ──
+def sluice():
+    # 잠든 습지: 짙은 늪빛 바탕에 이끼빛 마름모 격자, 가운데 석상인 말레이곰의 얼굴(둥근 귀 · 잿빛 머리 · 황갈 주둥이 · 짙은 눈·코)과
+    # 물방울이 떨어진 둥근 물결을 번갈아. 띠는 물 위로 솟은 갈대, 가운데는 '해곰'이라는 이름의 해(크림 가운데 · 주황 해 · 여덟 햇살 —
+    # 180° 대칭). 주황은 해 한 곳만 쓴다(무대에서도 곰 가슴의 주황이 단 하나의 강조색).
+    pal = dict(SHARED, B='#182a22', K='#2f5543', D='#6c6e7b', M='#c69c66', Q='#e0862e', C='#f0d5a0', T='#6fae9f', R='#5f7f45')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    bear = ['.DD....DD.', 'DDDD..DDDD', 'DDDDDDDDDD', 'DDODDDDODD', 'DDDDMMDDDD', 'DDDMOOMDDD', '.DDMMMMDD.', '..DDDDDD..']  # 곰 얼굴: 둥근 귀 · 짙은 눈 · 황갈 주둥이 · 넓은 코
+    ripple = ['.TTTT.', 'T....T', 'T.CC.T', 'T.CC.T', 'T....T', '.TTTT.']  # 물방울과 둥근 물결 (스스로 180° 대칭)
+    stamp(t, bear, 8, 8)
+    stamp(t, ripple, 16, 16)
+    stamp(t, ripple, 16, 0)
+    sym_tile(t)
+    band = band_rows(['.R...R', 'RR..RR', 'RR.RRR', 'TTTTTT'], 'B')  # 물 위로 솟은 갈대
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            a = math.atan2(dy, dx)
+            ray = abs(((a + math.pi / 8) % (math.pi / 4)) - math.pi / 8)  # 가장 가까운 햇살까지의 각
+            if d <= 2.0:
+                center[y][x] = 'C'
+            elif d <= 3.4:
+                center[y][x] = 'Q'
+            elif ray < 0.32:
+                center[y][x] = 'Q'
+    return pal, t, band, center, 'Q'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)

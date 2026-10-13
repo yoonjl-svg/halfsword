@@ -6,6 +6,7 @@ import { Fighter, GROUND_GROUPS } from '../../src/fighter.js';
 import { LOOKS } from '../../src/looks.js';
 import { AI } from '../../src/ai.js';
 import { Combat } from '../../src/combat.js';
+import { setSupportFloor } from '../../src/gait.js';
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
@@ -31,7 +32,8 @@ export function newRound(opts = {}) {
   const eventQueue = new RAPIER.EventQueue(true);
   const colliderInfo = new Map();
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-  world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
+  const floor = world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
+  setSupportFloor(world, floor); // 발 체중 받침은 이 바닥 접촉만 (main.js newRound 와 같게 — 벽에 닿은 발 힘은 받침이 아님, 10/14)
   const n = 32;
   const R = ARENA.radius + 0.25;
   for (let i = 0; i < (opts.walls === false ? 0 : n); i++) {
