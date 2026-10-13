@@ -533,10 +533,11 @@ export function chainRange(d, view) {
 //   combo(이베리아) = 쉼(SECRET.playerChainGap 초) 없이 이어진 베기 수 · firstHit(중국) = 쉬었다가 들어가며 친 첫 베기가 맞음(상대 아픔 +0.05 — AI 와 같은 눈, 막힘 제외)
 // ─────────────────────────────────────────────────────────────
 export class PlayerSecretWatch {
-  constructor(me, foe) {
+  /** locked: 이 판엔 비기를 아직 못 배움 (사장님 결정 10/13 23:1x — 손에 든 무기 유파 숙련도 5 에서 비기, main.js) → S = null (창이 안 열린다 · 무유파와 같은 길) */
+  constructor(me, foe, { locked = false } = {}) {
     this.me = me;
     this.foe = foe;
-    this.S = playerSecretOf(me);
+    this.S = locked ? null : playerSecretOf(me);
     this.sense = new Senses(me, foe);
     this.ev = { armed: true, off: 0 };
     this.open = null; // 열린 창 { S, ctx, t }

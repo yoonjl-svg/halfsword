@@ -20,11 +20,12 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
+import { aiUniqueStages } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
 import { Emotions, emoMods } from './emotions.js';
@@ -56,6 +57,8 @@ export class AI {
    * 항목은 전부 예전과 같은 rand() 호출로 채운다).
    *  persona.school: 유파 꾸러미 id (schools.js). 자세·기술·속임수·막기 자세·간격 상수를 여기서 읽는다. 안 주면 롱소드
    *  persona.level:  AI_LEVELS(난이도) 위에 덮어씌우는 값 (reaction·guardChance·counter·feint·read·strength 등)
+   *  persona.proficiency: 숙련도 0~5 (10/13 — characters.js 가 { 유파: 숙련도 } 로 채운다, 숫자면 손에 든 무기 유파의 값). 손에 든 유파의 고유 동작 가운데
+   *                  단계 ≤ 숙련도인 것만 쓰고, 비기는 5 에서만. 없으면 난이도 이름에서(AI_PROFICIENCY.ofLevel — normal = 2). levelName 은 실력 숫자 이름 그대로(인물은 숙련도에서 고른 것)
    *  persona.pers:   성격(this.pers) 위에 덮어씌우는 값. guardPref/techPref는 자세·기술 이름별로 부분 지정 가능
    */
   constructor(me, foe, levelName = 'normal', persona = null) {
@@ -81,8 +84,10 @@ export class AI {
     //  간격 상수 (가슴과 가슴 사이 수평 거리, m): 꾸러미 measure 는 그 꾸러미를 잰 무기(대부분 롱소드)의 값이라, 칼이 그보다 짧거나 길면
     //  실측 비율만큼 줄이거나 늘린다 — 안 그러면 짧은 칼을 쥔 쪽이 롱소드 간격에서 공격을 걸었다가 정작 닿지도 못하고 상대 롱소드에만 맞는다
     //  (무기 밸런스 시뮬로 확인한 근본 원인). 인물 꾸러미(청강검·나뭇가지·복제품)는 measure 가 이미 그 무기 실측이라 같은 무기면 1배 그대로
-    const art = resolveSwordArt(me.weapon, this.persona);
+    //  숙련도 (10/13): 손에 든 유파의 고유 동작은 단계 ≤ 숙련도인 것만 꾸러미에 (sword_art.js applySchoolArt) · 비기는 숙련도 5 에서만 (아래 this.secret)
+    const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.persona.proficiency ?? AI_PROFICIENCY.ofLevel[levelName] ?? AI_PROFICIENCY.ofLevel.normal });
     this.art = art;
+    this.proficiency = art.proficiency;
     this.school = art.school;
     // 유파 막기 자리 몸꼴 (10/11 — schools.js TRADITIONS[유파].parryCover, 중국 · 독일 왕관 10/12): 막는 동안(mode 'defend', 피하기 아님)만 그 줄의 막기 자세로 손·칼끝·몸을 덮는다.
     //  14 자리 섞기에 넣으면 그 자리를 지나는 베기 길이 휘고 원전 꼴(가로 든 칼)이 섞여 사라져서 덧씌우기로 둔다(frames.js COVERS 와 같은 까닭). 칸 없는 유파는 아무것도 안 붙인다(바이트 그대로)
@@ -214,18 +219,22 @@ export class AI {
     this.stats = { attacks: 0, feints: 0, parries: 0, voids: 0, counters: 0, preempts: 0, followUps: 0, landed: 0, aborted: 0 };
     // 패시브 고유 동작 (10/9, docs/strike/school_passive_2026-10-09.md): 이 유파의 passives 가운데 ai:false 아닌 것 (SKILL.schoolArt 1 일 때 — 유파 자료).
     //  독일 셋은 ai:false → 롱소드 AI 는 빈 목록 → 아래 모든 자리에서 난수도 코드 길도 전과 같다. 도구(motion_lab)는 이 목록을 갈아 끼워 잰다
-    this.passives = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false) : [];
+    //  숙련도 (10/13): 단계 표에 이름이 있는 패시브(동방 자→격 ciji — yaoji 이음, 4 단계)는 단계 ≤ 숙련도일 때만. 그 밖의 패시브는 그대로
+    const ST = aiUniqueStages(art.tradition);
+    const open = (map, name) => !map.has(name) || map.get(name) <= this.proficiency;
+    this.passives = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name)) : [];
     this.passiveAtk = null; // 지금 공격을 시작한 패시브 이름 (startAttack 이 지운다)
     this.pendingPassive = null; // 물러남 끝에 낼 패시브 (斂翅 꼴 at:'end')
     this.stepinArmed = true; // foeStepIn: 상대가 걸어 드는 한 번에 한 번만 굴린다
     // 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 … 화면 중앙에 기술명', docs/strike/tech_cue_2026-10-09.md):
     //  이 유파 고유 동작(길·속임수) 이름 표 — 꾸러미에 실제로 들어간 것(SKILL.schoolArt 켬 · ai:false 아님)만. 읽기만 하고 결정에는 안 쓴다(난수 없음)
-    const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter) : [];
+    const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter && open(ST.unique, u.name)) : []; // 숙련도로 뺀 것은 꾸러미에 없다
     this.uniqueByName = new Map(UQ.map((u) => [u.feint ? u.feint.name : u.name, u]));
     this.standoffArmed = true; // standoff: 대치 한 번에 한 번만 굴린다
     // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나 (SKILL.schoolArt·schoolSecret 일 때).
     //  굴림이 없다 — 조건이 차면 확정. 무유파는 null → 아래 비기 자리들은 난수도 코드 길도 전과 같다
-    this.secret = SKILL.schoolArt && SKILL.schoolSecret ? TRADITIONS[art.tradition]?.secret ?? null : null;
+    //  숙련도 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀'): 손에 든 유파의 숙련도가 AI_PROFICIENCY.secretAt(5) 아래면 null — 무유파처럼 비기 자리들이 전 코드 그대로 지나간다
+    this.secret = SKILL.schoolArt && SKILL.schoolSecret && this.proficiency >= AI_PROFICIENCY.secretAt ? TRADITIONS[art.tradition]?.secret ?? null : null;
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)

@@ -42,6 +42,7 @@ import { MOTION, buildFrameTable, styleTech, styleFeints, frameWatchGuards, weig
 import { TRADITIONS, SCHOOL_ART, traditionOf, schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
 import { MEASURED, WEAPON_BASELINE } from './weapon_measured.js';
+import { aiUniqueStages } from './unique_assist.js'; // AI 숙련도 거르기 (10/13): 고유 동작 단계 표는 그 파일 한 곳
 
 const LS_MEASURED = MEASURED.longsword;
 
@@ -100,8 +101,10 @@ function restGuardOf(names, tradition) {
  *  고유 동작(SCHOOL_ART.unique — 옛 이름 newTech): 유파 unique 가운데 ai:false 아닌 것을 mergeUnique 로 — 길·속임수는 가중치 뒤(유파 가중치를 받지 않는다),
  *   맞받아치기 꼴은 counterArt 뒤(같은 줄이면 고유 동작이 이긴다).
  *  맞받아치기(SCHOOL_ART.counter): 유파 counterArt — 그 이름이 모두 이 꾸러미 기술에 있을 때만(없는 기술을 고르면 AI 가 멈춘다)
+ *  숙련도(prof — 10/13 사장님 '숙련도 수치에 따라 쓸지 말지'): null 이면 거르지 않는다(플레이어·도구). 숫자면 고유 동작 단계 표(unique_assist.js aiUniqueStages)에서
+ *   단계 > prof 인 것을 뺀다(표에 없는 것 — 이베리아 rodaCounter — 은 그대로). 비기는 숙련도 5 에서만이라(ai.js) 그때는 고유 동작이 다 열려 비기가 찾는 이름이 모두 있다
  */
-function applySchoolArt(school, tradition, frame, style) {
+function applySchoolArt(school, tradition, frame, style, prof = null) {
   const T = TRADITIONS[tradition];
   if (!school || !T) return school;
   let out = school;
@@ -113,7 +116,9 @@ function applySchoolArt(school, tradition, frame, style) {
     });
     out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
   }
-  const uq = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false) : [];
+  const uqAll = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false) : [];
+  const stage = prof == null ? null : aiUniqueStages(tradition).unique;
+  const uq = stage ? uqAll.filter((u) => !stage.has(u.name) || stage.get(u.name) <= prof) : uqAll; // 숙련도 거르기 (10/13)
   if (uq.length) out = mergeUnique(out, uq.filter((u) => !u.counter)); // 고유 동작(길·속임수) — 맞받아치기 꼴은 유파 counterArt 뒤에
   const C = SCHOOL_ART.counter ? T.counterArt : null;
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
@@ -196,6 +201,13 @@ function measureScaler(school) {
   };
 }
 
+/** 숙련도 풀기 (10/13): 숫자면 그대로, { 유파: 숙련도 } 표면 이 유파 값(없으면 0 — 다른 유파 기본), 없으면 null(거르지 않음) */
+function proficiencyIn(p, tradition) {
+  if (p == null) return null;
+  if (typeof p === 'number') return p;
+  return p[tradition] ?? 0;
+}
+
 /** 처음 읽을 때 한 번 만드는 칸 */
 function lazy(obj, key, make) {
   Object.defineProperty(obj, key, {
@@ -216,6 +228,8 @@ function lazy(obj, key, make) {
  *  opts.lib    동작 라이브러리를 입히나 (기본 = 본판 스위치 MOTION.lib). 옛 이름 applyMotionLibrary·motionFor 는 true 로 부른다
  *  opts.base   라이브러리 표의 바탕 표 (기본 = 이 무기의 무기별 표). applyMotionLibrary 는 검객이 지금 쥔 표를 넘긴다 (null = 옛 바탕)
  *  opts.school 꾸러미 객체를 직접 (옛 이름 libSchool 호환 — 인물 대신)
+ *  opts.proficiency AI 숙련도 (10/13): 숫자(이 무기 유파의 숙련도) 또는 { 유파: 숙련도 } 표(없는 유파 = 0). 없으면 고유 동작을 거르지 않는다(플레이어·도구) —
+ *               풀린 값은 art.proficiency (null = 거르지 않음)
  */
 export function resolveSwordArt(spec, persona = null, opts = {}) {
   const w = spec ?? {};
@@ -245,6 +259,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
     caps: { grip: w.grip ?? null, maxAimTorque: w.controlOverrides?.maxAimTorque ?? null, fromGrip: !!w.capFromGrip },
     restGuard: restGuardOf(names, tradition),
     tradition,
+    proficiency: proficiencyIn(opts.proficiency, tradition),
     offArm: TRADITIONS[tradition]?.offArm ?? null, // 유파 빈팔 자세 (10/10 고증 — schools.js offArm, fighter.js applyPose 가 읽는다). 칸 없는 유파 = null(오늘 그대로)
     lib,
   };
@@ -252,7 +267,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   lazy(art, 'school', () => {
     const pkg = 'school' in opts ? opts.school : schoolOf(persona?.school ?? w.id); // 인물이 없으면 무기 유파 꾸러미(weaponSchool) — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율)
     const s = lib ? mergeLibSchool(pkg, spec) : pkg;
-    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style) : s;
+    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style, art.proficiency) : s;
   });
   lazy(art, 'tech', () => art.school.tech);
   lazy(art, 'feints', () => art.school.feints);
