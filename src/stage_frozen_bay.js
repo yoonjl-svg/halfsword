@@ -290,6 +290,7 @@ function baikalBackdrop(scene) {
   c.put('cross', box(0.8, 0.15, 0.15), CR, [0, cy + 0.66, -0.3]);
   c.put('cross', box(0.55, 0.13, 0.13), CR, [0, cy + 0.15, -0.3], [0, 0, 0.42]);
   c.pop();
+  chapelBear(c, out);
   const mats = { log: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }), roof: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }),
     dome: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }), cross: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }) };
   for (const [bin, mat] of Object.entries(mats)) {
@@ -298,6 +299,44 @@ function baikalBackdrop(scene) {
     for (const g of c.bins[bin]) g.dispose();
   }
   return out;
+}
+
+/** 예배당 앞에 앉아 결투를 지켜보는 북극곰 (10/13 23:0x 사장님 '그 앞에 북극곰이 앉아서 결투를 지켜보게').
+ *  예배당 박공벽(결투장 쪽을 보는 벽 — 문은 반대쪽) 앞 BEAR 자리에 엉덩이를 깔고 앞다리를 곧게 세워 앉아 결투장 한가운데(0, 0)를 본다.
+ *  앉은 키 약 1.66 m(실제 곰 크기). 예배당과 같은 Kit·같은 'log' 통에 합쳐 그리기 호출은 늘지 않는다(움직임 없음 — 188 m 에서 몇 픽셀이라 숨쉬기·고개 돌림이 안 보인다).
+ *  예배당처럼 안개를 끄고 Lambert 꼭짓점 색으로: 털은 크림빛 흰색, 코·눈은 검게. 예배당 바닥(1.7 m)이 비탈 위라 곰은 벽보다 낮게 앉고,
+ *  경기 카메라에선 어두운 예배당 바로 아래 기슭 띠 앞의 밝은 점(폰 가로 키 약 4 CSS px)으로 읽힌다.
+ *  난수: Kit 제 것(밝기 흔들림)만 — 무대의 다른 흩뿌림 순서는 그대로 */
+const BEAR = { side: 0, front: 3.1, y: 0 }; // 예배당 기준(박공벽 앞쪽으로 front m, 옆으로 side m). y 는 월드 높이 — 비탈이 얼음(y 0)과 만나는 기슭 끝에 앉는다(예배당 바닥 1.7 m 는 비탈 위)
+function chapelBear(c, out) {
+  const fx = -Math.sin(CHAPEL.rotY), fz = -Math.cos(CHAPEL.rotY); // 예배당 -Z (박공벽이 보는 쪽)
+  const sx = Math.cos(CHAPEL.rotY), sz = -Math.sin(CHAPEL.rotY);
+  const x = CHAPEL.x + fx * BEAR.front + sx * BEAR.side, z = CHAPEL.z + fz * BEAR.front + sz * BEAR.side;
+  out.bear = { x: +x.toFixed(2), y: BEAR.y, z: +z.toFixed(2), height: 1.66 };
+  const n0 = c.bins.log.length;
+  c.push([x, BEAR.y, z], Math.atan2(-x, -z)); // 곰의 +Z 가 결투장 한가운데를 본다
+  const FUR = 0xe6dcc4, FUR2 = 0xd6cdb8, DARK = 0x16181c;
+  const ball = new THREE.SphereGeometry(1, 7, 5);
+  const fur = { vary: 0, noise: 0.03 };
+  const blob = (pos, s, rot, col = FUR) => c.put('log', ball, col, pos, rot, s, col === DARK ? { vary: 0, noise: 0 } : fur);
+  blob([0, 0.36, -0.22], [0.48, 0.37, 0.5]); // 엉덩이 (깔고 앉음)
+  blob([0, 0.78, -0.06], [0.4, 0.55, 0.38], [-0.22, 0, 0]); // 몸통 (위가 앞으로 조금 기욺)
+  blob([0, 1.1, 0.1], [0.34, 0.32, 0.33], undefined, FUR2); // 가슴·어깨
+  limb(c, 'log', [0, 1.14, 0.12], [0, 1.4, 0.3], 0.23, 0.15, FUR, fur, 7); // 긴 목
+  blob([0, 1.47, 0.36], [0.16, 0.15, 0.2]); // 머리
+  limb(c, 'log', [0, 1.45, 0.48], [0, 1.41, 0.66], 0.095, 0.06, FUR, fur, 7); // 주둥이
+  blob([0, 1.415, 0.665], [0.04, 0.035, 0.035], undefined, DARK); // 코
+  for (const s of [-1, 1]) {
+    blob([s * 0.075, 1.52, 0.49], [0.024, 0.024, 0.02], undefined, DARK); // 눈
+    blob([s * 0.11, 1.6, 0.3], [0.05, 0.045, 0.03]); // 귀
+    limb(c, 'log', [s * 0.17, 1.0, 0.2], [s * 0.17, 0.06, 0.34], 0.12, 0.085, FUR, fur, 6); // 곧게 세운 앞다리
+    blob([s * 0.17, 0.045, 0.39], [0.1, 0.05, 0.14]); // 앞발
+    blob([s * 0.3, 0.27, -0.04], [0.16, 0.24, 0.3], [0.25, 0, 0], FUR2); // 접은 뒷다리 허벅지
+    blob([s * 0.31, 0.05, 0.2], [0.11, 0.05, 0.2]); // 앞으로 뻗은 뒷발
+  }
+  ball.dispose();
+  c.pop();
+  out.bear.triangles = c.bins.log.slice(n0).reduce((t, g) => t + g.attributes.position.count / 3, 0);
 }
 
 function dawnSky(scene) {
