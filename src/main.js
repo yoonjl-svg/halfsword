@@ -527,6 +527,7 @@ function newRound(weaponId) {
     configureWetlandMovement(f, stages.id); // 진흙 웅덩이 감속 (잠든 습지만)
     f.arenaObstacle = arenaStone?.navigation ?? null; // AI 돌아가기가 읽는다 (석상 없으면 null — 아무 일 없음)
   }
+  arena?.watchFighters?.([player, enemy]); // 잠든 습지: 웅덩이를 밟으면 물결 (그림만 — 다른 무대는 이 함수가 없다)
   // 진짜 엑스칼리버의 기운 (보여 주기만)
   for (const a of auras) a.dispose();
   auras = [player, enemy].map(attachAura).filter(Boolean);
@@ -2148,6 +2149,7 @@ window.game = {
       configureWetlandMovement(f, stages.id);
       f.arenaObstacle = arenaStone?.navigation ?? null;
     }
+    arena?.watchFighters?.([player, enemy]);
   },
   AI,
   settings,

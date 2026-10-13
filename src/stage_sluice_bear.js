@@ -10,6 +10,8 @@
 //   1c(감독 검수 · 사장님 10/14 03:5x '눈과 눈 주위가 중요'): 주둥이를 머리 고리에서 뽑아낸 한 덩어리(아래턱까지)로, 얼굴 황갈을 꼭짓점
 //   그러데이션으로(날카로운 테두리 없음), 눈을 작은 아몬드꼴·바깥 눈꼬리 처짐·쑥 들어간 눈두덩·짙은 테·반사점으로, 가슴 파임을 넓은 U 로 고쳤다.
 //   1d(감독 검수): 황갈 판을 주둥이·두 눈 바로 둘레·눈 위로 좁히고(볼·관자놀이 검정), 눈 1.3 배·윗눈꺼풀 짙은 선, 주둥이 15 % 짧고 넓게, 넓고 납작한 코.
+//   1e(감독 검수): 갈색 홍채·더 짙은 동공·옅은 눈 둘레(구슬 눈 → 부드러운 눈), 아래눈꺼풀 선은 아주 옅게, 이마 황갈 경계를 콧등 위가 가장 높은
+//   둥근 아치로(부드럽게), 아래턱 20 % 짧게·입선을 코 쪽으로, 머리통 위쪽을 넓고 평평하게·귀를 조금 위로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { Kit } from './stage_kit.js';
@@ -35,8 +37,11 @@ export const BEAR_COLORS = Object.freeze({
   brow: 0xd2b088, // 두 눈을 감싸는 '안경'·눈 위 눈썹 자리 — 옅은 황갈 (이마 검정으로 부드럽게 녹아든다)
   nose: 0x66524d, // 큰 코 (사진은 짙은 회갈색 — 윗면이 조금 밝고 아래에 콧구멍 둘)
   nostril: 0x1d1514,
-  eye: 0x4a2c1c, // 짙은 갈색 눈동자 (가운데 동공은 더 짙게)
-  eyeRim: 0x120c0a, // 눈 가장자리 얇은 짙은 테
+  eye: 0x5a3a22, // 짙은 갈색 홍채 (1e — 사진 홍채 빛, 가장자리는 조금 더 짙게)
+  iris: 0x6e4a2c, // 홍채 안쪽 (동공 둘레가 조금 밝아 눈동자로 읽힌다)
+  pupil: 0x1a100b, // 동공 — 홍채보다 짙은 거의 검은 갈색
+  eyeRim: 0x120c0a, // 윗눈꺼풀 짙은 선 (아래눈꺼풀 쪽은 거의 안 보이게)
+  eyeSkin: 0xdcc39c, // 눈 바로 둘레의 옅은 살빛 (사진은 눈 둘레 피부가 옅어 눈이 부드럽다)
   eyeShine: 0xf1ebdf, // 아주 작은 반사점
   claw: 0xcfc6b4, // 길고 아래로 휜 밝은 회백 발톱
   earIn: 0x151417, // 귀 컵 안쪽
@@ -47,11 +52,11 @@ export const BEAR_COLORS = Object.freeze({
 const TAU = Math.PI * 2;
 
 // ── 사진에서 잰 몸 (정면 폭은 사진, 깊이 d·앞뒤 cz 는 추정) ─────────────────────────────
-// 머리·목·몸통을 고리 하나로 [t, 반폭 w, 반깊이 d, 앞뒤 cz]: 둥근 정수리 → 볼(가장 넓은 곳, 머리 폭 0.188 — 어깨보다 확실히 좁게)
+// 머리·목·몸통을 고리 하나로 [t, 반폭 w, 반깊이 d, 앞뒤 cz]: 넓고 조금 평평한 정수리(1e — 관자놀이 쪽을 약 10 % 넓힘) → 볼(가장 넓은 곳, 머리 폭 0.192 — 어깨보다 확실히 좁게)
 //  → 굵은 목이 이음매 없이 비스듬한 어깨로 흘러내림 → 옆선이 거의 곧은 긴 몸통 → 아랫배 살짝 불룩 → 엉덩이가 가장 넓다(0.31) → 가랑이(t 0.817)
 const BODY = [
-  [0, 0.004, 0.004, 0.022], [0.005, 0.032, 0.03, 0.023], [0.013, 0.054, 0.049, 0.025], [0.026, 0.071, 0.064, 0.027],
-  [0.043, 0.083, 0.074, 0.029], [0.063, 0.09, 0.08, 0.03], [0.085, 0.093, 0.082, 0.03], [0.108, 0.094, 0.082, 0.027],
+  [0, 0.006, 0.005, 0.022], [0.004, 0.04, 0.031, 0.023], [0.011, 0.062, 0.05, 0.025], [0.022, 0.078, 0.063, 0.027],
+  [0.037, 0.089, 0.073, 0.029], [0.057, 0.095, 0.08, 0.03], [0.08, 0.096, 0.082, 0.03], [0.106, 0.095, 0.082, 0.027],
   [0.13, 0.099, 0.084, 0.021], [0.152, 0.105, 0.089, 0.013], [0.178, 0.113, 0.096, 0.009], [0.205, 0.119, 0.103, 0.0075],
   [0.24, 0.124, 0.109, 0.0075], [0.29, 0.128, 0.113, 0.007], [0.35, 0.129, 0.114, 0.006], [0.42, 0.128, 0.1115, 0.0055],
   [0.5, 0.125, 0.11, 0.0075], [0.57, 0.122, 0.112, 0.011], [0.63, 0.123, 0.117, 0.015], [0.68, 0.131, 0.12, 0.012],
@@ -90,20 +95,22 @@ const CLAW = { count: 5, baseT: 0.624, spread: 0.05, inward: 0.011, drop: 0.049,
 const HEAD_SHIFT = 0.012; // 사진의 머리(두 귀 가운데)는 몸 가운데보다 키의 0.012 오른쪽 — 머리 고리를 그만큼 옮기고 목에서 0 으로 잇는다
 const HEAD_CENTER = [HEAD_SHIFT, 0.921, 0.03]; // 몸 좌표 (Y = 1 − t)
 // 고개: 곰 왼쪽으로 조금 돌림(감독 측정: 코가 두 눈 가운데보다 약 9 px = 키의 0.02 오른쪽, 두 눈 (350, 66)·(383, 65)) · 갸웃은 아주 작게.
-//  머리통은 둥근 고리라 그대로 두고 얼굴(주둥이·눈·무늬·귀)만 돌린다
+//  얼굴(주둥이·눈·무늬·귀)은 이 돌림을 따르고, 머리통 고리도 같은 각만큼 비틀어 목에서 0 으로 잇는다 (1d)
 const HEAD_TURN = { yaw: 0.36, pitch: 0.02, roll: -0.02 }; // rad (확인표 1114)
 // 얼굴은 머리 고리를 머리 좌표 앞(+z)으로 밀어 깎는다 (주둥이·아래턱이 머리에서 솟은 한 덩어리 — 1c).
-//  주둥이: 바닥 타원(가운데 y −0.014, 반폭 0.057 — 윗입술 자리가 넓다, 위로 0.046 = 두 눈 사이 콧등 · 아래로 0.053 = 턱 끝)에서 끝으로 갈수록
+//  주둥이: 바닥 타원(가운데 y −0.014, 반폭 0.057 — 윗입술 자리가 넓다, 위로 0.046 = 두 눈 사이 콧등 · 아래로 0.0424 = 턱 끝)에서 끝으로 갈수록
 //  가늘어지는 짧고 넓적한 원뿔꼴, 끝까지 0.049 앞으로(1d: 15 % 짧게). 아래쪽(턱)은 덜 나온다. 다문 입선은 주둥이 아래쪽의 얕은 홈 (양 끝이 살짝 처짐)
-const SNOUT = { yc: -0.014, a: 0.057, chinA: 0.04, up: 0.046, down: 0.053, out: 0.049, flat: 0.26, chin: 0.3 };
-const MOUTH = { y: -0.04, droop: 0.004, half: 0.031, depth: 0.0036, width: 0.0028 };
+const SNOUT = { yc: -0.014, a: 0.057, chinA: 0.04, up: 0.046, down: 0.0424, out: 0.049, flat: 0.26, chin: 0.3 }; // 1e: 아래턱(down) 0.053 → 0.0424 (20 % 짧게)
+const MOUTH = { y: -0.035, droop: 0.004, half: 0.031, depth: 0.0036, width: 0.0028 }; // 1e: 입선 −0.04 → −0.035 (코 쪽으로)
 // 눈 (감독 측정 10/14: 두 눈 사이 키의 0.073 · 눈 ~ 코 세로 0.034 · 눈 t 0.056): 작은 아몬드꼴, 바깥 눈꼬리가 살짝 처진다.
 //  쑥 들어간 눈 — 눈자리를 얕게 파고(socket) 위 눈두덩(brow)을 살짝 내밀어 눈 위에 그늘, 가장자리에 얇은 짙은 테, 짙은 갈색 눈동자에 반사점 하나
-const EYE = { x: 0.039, y: 0.028, w: 0.028, h: 0.0185, droop: 0.0045, tilt: 0.12, rim: 1.16, lid: 0.07, pupil: 0.5, shine: 0.0021, socket: 0.0048, brow: 0.0052 };
-const EAR = { x: 0.092, y: 0.04, z: -0.012, r: 0.0175, thick: 0.007 }; // 작고 납작한 컵 귀, 정수리 양옆 위 (사진 귀 가운데 (309, 62)·(396, 66))
+const EYE = { x: 0.039, y: 0.028, w: 0.028, h: 0.0205, droop: 0.0045, tilt: 0.12, rim: 1.12, rimH: 1.3, iris: 0.5, pupil: 0.32, shine: 0.0018, socket: 0.0048, brow: 0.0052 };
+const EAR = { x: 0.098, y: 0.044, z: -0.012, r: 0.0175, thick: 0.007 }; // 작고 납작한 컵 귀, 넓어진 정수리 양옆 위 모서리 (1e: 조금 위·바깥으로 — 사진 귀 가운데 (309, 62)·(396, 66))
 // 얼굴 황갈 자리 (머리 좌표, 좌우 대칭): 주둥이 덩어리 + 두 눈을 감싸는 '안경' + 콧등 + 눈 위 눈썹 자리 둘. 모두 부드러운 가장자리
 const SPECS = { x: 0.036, rx: 0.0175, ry: 0.016 }; // 눈마다 감싸는 옅은 황갈 타원 — 바깥 끝이 눈꼬리보다 조금만 넓게 (1d)
 const BROWS = { x: 0.034, y: 0.047, rx: 0.017, ry: 0.0115 }; // 눈썹 자리 (콧등과 이어진다)
+// 이마 황갈 위 경계 (1e): 콧등 위가 가장 높고(y 0.049 — 사진 t 0.031) 바깥 눈썹 쪽으로 둥글게 내려가는 아치(눈썹 가운데 0.041 · 바깥 눈꼬리 0.027) — y = top − drop·(|x|/span)², 경계 폭 ±soft
+const BROW_ARCH = { top: 0.049, drop: 0.022, span: 0.058, soft: 0.0075 };
 const NOSE = { y: -0.004, w: 0.0235, h: 0.0115, d: 0.012 }; // 넓고 납작한 코 — 폭 0.047, 위가 평평, 주둥이 끝 위 (사진 코 가운데 (376, 81), 눈 ~ 코 세로 키의 0.034)
 
 // 가슴 말굽: 사진에서 줄마다 잰 주황 칸 [t, 왼쪽 바깥, 왼쪽 안, 오른쪽 안, 오른쪽 바깥] (안쪽 둘이 null 이면 가운데가 이어진 줄).
@@ -417,7 +424,7 @@ function chestPatch(kit, bodyMesh) {
 }
 
 /** 머리·목·몸통 한 고리(앞쪽 촘촘): 머리 좌표 앞으로 밀어 주둥이·아래턱·눈자리를 깎고, 꼭짓점 색 그러데이션으로 얼굴 황갈을 칠한다.
- *  머리통은 돌리지 않고 얼굴 쪽 깎기·칠·조각만 고개 돌림(TURN)을 따른다 */
+ *  머리통 고리는 고개 돌림만큼 비틀어(목에서 0) 얼굴 쪽 깎기·칠·조각과 함께 돈다 (1d) */
 function headAndBody(kit) {
   const C = BEAR_COLORS;
   // 머리는 잘게(HEAD_T), 그 아래 몸통은 BODY 표 고리 그대로 — 고리 하나라 목에 이음매가 없다
@@ -454,6 +461,7 @@ function headAndBody(kit) {
   const tip = new THREE.Color(C.muzzleTip);
   const muz = new THREE.Color(C.muzzle);
   const brow = new THREE.Color(C.brow);
+  const eyeSkin = new THREE.Color(C.eyeSkin);
   const hp = new THREE.Vector3();
   const hn = new THREE.Vector3();
   paint(headMesh, (p, n) => {
@@ -465,20 +473,28 @@ function headAndBody(kit) {
     let te = 0;
     let tb = 0;
     let lid = 0;
+    let skin = 0;
+    let under = 0;
     for (const side of [-1, 1]) {
       const dx = hp.x - side * EYE.x;
       const dy = hp.y - EYE.y;
       te = Math.max(te, ss(Math.hypot((hp.x - side * SPECS.x) / SPECS.rx, dy / SPECS.ry), 1.22, 0.72));
       tb = Math.max(tb, ss(Math.hypot((hp.x - side * BROWS.x) / BROWS.rx, (hp.y - BROWS.y) / BROWS.ry), 1.25, 0.6));
       lid = Math.max(lid, Math.exp(-((dx / 0.0135) ** 2)) * ss(dy, 0.004, 0.0085) * ss(dy, 0.016, 0.0105)); // 윗눈꺼풀 위 그늘
+      const de = Math.hypot(dx / (EYE.w * 0.62), (dy - EYE.h * 0.05) / (EYE.h * 0.78)); // 눈 바로 둘레 (1 ≈ 눈 테두리)
+      skin = Math.max(skin, ss(de, 2.1, 1.25)); // 옅은 살빛 고리 (1e — 사진은 눈 둘레 피부가 옅다)
+      under = Math.max(under, Math.exp(-((dx / 0.012) ** 2)) * Math.exp(-(((dy + EYE.h * 0.5) / 0.0024) ** 2))); // 아래눈꺼풀 선 — 아주 옅게
     }
-    const bw = 0.026 + 0.012 * ss(hp.y, 0.03, 0.048); // 콧등은 위로 갈수록 넓어져 눈썹 자리와 이어진다
-    const bridge = ss(Math.abs(hp.x), bw, bw * 0.5) * ss(hp.y, 0.062, 0.048) * ss(hp.y, SNOUT.yc - 0.01, SNOUT.yc + 0.01); // 콧등이 두 눈 사이로 눈썹 높이까지
-    const T = Math.max(ss(f.r, 1.08, 0.84), te, bridge, tb) * ss(hp.y, 0.068, 0.055) * ss(hn.z, -0.25, 0.2) * ss(Math.abs(hp.x), 0.067, 0.051); // 볼·관자놀이는 검정 (경계는 넓게 부드럽게)
+    const bw = 0.026 + 0.02 * ss(hp.y, 0.03, 0.05); // 콧등은 위로 갈수록 넓어져 눈썹 자리와 한 판이 된다 (1e — 아치 안이 비지 않게)
+    const bridge = ss(Math.abs(hp.x), bw, bw * 0.5) * ss(hp.y, 0.08, 0.062) * ss(hp.y, SNOUT.yc - 0.01, SNOUT.yc + 0.01); // 콧등이 두 눈 사이로 이마 아치까지
+    const A = BROW_ARCH;
+    const archTop = A.top - A.drop * Math.min(1.4, Math.abs(hp.x) / A.span) ** 2; // 이마 위 경계: 가운데가 가장 높은 둥근 아치 (1d 의 가로 직선 대신)
+    const T = Math.max(ss(f.r, 1.08, 0.84), te, bridge, tb) * ss(hp.y, archTop + A.soft, archTop - A.soft) * ss(hn.z, -0.25, 0.2) * ss(Math.abs(hp.x), 0.067, 0.051); // 볼·관자놀이는 검정 (경계는 넓게 부드럽게)
     const c = brow.clone().lerp(muz, ss(f.r, 0.98, 0.6) * ss(hn.y, 0.35, -0.1)).lerp(tip, ss(f.r, 0.55, 0.12)); // 주둥이 옆은 황갈, 콧등·윗면은 옅게, 끝이 가장 밝게
+    c.lerp(eyeSkin, 0.45 * skin);
     c.multiplyScalar(1 - 0.8 * f.mouth);
     const out = furC.lerp(c, T);
-    return out.multiplyScalar(1 - 0.45 * lid);
+    return out.multiplyScalar((1 - 0.22 * lid) * (1 - 0.1 * under));
   });
   return { mesh: headMesh, local };
 }
@@ -534,9 +550,11 @@ function faceParts(kit, bodyMesh) {
         kit.putM('bear', geom, color, m, plain);
         geom.dispose();
       };
-      layer(almond(EYE.w * EYE.rim, EYE.h * 1.5, EYE.droop * 1.3, side), C.eyeRim, 0.0006, 0, EYE.h * EYE.lid); // 테 — 위로 올려 윗눈꺼풀 선이 굵다
-      layer(almond(EYE.w, EYE.h, EYE.droop, side), C.eye, 0.0012);
-      layer(new THREE.CircleGeometry(1, 14).scale(EYE.h * EYE.pupil, EYE.h * EYE.pupil * 1.05, 1), C.eyeRim, 0.0015, -side * EYE.w * 0.04, EYE.h * 0.02); // 동공
+      // 테: 아랫선이 홍채 아랫선과 겹치게 올려(아래눈꺼풀 선은 안 보임) 윗눈꺼풀 선만 짙게 — 1e
+      layer(almond(EYE.w * EYE.rim, EYE.h * EYE.rimH, EYE.droop * 1.2, side), C.eyeRim, 0.0006, 0, EYE.h * 0.31 * (EYE.rimH - 1));
+      layer(almond(EYE.w, EYE.h, EYE.droop, side), C.eye, 0.0012); // 갈색 홍채 (가장자리)
+      layer(new THREE.CircleGeometry(1, 16).scale(EYE.h * EYE.iris, EYE.h * EYE.iris * 1.04, 1), C.iris, 0.0014, -side * EYE.w * 0.04, EYE.h * 0.03); // 홍채 안쪽 (조금 밝게)
+      layer(new THREE.CircleGeometry(1, 14).scale(EYE.h * EYE.pupil, EYE.h * EYE.pupil * 1.05, 1), C.pupil, 0.0016, -side * EYE.w * 0.04, EYE.h * 0.03); // 동공
       layer(new THREE.CircleGeometry(EYE.shine, 10), C.eyeShine, 0.0019, -side * EYE.w * 0.1, EYE.h * 0.2);
     }
     // 귀: 작고 납작한 컵 (앞·바깥을 보게, 정수리 양옆 위) — 납작한 원판 + 앞면 가운데 컵 안쪽을 어둡게
