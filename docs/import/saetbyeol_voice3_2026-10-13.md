@@ -218,3 +218,11 @@ sha256 `97f52164ca22b0989be61ed2c526af5d09d4c8744c0c81c0f7f568e711c7b37f`.
 
 1. 출혈2 는 아직 기절1 과 같은 파일(`isolde_ko1`)이다. 이 녹음에는 더 쓸 연기가 없다. 나누려면 같은 배우의 다른 녹음이나 다른 출처가 필요하다 — 사람이 정할 일.
 2. `isolde_ko2` 는 소리가 0.12 s 로 매우 짧고, 원본이 작아 +32 dB 올렸다. 끊기는 느낌·잡음이 괜찮은지 사람이 들어 봐야 한다.
+
+## 11. 출혈2 교체 (10/14 — 샛별 편집·전달, 사장님 전달)
+- 샛별 말(사장님 전달): "기절2·출혈1·부활음은 유지하고, 이 자료로 출혈2만 교체하면 된다."
+- 원본: 같은 성우 mvVoiceActing 의 다른 녹음 "exhaustion / sighs / woman voice acting"(Freesound 855463, CC0 1.0). 전체 공개 HQ MP3(PCM 8.81 s) sha256 608ec40e…cfb7.
+- 쓴 것: 출혈2 후보 = 원본 7.87–8.62 s 네 번째 숨(0.75 s) → `public/sfx/voice/isolde_bleed2.mp3`, sha256 4ce5c34d…1ca8(받은 묶음 manifest 와 같음). 손질은 그쪽: 70 Hz HP · 6500 Hz LP · 피크 0.62 · 들어감 35 ms · 잦아듦 240 ms · MP3 96 kbps, 음높이·속도 그대로. 세 토막 RMS 0.209 → 0.056 → 0.027(끝으로 잦아듦), 기존 이졸데 다섯 파일과 상관 최대 0.097.
+- 연결: src/sound.js isolde 프로필 `bleed: ['voice/isolde_bleed1', 'voice/isolde_bleed2']`(둘째만 바뀜). 기절(ko1·ko2)·출혈1·부활·hurt 2·gain 1.3 그대로, 이졸데·미나미 함께.
+- 쓰지 않은 것: 예비 후보(원본 0.64–1.32 s 첫 숨)와 원본 전체 파일은 들이지 않았다(배정 없음).
+- 사람 청취 승인 전: 그쪽 manifest 도 `human_listening_approval: false`. 이번 기절2(10/13)와 함께 사장님이 들어 보고 정한다.

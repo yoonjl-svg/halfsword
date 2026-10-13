@@ -56,6 +56,8 @@ voice/  — death vocals and short hurt grunts, one small set per character (tri
                                breath when she gets back up
       isolde_ko2.mp3        <- mvVoiceActing, "girl damage" (5.54-5.94 s), a short falling
                                voiced grunt not used elsewhere (added 2026-10-13, see below)
+      isolde_bleed2.mp3     <- mvVoiceActing, "exhaustion / sighs / woman voice acting" (7.87-8.62 s),
+                               the fourth breath of a second take (added 2026-10-14, see below)
 
 Thank you, HaelDB, Michel Baradari, kanyonwyvern, hisoul and mvVoiceActing!
 
@@ -256,7 +258,7 @@ mono 44.1 kHz MP3, and no pitch or tempo change.
       e215ca6df78f23dfc009c5f278619ff8e2085db6eb5db596cd25707c1626fce3
 
   Voice 'isolde' (Isolde, Minami): KO = isolde_ko1 + isolde_ko2, bleed = isolde_bleed1 +
-    isolde_ko1 (mvVoiceActing excerpts, CC0). isolde_revive1 is the revive breath only.
+    isolde_bleed2 (mvVoiceActing excerpts, CC0). isolde_revive1 is the revive breath only.
 
   CC0 1.0 (public domain) — mvVoiceActing, "girl damage" (Freesound 855460); preview handed over
     by Saetbyeol, cut here (not a copy of a Saetbyeol file)
@@ -266,7 +268,16 @@ mono 44.1 kHz MP3, and no pitch or tempo change.
     voice/isolde_ko2.mp3 <- 5.54-5.94 s (voice 5.59-5.71 s); decoded once to PCM, L+R mono,
       70 Hz HP, 5 ms in / 80 ms out, peak-normalized to -1 dBFS, mono MP3 (VBR q4); not pitch-shifted
       97f52164ca22b0989be61ed2c526af5d09d4c8744c0c81c0f7f568e711c7b37f
-    The only unused performance left in the take; bleed2 still reuses isolde_ko1.
+    The only unused performance left in the take. bleed2 now comes from a second take (below).
+
+  CC0 1.0 (public domain) — mvVoiceActing, "exhaustion / sighs / woman voice acting" (Freesound 855463);
+    same performer as "girl damage"; preview and excerpt prepared and handed over by Saetbyeol (2026-10-14)
+    https://freesound.org/people/mvVoiceActing/sounds/855463/
+    https://creativecommons.org/publicdomain/zero/1.0/
+    Public HQ preview MP3 SHA-256: 608ec40ed1e59317d062db6858b8b34da8cd000eee60776aea803b865979cfb7
+    voice/isolde_bleed2.mp3 <- 7.87-8.62 s (the fourth breath); decoded once to PCM, mono,
+      70 Hz HP, 6500 Hz LP, peak 0.62, 35 ms in / 240 ms out, MP3 96 kbps; no pitch or tempo change
+      4ce5c34d78037f7c3b071b68dbf68d484657c965948cc7cbfcf4efd61ba81ca8
 
   Not imported (discarded or not selected at the source): maya_hurt1, maya_bleed1, maya_bleed2,
     maya_bleed2_single, margarethe_ko2, margarethe_bleed2, tuyana_bleed2_fade, tome_ko1_warm,
