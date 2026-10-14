@@ -496,6 +496,9 @@ export const BALANCE = {
   stumbleRange: 0.35, // 발 밖으로 이만큼 벗어나면 딛는 걸음이 최대
   fallRange: 0.5, // 발 밖으로 이만큼 벗어나 잠깐이라도 버티지 못하면 넘어진다
   fallDelay: 0.25, // 이 시간(초) 동안 계속 벗어나 있으면 넘어짐
+  // 유파 보법 '버티기' 켬 (10/15 — 유파 걸음 칸 steady, 지금은 일본 0.25 뿐 · docs/strike/japanese_steady_2026-10-15.md · 확인표 1520~): 1 = 켬, 0 = 끔 `?jpSteady=0`.
+  //  steady 칸이 없는 유파(일본 말고 모두)는 이 값과 상관없이 지금 길 그대로 (fighter.js swayScale)
+  schoolSteady: 1,
 };
 
 // 몬탄테(츠바이핸더) 쥠 꼴 (docs/motion/iberian_montante_2026-10-10.md §10·§12·§15 — 값은 weapons.js ZW_FORMS). 손~칼끝 1.36 m 는 모두 같다.
