@@ -2310,18 +2310,24 @@ export class Sound {
   //  몸 소리: 발소리, 쓰러짐, 무기 부러짐, 죽음 (BodySounds 가 몸 상태를 보고 부른다)
   // ─────────────────────────────────────────────────────────────
 
-  /** 모래 위 발소리. speed = 발이 내려오던 속도 (m/s, AI 대결에서 중간값 1, 상위 10% 1.6 — 크게 내딛거나 비틀거림) */
-  footstep(speed, pos) {
+  /**
+   * 모래 위 발소리. speed = 발이 내려오던 속도 (m/s, AI 대결에서 중간값 1, 상위 10% 1.6 — 크게 내딛거나 비틀거림)
+   *  accent = 빠른 걸음 디딤(10/15 이탈리아 박자 걸음 — gait.js leg.fastStep, 값은 schools.js ITALIAN_GAIT.rhythm.accent): { gain, rate } 배율로 같은 표본을 조금 크고 높게.
+   *   표본·겹 고르기·난수 차례는 그대로(배율만 곱함). 없으면 전과 같다
+   */
+  footstep(speed, pos, accent = null) {
     if (!this._on || !this.ctx) return;
     const x = clamp01((speed - 0.3) / 1.8);
+    const ag = accent?.gain ?? 1;
+    const ar = accent?.rate ?? 1;
     // 녹음된 발소리(8가지, 같은 것이 연달아 안 나오게). 예전 장화 소리는 딱딱한 바닥의 "또각"과 방 울림이 있어 회랑처럼 들렸다.
     // 크게 디디면 합성 "쿵"을 조금 깔아 무게를 더한다
     const rec = this.pickSample(STAGE_SOUND[this.stage].step);
-    const ev = this.event({ bus: this.fleshBus, gain: rec ? 0.22 + 0.45 * x : 0.1 + 0.4 * x, bright: rec ? 0 : 1800 + 3500 * x, prio: 0.3, pos });
+    const ev = this.event({ bus: this.fleshBus, gain: (rec ? 0.22 + 0.45 * x : 0.1 + 0.4 * x) * ag, bright: rec ? 0 : 1800 + 3500 * x, prio: 0.3, pos });
     if (rec) {
-      this.layer(ev, rec, { rate: between(Math.random, 0.9, 1.02) });
-      if (x > 0.65) this.layer(ev, this.pick('stepHeavy'), { gain: 0.35 * x, rate: between(Math.random, 0.9, 1.05) });
-    } else this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) });
+      this.layer(ev, rec, { rate: between(Math.random, 0.9, 1.02) * ar });
+      if (x > 0.65) this.layer(ev, this.pick('stepHeavy'), { gain: 0.35 * x, rate: between(Math.random, 0.9, 1.05) * ar });
+    } else this.layer(ev, this.pick(x > 0.65 ? 'stepHeavy' : 'step'), { rate: between(Math.random, 0.9, 1.1) * ar });
   }
 
   /**
@@ -3632,7 +3638,9 @@ export class BodySounds {
           ft.vy = Math.min(ft.vy, vy);
         } else if (ft.up && y < 0.06) {
           ft.up = false;
-          if (this.t - ft.t > 0.12) s.footstep(Math.max(-ft.vy, -vy));
+          // 빠른 걸음 발(10/15 박자 걸음 — gait.js 가 그 걸음을 뗄 때 leg.fastStep 에 강조 배율 { gain, rate } 를 둠)이면 발소리를 조금 또렷하게. 아니면 전과 같다
+          const acc = f.gait?.legs?.[k === 'footF' ? 'F' : 'B']?.fastStep;
+          if (this.t - ft.t > 0.12) s.footstep(Math.max(-ft.vy, -vy), null, typeof acc === 'object' ? acc : null);
           ft.t = this.t;
           ft.vy = 0;
         }
