@@ -18,7 +18,7 @@ import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RET
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
-import { Combat } from './combat.js';
+import { Combat, woundDegree, woundRageMult } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, stageFoeId, stageLabel } from './stages.js';
 import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
@@ -2097,6 +2097,10 @@ window.game = {
   },
   get combat() {
     return combat;
+  },
+  // 와신상담 (월왕구천검 특수 능력, combat.js woundRageMult): 두 싸움꾼의 다친 정도 d 와 지금 공격력 배율 — 그 능력이 없는 칼은 늘 1
+  get woundRage() {
+    return [player, enemy].map((f) => f && { name: f.name, weapon: f.weapon?.id, d: +woundDegree(f).toFixed(3), mult: +woundRageMult(f).toFixed(3) });
   },
   // 흩어지는 조각 수 (칼·방어구, debris.js): game.debris.count() 전부, game.debris.count('armor') 방어구만
   debris: { count: debrisCount },

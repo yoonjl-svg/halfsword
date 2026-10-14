@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 import { SAIN_COLORS, ICE_COLORS, sainPartMesh, sainDecorate, icePartMesh, iceDecorate } from './rare_sword_details.js'; // 사인검·아이스 겉모습 (샛별 저장소에서 가져옴 6e71ba2·4a425f9)
 import { FLAMBERGE_MUSEUM, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
+import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -1477,6 +1478,47 @@ const flamberge = finalizeSpec('flamberge', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  22) 월왕구천검 (에픽) — 샛별 저장소에서 가져옴 (origin/main 7684c732 — 그쪽 c9719902 처음 80 cm · e7eb2f5c 85 cm). 겉모습 src/goujian_details.js.
+//      원형: 춘추 말기 월나라 왕 구천의 청동 직선 양날검 (1965 호북 강릉 망산 1호묘 출토) — [M] 소장 기관 기록 길이 55.7 cm · 폭 4.6 cm, 참고 사전 875 g.
+//      게임판은 실물의 복제가 아니라 늘린 각색 [I] (샛별 쪽 사용자 요청 '모르겐슈테른 69 cm 이상'): 전체 85 cm(손 기준 −0.09 ~ +0.76 m) · 날 67 cm ·
+//       질량 1.213 kg = 날 0.843(80 cm 판 날 0.78 kg 을 같은 단면으로 날 길이 비 0.67/0.62 만큼) + 자루 0.13 + 폼멜 0.14 + 코등이 0.10 ·
+//       칼날 무게중심 비율 0.38 · 회전 반경 비 0.26 [I] · 폭 4.6 cm · 한손 · 배율 베기·찌르기 1.05 · 둔타 1.0 — 제원은 모두 샛별 값 그대로.
+//      재질 steel (샛별 그대로): 우리 재질표(MATERIALS · SOUND_MATERIAL · MATERIAL_TOUGHNESS)와 소리 재질(sound.js)에 청동이 없다. 칼끼리 닿는 소리는 쇳소리
+//       (종도 청동이다), 반발은 쇠끼리(0.7), 부러짐은 등급표대로(재질 몫 1) — 청동이 강철보다 잘 부러지는 몫을 따로 두려면 새 재질·새 수가 들어 하지 않았다.
+//      우리 쪽에서 바꾼 것 (docs/import/goujian_port_2026-10-14.md · 확인표 1440~): 등급 레어 → 에픽 · 카드 뽑기에 넣음 · 특수 능력 '와신상담'(사장님 결정 10/14) ·
+//       school 'chinese'(동방 — 샛별 스펙엔 유파가 없어 그대로면 자동 판정 독일) · enterParry(짧은 한손 칼 관례 — 간장·막야·사인검과 같은 까닭) · 카드 글을 우리 글 규칙으로.
+// ═════════════════════════════════════════════════════════════
+const goujian = finalizeSpec('goujian', {
+  nameKo: '월왕구천검', nameEn: 'Sword of Goujian',
+  // 카드 글 (우리 글 규칙 — 숫자와 단위 띄움 · 두 문장 40 자 안). 감독 예 '월나라 왕 구천의 청동검. / 전체 85 cm, 질량 1.21 kg의 한손검.' 은 작은 가로 폰(568×320 · 844×340)
+  //  카드 폭 150 px 에서 설명 세 줄 + 능력 줄 두 줄이 되어, 고른 카드('내 무기' 꼬리표가 붙음)의 글이 앞면 아래로 3.6 px 넘쳤다 → 설명을 두 줄로 줄임
+  desc: '월왕 구천의 청동검.\n전체 85 cm, 1.21 kg의 한손검.',
+  grip: 'one-hand', material: 'steel', tier: 'epic', // 에픽 (사장님 결정 10/14) → power 1.1 · 내구 0.95 · 파손 0.0104 (등급표 그대로)
+  school: 'chinese', // 동방 유파 (사장님 결정 10/14 — 청강검·간장·막야·사인검과 같은 劍)
+  enterParry: true, // 들어가며 막기 (짧은 한손 칼 관례 — 간장·막야·사인검과 같은 까닭, 샛별 쪽엔 없음)
+  ability: '와신상담: 다칠수록 공격력 증폭', // 에픽 특수 능력 (사장님 결정 10/14 — 카드 능력 줄 문구 그대로)
+  woundRage: 0.3, // '와신상담': 칼 주인이 다친 정도 d(0~1)만큼 이 칼의 공격력(power)이 × (1 + 0.3·d) — 최대 +30 % 는 사장님 결정. d 정의는 combat.js woundDegree
+  hiltLength: 0.09, bladeLength: 0.67, gripAlong: -0.10,
+  mCut: 1.05, mThrust: 1.05, mBlunt: 1.0,
+  partMesh: goujianPartMesh, decorate: goujianDecorate,
+  buildParts() {
+    const L = this.bladeLength;
+    const bladeMass = 0.78 * L / 0.62; // 같은 단면·재질: 80 cm 판 날 0.78 kg 을 날 길이 비로 늘림 (샛별 식 그대로 — 0.843 kg)
+    const grip = boxInertia(0.13, 0.016, 0.079, 0.014);
+    const pommel = boxInertia(0.14, 0.026, 0.004, 0.026); // 원반 폼멜 (상자 콜라이더 — 샛별 그대로)
+    const guard = boxInertia(0.10, 0.034, 0.007, 0.016);
+    const blade = bladeInertia(bladeMass, L, 0.38, 0.26, 0.046, 0.009);
+    return [
+      partTuple(['box', 0.016, 0.079, 0.014], -0.001, 0.13, 0, grip.Ie, grip.It, GOUJIAN_COLORS.grip),
+      partTuple(['box', 0.026, 0.004, 0.026], -0.086, 0.14, 0, pommel.Ie, pommel.It, GOUJIAN_COLORS.metal),
+      partTuple(['box', 0.034, 0.007, 0.016], 0.083, 0.10, 0, guard.Ie, guard.It, GOUJIAN_COLORS.metal),
+      partTuple(['box', 0.023, L / 2, 0.0045], this.hiltLength + L / 2, bladeMass,
+        blade.comY, blade.Ie, blade.It, GOUJIAN_COLORS.blade, true),
+    ];
+  },
+});
+
 // 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
 //  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
@@ -1487,6 +1529,7 @@ export const WEAPONS = {
   uchigatana, // 제안 가지 (10/9, 사장님 확인 전) — 끝에 둬서 다른 무기의 목록 순서를 바꾸지 않는다
   ganjiang, moye, sain, ice, // 샛별 저장소에서 가져옴 (10/10, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
   flamberge, // 샛별 저장소 생김새를 옮겨 고침 (10/14, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
+  goujian, // 샛별 저장소에서 가져옴 (10/14 — 에픽·뽑기에 넣음·와신상담은 사장님 결정) — 같은 까닭으로 끝에 둔다
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
