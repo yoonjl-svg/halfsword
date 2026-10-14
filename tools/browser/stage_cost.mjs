@@ -1,17 +1,21 @@
 // 무대별 그리기 양 비교: 그리기 호출 · 삼각형 · 투명 면(투명 재질을 쓰는 보이는 물체 수) · 프레임 시간(헤드리스 참고치)
 //  폰 가로(844×420), 경기 카메라 그대로, 두 사람은 가만히 겨눈 자세. 물리·카메라를 멈추고 잰다.
-//  실행: vite 개발 서버를 띄운 뒤 node tools/browser/stage_cost.mjs http://127.0.0.1:5173 [무대 id ...]
+//  실행: vite 개발 서버를 띄운 뒤 node tools/browser/stage_cost.mjs http://127.0.0.1:5173 [무대 id ...] [--foe=<인물 id>]
+//   무대 id 를 안 주면 여정 순서(stages.js STAGE_ORDER — 10/14 19:4x 부터 열네 곳). --foe 를 주면 무대마다 같은 상대로 잰다(안 주면 무대 짝 STAGE_FOE · 짝 없는 무대는 무작위)
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 const base = process.argv[2] || 'http://127.0.0.1:5173';
-const ids = process.argv.slice(3).length ? process.argv.slice(3) : ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan'];
+const args = process.argv.slice(3);
+const foe = args.find((a) => a.startsWith('--foe='))?.slice(6) || null;
+const picked = args.filter((a) => !a.startsWith('--'));
+const ids = picked.length ? picked : ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'dayr'];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const rows = [];
 let errs = 0;
 for (const id of ids) {
   const page = await browser.newPage({ viewport: { width: 844, height: 420 }, deviceScaleFactor: 1 });
   page.on('pageerror', () => errs++);
-  await page.goto(`${base}/?stage=${id}&weapon=longsword&emo=0`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?stage=${id}&weapon=longsword&emo=0${foe ? `&foe=${foe}` : ''}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
   await page.getByText('여정 시작').click();
   await page.evaluate(() => { window.game.ai.update = () => {}; });

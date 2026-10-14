@@ -1635,6 +1635,7 @@ const STAGE_SOUND = {
   qinglan: { step: 'stepStone', grit: 'stepStone' }, // 청람잔도 (샛별 저장소에서 가져옴): 한낮의 열린 암반 쉼터, 실내 울림 없음
   sluice: { step: 'stepMud', grit: 'stepMud' }, // 잠든 습지 (샛별 저장소에서 가져옴): 젖은 흙 둔덕, 얕은 물과 침수림
   dayr: { step: 'stepStone', grit: 'stepStone' }, // 소금 사막 (샛별 저장소에서 가져옴): 닳은 벽돌 안뜰, 하늘이 트여 울림 없음
+  dunhuang: { step: 'step', grit: 'step', room: { dur: 0.28, rt: 0.16, e0: 0.035, e1: 0.075, lp: 2600, metal: 0.055, flesh: 0.018 } }, // 철불 절벽 (샛별 저장소에서 가져옴, 값 그대로): 마른 모래흙 발소리(산호 항구와 같은 녹음) · 절벽에 짧고 약하게 되튀는 반사 0.28 s
   poseidon: { step: 'step' },
   poseidon_night: { step: 'step', night: true }, // 밤의 포세이돈 (하인리히 재등장): 같은 바다·바람에 네 귀퉁이 화로·횃대의 불을 더하고 바람을 어둡게
   temple: { step: 'stepGravel', grit: 'stepGravel' },
