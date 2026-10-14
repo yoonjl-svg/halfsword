@@ -673,7 +673,8 @@ for (const c of CHARACTER_VARIANTS) finishAI(c);
 //   · 무기는 북부 대공의 검(ice — 샛별 쪽은 레이피어, 앞서 팔쉬온) → 유파 자동 판정 이베리아, 쥠·자세·기술은 우리 이베리아 대검 것 그대로.
 //     샛별 기질에서 유파에 묶인 자세·기술 취향(레이피어의 쟁기·찌르기 guardPref·techPref)은 뺐다 — 이베리아 자세 고르기 가중치 그대로. 실력·성격 숫자(level·pers 나머지)는 샛별 값 그대로(세 판 모두 같음)
 //   · 판 시작 자세 'wechselR'(아래 탈류 — 칼끝을 오른쪽 아래로 떨굼)는 샛별 팔쉬온 판(af089dbb)의 idle 그대로 — 이베리아 간 보는 자세 목록에 있는 자리
-//   · 습지 감속 면제 신발(샛별 terrainTraits.wetlandImmunity)은 옮기지 않는다 — 신발은 옷차림만. '마른 길을 아는 AI'는 무대 병합 뒤 따로(이번 범위 밖)
+//   · 습지 감속 면제 신발(샛별 terrainTraits.wetlandImmunity)은 옮기지 않는다 — 신발은 옷차림만. '마른 길을 아는 AI'는 넣음(사장님 10/14 18:3x — persona.terrainSense,
+//     docs/import/ratna_drypath_2026-10-14.md): 잠든 습지에서만 켜지고 감속 면제는 여전히 없다(라트나도 웅덩이에 들면 똑같이 느려진다)
 //   · 칭호·대사: 칭호 '습지 안내인' · 대사는 우리가 하오체로 다시 씀(토메 합쇼체·김씨 하게체와 겹치지 않게 — docs/import/ratna_port_2026-10-14.md §말투). 대검을 든 까닭을 말하는 줄은 넣지 않는다
 //   · 목소리: 토메 묶음 그대로(새 소리 파일 없음 — 토메·김씨와 같은 녹음)
 //   · 유파·장기·약점 글은 북부 대공의 검 기준으로 다시 씀 (샛별 글은 레이피어·팔쉬온 기준). 원숭이가 어깨에서 등짐 위로 옮겨 가(겹침 검사 — looks.js v4) 그 두 줄도 맞춤
@@ -701,6 +702,10 @@ export const CHARACTER_GUESTS = [
         level: { skill: 0.76, discipline: 0.84, strength: 1, aggression: 0.76 }, // 샛별 값 그대로
         pers: { precision: 0.78, guardStick: 2.8, fearful: 0.24, angry: 0.12, dogged: 0.4, rhythm: 2.9, aggr: 0.78, vor: 0.4 }, // 샛별 값 그대로 (자세·기술 취향은 뺌 — 위 머리말)
         idle: { guard: 'wechselR', gesture: 'still' }, // 시작 2초: 칼끝을 오른쪽 아래로 떨군 채 가만히
+        // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어'): 진흙 감속을 받는 무대(잠든 습지 — movementSurface 'wetland')에서만 켜진다.
+        //  마른 땅을 골라 디디고 웅덩이에 들면 빠져나오며(걸음 틀기 · 나오기 · 석상 돌아갈 쪽), 상대 등 뒤가 웅덩이가 되게 돌고 누르며, 상대가 젖은 자리에 서면 조금 더 먼저 들어간다
+        //  — ai.js dry* · 값 config.js DRYPATH (확인표 1340~). 감속 면제는 없다
+        terrainSense: 'wetland',
       },
     },
     look: getLook('ratna'),

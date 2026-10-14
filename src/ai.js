@@ -20,7 +20,7 @@
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -28,8 +28,9 @@ import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸�
 import { aiUniqueStages } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
-import { routeAroundStageObstacle } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
+import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
 import { avoidEtnaLava } from './terrain_navigation.js'; // 화산섬 용암: 내리막 자발 이동·기술 걸음만 돌리거나 취소 (지형 없는 무대는 아무 일 없음)
+import { wetlandWetness, WETLAND_RIM, WETLAND_CORE_SPEED } from './wetland_ground.js'; // 마른 길을 아는 AI (라트나 · 잠든 습지만 — 아래 dry* · config.js DRYPATH): 물리와 같은 젖음 지도
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { FINISH } from './finish.js';
@@ -271,11 +272,25 @@ export class AI {
     return this.mode === 'attack';
   }
 
+  /**
+   * 마른 길 감각의 세기 (0 = 꺼짐 — config.js DRYPATH, 사장님 10/14 18:3x): 인물 표식 persona.terrainSense 'wetland'(라트나)이고
+   *  이 몸이 진흙 감속을 받는 무대(movementSurface 'wetland' — 잠든 습지, main.js 가 판마다 붙인다)일 때만 숙련도별 세기. 둘 중 하나라도 아니면 0 —
+   *  그때는 아래 dry* 자리를 하나도 타지 않아 옛 길이 바이트 그대로다. 판 도중 무대를 바꿔도(game.setStage) 매 스텝 다시 읽는다
+   */
+  get drySense() {
+    return this.persona.terrainSense === 'wetland' && this.me.movementSurface === 'wetland' ? DRYPATH.power[this.proficiency] ?? 0 : 0;
+  }
+
   // ───────────────────────── 매 스텝 ─────────────────────────
-  /** 매 스텝: 싸움 판단(updateCombat) 뒤에 무대 장애물 돌아가기 · 화산섬 용암 피하기 — 스틱 입력의 방향만 바꾼다 (샛별 저장소 325a5c38 · 0116047c 의 줄을 옮김) */
+  /** 매 스텝: 싸움 판단(updateCombat) 뒤에 무대 장애물 돌아가기 · 화산섬 용암 피하기 — 스틱 입력의 방향만 바꾼다 (샛별 저장소 325a5c38 · 0116047c 의 줄을 옮김).
+   *  마른 길(drySense > 0 — 라트나 · 잠든 습지만)이면 돌아갈 쪽을 덜 젖은 쪽으로 미리 고르고(dryRouteSide), 돌아가기까지 끝난 스틱을 덜 젖은 쪽으로 튼다(dryFeet).
+   *  둘 다 자기 무대에서만 일한다(습지 · 화산섬은 함께 나오지 않음) — 용암 피하기를 마지막에 둬 안전 쪽이 이긴다 */
   update(dt) {
     this.updateCombat(dt);
+    const ds = this.drySense;
+    if (ds) this.dryRouteSide(ds);
     routeAroundStageObstacle(this);
+    if (ds) this.dryFeet(ds);
     avoidEtnaLava(this);
   }
 
@@ -814,6 +829,9 @@ export class AI {
     if (this.cautious) score -= 0.2;
     // 내 상태가 나쁘면 참는다
     if (this.me.offBalance > 0.03 || this.me.pain > 0.9) score -= 0.5;
+    // 마른 길 (라트나 · 잠든 습지만): 상대가 젖은 자리(진흙 감속 자리)에 서 있으면 발이 묶인 틈 — 작은 가산점 (기회 종류는 그대로)
+    const ds = this.drySense;
+    if (ds) score += DRYPATH.bonus * ds * this.dryFoeWet(s);
     if (this.foe.state === 'dead') score = -1;
     return { score, kind };
   }
@@ -2594,7 +2612,8 @@ export class AI {
       if (this.circleTimer <= 0) {
         this.circleTimer = rand(0.8, 2.2);
         const x = Math.random();
-        this.circle = x < 0.45 ? 0 : (x < 0.85 ? this.pers.circleDir : -this.pers.circleDir) * this.pers.circleRate;
+        const ds = this.drySense; // 마른 길 (라트나 · 잠든 습지만): 같은 굴림 x 로 멈춤·도는 쪽을 땅에 맞춰 고른다 — 0 이면 아래 옛 줄 그대로
+        this.circle = ds ? this.dryCircle(x, ds) : x < 0.45 ? 0 : (x < 0.85 ? this.pers.circleDir : -this.pers.circleDir) * this.pers.circleRate;
       }
       if (d < hold + 0.6) side = this.circle;
     }
@@ -2702,6 +2721,179 @@ export class AI {
     this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
     this.startStrike();
     return true;
+  }
+
+  // ───────────────────────── 마른 길 (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — config.js DRYPATH · docs/import/ratna_drypath_2026-10-14.md) ─────────────────────────
+  //  drySense > 0 일 때만 부른다(라트나 · 잠든 습지). 땅은 물리와 같은 젖음 지도(wetlandWetness — 진흙 감속이 읽는 그 값)로만 읽고, 디딤돌 그림은 보지 않는다.
+  //  내 발 자리 = 골반 수평 자리(감속 판정과 같은 점) · 상대 자리 = 반응 시간만큼 늦게 본 가슴 + 골반 속도 × 앞질러 봄(updateCombat 의 거리 셈과 같은 꼴).
+  //  난수를 새로 굴리지 않는다(돌기 고르기는 옛 굴림 x 를 그대로 쓴다). 새 상한·문턱·쿨다운 없음 — 젖음을 이어지는 무게로만 쓴다
+
+  /** 상대가 선 자리 어림 [x, z] (updateCombat 의 거리 셈과 같은 꼴) */
+  dryFoeAt(s) {
+    const L = this.level;
+    const ahead = L.reaction * (this.chasing ? 1 : L.predict);
+    return [s.cx + s.vx * ahead, s.cz + s.vz * ahead];
+  }
+
+  /** 상대가 선 자리의 젖음 0~1 (공격 결심 가산점 — opportunity) */
+  dryFoeWet(s) {
+    const [x, z] = this.dryFoeAt(s);
+    return wetlandWetness(x, z);
+  }
+
+  /**
+   * 내 발을 둘 자리의 값 0~1: 젖음 — 그리고 디딜 수 없는 곳(석상 길잡이 반지름(석상 + OBSTACLE_ROUTE.clear) 안 · 결투장 울타리 ARENA.radius 밖)은 다 젖은 땅처럼 본다
+   *  (가장자리는 웅덩이와 같은 폭 WETLAND_RIM 으로 녹임 — 걸음을 석상·울타리 쪽으로 틀거나 그쪽으로 나오지 않는다)
+   */
+  dryCost(x, z) {
+    let w = wetlandWetness(x, z);
+    const edge = clamp((Math.hypot(x, z) - ARENA.radius + WETLAND_RIM) / WETLAND_RIM, 0, 1);
+    if (edge > 0) w = Math.max(w, edge * edge * (3 - 2 * edge));
+    const ob = this.me.arenaObstacle;
+    if (!ob) return w;
+    const t = clamp((ob.radius + OBSTACLE_ROUTE.clear - Math.hypot(x - ob.x, z - ob.z)) / WETLAND_RIM, 0, 1);
+    return Math.max(w, t * t * (3 - 2 * t));
+  }
+
+  /**
+   * 마른 길 (발): 간 보기·물러나기·막으며 물러서기·다가가기(칼을 들며·닿기 전) 동안, 석상 돌아가기까지 끝난 이번 스텝 스틱을 땅에 맞춘다. 셋 모두 이어지는 값이라 떨지 않는다:
+   *  ① 누르기 (간 보며 옆으로 도는 거리 안 — moveFeet 와 같은 조건): 지금 자리에서 상대 등 뒤가 젖었으면(dryOrbit 의 등 뒤 젖음 b) 스틱을 앞으로 세기 × b × DRYPATH.press 만큼 더 민다
+   *     — 상대가 물러나면 웅덩이로 물러난다
+   *  ② 나오기: 지금 발 자리가 젖었으면(값 w > 0) 둘레 여덟 쪽 DRYPATH.look m 땅의 마른 정도로 가리킨 쪽(마른 몫 × 그쪽 단위 벡터의 합 ÷ 2)으로 걸음을 섞는다 — 섞는 몫 = 세기 × w.
+   *     웅덩이 한가운데서도 가장자리 쪽을 가리킨다(웅덩이 짧은 반지름이 look 남짓)
+   *  ③ 틀기: 가는 쪽에서 좌우로 DRYPATH.fan 돌린 두 자리(look m 앞) 가운데 덜 젖은 쪽으로 튼다 — 트는 각 = fan × 세기 × (한쪽 값 − 다른 쪽 값), 가장 크게 fan × 세기
+   *  땅 위 빠르기는 스틱 × 옆·뒤 걸음 몫(fighter.driveBalance 와 같은 몫)으로 셈하고 ③ 은 빠르기를 그대로 둔다. 발밑·둘레가 다 마르고 등 뒤도 마르면 스틱 그대로.
+   *  베는 걸음·비껴 딛는 기술 걸음·쓰러짐·발 묶임 동안은 손대지 않는다
+   */
+  dryFeet(ds) {
+    const me = this.me;
+    const closing = this.mode === 'attack' && (this.phase === 'windup' || this.phase === 'approach') && this.sideStepT == null;
+    if ((this.mode !== 'watch' && this.mode !== 'withdraw' && this.mode !== 'defend' && !closing) || me.state !== 'stand' || me.feetHeld || me.revival || !this.foe.alive || me.weapon?.gun) return;
+    const D = DRYPATH;
+    let sy = me.move.y;
+    if (this.mode === 'watch' && this.d < this.holdDist() + 0.6) sy += ds * this.dryOrbit([0])[0][1] * D.press; // ① 누르기
+    const f = me.forward(_v2);
+    const r = me.right(_v1);
+    const vs = me.move.x * GAIT.sideFactor;
+    const vf = sy * (sy < 0 ? GAIT.backFactor : 1);
+    let vx = vs * r.x + vf * f.x; // 땅 위 빠르기 몫 (앞 걸음 스틱 1 = 1)
+    let vz = vs * r.z + vf * f.z;
+    const p = me.bodies.pelvis.translation();
+    const here = this.dryCost(p.x, p.z);
+    if (here > 0) {
+      // ② 나오기
+      let ex = 0;
+      let ez = 0;
+      for (let k = 0; k < 8; k++) {
+        const a = (k * Math.PI) / 4;
+        const dry = 1 - this.dryCost(p.x + Math.cos(a) * D.look, p.z + Math.sin(a) * D.look);
+        ex += dry * Math.cos(a);
+        ez += dry * Math.sin(a);
+      }
+      const b = ds * here;
+      vx += (ex / 2 - vx) * b;
+      vz += (ez / 2 - vz) * b;
+    }
+    const v = Math.hypot(vx, vz);
+    let turn = 0;
+    if (v > 1e-6) {
+      // ③ 틀기
+      const wx = vx / v;
+      const wz = vz / v;
+      const at = (a) => this.dryCost(p.x + (wx * Math.cos(a) - wz * Math.sin(a)) * D.look, p.z + (wx * Math.sin(a) + wz * Math.cos(a)) * D.look);
+      turn = D.fan * ds * (at(-D.fan) - at(D.fan)); // + 면 +fan 쪽이 덜 젖었다
+      const c = Math.cos(turn);
+      const s = Math.sin(turn);
+      vx = v * (wx * c - wz * s);
+      vz = v * (wx * s + wz * c);
+    }
+    if (!turn && !(here > 0) && sy === me.move.y) return; // 다 마른 땅: 스틱 그대로
+    const ns = vx * r.x + vz * r.z; // 옆 · 앞 몫으로 되돌림
+    const nf = vx * f.x + vz * f.z;
+    const lim = Math.max(1, me.emoMods?.move ?? 1); // moveFeet 의 스틱 자르기와 같은 폭
+    me.move.set(clamp(ns / GAIT.sideFactor, -lim, lim), clamp(nf / (nf < 0 ? GAIT.backFactor : 1), -lim, lim));
+    me.stickX = me.move.x; // 석상 돌아가기(routeAroundStageObstacle)와 같은 꼴
+    me.stickY = me.move.y;
+  }
+
+  /**
+   * 마른 길 자리 값: 상대 둘레를 DRYPATH.orbit 만큼 오른쪽(+1 — 스틱 옆 +) · 제자리(0) · 왼쪽(−1)으로 돌아간 자리(거리 그대로)마다 [값, 등 뒤 젖음].
+   *  등 뒤 젖음 = 나 → 상대 줄 너머 DRYPATH.back m 를 셋으로 나눈 자리(⅓ · ⅔ · 끝)의 젖음 평균 — 상대가 밀려 물러날 길.
+   *  값 = herd × 등 뒤 젖음 − self × 내 발 자리 값(dryCost). 돌아간 자리에서 석상이 상대를 가리면 가장 나쁜 값(−self). sides 를 주면 그 쪽만
+   */
+  dryOrbit(sides = [1, 0, -1]) {
+    const D = DRYPATH;
+    const me = this.me;
+    const ob = me.arenaObstacle;
+    const p = me.bodies.pelvis.translation();
+    const [fx, fz] = this.dryFoeAt(this.sense.seen(this.level.reaction + 0.04 * this.anger));
+    const ox = p.x - fx;
+    const oz = p.z - fz;
+    const R = Math.hypot(ox, oz) || 1e-6;
+    const r = me.right(_v1);
+    return sides.map((sg) => {
+      let qx = ox;
+      let qz = oz;
+      if (sg) {
+        const ex = ox + sg * r.x * R * D.orbit;
+        const ez = oz + sg * r.z * R * D.orbit;
+        const k = R / (Math.hypot(ex, ez) || 1e-6);
+        qx = ex * k;
+        qz = ez * k;
+      }
+      const behind = (k) => wetlandWetness(fx - (qx / R) * D.back * k, fz - (qz / R) * D.back * k);
+      const back = (behind(1 / 3) + behind(2 / 3) + behind(1)) / 3;
+      const mx = fx + qx;
+      const mz = fz + qz;
+      if (sg && ob && obstacleSegmentBlocked({ x: mx, z: mz }, { x: fx, z: fz }, ob.radius + OBSTACLE_ROUTE.clear, ob)) return [-D.self, back];
+      return [D.herd * back - D.self * this.dryCost(mx, mz), back];
+    });
+  }
+
+  /**
+   * 마른 길 (돌기 고르기 — 옛 돌기 박자 circleTimer 에서 한 번): dryOrbit 의 오른쪽 · 제자리 · 왼쪽 값으로, 옛 굴림 x 를 그대로 써서 고른다.
+   *  옛 몫(멈춤 0.45 · 즐겨 도는 쪽 0.40 · 반대쪽 0.15)에서 시작해, 도는 편이 제자리보다 나은 만큼 멈춤 몫을 줄이고(못하면 늘리고)
+   *  한쪽이 나은 만큼 그쪽 몫을 늘린다 — 둘 다 × 세기, 값 차를 (herd + self)로 나눠 몫이 0~1 을 넘지 않는다. 땅이 다 같으면 옛 줄과 같은 x 에서 같은 값(도는 빠르기 circleRate 그대로)
+   */
+  dryCircle(x, ds) {
+    const D = DRYPATH;
+    const [[vR], [v0], [vL]] = this.dryOrbit();
+    const span = D.herd + D.self;
+    const h = this.pers.circleDir; // 즐겨 도는 쪽
+    const lean = (ds * (vR - vL) * h) / span; // + 면 땅이 즐겨 도는 쪽을 민다
+    const pStop = 0.45 * (1 - (ds * (Math.max(vR, vL) - v0)) / span);
+    const p0 = 0.4 / 0.55; // 돌 때 즐겨 도는 쪽 몫 (옛 0.40 : 0.15)
+    const pHabit = lean > 0 ? p0 + lean * (1 - p0) : p0 + lean * p0;
+    if (x < pStop) return 0;
+    return ((x - pStop) / (1 - pStop) < pHabit ? h : -h) * this.pers.circleRate;
+  }
+
+  /**
+   * 마른 길 (석상 돌아갈 쪽): 아직 쪽을 안 정했으면(obstacleSide null) 석상 둘레 두 길을 길잡이 고리(석상 + clear + ring) 위에서 돌기 걸음(OBSTACLE_ROUTE.step) 간격으로 견주어
+   *  덜 걸리는 쪽을 미리 적어 둔다 — 걸리는 시간 = 길이 ÷ (1 − (1 − WETLAND_CORE_SPEED) × 세기 × 젖음): 진흙 감속을 세기만큼만 알고 셈한다(마른 땅뿐이면 옛 고르기처럼 짧은 쪽).
+   *  routeAroundStageObstacle 은 길이 막혔을 때만 이 값을 쓰고(??=) 막히지 않았으면 null 로 되돌린다 — 그래서 한 번 막힌 동안은 쪽이 바뀌지 않는다(석상 앞에서 떨지 않음)
+   */
+  dryRouteSide(ds) {
+    const me = this.me;
+    const ob = me.arenaObstacle;
+    if (!ob || this.obstacleSide != null || !this.foe.alive || me.state !== 'stand' || me.feetHeld || me.revival) return; // 돌아가기가 길을 보지 않는 동안은 적어 두지 않는다
+    const p = me.bodies.pelvis.translation();
+    const t = this.foe.bodies.pelvis.translation();
+    const a0 = Math.atan2(p.z - ob.z, p.x - ob.x);
+    const a1 = Math.atan2(t.z - ob.z, t.x - ob.x);
+    const R = ob.radius + OBSTACLE_ROUTE.clear + OBSTACLE_ROUTE.ring;
+    const TAU = Math.PI * 2;
+    const time = (side) => {
+      const span = (((side * (a1 - a0)) % TAU) + TAU) % TAU; // 이 쪽으로 돌아 닿는 각
+      const n = Math.max(1, Math.ceil(span / OBSTACLE_ROUTE.step));
+      let T = 0;
+      for (let k = 1; k <= n; k++) {
+        const a = a0 + (side * span * k) / n;
+        T += (span * R) / n / (1 - (1 - WETLAND_CORE_SPEED) * ds * wetlandWetness(ob.x + Math.cos(a) * R, ob.z + Math.sin(a) * R));
+      }
+      return T;
+    };
+    this.obstacleSide = time(1) <= time(-1) ? 1 : -1;
   }
 }
 
