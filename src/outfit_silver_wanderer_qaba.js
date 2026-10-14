@@ -12,13 +12,15 @@
 //  꼴을 그대로 두고 바지 색만 칠한다 — 트임과 앞섶 사이로 바지 다리가 보여야 하므로. 발만 대표 메쉬 꼴을 장화로 바꾼다(reshapeMain — 종류·치수 값 그대로).
 //  겉모습만: 몸·질량·관절·충돌체·손 구체 그대로. 값은 모두 사장님 확인 전(docs/strike/owner_defaults_table.md 1226~1234).
 //  +X 앞 · +Y 위 · +Z 오른쪽 (부위 좌표). 높이는 서 있을 때 세계 높이로 적고 도막 원점 높이(허벅지 0.715 · 정강이 0.29 · 골반 0.97)를 빼서 쓴다.
+//  ── v9(look.daraishiRevision 9 — v7·v8 절충, outfit_silver_wanderer_v9.js): 같은 자락 꼴·스키닝에 style(색 · 테와 문양 짓는 함수)만 갈아 끼운다.
+//   style 이 없으면(v8) 만드는 꼭짓점·재질은 한 바이트도 달라지지 않는다(꼭짓점 해시 b2b1222c 그대로) — v9 는 다리마다 겉감·테·문양을 꼭짓점 색 한 장(SkinnedMesh 하나)으로 그린다
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-export function createDaraishiQaba(h) {
+export function createDaraishiQaba(h, style = null) {
   const { THREE, addMerged, CLOTH, artoriaCloth, reshapeMain, hangingClothShading } = h;
-  const COAT = 0xe9e9e5; // 겉감 — v7 흰 셔츠와 같은 색 (가슴·배 대표 메쉬가 그대로 카바 윗몸이 된다)
+  const COAT = style?.coat ?? 0xe9e9e5; // 겉감 — v7 흰 셔츠와 같은 색 (가슴·배 대표 메쉬가 그대로 카바 윗몸이 된다) · v9 는 보라
   const TRIM = 0x433653; // 테 — 어깨 망토·선 깃과 같은 짙은 보라
-  const TROUSER = 0x776b88; // 바지 — v6·v7 자락 단 띠 색(옅은 보랏빛 회색): 흰 카바·짙은 테·장화와 명도가 갈린다
+  const TROUSER = style?.trouser ?? 0x776b88; // 바지 — v6·v7 자락 단 띠 색(옅은 보랏빛 회색): 흰 카바·짙은 테·장화와 명도가 갈린다 · v9 는 안옷 흰빛
   const BOOT = 0x4a3836; // 부드러운 가죽 장화
   const SASH = 0x513c60; // 캄마르반드 — v6·v7 허리 띠와 같은 자두색 (detail 모듈 띠 몸통과 같은 값)
   const cloth = { ...CLOTH, metalness: 0, roughness: 0.87, side: THREE.DoubleSide };
@@ -143,8 +145,8 @@ export function createDaraishiQaba(h) {
     geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
     return geo;
   }
-  function skinned(parent, geo, color, skeleton) {
-    const mat = hangingClothShading(new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.06, ...cloth }));
+  function skinned(parent, geo, color, skeleton, painted = false) {
+    const mat = hangingClothShading(new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.06, ...cloth, ...(painted ? { vertexColors: true } : {}) })); // ── v9 painted: 꼭짓점 색
     const mesh = new THREE.SkinnedMesh(geo, mat);
     mesh.bind(skeleton, new THREE.Matrix4()); // 기준 자세 좌표 그대로(bindMatrix 단위 행렬)
     mesh.castShadow = true;
@@ -169,17 +171,22 @@ export function createDaraishiQaba(h) {
     const slitF = (y) => Math.PI / 2 - gap(y), slitB = (y) => Math.PI / 2 + gap(y);
     const segs = 14;
     const coat = smoothSeams(mergeGeometries([strip(COAT_ROWS, segs, fF, slitF, info), strip(COAT_ROWS, segs, slitB, fB, info)]));
-    skinned(layer(g), skin(coat, info), COAT, skeleton);
-    // 테: 앞섶(자락 앞 가장자리) · 트임 양쪽 가장자리 · 옷단 — 겉면에서 3 mm 띄운다
-    const lift = (y) => 1 + LIFT / lineAt(y).rx;
-    const slitRows = COAT_ROWS.filter((y) => y <= SLIT_TOP + 1e-6), hemRows = [HEM_Y + W_HEM, HEM_Y + W_HEM / 2, HEM_Y];
-    const trims = mergeGeometries([
-      strip(COAT_ROWS, 2, fF, (y) => fF(y) + W_FRONT / radiusAt(fF(y), y, info.outer), info, lift),
-      strip(slitRows, 1, (y) => slitF(y) - W_SLIT / radiusAt(slitF(y), y, info.outer), slitF, info, lift),
-      strip(slitRows, 1, slitB, (y) => slitB(y) + W_SLIT / radiusAt(slitB(y), y, info.outer), info, lift),
-      strip(hemRows, segs, fF, slitF, info, lift), strip(hemRows, segs, slitB, fB, info, lift),
-    ]);
-    skinned(layer(g), skin(trims, info), TRIM, skeleton);
+    if (style?.legDress) { // ── v9: 겉감 + style 의 테·문양([조각, 색] 목록)을 꼭짓점 색으로 칠해 한 장으로 — 그리기 호출은 다리마다 하나
+      const pieces = style.legDress(api, { info, fF, fB, slitF, slitB, segs });
+      skinned(layer(g), skin(mergeGeometries([paint(coat, COAT), ...pieces.map(([geo, color]) => paint(geo, color))]), info), 0xffffff, skeleton, true);
+    } else {
+      skinned(layer(g), skin(coat, info), COAT, skeleton);
+      // 테: 앞섶(자락 앞 가장자리) · 트임 양쪽 가장자리 · 옷단 — 겉면에서 3 mm 띄운다
+      const lift = (y) => 1 + LIFT / lineAt(y).rx;
+      const slitRows = COAT_ROWS.filter((y) => y <= SLIT_TOP + 1e-6), hemRows = [HEM_Y + W_HEM, HEM_Y + W_HEM / 2, HEM_Y];
+      const trims = mergeGeometries([
+        strip(COAT_ROWS, 2, fF, (y) => fF(y) + W_FRONT / radiusAt(fF(y), y, info.outer), info, lift),
+        strip(slitRows, 1, (y) => slitF(y) - W_SLIT / radiusAt(slitF(y), y, info.outer), slitF, info, lift),
+        strip(slitRows, 1, slitB, (y) => slitB(y) + W_SLIT / radiusAt(slitB(y), y, info.outer), info, lift),
+        strip(hemRows, segs, fF, slitF, info, lift), strip(hemRows, segs, slitB, fB, info, lift),
+      ]);
+      skinned(layer(g), skin(trims, info), TRIM, skeleton);
+    }
     // 바지 통(무릎 → 장화 목): 반지름 6.1 cm, 장화 바로 위에서 6.45 cm 로 불룩했다가 장화 안으로 들어간다 (정강이에 붙는다)
     const L = (y) => y - shinPos[1];
     addMerged(layer(g), [ringLoft([[L(0.505), 0.061], [L(0.42), 0.0605], [L(0.33), 0.061], [L(0.258), 0.0632], [L(0.234), 0.0645],
@@ -187,6 +194,7 @@ export function createDaraishiQaba(h) {
     // 부드러운 장화 목: 0.219 m(옷단 아래 8 cm) → 발목. 윗단 1 cm 를 조금 넓혀 접힌 가죽 끝으로
     addMerged(layer(g), [ringLoft([[L(0.219), 0.0592], [L(0.209), 0.0596], [L(0.199), 0.0558], [L(0.15), 0.0522], [L(0.10), 0.0488],
       [L(0.062), 0.0472], [L(0.04), 0.0452]], 14)], BOOT, { ...cloth, roughness: 0.62 });
+    style?.bootCuff?.(api, layer(g), L); // ── v9: 장화 목 윗단 금빛 고리
   }
 
   // ── 발: 장화 발 — 대표 메쉬(0.25 × 0.075 × 0.11 상자)를 앞코가 좁고 둥근 가죽 장화 꼴로 (종류·치수 값 그대로) ──
@@ -251,22 +259,24 @@ export function createDaraishiQaba(h) {
     geo.setIndex(idx); geo.computeVertexNormals();
     return geo;
   }
+  /** 골반 통 겉면에서 6 mm 앞의 x — 높이 y · 몸 가운데 z 자리 (띠 끝을 통 위에 띄운다) */
+  function hipFront(y, z) {
+    const j = y > HIP_ROWS[1][0] ? 0 : 1, y0 = HIP_ROWS[j][0], y1 = HIP_ROWS[j + 1][0];
+    const x0 = hipPoint(hipAngleAtZ(j, z), j)[0], x1 = hipPoint(hipAngleAtZ(j + 1, z), j + 1)[0];
+    return THREE.MathUtils.lerp(x0, x1, clamp((y0 - y) / (y0 - y1), 0, 1)) + 0.006;
+  }
   function pelvis(g, d) {
     rig = { pelvis: { g, pos: d?.pos ?? [0, 0.97, 0] }, thigh: {} }; // 새 인물의 첫 부위 — 다리 자락의 뼈로 쓴다
     const l = layer(g);
     const ring = hipGrid(() => Math.PI, () => Math.PI * 3, 40, 1); // 이음매는 뒤
     const ringMesh = addMerged(l, [ring], COAT, cloth);
     hangingClothShading(ringMesh.material);
+    if (style?.hipDress) { style.hipDress(api, l); return; } // ── v9: 앞섶 테·띠 끝은 style 이 짓는다
     const band = hipGrid((j) => hipAngleAtZ(j, 0.02 - W_FRONT), (j) => hipAngleAtZ(j, 0.02), 1, 1 + LIFT / 0.12);
     const bandMesh = addMerged(l, [band], TRIM, cloth);
     hangingClothShading(bandMesh.material);
     // 캄마르반드 띠 끝 둘: 왼 앞(겉자락 쪽 — 오른쪽 앞섶 테를 가리지 않게)의 매듭(배 도막 띠 위)에서 엉덩이 위로 11 · 8.5 cm, 통 겉면에서 6 mm 앞
-    const front = (y, z) => {
-      const j = y > HIP_ROWS[1][0] ? 0 : 1, y0 = HIP_ROWS[j][0], y1 = HIP_ROWS[j + 1][0];
-      const x0 = hipPoint(hipAngleAtZ(j, z), j)[0], x1 = hipPoint(hipAngleAtZ(j + 1, z), j + 1)[0];
-      return THREE.MathUtils.lerp(x0, x1, clamp((y0 - y) / (y0 - y1), 0, 1)) + 0.006;
-    };
-    const tail = (pts, widths) => ribbon(pts.map(([y, z]) => [front(y, z), y, z]), widths);
+    const tail = (pts, widths) => ribbon(pts.map(([y, z]) => [hipFront(y, z), y, z]), widths);
     addMerged(l, [
       tail([[0.058, -0.068], [0.0, -0.072], [-0.052, -0.079]], [0.03, 0.032, 0.029]),
       tail([[0.056, -0.088], [0.01, -0.095], [-0.027, -0.102]], [0.027, 0.029, 0.026]),
@@ -311,5 +321,15 @@ export function createDaraishiQaba(h) {
   function abdomenBand(g) {
     addMerged(layer(g), [surfaceBand(g.children[0], [[0.066, 0.02], [0.02, 0.02], [-0.025, 0.02]], W_FRONT, 4)], TRIM, { ...cloth });
   }
+  // ── v9: 꼭짓점 색 칠하기(겉감·테·문양을 한 메쉬로) · style 이 쓰는 자락 꼴 도구 ──
+  /** 조각 전체를 한 색으로 칠한다 (sRGB 16진 → 선형 — Color.setHex 가 바꿔 준다) */
+  function paint(geo, hex) {
+    const c = new THREE.Color(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) c.toArray(a, i * 3);
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(a, 3));
+    return geo;
+  }
+  const api = { THREE, section, lineAt, edgeAngle, gap, strip, radiusAt, ringLoft, ribbon, hipPoint, hipAngleAtZ, hipGrid, hipFront, paint,
+    COAT_ROWS, HIP_ROWS, HIP_Y, HEM_Y, SLIT_TOP, CROSS };
   return { leg, boot, pelvis, chestBand, abdomenBand, COAT, TRIM, SASH };
 }

@@ -5,10 +5,13 @@
 //   몸통 둥글리기 칸 8 → 5 · 검집 끝 쇠를 늘인 검집 끝으로 · 부위마다 같은 재질 조각을 한 메쉬로 합친다(mergeLayers)
 //  우리 판 v8(look.daraishiRevision 8 — 카바, outfit_silver_wanderer_qaba.js)은 '── v8' 줄: 가슴·배 앞섶 사선 테 · 허리는 높이 8.5 cm 캄마르반드(자두색 천 띠 +
 //   팔각 꽃 + 왼 앞 매듭 — 띠 끝 둘은 골반 도막) · 검집 쇠붙이는 기울인 검집(placeDaraishiScabbard)을 따른다
+//  우리 판 v9(look.daraishiRevision 9 — v7·v8 절충, outfit_silver_wanderer_v9.js)은 '── v9' 줄: 가슴은 흰 안옷 V · 금빛 선 두 줄 사이 짙은 보라 앞섶 테 · 망토 금빛 띠,
+//   배는 앞섶 테 · 짙은 가지색 캄마르반드(금빛 위아래 가장자리) — 팔각 꽃은 v8 그대로
 //  (아래 영어 줄 설명은 샛별 저장소 원문 그대로 둔 것이다)
 // v2 keeps v1 selectable. Surface-following embroidery and fittings only.
 import { createSilverWandererOutfit, DARAISHI_SCABBARD, placeDaraishiScabbard } from './outfit_silver_wanderer.js';
 import { createDaraishiQaba } from './outfit_silver_wanderer_qaba.js'; // ── v8
+import { createDaraishiV9 } from './outfit_silver_wanderer_v9.js'; // ── v9
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'; // ── v7 mergeLayers
 import { createSilverWandererFullHair } from './outfit_silver_wanderer_full_hair.js';
 import { createSilverWandererCourtHair } from './outfit_silver_wanderer_court_hair.js';
@@ -19,6 +22,7 @@ export function createSilverWandererDetail(h) {
   const fullHair = createSilverWandererFullHair(h,base.head);
   const courtHair = createSilverWandererCourtHair(h,base.head);
   const qaba = createDaraishiQaba(h); // ── v8
+  const v9 = createDaraishiV9(h); // ── v9 (가슴·배 장식만 — 자락·소매는 base 의 v9)
   const hasPersianDetails = look => ['full_layered','court_half_tie','court_braided_layers'].includes(look?.hairStyle);
   const thread = { ...CLOTH, metalness: .12, roughness: .73 };
   const metal = { ...CLOTH, metalness: .6, roughness: .36, steel: .7 };
@@ -125,7 +129,7 @@ export function createSilverWandererDetail(h) {
     // Hide v1's buried trim only. Keep the mantle itself and the white shirt.
     const old = g.children[0].children.find(n => n.name === 'silver-wanderer-cloth');
     for (const mesh of old?.children || []) if (mesh.material?.color.getHex() === 0xb6bbc3) mesh.visible = false;
-    if (look?.daraishiRevision >= 7) { if (look.daraishiRevision >= 8) qaba.chestBand(g); courtHair.chest(g, look); return; } // ── v8: 겉자락 앞섶 사선 테 // ── v7: 깃 가장자리 줄·깃 덩굴과 잎·자락 잎 테·앞섶 단추·솔기 줄은 만들지 않는다 (뒷머리 장막만)
+    if (look?.daraishiRevision >= 7) { if (look.daraishiRevision >= 9) v9.chest(g); else if (look.daraishiRevision >= 8) qaba.chestBand(g); courtHair.chest(g, look); return; } // ── v9: 안옷 V · 앞섶 테 · 망토 금빛 띠 // ── v8: 겉자락 앞섶 사선 테 // ── v7: 깃 가장자리 줄·깃 덩굴과 잎·자락 잎 테·앞섶 단추·솔기 줄은 만들지 않는다 (뒷머리 장막만)
     for (const s of [-1,1]) {
       edging.push(line(rows.map(([y])=>collar(y,s*.58)),.0023));
       // Older looks retain their original collar embroidery.
@@ -170,6 +174,14 @@ export function createSilverWandererDetail(h) {
   }
   function abdomen(g,look) {
     soften(g,look); const l=layer(g), stitches=[];
+    if(look?.daraishiRevision>=9) { // ── v9: 앞섶 테 · 짙은 가지색 캄마르반드(금빛 위아래 가장자리 · 매듭) — 팔각 꽃은 v8 과 같은 크기·자리·재질
+      v9.abdomen(g,()=>{
+        addMerged(l,[rosette((u,v)=>[.1265,v,u],-.015,-.06,.027)],INLAY,chased);
+        addMerged(l,[rosette((u,v)=>[.1285,v,u],-.015,-.06,.018)],SILVER,chased);
+        addMerged(l,[bake(ball(.008,8,6),[.132,-.06,-.015],null,[.45,1,1])],0x386b70,metal);
+      });
+      return;
+    }
     if(look?.daraishiRevision>=8) { // ── v8 캄마르반드: 높이 8.5 cm(서 있을 때 1.03~1.11 m) 천 띠가 가죽 띠 자리를 덮는다 · 팔각 꽃(크기 v7 그대로)은 띠 앞면에 붙여 · 왼 앞 매듭
       addMerged(l,[bake(artoriaRoundedBox(.25,.085,.355,.022),[0,-.06,0])],0x513c60,thread);
       addMerged(l,[rosette((u,v)=>[.1265,v,u],-.015,-.06,.027)],INLAY,chased);
