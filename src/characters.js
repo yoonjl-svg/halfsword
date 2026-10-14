@@ -561,7 +561,7 @@ const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
 //  무유파 무기(나뭇가지·권총·모르겐슈테른)는 고유 동작이 없어 숙련도는 실력 숫자에만 쓰인다.
 //  aiAtProficiency 가 ai.level(실력 숫자 이름 = config.js AI_PROFICIENCY.levels[숙련도])과 persona.proficiency({ 유파: 숙련도 } — ai.js·sword_art.js 가 고유 동작을 거르고, 5 에서만 비기)를 만든다.
 //  시트 기본값(finishAI — 도구는 지금처럼 ai.level·ai.persona 를 읽는다)과 시험 주소 ?foeProficiency=N(main.js)이 같은 함수를 쓴다.
-//  변형(mad: true — 사장님 10/13 "'광기의'는 궁극적으로 모든 캐릭터들에게 … 기본 캐릭터+1 의 숙련도와 추가 파워"): 변형 표시 하나 → 숙련도 +1(VARIANT_PLUS, 상한 AI_PROFICIENCY.max) ·
+//  변형(mad: true — 사장님 10/13 "'광기의'는 궁극적으로 모든 캐릭터들에게 … 기본 캐릭터+1 의 숙련도와 추가 파워" · 10/14 "얼터 에고 컨셉 — 칭호는 본캐랑 같음": 이름 앞에 '광기의', 칭호는 본캐 그대로): 변형 표시 하나 → 숙련도 +1(VARIANT_PLUS, 상한 AI_PROFICIENCY.max) ·
 //   실력 숫자 = 그 숙련도에서 원본이 받을 실효값 × MAD_SCALE(+20% — 사장님 9/28 확정을 추가 힘으로 그대로, 디렉터 해석). 다른 인물에게 변형을 만들 때도 madVariantAI(원본) 로
 const VARIANT_PLUS = 1;
 export function aiAtProficiency(c, p) {
@@ -631,7 +631,7 @@ HEINRICH_MAD_AI.persona.close = { rate: 0.9, kind: 'barge', then: 'cut' }; // �
 export const CHARACTER_VARIANTS = [
   // 4b. 광기의 하인리히 도른 — 밤의 포세이돈 신전에 다시 나타나는 하인리히 (사장 요청, 디렉터 14:08).
   //  붉은 눈·안광 아우라는 외형 담당 몫이고, 여기서는 eyes 표식만 둔다.
-  //  사장 확정(2026-09-28): 별칭 '밤의 왕', 대사는 우선 등장·승리 1종씩, 실력 숫자는 낮의 하인리히 +20% (HEINRICH_MAD_AI).
+  //  사장 확정(2026-09-28): 대사는 우선 등장·승리 1종씩, 실력 숫자는 낮의 하인리히 +20% (HEINRICH_MAD_AI). 별칭은 10/14 부터 본캐와 같은 '미치광이'(얼터 에고 규칙 — 전 '밤의 왕').
   //  성격(pers)·유파·감정 문턱·외형·무기·목소리(variantOf)는 낮의 하인리히 그대로다. 설정은 docs/character_lore.md §4b
   {
     ...HEINRICH,
@@ -639,7 +639,7 @@ export const CHARACTER_VARIANTS = [
     variantOf: 'heinrich',
     mad: true, // 변형 표시 (10/13 일반 규칙): 숙련도 +1 · 실력 숫자 +20% — aiAtProficiency
     name: '광기의 하인리히 도른',
-    epithet: '밤의 왕', // 사장 확정 (원본 별칭 '미치광이'와 겹치지 않는다)
+    // 칭호는 본캐와 같다 — '미치광이'(...HEINRICH 그대로). 사장님 10/14 12:4x "'광기의'는 모든 캐릭터에게 붙일 거고 얼터 에고 컨셉이야. 칭호는 본캐랑 같음" (전 '밤의 왕' 9/28)
     origin: '포세이돈 신전에서 쓰러진 뒤 그 자리를 떠나지 않았다. 밤이 되면 같은 자리에 다시 선다',
     backstory:
       '신전에서 베였다. 죽지는 않았다. 바닷물이 밀려와 피를 씻어 가는 동안 그는 칼을 놓지 않았고, 그날 밤부터 신전 기둥 사이에 앉아 칼과 이야기했다. ' +
