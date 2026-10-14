@@ -69,7 +69,7 @@ export function createTestRoute(params) {
       });
       const note = doc.createElement('p');
       note.id = 'testRouteNote';
-      note.style.cssText = 'margin:-8px 0 12px;font-size:12px;color:var(--accent);line-height:1.4';
+      note.style.cssText = 'margin:-8px 0 12px;font-size:var(--fs-s);color:var(--c-sub);line-height:1.4'; // 10/14 글자 규칙: 작게 · 보조 색 (index.html :root)
       note.textContent = `테스트 경로 · ${weaponName} · ${hero ? hero.name : '기본 주인공'} · ${foeFixed || stagePinned ? `${foeFixed ? `상대 ${foeFixed.name}` : '상대 무작위'} · ${stagePinned ? `무대 ${stagePinned}` : '무대 무작위'}` : '상대·무대 무작위'} · 고유 동작·비기 모두 열림`; // 고유 동작 해금: 테스트 경로는 모두 (main.js uniqueStageFor test — UNIQUE_ASSIST.testStage)
       actions.append(btn);
       doc.getElementById('menuSub')?.after(note); // 제목 아래 한 줄 (아래 단추 줄을 두껍게 하지 않게)

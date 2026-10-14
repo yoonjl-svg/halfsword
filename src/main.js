@@ -885,7 +885,7 @@ function showFoeLine(ch, line) {
 }
 
 // 이번 상대 소개 (이름 · 칭호 · 한마디) — 화면 가운데, 판 알림(toast) 바로 아래 (10/14 사장님 '사이즈 통일해서 예전처럼 시작 때 보이게 가운데로').
-//  세 줄 글자 크기는 하나(--fs-title), 색만 다르다: 이름 --hud-name · 칭호와 대사 --hud-epithet (index.html #foeIntro).
+//  세 줄 글자 크기는 하나(보통 --fs-m — 10/14 글자 규칙), 색만 다르다: 이름 = 본문 색 · 칭호와 대사 = 보조 색 (index.html #foeIntro).
 //  판이 시작되는 순간(beginFight)부터 발이 풀릴 때(ARENA.startHold)까지만 보인다 — 무기 카드를 고르는 동안에는 띄우지 않는다.
 //  무기 이름은 글로 적지 않는다 (대사와 겹쳐 읽기 어렵다는 오너 의견: 내 무기와 상대 무기는 카드 두 장이 보여 준다)
 function showFoeIntro(ch) {
@@ -906,7 +906,7 @@ function hideFoeIntro() {
 // ── 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): docs/ui/hud_intro_2026-10-14.md · hud_type_system_2026-10-10.md §15 ──
 //  첫 줄 = '스테이지 N · 무대 이름'(stages.js stageLabel — 순서표 밖 무대는 이름만).
 //  무기 카드를 고르는 동안만 그 아래에 카드 안내 '무기 카드를 한 장 고르세요'(PC '(1 · 2)') — 10/14 03:3x 사장님 '이전처럼 복구'(00:4x 에 뺐던 줄).
-//   예전 자리(왼쪽 위 칸의 마지막 줄, 위 6px)·꼴(700 · --ls-label · --accent) 그대로, 크기는 칸 전체 --fs-info 11px (10/14 04:1x 사장님 '왼쪽 위 11') (index.html #stageInfo em). 카드를 고르면 숨는다 — 자리는 두어
+//   예전 자리(왼쪽 위 칸의 마지막 줄, 위 6px)·꼴(--fw-label · --ls-label · 강조 색) 그대로, 크기는 칸 전체 작게 --fs-s (10/14 글자 규칙) (index.html #stageInfo em). 카드를 고르면 숨는다 — 자리는 두어
 //   화면이 바뀌어 카드 자리를 다시 재도 들썩이지 않는다. 카드 줄은 이 칸 아래에서 시작한다 (layoutDraw)
 //  10/14 03:3x 사장님 'AI 이름·기술명 표기는 아예 없앤다': 둘째 줄 'AI 이름 · 자세 / 기술'(foeLine · startFoeLine · paintFoeLine · updateFoeLine · foeTechPut)은 걷어냈다.
 //   상대 기술 알림은 화면 어디에도 띄우지 않는다 (판 시작 가운데 소개 #foeIntro 는 그대로)
@@ -1001,7 +1001,7 @@ cardEls[FOE_CARD].addEventListener('animationend', (e) => e.animationName === 'n
 drawEl.addEventListener('pointerdown', skipReveal);
 window.addEventListener('resize', () => layoutDraw()); // 폰을 돌리거나 전체화면이 되면 카드 크기를 다시 맞춘다
 if (window.ResizeObserver) new ResizeObserver(() => layoutDraw()).observe(drawEl); // resize 이벤트 없이(늦게) 화면 상자만 바뀌어도 (홈 화면 앱)
-document.fonts?.addEventListener?.('loadingdone', () => layoutDraw()); // 도트 글꼴(10/14)이 늦게 도착하면 글 넘침을 그 글꼴로 다시 잰다 (font-display: swap — 먼저 그린 시스템 글꼴로 잰 값을 버린다)
+document.fonts?.addEventListener?.('loadingdone', () => layoutDraw()); // 화면 글꼴(10/14 프리텐다드 + Cinzel)이 늦게 도착하면 글 넘침을 그 글꼴로 다시 잰다 (font-display: swap — 먼저 그린 시스템 글꼴로 잰 값을 버린다)
 
 /**
  * 두 사람의 무기를 감추거나 보인다 (카드를 고르기 전에는 손에 칼이 보이면 안 된다).
@@ -1101,25 +1101,21 @@ function layoutDraw() {
   drawEl.style.setProperty('--ch', `${ch}px`);
   // 번호 배지(높이 22px)의 가운데: 픽셀 뒷면은 아래 원판(아래에서 3칸 띄운 10칸 원판)의 가운데, classic 은 아래에서 10px
   drawEl.style.setProperty('--kb', cardBack === 'classic' ? '10px' : `${Math.max(4, 8 * px - 11)}px`);
-  // 글자 크기 (10/10 글자 체계 두 단계): 큰 카드 = 이름 title 20 · 설명 body 15, 그 밖 = 이름 body 15 · 설명 12 (사장님 10/14 09:0x '폰트 12가 제일 선명하면 11 다 12로' — 그 전 04:1x '11 px' — 전 caption 12.
-  //  12 는 줄이기 바닥(fitCardText)과 같아 더 줄지 않는다 — 넘치면 아래 '폭만 두 칸씩 넓힘'으로)
-  //  큰 카드 = 폭 205 · 높이 260 이상 (PC 1280×720 의 224×344 등. 가로 폰은 높이 상한 DRAW_CARD_H 때문에 이제 작은 카드 — 844×390 에서 156×234)
+  // 글자 크기는 CSS 글자 규칙의 세 단계 (10/14 — docs/ui/hud_type_system_2026-10-10.md §16): 카드 이름 보통 --fs-m · 부제·등급·설명·특수 능력 작게 --fs-s.
+  //  큰 카드(폭 205 · 높이 260 이상 — PC 1280×720 의 224×344 등)는 이름·설명만 한 단계 위(크게 · 보통)와 등급 알약 여백 (#draw.wide — CSS 가 정한다, 여기서는 px 를 쓰지 않는다).
+  //  설명을 줄이지는 않는다(예전 fitCardText 의 6 % 씩 줄이기는 바닥 = 작은 카드의 시작 크기가 되어 걷어냈다)
   const big = cw >= 205 && ch >= 260;
-  drawEl.style.setProperty('--name', big ? '20px' : '15px');
-  drawEl.style.setProperty('--desc', big ? '15px' : '12px');
   drawEl.classList.toggle('wide', big);
   drawEl.classList.toggle('low', low);
-  // 글자를 줄여도 설명이 넘치면(낮은 가로 화면의 긴 설명) 높이는 두고 폭만 두 칸씩 넓힌다
+  // 설명이 넘치면(낮은 가로 화면의 긴 설명) 높이는 두고 폭만 두 칸씩 넓힌다
   const step = cardBack !== 'classic' ? 2 * px : 2;
   const cwMax = Math.floor(Math.min(230, (row.width - 2 * gap) / 3));
-  fitCardText(big ? 15 : 12);
   while (!narrow && cw + step <= cwMax && cardTextOverflows()) {
     cw += step;
     drawEl.style.setProperty('--cw', `${cw}px`);
     drawEl.style.setProperty('--padL', `${Math.max(0, Math.floor((row.width - 3 * cw - 2 * gap) / 2))}px`);
-    fitCardText(big ? 15 : 12);
   }
-  // 폭을 끝까지 넓혀도 넘치면(568×320 같은 아주 작은 가로 화면 — 설명 바닥이 12px 라 더 줄지 않는다, 사장님 10/14 '11 다 12로') 그림 칸 최소 높이를 줄여 글자에 자리를 준다
+  // 폭을 끝까지 넓혀도 넘치면(568×320 같은 아주 작은 가로 화면) 그림 칸 최소 높이를 줄여 글자에 자리를 준다
   for (const m of [24, 16]) {
     if (narrow || !cardTextOverflows()) break;
     drawEl.style.setProperty('--thumbMin', `${m}px`);
@@ -1137,25 +1133,6 @@ function cardTextOverflows() {
   });
 }
 
-/** 설명이 긴 카드(건슬링어의 리볼버처럼 인용문이 붙은 것)가 있으면 세 장의 설명 글자를 함께, 그 카드가 들어올 때까지 조금씩 줄인다 (6 % 씩, 바닥 11px — 세 장 크기는 같게) */
-function fitCardText(base) {
-  const faces = cardEls.map((el) => {
-    const face = el.querySelector('.wface');
-    const abil = el.querySelector('.wabil');
-    const desc = el.querySelector('.wdesc');
-    return { face, thumb: el.querySelector('.wthumb'), last: () => (abil.textContent ? abil : desc) };
-  });
-  // 넘침 = 그림 칸(.wthumb — 남은 높이를 채운다)이 가장 작게(min-height) 줄었는데도 마지막 글줄의 아래가 카드 안쪽 여백(아래 padding)에서 4px 위(금테에 글자가 물리지 않게)를 넘는다.
-  //  그림 칸이 아직 줄어들 수 있으면 넘침이 아니다 — 전에는 그림 칸이 글을 늘 아래로 밀어 언제나 넘침으로 읽혀 설명이 모든 화면에서 11px 까지 줄었다 (10/14 고침, 사장님 '폰은 12px, PC는 15px 고쳐').
-  //  앞면은 뒤집혀 있어 화면 좌표 대신 배치 좌표로 잰다
-  const over = ({ face, thumb, last }) => thumb.offsetHeight <= parseFloat(getComputedStyle(thumb).minHeight) + 0.5
-    && last().offsetTop + last().offsetHeight > face.clientHeight - parseFloat(getComputedStyle(face).paddingBottom) - 4;
-  drawEl.style.setProperty('--desc', `${base}px`);
-  for (let k = 1, px = base; k <= 5 && px > 12 && faces.some(over); k++) {
-    px = Math.max(12, base * (1 - 0.06 * k)); // 바닥 12px = 갈무리11 의 도트 격자(em 12 도트 — 가장 선명, 사장님 10/14 '11 다 12로')
-    drawEl.style.setProperty('--desc', `${px.toFixed(2)}px`);
-  }
-}
 
 /** i번째 카드를 고른다 (누르기 · 1/2 키). 상대 칸(맨 오른쪽)은 고를 수 없다: 누르면 살짝 흔들릴 뿐 */
 function pickCard(i) {
@@ -1404,7 +1381,7 @@ window.addEventListener('blur', () => {
 // ── 감정이 켜지는 순간 한 줄 알림 (아래 가운데 감정 줄 #emoMsg) ──
 //  10/10 20:3x 사장님 '상태 3종은 전처럼 화면 중앙에 뜨게 · 감정 문장 가운데로 복귀' (docs/ui/hud_type_system_2026-10-10.md §14) — v2 의 오른쪽 위 ③ 경직·상태 묶음은 없앴다.
 //  상대: "오소리 브란이 공포에 잠식된다" / 주인공: 주어 없이 "공포에 잠식된다" (10/10 문구 정리: 다른 감정 줄과 같은 현재형) (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
-//  색은 상태 3종 한 색(--hud-state, 사장님 19:2x '상태 3종은 모두 같은 색으로 통일')
+//  색은 상태 3종 한 색(사장님 19:2x '상태 3종은 모두 같은 색으로 통일' — 10/14 글자 색 넷의 '상태·상대' --c-alert)
 const EMO_TEXT = {
   fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식된다',
   obsession: (who) => (who ? '집념을 보인다' : '집념이 생긴다'), // 사장님 결정: 주어 없이 — 상대는 "집념을 보인다", 주인공은 "집념이 생긴다"

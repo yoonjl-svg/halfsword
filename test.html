@@ -26,58 +26,65 @@
       @font-face { font-family: 'Noto Sans Math'; src: url('/fonts/NotoSansMath-symbols.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap;
         unicode-range: U+21BB, U+25AE-25AF; }
       :root {
-        --ink: #f3e9d8;
-        --dim: #b8a88e;
+        /* 글자 규칙 (10/14 — index.html :root 와 같은 값 · docs/ui/hud_type_system_2026-10-10.md §16): 글자 색 넷 · 크기 세 단계 · 굵기 셋 */
+        --c-text: #f3e9d8;
+        --c-sub: #b8a88e;
+        --c-accent: #d9a441;
+        --c-on-accent: #1b1410;
+        --ink: var(--c-text);
+        --dim: var(--c-sub);
+        --accent: var(--c-accent);
         --panel: rgba(24, 18, 14, 0.88);
         --line: rgba(243, 233, 216, 0.18);
-        --accent: #d9a441;
         --bg: #1b1410;
-        /* 글자 체계 (index.html :root 와 같은 값 — docs/ui/hud_type_system_2026-10-10.md) */
         --font-ui: 'Cinzel', 'Pretendard', 'Noto Sans TC', 'Noto Sans Math', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-        --fs-title: 20px;
-        --fs-body: 15px;
-        --fs-caption: 12px;
+        --fs-s: 12px;
+        --fs-m: 14px;
+        --fs-l: 17px;
+        --fw-body: 400;
+        --fw-label: 600;
+        --fw-head: 700;
         --ls-label: .04em;
         --tier-trash: #b8b6b0; --tier-common: #fff3c4; --tier-rare: #8cc4ff; --tier-epic: #d6a8ff; --tier-legend: #ffd24a; --tier-mystery: #8fe3c6;
       }
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-      html, body { margin: 0; background: var(--bg); color: var(--ink); }
+      html, body { margin: 0; background: var(--bg); color: var(--c-text); }
       html { overflow-x: hidden; } /* body 에 두면 body 가 스크롤 상자가 되어 아래 '시작' 줄이 붙지 않는다 */
       body {
-        font-family: var(--font-ui);
+        font-family: var(--font-ui); font-weight: var(--fw-body); font-synthesis: none;
         min-height: 100vh; min-height: 100dvh;
       }
       main {
         max-width: 880px; margin: 0 auto;
         padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
       }
-      h1 { font-size: var(--fs-title); font-weight: 800; margin: 4px 0 2px; letter-spacing: var(--ls-label); }
-      .lead { color: var(--dim); font-size: var(--fs-body); margin: 0 0 14px; line-height: 1.5; }
-      h2 { font-size: var(--fs-body); margin: 18px 0 8px; display: flex; align-items: baseline; gap: 8px; }
-      h2 small { color: var(--dim); font-weight: 400; font-size: var(--fs-caption); }
-      h3 { font-size: var(--fs-caption); color: var(--accent); margin: 10px 0 6px; font-weight: 700; letter-spacing: var(--ls-label); }
+      h1 { font-size: var(--fs-l); font-weight: var(--fw-head); margin: 4px 0 2px; letter-spacing: var(--ls-label); }
+      .lead { color: var(--c-sub); font-size: var(--fs-m); margin: 0 0 14px; line-height: 1.5; }
+      h2 { font-size: var(--fs-m); font-weight: var(--fw-label); margin: 18px 0 8px; display: flex; align-items: baseline; gap: 8px; }
+      h2 small { color: var(--c-sub); font-weight: var(--fw-body); font-size: var(--fs-s); }
+      h3 { font-size: var(--fs-s); color: var(--c-sub); margin: 10px 0 6px; font-weight: var(--fw-label); letter-spacing: var(--ls-label); } /* 묶음 이름표 — 누를 것이 아니라 보조 색 (10/14 글자 색 규칙) */
       .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
       .grid.big { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
       .pick {
         display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; min-width: 0;
-        padding: 8px 10px; text-align: left; font: inherit; color: var(--ink);
+        padding: 8px 10px; text-align: left; font: inherit; color: var(--c-text);
         background: var(--panel); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
       }
-      .pick[aria-pressed='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: rgba(217, 164, 65, 0.12); }
-      .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .pick[aria-pressed='true'] { border-color: var(--c-accent); box-shadow: inset 0 0 0 1px var(--c-accent); background: rgba(217, 164, 65, 0.12); }
+      .pick:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
       .pick .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-      .pick b { font-size: var(--fs-body); font-weight: 700; overflow-wrap: anywhere; }
-      .pick span { font-size: var(--fs-caption); color: var(--dim); overflow-wrap: anywhere; }
-      .pick b small { display: block; font-size: var(--fs-caption); font-weight: 400; color: var(--dim); }
+      .pick b { font-size: var(--fs-m); font-weight: var(--fw-label); overflow-wrap: anywhere; }
+      .pick .txt > span { font-size: var(--fs-s); color: var(--c-sub); overflow-wrap: anywhere; } /* 10/14: 예전 '.pick span' 은 이름 칸(.txt)·등급 글(.tier)·동그라미(.mark)까지 덮어 이름이 흐리고 등급 색이 안 나왔다 — 둘째 줄에만 */
+      .pick b small { display: block; font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); }
       .grid.big .pick { min-height: 72px; }
-      .grid.big .pick b { font-size: var(--fs-body); }
+      .grid.big .pick b { font-size: var(--fs-m); }
       .thumb {
         flex: none; width: 40px; height: 40px; border-radius: 6px;
         background: radial-gradient(closest-side, var(--tg), transparent) center / contain no-repeat;
       }
       .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
       .grid.big .thumb { width: 52px; height: 52px; }
-      .tier { color: var(--tc); font-weight: 700; }
+      .tier { color: var(--tc); font-weight: var(--fw-label); } /* 등급 색 = 글자 색 규칙의 예외 (사장님 10/14 11:0x) */
       /* 등급 색: index.html 의 [data-tier] 와 같은 값 */
       [data-tier] { --tc: var(--tier-common); --tg: rgba(255,236,190,.28); }
       [data-tier="trash"] { --tc: var(--tier-trash); --tg: rgba(190,188,180,.2); }
@@ -86,25 +93,25 @@
       [data-tier="legend"] { --tc: var(--tier-legend); --tg: rgba(255,210,74,.6); }
       [data-tier="mystery"] { --tc: var(--tier-mystery); --tg: rgba(120,220,190,.45); }
       .pick[data-tier] { border-left: 3px solid var(--tc); }
-      .mark { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); color: var(--dim); font-size: var(--fs-body); font-weight: 700; }
-      .pick[aria-pressed='true'] .mark { color: #1b1410; background: var(--accent); border-color: var(--accent); }
-      .note { color: var(--dim); font-size: var(--fs-caption); line-height: 1.55; margin: 10px 0 0; }
+      .mark { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); color: var(--c-sub); font-size: var(--fs-m); font-weight: var(--fw-label); }
+      .pick[aria-pressed='true'] .mark { color: var(--c-on-accent); background: var(--c-accent); border-color: var(--c-accent); }
+      .note { color: var(--c-sub); font-size: var(--fs-s); line-height: 1.55; margin: 10px 0 0; }
       .bar {
         position: sticky; bottom: 0; margin-top: 18px; z-index: 1;
         padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
         background: rgba(27, 20, 16, 0.96); border-top: 1px solid var(--line);
       }
       .bar-in { max-width: 880px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
-      #summary { flex: 1; min-width: 0; font-size: var(--fs-caption); color: var(--dim); line-height: 1.4; overflow-wrap: anywhere; }
-      #summary b { color: var(--ink); }
+      #summary { flex: 1; min-width: 0; font-size: var(--fs-s); color: var(--c-sub); line-height: 1.4; overflow-wrap: anywhere; }
+      #summary b { color: var(--c-text); font-weight: var(--fw-label); }
       #btnGo {
-        flex: none; min-height: 48px; min-width: 120px; padding: 0 22px; font: inherit; font-size: var(--fs-body); font-weight: 800;
-        border: 0; border-radius: 8px; background: var(--accent); color: #1b1410; cursor: pointer;
+        flex: none; min-height: 48px; min-width: 120px; padding: 0 22px; font: inherit; font-size: var(--fs-m); font-weight: var(--fw-head);
+        border: 0; border-radius: 8px; background: var(--c-accent); color: var(--c-on-accent); cursor: pointer;
       }
-      .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--dim); font-size: var(--fs-caption); text-decoration: none; }
-      .back:hover { color: var(--ink); }
+      .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--c-sub); font-size: var(--fs-s); text-decoration: none; }
+      .back:hover { color: var(--c-text); }
       @media (orientation: landscape) and (max-height: 500px) {
-        h1 { font-size: var(--fs-title); } /* 낮은 화면도 글자는 줄이지 않는다 (글자 체계) */
+        h1 { font-size: var(--fs-l); } /* 낮은 화면도 글자는 줄이지 않는다 (글자 규칙) */
         h2 { margin-top: 12px; }
         .lead { margin-bottom: 8px; }
       }

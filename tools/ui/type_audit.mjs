@@ -9,6 +9,7 @@
 //        fight(① 자세 + ② 기술 줄 · 감정 줄을 DOM 으로 넣음) · ready(② 비기 창 열림 secretReady 를 DOM 으로) · pause(일시정지 창) ·
 //        result(패배 창 + 판 알림 '패배' — DOM 으로) · rotate(세로 폰) · test(test.html)
 //  바깥 주소(127.0.0.1 밖)로 가는 요청은 막고 센다 — 글꼴이 우리 파일로만 그려지는지 보려고.
+//  골라 돌리기: ONLY=844,1280,rotate (화면) · TEST_ONLY=1 (test.html 만). 표로 옮길 때는 요소(선택자)마다 처음 나온 장면 값을 쓴다
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -215,7 +216,7 @@ for (const v of VIEWS) {
   await cdp.send('DOM.enable');
   await cdp.send('CSS.enable');
   const R = (report.views[v.name] = { scenes: {} });
-  await runScenes(v, ctx, page, cdp, R);
+  if (!process.env.TEST_ONLY) await runScenes(v, ctx, page, cdp, R); // TEST_ONLY=1: test.html 만
   // test.html (같은 화면 크기)
   await page.goto(base + '/test.html', { waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
@@ -233,7 +234,7 @@ for (const v of VIEWS) {
   await ctx.close();
 }
 // 세로 폰: 돌려 달라는 안내 (터치 세로에서만 덮는다)
-if (!process.env.ONLY || process.env.ONLY.split(',').includes('rotate')) {
+if (!process.env.TEST_ONLY && (!process.env.ONLY || process.env.ONLY.split(',').includes('rotate'))) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
   await ctx.route((url) => !/^(https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/|data:|blob:)/.test(url.href), (r) => r.abort());
   const page = await ctx.newPage();

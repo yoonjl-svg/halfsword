@@ -1,6 +1,6 @@
-// 카드 앞면 설명 글 넘침 점검 (10/14 도트 글꼴 · 작은 카드 설명 11px — docs/ui/pixel_font_2026-10-14.md):
+// 카드 앞면 설명 글 넘침 점검 (10/14 글자 규칙 — 카드 설명 작게 --fs-s · 이름 보통 --fs-m, docs/ui/webfont_2026-10-14.md · 앞선 도트 글꼴 판 docs/ui/pixel_font_2026-10-14.md):
 //  가로 화면마다 무기를 세 장씩 카드에 채우고(main.js openDraw 와 같은 방법 — 특수 능력 줄 따로) 화면 크기 바뀜(resize)으로 layoutDraw 를 다시 돌린 뒤,
-//  카드 크기(--cw·--ch) · 설명 글자(--desc) · 넘침(main.js cardTextOverflows 와 같은 판정 + 앞면 상자 밖으로 나간 글)을 잰다.
+//  카드 크기(--cw·--ch) · 설명·이름 글자 크기 · 그림 칸 최소 높이(--thumbMin) · 넘침(main.js cardTextOverflows 와 같은 판정 + 앞면 상자 밖으로 나간 글)을 잰다.
 //  실행: 개발 서버를 띄운 뒤  node tools/cardface/desc_fit_check.mjs http://127.0.0.1:<포트>
 //  넘침이 하나라도 있으면 종료 코드 1. playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM
 import { chromium } from 'playwright';
@@ -56,7 +56,7 @@ for (const [w, h, dpr] of SIZES) {
       return {
         cw: d.getPropertyValue('--cw'),
         ch: d.getPropertyValue('--ch'),
-        desc: d.getPropertyValue('--desc'),
+        desc: `${getComputedStyle(cards[0].querySelector('.wdesc')).fontSize} · 이름 ${getComputedStyle(cards[0].querySelector('.wname')).fontSize} · 그림 칸 최소 ${getComputedStyle(cards[0].querySelector('.wthumb')).minHeight}`,
         faces: cards.map((el, i) => {
           const face = el.querySelector('.wface');
           const thumb = el.querySelector('.wthumb');
