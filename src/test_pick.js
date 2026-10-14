@@ -1,8 +1,8 @@
 // 테스트 고르기 화면 (test.html) — 사장님 10/10 16:5x "무기와 캐릭터 고르도록 해. 상대와 스테이지는 랜덤"
 //  무기: weapons.js WEAPON_LIST 전부 (오늘 바뀐 무기 묶음을 위에) · 캐릭터: characters.js CHARACTERS 전부 + 기본 주인공(LOOKS.player)
-//  상대: '무작위'(본판 회전 CHARACTERS — 판마다) 또는 여정 밖 인물(characters.js CHARACTER_GUESTS — 10/14 라트나, 무대보다 먼저 온 인물은 여기서만 고른다)
+//  상대: '무작위'(본판 회전 CHARACTERS — 판마다) 또는 손님 인물(characters.js CHARACTER_GUESTS — 10/14 라트나·다라이시: 무작위 회전에 없어 여기서 고른다. 10/14 19:4x 부터 여정에서는 제 무대의 검객)
 //  '시작' → index.html?test=1&weapon=<id>&hero=<id|player>&foe=<random|인물 id>&stage=<random|무대 id> (그쪽 인자 뜻은 src/test_route.js)
-//  무대(10/14): 기본은 무작위(여정 무대 — 지금 그대로). 여정 밖 무대(잠든 습지 · 소금 사막)를 고르면 stage=<id> 로 그 무대에 고정된다 (기억하지 않는다)
+//  무대(10/14): 기본은 무작위(여정 무대 — 지금 그대로). 새 무대(잠든 습지 · 철불 절벽 · 소금 사막 — 10/14 19:4x 여정에 들어감)를 고르면 stage=<id> 로 그 무대에 고정된다 (기억하지 않는다)
 //  마지막 고른 무기·캐릭터·상대는 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작).
 //  비기 판(이베리아·중국·독일)은 기억하지 않는다 — 10/13 사장님 'test 경로로는 아직 끊기지 않는 흐름이 발동' = 예전에 고른 v5 가 기억돼 있던 것. 열 때마다 본판 기본값에서 시작
 import { WEAPON_LIST, TIER_LABEL, RETIRED_WEAPONS, WEAPONS } from './weapons.js';
@@ -54,10 +54,11 @@ const heroes = [
   { id: 'player', name: '기본 주인공', sub: '지금 플레이어 겉모습', armour: '투구' },
   ...CHARACTERS.map((c) => ({ id: c.id, name: c.name, sub: c.epithet || '—', armour: armourLine(c.look) })),
 ];
-// 상대 (10/14 — 사장님 '라트나는 테스트 경로의 상대 고르기와 ?foe=ratna 로'): 무작위(본판 회전) + 여정 밖 인물. 여정 밖 인물은 본판 무작위 상대 목록에 없다
+// 상대 (10/14 — 사장님 '라트나는 테스트 경로의 상대 고르기와 ?foe=ratna 로'): 무작위(본판 회전) + 손님 인물. 손님 인물은 본판 무작위 상대 목록에 없다
+//  (10/14 19:4x 사장님 결정으로 여정에서는 제 무대 — 잠든 습지 · 소금 사막 — 의 검객으로 나온다. 그래서 '여정 밖' 대신 '무작위 밖')
 const foes = [
   { id: 'random', name: '무작위', sub: `본판 인물 ${CHARACTERS.length}명 · 판마다`, armour: '고른 캐릭터는 빼고' },
-  ...CHARACTER_GUESTS.map((c) => ({ id: c.id, name: c.name, sub: `${c.epithet} · 여정 밖`, armour: WEAPONS[c.weapon]?.nameKo ?? c.weapon })),
+  ...CHARACTER_GUESTS.map((c) => ({ id: c.id, name: c.name, sub: `${c.epithet} · 무작위 밖`, armour: WEAPONS[c.weapon]?.nameKo ?? c.weapon })),
 ];
 
 // 이베리아 비기 판 (10/11 — docs/strike/iberian_secret_v6_2026-10-11.md): 새 '길목 지키기'(v6 기본) · v5 '멈추지 않는 흐름' · 옛 v4 '비켜 서며 크게 가로베기' — 시작 주소의 ibSecret 로 (main.js)
@@ -76,14 +77,17 @@ const DE_SECRETS = [
   { id: 'v1', name: '기본 · 받아 베기 (Versetzen)', sub: '머리·목을 노리는 칼을 맞받아 벰 — 지금 본판 기본' },
   { id: 'parry', name: '시험 · 감아 들기 (Indes)', sub: '황소·왕관으로 받아 칼이 붙은 동안 입력 → 받은 칼을 타고 한 수 (붙음이 짧아 잘 안 열림)' },
 ];
-// 무대 (10/14 — 여정 밖 무대 잠든 습지·소금 사막을 여는 곳, docs/import/sluice_port_2026-10-14.md · 확인표 1119 / docs/import/salt_desert_port_2026-10-14.md · 확인표 1214). 기본은 무작위(지금 그대로).
-//  화산섬(10/14, docs/import/volcano_port_2026-10-14.md)은 정식 경로 무대지만 비탈·용암을 바로 시험하려고 여기서도 고정할 수 있게 둔다
+// 무대 (10/14 — 새 무대 잠든 습지·소금 사막·철불 절벽을 여는 곳, docs/import/sluice_port_2026-10-14.md · 확인표 1119 / docs/import/salt_desert_port_2026-10-14.md · 확인표 1214 /
+//  docs/import/ironcliff_port_2026-10-14.md · 확인표 1386). 기본은 무작위(지금 그대로). 10/14 19:4x 사장님 결정으로 셋 다 여정 정식 경로(12 · 13 · 14 번째)에 들어갔고,
+//  무작위(여정 무대)에도 나온다 — 여기서 고르면 그 무대에 고정. 괄호 안 번호는 stages.js STAGE_ORDER 자리(왼쪽 위 '스테이지 N')와 같게 — 화산섬(docs/import/volcano_port_2026-10-14.md · 확인표 1463 · 1479)이
+//  철불 절벽 뒤 14 번째로 들어와 소금 사막은 15
 //  stages.js 를 부르면 무대 짓는 코드가 이 화면에 다 딸려 오므로 이름만 여기 적는다 (stages.js STAGE_NAME_KO 와 같은 이름)
 const STAGE_PICKS = [
   { id: 'random', name: '무작위 (여정 무대)', sub: '판마다 여정 무대 가운데 하나 — 지금 그대로' },
-  { id: 'sluice', name: '잠든 습지 (여정 밖)', sub: '새 무대 (10/14) — 가운데 말레이곰 석상 · 진흙 웅덩이 감속. 판이 바뀌어도 이 무대' },
-  { id: 'dayr', name: '소금 사막 (여정 밖)', sub: '새 무대 (10/14) — 소금 벌판 역참의 해 질 녘 · 낮은 해와 긴 그림자. 판이 바뀌어도 이 무대' },
-  { id: 'etna', name: '화산섬', sub: '새 무대 (10/14) — 결투장 전체가 산비탈 · 낮은 쪽 용암에 닿으면 화상(다리 → 무릎). 판이 바뀌어도 이 무대' },
+  { id: 'sluice', name: '잠든 습지 (여정 12)', sub: '새 무대 (10/14) — 가운데 말레이곰 석상 · 진흙 웅덩이 감속. 판이 바뀌어도 이 무대' },
+  { id: 'dunhuang', name: '철불 절벽 (여정 13)', sub: '새 무대 (10/14) — 석굴 절벽 앞뜰의 초가을 아침 · 6 층 누각과 벽화. 판이 바뀌어도 이 무대' },
+  { id: 'etna', name: '화산섬 (여정 14)', sub: '새 무대 (10/14) — 결투장 전체가 산비탈 · 낮은 쪽 용암에 닿으면 화상(다리 → 무릎). 판이 바뀌어도 이 무대' },
+  { id: 'dayr', name: '소금 사막 (여정 15)', sub: '새 무대 (10/14) — 소금 벌판 역참의 해 질 녘 · 낮은 해와 긴 그림자. 판이 바뀌어도 이 무대' },
 ];
 const saved = loadPick();
 const pick = {

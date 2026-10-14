@@ -663,6 +663,41 @@ def dayr():
     return pal, t, band, center, 'A'
 
 
+# ── 10/14: 철불 절벽 (샛별 저장소 무대 dunhuang 을 옮김 — 그쪽엔 뒷면이 없어 새로 그림, docs/import/ironcliff_port_2026-10-14.md) ──
+def dunhuang():
+    # 철불 절벽: 짙은 모래빛 갈색 바탕에 모래빛 마름모 격자, 처마를 인 석굴 입구(회백 절벽 · 붉은 처마 도리 · 휜 지붕 끝 · 어두운 아치 굴)와
+    # 청록 띠 한 가닥(벽화의 흩날리는 띠에서 — 사람 꼴 없이 S 자 띠만, 스스로 180° 대칭)을 번갈아. 띠는 기와 끝 · 붉은 도리 · 서까래 끝이 늘어선 처마,
+    # 가운데는 반대쪽 뜰의 부서진 수레에서 온 수레바퀴(살 여섯 — 살 여덟 바퀴는 종교 문양으로 읽힐 수 있어 피함, 연꽃·비천 같은 무늬도 넣지 않음).
+    # 강조색은 무대처럼 둘 — 붉은 처마(R)와 벽화 청록(J)
+    pal = dict(SHARED, B='#2d2418', K='#57452f', C='#d9c9a8', R='#a35a43', J='#6f9488', W='#7d6c5a')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    cave = ['W......W', 'WWWWWWWW', '.RRRRRR.', '.CCCCCC.', '.CCBBCC.', '.CBBBBC.', '.CBBBBC.', '.CBBBBC.']  # 끝이 들린 지붕 · 붉은 도리 · 회백 절벽에 뚫린 아치 굴 입구(땅까지 열림)
+    ribbon = ['.JJJJ.', 'J.....', '.JJJ..', '..JJJ.', '.....J', '.JJJJ.']  # 청록 S 자 띠 (스스로 180° 대칭)
+    stamp(t, cave, 8, 8)
+    stamp(t, ribbon, 16, 16)
+    stamp(t, ribbon, 16, 0)
+    sym_tile(t)
+    band = band_rows(['WWWWWW', 'RRRRRR', 'CC.CC.', 'CC.CC.'], 'B')  # 기와 끝 · 붉은 도리 · 서까래 끝
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            a = math.atan2(dy, dx)
+            spoke = min(abs(math.sin(a - k * math.pi / 3)) for k in range(3)) * d  # 살 여섯 (세 줄이 가운데를 지남 — 180° 대칭)
+            if d > 4.6:
+                center[y][x] = 'W'  # 바퀴 테
+            elif d <= 1.0:
+                center[y][x] = 'C'  # 굴대통
+            elif spoke < 0.45:
+                center[y][x] = 'W'  # 살
+    return pal, t, band, center, 'R'
+
+
 # ── 10/14: 화산섬 (샛별 저장소 무대 etna 를 옮김 — 그쪽엔 뒷면이 없어 새로 그림, docs/import/volcano_port_2026-10-14.md) ──
 def etna():
     # 화산섬: 해 뜨기 전 짙은 현무암빛 바탕에 굳은 용암 판 격자(마름모), 분화구 원뿔(옅은 재 연기 · 꼭대기 주황 빛)과
@@ -700,7 +735,7 @@ def etna():
 
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice), ('dayr', dayr), ('etna', etna)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice), ('dayr', dayr), ('dunhuang', dunhuang), ('etna', etna)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)
