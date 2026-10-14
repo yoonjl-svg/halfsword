@@ -3,10 +3,13 @@
 //  '── v7' 표시가 붙은 줄로 더했다: 1~3 mm 선(깃 테·덩굴·앞섶 줄·정강이 등줄)과 작은 쇠 장식은 만들지 않고, 빈 검집을 모노호시자오 날 길이로 늘인다.
 //  우리 판 v8(look.daraishiRevision 8 — 사장님 10/14 12:2x '조금만 더 페르시안 귀족의 전통 · 하의 길이와 겹침이 애매')은 '── v8' 줄: 몸통 아래 옷과 발을
 //  outfit_silver_wanderer_qaba.js 의 카바(종아리 중간 길이 긴 겉옷 · 바지 · 장화)로 바꾸고, 가죽 허리띠 대신 detail 의 캄마르반드, 검집은 자락 밖으로 조금 기울인다.
+//  우리 판 v9(look.daraishiRevision 9 — 사장님 10/14 13:4x 'v7·v8 절충: 보랏빛·장식은 v7 쪽으로, 고증에 묶이지 말 것')은 '── v9' 줄: 카바 꼴은 v8 그대로,
+//   겉감(가슴·배·골반·자락)과 위 소매를 보라로 칠하고 테·문양은 outfit_silver_wanderer_v9.js 가 짓는다
 //  (아래 영어 줄 설명은 샛별 저장소 원문 그대로 둔 것이다)
 // Reference-led preview: native anatomy/eyes, rigid part-local visual layers.
 // +X forward, +Y up/proximal, +Z right. No colliders, armor or controller edits.
 import { createDaraishiQaba } from './outfit_silver_wanderer_qaba.js'; // ── v8 카바
+import { createDaraishiV9 } from './outfit_silver_wanderer_v9.js'; // ── v9 절충
 // ── v7 빈 검집: 샛별 0.66 m(롱소드 임시 배정 때 만든 길이 — 모노호시자오 날 0.90 m 보다 짧다, 리뷰 4차 §2-4) → 0.94 m. 입(위 끝)은 그 자리, 아래로만 늘인다
 // ── v8 검집: 카바 자락(옷단에서 다리 축 바깥 0.14 m · 왼다리가 벌어지거나 비틀리면 더 바깥)에 검집이 묻히지 않게 입(위 끝)을 바깥(−z)으로 1.2 cm 옮기고
 //  입을 축으로 바깥으로 0.12 rad 기울인다 (끝은 약 12 cm 바깥) — 임시 검사(자락 뚫림 셈, docs/import/salt_desert_port_2026-10-14.md §2-7)로 고른 값, 확인표 1234
@@ -23,6 +26,9 @@ export function createSilverWandererOutfit(h) {
   const { THREE, bake, box, cyl, ball, addMerged, CLOTH, isoldeLock,
     artoriaCloth, artoriaRoundedBox, sleeveVolume } = h;
   const qaba = createDaraishiQaba(h); // ── v8
+  const v9 = createDaraishiV9(h); // ── v9: 보라 겉감의 카바(v9.qaba — 꼴은 v8 과 같다) · 테·문양
+  const is9 = (look) => look?.daraishiRevision >= 9;
+  const coatOf = (look) => (is9(look) ? v9.qaba : qaba); // ── v9
   const WHITE = 0xe9e9e5, PURPLE = 0x433653, HEM = 0x776b88;
   const SILVER = 0xb6bbc3, LEATHER = 0x413039, GOLD = 0xa88b45;
   const cloth = { ...CLOTH, metalness: 0, roughness: .87, side: THREE.DoubleSide };
@@ -112,7 +118,7 @@ export function createSilverWandererOutfit(h) {
     addMerged(layer(g, 'hair'), light, 0x98939d, hairMat);
   }
   function chest(g, look) {
-    torso(g, WHITE); const l = layer(g);
+    torso(g, is9(look) ? v9.C.coat : WHITE); const l = layer(g); // ── v9: 카바 윗몸도 보라 겉감 (흰 안옷은 v9 모듈의 가슴 V)
     // High open standing collar and short shoulder mantle; neither is heavy armor.
     addMerged(l, [drape([[.254, .072, .082], [.19, .079, .092], [.16, .127, .188],
       [.119, .14, .208], [.037, .14, .211]], .58, Math.PI * 2 - 1.16, .008, 4)], PURPLE, cloth);
@@ -131,7 +137,7 @@ export function createSilverWandererOutfit(h) {
     if (!look?.hairStyle) backHair(g);
   }
   function abdomen(g, look) {
-    torso(g, WHITE);
+    torso(g, is9(look) ? v9.C.coat : WHITE); // ── v9
     if (look?.daraishiRevision >= 8) return; // ── v8: 가죽 허리띠 대신 detail 의 캄마르반드(천 띠)
     const l = layer(g);
     addMerged(l, [bake(artoriaRoundedBox(.236, .07, .338, .015), [0, -.053, 0])], LEATHER, cloth);
@@ -143,9 +149,9 @@ export function createSilverWandererOutfit(h) {
   }
   function pelvis(g, look, d) {
     const coat = look?.daraishiRevision >= 8; // ── v8: 골반은 카바 허리 아래 윗단(흰 겉감·닫힌 통·앞섶 테·띠 끝) — 보라 엉덩이 자락 대신
-    torso(g, coat ? WHITE : PURPLE); const l = layer(g);
+    torso(g, coat ? (is9(look) ? v9.C.coat : WHITE) : PURPLE); const l = layer(g);
     const slim = look?.daraishiRevision >= 7;
-    if (coat) qaba.pelvis(g, d);
+    if (coat) coatOf(look).pelvis(g, d); // ── v9: 보라 겉감 골반 통 · 테·띠 끝은 v9 모듈
     else addMerged(l, [drape([[.107, .109, .16], [-.011, .124, .186], [-.149, .142, .211]], .44, Math.PI * 2 - .88, .024)], 0x5a4c68, cloth);
     addMerged(l, [line([[.124, .086, -.164], [.137, .046, -.06], [.139, -.015, .04], [.117, -.07, .164]], .013)], LEATHER, cloth);
     // Empty scabbard beside the left leg; decorative and independently colored.
@@ -157,7 +163,8 @@ export function createSilverWandererOutfit(h) {
       bake(cyl(.021, .014, .04, 10, false), [-.088, -.527, -.24], [0, 0, -.23])], GOLD, steel);
   }
   function upperArm(g, look) {
-    tint(g, WHITE); sleeveVolume(g, 1.04, 1.16);
+    tint(g, is9(look) ? v9.C.coat : WHITE); sleeveVolume(g, 1.04, 1.16);
+    if (is9(look)) { v9.upperArm(g); return; } // ── v9: 겉옷 반소매(보라) — 망토 어깨 덮개·금빛 아랫단 띠·소매 끝 띠는 v9 모듈이 한 메쉬로
     const l = layer(g);
     addMerged(l, [bake(ball(.072, 20, 12, null, null, [0, Math.PI * 2, 0, Math.PI * .59]), [0, .098, 0], null, [1, 1.02, 1.04]),
       cyl(.073, .07, .016, 20, true, [0, .074, 0])], PURPLE, cloth);
@@ -170,7 +177,7 @@ export function createSilverWandererOutfit(h) {
       cyl(.053, .05, .012, 20, true, [0, -.082, 0]), cyl(.049, .047, .009, 20, true, [0, -.1, 0])], SILVER, steel);
   }
   function skirt(g, side, lower, look, d) {
-    if (look?.daraishiRevision >= 8) { qaba.leg(g, d ?? { pos: [0, lower ? .29 : .715, side * .095] }, lower); return; } // ── v8: 카바 자락 · 바지 · 장화 목
+    if (look?.daraishiRevision >= 8) { coatOf(look).leg(g, d ?? { pos: [0, lower ? .29 : .715, side * .095] }, lower); return; } // ── v8: 카바 자락 · 바지 · 장화 목 (v9 는 보라 자락 + 테·문양)
     tint(g, WHITE); const l = layer(g);
     const tailored=look?.hairStyle==='court_braided_layers';
     // Each half follows its own leg; an open front keeps white trousers readable.
@@ -187,7 +194,7 @@ export function createSilverWandererOutfit(h) {
     }
   }
   function foot(g, look) {
-    if (look?.daraishiRevision >= 8) { qaba.boot(g); return; } // ── v8: 은 띠 붙인 회색 신 대신 부드러운 가죽 장화
+    if (look?.daraishiRevision >= 8) { coatOf(look).boot(g); return; } // ── v8: 은 띠 붙인 회색 신 대신 부드러운 가죽 장화 (v9 같은 장화)
     tint(g, 0x9b9fa8);
     addMerged(layer(g), [-.025, .007, .039].map(x => box(.021, .005, .105, [x, .041, 0], [0, 0, -.05])), SILVER, steel);
   }

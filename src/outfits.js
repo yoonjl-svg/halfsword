@@ -22,7 +22,7 @@ import { createTuyanaOutfit } from './outfit_tuyana.js'; // 투야나 v2 겨울 
 import { createRenjiBajiOutfit } from './outfit_renji_baji.js'; // 김씨 v2 하카마 → 바지·행전 (외형 다듬기 2차 10/10)
 import { createRatnaOutfit } from './outfit_ratna.js'; // 라트나 위라세타쿤 복식 (샛별 저장소에서 가져옴 10/14 — 샛별 v1~v3 + 우리 v4)
 import { createSilverWandererOutfit } from './outfit_silver_wanderer.js'; // 다라이시 복식 v1 (샛별 저장소에서 가져옴 10/14)
-import { createSilverWandererDetail } from './outfit_silver_wanderer_detail.js'; // 다라이시 v2~ (장식 · 긴 머리 · 반묶음 · 땋음 — 샛별 v2·v4~v6 + 우리 v7)
+import { createSilverWandererDetail } from './outfit_silver_wanderer_detail.js'; // 다라이시 v2~ (장식 · 긴 머리 · 반묶음 · 땋음 — 샛별 v2·v4~v6 + 우리 v7~v9)
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -2839,7 +2839,7 @@ export const OUTFITS = {
   tuyana_winter_priest_thick: createTuyanaOutfit(newOutfitHelpers, { dangle: true, thick: true }), // 투야나 v5 추트키 매듭 굵게 (10/11 01:4x)
   ratna_ferryman: createRatnaOutfit(newOutfitHelpers), // 라트나 (여정 밖 인물, 10/14) — 모듈 하나가 look.ratnaRevision 으로 샛별 v1~v3 · 우리 v4 를 가른다. 이름은 샛별 쪽 열쇠 그대로
   silver_wanderer: createSilverWandererOutfit(newOutfitHelpers), // 다라이시 v1 (여정 밖 인물, 10/14) — 이름은 샛별 쪽 열쇠 그대로
-  silver_wanderer_detail: createSilverWandererDetail(newOutfitHelpers), // 다라이시 v2·v4~v6 (look.hairStyle 로 가름) + 우리 v7 (look.daraishiRevision)
+  silver_wanderer_detail: createSilverWandererDetail(newOutfitHelpers), // 다라이시 v2·v4~v6 (look.hairStyle 로 가름) + 우리 v7~v9 (look.daraishiRevision)
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,
