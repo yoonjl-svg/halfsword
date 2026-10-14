@@ -947,7 +947,7 @@ const cardEls = [...drawEl.querySelectorAll('.wcard')];
 //  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
 //  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
 //  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
-const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025', frozen_bay: '#18293a', qinglan: '#16332f', sluice: '#182a22' }; // 테마 → 바탕색 (뒤 여섯은 샛별 저장소의 무대 — 얼어붙은 만·청람잔도는 10/11, 잠든 습지는 10/14 우리가 그림, tools/cardbacks/gen_pixel_cardbacks.py)
+const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025', frozen_bay: '#18293a', qinglan: '#16332f', sluice: '#182a22', dayr: '#2a1d1b' }; // 테마 → 바탕색 (뒤 일곱은 샛별 저장소의 무대 — 얼어붙은 만·청람잔도는 10/11, 잠든 습지·소금 사막은 10/14 우리가 그림, tools/cardbacks/gen_pixel_cardbacks.py)
 const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
 const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
 let cardBack = 'classic';
@@ -1669,6 +1669,7 @@ function updateCamera(dt) {
   camera.position.sub(camShake.o); // 다음 프레임 따라가기는 흔들림 없는 위치 기준
   sun.position.set(a.x + SUN_OFF.x, SUN_OFF.y, a.z + SUN_OFF.z);
   sun.target.position.set(a.x, 0, a.z);
+  stages.snapSun(); // 그림자 화소 맞춤 — 무대가 켠 때만(소금 사막의 긴 그림자가 기어다니며 깜빡이지 않게, stages.js). 다른 무대는 그대로
 }
 
 // ── 지금 검술 자세 이름 ① (10/14 03:3x 사장님 '자세 칸도 계속 보이게': 싸움 중에는 지금 자세 이름이 늘 보이고, 자세가 바뀌면 그 자리에서 바꿔 끼운다) ──

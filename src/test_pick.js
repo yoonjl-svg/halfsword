@@ -2,7 +2,7 @@
 //  무기: weapons.js WEAPON_LIST 전부 (오늘 바뀐 무기 묶음을 위에) · 캐릭터: characters.js CHARACTERS 전부 + 기본 주인공(LOOKS.player)
 //  상대: '무작위'(본판 회전 CHARACTERS — 판마다) 또는 여정 밖 인물(characters.js CHARACTER_GUESTS — 10/14 라트나, 무대보다 먼저 온 인물은 여기서만 고른다)
 //  '시작' → index.html?test=1&weapon=<id>&hero=<id|player>&foe=<random|인물 id>&stage=<random|무대 id> (그쪽 인자 뜻은 src/test_route.js)
-//  무대(10/14): 기본은 무작위(여정 무대 — 지금 그대로). 여정 밖 무대(잠든 습지)를 고르면 stage=<id> 로 그 무대에 고정된다 (기억하지 않는다)
+//  무대(10/14): 기본은 무작위(여정 무대 — 지금 그대로). 여정 밖 무대(잠든 습지 · 소금 사막)를 고르면 stage=<id> 로 그 무대에 고정된다 (기억하지 않는다)
 //  마지막 고른 무기·캐릭터·상대는 localStorage 에 기억한다 (읽기·쓰기 실패해도 그냥 동작).
 //  비기 판(이베리아·중국·독일)은 기억하지 않는다 — 10/13 사장님 'test 경로로는 아직 끊기지 않는 흐름이 발동' = 예전에 고른 v5 가 기억돼 있던 것. 열 때마다 본판 기본값에서 시작
 import { WEAPON_LIST, TIER_LABEL, RETIRED_WEAPONS, WEAPONS } from './weapons.js';
@@ -76,11 +76,12 @@ const DE_SECRETS = [
   { id: 'v1', name: '기본 · 받아 베기 (Versetzen)', sub: '머리·목을 노리는 칼을 맞받아 벰 — 지금 본판 기본' },
   { id: 'parry', name: '시험 · 감아 들기 (Indes)', sub: '황소·왕관으로 받아 칼이 붙은 동안 입력 → 받은 칼을 타고 한 수 (붙음이 짧아 잘 안 열림)' },
 ];
-// 무대 (10/14 — 여정 밖 무대 잠든 습지를 여는 곳, docs/import/sluice_port_2026-10-14.md · 확인표 1119). 기본은 무작위(지금 그대로).
+// 무대 (10/14 — 여정 밖 무대 잠든 습지·소금 사막을 여는 곳, docs/import/sluice_port_2026-10-14.md · 확인표 1119 / docs/import/salt_desert_port_2026-10-14.md · 확인표 1214). 기본은 무작위(지금 그대로).
 //  stages.js 를 부르면 무대 짓는 코드가 이 화면에 다 딸려 오므로 이름만 여기 적는다 (stages.js STAGE_NAME_KO 와 같은 이름)
 const STAGE_PICKS = [
   { id: 'random', name: '무작위 (여정 무대)', sub: '판마다 여정 무대 가운데 하나 — 지금 그대로' },
   { id: 'sluice', name: '잠든 습지 (여정 밖)', sub: '새 무대 (10/14) — 가운데 말레이곰 석상 · 진흙 웅덩이 감속. 판이 바뀌어도 이 무대' },
+  { id: 'dayr', name: '소금 사막 (여정 밖)', sub: '새 무대 (10/14) — 소금 벌판 역참의 해 질 녘 · 낮은 해와 긴 그림자. 판이 바뀌어도 이 무대' },
 ];
 const saved = loadPick();
 const pick = {
