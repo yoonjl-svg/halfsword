@@ -771,6 +771,30 @@ LOOK_ARCHIVE.ratna.v4 = {
   hoseUpper: 0xb68854, trouserSeam: 0x8d673f, faceSkin: 0xb48362, faceGlow: 0.18, ratnaMonkey: 'bag', ratnaRevision: 4,
 };
 
+// 다라이시 (여정 밖 인물 — characters.js CHARACTER_GUESTS, 10/14) — 샛별 저장소 LOOK_ARCHIVE.silver_wanderer v1·v2·v4·v5·v6 (origin/main db729604, 값 그대로).
+//  v3(상업 게임 인물을 참고한 머리 — 샛별 쪽에서도 미채택)는 옮기지 않았다(리뷰 4차 §출처). 복식 모듈: outfits.js silver_wanderer(v1) · silver_wanderer_detail(v2~).
+//  v1 첫 시안 → v2 장식 → v4 원래 긴 머리 숱 보강 → v5 반묶음 → v6 땋음·자락 다듬기. 방어구·투구 없음
+LOOK_ARCHIVE.silver_wanderer = { v1: {
+  tunic: 0xe9e9e5, quilt: 0xe9e9e5, sleeve: 0xe9e9e5, straps: null,
+  belt: 0x413039, hoseUpper: 0xe9e9e5, hoseLower: 0xe9e9e5, shoes: 0x9b9fa8,
+  skin: 0xe0bf9f, hands: 0xe0bf9f, helmet: null, metal: 0xb6bbc3, hair: 0x77737f,
+  headband: null, grip: 0x403038, hilt: 0xa88b45, accent: 0x433653,
+  outfit: 'silver_wanderer', armor: null, stockEyes: true,
+} };
+LOOK_ARCHIVE.silver_wanderer.v2 = { ...LOOK_ARCHIVE.silver_wanderer.v1, outfit: 'silver_wanderer_detail' };
+LOOK_ARCHIVE.silver_wanderer.v4 = { ...LOOK_ARCHIVE.silver_wanderer.v2, hairStyle: 'full_layered' };
+LOOK_ARCHIVE.silver_wanderer.v5 = { ...LOOK_ARCHIVE.silver_wanderer.v4, hairStyle: 'court_half_tie' };
+LOOK_ARCHIVE.silver_wanderer.v6 = { ...LOOK_ARCHIVE.silver_wanderer.v5, hairStyle: 'court_braided_layers' };
+// v7 (우리 판 — 사장님 10/14 08:1x '폰에서 안 보이는 1~2 mm 문양은 빼고 실루엣은 유지 · 땋은 머리는 마디가 보이게(머리와 명도 차) · 인물 삼각형을 우리 인물 최대 안팎으로',
+//  docs/import/salt_desert_port_2026-10-14.md): v6 실루엣(보라 깃·짧은 어깨 망토·흰 셔츠·보라 갈라진 자락·흰 바지·은 각반·긴 은발·땋음) 그대로 ·
+//  잔선(덩굴·잎·박음질·가는 테·고리 줄) 뺌 — 어깨 원판의 팔각 꽃·허리 띠의 팔각 꽃만 · 땋음은 마디 땋음(머리보다 밝은 은빛) · 머리 층 칸 줄임 ·
+//  빈 검집 0.66 → 0.94 m · 부위마다 같은 재질 합침. 모듈 쪽 '── v7' 줄(daraishiRevision 7). 값 모두 사장님 확인 전(확인표 1219~1221)
+LOOK_ARCHIVE.silver_wanderer.v7 = { ...LOOK_ARCHIVE.silver_wanderer.v6, daraishiRevision: 7 };
+// v8 (우리 판 — 사장님 10/14 12:2x '조금만 더 페르시안 귀족의 전통 · 하의 길이나 겹침이 애매'): v7 위에 카바(outfit_silver_wanderer_qaba.js) —
+//  흰 긴 겉옷이 가슴부터 종아리 중간(0.30 m)까지 한 벌 · 왼쪽 자락이 오른쪽으로 건너 여미는 앞섶 테 · 캄마르반드(천 띠 + 매듭 + 늘어진 끝) · 양옆 트임 ·
+//  보랏빛 회색 바지가 가죽 장화로 · 은 각반과 갈라진 보라 자락은 없앰 · 검집은 자락 밖으로 0.08 rad. 값 모두 사장님 확인 전(확인표 1226~1234)
+LOOK_ARCHIVE.silver_wanderer.v8 = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishiRevision: 8 };
+
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
   bran: 'v1',
@@ -786,6 +810,7 @@ export const CHARACTER_LOOK_VERSION = {
   renji: 'v3', // 외형 3차 10/11 — 옛 판 ?look=renji:v2(바지·행전) · v1
   eira: 'v5', // 10/11 01:4x 매듭 굵게 — 옛 판 ?look=eira:v4 · v3 · v2 · v1
   ratna: 'v4', // 10/14 여정 밖 인물 (우리 v4) — 샛별 판 ?look=ratna:v3 · v2 · v1
+  silver_wanderer: 'v8', // 10/14 여정 밖 인물 다라이시 (우리 v8 — 카바) — 우리 v7(겉모습 덜기만) ?look=silver_wanderer:v7 · 샛별 판 v6 · v5 · v4 · v2 · v1
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
