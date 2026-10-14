@@ -10,9 +10,10 @@ export const BEAR_NAVIGATION = Object.freeze({ x: 0, z: 0, radius: BEAR_AVOID_RA
 export const OBSTACLE_ROUTE = Object.freeze({ clear: 0.5, step: 0.58, ring: 0.75 });
 // 카메라가 석상 안으로 들어가지 않게 자르는 반지름 = 석상 반지름 + CAMERA_PAD (확인표 1118)
 export const CAMERA_PAD = 0.28;
-// 판 시작 자리 옆 비킴 (디자인 결정 D, 확인표 1121): 석상은 정확히 가운데 두고 두 사람을 +z(카메라 어깨 쪽)로 옮겨 카메라 → 상대 시선이 석상에 막히지 않게.
-//  0.45 m = 판 시작 카메라(열림 1 · 0.5 · 0)에서 상대 머리·가슴(가운데·좌우 0.2)·골반·무릎까지 광선이 석상(곰 + 받침)에 하나도 안 닿는 가장 작은 값 (0.05 m 간격으로 잼)
-export const START_SIDE = 0.45;
+// 판 시작 자리 옆 비킴 (디자인 결정 D, 확인표 1121 → 1251): 석상은 정확히 가운데 두고 두 사람을 +z(카메라 어깨 쪽)로 옮겨 카메라 → 상대 시선이 석상에 막히지 않게.
+//  판 시작 카메라(열림 1 · 0.5 · 0)에서 상대 머리·가슴(가운데·좌우 0.2)·골반·무릎까지 광선이 석상(곰 + 받침)에 하나도 안 닿는 가장 작은 값 (0.05 m 간격으로 잼).
+//  곰 3.0 m 에서 0.45 → 사장님 10/14 10:3x 곰 3.2 m 에서 0.50 (0.45 면 열림 1 카메라 → 상대 가슴 오른쪽 0.2 광선 하나가 석상에 닿는다)
+export const START_SIDE = 0.5;
 export const stageStartZ = (stageId) => (stageId === 'sluice' ? START_SIDE : 0);
 
 /**
