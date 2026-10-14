@@ -9,7 +9,8 @@
 //   · 이미 시작한 같은 상대의 찍기는 exitMargin 만큼 너그럽게 본다(경계에서 켜졌다 꺼졌다 하지 않게). 일어나기(getup) 이름만으로는 끊지 않는다
 //   · 칼끝이 몸 겉면에 닿기만 하면 시작할 수 있다(짧은·부러진 칼). 걸어서 깊이 닿을 수 있으면 그만큼 걸어 들어간다
 //   · 다 걸었는데도 닿지 않으면 허공을 찍지 않고 거둔다
-//  높이 값은 게임 설계값이다(인체 실측 한계가 아니다). 바닥은 평평한 y = 0 이라고 본다.
+//  높이 값은 게임 설계값이다(인체 실측 한계가 아니다). 높이는 쓰러진 상대의 골반 밑 땅 위로 잰다 — 평지 무대는 y 0,
+//  지형 무대(화산섬)는 그 자리 땅 높이를 뺀다 (샛별 0116047c 와 같게). 내 가슴과의 높낮이 비교(minimumDrop)는 월드 높이 그대로.
 // ─────────────────────────────────────────────────────────────
 import { BODY, SKILL } from './config.js';
 
@@ -50,6 +51,7 @@ export function lowFinishPosture(att, vic = att?.foe, continuing = false, cached
   if (!chest || !pelvis || !me || (headToo && !Number.isFinite(head))) return false;
   const top = Math.max(chest.y, pelvis.y, head);
   const limit = LOW_FINISH.enterHeight + (continuing ? LOW_FINISH.exitMargin : 0);
+  if (vic.terrain) return top - vic.terrain.heightAt(pelvis.x, pelvis.z) <= limit && top + LOW_FINISH.minimumDrop < me.y; // 지형 무대: 골반 밑 땅 위 높이
   return top <= limit && top + LOW_FINISH.minimumDrop < me.y;
 }
 

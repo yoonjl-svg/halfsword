@@ -294,6 +294,7 @@ export class Fighter {
    * @param {number} o.index  0 = 플레이어, 1 = 상대
    * @param {number} o.x       시작 x 위치
    * @param {number} [o.z]     시작 z 위치 (기본 0 — 잠든 습지만 옆으로 비켜 선다, main.js)
+   * @param {object} [o.terrain] 땅 계약 { heightAt(x, z), normalAt(x, z), … } (화산섬만 — 없으면 평평한 y 0)
    * @param {number} o.heading 처음 바라보는 방향(라디안). 0 = +x
    * @param {object} o.look    겉모습(색, 투구 등) — looks.js 참고
    */
@@ -305,6 +306,7 @@ export class Fighter {
     this.name = o.name;
     this.side = 1; // 오른손잡이
     this.heading = o.heading ?? 0;
+    this.terrain = o.terrain ?? null; // 지형 무대(화산섬 — etna_ground.js 의 땅 계약)만. 없으면(평지 무대) 바닥은 늘 y 0 — 아래 '지형 있을 때만' 갈래를 하나도 타지 않는다
     this.faceTarget = null; // 바라볼 지점(보통 상대 골반). main이 매 스텝 넣어준다.
 
     // ── 몸 상태 (체력 게이지 대신) ──
@@ -415,7 +417,7 @@ export class Fighter {
 
     const yaw = new THREE.Quaternion().setFromAxisAngle(UP, this.heading);
     this.yaw = yaw;
-    const origin = new THREE.Vector3(o.x, 0, o.z ?? 0);
+    const origin = this.terrain ? new THREE.Vector3(o.x, this.terrain.heightAt(o.x, o.z ?? 0), o.z ?? 0) : new THREE.Vector3(o.x, 0, o.z ?? 0); // 지형 무대: 시작 자리 땅 높이만큼 몸 전체를 올려 세운다
     const toWorld = (p) => new THREE.Vector3(...p).applyQuaternion(yaw).add(origin);
 
     const myBody = bodyBit(this.index);
@@ -732,6 +734,14 @@ export class Fighter {
   /** 다리 기능 (두 다리 평균) */
   get legHealth() {
     return (this.limbs.legF + this.limbs.legB) / 2;
+  }
+
+  /**
+   * 다리가 몸을 못 받친다: 두 다리 평균(legHealth)이 0.25 아래 — 그리고 화산섬 용암에 탄 다리가 하나라도 같은 문턱(0.25) 아래면
+   *  (멀쩡한 다리와 평균을 내서 탄 다리가 다시 서는 것만 막는다 — 샛별 37c8857b 그대로, 확인표 1460~). 용암에 덴 적 없으면(lavaBurn 없음) legHealth < 0.25 와 같다
+   */
+  get legsCannotSupport() {
+    return this.legHealth < 0.25 || (!!this.lavaBurn && this.lavaBurn.legs.some((limb) => this.limbs[limb] < 0.25));
   }
 
   /** 칼 든 팔 기능 */
@@ -1322,13 +1332,13 @@ export class Fighter {
       // 기울기는 일부러 숙인 만큼(배를 다쳐 웅크림·자세)을 빼고 잰다: 웅크린 채 일어서자마자 넘어졌다고 다시 쓰러지기를 되풀이하지 않게
       const fallTilt = tilt - THREE.MathUtils.radToDeg(this.hunch);
       if (fallTilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(fallTilt > BODY.fallTiltDeg + 15);
-      else if (this.legHealth < 0.25) this.knockDown(false); // 다리가 버티지 못해 주저앉는다
+      else if (this.legsCannotSupport) this.knockDown(false); // 다리가 버티지 못해 주저앉는다 (용암에 탄 다리 하나도 — legsCannotSupport)
     } else if (this.state === 'down') {
       if (this.stateTime > this.downTime && this.consciousness > 0.3 && !this.missingLeg) this.setState('getup'); // 다리를 잃었으면 서지 않는다 (절단 설계 §3-6)
     } else if (this.state === 'getup') {
       if (this.stateTime > this.kneelTime) {
         // 무릎 꿇은 자세에서 일어서기. 다리가 못 버티면 무릎 꿇은 채로 남는다
-        if (this.legHealth < 0.25) this.setState('kneel');
+        if (this.legsCannotSupport) this.setState('kneel');
         else if (this.stateTime > this.kneelTime + this.riseTime) {
           this.setState('stand');
           this.balance = 60;
@@ -2052,6 +2062,18 @@ export class Fighter {
     return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.dot(ref), -1, 1)));
   }
 
+  /** 이 자리의 땅 높이 (지형 무대만 — 평지 무대는 늘 0. 걸음·효과·소리가 같이 쓴다) */
+  groundHeightAt(x, z) {
+    return this.terrain ? this.terrain.heightAt(x, z) : 0;
+  }
+
+  /** 수평 속도 v 로 이 자리를 지날 때 땅 높이가 바뀌는 빠르기(m/s) — 비탈을 따라 오르내리는 몫. 평지 무대는 0 */
+  groundVelocityAt(x, z, v) {
+    if (!this.terrain) return 0;
+    const n = this.terrain.normalAt(x, z);
+    return -(n.x * v.x + n.z * v.z) / n.y;
+  }
+
   // 골반을 떠받치고, 몸을 세우고, 걷게 한다.
   driveBalance(dt) {
     const pelvis = this.bodies.pelvis;
@@ -2134,10 +2156,12 @@ export class Fighter {
 
     // 1) 체중 받치기 (다리를 펴는 힘)
     if (mus > 0.1 && loadSum > 0) {
-      const h = hybrid ? G.h : BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
+      // 지형 무대: 서는 높이는 골반 밑 땅 위로, 수직 속도는 비탈을 따라 오르내리는 몫을 뺀 값 (평지 무대는 아래 원래 식 그대로)
+      const h = hybrid ? G.h : this.terrain ? this.terrain.heightAt(p.x, p.z) + BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch : BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
+      const vy = this.terrain ? v.y - this.groundVelocityAt(p.x, p.z, v) : v.y;
       // hybrid: 보조 힘은 몸무게의 GAIT.assist만 (일어선 직후엔 100%에서 천천히 줄인다). 나머지는 다리 관절이 받친다
       const share = hybrid ? G.supportShare(M * g) : BODY.support;
-      let fy = M * g * share + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * v.y;
+      let fy = M * g * share + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * vy;
       // 다친 다리는 힘을 못 쓴다 → 체중을 버틸 수 있는 한계
       const legPower = (load.F * this.limbs.legF + load.B * this.limbs.legB) / loadSum;
       fy = THREE.MathUtils.clamp(fy * mus, 0, M * g * (1.2 + 1.3 * legPower) * Math.min(1, loadSum * 1.5));
@@ -2260,7 +2284,7 @@ export class Fighter {
     vel.multiplyScalar(1 / M);
     this.com = this.com || new THREE.Vector3();
     this.com.copy(com);
-    const w0 = Math.sqrt(9.81 / Math.max(0.5, com.y));
+    const w0 = Math.sqrt(9.81 / Math.max(0.5, this.terrain ? com.y - this.terrain.heightAt(com.x, com.z) : com.y)); // 지형 무대: 무게중심 높이는 그 밑 땅 위로
     const cpx = com.x + vel.x / w0;
     const cpz = com.z + vel.z / w0;
     // 걷는 중엔 무게중심이 발보다 앞서는 게 정상이다(다음 발로 받는다).
@@ -2270,12 +2294,13 @@ export class Fighter {
     // 발바닥 위치 (땅에 닿은 발만)
     const a = this.solePoint('footF', _c3);
     const b = this.solePoint('footB', _c4);
-    const ga = a.y < 0.09;
-    const gb = b.y < 0.09;
+    const T = this.terrain; // 지형 무대: 발 높이는 그 발 밑 땅 위로 (평지 무대는 원래 식 그대로)
+    const ga = T ? a.y - T.heightAt(a.x, a.z) < 0.09 : a.y < 0.09;
+    const gb = T ? b.y - T.heightAt(b.x, b.z) < 0.09 : b.y < 0.09;
     // 발마다 "체중을 받을 수 있는 정도": 땅에 닿아 있고(높이) 몸 아래에 있을수록(수평 거리) 크다
     const pp = this.bodies.pelvis.translation();
     const loadOf = (f) => {
-      const grounded = THREE.MathUtils.clamp((0.16 - f.y) / 0.08, 0, 1);
+      const grounded = THREE.MathUtils.clamp((0.16 - (T ? f.y - T.heightAt(f.x, f.z) : f.y)) / 0.08, 0, 1);
       const under = THREE.MathUtils.clamp(1.3 - Math.hypot(f.x - pp.x, f.z - pp.z) / 0.7, 0, 1);
       return grounded * under;
     };
@@ -2393,6 +2418,18 @@ export class Fighter {
       K('thighB', -0.15, knB);
       K('shinB', -1.75, knB);
       K('footB', 0.8, knB); // 뒷발은 발끝으로 땅을 짚는다
+    }
+    // 지형 무대(화산섬)만: 걸음(gait)이 발을 맡지 않는 동안(쓰러짐·무릎 꿇기·일어서기) 발목 목표를 그 발 밑 땅 기울기만큼 돌린다 —
+    //  정강이 목표 자세 기준으로 월드 기울기를 표현해 발바닥이 비탈과 나란해진다. 무릎·엉덩이 목표와 뒷발 발끝 굽힘은 그대로 (샛별 0116047c 그대로)
+    if (this.terrain && !(this.gait?.active && this.state === 'stand')) {
+      for (const k of ['F', 'B']) {
+        const fp = this.bodies['foot' + k].translation();
+        const n = this.terrain.normalAt(fp.x, fp.z);
+        const tilt = _terrainTilt.setFromUnitVectors(UP, _terrainNormal.set(n.x, n.y, n.z));
+        rot(this.bodies.pelvis, _terrainShin).multiply(J['thigh' + k].target).multiply(J['shin' + k].target);
+        _terrainFoot.copy(_terrainShin).multiply(J['foot' + k].target).premultiply(tilt);
+        J['foot' + k].target.copy(_terrainShin.invert()).multiply(_terrainFoot);
+      }
     }
     const setZ = (name, a) => J[name].target.setFromAxisAngle(Z_AXIS, a);
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
@@ -3724,3 +3761,8 @@ function distToSegment2D(px, pz, ax, az, bx, bz) {
 }
 const _axis = new THREE.Vector3();
 const _v2d = new THREE.Vector2();
+// 지형 무대 발목 목표용 (applyPose — 지형 없으면 쓰지 않는다)
+const _terrainNormal = new THREE.Vector3();
+const _terrainTilt = new THREE.Quaternion();
+const _terrainShin = new THREE.Quaternion();
+const _terrainFoot = new THREE.Quaternion();

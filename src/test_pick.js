@@ -77,11 +77,13 @@ const DE_SECRETS = [
   { id: 'parry', name: '시험 · 감아 들기 (Indes)', sub: '황소·왕관으로 받아 칼이 붙은 동안 입력 → 받은 칼을 타고 한 수 (붙음이 짧아 잘 안 열림)' },
 ];
 // 무대 (10/14 — 여정 밖 무대 잠든 습지·소금 사막을 여는 곳, docs/import/sluice_port_2026-10-14.md · 확인표 1119 / docs/import/salt_desert_port_2026-10-14.md · 확인표 1214). 기본은 무작위(지금 그대로).
+//  화산섬(10/14, docs/import/volcano_port_2026-10-14.md)은 정식 경로 무대지만 비탈·용암을 바로 시험하려고 여기서도 고정할 수 있게 둔다
 //  stages.js 를 부르면 무대 짓는 코드가 이 화면에 다 딸려 오므로 이름만 여기 적는다 (stages.js STAGE_NAME_KO 와 같은 이름)
 const STAGE_PICKS = [
   { id: 'random', name: '무작위 (여정 무대)', sub: '판마다 여정 무대 가운데 하나 — 지금 그대로' },
   { id: 'sluice', name: '잠든 습지 (여정 밖)', sub: '새 무대 (10/14) — 가운데 말레이곰 석상 · 진흙 웅덩이 감속. 판이 바뀌어도 이 무대' },
   { id: 'dayr', name: '소금 사막 (여정 밖)', sub: '새 무대 (10/14) — 소금 벌판 역참의 해 질 녘 · 낮은 해와 긴 그림자. 판이 바뀌어도 이 무대' },
+  { id: 'etna', name: '화산섬', sub: '새 무대 (10/14) — 결투장 전체가 산비탈 · 낮은 쪽 용암에 닿으면 화상(다리 → 무릎). 판이 바뀌어도 이 무대' },
 ];
 const saved = loadPick();
 const pick = {

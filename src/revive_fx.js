@@ -39,6 +39,8 @@ const LIGHT_COLOR = 0xfff1c8;
 const GOLD = new THREE.Color(1.0, 0.84, 0.52);
 const WHITE_GOLD = new THREE.Color(1.0, 0.96, 0.84);
 const GLOW = new THREE.Color(1.0, 0.86, 0.58); // 몸의 빛 색
+const _haloUp = new THREE.Vector3(0, 1, 0); // 지형 무대: 땅의 빛 고리를 비탈 법선으로 돌릴 때
+const _haloN = new THREE.Vector3();
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smooth = (a, b, x) => {
@@ -247,7 +249,12 @@ export class ReviveFx {
     const p = f.bodies.pelvis.translation();
     this.pos.x += (p.x - this.pos.x) * Math.min(1, dt * 6);
     this.pos.z += (p.z - this.pos.z) * Math.min(1, dt * 6);
-    this.group.position.set(this.pos.x, 0, this.pos.z);
+    if (f.terrain) {
+      // 지형 무대(화산섬): 빛기둥·땅의 빛을 그 자리 땅 높이에 세우고, 땅의 빛 고리는 비탈과 나란히 눕힌다 (빛 하나는 그룹을 따라 함께 오른다)
+      this.group.position.set(this.pos.x, f.terrain.heightAt(this.pos.x, this.pos.z), this.pos.z);
+      const n = f.terrain.normalAt(this.pos.x, this.pos.z);
+      this.halo.quaternion.setFromUnitVectors(_haloUp, _haloN.set(n.x, n.y, n.z));
+    } else this.group.position.set(this.pos.x, 0, this.pos.z);
 
     const ou = this.outer.material.uniforms;
     const cu = this.core.material.uniforms;

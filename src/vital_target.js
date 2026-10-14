@@ -158,7 +158,8 @@ export function findVital(att, snap, kind, extra = 0) {
   if (snap.chest.y > chest.y - VITAL.minimumChestDrop && up.y > VITAL.maximumUprightCos) return null;
   // 내려찍기가 맡는 몸은 건드리지 않는다 (낮은 상대 진입 'low' 의 같은 문턱 · 'down' 판이면 쓰러짐 이름)
   const top = Math.max(snap.chest.y, snap.pelvis.y);
-  const lowBody = top <= LOW_FINISH.enterHeight && top + LOW_FINISH.minimumDrop < chest.y;
+  const ground = att.terrain ? att.terrain.heightAt(snap.pelvis.x, snap.pelvis.z) : 0; // 지형 무대(화산섬): 상대 골반 밑 땅 위 높이로 (finish_entry 와 같은 문턱)
+  const lowBody = (att.terrain ? top - ground : top) <= LOW_FINISH.enterHeight && top + LOW_FINISH.minimumDrop < chest.y;
   const finishOwns = lowFinishOn(FINISH)
     ? (snap.state === 'down' || snap.state === 'getup') && lowBody
     : snap.state === 'down' || (FINISH.entry === 'downlow' && snap.state === 'getup' && lowBody);

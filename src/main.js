@@ -30,7 +30,7 @@ import { attachHands } from './hands.js';
 import { PerfMeter } from './perfmeter.js';
 import { createRenderCap } from './render_cap.js';
 import { createFighterLight } from './fighter_light.js';
-import { tickDebris, clearDebris, debrisCount } from './debris.js';
+import { tickDebris, clearDebris, debrisCount, DEBRIS } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
@@ -40,6 +40,7 @@ import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (t
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
 import { setSupportFloor } from './gait.js'; // 발 체중 받침은 바닥 콜라이더 접촉만 (10/14 — 벽·석상에 발이 닿은 힘은 받침이 아님)
+import { terrainForStage, createTerrainGround, applyTerrainHazards } from './etna_ground.js'; // 화산섬 비탈 땅(삼각형 그물 바닥 · 땅 따라 올린 벽 · 용암 화상) — 지형 없는 무대는 아래 평평한 바닥 그대로 (docs/import/volcano_port_2026-10-14.md)
 
 await RAPIER.init();
 
@@ -345,6 +346,7 @@ input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
 let arenaStone = null; // 무대 고정 장애물 (잠든 습지 석상 — arena_obstacle.js, 다른 무대는 null)
+let arenaGround = null; // 지형 무대의 바닥 { floor, lava, terrain } (화산섬 — etna_ground.js, 평지 무대는 null)
 let bodySounds = [];
 /**
  * 흩어지던 조각(부러진 칼날 끝·투구·판금 — debris.js 한 곳)과 벗겨진 케틀햇(캐릭터 그룹 밖, 장면에 있다)을 치운다:
@@ -475,6 +477,11 @@ function newRound(weaponId) {
   eventQueue = new RAPIER.EventQueue(true);
   colliderInfo = new Map();
 
+  // 지형 무대(화산섬): 그림과 같은 삼각형 그물 바닥 + 땅을 따라 올린 경계 벽 + 용암 감지 상자 (etna_ground.js). 발 받침은 그물 접촉만
+  const terrain = terrainForStage(stages.id);
+  arenaGround = terrain ? createTerrainGround(RAPIER, world, GROUND_GROUPS, terrain, { radius: ARENA.radius }) : null;
+  if (arenaGround) setSupportFloor(world, arenaGround.floor);
+  else {
   // 바닥 + 원형 경계 벽 (보이지 않는 벽: 눈에 보이는 건 대리석 테두리)
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   const floor = world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
@@ -493,6 +500,9 @@ function newRound(weaponId) {
       ground,
     );
   }
+  }
+  particles.terrain = terrain; // 핏방울이 비탈에 앉고 용암에 사라진다 (평지 null — 그대로)
+  DEBRIS.terrain = terrain; // 흩어지는 칼·방어구 조각의 바닥도 땅 높이로 (평지 null — 그대로)
 
   arenaStone = configureStageObstacle(RAPIER, world, stages.id, GROUND_GROUPS); // 잠든 습지: 가운데 석상 충돌체 (다른 무대 null)
   const startZ = stageStartZ(stages.id); // 잠든 습지: 두 사람을 옆으로 비켜 세워 카메라 → 상대 시선이 석상에 막히지 않게 (다른 무대 0)
@@ -504,6 +514,7 @@ function newRound(weaponId) {
     x: -ARENA.startGap / 2,
     z: startZ,
     heading: 0,
+    terrain, // 지형 무대만 땅 계약 (평지 null)
     look: LOOKS.player,
     weapon: weaponId,
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
@@ -519,6 +530,7 @@ function newRound(weaponId) {
     x: ARENA.startGap / 2,
     z: startZ,
     heading: Math.PI,
+    terrain,
     look: enemyLook,
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
     revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
@@ -947,7 +959,7 @@ const cardEls = [...drawEl.querySelectorAll('.wcard')];
 //  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
 //  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
 //  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
-const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025', frozen_bay: '#18293a', qinglan: '#16332f', sluice: '#182a22', dayr: '#2a1d1b' }; // 테마 → 바탕색 (뒤 일곱은 샛별 저장소의 무대 — 얼어붙은 만·청람잔도는 10/11, 잠든 습지·소금 사막은 10/14 우리가 그림, tools/cardbacks/gen_pixel_cardbacks.py)
+const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025', frozen_bay: '#18293a', qinglan: '#16332f', sluice: '#182a22', dayr: '#2a1d1b', etna: '#1d1b21' }; // 테마 → 바탕색 (뒤 여덟은 샛별 저장소의 무대 — 얼어붙은 만·청람잔도는 10/11, 잠든 습지·소금 사막·화산섬은 10/14 우리가 그림, tools/cardbacks/gen_pixel_cardbacks.py)
 const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
 const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
 let cardBack = 'classic';
@@ -1607,7 +1619,9 @@ function updateCamera(dt) {
   // 판 시작: 조금 높고 먼 자리에서 무대를 보여 주다가 발이 풀릴 때(ARENA.startHold)까지 평소 자리로 부드럽게 내려온다 (사장님 9/30).
   //  시계는 판마다 새로 0부터 세는 player.fightT (싸움 전 메뉴·무기 뽑기 동안엔 0이라 시작 자리에서 기다린다)
   const open = ARENA.startHold > 0 ? 1 - THREE.MathUtils.smoothstep(player.fightT, 0, ARENA.startHold) : 0;
-  const camH = CAMERA.height + CAMERA.openUp * open;
+  // 지형 무대(화산섬): 카메라 높이·바라보는 높이·해와 그림자 과녁을 내 무게중심 밑 땅 높이만큼 올린다 (평지 무대는 0 — 그대로)
+  const terrainY = player.terrain ? player.terrain.heightAt(a.x, a.z) : 0;
+  const camH = CAMERA.height + CAMERA.openUp * open + terrainY;
   camTarget
     .copy(a)
     .addScaledVector(camDir, -(CAMERA.back + CAMERA.openBack * open))
@@ -1636,7 +1650,8 @@ function updateCamera(dt) {
   clampStageCamera(a, camTarget, arenaStone?.navigation); // 잠든 습지: 카메라가 석상을 가로지르거나 안으로 들어가지 않게 (석상 없으면 그대로)
   camera.position.lerp(camTarget, k);
   clampStageCamera(a, camera.position, arenaStone?.navigation);
-  const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1);
+  if (player.terrain) camera.position.y = Math.max(camera.position.y, player.terrain.heightAt(camera.position.x, camera.position.z) + 0.45); // 비탈 위쪽으로 돈 카메라가 땅에 묻히지 않게 (샛별 값 0.45 m)
+  const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1 + terrainY);
   camLook.lerp(look, k);
   // 발걸음: 디딜 때 살짝 내려앉음
   if (player.footstep > 0) {
@@ -1650,8 +1665,8 @@ function updateCamera(dt) {
   camera.position.add(camShake.o);
   camera.lookAt(camLook);
   camera.position.sub(camShake.o); // 다음 프레임 따라가기는 흔들림 없는 위치 기준
-  sun.position.set(a.x + SUN_OFF.x, SUN_OFF.y, a.z + SUN_OFF.z);
-  sun.target.position.set(a.x, 0, a.z);
+  sun.position.set(a.x + SUN_OFF.x, SUN_OFF.y + terrainY, a.z + SUN_OFF.z);
+  sun.target.position.set(a.x, terrainY, a.z);
   stages.snapSun(); // 그림자 화소 맞춤 — 무대가 켠 때만(소금 사막의 긴 그림자가 기어다니며 깜빡이지 않게, stages.js). 다른 무대는 그대로
 }
 
@@ -2004,6 +2019,7 @@ function frame(now) {
       enemy.cacheState();
       world.step(eventQueue, combat.physicsHooks);
       combat.afterStep(world, eventQueue);
+      if (arenaGround) applyTerrainHazards(arenaGround, colliderInfo, PHYSICS.timestep); // 화산섬 용암 화상: 물리 스텝마다 닿은 몸 부위만 (평지 무대는 부르지 않는다)
       swordTrails.sample(PHYSICS.timestep); // 칼 잔상 띠: 이 스텝의 칼 자세를 기록 (읽기만)
       clashCooldown -= PHYSICS.timestep;
       clashStopCooldown -= PHYSICS.timestep;
@@ -2116,16 +2132,29 @@ window.game = {
   get stage() {
     return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
   },
+  // 지형 무대의 땅 계약·용암 (화산섬 — 시험 도구가 읽는다. 평지 무대는 null)
+  get terrain() {
+    return arenaGround?.terrain ?? null;
+  },
+  get arenaGround() {
+    return arenaGround;
+  },
   // 무대 고정 장애물 (잠든 습지 석상): 충돌체 수 · 돌아가기 반지름 — 시험 도구가 읽는다
   get arenaObstacle() {
     return arenaStone ? { colliderCount: arenaStone.handles.size, navigation: arenaStone.navigation } : null;
   },
   setStage(id) {
+    const terrainChanges = terrainForStage(id) !== terrainForStage(stages.id); // 지형 무대 ↔ 평지 무대: 물리 바닥이 달라진다
     if (useStage(id)) {
       clearFlying();
       stages.warm(renderer, camera);
     }
     sound.setStage(stages.id);
+    // 바닥이 바뀌면 판을 새로 세운다 — 옛 바닥 충돌체·걸음 높이 기억을 다른 그림 밑에 남기지 않게 (샛별 0116047c 와 같게)
+    if (world && terrainChanges) {
+      newRound(player.weapon.id);
+      return;
+    }
     // 판 도중에 무대를 바꾸면 석상 충돌체·진흙도 지금 세계에 맞춘다 (시작 자리는 다음 판부터)
     if (world) arenaStone = configureStageObstacle(RAPIER, world, stages.id, GROUND_GROUPS, arenaStone);
     for (const f of [player, enemy]) {

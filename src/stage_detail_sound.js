@@ -19,9 +19,11 @@ export const STAGE_DETAIL_PROFILES = Object.freeze({
   // 소금 사막 (샛별 저장소 origin/main db729604 의 우물 고리 소리를 옮김 — docs/import/salt_desert_port_2026-10-14.md).
   //  표 자리 = 난수 씨앗(9127 + 자리 × 311 + 변형 × 101)이라 습지 셋 뒤(자리 13 — 샛별 표와 같은 자리)에 붙인다: 있던 세부음 씨앗은 그대로
   caravanRing: { stage: 'dayr', duration: 1.1, gain: 0.025, gap: 22 },
+  // 화산섬 (샛별 저장소 origin/main 7684c732 의 굳은 껍질 소리를 옮김 — docs/import/volcano_port_2026-10-14.md). 표 끝에 붙여 있던 세부음 씨앗은 그대로
+  etnaCrust: { stage: 'etna', duration: 1.6, gain: 0.032, gap: 20 },
 });
 
-export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice' || stage === 'dayr';
+export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice' || stage === 'dayr' || stage === 'etna';
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const TAU = Math.PI * 2;
 
@@ -33,6 +35,20 @@ export function synthStageDetail(kind, sr, rng) {
   const profile = STAGE_DETAIL_PROFILES[kind];
   if (!profile || !Number.isFinite(sr) || sr < 8000) return new Float32Array(0);
   const out = new Float32Array(Math.ceil(profile.duration * sr));
+  if (kind === 'etnaCrust') {
+    // 화산섬: 먼 굳은 용암 껍질이 부서지는 소리 — 걸러 낮춘 금 가는 소리와 짧게 흘러내리는 알갱이 (샛별 원문 그대로).
+    //  계속되는 불 굉음·폭발·싸움 소리 같은 순간음은 없다
+    let low = 0, body = 0;
+    for (let i = 0; i < out.length; i++) {
+      const t = i / sr, n = rng() * 2 - 1;
+      low += (1 - Math.exp(-TAU * 560 / sr)) * (n - low);
+      body += (1 - Math.exp(-TAU * 115 / sr)) * (n - body);
+      const attack = 1 - Math.exp(-t / 0.008), tail = Math.min(1, (out.length - 1 - i) / (sr * 0.12));
+      const grit = Math.max(0, Math.sin(t * 39) + Math.sin(t * 71) * 0.4);
+      out[i] = tail * attack * (0.6 * body * Math.exp(-t / 0.28) + 0.16 * low * grit * Math.exp(-t / 0.4));
+    }
+    return out;
+  }
   if (kind === 'caravanRing') {
     // 소금 사막: 우물 줄 끝의 작은 쇠고리가 흔들림 끝에서 쇠말뚝에 닿는 소리 (샛별 원문 그대로 — 670·1093·1771 Hz 감쇠 부분음)
     // A small iron ring touching its peg: dry, damped and irregular partials.
@@ -285,6 +301,10 @@ export class StageDetailSound {
       // Dry air through a shaded brick iwan. No surf or crowded market bed.
       addNoise({ rate: 0.81, frequency: 430, gain: 0.0017, lfo: 0.038, depth: 0.00065, ceiling: 1250, pan: 0.12 });
       addNoise({ rate: 0.69, frequency: 1100, gain: 0.00075, lfo: 0.061, depth: 0.0003, ceiling: 2100, pan: -0.2 });
+    } else if (this.stage === 'etna') {
+      // 화산섬: 해 뜨기 전 능선의 바람 두 겹 — 370 Hz 위 바람과 95 Hz 낮은 웅웅거림 (샛별 값 그대로). 불 굉음은 없다
+      addNoise({ rate: 0.77, frequency: 370, gain: 0.0038, lfo: 0.031, depth: 0.0013, ceiling: 1250 });
+      addNoise({ rate: 0.65, type: 'lowpass', frequency: 95, gain: 0.0020, lfo: 0.052, depth: 0.0007, ceiling: 420, pan: 0.3 });
     }
     let remaining = nodes.length;
     for (const source of nodes) {

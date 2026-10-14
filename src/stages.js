@@ -27,6 +27,7 @@ import { buildFrozenBay } from './stage_frozen_bay.js';
 import { buildQinglan } from './stage_qinglan.js';
 import { buildSluice } from './stage_sluice.js';
 import { buildDayr } from './stage_dayr.js';
+import { buildEtna } from './stage_etna.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
@@ -50,6 +51,8 @@ const BUILDERS = {
   sluice: buildSluice, // 잠든 습지: 비 그친 한낮의 열대 담수 침수림, 진흙 섬·얕은 물·옛 돌 수문, 가운데 말레이곰 석상 (stage_sluice.js) — 여정 밖: 테스트 경로 무대 고르기·?stage=sluice 로만
   // 샛별 저장소에서 가져온 무대 (사장님 10/14 08:1x — 화면 이름 '소금 사막' · 여정 밖 · 해는 그림자가 나오는 가장 낮은 각, docs/import/salt_desert_port_2026-10-14.md)
   dayr: buildDayr, // 소금 사막: 소금 벌판 가 벽돌 역참 안뜰의 해 질 녘, 문루 안의 낮은 해와 긴 그림자 (stage_dayr.js) — 여정 밖: 테스트 경로 무대 고르기·?stage=dayr 로만. 코드 id 는 샛별 쪽 그대로
+  // 샛별 저장소에서 가져온 무대 (사장님 10/14 19:4x — 화면 이름 '화산섬' · 결투장 전체 비탈 · 용암 규칙 약하게 · 결투장 띠 없음 · 정식 경로, docs/import/volcano_port_2026-10-14.md)
+  etna: buildEtna, // 화산섬: 해 뜨기 전 화산 능선, 결투장 전체가 불규칙 산비탈(평균 약 10°) · 낮은 쪽 용암(화상 — 다리·팔 기능 감소, 사망 없음) (stage_etna.js · 땅 etna_ground.js). 코드 id 는 샛별 쪽 그대로
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
@@ -61,9 +64,12 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //   눈 내리는 성 안뜰(4번째)과 겨울 얼음만이 붙지 않게 멀리 두고, 숲(신목) → 겨울 새벽(얼음만) → 여름 한낮(잔도) → 다시 바닷가(포세이돈)로 계절·빛이 번갈아 바뀐다
 //  잠든 습지(sluice)는 순서표에 넣지 않았다 (10/14 감독 추천 '여정 밖' — 확인표 1119, 사장님 확인 전): 테스트 경로 무대 고르기·?stage=sluice 로만 연다
 //  소금 사막(dayr)도 순서표에 넣지 않았다 (사장님 10/14 08:1x '여정 밖' — 확인표 1214): 테스트 경로 무대 고르기·?stage=dayr 로만. STAGE_FOE 짝도 없다(무작위 상대)
-export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan'];
+//  10/14 19:4x 사장님 '습지, 소금 사막과 함께 정식 경로 포함' — 감독 안 차례: 청람잔도 → 잠든 습지 → 철불 절벽 → 화산섬(etna) → 소금 사막.
+//   화산섬은 철불 절벽 뒤 · 소금 사막 앞 자리 (습지·철불 절벽·소금 사막은 그 이식 작업이 넣는다 — 이 가지에서는 화산섬만 맨 끝에)
+export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'etna'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji' };
+//  화산섬(etna)의 전용 상대는 찬다(사장님 10/14 19:4x '찬다는 화산섬이 전용 스테이지') — 찬다가 본판에 들어오면 STAGE_FOE.etna = 'chanda' 를 넣는다. 그 전엔 무작위 상대
 // 그 무대 검객 후보 (사장님 10/10 20:0x — 샛별 저장소에서 가져온 넷의 무대 짝. 무대마다 한 명뿐인 STAGE_FOE 짝을 밀어내지 않고 후보로 더한다, 확인표 752).
 //  여정(foe=stage)에서 그 무대를 열 때 [본디 짝, ...후보] 가운데 하나를 고르게 고른다 → 본디 짝은 그 무대에서 절반만 나온다.
 //  졌을 때 같은 무대를 다시 열면 같은 상대(아래 stageFoeId 의 prevId). STAGE_FOE 자체는 그대로다
@@ -88,6 +94,7 @@ export const STAGE_NAME_KO = {
   poseidon_night: '밤의 포세이돈 신전', cathedral: '대성당', darkhall: '어두운 홀', loggia: '붉은 회랑', corsair: '산호 항구',
   sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도', sluice: '잠든 습지',
   dayr: '소금 사막', // 사장님 10/14 08:1x (샛별 쪽 '소금길의 (마지막) 역참') — 코드 id 는 그대로
+  etna: '화산섬', // 사장님 10/14 19:4x — 실제 지명은 화면에 쓰지 않는다 (코드 id 는 샛별 쪽 그대로)
 };
 /** 왼쪽 위 첫 줄: '스테이지 N · 이름' (순서표 밖이면 이름만) */
 export function stageLabel(id) {
