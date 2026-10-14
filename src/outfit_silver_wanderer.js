@@ -5,11 +5,14 @@
 //  outfit_silver_wanderer_qaba.js 의 카바(종아리 중간 길이 긴 겉옷 · 바지 · 장화)로 바꾸고, 가죽 허리띠 대신 detail 의 캄마르반드, 검집은 자락 밖으로 조금 기울인다.
 //  우리 판 v9(look.daraishiRevision 9 — 사장님 10/14 13:4x 'v7·v8 절충: 보랏빛·장식은 v7 쪽으로, 고증에 묶이지 말 것')은 '── v9' 줄: 카바 꼴은 v8 그대로,
 //   겉감(가슴·배·골반·자락)과 위 소매를 보라로 칠하고 테·문양은 outfit_silver_wanderer_v9.js 가 짓는다
+//  우리 판 v10(look.daraishiLower 10 — 사장님 10/14 18:4x 'v7 로 되돌리되 허리띠 아래 보라색 천만 v9 을 이식 · 벌어진 넓이는 그대로 · v9 의 길이와 장식')은
+//   daraishiRevision 7 그대로(v7 갈래 전부)에 '── v10' 줄 둘만: 엉덩이 자락과 다리 자락(허벅지·정강이 두 도막 + 옷단 띠)을 outfit_silver_wanderer_v10.js 가 짓는다
 //  (아래 영어 줄 설명은 샛별 저장소 원문 그대로 둔 것이다)
 // Reference-led preview: native anatomy/eyes, rigid part-local visual layers.
 // +X forward, +Y up/proximal, +Z right. No colliders, armor or controller edits.
 import { createDaraishiQaba } from './outfit_silver_wanderer_qaba.js'; // ── v8 카바
 import { createDaraishiV9 } from './outfit_silver_wanderer_v9.js'; // ── v9 절충
+import { createDaraishiV10 } from './outfit_silver_wanderer_v10.js'; // ── v10 v7 바탕 + v9 아래 자락
 // ── v7 빈 검집: 샛별 0.66 m(롱소드 임시 배정 때 만든 길이 — 모노호시자오 날 0.90 m 보다 짧다, 리뷰 4차 §2-4) → 0.94 m. 입(위 끝)은 그 자리, 아래로만 늘인다
 // ── v8 검집: 카바 자락(옷단에서 다리 축 바깥 0.14 m · 왼다리가 벌어지거나 비틀리면 더 바깥)에 검집이 묻히지 않게 입(위 끝)을 바깥(−z)으로 1.2 cm 옮기고
 //  입을 축으로 바깥으로 0.12 rad 기울인다 (끝은 약 12 cm 바깥) — 임시 검사(자락 뚫림 셈, docs/import/salt_desert_port_2026-10-14.md §2-7)로 고른 값, 확인표 1234
@@ -29,6 +32,8 @@ export function createSilverWandererOutfit(h) {
   const v9 = createDaraishiV9(h); // ── v9: 보라 겉감의 카바(v9.qaba — 꼴은 v8 과 같다) · 테·문양
   const is9 = (look) => look?.daraishiRevision >= 9;
   const coatOf = (look) => (is9(look) ? v9.qaba : qaba); // ── v9
+  const v10 = createDaraishiV10(h); // ── v10: 허리띠 아래 보라 자락(v7 꼴 · v9 길이·장식)
+  const is10 = (look) => look?.daraishiLower === 10;
   const WHITE = 0xe9e9e5, PURPLE = 0x433653, HEM = 0x776b88;
   const SILVER = 0xb6bbc3, LEATHER = 0x413039, GOLD = 0xa88b45;
   const cloth = { ...CLOTH, metalness: 0, roughness: .87, side: THREE.DoubleSide };
@@ -152,6 +157,7 @@ export function createSilverWandererOutfit(h) {
     torso(g, coat ? (is9(look) ? v9.C.coat : WHITE) : PURPLE); const l = layer(g);
     const slim = look?.daraishiRevision >= 7;
     if (coat) coatOf(look).pelvis(g, d); // ── v9: 보라 겉감 골반 통 · 테·띠 끝은 v9 모듈
+    else if (is10(look)) v10.hip(g, d); // ── v10: 엉덩이 자락 — v7 꼴(같은 꼭짓점) · v9 겉감(테는 다리 자락에만)
     else addMerged(l, [drape([[.107, .109, .16], [-.011, .124, .186], [-.149, .142, .211]], .44, Math.PI * 2 - .88, .024)], 0x5a4c68, cloth);
     addMerged(l, [line([[.124, .086, -.164], [.137, .046, -.06], [.139, -.015, .04], [.117, -.07, .164]], .013)], LEATHER, cloth);
     // Empty scabbard beside the left leg; decorative and independently colored.
@@ -186,9 +192,10 @@ export function createSilverWandererOutfit(h) {
     const rows = lower ? [[.29, .118, .115, -.034], [.14, .127, .125, -.038], [-.09, .145, .142, -.04], [-.175, .13, .136, -.037]]
       : [[.264, .135, .13, -.019], [.11, .142, .137, -.022], [-.12, .137, .137, -.03], [-.265, .134, .136, -.033]];
     if(tailored){if(lower)rows[3]=[hem,.13,.136,-.037];else rows[3][0]=side===1?-.24:-.26;}
-    addMerged(l, [drape(rows, start, Math.PI - opening, .034)], 0x665976, cloth);
+    if (is10(look)) v10.leg(g, d ?? { pos: [0, lower ? .29 : .715, side * .095] }, lower); // ── v10: 두 도막 자락 대신 한 장(v7 꼴 · 옷단 0.30 m · v9 테) — 흰 바지·은 각반은 v7 그대로
+    else addMerged(l, [drape(rows, start, Math.PI - opening, .034)], 0x665976, cloth);
     if (lower) {
-      addMerged(l, [drape([[hem+.009, .131, .137, -.037], [hem-.002, .131, .137, -.037]], start, Math.PI - opening, .034)], HEM, cloth);
+      if (!is10(look)) addMerged(l, [drape([[hem+.009, .131, .137, -.037], [hem-.002, .131, .137, -.037]], start, Math.PI - opening, .034)], HEM, cloth); // ── v10: 옷단 띠는 v10 자락의 옷단 테가 맡는다
       addMerged(l, [drape([[.12, .058, .058], [.043, .063, .06], [-.13, .049, .049], [-.2, .053, .052]], -.92, 1.84, .006)], SILVER, steel);
       if (!(look?.daraishiRevision >= 7)) addMerged(l, [line([[.058, .12, 0], [.066, .034, 0], [.052, -.13, 0], [.056, -.2, 0]], .0023)], 0xd9dce1, steel); // ── v7: 각반 등줄(2.3 mm)은 뺀다
     }
