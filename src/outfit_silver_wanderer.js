@@ -6,7 +6,7 @@
 //  우리 판 v9(look.daraishiRevision 9 — 사장님 10/14 13:4x 'v7·v8 절충: 보랏빛·장식은 v7 쪽으로, 고증에 묶이지 말 것')은 '── v9' 줄: 카바 꼴은 v8 그대로,
 //   겉감(가슴·배·골반·자락)과 위 소매를 보라로 칠하고 테·문양은 outfit_silver_wanderer_v9.js 가 짓는다
 //  우리 판 v10(look.daraishiLower 10 — 사장님 10/14 18:4x 'v7 로 되돌리되 허리띠 아래 보라색 천만 v9 을 이식 · 벌어진 넓이는 그대로 · v9 의 길이와 장식')은
-//   daraishiRevision 7 그대로(v7 갈래 전부)에 '── v10' 줄 둘만: 엉덩이 자락과 다리 자락(허벅지·정강이 두 도막 + 옷단 띠)을 outfit_silver_wanderer_v10.js 가 짓는다
+//   daraishiRevision 7 그대로(v7 갈래 전부)에 '── v10' 줄만: 엉덩이 자락과 다리 자락(허벅지·정강이 두 도막 + 옷단 띠)을 outfit_silver_wanderer_v10.js 가 짓고, 빈 검집은 v8 자리(감독 결정 10/14)
 //  (아래 영어 줄 설명은 샛별 저장소 원문 그대로 둔 것이다)
 // Reference-led preview: native anatomy/eyes, rigid part-local visual layers.
 // +X forward, +Y up/proximal, +Z right. No colliders, armor or controller edits.
@@ -16,11 +16,12 @@ import { createDaraishiV10 } from './outfit_silver_wanderer_v10.js'; // ── v
 // ── v7 빈 검집: 샛별 0.66 m(롱소드 임시 배정 때 만든 길이 — 모노호시자오 날 0.90 m 보다 짧다, 리뷰 4차 §2-4) → 0.94 m. 입(위 끝)은 그 자리, 아래로만 늘인다
 // ── v8 검집: 카바 자락(옷단에서 다리 축 바깥 0.14 m · 왼다리가 벌어지거나 비틀리면 더 바깥)에 검집이 묻히지 않게 입(위 끝)을 바깥(−z)으로 1.2 cm 옮기고
 //  입을 축으로 바깥으로 0.12 rad 기울인다 (끝은 약 12 cm 바깥) — 임시 검사(자락 뚫림 셈, docs/import/salt_desert_port_2026-10-14.md §2-7)로 고른 값, 확인표 1234
+// ── v10 검집: v7 자리면 v7 꼴 다리 자락 바깥 겉면에 걸쳐 축이 자락을 지나는 표본이 18.3 % — v8 자리를 쓴다(감독 결정 10/14, 확인표 1371). v7 은 v7 자리 그대로
 export const DARAISHI_SCABBARD = { length: 0.94, top: 0.33, splay: 0.12, out: 0.012 };
 const SCABBARD_POS = [-.018, -.22, -.24], SCABBARD_ROT = [0, 0, -.23];
-/** 빈 검집 좌표(위 끝 y = top)의 조각을 골반 좌표로 굽는다 — v7 까지는 샛별 자리 그대로, v8 은 입 자리를 지키며 바깥으로 기울인다 (detail 모듈 쇠붙이도 같은 함수) */
+/** 빈 검집 좌표(위 끝 y = top)의 조각을 골반 좌표로 굽는다 — v7 까지는 샛별 자리 그대로, v8~v10 은 입 자리를 지키며 바깥으로 기울인다 (detail 모듈 쇠붙이도 같은 함수) */
 export function placeDaraishiScabbard(THREE, bake, geo, look) {
-  if (!(look?.daraishiRevision >= 8)) return bake(geo, SCABBARD_POS, SCABBARD_ROT);
+  if (!(look?.daraishiRevision >= 8 || look?.daraishiLower === 10)) return bake(geo, SCABBARD_POS, SCABBARD_ROT); // ── v10: v8 자리
   const rot = [DARAISHI_SCABBARD.splay, 0, SCABBARD_ROT[2]], mouth = new THREE.Vector3(0, DARAISHI_SCABBARD.top, 0);
   const was = mouth.clone().applyEuler(new THREE.Euler(...SCABBARD_ROT)), now = mouth.clone().applyEuler(new THREE.Euler(...rot));
   return bake(geo, [SCABBARD_POS[0] + was.x - now.x, SCABBARD_POS[1] + was.y - now.y, SCABBARD_POS[2] + was.z - now.z - DARAISHI_SCABBARD.out], rot);

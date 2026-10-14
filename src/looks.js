@@ -800,7 +800,7 @@ LOOK_ARCHIVE.silver_wanderer.v8 = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishi
 //  (outfit_silver_wanderer_v9.js). 값 모두 사장님 확인 전(확인표 1320~)
 LOOK_ARCHIVE.silver_wanderer.v9 = { ...LOOK_ARCHIVE.silver_wanderer.v8, daraishiRevision: 9 };
 // v10 (우리 판 — 사장님 10/14 18:4x 'v7이 제일 나은 거 같다. v7로 되돌리되, 허리띠 아래로 보라색 천 부분만 v9을 이식해(벌어진 넓이는 그대로 유지하고 v9의 길이와 장식 등의 디테일 적용)'):
-//  v7 그대로(daraishiRevision 7 — 머리·얼굴·흰 윗옷·소매·망토·허리띠·흰 바지·은 각반·신·검집) + 허리띠 아래 보라 자락만 바꿔 끼우는 표시 daraishiLower 10 —
+//  v7 그대로(daraishiRevision 7 — 머리·얼굴·흰 윗옷·소매·망토·허리띠·흰 바지·은 각반·신 · 빈 검집만 v8 자리, 감독 결정 10/14) + 허리띠 아래 보라 자락만 바꿔 끼우는 표시 daraishiLower 10 —
 //  엉덩이 자락과 다리 바깥 자락은 v7 의 자리·벌어짐 그대로, 길이는 v9(옷단 0.30 m, 좌우 같게), 겉감 #66528A · 옷단 테 · 앞섶 테 · 트임 테 · 문양은 v9
 //  (outfit_silver_wanderer_v10.js). 값 모두 사장님 확인 전(확인표 1360~)
 LOOK_ARCHIVE.silver_wanderer.v10 = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishiLower: 10 };
