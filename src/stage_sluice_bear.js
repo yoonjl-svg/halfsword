@@ -16,6 +16,10 @@
 //   석상처럼'): 정수리 가운데를 사진에서 잰 만큼 꺼뜨리고 앞뒤로 얕은 골(CROWN), 칠한 색 → 회색조 두 톤 돌(검은 털 자리 짙은 돌 · 황갈·주황
 //   자리 밝은 돌), 가슴 말굽은 양각 판 + 둘레 음각 홈(RELIEF), 얼굴 무늬 경계는 얕은 단(FACE_STEP), 털은 드문 끌 자국(CHISEL), 눈은 돌 조각
 //   (음각 윗눈꺼풀 선 · 드릴로 판 눈동자), 오래된 돌(때 · 씻겨 바램 · 닳음 · 이끼 · 지의류 · 작은 깨짐 — WEATHER). 키 3.2 m (사장님 10/14 10:3x).
+//   2b(사장님 10/14 12:2x '얼굴 영역의 밝은 테두리가 이마 쪽에서 거의 직선으로 연결돼 있어. 실제 사진은 약간 밑으로 들어가는 곡선임' · 감독 검수 '가면 쓴
+//   원숭이처럼 보인다' · 12:3x '투톤 중 어두운 영역이 돌이나 바위 색처럼 안 느껴져. 너무 검달까?'): 이마 경계를 두 눈썹 자리 위가 높고 콧등 위 가운데가
+//   처지는 곡선(BROW_TOP)으로, 볼 바깥 경계를 사진 곡선(CHEEK_LINE)으로, 얼굴 판 단을 낮추고 둥근 비탈(FACE_STEP · FACE_BEVEL)로, 짙은 돌을 중간 회색으로
+//   밝히고 아주 작은 돌 결(MOTTLE.amp3)을 더했다. 눈·눈 둘레·주둥이·가슴 말굽·키·충돌체는 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -30,15 +34,16 @@ export const SLUICE_BEAR_ROTATION_Y = -Math.PI / 2; // 모델 앞(+Z) → 세상
 /** AI 돌아가기·카메라가 쓰는 석상 반지름(m): 받침 바깥 반지름 + 0.04 (확인표 1113 — 받침에 묶여 키 3.2 m 에도 그대로) */
 export const BEAR_AVOID_RADIUS = BEAR_PLINTH.radius + 0.04;
 
-// 색: 오래된 돌 석상, 회색조 두 톤 (곰 2 — 사장님 10/14 08:3x '회색조 투톤 명암', 확인표 1241). 사진의 검은 털 자리 = 짙은 회색 돌,
-//  황갈·주황 자리(주둥이·눈 둘레 '안경'·눈썹 자리·가슴 말굽)와 발톱 = 밝은 회색 돌. 순검정·순백 없이 돌빛 회색만 (때·그늘도 짙은 회색)
+// 색: 오래된 돌 석상, 회색조 두 톤 (곰 2 — 사장님 10/14 08:3x '회색조 투톤 명암', 확인표 1241 · 곰 2b 짙은 돌 1283). 사진의 검은 털 자리 = 짙은 회색 돌,
+//  황갈·주황 자리(주둥이·눈 둘레 '안경'·눈썹 자리·가슴 말굽)와 발톱 = 밝은 회색 돌. 순검정·순백 없이 돌빛 회색만 (때·그늘도 짙은 회색).
+//  곰 2b: 짙은 돌·밝은 돌 밝기(선형) 비 4.16 → 2.30 (경기 화면 같은 카메라에서 가슴 판 ÷ 몸통 4.62 → 2.65)
 export const BEAR_COLORS = Object.freeze({
-  dark: 0x575b5e, // 짙은 회색 돌 — 검은 털 자리 (아주 조금 서늘한 회색)
+  dark: 0x787873, // 짙은 회색 돌 — 검은 털 자리. 곰 2b(사장님 10/14 12:3x '어두운 영역이 돌이나 바위 색처럼 안 느껴져. 너무 검달까?'): 0x575b5e(서늘한 숯빛) → 조금 따뜻한 중간 회색
   light: 0xb3afa5, // 밝은 회색 돌 — 황갈·주황 자리 · 발톱 (아주 조금 따뜻한 회색)
   lightTip: 0xc0bcb2, // 주둥이 끝 — 닳아 가장 밝은 돌
   bleach: 0xcbc8bf, // 비에 씻겨 바랜 윗면 쪽으로 섞는 빛
   grime: 0x2c2f30, // 오목한 곳의 때 (겨드랑이·가랑이·홈·귀 안쪽 · 아랫면)
-  worn: 0x8a8d8b, // 짙은 돌의 튀어나온 곳이 닳은 빛 (코끝·주먹·발가락)
+  worn: 0x9a988f, // 짙은 돌의 튀어나온 곳이 닳은 빛 (코끝·주먹·발가락) — 곰 2b: 0x8a8d8b → 짙은 돌을 따라 밝고 따뜻하게
   wornLight: 0xc6c3ba, // 밝은 돌의 튀어나온 곳이 닳은 빛 (눈썹뼈 · 눈 바로 둘레)
   chip: 0x9c9e9a, // 깨진 자리 — 새로 드러난 돌 속
   eyeball: 0x54585a, // 눈알 — 짙은 돌 (사진의 짙은 갈색 눈 자리)
@@ -46,7 +51,7 @@ export const BEAR_COLORS = Object.freeze({
   pupil: 0x1f2122, // 드릴로 판 눈동자 구멍의 그늘
   pupilBridge: 0xa09e95, // 눈동자 구멍에 남긴 작은 돌 다리 (1e 반사점 자리 — 돌 조각의 눈빛)
   eyeLine: 0x26292a, // 윗눈꺼풀 음각 선
-  nose: 0x5a5d5e, // 코 — 짙은 돌 (사진 코는 짙은 회갈색)
+  nose: 0x7b7b76, // 코 — 짙은 돌 (사진 코는 짙은 회갈색) — 곰 2b: 0x5a5d5e → 짙은 돌을 따라
   nostril: 0x242627,
   earIn: 0x2e3132, // 귀 컵 안쪽 (때)
   moss: 0x58733f, // 발 둘레 이끼 (꼭짓점 색 — 받침 이끼와 같은 빛)
@@ -119,13 +124,30 @@ const EAR = { x: 0.098, y: 0.044, z: -0.012, r: 0.0175, thick: 0.007 }; // 작�
 const EAR_CHIP = { side: -1, angle: 1.2, r: 0.42, depth: 0.32 }; // 곰 오른 귀 위 바깥 테두리의 작은 깨짐 (귀 반지름 몫 — 확인표 1246)
 // 얼굴 밝은 돌 자리 (머리 좌표, 좌우 대칭): 주둥이 덩어리 + 두 눈을 감싸는 '안경' + 콧등 + 눈 위 눈썹 자리 둘. 무늬 세기 0.5 선이 얼굴 판 경계다.
 //  곰 2: 1e 의 부드러운 그러데이션은 무늬 세기 0.5 보다 바깥까지 밝게 보였다 — 또렷한 판 경계로 바꾸며 그 보이던 자리에 맞춰 '안경'을 넓히고(SPECS),
-//  이마 아치를 눈 위에서 평평하게(BROW_ARCH pow 4), 볼 경계를 조금 바깥으로(CHEEK) 옮겼다 — 사진처럼 가까운 눈 위에 밝은 띠, 바깥 눈꼬리에 좁은 띠가 남게
+//  이마 아치를 눈 위에서 평평하게(BROW_ARCH pow 4 — 곰 2b 에서 BROW_TOP 으로 바뀜), 볼 경계를 조금 바깥으로(CHEEK) 옮겼다 — 사진처럼 가까운 눈 위에 밝은 띠,
+//  바깥 눈꼬리에 좁은 띠가 남게
 const SPECS = { x: 0.037, rx: 0.024, ry: 0.0185 }; // 눈마다 감싸는 밝은 타원 (1d 0.036 · 0.0175 · 0.016)
 const BROWS = { x: 0.034, y: 0.047, rx: 0.017, ry: 0.0115 }; // 눈썹 자리 (콧등과 이어진다)
-// 이마 위 경계: 콧등 위가 가장 높고(y 0.05 — 사진 t 0.031) 눈 위(0.046)까지 거의 평평하다가 바깥 눈꼬리(0.034) 쪽으로 내려가는 아치
-//  y = top − drop·(|x|/span)^pow, 경계 폭 ±soft (1e: top 0.049 · drop 0.022 · pow 2 — 눈 가운데 위 0.039 로 윗눈꺼풀에 닿았다)
-const BROW_ARCH = { top: 0.05, drop: 0.0196, span: 0.058, pow: 4, soft: 0.0075 };
-const CHEEK = [0.07, 0.054]; // 볼·관자놀이 짙은 돌 경계 |x| (1d·1e 0.067 → 0.051)
+// 이마 위 경계 (곰 2b · 확인표 1280 — 사장님 10/14 12:2x '이마 쪽에서 거의 직선으로 연결돼 있어. 실제 사진은 약간 밑으로 들어가는 곡선'):
+//  두 눈썹 자리 위(|x| px)가 가장 높고 콧등 위 가운데가 dip 만큼 처진다 — 짙은 이마가 두 눈썹 자리 사이로 조금 내려온다. 눈썹 자리 바깥은 바깥 눈꼬리 쪽으로 내려간다.
+//  y = peak − dip·(1 + cos(π|x|/px))/2 (|x| ≤ px) · peak − drop·((|x| − px)/(span − px))^pow (바깥), 경계 폭 ±soft.
+//  사진 이마 경계를 머리 좌표로 옮겨 좌우 평균한 꼴(봉우리 0.0533 · 처짐 0.0051)을, 둥근 비탈(FACE_BEVEL)이 보이는 경계를 위로 넓히는 만큼 낮춰
+//  사진 구도 렌더에서 두 봉우리 평균 · 처짐(키의 0.0055) · 폭을 사진과 맞춘 값 (docs/import/sluice_port_2026-10-14.md §7-1). 곰 2 까지는 콧등 위가 가장 높은
+//  아치(BROW_ARCH: 가운데 0.05 · 눈 위 0.046 · 바깥 눈꼬리 0.034, 4 제곱 꼴)였다 — 앞에서 보면 두 눈썹 자리 위를 거의 곧게 이었다
+const BROW_TOP = { peak: 0.0519, px: 0.023, dip: 0.005, drop: 0.0222, span: 0.058, pow: 1.81, soft: 0.0075 };
+const CHEEK = [0.07, 0.054]; // 눈 둘레('안경')·눈썹 자리·주둥이 무늬의 바깥 끝 |x| (1d·1e 0.067 → 0.051) — 볼은 아래 CHEEK_LINE
+// 볼 바깥 경계 (곰 2b · 확인표 1281 — 감독 검수 '볼 쪽 바깥 경계도 사진의 곡선'): 사진 윤곽을 머리 좌표로 옮겨 좌우 평균한 [y, 바깥 |x|] — 눈 아래에서 바깥으로 불룩하다가(0.060)
+//  주둥이 옆을 거의 곧게 내려와 턱으로 둥글게 모인다. 입선(y −0.035) 아래는 사진 턱이 우리 아래턱(1e — 20 % 짧게)보다 길어 세로로 0.68 배 눌러 맞췄다.
+//  곰 2 까지는 눈 아래에서 안으로 파였고(|x| 0.047) 볼 끝은 세로 곧은 선(CHEEK)이었다. 위(top)는 눈 둘레 무늬와 겹쳐 사라진다
+const CHEEK_LINE = Object.freeze({
+  rows: [
+    [0.022, 0.0525], [0.016, 0.057], [0.01, 0.0598], [0.004, 0.0601], [-0.002, 0.0585], [-0.008, 0.0558], [-0.014, 0.0541], [-0.02, 0.0531], [-0.026, 0.0526],
+    [-0.032, 0.0521], [-0.0357, 0.0502], [-0.0384, 0.046], [-0.0411, 0.0409], [-0.0438, 0.0352], [-0.0466, 0.0295], [-0.0493, 0.0246], [-0.052, 0.019], [-0.0547, 0.011], [-0.0575, 0],
+  ],
+  soft: 0.007,
+  top: 0.021,
+  topSoft: 0.004,
+});
 const NOSE = { y: -0.004, w: 0.0235, h: 0.0115, d: 0.012 }; // 넓고 납작한 코 — 폭 0.047, 위가 평평, 주둥이 끝 위 (사진 코 가운데 (376, 81), 눈 ~ 코 세로 키의 0.034)
 
 // 곰 2 — 정수리 꺼짐 (사장님 10/14 08:3x '정수리가 움푹 들어가야 저 곰의 특징이 나와', 확인표 1240): 머리 좌표에서 정수리를 앞뒤로 지나는 얕은 골과 그 양옆 둔덕.
@@ -134,11 +156,13 @@ const NOSE = { y: -0.004, w: 0.0235, h: 0.0115, d: 0.012 }; // 넓고 납작한 
 //  사진 정면 윗선(키 449 px, 같은 방법으로 잼): 두 봉우리 x 340 · 354(사이 키의 0.031) 사이 x 348 에서 두 봉우리 잇는 선보다 키의 0.0024 · 둥근 지붕보다 0.0035 꺼짐
 //  → 모델 0.0022 · 0.0040, 봉우리 340 · 354, 꺼짐 348 (docs/import/sluice_port_2026-10-14.md §6-2)
 const CROWN = { x0: -0.009, depth: 0.002, sx: 0.008, lip: 0.004, lx: 0.022, lw: 0.01, y0: 0.05, y1: 0.068, zb: -0.05, zf: 0.08, soft: 0.015 };
-// 얼굴 밝은 돌 판 (확인표 1243): 머리 좌표 격자(h 간격)에 머리 겉면을 그려 넣고(앞을 보는 삼각형만 — z 버퍼), 밝은 돌 자리(무늬 세기 ≥ 0.5)만
-//  경계선에서 잘라 겉면에서 FACE_STEP(키 3.2 m 에서 3.5 mm) 띄운다 — 두 톤 경계가 또렷한 얕은 단이 된다. 판은 머리 겉면을 따라 눈자리로 파여 들어가고,
-//  눈 조각은 1e 와 같은 자리·같은 들림으로 판 위에 얹는다 (판 두께만큼 더 띄움). 머리 고리 자체는 모두 짙은 돌 — 머리 고리 꼭짓점 간격(4~8 mm)으로는
-//  또렷한 경계를 못 그려서 밝은 돌은 판만 진다
-const FACE_STEP = 0.0011;
+// 얼굴 밝은 돌 판 (확인표 1243 · 1282): 머리 좌표 격자(h 간격)에 머리 겉면을 그려 넣고(앞을 보는 삼각형만 — z 버퍼), 밝은 돌 자리(무늬 세기 ≥ 0.5)만
+//  경계선에서 잘라 겉면에서 FACE_STEP 띄운다. 판은 머리 겉면을 따라 눈자리로 파여 들어가고, 눈 조각은 1e 와 같은 자리·같은 들림으로 판 위에 얹는다
+//  (판 두께만큼 더 띄움). 머리 고리 자체는 모두 짙은 돌 — 머리 고리 꼭짓점 간격(4~8 mm)으로는 또렷한 경계를 못 그려서 밝은 돌은 판만 진다.
+//  곰 2b (감독 검수 '가면 쓴 원숭이처럼 보인다'): 단 3.5 mm(0.0011) → 1.3 mm(0.0004), 곧은 벽 + 벽 밑 때(0.45) → 판 가장자리에서 바깥으로 FACE_BEVEL.w
+//  (키 3.2 m 에서 6.4 mm) 동안 둥글게 내려가 겉면에 닿는 비탈(어깨·발 모두 둥근 cos² 꼴) — 색도 그 비탈에서 밝은 돌 → 짙은 돌로 넘어간다. 돌에 새긴 무늬 경계
+const FACE_STEP = 0.0004;
+const FACE_BEVEL = Object.freeze({ w: 0.002, rings: [0, 0.5, 1] }); // 비탈 너비(머리·몸 단위) · 비탈 고리 자리(0 = 판 가장자리, 1 = 겉면에 닿는 발)
 const FACE_PLATE = Object.freeze({ h: 0.003, x0: -0.077, x1: 0.077, y0: -0.066, y1: 0.064 });
 // 가슴 말굽 양각 (확인표 1242): 판을 몸 겉면에서 lift 만큼 띄우고 둘레를 얕은 음각 홈으로 돌린다.
 //  rings = [판 가장자리에서 바깥으로 거리, 들림]: 벽 발 · 홈 바닥 · 홈 바깥 둔덕 · 몸에 녹아드는 끝 (몸 단위 — 키 3.2 m 에서 0.001 = 3.2 mm)
@@ -184,8 +208,9 @@ const CHISEL = [
 // 오래된 돌 (확인표 1245): 오목한 곳·아랫면은 때(비를 덜 맞아 검은 딱지), 하늘을 보는 면은 비에 씻겨 바램, 튀어나온 곳은 닳아 밝게, 발 둘레 이끼.
 //  grime: 다른 덩어리를 바라보는 오목한 곳의 때 · down: 아랫면 때 · up: 윗면 바램 · mossTop: 발바닥에서 이 높이(몸 단위)까지 이끼 · moss: 이끼 세기
 const WEATHER = Object.freeze({ grime: 0.55, down: 0.24, up: 0.3, mossTop: 0.025, moss: 0.7, streak: 0.25 });
-// 돌 얼룩: 큰 얼룩(scale — 키 3.2 m 에서 약 20 cm) + 잔 얼룩(scale2 — 약 8 cm)의 밝기 흔들림 (꼭짓점 색, 질감 없음)
-const MOTTLE = Object.freeze({ amp: 0.14, scale: 16, amp2: 0.06, scale2: 40 });
+// 돌 얼룩: 큰 얼룩(scale — 키 3.2 m 에서 약 20 cm) + 잔 얼룩(scale2 — 약 8 cm) + 돌 결(scale3 — 약 3 cm, 곰 2b · 확인표 1284)의 밝기 흔들림 (꼭짓점 색, 질감 없음)
+//  곰 2b: 짙은 돌이 밝아져 같은 몫의 흔들림이 더 잘 보인다 — 머리·얼굴처럼 꼭짓점이 촘촘한 곳에서 결로 읽히는 아주 작은 얼룩을 더했다
+const MOTTLE = Object.freeze({ amp: 0.14, scale: 16, amp2: 0.06, scale2: 40, amp3: 0.06, scale3: 110 });
 // 빗물 자국: 튀어나온 곳(턱·어깨·팔꿈치) 아래로 흘러내린 짙은 줄 몇 — [방위 φ(rad, 0 = 앞), 시작 t, 끝 t, 반폭(rad)] (몸통만, 가슴 앞은 비움)
 const STREAKS = [[2.55, 0.2, 0.62, 0.05], [-2.62, 0.22, 0.58, 0.045], [3.06, 0.24, 0.5, 0.04], [1.62, 0.3, 0.66, 0.04], [-1.66, 0.32, 0.64, 0.04]];
 // 때 끼는 오목한 곳을 어림하는 캡슐 (몸 좌표 [x, Y, z], 키 = 1): 꼭짓점이 바라보는 쪽에 다른 덩어리가 가까울수록 때가 낀다
@@ -326,7 +351,8 @@ function vnoise(x, y, z, seed) {
   return out * 2 - 1;
 }
 /** 돌 얼룩 밝기 배수 (몸 좌표) */
-const mottle = (p) => 1 + MOTTLE.amp * vnoise(p.x * MOTTLE.scale, p.y * MOTTLE.scale, p.z * MOTTLE.scale, 3) + MOTTLE.amp2 * vnoise(p.x * MOTTLE.scale2, p.y * MOTTLE.scale2, p.z * MOTTLE.scale2, 7);
+const mottle = (p) =>
+  1 + MOTTLE.amp * vnoise(p.x * MOTTLE.scale, p.y * MOTTLE.scale, p.z * MOTTLE.scale, 3) + MOTTLE.amp2 * vnoise(p.x * MOTTLE.scale2, p.y * MOTTLE.scale2, p.z * MOTTLE.scale2, 7) + MOTTLE.amp3 * vnoise(p.x * MOTTLE.scale3, p.y * MOTTLE.scale3, p.z * MOTTLE.scale3, 11);
 /** 허벅지와 엉덩이가 만나는 골 (0~1): 허벅지 꼭짓점은 몸통 겉면에, 몸통 꼭짓점은 허벅지 겉면에 가까울수록 — 두 덩어리가 엇갈려 만나는 선을 때 낀 골로 */
 function hipCrease(p, part) {
   const t = 1 - p.y;
@@ -520,7 +546,31 @@ function faceShape(x, y) {
   }
   return { d, r, mouth, brow };
 }
-/** 얼굴 밝은 돌 자리 세기 0~1 (머리 좌표, 자리만으로): 주둥이 + 두 눈 '안경' + 콧등 + 눈썹 자리 × 이마 아치 아래 × 볼·관자놀이 안쪽 (1c~1e 의 황갈 판 그대로) */
+/** 이마 위 경계 높이 (머리 좌표 x → y, BROW_TOP): 두 눈썹 자리 위가 가장 높고 콧등 위 가운데가 조금 처진 곡선 (곰 2b) */
+function browTop(x) {
+  const B = BROW_TOP;
+  const ax = Math.abs(x);
+  if (ax <= B.px) return B.peak - (B.dip * (1 + Math.cos((Math.PI * ax) / B.px))) / 2;
+  return B.peak - B.drop * Math.min(1.4, (ax - B.px) / (B.span - B.px)) ** B.pow;
+}
+/** 볼 바깥 경계 |x| (머리 좌표 y → |x|, CHEEK_LINE 표 사이를 3 차 에르미트로 매끈하게). 표 밖이면 null */
+function cheekLine(y) {
+  const R = CHEEK_LINE.rows;
+  if (y > R[0][0] || y < R[R.length - 1][0]) return null;
+  let i = 0;
+  while (i < R.length - 2 && y < R[i + 1][0]) i++;
+  const p0 = R[Math.max(0, i - 1)];
+  const p1 = R[i];
+  const p2 = R[i + 1];
+  const p3 = R[Math.min(R.length - 1, i + 2)];
+  const h = p2[0] - p1[0];
+  const u = (y - p1[0]) / h;
+  const m1 = ((p2[1] - p0[1]) / (p2[0] - p0[0] || 1)) * h;
+  const m2 = ((p3[1] - p1[1]) / (p3[0] - p1[0] || 1)) * h;
+  return (2 * u ** 3 - 3 * u ** 2 + 1) * p1[1] + (u ** 3 - 2 * u ** 2 + u) * m1 + (-2 * u ** 3 + 3 * u ** 2) * p2[1] + (u ** 3 - u ** 2) * m2;
+}
+/** 얼굴 밝은 돌 자리 세기 0~1 (머리 좌표, 자리만으로): [주둥이 + 두 눈 '안경' + 콧등 + 눈썹 자리 × 무늬 바깥 끝(CHEEK)] 과 볼(CHEEK_LINE 안) 중 큰 쪽 × 이마 경계 아래.
+ *  '안경'·눈썹 자리·콧등·주둥이는 1c~1e · 곰 2 그대로, 이마 경계(browTop)와 볼(cheekLine)은 곰 2b */
 function faceTone(x, y, f) {
   let te = 0;
   let tb = 0;
@@ -528,11 +578,14 @@ function faceTone(x, y, f) {
     te = Math.max(te, ss(Math.hypot((x - side * SPECS.x) / SPECS.rx, (y - EYE.y) / SPECS.ry), 1.22, 0.72));
     tb = Math.max(tb, ss(Math.hypot((x - side * BROWS.x) / BROWS.rx, (y - BROWS.y) / BROWS.ry), 1.25, 0.6));
   }
-  const bw = 0.026 + 0.02 * ss(y, 0.03, 0.05); // 콧등은 위로 갈수록 넓어져 눈썹 자리와 한 판이 된다 (1e — 아치 안이 비지 않게)
-  const bridge = ss(Math.abs(x), bw, bw * 0.5) * ss(y, 0.08, 0.062) * ss(y, SNOUT.yc - 0.01, SNOUT.yc + 0.01); // 콧등이 두 눈 사이로 이마 아치까지
-  const A = BROW_ARCH;
-  const archTop = A.top - A.drop * Math.min(1.4, Math.abs(x) / A.span) ** A.pow; // 이마 위 경계: 가운데가 가장 높고 눈 위까지 평평한 아치
-  return Math.max(ss(f.r, 1.08, 0.84), te, bridge, tb) * ss(y, archTop + A.soft, archTop - A.soft) * ss(Math.abs(x), CHEEK[0], CHEEK[1]);
+  const bw = 0.026 + 0.02 * ss(y, 0.03, 0.05); // 콧등은 위로 갈수록 넓어져 눈썹 자리와 한 판이 된다 (1e — 이마 경계 안이 비지 않게)
+  const bridge = ss(Math.abs(x), bw, bw * 0.5) * ss(y, 0.08, 0.062) * ss(y, SNOUT.yc - 0.01, SNOUT.yc + 0.01); // 콧등이 두 눈 사이로 이마 경계까지
+  const inner = Math.max(ss(f.r, 1.08, 0.84), te, bridge, tb) * ss(Math.abs(x), CHEEK[0], CHEEK[1]);
+  const L = CHEEK_LINE;
+  const cw = cheekLine(y);
+  const cheek = cw == null ? 0 : ss(Math.abs(x), cw + L.soft, cw - L.soft) * ss(y, L.top + L.topSoft, L.top - L.topSoft);
+  const top = browTop(x);
+  return Math.max(inner, cheek) * ss(y, top + BROW_TOP.soft, top - BROW_TOP.soft);
 }
 /** 정수리 골 깊이 (머리 좌표, + = 아래로): 가운데를 앞뒤로 지나는 얕은 골 − 골 양옆 둔덕 — 머리 윗부분(y)과 정수리 앞뒤 구간(z)에서만 */
 function crownDip(x, y, z) {
@@ -568,7 +621,8 @@ function almondShape(w, h, droop) {
 }
 /**
  * 얼굴 밝은 돌 판 (FACE_PLATE): head = 머리 좌표의 머리·몸 고리(색인 있음).
- *  격자 칸 삼각형을 무늬 세기 0.5 선에서 잘라 판을 짓고, 잘린 선마다 판 가장자리에서 겉면까지 벽(아래는 때)을 세운다. 판·벽은 머리 좌표 그대로 넣는다
+ *  격자 칸 삼각형을 무늬 세기 0.5 선에서 잘라 판을 짓고, 잘린 선을 따라 판 가장자리에서 바깥 겉면으로 둥글게 내려가는 비탈(FACE_BEVEL)을 두른다
+ *  (곰 2 의 곧은 벽 · 벽 밑 때 대신 — 곰 2b). 판·비탈은 머리 좌표 그대로 넣는다
  */
 function facePlate(kit, head) {
   const F = FACE_PLATE;
@@ -576,14 +630,19 @@ function facePlate(kit, head) {
   const nx = Math.round((F.x1 - F.x0) / F.h) + 1;
   const ny = Math.round((F.y1 - F.y0) / F.h) + 1;
   const n = nx * ny;
-  const Z = new Float32Array(n).fill(-Infinity);
-  const Nm = new Float32Array(n * 3);
   const P = head.attributes.position.array;
   const Nr = head.attributes.normal.array;
   const I = head.index.array;
   const gx = (k) => F.x0 + (k % nx) * F.h;
   const gy = (k) => F.y0 + Math.floor(k / nx) * F.h;
-  // z 버퍼: 앞을 보는 삼각형을 격자에 그려 맨 앞 겉면 z · 보간 법선
+  // z 버퍼: 앞을 보는 삼각형을 격자에 그려 맨 앞 겉면 z · 보간 법선. 판 격자(h)보다 SUB 배 촘촘히 그려 둔다 —
+  //  판 삼각형이 머리 고리의 볼록한 꺾임(눈두덩·주둥이 둘레)보다 낮아지는 만큼 꼭짓점을 들어 올리려고 (곰 2b: 판이 얇아져 꺾임이 판을 뚫고 비쳤다)
+  const SUB = 3;
+  const hf = F.h / SUB;
+  const nxf = (nx - 1) * SUB + 1;
+  const nyf = (ny - 1) * SUB + 1;
+  const Zf = new Float32Array(nxf * nyf).fill(-Infinity);
+  const Nf = new Float32Array(nxf * nyf * 3);
   for (let t = 0; t < I.length; t += 3) {
     const a = I[t] * 3;
     const b = I[t + 1] * 3;
@@ -592,23 +651,51 @@ function facePlate(kit, head) {
     if (Math.max(ay, by, cy) < F.y0 || Math.min(ay, by, cy) > F.y1 || Math.max(P[a + 2], P[b + 2], P[c + 2]) < 0) continue;
     const det = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
     if (det <= 1e-12) continue; // 뒤를 보거나 납작한 삼각형
-    const i0 = Math.max(0, Math.ceil((Math.min(ax, bx, cx) - F.x0) / F.h));
-    const i1 = Math.min(nx - 1, Math.floor((Math.max(ax, bx, cx) - F.x0) / F.h));
-    const j0 = Math.max(0, Math.ceil((Math.min(ay, by, cy) - F.y0) / F.h));
-    const j1 = Math.min(ny - 1, Math.floor((Math.max(ay, by, cy) - F.y0) / F.h));
+    const i0 = Math.max(0, Math.ceil((Math.min(ax, bx, cx) - F.x0) / hf));
+    const i1 = Math.min(nxf - 1, Math.floor((Math.max(ax, bx, cx) - F.x0) / hf));
+    const j0 = Math.max(0, Math.ceil((Math.min(ay, by, cy) - F.y0) / hf));
+    const j1 = Math.min(nyf - 1, Math.floor((Math.max(ay, by, cy) - F.y0) / hf));
     for (let j = j0; j <= j1; j++) {
-      const py = F.y0 + j * F.h;
+      const py = F.y0 + j * hf;
       for (let i = i0; i <= i1; i++) {
-        const px = F.x0 + i * F.h;
+        const px = F.x0 + i * hf;
         const wb = ((px - ax) * (cy - ay) - (cx - ax) * (py - ay)) / det;
         const wc = ((bx - ax) * (py - ay) - (px - ax) * (by - ay)) / det;
         const wa = 1 - wb - wc;
         if (wa < -1e-6 || wb < -1e-6 || wc < -1e-6) continue;
         const z = wa * P[a + 2] + wb * P[b + 2] + wc * P[c + 2];
-        const k = j * nx + i;
-        if (z <= Z[k]) continue;
-        Z[k] = z;
-        for (let e = 0; e < 3; e++) Nm[k * 3 + e] = wa * Nr[a + e] + wb * Nr[b + e] + wc * Nr[c + e];
+        const k = j * nxf + i;
+        if (z <= Zf[k]) continue;
+        Zf[k] = z;
+        for (let e = 0; e < 3; e++) Nf[k * 3 + e] = wa * Nr[a + e] + wb * Nr[b + e] + wc * Nr[c + e];
+      }
+    }
+  }
+  const Z = new Float32Array(n);
+  const Nm = new Float32Array(n * 3);
+  for (let k = 0; k < n; k++) {
+    const kf = Math.floor(k / nx) * SUB * nxf + (k % nx) * SUB;
+    Z[k] = Zf[kf];
+    for (let e = 0; e < 3; e++) Nm[k * 3 + e] = Nf[kf * 3 + e];
+  }
+  // 들어 올림: 판 격자 칸의 두 삼각형(아래 tri() 와 같은 대각선) 안 촘촘한 점마다 겉면이 판 평면보다 높은 만큼 그 삼각형 세 꼭짓점을 올린다
+  const lift = new Float32Array(n);
+  for (let j = 0; j < ny - 1; j++) {
+    for (let i = 0; i < nx - 1; i++) {
+      const k = j * nx + i;
+      const [z00, z10, z11, z01] = [Z[k], Z[k + 1], Z[k + nx + 1], Z[k + nx]];
+      if (z00 === -Infinity || z10 === -Infinity || z11 === -Infinity || z01 === -Infinity) continue;
+      for (let b = 0; b <= SUB; b++) {
+        for (let a = 0; a <= SUB; a++) {
+          const zs = Zf[(j * SUB + b) * nxf + i * SUB + a];
+          if (zs === -Infinity) continue;
+          const [u, v] = [a / SUB, b / SUB];
+          const lower = u >= v; // (i,j)·(i+1,j)·(i+1,j+1) 삼각형
+          const zp = lower ? z00 + u * (z10 - z00) + v * (z11 - z10) : z00 + v * (z01 - z00) + u * (z11 - z01);
+          const e = zs - zp;
+          if (e <= 0) continue;
+          for (const q of lower ? [k, k + 1, k + nx + 1] : [k, k + nx + 1, k + nx]) lift[q] = Math.max(lift[q], e);
+        }
       }
     }
   }
@@ -622,22 +709,22 @@ function facePlate(kit, head) {
   }
   const pos = [];
   const nor = [];
-  const sur = []; // 판 꼭짓점 밑 겉면 자리 (벽 아래)
   const col = [];
   const idx = [];
   const vmap = new Map();
-  const add = (x, y, z, nX, nY, nZ) => {
+  const sfc = []; // 판 꼭짓점 밑 실제 겉면 z (들어 올림 빼고 — 비탈 발이 닿는 곳)
+  const add = (x, y, z, lz, nX, nY, nZ) => {
     const l = Math.hypot(nX, nY, nZ) || 1;
     const [ux, uy, uz] = [nX / l, nY / l, nZ / l];
-    pos.push(x + ux * FACE_STEP, y + uy * FACE_STEP, z + uz * FACE_STEP);
-    sur.push(x + ux * 0.0001, y + uy * 0.0001, z + uz * 0.0001);
+    pos.push(x + ux * FACE_STEP, y + uy * FACE_STEP, z + lz + uz * FACE_STEP);
+    sfc.push(z);
     nor.push(ux, uy, uz);
     const c = faceLight(x, y, faceShape(x, y));
     col.push(c.r, c.g, c.b);
     return pos.length / 3 - 1;
   };
   const gv = (k) => {
-    if (!vmap.has(k)) vmap.set(k, add(gx(k), gy(k), Z[k], Nm[k * 3], Nm[k * 3 + 1], Nm[k * 3 + 2]));
+    if (!vmap.has(k)) vmap.set(k, add(gx(k), gy(k), Z[k], lift[k], Nm[k * 3], Nm[k * 3 + 1], Nm[k * 3 + 2]));
     return vmap.get(k);
   };
   const ev = (ka, kb) => {
@@ -647,7 +734,7 @@ function facePlate(kit, head) {
       const u = (0.5 - M[lo]) / (M[hi] - M[lo]);
       const L = (q, k, e = 0) => q[k * 3 + e];
       const mix = (fa, fb) => fa + (fb - fa) * u;
-      vmap.set(key, add(mix(gx(lo), gx(hi)), mix(gy(lo), gy(hi)), mix(Z[lo], Z[hi]), mix(L(Nm, lo), L(Nm, hi)), mix(L(Nm, lo, 1), L(Nm, hi, 1)), mix(L(Nm, lo, 2), L(Nm, hi, 2))));
+      vmap.set(key, add(mix(gx(lo), gx(hi)), mix(gy(lo), gy(hi)), mix(Z[lo], Z[hi]), mix(lift[lo], lift[hi]), mix(L(Nm, lo), L(Nm, hi)), mix(L(Nm, lo, 1), L(Nm, hi, 1)), mix(L(Nm, lo, 2), L(Nm, hi, 2))));
     }
     return vmap.get(key);
   };
@@ -684,34 +771,78 @@ function facePlate(kit, head) {
   g.setIndex(idx);
   putColored(kit, g, col).userData.part = 'face';
   g.dispose();
-  // 단의 벽: 판 가장자리 → 겉면 (바깥을 보게, 아래쪽은 모서리에 낀 때)
-  const wp = [];
-  const wc = [];
-  const wi = [];
-  const grime = new THREE.Color(C.grime);
+  // 둥근 비탈 (곰 2b): 판 가장자리 꼭짓점마다 겉면 접평면 위 바깥 방향으로 FACE_BEVEL.w 만큼 고리를 내어, 높이는 판 들림 → 겉면(cos² — 어깨·발 모두 둥글게),
+  //  법선은 비탈 기울기만큼 바깥으로, 색은 그 가장자리 판 색 → 짙은 돌 (곰 2 의 벽 밑 때 0.45 는 걷음 — 테두리가 검은 선으로 읽혔다).
+  //  비탈 발은 겉면 위 0.0001 — 머리 고리와 이음매 없이 만난다
   const V = (i, q) => new THREE.Vector3(q[i * 3], q[i * 3 + 1], q[i * 3 + 2]);
+  const outAcc = new Map(); // 가장자리 꼭짓점 → 바깥 방향 누적 (가장자리 길이 무게)
   for (const [e1, e2, inner] of walls) {
-    const quad = [V(e1, pos), V(e2, pos), V(e2, sur), V(e1, sur)];
-    const cs = [e1, e2, e2, e1].map((e, i) => new THREE.Color(col[e * 3], col[e * 3 + 1], col[e * 3 + 2]).lerp(grime, i < 2 ? 0.08 : 0.45));
-    const fn = new THREE.Vector3().subVectors(quad[1], quad[0]).cross(new THREE.Vector3().subVectors(quad[3], quad[0]));
-    const out = new THREE.Vector3().addVectors(quad[0], quad[1]).multiplyScalar(0.5).sub(V(inner, pos));
-    if (fn.dot(out) < 0) {
-      quad.reverse();
-      cs.reverse();
+    const a = V(e1, pos);
+    const b = V(e2, pos);
+    const t = new THREE.Vector3().subVectors(b, a);
+    const o = new THREE.Vector3().crossVectors(t, V(e1, nor).add(V(e2, nor)));
+    if (o.lengthSq() < 1e-24) continue;
+    if (o.dot(a.add(b).multiplyScalar(0.5).sub(V(inner, pos))) < 0) o.negate();
+    o.setLength(t.length());
+    for (const e of [e1, e2]) {
+      if (!outAcc.has(e)) outAcc.set(e, new THREE.Vector3());
+      outAcc.get(e).add(o);
     }
-    const base = wp.length / 3;
-    quad.forEach((q, i) => {
-      wp.push(q.x, q.y, q.z);
-      wc.push(cs[i].r, cs[i].g, cs[i].b);
-    });
-    wi.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
-  const wg = new THREE.BufferGeometry();
-  wg.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3));
-  wg.setIndex(wi);
-  wg.computeVertexNormals();
-  putColored(kit, wg, wc).userData.part = 'face';
-  wg.dispose();
+  const BV = FACE_BEVEL;
+  const R = BV.rings.length;
+  const lift0 = 0.0001;
+  const dark = new THREE.Color(C.dark);
+  const bp = [];
+  const bn = [];
+  const bc = [];
+  const bi = [];
+  const ring = new Map(); // 가장자리 꼭짓점 → 비탈 고리 첫 꼭짓점 번호
+  const ringOf = (e) => {
+    if (ring.has(e)) return ring.get(e);
+    const nE = V(e, nor);
+    const base = V(e, pos).addScaledVector(nE, -FACE_STEP); // 판 가장자리 밑 (들어 올림 포함)
+    const out = (outAcc.get(e) || new THREE.Vector3()).clone();
+    out.addScaledVector(nE, -out.dot(nE));
+    if (out.lengthSq() > 1e-24) out.normalize();
+    // 비탈 발: 실제 겉면 자리에서 접평면 위 바깥으로 w — 겉면이 옆·아래로 돌아가는 곳(턱 밑 · 앞을 덜 보는 곳)일수록 비탈을 좁혀
+    //  (법선 z 0.4 → 0.1 에서 1 → 0) 허공에 뜨지 않게, 이웃 꼭짓점끼리 매끈하게
+    const w = Math.max(1e-6, BV.w * ss(nE.z, 0.1, 0.4));
+    const foot = new THREE.Vector3(base.x, base.y, sfc[e]).addScaledVector(out, w);
+    const c0 = new THREE.Color(col[e * 3], col[e * 3 + 1], col[e * 3 + 2]);
+    const first = bp.length / 3;
+    for (const s of BV.rings) {
+      const h = lift0 + (FACE_STEP - lift0) * Math.cos((Math.PI * s) / 2) ** 2;
+      const p = base.clone().lerp(foot, s).addScaledVector(nE, h);
+      const slope = ((FACE_STEP - lift0) * (Math.PI / 2) * Math.sin(Math.PI * s)) / w; // 높이가 바깥 거리에 따라 내려가는 기울기 (−dh/d거리)
+      const nb = nE.clone().addScaledVector(out, slope).normalize();
+      const c = c0.clone().lerp(dark, ss(s, 0, 1));
+      bp.push(p.x, p.y, p.z);
+      bn.push(nb.x, nb.y, nb.z);
+      bc.push(c.r, c.g, c.b);
+    }
+    ring.set(e, first);
+    return first;
+  };
+  for (const [e1, e2] of walls) {
+    if (!outAcc.has(e1) || !outAcc.has(e2)) continue;
+    const r1 = ringOf(e1);
+    const r2 = ringOf(e2);
+    // 감김이 겉면 바깥(법선 쪽)을 보게
+    const f = V(r2, bp).sub(V(r1, bp)).cross(V(r1 + 1, bp).sub(V(r1, bp)));
+    const flip = f.dot(V(r1, bn)) < 0;
+    for (let k = 0; k < R - 1; k++) {
+      const [a, b, c, d] = [r1 + k, r2 + k, r2 + k + 1, r1 + k + 1];
+      if (flip) bi.push(a, c, b, a, d, c);
+      else bi.push(a, b, c, a, c, d);
+    }
+  }
+  const bg = new THREE.BufferGeometry();
+  bg.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
+  bg.setAttribute('normal', new THREE.Float32BufferAttribute(bn, 3));
+  bg.setIndex(bi);
+  putColored(kit, bg, bc).userData.part = 'face';
+  bg.dispose();
 }
 /** 아몬드꼴 눈 조각 (almondShape) — side < 0 이면 거울 */
 function almond(w, h, droop, side) {

@@ -5,6 +5,7 @@
 //   ?view=face    : 머리 가까이   ?view=strip : 앞 · 앞 왼쪽 · 옆 · 뒤 넷을 한 장에
 //   ?view=lens    : 가까이 보기 — yaw(도, 0 = 정면 · + = 곰 왼쪽) · eye · look(카메라·볼 곳 높이, 곰 키 몫 — 0 = 발바닥) · span(틀 높이, 곰 키 몫) · fov
 //   ?w=&h= 캔버스 크기 · ?bearH= 곰 키(m, 기본 BEAR_HEIGHT) · ?bg=rrggbb 바탕 · ?ground=0 땅 없음
+//   ?albedo=1 : 빛 없이 꼭짓점 색만 (두 톤 무늬 경계를 빛·그늘에 흔들리지 않게 잴 때 — 곰 2b)
 //   결과: window.shot = { done, url(webp), triangles }
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -43,6 +44,11 @@ if (q.get('ground') !== '0') {
 
 const { group, triangleCount } = buildSluiceBear(scene, { position: [0, 0, 0], rotationY: 0, height });
 if (q.get('plinth') === '0') group.getObjectByName('sluice-sun-bear-plinth').visible = false;
+if (q.get('albedo') === '1') {
+  const bear = group.getObjectByName('sluice-sun-bear');
+  bear.material.dispose();
+  bear.material = new THREE.MeshBasicMaterial({ vertexColors: true });
+}
 
 /** 긴 렌즈 원근 카메라: 방향(dir, 수평)·눈높이·틀 높이 span 을 주면 그 틀이 꽉 차는 거리에 둔다 */
 function lens(dirX, dirZ, eyeY, lookY, span, aspect, fov = 12) {
