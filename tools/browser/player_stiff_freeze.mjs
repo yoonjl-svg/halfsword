@@ -21,7 +21,7 @@ page.on('console', (m) => {
 });
 await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerSecret, null, { timeout: 60000 });
 const probe = () =>
   page.evaluate(() => {

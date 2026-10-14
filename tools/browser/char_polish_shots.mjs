@@ -24,7 +24,7 @@ async function open(fight) {
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   await page.goto(`${base}/?stage=${stage}&${foeArg.includes(':') ? `look=${foeArg}` : `foe=${foe}`}&weapon=longsword&foeWeapon=${FOE_WEAPON[foe] || 'longsword'}&emo=0`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 600000 }).catch((e) => { console.log(errors.join('\n')); throw e; });
-  await page.getByText('싸움 시작').click({ timeout: 300000 }); // 기다림을 넉넉히: 여러 작업자가 같은 기계에서 돌릴 때(부하 30+) 느려진다
+  await page.getByText('여정 시작').click({ timeout: 300000 }); // 기다림을 넉넉히: 여러 작업자가 같은 기계에서 돌릴 때(부하 30+) 느려진다
   if (!fight) await page.evaluate(() => { window.game.ai.update = () => {}; });
   await page.waitForFunction((t) => window.game.state === 'fight' && window.game.stats.simTime > t, fight ? 4.0 : 1.2, { timeout: 900000 });
   await page.addStyleTag({ content: 'body > :not(#game), #moveStick, #moveKnob { display: none !important; visibility: hidden !important; }' });

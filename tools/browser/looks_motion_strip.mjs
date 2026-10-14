@@ -17,7 +17,7 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + 
 page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
 await page.goto(`${base}/?stage=arena&${foeArg.includes(':') ? `look=${foeArg}` : `foe=${foe}`}&weapon=longsword&foeWeapon=${FOE_WEAPON[foe] || 'longsword'}&emo=0`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 600000 });
-await page.getByText('싸움 시작').click({ timeout: 300000 });
+await page.getByText('여정 시작').click({ timeout: 300000 });
 await page.addStyleTag({ content: 'body > :not(#game), #moveStick, #moveKnob { display: none !important; visibility: hidden !important; }' });
 // 매 프레임 카메라를 상대에 붙인다 (게임 카메라 대신)
 await page.evaluate((deg) => {

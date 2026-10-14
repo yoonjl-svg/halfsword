@@ -23,7 +23,7 @@ for (const sh of SHOTS) {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(`${base}/?weapon=longsword&foeWeapon=${WEAPON}${process.env.QUERY ?? ''}`, { waitUntil: 'networkidle' }); // QUERY: 덧붙일 주소 (10/12 왕관 꼴 — '&kronShape=pad')
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.ai, null, { timeout: 60000 });
   await page.evaluate((sh) => {
     document.getElementById('techCue').style.visibility = 'hidden';

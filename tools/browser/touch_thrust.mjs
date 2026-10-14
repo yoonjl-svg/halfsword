@@ -15,7 +15,7 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + 
 page.on('requestfailed', (r) => errors.push('requestfailed: ' + r.url()));
 await page.goto(base + '/?weapon=longsword', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 30000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 await page.waitForTimeout(2500);
 await page.evaluate(() => { window.game.ai.update = () => {}; }); // 시험 중엔 적이 가만히 (넘어지면 찌를 수 없다)
 const cdp = await ctx.newCDPSession(page);

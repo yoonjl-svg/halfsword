@@ -21,7 +21,7 @@ for (const c of CASES) {
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   await page.goto(`${base}/?stage=${c.stage}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'draw' && window.game.draw.stage === 'choose' && window.game.draw.t > 0.6, null, { timeout: 60000 });
   const back = await page.evaluate(() => document.getElementById('draw').dataset.back);
   await page.screenshot({ path: `${out}/import_saetbyeol_${c.stage}_draw.png` });

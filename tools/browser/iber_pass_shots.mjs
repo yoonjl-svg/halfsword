@@ -23,7 +23,7 @@ page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(WHO === 'player' ? `${base}/?weapon=${WEAPON}&foeWeapon=longsword` : `${base}/?weapon=longsword&foeWeapon=${WEAPON}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight' && window.game.ai, null, { timeout: 60000 });
 await page.evaluate(() => {
   document.getElementById('techCue').style.visibility = 'hidden';

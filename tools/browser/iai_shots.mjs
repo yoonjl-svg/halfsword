@@ -26,7 +26,7 @@ async function open(q, arcLife = 8) {
   await page.goto(`${base}/${q}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
   await page.evaluate((L) => (window.game.config.SECRET.instantArcLife = L), arcLife);
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerSecret, null, { timeout: 60000 });
   return page;
 }

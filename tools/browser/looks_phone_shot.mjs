@@ -18,7 +18,7 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + 
 page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
 await page.goto(`${base}/?stage=${stage}&${foeArg.includes(':') ? `look=${foeArg}` : `foe=${foe}`}&weapon=longsword&foeWeapon=${FOE_WEAPON[foe] || 'longsword'}&emo=0`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 600000 });
-await page.getByText('싸움 시작').click({ timeout: 300000 });
+await page.getByText('여정 시작').click({ timeout: 300000 });
 await page.waitForFunction((t) => window.game.state === 'fight' && window.game.stats.simTime > t, secs, { timeout: 900000 });
 await page.evaluate(() => { window.game.world.step = () => {}; }); // 그 자리에서 멈춰 찍는다 (카메라는 게임 카메라 그대로)
 await page.evaluate(() => new Promise((ok) => { let n = 4; const f = () => (--n <= 0 ? ok() : requestAnimationFrame(f)); requestAnimationFrame(f); }));

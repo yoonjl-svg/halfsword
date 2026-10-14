@@ -11,7 +11,7 @@ page.on('pageerror', (e) => errors.push('pageerror: ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 await page.goto((process.argv[2] || 'http://127.0.0.1:5173') + '/?weapon=longsword', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 30000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 await page.waitForTimeout(2000);
 await page.evaluate(() => { window.game.ai.update = () => {}; });
 const th = () => page.evaluate(() => window.game.player.skill.thrusts);

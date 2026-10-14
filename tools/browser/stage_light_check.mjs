@@ -286,7 +286,7 @@ async function capture(stage, foe) {
   const q = `${stage === 'poseidon' ? '' : `stage=${stage}&`}foe=${foe}&weapon=longsword&emo=0`;
   await page.goto(`${base}/?${q}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.evaluate(() => { window.game.ai.update = () => {}; }); // 가만히 겨눈 자세로 세워 둔다 (판마다 같은 장면)
   await page.waitForTimeout(HOLD);
   await page.waitForFunction(() => window.game.stats.simTime > 1.0, null, { timeout: 90000 }); // 느린 기계에서도 자세가 자리 잡게

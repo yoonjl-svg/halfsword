@@ -17,7 +17,7 @@ for (const id of ids) {
   page.on('console', (m) => m.type() === 'error' && errors.push(`${id} console: ${m.text()}`));
   await page.goto(`${base}/?weapon=${id}&foeWeapon=longsword&stage=arena`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 30000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight' || (window.game.state === 'draw' && window.game.draw.stage === 'choose' && window.game.draw.t > 0.6), null, { timeout: 30000 });
   if ((await page.evaluate(() => window.game.state)) === 'draw') await page.locator('#draw .wcard[data-i="0"]').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 30000 });

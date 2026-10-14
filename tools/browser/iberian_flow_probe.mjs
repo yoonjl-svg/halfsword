@@ -22,7 +22,7 @@ page.on('console', (m) => {
 });
 await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword&ibSecret=${ver}&slowMo=0`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerSecret, null, { timeout: 60000 });
 await page.waitForFunction(() => window.game.stats.simTime > 2.6, null, { timeout: 120000 }); // 시작 정지(startHold) 뒤
 // 상대 멈춤 + 스텝 기록기

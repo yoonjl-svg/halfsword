@@ -99,7 +99,7 @@ async function before(o) {
   let page = await openFight(o, '?stage=poseidon&cards=excalibur,qinggang&foeWeapon=rapier');
   await page.waitForTimeout(600);
   await shot(page, o, 'menu', 'real: 처음 메뉴(.overlay .card — 제목·.sub·.row·.seg·.toggle·.primary·.howto)');
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'draw' && window.game.draw.stage === 'choose', null, { timeout: 90000 });
   await page.evaluate(() => (window.game.draw.hold = true));
   await page.waitForTimeout(1200);
@@ -120,7 +120,7 @@ async function before(o) {
 
   // 2) 싸움 시작 순간: Battle(toast) + 조작 안내(hint) + 상대 소개 — 무기 고정(?weapon)이라 뽑기 없이 바로
   page = await openFight(o, '?stage=poseidon&weapon=longsword');
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.waitForTimeout(150);
   await shot(page, o, 'start', 'real: Battle toast + hint + foeIntro');
@@ -226,7 +226,7 @@ async function before(o) {
 
   // 8) 겹침: 개울가 브란(분노로 시작) 판의 시작 — Battle + 안내 + 소개 + 감정 + 상대 패시브 + 자세 이름이 한꺼번에
   page = await openFight(o, '?stage=clearing&weapon=longsword');
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.evaluate(PIN);
   await page.evaluate(([nach, tagP]) => {
@@ -254,7 +254,7 @@ async function v2(o) {
   let page = await openFight(o, '?stage=poseidon&weapon=longsword');
   await page.waitForTimeout(600);
   await snap(page, 'menu', 'real: 처음 메뉴 (설정 줄 둘)');
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.waitForTimeout(150);
   await snap(page, 'start', 'real: 판 시작 toast(대면) + hint + foeIntro');
@@ -287,7 +287,7 @@ async function v2(o) {
   await page.context().close();
   // 5) 겹침: 개울가 브란(분노로 시작) 판의 시작 — 실제 경로로 ③ 에 '분노 / 상대 · 오소리 브란'
   page = await openFight(o, '?stage=clearing&weapon=longsword');
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.evaluate(PIN);
   await page.evaluate(() => { for (const id of ['toast', 'hint', 'foeIntro']) __pin(id); });
@@ -323,7 +323,7 @@ async function v3(o) {
   page = await openFight(o, '?stage=poseidon&weapon=longsword');
   await page.waitForTimeout(600);
   await snap(page, 'menu', 'real: 처음 메뉴 (한 열 · 좁은 폭)');
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.waitForTimeout(150);
   await snap(page, 'start', 'real: 판 시작 toast(대면) + hint + foeIntro');
@@ -346,7 +346,7 @@ async function v3(o) {
   await page.context().close();
   // 4) 감정 줄: 개울가 브란(분노로 시작) 판의 시작 — 실제 경로로 아래 가운데 '오소리 브란의 분노가 폭발한다'
   page = await openFight(o, '?stage=clearing&weapon=longsword');
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.evaluate(PIN);
   await page.evaluate(() => { for (const id of ['toast', 'hint', 'foeIntro']) __pin(id); });

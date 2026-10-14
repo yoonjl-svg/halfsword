@@ -24,7 +24,7 @@ async function open(stage, { fight = true, weapon = true, until = 1.2 } = {}) {
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   await page.goto(`${base}/?stage=${stage}&${who}${weapon ? '&weapon=longsword&foeWeapon=rapier' : ''}&emo=0`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   if (!weapon) return page;
   if (!fight) await page.evaluate(() => { window.game.ai.update = () => {}; });
   await page.waitForFunction((t) => window.game.state === 'fight' && window.game.stats.simTime > t, until, { timeout: 240000 });

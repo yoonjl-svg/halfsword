@@ -30,7 +30,7 @@ async function open(look, { stage = 'arena', viewport = { width: 640, height: 80
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   await page.goto(`${base}/?stage=${stage}&foe=ratna&look=${look}&weapon=longsword&foeWeapon=ice&emo=0${extra}`, { waitUntil: 'networkidle' }); // weapon= 은 상대에게도 번지므로 상대 무기를 따로 (라트나 = 북부 대공의 검)
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 600000 });
-  await page.getByText('싸움 시작').click({ timeout: 300000 });
+  await page.getByText('여정 시작').click({ timeout: 300000 });
   if (!ai) await page.evaluate(() => { window.game.ai.update = () => {}; });
   await page.waitForFunction((t) => window.game.state === 'fight' && window.game.stats.simTime > t, until, { timeout: 900000 });
   return page;

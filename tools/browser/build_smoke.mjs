@@ -33,7 +33,7 @@ for (const q of URLS) {
         rowTexts: [...document.querySelectorAll('#menu .row > span')].map((s) => s.textContent.trim()),
       }));
     }
-    await page.getByText('싸움 시작').click();
+    await page.getByText('여정 시작').click();
     if (!/weapon=/.test(q)) {
       await page.waitForFunction(() => window.game.state === 'draw' && window.game.draw.stage === 'choose' && window.game.draw.t > 0.6, null, { timeout: 30000 });
       await page.locator('#draw .wcard[data-i="0"]').click();

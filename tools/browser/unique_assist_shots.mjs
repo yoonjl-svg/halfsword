@@ -50,7 +50,7 @@ for (const C of CASES) {
   });
   await page.goto(`${base}/${C.q}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.waitForFunction(() => window.game.stats.simTime > 2.4, null, { timeout: 180000 }); // 판 시작 정지 지나기
   const info = await page.evaluate(() => {

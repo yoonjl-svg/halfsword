@@ -26,7 +26,7 @@ for (const c of CASES) {
   watch(page, errors);
   await page.goto(`${base}/?test=1&weapon=${c.weapon}&hero=${c.hero}&foe=${c.foe}&stage=${c.stage}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 60000 });
   const sim0 = await page.evaluate(() => window.game.stats.simTime);
   await page.waitForTimeout(5000);
@@ -64,7 +64,7 @@ for (const c of CASES) {
     watch(page, errors);
     await page.goto(`${base}/?weapon=longsword&stage=loggia`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-    await page.getByText('싸움 시작').click();
+    await page.getByText('여정 시작').click();
     await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 60000 });
     const name = await page.evaluate(() => document.querySelector('#foeIntro b')?.textContent);
     seen[name] = (seen[name] ?? 0) + 1;

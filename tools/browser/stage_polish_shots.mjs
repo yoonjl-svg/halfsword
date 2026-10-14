@@ -24,7 +24,7 @@ async function open(viewport, fight) {
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
   await page.goto(`${base}/?stage=${stage}&weapon=longsword&emo=0`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   if (!fight) await page.evaluate(() => { window.game.ai.update = () => {}; });
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.stats.simTime > 1.0, null, { timeout: 90000 });
   return page;

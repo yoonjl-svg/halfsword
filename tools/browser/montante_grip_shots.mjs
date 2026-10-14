@@ -28,7 +28,7 @@ page.on('console', (m) => {
 });
 await page.goto(`${base}/?weapon=longsword&foeWeapon=${WEAPON}${QUERY}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 60000 });
 await page.evaluate(() => {
   document.getElementById('techCue').style.visibility = 'hidden';

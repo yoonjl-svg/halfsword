@@ -25,7 +25,7 @@ async function open(q) {
   await page.goto(`${base}/${q}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
   await page.evaluate(() => (window.game.config.SECRET.instantArcLife = 8));
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.combat, null, { timeout: 60000 });
   // 시험만: 기술 이름 알림을 가리고, 물리 스텝마다 상대 칼끝 자취를 적고, 조건(__pauseIf)이 차는 스텝에서 일시정지
   await page.evaluate(() => {

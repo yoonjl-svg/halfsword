@@ -13,7 +13,7 @@ for (const id of ids) {
   page.on('pageerror', () => errs++);
   await page.goto(`${base}/?stage=${id}&weapon=longsword&emo=0`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.evaluate(() => { window.game.ai.update = () => {}; });
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.stats.simTime > 1.0, null, { timeout: 90000 });
   await page.keyboard.press('KeyP');

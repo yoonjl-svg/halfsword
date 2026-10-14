@@ -15,7 +15,7 @@ for (const stage of stages) {
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`${stage} http ${r.status()}: ${r.url()}`); });
   await page.goto(`${base}/?stage=${stage}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'draw' && window.game.draw.stage === 'choose' && window.game.draw.t > 0.6, null, { timeout: 60000 });
   const info = await page.evaluate(() => ({ back: document.getElementById('draw').dataset.back, px: getComputedStyle(document.getElementById('draw')).getPropertyValue('--px') }));
   await page.screenshot({ path: `${out}/cardbacks_game_${stage}.png` });

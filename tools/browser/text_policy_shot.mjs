@@ -18,7 +18,7 @@ page.on('console', (m) => {
 });
 await page.goto(`${base}/?weapon=uchigatana&foeWeapon=qinggang&iai=0&secret=0&playerSecret=0`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 60000 });
 // 자세 이름 HUD 가 뜰 때까지 (쉬는 자세 — 손대지 않으면 곧 뜬다)
 await page.waitForFunction(() => document.getElementById('guardName')?.classList.contains('show'), null, { timeout: 60000 }).catch(() => {});

@@ -51,7 +51,7 @@ const shot = async (page, name) => shotDir && page.screenshot({ path: `${shotDir
 const myTech = (page, text) => page.evaluate((t) => (window.game.player.uniqueCue = { text: t, kind: 'unique', who: 'me', schoolKo: '시험', name: t, t: Math.random() }), text);
 // 싸움을 띄우고 판 시작 정지(ARENA.startHold)가 풀린 뒤 상대를 세운다 (판이 끝나지 않게 — 시험만)
 async function fight(page) {
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.waitForFunction(() => window.game.player.fightT > 2.5, null, { timeout: 300000, polling: 100 });
   await page.evaluate(() => (window.game.ai.update = () => {}));

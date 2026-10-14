@@ -14,7 +14,7 @@ page.on('requestfailed', (r) => errors.push('requestfailed: ' + r.url()));
 page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
 await page.goto(base + '/', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 30000 });
-await page.getByText('싸움 시작').click();
+await page.getByText('여정 시작').click();
 // 무기 뽑기: 카드가 다 깔리면(0.45초) 내 카드 첫 장을 누르고, 상대 카드가 뒤집힌 뒤 카드가 사라져 싸움이 시작될 때까지 기다린다
 await page.waitForFunction(() => window.game.state === 'draw' && window.game.draw.stage === 'choose' && window.game.draw.t > 0.6, null, { timeout: 30000 });
 await page.locator('#draw .wcard[data-i="0"]').click();

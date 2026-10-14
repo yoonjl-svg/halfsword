@@ -33,7 +33,7 @@ for (const c of CASES) {
     const prev = st.stageEvent?.bind(st);
     st.stageEvent = (name, data) => { window.__cues.push({ name, kind: data?.kind }); return prev?.(name, data); };
   });
-  await page.getByText('싸움 시작').click();
+  await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 300000 });
   const sim0 = await page.evaluate(() => window.game.stats.simTime);
   await page.waitForTimeout(6000);
