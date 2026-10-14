@@ -320,6 +320,8 @@ export async function collectTexts({ characters = true } = {}) {
       for (const [k, list] of Object.entries(ch.lines ?? {})) {
         (Array.isArray(list) ? list : [list]).forEach((t, i) => add('인물', sc, at(`lines.${k}[${i}]`), t, { field: 'char.line', characters: true }));
       }
+      // 대사 출처 (10/14 병마용 — 화면에 대사 아래 줄로 나온다: main.js lineSourceOf). 같은 출처는 한 번만
+      for (const src of new Set(Object.values(ch.lineSources ?? {}))) add('인물', sc, at(`lineSources['${src}']`), src, { field: 'char.lineSource', characters: true });
     }
   }
 

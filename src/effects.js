@@ -45,6 +45,19 @@ export class Particles {
     }
   }
 
+  /**
+   * 흙 알갱이 (병마용 — 샛별 저장소 901b1f39 clayChips 그대로): 피 대신 몇 알이 잠깐 튀었다 사라진다. 바닥 얼룩 없음 · 피 끄기 설정과 상관없음 · 난수 없음(차례로 정한 각).
+   *  수 3 + E/18 (12 까지) · 크기 9~17 mm · 0.25~0.55 s · 흙빛 둘(#8b887a · #b0ac9a) — 값 샛별 그대로 (확인표 1420)
+   */
+  clayChips(point, dir, energy) {
+    const n = Math.min(12, 3 + Math.floor(Math.max(0, energy) / 18));
+    for (let i = 0; i < n; i++) {
+      const angle = i * 2.399963, speed = 0.35 + Math.min(1.8, energy / 120);
+      const v = new THREE.Vector3(dir.x * speed * 0.25 + Math.cos(angle) * 0.45, 0.35 + (i % 3) * 0.18, dir.z * speed * 0.25 + Math.sin(angle) * 0.45);
+      this.add(point, v, i % 2 ? 0x8b887a : 0xb0ac9a, 0.009 + (i % 3) * 0.004, 0.25 + (i % 4) * 0.1, false);
+    }
+  }
+
   /** 상처에서 뚝뚝 떨어지는 핏방울 */
   drip(point) {
     if (!this.bloodOn) return;
@@ -221,6 +234,23 @@ function texture(kind) {
   } else if (kind === 'stab') {
     blob(64, 64, 40, 'rgba(90,6,6,0.5)');
     blob(64, 64, 14, 'rgba(20,2,2,1)');
+  } else if (kind === 'clay') {
+    // 흙 몸(병마용)의 잔금 — 샛별 901b1f39 그대로: 밝은 테(2 px 비낀) 위 짙은 금 한 줄 + 갈래 하나. 붉은빛·번짐 없음, 난수 없음
+    g.lineCap = 'butt';
+    g.lineJoin = 'miter';
+    for (const [offset, color, width] of [[2, 'rgba(190,187,168,.6)', 3], [0, 'rgba(65,63,54,.85)', 2]]) {
+      g.strokeStyle = color;
+      g.lineWidth = width;
+      g.beginPath();
+      for (const [i, point] of [[57, 9], [64, 35], [55, 56], [71, 84], [62, 120]].entries()) {
+        if (!i) g.moveTo(point[0] + offset, point[1]);
+        else g.lineTo(point[0] + offset, point[1]);
+      }
+      g.moveTo(55 + offset, 56);
+      g.lineTo(37 + offset, 68);
+      g.lineTo(31 + offset, 85);
+      g.stroke();
+    }
   } else if (kind === 'bruise') {
     for (let i = 0; i < 6; i++) blob(64 + (r() - 0.5) * 30, 64 + (r() - 0.5) * 30, 20 + r() * 18, 'rgba(70,35,70,0.35)');
   } else if (kind === 'scratch') {
