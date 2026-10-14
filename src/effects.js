@@ -145,6 +145,7 @@ export class Particles {
     this.list = [];
     this.mesh.count = 0;
     this.dirty = false;
+    this._q.identity(); // 화산섬 판에서 비탈에 눕힌 회전이 다음 판(평지)에 남지 않게 (평지에선 늘 단위 회전 — 그림 그대로)
   }
 }
 

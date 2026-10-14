@@ -254,7 +254,10 @@ export class ReviveFx {
       this.group.position.set(this.pos.x, f.terrain.heightAt(this.pos.x, this.pos.z), this.pos.z);
       const n = f.terrain.normalAt(this.pos.x, this.pos.z);
       this.halo.quaternion.setFromUnitVectors(_haloUp, _haloN.set(n.x, n.y, n.z));
-    } else this.group.position.set(this.pos.x, 0, this.pos.z);
+    } else {
+      this.group.position.set(this.pos.x, 0, this.pos.z);
+      this.halo.quaternion.identity(); // 화산섬 판에서 기울였던 고리를 평지 판에서 되돌린다 (원래 늘 단위 회전이라 평지 그림은 그대로)
+    }
 
     const ou = this.outer.material.uniforms;
     const cu = this.core.material.uniforms;
