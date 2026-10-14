@@ -631,9 +631,41 @@ def sluice():
     return pal, t, band, center, 'Q'
 
 
+# ── 10/14: 소금 사막 (샛별 저장소 무대 dayr 를 옮김 — 그쪽엔 뒷면이 없어 새로 그림, docs/import/salt_desert_port_2026-10-14.md) ──
+def dayr():
+    # 소금 사막: 짙은 저녁 벽돌빛 바탕에 벽돌빛 마름모 격자, 문루(뾰족 아치) 안에 걸린 낮은 해(살구 하늘 · 호박색 해 · 보랏빛 땅거미)와
+    # 소금 결정 무리(흰 알갱이)를 번갈아. 띠는 엇갈려 쌓은 벽돌, 가운데는 벽돌 장식에 흔한 팔각 별(두 네모를 45° 겹친 꼴 — 스스로 180° 대칭) 안의 해.
+    # 호박색 해는 아치 안·가운데 두 곳만 (무대에서도 문루 안의 해가 단 하나의 강조색)
+    pal = dict(SHARED, B='#2a1d1b', K='#5a4234', C='#c7a77d', A='#f4b095', S='#ffc46b', W='#f2ede0', V='#536386')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    arch = ['...CC...', '..CAAC..', '.CAAAAC.', '.CASSAC.', 'CAASSAAC', 'CAAAAAAC', 'CVVVVVVC', 'CC....CC']  # 뾰족 아치 문루 · 살구 하늘의 해 · 땅거미 진 소금 벌판
+    salt = ['..W...', '.WWW..', '..W.W.', '.W.W..', '..WWW.', '...W..']  # 소금 결정 무리 (스스로 180° 대칭)
+    stamp(t, arch, 8, 8)
+    stamp(t, salt, 16, 16)
+    stamp(t, salt, 16, 0)
+    sym_tile(t)
+    band = band_rows(['CC.CCC', '......', 'CCCCC.', '......'], 'B')  # 엇갈려 쌓은 벽돌 두 켜
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            if max(abs(dx), abs(dy)) <= 3.9 or abs(dx) + abs(dy) <= 5.5:  # 팔각 별: 네모 + 45° 돌린 네모
+                center[y][x] = 'C'
+            if d <= 2.9:
+                center[y][x] = 'V'
+            if d <= 2.0:
+                center[y][x] = 'S'
+    return pal, t, band, center, 'A'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice), ('dayr', dayr)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)

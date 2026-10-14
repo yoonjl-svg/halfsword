@@ -16,9 +16,12 @@ export const STAGE_DETAIL_PROFILES = Object.freeze({
   sluiceDrip: { stage: 'sluice', duration: 0.7, gain: 0.042, gap: 2.5 },
   jungleRustle: { stage: 'sluice', duration: 2.0, gain: 0.025, gap: 8 },
   jungleBird: { stage: 'sluice', duration: 1.7, gain: 0.043, gap: 30 },
+  // 소금 사막 (샛별 저장소 origin/main db729604 의 우물 고리 소리를 옮김 — docs/import/salt_desert_port_2026-10-14.md).
+  //  표 자리 = 난수 씨앗(9127 + 자리 × 311 + 변형 × 101)이라 습지 셋 뒤(자리 13 — 샛별 표와 같은 자리)에 붙인다: 있던 세부음 씨앗은 그대로
+  caravanRing: { stage: 'dayr', duration: 1.1, gain: 0.025, gap: 22 },
 });
 
-export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice';
+export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice' || stage === 'dayr';
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const TAU = Math.PI * 2;
 
@@ -30,6 +33,20 @@ export function synthStageDetail(kind, sr, rng) {
   const profile = STAGE_DETAIL_PROFILES[kind];
   if (!profile || !Number.isFinite(sr) || sr < 8000) return new Float32Array(0);
   const out = new Float32Array(Math.ceil(profile.duration * sr));
+  if (kind === 'caravanRing') {
+    // 소금 사막: 우물 줄 끝의 작은 쇠고리가 흔들림 끝에서 쇠말뚝에 닿는 소리 (샛별 원문 그대로 — 670·1093·1771 Hz 감쇠 부분음)
+    // A small iron ring touching its peg: dry, damped and irregular partials.
+    const pitch = 0.96 + rng() * 0.08;
+    for (let i = 0; i < out.length; i++) {
+      const t = i / sr, attack = 1 - Math.exp(-t / 0.0018);
+      const tail = Math.min(1, (out.length - 1 - i) / (sr * 0.08));
+      out[i] = attack * tail * (0.23 * Math.sin(TAU * 670 * pitch * t) * Math.exp(-t / 0.095)
+        + 0.10 * Math.sin(TAU * 1093 * pitch * t) * Math.exp(-t / 0.057)
+        + 0.06 * Math.sin(TAU * 1771 * pitch * t) * Math.exp(-t / 0.03)
+        + 0.035 * (rng() * 2 - 1) * Math.exp(-t / 0.009));
+    }
+    return out;
+  }
   if (kind === 'jungleBird') {
     // 잠든 습지: 멀리서 드문드문 우는 둥근 숲새 소리 (녹음이 아닌 합성). 두 숨 사이에 조용한 틈, 계속 우는 합창이 아니다.
     const pitch = 0.94 + rng() * 0.12;
@@ -263,6 +280,11 @@ export class StageDetailSound {
       // 잠든 습지: 낮게 흐르는 물 위에 눈에 보이는 잎·물방울 소리만 드문드문. 보이지 않는 빗소리·방 울림·동물 합창은 없다
       addNoise({ rate: 0.69, frequency: 920, gain: 0.0036, lfo: 0.075, depth: 0.0007, ceiling: 1700, pan: 0.3 });
       addNoise({ rate: 0.81, frequency: 470, gain: 0.0019, lfo: 0.043, depth: 0.0006, ceiling: 1350, pan: -0.16 });
+    } else if (this.stage === 'dayr') {
+      // 소금 사막: 그늘진 벽돌 문루를 지나는 마른 바람 두 겹 (샛별 값 그대로 — 우리 무대 바탕 가운데 가장 작다). 시장 소음·물소리 없음
+      // Dry air through a shaded brick iwan. No surf or crowded market bed.
+      addNoise({ rate: 0.81, frequency: 430, gain: 0.0017, lfo: 0.038, depth: 0.00065, ceiling: 1250, pan: 0.12 });
+      addNoise({ rate: 0.69, frequency: 1100, gain: 0.00075, lfo: 0.061, depth: 0.0003, ceiling: 2100, pan: -0.2 });
     }
     let remaining = nodes.length;
     for (const source of nodes) {

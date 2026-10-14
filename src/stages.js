@@ -10,6 +10,7 @@
 //    ③ 새로 짓는다.
 //   물리와는 상관없다 (바닥·경계 벽은 main.js 가 판마다 따로 만든다. 시뮬은 이 파일을 읽지 않는다)
 // ─────────────────────────────────────────────────────────────
+import * as THREE from 'three';
 import { buildArena } from './arena.js';
 import { buildTemple } from './stage_temple.js';
 import { buildCastle } from './stage_castle.js';
@@ -25,6 +26,7 @@ import { buildSacredGrove } from './stage_sacred_grove.js';
 import { buildFrozenBay } from './stage_frozen_bay.js';
 import { buildQinglan } from './stage_qinglan.js';
 import { buildSluice } from './stage_sluice.js';
+import { buildDayr } from './stage_dayr.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
@@ -46,6 +48,8 @@ const BUILDERS = {
   qinglan: buildQinglan, // 청람잔도: 초여름 맑은 정오, 큰 강 협곡 위 바위 쉼터·돌계단 잔도·작은 샘 (stage_qinglan.js) — 김씨의 무대
   // 샛별 저장소에서 가져온 무대 (사장님 10/14 02:3x — 진흙 감속 켬 · 가운데 말레이곰 석상 충돌 · 여정 밖, docs/import/sluice_port_2026-10-14.md)
   sluice: buildSluice, // 잠든 습지: 비 그친 한낮의 열대 담수 침수림, 진흙 섬·얕은 물·옛 돌 수문, 가운데 말레이곰 석상 (stage_sluice.js) — 여정 밖: 테스트 경로 무대 고르기·?stage=sluice 로만
+  // 샛별 저장소에서 가져온 무대 (사장님 10/14 08:1x — 화면 이름 '소금 사막' · 여정 밖 · 해는 그림자가 나오는 가장 낮은 각, docs/import/salt_desert_port_2026-10-14.md)
+  dayr: buildDayr, // 소금 사막: 소금 벌판 가 벽돌 역참 안뜰의 해 질 녘, 문루 안의 낮은 해와 긴 그림자 (stage_dayr.js) — 여정 밖: 테스트 경로 무대 고르기·?stage=dayr 로만. 코드 id 는 샛별 쪽 그대로
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
@@ -56,6 +60,7 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  10/10 20:4x 두 무대를 그 뒤에 더 이었다(앞 아홉 순서·자리는 그대로): 얼어붙은 만(투야나) → 청람잔도(김씨). 까닭: 이미 있는 판 순서를 하나도 안 밀고,
 //   눈 내리는 성 안뜰(4번째)과 겨울 얼음만이 붙지 않게 멀리 두고, 숲(신목) → 겨울 새벽(얼음만) → 여름 한낮(잔도) → 다시 바닷가(포세이돈)로 계절·빛이 번갈아 바뀐다
 //  잠든 습지(sluice)는 순서표에 넣지 않았다 (10/14 감독 추천 '여정 밖' — 확인표 1119, 사장님 확인 전): 테스트 경로 무대 고르기·?stage=sluice 로만 연다
+//  소금 사막(dayr)도 순서표에 넣지 않았다 (사장님 10/14 08:1x '여정 밖' — 확인표 1214): 테스트 경로 무대 고르기·?stage=dayr 로만. STAGE_FOE 짝도 없다(무작위 상대)
 export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji' };
@@ -82,6 +87,7 @@ export const STAGE_NAME_KO = {
   poseidon: '포세이돈 신전', clearing: '화전 터', clearing_a: '화전 터', clearing_a_dry: '화전 터', temple: '산사', castle: '성 안뜰',
   poseidon_night: '밤의 포세이돈 신전', cathedral: '대성당', darkhall: '어두운 홀', loggia: '붉은 회랑', corsair: '산호 항구',
   sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도', sluice: '잠든 습지',
+  dayr: '소금 사막', // 사장님 10/14 08:1x (샛별 쪽 '소금길의 (마지막) 역참') — 코드 id 는 그대로
 };
 /** 왼쪽 위 첫 줄: '스테이지 N · 이름' (순서표 밖이면 이름만) */
 export function stageLabel(id) {
@@ -121,7 +127,9 @@ export class Stages {
       sunColor: sun.color.clone(),
       sunIntensity: sun.intensity,
       sunPos: sun.position.clone(),
+      shadow: shadowOf(sun), // 그림자 카메라 처음 값 (main.js: 1024² · ±4 m · 1~25 m) — 무대가 shadow 를 주면 바꿨다가 치울 때 되돌린다
     };
+    this.snap = null; // 그림자 화소 맞춤 (무대 shadow.snap — 소금 사막): { right, up, du, dv } · 없으면 null
     this.id = null; // 지금 배경 id
     this.arena = null; // 지금 배경 { update, excite }
     this.sunOffset = DEFAULT_SUN_OFFSET; // 해가 싸우는 자리를 따라다닐 때의 방향
@@ -143,6 +151,7 @@ export class Stages {
     this.arena = make(this.scene, { hemi: this.hemi, sun: this.sun });
     this.objects = this.scene.children.filter((o) => !before.has(o));
     this.sunOffset = this.arena.sunOffset ?? DEFAULT_SUN_OFFSET;
+    if (this.arena.shadow) this.useShadow(this.arena.shadow);
     this.id = id;
     this.clearMs = t1 - t0;
     this.buildMs = performance.now() - t1;
@@ -203,5 +212,56 @@ export class Stages {
     this.sun.color.copy(b.sunColor);
     this.sun.intensity = b.sunIntensity;
     this.sun.position.copy(b.sunPos);
+    this.useShadow(b.shadow);
+    this.snap = null;
   }
+
+  /**
+   * 무대 전용 그림자 카메라 (10/14 소금 사막 — 낮은 해의 긴 그림자): { left, right, top, bottom, near, far, mapSize, bias, normalBias, snap }.
+   *  주지 않은 칸은 처음 값. 지도 크기가 바뀌면 지금 지도를 풀어 three 가 다음 그림에서 새 크기로 만들게 한다.
+   *  snap 이면 해 방향에서 본 가로·세로 축과 화소 한 칸 크기를 적어 두고 snapSun 이 쓴다 (해 방향은 무대마다 고정)
+   */
+  useShadow(s) {
+    const b = this.base.shadow, sh = this.sun.shadow, cam = sh.camera;
+    for (const k of ['left', 'right', 'top', 'bottom', 'near', 'far']) cam[k] = s[k] ?? b[k];
+    cam.updateProjectionMatrix();
+    const size = s.mapSize ?? b.mapSize;
+    if (sh.mapSize.x !== size || sh.mapSize.y !== size) {
+      sh.mapSize.set(size, size);
+      sh.map?.dispose();
+      sh.map = null;
+    }
+    sh.bias = s.bias ?? b.bias;
+    sh.normalBias = s.normalBias ?? b.normalBias;
+    this.snap = null;
+    if (s.snap) {
+      // three 의 그림자 카메라는 해 자리에서 과녁을 본다(위 = +Y): 앞 L = 해 쪽, 가로 = Y × L, 세로 = L × 가로 (Matrix4.lookAt 과 같은 축)
+      const L = new THREE.Vector3(this.sunOffset.x, this.sunOffset.y, this.sunOffset.z).normalize();
+      const right = new THREE.Vector3(0, 1, 0).cross(L).normalize();
+      const up = new THREE.Vector3().crossVectors(L, right);
+      this.snap = { right, up, du: (cam.right - cam.left) / size, dv: (cam.top - cam.bottom) / size };
+    }
+  }
+
+  /**
+   * 그림자 화소 맞춤 (main.js updateCamera 가 해를 싸우는 자리로 옮긴 뒤 매 프레임): 해와 과녁을 같이 조금 옮겨 과녁이 그림자 지도 격자의
+   *  화소 모서리에 오게 한다 → 카메라가 움직여도 그림자 화소 격자는 땅에 고정돼 긴 그림자 가장자리가 기어다니지 않는다. 옮기는 양은 화소 반 칸 안.
+   *  snap 을 켜지 않은 무대는 아무 일도 없다 (해 자리 그대로)
+   */
+  snapSun() {
+    const s = this.snap;
+    if (!s) return;
+    const t = this.sun.target.position;
+    const pu = t.dot(s.right), pv = t.dot(s.up);
+    _snap.copy(s.right).multiplyScalar(Math.round(pu / s.du) * s.du - pu).addScaledVector(s.up, Math.round(pv / s.dv) * s.dv - pv);
+    t.add(_snap);
+    this.sun.position.add(_snap);
+  }
+}
+
+const _snap = new THREE.Vector3();
+/** 해 그림자 설정의 지금 값 (처음 값을 적어 둘 때) */
+function shadowOf(sun) {
+  const c = sun.shadow.camera;
+  return { left: c.left, right: c.right, top: c.top, bottom: c.bottom, near: c.near, far: c.far, mapSize: sun.shadow.mapSize.x, bias: sun.shadow.bias, normalBias: sun.shadow.normalBias };
 }
