@@ -326,12 +326,21 @@ const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2,
 //   stop = 이끄는 발만 딛고 멈추면 따라붙는 발을 곧(자세 고치기 기다림 없이) 짧게 딛고 선다. 값은 gait_rhythm.mjs 로 고름 — 사장님 확인 전 (확인표 580~)
 const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.7, leadV: 0.6, trailV: 1.6, restV: 1.1, stop: true };
 //  박자 걸음 rhythm (10/15 사장님 '앞이든 뒤든 4걸음마다 다음 1걸음이 50% 빨라질 수 있어? … 3걸음마다 1걸음이 더 박자 감각이 생길까?' → 감독 권고 3 + 1 —
-//   docs/strike/italian_rhythm_2026-10-15.md): 앞뒤 걸음 every 번마다 다음 한 걸음이 몸 빠르기 ×mul · 발 박자 ×mul(한 걸음 길이는 그대로, 시간만 ÷mul) — gait.js rhythmBegin.
+//   docs/strike/italian_rhythm_2026-10-15.md): 앞뒤 걸음 every 번마다 다음 한 걸음이 몸 빠르기 ×mul · 발 박자 ×mul(한 걸음 길이는 그대로, 시간만 ÷mul) — gait.js fastBegin.
 //   한 걸음 = follow 짝걸음 안에서는 이끄는 발 + 따라붙는 발 한 짝(짝 사이 쉼까지), 밖(지나 딛기)에서는 한 디딤. 옆 몫이 앞뒤 몫보다 큰 걸음·기술 걸음은 세지도 끊지도 않음.
 //   idle = 걸음이 끝난 뒤 이만큼(s) 새 걸음이 없으면 처음부터 · brake = 몸이 아직 반대쪽으로 이만큼(m/s — GAIT.walkMin 과 같은 크기) 넘게 가는 동안 뗀 걸음(방향을 막 바꾼
 //   멈춰 서는 디딤)은 빠른 걸음을 다음 앞뒤 걸음으로 미룸 · accent = 빠른 걸음 발소리 세기·높이 배율(sound.js footstep — 같은 표본).
 //   `?itRhythm=4` = 4 + 1(다섯째가 빠름) · `?itRhythm=0` = 끔(칸 없는 것과 같은 길) — main.js. every 3 · mul 1.5 는 사장님 말씀 10/15(3 + 1 은 감독 권고), 나머지는 사장님 확인 전 (확인표 1500~)
-const ITALIAN_RHYTHM = { every: 3, mul: 1.5, idle: 0.7, brake: 0.2, accent: { gain: 1.3, rate: 1.06 } };
+const FAST_ACCENT = { gain: 1.3, rate: 1.06 }; // 빠른 걸음 발소리 강조 — 박자 걸음·따라 들어가기가 같이 씀 (사장님 확인 전 · 확인표 1508)
+const ITALIAN_RHYTHM = { every: 3, mul: 1.5, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
+//  ⓐ″ 독일 따라 들어가기 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
+//   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —
+//   이탈리아 박자 걸음과 같은 빠른 걸음(gait.js fastBegin — 몸 빠르기·발 박자 ×mul · 같은 발소리 강조). 뒤·옆 걸음은 받지도 쓰지도 않음 · 몸이 아직 뒤로 brake m/s 넘게 가는 앞 걸음은
+//   받기만 하고 빠른 걸음은 다음 앞 걸음부터(박자 걸음 brake 와 같은 까닭). accel = 그 걸음 동안 몸 가속 한도(GAIT.maxAccel) 배율 — 서 있다가 박차고 들어가는 걸음은
+//   가속 한도에 묶여 목표 빠르기만 올려서는 몸이 빨라지지 않는다(chase_step_feel: 끝까지 밀어 1 m 까지 0.95 → 0.87 s 뿐, 한도 × 1.5 면 0.73 s). 박자 걸음엔 없음(뒤 짝걸음 일찍 디딤이 늘어서).
+//   독일 유파 몸만(유파 칸이 아니라 TRADITIONS.german 에 — 독일 걸음 칸이 없어야 지금 걸음 그대로라서). 스위치 GAIT.deChase(`?deChase=0` 끔).
+//   두 걸음 · ×1.5 · 헛침만 = 사장님 결정 10/15, window 0.6 s · brake 0.2 · accel 1.5 는 사장님 확인 전 (확인표 1512~)
+const GERMAN_CHASE = { window: 0.6, steps: 2, mul: 1.5, brake: 0.2, accel: 1.5, accent: FAST_ACCENT };
 const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 } };
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
@@ -884,7 +893,7 @@ export const TECH_NAMES = {
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로) · 이름은 DUSSACK_NAMES (sword_art.js schoolNames 가 가지 이름을 먼저 읽는다)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, get secret() { return this.secretSet ?? (SECRET.deSecret === 'v1' ? GERMAN_SECRET : GERMAN_SECRET_PARRY); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.deSecret 'parry' 기본(막기 연환 — 감아 들기) · 'v1' 옛 Versetzen (`?deSecret=v1`)
+  german: { id: 'german', nameKo: '독일', ...GERMAN, chase: GERMAN_CHASE, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, get secret() { return this.secretSet ?? (SECRET.deSecret === 'v1' ? GERMAN_SECRET : GERMAN_SECRET_PARRY); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.deSecret 'parry' 기본(막기 연환 — 감아 들기) · 'v1' 옛 Versetzen (`?deSecret=v1`)
   // 이탈리아 물러남(10/9 패시브 단계 — Ritirata): 몰리면 테르차(긴 자세)로 칼끝을 겨눈 채 물러난다, 그 밖엔 긴 자세·쟁기 (전 독일 값 황소 · 쟁기·긴 자세).
   //  레이피어 간 보는 자세(WATCH_GUARDS)에 긴 자세가 있다 — 재기 손잡이 motion_lab SCHOOL_RITIRATA=0 (전 값)
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다

@@ -167,11 +167,13 @@ export class Gait {
     this.speedF = 0;
     this.runW = 0;
     // 빠른 걸음 (10/15 — 이탈리아 박자 걸음 P.rhythm): fastK = 지금 걸음의 몸 빠르기·발 박자 배율(1 = 보통) · rhyN = 이번 마디에 센 앞뒤 걸음 · rhyIdle = 걸음이 끝난 뒤 지난 시간
-    //  rhyTrail = 짝걸음 빠른 걸음의 따라붙는 발이 아직 남았나
+    //  rhyTrail = 짝걸음 빠른 걸음의 따라붙는 발이 아직 남았나 · chase = 독일 따라 들어가기 받을 창(상대 헛침 뒤 — foeWhiff) · fastAccent = 지금 빠른 걸음의 발소리 강조 ·
+    //  fastAcc = 지금 빠른 걸음의 몸 가속 한도 배율(fighter.js driveBalance — 따라 들어가기만 둠)
     this.fastK = 1;
     this.rhyN = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
+    this.chase = null;
   }
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
@@ -218,17 +220,19 @@ export class Gait {
     this.prevHead = this.f.heading;
     this.headRate = 0;
     this.resetRates();
-    // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다
+    // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다(따라 들어가기 받을 창도 버림)
     this.fastK = 1;
     this.rhyN = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
+    this.chase = null;
   }
 
   exit() {
     this.active = false;
     this.fastK = 1;
     this.rhyN = 0;
+    this.chase = null;
     const J = this.f.jointByName;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
@@ -301,7 +305,19 @@ export class Gait {
   }
 
   /**
-   * 박자 걸음 (10/15 이탈리아 P.rhythm — docs/strike/italian_rhythm_2026-10-15.md): 새 걸음을 뗄 때(update ③) 세고, 이 걸음이 빠른 걸음인지(fastK) 정한다 → 이 걸음 시간을 돌려준다.
+   * 독일 따라 들어가기 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝났다(헛침) —
+   *  ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack 이 부른다. 내 무기가 독일 유파(TRADITIONS.german.chase)이고 서서 걷는 몸이면 받을 창을 연다(새 헛침이면 새로).
+   *  GAIT.deChase 0 이면 아무것도 안 한다(전 판). 상태만 적고 난수·몸은 건드리지 않는다
+   */
+  foeWhiff() {
+    if (!GAIT.deChase || !this.active || this.f.state !== 'stand') return;
+    const def = TRADITIONS[this.f.swordArt?.tradition]?.chase;
+    if (def) this.chase = { def, t: 0, left: def.steps, got: false };
+  }
+
+  /**
+   * 빠른 걸음 (10/15): 새 걸음을 뗄 때(update ③) 이 걸음이 빠른 걸음인지(fastK) 정한다 → 이 걸음 시간을 돌려준다.
+   *  RH = 이탈리아 박자 걸음(P.rhythm — docs/strike/italian_rhythm_2026-10-15.md)이 세고, C = 독일 따라 들어가기 받을 창(this.chase — docs/strike/german_chase_2026-10-15.md)이 쓴다.
    *  한 걸음(펜싱의 한 걸음) = follow 짝걸음이면 이끄는 발로 여는 한 짝(따라붙는 발·짝 사이 쉼까지 같은 걸음 — 몸 박자 leadV·trailV·restV 도 한 짝이 한 단위),
    *   아니면(지나 딛기) 걷는 동안 몸을 옮기는 한 디딤 — walk 걸음, 그리고 걷는 중 다리가 안 닿아 먼저 옮기는 catch 걸음(스틱 끝까지 앞으로 달리면
    *   레이피어 앞발 디딤이 늘 catch 로 열린다 — 박자 걸음 전에도 그렇다. 안 세면 두 디딤에 하나만 센다).
@@ -311,14 +327,33 @@ export class Gait {
    *   옆 걸음·기술 걸음(req·draw)·짝걸음 안 catch·자세 고치기는 세지도 끊지도 않는다(빠른 걸음만 거기서 끝남 — 그 걸음은 제 시간)
    *  방향을 막 바꿔 몸이 아직 반대쪽으로 RH.brake m/s 넘게 가는 동안 뗀 걸음은 빠른 걸음을 미룬다(셈은 하고 다음 앞뒤 걸음이 빠른 걸음) — 멈춰 서는 디딤을
    *   서두르면 붙잡기 반사가 는다(스틱 끝 앞 ↔ 뒤 번갈아 — rhythm_step_feel C). 빠른 걸음 중 스틱 앞뒤가 뒤집혀도 거기서 끝(update)
+   *  따라 들어가기는 같은 '한 걸음' 가운데 앞 걸음(wf > 0)만 받고 쓴다 — 받을 창 안 첫 앞 걸음부터 steps 걸음(몸이 아직 뒤로 brake 넘게 가는 앞 걸음은 받기만)
    *  wf = 가려는 속도의 앞 몫(m/s, 부호 있음) · vb = 걸러진 골반 속도의 앞 몫
    */
-  rhythmBegin(RH, kind, PR, wf, vLat, vb, Tstep) {
+  fastBegin(RH, C, kind, PR, wf, vLat, vb, Tstep) {
     const k0 = this.fastK;
     if (Math.abs(wf) > vLat && (PR ? kind === 'walk' && this.pairStep === 'lead' : kind === 'walk' || (kind === 'catch' && this.walking))) {
-      const fast = this.rhyN >= RH.every && vb * Math.sign(wf) > -(RH.brake ?? Infinity);
-      this.rhyN = fast ? 0 : Math.min(RH.every, this.rhyN + 1);
-      this.fastK = fast ? RH.mul : 1;
+      let k = 1;
+      if (RH) {
+        const fast = this.rhyN >= RH.every && vb * Math.sign(wf) > -(RH.brake ?? Infinity);
+        this.rhyN = fast ? 0 : Math.min(RH.every, this.rhyN + 1);
+        if (fast) {
+          k = RH.mul;
+          this.fastAccent = RH.accent ?? true;
+          this.fastAcc = RH.accel ?? 1;
+        }
+      }
+      if (C && wf > 0) {
+        // 따라 들어가기: 받을 창 안의 첫 앞 걸음이 받는다 — 몸이 아직 뒤로 brake 넘게 가면 받기만 하고(멈춰 서는 디딤) 빠른 걸음은 다음 앞 걸음부터. steps 걸음을 다 쓰면 끝
+        C.got = true;
+        if (vb > -(C.def.brake ?? Infinity)) {
+          k = C.def.mul;
+          this.fastAccent = C.def.accent ?? true;
+          this.fastAcc = C.def.accel ?? 1; // 가속 한도 배율 (fighter.js driveBalance — 그 걸음 동안만)
+          if (--C.left <= 0 && this.chase === C) this.chase = null;
+        }
+      }
+      this.fastK = k;
       this.fastDir = Math.sign(wf);
       this.rhyTrail = !!PR; // 짝걸음: 이 짝의 따라붙는 발 하나는 같은 걸음
     } else if (PR && kind === 'walk' && this.pairStep === 'trail' && this.rhyTrail) this.rhyTrail = false;
@@ -466,16 +501,19 @@ export class Gait {
     if (PR?.stride) cad = Math.max(cad, (2 * speed) / PR.stride);
     const T = walkNow ? 1 / cad : GAIT.settleT / (1 - this.P.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
-    // 박자 걸음(P.rhythm — 10/15 이탈리아, docs/strike/italian_rhythm_2026-10-15.md): every > 0 일 때만 센다(`?itRhythm=0` = 칸 없는 것과 같은 길).
-    //  판 시작 정지·마무리 중엔 세지 않고 처음부터 · 걷지 않으면 빠른 걸음 끝. 칸 없으면 셈하지 않는다
+    // 빠른 걸음 (10/15): 박자 걸음(P.rhythm — 이탈리아, docs/strike/italian_rhythm_2026-10-15.md)은 every > 0 일 때만 센다(`?itRhythm=0` = 칸 없는 것과 같은 길) ·
+    //  따라 들어가기(this.chase — 독일, 상대 헛침 뒤 받을 창 · docs/strike/german_chase_2026-10-15.md)는 GAIT.deChase 일 때만.
+    //  판 시작 정지·마무리 중엔 세지 않고 처음부터(받을 창도 버림) · 걷지 않으면 빠른 걸음 끝. 둘 다 없고 빠른 걸음도 아니면 셈하지 않는다
     //  빠른 걸음 중 스틱 앞뒤가 뒤집히면(가려는 속도 앞 몫의 부호가 그 걸음과 반대) 거기서 끝 — 멈춰 서는 동안 서두르지 않게
     let RH = this.P.rhythm?.every > 0 ? this.P.rhythm : null;
-    if (RH) {
+    let CH = GAIT.deChase ? this.chase : null;
+    if (RH || CH || this.fastK > 1) {
       if (f.feetHeld || f.finish?.amt > 0.5) {
         this.rhyN = 0;
         this.rhyIdle = 0;
         this.fastK = 1;
-        RH = null;
+        this.chase = null;
+        RH = CH = null;
       } else if (!walkNow || (this.fastK > 1 && (want.x * fwd.x + want.z * fwd.z) * this.fastDir < 0)) this.fastK = 1;
     }
     // 빠른 걸음 동안(fastK > 1) 발 박자를 fastK 배로: 한 걸음 시간 sT = stepT ÷ fastK (걸러진 박자 stepT 는 그대로 — 빠른 걸음이 끝나면 곧 제 박자).
@@ -648,10 +686,11 @@ export class Gait {
       }
       if (next) {
         const l = L[next];
-        if (RH) Tstep = this.rhythmBegin(RH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep); // 박자 걸음: 이 걸음을 세고 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈)
+        // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(따라 들어가기) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
+        if (RH || CH || this.fastK > 1) Tstep = this.fastBegin(RH, CH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep);
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
-        if (RH) l.fastStep = this.fastK > 1 ? RH.accent ?? true : null; // 빠른 걸음의 발 = 발소리 강조 배율 { gain, rate } — 디딜 때 조금 또렷하게 (sound.js BodySounds). 보통 걸음은 null
+        if (this.fastK > 1 || l.fastStep) l.fastStep = this.fastK > 1 ? this.fastAccent : null; // 빠른 걸음의 발 = 발소리 강조 배율 { gain, rate } — 디딜 때 조금 또렷하게 (sound.js BodySounds). 보통 걸음은 null
         // follow 의 따라붙는 발·끌어붙임(draw)은 발을 더 낮게 (중국 체보·일본 스리아시 — P.dragLift, 없으면 그대로)
         if (this.P.dragLift != null && (kind === 'draw' || (kind === 'walk' && this.follow && this.trailStep))) l.lift = this.P.dragLift;
         this.target(l, want, fwd, rgt, Tstep);
@@ -677,6 +716,13 @@ export class Gait {
         this.rhyN = 0;
         this.fastK = 1;
       }
+    }
+    // 따라 들어가기 받을 창: 받기 전엔 헛침 뒤 window s 안에 앞으로 걷기 시작하지 않으면 사라짐 · 받은 뒤엔 걸음(자세 고치기 빼고)이 끝나고 window s 안에
+    //  새 걸음을 떼지 않으면(멈춤) 남은 걸음도 사라짐. 창이 없으면 셈하지 않는다
+    if (CH && this.chase === CH) {
+      if (!CH.got) {
+        if ((CH.t += dt) > CH.def.window) this.chase = null;
+      } else if (!(swing && swing.kind !== 'settle') && this.sinceTD > CH.def.window) this.chase = null;
     }
     if (this.req) {
       this.req.age += dt;

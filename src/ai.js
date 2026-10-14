@@ -1348,6 +1348,9 @@ export class AI {
   /** 친 뒤: 이어 치기(Nachschlag) 또는 물러나기(Abzug) */
   afterStrike(d) {
     const L = this.level;
+    // 헛침(아래 패시브 사건 'missed' 와 같은 가름 — 몸에도 칼에도 안 닿음)이면 상대 걸음에 알린다: 독일 유파 몸이면 따라 들어가기 받을 창(gait.js foeWhiff — 10/15).
+    //  GAIT.deChase 0 이면 걸음 쪽이 아무것도 안 한다. 읽기·알림만(난수·이 AI 상태 그대로)
+    if (!this.hitLanded && !this.bound) this.foe.gait?.foeWhiff();
     if (this.hitLanded && !this.strikeTallied) {
       this.stats.landed++;
       this.evLanded = true; // 감정층 사건: 맞혔다

@@ -42,7 +42,7 @@ async function open(extra = '') {
     const mv = P.move;
     const set0 = mv.set.bind(mv);
     mv.set = (x, y) => (g._ovr ? set0(g._ovr.x, g._ovr.y) : set0(x, y)); // 스틱 덮기
-    // 센 걸음 기록: 짝걸음 이끄는 발(또는 지나 딛기 walk·catch) — gait.js rhythmBegin 과 같은 가름 · 끄는 차례(g._pauseAt = [센 걸음 번호(이끄는 발) | '번호t'(그 걸음 따라붙는 발)])
+    // 센 걸음 기록: 짝걸음 이끄는 발(또는 지나 딛기 walk·catch) — gait.js fastBegin 과 같은 가름 · 끄는 차례(g._pauseAt = [센 걸음 번호(이끄는 발) | '번호t'(그 걸음 따라붙는 발)])
     const G = P.gait;
     const b0 = G.begin.bind(G);
     g._steps = [];
