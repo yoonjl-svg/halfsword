@@ -20,9 +20,14 @@
 //   원숭이처럼 보인다' · 12:3x '투톤 중 어두운 영역이 돌이나 바위 색처럼 안 느껴져. 너무 검달까?'): 이마 경계를 두 눈썹 자리 위가 높고 콧등 위 가운데가
 //   처지는 곡선(BROW_TOP)으로, 볼 바깥 경계를 사진 곡선(CHEEK_LINE)으로, 얼굴 판 단을 낮추고 둥근 비탈(FACE_STEP · FACE_BEVEL)로, 짙은 돌을 중간 회색으로
 //   밝히고 아주 작은 돌 결(MOTTLE.amp3)을 더했다. 눈·눈 둘레·주둥이·가슴 말굽·키·충돌체는 그대로.
+//   2c(사장님 10/14 13:3x '곰 석상에서 검은색으로 표시되는 영역 때문인지, 자연 속에 방치된 석상이 아니라 현대의 모형 피규어 같아 보여. 모양은 지키되
+//   개선해봐'): 검게 칠한 듯한 곳(눈동자·윗눈꺼풀 선·콧구멍·가슴 홈·드릴 점·귀 안)을 판 자리의 그늘로 — 가장 깊은 그늘도 짙은 돌 선형 밝기의 절반(DEEP),
+//   때도 검정 대신 젖은 녹회색(grime). 습지에 오래 버려진 돌: 위를 보는 면의 이끼(MOSS_UP) · 튀어나온 곳 아래 옅은 녹회색 빗물 자국(STREAKS) ·
+//   지의류 딱지(LICHEN_BEAR) · 큰 덩어리 돌 빛깔 얼룩(STONE_TINT) · 귀 테두리·주먹·받침 모서리 닳음과 작은 깨짐 · 아래쪽 젖은 띠와 발등 진흙 튐(WET) ·
+//   받침 둘레 풀 몇 포기 · 무광(거칠기 1). 실루엣·비율·얼굴 생김·정수리 꺼짐·이마 곡선·키·충돌체는 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Kit, h3 } from './stage_kit.js';
 
 /** 곰 키(m, 정수리 ~ 발바닥, 받침 빼고). 사장님 10/14 10:3x '곰 석상은 3.2m로 넣어' (03:0x '약 3 m' 승인 뒤 — 확인표 1110 → 1250) */
@@ -37,29 +42,31 @@ export const BEAR_AVOID_RADIUS = BEAR_PLINTH.radius + 0.04;
 // 색: 오래된 돌 석상, 회색조 두 톤 (곰 2 — 사장님 10/14 08:3x '회색조 투톤 명암', 확인표 1241 · 곰 2b 짙은 돌 1283). 사진의 검은 털 자리 = 짙은 회색 돌,
 //  황갈·주황 자리(주둥이·눈 둘레 '안경'·눈썹 자리·가슴 말굽)와 발톱 = 밝은 회색 돌. 순검정·순백 없이 돌빛 회색만 (때·그늘도 짙은 회색).
 //  곰 2b: 짙은 돌·밝은 돌 밝기(선형) 비 4.16 → 2.30 (경기 화면 같은 카메라에서 가슴 판 ÷ 몸통 4.62 → 2.65)
+//  곰 2c: 칠한 듯한 검정(눈동자 0x1f2122 · 윗눈꺼풀 선 0x26292a · 콧구멍 0x242627 · 귀 안 0x2e3132 · 때 0x2c2f30)을 걷었다 — 판 자리는 그 자리 돌빛 → DEEP 쪽 섞음(EYE_CARVE ·
+//   SOFT_PIT)으로, 때는 젖은 녹회색으로. 두 톤(짙은 돌 · 밝은 돌)은 그대로
 export const BEAR_COLORS = Object.freeze({
   dark: 0x787873, // 짙은 회색 돌 — 검은 털 자리. 곰 2b(사장님 10/14 12:3x '어두운 영역이 돌이나 바위 색처럼 안 느껴져. 너무 검달까?'): 0x575b5e(서늘한 숯빛) → 조금 따뜻한 중간 회색
   light: 0xb3afa5, // 밝은 회색 돌 — 황갈·주황 자리 · 발톱 (아주 조금 따뜻한 회색)
   lightTip: 0xc0bcb2, // 주둥이 끝 — 닳아 가장 밝은 돌
   bleach: 0xcbc8bf, // 비에 씻겨 바랜 윗면 쪽으로 섞는 빛
-  grime: 0x2c2f30, // 오목한 곳의 때 (겨드랑이·가랑이·홈·귀 안쪽 · 아랫면)
-  worn: 0x9a988f, // 짙은 돌의 튀어나온 곳이 닳은 빛 (코끝·주먹·발가락) — 곰 2b: 0x8a8d8b → 짙은 돌을 따라 밝고 따뜻하게
+  grime: 0x4a4e44, // 오목한 곳의 때 (겨드랑이·가랑이·홈·아랫면) — 곰 2c(확인표 1294): 0x2c2f30(거의 검정) → 젖은 이끼 그늘빛 짙은 녹회색 (섞음 한도 0.85 에서도 짙은 돌 선형 밝기의 약 48 %)
+  worn: 0x9a988f, // 짙은 돌의 튀어나온 곳이 닳은 빛 (코끝·주먹·발가락·귀 테두리) — 곰 2b: 0x8a8d8b → 짙은 돌을 따라 밝고 따뜻하게
   wornLight: 0xc6c3ba, // 밝은 돌의 튀어나온 곳이 닳은 빛 (눈썹뼈 · 눈 바로 둘레)
   chip: 0x9c9e9a, // 깨진 자리 — 새로 드러난 돌 속
-  eyeball: 0x54585a, // 눈알 — 짙은 돌 (사진의 짙은 갈색 눈 자리)
-  iris: 0x5f6365, // 홍채 자리 — 눈알보다 조금 밝게 (1e 의 홍채 안쪽처럼 눈동자가 읽히게)
-  pupil: 0x1f2122, // 드릴로 판 눈동자 구멍의 그늘
-  pupilBridge: 0xa09e95, // 눈동자 구멍에 남긴 작은 돌 다리 (1e 반사점 자리 — 돌 조각의 눈빛)
-  eyeLine: 0x26292a, // 윗눈꺼풀 음각 선
-  nose: 0x7b7b76, // 코 — 짙은 돌 (사진 코는 짙은 회갈색) — 곰 2b: 0x5a5d5e → 짙은 돌을 따라
-  nostril: 0x242627,
-  earIn: 0x2e3132, // 귀 컵 안쪽 (때)
+  nose: 0x898881, // 코 — 곰 2c(확인표 1291): 0x7b7b76 → 주둥이와 같은 돌에서 조금 짙게 (짙은 돌 3 : 밝은 돌 1, 선형)
   moss: 0x58733f, // 발 둘레 이끼 (꼭짓점 색 — 받침 이끼와 같은 빛)
+  mossDeep: 0x4a6833, // 위를 보는 면 이끼 — 두툼한 가운데 (곰 2c)
+  mossLit: 0x768f45, // 위를 보는 면 이끼 — 얇은 가장자리·햇빛 (곰 2c)
+  streak: 0x9ca391, // 옅은 녹회색 빗물 자국 (곰 2c)
+  mud: 0x5d5140, // 발등 진흙 튐 (곰 2c)
   stone: 0x7c8077, // 받침 돌
   plinthMoss: 0x58733f, // 받침 이끼
   lichen: 0xa8ac8d, // 지의류 (옅은 회녹색)
   lichenWarm: 0xb7aa78, // 지의류 (옅은 누런빛, 하나 둘만)
+  grass: 0x6a7a44, // 받침 둘레 풀 (곰 2c)
 });
+/** 가장 깊은 그늘 (곰 2c · 확인표 1290): 짙은 돌 × DEEP (선형) — 눈동자 바닥 · 콧구멍 · 귀 컵 바닥도 이보다 어둡지 않다 (순검정 없음) */
+const DEEP = 0.5;
 
 const TAU = Math.PI * 2;
 
@@ -102,7 +109,7 @@ const ARM = [
 ];
 const PAW_TIP = 15; // ARM 안에서 발톱이 나오는 고리 (t 0.633)
 // 발톱: 발마다 다섯, 길이 약 0.05(사진에 보이는 발톱 0.045~0.06), 끝 t ≈ 0.67 (사진 0.661~0.677)
-const CLAW = { count: 5, baseT: 0.624, spread: 0.05, inward: 0.011, drop: 0.049, rBase: 0.0074, rTip: 0.0009 };
+const CLAW = { count: 5, baseT: 0.624, spread: 0.05, inward: 0.011, drop: 0.049, rBase: 0.0074, rTip: 0.0015 }; // 곰 2c: 끝 0.0009 → 0.0015 (닳아 무딘 끝)
 const BROKEN_CLAW = { side: -1, k: 1 }; // 곰 오른 앞발 둘째 발톱은 끝이 부러졌다 (작은 깨짐 — 확인표 1246)
 
 // 머리 (머리 가운데 기준 머리 좌표, 앞 +z). 사진: 눈 t 0.053 · 코 가운데 0.085 · 입 0.12 · 턱 0.147, 코 폭 0.039
@@ -122,6 +129,18 @@ const MOUTH = { y: -0.035, droop: 0.004, half: 0.031, depth: 0.0036, width: 0.00
 const EYE = { x: 0.039, y: 0.028, w: 0.028, h: 0.0205, droop: 0.0045, tilt: 0.12, rim: 1.12, rimH: 1.3, iris: 0.5, pupil: 0.32, shine: 0.0018, socket: 0.0048, brow: 0.0052 };
 const EAR = { x: 0.098, y: 0.044, z: -0.012, r: 0.0175, thick: 0.007 }; // 작고 납작한 컵 귀, 넓어진 정수리 양옆 위 모서리 (1e: 조금 위·바깥으로 — 사진 귀 가운데 (309, 62)·(396, 66))
 const EAR_CHIP = { side: -1, angle: 1.2, r: 0.42, depth: 0.32 }; // 곰 오른 귀 위 바깥 테두리의 작은 깨짐 (귀 반지름 몫 — 확인표 1246)
+const EAR_CHIP2 = { side: 1, angle: 2.3, r: 0.3, depth: 0.24 }; // 곰 2c: 왼 귀 위 안쪽 테두리에도 작은 깨짐 하나 (확인표 1300)
+// 곰 2c — 귀 컵 (확인표 1293): 납작한 공의 앞면을 오목하게 눌러 컵으로 (곰 2 의 짙은 원판 0x2e3132 대신 — 앞면 가운데가 귀 두께 × (1 − depth) 까지 들어간다).
+//  컵 바닥은 짙은 돌 → 가장 깊은 그늘 쪽으로 shade 만큼(오목한 그늘), 테두리(가장 튀어나온 곳)는 닳아 밝게 rimWear
+const EAR_CUP = Object.freeze({ depth: 1.45, pow: 1.15, shade: 0.8, rimWear: 0.45 });
+// 곰 2c — 눈은 판 자리의 그늘로만 (확인표 1290): 눈 조각 겹(윗눈꺼풀 · 눈알 · 홍채 · 눈동자 · 돌 다리)의 꼴 · 자리 · 들림은 곰 2 그대로 두고, 색만
+//  그 자리 얼굴 판 돌빛 → 가장 깊은 그늘(짙은 돌 × DEEP)의 섞음 a 로 (0 = 판 돌빛 · 1 = 가장 깊은 그늘). 윗눈꺼풀은 눈알 위 가장자리에서 가장 짙고(lidIn) 위로 판 돌빛까지
+//  옅어지는 그늘 띠, 눈알은 테두리 ballRim → 안 ball(위쪽 ballTop — 눈꺼풀 그늘), 홍채 자리 iris, 눈동자는 가운데로 갈수록 짙은 얕은 오목(pupil = 가장 깊은 그늘),
+//  곰 2 의 돌 다리(1e 반사점 자리)는 그 오목 안에 남은 돌(bridge). 겹마다 테두리는 바로 밑 겹과 같은 a 라 겹 경계가 칠한 선으로 안 보인다.
+//  법선은 판 자리처럼 가운데 쪽으로 기울여(slope · 윗눈꺼풀 띠는 아래로 lidSlope) 위쪽 벽은 해를 덜 받고 아래쪽 벽은 받는다
+const EYE_CARVE = Object.freeze({ lidIn: 0.9, ballRim: 0.66, ball: 0.86, ballTop: 0.94, iris: 0.97, pupil: 1, bridge: 0.62, slope: 0.3, lidSlope: 0.25 });
+// 곰 2c — 얕게 판 점 (확인표 1291 · 1292): 콧구멍 · 가슴 드릴 점은 가운데로 갈수록 그 자리 돌빛 → 가장 깊은 그늘 쪽으로 a, 법선은 가운데 쪽으로 기운 오목 (곰 2 의 짙은 원판 대신)
+const SOFT_PIT = Object.freeze({ nostril: 0.8, chestDot: 0.5, slope: 0.7 });
 // 얼굴 밝은 돌 자리 (머리 좌표, 좌우 대칭): 주둥이 덩어리 + 두 눈을 감싸는 '안경' + 콧등 + 눈 위 눈썹 자리 둘. 무늬 세기 0.5 선이 얼굴 판 경계다.
 //  곰 2: 1e 의 부드러운 그러데이션은 무늬 세기 0.5 보다 바깥까지 밝게 보였다 — 또렷한 판 경계로 바꾸며 그 보이던 자리에 맞춰 '안경'을 넓히고(SPECS),
 //  이마 아치를 눈 위에서 평평하게(BROW_ARCH pow 4 — 곰 2b 에서 BROW_TOP 으로 바뀜), 볼 경계를 조금 바깥으로(CHEEK) 옮겼다 — 사진처럼 가까운 눈 위에 밝은 띠,
@@ -204,15 +223,49 @@ const CHISEL = [
   ['thighL', [[0.835, 1.45], [0.875, 1.52], [0.915, 1.58]], 0.003],
   ['thighR', [[0.835, 1.45], [0.875, 1.52], [0.915, 1.58]], 0.003],
 ];
+// 지의류 딱지 (곰 2c · 확인표 1297): 몸 겉면에 꼭짓점마다 붙인 얇고 들쭉날쭉한 딱지 (크고 작은 조각 셋) — 옅은 회녹색, 하나만 누런빛.
+//  [붙일 곳, t, 방위 φ(rad, 0 = 앞 · + = 곰 왼쪽 · 팔·다리는 + = 바깥), 반지름(몸 단위 — 0.01 = 3.2 cm), 누런빛]. 얼굴 · 가슴 말굽엔 두지 않는다 (무늬가 읽히게)
+const LICHEN_BEAR = [
+  ['body', 0.215, -1.75, 0.0085, false], // 오른 어깨 바깥 (해 쪽)
+  ['body', 0.25, 2.2, 0.011, false], // 왼 어깨 뒤
+  ['body', 0.43, -2.45, 0.009, false], // 등 오른쪽
+  ['armR', 0.34, 1.2, 0.0065, false], // 오른 위팔 바깥
+  ['armL', 0.42, 1.6, 0.006, false], // 왼 위팔 바깥
+  ['body', 0.6, -1.4, 0.0075, false], // 오른 옆구리 아래
+  ['thighL', 0.87, 1.25, 0.006, true], // 왼 허벅지 바깥 — 누런빛 하나
+  ['body', 0.035, -1.05, 0.005, false], // 머리 오른쪽 위
+  ['armR', 0.5, 0.7, 0.0055, false], // 오른 아래팔 바깥 앞
+  ['body', 0.7, -0.95, 0.007, false], // 오른 배 아래 옆
+];
+const PAW_CHIP = { side: 1, t: 0.588, r: 0.013, depth: 0.003 }; // 곰 2c: 왼 앞발(주먹) 앞 모서리 작은 깨짐 — ARM 고리 t 0.588 의 맨 앞 꼭짓점 둘레 (확인표 1300)
 
-// 오래된 돌 (확인표 1245): 오목한 곳·아랫면은 때(비를 덜 맞아 검은 딱지), 하늘을 보는 면은 비에 씻겨 바램, 튀어나온 곳은 닳아 밝게, 발 둘레 이끼.
+// 오래된 돌 (확인표 1245): 오목한 곳·아랫면은 때(비를 덜 맞아 낀 딱지 — 곰 2c: 검정 대신 젖은 녹회색, 확인표 1294), 하늘을 보는 면은 비에 씻겨 바램, 튀어나온 곳은 닳아 밝게, 발 둘레 이끼.
 //  grime: 다른 덩어리를 바라보는 오목한 곳의 때 · down: 아랫면 때 · up: 윗면 바램 · mossTop: 발바닥에서 이 높이(몸 단위)까지 이끼 · moss: 이끼 세기
-const WEATHER = Object.freeze({ grime: 0.55, down: 0.24, up: 0.3, mossTop: 0.025, moss: 0.7, streak: 0.25 });
+//  곰 2c: grimeMax 때 섞음 한도 · streak 옅은 녹회색 빗물 자국 세기(곰 2 의 짙은 자국 0.25 대신) · mossUp 위를 보는 면 이끼 · wetTop · wet 아래쪽 젖은 띠(발바닥에서 높이 · 짙어짐) ·
+//  mud 발등 진흙 튐 (확인표 1295 · 1296 · 1299)
+const WEATHER = Object.freeze({ grime: 0.55, grimeMax: 0.85, down: 0.24, up: 0.3, mossTop: 0.025, moss: 0.7, streak: 0.5, mossUp: 0.92, wetTop: 0.075, wet: 0.24, mud: 0.7 });
 // 돌 얼룩: 큰 얼룩(scale — 키 3.2 m 에서 약 20 cm) + 잔 얼룩(scale2 — 약 8 cm) + 돌 결(scale3 — 약 3 cm, 곰 2b · 확인표 1284)의 밝기 흔들림 (꼭짓점 색, 질감 없음)
 //  곰 2b: 짙은 돌이 밝아져 같은 몫의 흔들림이 더 잘 보인다 — 머리·얼굴처럼 꼭짓점이 촘촘한 곳에서 결로 읽히는 아주 작은 얼룩을 더했다
 const MOTTLE = Object.freeze({ amp: 0.14, scale: 16, amp2: 0.06, scale2: 40, amp3: 0.06, scale3: 110 });
-// 빗물 자국: 튀어나온 곳(턱·어깨·팔꿈치) 아래로 흘러내린 짙은 줄 몇 — [방위 φ(rad, 0 = 앞), 시작 t, 끝 t, 반폭(rad)] (몸통만, 가슴 앞은 비움)
-const STREAKS = [[2.55, 0.2, 0.62, 0.05], [-2.62, 0.22, 0.58, 0.045], [3.06, 0.24, 0.5, 0.04], [1.62, 0.3, 0.66, 0.04], [-1.66, 0.32, 0.64, 0.04]];
+// 큰 덩어리 돌 빛깔 얼룩 (곰 2c · 확인표 1298): 약 60 cm 결로 조금 밝은 황토 회색 ↔ 조금 짙은 녹회색 — 채널 배수 (잡음 × amp 를 ±1 에서 자름). 밝기 잔얼룩(MOTTLE)보다 큰 덩어리
+const STONE_TINT = Object.freeze({ scale: 5.5, amp: 1.7, warm: [1.08, 1.02, 0.88], cool: [0.9, 0.95, 0.93] });
+// 빗물 자국 (곰 2c · 확인표 1296): 튀어나온 곳(이마 · 턱 · 가슴 말굽 아래 · 팔 바깥) 아래로 흘러내린 옅은 녹회색 세로 줄 —
+//  [붙일 곳, 방위 φ(rad, 0 = 앞 · + = 곰 왼쪽 · 팔은 + = 바깥), 시작 t, 끝 t, 반폭(rad), 세기]. 곰 2 의 등·옆구리 짙은 자국 다섯은 같은 자리에서 옅은 녹회색으로
+const STREAKS = [
+  ['body', 1.2, 0.03, 0.115, 0.06, 0.9], ['body', -0.48, 0.03, 0.11, 0.06, 0.8], // 이마 → 관자놀이 · 볼 바깥 (얼굴은 곰 왼쪽으로 0.36 rad 돌아 있다)
+  ['body', 0.05, 0.168, 0.265, 0.08, 1], // 턱 아래 → 가슴 파임(U) 안
+  ['body', -0.36, 0.312, 0.52, 0.06, 0.9], ['body', 0.2, 0.333, 0.55, 0.065, 1], ['body', 0.66, 0.288, 0.48, 0.05, 0.75], // 가슴 말굽 아래
+  ['body', 2.55, 0.2, 0.62, 0.05, 0.8], ['body', -2.62, 0.22, 0.58, 0.045, 0.8], ['body', 3.06, 0.24, 0.5, 0.04, 0.7], ['body', 1.62, 0.3, 0.66, 0.04, 0.8], ['body', -1.66, 0.32, 0.64, 0.04, 0.8], // 등 · 옆구리
+  ['arm', 1.35, 0.23, 0.56, 0.17, 1], ['arm', 2.05, 0.3, 0.5, 0.15, 0.7], // 팔 바깥 (양팔 거울)
+];
+// 위를 보는 면 이끼 (곰 2c · 확인표 1295): 자리(t 구간)마다 위를 보는 정도(법선 y up[0] → up[1]) × 얼룩(scale: 약 23 cm · 8 cm 두 겹, 문턱 patch 위만 — 군데군데).
+//  몸통: 정수리(정말 위를 보는 곳만 · 드물게 — 골은 따로 더 짙게) · 어깨와 가슴 말굽 위턱(비탈진 어깨도) / 팔: 위팔 윗면 · 주먹 위. 얼굴 판 · 귀 · 다리 · 발톱엔 없다
+const MOSS_UP = Object.freeze({
+  body: [{ t: [0, 0.075], up: [0.55, 0.9], patch: [0.2, 0.42] }, { t: [0.15, 0.32], up: [0.02, 0.4], patch: [-0.06, 0.24] }],
+  arm: [{ t: [0.19, 0.33], up: [0.02, 0.4], patch: [-0.06, 0.24] }, { t: [0.535, 0.62], up: [0.05, 0.45], patch: [-0.1, 0.2] }],
+  relief: [{ t: [0.17, 0.215], up: [0.05, 0.25], patch: [0.0, 0.26], scale: [45, 90] }], // 가슴 말굽 위턱 — 판 윗변 위 홈 · 둔덕만 (약 7 cm 얼룩으로 군데군데). 밝은 판(plate)엔 없다
+  scale: [14, 40],
+});
 // 때 끼는 오목한 곳을 어림하는 캡슐 (몸 좌표 [x, Y, z], 키 = 1): 꼭짓점이 바라보는 쪽에 다른 덩어리가 가까울수록 때가 낀다
 //  (겨드랑이·팔과 몸 사이 · 가랑이·허벅지 안쪽 · 턱 밑 · 귀 뒤 · 발목)
 const OCC = [
@@ -370,37 +423,96 @@ function hipCrease(p, part) {
   const d = THIGH[i][3] + (THIGH[i + 1][3] - THIGH[i][3]) * f;
   return ss(Math.hypot((p.x - cx) / w, (p.z - cz) / d), 1.16, 1.0) * ss(t, 0.74, 0.77);
 }
-/** 빗물 자국 세기 0~1 (몸통 겉면 자리): 방위 폭 안에서, 시작에서 짙고 끝으로 갈수록 옅게 */
-function streak(p) {
+/** 빗물 자국 세기 0~1 (곰 2c — 옅은 녹회색, STREAKS): 몸통 · 팔 겉면의 방위 폭 안에서, 시작에서 짙고 끝으로 갈수록 옅게. 줄은 조금 구불구불 */
+function streak(p, part) {
+  const arm = part.startsWith('arm');
+  if (!arm && part !== 'body') return 0;
   const t = 1 - p.y;
-  const phi = Math.atan2(p.x - HEAD_SHIFT * (1 - S(t, 0.13, 0.19)), p.z - bodyRing(Math.min(t, 0.817))[2]);
+  let phi;
+  if (arm) {
+    const side = part === 'armL' ? 1 : -1;
+    const [cx, cz] = lerpRow(ARM, t, side);
+    phi = Math.atan2((p.x - cx) * side, p.z - cz); // + = 팔 바깥
+  } else phi = Math.atan2(p.x - HEAD_SHIFT * (1 - S(t, 0.13, 0.19)), p.z - bodyRing(Math.min(t, 0.817))[2]);
   let k = 0;
-  for (const [a, t0, t1, hw] of STREAKS) {
+  for (const [where, a0, t0, t1, hw, amp] of STREAKS) {
+    if ((where === 'arm') !== arm || t < t0 - 0.015 || t > t1) continue;
+    const a = a0 + 0.35 * hw * Math.sin(t * 70 + a0 * 3);
     const da = Math.abs(Math.atan2(Math.sin(phi - a), Math.cos(phi - a)));
-    if (da > hw * 1.6 || t < t0 - 0.02 || t > t1) continue;
-    k = Math.max(k, ss(da, hw * 1.6, hw * 0.4) * ss(t, t0 - 0.02, t0 + 0.03) * (1 - ss(t, t0, t1) * 0.85));
+    if (da > hw * 1.6) continue;
+    k = Math.max(k, amp * ss(da, hw * 1.6, hw * 0.4) * ss(t, t0 - 0.015, t0 + 0.02) * (1 - 0.85 * ss(t, t0, t1)));
   }
   return k;
 }
-/** 오래된 돌의 겉: 돌 얼룩, 오목한 곳·아랫면 때, 윗면 바램, 발 둘레 이끼. cavity(p, n) 를 주면 그만큼 때를 더하고 바램을 던다 (새긴 홈) */
-function weather(g, part, cavity = null) {
-  const C = BEAR_COLORS;
-  const grime = new THREE.Color(C.grime);
-  const bleach = new THREE.Color(C.bleach);
-  const moss = new THREE.Color(C.moss);
+/** 위를 보는 면 이끼 무게 0~1 (곰 2c, MOSS_UP): 붙일 곳의 t 구간 × 위를 보는 정도 × 얼룩 문턱 (군데군데) */
+function mossUp(p, n, part) {
+  const zones = part.startsWith('arm') ? MOSS_UP.arm : part === 'body' || part === 'relief' ? MOSS_UP[part] : null;
+  if (!zones) return 0;
+  const t = 1 - p.y;
+  let m = 0;
+  for (const z of zones) {
+    const [a, b] = z.t;
+    const w = (a <= 0 ? 1 : ss(t, a - 0.012, a + 0.012)) * ss(t, b + 0.012, b - 0.012) * ss(n.y, z.up[0], z.up[1]);
+    if (w > 0) m = Math.max(m, w * mossPatch(p, z.patch, z.scale));
+  }
+  return m;
+}
+/** 이끼 얼룩 0~1 (약 23 cm · 8 cm 두 겹 — 몸 고리 간격에 맞춘 결, 문턱 위만 — 군데군데) */
+const mossPatch = (p, [lo, hi] = [0, 0.28], [a, b] = MOSS_UP.scale) => {
+  return ss(0.7 * vnoise(p.x * a, p.y * a, p.z * a, 17) + 0.3 * vnoise(p.x * b, p.y * b, p.z * b, 19), lo, hi);
+};
+const MOSS_DEEP = new THREE.Color(BEAR_COLORS.mossDeep);
+const MOSS_LIT = new THREE.Color(BEAR_COLORS.mossLit);
+const _moss = new THREE.Color();
+/** 이끼 빛 (두툼한 가운데 짙게 · 얇은 가장자리 누렇게 — 자리 잡음으로) */
+const mossColor = (p) => _moss.copy(MOSS_DEEP).lerp(MOSS_LIT, ss(vnoise(p.x * 45, p.y * 45, p.z * 45, 31), -0.4, 0.5));
+/** 큰 덩어리 돌 빛깔 (곰 2c, STONE_TINT): 따뜻한 황토 회색 ↔ 서늘한 녹회색 채널 배수 */
+function stoneTint(c, p) {
+  const T = STONE_TINT;
+  const k = Math.max(-1, Math.min(1, T.amp * vnoise(p.x * T.scale, p.y * T.scale, p.z * T.scale, 23)));
+  const m = k > 0 ? T.warm : T.cool;
+  const a = Math.abs(k);
+  c.r *= 1 + (m[0] - 1) * a;
+  c.g *= 1 + (m[1] - 1) * a;
+  c.b *= 1 + (m[2] - 1) * a;
+  return c;
+}
+const GRIME = new THREE.Color(BEAR_COLORS.grime);
+const BLEACH = new THREE.Color(BEAR_COLORS.bleach);
+const MOSS_FOOT = new THREE.Color(BEAR_COLORS.moss);
+const STREAK = new THREE.Color(BEAR_COLORS.streak);
+const MUD = new THREE.Color(BEAR_COLORS.mud);
+/**
+ * 오래된 돌의 겉 한 꼭짓점 (c 를 고쳐 돌려준다): 돌 얼룩 · 빛깔 얼룩, 윗면 바램, 빗물 자국, 오목한 곳 · 아랫면 때, 발 · 다리 아래 젖은 띠 · 발 둘레 이끼 · 발등 진흙, 위를 보는 면 이끼.
+ *  extra = { cav: 새긴 홈 세기(때를 더하고 바램을 던다), moss: 홈 안 이끼 } — 정수리 골
+ */
+function weatherAt(c, p, n, part0, extra = null) {
   const W = WEATHER;
-  const foot = part.startsWith('foot') || part.startsWith('thigh');
-  paint(g, (p, n, col, i) => {
-    const c = new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)).multiplyScalar(mottle(p));
-    const cav = cavity ? cavity(p, n) : 0;
-    c.lerp(bleach, W.up * ss(n.y, 0.35, 0.95) * (1 - cav));
-    c.lerp(grime, Math.min(0.85, W.grime * occlusion(p, n, part) + W.down * ss(n.y, -0.15, -0.85) + cav + 0.42 * hipCrease(p, part) + (part === 'body' ? W.streak * streak(p) : 0)));
-    if (foot && p.y < W.mossTop) {
+  const part = part0 === 'relief' || part0 === 'plate' ? 'body' : part0; // 가슴 말굽 판(plate) · 홈 고리(relief)는 몸통 겉 그대로 — 이끼만 따로 (판엔 없고 홈 고리는 위턱만, MOSS_UP.relief)
+  stoneTint(c.multiplyScalar(mottle(p)), p);
+  const cav = extra ? extra.cav : 0;
+  c.lerp(BLEACH, W.up * ss(n.y, 0.35, 0.95) * (1 - cav));
+  const st = W.streak * streak(p, part);
+  if (st > 0) c.lerp(STREAK, st);
+  c.lerp(GRIME, Math.min(W.grimeMax, W.grime * occlusion(p, n, part) + W.down * ss(n.y, -0.15, -0.85) + cav + 0.42 * hipCrease(p, part)));
+  if (part.startsWith('foot') || part.startsWith('thigh')) {
+    // 아래쪽 젖은 띠 (곰 2c): 발바닥에서 wetTop(키 3.2 m 에서 약 24 cm, 고르지 않은 윗선)까지 짙게
+    const edge = W.wetTop * (1 + 0.2 * vnoise(p.x * 40, 0.5, p.z * 40, 29));
+    c.multiplyScalar(1 - W.wet * ss(p.y, edge, edge * 0.6));
+    if (p.y < W.mossTop) {
       const patch = 0.55 + 0.45 * Math.sin(p.x * 310 + p.z * 170) * Math.cos(p.z * 260 - p.x * 90); // 고르지 않은 이끼 자리
-      c.lerp(moss, W.moss * ss(p.y, W.mossTop, W.mossTop * 0.25) * patch);
+      c.lerp(MOSS_FOOT, W.moss * ss(p.y, W.mossTop, W.mossTop * 0.25) * patch);
     }
-    return c;
-  });
+    // 발등 진흙 튐 (곰 2c): 발등 · 발끝 앞에 흩어진 점 (위 · 앞을 보는 면)
+    if (part.startsWith('foot')) c.lerp(MUD, W.mud * ss(n.y + 0.6 * n.z, 0.15, 0.7) * ss(vnoise(p.x * 60, p.y * 60, p.z * 60, 37), 0.12, 0.42));
+  }
+  const mu = W.mossUp * Math.max(mossUp(p, n, part0), extra ? extra.moss : 0);
+  if (mu > 0) c.lerp(mossColor(p), mu);
+  return c;
+}
+/** 오래된 돌의 겉 (weatherAt 을 꼭짓점마다). extra(p, n) → { cav, moss } 를 주면 새긴 홈 (정수리 골) */
+function weather(g, part, extra = null) {
+  paint(g, (p, n, col, i) => weatherAt(new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)), p, n, part, extra ? extra(p, n) : null));
 }
 /** 작은 깨짐: 가운데 c · 반지름 r 안 꼭짓점을 toward(단위 벡터) 쪽으로 가운데일수록 깊게(depth) 밀고, 그 삼각형은 깨진 면 — 평면 법선 · 새 돌빛(무게만큼) */
 function chipAt(g, c, r, depth, toward, color, flat = true) {
@@ -446,13 +558,13 @@ function surfaceInfo(indexed, painted) {
   for (let k = 0; k < order.length; k++) colors.set(c.subarray(k * 3, k * 3 + 3), order[k] * 3);
   return { mesh, colors };
 }
-/** 광선용 사본의 일부 삼각형만 (같은 꼭짓점 배열 · 색) — keep(첫 꼭짓점 Y, z) 인 삼각형. 광선 수백 개를 몸 전체에 쏘지 않게 */
+/** 광선용 사본의 일부 삼각형만 (같은 꼭짓점 배열 · 색) — keep(첫 꼭짓점 Y, z, x) 인 삼각형. 광선 수백 개를 몸 전체에 쏘지 않게 */
 function subInfo(info, keep) {
   const g = info.mesh.geometry;
   const P = g.attributes.position;
   const src = g.index.array;
   const idx = [];
-  for (let i = 0; i < src.length; i += 3) if (keep(P.getY(src[i]), P.getZ(src[i]))) idx.push(src[i], src[i + 1], src[i + 2]);
+  for (let i = 0; i < src.length; i += 3) if (keep(P.getY(src[i]), P.getZ(src[i]), P.getX(src[i]))) idx.push(src[i], src[i + 1], src[i + 2]);
   const sub = new THREE.BufferGeometry();
   sub.setAttribute('position', P);
   sub.setAttribute('normal', g.attributes.normal);
@@ -594,7 +706,8 @@ function crownDip(x, y, z) {
   const win = ss(y, C.y0, C.y1) * ss(z, C.zb - C.soft, C.zb + C.soft) * ss(z, C.zf + C.soft, C.zf - C.soft);
   return (C.depth * Math.exp(-((u / C.sx) ** 2)) - C.lip * Math.exp(-(((Math.abs(u) - C.lx) / C.lw) ** 2))) * win;
 }
-/** 얼굴 판 색 (머리 좌표 x, y): 밝은 돌 — 주둥이 끝은 닳아 가장 밝고, 눈썹뼈·눈 바로 둘레도 조금 닳아 밝다. 입선·윗눈꺼풀 주름·아래눈꺼풀 선(아주 옅게)은 새긴 홈의 때 */
+/** 얼굴 판 색 (머리 좌표 x, y): 밝은 돌 — 주둥이 끝은 닳아 가장 밝고, 눈썹뼈·눈 바로 둘레도 조금 닳아 밝다. 입선·윗눈꺼풀 주름·아래눈꺼풀 선(아주 옅게)은 새긴 홈의 그늘
+ *  (곰 2c: 검은 때 0.75 · 0.32 · 0.12 섞음 → 같은 돌을 그만큼 짙게 0.5 · 0.22 · 0.08 — 칠한 선이 아니라 홈의 그늘) */
 function faceLight(x, y, f) {
   const C = BEAR_COLORS;
   let lid = 0;
@@ -609,7 +722,7 @@ function faceLight(x, y, f) {
     under = Math.max(under, Math.exp(-((dx / 0.012) ** 2)) * Math.exp(-(((dy + EYE.h * 0.5) / 0.0024) ** 2))); // 아래눈꺼풀 선 — 아주 옅게
   }
   const c = new THREE.Color(C.light).lerp(new THREE.Color(C.lightTip), ss(f.r, 0.55, 0.12)).lerp(new THREE.Color(C.wornLight), Math.max(0.35 * skin, 0.4 * f.brow));
-  return c.lerp(new THREE.Color(C.grime), Math.min(0.8, 0.75 * f.mouth + 0.32 * lid + 0.12 * under));
+  return c.multiplyScalar(1 - Math.min(0.55, 0.5 * f.mouth + 0.22 * lid + 0.08 * under));
 }
 /** 아몬드꼴 (u = 바깥 눈꼬리 쪽, v = 위): 위 눈꺼풀 선은 안쪽이 높고, 바깥 눈꼬리는 droop 만큼 처진다 */
 function almondShape(w, h, droop) {
@@ -844,15 +957,112 @@ function facePlate(kit, head) {
   putColored(kit, bg, bc).userData.part = 'face';
   bg.dispose();
 }
-/** 아몬드꼴 눈 조각 (almondShape) — side < 0 이면 거울 */
-function almond(w, h, droop, side) {
-  const g = new THREE.ShapeGeometry(almondShape(w, h, droop), 10);
-  if (side < 0) {
-    g.scale(-1, 1, 1); // 거울: 오른눈은 바깥이 −x
-    const ix = g.index.array;
-    for (let i = 0; i < ix.length; i += 3) [ix[i + 1], ix[i + 2]] = [ix[i + 2], ix[i + 1]];
+/** 아몬드꼴 테두리 점 [[x, y], …] (almondShape — 첫 div + 1 점이 윗눈꺼풀 선) — side < 0 이면 거울 (오른눈은 바깥이 −x) */
+function almondPts(w, h, droop, side, div) {
+  const pts = almondShape(w, h, droop).getPoints(div).map((v) => [v.x * (side < 0 ? -1 : 1), v.y]);
+  const [a, b] = [pts[0], pts[pts.length - 1]];
+  if (Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9) pts.pop();
+  return pts;
+}
+/** 타원 테두리 점 (가운데 cx, cy · 반지름 rx, ry · n 점) */
+const ovalPts = (cx, cy, rx, ry, n) => Array.from({ length: n }, (_, i) => [cx + rx * Math.cos((i / n) * TAU), cy + ry * Math.sin((i / n) * TAU)]);
+/**
+ * 판 자리 조각 (곰 2c): 닫힌 테두리 outline 을 그 무게중심 쪽으로 겹(rings: s 1 = 테두리 → 0 = 가운데 점)으로 줄여 잇는 평평한 판 (조각 좌표 +z 가 겉).
+ *  돌려줌: { g: 색인 BufferGeometry(법선 +z — 부르는 쪽이 고친다), xy: 꼭짓점마다 [x, y], s: 꼭짓점마다 겹 자리 }
+ */
+function dish(outline, rings) {
+  let area = 0;
+  let cx = 0;
+  let cy = 0;
+  outline.forEach(([x0, y0], i) => {
+    const [x1, y1] = outline[(i + 1) % outline.length];
+    const cr = x0 * y1 - x1 * y0;
+    area += cr;
+    cx += (x0 + x1) * cr;
+    cy += (y0 + y1) * cr;
+  });
+  [cx, cy] = [cx / (3 * area), cy / (3 * area)];
+  const ol = area < 0 ? [...outline].reverse() : outline; // 반시계로 (앞면이 +z)
+  const n = ol.length;
+  const pos = [];
+  const xy = [];
+  const sv = [];
+  for (const s of rings) {
+    for (const [x, y] of s === 0 ? [[cx, cy]] : ol.map(([x, y]) => [cx + (x - cx) * s, cy + (y - cy) * s])) {
+      pos.push(x, y, 0);
+      xy.push([x, y]);
+      sv.push(s);
+    }
   }
-  return g;
+  const idx = [];
+  for (let r = 0; r < rings.length - 1; r++) {
+    const [a0, b0] = [r * n, (r + 1) * n];
+    for (let i = 0; i < n; i++) {
+      const i2 = (i + 1) % n;
+      if (rings[r + 1] === 0) idx.push(a0 + i, a0 + i2, b0);
+      else idx.push(a0 + i, a0 + i2, b0 + i2, a0 + i, b0 + i2, b0 + i);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 2 ? 1 : 0)), 3));
+  g.setIndex(idx);
+  return { g, xy, s: sv };
+}
+/**
+ * 곰 2c 눈 그늘 마당 (눈 조각 좌표 — 눈알 아몬드 원점, 바깥 눈꼬리 쪽으로 처짐·기울임은 틀이 진다): (x, y) → { a, gx, gy }.
+ *  a = 그 자리 판 돌빛 → 가장 깊은 그늘 섞음, (gx, gy) = 법선 기울기 (법선 = (gx, gy, 1) 정규화). 모든 겹이 같은 마당을 읽어 겹 경계가 안 보인다 (EYE_CARVE)
+ */
+function eyeField(side, rimLift) {
+  const E = EYE;
+  const K = EYE_CARVE;
+  const DIV = 40;
+  const ball = almondPts(E.w, E.h, E.droop, side, DIV);
+  const top = ball.slice(0, DIV + 1).sort((p, q) => p[0] - q[0]); // 눈알 윗선 (윗눈꺼풀 선 자리)
+  const topEdge = (x) => {
+    if (x <= top[0][0]) return top[0][1];
+    for (let i = 1; i < top.length; i++) if (x <= top[i][0]) return top[i - 1][1] + ((top[i][1] - top[i - 1][1]) * (x - top[i - 1][0])) / (top[i][0] - top[i - 1][0] || 1);
+    return top[top.length - 1][1];
+  };
+  const ys = ball.map((p) => p[1]);
+  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  const [cy, ax, ay] = [(y0 + y1) / 2, E.w / 2, (y1 - y0) / 2];
+  const [ox, oy] = [-side * E.w * 0.04, E.h * 0.03]; // 홍채 · 눈동자 가운데 (곰 2 그대로)
+  const ir = [E.h * E.iris, E.h * E.iris * 1.04];
+  const pr = [E.h * E.pupil, E.h * E.pupil * 1.05];
+  const [bx, by] = [-side * E.w * 0.1, E.h * 0.2]; // 돌 다리 (1e 반사점 자리)
+  const lidH = E.h * 0.2 + rimLift * 0.5; // 윗눈꺼풀 그늘 띠 높이 (눈알 윗선에서 위로)
+  return (x, y) => {
+    const e = Math.hypot(x / ax, (y - cy) / ay);
+    const d = y - topEdge(x);
+    const fade = ss(e, 1.15, 0.9);
+    let gx = (-K.slope * x * fade) / ax;
+    let gy = (-K.slope * (y - cy) * fade) / ay;
+    let a;
+    if (d > 0) {
+      // 윗눈꺼풀 그늘: 눈알 윗선에서 가장 짙고 위로 옅어진다 · 법선은 아래로 (해를 덜 받는 눈꺼풀 밑 벽)
+      a = K.lidIn * ss(d, lidH, lidH * 0.1);
+      gy = Math.min(gy, -K.lidSlope * ss(d, lidH, 0));
+      gx *= ss(d, lidH * 0.5, 0);
+    } else {
+      a = (K.ballRim + (K.ball - K.ballRim) * ss(e, 1, 0.7) + (K.ballTop - K.ball) * ss((y - cy) / ay, -0.1, 0.8)) * ss(e, 1.25, 1.0);
+    }
+    const ri = Math.hypot((x - ox) / ir[0], (y - oy) / ir[1]);
+    if (ri < 1) a += (Math.max(a, K.iris) - a) * ss(ri, 1, 0.6);
+    const rp = Math.hypot((x - ox) / pr[0], (y - oy) / pr[1]);
+    if (rp < 1) {
+      a += (K.pupil - a) * ss(rp, 1, 0.3);
+      const tilt = 0.8 * K.slope * Math.sin(Math.PI * rp); // 얕게 판 눈동자 오목 — 가운데·테두리 0
+      gx -= (tilt * (x - ox)) / (pr[0] * (rp || 1));
+      gy -= (tilt * (y - oy)) / (pr[1] * (rp || 1));
+    }
+    const rb = Math.hypot(x - bx, y - by) / E.shine;
+    if (rb < 1) {
+      a += (K.bridge - a) * ss(rb, 1, 0.35);
+      gy += 0.5 * ss(rb, 1, 0.3); // 남은 돌 — 위를 조금 보아 빛을 받는다
+    }
+    return { a, gx, gy };
+  };
 }
 
 const PLAIN = { vary: 0, noise: 0 };
@@ -873,16 +1083,17 @@ function sculpt(kit) {
     const thigh = kit.putM('bear', thighG, C.dark, I, PLAIN);
     weather(thigh, `thigh${k}`);
     surf[`thigh${k}`] = surfaceInfo(thighG, thigh);
-    // 발: 발목 아래에서 앞으로 (발끝 살짝 안쪽) — 발가락 끝 윗면은 닳아 밝게, 발바닥 둘레 이끼
+    // 발: 발목 아래에서 앞으로 (발끝 살짝 안쪽) — 발가락 끝 윗면은 닳아 밝게, 발바닥 둘레 이끼.
+    //  곰 2c: 고리를 촘촘히(footLoft — 겉면 그대로) · 닳음을 먼저 칠하고 오래된 돌 겉(젖은 띠 · 진흙 튐)을 그 위에 (젖은 발이 닳은 끝까지 짙게)
     const fm = new THREE.Matrix4().compose(new THREE.Vector3(side * 0.129, 0, -0.004), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -side * FOOT_TOE_IN), new THREE.Vector3(1, 1, 1));
-    const footG = loftZ(FOOT.map(([z, w, h, y]) => [z, w, h, 0, y]), 16, 0.9);
+    const footG = footLoft();
     const foot = kit.putM('bear', footG, C.dark, fm, PLAIN);
     footG.dispose();
-    weather(foot, `foot${k}`);
     paint(foot, (p, n, col, i) => {
       const m = 0.42 * ss(p.z, 0.05, 0.095) * ss(n.y + 0.6 * n.z, 0.2, 0.9);
       return m > 0 ? new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)).lerp(worn, m) : null;
     });
+    weather(foot, `foot${k}`);
     if (side < 0) chipAt(foot, new THREE.Vector3(side * 0.118, 0.019, 0.094), 0.011, 0.005, new THREE.Vector3(0, -0.6, -0.8).normalize(), C.chip); // 오른발 앞 모서리 작은 깨짐
     // 팔·앞발: 주먹(앞발 앞·위)은 닳아 밝게
     const armG = loftY(mirror(side, ARM), 18);
@@ -893,10 +1104,15 @@ function sculpt(kit) {
       return m > 0 ? new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)).lerp(worn, m) : null;
     });
     surf[`arm${k}`] = surfaceInfo(armG, arm);
+    if (side === PAW_CHIP.side) {
+      const [, rx, , rd, rz] = ARM.find((r) => r[0] === PAW_CHIP.t);
+      chipAt(arm, new THREE.Vector3(side * rx, tY(PAW_CHIP.t), rz + rd), PAW_CHIP.r, PAW_CHIP.depth, new THREE.Vector3(0, -0.45, -0.9).normalize(), C.chip, false); // 주먹 앞 모서리 작은 깨짐 (곰 2c — 닳은 주먹이라 깨진 면도 둥글게: 법선 그대로)
+    }
     claws(kit, side);
   }
   chestPatch(kit, body.info);
   chisel(kit, surf);
+  lichenSpots(kit, surf);
   faceParts(kit, body.info.mesh);
   for (const s of Object.values(surf)) {
     s.mesh.geometry.dispose();
@@ -981,8 +1197,9 @@ function chestPatch(kit, bodyInfo) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setIndex(idx);
   g.computeVertexNormals(); // 판 안에서 부드럽게 (몸 겉면과 거의 같은 법선)
-  weather(putColored(kit, g, cols), 'body');
-  g.dispose();
+  const plateOut = putColored(kit, g, cols);
+  weather(plateOut, 'plate');
+  const plateMesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); // 드릴 점 둘레 색을 판에서 읽으려고 (곰 2c)
 
   // 판 둘레 한 바퀴 (반시계 — 왼쪽 바깥 ↓ · 아래 끝 → · 오른쪽 바깥 ↑ · 오른 팔 윗변 ← · 파임 오른쪽 ↓ · 파임 바닥 · 파임 왼쪽 ↑ · 왼 팔 윗변 ←)
   const J = CHEST.length;
@@ -1003,7 +1220,6 @@ function chestPatch(kit, bodyInfo) {
   const rp = [];
   const rn = [];
   const rc = [];
-  const grime = new THREE.Color(C.grime);
   const dark = new THREE.Color(C.dark);
   const o = new THREE.Vector3();
   const tan = new THREE.Vector3();
@@ -1025,7 +1241,8 @@ function chestPatch(kit, bodyInfo) {
       rp.push(hit.point.x + hit.normal.x * h, hit.point.y + hit.normal.y * h, hit.point.z + hit.normal.z * h);
       rn.push(hit.normal.x, hit.normal.y, hit.normal.z);
       const last = r === RELIEF.rings.length - 1;
-      const c = last ? hit.color : r < 2 ? hit.color.clone().lerp(grime, 0.62) : hit.color.clone().lerp(new THREE.Color(C.worn), 0.08); // 홈 바닥 때 · 둔덕 조금 닳음
+      // 벽 발 · 홈 바닥은 같은 돌의 그늘(곰 2c: 검은 때 0.62 섞음 → 몸 돌빛 × 0.78 · 0.7 — 그려진 검은 선이 아니라 얕은 홈) · 둔덕 조금 닳음
+      const c = last ? hit.color : r < 2 ? hit.color.clone().multiplyScalar(r === 0 ? 0.78 : 0.7) : hit.color.clone().lerp(new THREE.Color(C.worn), 0.08);
       rc.push(c.r, c.g, c.b);
     });
   }
@@ -1057,25 +1274,45 @@ function chestPatch(kit, bodyInfo) {
   // 벽·홈·둔덕만 때·바램 (끝 고리는 이미 몸 색)
   const rcol = ring.attributes.color;
   const keep = rcol.array.slice();
-  weather(ring, 'body');
+  weather(ring, 'relief');
   const order = rg.index.array;
   for (let k = 0; k < order.length; k++) if (order[k] % R === R - 1) rcol.setXYZ(k, keep[k * 3], keep[k * 3 + 1], keep[k * 3 + 2]);
   rg.dispose();
-  // 아래쪽 점 넷: 드릴로 판 얕은 점 (판 겉면을 보게 · 판 위)
+  // 아래쪽 점 넷: 드릴로 판 얕은 점 (판 겉면을 보게 · 판 위). 곰 2c: 짙은 원판(0x5d605f) 대신 얕게 판 오목 — 둘레는 판 돌빛 그대로, 가운데로 갈수록
+  //  가장 깊은 그늘 쪽으로 SOFT_PIT.chestDot, 법선은 가운데 쪽으로 기운다
+  const deep = new THREE.Color(C.dark).multiplyScalar(DEEP);
+  const pc = plateOut.attributes.color;
   for (const [x, t, r] of CHEST_SPOTS) {
     const s = surfaceAt(info, from.set(x, tY(t), 1), back);
     if (!s) continue;
-    const sp = new THREE.CircleGeometry(r, 10);
-    const m = new THREE.Matrix4().compose(s.point.clone().addScaledVector(s.normal, lift + 0.0008), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), s.normal), new THREE.Vector3(1, 1, 1));
-    kit.putM('bear', sp, 0x5d605f, m, { vary: 0.04, noise: 0 });
+    const { g: sp, xy, s: sv } = dish(ovalPts(0, 0, r, r, 10), [1, 0.5, 0]);
+    xy.forEach(([px, py], k) => {
+      const v = new THREE.Vector3((-SOFT_PIT.slope * px) / r, (-SOFT_PIT.slope * py) / r, 1).normalize();
+      sp.attributes.normal.setXYZ(k, v.x, v.y, v.z);
+    });
+    sp.applyMatrix4(new THREE.Matrix4().compose(s.point.clone().addScaledVector(s.normal, lift + 0.0005), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), s.normal), new THREE.Vector3(1, 1, 1)));
+    // 꼭짓점(색인)마다 밑 판 색을 읽어 둘레가 판과 이어지게
+    const SP = sp.attributes.position;
+    const v = new THREE.Vector3();
+    const cols = [];
+    for (let k = 0; k < SP.count; k++) {
+      const h = hitOn(plateMesh, v.fromBufferAttribute(SP, k).addScaledVector(s.normal, 0.01), s.normal.clone().negate());
+      const base = new THREE.Color(0, 0, 0);
+      if (!h) base.set(C.light);
+      else for (const [j, w] of [[0, h.barycoord.x], [1, h.barycoord.y], [2, h.barycoord.z]]) base.add(new THREE.Color(pc.getX(h.faceIndex * 3 + j), pc.getY(h.faceIndex * 3 + j), pc.getZ(h.faceIndex * 3 + j)).multiplyScalar(w));
+      cols.push(...base.lerp(deep, SOFT_PIT.chestDot * ss(sv[k], 1, 0.15)).toArray());
+    }
+    putColored(kit, sp, cols);
     sp.dispose();
   }
+  plateMesh.material.dispose();
+  g.dispose();
   info.mesh.geometry.dispose();
 }
 
-/** 끌 자국: CHISEL 의 선마다 밑면(몸·팔·허벅지)에 붙인 가는 V 홈 — 가장자리는 밑면 색·법선 그대로, 가운데는 때 낀 짙은 선, 두 벽 법선을 서로 기울여 한쪽은 빛을 받는다 */
+/** 끌 자국: CHISEL 의 선마다 밑면(몸·팔·허벅지)에 붙인 가는 V 홈 — 가장자리는 밑면 색·법선 그대로, 가운데는 같은 돌의 그늘, 두 벽 법선을 서로 기울여 한쪽은 빛을 받는다.
+ *  곰 2c (잔디테일은 무디게): 가운데 검은 때 0.6 섞음 → 밑면 돌빛 × (1 − 0.3) · 벽 기울임 0.5 → 0.35 — 오래 닳아 무뎌진 홈 */
 function chisel(kit, surf) {
-  const grime = new THREE.Color(BEAR_COLORS.grime);
   const axis = {
     body: (t) => [HEAD_SHIFT * (1 - S(t, 0.13, 0.19)), bodyRing(Math.min(t, 0.817))[2]],
     armL: (t) => lerpRow(ARM, t, 1),
@@ -1109,8 +1346,8 @@ function chisel(kit, surf) {
       const b = samples[Math.min(samples.length - 1, k + 1)].point;
       B.subVectors(b, a).cross(s.normal).normalize(); // 선을 가로지르는 방향 (밑면 위)
       const hw = (width / 2) * s.taper;
-      const groove = s.color.clone().lerp(grime, 0.6 * s.taper);
-      const tilt = 0.5 * s.taper;
+      const groove = s.color.clone().multiplyScalar(1 - 0.3 * s.taper);
+      const tilt = 0.35 * s.taper;
       const put = (off, lift, tiltSign, c) => {
         pos.push(s.point.x + B.x * off + s.normal.x * lift, s.point.y + B.y * off + s.normal.y * lift, s.point.z + B.z * off + s.normal.z * lift);
         const nv = s.normal.clone().addScaledVector(B, tiltSign * tilt).normalize();
@@ -1139,6 +1376,92 @@ function chisel(kit, surf) {
     putColored(kit, g, col);
     g.dispose();
   }
+}
+/** 지의류 딱지 (곰 2c, LICHEN_BEAR): 밑면 겉면 자리에서 접평면 위 들쭉날쭉한 조각 셋을 그리고, 꼭짓점마다 밑면으로 광선을 쏘아 겉면에 얇게 붙인다.
+ *  색은 밑면 돌빛(이미 오래된 돌 겉)에 지의류 빛을 섞음 — 가운데 0.72 · 가장자리 0.55 */
+function lichenSpots(kit, surf) {
+  const C = BEAR_COLORS;
+  const axis = {
+    body: (t) => [HEAD_SHIFT * (1 - S(t, 0.13, 0.19)), bodyRing(Math.min(t, 0.817))[2]],
+    armL: (t) => lerpRow(ARM, t, 1),
+    armR: (t) => lerpRow(ARM, t, -1),
+    thighL: (t) => lerpRow(THIGH, t, 1),
+    thighR: (t) => lerpRow(THIGH, t, -1),
+  };
+  const up = new THREE.Vector3(0, 1, 0);
+  LICHEN_BEAR.forEach(([where, t, phi0, r, warm], n) => {
+    const info = surf[where];
+    const phi = phi0 * (where.endsWith('R') ? -1 : 1);
+    const [cx, cz] = axis[where](t);
+    const at = surfaceAt(info, new THREE.Vector3(cx + Math.sin(phi) * 0.5, tY(t), cz + Math.cos(phi) * 0.5), new THREE.Vector3(-Math.sin(phi), 0, -Math.cos(phi)));
+    if (!at) return;
+    const tu = up.clone().cross(at.normal).normalize();
+    const tv = at.normal.clone().cross(tu).normalize();
+    const near = r * 3 + 0.012;
+    const sub = subInfo(info, (y, z, x) => Math.abs(y - at.point.y) < near && Math.abs(z - at.point.z) < near && Math.abs(x - at.point.x) < near);
+    const tint = new THREE.Color(warm ? C.lichenWarm : C.lichen);
+    const pos = [];
+    const nor = [];
+    const cols = [];
+    const idx = [];
+    const SEG = 12;
+    const put = (u, v, k) => {
+      const q = at.point.clone().addScaledVector(tu, u).addScaledVector(tv, v);
+      const h = surfaceAt(sub, q.clone().addScaledVector(at.normal, 0.02), at.normal.clone().negate()) || { point: q, normal: at.normal, color: at.color };
+      pos.push(...h.point.clone().addScaledVector(h.normal, 0.0005).toArray());
+      nor.push(...h.normal.toArray());
+      cols.push(...h.color.clone().lerp(tint, k).toArray());
+    };
+    [[r, 0, 0], [r * 0.6, r * 0.85, r * 0.32], [r * 0.45, -r * 0.62, -r * 0.7]].forEach(([br, ox, oy], b) => {
+      const c0 = pos.length / 3;
+      const seed = n * 3 + b;
+      put(ox, oy, 0.72);
+      for (let i = 0; i < SEG; i++) {
+        const a = (i / SEG) * TAU;
+        const k = 0.72 + 0.28 * Math.abs(Math.sin(i * 2.7 + seed * 1.9)) + 0.2 * Math.sin(i * 0.9 + seed);
+        put(ox + Math.cos(a) * br * k, oy + Math.sin(a) * br * k, 0.55);
+      }
+      for (let i = 0; i < SEG; i++) idx.push(c0, c0 + 1 + i, c0 + 1 + ((i + 1) % SEG));
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    g.setIndex(idx);
+    // 감김이 밖(밑면 법선 쪽)을 보게
+    const f0 = new THREE.Triangle(...[0, 1, 2].map((j) => new THREE.Vector3().fromArray(pos, idx[j] * 3))).getNormal(new THREE.Vector3());
+    if (f0.dot(at.normal) < 0) {
+      for (let i = 0; i < idx.length; i += 3) [idx[i + 1], idx[i + 2]] = [idx[i + 2], idx[i + 1]];
+      g.setIndex(idx);
+    }
+    putColored(kit, g, cols);
+    g.dispose();
+    sub.mesh.geometry.dispose();
+  });
+}
+/** 발 고리 (곰 2c): FOOT 표 고리 사이마다 가운데 고리를 끼운 loftZ — 끼운 고리는 원래 곧은 띠 위라 겉면은 곰 2 그대로, 법선도 원래 고리 법선(끼운 고리는 앞뒤 평균)을
+ *  이어 받아 음영이 같다. 발등 진흙 튐(WEATHER.mud)이 꼭짓점 사이에서 뭉개지지 않게 */
+function footLoft() {
+  const SIDES = 16;
+  const rows = FOOT.map(([z, w, h, y]) => [z, w, h, 0, y]);
+  const fine = [];
+  rows.forEach((r, j) => {
+    if (j) fine.push(r.map((v, k) => (v + rows[j - 1][k]) / 2));
+    fine.push(r);
+  });
+  const coarse = loftZ(rows, SIDES, 0.9);
+  const g = loftZ(fine, SIDES, 0.9);
+  const cn = coarse.attributes.normal;
+  const v = new THREE.Vector3();
+  const w = new THREE.Vector3();
+  for (let j = 0; j < fine.length; j++) {
+    for (let i = 0; i < SIDES; i++) {
+      if (j % 2 === 0) v.fromBufferAttribute(cn, (j / 2) * SIDES + i);
+      else v.fromBufferAttribute(cn, ((j - 1) / 2) * SIDES + i).add(w.fromBufferAttribute(cn, ((j + 1) / 2) * SIDES + i)).normalize();
+      g.attributes.normal.setXYZ(j * SIDES + i, v.x, v.y, v.z);
+    }
+  }
+  coarse.dispose();
+  return g;
 }
 /** 다리·팔 표의 축 [cx, cz] 를 t 로 (선형) */
 function lerpRow(rows, t, side) {
@@ -1182,23 +1505,29 @@ function headAndBody(kit) {
   g.computeVertexNormals();
   const headMesh = kit.putM('bear', g, C.dark, new THREE.Matrix4(), PLAIN);
   const hp = new THREE.Vector3();
-  // 정수리 골의 때 (새긴 홈 — 바램을 덜고 때를 더한다)
-  const grooveGrime = (p) => {
+  // 정수리 골 (새긴 홈 — 바램을 덜고 그늘을 더한다). 곰 2c: 골 바닥 때 0.32 → 0.14(확인표 1294), 대신 위를 보는 골 안에 이끼(1295)
+  const groove = (p, n) => {
     hp.copy(p).applyMatrix4(TURN_INV);
-    return 0.32 * ss(crownDip(hp.x, hp.y + crownDip(hp.x, hp.y, hp.z), hp.z) / CROWN.depth, 0.2, 0.9);
+    const k = ss(crownDip(hp.x, hp.y + crownDip(hp.x, hp.y, hp.z), hp.z) / CROWN.depth, 0.2, 0.9);
+    return { cav: 0.14 * k, moss: k * ss(n.y, 0.2, 0.6) * (0.45 + 0.55 * mossPatch(p)) };
   };
-  weather(headMesh, 'body', grooveGrime);
+  weather(headMesh, 'body', groove);
   return { mesh: headMesh, info: surfaceInfo(g, headMesh) };
 }
 
-/** 얼굴 조각: 코(콧구멍)·얼굴 밝은 돌 판·눈(돌 조각)·귀 — 머리 좌표에서 붙이고 고개 돌림(TURN)을 얹는다 */
+/** 얼굴 조각: 코(콧구멍)·얼굴 밝은 돌 판·눈(돌 조각)·귀 — 머리 좌표에서 붙이고 고개 돌림(TURN)을 얹는다.
+ *  곰 2c: 눈 · 콧구멍은 판 자리의 그늘(EYE_CARVE · SOFT_PIT — 색은 맨 끝에, 둘레 돌빛이 정해진 뒤 칠한다), 귀는 오목한 컵(EAR_CUP) */
 function faceParts(kit, bodyMesh) {
   const C = BEAR_COLORS;
   const headLocal = new THREE.Mesh(bodyMesh.geometry.clone().applyMatrix4(TURN_INV), bodyMesh.material); // 광선용 (머리 좌표)
   const start = kit.bins.bear.length;
   const back = new THREE.Vector3(0, 0, -1);
   const onHead = (x, y) => hitOn(headLocal, new THREE.Vector3(x, y, 0.5), back);
-  // 큰 코(짙은 돌): 주둥이 끝 위에 얹힌 넓고 납작한 코 — 코끝 윗면은 닳아 밝고 아랫면은 때
+  const pits = []; // 콧구멍 (곰 2c): { out, s, at: 꼭짓점마다 코 겉면 [삼각형, 무게] }
+  const deep = new THREE.Color(C.dark).multiplyScalar(DEEP); // 가장 깊은 그늘 (곰 2c)
+  let noseOut = null;
+  let noseLocal = null;
+  // 큰 코: 주둥이 끝 위에 얹힌 넓고 납작한 코 — 주둥이와 같은 돌에서 조금 짙게(곰 2c), 코끝 윗면은 닳아 밝고 아랫면은 그늘
   {
     const hit = onHead(0, NOSE.y);
     const at = hit ? hit.point : new THREE.Vector3(0, NOSE.y, 0.14);
@@ -1208,93 +1537,164 @@ function faceParts(kit, bodyMesh) {
       [0.009, NOSE.w * 0.82, NOSE.h * 0.74, 0, -0.0004], [0.012, NOSE.w * 0.45, NOSE.h * 0.38, 0, -0.001],
     ], 20, 0.55);
     const noseM = new THREE.Matrix4().compose(at.clone().add(new THREE.Vector3(0, 0.001, -0.004)), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0, 0)), new THREE.Vector3(1, 1, 1));
-    const out = kit.putM('bear', nose, C.nose, noseM, PLAIN);
-    out.userData.part = 'face';
+    noseOut = kit.putM('bear', nose, C.nose, noseM, PLAIN);
+    noseOut.userData.part = 'face';
     const worn = new THREE.Color(C.worn);
-    const grime = new THREE.Color(C.grime);
-    paint(out, (q, n, col, i) => new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)).lerp(worn, 0.5 * Math.max(0, n.y) * ss(n.z, -0.2, 0.6) + 0.25 * ss(n.z, 0.6, 0.95)).lerp(grime, 0.35 * Math.max(0, -n.y)));
-    const noseLocal = new THREE.Mesh(nose.clone().applyMatrix4(noseM), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+    paint(noseOut, (q, n, col, i) => new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)).lerp(worn, 0.5 * Math.max(0, n.y) * ss(n.z, -0.2, 0.6) + 0.25 * ss(n.z, 0.6, 0.95)).multiplyScalar(1 - 0.18 * Math.max(0, -n.y)));
+    noseLocal = new THREE.Mesh(nose.clone().applyMatrix4(noseM), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
     nose.dispose();
     for (const side of [-1, 1]) {
-      // 콧구멍 둘: 코 앞면 아래쪽에 판 짙은 쉼표꼴
+      // 콧구멍 둘: 코 앞면 아래쪽에 얕게 판 쉼표꼴 (곰 2c — 짙은 원판 0x242627 대신 가운데로 갈수록 짙은 오목)
       const hitN = hitOn(noseLocal, new THREE.Vector3(side * NOSE.w * 0.45, NOSE.y - NOSE.h * 0.3, 0.5), back);
       if (!hitN) continue;
       const nz = hitN.face.normal.clone().normalize();
       const nx = new THREE.Vector3(1, 0, 0).addScaledVector(nz, -nz.x).normalize();
       const nb = new THREE.Matrix4().makeBasis(nx, new THREE.Vector3().crossVectors(nz, nx), nz);
       const nm = new THREE.Matrix4().makeTranslation(hitN.point.x, hitN.point.y, hitN.point.z).multiply(nb).multiply(new THREE.Matrix4().makeRotationZ(side * 0.45)).multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.0006));
-      const nostril = new THREE.CircleGeometry(1, 12).scale(NOSE.w * 0.34, NOSE.h * 0.4, 1);
-      kit.putM('bear', nostril, C.nostril, nm, PLAIN);
-      nostril.dispose();
+      const [rx, ry] = [NOSE.w * 0.34, NOSE.h * 0.4];
+      const { g, xy, s } = dish(ovalPts(0, 0, rx, ry, 12), [1, 0.5, 0]);
+      xy.forEach(([x, y], k) => {
+        const v = new THREE.Vector3((-SOFT_PIT.slope * s[k] * x) / rx, (-SOFT_PIT.slope * s[k] * y) / ry, 1).normalize();
+        g.attributes.normal.setXYZ(k, v.x, v.y, v.z);
+      });
+      g.applyMatrix4(nm);
+      const out = kit.putM('bear', g, C.nose, new THREE.Matrix4(), PLAIN);
+      // 꼭짓점(색인)마다 밑 코 겉면 자리 (색은 코가 다 칠해진 뒤 — 맨 끝)
+      const P = g.attributes.position;
+      const v = new THREE.Vector3();
+      const hits = [];
+      for (let k = 0; k < P.count; k++) {
+        const h = hitOn(noseLocal, v.fromBufferAttribute(P, k).addScaledVector(nz, 0.01), nz.clone().negate());
+        hits.push(h ? [h.faceIndex, h.barycoord.clone()] : null);
+      }
+      const order = g.index.array;
+      pits.push({ out, s: Float32Array.from(order, (k) => s[k]), at: Array.from(order, (k) => hits[k]) });
+      g.dispose();
     }
-    noseLocal.geometry.dispose();
-    noseLocal.material.dispose();
   }
   // 얼굴 밝은 돌 판
   facePlate(kit, headLocal.geometry);
   const rimLift = EYE.h * 0.31 * (EYE.rimH - 1); // 윗눈꺼풀 선을 위로 올린 만큼 (1e)
+  const eyes = []; // 눈 조각 겹 (곰 2c): { out, a: 꼭짓점마다 그늘 섞음, n: 판 법선(머리 좌표) }
   for (const side of [-1, 1]) {
-    // 눈(돌 조각): 눈자리 겉면(판 위)에 붙인 아몬드꼴 겹 — 윗눈꺼풀 음각 선 · 짙은 돌 눈알 · 조금 밝은 홍채 자리 · 드릴로 판 눈동자 · 구멍에 남긴 작은 돌 다리.
-    //  틀(자리·법선·기울임)과 들림은 1e 그대로, 판 두께(FACE_STEP)만큼 더 띄운다 — 오목한 눈자리에 묻히는 가장자리까지 1e 와 같아 아몬드꼴이 그대로 읽힌다
+    // 눈(돌 조각): 눈자리 겉면(판 위)에 붙인 아몬드꼴 겹 — 윗눈꺼풀 · 눈알 · 홍채 자리 · 눈동자 · 남긴 돌 다리. 틀(자리·법선·기울임)과 들림은 1e · 곰 2 그대로라
+    //  오목한 눈자리에 가장자리가 묻히는 꼴(보이는 아몬드)도 같다. 곰 2c: 색은 칠한 짙은 돌 · 검정 대신 판 돌빛 → 그늘 섞음(eyeField), 법선은 판 자리처럼 오목
     const hit = onHead(side * EYE.x, EYE.y);
     if (hit) {
       const z = hit.face.normal.clone().normalize();
       const x = new THREE.Vector3(1, 0, 0).addScaledVector(z, -z.x).normalize();
       const y = new THREE.Vector3().crossVectors(z, x);
       const frame = new THREE.Matrix4().makeTranslation(hit.point.x, hit.point.y, hit.point.z).multiply(new THREE.Matrix4().makeBasis(x, y, z)).multiply(new THREE.Matrix4().makeRotationZ(-side * EYE.tilt)); // 바깥 눈꼬리 쪽이 조금 내려가게
-      const layer = (geom, color, lift, ox = 0, oy = 0) => {
-        const m = frame.clone().multiply(new THREE.Matrix4().makeTranslation(ox, oy, lift + FACE_STEP));
-        const out = kit.putM('bear', geom, color, m, PLAIN);
-        geom.dispose();
-        return out;
+      const field = eyeField(side, rimLift);
+      const layer = (outline, rings, lift, rimToPlate = false) => {
+        const { g, xy, s } = dish(outline, rings);
+        const a = new Float32Array(xy.length);
+        xy.forEach(([px, py], k) => {
+          const f = field(px, py);
+          a[k] = rimToPlate && s[k] === 1 ? 0 : f.a; // 윗눈꺼풀 띠 바깥 테두리는 판 돌빛 그대로
+          const v = new THREE.Vector3(f.gx, f.gy, 1).normalize();
+          g.attributes.normal.setXYZ(k, v.x, v.y, v.z);
+        });
+        g.applyMatrix4(frame.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0, lift + FACE_STEP)));
+        eyes.push({ out: kit.putM('bear', g, 0xffffff, new THREE.Matrix4(), PLAIN), a: Float32Array.from(g.index.array, (k) => a[k]), n: z });
+        g.dispose();
       };
-      // 윗눈꺼풀 음각 선: 아랫선을 눈알 아랫선과 겹치게 올려(아래눈꺼풀 선은 안 보임) 윗선만 — 1e 의 짙은 테 자리
-      layer(almond(EYE.w * EYE.rim, EYE.h * EYE.rimH, EYE.droop * 1.2, side), C.eyeLine, 0.0006, 0, rimLift);
-      layer(almond(EYE.w, EYE.h, EYE.droop, side), C.eyeball, 0.0012); // 눈알 (1e 갈색 홍채 자리)
-      layer(new THREE.CircleGeometry(1, 16).scale(EYE.h * EYE.iris, EYE.h * EYE.iris * 1.04, 1), C.iris, 0.0014, -side * EYE.w * 0.04, EYE.h * 0.03); // 홍채 자리 (조금 밝게)
-      const pupil = layer(new THREE.CircleGeometry(1, 14).scale(EYE.h * EYE.pupil, EYE.h * EYE.pupil * 1.05, 1), C.pupil, 0.0016, -side * EYE.w * 0.04, EYE.h * 0.03); // 드릴 구멍
-      const pc = new THREE.Vector3(-side * EYE.w * 0.04, EYE.h * 0.03, 0).applyMatrix4(frame);
-      paint(pupil, (q) => 1 + 0.35 * ss(pc.y - q.y, 0, EYE.h * EYE.pupil)); // 구멍 아래 안벽은 빛을 조금 받는다
-      layer(new THREE.CircleGeometry(EYE.shine, 10), C.pupilBridge, 0.0019, -side * EYE.w * 0.1, EYE.h * 0.2); // 남긴 돌 다리 (1e 반사점 자리)
+      const [ox, oy] = [-side * EYE.w * 0.04, EYE.h * 0.03];
+      // 윗눈꺼풀: 아랫선을 눈알 아랫선과 겹치게 올려(아래눈꺼풀 선은 안 보임) 윗선만 — 1e 의 짙은 테 자리 → 곰 2c: 눈알 윗선에서 위로 옅어지는 그늘 띠
+      layer(almondPts(EYE.w * EYE.rim, EYE.h * EYE.rimH, EYE.droop * 1.2, side, 12).map(([px, py]) => [px, py + rimLift]), [1, 0.82, 0.6, 0], 0.0006, true);
+      layer(almondPts(EYE.w, EYE.h, EYE.droop, side, 12), [1, 0.75, 0.45, 0], 0.0012); // 눈알 (1e 갈색 홍채 자리)
+      layer(ovalPts(ox, oy, EYE.h * EYE.iris, EYE.h * EYE.iris * 1.04, 16), [1, 0.5, 0], 0.0014); // 홍채 자리
+      layer(ovalPts(ox, oy, EYE.h * EYE.pupil, EYE.h * EYE.pupil * 1.05, 14), [1, 0.55, 0], 0.0016); // 눈동자 — 얕게 판 오목
+      layer(ovalPts(-side * EYE.w * 0.1, EYE.h * 0.2, EYE.shine, EYE.shine, 10), [1, 0], 0.0019); // 남긴 돌 다리 (1e 반사점 자리)
     }
-    // 귀(짙은 돌): 작고 납작한 컵 (앞·바깥을 보게, 정수리 양옆 위) — 납작한 원판 + 앞면 가운데 컵 안쪽은 때. 곰 오른 귀 위 바깥 테두리에 작은 깨짐
+    // 귀(짙은 돌): 작고 납작한 컵 (앞·바깥을 보게, 정수리 양옆 위). 곰 2c: 짙은 원판(0x2e3132) 대신 앞면을 눌러 판 오목한 컵 — 바닥은 그늘, 테두리는 닳아 밝게.
+    //  곰 오른 귀 위 바깥 테두리 · 왼 귀 위 안쪽 테두리에 작은 깨짐
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2, side * 0.42, side * -0.5, 'YXZ'));
-    const ear = new THREE.SphereGeometry(1, 14, 10);
     const em = new THREE.Matrix4().compose(new THREE.Vector3(side * EAR.x, EAR.y, EAR.z), q, new THREE.Vector3(EAR.r, EAR.r * 1.06, EAR.thick));
+    const { g: ear, cup, rim } = earCup();
     const earOut = kit.putM('bear', ear, C.dark, em, PLAIN);
     earOut.userData.part = 'ear';
+    const order = ear.index.array;
+    const worn = new THREE.Color(C.worn);
+    paint(earOut, (p, n, col, i) => new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)).lerp(deep, EAR_CUP.shade * cup[order[i]]).lerp(worn, EAR_CUP.rimWear * rim[order[i]]));
     ear.dispose();
-    if (side === EAR_CHIP.side) {
-      const a = EAR_CHIP.angle;
-      const c = new THREE.Vector3(side * Math.cos(a), Math.sin(a), 0).applyMatrix4(em);
+    for (const ch of [EAR_CHIP, EAR_CHIP2]) {
+      if (side !== ch.side) continue;
+      const c = new THREE.Vector3(side * Math.cos(ch.angle), Math.sin(ch.angle), 0).applyMatrix4(em);
       const centre = new THREE.Vector3(side * EAR.x, EAR.y, EAR.z);
-      chipAt(earOut, c, EAR.r * EAR_CHIP.r, EAR.r * EAR_CHIP.depth, centre.sub(c).normalize(), C.chip);
+      chipAt(earOut, c, EAR.r * ch.r, EAR.r * ch.depth, centre.sub(c).normalize(), C.chip);
     }
-    const inner = new THREE.CircleGeometry(EAR.r * 0.68, 14);
-    const im = new THREE.Matrix4().compose(new THREE.Vector3(side * EAR.x, EAR.y, EAR.z).add(new THREE.Vector3(0, -EAR.r * 0.06, EAR.thick * 0.93).applyQuaternion(q)), q, new THREE.Vector3(1, 1.06, 1));
-    kit.putM('bear', inner, C.earIn, im, PLAIN);
-    inner.dispose();
   }
   headLocal.geometry.dispose();
   for (const gg of kit.bins.bear.slice(start)) gg.applyMatrix4(TURN);
   // 귀·코·얼굴 판은 머리 좌표 → 몸 좌표로 옮긴 뒤에 때·바램 (귀 뒤 · 코 아래 · 턱 밑)
   for (const gg of kit.bins.bear.slice(start)) if (gg.userData.part) weather(gg, gg.userData.part);
+  // 곰 2c — 판 자리 색 (둘레 돌빛이 정해진 뒤): 그 자리 돌빛 → 가장 깊은 그늘(짙은 돌 × DEEP) 섞음. 순검정 없음
+  const hp = new THREE.Vector3();
+  const nb = new THREE.Vector3();
+  for (const { out, a, n } of eyes) {
+    nb.copy(n).transformDirection(TURN);
+    paint(out, (p, nn, col, i) => {
+      hp.copy(p).applyMatrix4(TURN_INV);
+      return weatherAt(faceLight(hp.x, hp.y, faceShape(hp.x, hp.y)), p, nb, 'face').lerp(deep, a[i]);
+    });
+  }
+  const nc = noseOut.attributes.color;
+  for (const { out, s, at } of pits) {
+    paint(out, (p, nn, col, i) => {
+      const base = new THREE.Color(0, 0, 0);
+      const h = at[i];
+      if (!h) base.copy(new THREE.Color(C.nose));
+      else for (const [k, w] of [[0, h[1].x], [1, h[1].y], [2, h[1].z]]) base.add(new THREE.Color(nc.getX(h[0] * 3 + k), nc.getY(h[0] * 3 + k), nc.getZ(h[0] * 3 + k)).multiplyScalar(w));
+      return base.lerp(deep, SOFT_PIT.nostril * ss(s[i], 1, 0.2));
+    });
+  }
+  noseLocal.geometry.dispose();
+  noseLocal.material.dispose();
+}
+/** 귀 컵 (곰 2c · EAR_CUP): 단위 공의 앞(+z) 반을 가운데일수록 깊게 눌러 오목하게 — { g: 색인 BufferGeometry, cup: 꼭짓점마다 컵 바닥 그늘 0~1, rim: 테두리 닳음 0~1 } */
+function earCup() {
+  const sp = new THREE.SphereGeometry(1, 16, 12);
+  sp.deleteAttribute('normal');
+  sp.deleteAttribute('uv');
+  const g = mergeVertices(sp);
+  sp.dispose();
+  const P = g.attributes.position;
+  const cup = new Float32Array(P.count);
+  const rim = new Float32Array(P.count);
+  for (let i = 0; i < P.count; i++) {
+    const [x, y, z] = [P.getX(i), P.getY(i), P.getZ(i)];
+    const r = Math.min(1, Math.hypot(x, y));
+    if (z > 0) {
+      P.setZ(i, z - EAR_CUP.depth * (1 - r * r) ** EAR_CUP.pow);
+      cup[i] = ss(r, 0.9, 0.3);
+    }
+    rim[i] = ss(r, 0.7, 0.95) * ss(z, -0.25, 0.05);
+  }
+  g.computeVertexNormals();
+  return { g, cup, rim };
 }
 
 // 받침의 작은 깨짐 둘 · 지의류 · 발 둘레 이끼 덩이 (m, 받침 좌표 — 확인표 1246·1247)
-const PLINTH_CHIPS = [{ a: -Math.PI / 8, r: 0.05, depth: 0.034 }, { a: (5 * Math.PI) / 8, r: 0.045, depth: 0.03 }]; // 팔각 위 모서리 (방위: 0 = 곰 앞)
+// 곰 2c: 앞 왼쪽 위 모서리에 작은 깨짐 하나 더 (확인표 1300)
+const PLINTH_CHIPS = [{ a: -Math.PI / 8, r: 0.05, depth: 0.034 }, { a: (5 * Math.PI) / 8, r: 0.045, depth: 0.03 }, { a: (3 * Math.PI) / 8, r: 0.036, depth: 0.022 }]; // 팔각 위 모서리 (방위: 0 = 곰 앞)
 const LICHEN = [
   [0.56, 0.2, 0.03], [-0.6, -0.26, 0.026], [0.16, -0.64, 0.034], [-0.22, 0.66, 0.024], [0.62, -0.44, 0.02], // 윗면 [x, z, 반지름] — 셋째는 누런빛
 ];
 const LICHEN_SIDE = [[2.2, 0.2, 0.026], [3.9, 0.1, 0.034]]; // 옆면 [방위, 높이, 반지름] (뒤쪽 그늘 면)
 const MOSS_TUFTS = [[0.48, -0.1, 0.05], [-0.5, -0.12, 0.06], [0.33, 0.37, 0.045], [-0.43, 0.3, 0.04]]; // 발 둘레 [x, z, 크기]
+// 곰 2c (확인표 1299 · 1300 · 1301): 받침 아래쪽 젖은 띠 — 땅에서 top ± jag(고르지 않은 윗선, 0.2~0.3 m)까지 dark 만큼 짙게 / 위 모서리 닳음(밝게) / 받침 둘레 풀 몇 포기
+const PLINTH_WET = Object.freeze({ top: 0.25, jag: 0.04, dark: 0.3 });
+const PLINTH_WORN = Object.freeze({ color: 0xa2a59a, amount: 0.32 });
+const GRASS = [[0.95, 0.93, 7], [2.45, 0.9, 6], [-2.05, 0.92, 7], [-0.8, 0.95, 5]]; // [방위 a(0 = 곰 앞), 반지름(m), 잎 수] — 앞 디딤돌 쪽은 비움
 
-/** 받침: 낮은 팔각기둥 + 윗면 가장자리·옆 아래 이끼 · 위 모서리 깨짐 둘 · 지의류 점 · 발 둘레 이끼 덩이 (m 단위, 곰과 따로 — 평면 음영 돌) */
+/** 받침: 낮은 팔각기둥 + 윗면 가장자리·옆 아래 이끼 · 위 모서리 깨짐 셋 · 지의류 점 · 발 둘레 이끼 덩이 (m 단위, 곰과 따로 — 평면 음영 돌).
+ *  곰 2c: 아래쪽 젖은 띠 · 위 모서리 닳음 · 둘레 풀 몇 포기 */
 function plinth(kit, height) {
   const P = BEAR_PLINTH;
   const C = BEAR_COLORS;
   const moss = new THREE.Color(C.plinthMoss);
-  const block = new THREE.CylinderGeometry(P.radius * 0.95, P.radius, P.height * 0.82, 8, 2);
+  const block = new THREE.CylinderGeometry(P.radius * 0.95, P.radius, P.height * 0.82, 8, 5); // 곰 2c: 높이 나눔 2 → 5 (젖은 띠 윗선이 뭉개지지 않게)
   block.translate(0, (P.height * 0.82) / 2, 0);
   // 위 단: 옆면 + 위 모서리 모따기 (모서리를 깨도 윗면 큰 삼각형은 그대로이게 고리를 하나 더 둔다)
   const capH = P.height * 0.18;
@@ -1328,7 +1728,20 @@ function plinth(kit, height) {
       const k = 0.85 + patch * 0.3;
       for (let j = i; j < i + 3; j++) col.setXYZ(j, moss.r * k, moss.g * k, moss.b * k);
     }
-    // 위 모서리 작은 깨짐 둘 (새 돌빛 — 옆면·모따기에 걸친다)
+    // 아래쪽 젖은 띠 (곰 2c): 물을 머금은 돌 — 윗선은 방위에 따라 고르지 않게
+    paint(out, (q) => {
+      const a = Math.atan2(q.x, q.z);
+      const top = PLINTH_WET.top + PLINTH_WET.jag * (0.6 * Math.sin(a * 5 + 1.3) + 0.4 * Math.sin(a * 13 + 0.4));
+      const w = ss(q.y, top + 0.02, top - 0.03);
+      return w > 0 ? 1 - PLINTH_WET.dark * w : null;
+    });
+    // 위 모서리 닳음 (곰 2c): 모따기 둘레가 밝게
+    const wornStone = new THREE.Color(PLINTH_WORN.color);
+    paint(out, (q, n, col, i) => {
+      const e = ss(q.y, P.height - 0.03, P.height - 0.006) * ss(Math.hypot(q.x, q.z) / P.radius, 0.84, 0.89);
+      return e > 0 ? new THREE.Color(col.getX(i), col.getY(i), col.getZ(i)).lerp(wornStone, PLINTH_WORN.amount * e) : null;
+    });
+    // 위 모서리 작은 깨짐 셋 (새 돌빛 — 옆면·모따기에 걸친다)
     for (const ch of PLINTH_CHIPS) {
       const at = new THREE.Vector3(Math.sin(ch.a) * P.radius * 0.9, P.height - bevel, Math.cos(ch.a) * P.radius * 0.9);
       chipAt(out, at, ch.r, ch.depth, new THREE.Vector3(-Math.sin(ch.a), -0.75, -Math.cos(ch.a)).normalize(), 0x9a9c94, false);
@@ -1385,6 +1798,38 @@ function plinth(kit, height) {
     g.dispose();
   });
   probe.material.dispose();
+  grassTufts(kit);
+}
+/** 받침 둘레 풀 (곰 2c, GRASS): 땅에서 받침 아래 둘레로 몇 포기 — 잎마다 앞뒤 두 장 세모(평면 음영), 밑동 짙고 끝 밝게 (m 단위, 받침 좌표) */
+function grassTufts(kit) {
+  const base = new THREE.Color(BEAR_COLORS.grass);
+  const dry = new THREE.Color(0x9a9a5c);
+  GRASS.forEach(([a, rr, count], t) => {
+    const [cx, cz] = [Math.sin(a) * rr, Math.cos(a) * rr];
+    const pos = [];
+    const cols = [];
+    for (let i = 0; i < count; i++) {
+      const [r1, r2, r3, r4] = [1, 2, 3, 4].map((k) => h3(t, i, k, 70 + k));
+      const yaw = r1 * TAU;
+      const [ox, oz] = [cx + (r2 - 0.5) * 0.12, cz + (r3 - 0.5) * 0.12];
+      const h = 0.11 + 0.16 * r4;
+      const w = 0.012 + 0.014 * r2;
+      const lean = 0.03 + 0.07 * r3;
+      const [dx, dz] = [Math.cos(yaw) * w * 0.5, Math.sin(yaw) * w * 0.5];
+      const A = [ox - dx, -0.01, oz - dz];
+      const B = [ox + dx, -0.01, oz + dz];
+      const T = [ox + Math.sin(a) * lean + (r1 - 0.5) * 0.04, h, oz + Math.cos(a) * lean + (r4 - 0.5) * 0.04];
+      pos.push(...A, ...B, ...T, ...B, ...A, ...T);
+      const root = base.clone().multiplyScalar(0.62 + 0.1 * r2);
+      const tip = base.clone().multiplyScalar(1.1 + 0.12 * r1).lerp(dry, 0.25 * r4);
+      for (const c of [root, root, tip, root, root, tip]) cols.push(c.r, c.g, c.b);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    kit.putM('plinth', g, 0xffffff, new THREE.Matrix4(), PLAIN).attributes.color.array.set(cols);
+    g.dispose();
+  });
 }
 
 /** 석상 겉모습 + 충돌체 꼴. 충돌체는 부르는 쪽(arena_obstacle.js)이 shapes 로 만든다 */
@@ -1393,8 +1838,9 @@ export function buildSluiceBear(scene, { position = SLUICE_BEAR_POSITION, rotati
   sculpt(kit);
   for (const g of kit.bins.bear) g.scale(height, height, height).translate(0, BEAR_PLINTH.height, 0);
   plinth(kit, height);
-  // 돌 석상 (곰 2, 확인표 1241): 거친 돌(거칠기 0.92) · 부드러운 법선(닳아 둥근 돌 덩어리 — 끌 자국·깨짐·홈은 법선을 따로 준다) · 색은 모두 꼭짓점 색
-  const bearMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0 });
+  // 돌 석상 (곰 2, 확인표 1241): 거친 돌 · 부드러운 법선(닳아 둥근 돌 덩어리 — 끌 자국·깨짐·홈은 법선을 따로 준다) · 색은 모두 꼭짓점 색.
+  //  곰 2c (확인표 1302): 거칠기 0.92 → 1 · 금속 0 — 무광 (해 쪽 반사가 가장 넓게 퍼져 거의 안 보인다). 무대 덩굴과 같은 재질 꼴이라 셰이더가 늘지 않는다
+  const bearMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
   const stoneMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0 });
   const group = new THREE.Group();
   group.name = 'sluice-sun-bear-statue';

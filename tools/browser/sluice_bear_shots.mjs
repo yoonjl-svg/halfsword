@@ -9,19 +9,30 @@
 //  곰 2b(이마 경계 곡선 · 얼굴 판 둘레 · 짙은 돌 밝힘, 10/14): node tools/browser/sluice_bear_shots.mjs <개발 서버> --face2 → bear_stone_face2_*.webp
 //   ortho · face · game(2.5 초) · pixel(도트 모드 2.6 초) · game_cmp(경기 화면·도트 모드의 곰 둘레 2 배, 전/후 — 전 = 저장소의 bear_stone_game.webp ·
 //   bear_stone_pixel.webp: 곰 2 를 같은 카메라로 찍은 것. --stone 을 다시 돌리면 그 둘이 바뀌므로 비교는 그 전에)
+//  곰 2c(풍화 · 검정 걷기, 10/14): node tools/browser/sluice_bear_shots.mjs <개발 서버> --weather [--raw=<폴더>] [--before=<폴더>] → bear_weather_*.webp
+//   game(경기 화면 2.5 초, 상대 하인리히, AI 멈춤) · pixel(도트 모드 2.6 초) · detail(풍화 가까이 넷) — 고친 뒤 판만.
+//   전/후 맞대기: 고치기 전 판에서 먼저 --raw=<폴더> 로 날 그림(game · pixel · face · chest)을 저장해 두고, 고친 뒤 --before=<같은 폴더> 로 돌리면
+//   game_cmp(경기 화면 · 도트 모드의 곰 둘레, 전/후) · face(머리 가까이 전/후) · chest(가슴 가까이 전/후)를 더 그린다. 날 그림 폴더는 저장소 밖에 둔다
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM
 import { chromium } from 'playwright';
 import fs from 'node:fs';
+import path from 'node:path';
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const stone = process.argv.includes('--stone');
 const face2 = process.argv.includes('--face2');
-const rest = process.argv.slice(3).filter((a) => a !== '--stone' && a !== '--face2');
+const weather = process.argv.includes('--weather');
+const argDir = (k) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3) || null;
+const rawDir = argDir('raw');
+const beforeDir = argDir('before');
+const rest = process.argv.slice(3).filter((a) => !a.startsWith('--'));
 const bearH = rest[0] ? `&bearH=${+rest[0]}` : '';
 const tail = rest[1] ? `_${rest[1]}` : '';
 const outDir = new URL('../../docs/import/sluice/', import.meta.url);
 fs.mkdirSync(outDir, { recursive: true });
-const shots = face2
+const shots = weather
+  ? []
+  : face2
   ? [
       ['stone_face2_ortho', 'view=ortho&plinth=0&ground=0&w=685&h=512'],
       ['stone_face2_face', 'view=face&w=480&h=480'],
@@ -45,6 +56,14 @@ const DETAIL = [
   'view=lens&yaw=24&eye=0.12&look=0.02&span=0.36',
   'view=lens&yaw=-50&eye=0.95&look=0.92&span=0.2',
 ];
+// 곰 2c 풍화 가까이 넷 (해 쪽 — 곰 오른쪽 앞에서): 정수리·어깨 윗면(이끼 · 정수리 골) / 오른팔 바깥·옆구리(빗물 자국 · 지의류) / 발과 받침(젖은 띠 · 진흙 튐 · 풀) / 오른 귀(테두리 닳음 · 깨짐)
+const WEATHER_DETAIL = [
+  'view=lens&yaw=-22&eye=1.5&look=0.8&span=0.44',
+  'view=lens&yaw=-62&eye=0.6&look=0.58&span=0.6',
+  'view=lens&yaw=-28&eye=0.14&look=0.02&span=0.4',
+  'view=lens&yaw=-50&eye=0.95&look=0.92&span=0.2',
+];
+const WEATHER_CLOSE = { face: 'view=face&w=480&h=480', chest: 'view=lens&yaw=-12&eye=0.74&look=0.73&span=0.3&w=480&h=480' };
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1500, height: 900 } });
 const errors = [];
@@ -138,6 +157,35 @@ if (stone) {
   await game('stone_game', '', 2.5, false);
   await game('stone_pixel', '&pixel=1', 2.6, false);
   await game('stone_game6', '', 6, true);
+}
+if (weather) {
+  const raw = {
+    game: await gameShot('', 2.5, false),
+    pixel: await gameShot('&pixel=1', 2.6, false),
+    face: (await render(WEATHER_CLOSE.face)).url,
+    chest: (await render(WEATHER_CLOSE.chest)).url,
+  };
+  const cells = [];
+  for (const qs of WEATHER_DETAIL) cells.push((await render(`${qs}&w=560&h=420`)).url);
+  raw.detail = await compose(cells, 2);
+  if (rawDir) {
+    fs.mkdirSync(rawDir, { recursive: true });
+    for (const [k, u] of Object.entries(raw)) fs.writeFileSync(path.join(rawDir, `${k}.${u.startsWith('data:image/png') ? 'png' : 'webp'}`), Buffer.from(u.slice(u.indexOf(',') + 1), 'base64'));
+    console.log(`날 그림 → ${rawDir}`);
+  }
+  save('weather_game', await compose([raw.game], 1, 0, 0.82));
+  save('weather_pixel', await compose([raw.pixel], 1, 0, 0.82));
+  save('weather_detail', raw.detail);
+  if (beforeDir) {
+    const prev = (k) => {
+      const f = ['png', 'webp'].map((e) => path.join(beforeDir, `${k}.${e}`)).find((p) => fs.existsSync(p));
+      return `data:image/${path.extname(f).slice(1)};base64,${fs.readFileSync(f).toString('base64')}`;
+    };
+    // 경기 화면 · 도트 모드의 곰 둘레(받침까지) 1.6 배 — 왼쪽부터 경기 전 · 후 · 도트 전 · 후
+    save('weather_game_cmp', await composeCrop([prev('game'), raw.game, prev('pixel'), raw.pixel], 4, [480, 24, 232, 540], 1.6, 6, 0.84));
+    save('weather_face', await compose([prev('face'), raw.face], 2));
+    save('weather_chest', await compose([prev('chest'), raw.chest], 2));
+  }
 }
 console.log(errors.length ? `에러:\n${errors.join('\n')}` : '콘솔 에러 0');
 await browser.close();
