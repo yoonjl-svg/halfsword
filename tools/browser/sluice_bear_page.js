@@ -3,6 +3,7 @@
 //   ?view=ortho   : 정면 직교 — 사진과 같은 구도(정수리~발바닥 = ph 픽셀, 발바닥 줄 sy, 몸 가운데 cx). 받침은 ?plinth=0 으로 숨김
 //   ?view=front   : 정면, 약간 아래에서 긴 렌즈 (받침까지)   ?view=quarter : 앞 왼쪽 35°   ?view=side : 곰 왼쪽 옆   ?view=back
 //   ?view=face    : 머리 가까이   ?view=strip : 앞 · 앞 왼쪽 · 옆 · 뒤 넷을 한 장에
+//   ?view=lens    : 가까이 보기 — yaw(도, 0 = 정면 · + = 곰 왼쪽) · eye · look(카메라·볼 곳 높이, 곰 키 몫 — 0 = 발바닥) · span(틀 높이, 곰 키 몫) · fov
 //   ?w=&h= 캔버스 크기 · ?bearH= 곰 키(m, 기본 BEAR_HEIGHT) · ?bg=rrggbb 바탕 · ?ground=0 땅 없음
 //   결과: window.shot = { done, url(webp), triangles }
 // ─────────────────────────────────────────────────────────────
@@ -59,6 +60,10 @@ const VIEWS = {
   side: (a) => lens(1, 0, P + height * 0.45, total * 0.5, total * 1.12, a),
   back: (a) => lens(0.3, -1, P + height * 0.5, total * 0.5, total * 1.12, a),
   face: (a) => lens(0, 1, P + height * 0.86, P + height * 0.9, height * 0.36, a, 14),
+  lens: (a) => {
+    const yaw = THREE.MathUtils.degToRad(+q.get('yaw') || 0);
+    return lens(Math.sin(yaw), Math.cos(yaw), P + height * +(q.get('eye') ?? 0.5), P + height * +(q.get('look') ?? 0.5), height * +(q.get('span') ?? 0.4), a, +q.get('fov') || 14);
+  },
 };
 
 if (view === 'ortho') {

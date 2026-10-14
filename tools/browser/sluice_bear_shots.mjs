@@ -3,34 +3,104 @@
 //  front  : 정면 약간 아래에서 긴 렌즈(받침까지) · views : 앞 · 앞 왼쪽 35° · 옆 · 뒤 · face : 머리 가까이
 //  실행: vite 개발 서버를 띄운 뒤 node tools/browser/sluice_bear_shots.mjs http://127.0.0.1:5173 [곰 키 m] [이름 꼬리]
 //   (곰 키를 주면 그 키로, 이름 꼬리를 주면 bear_<보기>_<꼬리>.webp 로 — 크기 비교용)
+//  곰 2(돌 석상, 10/14): node tools/browser/sluice_bear_shots.mjs <개발 서버> --stone → bear_stone_*.webp
+//   ortho · face · views · detail(가슴 양각·음각 홈·끌 자국 / 정수리 골 / 발·받침의 닳음·깨짐·이끼·지의류 / 오른 귀 깨짐) ·
+//   game(경기 화면 1280×800, 상대 하인리히, AI 멈춤, 2.5 초) · pixel(도트 모드 2.6 초) · game6(AI 그대로 · 플레이어 가만히 6 초 — 키 3.2 m 귀 자리 확인)
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
-const bearH = process.argv[3] ? `&bearH=${+process.argv[3]}` : '';
-const tail = process.argv[4] ? `_${process.argv[4]}` : '';
+const stone = process.argv.includes('--stone');
+const rest = process.argv.slice(3).filter((a) => a !== '--stone');
+const bearH = rest[0] ? `&bearH=${+rest[0]}` : '';
+const tail = rest[1] ? `_${rest[1]}` : '';
 const outDir = new URL('../../docs/import/sluice/', import.meta.url);
 fs.mkdirSync(outDir, { recursive: true });
-const shots = [
-  ['ortho', 'view=ortho&plinth=0&ground=0&w=685&h=512'],
-  ['front', 'view=front&w=640&h=800'],
-  ['views', 'view=strip&w=1440&h=450'],
-  ['face', 'view=face&w=480&h=480'],
+const shots = stone
+  ? [
+      ['stone_ortho', 'view=ortho&plinth=0&ground=0&w=685&h=512'],
+      ['stone_face', 'view=face&w=480&h=480'],
+      ['stone_views', 'view=strip&w=1440&h=450'],
+    ]
+  : [
+      ['ortho', 'view=ortho&plinth=0&ground=0&w=685&h=512'],
+      ['front', 'view=front&w=640&h=800'],
+      ['views', 'view=strip&w=1440&h=450'],
+      ['face', 'view=face&w=480&h=480'],
+    ];
+// 가까이 보기 넷 (2×2 한 장): 가슴 앞 왼쪽(양각 판 · 음각 홈 · 끌 자국) · 정수리 위 앞(정수리 골 · 오른 귀 깨짐) · 발과 받침(닳은 발가락 · 깨짐 · 이끼 · 지의류) · 오른 귀 옆
+const DETAIL = [
+  'view=lens&yaw=-32&eye=0.78&look=0.74&span=0.34',
+  'view=lens&yaw=12&eye=1.7&look=0.95&span=0.22',
+  'view=lens&yaw=24&eye=0.12&look=0.02&span=0.36',
+  'view=lens&yaw=-50&eye=0.95&look=0.92&span=0.2',
 ];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1500, height: 900 } });
 const errors = [];
-page.on('pageerror', (e) => errors.push(`pageerror: ${e}`));
-page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+const watch = (p) => {
+  p.on('pageerror', (e) => errors.push(`pageerror: ${e}`));
+  p.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+};
+watch(page);
 await page.route('**/*', (r) => (r.request().url().startsWith(base) || r.request().url().startsWith('data:') ? r.continue() : r.abort())); // 바깥 요청 막기
-for (const [name, qs] of shots) {
+const save = (name, dataUrl) => {
+  const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
+  fs.writeFileSync(new URL(`bear_${name}${tail}.webp`, outDir), buf);
+  console.log(`bear_${name}${tail}.webp ${(buf.length / 1024).toFixed(1)} KB`);
+};
+const render = async (qs) => {
   await page.goto(`${base}/tools/browser/sluice_bear.html?${qs}${bearH}`);
   await page.waitForFunction(() => window.shot?.done, null, { timeout: 120000 });
-  const s = await page.evaluate(() => window.shot);
-  const buf = Buffer.from(s.url.slice(s.url.indexOf(',') + 1), 'base64');
-  fs.writeFileSync(new URL(`bear_${name}${tail}.webp`, outDir), buf);
-  console.log(`bear_${name}${tail}.webp ${(buf.length / 1024).toFixed(1)} KB · 삼각형 ${s.triangles}`);
+  return page.evaluate(() => window.shot);
+};
+/** 그림 여럿을 한 장으로 (브라우저 캔버스): cols 칸씩, 칸 사이 gap px, 결과 webp */
+const compose = async (urls, cols, gap = 6, quality = 0.88) => {
+  await page.setContent('<!doctype html><html><body></body></html>');
+  return page.evaluate(async ([list, c, g, q]) => {
+    const imgs = await Promise.all(list.map((u) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.src = u; })));
+    const w = imgs[0].width;
+    const h = imgs[0].height;
+    const rows = Math.ceil(imgs.length / c);
+    const cv = document.createElement('canvas');
+    cv.width = c * w + (c - 1) * g;
+    cv.height = rows * h + (rows - 1) * g;
+    const x = cv.getContext('2d');
+    x.fillStyle = '#16181a';
+    x.fillRect(0, 0, cv.width, cv.height);
+    imgs.forEach((im, i) => x.drawImage(im, (i % c) * (w + g), Math.floor(i / c) * (h + g)));
+    return cv.toDataURL('image/webp', q);
+  }, [urls, cols, gap, quality]);
+};
+for (const [name, qs] of shots) {
+  const s = await render(qs);
+  save(name, s.url);
+  if (name.endsWith('ortho')) console.log(`  삼각형 ${s.triangles}`);
+}
+if (stone) {
+  const cells = [];
+  for (const qs of DETAIL) cells.push((await render(`${qs}&w=560&h=420`)).url);
+  save('stone_detail', await compose(cells, 2));
+  // 경기 화면 (무대 빛·안개 그대로): 판을 시작해 정한 게임 시간에 멈추고 일시정지 창을 숨겨 찍는다
+  const game = async (name, query, t, ai) => {
+    const g = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+    watch(g);
+    await g.goto(`${base}/?stage=sluice&foe=heinrich&weapon=longsword&emo=0${query}`, { waitUntil: 'networkidle' });
+    await g.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000 });
+    await g.getByText('싸움 시작').click();
+    if (!ai) await g.evaluate(() => { window.game.ai.update = () => {}; });
+    await g.waitForFunction((tt) => window.game.state === 'fight' && window.game.stats.simTime >= tt, t, { timeout: 240000, polling: 50 });
+    await g.keyboard.press('KeyP');
+    await g.evaluate(() => document.getElementById('menu').classList.remove('show'));
+    await g.waitForTimeout(400);
+    const png = await g.screenshot();
+    await g.close();
+    save(name, await compose([`data:image/png;base64,${png.toString('base64')}`], 1, 0, 0.82));
+  };
+  await game('stone_game', '', 2.5, false);
+  await game('stone_pixel', '&pixel=1', 2.6, false);
+  await game('stone_game6', '', 6, true);
 }
 console.log(errors.length ? `에러:\n${errors.join('\n')}` : '콘솔 에러 0');
 await browser.close();
