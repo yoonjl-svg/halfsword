@@ -74,7 +74,7 @@ for (const c of CASES) {
     rows.push(r);
     // 상대를 쓰러뜨린다: 원인 '내려찍기'는 부활하지 않는다(revive.js) → 이긴 판 → 결과 화면 단추 '다음 상대'
     await page.evaluate(() => window.game.enemy.die('내려찍기'));
-    await page.waitForFunction(() => document.querySelector('#btnStart')?.offsetParent && /다음 상대/.test(document.querySelector('#btnStart').textContent), null, { timeout: 300000 });
+    await page.waitForFunction(() => document.querySelector('#btnStart')?.offsetParent && /다음 여정/.test(document.querySelector('#btnStart').textContent), null, { timeout: 300000 });
   }
   console.log('\n| 판 | 무대 | 상대 | 모양 | 질감 | 짓기 ms |\n|---:|---|---|---:|---:|---:|');
   rows.forEach((r, i) => console.log(`| ${i + 1} | ${r.stage} | ${r.foe} | ${r.geometries} | ${r.textures} | ${r.buildMs} |`));

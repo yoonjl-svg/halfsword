@@ -197,7 +197,7 @@ async function before(o) {
   await page.evaluate(() => {
     document.getElementById('menuTitle').textContent = '패배';
     document.getElementById('menuSub').textContent = '목을 베였다 · 하인리히: “은화! 은화 어딨어!”';
-    document.getElementById('btnStart').textContent = '다시 싸우기';
+    document.getElementById('btnStart').textContent = '다시 겨루기';
     document.getElementById('btnResume').style.display = 'none';
   });
   await page.waitForTimeout(300);
