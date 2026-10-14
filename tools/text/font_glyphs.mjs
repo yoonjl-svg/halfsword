@@ -1,10 +1,10 @@
-// 화면 글꼴 빠진 글자 점검 (10/14 도트 글꼴 — docs/ui/pixel_font_2026-10-14.md)
-//  화면 글(texts.mjs collectTexts — 유파·자세표·무기·인물·main.js·index.html 글 + 무대 이름 + test.html·test_pick.js 글)을
-//  public/fonts 의 갈무리11 보통(400)·굵게(700) 글자표(cmap)와 대조한다. 굵게 그리는 자리(800·700)의 글은 굵은 파일에도 있어야 한다 —
-//  없으면 그 글자만 다음 글꼴(시스템 굵은 글꼴)로 섞여 그려진다.
-//   굵은 자리: 자세·기술·비기·패시브·고유 동작·속임수 이름의 한국어 몫(괄호 앞 — 오른쪽 위 첫 줄 · 왼쪽 위) · 무기 이름 괄호 앞(카드 .wname) · 등급 · 인물 이름 · 무대 줄.
-//   보통 자리: 이름의 원어 몫(괄호 안 — 둘째 줄 500) · 설명 · 칭호 · 대사. 어느 쪽인지 가리기 어려운 글(main.js·HTML 글)은 두 파일 모두 본다.
-//  WOFF2 는 의존성 없이 읽는다 (node:zlib 브로틀리 · cmap 형식 4/12).
+// 화면 글꼴 빠진 글자 점검 (10/14 웹폰트 프리텐다드 + Cinzel — docs/ui/webfont_2026-10-14.md. 앞선 갈무리 판은 docs/ui/pixel_font_2026-10-14.md)
+//  화면 글(texts.mjs collectTexts — 유파·자세표·무기·인물·main.js·index.html 글 + 무대 이름 + test.html·test_pick.js·test_route.js 글
+//  + main.js 의 한글 없는 기호 글(독일 감아 들기 칸의 ▮▯ 등))을 index.html 의 @font-face 와 대조한다.
+//   글꼴 줄(--font-ui) 차례대로: 그 글꼴의 unicode-range 안이고 파일 글자표(cmap)에 있으면 우리 글꼴로 그려진다 —
+//   범위 안인데 파일에 없으면 브라우저가 다음 글꼴로 넘어가므로 같은 차례로 넘어간다. 끝까지 없으면 '빠진 글자'(시스템 글꼴로 그려짐).
+//   한 글꼴에 굵기가 여럿이면(프리텐다드 400 · 600 · 700) 굵기 파일 모두에 있어야 그 글꼴로 친다 — 어느 굵기로 그려도 같은 글꼴이게.
+//  WOFF2 는 의존성 없이 읽는다 (node:zlib 브로틀리 · cmap 형식 4/12). @font-face 는 index.html 에서 읽는다 (CSS 와 점검이 어긋나지 않게).
 //  실행: node tools/text/font_glyphs.mjs   (빠진 글자가 있으면 종료 코드 1 — 이모지는 시스템 글꼴로 그리는 것이 맞아 따로 적기만 한다)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -86,68 +86,75 @@ function woff2Cmap(file) {
   }
   return set;
 }
-const FONTS = path.join(ROOT, 'public/fonts');
-const REG = woff2Cmap(path.join(FONTS, 'Galmuri11.woff2'));
-const BOLD = woff2Cmap(path.join(FONTS, 'Galmuri11-Bold.woff2'));
 
-// main.js splitName 과 같은 규칙: '한국어 (원어)' → [한국어(첫 줄, 굵게), 원어(둘째 줄, 500)]
-function splitName(s) {
-  const m = /^(.*?)\s*\(([^()]*)\)\s*(.*)$/.exec(s ?? '');
-  if (!m || !m[1]) return [s ?? '', ''];
-  const rest = m[3].replace(/^·\s*/, '');
-  if (!rest || m[3].startsWith('·')) return [m[1], [m[2], rest].filter(Boolean).join(' · ')];
-  return [`${m[1]} ${rest}`, m[2]];
+// ── index.html 의 @font-face · 글꼴 줄(--font-ui) ──
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const faces = [...html.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(([, body]) => {
+  const fam = /font-family:\s*'([^']+)'/.exec(body)?.[1];
+  const url = /url\('\/fonts\/([^']+)'\)/.exec(body)?.[1];
+  const weight = /font-weight:\s*([^;]+);/.exec(body)?.[1].trim();
+  const ur = /unicode-range:\s*([^;]+);?/.exec(body)?.[1];
+  const ranges = ur ? ur.split(',').map((s) => s.trim().replace(/^U\+/i, '').split('-').map((h) => parseInt(h, 16))).map(([a, b]) => [a, b ?? a]) : null;
+  return { fam, url, weight, ranges, cmap: woff2Cmap(path.join(ROOT, 'public/fonts', url)) };
+});
+const stack = /--font-ui:\s*([^;]+);/.exec(html)[1].split(',').map((s) => s.trim().replace(/^'|'$/g, ''));
+const inRange = (f, cp) => !f.ranges || f.ranges.some(([a, b]) => cp >= a && cp <= b);
+/** 이 글자를 그리는 우리 글꼴 (글꼴 줄 차례) — 없으면 null. 범위 안인데 파일에 없는 것은 warn 에 적는다 */
+const warn = new Map();
+function drawnBy(cp) {
+  for (const fam of stack) {
+    const fs_ = faces.filter((f) => f.fam === fam && inRange(f, cp));
+    if (!fs_.length) continue;
+    if (fs_.every((f) => f.cmap.has(cp))) return fam;
+    for (const f of fs_) if (!f.cmap.has(cp) && f.ranges) warn.set(`${f.url} U+${cp.toString(16).toUpperCase()}`, true);
+  }
+  return null;
 }
-const NAME_FIELDS = new Set(['guard.name', 'frame.name', 'cover.name', 'tech.name', 'unique.nameKo', 'feint.name', 'passive.nameKo', 'secret.nameKo', 'secret.seq.nameKo']);
-const REG_FIELDS = new Set(['guard.desc', 'frame.desc', 'weapon.desc', 'weapon.ability', 'char.epithet', 'char.line', 'char.taunt', 'school.nameKo', 'branch.nameKo']);
-const parts = []; // { text, need: 'bold' | 'regular' | 'both', loc }
+
+// ── 화면 글 ──
+const parts = []; // { text, loc }
 const rows = await collectTexts({ characters: true });
-for (const r of rows) {
-  if (NAME_FIELDS.has(r.field)) {
-    const [a, b] = splitName(r.text);
-    parts.push({ text: a, need: 'bold', loc: r.loc }, { text: b, need: 'regular', loc: r.loc });
-  } else if (r.field === 'weapon.nameKo') {
-    const [, main, sub] = r.text.match(/^(.*?)\s*\((.*)\)\s*$/) || [null, r.text, ''];
-    parts.push({ text: main, need: 'bold', loc: r.loc }, { text: sub, need: 'regular', loc: r.loc });
-  } else if (r.field === 'tier' || r.field === 'char.name') parts.push({ text: r.text, need: 'bold', loc: r.loc });
-  else if (REG_FIELDS.has(r.field)) parts.push({ text: r.text, need: 'regular', loc: r.loc });
-  else parts.push({ text: r.text, need: 'both', loc: r.loc });
-}
-// 무대 줄 (왼쪽 위 800) — stages.js 는 무대 그림 모듈을 함께 읽어 무거우니 이름표만 글자 그대로 읽는다
+for (const r of rows) parts.push({ text: r.text, loc: r.loc });
+// 무대 줄 — stages.js 는 무대 그림 모듈을 함께 읽어 무거우니 이름표만 글자 그대로 읽는다
 const stagesSrc = fs.readFileSync(path.join(ROOT, 'src/stages.js'), 'utf8');
 const nameKo = /export const STAGE_NAME_KO = \{([\s\S]*?)\};/.exec(stagesSrc)?.[1] ?? '';
-for (const m of nameKo.matchAll(/'([^']+)'/g)) parts.push({ text: `스테이지 10 · ${m[1]}`, need: 'bold', loc: 'src/stages.js STAGE_NAME_KO' });
-// index.html 의 한글 없는 글(collectTexts 가 건너뜀 — 돌려 달라는 안내의 📱↻ · 일시정지 Ⅱ · 제목 Stillness): 모두 보통 굵기 자리
-for (const t of htmlTexts(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'))) if (!/[가-힣]/.test(t.text)) parts.push({ text: t.text, need: 'regular', loc: `index.html:${t.line}` });
-// 테스트 고르기 화면: test.html 글 · test_pick.js 글 (굵기가 섞여 두 파일 모두)
-for (const t of htmlTexts(fs.readFileSync(path.join(ROOT, 'test.html'), 'utf8'))) parts.push({ text: t.text, need: 'both', loc: `test.html:${t.line}` });
-for (const f of ['src/test_pick.js', 'src/test_route.js']) for (const s of jsStrings(fs.readFileSync(path.join(ROOT, f), 'utf8'))) if (/[^\x00-\x7f]/.test(s.text)) parts.push({ text: s.text, need: 'both', loc: `${f}:${s.line}` });
+for (const m of nameKo.matchAll(/'([^']+)'/g)) parts.push({ text: `스테이지 10 · ${m[1]}`, loc: 'src/stages.js STAGE_NAME_KO' });
+// index.html 의 한글 없는 글(collectTexts 가 건너뜀 — 돌려 달라는 안내의 📱↻ · 일시정지 Ⅱ · 제목 Stillness)
+for (const t of htmlTexts(html)) if (!/[가-힣]/.test(t.text)) parts.push({ text: t.text, loc: `index.html:${t.line}` });
+// main.js 의 한글 없는 기호 글 (독일 감아 들기 칸 ▮▯ 등 — collectTexts 는 한글 있는 글만 모은다)
+for (const s of jsStrings(fs.readFileSync(path.join(ROOT, 'src/main.js'), 'utf8'))) if (/[^\x00-\x7f]/.test(s.text) && !/[가-힣]/.test(s.text)) parts.push({ text: s.text, loc: `src/main.js:${s.line}` });
+// 테스트 고르기 화면: test.html 글 · test_pick.js · test_route.js 글
+for (const t of htmlTexts(fs.readFileSync(path.join(ROOT, 'test.html'), 'utf8'))) parts.push({ text: t.text, loc: `test.html:${t.line}` });
+for (const f of ['src/test_pick.js', 'src/test_route.js']) for (const s of jsStrings(fs.readFileSync(path.join(ROOT, f), 'utf8'))) if (/[^\x00-\x7f]/.test(s.text)) parts.push({ text: s.text, loc: `${f}:${s.line}` });
 
 const EMOJI = (cp) => cp >= 0x1f000 || (cp >= 0x2600 && cp <= 0x27bf) || cp === 0xfe0f || cp === 0x200d;
-const miss = { bold: new Map(), regular: new Map(), emoji: new Map() };
-const chars = { bold: new Set(), regular: new Set() };
+const miss = new Map();
+const emoji = new Map();
+const byFam = new Map();
 for (const p of parts) {
   for (const ch of p.text) {
     const cp = ch.codePointAt(0);
-    if (cp < 0x20) continue;
-    const want = p.need === 'both' ? ['bold', 'regular'] : [p.need];
-    for (const k of want) {
-      chars[k].add(ch);
-      const has = (k === 'bold' ? BOLD : REG).has(cp);
-      if (has) continue;
-      const bucket = EMOJI(cp) ? miss.emoji : miss[k];
-      const e = bucket.get(ch) ?? { n: 0, loc: new Set(), ex: p.text };
-      e.n++;
-      e.loc.add(p.loc);
-      bucket.set(ch, e);
+    if (cp < 0x21) continue; // 빈칸·줄바꿈
+    const fam = drawnBy(cp);
+    if (fam) {
+      if (!byFam.has(fam)) byFam.set(fam, new Set());
+      byFam.get(fam).add(ch);
+      continue;
     }
+    const bucket = EMOJI(cp) ? emoji : miss;
+    const e = bucket.get(ch) ?? { n: 0, loc: new Set(), ex: p.text };
+    e.n++;
+    e.loc.add(p.loc);
+    bucket.set(ch, e);
   }
 }
 const hex = (ch) => 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
 const show = (m) => [...m].map(([ch, e]) => `  ${ch} ${hex(ch)} × ${e.n} — ${[...e.loc].slice(0, 3).join(' · ')}${e.loc.size > 3 ? ' …' : ''}\n      예: ${e.ex.slice(0, 60)}`).join('\n');
-console.log(`글꼴: 갈무리11 보통 ${REG.size} 자 · 굵게 ${BOLD.size} 자 (한글 음절 보통 ${[...REG].filter((c) => c >= 0xac00 && c <= 0xd7a3).length} · 굵게 ${[...BOLD].filter((c) => c >= 0xac00 && c <= 0xd7a3).length})`);
-console.log(`화면 글 ${rows.length} 줄 + 무대·테스트 화면 → 조각 ${parts.length} 개 · 굵게 그릴 수 있는 글자 ${chars.bold.size} 종 · 보통으로 그리는 글자 ${chars.regular.size} 종`);
-console.log(`굵은 자리인데 굵은 파일에 없는 글자: ${miss.bold.size} 종${miss.bold.size ? '\n' + show(miss.bold) : ''}`);
-console.log(`보통 자리인데 보통 파일에 없는 글자: ${miss.regular.size} 종${miss.regular.size ? '\n' + show(miss.regular) : ''}`);
-console.log(`이모지 (시스템 글꼴로 그림 — 맞음): ${miss.emoji.size} 종${miss.emoji.size ? '\n' + show(miss.emoji) : ''}`);
-process.exit(miss.bold.size || miss.regular.size ? 1 : 0);
+console.log(`글꼴 줄: ${stack.slice(0, 5).join(' → ')} → (시스템)`);
+for (const f of faces) console.log(`  ${f.fam} ${f.weight} ${f.url}: ${f.cmap.size} 자${f.ranges ? ` · 범위 ${f.ranges.length} 토막` : ''}`);
+console.log(`화면 글 ${rows.length} 줄 + 무대·기호·테스트 화면 → 조각 ${parts.length} 개`);
+for (const [fam, set] of byFam) console.log(`  ${fam} 로 그리는 글자 ${set.size} 종${set.size <= 60 ? ': ' + [...set].join('') : ''}`);
+console.log(`우리 글꼴에 없는 글자(시스템 글꼴로 그려짐): ${miss.size} 종${miss.size ? '\n' + show(miss) : ''}`);
+console.log(`이모지 (시스템 글꼴로 그림 — 맞음): ${emoji.size} 종${emoji.size ? '\n' + show(emoji) : ''}`);
+if (warn.size) console.log(`범위(unicode-range) 안인데 파일에 없는 글자 ${warn.size} — 다음 글꼴로 넘어감: ${[...warn.keys()].slice(0, 8).join(' · ')}`);
+process.exit(miss.size ? 1 : 0);
