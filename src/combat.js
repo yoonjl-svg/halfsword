@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
@@ -54,6 +54,34 @@ const _q = new THREE.Quaternion();
 /** 강체 상태(p, q, com, v, w)에서 한 점의 속도 */
 function velAt(st, point, out) {
   return out.copy(point).sub(st.com).cross(st.w).negate().add(st.v); // v + w × r
+}
+
+// ── 와신상담 (월왕구천검 에픽 특수 능력 — 사장님 결정 10/14 '다칠 수록 공격력 증폭 … 최대 30%로 하자') ──
+//  무기 스펙에 woundRage(0.3)가 있으면 그 칼의 공격력(등급 power — 판정 에너지 배율)이 × (1 + woundRage × d) 가 된다. d = 칼 주인이 다친 정도(0~1).
+//  d 는 쌓이는 손상만 본다 — 아픔(pain)처럼 맞는 순간 튀었다 가라앉는 값은 쓰지 않는다 (맞을 때마다 배율이 출렁이지 않게):
+//   d = clamp(max(잃은 피 몫, 상처 몫, 팔다리 몫), 0, 1)
+//   · 잃은 피 몫 = (1 − blood) / (1 − VITALS.collapseBlood) — 쓰러지는 문턱(피 0.45)까지 잃으면 1. 피가 없는 몸(병마용)은 blood 가 늘 1 이라 0
+//   · 상처 몫    = Σ wounds[].severity ÷ WOUND_RAGE.sevRef — 피가 없는 몸도 오른다 (출혈 없이도 상처는 쌓인다). 잘린 단면 상처(stump)도 센다
+//   · 팔다리 몫  = 가장 상한 팔다리의 (1 − limbs[k]) — 상처로 망가지거나(limbs −= 심각도 × 0.7) 잘려 나가면(sever → 0) 그 팔다리 하나로 1
+//  d 정의는 사장님 확인 전 (확인표 1447). 기준값 sevRef 4 = 정규화 (사장님 확인 전 — 확인표 1448): 사람 12 판(fights12 조건)에서 살아남은 다친 싸움꾼 13 명의
+//   '정해진 잃은 피(1 − blood + bleed ÷ clotting) ÷ 상처 심각도 합' 가운데 0.121 → 피 0.55 를 잃을 상처 합 4.5 (합끼리 나눈 비 0.151 → 3.6) ·
+//   죽은 순간의 상처 심각도 합 가운데 4.2 (9 명) — 같은 상처면 피 없는 몸도 사람이 그 상처로 잃을 피 몫과 비슷한 d 가 되게.
+//  새 상한·문턱·쿨다운은 없다 (0.3 만 사장님 값). 이 능력이 없는 무기는 계산 자체를 안 한다 (analyze 의 배율 1 — 판이 바이트까지 같다)
+export const WOUND_RAGE = { sevRef: 4 };
+/** 싸움꾼이 다친 정도 d (0 = 멀쩡 · 1 = 중상). 읽기만 한다 */
+export function woundDegree(f) {
+  if (!f) return 0;
+  const blood = (1 - (f.blood ?? 1)) / (1 - VITALS.collapseBlood);
+  let sev = 0;
+  for (const w of f.wounds ?? []) sev += w.severity > 0 ? w.severity : 0;
+  let limb = 0;
+  for (const k in f.limbs ?? {}) limb = Math.max(limb, 1 - f.limbs[k]);
+  return THREE.MathUtils.clamp(Math.max(blood, sev / WOUND_RAGE.sevRef, limb), 0, 1);
+}
+/** 와신상담 배율: 칼(spec.woundRage)이 있으면 1 + woundRage × d, 없으면 1 (디버그 game.woundRage · 시험이 읽는다) */
+export function woundRageMult(f) {
+  const k = f?.weapon?.woundRage;
+  return k ? 1 + k * woundDegree(f) : 1;
 }
 
 /** 부위 이름 + 부위 기준 위치 → 해부학적 구역 */
@@ -275,12 +303,16 @@ export class Combat {
     const emoDealt = am?.dealt ?? 1;
     const emoTaken = vm?.taken ?? 1;
     const emoPass = (am?.pass ?? 0) + (vm?.pass ?? 0);
+    // 와신상담 (월왕구천검 — 위 WOUND_RAGE): 칼 주인이 다칠수록 이 칼의 공격력 × (1 + woundRage × d). 능력 없는 무기는 1 이고 계산도 안 한다
+    //  (power × 1 은 power 그대로라 다른 무기·사람 판은 바이트까지 같다). 물리(속도·질량)는 그대로, 판정 에너지에만 — 등급 power 와 같은 자리
+    const rage = att.weapon?.woundRage ? woundRageMult(att) : 1;
+    const power = att.weaponCfg.power * rage;
     let severity = 0;
     let pass = false;
     let thr = null; // 날이 들기 시작하는 문턱(J) — 측정 도구(weapon_anatomy.mjs, armor_eval.mjs)도 읽는다
     let eff = null; // 문턱과 견주는 실효 에너지(J)
     if (type === 'cut' || type === 'stab') {
-      const wMult = att.weaponCfg.power * (type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust); // 등급 배율 × 무기별 베기/찌르기 배율
+      const wMult = power * (type === 'cut' ? att.weaponCfg.mCut : att.weaponCfg.mThrust); // 등급 배율(와신상담이면 그 배율까지) × 무기별 베기/찌르기 배율
       thr = (type === 'cut' ? A.cut : A.stab) * guard;
       // 판금: 강철판 문턱 × 판의 막음. 판 밑 누비옷보다 약해지지는 않는다 (큰 쪽)
       if (plateGuard > 0) thr = Math.max(thr, (type === 'cut' ? ARMOR.plate.cut : ARMOR.plate.stab) * plateGuard);
@@ -303,7 +335,7 @@ export class Combat {
         }
       }
     }
-    if (type === 'blunt') energy *= att.weaponCfg.power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
+    if (type === 'blunt') energy *= power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
     return {
       type,
       zone,
@@ -329,6 +361,7 @@ export class Combat {
       bladeAxis: axis.clone(),
       finish, // 내려찍기 즉사 (사장님 결정 9/30, fighter.applyWound)
       ...(finishPower ? { finishPower: FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기 (FINISH.mode 'power25' 때만 붙는다)
+      ...(att.weapon?.woundRage ? { woundRage: rage } : {}), // 와신상담 배율 (그 능력이 있는 칼만 붙는다 — 시험·디버그가 읽는다)
     };
   }
 
