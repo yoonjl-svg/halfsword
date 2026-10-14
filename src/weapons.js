@@ -186,6 +186,28 @@ function addMerged(group, pieces, mat) {
   return m;
 }
 
+// 츠카이토 (모노호시자오·우치가타나): 납작한 비단 끈이 앞뒤 면에서 X 자로 엇갈려 감기고 옆면에서 꺾여 넘어가는 매듭 —
+//  y0(카시라 쪽 첫 줄)부터 0.034 m 마다 0.205 까지. 끈·매듭 상자는 자리·기울기째 구워 메쉬 하나('tsukaIto')로 그린다 — 상자마다
+//  메쉬였을 땐 그림자 그리기까지 그리기 호출이 상자 수 × 2 들었다(성 안뜰 폰 가로: 미나미 + 모노호시자오 404 → 262, 같은 미나미 + 롱소드 266 ·
+//  이졸데 + 우치가타나 343 → 225, 롱소드 230). 자리·각도·색·그림자 드리우기는 상자마다 그리던 때와 같다.
+function addTsukaIto(group, silk, y0) {
+  const step = 0.034;
+  const strip = new THREE.BoxGeometry(0.0062, step * 0.78, 0.0022);
+  const knot = new THREE.BoxGeometry(0.0026, 0.007, 0.022);
+  const ito = [];
+  for (let y = y0; y <= 0.205; y += step) {
+    for (const sz of [-1, 1]) {
+      for (const lean of [-1, 1]) ito.push([strip, [0, y, sz * 0.0162], lean * 0.72]);
+    }
+    for (const sx of [-1, 1]) ito.push([knot, [sx * 0.0133, y + step / 2, 0]]);
+  }
+  const m = addMerged(group, ito, silk);
+  m.name = 'tsukaIto';
+  strip.dispose();
+  knot.dispose();
+  return m;
+}
+
 // 재질(빛깔) 결정: 기본은 강철(칼끝 은색, 날 제외 부분은 캐릭터 옷과 맞춘 손잡이/코등이 색).
 function steelMatOpts(isBlade) {
   // 이 장면엔 환경 맵(envMap)이 없다 — metalness를 실제 강철만큼(0.9) 올리면 직접광 하이라이트
@@ -735,22 +757,8 @@ const monohoshizao = finalizeSpec('monohoshizao', {
     const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.231, 0]);
     fuchi.scale.z = 1.2;
     // 츠카이토: 납작한 비단 끈이 앞뒤 면에서 X 자로 엇갈려 감기고, 엇갈린 사이사이로 흰 사메가 마름모꼴로 드러난다
-    //  (고리 모양으로 감으면 장난감처럼 보였다). 옆면에서는 끈이 꺾여 넘어가는 매듭이 보인다.
-    //  끈 48 · 매듭 24 상자는 자리·기울기째 구워 메쉬 하나로 그린다 — 상자마다 메쉬였을 땐 칼 그룹 메쉬가 84 개라 그림자 그리기까지
-    //  그리기 호출이 142 개 더 들었다(성 안뜰 폰 가로: 미나미 + 모노호시자오 404 → 262, 같은 미나미 + 롱소드 266). 자리·각도·색·그림자 드리우기는 그대로
-    const step = 0.034;
-    const strip = new THREE.BoxGeometry(0.0062, step * 0.78, 0.0022);
-    const knot = new THREE.BoxGeometry(0.0026, 0.007, 0.022);
-    const ito = [];
-    for (let y = -0.178; y <= 0.205; y += step) {
-      for (const sz of [-1, 1]) {
-        for (const lean of [-1, 1]) ito.push([strip, [0, y, sz * 0.0162], lean * 0.72]);
-      }
-      for (const sx of [-1, 1]) ito.push([knot, [sx * 0.0133, y + step / 2, 0]]);
-    }
-    addMerged(group, ito, silk).name = 'tsukaIto';
-    strip.dispose();
-    knot.dispose();
+    //  (고리 모양으로 감으면 장난감처럼 보였다). 옆면에서는 끈이 꺾여 넘어가는 매듭이 보인다. 끈 48 · 매듭 24 상자가 메쉬 하나
+    addTsukaIto(group, silk, -0.178);
   },
 });
 
@@ -811,21 +819,7 @@ const uchigatana = finalizeSpec('uchigatana', {
     }
     const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.231, 0]);
     fuchi.scale.z = 1.2;
-    const step = 0.034;
-    const strip = new THREE.BoxGeometry(0.0062, step * 0.78, 0.0022);
-    for (let y = -0.12; y <= 0.205; y += step) {
-      for (const sz of [-1, 1]) {
-        for (const lean of [-1, 1]) {
-          const st = addMesh(group, strip, silk, [0, y, sz * 0.0162]);
-          st.rotation.z = lean * 0.72;
-          st.castShadow = true;
-        }
-      }
-      for (const sx of [-1, 1]) {
-        const knot = addMesh(group, new THREE.BoxGeometry(0.0026, 0.007, 0.022), silk, [sx * 0.0133, y + step / 2, 0]);
-        knot.castShadow = true;
-      }
-    }
+    addTsukaIto(group, silk, -0.12); // 모노호시자오와 같은 끈 — 츠카가 짧아 카시라 쪽 첫 줄이 위다 (끈 40 · 매듭 20 상자가 메쉬 하나)
   },
 });
 
