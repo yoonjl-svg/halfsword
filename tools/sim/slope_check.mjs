@@ -7,7 +7,8 @@
 //              — 문턱도 샛별 그대로(발 접촉 > 90 % · 서 있음 100 % · 땅 위 골반 0.72~1.12 m · 기울기 < 40° · 발바닥 침투 < 45 mm · 나아감 · 가만히 미끄럼 < 0.15 m · 8 s 안 일어섬)
 //              샛별이 그쪽 판에서 잰 값(발 접촉 ≥ 94.81 % · 침투 ≤ 10.81 mm · 기울기 ≤ 27.69°)과 우리 판 값을 나란히 적는다
 //  · lava    : 화상 '약하게'(사장님 결정 10/14) — 감지 경계 · 칼/잘린 부위 무효 · 다리 하나만 · 겹침 없음 · 60/120 Hz 같음 · 벗어나면 멈춤 · 팔 → 칼 놓침 · 사망 없음 · 실제 걸어 들어가 무릎
-//  · ai      : 용암 피하기(내리막 요청 돌림·기술 걸음 취소·용암 밖) · 밀리면 들어감(보이지 않는 벽 아님) · 무릎 꿇은 채 용암 속 상대를 끝내는지
+//  · ai      : 용암 피하기(내리막 요청 돌림·기술 걸음 취소·용암 밖) · 밀리면 들어감(보이지 않는 벽 아님) · 용암 속 마무리(사장님 결정 10/14 23:0x —
+//              무릎 꿇은 채 용암 안·가장자리에 있는 상대를 끝내는지 · 걸린 시간 · AI 화상: 걸어 들어감 시드 셋 + 깊이 넷 + 양쪽 같은 규칙 하나)
 //  · fx      : 땅 기준으로 바꾼 효과·판정 — 핏방울이 비탈에 앉고 용암에서 사라짐 · 오르막에서 쓰러진 상대의 마무리 진입 높이
 //  · reach   : 간격표는 수평 거리 — 비탈에서 두 가슴 높낮이 차와 실제 3 차원 거리 (AI 대 AI, 보고만)
 import fs from 'node:fs';
@@ -15,6 +16,7 @@ import { newRound, THREE, DT, AI, RAPIER } from './jelly_harness.mjs';
 import { GROUND_GROUPS } from '../../src/fighter.js';
 import { GAIT } from '../../src/config.js';
 import { ETNA, ETNA_TERRAIN, createTerrainGround, applyTerrainHazards } from '../../src/etna_ground.js';
+import { lavaFinishOpen } from '../../src/terrain_navigation.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const b = a.replace(/^--/, ''); const i = b.indexOf('='); return i < 0 ? [b, ''] : [b.slice(0, i), b.slice(i + 1)]; }));
 const only = new Set((args.only || 'surface,gait,lava,ai,fx,reach').split(','));
@@ -272,16 +274,29 @@ if (only.has('ai')) {
     A('덴 뒤 넘어짐/무릎, 10 s 뒤에도 용암으로 죽지 않음', kneelAt !== null && (alive10 === true || (alive10 === false && G.enemy.causeOfDeath !== '용암')), `상태 ${G.enemy.state} · 살아있음 ${alive10} · 사망 원인 ${G.enemy.causeOfDeath ?? '—'}`);
     close(G);
   }
-  // (3) 플레이어가 용암에 걸어 들어가 무릎 꿇은 뒤 — AI(상대)가 30 s 안에 끝내는가 (약하게 규칙의 남는 위험: 꿇은 채 판이 길어짐) · 보고만.
-  //  상대는 옆(+x)에 세워 두고 AI 를 끈 채(몸은 그대로) 플레이어만 걸어 들어간다. 플레이어가 무릎 꿇고 2 s 뒤 AI 를 켠다
-  for (const seed of [31, 32, 33]) {
-    const G = round({ seed, stageId: 'etna', heading: -Math.PI / 2, playerZ: 2.5, enemyZ: -1, gap: 3 });
+  // (3) 용암 속 마무리 (사장님 결정 10/14 23:0x — 안 ①, 기록 '용암 속 마무리' 절): 용암 안·가장자리에서 무릎 꿇은 상대를 AI 가 끝내는가 — 끝나는 데 걸린 시간 · AI 화상.
+  //  플레이어(AI 없음 — 칼을 든 채 가만히)가 무릎 꿇은 뒤 2 s 에 상대 AI 를 켠다(그때까지 AI 만 끔 — 몸은 그대로). 판마다 AI 를 켠 뒤 FINISH_SECS 까지 본다(시험 장치의 관찰 시간 — 게임 값 아님)
+  //  · 걸어 들어감(시드 셋): 상대를 옆(+x)에 세워 두고 플레이어만 내리막 조종 입력으로 걸어 들어가 무릎 (위치·피해를 넣지 않음)
+  //  · 깊이 넷: 플레이어를 물가(z 5.25) 너머 z 5.5 · 5.8 · 6.1 · 6.4 에 세워(오르막을 봄) 그 자리에서 덴 뒤 무릎 — 벽(6.5 m) 안 가장 깊은 곳까지
+  //  · 양쪽 같은 규칙: 위 (2) 와 같이 밀려 들어가 무릎 꿇은 상대(AI 몸)를, 플레이어 몸에 붙인 AI 가 끝내는가
+  const FINISH_SECS = 300;
+  const finishRow = (label, victim, finisher, startAt, deathAt, minD, maxZ, finishT) => {
+    const finished = deathAt !== null;
+    const detail = `${victim.state} 골반 z ${f3(victim.bodies.pelvis.translation().z)} · AI 켬 뒤 ${finished ? `${(deathAt - startAt).toFixed(1)} s 에 ${victim.causeOfDeath}` : `${FINISH_SECS} s 안에 못 끝냄`} · 가슴 수평 거리 최소 ${f3(minD)} m · AI 골반 최대 z ${f3(maxZ)} (물가 ${ETNA.lavaEdgeZ}) · AI 화상 ${!!finisher.lavaBurn} · 마무리 갈래 ${f1(finishT)} s`;
+    report.ai.push({ name: `용암 속 마무리: ${label}`, ok: finished && !finisher.lavaBurn, detail, finished, seconds: finished ? deathAt - startAt : null, minD, maxZ, aiBurned: !!finisher.lavaBurn });
+    check(finished && !finisher.lavaBurn, `ai 용암 속 마무리 ${label}: ${detail}`);
+  };
+  for (const spec of [
+    ...[31, 32, 33].map((seed) => ({ label: `걸어 들어가 무릎 꿇은 플레이어 (시드 ${seed})`, seed, walk: true, o: { heading: -Math.PI / 2, playerZ: 2.5, enemyZ: -1, gap: 3 }, faceP: { x: -1.5, y: 0, z: 100 } })),
+    ...[5.5, 5.8, 6.1, 6.4].map((z) => ({ label: `용암 속 z ${z} 에서 무릎 꿇은 플레이어 (시드 41)`, seed: 41, o: { heading: Math.PI / 2, heading2: -Math.PI / 2, playerZ: z, enemyZ: 1, gap: 0.6 }, faceP: { x: 0, y: 0, z: -100 } })),
+  ]) {
+    const G = round({ seed: spec.seed, stageId: 'etna', ...spec.o });
     G.parkEnemy = true;
-    G.faceP = { x: -1.5, y: 0, z: 100 };
+    G.faceP = spec.faceP;
     const f = G.player;
-    let contact = null, i = 0, aiOn = null, deathAt = null, minD = Infinity, eMaxZ = -Infinity;
-    G.before = () => { f.move.set(0, i < 240 || contact !== null ? 0 : 1); };
-    for (i = 0; i < Math.round(45 / DT); i++) {
+    let contact = null, i = 0, aiOn = null, deathAt = null, minD = Infinity, eMaxZ = -Infinity, finishT = 0;
+    G.before = () => { f.move.set(0, spec.walk && i >= 240 && contact === null ? 1 : 0); };
+    for (i = 0; i < Math.round((FINISH_SECS + 15) / DT); i++) {
       G.step();
       if (f.lavaBurn && contact === null) contact = G.t;
       if (aiOn === null && contact !== null && G.t - contact > 2) { G.parkEnemy = false; G.faceP = null; aiOn = G.t; }
@@ -289,12 +304,38 @@ if (only.has('ai')) {
         const a = f.bodies.chest.translation(), b = G.enemy.bodies.chest.translation();
         minD = Math.min(minD, Math.hypot(b.x - a.x, b.z - a.z));
         eMaxZ = Math.max(eMaxZ, G.enemy.bodies.pelvis.translation().z);
-        if (G.t - aiOn > 30) break;
+        if (lavaFinishOpen(G.ai)) finishT += DT;
+        if (G.t - aiOn > FINISH_SECS) break;
       }
       if (!f.alive) { deathAt = G.t; break; }
     }
-    const rowDetail = `플레이어 닿음 ${contact?.toFixed(1)} s · ${f.state} · AI 켬 뒤 ${deathAt !== null ? `${(deathAt - aiOn).toFixed(1)} s 에 ${f.causeOfDeath}` : '30 s 안에 못 끝냄'} · 가슴 수평 거리 최소 ${f3(minD)} m · AI 골반 최대 z ${f3(eMaxZ)} · AI 화상 ${!!G.enemy.lavaBurn}`;
-    report.ai.push({ name: `용암 속 무릎 꿇은 플레이어를 AI 가 끝내나 (시드 ${seed})`, ok: true, detail: rowDetail, report: true, finished: deathAt !== null, seconds: deathAt !== null ? deathAt - aiOn : null, minD, eMaxZ, aiBurned: !!G.enemy.lavaBurn });
+    finishRow(spec.label, f, G.enemy, aiOn, deathAt, minD, eMaxZ, finishT);
+    close(G);
+  }
+  {
+    const G = round({ seed: 251, stageId: 'etna', playerZ: 0, enemyZ: 3.6, gap: 2.5, heading2: Math.PI / 2 });
+    const E = G.enemy, P = G.player;
+    let pushed = false, contactAt = null, on = null, deathAt = null, minD = Infinity, pMaxZ = -Infinity, finishT = 0;
+    G.before = () => {
+      if (pushed || G.t < 2.1) return;
+      pushed = true;
+      for (const body of new Set([...Object.values(E.bodies), E.sword])) body.applyImpulse({ x: 0, y: 0, z: body.mass() * 7 }, true);
+    };
+    for (let i = 0; i < Math.round((FINISH_SECS + 15) / DT); i++) {
+      G.step();
+      if (E.lavaBurn && contactAt === null) contactAt = G.t;
+      if (on === null && contactAt !== null && G.t - contactAt > 2) { G.ai2 = new AI(P, E, 'normal'); on = G.t; }
+      if (on !== null) {
+        const a = P.bodies.chest.translation(), b = E.bodies.chest.translation();
+        minD = Math.min(minD, Math.hypot(b.x - a.x, b.z - a.z));
+        pMaxZ = Math.max(pMaxZ, P.bodies.pelvis.translation().z);
+        if (lavaFinishOpen(G.ai2)) finishT += DT;
+        if (G.t - on > FINISH_SECS) break;
+      }
+      if (!E.alive) { deathAt = G.t; break; }
+      if (!P.alive) break;
+    }
+    finishRow('밀려 들어가 무릎 꿇은 상대를 플레이어 쪽 AI 가 (양쪽 같은 규칙, 시드 251)', E, P, on, deathAt, minD, pMaxZ, finishT);
     close(G);
   }
   console.log('ai       ' + report.ai.map((r) => `${r.report ? '·' : r.ok ? '○' : '×'} ${r.name}${r.detail ? ` (${r.detail})` : ''}`).join('\n         '));
