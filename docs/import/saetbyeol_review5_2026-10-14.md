@@ -428,7 +428,7 @@
 5. **병마용 규칙**: 피 없음·머리로만 죽음은 우리 '내려찍기 즉사' 원칙에 예외를 만든다. 피 끄기 설정·단면 재질을 사람과 함께 쓰는 곳(decap_fx·limb_fx)에서 서로의 색을 바꾸는 탈이 날 수 있다(샛별도 겪고 고침).
 6. **겹침**: 찬다 ↔ 라트나(동남아 물가 · 기질 쌍둥이 · 습지 짝), 찬다 해요체 넷째, 병마용 ↔ 마르그레테 질문 꼴, 목소리 마야 묶음.
 7. **성능**: 둔황 그림자(먼 절벽까지 통째로), 용암 점광원·빛나는 셰이더·14 MB 질감, 비탈 물리 그물 — 폰 프레임은 `?fps=1` 실기기로만 안다.
-8. **겹치는 작업 파일**(§8-3): `stages.js`(import·BUILDERS·STAGE_NAME_KO·STAGE_FOE) · `sound.js`(STAGE_SOUND·VOICES) · `stage_detail_sound.js`(표 순서 = 씨앗) · `main.js`(PX_BACKS 한 줄 객체·onWound·대사 따옴표·바닥 만들기) · `outfits.js` · `looks.js` · `characters.js` · `weapons.js` · 카드 뒷면 도구 · `docs/strike/owner_defaults_table.md`(이번 몫은 1340~).
+8. **겹치는 작업 파일**(§8-3): `stages.js`(import·BUILDERS·STAGE_NAME_KO·STAGE_FOE) · `sound.js`(STAGE_SOUND·VOICES) · `stage_detail_sound.js`(표 순서 = 씨앗) · `main.js`(PX_BACKS 한 줄 객체·onWound·대사 따옴표·바닥 만들기) · `outfits.js` · `looks.js` · `characters.js` · `weapons.js` · 카드 뒷면 도구 · `docs/strike/owner_defaults_table.md`(이번 몫은 이식 때 빈 줄 — 1340~1379 는 다른 작업이 씀).
 9. **CHARACTERS 에 넣으면** 무작위 회전·인물 도는 도구(`characters_eval`·`revive_check`) 출력이 바뀐다 — 손님 인물(`CHARACTER_GUESTS`)이면 안 바뀐다.
 10. 참고(범위 밖): 본판 모노호시자오는 손잡이 끈을 상자 메쉬 73 개로 따로 그려, 미나미·다라이시 판의 그리기가 약 +170(성 안뜰 404~408)이다. 이번 비교 표의 '인물 그리기' 값에는 넣지 않았다.
 
@@ -468,7 +468,7 @@
 | characters_eval · revive_check | — | — | — | 손님이면 그대로 | — | — |
 | 게임(무작위) | 여정 그대로(밖) | — | 뽑기 확률(넣으면) | 손님이면 회전 그대로 | — | 여정 그대로(밖) |
 
-### 8-5. 확인표에 올릴 값 (다음 빈 줄 1340~ 예정 — 모두 샛별 값, 사장님 확인 전)
+### 8-5. 확인표에 올릴 값 (모두 샛별 값, 사장님 확인 전 — 아래 '예정 번호'는 이식 때 빈 줄로 다시 매긴다: 1340~1359 는 라트나 마른 길 AI, 1360~1379 는 다라이시 v10 이 먼저 씀)
 
 | 예정 번호 | 값 | 어디 |
 |---|---|---|
