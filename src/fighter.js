@@ -750,6 +750,20 @@ export class Fighter {
     return this.legHealth < 0.25 || (!!this.lavaBurn && this.lavaBurn.legs.some((limb) => this.limbs[limb] < 0.25));
   }
 
+  /**
+   * 균형 흔들림 배율 (1 = 그대로) — 이 몸이 받는 '균형이 흔들리는 양'에 곱하는 오직 한 자리 (docs/strike/japanese_steady_2026-10-15.md · 확인표 1520~).
+   *  지금은 유파 보법 '버티기'(사장님 10/15 '휘청·넘어짐 저항') 하나: 지금 걸음 값(gait.P — 손에 든 무기 유파의 걸음 칸)의 steady → 1 − steady (일본 0.25 → 0.75).
+   *  곱하는 곳 둘: ① 무게중심이 발 밖으로 벗어난 몫 offBalance(updateFooting) — 휘청 걸음·서두름(GAIT.hurryFrom)·붙잡기 반사(gait levC)·
+   *  발 디딤 잃음(offBalanceTime)·기준 막대 풀림이 모두 이 값을 읽는다 ② 맞아서 깎이는 휘청임 게이지(applyWound — balance ≤ 0 넘어짐).
+   *  머리 맞아 주저앉음(타격 에너지 문턱)·다리가 못 버팀(legsCannotSupport)은 부상이라 곱하지 않는다.
+   *  steady 칸이 없는 유파(독일·무유파 …)·`?jpSteady=0`·`?schoolGait=0`(걸음 값이 GAIT 그 자체)은 1 → 두 곳 모두 곱하는 줄을 건너뛴다(지금 길 그대로).
+   *  나중에 스태미너가 들어오면 여기에 곱한다 — 두 곳에 한꺼번에 걸린다.
+   */
+  get swayScale() {
+    const s = BALANCE.schoolSteady ? this.gait?.P.steady : 0;
+    return s > 0 ? 1 - s : 1;
+  }
+
   /** 칼 든 팔 기능 */
   get armHealth() {
     return this.limbs.armS;
@@ -1443,7 +1457,10 @@ export class Fighter {
     const bit = h.type !== 'blunt' && sev > 0;
     // 통증과 휘청임 (에너지가 클수록)
     this.pain = Math.min(2, this.pain + sev * 0.8 + h.energy / 150);
-    this.balance -= h.energy * VITALS.staggerPerJoule;
+    let stagger = h.energy * VITALS.staggerPerJoule;
+    const sway = this.swayScale; // 유파 버티기 (swayScale ②): 휘청임 게이지가 덜 깎인다 — 아래 머리 맞아 주저앉음(에너지 문턱)은 그대로. 칸 없는 유파는 1 이라 건너뜀
+    if (sway !== 1) stagger *= sway;
+    this.balance -= stagger;
 
     // 옷과 투구·판금도 상한다 (투구·판금이 막은 부위의 옷은 그대로)
     if (h.helmet) {
@@ -2357,6 +2374,10 @@ export class Fighter {
     // 지금 발 위치 기준과, 계획한 다음 발 위치 기준 중 더 가까운 쪽
     const off = Math.min(offFrom(cpx, cpz), offFrom(cpx - planX, cpz - planZ));
     this.offBalance = this.state === 'stand' ? Math.max(0, off - BALANCE.footMargin) : 0;
+    // 유파 버티기 (swayScale ①): 발 둘레 여유(footMargin) 밖으로 벗어난 몫에만 곱한다 — 여유 안에서는 그대로 0, 아래 문턱(fallRange·stumbleRange)과
+    //  걸음 쪽 문턱(hurryFrom·catchOff)은 그대로라 같은 밀림에 덜 휘청이고 덜 붙잡고 덜 넘어진다. 칸 없는 유파는 1 이라 건너뜀
+    const sway = this.swayScale;
+    if (sway !== 1) this.offBalance *= sway;
     if (this.offBalance > BALANCE.fallRange) this.offBalanceTime += dt;
     else this.offBalanceTime = Math.max(0, this.offBalanceTime - dt * 2);
     // 넘어지지 않으려고 캡처 포인트 쪽으로 딛는 걸음 (몸 기준 방향으로 변환)
