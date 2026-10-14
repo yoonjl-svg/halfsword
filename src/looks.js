@@ -799,6 +799,11 @@ LOOK_ARCHIVE.silver_wanderer.v8 = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishi
 //  테는 금빛 선 두 줄 사이 짙은 보라 띠 + 옷단 띠 위 덩굴 물결·팔각 꽃·마름모 · 망토 단·깃 금빛 띠 · 허리 띠 금빛 가장자리 · 장화 목 금빛 고리
 //  (outfit_silver_wanderer_v9.js). 값 모두 사장님 확인 전(확인표 1320~)
 LOOK_ARCHIVE.silver_wanderer.v9 = { ...LOOK_ARCHIVE.silver_wanderer.v8, daraishiRevision: 9 };
+// v10 (우리 판 — 사장님 10/14 18:4x 'v7이 제일 나은 거 같다. v7로 되돌리되, 허리띠 아래로 보라색 천 부분만 v9을 이식해(벌어진 넓이는 그대로 유지하고 v9의 길이와 장식 등의 디테일 적용)'):
+//  v7 그대로(daraishiRevision 7 — 머리·얼굴·흰 윗옷·소매·망토·허리띠·흰 바지·은 각반·신 · 빈 검집만 v8 자리, 감독 결정 10/14) + 허리띠 아래 보라 자락만 바꿔 끼우는 표시 daraishiLower 10 —
+//  엉덩이 자락과 다리 바깥 자락은 v7 의 자리·벌어짐 그대로, 길이는 v9(옷단 0.30 m, 좌우 같게), 겉감 #66528A · 옷단 테 · 앞섶 테 · 트임 테 · 문양은 v9
+//  (outfit_silver_wanderer_v10.js). 값 모두 사장님 확인 전(확인표 1360~)
+LOOK_ARCHIVE.silver_wanderer.v10 = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishiLower: 10 };
 
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
@@ -815,7 +820,7 @@ export const CHARACTER_LOOK_VERSION = {
   renji: 'v3', // 외형 3차 10/11 — 옛 판 ?look=renji:v2(바지·행전) · v1
   eira: 'v5', // 10/11 01:4x 매듭 굵게 — 옛 판 ?look=eira:v4 · v3 · v2 · v1
   ratna: 'v4', // 10/14 여정 밖 인물 (우리 v4) — 샛별 판 ?look=ratna:v3 · v2 · v1
-  silver_wanderer: 'v9', // 10/14 여정 밖 인물 다라이시 (우리 v9 — v7·v8 절충, 사장님 13:4x) — 우리 v8(흰 카바) ?look=silver_wanderer:v8 · v7(겉모습 덜기만) :v7 · 샛별 판 v6 · v5 · v4 · v2 · v1
+  silver_wanderer: 'v10', // 10/14 여정 밖 인물 다라이시 (우리 v10 — v7 바탕 + v9 아래 자락, 사장님 18:4x) — 우리 v9(v7·v8 절충) ?look=silver_wanderer:v9 · v8(흰 카바) :v8 · v7(겉모습 덜기만) :v7 · 샛별 판 v6 · v5 · v4 · v2 · v1
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

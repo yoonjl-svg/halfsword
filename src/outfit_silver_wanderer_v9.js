@@ -23,19 +23,15 @@ export const DARAISHI_V9 = {
   mantle: 0x433653, // 망토·선 깃·위 소매 어깨 덮개 (v1~v8 PURPLE 그대로)
 };
 
-export function createDaraishiV9(h) {
-  const { THREE, addMerged, CLOTH, artoriaCloth, hangingClothShading } = h;
+/** 테·문양 조각 도구 — v9 와 v10(outfit_silver_wanderer_v10.js 의 아래 자락)이 같이 쓴다. 꼭짓점 색 칠하기 · 판 · 팔각 꽃 · 마름모 · 팔각형 · 옷단 띠 문양 */
+export function daraishiOrnaments(THREE) {
   const C = DARAISHI_V9;
-  const thread = { ...CLOTH, metalness: 0.12, roughness: 0.73, side: THREE.DoubleSide, vertexColors: true };
-  const layer = (g) => artoriaCloth(g, 'silver-wanderer-v9');
   const paintHex = (geo, hex) => {
     const c = new THREE.Color(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) c.toArray(a, i * 3);
     geo.setAttribute('color', new THREE.Float32BufferAttribute(a, 3));
     return geo;
   };
-  /** [조각, 색] 목록을 칠해 부위 장식 층에 한 메쉬로 (꼭짓점 색 — 색이 여럿이어도 그리기 하나) */
-  const addPainted = (g, pieces, opts = thread) => addMerged(layer(g), pieces.map(([geo, hex]) => paintHex(geo, hex)), 0xffffff, opts);
   /** 2D 다각형(평면 좌표 [u, v])을 surface(u, v) → [x, y, z] 로 붙인 판 — 볼록하지 않아도 된다 */
   function panel(points, surface) {
     const idx = THREE.ShapeUtils.triangulateShape(points.map(([u, v]) => new THREE.Vector2(u, v)), []).flat();
@@ -61,6 +57,64 @@ export function createDaraishiV9(h) {
   }
   const lozenge = (surface, hu, hv) => panel([[hu, 0], [0, hv], [-hu, 0], [0, -hv]], surface);
   const octagon = (surface, r) => panel(Array.from({ length: 8 }, (_, k) => [Math.cos((k * Math.PI) / 4) * r, Math.sin((k * Math.PI) / 4) * r]), surface);
+  /**
+   * 옷단 띠 문양: 가운데 높이 yc 에서 각 s0 → s1 사이에 금빛 덩굴 물결(폭 9 mm · 진폭 9 mm — 꽃 자리마다 가운데 선을 지남)과
+   *  금빛 팔각 꽃(지름 3.2 cm · 꽃술 짙은 보라)·은 마름모를 번갈아 약 6.8 cm 마다(조각마다 고르게 나눔). [조각, 색] 을 out 에 넣는다.
+   *  P(a, y, mm) = 겉면에서 mm 띄운 점(자세 좌표) · rAt(a) = 그 높이 단면의 반지름 (각 너비 = 길이 ÷ 반지름)
+   */
+  function hemOrnament(P, rAt, s0, s1, yc, out) {
+    // 각 → 겉면 길이 표 (가운데 높이에서)
+    const n = 64, as = [], ss = [0];
+    let prev = P(s0, yc, 0);
+    for (let i = 0; i <= n; i++) {
+      const a = s0 + ((s1 - s0) * i) / n; as.push(a);
+      if (i) { const p = P(a, yc, 0); ss.push(ss[i - 1] + Math.hypot(p[0] - prev[0], p[2] - prev[2])); prev = p; }
+    }
+    const len = ss[n];
+    const angleAt = (s) => {
+      let i = 1;
+      while (i < n && ss[i] < s) i++;
+      const u = (s - ss[i - 1]) / Math.max(1e-9, ss[i] - ss[i - 1]);
+      return as[i - 1] + (as[i] - as[i - 1]) * THREE.MathUtils.clamp(u, 0, 1);
+    };
+    const count = Math.max(2, Math.round(len / 0.068)), step = len / count;
+    // 덩굴: 0 → len 을 칸 2.2 cm 안팎으로, 법선 쪽으로 ±4.5 mm
+    const A = 0.009, W = 0.009, k = Math.PI / step, cells = Math.max(8, Math.round(len / 0.022));
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= cells; i++) {
+      const s = (len * i) / cells, ph = k * (s - step / 2);
+      const dv = A * Math.sin(ph), slope = A * k * Math.cos(ph), nl = Math.hypot(1, slope);
+      for (const sgn of [-1, 1]) {
+        const ds = (-slope / nl) * (W / 2) * sgn, dvv = (1 / nl) * (W / 2) * sgn;
+        pos.push(...P(angleAt(THREE.MathUtils.clamp(s + ds, 0, len)), yc + dv + dvv, 5)); uv.push(i / cells, (sgn + 1) / 2);
+      }
+      if (i < cells) { const m = i * 2; idx.push(m, m + 2, m + 1, m + 1, m + 2, m + 3); }
+    }
+    const vine = new THREE.BufferGeometry();
+    vine.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    vine.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    vine.setIndex(idx); vine.computeVertexNormals();
+    out.push([vine, C.gold]);
+    for (let i = 0; i < count; i++) {
+      const s = step * (i + 0.5), a = angleAt(s), r = rAt(a);
+      const at = (mm) => (u, v) => P(a + u / r, yc + v, mm);
+      if (i % 2 === 0) {
+        out.push([rosette(at(5.8), 0.016), C.gold]);
+        out.push([octagon(at(6.4), 0.0058), C.band]);
+      } else out.push([lozenge(at(5.8), 0.013, 0.009), C.silver]);
+    }
+  }
+  return { paintHex, panel, rosette, lozenge, octagon, hemOrnament };
+}
+
+export function createDaraishiV9(h) {
+  const { THREE, addMerged, CLOTH, artoriaCloth, hangingClothShading } = h;
+  const C = DARAISHI_V9;
+  const thread = { ...CLOTH, metalness: 0.12, roughness: 0.73, side: THREE.DoubleSide, vertexColors: true };
+  const layer = (g) => artoriaCloth(g, 'silver-wanderer-v9');
+  const { paintHex, panel, lozenge, hemOrnament } = daraishiOrnaments(THREE); // 판·마름모·옷단 띠 문양 (v10 아래 자락과 같이 쓴다)
+  /** [조각, 색] 목록을 칠해 부위 장식 층에 한 메쉬로 (꼭짓점 색 — 색이 여럿이어도 그리기 하나) */
+  const addPainted = (g, pieces, opts = thread) => addMerged(layer(g), pieces.map(([geo, hex]) => paintHex(geo, hex)), 0xffffff, opts);
 
   // ════════ 자락 (다리마다 한 장 — qaba 모듈 leg 가 부른다. 좌표는 골반 기준 자세 좌표) ════════
   //  옷단 테(아래부터): 금빛 선 1.2 cm · 짙은 보라 띠 4.4 cm(덩굴 물결 + 팔각 꽃·마름모) · 금빛 선 1.2 cm — 모두 6.8 cm
@@ -109,47 +163,7 @@ export function createDaraishiV9(h) {
     // 옷단 띠 문양: 덩굴 물결(폭 9 mm · 진폭 9 mm)이 꽃 자리마다 가운데 선을 지나고, 꽃은 금빛 팔각(지름 3 cm) · 은 마름모를 번갈아
     const yc = HEM_Y + HEM_W / 2;
     for (const [a0, a1] of [[toward(fF, FRONT_W + 0.012), toward(slitF, -(SLIT_LINE + 0.012))], [toward(slitB, SLIT_LINE + 0.012), toward(fB, -0.03)]]) {
-      const s0 = a0(yc), s1 = a1(yc);
-      // 각 → 겉면 길이 표 (가운데 높이에서)
-      const n = 64, as = [], ss = [0];
-      let prev = P(s0, yc, 0);
-      for (let i = 0; i <= n; i++) {
-        const a = s0 + ((s1 - s0) * i) / n; as.push(a);
-        if (i) { const p = P(a, yc, 0); ss.push(ss[i - 1] + Math.hypot(p[0] - prev[0], p[2] - prev[2])); prev = p; }
-      }
-      const len = ss[n];
-      const angleAt = (s) => {
-        let i = 1;
-        while (i < n && ss[i] < s) i++;
-        const u = (s - ss[i - 1]) / Math.max(1e-9, ss[i] - ss[i - 1]);
-        return as[i - 1] + (as[i] - as[i - 1]) * THREE.MathUtils.clamp(u, 0, 1);
-      };
-      const count = Math.max(2, Math.round(len / 0.068)), step = len / count;
-      // 덩굴: 0 → len 을 칸 2.2 cm 안팎으로, 법선 쪽으로 ±4.5 mm
-      const A = 0.009, W = 0.009, k = Math.PI / step, cells = Math.max(8, Math.round(len / 0.022));
-      const pos = [], uv = [], idx = [];
-      for (let i = 0; i <= cells; i++) {
-        const s = (len * i) / cells, ph = k * (s - step / 2);
-        const dv = A * Math.sin(ph), slope = A * k * Math.cos(ph), nl = Math.hypot(1, slope);
-        for (const sgn of [-1, 1]) {
-          const ds = (-slope / nl) * (W / 2) * sgn, dvv = (1 / nl) * (W / 2) * sgn;
-          pos.push(...P(angleAt(THREE.MathUtils.clamp(s + ds, 0, len)), yc + dv + dvv, 5)); uv.push(i / cells, (sgn + 1) / 2);
-        }
-        if (i < cells) { const m = i * 2; idx.push(m, m + 2, m + 1, m + 1, m + 2, m + 3); }
-      }
-      const vine = new THREE.BufferGeometry();
-      vine.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      vine.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-      vine.setIndex(idx); vine.computeVertexNormals();
-      out.push([vine, C.gold]);
-      for (let i = 0; i < count; i++) {
-        const s = step * (i + 0.5), a = angleAt(s), r = radiusAt(a, yc, info.outer);
-        const at = (mm) => (u, v) => P(a + u / r, yc + v, mm);
-        if (i % 2 === 0) {
-          out.push([rosette(at(5.8), 0.016), C.gold]);
-          out.push([octagon(at(6.4), 0.0058), C.band]);
-        } else out.push([lozenge(at(5.8), 0.013, 0.009), C.silver]);
-      }
+      hemOrnament(P, (a) => radiusAt(a, yc, info.outer), a0(yc), a1(yc), yc, out);
     }
     return out;
   }

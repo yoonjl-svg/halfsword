@@ -231,7 +231,7 @@ export function createSilverWandererDetail(h) {
       addMerged(l,[put(cyl(.027,.027,.043,10,true,[0,.315,0])),put(cyl(.022,.018,.059,10,false,[0,chape,0]))],GOLD,metal);
       addMerged(l,[put(bake(new THREE.CircleGeometry(.024,10),[0,.331,0],[-Math.PI/2,0,0]))],0x221a21,leather);
       addMerged(l,[.27,.19].map(y=>put(cyl(.027,.027,.023,10,true,[0,y,0]))),0x30242d,leather);
-      const sz=look.daraishiRevision>=8?[-.252,-.258]:[-.24,-.24]; // ── v8: 바깥으로 옮기고 기울인 검집까지 매다는 끈을 늘인다
+      const sz=(look.daraishiRevision>=8||look.daraishiLower===10)?[-.252,-.258]:[-.24,-.24]; // ── v8: 바깥으로 옮기고 기울인 검집까지 매다는 끈을 늘인다 (── v10 도 v8 자리)
       addMerged(l,[line([[.028,.079,-.177],[.063,.068,-.213],[.049,.054,sz[0]]],.005),
         line([[-.033,.067,-.179],[.018,-.022,-.218],[.029,-.03,sz[1]]],.005)],0x4e3541,leather);
       return;
