@@ -166,6 +166,12 @@ export class Gait {
     this.sinceEnter = 0;
     this.speedF = 0;
     this.runW = 0;
+    // 빠른 걸음 (10/15 — 이탈리아 박자 걸음 P.rhythm): fastK = 지금 걸음의 몸 빠르기·발 박자 배율(1 = 보통) · rhyN = 이번 마디에 센 앞뒤 걸음 · rhyIdle = 걸음이 끝난 뒤 지난 시간
+    //  rhyTrail = 짝걸음 빠른 걸음의 따라붙는 발이 아직 남았나
+    this.fastK = 1;
+    this.rhyN = 0;
+    this.rhyIdle = 0;
+    this.rhyTrail = false;
   }
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
@@ -212,10 +218,17 @@ export class Gait {
     this.prevHead = this.f.heading;
     this.headRate = 0;
     this.resetRates();
+    // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다
+    this.fastK = 1;
+    this.rhyN = 0;
+    this.rhyIdle = 0;
+    this.rhyTrail = false;
   }
 
   exit() {
     this.active = false;
+    this.fastK = 1;
+    this.rhyN = 0;
     const J = this.f.jointByName;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
@@ -285,6 +298,36 @@ export class Gait {
       if (pa.draw) this.req.draw = true;
     }
     return true;
+  }
+
+  /**
+   * 박자 걸음 (10/15 이탈리아 P.rhythm — docs/strike/italian_rhythm_2026-10-15.md): 새 걸음을 뗄 때(update ③) 세고, 이 걸음이 빠른 걸음인지(fastK) 정한다 → 이 걸음 시간을 돌려준다.
+   *  한 걸음(펜싱의 한 걸음) = follow 짝걸음이면 이끄는 발로 여는 한 짝(따라붙는 발·짝 사이 쉼까지 같은 걸음 — 몸 박자 leadV·trailV·restV 도 한 짝이 한 단위),
+   *   아니면(지나 딛기) 걷는 동안 몸을 옮기는 한 디딤 — walk 걸음, 그리고 걷는 중 다리가 안 닿아 먼저 옮기는 catch 걸음(스틱 끝까지 앞으로 달리면
+   *   레이피어 앞발 디딤이 늘 catch 로 열린다 — 박자 걸음 전에도 그렇다. 안 세면 두 디딤에 하나만 센다).
+   *   앞뒤 걸음(옆 몫이 앞뒤 몫보다 작은 걸음)만 센다 — 앞 ↔ 뒤로 바꿔도 셈은 이어진다(펜싱 박자).
+   *  every 번 센 다음 걸음이 빠른 걸음(fastK = mul): 그 걸음을 떼서 다음 걸음을 뗄 때까지 — 짝걸음은 이끄는 발 + 첫 따라붙는 발 + 짝 사이 쉼까지
+   *   (뒤에 남은 발을 한 번 더 따라붙이는 걸음은 빠른 걸음 끝 — 몸이 빠른 채 따라붙기를 되풀이하지 않게).
+   *   옆 걸음·기술 걸음(req·draw)·짝걸음 안 catch·자세 고치기는 세지도 끊지도 않는다(빠른 걸음만 거기서 끝남 — 그 걸음은 제 시간)
+   *  방향을 막 바꿔 몸이 아직 반대쪽으로 RH.brake m/s 넘게 가는 동안 뗀 걸음은 빠른 걸음을 미룬다(셈은 하고 다음 앞뒤 걸음이 빠른 걸음) — 멈춰 서는 디딤을
+   *   서두르면 붙잡기 반사가 는다(스틱 끝 앞 ↔ 뒤 번갈아 — rhythm_step_feel C). 빠른 걸음 중 스틱 앞뒤가 뒤집혀도 거기서 끝(update)
+   *  wf = 가려는 속도의 앞 몫(m/s, 부호 있음) · vb = 걸러진 골반 속도의 앞 몫
+   */
+  rhythmBegin(RH, kind, PR, wf, vLat, vb, Tstep) {
+    const k0 = this.fastK;
+    if (Math.abs(wf) > vLat && (PR ? kind === 'walk' && this.pairStep === 'lead' : kind === 'walk' || (kind === 'catch' && this.walking))) {
+      const fast = this.rhyN >= RH.every && vb * Math.sign(wf) > -(RH.brake ?? Infinity);
+      this.rhyN = fast ? 0 : Math.min(RH.every, this.rhyN + 1);
+      this.fastK = fast ? RH.mul : 1;
+      this.fastDir = Math.sign(wf);
+      this.rhyTrail = !!PR; // 짝걸음: 이 짝의 따라붙는 발 하나는 같은 걸음
+    } else if (PR && kind === 'walk' && this.pairStep === 'trail' && this.rhyTrail) this.rhyTrail = false;
+    else {
+      this.fastK = 1;
+      this.rhyTrail = false;
+    }
+    // 지나 딛기는 이 걸음 시간을 새 배율로 (Tsw 는 지난 배율로 셈했다 — 짝걸음 발 뜬 시간·기술 걸음·끌어붙임·자세 고치기는 제 시간이라 그대로)
+    return this.fastK !== k0 && !PR && (kind === 'walk' || kind === 'catch') ? (Tstep * k0) / this.fastK : Tstep;
   }
 
   /** 몸을 turn(라디안)만큼 돌리려 할 때, 딛은 발에 대해 엉덩이가 비틀 수 있는 만큼으로 줄인다 */
@@ -423,8 +466,26 @@ export class Gait {
     if (PR?.stride) cad = Math.max(cad, (2 * speed) / PR.stride);
     const T = walkNow ? 1 / cad : GAIT.settleT / (1 - this.P.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
-    const Tds = this.stepT * this.P.dsFrac;
-    const Tsw = this.stepT - Tds;
+    // 박자 걸음(P.rhythm — 10/15 이탈리아, docs/strike/italian_rhythm_2026-10-15.md): every > 0 일 때만 센다(`?itRhythm=0` = 칸 없는 것과 같은 길).
+    //  판 시작 정지·마무리 중엔 세지 않고 처음부터 · 걷지 않으면 빠른 걸음 끝. 칸 없으면 셈하지 않는다
+    //  빠른 걸음 중 스틱 앞뒤가 뒤집히면(가려는 속도 앞 몫의 부호가 그 걸음과 반대) 거기서 끝 — 멈춰 서는 동안 서두르지 않게
+    let RH = this.P.rhythm?.every > 0 ? this.P.rhythm : null;
+    if (RH) {
+      if (f.feetHeld || f.finish?.amt > 0.5) {
+        this.rhyN = 0;
+        this.rhyIdle = 0;
+        this.fastK = 1;
+        RH = null;
+      } else if (!walkNow || (this.fastK > 1 && (want.x * fwd.x + want.z * fwd.z) * this.fastDir < 0)) this.fastK = 1;
+    }
+    // 빠른 걸음 동안(fastK > 1) 발 박자를 fastK 배로: 한 걸음 시간 sT = stepT ÷ fastK (걸러진 박자 stepT 는 그대로 — 빠른 걸음이 끝나면 곧 제 박자).
+    //  지나 딛기는 발 뜬 시간·두 발 디딤이 sT 로 줄고, 짝걸음(PR)은 한 짝 박자(2 × sT)를 짝 사이 쉼에서 줄인다 — 이끄는·따라붙는 발 뜬 시간은 그대로
+    //  (짝걸음 발 뜬 시간은 이미 0.1 s 안팎이라 더 줄이면 일찍 디딤·따라붙는 발 끌림이 는다 — rhythm_step_feel). 디딜 자리·몸 박자 셈도 sT. 보통 걸음은 sT = stepT (같은 수)
+    const sT = this.fastK > 1 ? this.stepT / this.fastK : this.stepT;
+    this.sT = sT;
+    const swT = PR ? this.stepT : sT;
+    const Tds = swT * this.P.dsFrac;
+    const Tsw = swT - Tds;
 
     const L = this.legs;
     let swing = L.F.stance ? (L.B.stance ? null : L.B) : L.F;
@@ -488,8 +549,8 @@ export class Gait {
     let pairTrail = false;
     if (PR && walkNow && !this.req && !this.drawPending && !swing) {
       const dfp = (L.F.plant.x - L.B.plant.x) * want.x + (L.F.plant.z - L.B.plant.z) * want.z;
-      pairTrail = this.lastTD === (dfp > 0 ? 'F' : 'B') && this.sinceTD < this.stepT * 1.5;
-      gate = pairTrail ? Tds * PR.inner : Math.max(Tds, 2 * this.stepT - Tsw * ((PR.lead ?? 1) + PR.trail) - Tds * PR.inner);
+      pairTrail = this.lastTD === (dfp > 0 ? 'F' : 'B') && this.sinceTD < sT * 1.5;
+      gate = pairTrail ? Tds * PR.inner : Math.max(Tds, 2 * sT - Tsw * ((PR.lead ?? 1) + PR.trail) - Tds * PR.inner);
     }
     if (!swing && this.sinceTD >= Math.min(Tds, gate) && f.muscle > 0.15) {
       let next = null;
@@ -532,7 +593,7 @@ export class Gait {
         //  (뒤에 남은 발이 엉덩이에서 P.trailReach 넘게 멀어졌으면 그 발부터 따라붙인다 — 다리가 안 닿아 허둥지둥 옮겨 딛기(catch) 전에)
         const tl = L[trail];
         const far = Math.hypot(tl.hip.x - tl.plant.x, tl.hip.z - tl.plant.z) > (this.P.trailReach ?? Infinity);
-        next = far || (this.lastTD === ahead && this.sinceTD < this.stepT * 1.5) ? trail : ahead;
+        next = far || (this.lastTD === ahead && this.sinceTD < sT * 1.5) ? trail : ahead;
         this.trailStep = next !== ahead;
         if (PR) {
           // 짝걸음: 따라붙는 발은 짧고 빠르게(Tsw × pair.trail), 이끄는 발은 짝 사이 쉼(gate)이 지난 뒤에 Tsw × pair.lead 로
@@ -547,12 +608,12 @@ export class Gait {
         //  방금 가는 쪽 발을 디뎠으면 다른 발(따라붙음), 아니면 가는 쪽 발 — 걷기 시작 첫 걸음도 가는 쪽 발(뒤따르는 발부터 들면 다리 꼬임 막기에 걸려 헛걸음)
         const dir = Math.sign(want.x * rgt.x + want.z * rgt.z);
         const lead = L.F.side * dir > 0 ? 'F' : 'B';
-        next = this.lastTD === lead && this.lastTDKind === 'walk' && this.sinceTD < this.stepT * 1.5 ? (lead === 'F' ? 'B' : 'F') : lead; // (멈춘 채 자세 고쳐 딛은 발은 '방금 디딘 이끄는 발'로 치지 않는다)
+        next = this.lastTD === lead && this.lastTDKind === 'walk' && this.sinceTD < sT * 1.5 ? (lead === 'F' ? 'B' : 'F') : lead; // (멈춘 채 자세 고쳐 딛은 발은 '방금 디딘 이끄는 발'로 치지 않는다)
       } else if (walkNow && !next) {
         // 걷기 시작: 가려는 쪽에서 뒤에 있는 발부터 (앞발부터 내딛으면 몸이 달아난다). 걷는 중: 번갈아
         //  (앞뒤로 걷기 시작할 땐 방금 디딘 발이라도 뒤에 있는 발부터: 앞발부터 내딛으면 뒷발이 닿지 않을 만큼 멀어진다)
         const fore = Math.abs(want.x * fwd.x + want.z * fwd.z) > vLat;
-        if (this.walkT > this.stepT * 1.2 || (this.sinceTD < this.stepT && !(this.P.startRear && fore))) next = this.lastTD === 'F' ? 'B' : 'F';
+        if (this.walkT > sT * 1.2 || (this.sinceTD < sT && !(this.P.startRear && fore))) next = this.lastTD === 'F' ? 'B' : 'F';
         else {
           const df = (L.F.plant.x - L.B.plant.x) * want.x + (L.F.plant.z - L.B.plant.z) * want.z;
           next = df > 0 ? 'B' : 'F';
@@ -587,8 +648,10 @@ export class Gait {
       }
       if (next) {
         const l = L[next];
+        if (RH) Tstep = this.rhythmBegin(RH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep); // 박자 걸음: 이 걸음을 세고 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈)
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
+        if (RH) l.fastStep = this.fastK > 1 ? RH.accent ?? true : null; // 빠른 걸음의 발 = 발소리 강조 배율 { gain, rate } — 디딜 때 조금 또렷하게 (sound.js BodySounds). 보통 걸음은 null
         // follow 의 따라붙는 발·끌어붙임(draw)은 발을 더 낮게 (중국 체보·일본 스리아시 — P.dragLift, 없으면 그대로)
         if (this.P.dragLift != null && (kind === 'draw' || (kind === 'walk' && this.follow && this.trailStep))) l.lift = this.P.dragLift;
         this.target(l, want, fwd, rgt, Tstep);
@@ -606,6 +669,15 @@ export class Gait {
     }
     // 발을 뗀 뒤 땅에서 떨어지면 원래 무게로 (땅에 닿은 채 가벼워지면 다리 힘에 발이 휙 끌려 땅을 긁는다)
     if (swing && swing.extra && (swing.soleY > 0.015 || swing.t > 0.12)) this.footMass(swing, false);
+    // 박자 걸음 셈 끊기(P.rhythm): 걸음(자세 고치기 빼고)이 끝난 뒤 RH.idle s 안에 새 걸음을 떼지 않으면 처음부터 — 발이 떠 있는 동안은 재지 않는다.
+    //  옆 걸음·기술 걸음도 걸음이라 시계를 되돌린다(세지도 끊지도 않음). 칸 없으면 셈하지 않는다
+    if (RH) {
+      if (swing && swing.kind !== 'settle') this.rhyIdle = 0;
+      else if ((this.rhyIdle += dt) > RH.idle) {
+        this.rhyN = 0;
+        this.fastK = 1;
+      }
+    }
     if (this.req) {
       this.req.age += dt;
       if (this.req.age > 1) this.req = null;
@@ -629,9 +701,13 @@ export class Gait {
       //  (한 짝 평균이 1 이 되게 나눈다 — 박자 값을 바꿔도 같은 스틱이면 같은 거리를 간다)
       const tL = Tsw * (PR.lead ?? 1);
       const tT = Tds * PR.inner + Tsw * PR.trail;
-      const tR = Math.max(Tds, 2 * this.stepT - tL - tT);
+      const tR = Math.max(Tds, 2 * sT - tL - tT);
       want.multiplyScalar(k / ((tL * PR.leadV + tT * PR.trailV + tR * PR.restV) / (tL + tT + tR)));
     }
+    // 빠른 걸음 몸 빠르기(10/15 — 박자 걸음): 가려는 속도 ×fastK. 발 박자도 같은 배(위 sT)라 한 걸음 길이는 그대로, 시간만 ÷fastK.
+    //  몸의 일이라 플레이어·AI 같이 — 이베리아 옆 빠르기(P.sideMul, 위 처음)와 같은 결이되 follow·박자 판단(speedF·cad) 뒤에 둔다(빠른 걸음이 follow 를 끄거나 박자를 두 번 올리지 않게).
+    //  아래 reachSlow 는 그대로 건다(뒤에 남은 발이 닿게). 보통 걸음은 셈하지 않는다
+    if (this.fastK > 1) want.multiplyScalar(this.fastK);
     // 한 발로 서 있는데 몸이 그 발에서 너무 멀어지면(다리가 곧 닿지 않는다) 내딛는 발이 닿을 때까지 덜 나간다
     //  (계속 밀고 나가면 뒤에 남은 발이 발끝으로 끌린다)
     if (swing && swing.kind !== 'req' && GAIT.reachSlow > 0) {
@@ -903,7 +979,7 @@ export class Gait {
       // follow(유파 걸음): 몸이 닿을 곳(아래 walk 가지와 같은 Raibert 몫)을 가운데로 펜싱 자세 자리에 딛는다 — 걷는 동안에도 앞발이 앞, 두 발이 서로 지나가지 않는다
       const v = this.vf;
       //  (짝걸음(P.pair)이면 한 발이 딛고 있는 시간이 한 짝(걸음 두 개) − 제 발 든 시간 — 몸이 그 가운데쯤 발 위를 지나게 그만큼 앞에 딛는다)
-      const Tst = this.pairOn ? 2 * this.stepT - l.T : this.stepT * (1 + this.P.dsFrac);
+      const Tst = this.pairOn ? 2 * this.sT - l.T : this.sT * (1 + this.P.dsFrac);
       const px = p.x + v.x * remain;
       const pz = p.z + v.z * remain;
       const cx = px + want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
@@ -927,7 +1003,7 @@ export class Gait {
     } else {
       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
       const v = this.vf;
-      const Tst = this.stepT * (1 + this.P.dsFrac);
+      const Tst = this.sT * (1 + this.P.dsFrac);
       const px = p.x + v.x * remain;
       const pz = p.z + v.z * remain;
       const ox = want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);

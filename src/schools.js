@@ -325,7 +325,14 @@ const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2,
 //   leadV·trailV·restV = 이끄는 발이 나가는 동안·따라붙는 동안·쉼 동안 몸이 나가는 빠르기 배율(한 짝 평균 1 로 나눔 — 몸이 짝마다 밀려 감)
 //   stop = 이끄는 발만 딛고 멈추면 따라붙는 발을 곧(자세 고치기 기다림 없이) 짧게 딛고 선다. 값은 gait_rhythm.mjs 로 고름 — 사장님 확인 전 (확인표 580~)
 const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.7, leadV: 0.6, trailV: 1.6, restV: 1.1, stop: true };
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 } };
+//  박자 걸음 rhythm (10/15 사장님 '앞이든 뒤든 4걸음마다 다음 1걸음이 50% 빨라질 수 있어? … 3걸음마다 1걸음이 더 박자 감각이 생길까?' → 감독 권고 3 + 1 —
+//   docs/strike/italian_rhythm_2026-10-15.md): 앞뒤 걸음 every 번마다 다음 한 걸음이 몸 빠르기 ×mul · 발 박자 ×mul(한 걸음 길이는 그대로, 시간만 ÷mul) — gait.js rhythmBegin.
+//   한 걸음 = follow 짝걸음 안에서는 이끄는 발 + 따라붙는 발 한 짝(짝 사이 쉼까지), 밖(지나 딛기)에서는 한 디딤. 옆 몫이 앞뒤 몫보다 큰 걸음·기술 걸음은 세지도 끊지도 않음.
+//   idle = 걸음이 끝난 뒤 이만큼(s) 새 걸음이 없으면 처음부터 · brake = 몸이 아직 반대쪽으로 이만큼(m/s — GAIT.walkMin 과 같은 크기) 넘게 가는 동안 뗀 걸음(방향을 막 바꾼
+//   멈춰 서는 디딤)은 빠른 걸음을 다음 앞뒤 걸음으로 미룸 · accent = 빠른 걸음 발소리 세기·높이 배율(sound.js footstep — 같은 표본).
+//   `?itRhythm=4` = 4 + 1(다섯째가 빠름) · `?itRhythm=0` = 끔(칸 없는 것과 같은 길) — main.js. every 3 · mul 1.5 는 사장님 말씀 10/15(3 + 1 은 감독 권고), 나머지는 사장님 확인 전 (확인표 1500~)
+const ITALIAN_RHYTHM = { every: 3, mul: 1.5, idle: 0.7, brake: 0.2, accent: { gain: 1.3, rate: 1.06 } };
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 } };
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
 //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)
