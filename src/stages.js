@@ -27,6 +27,7 @@ import { buildFrozenBay } from './stage_frozen_bay.js';
 import { buildQinglan } from './stage_qinglan.js';
 import { buildSluice } from './stage_sluice.js';
 import { buildDayr } from './stage_dayr.js';
+import { buildDunhuang } from './stage_dunhuang.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
@@ -46,10 +47,12 @@ const BUILDERS = {
   // 샛별 저장소에서 가져온 두 무대 더 (사장님 10/10 20:4x '얼어붙은 만이 린드, 청람잔도가 김씨 전용 스테이지' — 지오메트리·재질·조명·소리 그대로, docs/stages.md)
   frozen_bay: buildFrozenBay, // 얼어붙은 만: 동시베리아 내륙 호수의 겨울 새벽, 먹청색 얼음·눈 덮인 물가·낙엽송·선착장 (stage_frozen_bay.js) — 투야나 니콜라예바(id eira, 전 이름 에이라 린드)의 무대
   qinglan: buildQinglan, // 청람잔도: 초여름 맑은 정오, 큰 강 협곡 위 바위 쉼터·돌계단 잔도·작은 샘 (stage_qinglan.js) — 김씨의 무대
-  // 샛별 저장소에서 가져온 무대 (사장님 10/14 02:3x — 진흙 감속 켬 · 가운데 말레이곰 석상 충돌 · 여정 밖, docs/import/sluice_port_2026-10-14.md)
-  sluice: buildSluice, // 잠든 습지: 비 그친 한낮의 열대 담수 침수림, 진흙 섬·얕은 물·옛 돌 수문, 가운데 말레이곰 석상 (stage_sluice.js) — 여정 밖: 테스트 경로 무대 고르기·?stage=sluice 로만
-  // 샛별 저장소에서 가져온 무대 (사장님 10/14 08:1x — 화면 이름 '소금 사막' · 여정 밖 · 해는 그림자가 나오는 가장 낮은 각, docs/import/salt_desert_port_2026-10-14.md)
-  dayr: buildDayr, // 소금 사막: 소금 벌판 가 벽돌 역참 안뜰의 해 질 녘, 문루 안의 낮은 해와 긴 그림자 (stage_dayr.js) — 여정 밖: 테스트 경로 무대 고르기·?stage=dayr 로만. 코드 id 는 샛별 쪽 그대로
+  // 샛별 저장소에서 가져온 무대 (사장님 10/14 02:3x — 진흙 감속 켬 · 가운데 말레이곰 석상 충돌, docs/import/sluice_port_2026-10-14.md). 10/14 19:4x 여정 정식 경로로
+  sluice: buildSluice, // 잠든 습지: 비 그친 한낮의 열대 담수 침수림, 진흙 섬·얕은 물·옛 돌 수문, 가운데 말레이곰 석상 (stage_sluice.js) — 라트나의 무대
+  // 샛별 저장소에서 가져온 무대 (사장님 10/14 08:1x — 화면 이름 '소금 사막' · 해는 그림자가 나오는 가장 낮은 각, docs/import/salt_desert_port_2026-10-14.md). 10/14 19:4x 여정 정식 경로로
+  dayr: buildDayr, // 소금 사막: 소금 벌판 가 벽돌 역참 안뜰의 해 질 녘, 문루 안의 낮은 해와 긴 그림자 (stage_dayr.js) — 다라이시의 무대. 코드 id 는 샛별 쪽 그대로
+  // 샛별 저장소에서 가져온 무대 (사장님 10/14 19:4x — 화면 이름 '철불 절벽' · 벽화 그대로 · 결투장 띠 · 여정 정식 경로, docs/import/ironcliff_port_2026-10-14.md)
+  dunhuang: buildDunhuang, // 철불 절벽: 침식된 절벽 앞 석굴 앞뜰의 초가을 아침, 6 층 누각과 창작 벽화 (stage_dunhuang.js). 코드 id 는 샛별 쪽 그대로 — 화면 이름에 '둔황'은 넣지 않는다
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
@@ -59,11 +62,14 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  10/10 사장님 지시로 샛별 저장소의 세 무대를 대성당 뒤에 이었다(기존 여섯 순서는 그대로): 붉은 회랑(토메 비달) → 산호 항구(오마리) → 신목의 숲(미나미)
 //  10/10 20:4x 두 무대를 그 뒤에 더 이었다(앞 아홉 순서·자리는 그대로): 얼어붙은 만(투야나) → 청람잔도(김씨). 까닭: 이미 있는 판 순서를 하나도 안 밀고,
 //   눈 내리는 성 안뜰(4번째)과 겨울 얼음만이 붙지 않게 멀리 두고, 숲(신목) → 겨울 새벽(얼음만) → 여름 한낮(잔도) → 다시 바닷가(포세이돈)로 계절·빛이 번갈아 바뀐다
-//  잠든 습지(sluice)는 순서표에 넣지 않았다 (10/14 감독 추천 '여정 밖' — 확인표 1119, 사장님 확인 전): 테스트 경로 무대 고르기·?stage=sluice 로만 연다
-//  소금 사막(dayr)도 순서표에 넣지 않았다 (사장님 10/14 08:1x '여정 밖' — 확인표 1214): 테스트 경로 무대 고르기·?stage=dayr 로만. STAGE_FOE 짝도 없다(무작위 상대)
-export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan'];
+//  10/14 19:4x 사장님 '습지, 소금 사막과 함께 정식 경로 포함' — 청람잔도 뒤에 잠든 습지 → 철불 절벽 → (화산섬 자리 — 용암 무대는 나중에 따로 옮긴다) → 소금 사막 (감독 안,
+//   확인표 1119 · 1214 · 1386). 앞 열한 판의 순서·자리는 그대로이고, 끝은 숙련도 4 다라이시(소금 사막). 소금 사막 다음 판은 다시 포세이돈부터.
+//   화산섬이 오면 'dunhuang' 과 'dayr' 사이에 넣는다(그러면 소금 사막이 열다섯째로 밀린다)
+export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'dayr'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
-export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji' };
+//  10/14 19:4x: 잠든 습지 = 라트나 · 소금 사막 = 다라이시 (손님 인물 CHARACTER_GUESTS — CHARACTERS_BY_ID 로 풀린다, 무작위 회전에는 그대로 없음).
+//   철불 절벽(dunhuang)은 아직 짝이 없다(무작위 상대) — 병마용이 들어오면 감독이 dunhuang: 'terracotta'(샛별 id)로 넣는다
+export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji', sluice: 'ratna', dayr: 'silver_wanderer' };
 // 그 무대 검객 후보 (사장님 10/10 20:0x — 샛별 저장소에서 가져온 넷의 무대 짝. 무대마다 한 명뿐인 STAGE_FOE 짝을 밀어내지 않고 후보로 더한다, 확인표 752).
 //  여정(foe=stage)에서 그 무대를 열 때 [본디 짝, ...후보] 가운데 하나를 고르게 고른다 → 본디 짝은 그 무대에서 절반만 나온다.
 //  졌을 때 같은 무대를 다시 열면 같은 상대(아래 stageFoeId 의 prevId). STAGE_FOE 자체는 그대로다
@@ -88,6 +94,7 @@ export const STAGE_NAME_KO = {
   poseidon_night: '밤의 포세이돈 신전', cathedral: '대성당', darkhall: '어두운 홀', loggia: '붉은 회랑', corsair: '산호 항구',
   sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도', sluice: '잠든 습지',
   dayr: '소금 사막', // 사장님 10/14 08:1x (샛별 쪽 '소금길의 (마지막) 역참') — 코드 id 는 그대로
+  dunhuang: '철불 절벽', // 사장님 10/14 19:4x (샛별 쪽 '천불의 절벽') — '둔황'은 화면 이름에 넣지 않는다. 코드 id 는 그대로
 };
 /** 왼쪽 위 첫 줄: '스테이지 N · 이름' (순서표 밖이면 이름만) */
 export function stageLabel(id) {

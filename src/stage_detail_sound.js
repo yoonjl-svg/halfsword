@@ -19,9 +19,13 @@ export const STAGE_DETAIL_PROFILES = Object.freeze({
   // 소금 사막 (샛별 저장소 origin/main db729604 의 우물 고리 소리를 옮김 — docs/import/salt_desert_port_2026-10-14.md).
   //  표 자리 = 난수 씨앗(9127 + 자리 × 311 + 변형 × 101)이라 습지 셋 뒤(자리 13 — 샛별 표와 같은 자리)에 붙인다: 있던 세부음 씨앗은 그대로
   caravanRing: { stage: 'dayr', duration: 1.1, gain: 0.025, gap: 22 },
+  // 철불 절벽 (샛별 저장소 origin/main 7684c732 의 간판 이음매 삐걱 소리를 옮김 — docs/import/ironcliff_port_2026-10-14.md, 값 그대로).
+  //  표 끝(자리 14)에 붙여 있던 세부음 씨앗(자리 0~13)은 하나도 안 바뀐다. 샛별 표에서는 자리 15(그쪽 14 는 화산섬 etnaCrust)라 변형 셋의 잡음 결은 샛별 판과 다르다(합성 꼴·길이·세기는 같다).
+  //  나중에 화산섬(용암 무대)의 etnaCrust 는 이 줄 뒤(자리 15)에 붙인다
+  dunhuangWood: { stage: 'dunhuang', duration: 1.65, gain: 0.023, gap: 24 },
 });
 
-export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice' || stage === 'dayr';
+export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice' || stage === 'dayr' || stage === 'dunhuang';
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const TAU = Math.PI * 2;
 
@@ -33,6 +37,24 @@ export function synthStageDetail(kind, sr, rng) {
   const profile = STAGE_DETAIL_PROFILES[kind];
   if (!profile || !Number.isFinite(sr) || sr < 8000) return new Float32Array(0);
   const out = new Float32Array(Math.ceil(profile.duration * sr));
+  if (kind === 'dunhuangWood') {
+    // 철불 절벽: 처마 밑 글씨 없는 나무 간판의 마른 이음매가 흔들림 끝에서 버티며 내는 짧은 삐걱 (샛별 원문 그대로 — 부드럽고 고르지 않은 두 번의 끌림·미끄러짐)
+    // A dry eave/sign joint strains with a visible sway. Two soft, irregular
+    // stick/slip folds keep this short cue separate from a tonal wind bed.
+    let low = 0, grain = 0, phase = 0;
+    const variation = rng(), pitch = 0.94 + variation * 0.12;
+    const lowA = 1 - Math.exp(-TAU * 140 / sr), grainA = 1 - Math.exp(-TAU * 820 / sr);
+    for (let i = 0; i < out.length; i++) {
+      const t = i / sr, u = i / (out.length - 1), n = rng() * 2 - 1;
+      low += lowA * (n - low); grain += grainA * (n - grain);
+      const fold = Math.sin(Math.PI * u) ** 2;
+      const strain = 0.15 + 0.85 * Math.sin(t * (6.1 + variation) + 0.32 * Math.sin(t * 17)) ** 4;
+      phase += TAU * (133 + 23 * Math.sin(Math.PI * u) + 7 * Math.sin(t * 29)) * pitch / sr;
+      out[i] = fold * strain * (0.35 * (grain - low) + 0.033 * Math.sin(phase)
+        + 0.011 * Math.sin(phase * 2.17));
+    }
+    return out;
+  }
   if (kind === 'caravanRing') {
     // 소금 사막: 우물 줄 끝의 작은 쇠고리가 흔들림 끝에서 쇠말뚝에 닿는 소리 (샛별 원문 그대로 — 670·1093·1771 Hz 감쇠 부분음)
     // A small iron ring touching its peg: dry, damped and irregular partials.
@@ -285,6 +307,12 @@ export class StageDetailSound {
       // Dry air through a shaded brick iwan. No surf or crowded market bed.
       addNoise({ rate: 0.81, frequency: 430, gain: 0.0017, lfo: 0.038, depth: 0.00065, ceiling: 1250, pan: 0.12 });
       addNoise({ rate: 0.69, frequency: 1100, gain: 0.00075, lfo: 0.061, depth: 0.0003, ceiling: 2100, pan: -0.2 });
+    } else if (this.stage === 'dunhuang') {
+      // 철불 절벽: 트인 절벽 앞 서늘하고 맑은 아침 — 옅게 움직이는 공기와 고운 모래 스침 두 겹 (샛별 값 그대로). 낮은 파도·비·불 울림·음 있는 드론·종소리 없음
+      // Cool, clear morning at an open cliff: thin moving air and fine sand
+      // friction, without low surf, rain, fire rumble or pitched drone.
+      addNoise({ rate: 0.91, frequency: 760, gain: 0.0018, lfo: 0.043, depth: 0.0006, ceiling: 1900, pan: -0.18 });
+      addNoise({ rate: 0.83, frequency: 2100, gain: 0.00065, lfo: 0.073, depth: 0.00025, ceiling: 3200, pan: 0.2 });
     }
     let remaining = nodes.length;
     for (const source of nodes) {

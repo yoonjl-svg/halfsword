@@ -2,13 +2,17 @@
 //  ① 무대마다 주소로 무대만 고정(?weapon=longsword&stage=<id>, foe 인자 없음 = 여정과 같은 짝짓기 STAGE_FOE) → 싸움 → 상대가 전용 짝인지,
 //     콘솔 에러 0 → 캡처 두 장(전체 · 가운데 확대) docs/handoff/stage_sb_<tag>_{fight,close}.png
 //  ② 같은 페이지에서 무대 소리 세부음(stageDetail) 알림 수를 적는다(검사 아님 — SwiftShader 는 게임 시간이 느려 첫 낙수·얼음 소리 전에 끝날 수 있다)
-//  ③ 여정 한 바퀴: 주소 인자 없이(?weapon=longsword) 판을 열고 상대를 쓰러뜨려 '다음 상대' → STAGE_ORDER 열한 판 + 처음으로 돌아오기.
+//  ③ 여정 한 바퀴: 주소 인자 없이(?weapon=longsword) 판을 열고 상대를 쓰러뜨려 '다음 여정' → STAGE_ORDER 열네 판 + 처음으로 돌아오기
+//     (10/14 19:4x 잠든 습지 · 철불 절벽 · 소금 사막이 정식 경로에 들어와 열한 판 → 열네 판. 여정을 깬 뒤에도 무대는 끝나지 않고 포세이돈부터 다시 이어진다).
 //     판마다 무대 id · 상대 이름, 그리고 GPU 모양·질감 수가 같은 무대에서 같은 값으로 돌아오는지
-//  실행: vite 개발 서버를 띄운 뒤 node tools/browser/stages_sb_shots.mjs http://127.0.0.1:5173 [출력 폴더(기본 docs/handoff)]
+//  실행: vite 개발 서버를 띄운 뒤 node tools/browser/stages_sb_shots.mjs http://127.0.0.1:5173 [출력 폴더(기본 docs/handoff)] [--journey]
+//   --journey: ③ 여정 한 바퀴만 (①·② 캡처 없이 — 10/14)
 //  크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium). SwiftShader 라 물리는 실제 시간보다 느리게 흐른다(실기기 성능 아님)
 import { chromium } from 'playwright';
-const base = process.argv[2] || 'http://127.0.0.1:5173';
-const out = process.argv[3] || 'docs/handoff';
+const argv = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const journeyOnly = process.argv.includes('--journey');
+const base = argv[0] || 'http://127.0.0.1:5173';
+const out = argv[1] || 'docs/handoff';
 const CASES = [
   { id: 'frozen_bay', tag: 'frozen_bay', foeName: '투야나 니콜라예바' },
   { id: 'qinglan', tag: 'qinglan_after', foeName: '김씨' }, // 다시 지은 꼴 (샛별 꼴 그대로였던 때의 캡처는 stage_sb_qinglan_before_*.png)
@@ -21,7 +25,7 @@ const watch = (page, errors) => {
   page.on('requestfailed', (r) => errors.push('requestfailed: ' + r.url()));
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
 };
-for (const c of CASES) {
+for (const c of journeyOnly ? [] : CASES) {
   const page = (await browser.newPage({ viewport: { width: 900, height: 600 }, deviceScaleFactor: 2 })); page.setDefaultTimeout(300000); // 바쁜 기계(SwiftShader)에선 누름 처리·캡처가 오래 걸린다
   const errors = [];
   watch(page, errors);
@@ -63,8 +67,11 @@ for (const c of CASES) {
   watch(page, errors);
   await page.goto(`${base}/?weapon=longsword`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000 });
+  // 여정 순서(stages.js STAGE_ORDER 열네 판 — 10/14 19:4x 습지·철불 절벽·소금 사막) + 한 바퀴 뒤 다시 포세이돈. 무대 짝: 잠든 습지 라트나 · 소금 사막 다라이시 · 철불 절벽은 무작위 상대
+  const want = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'dayr', 'poseidon'];
+  const wantFoe = { sluice: '라트나 위라세타쿤', dayr: '다라이시' };
   const rows = [];
-  for (let round = 0; round < 12; round++) {
+  for (let round = 0; round < want.length; round++) {
     await page.locator('#btnStart').click({ timeout: 300000 }); // 판을 열 때 무대를 짓고 GPU 에 올리는 일이 누름 처리 안에서 끝난다 — 바쁜 기계에선 오래 걸린다
     await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 300000 });
     const r = await page.evaluate(() => {
@@ -72,16 +79,17 @@ for (const c of CASES) {
       return { stage: window.game.stage.id, foe: document.querySelector('#foeIntro b')?.textContent, geometries: i.geometries, textures: i.textures, buildMs: Math.round(window.game.stage.buildMs) };
     });
     rows.push(r);
-    // 상대를 쓰러뜨린다: 원인 '내려찍기'는 부활하지 않는다(revive.js) → 이긴 판 → 결과 화면 단추 '다음 상대'
+    // 상대를 쓰러뜨린다: 원인 '내려찍기'는 부활하지 않는다(revive.js) → 이긴 판 → 결과 화면 단추 '다음 여정'(10/14 11:1x 전 '다음 상대')
     await page.evaluate(() => window.game.enemy.die('내려찍기'));
     await page.waitForFunction(() => document.querySelector('#btnStart')?.offsetParent && /다음 여정/.test(document.querySelector('#btnStart').textContent), null, { timeout: 300000 });
   }
   console.log('\n| 판 | 무대 | 상대 | 모양 | 질감 | 짓기 ms |\n|---:|---|---|---:|---:|---:|');
   rows.forEach((r, i) => console.log(`| ${i + 1} | ${r.stage} | ${r.foe} | ${r.geometries} | ${r.textures} | ${r.buildMs} |`));
-  const want = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'poseidon'];
   const got = rows.map((r) => r.stage);
   if (got.join() !== want.join()) errors.push(`order ${got.join()} != ${want.join()}`);
-  if (rows[0].geometries !== rows[11].geometries) console.log(`(참고) 포세이돈 처음 ${rows[0].geometries}/${rows[0].textures} → 한 바퀴 뒤 ${rows[11].geometries}/${rows[11].textures}`);
+  for (const r of rows) if (wantFoe[r.stage] && r.foe !== wantFoe[r.stage]) errors.push(`foe on ${r.stage}: ${r.foe} != ${wantFoe[r.stage]}`);
+  const last = rows.length - 1; // 한 바퀴 뒤 다시 포세이돈 (열다섯째 판)
+  if (rows[0].geometries !== rows[last].geometries) console.log(`(참고) 포세이돈 처음 ${rows[0].geometries}/${rows[0].textures} → 한 바퀴 뒤 ${rows[last].geometries}/${rows[last].textures}`);
   console.log('journey', errors.length ? 'ERRORS:\n  ' + errors.join('\n  ') : 'ZERO console errors');
   fail += errors.length;
   await page.close();

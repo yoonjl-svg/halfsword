@@ -666,8 +666,9 @@ export const CHARACTER_VARIANTS = [
 
 for (const c of CHARACTER_VARIANTS) finishAI(c);
 
-// ───────────────────────────────────────────── 여정 밖 인물 — 테스트 경로의 상대 고르기(test.html)·?foe=id 로만 나온다 ─────────────────────────────────────────────
-//  CHARACTERS(기본 회전·무작위 상대·시뮬 라운드로빈) 밖에 둔다 — 여정(stages.js STAGE_FOE·STAGE_ORDER)에도 없다. 무대와 함께 들어올 인물이 무대보다 먼저 왔을 때의 자리.
+// ───────────────────────────────────────────── 손님 인물 (처음엔 여정 밖) — 테스트 경로의 상대 고르기(test.html)·?foe=id, 그리고 여정의 제 무대 ─────────────────────────────────────────────
+//  CHARACTERS(기본 회전·무작위 상대·시뮬 라운드로빈) 밖에 둔다. 무대와 함께 들어올 인물이 무대보다 먼저 왔을 때의 자리.
+//  10/14 19:4x 사장님 결정으로 제 무대가 여정 정식 경로에 들어가 여정에서도 나온다: 라트나 = 잠든 습지 · 다라이시(silver_wanderer) = 소금 사막 (stages.js STAGE_FOE — CHARACTERS_BY_ID 로 풀림)
 //  라트나 위라세타쿤 — 샛별 저장소 ed736cf5(라트나 v3 — 처음 d5b3151a · bf202a00, 기준 origin/main 325a5c38)에서 가져옴 (사장님 10/14 02:3x·03:0x 결정):
 //   · 무기는 북부 대공의 검(ice — 샛별 쪽은 레이피어, 앞서 팔쉬온) → 유파 자동 판정 이베리아, 쥠·자세·기술은 우리 이베리아 대검 것 그대로.
 //     샛별 기질에서 유파에 묶인 자세·기술 취향(레이피어의 쟁기·찌르기 guardPref·techPref)은 뺐다 — 이베리아 자세 고르기 가중치 그대로. 실력·성격 숫자(level·pers 나머지)는 샛별 값 그대로(세 판 모두 같음)
@@ -754,7 +755,7 @@ export const CHARACTER_GUESTS = [
 ];
 for (const c of CHARACTER_GUESTS) finishAI(c);
 
-/** id → 시트. 기본 회전·변형·여정 밖 인물까지 (변형은 여정의 정해진 자리·?foe=id, 여정 밖 인물은 테스트 경로의 상대 고르기·?foe=id 로만 나온다) */
+/** id → 시트. 기본 회전·변형·손님 인물까지 (변형은 여정의 정해진 자리·?foe=id, 손님 인물은 여정의 제 무대(STAGE_FOE)·테스트 경로의 상대 고르기·?foe=id) */
 export const CHARACTERS_BY_ID = Object.fromEntries([...CHARACTERS, ...CHARACTER_VARIANTS, ...CHARACTER_GUESTS].map((c) => [c.id, c]));
 
 /**
