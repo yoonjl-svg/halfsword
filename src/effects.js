@@ -22,6 +22,9 @@ export class Particles {
     this.dirty = false; // 지난 올림 뒤로 바뀐 입자가 있나 (새로 붙음·움직임·사라짐)
     this._m = new THREE.Matrix4();
     this._q = new THREE.Quaternion();
+    this.terrain = null; // 지형 무대(화산섬)만 main.js 가 땅 계약을 넣는다 — 없으면 바닥은 y 0 (아래 원래 길 그대로)
+    this._up = new THREE.Vector3(0, 1, 0);
+    this._n = new THREE.Vector3();
     this._s = new THREE.Vector3();
     this._c = new THREE.Color();
     this.bloodOn = true;
@@ -90,7 +93,23 @@ export class Particles {
         this.dirty = true;
         it.v.y -= 9.81 * dt;
         it.p.addScaledVector(it.v, dt);
-        if (it.p.y <= 0.002) {
+        const T = this.terrain;
+        if (T) {
+          // 지형 무대: 용암면 밑으로 들어간 입자는 사라지고(용암 위엔 얼룩이 남지 않는다), 나머지는 그 자리 땅 위에 앉는다
+          if (it.p.z >= T.lavaEdgeZ && it.p.y <= T.lavaLevel) {
+            it.life = 0;
+            continue;
+          }
+          const floorY = T.heightAt(it.p.x, it.p.z) + 0.002;
+          if (it.p.y <= floorY) {
+            if (it.sticks) {
+              it.stuck = true;
+              it.p.y = floorY;
+              it.life = 12;
+              it.size *= 1.8;
+            } else it.life = 0;
+          }
+        } else if (it.p.y <= 0.002) {
           if (it.sticks) {
             // 바닥에 떨어진 피는 납작한 얼룩으로 남는다
             it.stuck = true;
@@ -111,6 +130,13 @@ export class Particles {
       const it = list[i];
       const s = it.size;
       this._s.set(s, it.stuck ? 0.002 : s, s);
+      if (this.terrain) {
+        // 지형 무대: 바닥에 붙은 얼룩은 비탈과 나란히 눕힌다 (떠 있는 입자는 돌리지 않는다)
+        if (it.stuck) {
+          const n = this.terrain.normalAt(it.p.x, it.p.z);
+          this._q.setFromUnitVectors(this._up, this._n.set(n.x, n.y, n.z));
+        } else this._q.identity();
+      }
       this._m.compose(it.p, this._q, this._s);
       this.mesh.setMatrixAt(i, this._m);
       this.mesh.setColorAt(i, it.color);
@@ -132,6 +158,7 @@ export class Particles {
     this.list = [];
     this.mesh.count = 0;
     this.dirty = false;
+    this._q.identity(); // 화산섬 판에서 비탈에 눕힌 회전이 다음 판(평지)에 남지 않게 (평지에선 늘 단위 회전 — 그림 그대로)
   }
 }
 

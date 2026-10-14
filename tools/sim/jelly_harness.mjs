@@ -7,6 +7,7 @@ import { LOOKS } from '../../src/looks.js';
 import { AI } from '../../src/ai.js';
 import { Combat } from '../../src/combat.js';
 import { setSupportFloor } from '../../src/gait.js';
+import { terrainForStage, createTerrainGround, applyTerrainHazards } from '../../src/etna_ground.js';
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
@@ -31,6 +32,11 @@ export function newRound(opts = {}) {
   world.integrationParameters.numSolverIterations = opts.iters ?? 6;
   const eventQueue = new RAPIER.EventQueue(true);
   const colliderInfo = new Map();
+  // 지형 무대 시험(opts.stageId — 화산섬 'etna' 만, tools/sim/slope_check.mjs): main.js newRound 의 지형 갈래와 같은 바닥. 안 주면 아래 평평한 상자 바닥 그대로 (관문 바이트 같음)
+  const terrain = opts.stageId ? terrainForStage(opts.stageId) : null;
+  const environment = terrain ? createTerrainGround(RAPIER, world, GROUND_GROUPS, terrain, { radius: ARENA.radius, walls: opts.walls !== false }) : null;
+  if (environment) setSupportFloor(world, environment.floor);
+  else {
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   const floor = world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
   setSupportFloor(world, floor); // 발 체중 받침은 이 바닥 접촉만 (main.js newRound 와 같게 — 벽에 닿은 발 힘은 받침이 아님, 10/14)
@@ -45,16 +51,22 @@ export function newRound(opts = {}) {
       ground,
     );
   }
+  }
   const scene = new THREE.Scene();
   const gap = opts.gap ?? ARENA.startGap;
-  const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: LOOKS.player, breakSeed: opts.seed });
-  const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: LOOKS.enemy, breakSeed: opts.seed });
+  // 지형 시험만: 시작 자리 z·방향(opts.playerZ·enemyZ·heading·heading2)과 땅(terrain). 평지 판은 전과 같은 인자
+  const player = terrain
+    ? new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, z: opts.playerZ ?? 0, heading: opts.heading ?? 0, terrain, look: LOOKS.player, breakSeed: opts.seed })
+    : new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: LOOKS.player, breakSeed: opts.seed });
+  const enemy = terrain
+    ? new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, z: opts.enemyZ ?? 0, heading: opts.heading2 ?? Math.PI, terrain, look: LOOKS.enemy, breakSeed: opts.seed })
+    : new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: LOOKS.enemy, breakSeed: opts.seed });
   if (opts.onFighter) { opts.onFighter(player, world, RAPIER); opts.onFighter(enemy, world, RAPIER); }
   const ai = new AI(enemy, player, opts.difficulty ?? 'normal');
   player.skill.level = opts.skill ?? 0.7;
   const hits = [];
   const combat = new Combat(colliderInfo, { onWound: (att, vic, r) => hits.push(`${att.name}->${r.zone}:${r.type} ${r.energy.toFixed(0)}J`), onClash: () => {} });
-  const G = { world, eventQueue, player, enemy, ai, combat, hits, t: 0, ai2: null, parkEnemy: false };
+  const G = { world, eventQueue, player, enemy, ai, combat, hits, t: 0, ai2: null, parkEnemy: false, environment };
   G.step = () => {
     player.foe = G.parkEnemy ? null : enemy;
     enemy.foe = G.parkEnemy ? null : player;
@@ -70,6 +82,7 @@ export function newRound(opts = {}) {
     enemy.cacheState();
     world.step(eventQueue, combat.physicsHooks);
     combat.afterStep(world, eventQueue);
+    if (environment) G.burns = applyTerrainHazards(environment, colliderInfo, DT); // 지형 시험만: 용암 화상 (main.js 와 같은 자리 — 물리 스텝 뒤)
     G.t += DT;
   };
   G.park = () => {

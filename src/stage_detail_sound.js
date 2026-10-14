@@ -23,9 +23,12 @@ export const STAGE_DETAIL_PROFILES = Object.freeze({
   //  표 끝(자리 14)에 붙여 있던 세부음 씨앗(자리 0~13)은 하나도 안 바뀐다. 샛별 표에서는 자리 15(그쪽 14 는 화산섬 etnaCrust)라 변형 셋의 잡음 결은 샛별 판과 다르다(합성 꼴·길이·세기는 같다).
   //  나중에 화산섬(용암 무대)의 etnaCrust 는 이 줄 뒤(자리 15)에 붙인다
   dunhuangWood: { stage: 'dunhuang', duration: 1.65, gain: 0.023, gap: 24 },
+  // 화산섬 (샛별 저장소 origin/main 7684c732 의 굳은 껍질 소리를 옮김 — docs/import/volcano_port_2026-10-14.md). 표 끝(자리 15)에 붙여 있던 세부음 씨앗(자리 0~14)은 그대로.
+  //  샛별 표에서는 자리 14(그쪽 15 는 철불 절벽 dunhuangWood)라 변형 셋의 잡음 결은 샛별 판과 다르다(합성 꼴·길이·세기는 같다)
+  etnaCrust: { stage: 'etna', duration: 1.6, gain: 0.032, gap: 20 },
 });
 
-export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice' || stage === 'dayr' || stage === 'dunhuang';
+export const hasStageDetails = (stage) => stage === 'loggia' || stage === 'corsair' || stage === 'sacred_grove' || stage === 'frozen_bay' || stage === 'qinglan' || stage === 'sluice' || stage === 'dayr' || stage === 'dunhuang' || stage === 'etna';
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const TAU = Math.PI * 2;
 
@@ -37,6 +40,20 @@ export function synthStageDetail(kind, sr, rng) {
   const profile = STAGE_DETAIL_PROFILES[kind];
   if (!profile || !Number.isFinite(sr) || sr < 8000) return new Float32Array(0);
   const out = new Float32Array(Math.ceil(profile.duration * sr));
+  if (kind === 'etnaCrust') {
+    // 화산섬: 먼 굳은 용암 껍질이 부서지는 소리 — 걸러 낮춘 금 가는 소리와 짧게 흘러내리는 알갱이 (샛별 원문 그대로).
+    //  계속되는 불 굉음·폭발·싸움 소리 같은 순간음은 없다
+    let low = 0, body = 0;
+    for (let i = 0; i < out.length; i++) {
+      const t = i / sr, n = rng() * 2 - 1;
+      low += (1 - Math.exp(-TAU * 560 / sr)) * (n - low);
+      body += (1 - Math.exp(-TAU * 115 / sr)) * (n - body);
+      const attack = 1 - Math.exp(-t / 0.008), tail = Math.min(1, (out.length - 1 - i) / (sr * 0.12));
+      const grit = Math.max(0, Math.sin(t * 39) + Math.sin(t * 71) * 0.4);
+      out[i] = tail * attack * (0.6 * body * Math.exp(-t / 0.28) + 0.16 * low * grit * Math.exp(-t / 0.4));
+    }
+    return out;
+  }
   if (kind === 'dunhuangWood') {
     // 철불 절벽: 처마 밑 글씨 없는 나무 간판의 마른 이음매가 흔들림 끝에서 버티며 내는 짧은 삐걱 (샛별 원문 그대로 — 부드럽고 고르지 않은 두 번의 끌림·미끄러짐)
     // A dry eave/sign joint strains with a visible sway. Two soft, irregular
@@ -307,6 +324,10 @@ export class StageDetailSound {
       // Dry air through a shaded brick iwan. No surf or crowded market bed.
       addNoise({ rate: 0.81, frequency: 430, gain: 0.0017, lfo: 0.038, depth: 0.00065, ceiling: 1250, pan: 0.12 });
       addNoise({ rate: 0.69, frequency: 1100, gain: 0.00075, lfo: 0.061, depth: 0.0003, ceiling: 2100, pan: -0.2 });
+    } else if (this.stage === 'etna') {
+      // 화산섬: 해 뜨기 전 능선의 바람 두 겹 — 370 Hz 위 바람과 95 Hz 낮은 웅웅거림 (샛별 값 그대로). 불 굉음은 없다
+      addNoise({ rate: 0.77, frequency: 370, gain: 0.0038, lfo: 0.031, depth: 0.0013, ceiling: 1250 });
+      addNoise({ rate: 0.65, type: 'lowpass', frequency: 95, gain: 0.0020, lfo: 0.052, depth: 0.0007, ceiling: 420, pan: 0.3 });
     } else if (this.stage === 'dunhuang') {
       // 철불 절벽: 트인 절벽 앞 서늘하고 맑은 아침 — 옅게 움직이는 공기와 고운 모래 스침 두 겹 (샛별 값 그대로). 낮은 파도·비·불 울림·음 있는 드론·종소리 없음
       // Cool, clear morning at an open cliff: thin moving air and fine sand

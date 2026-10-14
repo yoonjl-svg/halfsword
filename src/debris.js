@@ -19,6 +19,7 @@ export const DEBRIS = {
   fade: 0.5, // 초: 칼 조각이 마지막 이만큼 동안 흐려진다
   gravity: 9.81,
   floorY: 0, // 경기장 바닥 높이
+  terrain: null, // 지형 무대(화산섬)만 main.js 가 땅 계약을 넣는다 — 그러면 바닥은 그 자리 땅 높이(조각마다 띄운 몫은 그대로)
   bounce: 0.3, // 땅에 튈 때 되튀는 비율
   groundFriction: 0.55, // 칼 조각: 땅에 닿을 때 수평 속도에 곱한다
   spinDamp: 0.5, // 칼 조각: 땅에 닿을 때 도는 빠르기에 곱한다
@@ -121,8 +122,9 @@ export function tickDebris(dt) {
     const o = d.obj;
     d.vel.y -= DEBRIS.gravity * dt;
     o.position.addScaledVector(d.vel, dt);
-    if (o.position.y < d.floor) {
-      o.position.y = d.floor;
+    const floor = DEBRIS.terrain ? DEBRIS.terrain.heightAt(o.position.x, o.position.z) + (d.floor - DEBRIS.floorY) : d.floor;
+    if (o.position.y < floor) {
+      o.position.y = floor;
       if (d.vel.y < 0) d.vel.y = -d.vel.y * DEBRIS.bounce;
       d.vel.x *= d.friction;
       d.vel.z *= d.friction;

@@ -698,9 +698,44 @@ def dunhuang():
     return pal, t, band, center, 'R'
 
 
+# ── 10/14: 화산섬 (샛별 저장소 무대 etna 를 옮김 — 그쪽엔 뒷면이 없어 새로 그림, docs/import/volcano_port_2026-10-14.md) ──
+def etna():
+    # 화산섬: 해 뜨기 전 짙은 현무암빛 바탕에 굳은 용암 판 격자(마름모), 분화구 원뿔(옅은 재 연기 · 꼭대기 주황 빛)과
+    # 주황 틈이 갈라진 현무암 판을 번갈아. 띠는 밧줄 꼴로 굳은 용암 물결(짙은 다홍 · 주황), 가운데는 식은 판 사이로
+    # 주황 틈 여섯 갈래가 모이는 용암 웅덩이(스스로 180° 대칭). 주황은 틈·꼭대기·가운데만 (무대에서도 용암 주황이 단 하나의 강조색)
+    pal = dict(SHARED, B='#1d1b21', K='#3b3539', C='#57514f', S='#8d8e9a', L='#ff7a2a', E='#9c2f14', Y='#ffc46b')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    cone = ['..S..S..', '...SS...', '...LL...', '..CLLC..', '.CCCCCC.', '.CCCCCC.', 'CCCCCCCC', 'CCCCCCCC']  # 분화구 원뿔: 재 연기 · 꼭대기 주황 · 검은 비탈
+    plate = ['.CCCC.', 'CCCLCC', 'CCLECC', 'CCELCC', 'CCLCCC', '.CCCC.']  # 주황 틈이 갈라진 현무암 판 (스스로 180° 대칭)
+    stamp(t, cone, 8, 8)
+    stamp(t, plate, 16, 16)
+    stamp(t, plate, 16, 0)
+    sym_tile(t)
+    band = band_rows(['.EE.EE', 'ELEELE', 'E.EE.E', 'CCCCCC'], 'B')  # 밧줄 꼴로 굳은 용암 물결(짙은 다홍에 주황 심 한 점씩) + 현무암 바닥
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            a = math.atan2(dy, dx)
+            ray = abs(((a + math.pi / 6) % (math.pi / 3)) - math.pi / 6)  # 가장 가까운 틈 갈래까지의 각 (여섯 갈래)
+            center[y][x] = 'C'
+            if ray * d < 0.75:
+                center[y][x] = 'L' if d > 3.0 else 'E'
+            if d <= 2.6:
+                center[y][x] = 'L'
+            if d <= 1.5:
+                center[y][x] = 'Y'
+    return pal, t, band, center, 'L'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice), ('dayr', dayr), ('dunhuang', dunhuang)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice), ('dayr', dayr), ('dunhuang', dunhuang), ('etna', etna)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)

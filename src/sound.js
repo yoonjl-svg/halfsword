@@ -1666,6 +1666,7 @@ const STAGE_SOUND = {
   sluice: { step: 'stepMud', grit: 'stepMud' }, // 잠든 습지 (샛별 저장소에서 가져옴): 젖은 흙 둔덕, 얕은 물과 침수림
   dayr: { step: 'stepStone', grit: 'stepStone' }, // 소금 사막 (샛별 저장소에서 가져옴): 닳은 벽돌 안뜰, 하늘이 트여 울림 없음
   dunhuang: { step: 'step', grit: 'step', room: { dur: 0.28, rt: 0.16, e0: 0.035, e1: 0.075, lp: 2600, metal: 0.055, flesh: 0.018 } }, // 철불 절벽 (샛별 저장소에서 가져옴, 값 그대로): 마른 모래흙 발소리(산호 항구와 같은 녹음) · 절벽에 짧고 약하게 되튀는 반사 0.28 s
+  etna: { step: 'stepStone', grit: 'stepStone' }, // 화산섬 (샛별 저장소에서 가져옴): 거친 현무암·재 비탈, 트인 능선이라 울림 없음
   poseidon: { step: 'step' },
   poseidon_night: { step: 'step', night: true }, // 밤의 포세이돈 (하인리히 재등장): 같은 바다·바람에 네 귀퉁이 화로·횃대의 불을 더하고 바람을 어둡게
   temple: { step: 'stepGravel', grit: 'stepGravel' },
@@ -3622,8 +3623,10 @@ export class BodySounds {
       for (const k of ['footF', 'footB']) {
         const b = f.bodies[k];
         const ft = this.feet[k];
-        const y = b.translation().y;
-        const vy = b.linvel().y;
+        // 지형 무대(화산섬): 발 높이는 그 발 밑 땅 위로, 수직 속도는 비탈을 따라 오르내리는 몫을 빼고 (평지 무대는 원래 값 그대로)
+        const p = f.terrain ? b.translation() : null;
+        const y = p ? p.y - f.terrain.heightAt(p.x, p.z) : b.translation().y;
+        const vy = p ? b.linvel().y - f.groundVelocityAt(p.x, p.z, b.linvel()) : b.linvel().y;
         if (y > 0.09) {
           ft.up = true;
           ft.vy = Math.min(ft.vy, vy);
@@ -3638,8 +3641,9 @@ export class BodySounds {
     if (f.state !== 'stand') {
       for (const k of ['pelvis', 'chest']) {
         const b = f.bodies[k];
-        const y = b.translation().y;
-        const vy = b.linvel().y;
+        const p = f.terrain ? b.translation() : null; // 지형 무대: 땅 위 높이 · 비탈 몫을 뺀 수직 속도 (위 발소리와 같게)
+        const y = p ? p.y - f.terrain.heightAt(p.x, p.z) : b.translation().y;
+        const vy = p ? b.linvel().y - f.groundVelocityAt(p.x, p.z, b.linvel()) : b.linvel().y;
         const v0 = this.fallV[k];
         if (v0 < -1 && vy > v0 * 0.35 && y < 0.45) {
           // 떨어지던 몸이 땅에서 멈췄다. 골반·가슴이 잇달아 닿으면 한 번만 크게
@@ -3687,7 +3691,8 @@ export class BodySounds {
     // 칼이 바닥에 떨어짐: 놓친 칼, 또는 쥔 채 쓰러진 칼이 땅에 닿는 순간 (튀어서 다시 닿는 것은 0.5초 안에 한 번만)
     const sw = f.sword;
     if (sw && (!f.armed || f.state !== 'stand')) {
-      const y = sw.translation().y;
+      const sp = f.terrain ? sw.translation() : null; // 지형 무대: 칼 높이는 그 밑 땅 위로 (수직 속도는 떨어지는 빠르기라 그대로)
+      const y = sp ? sp.y - f.terrain.heightAt(sp.x, sp.z) : sw.translation().y;
       const vy = sw.linvel().y;
       const v0 = this.swordVy;
       if (v0 < -1.2 && vy > v0 * 0.35 && y < 0.25) {
@@ -3700,7 +3705,8 @@ export class BodySounds {
     // 떨어진 머리가 바닥에 닿음 (32차): 칼과 같은 방법 — 떨어지던 머리가 땅 가까이서 멈추거나 튀면 그 순간. 굴러 튈 때마다 작게
     const hb = this.decap ? f.bodies?.head : null;
     if (hb) {
-      const y = hb.translation().y;
+      const hp = f.terrain ? hb.translation() : null; // 지형 무대: 떨어진 머리 높이는 그 밑 땅 위로
+      const y = hp ? hp.y - f.terrain.heightAt(hp.x, hp.z) : hb.translation().y;
       const vy = hb.linvel().y;
       const v0 = this.headVy;
       if (v0 < -0.8 && vy > v0 * 0.35 && y < 0.4) {

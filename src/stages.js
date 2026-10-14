@@ -28,6 +28,7 @@ import { buildQinglan } from './stage_qinglan.js';
 import { buildSluice } from './stage_sluice.js';
 import { buildDayr } from './stage_dayr.js';
 import { buildDunhuang } from './stage_dunhuang.js';
+import { buildEtna } from './stage_etna.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
@@ -53,6 +54,8 @@ const BUILDERS = {
   dayr: buildDayr, // 소금 사막: 소금 벌판 가 벽돌 역참 안뜰의 해 질 녘, 문루 안의 낮은 해와 긴 그림자 (stage_dayr.js) — 다라이시의 무대. 코드 id 는 샛별 쪽 그대로
   // 샛별 저장소에서 가져온 무대 (사장님 10/14 19:4x — 화면 이름 '철불 절벽' · 벽화 그대로 · 결투장 띠 · 여정 정식 경로, docs/import/ironcliff_port_2026-10-14.md)
   dunhuang: buildDunhuang, // 철불 절벽: 침식된 절벽 앞 석굴 앞뜰의 초가을 아침, 6 층 누각과 창작 벽화 (stage_dunhuang.js). 코드 id 는 샛별 쪽 그대로 — 화면 이름에 '둔황'은 넣지 않는다
+  // 샛별 저장소에서 가져온 무대 (사장님 10/14 19:4x — 화면 이름 '화산섬' · 결투장 전체 비탈 · 용암 규칙 약하게 · 결투장 띠 없음 · 여정 정식 경로, docs/import/volcano_port_2026-10-14.md)
+  etna: buildEtna, // 화산섬: 해 뜨기 전 화산 능선, 결투장 전체가 불규칙 산비탈(평균 약 10°) · 낮은 쪽 용암(화상 — 다리·팔 기능 감소, 사망 없음) (stage_etna.js · 땅 etna_ground.js). 코드 id 는 샛별 쪽 그대로
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
@@ -62,14 +65,15 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  10/10 사장님 지시로 샛별 저장소의 세 무대를 대성당 뒤에 이었다(기존 여섯 순서는 그대로): 붉은 회랑(토메 비달) → 산호 항구(오마리) → 신목의 숲(미나미)
 //  10/10 20:4x 두 무대를 그 뒤에 더 이었다(앞 아홉 순서·자리는 그대로): 얼어붙은 만(투야나) → 청람잔도(김씨). 까닭: 이미 있는 판 순서를 하나도 안 밀고,
 //   눈 내리는 성 안뜰(4번째)과 겨울 얼음만이 붙지 않게 멀리 두고, 숲(신목) → 겨울 새벽(얼음만) → 여름 한낮(잔도) → 다시 바닷가(포세이돈)로 계절·빛이 번갈아 바뀐다
-//  10/14 19:4x 사장님 '습지, 소금 사막과 함께 정식 경로 포함' — 청람잔도 뒤에 잠든 습지 → 철불 절벽 → (화산섬 자리 — 용암 무대는 나중에 따로 옮긴다) → 소금 사막 (감독 안,
-//   확인표 1119 · 1214 · 1386). 앞 열한 판의 순서·자리는 그대로이고, 끝은 숙련도 4 다라이시(소금 사막). 소금 사막 다음 판은 다시 포세이돈부터.
-//   화산섬이 오면 'dunhuang' 과 'dayr' 사이에 넣는다(그러면 소금 사막이 열다섯째로 밀린다)
-export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'dayr'];
+//  10/14 19:4x 사장님 '습지, 소금 사막과 함께 정식 경로 포함' — 청람잔도 뒤에 잠든 습지 → 철불 절벽 → 화산섬 → 소금 사막 (감독 안,
+//   확인표 1119 · 1214 · 1386 · 1463). 앞 열한 판의 순서·자리는 그대로이고, 끝은 숙련도 4 다라이시(소금 사막). 소금 사막 다음 판은 다시 포세이돈부터.
+//   화산섬(etna, docs/import/volcano_port_2026-10-14.md)은 철불 절벽과 소금 사막 사이 — 소금 사막은 열다섯째로 밀렸다
+export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 //  10/14 19:4x: 잠든 습지 = 라트나 · 소금 사막 = 다라이시 (손님 인물 CHARACTER_GUESTS — CHARACTERS_BY_ID 로 풀린다, 무작위 회전에는 그대로 없음).
 //   철불 절벽(dunhuang) = 병마용(terracotta, 손님 인물 — 10/14 감독 짝, 사장님 19:4x 정식 경로 결정에 따름)
-export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji', sluice: 'ratna', dayr: 'silver_wanderer', dunhuang: 'terracotta' };
+//   화산섬(etna) = 찬다(사장님 10/14 19:4x '찬다는 화산섬이 전용 스테이지' — 10/14 감독이 병합 때 짝 지음)
+export const STAGE_FOE = { poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji', sluice: 'ratna', dayr: 'silver_wanderer', dunhuang: 'terracotta', etna: 'chanda' };
 // 그 무대 검객 후보 (사장님 10/10 20:0x — 샛별 저장소에서 가져온 넷의 무대 짝. 무대마다 한 명뿐인 STAGE_FOE 짝을 밀어내지 않고 후보로 더한다, 확인표 752).
 //  여정(foe=stage)에서 그 무대를 열 때 [본디 짝, ...후보] 가운데 하나를 고르게 고른다 → 본디 짝은 그 무대에서 절반만 나온다.
 //  졌을 때 같은 무대를 다시 열면 같은 상대(아래 stageFoeId 의 prevId). STAGE_FOE 자체는 그대로다
@@ -95,6 +99,7 @@ export const STAGE_NAME_KO = {
   sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도', sluice: '잠든 습지',
   dayr: '소금 사막', // 사장님 10/14 08:1x (샛별 쪽 '소금길의 (마지막) 역참') — 코드 id 는 그대로
   dunhuang: '철불 절벽', // 사장님 10/14 19:4x (샛별 쪽 '천불의 절벽') — '둔황'은 화면 이름에 넣지 않는다. 코드 id 는 그대로
+  etna: '화산섬', // 사장님 10/14 19:4x — 실제 지명은 화면에 쓰지 않는다 (코드 id 는 샛별 쪽 그대로)
 };
 /** 왼쪽 위 첫 줄: '스테이지 N · 이름' (순서표 밖이면 이름만) */
 export function stageLabel(id) {

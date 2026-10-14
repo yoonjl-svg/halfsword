@@ -2,8 +2,9 @@
 //  ① 무대마다 주소로 무대만 고정(?weapon=longsword&stage=<id>, foe 인자 없음 = 여정과 같은 짝짓기 STAGE_FOE) → 싸움 → 상대가 전용 짝인지,
 //     콘솔 에러 0 → 캡처 두 장(전체 · 가운데 확대) docs/handoff/stage_sb_<tag>_{fight,close}.png
 //  ② 같은 페이지에서 무대 소리 세부음(stageDetail) 알림 수를 적는다(검사 아님 — SwiftShader 는 게임 시간이 느려 첫 낙수·얼음 소리 전에 끝날 수 있다)
-//  ③ 여정 한 바퀴: 주소 인자 없이(?weapon=longsword) 판을 열고 상대를 쓰러뜨려 '다음 여정' → STAGE_ORDER 열네 판 + 처음으로 돌아오기
-//     (10/14 19:4x 잠든 습지 · 철불 절벽 · 소금 사막이 정식 경로에 들어와 열한 판 → 열네 판. 여정을 깬 뒤에도 무대는 끝나지 않고 포세이돈부터 다시 이어진다).
+//  ③ 여정 한 바퀴: 주소 인자 없이(?weapon=longsword) 판을 열고 상대를 쓰러뜨려 '다음 여정' → STAGE_ORDER 열다섯 판 + 처음으로 돌아오기
+//     (10/14 19:4x 잠든 습지 · 철불 절벽 · 소금 사막이 정식 경로에 들어와 열한 판 → 열네 판, 같은 날 화산섬이 철불 절벽 뒤에 들어와 열다섯 판 — docs/import/volcano_port_2026-10-14.md.
+//     여정을 깬 뒤에도 무대는 끝나지 않고 포세이돈부터 다시 이어진다).
 //     판마다 무대 id · 상대 이름, 그리고 GPU 모양·질감 수가 같은 무대에서 같은 값으로 돌아오는지
 //  실행: vite 개발 서버를 띄운 뒤 node tools/browser/stages_sb_shots.mjs http://127.0.0.1:5173 [출력 폴더(기본 docs/handoff)] [--journey]
 //   --journey: ③ 여정 한 바퀴만 (①·② 캡처 없이 — 10/14)
@@ -67,8 +68,8 @@ for (const c of journeyOnly ? [] : CASES) {
   watch(page, errors);
   await page.goto(`${base}/?weapon=longsword`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000 });
-  // 여정 순서(stages.js STAGE_ORDER 열네 판 — 10/14 19:4x 습지·철불 절벽·소금 사막) + 한 바퀴 뒤 다시 포세이돈. 무대 짝: 잠든 습지 라트나 · 소금 사막 다라이시 · 철불 절벽은 무작위 상대
-  const want = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'dayr', 'poseidon'];
+  // 여정 순서(stages.js STAGE_ORDER 열다섯 판 — 10/14 19:4x 습지·철불 절벽·화산섬·소금 사막) + 한 바퀴 뒤 다시 포세이돈. 무대 짝: 잠든 습지 라트나 · 소금 사막 다라이시 · 철불 절벽·화산섬은 무작위 상대(화산섬은 찬다가 들어오면 짝)
+  const want = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr', 'poseidon'];
   const wantFoe = { sluice: '라트나 위라세타쿤', dayr: '다라이시' };
   const rows = [];
   for (let round = 0; round < want.length; round++) {
@@ -88,7 +89,7 @@ for (const c of journeyOnly ? [] : CASES) {
   const got = rows.map((r) => r.stage);
   if (got.join() !== want.join()) errors.push(`order ${got.join()} != ${want.join()}`);
   for (const r of rows) if (wantFoe[r.stage] && r.foe !== wantFoe[r.stage]) errors.push(`foe on ${r.stage}: ${r.foe} != ${wantFoe[r.stage]}`);
-  const last = rows.length - 1; // 한 바퀴 뒤 다시 포세이돈 (열다섯째 판)
+  const last = rows.length - 1; // 한 바퀴 뒤 다시 포세이돈 (열여섯째 판)
   if (rows[0].geometries !== rows[last].geometries) console.log(`(참고) 포세이돈 처음 ${rows[0].geometries}/${rows[0].textures} → 한 바퀴 뒤 ${rows[last].geometries}/${rows[last].textures}`);
   console.log('journey', errors.length ? 'ERRORS:\n  ' + errors.join('\n  ') : 'ZERO console errors');
   fail += errors.length;
