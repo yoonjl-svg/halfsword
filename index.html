@@ -41,7 +41,7 @@
         /* 크기 4 단계: 판 알림 / 이름·상태·창 제목 / 칸 첫 줄·대사·알림·창 줄 / 칸 둘째 줄·칭호·안내·카드 설명·배지 */
         --font-ui: 'Galmuri11', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; /* 10/14 갈무리11 먼저 — 뒤 시스템 글꼴은 갈무리에 없는 글자(이모지 등)만 */
         --font-display: 'Jacquard 12', 'Galmuri11', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; /* 큰 영문 제목에만 (메뉴 'Stillness') */
-        --fs-wordmark: 42px; /* 큰 영문 제목 크기: Jacquard 12 의 도트 격자(em 21 도트) 2 배 — 도트 하나 = 2px. 21px 은 지금 제목(20px 굵게)보다 작아 보인다 (사장님 확인 전) */
+        --fs-wordmark: 21px; /* 큰 영문 제목 크기: Jacquard 12 의 도트 격자(em 21 도트) 1 배 — 도트 하나 = 1px (사장님 10/14 09:0x '영문 제목은 너무 크다' — 전 42px = 2 배) */
         --fs-display: clamp(32px, 9vmin, 56px);
         --fs-title: 20px;
         --fs-body: 15px;
@@ -176,9 +176,9 @@
       @media (orientation: portrait) { #foeIntro { max-width: calc(100vw - 2 * var(--safe-l)); } }
       /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): 오른쪽 위 칸과 거울. 첫 줄 .stg = '스테이지 N · 무대 이름'.
          무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르세요' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
-         자리(칸 마지막 줄, 위 6px)·꼴 그대로: 700 · --ls-label · --accent. 크기는 칸 전체 --fs-info 11px (10/14 04:1x 사장님 '왼쪽 위 11' — 갈무리11 격자는 12px 라 반쯤 흐림, docs/ui/pixel_font_2026-10-14.md). 카드를 고르면 .off 로 숨고 자리는 둔다 — main.js setDrawGuide).
+         자리(칸 마지막 줄, 위 6px)·꼴 그대로: 700 · --ls-label · --accent. 크기는 칸 전체 --fs-info 12px (10/14 09:0x 사장님 '12가 제일 선명하면 11 다 12로' — 갈무리11 격자 em 12 도트, docs/ui/pixel_font_2026-10-14.md). 카드를 고르면 .off 로 숨고 자리는 둔다 — main.js setDrawGuide).
          둘째 줄 'AI 이름 · 자세 / 기술'(.foe)은 10/14 03:3x 사장님 'AI 이름·기술명 표기는 아예 없앤다'로 걷어냈다. 카드 줄은 이 칸 아래에서 시작한다 (main.js layoutDraw) */
-      #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); --fs-info: 11px; font-size: var(--fs-info); font-weight: 800; line-height: var(--lh-tight); word-break: keep-all; }
+      #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); --fs-info: 12px; font-size: var(--fs-info); font-weight: 800; line-height: var(--lh-tight); word-break: keep-all; }
       #stageInfo.show { opacity: 1; }
       #stageInfo .stg { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
       #stageInfo .stg { color: var(--hud-sys); }
@@ -250,7 +250,7 @@
       .wwho { display: none; flex: none; font-size: var(--fs-caption); font-weight: 700; letter-spacing: var(--ls-label); line-height: 1; padding: 3px 8px 2px 9px; border-radius: 999px; margin-bottom: 1px; color: #1b1410; background: var(--accent); }
       .wcard.picked .wwho, .wcard.foe .wwho { display: block; }
       .wcard.foe .wwho { color: #fbe9e2; background: #93372d; }
-      .wthumb { flex: 1 1 auto; min-height: 36px; width: 100%; background-position: center; background-repeat: no-repeat; background-size: contain, 100% 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,.55)); }
+      .wthumb { flex: 1 1 auto; min-height: var(--thumbMin, 36px); width: 100%; background-position: center; background-repeat: no-repeat; background-size: contain, 100% 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,.55)); }
       .wname { display: block; font-size: var(--name); font-weight: 800; line-height: var(--lh-tight); color: var(--tc); text-shadow: 0 0 10px var(--tg), 0 1px 1px #000; margin-top: 2px; word-break: keep-all; }
       .wsub { display: block; font-size: var(--fs-caption); line-height: var(--lh-tight); color: #cfc0a2; word-break: keep-all; }
       .wsub:empty { display: none; }
@@ -260,7 +260,7 @@
       .wabil { display: block; margin: 2px 0 0; font-size: var(--desc); line-height: var(--lh-text); color: var(--tc); word-break: keep-all; text-wrap: balance; } .wabil:empty { display: none; } /* 에픽 특수 능력 한 줄 */
       #draw.wide .wtier { margin: 6px 0; }
       #draw.low .wface { padding: 6px 7px 7px; }
-      #draw.low .wthumb { min-height: 28px; }
+      #draw.low .wthumb { min-height: var(--thumbMin, 28px); } /* --thumbMin: 폭을 다 넓혀도 설명이 넘치는 아주 작은 가로 화면에서만 main.js layoutDraw 가 줄인다 (10/14 — 설명 12px 바닥) */
       #draw.low .wtier { margin: 2px 0; }
       /* 고른 카드: 살짝 들리고 금빛 테두리. 못 고른 카드: 작아지고 어둡게 (무엇을 놓쳤는지는 보인다) */
       .wcard.picked { transform: translateY(-1%) scale(1.03); z-index: 1; }
@@ -306,7 +306,7 @@
       /* 창 (시작·일시정지·결과 — 10/10 글자 체계): 제목 title · 부제·줄·단추 body · 고르개·안내 caption */
       h1 { margin: 0 0 4px; font-size: var(--fs-title); font-weight: 800; line-height: var(--lh-tight); letter-spacing: var(--ls-label); }
       h2 { margin: 0 0 12px; font-size: var(--fs-title); }
-      /* 큰 영문 제목 (첫 메뉴의 'Stillness' — 10/14 사장님 1안 '도트'): Jacquard 12 · 도트 격자 2 배(42px) · 굵기 400(굵은 판이 없어 브라우저가 흉내 내지 않게) ·
+      /* 큰 영문 제목 (첫 메뉴의 'Stillness' — 10/14 사장님 1안 '도트'): Jacquard 12 · 도트 격자 1 배(21px — 10/14 09:0x 사장님 '너무 크다', 전 42px) · 굵기 400(굵은 판이 없어 브라우저가 흉내 내지 않게) ·
          자간 0(도트가 반 칸씩 밀리지 않게) · 줄 높이 1(이 글꼴은 위아래 높이가 em 과 같아 기준선이 정수 px). 일시정지·승리·패배로 제목 글을 바꾸면 이 칸이 사라져 h1 그대로(갈무리11 20px) */
       .wordmark { display: block; font-family: var(--font-display); font-size: var(--fs-wordmark); font-weight: 400; line-height: 1; letter-spacing: 0; }
       .sub { color: var(--dim); font-size: var(--fs-body); margin: 0 0 14px; line-height: var(--lh-text); }

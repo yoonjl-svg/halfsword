@@ -1071,6 +1071,7 @@ function layoutDraw() {
   drawEl.style.setProperty('--top', `${Math.round(introBottom + 10)}px`);
   drawEl.style.setProperty('--padT', '0px');
   drawEl.style.setProperty('--padL', '0px');
+  drawEl.style.removeProperty('--thumbMin'); // 그림 칸 최소 높이는 기본(36 · 낮은 자리 28)부터 — 아래 끝에서 넘칠 때만 줄인다
   const box = drawEl.querySelector('.drawRow').getBoundingClientRect();
   const row = { left: box.left, top: box.top, width: box.width, height: Math.max(0, Math.min(box.bottom, hintTop - 6) - box.top) };
   // 세로로 든 폰(좁고 높은 자리): 카드가 좁고 길어진다. 좁아도 낮은 자리(작은 가로 폰 568×320 등)는 가로 배치가 글이 더 잘 들어간다
@@ -1100,23 +1101,28 @@ function layoutDraw() {
   drawEl.style.setProperty('--ch', `${ch}px`);
   // 번호 배지(높이 22px)의 가운데: 픽셀 뒷면은 아래 원판(아래에서 3칸 띄운 10칸 원판)의 가운데, classic 은 아래에서 10px
   drawEl.style.setProperty('--kb', cardBack === 'classic' ? '10px' : `${Math.max(4, 8 * px - 11)}px`);
-  // 글자 크기 (10/10 글자 체계 두 단계): 큰 카드 = 이름 title 20 · 설명 body 15, 그 밖 = 이름 body 15 · 설명 11 (사장님 10/14 04:1x '카드 설명 11 px로 해' — 전 caption 12.
-  //  11 은 줄이기 바닥(fitCardText)과 같아 더 줄지 않는다 — 넘치면 아래 '폭만 두 칸씩 넓힘'으로)
+  // 글자 크기 (10/10 글자 체계 두 단계): 큰 카드 = 이름 title 20 · 설명 body 15, 그 밖 = 이름 body 15 · 설명 12 (사장님 10/14 09:0x '폰트 12가 제일 선명하면 11 다 12로' — 그 전 04:1x '11 px' — 전 caption 12.
+  //  12 는 줄이기 바닥(fitCardText)과 같아 더 줄지 않는다 — 넘치면 아래 '폭만 두 칸씩 넓힘'으로)
   //  큰 카드 = 폭 205 · 높이 260 이상 (PC 1280×720 의 224×344 등. 가로 폰은 높이 상한 DRAW_CARD_H 때문에 이제 작은 카드 — 844×390 에서 156×234)
   const big = cw >= 205 && ch >= 260;
   drawEl.style.setProperty('--name', big ? '20px' : '15px');
-  drawEl.style.setProperty('--desc', big ? '15px' : '11px');
+  drawEl.style.setProperty('--desc', big ? '15px' : '12px');
   drawEl.classList.toggle('wide', big);
   drawEl.classList.toggle('low', low);
   // 글자를 줄여도 설명이 넘치면(낮은 가로 화면의 긴 설명) 높이는 두고 폭만 두 칸씩 넓힌다
   const step = cardBack !== 'classic' ? 2 * px : 2;
   const cwMax = Math.floor(Math.min(230, (row.width - 2 * gap) / 3));
-  fitCardText(big ? 15 : 11);
+  fitCardText(big ? 15 : 12);
   while (!narrow && cw + step <= cwMax && cardTextOverflows()) {
     cw += step;
     drawEl.style.setProperty('--cw', `${cw}px`);
     drawEl.style.setProperty('--padL', `${Math.max(0, Math.floor((row.width - 3 * cw - 2 * gap) / 2))}px`);
-    fitCardText(big ? 15 : 11);
+    fitCardText(big ? 15 : 12);
+  }
+  // 폭을 끝까지 넓혀도 넘치면(568×320 같은 아주 작은 가로 화면 — 설명 바닥이 12px 라 더 줄지 않는다, 사장님 10/14 '11 다 12로') 그림 칸 최소 높이를 줄여 글자에 자리를 준다
+  for (const m of [24, 16]) {
+    if (narrow || !cardTextOverflows()) break;
+    drawEl.style.setProperty('--thumbMin', `${m}px`);
   }
 }
 /** 앞면 글이 정말 넘치는가: 그림 칸이 가장 작게(min-height) 줄었는데도 마지막 글줄이 아래 여백에 닿는다 (그림 칸이 남은 높이를 채우므로 그림이 줄어들 수 있으면 넘침이 아니다) */
@@ -1145,8 +1151,8 @@ function fitCardText(base) {
   const over = ({ face, thumb, last }) => thumb.offsetHeight <= parseFloat(getComputedStyle(thumb).minHeight) + 0.5
     && last().offsetTop + last().offsetHeight > face.clientHeight - parseFloat(getComputedStyle(face).paddingBottom) - 4;
   drawEl.style.setProperty('--desc', `${base}px`);
-  for (let k = 1, px = base; k <= 5 && px > 11 && faces.some(over); k++) {
-    px = Math.max(11, base * (1 - 0.06 * k));
+  for (let k = 1, px = base; k <= 5 && px > 12 && faces.some(over); k++) {
+    px = Math.max(12, base * (1 - 0.06 * k)); // 바닥 12px = 갈무리11 의 도트 격자(em 12 도트 — 가장 선명, 사장님 10/14 '11 다 12로')
     drawEl.style.setProperty('--desc', `${px.toFixed(2)}px`);
   }
 }
