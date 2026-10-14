@@ -800,6 +800,34 @@ LOOK_ARCHIVE.silver_wanderer.v8 = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishi
 //  (outfit_silver_wanderer_v9.js). 값 모두 사장님 확인 전(확인표 1320~)
 LOOK_ARCHIVE.silver_wanderer.v9 = { ...LOOK_ARCHIVE.silver_wanderer.v8, daraishiRevision: 9 };
 
+// 찬다 (여정 밖 인물 — characters.js CHARACTER_GUESTS, 10/14) — 샛별 저장소 LOOK_ARCHIVE.chanda v1 (675233e2 · origin/main 7684c732, 값 그대로) + 우리 v2.
+//  복식 모듈 하나(outfits.js chanda_watergate = src/outfit_chanda.js)가 chandaRevision 으로 판을 가른다. 방어구·투구 없음
+LOOK_ARCHIVE.chanda = { v1: {
+  tunic: 0x252c4b, quilt: 0x414967, sleeve: 0xa96f4e, straps: null,
+  belt: 0x978360, hoseUpper: 0x353d50, hoseLower: 0xb0a58a, shoes: 0x43372d,
+  skin: 0xa96f4e, hands: 0xa96f4e, helmet: null, metal: 0x93805a, hair: 0x161714,
+  headband: null, grip: 0x49392a, hilt: 0x93805a, accent: 0xb49354,
+  outfit: 'chanda_watergate', armor: null, stockEyes: true, eyeColor: 0x322019,
+  originalTorsoWidth: true,
+} };
+// v2 (우리 판 — 사장님 결정 10/14 '앞에서 보이는 무릎의 맨다리 틈을 고친다', docs/import/chanda_terra_port_2026-10-14.md §1-2):
+//  무릎을 굽히면 넓적다리 바짓단과 정강이 바짓단 사이로 정강이 살(구릿빛 캡슐 윗머리)이 앞으로 드러나던 틈을 바지 천으로 메움 — 모듈 쪽 '── v2' 줄. 색·나머지는 v1 그대로 (값 사장님 확인 전 — 확인표 1406)
+LOOK_ARCHIVE.chanda.v2 = { ...LOOK_ARCHIVE.chanda.v1, chandaRevision: 2 };
+
+// 병마용 (여정 밖 인물 — characters.js CHARACTER_GUESTS, 10/14) — 샛별 저장소 LOOK_ARCHIVE.terracotta v1 (b090ccc5 · origin/main 7684c732, 값 그대로) + 우리 v2.
+//  복식 모듈 하나(outfits.js terracotta_guard = src/outfit_terracotta.js)가 terracottaRevision 으로 판을 가른다. 흙 갑옷 조각은 장식(판금 판정 없음)
+LOOK_ARCHIVE.terracotta = { v1: {
+  tunic: 0x929084, quilt: 0x7c7b70, sleeve: 0xa4a094, straps: null,
+  belt: 0x929084, hoseUpper: 0xa4a094, hoseLower: 0xa4a094, shoes: 0x7c7b70,
+  skin: 0xa4a094, hands: 0xa4a094, helmet: null, metal: 0x929084, hair: 0x73756d,
+  headband: null, grip: 0x493829, hilt: 0x9c8554, accent: 0xa6a193,
+  outfit: 'terracotta_guard', armor: null, stockEyes: true, eyeColor: 0x4b4741,
+  originalTorsoWidth: true,
+} };
+// v2 (우리 판 — 사장님 결정 10/14 '끈·머리 홈 같은 잔선을 덜어 ≤ 2.7 만 삼각형(칼 포함)'): 폰 1 화소 안의 관(엮은 끈 반지름 1.4 mm · 머리 홈 1.2 mm · 얼굴 잔금 · 소매·옷 솔기)을 뺌 —
+//  갑옷 조각·상투·관·눈썹·수염 덩어리·다리 감은 천 같은 큰 꼴은 그대로. 모듈 쪽 '── v2' 줄 (값 사장님 확인 전 — 확인표 1416~1417)
+LOOK_ARCHIVE.terracotta.v2 = { ...LOOK_ARCHIVE.terracotta.v1, terracottaRevision: 2 };
+
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
   bran: 'v1',
@@ -816,6 +844,8 @@ export const CHARACTER_LOOK_VERSION = {
   eira: 'v5', // 10/11 01:4x 매듭 굵게 — 옛 판 ?look=eira:v4 · v3 · v2 · v1
   ratna: 'v4', // 10/14 여정 밖 인물 (우리 v4) — 샛별 판 ?look=ratna:v3 · v2 · v1
   silver_wanderer: 'v9', // 10/14 여정 밖 인물 다라이시 (우리 v9 — v7·v8 절충, 사장님 13:4x) — 우리 v8(흰 카바) ?look=silver_wanderer:v8 · v7(겉모습 덜기만) :v7 · 샛별 판 v6 · v5 · v4 · v2 · v1
+  chanda: 'v2', // 10/14 여정 밖 인물 찬다 (우리 v2 — 무릎 틈 메움) — 샛별 판 ?look=chanda:v1
+  terracotta: 'v2', // 10/14 여정 밖 인물 병마용 (우리 v2 — 잔선 덜기) — 샛별 판 ?look=terracotta:v1
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

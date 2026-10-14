@@ -12,7 +12,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine, aiAtProficiency } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS } from './weapons.js';
 import { attachAura } from './aura.js';
@@ -522,6 +522,7 @@ function newRound(weaponId) {
     look: enemyLook,
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
     revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
+    physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 — fighter.js HUMAN_BODY). 없으면 사람
   });
   for (const f of [player, enemy]) {
     configureWetlandMovement(f, stages.id); // 진흙 웅덩이 감속 (잠든 습지만)
@@ -652,8 +653,12 @@ function onWound(att, vic, r, point, pr) {
   if (r.pass) stats.passes++;
   const e = r.energy;
   const opened = r.type !== 'blunt' && r.severity > 0;
+  // 흙 몸(병마용 — fighter.physiology.body 'clay', 샛별 901b1f39): 피 대신 흙 알갱이 · 상처 자국 대신 무광 잔금 · 칼에 피 안 묻음 · 살 소리 대신 마른 타격음.
+  //  사람(body 'human')은 아래 예전 길 그대로
+  const clay = vic.physiology?.body === 'clay';
   // 피: 벤 방향으로 흩뿌림
-  if (opened) particles.blood(point, r.dir, 6 + r.severity * 40, r.speed);
+  if (clay) { if (e > 5) particles.clayChips(point, r.dir, e); } // 5 J 넘는 타격마다 잠깐 흩어지는 흙 알갱이 (샛별 값 — 확인표 1420)
+  else if (opened) particles.blood(point, r.dir, 6 + r.severity * 40, r.speed);
   // 흔적 (몸 표면에 붙어서 같이 움직인다)
   const mesh = vic.partMesh[pr.v.part];
   const group = vic.groups[pr.v.part];
@@ -671,7 +676,9 @@ function onWound(att, vic, r, point, pr) {
     // 투구·판금: 긁힘, 세면 찌그러짐 (벗겨지거나 부서지면 조각과 함께 날아간다).
     //  조각 투구(마르그레테)는 사발 조각 메쉬에, 판금은 그 부위에서 맞은 곳에 가장 가까운 판금 메쉬에 붙인다
     const steel = r.helmet && vic.helmetGroup ? (vic.helmetGroup.userData.pieces?.bowl ?? vic.helmetGroup).children[0] : r.plate ? vic.plateMeshNear(pr.v.part, r.local) : null;
-    if (steel?.geometry) {
+    if (clay) {
+      if (e > 5) stickDecal(mesh, local, bladeLocal, 'clay', 0.035 + Math.min(0.035, e / 2200), Math.min(0.18, 0.04 + e / 900)); // 흙 몸: 베인 결을 따라 무광 잔금 (피 번짐 없음 — 샛별 값, 확인표 1421)
+    } else if (steel?.geometry) {
       const p = r.local.clone().applyMatrix4(new THREE.Matrix4().copy(steel.matrixWorld).invert().multiply(group.matrixWorld));
       stickDecal(steel, p, bladeLocal, 'scratch', 0.03, Math.min(0.16, 0.04 + e / 1200));
       if (e > 60) stickDecal(steel, p, null, 'dent', 0.03 + Math.min(0.05, e / 4000), 0.03 + Math.min(0.05, e / 4000));
@@ -686,7 +693,7 @@ function onWound(att, vic, r, point, pr) {
       if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, local, null, 'soak', 0.04, 0.04);
     }
   }
-  if (opened) att.bloodyBlade(0.08 + r.severity * 0.15);
+  if (opened && !clay) att.bloodyBlade(0.08 + r.severity * 0.15); // 흙 몸을 벤 칼에는 피가 묻지 않는다
   // 소리: 투구는 투구 소리. 판금은 전투 판정(r.plate — 아직 붙어 있는 판이 덮은 곳을 맞았다)을 따른다:
   //  날이 들지 못했으면 판금이 막는 소리(때린 무기 재질대로), 판을 뚫고 들어갔으면 강철 소리 한 번 (살 소리는 아래에서 따로)
   //  불꽃: 막혔으면 더 많고, 판을 뚫고 들어가도 강철을 긁은 불꽃이 조금 튄다 (ARMOR 를 켰을 때만 — 끄면 예전 그대로)
@@ -702,10 +709,11 @@ function onWound(att, vic, r, point, pr) {
     vic.armorBroke = false;
     sound.plateBreak(e);
   }
-  if (r.type === 'cut') sound.cut(e, r.pass);
+  if (clay) sound.clay(e, point); // 흙 몸: 마른 타격음 하나 (살·뼈 소리 대신 — 샛별 값, 확인표 1422)
+  else if (r.type === 'cut') sound.cut(e, r.pass);
   else if (r.type === 'stab' && opened) sound.stab(e); // 날이 들지 못한 내려찍기 즉사 찌르기(r.finish, 심각도 0)는 막힌 타격 소리
   else sound.blunt(e);
-  if (e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet && !r.plate) sound.bone(e);
+  if (!clay && e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg') && !r.helmet && !r.plate) sound.bone(e);
   // 멈칫: 재질에 따라. 살을 깨끗이 가르면 짧게, 박히거나 뼈·투구에 걸리면 길게 (최대 0.1초 — 조작이 늦게 느껴지지 않게)
   const bone = e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg');
   const stopT = r.pass ? Math.min(0.06, e / 2000) : r.stuck || bone || r.helmet || r.plate ? Math.min(0.1, e / 900) : Math.min(0.08, e / 1200);
@@ -790,6 +798,7 @@ function updateBindSound() {
 // 상처에서 떨어지는 핏방울
 const _wp = new THREE.Vector3();
 function updateDrips(f, dt) {
+  if (f.physiology?.bleeds === false) return; // 피 없는 몸(병마용): 핏방울·번짐 없음 (출혈도 0)
   for (const w of f.wounds) {
     // 옷에 번지는 핏자국: 흘린 피만큼 커진다 (가끔씩 다시 투사)
     if (w.soak) {
@@ -880,6 +889,7 @@ function showFoeLine(ch, line) {
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = '';
   el.querySelector('span').textContent = `“${line}”`;
+  el.querySelector('small').textContent = lineSourceOf(ch, line); // 대사 아래 줄 출처 (병마용의 고전 인용 『사기』·『설원』 — 사장님 10/14 '출처까지 다 나오게 해'. 없는 인물은 빈칸이라 줄이 숨는다)
   el.classList.add('show');
   hudLater('foeIntro', 3.4, () => el.classList.remove('show'));
 }
@@ -894,7 +904,7 @@ function showFoeIntro(ch) {
   if (!ch || !(ARENA.startHold > 0)) return el.classList.remove('show');
   el.querySelector('b').textContent = ch.name;
   el.querySelector('i').textContent = ch.epithet;
-  { const line = randomLine(ch, ch.lines?.introStray && foeWeaponId !== ch.weapon ? 'introStray' : 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸)
+  { const line = randomLine(ch, ch.lines?.introStray && foeWeaponId !== ch.weapon ? 'introStray' : 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; el.querySelector('small').textContent = lineSourceOf(ch, line); } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸) · 출처는 대사 아래 줄 (병마용)
   el.classList.add('show');
   hudLater('foeIntro', ARENA.startHold, () => el.classList.remove('show')); // 정지가 풀리는 순간 걷는다 (화면 글자 시계 = 게임 시간, player.fightT 와 같이 흐른다)
 }
@@ -1571,6 +1581,7 @@ function checkRoundEnd(dt) {
     $('menuTitle').textContent = win ? '승리' : '패배';
     // 졌으면 상대의 승리 대사를 한 줄 덧붙인다 (사장님 확정)
     $('menuSub').textContent = !win && lastFoeLine ? `${cause} · ${currentFoe.name}: “${lastFoeLine}”` : cause;
+    { const src = !win && lastFoeLine ? lineSourceOf(currentFoe, lastFoeLine) : ''; if (src) { const s = document.createElement('small'); s.textContent = src; $('menuSub').append(s); } } // 대사 아래 줄에 출처 (병마용 — index.html #menuSub small)
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '다시 겨루기'; // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
     $('btnResume').style.display = 'none';
@@ -2138,6 +2149,7 @@ window.game = {
   AI,
   settings,
   sound, // 예: game.sound.clash(8) 로 소리 확인, game.sound.stats
+  particles, // 피·흙 알갱이 입자 (예: game.particles.bloodOn = false 로 '피 표현 끔' 갈래 — 단면 색 점검 tools/browser/chanda_terra_shots.mjs clay)
   fighterLight, // 예: game.fighterLight.enabled = false 로 캐릭터 조명을 끄고 비교
   reviveFx, // 부활 연출 (예: game.reviveFx.active, game.reviveFx.group)
 };

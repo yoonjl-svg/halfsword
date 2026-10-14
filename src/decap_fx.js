@@ -7,6 +7,8 @@
 //   · 판정·물리 무관(겉모습만). 난수는 이 모듈 전용(시간·순번 해시) — Math.random 을 쓰지 않는다.
 //  main.js: const decapFx = createDecapFx(particles); 프레임마다 decapFx.update([player, enemy], dt * scale)
 //   판이 바뀌면 검객(과 그 그룹에 붙인 원판)이 통째로 바뀌므로 따로 치울 것이 없다.
+//   · 흙 몸(병마용 — fighter.physiology.body 'clay', 샛별 901b1f39): 회갈색 흙 단면 · 뼈 단면 없음 · 분출·핏방울 없음. 재질을 사람 것과 따로 둔다 —
+//     사람 단면 재질은 '피 표현' 켬/끔에 따라 프레임마다 색을 바꾸는데, 같은 재질을 쓰면 같은 판의 흙 단면까지 핏빛·회색으로 바뀌고 흙 단면 색이 사람 단면에 번진다(샛별도 겪고 나눔).
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 
@@ -24,16 +26,23 @@ const geoBone = new THREE.CircleGeometry(NECK_R * 0.28, 10);
 const matFlesh = new THREE.MeshStandardMaterial({ color: FLESH, roughness: 0.55, side: THREE.DoubleSide });
 const matRing = new THREE.MeshStandardMaterial({ color: 0x6a1a18, roughness: 0.6, side: THREE.DoubleSide });
 const matBone = new THREE.MeshStandardMaterial({ color: BONE, roughness: 0.8, side: THREE.DoubleSide });
+const CLAY = 0x8b887a; // 흙 단면 (샛별 값)
+const CLAY_RIM = 0xaaa697; // 흙 단면 가장자리 (샛별 값)
+const matClay = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 1, side: THREE.DoubleSide }); // 흙 몸 전용 — 피 표현 켬/끔과 상관없이 늘 이 색
+const matClayRim = new THREE.MeshStandardMaterial({ color: CLAY_RIM, roughness: 1, side: THREE.DoubleSide });
 
-/** 단면 원판 하나 (그룹 기준 pos 에, 법선 n 쪽을 보게) */
-function stumpDisc(group, pos, n) {
+/** 단면 원판 하나 (그룹 기준 pos 에, 법선 n 쪽을 보게). clay = 흙 몸: 흙 재질 · 뼈 없음 */
+function stumpDisc(group, pos, n, clay = false) {
   const g = new THREE.Group();
-  const flesh = new THREE.Mesh(geoFlesh, matFlesh);
-  const ring = new THREE.Mesh(geoRing, matRing);
-  const bone = new THREE.Mesh(geoBone, matBone);
+  const flesh = new THREE.Mesh(geoFlesh, clay ? matClay : matFlesh);
+  const ring = new THREE.Mesh(geoRing, clay ? matClayRim : matRing);
   ring.position.z = 0.0005;
-  bone.position.set(-NECK_R * 0.3, 0, 0.001); // 목뼈는 목 뒤쪽(몸 기준 −x)에 치우친다
-  g.add(flesh, ring, bone);
+  g.add(flesh, ring);
+  if (!clay) {
+    const bone = new THREE.Mesh(geoBone, matBone);
+    bone.position.set(-NECK_R * 0.3, 0, 0.001); // 목뼈는 목 뒤쪽(몸 기준 −x)에 치우친다
+    g.add(bone);
+  }
   g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
   g.position.copy(pos);
   g.name = 'decapStump';
@@ -61,9 +70,10 @@ export function createDecapFx(particles) {
     const w = f.wounds.find((x) => x.stump && !x.limb); // 참수 단면만 (팔·다리 단면 상처는 limb 표시가 있다 — 10/8 검토 1)
     const local = w ? w.local.clone() : new THREE.Vector3(0, 0.17, 0);
     local.y = Math.max(local.y, 0.176); // 옷깃(원기둥) 위에 얹는다
-    const body = f.groups.chest ? stumpDisc(f.groups.chest, local, UP) : null;
-    const head = f.groups.head ? stumpDisc(f.groups.head, new THREE.Vector3(0, -0.072, 0), DOWN) : null;
-    const st = { t: 0, body, head, local, acc: 0, hacc: 0 };
+    const clay = f.physiology?.body === 'clay';
+    const body = f.groups.chest ? stumpDisc(f.groups.chest, local, UP, clay) : null;
+    const head = f.groups.head ? stumpDisc(f.groups.head, new THREE.Vector3(0, -0.072, 0), DOWN, clay) : null;
+    const st = { t: 0, body, head, local, acc: 0, hacc: 0, clay };
     done.set(f, st);
     return st;
   };
@@ -79,7 +89,7 @@ export function createDecapFx(particles) {
         matFlesh.color.setHex(col);
         matRing.color.setHex(blood ? 0x6a1a18 : 0x4a4644);
       }
-      if (!blood || dt <= 0) continue;
+      if (!blood || st.clay || dt <= 0) continue; // 흙 몸: 분출·핏방울 없음 (단면 색은 흙 재질 그대로)
       // 몸통 단면: 박동하며 뿜는 피 (초당 70 → 10 방울, 2.2 Hz 박동)
       if (st.t < SPRAY_T && f.groups.chest) {
         const k = 1 - st.t / SPRAY_T;

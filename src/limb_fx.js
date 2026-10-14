@@ -5,6 +5,8 @@
 //   · 피: 몸 쪽 단면에서 참수(1.5 s)보다 짧게 0.6 s, 떨어진 쪽은 0.35 s 몇 방울. 그 뒤는 단면 상처의 bleed(main.js updateDrips)가 이어받는다.
 //   · 판정·물리 무관(겉모습만). 난수는 이 모듈 전용 — Math.random 을 쓰지 않는다. '피 표현'을 끄면 회색 단면·분출 없음.
 //  main.js: const limbFx = createLimbFx(particles); 프레임마다 limbFx.update([player, enemy], dt * scale)
+//   · 흙 몸(병마용 — fighter.physiology.body 'clay', 샛별 901b1f39): 회갈색 흙 단면 · 뼈 단면 없음 · 분출 없음. 재질은 사람 것과 따로 —
+//     사람 단면 재질은 '피 표현' 켬/끔에 따라 프레임마다 색이 바뀌므로, 같이 쓰면 같은 판에서 두 몸의 단면 색이 서로 섞인다 (decap_fx 와 같은 까닭)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 
@@ -20,18 +22,23 @@ const STUMP_R = { elbow: ['farmS', 'farmS'], shoulder: ['uarmS', 'uarmS'], knee:
 const matFlesh = new THREE.MeshStandardMaterial({ color: FLESH, roughness: 0.55, side: THREE.DoubleSide });
 const matRing = new THREE.MeshStandardMaterial({ color: 0x6a1a18, roughness: 0.6, side: THREE.DoubleSide });
 const matBone = new THREE.MeshStandardMaterial({ color: BONE, roughness: 0.8, side: THREE.DoubleSide });
+const matClay = new THREE.MeshStandardMaterial({ color: 0x8b887a, roughness: 1, side: THREE.DoubleSide }); // 흙 몸 전용 단면 (샛별 값 — decap_fx 와 같은 색), 피 표현과 상관없이 늘 이 색
+const matClayRim = new THREE.MeshStandardMaterial({ color: 0xaaa697, roughness: 1, side: THREE.DoubleSide });
 const geos = new Map();
 const geo = (r) => { if (!geos.has(r)) geos.set(r, { flesh: new THREE.CircleGeometry(r, 14), ring: new THREE.RingGeometry(r * 0.8, r, 14), bone: new THREE.CircleGeometry(r * 0.3, 8) }); return geos.get(r); };
 
-function stumpDisc(group, pos, n, r) {
+function stumpDisc(group, pos, n, r, clay = false) {
   const g = new THREE.Group();
   const G = geo(r);
-  const flesh = new THREE.Mesh(G.flesh, matFlesh);
-  const ring = new THREE.Mesh(G.ring, matRing);
-  const bone = new THREE.Mesh(G.bone, matBone);
+  const flesh = new THREE.Mesh(G.flesh, clay ? matClay : matFlesh);
+  const ring = new THREE.Mesh(G.ring, clay ? matClayRim : matRing);
   ring.position.z = 0.0005;
-  bone.position.z = 0.001;
-  g.add(flesh, ring, bone);
+  g.add(flesh, ring);
+  if (!clay) { // 흙 몸: 뼈 단면 없음
+    const bone = new THREE.Mesh(G.bone, matBone);
+    bone.position.z = 0.001;
+    g.add(bone);
+  }
   g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
   g.position.copy(pos);
   g.name = 'limbStump';
@@ -54,9 +61,10 @@ export function createLimbFx(particles) {
     const pN = pLocal.lengthSq() > 1e-6 ? pLocal.clone().normalize() : new THREE.Vector3(0, -1, 0); // 단면은 부위 중심에서 관절 쪽을 본다
     const cLocal = new THREE.Vector3(s.childLocal.x, s.childLocal.y, s.childLocal.z);
     const cN = cLocal.lengthSq() > 1e-6 ? cLocal.clone().normalize() : new THREE.Vector3(0, 1, 0);
-    if (pg) stumpDisc(pg, pLocal, pN, RADIUS[rp] ?? 0.045);
-    if (cg) stumpDisc(cg, cLocal, cN, RADIUS[rc] ?? 0.04);
-    live.push({ f, t: 0, pg, pLocal, pN, cg, cLocal, acc: 0, cacc: 0 });
+    const clay = f.physiology?.body === 'clay';
+    if (pg) stumpDisc(pg, pLocal, pN, RADIUS[rp] ?? 0.045, clay);
+    if (cg) stumpDisc(cg, cLocal, cN, RADIUS[rc] ?? 0.04, clay);
+    if (!clay) live.push({ f, t: 0, pg, pLocal, pN, cg, cLocal, acc: 0, cacc: 0 }); // 흙 몸은 분출이 없어 분출 목록에 넣지 않는다
   };
   const update = (fighters, dt) => {
     for (const f of fighters) {

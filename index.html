@@ -180,6 +180,9 @@
       #foeIntro i:empty { display: none; }
       #foeIntro span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 4px; font-weight: var(--fw-body); color: var(--c-sub); }
       #foeIntro span:empty { display: none; }
+      /* 대사 출처 (10/14 사장님 '출처까지 다 나오게 해' — 병마용의 고전 인용 『사기』·『설원』): 대사 아래 줄에 작게(--fs-s 12) · 보조 색 · 400. 출처 없는 인물은 빈칸이라 줄이 없다 (main.js lineSourceOf) */
+      #foeIntro small { display: block; margin-top: 2px; font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); }
+      #foeIntro small:empty { display: none; }
       @media (orientation: portrait) { #foeIntro { max-width: calc(100vw - 2 * var(--safe-l)); } }
       /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): 오른쪽 위 칸과 거울. 첫 줄 .stg = '스테이지 N · 무대 이름'.
          무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르세요' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
@@ -321,6 +324,7 @@
          일시정지·승리·패배로 제목 글을 바꾸면 이 칸이 사라져 h1 그대로(크게 --fs-l) */
       .wordmark { display: block; font-size: var(--fs-wordmark); line-height: 1.1; }
       .sub { color: var(--c-sub); font-size: var(--fs-m); margin: 0 0 14px; line-height: var(--lh-text); }
+      #menuSub small { display: block; margin-top: 2px; font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); } /* 결과 창 부제의 대사 출처 (병마용 — 위 #foeIntro small 과 같은 꼴) */
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-m); }
       .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
       .seg button { background: transparent; color: var(--c-sub); border: 0; padding: 6px 10px; font-size: var(--fs-s); }
@@ -363,7 +367,7 @@
     <div id="toast"></div>
     <div id="emoMsg"></div>
     <div id="hint"></div>
-    <div id="foeIntro"><b></b><i></i><span></span></div>
+    <div id="foeIntro"><b></b><i></i><span></span><small></small></div>
     <div id="stageInfo" aria-live="polite"><div class="stg"></div><em></em></div>
     <!-- 무기 뽑기 카드 세 장 (main.js 가 판마다 채운다. 단추 안이라 span 만 쓴다).
          왼쪽 두 장은 내가 고르는 카드(단추), 맨 오른쪽은 상대 무기 칸이라 누를 수도 초점을 받을 수도 없다(단추가 아니다) -->

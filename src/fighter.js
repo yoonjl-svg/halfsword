@@ -52,6 +52,11 @@ const LIMB_SEVER_JOINTS = {
 };
 /** count 모드의 수집함: 통과 베기가 팔다리 관절 근처에 닿을 때마다 한 줄 (자르지 않는다). 측정 도구 tools/sim/limb_sever_count.mjs 가 읽는다 */
 export const LIMB_SEVER_COUNT = { events: [] };
+// ── 몸 규칙 (병마용 — 샛별 저장소 901b1f39 와 같은 꼴, 사장님 결정 10/14 '샛별 그대로' · docs/import/chanda_terra_port_2026-10-14.md §3) ──
+//  인물 시트 physiology 가 이 위에 덮인다. 없으면 이 값 그대로(사람) — 아래 갈래는 모두 이 값을 보고, 사람은 예전 길을 한 줄도 다르게 돌지 않는다.
+//   body: 'human' | 'clay' — 겉모습·소리 갈래 표식(흙 알갱이·잔금·마른 타격음·흙 단면·부서지는 소리 — main.js · effects.js · decap_fx.js · limb_fx.js · sound.js)
+//   bleeds: false 면 출혈 0 · 혈액 1 고정 · deathRequiresHeadDetachment: true 면 목 관절이 떨어지기 전에는 죽지 않는다(die 거부 — 부활보다 먼저 본다)
+export const HUMAN_BODY = Object.freeze({ body: 'human', bleeds: true, deathRequiresHeadDetachment: false });
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
 // ─────────────────────────────────────────────────────────────
@@ -317,6 +322,7 @@ export class Fighter {
     this.causeOfDeath = null;
     this.revive = reviveOf(o.revive); // 처음 죽을 때 한 번 더 일어서기 (캐릭터 시트 revive, 없으면 null) — revive.js
     this.revival = null; // 부활하는 중이면 그 진행 상태 (revive.js)
+    this.physiology = o.physiology ? Object.freeze({ ...HUMAN_BODY, ...o.physiology }) : HUMAN_BODY; // 몸 규칙 (캐릭터 시트 physiology — 병마용, 위 HUMAN_BODY). 없으면 사람
     this.daze = 0;
     this.downTime = BODY.fallDuration;
     this.kneelTime = 1.1;
@@ -1358,6 +1364,7 @@ export class Fighter {
   }
 
   setState(s) {
+    if (s === 'dead' && !this.canDie) return; // 흙 몸(병마용): 머리가 떨어지기 전에는 죽은 상태로 가지 않는다 (사람은 늘 canDie)
     this.state = s;
     this.stateTime = 0;
   }
@@ -1380,13 +1387,24 @@ export class Fighter {
 
   die(cause, noRevive = false) { // noRevive: 즉사 대신 힘으로 들어간 찍기(FINISH.mode 'power25')가 낸 치명상 — 찍기 즉사처럼 되살아나지 않는다
     if (this.state === 'dead') return;
-    if (!noRevive && tryRevive(this, cause)) return; // 처음 죽음이면 투지로 다시 일어선다 (revive.js)
+    if (!this.canDie) return; // 흙 몸(병마용): 몸통 찌르기·내려찍기·기절로는 죽지 않는다 — 부활(tryRevive)보다 먼저 보므로 남은 부활 횟수도 쓰지 않는다 (샛별 901b1f39 순서)
+    if (!noRevive && tryRevive(this, cause)) return; // 처음 죽음이면 투지로 다시 일어선다 (revive.js) — 참수된 몸은 tryRevive 가 거절하니 흙 몸의 '머리 잘림 = 끝'도 여기서 그대로
     this.causeOfDeath = cause;
     this.setState('dead');
   }
 
+  /** 죽을 수 있나: 사람은 늘 true. 목 관절이 떨어져야만 죽는 몸(병마용)은 참수되어 목 관절이 없을 때만 (샛별 901b1f39 canDie 그대로) */
+  get canDie() {
+    return !this.physiology.deathRequiresHeadDetachment || (this.decapitated && !this.jointByName.head?.joint);
+  }
+
   // ── 출혈·의식·통증 ──
   updateVitals(dt) {
+    if (!this.physiology.bleeds) { // 피 없는 몸(병마용): 혈액 1 · 출혈 0 고정 (사람은 이 줄을 타지 않는다)
+      this.blood = 1;
+      this.bleed = 0;
+      for (const w of this.wounds) w.bleed = 0;
+    }
     if (this.bleed > 0) {
       this.blood = Math.max(0, this.blood - this.bleed * dt);
       // 피가 굳으며 출혈이 줄어든다 (큰 상처일수록 느리게)
@@ -1449,13 +1467,16 @@ export class Fighter {
         this.consciousness -= h.energy * VITALS.concussionPerJoule * k;
         if (h.energy * k > 45) this.knockDown(h.energy * k > 90); // 머리를 세게 맞으면 주저앉거나 쓰러진다
         this.daze = Math.min(1, (this.daze || 0) + h.energy * k / 100); // 멍함
+        // 흙 몸(병마용): 사람을 기절로 끝내는 같은 머리·목 둔타 문턱(의식 ≤ 0)에서 목이 부러져 머리가 떨어진다 (샛별 901b1f39 — 새 문턱 없음).
+        //  머리·목을 실제로 맞았을 때만 — 엉뚱한 기절 요청(die('기절'))은 머리를 떼지 않는다
+        if (this.physiology.deathRequiresHeadDetachment && this.consciousness <= 0) this.detachHeadFromWound(h);
       }
       return;
     }
 
     // 베기/찌르기 → 상처 + 출혈. 찌르기는 ×1.6 (가슴 찌르기 +0.25 는 이것과 겹쳐 지움 — 사장님 9/30 14:30, 128판 0회)
     const bleedPerSev = h.bleedPerSev;
-    const bleed = sev * bleedPerSev * (h.type === 'stab' ? 1.6 : 1);
+    const bleed = this.physiology.bleeds ? sev * bleedPerSev * (h.type === 'stab' ? 1.6 : 1) : 0; // 피 없는 몸(병마용)은 상처만 남고 출혈 0
     this.bleed += bleed;
     this.wounds.push({ part: h.part, type: h.type, severity: sev, bleed, local: h.local.clone() });
     if (COMBAT.limbSever !== 'off') this.limbSeverCheck(h); // 팔·다리 절단 후보 (count: 세기만 / on: 관절 떼기)
@@ -1463,11 +1484,15 @@ export class Fighter {
     // 치명상
     if (Z === 'neck' && sev > 0.5) {
       // 참수 (COMBAT.decapitate): 칼이 목을 가르고 지나간 베기만. 튕긴 충돌·찌르기·둔기·총은 아니다
-      const decap = COMBAT.decapitate && h.type === 'cut' && h.pass && h.passing;
+      //  흙 몸(병마용)은 사람에게 치명인 목 상처(베기·찌르기 모두)면 목이 부서져 머리가 떨어진다 (샛별 901b1f39 — 같은 문턱 0.5)
+      const decap = this.physiology.deathRequiresHeadDetachment || (COMBAT.decapitate && h.type === 'cut' && h.pass && h.passing);
       if (decap) this.decapitate(sev, bleed);
       this.die('목', !!h.finishPower);
       if (decap) COMBAT_HOOKS.onDecapitate?.(this, this.bodies.head);
-    } else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) this.die('머리', !!h.finishPower);
+    } else if (Z === 'head' && ((h.type === 'cut' && sev > 0.8) || (h.type === 'stab' && sev > 0.5))) {
+      if (this.physiology.deathRequiresHeadDetachment) this.detachHeadFromWound(h); // 흙 몸: 사람에게 치명인 머리 상처면 머리가 떨어지고 그래서 죽는다
+      else this.die('머리', !!h.finishPower);
+    }
 
     // 팔다리 기능
     const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' }[h.part];
@@ -1485,13 +1510,26 @@ export class Fighter {
    */
   decapitate(sev, bleed) {
     const J = this.jointByName.head;
+    if (!J?.joint || this.decapitated) return false; // 이미 뗐다 (흙 몸은 머리 상처가 여러 번 올 수 있다 — 사람 길은 처음 한 번뿐이라 그대로)
     const a = J.joint.anchor1(); // 가슴 몸 기준 목 관절 자리
     this.world.removeImpulseJoint(J.joint, true);
     this.joints.splice(this.joints.indexOf(J), 1); // 근육을 더는 걸지 않는다 (applyPose 의 J.head 목표 쓰기는 아무 데도 안 간다)
     J.joint = null;
     this.decapitated = true;
+    if (!this.physiology.bleeds) bleed = 0; // 피 없는 몸: 목 단면도 출혈 0
     this.bleed += bleed;
     this.wounds.push({ part: 'chest', type: 'cut', severity: sev, bleed, local: new THREE.Vector3(a.x, a.y, a.z), stump: true });
+    return true;
+  }
+
+  /**
+   * 흙 몸(병마용 — 목 관절이 떨어져야만 죽는 몸)의 머리 떨어짐: 사람에게 치명인 머리 베기·찌르기, 기절 문턱을 넘은 머리·목 둔타가 목을 부순다 (샛별 901b1f39 그대로).
+   *  새 힘·배율 없음 — 머리는 칼·끌림이 준 속도 그대로 날아간다. 목을 뗀 뒤에야 die 가 받아들여진다
+   */
+  detachHeadFromWound(h) {
+    if (!this.decapitate(h.severity, 0)) return;
+    this.die(h.zone === 'neck' ? '목' : '머리', !!h.finishPower);
+    COMBAT_HOOKS.onDecapitate?.(this, this.bodies.head);
   }
 
   /**
@@ -1622,7 +1660,7 @@ export class Fighter {
     }
     // 5. 상처·출혈: 떨어진 부위의 상처는 더는 몸의 피가 아니다; 단면 상처를 몸 쪽 부위에 (참수와 같은 꼴)
     for (const w of this.wounds) if (this.detachedParts.has(w.part) && !w.detached) { this.bleed = Math.max(0, this.bleed - w.bleed); w.bleed = 0; w.detached = true; }
-    const bleed = h.severity * (h.bleedPerSev ?? 0.012);
+    const bleed = this.physiology.bleeds ? h.severity * (h.bleedPerSev ?? 0.012) : 0; // 피 없는 몸(병마용): 단면 출혈 0 (샛별 901b1f39 limb_sever 와 같은 뜻)
     this.bleed += bleed;
     this.wounds.push({ part: parentName, type: 'cut', severity: h.severity, bleed, local: new THREE.Vector3(a1.x, a1.y, a1.z), stump: true, limb: t.kind });
     this.severed ||= [];

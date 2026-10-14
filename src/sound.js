@@ -294,9 +294,12 @@ const VOWELS = {
  *       revive = 부활 때 곁들이는 짧은 숨 들이켬 개수(이졸데만),
  *       rate = 재생 속도(목소리 높이), gain = 음량
  *       녹음은 들어 보지 않고 음높이·길이 분석으로 골랐다 — 귀로 듣고 바꾸려면 파일만 갈아 끼우면 된다
- *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 지금은 쓰는 캐릭터가 없다
+ *  mute: 목소리 없이 몸이 "쿵" 쓰러지는 소리만 (BodySounds 가 쓰러짐을 꼭 한 번, 무겁게 낸다). 10/14 병마용(VOICES.silent)이 처음 쓴다
  */
 export const VOICES = {
+  // ── 10/14 병마용 (샛별 저장소 901b1f39 의 voice 'silent' 그대로 — 사장님 결정 10/14 '목소리는 없다(기합·신음 없음)'): 녹음도 합성 목소리도 없음.
+  //  신음(hurt)·죽음(death)·숨은 내지 않고, 몸이 땅에 닿는 "쿵"과 흙 몸 소리(clay · clayBreak — 머리·팔다리가 떨어질 때 부서지는 소리)만 난다
+  silent: { mute: true },
   // ── 10/13 목소리 갱신 (사장님 지시로 샛별 저장소 3f330f7·87c8e77·b728e34·b75013b·7b6b079·9d1b56a 의 최종본을 가져옴 — docs/import/saetbyeol_voice3_2026-10-13.md) ──
   //  상대는 피격2·기절2·출혈2, 피격과 기절은 서로 다른 녹음. 플레이어만 예외(조용한 사망음 하나 + 이명). 브란·하인리히·광기의 하인리히는 그대로
   //  maya: 마야 라토르 전용 — AuraVoice(CC0). 출혈 1·2는 한 호흡 조각, 피격1은 원래 출혈1 뒤 조각, 출혈2만 350Hz -1dB. 음높이 그대로
@@ -829,6 +832,32 @@ export const SYNTH = {
     noiseHit(out, sr, r, { t0: 0.004, amp: 0.3, attack: 0.001, tau: 0.008, type: 'bandpass', f: 1300, q: 1 });
     saturate(out, 2.4, 0.15);
     return fadeOut(normalize(out, 0.9), sr, 0.1);
+  },
+
+  /**
+   * 구운 흙이 깨져 떨어지는 소리 (10/14 병마용 — 사장님 '머리나 팔 잘릴 때 부서지는 소리만'). 절차 합성, 새 파일 없음.
+   *  흙 그릇처럼 둔하게 금이 가는 "딱"(펄스 4~7 개, 0~45 ms) + 짧게 죽는 흙 울림 10 개(500~2600 Hz · 15~45 ms — 길면 도자기 종소리가 된다)
+   *  + 처음 0.15 s 잘게 바스러지는 알갱이 + 0.05~0.55 s 동안 드물어지며 떨어지는 조각 6~10 개(1.2~3.6 kHz 똑) + 낮은 "툭"(85~115 Hz). 0.7 s
+   */
+  clayBreak(sr, r) {
+    const n = Math.round(0.7 * sr);
+    const x = new Float32Array(n);
+    const out = new Float32Array(n);
+    const cracks = [0.001];
+    const k = Math.round(between(r, 4, 7));
+    for (let i = 0; i < k; i++) cracks.push(0.001 + (between(r, 0.004, 0.045) * (i + 1)) / k);
+    for (const [i, t] of cracks.entries()) pulse(x, sr, t, 0.00025, (i === 0 ? 1 : between(r, 0.3, 0.8)) * (r() < 0.5 ? -1 : 1));
+    const modes = [];
+    for (let i = 0; i < 10; i++) modes.push({ f: Math.exp(between(r, Math.log(500), Math.log(2600))), a: between(r, 0.4, 1) * (r() < 0.5 ? -1 : 1), t60: between(r, 0.015, 0.045) });
+    resonate(x, out, sr, modes, Math.ceil(0.06 * sr));
+    normalize(out, 1);
+    for (const t of cracks) noiseHit(out, sr, r, { t0: t, amp: between(r, 0.3, 0.6), tau: 0.002, f: 1800 });
+    gritBurst(out, sr, r, { t0: 0.004, span: 0.15, count: 30, amp: 0.3, fLo: 700, fHi: 4000 });
+    const m = 6 + Math.floor(r() * 5);
+    for (let j = 0; j < m; j++) noiseHit(out, sr, r, { t0: 0.05 + r() ** 1.6 * 0.5, amp: between(r, 0.12, 0.45), attack: 0.0004, tau: between(r, 0.003, 0.006), type: 'bandpass', f: between(r, 1200, 3600), q: 2.5 });
+    thumpTone(out, sr, { t0: 0.001, f0: between(r, 85, 115), drop: 0.5, tau: 0.035, amp: 0.45 });
+    saturate(out, 2.2);
+    return fadeOut(normalize(out, 0.9), sr, 0.08);
   },
 
   /**
@@ -1557,6 +1586,7 @@ const BANK = [
   ['fallLight', 2, (sr, r) => SYNTH.bodyFall(sr, r, false)],
   ['breakWood', 2, (sr, r) => SYNTH.weaponBreak(sr, r, 'wood')],
   ['breakFrozen', 2, (sr, r) => SYNTH.weaponBreak(sr, r, 'frozen')],
+  ['clayBreak', 2, SYNTH.clayBreak], // 병마용 머리·팔다리가 떨어질 때 흙이 부서지는 소리 (10/14 — 조각 씨앗은 이름으로 정해져 다른 소리는 그대로)
   ['hitCut', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'cut')],
   ['hitStab', 2, (sr, r) => SYNTH.hitSlash(sr, r, 'stab')],
   ['hitBlunt', 3, (sr, r) => SYNTH.hitSlash(sr, r, 'blunt')],
@@ -2455,6 +2485,7 @@ export class Sound {
   hurt(voice, severity = 0.5, { me = false, pos } = {}) {
     if (!this._on || !this.ctx) return;
     const id = voice in VOICES ? voice : 'generic';
+    if (VOICES[id].mute) return; // 목소리 없는 인물(병마용): 신음 없음
     const rec = this.pickSample(`voice:${id}:hurt`);
     if (!rec) return;
     const R = VOICES[id].rec || {};
@@ -2583,6 +2614,33 @@ export class Sound {
     this.layer(ev, this.pick('bone'), { gain: 0.6, rate: between(Math.random, 0.75, 0.9), delay: 0.004 });
     this.layer(ev, this.pick('wetHeavy'), { gain: 0.5, rate: between(Math.random, 0.65, 0.8), delay: 0.012 });
     this.layer(ev, this.pick('thump'), { gain: 0.3, rate: 0.7, delay: 0.008 });
+  }
+
+  /**
+   * 흙 몸(병마용)을 친 마른 타격음 — 샛별 저장소 901b1f39 clay() 그대로: 뼈 조각 소리를 0.78 배 빠르기로 0.22 초만. 젖은 소리·살 소리 없음.
+   *  세기 0.18 + 0.42 × E/150 (확인표 1422). main.js onWound 가 살·뼈 소리 대신 부른다
+   */
+  clay(energy, pos) {
+    if (!this._on || !this.ctx) return;
+    const e = clamp01(energy / 150);
+    const ev = this.event({ bus: this.fleshBus, gain: 0.18 + 0.42 * e, prio: 1.5, pos });
+    this.layer(ev, this.pick('bone'), { gain: 0.8, rate: 0.78, dur: 0.22 });
+  }
+
+  /**
+   * 흙 몸(병마용)의 머리·팔다리가 떨어질 때 부서지는 소리 (사장님 10/14 19:4x '머리나 팔 잘릴 때 부서지는 소리만') — 사람의 참수·절단 소리(젖은 소리·목소리) 대신.
+   *  절차 합성 clayBreak 한 겹 + 저장소 녹음 'crack'(나무 쪼개짐, Kenney CC0 — 이미 있는 표본)을 낮게 + 그 무대 바닥 알갱이(떨어진 조각이 바닥에 흩어짐). 새 파일 없음.
+   *  head = 머리(조금 크고 낮게) · 팔다리는 조금 작게. 내가 당하는 일은 없다(병마용은 상대 자리만) — me 는 다른 소리와 같은 꼴로만 받는다
+   */
+  clayBreak({ head = false, me = false, pos } = {}) {
+    if (!this._on || !this.ctx) return;
+    const ev = this.event({ bus: this.fleshBus, gain: head ? 0.85 : 0.7, prio: head ? 3 : 2.5, pos });
+    this.layer(ev, this.pick('clayBreak'), { gain: 1, rate: head ? between(Math.random, 0.86, 0.94) : between(Math.random, 0.98, 1.08) });
+    const rec = this.pickSample('crack');
+    if (rec) this.layer(ev, rec, { gain: 0.35, rate: between(Math.random, 0.7, 0.8), delay: 0.004 });
+    const grit = this.pickSample(STAGE_SOUND[this.stage]?.grit || STAGE_SOUND[this.stage]?.step);
+    if (grit) this.layer(ev, grit, { gain: 0.3, rate: between(Math.random, 1.05, 1.25), delay: 0.09 });
+    if (me && head) this.fadeOutWorld(); // (참수와 같은 꼴 — 머리가 떨어지면 판이 끝난다)
   }
 
   /**
@@ -3539,12 +3597,15 @@ export class BodySounds {
     const s = this.s;
     this.t += dt;
     // 참수 (32차): fighter.decapitate 가 decapitated 를 켠다(die 와 같은 순간). 절단감 소리를 한 번, 죽음 목소리는 내지 않는다
+    //  흙 몸(병마용 — physiology.body 'clay'): 젖은 절단감 대신 흙이 부서지는 소리 (머리 · 팔다리 — 사장님 10/14 19:4x '머리나 팔 잘릴 때 부서지는 소리만')
+    const clay = f.physiology?.body === 'clay';
     if (f.decapitated && !this.decap) {
       this.decap = true;
-      s.decapitate({ me: this.me });
+      if (clay) s.clayBreak({ head: true, me: this.me });
+      else s.decapitate({ me: this.me });
     }
     const nSev = f.severed?.length || 0;
-    if (nSev > this.nSevered) { this.nSevered = nSev; s.sever({ me: this.me }); } // 팔·다리 절단: 절단감 한 번
+    if (nSev > this.nSevered) { this.nSevered = nSev; if (clay) s.clayBreak({ me: this.me }); else s.sever({ me: this.me }); } // 팔·다리 절단: 절단감 한 번 (흙 몸은 부서지는 소리)
     if (f.state !== this.state) {
       if (f.state === 'dead') {
         if (!f.decapitated) s.death(this.voice, f.causeOfDeath, { me: this.me });
@@ -3600,7 +3661,7 @@ export class BodySounds {
     if (W.length < this.nWounds) this.nWounds = W.length;
     while (this.nWounds < W.length) {
       const w = W[this.nWounds++];
-      if (f.state !== 'dead' && w.severity > 0.4 && this.t - this.lastHurt > 2) {
+      if (f.state !== 'dead' && w.severity > 0.4 && this.t - this.lastHurt > 2 && !VOICES[this.voice]?.mute) { // 목소리 없는 인물(병마용)은 신음을 부르지도 않는다
         s.hurt(this.voice, w.severity, { me: this.me });
         this.lastHurt = this.t;
       }
