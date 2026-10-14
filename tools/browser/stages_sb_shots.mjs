@@ -69,7 +69,7 @@ for (const c of journeyOnly ? [] : CASES) {
   await page.goto(`${base}/?weapon=longsword`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000 });
   // 여정 순서(stages.js STAGE_ORDER 열다섯 판 — 10/14 19:4x 습지·철불 절벽·화산섬·소금 사막) + 한 바퀴 뒤 다시 포세이돈. 무대 짝: 잠든 습지 라트나 · 소금 사막 다라이시 · 철불 절벽·화산섬은 무작위 상대(화산섬은 찬다가 들어오면 짝)
-  const want = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr', 'poseidon'];
+  const want = ['poseidon', 'clearing', 'temple', 'castle', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr', 'poseidon_night', 'poseidon'];
   const wantFoe = { sluice: '라트나 위라세타쿤', dayr: '다라이시' };
   const rows = [];
   for (let round = 0; round < want.length; round++) {

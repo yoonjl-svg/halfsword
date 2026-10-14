@@ -8,7 +8,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173';
 const args = process.argv.slice(3);
 const foe = args.find((a) => a.startsWith('--foe='))?.slice(6) || null;
 const picked = args.filter((a) => !a.startsWith('--'));
-const ids = picked.length ? picked : ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr'];
+const ids = picked.length ? picked : ['poseidon', 'clearing', 'temple', 'castle', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr', 'poseidon_night'];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const rows = [];
 let errs = 0;

@@ -68,7 +68,8 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  10/14 19:4x 사장님 '습지, 소금 사막과 함께 정식 경로 포함' — 청람잔도 뒤에 잠든 습지 → 철불 절벽 → 화산섬 → 소금 사막 (감독 안,
 //   확인표 1119 · 1214 · 1386 · 1463). 앞 열한 판의 순서·자리는 그대로이고, 끝은 숙련도 4 다라이시(소금 사막). 소금 사막 다음 판은 다시 포세이돈부터.
 //   화산섬(etna, docs/import/volcano_port_2026-10-14.md)은 철불 절벽과 소금 사막 사이 — 소금 사막은 열다섯째로 밀렸다
-export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'poseidon_night', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr'];
+// 10/14 23:0x 사장님 "스테이지 순서를 '밤의 포세이돈'을 맨 마지막으로 둬" → 밤의 포세이돈(광기의 하인리히)이 여정의 끝
+export const STAGE_ORDER = ['poseidon', 'clearing', 'temple', 'castle', 'cathedral', 'loggia', 'corsair', 'sacred_grove', 'frozen_bay', 'qinglan', 'sluice', 'dunhuang', 'etna', 'dayr', 'poseidon_night'];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 //  10/14 19:4x: 잠든 습지 = 라트나 · 소금 사막 = 다라이시 (손님 인물 CHARACTER_GUESTS — CHARACTERS_BY_ID 로 풀린다, 무작위 회전에는 그대로 없음).
 //   철불 절벽(dunhuang) = 병마용(terracotta, 손님 인물 — 10/14 감독 짝, 사장님 19:4x 정식 경로 결정에 따름)
