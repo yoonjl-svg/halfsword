@@ -117,10 +117,10 @@ export class Stamina {
       this.counts.exhaustion++;
       this.stroke = null;
       this.action = 'exhausted';
-    } else if (this.value < -30) this.level = 2;
-    else if (this.level === 2 && this.value >= -15 - 1e-9) this.level = 1;
+    } else if (this.value < STAMINA.severeAt) this.level = 2; // 심한 지침 −40 아래(사장님 10/16 — 전 −30)
+    else if (this.level === 2 && this.value >= STAMINA.severeAt + STAMINA.stageBack - 1e-9) this.level = 1;
     else if (this.level === 0 && this.value < 0) this.level = 1;
-    if (this.level === 1 && this.value >= 15 - 1e-9) this.level = 0;
+    if (this.level === 1 && this.value >= STAMINA.stageBack - 1e-9) this.level = 0;
   }
 
   spend(kind, amount) {

@@ -16,7 +16,9 @@ export const PHYSICS = {
 //  on: true = 켬(기본) · false = 기력 없음(지금 본판 그대로 — 관문 바이트 같음). 주소 `?stamina=0` = 끔(main.js). 시뮬은 with_config STAMINA.on=false
 //  범위 100 … 0 … −50(탈진) · 0 아래 이동·공격 × 0.7 · −30 아래 × 0.5 — 사장님 결정(배율 0.7 · 0.5 는 stamina.js speed) · 되돌림 +15 · −15 는 설계 시작값(stamina.js stages)
 export const STAMINA = {
-  on: true, max: 100, floor: -50,
+  // 단계 문턱(사장님 10/16 00:5x '심한 지침을 -30이 아니라 -40으로 탈진을 -80으로' — 전 −30 · −50): 0 아래 지침(× 0.7) · severeAt 아래 심한 지침(× 0.5) · floor 에서 탈진.
+  //  stageBack: 한 단계 위로 돌아오려면 문턱보다 15 더 회복해야(지침 → 생생 +15 · 심한 지침 → 지침 severeAt + 15 = −25 — 설계안 §0 11 '단계 되돌림', 값 그대로)
+  on: true, max: 100, floor: -80, severeAt: -40, stageBack: 15,
   // 비용: 베기 12 · 찌르기 7 · 막아 받기 3(상대 공격 한 번에 한 번) — × 무게 · 비기 35 · 첫 걸음 박차기 12(우리 본판 gait.js fastBegin — 독일 뒤 · 이베리아 옆) — 무게 없음.
   //  shotCost: 권총 한 발 2 × 무게(샛별 저장소 첫 판부터 — 설계안에 없음, 사장님 확인 전)
   cutCost: 12, thrustCost: 7, blockCost: 3, secretCost: 35, pushCost: 12, shotCost: 2,
@@ -28,7 +30,7 @@ export const STAMINA = {
   stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
   // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전) · 막기 유지 중엔 멈춤
   recoverPerSecond: 15, playerRecoverPerSecond: 21, recoverDelay: 0.6,
-  exhaustSeconds: 2.5, exhaustRecover: 20, // 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 초당 20 · 끝에서 0(지침 단계)으로(설계 시작값 — 사장님 확인 전)
+  exhaustSeconds: 2.5, exhaustRecover: 32, // 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 끝에서 0(지침 단계)으로. 초당 32 = −floor ÷ 2.5 — 2.5 s 끝에 0 에 닿게(전 50 ÷ 2.5 = 20 과 같은 규칙, 10/16 탈진 −80 에 맞춤 · 탈진 중 값은 막대에 안 보이고(진행은 시간) 끝에서 0 으로 맞추므로 게임 차이 없음)
   tiredPower: 0.49, severePower: 0.25, // 지침·심한 지침의 팔·손목 힘 배율(안쪽 값 — 칼끝 빠르기를 0.7 · 0.5 가까이로 맞추려던 시작값, 보정 끝나지 않음 — 사장님 확인 전)
   aiRestAt: 20, aiAggressiveRestAt: -10, aiResumeAt: 35, // AI: 20 아래(공격적 기질 −10 아래) 새 공격 멈추고 물러남 · 35 에서 다시(되돌림 35 는 샛별 저장소 값 — 사장님 확인 전)
 };

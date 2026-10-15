@@ -207,7 +207,7 @@ function speedAt(weapon, stick, level) {
     for (let i = 0; i < 300; i++) g.step();
     const s = fresh(f);
     const pin = () => {
-      s.value = level === 2 ? -35 : level === 1 ? -10 : 100; // −35: 박차기 12 를 내도 −50 에 안 닿게
+      s.value = level === 2 ? STAMINA.severeAt - 15 : level === 1 ? -10 : 100; // 심한 지침 −55(10/16 문턱 −40 · 탈진 −80 — 전 −35): 박차기 12 를 내도 탈진에 안 닿게
       s.level = level;
     };
     const p0 = { ...f.bodies.pelvis.translation() };
