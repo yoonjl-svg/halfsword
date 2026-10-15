@@ -137,7 +137,12 @@ export const CLOSE = {
 export const GAIT = {
   lowMax: 0.16, // 유파 걸음이 있는 몸만: 유파 바탕 낮춤 + 자세표·덧씌우기 낮춤의 합계 상한(m, 전역 기본 높이 기준). 비기 자세(secretStance) 동안은 상한 밖 (확인표 507)
   school: 1, // 유파 걸음 (10/10 비싼 층, docs/strike/school_gait_design_2026-10-10.md): 1 = 무기 유파의 TRADITIONS[t].gait 를 덮음(독일·무유파는 칸 없음 = 그대로), 0 = 모든 유파 같은 걸음(전 판). `?schoolGait=0`
-  deChase: 1, // 독일 따라 들어가기 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md): 1 = 상대 헛침 뒤 독일 유파 몸의 앞 두 걸음이 빠른 걸음(값 schools.js TRADITIONS.german.chase · gait.js foeWhiff·fastBegin), 0 = 끔(전 판 — 바이트 같음). `?deChase=0`
+  deChase: 1, // 독일 보법 '간격 잡기'의 빠른 디딤 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기', 10/15 18:0x 부터 '간격 잡기'): 1 = 상대 헛침 뒤 독일 유파 몸의 앞 두 걸음이 빠른 걸음(값 schools.js TRADITIONS.german.chase · gait.js foeWhiff·fastBegin), 0 = 끔(빠른 디딤도 잡기도 없음 — 전 판, 바이트 같음). `?deChase=0`
+  // 독일 간격 잡기의 '잡기' (10/15 18:0x 사장님 승인 "'간격 잡기'로 네가 잡은 기준으로 테스트 해봐" — docs/strike/german_hold_2026-10-15.md): 받을 창이 열려 있거나 빠른 디딤 중에
+  //  '지금 거리 − 세게 멈춤으로 서는 거리'가 내 무기 measure.contact(칼이 제대로 들어가는 거리 — 롱소드 1.57 m) 안이 되면 남은 빠른 디딤을 버리고 세게 멈춤(가속 한도 × burstAccel) ·
+  //  창과 같은 0.6 s 동안 조종 입력의 앞(상대 쪽) 몫만 0 — 스틱을 놓았다 다시 밀면 바로 풀림. 헛침 때 이미 contact 안이면 창을 열지 않음. 플레이어만(AI 가 몰지 않는 몸 — AI 는 그대로)
+  //  gait.js holdTick · fighter.js driveBalance. 1 = 켬, 0 = 끔(빠른 디딤만 — 지금 판 그대로, 바이트 같음). `?deHold=0`. 규칙의 값 자리는 사장님 확인 전 (확인표 1638~)
+  deHold: 1,
   // 첫 걸음 박차기 (10/15 사장님 승인 1 단계 '첫걸음 박차기는 넣고 끌 수 있게 해서 내가 해보겠음' — docs/strike/step_burst_2026-10-15.md): 서 있던 몸이 뒤·옆으로 떼는 첫 걸음만 빠르다 —
   //  빠른 걸음 장치(gait.js fastBegin — 몸 빠르기·발 박자 × fastK, 가속 한도 × burstAccel)를 그 한 걸음에. 이어 걷는 걸음은 제 빠르기. 모든 유파의 바탕 걸음(이탈리아 빼고 · 옆 박차기는 이베리아만 — 10/15 15:1x, schools.js IBERIAN_GAIT.burstSide) · 지금은 플레이어만(AI 가 몰지 않는 몸)
   //  빠르기는 걷는 빠르기에 대한 배율이 아니라 절대 목표(m/s — 스틱 끝·다치지 않은 몸 기준): fastK = 목표 ÷ 그 쪽 걷는 빠르기(moveSpeed × backFactor·sideFactor) → 걷는 빠르기 값을 바꿔도 박차기는 그대로.
@@ -148,7 +153,7 @@ export const GAIT = {
   burstFwdMax: 0.3, // 스틱 방향의 앞 몫(앞 = 1, 옆 = 0, 뒤 = −1)이 이보다 작아야(뒤·옆·비스듬히 뒤) 박찬다 — 앞 첫 걸음은 그대로
   burstBackV: 2.5, // 뒤 첫 걸음 몸 목표 빠르기(m/s) — 걷는 뒷걸음 1.26(뒷걸음 × 0.7 — 박차기를 넣을 때는 × 0.6 = 1.08)
   burstSideV: 1.5, // 옆 첫 걸음 몸 목표 빠르기(m/s) — 걷는 옆걸음 0.72 (비스듬히는 스틱의 옆 몫 비율로 섞음 · 이베리아 옆 × 1.3 도 박찬 걸음은 같은 목표) · 10/15 15:1x 부터 옆 박차기는 이베리아만
-  burstAccel: 4, // 그 첫 걸음 동안 몸 가속 한도(maxAccel 3.2 m/s²) 배율 (따라 들어가기 accel 과 같은 뜻)
+  burstAccel: 4, // 그 첫 걸음 동안 몸 가속 한도(maxAccel 3.2 m/s²) 배율 (간격 잡기 빠른 디딤 chase.accel 과 같은 뜻) · 박찬 뒤 세게 멈춤·간격 잡기 세게 멈춤도 이 배율
   burstT: 0.22, // 그 첫 걸음의 발 뜬 시간(s, 절대값 — 그 걸음 제 시간보다 길게는 안 함)
   footExtra: 2, // 딛은 발 무게에 더하는 몫(kg): 신발·쇠 발싸개. 딛은 발의 물리 계산이 더 잘 수렴한다 (내딛는 발은 원래 무게)
   assist: 0.2, // 10/1 21:10 사장님 결정(디렉터 권고): 0.3 → 0.2. 보이지 않는 힘이 받쳐 주는 몸무게 비율 (나머지는 다리 관절 → 발 → 땅). 0이면 다리가 전부. 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 놀 수 있는 칸 (손맛 바닥 통과 = legs asis 10 칸) 중 실전 동작 유사도 1 위 58.5 (docs/strike/support_optimum_2026-10-01.md)

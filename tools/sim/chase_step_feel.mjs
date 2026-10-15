@@ -1,4 +1,4 @@
-// 독일 따라 들어가기 계기 (10/15 — docs/strike/german_chase_2026-10-15.md): 상대 헛침 뒤 앞으로 걷는 걸음마다 시각·시간·거리·빠르기를 켬(GAIT.deChase 1)·끔(0)으로 견준다.
+// 독일 간격 잡기 빠른 디딤 계기 (10/15 — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' — 잡기는 tools/sim/hold_gap_feel.mjs): 상대 헛침 뒤 앞으로 걷는 걸음마다 시각·시간·거리·빠르기를 켬(GAIT.deChase 1)·끔(0)으로 견준다.
 //  ① 롱소드 플레이어(혼자 — 상대를 멀리 치움, 벽 없음): 판 시작 정지·쉼 뒤 '상대 헛침'을 알리고(gait.foeWhiff — ai.js afterStrike·skill.js whiffTrack 가 부르는 자리를 대본이 부름)
 //   대본대로 스틱을 민다. 걸음 = 걷는 동안 walk·catch 한 디딤(gait.js fastBegin 과 같은 가름) · 시간·거리 = 그 걸음을 뗀 때부터 다음 걸음을 뗄 때까지 · 빠르기 = 거리 ÷ 시간
 //   대본: A 0.2 s 뒤 앞 끝 2.5 s · B 0.2 s 뒤 앞 0.5 2.5 s · C 0.8 s 뒤 앞 끝(창 0.6 s 넘음 — 못 받음) · D 뒤 끝 0.4 s → 앞 끝 2.1 s(뒤 걸음은 안 받음 · 몸이 아직 뒤로 가는 첫 앞 걸음은 받기만)
@@ -110,7 +110,7 @@ function runP(scn, on) {
 
 const f2 = (v) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 const f3 = (v) => (Number.isFinite(v) ? v.toFixed(3) : '-');
-console.log(`따라 들어가기 계기 · ${id} 플레이어 · 헛침 알림 뒤 대본 · 켬 = GAIT.deChase 1 · 끔 = 0`);
+console.log(`간격 잡기 빠른 디딤 계기 · ${id} 플레이어 · 헛침 알림 뒤 대본 · 켬 = GAIT.deChase 1 · 끔 = 0`);
 console.log('| 대본 | 받을 창 열림 | 빠른 걸음 차례 (켬) | 앞 걸음 1·2 시간 s 끔 → 켬 | 앞 걸음 1·2 거리 m 끔 → 켬 | 앞 걸음 1·2 빠르기 m/s 끔 → 켬 | 3·4째 빠르기 끔 → 켬 | 앞으로 민 뒤 0.5 · 1.0 s 간 거리 m 끔 → 켬 | 1 m 까지 s 끔 → 켬 | 넘어짐 · 붙잡기 반사 s · catch · 일찍 디딤 (끔 → 켬) |');
 console.log('|---|---|---|---|---|---|---|---|---|---|');
 const detail = [];
