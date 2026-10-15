@@ -2,7 +2,7 @@
 //  X 의 빠른 걸음(gait.fastK > 1 로 뗀 걸음 — 짝걸음은 이끄는 발만 셈) 수 · 그 걸음 동안 X 가 시작한 공격(ai.js startAttack, 이어 치기 포함) 수 ·
 //  X 의 넘어짐(stand → down)·붙잡기 반사 시간(gait.levC > 0.3 — 그중 빠른 걸음 동안과 그 뒤 0.5 s 몫, 다리 다침(legHealth < 1) 뒤 몫)·catch 디딤·
 //  일찍 디딤(walk 걸음이 정한 시간 85 % 전에 디딤) · 공격 수 · 끝난 판(죽음 — 판마다 싸움이 갈라지므로 씨앗별 값보다 합을 본다)
-//  X 가 독일 유파면 따라 들어가기(10/15 — docs/strike/german_chase_2026-10-15.md)도: 상대 헛침 알림 받음(gait.foeWhiff) · 발동(빠른 걸음을 하나라도 뗀 받을 창) · 그 가운데 발동 뒤 1 s 안에
+//  X 가 독일 유파면 간격 잡기 빠른 디딤(10/15 — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' · AI 끼리라 잡기는 없음)도: 상대 헛침 알림 받음(gait.foeWhiff) · 발동(빠른 걸음을 하나라도 뗀 받을 창) · 그 가운데 발동 뒤 1 s 안에
 //  X 가 공격을 시작한 수 — 끄고 견주려면 node tools/sim/with_config.mjs GAIT.deChase=0 fast_step_duel.mjs …
 //  재기만 — 물리·난수·AI 는 게임 그대로(begin·touchdown·startAttack·foeWhiff 를 감싸 읽기만), 판 하나는 결정적. 주기는 TRADITIONS.italian.gait.rhythm.every 를 바꿔 견줌
 //  10/15 디딤 셈(docs/strike/italian_rhythm_2026-10-15.md §8): 주기 칸은 setItalianRhythm 글 — '0' 끔 · 'N' 옛 짝 셈 N + 1 · 'N+M' 디딤 셈 N + M ·
@@ -85,7 +85,7 @@ AI.prototype.startAttack = function (tech, why, opt) {
 
 const school = (w) => (SCHOOLS[w] ? w : 'longsword');
 console.log(`빠른 걸음 AI 판 · ${xw} AI 대 ${yw} AI · 씨앗 ${nSeed} × ${secs} s · 기본 mul ${RH.mul}(갈래마다 칸 이름에) · idle ${RH.idle} s`);
-console.log('| 주기 | 씨앗 | 빠른 걸음 (분당) | 그 걸음 중 공격 / 공격 | 넘어짐 | 붙잡기 반사 s (빠른 걸음 +0.5 s 안 · 다리 다친 뒤) | catch 디딤 | 일찍 디딤 (빠른 걸음 발) | 따라 들어가기: 헛침 알림 · 발동 (분당) · 발동 뒤 1 s 안 공격 | 끝 (X/상대) | 디딤: 앞뒤 · 빠른 몫 · 발동(분당) |');
+console.log('| 주기 | 씨앗 | 빠른 걸음 (분당) | 그 걸음 중 공격 / 공격 | 넘어짐 | 붙잡기 반사 s (빠른 걸음 +0.5 s 안 · 다리 다친 뒤) | catch 디딤 | 일찍 디딤 (빠른 걸음 발) | 간격 잡기: 헛침 알림 · 발동 (분당) · 발동 뒤 1 s 안 공격 | 끝 (X/상대) | 디딤: 앞뒤 · 빠른 몫 · 발동(분당) |');
 console.log('|---|---|---|---|---|---|---|---|---|---|---|');
 const ITX = traditionOf(getWeapon(xw)) === 'italian'; // 주기 칸은 이탈리아 무기만 뜻이 있다 (아니면 '-')
 for (const every of EVERY) {

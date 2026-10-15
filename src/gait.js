@@ -173,14 +173,18 @@ export class Gait {
     this.runW = 0;
     // 빠른 걸음 (10/15 — 이탈리아 박자 걸음 P.rhythm): fastK = 지금 걸음의 몸 빠르기·발 박자 배율(1 = 보통) · rhyN = 이번 마디에 센 앞뒤 걸음(디딤 셈이면 보통 디딤) ·
     //  rhyF = 디딤 셈 빠른 몫에 남은 빠른 디딤 · rhyIdle = 걸음이 끝난 뒤 지난 시간
-    //  rhyTrail = 짝걸음 빠른 걸음의 따라붙는 발이 아직 남았나 · chase = 독일 따라 들어가기 받을 창(상대 헛침 뒤 — foeWhiff) · fastAccent = 지금 빠른 걸음의 발소리 강조 ·
-    //  fastAcc = 지금 빠른 걸음의 몸 가속 한도 배율(fighter.js driveBalance — 따라 들어가기만 둠)
+    //  rhyTrail = 짝걸음 빠른 걸음의 따라붙는 발이 아직 남았나 · chase = 독일 간격 잡기 받을 창(상대 헛침 뒤 — foeWhiff) · fastAccent = 지금 빠른 걸음의 발소리 강조 ·
+    //  fastAcc = 지금 빠른 걸음의 몸 가속 한도 배율(fighter.js driveBalance — 간격 잡기 빠른 디딤만 둠) · chaseStep = 지금 빠른 걸음이 간격 잡기 빠른 디딤인가(fastBegin)
     this.fastK = 1;
     this.rhyN = 0;
     this.rhyF = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
     this.chase = null;
+    this.chaseStep = false;
+    // 간격 잡기의 잡기(10/15 — GAIT.deHold, holdTick · 플레이어만): hold = 잡는 중 { t 지난 시간, T 잡는 시간 } · holdBrake = 걸 때 상대 쪽 단위 벡터(세게 멈춤 — 몸이 설 때까지) ·
+    //  holdEnd = 마지막 잡기가 풀린 까닭('time' · 'stick' · 'state' — 읽기만 하는 표시)
+    this.hold = this.holdBrake = this.holdEnd = null;
     // 첫 걸음 박차기(10/15 — GAIT.stepBurst): burst = 서 있다가 뒤·옆으로 걷기 시작한 순간 걸고(update) 첫 걸음을 뗄 때 쓴다(fastBegin) — { fore, side 스틱 방향 부호 · lat 옆 몫 비율 } ·
     //  burstLeg = 그 걸음의 발(디딜 자리를 박찬 가속으로 내다봄 — burstAhead) · burstBrake = 박찬 쪽 단위 벡터(몸이 따라잡을 때까지 가속 한도 그대로 — 세게 멈춤)
     this.burst = this.burstLeg = this.burstBrake = null;
@@ -231,13 +235,14 @@ export class Gait {
     this.prevHead = this.f.heading;
     this.headRate = 0;
     this.resetRates();
-    // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다(따라 들어가기 받을 창·박차기도 버림)
+    // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다(간격 잡기 받을 창·잡기·박차기도 버림)
     this.fastK = 1;
     this.rhyN = 0;
     this.rhyF = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
     this.chase = null;
+    this.hold = this.holdBrake = null;
     this.burst = this.burstLeg = this.burstBrake = null;
   }
 
@@ -247,6 +252,8 @@ export class Gait {
     this.rhyN = 0;
     this.rhyF = 0;
     this.chase = null;
+    if (this.hold) this.holdEnd = 'state';
+    this.hold = this.holdBrake = null;
     this.burst = this.burstLeg = this.burstBrake = null;
     const J = this.f.jointByName;
     for (const k of ['F', 'B']) {
@@ -320,19 +327,72 @@ export class Gait {
   }
 
   /**
-   * 독일 따라 들어가기 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝났다(헛침) —
+   * 독일 간격 잡기 — 받을 창 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md, 그때 이름 '따라 들어가기'): 상대 공격이 칼에도 몸에도 닿지 않고 끝났다(헛침) —
    *  ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack 이 부른다. 내 무기가 독일 유파(TRADITIONS.german.chase)이고 서서 걷는 몸이면 받을 창을 연다(새 헛침이면 새로).
+   *  잡기(GAIT.deHold — 10/15 18:0x, docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)는 헛침 때 이미 내 칼이 제대로 들어가는 거리(swordArt.measure.contact —
+   *   가슴-가슴, holdTick 과 같은 잣대) 안이면 창을 열지 않는다(이미 가까움). AI 는 그대로.
    *  GAIT.deChase 0 이면 아무것도 안 한다(전 판). 상태만 적고 난수·몸은 건드리지 않는다
    */
   foeWhiff() {
     if (!GAIT.deChase || !this.active || this.f.state !== 'stand') return;
     const def = TRADITIONS[this.f.swordArt?.tradition]?.chase;
-    if (def) this.chase = { def, t: 0, left: def.steps, got: false };
+    if (!def) return;
+    if (GAIT.deHold && !this.f.aiControlled && this.f.foeDistance() <= this.f.swordArt.measure.contact) return;
+    this.chase = { def, t: 0, left: def.steps, got: false };
+  }
+
+  /**
+   * 독일 간격 잡기 — 잡기 (10/15 18:0x 사장님 승인 "'간격 잡기'로 네가 잡은 기준으로 테스트 해봐" · 감독 보충 '거기서 서야' — docs/strike/german_hold_2026-10-15.md):
+   *  플레이어(AI 가 몰지 않는 몸)만, GAIT.deHold 일 때 fighter.js driveBalance 가 조종 입력을 읽기 전에 매 스텝 부른다. 칼 입력은 읽지 않는다(다리만의 규칙).
+   *  걸기: 받을 창이 열려 있거나(this.chase — 받기 전·받은 뒤 남은 걸음) 간격 잡기 빠른 디딤 중(fastK > 1 · chaseStep)에
+   *   '지금 거리 − 멈추는 거리' ≤ 내 무기 swordArt.measure.contact(칼이 제대로 들어가는 거리 — 롱소드 1.57 m, 무기별 실측)이면 —
+   *   거리 = 가슴-가슴 수평(fighter.foeDistance — AI 가 measure 와 견주는 d 와 같은 잣대) · 멈추는 거리 = v² ÷ (2 · maxAccel · burstAccel)
+   *   (v = 걸러진 골반 빠르기 vf 의 상대 쪽 몫 — 세게 멈춤 가속으로 서는 거리: 서는 자리가 contact 근처가 되게)
+   *   → 남은 빠른 디딤을 버리고(fastK 1 · 받을 창 닫음) 잡기 window s(받을 창과 같은 값 0.6) · 세게 멈춤(holdBrake — 가속 한도 × burstAccel, 박차기 뒤 세게 멈춤과 같은 값)
+   *  잡는 동안: 조종 입력(move — 스틱, 그리고 거기에 얹힌 베기 첫 0.3 s 몸 밀기)의 앞 몫만 0(fighter.js driveBalance — 옆·뒤 몫은 그대로, 판 시작 정지와 같은 자리) ·
+   *   몸이 이미 가진 빠르기는 물리대로(세게 멈춤 한도로 줄고, 다 줄면 보통 한도) · 기술 걸음(requestStep)·균형 걸음(stumble)은 그대로
+   *  풀기: 스틱을 놓으면(데드존 안 = 0 — main.js stickX·stickY, 없으면 move) 바로 · window s 지나면 · 판 시작 정지·마무리 중 · 넘어짐(exit). 한 받을 창에 한 번(걸 때 창을 닫음)
+   *  세게 멈춤 끝은 update(몸의 그 쪽 빠르기가 가려는 속도의 그 몫 + BRAKE_TOL 안 — 박차기 세게 멈춤과 같은 셈, 시간 값 없음). 난수는 건드리지 않는다
+   */
+  holdTick(dt) {
+    const f = this.f;
+    if (f.feetHeld || f.finish?.amt > 0.5) {
+      if (this.hold) this.holdEnd = 'state';
+      this.hold = this.holdBrake = null;
+      return;
+    }
+    const H = this.hold;
+    if (H) {
+      const sx = f.stickX ?? f.move.x;
+      const sy = f.stickY ?? f.move.y;
+      if (!sx && !sy) this.holdEnd = 'stick';
+      else if ((H.t += dt) > H.T) this.holdEnd = 'time';
+      else return;
+      this.hold = null;
+      return;
+    }
+    if (!this.chase && !(this.fastK > 1 && this.chaseStep)) return;
+    const foe = f.foe;
+    const contact = f.swordArt?.measure?.contact;
+    if (!foe || !(contact > 0)) return;
+    const a = f.bodies.chest.translation();
+    const b = foe.bodies.chest.translation();
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const d = Math.hypot(dx, dz);
+    if (!(d > 1e-6)) return;
+    const v = Math.max(0, (this.vf.x * dx + this.vf.z * dz) / d);
+    if (d - (v * v) / (2 * GAIT.maxAccel * GAIT.burstAccel) > contact) return;
+    this.hold = { t: 0, T: TRADITIONS[f.swordArt.tradition]?.chase?.window ?? 0 };
+    this.holdEnd = null;
+    this.holdBrake = { x: dx / d, z: dz / d };
+    this.fastK = 1;
+    this.chase = null;
   }
 
   /**
    * 빠른 걸음 (10/15): 새 걸음을 뗄 때(update ③) 이 걸음이 빠른 걸음인지(fastK) 정한다 → 이 걸음 시간을 돌려준다.
-   *  RH = 이탈리아 박자 걸음(P.rhythm — docs/strike/italian_rhythm_2026-10-15.md)이 세고, C = 독일 따라 들어가기 받을 창(this.chase — docs/strike/german_chase_2026-10-15.md)이 쓴다.
+   *  RH = 이탈리아 박자 걸음(P.rhythm — docs/strike/italian_rhythm_2026-10-15.md)이 세고, C = 독일 간격 잡기 받을 창(this.chase — docs/strike/german_chase_2026-10-15.md)이 쓴다.
    *  한 걸음(펜싱의 한 걸음) = follow 짝걸음이면 이끄는 발로 여는 한 짝(따라붙는 발·짝 사이 쉼까지 같은 걸음 — 몸 박자 leadV·trailV·restV 도 한 짝이 한 단위),
    *   아니면(지나 딛기) 걷는 동안 몸을 옮기는 한 디딤 — walk 걸음, 그리고 걷는 중 다리가 안 닿아 먼저 옮기는 catch 걸음(스틱 끝까지 앞으로 달리면
    *   레이피어 앞발 디딤이 늘 catch 로 열린다 — 박자 걸음 전에도 그렇다. 안 세면 두 디딤에 하나만 센다).
@@ -342,18 +402,19 @@ export class Gait {
    *   옆 걸음·기술 걸음(req·draw)·짝걸음 안 catch·자세 고치기는 세지도 끊지도 않는다(빠른 걸음만 거기서 끝남 — 그 걸음은 제 시간)
    *  방향을 막 바꿔 몸이 아직 반대쪽으로 RH.brake m/s 넘게 가는 동안 뗀 걸음은 빠른 걸음을 미룬다(셈은 하고 다음 앞뒤 걸음이 빠른 걸음) — 멈춰 서는 디딤을
    *   서두르면 붙잡기 반사가 는다(스틱 끝 앞 ↔ 뒤 번갈아 — rhythm_step_feel C). 빠른 걸음 중 스틱 앞뒤가 뒤집혀도 거기서 끝(update)
-   *  따라 들어가기는 같은 '한 걸음' 가운데 앞 걸음(wf > 0)만 받고 쓴다 — 받을 창 안 첫 앞 걸음부터 steps 걸음(몸이 아직 뒤로 brake 넘게 가는 앞 걸음은 받기만)
+   *  간격 잡기 빠른 디딤은 같은 '한 걸음' 가운데 앞 걸음(wf > 0)만 받고 쓴다 — 받을 창 안 첫 앞 걸음부터 steps 걸음(몸이 아직 뒤로 brake 넘게 가는 앞 걸음은 받기만)
    *  ※ 위 '한 걸음'(짝걸음 = 한 짝)은 옛 셈 RH.count 'pair'(`?itRhythm=N` 비교용)이다. 기본 RH.count 'foot'(10/15 13:2x 사장님 '디딤 기준으로 통일'):
    *   짝걸음 안에서도 **디딤 하나 = 한 걸음**(이끄는 발·따라붙는 발·걷는 중 catch 모두) — 앞뒤 디딤 normal 번 보통 → 다음 fast 디딤이 빠름(기본 2 + 2 — 10/15 15:1x, 전 4 + 2 · 셈 rhyN, 남은 빠른 디딤 rhyF).
    *   짝걸음이면 빠른 몫은 **이끄는 발 디딤에서만 시작** — 셈이 따라붙는 발에서 차면 그 발은 보통으로 두고(셈은 normal 에 머묾) 다음 이끄는 발에서 시작 → 빠른 몫이 펜싱 한 걸음 통째.
    *   빠른 디딤마다 fastK = mul(박자 · 몸 빠르기 — 짝걸음은 발 뜬 시간 그대로, 짝 사이 쉼에서 줄임) · 가속 한도 규칙도 그대로(RH.accel 없음 = × 1).
    *   옆 걸음·기술 걸음·자세 고치기는 세지도 끊지도 않음(그 걸음은 제 빠르기 — 남은 빠른 디딤은 다음 앞뒤 디딤으로) · brake 미룸 · idle 끊김 · 스틱 뒤집힘 끝은 같음
-   *   (스틱이 뒤집혀 빠른 걸음이 끝나면 남은 빠른 디딤도 버림 — update). 독일 따라 들어가기는 원래 디딤 셈(PR 없음)이라 그대로
+   *   (스틱이 뒤집혀 빠른 걸음이 끝나면 남은 빠른 디딤도 버림 — update). 독일 간격 잡기 빠른 디딤은 원래 디딤 셈(PR 없음)이라 그대로
    *  wf = 가려는 속도의 앞 몫(m/s, 부호 있음) · vb = 걸러진 골반 속도의 앞 몫
    */
   fastBegin(RH, C, kind, PR, wf, vLat, vb, Tstep) {
     const k0 = this.fastK;
     this.fastFore = false; // 첫 걸음 박차기의 '앞뒤 몫만 빠르게'(이베리아 아닌 유파 비스듬히 뒤) — 아래 박차기 가지만 켬
+    this.chaseStep = false; // 이 걸음이 간격 잡기 빠른 디딤인가 — 아래 C 가지만 켬 (잡기 걸기 holdTick 이 읽음)
     const foot = RH?.count === 'foot'; // 디딤 셈(기본) — 짝걸음 따라붙는 발·catch 도 센다
     if (Math.abs(wf) > vLat && (PR && !foot ? kind === 'walk' && this.pairStep === 'lead' : kind === 'walk' || (kind === 'catch' && this.walking))) {
       let k = 1;
@@ -381,12 +442,13 @@ export class Gait {
         }
       }
       if (C && wf > 0) {
-        // 따라 들어가기: 받을 창 안의 첫 앞 걸음이 받는다 — 몸이 아직 뒤로 brake 넘게 가면 받기만 하고(멈춰 서는 디딤) 빠른 걸음은 다음 앞 걸음부터. steps 걸음을 다 쓰면 끝
+        // 간격 잡기 빠른 디딤: 받을 창 안의 첫 앞 걸음이 받는다 — 몸이 아직 뒤로 brake 넘게 가면 받기만 하고(멈춰 서는 디딤) 빠른 걸음은 다음 앞 걸음부터. steps 걸음을 다 쓰면 끝
         C.got = true;
         if (vb > -(C.def.brake ?? Infinity)) {
           k = C.def.mul;
           this.fastAccent = C.def.accent ?? true;
           this.fastAcc = C.def.accel ?? 1; // 가속 한도 배율 (fighter.js driveBalance — 그 걸음 동안만)
+          this.chaseStep = true;
           if (--C.left <= 0 && this.chase === C) this.chase = null;
         }
       }
@@ -626,7 +688,7 @@ export class Gait {
     const T = walkNow ? 1 / cad : GAIT.settleT / (1 - this.P.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
     // 빠른 걸음 (10/15): 박자 걸음(P.rhythm — 이탈리아, docs/strike/italian_rhythm_2026-10-15.md)은 켜졌을 때만 센다(rhythmOn — 디딤 셈 N + M 또는 옛 짝 셈 · `?itRhythm=0` = 칸 없는 것과 같은 길) ·
-    //  따라 들어가기(this.chase — 독일, 상대 헛침 뒤 받을 창 · docs/strike/german_chase_2026-10-15.md)는 GAIT.deChase 일 때만.
+    //  간격 잡기 빠른 디딤(this.chase — 독일, 상대 헛침 뒤 받을 창 · docs/strike/german_chase_2026-10-15.md)은 GAIT.deChase 일 때만(잡기는 holdTick — driveBalance 가 먼저 부름).
     //  판 시작 정지·마무리 중엔 세지 않고 처음부터(받을 창도 버림) · 걷지 않으면 빠른 걸음 끝. 둘 다 없고 빠른 걸음도 아니면 셈하지 않는다
     //  빠른 걸음 중 스틱 앞뒤가 뒤집히면(가려는 속도 앞 몫의 부호가 그 걸음과 반대) 거기서 끝 — 멈춰 서는 동안 서두르지 않게
     let RH = rhythmOn(this.P.rhythm) ? this.P.rhythm : null;
@@ -819,7 +881,7 @@ export class Gait {
       }
       if (next) {
         const l = L[next];
-        // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(따라 들어가기) 박차기를 쓰고(첫 걸음) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
+        // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(간격 잡기) 박차기를 쓰고(첫 걸음) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
         if (RH || CH || this.burst || this.fastK > 1) Tstep = this.fastBegin(RH, CH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep);
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
@@ -863,7 +925,7 @@ export class Gait {
         this.fastK = 1;
       }
     }
-    // 따라 들어가기 받을 창: 받기 전엔 헛침 뒤 window s 안에 앞으로 걷기 시작하지 않으면 사라짐 · 받은 뒤엔 걸음(자세 고치기 빼고)이 끝나고 window s 안에
+    // 간격 잡기 받을 창: 받기 전엔 헛침 뒤 window s 안에 앞으로 걷기 시작하지 않으면 사라짐 · 받은 뒤엔 걸음(자세 고치기 빼고)이 끝나고 window s 안에
     //  새 걸음을 떼지 않으면(멈춤) 남은 걸음도 사라짐. 창이 없으면 셈하지 않는다
     if (CH && this.chase === CH) {
       if (!CH.got) {
@@ -964,6 +1026,12 @@ export class Gait {
         want.x += bb.x * (ws - wb);
         want.z += bb.z * (ws - wb);
       }
+    }
+    // 간격 잡기 세게 멈춤(holdBrake — 잡기를 걸 때의 상대 쪽 단위 벡터, holdTick · 플레이어만): 몸의 그 쪽 빠르기가 가려는 속도의 그 몫 + BRAKE_TOL 안으로 줄면 끝 —
+    //  그동안 가속 한도 × burstAccel(fighter.js driveBalance). 박차기 세게 멈춤과 같은 셈 · 시간 값 없음 · 잡기가 먼저 풀려도(스틱 놓음) 몸이 설 때까지는 그대로
+    if (this.holdBrake) {
+      const hb = this.holdBrake;
+      if (this.vf.x * hb.x + this.vf.z * hb.z <= Math.max(0, want.x * hb.x + want.z * hb.z) + BRAKE_TOL) this.holdBrake = null;
     }
 
     // ⑥ 골반 높이: 딛은 다리가 닿는 높이 (무릎을 조금 굽힌 채)

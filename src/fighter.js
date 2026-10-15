@@ -237,6 +237,7 @@ const _v3 = new THREE.Vector3();
 const _q1 = new THREE.Quaternion();
 const UP = new THREE.Vector3(0, 1, 0);
 const HELD_MOVE = Object.freeze({ x: 0, y: 0 }); // 발이 묶인 동안 읽는 조종 입력 (feetHeld)
+const HOLD_MOVE = { x: 0, y: 0 }; // 독일 간격 잡기 동안 읽는 조종 입력 — 옆 몫만(앞 몫 0, gait.js holdTick · driveBalance)
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 const toV = (v) => _v3.set(v.x, v.y, v.z);
@@ -2145,7 +2146,15 @@ export class Fighter {
     const hybrid = !!G && this.state === 'stand';
     const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1) * (this.wearsPlate() ? ARMOR.moveMul : 1); // moveMul: 권총은 발이 빠르다 (weapons.js), 판금은 느리다 (config.js ARMOR)
     const st = this.stumble;
-    const mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
+    let mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
+    // 독일 간격 잡기의 잡기 (10/15 — GAIT.deHold, gait.js holdTick · docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)만 — 조종 입력을 읽기 전에 걸고·풀고·시간을 센다.
+    //  잡는 동안 조종 입력의 앞(상대 쪽 — 몸은 늘 상대를 본다) 몫만 0 — 옆·뒤 몫·균형 걸음(stumble)·기술 걸음(gait req)은 그대로, 몸이 가진 빠르기는 물리대로(아래 가속 한도).
+    //  끄면(0)·AI 는 부르지도 읽지도 않는다(바이트 같음)
+    if (hybrid && GAIT.deHold && !this.aiControlled && G.active) G.holdTick(dt);
+    if (hybrid && G.hold && mvIn.y > 0) {
+      HOLD_MOVE.x = mvIn.x;
+      mvIn = HOLD_MOVE;
+    }
     // 진흙(잠든 습지 웅덩이)은 조종 입력만 줄인다 — 균형 잡는 걸음(stumble)·중력·공격은 그대로. 다른 무대는 정확히 1 (샛별 저장소 325a5c38 의 한 줄을 옮김)
     const terrainScale = fighterWetlandMoveScale(this, p.x, p.z);
     this.surfaceSpeedScale = terrainScale;
@@ -2228,9 +2237,10 @@ export class Fighter {
     const dvx = want.x - v.x;
     const dvz = want.z - v.z;
     const grip = Math.min(1, loadSum * 1.5);
-    // 빠른 걸음(10/15 — gait.js fastBegin)이 가속 한도 배율을 두면(독일 따라 들어가기 chase.accel — 헛침 뒤 박차고 들어감) 그 걸음 동안만 곱한다. 보통 걸음·이탈리아 박자 걸음은 × 1 (같은 수)
-    //  첫 걸음 박차기(10/15 — GAIT.stepBurst)는 박찬 걸음 뒤에도 몸이 박찬 빠르기를 다 줄일 때까지(gait.burstBrake) 같은 배율 — 세게 멈춤. 플레이어만이라 AI 는 늘 같은 수
-    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake ? GAIT.burstAccel : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
+    // 빠른 걸음(10/15 — gait.js fastBegin)이 가속 한도 배율을 두면(독일 간격 잡기 빠른 디딤 chase.accel — 헛침 뒤 박차고 들어감) 그 걸음 동안만 곱한다. 보통 걸음·이탈리아 박자 걸음은 × 1 (같은 수)
+    //  첫 걸음 박차기(10/15 — GAIT.stepBurst)는 박찬 걸음 뒤에도 몸이 박찬 빠르기를 다 줄일 때까지(gait.burstBrake) 같은 배율 — 세게 멈춤. 간격 잡기의 잡기(gait.holdBrake)도
+    //  잡기를 건 뒤 몸이 설 때까지 같은 배율(같은 값 — 새 값 없음). 둘 다 플레이어만이라 AI 는 늘 같은 수
+    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake ? GAIT.burstAccel : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     push(fx, 0, fz);

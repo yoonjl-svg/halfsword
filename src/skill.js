@@ -1182,7 +1182,7 @@ export class Skill {
   }
 
   /**
-   * 사람 휘두르기 헛침 (10/15 독일 따라 들어가기 — docs/strike/german_chase_2026-10-15.md): AI 가 몰지 않는 몸만(AI 는 ai.js afterStrike 의 missed 가 알린다).
+   * 사람 휘두르기 헛침 (10/15 독일 간격 잡기 — docs/strike/german_chase_2026-10-15.md): AI 가 몰지 않는 몸만(AI 는 ai.js afterStrike 의 missed 가 알린다).
    *  한 번의 공격 = 휘두르기(또는 탭 찌르기)가 이어진 동안 + 손이 멈춘 뒤(UNIQUE_ASSIST.onsetQuiet) 칼이 다 지나갈 때까지(AI follow 와 같은 꼴: 0.3 s 지나고
    *  칼끝이 6 m/s 아래로, 늦어도 0.5 s). 그 사이 다시 휘두르면 같은 공격으로 잇는다 — 감기 + 긋기, 잇따른 긋기는 한 번(AI 도 감기·베기·지나감이 한 공격) · 그 사이 한 번이라도 닿으면 헛침 아님.
    *  맞힘 = 상대 아픔 +0.05(AI hitLanded·unique_assist 와 같은 눈) · 맞물림 = 칼끼리 0.07 m(ai.js checkBind 와 같은 기하). 끝날 때 둘 다 없으면 상대 걸음에 알린다
@@ -1244,7 +1244,7 @@ export class Skill {
     const sp = this.vel.length();
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
     this.swinging = swinging;
-    if (GAIT.deChase && !f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 따라 들어가기, 10/15). AI 는 ai.js afterStrike 가 알린다
+    if (GAIT.deChase && !f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 간격 잡기, 10/15). AI 는 ai.js afterStrike 가 알린다
     if (this.uniq) this.uniq.detect(dt, swinging); // 플레이어 고유 동작: 긋기 시작(시작 패드·처음 방향)을 읽고 해금된 고유 동작이 맞으면 그 긋기에 강화를 얹는다 (잇는 동작은 이어 그은 긋기에 뒷몫)
     // 플레이어 막기 버튼 (10/11 — parry_button.js): 버튼이 손 목표를 휘두르기 문턱보다 빠르게 옮기는 동안은 AI 막기(손이 parrySpeed 로 옮겨져 휘두르기로 잡힘)처럼
     //  휘두르기 꼴의 거르기·몸 따라가기를 쓴다. 휘두르기 사건(swinging — 내딛기·베기 덩이·자세로 돌아가기)은 손가락 끌기만 (버튼이 prev 도 옮긴다). 버튼이 없으면 guardDrive 없음 → 그대로
