@@ -123,6 +123,8 @@ function mkLeg(k, side) {
  *  읽는 값·연산이 한 비트도 안 바뀐다. 칸이 있으면 GAIT 를 프로토타입으로 둔 객체(덮지 않은 열쇠는 전역 값 — with_config·주소 손잡이도 그대로 따라감).
  *  byFrame[틀]: 그 몸 틀(swordArt.frame)만 더 덮는 값(일본 앞무게 = 모노호시자오). 플레이어도 같은 걸음(사장님 10/10 05:1x '플레이어도 유파 영향') —
  *  player: 플레이어 쪽(fighter.index 0 이고 AI 가 몰지 않을 때)만 다시 덮는 값(조작감 완화용)
+ *  보폭 규칙 (10/15 20:3x 사장님 — GAIT.strideRule, docs/strike/stride_rule_2026-10-15.md): 칸에 strideK(k)가 있으면 맨 끝에 보폭 상한 = GAIT.maxStride × k · 1 m/s 박자 = GAIT.cadence0 ÷ k 로
+ *   (덮어쓰기 칸 byFrame·player 의 그 두 값도 이것으로 — 사람·AI 같은 보폭 · 박자는 빠르기 ÷ 보폭). 끄면(0) 칸 값 그대로(바이트 같음)
  */
 export function gaitParams(f, isPlayer = false) {
   if (!GAIT.school) return GAIT;
@@ -137,6 +139,10 @@ export function gaitParams(f, isPlayer = false) {
   put(g);
   put(g.byFrame?.[art.frame]);
   if (isPlayer) put(g.player);
+  if (GAIT.strideRule && g.strideK) {
+    P.maxStride = GAIT.maxStride * g.strideK;
+    P.cadence0 = GAIT.cadence0 / g.strideK;
+  }
   P.tradition = art.tradition;
   return P;
 }
