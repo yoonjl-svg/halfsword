@@ -6,14 +6,21 @@
 //  재기만 — 물리·난수는 게임 그대로(begin·touchdown 을 감싸 읽기만), 판 하나는 결정적.
 //  실행: node tools/sim/step_burst_feel.mjs [무기 longsword] [가까움 2.4] [대본들 A,B,…]   (SBF_ROWS=1 → 걸음마다 줄 · SBF_JSON=파일 → 값 고르기용 기록)
 //  값 고르기: node tools/sim/with_config.mjs GAIT.burstBackV=2.2 step_burst_feel.mjs …
+//  이어 밀기 (10/15 뒤 2 s 고침 — 문서 §7): 대본 K(뒤 끝 2 s) · L(오른 끝 2 s) 은 표 밑에 빠르기(0.1 s 마다 · 게임 m/s)·1 s·2 s 간 거리·박찬 걸음 뒤(0.45 s~) 가장 느린 빠르기를 더 적는다.
+//   차림 SBF_START: 'rest'(기본 — 위 쉼 뒤) · 'open:<s>[,<s>…]' = 판 시작 정지(ARENA.startHold)가 풀린 뒤 s 초 그 자리(상대 가슴 5.6 m)에 서 있다가 대본
+//   (카메라 계기 cam_follow_probe.mjs 의 walk 대본이 open:0.8 — 자세 고치던 발이 아직 떠 있을 때) · 'open:sweep' = 풀린 뒤 0.4~2.1 s 스물한 때.
+//   때를 둘 넘게 주면 대본마다 짧은 표(때마다 한 줄) + 켬 ≥ 끔 셈만. 예) SBF_START=open:sweep node tools/sim/step_burst_feel.mjs longsword 2.4 K,L
 import { newRound, DT, THREE } from './harness_m.mjs';
-import { GAIT } from '../../src/config.js';
+import { GAIT, ARENA } from '../../src/config.js';
 import { Gait } from '../../src/gait.js';
 
 const id = process.argv[2] || 'longsword';
 const NEAR = +(process.argv[3] || 2.4);
 const ONLY = process.argv[4] ? process.argv[4].split(',') : null;
 const ROWS = process.env.SBF_ROWS === '1';
+const START = (process.env.SBF_START || 'rest').trim().replace(/^open:/, '');
+const SWEEP = [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.78, 0.8, 0.82, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.5, 1.8, 2.1]; // 풀린 뒤 s (자세 고치던 발이 떠 있는 때를 촘촘히)
+const STARTS = START === 'rest' ? ['rest'] : START === 'sweep' ? SWEEP : START.split(',').map(Number);
 const SB0 = GAIT.stepBurst;
 let rec = null;
 const B0 = Gait.prototype.begin;
@@ -42,10 +49,12 @@ const SCR = {
   H: { name: '앞 끝 1.0 s (박차기 없음)', seq: [[0, 1, 1.0], [0, 0, 1.0]] },
   I: { name: '뒤 0.5 1.5 s (문턱 아래)', seq: [[0, -0.5, 1.5], [0, 0, 1.0]] },
   J: { name: '뒤 끝 0.15 s 떼고 놓기', seq: [[0, -1, 0.15], [0, 0, 1.5]] },
+  K: { name: '뒤 끝 2 s (서 있다가 이어 물러나기)', seq: [[0, -1, 2.0], [0, 0, 0.5]], hold: true },
+  L: { name: '오른 끝 2 s (서 있다가 이어 옆걸음)', seq: [[1, 0, 2.0], [0, 0, 0.5]], hold: true },
 };
 
 const _u = new THREE.Vector3();
-function run(scn, on) {
+function run(scn, on, start = 'rest') {
   GAIT.stepBurst = on;
   const G = newRound({ walls: true, seed: 7, weapon: id, weapon2: 'longsword' });
   const E = G.enemy;
@@ -66,12 +75,15 @@ function run(scn, on) {
     prev = P.state;
     if (g.active && g.levC > 0.3) lev += DT;
   };
-  while (t < 2.3) step(0, 0, false);
-  const t1 = t;
-  while (P.foeDistance() > NEAR && t - t1 < 8) step(0, 1, false);
-  // 쉼: 1.5 s 뒤 두 발이 다 딛고 마지막 디딤 뒤 0.6 s 가 지날 때까지(자세 고치기가 끝난 선 몸 — 늦어도 5 s)
-  const t2 = t;
-  while (t - t2 < 5 && (t - t2 < 1.5 || !(g.legs.F.stance && g.legs.B.stance && g.sinceTD > 0.6))) step(0, 0, false);
+  if (start === 'rest') {
+    while (t < 2.3) step(0, 0, false);
+    const t1 = t;
+    while (P.foeDistance() > NEAR && t - t1 < 8) step(0, 1, false);
+    // 쉼: 1.5 s 뒤 두 발이 다 딛고 마지막 디딤 뒤 0.6 s 가 지날 때까지(자세 고치기가 끝난 선 몸 — 늦어도 5 s)
+    const t2 = t;
+    while (t - t2 < 5 && (t - t2 < 1.5 || !(g.legs.F.stance && g.legs.B.stance && g.sinceTD > 0.6))) step(0, 0, false);
+  } else while (t < ARENA.startHold + start - 1e-9) step(0, 0, false); // 판 시작 자리에서: 정지가 풀린 뒤 start 초 (자세 고치기가 아직 남았을 수 있음)
+  const swing0 = g.legs.F.stance && g.legs.B.stance ? '-' : g.legs.F.stance ? `B ${g.legs.B.kind}` : `F ${g.legs.F.kind}`; // 대본 시작 때 떠 있던 발
   const seq = SCR[scn].seq;
   const [mx0, my0] = seq[0];
   const fwd = P.forward(new THREE.Vector3());
@@ -85,7 +97,7 @@ function run(scn, on) {
   };
   rec = { who: P, t0: t, t: 0, begins: [], tds: [], cx: () => P.bodies.chest.translation().x, cz: () => P.bodies.chest.translation().z };
   const at = {};
-  const marks = [0.2, 0.3, 0.4, 0.5, 1.0];
+  const marks = [0.2, 0.3, 0.4, 0.5, 1.0, 1.5, 2.0];
   let t25 = NaN;
   let vMax = 0;
   let dPrev = 0;
@@ -93,8 +105,12 @@ function run(scn, on) {
   let tStill = NaN;
   let still = 0;
   const trace = [];
+  // 이어 밀기: 스틱을 미는 동안(첫 줄) 0.1 s 마다 간 거리 → 빠르기 · 0.5 s 뒤(박찬 걸음·세게 멈춤이 끝난 뒤) 가장 느린 0.1 s 빠르기
+  const v01 = [];
+  let d01 = 0;
+  let vLow = Infinity;
   let tt = 0;
-  for (const [mx, my, d] of seq) {
+  for (const [si, [mx, my, d]] of seq.entries()) {
     for (let i = 0, n = Math.round(d / DT); i < n; i++) {
       step(mx, my, true);
       tt += DT;
@@ -104,6 +120,11 @@ function run(scn, on) {
       vMax = Math.max(vMax, v);
       dMax = Math.max(dMax, dd);
       for (const m of marks) if (at[m] == null && tt >= m - 1e-9) at[m] = dd;
+      if (si === 0 && Math.round(tt / DT) % Math.round(0.1 / DT) === 0) {
+        v01.push((dd - d01) / 0.1);
+        d01 = dd;
+        if (tt > 0.55) vLow = Math.min(vLow, v01[v01.length - 1]);
+      }
       if (Number.isNaN(t25) && dd >= 0.25) t25 = tt;
       // 멈춤: 놓은 뒤 골반 빠르기 0.1 m/s 아래로 0.1 s 가 처음 찬 때
       if (mx === 0 && my === 0 && Number.isNaN(tStill)) {
@@ -148,21 +169,53 @@ function run(scn, on) {
     early: r.tds.filter((d) => d.early).length,
     walkTD: r.tds.filter((d) => d.kind === 'walk').length,
     trace,
+    v01,
+    vLow,
+    swing0,
   };
 }
 
 const f2 = (v) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 const f3 = (v) => (Number.isFinite(v) ? v.toFixed(3) : '-');
-console.log(`첫 걸음 박차기 계기 · ${id} 플레이어 · 상대 가슴 ${NEAR} m 에서 쉼 뒤 대본 · 켬 = GAIT.stepBurst 1 · 끔 = 0 · burstBackV ${GAIT.burstBackV} · burstSideV ${GAIT.burstSideV} · burstAccel ${GAIT.burstAccel}`);
+const head = `첫 걸음 박차기 계기 · ${id} 플레이어 · ${STARTS[0] === 'rest' ? `상대 가슴 ${NEAR} m 에서 쉼 뒤 대본` : `판 시작 자리에서 정지가 풀린 뒤 ${STARTS.join(' · ')} s 서 있다가 대본`} · 켬 = GAIT.stepBurst 1 · 끔 = 0 · burstBackV ${GAIT.burstBackV} · burstSideV ${GAIT.burstSideV} · burstAccel ${GAIT.burstAccel}`;
+const scns = Object.keys(SCR).filter((s) => !ONLY || ONLY.includes(s));
+if (STARTS.length > 1) {
+  // 때 여럿: 대본마다 짧은 표 — 때마다 켬·끔 한 줄 + 켬 ≥ 끔 셈 (스틱을 미는 동안 끝의 간 거리로)
+  console.log(head);
+  const json = {};
+  for (const scn of scns) {
+    const T = SCR[scn].seq[0][2];
+    console.log(`\n#### ${scn} ${SCR[scn].name}\n\n| 풀린 뒤 s | 그때 떠 있던 발 | 0.3 s m (끔 → 켬) | 1 s m | ${T >= 2 ? '2 s' : '끝'} m | 0.5 s 뒤 가장 느린 m/s | 넘어짐 · 붙잡기 반사 s · catch (끔 → 켬) |\n|---|---|---|---|---|---|---|`);
+    let ok = 0;
+    let worst = Infinity;
+    let worstAt = null;
+    for (const st of STARTS) {
+      const a = run(scn, 0, st);
+      const b = run(scn, 1, st);
+      (json[scn] ||= {})[st] = { off: { ...a, trace: undefined }, on: { ...b, trace: undefined } };
+      const ea = T >= 2 ? a.at[2.0] : a.dEnd;
+      const eb = T >= 2 ? b.at[2.0] : b.dEnd;
+      if (eb >= ea - 1e-9) ok++;
+      if (eb - ea < worst) (worst = eb - ea), (worstAt = st);
+      console.log(`| ${st} | ${b.swing0} | ${f2(a.at[0.3])} → ${f2(b.at[0.3])} | ${f2(a.at[1.0])} → ${f2(b.at[1.0])} | ${f2(ea)} → ${f2(eb)}${eb < ea - 1e-9 ? ' **' : ''} | ${f2(a.vLow)} → ${f2(b.vLow)} | ${a.falls}·${f2(a.lev)}·${a.catches} → ${b.falls}·${f2(b.lev)}·${b.catches} |`);
+    }
+    console.log(`\n켬 ≥ 끔 (${T >= 2 ? '2 s' : '끝'} 간 거리): ${ok}/${STARTS.length} · 가장 나쁜 켬 − 끔 ${f2(worst)} m (풀린 뒤 ${worstAt} s)`);
+  }
+  if (process.env.SBF_JSON) (await import('node:fs')).writeFileSync(process.env.SBF_JSON, JSON.stringify(json));
+  process.exit(0);
+}
+const ST = STARTS[0];
+console.log(head);
 console.log('| 대본 | 0.2 · 0.3 · 0.4 · 0.5 s 간 거리 m (끔 → 켬) | 1.0 s | 0.25 m 까지 s | 첫 걸음: 발 뜬 s · 발 옮김 m · 다음 걸음까지 가슴 m (끔 → 켬) | 빠른 걸음 (켬) | 가장 빠른 몸 m/s | 가장 멀리 · 끝 m | 멈춤 s | 2·3째 걸음 다음까지 가슴 m (끔 → 켬) | 넘어짐 · 붙잡기 반사 s · catch · 일찍 디딤 (끔 → 켬) |');
 console.log('|---|---|---|---|---|---|---|---|---|---|---|');
 const detail = [];
+const holds = [];
 const json = {};
-for (const scn of Object.keys(SCR)) {
-  if (ONLY && !ONLY.includes(scn)) continue;
-  const a = run(scn, 0);
-  const b = run(scn, 1);
+for (const scn of scns) {
+  const a = run(scn, 0, ST);
+  const b = run(scn, 1, ST);
   json[scn] = { off: { ...a, trace: undefined }, on: { ...b, trace: undefined } };
+  if (SCR[scn].hold) holds.push([scn, a, b]);
   const p = (k, fmt) => `${fmt(a[k])} → ${fmt(b[k])}`;
   const m4 = [0.2, 0.3, 0.4, 0.5].map((m) => `${f2(a.at[m])}→${f2(b.at[m])}`).join(' · ');
   const s1 = (R) => R.steps[0];
@@ -178,6 +231,12 @@ for (const scn of Object.keys(SCR)) {
       detail.push(`\n시각·간 거리·빠르기: ${R.trace.map(([t, d, v]) => `${t.toFixed(2)}:${d.toFixed(2)}/${v.toFixed(1)}`).join(' ')}`);
     }
   }
+}
+if (holds.length) {
+  // 이어 밀기 (K·L): 박찬 걸음 뒤에도 그 스틱의 걷는 빠르기로 이어 걷나 — 0.1 s 마다 빠르기 · 1 s · 2 s 간 거리 · 0.5 s 뒤 가장 느린 빠르기
+  console.log('\n이어 밀기 — 스틱을 미는 동안 0.1 s 마다 빠르기(게임 m/s, 스틱 쪽) · 끔 / 켬');
+  console.log('| 대본 | 1 s m (끔 → 켬) | 2 s m | 0.5 s 뒤 가장 느린 m/s | 빠르기 끔 | 빠르기 켬 |\n|---|---|---|---|---|---|');
+  for (const [scn, a, b] of holds) console.log(`| ${scn} | ${f2(a.at[1.0])} → ${f2(b.at[1.0])} | ${f2(a.at[2.0])} → ${f2(b.at[2.0])}${b.at[2.0] < a.at[2.0] - 1e-9 ? ' **' : ''} | ${f2(a.vLow)} → ${f2(b.vLow)} | ${a.v01.map(f2).join(' ')} | ${b.v01.map(f2).join(' ')} |`);
 }
 if (detail.length) console.log(detail.join('\n'));
 if (process.env.SBF_JSON) (await import('node:fs')).writeFileSync(process.env.SBF_JSON, JSON.stringify(json)); // 값 고르기용 (SBF_JSON=파일)

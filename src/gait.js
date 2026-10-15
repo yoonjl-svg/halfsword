@@ -496,6 +496,9 @@ export class Gait {
       const wl = want.x * rgt.x + want.z * rgt.z;
       want.addScaledVector(rgt, wl * (this.P.sideMul - 1));
     }
+    // 막대가 가리키는 걷기 빠르기(유파 옆 빠르기까지) — 아래 붙잡기 반사 느림(slow)·reachSlow·좌우 흔들기로 줄기 전 값. 첫 걸음 박차기 뒤 세게 멈춤의 바닥(아래 ⑥ 앞)만 읽는다
+    const wsx = want.x;
+    const wsz = want.z;
     // 유파 걸음 follow(앞발 먼저·뒷발 따라붙임): 상대 가슴이 P.followIn 안일 때만 (나가는 문턱은 0.3 m 더 — 들락날락 막기). 칸 없는 유파는 셈하지 않는다
     //  빨리 갈 땐(걸러진 빠르기 > P.followVmax) 지나 딛는다 — 펜싱·검도도 멀리서 빨리 좁힐 땐 아유미아시. follow 그대로 빨리 가면 뒤에 남은 발이 안 닿아 허둥지둥 옮겨 딛는다
     if (this.P.footwork === 'follow') this.follow = f.foeDistance() < this.P.followIn + (this.follow ? 0.3 : 0) && this.speedF < (this.P.followVmax ?? Infinity) * (this.follow ? 1.15 : 1);
@@ -696,6 +699,11 @@ export class Gait {
       gate = pairTrail ? Tds * PR.inner : Math.max(Tds, 2 * sT - Tsw * ((PR.lead ?? 1) + PR.trail) - Tds * PR.inner);
     }
     if (!swing && this.sinceTD >= Math.min(Tds, gate) && f.muscle > 0.15) {
+      // 첫 걸음 박차기(10/15 뒤 2 s 고침 — docs/strike/step_burst_2026-10-15.md §7): 뒤(비스듬히 뒤 포함 — side 0) 박차기는 첫 걸음을 뗄 때도 몸이 서 있어야(burstStandV 아래) 쓴다.
+      //  자세 고치던 발이 아직 떠 있으면 첫 걸음이 그 발이 디딜 때까지 늦고, 그동안 보통 걸음으로 이미 0.5~0.7 m/s 움직인 몸에서 박차면 박찬 발(앞발이 몸 뒤로 크게 건너감)이
+      //  닿지 않는 데(엉덩이 뒤 0.5 m · 발바닥 0.1 m 위)에 떨어져 붙잡기 반사로 몸이 거의 선다. 발을 고르기 전에 버려 그 걸음은 그 유파 보통 첫 걸음.
+      //  옆 박차기는 그대로(가는 쪽 발을 짧게 옮겨 늦게 차도 발이 땅에 닿음 — 늦은 옆 박차기도 끔보다 더 감)
+      if (this.burst && !this.burst.side && Math.hypot(this.vf.x, this.vf.z) >= GAIT.burstStandV) this.burst = null;
       let next = null;
       let kind = 'walk';
       let Tstep = Tsw;
@@ -917,9 +925,18 @@ export class Gait {
 
     // 첫 걸음 박차기 뒤 세게 멈춤(burstBrake — 박찬 쪽 단위 벡터): 박찬 걸음이 끝난 뒤(fastK 1 — 다음 걸음·스틱 거꾸로·놓음)에도 몸이 박찬 쪽으로 가려는 속도보다 BRAKE_TOL 넘게 빠른 동안은
     //  가속 한도 × burstAccel 그대로(fighter.js driveBalance) — 박찬 빠르기를 보통 가속 한도(3.2 m/s²)로 줄이면 몸이 0.3 m 넘게 더 흘러 발이 못 따라간다. 따라잡으면 끝 — 시간 값 없음
+    //  10/15 뒤 2 s 고침(§7): 막대를 박찬 쪽으로 밀고 있으면(막대 걷기 빠르기의 박찬 쪽 몫 ws > 0) 세게 멈춤은 ws 까지만 끌어내린다 — 붙잡기 반사 느림·reachSlow 가
+    //  가려는 속도를 그 아래로 줄여도 × burstAccel 로 거기까지 끌지 않는다(뒤로 오래 밀 때 몸이 0.1 m/s 까지 서던 까닭). ws 아래로 줄이는 몫은 세게 멈춤이 끝난 뒤 보통 가속 한도로.
+    //  막대를 놓았거나 거꾸로면(ws ≤ 0) 전과 같다
     if (this.burstBrake && this.fastK <= 1) {
       const bb = this.burstBrake;
-      if (this.vf.x * bb.x + this.vf.z * bb.z <= Math.max(0, want.x * bb.x + want.z * bb.z) + BRAKE_TOL) this.burstBrake = null;
+      const ws = wsx * bb.x + wsz * bb.z;
+      const wb = want.x * bb.x + want.z * bb.z;
+      if (this.vf.x * bb.x + this.vf.z * bb.z <= Math.max(0, wb, ws) + BRAKE_TOL) this.burstBrake = null;
+      else if (ws > 0 && wb < ws) {
+        want.x += bb.x * (ws - wb);
+        want.z += bb.z * (ws - wb);
+      }
     }
 
     // ⑥ 골반 높이: 딛은 다리가 닿는 높이 (무릎을 조금 굽힌 채)
