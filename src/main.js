@@ -35,7 +35,7 @@ import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { PlayerUniqueAssist, uniqueStageFor, setClearsOverride, addJourneyClear, sealNotice } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
-import { TRADITIONS } from './schools.js';
+import { TRADITIONS, setItalianRhythm } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
@@ -122,10 +122,12 @@ if (params.get('finishLift') === '1') FINISH_SWITCH.lift = true;
 if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = params.get('finishAim');
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady') ? 1 : 0; // 일본 보법 버티기(10/15 — 흔들림 × 0.75, fighter.js swayScale): 기본 1, `?jpSteady=0` = 끔
-// 이탈리아 박자 걸음 주기(10/15 — schools.js ITALIAN_GAIT.rhythm.every, docs/strike/italian_rhythm_2026-10-15.md): 기본 3(3 + 1 — 넷째 걸음이 빠름), `?itRhythm=4` = 4 + 1 · `?itRhythm=0` = 끔
-if (params.has('itRhythm') && Number.isInteger(+params.get('itRhythm')) && +params.get('itRhythm') >= 0) TRADITIONS.italian.gait.rhythm.every = +params.get('itRhythm');
+// 이탈리아 박자 걸음 셈(10/15 — schools.js ITALIAN_GAIT.rhythm · setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8): 기본 디딤 셈 4 + 2(보통 디딤 넷 → 빠른 디딤 둘),
+//  `?itRhythm=3+2` · `?itRhythm=0` = 끔 · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판 — 짝걸음 한 짝 = 한 걸음) · `?itRhythm=4` = 옛 짝 셈 4 + 1
+if (params.has('itRhythm')) setItalianRhythm(params.get('itRhythm'));
 if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 따라 들어가기(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md): 기본 1, `?deChase=0` = 끔
 if (params.get('walk') === 'old') Object.assign(CONFIG.GAIT, { moveSpeed: 2.3, backFactor: 0.45, sideFactor: 0.31 }); // 걷기 빠르기 전 값(10/15 사장님 결정 전 — 앞 2.3 · 뒤 × 0.45 · 옆 × 0.31) 비교용: `?walk=old`
+if (params.has('stepBurst')) CONFIG.GAIT.stepBurst = +params.get('stepBurst') ? 1 : 0; // 첫 걸음 박차기(10/15 — 서 있다가 뒤·옆으로 떼는 첫 걸음만 빠름, 플레이어만 · 이탈리아 빼고, docs/strike/step_burst_2026-10-15.md): 기본 1, `?stepBurst=0` = 끔
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
 //  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다
 const TEMPO = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1.1) || 1.1)); // 기본 1.1 (사장님 10/10 05:1x '기본 템포 1.1로'), 전 값 `?tempo=1` // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
