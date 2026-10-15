@@ -7,15 +7,20 @@
 import { BOOK_SCHOOLS, ROMAN, booksOf, readBooks, bookState, setBookInUse, buyBook, headPriceOf } from './skill_books.js';
 import { readProgress } from './lobby_progress.js';
 import { TRADITIONS } from './schools.js';
+const short = (t) => String(t ?? '').replace(/\s*[(·].*$/, ''); // 고유 공격 이름에서 한글만 (괄호 원어 · 가운뎃점 뒤 설명은 뺀다)
 
-// 별자리 꼴 (판 좌표 300 × 210 — 유파 무기·몸놀림을 본뜸 · 폰 가로의 좁은 판에서도 책이 안 겹치게 줄은 셋까지): at = 책 I~V 자리 · links = 이은 줄 (책 번호 1~5)
+// 별자리 꼴 (판 좌표 300 × 210 — 유파 무기·몸놀림을 본뜸): at = 책 I~V 자리 · links = 이은 줄 (책 번호 1~5).
+//  폰 가로 판(263 px)에서 책·이름·값이 안 겹치고, 줄마다 책 칸 밖으로 룬 꾸밈이 들어갈 만큼 비스듬히 떨어지게 (위아래로 붙은 줄은 이름에 가려 안 쓴다).
+//  판이 더 좁으면 책 크기를 판에 맞춰 줄인다(--s · 아래 fit) — 잰 도구 tools/browser/skill_tree_layout.mjs (문서 §6)
 export const CONSTELLATIONS = Object.freeze({
-  german: { at: [[150, 30], [62, 100], [238, 100], [150, 100], [150, 164]], links: [[1, 4], [2, 4], [4, 3], [4, 5]] }, // 롱소드 십자: 칼끝 · 코등이 좌우 · 칼밑 · 폼멜
-  italian: { at: [[150, 30], [78, 92], [222, 92], [104, 164], [196, 164]], links: [[1, 2], [1, 3], [2, 4], [3, 5], [4, 5]] }, // 레이피어 컵 고리(오각)
-  iberian: { at: [[42, 164], [92, 86], [150, 30], [208, 86], [258, 164]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 몬탄테: 머리 위로 크게 도는 호
-  japanese: { at: [[44, 164], [98, 130], [152, 98], [206, 64], [258, 30]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 휜 칼: 비스듬히 올라가는 곡선
+  german: { at: [[70, 36], [70, 160], [150, 98], [230, 36], [230, 160]], links: [[1, 3], [2, 3], [3, 4], [3, 5]] }, // 엇갈린 두 칼(X): 가운데 III 에서 네 귀로
+  italian: { at: [[36, 110], [104, 36], [196, 36], [264, 110], [150, 166]], links: [[1, 2], [2, 3], [3, 4], [4, 5], [5, 1]] }, // 레이피어 컵 고리(오각 고리)
+  iberian: { at: [[32, 166], [82, 84], [150, 34], [218, 84], [268, 166]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 몬탄테: 머리 위로 크게 도는 호
+  japanese: { at: [[240, 36], [136, 36], [60, 100], [136, 164], [240, 164]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 휜 칼날(초승달 꼴)
   chinese: { at: [[42, 46], [96, 164], [150, 70], [204, 164], [258, 46]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 검무의 꺾이는 걸음(W)
 });
+const BOARD_PX = 263; // 폰 가로 844 × 390 의 판 너비 — 이보다 좁으면 책·이름·값을 같은 비로 줄인다(0.6 까지) · 넓으면 그대로
+const GAP = 3; // 책 칸과 줄 끝 사이 (판 좌표)
 
 // 유파 문양 (12 × 12 픽셀 — 픽셀 결 crispEdges): 칼날 = 밝은 쇠 · 손잡이 = 금빛
 const EMBLEMS = {
@@ -26,8 +31,8 @@ const EMBLEMS = {
   chinese: { blade: 'M5 0h2v6H5z', hilt: 'M3 6h1v1H3zM8 6h1v1H8zM4 7h4v1H4zM5 8h2v2H5zM4 10h4v1H4zM6 11h1v1H6z' },
 };
 const SVG_NS = 'http://www.w3.org/2000/svg';
-// 급 I~V (픽셀 숫자 4 칸 높이 — 표지 아래, 등급 색): I = 세로 막대 · V = 꺾쇠
-const NUMERAL = { I: (x) => `M${x} 0h1v4h-1z`, V: (x) => `M${x} 0h1v2h-1zM${x + 2} 0h1v2h-1zM${x + 1} 2h1v2h-1z` };
+// 급 I~V (픽셀 숫자 4 칸 높이 — 표지 아래, 등급 색): I = 세로 막대 · V = 세 칸 내려와 아래 한 점에서 모이는 두 획 (두 칸만 내려오면 Y 로 읽힌다)
+const NUMERAL = { I: (x) => `M${x} 0h1v4h-1z`, V: (x) => `M${x} 0h1v3h-1zM${x + 2} 0h1v3h-1zM${x + 1} 3h1v1h-1z` };
 function numeralPath(tier) {
   const glyphs = ROMAN[tier].split(''), w = glyphs.reduce((n, g) => n + (g === 'V' ? 3 : 1), 0) + glyphs.length - 1;
   let x = 10 - Math.ceil(w / 2), d = '';
@@ -49,21 +54,37 @@ function bookSvg(school, tier) {
 }
 const COIN_SVG = '<svg class="price-coin" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="#674823" d="M2 0h12v2h2v12h-2v2H2v-2H0V2h2Z"/><path fill="#d9a441" d="M3 1h10v2h2v10h-2v2H3v-2H1V3h2Z"/><path fill="#f3d785" d="M4 3h8v2H5v7H3V4h1Z"/></svg>';
 
-/** 룬 줄 하나 (판 좌표): 두 책 사이 곧은 줄 + 가운데 룬 꺾쇠 둘(ᚲ 꼴) + 작은 마름모 */
-function runeLink(a, b, lit) {
+/** 책 자리 a 에서 b 쪽으로 — 그 책의 칸(섬네일 · 값 · 이름, 판 좌표 상자들)을 마지막으로 벗어나는 거리 + 틈 (칸 사이 작은 틈에서 멈추지 않게 끝까지 본다) */
+function trimAt(a, b, boxes) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+  let last = -0.5;
+  for (let t = 0; t < len; t += 0.5) {
+    const x = a[0] + (dx * t) / len, y = a[1] + (dy * t) / len;
+    if (boxes.some((r) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3])) last = t;
+  }
+  return last + 0.5 + GAP;
+}
+
+/** 룬 줄 하나 (판 좌표): 두 책 칸 사이에 보이는 곧은 줄(t0 · t1 = 양 끝에서 비운 거리) + 그 가운데 룬 꺾쇠 둘(ᚲ 꼴) + 작은 마름모 — 짧으면 마름모만 */
+function runeLink(a, b, lit, t0, t1) {
   const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
-  const r = 22; // 책 자리를 비운다
   const p = (t, n = 0) => `${(a[0] + ux * t + nx * n).toFixed(1)} ${(a[1] + uy * t + ny * n).toFixed(1)}`;
-  const m = len / 2;
-  const d = `M${p(r)} L${p(len - r)} M${p(m - 9, 6)} L${p(m - 3)} L${p(m - 9, -6)} M${p(m + 3, 6)} L${p(m + 9)} L${p(m + 3, -6)}`;
+  const vis = len - t0 - t1, m = t0 + vis / 2, rune = vis >= 22 ? 'full' : vis >= 10 ? 'gem' : 'line';
+  let d = vis > 1 ? `M${p(t0)} L${p(len - t1)}` : '';
+  if (rune === 'full') d += ` M${p(m - 9, 6)} L${p(m - 3)} L${p(m - 9, -6)} M${p(m + 3, 6)} L${p(m + 9)} L${p(m + 3, -6)}`;
   const g = document.createElementNS(SVG_NS, 'g');
   g.setAttribute('class', `rune-link${lit ? ' lit' : ''}`);
+  g.dataset.visible = vis.toFixed(1); // 시험 도구가 읽는다 (skill_tree_layout.mjs)
+  g.dataset.rune = rune;
   const path = document.createElementNS(SVG_NS, 'path');
   path.setAttribute('d', d);
-  const gem = document.createElementNS(SVG_NS, 'path');
-  gem.setAttribute('class', 'rune-gem');
-  gem.setAttribute('d', `M${p(m, 0)} m0 -3 l3 3 l-3 3 l-3 -3 z`);
-  g.append(path, gem);
+  g.append(path);
+  if (rune !== 'line') {
+    const gem = document.createElementNS(SVG_NS, 'path');
+    gem.setAttribute('class', 'rune-gem');
+    gem.setAttribute('d', `M${p(m, 0)} m0 -3 l3 3 l-3 3 l-3 -3 z`);
+    g.append(gem);
+  }
   return g;
 }
 
@@ -73,7 +94,7 @@ function runeLink(a, b, lit) {
  */
 export function mountSkillTree(root, { test = false, onWallet = () => {}, announce = () => {} } = {}) {
   root.innerHTML = `<div class="school-tabs" role="tablist" aria-label="유파">${BOOK_SCHOOLS.map((s, i) => `<button role="tab" data-school="${s}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}">${TRADITIONS[s].nameKo}</button>`).join('')}</div>
-    <div class="tree-frame card-frame"><div class="tree-board" role="tabpanel" aria-label="스킬북 별자리"><svg class="tree-links" viewBox="0 0 300 210" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg><div class="tree-nodes"></div>
+    <div class="tree-frame card-frame"><div class="tree-board" role="tabpanel" aria-label="스킬북 별자리"><svg class="tree-links" viewBox="0 0 300 210" preserveAspectRatio="none" aria-hidden="true"></svg><div class="tree-nodes"></div>
     <section class="book-detail" hidden aria-labelledby="bookTitle"><button type="button" class="detail-close" aria-label="설명 닫기">×</button>
       <div class="detail-head"><span class="book-thumb detail-thumb"></span><div><b id="bookTitle" tabindex="-1"></b><small id="bookMeta"></small></div></div>
       <p id="bookEffect" class="detail-effect"></p><ul id="bookList" class="detail-list" hidden></ul><p id="bookSource" class="detail-source"></p><p id="bookState" class="detail-state" role="status"></p>
@@ -86,10 +107,31 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
   let school = BOOK_SCHOOLS[0], selected = null, lastNode = null;
   const stateOf = (books, id) => (test ? 'use' : bookState(books, id));
 
+  // 줄은 책 칸을 잰 뒤 그린다 (책 크기는 판 너비를 따른다 — 판이 숨어 있으면 보일 때 ResizeObserver 가 다시 부른다)
+  function drawLinks(books = readBooks()) {
+    const board = $('.tree-board'), br = board.getBoundingClientRect(), C = CONSTELLATIONS[school], list = booksOf(school);
+    if (!br.width || !br.height) return;
+    const kx = 300 / br.width, ky = 210 / br.height;
+    const boxes = [...root.querySelectorAll('.book-node')].map((n) => [...n.querySelectorAll('.book-thumb, .book-cat, .book-price')].map((e) => {
+      const r = e.getBoundingClientRect();
+      return [(r.left - br.left) * kx, (r.top - br.top) * ky, (r.right - br.left) * kx, (r.bottom - br.top) * ky];
+    }));
+    $('.tree-links').replaceChildren(...C.links.map(([i, j]) => {
+      const a = C.at[i - 1], b = C.at[j - 1], lit = stateOf(books, list[i - 1].id) !== 'unowned' && stateOf(books, list[j - 1].id) !== 'unowned';
+      return runeLink(a, b, lit, trimAt(a, b, boxes[i - 1]), trimAt(b, a, boxes[j - 1]));
+    }));
+  }
+  const board = $('.tree-board');
+  function fit() {
+    const w = board.clientWidth;
+    if (w) board.style.setProperty('--s', Math.min(1, Math.max(0.6, w / BOARD_PX)).toFixed(3));
+    drawLinks();
+  }
+  const sizer = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+  sizer?.observe(board);
+
   function render() {
     const books = readBooks(), C = CONSTELLATIONS[school], list = booksOf(school);
-    const svg = $('.tree-links');
-    svg.replaceChildren(...C.links.map(([i, j]) => runeLink(C.at[i - 1], C.at[j - 1], stateOf(books, list[i - 1].id) !== 'unowned' && stateOf(books, list[j - 1].id) !== 'unowned')));
     $('.tree-nodes').innerHTML = list.map((b, k) => {
       const st = stateOf(books, b.id), [x, y] = C.at[k];
       const label = `${b.title} · ${ROMAN[b.tier]}급 ${b.rarityKo} · ${st === 'unowned' ? `금화 ${b.price} · 사지 않음` : st === 'use' ? '사용 중' : '봉인'}`;
@@ -98,6 +140,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
         <span class="book-cat">${b.label}</span>${st === 'unowned' ? `<span class="book-price">${COIN_SVG}${b.price}</span>` : ''}</button>`;
     }).join('');
     root.dataset.school = school;
+    drawLinks(books);
     renderDetail(books);
   }
 
@@ -112,16 +155,18 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     $('.detail-head').dataset.state = st;
     $('#bookTitle').textContent = b.title;
     $('#bookTitle').dataset.tier = b.rarity;
-    $('#bookMeta').textContent = `${ROMAN[b.tier]}급 · ${b.rarityKo} · ${b.schoolKo} 유파`;
+    // 급 · 등급 · 유파 · 지금 상태(사용 중 = 싸움에서 켜짐 · 봉인 = 꺼짐) 한 줄 — 폰 가로의 좁은 판에서도 단추까지 한눈에 들어오게
+    $('#bookMeta').textContent = `${ROMAN[b.tier]}급 · ${b.rarityKo} · ${b.schoolKo} 유파${test ? '' : st === 'use' ? ' · 사용 중' : st === 'sealed' ? ' · 봉인' : ''}`;
     $('#bookMeta').dataset.tier = b.rarity;
     $('#bookEffect').textContent = b.effect + (b.provisional ? ' (임시)' : '');
     $('#bookList').hidden = !b.list;
-    $('#bookList').innerHTML = (b.list ?? []).map((n) => `<li>${n}</li>`).join('');
+    $('#bookList').innerHTML = (b.list ?? []).map((n) => `<li>${short(n)}</li>`).join(''); // 고유 공격 넷 — 한글 이름만 이어서(원어는 싸움 화면 기술 칸에)
     $('#bookSource').textContent = `출처 · ${b.source}`;
     const head = headPriceOf(b.tier); // 머리로 사는 값 — 사장님 확인 전 (지금 null — 단추 없음)
-    $('#bookState').textContent = test ? '테스트 경로 — 모든 책이 열려 있습니다'
-      : st === 'unowned' ? `금화 ${b.price}${head != null ? ` · 머리 ${head}` : ''}${coins < b.price ? ` — 금화가 모자랍니다 (가진 금화 ${coins})` : ''}`
-        : st === 'use' ? '사용 중 — 싸움에서 켜짐' : '봉인 — 싸움에서 꺼짐';
+    const note = test ? '테스트 경로 — 모든 책이 열려 있습니다'
+      : st === 'unowned' && coins < b.price ? `금화가 모자랍니다 — 가진 금화 ${coins}${head != null ? ` · 머리 ${head}` : ''}` : st === 'unowned' && head != null ? `머리 ${head}` : '';
+    $('#bookState').textContent = note;
+    $('#bookState').hidden = !note;
     $('#buyBook').hidden = test || st !== 'unowned';
     $('#buyBook').textContent = `구입 · 금화 ${b.price}`;
     $('#buyBook').disabled = coins < b.price;
@@ -168,6 +213,6 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
   return {
     refresh: render,
     show(s, tier = null) { const tab = tabs.find((t) => t.dataset.school === s); if (tab) selectTab(tab); if (tier) select(tier); },
-    destroy() { events.abort(); },
+    destroy() { events.abort(); sizer?.disconnect(); },
   };
 }
