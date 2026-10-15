@@ -1322,8 +1322,12 @@ function beginFight() {
   } else showFightCues();
 }
 /** 판 시작 글: 가운데 소개(지금부터 발이 풀릴 때까지 — showFoeIntro) · 판 알림 '대면' · 아래 조작 안내 */
+let introShownFor = null; // 지난 판에 소개를 띄운 상대·무대 (다시 겨루기면 소개를 빼려고 — 사장님 10/15 '다시 겨루기에서는 상대 소개 빼' · 확인표 1637)
 function showFightCues() {
-  showFoeIntro(currentFoe);
+  const introKey = `${currentFoe?.id ?? currentFoe?.name ?? ''}@${stages.id}`;
+  if (introKey !== introShownFor) showFoeIntro(currentFoe); // 같은 무대에서 같은 상대와 다시 = 다시 겨루기 — 소개 없음(판 알림 '대면'·조작 안내는 그대로)
+  else showFoeIntro(null);
+  introShownFor = introKey;
   showToast(FIGHT_START_TEXT, 900);
   showHint(input.isTouchDevice ? '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기' : '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기');
 }
