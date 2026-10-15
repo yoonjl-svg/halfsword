@@ -3626,6 +3626,10 @@ export class BodySounds {
     this.broken = !!f.weaponBroken;
 
     if (f.state === 'stand' || f.state === 'getup') {
+      // 이탈리아 고른 짝걸음(10/15 …/it-even — gait P.pair.even, docs/strike/italian_rhythm_2026-10-15.md §10): 발을 낮게(0.045 m) 짧게 들어 아래 높이 판정(발 몸체 0.09 m 위로)에
+      //  거의 걸리지 않는다(가까이 반 스틱 디딤 12~15 번에 발소리 0~1) — 박자 걸음 디딤 간격이 들리게 걷는 디딤(walk·catch)마다 gait.touchdown 셈(leg.tdN)으로 낸다.
+      //  세기 = 그 발이 내려오던 가장 빠른 속도(높이 판정과 같은 잣대) · 강조 = leg.fastStep 그대로. 다른 걸음(`?itGait=old` 포함)은 아래 높이 판정 그대로
+      const G = f.state === 'stand' && f.gait?.active && f.gait.P?.pair?.even ? f.gait : null;
       for (const k of ['footF', 'footB']) {
         const b = f.bodies[k];
         const ft = this.feet[k];
@@ -3633,6 +3637,21 @@ export class BodySounds {
         const p = f.terrain ? b.translation() : null;
         const y = p ? p.y - f.terrain.heightAt(p.x, p.z) : b.translation().y;
         const vy = p ? b.linvel().y - f.groundVelocityAt(p.x, p.z, b.linvel()) : b.linvel().y;
+        if (G) {
+          const l = G.legs[k === 'footF' ? 'F' : 'B'];
+          const n = l.tdN || 0;
+          if (ft.n === undefined) ft.n = n;
+          if (!l.stance) ft.vy = Math.min(ft.vy, vy);
+          else if (n !== ft.n) {
+            ft.n = n;
+            if ((l.kind === 'walk' || l.kind === 'catch') && this.t - ft.t > 0.08) s.footstep(Math.max(-ft.vy, -vy), null, typeof l.fastStep === 'object' ? l.fastStep : null);
+            ft.t = this.t;
+            ft.vy = 0;
+          }
+          ft.up = false;
+          continue;
+        }
+        if (ft.n !== undefined) ft.n = undefined; // 고른 짝걸음이 아니게 되면(무기 바뀜 등) 셈을 버림
         if (y > 0.09) {
           ft.up = true;
           ft.vy = Math.min(ft.vy, vy);
