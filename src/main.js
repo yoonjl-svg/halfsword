@@ -569,6 +569,9 @@ function newRound(weaponId) {
     terrain, // 지형 무대만 땅 계약 (평지 null)
     look: loadout && loadout.armor !== LOBBY_ARMOR.id ? LOOK_BAREHEAD : LOOKS.player, // 대기실에서 케틀 햇을 벗었으면 맨머리 (여정만 — 그 밖은 지금처럼 케틀 햇)
     weapon: weaponId,
+    // 스킬북 (사람만): 보법 책 없음·봉인 = 기본 걸음(gait.js · stamina.js — schools.js footworkTradition) · 막기 책 없음·봉인 = 무유파 막기 자리(parry_button.js) — 걸음을 만들기 전에 넘긴다
+    schoolFootwork: kit ? kit.footwork : undefined,
+    schoolParry: kit ? kit.parry : undefined,
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
@@ -589,11 +592,6 @@ function newRound(weaponId) {
     physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 — fighter.js HUMAN_BODY). 없으면 사람
   });
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −40 · −80 그대로 · 기력 끔이면 아무 일 없음)
-  if (kit) {
-    // 스킬북 (사람만 · 첫 스텝 전): 보법 책 없음·봉인 = 기본 걸음(gait.js · stamina.js — schools.js footworkTradition) · 막기 책 없음·봉인 = 무유파 막기 자리(parry_button.js)
-    player.schoolFootwork = kit.footwork;
-    player.schoolParry = kit.parry;
-  }
   for (const f of [player, enemy]) {
     configureWetlandMovement(f, stages.id); // 진흙 웅덩이 감속 (잠든 습지만)
     f.arenaObstacle = arenaStone?.navigation ?? null; // AI 돌아가기가 읽는다 (석상 없으면 null — 아무 일 없음)
