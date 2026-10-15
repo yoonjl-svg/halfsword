@@ -578,9 +578,13 @@ export class Gait {
     //  스틱을 burstStick 넘게 뒤·옆(앞 몫 < burstFwdMax)으로 밀었으면 건다 → 첫 걸음을 뗄 때 fastBegin 이 쓴다. 지금은 플레이어만(AI 가 몰면 aiControlled) ·
     //  유파 걸음 칸 burst: false(이탈리아 — 박자 걸음 첫 디딤과 겹침)는 받지 않음 · 박찬 몸이 아직 박찬 빠르기를 다 줄이기 전(burstBrake)엔 다시 걸지 않음 ·
     //  판 시작 정지·마무리 중엔 걸지 않는다. 시간 값 없음 — 걷기 시작마다 한 번. 끄면(0) 셈하지 않는다
+    //  뒤(비스듬히 뒤 포함 — side 0) 박차기는 두 발이 다 땅에 있을 때만 건다(10/15 뒤 2 s 고침 — docs/strike/step_burst_2026-10-15.md §7): 자세 고치던 발이 아직 떠 있으면 첫 걸음이
+    //   그 발이 디딜 때까지 늦고 그동안 보통 걸음으로 움직인 몸에서 박차게 되어, 박찬 발(앞발이 몸 뒤로 크게 건너감)이 닿지 않는 데(엉덩이 뒤 0.5 m · 발바닥 0.1 m 위)에
+    //   떨어져 붙잡기 반사로 몸이 거의 선다(그 걸음은 그 유파 보통 첫 걸음). 옆 박차기는 그대로(가는 쪽 발을 짧게 옮겨 늦게 차도 발이 땅에 닿음)
     if (walkNow && !this.walking && GAIT.stepBurst && pl && this.P.burst !== false && mv && !this.burstBrake && !(f.finish?.amt > 0.5)) {
       const m = mv.length();
-      if (m >= GAIT.burstStick && mv.y / m < GAIT.burstFwdMax && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV) this.burst = { fore: Math.sign(mv.y), side: Math.abs(mv.x) > Math.abs(mv.y) ? Math.sign(mv.x) : 0, lat: (mv.x * mv.x) / (m * m) };
+      const side = Math.abs(mv.x) > Math.abs(mv.y) ? Math.sign(mv.x) : 0;
+      if (m >= GAIT.burstStick && mv.y / m < GAIT.burstFwdMax && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV && (side || (this.legs.F.stance && this.legs.B.stance))) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
     }
     if (walkNow !== this.walking) {
       this.walking = walkNow;
@@ -699,11 +703,6 @@ export class Gait {
       gate = pairTrail ? Tds * PR.inner : Math.max(Tds, 2 * sT - Tsw * ((PR.lead ?? 1) + PR.trail) - Tds * PR.inner);
     }
     if (!swing && this.sinceTD >= Math.min(Tds, gate) && f.muscle > 0.15) {
-      // 첫 걸음 박차기(10/15 뒤 2 s 고침 — docs/strike/step_burst_2026-10-15.md §7): 뒤(비스듬히 뒤 포함 — side 0) 박차기는 첫 걸음을 뗄 때도 몸이 서 있어야(burstStandV 아래) 쓴다.
-      //  자세 고치던 발이 아직 떠 있으면 첫 걸음이 그 발이 디딜 때까지 늦고, 그동안 보통 걸음으로 이미 0.5~0.7 m/s 움직인 몸에서 박차면 박찬 발(앞발이 몸 뒤로 크게 건너감)이
-      //  닿지 않는 데(엉덩이 뒤 0.5 m · 발바닥 0.1 m 위)에 떨어져 붙잡기 반사로 몸이 거의 선다. 발을 고르기 전에 버려 그 걸음은 그 유파 보통 첫 걸음.
-      //  옆 박차기는 그대로(가는 쪽 발을 짧게 옮겨 늦게 차도 발이 땅에 닿음 — 늦은 옆 박차기도 끔보다 더 감)
-      if (this.burst && !this.burst.side && Math.hypot(this.vf.x, this.vf.z) >= GAIT.burstStandV) this.burst = null;
       let next = null;
       let kind = 'walk';
       let Tstep = Tsw;
