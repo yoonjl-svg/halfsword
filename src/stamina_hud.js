@@ -40,7 +40,7 @@ export function createStaminaHud(root) {
         const st = f.stamina;
         bar.dataset.exhausted = String(st.exhausted);
         bar.dataset.level = String(st.level);
-        bar.dataset.full = String(st.value >= 99.99 && st.level === 0);
+        bar.dataset.full = String(st.value >= st.max - 0.01 && st.level === 0); // 가득 = 최대(케틀 햇 덧 포함 — stamina.js max)
         const percent = Math.round(f.stamina.ratio * 100);
         bar.setAttribute('aria-valuenow', String(percent));
         bar.setAttribute('aria-valuetext', st.exhausted ? `탈진 회복 ${Math.round(st.progress * 100)}% · 이동 불가` : `${percent}%${st.level === 2 ? ' · 심한 지침' : st.level === 1 ? ' · 지침' : ''}`);

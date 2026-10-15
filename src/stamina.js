@@ -9,6 +9,7 @@ export class Stamina {
   constructor(fighter) {
     this.fighter = fighter;
     this.controller = null;
+    this.maxBonus = 0; // 최대 기력 덧 (대기실 장비 — 케틀 햇 '생존술: 기력 +30', main.js setMaxBonus · 플레이어만). 문턱 0 · −40 · −80 과 그 밖 규칙은 그대로
     this.value = STAMINA.max;
     this.level = 0;
     this.exhaustLeft = 0;
@@ -35,12 +36,19 @@ export class Stamina {
     this.clinchStep = null;
   }
 
+  /** 최대 기력: 100(STAMINA.max) + 장비 덧. 기력을 끄면(STAMINA.on false) 덧 없이 100 — 지금 판 그대로 */
+  get max() { return STAMINA.on ? STAMINA.max + this.maxBonus : STAMINA.max; }
+  /** 판을 세울 때(main.js newRound — 첫 스텝 전) 장비 덧을 정하고 그 최대에서 시작한다 */
+  setMaxBonus(bonus) {
+    this.maxBonus = Math.max(0, +bonus || 0);
+    if (STAMINA.on) this.value = this.max;
+  }
   captureMass(mass) { if (this.originalMass == null && mass > 0) this.originalMass = mass; }
   get weight() {
     this.captureMass(this.fighter.swordMass);
     return clamp(Math.sqrt((this.originalMass ?? STAMINA.weaponReferenceMass) / STAMINA.weaponReferenceMass), 0.75, 1.5);
   }
-  get ratio() { return clamp(this.value / STAMINA.max, 0, 1); }
+  get ratio() { return clamp(this.value / this.max, 0, 1); } // 머리 위 막대 = 최대(덧 포함)의 몫
   get exhausted() { return STAMINA.on && this.exhaustLeft > 0; }
   get speed() { return !STAMINA.on ? 1 : this.exhausted ? 0 : this.level === 2 ? 0.5 : this.level === 1 ? 0.7 : 1; }
   get power() { return !STAMINA.on || this.exhausted ? 1 : this.level === 2 ? STAMINA.severePower : this.level === 1 ? STAMINA.tiredPower : 1; }
@@ -289,7 +297,7 @@ export class Stamina {
       const steps = Math.floor((this.distance + 1e-9) / STAMINA.stepDistance);
       if (steps) {
         this.distance -= steps * STAMINA.stepDistance;
-        const cost = STAMINA.stepCosts[f.swordArt?.tradition] ?? STAMINA.stepCosts.default;
+        const cost = STAMINA.stepCosts[f.schoolFootwork === false ? 'default' : f.swordArt?.tradition] ?? STAMINA.stepCosts.default; // 유파 걷기 기력은 보법 몫 — 대기실 스킬북 '보법'이 없거나 해제한 플레이어는 보통 1.4
         this.spend('move', steps * cost);
       }
     }
@@ -299,7 +307,7 @@ export class Stamina {
     if (!this.guarding) {
       const before = this.value;
       const rate = f.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond;
-      this.value = Math.min(STAMINA.max, this.value + active * rate);
+      this.value = Math.min(this.max, this.value + active * rate);
       this.recovered += this.value - before;
     }
     this.stages();

@@ -939,6 +939,12 @@ export const TECH_NAMES = {
 //  (독일 쟁기/긴 자세 · 이탈리아 테르차 · 이베리아 중단형 · 일본 中段 · 중국 中平 · 무유파 앞으로 겨눔). null = SKILL.homeGuard(쟁기 자리) 그대로.
 //  일본·중국 rest = 'langort'(긴 자세 자리 [0.0, 0.03] = 中段·中平) — **사장님 10/9 01:2x 답: 안 A**(확인표 198). 쉴 자세는 스위치(SKILL.schoolArt)와 상관없이 늘 쓴다(플레이어 ③ 되돌아옴만).
 //  비교용 `?schoolRest=pflugR`(= 안 B, 쟁기 자리 = SKILL.homeGuard — 10/9 00:49 까지의 판)
+/**
+ * 걸음(보법)을 읽는 유파 — 플레이어가 대기실 스킬북 '보법'을 안 가졌거나 해제했으면(fighter.schoolFootwork === false — main.js newRound, 첫 화면·대기실 여정만)
+ *  유파 없이 기본 걸음(GAIT 그대로 · 박차기·간격 잡기·박자 걸음·버티기·가벼운 발·유파 걷기 기력 없음). 그 밖(AI·시뮬·옛 메뉴 판)은 늘 무기 유파 — 지금 그대로
+ */
+export const footworkTradition = (f) => (f?.schoolFootwork === false ? null : f?.swordArt?.tradition);
+
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로) · 이름은 DUSSACK_NAMES (sword_art.js schoolNames 가 가지 이름을 먼저 읽는다)
