@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { BODY, GAIT } from './config.js';
-import { TRADITIONS } from './schools.js';
+import { TRADITIONS, FAST_ACCENT } from './schools.js';
 import { GUARD_BASE } from './guards.js';
 
 // 자세 이름 → 바탕 자세표 차례 (유파 걸음 P.guardLow — 몸 틀 자세표도 같은 패드 자리·같은 순서라 bodyGuard.nearest 와 견줄 수 있다)
@@ -400,7 +400,8 @@ export class Gait {
       this.rhyTrail = false;
     }
     // 첫 걸음 박차기 (10/15 — GAIT.stepBurst, update 의 걷기 시작에서 건 this.burst): 걷기 시작 뒤 처음 뗀 걸음이 걷는 걸음(walk·catch — 짝걸음은 이끄는 발로 여는 한 짝)이면
-    //  그 걸음을 빠른 걸음으로 — 몸 빠르기·발 박자 × fastK · 가속 한도 × burstAccel · 발소리 강조 없음. 박자 걸음 셈은 위에서 그대로(이 걸음도 센다), 배율만 덮는다.
+    //  그 걸음을 빠른 걸음으로 — 몸 빠르기·발 박자 × fastK · 가속 한도 × burstAccel · 발소리 강조는 빠른 걸음과 같은 FAST_ACCENT(10/15 15:2x 사장님 '박차기에 발소리 강조 붙여' —
+    //  박찬 발 디딤만: 다음 걸음은 fastK 1 이라 update ③ 이 그 발의 fastStep 을 지움). 박자 걸음 셈은 위에서 그대로(이 걸음도 센다), 배율만 덮는다.
     //  fastK = 절대 목표 빠르기 ÷ 그 쪽 걷는 빠르기(뒤 burstBackV ÷ (moveSpeed × backFactor) · 옆 burstSideV ÷ (moveSpeed × sideFactor) — 스틱의 옆 몫 비율 lat 로 섞음, 1 아래로는 안 내림)
     //  끝: 다음 걸음을 뗄 때(위 가지들이 fastK 를 다시 정함 — 이어 걷는 걸음은 제 빠르기) · 스틱이 거꾸로 가면 · 멈추면(update). 첫 걸음이 기술 걸음이면 박차기는 버린다
     const B = this.burst;
@@ -412,7 +413,7 @@ export class Gait {
         this.fastK = Math.max(1, kB + (kS - kB) * B.lat);
         this.fastFore = !!B.foreOnly; // 이베리아 아닌 유파의 비스듬히 뒤: 몸 빠르기의 앞뒤 몫만 × fastK (옆 몫은 보통 빠르기 — §8)
         this.fastAcc = GAIT.burstAccel;
-        this.fastAccent = null;
+        this.fastAccent = FAST_ACCENT; // 박찬 발 디딤 발소리 강조(× 1.3 · × 1.06 — 빠른 걸음과 같은 값 · 10/15 15:2x)
         this.fastDir = B.side ? 0 : B.fore;
         this.fastSide = B.side;
         this.rhyTrail = !!PR;

@@ -10,6 +10,8 @@
 //   차림 SBF_START: 'rest'(기본 — 위 쉼 뒤) · 'open:<s>[,<s>…]' = 판 시작 정지(ARENA.startHold)가 풀린 뒤 s 초 그 자리(상대 가슴 5.6 m)에 서 있다가 대본
 //   (카메라 계기 cam_follow_probe.mjs 의 walk 대본이 open:0.8 — 자세 고치던 발이 아직 떠 있을 때) · 'open:sweep' = 풀린 뒤 0.4~2.1 s 스물한 때.
 //   때를 둘 넘게 주면 대본마다 짧은 표(때마다 한 줄) + 켬 ≥ 끔 셈만. 예) SBF_START=open:sweep node tools/sim/step_burst_feel.mjs longsword 2.4 K,L
+//  발소리 (10/15 15:2x 박차기 발소리 강조 — 문서 §9): 표 밑에 대본 동안 발소리(sound.js BodySounds 판정 흉내 — 발 몸체 0.09 m 위로 떴다가 0.06 m 아래로 · 0.12 s 안 두 번은 하나)와
+//   그 가운데 강조(그때 그 발 gait leg.fastStep 이 { gain, rate })를 적는다 — 강조가 박찬 발 디딤에만 나나
 //  비스듬히 (10/15 15:1x 옆 박차기는 이베리아만 — 문서 §8): 대본 G(45°) · M(옆 몫이 큼 — 옆 0.87 · 뒤 0.5) · N(뒤 몫이 큼 — 옆 0.5 · 뒤 0.87) 은 표 밑에 가슴이 간 거리의 뒤 몫·옆 몫을 따로 적는다
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { GAIT, ARENA } from '../../src/config.js';
@@ -68,11 +70,27 @@ function run(scn, on, start = 'rest') {
   let falls = 0;
   let lev = 0;
   let prev = P.state;
+  const feet = { footF: { up: false, t: -1 }, footB: { up: false, t: -1 } };
+  const sounds = [];
   const step = (mx, my, live) => {
     P.move.set(mx, my);
     G.step();
     t += DT;
     if (rec) rec.t = t - rec.t0;
+    // 발소리 판정 흉내 (sound.js BodySounds — 서 있거나 일어나는 몸만): 대본 동안만 적는다
+    if (P.state === 'stand' || P.state === 'getup') {
+      for (const k of ['footF', 'footB']) {
+        const y = P.bodies[k].translation().y;
+        const ft = feet[k];
+        if (y > 0.09) ft.up = true;
+        else if (ft.up && y < 0.06) {
+          ft.up = false;
+          const acc = g.legs[k === 'footF' ? 'F' : 'B'].fastStep;
+          if (t - ft.t > 0.12 && rec) sounds.push({ t: rec.t, k: k === 'footF' ? 'F' : 'B', acc: !!acc && typeof acc === 'object' });
+          ft.t = t;
+        }
+      }
+    }
     if (!live) return;
     if (prev === 'stand' && P.state === 'down') falls++;
     prev = P.state;
@@ -184,6 +202,7 @@ function run(scn, on, start = 'rest') {
     v01,
     vLow,
     swing0,
+    sounds,
   };
 }
 
@@ -223,6 +242,7 @@ console.log('|---|---|---|---|---|---|---|---|---|---|---|');
 const detail = [];
 const holds = [];
 const diags = [];
+const snds = [];
 const json = {};
 for (const scn of scns) {
   const a = run(scn, 0, ST);
@@ -230,6 +250,7 @@ for (const scn of scns) {
   json[scn] = { off: { ...a, trace: undefined }, on: { ...b, trace: undefined } };
   if (SCR[scn].hold) holds.push([scn, a, b]);
   if (SCR[scn].diag) diags.push([scn, a, b]);
+  snds.push([scn, a, b]);
   const p = (k, fmt) => `${fmt(a[k])} → ${fmt(b[k])}`;
   const m4 = [0.2, 0.3, 0.4, 0.5].map((m) => `${f2(a.at[m])}→${f2(b.at[m])}`).join(' · ');
   const s1 = (R) => R.steps[0];
@@ -257,6 +278,19 @@ if (diags.length) {
   console.log('\n비스듬히 — 가슴이 간 거리의 뒤 몫 · 옆 몫 (m · 끔 → 켬)');
   console.log('| 대본 | 0.3 s 뒤 몫 | 0.3 s 옆 몫 | 0.5 s 뒤 몫 | 0.5 s 옆 몫 | 1.0 s 뒤 몫 | 1.0 s 옆 몫 |\n|---|---|---|---|---|---|---|');
   for (const [scn, a, b] of diags) console.log(`| ${scn} | ${[0.3, 0.5, 1.0].map((m) => `${f2(a.atC[m]?.[0])} → ${f2(b.atC[m]?.[0])} | ${f2(a.atC[m]?.[1])} → ${f2(b.atC[m]?.[1])}`).join(' | ')} |`);
+}
+{
+  // 발소리 (켬): 강조는 박찬 발 디딤에만 나야 한다 (10/15 15:2x — 문서 §9)
+  console.log('\n발소리 — 대본 동안 (sound.js 판정 흉내) · 강조 = 그때 그 발이 빠른 걸음 발(leg.fastStep)');
+  console.log('| 대본 | 발소리 수 (끔 → 켬) | 강조 (끔 → 켬) | 켬: 강조 때 s · 발 | 켬: 첫 걸음 발 · 디딘 때 s | 켬: 박찬 발 디딤 밖 강조 (다른 발 · 그 발 다음 걸음 뒤) |\n|---|---|---|---|---|---|');
+  for (const [scn, a, b] of snds) {
+    const s0 = b.steps[0];
+    const td0 = s0 && Number.isFinite(s0.air) ? s0.t + s0.air : NaN;
+    const accs = b.sounds.filter((q) => q.acc);
+    const tNext = b.steps.slice(1).find((q) => q.k === s0?.k)?.t ?? Infinity; // 박찬 발이 다음 걸음을 뗀 때 — 그 뒤 강조는 박찬 디딤이 아님
+    const outside = accs.filter((q) => !s0?.fast || q.k !== s0.k || q.t >= tNext).length;
+    console.log(`| ${scn} | ${a.sounds.length} → ${b.sounds.length} | ${a.sounds.filter((q) => q.acc).length} → ${accs.length} | ${accs.map((q) => `${f2(q.t)} ${q.k}`).join(' · ') || '-'} | ${s0 ? `${s0.k} · ${f2(td0)}` : '-'}${s0?.fast ? ' (박참)' : ''} | ${outside} |`);
+  }
 }
 if (detail.length) console.log(detail.join('\n'));
 if (process.env.SBF_JSON) (await import('node:fs')).writeFileSync(process.env.SBF_JSON, JSON.stringify(json)); // 값 고르기용 (SBF_JSON=파일)
