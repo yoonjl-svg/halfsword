@@ -188,6 +188,7 @@ export class Gait {
     //  fastAcc = 지금 빠른 걸음의 몸 가속 한도 배율(fighter.js driveBalance — 간격 잡기 빠른 디딤만 둠) · chaseStep = 지금 빠른 걸음이 간격 잡기 빠른 디딤인가(fastBegin)
     this.fastK = 1;
     this.rhyN = 0;
+    this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
@@ -249,6 +250,7 @@ export class Gait {
     // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다(간격 잡기 받을 창·잡기·박차기도 버림)
     this.fastK = 1;
     this.rhyN = 0;
+    this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
@@ -261,6 +263,7 @@ export class Gait {
     this.active = false;
     this.fastK = 1;
     this.rhyN = 0;
+    this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.chase = null;
     if (this.hold) this.holdEnd = 'state';
@@ -427,13 +430,17 @@ export class Gait {
     this.fastFore = false; // 첫 걸음 박차기의 '앞뒤 몫만 빠르게'(이베리아 아닌 유파 비스듬히 뒤) — 아래 박차기 가지만 켬
     this.chaseStep = false; // 이 걸음이 간격 잡기 빠른 디딤인가 — 아래 C 가지만 켬 (잡기 걸기 holdTick 이 읽음)
     const foot = RH?.count === 'foot'; // 디딤 셈(기본) — 짝걸음 따라붙는 발·catch 도 센다
+    this.fastTimeOnly = false; // 박자 걸음 보폭 박자(RH.timeOnly — 10/15 22:1x 이탈리아 시험): 빠른 몫이 발 박자만 ×mul(몸 빠르기 그대로 → 보폭이 짧아짐)
     if (Math.abs(wf) > vLat && (PR && !foot ? kind === 'walk' && this.pairStep === 'lead' : kind === 'walk' || (kind === 'catch' && this.walking))) {
       let k = 1;
       if (foot) {
         // 디딤 셈 N + M: 빠른 몫 안이면 이 디딤도 빠름 · 아니면 normal 번 센 뒤(짝걸음은 이끄는 발 디딤에서만 · 멈춰 서는 디딤은 brake 로 미룸) 빠른 몫 시작
+        const fresh = RH.shortFirst && !this.rhyGo; // 보폭 박자: 쉬었다 걸으면 짧은 디딤(빠른 몫)부터 — '1-2 디딤 짧게 3-4 디딤 넓게' (쉬었다 떼는 첫 디딤은 짝 자리가 아직 없어도 이끄는 발로 봄)
+        if (fresh) this.rhyN = RH.normal;
+        this.rhyGo = true;
         let fast = this.rhyF > 0;
         if (fast) this.rhyF--;
-        else if (this.rhyN >= RH.normal && (!PR || (kind === 'walk' && this.pairStep === 'lead')) && vb * Math.sign(wf) > -(RH.brake ?? Infinity)) {
+        else if (this.rhyN >= RH.normal && ((fresh && this.pairStep !== 'trail') || !PR || (kind === 'walk' && this.pairStep === 'lead')) && vb * Math.sign(wf) > -(RH.brake ?? Infinity)) {
           fast = true;
           this.rhyN = 0;
           this.rhyF = RH.fast - 1;
@@ -442,6 +449,7 @@ export class Gait {
           k = RH.mul;
           this.fastAccent = RH.accent ?? true;
           this.fastAcc = RH.accel ?? 1;
+          this.fastTimeOnly = !!RH.timeOnly;
         }
       } else if (RH) {
         const fast = this.rhyN >= RH.every && vb * Math.sign(wf) > -(RH.brake ?? Infinity);
@@ -460,6 +468,7 @@ export class Gait {
           this.fastAccent = C.def.accent ?? true;
           this.fastAcc = C.def.accel ?? 1; // 가속 한도 배율 (fighter.js driveBalance — 그 걸음 동안만)
           this.chaseStep = true;
+          this.fastTimeOnly = false;
           if (--C.left <= 0 && this.chase === C) this.chase = null;
         }
       }
@@ -486,6 +495,7 @@ export class Gait {
         this.fastK = Math.max(1, kB + (kS - kB) * B.lat);
         this.fastFore = !!B.foreOnly; // 이베리아 아닌 유파의 비스듬히 뒤: 몸 빠르기의 앞뒤 몫만 × fastK (옆 몫은 보통 빠르기 — §8)
         this.fastAcc = GAIT.burstAccel;
+        this.fastTimeOnly = false;
         this.fastAccent = FAST_ACCENT; // 박찬 발 디딤 발소리 강조(× 1.3 · × 1.06 — 빠른 걸음과 같은 값 · 10/15 15:2x)
         this.fastDir = B.side ? 0 : B.fore;
         this.fastSide = B.side;
@@ -508,7 +518,8 @@ export class Gait {
   fastPeek(RH, trail, wf, vLat, vb) {
     if (!(Math.abs(wf) > vLat)) return 1;
     const go = vb * Math.sign(wf) > -(RH.brake ?? Infinity);
-    if (RH.count === 'foot') return this.rhyF > 0 || (!trail && this.rhyN >= RH.normal && go) ? RH.mul : 1;
+    const fresh = RH.shortFirst && !this.rhyGo; // 보폭 박자 — fastBegin 과 같은 가름(쉬었다 떼는 첫 이끄는 디딤부터 짧은 디딤)
+    if (RH.count === 'foot') return this.rhyF > 0 || (!trail && (fresh ? RH.normal : this.rhyN) >= RH.normal && go) ? RH.mul : 1;
     if (trail) return this.fastK > 1 && this.rhyTrail ? this.fastK : 1;
     return this.rhyN >= RH.every && go ? RH.mul : 1;
   }
@@ -723,6 +734,7 @@ export class Gait {
     if (RH || CH || this.burst || this.fastK > 1) {
       if (f.feetHeld || f.finish?.amt > 0.5) {
         this.rhyN = 0;
+        this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
         this.rhyF = 0;
         this.rhyIdle = 0;
         this.fastK = 1;
@@ -956,6 +968,7 @@ export class Gait {
       if (swing && swing.kind !== 'settle') this.rhyIdle = 0;
       else if ((this.rhyIdle += dt) > RH.idle) {
         this.rhyN = 0;
+        this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
         this.rhyF = 0;
         this.fastK = 1;
       }
@@ -996,7 +1009,7 @@ export class Gait {
     // 빠른 걸음 몸 빠르기(10/15 — 박자 걸음): 가려는 속도 ×fastK. 발 박자도 같은 배(위 sT)라 한 걸음 길이는 그대로, 시간만 ÷fastK.
     //  몸의 일이라 플레이어·AI 같이 — 이베리아 옆 빠르기(P.sideMul, 위 처음)와 같은 결이되 follow·박자 판단(speedF·cad) 뒤에 둔다(빠른 걸음이 follow 를 끄거나 박자를 두 번 올리지 않게).
     //  아래 reachSlow 는 그대로 건다(뒤에 남은 발이 닿게). 보통 걸음은 셈하지 않는다
-    if (this.fastK > 1) {
+    if (this.fastK > 1 && !this.fastTimeOnly) {
       if (this.fastFore) want.addScaledVector(fwd, (want.x * fwd.x + want.z * fwd.z) * (this.fastK - 1)); // 첫 걸음 박차기 비스듬히 뒤(이베리아 아님): 앞뒤 몫만
       else want.multiplyScalar(this.fastK);
     }

@@ -335,7 +335,7 @@ const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.
 //   even = 디딤 간격이 늘 한 걸음 시간(이끄는 발 → 따라붙는 발 → 이끄는 발 … 같은 간격 — gait.js update ③ gate · 박자 걸음 빠른 디딤은 그 간격 ÷ mul — fastPeek) · 몸 박자 없음(leadV·trailV·restV 칸 없음 — 몸 빠르기 고르게) ·
 //   두 발 다 Tsw × lead · trail(0.7 — 옛 0.45 · 0.4 의 짧게 채는 발은 고른 간격에서도 골반을 멈칫하게 함)로 들고 나머지는 두 발 — 한 발로 오래 버티지 않게(10/10 '저는 느낌' — 골반이 짝마다 8 cm 주저앉던 고른 셔플과 다름).
 //   stride = 한 짝에 한 발이 옮기는 거리 상한(작게 빨리 0.36 → 0.28 — 넘으면 박자를 올림) · len · stop 은 옛 짝과 같음. 값은 사장님 확인 전 (확인표 1711~1713)
-const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, stride: 0.28, len: 0.7, stop: true };
+const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, stride: 0.44, len: 0.7, stop: true }; // stride 0.28 → 0.44(10/15 22:1x 보폭 박자 시험 — 0.28 × 1.1 ÷ 0.7 · `?itStride=0` 이면 0.28)
 //  박자 걸음 rhythm (10/15 사장님 '앞이든 뒤든 4걸음마다 다음 1걸음이 50% 빨라질 수 있어? … 3걸음마다 1걸음이 더 박자 감각이 생길까?' → 감독 권고 3 + 1 —
 //   docs/strike/italian_rhythm_2026-10-15.md): 빠른 걸음은 몸 빠르기 ×mul · 발 박자 ×mul(한 걸음 길이는 그대로, 시간만 ÷mul) — gait.js fastBegin.
 //   count 'foot' (기본 — 10/15 13:2x 사장님 '디딤 기준으로 통일하자 … 3+2? 4+2?' → 감독 권고 4 + 2, 확인표 1604~): 앞뒤 **디딤** normal 번 보통 → 다음 fast 디딤이 빠름.
@@ -354,7 +354,13 @@ const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, strid
 export const FAST_ACCENT = { gain: 1.3, rate: 1.06 }; // 빠른 걸음 발소리 강조 — 박자 걸음·간격 잡기 빠른 디딤·첫 걸음 박차기(10/15 15:2x 사장님 '박차기에 발소리 강조 붙여' — gait.js fastBegin)가 같이 씀 (사장님 확인 전 · 확인표 1508 · 1621)
 const ITALIAN_MUL = 1.5; // 박자 걸음 빠른 디딤 배율 (사장님 결정 10/15 19:3x '30%로는 리듬감이 안 살아. 50%로 해' — 15:1x 의 1.3 에서. 지난 판 비교 `?itRhythm=2+2x1.3`)
 const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`?itRhythm=4+2` · `3+2` · 옛 짝 셈 N)의 배율 — 그때 값 그대로
-const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: ITALIAN_MUL, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
+//   **10/15 22:1x 사장님 시험** '속도 가중치를 주는 게 아니라 보폭 차이를 두면 어떨까. 1-2 디딤 짧게 3-4 디딤 넓게. 1-2는 0.8로 3-4는 1.1로'("이탈리아 보폭이 지금 너무 짧아졌어") →
+//    보폭 박자 ITALIAN_STRIDE: 디딤 셈 2 + 2 의 빠른 몫(짧은 디딤)이 먼저(shortFirst — 쉬었다 걸으면 짧게 둘 → 길게 둘 …), 몸 빠르기는 그대로(timeOnly — 발 박자만 ×mul).
+//    보폭 규칙 계수로 짧은 디딤 0.8(0.50 m) · 긴 디딤 1.1(0.68 m): 이탈리아 바탕 보폭을 긴 디딤(strideK 1.1)으로 두고 짧은 디딤은 발 박자 × (1.1 ÷ 0.8 = 1.375) — 같은 몸 빠르기에서 간격이 짧으면
+//    보폭이 짧다. 고른 짝걸음 보폭 상한(ITALIAN_PAIR_EVEN.stride)도 같은 비로(0.28 × 1.1 ÷ 0.7). 발소리 강조는 짧은 디딤(빠른 몫) 그대로. 시험값 — 사장님 확인 전.
+//    `?itStride=0` = 22:0x 판(속도 ×1.5 · 바탕 0.7) · `?itStride=0.75,1.1` 처럼 짧은·긴 계수를 손으로 — setItalianStride
+const ITALIAN_STRIDE = { short: 0.8, long: 1.1 };
+const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: ITALIAN_STRIDE.long / ITALIAN_STRIDE.short, timeOnly: true, shortFirst: true, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
 //  ⓐ″ 독일 보법 '간격 잡기'의 빠른 디딤 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' — 10/15 18:0x 부터 '간격 잡기',
 //   AI 패시브 '따라 들어가기 (Nachreisen)'(GERMAN_PASSIVES)와 다른 것. 잡기 = config GAIT.deHold · gait.js holdTick — docs/strike/german_hold_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
 //   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —
@@ -371,7 +377,7 @@ const GERMAN_CHASE = { window: 0.6, steps: 2, mul: 1.5, brake: 0.2, accel: 1.5, 
 //  even: 고른 바탕 걸음 (10/15 — config GAIT.itEven 1 일 때 gait.js gaitParams 가 위에 덮음 · `?itGait=old` = 덮지 않음, 옛 짝걸음 바이트 같음 · docs/strike/italian_rhythm_2026-10-15.md §10):
 //   짝걸음(가까이 · 앞뒤로 천천히)을 고른 짝(ITALIAN_PAIR_EVEN)으로. 지나 딛기(멀리·빨리)의 보폭·박자는 보폭 규칙(strideK 0.7 — 아래 칸 · config GAIT.strideRule)이 맡는다. 값은 사장님 확인 전 (확인표 1710~)
 const ITALIAN_EVEN = { pair: ITALIAN_PAIR_EVEN, dsFrac: 0.21, player: { dsFrac: 0.21 } };
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.7, even: ITALIAN_EVEN };
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 1.1, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
 //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)
@@ -1241,6 +1247,28 @@ export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: tr
  *  배율 mul 도 같이 정한다: 지난 판 비교 갈래 '4+2'(13:2x 판) · '3+2' · 옛 짝 셈 N 은 그때 ×1.5(ITALIAN_OLD_MUL), 그 밖의 N + M(기본 2+2 포함)은 지금 ×1.5(ITALIAN_MUL — 10/15 19:3x, 전 ×1.3)
  *  'N+MxK'(주소 'N MxK' — 예 `?itRhythm=2+2x1.3` = 15:1x 판)는 배율 K 를 손으로 (10/15 …/it-even)
  */
+/**
+ * 이탈리아 보폭 박자 (10/15 22:1x 사장님 시험 — ITALIAN_STRIDE): '0' = 22:0x 판(박자 걸음 몸 빠르기·발 박자 ×1.5 · 바탕 보폭 계수 0.7 · 짝 보폭 0.28) ·
+ *  'a,b' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수 — 기본 0.8,1.1). main.js `?itStride=` · `?itRhythm=` 보다 먼저 부른다
+ */
+export function setItalianStride(v) {
+  const g = TRADITIONS.italian.gait;
+  const R = g.rhythm;
+  const s = String(v ?? '').trim();
+  if (s === '0') {
+    Object.assign(R, { mul: ITALIAN_MUL, timeOnly: false, shortFirst: false });
+    g.strideK = 0.7;
+    g.even.pair.stride = 0.28;
+    return true;
+  }
+  const m = s.match(/^(\d*\.?\d+)\s*,\s*(\d*\.?\d+)$/);
+  if (!m || !(+m[1] > 0) || !(+m[2] > +m[1])) return false;
+  Object.assign(R, { mul: +m[2] / +m[1], timeOnly: true, shortFirst: true });
+  g.strideK = +m[2];
+  g.even.pair.stride = (0.28 * +m[2]) / 0.7;
+  return true;
+}
+
 export function setItalianRhythm(v) {
   const R = TRADITIONS.italian.gait.rhythm;
   const s = String(v ?? '').trim();
