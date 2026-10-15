@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { BODY, GAIT } from './config.js';
-import { TRADITIONS, FAST_ACCENT } from './schools.js';
+import { TRADITIONS, FAST_ACCENT, footworkTradition } from './schools.js';
 import { GUARD_BASE } from './guards.js';
 
 // 자세 이름 → 바탕 자세표 차례 (유파 걸음 P.guardLow — 몸 틀 자세표도 같은 패드 자리·같은 순서라 bodyGuard.nearest 와 견줄 수 있다)
@@ -130,7 +130,7 @@ function mkLeg(k, side) {
 export function gaitParams(f, isPlayer = false) {
   if (!GAIT.school) return GAIT;
   const art = f.swordArt;
-  const g = TRADITIONS[art?.tradition]?.gait;
+  const g = TRADITIONS[footworkTradition(f)]?.gait; // 대기실 스킬북 '보법' 없음·해제(플레이어만 — schools.js footworkTradition)이면 기본 걸음
   if (!g) return GAIT;
   const P = Object.create(GAIT);
   const put = (o) => {
@@ -349,7 +349,7 @@ export class Gait {
    */
   foeWhiff() {
     if (!GAIT.deChase || !this.active || this.f.state !== 'stand') return;
-    const def = TRADITIONS[this.f.swordArt?.tradition]?.chase;
+    const def = TRADITIONS[footworkTradition(this.f)]?.chase; // 독일 간격 잡기 — 보법 책이 없거나 해제한 플레이어는 없음
     if (!def) return;
     if (GAIT.deHold && !this.f.aiControlled && this.f.foeDistance() <= this.f.swordArt.measure.contact) return;
     this.chase = { def, t: 0, left: def.steps, got: false };
@@ -397,7 +397,7 @@ export class Gait {
     if (!(d > 1e-6)) return;
     const v = Math.max(0, (this.vf.x * dx + this.vf.z * dz) / d);
     if (d - (v * v) / (2 * GAIT.maxAccel * GAIT.burstAccel) > contact) return;
-    this.hold = { t: 0, T: TRADITIONS[f.swordArt.tradition]?.chase?.window ?? 0 };
+    this.hold = { t: 0, T: TRADITIONS[footworkTradition(f)]?.chase?.window ?? 0 };
     this.holdEnd = null;
     this.holdBrake = { x: dx / d, z: dz / d };
     this.fastK = 1;
@@ -599,9 +599,10 @@ export class Gait {
     const f = this.f;
     // 유파 걸음 값: 무기(검술 풀이)가 바뀌었거나 조종이 바뀌었으면(AI 가 몰면 aiControlled) 다시 고른다 — 칸 없는 유파는 늘 GAIT 그대로
     const pl = !f.aiControlled;
-    if (this._art !== f.swordArt || this._pl !== pl) {
+    if (this._art !== f.swordArt || this._pl !== pl || this._fw !== f.schoolFootwork) {
       this._art = f.swordArt;
       this._pl = pl;
+      this._fw = f.schoolFootwork; // 대기실 스킬북 '보법'(플레이어만 — 판을 세울 때 정한다)
       this.P = gaitParams(f, pl);
     }
     // 유파 옆 빠르기(P.sideMul — 10/10 이베리아 데스트레사 둥근 걸음, 사장님 '사이드스텝 이동량 증가' · 확인표 623): 조종 스틱에 옆 몫이 있을 때 가려는 속도의 옆 몫을 배율만큼.
@@ -708,7 +709,7 @@ export class Gait {
         if (GAIT.burstDe) {
           if (side) {
             if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
-          } else if (mv.y < 0 && f.swordArt?.tradition === 'german') this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
+          } else if (mv.y < 0 && footworkTradition(f) === 'german') this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
         } else if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
         else if (!side && mv.y < 0) this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
       }

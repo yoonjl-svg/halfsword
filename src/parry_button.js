@@ -59,7 +59,8 @@ export class PlayerParryGuard {
     this.stats = { heldT: 0, threats: 0, lines: {}, waitT: 0 };
     this.boost = false; // 막기 거듦이 me.powerMul 을 쥐고 있나
     this._s2 = {}; // 일찍 읽기용 내다본 모습 (seen 사본)
-    const pc = TRADITIONS[me.swordArt?.tradition]?.parryCover;
+    // 대기실 스킬북 '막기'를 안 가졌거나 해제한 플레이어(me.schoolParry === false — main.js newRound, 첫 화면·대기실 여정만): 무유파 막기 자리(TRADITIONS.none.parry)·덧씌우기 없음
+    const pc = me.schoolParry === false ? null : TRADITIONS[me.swordArt?.tradition]?.parryCover;
     if (pc) {
       const { down, ...covers } = pc; // 쓰러져 머리 가리기(down)는 AI 몫 — 플레이어 몸엔 막기 줄만
       if (Object.keys(covers).length) installCover(me, this, covers);
@@ -75,14 +76,15 @@ export class PlayerParryGuard {
     const S = this.school;
     if (!S) return null;
     if (line === 'point') return S.pose.point;
-    return S.parry[line] || S.pose.point;
+    const P = this.me.schoolParry === false ? TRADITIONS.none.parry : S.parry; // 스킬북 '막기' 없음·해제 = 무유파 자리
+    return P[line] || S.pose.point;
   }
 
   /** 지금 잡은 막기 자세 이름 { name, desc } — 중국 덧씌우기 자리는 그 이름(거정세·어거세·요략세), 아니면 그 패드에서 가장 가까운 내 자세표 자리의 이름 (표두세·황소…) */
   nameOf(line) {
     const me = this.me;
     const tr = me.swordArt?.tradition;
-    const slot = line && line !== 'point' ? TRADITIONS[tr]?.parryCover?.[line] : null;
+    const slot = line && line !== 'point' && me.schoolParry !== false ? TRADITIONS[tr]?.parryCover?.[line] : null;
     if (slot?.name) return { name: slot.name, desc: slot.desc };
     const p = this.padOf(line);
     if (!p) return null;

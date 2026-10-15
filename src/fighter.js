@@ -304,12 +304,16 @@ export class Fighter {
    * @param {object} [o.terrain] 땅 계약 { heightAt(x, z), normalAt(x, z), … } (화산섬만 — 없으면 평평한 y 0)
    * @param {number} o.heading 처음 바라보는 방향(라디안). 0 = +x
    * @param {object} o.look    겉모습(색, 투구 등) — looks.js 참고
+   * @param {boolean} [o.schoolFootwork] [o.schoolParry] false = 대기실 스킬북 보법·막기를 안 가졌거나 봉인한 플레이어(main.js — 첫 화면·대기실 여정만).
+   *        걸음 값을 처음부터 기본으로 고르게 걸음(Gait)을 만들기 전에 적는다. 없으면 속성도 없다(시뮬·AI 그대로)
    */
   constructor(RAPIER, world, scene, colliderInfo, o) {
     this.R = RAPIER;
     this.world = world;
     this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
     this.index = o.index;
+    if (o.schoolFootwork === false) this.schoolFootwork = false; // schools.js footworkTradition — gait.js · stamina.js
+    if (o.schoolParry === false) this.schoolParry = false; // parry_button.js
     this.name = o.name;
     this.side = 1; // 오른손잡이
     this.heading = o.heading ?? 0;

@@ -52,7 +52,9 @@ function notice(text) {
 
 /** 화면에 걸린 묶음 파일 이름들 (assets/…) — 판마다 해시가 바뀐다 */
 const assetSig = (names) => [...new Set(names)].filter((n) => /(^|\/)assets\//.test(n)).map((n) => n.slice(n.lastIndexOf('assets/'))).sort().join('|');
-const currentSig = () => assetSig([...document.querySelectorAll('script[src],link[href]')].map((el) => el.getAttribute('src') || el.getAttribute('href') || ''));
+//  <script src> 만 센다 (10/16 — docs/import/lobby_port_2026-10-16.md §7): 첫 화면(game_entry.js)이 게임 묶음을 나중에 받을 때 Vite 가 머리에 넣는 modulepreload <link> 는
+//  받아 온 HTML 에 없는 이름이라, 그것까지 세면 같은 판인데도 늘 '새 판'으로 읽어 첫 화면·메뉴에서 돌아올 때마다 새로 고친다. 진입 묶음 이름은 그 아래 묶음이 바뀌면 같이 바뀐다
+const currentSig = () => assetSig([...document.querySelectorAll('script[src]')].map((el) => el.getAttribute('src') || ''));
 
 let lastCheck = 0;
 let reloading = false;
@@ -65,7 +67,7 @@ async function checkForNewBuild(registration) {
   try {
     const res = await fetch(new URL('index.html', scope), { cache: 'no-store' });
     if (!res.ok) return;
-    const sig = assetSig((await res.text()).match(/(?:src|href)="[^"]*assets\/[^"]+"/g)?.map((s) => s.replace(/^(?:src|href)="|"$/g, '')) || []);
+    const sig = assetSig((await res.text()).match(/src="[^"]*assets\/[^"]+"/g)?.map((s) => s.replace(/^src="|"$/g, '')) || []);
     const mine = currentSig();
     if (sig && mine && sig !== mine && window.game?.state === 'menu' && document.visibilityState === 'visible') {
       reloading = true;
