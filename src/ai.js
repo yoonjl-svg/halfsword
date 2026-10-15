@@ -286,6 +286,10 @@ export class AI {
    *  마른 길(drySense > 0 — 라트나 · 잠든 습지만)이면 돌아갈 쪽을 덜 젖은 쪽으로 미리 고르고(dryRouteSide), 돌아가기까지 끝난 스틱을 덜 젖은 쪽으로 튼다(dryFeet).
    *  둘 다 자기 무대에서만 일한다(습지 · 화산섬은 함께 나오지 않음) — 용암 피하기를 마지막에 둬 안전 쪽이 이긴다 */
   update(dt) {
+    // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
+    //  간 보기·막기·물러남(비기 꼴 포함)의 발놀림 박자(간격 비례 제어·잔걸음·'관성으로 너무 멀리 가지 않게' 늦추는 물러남)는 옛 가속(3.2 m/s²) 몸에 맞춘 값이라 그 꼴에서는 옛 가속으로 민다
+    //  (fighter.js driveBalance 가 읽음 — 지난 스텝의 꼴 · 칸 없는 몸은 어차피 × 1). 끄면(0) 늘 false(사람·AI 같이 — 지금 판, 바이트 같음). 사람은 AI 가 없어 그대로
+    this.me.aiLightHold = GAIT.cnLightAi ? this.mode !== 'attack' : false;
     this.updateCombat(dt);
     const ds = this.drySense;
     if (ds) this.dryRouteSide(ds);
