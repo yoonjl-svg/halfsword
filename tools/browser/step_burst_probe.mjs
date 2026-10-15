@@ -2,6 +2,8 @@
 //  가슴이 간 거리(게임 시간 0.2 · 0.3 · 0.5 s)와 첫 걸음이 박차기였나(gait.fastK > 1)를 켬(기본)·끔(`&stepBurst=0`)으로 읽고, 누른 뒤 0.3 s 에 멈춰 옆에서 한 장씩 찍는다.
 //  상대(AI 판단 끔)는 제자리에 세우고 둘 다 상처를 끈다(걸음·물리 그대로). 화면 왼쪽 위 글은 이 도구가 붙인 설명(게임 화면 글 아님). 콘솔 오류를 센다.
 //  이탈리아(레이피어 — 박차기 받지 않는 유파) 한 번: 켬·끔 같아야 한다.
+//  10/15 15:1x 옆 박차기는 이베리아만(문서 §8): 롱소드 옆(D)은 이제 보통 첫 걸음(fastK 1) · 츠바이핸더(이베리아) 켬 한 번 — 옆도 박차기.
+//  주소에 openSweep=0(9/30 판 시작 — 정지 2 s): 첫 판 무대 훑기(3.3 게임 초) 동안은 발이 묶여 '두 발로 선' 때 누른 키가 먹지 않는다
 //  실행: npx vite --port 5191 --strictPort (자기 포트·자기 캐시 폴더) & → node tools/browser/step_burst_probe.mjs http://127.0.0.1:5191 <출력 폴더>
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -21,7 +23,7 @@ async function open(weapon, extra = '') {
   page.on('response', (r) => {
     if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`);
   });
-  await page.goto(`${base}/index.html?test=1&weapon=${weapon}&hero=player&foe=isolde&stage=castle${extra}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/index.html?test=1&weapon=${weapon}&hero=player&foe=isolde&stage=castle&openSweep=0${extra}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword && document.getElementById('btnStart'), null, { timeout: 120000 });
   await page.evaluate(() => document.getElementById('btnStart').click());
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });
@@ -150,6 +152,7 @@ for (const [weapon, extra, nm] of [
   ['longsword', '&stepBurst=0', '롱소드 끔'],
   ['rapier', '', '레이피어(이탈리아) 켬'],
   ['rapier', '&stepBurst=0', '레이피어(이탈리아) 끔'],
+  ['zweihander', '', '츠바이핸더(이베리아) 켬'],
 ]) {
   const page = await open(weapon, extra);
   const tag = `${weapon}${extra ? '_off' : '_on'}`;

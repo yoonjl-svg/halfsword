@@ -10,6 +10,7 @@
 //   차림 SBF_START: 'rest'(기본 — 위 쉼 뒤) · 'open:<s>[,<s>…]' = 판 시작 정지(ARENA.startHold)가 풀린 뒤 s 초 그 자리(상대 가슴 5.6 m)에 서 있다가 대본
 //   (카메라 계기 cam_follow_probe.mjs 의 walk 대본이 open:0.8 — 자세 고치던 발이 아직 떠 있을 때) · 'open:sweep' = 풀린 뒤 0.4~2.1 s 스물한 때.
 //   때를 둘 넘게 주면 대본마다 짧은 표(때마다 한 줄) + 켬 ≥ 끔 셈만. 예) SBF_START=open:sweep node tools/sim/step_burst_feel.mjs longsword 2.4 K,L
+//  비스듬히 (10/15 15:1x 옆 박차기는 이베리아만 — 문서 §8): 대본 G(45°) · M(옆 몫이 큼 — 옆 0.87 · 뒤 0.5) · N(뒤 몫이 큼 — 옆 0.5 · 뒤 0.87) 은 표 밑에 가슴이 간 거리의 뒤 몫·옆 몫을 따로 적는다
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { GAIT, ARENA } from '../../src/config.js';
 import { Gait } from '../../src/gait.js';
@@ -45,12 +46,14 @@ const SCR = {
   D: { name: '오른 끝 0.3 s 떼고 놓기', seq: [[1, 0, 0.3], [0, 0, 1.5]] },
   E: { name: '왼 끝 1.5 s', seq: [[-1, 0, 1.5], [0, 0, 1.0]] },
   F: { name: '왼 끝 0.3 s 떼고 놓기', seq: [[-1, 0, 0.3], [0, 0, 1.5]] },
-  G: { name: '비스듬히 뒤 오른 1.5 s', seq: [[0.707, -0.707, 1.5], [0, 0, 1.0]] },
+  G: { name: '비스듬히 뒤 오른 1.5 s', seq: [[0.707, -0.707, 1.5], [0, 0, 1.0]], diag: true },
   H: { name: '앞 끝 1.0 s (박차기 없음)', seq: [[0, 1, 1.0], [0, 0, 1.0]] },
   I: { name: '뒤 0.5 1.5 s (문턱 아래)', seq: [[0, -0.5, 1.5], [0, 0, 1.0]] },
   J: { name: '뒤 끝 0.15 s 떼고 놓기', seq: [[0, -1, 0.15], [0, 0, 1.5]] },
   K: { name: '뒤 끝 2 s (서 있다가 이어 물러나기)', seq: [[0, -1, 2.0], [0, 0, 0.5]], hold: true },
   L: { name: '오른 끝 2 s (서 있다가 이어 옆걸음)', seq: [[1, 0, 2.0], [0, 0, 0.5]], hold: true },
+  M: { name: '비스듬히 옆 오른 1.5 s (옆 0.87 · 뒤 0.5 — 옆 몫이 큼)', seq: [[0.866, -0.5, 1.5], [0, 0, 1.0]], diag: true },
+  N: { name: '비스듬히 뒤 오른 1.5 s (옆 0.5 · 뒤 0.87 — 뒤 몫이 큼)', seq: [[0.5, -0.866, 1.5], [0, 0, 1.0]], diag: true },
 };
 
 const _u = new THREE.Vector3();
@@ -95,8 +98,16 @@ function run(scn, on, start = 'rest') {
     const c = P.bodies.chest.translation();
     return (c.x - C0.x) * _u.x + (c.z - C0.z) * _u.z;
   };
+  const sx = Math.sign(mx0) || 1;
+  const comp = () => {
+    const c = P.bodies.chest.translation();
+    const dx = c.x - C0.x;
+    const dz = c.z - C0.z;
+    return [-(dx * fwd.x + dz * fwd.z), sx * (dx * rgt.x + dz * rgt.z)]; // 비스듬히 대본: 뒤 몫 · 스틱 옆 쪽 몫 (대본 시작 때 몸 방향)
+  };
   rec = { who: P, t0: t, t: 0, begins: [], tds: [], cx: () => P.bodies.chest.translation().x, cz: () => P.bodies.chest.translation().z };
   const at = {};
+  const atC = {};
   const marks = [0.2, 0.3, 0.4, 0.5, 1.0, 1.5, 2.0];
   let t25 = NaN;
   let vMax = 0;
@@ -119,7 +130,7 @@ function run(scn, on, start = 'rest') {
       dPrev = dd;
       vMax = Math.max(vMax, v);
       dMax = Math.max(dMax, dd);
-      for (const m of marks) if (at[m] == null && tt >= m - 1e-9) at[m] = dd;
+      for (const m of marks) if (at[m] == null && tt >= m - 1e-9) (at[m] = dd), (atC[m] = comp());
       if (si === 0 && Math.round(tt / DT) % Math.round(0.1 / DT) === 0) {
         v01.push((dd - d01) / 0.1);
         d01 = dd;
@@ -157,6 +168,7 @@ function run(scn, on, start = 'rest') {
   }
   return {
     at,
+    atC,
     t25,
     vMax,
     dMax,
@@ -210,12 +222,14 @@ console.log('| 대본 | 0.2 · 0.3 · 0.4 · 0.5 s 간 거리 m (끔 → 켬) | 
 console.log('|---|---|---|---|---|---|---|---|---|---|---|');
 const detail = [];
 const holds = [];
+const diags = [];
 const json = {};
 for (const scn of scns) {
   const a = run(scn, 0, ST);
   const b = run(scn, 1, ST);
   json[scn] = { off: { ...a, trace: undefined }, on: { ...b, trace: undefined } };
   if (SCR[scn].hold) holds.push([scn, a, b]);
+  if (SCR[scn].diag) diags.push([scn, a, b]);
   const p = (k, fmt) => `${fmt(a[k])} → ${fmt(b[k])}`;
   const m4 = [0.2, 0.3, 0.4, 0.5].map((m) => `${f2(a.at[m])}→${f2(b.at[m])}`).join(' · ');
   const s1 = (R) => R.steps[0];
@@ -237,6 +251,12 @@ if (holds.length) {
   console.log('\n이어 밀기 — 스틱을 미는 동안 0.1 s 마다 빠르기(게임 m/s, 스틱 쪽) · 끔 / 켬');
   console.log('| 대본 | 1 s m (끔 → 켬) | 2 s m | 0.5 s 뒤 가장 느린 m/s | 빠르기 끔 | 빠르기 켬 |\n|---|---|---|---|---|---|');
   for (const [scn, a, b] of holds) console.log(`| ${scn} | ${f2(a.at[1.0])} → ${f2(b.at[1.0])} | ${f2(a.at[2.0])} → ${f2(b.at[2.0])}${b.at[2.0] < a.at[2.0] - 1e-9 ? ' **' : ''} | ${f2(a.vLow)} → ${f2(b.vLow)} | ${a.v01.map(f2).join(' ')} | ${b.v01.map(f2).join(' ')} |`);
+}
+if (diags.length) {
+  // 비스듬히 (G·M·N): 가슴이 간 거리의 뒤 몫 · 옆 몫 — 이베리아 아닌 유파의 비스듬히 뒤 박차기는 뒤 몫만 빠르게(옆 몫은 보통 빠르기 — 문서 §8)
+  console.log('\n비스듬히 — 가슴이 간 거리의 뒤 몫 · 옆 몫 (m · 끔 → 켬)');
+  console.log('| 대본 | 0.3 s 뒤 몫 | 0.3 s 옆 몫 | 0.5 s 뒤 몫 | 0.5 s 옆 몫 | 1.0 s 뒤 몫 | 1.0 s 옆 몫 |\n|---|---|---|---|---|---|---|');
+  for (const [scn, a, b] of diags) console.log(`| ${scn} | ${[0.3, 0.5, 1.0].map((m) => `${f2(a.atC[m]?.[0])} → ${f2(b.atC[m]?.[0])} | ${f2(a.atC[m]?.[1])} → ${f2(b.atC[m]?.[1])}`).join(' | ')} |`);
 }
 if (detail.length) console.log(detail.join('\n'));
 if (process.env.SBF_JSON) (await import('node:fs')).writeFileSync(process.env.SBF_JSON, JSON.stringify(json)); // 값 고르기용 (SBF_JSON=파일)
