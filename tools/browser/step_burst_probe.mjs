@@ -2,6 +2,10 @@
 //  가슴이 간 거리(게임 시간 0.2 · 0.3 · 0.5 s)와 첫 걸음이 박차기였나(gait.fastK > 1)를 켬(기본)·끔(`&stepBurst=0`)으로 읽고, 누른 뒤 0.3 s 에 멈춰 옆에서 한 장씩 찍는다.
 //  상대(AI 판단 끔)는 제자리에 세우고 둘 다 상처를 끈다(걸음·물리 그대로). 화면 왼쪽 위 글은 이 도구가 붙인 설명(게임 화면 글 아님). 콘솔 오류를 센다.
 //  이탈리아(레이피어 — 박차기 받지 않는 유파) 한 번: 켬·끔 같아야 한다.
+//  10/15 15:1x 옆 박차기는 이베리아만(문서 §8): 롱소드 옆(D)은 이제 보통 첫 걸음(fastK 1) · 츠바이핸더(이베리아) 켬 한 번 — 옆도 박차기.
+//  주소에 openSweep=0(9/30 판 시작 — 정지 2 s): 첫 판 무대 훑기(3.3 게임 초) 동안은 발이 묶여 '두 발로 선' 때 누른 키가 먹지 않는다
+//  10/15 15:2x 박차기 발소리 강조(문서 §9): 누른 뒤 1.2 s 동안 게임이 부른 발소리(game.sound.footstep — 소리가 꺼져 있어도 부름은 남음)와 그 강조 배율,
+//   플레이어 발 디딤(gait.touchdown)을 적는다 — 강조가 박찬 발 디딤에만 나나 (상대는 제자리라 발소리는 거의 플레이어 것 — 상대 디딤 수도 적음)
 //  실행: npx vite --port 5191 --strictPort (자기 포트·자기 캐시 폴더) & → node tools/browser/step_burst_probe.mjs http://127.0.0.1:5191 <출력 폴더>
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -21,7 +25,7 @@ async function open(weapon, extra = '') {
   page.on('response', (r) => {
     if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`);
   });
-  await page.goto(`${base}/index.html?test=1&weapon=${weapon}&hero=player&foe=isolde&stage=castle${extra}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/index.html?test=1&weapon=${weapon}&hero=player&foe=isolde&stage=castle&openSweep=0${extra}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword && document.getElementById('btnStart'), null, { timeout: 120000 });
   await page.evaluate(() => document.getElementById('btnStart').click());
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });
@@ -40,11 +44,29 @@ async function open(weapon, extra = '') {
     // 물리 스텝마다: 게임 시간 · 가슴 자리 · 스틱 · 첫 걸음 박차기 (걸음을 뗄 때 fastK)
     g._log = [];
     g._firstK = null;
+    g._snd = [];
+    g._tds = [];
+    g._eSteps = 0;
     const G = P.gait;
     const b0 = G.begin.bind(G);
     G.begin = (l, kind, T) => {
       b0(l, kind, T);
-      if (g._arm && g._firstK == null && kind !== 'settle') g._firstK = { k: G.fastK, kind, T, t: g.stats.simTime };
+      if (g._arm && g._firstK == null && kind !== 'settle') g._firstK = { k: G.fastK, kind, T, t: g.stats.simTime, leg: l.k };
+    };
+    const td0 = G.touchdown.bind(G);
+    G.touchdown = (l, sp) => {
+      if (g._arm) g._tds.push([g.stats.simTime, l.k, l.kind]);
+      return td0(l, sp);
+    };
+    const eb0 = E.gait.begin.bind(E.gait);
+    E.gait.begin = (l, kind, T) => {
+      eb0(l, kind, T);
+      if (g._arm) g._eSteps++;
+    };
+    const fs0 = g.sound.footstep.bind(g.sound);
+    g.sound.footstep = (sp, pos, acc) => {
+      if (g._arm) g._snd.push([g.stats.simTime, acc ? acc.gain : 0, acc ? acc.rate : 0]);
+      return fs0(sp, pos, acc);
     };
     const c = g.combat;
     const o = c.afterStep.bind(c);
@@ -94,6 +116,9 @@ async function press(page, key, label, shot) {
     const g = window.game;
     g._log = [];
     g._firstK = null;
+    g._snd = [];
+    g._tds = [];
+    g._eSteps = 0;
     g._arm = true;
     g._pauseAt = null;
   }, t0);
@@ -140,7 +165,10 @@ async function press(page, key, label, shot) {
       const r = L.find((q) => q[0] >= tPush + dt - 1e-6) || L[L.length - 1];
       return ((r[1] - r0[1]) * ux + (r[2] - r0[2]) * uz) / n;
     };
-    return { d02: at(0.2), d03: at(0.3), d05: at(0.5), first: g._firstK, stick: Math.hypot(mx, my), emo: P.emoMods?.move ?? 1, t0: tPush };
+    const snd = g._snd.filter((q) => q[0] <= tPush + 1.2).map(([t, ga, ra]) => [t - tPush, ga, ra]);
+    const tds = g._tds.filter((q) => q[0] <= tPush + 1.2).map(([t, k, kind]) => [t - tPush, k, kind]);
+    g._arm = false;
+    return { d02: at(0.2), d03: at(0.3), d05: at(0.5), first: g._firstK, stick: Math.hypot(mx, my), emo: P.emoMods?.move ?? 1, t0: tPush, snd, tds, eSteps: g._eSteps };
   }, tPush);
 }
 
@@ -150,6 +178,7 @@ for (const [weapon, extra, nm] of [
   ['longsword', '&stepBurst=0', '롱소드 끔'],
   ['rapier', '', '레이피어(이탈리아) 켬'],
   ['rapier', '&stepBurst=0', '레이피어(이탈리아) 끔'],
+  ['zweihander', '', '츠바이핸더(이베리아) 켬'],
 ]) {
   const page = await open(weapon, extra);
   const tag = `${weapon}${extra ? '_off' : '_on'}`;
@@ -164,5 +193,10 @@ console.log('| 판 | 뒤(S): 0.2 · 0.3 · 0.5 s 간 거리 m · 첫 걸음 fast
 console.log('|---|---|---|');
 const row = (q, t0) => `${f2(q.d02)} · ${f2(q.d03)} · ${f2(q.d05)} · ${f2(q.first?.k)} · ${f2(q.first?.T)} · ${f2(q.first ? q.first.t - q.t0 : NaN)} · ${f2(q.stick)}`;
 for (const r of out) console.log(`| ${r.nm} | ${row(r.back)} | ${row(r.side)} |`);
+// 발소리: 누른 뒤 s (* = 강조 — 배율 gain × rate) · 플레이어 디딤(발 · 꼴) · 첫 걸음 발 · 상대 걸음 수
+console.log('\n| 판 · 쪽 | 발소리 누른 뒤 s (* 강조 gain·rate) | 플레이어 디딤 s (발 꼴) | 첫 걸음 발 · fastK | 상대 걸음 |\n|---|---|---|---|---|');
+const sn = (q) => q.snd.map(([t, ga, ra]) => `${f2(t)}${ga ? `*${ga}·${ra}` : ''}`).join(' ') || '-';
+const tdl = (q) => q.tds.map(([t, k, kind]) => `${f2(t)} ${k} ${kind}`).join(' · ') || '-';
+for (const r of out) for (const [nm, q] of [['뒤', r.back], ['옆', r.side]]) console.log(`| ${r.nm} · ${nm} | ${sn(q)} | ${tdl(q)} | ${q.first?.leg ?? '-'} · ${f2(q.first?.k)} | ${q.eSteps} |`);
 console.log(`콘솔·페이지 오류: ${errors.length}`);
 for (const e of errors.slice(0, 10)) console.log('  ' + e);
