@@ -2240,7 +2240,9 @@ export class Fighter {
     // 빠른 걸음(10/15 — gait.js fastBegin)이 가속 한도 배율을 두면(독일 간격 잡기 빠른 디딤 chase.accel — 헛침 뒤 박차고 들어감) 그 걸음 동안만 곱한다. 보통 걸음·이탈리아 박자 걸음은 × 1 (같은 수)
     //  첫 걸음 박차기(10/15 — GAIT.stepBurst)는 박찬 걸음 뒤에도 몸이 박찬 빠르기를 다 줄일 때까지(gait.burstBrake) 같은 배율 — 세게 멈춤. 간격 잡기의 잡기(gait.holdBrake)도
     //  잡기를 건 뒤 몸이 설 때까지 같은 배율(같은 값 — 새 값 없음). 둘 다 플레이어만이라 AI 는 늘 같은 수
-    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake ? GAIT.burstAccel : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
+    //  동방 보법 '가벼운 발'(10/15 — GAIT.cnLight · 유파 걸음 칸 light, 동방 1.5 · docs/strike/cn_light_feet_2026-10-15.md): 위 셋이 아닌 보통 걸음 몫(× 1)만 곱한다 —
+    //  걷기 시작·멈춤·방향 바꿈이 같은 한도라 함께 빨라지고 최고 빠르기(speed)는 그대로. 몸의 일이라 사람·AI 같이. 칸 없는 유파·끔(0)은 × 1 그대로(바이트 같음)
+    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake ? GAIT.burstAccel : GAIT.cnLight ? (G.P.light ?? 1) : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     push(fx, 0, fz);

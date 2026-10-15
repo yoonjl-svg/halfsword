@@ -143,6 +143,10 @@ export const GAIT = {
   //  창과 같은 0.6 s 동안 조종 입력의 앞(상대 쪽) 몫만 0 — 스틱을 놓았다 다시 밀면 바로 풀림. 헛침 때 이미 contact 안이면 창을 열지 않음. 플레이어만(AI 가 몰지 않는 몸 — AI 는 그대로)
   //  gait.js holdTick · fighter.js driveBalance. 1 = 켬, 0 = 끔(빠른 디딤만 — 지금 판 그대로, 바이트 같음). `?deHold=0`. 규칙의 값 자리는 사장님 확인 전 (확인표 1638~)
   deHold: 1,
+  // 동방 보법 '가벼운 발' (10/15 18:3x 사장님 '가벼운 발로 가자' — docs/strike/cn_light_feet_2026-10-15.md): 1 = 유파 걸음 칸 light(동방 1.5 — schools.js CHINESE_GAIT)가 있으면
+  //  발로 내는 몸 가속 한도의 보통 걸음 몫(× 1)에 곱함(fighter.js driveBalance — 걷기 시작·멈춤·방향 바꿈이 빨라지고 최고 빠르기는 그대로 · 빠른 걸음·박차기·세게 멈춤은 그 값 그대로 · 사람·AI 같이),
+  //  0 = 끔(지금 판 그대로 — 바이트 같음). `?cnLight=0`. 값(1.5)과 곱하는 자리는 사장님 확인 전 (확인표 1649~)
+  cnLight: 1,
   // 첫 걸음 박차기 (10/15 사장님 승인 1 단계 '첫걸음 박차기는 넣고 끌 수 있게 해서 내가 해보겠음' — docs/strike/step_burst_2026-10-15.md): 서 있던 몸이 뒤·옆으로 떼는 첫 걸음만 빠르다 —
   //  빠른 걸음 장치(gait.js fastBegin — 몸 빠르기·발 박자 × fastK, 가속 한도 × burstAccel)를 그 한 걸음에. 이어 걷는 걸음은 제 빠르기. 모든 유파의 바탕 걸음(이탈리아 빼고 · 옆 박차기는 이베리아만 — 10/15 15:1x, schools.js IBERIAN_GAIT.burstSide) · 지금은 플레이어만(AI 가 몰지 않는 몸)
   //  빠르기는 걷는 빠르기에 대한 배율이 아니라 절대 목표(m/s — 스틱 끝·다치지 않은 몸 기준): fastK = 목표 ÷ 그 쪽 걷는 빠르기(moveSpeed × backFactor·sideFactor) → 걷는 빠르기 값을 바꿔도 박차기는 그대로.
