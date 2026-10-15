@@ -145,7 +145,7 @@ export function uniqueDef(tradition, e) {
 //  5 단계(UNIQUE_ASSIST.secretStage) = 그 유파 비기 (사장님 결정 10/13 23:1x — 21~25 번째 인장. 그 전엔 플레이어 비기 창이 안 열린다: main.js PlayerSecretWatch locked).
 //  인장 이름(단계별 — 사장님 결정 10/13 23:1x 1 견습생 · 2 숙련자 · 3 전문가 · 4 마스터 · 5 신: 여기 한 곳). 유파 이름은 TRADITIONS[유파].nameKo 를 그때 읽는다(글자를 박지 않는다)
 export const SEAL_NAMES = ['견습생', '숙련자', '전문가', '마스터', '신'];
-const CLEAR_KEY = 'stillness.journeyClears.v1';
+export const CLEAR_KEY = 'stillness.journeyClears.v1'; // 인장 → 금화 바꾸기(seal_coins.js)가 저장된 깬 수만 읽는다 (주소 ?clears= 덮어쓰기 말고)
 let clearsOverride = null; // 시험용 `?clears=N` (main.js setClearsOverride): 있으면 저장소 대신 이 값을 쓰고 깬 수도 여기에만 더한다
 export function setClearsOverride(n) {
   const v = n == null || n === '' ? NaN : Number(n);
