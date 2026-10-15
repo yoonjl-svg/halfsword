@@ -11,17 +11,22 @@
 //   D 짝걸음 앞 0.3 6 s · E 짝걸음 뒤 0.6 6 s · F 짝걸음 앞 0.3 ↔ 뒤 0.6 1.2 s 씩 번갈아 6 s — D~F 는 상대가 가슴 거리 2.3 m 를 지킴(follow 안 · 짝걸음)
 //   갈래(안정 합): A·B 스틱 1.0·0.9·0.8 · C 번갈아 0.75·0.6·0.9 s · D~F 지키는 거리 2.3·2.0·2.6 m (걸음마다 줄은 첫 갈래만 · RSF_STICK·RSF_PER·RSF_KEEP 로 바꿈,
 //   D~F 스틱은 RSF_DSTICK(앞 0.3)·RSF_ESTICK(뒤 0.6))
-//  실행: node tools/sim/rhythm_step_feel.mjs [무기 rapier] [주기들 0,3,4] [대본들 A,B,C,D,E,F]   (RSF_ROWS=1 → 걸음마다 줄)
+//  10/15 디딤 셈(docs/strike/italian_rhythm_2026-10-15.md §8): 주기 칸은 setItalianRhythm 글 — '0' 끔 · 'N' 옛 짝 셈 N + 1 · 'N+M' 디딤 셈 N + M.
+//   디딤 셈이면 걸음마다 줄·빠름 ÷ 이웃도 디딤 하나씩(짝걸음 따라붙는 발도) · 덧붙인 칸 '디딤 기준'(모든 셈 같은 잣대): 앞뒤 디딤 수 · 그중 빠른 디딤 몫 ·
+//   빠른 몫(이어진 빠른 디딤 묶음) 수와 분당 · 빠른 몫 빠르기 ÷ 바로 앞 보통 디딤 둘 빠르기(몫마다 평균 — 첫 갈래)
+//  실행: node tools/sim/rhythm_step_feel.mjs [무기 rapier] [주기들 0,3,4+2,3+2] [대본들 A,B,C,D,E,F]   (RSF_ROWS=1 → 걸음마다 줄)
 import { newRound, DT } from './harness_m.mjs';
 import { Gait } from '../../src/gait.js';
-import { TRADITIONS } from '../../src/schools.js';
+import { TRADITIONS, setItalianRhythm } from '../../src/schools.js';
 
 const id = process.argv[2] || 'rapier';
-const EVERY = (process.argv[3] || '0,3,4').split(',').map(Number);
+const EVERY = (process.argv[3] || '0,3,4+2,3+2').split(',');
 const SCN = (process.argv[4] || 'A,B,C,D,E,F').split(',');
 const ROWS = process.env.RSF_ROWS === '1';
 const RH = TRADITIONS.italian.gait.rhythm;
-const EVERY0 = RH.every;
+const RH0 = { ...RH };
+const label = (e) => (+e === 0 && !/[+ ]/.test(e) ? '끔' : /[+ ]/.test(e) ? `${e.replace(/\s*[+ ]\s*/, ' + ')} (디딤)` : `${e} + 1 (짝)`);
+const isFoot = (e) => /[+ ]/.test(e);
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
 let rec = null; // 지금 재는 판
@@ -58,7 +63,7 @@ const SCRIPTS = {
 };
 
 function run(scn, vi, every) {
-  RH.every = 0;
+  setItalianRhythm('0');
   const S = SCRIPTS[scn];
   const G = newRound({ walls: !S.park, seed: 7, weapon: id, weapon2: 'longsword' });
   const P = G.player;
@@ -106,15 +111,30 @@ function run(scn, vi, every) {
     while (P.foeDistance() > keep + 0.3 && t - t1 < 10) step(0.5);
   }
   for (let i = 0; i < 1.2 / DT; i++) step(0); // 쉼 — 셈이 처음부터 (idle 넘게)
-  RH.every = every;
+  setItalianRhythm(every);
   rec = { who: P, t, begins: [], tds: [], v: [] };
   on = true;
   const t0 = t;
   for (const [my, dur] of S.vars[vi]) for (let i = 0, n = Math.round(dur / DT); i < n; i++) step(my);
   const r = rec;
   rec = null;
-  RH.every = EVERY0;
-  const counted = r.begins.filter((b) => Math.abs(b.my) > Math.abs(b.mx) && (b.pairOn ? b.kind === 'walk' && b.pairStep === 'lead' : b.kind === 'walk' || (b.kind === 'catch' && b.walking)));
+  Object.assign(RH, RH0);
+  const footfall = (b) => Math.abs(b.my) > Math.abs(b.mx) && (b.kind === 'walk' || (b.kind === 'catch' && b.walking));
+  const counted = r.begins.filter((b) => (isFoot(every) ? footfall(b) : Math.abs(b.my) > Math.abs(b.mx) && (b.pairOn ? b.kind === 'walk' && b.pairStep === 'lead' : b.kind === 'walk' || (b.kind === 'catch' && b.walking))));
+  // 디딤 기준(모든 셈 같은 잣대): 앞뒤 디딤 · 빠른 디딤 · 빠른 몫(이어진 빠른 디딤 묶음) · 몫 빠르기 ÷ 바로 앞 보통 디딤 둘
+  const ff = r.begins.filter(footfall);
+  const foot = { n: Math.max(0, ff.length - 1), fast: 0, seg: 0, gain: [] };
+  for (let i = 0; i + 1 < ff.length; i++) {
+    if (ff[i].fastK > 1) foot.fast++;
+    if (ff[i].fastK > 1 && !(i > 0 && ff[i - 1].fastK > 1)) {
+      foot.seg++;
+      let j = i;
+      while (j + 1 < ff.length && ff[j].fastK > 1) j++; // ff[j] = 몫 뒤 첫 보통 디딤
+      const sp = (a, b) => Math.hypot(ff[b].x - ff[a].x, ff[b].z - ff[a].z) / (ff[b].t - ff[a].t);
+      if (i >= 2 && ff[i - 2].fastK <= 1 && ff[i - 1].fastK <= 1 && ff[j].fastK <= 1) foot.gain.push(sp(i, j) / sp(i - 2, i));
+    }
+  }
+  foot.T = r.begins.length ? (r.v.length ? r.v[r.v.length - 1][0] - t0 : 0) : 0;
   const rows = [];
   for (let i = 0; i + 1 < counted.length; i++) {
     const a = counted[i];
@@ -133,15 +153,15 @@ function run(scn, vi, every) {
       if (nb && nb.walking) st.gapMax = Math.max(st.gapMax, nb.t - d.t);
     }
   }
-  return { rows, st, n: counted.length };
+  return { rows, st, n: counted.length, foot };
 }
 
 const f2 = (v) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 const f3 = (v) => (Number.isFinite(v) ? v.toFixed(3) : '-');
 const mean = (a, k) => (a.length ? a.reduce((s, r) => s + r[k], 0) / a.length : NaN);
 console.log(`빠른 걸음 계기 · ${id} 플레이어 · mul ${RH.mul} · idle ${RH.idle} s — 걸음 칸은 첫 갈래, 안정 칸은 갈래 셋 합`);
-console.log('| 대본 | 주기 | 센 걸음 | 보통: 시간 s · 빠르기 m/s · 최고 | 빠른: 시간 s · 빠르기 m/s · 최고 | 빠름 ÷ 보통 (빠르기 · 시간 · 거리) | 빠름 ÷ 이웃 (빠르기 · 시간 · 거리 · 최고) | 빠른 걸음 차례 | 넘어짐 · 붙잡기 반사 s (최고 levC) · catch · 일찍 디딤 | 걷는 틈 최대 s | 발소리 (빠른 발) |');
-console.log('|---|---|---|---|---|---|---|---|---|---|---|');
+console.log('| 대본 | 주기 | 센 걸음 | 보통: 시간 s · 빠르기 m/s · 최고 | 빠른: 시간 s · 빠르기 m/s · 최고 | 빠름 ÷ 보통 (빠르기 · 시간 · 거리) | 빠름 ÷ 이웃 (빠르기 · 시간 · 거리 · 최고) | 빠른 걸음 차례 | 넘어짐 · 붙잡기 반사 s (최고 levC) · catch · 일찍 디딤 | 걷는 틈 최대 s | 발소리 (빠른 발) | 디딤 기준: 앞뒤 디딤 · 빠른 디딤 몫 · 빠른 몫 수 (분당) · 몫 빠르기 ÷ 앞 보통 둘 (갈래 셋 합 · 몫 빠르기는 첫 갈래) |');
+console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
 const detail = [];
 for (const scn of SCN) {
   const S = SCRIPTS[scn];
@@ -162,9 +182,12 @@ for (const scn of SCN) {
     }).filter(Boolean);
     const gap = Math.max(...runs.map((x) => x.st.gapMax));
     const lev = Math.max(...runs.map((x) => x.st.levMax));
-    console.log(`| ${scn} ${S.name} | ${every ? `${every} + 1` : '끔'} | ${n} | ${f2(mean(nrm, 'dur'))} · ${f2(mean(nrm, 'v'))} · ${f2(mean(nrm, 'vm'))} | ${f2(mean(fst, 'dur'))} · ${f2(mean(fst, 'v'))} · ${f2(mean(fst, 'vm'))} | ${f2(mean(fst, 'v') / mean(nrm, 'v'))} · ${f2(mean(fst, 'dur') / mean(nrm, 'dur'))} · ${f2(mean(fst, 'dist') / mean(nrm, 'dist'))} | ${f2(mean(nb, 'v'))} · ${f2(mean(nb, 'dur'))} · ${f2(mean(nb, 'dist'))} · ${f2(mean(nb, 'vm'))} | ${order} | ${sum('falls')} · ${f2(sum('levT'))} (${f2(lev)}) · ${sum('catches')} · ${sum('early')}/${sum('walkTD')} | ${f2(gap)} | ${sum('sounds')} (${sum('soundsFast')}) |`);
+    const F = runs.reduce((a, x) => ({ n: a.n + x.foot.n, fast: a.fast + x.foot.fast, seg: a.seg + x.foot.seg, T: a.T + x.foot.T }), { n: 0, fast: 0, seg: 0, T: 0 });
+    const g0 = runs[0].foot.gain;
+    const footCol = `${F.n} · ${F.n ? Math.round((100 * F.fast) / F.n) : 0} % · ${F.seg} (${F.T ? ((F.seg * 60) / F.T).toFixed(1) : '-'}) · ${g0.length ? (g0.reduce((a, b) => a + b, 0) / g0.length).toFixed(2) : '-'}`;
+    console.log(`| ${scn} ${S.name} | ${label(every)} | ${n} | ${f2(mean(nrm, 'dur'))} · ${f2(mean(nrm, 'v'))} · ${f2(mean(nrm, 'vm'))} | ${f2(mean(fst, 'dur'))} · ${f2(mean(fst, 'v'))} · ${f2(mean(fst, 'vm'))} | ${f2(mean(fst, 'v') / mean(nrm, 'v'))} · ${f2(mean(fst, 'dur') / mean(nrm, 'dur'))} · ${f2(mean(fst, 'dist') / mean(nrm, 'dist'))} | ${f2(mean(nb, 'v'))} · ${f2(mean(nb, 'dur'))} · ${f2(mean(nb, 'dist'))} · ${f2(mean(nb, 'vm'))} | ${order} | ${sum('falls')} · ${f2(sum('levT'))} (${f2(lev)}) · ${sum('catches')} · ${sum('early')}/${sum('walkTD')} | ${f2(gap)} | ${sum('sounds')} (${sum('soundsFast')}) | ${footCol} |`);
     if (ROWS) {
-      detail.push(`\n#### ${scn} ${S.name} · ${every ? `${every} + 1` : '끔'}\n\n| 걸음 | 시각 s | 쪽 | 디딤 | 시간 s | 거리 m | 빠르기 m/s | 최고 m/s | 빠른 걸음 |\n|---|---|---|---|---|---|---|---|---|`);
+      detail.push(`\n#### ${scn} ${S.name} · ${label(every)}\n\n| 걸음 | 시각 s | 쪽 | 디딤 | 시간 s | 거리 m | 빠르기 m/s | 최고 m/s | 빠른 걸음 |\n|---|---|---|---|---|---|---|---|---|`);
       for (const r of rows) detail.push(`| ${r.i} | ${f2(r.t)} | ${r.dir} | ${r.pair ? '짝' : r.kind} | ${f3(r.dur)} | ${f3(r.dist)} | ${f2(r.v)} | ${f2(r.vm)} | ${r.fast ? '**빠름**' : ''} |`);
     }
   }
