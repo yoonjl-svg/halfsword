@@ -37,6 +37,7 @@ import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버
 import { PlayerUniqueAssist, uniqueStageFor, setClearsOverride, addJourneyClear, sealNotice } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setItalianRhythm } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
+import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
 import { setSupportFloor } from './gait.js'; // 발 체중 받침은 바닥 콜라이더 접촉만 (10/14 — 벽·석상에 발이 닿은 힘은 받침이 아님)
@@ -580,6 +581,7 @@ function newRound(weaponId) {
   const foeAI = currentFoe ? (FOE_PROF != null ? aiAtProficiency(currentFoe, FOE_PROF) : currentFoe.ai) : FOE_PROF != null ? { level: AI_PROFICIENCY.levels[FOE_PROF], persona: { proficiency: FOE_PROF } } : { level: 'normal', persona: null };
   const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...foeAI.persona, school: foeWeapon } : foeAI.persona;
   ai = new AI(enemy, player, foeAI.level, persona);
+  if (testRoute.foeWhiff) ai.drill = new WhiffDrill(); // ?foeWhiff=1: 상대가 닿지 않는 거리에서 2~3 s 마다 허공을 벤다 (whiff_drill.js — 판마다 새 바깥 거리). 없으면 평소 그대로
   const uniqueStage = uniqueStageFor(player.swordArt?.tradition, { test: testRoute.active, param: UNIQUE_STAGE_PARAM }).stage; // 손에 든 무기 유파의 숙련도 (본판 = 인장 수 · 테스트 경로 5 · ?uniqueStage)
   playerSecret = new PlayerSecretWatch(player, enemy, { locked: uniqueStage < CONFIG.UNIQUE_ASSIST.secretStage }); // 내 무기 유파의 비기 — 숙련도 5 에서만 (사장님 결정 10/13 23:1x '숙련도 5단계 … 거기서 비기를 배우게'). 그 전·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
   playerGuard = new PlayerParryGuard(player, enemy); // 막기 버튼 (누르는 동안만 손을 쥔다 — 권총·맨손이면 아무 일도 없다)
