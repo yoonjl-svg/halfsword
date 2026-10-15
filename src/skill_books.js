@@ -16,7 +16,7 @@ import { UNIQUE_ASSIST } from './config.js';
 /** 탭 차례 (감독 10/16: 독일 · 이탈리아 · 이베리아 · 일본 · 동방) */
 export const BOOK_SCHOOLS = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
 
-/** 급 다섯 — kind = 판에서 켜고 끄는 몫 · rarity = 등급(색은 lobby.css --book-*) · price = 금화 (사장님 결정 10/16 04:1x '100부터 500까지') */
+/** 급 다섯 — kind = 판에서 켜고 끄는 몫 · rarity = 등급(색 = 등급 색 --tier-* — entrance_type.css [data-tier]) · price = 금화 (사장님 결정 10/16 04:1x '100부터 500까지') */
 export const BOOK_TIERS = Object.freeze([
   { tier: 1, kind: 'footwork', label: '보법', rarity: 'common', price: 100 },
   { tier: 2, kind: 'parry', label: '막기', rarity: 'uncommon', price: 200 },
@@ -29,7 +29,7 @@ export const BOOK_RARITY_LABEL = Object.freeze({ common: '커먼', uncommon: '�
 export const ROMAN = Object.freeze(['', 'I', 'II', 'III', 'IV', 'V']);
 
 /**
- * 머리(heads)로 사기 — 사장님 04:1x '금화나 머리를 얻으면 교환' 의 두 번째 돈. 얻는 곳·바꾸는 값은 아직 없다(사장님 확인 전).
+ * 머리(heads)로 사기 — 사장님 04:1x '금화나 머리를 얻으면 교환' 의 두 번째 돈. 얻는 곳 = 여정 싸움에서 상대 목 베기(사장님 04:3x — main.js · lobby_progress.js awardHead) · 책과 바꾸는 값은 아직 없다(사장님 확인 전).
  *  값이 정해지면 이 한 줄에 급마다 머리 수를 넣는다(예: { 1: 1, … }) — 그때 대기실 상세에 '머리로 구입' 단추가 생긴다. null = 머리로는 못 산다
  */
 export const BOOK_HEAD_PRICE = null;
@@ -157,5 +157,5 @@ export function playerKit(tradition, books, { test = false } = {}) {
   const on = (tier) => test || bookState(books, bookId(tradition, tier)) === 'use';
   return { footwork: on(1), parry: on(2), unique: on(3), passive: on(4), secret: on(5) };
 }
-/** 책 몫 → 고유 공격 단계 (main.js PlayerUniqueAssist): 고유자세 책을 쓰면 넷 모두(4단계) · 아니면 0 (사장님 04:0x '고유 공격 넷을 한꺼번에') */
+/** 책 몫 → 고유 공격 단계 (main.js PlayerUniqueAssist): 고유자세 책을 쓰면 넷 모두(4단계) · 아니면 0 (감독 10/16 04:0x 전달 — 지금 고유 공격 넷을 한꺼번에 · 임시. 사장님 04:0x '일단 지금꺼 토대로') */
 export const kitUniqueStage = (kit) => (kit?.unique ? UNIQUE_ASSIST.secretStage - 1 : 0);
