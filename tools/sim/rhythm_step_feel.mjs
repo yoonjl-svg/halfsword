@@ -14,18 +14,20 @@
 //  10/15 디딤 셈(docs/strike/italian_rhythm_2026-10-15.md §8): 주기 칸은 setItalianRhythm 글 — '0' 끔 · 'N' 옛 짝 셈 N + 1 · 'N+M' 디딤 셈 N + M.
 //   디딤 셈이면 걸음마다 줄·빠름 ÷ 이웃도 디딤 하나씩(짝걸음 따라붙는 발도) · 덧붙인 칸 '디딤 기준'(모든 셈 같은 잣대): 앞뒤 디딤 수 · 그중 빠른 디딤 몫 ·
 //   빠른 몫(이어진 빠른 디딤 묶음) 수와 분당 · 빠른 몫 빠르기 ÷ 바로 앞 보통 디딤 둘 빠르기(몫마다 평균 — 첫 갈래)
-//  실행: node tools/sim/rhythm_step_feel.mjs [무기 rapier] [주기들 0,3,4+2,3+2] [대본들 A,B,C,D,E,F]   (RSF_ROWS=1 → 걸음마다 줄)
+//  10/15 15:1x 기본 2 + 2 · ×1.3(§9) — 칸 이름에 그 갈래 배율(지난 판 비교 4+2 · 3+2 · 옛 짝 셈 N 은 ×1.5 — setItalianRhythm)
+//  실행: node tools/sim/rhythm_step_feel.mjs [무기 rapier] [주기들 0,2+2,4+2,3] [대본들 A,B,C,D,E,F]   (RSF_ROWS=1 → 걸음마다 줄)
 import { newRound, DT } from './harness_m.mjs';
 import { Gait } from '../../src/gait.js';
 import { TRADITIONS, setItalianRhythm } from '../../src/schools.js';
 
 const id = process.argv[2] || 'rapier';
-const EVERY = (process.argv[3] || '0,3,4+2,3+2').split(',');
+const EVERY = (process.argv[3] || '0,2+2,4+2,3').split(',');
 const SCN = (process.argv[4] || 'A,B,C,D,E,F').split(',');
 const ROWS = process.env.RSF_ROWS === '1';
 const RH = TRADITIONS.italian.gait.rhythm;
 const RH0 = { ...RH };
-const label = (e) => (+e === 0 && !/[+ ]/.test(e) ? '끔' : /[+ ]/.test(e) ? `${e.replace(/\s*[+ ]\s*/, ' + ')} (디딤)` : `${e} + 1 (짝)`);
+const mulOf = (e) => (setItalianRhythm(e), Object.assign({}, RH).mul); // 그 갈래 배율 (아래 run 이 끝나면 RH0 로 되돌림 — 칸 이름만 읽음)
+const label = (e) => { const m = mulOf(e); Object.assign(RH, RH0); return +e === 0 && !/[+ ]/.test(e) ? '끔' : /[+ ]/.test(e) ? `${e.replace(/\s*[+ ]\s*/, ' + ')} (디딤 ×${m})` : `${e} + 1 (짝 ×${m})`; };
 const isFoot = (e) => /[+ ]/.test(e);
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
@@ -159,7 +161,7 @@ function run(scn, vi, every) {
 const f2 = (v) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 const f3 = (v) => (Number.isFinite(v) ? v.toFixed(3) : '-');
 const mean = (a, k) => (a.length ? a.reduce((s, r) => s + r[k], 0) / a.length : NaN);
-console.log(`빠른 걸음 계기 · ${id} 플레이어 · mul ${RH.mul} · idle ${RH.idle} s — 걸음 칸은 첫 갈래, 안정 칸은 갈래 셋 합`);
+console.log(`빠른 걸음 계기 · ${id} 플레이어 · 기본 mul ${RH.mul}(갈래마다 칸 이름에) · idle ${RH.idle} s — 걸음 칸은 첫 갈래, 안정 칸은 갈래 셋 합`);
 console.log('| 대본 | 주기 | 센 걸음 | 보통: 시간 s · 빠르기 m/s · 최고 | 빠른: 시간 s · 빠르기 m/s · 최고 | 빠름 ÷ 보통 (빠르기 · 시간 · 거리) | 빠름 ÷ 이웃 (빠르기 · 시간 · 거리 · 최고) | 빠른 걸음 차례 | 넘어짐 · 붙잡기 반사 s (최고 levC) · catch · 일찍 디딤 | 걷는 틈 최대 s | 발소리 (빠른 발) | 디딤 기준: 앞뒤 디딤 · 빠른 디딤 몫 · 빠른 몫 수 (분당) · 몫 빠르기 ÷ 앞 보통 둘 (갈래 셋 합 · 몫 빠르기는 첫 갈래) |');
 console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
 const detail = [];

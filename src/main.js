@@ -123,8 +123,8 @@ if (params.get('finishLift') === '1') FINISH_SWITCH.lift = true;
 if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = params.get('finishAim');
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady') ? 1 : 0; // 일본 보법 버티기(10/15 — 흔들림 × 0.75, fighter.js swayScale): 기본 1, `?jpSteady=0` = 끔
-// 이탈리아 박자 걸음 셈(10/15 — schools.js ITALIAN_GAIT.rhythm · setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8): 기본 디딤 셈 4 + 2(보통 디딤 넷 → 빠른 디딤 둘),
-//  `?itRhythm=3+2` · `?itRhythm=0` = 끔 · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판 — 짝걸음 한 짝 = 한 걸음) · `?itRhythm=4` = 옛 짝 셈 4 + 1
+// 이탈리아 박자 걸음 셈(10/15 — schools.js ITALIAN_GAIT.rhythm · setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9): 기본 디딤 셈 2 + 2 · ×1.3(보통 디딤 둘 → 빠른 디딤 둘 — 사장님 10/15 15:1x),
+//  지난 판 비교(그때 ×1.5): `?itRhythm=4+2`(13:2x 판) · `?itRhythm=3+2` · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판 — 짝걸음 한 짝 = 한 걸음) · `?itRhythm=4` = 옛 짝 셈 4 + 1 · `?itRhythm=0` = 끔
 if (params.has('itRhythm')) setItalianRhythm(params.get('itRhythm'));
 if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 따라 들어가기(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md): 기본 1, `?deChase=0` = 끔
 if (params.get('walk') === 'old') Object.assign(CONFIG.GAIT, { moveSpeed: 2.3, backFactor: 0.45, sideFactor: 0.31 }); // 걷기 빠르기 전 값(10/15 사장님 결정 전 — 앞 2.3 · 뒤 × 0.45 · 옆 × 0.31) 비교용: `?walk=old`

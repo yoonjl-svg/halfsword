@@ -333,10 +333,15 @@ const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.
 //   두 셈 다: 옆 몫이 앞뒤 몫보다 큰 걸음·기술 걸음은 세지도 끊지도 않음.
 //   idle = 걸음이 끝난 뒤 이만큼(s) 새 걸음이 없으면 처음부터 · brake = 몸이 아직 반대쪽으로 이만큼(m/s — GAIT.walkMin 과 같은 크기) 넘게 가는 동안 뗀 걸음(방향을 막 바꾼
 //   멈춰 서는 디딤)은 빠른 걸음을 다음 앞뒤 걸음으로 미룸 · accent = 빠른 걸음 발소리 세기·높이 배율(sound.js footstep — 같은 표본).
-//   주소 `?itRhythm=4+2`(기본) · `?itRhythm=3+2` · `?itRhythm=0` = 끔(칸 없는 것과 같은 길) · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판) — main.js · setItalianRhythm.
-//   mul 1.5 는 사장님 말씀 10/15 · 4 + 2 는 감독 권고(사장님 확인 전), 나머지는 사장님 확인 전 (확인표 1500~ · 1604~)
+//   **10/15 15:1x 사장님 결정** '이탈리아는 2+2로 하자. 대신 가속을 50%에서 30%로 조정. 몸이 빨라지는 게 궁극적 이점이라기보다는 리듬감을 살려서 플레이하게 만드는 게 목적'
+//    → 기본 디딤 셈 **2 + 2**(보통 디딤 둘 → 빠른 디딤 둘 — 짝걸음이면 보통 한 짝 → 빠른 한 짝 '따·닥, 따닥!') · **mul 1.3**(전 1.5 — 몸 빠르기·발 박자 둘 다. 가속 한도 규칙은 그대로 × 1) (확인표 1626~)
+//   주소 `?itRhythm=2+2`(기본) · `?itRhythm=4+2`(13:2x 판) · `?itRhythm=3+2` · `?itRhythm=0` = 끔(칸 없는 것과 같은 길) · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판) — main.js · setItalianRhythm.
+//    지난 판 비교 갈래(4+2 · 3+2 · 옛 짝 셈 N)는 그때 배율 ×1.5 그대로 — 그 판을 그대로 다시 본다(ITALIAN_OLD_MUL)
+//   2 + 2 · ×1.3 은 사장님 결정 10/15 15:1x · 나머지(idle · brake · accent)는 사장님 확인 전 (확인표 1500~ · 1604~ · 1626~)
 const FAST_ACCENT = { gain: 1.3, rate: 1.06 }; // 빠른 걸음 발소리 강조 — 박자 걸음·따라 들어가기가 같이 씀 (사장님 확인 전 · 확인표 1508)
-const ITALIAN_RHYTHM = { count: 'foot', normal: 4, fast: 2, every: 3, mul: 1.5, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
+const ITALIAN_MUL = 1.3; // 박자 걸음 빠른 디딤 배율 (사장님 결정 10/15 15:1x — 전 1.5)
+const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`?itRhythm=4+2` · `3+2` · 옛 짝 셈 N)의 배율 — 그때 값 그대로
+const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: ITALIAN_MUL, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
 //  ⓐ″ 독일 따라 들어가기 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
 //   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —
 //   이탈리아 박자 걸음과 같은 빠른 걸음(gait.js fastBegin — 몸 빠르기·발 박자 ×mul · 같은 발소리 강조). 뒤·옆 걸음은 받지도 쓰지도 않음 · 몸이 아직 뒤로 brake m/s 넘게 가는 앞 걸음은
@@ -1207,8 +1212,9 @@ TRADITIONS.chinese.parryCover = { ...TRADITIONS.chinese.parryCover, down: CHINES
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
 
 /**
- * 이탈리아 박자 걸음 셈 고르기 (10/15 — 주소 `?itRhythm=` · 시뮬 환경 변수 IT_RHYTHM): 'N+M' = 디딤 셈 N + M(기본 4+2 · 3+2 — 주소에선 + 가 빈칸으로 읽혀 'N M' 도 받음) ·
+ * 이탈리아 박자 걸음 셈 고르기 (10/15 — 주소 `?itRhythm=` · 시뮬 환경 변수 IT_RHYTHM): 'N+M' = 디딤 셈 N + M(기본 2+2 · 4+2 · 3+2 — 주소에선 + 가 빈칸으로 읽혀 'N M' 도 받음) ·
  *  '0' = 끔(칸 없는 것과 같은 길) · 'N'(1 이상 정수) = 옛 짝 셈 N + 1(10/15 오전 판 — `?itRhythm=3` 이 그 기본). 못 읽으면 그대로 두고 false
+ *  배율 mul 도 같이 정한다: 지난 판 비교 갈래 '4+2'(13:2x 판) · '3+2' · 옛 짝 셈 N 은 그때 ×1.5(ITALIAN_OLD_MUL), 그 밖의 N + M(기본 2+2 포함)은 지금 ×1.3(ITALIAN_MUL)
  */
 export function setItalianRhythm(v) {
   const R = TRADITIONS.italian.gait.rhythm;
@@ -1218,6 +1224,7 @@ export function setItalianRhythm(v) {
     R.count = 'foot';
     R.normal = +m[1];
     R.fast = +m[2];
+    R.mul = R.fast === 2 && (R.normal === 4 || R.normal === 3) ? ITALIAN_OLD_MUL : ITALIAN_MUL;
     return true;
   }
   if (!/^\d+$/.test(s)) return false;
@@ -1225,6 +1232,7 @@ export function setItalianRhythm(v) {
   else {
     R.count = 'pair';
     R.every = +s;
+    R.mul = ITALIAN_OLD_MUL;
   }
   return true;
 }

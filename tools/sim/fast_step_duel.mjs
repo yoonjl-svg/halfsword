@@ -7,14 +7,15 @@
 //  재기만 — 물리·난수·AI 는 게임 그대로(begin·touchdown·startAttack·foeWhiff 를 감싸 읽기만), 판 하나는 결정적. 주기는 TRADITIONS.italian.gait.rhythm.every 를 바꿔 견줌
 //  10/15 디딤 셈(docs/strike/italian_rhythm_2026-10-15.md §8): 주기 칸은 setItalianRhythm 글 — '0' 끔 · 'N' 옛 짝 셈 N + 1 · 'N+M' 디딤 셈 N + M ·
 //   덧붙인 칸 '디딤': X 의 앞뒤 디딤(walk·catch 걸음 — 스틱 앞뒤 몫이 옆 몫 이상) 수 · 그중 빠른 디딤 몫 · 빠른 몫(이어진 빠른 디딤 묶음 = 발동) 수와 분당
-//  실행: node tools/sim/fast_step_duel.mjs [X 무기 rapier] [상대 무기 longsword] [씨앗 수 3] [초 40] [주기들 0,3,4+2]
+//  10/15 15:1x 기본 2 + 2 · ×1.3(§9) — 칸 이름에 그 갈래 배율(지난 판 비교 4+2 · 3+2 · 옛 짝 셈 N 은 ×1.5 — setItalianRhythm)
+//  실행: node tools/sim/fast_step_duel.mjs [X 무기 rapier] [상대 무기 longsword] [씨앗 수 3] [초 40] [주기들 0,2+2,4+2]
 import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { Gait } from '../../src/gait.js';
 import { SCHOOLS, TRADITIONS, traditionOf, setItalianRhythm } from '../../src/schools.js';
 import { getWeapon } from '../../src/weapons.js';
 
-const [xw = 'rapier', yw = 'longsword', nSeed = '3', secs = '40', everyArg = '0,3,4+2'] = process.argv.slice(2);
+const [xw = 'rapier', yw = 'longsword', nSeed = '3', secs = '40', everyArg = '0,2+2,4+2'] = process.argv.slice(2);
 const EVERY = everyArg.split(',');
 const RH = TRADITIONS.italian.gait.rhythm;
 const RH0 = { ...RH };
@@ -83,13 +84,13 @@ AI.prototype.startAttack = function (tech, why, opt) {
 };
 
 const school = (w) => (SCHOOLS[w] ? w : 'longsword');
-console.log(`빠른 걸음 AI 판 · ${xw} AI 대 ${yw} AI · 씨앗 ${nSeed} × ${secs} s · mul ${RH.mul} · idle ${RH.idle} s`);
+console.log(`빠른 걸음 AI 판 · ${xw} AI 대 ${yw} AI · 씨앗 ${nSeed} × ${secs} s · 기본 mul ${RH.mul}(갈래마다 칸 이름에) · idle ${RH.idle} s`);
 console.log('| 주기 | 씨앗 | 빠른 걸음 (분당) | 그 걸음 중 공격 / 공격 | 넘어짐 | 붙잡기 반사 s (빠른 걸음 +0.5 s 안 · 다리 다친 뒤) | catch 디딤 | 일찍 디딤 (빠른 걸음 발) | 따라 들어가기: 헛침 알림 · 발동 (분당) · 발동 뒤 1 s 안 공격 | 끝 (X/상대) | 디딤: 앞뒤 · 빠른 몫 · 발동(분당) |');
 console.log('|---|---|---|---|---|---|---|---|---|---|---|');
 const ITX = traditionOf(getWeapon(xw)) === 'italian'; // 주기 칸은 이탈리아 무기만 뜻이 있다 (아니면 '-')
 for (const every of EVERY) {
   setItalianRhythm(every);
-  const lab = ITX ? (/[+ ]/.test(every) ? `${every.replace(/\s*[+ ]\s*/, ' + ')} (디딤)` : +every ? `${every} + 1 (짝)` : '끔') : '-';
+  const lab = ITX ? (/[+ ]/.test(every) ? `${every.replace(/\s*[+ ]\s*/, ' + ')} (디딤 ×${RH.mul})` : +every ? `${every} + 1 (짝 ×${RH.mul})` : '끔') : '-';
   const tot = { fast: 0, fastAtk: 0, atk: 0, falls: 0, lev: 0, levF: 0, levH: 0, catches: 0, early: 0, walkTD: 0, T: 0, whiffs: 0, chase: 0, chaseAtk: 0, fn: 0, ff: 0, fs: 0 };
   for (let s = 1; s <= +nSeed; s++) {
     const seed = 1000 + s;
