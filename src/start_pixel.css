@@ -125,3 +125,17 @@ html[data-start-theme="pixel"] {
 [data-start-theme="pixel"] #accountDialog .notice-footer{justify-content:flex-end}
 [data-start-theme="pixel"] #accountDialog button:disabled{opacity:.5;cursor:default}
 @media(max-height:500px) and (orientation:landscape){[data-start-theme="pixel"] .title-footer button{height:29px}}
+/* 10/16 (docs/import/lobby_fix_2026-10-16.md §4): 폰 가로에서 계정 번호 단계가 창 안에서 넘쳐 스크롤되던 것 — 창을 넓혀 줄바꿈을 줄이고 틈만 좁힌다 (글자·단추 크기 그대로) */
+@media(max-height:500px) and (orientation:landscape){
+  [data-start-theme="pixel"] #accountDialog{width:min(540px,calc(100vw - 48px))}
+  [data-start-theme="pixel"] #accountDialog .notice-header{padding:10px 22px}
+  [data-start-theme="pixel"] .account-content{padding:10px 22px 8px}
+  [data-start-theme="pixel"] .account-content p{margin-bottom:6px}
+  [data-start-theme="pixel"] .account-submit{margin:8px 0 2px}
+  [data-start-theme="pixel"] .account-text-button{padding:4px 0}
+  [data-start-theme="pixel"] .account-content .account-note{margin:4px 0 0}
+  [data-start-theme="pixel"] #accountStatus{margin-top:4px}
+  [data-start-theme="pixel"] #accountDialog .notice-footer{padding:6px 22px}
+}
+/* 입력 칸 초점 테두리가 위 칸 이름('인증번호')을 덮지 않게 (리뷰 §8-4) */
+[data-start-theme="pixel"] input:focus-visible{outline-offset:2px}

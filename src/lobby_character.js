@@ -4,6 +4,8 @@ import { getWeapon } from './weapons.js';
 
 // 대기실 첫 칸의 캐릭터 미리보기 (샛별 저장소 817db21c · b73a9c82 · 3b280a1b): 메뉴 뒤에 세워 둔 실제 플레이어(Fighter)의 겉모습만 복제한다.
 // 전투의 몸·관절·자세·공유 자원은 변경하지 않는다. 따로 된 WebGL 그리개 하나 — 돌리거나 크기·장착이 바뀔 때만 그린다.
+// 10/16 (사장님 03:5x '캐릭터쪽 해상도 너무 낮던데. 좋아지게 할 방법은 없어?' — docs/import/lobby_fix_2026-10-16.md §5): 화소 비 1 → 기기 화소 비(min(devicePixelRatio, 3)) + 계단 펴기(MSAA).
+//  그리는 때는 그대로(돌리거나 크기·장착이 바뀔 때만) — 그리기 호출 수는 같고 한 번 그릴 때 칠하는 화소만 는다. data-calls · data-ratio = 시험 도구가 읽는 값
 export function createLobbyCharacter(container, fighter) {
   const scene = new THREE.Scene(), model = new THREE.Group();
   let swordArm = null, weapon = null, helmet = null;
@@ -43,8 +45,10 @@ export function createLobbyCharacter(container, fighter) {
   // 세운 롱소드까지 들어오는 축척(샛별 쪽 값 그대로 — 무기 칸에서 롱소드는 뺐지만 인물 크기를 같게 둔다). 장착/해제 때 인물 크기는 바뀌지 않는다.
   const displayHeight = Math.max(height, 2.16);
   camera.position.set(5, displayHeight * .55, 0); camera.lookAt(0, displayHeight * .5, 0);
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
-  renderer.setPixelRatio(1); renderer.setClearColor(0, 0);
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  const ratio = Math.min(window.devicePixelRatio || 1, 3);
+  renderer.setPixelRatio(ratio); renderer.setClearColor(0, 0);
+  container.dataset.ratio = String(ratio);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.domElement.setAttribute('aria-hidden', 'true');
   container.append(renderer.domElement);
@@ -53,6 +57,7 @@ export function createLobbyCharacter(container, fighter) {
   const render = () => {
     container.dataset.angle = String(Math.round(THREE.MathUtils.radToDeg(model.rotation.y)));
     renderer.render(scene, camera);
+    container.dataset.calls = String(renderer.info.render.calls);
   };
   const resize = () => {
     const w = container.clientWidth, h = container.clientHeight;
