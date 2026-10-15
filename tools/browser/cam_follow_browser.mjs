@@ -35,7 +35,8 @@ await page.addInitScript(() => {
   window.__key = '';
 });
 await page.goto(`${base}/?stage=poseidon&weapon=longsword${extra}`, { waitUntil: 'domcontentloaded' });
-await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000 });
+// polling 100 ms: 이 도구는 requestAnimationFrame 을 가상 시계로 바꿔 두어 기본(rAF) 기다림이 다시 묻지 못한다 — 10/16 부터 게임 모듈은 들머리(game_entry.js)가 뒤이어 받아 DOMContentLoaded 뒤에 뜬다
+await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000, polling: 100 });
 await page.evaluate(() => window.__tick(5));
 await page.evaluate(() => document.getElementById('btnStart').click());
 await page.evaluate(() => window.__tick(2));

@@ -10,6 +10,8 @@ import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨�
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
 import { createScreenTint } from './screen_tint.js';
+import { readJourney, writeJourney } from './journey_save.js'; // 여정 이어하기 지점 (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
+import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
@@ -21,7 +23,7 @@ import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { Combat, woundDegree, woundRageMult } from './combat.js';
-import { Stages, nextStage, STAGE_IDS, stageFoeId, stageLabel } from './stages.js';
+import { Stages, nextStage, STAGE_IDS, STAGE_ORDER, STAGE_FOE, STAGE_FOE_EXTRA, stageFoeId, stageLabel } from './stages.js';
 import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
@@ -297,6 +299,12 @@ let arena = null; // 지금 배경 { update(dt), excite(amount) }
 let SUN_OFF = null; // 해가 싸우는 자리를 따라다닐 때의 방향 (배경마다 다르다)
 let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 다음 배경으로 넘어간다)
 let lastRoundWon = false; // 지난 판을 이겼나 (사장님 결정: 이겨야 다음 무대·다음 상대로, 지면 같은 무대에서 같은 상대와 다시)
+// 첫 화면·대기실에서 연 여정 (game_entry.js → launchJourney — docs/import/lobby_port_2026-10-16.md §5): 이어하기 지점 저장 · 대면 결과 기록 · 대기실 이름은 이 판들에서만.
+//  주소로 무대·상대·무기를 고정했거나 테스트 경로면 여정이 아니다 (아래 checkRoundEnd 의 '무대 깸' 조건 + 고정 무기 없음)
+let journeyMode = false;
+let pendingJourney = null; // 이어하기: 다음 startFight 가 되살릴 무대 시작 지점 (validJourney 가 고른 것)
+const JOURNEY_PURE = foeParam === 'stage' && !STAGE_PIN && !testRoute.active && !FIXED_WEAPON;
+const journeySaves = () => journeyMode && JOURNEY_PURE;
 function useStage(id) {
   if (id === stages.id) return false;
   reviveFx.reset(); // 부활 연출이 남아 있으면 떼고 짓는다 (새 배경의 물체로 잘못 세지 않게)
@@ -536,7 +544,7 @@ function newRound(weaponId) {
   const foeWeapon = foeWeaponId;
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
-    name: '나',
+    name: journeyMode ? readProfile().name : '나', // 대기실 이름 (첫 화면에서 연 여정만 — 화면에 플레이어 이름이 나오는 자리는 없다. 메뉴 뒤 판·주소 판은 그대로 '나')
     x: -ARENA.startGap / 2,
     z: startZ,
     heading: 0,
@@ -1076,10 +1084,11 @@ function setWeaponsVisible(v) {
         });
 }
 
-/** 카드 세 장을 새로 채워 엎어 놓는다: 내 카드 두 장 + 상대 무기 (prepareRound 가 정한 무기) */
-function openDraw() {
+/** 카드 세 장을 새로 채워 엎어 놓는다: 내 카드 두 장 + 상대 무기 (prepareRound 가 정한 무기). savedCards = 이어하기 지점에 저장된 내 카드 두 장 */
+function openDraw(savedCards = null) {
   const foeId = getWeapon(foeWeaponId).id; // 짧은 별칭(chicken 등)도 상대가 실제로 드는 무기 id 로
-  Object.assign(draw, { stage: 'choose', t: 0, ids: [...drawCardIds(), foeId], pick: -1, others: false, foe: false, built: false, skip: false });
+  Object.assign(draw, { stage: 'choose', t: 0, ids: [...(savedCards || drawCardIds()), foeId], pick: -1, others: false, foe: false, built: false, skip: false });
+  saveJourneyRound(null, draw.ids.slice(0, 2)); // 여정이면 이어하기 지점 = 이 무대 · 이 상대 · 이 카드 두 장 (다시 열어도 같은 카드)
   setCardBack(stages.id); // 이번 판 배경의 뒷면
   cardEls.forEach((el, i) => {
     const w = getWeapon(draw.ids[i]);
@@ -1212,6 +1221,7 @@ function buildPicked() {
   draw.built = true;
   lastPlayerWeapon = draw.ids[draw.pick];
   newRound(lastPlayerWeapon);
+  saveJourneyRound(lastPlayerWeapon); // 여정이면 이어하기 지점 = 고른 무기로 이 무대 시작부터
   setWeaponsVisible(false);
 }
 
@@ -1279,6 +1289,8 @@ function showHint(text, ms = 3500) {
 }
 
 async function startFight() {
+  const savedRound = pendingJourney; // 이어하기로 연 판이면 저장된 무대 시작 지점 (launchJourney 가 넣는다 — 한 번만 쓴다)
+  pendingJourney = null;
   sound.unlock();
   sound.ambience(); // 배경의 고요 (포세이돈: 파도·바람, 산사: 산바람·풍경·산새). 아주 작게, 처음 한 번만 켜진다
   // 폰이면 전체화면 + 가로 고정 시도 (지원 안 하면 조용히 넘어감)
@@ -1298,11 +1310,23 @@ async function startFight() {
   toast.classList.remove('show');
   nextRoundStage(); // 배경: 첫 판은 메뉴 뒤 그대로, 그 다음 판부터는 정해진 순서로 다음 배경 (짓는 멈칫은 메뉴가 아직 떠 있는 동안)
   planOpening(); // 판 시작 카메라: 이 무대 첫 판이면 무대 훑기, 같은 무대 다시면 내려앉기 — 정지(발 묶임) 길이도 여기서 (카드 고르는 동안 카메라는 그 시작 자리)
-  prepareRound(); // 이번 상대 · 상대 무기
+  if (savedRound?.foe) {
+    // 이어하기: 저장된 상대 · 상대 무기 그대로 (validJourney 가 이 무대의 상대인지 이미 봤다)
+    currentFoe = CHARACTERS_BY_ID[savedRound.foe];
+    foeWeaponId = savedRound.foeWeapon;
+    sound.prepareVoices(['player', voiceOf(currentFoe)]);
+  } else prepareRound(); // 이번 상대 · 상대 무기
   hideFoeIntro(); // 가운데 소개는 싸움이 시작될 때 (beginFight) — 카드를 고르는 동안에는 띄우지 않는다
   showStageInfo(); // 왼쪽 위 무대 줄
   techClear(); // 새 판이 열렸다: 오른쪽 위 ② 마지막 기술 · ① 자세 칸을 비운다 (10/14 03:1x·03:3x — 둘 다 시간으로는 사라지지 않는다)
   guardClear();
+  if (savedRound?.weapon) {
+    // 이어하기: 무기를 이미 골라 둔 판 — 그 무기로 무대 시작부터 (카드 없이)
+    lastPlayerWeapon = savedRound.weapon;
+    newRound(savedRound.weapon);
+    beginFight();
+    return;
+  }
   if (FIXED_WEAPON) {
     // 테스트용 ?weapon= : 뽑기 없이 그 무기로 바로 싸움 시작
     newRound(FIXED_WEAPON);
@@ -1316,7 +1340,54 @@ async function startFight() {
   input.enabled = false;
   applyMoveMode();
   setDrawGuide('on'); // 왼쪽 위 무대 줄 아래 "무기 카드를 한 장 고르세요" (10/14 03:3x 되살림 — 카드 자리를 재기 전에)
-  openDraw();
+  openDraw(savedRound?.cards);
+}
+
+// ── 여정 이어하기 (첫 화면 '이어하기' · 대기실 '여정 시작/이어가기' — game_entry.js 가 아래 내보낸 함수를 부른다, docs/import/lobby_port_2026-10-16.md §5) ──
+//  저장 단위는 무대 시작 자리: 카드를 펼치면 { 무대 · 상대 · 상대 무기 · 내 카드 둘 }, 고르면 { … · 내 무기 }, 이기면 곧바로 { 다음 무대 } (같은 승리·인장을 다시 받지 않게).
+//  무대 차례 = STAGE_ORDER (nextStage), 해금(깬 수·인장)은 지금 그대로 checkRoundEnd 의 addJourneyClear 만 센다 — 이어하기 지점은 해금을 바꾸지 않는다.
+function saveJourneyRound(weapon, cards = null) {
+  if (journeySaves()) writeJourney({ stage: stages.id, foe: currentFoe?.id ?? null, foeWeapon: getWeapon(foeWeaponId).id, weapon, cards, lastWeapon: lastPlayerWeapon });
+}
+/** 저장된 이어하기 지점을 지금 여정에 맞춘다: 무대가 STAGE_ORDER 에 없으면 없음. 상대가 그 무대의 상대(STAGE_FOE · 후보)가 아니거나
+ *  무기가 지금 뽑기 목록(빼 둔 무기 제외)에 없으면 그 무대를 처음부터(상대·카드 새로) — 무대 자리는 지킨다 */
+function validJourney() {
+  if (!JOURNEY_PURE) return null; // 주소로 무대·상대·무기를 고정한 판에는 이어하기가 없다
+  const saved = readJourney();
+  if (!saved || !STAGE_ORDER.includes(saved.stage)) return null;
+  const pool = new Set(PLAYER_WEAPON_POOL);
+  const known = (id) => WEAPON_LIST.some((w) => w.id === id);
+  const foes = [STAGE_FOE[saved.stage], ...(STAGE_FOE_EXTRA[saved.stage] ?? [])];
+  const out = { stage: saved.stage, foe: null, foeWeapon: null, weapon: null, cards: null, lastWeapon: pool.has(saved.lastWeapon) ? saved.lastWeapon : null };
+  if (saved.foe && foes.includes(saved.foe) && CHARACTERS_BY_ID[saved.foe] && known(saved.foeWeapon)) {
+    out.foe = saved.foe;
+    out.foeWeapon = saved.foeWeapon;
+    if (saved.weapon && pool.has(saved.weapon)) out.weapon = saved.weapon;
+    else if (saved.cards?.every((id) => pool.has(id)) && saved.cards[0] !== saved.cards[1]) out.cards = saved.cards.slice();
+  }
+  return out;
+}
+export const canContinueJourney = () => !!validJourney();
+export const getLobbyPlayer = () => player; // 대기실 캐릭터 미리보기가 겉모습을 복제한다 (메뉴 뒤에 세워 둔 판의 플레이어 — 몸·물리는 건드리지 않는다)
+export const getLobbySettings = () => ({ fpsCap: settings.fpsCap });
+export function setLobbyFps(enabled) {
+  settings.fpsCap = !!enabled; // 첫 화면 설정 창 — 메뉴의 '화면 60 fps 제한' 줄과 같은 값 · 같은 저장
+  saveSettings();
+  refreshSettingsUI();
+}
+/** 대기실의 출발 단추: choice 'new' = 첫 무대(STAGE_ORDER[0])부터 새 카드 · 'continue' = 저장된 무대 시작부터. 깬 수·인장·설정은 그대로 */
+export async function launchJourney(choice) {
+  const saved = choice === 'continue' ? validJourney() : null;
+  if (choice === 'continue' && !saved) return false;
+  journeyMode = true;
+  pendingJourney = saved;
+  stageFought = false; // 메뉴 뒤 판처럼 '이 무대 첫 판' — nextRoundStage 가 넘기지 않는다
+  lastRoundWon = false;
+  lastPlayerWeapon = saved?.lastWeapon || null;
+  if (useStage(saved?.stage || STAGE_PIN || nextStage())) stages.warm(renderer, camera);
+  sound.setStage(stages.id);
+  await startFight();
+  return true;
 }
 
 /** 무기를 받았다: 싸움 시작 (판 시작 알림, 조이스틱, 조작 안내) */
@@ -1392,6 +1463,7 @@ $('btnPause').addEventListener('pointerdown', (event) => {
   pause();
 });
 window.addEventListener('keydown', (e) => {
+  if (document.documentElement.hasAttribute('data-start-open')) return; // 첫 화면·대기실이 앞에 있는 동안 게임 키(P·F·1·2)는 쉰다 (game_entry.js)
   if (state === 'draw') {
     // 무기 뽑기: 1·2 로 카드 고르기 (3 번째는 상대 칸이라 키가 없다), 결과를 보는 동안 스페이스·엔터로 바로 싸움
     const k = { Digit1: 0, Digit2: 1, Numpad1: 0, Numpad2: 1 }[e.code];
@@ -1596,12 +1668,15 @@ function checkRoundEnd(dt) {
       roundOver = true;
       resultShown = false;
       const win = !enemy.alive;
+      if (journeySaves()) recordDuel(win); // 대기실 '대면 결과' — 첫 화면에서 연 여정의 판마다 한 번
       lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
       // 고유 동작 해금 (사장님 결정 10/13 22:3x): 여정(무대마다 그곳 검객 — 이기면 다음 무대로 넘어간다: nextRoundStage 의 advance)에서 이긴 판 = 무대 하나 깸.
       //  깬 수가 10 의 배수가 되면 인장 하나 → 아래 가운데 안내 줄(#hint)에 한 줄 (도장 연출·모음 화면은 다음 작업)
       if (win && foeParam === 'stage' && !STAGE_PIN && !testRoute.active) {
         const cl = addJourneyClear();
         if (cl.seal) showHint(sealNotice(cl.seal), 3400);
+        // 이긴 순간 이어하기 지점을 다음 무대로 — 다시 열어 같은 승리·인장을 또 받지 않게 (첫 화면에서 연 여정만)
+        if (journeySaves()) writeJourney({ stage: nextStage(stages.id), lastWeapon: player.weapon.id });
       }
       showRoundResult();
       if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
@@ -2017,6 +2092,8 @@ const renderCap = createRenderCap();
 
 function frame(now) {
   requestAnimationFrame(frame);
+  // 첫 화면·대기실이 앞에 있는 동안(game_entry.js — html[data-start-open])에는 뒤의 3D 그리기·물리 시간을 멈춘다 (화면이 가려져 있다)
+  if (document.documentElement.hasAttribute('data-start-open')) { last = now; acc = 0; return; }
   sound.setPaused(state !== 'fight' && state !== 'draw'); // 샛별 저장소 무대 셋의 배경음·세부음만 메뉴·일시정지 동안 줄인다 (stage_detail_sound.js)
   const frameMs = now - last;
   let dt = Math.min(0.1, frameMs / 1000);

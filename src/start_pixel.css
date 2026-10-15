@@ -1,0 +1,127 @@
+/* 첫 화면 픽셀 시안 (샛별 저장소 시작 화면 마지막 판 그대로 — 대기실 lobby.css 도 이 단추·창 꾸밈을 쓴다).
+   아래 줄 세 칸은 공지사항 · 설정(샛별 3b280a1b 판의 설정 창 꾸밈) · 계정 연결(마지막 판의 꾸밈 그대로).
+   game_entry.js 가 Shadow DOM 안에 넣으며 html[data-start-theme=pixel] 을 :host 로 바꾼다 — 아래 --line · 바탕색은 그 안에서만 (게임 HUD 의 --line 과 다르다, 문서 §8) */
+html[data-start-theme="pixel"] {
+  color-scheme: dark;
+  /* 게임 index.html의 본문 / 보조 / 강조색 및 12·14·17px 위계를 따른다. */
+  --c-text: #f3e9d8;
+  --c-sub: #b8a88e;
+  --c-accent: #d9a441;
+  --muted: var(--c-sub);
+  --line: #65513a;
+  color: var(--c-text);
+  background: #30291e;
+}
+[data-start-theme="pixel"] .scene-shade { background: linear-gradient(0deg, #211c19b0 0%, transparent 24%, transparent 80%, #211c1930 100%); }
+[data-start-theme="pixel"] .title-screen { padding-left: 25vw; transition: opacity .7s steps(7), translate .7s steps(7); translate: 0 8px; }
+[data-start-theme="pixel"] .title-group { transform: translateY(-2vh); }
+[data-start-theme="pixel"] .title-korean { position: relative; color: var(--c-text); font-size: 32px; letter-spacing: .2em; padding: 0; font-weight: 600; margin: 0 auto 0; text-shadow: 2px 2px #302319; }
+[data-start-theme="pixel"] .title-korean canvas { display: block; height: 58px; width: auto; margin: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+[data-start-theme="pixel"] .pixel-wordmark { position: relative; width: min(100%, 650px); margin: 0 auto; font-weight: 600; line-height: 1; text-shadow: 3px 3px #362617; }
+[data-start-theme="pixel"] .pixel-wordmark canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+[data-start-theme="pixel"] .pixel-wordmark[data-painted="true"] > span, [data-start-theme="pixel"] .title-korean[data-painted="true"] > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+[data-start-theme="pixel"] .title-rule { width: 120px; margin: 7px auto 28px; gap: 12px; }
+[data-start-theme="pixel"] .title-rule::before, [data-start-theme="pixel"] .title-rule::after { height: 2px; width: 40px; background: #b99b63; box-shadow: 0 2px #33291c; }
+[data-start-theme="pixel"] .title-rule span { transform: none; width: 4px; height: 4px; background: #eed49a; box-shadow: 0 -4px #c5a56b, 0 4px #967849, -4px 0 #c5a56b, 4px 0 #967849; }
+[data-start-theme="pixel"] .start-actions { gap: 16px; }
+[data-start-theme="pixel"] .start-actions button, [data-start-theme="pixel"] .confirm-button {
+  --button-fill: #85602f;
+  width: calc(278px * .82); height: calc(60px * .82); min-height: 0; padding: 6px 20px;
+  background: var(--button-fill);
+  background-image: repeating-linear-gradient(0deg, #482b1712 0 2px, transparent 2px 8px);
+  border: 4px solid #3c2818; border-top-color: #d1ab6d; border-left-color: #b78a4e;
+  box-shadow: inset 0 3px #dfbd7b55, inset 0 -4px #4b301b66, 0 4px #221b13;
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px), 0 4px, 4px 4px);
+  color: var(--c-text); text-shadow: 0 2px #4b321f; font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: .06em;
+  transition: none;
+}
+[data-start-theme="pixel"] #continueJourney { --button-fill: #65492f; border-top-color: #aa8754; border-left-color: #8a663e; }
+[data-start-theme="pixel"] .start-actions button::before { left: 18px; top: calc(50% - 3px); width: 3px; height: 6px; background: #ffe6a6; box-shadow: -3px -3px #ffe6a6, -3px 0 #ffe6a6, -3px 6px #ffe6a6; }
+[data-start-theme="pixel"] .start-actions button:hover, [data-start-theme="pixel"] .start-actions button:focus-visible, [data-start-theme="pixel"] .start-actions button[aria-pressed="true"] { background-color: #886132; border-color: #d3ab68 #4b321f #4b321f #d3ab68; color: var(--c-text); box-shadow: inset 0 3px #eccb8b66, inset 0 -4px #63402288, 0 4px #221b13; }
+[data-start-theme="pixel"] #continueJourney:hover, [data-start-theme="pixel"] #continueJourney:focus-visible, [data-start-theme="pixel"] #continueJourney[aria-pressed="true"] { background-color: #82603a; }
+[data-start-theme="pixel"] .start-actions button:hover::before, [data-start-theme="pixel"] .start-actions button:focus-visible::before { opacity: 1; }
+[data-start-theme="pixel"] .start-actions button:active, [data-start-theme="pixel"] .confirm-button:active { transform: translateY(3px); box-shadow: inset 0 3px #412b1b99; }
+[data-start-theme="pixel"] button:focus-visible, [data-start-theme="pixel"] input:focus-visible, [data-start-theme="pixel"] .notice-list:focus-visible { outline: 2px dashed var(--c-accent); outline-offset: 5px; }
+[data-start-theme="pixel"] .title-footer { justify-content: flex-start; }
+[data-start-theme="pixel"] .title-footer button { color: var(--c-sub); background: #30271de6; border: 1px solid var(--line); box-shadow: none; padding: 0 14px; min-height: 36px; font-size: 12px; }
+[data-start-theme="pixel"] .title-footer button:hover, [data-start-theme="pixel"] .title-footer button:focus-visible { color: var(--c-text); border-color: var(--c-sub); }
+[data-start-theme="pixel"] dialog {
+  width: min(532px, calc(100vw - 40px)); max-height: min(620px, calc(100svh - 44px));
+  color: var(--c-text); background: #30271e; border: 2px solid #8d7049;
+  border-right-color: #56432f; border-bottom-color: #56432f;
+  box-shadow: 0 0 0 3px #211c16, 4px 6px 0 3px #17150f77;
+}
+[data-start-theme="pixel"] dialog::backdrop { background: #261e1680; }
+[data-start-theme="pixel"] .notice-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+[data-start-theme="pixel"] .notice-count { float: none; color: var(--c-sub); font-size: 12px; }
+[data-start-theme="pixel"] .notice-header h2 { margin: 0; color: var(--c-text); font-size: 17px; font-weight: 600; }
+[data-start-theme="pixel"] .notice-list {
+  scrollbar-color: #8d7049 #30271e; scrollbar-width: thin; padding: 0 26px;
+}
+[data-start-theme="pixel"] .notice-list::-webkit-scrollbar { width: 4px; }
+[data-start-theme="pixel"] .notice-list::-webkit-scrollbar-track { background: #30271e; }
+[data-start-theme="pixel"] .notice-list::-webkit-scrollbar-thumb { background: #8d7049; }
+[data-start-theme="pixel"] .notice-entry { border-bottom: 1px solid #65513a80; padding: 19px 0; }
+[data-start-theme="pixel"] .notice-entry:last-child { border-bottom: 0; }
+[data-start-theme="pixel"] .notice-meta { color: var(--c-sub); font-size: 12px; }
+[data-start-theme="pixel"] .notice-meta .unread { color: var(--c-accent); font-weight: 400; }
+[data-start-theme="pixel"] .notice-meta .unread::before { width: 4px; height: 4px; }
+[data-start-theme="pixel"] .notice-entry h3 { color: var(--c-text); font-size: 14px; }
+[data-start-theme="pixel"] .notice-entry p { color: var(--c-sub); font-size: 14px; }
+[data-start-theme="pixel"] .notice-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 26px; border-top: 1px solid var(--line); background: #30271e; }
+[data-start-theme="pixel"] .hide-read { color: var(--c-sub); font-size: 12px; font-weight: 400; margin: 0; white-space: nowrap; }
+[data-start-theme="pixel"] .hide-read input { width: 18px; height: 18px; border: 1px solid var(--c-sub); background: #211c16; }
+[data-start-theme="pixel"] .hide-read input:checked::after { border: 0; transform: none; width: 3px; height: 3px; background: var(--c-text); box-shadow: 3px -3px var(--c-text), -3px -3px var(--c-text), 3px -6px var(--c-text); }
+[data-start-theme="pixel"] .confirm-button { flex: 0 0 72px; width: 72px; height: 36px; padding: 4px 14px; font-size: 14px; border-width: 2px; border-color: #8d7049 #453422 #453422 #8d7049; background: #60462f; box-shadow: inset 0 -2px #392b1e; text-shadow: none; letter-spacing: 0; }
+[data-start-theme="pixel"] .confirm-button:hover { background-color: #715237; }
+[data-start-theme="pixel"] .confirm-button span { display: none; }
+@media (orientation: portrait) {
+  [data-start-theme="pixel"] .title-screen { padding: 22px; }
+  [data-start-theme="pixel"] .title-group { transform: translateY(-5vh); }
+  [data-start-theme="pixel"] .pixel-wordmark { width: 100%; }
+  [data-start-theme="pixel"] .title-korean canvas { height: 48px; }
+  [data-start-theme="pixel"] .title-rule { margin: 6px auto 26px; }
+  [data-start-theme="pixel"] .start-actions button { width: calc(min(278px, 100vw - 72px) * .82); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  [data-start-theme="pixel"] .pixel-wordmark { width: min(100%, 430px); }
+  [data-start-theme="pixel"] .title-korean canvas { height: 48px; }
+  [data-start-theme="pixel"] .title-group { transform: translateY(-6px); }
+  [data-start-theme="pixel"] .title-rule { margin: 1px auto 16px; }
+  [data-start-theme="pixel"] .start-actions { gap: 12px; }
+  [data-start-theme="pixel"] .start-actions button { height: calc(48px * .82); padding: 4px 20px; width: calc(250px * .82); }
+  [data-start-theme="pixel"] dialog { width: min(500px, calc(100vw - 48px)); max-height: calc(100svh - 32px); }
+  [data-start-theme="pixel"] .notice-header { padding: 14px 22px; }
+  [data-start-theme="pixel"] .notice-list { padding: 0 22px; }
+  [data-start-theme="pixel"] .notice-entry { padding: 14px 0; }
+  [data-start-theme="pixel"] .notice-footer { padding: 8px 22px; }
+  [data-start-theme="pixel"] .title-footer button { min-height: 32px; padding: 0 12px; }
+}
+@media (prefers-reduced-motion: reduce) { [data-start-theme="pixel"] .title-screen { transition: none; translate: none; } }
+/* 첫 화면 하단의 공지/설정: 종전 공지 박스(약78×36)의 90%, 동일한 두 칸. */
+[data-start-theme="pixel"] .title-footer{gap:8px}
+[data-start-theme="pixel"] .title-footer button{box-sizing:border-box;width:70px;min-height:0;height:32px;padding:0;font-size:12px}
+[data-start-theme="pixel"] #settingsDialog{width:min(360px,calc(100vw - 40px))}
+[data-start-theme="pixel"] .settings-content{padding:18px 26px;font-size:14px}
+[data-start-theme="pixel"] .settings-content p{font-size:12px;color:var(--c-sub);margin:12px 0 0}
+[data-start-theme="pixel"] .settings-content p:empty{display:none}
+[data-start-theme="pixel"] .setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+[data-start-theme="pixel"] .setting-row input{accent-color:var(--c-accent);width:18px;height:18px;margin:0}
+[data-start-theme="pixel"] #settingsDialog .notice-footer{justify-content:flex-end}
+[data-start-theme="pixel"] #openAccount{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-start-theme="pixel"] #openAccount[data-connected=true]{width:auto;min-width:70px;max-width:min(220px,40vw);padding:0 10px}
+[data-start-theme="pixel"] #accountDialog{width:min(380px,calc(100vw - 40px))}
+[data-start-theme="pixel"] .account-content{padding:16px 24px;overflow:auto;font-size:12px}
+[data-start-theme="pixel"] .account-content p{margin:0 0 12px;color:var(--c-sub);line-height:1.6;overflow-wrap:anywhere}
+[data-start-theme="pixel"] .account-content p:empty{display:none}
+[data-start-theme="pixel"] .account-content label{display:block;margin-bottom:5px}
+[data-start-theme="pixel"] .account-content input{box-sizing:border-box;width:100%;padding:9px 10px;background:#211c16;border:1px solid var(--line);color:var(--c-text);font:14px Pretendard,sans-serif;border-radius:0}
+[data-start-theme="pixel"] .account-submit{width:100%;margin:12px 0 6px;padding:8px 12px;border:2px solid #8d7049;border-right-color:#453422;border-bottom-color:#453422;background:#60462f;color:var(--c-text);font:600 12px Pretendard,sans-serif;box-shadow:inset 0 -2px #392b1e}
+[data-start-theme="pixel"] .account-text-button{background:transparent;border:0;padding:6px 0;color:var(--c-sub);font:12px Pretendard,sans-serif;text-decoration:underline;text-underline-offset:3px}
+[data-start-theme="pixel"] .account-secondary{display:flex;justify-content:space-between;gap:12px}
+[data-start-theme="pixel"] .account-content .account-note{margin:14px 0 0}
+[data-start-theme="pixel"] #accountStatus{color:var(--c-text);margin-top:12px}
+[data-start-theme="pixel"] #accountAddress{color:var(--c-text);font-size:14px}
+[data-start-theme="pixel"] #accountDialog .notice-footer{justify-content:flex-end}
+[data-start-theme="pixel"] #accountDialog button:disabled{opacity:.5;cursor:default}
+@media(max-height:500px) and (orientation:landscape){[data-start-theme="pixel"] .title-footer button{height:29px}}

@@ -1,0 +1,180 @@
+// 첫 화면: 공지 → 바람·낙엽과 픽셀 제목 '적막 / Stillness' → 처음부터 · 이어하기 (샛별 저장소 시작 화면 — docs/import/lobby_port_2026-10-16.md §2)
+//  아래 꾸밈(ENTRANCE_HTML)과 동작은 샛별 쪽 마지막 판(e52d23b0) 그대로이고, 다른 점은:
+//   ① 아래 줄 세 칸 = 공지사항 · 설정 · 계정 연결 (설정은 샛별 3b280a1b 판에 있던 것 — 마지막 판은 설정 자리에 계정 연결)
+//   ② 계정 연결은 메일 6자리 번호로만 (src/account/title_account.js) · 그 모듈은 첫 화면이 뜬 뒤에 따로 받는다(첫 그림을 늦추지 않게)
+//   ③ 픽셀 시안만 (첫 시안의 바람 장면 pixel_wind.js 는 들여오지 않았다)
+//  game_entry.js 가 Shadow DOM 안에 붙인다 — 게임 HUD 글자 규칙(index.html)과 섞이지 않는다.
+import { UPDATE_NOTES } from './update_notes.js';
+import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
+
+export const NOTICE_KEY = 'stillness.title.notices.v1';
+
+export const ENTRANCE_HTML = `<main id="entrance" data-phase="notice">
+  <canvas id="windScene" aria-hidden="true"></canvas>
+  <div class="scene-shade" aria-hidden="true"></div>
+  <section id="titleScreen" class="title-screen" aria-label="시작 화면" inert>
+    <div class="title-group">
+      <p class="title-korean"><span>적막</span></p>
+      <h1 class="pixel-wordmark"><span>Stillness</span></h1>
+      <div class="title-rule" aria-hidden="true"><span></span></div>
+      <div class="start-actions" aria-label="여정 선택">
+        <button type="button" id="newJourney" aria-pressed="false">처음부터</button>
+        <button type="button" id="continueJourney" aria-pressed="false">이어하기</button>
+      </div>
+      <p id="selectionStatus" class="sr-only" role="status"></p>
+    </div>
+    <footer class="title-footer"><button id="openNotices" type="button">공지사항</button><button id="openSettings" type="button">설정</button><button id="openAccount" type="button" disabled>계정 연결</button></footer>
+  </section>
+  <dialog id="noticeDialog" aria-labelledby="noticeHeading" aria-describedby="noticeIntro">
+    <header class="notice-header">
+      <h2 id="noticeHeading" tabindex="-1">공지사항</h2>
+      <span id="noticeCount" class="notice-count"></span>
+      <p id="noticeIntro" class="sr-only">최근 업데이트를 확인하세요.</p>
+    </header>
+    <div id="noticeList" class="notice-list" tabindex="0" aria-label="업데이트 목록, 스크롤 가능"></div>
+    <footer class="notice-footer">
+      <label class="hide-read"><input id="hideRead" type="checkbox" /><span>지난 업데이트 숨김</span></label>
+      <button id="confirmNotices" class="confirm-button" type="button">확인<span aria-hidden="true">→</span></button>
+    </footer>
+  </dialog>
+  <dialog id="settingsDialog" aria-labelledby="settingsHeading">
+    <header class="notice-header"><h2 id="settingsHeading" tabindex="-1">설정</h2></header>
+    <div class="settings-content"><label class="setting-row" for="titleFps">화면 60 fps 제한<input id="titleFps" type="checkbox" checked /></label><p>화면 갱신을 제한해 배터리 소모를 줄입니다.</p><p id="settingsStatus" role="status"></p></div>
+    <footer class="notice-footer"><button id="closeSettings" class="confirm-button" type="button">확인</button></footer>
+  </dialog>
+  <dialog id="accountDialog" aria-labelledby="accountHeading">
+    <header class="notice-header"><h2 id="accountHeading" tabindex="-1">계정 연결</h2></header>
+    <div class="account-content">
+      <div id="accountConnected" hidden><p id="accountAddress"></p><button id="accountLogout" class="account-text-button" type="button">이 기기에서 로그아웃</button></div>
+      <div id="accountForms">
+        <form id="accountEmailForm"><p id="accountIntro">이메일로 받은 6자리 인증번호로 연결합니다.</p><label for="accountEmail">이메일</label><input id="accountEmail" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required /><button id="accountSend" class="account-submit" type="submit">인증번호 받기</button><button id="accountMode" class="account-text-button" type="button">기존 계정으로 로그인</button></form>
+        <form id="accountCodeForm" hidden><p id="accountCodeHelp"></p><label for="accountCode">인증번호</label><input id="accountCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" minlength="6" maxlength="10" required /><button id="accountVerify" class="account-submit" type="submit">연결하기</button><div class="account-secondary"><button id="accountResend" class="account-text-button" type="button">다시 받기</button><button id="accountEditEmail" class="account-text-button" type="button">이메일 수정</button></div></form>
+      </div>
+      <p id="accountStatus" role="status"></p><p class="account-note">여정 기록은 현재 기기에 저장됩니다.</p>
+    </div>
+    <footer class="notice-footer"><button id="closeAccount" class="confirm-button" type="button">닫기</button></footer>
+  </dialog>
+</main>`;
+
+/**
+ * root: ENTRANCE_HTML 이 붙은 곳(Shadow root) · onChoice('new' | 'continue') · settings: () => Promise<{ get(): { fpsCap }, set(bool) }> (게임 설정 — main.js)
+ * accountLoader: () => import('./account/title_account.js') (없으면 계정 단추를 숨긴다) · accountOptions: 시험에서 인증 객체를 바꿔 끼울 때 ({ auth })
+ */
+export function mountStartScreen({ root = document, storageKey = NOTICE_KEY, onChoice, settings, accountLoader, accountOptions } = {}) {
+const STORAGE_KEY = storageKey;
+const $ = id => root.getElementById(id);
+const events = new AbortController();
+const listen = (el, type, fn, options = {}) => el.addEventListener(type, fn, { ...options, signal: events.signal });
+const entrance = $('entrance'), title = $('titleScreen'), dialog = $('noticeDialog');
+const list = $('noticeList'), checkbox = $('hideRead'), seen = new Set();
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const scene = createPixelGrove($('windScene'), reducedMotion);
+paintPixelWordmark(root.querySelector('.pixel-wordmark'));
+paintPixelWordmark(root.querySelector('.title-korean'), {
+  text: '적막', font: '600 18px Pretendard', height: 29, baseline: 22, tracking: 4, letterOffsets: [0, 1],
+});
+let saved = { hideRead: false, readIds: [] }, transition = 0, visibleNotes = [];
+try {
+  const value = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  if (value && typeof value === 'object') saved = {
+    hideRead: value.hideRead === true,
+    readIds: Array.isArray(value.readIds) ? value.readIds.filter(id => typeof id === 'string').slice(-500) : [],
+  };
+} catch { /* 저장소를 사용할 수 없으면 이번 실행에서만 기억한다. */ }
+const read = new Set(saved.readIds);
+
+function recordVisible() {
+  if (!dialog.open) return;
+  const viewport = list.getBoundingClientRect();
+  for (const article of list.children) {
+    const rect = article.getBoundingClientRect();
+    const height = Math.min(rect.bottom, viewport.bottom) - Math.max(rect.top, viewport.top);
+    if (height >= Math.min(80, rect.height * .55)) seen.add(article.dataset.noticeId);
+  }
+}
+
+function showNotices(all = false) {
+  clearTimeout(transition);
+  entrance.dataset.phase = 'notice'; title.inert = true; scene.calm(); seen.clear();
+  visibleNotes = UPDATE_NOTES.filter(note => all || !saved.hideRead || !read.has(note.id));
+  if (!visibleNotes.length) { showTitle(); return; }
+  list.replaceChildren();
+  for (const note of visibleNotes) {
+    const article = document.createElement('article');
+    article.className = 'notice-entry'; article.dataset.noticeId = note.id;
+    const meta = document.createElement('div'); meta.className = 'notice-meta';
+    const time = document.createElement('time'); time.dateTime = note.date.replaceAll('.', '-'); time.textContent = note.date;
+    const status = document.createElement('span'); status.textContent = read.has(note.id) ? '읽음' : '새 소식';
+    if (!read.has(note.id)) status.className = 'unread';
+    const heading = document.createElement('h3'); heading.textContent = note.title;
+    const body = document.createElement('p'); body.textContent = note.body;
+    meta.append(time, status); article.append(meta, heading, body); list.append(article);
+  }
+  $('noticeCount').textContent = `업데이트 ${visibleNotes.length}`;
+  checkbox.checked = saved.hideRead; dialog.showModal(); list.scrollTop = 0;
+  $('noticeHeading').focus(); requestAnimationFrame(recordVisible);
+}
+
+function showTitle() {
+  if (dialog.open) dialog.close();
+  entrance.dataset.phase = 'wind'; scene.gust();
+  transition = setTimeout(() => {
+    entrance.dataset.phase = 'ready'; title.inert = false; $('newJourney').focus({ preventScroll: true });
+  }, reducedMotion.matches ? 0 : 1800);
+}
+
+listen($('confirmNotices'), 'click', () => {
+  recordVisible();
+  // 실제로 화면에 들어온 항목만 읽음 처리한다. 아래까지 스크롤하지 않은 공지는 다음에도 남는다.
+  for (const id of seen) read.add(id);
+  saved = { hideRead: checkbox.checked, readIds: [...read] };
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch { /* private mode / quota */ }
+  showTitle();
+});
+listen(dialog, 'cancel', event => { event.preventDefault(); $('confirmNotices').click(); });
+listen(list, 'scroll', recordVisible, { passive: true });
+listen($('openNotices'), 'click', () => showNotices(true));
+// 설정 (샛별 3b280a1b — 대기실에 있던 설정을 첫 화면 공지사항 옆으로): 게임 설정 '화면 60 fps 제한' 하나 (우리 메뉴의 설정 줄과 같은 값 · 같은 저장 gladiator-settings)
+if (settings) {
+  listen($('openSettings'), 'click', async () => {
+    $('settingsDialog').showModal(); $('settingsHeading').focus();
+    $('titleFps').disabled = true; $('settingsStatus').textContent = '';
+    try {
+      const api = await settings();
+      if (events.signal.aborted) return;
+      $('titleFps').checked = api.get().fpsCap; $('titleFps').disabled = false;
+    } catch { if (!events.signal.aborted) $('settingsStatus').textContent = '설정을 불러오지 못했습니다. 다시 시도해 주세요.'; }
+  });
+  listen($('titleFps'), 'change', async () => {
+    const value = $('titleFps').checked;
+    try { const api = await settings(); if (!events.signal.aborted) api.set(value); }
+    catch { if (!events.signal.aborted) { $('titleFps').checked = !value; $('settingsStatus').textContent = '설정을 저장하지 못했습니다.'; } }
+  });
+  listen($('closeSettings'), 'click', () => $('settingsDialog').close());
+} else $('openSettings').hidden = true;
+// 계정 연결 (샛별 3688f391 — 메일 6자리 번호로만 고침): 인증 SDK 묶음은 크니 첫 화면을 그린 뒤 따로 받는다. 받기 전에는 단추를 잠가 둔다(누름이 헛돌지 않게)
+let account = null, busyNow = false;
+if (accountLoader) accountLoader().then(({ mountTitleAccount }) => {
+  if (events.signal.aborted) return;
+  account = mountTitleAccount(root, accountOptions);
+  $('openAccount').disabled = busyNow;
+}).catch(() => { if (!events.signal.aborted) $('openAccount').hidden = true; });
+else $('openAccount').hidden = true;
+for (const id of ['newJourney', 'continueJourney']) listen($(id), 'click', () => {
+  if (onChoice) { onChoice(id === 'newJourney' ? 'new' : 'continue'); return; }
+  for (const other of ['newJourney', 'continueJourney']) $(other).setAttribute('aria-pressed', String(other === id));
+  entrance.dataset.choice = id === 'newJourney' ? 'new' : 'continue';
+  $('selectionStatus').textContent = `${$(id).textContent} 선택`;
+});
+showNotices();
+
+return {
+  setStatus(text) { $('selectionStatus').textContent = text; $('selectionStatus').classList.remove('sr-only'); },
+  setBusy(busy) {
+    busyNow = busy;
+    for (const id of ['newJourney', 'continueJourney', 'openNotices', 'openSettings']) $(id).disabled = busy;
+    if (account) $('openAccount').disabled = busy;
+  },
+  destroy() { clearTimeout(transition); events.abort(); if (dialog.open) dialog.close(); $('settingsDialog').close(); account?.destroy(); scene.dispose(); },
+};
+}
