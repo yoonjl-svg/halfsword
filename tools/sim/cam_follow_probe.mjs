@@ -4,8 +4,9 @@
 //  견줌: 옛 카메라(10/15 오전 — 무게중심 follow 5 → 자리 6 · 바라보는 점 6) · 새 카메라(camera_rig 따라가기 + 물러날 때 올림 + 최소 거리)
 //  재는 것 (구간마다): 빠르기(실제 m/s) · 카메라 ↔ 몸 무게중심 수평 거리(평균·최소·최대 — 서 있을 때 3.04) · 지연(진행 방향으로 카메라가 있어야 할 자리에서 뒤처진 몫 ÷ 빠르기, 실제 초)
 //   · 흔들림(카메라 자리의 화면 사이 둘째 차분 RMS · 0.033 s 가우스로 거른 나머지 RMS, mm — 서 있기 · 걷기) · 물러날 때 올린 높이
-//  플레이어(index 0)는 AI 없이 스틱 대본만 (끝까지 밂), 상대는 제자리. 뒤 2 m/s 박차기(다른 작업 …/step-burst)는 흉내: 그 대본 동안 GAIT.backFactor 를 그 빠르기로 · 발 가속 한도 × 2 (이 도구 안에서만)
-//  실행: node tools/sim/cam_follow_probe.mjs [--walk=old] [--fps=60] [--burst=2.0] [--weapon=longsword] [--jitter=0]  (--walk=old = 10/15 전 걷기 빠르기 2.3·×0.45·×0.31 — 브라우저 ?walk=old 와 같은 값)
+//  플레이어(index 0)는 AI 없이 스틱 대본만 (끝까지 밂), 상대는 제자리. 대본 셋: walk(앞·뒤·옆 2 s 씩 — 서 있다가 뒤·옆으로 떼는 첫 걸음은 첫 걸음 박차기 GAIT.stepBurst 그대로)
+//   · step(서 있다가 0.3 s 짧게 뒤·옆으로 미는 박차기 — 뒤 0.3 s 에 ≈ 0.40 m, 판 끝까지 카메라-몸 거리 최소·뒤처짐 최대) · emu(--emu: 뒤 2 m/s 를 1.2 s 이어 미는 흉내 — 그 동안 GAIT.backFactor·maxAccel 을 이 도구 안에서만)
+//  실행: node tools/sim/cam_follow_probe.mjs [--walk=old] [--fps=60] [--weapon=longsword] [--jitter=0] [--emu [--burst=2.0]] [--stepBurst=0]  (--walk=old = 10/15 전 걷기 빠르기 2.3·×0.45·×0.31 — 브라우저 ?walk=old 와 같은 값)
 //   --jitter=0.2: 화면 시간을 ±20 % 흔들어(폰 프레임 들쭉날쭉) 잰다 · --occl: 가림 모형만 (물러날 때 올림 vs 뒤로 빼기)
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { followState, followReset, followStep, retreatStep, basePose, keepDistance } from '../../src/camera_rig.js';
@@ -18,13 +19,15 @@ const JIT = +(opt.jitter ?? 0);
 const BURST = +(opt.burst ?? 2.0);
 const BURST_ACC = +(opt.burstAccel ?? 2); // 박차기 흉내 동안 발 가속 한도 GAIT.maxAccel 배수 (보통 3.2 m/s² 로는 0.4 s 에 2 m/s 에 못 닿는다)
 if (opt.walk === 'old') Object.assign(GAIT, { moveSpeed: 2.3, backFactor: 0.45, sideFactor: 0.31 });
+if (opt.stepBurst != null) GAIT.stepBurst = +opt.stepBurst ? 1 : 0; // 첫 걸음 박차기 켬·끔 (브라우저 ?stepBurst 와 같은 뜻)
 const baseBack = GAIT.backFactor;
 const baseAcc = GAIT.maxAccel;
 
 const PLANS = {
   walk: [['s', 0.5], ['b', 2.0], ['s', 1], ['f', 2.0], ['s', 1], ['l', 2], ['s', 1], ['r', 2], ['s', 1]],
-  burst: [['s', 0.5], ['B', 1.2], ['s', 1.2], ['f', 1.4], ['s', 1], ['B', 0.4], ['s', 0.6], ['B', 0.4], ['s', 0.6], ['B', 0.4], ['s', 1]],
+  step: [['s', 0.6], ['b', 0.3], ['s', 0.9], ['b', 0.3], ['s', 0.9], ['l', 0.3], ['s', 0.9], ['r', 0.3], ['s', 0.9], ['b', 0.6], ['s', 1.0]],
 };
+if (opt.emu) PLANS.emu = [['s', 0.5], ['B', 1.2], ['s', 1.2], ['f', 1.4], ['s', 1], ['B', 0.4], ['s', 0.6], ['B', 0.4], ['s', 0.6], ['B', 0.4], ['s', 1]];
 const STICK = { f: [0, 1], b: [0, -1], B: [0, -1], l: [-1, 0], r: [1, 0], s: [0, 0] };
 const NAME = { f: '앞', b: '뒤', B: `뒤 ${BURST} m/s`, l: '왼', r: '오른', s: '섬' };
 
@@ -119,6 +122,30 @@ function jitter(C, idx, kx = 'cx', kz = 'cz') {
   const d2 = idx.filter((i) => i > 0 && i < C.length - 1).map((i) => Math.hypot(X[i + 1] - 2 * X[i] + X[i - 1], Z[i + 1] - 2 * Z[i] + Z[i - 1]) * 1000);
   return { d2: rms(d2), hp: rms(hp) };
 }
+/** 짧은 박차기 (step 대본): 구간 시작 ~ 놓은 뒤 0.6 s — 몸 최고 빠르기(실제 m/s) · 첫 0.3 s(게임) 간 거리 · 카메라-몸 수평 거리 최소 · 진행 방향으로 있어야 할 자리에서 뒤처진 몫 최대(mm) · 올림 최대 */
+function burstReport(C, segs) {
+  const rows = [];
+  for (const s of segs) {
+    if (s.k === 's') continue;
+    const idx = C.map((c, i) => i).filter((i) => C[i].t >= s.a && C[i].t <= s.b + 0.6);
+    if (idx.length < 4) continue;
+    const i0 = idx[0];
+    const at03 = idx.find((i) => C[i].t >= s.a + 0.3) ?? idx.at(-1);
+    const dx = C[at03].px - C[i0].px, dz = C[at03].pz - C[i0].pz;
+    const moved = Math.hypot(dx, dz), ux = dx / (moved || 1), uz = dz / (moved || 1);
+    let vmax = 0, dmin = Infinity, lagMax = 0, lift = 0;
+    for (let j = 1; j < idx.length; j++) {
+      const a = C[idx[j - 1]], c = C[idx[j]];
+      vmax = Math.max(vmax, (Math.hypot(c.px - a.px, c.pz - a.pz) / (c.t - a.t)) * TEMPO);
+      dmin = Math.min(dmin, Math.hypot(c.cx - c.px, c.cz - c.pz));
+      const ix = c.px - c.dirX * CAMERA.back - c.dirZ * CAMERA.shoulder, iz = c.pz - c.dirZ * CAMERA.back + c.dirX * CAMERA.shoulder;
+      lagMax = Math.max(lagMax, (ix - c.cx) * ux + (iz - c.cz) * uz);
+      lift = Math.max(lift, c.lift);
+    }
+    rows.push({ k: s.k, moved, vmax, dmin, lagMax, lift });
+  }
+  return rows;
+}
 function report(name, C, segs) {
   const rows = [];
   for (const s of segs) {
@@ -182,6 +209,10 @@ for (const [pname, plan] of Object.entries(PLANS)) {
     const C = camera(R.frames, kind);
     const rep = report(kind, C, R.segs);
     console.log(`\n[${pname} · ${kind === 'old' ? '옛 카메라' : '새 카메라'}]`);
+    if (pname === 'step') {
+      for (const r of burstReport(C, R.segs)) console.log(`  ${NAME[r.k].padEnd(5)} 0.3 s 간 ${f2(r.moved)} m · 몸 최고 ${f2(r.vmax)} m/s · 카메라-몸 거리 최소 ${f2(r.dmin)} m · 뒤처짐 최대 ${(r.lagMax * 1000).toFixed(0)} mm · 올림 최대 ${f2(r.lift * CAMERA.retreatLift)} m`);
+      continue;
+    }
     for (const r of rep.rows) console.log(`  ${NAME[r.k].padEnd(9)} 빠르기 ${f2(r.sp)} m/s · 지연 ${(r.lag * 1000).toFixed(0).padStart(4)} ms · 거리 평균 ${f2(r.dMean)} (최소 ${f2(r.dMin)} · 최대 ${f2(r.dMax)}) m · 올림 최대 ${f2(r.lift * CAMERA.retreatLift)} m · 흔들림 둘째 차분 ${f2(r.jit.d2)} · 거른 나머지 ${f2(r.jit.hp)} mm`);
     console.log(`  서 있기 흔들림: 카메라 둘째 차분 ${f2(rep.still.d2)} · 거른 나머지 ${f2(rep.still.hp)} mm · 바라보는 점 ${f2(rep.stillLook.d2)} · ${f2(rep.stillLook.hp)} mm`);
     console.log(`  걷기 흔들림:   카메라 둘째 차분 ${f2(rep.walk.d2)} · 거른 나머지 ${f2(rep.walk.hp)} mm · 바라보는 점 ${f2(rep.walkLook.d2)} · ${f2(rep.walkLook.hp)} mm`);
