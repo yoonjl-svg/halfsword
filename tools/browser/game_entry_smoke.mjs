@@ -59,7 +59,10 @@ try{
  assert.equal(await p.evaluate(()=>game.state),'menu');
  assert.equal(await checkpoint(p),null);
  assert.equal(await p.locator('#lobbyRank').textContent(),'Lv.1 여행자');
- assert.equal(await p.locator('#lobbySchool').textContent(),'독일 유파');
+ // 10/16 (lobby_fix §6): 대표 유파 = 산 스킬북이 가장 많은 유파 — 책 없음 · 깬 수 37 = 인장 3 → 금화 100 + 300 (한 번) · 알림 한 줄
+ assert.equal(await p.locator('#lobbySchool').textContent(),'아직 없음');
+ assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyHeads').textContent(),'0');
+ assert.equal(await p.locator('#lobbyStatus').textContent(),'인장 3개를 금화 300으로 바꿨습니다.');
  assert.equal(await p.locator('#duelRecord').textContent(),'0승리 0패배 (0%)');
  assert.equal(await p.locator('#panelInventory').isVisible(),true);
  const thumbs=await p.locator('.inventory-item img').evaluateAll(els=>els.map(e=>({loaded:e.complete&&e.naturalWidth>0,src:e.getAttribute('src')})));
@@ -80,12 +83,13 @@ try{
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');
  await p.locator('#editName').tap();await p.locator('#playerNameInput').fill('취소할 이름');await p.locator('#cancelName').tap();
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');
- await p.locator('#tabSkills').tap();assert.equal(await p.locator('.skill-group').count(),5);assert.ok(await p.locator('.skill-group p.unlocked').count()>0);
+ await p.locator('#tabSkills').tap();assert.equal(await p.locator('.school-tabs [role=tab]').count(),5);assert.equal(await p.locator('.book-node').count(),5);assert.equal(await p.locator('.book-node[data-state=unowned]').count(),5);
  await screenshot(p,'lobby-skills');
  await p.locator('#lobbyBack').tap();await title(p);await p.waitForFunction(()=>!document.querySelector('#gameEntrance').shadowRoot.getElementById('openAccount').disabled,null,{timeout:20000});
  await p.locator('#openAccount').tap();assert.equal(await p.locator('#accountEmail').isVisible(),true);
  await p.locator('#closeAccount').tap();await p.locator('#newJourney').tap();
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');assert.equal(await checkpoint(p),null);
+ assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyStatus').textContent(),''); // 인장 → 금화는 한 번만 (대기실에 다시 와도)
  check('lobby: real character touch rotation with physics untouched; tree branch only; editable name; tabs; account entry; safe back navigation',{thumbs});
  await p.locator('#lobbyDepart').tap();await phase(p,'draw');
  await p.waitForFunction(()=>game.draw.t>.6,null,{timeout:20000});
@@ -127,6 +131,10 @@ try{
  await p.evaluate(()=>game.enemy.die('기절',true));
  await p.waitForFunction(k=>JSON.parse(localStorage.getItem(k)).stage==='clearing',key,{timeout:20000});
  assert.deepEqual(await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),profileKey),{version:1,name:'바람',wins:1,losses:0});
+ const wonCoins=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).coins);assert.ok(wonCoins>=405&&wonCoins<=415,`win +5~15: ${wonCoins}`); // 사장님 10/16 04:3x
+ await p.waitForFunction(()=>game.state==='paused',null,{timeout:30000});
+ assert.equal(await p.locator('#menuReward').textContent(),`금화 +${wonCoins-400}`);assert.equal(await p.locator('#menuReward').isVisible(),true);
+ check('journey win: coins +5..15 saved and shown on the result screen',{coins:wonCoins});
  assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
  await p.reload({waitUntil:'networkidle'});await title(p);await p.locator('#continueJourney').click();await p.locator('#lobbyDepart').click();await phase(p,'draw');
  assert.equal(await p.evaluate(()=>game.stage.id),'clearing');assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
@@ -141,6 +149,8 @@ try{
  await p.goto(base+'/?test=1&weapon=longsword&foe=heinrich&stage=castle',{waitUntil:'networkidle'});await p.waitForFunction(()=>window.game?.player,null,{timeout:60000});
  assert.equal(await p.locator('#gameEntrance').count(),0);await p.locator('#btnStart').tap();await phase(p,'fight');
  assert.equal(await p.evaluate(()=>game.stage.id),'castle');assert.deepEqual(await checkpoint(p),savedBefore);
+ const coinsBefore=await p.evaluate(()=>localStorage.getItem('stillness.lobby.progress.v1'));await p.evaluate(()=>game.enemy.die('기절',true));await p.waitForFunction(()=>game.state==='paused',null,{timeout:30000});
+ assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.lobby.progress.v1')),coinsBefore);assert.equal(await p.locator('#menuReward').isVisible(),false); // 테스트 경로 판은 금화가 안 바뀐다
  check('existing direct test link bypasses title and cannot overwrite journey');
  for(const q of ['?stamina=0','?foeWhiff=1','?stage=sluice','?look=heinrich:v0']){
   await p.goto(base+'/'+q,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.game?.player,null,{timeout:60000});

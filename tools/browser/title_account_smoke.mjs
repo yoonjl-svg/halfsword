@@ -45,6 +45,10 @@ try{
  assert.equal(await p.locator('#accountCodeHelp').textContent(),`${user.email}로 보낸 메일의 6자리 인증번호를 입력하세요.`);
  assert.equal(await p.locator('#accountStatus').textContent(),'메일을 확인해 주세요. 메일이 보이지 않으면 스팸함도 확인해 주세요.');
  assert.equal(await p.locator('#accountResend').isDisabled(),true);assert.equal(await label(p),'계정 연결');
+ // 10/16 (docs/import/lobby_fix_2026-10-16.md §4): 폰 가로 번호 단계가 창 안에서 스크롤되지 않는다 — 안내 · 칸 · 단추 · 알림 · 맨 아래 '여정 기록…' 줄까지 한 화면, 초점 테두리가 칸 이름을 안 덮음
+ await p.locator('#accountCode').focus();
+ const fit=await p.locator('#accountDialog').evaluate(d=>{const c=d.querySelector('.account-content'),note=d.querySelector('.account-note').getBoundingClientRect(),dr=d.getBoundingClientRect(),cr=c.getBoundingClientRect(),input=d.querySelector('#accountCode'),s=getComputedStyle(input),lab=d.querySelector('label[for=accountCode]').getBoundingClientRect(),ir=input.getBoundingClientRect();return {dialog:[d.scrollHeight,d.clientHeight],content:[c.scrollHeight,c.clientHeight],noteInside:note.bottom<=cr.bottom+.5&&note.bottom<=dr.bottom,outlineGap:ir.top-(parseFloat(s.outlineOffset)+parseFloat(s.outlineWidth))-lab.bottom};});
+ assert.ok(fit.dialog[0]<=fit.dialog[1]+1&&fit.content[0]<=fit.content[1]+1&&fit.noteInside,JSON.stringify(fit));assert.ok(fit.outlineGap>=0,JSON.stringify(fit));results.push('phone landscape code step fits without inner scroll (note line visible) and the focus outline clears the label');
  await p.locator('#accountCode').fill('111111');await p.locator('#accountVerify').tap();await p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('accountStatus').textContent.includes('인증번호를 확인'));
  assert.equal(await label(p),'계정 연결');failVerify=false;
  await p.locator('#accountCode').fill('123456');await p.locator('#accountVerify').tap();await p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('openAccount').textContent==='traveler.test');

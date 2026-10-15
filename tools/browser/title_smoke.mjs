@@ -65,15 +65,19 @@ try{
  await open(page);
  assert.equal(await page.locator('#noticeDialog').evaluate(d=>d.open),true);assert.equal(await page.locator('.notice-entry').count(),N);
  let b=await bounds(page);check(`first launch: ${N} notices in the dialog`,b);await shot(page,'notices-desktop');
- const typography=await inRoot(page,`return Object.fromEntries(['.notice-header h2','.notice-count','.notice-entry h3','.notice-entry p','.notice-meta','.unread','.hide-read','.confirm-button'].map(selector=>{const s=getComputedStyle(root.querySelector(selector));return [selector,{size:s.fontSize,color:s.color}];}));`);
- assert.deepEqual(typography['.notice-header h2'],{size:'17px',color:'rgb(243, 233, 216)'});
- assert.deepEqual(typography['.notice-entry h3'],{size:'14px',color:'rgb(243, 233, 216)'});
- assert.deepEqual(typography['.notice-entry p'],{size:'14px',color:'rgb(184, 168, 142)'});
- assert.deepEqual(typography['.notice-meta'],{size:'12px',color:'rgb(184, 168, 142)'});
- assert.equal(typography['.unread'].color,'rgb(217, 164, 65)');
+ // 10/16 글자 정돈 (docs/import/lobby_fix_2026-10-16.md §1 — src/entrance_type.css): 싸움 화면 규칙 — 창 제목 17·700 · 이름 14·700 · 설명 12·400 보조 · 표지 12·600 강조 · 글꼴 줄 --font-ui(Cinzel 먼저)
+ const typography=await inRoot(page,`return Object.fromEntries(['.notice-header h2','.notice-count','.notice-entry h3','.notice-entry p','.notice-meta','.unread','.hide-read','.confirm-button'].map(selector=>{const s=getComputedStyle(root.querySelector(selector));return [selector,{size:s.fontSize,color:s.color,weight:s.fontWeight,family:s.fontFamily.split(',')[0].replace(/['"]/g,'').trim(),wordBreak:s.wordBreak}];}));`);
+ const pick=(t,...k)=>Object.fromEntries(k.map(x=>[x,t[x]]));
+ assert.deepEqual(pick(typography['.notice-header h2'],'size','color','weight'),{size:'17px',color:'rgb(243, 233, 216)',weight:'700'});
+ assert.deepEqual(pick(typography['.notice-entry h3'],'size','color','weight'),{size:'14px',color:'rgb(243, 233, 216)',weight:'700'});
+ assert.deepEqual(pick(typography['.notice-entry p'],'size','color','weight'),{size:'12px',color:'rgb(184, 168, 142)',weight:'400'});
+ assert.deepEqual(pick(typography['.notice-meta'],'size','color','weight'),{size:'12px',color:'rgb(184, 168, 142)',weight:'400'});
+ assert.deepEqual(pick(typography['.unread'],'color','weight'),{color:'rgb(217, 164, 65)',weight:'600'});
+ assert.equal(typography['.confirm-button'].weight,'700');
+ assert.ok(Object.values(typography).every(t=>t.family==='Cinzel'&&t.wordBreak==='keep-all'),JSON.stringify(typography));
  assert.equal(new Set(Object.values(typography).map(s=>s.size)).size,3);
  assert.equal(new Set(Object.values(typography).map(s=>s.color)).size,3);
- check('notices use the game text colors (--c-text · --c-sub · --c-accent values) and three type sizes (12 · 14 · 17)',{typography});
+ check('notices follow the battle HUD type rule (font stack Cinzel→Pretendard · sizes 12/14/17 · weights 400/600/700 · three text colors · keep-all)',{typography});
  await page.evaluate(()=>localStorage.setItem('gladiator-settings','{"fpsCap":true,"prototype-sentinel":true}'));
  await page.locator('#hideRead').check();await page.locator('#confirmNotices').click();
  await page.waitForTimeout(850);await shot(page,'wind-transition-desktop');await ready(page);await shot(page,'title-desktop');

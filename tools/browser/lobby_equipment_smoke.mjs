@@ -27,7 +27,9 @@ try{
  await p.waitForFunction(()=>!document.querySelector('#gameEntrance').shadowRoot.getElementById('openAccount').disabled,null,{timeout:20000});
  await p.locator('#openAccount').tap();assert.equal(await p.locator('#accountEmail').isVisible(),true);await shot(p,'title-account');await p.locator('#closeAccount').tap();
  const titleButton=await style('#newJourney');await shot(p,'title-reference');await p.locator('#newJourney').tap();await p.locator('#characterView canvas').waitFor({timeout:20000});
- const lobbyButton=await style('#tabWeapons');assert.equal(lobbyButton[1],'12px');assert.equal(titleButton[1],'14px');assert.deepEqual(lobbyButton.filter((_,i)=>i!==1),titleButton.filter((_,i)=>i!==1));assert.equal(await p.locator('#lobbyBack').textContent(),'‹ 첫 화면으로');
+ // 단추 꼴(나무 결 · 테두리 · 모서리)은 같고 글은 싸움 화면 규칙(10/16 entrance_type.css): 첫 화면 주 단추 14·700 · 고른 탭 12·600 · 안 고른 탭 12·400 · 글꼴 줄 Cinzel → 프리텐다드
+ const lobbyButton=await style('#tabWeapons'),otherTab=await style('#tabArmor');assert.equal(lobbyButton[1],'12px');assert.equal(titleButton[1],'14px');assert.deepEqual([titleButton[2],lobbyButton[2],otherTab[2]],['700','600','400']);
+ assert.ok(titleButton[0].startsWith('Cinzel, Pretendard'),titleButton[0]);assert.deepEqual(lobbyButton.filter((_,i)=>i>2),titleButton.filter((_,i)=>i>2));assert.equal(lobbyButton[0],titleButton[0]);assert.equal(await p.locator('#lobbyBack').textContent(),'‹ 첫 화면으로');
  await state(p,false,false,'');assert.equal(await p.locator('.inventory-item').count(),1);assert.equal(await p.locator('.inventory-slot').count(),19);
  assert.equal(await p.locator('[data-weapon=longsword]').count(),0);
  const layout=await p.locator('.inventory-grid').evaluate(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect(),item=e.firstElementChild.getBoundingClientRect(),root=e.getRootNode();return {columns:s.gridTemplateColumns.split(' ').length,rows:s.gridTemplateRows.split(' ').length,cell:[item.width,item.height],width:r.width,frame:root.querySelector('.portrait-card').getBoundingClientRect().toJSON(),panel:root.querySelector('.character-panel').getBoundingClientRect().toJSON(),depart:root.getElementById('lobbyDepart').getBoundingClientRect().toJSON()};});
@@ -42,7 +44,8 @@ try{
  assert.deepEqual(menu.map(m=>m.text),['무기','방어구','상점','스킬북']);assert.equal(menu[0].y,menu[1].y);assert.equal(menu[2].y,menu[3].y);assert.ok(menu[2].y>menu[0].y);
  await p.locator('#tabArmor').tap();assert.equal(await p.locator('.inventory-item').count(),1);assert.equal(await p.locator('.inventory-slot').count(),19);
  await p.locator('[data-armor=kettle] img').evaluate(img=>img.decode());await p.locator('button[data-armor=kettle]').tap();
- let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','커먼','여행자의 필수품. 뒤집으면 요리를 할 수 있다.']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
+ let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','레전드','여행자의 필수품. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
+ assert.deepEqual(await p.locator('#itemDetail').evaluate(e=>[getComputedStyle(e.querySelector('#itemRarity')).color,getComputedStyle(e.querySelector('#itemName')).color,getComputedStyle(e.querySelector('.item-ability')).color]),Array(3).fill('rgb(255, 210, 74)')); // 레전드 = --tier-legend (사장님 10/16 03:5x)
  assert.equal(await p.locator('[data-armor=kettle] img').getAttribute('alt'),'케틀 햇');
  assert.equal(await p.locator('#characterView').getAttribute('data-armor'),'kettle');await state(p,false,true,'');await shot(p,'armor-equipped');
  await p.locator('#unequipItem').tap();assert.equal(await p.locator('#characterView').getAttribute('data-armor'),'');await state(p,true,false,'');await shot(p,'armor-unequipped');
@@ -71,13 +74,15 @@ try{
  await p.locator('#lobbyBack').tap();await title(p);await p.locator('#newJourney').tap();await state(p,false,false,'tree_branch');assert.equal(await p.locator('#lobbyName').textContent(),'방랑 검객');
  assert.deepEqual(await p.evaluate(()=>[localStorage.getItem('stillness.lobby.weapon.v1'),localStorage.getItem('stillness.lobby.armor.v1')]),['{"version":1,"weapon":"tree_branch"}','{"version":1,"armor":"kettle"}']);
  checks.push({name:'equipped weapon rotates with model; persistence (stillness.lobby.*) through reload/name edit/back navigation; selection resets'});
- await p.locator('#lobbyDepart').tap();await p.waitForFunction(()=>game.state==='draw',null,{timeout:60000});checks.push({name:'departure still enters existing journey card flow'});await c.close();
+ // 10/16 (사장님 03:5x '장착하면 실제 전투에 가져나가게 해'): 나뭇가지를 장착했으면 카드 없이 그 무기로 곧장 싸움
+ await p.locator('#lobbyDepart').tap();await p.waitForFunction(()=>game.state==='fight',null,{timeout:60000});assert.equal(await p.evaluate(()=>game.player.weapon.id),'tree_branch');assert.equal(await p.evaluate(()=>document.getElementById('draw').classList.contains('show')),false);
+ checks.push({name:'departure with the branch equipped goes straight to the fight with the branch (no card draw)'});await c.close();
  for(const [name,width,height] of [['desktop',1280,720],['wide',1440,900],['portrait',390,844],['small-portrait',320,568],['small-landscape',568,320]]){
   const qc=await browser.newContext({viewport:{width,height},reducedMotion:'reduce'});await noAuth(qc);const q=await qc.newPage();watch(q);await q.goto(base+'/',{waitUntil:'networkidle'});await title(q);await q.locator('#newJourney').click();await q.locator('#characterView canvas').waitFor({timeout:20000});
   assert.ok(await q.locator('.lobby').evaluate(e=>e.scrollWidth<=e.clientWidth));await q.locator('#equipItem').scrollIntoViewIfNeeded();
   await q.locator('[data-weapon=tree_branch]').click();const kk=await card(q);assert.ok(kk.inside&&!kk.overflow,`${name} ${JSON.stringify(kk)}`);
   await q.locator('#equipItem').click();await state(q,false,true,'tree_branch');
-  await q.locator('#lobbyDepart').scrollIntoViewIfNeeded();await q.locator('#lobbyDepart').click();await q.waitForFunction(()=>game.state==='draw',null,{timeout:60000});
+  await q.locator('#lobbyDepart').scrollIntoViewIfNeeded();await q.locator('#lobbyDepart').click();await q.waitForFunction(()=>game.state==='fight'&&game.player.weapon.id==='tree_branch',null,{timeout:60000});
   checks.push({name:`${name}: fits, item card inside the frame, equipment buttons and departure reachable`});await qc.close();
  }
  const denied=await browser.newContext({viewport:{width:844,height:390},reducedMotion:'reduce'});await noAuth(denied);
