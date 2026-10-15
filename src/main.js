@@ -41,6 +41,7 @@ import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_o
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
 import { setSupportFloor } from './gait.js'; // 발 체중 받침은 바닥 콜라이더 접촉만 (10/14 — 벽·석상에 발이 닿은 힘은 받침이 아님)
 import { terrainForStage, createTerrainGround, applyTerrainHazards } from './etna_ground.js'; // 화산섬 비탈 땅(삼각형 그물 바닥 · 땅 따라 올린 벽 · 용암 화상) — 지형 없는 무대는 아래 평평한 바닥 그대로 (docs/import/volcano_port_2026-10-14.md)
+import { followState, followReset, followStep, retreatStep, basePose, keepDistance, sweepParams, sweepPose, settlePose } from './camera_rig.js'; // 카메라 셈: 따라가기 · 판 시작(무대 훑기 · 다시 겨루기 내려앉기) — 10/15, docs/strike/camera_open_2026-10-15.md (노드 측정 도구와 같은 함수)
 
 await RAPIER.init();
 
@@ -131,6 +132,10 @@ if (params.has('stepBurst')) CONFIG.GAIT.stepBurst = +params.get('stepBurst') ? 
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
 //  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다
 const TEMPO = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1.1) || 1.1)); // 기본 1.1 (사장님 10/10 05:1x '기본 템포 1.1로'), 전 값 `?tempo=1` // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
+// 판 시작 카메라 · 따라가기 (10/15 사장님 — docs/strike/camera_open_2026-10-15.md, 확인표 1560~1579): `?openSweep=0` = 9/30 판 시작(정지 2 s · 조금 높고 먼 자리에서 내려오기 — 다시 겨루기도 같음)
+//  `?camFollow=old` = 예전 따라가기(무게중심 follow 5 → 카메라 자리 6 두 번 거름 · 최소 거리·물러날 때 올리기 없음). 둘 다 쓰면 10/15 오전 판과 거의 같다
+const OPEN_SWEEP = params.get('openSweep') !== '0';
+const CAM_OLD = params.get('camFollow') === 'old';
 const schoolRest = params.get('schoolRest');
 if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
 const oneVersatile = params.get('oneVersatile');
@@ -603,7 +608,7 @@ function newRound(weaponId) {
   sound.roundStart(); // 대성당: 판이 시작될 때 파이프 오르간이 한 번 울린다
   roundOver = false;
   roundOverTime = 0;
-  camFollow.copy(player.pelvisPos);
+  resetCamera(); // 따라가기를 새 판 몸 자리에 바로 맞춘다 (지난 판 자리에서 미끄러져 오지 않게 — 판 시작 자리는 planOpening 이 정한다)
   hitStop = 0;
   // 시간이 흐르기 전에도(무기 뽑기 동안) 선 자세 그대로 보이게 겉모습을 몸에 맞춰 둔다
   player.syncMeshes();
@@ -916,6 +921,8 @@ function showFoeLine(ch, line) {
 // 이번 상대 소개 (이름 · 칭호 · 한마디) — 화면 가운데, 판 알림(toast) 바로 아래 (10/14 사장님 '사이즈 통일해서 예전처럼 시작 때 보이게 가운데로').
 //  세 줄 글자 크기는 하나(보통 --fs-m — 10/14 글자 규칙), 색만 다르다: 이름 = 본문 색 · 칭호와 대사 = 보조 색 (index.html #foeIntro).
 //  판이 시작되는 순간(beginFight)부터 발이 풀릴 때(ARENA.startHold)까지만 보인다 — 무기 카드를 고르는 동안에는 띄우지 않는다.
+//  10/15 판 시작 카메라: 무대 훑기 판은 훑기 시작 CAMERA.open.introAt 초 뒤에 떠서 introSec 초(= 카메라가 내 어깨 자리에 닿을 때) 걷힌다 — 처음 1 초는 무대만 보이게.
+//   다시 겨루기(내려앉기 1 s)는 판 시작에 떠서 introSec 초 (정지보다 1 초 길게 — 대사를 읽을 시간). `?openSweep=0` 은 예전처럼 ARENA.startHold 까지
 //  무기 이름은 글로 적지 않는다 (대사와 겹쳐 읽기 어렵다는 오너 의견: 내 무기와 상대 무기는 카드 두 장이 보여 준다)
 function showFoeIntro(ch) {
   const el = $('foeIntro');
@@ -925,7 +932,8 @@ function showFoeIntro(ch) {
   el.querySelector('i').textContent = ch.epithet;
   { const line = randomLine(ch, ch.lines?.introStray && foeWeaponId !== ch.weapon ? 'introStray' : 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; el.querySelector('small').textContent = lineSourceOf(ch, line); } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸) · 출처는 대사 아래 줄 (병마용)
   el.classList.add('show');
-  hudLater('foeIntro', ARENA.startHold, () => el.classList.remove('show')); // 정지가 풀리는 순간 걷는다 (화면 글자 시계 = 게임 시간, player.fightT 와 같이 흐른다)
+  if (camOpen.mode === 'sweep') return; // 훑기 판: 카메라가 내 어깨 자리에 닿는 순간(발이 풀릴 때) watchOpening 이 걷는다 — 느린 기기에서 게임 시간이 늦게 흘러도 닿을 때까지
+  hudLater('foeIntro', camOpen.mode === 'old' ? ARENA.startHold : CAMERA.open.introSec, () => el.classList.remove('show')); // 화면 글자 시계(일시정지·메뉴면 멈춘다)
 }
 function hideFoeIntro() {
   hudLater('foeIntro');
@@ -1274,6 +1282,7 @@ async function startFight() {
   closeDraw(); // 뽑기 도중에 "처음부터 다시"를 눌렀으면 그 카드는 치운다
   toast.classList.remove('show');
   nextRoundStage(); // 배경: 첫 판은 메뉴 뒤 그대로, 그 다음 판부터는 정해진 순서로 다음 배경 (짓는 멈칫은 메뉴가 아직 떠 있는 동안)
+  planOpening(); // 판 시작 카메라: 이 무대 첫 판이면 무대 훑기, 같은 무대 다시면 내려앉기 — 정지(발 묶임) 길이도 여기서 (카드 고르는 동안 카메라는 그 시작 자리)
   prepareRound(); // 이번 상대 · 상대 무기
   hideFoeIntro(); // 가운데 소개는 싸움이 시작될 때 (beginFight) — 카드를 고르는 동안에는 띄우지 않는다
   showStageInfo(); // 왼쪽 위 무대 줄
@@ -1306,7 +1315,15 @@ function beginFight() {
   techClear();
   guardClear(); // 무기를 받아 판을 새로 세웠으니 자세 이름도 처음부터 다시 읽는다
   applyMoveMode();
-  showFoeIntro(currentFoe); // 가운데 소개: 지금부터 발이 풀릴 때(ARENA.startHold)까지
+  // 판 시작 카메라 (10/15): 무대 훑기 판은 처음 CAMERA.open.introAt 초 동안 무대만 보이고 그 뒤에 알림·소개·안내 (watchOpening). 내려앉기·예전 판은 지금 바로
+  if (camOpen.mode === 'sweep') {
+    camOpen.swept = stages.id; // 이 무대는 훑었다 — 같은 무대 다음 판은 내려앉기
+    camOpen.cue = true;
+  } else showFightCues();
+}
+/** 판 시작 글: 가운데 소개(지금부터 발이 풀릴 때까지 — showFoeIntro) · 판 알림 '대면' · 아래 조작 안내 */
+function showFightCues() {
+  showFoeIntro(currentFoe);
   showToast(FIGHT_START_TEXT, 900);
   showHint(input.isTouchDevice ? '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기' : '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기');
 }
@@ -1619,32 +1636,80 @@ const camShake = { o: new THREE.Vector3(), v: new THREE.Vector3() };
 function kickCamera(dir, strength) {
   camShake.v.addScaledVector(dir, strength);
 }
-const camTarget = new THREE.Vector3();
-const camFollow = new THREE.Vector3();
+const camTarget = new THREE.Vector3(); // 평소 자리 (어깨 너머)
+const camFollow = new THREE.Vector3(); // 따라가는 점 (걸러진 내 무게중심)
 const camLook = new THREE.Vector3();
 const camDir = new THREE.Vector3(1, 0, 0);
 const _cd = new THREE.Vector3();
+const _co = new THREE.Vector3();
+const _cl = new THREE.Vector3();
+// 따라가기 (10/15 — src/camera_rig.js 머리말 · config CAMERA.followTau): f = 따라가는 점(camFollow) · prev·vel = 지난 화면 몸 자리와 빠르기(게임 m/s) · lift = 물러날 때 올린 몫 0~1
+const camRig = followState(camFollow);
+let camSteps = 0; // 이번 화면에 돈 물리 스텝 수 (게임 루프가 적는다)
+
+// ── 판 시작 카메라 (10/15 사장님 '첫 전투 시작 시 스테이지 전체를 빠르게 슥 훑고 기본 카메라 화면으로 다가가게 해. 3초 정도? … 카메라가 캐릭터에 따라 붙으면 바로 전투 시작') ──
+//  mode 'sweep' = 그 무대의 첫 판(메뉴에서 시작 · '다음 여정'으로 새 무대 · 테스트 경로 새 무대 · ?stage= 고정 무대의 첫 판): 무대 훑기 CAMERA.open.sweepSec 초
+//       'settle' = 같은 무대를 다시('다시 겨루기' · 처음부터 다시): 짧은 내려앉기 settleSec 초 · 'old' = `?openSweep=0` (9/30 판 시작, 정지 2 s)
+//  정지(발 묶임 fighter.feetHeld · AI 판 시작 몸짓)는 이 브라우저에서만 판 시작 카메라 길이와 같다: ARENA.startHold 를 판마다 바꾼다(게임 시간 = 실제 초 × 템포).
+//   시뮬 도구는 이 파일을 읽지 않아 config 값(SIM_HOLD 2.0)을 그대로 쓴다 — 관문 그대로
+const SIM_HOLD = ARENA.startHold;
+const camOpen = { mode: 'old', params: null, centre: { x: 0, z: 0 }, swept: null, cue: false, introUp: false, u: null, endPos: new THREE.Vector3(), endLook: new THREE.Vector3() }; // u: 스크린샷용으로 판 시작 자리를 그 u 에 세운다 (game.camOpen.u — null 이면 시계대로) · endPos/endLook: 지금 평소 자리
+/** 판을 열 때(startFight · 처음 메뉴 뒤 판): 판 시작 카메라와 정지 길이를 정한다 */
+function planOpening() {
+  if (!OPEN_SWEEP) {
+    camOpen.mode = 'old';
+    ARENA.startHold = SIM_HOLD;
+  } else {
+    camOpen.mode = stages.id !== camOpen.swept ? 'sweep' : 'settle';
+    ARENA.startHold = (camOpen.mode === 'sweep' ? CAMERA.open.sweepSec : CAMERA.open.settleSec) * TEMPO;
+  }
+  camOpen.params = sweepParams(stages.id);
+  camOpen.centre = { x: 0, z: stageStartZ(stages.id) }; // 두 사람 시작 자리의 가운데 (잠든 습지는 +z 로 비켜 선다)
+  camOpen.cue = camOpen.introUp = false;
+}
+/** 판 시작 카메라의 자리 0~1 (1 = 끝 — 발이 풀린다) */
+function openProgress() {
+  if (camOpen.u != null) return camOpen.u;
+  return ARENA.startHold > 0 ? Math.min(1, player.fightT / (ARENA.startHold - 1e-6)) : 1; // fighter.feetHeld 와 같은 끝(− 1e-6): 카메라가 닿는 화면 = 발이 풀리는 화면
+}
+/** 게임 루프(싸움 중): 무대 훑기 판의 알림·소개·안내를 훑기 시작 introAt 초 뒤에 */
+function watchOpening() {
+  if (camOpen.cue && player.fightT >= CAMERA.open.introAt * TEMPO) {
+    camOpen.cue = false;
+    camOpen.introUp = true;
+    showFightCues();
+  }
+  if (camOpen.introUp && !player.feetHeld) {
+    camOpen.introUp = false; // 카메라가 닿았다 = 싸움 시작: 소개를 걷는다
+    hideFoeIntro();
+  }
+}
+/** 새 판(newRound): 따라가기를 새 몸 자리에 바로 맞춘다 */
+function resetCamera() {
+  followReset(camRig, player.pelvisPos);
+  camSteps = 0;
+  const e = enemy.pelvisPos;
+  _cd.set(e.x - camFollow.x, 0, e.z - camFollow.z);
+  if (_cd.length() > 0.3) camDir.copy(_cd.normalize()); // 지난 판 끝 방향에서 돌아오지 않게 (판 시작 자리가 이 방향으로 정해진다)
+}
 function updateCamera(dt) {
   if (!player || window.game?.freeCam) return; // freeCam: 디버그용으로 카메라를 직접 조종
-  // 흔들리는 골반 대신 몸 전체 무게중심을 부드럽게 따라간다
-  //  (참수된 몸은 무게중심에 날아가는 머리가 섞이니 골반을 따른다)
-  const a = camFollow.lerp((!player.decapitated && player.com) || player.pelvisPos, 1 - Math.exp(-dt * CAMERA.follow));
+  // 흔들리는 골반 대신 몸 전체 무게중심을 따라간다 (참수된 몸은 무게중심에 날아가는 머리가 섞이니 골반을 따른다)
+  const src = (!player.decapitated && player.com) || player.pelvisPos;
+  const standing = player.state === 'stand';
+  // 따라가는 점: 지금 몸 자리를 물리 스텝 사이 남은 시간(acc)만큼 지난 빠르기로 앞으로 민 자리를 CAMERA.followTau 로 한 번만 거른다 (서 있지 않으면 followTauDown) — camera_rig.followStep
+  const a = CAM_OLD ? camFollow.lerp(src, 1 - Math.exp(-dt * CAMERA.follow)) : followStep(camRig, src, camSteps, acc, dt, standing, CAMERA, PHYSICS.timestep);
   const b = (!enemy.decapitated && enemy.com) || enemy.pelvisPos;
-  // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지)
+  // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지) — 도는 것은 지금처럼 부드럽게(3/s)
   _cd.set(b.x - a.x, 0, b.z - a.z);
   if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
   const right = _cd.set(-camDir.z, 0, camDir.x);
-  // 판 시작: 조금 높고 먼 자리에서 무대를 보여 주다가 발이 풀릴 때(ARENA.startHold)까지 평소 자리로 부드럽게 내려온다 (사장님 9/30).
-  //  시계는 판마다 새로 0부터 세는 player.fightT (싸움 전 메뉴·무기 뽑기 동안엔 0이라 시작 자리에서 기다린다)
-  const open = ARENA.startHold > 0 ? 1 - THREE.MathUtils.smoothstep(player.fightT, 0, ARENA.startHold) : 0;
+  // 물러나는 동안 카메라를 조금 올린다 (CAMERA.retreatLift — 가까이 따라붙은 상대를 내 몸이 덜 가리게): 지난 화면 몸 빠르기의 카메라 방향 반대 몫으로 — camera_rig.retreatStep
+  const lift = CAM_OLD ? 0 : retreatStep(camRig, camDir.x, camDir.z, dt, standing, CAMERA);
   // 지형 무대(화산섬): 카메라 높이·바라보는 높이·해와 그림자 과녁을 내 무게중심 밑 땅 높이만큼 올린다 (평지 무대는 0 — 그대로)
   const terrainY = player.terrain ? player.terrain.heightAt(a.x, a.z) : 0;
-  const camH = CAMERA.height + CAMERA.openUp * open + terrainY;
-  camTarget
-    .copy(a)
-    .addScaledVector(camDir, -(CAMERA.back + CAMERA.openBack * open))
-    .addScaledVector(right, CAMERA.shoulder)
-    .setY(camH);
+  const camH = CAMERA.height + CAMERA.retreatLift * lift + terrainY;
+  basePose(a, camDir.x, camDir.z, lift, terrainY, CAMERA, camTarget); // 어깨 너머: a 에서 뒤로 back · 오른쪽 shoulder · 높이 camH
   // 비기 카메라 연출 (10/10 이베리아 사이드스텝 사선 베기): 내 쪽 무게중심을 축으로 SECRET.camSwing ° 를 camSwingIn 초에 돌렸다가 camSwingOut 초에 되돌림 (부드럽게)
   if (camSwing.t >= 0) {
     camSwing.t += dt;
@@ -1661,16 +1726,32 @@ function updateCamera(dt) {
       camTarget.z = a.z + ox * Math.sin(ang) + oz * Math.cos(ang);
     }
   }
+  // 최소 거리 (CAMERA.minDist): 몸이 카메라 쪽으로 밀려 와도 카메라가 그 자리에서 바로 물러난다 — 지금 몸 자리(거르기 전) 기준, 수평 (camera_rig.keepDistance)
+  if (!CAM_OLD) keepDistance(camTarget, src, CAMERA.minDist);
   // 경기장 바깥 돌벽을 뚫고 나가지 않게
   const r = Math.hypot(camTarget.x, camTarget.z);
   if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
-  const k = 1 - Math.exp(-dt * 6);
   clampStageCamera(a, camTarget, arenaStone?.navigation); // 잠든 습지: 카메라가 석상을 가로지르거나 안으로 들어가지 않게 (석상 없으면 그대로)
-  camera.position.lerp(camTarget, k);
-  clampStageCamera(a, camera.position, arenaStone?.navigation);
+  const look = _cl.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1 + terrainY);
+  camOpen.endPos.copy(camTarget);
+  camOpen.endLook.copy(look);
+  // 판 시작: 무대 훑기(그 무대 첫 판) · 내려앉기(다시 겨루기 · `?openSweep=0`) — 끝(u = 1)에서 평소 자리와 같아 이어 붙는 곳에서 튀지 않는다 (src/camera_rig.js)
+  const u = openProgress();
+  if (u < 1) {
+    if (camOpen.mode === 'sweep') sweepPose(u, camTarget, look, camOpen.centre, player.terrain ? player.terrain.heightAt(camOpen.centre.x, camOpen.centre.z) : 0, camOpen.params, _co, look);
+    else settlePose(u, camTarget, look, camDir.x, camDir.z, CAMERA.openBack, CAMERA.openUp, _co, look);
+    camera.position.copy(_co);
+    camLook.copy(look);
+  } else if (CAM_OLD) {
+    const k = 1 - Math.exp(-dt * 6); // 예전: 자리·바라보는 점을 한 번 더 거른다 (자리 6)
+    camera.position.lerp(camTarget, k);
+    clampStageCamera(a, camera.position, arenaStone?.navigation);
+    camLook.lerp(look, k);
+  } else {
+    camera.position.copy(camTarget);
+    camLook.copy(look);
+  }
   if (player.terrain) camera.position.y = Math.max(camera.position.y, player.terrain.heightAt(camera.position.x, camera.position.z) + 0.45); // 비탈 위쪽으로 돈 카메라가 땅에 묻히지 않게 (샛별 값 0.45 m)
-  const look = _cd.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1 + terrainY);
-  camLook.lerp(look, k);
   // 발걸음: 디딜 때 살짝 내려앉음
   if (player.footstep > 0) {
     camShake.v.y -= CAMERA.stepBob * 12 * player.footstep;
@@ -2046,6 +2127,8 @@ function frame(now) {
       steps++;
     }
     if (steps === PHYSICS.maxStepsPerFrame) acc = 0;
+    camSteps = steps; // 카메라 따라가기: 이번 화면에 몸이 나아간 게임 시간 (빠르기 = 옮긴 거리 ÷ 스텝 시간)
+    watchOpening(); // 무대 훑기 판: 훑기 시작 introAt 초 뒤 알림·소개·안내
     if (perf) {
       physMs = performance.now() - physT0;
       physSteps = steps;
@@ -2074,6 +2157,7 @@ function frame(now) {
     checkRoundEnd(dt);
   } else {
     muteWhoosh();
+    camSteps = 0;
     // 무기 뽑기: 싸움(물리·AI)은 멈춘 채 카드 순서만 흐른다. 바다·먼지는 그대로 움직인다
     if (state === 'draw') {
       updateDraw(dt);
@@ -2099,7 +2183,8 @@ function frame(now) {
   if (state === 'fight' || state === 'draw') tickHudTimers(dt); // 화면 글자 시계 (일시정지·메뉴면 멈춘다)
 }
 
-// 메뉴 뒤 배경으로 보일 첫 판을 미리 만들어 둔다
+// 메뉴 뒤 배경으로 보일 첫 판을 미리 만들어 둔다 (메뉴 뒤 카메라 = 그 판 시작 자리 — 첫 판은 무대 훑기의 시작 자리)
+planOpening();
 prepareRound();
 newRound(FIXED_WEAPON || 'longsword');
 requestAnimationFrame(frame);
@@ -2139,6 +2224,24 @@ window.game = {
   // 흩어지는 조각 수 (칼·방어구, debris.js): game.debris.count() 전부, game.debris.count('armor') 방어구만
   debris: { count: debrisCount },
   draw, // 무기 뽑기 상태 (stage, ids = [내 카드, 내 카드, 상대 무기], pick). 스크린샷용으로 game.draw.hold = true 면 순서가 멈춘다
+  // 판 시작 카메라 (10/15): mode 'sweep'|'settle'|'old' · params(무대 길 — 바꾸면 그 판부터) · swept(훑은 무대) · u(스크린샷용 고정 자리, null = 시계대로) · endPos/endLook(지금 평소 자리)
+  camOpen,
+  get camRig() {
+    return { follow: camFollow.clone(), vel: { ...camRig.vel }, lift: camRig.lift, look: camLook.clone(), dir: camDir.clone() }; // 따라가기 상태 (tools/browser/cam_follow_browser.mjs 가 잰다)
+  },
+  /** 무대 훑기 길을 n 등분해 [{ pos, look }] (지금 평소 자리 기준, 무대 길 덮어쓰기 over) — 무대 소품 뚫음 검사용 (tools/browser/cam_open_shots.mjs) */
+  camOpenPath(n = 60, over = null) {
+    const P = { ...camOpen.params, ...(over ?? {}) };
+    const g = player?.terrain ? player.terrain.heightAt(camOpen.centre.x, camOpen.centre.z) : 0;
+    const out = [];
+    for (let i = 0; i <= n; i++) {
+      const pos = new THREE.Vector3();
+      const look = new THREE.Vector3();
+      sweepPose(i / n, camOpen.endPos, camOpen.endLook, camOpen.centre, g, P, pos, look);
+      out.push({ u: i / n, pos, look });
+    }
+    return out;
+  },
   get state() {
     return state;
   },
@@ -2147,6 +2250,10 @@ window.game = {
   config: CONFIG,
   THREE,
   camera,
+  scene, // 무대 소품 뚫음 검사(tools/browser/cam_open_shots.mjs)가 무대 메쉬를 훑는다
+  get fighterMeshes() {
+    return fighterMeshes; // 이번 판 두 검객(몸·칼·빛) — 같은 검사에서 무대와 따로 센다
+  },
   freeCam: false,
   renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
   renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 60 fps 제한' (game.settings.fpsCap)
@@ -2172,6 +2279,7 @@ window.game = {
       stages.warm(renderer, camera);
     }
     sound.setStage(stages.id);
+    if (state === 'menu') planOpening(); // 메뉴 뒤에서 바꾸면 판 시작 카메라도 새 무대 길로 (싸움 도중이면 그 판 정지 길이는 그대로 — 다음 판부터)
     // 바닥이 바뀌면 판을 새로 세운다 — 옛 바닥 충돌체·걸음 높이 기억을 다른 그림 밑에 남기지 않게 (샛별 0116047c 와 같게)
     if (world && terrainChanges) {
       newRound(player.weapon.id);
