@@ -1,3 +1,4 @@
+import { STAMINA } from './config.js';
 // ─────────────────────────────────────────────────────────────
 //  상대 AI: 사람 검객처럼 싸운다
 //
@@ -66,6 +67,7 @@ export class AI {
    */
   constructor(me, foe, levelName = 'normal', persona = null) {
     this.me = me;
+    me.stamina.controller = this; // 공통 기력 장부의 방어 상태
     this.foe = foe;
     this.sense = new Senses(me, foe);
     me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
@@ -294,6 +296,16 @@ export class AI {
     //  간 보기·막기·물러남(비기 꼴 포함)의 발놀림 박자(간격 비례 제어·잔걸음·'관성으로 너무 멀리 가지 않게' 늦추는 물러남)는 옛 가속(3.2 m/s²) 몸에 맞춘 값이라 그 꼴에서는 옛 가속으로 민다
     //  (fighter.js driveBalance 가 읽음 — 지난 스텝의 꼴 · 칸 없는 몸은 어차피 × 1). 끄면(0) 늘 false(사람·AI 같이 — 지금 판, 바이트 같음). 사람은 AI 가 없어 그대로
     this.me.aiLightHold = GAIT.cnLightAi ? this.mode !== 'attack' : false;
+    // 기력 탈진 (샛별 저장소 6ac1070d — docs/strike/stamina_import_2026-10-15.md): 2.5 s 제자리 숨 고르기 — 비기·공격·막기·걸음 의도를 모두 거두고 스틱 0 (몸은 물리대로 · 균형 디딤 그대로). 기력 끔이면 늘 거짓
+    if (this.me.stamina.exhausted) {
+      if (this.secretRun) this.secretAbort();
+      this.mode = 'watch'; this.phase = 'ready'; this.path.length = 0;
+      this.defLine = this.coverLine = null;
+      this.pendingPassive = null;
+      this.me.secretStiff = false;
+      this.me.move.set(0, 0); this.me.stickX = this.me.stickY = 0;
+      return;
+    }
     this.updateCombat(dt);
     const ds = this.drySense;
     if (ds) this.dryRouteSide(ds);
@@ -348,6 +360,12 @@ export class AI {
     // 무릎 꿇었거나 일어나는 중: 다리는 못 놀리지만 칼은 쥘 수 있다 → 가만히 가리고만 있지 않고,
     //  사정거리 안까지 다가온 적은 아래에서도 위협하거나 짧게 친다 (발놀림은 아래에서 0으로 막는다)
     const kneeling = me.state !== 'stand';
+    if (STAMINA.on) {
+      const limit = this.pers.aggr * L.aggression > 1.15 ? STAMINA.aiAggressiveRestAt : STAMINA.aiRestAt;
+      if (me.stamina.value < limit) this.staminaRest = true;
+      else if (me.stamina.value >= STAMINA.aiResumeAt) this.staminaRest = false;
+      if (this.staminaRest && this.mode === 'watch') this.startWithdraw(0.8, this.school.withdraw.calm[0]);
+    } else this.staminaRest = false;
 
     // 칼을 놓쳤다: 빈손으로는 칠 수 없다 → 하던 공격을 거두고 간격 밖으로 물러난다 (좀비처럼 맨손으로 달려들지 않는다)
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
@@ -648,6 +666,7 @@ export class AI {
     this.decideTimer = rand(0.06, 0.14);
     const opp = this.opportunity(s, d);
     let need = 1 - 0.3 * (this.pers.aggr * L.aggression - 0.8);
+    if (STAMINA.on && this.foe.stamina.level > 0) need -= this.foe.stamina.exhausted ? 0.45 : 0.2;
     // 겁먹으면 확실한 순간(헛친 뒤·쓰러진 상대)에만 들어간다
     if (opp.kind !== 'recover' && opp.kind !== 'finish') need += this.fear * 0.7;
     const reachOut = this.chasing ? 1.0 : 0.4; // 빈손 상대는 조금 멀어도 뛰어들며 친다
@@ -944,7 +963,7 @@ export class AI {
   // ───────────────────────── 공격 ─────────────────────────
   /** 공격 시작. why: 어떤 기회였나 (recover/stepin/finish/patience/counter/...) */
   startAttack(tech, why, opt = {}) {
-    if (!tech || !this.me.armed) return false; // 칼이 없으면 칠 수 없다
+    if (!tech || !this.me.armed || this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
     if (this.secretRun && !opt.secret) this.secretAbort(); // 비기가 아닌 공격이 시작되면 비기는 끝 (보통은 걸쇠로 오지 않는다)
     if (!opt.chain && !opt.secret) this.restBefore = this.sense.t - this.lastAtkT; // 중국 연환삼격: 이번 칼 앞에 쉰 시간
     this.atkClash = false;
@@ -1215,6 +1234,7 @@ export class AI {
 
   startStrike() {
     const t = this.tech;
+    this.me.stamina.attack(t.kind === 'thrust' ? 'thrust' : 'cut');
     this.phase = 'strike';
     this.path.length = 0;
     this.strikeCue(t); // 기술 알림 (고유 동작 — 칼이 실제로 나가는 순간)
@@ -1917,6 +1937,7 @@ export class AI {
 
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
   secretGo(S, ctx = {}) {
+    if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
     const D = S.do;
     const run = { S, stage: 'strike', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
     const opt = { noFeint: true, fastChamber: true, noPending: true, secret: true };
@@ -2028,6 +2049,7 @@ export class AI {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
       return false;
     }
+    this.me.stamina.secret();
     this.secretStat(S).fired++;
     this.binds?.reset(); // 이베리아: 비기를 내면 맺힘 셈 0
     this.setTechCue(S.nameKo ?? S.name, 'secret');
@@ -2536,7 +2558,7 @@ export class AI {
     const dx = tx - off.x;
     const dy = ty - off.y;
     const dd = Math.hypot(dx, dy);
-    const step = this.handSpeed * dt;
+    const step = this.handSpeed * dt * (this.mode === 'attack' || this.mode === 'secret' ? this.me.stamina.speed : 1);
     if (dd > step) {
       off.x += (dx / dd) * step;
       off.y += (dy / dd) * step;

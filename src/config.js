@@ -11,6 +11,28 @@ export const PHYSICS = {
   maxStepsPerFrame: 6, // 프레임이 밀렸을 때 따라잡기 위한 최대 스텝 수
 };
 
+// 기력(스태미너) — 설계 docs/design/stamina_2026-10-15.md (사장님 결정 §0) · 구현 샛별 저장소(c8e2bdaf … 577f4d53) · 들여온 기록 docs/strike/stamina_import_2026-10-15.md.
+//  계산은 src/stamina.js(사람·AI 같은 장부 — 회복만 사람 21 · AI 15), 머리 위 막대 src/stamina_hud.js. 모든 시간은 물리(게임) 시간.
+//  on: true = 켬(기본) · false = 기력 없음(지금 본판 그대로 — 관문 바이트 같음). 주소 `?stamina=0` = 끔(main.js). 시뮬은 with_config STAMINA.on=false
+//  범위 100 … 0 … −50(탈진) · 0 아래 이동·공격 × 0.7 · −30 아래 × 0.5 — 사장님 결정(배율 0.7 · 0.5 는 stamina.js speed) · 되돌림 +15 · −15 는 설계 시작값(stamina.js stages)
+export const STAMINA = {
+  on: true, max: 100, floor: -50,
+  // 비용: 베기 12 · 찌르기 7 · 막아 받기 3(상대 공격 한 번에 한 번) — × 무게 · 비기 35 · 첫 걸음 박차기 12(우리 본판 gait.js fastBegin — 독일 뒤 · 이베리아 옆) — 무게 없음.
+  //  shotCost: 권총 한 발 2 × 무게(샛별 저장소 첫 판부터 — 설계안에 없음, 사장님 확인 전)
+  cutCost: 12, thrustCost: 7, blockCost: 3, secretCost: 35, pushCost: 12, shotCost: 2,
+  clinchPerSecond: 10, // 붙어 밀고 버티는 동안(밀치기 누르기 + 팔·칼 닿음) 두 몸 각각 초당 10 · 회복 멈춤(샛별 저장소 ba14a6f8 — 설계안에 없음, 사장님 확인 전)
+  // 사람 긋기 청구(샛별 저장소 f933bc07): 끊김 0.12 s 넘으면 새 긋기(설계안은 고유 동작의 onsetQuiet 0.06) · 손이 0.06 m 넘게 움직여야 · 겨눔 가운데 0.22 m 를 가르는 긋기는 바로 확정
+  strokeQuiet: 0.12, strokeTravel: 0.06, strokeCenter: 0.22,
+  weaponReferenceMass: 1.6, // 무게 = √(처음 쥔 칼 질량 ÷ 1.6 kg) 0.75 ~ 1.5 — 칼이 부러져도 처음 질량(사장님 결정)
+  // 걷기: 골반 수평 이동 0.62 m 마다 보통 1.4 · 동방 0.7 · 일본 2.1(사장님 결정 §0 15 · 16 — 유파 열쇠 swordArt.tradition · docs/strike/school_kit_map.md 보법 칸) · 한 스텝 거리 상한 3 m/s(튐 막기)
+  stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
+  // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전) · 막기 유지 중엔 멈춤
+  recoverPerSecond: 15, playerRecoverPerSecond: 21, recoverDelay: 0.6,
+  exhaustSeconds: 2.5, exhaustRecover: 20, // 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 초당 20 · 끝에서 0(지침 단계)으로(설계 시작값 — 사장님 확인 전)
+  tiredPower: 0.49, severePower: 0.25, // 지침·심한 지침의 팔·손목 힘 배율(안쪽 값 — 칼끝 빠르기를 0.7 · 0.5 가까이로 맞추려던 시작값, 보정 끝나지 않음 — 사장님 확인 전)
+  aiRestAt: 20, aiAggressiveRestAt: -10, aiResumeAt: 35, // AI: 20 아래(공격적 기질 −10 아래) 새 공격 멈추고 물러남 · 35 에서 다시(되돌림 35 는 샛별 저장소 값 — 사장님 확인 전)
+};
+
 export const ARENA = {
   radius: 6.5, // 원형 경기장 반지름 (대리석 경계 테두리 위치)
   startGap: 5.6, // 시작할 때 두 검투사 사이 거리. 사장님 9/30 "멀리 떨어트려 맵을 보게"(4.2 → 7.0) → 09:10 "너무 떨어져 있어, 조금만 붙이자, 그래도 초기보다는 멀게"(→ 5.6, 롱소드 닿는 거리 밖 3.6 m)
