@@ -8,6 +8,8 @@ import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
 import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode·vital·plateNeck (주소 ?finishEntry · ?finishMode · ?vital · ?plateNeck)
 import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨눔 갈래 스위치 (10/12)
 import { Fighter, GROUND_GROUPS } from './fighter.js';
+import { createStaminaHud } from './stamina_hud.js';
+import { createScreenTint } from './screen_tint.js';
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
@@ -49,6 +51,9 @@ await RAPIER.init();
 // 테스트용 URL 파라미터: ?weapon=monohoshizao&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도(…?r2p=1?weapon=…) 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
+if (params.has('stamina')) CONFIG.STAMINA.on = params.get('stamina') !== '0'; // 기력(10/15 — 샛별 저장소 구현, docs/strike/stamina_import_2026-10-15.md): 기본 켬, `?stamina=0` = 기력 없음(막대·비용·지침·탈진 모두 없음 — 지금 본판 그대로)
+const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
+const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
 const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // 빼 둔 무기(에스톡·세이버·팔쉬온 — 사장님 10/13 23:2x)는 카드에 안 나온다
@@ -591,6 +596,7 @@ function newRound(weaponId) {
   const uniqueStage = uniqueStageFor(player.swordArt?.tradition, { test: testRoute.active, param: UNIQUE_STAGE_PARAM }).stage; // 손에 든 무기 유파의 숙련도 (본판 = 인장 수 · 테스트 경로 5 · ?uniqueStage)
   playerSecret = new PlayerSecretWatch(player, enemy, { locked: uniqueStage < CONFIG.UNIQUE_ASSIST.secretStage }); // 내 무기 유파의 비기 — 숙련도 5 에서만 (사장님 결정 10/13 23:1x '숙련도 5단계 … 거기서 비기를 배우게'). 그 전·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
   playerGuard = new PlayerParryGuard(player, enemy); // 막기 버튼 (누르는 동안만 손을 쥔다 — 권총·맨손이면 아무 일도 없다)
+  player.stamina.controller = playerGuard;
   playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStage }); // 고유 동작 강화: 손에 든 무기 유파의 숙련도(인장 수)만큼 열림 (단계 0 · 무유파 · 끔이면 붙지 않음)
   uniqueCueSeen = null;
   secretSlow = 0;
@@ -851,7 +857,6 @@ function updateDrips(f, dt) {
 // ── UI ──
 const $ = (id) => document.getElementById(id);
 const menu = $('menu');
-const hud = $('hud');
 const topButtons = $('topButtons');
 const toast = $('toast');
 const hint = $('hint');
@@ -1287,7 +1292,7 @@ async function startFight() {
   }
   $('rotate').classList.add('enabled');
   menu.classList.remove('show');
-  hud.classList.add('show');
+  screenTint.visible = true;
   topButtons.classList.add('show');
   closeDraw(); // 뽑기 도중에 "처음부터 다시"를 눌렀으면 그 카드는 치운다
   toast.classList.remove('show');
@@ -1567,25 +1572,15 @@ function updatePlayerEmotion(dt) {
   T.ax = T.x;
   T.ay = T.y;
   // 화면: 감정별 색이 세기만큼 (공포 푸른 회색·분노 붉음·집념 금빛)
-  const el = $('emotion');
-  if (el) {
-    el.dataset.emotion = playerEmo.emotion || '';
-    el.style.opacity = (playerEmo.emotion && EMO_ABILITY.enabled ? 0.25 + 0.5 * playerEmo.intensity : playerEmo.emotion ? 0.15 : 0).toFixed(3);
-  }
+  screenTint.setEmotion(playerEmo.emotion, playerEmo.emotion && EMO_ABILITY.enabled ? 0.25 + 0.5 * playerEmo.intensity : playerEmo.emotion ? 0.15 : 0);
 }
 
 // 체력 게이지 대신: 피를 흘리거나 아프면 화면 가장자리가 붉게 물든다 (하프 소드처럼 숫자 없음)
-//  값이 바뀔 때만 스타일을 쓴다 (같은 값을 매 프레임 쓰지 않게 — 보이는 것은 같다)
-const hudLast = { opacity: null };
 function updateHud() {
   const lost = THREE.MathUtils.clamp((1 - player.blood) / 0.5, 0, 1);
   const pulse = player.bleed > 0.002 ? 0.15 * (0.5 + 0.5 * Math.sin(performance.now() / 180)) : 0;
   const v = Math.min(1, lost * 0.85 + Math.min(1, player.pain) * 0.35 + pulse);
-  const opacity = v.toFixed(3);
-  if (opacity !== hudLast.opacity) $('vignette').style.opacity = hudLast.opacity = opacity;
-  // 10/13 사장님 '붉은 화면이 될 때 화면 오른쪽 일부 영역이 바뀌지 않고 그대로' — 의식이 흐려질 때 붉은 테두리 자체에 걸던 blur 필터를 뺐다.
-  //  그 필터는 뒤의 장면이 아니라 이 테두리만 흐리게 해 보이는 차이가 거의 없었고, 휴대폰 사파리에서 화면 전체 크기 층에 매 프레임 바뀌는 필터를 걸면
-  //  층의 일부 조각이 다시 그려지지 않는 문제가 알려져 있다(데스크톱 크로미엄에서는 재현 안 됨 — 사장님 기기 확인 필요)
+  screenTint.setBlood(v);
 }
 
 /** 판 끝 결과 글자: 결정타 슬로모션(slowMo)이 끝난 뒤에 한 번. 슬로모션 동안 참수·쓰러지는 장면을 글자가 가리지 않게 */
@@ -1802,6 +1797,10 @@ function paintGuard(key, name, tail) {
   guardName.replaceChildren(b, d);
 }
 function updateGuardName() {
+  if (player?.alive && player.stamina.exhausted) {
+    if (guardShown !== 'exhausted') paintGuard('exhausted', '탈진', '숨 고르기 · 이동·공격·막기 불가');
+    return;
+  }
   // 막기 버튼을 누르는 동안: ① 자세 칸에 지금 잡은 막기 자세 이름 (첫 줄 유파 이름 · 둘째 줄 원어 · 막기 / 막기 기다림). 자리가 바뀔 때마다 바꿔 끼운다
   if (playerGuard?.active && player.alive) {
     const key = `parry:${playerGuard.mode}:${playerGuard.line}`;
@@ -2028,15 +2027,18 @@ function frame(now) {
   if (state === 'fight' && player) {
     // 손 목표 갱신 (입력 → 플레이어)
     const d = input.consumeHandDelta();
+    const exhausted = player.stamina.exhausted;
+    if (exhausted) { d.x = 0; d.y = 0; }
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
     const inScale = hitStop > 0 ? 0.25 : 1;
     // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust). 권총은 손가락이 닿는 순간 쏜다 (쏘는 타이밍이 실력이라 뗄 때까지 늦추지 않는다)
     input.tapOnDown = !!player.weapon?.gun;
     let taps = input.consumeTaps();
+    if (exhausted) taps = 0;
     // 플레이어 비기 (10/9 23:5x): 창이 열려 있을 때 공격 입력(톡 = 찌르기, 휘두르기만큼 빠른 끌기 = 베기)이 오면 그 입력 대신 비기 완벽 실행.
     //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 실행 동안 내 것, 경직 동안은 안 듣는다 (사장님 10/10 20:5x '잠깐 아예 못 움직이게' — 칼은 skill.js holdStiff 가 멈춰 둔다)
     const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
-    let secBusy = !!player.skill.secretPhase;
+    let secBusy = exhausted || !!player.skill.secretPhase;
     // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
     const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
     if ((playerSecret?.open || gilReady) && !secBusy && player.alive && (taps > 0 || swipe)) {
@@ -2079,7 +2081,7 @@ function frame(now) {
     watchMudNotice(); // 잠든 습지: 진흙을 처음 밟으면 알림 줄 한 번 (다른 무대는 배율 1 이라 안 뜬다)
     const m = input.move;
     const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
-    const feet = player.alive && player.skill.secretPhase !== 'stiff'; // 비기 경직: 스틱이 안 듣는다 (걸음·근접 밀치기 없음 — 몸은 물리대로)
+    const feet = player.alive && !exhausted && player.skill.secretPhase !== 'stiff'; // 비기 경직: 스틱이 안 듣는다 (걸음·근접 밀치기 없음 — 몸은 물리대로)
     player.move.set(feet ? m.x * emv : 0, feet ? m.y * emv : 0);
     player.stickX = feet ? m.x : 0; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     player.stickY = feet ? m.y : 0;
@@ -2181,11 +2183,14 @@ function frame(now) {
     if (roundOver) tickDebris(dt * 0.5);
   }
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
+  staminaHud.update([player, enemy], camera, state === 'fight' && !roundOver);
+  screenTint.update(dt);
   let renderMs = 0;
   if (paint) {
     fighterLight.update(fighterMeshes);
     const renderT0 = perf ? performance.now() : 0;
     renderer.render(scene, camera);
+    screenTint.render(renderer);
     renderMs = perf ? performance.now() - renderT0 : 0;
   } else camera.updateMatrixWorld(); // 그리기가 해 주던 카메라 행렬 갱신 — 소리 좌우(sound._where)가 읽는다
   if (perf) perf.frame(now, frameMs, physMs, renderMs, physSteps, capped, simWant, simGot, paint);
@@ -2271,6 +2276,7 @@ window.game = {
   freeCam: false,
   renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
   renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 60 fps 제한' (game.settings.fpsCap)
+  screenTint,
   // 배경: game.stage 로 지금 배경·짓는 시간 확인, game.setStage('castle') 로 바로 바꿔 보기 (싸우는 중이면 잠깐 멈칫한다)
   get stage() {
     return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
