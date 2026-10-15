@@ -450,6 +450,7 @@ export class Gait {
           this.fastAccent = RH.accent ?? true;
           this.fastAcc = RH.accel ?? 1;
           this.fastTimeOnly = !!RH.timeOnly;
+          this.fastSpeedMul = RH.speedMul ?? 1; // timeOnly 일 때 몸 빠르기 배율(보폭 + 빠르기 결합 — 10/15 22:5x)
         }
       } else if (RH) {
         const fast = this.rhyN >= RH.every && vb * Math.sign(wf) > -(RH.brake ?? Infinity);
@@ -1009,8 +1010,9 @@ export class Gait {
     // 빠른 걸음 몸 빠르기(10/15 — 박자 걸음): 가려는 속도 ×fastK. 발 박자도 같은 배(위 sT)라 한 걸음 길이는 그대로, 시간만 ÷fastK.
     //  몸의 일이라 플레이어·AI 같이 — 이베리아 옆 빠르기(P.sideMul, 위 처음)와 같은 결이되 follow·박자 판단(speedF·cad) 뒤에 둔다(빠른 걸음이 follow 를 끄거나 박자를 두 번 올리지 않게).
     //  아래 reachSlow 는 그대로 건다(뒤에 남은 발이 닿게). 보통 걸음은 셈하지 않는다
-    if (this.fastK > 1 && !this.fastTimeOnly) {
-      if (this.fastFore) want.addScaledVector(fwd, (want.x * fwd.x + want.z * fwd.z) * (this.fastK - 1)); // 첫 걸음 박차기 비스듬히 뒤(이베리아 아님): 앞뒤 몫만
+    if (this.fastK > 1 && (!this.fastTimeOnly || this.fastSpeedMul > 1)) {
+      if (this.fastTimeOnly) want.multiplyScalar(this.fastSpeedMul); // 이탈리아 보폭 박자: 몸은 speedMul, 박자는 fastK(mul)
+      else if (this.fastFore) want.addScaledVector(fwd, (want.x * fwd.x + want.z * fwd.z) * (this.fastK - 1)); // 첫 걸음 박차기 비스듬히 뒤(이베리아 아님): 앞뒤 몫만
       else want.multiplyScalar(this.fastK);
     }
     // 한 발로 서 있는데 몸이 그 발에서 너무 멀어지면(다리가 곧 닿지 않는다) 내딛는 발이 닿을 때까지 덜 나간다

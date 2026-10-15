@@ -359,8 +359,11 @@ const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`?itRhythm=4+2` · `3+2
 //    보폭 규칙 계수로 짧은 디딤 0.8(0.50 m) · 긴 디딤 1.1(0.68 m): 이탈리아 바탕 보폭을 긴 디딤(strideK 1.1)으로 두고 짧은 디딤은 발 박자 × (1.1 ÷ 0.8 = 1.375) — 같은 몸 빠르기에서 간격이 짧으면
 //    보폭이 짧다. 고른 짝걸음 보폭 상한(ITALIAN_PAIR_EVEN.stride)도 같은 비로(0.28 × 1.1 ÷ 0.7). 발소리 강조는 짧은 디딤(빠른 몫) 그대로. 시험값 — 사장님 확인 전.
 //    `?itStride=0` = 22:0x 판(속도 ×1.5 · 바탕 0.7) · `?itStride=0.75,1.1` 처럼 짧은·긴 계수를 손으로 — setItalianStride
-const ITALIAN_STRIDE = { short: 0.8, long: 1.1 };
-const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: ITALIAN_STRIDE.long / ITALIAN_STRIDE.short, timeOnly: true, shortFirst: true, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
+//   **10/15 22:5x 사장님** '별로 박자 감각이 안 느껴져 … 뭐가 제일 리듬감 있는가?' → 감독 권고 '보폭 차이 + 빠르기 결합': 짧은 디딤은 몸 빠르기도 × speed(1.3) —
+//    짧은 디딤 간격 = (short ÷ speed) ÷ long = 긴 디딤 간격의 0.56 배(보폭만일 때 0.73) · 짧은 짝에서 몸이 치고 나감 · 평균 빠르기 +11 %(옛 × 1.5 는 +20 %).
+//    발 박자 배율 mul = long × speed ÷ short · 몸 빠르기 배율 speedMul = speed(gait.js fastBegin · update — timeOnly 일 때 몸은 speedMul, 박자는 mul). `?itStride=a,b,c` = 짧은·긴 계수·짧은 디딤 빠르기
+const ITALIAN_STRIDE = { short: 0.8, long: 1.1, speed: 1.3 };
+const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, timeOnly: true, shortFirst: true, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
 //  ⓐ″ 독일 보법 '간격 잡기'의 빠른 디딤 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' — 10/15 18:0x 부터 '간격 잡기',
 //   AI 패시브 '따라 들어가기 (Nachreisen)'(GERMAN_PASSIVES)와 다른 것. 잡기 = config GAIT.deHold · gait.js holdTick — docs/strike/german_hold_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
 //   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —
@@ -1249,21 +1252,22 @@ export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: tr
  */
 /**
  * 이탈리아 보폭 박자 (10/15 22:1x 사장님 시험 — ITALIAN_STRIDE): '0' = 22:0x 판(박자 걸음 몸 빠르기·발 박자 ×1.5 · 바탕 보폭 계수 0.7 · 짝 보폭 0.28) ·
- *  'a,b' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수 — 기본 0.8,1.1). main.js `?itStride=` · `?itRhythm=` 보다 먼저 부른다
+ *  'a,b[,c]' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수) · 짧은 디딤 몸 빠르기 c(기본 0.8,1.1,1.3 — c 없으면 1 = 보폭만). main.js `?itStride=` · `?itRhythm=` 보다 먼저 부른다
  */
 export function setItalianStride(v) {
   const g = TRADITIONS.italian.gait;
   const R = g.rhythm;
   const s = String(v ?? '').trim();
   if (s === '0') {
-    Object.assign(R, { mul: ITALIAN_MUL, timeOnly: false, shortFirst: false });
+    Object.assign(R, { mul: ITALIAN_MUL, speedMul: undefined, timeOnly: false, shortFirst: false });
     g.strideK = 0.7;
     g.even.pair.stride = 0.28;
     return true;
   }
-  const m = s.match(/^(\d*\.?\d+)\s*,\s*(\d*\.?\d+)$/);
-  if (!m || !(+m[1] > 0) || !(+m[2] > +m[1])) return false;
-  Object.assign(R, { mul: +m[2] / +m[1], timeOnly: true, shortFirst: true });
+  const m = s.match(/^(\d*\.?\d+)\s*,\s*(\d*\.?\d+)(?:\s*,\s*(\d*\.?\d+))?$/);
+  const c = m?.[3] ? +m[3] : 1; // 짧은 디딤 몸 빠르기 배율(없으면 1 = 보폭만)
+  if (!m || !(+m[1] > 0) || !(+m[2] >= +m[1]) || !(c >= 1) || !((+m[2] * c) / +m[1] > 1)) return false;
+  Object.assign(R, { mul: (+m[2] * c) / +m[1], speedMul: c, timeOnly: true, shortFirst: true });
   g.strideK = +m[2];
   g.even.pair.stride = (0.28 * +m[2]) / 0.7;
   return true;
