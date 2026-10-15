@@ -701,7 +701,14 @@ export class Gait {
         // 옆 박차기(옆·비스듬히 옆 — 옆 몫이 뒤 몫보다 큼)는 유파 걸음 칸 burstSide(이베리아)만(10/15 15:1x 사장님 '옆으로 박차기는 이베리아 유파만 사용하게 바꿔' — §8).
         //  다른 유파는 뒤 몫이 옆 몫 이상일 때만 건다 — 비스듬히 뒤면 몸 빠르기의 앞뒤 몫만 빠르게(foreOnly — 옆 몫은 보통 빠르기: fastBegin · update ③ 뒤 · burstAhead · 세게 멈춤 쪽).
         //  스틱이 곧장 뒤(옆 몫 0)면 전과 같은 길
-        if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
+        //  박차기는 독일 보법(10/15 20:4x 사장님 '박차기는 독일 보법으로 넣어' — GAIT.burstDe · docs/strike/step_burst_2026-10-15.md §10): 뒤(비스듬히 뒤 — 뒤 몫 ≥ 옆 몫) 박차기는
+        //   내 무기 유파가 독일(swordArt.tradition — 독일은 유파 걸음 칸이 없어 무기 유파를 바로 읽음)일 때만 · 옆(비스듬히 옆) 박차기는 burstSide(이베리아)만 그대로 →
+        //   이베리아는 옆만(뒤 박차기 없음) · 일본·동방·이탈리아·무유파는 박차기 없음. 끄면(0) 아래 지금 판 그대로(바이트 같음)
+        if (GAIT.burstDe) {
+          if (side) {
+            if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
+          } else if (mv.y < 0 && f.swordArt?.tradition === 'german') this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
+        } else if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
         else if (!side && mv.y < 0) this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
       }
     }

@@ -3,6 +3,8 @@
 //  상대(AI 판단 끔)는 제자리에 세우고 둘 다 상처를 끈다(걸음·물리 그대로). 화면 왼쪽 위 글은 이 도구가 붙인 설명(게임 화면 글 아님). 콘솔 오류를 센다.
 //  이탈리아(레이피어 — 박차기 받지 않는 유파) 한 번: 켬·끔 같아야 한다.
 //  10/15 15:1x 옆 박차기는 이베리아만(문서 §8): 롱소드 옆(D)은 이제 보통 첫 걸음(fastK 1) · 츠바이핸더(이베리아) 켬 한 번 — 옆도 박차기.
+//  10/15 20:4x 박차기는 독일 보법(문서 §10 — GAIT.burstDe): 기본 판 묶음(SBP_CASES=de)은 롱소드(독일 — 뒤만) · 우치가타나 · 청강검(없음) · 츠바이핸더(옆만) · 츠바이핸더 `&burstDe=0`(지금 판 — 뒤도) ·
+//   전 묶음은 SBP_CASES=old. 사진은 롱소드 판만(출력 폴더 — 저장소에 넣지 않음)
 //  주소에 openSweep=0(9/30 판 시작 — 정지 2 s): 첫 판 무대 훑기(3.3 게임 초) 동안은 발이 묶여 '두 발로 선' 때 누른 키가 먹지 않는다
 //  10/15 15:2x 박차기 발소리 강조(문서 §9): 누른 뒤 1.2 s 동안 게임이 부른 발소리(game.sound.footstep — 소리가 꺼져 있어도 부름은 남음)와 그 강조 배율,
 //   플레이어 발 디딤(gait.touchdown)을 적는다 — 강조가 박찬 발 디딤에만 나나 (상대는 제자리라 발소리는 거의 플레이어 것 — 상대 디딤 수도 적음)
@@ -172,14 +174,26 @@ async function press(page, key, label, shot) {
   }, tPush);
 }
 
+// 판 묶음 (SBP_CASES): de(기본 — 10/15 20:4x 박차기는 독일 보법, 문서 §10: 롱소드(독일) 뒤만 박참 · 우치가타나(일본)·청강검(동방) 없음 · 츠바이핸더(이베리아) 옆만 ·
+//  `&burstDe=0` = 지금 판 — 츠바이핸더 뒤도 박참) · old(§8·§9 판 — 롱소드 켬·끔 · 레이피어 켬·끔 · 츠바이핸더)
+const CASES = {
+  de: [
+    ['longsword', '', '롱소드(독일) 켬'],
+    ['uchigatana', '', '우치가타나(일본) 켬'],
+    ['qinggang', '', '청강검(동방) 켬'],
+    ['zweihander', '', '츠바이핸더(이베리아) 켬'],
+    ['zweihander', '&burstDe=0', '츠바이핸더(이베리아) burstDe=0'],
+  ],
+  old: [
+    ['longsword', '', '롱소드 켬'],
+    ['longsword', '&stepBurst=0', '롱소드 끔'],
+    ['rapier', '', '레이피어(이탈리아) 켬'],
+    ['rapier', '&stepBurst=0', '레이피어(이탈리아) 끔'],
+    ['zweihander', '', '츠바이핸더(이베리아) 켬'],
+  ],
+};
 const out = [];
-for (const [weapon, extra, nm] of [
-  ['longsword', '', '롱소드 켬'],
-  ['longsword', '&stepBurst=0', '롱소드 끔'],
-  ['rapier', '', '레이피어(이탈리아) 켬'],
-  ['rapier', '&stepBurst=0', '레이피어(이탈리아) 끔'],
-  ['zweihander', '', '츠바이핸더(이베리아) 켬'],
-]) {
+for (const [weapon, extra, nm] of CASES[process.env.SBP_CASES || 'de']) {
   const page = await open(weapon, extra);
   const tag = `${weapon}${extra ? '_off' : '_on'}`;
   const back = await press(page, 'KeyS', `${nm} · 뒤(S) 누른 뒤 0.3 s`, weapon === 'longsword' ? `burst_${tag}_back` : null);
