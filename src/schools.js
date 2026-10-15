@@ -341,7 +341,10 @@ const ITALIAN_RHYTHM = { every: 3, mul: 1.5, idle: 0.7, brake: 0.2, accent: FAST
 //   독일 유파 몸만(유파 칸이 아니라 TRADITIONS.german 에 — 독일 걸음 칸이 없어야 지금 걸음 그대로라서). 스위치 GAIT.deChase(`?deChase=0` 끔).
 //   두 걸음 · ×1.5 · 헛침만 = 사장님 결정 10/15, window 0.6 s · brake 0.2 · accel 1.5 는 사장님 확인 전 (확인표 1512~)
 const GERMAN_CHASE = { window: 0.6, steps: 2, mul: 1.5, brake: 0.2, accel: 1.5, accent: FAST_ACCENT };
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 } };
+//  burst: false — 첫 걸음 박차기(10/15 바탕 걸음, config GAIT.stepBurst · docs/strike/step_burst_2026-10-15.md)를 이 유파는 받지 않는다(gait.js 가 gaitParams 로 읽음).
+//   서 있다가 뒤로 떼는 첫 걸음이 박차기이면서 박자 걸음 첫 디딤이라 '느·느·느·느·빠·빠'가 '빠·느·…'로 흐트러진다(사장님 10/15 13:3x 걱정) — 감독 권고 2안, 사장님 확인 전 (확인표 1580~).
+//   지우면(또는 true) 이탈리아도 박차기를 받는다 — 다른 유파는 칸이 없어 받는다
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 } };
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
 //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)

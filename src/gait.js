@@ -174,6 +174,9 @@ export class Gait {
     this.rhyIdle = 0;
     this.rhyTrail = false;
     this.chase = null;
+    // 첫 걸음 박차기(10/15 — GAIT.stepBurst): burst = 서 있다가 뒤·옆으로 걷기 시작한 순간 걸고(update) 첫 걸음을 뗄 때 쓴다(fastBegin) — { fore, side 스틱 방향 부호 · lat 옆 몫 비율 } ·
+    //  burstLeg = 그 걸음의 발(디딜 자리를 박찬 가속으로 내다봄 — burstAhead) · burstBrake = 박찬 쪽 단위 벡터(몸이 따라잡을 때까지 가속 한도 그대로 — 세게 멈춤)
+    this.burst = this.burstLeg = this.burstBrake = null;
   }
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
@@ -220,12 +223,13 @@ export class Gait {
     this.prevHead = this.f.heading;
     this.headRate = 0;
     this.resetRates();
-    // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다(따라 들어가기 받을 창도 버림)
+    // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다(따라 들어가기 받을 창·박차기도 버림)
     this.fastK = 1;
     this.rhyN = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
     this.chase = null;
+    this.burst = this.burstLeg = this.burstBrake = null;
   }
 
   exit() {
@@ -233,6 +237,7 @@ export class Gait {
     this.fastK = 1;
     this.rhyN = 0;
     this.chase = null;
+    this.burst = this.burstLeg = this.burstBrake = null;
     const J = this.f.jointByName;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
@@ -355,14 +360,68 @@ export class Gait {
       }
       this.fastK = k;
       this.fastDir = Math.sign(wf);
+      this.fastSide = 0;
       this.rhyTrail = !!PR; // 짝걸음: 이 짝의 따라붙는 발 하나는 같은 걸음
     } else if (PR && kind === 'walk' && this.pairStep === 'trail' && this.rhyTrail) this.rhyTrail = false;
     else {
       this.fastK = 1;
       this.rhyTrail = false;
     }
+    // 첫 걸음 박차기 (10/15 — GAIT.stepBurst, update 의 걷기 시작에서 건 this.burst): 걷기 시작 뒤 처음 뗀 걸음이 걷는 걸음(walk·catch — 짝걸음은 이끄는 발로 여는 한 짝)이면
+    //  그 걸음을 빠른 걸음으로 — 몸 빠르기·발 박자 × fastK · 가속 한도 × burstAccel · 발소리 강조 없음. 박자 걸음 셈은 위에서 그대로(이 걸음도 센다), 배율만 덮는다.
+    //  fastK = 절대 목표 빠르기 ÷ 그 쪽 걷는 빠르기(뒤 burstBackV ÷ (moveSpeed × backFactor) · 옆 burstSideV ÷ (moveSpeed × sideFactor) — 스틱의 옆 몫 비율 lat 로 섞음, 1 아래로는 안 내림)
+    //  끝: 다음 걸음을 뗄 때(위 가지들이 fastK 를 다시 정함 — 이어 걷는 걸음은 제 빠르기) · 스틱이 거꾸로 가면 · 멈추면(update). 첫 걸음이 기술 걸음이면 박차기는 버린다
+    const B = this.burst;
+    if (B) {
+      this.burst = null;
+      if ((kind === 'walk' || kind === 'catch') && (!PR || this.pairStep === 'lead')) {
+        const kB = GAIT.burstBackV / (GAIT.moveSpeed * GAIT.backFactor);
+        const kS = GAIT.burstSideV / (GAIT.moveSpeed * GAIT.sideFactor * (this.P.sideMul || 1)); // 이베리아 옆 빠르기(P.sideMul × 1.3)도 박찬 걸음은 같은 절대 목표 — 걷는 옆걸음만 빠르다
+        this.fastK = Math.max(1, kB + (kS - kB) * B.lat);
+        this.fastAcc = GAIT.burstAccel;
+        this.fastAccent = null;
+        this.fastDir = B.side ? 0 : B.fore;
+        this.fastSide = B.side;
+        this.rhyTrail = !!PR;
+        this.burstStep = true; // 부른 쪽(update ③)이 이 걸음의 발을 burstLeg 로 적는다
+        // 발 뜬 시간은 절대값 burstT(그 걸음 제 시간보다 길게는 안 함) — 몸 빠르기 배율로 나누면(÷ fastK) 걸음이 너무 짧아(0.15 s) 몸이 박찬 빠르기에 닿기 전에 걸음이 끝난다
+        return Math.min(Tstep, GAIT.burstT);
+      }
+    }
     // 지나 딛기는 이 걸음 시간을 새 배율로 (Tsw 는 지난 배율로 셈했다 — 짝걸음 발 뜬 시간·기술 걸음·끌어붙임·자세 고치기는 제 시간이라 그대로)
     return this.fastK !== k0 && !PR && (kind === 'walk' || kind === 'catch') ? (Tstep * k0) / this.fastK : Tstep;
+  }
+
+  /**
+   * 첫 걸음 박차기 발(burstLeg)의 디딜 자리 셈(target): 남은 시간 remain 동안 몸이 가려는 속도 × fastK 쪽으로 박찬 가속 한도(maxAccel × burstAccel)로 빨라진다(느려진다)고 보고
+   *  디딜 때의 몸 자리(px·pz)와 몸 빠르기(x·z)를 내다본다 — 지금 빠르기(vf)로만 보면 아직 거의 서 있는 몸이라 발이 몸 밑에 짧게 떨어지고, 박찬 몸이 그 발을 지나친다
+   *  (놓으면 '가만히 서기' 무게중심 되돌림이 몸을 도로 끌어온다). 박찬 쪽과 수직인 몫은 지금 빠르기 그대로. 디딜 자리 식(Raibert)은 그대로 이 값을 쓴다
+   */
+  burstAhead(p, want, remain) {
+    const v = this.vf;
+    const o = _ba;
+    const w = Math.hypot(want.x, want.z);
+    if (w < 1e-6) {
+      o.x = v.x;
+      o.z = v.z;
+      o.px = p.x + v.x * remain;
+      o.pz = p.z + v.z * remain;
+      return o;
+    }
+    const ux = want.x / w;
+    const uz = want.z / w;
+    const W = w * this.fastK; // 박찬 목표 빠르기 (스틱 쪽)
+    const va = v.x * ux + v.z * uz;
+    const a = GAIT.maxAccel * GAIT.burstAccel;
+    const s = Math.sign(W - va);
+    const tr = Math.min(remain, Math.abs(W - va) / a); // 목표 빠르기에 닿는 데 걸리는 시간
+    const d = va * tr + 0.5 * s * a * tr * tr + W * (remain - tr);
+    const vEnd = va + s * a * tr;
+    o.x = v.x + (vEnd - va) * ux;
+    o.z = v.z + (vEnd - va) * uz;
+    o.px = p.x + (v.x - va * ux) * remain + ux * d;
+    o.pz = p.z + (v.z - va * uz) * remain + uz * d;
+    return o;
   }
 
   /** 몸을 turn(라디안)만큼 돌리려 할 때, 딛은 발에 대해 엉덩이가 비틀 수 있는 만큼으로 줄인다 */
@@ -482,6 +541,14 @@ export class Gait {
     //  걷기 ↔ 서기가 번갈아 바뀌면 발이 헛디딘다)
     this.speedF += (speed - this.speedF) * Math.min(1, dt * GAIT.walkFilter);
     const walkNow = this.walking ? this.speedF > GAIT.walkMin * 0.6 : this.speedF > GAIT.walkMin || speed > GAIT.walkMin * 2;
+    // 첫 걸음 박차기 (10/15 — GAIT.stepBurst · docs/strike/step_burst_2026-10-15.md): 서 있던 몸(걷지 않았고 골반이 burstStandV 보다 느림)이 지금 걷기 시작하고
+    //  스틱을 burstStick 넘게 뒤·옆(앞 몫 < burstFwdMax)으로 밀었으면 건다 → 첫 걸음을 뗄 때 fastBegin 이 쓴다. 지금은 플레이어만(AI 가 몰면 aiControlled) ·
+    //  유파 걸음 칸 burst: false(이탈리아 — 박자 걸음 첫 디딤과 겹침)는 받지 않음 · 박찬 몸이 아직 박찬 빠르기를 다 줄이기 전(burstBrake)엔 다시 걸지 않음 ·
+    //  판 시작 정지·마무리 중엔 걸지 않는다. 시간 값 없음 — 걷기 시작마다 한 번. 끄면(0) 셈하지 않는다
+    if (walkNow && !this.walking && GAIT.stepBurst && pl && this.P.burst !== false && mv && !this.burstBrake && !(f.finish?.amt > 0.5)) {
+      const m = mv.length();
+      if (m >= GAIT.burstStick && mv.y / m < GAIT.burstFwdMax && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV) this.burst = { fore: Math.sign(mv.y), side: Math.abs(mv.x) > Math.abs(mv.y) ? Math.sign(mv.x) : 0, lat: (mv.x * mv.x) / (m * m) };
+    }
     if (walkNow !== this.walking) {
       this.walking = walkNow;
       this.walkT = 0;
@@ -507,14 +574,20 @@ export class Gait {
     //  빠른 걸음 중 스틱 앞뒤가 뒤집히면(가려는 속도 앞 몫의 부호가 그 걸음과 반대) 거기서 끝 — 멈춰 서는 동안 서두르지 않게
     let RH = this.P.rhythm?.every > 0 ? this.P.rhythm : null;
     let CH = GAIT.deChase ? this.chase : null;
-    if (RH || CH || this.fastK > 1) {
+    //  첫 걸음 박차기(this.burst — 위 걷기 시작에서 건 것)도 같은 자리: 첫 걸음을 떼기 전에 멈추면 버린다 · 박찬 걸음 중 스틱이 거꾸로(옆 박차기는 옆으로 거꾸로) 가면 거기서 끝 ·
+    //  박찬 발이 떠 있고 스틱을 밀고 있는 동안은 '걷지 않음'으로 끝내지 않는다(느린 옆·뒤 출발은 걸러진 빠르기가 둘째 스텝에 걷기 문턱 아래로 한 번 깜빡인다 — 그 깜빡임에 박차기가 끊기지 않게)
+    if (RH || CH || this.burst || this.fastK > 1) {
       if (f.feetHeld || f.finish?.amt > 0.5) {
         this.rhyN = 0;
         this.rhyIdle = 0;
         this.fastK = 1;
         this.chase = null;
+        this.burst = this.burstLeg = this.burstBrake = null;
         RH = CH = null;
-      } else if (!walkNow || (this.fastK > 1 && (want.x * fwd.x + want.z * fwd.z) * this.fastDir < 0)) this.fastK = 1;
+      } else if ((!walkNow && !(this.burstLeg && mv?.lengthSq() > 0)) || (this.fastK > 1 && ((want.x * fwd.x + want.z * fwd.z) * this.fastDir < 0 || (this.fastSide && (want.x * rgt.x + want.z * rgt.z) * this.fastSide < 0)))) {
+        this.fastK = 1;
+        if (!walkNow) this.burst = null;
+      }
     }
     // 빠른 걸음 동안(fastK > 1) 발 박자를 fastK 배로: 한 걸음 시간 sT = stepT ÷ fastK (걸러진 박자 stepT 는 그대로 — 빠른 걸음이 끝나면 곧 제 박자).
     //  지나 딛기는 발 뜬 시간·두 발 디딤이 sT 로 줄고, 짝걸음(PR)은 한 짝 박자(2 × sT)를 짝 사이 쉼에서 줄인다 — 이끄는·따라붙는 발 뜬 시간은 그대로
@@ -640,10 +713,11 @@ export class Gait {
           else Tstep = Tsw * (PR.lead ?? 1);
           if (next) this.pairStep = this.trailStep ? 'trail' : 'lead';
         }
-      } else if (walkNow && !next && this.P.sideLead && speed > 0.05 && vLat / speed > (this.P.crossFrom ?? 0.7)) {
+      } else if (walkNow && !next && (this.P.sideLead || this.burst?.side) && speed > 0.05 && vLat / speed > (this.P.crossFrom ?? 0.7)) {
         // 옆으로 갈 땐 가는 쪽 발이 먼저, 다른 발이 따라붙는다(P.sideLead — 10/10 이베리아: 에텐하르트 1675 둥근 걸음 '그 발이 제 쪽으로' ·
         //  피게이레두 1651 복합 규칙 XII '오른발을 오른쪽으로 … 왼발이 따라붙는다', 확인표 621). 옆 몫 문턱은 둥근 걸음 발끝 틀기와 같은 P.crossFrom.
         //  방금 가는 쪽 발을 디뎠으면 다른 발(따라붙음), 아니면 가는 쪽 발 — 걷기 시작 첫 걸음도 가는 쪽 발(뒤따르는 발부터 들면 다리 꼬임 막기에 걸려 헛걸음)
+        //  첫 걸음 박차기(10/15)가 옆으로 걸린 첫 걸음도 이 규칙(모든 유파) — 뒤따르는 발부터 들면 그 발이 다른 발 옆에서 멈춰(0.1 m) 박찬 몸 밑에 디딜 발이 없다. 다음 걸음부터는 그 유파 규칙
         const dir = Math.sign(want.x * rgt.x + want.z * rgt.z);
         const lead = L.F.side * dir > 0 ? 'F' : 'B';
         next = this.lastTD === lead && this.lastTDKind === 'walk' && this.sinceTD < sT * 1.5 ? (lead === 'F' ? 'B' : 'F') : lead; // (멈춘 채 자세 고쳐 딛은 발은 '방금 디딘 이끄는 발'로 치지 않는다)
@@ -686,10 +760,17 @@ export class Gait {
       }
       if (next) {
         const l = L[next];
-        // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(따라 들어가기) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
-        if (RH || CH || this.fastK > 1) Tstep = this.fastBegin(RH, CH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep);
+        // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(따라 들어가기) 박차기를 쓰고(첫 걸음) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
+        if (RH || CH || this.burst || this.fastK > 1) Tstep = this.fastBegin(RH, CH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep);
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
+        if (this.burstStep) {
+          // 첫 걸음 박차기를 쓴 걸음: 그 발(디딜 자리를 박찬 가속으로 내다봄 — target) · 박찬 쪽(세게 멈춤 — 아래 burstBrake)
+          this.burstStep = false;
+          this.burstLeg = l;
+          const w = Math.hypot(want.x, want.z) || 1;
+          this.burstBrake = { x: want.x / w, z: want.z / w };
+        }
         if (this.fastK > 1 || l.fastStep) l.fastStep = this.fastK > 1 ? this.fastAccent : null; // 빠른 걸음의 발 = 발소리 강조 배율 { gain, rate } — 디딜 때 조금 또렷하게 (sound.js BodySounds). 보통 걸음은 null
         // follow 의 따라붙는 발·끌어붙임(draw)은 발을 더 낮게 (중국 체보·일본 스리아시 — P.dragLift, 없으면 그대로)
         if (this.P.dragLift != null && (kind === 'draw' || (kind === 'walk' && this.follow && this.trailStep))) l.lift = this.P.dragLift;
@@ -799,6 +880,13 @@ export class Gait {
         if (_s1.length() > 0.3) _s1.setLength(0.3);
         want.add(_s1);
       }
+    }
+
+    // 첫 걸음 박차기 뒤 세게 멈춤(burstBrake — 박찬 쪽 단위 벡터): 박찬 걸음이 끝난 뒤(fastK 1 — 다음 걸음·스틱 거꾸로·놓음)에도 몸이 박찬 쪽으로 가려는 속도보다 BRAKE_TOL 넘게 빠른 동안은
+    //  가속 한도 × burstAccel 그대로(fighter.js driveBalance) — 박찬 빠르기를 보통 가속 한도(3.2 m/s²)로 줄이면 몸이 0.3 m 넘게 더 흘러 발이 못 따라간다. 따라잡으면 끝 — 시간 값 없음
+    if (this.burstBrake && this.fastK <= 1) {
+      const bb = this.burstBrake;
+      if (this.vf.x * bb.x + this.vf.z * bb.z <= Math.max(0, want.x * bb.x + want.z * bb.z) + BRAKE_TOL) this.burstBrake = null;
     }
 
     // ⑥ 골반 높이: 딛은 다리가 닿는 높이 (무릎을 조금 굽힌 채)
@@ -1023,11 +1111,12 @@ export class Gait {
       l.yaw1 = this.guardYaw(l);
     } else if (this.follow) {
       // follow(유파 걸음): 몸이 닿을 곳(아래 walk 가지와 같은 Raibert 몫)을 가운데로 펜싱 자세 자리에 딛는다 — 걷는 동안에도 앞발이 앞, 두 발이 서로 지나가지 않는다
-      const v = this.vf;
+      //  (첫 걸음 박차기 발이면 몸 빠르기·디딜 때 자리를 박찬 가속으로 내다본다 — burstAhead)
+      const v = l === this.burstLeg ? this.burstAhead(p, want, remain) : this.vf;
       //  (짝걸음(P.pair)이면 한 발이 딛고 있는 시간이 한 짝(걸음 두 개) − 제 발 든 시간 — 몸이 그 가운데쯤 발 위를 지나게 그만큼 앞에 딛는다)
       const Tst = this.pairOn ? 2 * this.sT - l.T : this.sT * (1 + this.P.dsFrac);
-      const px = p.x + v.x * remain;
-      const pz = p.z + v.z * remain;
+      const px = l === this.burstLeg ? v.px : p.x + v.x * remain;
+      const pz = l === this.burstLeg ? v.pz : p.z + v.z * remain;
       const cx = px + want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
       const cz = pz + want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
       const h = this.headAhead();
@@ -1048,10 +1137,11 @@ export class Gait {
       }
     } else {
       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
-      const v = this.vf;
+      //  (첫 걸음 박차기 발이면 몸 빠르기·디딜 때 자리를 박찬 가속으로 내다본다 — burstAhead)
+      const v = l === this.burstLeg ? this.burstAhead(p, want, remain) : this.vf;
       const Tst = this.sT * (1 + this.P.dsFrac);
-      const px = p.x + v.x * remain;
-      const pz = p.z + v.z * remain;
+      const px = l === this.burstLeg ? v.px : p.x + v.x * remain;
+      const pz = l === this.burstLeg ? v.pz : p.z + v.z * remain;
       const ox = want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
       const oz = want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
       const wd = this.P.width;
@@ -1102,6 +1192,7 @@ export class Gait {
 
   touchdown(l, speed) {
     l.stance = true;
+    if (l === this.burstLeg) this.burstLeg = null; // 첫 걸음 박차기 발이 디딤 (세게 멈춤 burstBrake 는 몸이 따라잡을 때까지 — update)
     // 디딜 때의 무릎 굽힘 (허벅지와 정강이 사이 각도)
     const bt = this.f.bodies[l.thigh].rotation();
     const bs = this.f.bodies[l.shin].rotation();
@@ -1619,6 +1710,8 @@ export function setSupportFloor(world, collider) {
   SUPPORT_FLOOR.set(world, collider.handle);
 }
 const _p = { x: 0, y: 0, z: 0 };
+const _ba = { x: 0, z: 0, px: 0, pz: 0 }; // 첫 걸음 박차기 발 디딜 자리 셈(burstAhead) — 디딘 때 몸 빠르기·자리
+const BRAKE_TOL = 0.1; // 첫 걸음 박차기 뒤 세게 멈춤이 끝나는 빠르기 차(m/s): 몸이 박찬 쪽으로 가려는 속도보다 이만큼 안으로 느려지면 보통 가속 한도로 (확인표 1580~)
 // 지형 무대 발 틀·마찰용 (floorFrame · pinTerrainFoot · plantAt · toePivot — 지형 없으면 쓰지 않는다)
 const _floorNormal = new THREE.Vector3();
 const _floorFwd = new THREE.Vector3();
