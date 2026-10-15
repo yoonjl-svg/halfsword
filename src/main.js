@@ -124,9 +124,11 @@ if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = pa
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 if (params.has('strideRule')) CONFIG.GAIT.strideRule = +params.get('strideRule') ? 1 : 0; // 보폭 규칙(10/15 20:3x 사장님 — 유파 보폭 상한 0.62 × k · 박자 2.05 ÷ k, 최고 빠르기 같음 · docs/strike/stride_rule_2026-10-15.md): 기본 1, `?strideRule=0` = 옛 유파 값
 if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady') ? 1 : 0; // 일본 보법 버티기(10/15 — 흔들림 × 0.75, fighter.js swayScale): 기본 1, `?jpSteady=0` = 끔
-// 이탈리아 박자 걸음 셈(10/15 — schools.js ITALIAN_GAIT.rhythm · setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9): 기본 디딤 셈 2 + 2 · ×1.3(보통 디딤 둘 → 빠른 디딤 둘 — 사장님 10/15 15:1x),
+// 이탈리아 박자 걸음 셈(10/15 — schools.js ITALIAN_GAIT.rhythm · setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9 · §10): 기본 디딤 셈 2 + 2 · ×1.5(보통 디딤 둘 → 빠른 디딤 둘 — 사장님 10/15 15:1x 2 + 2 · 19:3x '50%로 해'),
+//  15:1x 판(×1.3) 비교 `?itRhythm=2+2x1.3`('N+MxK' = 배율 손으로) ·
 //  지난 판 비교(그때 ×1.5): `?itRhythm=4+2`(13:2x 판) · `?itRhythm=3+2` · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판 — 짝걸음 한 짝 = 한 걸음) · `?itRhythm=4` = 옛 짝 셈 4 + 1 · `?itRhythm=0` = 끔
 if (params.has('itRhythm')) setItalianRhythm(params.get('itRhythm'));
+if (params.has('itGait')) CONFIG.GAIT.itEven = params.get('itGait') === 'old' ? 0 : 1; // 이탈리아 고른 바탕 걸음(10/15 19:3x 사장님 '이탈리아 보법 자체가 이미 불균질' — 고른 짝걸음, docs/strike/italian_rhythm_2026-10-15.md §10): 기본 켬, `?itGait=old` = 옛 짝걸음('따·닥 + 쉼')
 if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 간격 잡기의 빠른 디딤(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기'): 기본 1, `?deChase=0` = 끔(잡기도 없음)
 if (params.has('deHold')) CONFIG.GAIT.deHold = +params.get('deHold') ? 1 : 0; // 독일 간격 잡기의 잡기(10/15 18:0x — 칼이 제대로 들어가는 거리 contact 에서 서고 0.6 s 앞 몫 0 · 스틱 놓았다 밀면 풀림 · 플레이어만, docs/strike/german_hold_2026-10-15.md): 기본 1, `?deHold=0` = 끔(빠른 디딤만 — 지금 판)
 if (params.has('cnLight')) CONFIG.GAIT.cnLight = +params.get('cnLight') ? 1 : 0; // 동방 보법 가벼운 발(10/15 18:3x — 발로 내는 가속 한도의 보통 걸음 몫 × 1.5, 최고 빠르기 그대로 · 사람·AI 같이, docs/strike/cn_light_feet_2026-10-15.md): 기본 1, `?cnLight=0` = 끔(지금 판)

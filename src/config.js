@@ -141,6 +141,7 @@ export const GAIT = {
   //  1 m/s 박자 cadence0 = 이 칸 cadence0(2.05) ÷ k (사람·AI 같이 — 플레이어 덮어쓰기 칸의 두 값도 이것으로) · 걷는 최고 빠르기(moveSpeed·backFactor·sideFactor)는 모든 유파 같음(손대지 않음).
   //  k = 이탈리아 0.7 · 일본 0.8 · 동방 0.9 · 독일 1.0(칸 없음) · 이베리아 1.2 (schools.js *_GAIT.strideK). 0 = 옛 유파 값(바이트 같음). `?strideRule=0`. 사장님 결정 10/15 20:3x (확인표 1700~)
   strideRule: 1,
+  itEven: 1, // 이탈리아 '고른 바탕 걸음' (10/15 사장님 '이탈리아 보법 자체가 이미 불균질 … 런지를 흉내낸건가? … 보폭을 조금 줄일까? 작게 빨리' — docs/strike/italian_rhythm_2026-10-15.md §10): 1 = schools.js ITALIAN_GAIT.even 을 덮음(고른 짝걸음 — 디딤 간격이 늘 한 걸음 시간 · 몸 박자 없음 · 짝 보폭 0.36 → 0.28), 0 = 옛 짝걸음('따·닥 + 쉼' — 바이트 같음). `?itGait=old` = 0. 사람·AI 같이 · 지나 딛기(멀리·빨리) 보폭·박자는 보폭 규칙(strideRule — 이탈리아 k 0.7)
   deChase: 1, // 독일 보법 '간격 잡기'의 빠른 디딤 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기', 10/15 18:0x 부터 '간격 잡기'): 1 = 상대 헛침 뒤 독일 유파 몸의 앞 두 걸음이 빠른 걸음(값 schools.js TRADITIONS.german.chase · gait.js foeWhiff·fastBegin), 0 = 끔(빠른 디딤도 잡기도 없음 — 전 판, 바이트 같음). `?deChase=0`
   // 독일 간격 잡기의 '잡기' (10/15 18:0x 사장님 승인 "'간격 잡기'로 네가 잡은 기준으로 테스트 해봐" — docs/strike/german_hold_2026-10-15.md): 받을 창이 열려 있거나 빠른 디딤 중에
   //  '지금 거리 − 세게 멈춤으로 서는 거리'가 내 무기 measure.contact(칼이 제대로 들어가는 거리 — 롱소드 1.57 m) 안이 되면 남은 빠른 디딤을 버리고 세게 멈춤(가속 한도 × burstAccel) ·

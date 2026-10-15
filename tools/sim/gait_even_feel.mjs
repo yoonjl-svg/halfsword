@@ -1,7 +1,7 @@
 // 걸음 고르기 계기 (10/15 — 이탈리아 보법 '고른 바탕 걸음 · 작게 빨리' docs/strike/italian_rhythm_2026-10-15.md §10 · 유파 보폭 규칙 docs/strike/stride_rule_2026-10-15.md): 플레이어 스틱 대본에서 디딤마다
 //  시각 · 간격 · 발(이끄는 = 다른 발보다 가는 쪽으로 앞에 딛음 / 따라붙는 = 뒤에 딛음) · 발이 옮긴 거리(뜬 자리 → 디딘 자리) · 몸이 간 거리(골반, 가는 쪽 몫) ·
 //  그 발을 떼기 전 두 발 디딤 시간(짝걸음이면 짝 사이 쉼) · catch · 일찍 디딤 · 빠른 디딤(박자 걸음) · 발소리(sound.js BodySounds 판정 흉내 — 발 몸체 0.09 m 위로 떴다가 0.06 m 아래로,
-//  0.12 s 안 두 번은 하나 · 강조 = 그 발 leg.fastStep)를 뽑고 '고르기'를 숫자로 — 무기(유파)·박자 걸음 갈래끼리 같은 표.
+//  0.12 s 안 두 번은 하나 · 강조 = 그 발 leg.fastStep — 이탈리아 고른 짝걸음은 게임처럼 걷는 디딤마다)를 뽑고 '고르기'를 숫자로 — 무기(유파)·박자 걸음 갈래끼리 같은 표.
 //  고르기 칸 (걷는 동안 — 처음 두 디딤은 출발 몫이라 뺌):
 //   간격 CV = 디딤 간격 표준편차 ÷ 평균 · 이끔→따름 ÷ 따름→이끔(a/b — 짝걸음 '따·닥'이면 작고 고른 걸음이면 1) · 옮긴 거리 CV · 이끄는 발 ÷ 따라붙는 발 옮긴 거리 ·
 //   몸 빠르기 CV = 골반 가는 쪽 빠르기(0.02 s 마다) 표준편차 ÷ 평균 · 거의 섬 몫 = 그 빠르기가 평균의 30 % 아래인 시간 몫(몸이 섰다가 튀어 나가는 꼴) ·
@@ -54,6 +54,7 @@ const SCRIPTS = {
   NU: { tap: true, name: '가까이 뒤 톡 0.2 s', seq: [[-1, 0.2], [0, 1.3]] },
 };
 const KEEP = +process.env.GEF_KEEP || 2.3; // 가까이 대본에서 상대가 지키는 가슴 거리 (GEF_KEEP)
+const RELEASE = 1.0; // 톡 아닌 대본 뒤 스틱을 놓는 시간 s (멈춤 거리)
 const APPROACH = +process.env.GEF_APPROACH || 0.5; // 가까이 대본 다가가는 스틱 (GEF_APPROACH — 쉬는 자세의 발 자리가 달라짐)
 
 let rec = null;
@@ -76,6 +77,11 @@ Gait.prototype.touchdown = function (l, speed) {
   rec.open[l.k] = null;
   const p = this.f.bodies.pelvis.translation();
   rec.tds.push({ t: rec.t, k: l.k, kind, early, x: l.plant.x, z: l.plant.z, ox: o.plant.x, oz: o.plant.z, b, px: p.x, pz: p.z, fast: !!(b && b.fastK > 1), follow: !!this.follow });
+  // 이탈리아 고른 짝걸음(P.pair.even): 게임 발소리는 걷는 디딤마다(sound.js BodySounds — gait leg.tdN) — 같은 발 0.08 s 안 두 번은 하나
+  if (this.P.pair?.even && (kind === 'walk' || kind === 'catch') && rec.t - (rec.sndT[l.k] ?? -9) > 0.08) {
+    rec.sounds.push({ t: rec.t, k: l.k, acc: !!l.fastStep });
+    rec.sndT[l.k] = rec.t;
+  }
 };
 
 function run(id, rhy, scn) {
@@ -112,6 +118,7 @@ function run(id, rhy, scn) {
       rec.samples.push({ t, v: v.x * rec.d.x + v.z * rec.d.z, vh: Math.hypot(v.x, v.z), y: pp.y, x: pp.x, z: pp.z });
     }
     for (const k of ['footF', 'footB']) {
+      if (g.P?.pair?.even) break; // 고른 짝걸음은 디딤 셈(위 touchdown) — 높이 판정 안 씀(게임과 같게)
       const y = P.bodies[k].translation().y;
       const ft = feet[k];
       if (y > 0.09) ft.up = true;
@@ -132,7 +139,7 @@ function run(id, rhy, scn) {
   else Object.assign(RH, RH0);
   const dir = Math.sign(S.seq[0][0]);
   P.forward(_f);
-  rec = { who: P, t, begins: [], tds: [], samples: [], sounds: [], open: { F: null, B: null }, d: { x: _f.x * dir, z: _f.z * dir } };
+  rec = { who: P, t, begins: [], tds: [], samples: [], sounds: [], sndT: {}, open: { F: null, B: null }, d: { x: _f.x * dir, z: _f.z * dir } };
   on = true;
   const t0 = t;
   const p0 = { ...P.bodies.pelvis.translation() };
@@ -141,11 +148,14 @@ function run(id, rhy, scn) {
     for (let i = 0, n = Math.round(dur / DT); i < n; i++) step(my);
     if (my !== 0) t1 = t;
   }
+  // 놓기(톡 아닌 대본): 스틱을 놓고 RELEASE s — 멈춤 거리·서는 때(놓은 뒤 골반 가는 쪽으로 더 간 거리 · 0.1 m/s 아래로 서는 때)
+  const pRel = { ...P.bodies.pelvis.translation() };
+  if (!S.tap) for (let i = 0, n = Math.round(RELEASE / DT); i < n; i++) step(0);
   const r = rec;
   rec = null;
   Object.assign(RH, RH0);
   const pEnd = P.bodies.pelvis.translation();
-  return { r, st, t0, t1, tEnd: t, p0, pEnd, d: r.d, tap: !!S.tap, rhy: { ...g.P.rhythm } };
+  return { r, st, t0, t1, tEnd: t, p0, pEnd, pRel, d: r.d, tap: !!S.tap, rhy: { ...g.P.rhythm } };
 }
 
 const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
@@ -221,8 +231,15 @@ function analyse(R) {
     const last = all.length ? all[all.length - 1].t - t0 : NaN;
     tap = { n: all.length, last, stop: stopS ? stopS.t - t0 : NaN, dist: along(R.p0.x, R.p0.z, R.pEnd.x, R.pEnd.z) };
   }
+  // 놓기: 놓은 뒤 더 간 거리 · 서는 때(놓은 때부터)
+  let rel = null;
+  if (!R.tap) {
+    const stopS = r.samples.find((s) => s.t > t1 + 0.02 && s.vh < 0.1);
+    rel = { dist: along(R.pRel.x, R.pRel.z, R.pEnd.x, R.pEnd.z), stop: stopS ? stopS.t - t1 : NaN };
+  }
   const sounds = r.sounds.filter((s) => s.t > t0 && s.t <= (R.tap ? R.tEnd : t1 + 0.05));
   return {
+    rel,
     rows,
     n: rows.length,
     rate,
@@ -279,7 +296,7 @@ const detail = [];
 const sumRows = [];
 if (!SUM) {
   out.push(`걸음 고르기 계기 · 플레이어 · 디딤 = walk·catch(톡은 settle 도) · 고르기 칸은 처음 두 디딤 뺌 · 가까이 = 상대가 가슴 ${KEEP} m 를 지킴`);
-  out.push('| 대본 | 무기 (유파) | 갈래 | 디딤 · 초당 | 간격 평균 s · CV | 이끔→따름 ÷ 따름→이끔 (a · b s) | 이끄는 디딤 몫 · follow 몫 · 꼴 바뀜 | 발이 옮긴 거리 m · CV · 이끔 ÷ 따름 | 몸이 한 디딤에 간 거리 m · CV | 몸 빠르기 m/s · CV · 거의 섬 몫 | 몸 앞뒤 출렁임 cm · 골반 높이 표준편차 cm | 짝 사이 쉼 s (최대) · 두 발 디딤 s | 보통 디딤 간격 CV · 빠름 ÷ 보통 (빠른 디딤) | 톡: 디딤 · 마지막 디딤 s · 서는 때 s · 간 거리 m | 넘어짐 · 붙잡기 반사 s · catch · 일찍 디딤 · 기술 걸음 | 발소리 (강조) |');
+  out.push('| 대본 | 무기 (유파) | 갈래 | 디딤 · 초당 | 간격 평균 s · CV | 이끔→따름 ÷ 따름→이끔 (a · b s) | 이끄는 디딤 몫 · follow 몫 · 꼴 바뀜 | 발이 옮긴 거리 m · CV · 이끔 ÷ 따름 | 몸이 한 디딤에 간 거리 m · CV | 몸 빠르기 m/s · CV · 거의 섬 몫 | 몸 앞뒤 출렁임 cm · 골반 높이 표준편차 cm | 짝 사이 쉼 s (최대) · 두 발 디딤 s | 보통 디딤 간격 CV · 빠름 ÷ 보통 (빠른 디딤) | 톡: 디딤 · 마지막 디딤 s · 서는 때 s · 간 거리 m / 그 밖: 놓은 뒤 서는 때 s · 더 간 거리 m | 넘어짐 · 붙잡기 반사 s · catch · 일찍 디딤 · 기술 걸음 | 발소리 (강조) |');
   out.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 }
 for (const scn of SCN) {
@@ -289,7 +306,7 @@ for (const scn of SCN) {
       const R = run(id, rhy, scn);
       const A = analyse(R);
       const lb = label(id, rhy);
-      const tapCol = A.tap ? `${A.tap.n} · ${f2(A.tap.last)} · ${f2(A.tap.stop)} · ${f2(A.tap.dist)}` : '';
+      const tapCol = A.tap ? `${A.tap.n} · ${f2(A.tap.last)} · ${f2(A.tap.stop)} · ${f2(A.tap.dist)}` : A.rel ? `놓기: 서는 때 ${f2(A.rel.stop)} · 더 간 ${f2(A.rel.dist)}` : '';
       const line = `| ${scn} ${SCRIPTS[scn].name} | ${id} (${schoolOf(id)}) | ${lb} | ${A.n} · ${f2(A.rate)} | ${f3(A.ivMean)} · ${f2(A.ivCV)} | ${f2(A.ab)} (${f2(A.abA)} · ${f2(A.abB)}) | ${pct(A.leadShare)} · ${pct(A.followShare)} · ${R.st.switches} | ${f3(A.trav)} · ${f2(A.travCV)} · ${f2(A.travLT)} | ${f3(A.body)} · ${f2(A.bodyCV)} | ${f2(A.vMean)} · ${f2(A.vCV)} · ${pct(A.vStop)} | ${(100 * A.surge).toFixed(1)} · ${(100 * A.yStd).toFixed(1)} | ${f2(A.rest)} (${f2(A.restMax)}) · ${f2(A.ds)} | ${A.nFast ? `${f2(A.ivNCV)} · ${f2(A.fastRatio)} (${A.nFast})` : `${f2(A.ivNCV)} · -`} | ${tapCol} | ${R.st.falls} · ${f2(R.st.levT)} · ${A.catches} · ${A.early}/${A.walkN} · ${A.req} | ${A.sounds} (${A.soundsAcc}) |`;
       if (SUM) sumRows.push({ scn, id, lb, A, R });
       else out.push(line);
