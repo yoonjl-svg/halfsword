@@ -5,17 +5,20 @@
 //  X 가 독일 유파면 따라 들어가기(10/15 — docs/strike/german_chase_2026-10-15.md)도: 상대 헛침 알림 받음(gait.foeWhiff) · 발동(빠른 걸음을 하나라도 뗀 받을 창) · 그 가운데 발동 뒤 1 s 안에
 //  X 가 공격을 시작한 수 — 끄고 견주려면 node tools/sim/with_config.mjs GAIT.deChase=0 fast_step_duel.mjs …
 //  재기만 — 물리·난수·AI 는 게임 그대로(begin·touchdown·startAttack·foeWhiff 를 감싸 읽기만), 판 하나는 결정적. 주기는 TRADITIONS.italian.gait.rhythm.every 를 바꿔 견줌
-//  실행: node tools/sim/fast_step_duel.mjs [X 무기 rapier] [상대 무기 longsword] [씨앗 수 3] [초 40] [주기들 0,3]
+//  10/15 디딤 셈(docs/strike/italian_rhythm_2026-10-15.md §8): 주기 칸은 setItalianRhythm 글 — '0' 끔 · 'N' 옛 짝 셈 N + 1 · 'N+M' 디딤 셈 N + M ·
+//   덧붙인 칸 '디딤': X 의 앞뒤 디딤(walk·catch 걸음 — 스틱 앞뒤 몫이 옆 몫 이상) 수 · 그중 빠른 디딤 몫 · 빠른 몫(이어진 빠른 디딤 묶음 = 발동) 수와 분당
+//  실행: node tools/sim/fast_step_duel.mjs [X 무기 rapier] [상대 무기 longsword] [씨앗 수 3] [초 40] [주기들 0,3,4+2]
 import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { Gait } from '../../src/gait.js';
-import { SCHOOLS, TRADITIONS, traditionOf } from '../../src/schools.js';
+import { SCHOOLS, TRADITIONS, traditionOf, setItalianRhythm } from '../../src/schools.js';
 import { getWeapon } from '../../src/weapons.js';
 
-const [xw = 'rapier', yw = 'longsword', nSeed = '3', secs = '40', everyArg = '0,3'] = process.argv.slice(2);
-const EVERY = everyArg.split(',').map(Number);
+const [xw = 'rapier', yw = 'longsword', nSeed = '3', secs = '40', everyArg = '0,3,4+2'] = process.argv.slice(2);
+const EVERY = everyArg.split(',');
 const RH = TRADITIONS.italian.gait.rhythm;
-const EVERY0 = RH.every;
+const RH0 = { ...RH };
+let foot = { n: 0, fast: 0, seg: 0, last: false }; // 앞뒤 디딤 · 빠른 디딤 · 빠른 몫(발동)
 let X = null;
 let fastSteps = 0;
 let fastAtk = 0;
@@ -32,6 +35,12 @@ let lastChase = null;
 const B0 = Gait.prototype.begin;
 Gait.prototype.begin = function (l, kind, T) {
   B0.call(this, l, kind, T);
+  if (this.f === X && (kind === 'walk' || (kind === 'catch' && this.walking)) && Math.abs(this.f.move.y) >= Math.abs(this.f.move.x)) {
+    foot.n++;
+    if (this.fastK > 1) foot.fast++;
+    if (this.fastK > 1 && !foot.last) foot.seg++;
+    foot.last = this.fastK > 1;
+  }
   if (this.f === X && this.fastK > 1 && (kind === 'walk' || kind === 'catch') && !(this.pairOn && this.pairStep === 'trail')) {
     fastSteps++;
     if (this.chaseOf && this.chaseOf !== lastChase) {
@@ -75,17 +84,18 @@ AI.prototype.startAttack = function (tech, why, opt) {
 
 const school = (w) => (SCHOOLS[w] ? w : 'longsword');
 console.log(`빠른 걸음 AI 판 · ${xw} AI 대 ${yw} AI · 씨앗 ${nSeed} × ${secs} s · mul ${RH.mul} · idle ${RH.idle} s`);
-console.log('| 주기 | 씨앗 | 빠른 걸음 (분당) | 그 걸음 중 공격 / 공격 | 넘어짐 | 붙잡기 반사 s (빠른 걸음 +0.5 s 안 · 다리 다친 뒤) | catch 디딤 | 일찍 디딤 (빠른 걸음 발) | 따라 들어가기: 헛침 알림 · 발동 (분당) · 발동 뒤 1 s 안 공격 | 끝 (X/상대) |');
-console.log('|---|---|---|---|---|---|---|---|---|---|');
+console.log('| 주기 | 씨앗 | 빠른 걸음 (분당) | 그 걸음 중 공격 / 공격 | 넘어짐 | 붙잡기 반사 s (빠른 걸음 +0.5 s 안 · 다리 다친 뒤) | catch 디딤 | 일찍 디딤 (빠른 걸음 발) | 따라 들어가기: 헛침 알림 · 발동 (분당) · 발동 뒤 1 s 안 공격 | 끝 (X/상대) | 디딤: 앞뒤 · 빠른 몫 · 발동(분당) |');
+console.log('|---|---|---|---|---|---|---|---|---|---|---|');
 const ITX = traditionOf(getWeapon(xw)) === 'italian'; // 주기 칸은 이탈리아 무기만 뜻이 있다 (아니면 '-')
 for (const every of EVERY) {
-  RH.every = every;
-  const lab = ITX ? (every ? `${every} + 1` : '끔') : '-';
-  const tot = { fast: 0, fastAtk: 0, atk: 0, falls: 0, lev: 0, levF: 0, levH: 0, catches: 0, early: 0, walkTD: 0, T: 0, whiffs: 0, chase: 0, chaseAtk: 0 };
+  setItalianRhythm(every);
+  const lab = ITX ? (/[+ ]/.test(every) ? `${every.replace(/\s*[+ ]\s*/, ' + ')} (디딤)` : +every ? `${every} + 1 (짝)` : '끔') : '-';
+  const tot = { fast: 0, fastAtk: 0, atk: 0, falls: 0, lev: 0, levF: 0, levH: 0, catches: 0, early: 0, walkTD: 0, T: 0, whiffs: 0, chase: 0, chaseAtk: 0, fn: 0, ff: 0, fs: 0 };
   for (let s = 1; s <= +nSeed; s++) {
     const seed = 1000 + s;
     const G = newRound({ walls: true, seed, weapon: xw, weapon2: yw, difficulty: 'normal', persona: { school: school(yw) }, AI2Class: AI, difficulty2: 'normal', persona2: { school: school(xw) } });
     X = G.player;
+    foot = { n: 0, fast: 0, seg: 0, last: false };
     fastSteps = fastAtk = atk = early = earlyF = walkTD = catches = whiffs = 0;
     chaseOn = [];
     atkT = [];
@@ -114,9 +124,12 @@ for (const every of EVERY) {
       if (X.state === 'dead' || G.enemy.state === 'dead') break;
     }
     const chaseAtk = chaseOn.filter((c) => atkT.some((a) => a > c && a <= c + 1)).length;
-    console.log(`| ${lab} | ${seed} | ${fastSteps} (${((fastSteps * 60) / T).toFixed(1)}) | ${fastAtk} / ${atk} | ${falls} | ${lev.toFixed(2)} (${levF.toFixed(2)} · ${levH.toFixed(2)}) | ${catches} | ${early}/${walkTD} (${earlyF}) | ${whiffs} · ${chaseOn.length} (${((chaseOn.length * 60) / T).toFixed(1)}) · ${chaseAtk} | ${X.state}/${G.enemy.state} @${T.toFixed(1)} s |`);
+    console.log(`| ${lab} | ${seed} | ${fastSteps} (${((fastSteps * 60) / T).toFixed(1)}) | ${fastAtk} / ${atk} | ${falls} | ${lev.toFixed(2)} (${levF.toFixed(2)} · ${levH.toFixed(2)}) | ${catches} | ${early}/${walkTD} (${earlyF}) | ${whiffs} · ${chaseOn.length} (${((chaseOn.length * 60) / T).toFixed(1)}) · ${chaseAtk} | ${X.state}/${G.enemy.state} @${T.toFixed(1)} s | ${foot.n} · ${foot.n ? Math.round((100 * foot.fast) / foot.n) : 0} % · ${foot.seg} (${((foot.seg * 60) / T).toFixed(1)}) |`);
+    tot.fn += foot.n;
+    tot.ff += foot.fast;
+    tot.fs += foot.seg;
     Object.assign(tot, { fast: tot.fast + fastSteps, fastAtk: tot.fastAtk + fastAtk, atk: tot.atk + atk, falls: tot.falls + falls, lev: tot.lev + lev, levF: tot.levF + levF, levH: tot.levH + levH, catches: tot.catches + catches, early: tot.early + early, earlyF: (tot.earlyF ?? 0) + earlyF, walkTD: tot.walkTD + walkTD, T: tot.T + T, whiffs: tot.whiffs + whiffs, chase: tot.chase + chaseOn.length, chaseAtk: tot.chaseAtk + chaseAtk });
   }
-  console.log(`| **${lab} 합** | | ${tot.fast} (${((tot.fast * 60) / tot.T).toFixed(1)}) | ${tot.fastAtk} / ${tot.atk} | ${tot.falls} | ${tot.lev.toFixed(2)} (${tot.levF.toFixed(2)} · ${tot.levH.toFixed(2)}) | ${tot.catches} | ${tot.early}/${tot.walkTD} (${tot.earlyF ?? 0}) | ${tot.whiffs} · ${tot.chase} (${((tot.chase * 60) / tot.T).toFixed(1)}) · ${tot.chaseAtk} | ${tot.T.toFixed(1)} s |`);
+  console.log(`| **${lab} 합** | | ${tot.fast} (${((tot.fast * 60) / tot.T).toFixed(1)}) | ${tot.fastAtk} / ${tot.atk} | ${tot.falls} | ${tot.lev.toFixed(2)} (${tot.levF.toFixed(2)} · ${tot.levH.toFixed(2)}) | ${tot.catches} | ${tot.early}/${tot.walkTD} (${tot.earlyF ?? 0}) | ${tot.whiffs} · ${tot.chase} (${((tot.chase * 60) / tot.T).toFixed(1)}) · ${tot.chaseAtk} | ${tot.T.toFixed(1)} s | ${tot.fn} · ${tot.fn ? Math.round((100 * tot.ff) / tot.fn) : 0} % · ${tot.fs} (${((tot.fs * 60) / tot.T).toFixed(1)}) |`);
 }
-RH.every = EVERY0;
+Object.assign(RH, RH0);
