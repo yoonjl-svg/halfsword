@@ -48,6 +48,7 @@
 - 짧게: 일지 한 편 1.5쪽 안. 자세한 기록은 `docs/strike/`·`docs/motion/` 에 두고 링크한다.
 - 실패도 성공과 같은 형식으로 적는다. 숨기지 않는다.
 - 상대 코드를 가져올 때는 상대 커밋 sha 와 ID 를 커밋 메시지에 적는다 (`from A-012 <sha>`).
+- **코드 넘기기 약속** (사장님 10/16 01:2x 승인 — 두 쪽 같게): ① 넘기기 전에 받는 쪽의 최신 본판을 먼저 합친다(그 위에 내 작업을 얹어, 두 판의 차이가 그 작업만 남게) ② 넘길 때는 가지 이름이나 커밋 범위(첫 sha … 끝 sha)만 알려 준다 ③ `src/main.js`·`index.html` 같은 공용 파일에는 연결 한두 줄만 넣고 나머지는 새 파일로 ④ 코드 안의 설정·저장 이름(localStorage 열쇠·앱 id 등)에는 저장소 이름 대신 중립 이름을 쓴다(두 게임이 같은 출처(origin)에서 돌아 저장소를 함께 쓰므로 열쇠가 겹치지 않게 앞머리로 가른다). 받는 쪽은 그 범위를 받아 관문·리뷰만 한다.
 
 ## 7. 자동화 (적막 쪽)
 - 23:22 KST 디렉터 세션 트리거(trig_01HWmdVb8kkdhXw4pWedx3fY): ① 그날 작성 노트 `docs/dev_exchange/notes/YYYY-MM-DD.md` 커밋(= manifest 의 source_sha) → ② 일지 `.md` + manifest `.json`(schema 1, status published, report_id `yoonjl-svg/halfsword@YYYY-MM-DDT23:30+09:00`, window, technical_base 14bcf1fe6bd205c775db91aa4ca36b9841b6d2bd, source_sha, notes_blob_sha = `git hash-object`, notes_sha256, markdown_sha256 = 발행 md 원본 바이트) + 대장 갱신 커밋 → ③ main push. 일지 첫 줄은 반드시 `# 개발자 회의록 YYYY-MM-DD (적막)` (샛별 수신기의 날짜 머리말 검사).
