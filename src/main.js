@@ -122,6 +122,7 @@ if (params.get('finishLift') === '1') FINISH_SWITCH.lift = true;
 if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = params.get('finishAim');
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady') ? 1 : 0; // 일본 보법 버티기(10/15 — 흔들림 × 0.75, fighter.js swayScale): 기본 1, `?jpSteady=0` = 끔
+if (params.has('jpSlow')) CONFIG.GAIT.schoolSpeed = +params.get('jpSlow') ? 1 : 0; // 일본 보법 감속(10/15 — 걸음 빠르기 × 0.95, fighter.js driveBalance): 기본 1, `?jpSlow=0` = 끔
 // 이탈리아 박자 걸음 주기(10/15 — schools.js ITALIAN_GAIT.rhythm.every, docs/strike/italian_rhythm_2026-10-15.md): 기본 3(3 + 1 — 넷째 걸음이 빠름), `?itRhythm=4` = 4 + 1 · `?itRhythm=0` = 끔
 if (params.has('itRhythm') && Number.isInteger(+params.get('itRhythm')) && +params.get('itRhythm') >= 0) TRADITIONS.italian.gait.rhythm.every = +params.get('itRhythm');
 if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 따라 들어가기(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md): 기본 1, `?deChase=0` = 끔
