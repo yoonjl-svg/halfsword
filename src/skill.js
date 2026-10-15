@@ -444,7 +444,7 @@ export class Skill {
     const g = f.handBase || f.guardPose.hand; // 지금 손 목표 (덧씌우기 전, driveSword 가 매 스텝 적는다)
     this.pom = { t: 0, h0: g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12], head: target === 'head' && !headOff(f.foe), go: null };
     this.pommels++;
-    if (!f.aiControlled) f.stamina.attack('cut');
+    f.stamina.attack('cut'); // 기력: 사람·AI 같은 규칙(설계안 §1) — AI 찍기(persona.close then 'pommel')는 startStrike 를 거치지 않으니 여기서 한 번 (10/16 감독: 들여온 판은 사람만 청구 — D14)
     // 한 걸음 내딛으며 찍는다 (찌르기와 같은 요청 꼴: gait lunge 0.3 s — 당기는 동안 발이 나가 내지를 때 딛는다)
     if (step && POMMEL.step > 0 && f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: POMMEL.step, duration: 0.3 });
     return true;
