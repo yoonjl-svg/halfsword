@@ -2143,8 +2143,7 @@ export class Fighter {
     // 다리가 체중을 싣는 걸음: 서 있는 동안만 (쓰러짐·일어남·무릎 꿇기는 예전 방식)
     const G = this.gait;
     const hybrid = !!G && this.state === 'stand';
-    // 유파 걸음 빠르기(10/15 — 일본 speedMul 0.95, 낮고 단단한 대신 느림 · 칸 없는 유파는 1): 앞·뒤·옆 모두 같은 배율
-    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (GAIT.schoolSpeed ? (G?.P.speedMul ?? 1) : 1) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1) * (this.wearsPlate() ? ARMOR.moveMul : 1); // moveMul: 권총은 발이 빠르다 (weapons.js), 판금은 느리다 (config.js ARMOR)
+    const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1) * (this.wearsPlate() ? ARMOR.moveMul : 1); // moveMul: 권총은 발이 빠르다 (weapons.js), 판금은 느리다 (config.js ARMOR)
     const st = this.stumble;
     const mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
     // 진흙(잠든 습지 웅덩이)은 조종 입력만 줄인다 — 균형 잡는 걸음(stumble)·중력·공격은 그대로. 다른 무대는 정확히 1 (샛별 저장소 325a5c38 의 한 줄을 옮김)
