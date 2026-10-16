@@ -606,6 +606,72 @@ function buildCoins() {
   return g;
 }
 
+// 주머니 겉감 그림 (선반 UV: u = 둘레 0~1 · v = 단면을 따라 바닥 0 → 위 끝 1. 바닥 원판 v 0~0.15 · 배 0.25~0.45 · 목 0.64)
+//  색: 삼베 결 + 피 얼룩(아래에서 스며 오른 혀 셋 — 앞(bu)이 가장 높음 · 가장자리 마른 띠 · 바로 밖 옅게 번진 분홍 · 위쪽 튄 방울 · 흘러내린 줄)
+//  거칠기: 천 0.95 · 젖은 피 0.42 (빛을 받아 윤이 남 — 어두운 바탕 · 작은 크기에서도 피로 읽히게)
+//  구도 시험: ?bu=0.81 (앞쪽 u) ?bh=0.43 (앞 혀 높이 v) ?bseed=11
+function pouchMaps() {
+  const W = 512, H = 512;
+  const col = document.createElement('canvas'), rgh = document.createElement('canvas');
+  col.width = rgh.width = W; col.height = rgh.height = H;
+  let st = num('bseed', 11) >>> 0;
+  const rnd = () => ((st = (st * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const G = 64, grid = Array.from({ length: G * G }, rnd);
+  const sm = (t) => t * t * (3 - 2 * t), mix = (a, b, t) => a + (b - a) * t;
+  const cell = (a, b) => grid[(((a % G) + G) % G) + (((b % G) + G) % G) * G];
+  const noise = (u, v, f) => { // u 둘레는 이어짐(f 마디로 감음)
+    const x = u * f, y = v * f, xi = Math.floor(x), yi = Math.floor(y), tx = sm(x - xi), ty = sm(y - yi);
+    const w = (a) => ((a % f) + f) % f;
+    return mix(mix(cell(w(xi), yi), cell(w(xi + 1), yi), tx), mix(cell(w(xi), yi + 1), cell(w(xi + 1), yi + 1), tx), ty);
+  };
+  const fbm = (u, v) => 0.55 * noise(u, v, 4) + 0.3 * noise(u, v, 9) + 0.15 * noise(u, v, 23);
+  const du = (a, b) => { const d = Math.abs(a - b) % 1; return Math.min(d, 1 - d); };
+  const front = num('bu', 0.81), frontH = num('bh', 0.43);
+  const tongues = [[front, frontH, 0.075], [front - 0.13, 0.335, 0.035], [front + 0.29, 0.335, 0.05], [front - 0.27, 0.3, 0.045], [front + 0.52, 0.29, 0.06]];
+  // 튄 방울 · 흘러내린 줄 (앞쪽 반에만 — 보이는 쪽)
+  const spots = [];
+  for (let i = 0; i < 6; i++) spots.push({ u: front + (rnd() - 0.5) * 0.36, v: 0.34 + rnd() * 0.12, r: 0.005 + rnd() * 0.009 });
+  const drips = [{ u: front + 0.05, v0: 0.47, len: 0.09 }, { u: front - 0.08, v0: 0.42, len: 0.06 }];
+  const cloth = [176, 138, 88], fresh = [158, 30, 22], dried = [70, 15, 11], rim = [86, 18, 13], wick = [150, 92, 66];
+  const c2 = col.getContext('2d'), r2 = rgh.getContext('2d');
+  const img = c2.createImageData(W, H), rim2 = r2.createImageData(W, H);
+  for (let py = 0; py < H; py++) {
+    const v = 1 - (py + 0.5) / H; // 캔버스 위 = v 1 (텍스처 flipY)
+    for (let px = 0; px < W; px++) {
+      const u = (px + 0.5) / W;
+      // 얼룩 높이: 둘레마다 다르게(낮은 물결 + 혀) · 가장자리는 너덜너덜하게
+      let h = 0.2 + 0.07 * fbm(u, 0.2);
+      for (const [cu, th, w] of tongues) h = Math.max(h, 0.2 + (th - 0.2) * Math.exp(-((du(u, cu) / w) ** 2)) * (0.75 + 0.5 * noise(u, 0.7, 6)));
+      let d = h + (fbm(u * 1.0, v + 3.1) - 0.5) * 0.09 + (noise(u, v + 5.3, 40) - 0.5) * 0.03 - v; // > 0 = 얼룩 안 (v 단위 깊이) · 가장자리는 실핏줄처럼 너덜너덜
+      // 방울 · 줄
+      let spot = -1;
+      for (const sp of spots) { const dd = Math.hypot(du(u, sp.u) * 2.4, v - sp.v); spot = Math.max(spot, (sp.r - dd) / sp.r); }
+      for (const dr of drips) { const dx = du(u, dr.u) * 2.4; if (v < dr.v0 && v > dr.v0 - dr.len) { const t = (dr.v0 - v) / dr.len; const wdt = 0.006 * (1 - 0.6 * t); spot = Math.max(spot, (wdt - dx) / wdt); } }
+      const grain = 0.97 + 0.06 * noise(u, v, 96); // 삼베 결 (옅게 — 얼룩처럼 보이지 않게)
+      let c = cloth.map((k) => k * grain), rough = 0.95;
+      if (d > -0.02 && d <= 0) c = c.map((k, j) => mix(k, wick[j], 0.35 * (1 + d / 0.02))); // 얼룩 바로 밖 옅게 번짐
+      const inSpot = spot > 0;
+      if (d > 0 || inSpot) {
+        const depth = d > 0 ? smoothClamp(d / 0.13) : 0.35;
+        const mott = 0.84 + 0.32 * fbm(u * 3, v * 3 + 7);
+        let b = fresh.map((k, j) => mix(k, dried[j], depth) * mott);
+        if (v < 0.17) b = b.map((k, j) => mix(k, dried[j], 0.6)); // 바닥은 오래 젖어 검붉게
+        const edge = d > 0 ? d : spot * 0.012;
+        if (edge < 0.012) b = b.map((k, j) => mix(k, rim[j], 0.55 * (1 - edge / 0.012))); // 가장자리 마른 띠
+        c = b; rough = 0.42 + 0.18 * depth;
+      }
+      const o = (py * W + px) * 4;
+      img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
+      const rv = Math.round(rough * 255); rim2.data[o] = rv; rim2.data[o + 1] = rv; rim2.data[o + 2] = rv; rim2.data[o + 3] = 255;
+    }
+  }
+  c2.putImageData(img, 0, 0); r2.putImageData(rim2, 0, 0);
+  const color = new THREE.CanvasTexture(col); color.colorSpace = THREE.SRGBColorSpace; color.anisotropy = 4;
+  const rough = new THREE.CanvasTexture(rgh);
+  return { color, rough };
+}
+function smoothClamp(t) { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); }
+
 // ── 머리 — 천 주머니 (불룩한 몸 · 목을 묶은 끈 · 위로 벌어진 주름 · 아래가 살짝 피에 젖음) ──
 function buildPouch() {
   const g = new THREE.Group();
@@ -615,9 +681,11 @@ function buildPouch() {
   const lathe = new THREE.LatheGeometry(new THREE.SplineCurve(prof.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(120), 128);
   lathe.rotateY(Math.PI / 2);
   const pos = lathe.attributes.position, n = pos.count, colors = new Float32Array(n * 3);
-  const cloth = new THREE.Color(0xb08a58), clothDark = new THREE.Color(0x6e5232), blood = new THREE.Color(0x701a14), bloodDeep = new THREE.Color(0x3a0d0b), tide = new THREE.Color(0x4a0f0c);
-  const soakAt = num('soak', 0.22); // 피가 스민 높이 (주머니 높이 비 — 사장님 ⑧ '아래가 살짝' · 흘러내림 없이 아래에서 스며 오른 꼴)
-  const tmp = new THREE.Color();
+  // 겉감 색 · 피는 캔버스 그림(pouchMaps) — 꼭짓점 색은 주름 골 그늘(회색 배율)만 맡는다
+  //  사장님 10/16 19:0x '주머니 아랫면 피에 젖은게 너무 균질한 모양을 아래에만 형성하고 있어서 눈에 잘 안 띄는 거 같아, 배경도 어둡다 보니'
+  //   → 고르지 않게: 아래에서 스민 얼룩이 둘레마다 다른 높이로 혀처럼 올라오고(앞쪽이 가장 높음) · 위쪽에 튄 방울 · 흘러내린 줄 몇 ·
+  //     얼룩 가장자리에 마른 띠 · 젖은 데는 윤이 남(거칠기 낮음) · 덜 마른 붉은빛(어두운 바탕에서도 보이게)
+  const shadeLo = 0.62; // 주름 골 가장 어두운 배율 (전 clothDark / cloth 비)
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   for (let i = 0; i < n; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), th = Math.atan2(z, x);
@@ -629,19 +697,13 @@ function buildPouch() {
     // 바닥에 앉아 납작 · 가로로 조금 넓게
     const flat = y < 0.12 ? 1 + 0.06 * (1 - y / 0.12) : 1;
     pos.setXYZ(i, x * k * 1.06 * flat, y < 0.05 ? y * 0.8 : y, z * k * 0.94 * flat);
-    // 색: 주름 골은 어둡게 · 피는 아래에서 올라와 스민다(경계가 고르지 않게 · 경계에 옅게 마른 띠)
-    tmp.copy(cloth).lerp(clothDark, Math.max(0, -fold) * 2.2 + 0.25 * top * (1 - Math.abs(Math.cos(th))));
-    const edge = soakAt + 0.045 * Math.sin(th * 3 + 0.7) + 0.025 * Math.sin(th * 7 + 2.1) + 0.015 * Math.sin(th * 13 + 0.3);
-    const soak = smooth(edge + 0.05, edge - 0.04, y);
-    if (soak > 0) {
-      const ringK = Math.exp(-(((y - edge + 0.012) / 0.018) ** 2)) * 0.5;
-      tmp.lerp(blood.clone().lerp(bloodDeep, smooth(edge, 0, y) * 0.9), soak * 0.95).lerp(tide, ringK * soak);
-    }
-    colors.set([tmp.r, tmp.g, tmp.b], i * 3);
+    const shade = 1 - (1 - shadeLo) * Math.min(1, Math.max(0, -fold) * 2.2 + 0.25 * top * (1 - Math.abs(Math.cos(th))));
+    colors.set([shade, shade, shade], i * 3);
   }
   lathe.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   lathe.computeVertexNormals();
-  g.add(new THREE.Mesh(lathe, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide })));
+  const maps = pouchMaps();
+  g.add(new THREE.Mesh(lathe, new THREE.MeshStandardMaterial({ vertexColors: true, map: maps.color, roughnessMap: maps.rough, roughness: 1, metalness: 0, side: THREE.DoubleSide })));
   // 끈: 목을 두 번 감고 앞에서 매듭 · 늘어진 두 가닥(끝에 작은 매듭)
   const cordMat = new THREE.MeshStandardMaterial({ color: 0x3e2a1a, roughness: 0.8, metalness: 0 });
   for (const [y, rr] of [[0.775, 0.152], [0.81, 0.148]]) {
