@@ -7,6 +7,7 @@
 //   next  = 다음 공격을 시작할 때까지
 //   dtip  = 켬·끔 칼끝 자리 차이 (+0.1 · 0.2 · 0.3 · 0.5 · 0.8 s)
 //  SEEDS=1-40 ATK=longsword GAP=2.2 TMAX=120 WIN=1.5 OUT=<json>
+//  COUNT=1: 맞대기 없이 씨앗마다 TMAX 초를 켬으로만 돌려 칼끼리 새로 닿음 · 흘림 수만 센다 (실전 흘림 빈도 — docs/design/parry_reading_research_2026-10-17.md)
 //  node tools/sim/flow_recover.mjs
 import { newRound, DT } from './harness_m.mjs';
 import { writeFileSync } from 'node:fs';
@@ -85,6 +86,19 @@ function after(r, tF) {
 }
 
 const out = [];
+if (process.env.COUNT) {
+  let F = 0, Nn = 0;
+  for (let seed = s0; seed <= s1; seed++) {
+    const r = run(seed, true, TMAX);
+    F += r.fresh;
+    Nn += r.flows;
+    out.push({ seed, fresh: r.fresh, flows: r.flows });
+    console.log(`seed ${seed}: 칼끼리 새로 닿음 ${r.fresh} · 흘림 ${r.flows}`);
+  }
+  console.log(`합: 칼끼리 새로 닿음 ${F} · 흘림 ${Nn} (${Nn ? (F / Nn).toFixed(1) : '—'} 번에 1 번)`);
+  if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));
+  process.exit(0);
+}
 for (let seed = s0; seed <= s1; seed++) {
   const on = run(seed, true, null);
   if (on.flowT == null) {
