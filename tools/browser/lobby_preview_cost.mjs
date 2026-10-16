@@ -2,7 +2,7 @@
 //  잣대: WebGL 그리기 호출(drawElements · drawArrays …)을 미리보기 캔버스(#characterView 안)에서만 센다 — 옛 판에도 시험용 값이 없어도 된다
 //   · 첫 그림 = '처음부터'를 누른 때 → 미리보기 첫 그리기 호출까지 (게임·대기실 묶음 받기 포함 — 이 상자에선 흔들림이 크다) — 판마다 새 창, 같은 판 n 번의 가운데 값과 범위
 //   · 미리보기 준비 = 미리보기 캔버스의 WebGL 문맥을 만든 때 → 첫 그리기 호출까지 (그리개 · 복제 · 셰이더 — 미리보기 몫만)
-//   · 한 번 그리기 = 방향키로 돌릴 때 한 번 그리는 데 든 시간(gl.finish 까지) · 그리는 화소 수(캔버스 너비 × 높이)
+//   · 한 번 그리기 = 한 번 그리는 데 든 시간(gl.finish 까지 — 10/16 돌림판 판은 시험 고리로, 옛 판은 방향키로 바로 그림) · 그리는 화소 수(캔버스 너비 × 높이)
 //  node tools/browser/lobby_preview_cost.mjs <주소> [n=5] [화소 비=3]   (폰 가로 844×390 · 소프트웨어 GL — 실기기 값이 아니라 두 판의 비)
 import { chromium } from 'playwright';
 const base = process.argv[2] || 'http://127.0.0.1:5210', runs = +(process.argv[3] || 5), dpr = +(process.argv[4] || 3);
@@ -35,7 +35,9 @@ try {
       const view = document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView'), c = view.querySelector('canvas');
       const gl = c.getContext('webgl2') || c.getContext('webgl');
       const calls0 = window.__preview.calls, times = [];
-      for (let k = 0; k < 12; k++) { const t0 = performance.now(); view.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); gl.finish(); times.push(performance.now() - t0); }
+      // 한 번 그리기: 10/16 돌림판부터 방향키는 화면 한 장씩 부드럽게 돌아(바로 그리지 않음) — 그 판은 시험 고리(lobbyPreview.setArmor 가 바로 한 번 그림)로, 옛 판은 방향키로
+      const once = view.lobbyPreview?.setArmor ? () => view.lobbyPreview.setArmor(view.dataset.armor || null) : () => view.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      for (let k = 0; k < 12; k++) { const t0 = performance.now(); once(); gl.finish(); times.push(performance.now() - t0); }
       times.sort((a, b) => a - b);
       return { first: window.__preview.first, init: window.__preview.init, callsPerRender: (window.__preview.calls - calls0) / 12, renderMs: times[6], css: [c.clientWidth, c.clientHeight], buffer: [c.width, c.height], aa: gl.getContextAttributes().antialias };
     });
