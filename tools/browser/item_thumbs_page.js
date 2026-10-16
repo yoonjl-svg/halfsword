@@ -15,7 +15,8 @@
 //      유파마다 다섯 장을 같은 틀(같은 배율)로 찍는다 — 급마다 크기 차이가 그대로 보이게
 //   · 금화 wallet/coins.webp — 256 × 256: 금화 여덟이 아무렇게나 쌓임(다섯 쌓임 · 하나 기댐 · 흩어진 둘)
 //   · 머리(천 주머니) wallet/pouch.webp — 256 × 256: 불룩한 천 주머니 · 묶은 끈 · 아래가 살짝 피에 젖음(사장님 ⑧)
-//  ?ids=books,coins,pouch 또는 german_3 처럼 몇 개만. 결과는 window.thumbs = { done, list: [{ path, url, w, h, bytes, pad }] }
+//   · 용사의 눈물 armor/hero_tear.webp — 256 × 256: 물방울 모양 다이아 목걸이 (사장님 10/17 — 대기실 방어구 칸 · 아래 buildTear)
+//  ?ids=books,coins,pouch,tear 또는 german_3 처럼 몇 개만. 결과는 window.thumbs = { done, list: [{ path, url, w, h, bytes, pad }] }
 //  구도 시험: ?cx=0.78 (금화 내려다보기) ?px=0.28 (주머니 내려다보기) ?soak=0.22 (피 높이)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -33,7 +34,7 @@ const CJK_FONT = '"IPAGothic", "WenQuanYi Zen Hei", "Noto Sans CJK JP", sans-ser
 
 const params = new URLSearchParams(location.search);
 const num = (k, d) => (params.has(k) ? +params.get(k) : d);
-const want = params.get('ids') ? params.get('ids').split(',') : ['books', 'coins', 'pouch'];
+const want = params.get('ids') ? params.get('ids').split(',') : ['books', 'coins', 'pouch', 'tear'];
 await document.fonts.load(`32px ${CJK_FONT}`, '孫子五輪書').catch(() => {}); // 시스템 글꼴이라 곧 끝난다 — 캔버스에 쓰기 전에 확실히
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -730,6 +731,76 @@ function buildPouch() {
   return g;
 }
 
+// ── 용사의 눈물 — 물방울 모양 다이아 목걸이 (사장님 10/17 '작은 물방울 모양의 다이아 목걸이' — docs/import/hero_tear_2026-10-17.md) ──
+//  armor/hero_tear.webp 256 × 256: 은빛(화이트 골드) 사슬 한 바퀴 + 아래 가운데 고리(바일)에 매단 페어 컷 다이아(뾰족한 끝이 위 = 물방울) · 다이아 둘레 은 테.
+//  금속 = 무기 · 금화와 같은 metalMat(레전드 마감 값) · 다이아 = 면마다 평평한 빛(flatShading) + 면마다 조금씩 다른 흰빛 · 하늘빛(브릴리언트 컷의 반짝임 무늬) — 게임 모형이 없는 물건이라 여기서 짓는다.
+//  칸에서 읽히게 다이아를 실물보다 크게(그림 높이의 약 40 %) · 사슬을 조금 굵게. 구도 시험: ?tx=-0.35 (탁자 기울기) ?ty=-0.2 (돌림) ?gx=0.18 · ?gy=0.38 (다이아 기울기)
+const tearSilver = metalMat(parseInt(params.get('tc') || 'e3e7ec', 16), { rough: num('tr', 0.22), metal: num('tm', 0.95), env: num('te', 1.3) });
+/** 물방울 윤곽 (뾰족한 끝 위 · 반시계 방향 — 앞면 세모 차례): t 0~1 → [x, y] · 높이 2 (y −1 ~ +1) · 가장 넓은 곳은 가운데보다 조금 아래 */
+const tearOutline = (t, sharp = 1.25, wide = 0.82) => { const a = t * Math.PI * 2; return [-wide * Math.sin(a) * Math.abs(Math.sin(a / 2)) ** sharp, Math.cos(a)]; };
+/** 페어 컷 다이아 (브릴리언트 컷을 줄인 꼴): 거들 둘레 N 점 · 크라운(가운데 고리 N/2 · 테이블 N/2) · 파빌리온(고리 N/2 · 큘릿) — 면마다 세모(평평한 빛). 반높이 H · 가운데 = 원점 */
+function diamondGeometry(N = 16, H = 0.5) {
+  const crown = 0.17, pav = 0.42, girdle = 0.012, CY = -0.12 * H; // 고리는 둥근 쪽 가운데(CY)로 모인다 (페어 컷의 테이블 · 큘릿 자리)
+  const at = (i, s, z) => { const [x, y] = tearOutline((((i % N) + N) % N) / N); return new THREE.Vector3(x * H * s, (y * H - CY) * s + CY, z); };
+  const G = [], Gb = [], M = [], T = [], P = [];
+  for (let i = 0; i < N; i++) { G.push(at(i, 1, girdle)); Gb.push(at(i, 1, -girdle)); }
+  for (let i = 0; i < N / 2; i++) { T.push(at(2 * i, 0.56, crown * H)); M.push(at(2 * i + 1, 0.8, crown * H * 0.55)); P.push(at(2 * i + 1, 0.5, -pav * H * 0.55)); }
+  const top = new THREE.Vector3(0, CY, crown * H), C = new THREE.Vector3(0, CY, -pav * H);
+  const pos = [], col = [];
+  // 면 색: 흰빛 · 옅은 하늘 · 하늘 · 짙은 쪽 — 이웃 면끼리 갈마들어 작은 크기에서도 반짝임 무늬가 보이게
+  const PAL = [0xffffff, 0xeaf5ff, 0xc9e5fb, 0x9cc9ef, 0x6c9fcf, 0x45709c].map((h) => new THREE.Color(h));
+  const tri = (a, b, c, k) => { for (const v of [a, b, c]) { pos.push(v.x, v.y, v.z); col.push(PAL[k].r, PAL[k].g, PAL[k].b); } };
+  const h = N / 2, m = (i) => ((i % h) + h) % h;
+  for (let i = 0; i < h; i++) tri(top, T[i], T[m(i + 1)], i % 2 ? 1 : 2); // 테이블 (한 면이지만 부채꼴 세모를 흰빛 · 옅은 하늘로 갈마들게 — 테이블에 비친 파빌리온 바람개비 무늬)
+  for (let i = 0; i < h; i++) {
+    tri(T[i], M[i], T[m(i + 1)], i % 2 ? 0 : 3); // 별 면
+    tri(T[i], M[m(i - 1)], G[2 * i], i % 2 ? 2 : 4); tri(T[i], G[2 * i], M[i], i % 2 ? 4 : 2); // 연 면 (둘로 — 반은 밝게 반은 짙게)
+    tri(M[i], G[2 * i], G[2 * i + 1], i % 2 ? 1 : 5); tri(M[i], G[2 * i + 1], G[(2 * i + 2) % N], i % 2 ? 3 : 0); // 윗 거들 면
+    tri(P[i], Gb[2 * i + 1], Gb[2 * i], 3); tri(P[i], Gb[(2 * i + 2) % N], Gb[2 * i + 1], 4); // 아랫 거들 면 (뒤 — 기울면 둘레에 보인다)
+    tri(C, P[i], Gb[2 * i], 5); tri(C, Gb[(2 * i + 2) % N], P[i], 4); // 파빌리온 큰 면
+  }
+  for (let i = 0; i < N; i++) { const j = (i + 1) % N; tri(G[i], Gb[i], G[j], 2); tri(G[j], Gb[i], Gb[j], 2); } // 거들 띠
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals(); // 꼭짓점을 나누지 않은 세모라 면마다 평평
+  return { geo, outline: G };
+}
+function buildTear() {
+  const g = new THREE.Group();
+  // 사슬: 닫힌 고리 한 바퀴 — 위는 넓은 둥근 테(목 뒤) · 아래는 바일로 모이는 V (다이아 무게로 당겨짐). 고리마다 90° 엇갈림
+  const loop = new THREE.CatmullRomCurve3([[0, 0.02], [0.2, 0.19], [0.41, 0.47], [0.51, 0.76], [0.44, 1.0], [0.24, 1.14], [0, 1.18], [-0.24, 1.14], [-0.44, 1.0], [-0.51, 0.76], [-0.41, 0.47], [-0.2, 0.19]].map(([x, y]) => new THREE.Vector3(x, y, 0)), true, 'centripetal');
+  const n = Math.round(loop.getLength() / num('tp', 0.048)), pts = loop.getSpacedPoints(n);
+  const link = new THREE.TorusGeometry(0.021, num('tw', 0.0085), 8, 20); link.scale(1.5, 1, 1);
+  const Z = new THREE.Vector3(0, 0, 1), basis = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[i + 1], t = b.clone().sub(a).normalize(), nrm = new THREE.Vector3().crossVectors(Z, t);
+    const m = new THREE.Mesh(link, tearSilver);
+    if (i % 2) basis.makeBasis(t, Z, new THREE.Vector3().crossVectors(t, Z)); else basis.makeBasis(t, nrm, Z); // 짝수 = 사슬 면에 누움 · 홀수 = 세움
+    m.quaternion.setFromRotationMatrix(basis);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    g.add(m);
+  }
+  // 매단 것: 바일(사슬 맨 아래가 지나가는 작은 고리 — 사슬 면에 수직)이 축 · 그 아래 다이아(뾰족한 끝이 위)
+  const H = num('gh', 0.36), drop = H + 0.05; // 다이아 반높이 · 바일 가운데 ~ 다이아 가운데
+  const { geo, outline } = diamondGeometry(16, H);
+  const pend = new THREE.Group();
+  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.013, 10, 32), tearSilver);
+  bail.rotation.y = Math.PI / 2;
+  pend.add(bail);
+  const gem = new THREE.Group();
+  gem.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: num('gr', 0.06), metalness: num('gm', 0.3), envMap: tearSilver.envMap, envMapIntensity: num('ge', 1.6), flatShading: true, emissive: 0x8fb8dc, emissiveIntensity: num('gl', 0.12) })));
+  const rim = new THREE.CatmullRomCurve3(outline.map((v) => new THREE.Vector3(v.x * 1.025, v.y * 1.025 - 0.0016, 0)), true); // 둘레 은 테 (물방울 윤곽을 어두운 칸에서 또렷이)
+  gem.add(new THREE.Mesh(new THREE.TubeGeometry(rim, 128, 0.011, 8, true), tearSilver));
+  const claw = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 10), tearSilver); claw.position.set(0, H + 0.006, 0.004); gem.add(claw); // 뾰족한 끝을 무는 발
+  gem.position.set(0, -drop, 0);
+  pend.add(gem);
+  pend.rotation.set(num('gx', 0.18), num('gy', 0.38), 0);
+  pend.position.set(0, -0.012, 0);
+  g.add(pend);
+  g.rotation.set(num('tx', -0.35), num('ty', -0.2), 0);
+  return g;
+}
 
 // ── 찍기 ──
 const small = document.createElement('canvas');
@@ -767,6 +838,7 @@ for (const s of BOOK_SCHOOLS) for (const T of BOOK_TIERS) {
 }
 if (want.includes('coins')) jobs.push({ path: 'wallet/coins.webp', label: '금화', w: 256, h: 256, build: buildCoins, show: [[20, 20], [14, 14], [9, 9]] });
 if (want.includes('pouch')) jobs.push({ path: 'wallet/pouch.webp', label: '머리', w: 256, h: 256, build: buildPouch, show: [[20, 20], [14, 14]] });
+if (want.includes('tear')) jobs.push({ path: 'armor/hero_tear.webp', label: '용사의 눈물', w: 256, h: 256, build: buildTear, show: [[38, 38], [30, 30]] }); // 대기실 방어구 칸 (칸 약 44~49 px 의 80 %)
 
 // 틀: 유파마다 다섯 장(I~V)을 모두 담는 한 틀 — 한 유파 안에선 같은 배율이라 급마다 볼륨(두께 · 높이 · 길이 · 대쪽 수) 차이가 그대로 보이고,
 //  유파끼리는 저마다 칸을 채운다(대기실 별자리 판은 유파 탭 하나씩 보여 준다). 몇 장만 찍어도 틀은 같다
