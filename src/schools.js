@@ -1213,7 +1213,11 @@ TRADITIONS.iberian.withdraw = { pressed: 'langort', calm: ['langort', 'alber'] }
 //  수는 물리 찾기(tools/sim/cover_search.mjs RANGE=talho — 상위 7 을 치는 칼 셋 × 간격 8 × 빠르기 3 × 성난 베기 · 가로 베기 = 144 판): 맞은 판 11 → 10 — 막음은 이미 높아(따라가기 뒤)
 //   더 막지는 않고 손해 없음(원전 꼴 중 맞은 판이 가장 적은 것). 사장님 확인 전(확인표 2012)
 export const IBERIAN_TALHO = { name: '탈류 쳐내기 (talho)', desc: '왼쪽으로 오는 칼을 오른 어깨에서 비스듬히 베어 쳐낸다 · 쳐낸 칼은 머리 앞 왼쪽에 비스듬히 선다', pad: G.ochsL, hand: [0.41, 0.32, -0.4], blade: [38, -6], pelvisYaw: 26, chestYaw: 12, pitch: 1, drop: 0.02, src: '피게이레두 1651 단ⅩⅣ 「deflect it with a talho」 · 복ⅩⅤ 「high in front of the head on the left side, in obtuse line」 [원문 영역] · 줄 highL [해석] · 수 물리 찾기 [추정]' };
-TRADITIONS.iberian.parryCover = { highL: IBERIAN_TALHO };
+// 오른쪽 짝 — 레베스 쳐내기 (revés) (10/17 02:xx — 사장님 '탈류 레베스도 한 쌍으로 만들어'): 원전은 「오는 쪽에 따라 탈류로, 아니면 레베스로 쳐낸다」(단ⅩⅣ) —
+//  오른쪽으로 오는 칼을 레베스(왼 어깨에서 비스듬히 내려 베기)로 쳐내면 그 칼이 「high along the right diagonal in an obtuse line」(복ⅩⅤ — 위 막기 자리 '오른 높이 비낌'과 같은 근거)에 멈춘다 [원문 영역] → 줄 highR [해석]
+//  꼴: 탈류 쳐내기의 거울 — 두 손을 머리 앞 오른쪽 높이로, 칼은 위로 비스듬히. 수는 물리 찾기(cover_search RANGE=talho · LINE=highR — 성난 베기 왼쪽 · 가로 베기 오른쪽 144 판: 맞은 판 11 → 8) [추정] — 사장님 확인 전(확인표 2013)
+export const IBERIAN_REVES = { name: '레베스 쳐내기 (revés)', desc: '오른쪽으로 오는 칼을 왼 어깨에서 비스듬히 베어 쳐낸다 · 쳐낸 칼은 머리 앞 오른쪽에 비스듬히 선다', pad: G.ochsR, hand: [0.41, 0.32, 0.4], blade: [38, 6], pelvisYaw: -26, chestYaw: -12, pitch: 1, drop: 0.02, src: '피게이레두 1651 단ⅩⅣ 「or else deflect with a revez, according to which side」 · 복ⅩⅤ 「high along the right diagonal in an obtuse line」 [원문 영역] · 줄 highR [해석] · 수 물리 찾기 [추정]' };
+TRADITIONS.iberian.parryCover = { highL: IBERIAN_TALHO, highR: IBERIAN_REVES };
 
 // 중국 막기 자리 (조선세법 — 24 세 가운데 格·洗, 무비지 국역 쪽/원서 쪽 · 무도 권2 p). 전: 독일 표 그대로(위 옛 기록 — 擧鼎格 을 왕관 자리로 넣어 본 일은 chinese_guards 문서 §3)
 //   highC·highR 표두세 자리(칼을 머리 위로 높이 듦) — 擧鼎勢 「卽擧鼎格, 法能鼎格上殺」(쪽154/0568 · 무도 p035/27 그림 '칼을 머리 위로 들어 막음') [원문] ·
