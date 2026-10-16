@@ -7,6 +7,7 @@
 //  첫 화면·대기실은 Shadow DOM 안 — 꾸밈은 그 안에서만, 글자는 게임 HUD 규칙의 토큰(index.html :root)을 물려받아 entrance_type.css 한 곳에서 (lobby_fix §1).
 //   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
 //  디자인 보기용 주소 `?coins=N` = 대기실 금화를 N 으로 (lobby_progress.js setCoins — 게임 인자로 세지 않아 첫 화면이 뜬다 · lobby_fix §6)
+//  소리 (사장님 10/17 — docs/import/ui_sound_2026-10-17.md · ui_sound.js): 덮개 안 확인 류 단추 = 짧은 딸깍 · 첫 화면 = 바람(첫 누름에 스며들고 대기실로 가면 잦아들어 꺼짐)
 import baseStyle from './start_screen.css?inline';
 import pixelStyle from './start_pixel.css?inline';
 import uiStyle from './entrance_ui.css?inline';
@@ -14,6 +15,7 @@ import typeStyle from './entrance_type.css?inline';
 import { ENTRANCE_HTML, mountStartScreen } from './start_screen.js';
 import { skipsTitle } from './journey_save.js';
 import { setCoins } from './lobby_progress.js';
+import { wireUiSound, titleWind } from './ui_sound.js';
 
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&'));
 if (params.has('coins')) setCoins(Number(params.get('coins')));
@@ -33,6 +35,7 @@ if (skipsTitle(params)) {
     host.id = 'gameEntrance';
     host.style.cssText = 'position:fixed;inset:0;z-index:100;background:#30291e';
     root = host.attachShadow({ mode: 'open' });
+    wireUiSound(root); // 이 덮개의 확인 류 단추 → 딸깍 (첫 화면 · 대기실 모두 이 root 안)
     document.body.append(host);
     covered = [...document.body.children].filter(el => el !== host && el.id !== 'rotate' && el.tagName !== 'SCRIPT');
     for (const el of covered) el.inert = true;
@@ -51,6 +54,7 @@ if (skipsTitle(params)) {
     const markup = document.createElement('template');
     markup.innerHTML = ENTRANCE_HTML;
     root.replaceChildren(style, markup.content);
+    titleWind(true, root.getElementById('entrance')); // 첫 화면 바람 — 붙인 뒤 · 띄우기 전 (공지 없이 바로 바람 장면이 불어도 놓치지 않게)
     let choosing = false;
     screen = mountStartScreen({
       root,
@@ -77,6 +81,7 @@ if (skipsTitle(params)) {
   // 대기실: choice 'new' = 첫 무대부터 · 'continue' = 이어하기 지점부터 (첫 화면의 이어하기 · 싸움에서 돌아온 대기실)
   async function showLobby(game, choice) {
     const { mountLobby } = await import('./lobby.js'); // 대기실 묶음(3D 미리보기)은 고를 때 받는다 — 첫 화면을 늦추지 않게
+    titleWind(false); // 첫 화면 바람은 대기실 · 싸움으로 이어지지 않는다 (잦아들어 꺼짐)
     screen?.destroy(); screen = null;
     lobby = mountLobby({ root, game, choice, onBack: showTitle, async onDepart() {
       if (!await game.launchJourney(choice)) throw new Error('Missing journey');
