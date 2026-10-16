@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
@@ -50,6 +50,9 @@ const _c = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _e = new THREE.Vector3();
 const _q = new THREE.Quaternion();
+const _n1 = new THREE.Vector3(); // 흘려 받기 (Combat.nagashi)
+const _n2 = new THREE.Vector3();
+const _n3 = new THREE.Vector3();
 
 /** 강체 상태(p, q, com, v, w)에서 한 점의 속도 */
 function velAt(st, point, out) {
@@ -540,6 +543,8 @@ export class Combat {
     B.fighter.stamina.block(A.fighter);
     const fresh = this.stepNo - this.bladeLast > STEEL.rearmSteps; // 떨어져 있다가 새로 부딪힘
     this.bladeLast = this.stepNo;
+    // 우케나가시 흘려 받기 (config NAGASHI): 받은 칼을 칼 지붕을 따라 미끄러뜨리고, 받는 쪽 손 흔들림·무기 닳음을 던다 (아래 feel)
+    const flowD = fresh && NAGASHI.on && SA && SB && J > 0 ? this.nagashi(A, B, SA, SB, point, nrm, vn) : null;
     // 새로 부딪혀 튕긴 순간: 칼이 손 안에서 길이 축으로 팽이처럼 도는 몫은 손아귀가 잡는다 (gripTwist)
     if (fresh) for (const f of [A.fighter, B.fighter]) gripTwist(f);
     const va = A.body.velocityAtPoint(point);
@@ -562,15 +567,54 @@ export class Combat {
       fe.point.copy(point);
       fe.time = fresh ? 0 : fe.time + this.dt;
       if (fresh) {
+        const jf = f === flowD ? J * (1 - NAGASHI.joltCut) : J; // 흘려 받은 쪽은 받는 충격을 joltCut 만큼 덜 (config NAGASHI)
         fe.impact = J;
         fe.impactSpeed = vn;
-        f.takeJolt?.(J);
-        f.absorbWeaponImpact?.(J, f === A.fighter ? B.fighter : A.fighter); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다 (상대 칼의 breakMult — 청강검 '창천')
+        f.takeJolt?.(jf);
+        f.absorbWeaponImpact?.(jf, f === A.fighter ? B.fighter : A.fighter); // 칼끼리 세게 부딪힌 몫만큼 내구도가 있는 무기(나뭇가지 등)를 깎는다 (상대 칼의 breakMult — 청강검 '창천')
       }
     }
     for (const f of [A.fighter, B.fighter]) if (f.skill?.corr === 'v2') (f.bladeTouch = true), (f.touchStep = this.stepNo); // 보정 v2: 칼끼리 닿음
     if (BIND.natural) this.bindFeel(pairs, point, A.fighter, B.fighter, fresh);
-    this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm });
+    this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm, nagashi: !!flowD });
+  }
+
+  /**
+   * 우케나가시 흘려 받기 (config NAGASHI — docs/strike/ukenagashi_talho_2026-10-17.md §12). 칼끼리 새로 부딪힌 스텝(물리 뒤)에 한 번:
+   *  받는 쪽 D = 일본 막기의 흘려 받기 칸(schools.js parryCover 의 nagashi — 우케나가시)을 가지고 막는 중인 싸움꾼
+   *   (플레이어 = 막기 단추를 쥐고 손이 막기 자리로 감 — parry_button.js active · AI = 막기 꼴 mode 'defend', 피하기 아님).
+   *  상대 칼이 맞닿은 자리에서 아래로 moveDown 넘게 움직이고(내려 베기), 그 자리가 D 가슴 + zoneHy 보다 높고, D 칼끝이 코등이보다 낮으면(칼 지붕.
+   *   칼끝이 위인 칼은 받은 칼이 코등이 쪽으로 흘러내려 걸릴 뿐이라 흘리지 못한다) 상대 칼에 D 칼 축의 칼끝 쪽(지붕의 내리막)을 맞닿는 면에 눕힌 방향으로
+   *   slideK × vn(맞부딪는 빠르기)의 빠르기를 더한다 — 그 방향으로 민 유효 질량(손 포함 gripMass) × 빠르기. 같은 크기 반대 충격은 D 칼이 받는다(거의 칼 길이 방향 — 손이 축으로 받음).
+   *   두 칼 모두 칼날 중심선 위에 건다(rebound 와 같은 까닭 — 날 끝에 걸면 칼이 길이 축으로 팽이처럼 돈다). 그리고 D 의 몸꼴을 poseT 동안 우케나가시로.
+   *  돌려줌: 흘려 받은 싸움꾼(D) · 없으면 null
+   */
+  nagashi(A, B, SA, SB, point, nrm, vn) {
+    for (const [D, O, SO] of [[A.fighter, B.fighter, SB], [B.fighter, A.fighter, SA]]) {
+      const st = D.skill?._cover;
+      if (!st?.nagashi || D.schoolParry === false || !O.swordProps) continue;
+      if (!(D.parryGuard ? D.parryGuard.active : st.ai?.mode === 'defend' && !st.ai.defVoid)) continue;
+      if (velAt(SO, point, _n1).y > -NAGASHI.moveDown) continue; // 상대 칼이 내려오지 않음
+      if (point.y < D.bodies.chest.translation().y + NAGASHI.zoneHy) continue; // 받는 자리가 낮음
+      const dir = D.bladePoint(1, _n1).sub(D.bladePoint(0, _n2)); // 코등이 → 칼끝
+      if (dir.y >= 0) continue; // 칼끝이 위 — 지붕이 아니다
+      dir.addScaledVector(nrm, -dir.dot(nrm)); // 맞닿는 면에 눕힘
+      if (dir.lengthSq() < 1e-8) continue;
+      dir.normalize();
+      const onAxis = (sw) => {
+        const ax = _n3.set(0, 1, 0).applyQuaternion(rotQ(sw));
+        const o = tv(sw.translation());
+        return o.addScaledVector(ax, _n2.copy(point).sub(o).dot(ax));
+      };
+      const pO = onAxis(O.sword);
+      const Jt = gripMass(O.swordProps, liveState(O.sword), pO, dir, STEEL.handMass) * NAGASHI.slideK * vn;
+      O.sword.applyImpulseAtPoint({ x: dir.x * Jt, y: dir.y * Jt, z: dir.z * Jt }, vp(pO), true);
+      D.sword.applyImpulseAtPoint({ x: -dir.x * Jt, y: -dir.y * Jt, z: -dir.z * Jt }, vp(onAxis(D.sword)), true);
+      st.forceT = NAGASHI.poseT;
+      this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone() };
+      return D;
+    }
+    return null;
   }
 
   /**

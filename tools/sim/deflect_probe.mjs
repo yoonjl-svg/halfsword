@@ -9,11 +9,12 @@
 import { newRound, DT } from './harness_m.mjs';
 import { writeFileSync } from 'node:fs';
 import * as THREE from 'three';
-import { SKILL } from '../../src/config.js';
+import { SKILL, NAGASHI } from '../../src/config.js';
 import { TECH } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
+if (process.env.NAGASHI != null) NAGASHI.on = +process.env.NAGASHI; // NAGASHI=0: 흘려 받기 규칙 끔 (config NAGASHI)
 const CONFIGS = (process.argv[2] ?? 'uchigatana,uchigatana:nocover,longsword').split(',').map((s) => {
   const [weapon, mode = 'school'] = s.split(':');
   return { weapon, mode, key: s };
@@ -50,11 +51,12 @@ function trial(cfg, attack, atk, gap) {
   A.move.set(0, 0);
   guard.held = !process.env.NOPARRY; // NOPARRY=1: 막기 단추를 안 누른 판 — 그 간격에서 막지 않으면 실제로 맞는지 보기
   const setPad = (x, y) => (A.handOffset.set(x, y), A.skill.aimRaw?.set?.(x, y));
-  let ph = 0, t0 = 0, pts = null, cut = null, first = null, touch = 0, lastTouch = -1, slide = 0;
+  let ph = 0, t0 = 0, pts = null, cut = null, first = null, touch = 0, lastTouch = -1, slide = 0, nag = 0;
   const track = [];
   const prev = Gm.combat.hooks.onClash;
   Gm.combat.hooks.onClash = (point, sp, info) => {
     prev?.(point, sp, info);
+    if (info.nagashi) nag++; // 흘려 받기가 걸린 부딪힘 (combat.js nagashi — config NAGASHI)
     // 긋기(ph 3~) 동안 처음 부딪힌 것만 — 준비 동작(칼을 들어 올림) 중 스침은 뺀다. 닿은 자리 = 내 칼 위 몇 할(0 코등이 → 1 칼끝, 음수 = 자루 쪽) · 덧씌운 몸꼴 무게
     if (!first && info.fresh && ph >= 3) {
       const a = D.bladePoint(0, new THREE.Vector3()), b = D.bladePoint(1, new THREE.Vector3());
@@ -83,17 +85,19 @@ function trial(cfg, attack, atk, gap) {
       const c = D.bodies.chest.translation();
       const tip = A.bladePoint(1, _t);
       const rt = D.right(_r);
-      track.push({ lat: (tip.x - c.x) * rt.x + (tip.z - c.z) * rt.z, h: tip.y - c.y });
+      track.push({ t: Gm.t - first.t, lat: (tip.x - c.x) * rt.x + (tip.z - c.z) * rt.z, h: tip.y - c.y });
     }
   };
   while (!(ph === 4 && Gm.t - t0 > 0.6) && Gm.t < 6) Gm.step();
   const why = !cut && !first ? 'clear' : cut ? (cut.ph < 3 ? 'wind' : 'cut') : 'ok';
-  if (!first) return { why };
+  if (!first) return { why, nag };
   // 칼끝 길: 어깨(가슴 +0.15) 밑으로 내려간 첫 점의 옆 자리 · 머리(가슴 +0.45) 위에 머문 몫
   const low = track.find((p) => p.h < 0.15);
   const highShare = track.filter((p) => p.h > 0.45).length / Math.max(1, track.length);
   const path = low ? (Math.abs(low.lat) > 0.25 ? 'slide' : 'through') : highShare > 0.6 ? 'stop' : 'hang';
-  return { why, vn: first.vn, vt: first.vt, J: first.J, line: first.line, mode: first.mode, cw: first.cw, at: first.at, touch, slide, path, lowLat: low?.lat ?? null };
+  // 처음 닿은 뒤 0.2 s 의 상대 칼끝 자리 (막는 쪽 가슴 기준 옆 · 높이 — 흘려 받기 켬·끔 비교용)
+  const p20 = track.find((p) => p.t >= 0.2) ?? track[track.length - 1];
+  return { why, nag, vn: first.vn, vt: first.vt, J: first.J, line: first.line, mode: first.mode, cw: first.cw, at: first.at, touch, slide, path, lowLat: low?.lat ?? null, lat20: p20?.lat ?? null, h20: p20?.h ?? null };
 }
 
 const out = {};
@@ -105,6 +109,6 @@ for (const cfg of CONFIGS) {
   const avg = (k) => (hit.length ? hit.reduce((s, r) => s + r[k], 0) / hit.length : 0);
   const cnt = (p) => hit.filter((r) => r.path === p).length;
   console.log(`${cfg.key.padEnd(20)} 부딪힘 ${hit.length}/${rows.length} · 처음 닿을 때 맞닿는 빠르기 vn ${avg('vn').toFixed(2)} · 스치는 빠르기 vt ${avg('vt').toFixed(2)} m/s · 충격량 ${avg('J').toFixed(2)} N·s · 0.35 s 안 닿은 시간 ${avg('touch').toFixed(3)} s` +
-    ` | 칼끝: 흘러내림 ${cnt('slide')} · 멈춤 ${cnt('stop')} · 가운데로 ${cnt('through')} · 머묾 ${cnt('hang')} | 막음 ${rows.filter((r) => r.why === 'ok').length} 베임 ${rows.filter((r) => r.why === 'cut' || r.why === 'wind').length}`);
+    ` | 칼끝: 흘러내림 ${cnt('slide')} · 멈춤 ${cnt('stop')} · 가운데로 ${cnt('through')} · 머묾 ${cnt('hang')} | 막음 ${rows.filter((r) => r.why === 'ok').length} 베임 ${rows.filter((r) => r.why === 'cut' || r.why === 'wind').length} | 흘려 받기 걸린 판 ${rows.filter((r) => r.nag > 0).length}`);
 }
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));

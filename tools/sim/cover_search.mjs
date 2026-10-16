@@ -6,12 +6,13 @@
 //  node tools/sim/cover_search.mjs
 import { newRound, DT } from './harness_m.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { SKILL } from '../../src/config.js';
+import { SKILL, NAGASHI } from '../../src/config.js';
 import { TECH, FEINTS } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
 if (process.env.FOLLOW != null) SKILL.parryFollow = +process.env.FOLLOW;
+if (process.env.NAGASHI != null) NAGASHI.on = +process.env.NAGASHI; // NAGASHI=0: 흘려 받기 규칙 끔 (config NAGASHI)
 const TR = process.env.TR ?? 'japanese';
 const WEAPON = process.env.WEAPON ?? 'uchigatana';
 const LINE = process.env.LINE ?? 'highL';
@@ -71,7 +72,9 @@ function candidate() {
   return { ...RANGE(), pelvisYaw: Math.round(pick(-40, 40)), chestYaw: Math.round(pick(-50, 50)), pitch: Math.round(pick(0, 10)), drop: r2(pick(0, 0.1)) };
 }
 
+let nag = false;
 function trial(cover, atk, gap, speed, attack) {
+  nag = false;
   SKILL.parryAssist = 0;
   const Gm = newRound({ weapon: WEAPON, weapon2: atk, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
@@ -95,6 +98,8 @@ function trial(cover, atk, gap, speed, attack) {
   const setPad = (x, y) => (A.handOffset.set(x, y), A.skill.aimRaw?.set?.(x, y));
   let cut = null, clash = null, ph = 0, t0 = 0, pts = null, cutPh = null;
   const c0 = Gm.clashes;
+  const prev = Gm.combat.hooks.onClash;
+  Gm.combat.hooks.onClash = (point, sp, info) => (prev?.(point, sp, info), info.nagashi && (nag = true)); // 흘려 받기가 걸렸나 (combat.js nagashi)
   Gm.before = () => {
     guard.step(DT);
     D.inputActive = guard.active;
@@ -119,23 +124,24 @@ function trial(cover, atk, gap, speed, attack) {
 }
 
 function score(cover) {
-  let ok = 0, n = 0, nS = 0;
+  let ok = 0, n = 0, nS = 0, nN = 0;
   const trials = [];
   for (const attack of ATTACKS) for (const atk of ATKS) for (const gap of GAPS) for (const sp of SPEEDS) {
     const w = trial(cover, atk, gap, sp, attack);
-    trials.push([attack.name, atk, gap, sp, w]);
+    trials.push([attack.name, atk, gap, sp, w, nag ? 1 : 0]);
+    if (nag) nN++;
     if (w === 'clear') continue;
     n++;
     if (w !== 'wind') nS++;
     if (w === 'ok') ok++;
   }
-  return { ok, n, nS, trials };
+  return { ok, n, nS, nN, trials };
 }
 
 const cands = process.env.CANDS ? JSON.parse(readFileSync(process.env.CANDS, 'utf8')) : [{ tag: '지금', cover: null }, ...Array.from({ length: N }, (_, i) => ({ tag: `c${i}`, cover: candidate() }))];
 const res = cands.map((c) => ({ ...c, ...score(c.cover) }));
 res.sort((a, b) => b.ok / Math.max(1, b.n) - a.ok / Math.max(1, a.n) || b.n - a.n);
-for (const r of res.slice(0, TOP)) console.log(`${r.tag.padEnd(6)} ${r.ok}/${r.n} (긋기만 ${r.ok}/${r.nS}) ${JSON.stringify(r.cover)}`);
+for (const r of res.slice(0, TOP)) console.log(`${r.tag.padEnd(6)} ${r.ok}/${r.n} (긋기만 ${r.ok}/${r.nS}) 흘림 ${r.nN} ${JSON.stringify(r.cover)}`);
 const now = res.find((r) => r.tag === '지금');
-if (now) console.log(`지금 ${now.ok}/${now.n} (긋기만 ${now.ok}/${now.nS})`);
+if (now) console.log(`지금 ${now.ok}/${now.n} (긋기만 ${now.ok}/${now.nS}) 흘림 ${now.nN}`);
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(res, null, 1));

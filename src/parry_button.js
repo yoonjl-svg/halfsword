@@ -48,6 +48,7 @@ export class PlayerParryGuard {
   constructor(me, foe) {
     this.me = me;
     this.foe = foe;
+    me.parryGuard = this; // 흘려 받기(combat.js — config NAGASHI)가 '막기 단추를 누름'을 읽는다
     this.L = AI_LEVELS.normal;
     this.sense = new Senses(me, foe);
     this.lag = 0; // 위협을 몇 초 전 모습으로 읽나 (0 = 지금. 재기: AI_LEVELS.normal.reaction 0.26 이면 AI 보통과 같은 눈)

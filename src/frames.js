@@ -271,7 +271,8 @@ export function installCover(fighter, ai, covers) {
     const az = o.blade[1] * D2R;
     return [k, { ...o, dir: [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)] }];
   }));
-  sk._cover = { w: 0, last: null, own: false, keep: null, face: null };
+  sk._cover = { w: 0, last: null, own: false, keep: null, face: null, ai, forceT: 0, nagashi: Object.values(D).find((c) => c.nagashi) ?? null };
+  //  ai = 덮개 주인(AI · 막기 단추 — combat.js 흘려 받기가 '막는 중'을 읽는다) · forceT/nagashi = 흘려 받기가 걸면 그 동안 우케나가시 꼴 (config NAGASHI.poseT)
   const upd = sk.update.bind(sk);
   const release = (st, pose) => {
     if (!st.own) return;
@@ -290,7 +291,8 @@ export function installCover(fighter, ai, covers) {
     }
     // 칸 down (10/11 중국 덮는 자세 — 사장님 01:5x '거정세로 바꿔야지'): 완전히 쓰러져 칼을 머리 위로 들어 가리는 동안(ai.js 'down' 가지 — 손은 pose.cover 패드)도 그 몸꼴로 덮는다.
     //  칸 없는 꾸러미(지금 중국 말고 모두)는 전과 같다. 쓰러진 몸은 근육이 0.1 이라(fighter.js — driveSword 문턱 0.12 밑) 다리를 잃은 몸이 아니면 손·칼 서보가 거의 돌지 않는다
-    const want = D.down && fighter.state === 'down' ? D.down : ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : ai.coverLine && D[ai.coverLine]?.watch ? D[ai.coverLine] : null;
+    let want = D.down && fighter.state === 'down' ? D.down : ai.mode === 'defend' && !ai.defVoid ? D[ai.defLine] : ai.coverLine && D[ai.coverLine]?.watch ? D[ai.coverLine] : null;
+    if (st.forceT > 0) (st.forceT -= dt), (want = st.nagashi ?? want); // 흘려 받기 (combat.js — config NAGASHI)
     if (want) st.last = want;
     st.w = Math.max(0, Math.min(1, st.w + (want ? dt / MOTION.coverIn : -dt / MOTION.coverOut))); // 덮는 시간·걷는 시간 (MOTION)
     const c = st.last;

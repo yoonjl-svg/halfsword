@@ -8,7 +8,7 @@
 //  node tools/sim/parry_gap_map.mjs longsword,rapier,zweihander,uchigatana,qinggang,qinggang:basic,qinggang:nocover
 import { newRound, DT } from './harness_m.mjs';
 import { writeFileSync } from 'node:fs';
-import { SKILL } from '../../src/config.js';
+import { SKILL, NAGASHI } from '../../src/config.js';
 import { TECH, FEINTS } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { NEW_TECH } from '../../src/frames.js';
@@ -18,6 +18,7 @@ const CONFIGS = (process.argv[2] ?? 'longsword').split(',').map((s) => {
   const [weapon, mode = 'school'] = s.split(':');
   return { weapon, mode, key: s };
 });
+if (process.env.NAGASHI != null) NAGASHI.on = +process.env.NAGASHI; // NAGASHI=0: 흘려 받기 규칙 끔 (config NAGASHI)
 if (process.env.FOLLOW != null) SKILL.parryFollow = +process.env.FOLLOW; // 막기 따라가기 (판 값 — 10/16 22:5x 부터 1, 0 = 그 전)
 const ATK = process.env.ATK ?? 'longsword';
 const GAPS = (process.env.GAPS ?? '1.35,1.5,1.65,1.8').split(',').map(Number);
@@ -82,7 +83,9 @@ function trial(cfg, atk, gap) {
   A.move.set(0, 0);
   guard.held = true;
   const setPad = (x, y) => (A.handOffset.set(x, y), A.skill.aimRaw?.set?.(x, y));
-  const r = { cut: null, clash: null, lines: new Set() };
+  const r = { cut: null, clash: null, lines: new Set(), nag: false };
+  const prev = Gm.combat.hooks.onClash;
+  Gm.combat.hooks.onClash = (point, sp, info) => (prev?.(point, sp, info), info.nagashi && (r.nag = true)); // 흘려 받기가 걸렸나 (combat.js nagashi)
   let ph = 0, t0 = 0, pts = null;
   const c0 = Gm.clashes;
   Gm.before = () => {
@@ -108,11 +111,12 @@ function trial(cfg, atk, gap) {
   };
   while (!(ph === 4 && Gm.t - t0 > 0.6) && Gm.t < 6) Gm.step();
   const lines = [...r.lines].join('>') || '-';
-  if (!r.cut && r.clash == null) return { why: 'clear', lines };
-  if (!r.cut) return { why: 'ok', lines };
+  const nag = r.nag ? 1 : 0;
+  if (!r.cut && r.clash == null) return { why: 'clear', lines, nag };
+  if (!r.cut) return { why: 'ok', lines, nag };
   // wind = 긋기 전(준비 동작 · 멈춤)에 벰 — 가까운 간격에서 준비 자세로 가는 칼끝이 다리를 스친다 (10/16 23:5x). 막음 셈에선 전과 같이 못 막음
-  if (r.cut.ph < 3) return { why: 'wind', lines, part: r.cut.part };
-  return { why: r.clash != null && r.clash < r.cut.t ? 'pushed' : 'cut', lines, part: r.cut.part };
+  if (r.cut.ph < 3) return { why: 'wind', lines, part: r.cut.part, nag };
+  return { why: r.clash != null && r.clash < r.cut.t ? 'pushed' : 'cut', lines, part: r.cut.part, nag };
 }
 
 const out = { atk: ATK, gaps: GAPS, configs: {} };
@@ -120,7 +124,7 @@ for (const cfg of CONFIGS) {
   const rows = {};
   for (const atk of ATTACKS) rows[atk.name] = GAPS.map((g) => trial(cfg, atk, g));
   out.configs[cfg.key] = rows;
-  let ok = 0, n = 0, wind = 0;
+  let ok = 0, n = 0, wind = 0, nag = 0;
   const cells = [];
   for (const [name, res] of Object.entries(rows)) {
     const v = res.filter((x) => x.why !== 'clear');
@@ -129,8 +133,9 @@ for (const cfg of CONFIGS) {
     ok += k;
     n += v.length;
     wind += wd;
+    nag += res.filter((x) => x.nag).length;
     cells.push(`${name} ${k}/${v.length}${wd ? `(준비 ${wd})` : ''}`);
   }
-  console.log(`${cfg.key.padEnd(18)} 치는 칼 ${ATK.padEnd(10)} 막음 ${ok}/${n} = ${n ? Math.round((100 * ok) / n) : 0}% (준비 동작에 벰 ${wind}) | ${cells.join(' · ')}`);
+  console.log(`${cfg.key.padEnd(18)} 치는 칼 ${ATK.padEnd(10)} 막음 ${ok}/${n} = ${n ? Math.round((100 * ok) / n) : 0}% (준비 동작에 벰 ${wind}) 흘려 받기 걸린 판 ${nag} | ${cells.join(' · ')}`);
 }
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));
