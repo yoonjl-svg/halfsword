@@ -73,7 +73,9 @@ try{
  const tx=turn.x+turn.width*.15,ty=turn.y+turn.height*.5;
  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:tx,y:ty}]});
  await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:tx+turn.width*.5,y:ty}]});
+ await p.waitForTimeout(250); // 10/16 돌림판: 멈췄다 놓으면 관성 없이 그 자리 (튕기면 더 돈다 — ui_fix_smoke)
  await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning==='false');
  assert.ok(Math.abs(Number(await p.locator('#characterView').getAttribute('data-angle'))-180)<3);
  await screenshot(p,'lobby-back');
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({p:rb.translation(),q:rb.rotation()}))),beforeBodies);

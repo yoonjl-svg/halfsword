@@ -66,7 +66,7 @@ try{
  assert.equal(await page.locator('#noticeDialog').evaluate(d=>d.open),true);assert.equal(await page.locator('.notice-entry').count(),N);
  let b=await bounds(page);check(`first launch: ${N} notices in the dialog`,b);await shot(page,'notices-desktop');
  // 10/16 글자 정돈 (docs/import/lobby_fix_2026-10-16.md §1 — src/entrance_type.css): 싸움 화면 규칙 — 창 제목 17·700 · 이름 14·700 · 설명 12·400 보조 · 표지 12·600 강조 · 글꼴 줄 --font-ui(Cinzel 먼저)
- //  10/16 08:3x 사장님 '공지사항 안의 글씨 더 작게 해' (docs/ui/uifix_2026-10-16.md §1): 공지 본문 · 날짜 줄만 한 단계 아래 10 (--fs-xs)
+ //  10/16 08:3x 사장님 '공지사항 안의 글씨 더 작게 해' (docs/import/ui_fix_2026-10-16.md §2): 공지 본문 · 날짜 줄만 한 단계 아래 10 (--fs-xs)
  const typography=await inRoot(page,`return Object.fromEntries(['.notice-header h2','.notice-count','.notice-entry h3','.notice-entry p','.notice-meta','.unread','.hide-read','.confirm-button'].map(selector=>{const s=getComputedStyle(root.querySelector(selector));return [selector,{size:s.fontSize,color:s.color,weight:s.fontWeight,family:s.fontFamily.split(',')[0].replace(/['"]/g,'').trim(),wordBreak:s.wordBreak}];}));`);
  const pick=(t,...k)=>Object.fromEntries(k.map(x=>[x,t[x]]));
  assert.deepEqual(pick(typography['.notice-header h2'],'size','color','weight'),{size:'17px',color:'rgb(243, 233, 216)',weight:'700'});

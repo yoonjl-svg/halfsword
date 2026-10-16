@@ -74,7 +74,8 @@ paintPixelWordmark(root.querySelector('.title-korean'), {
   text: '적막', font: '600 18px Pretendard', height: 29, baseline: 22, tracking: 4, letterOffsets: [0, 1],
 });
 let saved = { hideRead: false, readIds: [] }, transition = 0, visibleNotes = [];
-// 첫 화면 아래 줄 '공지사항'으로 연 공지 (처음 들어올 때의 공지 → 첫 화면과 다른 길): 확인 = 창만 닫는다 — 첫 화면 바람·제목 나타남을 다시 틀지 않는다 (사장님 10/16 08:3x)
+// 첫 화면 아래 줄 '공지사항'으로 연 공지 (처음 들어올 때의 공지 → 첫 화면과 다른 길): 확인 = 창만 닫는다 — 첫 화면 바람·제목 나타남을 다시 틀지 않는다
+//  (사장님 10/16 08:3x '공지사항 눌렀다가 확인 누르면 창이 닫히는 게 아니라 다시 애니메이션이 재생되는데 고칠 수 있나' — docs/import/ui_fix_2026-10-16.md §2)
 let noticeFromTitle = false;
 try {
   const value = JSON.parse(localStorage.getItem(STORAGE_KEY));

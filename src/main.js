@@ -502,9 +502,9 @@ function warmRoundFx(on) {
 
 /**
  * 싸움판 만들기: prepareRound 가 정한 상대와 주인공 무기(weaponId)로 물리 세계와 두 사람을 새로 세운다.
- *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다).
+ *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다). quiet = 판 시작 소리를 안 냄 (toLobby)
  */
-function newRound(weaponId) {
+function newRound(weaponId, { quiet = false } = {}) {
   input.resetTransient(); // 지난 판의 손가락 상태를 물려받지 않는다 (10/8 입력 수명주기)
   // 다리로 체중 받치기: 게임은 늘 gait.js 걸음(다리가 체중 대부분을 받친다). 오너 결정으로 설정 토글을 없애고 기본 적용했다.
   //  CONFIG 기본값도 'hybrid'라 시뮬 도구가 게임과 같은 걸음을 잰다(9/29). 이 줄은 콘솔·도구가 바꿔 둔 값을 판마다 되돌린다
@@ -657,7 +657,7 @@ function newRound(weaponId) {
   const foeVoice = voiceOf(currentFoe);
   bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
   sound.resetRound();
-  sound.roundStart(); // 대성당: 판이 시작될 때 파이프 오르간이 한 번 울린다
+  if (!quiet) sound.roundStart(); // 대성당: 판이 시작될 때 파이프 오르간이 한 번 울린다 (quiet = 싸움 → 대기실이 메뉴 뒤 판을 새로 세울 때 — toLobby)
   roundOver = false;
   roundOverTime = 0;
   resetCamera(); // 따라가기를 새 판 몸 자리에 바로 맞춘다 (지난 판 자리에서 미끄러져 오지 않게 — 판 시작 자리는 planOpening 이 정한다)
@@ -1497,9 +1497,10 @@ function resume() {
   last = performance.now();
 }
 
-// ── 싸움 → 대기실 (사장님 10/16 08:3x '전투에서 대기실로 가는 기능이 필요해. 정지 누르면 거기에 넣어' · 결과 창 '다음 여정과 대기실 선택지로' — docs/ui/uifix_2026-10-16.md §3 · §4) ──
+// ── 싸움 → 대기실 (사장님 10/16 08:3x '전투에서 대기실로 가는 기능이 필요해. 정지 누르면 거기에 넣어' · 결과 창 '다음 여정과 대기실 선택지로' — docs/import/ui_fix_2026-10-16.md §3 · §4) ──
 //  첫 화면·대기실로 연 여정만 (journeySaves + game_entry.js 가 출발할 때 건 setLobbyReturn) — 테스트 경로 · 주소 판 메뉴는 그대로.
-//  판을 떠난다: 금화 · 대면 결과는 안 바뀐다(사장님 08:4x '깎지 마') · 이어하기 지점도 그대로(지금 무대 시작 — 이긴 판이면 이미 다음 무대) · 대기실 동안 게임 소리는 멈춤
+//  판을 떠난다: 금화 · 대면 결과는 안 바뀐다(사장님 08:4x '깎지 마') · 이어하기 지점도 그대로(지금 무대 시작 — 이긴 판이면 이미 다음 무대) · 대기실 동안 게임 소리는 멈춤.
+//  대기실이 다시 '여정 이어가기'로 출발하면 launchJourney('continue') 가 그 지점부터 판을 새로 연다
 let lobbyReturn = null;
 export function setLobbyReturn(fn) {
   lobbyReturn = typeof fn === 'function' ? fn : null;
@@ -1522,8 +1523,13 @@ function toLobby() {
   hideFoeIntro();
   topButtons.classList.remove('show');
   $('rotate').classList.remove('enabled');
+  parryHold.btn = null; // 막기를 누른 채 떠나도 다음 판에 막기가 붙어 있지 않게
+  parryHold.key = false;
   applyMoveMode();
   sound.ctx?.suspend?.()?.catch?.(() => {}); // 판이 다시 열리면 startFight 의 sound.unlock 이 되살린다
+  // 메뉴 뒤 판을 처음 열 때처럼 새로 세운다 (시간은 안 흐름): 싸우던 판의 쓰러진 몸 · 상처 · 벗겨진 투구 · 흩어진 조각을 치운다.
+  //  대기실 캐릭터 미리보기가 이 판의 선 플레이어를 읽는다(getLobbyPlayer). 소리는 멈춰 둔 채라 판 시작 소리는 안 낸다(quiet)
+  newRound('longsword', { quiet: true });
   back();
 }
 $('btnStart').addEventListener('click', startFight);
