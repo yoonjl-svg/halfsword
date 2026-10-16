@@ -1,7 +1,7 @@
 // 대기실 고친 것 실제 흐름 점검 (docs/import/lobby_fix_2026-10-16.md §9) — 배포판 + 미리 보기 서버, 인증 서버는 막음(부르면 실패)
 //  ① 나뭇가지 장착 → 여정 시작 = 카드 없이 나뭇가지 · 해제 → 카드가 돌아옴 ② 케틀 햇: 장착 = 투구 + 최대 기력 130(머리 위 막대 = 130 의 몫) · 벗음 = 맨머리 + 100
 //  ③ 스킬북: 어둡게·값 → 구입 → 사용(둥근 빛) → 봉인 — 봉인/안 삼이면 싸움에서 실제로 꺼짐(일본 보법 · 막기 · 고유 공격 넷 · 비기)
-//  ④ 금화: 진 판 −1~5 · 0 밑으로 안 감 · 결과 창 한 줄 ⑤ 머리: 상대 목을 베면 1(한 번) ⑥ 인장 → 금화 한 번 ⑦ 테스트 경로 = 책 모두 열림 · 금화·인장 그대로 ⑧ 세로 폰 안내 · 미리보기 화소 비
+//  ④ 금화: 진 판 −1~5 · 0 밑으로 안 감 · 결과 창 한 줄 ⑤ 머리: 상대 목을 베면 1(한 번) ⑥ 인장 → 금화 한 번 ⑦ 테스트 경로 = 책 모두 열림 · 금화·인장 그대로 ⑧ 세로 폰 = 돌려 달라는 안내가 대기실을 덮음 · 미리보기 화소 비
 //  npm run build && npx vite preview --port 5210 →  node tools/browser/lobby_fix_smoke.mjs http://127.0.0.1:5210 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -125,19 +125,24 @@ try {
   checks.push('test route: every book open in the lobby, no seal conversion, school kit flags untouched in the fight, coins unchanged');
   await sc.close();
 
-  // ⑧ 세로 폰: 안내 한 줄 · 출발하면 돌려 달라는 안내가 서서히
-  const pc = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }); await noAuth(pc);
+  // ⑧ 폰: 대기실은 가로 화면만 (사장님 10/16 14:0x — docs/import/ui_fix_2026-10-16.md §11). 세로로 돌리면 싸움과 같은 '폰을 가로로 돌려 주세요'가 대기실을 덮고(누름도 막음)
+  //  가로로 돌리면 그대로 · 대기실 안 '싸움은 가로 화면입니다' 줄은 없다(전 ⑧ 은 그 줄과 출발 뒤 안내가 서서히 나타나는 것을 봤다) · 미리보기 = 기기 화소 비 3
+  const pc = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }); await noAuth(pc);
   const r = await pc.newPage(); watch(r);
+  const cover = () => r.evaluate(() => { const el = document.getElementById('rotate'); return { shown: getComputedStyle(el).display !== 'none', top: el.contains(document.elementFromPoint(innerWidth / 2, innerHeight / 2)) }; });
   await lobby(r, '/');
-  assert.equal(await r.locator('#landscapeHint').isVisible(), true); assert.match(await r.locator('#landscapeHint').textContent(), /싸움은 가로 화면/);
   assert.equal(await r.locator('#characterView').getAttribute('data-ratio'), '3');
-  await r.locator('#lobbyDepart').scrollIntoViewIfNeeded(); await r.locator('#lobbyDepart').tap();
-  await r.waitForFunction(() => game.state === 'draw' || game.state === 'fight', null, { timeout: 60000 });
-  assert.equal(await r.evaluate(() => getComputedStyle(document.getElementById('rotate')).animationName), 'rotateIn');
-  checks.push('portrait phone: in-lobby landscape hint; preview at device ratio 3; the rotate screen fades in after departure');
+  assert.equal(await shadow(r, `return root.querySelectorAll('#landscapeHint, .landscape-hint').length`), 0);
+  assert.deepEqual(await cover(), { shown: false, top: false });
+  await r.setViewportSize({ width: 390, height: 844 }); // 세로로
+  assert.deepEqual(await cover(), { shown: true, top: true });
+  await r.setViewportSize({ width: 844, height: 390 }); // 다시 가로로 — 대기실 그대로
+  assert.deepEqual(await cover(), { shown: false, top: false });
+  await depart(r, 'draw');
+  assert.equal(await r.evaluate(() => getComputedStyle(document.getElementById('rotate')).animationName), 'none'); // 출발 뒤 서서히 나타나던 것 지움
+  await r.setViewportSize({ width: 390, height: 844 }); assert.deepEqual(await cover(), { shown: true, top: true }); // 싸움(카드)도 그대로 덮음
+  checks.push('phone: the lobby is landscape-only — in portrait the rotate screen covers it (and takes the taps), back to landscape it is as it was; no in-lobby landscape hint; no fade-in after departure; preview at device ratio 3');
   await pc.close();
-  const lc = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true }); await noAuth(lc);
-  const l = await lc.newPage(); watch(l); await lobby(l, '/'); assert.equal(await l.locator('#landscapeHint').isVisible(), false); await lc.close();
   assert.deepEqual(errors, []);
 } finally {
   fs.writeFileSync(`${out}/lobby_fix.json`, JSON.stringify({ checks, errors }, null, 2));

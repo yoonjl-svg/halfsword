@@ -2,7 +2,8 @@
 //  ① 캐릭터(실제 플레이어 겉모습 360° · 장착 미리보기) + 출발 단추 ② 내 정보(레벨·호칭 · 이름 · 대표 유파 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 무기 · 방어구 · 상점 · 스킬북
 //  우리 손댐 (사장님 10/16 01:0x): 무기 칸은 나뭇가지 하나(롱소드 뺌) · 나뭇가지도 방어구처럼 설명 카드(이름 · 등급 · 설명 — 우리 weapons.js 의 nameKo · tier · desc 그대로, 등급 글은 무기 카드와 같은 TIER_LABEL)
 //  10/16 03:5x~04:3x (lobby_fix): 장착은 실제 싸움에 (main.js journeyLoadout) · 케틀 햇 레전드 + '생존술: 기력 +30' · 글자는 싸움 화면 규칙(entrance_type.css) ·
-//   스킬북 = 유파별 별자리(skill_tree.js — 금화로 사고 사용 / 봉인) · 머리(천 주머니) · 이미 받은 인장을 금화로 한 번(seal_coins.js) · 세로 화면이면 싸움은 가로라는 안내
+//   스킬북 = 유파별 별자리(skill_tree.js — 금화로 사고 사용 / 봉인) · 머리(천 주머니) · 이미 받은 인장을 금화로 한 번(seal_coins.js)
+//  10/16 14:0x: 첫 화면·대기실도 가로 화면만 — 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'가 덮어(game_entry.js openHost) 대기실 안 '싸움은 가로 화면입니다' 줄은 지움
 import style from './lobby.css?inline';
 import titleStyle from './start_pixel.css?inline';
 import typeStyle from './entrance_type.css?inline';
@@ -16,10 +17,7 @@ import { mountSkillTree } from './skill_tree.js';
 import { convertSeals, takeSealNotice } from './seal_coins.js';
 import { TRADITIONS } from './schools.js';
 import { getWeapon, TIER_LABEL } from './weapons.js';
-
-const COIN_ICON = '<svg class="coin-icon" viewBox="0 0 16 16" role="img" aria-label="금화" shape-rendering="crispEdges"><path fill="#674823" d="M2 0h12v2h2v12h-2v2H2v-2H0V2h2Z"/><path fill="#d9a441" d="M3 1h10v2h2v10h-2v2H3v-2H1V3h2Z"/><path fill="#f3d785" d="M4 3h8v2H5v7H3V4h1Z"/><path fill="#93662b" d="M11 5h2v7h-1v1H5v-2h6Z"/><path fill="#f3d785" d="M7 6h2v4H7Z"/></svg>';
-// 머리 — 천 주머니 (사장님 10/16 04:3x '금화 옆에 천 주머니 모양으로 만들어'): 묶은 끈 · 접힌 귀 · 불룩한 몸 (16 × 16 픽셀)
-const POUCH_ICON = '<svg class="coin-icon pouch-icon" viewBox="0 0 16 16" role="img" aria-label="머리" shape-rendering="crispEdges"><path fill="#4a3422" d="M4 0h2v1h4V0h2v2h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1h-1v1H4v-1H3v-1H2v-1H1V7h1V5h1V4h1V3h1V2H4Z"/><path fill="#a9814f" d="M5 1h1v1h4V1h1v1h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1H4v-1H3v-1H2V7h1V5h1V4h1V3h1V2H5Z"/><path fill="#d6b27a" d="M4 6h1v1h1v4H5v1H4V9H3V7h1Z"/><path fill="#6f5130" d="M11 7h1v1h1v4h-1v1h-1v1H8v-1h2v-1h1Z"/><path fill="#3a2a1b" d="M6 3h4v1H6z"/><path fill="#c9a36b" d="M7 2h2v1H7z"/></svg>';
+import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 금화 · 머리 그림 — 결과 창 금화 줄과 같은 그림
 
 export function mountLobby({ root, game, choice, onDepart, onBack }) {
   const ctx = game.getSkillBookContext?.() ?? { test: false };
@@ -27,7 +25,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><button id="lobbyBack">‹ 첫 화면으로</button></header>
     <div class="lobby-columns">
-      <section class="character-panel"><div class="portrait-card card-frame" aria-label="내 캐릭터"><div class="character-view" id="characterView" tabindex="0" role="group" aria-label="캐릭터 360도 보기. 드래그 또는 좌우 방향키로 회전, Home으로 정면"></div></div><div class="departure-actions start-actions"><button class="depart" id="lobbyDepart">${choice === 'continue' ? '여정 이어가기' : '여정 시작'}</button></div><p class="landscape-hint" id="landscapeHint"><span aria-hidden="true">↻</span> 싸움은 가로 화면입니다<br>시작하면 폰을 돌려 주세요</p><p id="lobbyStatus" class="lobby-status" role="status"></p></section>
+      <section class="character-panel"><div class="portrait-card card-frame" aria-label="내 캐릭터"><div class="character-view" id="characterView" tabindex="0" role="group" aria-label="캐릭터 360도 보기. 드래그 또는 좌우 방향키로 회전, Home으로 정면"></div></div><div class="departure-actions start-actions"><button class="depart" id="lobbyDepart">${choice === 'continue' ? '여정 이어가기' : '여정 시작'}</button></div><p id="lobbyStatus" class="lobby-status" role="status"></p></section>
       <section class="profile-panel" aria-label="내 정보">
         <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank"></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd><dt>대표 유파</dt><dd id="lobbySchool"></dd></dl>
         <p class="duel-record"><span>대면 결과</span><b id="duelRecord"></b></p>

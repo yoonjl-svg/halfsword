@@ -3,7 +3,8 @@
    우리 싸움 화면 글자 규칙(index.html :root 토큰 — docs/ui/hud_type_system_2026-10-10.md §16)을 그대로 읽는다. Shadow DOM 안이라도 :root 의 사용자 속성(--*)은 물려받는다.
    · 글꼴: --font-ui (라틴 글자 = Cinzel — 원어 기술 이름 · 'Lv.' · 서명 / 그 밖 = 프리텐다드). 메일 주소 · 번호 · 입력 칸만 --font-plain (아래)
    · 위계 넷 + 표지 하나: 창 제목 17 · 700 / 이름·첫 줄 14 · 700 / 줄 14 · 400 / 둘째 줄·설명 12 · 400 보조 색 / 표지(등급 · 새 소식 · 장착 중) 12 · 600
-   · 공지 안 본문 · 날짜 줄만 한 단계 아래 10 (--fs-xs — 사장님 10/16 08:3x '공지사항 안의 글씨 더 작게 해' · docs/import/ui_fix_2026-10-16.md §2). 공지 제목 14 · 창 제목 17 · 아래 줄 12 는 그대로
+   · 공지 안 본문 · 날짜 줄은 한 단계 아래 10 (--fs-xs — 사장님 10/16 08:3x '공지사항 안의 글씨 더 작게 해' · docs/import/ui_fix_2026-10-16.md §2) · 공지 제목도 본문과 같은 10
+     (14:0x '공지 제목도 글자 크기 내용과 같이 줄여. 색은 흰색으로 유지' — 굵기 700 · 흰색 --c-text 그대로 · §11). 창 제목 17 · 아래 줄 12 는 그대로
    · 강조는 강조 색(금색) 또는 굵기만. 등급 글은 등급 색(--tier-*). 한글은 낱말 가운데서 줄을 바꾸지 않는다(keep-all)
    · 크기는 키우지 않는다 — 낮은 가로 화면의 10px 두 곳(장착 배지 · 상태 줄)도 그대로 · 나무 판 · 단추 꼴 · 단추 크기 그대로
    · 단추 글: 주 단추(처음부터 · 이어하기 · 여정 시작 · 확인 · 닫기 · 저장 · 인증번호 받기 · 연결하기 · 장착 · 구입) 700 / 부 단추(첫 화면으로 · 아래 줄 · 취소 · 해제 · 고르지 않은 탭) 400 / 고른 탭 600
@@ -40,7 +41,7 @@
 /* 공지 안 날짜·읽음 줄과 본문: 한 단계 아래 12 → 10 (사장님 10/16 08:3x '공지사항 안의 글씨 더 작게 해'). 굵기·색·줄 간격 비율은 그대로 */
 :host .notice-meta { font-size: var(--fs-xs); font-weight: var(--fw-body); color: var(--c-sub); }
 :host .notice-meta .unread { color: var(--c-accent); font-weight: var(--fw-label); }
-:host .notice-entry h3 { font-size: var(--fs-m); font-weight: var(--fw-head); color: var(--c-text); }
+:host .notice-entry h3 { font-size: var(--fs-xs); font-weight: var(--fw-head); color: var(--c-text); } /* 공지 제목 = 본문과 같은 10 · 흰색(--c-text) · 700 그대로 (사장님 10/16 14:0x) */
 :host .notice-entry p { font-size: var(--fs-xs); font-weight: var(--fw-body); line-height: 1.6; color: var(--c-sub); }
 :host .hide-read { font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); }
 :host .confirm-button { font-weight: var(--fw-head); }

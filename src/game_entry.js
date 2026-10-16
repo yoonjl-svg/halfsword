@@ -21,14 +21,18 @@ if (skipsTitle(params)) {
 } else {
   let host = null, root = null, covered = [];
   // 덮개(Shadow DOM 을 단 #gameEntrance) 열기 — 처음 열 때 · 싸움에서 대기실로 돌아올 때. 뒤의 게임은 숨기고(index.html html[data-start-open]) 누를 수 없게(inert)
+  //  첫 화면 · 공지 · 계정 · 대기실도 가로 화면만 (사장님 10/16 14:0x '첫 화면이나 대기실도 가로 화면에서만 볼 수 있게 해'): 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'(#rotate)가
+  //   이 덮개 위를 덮는다 — 조건도 싸움과 같다(세로 + 터치 · PC 는 그대로). 안내는 inert 로 두지 않는다(inert 면 누름이 뒤의 첫 화면·대기실로 지나간다).
+  //   창(공지 · 설정 · 계정 · 이름 — showModal)은 맨 위 층이라 안내보다 위에 그려져 같은 조건에서 감춘다 (start_pixel.css 끝)
   function openHost() {
     document.documentElement.setAttribute('data-start-open', '');
+    document.getElementById('rotate')?.classList.add('enabled');
     host = document.createElement('div');
     host.id = 'gameEntrance';
     host.style.cssText = 'position:fixed;inset:0;z-index:100;background:#30291e';
     root = host.attachShadow({ mode: 'open' });
     document.body.append(host);
-    covered = [...document.body.children].filter(el => el !== host && el.tagName !== 'SCRIPT');
+    covered = [...document.body.children].filter(el => el !== host && el.id !== 'rotate' && el.tagName !== 'SCRIPT');
     for (const el of covered) el.inert = true;
   }
   openHost();
@@ -77,7 +81,7 @@ if (skipsTitle(params)) {
       game.setLobbyReturn?.(backToLobby); // 이 여정의 정지 · 결과 창에 '대기실' (main.js lobbyMenu)
       document.documentElement.removeAttribute('data-start-open');
       for (const el of covered) el.inert = false;
-      // 대기실을 0.3 s 걷어 낸다 — 뒤의 카드·싸움 화면(세로 폰이면 돌려 달라는 안내)이 비쳐 보이며 넘어가게 (리뷰 §8-6 '갑작스럽다')
+      // 대기실을 0.3 s 걷어 낸다 — 뒤의 카드·싸움 화면이 비쳐 보이며 넘어가게 (리뷰 §8-6 '갑작스럽다')
       const leaving = host, gone = lobby;
       leaving.style.pointerEvents = 'none'; leaving.style.background = 'transparent';
       root.querySelector('.lobby')?.setAttribute('data-leaving', '');

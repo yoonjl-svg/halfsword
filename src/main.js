@@ -14,6 +14,7 @@ import { readJourney, writeJourney, addJourneyClear } from './journey_save.js'; 
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { readLobbyEquipment, readLobbyArmor, LOBBY_ARMOR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3)
 import { journeyCoins, awardHead } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x)
+import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
 import { readBooks, playerKit, kitUniqueStage, bookTierParam } from './skill_books.js'; // 대기실 스킬북 = 플레이어 유파 몫 — 모든 판 (사장님 10/16 04:1x 산 책만 · 08:1x 인장 없앰, docs/strike/school_kit_map.md §2 · §3)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
@@ -1757,14 +1758,15 @@ function showRoundResult() {
   showToast(lastRoundWon ? '승리' : '패배', 0);
 }
 
-/** 결과 창 한 줄: '금화 +12 · 머리 +1' / '금화 −3' (첫 화면·대기실 여정만 — 그 밖은 숨김) */
+/** 결과 창 한 줄: '[금화] 금화 +12 · [천 주머니] 머리 +1' / '[금화] 금화 −3' (첫 화면·대기실 여정만 — 그 밖은 숨김).
+ *  사장님 10/16 14:0x: 늘든 줄든 같은 색(index.html .reward — 강조 색) · 위 부제와 빈 줄 하나 · 대기실 금화 그림. 그림은 글 옆 꾸밈이라 읽는 글에서 뺀다(글 '금화' · '머리'가 이미 있다) */
 function showRewardLine() {
   const r = roundReward, el = $('menuReward');
   el.hidden = !r;
   if (!r) return;
   const sign = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
-  el.textContent = `금화 ${sign(r.coins)}${r.heads ? ` · 머리 +${r.heads}` : ''}`;
-  el.dataset.sign = r.coins < 0 ? '-' : '+';
+  el.innerHTML = `${COIN_ICON}<span>금화 ${sign(r.coins)}</span>${r.heads ? `<span class="sep"> · </span>${POUCH_ICON}<span>머리 +${r.heads}</span>` : ''}`;
+  for (const icon of el.querySelectorAll('svg')) { icon.removeAttribute('role'); icon.removeAttribute('aria-label'); icon.setAttribute('aria-hidden', 'true'); }
 }
 
 function checkRoundEnd(dt) {
@@ -1807,8 +1809,10 @@ function checkRoundEnd(dt) {
       ? { 목: '목을 베었다', 머리: '머리를 쳤다', 출혈: '출혈로 쓰러뜨렸다', 기절: '기절시켰다', 내려찍기: '내려찍었다' }[loser.causeOfDeath] || '쓰러뜨렸다'
       : { 목: '목을 베였다', 머리: '머리를 맞았다', 출혈: '피를 너무 흘렸다', 기절: '기절했다', 내려찍기: '내려찍혔다' }[loser.causeOfDeath] || '쓰러졌다';
     $('menuTitle').textContent = win ? '승리' : '패배';
-    // 졌으면 상대의 승리 대사를 한 줄 덧붙인다 (사장님 확정)
-    $('menuSub').textContent = !win && lastFoeLine ? `${cause} · ${currentFoe.name}: “${lastFoeLine}”` : cause;
+    // 졌으면 상대의 승리 대사를 덧붙인다 (사장님 확정) — 사장님 10/16 14:0x '패배한 이유 쓰고 한 줄 내려서 다음줄에 캐릭터 메시지 넣어. 이름은 빼고 쌍따옴표 안에 대사만':
+    //  첫 줄 = 진 까닭('기절했다') · 다음 줄 = “대사”(이름 없이) · 그 아래 출처(있으면) · 금화 줄은 빈 줄 하나 띄고 (index.html .reward)
+    $('menuSub').textContent = cause;
+    if (!win && lastFoeLine) $('menuSub').append(document.createElement('br'), `“${lastFoeLine}”`);
     { const src = !win && lastFoeLine ? lineSourceOf(currentFoe, lastFoeLine) : ''; if (src) { const s = document.createElement('small'); s.textContent = src; $('menuSub').append(s); } } // 대사 아래 줄에 출처 (병마용 — index.html #menuSub small)
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '다시 겨루기'; // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
