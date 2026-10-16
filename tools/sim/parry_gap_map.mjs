@@ -11,6 +11,7 @@ import { writeFileSync } from 'node:fs';
 import { SKILL } from '../../src/config.js';
 import { TECH, FEINTS } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
+import { NEW_TECH } from '../../src/frames.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
 const CONFIGS = (process.argv[2] ?? 'longsword').split(',').map((s) => {
@@ -29,7 +30,28 @@ const ALL = [
     return { name: f.name, kind: 'feint', from: t.from, path: [lerp(t.from, t.path[0], f.at), ...f.then] };
   }),
 ];
-const ATTACKS = process.env.ATTACKS ? process.env.ATTACKS.split(',').map((n) => ALL.find((a) => a.name === n)) : ALL;
+// UNIQUE=1 | 이름,… (10/16 23:0x 사장님 '고유 동작 넣어서 빈틈 다시 재 봐'): 유파 고유 동작(TRADITIONS.*.unique — 길 · 속임수) + 몸 틀 새 기술(frames.js NEW_TECH)을 더한다.
+//  발 디딤(step — 옆 비킴 · 뛰어듦)은 대본이 움직이지 않으므로 칼 길만 같다(그 기술 숫자는 대략값). ONLY=1 이면 고유 동작만
+const UNIQ = [];
+if (process.env.UNIQUE) {
+  const want = process.env.UNIQUE === '1' ? null : new Set(process.env.UNIQUE.split(','));
+  const seen = new Set();
+  const add = (t) => {
+    if (!t?.name || seen.has(t.name) || (want && !want.has(t.name))) return;
+    seen.add(t.name);
+    UNIQ.push(t);
+  };
+  for (const tr of Object.values(TRADITIONS)) for (const u of tr.unique ?? []) {
+    if (u.from && u.path) add({ name: u.name, kind: u.kind, from: u.from, path: u.path, step: !!u.step });
+    else if (u.feint && byName[u.feint.fake]) {
+      const t = byName[u.feint.fake];
+      add({ name: u.name, kind: 'feint', from: t.from, path: [lerp(t.from, t.path[0], u.feint.at), ...u.feint.then] });
+    }
+  }
+  for (const list of Object.values(NEW_TECH)) for (const t of list) if (t.from && t.path) add({ name: t.name, kind: t.kind, from: t.from, path: t.path });
+}
+const POOL = process.env.ONLY ? UNIQ : [...ALL, ...UNIQ];
+const ATTACKS = process.env.ATTACKS ? process.env.ATTACKS.split(',').map((n) => POOL.find((a) => a.name === n)).filter(Boolean) : POOL;
 
 function trial(cfg, atk, gap) {
   SKILL.parryAssist = 0; // 지금 판 값
