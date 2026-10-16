@@ -1055,7 +1055,9 @@ const CARD_BACK_SVG =
 const CARD_BACK_SVG_FOE = CARD_BACK_SVG.replaceAll('#d9a441', '#86817a').replaceAll('#e8d3a0', '#a9a49c').replaceAll('#8a5a2b', '#55514c');
 /** 판을 열 때: 그 판 배경의 뒷면으로 바꾼다 (카드마다 조각 그림을 --b-* 변수로 넣는다) */
 function setCardBack(stageId) {
-  cardBack = BACK_PIN || (stageId in PX_BACKS ? stageId : 'classic');
+  // 밤 무대(10/16 샛별)는 뒷면 그림이 아직 없어 같은 곳 낮 무대의 뒷면을 빌린다 (밤의 포세이돈은 제 뒷면)
+  const dayOf = typeof stageId === 'string' ? stageId.replace(/_night$/, '') : stageId;
+  cardBack = BACK_PIN || (stageId in PX_BACKS ? stageId : dayOf in PX_BACKS ? dayOf : 'classic');
   drawEl.dataset.back = cardBack === 'classic' ? 'classic' : 'px';
   cardEls.forEach((el, i) => {
     const foe = i === FOE_CARD;

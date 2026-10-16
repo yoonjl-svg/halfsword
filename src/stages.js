@@ -81,7 +81,17 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  1막 유럽(길 떠남): 포세이돈 · 화전 터 · 성 안뜰 · 붉은 회랑 · 대성당 / 2막 남쪽 바다: 산호 항구 · 잠든 습지 · 화산섬 /
 //  3막 동아시아(여름 → 겨울): 청람잔도 · 신목의 숲 · 산사 · 얼어붙은 만 / 4막 비단길 귀로(마지막 하루 — 아침 · 해 질 녘 · 밤): 철불 절벽 · 소금 사막 · 밤의 포세이돈.
 //  처음 · 끝(포세이돈 · 밤의 포세이돈)과 화전 터 · 대성당 · 소금 사막 자리는 그대로. 저장된 이어하기는 무대 id 라 그대로 이어진다(번호만 바뀜)
-export const STAGE_ORDER = ['poseidon', 'clearing', 'castle', 'loggia', 'cathedral', 'corsair', 'sluice', 'etna', 'qinglan', 'sacred_grove', 'temple', 'frozen_bay', 'dunhuang', 'dayr', 'poseidon_night'];
+// 10/16 19:4x 사장님 "스테이지를 5개 단위로 나누어서, 5개마다 밤 스테이지 5개가 이어지게 할거야. 그 다음은 다시 원래의 낮 스테이지 순서로 돌아감."
+//  → 낮 다섯 · 밤 다섯이 번갈아 온다. 낮은 위 4 막 차례 그대로(밤의 포세이돈만 빠짐), 밤은 낮과 같은 차례로 다섯씩 (docs/stages.md 표).
+//  밤 첫 다섯 = 방금 지나온 낮 다섯의 밤. 둘째 다섯 = 산호 항구 · 잠든 습지 · 신목의 숲의 밤 + 산사 · 얼어붙은 만의 밤
+//  (화산섬 · 청람잔도의 밤이 아직 없어 다음 낮 묶음 두 곳의 밤을 당겨 씀). 끝 낮 묶음은 지금 네 곳. 밤 무대가 새로 생기면 같은 규칙으로 자리를 다시 잡는다
+export const STAGE_ORDER = [
+  'poseidon', 'clearing', 'castle', 'loggia', 'cathedral',
+  'poseidon_night', 'clearing_night', 'castle_night', 'loggia_night', 'cathedral_night',
+  'corsair', 'sluice', 'etna', 'qinglan', 'sacred_grove',
+  'corsair_night', 'sluice_night', 'sacred_grove_night', 'temple_night', 'frozen_bay_night',
+  'temple', 'frozen_bay', 'dunhuang', 'dayr',
+];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 //  10/14 19:4x: 잠든 습지 = 라트나 · 소금 사막 = 다라이시 (손님 인물 CHARACTER_GUESTS — CHARACTERS_BY_ID 로 풀린다, 무작위 회전에는 그대로 없음).
 //   철불 절벽(dunhuang) = 병마용(terracotta, 손님 인물 — 10/14 감독 짝, 사장님 19:4x 정식 경로 결정에 따름)
