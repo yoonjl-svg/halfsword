@@ -1,4 +1,5 @@
 // 실제 게임 촬영 + 같은 렌더러용 색 합성의 픽셀/크기 검사. iOS 실기기 검사는 아니다.
+// uniqueStage=2 = 보법·막기 책만 (고유 공격·비기 없음 — 10/16 08:1x 인장 없앰 전 주소 판의 uniqueStage=0 과 같은 몫: 주소 판도 산 책을 읽게 됨)
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +11,7 @@ try {
  const page=await browser.newPage({viewport:{width:844,height:390},deviceScaleFactor:2,isMobile:true,hasTouch:true});
  page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.clock.install({time:new Date('2026-10-15T12:00:00Z')});await page.clock.pauseAt(new Date('2026-10-15T12:00:01Z'));
- await page.goto(`${base}/?weapon=longsword&foe=default&stage=frozen_bay&emo=0&uniqueStage=0`,{waitUntil:'networkidle'});
+ await page.goto(`${base}/?weapon=longsword&foe=default&stage=frozen_bay&emo=0&uniqueStage=2`,{waitUntil:'networkidle'});
  await page.evaluate(()=>{game.renderCap.tick=()=>false;game.config.ARENA.startGap=1.6;document.getElementById('btnStart').click();});
  for(let i=0;i<90&&!(await page.evaluate(()=>game.state==='fight'));i++)await page.clock.runFor(16);
  assert.equal(await page.evaluate(()=>game.state),'fight');
@@ -47,7 +48,7 @@ try {
  for(const r of tint.rows){assert.deepEqual(r.left,r.right);assert.notDeepEqual(r.right,r.plain);assert.ok(r.maxAdjacentJump<=2,JSON.stringify(r));assert.ok(r.autoClear&&r.autoReset);}
  assert.ok(tint.inactiveSkipped);assert.equal(tint.oldLayers,0);results.push({check:'12 tint/size combinations: both edges covered without seam',...tint});
  // 실제 시작 경로로 무대를 골라 왼쪽 위 무대 이름까지 촬영 내용과 맞춘다.
- await page.goto(`${base}/?weapon=longsword&foe=default&stage=etna&emo=0&uniqueStage=0`,{waitUntil:'networkidle'});
+ await page.goto(`${base}/?weapon=longsword&foe=default&stage=etna&emo=0&uniqueStage=2`,{waitUntil:'networkidle'});
  await page.evaluate(()=>{game.renderCap.tick=()=>false;game.config.ARENA.startGap=1.6;document.getElementById('btnStart').click();});
  for(let i=0;i<90&&!(await page.evaluate(()=>game.state==='fight'));i++)await page.clock.runFor(16);
  assert.equal(await page.evaluate(()=>game.state),'fight');

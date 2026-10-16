@@ -1,6 +1,6 @@
 // 여정 이어하기 지점 (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
 //  무대 시작 자리만 저장한다: 무대 · 그 무대 상대 · 상대 무기 · (카드를 펼쳤으면) 내 카드 두 장 · (골랐으면) 내 무기 · 지난 판 무기.
-//  해금(깬 수 stillness.journeyClears.v1 · 인장)·설정(gladiator-settings)·싸움 중 물리 상태는 이 열쇠에 넣지 않는다.
+//  깬 수(stillness.journeyClears.v1 — 아래 journeyClears, 통계)·설정(gladiator-settings)·싸움 중 물리 상태는 이 열쇠에 넣지 않는다.
 //  무대 차례는 stages.js STAGE_ORDER, 저장 내용이 지금 여정과 맞는지는 main.js validJourney 가 본다.
 export const JOURNEY_SAVE_KEY = 'stillness.journey.checkpoint.v1';
 
@@ -40,4 +40,29 @@ export function writeJourney(checkpoint, storage) {
   } catch {
     return false;
   }
+}
+
+// 깬 무대 수 — 통계 (10/13 부터 같은 열쇠). 여정에서 이겨 다음 무대로 넘어가는 판마다 +1 (main.js checkRoundEnd — 주소로 무대를 고정한 판 · 테스트 경로는 안 셈).
+//  10/16 08:1x 사장님 '인장 제도 없애' 뒤로는 아무것도 열지 않는다(유파 몫은 스킬북). 이미 받은 인장을 금화로 한 번 바꿀 때만 이 수를 읽는다(seal_coins.js).
+//  읽기·쓰기가 막혀도 0 으로 그냥 동작한다.
+export const CLEAR_KEY = 'stillness.journeyClears.v1';
+export function journeyClears(storage) {
+  try {
+    storage ??= globalThis.localStorage;
+    const n = Number(storage.getItem(CLEAR_KEY));
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  } catch {
+    return 0;
+  }
+}
+/** 무대를 하나 깸: 깬 수 +1 — 돌려줌: 새 깬 수 (저장을 못 해도 이번 판은 그대로) */
+export function addJourneyClear(storage) {
+  const clears = journeyClears(storage) + 1;
+  try {
+    storage ??= globalThis.localStorage;
+    storage.setItem(CLEAR_KEY, String(clears));
+  } catch {
+    /* 저장 못 해도 이번 판은 그대로 */
+  }
+  return clears;
 }

@@ -34,7 +34,8 @@ await page.addInitScript(() => {
   window.__rec = [];
   window.__key = '';
 });
-await page.goto(`${base}/?stage=poseidon&weapon=longsword${extra}`, { waitUntil: 'domcontentloaded' });
+// &uniqueStage=2: 보법·막기 책 — 10/16 08:1x 인장 없앰부터 주소 판도 산 책을 읽어(새 브라우저 = 책 없음), 그 전 주소 판처럼 플레이어 유파 걸음·막기를 켠다
+await page.goto(`${base}/?stage=poseidon&weapon=longsword&uniqueStage=2${extra}`, { waitUntil: 'domcontentloaded' });
 // polling 100 ms: 이 도구는 requestAnimationFrame 을 가상 시계로 바꿔 두어 기본(rAF) 기다림이 다시 묻지 못한다 — 10/16 부터 게임 모듈은 들머리(game_entry.js)가 뒤이어 받아 DOMContentLoaded 뒤에 뜬다
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 90000, polling: 100 });
 await page.evaluate(() => window.__tick(5));

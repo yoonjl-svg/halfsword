@@ -10,12 +10,11 @@ import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨�
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
 import { createScreenTint } from './screen_tint.js';
-import { readJourney, writeJourney } from './journey_save.js'; // 여정 이어하기 지점 (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
+import { readJourney, writeJourney, addJourneyClear } from './journey_save.js'; // 여정 이어하기 지점 · 깬 무대 수(통계) (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { readLobbyEquipment, readLobbyArmor, LOBBY_ARMOR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3)
 import { journeyCoins, awardHead } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x)
-import { readBooks, playerKit, kitUniqueStage } from './skill_books.js'; // 대기실 스킬북 = 플레이어 유파 몫 (사장님 10/16 04:1x — 산 책만, docs/import/lobby_fix_2026-10-16.md §6)
-import { convertSeals, CONVERT_FUTURE_SEALS } from './seal_coins.js'; // 인장 → 금화 (사장님 10/16 04:2x — 앞으로 받을 인장은 스위치 하나, 지금 끔)
+import { readBooks, playerKit, kitUniqueStage, bookTierParam } from './skill_books.js'; // 대기실 스킬북 = 플레이어 유파 몫 — 모든 판 (사장님 10/16 04:1x 산 책만 · 08:1x 인장 없앰, docs/strike/school_kit_map.md §2 · §3)
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
@@ -42,7 +41,7 @@ import { tickDebris, clearDebris, debrisCount, DEBRIS } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
-import { PlayerUniqueAssist, uniqueStageFor, setClearsOverride, addJourneyClear, sealNotice } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
+import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setItalianRhythm, setItalianStride, traditionOf } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
@@ -115,10 +114,9 @@ if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
 // 테스트 경로도 기본 켬 (사장님 10/14 03:1x '테스트에서 켜' — 10/14 02:0x 부터 '궤적은 내 것' 강화 판으로 다시 만드는 동안 꺼 두었던 것). 끄려면 `?uniqueAssist=0`
 if (params.has('uniqueEnhance')) CONFIG.UNIQUE_ASSIST.enhance = Math.max(0, +params.get('uniqueEnhance') || 0); // 고유 동작 강화 세기(10/14): 기본 1 · 0 = 기술 이름 알림만 · 0.5 = 절반 (걸음·몸·끝 힘 한꺼번에)
-const UNIQUE_STAGE_PARAM = params.get('uniqueStage'); // 고유 동작 해금 단계 덮어쓰기 `?uniqueStage=0..5` (5 = 비기까지) — 모든 유파를 그 단계로 (본판·테스트 경로 모두). 없으면 테스트 경로 4 · 본판은 손에 든 무기 유파의 인장 수
+const UNIQUE_STAGE = bookTierParam(params.get('uniqueStage')); // 개발 인자 `?uniqueStage=0..5`: 손에 든 무기 유파의 N 급까지 스킬북을 '사용'으로 (0 = 책 없음 · 2 = 보법·막기 · 5 = 모두 — 산 책·테스트 경로보다 먼저, skill_books.js playerKit). 없으면 산 책 · 테스트 경로는 모두
 const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..5` (실력 숫자 이름·고유 동작 거르기·5 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
 const FOE_PROF = /^[0-9]$/.test(FOE_PROF_PARAM ?? '') && +FOE_PROF_PARAM <= AI_PROFICIENCY.max ? +FOE_PROF_PARAM : null;
-setClearsOverride(params.get('clears')); // 시험용 `?clears=N`: 여정에서 깬 무대 수를 N 으로 (저장소는 건드리지 않는다 — 그 판 동안 깬 수도 여기에만 더함)
 // 마무리 스위치 (10/12 샛별 가져오기 2차 — docs/import/saetbyeol_round2_2026-10-12.md, 기본은 둘 다 끔):
 //  `?finishEntry=low` = 낮은 상대 진입(몸 높이로 내려찍기를 연다, finish_entry.js) · `?finishMode=power25` = 즉사 대신 판정 에너지 2.5 배 + 갑옷 판정
 if (['down', 'low', 'downlow', 'auto'].includes(params.get('finishEntry'))) FINISH_SWITCH.entry = params.get('finishEntry'); // downlow = 고친 판 (큰 쓰러짐은 지금처럼 + 일어나는 중 낮은 몸) · 기본 auto (10/12)
@@ -309,9 +307,10 @@ let journeyMode = false;
 let pendingJourney = null; // 이어하기: 다음 startFight 가 되살릴 무대 시작 지점 (validJourney 가 고른 것)
 const JOURNEY_PURE = foeParam === 'stage' && !STAGE_PIN && !testRoute.active && !FIXED_WEAPON;
 const journeySaves = () => journeyMode && JOURNEY_PURE;
-// 대기실 장착·스킬북을 싸움에 (docs/import/lobby_fix_2026-10-16.md §3 · §6): 첫 화면·대기실에서 연 여정만(journeySaves — 주소 고정 판·테스트 경로·옛 메뉴 판은 지금 그대로).
-//  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리) · books = 산 스킬북 · 봉인 (playerKit)
-const journeyLoadout = () => (journeySaves() ? { weapon: readLobbyEquipment(), armor: readLobbyArmor(), books: readBooks() } : null);
+// 대기실 장착을 싸움에 (docs/import/lobby_fix_2026-10-16.md §3): 첫 화면·대기실에서 연 여정만(journeySaves — 주소 고정 판·테스트 경로·옛 메뉴 판은 지금 그대로).
+//  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리).
+//  스킬북(유파 몫)은 여기가 아니라 모든 판이 읽는다 — newRound 의 playerKit (10/16 08:1x 인장 없앰)
+const journeyLoadout = () => (journeySaves() ? { weapon: readLobbyEquipment(), armor: readLobbyArmor() } : null);
 const LOOK_BAREHEAD = { ...LOOKS.player, helmet: null }; // 케틀 햇을 벗은 주인공 — 겉모습·머리 방어 둘 다 없음 (fighter.js look.helmet)
 // 이번 판 금화 · 머리 (결과 창 한 줄 — showRewardLine). 첫 화면·대기실 여정만 바뀐다 (주소 고정 판 · 테스트 경로 · 옛 메뉴 판은 그대로)
 let roundReward = null;
@@ -559,7 +558,8 @@ function newRound(weaponId) {
   const before = new Set(scene.children);
   const foeWeapon = foeWeaponId;
   const loadout = journeyLoadout();
-  const kit = loadout ? playerKit(traditionOf(getWeapon(weaponId)), loadout.books) : null; // 손에 든 무기 유파의 스킬북 (무유파 무기 = null — 유파 몫이 원래 없다)
+  // 손에 든 무기 유파의 스킬북 — 모든 판 (첫 화면·대기실 여정 · 옛 메뉴 판 · 주소 판 — 10/16 08:1x 인장 없앰). 테스트 경로 = 모두 · ?uniqueStage=N = N 급까지 (무유파 무기 = null — 유파 몫이 원래 없다)
+  const kit = playerKit(traditionOf(getWeapon(weaponId)), readBooks(), { test: testRoute.active, upTo: UNIQUE_STAGE });
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
     name: journeyMode ? readProfile().name : '나', // 대기실 이름 (첫 화면에서 연 여정만 — 화면에 플레이어 이름이 나오는 자리는 없다. 메뉴 뒤 판·주소 판은 그대로 '나')
@@ -592,6 +592,7 @@ function newRound(weaponId) {
     physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 — fighter.js HUMAN_BODY). 없으면 사람
   });
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −40 · −80 그대로 · 기력 끔이면 아무 일 없음)
+  //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
   for (const f of [player, enemy]) {
     configureWetlandMovement(f, stages.id); // 진흙 웅덩이 감속 (잠든 습지만)
     f.arenaObstacle = arenaStone?.navigation ?? null; // AI 돌아가기가 읽는다 (석상 없으면 null — 아무 일 없음)
@@ -623,14 +624,12 @@ function newRound(weaponId) {
   const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...foeAI.persona, school: foeWeapon } : foeAI.persona;
   ai = new AI(enemy, player, foeAI.level, persona);
   if (testRoute.foeWhiff) ai.drill = new WhiffDrill(); // ?foeWhiff=1: 상대가 닿지 않는 거리에서 2~3 s 마다 허공을 벤다 (whiff_drill.js — 판마다 새 바깥 거리). 없으면 평소 그대로
-  // 손에 든 무기 유파의 숙련도: 첫 화면·대기실 여정 = 스킬북(고유자세 책 = 고유 공격 넷 한꺼번에 · 비기 책 = 비기 — 인장은 아무것도 안 연다, 사장님 10/16 04:1x) ·
-  //  그 밖(옛 메뉴 판) = 지금 그대로 인장 수 · 테스트 경로 5 · ?uniqueStage
-  const uniqueStage = kit ? kitUniqueStage(kit) : uniqueStageFor(player.swordArt?.tradition, { test: testRoute.active, param: UNIQUE_STAGE_PARAM }).stage;
-  const secretOpen = kit ? kit.secret : uniqueStage >= CONFIG.UNIQUE_ASSIST.secretStage;
-  playerSecret = new PlayerSecretWatch(player, enemy, { locked: !secretOpen }); // 내 무기 유파의 비기 — 여정은 비기 책이 '사용'일 때 · 옛 메뉴 판은 숙련도 5 에서만 (사장님 결정 10/13 23:1x). 그 전·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
+  // 손에 든 무기 유파의 고유 공격 · 비기 = 위의 스킬북 몫 kit (고유자세 책 = 고유 공격 넷 한꺼번에 · 비기 책 = 비기 — 사장님 10/16 04:1x · 08:1x 인장 없앰)
+  const uniqueStage = kitUniqueStage(kit);
+  playerSecret = new PlayerSecretWatch(player, enemy, { locked: !kit?.secret }); // 내 무기 유파의 비기 — 비기 책이 '사용'일 때만. 그 밖·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
   playerGuard = new PlayerParryGuard(player, enemy); // 막기 버튼 (누르는 동안만 손을 쥔다 — 권총·맨손이면 아무 일도 없다)
   player.stamina.controller = playerGuard;
-  playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStage }); // 고유 동작 강화: 손에 든 무기 유파의 숙련도(인장 수)만큼 열림 (단계 0 · 무유파 · 끔이면 붙지 않음)
+  playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStage }); // 고유 동작 강화: 고유자세 책이 '사용'이면 넷 모두 (단계 0 · 무유파 · 끔이면 붙지 않음)
   uniqueCueSeen = null;
   secretSlow = 0;
   secretBurstsSeen = 0;
@@ -1381,8 +1380,8 @@ async function startFight() {
 }
 
 // ── 여정 이어하기 (첫 화면 '이어하기' · 대기실 '여정 시작/이어가기' — game_entry.js 가 아래 내보낸 함수를 부른다, docs/import/lobby_port_2026-10-16.md §5) ──
-//  저장 단위는 무대 시작 자리: 카드를 펼치면 { 무대 · 상대 · 상대 무기 · 내 카드 둘 }, 고르면 { … · 내 무기 }, 이기면 곧바로 { 다음 무대 } (같은 승리·인장을 다시 받지 않게).
-//  무대 차례 = STAGE_ORDER (nextStage), 해금(깬 수·인장)은 지금 그대로 checkRoundEnd 의 addJourneyClear 만 센다 — 이어하기 지점은 해금을 바꾸지 않는다.
+//  저장 단위는 무대 시작 자리: 카드를 펼치면 { 무대 · 상대 · 상대 무기 · 내 카드 둘 }, 고르면 { … · 내 무기 }, 이기면 곧바로 { 다음 무대 } (같은 승리를 다시 받지 않게).
+//  무대 차례 = STAGE_ORDER (nextStage), 깬 수(통계)는 checkRoundEnd 의 addJourneyClear 만 센다 — 이어하기 지점은 깬 수를 바꾸지 않는다.
 function saveJourneyRound(weapon, cards = null) {
   if (journeySaves()) writeJourney({ stage: stages.id, foe: currentFoe?.id ?? null, foeWeapon: getWeapon(foeWeaponId).id, weapon, cards, lastWeapon: lastPlayerWeapon });
 }
@@ -1406,15 +1405,15 @@ function validJourney() {
 }
 export const canContinueJourney = () => !!validJourney();
 export const getLobbyPlayer = () => player; // 대기실 캐릭터 미리보기가 겉모습을 복제한다 (메뉴 뒤에 세워 둔 판의 플레이어 — 몸·물리는 건드리지 않는다)
-/** 대기실 스킬북 화면이 읽는 이 판의 갈래: test = 테스트 경로(책 모두 열림 · 인장 바꾸기 안 함) · clearsPinned = 주소 ?clears= (인장 바꾸기 안 함) */
-export const getSkillBookContext = () => ({ test: testRoute.active, clearsPinned: params.has('clears') });
+/** 대기실 스킬북 화면이 읽는 이 판의 갈래: test = 테스트 경로(책 모두 열림 · 이미 받은 인장을 금화로 바꾸지 않음) */
+export const getSkillBookContext = () => ({ test: testRoute.active });
 export const getLobbySettings = () => ({ fpsCap: settings.fpsCap });
 export function setLobbyFps(enabled) {
   settings.fpsCap = !!enabled; // 첫 화면 설정 창 — 메뉴의 '화면 60 fps 제한' 줄과 같은 값 · 같은 저장
   saveSettings();
   refreshSettingsUI();
 }
-/** 대기실의 출발 단추: choice 'new' = 첫 무대(STAGE_ORDER[0])부터 새 카드 · 'continue' = 저장된 무대 시작부터. 깬 수·인장·설정은 그대로 */
+/** 대기실의 출발 단추: choice 'new' = 첫 무대(STAGE_ORDER[0])부터 새 카드 · 'continue' = 저장된 무대 시작부터. 깬 수·설정은 그대로 */
 export async function launchJourney(choice) {
   const saved = choice === 'continue' ? validJourney() : null;
   if (choice === 'continue' && !saved) return false;
@@ -1724,16 +1723,11 @@ function checkRoundEnd(dt) {
         roundReward = { heads: roundReward?.heads ?? 0, coins: journeyCoins(win).delta };
       }
       lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
-      // 고유 동작 해금 (사장님 결정 10/13 22:3x): 여정(무대마다 그곳 검객 — 이기면 다음 무대로 넘어간다: nextRoundStage 의 advance)에서 이긴 판 = 무대 하나 깸.
-      //  깬 수가 10 의 배수가 되면 인장 하나 → 아래 가운데 안내 줄(#hint)에 한 줄 (도장 연출·모음 화면은 다음 작업)
+      // 여정(무대마다 그곳 검객 — 이기면 다음 무대로 넘어간다: nextRoundStage 의 advance)에서 이긴 판 = 무대 하나 깸 → 깬 수 +1 (통계 — journey_save.js).
+      //  인장은 없다(사장님 10/16 08:1x '인장 제도 없애' — 얻지도 알리지도 않는다 · 유파 몫은 스킬북)
       if (win && foeParam === 'stage' && !STAGE_PIN && !testRoute.active) {
-        const cl = addJourneyClear();
-        if (journeySaves()) {
-          // 첫 화면·대기실 여정: 인장은 아무것도 열지 않는다(스킬북은 금화로 — 사장님 10/16 04:1x). 앞으로 받을 인장을 금화로 바꾸는 스위치(seal_coins.js)를 켰을 때만 알림
-          const got = cl.seal && CONVERT_FUTURE_SEALS ? convertSeals() : null;
-          if (got?.coins) showHint(`인장 ${got.seals}개 — 금화 +${got.coins}`, 3400);
-        } else if (cl.seal) showHint(sealNotice(cl.seal), 3400); // 옛 메뉴 판: 지금 그대로 (인장 단계로 고유 동작이 열린다)
-        // 이긴 순간 이어하기 지점을 다음 무대로 — 다시 열어 같은 승리·인장을 또 받지 않게 (첫 화면에서 연 여정만)
+        addJourneyClear();
+        // 이긴 순간 이어하기 지점을 다음 무대로 — 다시 열어 같은 승리를 또 받지 않게 (첫 화면에서 연 여정만)
         if (journeySaves()) writeJourney({ stage: nextStage(stages.id), lastWeapon: player.weapon.id });
       }
       showRoundResult();

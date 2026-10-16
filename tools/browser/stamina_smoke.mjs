@@ -1,4 +1,5 @@
 // 실제 입력/물리 스텝 검사. 중간 GPU 그리기만 생략하고 촬영할 때 실제 게임을 그린다.
+// uniqueStage=2 = 보법·막기 책만 (고유 공격·비기 없음 — 10/16 08:1x 인장 없앰 전 주소 판의 uniqueStage=0 과 같은 몫: 주소 판도 산 책을 읽게 됨)
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +12,7 @@ try {
  page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  page.on('requestfailed',r=>errors.push(r.url()));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
  await page.clock.install({time:new Date('2026-10-15T09:00:00Z')});await page.clock.pauseAt(new Date('2026-10-15T09:00:01Z'));
- await page.goto(`${base}/?weapon=longsword&foe=default&stage=castle&emo=0&uniqueStage=0`,{waitUntil:'networkidle'});
+ await page.goto(`${base}/?weapon=longsword&foe=default&stage=castle&emo=0&uniqueStage=2`,{waitUntil:'networkidle'});
  await page.evaluate(()=>{game.renderCap.tick=()=>false;document.getElementById('btnStart').click();});
  const waitFight=async()=>{for(let i=0;i<60;i++){if(await page.evaluate(()=>game.state==='fight'))return;await page.clock.runFor(16);}throw Error('fight did not start');};
  await waitFight();await page.evaluate(()=>{game.ai.update=()=>{};});await page.clock.runFor(2300);

@@ -31,7 +31,7 @@ import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
-//  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1. stage = 그 동작이 열리는 성장 단계(1~4). name = schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
+//  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1. stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 고유자세 책 하나로 넷 모두: skill_books.js kitUniqueStage). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
 //  on = 여는 조건 목록(하나라도 맞으면):
 //   { tech }        이 긋기가 그 기본 동작(시작 패드 + 첫 방향)
 //   { pad, dir }    시작 패드 + 방향('up' | 'down' | 'horiz')
@@ -139,78 +139,8 @@ export function uniqueDef(tradition, e) {
   return { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: u.step ?? null };
 }
 
-// ── 해금 (사장님 결정 10/13 22:3x — 주인공 하나 기준) ──
-//  여정(foe=stage)에서 무대를 깰 때마다 깬 수 +1 (localStorage — 읽기·쓰기 실패해도 0 으로 그냥 동작). UNIQUE_ASSIST.sealEvery 번마다 인장 하나를
-//  sealOrder 유파 차례로 돌아가며 준다(sealMax 개에서 끝). 유파 숙련도 = 그 유파 인장 수(0~5) = 그 유파 무기를 들었을 때 열리는 고유 동작 단계.
-//  5 단계(UNIQUE_ASSIST.secretStage) = 그 유파 비기 (사장님 결정 10/13 23:1x — 21~25 번째 인장. 그 전엔 플레이어 비기 창이 안 열린다: main.js PlayerSecretWatch locked).
-//  인장 이름(단계별 — 사장님 결정 10/13 23:1x 1 견습생 · 2 숙련자 · 3 전문가 · 4 마스터 · 5 신: 여기 한 곳). 유파 이름은 TRADITIONS[유파].nameKo 를 그때 읽는다(글자를 박지 않는다)
-export const SEAL_NAMES = ['견습생', '숙련자', '전문가', '마스터', '신'];
-export const CLEAR_KEY = 'stillness.journeyClears.v1'; // 인장 → 금화 바꾸기(seal_coins.js)가 저장된 깬 수만 읽는다 (주소 ?clears= 덮어쓰기 말고)
-let clearsOverride = null; // 시험용 `?clears=N` (main.js setClearsOverride): 있으면 저장소 대신 이 값을 쓰고 깬 수도 여기에만 더한다
-export function setClearsOverride(n) {
-  const v = n == null || n === '' ? NaN : Number(n);
-  clearsOverride = Number.isInteger(v) && v >= 0 ? v : null;
-  return clearsOverride;
-}
-/** 지금까지 깬 무대 수 */
-export function journeyClears() {
-  if (clearsOverride != null) return clearsOverride;
-  try {
-    const n = Number(localStorage.getItem(CLEAR_KEY));
-    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
-  } catch {
-    return 0;
-  }
-}
-/** 무대를 하나 깸 (main.js — 여정에서 이겨 다음 무대로 넘어가는 판): 깬 수 +1. { clears, seal } — seal = 이번에 얻은 인장 { k, school, stage } (없으면 null) */
-export function addJourneyClear() {
-  const before = journeyClears();
-  const clears = before + 1;
-  if (clearsOverride != null) clearsOverride = clears;
-  else {
-    try {
-      localStorage.setItem(CLEAR_KEY, String(clears));
-    } catch {
-      /* 저장 못 해도 이번 판은 그대로 */
-    }
-  }
-  const k = sealCount(clears);
-  return { clears, seal: k > sealCount(before) ? sealAt(k) : null };
-}
-/** 깬 수 → 받은 인장 수 (sealMax 에서 멈춤) */
-export function sealCount(clears) {
-  return Math.min(UA.sealMax, Math.floor(Math.max(0, clears) / UA.sealEvery));
-}
-/** 인장 k(1부터): { k, school: sealOrder[(k−1) mod 5], stage: ⌊(k−1)/5⌋+1 } */
-export function sealAt(k) {
-  const O = UA.sealOrder;
-  return { k, school: O[(k - 1) % O.length], stage: Math.floor((k - 1) / O.length) + 1 };
-}
-/** 유파별 숙련도 (그 유파 인장 수 0~5) */
-export function masteryOf(clears) {
-  const m = Object.fromEntries(UA.sealOrder.map((s) => [s, 0]));
-  for (let k = 1; k <= sealCount(clears); k++) m[sealAt(k).school]++;
-  return m;
-}
-/** 이번 판의 해금 단계 (손에 든 무기 유파): 주소 ?uniqueStage=0..5(모든 유파) > 테스트 경로(testStage) > 그 유파 숙련도. 5 = 비기까지 (secretStage) */
-export function uniqueStageFor(tradition, { test = false, param = null, clears = journeyClears() } = {}) {
-  const p = param == null || param === '' ? NaN : Number(param);
-  if (Number.isInteger(p) && p >= 0 && p <= UA.secretStage) return { stage: p, source: 'url' };
-  if (test) return { stage: UA.testStage, source: 'test' };
-  return { stage: masteryOf(clears)[tradition] ?? 0, source: 'seals' };
-}
-/** 인장 알림 한 줄 (사장님 결정 10/13 23:1x '독일 유파 신 이렇게'): 「독일 유파 견습생」 인장 — 비껴 딛는 가로베기 열림 · 「동방 유파 신」 인장 — 비기 연환삼격 열림
- *  (유파 이름은 TRADITIONS 에서 · 동작·비기 이름은 괄호 앞) */
-export function sealNotice(seal) {
-  if (!seal) return '';
-  const school = TRADITIONS[seal.school]?.nameKo ?? seal.school;
-  const e = (PLAYER_UNIQUE[seal.school] ?? []).find((x) => x.stage === seal.stage);
-  const U = e ? uniqueDef(seal.school, e) : null;
-  const short = (t) => String(t).replace(/\s*[(·].*$/, '');
-  const secret = seal.stage >= UA.secretStage ? TRADITIONS[seal.school]?.secret : null;
-  const move = U ? short(U.nameKo) : secret?.nameKo ? `비기 ${short(secret.nameKo)}` : '';
-  return `「${school} 유파 ${SEAL_NAMES[seal.stage - 1] ?? ''}」 인장${move ? ` — ${move} 열림` : ''}`;
-}
+// 해금은 이 파일 밖 — 플레이어에게 무엇이 열리는지는 스킬북 하나(skill_books.js playerKit · kitUniqueStage → 아래 PlayerUniqueAssist 의 stage).
+//  10/13 의 여정 인장(깬 수 → 인장 → 유파 숙련도 · 인장 이름 · 인장 알림)은 10/16 08:1x 사장님 '인장 제도 없애'로 지웠다. 깬 수는 통계로만 journey_save.js 에 남는다
 
 /**
  * 플레이어 한 명의 고유 동작 강화 (10/14 — 궤적은 손가락, 고유 동작은 손가락으로 못 하는 몫만). 붙이면(f.skill.uniq = this) 검술 층이 매 스텝

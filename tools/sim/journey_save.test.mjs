@@ -2,7 +2,7 @@
 //  node --test tools/sim/journey_save.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { JOURNEY_SAVE_KEY, readJourney, writeJourney, skipsTitle } from '../../src/journey_save.js';
+import { JOURNEY_SAVE_KEY, readJourney, writeJourney, skipsTitle, CLEAR_KEY, journeyClears, addJourneyClear } from '../../src/journey_save.js';
 const memory=()=>{const data=new Map([['stillness.journeyClears.v1','37'],['gladiator-settings','keep']]);return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};};
 test('our key names: no clash with existing keys, no other-build names',()=>{
  assert.equal(JOURNEY_SAVE_KEY,'stillness.journey.checkpoint.v1');
@@ -34,6 +34,13 @@ test('blocked storage and blocked storage property do not stop a new game',()=>{
 });
 test('any game argument keeps the old direct entry; plain address shows the title',()=>{
  const p=q=>new URLSearchParams(q);
- for(const query of ['test=1','stage=castle','weapon=longsword','hero=heinrich','foe=random','look=heinrich:v0','lookv=0','foeWeapon=rapier','stamina=0','foeWhiff=1','tempo=1','itRhythm=4','camFollow=old','cards=longsword,rapier','clears=37','fps=1','offline=1','title=0','title=0&stage=castle'])assert.equal(skipsTitle(p(query)),true,query);
+ for(const query of ['test=1','stage=castle','weapon=longsword','hero=heinrich','foe=random','look=heinrich:v0','lookv=0','foeWeapon=rapier','stamina=0','foeWhiff=1','tempo=1','itRhythm=4','camFollow=old','cards=longsword,rapier','fps=1','offline=1','title=0','title=0&stage=castle'])assert.equal(skipsTitle(p(query)),true,query);
  for(const query of ['','title=1','nosw=1','title=1&stage=castle','title=1&cards=longsword,rapier','utm_source=x','fbclid=abc','gclid=abc'])assert.equal(skipsTitle(p(query)),false,query);
+});
+test('clear count (statistic since seals were removed 10/16): same key, +1 per clear, blocked or bad storage reads 0 without throwing',()=>{
+ const s=memory();assert.equal(CLEAR_KEY,'stillness.journeyClears.v1');assert.equal(journeyClears(s),37);
+ assert.equal(addJourneyClear(s),38);assert.equal(s.getItem(CLEAR_KEY),'38');assert.equal(s.getItem('gladiator-settings'),'keep');
+ const denied={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};
+ assert.equal(journeyClears(denied),0);assert.equal(addJourneyClear(denied),1);
+ for(const bad of [null,'x','-3'])s.setItem(CLEAR_KEY,bad),assert.equal(journeyClears(s),0);
 });

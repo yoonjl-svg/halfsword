@@ -10,7 +10,7 @@
 //                     foe=random 이면 상대 후보에서 고른 인물은 뺀다(같은 겉모습 둘이 서지 않게)
 //                     foe=<인물 id> 면 판마다 그 인물(main.js pickFoe — CHARACTERS_BY_ID). 10/14 고르기 화면의 '상대' 줄 — 손님 인물(CHARACTER_GUESTS, 라트나·다라이시)은
 //                     무작위 후보(CHARACTERS)에 없어 테스트 경로에서는 여기서 고른다 (여정에서는 제 무대의 검객 — stages.js STAGE_FOE, 10/14 19:4x)
-//                   ⑤ 플레이어 고유 동작(unique_assist.js)이 모두 열린다 (UNIQUE_ASSIST.testStage 5 = 비기까지 — 본판은 여정 인장 수, 둘 다 ?uniqueStage=0..5 로 덮음)
+//                   ⑤ 플레이어 유파 몫(스킬북 다섯 권 — 보법·막기·고유 공격·패시브 자리·비기)이 모두 '사용' (skill_books.js playerKit test — 본판은 산 책, 둘 다 개발 인자 ?uniqueStage=0..5 로 덮음)
 //   foeWhiff=1      : 상대 헛스윙 (10/15 — 고르기 화면 '상대 헛스윙'): 상대 AI 가 제 칼이 닿지 않는 거리에서 2~3 s 마다 허공을 벤다(src/whiff_drill.js — main.js 가 판마다 붙임).
 //                     독일 간격 잡기 시험용. 다가가면 평소대로 싸운다. test=1 없이도 쓸 수 있다. 없으면 상대는 평소 그대로
 import { CHARACTERS, CHARACTERS_BY_ID, pickCharacterWeapon } from './characters.js';
@@ -74,7 +74,7 @@ export function createTestRoute(params) {
       const note = doc.createElement('p');
       note.id = 'testRouteNote';
       note.style.cssText = 'margin:-8px 0 12px;font-size:var(--fs-s);color:var(--c-sub);line-height:1.4'; // 10/14 글자 규칙: 작게 · 보조 색 (index.html :root)
-      note.textContent = `테스트 경로 · ${weaponName} · ${hero ? hero.name : '기본 주인공'} · ${foeFixed || stagePinned ? `${foeFixed ? `상대 ${foeFixed.name}` : '상대 무작위'} · ${stagePinned ? `무대 ${stagePinned}` : '무대 무작위'}` : '상대·무대 무작위'} · 고유 동작·비기 모두 열림${foeWhiff ? ' · 상대 헛스윙' : ''}`; // 고유 동작 해금: 테스트 경로는 모두 (main.js uniqueStageFor test — UNIQUE_ASSIST.testStage)
+      note.textContent = `테스트 경로 · ${weaponName} · ${hero ? hero.name : '기본 주인공'} · ${foeFixed || stagePinned ? `${foeFixed ? `상대 ${foeFixed.name}` : '상대 무작위'} · ${stagePinned ? `무대 ${stagePinned}` : '무대 무작위'}` : '상대·무대 무작위'} · 고유 동작·비기 모두 열림${foeWhiff ? ' · 상대 헛스윙' : ''}`; // 유파 몫: 테스트 경로는 스킬북 모두 (main.js newRound — skill_books.js playerKit test)
       actions.append(btn);
       doc.getElementById('menuSub')?.after(note); // 제목 아래 한 줄 (아래 단추 줄을 두껍게 하지 않게)
     },

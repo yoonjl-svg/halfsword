@@ -1,4 +1,5 @@
 // 준비한 스틱 입력으로 실제 게임의 밀기·접촉·기력·HUD를 검증하고 촬영한다.
+// uniqueStage=2 = 보법·막기 책만 (고유 공격·비기 없음 — 10/16 08:1x 인장 없앰 전 주소 판의 uniqueStage=0 과 같은 몫: 주소 판도 산 책을 읽게 됨)
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,7 +16,7 @@ try {
   page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); });
   await page.clock.install({ time: new Date('2026-10-15T10:00:00Z') });
   await page.clock.pauseAt(new Date('2026-10-15T10:00:01Z'));
-  await page.goto(`${base}/?weapon=longsword&foe=default&stage=castle&emo=0&uniqueStage=0`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?weapon=longsword&foe=default&stage=castle&emo=0&uniqueStage=2`, { waitUntil: 'networkidle' });
   await page.evaluate(() => { game.renderCap.tick = () => false; game.config.ARENA.startGap = 1.6; document.getElementById('btnStart').click(); });
   for (let i = 0; i < 90 && !(await page.evaluate(() => game.state === 'fight')); i++) await page.clock.runFor(16);
   assert.equal(await page.evaluate(() => game.state), 'fight');

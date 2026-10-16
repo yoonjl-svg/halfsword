@@ -20,7 +20,8 @@ async function open(q) {
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
   });
-  await page.goto(`${base}/${q}`, { waitUntil: 'networkidle' });
+  // &uniqueStage=2: 보법·막기 책 — 10/16 08:1x 인장 없앰부터 주소 판도 산 책을 읽어(새 브라우저 = 책 없음), 그 전 주소 판처럼 플레이어 유파 걸음·막기를 켠다
+  await page.goto(`${base}/${q}&uniqueStage=2`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
   await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 60000 });

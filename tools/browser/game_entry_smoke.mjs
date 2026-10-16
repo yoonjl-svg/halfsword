@@ -59,7 +59,7 @@ try{
  assert.equal(await p.evaluate(()=>game.state),'menu');
  assert.equal(await checkpoint(p),null);
  assert.equal(await p.locator('#lobbyRank').textContent(),'Lv.1 여행자');
- // 10/16 (lobby_fix §6): 대표 유파 = 산 스킬북이 가장 많은 유파 — 책 없음 · 깬 수 37 = 인장 3 → 금화 100 + 300 (한 번) · 알림 한 줄
+ // 10/16 (lobby_fix §6): 대표 유파 = 산 스킬북이 가장 많은 유파 — 책 없음 · 깬 수 37 = 옛 인장 3 → 금화 100 + 300 (한 번 — 인장 제도는 08:1x 에 없앰, 바꾸기만 남음) · 알림 한 줄
  assert.equal(await p.locator('#lobbySchool').textContent(),'아직 없음');
  assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyHeads').textContent(),'0');
  assert.equal(await p.locator('#lobbyStatus').textContent(),'인장 3개를 금화 300으로 바꿨습니다.');
@@ -142,7 +142,7 @@ try{
  await p.reload({waitUntil:'networkidle'});await title(p);await p.locator('#newJourney').click();await p.locator('#lobbyDepart').click();await phase(p,'draw');
  assert.equal(await p.evaluate(()=>game.stage.id),'poseidon');assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
  assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('gladiator-settings')).fpsCap),true);
- check('new journey resets stage while preserving unlocks (clears/seals) and settings');
+ check('new journey resets stage while preserving the clear count (statistic) and settings');
  await p.locator('#btnPause').tap();await phase(p,'paused');await p.locator('#btnStart').tap();await phase(p,'draw');
  check('existing restart still returns to draw');
  const savedBefore=await checkpoint(p);

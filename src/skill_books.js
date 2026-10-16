@@ -7,7 +7,8 @@
 //  책 내용 = 지금 게임에 있는 것 (사장님 04:0x): 1 보법 = 지금 유파 걸음 · 2 막기 = 지금 유파 막기 자리 · 3 고유자세 = 지금 고유 공격 넷(한꺼번에 — 임시) ·
 //   4 패시브 = 개발 예정(사람 몫이 아직 없다 — 지금 패시브는 모두 AI 몫) · 5 비기 = 지금 비기.
 //  산 책만 열린다(가진 것 = lobby_progress.js 얻은 것 'skillbook:<유파>:<급>') · 순서·조건 없음(별자리 줄은 꾸밈) · 산 책은 '사용'으로 시작, '봉인'하면 판에서 꺼진다(봉인 목록 = 아래 BOOK_STATE_KEY).
-//  판에 미치는 곳 (사람만 — AI·시뮬은 그대로): 첫 화면·대기실에서 연 여정만 playerKit 을 읽는다(main.js newRound). 테스트 경로는 지금처럼 모두 열림, 옛 메뉴(게임 인자 있는 주소) 판은 지금 그대로.
+//  판에 미치는 곳 (사람만 — AI·시뮬은 그대로): 모든 판이 playerKit 을 읽는다(main.js newRound — 첫 화면·대기실 여정 · 옛 메뉴 판 · 주소 판, 10/16 08:1x 인장 없앰부터).
+//   테스트 경로는 모두 열림 · 개발 인자 `?uniqueStage=N` 은 그 유파의 N 급까지 '사용'(0 = 책 없음 · 5 = 모두 — bookTierParam).
 import { TRADITIONS } from './schools.js';
 import { PLAYER_UNIQUE, uniqueDef } from './unique_assist.js';
 import { readProgress, purchase } from './lobby_progress.js';
@@ -147,15 +148,21 @@ export function buyBook(school, tier) {
 }
 
 /**
- * 플레이어가 이 판에 가진 유파 몫 — 해금 규칙의 오직 한 자리 (사장님 10/16 04:1x: 산 책만 · 순서 없음 / 04:3x: 봉인한 책은 꺼짐).
+ * 플레이어가 이 판에 가진 유파 몫 — 해금 규칙의 오직 한 자리 (사장님 10/16 04:1x: 산 책만 · 순서 없음 / 04:3x: 봉인한 책은 꺼짐 / 08:1x: 인장 없음 — 모든 판).
  *  tradition = 손에 든 무기 유파(swordArt.tradition) · books = readBooks() · test = 테스트 경로(모두 열림 — 사장님 '지금처럼').
+ *  upTo = 개발 인자 `?uniqueStage=N`(bookTierParam): 산 책과 상관없이 N 급까지 켬 — 테스트 경로보다 먼저(10/13 ?uniqueStage 가 테스트 경로를 덮던 차례 그대로).
  *  책이 없는 유파(무유파 등)는 null — 유파 몫이 원래 없다(지금 그대로).
  *  돌려줌 { footwork, parry, unique, passive, secret } — 그 책이 '사용'(샀고 봉인 안 함)이면 켬
  */
-export function playerKit(tradition, books, { test = false } = {}) {
+export function playerKit(tradition, books, { test = false, upTo = null } = {}) {
   if (!BOOK_SCHOOLS.includes(tradition)) return null;
-  const on = (tier) => test || bookState(books, bookId(tradition, tier)) === 'use';
+  const on = (tier) => (upTo != null ? tier <= upTo : test || bookState(books, bookId(tradition, tier)) === 'use');
   return { footwork: on(1), parry: on(2), unique: on(3), passive: on(4), secret: on(5) };
+}
+/** 개발 인자 `?uniqueStage=N` → 켤 급 N (0~5 정수 — 0 = 책 없음 · 2 = 보법·막기 · 5 = 모두) · 없거나 범위 밖이면 null (산 책대로) */
+export function bookTierParam(raw) {
+  const n = raw == null || raw === '' ? NaN : Number(raw);
+  return Number.isInteger(n) && n >= 0 && n <= BOOK_TIERS.length ? n : null;
 }
 /** 책 몫 → 고유 공격 단계 (main.js PlayerUniqueAssist): 고유자세 책을 쓰면 넷 모두(4단계) · 아니면 0 (감독 10/16 04:0x 전달 — 지금 고유 공격 넷을 한꺼번에 · 임시. 사장님 04:0x '일단 지금꺼 토대로') */
 export const kitUniqueStage = (kit) => (kit?.unique ? UNIQUE_ASSIST.secretStage - 1 : 0);

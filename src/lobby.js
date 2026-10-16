@@ -22,7 +22,7 @@ const COIN_ICON = '<svg class="coin-icon" viewBox="0 0 16 16" role="img" aria-la
 const POUCH_ICON = '<svg class="coin-icon pouch-icon" viewBox="0 0 16 16" role="img" aria-label="머리" shape-rendering="crispEdges"><path fill="#4a3422" d="M4 0h2v1h4V0h2v2h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1h-1v1H4v-1H3v-1H2v-1H1V7h1V5h1V4h1V3h1V2H4Z"/><path fill="#a9814f" d="M5 1h1v1h4V1h1v1h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1H4v-1H3v-1H2V7h1V5h1V4h1V3h1V2H5Z"/><path fill="#d6b27a" d="M4 6h1v1h1v4H5v1H4V9H3V7h1Z"/><path fill="#6f5130" d="M11 7h1v1h1v4h-1v1h-1v1H8v-1h2v-1h1Z"/><path fill="#3a2a1b" d="M6 3h4v1H6z"/><path fill="#c9a36b" d="M7 2h2v1H7z"/></svg>';
 
 export function mountLobby({ root, game, choice, onDepart, onBack }) {
-  const ctx = game.getSkillBookContext?.() ?? { test: false, clearsPinned: false };
+  const ctx = game.getSkillBookContext?.() ?? { test: false };
   root.innerHTML = `<style>${titleStyle}\n${style}\n${typeStyle}</style><main class="lobby" data-start-theme="pixel" aria-labelledby="lobbyHeading">
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><button id="lobbyBack">‹ 첫 화면으로</button></header>
@@ -56,10 +56,10 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();
   paintPixelWordmark($('lobbyHeading'), { text: '대기실', font: '600 18px Pretendard', height: 29, baseline: 22, tracking: 2 });
-  // 이미 받은 인장 → 금화 (사장님 10/16 04:2x — 한 번만, seal_coins.js). 테스트 경로·주소 ?clears= 판에서는 바꾸지 않는다
-  const converted = ctx.test || ctx.clearsPinned ? null : convertSeals();
+  // 이미 받은 인장 → 금화 (사장님 10/16 04:2x — 한 번만, seal_coins.js · 인장 제도는 08:1x 에 없앰). 테스트 경로에서는 바꾸지 않는다
+  const converted = ctx.test ? null : convertSeals();
   const profile = readProfile();
-  // 대표 유파 = 산 스킬북이 가장 많은 유파(같으면 탭 차례 앞) — 인장은 이제 플레이어에게 아무것도 열지 않아(사장님 04:1x) 인장 수로 고르지 않는다
+  // 대표 유파 = 산 스킬북이 가장 많은 유파(같으면 탭 차례 앞)
   function representative() {
     const owned = readBooks().owned, count = Object.fromEntries(BOOK_SCHOOLS.map(s => [s, 0]));
     for (const id of owned) count[id.split(':')[0]]++;

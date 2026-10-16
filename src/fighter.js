@@ -1713,6 +1713,7 @@ export class Fighter {
   /**
    * 투구가 벗겨져 날아간다 (따로 굴러다니는 물체가 된다). 조각으로 나뉜 투구(마르그레테 뿔 투구, userData.pieces)는
    * ARMOR.on 이면 벗겨지는 대신 부서져 흩어진다(shatterHelmet). 어느 쪽이든 그 뒤로는 맨머리다
+   * 기력은 건드리지 않는다 — 대기실 케틀 햇의 최대 기력 130 은 그 판 그대로 (main.js newRound · 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.')
    */
   knockOffHelmet(dir, energy) {
     if (!this.hasHelmet || !this.helmetGroup) return;
