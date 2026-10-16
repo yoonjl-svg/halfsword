@@ -67,6 +67,17 @@ function trial(cfg, atk, gap) {
   if (saved) Object.defineProperty(TRADITIONS[tr], 'parryCover', { value: null, configurable: true, writable: true });
   const guard = new PlayerParryGuard(D, A);
   if (saved) Object.defineProperty(TRADITIONS[tr], 'parryCover', saved);
+  // CALM=<m/s> 시험 (10/17 01:1x): 따라가기를 상대 칼끝이 이 빠르기 밑일 때(정말 멈춘 준비 자세)만 — 긋는 중 위협이 잠깐 끊겨도 손 자리로 줄을 옮기지 않게
+  if (process.env.CALM) {
+    const CALM = +process.env.CALM, st = guard.step.bind(guard);
+    guard.step = (dt) => {
+      const s = guard.sense.seen(0), keep = SKILL.parryFollow;
+      if (Math.hypot(s.tvx, s.tvy, s.tvz) >= CALM) SKILL.parryFollow = 0;
+      const out = st(dt);
+      SKILL.parryFollow = keep;
+      return out;
+    };
+  }
   Gm.ai.update = () => {};
   A.move.set(0, 0);
   guard.held = true;
