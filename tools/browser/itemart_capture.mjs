@@ -1,5 +1,6 @@
 // 아이템 그림 사진 (사장님 10/16 14:4x ③ · 15:3x ⑦⑧⑨ — docs/import/item_art_2026-10-16.md). 폰 가로 844×390 · 화소 비 3 · 터치 (실제 폰과 같은 비)
 //  장면: tree(스킬북 별자리 — 독일: I 사용 · II 봉인 · III 사용 · IV·V 안 삼 + 값 표지) · detail(책 III 설명 카드) · wallet(대기실 지갑 금화 · 머리) · result(이긴 판 결과 창 — 금화 + 머리)
+//   + tree_<유파>(이탈리아 · 이베리아 · 일본 · 동방 — 같은 상태: I · III 사용 · II 봉인 · IV · V 안 삼) · detail_japanese(일본 III 설명 카드) — 문서 꼴 다섯 (사장님 17:3x · 17:4x)
 //  저장: <out>/<장면>.png (전체 화면) + <out>/rects.json (자를 자리 — 사진 판 만들기 tools/browser/itemart_sheet.py 가 읽는다)
 //  --lobby-smooth : 대기실 금화 · 머리 그림의 '픽셀 확대'(lobby.css .coin-icon image-rendering: pixelated)를 사진에서만 끈다 —
 //                   그 줄은 다른 작업자가 지우는 중이라(같은 날 2 단계), 합친 뒤 모습을 미리 보려고. 저장소 CSS 는 안 바꾼다.
@@ -16,9 +17,9 @@ const seed = () => {
   if (sessionStorage.getItem('seeded')) return;
   sessionStorage.setItem('seeded', '1');
   localStorage.setItem('stillness.journeyClears.v1', '0');
-  const books = ['german:1', 'german:2', 'german:3'];
+  const books = ['german', 'italian', 'iberian', 'japanese', 'chinese'].flatMap((s) => [`${s}:1`, `${s}:2`, `${s}:3`]); // 유파마다 I · II · III 삼
   localStorage.setItem('stillness.lobby.progress.v1', JSON.stringify({ version: 1, coins: 1240, heads: 3, titles: [], title: '여행자', acquisitions: books.map((b) => ({ receipt: `skillbook:${b}`, kind: 'skillbook' })) }));
-  localStorage.setItem('stillness.lobby.skillbooks.v1', JSON.stringify({ version: 1, sealed: ['german:2'] }));
+  localStorage.setItem('stillness.lobby.skillbooks.v1', JSON.stringify({ version: 1, sealed: ['german:2', 'italian:2', 'iberian:2', 'japanese:2', 'chinese:2'] })); // II 는 봉인
 };
 const rectOf = (p, sel) => p.evaluate((s) => {
   const root = document.querySelector('#gameEntrance')?.shadowRoot, el = root?.querySelector(s) ?? document.querySelector(s);
@@ -51,6 +52,19 @@ try {
   await p.locator('.book-node[data-book="3"]').tap(); await p.locator('.book-detail').waitFor(); await images(); await p.waitForTimeout(300);
   rects.detail = await rectOf(p, '#panelSkills');
   await shot('detail');
+  await p.locator('.detail-close').tap();
+  // 나머지 유파 넷 (같은 상태 — 문서 꼴이 유파마다 다르다)
+  for (const school of ['italian', 'iberian', 'japanese', 'chinese']) {
+    await p.locator(`.school-tabs [data-school=${school}]`).tap(); await images(); await p.waitForTimeout(300);
+    assert.equal(await p.locator('.book-node[data-state=use]').count(), 2);
+    assert.equal(await p.locator('.book-node[data-state=unowned]').count(), 2);
+    rects[`tree_${school}`] = await rectOf(p, '#panelSkills');
+    await shot(`tree_${school}`);
+  }
+  await p.locator('.school-tabs [data-school=japanese]').tap(); await images(); // 일본 III 설명 카드 (제목 쪽지 두루마리)
+  await p.locator('.book-node[data-book="3"]').tap(); await p.locator('.book-detail').waitFor(); await images(); await p.waitForTimeout(300);
+  rects.detail_japanese = await rectOf(p, '#panelSkills');
+  await shot('detail_japanese');
   await p.locator('.detail-close').tap();
   // 이긴 판 결과 창 (금화 + 머리): 여정 → 카드 → 상대 목을 벰
   await p.locator('#tabWeapons').tap(); await p.locator('#lobbyDepart').tap();
