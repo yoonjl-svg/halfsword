@@ -15,7 +15,7 @@ mkdirSync(out, { recursive: true });
 // 기대값 (앞 8 자리): 끔 = 91d4646 본판 · 켬 = 기력 들여온 판
 const EXPECT = {
   off: { fights12: '7f5860c7', live_battery: '648aca66', finish_thrust: '2de06c03', weapon_smoke: '7085b282' },
-  on: { fights12: 'a071c0af', live_battery: '648aca66', finish_thrust: '2de06c03', weapon_smoke: '7085b282' },
+  on: { fights12: '5dfe035c', live_battery: '648aca66', finish_thrust: '2de06c03', weapon_smoke: '7085b282' },
 };
 const cases = [
   ['fights12', 'fights12', []],

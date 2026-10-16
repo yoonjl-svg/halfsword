@@ -235,7 +235,7 @@ export function ashGround(scene, groundY, { wet = true, paint = null } = {}) {
     const n1 = h3(Math.round(x * 0.5), 0, Math.round(z * 0.5), 4) * 0.5 + h3(x * 0.8, 2, z * 0.8, 6) * 0.5;
     const n2 = h3(Math.round(x * 0.18), 5, Math.round(z * 0.18), 7);
     tmp.copy(cAsh).lerp(cSoot, THREE.MathUtils.clamp((n1 - 0.45) * 1.8, 0, 1) * 0.7); // 더 탄 자리는 더 검다
-    const trod = THREE.MathUtils.clamp((8.4 - rr) / 2.0, 0, 1);
+    const trod = THREE.MathUtils.clamp((ARENA.radius + 1.9 - rr) / 2.0, 0, 1);
     tmp.lerp(cEarth, trod * (0.55 + 0.45 * n1));
     // 타다 남은 마른 풀 (바깥쪽, 드문드문)
     if (rr > 12) tmp.lerp(cDry, THREE.MathUtils.clamp((n2 - 0.62) * 3, 0, 1) * 0.6 * THREE.MathUtils.smoothstep(rr, 12, 18));
@@ -400,7 +400,7 @@ export function birchTree(K, r, groundY, x, z, h, lean) {
 }
 
 /** 새싹: 탄 땅 사이로 드문드문 (인스턴싱, 작은 세모잎 두 장). avoid: [{x, z, r}] */
-export function sproutField(scene, groundY, { N = 1900, avoid = [], seed = 66, r0 = 8.8, r1 = 17 } = {}) {
+export function sproutField(scene, groundY, { N = 1900, avoid = [], seed = 66, r0 = ARENA.radius + 2.3, r1 = 17 } = {}) {
   const sr = rng(seed);
   const g = new THREE.BufferGeometry();
   // 잎 두 장 = 삼각형 넷 (양면)
@@ -616,7 +616,7 @@ export function ashDrift(scene, { n = 600, seed = 77 } = {}) {
  * 봄비: 가는 빗줄기(점 스프라이트)가 결투 자리 둘레 24m 상자 안에 내린다. 바람에 비스듬하고, 큰 타격이 나오면 휘몰아친다.
  *  폰에서 가볍게: 점 2400개, 질감 한 장. 반환 step(dt, t, gust)
  */
-export function springRain(scene, { n = 2400, seed = 55 } = {}) {
+export function springRain(scene, { n = 2400, seed = 55, size = .55, opacity = .42, speedScale = 1, windScale = 1, color = 0xd6dcdd } = {}) {
   const rr = rng(seed);
   const pos = new Float32Array(n * 3);
   const sp = new Float32Array(n);
@@ -626,16 +626,17 @@ export function springRain(scene, { n = 2400, seed = 55 } = {}) {
     pos[i * 3] = (rr() - 0.5) * 2 * BOX;
     pos[i * 3 + 1] = rr() * H;
     pos[i * 3 + 2] = (rr() - 0.5) * 2 * BOX;
-    sp[i] = 6.5 + rr() * 3;
+    sp[i] = (6.5 + rr() * 3) * speedScale;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.55, map: rainTexture(), transparent: true, opacity: 0.42, depthWrite: false, color: 0xd6dcdd }));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size, map: rainTexture(), transparent: true, opacity, depthWrite: false, color }));
+  pts.name = 'rain-particles';
   pts.frustumCulled = false;
   scene.add(pts);
   return (dt, t, gust) => {
-    const wx = -0.9 - gust * 5;
-    const wz = 0.3 + gust * 1.5;
+    const wx = (-0.9 - gust * 5) * windScale;
+    const wz = (0.3 + gust * 1.5) * windScale;
     for (let i = 0; i < n; i++) {
       const j = i * 3;
       pos[j + 1] -= sp[i] * dt;
@@ -687,7 +688,7 @@ export function buildClearing(scene, lights = {}, { rain = true } = {}) {
   // ── 탄 그루터기와 쓰러진 통나무 (결투 자리 밖 9~24m) ──
   for (let i = 0; i < 54; i++) {
     const a = r() * Math.PI * 2;
-    const d = 9.3 + r() * 14;
+    const d = ARENA.radius + 2.8 + r() * 14;
     const x = Math.cos(a) * d;
     const z = Math.sin(a) * d;
     if (x < -10 && z > 4 && z < 14) continue; // 오두막 마당

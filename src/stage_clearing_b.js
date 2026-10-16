@@ -28,9 +28,9 @@ const CB = {
 
 /**
  * 화전 터 2안을 만든다. 반환: { update(dt), excite(amount), sunOffset, fighterLight }
- *  lights: main.js 의 { hemi, sun }. opt.rain: 봄비 (기본 켬)
+ *  lights: main.js 의 { hemi, sun }. opt.rain: 봄비 (기본 켬), wet: 비가 그친 뒤에도 젖은 땅 유지
  */
-export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
+export function buildClearingB(scene, lights = {}, { rain = true, wet = rain } = {}) {
   const r = rng(3307);
   const K = new Kit(881);
   const { FOG, sunOffset } = morning(scene, lights, { rain });
@@ -38,14 +38,14 @@ export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
   const CAMP = { x: -15, z: 8.5, rot: 0.6 }; // 움막
   const OAK = { x: -12.5, z: -9.5 }; // 반쯤 탄 참나무
   const PYRE = { x: 12.5, z: -12 }; // 불더미
-  const FIELD = { x0: 5, x1: 19, z0: 7, z1: 17 }; // 이랑
+  const FIELD = { x0: ARENA.radius - 1.5, x1: 19, z0: 7, z1: 17 }; // 넓어진 결투 자리 밖에서 시작하는 이랑
   const POST = { x: 19, z: -11 }; // 경계 말뚝
   const openAz = -0.75; // 북동쪽이 트였다
 
   // 땅: 이랑 자리는 갈아 놓은 흙색
   const cField = new THREE.Color(CB.field);
   ashGround(scene, groundY, {
-    wet: rain,
+    wet,
     paint: (x, z, tmp) => {
       if (x > FIELD.x0 - 0.5 && x < FIELD.x1 + 0.5 && z > FIELD.z0 - 0.5 && z < FIELD.z1 + 0.5) tmp.lerp(cField, 0.75);
     },
@@ -59,7 +59,7 @@ export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
       if (i === 4 || i === 9) continue; // 틈 둘
       const a = (i / n) * Math.PI * 2 + 0.2;
       const len = ((2 * Math.PI * R0) / n) * (0.78 + r() * 0.12);
-      fallenLog(K, groundY, Math.cos(a) * R0 + (r() - 0.5) * 0.2, Math.sin(a) * R0 + (r() - 0.5) * 0.2, len, 0.15 + r() * 0.07, a + Math.PI / 2 + (r() - 0.5) * 0.12);
+      fallenLog(K, groundY, Math.cos(a) * R0 + (r() - 0.5) * 0.2, Math.sin(a) * R0 + (r() - 0.5) * 0.2, len, 0.15 + r() * 0.07, -a + Math.PI / 2 + (r() - 0.5) * 0.12);
     }
     // 틈에는 말뚝 하나씩
     for (const i of [4, 9]) {
@@ -71,7 +71,7 @@ export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
   // ── 탄 그루터기 (더 크고 드물게) 와 쓰러진 통나무 ──
   for (let i = 0; i < 40; i++) {
     const a = r() * Math.PI * 2;
-    const d = 9.5 + r() * 14;
+    const d = ARENA.radius + 3 + r() * 14;
     const x = Math.cos(a) * d;
     const z = Math.sin(a) * d;
     if (Math.hypot(x - CAMP.x, z - CAMP.z) < 6 || Math.hypot(x - OAK.x, z - OAK.z) < 3 || Math.hypot(x - PYRE.x, z - PYRE.z) < 4) continue;
@@ -370,7 +370,7 @@ export function buildClearingB(scene, lights = {}, { rain = true } = {}) {
   ]);
   clearingMeshes(scene, K, pointGlow(glowPts)); // 잉걸불의 붉은 빛을 둘레(불더미·그루터기)에 구워 넣는다
 
-  if (rain)
+  if (wet)
     puddles(scene, groundY, [
       [-2.8, 2.6, 1.5, 0.9, 0.9],
       [3.6, -3.2, 1.0, 0.7, 0.2],
