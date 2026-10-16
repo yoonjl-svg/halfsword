@@ -93,13 +93,15 @@ function trial(cover, atk, gap, speed) {
 
 function score(cover) {
   let ok = 0, n = 0;
+  const trials = [];
   for (const atk of ATKS) for (const gap of GAPS) for (const sp of SPEEDS) {
     const w = trial(cover, atk, gap, sp);
+    trials.push([atk, gap, sp, w]);
     if (w === 'clear') continue;
     n++;
     if (w === 'ok') ok++;
   }
-  return { ok, n };
+  return { ok, n, trials };
 }
 
 const cands = process.env.CANDS ? JSON.parse(readFileSync(process.env.CANDS, 'utf8')) : [{ tag: '지금', cover: null }, ...Array.from({ length: N }, (_, i) => ({ tag: `c${i}`, cover: candidate() }))];
