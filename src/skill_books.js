@@ -85,10 +85,10 @@ const FOOTWORK_TEXT = {
 };
 const PARRY_TEXT = {
   german: '머리 위는 왕관으로 받는 독일 막기 자리',
-  italian: '이탈리아 막기 자리 — 지금은 무유파 자리와 같다',
-  iberian: '이베리아 막기 자리 — 지금은 무유파 자리와 같다',
+  italian: '이탈리아 막기 자리 (왼쪽 위 · 머리 위가 다르다)',
+  iberian: '이베리아 막기 자리 (몬탄테 비낌 — 위 셋 · 아래 · 찌르기가 다르다)',
   japanese: '일본 막기 자리 (오른쪽 아래는 낮은 자세)',
-  chinese: '거정세 · 어거세 · 요략세로 받는 동방 막기',
+  chinese: '거정세 · 어거세 · 요략세(칼끝을 드리워 다리까지)로 받는 동방 막기',
 };
 
 export const bookId = (school, tier) => `${school}:${tier}`;

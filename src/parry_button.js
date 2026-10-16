@@ -142,6 +142,16 @@ export class PlayerParryGuard {
       // ② 다시 읽기: 한 공격 안에서도 지금 읽은 줄이 바뀌면 따라간다 (AI 는 한 번 정하면 그대로 — 준비 동작을 공격으로 읽고 줄을 잘못 굳히는 일, 기록 §3)
       this.defLine = th.line;
       this.stats.reread = (this.stats.reread ?? 0) + 1;
+    } else if (SKILL.parryFollow && !th && this.defLine) {
+      // 따라가기 (10/16 — docs/strike/yoryak_shape_2026-10-16.md): 막는 중 위협이 잠깐 끊기면(상대가 준비 자세에서 멈춤) 기다릴 때와 같은 규칙(coverFor)으로
+      //  상대 칼이 있는 쪽 줄로 옮긴다 — 준비 동작을 공격으로 읽어 굳힌 줄(위)을 칼을 내린 준비 자세(아래)로 바로잡는다.
+      //  가까운 올려 베기는 다리를 먼저 베어, 긋기 전에 아래 자리(동방 요략세)에 가 있어야 막는다
+      const p = AI.prototype.coverFor.call({ school: this.school }, s);
+      const ln = LINES.find((k) => this.school.parry[k] === p);
+      if (ln && ln !== this.defLine) {
+        this.defLine = ln;
+        this.stats.follow = (this.stats.follow ?? 0) + 1;
+      }
     }
     if (this.defLine) {
       // ai.js defend 의 끝: 공격이 지나갔다 (칼끝이 더는 오지 않고 손이 멈췄다) · 막기 시간이 다 됐다
