@@ -1471,6 +1471,8 @@ function pause() {
   $('menuReward').hidden = true;
   $('btnStart').textContent = '처음부터 다시';
   $('btnResume').style.display = '';
+  $('btnLobby').hidden = !lobbyMenu(); // 첫 화면·대기실 여정만 — 판을 떠나 대기실로 (아래 toLobby)
+  $('fpsRow').hidden = false;
   showMenu();
 }
 
@@ -1491,7 +1493,37 @@ function resume() {
   last = performance.now();
 }
 
+// ── 싸움 → 대기실 (사장님 10/16 08:3x '전투에서 대기실로 가는 기능이 필요해. 정지 누르면 거기에 넣어' · 결과 창 '다음 여정과 대기실 선택지로' — docs/ui/uifix_2026-10-16.md §3 · §4) ──
+//  첫 화면·대기실로 연 여정만 (journeySaves + game_entry.js 가 출발할 때 건 setLobbyReturn) — 테스트 경로 · 주소 판 메뉴는 그대로.
+//  판을 떠난다: 금화 · 대면 결과는 안 바뀐다(사장님 08:4x '깎지 마') · 이어하기 지점도 그대로(지금 무대 시작 — 이긴 판이면 이미 다음 무대) · 대기실 동안 게임 소리는 멈춤
+let lobbyReturn = null;
+export function setLobbyReturn(fn) {
+  lobbyReturn = typeof fn === 'function' ? fn : null;
+}
+const lobbyMenu = () => journeySaves() && !!lobbyReturn;
+function toLobby() {
+  if (!lobbyMenu()) return;
+  const back = lobbyReturn;
+  pauseOpen = false;
+  state = 'menu';
+  journeyMode = false; // 대기실에서 다시 출발하면 launchJourney 가 켠다
+  input.enabled = false;
+  input.resetTransient();
+  document.exitPointerLock?.();
+  menu.classList.remove('show');
+  closeDraw();
+  toast.classList.remove('show');
+  hint.classList.remove('show');
+  clearEmoMsg();
+  hideFoeIntro();
+  topButtons.classList.remove('show');
+  $('rotate').classList.remove('enabled');
+  applyMoveMode();
+  sound.ctx?.suspend?.()?.catch?.(() => {}); // 판이 다시 열리면 startFight 의 sound.unlock 이 되살린다
+  back();
+}
 $('btnStart').addEventListener('click', startFight);
+$('btnLobby').addEventListener('click', toLobby);
 testRoute.mount(document, getWeapon(FIXED_WEAPON || 'longsword').nameKo); // test=1: 메뉴에 '테스트 고르기로'
 $('btnResume').addEventListener('click', resume);
 $('btnPause').addEventListener('click', pause);
@@ -1517,11 +1549,11 @@ window.addEventListener('keydown', (e) => {
 // 싸우는 도중 전화·잠금·다른 앱 때문에 소리가 멈췄으면(아이폰은 'interrupted'), 다음에 화면을 만질 때 다시 켠다.
 // (일시정지 → 계속하기를 누르지 않아도 되게. 시작 버튼을 누르기 전에는 소리 장치를 만들지 않는다: sound.ctx 가 있을 때만)
 for (const ev of ['touchend', 'pointerup', 'keydown']) {
-  window.addEventListener(ev, () => sound.ctx && sound.unlock(), { passive: true });
+  window.addEventListener(ev, () => sound.ctx && !document.documentElement.hasAttribute('data-start-open') && sound.unlock(), { passive: true }); // 첫 화면·대기실이 앞이면 안 켬 (싸움 → 대기실 동안 소리 멈춤)
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) pause(); // 화면을 떠나면(전화·앱 전환) 멈춘다 — 돌아와서 첫 손가락이 지난 획을 잇지 않게 (10/8)
-  if (!document.hidden && sound.ctx) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
+  if (!document.hidden && sound.ctx && !document.documentElement.hasAttribute('data-start-open')) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
 window.addEventListener('blur', pause);
 // 막기 단추·키 (누르는 동안): 단추는 포인터를 붙잡아 손가락이 밖으로 미끄러져도 뗄 때까지 누름 — 칼 끌기(캔버스)와 따로
@@ -1757,6 +1789,11 @@ function checkRoundEnd(dt) {
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '다시 겨루기'; // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
     $('btnResume').style.display = 'none';
+    // 첫 화면·대기실 여정 (사장님 10/16 08:3x '팝업에선 얻은 금화나 잃은 금화 표시하고, 그 화면에서 설정은 빼고, 다음 여정과 대기실 선택지로'): 금화 줄(showRewardLine) ·
+    //  '다음 여정'(진 판은 '다시 겨루기' — 같은 무대) · '대기실'. 설정 줄은 정지 창 · 첫 화면 설정에만. 그 밖 판은 지금 그대로
+    const lobbyOk = lobbyMenu();
+    $('fpsRow').hidden = lobbyOk;
+    $('btnLobby').hidden = !lobbyOk;
     showRewardLine();
     testRoute.resultLabel($('btnStart'));
     reviveFx.reset(); // 결과 화면: 부활 연출이 남아 있으면 치운다 (상대가 일어서는 동안 내가 죽었을 때)

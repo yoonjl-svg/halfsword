@@ -38,6 +38,10 @@
 :host .notice-meta .unread { color: var(--c-accent); font-weight: var(--fw-label); }
 :host .notice-entry h3 { font-size: var(--fs-m); font-weight: var(--fw-head); color: var(--c-text); }
 :host .notice-entry p { font-size: var(--fs-s); font-weight: var(--fw-body); line-height: 1.6; color: var(--c-sub); }
+/* 공지 안 글자 한 단계 아래 (사장님 10/16 08:3x '공지사항 안의 글씨 더 작게 해'): 날짜·읽음 줄과 본문만 12 → 10 (--fs-xs — 글자 규칙 세 단계 12 · 14 · 17 의 한 단계 아래 · 첫 화면·대기실에만,
+   낮은 가로 화면 대기실의 10px 두 곳과 같은 크기). 굵기·색·줄 간격 비율은 그대로 · 창 제목 · 공지 제목(14) · 아래 줄은 그대로 */
+:host { --fs-xs: 10px; }
+:host .notice-meta, :host .notice-entry p { font-size: var(--fs-xs); }
 :host .hide-read { font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); }
 :host .confirm-button { font-weight: var(--fw-head); }
 :host .settings-content { font-size: var(--fs-m); font-weight: var(--fw-body); }

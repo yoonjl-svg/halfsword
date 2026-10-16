@@ -74,6 +74,8 @@ paintPixelWordmark(root.querySelector('.title-korean'), {
   text: '적막', font: '600 18px Pretendard', height: 29, baseline: 22, tracking: 4, letterOffsets: [0, 1],
 });
 let saved = { hideRead: false, readIds: [] }, transition = 0, visibleNotes = [];
+// 첫 화면 아래 줄 '공지사항'으로 연 공지 (처음 들어올 때의 공지 → 첫 화면과 다른 길): 확인 = 창만 닫는다 — 첫 화면 바람·제목 나타남을 다시 틀지 않는다 (사장님 10/16 08:3x)
+let noticeFromTitle = false;
 try {
   const value = JSON.parse(localStorage.getItem(STORAGE_KEY));
   if (value && typeof value === 'object') saved = {
@@ -94,10 +96,11 @@ function recordVisible() {
 }
 
 function showNotices(all = false) {
-  clearTimeout(transition);
-  entrance.dataset.phase = 'notice'; title.inert = true; scene.calm(); seen.clear();
+  noticeFromTitle = all && entrance.dataset.phase === 'ready';
+  if (!noticeFromTitle) { clearTimeout(transition); entrance.dataset.phase = 'notice'; title.inert = true; scene.calm(); }
+  seen.clear();
   visibleNotes = UPDATE_NOTES.filter(note => all || !saved.hideRead || !read.has(note.id));
-  if (!visibleNotes.length) { showTitle(); return; }
+  if (!visibleNotes.length) { if (!noticeFromTitle) showTitle(); return; }
   list.replaceChildren();
   for (const note of visibleNotes) {
     const article = document.createElement('article');
@@ -129,7 +132,8 @@ listen($('confirmNotices'), 'click', () => {
   for (const id of seen) read.add(id);
   saved = { hideRead: checkbox.checked, readIds: [...read] };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch { /* private mode / quota */ }
-  showTitle();
+  if (noticeFromTitle) { dialog.close(); $('openNotices').focus({ preventScroll: true }); } // 첫 화면에서 연 공지: 창만 닫음 (첫 화면은 그대로 'ready')
+  else showTitle(); // 처음 들어올 때: 공지 → 첫 화면 넘어감 그대로
 });
 listen(dialog, 'cancel', event => { event.preventDefault(); $('confirmNotices').click(); });
 listen(list, 'scroll', recordVisible, { passive: true });
