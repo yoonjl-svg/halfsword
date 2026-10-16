@@ -1,5 +1,6 @@
 // 첫 화면·공지 점검 — 게임 주소(/) 위에서 (샛별 저장소 start_screen_smoke.mjs 는 시안 쪽 따로 된 쪽(start-pixel.html)을 봤다 — 그 쪽은 들여오지 않아 같은 점검을 게임 첫 화면에 맞춤, docs/import/lobby_port_2026-10-16.md §6)
 //  공지 다섯 · 글자 색 셋·크기 셋 · 화면에 들어온 공지만 읽음 · '지난 업데이트 숨김' 기억 · 깨진 저장 되살림 · 픽셀 제목·단추 크기 · 아래 줄 세 칸 · 화면 크기 · 움직임 줄이기 · 저장 막힘
+//  10/16 14:0x (docs/import/ui_fix_2026-10-16.md §11): 공지 제목 = 본문과 같은 10 · 폰 세로 = '폰을 가로로 돌려 주세요'가 공지·첫 화면을 덮음(공지 창도 감춤) → 가로로 돌려 같은 점검 · PC 세로는 그대로
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/title_smoke.mjs http://127.0.0.1:5201 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -16,6 +17,8 @@ const inRoot=(page,body,arg)=>page.evaluate(new Function('arg',`const root=${S};
 const ready=page=>page.waitForFunction(()=>document.querySelector('#gameEntrance')?.shadowRoot.getElementById('entrance')?.dataset.phase==='ready',null,{timeout:20000});
 const open=async(page)=>{await page.goto(`${base}/`,{waitUntil:'networkidle'});await page.locator('#noticeDialog').waitFor({state:'attached',timeout:30000});await page.evaluate(()=>document.fonts.ready);};
 const shot=(page,name)=>page.screenshot({path:`${out}/${name}.png`});
+// 돌려 달라는 안내(index.html #rotate): 보이나 · 화면 가운데를 누르면 안내가 받나 · 공지 창이 그려지나 (창은 showModal 맨 위 층이라 세로 폰에선 감춘다 — start_pixel.css)
+const cover=page=>page.evaluate(()=>{const el=document.getElementById('rotate'),d=document.querySelector('#gameEntrance').shadowRoot.getElementById('noticeDialog');return {shown:getComputedStyle(el).display!=='none',top:el.contains(document.elementFromPoint(innerWidth/2,innerHeight/2)),dialog:d.open&&getComputedStyle(d).display!=='none'};});
 async function newPage(opts){const ctx=await browser.newContext(opts);await ctx.route('https://*.supabase.co/**',r=>{errors.push('auth server called: '+r.request().url());r.abort();});const p=await ctx.newPage();watch(p);return p;}
 async function readAll(page){
  for(let i=0;i<30;i++){
@@ -67,19 +70,20 @@ try{
  let b=await bounds(page);check(`first launch: ${N} notices in the dialog`,b);await shot(page,'notices-desktop');
  // 10/16 글자 정돈 (docs/import/lobby_fix_2026-10-16.md §1 — src/entrance_type.css): 싸움 화면 규칙 — 창 제목 17·700 · 이름 14·700 · 설명 12·400 보조 · 표지 12·600 강조 · 글꼴 줄 --font-ui(Cinzel 먼저)
  //  10/16 08:3x 사장님 '공지사항 안의 글씨 더 작게 해' (docs/import/ui_fix_2026-10-16.md §2): 공지 본문 · 날짜 줄만 한 단계 아래 10 (--fs-xs)
+ //  10/16 14:0x '공지 제목도 글자 크기 내용과 같이 줄여. 색은 흰색으로 유지' (같은 문서 §11): 공지 제목도 10 · 흰색 · 700 그대로
  const typography=await inRoot(page,`return Object.fromEntries(['.notice-header h2','.notice-count','.notice-entry h3','.notice-entry p','.notice-meta','.unread','.hide-read','.confirm-button'].map(selector=>{const s=getComputedStyle(root.querySelector(selector));return [selector,{size:s.fontSize,color:s.color,weight:s.fontWeight,family:s.fontFamily.split(',')[0].replace(/['"]/g,'').trim(),wordBreak:s.wordBreak}];}));`);
  const pick=(t,...k)=>Object.fromEntries(k.map(x=>[x,t[x]]));
  assert.deepEqual(pick(typography['.notice-header h2'],'size','color','weight'),{size:'17px',color:'rgb(243, 233, 216)',weight:'700'});
- assert.deepEqual(pick(typography['.notice-entry h3'],'size','color','weight'),{size:'14px',color:'rgb(243, 233, 216)',weight:'700'});
+ assert.deepEqual(pick(typography['.notice-entry h3'],'size','color','weight'),{size:'10px',color:'rgb(243, 233, 216)',weight:'700'});
  assert.deepEqual(pick(typography['.notice-entry p'],'size','color','weight'),{size:'10px',color:'rgb(184, 168, 142)',weight:'400'});
  assert.deepEqual(pick(typography['.notice-meta'],'size','color','weight'),{size:'10px',color:'rgb(184, 168, 142)',weight:'400'});
  assert.equal(typography['.notice-count'].size,'12px');assert.equal(typography['.hide-read'].size,'12px');
  assert.deepEqual(pick(typography['.unread'],'color','weight'),{color:'rgb(217, 164, 65)',weight:'600'});
  assert.equal(typography['.confirm-button'].weight,'700');
  assert.ok(Object.values(typography).every(t=>t.family==='Cinzel'&&t.wordBreak==='keep-all'),JSON.stringify(typography));
- assert.equal(new Set(Object.values(typography).map(s=>s.size)).size,4); // 17 · 14 · 12 + 공지 안 10
+ assert.equal(new Set(Object.values(typography).map(s=>s.size)).size,4); // 17 · 14(확인 단추) · 12 + 공지 안 10(제목 · 본문 · 날짜)
  assert.equal(new Set(Object.values(typography).map(s=>s.color)).size,3);
- check('notices follow the battle HUD type rule (font stack Cinzel→Pretendard · sizes 12/14/17 + notice body/date one step down at 10 · weights 400/600/700 · three text colors · keep-all)',{typography});
+ check('notices follow the battle HUD type rule (font stack Cinzel→Pretendard · sizes 12/14/17 + notice title/body/date one step down at 10 · title white 700 · weights 400/600/700 · three text colors · keep-all)',{typography});
  await page.evaluate(()=>localStorage.setItem('gladiator-settings','{"fpsCap":true,"prototype-sentinel":true}'));
  await page.locator('#hideRead').check();await page.locator('#confirmNotices').click();
  await page.waitForTimeout(850);await shot(page,'wind-transition-desktop');await ready(page);await shot(page,'title-desktop');
@@ -101,16 +105,25 @@ try{
  assert.equal(await inRoot(page,`return root.getElementById('titleScreen').inert`),false);check('footer notices: 확인 only closes the dialog (no title intro replay — phase stays ready)');
 await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.notice-entry').count(),N);check('reopen notices and turn hiding off');
  await page.evaluate(k=>localStorage.setItem(k,'{bad json'),key);await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.notice-entry').count(),N);check('invalid saved preference recovers');
- for(const [name,width,height] of [['phone-landscape',844,390],['phone-portrait',390,844],['small-landscape',568,320],['small-portrait',320,568]]){
-  const mobile=await newPage({viewport:{width,height},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-  await open(mobile);b=await bounds(mobile);
+ for(const [name,W,H] of [['phone-landscape',844,390],['phone-portrait',390,844],['small-landscape',568,320],['small-portrait',320,568]]){
+  const mobile=await newPage({viewport:{width:W,height:H},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+  await open(mobile);
+  // 세로 폰: 공지(처음 들어온 사람)를 돌려 달라는 안내가 덮는다 — 창도 안 그린다. 가로로 돌리면(폭·높이 바꿈) 공지 그대로 → 아래 점검은 가로에서
+  const portrait=H>W,[width,height]=portrait?[H,W]:[W,H];
+  if(portrait){await mobile.waitForTimeout(300);assert.deepEqual(await cover(mobile),{shown:true,top:false,dialog:false});await mobile.setViewportSize({width,height});} // top: 창이 열린 동안엔 창 밖이 모두 inert 라 누름이 아무 데도 안 간다
+  assert.deepEqual(await cover(mobile),{shown:false,top:false,dialog:true});
+  b=await bounds(mobile);
   assert.ok(b.dialog[0]>=0&&b.dialog[1]>=0&&b.dialog[2]<=width&&b.dialog[3]<=height,JSON.stringify(b));assert.ok(b.confirm[3]<=height);assert.equal(b.scroll,true);
   await mobile.locator('#confirmNotices').click();await ready(mobile);
   const t=await mobile.locator('h1.pixel-wordmark').boundingBox();assert.ok(t.x>=0&&t.x+t.width<=width+1,JSON.stringify(t));
   assert.equal(await mobile.locator('#continueJourney').isVisible(),true);
   const l=await titleLayout(mobile);
-  check(`${name}: dialog, scrolling and title fit`,{width,height,...b,layout:l});await mobile.context().close();
+  // 첫 화면도 세로면 안내가 덮고 누름을 받는다 (창 없음 — 가운데를 누르면 안내)
+  if(portrait){await mobile.setViewportSize({width:W,height:H});assert.deepEqual(await cover(mobile),{shown:true,top:true,dialog:false});}
+  check(`${name}: ${portrait?'rotate screen covers notices and title in portrait; turned to landscape — ':''}dialog, scrolling and title fit`,{width,height,...b,layout:l});await mobile.context().close();
  }
+ // PC 는 그대로: 세로로 좁은 창(터치 없음)이어도 안내 없이 공지 · 첫 화면
+ {const narrow=await newPage({viewport:{width:390,height:844}});await open(narrow);assert.deepEqual(await cover(narrow),{shown:false,top:false,dialog:true});await narrow.locator('#confirmNotices').click();await ready(narrow);check('desktop portrait-shaped window (no touch): no rotate screen');await narrow.context().close();}
  const reduced=await newPage({viewport:{width:844,height:390},reducedMotion:'reduce'});await open(reduced);await reduced.locator('#confirmNotices').click();await ready(reduced);assert.equal(await reduced.locator('#titleScreen').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');check('reduced motion: immediate static title');
  const denied=await browser.newContext();await denied.route('https://*.supabase.co/**',r=>r.abort());const dp=await denied.newPage();watch(dp);await dp.addInitScript(()=>{Storage.prototype.getItem=()=>{throw new DOMException('denied','SecurityError');};Storage.prototype.setItem=()=>{throw new DOMException('denied','SecurityError');};});await open(dp);await dp.locator('#hideRead').check();await dp.locator('#confirmNotices').click();await ready(dp);check('storage denied: screen remains usable');
  assert.deepEqual(errors,[]);
