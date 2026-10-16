@@ -63,7 +63,8 @@ try {
   const dim = await shadow(p, `return getComputedStyle(root.querySelector('.book-node[data-book="1"] .book-thumb')).filter`); assert.match(dim, /grayscale/);
   for (const tier of [1, 2, 3, 5]) { if (tier !== 1) { await closeBook(p); await book(p, 'japanese', tier); } await p.locator('#buyBook').click(); assert.equal(await p.locator('.book-detail').getAttribute('data-state'), 'use'); }
   assert.equal((await progress(p)).coins, 1500 - 100 - 200 - 300 - 500);
-  assert.equal(await p.locator('#lobbySchool').textContent(), '일본 유파');
+  assert.equal(await p.locator('#lobbySchool').count(), 0); // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥ — 책을 사도 내 정보 칸은 그대로)
+  assert.equal(await p.locator('#lobbyLevel').textContent(), 'Lv.5'); // 레벨 = 1 + 산 책 넷
   const glow = await shadow(p, `const s=getComputedStyle(root.querySelector('.book-node[data-book="5"] .book-thumb'),'::before');return [s.content,s.borderRadius,s.opacity];`); assert.equal(glow[0], '""'); assert.equal(glow[1], '50%');
   await closeBook(p); await p.screenshot({ path: `${out}/tree-japanese-use.png` });
   await depart(p, 'draw'); await pick(p, 0); await p.evaluate(() => { game.config.ARENA.startHold = 0; }); await p.waitForTimeout(300);

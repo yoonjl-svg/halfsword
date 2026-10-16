@@ -35,7 +35,8 @@ try{
  for(let i=0;i<20;i++){const done=await p.locator('#noticeList').evaluate(el=>{el.scrollTop+=el.clientHeight/2;return el.scrollTop+el.clientHeight>=el.scrollHeight-1;});await p.waitForTimeout(60);if(done)break;}
  await p.locator('#hideRead').check();await title(p);
  const buttons=await p.locator('.start-actions button').evaluateAll(els=>els.map(el=>({width:el.getBoundingClientRect().width,background:getComputedStyle(el).backgroundColor})));
- assert.ok(buttons.every(b=>Math.abs(b.width-205)<.1&&b.background.startsWith('rgb(')),JSON.stringify(buttons));
+ assert.ok(buttons.every(b=>Math.abs(b.width-205)<.1),JSON.stringify(buttons));
+ assert.deepEqual(buttons.map(b=>b.background),['rgb(217, 164, 65)','rgba(24, 18, 14, 0.88)']); // 10/16 15:3x: 처음부터 = 싸움 주 단추(금색) · 이어하기 = 부 단추(그림 위라 창 바탕 --panel)
  assert.equal(await p.locator('.pixel-wordmark > span').evaluate(el=>getComputedStyle(el).position),'absolute');
  assert.deepEqual(await p.locator('.title-footer button').evaluateAll(els=>els.map(e=>e.textContent)),['공지사항','설정','계정 연결']);
  assert.equal(await p.evaluate(()=>game.stats.simTime),0);
@@ -58,9 +59,9 @@ try{
  assert.equal(await p.evaluate(()=>game.stats.simTime),0);
  assert.equal(await p.evaluate(()=>game.state),'menu');
  assert.equal(await checkpoint(p),null);
- assert.equal(await p.locator('#lobbyRank').textContent(),'Lv.1 여행자');
- // 10/16 (lobby_fix §6): 대표 유파 = 산 스킬북이 가장 많은 유파 — 책 없음 · 깬 수 37 = 옛 인장 3 → 금화 100 + 300 (한 번 — 인장 제도는 08:1x 에 없앰, 바꾸기만 남음) · 알림 한 줄
- assert.equal(await p.locator('#lobbySchool').textContent(),'아직 없음');
+ assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleCurrent').textContent(),'여행자'); // 10/16 15:3x ⑥: 레벨 글 + 호칭 내림 상자
+ // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥) · 깬 수 37 = 옛 인장 3 → 금화 100 + 300 (한 번 — 인장 제도는 08:1x 에 없앰, 바꾸기만 남음) · 알림 한 줄
+ assert.equal(await p.locator('#lobbySchool').count(),0);
  assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyHeads').textContent(),'0');
  assert.equal(await p.locator('#lobbyStatus').textContent(),'인장 3개를 금화 300으로 바꿨습니다.');
  assert.equal(await p.locator('#duelRecord').textContent(),'0승리 0패배 (0%)');
@@ -169,7 +170,7 @@ try{
   const foot=await q.locator('.title-footer button').evaluateAll(els=>els.map(e=>e.getBoundingClientRect().right));assert.ok(foot.every(r=>r<=width),JSON.stringify(foot));
   check(`${name}: integrated title and compact notices fit`,rects);
   await q.locator('#newJourney').click();await q.locator('#characterView canvas').waitFor({timeout:20000});
-  assert.equal(await q.locator('#lobbySchool').textContent(),'아직 없음');
+  assert.equal(await q.locator('#lobbySchool').count(),0); // 대표 유파 칸 없음 (10/16 15:3x ⑥)
   assert.ok(await q.locator('.lobby').evaluate(el=>el.scrollWidth<=el.clientWidth));
   await q.locator('#lobbyDepart').scrollIntoViewIfNeeded();assert.equal(await q.locator('#lobbyDepart').isVisible(),true);
   await q.locator('#tabWeapons').focus();await q.keyboard.press('End');assert.equal(await q.locator('#panelSkills').isVisible(),true);
