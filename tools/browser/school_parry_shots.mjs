@@ -27,6 +27,11 @@ for (const sh of SHOTS) {
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.ai, null, { timeout: 60000 });
   await page.evaluate((sh) => {
     document.getElementById('techCue').style.visibility = 'hidden';
+    // 10/16 판 시작 글(가운데 소개 · '대면' 알림 · 조작 안내)과 조작 단추가 몸을 가리지 않게 (자세 사진만)
+    for (const id of ['toast', 'foeIntro', 'hint', 'moveStick', 'btnParry', 'guardName', 'staminaHud', 'stageInfo', 'topButtons']) {
+      const el = document.getElementById(id);
+      if (el) el.style.visibility = 'hidden';
+    }
     const g = window.game;
     const ai = g.ai;
     g.player.applyWound = () => {};
