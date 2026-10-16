@@ -502,9 +502,9 @@ function warmRoundFx(on) {
 
 /**
  * 싸움판 만들기: prepareRound 가 정한 상대와 주인공 무기(weaponId)로 물리 세계와 두 사람을 새로 세운다.
- *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다). quiet = 판 시작 소리를 안 냄 (toLobby)
+ *  만들기만 하고 시간은 흐르지 않는다 (게임 루프가 state 'fight' 일 때만 물리를 돌린다).
  */
-function newRound(weaponId, { quiet = false } = {}) {
+function newRound(weaponId) {
   input.resetTransient(); // 지난 판의 손가락 상태를 물려받지 않는다 (10/8 입력 수명주기)
   // 다리로 체중 받치기: 게임은 늘 gait.js 걸음(다리가 체중 대부분을 받친다). 오너 결정으로 설정 토글을 없애고 기본 적용했다.
   //  CONFIG 기본값도 'hybrid'라 시뮬 도구가 게임과 같은 걸음을 잰다(9/29). 이 줄은 콘솔·도구가 바꿔 둔 값을 판마다 되돌린다
@@ -657,7 +657,7 @@ function newRound(weaponId, { quiet = false } = {}) {
   const foeVoice = voiceOf(currentFoe);
   bodySounds = [new BodySounds(sound, player, 'player', true), new BodySounds(sound, enemy, foeVoice)];
   sound.resetRound();
-  if (!quiet) sound.roundStart(); // 대성당: 판이 시작될 때 파이프 오르간이 한 번 울린다 (quiet = 싸움 → 대기실이 메뉴 뒤 판을 새로 세울 때 — toLobby)
+  sound.roundStart(); // 대성당: 판이 시작될 때 파이프 오르간이 한 번 울린다
   roundOver = false;
   roundOverTime = 0;
   resetCamera(); // 따라가기를 새 판 몸 자리에 바로 맞춘다 (지난 판 자리에서 미끄러져 오지 않게 — 판 시작 자리는 planOpening 이 정한다)
@@ -1408,7 +1408,23 @@ function validJourney() {
   return out;
 }
 export const canContinueJourney = () => !!validJourney();
-export const getLobbyPlayer = () => player; // 대기실 캐릭터 미리보기가 겉모습을 복제한다 (메뉴 뒤에 세워 둔 판의 플레이어 — 몸·물리는 건드리지 않는다)
+export const getLobbyPlayer = () => player; // 메뉴 뒤에 세워 둔 판의 플레이어 (시험 도구가 '대기실이 게임 몸·물리를 안 건드린다'를 본다)
+/**
+ * 대기실 캐릭터 몸(lobby_rig.js — 사장님 10/16 08:4x '무기 장착도 정교해져야 돼', docs/import/ui_fix_2026-10-16.md §6)이 쓸 값: 물리 모듈과 다음 판의 플레이어와 같은 것
+ *  (newRound 의 플레이어 Fighter 값 — 겉모습(?hero 포함) · 무기 · 스킬북 보법·막기 · 검술 층). weaponId 없으면 맨손. 투구는 미리보기가 보이기/숨기기로 (LOOK_BAREHEAD 와 같은 꼴)
+ */
+export function lobbyRigSpec(weaponId) {
+  const kit = weaponId ? playerKit(traditionOf(getWeapon(weaponId)), readBooks(), { test: testRoute.active, upTo: UNIQUE_STAGE }) : null;
+  return {
+    RAPIER,
+    name: readProfile().name,
+    look: testRoute.player.look ?? LOOKS.player,
+    weapon: weaponId || null,
+    schoolFootwork: kit ? kit.footwork : undefined,
+    schoolParry: kit ? kit.parry : undefined,
+    skill: { level: +settings.skill, corr: CONFIG.SKILL.corr, corrTip: CONFIG.SKILL.corrTip, autoGuard: true },
+  };
+}
 /** 대기실 스킬북 화면이 읽는 이 판의 갈래: test = 테스트 경로(책 모두 열림 · 이미 받은 인장을 금화로 바꾸지 않음) */
 export const getSkillBookContext = () => ({ test: testRoute.active });
 export const getLobbySettings = () => ({ fpsCap: settings.fpsCap });
@@ -1527,9 +1543,7 @@ function toLobby() {
   parryHold.key = false;
   applyMoveMode();
   sound.ctx?.suspend?.()?.catch?.(() => {}); // 판이 다시 열리면 startFight 의 sound.unlock 이 되살린다
-  // 메뉴 뒤 판을 처음 열 때처럼 새로 세운다 (시간은 안 흐름): 싸우던 판의 쓰러진 몸 · 상처 · 벗겨진 투구 · 흩어진 조각을 치운다.
-  //  대기실 캐릭터 미리보기가 이 판의 선 플레이어를 읽는다(getLobbyPlayer). 소리는 멈춰 둔 채라 판 시작 소리는 안 낸다(quiet)
-  newRound('longsword', { quiet: true });
+  // 싸우던 판은 그대로 멈춰 둔다(덮개 뒤 — 시간 안 흐름). 대기실 캐릭터는 이 판을 읽지 않고 따로 된 몸을 세운다(lobby_rig.js) · 다시 출발하면 startFight 가 판을 새로 연다
   back();
 }
 $('btnStart').addEventListener('click', startFight);

@@ -80,11 +80,11 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   $('duelRecord').textContent = `${profile.wins}승리 ${profile.losses}패배 (${total ? Math.round(profile.wins / total * 100) : 0}%)`;
   const status = (text, tone = '') => { $('lobbyStatus').textContent = text; if (tone) $('lobbyStatus').dataset.tone = tone; else delete $('lobbyStatus').dataset.tone; };
   if (converted?.coins) status(`인장 ${converted.seals}개를 금화 ${converted.coins.toLocaleString('ko-KR')}으로 바꿨습니다.`, 'notice');
-  const preview = createLobbyCharacter($('characterView'), game.getLobbyPlayer());
+  const preview = createLobbyCharacter($('characterView'), game); // 몸 = 다음 판 플레이어와 같은 Fighter (lobby_rig.js — game.lobbyRigSpec)
   let selectedItem = null, category = 'weapon';
   const equipped = { weapon: readLobbyEquipment(), armor: readLobbyArmor() };
   preview.setWeapon(equipped.weapon); preview.setArmor(equipped.armor);
-  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, announce: text => { $('skillStatus').textContent = text; } });
+  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, onBooks: () => preview.refresh(), announce: text => { $('skillStatus').textContent = text; } }); // 책을 사거나 봉인하면 미리보기 걸음 자세도 (그 무기 유파 보법)
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')];
   function selectTab(tab) {
     for (const item of tabs) {

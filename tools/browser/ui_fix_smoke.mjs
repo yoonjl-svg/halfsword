@@ -5,6 +5,7 @@
 //     짐: '패배' · '금화 −N'(또는 ±0) · '다시 겨루기'(같은 무대 — 진 판은 넘어가지 않음) · '대기실'
 //  ③ 테스트 경로 · 주소 판: 정지 · 결과 창에 '대기실' 없음 · 결과 창 설정 줄 그대로 (메뉴 그대로)
 //  ④ 대기실 캐릭터: '드래그하여 회전' 없음 · 천천히 반 칸 끌면 180°(멈췄다 놓으면 관성 없음) · 튕기면 더 돌다 섬 · 선 뒤로는 그리지 않음 · 막는 각 없음(몇 바퀴든) · Home = 가까운 정면
+//  ⑤ 대기실 무기 = 싸움 무기 (08:4x — 같은 문서 §6): 나뭇가지를 장착한 대기실 몸 ↔ 그 무기로 연 여정 판의 플레이어(상대 AI 멈춤 · 자세를 고쳐 딛고 선 뒤) — 골반 기준 손목 · 칼끝 · 칼날 축
 //  npm run build && npx vite preview --port 5230 →  node tools/browser/ui_fix_smoke.mjs http://127.0.0.1:5230 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -151,6 +152,33 @@ try {
     assert.equal(((home % 360) + 360) % 360, 0, `home → ${home}`);
     await shot(p, 'lobby-turntable');
     checks.push({ check: 'lobby turntable: no drag hint; slow half drag = 180° with no coast; a flick coasts and stops; no renders at rest; no clamp (two more turns); Home = nearest front', slow, flick, two, home, frames: [f0, f1] });
+    await c.close();
+  }
+  // ⑤ 대기실 무기 = 싸움 무기
+  {
+    const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, reducedMotion: 'reduce' }); await noAuth(c);
+    const p = await c.newPage(); watch(p);
+    await lobby(p, '/?title=1&cards=longsword,rapier');
+    await p.locator('[data-weapon=tree_branch]').click(); await p.locator('#equipItem').click();
+    const ready = () => p.waitForFunction(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.rig === 'ready', null, { timeout: 60000 });
+    await ready();
+    // 골반 기준 몸 틀(앞 x · 위 y · 오른쪽 z): 손목(아래팔 끝 = 칼 원점) · 칼끝 · 칼날 축
+    const POSE = `const T=game.THREE,V=(v)=>new T.Vector3(v.x,v.y,v.z),Q=(r)=>new T.Quaternion(r.x,r.y,r.z,r.w);const pv=V(f.bodies.pelvis.translation()),inv=f.yaw.clone().invert(),loc=(q)=>q.clone().sub(pv).applyQuaternion(inv);
+      const wrist=loc(new T.Vector3(0.13,0,0).applyQuaternion(Q(f.bodies.farmS.rotation())).add(V(f.bodies.farmS.translation()))),tip=loc(f.bladePoint(1)),axis=new T.Vector3(0,1,0).applyQuaternion(Q(f.sword.rotation())).applyQuaternion(inv);
+      return {weapon:f.weapon.id,wrist:wrist.toArray(),tip:tip.toArray(),axis:axis.toArray()};`;
+    const lobbyPose = await p.evaluate(new Function(`const f=document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').lobbyPreview.fighter;${POSE}`));
+    await depart(p);
+    assert.equal(await p.evaluate(() => game.player.weapon.id), 'tree_branch');
+    await p.evaluate(() => { game.ai.update = () => {}; });
+    const hold = await p.evaluate(() => game.config.ARENA.startHold);
+    await p.waitForFunction((t) => game.stats.simTime >= t, hold + 4, { timeout: 180000 });
+    const fightPose = await p.evaluate(new Function(`const f=game.player;${POSE}`));
+    const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    const ang = (a, b) => (Math.acos(Math.min(1, Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * 180) / Math.PI;
+    const diff = { wristCm: +(d(lobbyPose.wrist, fightPose.wrist) * 100).toFixed(2), tipCm: +(d(lobbyPose.tip, fightPose.tip) * 100).toFixed(2), axisDeg: +ang(lobbyPose.axis, fightPose.axis).toFixed(2) };
+    assert.equal(lobbyPose.weapon, 'tree_branch');
+    assert.ok(diff.wristCm < 2 && diff.tipCm < 3 && diff.axisDeg < 2, JSON.stringify({ diff, lobbyPose, fightPose }));
+    checks.push({ check: 'lobby weapon = fight weapon: the equipped branch in the lobby body and in the journey fight (AI paused, settled) — wrist · tip · blade axis relative to the pelvis', diff, hold });
     await c.close();
   }
   assert.deepEqual(errors, []);
