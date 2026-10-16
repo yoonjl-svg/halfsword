@@ -5,9 +5,11 @@
 //   대기실을 '여정 이어가기'로 띄운다 (main.js setLobbyReturn → toLobby). 주소로 연 판 · 테스트 경로는 이 길이 없다.
 //  게임 인자가 하나라도 있는 주소(?stage= ?weapon= ?foe= ?test=1 ?stamina=0 ?foeWhiff=1 …): 지금처럼 바로 게임 메뉴 (journey_save.js skipsTitle)
 //  첫 화면·대기실은 Shadow DOM 안 — 꾸밈은 그 안에서만, 글자는 게임 HUD 규칙의 토큰(index.html :root)을 물려받아 entrance_type.css 한 곳에서 (lobby_fix §1).
+//   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
 //  디자인 보기용 주소 `?coins=N` = 대기실 금화를 N 으로 (lobby_progress.js setCoins — 게임 인자로 세지 않아 첫 화면이 뜬다 · lobby_fix §6)
 import baseStyle from './start_screen.css?inline';
 import pixelStyle from './start_pixel.css?inline';
+import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { ENTRANCE_HTML, mountStartScreen } from './start_screen.js';
 import { skipsTitle } from './journey_save.js';
@@ -23,7 +25,7 @@ if (skipsTitle(params)) {
   // 덮개(Shadow DOM 을 단 #gameEntrance) 열기 — 처음 열 때 · 싸움에서 대기실로 돌아올 때. 뒤의 게임은 숨기고(index.html html[data-start-open]) 누를 수 없게(inert)
   //  첫 화면 · 공지 · 계정 · 대기실도 가로 화면만 (사장님 10/16 14:0x '첫 화면이나 대기실도 가로 화면에서만 볼 수 있게 해'): 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'(#rotate)가
   //   이 덮개 위를 덮는다 — 조건도 싸움과 같다(세로 + 터치 · PC 는 그대로). 안내는 inert 로 두지 않는다(inert 면 누름이 뒤의 첫 화면·대기실로 지나간다).
-  //   창(공지 · 설정 · 계정 · 이름 — showModal)은 맨 위 층이라 안내보다 위에 그려져 같은 조건에서 감춘다 (start_pixel.css 끝)
+  //   창(공지 · 설정 · 계정 · 이름 — showModal)은 맨 위 층이라 안내보다 위에 그려져 같은 조건에서 감춘다 (entrance_ui.css 끝)
   function openHost() {
     document.documentElement.setAttribute('data-start-open', '');
     document.getElementById('rotate')?.classList.add('enabled');
@@ -45,7 +47,7 @@ if (skipsTitle(params)) {
     style.textContent = (baseStyle + pixelStyle)
       .replace(/(?:html)?\[data-start-theme=["']?pixel["']?\]/g, ':host')
       .replaceAll(':root', ':host').replace(/html,\s*body/g, ':host')
-      + '\n#selectionStatus:not(.sr-only){position:absolute;left:0;right:0;margin:12px 0 0;}\n' + typeStyle;
+      + '\n#selectionStatus:not(.sr-only){position:absolute;left:0;right:0;margin:12px 0 0;}\n' + uiStyle + '\n' + typeStyle;
     const markup = document.createElement('template');
     markup.innerHTML = ENTRANCE_HTML;
     root.replaceChildren(style, markup.content);

@@ -5,8 +5,12 @@
 //  금화 벌기 (사장님 결정 04:3x '승리시 랜덤으로 벌어. 5~15원 중 랜덤. 패배시 1~5원 감소'): 첫 화면·대기실 여정의 판 끝마다 journeyCoins — 0 아래로는 안 내려간다.
 //  머리 (사장님 결정 04:3x '적의 머리를 베면 1개씩 주는 재화'): 같은 여정에서 상대의 목을 베면 1 (main.js — COMBAT_HOOKS.onDecapitate · 한 상대에 한 번, awardHead).
 //   머리로 무엇을 사는지는 사장님 확인 전 (skill_books.js BOOK_HEAD_PRICE null). 디자인 보기용 주소 `?coins=N`(game_entry.js setCoins).
+//  호칭 (사장님 10/16 15:3x ⑥ "호칭 시스템을 나중에 추가할 거라서 '여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" · 16:0x "… 이미 가진 호칭인 여행자가 보이고"
+//   — docs/import/ui_unify_2026-10-16.md §5): 기본 호칭 '여행자'는 늘 가짐 · 얻은 호칭은 titles(unlockEventTitle — 앞으로 호칭 제도가 부른다) · 고른 호칭은 title(selectTitle).
+//   호칭을 새로 지어 넣지 않는다(지금 얻을 수 있는 호칭은 없다).
 export const PROGRESS_KEY = 'stillness.lobby.progress.v1';
-let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: '여행자' };
+export const DEFAULT_TITLE = '여행자';
+let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: DEFAULT_TITLE };
 const validText = s => typeof s === 'string' && s.length > 0 && s.length <= 160;
 const count = n => Number.isSafeInteger(n) && n >= 0;
 export function readProgress() {
@@ -19,7 +23,7 @@ export function readProgress() {
         seen.add(a.receipt); return true;
       }).map(({receipt, kind}) => ({receipt, kind}));
       const titles = (Array.isArray(value.titles) ? value.titles : []).filter(t => t && validText(t.event) && validText(t.name));
-      session = { acquisitions, titles, title: titles.some(t => t.name === value.title) ? value.title : '여행자',
+      session = { acquisitions, titles, title: titles.some(t => t.name === value.title) ? value.title : DEFAULT_TITLE,
         coins: count(value.coins) ? value.coins : 100, heads: count(value.heads) ? value.heads : 0 };
     }
   } catch { /* 이번 실행 동안 유지한다. */ }
@@ -100,9 +104,23 @@ export function awardHead(foe) {
   addHeads(1);
   return true;
 }
-// 이벤트 조건은 해당 이벤트에서 판정한다. 호칭은 레벨/유파로 자동 해금하지 않는다.
+// ── 호칭 ──
+/**
+ * 호칭 얻기 (앞으로 호칭 제도가 부른다 — 지금은 부르는 곳 없음): 사건(event)마다 한 번 · 이벤트 조건은 해당 이벤트에서 판정한다.
+ *  호칭은 레벨/유파로 자동 해금하지 않는다. 기본 호칭 '여행자'는 얻을 것이 아니라 늘 가진 것. 돌려줌: 이번에 얻었나
+ */
 export function unlockEventTitle(event, name) {
   readProgress();
-  if (!validText(event) || !validText(name) || session.titles.some(t => t.event === event)) return false;
+  if (!validText(event) || !validText(name) || name === DEFAULT_TITLE || session.titles.some(t => t.event === event)) return false;
   session.titles.push({ event, name }); save(); return true;
+}
+/** 가진 호칭 — 기본 '여행자' 먼저, 그 뒤 얻은 호칭(얻은 차례 · 같은 이름은 하나). 대기실 호칭 내림 상자가 이것만 보인다 (사장님 16:0x '이미 가진 호칭') */
+export function titleOptions() {
+  return [...new Set([DEFAULT_TITLE, ...readProgress().titles.map(t => t.name)])];
+}
+/** 호칭 고르기: 가진 호칭만 · 고른 것은 title 에 저장. 돌려줌 { ok, saved } (저장 못 하면 이번 실행 동안 유지) */
+export function selectTitle(name) {
+  if (!titleOptions().includes(name)) return { ok: false, saved: false };
+  session.title = name;
+  return { ok: true, saved: save() };
 }

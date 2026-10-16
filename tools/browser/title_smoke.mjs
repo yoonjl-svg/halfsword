@@ -1,6 +1,8 @@
 // 첫 화면·공지 점검 — 게임 주소(/) 위에서 (샛별 저장소 start_screen_smoke.mjs 는 시안 쪽 따로 된 쪽(start-pixel.html)을 봤다 — 그 쪽은 들여오지 않아 같은 점검을 게임 첫 화면에 맞춤, docs/import/lobby_port_2026-10-16.md §6)
 //  공지 다섯 · 글자 색 셋·크기 셋 · 화면에 들어온 공지만 읽음 · '지난 업데이트 숨김' 기억 · 깨진 저장 되살림 · 픽셀 제목·단추 크기 · 아래 줄 세 칸 · 화면 크기 · 움직임 줄이기 · 저장 막힘
 //  10/16 14:0x (docs/import/ui_fix_2026-10-16.md §11): 공지 제목 = 본문과 같은 10 · 폰 세로 = '폰을 가로로 돌려 주세요'가 공지·첫 화면을 덮음(공지 창도 감춤) → 가로로 돌려 같은 점검 · PC 세로는 그대로
+//  10/16 15:3x (docs/import/ui_unify_2026-10-16.md): 처음부터 · 이어하기 · 확인 = 싸움 화면 단추(높이 · 색) · '지난 업데이트 숨김' = 미닫이(role=switch — check/uncheck 그대로) · 나타나기 움직임 줄이기
+//   (싸움 화면과 계산값 맞대기 · 미닫이 꼴 · 누를 때 안 내려앉기 · 글자만 steps 는 tools/browser/ui_unify_smoke.mjs)
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/title_smoke.mjs http://127.0.0.1:5201 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -33,7 +35,7 @@ async function bounds(page){
  assert.ok(Math.abs((c[1]+c[3])-(l[1]+l[3]))<2,'notice controls should share one row');
  assert.ok(l[2]+10<=c[0],'notice label and confirm must not overlap');
  assert.ok(c[2]-c[0]<=80&&c[3]-c[1]>=32,'compact confirm remains usable');
- assert.ok(b.footerHeight<=64,'notice footer should give space back to the list');
+ assert.ok(b.footerHeight<=68,'notice footer should give space back to the list'); // 10/16 15:3x: 확인 = 싸움 주 단추 높이(42 · 낮은 화면 36 — 전 나무 단추 36) → 아래 칸 64 → 67
  return b;
 }
 async function titleLayout(page){
@@ -45,17 +47,22 @@ async function titleLayout(page){
    for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++)if(pixels[(y*canvas.width+x)*4+3]){rows.push(y);break;}
    return {text:el.textContent,inkHeight:(Math.max(...rows)-Math.min(...rows)+1)*rect.height/canvas.height,rendering:getComputedStyle(canvas).imageRendering};
   };
-  const buttons=[...root.querySelectorAll('.start-actions button')].map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {text:el.textContent,width:r.width,height:r.height,left:r.left,right:r.right,top:r.top,bottom:r.bottom,background:s.backgroundColor,border:parseFloat(s.borderWidth)};});
+  const buttons=[...root.querySelectorAll('.start-actions button')].map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {text:el.textContent,width:r.width,height:r.height,left:r.left,right:r.right,top:r.top,bottom:r.bottom,background:s.backgroundColor,border:parseFloat(s.borderWidth),radius:s.borderRadius,shadow:s.boxShadow};});
   const footer=root.querySelector('.title-footer'),f=footer.getBoundingClientRect(),fb=[...footer.children].map(e=>{const r=e.getBoundingClientRect();return {text:e.textContent,right:r.right,bottom:r.bottom,width:r.width};});
   return {english:wordmark('h1'),korean:wordmark('.title-korean'),buttons,footer:{left:f.left,top:f.top,controls:fb},width:innerWidth,height:innerHeight};`);
  assert.equal(layout.korean.text,'적막');assert.match(layout.korean.rendering,/pixelated|crisp-edges/);
  assert.ok(layout.korean.inkHeight>24&&layout.korean.inkHeight<layout.english.inkHeight,JSON.stringify(layout));
  const compact=layout.width>layout.height&&layout.height<=500;
- const oldWidth=compact?250:layout.width<layout.height?Math.min(278,layout.width-72):278,oldHeight=compact?48:60;
+ const oldWidth=compact?250:layout.width<layout.height?Math.min(278,layout.width-72):278;
  assert.deepEqual(layout.buttons.map(b=>b.text),['처음부터','이어하기']);
+ // 10/16 15:3x 사장님 ② (docs/import/ui_unify_2026-10-16.md): 나무 판자 → 싸움 화면 단추 — 처음부터 = 주 단추(금색 · 테두리 없음) · 이어하기 = 부 단추(1 px 테두리 · 그림 위라 창 바탕) · 모서리 8 · 그림자 없음.
+ //  높이 = 싸움 단추(주 42 · 부 40 / 낮은 화면 36 · 34 — ui_unify_smoke 가 싸움 화면과 맞대 봄) · 폭은 전 판자 폭 그대로(82 %)
+ const [primary,secondary]=layout.buttons;
+ assert.deepEqual([primary.background,primary.border,secondary.background,secondary.border],['rgb(217, 164, 65)',0,'rgba(24, 18, 14, 0.88)',1]);
+ assert.deepEqual([Math.round(primary.height),Math.round(secondary.height)],compact?[36,34]:[42,40],JSON.stringify(layout.buttons));
  for(const b of layout.buttons){
-  assert.ok(Math.abs(b.width/oldWidth-.82)<.002&&Math.abs(b.height/oldHeight-.82)<.002,JSON.stringify(b));
-  assert.ok(b.background.startsWith('rgb(')&&b.border>=4);
+  assert.ok(Math.abs(b.width/oldWidth-.82)<.002,JSON.stringify(b));
+  assert.equal(b.radius,'8px');assert.equal(b.shadow,'none');
   assert.ok(b.left>=0&&b.right<=layout.width&&b.top>0&&b.bottom<layout.height,JSON.stringify(b));
  }
  assert.deepEqual(layout.footer.controls.map(c=>c.text),['공지사항','설정','계정 연결']);
@@ -82,7 +89,7 @@ try{
  assert.equal(typography['.confirm-button'].weight,'700');
  assert.ok(Object.values(typography).every(t=>t.family==='Cinzel'&&t.wordBreak==='keep-all'),JSON.stringify(typography));
  assert.equal(new Set(Object.values(typography).map(s=>s.size)).size,4); // 17 · 14(확인 단추) · 12 + 공지 안 10(제목 · 본문 · 날짜)
- assert.equal(new Set(Object.values(typography).map(s=>s.color)).size,3);
+ assert.equal(new Set(Object.values(typography).map(s=>s.color)).size,4); // 글자 색 셋(본문 · 보조 · 강조) + 확인 = 주 단추라 금색 위 글자(--c-on-accent — 10/16 15:3x)
  check('notices follow the battle HUD type rule (font stack Cinzel→Pretendard · sizes 12/14/17 + notice title/body/date one step down at 10 · title white 700 · weights 400/600/700 · three text colors · keep-all)',{typography});
  await page.evaluate(()=>localStorage.setItem('gladiator-settings','{"fpsCap":true,"prototype-sentinel":true}'));
  await page.locator('#hideRead').check();await page.locator('#confirmNotices').click();
@@ -90,7 +97,7 @@ try{
  const wm=await inRoot(page,`const el=root.querySelector('h1');return {fontReady:document.fonts.check('600 32px Cinzel','Stillness'),text:el.textContent,width:el.querySelector('canvas')?.width,rendering:getComputedStyle(el.querySelector('canvas')).imageRendering};`);
  assert.equal(wm.fontReady,true);assert.equal(wm.text,'Stillness');assert.ok(wm.width>100);assert.match(wm.rendering,/pixelated|crisp-edges/);
  const layout=await titleLayout(page);
- check('pixel Korean/English title, 18% smaller framed buttons, bottom-left footer of three',{wm,layout});
+ check('pixel Korean/English title, battle buttons (primary 처음부터 · secondary 이어하기 at the old plank width), bottom-left footer of three',{wm,layout});
  const state=await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);assert.equal(state.hideRead,true);assert.ok(state.readIds.length>0&&state.readIds.length<=N);
  assert.equal(await page.evaluate(()=>localStorage.getItem('gladiator-settings')),'{"fpsCap":true,"prototype-sentinel":true}');check('notice reading preserves game settings');
  await page.reload({waitUntil:'networkidle'});
@@ -124,7 +131,9 @@ await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.n
  }
  // PC 는 그대로: 세로로 좁은 창(터치 없음)이어도 안내 없이 공지 · 첫 화면
  {const narrow=await newPage({viewport:{width:390,height:844}});await open(narrow);assert.deepEqual(await cover(narrow),{shown:false,top:false,dialog:true});await narrow.locator('#confirmNotices').click();await ready(narrow);check('desktop portrait-shaped window (no touch): no rotate screen');await narrow.context().close();}
- const reduced=await newPage({viewport:{width:844,height:390},reducedMotion:'reduce'});await open(reduced);await reduced.locator('#confirmNotices').click();await ready(reduced);assert.equal(await reduced.locator('#titleScreen').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');check('reduced motion: immediate static title');
+ const reduced=await newPage({viewport:{width:844,height:390},reducedMotion:'reduce'});await open(reduced);await reduced.locator('#confirmNotices').click();await ready(reduced);
+ // 10/16 15:3x: 나타나기는 첫 화면 칸이 아니라 제목 글자 · 단추 · 아래 줄 저마다 (글자 = steps(7) · 단추 = 매끈) — 움직임 줄이기면 모두 바로
+ assert.deepEqual(await inRoot(reduced,`return ['#titleScreen','.title-korean','.pixel-wordmark','.title-rule','.start-actions','.title-footer'].map(s=>getComputedStyle(root.querySelector(s)).transitionDuration)`),Array(6).fill('0s'));check('reduced motion: immediate static title');
  const denied=await browser.newContext();await denied.route('https://*.supabase.co/**',r=>r.abort());const dp=await denied.newPage();watch(dp);await dp.addInitScript(()=>{Storage.prototype.getItem=()=>{throw new DOMException('denied','SecurityError');};Storage.prototype.setItem=()=>{throw new DOMException('denied','SecurityError');};});await open(dp);await dp.locator('#hideRead').check();await dp.locator('#confirmNotices').click();await ready(dp);check('storage denied: screen remains usable');
  assert.deepEqual(errors,[]);
 }finally{fs.writeFileSync(`${out}/results.json`,JSON.stringify({results,errors},null,2));await browser.close();}
