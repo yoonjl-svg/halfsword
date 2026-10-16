@@ -30,7 +30,7 @@ try{
  // 글은 싸움 화면 규칙(10/16 entrance_type.css): 첫 화면 주 단추 14·700 · 고른 탭 12·600 · 안 고른 탭 12·400 · 글꼴 줄 Cinzel → 프리텐다드
  //  꼴(10/16 15:3x — 나무 판자 → 싸움 화면 꼴): 주 단추 = 테두리 없는 납작한 금색 · 탭 = 1 px 테두리(고른 것 금색) · 둘 다 잘라 낸 모서리 · 나뭇결 없음
  const lobbyButton=await style('#tabWeapons'),otherTab=await style('#tabArmor');assert.equal(lobbyButton[1],'12px');assert.equal(titleButton[1],'14px');assert.deepEqual([titleButton[2],lobbyButton[2],otherTab[2]],['700','600','400']);
- assert.ok(titleButton[0].startsWith('Cinzel, Pretendard'),titleButton[0]);assert.equal(lobbyButton[0],titleButton[0]);assert.equal(await p.locator('#lobbyBack').textContent(),'‹ 첫 화면으로');
+ assert.ok(titleButton[0].startsWith('Cinzel, Pretendard'),titleButton[0]);assert.equal(lobbyButton[0],titleButton[0]);assert.equal(await p.locator('#lobbyBack').textContent(),'첫 화면으로');
  assert.deepEqual(titleButton.slice(4),['0px','none','none']);assert.deepEqual(lobbyButton.slice(3),['rgb(217, 164, 65)','1px','none','none']);assert.deepEqual(otherTab.slice(3),['rgba(243, 233, 216, 0.18)','1px','none','none']);
  await state(p,false,false,'');assert.equal(await p.locator('.inventory-item').count(),1);assert.equal(await p.locator('.inventory-slot').count(),19);
  assert.equal(await p.locator('[data-weapon=longsword]').count(),0);
