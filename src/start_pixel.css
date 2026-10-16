@@ -39,7 +39,7 @@ html[data-start-theme="pixel"] {
 /* 아래 줄 세 칸 (공지사항 · 설정 · 계정 연결) = 작은 부 단추 · 그림 위라 창 바탕 (entrance_ui.css .secondary.small.on-art) — 폭은 전과 같은 70 px 세 칸(글은 가운데 · 옆 여백 없이) ·
    계정이 이어지면 메일 앞부분이 들어가게 폭을 글에 맞춘다(220 px · 화면 40 % 까지 — 넘치면 …) */
 [data-start-theme="pixel"] .title-footer { justify-content: flex-start; gap: 8px; }
-[data-start-theme="pixel"] .title-footer button.small { width: 70px; padding-left: 0; padding-right: 0; }
+/* 아래 줄 작은 단추의 폭 70 · 옆 패딩 0 은 entrance_ui.css .secondary.small.utility (대기실 '첫 화면으로'와 같은 꼴) */
 [data-start-theme="pixel"] #openAccount { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-start-theme="pixel"] #openAccount[data-connected=true] { width: auto; min-width: 70px; max-width: min(220px, 40vw); padding-left: 10px; padding-right: 10px; }
 [data-start-theme="pixel"] dialog {

@@ -29,7 +29,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   --link: 12px;                        /* 사슬 한 마디 */
   --title-h: 21px; --title-gap: 12px;  /* 창 제목 줄 (무기 · 스킬북 …) */
   --depart: 42px; --depart-gap: 12px;  /* 출발 단추 = 싸움 주 단추 높이(패딩 13 + 글 줄 16) · 카드와 사이 (반올림 남는 것은 이 틈으로) */
-  --profile-min: 190px;
+  --profile-w: 184px;                  /* 내 정보 칸 폭 (사장님 18:0x — 내용만큼. 전: 최소 190 + 남는 폭 전부) */
   --col-max: 520px;                    /* 큰 화면에선 칸 높이를 여기까지 · 위아래 가운데 */
   --col-h: min(100dvh - var(--pad-t) - var(--pad-b) - var(--head) - var(--head-gap), var(--col-max));
   --row-w: min(100vw - var(--pad-l) - var(--pad-r), 1220px);
@@ -38,7 +38,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   --card-h: calc(var(--card-w) * 1.5);
   --chrome-v: calc(2px + 2 * var(--pp) + var(--title-h) + var(--title-gap) + 2 * var(--fr));
   --chrome-h: calc(2px + 2 * var(--pp) + 2 * var(--fr));
-  --grid-wmax: calc(var(--row-w) - var(--card-w) - var(--profile-min) - 2 * var(--gap) - var(--chrome-h));
+  --grid-wmax: calc(var(--row-w) - var(--card-w) - var(--profile-w) - 2 * var(--gap) - var(--chrome-h));
   --grid-w: max(132px, min((var(--col-h) - var(--chrome-v)) * 1.25, var(--grid-wmax)));
   --grid-h: calc(var(--grid-w) * .8);
   position: relative; isolation: isolate; height: 100dvh; overflow: auto;
@@ -54,19 +54,19 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   }
 }
 @media (max-height: 500px) { .lobby { --depart: 36px; } } /* 싸움 주 단추가 낮은 화면에서 패딩 10 (entrance_ui.css 와 같은 조건) */
-@media (min-width: 1100px) { .lobby { --pad-t: 30px; --pad-b: 36px; --head-gap: 26px; --profile-min: 240px; } }
+@media (min-width: 1100px) { .lobby { --pad-t: 30px; --pad-b: 36px; --head-gap: 26px; --profile-w: 210px; } }
 @media (max-height: 540px) and (min-width: 680px) {
-  .lobby { --pad-t: 8px; --pad-b: 12px; --pad-l: max(16px, env(safe-area-inset-left)); --pad-r: max(16px, env(safe-area-inset-right)); --head: 30px; --head-gap: 6px; --gap: 16px; --pp: 12px; --depart-gap: 10px; --col-max: 100dvh; }
+  .lobby { --pad-t: 8px; --pad-b: 12px; --pad-l: max(16px, env(safe-area-inset-left)); --pad-r: max(16px, env(safe-area-inset-right)); --head: 30px; --head-gap: 6px; --gap: 16px; --pp: 12px; --depart-gap: 10px; --col-max: 100dvh; --profile-w: 176px; }
 }
 /* 폭 680~779 (작은 가로 폰 740 × 360 · 680 × 360): 내 정보 칸 최소 폭을 줄여 별자리 판이 너무 작아지지 않게(판 폭 192 → 240 — 책 이름이 판 밖으로 나가던 것) */
-@media (min-width: 680px) and (max-width: 779px) { .lobby { --profile-min: 150px; } }
+@media (min-width: 680px) and (max-width: 779px) { .lobby { --profile-w: 150px; } }
 
 .lobby-backdrop, .lobby-shade { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -2; image-rendering: pixelated; }
 .lobby-shade { z-index: -1; background: #211c195c; } /* 배경 그림을 조금 어둡게 (그림 쪽 — UI 색에 세지 않음) */
 .lobby-header { flex: none; width: 100%; max-width: 1220px; height: var(--head); margin: 0 auto var(--head-gap); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .lobby-header h1 { position: relative; margin: 0; font-size: 17px; font-weight: 600; letter-spacing: .12em; }
 .lobby-header h1 canvas { display: block; height: var(--head); width: auto; image-rendering: pixelated; }
-.lobby-columns { flex: none; width: 100%; max-width: 1220px; height: var(--col-h); margin: 0 auto; display: grid; grid-template-columns: var(--card-w) minmax(var(--profile-min), 1fr) calc(var(--grid-w) + var(--chrome-h)); gap: var(--gap); align-items: stretch; }
+.lobby-columns { flex: none; width: 100%; max-width: 1220px; height: var(--col-h); margin: 0 auto; display: grid; grid-template-columns: var(--card-w) var(--profile-w) calc(var(--grid-w) + var(--chrome-h)); justify-content: center; gap: var(--gap); align-items: stretch; }
 
 /* ── 사슬 틀 (겉 — 그림 그대로): 캐릭터 카드 · 재고 칸 · 별자리 판. 틀의 픽셀 확대는 틀에만 (안의 그림 · 글은 매끈하게) ── */
 .card-frame, .skill-tree-host { position: relative; border: var(--fr) solid transparent; border-image: url('../public/ui/cardbacks/px_clearing_frame.png') 7 / var(--fr) / 0 repeat; image-rendering: pixelated; }
@@ -89,11 +89,13 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 @media (max-width: 679px) { .lobby-header { height: auto; min-height: var(--head); } .lobby-status { white-space: normal; } } /* 좁은 화면은 아래로 흐르니 두 줄이 되어도 된다 */
 .character-panel .depart { flex: none; width: var(--card-w); max-width: 100%; }
 
-/* ── 창 (싸움 창 꼴 — --panel 바탕 · 1 px --line · 모서리 10. 전: 나무색 불투명 · 두꺼운 볼록 테두리 · 딱딱한 그림자) ── */
-.profile-panel, .contents-panel { min-width: 0; min-height: 0; overflow: auto; padding: var(--pp); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* ── 창 (싸움 창 꼴 — --panel 바탕 · 1 px --line. 전: 나무색 불투명 · 두꺼운 볼록 테두리 · 딱딱한 그림자)
+   세 칸 모서리는 각지게 (사장님 10/16 18:0x "대기실에서 3단 영역 모서리에 애매한 라운딩이 들어간 게 싫어" — 사슬 틀과 나란히 선 큰 영역. 둥근 모서리는 떠 있는 창 · 단추에만) ── */
+.profile-panel, .contents-panel { min-width: 0; min-height: 0; overflow: auto; padding: var(--pp); background: var(--panel); border: 1px solid var(--line); border-radius: 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
-/* ── ② 내 정보: 레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리 · 메뉴 넷(아래에 붙임) ── */
-.profile-panel { display: flex; flex-direction: column; }
+/* ── ② 내 정보: 레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리 · 메뉴 넷 — 내용만큼 작게 (사장님 10/16 18:0x "두 번째 영역이 지금 정보에 비해 너무 크네. 상하좌우 다 작아져도 돼"):
+   폭 = --profile-w 하나(전: 남는 폭을 다 가짐 1fr) · 높이 = 내용(전: 칸 높이 끝까지) · 위 줄은 다른 두 칸과 같게 · 메뉴 넷은 금화 바로 아래 ── */
+.profile-panel { display: flex; flex-direction: column; align-self: start; max-height: 100%; }
 .profile-data { margin: 0; }
 .profile-data dd { margin: 0; }
 .rank-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 10px; }
@@ -126,7 +128,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .coin-balance { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
 .coin-icon { display: block; flex-shrink: 0; width: 20px; height: 20px; } /* 금화 · 주머니 그림 — 매끈하게 줄임 (픽셀 확대 끔 — 그림은 다른 작업자가 매끈한 그림으로 바꾼다) */
 .wallet .pouch-icon { margin-left: 6px; }
-.lobby-tabs { margin-top: auto; padding-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lobby-tabs { margin-top: 0; padding-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .lobby-tabs [role="tab"] { padding: 7px 4px; }
 
 /* ── ③ 재고 · 상점 · 스킬북 ── */

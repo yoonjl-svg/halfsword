@@ -63,6 +63,7 @@ try {
     await p.locator('#openAccount').click(); got['인증번호 받기'] = await read(p, '#accountSend'); got['계정 닫기'] = await read(p, '#closeAccount'); await p.locator('#closeAccount').click();
     await toLobby(p);
     got['여정 시작'] = await read(p, '#lobbyDepart'); got['첫 화면으로'] = await read(p, '#lobbyBack');
+    assert.equal((await shadow(p, `return root.getElementById('lobbyBack').textContent.trim();`)), '첫 화면으로'); // 화살표 없음 — 첫 화면 '공지사항'과 같은 꼴 (사장님 18:0x)
     await p.locator('[data-weapon=tree_branch]').click();
     got['장착(누를 수 있음)'] = await read(p, '#equipItem'); got['해제(누를 수 없음)'] = await read(p, '#unequipItem');
     await p.locator('#tabSkills').click(); await p.locator('.book-node[data-book="1"]').click();
@@ -77,6 +78,7 @@ try {
     // 그림 위 부 단추(이어하기): 바탕만 싸움 창(.card) 바탕 — 싸움 부 단추는 늘 창 위에 있다
     same(got['이어하기'], battle.secondary, ALL.filter((k) => k !== 'backgroundColor'), '이어하기'); assert.equal(got['이어하기'].backgroundColor, battle.card.backgroundColor); assert.equal(got['이어하기'].height, battle.secondary.height);
     // 작은 부 단추(아래 줄 · 첫 화면으로): 글 크기 12 · 패딩만 다름
+    same(got['첫 화면으로'], got['공지사항'], PROPS.filter((k) => !/width|height/i.test(k) || /border|min/i.test(k)), '첫 화면으로 = 공지사항'); // 사장님 18:0x '첫 화면의 공지사항처럼'
     for (const k of ['공지사항', '첫 화면으로']) { same(got[k], battle.secondary, ['borderRadius', 'color', 'fontFamily', 'fontWeight', 'borderTopWidth', 'borderTopStyle', 'borderTopColor', 'minHeight', 'lineHeight', 'letterSpacing'], k); assert.equal(got[k].fontSize, '12px'); assert.equal(got[k].backgroundColor, battle.card.backgroundColor); }
     // 누를 수 없는 짝 단추: 부 단추 꼴 + 흐리게 .4
     for (const k of ['해제(누를 수 없음)', '사용(누를 수 없음)']) { same(got[k], battle.secondary, ALL, k); assert.equal(got[k].opacity, '0.4'); }
@@ -200,7 +202,14 @@ try {
     const a = await L();
     const near = (x, y, what, tol = 1) => assert.ok(Math.abs(x - y) <= tol, `${size} ${what}: ${x} vs ${y}`);
     near(a.card.y, a.profile.y, 'card top = profile top'); near(a.card.y, a.contents.y, 'card top = contents top');
-    near(a.depart.b, a.profile.b, 'depart bottom = profile bottom'); near(a.depart.b, a.contents.b, 'depart bottom = contents bottom');
+    near(a.depart.b, a.contents.b, 'depart bottom = contents bottom');
+    // 내 정보 칸 = 내용만큼 (사장님 18:0x '두 번째 영역이 지금 정보에 비해 너무 크네. 상하좌우 다 작아져도 돼'): 위 줄만 같이 · 아래는 메뉴 넷 바로 밑 · 폭 = --profile-w(남는 폭을 안 가짐)
+    const pp = await shadow(p, `const e=root.querySelector('.profile-panel'),t=root.querySelector('.lobby-tabs').getBoundingClientRect(),r=e.getBoundingClientRect(),s=getComputedStyle(e);return {w:r.width,pad:parseFloat(s.paddingBottom),tabsB:t.bottom,b:r.bottom,want:parseFloat(getComputedStyle(root.querySelector('.lobby')).getPropertyValue('--profile-w'))};`);
+    near(pp.w, pp.want, 'profile width = --profile-w', 1); near(pp.b - pp.tabsB, pp.pad + 1, 'profile ends right under the menu tabs', 1.5);
+    assert.ok(a.profile.b < a.contents.b - 20, `${size} profile shorter than the columns`);
+    // 세 칸 모서리 = 각짐 (사장님 18:0x '3단 영역 모서리에 애매한 라운딩이 들어간 게 싫어') — 떠 있는 창 · 단추는 그대로 둥글게
+    const rr = await shadow(p, `return ['.profile-panel','.contents-panel'].map((q)=>getComputedStyle(root.querySelector(q)).borderTopLeftRadius);`);
+    assert.deepEqual(rr, ['0px', '0px'], `${size} column panels square`);
     assert.ok(a.depart.y >= a.card.b, `${size} depart below card`);
     assert.deepEqual(a.frames, ['14px', '14px', '14px'], `${size} frame thickness`);
     const ratio = a.card.w / a.card.h; assert.ok(ratio > 0.62 && ratio < 0.7, `${size} card ratio ${ratio}`);

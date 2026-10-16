@@ -26,7 +26,7 @@ export const ENTRANCE_HTML = `<main id="entrance" data-phase="notice">
       </div>
       <p id="selectionStatus" class="sr-only" role="status"></p>
     </div>
-    <footer class="title-footer"><button id="openNotices" type="button" class="secondary small on-art">공지사항</button><button id="openSettings" type="button" class="secondary small on-art">설정</button><button id="openAccount" type="button" class="secondary small on-art" disabled>계정 연결</button></footer>
+    <footer class="title-footer"><button id="openNotices" type="button" class="secondary small on-art utility">공지사항</button><button id="openSettings" type="button" class="secondary small on-art utility">설정</button><button id="openAccount" type="button" class="secondary small on-art utility" disabled>계정 연결</button></footer>
   </section>
   <dialog id="noticeDialog" aria-labelledby="noticeHeading" aria-describedby="noticeIntro">
     <header class="notice-header">
