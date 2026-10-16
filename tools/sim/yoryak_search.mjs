@@ -30,11 +30,13 @@ const BASE_COVER = { ...TRADITIONS.chinese.parryCover };
 const BASE_PAD = TRADITIONS.chinese.parry[LINE];
 const sgn = SIDE === 'L' ? -1 : 1; // 가리는 쪽 (z: + = 칼 든 오른쪽)
 
+// RANGE=hang: 칼끝을 아래로 드리운 꼴(다리까지 가림 — 가까운 간격의 올려 베기는 다리를 벤다, 10/16 22:0x 추적). 원전 짝: 跨左勢 「提水」(칼끝을 왼 아래로 늘어뜨림)
+const HANG = process.env.RANGE === 'hang';
 function candidate() {
-  const el = pick(-35, 20);
-  const az = sgn * pick(15, 115); // 칼끝이 가리는 쪽으로 15~115°
+  const el = HANG ? pick(-80, -20) : pick(-35, 20);
+  const az = sgn * (HANG ? pick(5, 120) : pick(15, 115)); // 칼끝이 가리는 쪽으로
   return {
-    hand: [r2(pick(0.15, 0.5)), r2(pick(-0.42, -0.05)), r2(pick(-0.3, 0.3))],
+    hand: HANG ? [r2(pick(0.1, 0.45)), r2(pick(-0.5, -0.1)), r2(pick(-0.35, 0.2))] : [r2(pick(0.15, 0.5)), r2(pick(-0.42, -0.05)), r2(pick(-0.3, 0.3))],
     blade: [Math.round(el), Math.round(az)],
     pelvisYaw: Math.round(pick(-30, 15)),
     chestYaw: Math.round(pick(-45, 15)),
