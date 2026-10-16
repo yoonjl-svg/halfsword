@@ -4,7 +4,7 @@
 //  공격 = 기술 12 (TECH 모두) + 속임수 4 (FEINTS — ai.js 와 같이 가짜 길을 at 만큼 가다가 then 길로).
 //  막는 쪽 꼴: 무기[:꼴] — 꼴 school(기본 · 2급 막기 책) · basic(책 없음 = 무유파 자리 · 덧씌우기 없음) · nocover(유파 자리 그대로, 몸꼴 덧씌우기만 뺌)
 //  막음 = 칼날 상처 없음 + 칼끼리 닿음 · 베임 = 칼날 상처 · 둘 다 아님(간격 밖·스침)은 뺀다 (parry_assist_bench 와 같은 뜻)
-//  ATK=<치는 무기>(기본 longsword) · GAPS=… · ATTACKS=이름,… · OUT=<json 경로>
+//  FOLLOW=1|low = 시험(막는 중 멈춘 상대 칼 따라가기) · ATK=<치는 무기>(기본 longsword) · GAPS=… · ATTACKS=이름,… · OUT=<json 경로>
 //  node tools/sim/parry_gap_map.mjs longsword,rapier,zweihander,uchigatana,qinggang,qinggang:basic,qinggang:nocover
 import { newRound, DT } from './harness_m.mjs';
 import { writeFileSync } from 'node:fs';
@@ -12,6 +12,7 @@ import { SKILL } from '../../src/config.js';
 import { TECH, FEINTS } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
+import { AI } from '../../src/ai.js';
 
 const CONFIGS = (process.argv[2] ?? 'longsword').split(',').map((s) => {
   const [weapon, mode = 'school'] = s.split(':');
@@ -44,6 +45,20 @@ function trial(cfg, atk, gap) {
   if (saved) Object.defineProperty(TRADITIONS[tr], 'parryCover', { value: null, configurable: true, writable: true });
   const guard = new PlayerParryGuard(D, A);
   if (saved) Object.defineProperty(TRADITIONS[tr], 'parryCover', saved);
+  // FOLLOW=1: 시험 — 막는 중 위협이 잠깐 끊기면 기다릴 때 규칙(AI coverFor)으로 상대 칼이 있는 쪽 줄로 (FOLLOW=low 면 아래 줄로만)
+  if (process.env.FOLLOW) {
+    const st = guard.step.bind(guard);
+    const KEYS = ['highL', 'highR', 'highC', 'lowL', 'lowR', 'thrust'];
+    guard.step = (dt) => {
+      const r = st(dt);
+      if (guard.mode === 'defend' && guard.noThreat > 0) {
+        const p = AI.prototype.coverFor.call({ school: guard.school }, guard.sense.seen(guard.lag));
+        const ln = KEYS.find((k) => guard.school.parry[k] === p);
+        if (ln && ln !== guard.defLine && (process.env.FOLLOW !== 'low' || ln.startsWith('low'))) guard.defLine = ln;
+      }
+      return r;
+    };
+  }
   Gm.ai.update = () => {};
   A.move.set(0, 0);
   guard.held = true;

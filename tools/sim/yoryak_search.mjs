@@ -11,6 +11,7 @@ import { SKILL } from '../../src/config.js';
 import { TECH } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
+import { AI } from '../../src/ai.js';
 
 const SIDE = process.env.SIDE ?? 'L';
 const LINE = SIDE === 'L' ? 'lowL' : 'lowR';
@@ -72,6 +73,36 @@ function trial(cover, atk, gap, speed) {
     guard.step = (dt) => {
       if (guard.noThreat > SPL && guard.noThreat <= 0.25) guard.noThreat = 0.26;
       return st(dt);
+    };
+  }
+  // RISE=<m/s>: 시험 — 상대 칼끝이 내 가슴보다 낮은 데서 이 빠르기 넘게 올라오면 위 줄로 읽었어도 아래 줄로 바꾼다 (올려 베기를 아래로 읽기)
+  if (process.env.RISE) {
+    const RV = +process.env.RISE;
+    const st2 = guard.step.bind(guard);
+    guard.step = (dt) => {
+      const r = st2(dt);
+      const s = guard.sense.seen(0);
+      const c = D.bodies.chest.translation();
+      if (guard.defLine && guard.defLine.startsWith('high') && s.tvy > RV && s.ty < c.y - 0.1) {
+        const rt = D.right();
+        const lat = (s.tx - c.x) * (rt?.x ?? 0) + (s.tz - c.z) * (rt?.z ?? 0);
+        guard.defLine = lat >= 0 ? 'lowR' : 'lowL';
+      }
+      return r;
+    };
+  }
+  // FOLLOW=1: 시험 — 막는 중에 위협이 잠깐 끊기면(상대가 준비 자세에서 멈춤) 기다릴 때와 같은 규칙(AI coverFor)으로 상대 칼이 있는 쪽 줄로 바꾼다
+  if (process.env.FOLLOW) {
+    const st3 = guard.step.bind(guard);
+    const KEYS = ['highL', 'highR', 'highC', 'lowL', 'lowR', 'thrust'];
+    guard.step = (dt) => {
+      const r = st3(dt);
+      if (guard.mode === 'defend' && guard.noThreat > 0) {
+        const p = AI.prototype.coverFor.call({ school: guard.school }, guard.sense.seen(guard.lag));
+        const ln = KEYS.find((k) => guard.school.parry[k] === p);
+        if (ln && ln !== guard.defLine) guard.defLine = ln;
+      }
+      return r;
     };
   }
   Gm.ai.update = () => {};
