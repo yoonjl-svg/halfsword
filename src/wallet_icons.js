@@ -1,4 +1,9 @@
-// 금화 · 머리 그림 (16 × 16 픽셀) — 대기실 지갑(lobby.js)과 결과 창 금화 줄(main.js showRewardLine)이 같은 그림을 쓴다 (사장님 10/16 14:0x '우리가 대기실에서 사용했던 금화 아이콘을 넣어')
-export const COIN_ICON = '<svg class="coin-icon" viewBox="0 0 16 16" role="img" aria-label="금화" shape-rendering="crispEdges"><path fill="#674823" d="M2 0h12v2h2v12h-2v2H2v-2H0V2h2Z"/><path fill="#d9a441" d="M3 1h10v2h2v10h-2v2H3v-2H1V3h2Z"/><path fill="#f3d785" d="M4 3h8v2H5v7H3V4h1Z"/><path fill="#93662b" d="M11 5h2v7h-1v1H5v-2h6Z"/><path fill="#f3d785" d="M7 6h2v4H7Z"/></svg>';
-// 머리 — 천 주머니 (사장님 10/16 04:3x '금화 옆에 천 주머니 모양으로 만들어'): 묶은 끈 · 접힌 귀 · 불룩한 몸
-export const POUCH_ICON = '<svg class="coin-icon pouch-icon" viewBox="0 0 16 16" role="img" aria-label="머리" shape-rendering="crispEdges"><path fill="#4a3422" d="M4 0h2v1h4V0h2v2h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1h-1v1H4v-1H3v-1H2v-1H1V7h1V5h1V4h1V3h1V2H4Z"/><path fill="#a9814f" d="M5 1h1v1h4V1h1v1h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1H4v-1H3v-1H2V7h1V5h1V4h1V3h1V2H5Z"/><path fill="#d6b27a" d="M4 6h1v1h1v4H5v1H4V9H3V7h1Z"/><path fill="#6f5130" d="M11 7h1v1h1v4h-1v1h-1v1H8v-1h2v-1h1Z"/><path fill="#3a2a1b" d="M6 3h4v1H6z"/><path fill="#c9a36b" d="M7 2h2v1H7z"/></svg>';
+// 금화 · 머리 그림 — 대기실 지갑(lobby.js)과 결과 창 금화 줄(main.js showRewardLine)이 같은 그림을 쓴다 (사장님 10/16 14:0x '우리가 대기실에서 사용했던 금화 아이콘을 넣어')
+//  매끈한 3D 그림 256 × 256 (사장님 10/16 15:3x ⑦ '금화와 주머니도 매끈하게 해' — 스타일 규칙 '겉은 픽셀, 속은 매끈', docs/design_language.md §5).
+//  만드는 도구 tools/browser/item_thumbs.mjs (무기 카드 그림과 같은 빛 · 금속) — docs/import/item_art_2026-10-16.md. 크기는 쓰는 곳 CSS (.coin-icon · .reward img)
+// 금화 — 여러 닢이 아무렇게나 쌓인 꼴 (사장님 ⑦ '동전이 여러 개 비정형적으로 쌓인 모습이면 더 좋겠어'). 스킬북 값 표지(skill_tree.js)도 같은 그림
+export const COIN_SRC = 'ui/wallet/coins.webp';
+export const COIN_ICON = `<img class="coin-icon" src="${COIN_SRC}" alt="금화" draggable="false">`;
+// 머리 — 천 주머니 (사장님 10/16 04:3x '금화 옆에 천 주머니 모양으로 만들어'): 묶은 끈 · 위로 벌어진 주름 · 불룩한 몸 · 아래가 살짝 피에 젖음 (15:3x ⑧)
+export const POUCH_SRC = 'ui/wallet/pouch.webp';
+export const POUCH_ICON = `<img class="coin-icon pouch-icon" src="${POUCH_SRC}" alt="머리" draggable="false">`;

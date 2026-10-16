@@ -3,10 +3,11 @@
 //   구입하면 밝아지고 사용 봉인 선택 가능. 사용하면 섬네일 자리를 둥근 빛이 감쌈.'
 //  상태 셋 (skill_books.js bookState): 안 삼 = 어둡게 + 값 · 사용 = 밝게 + 둥근 빛 · 봉인 = 밝게, 빛 없음(판에서 꺼짐). 줄은 꾸밈 — 아무 차례로나 산다.
 //  책을 누르면 판 위에 설명 카드: 이름 · 급 · 등급 · 유파 · 효과 한 줄(고유자세는 넷을 적고 '임시') · 짧은 출처 · 구입(안 삼) 또는 사용 / 봉인(산 책).
-//  꾸밈은 우리 픽셀 결(대기실 나무 판 · 카드 틀) — 글자는 entrance_type.css 규칙, 색·자리는 lobby.css '스킬북' 칸.
+//  꾸밈: 판 틀은 픽셀 결(카드 틀 — 겉) · 책 · 금화 그림은 매끈한 3D 그림(속 — 스타일 규칙 '겉은 픽셀, 속은 매끈', docs/design_language.md §5) — 글자는 entrance_type.css 규칙, 색·자리는 lobby.css '스킬북' 칸.
 import { BOOK_SCHOOLS, ROMAN, booksOf, readBooks, bookState, setBookInUse, buyBook, headPriceOf } from './skill_books.js';
 import { readProgress } from './lobby_progress.js';
 import { TRADITIONS } from './schools.js';
+import { COIN_SRC } from './wallet_icons.js';
 const short = (t) => String(t ?? '').replace(/\s*[(·].*$/, ''); // 고유 공격 이름에서 한글만 (괄호 원어 · 가운뎃점 뒤 설명은 뺀다)
 
 // 별자리 꼴 (판 좌표 300 × 210 — 유파 무기·몸놀림을 본뜸): at = 책 I~V 자리 · links = 이은 줄 (책 번호 1~5).
@@ -22,37 +23,17 @@ export const CONSTELLATIONS = Object.freeze({
 const BOARD_PX = 263; // 폰 가로 844 × 390 의 판 너비 — 이보다 좁으면 책·이름·값을 같은 비로 줄인다(0.6 까지) · 넓으면 그대로
 const GAP = 3; // 책 칸과 줄 끝 사이 (판 좌표)
 
-// 유파 문양 (12 × 12 픽셀 — 픽셀 결 crispEdges): 칼날 = 밝은 쇠 · 손잡이 = 금빛
-const EMBLEMS = {
-  german: { blade: 'M5 0h2v7H5z', hilt: 'M2 7h8v1H2zM5 8h2v2H5zM4 10h4v1H4z' },
-  italian: { blade: 'M6 0h1v7H6z', hilt: 'M4 5h1v1H4zM8 5h1v1H8zM3 6h1v1H3zM9 6h1v1H9zM1 7h10v1H1zM3 8h1v1H3zM9 8h1v1H9zM4 9h1v1H4zM8 9h1v1H8zM6 8h1v2H6zM5 10h3v1H5z' },
-  iberian: { blade: 'M5 0h2v6H5zM1 1h1v1H1zM0 2h1v4H0zM1 6h1v1H1z', hilt: 'M2 6h8v1H2zM2 7h1v1H2zM9 7h1v1H9zM5 7h2v3H5zM4 10h4v1H4z' },
-  japanese: { blade: 'M10 0h1v1h-1zM9 1h1v1H9zM8 2h2v1H8zM7 3h2v1H7zM6 4h2v1H6zM5 5h2v1H5z', hilt: 'M3 6h4v2H3zM2 8h2v1H2zM1 9h2v1H1zM0 10h2v1H0z' },
-  chinese: { blade: 'M5 0h2v6H5z', hilt: 'M3 6h1v1H3zM8 6h1v1H8zM4 7h4v1H4zM5 8h2v2H5zM4 10h4v1H4zM6 11h1v1H6z' },
-};
 const SVG_NS = 'http://www.w3.org/2000/svg';
-// 급 I~V (픽셀 숫자 4 칸 높이 — 표지 아래, 등급 색): I = 세로 막대 · V = 세 칸 내려와 아래 한 점에서 모이는 두 획 (두 칸만 내려오면 Y 로 읽힌다)
-const NUMERAL = { I: (x) => `M${x} 0h1v4h-1z`, V: (x) => `M${x} 0h1v3h-1zM${x + 2} 0h1v3h-1zM${x + 1} 3h1v1h-1z` };
-function numeralPath(tier) {
-  const glyphs = ROMAN[tier].split(''), w = glyphs.reduce((n, g) => n + (g === 'V' ? 3 : 1), 0) + glyphs.length - 1;
-  let x = 10 - Math.ceil(w / 2), d = '';
-  for (const g of glyphs) { d += NUMERAL[g](x); x += (g === 'V' ? 3 : 1) + 1; }
-  return d;
-}
-/** 책 섬네일 (가죽 표지 · 책등 · 쪽 가장자리 · 가운데 유파 문양 · 아래 급 숫자) — 20 × 26 픽셀 */
-function bookSvg(school, tier) {
-  const e = EMBLEMS[school] ?? EMBLEMS.german;
-  return `<svg class="book-svg" viewBox="0 0 20 26" aria-hidden="true" shape-rendering="crispEdges">
-    <path class="book-edge" d="M3 1h15v1h1v23H3z"/>
-    <path class="book-pages" d="M17 2h1v22h-1z"/>
-    <path class="book-cover" d="M2 1h14v24H2z"/>
-    <path class="book-spine" d="M2 1h2v24H2z"/>
-    <path class="book-band" d="M4 3h12v1H4zM4 23h12v1H4z"/>
-    <g transform="translate(4 5)"><path class="emblem-blade" d="${e.blade}"/><path class="emblem-hilt" d="${e.hilt}"/></g>
-    <path class="book-numeral" transform="translate(0 18)" d="${numeralPath(tier)}"/>
-  </svg>`;
-}
-const COIN_SVG = '<svg class="price-coin" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="#674823" d="M2 0h12v2h2v12h-2v2H2v-2H0V2h2Z"/><path fill="#d9a441" d="M3 1h10v2h2v10h-2v2H3v-2H1V3h2Z"/><path fill="#f3d785" d="M4 3h8v2H5v7H3V4h1Z"/></svg>';
+/**
+ * 책 섬네일 — 매끈한 3D 그림 public/ui/books/<유파>_<급>.webp (256 × 336 = 책 칸 32 × 42 와 같은 비 — .book-svg 가 칸을 꽉 채운다):
+ *  유파마다 실제 옛 문서 꼴 하나(독일 가죽 펜히트부흐 · 이탈리아 그림 낱장 묶음 · 이베리아 말린 양피지와 밀랍 인장 · 일본 오륜서 두루마리 · 동방 죽간) ·
+ *  급은 볼륨(두께 · 높이 · 길이 · 대쪽 수)과 끈 · 리본의 등급 색으로만 (로마 숫자 없음). 사장님 10/16 14:4x ③ · 15:3x ⑨ '무기 그림과 같은 방식' ·
+ *  16:1x '유파별로 … 급수 별로 … 사실성' · 17:3x '말린 양피지나 서류더미처럼 여러 가지 형태 … 로마자는 빼도 돼' · 17:4x '실제 오륜서 … 동방 죽간'
+ *  (만드는 도구 tools/browser/item_thumbs.mjs — docs/import/item_art_2026-10-16.md). 꾸밈 그림이라 화면 읽기에선 감춘다(책 단추가 이름 · 급 · 상태를 읽는다)
+ */
+const bookImg = (school, tier) => `<img class="book-svg" src="ui/books/${BOOK_SCHOOLS.includes(school) ? school : 'german'}_${tier}.webp" alt="" aria-hidden="true" draggable="false">`;
+// 값 표지 금화 — 대기실 지갑과 같은 금화 그림 (wallet_icons.js — 꾸밈이라 감춤: 단추 이름이 '금화 N' 을 읽는다)
+const PRICE_COIN = `<img class="price-coin" src="${COIN_SRC}" alt="" aria-hidden="true" draggable="false">`;
 
 /** 책 자리 a 에서 b 쪽으로 — 그 책의 칸(섬네일 · 값 · 이름, 판 좌표 상자들)을 마지막으로 벗어나는 거리 + 틈 (칸 사이 작은 틈에서 멈추지 않게 끝까지 본다) */
 function trimAt(a, b, boxes) {
@@ -136,8 +117,8 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, onBook
       const st = stateOf(books, b.id), [x, y] = C.at[k];
       const label = `${b.title} · ${ROMAN[b.tier]}급 ${b.rarityKo} · ${st === 'unowned' ? `금화 ${b.price} · 사지 않음` : st === 'use' ? '사용 중' : '봉인'}`;
       return `<button type="button" class="book-node" data-tier="${b.rarity}" data-book="${b.tier}" data-state="${st}" style="left:${(x / 3).toFixed(2)}%;top:${(y / 2.1).toFixed(2)}%" aria-label="${label}" aria-pressed="${selected === b.tier}">
-        <span class="book-thumb" data-tier="${b.rarity}">${bookSvg(school, b.tier)}</span>
-        <span class="book-cat">${b.label}</span>${st === 'unowned' ? `<span class="book-price">${COIN_SVG}${b.price}</span>` : ''}</button>`;
+        <span class="book-thumb" data-tier="${b.rarity}">${bookImg(school, b.tier)}</span>
+        <span class="book-cat">${b.label}</span>${st === 'unowned' ? `<span class="book-price">${PRICE_COIN}${b.price}</span>` : ''}</button>`;
     }).join('');
     root.dataset.school = school;
     drawLinks(books);
@@ -151,7 +132,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, onBook
     box.hidden = false;
     box.dataset.state = st;
     $('.detail-thumb').dataset.tier = b.rarity;
-    $('.detail-thumb').innerHTML = bookSvg(school, b.tier);
+    $('.detail-thumb').innerHTML = bookImg(school, b.tier);
     $('.detail-head').dataset.state = st;
     $('#bookTitle').textContent = b.title;
     $('#bookTitle').dataset.tier = b.rarity;

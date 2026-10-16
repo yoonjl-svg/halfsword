@@ -1764,7 +1764,7 @@ function showRewardLine() {
   if (!r) return;
   const sign = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
   el.innerHTML = `${COIN_ICON}<span>금화 ${sign(r.coins)}</span>${r.heads ? `<span class="sep"> · </span>${POUCH_ICON}<span>머리 +${r.heads}</span>` : ''}`;
-  for (const icon of el.querySelectorAll('svg')) { icon.removeAttribute('role'); icon.removeAttribute('aria-label'); icon.setAttribute('aria-hidden', 'true'); }
+  for (const icon of el.querySelectorAll('img')) { icon.alt = ''; icon.setAttribute('aria-hidden', 'true'); } // 매끈한 그림(wallet_icons.js — 10/16 15:3x ⑦): 빈 alt = 꾸밈
 }
 
 function checkRoundEnd(dt) {

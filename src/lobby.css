@@ -181,8 +181,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .book-thumb { position: relative; display: block; width: calc(32px * var(--s)); height: calc(42px * var(--s)); isolation: isolate; }
 .book-svg { position: relative; display: block; width: 100%; height: 100%; }
 /* 책 그림 색 (그림 쪽 — skill_tree.js bookSvg · UI 색에 세지 않음 · 다른 작업자가 새 그림으로 바꾸는 중) */
-.book-edge { fill: #1b130c; } .book-pages { fill: #e3d6bb; } .book-cover { fill: #5e4126; } .book-spine { fill: #38261a; } .book-band, .book-numeral { fill: var(--tc); }
-.emblem-blade { fill: #e9eef1; } .emblem-hilt { fill: #d9a441; }
+/* 책 그림은 매끈한 그림 파일(public/ui/books/<유파>_<급>.webp — skill_tree.js bookSvg) — 옛 픽셀 SVG 색 줄은 지움 (10/16 병합) */
 .book-cat { font-size: calc(12px * var(--s)); line-height: calc(14px * var(--s)); color: var(--c-text); white-space: nowrap; }
 /* 값 표지: 어두운 책 아래쪽에 걸친다 (옆으로 내밀면 룬 줄·이웃 책과 부딪힌다) — 싸움 창 꼴의 작은 알약 */
 .book-price { position: absolute; left: 50%; top: calc(27px * var(--s)); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-family: var(--font-ui); font-weight: 600; font-size: max(8px, calc(10px * var(--s))); line-height: calc(14px * var(--s)); color: var(--c-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }

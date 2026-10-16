@@ -26,6 +26,8 @@ async function lobby(p, url) {
 const progress = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')));
 const depart = async (p, state) => { await p.locator('#lobbyDepart').click(); await p.waitForFunction((s) => game.state === s, state, { timeout: 60000 }); await p.waitForFunction(() => !document.getElementById('gameEntrance'), null, { timeout: 5000 }); };
 const pick = async (p, i = 0) => { await p.waitForFunction(() => game.draw.t > 0.6, null, { timeout: 20000 }); await p.locator(`#draw .wcard[data-i="${i}"]`).click(); await p.waitForFunction(() => game.state === 'fight', null, { timeout: 30000 }); };
+// 매끈한 아이템 그림 (10/16 15:3x ⑦⑨ — docs/import/item_art_2026-10-16.md): 실제로 읽혔나(complete · 가로 256) · 주소 · 세로 · alt · aria-hidden · 그린 크기
+const imgs = (p, sel, inShadow = true) => p.evaluate(([s, sh]) => Promise.all([...(sh ? document.querySelector('#gameEntrance').shadowRoot : document).querySelectorAll(s)].map((i) => i.decode().catch(() => {}).then(() => ({ src: i.getAttribute('src'), ok: i.complete && i.naturalWidth === 256, h: i.naturalHeight, alt: i.getAttribute('alt'), hidden: i.getAttribute('aria-hidden'), w: Math.round(i.getBoundingClientRect().width * 10) / 10 })))), [sel, inShadow]);
 const book = async (p, school, tier) => { await p.locator('#tabSkills').click(); await p.locator(`.school-tabs [data-school=${school}]`).click(); await p.locator(`.book-node[data-book="${tier}"]`).click(); await p.locator('.book-detail').waitFor(); };
 const closeBook = (p) => p.locator('.detail-close').click();
 
@@ -61,6 +63,18 @@ try {
   await book(p, 'japanese', 1);
   assert.equal(await p.locator('.book-detail').getAttribute('data-state'), 'unowned'); assert.equal(await p.locator('#buyBook').textContent(), '구입 · 금화 100');
   const dim = await shadow(p, `return getComputedStyle(root.querySelector('.book-node[data-book="1"] .book-thumb')).filter`); assert.match(dim, /grayscale/);
+  // 아이템 그림: 지갑(내 정보 20 px · 스킬북 칸 14 px — 금화 · 머리) · 별자리 책 다섯(일본 I~V) · 값 표지 금화 · 설명 카드 책 — 모두 매끈한 256 px 그림이 읽힘 · 옛 도트 svg 없음
+  const wallet = await imgs(p, '.coin-balance img'), panelWallet = await imgs(p, '.panel-wallet img');
+  for (const w of [wallet, panelWallet]) assert.deepEqual(w.map(({ src, ok, alt, hidden }) => ({ src, ok, alt, hidden })), [{ src: 'ui/wallet/coins.webp', ok: true, alt: '금화', hidden: null }, { src: 'ui/wallet/pouch.webp', ok: true, alt: '머리', hidden: null }], JSON.stringify(w));
+  assert.deepEqual(panelWallet.map((i) => i.w), [14, 14]);
+  const nodes = await imgs(p, '.book-node .book-svg');
+  assert.deepEqual(nodes.map(({ src, ok, h, alt, hidden }) => ({ src, ok, h, alt, hidden })), [1, 2, 3, 4, 5].map((k) => ({ src: `ui/books/japanese_${k}.webp`, ok: true, h: 336, alt: '', hidden: 'true' })), JSON.stringify(nodes));
+  const prices = await imgs(p, '.book-price .price-coin');
+  assert.equal(prices.length, 5); assert.ok(prices.every((i) => i.ok && i.src === 'ui/wallet/coins.webp' && i.hidden === 'true'), JSON.stringify(prices));
+  const detailBook = await imgs(p, '.detail-thumb .book-svg');
+  assert.deepEqual(detailBook.map(({ src, ok, h }) => ({ src, ok, h })), [{ src: 'ui/books/japanese_1.webp', ok: true, h: 336 }], JSON.stringify(detailBook));
+  assert.equal(await shadow(p, `return root.querySelectorAll('.book-svg path, .price-coin path, .coin-icon path').length`), 0);
+  checks.push(`item pictures load (256 px smooth webp): lobby wallet coins + pouch (alt 금화 · 머리, ${wallet.map((i) => i.w)} px · panel 14 px), five Japanese book nodes (${nodes.map((i) => i.w)} px wide), five price-tag coins (${prices[0].w} px), the book detail thumbnail (${detailBook[0].w} px); no pixel svg left`);
   for (const tier of [1, 2, 3, 5]) { if (tier !== 1) { await closeBook(p); await book(p, 'japanese', tier); } await p.locator('#buyBook').click(); assert.equal(await p.locator('.book-detail').getAttribute('data-state'), 'use'); }
   assert.equal((await progress(p)).coins, 1500 - 100 - 200 - 300 - 500);
   assert.equal(await p.locator('#lobbySchool').count(), 0); // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥ — 책을 사도 내 정보 칸은 그대로)
@@ -97,7 +111,9 @@ try {
   await p.waitForFunction(() => game.state === 'paused', null, { timeout: 30000 });
   const won = await progress(p); assert.equal(won.heads, headsBefore + 1);
   assert.match(await p.locator('#menuReward').textContent(), /^금화 \+(?:[5-9]|1[0-5]) · 머리 \+1$/); await p.screenshot({ path: `${out}/result-win-head.png` });
-  checks.push('decapitating the foe in a journey gives one head (once per foe) and the result line shows coins + head');
+  const rewardIcons = await imgs(p, '#menuReward img', false); // 결과 창 금화 · 주머니 그림 (꾸밈 — 빈 alt · aria-hidden · 14 px)
+  assert.deepEqual(rewardIcons.map(({ src, ok, alt, hidden, w }) => ({ src, ok, alt, hidden, w })), [{ src: 'ui/wallet/coins.webp', ok: true, alt: '', hidden: 'true', w: 14 }, { src: 'ui/wallet/pouch.webp', ok: true, alt: '', hidden: 'true', w: 14 }], JSON.stringify(rewardIcons));
+  checks.push('decapitating the foe in a journey gives one head (once per foe) and the result line shows coins + head (smooth coin + pouch pictures load, 14 px, hidden from screen readers)');
   await lobby(p, '/'); assert.equal(await p.locator('#lobbyHeads').textContent(), String(headsBefore + 1));
 
   // ⑥ 인장 → 금화 한 번 (처음부터 · 이어하기 · 새로 고침)
