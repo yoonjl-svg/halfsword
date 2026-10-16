@@ -2,8 +2,10 @@
 //  10/16 08:1x 사장님 '인장 제도 없애' — 인장은 이제 없다(얻지도 않고 알리지도 않고 아무것도 열지 않음). 이 파일은 이미 받은 인장을 한 번 금화로 바꾸는 일만 한다.
 //  옛 인장 셈은 아래 얼린 상수(OLD_SEALS — 깬 무대 10 번마다 하나 · 25 개에서 끝, 지운 config.js UNIQUE_ASSIST.sealEvery·sealMax 와 같은 값)로 여기에만 둔다.
 //  깬 수 = 저장된 통계 stillness.journeyClears.v1 (journey_save.js journeyClears).
-//  바꾼 기록 = SEAL_COINS_KEY { version, converted: 금화로 바꾼 인장 수, at } — 있으면 다시 바꾸지 않는다(새로 고침·처음부터/이어하기 어느 길로 대기실에 와도 한 번).
-//  테스트 경로에서는 바꾸지 않는다(부르는 쪽 — lobby.js).
+//  바꾼 기록 = SEAL_COINS_KEY { version, converted: 금화로 바꾼 인장 수, at, notice } — 있으면 다시 바꾸지 않는다(새로 고침·어느 길로 와도 한 번).
+//  바꾸는 때 = 이 판을 처음 연 때(main.js — 첫 화면 · 옛 메뉴 · 주소 판 어느 길이든, 테스트 경로만 빼고): 인장을 없앤 뒤에 깬 무대가 금화로 바뀌지 않게
+//   대기실을 기다리지 않는다(10/16 — 확인표 1928). 알림('인장 N개를 금화 …으로 바꿨습니다.')은 그 뒤 처음 연 대기실이 한 번 띄운다(takeSealNotice — notice 표시).
+//  10/16 04:5x 판이 남긴 기록(notice 칸 없음)은 이미 알림을 본 것으로 읽는다.
 import { journeyClears } from './journey_save.js';
 import { addCoins } from './lobby_progress.js';
 
@@ -33,8 +35,16 @@ function writeRecord(storage, record) {
 export function convertSeals({ clears = journeyClears(), storage = globalThis.localStorage, add = addCoins } = {}) {
   if (readRecord(storage)) return { seals: 0, coins: 0, first: false };
   const seals = sealCount(clears);
-  writeRecord(storage, { version: 1, converted: seals, at: new Date().toISOString().slice(0, 10) });
+  writeRecord(storage, { version: 1, converted: seals, at: new Date().toISOString().slice(0, 10), notice: seals > 0 });
   const coins = seals * COINS_PER_SEAL;
   if (coins) add(coins);
   return { seals, coins, first: true };
+}
+
+/** 바꾼 알림 한 번 (대기실 — lobby.js): 아직 안 띄운 바꿈이 있으면 { seals, coins } 를 돌려주고 띄운 것으로 적는다 · 없으면 null */
+export function takeSealNotice(storage = globalThis.localStorage) {
+  const record = readRecord(storage);
+  if (!record?.notice || !record.converted) return null;
+  writeRecord(storage, { ...record, notice: false });
+  return { seals: record.converted, coins: record.converted * COINS_PER_SEAL };
 }

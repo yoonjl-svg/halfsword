@@ -15,6 +15,7 @@ import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이�
 import { readLobbyEquipment, readLobbyArmor, LOBBY_ARMOR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3)
 import { journeyCoins, awardHead } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x)
 import { readBooks, playerKit, kitUniqueStage, bookTierParam } from './skill_books.js'; // 대기실 스킬북 = 플레이어 유파 몫 — 모든 판 (사장님 10/16 04:1x 산 책만 · 08:1x 인장 없앰, docs/strike/school_kit_map.md §2 · §3)
+import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
@@ -64,6 +65,9 @@ const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게
 const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // 빼 둔 무기(에스톡·세이버·팔쉬온 — 사장님 10/13 23:2x)는 카드에 안 나온다
 const FIXED_WEAPON = params.get('weapon');
 const testRoute = createTestRoute(params); // 인자가 없으면 아무것도 바꾸지 않는다
+// 이미 받은 인장 → 금화 (사장님 10/16 04:2x · 08:1x '인장 제도 없애' — seal_coins.js): 이 판을 처음 연 때 한 번, 첫 화면 · 옛 메뉴 · 주소 판 어느 길이든(테스트 경로만 빼고).
+//  대기실을 기다리면 인장을 없앤 뒤 옛 메뉴·주소 판에서 깬 무대까지 옛 셈으로 금화가 된다 — 그래서 여기서 (확인표 1928). 알림은 다음 대기실이 한 번 (lobby.js)
+if (!testRoute.active) convertSeals();
 // 테스트용 ?morgTorque=33 : 모르겐슈테른 손목 겨눔 토크 상한(기본 22 = 한손 무기 공통, 확인표 169)을 이번 실행에만 바꾼다 — 사장님 비교용, 저장하지 않는다
 const morgTorque = +params.get('morgTorque');
 if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = morgTorque;

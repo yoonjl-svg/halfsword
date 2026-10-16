@@ -10,7 +10,7 @@ const { Stamina } = await import('../../src/stamina.js');
 const { STAMINA, GAIT, UNIQUE_ASSIST } = await import('../../src/config.js');
 const { readProgress, journeyCoins, rollInt, awardHead, JOURNEY_COINS, PROGRESS_KEY, setCoins } = await import('../../src/lobby_progress.js');
 const { BOOK_TIERS, booksOf, bookOf, buyBook, readBooks, bookState, setBookInUse, playerKit, kitUniqueStage, bookTierParam, BOOK_HEAD_PRICE, headPriceOf, BOOK_STATE_KEY } = await import('../../src/skill_books.js');
-const { convertSeals, sealCount, OLD_SEALS, COINS_PER_SEAL, SEAL_COINS_KEY } = await import('../../src/seal_coins.js');
+const { convertSeals, takeSealNotice, sealCount, OLD_SEALS, COINS_PER_SEAL, SEAL_COINS_KEY } = await import('../../src/seal_coins.js');
 const { CLEAR_KEY, journeyClears, addJourneyClear } = await import('../../src/journey_save.js');
 const { newRound, DT } = await import('./harness_m.mjs');
 const { PlayerParryGuard } = await import('../../src/parry_button.js');
@@ -168,6 +168,21 @@ test('이미 바꾼 기록(10/16 04:5x 판이 남긴 꼴)이 있으면 깬 수�
   assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(readProgress().coins, 100);
   assert.equal(journeyClears(), 120); assert.equal(addJourneyClear(), 121); assert.equal(storage.get(CLEAR_KEY), '121');
   assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(readProgress().coins, 100);
+});
+
+test('바꾼 알림은 한 번: 판을 처음 연 때 바꾸고(어느 길이든) 다음 대기실이 한 번 알림 · 인장 0 · 04:5x 기록은 알림 없음 · 바꾼 뒤 깬 무대는 안 바꿈', () => {
+  reset(); storage.set(CLEAR_KEY, '35'); // 인장 3 — 옛 메뉴·주소 판으로 먼저 연 사람 (main.js 가 판을 열 때 바꿈)
+  assert.deepEqual(convertSeals(), { seals: 3, coins: 300, first: true }); assert.equal(readProgress().coins, 400);
+  assert.equal(JSON.parse(storage.get(SEAL_COINS_KEY)).notice, true);
+  addJourneyClear(); addJourneyClear(); assert.equal(journeyClears(), 37); // 그 뒤 주소 판에서 깬 무대 — 금화가 안 된다
+  assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(readProgress().coins, 400);
+  assert.deepEqual(takeSealNotice(), { seals: 3, coins: 300 }); // 대기실: 알림 한 번
+  assert.equal(takeSealNotice(), null); assert.equal(JSON.parse(storage.get(SEAL_COINS_KEY)).notice, false);
+  reset(); storage.set(CLEAR_KEY, '9'); // 인장 0 — 기록만, 알림 없음
+  assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: true }); assert.equal(takeSealNotice(), null);
+  storage.set(CLEAR_KEY, '10'); assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(takeSealNotice(), null);
+  reset(); storage.set(SEAL_COINS_KEY, JSON.stringify({ version: 1, converted: 3, at: '2026-10-16' })); // 04:5x 판 기록 — 그때 이미 알림을 봄
+  assert.equal(takeSealNotice(), null);
 });
 
 // ── 여정 금화 · 머리 (사장님 10/16 04:3x) ──

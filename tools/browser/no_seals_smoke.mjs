@@ -2,6 +2,7 @@
 //  ① 새 프로필: 바꿈 알림 없음 · 대기실·별자리 어디에도 '인장' 글 없음 · 책 없는 여정 판 = 기본 몫 · 이겨도 인장 안내 없음(깬 수만 +1)
 //  ② 옛 메뉴 여정(게임 인자 주소): 깬 수 9 → 이겨서 10 이 되어도 안내 줄에 인장 없음 · 플레이어 몫은 산 책(새 프로필 = 없음)
 //  ③ 깬 수 35 프로필: 첫 대기실에서 금화 +300 한 번(알림 한 줄) · 첫 화면으로 돌아오거나 새로 고침 · 깬 수가 늘어도 다시 안 줌 · 이미 바꾼 기록이 있으면 안 줌
+//     · 옛 메뉴로 먼저 연 사람(깬 수 39): 판을 연 때 바꿈 · 그 뒤 이겨 40 이 되어도 안 줌 · 다음 대기실이 알림 한 번 (확인표 1928)
 //  ④ 테스트 경로 = 책 모두 '사용'(일본 걸음 · 버티기 · 유파 막기 · 고유 공격 넷 · 비기)
 //  ⑤ 주소 판: 책 없음 = 기본 몫 · ?uniqueStage=0 / 2 / 5 = 책 없음 / 보법·막기 / 모두 · 산 책(일본 I · V)은 주소 판에서도 그대로
 //  npm run build && npx vite preview --port 5220 →  node tools/browser/no_seals_smoke.mjs http://127.0.0.1:5220 /tmp/<빈 폴더>
@@ -98,6 +99,22 @@ try {
     assert.equal(await q.locator('#lobbyStatus').textContent(), ''); assert.equal(await q.locator('#lobbyCoins').textContent(), '100');
     checks.push('a player who already converted (10/16 04:5x record) gets nothing again');
     await d.close();
+    // 옛 메뉴(주소 판)로 먼저 연 사람 (확인표 1928): 판을 연 때 바꿈 — 깬 수 39 = 인장 3 → 금화 400 저장 · 그 뒤 주소 판에서 이겨 40 이 되어도 안 바꿈 · 다음 대기실이 알림 한 번
+    const e = await browser.newContext({ viewport: { width: 844, height: 390 }, reducedMotion: 'reduce' }); await noAuth(e); await hintLog(e);
+    await seed(e, { 'stillness.journeyClears.v1': '39' });
+    const r = await e.newPage(); watch(r);
+    await r.goto(base + '/?cards=longsword,rapier', { waitUntil: 'networkidle' }); await r.waitForFunction(() => window.game?.player, null, { timeout: 60000 });
+    const stored = () => r.evaluate(() => ({ coins: JSON.parse(localStorage.getItem('stillness.lobby.progress.v1'))?.coins ?? null, record: JSON.parse(localStorage.getItem('stillness.lobby.sealCoins.v1')) }));
+    const atLoad = await stored();
+    assert.equal(atLoad.coins, 400); assert.equal(atLoad.record.converted, 3); assert.equal(atLoad.record.notice, true);
+    await r.locator('#btnStart').click(); await pick(r, 0); await win(r); await noSeal(r, 'old-menu win after the conversion');
+    assert.equal(await clears(r), '40'); assert.equal((await stored()).coins, 400);
+    await lobby(r, '/');
+    assert.equal(await r.locator('#lobbyStatus').textContent(), '인장 3개를 금화 300으로 바꿨습니다.'); assert.equal(await r.locator('#lobbyCoins').textContent(), '400');
+    await r.locator('#lobbyBack').click(); await lobby(r);
+    assert.equal(await r.locator('#lobbyStatus').textContent(), ''); assert.equal((await stored()).record.notice, false);
+    checks.push('old-menu first: 39 clears convert at load (300 once) · a later URL win to 40 pays nothing · the next lobby shows the notice once');
+    await e.close();
   }
   // ④ 테스트 경로 = 모두
   {

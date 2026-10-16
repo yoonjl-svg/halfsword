@@ -48,7 +48,7 @@ try {
   await p.evaluate(() => { game.player.stamina.value = 65; });
   assert.equal(await p.evaluate(() => Math.round(game.player.stamina.ratio * 100)), 50);
   checks.push('branch equipped → fight with the branch, no card draw; kettle hat default → helmet + stamina max 130 (bar = share of 130), foe 100');
-  await lobby(p, '/'); await p.locator('[data-weapon=tree_branch]').click(); await p.locator('#unequipItem').click();
+  await lobby(p, '/?title=1&cards=longsword,rapier'); await p.locator('[data-weapon=tree_branch]').click(); await p.locator('#unequipItem').click(); // 카드 고정 — 무작위 카드에 나뭇가지가 나와 아래 '나뭇가지 아님'이 가끔 틀리던 것 (10/16 고침)
   await p.locator('#tabArmor').click(); await p.locator('button[data-armor=kettle]').click(); await p.locator('#unequipItem').click();
   await depart(p, 'draw'); await pick(p, 0);
   assert.notEqual(await p.evaluate(() => game.player.weapon.id), 'tree_branch');

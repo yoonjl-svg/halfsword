@@ -13,7 +13,7 @@ import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress } from './lobby_progress.js';
 import { BOOK_SCHOOLS, readBooks } from './skill_books.js';
 import { mountSkillTree } from './skill_tree.js';
-import { convertSeals } from './seal_coins.js';
+import { convertSeals, takeSealNotice } from './seal_coins.js';
 import { TRADITIONS } from './schools.js';
 import { getWeapon, TIER_LABEL } from './weapons.js';
 
@@ -56,8 +56,9 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();
   paintPixelWordmark($('lobbyHeading'), { text: '대기실', font: '600 18px Pretendard', height: 29, baseline: 22, tracking: 2 });
-  // 이미 받은 인장 → 금화 (사장님 10/16 04:2x — 한 번만, seal_coins.js · 인장 제도는 08:1x 에 없앰). 테스트 경로에서는 바꾸지 않는다
-  const converted = ctx.test ? null : convertSeals();
+  // 이미 받은 인장 → 금화 (사장님 10/16 04:2x — 한 번만, seal_coins.js · 인장 제도는 08:1x 에 없앰). 바꾸기는 판을 처음 연 때 main.js 가 이미 했다 — 여기선 남은 것만(안전)
+  //  알림은 아직 안 띄운 바꿈이 있을 때 한 번 (takeSealNotice). 테스트 경로에서는 바꾸지도 알리지도 않는다
+  const converted = ctx.test ? null : (convertSeals(), takeSealNotice());
   const profile = readProfile();
   // 대표 유파 = 산 스킬북이 가장 많은 유파(같으면 탭 차례 앞)
   function representative() {
