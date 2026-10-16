@@ -31,7 +31,7 @@ const pick = async (p) => { await p.waitForFunction(() => game.state === 'draw' 
 const settle = (p) => p.waitForFunction(() => game.stats.simTime > 4.5, null, { timeout: 90000 }); // 판 시작 훑기 · 알림이 지나간 뒤
 const paused = (p) => p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 40000 }).then(() => p.waitForTimeout(300));
 const end = async (p, who) => { await p.evaluate((w) => game[w].die('기절', true), who); await paused(p); };
-const reward = (p) => p.evaluate(() => { const el = document.getElementById('menuReward'); return { text: el.textContent, color: getComputedStyle(el).color, icons: el.querySelectorAll('svg').length }; });
+const reward = (p) => p.evaluate(() => { const el = document.getElementById('menuReward'); return { text: el.textContent, color: getComputedStyle(el).color, icons: el.querySelectorAll('img').length }; }); // 금화 · 주머니 그림 = 매끈한 img (10/16 15:3x — docs/import/item_art_2026-10-16.md)
 
 // 결과 창 셋 (첫 화면·대기실 여정 — 폰 가로)
 {

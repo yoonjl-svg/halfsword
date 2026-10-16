@@ -39,9 +39,11 @@ const menu = (p) => p.evaluate(() => {
   return { title: document.getElementById('menuTitle').textContent, start: document.getElementById('btnStart').textContent, resume: vis('btnResume'), lobby: vis('btnLobby'), lobbyText: document.getElementById('btnLobby').textContent, fps: vis('fpsRow'), reward: vis('menuReward') ? document.getElementById('menuReward').textContent : null, test: vis('btnTestPick') };
 });
 // 결과 창 꼴 (14:0x): 부제 줄들 · 금화 줄 색 · 그림 · 부제 아래 끝과 금화 줄 위 끝 사이 틈(= 빈 줄 하나 = 부제 한 줄 높이)
-const look = (p) => p.evaluate(() => {
-  const sub = document.getElementById('menuSub'), rw = document.getElementById('menuReward'), s = sub.getBoundingClientRect(), r = rw.getBoundingClientRect();
-  return { lines: sub.innerText.split('\n'), color: getComputedStyle(rw).color, icons: [...rw.querySelectorAll('svg')].map((i) => i.getAttribute('class')), hidden: [...rw.querySelectorAll('svg')].every((i) => i.getAttribute('aria-hidden') === 'true'), gap: r.top - s.bottom, line: parseFloat(getComputedStyle(sub).lineHeight) };
+//  그림 = 매끈한 금화 · 주머니 그림 (10/16 15:3x ⑦ — docs/import/item_art_2026-10-16.md): 실제로 읽혔나(256 px) · 꾸밈(빈 alt · aria-hidden) · 14 px
+const look = (p) => p.evaluate(async () => {
+  const sub = document.getElementById('menuSub'), rw = document.getElementById('menuReward'), s = sub.getBoundingClientRect(), r = rw.getBoundingClientRect(), imgs = [...rw.querySelectorAll('img')];
+  await Promise.all(imgs.map((i) => i.decode().catch(() => {})));
+  return { lines: sub.innerText.split('\n'), color: getComputedStyle(rw).color, icons: imgs.map((i) => i.getAttribute('class')), hidden: imgs.every((i) => i.getAttribute('aria-hidden') === 'true' && i.getAttribute('alt') === ''), loaded: imgs.every((i) => i.complete && i.naturalWidth === 256), size: imgs.map((i) => i.getBoundingClientRect().width), svg: rw.querySelectorAll('svg').length, gap: r.top - s.bottom, line: parseFloat(getComputedStyle(sub).lineHeight) };
 });
 const ACCENT = 'rgb(217, 164, 65)'; // --c-accent
 const store = (p) => p.evaluate(() => ({ coins: JSON.parse(localStorage.getItem('stillness.lobby.progress.v1'))?.coins ?? 100, profile: localStorage.getItem('stillness.lobby.profile.v1'), checkpoint: localStorage.getItem('stillness.journey.checkpoint.v1') }));
@@ -80,6 +82,7 @@ try {
     assert.ok(gain >= 5 && gain <= 15, won.reward);
     const wonLook = await look(p);
     assert.equal(wonLook.lines.length, 1); assert.equal(wonLook.color, ACCENT); assert.deepEqual(wonLook.icons, ['coin-icon']); assert.ok(wonLook.hidden);
+    assert.ok(wonLook.loaded, JSON.stringify(wonLook)); assert.deepEqual(wonLook.size, [14]); assert.equal(wonLook.svg, 0); // 매끈한 금화 그림이 실제로 읽힘 (옛 도트 svg 없음)
     assert.ok(Math.abs(wonLook.gap - wonLook.line) < 0.6, JSON.stringify(wonLook)); // 빈 줄 하나
     await shot(p, 'result-win');
     await p.locator('#btnLobby').click(); await inLobby(p);
@@ -100,7 +103,7 @@ try {
     const lostLook = await look(p);
     assert.deepEqual(lostLook.lines, ['기절했다']); // 부제 = 진 까닭 한 줄뿐 — 승리 창과 같은 꼴 (14:4x — 전 14:0x 다음 줄 “대사”)
     assert.equal(lostLook.lines.length, wonLook.lines.length);
-    assert.equal(lostLook.color, wonLook.color); assert.deepEqual(lostLook.icons, ['coin-icon']); // 잃어도 같은 색 · 같은 금화 그림
+    assert.equal(lostLook.color, wonLook.color); assert.deepEqual(lostLook.icons, ['coin-icon']); assert.ok(lostLook.loaded && lostLook.hidden); // 잃어도 같은 색 · 같은 금화 그림
     assert.ok(Math.abs(lostLook.gap - lostLook.line) < 0.6, JSON.stringify(lostLook));
     await shot(p, 'result-loss');
     await p.locator('#btnStart').click(); await pick(p, 0);
