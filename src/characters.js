@@ -565,6 +565,8 @@ const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
 //  변형(mad: true — 사장님 10/13 "'광기의'는 궁극적으로 모든 캐릭터들에게 … 기본 캐릭터+1 의 숙련도와 추가 파워" · 10/14 "얼터 에고 컨셉 — 칭호는 본캐랑 같음": 이름 앞에 '광기의', 칭호는 본캐 그대로): 변형 표시 하나 → 숙련도 +1(VARIANT_PLUS, 상한 AI_PROFICIENCY.max) ·
 //   기존 하인리히 실력 숫자 = 그 숙련도에서 원본이 받을 실효값 × MAD_SCALE(+20%).
 //   10/16 새 투야나·랴오는 외양만: appearanceOnly는 원본 AI를 그대로 쓰고 이 강화 규칙을 적용하지 않는다.
+//   10/16 22:3x 사장님 "모든 얼터에 숙련도+1을 잊지 말고 적용해 두도록 해" → appearanceOnly 도 숙련도 +1(madVariantAI)은 받는다 — 빼는 것은 실력 숫자 +20% 뿐.
+//    새 얼터가 들어와도 아래 '얼터 숙련도 맞춤'이 원본 +1(상한 5)로 맞춘다. 미나미(5)는 얼터도 5 — 낮의 미나미도 고노센(사장님 '마음에 든다')
 const VARIANT_PLUS = 1;
 export function aiAtProficiency(c, p) {
   const level = AI_PROFICIENCY.levels[p] ?? 'normal';
@@ -668,7 +670,7 @@ export const CHARACTER_VARIANTS = [
   ...['eira', 'liao', 'margarethe', 'isolde', 'tome', 'omari', 'bran', 'minami'].map((id) => {
     const base = CHARACTERS.find((c) => c.id === id);
     return { ...base, id: `${id}_mad`, variantOf: id, mad: true, appearanceOnly: true,
-      name: `광기의 ${base.name}`, ai: JSON.parse(JSON.stringify(base.ai)),
+      name: `광기의 ${base.name}`, ai: madVariantAI(base), // 숙련도 +1 (사장님 10/16 22:3x — 모든 얼터)
       look: alterLook(base.look, id), lookVersion: `${base.lookVersion}-alter${id==='isolde'?3:['margarethe','tome','bran'].includes(id)?2:1}`,
       eyes: id === 'liao' ? 'clothGlow' : 'madGlow',
     };
@@ -884,10 +886,21 @@ for (const c of CHARACTER_GUESTS) finishAI(c);
 // here so no guest has to enter the random combat roster or change its AI.
 const ratnaBase = CHARACTER_GUESTS.find(c => c.id === 'ratna');
 const ratnaAlter = { ...ratnaBase, id: 'ratna_mad', variantOf: 'ratna', mad: true, appearanceOnly: true,
-  name: `광기의 ${ratnaBase.name}`, ai: JSON.parse(JSON.stringify(ratnaBase.ai)),
+  name: `광기의 ${ratnaBase.name}`, ai: madVariantAI(ratnaBase), // 숙련도 +1 (사장님 10/16 22:3x — 모든 얼터)
   look: alterLook(ratnaBase.look, 'ratna'), lookVersion: `${ratnaBase.lookVersion}-alter4`, eyes: 'madGlow' };
 finishAI(ratnaAlter);
 CHARACTER_VARIANTS.push(ratnaAlter);
+
+// 얼터 숙련도 맞춤 (사장님 10/16 22:3x "모든 얼터에 숙련도+1을 잊지 말고 적용해 두도록 해"): 변형(variantOf)은 모두 원본 숙련도 +1(상한 AI_PROFICIENCY.max).
+//  시트를 복사해 만든 새 얼터가 +1 을 빠뜨려도 여기서 맞추고 실력 숫자·유파 표를 다시 채운다 (이미 맞으면 손대지 않음 — 광기의 하인리히 등)
+for (const c of CHARACTER_VARIANTS) {
+  const base = [...CHARACTERS, ...CHARACTER_GUESTS].find((x) => x.id === c.variantOf);
+  const want = base ? Math.min(AI_PROFICIENCY.max, base.ai.proficiency + VARIANT_PLUS) : c.ai.proficiency;
+  if (c.ai.proficiency !== want) {
+    c.ai.proficiency = want;
+    finishAI(c);
+  }
+}
 
 /** id → 시트. 기본 회전·변형·손님 인물까지 (변형은 여정의 정해진 자리·?foe=id, 손님 인물은 여정의 제 무대(STAGE_FOE)·테스트 경로의 상대 고르기·?foe=id) */
 export const CHARACTERS_BY_ID = Object.fromEntries([...CHARACTERS, ...CHARACTER_VARIANTS, ...CHARACTER_GUESTS].map((c) => [c.id, c]));

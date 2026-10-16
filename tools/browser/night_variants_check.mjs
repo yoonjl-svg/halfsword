@@ -1,4 +1,4 @@
-// Runtime checks for cosmetic variants: no implicit mad-stat boost, stable stage disposal.
+// Runtime checks for cosmetic variants: proficiency +1 only (no mad-stat boost), stable stage disposal.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from 'playwright';
@@ -6,7 +6,8 @@ import {CHARACTERS_BY_ID,CHARACTER_VARIANTS,aiAtProficiency} from '../../src/cha
 const base=process.argv[2]||'http://127.0.0.1:4194',out=process.argv[3]||'/tmp/night-variants-check.json';
 for(const id of ['eira','liao','margarethe','isolde','tome','omari','bran','minami','ratna']){
  const original=CHARACTERS_BY_ID[id],alter=CHARACTER_VARIANTS.find(c=>c.id===id+'_mad');
- assert.deepEqual(alter.ai,original.ai);
+ // 10/16 22:3x 사장님 '모든 얼터에 숙련도+1' — 숙련도만 원본 +1(상한 5), 그 숙련도에서의 AI 는 원본과 같다(실력 숫자 +20% 없음)
+ assert.equal(alter.ai.proficiency,Math.min(5,original.ai.proficiency+1));
  for(let p=1;p<=5;p++)assert.deepEqual(aiAtProficiency(alter,p),aiAtProficiency(original,p));
  assert.equal(alter.weapon,original.weapon);
 }
