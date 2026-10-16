@@ -48,7 +48,7 @@ function trial(cfg, attack, atk, gap) {
   }
   Gm.ai.update = () => {};
   A.move.set(0, 0);
-  guard.held = true;
+  guard.held = !process.env.NOPARRY; // NOPARRY=1: 막기 단추를 안 누른 판 — 그 간격에서 막지 않으면 실제로 맞는지 보기
   const setPad = (x, y) => (A.handOffset.set(x, y), A.skill.aimRaw?.set?.(x, y));
   let ph = 0, t0 = 0, pts = null, cut = null, first = null, touch = 0, lastTouch = -1, slide = 0;
   const track = [];
