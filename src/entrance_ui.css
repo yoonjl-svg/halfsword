@@ -1,0 +1,57 @@
+/* 첫 화면 · 대기실 단추 · 미닫이 · 탭 = 싸움 화면 꼴 그대로 (사장님 10/16 15:3x ② "나무 판자를 전투 단추로 바꿔 … 통일성이 떨어질 거 같아" · ③ "설정은 미닫이가 맞아"
+   — docs/import/ui_unify_2026-10-16.md · 스타일 규칙 '겉은 픽셀, 속은 매끈' docs/design_language.md §5).
+   첫 화면 · 대기실은 Shadow DOM 안이라 싸움 화면 CSS(index.html .primary · .secondary · .toggle)가 들어오지 않는다. 그래서 같은 값을 여기 한 번 더 적는다 —
+   값은 모두 싸움 화면과 같은 토큰(:root 의 --* 는 Shadow DOM 안으로 물려받는다)이고, 싸움 화면 꼴을 바꾸면 여기도 같이 바꾼다 (tools/browser/ui_unify_smoke.mjs 가 두 쪽 계산값을 맞대 본다).
+   game_entry.js(첫 화면) · lobby.js(대기실)가 꾸밈 파일 뒤 · 글자 파일(entrance_type.css) 앞에 넣는다.
+   싸움 화면과 다른 것 (자리 때문 — 문서 §1-4): 폭(싸움 창은 100 %) · 바깥 여백 · 그림 위 부 단추 바탕(.on-art) · 작은 부 단추(.small) · 누를 수 없는 단추(싸움 화면엔 없음) */
+
+/* 주 단추 = 납작한 금색 · 부 단추 = 테두리만 · 모서리 8 (index.html .primary · .secondary 와 같은 값) — 눌릴 때 내려앉기 · 계단 그림자 · 나뭇결 없음 */
+:host .primary, :host .secondary {
+  min-height: 0; margin: 0; line-height: normal; letter-spacing: normal; text-shadow: none; box-shadow: none; transform: none; transition: none;
+  font-family: inherit; font-size: var(--fs-m); border-radius: 8px; cursor: pointer;
+}
+:host .primary { padding: 13px; font-weight: var(--fw-head); border: 0; background: var(--c-accent); color: var(--c-on-accent); }
+:host .secondary { padding: 11px; font-weight: var(--fw-body); border: 1px solid var(--line); background: transparent; color: var(--c-text); }
+@media (max-height: 500px) {
+  :host .primary { padding: 10px; }
+  :host .secondary { padding: 8px; }
+}
+/* 그림(픽셀 숲) 위에 바로 놓인 부 단추: 싸움 화면 부 단추 뒤에는 늘 창(.card — --panel)이 있다 → 같은 바탕을 단추에 깔아 가장자리가 그림에 묻히지 않게 (사장님 지시 10/16) */
+:host .secondary.on-art { background: var(--panel); }
+/* 작은 부 단추 (첫 화면 아래 줄 · 대기실 '첫 화면으로'): 꼴은 부 단추 그대로 · 글자만 작게(--fs-s) · 높이 28 — 값은 사장님 확인 전 */
+:host .secondary.small { padding: 6px 12px; font-size: var(--fs-s); }
+/* 누를 수 없을 때: 싸움 화면엔 이런 단추가 없어 감독 시안 값(흐리게 .4)으로 — 꼴은 그대로 */
+:host .primary:disabled, :host .secondary:disabled { opacity: .4; cursor: default; }
+
+/* 두 단추 짝 (장착 · 해제 / 구입 · 사용 · 봉인): 지금 누를 수 있는 것 = 주 단추, 나머지 = 누를 수 없는 부 단추 (사장님 지시 10/16 — 한 창에 주 단추 하나).
+   스킬북 단추 꼴(skill_tree.js)은 표지가 없어 자리로 고른다 */
+:host :is(.equipment-actions, .detail-actions) button {
+  min-height: 0; margin: 0; line-height: normal; letter-spacing: normal; text-shadow: none; box-shadow: none; transform: none;
+  font-family: inherit; font-size: var(--fs-m); border-radius: 8px; padding: 11px; font-weight: var(--fw-body); border: 1px solid var(--line); background: transparent; color: var(--c-text);
+}
+:host :is(.equipment-actions, .detail-actions) button:not(:disabled) { padding: 13px; font-weight: var(--fw-head); border: 0; background: var(--c-accent); color: var(--c-on-accent); cursor: pointer; }
+:host :is(.equipment-actions, .detail-actions) button:disabled { opacity: .4; cursor: default; }
+@media (max-height: 500px) {
+  :host :is(.equipment-actions, .detail-actions) button { padding: 8px; }
+  :host :is(.equipment-actions, .detail-actions) button:not(:disabled) { padding: 10px; }
+}
+
+/* 미닫이 (index.html .toggle 과 같은 값 — 44 × 24 알약 · 손잡이 18): 켜면 금색 바탕 · 손잡이 오른쪽. 화면 읽기 = role=switch · aria-checked (사장님 ③) */
+:host .toggle { position: relative; flex: none; width: 44px; height: 24px; min-height: 0; margin: 0; padding: 0; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, .4); cursor: pointer; }
+:host .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--c-sub); transition: left .15s; }
+:host .toggle[aria-checked="true"] { background: var(--c-accent); }
+:host .toggle[aria-checked="true"]::after { left: 22px; background: var(--c-on-accent); }
+:host .toggle:disabled { opacity: .4; cursor: default; }
+
+/* 탭 (대기실 메뉴 넷 · 스킬북 유파 다섯): 테두리만 · 고른 것 = 금색 테두리 + 금색 글 · 모서리 8 (단추와 같게). 글 크기 · 굵기는 entrance_type.css */
+:host [role="tab"] { min-height: 0; margin: 0; padding: 6px 4px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--c-sub); line-height: var(--lh-tight); letter-spacing: normal; text-shadow: none; box-shadow: none; white-space: nowrap; cursor: pointer; }
+:host [role="tab"][aria-selected="true"] { border-color: var(--c-accent); color: var(--c-accent); }
+@media (hover: hover) { :host [role="tab"]:not([aria-selected="true"]):hover { color: var(--c-text); } }
+
+/* 키보드 초점: 금색 한 줄 (점선 대신 — 매끈한 쪽) */
+:host button:focus-visible, :host [role="option"]:focus-visible, :host .character-view:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+
+/* 10/16 14:0x 사장님 '첫 화면이나 대기실도 가로 화면에서만 볼 수 있게 해' (docs/import/ui_fix_2026-10-16.md §11): 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'(index.html #rotate)가 덮는데,
+   창(공지 · 설정 · 계정 · 대기실 이름 — showModal)은 맨 위 층이라 그 안내 위로 올라온다 → 같은 조건(세로 + 터치)에서 창과 그 바탕을 감춘다. 열린 채로 있어 가로로 돌리면 그대로 다시 보인다
+   (start_pixel.css 끝에 있던 것 — 대기실이 그 파일을 더는 넣지 않아 둘이 함께 쓰는 여기로 옮김) */
+@media (orientation: portrait) and (pointer: coarse) { dialog[open], dialog[open]::backdrop { display: none; } }

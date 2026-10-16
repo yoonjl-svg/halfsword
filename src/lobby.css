@@ -1,144 +1,267 @@
-/* 대기실 (샛별 저장소 대기실 마지막 판 3b280a1b 그대로 — 단추·창은 첫 화면 start_pixel.css 를 함께 넣어 쓴다. game_entry.js 의 Shadow DOM 안).
-   우리 손댐은 lobby.js 의 칸·설명 카드 내용뿐 (롱소드 뺌 · 나뭇가지 설명 카드) — 꾸밈 값은 그대로 */
-:host{--c-text:#f3e9d8;--c-sub:#b8a88e;--c-accent:#d9a441;--line:#65513a;display:block;color:var(--c-text);font:14px/1.5 Pretendard,sans-serif;font-synthesis:none;background:#30291e;color-scheme:dark}
-*{box-sizing:border-box}[hidden]{display:none!important}button,input{font:inherit;color:inherit}button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px dashed var(--c-accent);outline-offset:3px}
-button{border:0;background:none;min-height:32px;padding:6px 12px;border-radius:0}button:disabled{cursor:default}
-.lobby{position:relative;isolation:isolate;height:100dvh;overflow:auto;padding:22px max(24px,env(safe-area-inset-right)) 24px max(24px,env(safe-area-inset-left))}
-.lobby-backdrop,.lobby-shade{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-2;image-rendering:pixelated}
-.lobby-shade{z-index:-1;background:#211c195c}
-.lobby-header{max-width:1220px;margin:0 auto 18px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.lobby-header h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.12em;position:relative}
-.lobby-header h1 canvas{height:42px;width:auto;display:block;image-rendering:pixelated}
-.lobby-header h1[data-painted=true]>span,.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.lobby-header button{font-size:12px;color:var(--c-sub);border:1px solid var(--line);background:#30271de6;min-height:36px;padding:0 14px}
-.lobby-header button:hover{color:var(--c-text);border-color:var(--c-sub)}
-.lobby-columns{max-width:1220px;margin:auto;min-height:0;height:calc(100% - 60px);display:grid;grid-template-columns:minmax(180px,1fr) minmax(190px,.8fr) minmax(245px,1.28fr);gap:30px;align-items:start}
-.character-panel{height:100%;min-height:0;display:flex;align-items:center;flex-direction:column;gap:16px}
-.card-frame{--frame-size:14px;position:relative;border:var(--frame-size) solid transparent;border-image:url('../public/ui/cardbacks/px_clearing_frame.png') 7 / var(--frame-size) / 0 repeat;image-rendering:pixelated;background:radial-gradient(ellipse at center,#4a3d2cc9,#1a1816e0),url('../public/ui/cardbacks/px_clearing_tile.png') center/32px 64px,#1a1816;box-shadow:4px 6px 0 #17150f77}
-.portrait-card{width:80%;height:80%;flex-shrink:0;min-height:0;display:flex;flex-direction:column}
-.portrait-card::before,.portrait-card::after{content:'';position:absolute;left:calc(50% - 10px);width:20px;height:20px;background:url('../public/ui/cardbacks/px_clearing_plaque.png') center/contain no-repeat;image-rendering:pixelated;pointer-events:none;z-index:1}
-.portrait-card::before{top:-8px}.portrait-card::after{bottom:-8px}
-.character-view{position:relative;flex:1;min-height:0;touch-action:none;cursor:grab;image-rendering:pixelated}
-.character-view:active{cursor:grabbing}.character-view canvas{display:block;width:100%;height:100%}
-.lobby-status{font-size:12px;color:var(--c-sub);margin:0;max-width:80%;min-height:0;background:#30271dee}
-.profile-panel{height:100%;min-width:0;overflow:auto;padding:26px 20px;background:#30271eee;border:2px solid #8d7049;border-right-color:#56432f;border-bottom-color:#56432f;box-shadow:3px 4px 0 #17150f66;scrollbar-width:thin;scrollbar-color:#8d7049 #30271e}
-.profile-data{margin:0}.profile-data dt{color:var(--c-sub);font-size:12px;margin:0 0 4px}.profile-data dd{margin:0 0 22px;font-size:17px;font-weight:600;text-shadow:0 2px #302319}
-.profile-data #lobbyRank{color:var(--c-accent)}.name-row{display:flex;align-items:center;gap:6px;min-width:0}.name-row span{overflow-wrap:anywhere}
-.edit-name{padding:6px;width:32px;min-width:32px;min-height:32px;color:var(--c-sub)}.edit-name:hover{color:var(--c-text)}.edit-name svg{display:block;width:16px;height:16px}
-.duel-record{margin:14px 0 24px;font-size:14px}.duel-record span{display:block;font-size:12px;color:var(--c-sub);margin-bottom:4px}
-/* 나무 결·색·모서리·그림자·글자는 첫 화면의 start_pixel.css를 그대로 쓴다. */
-[data-start-theme=pixel] .start-actions{display:grid;gap:12px;justify-content:stretch}
-[data-start-theme=pixel] .start-actions button{position:relative;max-width:100%;width:100%;flex-shrink:0}
-[data-start-theme=pixel] .start-actions button::before{content:'';position:absolute;opacity:0}
-[data-start-theme=pixel] .lobby-tabs button:not([aria-selected=true]),[data-start-theme=pixel] #unequipItem{--button-fill:#65492f;border-top-color:#aa8754;border-left-color:#8a663e}
-[data-start-theme=pixel] .lobby-tabs button[aria-selected=true]::before{opacity:1}
-[data-start-theme=pixel] .start-actions button:disabled,[data-start-theme=pixel] #unequipItem:disabled{--button-fill:#403326;background-color:var(--button-fill);opacity:.6;color:#a0927c;border-color:#6b5639 #34271b #34271b #6b5639;box-shadow:inset 0 3px #87704f33,inset 0 -4px #22180f55,0 4px #221b13;text-shadow:none;transform:none}
-[data-start-theme=pixel] .start-actions button:disabled::before{opacity:0}
-[data-start-theme=pixel] .departure-actions{width:80%;max-width:228px}
-.contents-panel{min-width:0;max-height:100%;overflow:auto;padding:20px;background:#30271eee;border:2px solid #8d7049;border-right-color:#56432f;border-bottom-color:#56432f;box-shadow:3px 4px 0 #17150f66;scrollbar-width:thin;scrollbar-color:#8d7049 #30271e}
-.panel-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px}.panel-heading h2{font-size:17px;margin:0;font-weight:600;text-shadow:0 2px #302319}.panel-heading span{font-size:12px;color:var(--c-sub)}
-.inventory-frame{background:#211a12}
-.inventory-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));aspect-ratio:5/4;background:#17150e;gap:1px;padding:1px}
-.inventory-item,.inventory-slot{position:relative;display:block;min-width:0;min-height:0;padding:5px;border:1px solid #715b3c88;background:#30271eaa;overflow:hidden}
-.inventory-slot{padding:0;background:#211c16}.inventory-item:hover{background:#60462f66}.inventory-item[aria-pressed=true]{border-color:var(--c-accent);background:#60462f99;box-shadow:inset 0 0 0 1px #d9a44188}
-.inventory-item img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;pointer-events:none;filter:drop-shadow(1px 2px 1px #0008)}
-.equipped-badge{position:absolute;left:0;right:0;bottom:0;text-align:center;color:var(--c-text);background:#302319ed;font-size:12px;line-height:16px;pointer-events:none}
-[data-start-theme=pixel] .equipment-actions{display:grid;grid-template-columns:1fr 1fr;margin-top:20px;gap:12px}
-.skill-group{padding:14px 0;border-bottom:1px solid #715b3c80}.skill-group:first-of-type{padding-top:0}.skill-group h3{margin:0 0 7px;font-size:14px}.skill-group h3 span{float:right;color:var(--c-sub);font-size:12px;font-weight:400}.skill-group p{margin:5px 0;font-size:12px;color:var(--c-sub)}.skill-group p.unlocked{color:var(--c-text)}
-.setting-row{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-top:1px solid #715b3c80;gap:12px}.setting-row input{accent-color:var(--c-accent);width:18px;height:18px}.setting-note{font-size:12px;color:var(--c-sub)}
-.name-dialog{color:var(--c-text);background:#30271e;border:2px solid #8d7049;border-right-color:#56432f;border-bottom-color:#56432f;padding:24px;width:min(340px,calc(100vw - 32px));box-shadow:0 0 0 3px #211c16,4px 6px 0 3px #17150f77}
-.name-dialog::backdrop{background:#261e1680}.name-dialog h2{font-size:17px;margin:0 0 16px}.name-dialog label{font-size:12px;color:var(--c-sub)}.name-dialog input{display:block;width:100%;margin:8px 0;background:#211c16;border:1px solid #65513a;padding:10px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}.dialog-actions button{border:2px solid #8d7049;border-right-color:#453422;border-bottom-color:#453422;background:#60462f;box-shadow:inset 0 -2px #392b1e;font-size:14px;min-width:64px}.name-error{font-size:12px;color:var(--c-sub);min-height:18px;margin:0}
-@media(min-width:1100px){.lobby{padding-top:30px;padding-bottom:36px}.lobby-header{margin-bottom:26px}.lobby-columns{height:calc(100% - 70px);max-height:680px}}
-@media(max-height:540px) and (min-width:680px){.lobby{padding:8px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left))}.lobby-header{margin-bottom:6px}.lobby-header h1 canvas{height:30px}.lobby-header button{min-height:28px}.lobby-columns{height:calc(100% - 36px);gap:16px;grid-template-columns:1fr .85fr 1.25fr}.character-panel{gap:10px}.profile-panel,.contents-panel{padding:12px}.profile-data dt{line-height:14px;margin-bottom:0}.profile-data dd{font-size:14px;margin-bottom:7px;line-height:20px}.profile-data dd:last-child{margin-bottom:0}.duel-record{margin:9px 0 12px;font-size:12px;line-height:16px}.duel-record span{margin-bottom:2px}[data-start-theme=pixel] .lobby-tabs{gap:8px}[data-start-theme=pixel] .start-actions button{height:36px;padding:3px 15px;line-height:18px}.panel-heading{margin-bottom:10px}.card-frame{--frame-size:12px}[data-start-theme=pixel] .equipment-actions{margin-top:14px;gap:8px}.equipped-badge{font-size:10px;line-height:12px}.lobby-status{font-size:10px}}
-@media(max-height:370px) and (min-width:680px){.profile-panel{padding:7px 10px}.profile-data dd{margin-bottom:4px}.duel-record{margin:5px 0 6px}[data-start-theme=pixel] .lobby-tabs{gap:5px}[data-start-theme=pixel] .lobby-tabs button{height:32px}}
-@media(max-width:679px){.lobby{padding:14px 12px 24px}.lobby-header{margin-bottom:12px}.lobby-header h1 canvas{height:34px}.lobby-columns{height:auto;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.character-panel{height:442px;gap:12px}.portrait-card{width:90%;height:80%}.profile-panel{height:auto;min-height:442px;padding:16px 10px}.profile-data dd{font-size:14px;margin-bottom:14px}.duel-record{margin:6px 0 20px;font-size:12px}.contents-panel{grid-column:1/-1;max-height:none;padding:16px}.inventory-frame{max-width:440px}.name-row{gap:0}.edit-name{width:28px;min-width:28px;padding:5px}[data-start-theme=pixel] .start-actions button{height:41px;padding:4px 12px;letter-spacing:0}[data-start-theme=pixel] .departure-actions{width:90%}.card-frame{--frame-size:12px}.equipment-actions{max-width:440px}}
-/* 출발 버튼은 기존 크기를 유지한다. 나머지 조작은 작은 나무 버튼 두 줄로 정리한다. */
-.profile-panel{height:auto;max-height:100%;padding:20px 16px}
-.profile-data dd{font-size:14px;margin-bottom:14px;line-height:22px}
-.profile-data #lobbyRank{white-space:nowrap;margin-bottom:8px}
-.name-row{min-height:28px}.edit-name{min-height:28px;min-width:28px;width:28px;padding:5px}
-.duel-record{font-size:12px;margin:20px 0 12px}.duel-record b{font-weight:400}
-.coin-balance{display:flex;align-items:center;gap:8px;margin:0 0 18px;font-size:12px;font-variant-numeric:tabular-nums}
-.coin-icon{display:block;width:20px;height:20px;flex-shrink:0;image-rendering:pixelated}
-[data-start-theme=pixel] .lobby-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 8px}
-[data-start-theme=pixel] .start-actions:not(.departure-actions) button{font-size:12px;letter-spacing:0;height:36px;line-height:18px;padding:3px 10px}
-[data-start-theme=pixel] .lobby-tabs button::before{display:none}
-[data-start-theme=pixel] .equipment-actions{grid-template-columns:64px 64px;gap:8px;margin-top:12px}
-[data-start-theme=pixel] .equipment-actions button{height:32px;border-width:3px}
-.panel-heading{margin-bottom:12px}.panel-heading h2,.name-dialog h2{font-size:14px}
-.lobby-header button{min-height:30px;padding:0 10px}
-.item-detail{position:absolute;left:8px;right:8px;bottom:8px;padding:8px 10px;background:#30271ef5;border:1px solid var(--line);font-size:12px;line-height:18px;pointer-events:none}.item-detail p{margin:0}.item-detail p:first-child{display:flex;gap:8px;margin-bottom:3px}.item-detail span,.item-detail p:last-child,.empty-panel{color:var(--c-sub)}.empty-panel{font-size:12px}
-@media(max-height:540px) and (min-width:680px){.profile-panel{padding:12px}.profile-data dd{margin-bottom:8px;line-height:20px}.profile-data #lobbyRank{margin-bottom:4px}.duel-record{margin:12px 0 8px}.coin-balance{margin-bottom:12px}.coin-icon{width:18px;height:18px}[data-start-theme=pixel] .lobby-tabs{gap:8px}[data-start-theme=pixel] .start-actions:not(.departure-actions) button{height:30px;padding:1px 8px}[data-start-theme=pixel] .equipment-actions{margin-top:10px}}
-@media(max-height:370px) and (min-width:680px){.profile-panel{padding:8px 10px}.profile-data dd{margin-bottom:4px}.duel-record{margin-top:7px}.coin-balance{margin-bottom:8px}}
-@media(max-width:679px){.profile-panel{min-height:0;padding:16px 10px}.profile-data dd{margin-bottom:12px}.duel-record{margin:20px 0 12px}[data-start-theme=pixel] .lobby-tabs{gap:8px 4px}[data-start-theme=pixel] .lobby-tabs button{padding:2px 4px}.coin-balance{margin-bottom:16px}.lobby-header button{min-height:30px}}
-/* ── 10/16 고친 것 (docs/import/lobby_fix_2026-10-16.md) — 글자 값은 entrance_type.css 한 곳 ── */
-/* 캐릭터 미리보기: 기기 화소 비로 그려(lobby_character.js) 도트 늘이기를 끈다 (사장님 03:5x '캐릭터쪽 해상도 너무 낮던데') */
-.character-view{image-rendering:auto}
-/* 금화 · 머리(천 주머니) — 사장님 04:3x '금화 옆에 천 주머니 모양으로' */
-.wallet .pouch-icon{margin-left:6px}
-.panel-wallet{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--c-text);font-variant-numeric:tabular-nums}
-.panel-wallet .coin-icon{width:14px;height:14px}
-.panel-wallet b{font-weight:400}
-/* 좁은 화면: 캐릭터 칸이 출발 단추 밑의 알림 줄까지 품게 (전: 칸 높이 442px 고정이라 그 밑 줄이 아래 칸 뒤로 숨었다) */
-@media(max-width:679px){.character-panel{height:auto;min-height:442px}.portrait-card{height:354px}}
-/* 여정으로 넘어가며 대기실을 걷어 내는 동안 (game_entry.js — 0.3 s, 뒤의 카드·싸움 화면이 비쳐 보인다) */
-.lobby[data-leaving]{opacity:0;transition:opacity .3s ease}
-@media (prefers-reduced-motion:reduce){.lobby[data-leaving]{transition:none}}
+/* 대기실 (샛별 저장소 대기실 3b280a1b 에서 들여옴 — docs/import/lobby_port_2026-10-16.md · 고친 것 lobby_fix · ui_fix_2026-10-16.md). game_entry.js 의 Shadow DOM 안.
+   10/16 15:3x 사장님 ② ④ ⑤ ⑥ ⑨ (docs/import/ui_unify_2026-10-16.md — 스타일 규칙 '겉은 픽셀, 속은 매끈' docs/design_language.md §5):
+    · 겉(픽셀) = 숲 배경(pixel_grove.js — 첫 화면과 같은 그림, 팔레트 따로) · '대기실' 글자 · 사슬 틀 셋(캐릭터 카드 · 재고 칸 · 별자리 판 — 틀 그림 · 원판 그대로) · 캐릭터 카드 바탕 무늬
+    · 속(매끈) = 창 · 칸 · 단추 · 탭 · 글 = 싸움 화면 규칙. UI 색은 싸움 화면 토큰만 — --panel --line --c-text --c-sub --c-accent --c-on-accent --c-alert --tier-* (index.html :root 에서 물려받음)
+      (예외는 싸움 화면 값을 그대로 옮긴 것: 등급 빛 --tg · 이름 창 바탕 막 = 싸움 메뉴 .overlay · 카드 그림자 = 싸움 카드 뒷면 그림자)
+    · 단추 · 미닫이 · 탭 꼴은 entrance_ui.css, 글자 크기 · 굵기 · 색은 entrance_type.css */
+:host { display: block; font-size: 14px; line-height: 1.5; font-synthesis: none; color: var(--c-text); background: #30291e; color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button, input { font: inherit; color: inherit; }
+button { padding: 0; border: 0; background: none; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: default; }
+input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.sr-only, .lobby-header h1[data-painted=true] > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-/* ── 스킬북 (skill_tree.js): 유파 탭 · 별자리 판(룬 줄) · 책 섬네일(문양 · 급) · 설명 카드 ── */
-.skill-tree-host{display:block}
-.school-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;margin:0 0 8px;padding:2px;background:#17150e;border:1px solid #715b3c88}
-.school-tabs button{min-height:26px;padding:2px 0;font-size:12px;color:var(--c-sub);background:#30271eaa;border:1px solid transparent;white-space:nowrap}
-.school-tabs button:hover{color:var(--c-text)}
-.school-tabs button[aria-selected=true]{color:var(--c-text);background:#60462f99;border-color:var(--c-accent);font-weight:600}
-.tree-frame{background:#211a12}
-.tree-board{--s:1;position:relative;width:100%;aspect-ratio:300/210} /* --s = 책 크기 비 (skill_tree.js fit — 판 263 px 보다 좁으면 줄임) */
-.tree-links{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-.rune-link path{fill:none;stroke:#8d7049;stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter;opacity:.4}
-.rune-link .rune-gem{fill:#8d7049;stroke:none}
-.rune-link.lit path{stroke:#d9a441;opacity:.9}
-.rune-link.lit .rune-gem{fill:#f3d785;opacity:1}
-.tree-nodes{position:absolute;inset:0}
-.book-node{position:absolute;width:calc(58px * var(--s));margin-left:calc(-29px * var(--s));margin-top:calc(-21px * var(--s));display:flex;flex-direction:column;align-items:center;gap:calc(2px * var(--s));min-height:0;padding:0;background:none;border:0;color:var(--c-text)}
-.book-thumb{position:relative;display:block;width:calc(32px * var(--s));height:calc(42px * var(--s));isolation:isolate}
-.book-svg{position:relative;display:block;width:100%;height:100%}
-.book-edge{fill:#1b130c}.book-pages{fill:#e3d6bb}.book-cover{fill:#5e4126}.book-spine{fill:#38261a}.book-band,.book-numeral{fill:var(--tc)}
-.emblem-blade{fill:#e9eef1}.emblem-hilt{fill:#d9a441}
-.book-cat{font-size:calc(12px * var(--s));line-height:calc(14px * var(--s));color:var(--c-text);white-space:nowrap;text-shadow:0 1px #000a}
-/* 값 표지: 어두운 책 아래쪽에 걸친다 (옆으로 내밀면 룬 줄·이웃 책과 부딪힌다) */
-.book-price{position:absolute;left:50%;top:calc(27px * var(--s));transform:translateX(-50%);display:inline-flex;align-items:center;gap:2px;padding:0 3px 0 2px;background:#1e1810f0;border:1px solid #8d7049;font-family:var(--font-ui);font-weight:600;font-size:max(8px, calc(10px * var(--s)));line-height:calc(14px * var(--s));color:var(--c-accent);font-variant-numeric:tabular-nums;white-space:nowrap}
-.book-price .price-coin{display:block;width:calc(9px * var(--s));height:calc(9px * var(--s))}
+/* ── 크기 (사장님 ⑤ "사슬 틀은 3단 구성은 합리적이야. 그런데 각 틀의 사이즈나 비율은 조절해도 될 거 같아"):
+   세 칸(캐릭터 카드 + 출발 · 내 정보 · 재고/스킬북)이 위 · 아래 줄을 같이 쓴다 — 칸 높이 --col-h 하나에서 모두 셈.
+   · 사슬 틀 두께 --fr 14 px = 틀 그림 한 칸 2 px (세 틀 모두 같게 — 전: 높이가 낮으면 12 px = 1.71 배라 칸이 고르지 않았다)
+   · 틀 길이는 사슬 한 마디(--link 12 px = 그림 6 칸)의 배수 — 모서리에서 마디가 잘리지 않게 (round() 를 못 쓰는 브라우저는 반올림 없이)
+   · 캐릭터 카드 = 싸움 무기 카드 비(약 2 : 3 — PC 224 × 344 와 같은 쪽) · 높이 = 칸 높이 − 출발 단추 − 틈 · 폭은 줄 폭의 30 % 까지
+   · 재고 틀 = 칸 5 × 4 를 꼭 맞게 품음(남는 띠 없음) · 별자리 틀(유파 탭 + 판)은 재고 틀과 같은 바깥 크기 — 탭을 바꿔도 틀이 안 움직인다
+   값(두께 · 비 · 여백)은 사장님 확인 전 — 확인표 1970~ */
+.lobby {
+  --pad-t: 22px; --pad-b: 24px; --pad-l: max(24px, env(safe-area-inset-left)); --pad-r: max(24px, env(safe-area-inset-right));
+  --head: 42px; --head-gap: 18px;      /* 제목 줄('대기실' 글자 높이) · 아래 틈 */
+  --gap: 30px;                         /* 세 칸 사이 */
+  --pp: 20px;                          /* 창 안 여백 = 싸움 창(.card) 20 · 낮은 화면 12 */
+  --fr: 14px;                          /* 사슬 틀 두께 */
+  --link: 12px;                        /* 사슬 한 마디 */
+  --title-h: 21px; --title-gap: 12px;  /* 창 제목 줄 (무기 · 스킬북 …) */
+  --depart: 42px; --depart-gap: 12px;  /* 출발 단추 = 싸움 주 단추 높이(패딩 13 + 글 줄 16) · 카드와 사이 (반올림 남는 것은 이 틈으로) */
+  --profile-min: 190px;
+  --col-max: 520px;                    /* 큰 화면에선 칸 높이를 여기까지 · 위아래 가운데 */
+  --col-h: min(100dvh - var(--pad-t) - var(--pad-b) - var(--head) - var(--head-gap), var(--col-max));
+  --row-w: min(100vw - var(--pad-l) - var(--pad-r), 1220px);
+  --card-avail: calc(var(--col-h) - var(--depart) - var(--depart-gap));
+  --card-w: min(var(--card-avail) * 2 / 3, var(--row-w) * .3);
+  --card-h: calc(var(--card-w) * 1.5);
+  --chrome-v: calc(2px + 2 * var(--pp) + var(--title-h) + var(--title-gap) + 2 * var(--fr));
+  --chrome-h: calc(2px + 2 * var(--pp) + 2 * var(--fr));
+  --grid-wmax: calc(var(--row-w) - var(--card-w) - var(--profile-min) - 2 * var(--gap) - var(--chrome-h));
+  --grid-w: max(132px, min((var(--col-h) - var(--chrome-v)) * 1.25, var(--grid-wmax)));
+  --grid-h: calc(var(--grid-w) * .8);
+  position: relative; isolation: isolate; height: 100dvh; overflow: auto;
+  display: flex; flex-direction: column; justify-content: safe center;
+  padding: var(--pad-t) var(--pad-r) var(--pad-b) var(--pad-l);
+}
+@supports (width: round(down, 10px, 3px)) {
+  .lobby {
+    --card-w: calc(round(down, min(var(--card-avail) * 2 / 3, var(--row-w) * .3) - 2 * var(--fr), var(--link)) + 2 * var(--fr));
+    --card-h: calc(min(round(nearest, var(--card-w) * 1.5 - 2 * var(--fr), var(--link)), round(down, var(--card-avail) - 2 * var(--fr), var(--link))) + 2 * var(--fr));
+    --grid-w: round(down, max(132px, min(round(nearest, round(down, var(--col-h) - var(--chrome-v), var(--link)) * 1.25, var(--link)), var(--grid-wmax))), var(--link));
+    --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
+  }
+}
+@media (max-height: 500px) { .lobby { --depart: 36px; } } /* 싸움 주 단추가 낮은 화면에서 패딩 10 (entrance_ui.css 와 같은 조건) */
+@media (min-width: 1100px) { .lobby { --pad-t: 30px; --pad-b: 36px; --head-gap: 26px; --profile-min: 240px; } }
+@media (max-height: 540px) and (min-width: 680px) {
+  .lobby { --pad-t: 8px; --pad-b: 12px; --pad-l: max(16px, env(safe-area-inset-left)); --pad-r: max(16px, env(safe-area-inset-right)); --head: 30px; --head-gap: 6px; --gap: 16px; --pp: 12px; --depart-gap: 10px; --col-max: 100dvh; }
+}
+/* 폭 680~779 (작은 가로 폰 740 × 360 · 680 × 360): 내 정보 칸 최소 폭을 줄여 별자리 판이 너무 작아지지 않게(판 폭 192 → 240 — 책 이름이 판 밖으로 나가던 것) */
+@media (min-width: 680px) and (max-width: 779px) { .lobby { --profile-min: 150px; } }
+
+.lobby-backdrop, .lobby-shade { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -2; image-rendering: pixelated; }
+.lobby-shade { z-index: -1; background: #211c195c; } /* 배경 그림을 조금 어둡게 (그림 쪽 — UI 색에 세지 않음) */
+.lobby-header { flex: none; width: 100%; max-width: 1220px; height: var(--head); margin: 0 auto var(--head-gap); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.lobby-header h1 { position: relative; margin: 0; font-size: 17px; font-weight: 600; letter-spacing: .12em; }
+.lobby-header h1 canvas { display: block; height: var(--head); width: auto; image-rendering: pixelated; }
+.lobby-columns { flex: none; width: 100%; max-width: 1220px; height: var(--col-h); margin: 0 auto; display: grid; grid-template-columns: var(--card-w) minmax(var(--profile-min), 1fr) calc(var(--grid-w) + var(--chrome-h)); gap: var(--gap); align-items: stretch; }
+
+/* ── 사슬 틀 (겉 — 그림 그대로): 캐릭터 카드 · 재고 칸 · 별자리 판. 틀의 픽셀 확대는 틀에만 (안의 그림 · 글은 매끈하게) ── */
+.card-frame, .skill-tree-host { position: relative; border: var(--fr) solid transparent; border-image: url('../public/ui/cardbacks/px_clearing_frame.png') 7 / var(--fr) / 0 repeat; image-rendering: pixelated; }
+.card-frame > *, .skill-tree-host > * { image-rendering: auto; }
+
+/* ── ① 캐릭터 카드 + 출발 (카드 위 · 출발 단추 아래 — 칸의 위아래 줄) ── */
+.character-panel { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+.portrait-card { flex: none; width: var(--card-w); height: var(--card-h); display: flex; flex-direction: column;
+  background: radial-gradient(ellipse at center, #4a3d2cc9, #1a1816e0), url('../public/ui/cardbacks/px_clearing_tile.png') center / 32px 64px, #1a1816; /* 카드 바탕 무늬 (겉 — 카드 뒷면 조각) */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .5); } /* 싸움 카드 뒷면(.wback)과 같은 부드러운 그림자 — 전: 딱딱한 계단 그림자 4px 6px */
+.portrait-card::before, .portrait-card::after { content: ''; position: absolute; left: calc(50% - 10px); width: 20px; height: 20px; background: url('../public/ui/cardbacks/px_clearing_plaque.png') center / contain no-repeat; image-rendering: pixelated; pointer-events: none; z-index: 1; }
+.portrait-card::before { top: -8px; }
+.portrait-card::after { bottom: -8px; }
+.character-view { position: relative; flex: 1; min-height: 0; touch-action: none; cursor: grab; image-rendering: auto; }
+.character-view:active { cursor: grabbing; }
+.character-view canvas { display: block; width: 100%; height: 100%; }
+/* 알림 줄(인장 → 금화 · 이름 저장 · 출발 실패): 제목 줄 가운데 작은 창 — 전엔 출발 단추 밑이라 칸 아래 줄을 밀었다(카드 위에 띄우면 캐릭터 머리를 가린다) */
+.lobby-status { flex: 0 1 auto; min-width: 0; margin: 0 auto; padding: 3px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: var(--lh-text); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lobby-status:empty { display: none; }
+@media (max-width: 679px) { .lobby-header { height: auto; min-height: var(--head); } .lobby-status { white-space: normal; } } /* 좁은 화면은 아래로 흐르니 두 줄이 되어도 된다 */
+.character-panel .depart { flex: none; width: var(--card-w); max-width: 100%; }
+
+/* ── 창 (싸움 창 꼴 — --panel 바탕 · 1 px --line · 모서리 10. 전: 나무색 불투명 · 두꺼운 볼록 테두리 · 딱딱한 그림자) ── */
+.profile-panel, .contents-panel { min-width: 0; min-height: 0; overflow: auto; padding: var(--pp); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+/* ── ② 내 정보: 레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리 · 메뉴 넷(아래에 붙임) ── */
+.profile-panel { display: flex; flex-direction: column; }
+.profile-data { margin: 0; }
+.profile-data dd { margin: 0; }
+.rank-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 10px; }
+#lobbyLevel { font-size: var(--fs-m); line-height: 28px; white-space: nowrap; }
+/* 호칭 내림 상자 (사장님 ⑥ · 16:0x): 단추 = 싸움 부 단추 꼴(테두리 1 px --line · 모서리 8 · 본문 색 글 + 작은 갈매기표 — 금색 아님) */
+.title-picker { position: relative; display: inline-block; min-width: 0; max-width: 100%; }
+.title-select { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 0; padding: 4px 8px 4px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--c-text); font-size: var(--fs-m); line-height: var(--lh-tight); }
+#titleCurrent { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-select .chevron { flex: none; width: 10px; height: 10px; color: var(--c-sub); transition: rotate .15s; }
+.title-select[aria-expanded="true"] { border-color: var(--c-sub); }
+.title-select[aria-expanded="true"] .chevron { rotate: 180deg; }
+/* 열린 창: 단추 바로 아래로 · 반투명(싸움 창 --panel 그대로 — 뒤 대기실이 조금 비친다) · 1 px --line · 모서리 10 · 가진 호칭만 (시스템 알림 · 빈 줄 없음) */
+.title-list { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; min-width: max(100%, 140px); max-height: 168px; overflow: auto; margin: 0; padding: 4px; list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.title-list [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; padding: 6px 10px; border-radius: 6px; font-size: var(--fs-m); line-height: var(--lh-tight); color: var(--c-text); white-space: nowrap; cursor: pointer; }
+.title-list [role="option"]:focus { outline: none; background: var(--line); }
+.title-list .check { flex: none; width: 12px; height: 12px; color: var(--c-accent); }
+.title-list [aria-selected="false"] .check { visibility: hidden; }
+@media (hover: hover) {
+  .title-select:hover { border-color: var(--c-sub); }
+  .title-list [role="option"]:hover { background: var(--line); }
+}
+@media (prefers-reduced-motion: reduce) { .title-select .chevron { transition: none; } }
+.name-row { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 28px; font-size: var(--fs-m); }
+.name-row span { overflow-wrap: anywhere; }
+.edit-name { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; color: var(--c-sub); }
+.edit-name svg { display: block; width: 16px; height: 16px; }
+@media (hover: hover) { .edit-name:hover { color: var(--c-text); } }
+.duel-record { margin: 16px 0 12px; font-size: var(--fs-s); line-height: 16px; }
+.duel-record span { display: block; margin-bottom: 2px; }
+.coin-balance { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+.coin-icon { display: block; flex-shrink: 0; width: 20px; height: 20px; } /* 금화 · 주머니 그림 — 매끈하게 줄임 (픽셀 확대 끔 — 그림은 다른 작업자가 매끈한 그림으로 바꾼다) */
+.wallet .pouch-icon { margin-left: 6px; }
+.lobby-tabs { margin-top: auto; padding-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lobby-tabs [role="tab"] { padding: 7px 4px; }
+
+/* ── ③ 재고 · 상점 · 스킬북 ── */
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: var(--title-h); margin: 0 0 var(--title-gap); }
+.panel-heading h2 { margin: 0; font-size: var(--fs-m); line-height: var(--title-h); }
+.panel-heading > span { font-size: var(--fs-s); }
+.empty-panel { margin: 0; font-size: var(--fs-s); }
+.panel-wallet { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+.panel-wallet .coin-icon { width: 14px; height: 14px; }
+/* 재고 틀: 칸 5 × 4 를 꼭 맞게 (틀 안 = 칸 판 그대로 — 남는 띠 없음) */
+.inventory-frame { width: calc(var(--grid-w) + 2 * var(--fr)); height: calc(var(--grid-h) + 2 * var(--fr)); background: var(--panel); }
+.inventory-grid { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 6px; }
+.inventory-item, .inventory-slot { position: relative; display: block; min-width: 0; min-height: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; }
+/* 칸 그림 (사장님 ⑨ 1 단계 — 감독 검토 §2): 보이는 그림이 칸의 80 % · 매끈하게 줄임(픽셀 확대 끔) · 뒤에 등급 빛 = 무기 카드 앞면(.wthumb)과 같은 원 빛 · 같은 그림자.
+   그림 상자 = 칸의 80 % × --fit (lobby.js fitThumb 가 그림 파일의 투명한 가장자리를 빼고 잰 값 — 케틀 햇처럼 여백이 큰 그림도 같은 크기로 읽히게) · --fx · --fy = 보이는 부분을 가운데로.
+   등급 빛 값은 index.html [data-tier] --tg 그대로 (케틀 햇 = 레전드 금빛 · 나뭇가지 = 쓰레기 회색) */
+.inventory-item { --tg: rgba(255, 236, 190, .28); background: radial-gradient(closest-side, var(--tg), transparent); }
+.inventory-item[data-tier="trash"] { --tg: rgba(190, 188, 180, .2); }
+.inventory-item[data-tier="rare"] { --tg: rgba(110, 170, 255, .45); }
+.inventory-item[data-tier="epic"] { --tg: rgba(190, 130, 255, .5); }
+.inventory-item[data-tier="legend"] { --tg: rgba(255, 210, 74, .6); }
+.inventory-item[data-tier="mystery"] { --tg: rgba(120, 220, 190, .45); }
+.inventory-item img { --fit: 1; --fx: 0; --fy: 0; --box: calc(80% * var(--fit)); position: absolute; width: var(--box); height: var(--box); left: calc(50% - var(--box) / 2 - var(--fx) * var(--box)); top: calc(50% - var(--box) / 2 - var(--fy) * var(--box)); object-fit: contain; image-rendering: auto; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55)); }
+.inventory-item[aria-pressed="true"] { border-color: var(--c-accent); }
+@media (hover: hover) { .inventory-item:not([aria-pressed="true"]):hover { border-color: var(--c-sub); } }
+/* '장착 중': 그림을 가리지 않게 칸 왼쪽 위 귀퉁이에 걸친 작은 알약 (사장님 ⑨ — 글 그대로). 무기 그림은 모두 ↗ 대각선 · 케틀 햇은 위가 비어 왼쪽 위가 빈 자리 */
+.equipped-badge { position: absolute; z-index: 1; top: -5px; left: -3px; padding: 0 5px; border-radius: 999px; background: var(--c-accent); color: var(--c-on-accent); font-size: var(--fs-xs); line-height: 14px; white-space: nowrap; pointer-events: none; }
+/* 설명 카드 (칸을 고르면 틀 안 아래쪽): 이름 · 등급 · 설명 · 장착 / 해제 — 스킬북 설명 카드(구입 · 사용 · 봉인)와 같은 자리 · 같은 꼴 */
+/*  바탕 = 싸움 창 --panel 두 겹(거의 불투명 — 칸 · 별자리가 글 뒤로 비치면 읽기 어렵다. 반투명 창은 호칭 내림 상자 — 사장님 16:0x) */
+.item-detail { position: absolute; z-index: 2; left: 6px; right: 6px; bottom: 6px; padding: 8px 10px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 18px; }
+.item-head { display: flex; align-items: baseline; gap: 8px; margin: 0 0 2px; }
+#itemName { font-size: var(--fs-m); }
+#itemDescription { margin: 0; }
+.equipment-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; } /* 가운데 맞춤 — 줄로 늘이면 부 단추가 주 단추 높이로 늘어난다(싸움 단추 높이 그대로: 주 36 · 부 34) */
+.equipment-actions button { min-width: 72px; }
+
+/* ── 스킬북 (skill_tree.js): 사슬 틀(별자리 틀) = 유파 탭 + 별자리 판 — 재고 틀과 같은 바깥 크기 ── */
+.skill-tree-host { display: flex; flex-direction: column; width: calc(var(--grid-w) + 2 * var(--fr)); height: calc(var(--grid-h) + 2 * var(--fr)); background: var(--panel); }
+.school-tabs { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 6px 6px 0; }
+/* 판 = 별자리 비 300 : 210 그대로(책 자리가 % 라 비가 바뀌면 판 끝의 책 이름이 밖으로 나간다) — 탭 아래 남은 자리에 들어가는 가장 큰 판을 가운데에 (남는 곳은 같은 바탕이라 띠로 안 보임) */
+.skill-tree-host .tree-frame { flex: 1; min-height: 0; display: grid; place-items: center; container-type: size; border: 0; border-image: none; background: none; box-shadow: none; }
+.tree-board { --s: 1; position: relative; width: 100%; width: min(100cqw, 100cqh * 300 / 210); aspect-ratio: 300 / 210; } /* --s = 책 크기 비 (skill_tree.js fit — 판 263 px 보다 좁으면 줄임) */
+.tree-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.rune-link path { fill: none; stroke: var(--c-sub); stroke-width: 1.5; stroke-linecap: square; stroke-linejoin: miter; opacity: .4; }
+.rune-link .rune-gem { fill: var(--c-sub); stroke: none; }
+.rune-link.lit path { stroke: var(--c-accent); opacity: .9; }
+.rune-link.lit .rune-gem { fill: var(--c-accent); opacity: 1; }
+.tree-nodes { position: absolute; inset: 0; }
+.book-node { position: absolute; width: calc(58px * var(--s)); margin-left: calc(-29px * var(--s)); margin-top: calc(-21px * var(--s)); display: flex; flex-direction: column; align-items: center; gap: calc(2px * var(--s)); min-height: 0; padding: 0; background: none; border: 0; color: var(--c-text); }
+.book-thumb { position: relative; display: block; width: calc(32px * var(--s)); height: calc(42px * var(--s)); isolation: isolate; }
+.book-svg { position: relative; display: block; width: 100%; height: 100%; }
+/* 책 그림 색 (그림 쪽 — skill_tree.js bookSvg · UI 색에 세지 않음 · 다른 작업자가 새 그림으로 바꾸는 중) */
+.book-edge { fill: #1b130c; } .book-pages { fill: #e3d6bb; } .book-cover { fill: #5e4126; } .book-spine { fill: #38261a; } .book-band, .book-numeral { fill: var(--tc); }
+.emblem-blade { fill: #e9eef1; } .emblem-hilt { fill: #d9a441; }
+.book-cat { font-size: calc(12px * var(--s)); line-height: calc(14px * var(--s)); color: var(--c-text); white-space: nowrap; }
+/* 값 표지: 어두운 책 아래쪽에 걸친다 (옆으로 내밀면 룬 줄·이웃 책과 부딪힌다) — 싸움 창 꼴의 작은 알약 */
+.book-price { position: absolute; left: 50%; top: calc(27px * var(--s)); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-family: var(--font-ui); font-weight: 600; font-size: max(8px, calc(10px * var(--s))); line-height: calc(14px * var(--s)); color: var(--c-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.book-price .price-coin { display: block; width: calc(9px * var(--s)); height: calc(9px * var(--s)); }
 /* 안 삼: 어둡게 (값만 밝게) */
-.book-node[data-state=unowned] .book-thumb,.detail-head[data-state=unowned] .book-thumb{filter:grayscale(1) brightness(.42)}
-.book-node[data-state=unowned] .book-cat{color:var(--c-sub);opacity:.75}
+.book-node[data-state=unowned] .book-thumb, .detail-head[data-state=unowned] .book-thumb { filter: grayscale(1) brightness(.42); }
+.book-node[data-state=unowned] .book-cat { color: var(--c-sub); opacity: .75; }
 /* 사용: 섬네일을 둥근 빛이 감싼다 (사장님 04:3x '사용하면 섬네일 자리를 둥근 빛이 감쌈') — 빛 색 = 등급 색 */
-.book-node[data-state=use] .book-thumb::before,.detail-head[data-state=use] .book-thumb::before{content:'';position:absolute;left:50%;top:50%;width:calc(54px * var(--s));height:calc(54px * var(--s));margin:calc(-27px * var(--s)) 0 0 calc(-27px * var(--s));border-radius:50%;z-index:-1;background:radial-gradient(circle,transparent 49%,var(--tc) 55%,transparent 71%);box-shadow:0 0 calc(14px * var(--s)) calc(2px * var(--s)) var(--tc);opacity:.62;animation:book-glow 2.6s ease-in-out infinite}
-.detail-head[data-state=use] .book-thumb::before{width:40px;height:40px;margin:-20px 0 0 -20px;box-shadow:0 0 8px 1px var(--tc)} /* 설명 카드 섬네일 빛은 작게 — 옆 제목에 안 번지게 */
-@keyframes book-glow{50%{opacity:.4}}
-@media (prefers-reduced-motion:reduce){.book-node[data-state=use] .book-thumb::before,.detail-head[data-state=use] .book-thumb::before{animation:none}}
+.book-node[data-state=use] .book-thumb::before, .detail-head[data-state=use] .book-thumb::before { content: ''; position: absolute; left: 50%; top: 50%; width: calc(54px * var(--s)); height: calc(54px * var(--s)); margin: calc(-27px * var(--s)) 0 0 calc(-27px * var(--s)); border-radius: 50%; z-index: -1; background: radial-gradient(circle, transparent 49%, var(--tc) 55%, transparent 71%); box-shadow: 0 0 calc(14px * var(--s)) calc(2px * var(--s)) var(--tc); opacity: .62; animation: book-glow 2.6s ease-in-out infinite; }
+.detail-head[data-state=use] .book-thumb::before { width: 40px; height: 40px; margin: -20px 0 0 -20px; box-shadow: 0 0 8px 1px var(--tc); } /* 설명 카드 섬네일 빛은 작게 — 옆 제목에 안 번지게 */
+@keyframes book-glow { 50% { opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { .book-node[data-state=use] .book-thumb::before, .detail-head[data-state=use] .book-thumb::before { animation: none; } }
 /* 봉인: 밝게, 빛 없음 — 이름 줄만 보조 색 */
-.book-node[data-state=sealed] .book-cat{color:var(--c-sub)}
-.book-node[aria-pressed=true] .book-thumb{outline:2px dashed var(--c-accent);outline-offset:3px}
-.book-node:focus-visible{outline:none}.book-node:focus-visible .book-thumb{outline:2px dashed var(--c-accent);outline-offset:3px}
-/* 설명 카드 (판 위) */
-.book-detail{position:absolute;inset:2px;z-index:2;overflow:auto;padding:8px 10px;background:#2c241b;border:1px solid #8d7049;box-shadow:0 0 0 2px #17150f99;font-size:12px;line-height:1.4;scrollbar-width:thin;scrollbar-color:#8d7049 #30271e}
-.detail-close{position:absolute;top:0;right:2px;width:28px;min-height:28px;padding:0;font-size:17px;line-height:1;color:var(--c-sub)}
-.detail-close:hover{color:var(--c-text)}
-.detail-head{display:flex;gap:14px;align-items:center;margin:0 26px 4px 0}
-.detail-head .book-thumb{flex:none;width:26px;height:34px;margin-left:6px}
-.detail-head b{display:block;font-size:14px;line-height:1.3;font-weight:700;color:var(--tc);outline:none}
-.detail-head small{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--tc)}
-.book-detail p{margin:3px 0}
-.detail-effect,.detail-list{color:var(--c-text)}
-.detail-list{margin:1px 0 3px;padding:0;list-style:none}.detail-list li{display:inline;white-space:nowrap}.detail-list li+li::before{content:' · ';white-space:normal;color:var(--c-sub)}
-.detail-source{color:var(--c-sub)}
-.detail-state{color:var(--c-text)}
-.book-detail[data-state=unowned] .detail-state{color:var(--c-accent)}
-.detail-state[hidden]{display:none}
-[data-start-theme=pixel] .detail-actions{display:flex;gap:8px;margin-top:6px}
-[data-start-theme=pixel] .detail-actions button{width:auto;min-width:64px;height:30px;padding:2px 10px;font-size:12px;line-height:18px;letter-spacing:0;border-width:3px}
-[data-start-theme=pixel] .detail-actions button[hidden]{display:none}
-[data-start-theme=pixel] #sealBook{--button-fill:#65492f;border-top-color:#aa8754;border-left-color:#8a663e}
-[data-start-theme=pixel] .detail-actions button:disabled{--button-fill:#403326;background-color:var(--button-fill);opacity:.6;color:#a0927c;border-color:#6b5639 #34271b #34271b #6b5639;text-shadow:none;transform:none}
-@media(max-width:679px){.tree-frame{max-width:440px}}
+.book-node[data-state=sealed] .book-cat { color: var(--c-sub); }
+.book-node[aria-pressed=true] .book-thumb, .book-node:focus-visible .book-thumb { outline: 2px solid var(--c-accent); outline-offset: 3px; }
+.book-node:focus-visible { outline: none; }
+/* 설명 카드 (판 위) — 싸움 창 꼴 */
+.book-detail { position: absolute; inset: 2px; z-index: 2; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.4; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.detail-close { position: absolute; top: 0; right: 2px; width: 28px; min-height: 28px; padding: 0; font-size: 17px; line-height: 1; color: var(--c-sub); }
+@media (hover: hover) { .detail-close:hover { color: var(--c-text); } }
+.detail-head { display: flex; gap: 14px; align-items: center; margin: 0 26px 4px 0; }
+.detail-head .book-thumb { flex: none; width: 26px; height: 34px; margin-left: 6px; }
+.detail-head b { display: block; font-size: var(--fs-m); line-height: 1.3; color: var(--tc); outline: none; }
+.detail-head small { display: block; font-size: var(--fs-s); letter-spacing: var(--ls-label); color: var(--tc); }
+.book-detail p { margin: 3px 0; }
+.detail-effect, .detail-list, .detail-state { color: var(--c-text); }
+.detail-source { color: var(--c-sub); }
+.detail-list { margin: 1px 0 3px; padding: 0; list-style: none; }
+.detail-list li { display: inline; white-space: nowrap; }
+.detail-list li + li::before { content: ' · '; white-space: normal; color: var(--c-sub); }
+.book-detail[data-state=unowned] .detail-state { color: var(--c-accent); }
+.detail-state[hidden] { display: none; }
+.detail-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.detail-actions button { min-width: 64px; }
+
+/* ── 이름 수정 창 (싸움 창 꼴 · 폭 = 싸움 메뉴 창 340) ── */
+.name-dialog { width: min(340px, calc(100vw - 32px)); padding: 20px; color: var(--c-text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.name-dialog::backdrop { background: radial-gradient(ellipse at center, rgba(27, 20, 16, .55), rgba(27, 20, 16, .92)); } /* 싸움 메뉴 덮개(.overlay)와 같은 막 */
+.name-dialog h2 { margin: 0 0 12px; font-size: var(--fs-l); line-height: var(--lh-tight); }
+.name-dialog label { font-size: var(--fs-s); }
+.name-dialog input { display: block; width: 100%; margin: 8px 0; padding: 10px; background: transparent; border: 1px solid var(--line); border-radius: 8px; color: var(--c-text); }
+.name-dialog input:focus-visible { outline: none; border-color: var(--c-accent); } /* 입력 칸: 가는 테두리 · 누르면 금색 테두리 (감독 검토 §1) */
+.name-error { min-height: 18px; margin: 0; font-size: var(--fs-s); }
+.dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.dialog-actions button { min-width: 72px; }
+@media (max-height: 500px) { .name-dialog { padding: 12px 18px; } }
+
+/* ── 아주 낮은 가로 화면 (높이 370 이하): 내 정보 칸 틈만 줄인다 ── */
+@media (max-height: 370px) and (min-width: 680px) {
+  .rank-row { margin-bottom: 6px; }
+  .duel-record { margin: 8px 0; }
+  .lobby-tabs { gap: 6px; padding-top: 8px; }
+  .lobby-tabs [role="tab"] { padding: 5px 4px; }
+}
+
+/* ── 좁은 화면 (폭 679 이하 — 작은 가로 폰 568 × 320 · PC 세로 창): 캐릭터 | 내 정보 한 줄 · 그 아래 재고/스킬북, 화면이 아래로 흐른다 ── */
+@media (max-width: 679px) {
+  .lobby {
+    --pad-t: 14px; --pad-b: 24px; --pad-l: max(12px, env(safe-area-inset-left)); --pad-r: max(12px, env(safe-area-inset-right));
+    --head: 34px; --head-gap: 12px; --gap: 12px; --pp: 16px;
+    --card-w: min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px);
+    --card-h: calc(var(--card-w) * 1.5);
+    --grid-w: min(100cqw - 2 * var(--fr), 408px); /* 100cqw = 재고 창 안 폭 (.contents-panel 이 폭 기준) */
+    --grid-h: calc(var(--grid-w) * .8);
+    display: block;
+  }
+  @supports (width: round(down, 10px, 3px)) {
+    .lobby {
+      --card-w: calc(round(down, min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px) - 2 * var(--fr), var(--link)) + 2 * var(--fr));
+      --card-h: calc(round(nearest, var(--card-w) * 1.5 - 2 * var(--fr), var(--link)) + 2 * var(--fr));
+      --grid-w: round(down, min(100cqw - 2 * var(--fr), 408px), var(--link));
+      --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
+    }
+  }
+  .lobby-columns { height: auto; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .character-panel { justify-content: flex-start; gap: 12px; }
+  .profile-panel { overflow: visible; }
+  .contents-panel { grid-column: 1 / -1; overflow: visible; container-type: inline-size; }
+  .inventory-frame, .skill-tree-host { margin: 0 auto; }
+}
+
+/* 여정으로 넘어가며 대기실을 걷어 내는 동안 (game_entry.js — 0.3 s, 뒤의 카드·싸움 화면이 비쳐 보인다) */
+.lobby[data-leaving] { opacity: 0; transition: opacity .3s ease; }
+@media (prefers-reduced-motion: reduce) { .lobby[data-leaving] { transition: none; } }

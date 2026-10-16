@@ -1,36 +1,57 @@
 // 대기실 (샛별 저장소 817db21c · b73a9c82 · 3b280a1b — docs/import/lobby_port_2026-10-16.md §3 · 고친 것 docs/import/lobby_fix_2026-10-16.md): 첫 화면의 처음부터·이어하기와 여정 사이의 세 칸
-//  ① 캐릭터(실제 플레이어 겉모습 360° · 장착 미리보기) + 출발 단추 ② 내 정보(레벨·호칭 · 이름 · 대표 유파 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 무기 · 방어구 · 상점 · 스킬북
+//  ① 캐릭터(실제 플레이어 겉모습 360° · 장착 미리보기) + 출발 단추 ② 내 정보(레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 무기 · 방어구 · 상점 · 스킬북
 //  우리 손댐 (사장님 10/16 01:0x): 무기 칸은 나뭇가지 하나(롱소드 뺌) · 나뭇가지도 방어구처럼 설명 카드(이름 · 등급 · 설명 — 우리 weapons.js 의 nameKo · tier · desc 그대로, 등급 글은 무기 카드와 같은 TIER_LABEL)
 //  10/16 03:5x~04:3x (lobby_fix): 장착은 실제 싸움에 (main.js journeyLoadout) · 케틀 햇 레전드 + '생존술: 기력 +30' · 글자는 싸움 화면 규칙(entrance_type.css) ·
 //   스킬북 = 유파별 별자리(skill_tree.js — 금화로 사고 사용 / 봉인) · 머리(천 주머니) · 이미 받은 인장을 금화로 한 번(seal_coins.js)
 //  10/16 14:0x: 첫 화면·대기실도 가로 화면만 — 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'가 덮어(game_entry.js openHost) 대기실 안 '싸움은 가로 화면입니다' 줄은 지움
+//  10/16 15:3x · 16:0x (사장님 ② ④ ⑤ ⑥ ⑨ — docs/import/ui_unify_2026-10-16.md): 단추 · 탭 = 싸움 화면 꼴(entrance_ui.css) · 창 = 싸움 창 · 세 칸 위아래 줄 맞춤 · 사슬 틀 크기 ·
+//   호칭 내림 상자(대표 유파 칸은 뺌) · 재고 칸 그림 = 매끈 · 칸의 80 % · 등급 빛 · '장착 중'은 칸 귀퉁이 작은 알약 · 장착 · 해제는 설명 카드 안(스킬북 설명 카드의 구입 · 사용 · 봉인과 같은 자리)
 import style from './lobby.css?inline';
-import titleStyle from './start_pixel.css?inline';
+import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { LOBBY_ITEMS, LOBBY_ARMOR, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor } from './lobby_equipment.js';
 import { createLobbyCharacter } from './lobby_character.js';
 import { readProfile, renamePlayer } from './player_profile.js';
-import { readProgress } from './lobby_progress.js';
-import { BOOK_SCHOOLS, readBooks } from './skill_books.js';
+import { readProgress, titleOptions, selectTitle } from './lobby_progress.js';
 import { mountSkillTree } from './skill_tree.js';
 import { convertSeals, takeSealNotice } from './seal_coins.js';
-import { TRADITIONS } from './schools.js';
 import { getWeapon, TIER_LABEL } from './weapons.js';
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 금화 · 머리 그림 — 결과 창 금화 줄과 같은 그림
 
+// 칸 그림 맞춤 (사장님 ⑨ — 감독 검토 §2 '케틀 햇이 칸 폭의 약 45 %'): 그림 파일의 투명한 가장자리를 빼고, 보이는 부분의 긴 쪽이 칸의 80 % 가 되게 키우고 가운데에 둔다.
+//  같은 그림은 한 번만 잰다(이번 실행 동안). 재기 전 · 못 재면 그림 상자 = 칸의 80 % 그대로 (lobby.css .inventory-item img 의 --fit · --fx · --fy)
+const thumbFits = new Map();
+function fitThumb(img) {
+  const apply = f => { img.style.setProperty('--fit', f.fit.toFixed(3)); img.style.setProperty('--fx', f.x.toFixed(3)); img.style.setProperty('--fy', f.y.toFixed(3)); img.dataset.fit = 'content'; };
+  const known = thumbFits.get(img.src);
+  if (known) { apply(known); return; }
+  img.decode().then(() => {
+    const n = 64, canvas = document.createElement('canvas'); canvas.width = canvas.height = n;
+    const g = canvas.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, n, n);
+    const a = g.getImageData(0, 0, n, n).data;
+    let x0 = n, y0 = n, x1 = -1, y1 = -1;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (a[(y * n + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return;
+    const f = { fit: Math.min(1.6, n / Math.max(x1 - x0 + 1, y1 - y0 + 1)), x: (x0 + x1 + 1) / 2 / n - .5, y: (y0 + y1 + 1) / 2 / n - .5 };
+    thumbFits.set(img.src, f); apply(f);
+  }).catch(() => {});
+}
+const CHEVRON = '<svg class="chevron" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5 8 3.5"/></svg>';
+const CHECK = '<svg class="check" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9 9.5 3.5"/></svg>';
+
 export function mountLobby({ root, game, choice, onDepart, onBack }) {
   const ctx = game.getSkillBookContext?.() ?? { test: false };
-  root.innerHTML = `<style>${titleStyle}\n${style}\n${typeStyle}</style><main class="lobby" data-start-theme="pixel" aria-labelledby="lobbyHeading">
+  root.innerHTML = `<style>${uiStyle}\n${style}\n${typeStyle}</style><main class="lobby" aria-labelledby="lobbyHeading">
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
-    <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><button id="lobbyBack">‹ 첫 화면으로</button></header>
+    <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><p id="lobbyStatus" class="lobby-status" role="status"></p><button id="lobbyBack" class="secondary small on-art">‹ 첫 화면으로</button></header>
     <div class="lobby-columns">
-      <section class="character-panel"><div class="portrait-card card-frame" aria-label="내 캐릭터"><div class="character-view" id="characterView" tabindex="0" role="group" aria-label="캐릭터 360도 보기. 드래그 또는 좌우 방향키로 회전, Home으로 정면"></div></div><div class="departure-actions start-actions"><button class="depart" id="lobbyDepart">${choice === 'continue' ? '여정 이어가기' : '여정 시작'}</button></div><p id="lobbyStatus" class="lobby-status" role="status"></p></section>
+      <section class="character-panel"><div class="portrait-card card-frame" aria-label="내 캐릭터"><div class="character-view" id="characterView" tabindex="0" role="group" aria-label="캐릭터 360도 보기. 드래그 또는 좌우 방향키로 회전, Home으로 정면"></div></div><button class="primary depart" id="lobbyDepart">${choice === 'continue' ? '여정 이어가기' : '여정 시작'}</button></section>
       <section class="profile-panel" aria-label="내 정보">
-        <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank"></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd><dt>대표 유파</dt><dd id="lobbySchool"></dd></dl>
+        <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank" class="rank-row"><span id="lobbyLevel"></span><span class="title-picker"><button type="button" id="titleSelect" class="title-select" aria-haspopup="listbox" aria-expanded="false" aria-controls="titleList" aria-labelledby="titleLabel titleCurrent"><span id="titleLabel" class="sr-only">호칭</span><span id="titleCurrent"></span>${CHEVRON}</button><ul id="titleList" class="title-list" role="listbox" aria-labelledby="titleLabel" hidden></ul></span></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd></dl>
         <p class="duel-record"><span>대면 결과</span><b id="duelRecord"></b></p>
         <p class="coin-balance wallet">${COIN_ICON}<span id="lobbyCoins"></span>${POUCH_ICON}<span id="lobbyHeads"></span></p>
-        <nav class="lobby-tabs start-actions" role="tablist" aria-label="대기실 메뉴">
+        <nav class="lobby-tabs" role="tablist" aria-label="대기실 메뉴">
           <button role="tab" id="tabWeapons" aria-controls="panelInventory" aria-selected="true" data-panel="Inventory" data-category="weapon">무기</button>
           <button role="tab" id="tabArmor" aria-controls="panelInventory" aria-selected="false" tabindex="-1" data-panel="Inventory" data-category="armor">방어구</button>
           <button role="tab" id="tabShop" aria-controls="panelShop" aria-selected="false" tabindex="-1" data-panel="Shop">상점</button>
@@ -41,15 +62,14 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
         <div role="tabpanel" id="panelInventory" aria-labelledby="tabWeapons">
           <div class="panel-heading"><h2 id="inventoryHeading">무기</h2><span id="inventoryCount"></span></div>
           <div class="inventory-frame card-frame"><div class="inventory-grid" aria-label="가로 5칸 세로 4칸"></div>
-          <div class="item-detail" id="itemDetail" hidden><p><b id="itemName"></b><span id="itemRarity"></span></p><p id="itemDescription"></p></div></div>
-          <div class="equipment-actions start-actions"><button id="equipItem" disabled>장착</button><button id="unequipItem" disabled>해제</button></div>
+          <div class="item-detail" id="itemDetail" hidden><p class="item-head"><b id="itemName"></b><span id="itemRarity"></span></p><p id="itemDescription"></p><div class="equipment-actions"><button type="button" id="equipItem" disabled>장착</button><button type="button" id="unequipItem" disabled>해제</button></div></div></div>
           <p id="equipmentStatus" class="sr-only" role="status"></p>
         </div>
         <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden><div class="panel-heading"><h2>상점</h2></div><p class="empty-panel">아직 판매 중인 물품이 없습니다.</p></div>
         <div role="tabpanel" id="panelSkills" aria-labelledby="tabSkills" hidden><div class="panel-heading"><h2>스킬북</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="skillCoins"></b>${POUCH_ICON}<b id="skillHeads"></b></span></div><div id="skillTreeHost" class="skill-tree-host"></div><p id="skillStatus" class="sr-only" role="status"></p></div>
       </section>
     </div>
-  </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions start-actions"><button type="button" id="cancelName">취소</button><button type="submit">저장</button></div></form></dialog>`;
+  </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>`;
   const $ = id => root.getElementById(id), events = new AbortController();
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();
@@ -58,25 +78,68 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   //  알림은 아직 안 띄운 바꿈이 있을 때 한 번 (takeSealNotice). 테스트 경로에서는 바꾸지도 알리지도 않는다
   const converted = ctx.test ? null : (convertSeals(), takeSealNotice());
   const profile = readProfile();
-  // 대표 유파 = 산 스킬북이 가장 많은 유파(같으면 탭 차례 앞)
-  function representative() {
-    const owned = readBooks().owned, count = Object.fromEntries(BOOK_SCHOOLS.map(s => [s, 0]));
-    for (const id of owned) count[id.split(':')[0]]++;
-    const best = BOOK_SCHOOLS.reduce((a, s) => (count[s] > count[a] ? s : a), BOOK_SCHOOLS[0]);
-    return count[best] ? `${TRADITIONS[best].nameKo} 유파` : '아직 없음';
-  }
+  const status = (text, tone = '') => { $('lobbyStatus').textContent = text; if (tone) $('lobbyStatus').dataset.tone = tone; else delete $('lobbyStatus').dataset.tone; };
+  // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥ '대표 유파 정보는 없어도 되겠다')
   function renderWallet() {
     const progress = readProgress();
-    $('lobbyRank').textContent = `Lv.${progress.level} ${progress.title}`;
+    $('lobbyLevel').textContent = `Lv.${progress.level}`; // 레벨은 글 그대로 (금색 아님 — 강조 색은 누를 것 · 꼭 볼 것만)
     $('lobbyCoins').textContent = $('skillCoins').textContent = progress.coins.toLocaleString('ko-KR');
     $('lobbyHeads').textContent = $('skillHeads').textContent = progress.heads.toLocaleString('ko-KR');
-    $('lobbySchool').textContent = representative();
   }
-  renderWallet();
+  // ── 호칭 내림 상자 (사장님 10/16 15:3x ⑥ "'여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" ·
+  //    16:0x "호칭 내림 상자를 누르면 아래로 열리는 투명도를 가진 박스에 이미 가진 호칭인 여행자가 보이고, '호칭 없음' 같은 시스템 알림은 거기서 빼자"):
+  //  단추 = 지금 호칭 + 작은 갈매기표(싸움 화면 부 단추 꼴 — 금색 아님) · 누르면 바로 아래로 반투명 창(--panel)이 열려 가진 호칭만 보인다(지금은 기본 '여행자' 하나 — 지금 호칭 = ✓).
+  //  고르면 title 에 저장(lobby_progress.js selectTitle). 키보드: 단추에서 ↓ ↑ = 열기 · 목록에서 ↑ ↓ Home End = 옮기기 · Enter Space = 고르기 · Esc = 닫고 단추로 · Tab = 닫기 / 바깥을 누르면 닫힘
+  const picker = $('titleSelect'), titleList = $('titleList');
+  const titleItems = () => [...titleList.querySelectorAll('[role=option]')];
+  function renderTitles() {
+    const { title } = readProgress();
+    $('titleCurrent').textContent = title;
+    titleList.replaceChildren(...titleOptions().map((name, i) => {
+      const li = document.createElement('li');
+      li.id = `titleOption${i}`; li.setAttribute('role', 'option'); li.tabIndex = -1; li.dataset.title = name;
+      li.setAttribute('aria-selected', String(name === title));
+      li.innerHTML = `<span class="title-name"></span>${CHECK}`; li.firstChild.textContent = name;
+      return li;
+    }));
+  }
+  function openTitles(at = 'current') {
+    renderTitles();
+    titleList.hidden = false; picker.setAttribute('aria-expanded', 'true');
+    const items = titleItems(), current = items.findIndex(o => o.getAttribute('aria-selected') === 'true');
+    items[at === 'last' ? items.length - 1 : Math.max(0, current)]?.focus({ preventScroll: true });
+  }
+  function closeTitles(refocus = true) {
+    if (titleList.hidden) return;
+    titleList.hidden = true; picker.setAttribute('aria-expanded', 'false');
+    if (refocus) picker.focus({ preventScroll: true });
+  }
+  function chooseTitle(name) {
+    const result = selectTitle(name);
+    if (result.ok) { renderTitles(); if (!result.saved) status('호칭은 이번 실행 동안 유지됩니다.'); }
+    closeTitles();
+  }
+  listen(picker, 'click', () => (titleList.hidden ? openTitles() : closeTitles()));
+  listen(picker, 'keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openTitles(e.key === 'ArrowUp' ? 'last' : 'current'); }
+    else if (e.key === 'Escape' && !titleList.hidden) { e.preventDefault(); closeTitles(); }
+  });
+  listen(titleList, 'keydown', e => {
+    const items = titleItems(), i = items.indexOf(root.activeElement);
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+      e.preventDefault();
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : Math.min(items.length - 1, Math.max(0, i + (e.key === 'ArrowDown' ? 1 : -1)));
+      items[next]?.focus({ preventScroll: true });
+    } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (items[i]) chooseTitle(items[i].dataset.title); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeTitles(); }
+    else if (e.key === 'Tab') closeTitles(); // 단추로 돌린 뒤 브라우저가 다음 칸으로 옮긴다
+  });
+  listen(titleList, 'click', e => { const item = e.target.closest('[role=option]'); if (item) chooseTitle(item.dataset.title); });
+  listen(root, 'pointerdown', e => { if (!titleList.hidden && !e.composedPath().some(n => n === picker || n === titleList)) closeTitles(false); });
+  renderWallet(); renderTitles();
   $('lobbyName').textContent = profile.name;
   const total = profile.wins + profile.losses;
   $('duelRecord').textContent = `${profile.wins}승리 ${profile.losses}패배 (${total ? Math.round(profile.wins / total * 100) : 0}%)`;
-  const status = (text, tone = '') => { $('lobbyStatus').textContent = text; if (tone) $('lobbyStatus').dataset.tone = tone; else delete $('lobbyStatus').dataset.tone; };
   if (converted?.coins) status(`인장 ${converted.seals}개를 금화 ${converted.coins.toLocaleString('ko-KR')}으로 바꿨습니다.`, 'notice');
   const preview = createLobbyCharacter($('characterView'), game); // 몸 = 다음 판 플레이어와 같은 Fighter (lobby_rig.js — game.lobbyRigSpec)
   let selectedItem = null, category = 'weapon';
@@ -114,6 +177,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     const spec = getWeapon(id);
     return { name: spec.nameKo, tier: TIER_LABEL[spec.tier] ? spec.tier : 'common', description: spec.desc || '', ability: '' };
   };
+  // 칸: 그림 = 칸의 80 % · 매끈하게 줄임 · 뒤에 등급 빛(무기 카드 앞면 .wthumb 와 같은 원 빛 — data-tier · lobby.css) — 사장님 ⑨ 1 단계(감독 검토 §2)
   function renderInventory() {
     const items = category === 'armor' ? [LOBBY_ARMOR.id] : LOBBY_ITEMS;
     $('inventoryHeading').textContent = category === 'armor' ? '방어구' : '무기';
@@ -122,8 +186,9 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
       const id = items[i];
       if (!id) return '<span class="inventory-slot" aria-hidden="true"></span>';
       const thumbnail = category === 'armor' ? LOBBY_ARMOR.thumbnail : `ui/weapons/${id}.webp`;
-      return `<button class="inventory-item" data-item="${id}" data-${category}="${id}" aria-pressed="false"><img src="${thumbnail}" alt="${itemName(id)}" draggable="false"><span class="equipped-badge" hidden>장착 중</span></button>`;
+      return `<button class="inventory-item" data-item="${id}" data-${category}="${id}" data-tier="${itemCard(id).tier}" aria-pressed="false"><img src="${thumbnail}" alt="${itemName(id)}" draggable="false"><span class="equipped-badge" hidden>장착 중</span></button>`;
     }).join('');
+    for (const img of grid.querySelectorAll('.inventory-item img')) fitThumb(img);
     refreshEquipment();
   }
   function refreshEquipment() {
@@ -133,6 +198,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
       button.querySelector('.equipped-badge').hidden = id !== equipped[category];
       button.setAttribute('aria-label', `${itemName(id)}${id === equipped[category] ? ' · 장착 중' : ''} 선택`);
     }
+    // 장착 · 해제: 지금 누를 수 있는 쪽 = 주 단추 · 다른 쪽 = 누를 수 없는 부 단추 (꼴은 entrance_ui.css — 누를 수 있나로 고른다)
     $('equipItem').disabled = !selectedItem || selectedItem === equipped[category];
     $('unequipItem').disabled = !selectedItem || selectedItem !== equipped[category];
     $('itemDetail').hidden = !selectedItem;
@@ -157,8 +223,9 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
       refreshEquipment();
     } catch { $('equipmentStatus').textContent = '장비를 표시하지 못했습니다. 다시 시도해 주세요.'; }
   }
-  listen($('equipItem'), 'click', () => { if (selectedItem && selectedItem !== equipped[category]) equip(selectedItem); });
-  listen($('unequipItem'), 'click', () => { if (selectedItem && selectedItem === equipped[category]) equip(null); });
+  // 누른 단추가 사라지지 않게 초점을 짝 단추로 (장착하면 해제가, 해제하면 장착이 주 단추가 된다)
+  listen($('equipItem'), 'click', () => { if (selectedItem && selectedItem !== equipped[category]) { equip(selectedItem); $('unequipItem').focus({ preventScroll: true }); } });
+  listen($('unequipItem'), 'click', () => { if (selectedItem && selectedItem === equipped[category]) { equip(null); $('equipItem').focus({ preventScroll: true }); } });
   renderInventory();
   listen($('editName'), 'click', () => { $('playerNameInput').value = readProfile().name; $('nameError').textContent = ''; $('nameDialog').showModal(); $('playerNameInput').select(); });
   listen($('cancelName'), 'click', () => $('nameDialog').close());

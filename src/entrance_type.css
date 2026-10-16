@@ -6,11 +6,10 @@
    · 공지 안 본문 · 날짜 줄은 한 단계 아래 10 (--fs-xs — 사장님 10/16 08:3x '공지사항 안의 글씨 더 작게 해' · docs/import/ui_fix_2026-10-16.md §2) · 공지 제목도 본문과 같은 10
      (14:0x '공지 제목도 글자 크기 내용과 같이 줄여. 색은 흰색으로 유지' — 굵기 700 · 흰색 --c-text 그대로 · §11). 창 제목 17 · 아래 줄 12 는 그대로
    · 강조는 강조 색(금색) 또는 굵기만. 등급 글은 등급 색(--tier-*). 한글은 낱말 가운데서 줄을 바꾸지 않는다(keep-all)
-   · 크기는 키우지 않는다 — 낮은 가로 화면의 10px 두 곳(장착 배지 · 상태 줄)도 그대로 · 나무 판 · 단추 꼴 · 단추 크기 그대로
-   · 단추 글: 주 단추(처음부터 · 이어하기 · 여정 시작 · 확인 · 닫기 · 저장 · 인증번호 받기 · 연결하기 · 장착 · 구입) 700 / 부 단추(첫 화면으로 · 아래 줄 · 취소 · 해제 · 고르지 않은 탭) 400 / 고른 탭 600
-   이 파일은 start_screen.css · start_pixel.css · lobby.css 뒤에 붙는다(game_entry.js · lobby.js) — 꾸밈 값은 그 파일들, 글자 값은 여기 한 곳. */
+   · 단추 글(10/16 15:3x — 싸움 화면 단추와 같은 값, entrance_ui.css 한 곳): 주 단추 14 · 700 / 부 단추 14 · 400 / 작은 부 단추(아래 줄 · 첫 화면으로) 12 · 400 / 탭 12 · 400, 고른 탭 600
+   이 파일은 start_screen.css · start_pixel.css · lobby.css · entrance_ui.css 뒤에 붙는다(game_entry.js · lobby.js) — 꾸밈 값은 그 파일들, 글자 값은 여기 한 곳. */
 :host {
-  --fs-xs: 10px; /* 글자 규칙 세 단계(--fs-s 12 · --fs-m 14 · --fs-l 17 — index.html :root)의 한 단계 아래 — 첫 화면·대기실에만(공지 본문·날짜 · 낮은 가로 대기실의 10px 두 곳과 같은 크기) */
+  --fs-xs: 10px; /* 글자 규칙 세 단계(--fs-s 12 · --fs-m 14 · --fs-l 17 — index.html :root)의 한 단계 아래 — 첫 화면·대기실에만(공지 본문·날짜 · '장착 중' 알약) */
   --font-plain: 'Pretendard', 'Noto Sans TC', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif; /* 라틴도 프리텐다드 — Cinzel 작은 대문자로는 메일 주소를 맞게 썼는지 보기 어렵다 */
   --tier-uncommon: #a8d67e; /* 스킬북 2급 '언커먼' (무기 등급엔 없는 칸 — 샛별 저장소 기획의 이름 · 색은 사장님 확인 전): 커먼(크림)과 레어(파랑) 사이의 옅은 풀색, ??? 청록과 다르게 */
   font-family: var(--font-ui);
@@ -29,10 +28,11 @@
 :host [data-tier=legend] { --tc: var(--tier-legend); }
 :host [data-tier=mystery] { --tc: var(--tier-mystery); }
 
+/* ── 탭 (대기실 메뉴 · 스킬북 유파): 12 · 400 · 고른 탭 600 ── */
+:host [role="tab"] { font-size: var(--fs-s); font-weight: var(--fw-body); }
+:host [role="tab"][aria-selected="true"] { font-weight: var(--fw-label); }
+
 /* ── 첫 화면 ── */
-:host .title-group .start-actions button { font-weight: var(--fw-head); }
-:host .title-footer button { font-weight: var(--fw-body); color: var(--c-sub); }
-:host .title-footer button:hover, :host .title-footer button:focus-visible { color: var(--c-text); }
 :host #selectionStatus:not(.sr-only) { font: var(--fw-body) var(--fs-s) / var(--lh-text) var(--font-ui); color: var(--c-sub); }
 
 /* ── 창 (공지 · 설정 · 계정) ── */
@@ -44,30 +44,25 @@
 :host .notice-entry h3 { font-size: var(--fs-xs); font-weight: var(--fw-head); color: var(--c-text); } /* 공지 제목 = 본문과 같은 10 · 흰색(--c-text) · 700 그대로 (사장님 10/16 14:0x) */
 :host .notice-entry p { font-size: var(--fs-xs); font-weight: var(--fw-body); line-height: 1.6; color: var(--c-sub); }
 :host .hide-read { font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); }
-:host .confirm-button { font-weight: var(--fw-head); }
 :host .settings-content { font-size: var(--fs-m); font-weight: var(--fw-body); }
 :host .settings-content p, :host .account-content p { font-size: var(--fs-s); color: var(--c-sub); }
 :host .account-content label { font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-text); }
-:host .account-submit { font-family: var(--font-ui); font-weight: var(--fw-head); }
 :host .account-text-button { font-family: var(--font-ui); font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); }
 :host #accountStatus { color: var(--c-text); }
 :host #accountAddress { font-size: var(--fs-m); color: var(--c-text); }
 
 /* ── 대기실 ── */
-:host .lobby-header button { font-weight: var(--fw-body); color: var(--c-sub); }
-:host .lobby-header button:hover { color: var(--c-text); }
-:host .profile-data dt, :host .duel-record > span, :host .panel-heading span, :host .lobby-status, :host .empty-panel { font-weight: var(--fw-body); color: var(--c-sub); }
+:host .profile-data dt, :host .duel-record > span, :host .panel-heading > span:not(.wallet), :host .lobby-status, :host .empty-panel { font-weight: var(--fw-body); color: var(--c-sub); }
 :host .profile-data dd { font-weight: var(--fw-body); color: var(--c-text); text-shadow: none; }
-:host .profile-data #lobbyRank { font-weight: var(--fw-head); color: var(--c-accent); }
+:host #lobbyLevel { font-weight: var(--fw-head); color: var(--c-text); } /* 레벨 = 본문 색 + 굵게 (전 금색 — 강조 색은 누를 것 · 꼭 볼 것만, 감독 검토 §1) */
+:host .title-select { font-weight: var(--fw-body); color: var(--c-text); }
+:host .title-list [role="option"] { font-weight: var(--fw-body); }
+:host .title-list [aria-selected="true"] { font-weight: var(--fw-label); } /* 지금 호칭 = 600 + ✓ */
 :host .profile-data .name-row span { font-weight: var(--fw-head); }
-:host .duel-record b, :host .coin-balance { font-weight: var(--fw-body); color: var(--c-text); }
+:host .duel-record b, :host .coin-balance, :host .wallet b { font-weight: var(--fw-body); color: var(--c-text); }
 :host .panel-heading h2, :host .name-dialog h2 { font-weight: var(--fw-head); text-shadow: none; }
 :host .name-dialog h2 { font-size: var(--fs-l); }
 :host .name-dialog label, :host .name-error { color: var(--c-sub); font-weight: var(--fw-body); }
-:host .lobby-tabs button { font-weight: var(--fw-body); }
-:host .lobby-tabs button[aria-selected=true] { font-weight: var(--fw-label); }
-:host .departure-actions button, :host #equipItem, :host .dialog-actions button[type=submit] { font-weight: var(--fw-head); }
-:host #unequipItem, :host .dialog-actions button[type=button] { font-weight: var(--fw-body); }
 :host .equipped-badge { font-weight: var(--fw-label); }
 :host .lobby-status[data-tone=notice] { color: var(--c-accent); font-weight: var(--fw-label); }
 /* 설명 카드: 이름 · 등급(등급 색) · 설명(본문 색 — 무기 카드 설명과 같게) · 특수 능력(등급 색 — 무기 카드 특수 능력 줄과 같게) */

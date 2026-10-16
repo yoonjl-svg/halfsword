@@ -1,19 +1,27 @@
-/* 첫 화면 픽셀 시안 (샛별 저장소 시작 화면 마지막 판 그대로 — 대기실 lobby.css 도 이 단추·창 꾸밈을 쓴다).
-   아래 줄 세 칸은 공지사항 · 설정(샛별 3b280a1b 판의 설정 창 꾸밈) · 계정 연결(마지막 판의 꾸밈 그대로).
-   game_entry.js 가 Shadow DOM 안에 넣으며 html[data-start-theme=pixel] 을 :host 로 바꾼다 — 아래 --line · 바탕색은 그 안에서만 (게임 HUD 의 --line 과 다르다, 문서 §8) */
+/* 첫 화면 픽셀 시안 (샛별 저장소 시작 화면 마지막 판 — 공지 · 설정 · 계정 창 꾸밈).
+   game_entry.js 가 Shadow DOM 안에 넣으며 html[data-start-theme=pixel] 을 :host 로 바꾼다 — 아래 --dlg-line · 바탕색은 그 안에서만.
+   10/16 15:3x 사장님 ② "나무 판자를 전투 단추로 바꿔" · ③ "설정은 미닫이가 맞아" (docs/import/ui_unify_2026-10-16.md — 스타일 규칙 '겉은 픽셀, 속은 매끈'):
+    · 겉(픽셀) = 숲 배경 · 큰 제목 글자(적막 · STILLNESS · 가름줄) — 그대로
+    · 속(매끈) = 단추 · 미닫이 = 싸움 화면 꼴(entrance_ui.css). 여기 있던 나무 판자 단추 · 눌릴 때 3 px 뚝 · 단추 앞 픽셀 화살표 · 네모 체크는 지웠다
+    · 창(공지 · 설정 · 계정)의 나무 창 꼴 · 색은 그대로 둔다(사장님 '색 수는 첫 화면은 두고' — 창을 싸움 창으로 바꿀지는 사장님 확인 전, 문서 §8)
+    · 대기실은 이 파일을 더는 넣지 않는다(대기실 단추도 entrance_ui.css) */
 html[data-start-theme="pixel"] {
   color-scheme: dark;
-  /* 게임 index.html의 본문 / 보조 / 강조색 및 12·14·17px 위계를 따른다. */
-  --c-text: #f3e9d8;
-  --c-sub: #b8a88e;
-  --c-accent: #d9a441;
+  /* 글자 색 넷 · 크기 12 · 14 · 17 은 게임 index.html :root 토큰을 그대로 물려받는다 (여기서 다시 적지 않는다) */
   --muted: var(--c-sub);
-  --line: #65513a;
+  --dlg-line: #65513a; /* 창 가름줄 (나무 창 꼴) — 싸움 화면 --line 은 단추 테두리가 쓴다 */
   color: var(--c-text);
   background: #30291e;
 }
 [data-start-theme="pixel"] .scene-shade { background: linear-gradient(0deg, #211c19b0 0%, transparent 24%, transparent 80%, #211c1930 100%); }
-[data-start-theme="pixel"] .title-screen { padding-left: 25vw; transition: opacity .7s steps(7), translate .7s steps(7); translate: 0 8px; }
+/* 나타나기 (감독 진단 (c) — 전: 첫 화면 전체가 0.7 s 7 단계로 끊어 나타남): 픽셀 제목 글자(적막 · STILLNESS · 가름줄)만 7 단계로 끊고(픽셀 결),
+   단추 · 아래 줄은 매끈하게 (같은 0.7 s · 같은 8 px 올라옴 — 바람이 지나간 뒤 0.45 s 늦게, 그대로) */
+[data-start-theme="pixel"] .title-screen { padding-left: 25vw; opacity: 1; translate: none; transition: none; }
+[data-start-theme="pixel"] :is(.title-korean, .pixel-wordmark, .title-rule, .start-actions, .title-footer) { opacity: 0; translate: 0 8px; }
+[data-start-theme="pixel"] :is(.title-korean, .pixel-wordmark, .title-rule) { transition: opacity .7s steps(7), translate .7s steps(7); }
+[data-start-theme="pixel"] :is(.start-actions, .title-footer) { transition: opacity .7s ease, translate .7s ease; }
+[data-start-theme="pixel"] #entrance:is([data-phase="wind"], [data-phase="ready"]) :is(.title-korean, .pixel-wordmark, .title-rule, .start-actions, .title-footer) { opacity: 1; translate: 0 0; }
+[data-start-theme="pixel"] #entrance[data-phase="wind"] :is(.title-korean, .pixel-wordmark, .title-rule, .start-actions, .title-footer) { transition-delay: .45s; }
 [data-start-theme="pixel"] .title-group { transform: translateY(-2vh); }
 [data-start-theme="pixel"] .title-korean { position: relative; color: var(--c-text); font-size: 32px; letter-spacing: .2em; padding: 0; font-weight: 600; margin: 0 auto 0; text-shadow: 2px 2px #302319; }
 [data-start-theme="pixel"] .title-korean canvas { display: block; height: 58px; width: auto; margin: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -23,28 +31,17 @@ html[data-start-theme="pixel"] {
 [data-start-theme="pixel"] .title-rule { width: 120px; margin: 7px auto 28px; gap: 12px; }
 [data-start-theme="pixel"] .title-rule::before, [data-start-theme="pixel"] .title-rule::after { height: 2px; width: 40px; background: #b99b63; box-shadow: 0 2px #33291c; }
 [data-start-theme="pixel"] .title-rule span { transform: none; width: 4px; height: 4px; background: #eed49a; box-shadow: 0 -4px #c5a56b, 0 4px #967849, -4px 0 #c5a56b, 4px 0 #967849; }
-[data-start-theme="pixel"] .start-actions { gap: 16px; }
-[data-start-theme="pixel"] .start-actions button, [data-start-theme="pixel"] .confirm-button {
-  --button-fill: #85602f;
-  width: calc(278px * .82); height: calc(60px * .82); min-height: 0; padding: 6px 20px;
-  background: var(--button-fill);
-  background-image: repeating-linear-gradient(0deg, #482b1712 0 2px, transparent 2px 8px);
-  border: 4px solid #3c2818; border-top-color: #d1ab6d; border-left-color: #b78a4e;
-  box-shadow: inset 0 3px #dfbd7b55, inset 0 -4px #4b301b66, 0 4px #221b13;
-  clip-path: polygon(4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px), 0 4px, 4px 4px);
-  color: var(--c-text); text-shadow: 0 2px #4b321f; font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: .06em;
-  transition: none;
-}
-[data-start-theme="pixel"] #continueJourney { --button-fill: #65492f; border-top-color: #aa8754; border-left-color: #8a663e; }
-[data-start-theme="pixel"] .start-actions button::before { left: 18px; top: calc(50% - 3px); width: 3px; height: 6px; background: #ffe6a6; box-shadow: -3px -3px #ffe6a6, -3px 0 #ffe6a6, -3px 6px #ffe6a6; }
-[data-start-theme="pixel"] .start-actions button:hover, [data-start-theme="pixel"] .start-actions button:focus-visible, [data-start-theme="pixel"] .start-actions button[aria-pressed="true"] { background-color: #886132; border-color: #d3ab68 #4b321f #4b321f #d3ab68; color: var(--c-text); box-shadow: inset 0 3px #eccb8b66, inset 0 -4px #63402288, 0 4px #221b13; }
-[data-start-theme="pixel"] #continueJourney:hover, [data-start-theme="pixel"] #continueJourney:focus-visible, [data-start-theme="pixel"] #continueJourney[aria-pressed="true"] { background-color: #82603a; }
-[data-start-theme="pixel"] .start-actions button:hover::before, [data-start-theme="pixel"] .start-actions button:focus-visible::before { opacity: 1; }
-[data-start-theme="pixel"] .start-actions button:active, [data-start-theme="pixel"] .confirm-button:active { transform: translateY(3px); box-shadow: inset 0 3px #412b1b99; }
-[data-start-theme="pixel"] button:focus-visible, [data-start-theme="pixel"] input:focus-visible, [data-start-theme="pixel"] .notice-list:focus-visible { outline: 2px dashed var(--c-accent); outline-offset: 5px; }
-[data-start-theme="pixel"] .title-footer { justify-content: flex-start; }
-[data-start-theme="pixel"] .title-footer button { color: var(--c-sub); background: #30271de6; border: 1px solid var(--line); box-shadow: none; padding: 0 14px; min-height: 36px; font-size: 12px; }
-[data-start-theme="pixel"] .title-footer button:hover, [data-start-theme="pixel"] .title-footer button:focus-visible { color: var(--c-text); border-color: var(--c-sub); }
+/* 처음부터(주 단추) · 이어하기(부 단추 — 그림 위라 창 바탕을 깐다): 꼴 · 높이는 싸움 화면 단추 그대로(entrance_ui.css), 폭만 자리 값(전 나무 판자 폭 그대로 228 · 낮은 화면 205) ·
+   두 단추 사이 8 px = 싸움 창의 주 단추 → 부 단추 사이 */
+[data-start-theme="pixel"] .start-actions { gap: 8px; }
+[data-start-theme="pixel"] .start-actions button { width: calc(278px * .82); }
+[data-start-theme="pixel"] input:focus-visible, [data-start-theme="pixel"] .notice-list:focus-visible { outline: 2px dashed var(--c-accent); outline-offset: 5px; }
+/* 아래 줄 세 칸 (공지사항 · 설정 · 계정 연결) = 작은 부 단추 · 그림 위라 창 바탕 (entrance_ui.css .secondary.small.on-art) — 폭은 전과 같은 70 px 세 칸(글은 가운데 · 옆 여백 없이) ·
+   계정이 이어지면 메일 앞부분이 들어가게 폭을 글에 맞춘다(220 px · 화면 40 % 까지 — 넘치면 …) */
+[data-start-theme="pixel"] .title-footer { justify-content: flex-start; gap: 8px; }
+[data-start-theme="pixel"] .title-footer button.small { width: 70px; padding-left: 0; padding-right: 0; }
+[data-start-theme="pixel"] #openAccount { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-start-theme="pixel"] #openAccount[data-connected=true] { width: auto; min-width: 70px; max-width: min(220px, 40vw); padding-left: 10px; padding-right: 10px; }
 [data-start-theme="pixel"] dialog {
   width: min(532px, calc(100vw - 40px)); max-height: min(620px, calc(100svh - 44px));
   color: var(--c-text); background: #30271e; border: 2px solid #8d7049;
@@ -52,7 +49,7 @@ html[data-start-theme="pixel"] {
   box-shadow: 0 0 0 3px #211c16, 4px 6px 0 3px #17150f77;
 }
 [data-start-theme="pixel"] dialog::backdrop { background: #261e1680; }
-[data-start-theme="pixel"] .notice-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+[data-start-theme="pixel"] .notice-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 26px; border-bottom: 1px solid var(--dlg-line); }
 [data-start-theme="pixel"] .notice-count { float: none; color: var(--c-sub); font-size: 12px; }
 [data-start-theme="pixel"] .notice-header h2 { margin: 0; color: var(--c-text); font-size: 17px; font-weight: 600; }
 [data-start-theme="pixel"] .notice-list {
@@ -68,12 +65,11 @@ html[data-start-theme="pixel"] {
 [data-start-theme="pixel"] .notice-meta .unread::before { width: 4px; height: 4px; }
 [data-start-theme="pixel"] .notice-entry h3 { color: var(--c-text); font-size: 14px; }
 [data-start-theme="pixel"] .notice-entry p { color: var(--c-sub); font-size: 14px; }
-[data-start-theme="pixel"] .notice-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 26px; border-top: 1px solid var(--line); background: #30271e; }
+[data-start-theme="pixel"] .notice-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 26px; border-top: 1px solid var(--dlg-line); background: #30271e; }
+/* '지난 업데이트 숨김' = 싸움 화면 미닫이 (사장님 ③ — 전 네모 체크) · 글을 눌러도 켜고 끈다(label) */
 [data-start-theme="pixel"] .hide-read { color: var(--c-sub); font-size: 12px; font-weight: 400; margin: 0; white-space: nowrap; }
-[data-start-theme="pixel"] .hide-read input { width: 18px; height: 18px; border: 1px solid var(--c-sub); background: #211c16; }
-[data-start-theme="pixel"] .hide-read input:checked::after { border: 0; transform: none; width: 3px; height: 3px; background: var(--c-text); box-shadow: 3px -3px var(--c-text), -3px -3px var(--c-text), 3px -6px var(--c-text); }
-[data-start-theme="pixel"] .confirm-button { flex: 0 0 72px; width: 72px; height: 36px; padding: 4px 14px; font-size: 14px; border-width: 2px; border-color: #8d7049 #453422 #453422 #8d7049; background: #60462f; box-shadow: inset 0 -2px #392b1e; text-shadow: none; letter-spacing: 0; }
-[data-start-theme="pixel"] .confirm-button:hover { background-color: #715237; }
+/* 확인 = 주 단추(entrance_ui.css) · 폭만 자리 값(전 72 px 그대로) */
+[data-start-theme="pixel"] .confirm-button { flex: 0 0 72px; width: 72px; }
 [data-start-theme="pixel"] .confirm-button span { display: none; }
 @media (orientation: portrait) {
   [data-start-theme="pixel"] .title-screen { padding: 22px; }
@@ -88,57 +84,49 @@ html[data-start-theme="pixel"] {
   [data-start-theme="pixel"] .title-korean canvas { height: 48px; }
   [data-start-theme="pixel"] .title-group { transform: translateY(-6px); }
   [data-start-theme="pixel"] .title-rule { margin: 1px auto 16px; }
-  [data-start-theme="pixel"] .start-actions { gap: 12px; }
-  [data-start-theme="pixel"] .start-actions button { height: calc(48px * .82); padding: 4px 20px; width: calc(250px * .82); }
+  [data-start-theme="pixel"] .start-actions { gap: 8px; }
+  [data-start-theme="pixel"] .start-actions button { width: calc(250px * .82); }
   [data-start-theme="pixel"] dialog { width: min(500px, calc(100vw - 48px)); max-height: calc(100svh - 32px); }
   [data-start-theme="pixel"] .notice-header { padding: 14px 22px; }
   [data-start-theme="pixel"] .notice-list { padding: 0 22px; }
   [data-start-theme="pixel"] .notice-entry { padding: 14px 0; }
   [data-start-theme="pixel"] .notice-footer { padding: 8px 22px; }
-  [data-start-theme="pixel"] .title-footer button { min-height: 32px; padding: 0 12px; }
 }
-@media (prefers-reduced-motion: reduce) { [data-start-theme="pixel"] .title-screen { transition: none; translate: none; } }
-/* 첫 화면 하단의 공지/설정: 종전 공지 박스(약78×36)의 90%, 동일한 두 칸. */
-[data-start-theme="pixel"] .title-footer{gap:8px}
-[data-start-theme="pixel"] .title-footer button{box-sizing:border-box;width:70px;min-height:0;height:32px;padding:0;font-size:12px}
-[data-start-theme="pixel"] #settingsDialog{width:min(360px,calc(100vw - 40px))}
-[data-start-theme="pixel"] .settings-content{padding:18px 26px;font-size:14px}
-[data-start-theme="pixel"] .settings-content p{font-size:12px;color:var(--c-sub);margin:12px 0 0}
-[data-start-theme="pixel"] .settings-content p:empty{display:none}
-[data-start-theme="pixel"] .setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
-[data-start-theme="pixel"] .setting-row input{accent-color:var(--c-accent);width:18px;height:18px;margin:0}
-[data-start-theme="pixel"] #settingsDialog .notice-footer{justify-content:flex-end}
-[data-start-theme="pixel"] #openAccount{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-[data-start-theme="pixel"] #openAccount[data-connected=true]{width:auto;min-width:70px;max-width:min(220px,40vw);padding:0 10px}
-[data-start-theme="pixel"] #accountDialog{width:min(380px,calc(100vw - 40px))}
-[data-start-theme="pixel"] .account-content{padding:16px 24px;overflow:auto;font-size:12px}
-[data-start-theme="pixel"] .account-content p{margin:0 0 12px;color:var(--c-sub);line-height:1.6;overflow-wrap:anywhere}
-[data-start-theme="pixel"] .account-content p:empty{display:none}
-[data-start-theme="pixel"] .account-content label{display:block;margin-bottom:5px}
-[data-start-theme="pixel"] .account-content input{box-sizing:border-box;width:100%;padding:9px 10px;background:#211c16;border:1px solid var(--line);color:var(--c-text);font:14px Pretendard,sans-serif;border-radius:0}
-[data-start-theme="pixel"] .account-submit{width:100%;margin:12px 0 6px;padding:8px 12px;border:2px solid #8d7049;border-right-color:#453422;border-bottom-color:#453422;background:#60462f;color:var(--c-text);font:600 12px Pretendard,sans-serif;box-shadow:inset 0 -2px #392b1e}
-[data-start-theme="pixel"] .account-text-button{background:transparent;border:0;padding:6px 0;color:var(--c-sub);font:12px Pretendard,sans-serif;text-decoration:underline;text-underline-offset:3px}
-[data-start-theme="pixel"] .account-secondary{display:flex;justify-content:space-between;gap:12px}
-[data-start-theme="pixel"] .account-content .account-note{margin:14px 0 0}
-[data-start-theme="pixel"] #accountStatus{color:var(--c-text);margin-top:12px}
-[data-start-theme="pixel"] #accountAddress{color:var(--c-text);font-size:14px}
-[data-start-theme="pixel"] #accountDialog .notice-footer{justify-content:flex-end}
-[data-start-theme="pixel"] #accountDialog button:disabled{opacity:.5;cursor:default}
-@media(max-height:500px) and (orientation:landscape){[data-start-theme="pixel"] .title-footer button{height:29px}}
+@media (prefers-reduced-motion: reduce) { [data-start-theme="pixel"] :is(.title-screen, .title-korean, .pixel-wordmark, .title-rule, .start-actions, .title-footer) { transition: none; translate: none; } }
+/* 설정 창: '화면 60 fps 제한' = 싸움 화면 미닫이 (사장님 ③ "설정은 미닫이가 맞아" — 같은 값 · 같은 저장 gladiator-settings) · 확인 = 주 단추 */
+[data-start-theme="pixel"] #settingsDialog { width: min(360px, calc(100vw - 40px)); }
+[data-start-theme="pixel"] .settings-content { padding: 18px 26px; font-size: 14px; }
+[data-start-theme="pixel"] .settings-content p { font-size: 12px; color: var(--c-sub); margin: 12px 0 0; }
+[data-start-theme="pixel"] .settings-content p:empty { display: none; }
+[data-start-theme="pixel"] .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; }
+[data-start-theme="pixel"] #settingsDialog .notice-footer { justify-content: flex-end; }
+/* 계정 창: '인증번호 받기' · '연결하기' = 주 단추 · '닫기' = 부 단추 (entrance_ui.css) — 창 · 입력 칸 꼴은 그대로 */
+[data-start-theme="pixel"] #accountDialog { width: min(380px, calc(100vw - 40px)); }
+[data-start-theme="pixel"] .account-content { padding: 16px 24px; overflow: auto; font-size: 12px; }
+[data-start-theme="pixel"] .account-content p { margin: 0 0 12px; color: var(--c-sub); line-height: 1.6; overflow-wrap: anywhere; }
+[data-start-theme="pixel"] .account-content p:empty { display: none; }
+[data-start-theme="pixel"] .account-content label { display: block; margin-bottom: 5px; }
+[data-start-theme="pixel"] .account-content input { box-sizing: border-box; width: 100%; padding: 9px 10px; background: #211c16; border: 1px solid var(--dlg-line); color: var(--c-text); font: 14px Pretendard, sans-serif; border-radius: 0; }
+[data-start-theme="pixel"] .account-submit { width: 100%; margin: 12px 0 6px; }
+[data-start-theme="pixel"] .account-text-button { background: transparent; border: 0; padding: 6px 0; color: var(--c-sub); font: 12px Pretendard, sans-serif; text-decoration: underline; text-underline-offset: 3px; }
+[data-start-theme="pixel"] .account-secondary { display: flex; justify-content: space-between; gap: 12px; }
+[data-start-theme="pixel"] .account-content .account-note { margin: 14px 0 0; }
+[data-start-theme="pixel"] #accountStatus { color: var(--c-text); margin-top: 12px; }
+[data-start-theme="pixel"] #accountAddress { color: var(--c-text); font-size: 14px; }
+[data-start-theme="pixel"] #accountDialog .notice-footer { justify-content: flex-end; }
+[data-start-theme="pixel"] #accountDialog .account-text-button:disabled { opacity: .5; cursor: default; }
 /* 10/16 (docs/import/lobby_fix_2026-10-16.md §4): 폰 가로에서 계정 번호 단계가 창 안에서 넘쳐 스크롤되던 것 — 창을 넓혀 줄바꿈을 줄이고 틈만 좁힌다 (글자·단추 크기 그대로) */
-@media(max-height:500px) and (orientation:landscape){
-  [data-start-theme="pixel"] #accountDialog{width:min(540px,calc(100vw - 48px))}
-  [data-start-theme="pixel"] #accountDialog .notice-header{padding:10px 22px}
-  [data-start-theme="pixel"] .account-content{padding:10px 22px 8px}
-  [data-start-theme="pixel"] .account-content p{margin-bottom:6px}
-  [data-start-theme="pixel"] .account-submit{margin:8px 0 2px}
-  [data-start-theme="pixel"] .account-text-button{padding:4px 0}
-  [data-start-theme="pixel"] .account-content .account-note{margin:4px 0 0}
-  [data-start-theme="pixel"] #accountStatus{margin-top:4px}
-  [data-start-theme="pixel"] #accountDialog .notice-footer{padding:6px 22px}
+@media (max-height: 500px) and (orientation: landscape) {
+  [data-start-theme="pixel"] #accountDialog { width: min(540px, calc(100vw - 48px)); }
+  [data-start-theme="pixel"] #accountDialog .notice-header { padding: 10px 22px; }
+  [data-start-theme="pixel"] .account-content { padding: 10px 22px 8px; }
+  [data-start-theme="pixel"] .account-content p { margin-bottom: 6px; }
+  [data-start-theme="pixel"] .account-submit { margin: 8px 0 2px; }
+  [data-start-theme="pixel"] .account-text-button { padding: 4px 0; }
+  [data-start-theme="pixel"] .account-content .account-note { margin: 4px 0 0; }
+  [data-start-theme="pixel"] #accountStatus { margin-top: 4px; }
+  [data-start-theme="pixel"] #accountDialog .notice-footer { padding: 6px 22px; }
 }
 /* 입력 칸 초점 테두리가 위 칸 이름('인증번호')을 덮지 않게 (리뷰 §8-4) */
-[data-start-theme="pixel"] input:focus-visible{outline-offset:2px}
-/* 10/16 14:0x 사장님 '첫 화면이나 대기실도 가로 화면에서만 볼 수 있게 해' (docs/import/ui_fix_2026-10-16.md §11): 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'(index.html #rotate)가 덮는데,
-   창(공지 · 설정 · 계정 · 대기실 이름 — showModal)은 맨 위 층이라 그 안내 위로 올라온다 → 같은 조건(세로 + 터치)에서 창과 그 바탕을 감춘다. 열린 채로 있어 가로로 돌리면 그대로 다시 보인다 */
-@media (orientation:portrait) and (pointer:coarse){dialog[open],dialog[open]::backdrop{display:none}}
+[data-start-theme="pixel"] input:focus-visible { outline-offset: 2px; }
+/* 세로 폰에서 창을 감추는 줄(10/16 14:0x)은 대기실 이름 창도 함께 쓰도록 entrance_ui.css 로 옮겼다 */
