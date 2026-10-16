@@ -3,6 +3,7 @@
 //   · 첫 그림 = '처음부터'를 누른 때 → 미리보기 첫 그리기 호출까지 (게임·대기실 묶음 받기 포함 — 이 상자에선 흔들림이 크다) — 판마다 새 창, 같은 판 n 번의 가운데 값과 범위
 //   · 미리보기 준비 = 미리보기 캔버스의 WebGL 문맥을 만든 때 → 첫 그리기 호출까지 (그리개 · 복제 · 셰이더 — 미리보기 몫만)
 //   · 한 번 그리기 = 한 번 그리는 데 든 시간(gl.finish 까지 — 10/16 돌림판 판은 시험 고리로, 옛 판은 방향키로 바로 그림) · 그리는 화소 수(캔버스 너비 × 높이)
+//   · 10/17 판(docs/import/lobby_preview_2026-10-17.md): 위 '한 번 그리기'는 장착을 바꿀 때(그림자 지도까지) · turnMs · callsPerTurn = 돌릴 때(카메라만 — lobbyPreview.turnTo) · samples = 계단 펴기 표본 수
 //  node tools/browser/lobby_preview_cost.mjs <주소> [n=5] [화소 비=3]   (폰 가로 844×390 · 소프트웨어 GL — 실기기 값이 아니라 두 판의 비)
 import { chromium } from 'playwright';
 const base = process.argv[2] || 'http://127.0.0.1:5210', runs = +(process.argv[3] || 5), dpr = +(process.argv[4] || 3);
@@ -36,15 +37,25 @@ try {
       const gl = c.getContext('webgl2') || c.getContext('webgl');
       const calls0 = window.__preview.calls, times = [];
       // 한 번 그리기: 10/16 돌림판부터 방향키는 화면 한 장씩 부드럽게 돌아(바로 그리지 않음) — 그 판은 시험 고리(lobbyPreview.setArmor 가 바로 한 번 그림)로, 옛 판은 방향키로
+      //  10/17 판부터 setArmor 는 그림자 지도도 다시 그린다(장착을 바꿀 때 값) — 돌릴 때 값은 아래 turnTo 로 따로
       const once = view.lobbyPreview?.setArmor ? () => view.lobbyPreview.setArmor(view.dataset.armor || null) : () => view.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
       for (let k = 0; k < 12; k++) { const t0 = performance.now(); once(); gl.finish(); times.push(performance.now() - t0); }
       times.sort((a, b) => a - b);
-      return { first: window.__preview.first, init: window.__preview.init, callsPerRender: (window.__preview.calls - calls0) / 12, renderMs: times[6], css: [c.clientWidth, c.clientHeight], buffer: [c.width, c.height], aa: gl.getContextAttributes().antialias };
+      // 돌릴 때 한 번 그리기 (10/17 — lobbyPreview.turnTo 가 있는 판만: 카메라만 돌고 그림자 지도는 그대로)
+      let turnCalls = null, turnMs = null;
+      if (view.lobbyPreview?.turnTo) {
+        const c1 = window.__preview.calls, tt = [];
+        for (let k = 0; k < 12; k++) { const t0 = performance.now(); view.lobbyPreview.turnTo(k * 30); gl.finish(); tt.push(performance.now() - t0); }
+        tt.sort((a, b) => a - b); turnCalls = (window.__preview.calls - c1) / 12; turnMs = tt[6];
+      }
+      return { first: window.__preview.first, init: window.__preview.init, callsPerRender: (window.__preview.calls - calls0) / 12, renderMs: times[6], turnCalls, turnMs, css: [c.clientWidth, c.clientHeight], buffer: [c.width, c.height], aa: gl.getContextAttributes().antialias, samples: gl.getParameter(gl.SAMPLES) };
     });
     rows.push(one);
     await ctx.close();
   }
 } finally { await browser.close(); }
 const firsts = rows.map((r) => r.first).sort((a, b) => a - b), renders = rows.map((r) => r.renderMs).sort((a, b) => a - b), inits = rows.map((r) => r.init).sort((a, b) => a - b), r0 = rows[0];
-console.log(JSON.stringify({ base, dpr, runs, callsPerRender: r0.callsPerRender, cssPx: r0.css, bufferPx: r0.buffer, pixels: r0.buffer[0] * r0.buffer[1], antialias: r0.aa,
+const turns = rows[0].turnMs == null ? null : rows.map((r) => r.turnMs).sort((a, b) => a - b);
+console.log(JSON.stringify({ base, dpr, runs, callsPerRender: r0.callsPerRender, callsPerTurn: r0.turnCalls, cssPx: r0.css, bufferPx: r0.buffer, pixels: r0.buffer[0] * r0.buffer[1], antialias: r0.aa, samples: r0.samples,
+  turnMs: turns && { median: +turns[runs >> 1].toFixed(2), min: +turns[0].toFixed(2), max: +turns.at(-1).toFixed(2) },
   firstFrameMs: { median: +firsts[runs >> 1].toFixed(1), min: +firsts[0].toFixed(1), max: +firsts.at(-1).toFixed(1) }, previewInitMs: { median: +inits[runs >> 1].toFixed(1), min: +inits[0].toFixed(1), max: +inits.at(-1).toFixed(1) }, renderMs: { median: +renders[runs >> 1].toFixed(2), min: +renders[0].toFixed(2), max: +renders.at(-1).toFixed(2) } }));
