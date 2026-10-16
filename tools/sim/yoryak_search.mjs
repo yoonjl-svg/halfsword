@@ -3,7 +3,7 @@
 //  → 찾는 범위 = 손 낮게(가슴 중심 아래) · 앞으로 · 칼은 수평 가까이(위아래 ±35°) · 칼끝은 가리는 쪽으로. 몸 돌림도 함께.
 //  판: parry_gap_map 과 같음 — 플레이어(청강검 · 동방 막기 책)가 막기 단추를 버티고, AI normal 몸이 대본으로 올려 베기.
 //  줄: SIDE=L → lowL 몸꼴(내 왼쪽 아래로 오는 올려 베기 unterhau) · SIDE=R → lowR 몸꼴(내 오른쪽 아래로 오는 unterhauL)
-//  PA=<막기 거듦 단계 0~3> N=<후보 수> SEED=<씨앗> ATKS=longsword,zweihander GAPS=… SPEEDS=11 TOP=<보일 수> OUT=<json> CANDS=<json — 이 후보만 잼>
+//  SPLIT=<초 — 새 공격으로 읽는 멈춤 길이 시험> PA=<막기 거듦 단계 0~3> N=<후보 수> SEED=<씨앗> ATKS=longsword,zweihander GAPS=… SPEEDS=11 TOP=<보일 수> OUT=<json> CANDS=<json — 이 후보만 잼>
 //  node tools/sim/yoryak_search.mjs
 import { newRound, DT } from './harness_m.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -62,6 +62,15 @@ function trial(cover, atk, gap, speed) {
   if (cover?.pad) {
     const po = guard.padOf.bind(guard);
     guard.padOf = (line) => (line === LINE ? cover.pad : po(line));
+  }
+  // SPLIT=<초>: 시험 — 칼끝이 그 초 넘게 멈췄다 다시 오면 새 공격으로 읽는다(지금 판은 0.25 s — 준비 동작과 긋기 사이 멈춤 0.15 s 를 한 공격으로 묶음)
+  if (process.env.SPLIT) {
+    const SPL = +process.env.SPLIT;
+    const st = guard.step.bind(guard);
+    guard.step = (dt) => {
+      if (guard.noThreat > SPL && guard.noThreat <= 0.25) guard.noThreat = 0.26;
+      return st(dt);
+    };
   }
   Gm.ai.update = () => {};
   A.move.set(0, 0);
