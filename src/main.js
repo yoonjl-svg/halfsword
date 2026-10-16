@@ -12,7 +12,7 @@ import { createStaminaHud } from './stamina_hud.js';
 import { createScreenTint } from './screen_tint.js';
 import { readJourney, writeJourney, addJourneyClear } from './journey_save.js'; // 여정 이어하기 지점 · 깬 무대 수(통계) (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
-import { readLobbyEquipment, readLobbyArmor, LOBBY_ARMOR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3)
+import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
 import { journeyCoins, awardHead } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x)
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
 import { readBooks, playerKit, kitUniqueStage, bookTierParam } from './skill_books.js'; // 대기실 스킬북 = 플레이어 유파 몫 — 모든 판 (사장님 10/16 04:1x 산 책만 · 08:1x 인장 없앰, docs/strike/school_kit_map.md §2 · §3)
@@ -313,9 +313,10 @@ let pendingJourney = null; // 이어하기: 다음 startFight 가 되살릴 무�
 const JOURNEY_PURE = foeParam === 'stage' && !STAGE_PIN && !testRoute.active && !FIXED_WEAPON;
 const journeySaves = () => journeyMode && JOURNEY_PURE;
 // 대기실 장착을 싸움에 (docs/import/lobby_fix_2026-10-16.md §3): 첫 화면·대기실에서 연 여정만(journeySaves — 주소 고정 판·테스트 경로·옛 메뉴 판은 지금 그대로).
-//  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리).
+//  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리) ·
+//  neck = 용사의 눈물(있으면 플레이어 기력 무한 + 내 기력 막대 없음 · 겉모습 그대로 — 10/17, docs/import/hero_tear_2026-10-17.md).
 //  스킬북(유파 몫)은 여기가 아니라 모든 판이 읽는다 — newRound 의 playerKit (10/16 08:1x 인장 없앰)
-const journeyLoadout = () => (journeySaves() ? { weapon: readLobbyEquipment(), armor: readLobbyArmor() } : null);
+const journeyLoadout = () => (journeySaves() ? { weapon: readLobbyEquipment(), armor: readLobbyArmor(), neck: readLobbyNeck() } : null);
 const LOOK_BAREHEAD = { ...LOOKS.player, helmet: null }; // 케틀 햇을 벗은 주인공 — 겉모습·머리 방어 둘 다 없음 (fighter.js look.helmet)
 // 이번 판 금화 · 머리 (결과 창 한 줄 — showRewardLine). 첫 화면·대기실 여정만 바뀐다 (주소 고정 판 · 테스트 경로 · 옛 메뉴 판은 그대로)
 let roundReward = null;
@@ -598,6 +599,7 @@ function newRound(weaponId) {
   });
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −40 · −80 그대로 · 기력 끔이면 아무 일 없음)
   //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
+  if (loadout?.neck === HERO_TEAR.id) player.stamina.setInfinite(true); // 용사의 눈물 '불굴: 기력 무한' (사장님 10/17) — 플레이어만 · 청구 · 지침 · 탈진 없음 · 머리 위 내 막대 없음(stamina_hud.js) · 몸에 붙이는 것 없음(겉모습 그대로)
   for (const f of [player, enemy]) {
     configureWetlandMovement(f, stages.id); // 진흙 웅덩이 감속 (잠든 습지만)
     f.arenaObstacle = arenaStone?.navigation ?? null; // AI 돌아가기가 읽는다 (석상 없으면 null — 아무 일 없음)

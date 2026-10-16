@@ -25,6 +25,7 @@ export function createStaminaHud(root) {
         const f = fighters[i];
         bar.hidden = true;
         if (!visible || !STAMINA.on || !f?.alive || f.revival || f.decapitated) return;
+        if (f.stamina.infinite) return; // 기력 무한(용사의 눈물 — 플레이어만): 그 사람 막대는 아예 없다 (사장님 10/17 '어차피 기력 무한이기 때문에 기력바 표시하지 않음' · 상대 막대는 그대로)
         const head = f.bodies.head.translation();
         point.set(head.x, head.y + 0.28, head.z);
         if (viewPoint.copy(point).applyMatrix4(camera.matrixWorldInverse).z >= 0) return;

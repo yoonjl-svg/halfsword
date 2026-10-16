@@ -6,11 +6,13 @@
 //  10/16 14:0x: 첫 화면·대기실도 가로 화면만 — 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'가 덮어(game_entry.js openHost) 대기실 안 '싸움은 가로 화면입니다' 줄은 지움
 //  10/16 15:3x · 16:0x (사장님 ② ④ ⑤ ⑥ ⑨ — docs/import/ui_unify_2026-10-16.md): 단추 · 탭 = 싸움 화면 꼴(entrance_ui.css) · 창 = 싸움 창 · 세 칸 위아래 줄 맞춤 · 사슬 틀 크기 ·
 //   호칭 내림 상자(대표 유파 칸은 뺌) · 재고 칸 그림 = 매끈 · 칸의 80 % · 등급 빛 · '장착 중'은 칸 귀퉁이 작은 알약 · 장착 · 해제는 설명 카드 안(스킬북 설명 카드의 구입 · 사용 · 봉인과 같은 자리)
+//  10/17 (사장님 '용사의 눈물 … 방어구에 넣어둬' — docs/import/hero_tear_2026-10-17.md): 방어구 칸 = 케틀 햇 · 용사의 눈물 (lobby_equipment.js LOBBY_ARMORS) ·
+//   장착은 물건마다 제 자리(armorSlot — 머리 · 목)라 둘을 같이 건다 · 용사의 눈물은 겉모습 변화가 없어 미리보기에 손대지 않는다
 import style from './lobby.css?inline';
 import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
-import { LOBBY_ITEMS, LOBBY_ARMOR, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor } from './lobby_equipment.js';
+import { LOBBY_ITEMS, LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
 import { createLobbyCharacter } from './lobby_character.js';
 import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress, titleOptions, selectTitle } from './lobby_progress.js';
@@ -143,8 +145,9 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   if (converted?.coins) status(`인장 ${converted.seals}개를 금화 ${converted.coins.toLocaleString('ko-KR')}으로 바꿨습니다.`, 'notice');
   const preview = createLobbyCharacter($('characterView'), game); // 몸 = 다음 판 플레이어와 같은 Fighter (lobby_rig.js — game.lobbyRigSpec)
   let selectedItem = null, category = 'weapon';
-  const equipped = { weapon: readLobbyEquipment(), armor: readLobbyArmor() };
-  preview.setWeapon(equipped.weapon); preview.setArmor(equipped.armor);
+  // 장착 자리: 무기 · 머리(케틀 햇) · 목(용사의 눈물 — 10/17). 미리보기 겉모습은 무기 · 머리만 (용사의 눈물은 겉모습 변화 없음 — 사장님 10/17)
+  const equipped = { weapon: readLobbyEquipment(), head: readLobbyArmor(), neck: readLobbyNeck() };
+  preview.setWeapon(equipped.weapon); preview.setArmor(equipped.head);
   const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, onBooks: () => preview.refresh(), announce: text => { $('skillStatus').textContent = text; } }); // 책을 사거나 봉인하면 미리보기 걸음 자세도 (그 무기 유파 보법)
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')];
   function selectTab(tab) {
@@ -170,22 +173,25 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     });
   }
   const grid = root.querySelector('.inventory-grid');
-  const itemName = id => category === 'armor' ? LOBBY_ARMOR.nameKo : getWeapon(id).nameKo;
+  const armorOf = id => LOBBY_ARMORS.find(a => a.id === id);
+  const slotOf = id => category === 'armor' ? armorSlot(id) : 'weapon'; // 이 물건을 거는 자리 (equipped 열쇠)
+  const isOn = id => equipped[slotOf(id)] === id;
+  const itemName = id => category === 'armor' ? armorOf(id).nameKo : getWeapon(id).nameKo;
   // 설명 카드: 방어구는 lobby_equipment.js 의 글(설명 뒤에 특수 능력 — 등급 색), 무기는 우리 무기 자료 그대로 (카드 설명의 줄바꿈은 빈칸으로 — 무기 카드 .wdesc 와 같게)
   const itemCard = id => {
-    if (category === 'armor') return { name: LOBBY_ARMOR.nameKo, tier: LOBBY_ARMOR.tier, description: LOBBY_ARMOR.description, ability: LOBBY_ARMOR.ability };
+    if (category === 'armor') { const a = armorOf(id); return { name: a.nameKo, tier: a.tier, description: a.description, ability: a.ability }; }
     const spec = getWeapon(id);
     return { name: spec.nameKo, tier: TIER_LABEL[spec.tier] ? spec.tier : 'common', description: spec.desc || '', ability: '' };
   };
   // 칸: 그림 = 칸의 80 % · 매끈하게 줄임 · 뒤에 등급 빛(무기 카드 앞면 .wthumb 와 같은 원 빛 — data-tier · lobby.css) — 사장님 ⑨ 1 단계(감독 검토 §2)
   function renderInventory() {
-    const items = category === 'armor' ? [LOBBY_ARMOR.id] : LOBBY_ITEMS;
+    const items = category === 'armor' ? LOBBY_ARMORS.map(a => a.id) : LOBBY_ITEMS;
     $('inventoryHeading').textContent = category === 'armor' ? '방어구' : '무기';
     $('inventoryCount').textContent = `${items.length}개`;
     grid.innerHTML = Array.from({length:20}, (_, i) => {
       const id = items[i];
       if (!id) return '<span class="inventory-slot" aria-hidden="true"></span>';
-      const thumbnail = category === 'armor' ? LOBBY_ARMOR.thumbnail : `ui/weapons/${id}.webp`;
+      const thumbnail = category === 'armor' ? armorOf(id).thumbnail : `ui/weapons/${id}.webp`;
       return `<button class="inventory-item" data-item="${id}" data-${category}="${id}" data-tier="${itemCard(id).tier}" aria-pressed="false"><img src="${thumbnail}" alt="${itemName(id)}" draggable="false"><span class="equipped-badge" hidden>장착 중</span></button>`;
     }).join('');
     for (const img of grid.querySelectorAll('.inventory-item img')) fitThumb(img);
@@ -193,14 +199,14 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   }
   function refreshEquipment() {
     for (const button of grid.querySelectorAll('[data-item]')) {
-      const id = button.dataset.item;
+      const id = button.dataset.item, on = isOn(id);
       button.setAttribute('aria-pressed', String(id === selectedItem));
-      button.querySelector('.equipped-badge').hidden = id !== equipped[category];
-      button.setAttribute('aria-label', `${itemName(id)}${id === equipped[category] ? ' · 장착 중' : ''} 선택`);
+      button.querySelector('.equipped-badge').hidden = !on;
+      button.setAttribute('aria-label', `${itemName(id)}${on ? ' · 장착 중' : ''} 선택`);
     }
     // 장착 · 해제: 지금 누를 수 있는 쪽 = 주 단추 · 다른 쪽 = 누를 수 없는 부 단추 (꼴은 entrance_ui.css — 누를 수 있나로 고른다)
-    $('equipItem').disabled = !selectedItem || selectedItem === equipped[category];
-    $('unequipItem').disabled = !selectedItem || selectedItem !== equipped[category];
+    $('equipItem').disabled = !selectedItem || isOn(selectedItem);
+    $('unequipItem').disabled = !selectedItem || !isOn(selectedItem);
     $('itemDetail').hidden = !selectedItem;
     if (selectedItem) {
       const card = itemCard(selectedItem);
@@ -214,18 +220,20 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     const id = event.target.closest('[data-item]')?.dataset.item;
     selectedItem = !id || id === selectedItem ? null : id; refreshEquipment();
   });
-  function equip(id) {
+  // 걸기(on) · 벗기 — 그 물건의 자리만 바뀐다 (케틀 햇을 벗어도 용사의 눈물은 그대로 · 반대도). 미리보기 → 저장 차례는 전 그대로 (몸을 못 만들면 장착 표시 그대로)
+  function equip(id, on) {
     try {
-      if (category === 'armor') preview.setArmor(id); else preview.setWeapon(id);
-      equipped[category] = id;
-      const saved = category === 'armor' ? saveLobbyArmor(id) : saveLobbyEquipment(id);
-      $('equipmentStatus').textContent = `${id ? itemName(id) + ' 장착' : '장착 해제'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`;
+      const slot = slotOf(id), value = on ? id : null;
+      if (slot === 'weapon') preview.setWeapon(value); else if (slot === 'head') preview.setArmor(value); // 목(용사의 눈물)은 겉모습이 그대로라 미리보기에 손대지 않는다
+      equipped[slot] = value;
+      const saved = slot === 'weapon' ? saveLobbyEquipment(value) : slot === 'head' ? saveLobbyArmor(value) : saveLobbyNeck(value);
+      $('equipmentStatus').textContent = `${itemName(id)} ${on ? '장착' : '장착 해제'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`;
       refreshEquipment();
     } catch { $('equipmentStatus').textContent = '장비를 표시하지 못했습니다. 다시 시도해 주세요.'; }
   }
   // 누른 단추가 사라지지 않게 초점을 짝 단추로 (장착하면 해제가, 해제하면 장착이 주 단추가 된다)
-  listen($('equipItem'), 'click', () => { if (selectedItem && selectedItem !== equipped[category]) { equip(selectedItem); $('unequipItem').focus({ preventScroll: true }); } });
-  listen($('unequipItem'), 'click', () => { if (selectedItem && selectedItem === equipped[category]) { equip(null); $('equipItem').focus({ preventScroll: true }); } });
+  listen($('equipItem'), 'click', () => { if (selectedItem && !isOn(selectedItem)) { equip(selectedItem, true); $('unequipItem').focus({ preventScroll: true }); } });
+  listen($('unequipItem'), 'click', () => { if (selectedItem && isOn(selectedItem)) { equip(selectedItem, false); $('equipItem').focus({ preventScroll: true }); } });
   renderInventory();
   listen($('editName'), 'click', () => { $('playerNameInput').value = readProfile().name; $('nameError').textContent = ''; $('nameDialog').showModal(); $('playerNameInput').select(); });
   listen($('cancelName'), 'click', () => $('nameDialog').close());

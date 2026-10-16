@@ -1,5 +1,6 @@
 // 대기실 장착·배치 점검 (샛별 저장소 lobby_equipment_smoke.mjs 를 우리 판에 맞춤 — docs/import/lobby_port_2026-10-16.md §6)
 //  우리 손댐: 무기 칸 = 나뭇가지 하나(롱소드 뺌) · 나뭇가지 설명 카드(weapons.js 이름·등급·설명 그대로) · 방어구 이름 '케틀 햇' · 첫 화면 아래 줄 세 칸
+//  10/17: 방어구 칸 = 케틀 햇 · 용사의 눈물 둘 (용사의 눈물 장착 · 싸움은 tools/browser/hero_tear_smoke.mjs — 여기서는 칸 수 · 차례만)
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/lobby_equipment_smoke.mjs http://127.0.0.1:5201 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -46,7 +47,8 @@ try{
  const order=await p.locator('.profile-data dd').evaluateAll(els=>els.map(e=>e.id||e.className));assert.deepEqual(order,['lobbyRank','name-row']); // 대표 유파 칸은 뺐다 (10/16 15:3x ⑥)
  const menu=await p.locator('.lobby-tabs button').evaluateAll(els=>els.map(e=>({text:e.textContent,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y})));
  assert.deepEqual(menu.map(m=>m.text),['무기','방어구','상점','스킬북']);assert.equal(menu[0].y,menu[1].y);assert.equal(menu[2].y,menu[3].y);assert.ok(menu[2].y>menu[0].y);
- await p.locator('#tabArmor').tap();assert.equal(await p.locator('.inventory-item').count(),1);assert.equal(await p.locator('.inventory-slot').count(),19);
+ await p.locator('#tabArmor').tap();assert.equal(await p.locator('.inventory-item').count(),2);assert.equal(await p.locator('.inventory-slot').count(),18); // 10/17 용사의 눈물이 둘째 칸 (hero_tear_smoke 가 자세히 본다)
+ assert.deepEqual(await p.locator('.inventory-item').evaluateAll(els=>els.map(e=>e.dataset.armor)),['kettle','hero_tear']);
  await p.locator('[data-armor=kettle] img').evaluate(img=>img.decode());await p.locator('button[data-armor=kettle]').tap();
  let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','레전드','여행자의 필수품. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
  assert.deepEqual(await p.locator('#itemDetail').evaluate(e=>[getComputedStyle(e.querySelector('#itemRarity')).color,getComputedStyle(e.querySelector('#itemName')).color,getComputedStyle(e.querySelector('.item-ability')).color]),Array(3).fill('rgb(255, 210, 74)')); // 레전드 = --tier-legend (사장님 10/16 03:5x)

@@ -10,6 +10,7 @@ export class Stamina {
     this.fighter = fighter;
     this.controller = null;
     this.maxBonus = 0; // 최대 기력 덧 (대기실 장비 — 케틀 햇 '생존술: 기력 +30', main.js setMaxBonus · 플레이어만). 문턱 0 · −40 · −80 과 그 밖 규칙은 그대로
+    this.infinite = false; // 기력 무한 (대기실 장비 — 용사의 눈물 '불굴: 기력 무한', main.js setInfinite · 플레이어만). 거짓이면 아래 모든 길이 전과 한 글자도 다르지 않다
     this.value = STAMINA.max;
     this.level = 0;
     this.exhaustLeft = 0;
@@ -42,6 +43,20 @@ export class Stamina {
   setMaxBonus(bonus) {
     this.maxBonus = Math.max(0, +bonus || 0);
     if (STAMINA.on) this.value = this.max;
+  }
+  /**
+   * 기력 무한 (용사의 눈물 — main.js newRound 가 판을 세울 때 · 첫 스텝 전 · 플레이어만, docs/import/hero_tear_2026-10-17.md):
+   *  늘 가득(최대 — 케틀 햇 덧까지) · 청구(spend — 걷기 · 공격 · 막아 받기 · 박차기 · 비기 · 권총 · 클린치)가 깎지 않는다 →
+   *  지침(× 0.7 · × 0.5 · 힘 배율) · 탈진 · 숨 고르기 자세 · 숨소리 · 회복 쉼이 생기지 않는다. 상대가 읽는 내 기력(ai.js 지친 상대 노림)도 늘 생생.
+   *  공격 번호(attackId — 상대의 막아 받기 청구)와 횟수 셈(counts)은 전처럼 남는다 — 상대 장부는 그대로. 기력 끔(STAMINA.on 거짓)이면 원래 100 그대로
+   */
+  setInfinite(on = true) {
+    this.infinite = !!on;
+    if (this.infinite) this.refill();
+  }
+  /** 무한 기력의 '늘 가득': 값 = 최대 · 생생 · 탈진 없음 (setInfinite · 스텝마다 — 시험 도구가 값을 바꿔 놓아도 다음 스텝에 되돌린다) */
+  refill() {
+    this.value = this.max; this.level = 0; this.exhaustLeft = 0; this.pose = 0;
   }
   captureMass(mass) { if (this.originalMass == null && mass > 0) this.originalMass = mass; }
   get weight() {
@@ -132,7 +147,7 @@ export class Stamina {
   }
 
   spend(kind, amount) {
-    if (!STAMINA.on || this.exhausted || !this.fighter.alive || this.fighter.revival || !(amount > 0)) return false;
+    if (!STAMINA.on || this.infinite || this.exhausted || !this.fighter.alive || this.fighter.revival || !(amount > 0)) return false; // 기력 무한: 모든 청구가 여기서 멈춘다 (값 · 쉼 시계 · 단계 그대로)
     this.value = Math.max(STAMINA.floor, this.value - amount);
     this.spent[kind] += amount;
     if (kind !== 'move') this.rest = 0;
@@ -257,6 +272,7 @@ export class Stamina {
       this.clinching = false; this.clinchStep = null;
       return;
     }
+    if (this.infinite) this.refill(); // 기력 무한: 늘 가득 — 아래 길(클린치 짝 셈 · 긋기 확정 · 걸음 셈)은 그대로 돌고 청구만 spend 가 받지 않는다
     // 회복·걷기보다 우선. 이번 스텝 비용으로 탈진했으면 강제 회복은 다음 스텝부터.
     if (this.stepClinch(dt)) {
       if (!this.exhausted) this.pose = Math.max(0, this.pose - dt * 6);
