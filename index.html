@@ -22,8 +22,9 @@
     <link rel="preload" href="/fonts/Pretendard-Bold.subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/Cinzel-latin.woff2" as="font" type="font/woff2" crossorigin />
     <style>
-      /* 첫 화면·대기실이 앞에 있는 동안 뒤의 게임 화면(메뉴·HUD)은 그리지 않는다 — 처음 열 때 옛 메뉴가 잠깐 비치거나 누름을 받지 않게 (game_entry.js 가 inert 도 건다) */
-      html[data-start-open] body > :not(#gameEntrance):not(script) { visibility: hidden; }
+      /* 첫 화면·대기실이 앞에 있는 동안 뒤의 게임 화면(메뉴·HUD)은 그리지 않는다 — 처음 열 때 옛 메뉴가 잠깐 비치거나 누름을 받지 않게 (game_entry.js 가 inert 도 건다).
+         돌려 달라는 안내(#rotate)만 빼고 — 세로 폰이면 첫 화면·대기실도 덮는다 (사장님 10/16 14:0x, 아래 #rotate) */
+      html[data-start-open] body > :not(#gameEntrance):not(#rotate):not(script) { visibility: hidden; }
       /* ── 화면 글꼴: Cinzel = 라틴 글자에만(unicode-range = 두 조각에 실제로 든 글자 — 숫자·기호·빈칸은 프리텐다드로). 굵기 축 400–900 한 파일.
          프리텐다드 = 한글·숫자·기호 (만든 이의 KS X 1001 서브셋 그대로 — 쓰는 굵기 셋 400 · 600 · 700, 그 밖의 굵기는 가까운 파일로 그린다).
          보충 = 프리텐다드에 없는 글자만: 중국 유파 원어의 한자 43 자 + Ⅰ·Ⅱ (Noto Sans TC 조각) · ▮▯↻ (Noto Sans Math 조각). 한 굵기 파일이라 굵기 범위로 적어 흉내 굵기를 막는다 ── */
@@ -332,9 +333,12 @@
       .wordmark { display: block; font-size: var(--fs-wordmark); line-height: 1.1; }
       .sub { color: var(--c-sub); font-size: var(--fs-m); margin: 0 0 14px; line-height: var(--lh-text); }
       #menuSub small { display: block; margin-top: 2px; font-size: var(--fs-s); font-weight: var(--fw-body); color: var(--c-sub); } /* 결과 창 부제의 대사 출처 (병마용 — 위 #foeIntro small 과 같은 꼴) */
-      /* 결과 창 금화 · 머리 (10/16 사장님 04:3x — 첫 화면·대기실 여정만, main.js showRewardLine): 늘면 강조 색 · 줄면 보조 색. 작게 · 600 (표지) */
-      .reward { margin: -8px 0 12px; font-size: var(--fs-s); font-weight: var(--fw-label); letter-spacing: var(--ls-label); color: var(--c-accent); }
-      .reward[data-sign="-"] { color: var(--c-sub); }
+      /* 결과 창 금화 · 머리 (10/16 사장님 04:3x — 첫 화면·대기실 여정만, main.js showRewardLine): 작게 · 600 (표지).
+         14:0x '패배 때 금화 -3도 승리 때 금화 +10과 색이 같아야 해 · 한 줄 더 띄고 · 대기실에서 사용했던 금화 아이콘': 늘든 줄든 강조 색 · 위 부제와 사이에 빈 줄 하나(부제 한 줄 높이 — 부제 아래 여백과 겹쳐 그 높이만) ·
+         대기실 금화 그림(wallet_icons.js) · 머리가 있으면 같은 줄에 천 주머니 그림 */
+      .reward { display: flex; align-items: center; margin: calc(var(--fs-m) * var(--lh-text)) 0 12px; font-size: var(--fs-s); font-weight: var(--fw-label); letter-spacing: var(--ls-label); color: var(--c-accent); }
+      .reward svg { flex: none; width: 14px; height: 14px; margin-right: 5px; image-rendering: pixelated; }
+      .reward .sep { margin: 0 7px; } /* ' · ' — 글은 띄어 쓴 그대로(읽는 글 '금화 +12 · 머리 +1'), 보이는 틈만 여백으로 */
       .reward[hidden] { display: none; }
       .row[hidden] { display: none; } /* 결과 창(첫 화면·대기실 여정)엔 설정 줄을 뺀다 — 정지 창 · 첫 화면 설정에는 그대로 (10/16 08:3x, main.js) */
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-m); }
@@ -367,10 +371,9 @@
       #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; background: #1b1410; font-size: var(--fs-l); line-height: var(--lh-text); padding: 24px; z-index: 10; }
       #rotate small { display: block; margin-top: 6px; font-size: var(--fs-s); color: var(--c-sub); word-break: keep-all; }
       @media (orientation: portrait) and (pointer: coarse) { #rotate.enabled { display: flex; } }
-      /* 대기실에서 넘어올 때 갑자기 덮지 않게 (10/16 — 대기실이 0.3 s 걷히는 동안 이 안내가 0.5 s 에 걸쳐 나타난다. 첫 화면·대기실이 앞에 있는 동안엔 시작하지 않는다) */
-      html:not([data-start-open]) #rotate.enabled { animation: rotateIn .5s ease-out; }
-      @keyframes rotateIn { from { opacity: 0; } }
-      @media (prefers-reduced-motion: reduce) { html:not([data-start-open]) #rotate.enabled { animation: none; } }
+      /* 첫 화면 · 공지 · 계정 · 대기실도 가로 화면만 (사장님 10/16 14:0x — game_entry.js openHost 가 enabled 를 건다): 그 덮개(#gameEntrance · z-index 100) 위.
+         세로 대기실의 '싸움은 가로 화면입니다' 줄과 출발 뒤 이 안내가 0.5 s 에 걸쳐 나타나던 것(10/16 04:3x)은 지웠다 — 세로에선 대기실부터 이 안내가 덮는다 */
+      html[data-start-open] #rotate { z-index: 101; }
     </style>
   </head>
   <body>

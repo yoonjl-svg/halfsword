@@ -80,12 +80,9 @@ button{border:0;background:none;min-height:32px;padding:6px 12px;border-radius:0
 .panel-wallet{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--c-text);font-variant-numeric:tabular-nums}
 .panel-wallet .coin-icon{width:14px;height:14px}
 .panel-wallet b{font-weight:400}
-/* 세로 폰: 싸움은 가로라는 안내 (여정 시작 전에 — #rotate 와 같은 조건) */
-.landscape-hint{display:none;margin:0;max-width:80%;font-size:12px;line-height:1.4;color:var(--c-sub);text-align:center}
-@media (orientation:portrait) and (pointer:coarse){.landscape-hint{display:block}}
-/* 좁은 화면: 캐릭터 칸이 출발 단추 밑의 안내·알림 줄까지 품게 (전: 칸 높이 442px 고정이라 그 밑 줄이 아래 칸 뒤로 숨었다) */
+/* 좁은 화면: 캐릭터 칸이 출발 단추 밑의 알림 줄까지 품게 (전: 칸 높이 442px 고정이라 그 밑 줄이 아래 칸 뒤로 숨었다) */
 @media(max-width:679px){.character-panel{height:auto;min-height:442px}.portrait-card{height:354px}}
-/* 여정으로 넘어가며 대기실을 걷어 내는 동안 (game_entry.js — 0.3 s, 뒤의 싸움 화면·돌려 달라는 안내가 비쳐 보인다) */
+/* 여정으로 넘어가며 대기실을 걷어 내는 동안 (game_entry.js — 0.3 s, 뒤의 카드·싸움 화면이 비쳐 보인다) */
 .lobby[data-leaving]{opacity:0;transition:opacity .3s ease}
 @media (prefers-reduced-motion:reduce){.lobby[data-leaving]{transition:none}}
 
