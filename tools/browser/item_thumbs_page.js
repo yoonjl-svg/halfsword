@@ -417,16 +417,13 @@ function japaneseBook(tier, rarity) {
   for (const y of [0.36, 0.12, -0.12, -0.36]) tube([[xs, y, tz], [w / 2 - 0.01, y, tz], [w / 2 + 0.006, y, fz - 0.006]]);
   // 귀 천 (III 무명 · IV~V 금빛 비단) — 꿰맨 쪽 위 · 아래 귀
   if (tier >= 3) for (const sy of [1, -1]) plate(g, rect(w / 2 - 0.075, sy > 0 ? h / 2 - 0.07 : -h / 2, w / 2 + 0.002, sy > 0 ? h / 2 : -h / 2 + 0.07), tier >= 4 ? surfaceMat('cloth', 0xb0883c, 7, { brocade: 0.8 }) : plainMat(0x8a7a5e, 0.85), fz, { depth: 0.002, bevel: 0.001 });
-  // 제목 쪽지 (왼쪽 위 — 흰 종이 · 가는 테 · 먹 글자 셋)
+  // 제목 쪽지 (왼쪽 위 — 흰 종이 · 가는 테 · 글자 없이 바랜 붓 자국)
   const sx0 = -w / 2 + 0.05, sx1 = sx0 + 0.12, sy1 = h / 2 - 0.05, sy0 = sy1 - 0.38;
   plate(g, rect(sx0, sy0, sx1, sy1), ivoryMat, fz, { depth: 0.002, bevel: 0.001 }); // 쪽지 윗면 = fz + 0.003 — 테 · 글자는 그 위에
   plate(g, frameShape(sx0 + 0.012, sy0 + 0.012, sx1 - 0.012, sy1 - 0.012, 0.006), inkMat, fz + 0.0032, { depth: 0.0008, bevel: 0 });
-  // 먹 글자 셋 — 붓 획 몇 개(가로 · 세로 · 삐침)로 글자처럼 (네모 덩어리면 필름 구멍처럼 보인다)
-  const mx = (sx0 + sx1) / 2, st = 0.011;
-  [[[-0.03, 0.022, 0.03, 0.022], [-0.034, -0.004, 0.034, -0.004], [0, 0.04, 0, -0.04]], [[-0.03, 0.03, 0.03, 0.03], [-0.02, -0.035, 0.024, 0.012], [0.024, -0.035, -0.02, 0.012]], [[-0.032, 0.03, -0.032, -0.03], [-0.032, 0.03, 0.03, 0.03], [-0.032, -0.006, 0.026, -0.006], [-0.032, -0.03, 0.03, -0.03]]].forEach((strokes, i) => {
-    const y = sy1 - 0.085 - i * 0.105;
-    plate(g, strokes.map(([ax, ay, bx, by]) => stroke([[mx + ax, y + ay], [mx + bx, y + by]], st)), inkMat, fz + 0.0032, { depth: 0.0008, bevel: 0 });
-  });
+  // 쪽지 안: 글자 없이 바랜 붓 자국 한 줄 (가짜 글자는 쓰지 않는다 — 감독 17:0x '뜻 없는 글자 꼴은 어색하다')
+  const mx = (sx0 + sx1) / 2;
+  plate(g, stroke(curve((t) => [mx + 0.004 * Math.sin(t * 3.1), sy1 - 0.06 - t * 0.26], 16), (t) => 0.004 + 0.012 * Math.sin(Math.PI * Math.min(1, t * 1.1))), plainMat(0x948470, 0.6), fz + 0.0032, { depth: 0.0006, bevel: 0 });
   coverMarks(g, 'japanese', tier, rarity, fz, { ...LAYOUT, cx: 0.03, ey: 0.035, eh: 0.3, ny: -0.42, nh: 0.16, press: shade(hex, 0.35) });
   g.userData.cover = { w, h }; // 표지 네모 (자리 점검)
   return g;

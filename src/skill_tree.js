@@ -26,7 +26,8 @@ const GAP = 3; // 책 칸과 줄 끝 사이 (판 좌표)
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /**
  * 책 섬네일 — 매끈한 3D 그림 public/ui/books/<유파>_<급>.webp (256 × 336 = 책 칸 32 × 42 와 같은 비 — .book-svg 가 칸을 꽉 채운다):
- *  가죽 표지 · 둥근 책등 · 쪽 가장자리 · 가운데 금박 유파 문양(칼 다섯) · 아래 급 숫자(등급 색). 사장님 10/16 14:4x ③ · 15:3x ⑨ '무기 그림과 같은 방식'
+ *  유파마다 책 꼴 하나(독일 펜히트부흐 · 이탈리아 모로코 가죽 · 이베리아 양피지 · 일본 和綴じ · 동방 천 갑) · 급마다 종이 · 표지 색 · 두께 · 쇠붙이 · 금박 ·
+ *  가운데 유파 문양(칼) · 아래 급 숫자와 끈(등급 색). 사장님 10/16 14:4x ③ · 15:3x ⑨ '무기 그림과 같은 방식' · 16:1x '유파별로 … 급수 별로 … 사실성'
  *  (만드는 도구 tools/browser/item_thumbs.mjs — docs/import/item_art_2026-10-16.md). 꾸밈 그림이라 화면 읽기에선 감춘다(책 단추가 이름 · 급 · 상태를 읽는다)
  */
 const bookImg = (school, tier) => `<img class="book-svg" src="ui/books/${BOOK_SCHOOLS.includes(school) ? school : 'german'}_${tier}.webp" alt="" aria-hidden="true" draggable="false">`;
