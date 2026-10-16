@@ -187,7 +187,7 @@ async function runScenes(v, ctx, page, cdp, R) {
   // 판 결과 창 (패배): main.js 결과 창과 같은 글 자리에 넣는다 + 판 알림 '패배'
   await page.evaluate(() => {
     document.getElementById('menuTitle').textContent = '패배';
-    document.getElementById('menuSub').textContent = '목을 베였다 · 하인리히 도른: “기어서 살려 달라 하랬지.”';
+    document.getElementById('menuSub').textContent = '목을 베였다'; // 부제 = 진 까닭 한 줄뿐 (사장님 10/16 14:4x — 대사는 싸움 화면에만)
     document.getElementById('btnStart').textContent = '다시 싸우기';
     document.getElementById('btnResume').style.display = 'none';
     const t = document.getElementById('toast');

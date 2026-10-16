@@ -956,10 +956,8 @@ function tickHudTimers(dt) {
   tickEmoMsg(dt);
 }
 
-let lastFoeLine = ''; // 이번 판 끝에 상대가 한 말 (결과 화면에도 적는다)
-/** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 */
+/** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 — 싸움 화면에만 (결과 창엔 안 적는다 — 사장님 10/16 14:4x) */
 function showFoeLine(ch, line) {
-  lastFoeLine = line;
   if (!line) return;
   const el = $('foeIntro');
   el.querySelector('b').textContent = ch.name;
@@ -1790,7 +1788,6 @@ function checkRoundEnd(dt) {
       }
       showRoundResult();
       if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
-      else lastFoeLine = '';
     }
     return;
   }
@@ -1809,11 +1806,9 @@ function checkRoundEnd(dt) {
       ? { 목: '목을 베었다', 머리: '머리를 쳤다', 출혈: '출혈로 쓰러뜨렸다', 기절: '기절시켰다', 내려찍기: '내려찍었다' }[loser.causeOfDeath] || '쓰러뜨렸다'
       : { 목: '목을 베였다', 머리: '머리를 맞았다', 출혈: '피를 너무 흘렸다', 기절: '기절했다', 내려찍기: '내려찍혔다' }[loser.causeOfDeath] || '쓰러졌다';
     $('menuTitle').textContent = win ? '승리' : '패배';
-    // 졌으면 상대의 승리 대사를 덧붙인다 (사장님 확정) — 사장님 10/16 14:0x '패배한 이유 쓰고 한 줄 내려서 다음줄에 캐릭터 메시지 넣어. 이름은 빼고 쌍따옴표 안에 대사만':
-    //  첫 줄 = 진 까닭('기절했다') · 다음 줄 = “대사”(이름 없이) · 그 아래 출처(있으면) · 금화 줄은 빈 줄 하나 띄고 (index.html .reward)
+    // 부제 = 이 한 줄뿐 — 승리 · 패배 같은 꼴 (사장님 10/16 14:4x '패배 후의 팝업창에선 대사 빼버리자. 그러면 승리 팝업과 패배 팝업이 동일해짐'):
+    //  상대의 승리 대사(와 출처)는 결과 창이 뜨기 전 싸움 화면에 3.4 s (showFoeLine) — 전 14:0x 는 다음 줄에 “대사”도. 금화 줄은 빈 줄 하나 띄고 (index.html .reward)
     $('menuSub').textContent = cause;
-    if (!win && lastFoeLine) $('menuSub').append(document.createElement('br'), `“${lastFoeLine}”`);
-    { const src = !win && lastFoeLine ? lineSourceOf(currentFoe, lastFoeLine) : ''; if (src) { const s = document.createElement('small'); s.textContent = src; $('menuSub').append(s); } } // 대사 아래 줄에 출처 (병마용 — index.html #menuSub small)
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '다시 겨루기'; // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
     $('btnResume').style.display = 'none';
@@ -1825,7 +1820,7 @@ function checkRoundEnd(dt) {
     showRewardLine();
     testRoute.resultLabel($('btnStart'));
     reviveFx.reset(); // 결과 화면: 부활 연출이 남아 있으면 치운다 (상대가 일어서는 동안 내가 죽었을 때)
-    hideFoeIntro(); // 화면 글자 시계는 게임 시간이라 결과 창 뒤에 남지 않게 여기서 걷는다 (대사는 결과 창 부제에 있다)
+    hideFoeIntro(); // 화면 글자 시계는 게임 시간이라 결과 창 뒤에 남지 않게 여기서 걷는다 (대사는 결과 창이 뜨기 전에 이미 보였다)
     clearEmoMsg();
     showMenu();
   }

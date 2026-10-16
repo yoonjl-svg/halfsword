@@ -6,7 +6,7 @@
 //   detail  병마용 잔선 덜기 전/후 가까이 — 머리(머리 홈·얼굴 새김) · 가슴(엮은 끈) · 다리(솔기), v1 · v2 같은 자리 (640×640)
 //   knee    찬다 무릎 전/후: 앞으로 디딘 다리 무릎을 굽힌 겨눔(동방 탄복세 — 칼자루를 오른 허리에)과 싸우는 중 무릎을 크게 굽힌 순간을 앞에서 가까이 (v1 · v2)
 //   duel    결투 거리 — 게임 카메라 그대로 폰 가로 844×390(화면 배율 1): 판 시작 1.0 s · 싸우는 중 6 s (두 인물 · 무대 하나)
-//   line    병마용 판 시작 소개 — 이름 · 칭호 · 대사 + 대사 아래 줄 출처(『사기』·『설원』) · 결과 창 부제의 대사·출처 (844×390)
+//   line    병마용 판 시작 소개 — 이름 · 칭호 · 대사 + 대사 아래 줄 출처(『사기』·『설원』) · 진 판 싸움 화면의 승리 대사·출처 — 결과 창엔 대사가 없다(사장님 10/16 14:4x) (844×390)
 //   prof    숙련도 확인: ?foe=chanda · ?foe=terracotta 를 30 s × 3 판씩(내 인물은 가만히) — AI 가 쓴 기술 이름을 모아 동방 고유 동작이 체보요격·좌익격 안인지, 비기 0 인지
 //           (갈래 이름 뒤에 :chanda · :terracotta 를 붙이면 그 인물만 — 예: prof:chanda)
 //   clay    병마용 몸 규칙 브라우저 점검: 같은 판에서 내 목·팔(사람)과 병마용 목·팔을 합성 상처로 자른 뒤 피 켬/끔 두 장 — 단면 색(사람 검붉은 살/회색, 흙은 흙빛 그대로)·출혈·목소리 호출
@@ -195,14 +195,14 @@ if (on('line')) {
     }
     await p.close();
   }
-  // 결과 창: 병마용이 이긴 판(내가 죽음) — 내 목을 합성 상처로 베어 판을 끝내고 결과 창 부제를 본다
+  // 병마용이 이긴 판(내가 죽음) — 내 목을 합성 상처로 베어 판을 끝내고, 결과 창이 뜨기 전 싸움 화면의 승리 대사 · 출처를 본다 (결과 창엔 대사가 없다 — 사장님 10/16 14:4x)
   const p = await open('terracotta', { stage: 'castle', viewport: { width: 844, height: 390 }, ai: true, until: 2.5 });
   await p.evaluate(() => { const g = window.game; g.player.die('목'); });
-  await p.waitForFunction(() => document.getElementById('menuSub')?.textContent.includes('병마용'), null, { timeout: 120000 });
+  await p.waitForFunction(() => document.getElementById('foeIntro')?.classList.contains('show') && document.querySelector('#foeIntro span')?.textContent, null, { timeout: 120000 });
   await nextFrames(p, 4);
-  const sub = await p.evaluate(() => ({ text: document.getElementById('menuSub').innerText, src: document.querySelector('#menuSub small')?.textContent ?? null }));
-  say(`line 결과 창: ${sub.text.replace(/\n/g, ' / ')} (출처 줄 '${sub.src}')`);
-  await p.screenshot({ path: `${out}/line_result.png` });
+  const won = await p.evaluate(() => ({ text: document.querySelector('#foeIntro span').textContent, src: document.querySelector('#foeIntro small')?.textContent ?? null }));
+  say(`line 승리 대사(싸움 화면): ${won.text} (출처 줄 '${won.src}')`);
+  await p.screenshot({ path: `${out}/line_win.png` });
   await p.close();
 }
 

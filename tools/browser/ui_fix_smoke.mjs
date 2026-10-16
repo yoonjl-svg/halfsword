@@ -4,6 +4,7 @@
 //  ② 결과 창 — 이김: '승리' · '금화 +N' · 설정 줄 없음 · '다음 여정' · '대기실' → 대기실 금화 = 전 + N → 출발 = 다음 무대
 //     짐: '패배' · '금화 −N'(또는 ±0) · '다시 겨루기'(같은 무대 — 진 판은 넘어가지 않음) · '대기실'
 //     14:0x (같은 문서 §11): 금화 줄은 늘든 줄든 같은 강조 색 · 위 부제와 빈 줄 하나(부제 한 줄 높이) · 앞에 대기실 금화 그림 / 패배 글 = 첫 줄 진 까닭 · 다음 줄 “대사”(이름 없이)
+//     14:4x (같은 문서 §12): 결과 창 부제에서 대사를 뺌 — 진 까닭 한 줄뿐(승리 창과 같은 꼴) · 상대 대사는 결과 창이 뜨기 전 싸움 화면에만
 //  ③ 테스트 경로 · 주소 판: 정지 · 결과 창에 '대기실' 없음 · 결과 창 설정 줄 그대로 (메뉴 그대로)
 //  ④ 대기실 캐릭터: '드래그하여 회전' 없음 · 천천히 반 칸 끌면 180°(멈췄다 놓으면 관성 없음) · 튕기면 더 돌다 섬 · 선 뒤로는 그리지 않음 · 막는 각 없음(몇 바퀴든) · Home = 가까운 정면
 //  ⑤ 대기실 무기 = 싸움 무기 (08:4x — 같은 문서 §6): 나뭇가지를 장착한 대기실 몸 ↔ 그 무기로 연 여정 판의 플레이어(상대 AI 멈춤 · 자세를 고쳐 딛고 선 뒤) — 골반 기준 손목 · 칼끝 · 칼날 축
@@ -88,14 +89,17 @@ try {
     const stage1 = await p.evaluate(() => game.stage.id);
     assert.notEqual(stage1, stage0);
     checks.push({ check: 'win popup: 승리 · 금화 +N (accent · coin icon · one blank line above) · no settings row · 다음 여정 + 대기실; 대기실 shows the new coins; departing opens the next stage', reward: won.reward, look: wonLook, stage1 });
-    // ② 진 판 결과 창
-    await end(p, 'player');
+    // ② 진 판 결과 창 — 상대 대사는 결과 창이 뜨기 전 싸움 화면에만 (14:4x)
+    await p.evaluate(() => game.player.die('기절', true));
+    const said = await (await p.waitForFunction(() => { const el = document.getElementById('foeIntro'); return el.classList.contains('show') && document.getElementById('menu').classList.contains('show') === false && el.querySelector('span').textContent; }, null, { timeout: 20000 })).jsonValue();
+    assert.match(said, /^“[^“”]+”$/); // 싸움 화면 = 이름 + “대사”
+    await p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 40000 });
     const lost = await menu(p);
     assert.equal(lost.title, '패배'); assert.equal(lost.start, '다시 겨루기'); assert.equal(lost.lobby, true); assert.equal(lost.fps, false);
     assert.match(lost.reward, /^금화 (−[1-5]|±0)$/);
     const lostLook = await look(p);
-    assert.equal(lostLook.lines[0], '기절했다'); // 첫 줄 = 진 까닭
-    assert.ok(lostLook.lines.length >= 2 && /^“[^“”]+”$/.test(lostLook.lines[1]), JSON.stringify(lostLook)); // 다음 줄 = “대사” — 이름 없이(전: '기절했다 · 이름: “…”' 한 줄)
+    assert.deepEqual(lostLook.lines, ['기절했다']); // 부제 = 진 까닭 한 줄뿐 — 승리 창과 같은 꼴 (14:4x — 전 14:0x 다음 줄 “대사”)
+    assert.equal(lostLook.lines.length, wonLook.lines.length);
     assert.equal(lostLook.color, wonLook.color); assert.deepEqual(lostLook.icons, ['coin-icon']); // 잃어도 같은 색 · 같은 금화 그림
     assert.ok(Math.abs(lostLook.gap - lostLook.line) < 0.6, JSON.stringify(lostLook));
     await shot(p, 'result-loss');
@@ -105,7 +109,7 @@ try {
     await p.locator('#btnPause').click(); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 10000 });
     assert.equal((await menu(p)).fps, true);
     await p.locator('#btnResume').click();
-    checks.push({ check: 'loss popup: 패배 · cause line then “line” without the name · 금화 −N in the same accent color with the coin icon after one blank line · no settings row · 다시 겨루기 (same stage) + 대기실; the pause menu keeps the settings row', reward: lost.reward, look: lostLook });
+    checks.push({ said, check: 'loss popup: the foe line shows on the fight screen before the popup · 패배 · cause line only (same shape as the win popup) · 금화 −N in the same accent color with the coin icon after one blank line · no settings row · 다시 겨루기 (same stage) + 대기실; the pause menu keeps the settings row', reward: lost.reward, look: lostLook });
     await c.close();
   }
   // ③ 테스트 경로 · 주소 판 — 메뉴 그대로

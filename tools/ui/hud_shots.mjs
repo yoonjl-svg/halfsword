@@ -196,7 +196,7 @@ async function before(o) {
   await shot(page, o, 'pause', 'real: 일시정지 창');
   await page.evaluate(() => {
     document.getElementById('menuTitle').textContent = '패배';
-    document.getElementById('menuSub').textContent = '목을 베였다 · 하인리히: “은화! 은화 어딨어!”';
+    document.getElementById('menuSub').textContent = '목을 베였다'; // 부제 = 진 까닭 한 줄뿐 (사장님 10/16 14:4x — 대사는 싸움 화면에만)
     document.getElementById('btnStart').textContent = '다시 겨루기';
     document.getElementById('btnResume').style.display = 'none';
   });
