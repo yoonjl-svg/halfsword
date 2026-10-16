@@ -3,6 +3,7 @@
 //  10/16 14:0x (docs/import/ui_fix_2026-10-16.md §11): 공지 제목 = 본문과 같은 10 · 폰 세로 = '폰을 가로로 돌려 주세요'가 공지·첫 화면을 덮음(공지 창도 감춤) → 가로로 돌려 같은 점검 · PC 세로는 그대로
 //  10/16 15:3x (docs/import/ui_unify_2026-10-16.md): 처음부터 · 이어하기 · 확인 = 싸움 화면 단추(높이 · 색) · '지난 업데이트 숨김' = 미닫이(role=switch — check/uncheck 그대로) · 나타나기 움직임 줄이기
 //   (싸움 화면과 계산값 맞대기 · 미닫이 꼴 · 누를 때 안 내려앉기 · 글자만 steps 는 tools/browser/ui_unify_smoke.mjs)
+//  10/17 (docs/import/notice_size_2026-10-17.md): 공지 글자 자동 키움 끔(text-size-adjust 100%) · 아래 줄 '공지사항'으로 연 공지 = 처음 들어올 때 공지와 같은 글자 값
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/title_smoke.mjs http://127.0.0.1:5201 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -19,6 +20,8 @@ const inRoot=(page,body,arg)=>page.evaluate(new Function('arg',`const root=${S};
 const ready=page=>page.waitForFunction(()=>document.querySelector('#gameEntrance')?.shadowRoot.getElementById('entrance')?.dataset.phase==='ready',null,{timeout:20000});
 const open=async(page)=>{await page.goto(`${base}/`,{waitUntil:'networkidle'});await page.locator('#noticeDialog').waitFor({state:'attached',timeout:30000});await page.evaluate(()=>document.fonts.ready);};
 const shot=(page,name)=>page.screenshot({path:`${out}/${name}.png`});
+// 공지 글자 값(창 제목 · 공지 제목 · 본문 · 날짜 줄 · 업데이트 수 · 숨김 글): 크기 · 줄 높이 · text-size-adjust — 두 길(처음 들어올 때 · 아래 줄 '공지사항')이 같아야 한다 (10/17)
+const noticeType=page=>inRoot(page,`return ['#noticeHeading','.notice-entry h3','.notice-entry p','.notice-meta','.notice-count','.hide-read'].map(sel=>{const s=getComputedStyle(root.querySelector(sel));return [sel,s.fontSize,s.lineHeight,s.webkitTextSizeAdjust];});`);
 // 돌려 달라는 안내(index.html #rotate): 보이나 · 화면 가운데를 누르면 안내가 받나 · 공지 창이 그려지나 (창은 showModal 맨 위 층이라 세로 폰에선 감춘다 — start_pixel.css)
 const cover=page=>page.evaluate(()=>{const el=document.getElementById('rotate'),d=document.querySelector('#gameEntrance').shadowRoot.getElementById('noticeDialog');return {shown:getComputedStyle(el).display!=='none',top:el.contains(document.elementFromPoint(innerWidth/2,innerHeight/2)),dialog:d.open&&getComputedStyle(d).display!=='none'};});
 async function newPage(opts){const ctx=await browser.newContext(opts);await ctx.route('https://*.supabase.co/**',r=>{errors.push('auth server called: '+r.request().url());r.abort();});const p=await ctx.newPage();watch(p);return p;}
@@ -91,6 +94,8 @@ try{
  assert.equal(new Set(Object.values(typography).map(s=>s.size)).size,4); // 17 · 14(확인 단추) · 12 + 공지 안 10(제목 · 본문 · 날짜)
  assert.equal(new Set(Object.values(typography).map(s=>s.color)).size,4); // 글자 색 셋(본문 · 보조 · 강조) + 확인 = 주 단추라 금색 위 글자(--c-on-accent — 10/16 15:3x)
  check('notices follow the battle HUD type rule (font stack Cinzel→Pretendard · sizes 12/14/17 + notice title/body/date one step down at 10 · title white 700 · weights 400/600/700 · three text colors · keep-all)',{typography});
+ // 10/17: 아이폰 웹킷이 처음 들어올 때 공지의 제목·본문만 10 → 17 로 키우던 것 — 첫 화면 글자는 자동 키움을 끈다 (src/entrance_type.css :host)
+ const firstType=await noticeType(page);assert.ok(firstType.every(t=>t[3]==='100%'),JSON.stringify(firstType));
  await page.evaluate(()=>localStorage.setItem('gladiator-settings','{"fpsCap":true,"prototype-sentinel":true}'));
  await page.locator('#hideRead').check();await page.locator('#confirmNotices').click();
  await page.waitForTimeout(850);await shot(page,'wind-transition-desktop');await ready(page);await shot(page,'title-desktop');
@@ -107,7 +112,7 @@ try{
  await page.reload({waitUntil:'networkidle'});await ready(page);assert.equal(await page.locator('#noticeDialog').evaluate(d=>d.open),false);check('all read: next launch goes straight to title');
  // 아래 줄에서 연 공지: 확인 = 창만 닫음 — 첫 화면 넘어감(phase notice → wind → ready)을 다시 틀지 않는다 (사장님 10/16 08:3x)
  await inRoot(page,`window.__phases=[];new MutationObserver(()=>window.__phases.push(root.getElementById('entrance').dataset.phase)).observe(root.getElementById('entrance'),{attributes:true,attributeFilter:['data-phase']});`);
- await page.locator('#openNotices').click();assert.equal(await page.locator('.notice-entry').count(),N);await page.locator('#hideRead').uncheck();await page.locator('#confirmNotices').click();await ready(page);
+ await page.locator('#openNotices').click();assert.equal(await page.locator('.notice-entry').count(),N);assert.deepEqual(await noticeType(page),firstType);check('footer notices use the same notice text values as the first-launch notices (size · line height · text-size-adjust 100%)');await page.locator('#hideRead').uncheck();await page.locator('#confirmNotices').click();await ready(page);
  await page.waitForTimeout(400);assert.equal(await page.locator('#noticeDialog').evaluate(d=>d.open),false);assert.deepEqual(await page.evaluate(()=>window.__phases),[]);
  assert.equal(await inRoot(page,`return root.getElementById('titleScreen').inert`),false);check('footer notices: 확인 only closes the dialog (no title intro replay — phase stays ready)');
 await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.notice-entry').count(),N);check('reopen notices and turn hiding off');

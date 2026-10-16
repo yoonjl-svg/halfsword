@@ -7,6 +7,7 @@
      (14:0x '공지 제목도 글자 크기 내용과 같이 줄여. 색은 흰색으로 유지' — 굵기 700 · 흰색 --c-text 그대로 · §11). 창 제목 17 · 아래 줄 12 는 그대로
    · 강조는 강조 색(금색) 또는 굵기만. 등급 글은 등급 색(--tier-*). 한글은 낱말 가운데서 줄을 바꾸지 않는다(keep-all)
    · 단추 글(10/16 15:3x — 싸움 화면 단추와 같은 값, entrance_ui.css 한 곳): 주 단추 14 · 700 / 부 단추 14 · 400 / 작은 부 단추(아래 줄 · 첫 화면으로) 12 · 400 / 탭 12 · 400, 고른 탭 600
+   · 브라우저가 글자를 제멋대로 키우지 않게 한다(아래 :host 의 text-size-adjust — 사장님 10/17 '들어가자마자 뜨는 공지의 글자가 여전히 크게 나옴' · docs/import/notice_size_2026-10-17.md)
    이 파일은 start_screen.css · start_pixel.css · lobby.css · entrance_ui.css 뒤에 붙는다(game_entry.js · lobby.js) — 꾸밈 값은 그 파일들, 글자 값은 여기 한 곳. */
 :host {
   --fs-xs: 10px; /* 글자 규칙 세 단계(--fs-s 12 · --fs-m 14 · --fs-l 17 — index.html :root)의 한 단계 아래 — 첫 화면·대기실에만(공지 본문·날짜 · '장착 중' 알약) */
@@ -15,6 +16,11 @@
   font-family: var(--font-ui);
   word-break: keep-all;
   overflow-wrap: break-word;
+  /* 글자 자동 키움 끔 (물려받는 값 — 첫 화면 · 공지 · 설정 · 계정 · 대기실 모두). 아이폰 웹킷은 가로 화면에서 폰 세로 폭(390)보다 넓은 글 칸의 작은 글자를
+     키운다(공지 제목·본문 452 px 칸 → 10 → 17). 그 셈은 #entrance(높이 100svh · overflow hidden) 안에서 시작한 배치 때만 공지 창까지 닿아서, 처음 들어올 때의 공지
+     (창이 열린 채 픽셀 제목 그림 · 계정 단추 글이 바뀜)만 커지고 '공지사항'으로 연 공지는 그대로였다. 글자 크기는 위 규칙 값 그대로만 쓴다 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 :host button, :host input { font-family: inherit; }
 :host input, :host #accountAddress, :host #accountCodeHelp, :host #openAccount[data-connected=true] { font-family: var(--font-plain); }
