@@ -2,7 +2,7 @@
 //  AI 의 update 를 시험용으로 바꾼다: 막는 중(mode 'defend', 피하기 아님, defLine = 그 줄)으로 두고 손은 꾸러미 막기 자리(art.school.parry[줄])로 —
 //  본판의 막기 덧씌우기(frames.js installCover — 유파 parryCover)가 그대로 돈다. 'pad:<G 열쇠>' 는 막지 않고 그 패드만 든다(자세표 몸꼴).
 //  시험만: 플레이어는 맞지 않고 치지 않는다. 콘솔 에러 0 을 본다.
-//   SHOTS=highC,thrust,lowL,pad:sideR,pad:sideL  WEAPON=qinggang  PREFIX=school_parry_after  VIEWS=front,side  QUERY=&kronShape=pad
+//   SHOTS=highC,thrust,lowL,pad:sideR,pad:sideL  WEAPON=qinggang  PREFIX=school_parry_after  VIEWS=front,side  QUERY=&kronShape=pad  CAM_R=<카메라 거리 m, 기본 3>
 //   npx vite build && npx vite preview --port 4193 --strictPort &   node tools/browser/school_parry_shots.mjs http://127.0.0.1:4193 <폴더>
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -12,6 +12,7 @@ const PREFIX = process.env.PREFIX || 'school_parry';
 const WEAPON = process.env.WEAPON || 'qinggang';
 const SHOTS = (process.env.SHOTS || 'highC,thrust,lowL').split(',').filter(Boolean);
 const VIEWS = (process.env.VIEWS || 'q34').split(',').filter(Boolean);
+const CAM_R = +(process.env.CAM_R ?? 3.0); // 10/17 카메라 거리 — 가까이 찍기 (기본 3 m 그대로)
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const errors = [];
@@ -78,7 +79,7 @@ for (const sh of SHOTS) {
   out[sh] = info;
   await page.evaluate(() => { const g = window.game; if (g.state === 'fight') window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyP' })); document.getElementById('menu').style.visibility = 'hidden'; });
   for (const view of VIEWS) {
-    await page.evaluate((view) => {
+    await page.evaluate(([view, R]) => {
       const g = window.game, f = g.enemy, o = g.player;
       const b = f.bodies.chest.translation(), a = o.bodies.chest.translation();
       let fx = a.x - b.x, fz = a.z - b.z;
@@ -86,12 +87,11 @@ for (const sh of SHOTS) {
       fx /= L; fz /= L;
       const rx = -fz, rz = fx, s = f.side;
       const ang = { front: [0.85, 0.53], side: [0, 1], q34: [0.5, 0.87] }[view];
-      const R = 3.0;
       const cx = fx * ang[0] + rx * s * ang[1], cz = fz * ang[0] + rz * s * ang[1];
       g.freeCam = true;
       g.camera.position.set(b.x + cx * R, 1.5, b.z + cz * R);
       g.camera.lookAt(b.x, 1.25, b.z);
-    }, view);
+    }, [view, CAM_R]);
     await page.waitForTimeout(200);
     await page.screenshot({ path: `${dir}/${PREFIX}_${sh.replace(':', '-')}_${view}.png` });
   }

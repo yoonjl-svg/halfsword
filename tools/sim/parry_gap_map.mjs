@@ -4,7 +4,7 @@
 //  공격 = 기술 12 (TECH 모두) + 속임수 4 (FEINTS — ai.js 와 같이 가짜 길을 at 만큼 가다가 then 길로).
 //  막는 쪽 꼴: 무기[:꼴] — 꼴 school(기본 · 2급 막기 책) · basic(책 없음 = 무유파 자리 · 덧씌우기 없음) · nocover(유파 자리 그대로, 몸꼴 덧씌우기만 뺌)
 //  막음 = 칼날 상처 없음 + 칼끼리 닿음 · 베임 = 칼날 상처 · 둘 다 아님(간격 밖·스침)은 뺀다 (parry_assist_bench 와 같은 뜻)
-//  FOLLOW=0|1 = 막기 따라가기 끄고 켜기(판 값 1) · ATK=<치는 무기>(기본 longsword) · GAPS=… · ATTACKS=이름,… · OUT=<json 경로>
+//  FOLLOW=0|1 = 막기 따라가기 끄고 켜기(판 값 1) · PA=<막기 거듦 단계 0~3>(판 값 0) · ATK=<치는 무기>(기본 longsword) · GAPS=… · ATTACKS=이름,… · OUT=<json 경로>
 //  node tools/sim/parry_gap_map.mjs longsword,rapier,zweihander,uchigatana,qinggang,qinggang:basic,qinggang:nocover
 import { newRound, DT } from './harness_m.mjs';
 import { writeFileSync } from 'node:fs';
@@ -54,7 +54,7 @@ const POOL = process.env.ONLY ? UNIQ : [...ALL, ...UNIQ];
 const ATTACKS = process.env.ATTACKS ? process.env.ATTACKS.split(',').map((n) => POOL.find((a) => a.name === n)).filter(Boolean) : POOL;
 
 function trial(cfg, atk, gap) {
-  SKILL.parryAssist = 0; // 지금 판 값
+  SKILL.parryAssist = +(process.env.PA ?? 0); // 막기 거듦 단계 (지금 판 값 0 — PA=2 = 일찍·다시 읽기, docs/strike/parry_assist_2026-10-12.md)
   const Gm = newRound({ weapon: cfg.weapon, weapon2: ATK, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr;
@@ -92,13 +92,15 @@ function trial(cfg, atk, gap) {
     if (r.clash == null && Gm.clashes > c0) r.clash = Gm.t;
     if (!r.cut) {
       const w = Gm.wounds.find((x) => x.vic === D && x.type !== 'blunt');
-      if (w) r.cut = { t: Gm.t, part: w.part ?? w.region ?? null };
+      if (w) r.cut = { t: Gm.t, part: w.zone ?? w.part ?? w.region ?? null, ph };
     }
   };
   while (!(ph === 4 && Gm.t - t0 > 0.6) && Gm.t < 6) Gm.step();
   const lines = [...r.lines].join('>') || '-';
   if (!r.cut && r.clash == null) return { why: 'clear', lines };
   if (!r.cut) return { why: 'ok', lines };
+  // wind = 긋기 전(준비 동작 · 멈춤)에 벰 — 가까운 간격에서 준비 자세로 가는 칼끝이 다리를 스친다 (10/16 23:5x). 막음 셈에선 전과 같이 못 막음
+  if (r.cut.ph < 3) return { why: 'wind', lines, part: r.cut.part };
   return { why: r.clash != null && r.clash < r.cut.t ? 'pushed' : 'cut', lines, part: r.cut.part };
 }
 
@@ -107,15 +109,17 @@ for (const cfg of CONFIGS) {
   const rows = {};
   for (const atk of ATTACKS) rows[atk.name] = GAPS.map((g) => trial(cfg, atk, g));
   out.configs[cfg.key] = rows;
-  let ok = 0, n = 0;
+  let ok = 0, n = 0, wind = 0;
   const cells = [];
   for (const [name, res] of Object.entries(rows)) {
     const v = res.filter((x) => x.why !== 'clear');
     const k = v.filter((x) => x.why === 'ok').length;
+    const wd = v.filter((x) => x.why === 'wind').length;
     ok += k;
     n += v.length;
-    cells.push(`${name} ${k}/${v.length}`);
+    wind += wd;
+    cells.push(`${name} ${k}/${v.length}${wd ? `(준비 ${wd})` : ''}`);
   }
-  console.log(`${cfg.key.padEnd(18)} 치는 칼 ${ATK.padEnd(10)} 막음 ${ok}/${n} = ${n ? Math.round((100 * ok) / n) : 0}% | ${cells.join(' · ')}`);
+  console.log(`${cfg.key.padEnd(18)} 치는 칼 ${ATK.padEnd(10)} 막음 ${ok}/${n} = ${n ? Math.round((100 * ok) / n) : 0}% (준비 동작에 벰 ${wind}) | ${cells.join(' · ')}`);
 }
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));

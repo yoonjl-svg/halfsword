@@ -1133,6 +1133,14 @@ TRADITIONS.chinese.ownFeints = true;
 //  (그 자리의 몸꼴은 이미 유파 자세표 guardTable 이 정한다). 고르는 기준은 원전, 물리 막음 비율은 보고만(tools/sim/school_parry.mjs). 값은 모두 사장님 확인 전 (확인표 800~)
 //  일본 막기 자리는 위 JAPANESE_PARRY. 덮는 자세: 일본 — 조단 자리(두 손 이마 위). 소태도 1본 仕太刀 「右手頭上·刃先後ろ, 左鎬で受け流し」(검도형 p16 — 머리 위에서 받음) [원문] · 자리 [해석]
 TRADITIONS.japanese.pose = { ...GERMAN.pose, cover: G.tag };
+// 일본 고유 막기 몸꼴 — 우케나가시 (受け流し) (10/17 00:1x — 사장님 10/16 23:3x '우케나가시 탈류 쳐내기 개발해' · docs/strike/ukenagashi_talho_2026-10-17.md).
+//  검도형 p16 소태도 1본 仕太刀: 打太刀가 正面(머리)을 치면 「右足を右斜め前に…体を右に開き、右手を頭上に上げ、刃先を後ろに…左鎬で受け流し」 [원문] → 줄 highC(정수리 베기) [해석]
+//  꼴: 오른손을 머리 높이 앞으로 올리고 칼끝을 왼쪽으로 비스듬히 낮춰(아래 21° · 옆 83°) 지붕처럼 — 떨어지는 칼이 왼 칼등(鎬)을 타고 왼쪽으로 흘러내린다.
+//   몸을 연다(골반 −31° · 가슴 −48° — 칼 든 오른 어깨가 앞) · 조금 낮춤(0.09 m). 자리(패드)는 그대로 긴 자세 자리 — 손이 가는 길만 정하고 꼴은 이 덧씌우기(frames.js installCover)가 준다.
+//  수는 물리 찾기(tools/sim/cover_search.mjs RANGE=ukenagashi — 후보 80 → 상위 6 을 치는 칼 셋 × 간격 8 × 빠르기 3 × 공격 넷(정수리 · 위→다리 · 성난 베기 · 찌르기→베기) = 288 판):
+//   맞은 판 24 → 19 [추정]. 처음 노린 줄(위 왼쪽 — 성난 베기)은 따라가기 뒤 이미 32/32 라 그 줄 후보는 모두 손해(61/71 → 51/68 이하)여서 원전 1본의 줄(정수리)로 옮김. 사장님 확인 전(확인표 2011)
+export const JAPANESE_UKENAGASHI = { name: '우케나가시 (受け流し)', desc: '오른손을 머리 위로 올리고 칼끝을 왼쪽으로 비스듬히 내려 지붕처럼 받는다 · 떨어지는 칼이 칼등을 타고 흘러내린다', pad: G.langort, hand: [0.23, 0.4, -0.21], blade: [-21, -83], pelvisYaw: -31, chestYaw: -48, pitch: 2, drop: 0.09, src: '검도형 p16 소태도 1본 「体を右に開き、右手を頭上に上げ、刃先を後ろに…左鎬で受け流し」 [원문] · 줄 highC [해석] · 수 물리 찾기 [추정]' };
+TRADITIONS.japanese.parryCover = { highC: JAPANESE_UKENAGASHI };
 
 // 이탈리아 막기 자리 (카포 페로 1610 — Wiktenauer 영역 단락 [n]·권고 n·판 번호). 막기는 칼끝을 곧게 두고 forte 로 받는다:
 //  [115] 「While I strike, I necessarily parry together, inasmuch as I strike in the straight line」 · 권고 21 「all the parries require an extended arm」 · 권고 15 「parry with the true edge … with the forte」 [원문]
@@ -1198,6 +1206,14 @@ TRADITIONS.iberian.ownFeints = true;
 // 물러남 (전 독일 값: 몰리면 황소 · 그 밖 쟁기·긴 자세): 규칙을 '풀며' 물러날 때 「removing backward the left foot with a talho equal to the first」(단Ⅰ) — 베기 끝은 얼굴 앞(곧은 자세) ·
 //  「retreating backward until you place your body as it began the rule」(복Ⅰ) — 규칙의 시작 = 몸을 곧게, 칼끝을 땅에(단Ⅰ) [원문 영역]
 TRADITIONS.iberian.withdraw = { pressed: 'langort', calm: ['langort', 'alber'] };
+// 이베리아 고유 막기 몸꼴 — 탈류 쳐내기 (talho) (10/17 00:1x — 사장님 10/16 23:3x '우케나가시 탈류 쳐내기 개발해' · docs/strike/ukenagashi_talho_2026-10-17.md).
+//  몬탄테는 받지 않고 베어서 쳐낸다 — 「deflect it with a talho … or else deflect with a revez, according to which side」(단ⅩⅣ). 왼쪽으로 오는 칼을 탈류로 쳐내면 그 칼이
+//  「high in front of the head on the left side, in obtuse line」(복ⅩⅤ)에 멈춘다 [원문 영역] → 줄 highL(위 막기 자리 '왼 높이 비낌'과 같은 근거) [해석]
+//  꼴: 쳐낸 칼이 멈춘 자리 — 두 손을 머리 앞 왼쪽 높이로(앞 0.41 · 위 0.32 · 왼 0.40 m), 칼은 위로 38° 세워 비스듬히(옆 −6°). 몸은 왼 어깨를 조금 앞으로(골반 26° · 가슴 12°).
+//  수는 물리 찾기(tools/sim/cover_search.mjs RANGE=talho — 상위 7 을 치는 칼 셋 × 간격 8 × 빠르기 3 × 성난 베기 · 가로 베기 = 144 판): 맞은 판 11 → 10 — 막음은 이미 높아(따라가기 뒤)
+//   더 막지는 않고 손해 없음(원전 꼴 중 맞은 판이 가장 적은 것). 사장님 확인 전(확인표 2012)
+export const IBERIAN_TALHO = { name: '탈류 쳐내기 (talho)', desc: '왼쪽으로 오는 칼을 오른 어깨에서 비스듬히 베어 쳐낸다 · 쳐낸 칼은 머리 앞 왼쪽에 비스듬히 선다', pad: G.ochsL, hand: [0.41, 0.32, -0.4], blade: [38, -6], pelvisYaw: 26, chestYaw: 12, pitch: 1, drop: 0.02, src: '피게이레두 1651 단ⅩⅣ 「deflect it with a talho」 · 복ⅩⅤ 「high in front of the head on the left side, in obtuse line」 [원문 영역] · 줄 highL [해석] · 수 물리 찾기 [추정]' };
+TRADITIONS.iberian.parryCover = { highL: IBERIAN_TALHO };
 
 // 중국 막기 자리 (조선세법 — 24 세 가운데 格·洗, 무비지 국역 쪽/원서 쪽 · 무도 권2 p). 전: 독일 표 그대로(위 옛 기록 — 擧鼎格 을 왕관 자리로 넣어 본 일은 chinese_guards 문서 §3)
 //   highC·highR 표두세 자리(칼을 머리 위로 높이 듦) — 擧鼎勢 「卽擧鼎格, 法能鼎格上殺」(쪽154/0568 · 무도 p035/27 그림 '칼을 머리 위로 들어 막음') [원문] ·

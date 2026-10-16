@@ -35,6 +35,14 @@ import { AI } from './ai.js';
 
 const _r = new THREE.Vector3();
 const LINES = ['highL', 'highR', 'highC', 'lowL', 'lowR', 'thrust'];
+// coverFor 가 고른 자리 → 줄 이름 (10/16 23:5x): 두 줄이 같은 자리를 쓰면(이베리아 lowL·lowR = 왼 비낀 자세 · 동방 highR·highC = 거정세 자리 · 이탈리아 highL·lowL)
+//  LINES 차례의 앞 줄만 잡혀 그 줄의 몸꼴 덧씌우기가 엇갈렸다(동방 정수리 준비에 거정세 대신 맨 자리) — coverFor 와 같은 규칙으로 상대 칼이 있는 쪽 줄을 먼저 본다.
+//  손 목표(자리)는 그대로 — 고르는 줄 이름만. 가운데(pose.point)는 전과 같이 LINES 차례
+function coverLineOf(school, s, p) {
+  const want = s.hy > 0.15 ? (s.hx > 0.15 ? 'highL' : s.hx < -0.15 ? 'highR' : 'highC') : s.hy < -0.2 ? (s.hx >= 0 ? 'lowL' : 'lowR') : null;
+  if (want && school.parry[want] === p) return want;
+  return LINES.find((k) => school.parry[k] === p);
+}
 
 export class PlayerParryGuard {
   constructor(me, foe) {
@@ -147,7 +155,7 @@ export class PlayerParryGuard {
       //  상대 칼이 있는 쪽 줄로 옮긴다 — 준비 동작을 공격으로 읽어 굳힌 줄(위)을 칼을 내린 준비 자세(아래)로 바로잡는다.
       //  가까운 올려 베기는 다리를 먼저 베어, 긋기 전에 아래 자리(동방 요략세)에 가 있어야 막는다
       const p = AI.prototype.coverFor.call({ school: this.school }, s);
-      const ln = LINES.find((k) => this.school.parry[k] === p);
+      const ln = coverLineOf(this.school, s, p);
       if (ln && ln !== this.defLine) {
         this.defLine = ln;
         this.stats.follow = (this.stats.follow ?? 0) + 1;
@@ -168,7 +176,7 @@ export class PlayerParryGuard {
       this.mode = 'idle';
       this.stats.waitT += dt;
       p = AI.prototype.coverFor.call({ school: this.school }, s); // 기다림: AI 가 물러나며 가리는 자리 (같은 함수)
-      this.line = p === this.school.pose.point ? 'point' : (LINES.find((k) => this.school.parry[k] === p) ?? 'point');
+      this.line = p === this.school.pose.point ? 'point' : (coverLineOf(this.school, s, p) ?? 'point');
     }
     this.coverLine = this.mode === 'idle' && this.line !== 'point' ? this.line : null;
     // 손 목표를 막기 빠르기로 (ai.js moveHand 와 같은 꼴)
