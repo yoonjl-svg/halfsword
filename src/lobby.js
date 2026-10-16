@@ -13,7 +13,7 @@ import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress } from './lobby_progress.js';
 import { BOOK_SCHOOLS, readBooks } from './skill_books.js';
 import { mountSkillTree } from './skill_tree.js';
-import { convertSeals } from './seal_coins.js';
+import { convertSeals, takeSealNotice } from './seal_coins.js';
 import { TRADITIONS } from './schools.js';
 import { getWeapon, TIER_LABEL } from './weapons.js';
 
@@ -22,12 +22,12 @@ const COIN_ICON = '<svg class="coin-icon" viewBox="0 0 16 16" role="img" aria-la
 const POUCH_ICON = '<svg class="coin-icon pouch-icon" viewBox="0 0 16 16" role="img" aria-label="머리" shape-rendering="crispEdges"><path fill="#4a3422" d="M4 0h2v1h4V0h2v2h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1h-1v1H4v-1H3v-1H2v-1H1V7h1V5h1V4h1V3h1V2H4Z"/><path fill="#a9814f" d="M5 1h1v1h4V1h1v1h-1v1h1v1h1v1h1v2h1v6h-1v1h-1v1H4v-1H3v-1H2V7h1V5h1V4h1V3h1V2H5Z"/><path fill="#d6b27a" d="M4 6h1v1h1v4H5v1H4V9H3V7h1Z"/><path fill="#6f5130" d="M11 7h1v1h1v4h-1v1h-1v1H8v-1h2v-1h1Z"/><path fill="#3a2a1b" d="M6 3h4v1H6z"/><path fill="#c9a36b" d="M7 2h2v1H7z"/></svg>';
 
 export function mountLobby({ root, game, choice, onDepart, onBack }) {
-  const ctx = game.getSkillBookContext?.() ?? { test: false, clearsPinned: false };
+  const ctx = game.getSkillBookContext?.() ?? { test: false };
   root.innerHTML = `<style>${titleStyle}\n${style}\n${typeStyle}</style><main class="lobby" data-start-theme="pixel" aria-labelledby="lobbyHeading">
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><button id="lobbyBack">‹ 첫 화면으로</button></header>
     <div class="lobby-columns">
-      <section class="character-panel"><div class="portrait-card card-frame" aria-label="내 캐릭터"><div class="character-view" id="characterView" tabindex="0" role="group" aria-label="캐릭터 360도 보기. 드래그 또는 좌우 방향키로 회전, Home으로 정면"></div><p class="rotate-hint">↔ 드래그하여 회전</p></div><div class="departure-actions start-actions"><button class="depart" id="lobbyDepart">${choice === 'continue' ? '여정 이어가기' : '여정 시작'}</button></div><p class="landscape-hint" id="landscapeHint"><span aria-hidden="true">↻</span> 싸움은 가로 화면입니다<br>시작하면 폰을 돌려 주세요</p><p id="lobbyStatus" class="lobby-status" role="status"></p></section>
+      <section class="character-panel"><div class="portrait-card card-frame" aria-label="내 캐릭터"><div class="character-view" id="characterView" tabindex="0" role="group" aria-label="캐릭터 360도 보기. 드래그 또는 좌우 방향키로 회전, Home으로 정면"></div></div><div class="departure-actions start-actions"><button class="depart" id="lobbyDepart">${choice === 'continue' ? '여정 이어가기' : '여정 시작'}</button></div><p class="landscape-hint" id="landscapeHint"><span aria-hidden="true">↻</span> 싸움은 가로 화면입니다<br>시작하면 폰을 돌려 주세요</p><p id="lobbyStatus" class="lobby-status" role="status"></p></section>
       <section class="profile-panel" aria-label="내 정보">
         <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank"></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd><dt>대표 유파</dt><dd id="lobbySchool"></dd></dl>
         <p class="duel-record"><span>대면 결과</span><b id="duelRecord"></b></p>
@@ -56,10 +56,11 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();
   paintPixelWordmark($('lobbyHeading'), { text: '대기실', font: '600 18px Pretendard', height: 29, baseline: 22, tracking: 2 });
-  // 이미 받은 인장 → 금화 (사장님 10/16 04:2x — 한 번만, seal_coins.js). 테스트 경로·주소 ?clears= 판에서는 바꾸지 않는다
-  const converted = ctx.test || ctx.clearsPinned ? null : convertSeals();
+  // 이미 받은 인장 → 금화 (사장님 10/16 04:2x — 한 번만, seal_coins.js · 인장 제도는 08:1x 에 없앰). 바꾸기는 판을 처음 연 때 main.js 가 이미 했다 — 여기선 남은 것만(안전)
+  //  알림은 아직 안 띄운 바꿈이 있을 때 한 번 (takeSealNotice). 테스트 경로에서는 바꾸지도 알리지도 않는다
+  const converted = ctx.test ? null : (convertSeals(), takeSealNotice());
   const profile = readProfile();
-  // 대표 유파 = 산 스킬북이 가장 많은 유파(같으면 탭 차례 앞) — 인장은 이제 플레이어에게 아무것도 열지 않아(사장님 04:1x) 인장 수로 고르지 않는다
+  // 대표 유파 = 산 스킬북이 가장 많은 유파(같으면 탭 차례 앞)
   function representative() {
     const owned = readBooks().owned, count = Object.fromEntries(BOOK_SCHOOLS.map(s => [s, 0]));
     for (const id of owned) count[id.split(':')[0]]++;
@@ -79,11 +80,11 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   $('duelRecord').textContent = `${profile.wins}승리 ${profile.losses}패배 (${total ? Math.round(profile.wins / total * 100) : 0}%)`;
   const status = (text, tone = '') => { $('lobbyStatus').textContent = text; if (tone) $('lobbyStatus').dataset.tone = tone; else delete $('lobbyStatus').dataset.tone; };
   if (converted?.coins) status(`인장 ${converted.seals}개를 금화 ${converted.coins.toLocaleString('ko-KR')}으로 바꿨습니다.`, 'notice');
-  const preview = createLobbyCharacter($('characterView'), game.getLobbyPlayer());
+  const preview = createLobbyCharacter($('characterView'), game); // 몸 = 다음 판 플레이어와 같은 Fighter (lobby_rig.js — game.lobbyRigSpec)
   let selectedItem = null, category = 'weapon';
   const equipped = { weapon: readLobbyEquipment(), armor: readLobbyArmor() };
   preview.setWeapon(equipped.weapon); preview.setArmor(equipped.armor);
-  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, announce: text => { $('skillStatus').textContent = text; } });
+  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, onBooks: () => preview.refresh(), announce: text => { $('skillStatus').textContent = text; } }); // 책을 사거나 봉인하면 미리보기 걸음 자세도 (그 무기 유파 보법)
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')];
   function selectTab(tab) {
     for (const item of tabs) {

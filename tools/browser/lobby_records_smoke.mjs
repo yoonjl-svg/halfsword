@@ -23,9 +23,10 @@ try{
  await p.locator('#continueJourney').click();assert.equal(await p.locator('#duelRecord').textContent(),'2승리 1패배 (67%)');
  assert.equal(await p.locator('#lobbyDepart').textContent(),'여정 이어가기');
  const rect=await p.locator('#lobbyDepart').boundingBox();assert.ok(rect.y>=0&&rect.y+rect.height<=390);
- await p.locator('#characterView').focus();await p.keyboard.press('ArrowRight');
+ const rest=()=>p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning==='false'); // 10/16 돌림판: 방향키도 부드럽게 돈다 — 선 뒤에 읽는다
+ await p.locator('#characterView').focus();await p.keyboard.press('ArrowRight');await rest();
  assert.equal(Number(await p.locator('#characterView').getAttribute('data-angle')),23);
- await p.keyboard.press('Home');assert.equal(Number(await p.locator('#characterView').getAttribute('data-angle')),0);
+ await p.keyboard.press('Home');await rest();assert.equal(Number(await p.locator('#characterView').getAttribute('data-angle')),0);
  await p.locator('#editName').click();await p.locator('#playerNameInput').fill('   ');await p.locator('#nameForm button[type=submit]').click();assert.match(await p.locator('#nameError').textContent(),/입력/);
  await p.locator('#playerNameInput').fill('<b>검객</b>');await p.locator('#nameForm button[type=submit]').click();
  assert.equal(await p.locator('#lobbyName').textContent(),'<b>검객</b>');assert.equal(await p.locator('#lobbyName b').count(),0);

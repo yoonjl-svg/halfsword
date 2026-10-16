@@ -1,4 +1,5 @@
-// 대기실 고친 것 시험 (docs/import/lobby_fix_2026-10-16.md): 케틀 햇 최대 기력 130 · 스킬북(사기 · 사용/봉인 · 판에서 켜고 끔) · 인장 → 금화 · 여정 금화 · 머리
+// 대기실 고친 것 시험 (docs/import/lobby_fix_2026-10-16.md): 케틀 햇 최대 기력 130 · 스킬북(사기 · 사용/봉인 · 판에서 켜고 끔 · ?uniqueStage) · 이미 받은 인장 → 금화 · 여정 금화 · 머리
+//  10/16 08:1x 인장 없앰(docs/strike/school_kit_map.md §3): 인장 셈은 seal_coins.js 의 얼린 상수 · 깬 수는 journey_save.js 통계
 //  node --test tools/sim/lobby_fix.test.mjs   (시뮬 판은 tools/sim/harness_m.mjs — 플래그는 main.js newRound 가 플레이어에게만 거는 것과 같은 자리)
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,9 +9,9 @@ globalThis.localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k,
 const { Stamina } = await import('../../src/stamina.js');
 const { STAMINA, GAIT, UNIQUE_ASSIST } = await import('../../src/config.js');
 const { readProgress, journeyCoins, rollInt, awardHead, JOURNEY_COINS, PROGRESS_KEY, setCoins } = await import('../../src/lobby_progress.js');
-const { BOOK_TIERS, booksOf, bookOf, buyBook, readBooks, bookState, setBookInUse, playerKit, kitUniqueStage, BOOK_HEAD_PRICE, headPriceOf, BOOK_STATE_KEY } = await import('../../src/skill_books.js');
-const { convertSeals, storedClears, SEAL_COINS_KEY, CONVERT_FUTURE_SEALS } = await import('../../src/seal_coins.js');
-const { setClearsOverride, CLEAR_KEY } = await import('../../src/unique_assist.js');
+const { BOOK_TIERS, booksOf, bookOf, buyBook, readBooks, bookState, setBookInUse, playerKit, kitUniqueStage, bookTierParam, BOOK_HEAD_PRICE, headPriceOf, BOOK_STATE_KEY } = await import('../../src/skill_books.js');
+const { convertSeals, takeSealNotice, sealCount, OLD_SEALS, COINS_PER_SEAL, SEAL_COINS_KEY } = await import('../../src/seal_coins.js');
+const { CLEAR_KEY, journeyClears, addJourneyClear } = await import('../../src/journey_save.js');
 const { newRound, DT } = await import('./harness_m.mjs');
 const { PlayerParryGuard } = await import('../../src/parry_button.js');
 const { PlayerUniqueAssist } = await import('../../src/unique_assist.js');
@@ -89,6 +90,17 @@ test('playerKit: 산 책이 사용일 때만 켬 · 봉인·안 삼은 끔 · �
   assert.equal(playerKit('none', books), null);
   assert.equal(kitUniqueStage({ unique: true }), 4); assert.equal(kitUniqueStage({ unique: false }), 0);
 });
+test('개발 인자 ?uniqueStage=N: 0 = 책 없음 · N 급까지 · 5 = 모두 — 산 책·테스트 경로보다 먼저 · 범위 밖은 산 책대로', () => {
+  assert.deepEqual([null, '', '0', '2', '5', '6', '-1', '2.5', 'x'].map(bookTierParam), [null, null, 0, 2, 5, null, null, null, null]);
+  const none = { owned: new Set(), sealed: new Set() };
+  const all = { owned: new Set([1, 2, 3, 4, 5].map((t) => `german:${t}`)), sealed: new Set() };
+  assert.deepEqual(playerKit('german', all, { upTo: 0 }), { footwork: false, parry: false, unique: false, passive: false, secret: false });
+  assert.deepEqual(playerKit('german', none, { upTo: 2 }), { footwork: true, parry: true, unique: false, passive: false, secret: false }); // 10/16 전 주소 판 기본(보법·막기 늘 켬 · 깬 수 0)과 같은 몫
+  assert.deepEqual(playerKit('japanese', none, { upTo: 5 }), { footwork: true, parry: true, unique: true, passive: true, secret: true });
+  assert.deepEqual(playerKit('japanese', none, { test: true, upTo: 1 }), { footwork: true, parry: false, unique: false, passive: false, secret: false }); // ?uniqueStage 가 테스트 경로를 덮는다 (10/13 차례)
+  assert.equal(kitUniqueStage(playerKit('german', none, { upTo: 3 })), 4); assert.equal(kitUniqueStage(playerKit('german', all, { upTo: 2 })), 0);
+  assert.equal(playerKit('none', all, { upTo: 5 }), null);
+});
 test('실제 판: 보법 봉인 = 기본 걸음 (일본 버티기·낮은 자세·걷기 기력 2.1 없음), 사용 = 유파 걸음', () => {
   for (const on of [true, false]) {
     const g = newRound({ weapon: 'monohoshizao', seed: 3, onFighter: (f) => { if (f.index === 0 && !on) f.schoolFootwork = false; } });
@@ -134,9 +146,10 @@ test('실제 판: 고유자세 · 비기 봉인 = 고유 공격 없음 · 비기
   } finally { g.world.free(); }
 });
 
-// ── 인장 → 금화 (사장님 10/16 04:2x) ──
-test('인장 → 금화: 한 번만 · 인장 0 = 없음 · 인장 25 = 2,500 · 앞으로 받을 인장은 스위치(꺼짐)', () => {
-  assert.equal(CONVERT_FUTURE_SEALS, false);
+// ── 이미 받은 인장 → 금화 (사장님 10/16 04:2x · 08:1x 인장 없앰 — 한 번만) ──
+test('인장 → 금화: 한 번만 · 인장 0 = 없음 · 인장 25 = 2,500 · 바꾼 뒤 깬 무대는 안 바꿈 · 옛 셈은 얼린 상수', () => {
+  assert.deepEqual(OLD_SEALS, { clearsPerSeal: 10, max: 25 }); assert.equal(Object.isFrozen(OLD_SEALS), true); assert.equal(COINS_PER_SEAL, 100);
+  assert.deepEqual([0, 9, 10, 35, 37, 249, 250, 999].map(sealCount), [0, 0, 1, 3, 3, 24, 25, 25]);
   reset(); storage.set(CLEAR_KEY, '0');
   assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: true }); assert.equal(readProgress().coins, 100);
   assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); // 기록이 생겼다 — 다시 안 함
@@ -144,16 +157,32 @@ test('인장 → 금화: 한 번만 · 인장 0 = 없음 · 인장 25 = 2,500 ·
   assert.deepEqual(convertSeals(), { seals: 25, coins: 2500, first: true }); assert.equal(readProgress().coins, 2600);
   assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(readProgress().coins, 2600); // 새로 고침해도 한 번
   assert.deepEqual(JSON.parse(storage.get(SEAL_COINS_KEY)).converted, 25);
-  reset(); storage.set(CLEAR_KEY, '37'); // 인장 3 (10 번마다 — 본판 셈 그대로)
-  assert.equal(convertSeals().coins, 300);
-  storage.set(CLEAR_KEY, '52'); // 그 뒤 인장 2 더 — 스위치 꺼짐: 그대로
-  assert.equal(convertSeals().coins, 0);
-  assert.equal(convertSeals({ future: true }).coins, 200); // 켜면 그동안 받은 몫부터
-  assert.equal(convertSeals({ future: true }).coins, 0);
+  reset(); storage.set(CLEAR_KEY, '35'); // 인장 3
+  assert.equal(convertSeals().coins, 300); assert.equal(readProgress().coins, 400);
+  storage.set(CLEAR_KEY, '52'); // 바꾼 뒤에 깬 무대 — 인장이 없으니 그대로
+  assert.equal(convertSeals().coins, 0); assert.equal(readProgress().coins, 400);
 });
-test('인장 → 금화는 주소 ?clears= 덮어쓰기를 읽지 않는다 (저장된 깬 수만)', () => {
-  reset(); storage.set(CLEAR_KEY, '0');
-  try { setClearsOverride(250); assert.equal(storedClears(), 0); assert.equal(convertSeals().coins, 0); } finally { setClearsOverride(null); }
+test('이미 바꾼 기록(10/16 04:5x 판이 남긴 꼴)이 있으면 깬 수가 늘어도 다시 안 줌 · 깬 수는 통계로 셈', () => {
+  reset(); storage.set(CLEAR_KEY, '120');
+  storage.set(SEAL_COINS_KEY, JSON.stringify({ version: 1, converted: 3, at: '2026-10-16' }));
+  assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(readProgress().coins, 100);
+  assert.equal(journeyClears(), 120); assert.equal(addJourneyClear(), 121); assert.equal(storage.get(CLEAR_KEY), '121');
+  assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(readProgress().coins, 100);
+});
+
+test('바꾼 알림은 한 번: 판을 처음 연 때 바꾸고(어느 길이든) 다음 대기실이 한 번 알림 · 인장 0 · 04:5x 기록은 알림 없음 · 바꾼 뒤 깬 무대는 안 바꿈', () => {
+  reset(); storage.set(CLEAR_KEY, '35'); // 인장 3 — 옛 메뉴·주소 판으로 먼저 연 사람 (main.js 가 판을 열 때 바꿈)
+  assert.deepEqual(convertSeals(), { seals: 3, coins: 300, first: true }); assert.equal(readProgress().coins, 400);
+  assert.equal(JSON.parse(storage.get(SEAL_COINS_KEY)).notice, true);
+  addJourneyClear(); addJourneyClear(); assert.equal(journeyClears(), 37); // 그 뒤 주소 판에서 깬 무대 — 금화가 안 된다
+  assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(readProgress().coins, 400);
+  assert.deepEqual(takeSealNotice(), { seals: 3, coins: 300 }); // 대기실: 알림 한 번
+  assert.equal(takeSealNotice(), null); assert.equal(JSON.parse(storage.get(SEAL_COINS_KEY)).notice, false);
+  reset(); storage.set(CLEAR_KEY, '9'); // 인장 0 — 기록만, 알림 없음
+  assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: true }); assert.equal(takeSealNotice(), null);
+  storage.set(CLEAR_KEY, '10'); assert.deepEqual(convertSeals(), { seals: 0, coins: 0, first: false }); assert.equal(takeSealNotice(), null);
+  reset(); storage.set(SEAL_COINS_KEY, JSON.stringify({ version: 1, converted: 3, at: '2026-10-16' })); // 04:5x 판 기록 — 그때 이미 알림을 봄
+  assert.equal(takeSealNotice(), null);
 });
 
 // ── 여정 금화 · 머리 (사장님 10/16 04:3x) ──

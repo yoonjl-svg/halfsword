@@ -1,4 +1,5 @@
 // 로컬 실제 게임: 같은20에서 같은2초 동안 사람21/s·AI15/s 비교·촬영.
+// uniqueStage=2 = 보법·막기 책만 (고유 공격·비기 없음 — 10/16 08:1x 인장 없앰 전 주소 판의 uniqueStage=0 과 같은 몫: 주소 판도 산 책을 읽게 됨)
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +11,7 @@ try {
  const page=await browser.newPage({viewport:{width:844,height:390},deviceScaleFactor:2,hasTouch:true,isMobile:true});
  page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.clock.install({time:new Date('2026-10-15T22:00:00+09:00')});await page.clock.pauseAt(new Date('2026-10-15T22:00:01+09:00'));
- await page.goto(`${base}/?weapon=longsword&foe=default&stage=frozen_bay&emo=0&uniqueStage=0&tempo=1`,{waitUntil:'networkidle'});
+ await page.goto(`${base}/?weapon=longsword&foe=default&stage=frozen_bay&emo=0&uniqueStage=2&tempo=1`,{waitUntil:'networkidle'});
  await page.evaluate(()=>{game.renderCap.tick=()=>false;game.config.ARENA.startGap=2;document.getElementById('btnStart').click();});
  for(let i=0;i<90&&!(await page.evaluate(()=>game.state==='fight'));i++)await page.clock.runFor(16);
  assert.equal(await page.evaluate(()=>game.state),'fight');

@@ -848,19 +848,12 @@ export const SECRET = {
 
 // ── 플레이어 고유 동작 이어 주기 → 10/14 강화 (10/13 사장님 '플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 그 고유 동작의 궤적으로 이어 준다' ·
 //    '이질감보다는 자연스러운 향상' — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md). 플레이어만 (AI 는 읽지 않는다).
-//  표(어느 긋기가 어느 고유 동작을 여는가 — 사장님 확정 10/13 22:3x)·인장 이름은 unique_assist.js 한 곳. 해금 수(sealEvery·sealOrder·sealMax)는 사장님 결정, 그 밖의 수는 [추정] · 사장님 확인 전 (확인표 1040~1049)
+//  표(어느 긋기가 어느 고유 동작을 여는가 — 사장님 확정 10/13 22:3x)는 unique_assist.js 한 곳. 수는 [추정] · 사장님 확인 전 (확인표 1040~1049)
+//  플레이어에게 무엇이 열리는지는 스킬북 하나(skill_books.js playerKit — 고유자세 책 = 고유 공격 넷 · 비기 책 = 비기). 10/13 의 인장 해금 수(sealEvery·sealOrder·sealMax·testStage)는
+//   10/16 08:1x 사장님 '인장 제도 없애'로 지웠다 — 이미 받은 인장을 금화로 한 번 바꾸는 옛 셈만 seal_coins.js 에 얼려 둔다 (확인표 1920~)
 export const UNIQUE_ASSIST = {
   on: 1, // 0 = 끔 (`?uniqueAssist=0` — 플레이어 칼은 지금처럼 손가락만 따른다)
-  // 해금 (사장님 결정 10/13 22:3x): 성장은 주인공 하나 기준 — 여정(foe=stage)에서 무대를 깰 때마다(이겨서 다음 무대로) 깬 수 +1 (localStorage).
-  //  sealEvery 번 깰 때마다 인장 하나, 유파를 sealOrder 차례로 돌아가며(인장 k 의 유파 = sealOrder[(k−1) mod 5], 단계 = ⌊(k−1)/5⌋+1), sealMax 개(= 5 유파 × 5 단계)에서 끝.
-  //  유파 숙련도 = 그 유파 인장 수(0~5) → 손에 든 무기 유파의 1~n 단계 고유 동작이 열린다. 5 단계(secretStage) = 그 유파 비기 (사장님 결정 10/13 23:1x '숙련도 5단계를 만들고 거기서 비기를 배우게 하자' —
-  //   21~25 번째 인장 = 210·220·230·240·250 번. 그 전엔 플레이어 비기 창이 열리지 않는다 — main.js PlayerSecretWatch locked).
-  //  테스트 경로(?test=1)는 testStage(비기까지 모두). `?uniqueStage=0..5` 는 모든 유파를 그 단계로, `?clears=N` 은 깬 수를 덮어쓴다
-  sealEvery: 10, // 사장님 결정 10/13
-  sealOrder: ['german', 'iberian', 'italian', 'japanese', 'chinese'], // 사장님 결정 10/13 (독일 → 이베리아 → 이탈리아 → 일본 → 동방 → 다시 독일 2단계 …)
-  sealMax: 25, // 사장님 결정 10/13 23:1x (25 개 = 250 번에서 끝 — 전 20 개)
-  secretStage: 5, // 사장님 결정 10/13 23:1x: 숙련도 5 = 비기 (플레이어 비기 창 · AI 비기 둘 다 — AI_PROFICIENCY.secretAt)
-  testStage: 5, // 테스트 경로는 비기까지 모두 해금 (사장님 결정 10/13 23:1x — 전 4)
+  secretStage: 5, // 사장님 결정 10/13 23:1x: 숙련도 5 = 비기 (AI 비기 — AI_PROFICIENCY.secretAt). 플레이어는 비기 책 · 고유자세 책 = 고유 공격 단계 secretStage − 1 (skill_books.js kitUniqueStage)
   // 긋기 읽기 (손이 빠르게 움직이기 시작하는 순간 — 검술 층의 휘두르기 문턱 SKILL.swingSpeed 를 넘는 스텝)
   padRadius: 0.15, // 시작 자리 = 가장 가까운 자세 패드(G.*), 이 거리(패드 m) 안일 때만 그 자세에서 시작한 긋기로 본다 (패드 사이 간격 0.25~0.4 의 절반쯤)
   angle: 40, // 허용 각(°): 처음 손 방향 ↔ 기본 동작 첫 방향 · 조건의 방향(위·아래·가로) · 이어 들어갈 고유 동작 길의 첫 방향

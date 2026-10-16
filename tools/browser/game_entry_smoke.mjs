@@ -59,7 +59,7 @@ try{
  assert.equal(await p.evaluate(()=>game.state),'menu');
  assert.equal(await checkpoint(p),null);
  assert.equal(await p.locator('#lobbyRank').textContent(),'Lv.1 여행자');
- // 10/16 (lobby_fix §6): 대표 유파 = 산 스킬북이 가장 많은 유파 — 책 없음 · 깬 수 37 = 인장 3 → 금화 100 + 300 (한 번) · 알림 한 줄
+ // 10/16 (lobby_fix §6): 대표 유파 = 산 스킬북이 가장 많은 유파 — 책 없음 · 깬 수 37 = 옛 인장 3 → 금화 100 + 300 (한 번 — 인장 제도는 08:1x 에 없앰, 바꾸기만 남음) · 알림 한 줄
  assert.equal(await p.locator('#lobbySchool').textContent(),'아직 없음');
  assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyHeads').textContent(),'0');
  assert.equal(await p.locator('#lobbyStatus').textContent(),'인장 3개를 금화 300으로 바꿨습니다.');
@@ -73,7 +73,9 @@ try{
  const tx=turn.x+turn.width*.15,ty=turn.y+turn.height*.5;
  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:tx,y:ty}]});
  await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:tx+turn.width*.5,y:ty}]});
+ await p.waitForTimeout(250); // 10/16 돌림판: 멈췄다 놓으면 관성 없이 그 자리 (튕기면 더 돈다 — ui_fix_smoke)
  await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning==='false');
  assert.ok(Math.abs(Number(await p.locator('#characterView').getAttribute('data-angle'))-180)<3);
  await screenshot(p,'lobby-back');
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({p:rb.translation(),q:rb.rotation()}))),beforeBodies);
@@ -142,7 +144,7 @@ try{
  await p.reload({waitUntil:'networkidle'});await title(p);await p.locator('#newJourney').click();await p.locator('#lobbyDepart').click();await phase(p,'draw');
  assert.equal(await p.evaluate(()=>game.stage.id),'poseidon');assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
  assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('gladiator-settings')).fpsCap),true);
- check('new journey resets stage while preserving unlocks (clears/seals) and settings');
+ check('new journey resets stage while preserving the clear count (statistic) and settings');
  await p.locator('#btnPause').tap();await phase(p,'paused');await p.locator('#btnStart').tap();await phase(p,'draw');
  check('existing restart still returns to draw');
  const savedBefore=await checkpoint(p);

@@ -67,7 +67,8 @@ try{
  checks.push({name:'tree branch card = weapons.js nameKo · TIER_LABEL · desc; selection separate from equip; unequip/clear and repeated cycles; physics untouched'});
  await p.locator('[data-weapon=tree_branch]').tap();await p.locator('#equipItem').tap();
  const v=await p.locator('#characterView').boundingBox(),cdp=await c.newCDPSession(p),x=v.x+v.width*.1,y=v.y+v.height*.5;
- await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+v.width*.25,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+v.width*.25,y}]});await p.waitForTimeout(250);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); // 10/16 돌림판: 멈췄다 놓으면 관성 없음
+ await p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning==='false');
  assert.ok(Math.abs(Number(await p.locator('#characterView').getAttribute('data-angle'))-90)<3);await shot(p,'equipped-rotation');
  await p.reload({waitUntil:'networkidle'});await title(p);await p.locator('#newJourney').tap();await state(p,false,false,'tree_branch');assert.equal(await p.locator('#characterView').getAttribute('data-armor'),'kettle');
  await p.locator('#editName').tap();await p.locator('#playerNameInput').fill('방랑 검객');await p.locator('#nameForm button[type=submit]').tap();

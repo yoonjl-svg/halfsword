@@ -33,7 +33,7 @@ const CASES = [
   { label: 'test-default', q: '?test=1&weapon=longsword', strokes: ['zwerch'] }, // 테스트 경로 기본 = 끔 (10/14 02:0x)
   { label: 'main-stage4', q: '?weapon=longsword&uniqueStage=4', strokes: ['zornhau'] },
   { label: 'main-default', q: '?weapon=longsword', strokes: ['zornhau', 'zwerch'] },
-  { label: 'main-clears60', q: '?weapon=longsword&clears=60', strokes: ['zornhau', 'zwerch'] },
+  { label: 'main-stage3', q: '?weapon=longsword&uniqueStage=3', strokes: ['zornhau', 'zwerch'] }, // 10/16 인장 없앰: 전 '?clears=60'(독일 인장 둘 = 1·2 단계) → 고유자세 책까지(넷 모두 — 3 급 책 하나)
   { label: 'test-off', q: '?test=1&weapon=longsword&uniqueAssist=0', strokes: ['zornhau', 'zwerch'] },
 ];
 const out = [];

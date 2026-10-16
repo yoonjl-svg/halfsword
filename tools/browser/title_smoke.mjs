@@ -66,18 +66,20 @@ try{
  assert.equal(await page.locator('#noticeDialog').evaluate(d=>d.open),true);assert.equal(await page.locator('.notice-entry').count(),N);
  let b=await bounds(page);check(`first launch: ${N} notices in the dialog`,b);await shot(page,'notices-desktop');
  // 10/16 글자 정돈 (docs/import/lobby_fix_2026-10-16.md §1 — src/entrance_type.css): 싸움 화면 규칙 — 창 제목 17·700 · 이름 14·700 · 설명 12·400 보조 · 표지 12·600 강조 · 글꼴 줄 --font-ui(Cinzel 먼저)
+ //  10/16 08:3x 사장님 '공지사항 안의 글씨 더 작게 해' (docs/import/ui_fix_2026-10-16.md §2): 공지 본문 · 날짜 줄만 한 단계 아래 10 (--fs-xs)
  const typography=await inRoot(page,`return Object.fromEntries(['.notice-header h2','.notice-count','.notice-entry h3','.notice-entry p','.notice-meta','.unread','.hide-read','.confirm-button'].map(selector=>{const s=getComputedStyle(root.querySelector(selector));return [selector,{size:s.fontSize,color:s.color,weight:s.fontWeight,family:s.fontFamily.split(',')[0].replace(/['"]/g,'').trim(),wordBreak:s.wordBreak}];}));`);
  const pick=(t,...k)=>Object.fromEntries(k.map(x=>[x,t[x]]));
  assert.deepEqual(pick(typography['.notice-header h2'],'size','color','weight'),{size:'17px',color:'rgb(243, 233, 216)',weight:'700'});
  assert.deepEqual(pick(typography['.notice-entry h3'],'size','color','weight'),{size:'14px',color:'rgb(243, 233, 216)',weight:'700'});
- assert.deepEqual(pick(typography['.notice-entry p'],'size','color','weight'),{size:'12px',color:'rgb(184, 168, 142)',weight:'400'});
- assert.deepEqual(pick(typography['.notice-meta'],'size','color','weight'),{size:'12px',color:'rgb(184, 168, 142)',weight:'400'});
+ assert.deepEqual(pick(typography['.notice-entry p'],'size','color','weight'),{size:'10px',color:'rgb(184, 168, 142)',weight:'400'});
+ assert.deepEqual(pick(typography['.notice-meta'],'size','color','weight'),{size:'10px',color:'rgb(184, 168, 142)',weight:'400'});
+ assert.equal(typography['.notice-count'].size,'12px');assert.equal(typography['.hide-read'].size,'12px');
  assert.deepEqual(pick(typography['.unread'],'color','weight'),{color:'rgb(217, 164, 65)',weight:'600'});
  assert.equal(typography['.confirm-button'].weight,'700');
  assert.ok(Object.values(typography).every(t=>t.family==='Cinzel'&&t.wordBreak==='keep-all'),JSON.stringify(typography));
- assert.equal(new Set(Object.values(typography).map(s=>s.size)).size,3);
+ assert.equal(new Set(Object.values(typography).map(s=>s.size)).size,4); // 17 · 14 · 12 + 공지 안 10
  assert.equal(new Set(Object.values(typography).map(s=>s.color)).size,3);
- check('notices follow the battle HUD type rule (font stack Cinzel→Pretendard · sizes 12/14/17 · weights 400/600/700 · three text colors · keep-all)',{typography});
+ check('notices follow the battle HUD type rule (font stack Cinzel→Pretendard · sizes 12/14/17 + notice body/date one step down at 10 · weights 400/600/700 · three text colors · keep-all)',{typography});
  await page.evaluate(()=>localStorage.setItem('gladiator-settings','{"fpsCap":true,"prototype-sentinel":true}'));
  await page.locator('#hideRead').check();await page.locator('#confirmNotices').click();
  await page.waitForTimeout(850);await shot(page,'wind-transition-desktop');await ready(page);await shot(page,'title-desktop');
@@ -92,7 +94,12 @@ try{
  if(state.readIds.length<N){assert.equal(remaining.length,N-state.readIds.length);assert.ok(remaining.every(id=>!state.readIds.includes(id)));await readAll(page);await page.locator('#confirmNotices').click();}
  await ready(page);check('hide-read preference persists; offscreen notices remain unread',{read:state.readIds,remaining});
  await page.reload({waitUntil:'networkidle'});await ready(page);assert.equal(await page.locator('#noticeDialog').evaluate(d=>d.open),false);check('all read: next launch goes straight to title');
- await page.locator('#openNotices').click();assert.equal(await page.locator('.notice-entry').count(),N);await page.locator('#hideRead').uncheck();await page.locator('#confirmNotices').click();await ready(page);await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.notice-entry').count(),N);check('reopen notices and turn hiding off');
+ // 아래 줄에서 연 공지: 확인 = 창만 닫음 — 첫 화면 넘어감(phase notice → wind → ready)을 다시 틀지 않는다 (사장님 10/16 08:3x)
+ await inRoot(page,`window.__phases=[];new MutationObserver(()=>window.__phases.push(root.getElementById('entrance').dataset.phase)).observe(root.getElementById('entrance'),{attributes:true,attributeFilter:['data-phase']});`);
+ await page.locator('#openNotices').click();assert.equal(await page.locator('.notice-entry').count(),N);await page.locator('#hideRead').uncheck();await page.locator('#confirmNotices').click();await ready(page);
+ await page.waitForTimeout(400);assert.equal(await page.locator('#noticeDialog').evaluate(d=>d.open),false);assert.deepEqual(await page.evaluate(()=>window.__phases),[]);
+ assert.equal(await inRoot(page,`return root.getElementById('titleScreen').inert`),false);check('footer notices: 확인 only closes the dialog (no title intro replay — phase stays ready)');
+await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.notice-entry').count(),N);check('reopen notices and turn hiding off');
  await page.evaluate(k=>localStorage.setItem(k,'{bad json'),key);await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.notice-entry').count(),N);check('invalid saved preference recovers');
  for(const [name,width,height] of [['phone-landscape',844,390],['phone-portrait',390,844],['small-landscape',568,320],['small-portrait',320,568]]){
   const mobile=await newPage({viewport:{width,height},deviceScaleFactor:2,isMobile:true,hasTouch:true});

@@ -336,6 +336,7 @@
       .reward { margin: -8px 0 12px; font-size: var(--fs-s); font-weight: var(--fw-label); letter-spacing: var(--ls-label); color: var(--c-accent); }
       .reward[data-sign="-"] { color: var(--c-sub); }
       .reward[hidden] { display: none; }
+      .row[hidden] { display: none; } /* 결과 창(첫 화면·대기실 여정)엔 설정 줄을 뺀다 — 정지 창 · 첫 화면 설정에는 그대로 (10/16 08:3x, main.js) */
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-m); }
       .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
       .seg button { background: transparent; color: var(--c-sub); border: 0; padding: 6px 10px; font-size: var(--fs-s); }
@@ -409,11 +410,12 @@
         <!-- 검술 보정 단계 메뉴(끔·약·보통·강)는 뺐다 — 사장님 10/8 21:5x "플레이어에겐 구분이 필요 없어. 한 단계로 기본 적용": 보정은 늘 0.7 (main.js DEFAULTS.skill) -->
         <!-- 10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아': 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출은 늘 켬,
              픽셀 모드(실험 ?pixel=1)는 주소 인자로만, 기울기 이동은 기능째 지웠다 (main.js DEFAULTS). 모든 기술 이름(디버그 ?techCueAll=1)은 10/14 03:3x 상대 기술 표기와 함께 걷어냈다 -->
-        <div class="row"><span>화면 60 fps 제한</span><button class="toggle" data-setting="fpsCap" aria-label="화면 60 fps 제한"></button></div>
+        <div class="row" id="fpsRow"><span>화면 60 fps 제한</span><button class="toggle" data-setting="fpsCap" aria-label="화면 60 fps 제한"></button></div>
         <!-- 시작 단추는 카드 아래에 붙여 둔다: 가로로 든 폰에서 설정 목록이 길어도 스크롤 없이 보인다 -->
         <div class="actions">
           <button class="primary" id="btnStart">여정 시작</button> <!-- 사장님 10/14 11:0x "싸움 시작 문구는 유치해. 여정 시작" -->
           <button class="secondary" id="btnResume" style="display:none">계속하기</button>
+          <button class="secondary" id="btnLobby" hidden>대기실</button> <!-- 정지 · 결과 창: 첫 화면·대기실로 연 여정만 — 판을 떠나 대기실로 (사장님 10/16 08:3x · main.js toLobby) -->
         </div>
         <ul class="howto" id="howto"></ul>
       </div>

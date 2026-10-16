@@ -12,7 +12,8 @@ import { RAPIER, THREE, CONFIG } from './jelly_harness.mjs';
 import { Fighter, GROUND_GROUPS } from '../../src/fighter.js';
 import { LOOKS } from '../../src/looks.js';
 import { Combat } from '../../src/combat.js';
-import { PlayerUniqueAssist, PLAYER_UNIQUE, masteryOf, sealAt, sealCount, sealNotice, uniqueStageFor, addJourneyClear, setClearsOverride, journeyClears } from '../../src/unique_assist.js';
+import { PlayerUniqueAssist, PLAYER_UNIQUE } from '../../src/unique_assist.js';
+import { playerKit, kitUniqueStage, bookTierParam } from '../../src/skill_books.js';
 import { TECH, G } from '../../src/ai_techniques.js';
 import crypto from 'node:crypto';
 import { segDist } from '../../src/skill.js';
@@ -541,12 +542,15 @@ for (const school of SCHOOLS) {
   log(`합: 손 목표 차이 RMS ${Math.sqrt(six.s2 / Math.max(1, six.n)).toExponential(2)} · 최대 ${six.mx.toExponential(2)} · 칼끝 차이 RMS ${Math.sqrt(six.t2 / Math.max(1, six.n)).toFixed(3)} · 최대 ${six.tmx.toFixed(3)} m · 날 각(${six.eaOn.length} 스텝) 붙임 ${ea(six.eaOn)} / 안 붙임 ${ea(six.eaOff)}`);
 }
 
-log('\n## ⑤ 해금 (사장님 결정 10/13 22:3x): 깬 수 → 인장 → 유파 숙련도');
-for (const c of [0, 9, 10, 19, 20, 49, 50, 51, 60, 99, 100, 150, 199, 200, 250]) log(`깬 수 ${c}: 인장 ${sealCount(c)} · 숙련도 ${JSON.stringify(masteryOf(c))}`);
-for (const k of [1, 2, 3, 4, 5, 6, 10, 11, 20]) log(`인장 ${k}: ${JSON.stringify(sealAt(k))} → ${sealNotice(sealAt(k))}`);
-log(`단계: 본판 깬 수 0 독일 ${uniqueStageFor('german', { clears: 0 }).stage} · 깬 수 60 독일 ${uniqueStageFor('german', { clears: 60 }).stage} 이베리아 ${uniqueStageFor('iberian', { clears: 60 }).stage} 동방 ${uniqueStageFor('chinese', { clears: 60 }).stage} · 테스트 ${uniqueStageFor('german', { test: true, clears: 0 }).stage} · ?uniqueStage=2 테스트 ${uniqueStageFor('german', { test: true, param: '2' }).stage} 본판 ${uniqueStageFor('chinese', { param: '2', clears: 0 }).stage} · 무유파 ${uniqueStageFor('none', { clears: 200 }).stage}`);
-setClearsOverride(9);
-const a1 = addJourneyClear();
-const a2 = addJourneyClear();
-log(`?clears=9 → 깸 → ${a1.clears} 인장 ${a1.seal ? sealNotice(a1.seal) : '-'} · 한 번 더 → ${a2.clears} 인장 ${a2.seal ? sealNotice(a2.seal) : '-'} (저장소 없는 Node: 덮어쓰기 없으면 ${(setClearsOverride(null), journeyClears())})`);
+log("\n## ⑤ 해금 (10/16 08:1x 사장님 '인장 제도 없애' — 스킬북 하나: skill_books.js playerKit · kitUniqueStage)");
+{
+  const none = { owned: new Set(), sealed: new Set() };
+  for (const raw of [null, '0', '1', '2', '3', '4', '5', '6']) {
+    const upTo = bookTierParam(raw);
+    const k = playerKit('german', none, { upTo });
+    log(`?uniqueStage=${raw ?? '(없음)'} → 급 ${upTo ?? '산 책'} · ${JSON.stringify(k)} · 고유 공격 단계 ${kitUniqueStage(k)}`);
+  }
+  const some = { owned: new Set(['german:1', 'german:3', 'german:5']), sealed: new Set(['german:5']) };
+  log(`산 책 독일 I·III·V (V 봉인) → ${JSON.stringify(playerKit('german', some))} · 단계 ${kitUniqueStage(playerKit('german', some))} · 테스트 경로 ${JSON.stringify(playerKit('german', none, { test: true }))} · 무유파 ${playerKit('none', some)}`);
+}
 log(`\n합계 ① 기본 긋기: 맞게 발동 ${tally.ok} · 정답 없음·발동 없음 ${tally.okNone} · 잘못 발동 ${tally.wrong} · 안 발동 ${tally.miss}`);
