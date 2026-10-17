@@ -342,6 +342,43 @@
       .reward img { flex: none; width: 14px; height: 14px; margin-right: 5px; }
       .reward .sep { margin: 0 7px; } /* ' · ' — 글은 띄어 쓴 그대로(읽는 글 '금화 +12 · 머리 +1'), 보이는 틈만 여백으로 */
       .reward[hidden] { display: none; }
+      /* 패배 창 프로필 + 대사 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md §4): 그림이 있으면 창이 옆으로 넓어진다 — 왼쪽 정사각 그림 --pf · 틈 16 · 오른쪽 칸은 전 창 폭(340) 그대로 · 위에 붙임.
+         그림 크기 --pf = 같은 화면의 대기실 프로필 칸과 같은 CSS px (사장님 23:4x '패배 팝업 프로필도 같은 크기로 맞추고') — 아래 셈은 lobby.css .lobby 의 --card-w 셈을 그대로 옮긴 것
+         (칸 높이 · 줄 폭 · 출발 단추 → 전 카드 폭 --card-w0 → 그 60 % — 10/18 01:0x). lobby.css 의 여백 · 제목 줄 · 단추 값이나 미디어 조건을 바꾸면 여기도 같이 — tools/browser/defeat_portrait_smoke.mjs 가 두 크기를 견준다.
+         그림 안에 액자 1 이 있어 CSS 틀은 없다(대기실 프로필 칸과 같은 꼴) · 원본을 줄인 그림은 매끈하게, 예비 low(?portrait=low)는 픽셀 그대로.
+         대사 = 싸움 화면 대사와 같은 꼴(“…” · 보조 색 · 출처가 있으면 아래 줄 작게) · 진 까닭 줄 아래 · 금화 줄은 그 아래 빈 줄 하나 그대로(.reward 위 여백) · 값은 사장님 확인 전 */
+      .card {
+        --lb-pt: 22px; --lb-pb: 24px; --lb-pl: max(24px, env(safe-area-inset-left)); --lb-pr: max(24px, env(safe-area-inset-right));
+        --lb-head: 42px; --lb-head-gap: 18px; --lb-depart: 42px; --lb-depart-gap: 12px; --lb-col-max: 520px;
+        --lb-col-h: min(100dvh - var(--lb-pt) - var(--lb-pb) - var(--lb-head) - var(--lb-head-gap), var(--lb-col-max));
+        --lb-row-w: min(100vw - var(--lb-pl) - var(--lb-pr), 1220px);
+        --lb-w0: min((var(--lb-col-h) - var(--lb-depart) - var(--lb-depart-gap)) * 2 / 3, var(--lb-row-w) * .3);
+        --pf: calc(var(--lb-w0) * .6);
+      }
+      @supports (width: round(down, 10px, 3px)) {
+        .card { --lb-w0: calc(round(down, min((var(--lb-col-h) - var(--lb-depart) - var(--lb-depart-gap)) * 2 / 3, var(--lb-row-w) * .3) - 28px, 12px) + 28px); --pf: round(down, var(--lb-w0) * .6, 1px); }
+      }
+      @media (max-height: 500px) { .card { --lb-depart: 36px; } }
+      @media (min-width: 1100px) { .card { --lb-pt: 30px; --lb-pb: 36px; --lb-head-gap: 26px; } }
+      @media (max-height: 540px) and (min-width: 680px) {
+        .card { --lb-pt: 8px; --lb-pb: 12px; --lb-pl: max(16px, env(safe-area-inset-left)); --lb-pr: max(16px, env(safe-area-inset-right)); --lb-head: 30px; --lb-head-gap: 6px; --lb-depart-gap: 10px; --lb-col-max: 100dvh; }
+      }
+      @media (max-width: 679px) {
+        .card { --lb-w0: min((100vw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right)) - 12px) / 2, 232px); }
+        @supports (width: round(down, 10px, 3px)) {
+          .card { --lb-w0: calc(round(down, min((100vw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right)) - 12px) / 2, 232px) - 28px, 12px) + 28px); }
+        }
+      }
+      .card.foe-shown { display: flex; align-items: flex-start; gap: 16px; width: min(calc(340px + 16px + var(--pf)), 100%); }
+      .card-body { flex: 1; min-width: 0; }
+      .foe-portrait { flex: none; width: var(--pf); height: var(--pf); margin: 0; background: #30261c; box-shadow: 0 6px 16px rgba(0,0,0,.45); }
+      .foe-portrait[hidden], .foe-line[hidden] { display: none; }
+      .foe-portrait img { display: block; width: 100%; height: 100%; image-rendering: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+      .foe-portrait[data-mode="low"] img { image-rendering: pixelated; }
+      .foe-line { margin: 0; color: var(--c-sub); font-size: var(--fs-m); line-height: var(--lh-text); word-break: keep-all; overflow-wrap: anywhere; }
+      .foe-line small { display: block; margin-top: 2px; font-size: var(--fs-s); line-height: 1.4; }
+      .foe-line small:empty { display: none; }
+      .card.foe-shown .actions { margin-left: 0; padding-left: 0; } /* 단추 줄 바탕이 왼쪽 그림 위로 번지지 않게 (다른 창은 카드 여백까지 덮는 그대로) */
       .row[hidden] { display: none; } /* 결과 창(첫 화면·대기실 여정)엔 설정 줄을 뺀다 — 정지 창 · 첫 화면 설정에는 그대로 (10/16 08:3x, main.js) */
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-m); }
       .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -408,8 +445,13 @@
 
     <div class="overlay show" id="menu">
       <div class="card">
+        <!-- 패배 창 (사장님 10/17 22:1x '패배하면 팝업창에 나를 패배시킨 캐릭터가 프로필이 뜨고, 그 오른쪽이든 아래든 적절한 곳에 대사 출력'): 왼쪽 정사각 프로필(그림 안에 액자 1) ·
+             오른쪽 칸 = 아래 .card-body (제목 · 진 까닭 · “대사” · 금화 · 단추). 이긴 판 · 정지 · 시작 창은 숨김 (main.js showDefeatFoe) -->
+        <figure class="foe-portrait" id="menuFoe" hidden><img id="menuFoeImg" alt="" draggable="false" decoding="async"></figure>
+        <div class="card-body">
         <h1 id="menuTitle"><span class="wordmark">Stillness</span></h1>
         <p class="sub" id="menuSub">길 위에선 이름을 묻지 않는다.</p>
+        <p class="foe-line" id="menuFoeLine" hidden><span id="menuFoeQuote"></span><small id="menuFoeSource"></small></p> <!-- 패배 창: 싸움 화면에 띄운 상대의 승리 대사 그대로(출처가 있으면 아래 줄 — showFoeLine 과 같은 꼴) -->
         <p class="reward" id="menuReward" hidden></p> <!-- 결과 창: 이번 판 금화 · 머리 (첫 화면·대기실 여정만 — main.js) -->
         <!-- 상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js · main.js) -->
         <!-- 검술 보정 단계 메뉴(끔·약·보통·강)는 뺐다 — 사장님 10/8 21:5x "플레이어에겐 구분이 필요 없어. 한 단계로 기본 적용": 보정은 늘 0.7 (main.js DEFAULTS.skill) -->
@@ -423,6 +465,7 @@
           <button class="secondary" id="btnLobby" hidden>대기실</button> <!-- 정지 · 결과 창: 첫 화면·대기실로 연 여정만 — 판을 떠나 대기실로 (사장님 10/16 08:3x · main.js toLobby) -->
         </div>
         <ul class="howto" id="howto"></ul>
+        </div>
       </div>
     </div>
 

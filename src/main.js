@@ -46,7 +46,7 @@ import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setItalianRhythm, setItalianStride, traditionOf } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
-import { portraitIdOf } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
+import { portraitIdOf, portraitSrc, portraitMode } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
@@ -965,7 +965,7 @@ function tickHudTimers(dt) {
   tickEmoMsg(dt);
 }
 
-/** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 — 싸움 화면에만 (결과 창엔 안 적는다 — 사장님 10/16 14:4x) */
+/** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 — 싸움 화면 3.4 s (10/16 14:4x 결과 창에서 뺐다가 10/17 22:1x 패배 창에 프로필과 다시 — showDefeatFoe) */
 function showFoeLine(ch, line) {
   if (!line) return;
   const el = $('foeIntro');
@@ -975,6 +975,33 @@ function showFoeLine(ch, line) {
   el.querySelector('small').textContent = lineSourceOf(ch, line); // 대사 아래 줄 출처 (병마용의 고전 인용 『사기』·『설원』 — 사장님 10/14 '출처까지 다 나오게 해'. 없는 인물은 빈칸이라 줄이 숨는다)
   el.classList.add('show');
   hudLater('foeIntro', 3.4, () => el.classList.remove('show'));
+}
+
+// 패배 창의 상대 (사장님 10/17 22:1x '패배하면 팝업창에 나를 패배시킨 캐릭터가 프로필이 뜨고, 그 오른쪽이든 아래든 적절한 곳에 대사 출력' — docs/design/portrait_ui_2026-10-17.md §4):
+//  진 순간 고른 승리 대사(싸움 화면 showFoeLine 과 같은 줄)를 들고 있다가 결과 창에서 그 상대의 프로필(portraits.js — 변형은 바탕 인물 그림) 오른쪽에 그대로 · 출처 줄도 같은 꼴.
+//  그림이 없는 상대(?foe=default 기본 상대 등)는 그림 칸을 숨기고(대사가 있으면 글만) · 그림을 못 불러오면 그림 칸만 숨긴다 · 이긴 판 · 정지 · 시작 창은 숨김
+let defeatFoe = null; // { ch, line } — 이번 판에 나를 쓰러뜨린 상대와 그 대사 (판이 끝날 때 정한다)
+$('menuFoeImg').addEventListener('error', () => { $('menuFoe').hidden = true; $('menu').querySelector('.card').classList.remove('foe-shown'); });
+/** 진 순간: 그림을 미리 받아 둔다(결과 창은 3.5 s 뒤) — 숨긴 칸이어도 img 는 받는다 */
+function loadDefeatFoe(foe) {
+  defeatFoe = foe;
+  const src = foe ? portraitSrc(foe.ch.id) : null, img = $('menuFoeImg');
+  if (src && img.getAttribute('src') !== src) img.src = src;
+}
+function showDefeatFoe(foe) {
+  const fig = $('menuFoe'), img = $('menuFoeImg'), lineEl = $('menuFoeLine');
+  const src = foe ? portraitSrc(foe.ch.id) : null;
+  const broken = !!src && img.getAttribute('src') === src && img.complete && img.naturalWidth === 0; // 같은 그림을 전에 못 불러왔으면(예: 오프라인에서 예비 low) 칸을 숨긴 채로
+  fig.hidden = !src || broken;
+  if (src && !broken) {
+    fig.dataset.portrait = portraitIdOf(foe.ch.id); fig.dataset.mode = portraitMode();
+    img.alt = `${foe.ch.name} 프로필`;
+    if (img.getAttribute('src') !== src) img.src = src;
+  }
+  lineEl.hidden = !foe?.line;
+  $('menuFoeQuote').textContent = foe?.line ? `“${foe.line}”` : '';
+  $('menuFoeSource').textContent = foe?.line ? lineSourceOf(foe.ch, foe.line) || '' : ''; // 병마용의 고전 인용 출처 (없는 인물은 빈칸이라 줄이 숨는다 — showFoeLine 과 같음)
+  $('menu').querySelector('.card').classList.toggle('foe-shown', !fig.hidden);
 }
 
 // 이번 상대 소개 (이름 · 칭호 · 한마디) — 화면 가운데, 판 알림(toast) 바로 아래 (10/14 사장님 '사이즈 통일해서 예전처럼 시작 때 보이게 가운데로').
@@ -1501,6 +1528,7 @@ function pause() {
   $('menuTitle').textContent = '일시정지';
   $('menuSub').textContent = '설정을 바꾸거나 계속할 수 있어요.';
   $('menuReward').hidden = true;
+  showDefeatFoe(null); // 패배 창의 상대 프로필 · 대사는 정지 창에 남기지 않는다
   $('btnStart').textContent = '처음부터 다시';
   $('btnResume').style.display = '';
   $('btnLobby').hidden = !lobbyMenu(); // 첫 화면·대기실 여정만 — 판을 떠나 대기실로 (아래 toLobby)
@@ -1800,7 +1828,10 @@ function checkRoundEnd(dt) {
         if (journeySaves()) writeJourney({ stage: nextStage(stages.id), lastWeapon: player.weapon.id });
       }
       showRoundResult();
-      if (!win && currentFoe) showFoeLine(currentFoe, randomLine(currentFoe, 'win')); // 상대의 승리 대사 (죽은 쪽은 말이 없다)
+      // 상대의 승리 대사 (죽은 쪽은 말이 없다) — 싸움 화면 3.4 s · 같은 줄을 패배 창에도 프로필과 함께 (10/17 22:1x — showDefeatFoe)
+      const foeWin = !win && currentFoe ? { ch: currentFoe, line: randomLine(currentFoe, 'win') } : null;
+      loadDefeatFoe(foeWin);
+      if (foeWin) showFoeLine(foeWin.ch, foeWin.line);
     }
     return;
   }
@@ -1819,9 +1850,10 @@ function checkRoundEnd(dt) {
       ? { 목: '목을 베었다', 머리: '머리를 쳤다', 출혈: '출혈로 쓰러뜨렸다', 기절: '기절시켰다', 내려찍기: '내려찍었다' }[loser.causeOfDeath] || '쓰러뜨렸다'
       : { 목: '목을 베였다', 머리: '머리를 맞았다', 출혈: '피를 너무 흘렸다', 기절: '기절했다', 내려찍기: '내려찍혔다' }[loser.causeOfDeath] || '쓰러졌다';
     $('menuTitle').textContent = win ? '승리' : '패배';
-    // 부제 = 이 한 줄뿐 — 승리 · 패배 같은 꼴 (사장님 10/16 14:4x '패배 후의 팝업창에선 대사 빼버리자. 그러면 승리 팝업과 패배 팝업이 동일해짐'):
-    //  상대의 승리 대사(와 출처)는 결과 창이 뜨기 전 싸움 화면에 3.4 s (showFoeLine) — 전 14:0x 는 다음 줄에 “대사”도. 금화 줄은 빈 줄 하나 띄고 (index.html .reward)
+    // 부제 = 이 한 줄뿐 (사장님 10/16 14:4x '패배 후의 팝업창에선 대사 빼버리자') — 10/17 22:1x 패배 창은 새 결정: 나를 쓰러뜨린 상대의 프로필 + 그 오른쪽에 승리 대사(싸움 화면 3.4 s 와 같은 줄 · 출처 줄 같은 꼴)
+    //  — showDefeatFoe. 이긴 판은 그대로(부제 한 줄). 금화 줄은 그 위 글과 빈 줄 하나 띄고 (index.html .reward)
     $('menuSub').textContent = cause;
+    showDefeatFoe(win ? null : defeatFoe);
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '다시 겨루기'; // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
     $('btnResume').style.display = 'none';

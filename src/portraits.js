@@ -4,7 +4,8 @@
 //   original(기본) = 원본 1254² 를 768² 로 줄인 WebP(LANCZOS · 품질 88 · method 6) — public/ui/portraits/<id>.webp · 설치 묶음에 든다 · 매끈하게 보임
 //   low(예비)      = 4 px 덩어리 픽셀판 low.png 그대로 — public/encounters/portraits-frame1-20261017/low/<id>.png · encounters 라 설치 묶음에서 빠짐(온라인에서만) · 주소 ?portrait=low · 픽셀 그대로 보임
 //   원본 PNG(2 MB · 기록용 마스터)는 art/portraits-frame1-20261017/ — 배포 · 설치 묶음 밖
-//  우리 인물 id → 프로필 id: 같은 이름은 그대로 · 변형(밤 얼터 · 광기의 ○○ — characters.js variantOf)은 바탕 인물 그림 · 그림이 없는 상대(무작위 · 동물 · 그 밖)는 null
+//  우리 인물 id → 프로필 id: 같은 이름은 그대로 · 변형(밤 얼터 · 광기의 ○○ — characters.js variantOf)은 바탕 인물 그림을 함께 씀(사장님 10/18 01:0x '얼터는 일단 기본 캐릭터 프로필을 공유') ·
+//   그림이 없는 상대(기본 상대 ?foe=default · 동물 · 그 밖)는 null — 시험 tools/sim/portraits.test.mjs
 import { CHARACTERS_BY_ID } from './characters.js';
 
 export const PORTRAIT_IDS = Object.freeze(['player', 'bran', 'isolde', 'artoria', 'chanda', 'eira', 'heinrich', 'liao', 'margarethe', 'minami', 'omari', 'ratna', 'renji', 'samira', 'silver_wanderer', 'terracotta', 'tome']);
