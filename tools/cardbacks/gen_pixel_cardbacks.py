@@ -733,9 +733,42 @@ def etna():
     return pal, t, band, center, 'L'
 
 
+# ── 10/17: 봉인의 중정 (샛별 저장소 무대 courtyard 를 옮김 — 그쪽엔 뒷면이 없어 새로 그림, docs/design/courtyard_fix_2026-10-17.md §4) ──
+def courtyard():
+    # 봉인의 중정: 짙은 장밋빛 사암 바탕에 장밋빛 마름모 격자(자로카 창의 돌 격자), 위에서 본 계단 우물(밝은 사암 테 · 장밋빛 단 · 짙은 안쪽 단 · 청록 물)과
+    # 붉은 밀랍 봉인(짙은 붉은 찍힌 무늬 — 스스로 180° 대칭)을 번갈아. 띠는 장밋빛 처마 위에 줄지은 작은 차트리 돔, 가운데는 큰 붉은 밀랍 봉인에 찍힌 여덟 모 별.
+    # 붉은색은 봉인 두 곳만 쓴다(무대에서도 문의 붉은 봉인과 마야의 옷이 강조색) — 소금 사막(벽돌 · 문루 안 해 · 소금 결정)과 갈리게
+    pal = dict(SHARED, B='#3a1f24', K='#7a4a42', P='#d8ab8e', S='#a0634f', T='#6e3e34', W='#4f8278', R='#b0262e', D='#5c1418')
+    t = canvas(TW, TH, 'B')
+    diamond_lattice(t, 'K')
+    well = ['PPPPPPPP', 'PSSSSSSP', 'PSTTTTSP', 'PSTWWTSP', 'PSTWWTSP', 'PSTTTTSP', 'PSSSSSSP', 'PPPPPPPP']  # 위에서 본 계단 우물: 밝은 테 · 장밋빛 단 · 짙은 안쪽 단 · 물
+    seal = ['.RRRR.', 'RRDDRR', 'RDRRDR', 'RDRRDR', 'RRDDRR', '.RRRR.']  # 붉은 밀랍 봉인 (스스로 180° 대칭)
+    stamp(t, well, 8, 8)
+    stamp(t, seal, 16, 16)
+    stamp(t, seal, 16, 0)
+    sym_tile(t)
+    band = band_rows(['..PP..', '.PPPP.', 'SSSSSS', 'S.SS.S'], 'B')  # 장밋빛 처마 위의 작은 차트리 돔과 처마 받침
+    center = canvas(14, 14, '.')
+    disc_bg(center, 'B', 'G')
+    for y in range(14):
+        for x in range(14):
+            dx, dy = x + 0.5 - 7, y + 0.5 - 7
+            d = math.hypot(dx, dy)
+            if d > 5.6:
+                continue
+            center[y][x] = 'R'
+            if d > 4.7:
+                center[y][x] = 'D'  # 두툼한 밀랍 테
+            elif max(abs(dx), abs(dy)) <= 2.4 or abs(dx) + abs(dy) <= 3.4:  # 여덟 모 별: 네모 + 45° 돌린 네모
+                center[y][x] = 'D'
+            if d <= 1.0:
+                center[y][x] = 'R'
+    return pal, t, band, center, 'R'
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice), ('dayr', dayr), ('dunhuang', dunhuang), ('etna', etna)]:
+    for name, fn in [('poseidon', poseidon), ('poseidon_night', poseidon_night), ('clearing', clearing), ('clearing_a', clearing_a), ('castle', castle), ('temple', temple), ('cathedral', cathedral), ('loggia', loggia), ('corsair', corsair), ('sacred_grove', sacred_grove), ('frozen_bay', frozen_bay), ('qinglan', qinglan), ('sluice', sluice), ('dayr', dayr), ('dunhuang', dunhuang), ('etna', etna), ('courtyard', courtyard)]:
         pal, tile, band, center, accent = fn()
         assert check_sym(tile), name + ' tile not symmetric'
         fr = frame(band, 'B', accent)
