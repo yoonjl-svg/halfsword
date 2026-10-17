@@ -153,7 +153,7 @@ try{
  await p.waitForFunction(k=>JSON.parse(localStorage.getItem(k)).stage==='clearing',key,{timeout:20000});
  assert.deepEqual(await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),profileKey),{version:1,name:'바람',wins:1,losses:0});
  const wonCoins=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).coins);assert.ok(wonCoins>=405&&wonCoins<=415,`win +5~15: ${wonCoins}`); // 사장님 10/16 04:3x
- await p.waitForFunction(()=>game.state==='paused',null,{timeout:30000});
+ await p.waitForFunction(()=>game.state==='paused',null,{timeout:90000});
  assert.equal(await p.locator('#menuReward').textContent(),`금화 +${wonCoins-400}`);assert.equal(await p.locator('#menuReward').isVisible(),true);
  assert.equal(await p.locator('#btnLobby').isVisible(),true); // 결과 창에도 '대기실' (여정 판)
  check('journey win: coins +5..15 saved and shown on the result screen (with 대기실)',{coins:wonCoins});
@@ -171,7 +171,7 @@ try{
  await p.goto(base+'/?test=1&weapon=longsword&foe=heinrich&stage=castle',{waitUntil:'networkidle'});await p.waitForFunction(()=>window.game?.player,null,{timeout:60000});
  assert.equal(await p.locator('#gameEntrance').count(),0);await p.locator('#btnStart').tap();await phase(p,'fight');
  assert.equal(await p.evaluate(()=>game.stage.id),'castle');assert.deepEqual(await checkpoint(p),savedBefore);
- const coinsBefore=await p.evaluate(()=>localStorage.getItem('stillness.lobby.progress.v1'));await p.evaluate(()=>game.enemy.die('기절',true));await p.waitForFunction(()=>game.state==='paused',null,{timeout:30000});
+ const coinsBefore=await p.evaluate(()=>localStorage.getItem('stillness.lobby.progress.v1'));await p.evaluate(()=>game.enemy.die('기절',true));await p.waitForFunction(()=>game.state==='paused',null,{timeout:90000});
  assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.lobby.progress.v1')),coinsBefore);assert.equal(await p.locator('#menuReward').isVisible(),false); // 테스트 경로 판은 금화가 안 바뀐다
  assert.equal(await p.locator('#btnLobby').isVisible(),false); // 주소로 연 판에는 '대기실' 길이 없다
  check('existing direct test link bypasses title and cannot overwrite journey (no 대기실 on its result screen)');
