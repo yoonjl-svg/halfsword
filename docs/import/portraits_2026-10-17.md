@@ -32,7 +32,7 @@
 | 인물 ↔ 그림 표 | `src/portraits.js` | — | — | — |
 | 만드는 도구 | `tools/ui/portraits_build.py` (`webp` · `strip` · `frame`) | — | — | — |
 
-- 설치 묶음(빌드 `pwa-build.json` totalBytes): 바탕 `d5fca2f` 7,629,719 B(395 파일) → 이번 판 9,119,932 B(412 파일) · +1.49 MB. low 를 기본으로 담았다면 14,335,901 B(+6.7 MB — 중간 빌드로 잼, 커밋 안 함 · §3-3).
+- 설치 묶음(빌드 `pwa-build.json` totalBytes): 바탕 `d5fca2f` 7,629,719 B(395 파일) → 프로필 들여옴 판 9,119,932 B(412 파일) · +1.49 MB → 10/18 틀 그림 `frame1_portrait.png`(65,122 B × 두 벌 — public 사본 + 빌드 해시 사본) 뒤 9,249,495 B(414 파일). low 를 기본으로 담았다면 14,335,901 B(+6.7 MB — 중간 빌드로 잼, 커밋 안 함 · §3-3).
 
 ## 3. 바꾼 것
 

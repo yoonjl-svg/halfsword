@@ -83,7 +83,7 @@
 
 ### 3-4. 대기실 여는 시간
 - 빌드판 · Chromium(SwiftShader) · 844 × 390 × 3 · 정지 → '대기실' 누른 때부터 ① 칸이 다 될 때까지(전: 몸 `data-rig=ready` · 뒤: 그림이 풀림), 3 번 가운데: **2,950 → 2,515 ms**(−0.44 s · 그림이 풀리는 때 = 대기실이 열린 때와 거의 같음). 컴퓨터가 다른 일로 바쁜 중이라 거친 값.
-- 대기실 묶음(`lobby-*.js`): 47.12 → 38.68 kB(3D 미리보기가 빠짐). 설치 묶음은 프로필 그림 17 장(1.49 MB)이 늘어 7,629,719 → 9,119,932 B.
+- 대기실 묶음(`lobby-*.js`): 47.12 → 38.68 kB(3D 미리보기가 빠짐). 설치 묶음은 프로필 그림 17 장(1.49 MB)이 늘어 7,629,719 → 9,119,932 B · 10/18 프로필 같은 틀 그림(65 KB — `../public` 참조라 public 사본과 빌드 해시 사본 두 벌)까지 9,249,495 B(414 파일).
 
 ## 4. 패배 창 — 나를 쓰러뜨린 상대의 프로필 + 대사
 
@@ -99,9 +99,9 @@
 
 ## 5. 점검
 
-- 칼 싸움 관문(화면 일 — 바뀌면 안 됨, `0b11258` + 패배 창 작업본에서 잼): `fights12` 5dfe035c · `live_battery` 648aca66 · `finish_thrust 1 --stand` 2de06c03 · `corr_s0 --limits=on,off --scenes=a,b` IDENTICAL 12 · `weapon_smoke` OK 24(e06f14ed) · `tools/text/name_policy.mjs` 위반 0 — 모두 그대로.
+- 칼 싸움 관문(화면 일 — 바뀌면 안 됨, `0b11258` + 패배 창 작업본에서 재고 · 마지막 `21728e5` 에서 다시 잼 — 둘 다): `fights12` 5dfe035c · `live_battery` 648aca66 · `finish_thrust 1 --stand` 2de06c03 · `corr_s0 --limits=on,off --scenes=a,b` IDENTICAL 12 · `weapon_smoke` OK 24(e06f14ed) · `tools/text/name_policy.mjs` 위반 0 — 모두 그대로.
 - `node --test tools/sim/*.test.mjs` 95/95(새 `portraits.test.mjs` 2 — 전 93) · `npm run build`(PWA 포함) 통과.
-- 브라우저(빌드판 `vite preview`, 60 % 판): `game_entry_smoke` 25 · `lobby_equipment_smoke` 11 · `ui_unify_smoke` 11 · `ui_fix_smoke` 7 · 새 `defeat_portrait_smoke` 12 — 콘솔 · 페이지 오류 0. `lobby_records_smoke` 4 · `lobby_fix_smoke` 11 · `hero_tear_smoke` 6 은 앞 판(첫 판 · 80 %)에서 오류 0(크기와 무관한 확인).
+- 브라우저(빌드판 `vite preview`, 마지막 판 — 60 % · 프로필 같은 틀 · 싸움 화면 대사 뺌): `game_entry_smoke` 25 · `lobby_equipment_smoke` 11 · `ui_unify_smoke` 11 · `hero_tear_smoke` 6 · `lobby_records_smoke` 4 · `lobby_fix_smoke` 11 · `ui_fix_smoke` 7 · 새 `defeat_portrait_smoke` 12 — 모두 콘솔 · 페이지 오류 0.
   - `defeat_portrait_smoke` 는 결과 창이 게임 시간 3.5 s 뒤라, 컴퓨터가 바쁠 때(다른 점검과 같이 돌림) 첫 크기에서 40 s 기다림을 넘긴 일이 있어 기다림을 150 s 로 늘렸다 — 혼자 돌리면 통과.
   - 한때(디스크가 잠깐 가득 찼던 때와 겹침) `ui_fix` · `ui_unify` · `hero_tear` · `lobby_fix` 가 검사는 다 통과하고 오류 칸에 `net::ERR_INSUFFICIENT_RESOURCES` 가 찍힌 일이 있다 — 바탕 `d5fca2f` 빌드로 같은 도구를 돌려도 같은 수(43 · 46)라 환경 문제. 다시 돌려 0.
 
