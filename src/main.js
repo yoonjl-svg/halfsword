@@ -112,6 +112,8 @@ if (params.has('secretReach')) CONFIG.SECRET.secretReach = +params.get('secretRe
 if (params.has('iaiRise')) CONFIG.SECRET.iaiRise = +params.get('iaiRise') ? 1 : 0; // 고노센 올려베기·한 손(10/12 03:2x): 기본 1, `?iaiRise=0` = 가로 휩쓸기·두 손
 if (params.has('kronH')) CONFIG.SKILL.deKronH = +params.get('kronH') ? 1 : 0; // 왕관 손·칼끝 자리(10/12 08:2x): 기본 1 = 쓸어 고른 자리, `?kronH=0` = 00:1x 값
 if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
+if (params.get('itRetreat') === '1' || params.get('itRetreat') === '2') CONFIG.SKILL.itRetreat = +params.get('itRetreat'); // 이탈리아 물러서기 연구(10/17 — 판 값 끔, 사장님 확인 전): `?itRetreat=1` = 막기 단추가 약한 길에서 실제 디딤 두 번 물러섬 · `?itRetreat=2` = 막는 동안 스틱을 뒤로 당긴 두 디딤을 물러서는 한 짝으로 셈(스틱은 플레이어 것) (docs/strike/italian_retreat_2026-10-17.md)
+if (params.get('itParryBeat') === '1') CONFIG.SKILL.itParryBeat = 1; // 막기를 짧은 박자로 셈(10/17 연구 — 사장님 승인 전 제안, 판 값 끔): `?itParryBeat=1`
 if (['1', '2'].includes(params.get('itForte'))) CONFIG.SKILL.itForte = +params.get('itForte'); // 이탈리아 forte 막기 연구 후보 (가)(10/17 — 사장님 확인 전): 기본 0 = 끔, `?itForte=1`·`?itForte=2` = 후보 몸꼴 (docs/strike/italian_forte_parry_2026-10-17.md)
 if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 실험(10/11 — docs/strike/natural_bind_2026-10-11.md): 기본 0, `?bind=1` = 칼끼리 덜 튕기고 더 물림 · 막힌 칼을 노리던 자리로 밂 · 독일 느낌 · 넓은 맞부딪힘
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기

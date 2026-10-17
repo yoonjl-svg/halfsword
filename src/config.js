@@ -680,6 +680,16 @@ export const SKILL = {
   deKron: 1, // 독일 막기 자리 머리 위(highC) = 왕관(Kron, G.kron [0.02, 0.4] — 칼자루를 머리 위로 들어 코등이·칼자루로 받음). 사장님 10/11 22:2x '독일 막기 자세에 왕관 넣어' → 기본. 감아 들기(SECRET.deSecret 'parry')의 정한 자세에도 든다(왕관 → 뛰어들기). 0 = 전 자리(긴 자세)·정한 자세 황소 둘 (`?kron=0`, 시뮬 with_config.mjs SKILL.deKron=0) — docs/strike/natural_bind_2026-10-11.md · 확인표 910
   deKronShape: 'true', // 왕관 꼴 (사장님 10/12 00:1x '왕관 꼴 만들어 일단'): 'true' = 진짜 왕관 꼴(칼자루를 머리 위로 높이 들고 코등이를 가로로 — schools.js GERMAN_KRON 덧씌우기 자리, 손·칼끝·칼 면을 직접 줌) · 'pad' = 10/11 꼴(패드만 — 자세표 섞기로 칼이 지붕처럼 섬, `?kronShape=pad`, 시뮬 with_config.mjs SKILL.deKronShape=pad). deKron 0 이면 읽지 않음 — docs/strike/kron_shape_2026-10-12.md · 확인표 917
   deKronH: 1, // 왕관 손·칼끝 자리 (10/12 08:2x 사장님 '막기의 효용이 가장 큰 자세이되 원전을 해치지 않게'): 1 = 쓸어 고른 손 [0.16, 0.50, 0.04] m · 칼 70° (손이 머리 꼭대기 0.39 m 위) · 0 = 10/12 00:1x 손 [0.16, 0.60, 0.04] · 80°. `?kronH=0`, 시뮬 with_config.mjs SKILL.deKronH=0 — schools.js KRON_AT · docs/strike/kron_shape_2026-10-12.md §9 · 확인표 1023
+  // 이탈리아 물러서기 연구 (10/17 14:5x 사장님 '물러서기를 실제 발 디딤 두 번으로 함. 이렇게 해서 제안대로 실효 재봐' — **연구 · 판 값 끔**, docs/strike/italian_retreat_2026-10-17.md · 확인표 2040~2045 사장님 확인 전):
+  //  itRetreat 1 = 이탈리아 막기 책 플레이어의 막기 단추가 새 공격을 읽은 순간 약한 길(아래 gap)이면 실제 디딤 두 번(뒷발 → 앞발)으로 한 짝 물러섬 — 박자 걸음은 그 둘을 짧은 디딤으로 센다
+  //   (gait.js rhythmBeat 'retreat') → 다음 나아가는 한 짝이 긴 디딤. 걸음은 걷기 장치 그대로(스틱을 뒤로 민 것과 같음 — 막기 단추가 그 두 디딤 동안 스틱을 쥔다). `?itRetreat=1` · parry_gap_map.mjs 꼴 retreat
+  //  itRetreat 2 = 플레이어 스스로: 막는 동안 스틱을 뒤로 당기면 그 두 디딤을 물러서는 한 짝(짧은 디딤)으로 센다 — 스틱을 쥐지 않음 · 거리 · 뒤 자리는 플레이어가 본다(식힘 cool 만 같음). `?itRetreat=2` · 꼴 retreat2
+  //  itRetreatVals: gap = 처음 읽은 때 가슴 사이 거리가 이 이상이면(m — 456 판 자료: 1.35 m 밑에선 물러서도 맞은 판이 그대로) · low = 1 이면 읽은 줄이 아래(lowL · lowR)여도(자료: 처음 읽은 줄이 아래인 판은 맞은 판 0 — 끔) ·
+  //   stick = 뒤로 미는 크기(0~1 — 걸음 길이는 박자 걸음 짧은 디딤 그대로) · maxT = 두 디딤을 이 안(s)에 못 하면 놓음 · room = 뒤로 이만큼(m) 결투장 안(반지름 − 0.3)이어야 · cool = 물러서기가 끝나고 이만큼(s) 지나야 다시
+  //  itParryBeat 1 = 물러서지 않은 막기도 짧은 박자로 셈(짧은 디딤 둘을 막 마친 셈 — rhythmBeat 'parry') → 막은 뒤 첫 나아가는 한 짝이 긴 디딤. **사장님 승인 전 제안**, `?itParryBeat=1` · 꼴 beat
+  itRetreat: 0,
+  itRetreatVals: { gap: 1.35, low: 0, stick: 1, maxT: 1.2, room: 1.0, cool: 1.2 },
+  itParryBeat: 0,
   itForte: 0, // 이탈리아 forte 막기 연구 후보 (가) (10/17 감독 요청 — **연구 · 사장님 확인 전**, 확인표 2037): 0 = 끔(지금 판 그대로 — 이탈리아 막기 몸꼴 덧씌우기 없음) · 1·2 = 후보 몸꼴(schools.js ITALIAN_FORTE — 위 줄을 팔 뻗은 원전 꼴로 세워 forte 로 받게). `?itForte=1`, 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte'·'무기:forte2' — docs/strike/italian_forte_parry_2026-10-17.md
   // 플레이어 막기 버튼 거듦 (10/12 — 사장님 01:1x '무기가 무거울수록 성공률이 너무 떨어져서 거의 무용지물 … 지금보다는 성공률이 올라야 해'. docs/strike/parry_assist_2026-10-12.md · 확인표 990~993, **사장님 확인 전**).
   //  막기 버튼을 누르고 있는 동안만, 플레이어만(src/parry_button.js). AI 막기·시뮬 판은 읽지 않는다. 새 상한·쿨타임 없음.

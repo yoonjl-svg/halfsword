@@ -363,7 +363,11 @@ const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`?itRhythm=4+2` · `3+2
 //    짧은 디딤 간격 = (short ÷ speed) ÷ long = 긴 디딤 간격의 0.56 배(보폭만일 때 0.73) · 짧은 짝에서 몸이 치고 나감 · 평균 빠르기 +11 %(옛 × 1.5 는 +20 %).
 //    발 박자 배율 mul = long × speed ÷ short · 몸 빠르기 배율 speedMul = speed(gait.js fastBegin · update — timeOnly 일 때 몸은 speedMul, 박자는 mul). `?itStride=a,b,c` = 짧은·긴 계수·짧은 디딤 빠르기
 const ITALIAN_STRIDE = { short: 0.8, long: 1.1, speed: 1.3 };
-const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, timeOnly: true, shortFirst: true, idle: 0.7, brake: 0.2, accent: FAST_ACCENT };
+//   **10/17 14:5x 사장님 결정** '멈춤 기준을 0.6초로 하고(왜냐하면 독일 박차기로 0.6초 멈춤이 기준이기 때문) 막기 중엔 셈을 지우지 않게 함' → idle **0.7 → 0.6 s**.
+//    독일 쪽 0.6 s 는 독일 보법 '간격 잡기'(아래 GERMAN_CHASE.window)의 값이다: 받은 빠른 디딤 사이 걸음이 끝나고 0.6 s 안에 새 걸음이 없으면 남은 빠른 디딤이 사라지는 멈춤 기준
+//    (헛침 뒤 받을 창 · 잡기 시간도 같은 0.6 s). 첫 걸음 박차기(config GAIT.stepBurst)에는 시간 문턱이 없다 — 골반 수평 빠르기 0.3 m/s(burstStandV) 밑이면 '서 있음'.
+//    막는 동안은 셈 시계가 0 에 머문다(gait.js parrying — 같은 결정 · 확인표 2038 · 2039)
+const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, timeOnly: true, shortFirst: true, idle: 0.6, brake: 0.2, accent: FAST_ACCENT };
 //  ⓐ″ 독일 보법 '간격 잡기'의 빠른 디딤 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' — 10/15 18:0x 부터 '간격 잡기',
 //   AI 패시브 '따라 들어가기 (Nachreisen)'(GERMAN_PASSIVES)와 다른 것. 잡기 = config GAIT.deHold · gait.js holdTick — docs/strike/german_hold_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
 //   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —

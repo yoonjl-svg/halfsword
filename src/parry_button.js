@@ -25,7 +25,7 @@
 //   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL } from './config.js';
+import { AI_LEVELS, SKILL, ARENA } from './config.js';
 import { Senses } from './ai_sense.js';
 import { threatNow } from './secret.js';
 import { TRADITIONS } from './schools.js';
@@ -34,6 +34,7 @@ import { installCover } from './frames.js';
 import { AI } from './ai.js';
 
 const _r = new THREE.Vector3();
+const _b = new THREE.Vector3();
 const LINES = ['highL', 'highR', 'highC', 'lowL', 'lowR', 'thrust'];
 // coverFor 가 고른 자리 → 줄 이름 (10/16 23:5x): 두 줄이 같은 자리를 쓰면(이베리아 lowL·lowR = 왼 비낀 자세 · 동방 highR·highC = 거정세 자리 · 이탈리아 highL·lowL)
 //  LINES 차례의 앞 줄만 잡혀 그 줄의 몸꼴 덧씌우기가 엇갈렸다(동방 정수리 준비에 거정세 대신 맨 자리) — coverFor 와 같은 규칙으로 상대 칼이 있는 쪽 줄을 먼저 본다.
@@ -68,6 +69,10 @@ export class PlayerParryGuard {
     this.stats = { heldT: 0, threats: 0, lines: {}, waitT: 0 };
     this.boost = false; // 막기 거듦이 me.powerMul 을 쥐고 있나
     this._s2 = {}; // 일찍 읽기용 내다본 모습 (seen 사본)
+    // 이탈리아 물러서기 (10/17 연구 — SKILL.itRetreat · itParryBeat, 판 값 끔): retreat = 물러서는 한 짝 { t 지난 시간 · n0 걸 때 디딤 수 } · retreatEnd = 마지막으로 끝난 때(clock — 식힘 cool)
+    this.retreat = null;
+    this.retreatEnd = -Infinity;
+    this.clock = 0;
     // 대기실 스킬북 '막기'를 안 가졌거나 해제한 플레이어(me.schoolParry === false — main.js newRound, 첫 화면·대기실 여정만): 무유파 막기 자리(TRADITIONS.none.parry)·덧씌우기 없음
     const pc = me.schoolParry === false ? null : TRADITIONS[me.swordArt?.tradition]?.parryCover;
     if (pc) {
@@ -110,6 +115,7 @@ export class PlayerParryGuard {
   step(dt) {
     const me = this.me;
     const sk = me.skill;
+    this.clock += dt;
     this.sense.record(dt);
     sk.guardDrive = 0;
     const can = !me.stamina.exhausted && this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school;
@@ -129,6 +135,7 @@ export class PlayerParryGuard {
       this.noThreat = 0;
     } else this.noThreat += dt;
     if (!can) {
+      if (this.retreat) this.endRetreat(); // 물러서는 한 짝도 놓는다 (스틱으로 돌려줌)
       if (this.active && !this.broken) sk.cutPending = true; // 놓으면 검술 층의 '자세로 돌아가기'(쉴 자세)로 — 휘두르고 난 뒤와 같은 길
       this.active = false;
       this.mode = 'idle';
@@ -147,6 +154,7 @@ export class PlayerParryGuard {
       this.timer = 0.65;
       this.stats.threats++;
       this.stats.lines[th.line] = (this.stats.lines[th.line] ?? 0) + 1;
+      if (SKILL.itRetreat || SKILL.itParryBeat) this.beatOnThreat(th, d);
     } else if (A >= 2 && AV.reread && th && this.defLine && th.line !== this.defLine) {
       // ② 다시 읽기: 한 공격 안에서도 지금 읽은 줄이 바뀌면 따라간다 (AI 는 한 번 정하면 그대로 — 준비 동작을 공격으로 읽고 줄을 잘못 굳히는 일, 기록 §3)
       this.defLine = th.line;
@@ -167,6 +175,21 @@ export class PlayerParryGuard {
       this.timer -= dt;
       const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
       if ((swingOver && this.timer < 0.35) || this.timer <= 0) this.defLine = null;
+    }
+    // 물러서는 한 짝 (10/17 연구 — SKILL.itRetreat): 박자 걸음이 짧은 디딤으로 센 두 디딤(뒷발 → 앞발 — gait.js shortPair)을 다 디딜 때까지 스틱을 뒤로 쥔다 · maxT 안에 못 하면 놓음.
+    //  둘째 짧은 디딤을 뗀 때(shortPair 0)의 디딤 수 z 를 적고, 그 뒤 처음 디딘 때 끝. 걸 때 자세 고치던 발이 떠 있으면 그 발은 걷는 걸음으로 바뀌어(셈 밖) 한 디딤 더 물러선다
+    //  스스로 물러서기(itRetreat 1 · 2 둘 다): 막는 동안 스틱을 뒤로(뒤 90° 부채꼴 — fighter.closeStep 의 밂과 같은 기하, 새 수 없음) 당기면 그 두 디딤을 짧은 디딤으로 센다 — 스틱은 플레이어 것 그대로 · 뒤에서 떼면 끝
+    //  스틱이 이긴다(itRetreat 1): 막기 단추가 물러서는 중 플레이어가 스틱을 대면 — 뒤로면 스스로 물러서기로 이어 세고, 다른 쪽이면 그 자리에서 끝(스틱을 돌려줌)
+    const back = -me.stickY > Math.abs(me.stickX);
+    if (SKILL.itRetreat && !this.retreat && back) this.ownRetreat();
+    if (this.retreat) {
+      const R = this.retreat;
+      R.t += dt;
+      const touched = !R.own && (me.stickX !== 0 || me.stickY !== 0);
+      if (touched && back) R.own = true;
+      if (R.z == null && !(me.gait?.shortPair > 0)) R.z = this.footfalls();
+      if ((R.z != null && this.footfalls() > R.z) || R.t > SKILL.itRetreatVals.maxT || (R.own && !back) || (touched && !back)) this.endRetreat();
+      else if (!R.own) me.move.set(0, -SKILL.itRetreatVals.stick);
     }
     let p;
     if (this.defLine) {
@@ -205,6 +228,65 @@ export class PlayerParryGuard {
     } else if (this.boost) (me.powerMul = 1), (this.boost = false);
     me.inputActive = true; // 손을 쥐고 있다 — 쉼 무게·되돌아옴·끝점 붙잡음은 손가락이 움직일 때처럼 비킨다 (main.js 가 프레임마다 다시 정함)
     return true;
+  }
+
+  /**
+   * 이탈리아 물러서기 · 막기 박자 (10/17 연구 — SKILL.itRetreat · itParryBeat, 판 값 끔 · docs/strike/italian_retreat_2026-10-17.md): 새 공격을 읽은 순간(한 공격에 한 번).
+   *  이탈리아 막기 책을 쥔 플레이어만. itRetreat 1(막기 단추가 물러섬)이고 스틱을 대지 않았고(스틱이 이긴다) 약한 길(가슴 사이 거리 ≥ gap, 또는 low 일 때 읽은 줄이 아래 — 올려 베기)이고 뒤에 자리가 있고 식힘이 지났으면 물러서는 한 짝을 건다:
+   *   박자 걸음은 그 두 디딤을 짧은 디딤으로 센다(gait.js rhythmBeat 'retreat') → 다음 나아가는 한 짝이 긴 디딤. 카포 페로 권고 4 · 13 · 12 — 몸을 조금 뒤로 빼 비키고 곧장 찌름 · 뒷발부터 [해석]
+   *  아니면 itParryBeat 일 때 막기를 짧은 박자로 센다(rhythmBeat 'parry' — 막은 뒤 첫 나아가는 한 짝이 긴 디딤 · 물러서는 중이면 그 셈 그대로). 새 상한 · 쿨타임 값은 itRetreatVals(사장님 확인 전)
+   */
+  beatOnThreat(th, d) {
+    const me = this.me;
+    if (!this.italianFeet()) return;
+    const V = SKILL.itRetreatVals;
+    const weak = d >= V.gap || (V.low && (th.line === 'lowL' || th.line === 'lowR'));
+    if (SKILL.itRetreat === 1 && !this.retreat && me.stickX === 0 && me.stickY === 0 && weak && this.clock - this.retreatEnd >= V.cool && this.roomBehind(V.room)) {
+      this.retreat = { t: 0, n0: this.footfalls() };
+      me.gait.rhythmBeat('retreat');
+      this.stats.retreats = (this.stats.retreats ?? 0) + 1;
+      return;
+    }
+    if (SKILL.itParryBeat && !this.retreat) me.gait.rhythmBeat('parry');
+  }
+
+  /** 스스로 물러서기 (itRetreat 1 · 2) — 플레이어가 막는 동안 스틱을 뒤로 당긴 순간: 그 걸음을 물러서는 한 짝으로 센다(스틱은 쥐지 않음 · 식힘 cool 같음 · 거리 · 뒤 자리는 플레이어가 본다) */
+  ownRetreat() {
+    if (!this.italianFeet() || this.clock - this.retreatEnd < SKILL.itRetreatVals.cool) return;
+    this.retreat = { t: 0, n0: this.footfalls(), own: true };
+    this.me.gait.rhythmBeat('retreat');
+    this.stats.retreats = (this.stats.retreats ?? 0) + 1;
+  }
+
+  /** 이탈리아 막기 책을 쥐고(책 해제면 아님) 박자 걸음이 도는 몸인가 */
+  italianFeet() {
+    const me = this.me;
+    return me.swordArt?.tradition === 'italian' && me.schoolParry !== false && !!me.gait?.active;
+  }
+
+  /** 지금까지 디딘 발 수 (gait.js touchdown 의 tdN — 두 발 합) */
+  footfalls() {
+    const L = this.me.gait?.legs;
+    return L ? (L.F.tdN ?? 0) + (L.B.tdN ?? 0) : 0;
+  }
+
+  /** 뒤로 room m 물러선 골반 자리가 결투장 안(ARENA.radius − 0.3 m — 보이지 않는 벽 앞)인가. 석상 같은 무대 장애물은 보지 않는다 */
+  roomBehind(room) {
+    const p = this.me.bodies.pelvis.translation();
+    const f = this.me.forward(_b);
+    return Math.hypot(p.x - f.x * room, p.z - f.z * room) < ARENA.radius - 0.3;
+  }
+
+  /** 물러서는 한 짝 끝 — 못 다 딛은 짧은 디딤 몫은 버리고(셈은 짧은 박자를 마친 자리 — 다음 둘이 긴 디딤), 막기 단추가 쥐었던 스틱을 돌려줌(main.js 가 프레임마다 스틱 값으로 다시 정한다 · 시뮬은 0) */
+  endRetreat() {
+    const me = this.me;
+    const own = this.retreat?.own;
+    this.retreat = null;
+    this.retreatEnd = this.clock;
+    if (me.gait?.shortPair > 0) me.gait.shortPair = 0;
+    if (own) return;
+    const k = me.emoMods?.move ?? 1;
+    me.move.set(me.stickX * k, me.stickY * k);
   }
 
   /** 일찍 읽기 (막기 거듦 ②): 칼끝·타격점을 지금 속도로 lead 초 앞에 둔 모습 (나머지 칸은 그대로) */
