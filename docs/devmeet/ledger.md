@@ -152,3 +152,20 @@
 | S-146 | 2026-10-16 | Stillness | 요략세 새 몸꼴 + 막기 단추 따라가기 | 끝남 | d4fa734 | 보통 | schools.js·parry_button.js·config.js | 열림 |
 | S-147 | 2026-10-16 | Stillness | 얼터 숙련도 +1(모두) | 끝남 | 2e370e0 | 쉬움 | characters.js | 열림 |
 | S-148 | 2026-10-16 | Stillness | 운영: 관문 그대로 · 컨테이너 재시작 넷 · 하루 예산 넘음 | 기록 | — | — | — | 닫힘 |
+| S-149 | 2026-10-17 | Stillness | 일본 우케나가시 · 이베리아 탈류 · 레베스 쳐내기 + 흘려 받기(u37) | 끝남(확인표 2011~2014 사장님 확인 전) | 4eb2813·68697f6·92f2839·6f4fff0 | 손봐서 | schools.js·combat.js·parry_button.js | 열림 |
+| S-150 | 2026-10-17 | Stillness | 막기 줄 읽기 다시 짜기 연구 의뢰(MSG-S-012) — 우리 손질 열 가지 되돌림 | 연구 · 상대 몫(답신 받음 → S-161) | 3b2ffca | — | docs/design/parry_reading_research_2026-10-17.md | 닫힘 |
+| S-151 | 2026-10-17 | Stillness | 첫 화면 · 대기실 손질 — 공지 글자 · 소리 · 용사의 눈물 · 대기실 미리보기 | 끝남(일부 사장님 확인 전) | cce7fc0·8307381·9b26a54·17edab5·2ffc536 | 보통 | entrance_type.css·ui_sound.js·lobby*.js·stamina.js | 열림 |
+| S-152 | 2026-10-17 | 샛별→Stillness | 기력 실제 접촉 보정 들임(샛별 47b2e16e) | 끝남 | 0eb7ba4·f21266d | — (그쪽 것) | attack_tempo.js·stamina.js·skill.js·fighter.js | 닫힘 |
+| S-153 | 2026-10-17 | Stillness | 게임 이름 Stillness · 첫 화면 'Stage 1' · 첫 화면에서 곧바로 여정 · 'Stage 입장' · '첫 화면' | 끝남 | 4d42482·bf4dc54·9abb04d·e5f9802 | 안 맞음(이름 · 흐름) | start_screen*·game_entry.js·journey_save.js | 닫힘 |
+| S-154 | 2026-10-17 | Stillness | 기력 문턱 심한 지침 −35 · 탈진 −70 | 끝남 | d051c3c | 쉬움 | config.js·stamina.js | 열림 |
+| S-155 | 2026-10-17 | 샛별→Stillness | 수치 요청 셋 — 냉동 참치 둔타 2.4 · 고무 닭 1.2 · AI 리볼버 × 1.8 | 끝남 | bd63069·871e472·a7c8043 | — (그쪽 요청) | weapons.js·gun.js·characters.js | 닫힘 |
+| S-156 | 2026-10-17 | 샛별→Stillness | 샛별 셋째 들여오기(8233ac94 → 429751b4) · 여정 스물여덟 판 | 끝남 | 192c0fb·74dff85·e4c04aa·87e8c59 | — (그쪽 것) | stage_*·outfit_alter*·weapons.js·stages.js | 닫힘 |
+| S-157 | 2026-10-17 | Stillness | 이탈리아 막기 — 두 자리 원전 그대로 · (가) forte 넣지 않음 · 박자 멈춤 0.6 s · 물러서며 받기 꺼 둠 | 멈춤 0.6 s 반영 · 나머지 연구(켜지 않음 권장) | be3c0b5·63ee6ca | 측정 도구 참고 | gait.js·parry_button.js·schools.js | 열림 |
+| S-158 | 2026-10-17 | Stillness | 사장님 완성도 두 기준(30 초 득 > 실 · 사람에게 유리) + 무게 단 맞음 · 피해 총량 · 막기 실패 둘로 | 상시 규칙 | 5cac4c3·fcbeec3·64ae673 | 같은 잣대 | docs/director_handoff.md §2 | 열림 |
+| S-159 | 2026-10-17 | Stillness | 붉은 회랑 짓기 멈칫 고침(willReadFrequently · 1.35~4.7 s → 0.3 s) | 끝남 | d07f48a | 쉬움 | stage_kit.js·stage_loggia.js | 열림 |
+| S-160 | 2026-10-17 | Stillness | 봉인의 중정 리뷰 → 다 고침 · 장애물 곁 카메라 · 여정 스물아홉 판 | 끝남(바닥 밝기 등 사장님 확인 전) | 1930074·89245ce·e421422·f31cd29·95d177e | 보통 | arena_obstacle.js·stage_courtyard*.js·stages.js | 열림 |
+| S-161 | 2026-10-17 | Stillness | 동방 막기 최종 검토 — 샛별 막기 연구 일곱 묶음(MSG-S-012 답신) 재현 · 넣을 후보 없음 · 경로 판독 보류 | 보류(사장님 결정 대기) | af625a0·d2d67a4 | — | docs/strike/chinese_parry_final_review_2026-10-17.md | 열림 |
+| S-162 | 2026-10-17 | Stillness | 동방 막기 단추 손 빠르기(켜지 않음) · 실패 둘로 나눠 셈 · 닿는 순간 손 상태 · 붙잡기 시험(득 없음) | 실패 · 스위치 끔 | 93bbf52·64ae673·58ca270·d2f94c4 | 측정 도구 참고 | config.js·parry_button.js | 닫힘 |
+| S-163 | 2026-10-17 | Stillness | 동방 막기 마지막 안 — 버티는 힘 끔(득 없음) · 막는 동안 피해 감소 판 값 0.5 | 피해 감소 기본 플레이 반영(사장님 손맛 뒤 조정) | d26cc40·d5fca2f | 안 맞음(동방 막기 단추) | combat.js·parry_button.js·config.js | 열림 |
+| S-164 | 2026-10-17 | Stillness | 대기실 프로필(샛별 프로필 17 명 · 액자 1 들여오기) · 패배 팝업 | 진행 중 | — | — | — | 열림 |
+| S-165 | 2026-10-17 | Stillness | 운영: 관문 그대로(smoke 23 → 24) · 단위 시험 93/93 · 샛별 열람 00:0x · 00:3x + 사장님 요청 둘 | 기록 | — | — | — | 닫힘 |
