@@ -597,7 +597,7 @@ function newRound(weaponId) {
     revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
     physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 — fighter.js HUMAN_BODY). 없으면 사람
   });
-  if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −40 · −80 그대로 · 기력 끔이면 아무 일 없음)
+  if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −35 · −70 그대로 · 기력 끔이면 아무 일 없음)
   //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
   if (loadout?.neck === HERO_TEAR.id) player.stamina.setInfinite(true); // 용사의 눈물 '기력 무한' (사장님 10/17) — 플레이어만 · 청구 · 지침 · 탈진 없음 · 머리 위 내 막대 없음(stamina_hud.js) · 몸에 붙이는 것 없음(겉모습 그대로)
   for (const f of [player, enemy]) {
