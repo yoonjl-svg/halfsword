@@ -11,13 +11,14 @@ export async function departTitle(p, sel = '#newJourney', how = 'click') {
   return p.evaluate(() => window.game.state);
 }
 
-/** 싸움(또는 카드 고르기)에서 정지 → '대기실'. 대기실 몸이 설 때까지 기다린다 */
+/** 싸움(또는 카드 고르기)에서 정지 → '대기실'. 프로필 그림이 뜰 때까지 기다린다
+ *  (10/17 22:1x 사장님 — 3D 미리보기(#characterView · 몸이 서기를 기다림)를 정사각 프로필 그림으로 바꿈: 이제 #lobbyPortraitImg 가 풀리면(또는 못 불러와 빈 액자) 다 연 것) */
 export async function lobbyFromBattle(p, how = 'click') {
   await p.evaluate(() => document.getElementById('btnPause').click()); // 정지 단추는 판 시작 정지 동안 숨어 있을 수 있어 직접 누른다
   await p.waitForFunction(() => window.game.state === 'paused' && !document.getElementById('btnLobby').hidden, null, { timeout: 30000 });
   await p.locator('#btnLobby')[how]();
-  await p.locator('#characterView canvas').waitFor({ timeout: 60000 });
-  await p.waitForFunction(() => document.querySelector('#gameEntrance')?.shadowRoot.getElementById('characterView')?.dataset.rig === 'ready', null, { timeout: 90000 }).catch(() => {});
+  await p.locator('#lobbyPortraitImg').waitFor({ state: 'attached', timeout: 60000 });
+  await p.waitForFunction(() => { const r = document.querySelector('#gameEntrance')?.shadowRoot, img = r?.getElementById('lobbyPortraitImg'); return !!img && (img.complete && img.naturalWidth > 0 || r.getElementById('lobbyPortrait').hasAttribute('data-empty')); }, null, { timeout: 60000 });
 }
 
 /** 첫 화면 → (곧바로 여정) → 정지 → 대기실 */

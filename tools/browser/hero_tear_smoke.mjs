@@ -136,9 +136,10 @@ try {
   assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', true]]); // 새 기기: 둘 다 씀 (사장님 10/17 '용사의 눈물은 장착을 기본으로')
   await p.waitForTimeout(400);
   checks.push('lobby (title Stage 1 → cards → pause → 대기실) armor tab: 2 items (kettle hat · hero tear), both thumbnails load at 256 px, legend glow; new device = kettle on, tear on (default equipped)');
-  const view = await p.locator('#characterView').boundingBox();
-  const frames = () => p.locator('#characterView').getAttribute('data-frames');
-  const before = await p.screenshot({ clip: view }), framesBefore = await frames();
+  // 10/17 22:1x: 3D 미리보기를 정사각 프로필 그림으로 바꿈 — 목걸이를 벗고 걸어도 프로필 칸 화소가 한 점도 안 바뀐다(전: 미리보기 화소 · 다시 그린 수)
+  const view = await p.locator('#lobbyPortrait').boundingBox();
+  const portraitSrc = () => p.locator('#lobbyPortraitImg').getAttribute('src');
+  const before = await p.screenshot({ clip: view }), srcBefore = await portraitSrc();
   await p.locator('button[data-armor=hero_tear]').tap();
   const k = await card(p);
   assert.deepEqual([k.hidden, k.tier, k.name, k.rarity, k.description], [false, 'legend', '용사의 눈물', '레전드', '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다. (기력 무한)']);
@@ -152,16 +153,14 @@ try {
   assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', true]]); // 다시 둘 다 장착
   assert.match(await p.locator('#equipmentStatus').textContent(), /^용사의 눈물 장착/);
   assert.equal(await p.locator('#equipItem').isEnabled(), false); assert.equal(await p.locator('#unequipItem').isEnabled(), true);
-  assert.equal(await p.locator('#characterView').getAttribute('data-armor'), 'kettle'); // 미리보기 투구 그대로
-  assert.equal(await p.evaluate(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').lobbyPreview.fighter.helmetGroup.visible), true);
   await p.waitForTimeout(300);
   const after = await p.screenshot({ clip: view });
-  assert.ok(before.equals(after), 'preview pixels changed after unequipping/equipping the tear'); // 겉모습 변화 없음 — 미리보기 화소가 한 점도 안 바뀜
-  assert.equal(await frames(), framesBefore); // 미리보기를 다시 그리지도 않았다 (목 자리는 미리보기에 손대지 않음)
+  assert.ok(before.equals(after), 'portrait pixels changed after unequipping/equipping the tear'); // 겉모습 변화 없음 — 프로필 칸 화소가 한 점도 안 바뀜
+  assert.equal(await portraitSrc(), srcBefore); // 그림도 그대로 (장착과 무관)
   assert.deepEqual(await p.evaluate(() => [localStorage.getItem('stillness.lobby.armor.v1'), localStorage.getItem('stillness.lobby.neck.v1')]), [null, '{"version":1,"neck":"hero_tear"}']); // 케틀 햇은 기본 장착(저장 없음) 그대로
   await p.locator('button[data-armor=hero_tear]').tap(); assert.equal((await card(p)).hidden, true); await p.locator('button[data-armor=hero_tear]').tap(); assert.equal((await card(p)).hidden, false); // 카드 닫았다 다시 — 장착 중 그대로
   assert.deepEqual((await badges(p)).map((b) => b.on), [true, true]);
-  checks.push('tear card: 용사의 눈물 · 레전드 · description + (기력 무한) in legend colour, inside the frame; new device = 장착 중; unequip → saved null, kettle stays; equip again → both items 장착 중; preview pixels identical before/after (no look change); saved in stillness.lobby.neck.v1');
+  checks.push('tear card: 용사의 눈물 · 레전드 · description + (기력 무한) in legend colour, inside the frame; new device = 장착 중; unequip → saved null, kettle stays; equip again → both items 장착 중; profile picture pixels identical before/after (no look change); saved in stillness.lobby.neck.v1');
 
   // ── ② 장착하고 싸움 ──
   await depart(p);
@@ -213,7 +212,7 @@ try {
   await lobby(C.p);
   await C.p.locator('#tabArmor').tap();
   assert.deepEqual((await badges(C.p)).map((b) => [b.id, b.on]), [['kettle', false], ['hero_tear', true]]);
-  assert.equal(await C.p.locator('#characterView').getAttribute('data-armor'), '');
+  assert.equal(await C.p.evaluate(() => localStorage.getItem('stillness.lobby.armor.v1')), '{"version":1,"armor":null}'); // 케틀 햇 벗음 (10/17 — 전: 미리보기 data-armor)
   await depart(C.p);
   assert.deepEqual(await C.p.evaluate(() => [game.player.hasHelmet, game.player.stamina.infinite, game.player.stamina.max, document.querySelector('.stamina-bar[aria-label="나 기력"]').hidden]), [false, true, 100, true]);
   checks.push('kettle off + tear on: bare head (kettle rule unchanged) + infinite stamina (max 100) + no bar — the two slots are independent');

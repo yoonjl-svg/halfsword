@@ -46,6 +46,7 @@ import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setItalianRhythm, setItalianStride, traditionOf } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
+import { portraitIdOf } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
@@ -1436,6 +1437,8 @@ export function lobbyRigSpec(weaponId) {
 }
 /** 대기실 스킬북 화면이 읽는 이 판의 갈래: test = 테스트 경로(책 모두 열림 · 이미 받은 인장을 금화로 바꾸지 않음) */
 export const getSkillBookContext = () => ({ test: testRoute.active });
+/** 대기실 프로필 칸의 인물 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md): ?hero=<인물 id> 로 다른 영웅이면 그 인물(그림이 없으면 플레이어) · 아니면 플레이어 */
+export const lobbyPortraitId = () => (testRoute.hero && portraitIdOf(testRoute.hero.id)) || 'player';
 export const getLobbySettings = () => ({ fpsCap: settings.fpsCap });
 export function setLobbyFps(enabled) {
   settings.fpsCap = !!enabled; // 첫 화면 설정 창 — 메뉴의 '화면 60 fps 제한' 줄과 같은 값 · 같은 저장

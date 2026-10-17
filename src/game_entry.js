@@ -95,7 +95,7 @@ if (skipsTitle(params)) {
   }
   // 대기실 (싸움의 정지 · 결과 창 '대기실'에서 — 'continue' = 이어하기 지점부터)
   async function showLobby(game, choice) {
-    const { mountLobby } = await import('./lobby.js'); // 대기실 묶음(3D 미리보기)은 열 때 받는다 — 첫 화면을 늦추지 않게
+    const { mountLobby } = await import('./lobby.js'); // 대기실 묶음은 열 때 받는다 — 첫 화면을 늦추지 않게 (10/17 3D 미리보기를 프로필 그림으로 바꿔 묶음이 가벼워짐)
     titleWind(false);
     screen?.destroy(); screen = null;
     lobby = mountLobby({ root, game, choice, onBack: showTitle, async onDepart() {

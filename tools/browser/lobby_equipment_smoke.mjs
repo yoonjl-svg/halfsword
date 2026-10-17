@@ -15,7 +15,10 @@ const IGNORED=/deprecated parameters for the initialization function/;
 const watch=p=>{p.on('pageerror',e=>errors.push(String(e)));p.on('console',m=>{if(m.type()==='error'&&!IGNORED.test(m.text()))errors.push(m.text());});p.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});};
 const noAuth=async c=>c.route('https://*.supabase.co/**',r=>{errors.push('auth server called: '+r.request().url());r.abort();});
 const title=async p=>{await p.waitForFunction(()=>window.game?.player,null,{timeout:60000});if(await p.locator('#noticeDialog').evaluate(d=>d.open))await p.locator('#confirmNotices').click();};
-const state=async(p,equip,unequip,weapon)=>{assert.equal(await p.locator('#equipItem').isEnabled(),equip);assert.equal(await p.locator('#unequipItem').isEnabled(),unequip);assert.equal(await p.locator('#characterView').getAttribute('data-equipped'),weapon);};
+// 장착한 무기 = 무기 칸의 '장착 중' 표시 (10/17 — 전: 3D 미리보기 #characterView data-equipped · 미리보기를 정사각 프로필 그림으로 바꿈). 방어구 칸이 보이는 동안은 무기 칸이 없어 건너뜀
+const state=async(p,equip,unequip,weapon)=>{assert.equal(await p.locator('#equipItem').isEnabled(),equip);assert.equal(await p.locator('#unequipItem').isEnabled(),unequip);if(await p.locator('.inventory-item[data-weapon]').count())assert.equal(await p.locator('.inventory-item[data-weapon].is-equipped').evaluateAll(els=>els.map(e=>e.dataset.weapon).join('')),weapon);};
+const armorOn=(p,id)=>p.locator(`.inventory-item[data-armor=${id}]`).evaluate(e=>e.classList.contains('is-equipped'));
+const portraitOf=p=>p.locator('#lobbyPortrait').evaluate(f=>[f.dataset.portrait,f.querySelector('img').getAttribute('src'),f.querySelector('img').complete&&f.querySelector('img').naturalWidth>0]);
 const card=p=>p.locator('#itemDetail').evaluate(e=>{const r=e.getBoundingClientRect(),f=e.closest('.inventory-frame').getBoundingClientRect();return {hidden:e.hidden,name:e.querySelector('#itemName').textContent,rarity:e.querySelector('#itemRarity').textContent,description:e.querySelector('#itemDescription').textContent,inside:r.left>=f.left-.5&&r.right<=f.right+.5&&r.top>=f.top-.5&&r.bottom<=f.bottom+.5,overflow:e.scrollHeight>e.clientHeight+1};});
 const shot=(p,name)=>p.screenshot({path:`${out}/${name}.png`});
 const branch=getWeapon('tree_branch');
@@ -39,11 +42,12 @@ try{
  assert.equal(await p.locator('[data-weapon=longsword]').count(),0);
  const layout=await p.locator('.inventory-grid').evaluate(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect(),item=e.firstElementChild.getBoundingClientRect(),root=e.getRootNode();return {columns:s.gridTemplateColumns.split(' ').length,rows:s.gridTemplateRows.split(' ').length,cell:[item.width,item.height],width:r.width,frame:root.querySelector('.portrait-card').getBoundingClientRect().toJSON(),panel:root.querySelector('.character-panel').getBoundingClientRect().toJSON(),depart:root.getElementById('lobbyDepart').getBoundingClientRect().toJSON()};});
  assert.equal(layout.columns,5);assert.equal(layout.rows,4);assert.ok(Math.abs(layout.cell[0]-layout.cell[1])<1);assert.ok(layout.cell[0]>43.3);
- // 10/16 15:3x ⑤: 캐릭터 카드 = 싸움 무기 카드 비(약 2 : 3) · 칸 위 = 카드 위 · 칸 아래 = 출발 단추 아래 (전: 칸의 80 % × 80 %)
- const ratio=layout.frame.width/layout.frame.height;assert.ok(ratio>.62&&ratio<.7,`card ratio ${ratio}`);
+ // 10/16 15:3x ⑤: 칸 위 = 카드 위 · 칸 아래 = 출발 단추 아래 (전: 칸의 80 % × 80 %) · 10/17 22:1x: 카드(2 : 3 미리보기) → 같은 폭의 정사각 프로필 그림 — 높이만 짧아짐, 출발 단추 자리 그대로
+ const ratio=layout.frame.width/layout.frame.height;assert.ok(ratio>.99&&ratio<1.01,`card ratio ${ratio}`);assert.ok(Math.abs(layout.frame.width-layout.depart.width)<.5,JSON.stringify(layout));
+ assert.deepEqual(await portraitOf(p),['player','ui/portraits/player.webp',true]);
  assert.ok(Math.abs(layout.frame.top-layout.panel.top)<1&&Math.abs(layout.depart.bottom-layout.panel.bottom)<1&&layout.depart.y>=layout.frame.bottom&&layout.depart.bottom<=390,JSON.stringify(layout));
  assert.equal((await card(p)).hidden,true);
- await shot(p,'lobby-phone');checks.push({name:'battle-style buttons and tabs, lobby text smaller; character card about 2:3 from the column top to the departure button at the column bottom; 5×4 square grid; tree branch only (no longsword)',layout});
+ await shot(p,'lobby-phone');checks.push({name:'battle-style buttons and tabs, lobby text smaller; square profile picture (player, low) at the column top, departure button at the column bottom (same width); 5×4 square grid; tree branch only (no longsword)',layout});
  assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleCurrent').textContent(),'여행자');assert.equal(await p.locator('#lobbyCoins').textContent(),'100');
  assert.equal(await p.locator('.duel-record > span').textContent(),'대면 결과');
  const order=await p.locator('.profile-data dd').evaluateAll(els=>els.map(e=>e.id||e.className));assert.deepEqual(order,['lobbyRank','name-row']); // 대표 유파 칸은 뺐다 (10/16 15:3x ⑥)
@@ -55,8 +59,8 @@ try{
  let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','레전드','여행자의 필수품. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
  assert.deepEqual(await p.locator('#itemDetail').evaluate(e=>[getComputedStyle(e.querySelector('#itemRarity')).color,getComputedStyle(e.querySelector('#itemName')).color,getComputedStyle(e.querySelector('.item-ability')).color]),Array(3).fill('rgb(255, 210, 74)')); // 레전드 = --tier-legend (사장님 10/16 03:5x)
  assert.equal(await p.locator('[data-armor=kettle] img').getAttribute('alt'),'케틀 햇');
- assert.equal(await p.locator('#characterView').getAttribute('data-armor'),'kettle');await state(p,false,true,'');await shot(p,'armor-equipped');
- await p.locator('#unequipItem').tap();assert.equal(await p.locator('#characterView').getAttribute('data-armor'),'');await state(p,true,false,'');await shot(p,'armor-unequipped');
+ assert.equal(await armorOn(p,'kettle'),true);await state(p,false,true,'');await shot(p,'armor-equipped');
+ await p.locator('#unequipItem').tap();assert.equal(await armorOn(p,'kettle'),false);await state(p,true,false,'');await shot(p,'armor-unequipped');
  assert.match(await p.locator('#equipmentStatus').textContent(),/장착 해제/);
  assert.equal(await p.evaluate(()=>game.player.helmetGroup.visible),true);
  await p.locator('#equipItem').tap();assert.match(await p.locator('#equipmentStatus').textContent(),/^케틀 햇 장착/);await p.locator('#tabWeapons').tap();await state(p,false,false,'');
@@ -67,23 +71,20 @@ try{
  assert.equal(k.rarity,'쓰레기');await shot(p,'branch-selected');
  await p.locator('#equipItem').tap();await state(p,false,true,'tree_branch');await shot(p,'branch-equipped');
  assert.equal(await p.locator('[data-weapon=tree_branch] .equipped-badge').isVisible(),true);
- assert.match(await p.locator('#characterView').getAttribute('aria-label'),/나뭇가지 장착/);
+ assert.match(await p.locator('#equipmentStatus').textContent(),/나뭇가지 장착/);assert.deepEqual(await portraitOf(p),['player','ui/portraits/player.webp',true]); // 프로필 그림은 장착과 무관
  await p.locator('#unequipItem').tap();await state(p,true,false,'');await shot(p,'unequipped');
  await p.locator('.inventory-slot').first().tap();await state(p,false,false,'');assert.equal((await card(p)).hidden,true);
  for(let i=0;i<8;i++){await p.locator('[data-weapon=tree_branch]').tap();await p.locator('#equipItem').tap();await p.locator('#unequipItem').tap();await p.locator('.inventory-slot').first().tap();}
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({position:rb.translation(),rotation:rb.rotation()}))),bodies);assert.equal(await p.evaluate(()=>game.stats.simTime),0);
  checks.push({name:'tree branch card = weapons.js nameKo · TIER_LABEL · desc; selection separate from equip; unequip/clear and repeated cycles; physics untouched'});
  await p.locator('[data-weapon=tree_branch]').tap();await p.locator('#equipItem').tap();
- const v=await p.locator('#characterView').boundingBox(),cdp=await c.newCDPSession(p),x=v.x+v.width*.1,y=v.y+v.height*.5;
- await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+v.width*.25,y}]});await p.waitForTimeout(250);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); // 10/16 돌림판: 멈췄다 놓으면 관성 없음
- await p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning==='false');
- assert.ok(Math.abs(Number(await p.locator('#characterView').getAttribute('data-angle'))-90)<3);await shot(p,'equipped-rotation');
+ await shot(p,'equipped-portrait'); // 10/17: 돌림판(끌어 90° 돌리기) 없음 — 프로필 그림
  await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await titleToLobby(p,'#newJourney','tap'),'fight');assert.equal(await p.evaluate(()=>game.player.weapon.id),'tree_branch'); // 장착한 나뭇가지 → 첫 화면에서도 카드 없이 곧장 싸움
- await state(p,false,false,'tree_branch');assert.equal(await p.locator('#characterView').getAttribute('data-armor'),'kettle');
+ await state(p,false,false,'tree_branch');assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.lobby.armor.v1')),'{"version":1,"armor":"kettle"}');
  await p.locator('#editName').tap();await p.locator('#playerNameInput').fill('방랑 검객');await p.locator('#nameForm button[type=submit]').tap();
  await p.locator('#lobbyBack').tap();await title(p);await titleToLobby(p,'#newJourney','tap');await state(p,false,false,'tree_branch');assert.equal(await p.locator('#lobbyName').textContent(),'방랑 검객');
  assert.deepEqual(await p.evaluate(()=>[localStorage.getItem('stillness.lobby.weapon.v1'),localStorage.getItem('stillness.lobby.armor.v1')]),['{"version":1,"weapon":"tree_branch"}','{"version":1,"armor":"kettle"}']);
- checks.push({name:'equipped weapon rotates with model; persistence (stillness.lobby.*) through reload/name edit/back navigation; selection resets; Stage 1 with the branch equipped fights with it at once (no card draw)'});
+ checks.push({name:'equipped weapon kept (badge); persistence (stillness.lobby.*) through reload/name edit/back navigation; selection resets; Stage 1 with the branch equipped fights with it at once (no card draw)'});
  // 10/16 (사장님 03:5x '장착하면 실제 전투에 가져나가게 해'): 나뭇가지를 장착했으면 카드 없이 그 무기로 곧장 싸움
  await p.locator('#lobbyDepart').tap();await p.waitForFunction(()=>game.state==='fight',null,{timeout:60000});assert.equal(await p.evaluate(()=>game.player.weapon.id),'tree_branch');assert.equal(await p.evaluate(()=>document.getElementById('draw').classList.contains('show')),false);
  checks.push({name:'lobby departure (Stage 입장) with the branch equipped goes straight to the fight with the branch (no card draw)'});await c.close();

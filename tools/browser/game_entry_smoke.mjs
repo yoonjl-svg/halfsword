@@ -87,18 +87,13 @@ try{
  assert.deepEqual(thumbs.map(t=>t.src),['ui/weapons/tree_branch.webp']);assert.ok(thumbs.every(t=>t.loaded));
  await screenshot(p,'lobby-phone');
  check('pause → 대기실 during the card draw opens the lobby (depart button Stage 입장; game behind stopped, checkpoint kept); first visit shows the one-time seal → coins notice');
+ // 10/17 22:1x 사장님: 3D 미리보기(돌림판) → 정사각 프로필 그림 (전 점검: 끌어 돌리기 180° · 방향키 Home). 이제: 플레이어 그림(low)이 떴나 · 정사각 · 칸 폭 그대로 · 출발 단추와 안 겹침 · 눌러도 판 몸 그대로
  const beforeBodies=await p.evaluate(()=>game.player.meshes.map(({rb})=>({p:rb.translation(),q:rb.rotation()})));
- const turn=await p.locator('#characterView').boundingBox(),touch=await context.newCDPSession(p);
- const tx=turn.x+turn.width*.15,ty=turn.y+turn.height*.5;
- await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:tx,y:ty}]});
- await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:tx+turn.width*.5,y:ty}]});
- await p.waitForTimeout(250); // 10/16 돌림판: 멈췄다 놓으면 관성 없이 그 자리 (튕기면 더 돈다 — ui_fix_smoke)
- await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
- await p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning==='false');
- assert.ok(Math.abs(Number(await p.locator('#characterView').getAttribute('data-angle'))-180)<3);
- await screenshot(p,'lobby-back');
+ const portrait=await p.locator('#lobbyPortrait').evaluate(f=>{const img=f.querySelector('img'),r=f.getBoundingClientRect(),d=f.getRootNode().getElementById('lobbyDepart').getBoundingClientRect();return {id:f.dataset.portrait,mode:f.dataset.mode,empty:f.hasAttribute('data-empty'),src:img.getAttribute('src'),loaded:img.complete&&img.naturalWidth===768,w:r.width,h:r.height,bottom:r.bottom,departTop:d.top,departW:d.width};});
+ assert.deepEqual([portrait.id,portrait.mode,portrait.empty,portrait.src,portrait.loaded],['player','original',false,'ui/portraits/player.webp',true],JSON.stringify(portrait));
+ assert.ok(Math.abs(portrait.w-portrait.h)<.5&&Math.abs(portrait.w-portrait.departW)<.5&&portrait.bottom<portrait.departTop,JSON.stringify(portrait));
+ await p.locator('#lobbyPortrait').tap();
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({p:rb.translation(),q:rb.rotation()}))),beforeBodies);
- await p.locator('#characterView').focus();await p.keyboard.press('Home');
  await p.locator('[data-weapon=tree_branch]').tap();assert.equal(await p.locator('#equipItem').isEnabled(),true);assert.equal(await p.locator('#unequipItem').isEnabled(),false);
  await p.locator('#editName').tap();await p.locator('#playerNameInput').fill('  바람  ');await p.locator('#nameForm button[type=submit]').click();
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');

@@ -217,8 +217,12 @@ try {
     const rr = await shadow(p, `return ['.profile-panel','.contents-panel'].map((q)=>getComputedStyle(root.querySelector(q)).borderTopLeftRadius);`);
     assert.deepEqual(rr, ['0px', '0px'], `${size} column panels square`);
     assert.ok(a.depart.y >= a.card.b, `${size} depart below card`);
-    assert.deepEqual(a.frames, ['14px', '14px', '14px'], `${size} frame thickness`);
-    const ratio = a.card.w / a.card.h; assert.ok(ratio > 0.62 && ratio < 0.7, `${size} card ratio ${ratio}`);
+    // 10/17 22:1x: 캐릭터 카드(2 : 3 · 사슬 틀) → 같은 폭의 정사각 프로필 그림(그림 안에 액자 1 — CSS 틀 0) · 재고 · 별자리 틀 = 액자 1 (14 px 그대로)
+    assert.deepEqual(a.frames, ['0px', '14px', '14px'], `${size} frame thickness`);
+    const ratio = a.card.w / a.card.h; assert.ok(ratio > 0.99 && ratio < 1.01, `${size} card ratio ${ratio}`); near(a.card.w, a.depart.w, 'card width = depart width', .5);
+    const frame1 = fs.readFileSync(new URL('../../public/ui/px_frame1.png', import.meta.url)).toString('base64'); // 작은 그림이라 빌드가 data: 로 묶는다 (개발 서버는 파일 주소)
+    const src = await shadow(p, `return getComputedStyle(root.querySelector('.inventory-frame')).borderImageSource`);
+    assert.ok(src.includes(frame1) || /ui\/px_frame1\.png/.test(src), `${size} frame 1 border image: ${src.slice(0, 80)}`);
     near(a.grid.x - a.inv.x, 14, 'grid fills frame (left)', .5); near(a.inv.r - a.grid.r, 14, 'grid fills frame (right)', .5); near(a.grid.y - a.inv.y, 14, 'grid fills frame (top)', .5); near(a.inv.b - a.grid.b, 14, 'grid fills frame (bottom)', .5);
     if (a.round) for (const [k, f] of [['card', a.card], ['inv', a.inv]]) for (const d of [f.w, f.h]) assert.ok(Math.abs(((d - 28) % 12 + 12) % 12) < .51 || Math.abs(((d - 28) % 12) - 12) < .51, `${size} ${k} ${d}: whole chain links`);
     // 칸 그림 (보이는 부분 = 그림 파일의 불투명 상자 × 그린 크기) · 등급 빛 · '장착 중' 자리
@@ -247,7 +251,7 @@ try {
     for (const k of ['x', 'y', 'w', 'h']) near(s.host[k], a.inv[k], `star-board frame ${k} = inventory frame`, .5);
     if (size === '844x390') await p.screenshot({ path: `${out}/lobby-skills-844.png` });
     report[`frames ${size}`] = { card: [a.card.w, a.card.h, +ratio.toFixed(3)], inventory: [a.inv.w, a.inv.h], starBoard: [s.host.w, s.host.h], columns: { top: [a.card.y, a.profile.y, a.contents.y], bottom: [a.depart.b, a.profile.b, a.contents.b] }, pictures: got.map((g) => [g.item, g.visible]) };
-    checks.push(`${size}: columns share top/bottom lines; chain frames 14 px; card ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); inventory frame ${a.inv.w}×${a.inv.h} = star-board frame, grid fills it (no strips)${a.round ? ', whole chain links' : ''}; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
+    checks.push(`${size}: columns share top/bottom lines; frame-1 frames 14 px (profile picture: none — frame drawn in the picture); square profile ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); inventory frame ${a.inv.w}×${a.inv.h} = star-board frame, grid fills it (no strips)${a.round ? ', whole chain links' : ''}; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
     await c.close();
   }
   assert.deepEqual(errors, []);

@@ -6,8 +6,8 @@
 //     14:0x (같은 문서 §11): 금화 줄은 늘든 줄든 같은 강조 색 · 위 부제와 빈 줄 하나(부제 한 줄 높이) · 앞에 대기실 금화 그림 / 패배 글 = 첫 줄 진 까닭 · 다음 줄 “대사”(이름 없이)
 //     14:4x (같은 문서 §12): 결과 창 부제에서 대사를 뺌 — 진 까닭 한 줄뿐(승리 창과 같은 꼴) · 상대 대사는 결과 창이 뜨기 전 싸움 화면에만
 //  ③ 테스트 경로 · 주소 판: 정지 · 결과 창에 '대기실' 없음 · 결과 창 설정 줄 그대로 (메뉴 그대로)
-//  ④ 대기실 캐릭터: '드래그하여 회전' 없음 · 천천히 반 칸 끌면 180°(멈췄다 놓으면 관성 없음) · 튕기면 더 돌다 섬 · 선 뒤로는 그리지 않음 · 막는 각 없음(몇 바퀴든) · Home = 가까운 정면
-//  ⑤ 대기실 무기 = 싸움 무기 (08:4x — 같은 문서 §6): 나뭇가지를 장착한 대기실 몸 ↔ 그 무기로 연 여정 판의 플레이어(상대 AI 멈춤 · 자세를 고쳐 딛고 선 뒤) — 골반 기준 손목 · 칼끝 · 칼날 축
+//  ④ 대기실 캐릭터: '드래그하여 회전' 없음 · 10/17 22:1x 돌림판 3D 미리보기를 정사각 프로필 그림으로 바꿈(docs/design/portrait_ui_2026-10-17.md) — 그림이 뜨고 출발 단추 위 · 끌어도 아무 일 없음
+//  ⑤ 대기실 무기 = 싸움 무기 (08:4x — 같은 문서 §6): 나뭇가지를 장착하고 출발하면 그 무기로 싸움 (10/17 전: 대기실 몸 ↔ 판의 플레이어 손목 · 칼끝 · 칼날 축 — 대기실 몸이 없어짐)
 //  10/17: ④ ⑤ 의 대기실도 첫 화면 → 곧바로 카드 → 정지 → '대기실' 로 연다 (tools/browser/to_lobby.mjs)
 //  npm run build && npx vite preview --port 5230 →  node tools/browser/ui_fix_smoke.mjs http://127.0.0.1:5230 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
@@ -32,7 +32,7 @@ async function lobby(p, url) { // 첫 화면 → 곧바로 여정 → 정지 →
   await title(p);
   return titleToLobby(p);
 }
-const inLobby = (p) => p.waitForFunction(() => !!document.querySelector('#gameEntrance')?.shadowRoot.querySelector('.lobby #characterView canvas') && document.documentElement.hasAttribute('data-start-open'), null, { timeout: 30000 });
+const inLobby = (p) => p.waitForFunction(() => !!document.querySelector('#gameEntrance')?.shadowRoot.querySelector('.lobby #lobbyPortraitImg') && document.documentElement.hasAttribute('data-start-open'), null, { timeout: 30000 }); // 10/17: 3D 미리보기 그리개 → 프로필 그림
 const pick = async (p, i = 0) => { await p.waitForFunction(() => game.state === 'draw' && game.draw.t > 0.6, null, { timeout: 30000 }); await p.locator(`#draw .wcard[data-i="${i}"]`).click(); await p.waitForFunction(() => game.state === 'fight', null, { timeout: 30000 }); };
 const depart = async (p) => { await p.locator('#lobbyDepart').click(); await p.waitForFunction(() => !document.getElementById('gameEntrance') && ['draw', 'fight'].includes(game.state), null, { timeout: 60000 }); };
 const end = async (p, who) => { await p.evaluate((w) => game[w].die('기절', true), who); await p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 40000 }); };
@@ -135,75 +135,36 @@ try {
     checks.push({ check: `${name}: no 대기실 in the pause or result menu; the result keeps its settings row`, paused, won });
     await c.close();
   }
-  // ④ 대기실 캐릭터 돌림판
+  // ④ 대기실 캐릭터 (10/17 22:1x 사장님 '캐릭터 미리보기를 없애고 정사각형의 프로필 사진 들어갈 자리' — 전: 돌림판 3D 미리보기 · 끌기 180° · 튕김 · 막는 각 없음 · Home)
+  //  이제: 끌기 안내 없음 · 돌림판 없음 · 정사각 프로필 그림(플레이어 low)이 뜨고 출발 단추 위 · 끌어도 아무 일 없음(판 몸 그대로)
   {
     const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, reducedMotion: 'reduce', hasTouch: true, isMobile: true }); await noAuth(c);
     const p = await c.newPage(); watch(p);
     assert.equal(await lobby(p, '/'), 'draw');
     assert.ok(!/드래그/.test(await inRoot(p, `return root.querySelector('.lobby').textContent`)), 'drag hint text is gone');
-    assert.equal(await inRoot(p, `return root.querySelectorAll('.rotate-hint').length`), 0);
-    const view = p.locator('#characterView'), box = await view.boundingBox(), cdp = await c.newCDPSession(p);
-    const attr = async (k) => view.getAttribute(`data-${k}`);
-    const rest = () => p.waitForFunction(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning === 'false', null, { timeout: 10000 });
-    const y = box.y + box.height * 0.5;
-    const touch = async (xs, gap, hold) => {
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: xs[0], y }] });
-      for (const x of xs.slice(1)) { await p.waitForTimeout(gap); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] }); }
-      if (hold) await p.waitForTimeout(hold);
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    };
-    const x0 = box.x + box.width * 0.2, w = box.width;
-    // 천천히 반 칸 · 멈췄다 놓음 → 180° 그대로 (관성 없음)
-    await touch([0, 0.1, 0.2, 0.3, 0.4, 0.5].map((f) => x0 + f * w), 40, 250); await rest();
-    const slow = Number(await attr('angle'));
-    assert.ok(Math.abs(slow - 180) <= 3, `slow half drag → ${slow}`);
-    // 튕김 → 손가락이 간 만큼(+108°)보다 더 돌다 선다 · 선 뒤로는 그리지 않음
-    const f0 = Number(await attr('frames'));
-    await touch([0, 0.1, 0.2, 0.3].map((f) => x0 + f * w), 16, 0);
-    await rest();
-    const flick = Number(await attr('angle')), f1 = Number(await attr('frames'));
-    assert.ok(flick - slow > 108 + 20, `flick coasts: ${slow} → ${flick}`);
-    assert.ok(f1 - f0 >= 5, `rendered while turning: ${f0} → ${f1}`);
-    await p.waitForTimeout(700);
-    assert.equal(Number(await attr('frames')), f1, 'no renders at rest');
-    // 막는 각 없음 — 두 바퀴 더(천천히)
-    const a0 = Number(await attr('angle'));
-    for (let k = 0; k < 2; k++) await touch([0, 0.25, 0.5, 0.75, 1].map((f) => box.x + 0.02 * w + f * w * 0.96), 40, 250), await rest();
-    const two = Number(await attr('angle'));
-    assert.ok(Math.abs(two - a0 - 2 * 0.96 * 360) <= 6, `two more turns: ${a0} → ${two}`);
-    // Home = 가까운 정면 (360 의 배수)
-    await view.focus(); await p.keyboard.press('Home'); await rest();
-    const home = Number(await attr('angle'));
-    assert.equal(((home % 360) + 360) % 360, 0, `home → ${home}`);
-    await shot(p, 'lobby-turntable');
-    checks.push({ check: 'lobby turntable: no drag hint; slow half drag = 180° with no coast; a flick coasts and stops; no renders at rest; no clamp (two more turns); Home = nearest front', slow, flick, two, home, frames: [f0, f1] });
+    assert.equal(await inRoot(p, `return root.querySelectorAll('.rotate-hint, #characterView, .character-view canvas').length`), 0);
+    const pf = await inRoot(p, `const f=root.getElementById('lobbyPortrait'),i=f.querySelector('img'),r=f.getBoundingClientRect(),d=root.getElementById('lobbyDepart').getBoundingClientRect();return {id:f.dataset.portrait,src:i.getAttribute('src'),w:i.naturalWidth,box:[r.width,r.height],gap:d.top-r.bottom}`);
+    assert.deepEqual([pf.id, pf.src, pf.w], ['player', 'ui/portraits/player.webp', 768], JSON.stringify(pf));
+    assert.ok(Math.abs(pf.box[0] - pf.box[1]) < 0.5 && pf.gap >= 0, JSON.stringify(pf));
+    const bodies = await p.evaluate(() => game.player.meshes.map(({ rb }) => ({ p: rb.translation(), q: rb.rotation() })));
+    const box = await p.locator('#lobbyPortrait').boundingBox(), cdp = await c.newCDPSession(p), y = box.y + box.height * 0.5;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + box.width * 0.2, y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: box.x + box.width * 0.7, y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    assert.deepEqual(await p.evaluate(() => game.player.meshes.map(({ rb }) => ({ p: rb.translation(), q: rb.rotation() }))), bodies);
+    await shot(p, 'lobby-portrait');
+    checks.push({ check: 'lobby character: no drag hint, no turntable; square player profile picture (original reduced to 768²) above the departure button; dragging it changes nothing', pf });
     await c.close();
   }
-  // ⑤ 대기실 무기 = 싸움 무기
+  // ⑤ 대기실 무기 = 싸움 무기 (전: 대기실 3D 몸 ↔ 판의 플레이어 손목 · 칼끝 · 칼날 축 — 10/17 대기실 몸이 없어져 장착한 무기로 싸우는지만 본다)
   {
     const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, reducedMotion: 'reduce' }); await noAuth(c);
     const p = await c.newPage(); watch(p);
     assert.equal(await lobby(p, '/?title=1&cards=longsword,rapier'), 'draw');
     await p.locator('[data-weapon=tree_branch]').click(); await p.locator('#equipItem').click();
-    const ready = () => p.waitForFunction(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.rig === 'ready', null, { timeout: 60000 });
-    await ready();
-    // 골반 기준 몸 틀(앞 x · 위 y · 오른쪽 z): 손목(아래팔 끝 = 칼 원점) · 칼끝 · 칼날 축
-    const POSE = `const T=game.THREE,V=(v)=>new T.Vector3(v.x,v.y,v.z),Q=(r)=>new T.Quaternion(r.x,r.y,r.z,r.w);const pv=V(f.bodies.pelvis.translation()),inv=f.yaw.clone().invert(),loc=(q)=>q.clone().sub(pv).applyQuaternion(inv);
-      const wrist=loc(new T.Vector3(0.13,0,0).applyQuaternion(Q(f.bodies.farmS.rotation())).add(V(f.bodies.farmS.translation()))),tip=loc(f.bladePoint(1)),axis=new T.Vector3(0,1,0).applyQuaternion(Q(f.sword.rotation())).applyQuaternion(inv);
-      return {weapon:f.weapon.id,wrist:wrist.toArray(),tip:tip.toArray(),axis:axis.toArray()};`;
-    const lobbyPose = await p.evaluate(new Function(`const f=document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').lobbyPreview.fighter;${POSE}`));
     await depart(p);
-    assert.equal(await p.evaluate(() => game.player.weapon.id), 'tree_branch');
-    await p.evaluate(() => { game.ai.update = () => {}; });
-    const hold = await p.evaluate(() => game.config.ARENA.startHold);
-    await p.waitForFunction((t) => game.stats.simTime >= t, hold + 4, { timeout: 180000 });
-    const fightPose = await p.evaluate(new Function(`const f=game.player;${POSE}`));
-    const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-    const ang = (a, b) => (Math.acos(Math.min(1, Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * 180) / Math.PI;
-    const diff = { wristCm: +(d(lobbyPose.wrist, fightPose.wrist) * 100).toFixed(2), tipCm: +(d(lobbyPose.tip, fightPose.tip) * 100).toFixed(2), axisDeg: +ang(lobbyPose.axis, fightPose.axis).toFixed(2) };
-    assert.equal(lobbyPose.weapon, 'tree_branch');
-    assert.ok(diff.wristCm < 2 && diff.tipCm < 3 && diff.axisDeg < 2, JSON.stringify({ diff, lobbyPose, fightPose }));
-    checks.push({ check: 'lobby weapon = fight weapon: the equipped branch in the lobby body and in the journey fight (AI paused, settled) — wrist · tip · blade axis relative to the pelvis', diff, hold });
+    assert.equal(await p.evaluate(() => [game.state, game.player.weapon.id].join()), 'fight,tree_branch');
+    checks.push({ check: 'lobby weapon = fight weapon: the branch equipped in the lobby is the weapon of the journey fight (no card draw)' });
     await c.close();
   }
   assert.deepEqual(errors, []);

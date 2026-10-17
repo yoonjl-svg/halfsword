@@ -26,14 +26,13 @@ try{
  assert.equal(await p.evaluate(()=>[game.stage.id,game.player.weapon.id].join()),'poseidon,longsword');assert.equal(await p.locator('#duelRecord').textContent(),'2승리 1패배 (67%)');
  assert.equal(await p.locator('#lobbyDepart').textContent(),'Stage 입장');
  const rect=await p.locator('#lobbyDepart').boundingBox();assert.ok(rect.y>=0&&rect.y+rect.height<=390);
- const rest=()=>p.waitForFunction(()=>document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').dataset.turning==='false'); // 10/16 돌림판: 방향키도 부드럽게 돈다 — 선 뒤에 읽는다
- await p.locator('#characterView').focus();await p.keyboard.press('ArrowRight');await rest();
- assert.equal(Number(await p.locator('#characterView').getAttribute('data-angle')),23);
- await p.keyboard.press('Home');await rest();assert.equal(Number(await p.locator('#characterView').getAttribute('data-angle')),0);
+ // 10/17 22:1x: 3D 미리보기(방향키 돌리기 23° · Home 0°)를 정사각 프로필 그림으로 바꿈 — 프로필 칸이 출발 단추 위에 겹치지 않고 그림이 떴나
+ const pf=await p.locator('#lobbyPortrait').evaluate(f=>({id:f.dataset.portrait,loaded:f.querySelector('img').complete&&f.querySelector('img').naturalWidth>0,bottom:f.getBoundingClientRect().bottom}));
+ assert.equal(pf.id,'player');assert.equal(pf.loaded,true);assert.ok(pf.bottom<=rect.y,JSON.stringify([pf,rect]));
  await p.locator('#editName').click();await p.locator('#playerNameInput').fill('   ');await p.locator('#nameForm button[type=submit]').click();assert.match(await p.locator('#nameError').textContent(),/입력/);
  await p.locator('#playerNameInput').fill('<b>검객</b>');await p.locator('#nameForm button[type=submit]').click();
  assert.equal(await p.locator('#lobbyName').textContent(),'<b>검객</b>');assert.equal(await p.locator('#lobbyName b').count(),0);
- checks.push('이어하기 on the title goes straight to the saved fight (poseidon · longsword); pause → 대기실; rounding, departure visibility, keyboard rotation, empty-name rejection and literal name rendering');
+ checks.push('이어하기 on the title goes straight to the saved fight (poseidon · longsword); pause → 대기실; rounding, departure visibility, profile picture above the departure button, empty-name rejection and literal name rendering');
  await p.locator('#lobbyDepart').click();await p.waitForFunction(()=>game.state==='fight',null,{timeout:60000});
  // 전적 저장 경계만 강제로 검사한다 (전투 승패의 실측 자료가 아니다).
  await p.evaluate(()=>game.player.die('기절',true));await p.waitForFunction(k=>JSON.parse(localStorage.getItem(k)).losses===2,PROFILE,{timeout:20000});

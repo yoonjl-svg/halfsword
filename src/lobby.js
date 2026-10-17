@@ -1,5 +1,5 @@
 // 대기실 (샛별 저장소 817db21c · b73a9c82 · 3b280a1b — docs/import/lobby_port_2026-10-16.md §3 · 고친 것 docs/import/lobby_fix_2026-10-16.md): 첫 화면의 처음부터·이어하기와 여정 사이의 세 칸
-//  ① 캐릭터(실제 플레이어 겉모습 360° · 장착 미리보기) + 출발 단추 ② 내 정보(레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 무기 · 방어구 · 상점 · 스킬북
+//  ① 캐릭터 프로필(정사각 그림 — 10/17 22:1x 사장님: 3D 미리보기(360° · 장착)를 없애고 프로필 사진 자리, docs/design/portrait_ui_2026-10-17.md) + 출발 단추 ② 내 정보(레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 무기 · 방어구 · 상점 · 스킬북
 //  우리 손댐 (사장님 10/16 01:0x): 무기 칸은 나뭇가지 하나(롱소드 뺌) · 나뭇가지도 방어구처럼 설명 카드(이름 · 등급 · 설명 — 우리 weapons.js 의 nameKo · tier · desc 그대로, 등급 글은 무기 카드와 같은 TIER_LABEL)
 //  10/16 03:5x~04:3x (lobby_fix): 장착은 실제 싸움에 (main.js journeyLoadout) · 케틀 햇 레전드 + '생존술: 기력 +30' · 글자는 싸움 화면 규칙(entrance_type.css) ·
 //   스킬북 = 유파별 별자리(skill_tree.js — 금화로 사고 사용 / 봉인) · 머리(천 주머니) · 이미 받은 인장을 금화로 한 번(seal_coins.js)
@@ -13,7 +13,7 @@ import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { LOBBY_ITEMS, LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
-import { createLobbyCharacter } from './lobby_character.js';
+import { portraitSrc, portraitMode } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 lobby_character.js)
 import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress, titleOptions, selectTitle } from './lobby_progress.js';
 import { mountSkillTree } from './skill_tree.js';
@@ -53,7 +53,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><p id="lobbyStatus" class="lobby-status" role="status"></p><button id="lobbyBack" class="secondary small on-art utility">첫 화면</button></header>
     <div class="lobby-columns">
-      <section class="character-panel"><div class="portrait-card card-frame" aria-label="내 캐릭터"><div class="character-view" id="characterView" tabindex="0" role="group" aria-label="캐릭터 360도 보기. 드래그 또는 좌우 방향키로 회전, Home으로 정면"></div></div><button class="primary depart" id="lobbyDepart">Stage 입장</button></section>
+      <section class="character-panel"><figure class="portrait-card" id="lobbyPortrait" aria-label="내 캐릭터 프로필"><img id="lobbyPortraitImg" alt="" draggable="false" decoding="async"></figure><button class="primary depart" id="lobbyDepart">Stage 입장</button></section>
       <section class="profile-panel" aria-label="내 정보">
         <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank" class="rank-row"><span id="lobbyLevel"></span><span class="title-picker"><button type="button" id="titleSelect" class="title-select" aria-haspopup="listbox" aria-expanded="false" aria-controls="titleList" aria-labelledby="titleLabel titleCurrent"><span id="titleLabel" class="sr-only">호칭</span><span id="titleCurrent"></span>${CHEVRON}</button><ul id="titleList" class="title-list" role="listbox" aria-labelledby="titleLabel" hidden></ul></span></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd></dl>
         <p class="duel-record"><span>대면 결과</span><b id="duelRecord"></b></p>
@@ -148,12 +148,18 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   const total = profile.wins + profile.losses;
   $('duelRecord').textContent = `${profile.wins}승리 ${profile.losses}패배 (${total ? Math.round(profile.wins / total * 100) : 0}%)`;
   if (converted?.coins) status(`인장 ${converted.seals}개를 금화 ${converted.coins.toLocaleString('ko-KR')}으로 바꿨습니다.`, 'notice');
-  const preview = createLobbyCharacter($('characterView'), game); // 몸 = 다음 판 플레이어와 같은 Fighter (lobby_rig.js — game.lobbyRigSpec)
+  // ① 프로필 칸 (사장님 10/17 22:1x — 3D 미리보기를 없애고 정사각 프로필 사진 자리 · docs/design/portrait_ui_2026-10-17.md): 지금 플레이어의 프로필
+  //  (23:0x 원본이 기본 — 원본을 줄인 768² 그림 · ?portrait=low 이면 예비 픽셀판, portraits.js).
+  //  ?hero=<인물 id> 로 다른 영웅이면 그 그림(main.js lobbyPortraitId). 그림 안에 액자 1 이 있어 CSS 틀은 없다 · 못 불러오면 빈 액자 1(data-empty — lobby.css)
+  const portraitId = game.lobbyPortraitId?.() ?? 'player', portraitImg = $('lobbyPortraitImg');
+  $('lobbyPortrait').dataset.portrait = portraitId; $('lobbyPortrait').dataset.mode = portraitMode();
+  portraitImg.alt = `${profile.name} 프로필`;
+  listen(portraitImg, 'error', () => { $('lobbyPortrait').dataset.empty = ''; portraitImg.alt = ''; });
+  portraitImg.src = portraitSrc(portraitId) ?? portraitSrc('player');
   let selectedItem = null, category = 'weapon';
-  // 장착 자리: 무기 · 머리(케틀 햇) · 목(용사의 눈물 — 10/17). 미리보기 겉모습은 무기 · 머리만 (용사의 눈물은 겉모습 변화 없음 — 사장님 10/17)
+  // 장착 자리: 무기 · 머리(케틀 햇) · 목(용사의 눈물 — 10/17)
   const equipped = { weapon: readLobbyEquipment(), head: readLobbyArmor(), neck: readLobbyNeck() };
-  preview.setWeapon(equipped.weapon); preview.setArmor(equipped.head);
-  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, onBooks: () => preview.refresh(), announce: text => { $('skillStatus').textContent = text; } }); // 책을 사거나 봉인하면 미리보기 걸음 자세도 (그 무기 유파 보법)
+  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, announce: text => { $('skillStatus').textContent = text; } });
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')];
   function selectTab(tab) {
     for (const item of tabs) {
@@ -226,11 +232,10 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     const id = event.target.closest('[data-item]')?.dataset.item;
     selectedItem = !id || id === selectedItem ? null : id; refreshEquipment();
   });
-  // 걸기(on) · 벗기 — 그 물건의 자리만 바뀐다 (케틀 햇을 벗어도 용사의 눈물은 그대로 · 반대도). 미리보기 → 저장 차례는 전 그대로 (몸을 못 만들면 장착 표시 그대로)
+  // 걸기(on) · 벗기 — 그 물건의 자리만 바뀐다 (케틀 햇을 벗어도 용사의 눈물은 그대로 · 반대도). 프로필 그림은 장착과 무관(10/17 — 3D 미리보기 없앰)
   function equip(id, on) {
     try {
       const slot = slotOf(id), value = on ? id : null;
-      if (slot === 'weapon') preview.setWeapon(value); else if (slot === 'head') preview.setArmor(value); // 목(용사의 눈물)은 겉모습이 그대로라 미리보기에 손대지 않는다
       equipped[slot] = value;
       const saved = slot === 'weapon' ? saveLobbyEquipment(value) : slot === 'head' ? saveLobbyArmor(value) : saveLobbyNeck(value);
       $('equipmentStatus').textContent = `${itemName(id)} ${on ? '장착' : '장착 해제'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`;
@@ -259,6 +264,6 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   $('lobbyHeading').focus();
   return {
     tree, // 시험·사진 도구: lobby.tree.show('german', 2)
-    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); preview.dispose(); grove.dispose(); },
+    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); grove.dispose(); },
   };
 }
