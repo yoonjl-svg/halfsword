@@ -1,6 +1,6 @@
 /* Stillness 서비스 워커 — tools/pwa/build.mjs 가 빌드 끝에 이 틀로 dist/sw.js 를 만든다 (docs/pwa_2026-10-13.md).
  *
- *  - 화면(HTML) 요청: 네트워크 먼저(HTTP 캐시도 다시 확인). 안 되면(오프라인) 이 워커가 깔아 둔 판의 HTML.
+ *  - 화면(HTML) 요청 · 매니페스트: 네트워크 먼저(HTML 은 HTTP 캐시도 다시 확인). 안 되면(오프라인) 이 워커가 깔아 둔 판의 것.
  *    → 새 판을 올리면 다음에 여는 순간 새 HTML · 새 묶음(이름에 해시)이 바로 온다. 워커가 옛 판이어도 마찬가지.
  *  - 나머지(묶음 JS·CSS·소리·그림): 이 판 캐시 먼저, 없으면 네트워크. 목록에 없는 주소(옛 실험판 corr/r2p/support/wb 등)는 건드리지 않는다.
  *  - 캐시 이름 = 'stillness-pwa:' + scope + ':' + 판 번호(파일 목록·내용의 해시). 내용이 바뀐 빌드마다 바뀐다.
@@ -182,7 +182,7 @@ self.addEventListener('fetch', (event) => {
   }
   let rel = url.pathname.slice(SCOPE_PATH.length);
   if (rel === '') rel = 'index.html';
-  const isHtml = navigate || /\.html$/.test(rel);
+  const isHtml = navigate || /\.(html|webmanifest)$/.test(rel); // 매니페스트도 네트워크 먼저(10/18 — 캐시 먼저면 옛 판 워커가 옛 게임 이름을 계속 내준다)
   const key = new URL(rel, SCOPE).href;
   if (!byUrl.has(key)) return; // 목록에 없는 것(옛 실험판·다른 앱·API)은 그냥 네트워크 — 캐시하지도 가로채지도 않는다
   if (isHtml) {

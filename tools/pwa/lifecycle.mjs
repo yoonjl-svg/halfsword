@@ -164,7 +164,7 @@ try {
     await ai.decode();
     return { url: link.href, json, icons, apple: { href: apple, w: ai.naturalWidth }, title: document.querySelector('meta[name="apple-mobile-web-app-title"]')?.content };
   });
-  assert.equal(manifest.url, base + 'manifest.webmanifest');
+  assert.equal(manifest.url, base + 'stillness-20261018.webmanifest'); // 10/18 새 이름 (옛 워커 캐시의 옛 매니페스트를 건너뜀 — docs/import/app_icon_px32_2026-10-18.md)
   assert.equal(new URL(manifest.json.start_url, manifest.url).href, base);
   assert.equal(new URL(manifest.json.scope, manifest.url).href, base);
   assert.equal(new URL(manifest.json.id, manifest.url).href, base);
