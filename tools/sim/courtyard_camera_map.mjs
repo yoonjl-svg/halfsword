@@ -6,6 +6,9 @@
 //   ① 장애물 충돌체(보이는 돌이 그 안에 든다)에 막힌 몫 ② 내 몸(부위마다 공 — 어림)에 막힌 몫 ③ 둘 중 하나에 막힌 몫을 센다.
 //  칸 값 = 열두 방향 가운데 상대가 절반 넘게 가려지는 방향의 몫. 카메라 당김(clampStageCamera 가 0.5 m 넘게 앞으로 당김) · 카메라 ↔ 내 몸 거리도 센다.
 //  무대: courtyard(급수정) · sluice(말레이곰 석상 — 지금 여정에 있는 비교 기준) · open(장애물 없음 — 내 몸 가림의 바탕값). 몸 자세는 판 시작 선 자세 그대로(겨눈 자세).
+//  10/17 고침 점검(docs/design/courtyard_fix_2026-10-17.md)에서 더한 칸: 카메라 높이 2.0 m 아래(low) · 내 몸이 장애물에 절반 넘게 가림(meHidden) ·
+//   내 가슴이 화면(844×390 · 667×375, 시야 55°, main.js 와 같은 바라보는 점) 밖(meOut) · 카메라를 내 몸 둘레로 돌린 각(swing, °).
+//   clampStageCamera 에 { instant: true } 를 넘긴다 — 화면마다 부드럽게 옮기기 · 고른 쪽 지키기 없이 바로 그 자리(옛 함수는 넷째 인자를 안 읽는다)
 //  실행: node tools/sim/courtyard_camera_map.mjs [결과.json] [--d=2.0] [--stages=courtyard,sluice,open]
 import fs from 'node:fs';
 import { newRound, RAPIER, THREE } from './harness_m.mjs';
@@ -60,16 +63,20 @@ for (const stage of STAGES) {
   };
   const rot = (o, yaw, x0, z0) => { const c = Math.cos(yaw), s = Math.sin(yaw); return { x: x0 + o[0] * c - o[2] * s, y: o[1], z: z0 + o[0] * s + o[2] * c }; };
   const cells = [];
-  const tot = { n: 0, cover: 0, body: 0, any: 0, coverAll: 0, pulled: 0, near: 0 };
+  const tot = { n: 0, cover: 0, body: 0, any: 0, coverAll: 0, pulled: 0, near: 0, low: 0, meHidden: 0, meOut: 0, swung: 0 };
+  const swings = [];
+  const views = [844 / 390, 667 / 375].map((aspect) => new THREE.PerspectiveCamera(CAMERA.fov, aspect, 0.1, 700));
+  const _p = new THREE.Vector3();
   const cam = new THREE.Vector3();
   for (let gx = -LIMIT; gx <= LIMIT + 1e-6; gx += 0.5) for (let gz = -LIMIT; gz <= LIMIT + 1e-6; gz += 0.5) {
     if (Math.hypot(gx, gz) > LIMIT || !standable(gx, gz)) continue;
-    const c = { n: 0, cover: 0, body: 0, any: 0, pulled: 0, near: 0 };
+    const c = { n: 0, cover: 0, body: 0, any: 0, pulled: 0, near: 0, low: 0, meHidden: 0, meOut: 0, swing: 0 };
     for (let k = 0; k < 12; k++) {
       const a = (k * Math.PI) / 6;
       const ux = Math.cos(a), uz = Math.sin(a);
       const ex = gx + ux * D, ez = gz + uz * D;
       if (Math.hypot(ex, ez) > LIMIT || !standable(ex, ez)) continue;
+      const eyaw = Math.atan2(-uz, -ux) - Math.PI, pyaw = a; // 상대: −x → 나를 봄 · 나: +x → 상대를 봄
       // 두 사람 사이 선이 장애물을 지나면(돌 너머 상대) 칼 닿는 거리 짝이 아니다 — 뺀다
       if (ob && coverHit({ x: gx, y: 1.0, z: gz }, { x: ex, y: 1.0, z: ez })) continue;
       const src = { x: gx, y: comY, z: gz };
@@ -78,9 +85,22 @@ for (const stage of STAGES) {
       const r = Math.hypot(cam.x, cam.z);
       if (r > 10.5) cam.multiplyScalar(10.5 / r).setY(CAMERA.height);
       const before = Math.hypot(cam.x - src.x, cam.z - src.z);
-      clampStageCamera(src, cam, nav);
+      const bx = cam.x - src.x, bz = cam.z - src.z;
+      clampStageCamera(src, cam, nav, { instant: true });
       const after = Math.hypot(cam.x - src.x, cam.z - src.z);
-      const eyaw = Math.atan2(-uz, -ux) - Math.PI, pyaw = a; // 상대: −x → 나를 봄 · 나: +x → 상대를 봄
+      // 돌린 각 (수평, °)
+      const swing = Math.abs(Math.atan2(bx * (cam.z - src.z) - bz * (cam.x - src.x), bx * (cam.x - src.x) + bz * (cam.z - src.z))) * 180 / Math.PI;
+      // 내 몸이 장애물에 가리나 — 카메라에서 내 몸 부위(공 중심)까지 광선이 장애물 충돌체에 막히는 몫
+      let meBlocked = 0;
+      const bodyKeys = Object.keys(BODY);
+      for (const bk of bodyKeys) if (coverHit(cam, rot(pRel[bk], pyaw, gx, gz))) meBlocked++;
+      // 내 가슴이 화면 안인가 — main.js 와 같은 바라보는 점(무게중심에서 상대 쪽 lookAhead · 높이 1.1)
+      let out = false;
+      for (const v of views) {
+        v.position.copy(cam); v.lookAt(src.x + ux * CAMERA.lookAhead, 1.1, src.z + uz * CAMERA.lookAhead); v.updateMatrixWorld(); v.updateProjectionMatrix();
+        _p.set(...Object.values(rot(pRel.chest, pyaw, gx, gz))).project(v);
+        if (Math.abs(_p.x) > 1 || Math.abs(_p.y) > 1 || _p.z > 1) out = true;
+      }
       let byCover = 0, byBody = 0, byAny = 0;
       for (const kp of PARTS) {
         const tp = rot(eRel[kp], eyaw, ex, ez);
@@ -97,12 +117,21 @@ for (const stage of STAGES) {
       if (byCover === PARTS.length) tot.coverAll++;
       if (before - after > 0.5) { c.pulled++; tot.pulled++; }
       if (after < 1.6) { c.near++; tot.near++; }
+      if (cam.y < 2.0) { c.low++; tot.low++; }
+      if (meBlocked > bodyKeys.length / 2) { c.meHidden++; tot.meHidden++; }
+      if (out) { c.meOut++; tot.meOut++; }
+      c.swing += swing; swings.push(swing); if (swing > 1) tot.swung++;
     }
-    if (c.n) cells.push([+gx.toFixed(2), +gz.toFixed(2), +(c.cover / c.n).toFixed(3), +(c.body / c.n).toFixed(3), +(c.any / c.n).toFixed(3), +(c.pulled / c.n).toFixed(3), +(c.near / c.n).toFixed(3)]);
+    if (c.n) cells.push([+gx.toFixed(2), +gz.toFixed(2), +(c.cover / c.n).toFixed(3), +(c.body / c.n).toFixed(3), +(c.any / c.n).toFixed(3), +(c.pulled / c.n).toFixed(3), +(c.near / c.n).toFixed(3),
+      +(c.low / c.n).toFixed(3), +(c.meHidden / c.n).toFixed(3), +(c.meOut / c.n).toFixed(3), +(c.swing / c.n).toFixed(1)]);
   }
   const f = (x) => +(x / Math.max(1, tot.n)).toFixed(4);
-  result.stages[stage] = { nav, samples: tot.n, coverHalf: f(tot.cover), coverAll: f(tot.coverAll), bodyHalf: f(tot.body), anyHalf: f(tot.any), camPulled: f(tot.pulled), camNear: f(tot.near),
-    cellKeys: ['x', 'z', 'coverHalf', 'bodyHalf', 'anyHalf', 'camPulled', 'camNear'], cells };
+  swings.sort((p, q) => p - q);
+  const { camera: _cam, ...navBrief } = nav ?? {};
+  result.stages[stage] = { nav: nav ? navBrief : null, samples: tot.n, coverHalf: f(tot.cover), coverAll: f(tot.coverAll), bodyHalf: f(tot.body), anyHalf: f(tot.any), camPulled: f(tot.pulled), camNear: f(tot.near),
+    camLow: f(tot.low), meHidden: f(tot.meHidden), meOut: f(tot.meOut), swung: f(tot.swung),
+    swingMean: +(swings.reduce((p, q) => p + q, 0) / Math.max(1, swings.length)).toFixed(2), swingP95: +(swings[Math.floor(swings.length * 0.95)] ?? 0).toFixed(1), swingMax: +(swings[swings.length - 1] ?? 0).toFixed(1),
+    cellKeys: ['x', 'z', 'coverHalf', 'bodyHalf', 'anyHalf', 'camPulled', 'camNear', 'camLow', 'meHidden', 'meOut', 'swingMean'], cells };
   const { cells: _, cellKeys: __, ...brief } = result.stages[stage];
   console.log(stage, JSON.stringify(brief));
   G.world.free();
