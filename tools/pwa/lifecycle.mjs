@@ -174,7 +174,7 @@ try {
   assert.equal(manifest.title, 'Stillness');
   for (const ic of manifest.icons) assert.equal(`${ic.w}x${ic.h}`, ic.sizes);
   assert(manifest.icons.some((i) => i.purpose === 'maskable'));
-  assert.equal(manifest.apple.w, 192); // 도트 6배 정수 확대 (180 은 칸이 고르지 않다)
+  assert.equal(manifest.apple.w, 180); // 10/17 새 그림 — 파일 그대로 180×180 (docs/import/app_icon_2026-10-17.md)
   await until(page, installedAs, prefix + build.v1.version);
   const s1 = await swState(page);
   assert.equal(s1.scope, base);

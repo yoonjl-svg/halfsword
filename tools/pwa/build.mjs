@@ -15,7 +15,7 @@ const EXCLUDED_DIRS = new Set(['corr', 'r2p', 'support', 'wb', 'encounters']);
 const GENERATED = new Set(['sw.js', 'pwa-build.json']);
 const BUDGET_BYTES = 30 * 1024 * 1024; // 넘으면 담을 목록을 다시 보라고 멈춘다
 const NAV_TIMEOUT_MS = 10000; // 화면 요청이 이보다 늦으면 깔린 판으로 연다 (깔린 판이 있을 때만) — 사장님 확인 전
-const REQUIRED = ['index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'];
+const REQUIRED = ['index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png', 'icons/tree-sword-20261017-icon-192.png', 'icons/tree-sword-20261017-icon-512.png', 'icons/tree-sword-20261017-icon-maskable-512.png', 'icons/tree-sword-20261017-apple-touch-icon.png', 'icons/tree-sword-20261017-favicon-32.png', 'icons/tree-sword-20261017-favicon-64.png']; // 10/17 새 이름 = index.html · 매니페스트가 거는 아이콘 (docs/import/app_icon_2026-10-17.md)
 
 const sha = (b) => createHash('sha256').update(b).digest('hex');
 const files = [];
