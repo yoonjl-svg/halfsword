@@ -217,15 +217,17 @@ try {
     const rr = await shadow(p, `return ['.profile-panel','.contents-panel'].map((q)=>getComputedStyle(root.querySelector(q)).borderTopLeftRadius);`);
     assert.deepEqual(rr, ['0px', '0px'], `${size} column panels square`);
     assert.ok(a.depart.y >= a.card.b, `${size} depart below card`);
-    // 10/17 22:1x: 캐릭터 카드(2 : 3 · 사슬 틀) → 같은 폭의 정사각 프로필 그림(그림 안에 액자 1 — CSS 틀 0) · 재고 · 별자리 틀 = 액자 1 (14 px 그대로)
-    assert.deepEqual(a.frames, ['0px', '14px', '14px'], `${size} frame thickness`);
+    // 10/17 22:1x: 캐릭터 카드(2 : 3 · 사슬 틀) → 같은 폭의 정사각 프로필 그림(그림 안에 액자 1 — CSS 틀 0) · 재고 · 별자리 틀 = 액자 1
+    //  10/18 01:2x '3단쪽에 액자 두께가 다르네. 프로필과 똑같아야지': 틀 두께 = 122 × 프로필 폭 ÷ 1254 (프로필 그림 속 액자를 잘라 만든 9 조각 frame1_portrait.png — 브라우저는 테두리를 정수 px 로 내림)
+    const fr = a.card.w * 122 / 1254, bw = parseFloat(a.frames[1]);
+    assert.equal(a.frames[0], '0px', `${size} profile picture has no CSS frame`); assert.equal(a.frames[1], a.frames[2], `${size} inventory = star-board frame`);
+    assert.ok(bw <= fr + .01 && bw > fr - 1.01, `${size} frame ${bw} vs profile-scaled ${fr.toFixed(2)}`);
     const ratio = a.card.w / a.card.h; assert.ok(ratio > 0.99 && ratio < 1.01, `${size} card ratio ${ratio}`); near(a.card.w, a.depart.w, 'card width = depart width', .5);
-    const frame1 = fs.readFileSync(new URL('../../public/ui/px_frame1.png', import.meta.url)).toString('base64'); // 작은 그림이라 빌드가 data: 로 묶는다 (개발 서버는 파일 주소)
     const src = await shadow(p, `return getComputedStyle(root.querySelector('.inventory-frame')).borderImageSource`);
-    assert.ok(src.includes(frame1) || /ui\/px_frame1\.png/.test(src), `${size} frame 1 border image: ${src.slice(0, 80)}`);
-    near(a.grid.x - a.inv.x, 14, 'grid fills frame (left)', .5); near(a.inv.r - a.grid.r, 14, 'grid fills frame (right)', .5); near(a.grid.y - a.inv.y, 14, 'grid fills frame (top)', .5); near(a.inv.b - a.grid.b, 14, 'grid fills frame (bottom)', .5);
-    // 사슬 마디 배수 확인은 뺐다 (10/17 — 틀이 액자 1(줄무늬)이라 마디가 없고, 23:4x 프로필 칸 80 % · 재고 틀 폭 + 줄어든 폭이라 12 의 배수가 아니다) — 재고 틀 높이만 전처럼 마디 배수
-    if (a.round) assert.ok(Math.abs(((a.inv.h - 28) % 12 + 12) % 12) < .51 || Math.abs(((a.inv.h - 28) % 12) - 12) < .51, `${size} inv height ${a.inv.h}: link multiple`);
+    assert.match(src, /frame1_portrait/, `${size} frame 1 border image: ${src.slice(0, 80)}`);
+    near(a.grid.x - a.inv.x, bw, 'grid fills frame (left)', .5); near(a.inv.r - a.grid.r, bw, 'grid fills frame (right)', .5); near(a.grid.y - a.inv.y, bw, 'grid fills frame (top)', .5); near(a.inv.b - a.grid.b, bw, 'grid fills frame (bottom)', .5);
+    // 사슬 마디 배수 확인은 뺐다 (10/17 — 틀이 액자 1(줄무늬)이라 마디가 없고, 23:4x 프로필 칸 80 % · 재고 틀 폭 + 줄어든 폭이라 12 의 배수가 아니다) — 재고 칸 판 높이(틀 두께 뺀 것)만 전처럼 마디 배수
+    if (a.round) { const gh = a.inv.h - 2 * fr; assert.ok(Math.abs(((gh % 12) + 12) % 12) < .51 || Math.abs((gh % 12) - 12) < .51, `${size} inv grid height ${gh}: link multiple`); }
     // 칸 그림 (보이는 부분 = 그림 파일의 불투명 상자 × 그린 크기) · 등급 빛 · '장착 중' 자리
     const cells = async () => shadow(p, `return Promise.all([...root.querySelectorAll('.inventory-item')].map(async (b)=>{const img=b.querySelector('img');await img.decode().catch(()=>{});
         const n=64,cv=document.createElement('canvas');cv.width=cv.height=n;const x=cv.getContext('2d');x.drawImage(img,0,0,n,n);const d=x.getImageData(0,0,n,n).data;let x0=n,x1=-1,y0=n,y1=-1;
@@ -252,7 +254,7 @@ try {
     for (const k of ['x', 'y', 'w', 'h']) near(s.host[k], a.inv[k], `star-board frame ${k} = inventory frame`, .5);
     if (size === '844x390') await p.screenshot({ path: `${out}/lobby-skills-844.png` });
     report[`frames ${size}`] = { card: [a.card.w, a.card.h, +ratio.toFixed(3)], inventory: [a.inv.w, a.inv.h], starBoard: [s.host.w, s.host.h], columns: { top: [a.card.y, a.profile.y, a.contents.y], bottom: [a.depart.b, a.profile.b, a.contents.b] }, pictures: got.map((g) => [g.item, g.visible]) };
-    checks.push(`${size}: columns share top/bottom lines; frame-1 frames 14 px (profile picture: none — frame drawn in the picture); square profile ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); inventory frame ${a.inv.w}×${a.inv.h} = star-board frame, grid fills it (no strips)${a.round ? ', inventory height in link multiples' : ''}; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
+    checks.push(`${size}: columns share top/bottom lines; frame-1 frames = profile-scaled (122/1254 of the profile width; profile picture: none — frame drawn in the picture); square profile ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); inventory frame ${a.inv.w}×${a.inv.h} = star-board frame, grid fills it (no strips)${a.round ? ', inventory height in link multiples' : ''}; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
     await c.close();
   }
   assert.deepEqual(errors, []);

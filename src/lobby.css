@@ -25,7 +25,9 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   --head: 42px; --head-gap: 18px;      /* 제목 줄('대기실' 글자 높이) · 아래 틈 */
   --gap: 30px;                         /* 세 칸 사이 */
   --pp: 20px;                          /* 창 안 여백 = 싸움 창(.card) 20 · 낮은 화면 12 */
-  --fr: 14px;                          /* 틀(액자 1) 두께 */
+  --fr: calc(var(--card-w) * 122 / 1254); /* 틀(액자 1) 두께 = 프로필 그림 속 액자와 같은 비 (사장님 10/18 01:2x '3단쪽에 액자 두께가 다르네. 프로필과 똑같아야지'):
+                                          틀 그림 조각 122 px(1254 px 원본 기준 — 곧은 띠 79 + 띠 안쪽 투명) × 프로필 표시 폭 ÷ 1254 → 844×390 10.7 px (전: 14 px 고정) */
+  --fr0: 14px;                         /* 칸 폭 셈의 마디 맞춤에 쓰던 옛 틀 두께 (그대로 두어 칸 폭 · 프로필 크기가 안 바뀜 — --fr 은 프로필 크기에서 나오므로 여기서 쓰면 돌고 돈다) */
   --link: 12px;                        /* 사슬 한 마디 (10/17 액자 1 은 줄이라 마디 없음 — 칸 크기 셈을 그대로 두려고 둠) */
   --title-h: 21px; --title-gap: 12px;  /* 창 제목 줄 (무기 · 스킬북 …) */
   --depart: 42px; --depart-gap: 12px;  /* 출발 단추 = 싸움 주 단추 높이(패딩 13 + 글 줄 16) · 카드와 사이 (반올림 남는 것은 이 틈으로) */
@@ -48,7 +50,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 }
 @supports (width: round(down, 10px, 3px)) {
   .lobby {
-    --card-w0: calc(round(down, min(var(--card-avail) * 2 / 3, var(--row-w) * .3) - 2 * var(--fr), var(--link)) + 2 * var(--fr));
+    --card-w0: calc(round(down, min(var(--card-avail) * 2 / 3, var(--row-w) * .3) - 2 * var(--fr0), var(--link)) + 2 * var(--fr0));
     --card-w: round(down, var(--card-w0) * .6, 1px);
     --grid-w: round(down, max(132px, min(round(nearest, round(down, var(--col-h) - var(--chrome-v), var(--link)) * 1.25, var(--link)), var(--grid-wmax))), var(--link));
     --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
@@ -69,11 +71,12 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .lobby-header h1 canvas { display: block; height: var(--head); width: auto; image-rendering: pixelated; }
 .lobby-columns { flex: none; width: 100%; max-width: 1220px; height: var(--col-h); margin: 0 auto; display: grid; grid-template-columns: var(--card-w) var(--profile-w) calc(var(--grid-w) + var(--grid-x) + var(--chrome-h)); justify-content: center; gap: var(--gap); align-items: stretch; }
 
-/* ── 액자 1 틀 (겉 — 픽셀 그대로): 재고 칸 · 별자리 판 (사장님 10/17 22:1x '대기실에 있는 현재 프레임을 액자1로 고쳐' — 전: 사슬 틀 px_clearing_frame.png).
-   그림 = public/ui/px_frame1.png (16 × 16 · 조각 7 px — 바깥부터 어두운 테 · 금색 줄 2 · 어두운 틈 2 · 옅은 금색 줄 · 갈색 그늘, 네 모서리 네모 장식 · 가운데 투명).
-   액자 1 시안(샛별 저장소 26670942 frame-samples.png 첫 칸)의 색을 뽑아 7 px 조각으로 다시 그림(docs/design/portrait_ui_2026-10-17.md §2) · 두께 --fr 14 px = 한 칸 2 px (전 틀과 같은 두께 — 칸 크기 셈 그대로).
-   틀의 픽셀 확대는 틀에만 (안의 그림 · 글은 매끈하게) ── */
-.card-frame, .skill-tree-host { position: relative; border: var(--fr) solid transparent; border-image: url('../public/ui/px_frame1.png') 7 / var(--fr) / 0 repeat; image-rendering: pixelated; }
+/* ── 액자 1 틀: 재고 칸 · 별자리 판 (사장님 10/17 22:1x '대기실에 있는 현재 프레임을 액자1로 고쳐' — 전: 사슬 틀 px_clearing_frame.png).
+   10/18 01:2x '3단쪽에 액자 두께가 다르네. 프로필과 똑같아야지' → 틀 그림 = 프로필 그림(플레이어 원본 1254²) 속 액자 1 을 잘라 만든 9 조각 public/ui/frame1_portrait.png
+   (252 × 252 · 조각 122 px — 어두운 바깥 띠 50 · 금색 줄 8 · 틈 8 · 금색 줄 7 · 안쪽 선 5 = 곧은 띠 79 px + 모서리 네모 · 안쪽 계단 장식, 띠 안쪽 투명 · tools/ui/portraits_build.py frame-portrait)
+   두께 --fr = 122 × 프로필 표시 폭 ÷ 1254 — 같은 화면에서 금색 줄 굵기 · 간격 · 모서리 장식이 프로필 그림과 같은 CSS px (docs/design/portrait_ui_2026-10-17.md §2).
+   매끈하게 줄임(프로필 그림과 같은 보기 — 전 7 px 픽셀 틀 px_frame1.png 은 2 배 픽셀 확대였다) ── */
+.card-frame, .skill-tree-host { position: relative; border: var(--fr) solid transparent; border-image: url('../public/ui/frame1_portrait.png') 122 / var(--fr) / 0 stretch; image-rendering: auto; }
 .card-frame > *, .skill-tree-host > * { image-rendering: auto; }
 
 /* ── ① 프로필 칸 + 출발 (사장님 10/17 22:1x '캐릭터 미리보기를 없애고 정사각형의 프로필 사진 들어갈 자리를 미리 잡아둬. 전체 3단 레이아웃과 비율은 지금을 유지하고 캐릭터 미리보기 창만 짧아지는 느낌으로'):
@@ -85,7 +88,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .portrait-card { flex: none; position: relative; width: var(--card-w); height: var(--card-w); margin: 0; background: #30261c; box-shadow: 0 8px 20px rgba(0, 0, 0, .5); }
 .portrait-card img { display: block; width: 100%; height: 100%; image-rendering: auto; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
 .portrait-card[data-mode="low"] img { image-rendering: pixelated; }
-.portrait-card[data-empty] { border: var(--fr) solid transparent; border-image: url('../public/ui/px_frame1.png') 7 / var(--fr) / 0 repeat; image-rendering: pixelated; }
+.portrait-card[data-empty] { border: var(--fr) solid transparent; border-image: url('../public/ui/frame1_portrait.png') 122 / var(--fr) / 0 stretch; }
 .portrait-card[data-empty] img { display: none; }
 /* 알림 줄(인장 → 금화 · 이름 저장 · 출발 실패): 제목 줄 가운데 작은 창 — 전엔 출발 단추 밑이라 칸 아래 줄을 밀었다(카드 위에 띄우면 캐릭터 머리를 가린다) */
 .lobby-status { flex: 0 1 auto; min-width: 0; margin: 0 auto; padding: 3px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: var(--lh-text); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -268,7 +271,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   }
   @supports (width: round(down, 10px, 3px)) {
     .lobby {
-      --card-w0: calc(round(down, min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px) - 2 * var(--fr), var(--link)) + 2 * var(--fr));
+      --card-w0: calc(round(down, min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px) - 2 * var(--fr0), var(--link)) + 2 * var(--fr0));
       --card-w: round(down, var(--card-w0) * .6, 1px);
       --grid-w: round(down, min(100cqw - 2 * var(--fr), 408px), var(--link));
       --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
