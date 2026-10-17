@@ -1,4 +1,4 @@
-import { buildCourtyard } from './stage_courtyard.js'; // 봉인의 중정 · 밤 다섯째 ~ 일곱째 넷 — 샛별 저장소에서 가져옴 (10/17, docs/import/saetbyeol_round3_2026-10-17.md)
+import { buildCourtyard } from './stage_courtyard.js'; // 봉인의 중정 · 밤 다섯째 ~ 일곱째 넷 — 샛별 저장소에서 가져옴 (10/17, docs/import/saetbyeol_round3_2026-10-17.md). 중정은 디자인 리뷰 뒤 고쳐 여정에 (docs/design/courtyard_fix_2026-10-17.md)
 import { buildDunhuangNight } from './stage_dunhuang_night.js';
 import { buildDayrNight } from './stage_dayr_night.js';
 import { buildLoggiaNight, buildSacredGroveNight, buildCorsairNight } from './stage_night_third.js';
@@ -40,10 +40,10 @@ import { buildEtna } from './stage_etna.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
-  // 샛별 저장소에서 가져온 무대 다섯 (10/17 — 사장님 10/16~17 결정, 샛별 쪽). 여정 순서(STAGE_ORDER)에는 넣지 않았다 — 주소로 연다 (?stage=<id>, 상대는 STAGE_FOE 짝)
+  // 샛별 저장소에서 가져온 무대 다섯 (10/17 — 사장님 10/16~17 결정, 샛별 쪽). 밤 넷은 10/17 14:xx · 중정은 디자인 리뷰를 고친 뒤 10/17 15:4x 여정 순서(STAGE_ORDER)에 들어갔다
   dayr_night: buildDayrNight, // 밤의 소금 사막: 상인으로 위장한 암살단 · 끊긴 모의 · 등불 둘레의 참상 (stage_dayr_night.js) — 광기의 다라이시
   dunhuang_night: buildDunhuangNight, // 밤의 철불 절벽: 사방에서 겨루고 행군하는 오 · 월의 망령 (stage_dunhuang_night.js) — 광기의 병마용
-  courtyard: buildCourtyard, // 봉인의 중정: 라자스탄풍 사암 역참 · 계단 우물 · 가운데 급수정 엄폐물 (stage_courtyard.js) — 마야의 무대 (낮)
+  courtyard: buildCourtyard, // 봉인의 중정: 라자스탄풍 장밋빛 사암 역참 · 마야 뒤 계단 우물과 붉은 봉인의 문 · 가운데 급수정 엄폐물 · 장마 앞 늦은 오후 모래바람 (stage_courtyard.js) — 마야의 무대 (낮, 여정 12)
   etna_night: buildEtnaNight, qinglan_night: buildQinglanNight, // 밤의 화산섬 · 밤의 청람잔도 (stage_night_fifth.js) — 광기의 찬다 · 광기의 김씨
   sluice_night: buildSluiceNight, loggia_night: buildLoggiaNight, sacred_grove_night: buildSacredGroveNight, corsair_night: buildCorsairNight,
   clearing_night: buildClearingNight, castle_night: buildCastleNight, cathedral_night: buildCathedralNight,
@@ -98,13 +98,16 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  위 규칙대로 자리 잡음: 둘째 밤 다섯 = 산호 항구 · 잠든 습지 · 화산섬 · 청람잔도 · 신목의 숲의 밤(당겨 쓰던 산사 · 얼어붙은 만의 밤은 제자리로) ·
 //  끝 낮 넷 뒤에 그 넷의 밤(산사 · 얼어붙은 만 · 철불 절벽 · 소금 사막) — 스물여덟 판, 끝판 = 밤의 소금 사막(광기의 다라이시). 그다음은 다시 포세이돈부터.
 //  봉인의 중정(마야 — 낮)은 디자인 리뷰 뒤 2 막 산호 항구와 잠든 습지 사이에 넣는다(사장님 같은 때 — 감독 10/16 제안 그대로). 그때 낮 묶음이 다시 다섯씩 갈린다
+// 10/17 15:4x 사장님 '다 고쳐서 올려'(봉인의 중정 디자인 리뷰 '고쳐서 넣기'의 답) — 고친 중정을 2 막 산호 항구 바로 뒤(12 번째)에 넣었다. 낮 다섯 · 밤 같은 곳 규칙(10/16 19:4x) 그대로:
+//  둘째 낮 = 산호 항구 · 봉인의 중정 · 잠든 습지 · 화산섬 · 청람잔도 → 그 밤 넷(중정은 밤 짝이 없다) → 셋째 낮 = 신목의 숲 · 산사 · 얼어붙은 만 · 철불 절벽 · 소금 사막 → 그 밤 다섯.
+//  스물아홉 판, 끝판은 그대로 밤의 소금 사막. 2 막 색 차례 = 바다 파랑(산호 항구) → 장밋빛 · 주황(중정) → 초록(습지) → 검정 · 빨강(화산섬)
 export const STAGE_ORDER = [
   'poseidon', 'clearing', 'castle', 'loggia', 'cathedral',
   'poseidon_night', 'clearing_night', 'castle_night', 'loggia_night', 'cathedral_night',
-  'corsair', 'sluice', 'etna', 'qinglan', 'sacred_grove',
-  'corsair_night', 'sluice_night', 'etna_night', 'qinglan_night', 'sacred_grove_night',
-  'temple', 'frozen_bay', 'dunhuang', 'dayr',
-  'temple_night', 'frozen_bay_night', 'dunhuang_night', 'dayr_night',
+  'corsair', 'courtyard', 'sluice', 'etna', 'qinglan',
+  'corsair_night', 'sluice_night', 'etna_night', 'qinglan_night',
+  'sacred_grove', 'temple', 'frozen_bay', 'dunhuang', 'dayr',
+  'sacred_grove_night', 'temple_night', 'frozen_bay_night', 'dunhuang_night', 'dayr_night',
 ];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 //  10/14 19:4x: 잠든 습지 = 라트나 · 소금 사막 = 다라이시 (손님 인물 CHARACTER_GUESTS — CHARACTERS_BY_ID 로 풀린다, 무작위 회전에는 그대로 없음).
@@ -118,7 +121,8 @@ export const STAGE_FOE = { dayr_night: 'silver_wanderer_mad', dunhuang_night: 't
 //   아르토리아·사미라는 후보 — 본디 짝과 반반(사장님 '무대 후보 비율은 반반')
 //  10/10 23:3x 사장님 '아르토리아는 대성당으로 반반, 사미라는 볼로냐 도서관으로 반반' → 짝을 바꿨다(대성당 = 마르그레테·아르토리아, 붉은 회랑 = 토메·사미라)
 //  10/17 14:xx 사장님 '전용 얼터 캐릭터들은 바로 여정에' → 밤의 대성당 후보는 광기의 아르토리아(샛별 저장소 셋째 들여오기 — 궁정 예복 · 갑옷 없음). 낮 대성당은 아르토리아 그대로
-export const STAGE_FOE_EXTRA = { cathedral_night: ['artoria_mad'], cathedral: ['artoria'], loggia: ['samira'] };
+//  10/17 사장님 '봉인의 중정 이식이 끝나면 마야는 거기서만 나올거야' → 중정이 여정에 들어가(15:4x '다 고쳐서 올려') 붉은 회랑의 마야 후보를 뺐다 — 붉은 회랑은 늘 토메, 마야는 중정(STAGE_FOE)에서만
+export const STAGE_FOE_EXTRA = { cathedral_night: ['artoria_mad'], cathedral: ['artoria'] };
 /** 이번 판 무대의 검객 id: 후보가 없으면 STAGE_FOE 그대로(난수 안 씀). 지난 상대(prevId)가 이 무대 후보면 그 사람 그대로(진 뒤 다시 싸우기) */
 export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
   const base = STAGE_FOE[stageId];
