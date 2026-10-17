@@ -1,6 +1,6 @@
 // node tools/sim/stamina_gates.mjs on|off [출력 폴더]
 // 기력 켬/끔으로 관문 다섯을 돌려 기대값과 견준다 (샛별 저장소 9db75870 의 도구 — 우리 본판 기대값으로 고침, docs/strike/stamina_import_2026-10-15.md §6).
-//  해시 = stdout 에서 'deprecated parameters' 줄을 뺀 sha256 앞 8 자리. 끔은 기력이 들어오기 전 본판(91d4646) 기대값과 같아야 하고,
+//  해시 = stdout 에서 'deprecated parameters' 줄을 뺀 sha256 앞 8 자리. 끔은 기력을 끈 지금 본판 값(아래 EXPECT.off)과 같아야 하고,
 //  켬은 fights12 만 바뀐다(AI 숨 고르기 — 문서 §6). corr 는 출력에 걸린 시간이 있어 IDENTICAL 12 로 본다.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -12,9 +12,11 @@ const mode = process.argv[2];
 if (!['on', 'off'].includes(mode)) throw Error('on 또는 off 인자를 명시하세요');
 const out = resolve(process.argv[3] ?? '/tmp/stamina-gates');
 mkdirSync(out, { recursive: true });
-// 기대값 (앞 8 자리): 끔 = 91d4646 본판 · 켬 = 기력 들여온 판
+// 기대값 (앞 8 자리): 끔 = 기력을 끈 지금 본판 · 켬 = 기본(기력 켬)
+//  끔 fights12 는 10/17 에 고침 7f5860c7 → 5b0d4b19 — 7f5860c7 은 10/15 기력 들이기 전 본판(91d4646) 값이고, 그 뒤 본판 일(AI · 막기 · 흘림 등)로 끈 판도 바뀌었다.
+//   main e32f757 을 끄고 돌린 값과 기력 접촉 보정을 들인 판을 끄고 돌린 값이 같음(docs/import/stamina_contact_2026-10-17.md §4)
 const EXPECT = {
-  off: { fights12: '7f5860c7', live_battery: '648aca66', finish_thrust: '2de06c03', weapon_smoke: '7085b282' },
+  off: { fights12: '5b0d4b19', live_battery: '648aca66', finish_thrust: '2de06c03', weapon_smoke: '7085b282' },
   on: { fights12: '5dfe035c', live_battery: '648aca66', finish_thrust: '2de06c03', weapon_smoke: '7085b282' },
 };
 const cases = [
