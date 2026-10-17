@@ -9,17 +9,19 @@
 //  10/17 고침 점검(docs/design/courtyard_fix_2026-10-17.md)에서 더한 칸: 카메라 높이 2.0 m 아래(low) · 내 몸이 장애물에 절반 넘게 가림(meHidden) ·
 //   내 가슴이 화면(844×390 · 667×375, 시야 55°, main.js 와 같은 바라보는 점) 밖(meOut) · 카메라를 내 몸 둘레로 돌린 각(swing, °).
 //   clampStageCamera 에 { instant: true } 를 넘긴다 — 화면마다 부드럽게 옮기기 · 고른 쪽 지키기 없이 바로 그 자리(옛 함수는 넷째 인자를 안 읽는다)
-//  실행: node tools/sim/courtyard_camera_map.mjs [결과.json] [--d=2.0] [--stages=courtyard,sluice,open]
+//  실행: node tools/sim/courtyard_camera_map.mjs [결과.json] [--d=2.0] [--stages=courtyard,sluice,open] · 걷기 확인만: [결과.json] --walk (맨 아래 walkCheck)
 import fs from 'node:fs';
 import { newRound, RAPIER, THREE } from './harness_m.mjs';
 import { GROUND_GROUPS } from '../../src/fighter.js';
-import { configureStageObstacle, clampStageCamera } from '../../src/arena_obstacle.js';
+import { configureStageObstacle, clampStageCamera, BEAR_NAVIGATION } from '../../src/arena_obstacle.js';
+import { COURTYARD_NAVIGATION } from '../../src/stage_courtyard_cover.js';
 import { CAMERA, ARENA } from '../../src/config.js';
 import { basePose, keepDistance } from '../../src/camera_rig.js';
 
 const args = process.argv.slice(2);
 const out = args[0] && !args[0].startsWith('--') ? args[0] : '/tmp/courtyard-camera-map.json';
 const opt = (k, d) => args.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3) ?? d;
+if (args.includes('--walk')) { walkCheck(); process.exit(0); }
 const D = +opt('d', 2.0);
 const STAGES = opt('stages', 'courtyard,sluice,open').split(',');
 const PARTS = ['head', 'chest', 'abdomen', 'pelvis', 'thighF', 'thighB', 'shinF', 'shinB', 'uarmS', 'uarmO'];
@@ -137,3 +139,46 @@ for (const stage of STAGES) {
   G.world.free();
 }
 fs.writeFileSync(out, JSON.stringify(result) + '\n');
+
+/** --walk (10/17 고침 점검): 바닥 지도 대신 정해 둔 길을 1/60 s 로 걸으며 main.js 와 같은 순서로 카메라를 놓는다 — clampStageCamera 는 화면마다 상태 있음
+ *  (고른 쪽 지키기 · 시간으로 옮기기). 시계는 가짜(performance.now 를 화면마다 1/60 s). 길: ① 상대를 보며 물러나 돌에 등을 붙임 ② 등을 붙인 채 옆으로(긴 면 · 짧은 면)
+ *  ③ 돌 둘레를 바깥을 보며 한 바퀴 ④ 돌을 옆에 끼고 지나감 ⑤ 돌을 등지지 않고 지나감. 셈: 돌린 각의 가장 큰 값 · 한 화면에 바뀐 가장 큰 각 · 6° 넘게 바뀐 화면(끊어 붙임) */
+function walkCheck() {
+  const DT = 1 / 60;
+  let now = 1000;
+  globalThis.performance = { now: () => now };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const line = (from, to, sec, foeOff) => { const n = Math.round(sec / DT); return Array.from({ length: n + 1 }, (_, i) => { const t = i / n, p = { x: lerp(from[0], to[0], t), z: lerp(from[1], to[1], t) }; return [p, { x: p.x + foeOff[0], z: p.z + foeOff[1] }]; }); };
+  const circle = (r, sec, foeDist) => { const n = Math.round(sec / DT); return Array.from({ length: n + 1 }, (_, i) => { const a = (i / n) * Math.PI * 2, p = { x: Math.cos(a) * r, z: Math.sin(a) * r }; return [p, { x: p.x + Math.cos(a) * foeDist, z: p.z + Math.sin(a) * foeDist }]; }); };
+  const walk = {};
+  for (const [stage, nav, R] of [['courtyard', COURTYARD_NAVIGATION, 1.2], ['sluice', BEAR_NAVIGATION, 1.18]]) {
+    const paths = { backIn: line([-4.5, 0.3], [-R, 0.3], 3, [-2.2, 0.1]), slide: line([-R, -1.8], [-R, 1.8], 3, [-2.2, 0]), slideShort: line([-1.6, R + 0.25], [1.6, R + 0.25], 3, [0, 2.2]),
+      circleOut: circle(R + 0.35, 8, 2.2), passBy: line([-5, 1.6], [5, 1.6], 5, [0.2, 3]), walkPastFacing: line([-5, 1.4], [5, 1.4], 6, [8, 1.4]) };
+    for (const [name, path] of Object.entries(paths)) {
+      const cam = new THREE.Vector3();
+      let dir = null, prev = 0, maxStep = 0, maxSwing = 0, frames = 0;
+      const cuts = [];
+      for (const [p, foe] of path) {
+        now += DT * 1000;
+        const dx = foe.x - p.x, dz = foe.z - p.z, L = Math.hypot(dx, dz);
+        if (!dir) dir = { x: dx / L, z: dz / L };
+        const k = 1 - Math.exp(-DT * 3); // 바라보는 쪽은 main.js 처럼 천천히 따라간다
+        dir.x += (dx / L - dir.x) * k; dir.z += (dz / L - dir.z) * k;
+        const n = Math.hypot(dir.x, dir.z); dir.x /= n; dir.z /= n;
+        const a = { x: p.x, y: 1.0, z: p.z };
+        basePose(a, dir.x, dir.z, 0, 0, CAMERA, cam);
+        keepDistance(cam, a, CAMERA.minDist);
+        const r = Math.hypot(cam.x, cam.z); if (r > 10.5) { cam.x *= 10.5 / r; cam.z *= 10.5 / r; }
+        const bx = cam.x - a.x, bz = cam.z - a.z;
+        clampStageCamera(a, cam, nav);
+        const fx = cam.x - a.x, fz = cam.z - a.z;
+        const swing = (Math.atan2(bx * fz - bz * fx, bx * fx + bz * fz) * 180) / Math.PI;
+        if (frames > 0) { const step = Math.abs(swing - prev); maxStep = Math.max(maxStep, step); if (step > 6) cuts.push([frames, +prev.toFixed(1), +swing.toFixed(1)]); }
+        maxSwing = Math.max(maxSwing, Math.abs(swing)); prev = swing; frames++;
+      }
+      walk[`${stage} ${name}`] = { frames, maxSwing: +maxSwing.toFixed(1), maxStepDeg: +maxStep.toFixed(1), cuts: cuts.slice(0, 8) };
+      console.log('walk', stage, name, JSON.stringify(walk[`${stage} ${name}`]));
+    }
+  }
+  fs.writeFileSync(out, JSON.stringify({ walk }) + '\n');
+}
