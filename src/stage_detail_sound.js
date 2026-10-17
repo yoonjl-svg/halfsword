@@ -28,9 +28,14 @@ export const STAGE_DETAIL_PROFILES = Object.freeze({
   etnaCrust: { stage: 'etna', duration: 1.6, gain: 0.032, gap: 20 },
   wetlandThunder: { stage: 'sluice', nightOnly: true, duration: 3.8, gain: .24, gap: 5 },
   courtyardCloth: { stage: 'courtyard', duration: 1.25, gain: .024, gap: 5 },
-  courtyardDrip: { stage: 'courtyard', duration: .65, gain: .018, gap: 8 },
+  // 봉인의 중정 우물 둘 (10/17 디자인 리뷰 고칠 목록 7 — 청람잔도 샘 물방울 · 소금 사막 우물 고리를 다시 쓰던 것을 이 무대만의 소리로): 깊은 우물에 떨어지는 물방울의 울림 ·
+  //  돌풍 끝에 두레박이 돌 가장자리에 닿는 둔한 나무 소리와 물 출렁임이 우물 아래로 되울림. 표 자리(씨앗)는 그대로 — 길이만 울림 꼬리에 맞춤 [사장님 확인 전]
+  courtyardDrip: { stage: 'courtyard', duration: .95, gain: .018, gap: 8 },
   courtyardRing: { stage: 'courtyard', duration: 1.1, gain: .02, gap: 8 },
 });
+// 봉인의 중정 돌풍 (10/17 목록 7): 무대가 돌풍을 시작할 때 'courtyardGust' { duration } 를 보낸다 — 세부음(목소리 둘 · 간격 규칙)이 아니라 바탕 바람의 한 겹을 키운다.
+//  바탕 대비 돌풍 한가운데 약 +6 dB (low → 1 · 오르는 시간 = 길이 × rise, 내려오는 때 = 길이 × fallAt) [사장님 확인 전]
+export const COURTYARD_GUST = Object.freeze({ low: 0.2, rise: 0.18, fallAt: 0.55, fall: 0.2 });
 
 export const WETLAND_THUNDER_VARIANTS = Object.freeze([
   Object.freeze({ name: 'short', duration: 1.8 }),
@@ -50,8 +55,8 @@ const TAU = Math.PI * 2;
 export function synthStageDetail(kind, sr, rng, variant = 1) {
   const profile = STAGE_DETAIL_PROFILES[kind];
   if (!profile || !Number.isFinite(sr) || sr < 8000) return new Float32Array(0);
-  // 중정 세 소리는 있던 합성(천 · 샘 물방울 · 대상 방울)을 다시 쓴다 — 표 끝에 더해 기존 무대들의 씨앗 차례는 그대로 (샛별 저장소 10/17)
-  kind = ({courtyardCloth:'clothRustle',courtyardDrip:'springDrip',courtyardRing:'caravanRing'})[kind] ?? kind;
+  // 중정 천 소리는 있던 천 합성을 다시 쓴다 — 표 끝에 더해 기존 무대들의 씨앗 차례는 그대로 (샛별 저장소 10/17). 우물 둘은 10/17 에 이 무대만의 합성으로(아래)
+  kind = ({courtyardCloth:'clothRustle'})[kind] ?? kind;
   const thunder = kind === 'wetlandThunder' ? WETLAND_THUNDER_VARIANTS[variant] ?? WETLAND_THUNDER_VARIANTS[1] : null;
   const out = new Float32Array(Math.ceil((thunder?.duration ?? profile.duration) * sr));
   if (kind === 'wetlandThunder') {
@@ -117,6 +122,51 @@ export function synthStageDetail(kind, sr, rng, variant = 1) {
       out[i] = fold * strain * (0.35 * (grain - low) + 0.033 * Math.sin(phase)
         + 0.011 * Math.sin(phase * 2.17));
     }
+    return out;
+  }
+  if (kind === 'courtyardDrip') {
+    // 봉인의 중정: 6 m 아래 우물물에 떨어지는 물방울 — 샘 물방울보다 낮게 오르는 거품 소리 · 우물 통의 낮은 울림(140 Hz) · 돌 벽에 0.11 s 마다 되울림 넷
+    const pitch = 0.92 + rng() * 0.1, taps = [[0, 1], [0.11, 0.46], [0.225, 0.24], [0.345, 0.12], [0.47, 0.06]];
+    const dry = new Float32Array(Math.ceil(0.32 * sr));
+    let phase = 0, splash = 0;
+    const a = 1 - Math.exp(-TAU * 1500 / sr);
+    for (let i = 0; i < dry.length; i++) {
+      const t = i / sr;
+      phase += TAU * (520 + 300 * (1 - Math.exp(-t / 0.05))) * pitch / sr;
+      splash += a * (rng() * 2 - 1 - splash);
+      const envelope = (1 - Math.exp(-t / 0.003)) * Math.exp(-t / 0.045);
+      dry[i] = 0.3 * Math.sin(phase) * envelope + 0.07 * splash * Math.exp(-t / 0.02)
+        + 0.09 * Math.sin(TAU * 140 * pitch * t) * (1 - Math.exp(-t / 0.01)) * Math.exp(-t / 0.18);
+    }
+    for (const [delay, gain] of taps) {
+      const off = Math.floor(delay * sr);
+      let low = 0; const lowA = 1 - Math.exp(-TAU * (delay ? 1100 : 9000) / sr); // 되울림일수록 어둡게
+      for (let i = 0; i < dry.length && off + i < out.length; i++) { low += lowA * (dry[i] - low); out[off + i] += gain * low; }
+    }
+    for (let i = 0; i < out.length; i++) out[i] *= Math.min(1, (out.length - 1 - i) / (sr * 0.08));
+    return out;
+  }
+  if (kind === 'courtyardRing') {
+    // 봉인의 중정: 돌풍 끝에 두레박이 우물 돌 가장자리에 닿는 둔한 나무 소리(180 · 310 · 470 Hz 빨리 사그라짐)와 짧은 물 출렁임이
+    //  우물 아래로 0.14 · 0.29 · 0.45 s 에 되울린다 — 소금 사막의 맑은 쇠고리(670 · 1093 · 1771 Hz)와 다른 소리
+    const pitch = 0.95 + rng() * 0.1, dry = new Float32Array(Math.ceil(0.55 * sr));
+    let thud = 0, slosh = 0, sloshLow = 0;
+    const thudA = 1 - Math.exp(-TAU * 900 / sr), sA = 1 - Math.exp(-TAU * 820 / sr), sLowA = 1 - Math.exp(-TAU * 260 / sr);
+    for (let i = 0; i < dry.length; i++) {
+      const t = i / sr, n = rng() * 2 - 1;
+      thud += thudA * (n - thud); slosh += sA * (n - slosh); sloshLow += sLowA * (slosh - sloshLow);
+      const attack = 1 - Math.exp(-t / 0.0025);
+      const knock = 0.26 * Math.sin(TAU * 180 * pitch * t) * Math.exp(-t / 0.06) + 0.13 * Math.sin(TAU * 310 * pitch * t) * Math.exp(-t / 0.04)
+        + 0.06 * Math.sin(TAU * 470 * pitch * t) * Math.exp(-t / 0.025) + 0.16 * thud * Math.exp(-t / 0.012);
+      const st = Math.max(0, t - 0.05), wave = (1 - Math.exp(-st / 0.05)) * Math.exp(-st / 0.22) * (0.6 + 0.4 * Math.sin(st * 23));
+      dry[i] = attack * knock + 0.09 * (slosh - sloshLow) * wave;
+    }
+    for (const [delay, gain] of [[0, 1], [0.14, 0.38], [0.29, 0.19], [0.45, 0.09]]) {
+      const off = Math.floor(delay * sr);
+      let low = 0; const lowA = 1 - Math.exp(-TAU * (delay ? 900 : 9000) / sr);
+      for (let i = 0; i < dry.length && off + i < out.length; i++) { low += lowA * (dry[i] - low); out[off + i] += gain * low; }
+    }
+    for (let i = 0; i < out.length; i++) out[i] *= Math.min(1, (out.length - 1 - i) / (sr * 0.1));
     return out;
   }
   if (kind === 'caravanRing') {
@@ -329,7 +379,7 @@ export class StageDetailSound {
     if (!this.paused) out.gain.setTargetAtTime(1, c.currentTime + 0.1, 0.8);
     out.connect(sound.master);
     const nodes = [], connections = [out];
-    const addNoise = ({ rate = 1, type = 'bandpass', frequency, gain, lfo, depth, pan = 0, ceiling = 1800 }) => {
+    const addNoise = ({ rate = 1, type = 'bandpass', frequency, gain, lfo, depth, pan = 0, ceiling = 1800, bus = out }) => {
       const src = c.createBufferSource();
       src.buffer = sound._noiseBuf(); src.loop = true; src.playbackRate.value = rate;
       const filter = c.createBiquadFilter(); filter.type = type; filter.frequency.value = frequency; filter.Q.value = 0.65;
@@ -337,17 +387,22 @@ export class StageDetailSound {
       const volume = c.createGain(); volume.gain.value = gain;
       src.connect(filter).connect(top).connect(volume);
       const panner = c.createStereoPanner?.();
-      if (panner) { panner.pan.value = pan; volume.connect(panner).connect(out); connections.push(panner); }
-      else volume.connect(out);
+      if (panner) { panner.pan.value = pan; volume.connect(panner).connect(bus); connections.push(panner); }
+      else volume.connect(bus);
       connections.push(src, filter, top, volume); nodes.push(src);
       const mod = c.createOscillator(), amount = c.createGain();
       mod.frequency.value = lfo; amount.gain.value = depth;
       mod.connect(amount).connect(volume.gain);
       nodes.push(mod); connections.push(mod, amount);
     };
+    let gust = null;
     if (this.stage === 'courtyard') {
       addNoise({rate:.8,frequency:530,gain:.0025,lfo:.049,depth:.0011,ceiling:1550,pan:.15});
       addNoise({rate:.72,frequency:1200,gain:.001,lfo:.071,depth:.0004,ceiling:2200,pan:-.2});
+      // 돌풍 겹 (10/17 목록 7): 거친 바람(700 Hz)과 모래 스침(2.6 kHz) — 평소 COURTYARD_GUST.low 로 낮게 깔렸다가 무대가 알린 돌풍에 맞춰 커진다(gust)
+      gust = c.createGain(); gust.gain.value = COURTYARD_GUST.low; gust.connect(out); connections.push(gust);
+      addNoise({rate:.76,frequency:700,gain:.0076,lfo:.13,depth:.0018,ceiling:1700,pan:.25,bus:gust});
+      addNoise({rate:.93,frequency:2600,gain:.0018,lfo:.21,depth:.0006,ceiling:4200,pan:-.3,bus:gust});
     } else if (this.stage === 'loggia') {
       addNoise({ frequency: 420, gain: 0.003, lfo: 0.041, depth: 0.001, ceiling: 1350 });
       addNoise({ rate: 0.81, type: 'lowpass', frequency: 180, gain: 0.005, lfo: 0.067, depth: 0.002 });
@@ -397,11 +452,25 @@ export class StageDetailSound {
       source.onended = () => { if (--remaining === 0) for (const node of connections) node.disconnect(); };
       source.start(c.currentTime);
     }
-    this.ambient = { out, nodes, detail: true };
+    this.ambient = { out, nodes, detail: true, gust };
     return this.ambient;
   }
 
+  /** 봉인의 중정 돌풍 (stage_courtyard.js 가 돌풍 시작에 보낸다): 바탕의 돌풍 겹을 돌풍 길이에 맞춰 키웠다 줄인다 — 세부음 목소리 · 간격 규칙과 따로 */
+  gustSwell(data = {}) {
+    const g = this.ambient?.gust, c = this.sound.ctx;
+    const duration = Number.isFinite(data.duration) ? clamp(data.duration, 1, 8) : 4.6;
+    if (!g || this.paused || !this.sound.on) { this.stats.rejected++; return false; }
+    const t = c.currentTime, G = COURTYARD_GUST, peak = clamp(data.amp ?? 1, 0, 1) * (1 - G.low) + G.low;
+    g.gain.cancelScheduledValues(t);
+    g.gain.setTargetAtTime(peak, t, duration * G.rise);
+    g.gain.setTargetAtTime(G.low, t + duration * G.fallAt, duration * G.fall);
+    this.stats.gusts = (this.stats.gusts ?? 0) + 1;
+    return true;
+  }
+
   event(data = {}) {
+    if (data.kind === 'courtyardGust') return this.stage === 'courtyard' ? this.gustSwell(data) : (this.stats.rejected++, false);
     const sound = this.sound, c = sound.ctx, profile = STAGE_DETAIL_PROFILES[data.kind];
     const reject = () => { this.stats.rejected++; return false; };
     if (!profile || profile.stage !== this.stage || !sound.on || this.paused || (!c.startRendering && c.state !== 'running')) return reject();

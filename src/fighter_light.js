@@ -23,6 +23,8 @@
 //      rim      테두리광·윤곽 빛 세기 배율 (기본 1 = 모자란 만큼에 비례, RIM_MIN~3)
 //      rimColor 테두리광·윤곽 빛 색. 기본: 반구광 하늘색과 흰색의 반반
 //      env      금속 반사 세기 배율 (ENV_MIN~1). 기본: 스테이지 밝기에서 자동
+//    fighterShade(x, y, z) → 0~1 (선택, 10/17 봉인의 중정): 그 점이 받는 해 몫. 무대의 큰 장애물(급수정)이 해를 가리는 그늘에 든 몸 부위는
+//      해(방향광) 빛을 그만큼 덜 받는다 — 캐릭터는 그림자 지도를 받지 않아(제 그림자 여드름 없게) 땅 그늘과 몸 빛이 어긋나던 것. 부위(재질)마다 셈 · 0.08 s 로 부드럽게
 //   색은 짙게 적어도 한 채널이 밝기의 CHROMA_MAX 배를 넘지 않게 흰색 쪽으로 옅어진다 (새파랑 0x0000ff → 푸르스름한 흰빛)
 //  기본 최소값은 유지. 사용자 지정 밤 습지의 weatherDim(.15~1, 기본1)만 채움/반사를 추가 감쇠한다.
 //  자세한 약속은 docs/stages.md 의 "조명 약속".
@@ -97,6 +99,12 @@ const CODE = `
 #include <lights_fragment_end>`;
 
 const patched = new WeakSet(); // 이미 캐릭터 조명을 받게 한 재질 (복제된 재질이 표시를 물려받지 않게 userData 대신)
+const sunShare = new WeakMap(); // 재질 → { value } 해(방향광) 몫 0~1 — 무대 fighterShade 가 없으면 늘 1 (10/17)
+// three r186 lights_fragment_begin 의 방향광 한 줄 — 찾으면 그 뒤에 해 몫을 곱하고, 못 찾으면(three 판이 바뀜) 그늘 없이 그대로 둔다
+const DIR_LIGHT_LINE = 'getDirectionalLightInfo( directionalLight, directLight );';
+const SHADED_BEGIN = THREE.ShaderChunk.lights_fragment_begin.includes(DIR_LIGHT_LINE)
+  ? THREE.ShaderChunk.lights_fragment_begin.replace(DIR_LIGHT_LINE, DIR_LIGHT_LINE + '\n\t\tdirectLight.color *= flSun;')
+  : null;
 const env0 = new WeakMap(); // 재질 → 원래 금속 반사 세기
 function patch(mat) {
   if (patched.has(mat)) return;
@@ -104,12 +112,16 @@ function patch(mat) {
   if (!(mat.isMeshStandardMaterial || mat.isMeshLambertMaterial || mat.isMeshPhongMaterial)) return;
   const prevCompile = mat.onBeforeCompile;
   const prevKey = mat.customProgramCacheKey();
+  const share = { value: 1 };
+  sunShare.set(mat, share);
   mat.onBeforeCompile = function (shader, renderer) {
     prevCompile.call(this, shader, renderer);
     Object.assign(shader.uniforms, U);
+    shader.uniforms.flSun = share;
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + DECL)
+      .replace('#include <common>', '#include <common>\n' + DECL + 'uniform float flSun;\n')
       .replace('#include <lights_fragment_end>', CODE);
+    if (SHADED_BEGIN) shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_begin>', SHADED_BEGIN);
   };
   mat.customProgramCacheKey = () => 'fighterLight|' + prevKey;
   mat.fog = false; // 캐릭터는 안개에 묻지 않는다 (지금 스테이지들은 안개가 18m 밖에서 시작해 달라지는 것 없음)
@@ -125,7 +137,9 @@ export function createFighterLight(lights, stage = {}) {
   const num = (v, d) => (Number.isFinite(v) ? v : d);
   // 스테이지가 준 설정 (배경이 바뀌면 setStage 로 바꿔 끼운다)
   let cfg, cfgKey, cfgRim, rimMul;
+  let shadeFn = null; // 무대 fighterShade (봉인의 중정) — 없으면 null
   function configure(st) {
+    shadeFn = typeof st?.fighterShade === 'function' ? st.fighterShade : null;
     cfg = st?.fighterLight || {};
     cfgKey = cfg.color != null ? hue(new THREE.Color(cfg.color), 0, new THREE.Color()) : null;
     cfgRim = cfg.rimColor != null ? hue(new THREE.Color(cfg.rimColor), 0, new THREE.Color()) : null;
@@ -218,6 +232,28 @@ export function createFighterLight(lights, stage = {}) {
     const e0 = env0.get(m);
     if (e0 != null) m.envMapIntensity = e0 * state.env;
   }
+  // 무대 그늘 (10/17): 부위(재질)마다 그 메시 자리의 해 몫(fighterShade)으로 — SHADE_TAU 로 부드럽게. 그늘이 없는 무대로 바뀌면 한 번 1 로 되돌린다
+  const SHADE_TAU = 0.08; // 실제 초
+  const _wp = new THREE.Vector3();
+  let shadeT = -1;
+  let shadeWas = false;
+  function shadeMeshes() {
+    const t = (globalThis.performance?.now?.() ?? Date.now()) / 1000;
+    const k = shadeFn && shadeT >= 0 ? 1 - Math.exp(-Math.min(0.25, t - shadeT) / SHADE_TAU) : 1;
+    shadeT = t;
+    for (const mesh of meshes) {
+      let want = 1;
+      if (shadeFn && state.enabled) {
+        mesh.getWorldPosition(_wp);
+        want = THREE.MathUtils.clamp(num(shadeFn(_wp.x, _wp.y, _wp.z), 1), 0, 1);
+      }
+      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const m of list) {
+        const share = m && sunShare.get(m);
+        if (share) share.value += (want - share.value) * k;
+      }
+    }
+  }
   return Object.assign(state, {
     /** 배경이 바뀌었다: 그 배경의 fighterLight 설정으로 바꿔 끼운다 (세기는 다음 update 에서 새 빛으로 다시 잰다) */
     setStage(st) {
@@ -237,6 +273,9 @@ export function createFighterLight(lights, stage = {}) {
         if (Array.isArray(m)) for (const mm of m) apply(mm);
         else if (m) apply(m);
       }
+      if (shadeFn || shadeWas) shadeMeshes();
+      shadeWas = !!shadeFn;
+      if (!shadeFn) shadeT = -1;
     },
   });
 }

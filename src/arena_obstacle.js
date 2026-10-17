@@ -115,11 +115,11 @@ export function routeAroundStageObstacle(ai) {
 // ── 카메라 보호: 돌의 실제 꼴로 (위 CAMERA_GUARD 머리말) ──
 
 /**
- * 충돌체 꼴(세상 좌표 — configureStageObstacle 과 같은 표) → 카메라 셈용 몸: 축에 맞춘 상자 · 세운 원기둥 · 캡슐.
- *  볼록 껍질(중정 돔)은 감싸는 세운 원기둥으로, 돌린 상자는 감싸는 상자로 본다(넉넉한 쪽). 꼴을 바꾸면 여기도 그대로 따라온다
+ * 충돌체 꼴(세상 좌표 — configureStageObstacle 과 같은 표) → 카메라 · 그늘 셈용 몸: 축에 맞춘 상자 · 세운 원기둥 · 캡슐.
+ *  볼록 껍질(중정 돔)은 높이 켜마다 감싸는 세운 원기둥을 쌓아서, 돌린 상자는 감싸는 상자로 본다(넉넉한 쪽). 꼴을 바꾸면 여기도 그대로 따라온다
  */
 export function cameraBlockers(shapes) {
-  return Object.freeze(shapes.map((s) => {
+  return Object.freeze(shapes.flatMap((s) => {
     const [x, y, z] = s.center;
     const q = s.rotation ?? { x: 0, y: 0, z: 0, w: 1 };
     const turn = (vx, vy, vz) => { // 사원수 q 로 벡터를 돌린다
@@ -137,11 +137,13 @@ export function cameraBlockers(shapes) {
       return Object.freeze({ k: 'cap', ax: x - ax, ay: y - ay, az: z - az, bx: x + ax, by: y + ay, bz: z + az, r: s.radius });
     }
     if (s.type === 'cylinder' && !s.rotation) return Object.freeze({ k: 'cyl', x, z, r: s.radius, y0: y - s.halfHeight, y1: y + s.halfHeight });
-    // 볼록 껍질(점은 가운데 기준) · 돌린 원기둥: 감싸는 세운 원기둥
+    // 볼록 껍질(점은 가운데 기준) · 돌린 원기둥: 점들의 높이 켜마다 감싸는 세운 원기둥 (중정 돔 — 둥근 지붕이 위로 갈수록 좁아지는 꼴을 따른다)
     const pts = s.points ?? [-s.radius, -s.halfHeight, -s.radius, s.radius, s.halfHeight, s.radius];
-    let r = 0, y0 = Infinity, y1 = -Infinity;
-    for (let i = 0; i < pts.length; i += 3) { const [u, v, w] = turn(pts[i], pts[i + 1], pts[i + 2]); r = Math.max(r, Math.hypot(u, w)); y0 = Math.min(y0, v); y1 = Math.max(y1, v); }
-    return Object.freeze({ k: 'cyl', x, z, r, y0: y + y0, y1: y + y1 });
+    const ring = new Map(); // 높이(mm) → 그 켜의 가장 큰 반지름
+    for (let i = 0; i < pts.length; i += 3) { const [u, v, w] = turn(pts[i], pts[i + 1], pts[i + 2]); const k = Math.round(v * 1000); ring.set(k, Math.max(ring.get(k) ?? 0, Math.hypot(u, w))); }
+    const ys = [...ring.keys()].sort((a, b) => a - b);
+    if (ys.length < 2) return [Object.freeze({ k: 'cyl', x, z, r: ring.get(ys[0]) ?? 0, y0: y + ys[0] / 1000, y1: y + ys[0] / 1000 })];
+    return ys.slice(1).map((k, i) => Object.freeze({ k: 'cyl', x, z, r: Math.max(ring.get(ys[i]), ring.get(k)), y0: y + ys[i] / 1000, y1: y + k / 1000 }));
   }));
 }
 // 길잡이(navigation) → 카메라 셈용 몸. 길잡이 객체는 그대로 두고(AI · 시험 도구가 같은 객체를 읽는다) 옆에 붙여 둔다
@@ -250,6 +252,17 @@ function clearAngle(bodies, origin, base, side) {
     return hi;
   }
   return null;
+}
+/**
+ * 점(x, y, z)에서 (dx, dy, dz)(단위 벡터) 쪽으로 length 안에 장애물 꼴이 있나 — 무대의 해 그늘(봉인의 중정: 급수정 그늘에 든 몸은 해를 덜 받는다,
+ *  stage_courtyard.js fighterShade)이 쓴다. 장애물이 없거나 모르는 길잡이면 false
+ */
+export function obstacleBlocksRay(obstacle, x, y, z, dx, dy, dz, length = 30) {
+  const bodies = obstacle && (obstacle.camera ?? CAMERA_BODIES.get(obstacle));
+  if (!bodies) return false;
+  const qx = x + dx * length, qy = y + dy * length, qz = z + dz * length;
+  for (const b of bodies) if (segmentHits(b, x, y, z, qx, qy, qz, 0)) return true;
+  return false;
 }
 const guardState = new WeakMap(); // 넘겨받은 카메라 벡터 → { side, swing, t }
 const clockSec = () => (globalThis.performance?.now?.() ?? Date.now()) / 1000;
