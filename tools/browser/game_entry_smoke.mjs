@@ -24,7 +24,7 @@ async function screenshot(p,name){await p.screenshot({path:`${out}/${name}.png`}
 try{
  const context=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:2,isMobile:true,hasTouch:true,serviceWorkers:'allow'});await noAuth(context);
  const p=await context.newPage();watch(p);
- await p.addInitScript(()=>{if(!localStorage.getItem('gladiator-settings')){localStorage.setItem('gladiator-settings','{"fpsCap":true}');localStorage.setItem('stillness.journeyClears.v1','37');}});
+ await p.addInitScript(()=>{if(!localStorage.getItem('gladiator-settings')){localStorage.setItem('gladiator-settings','{"fpsCap":true}');localStorage.setItem('stillness.journeyClears.v1','37');localStorage.setItem('stillness.lobby.neck.v1','{"version":1,"neck":null}');}}); // 용사의 눈물은 벗고 (10/17 기본 장착 — 걸면 기력이 안 깎여 아래 공격 확인이 안 됨 · 건 쪽은 hero_tear_smoke)
  // ?title=1: 카드 두 장을 고정(?cards=)하면서도 첫 화면으로 — 게임 인자가 있으면 원래 첫 화면을 건너뛴다
  await p.goto(base+'/?title=1&cards=longsword,rapier',{waitUntil:'networkidle'});await p.waitForFunction(()=>window.game?.player,null,{timeout:60000});
  assert.equal(await p.locator('#noticeDialog').evaluate(d=>d.open),true);

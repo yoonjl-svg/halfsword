@@ -10,7 +10,7 @@ export class Stamina {
     this.fighter = fighter;
     this.controller = null;
     this.maxBonus = 0; // 최대 기력 덧 (대기실 장비 — 케틀 햇 '생존술: 기력 +30', main.js setMaxBonus · 플레이어만). 문턱 0 · −40 · −80 과 그 밖 규칙은 그대로
-    this.infinite = false; // 기력 무한 (대기실 장비 — 용사의 눈물 '불굴: 기력 무한', main.js setInfinite · 플레이어만). 거짓이면 아래 모든 길이 전과 한 글자도 다르지 않다
+    this.infinite = false; // 기력 무한 (대기실 장비 — 용사의 눈물 '기력 무한', main.js setInfinite · 플레이어만). 거짓이면 아래 모든 길이 전과 한 글자도 다르지 않다
     this.value = STAMINA.max;
     this.level = 0;
     this.exhaustLeft = 0;

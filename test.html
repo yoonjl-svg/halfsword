@@ -48,7 +48,7 @@
         --tier-trash: #b8b6b0; --tier-common: #fff3c4; --tier-rare: #8cc4ff; --tier-epic: #d6a8ff; --tier-legend: #ffd24a; --tier-mystery: #8fe3c6;
       }
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-      html, body { margin: 0; background: var(--bg); color: var(--c-text); }
+      html, body { margin: 0; background: var(--bg); color: var(--c-text); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } /* 글자 자동 키움 끔 (index.html 과 같은 두 줄 — 사장님 10/17) */
       html { overflow-x: hidden; } /* body 에 두면 body 가 스크롤 상자가 되어 아래 '시작' 줄이 붙지 않는다 */
       body {
         font-family: var(--font-ui); font-weight: var(--fw-body); font-synthesis: none;

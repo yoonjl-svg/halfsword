@@ -782,17 +782,19 @@ function buildTear() {
     g.add(m);
   }
   // 매단 것: 바일(사슬 맨 아래가 지나가는 작은 고리 — 사슬 면에 수직)이 축 · 그 아래 다이아(뾰족한 끝이 위)
-  const H = num('gh', 0.36), drop = H + 0.05; // 다이아 반높이 · 바일 가운데 ~ 다이아 가운데
+  //  다이아 크기: 사장님 10/17 '섬네일 다이아 크기 줄여 1/3로' — 256 px 그림 위 다이아 높이 87 → 29 px (반높이 0.36 → 0.09: 돌이 작아진 만큼 그림이 칸에 맞춰
+  //   다시 채워져 사슬이 조금 커지므로 그 몫까지 넣은 값). 사슬 고리는 그대로 · 바일 · 둘레 테 · 발도 작은 돌에 맞춰 줄임 (전: 바일 0.045 · 굵기 0.013 · 테 0.011 · 발 0.02 · 간격 0.05)
+  const H = num('gh', 0.09), drop = H + 0.034; // 다이아 반높이 · 바일 가운데 ~ 다이아 가운데
   const { geo, outline } = diamondGeometry(16, H);
   const pend = new THREE.Group();
-  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.013, 10, 32), tearSilver);
+  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.0085, 10, 32), tearSilver); // 사슬 고리(0.021 · 0.0085)와 같은 굵기
   bail.rotation.y = Math.PI / 2;
   pend.add(bail);
   const gem = new THREE.Group();
   gem.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: num('gr', 0.06), metalness: num('gm', 0.3), envMap: tearSilver.envMap, envMapIntensity: num('ge', 1.6), flatShading: true, emissive: 0x8fb8dc, emissiveIntensity: num('gl', 0.12) })));
   const rim = new THREE.CatmullRomCurve3(outline.map((v) => new THREE.Vector3(v.x * 1.025, v.y * 1.025 - 0.0016, 0)), true); // 둘레 은 테 (물방울 윤곽을 어두운 칸에서 또렷이)
-  gem.add(new THREE.Mesh(new THREE.TubeGeometry(rim, 128, 0.011, 8, true), tearSilver));
-  const claw = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 10), tearSilver); claw.position.set(0, H + 0.006, 0.004); gem.add(claw); // 뾰족한 끝을 무는 발
+  gem.add(new THREE.Mesh(new THREE.TubeGeometry(rim, 128, 0.0055, 8, true), tearSilver));
+  const claw = new THREE.Mesh(new THREE.SphereGeometry(0.009, 12, 10), tearSilver); claw.position.set(0, H + 0.003, 0.002); gem.add(claw); // 뾰족한 끝을 무는 발
   gem.position.set(0, -drop, 0);
   pend.add(gem);
   pend.rotation.set(num('gx', 0.18), num('gy', 0.38), 0);

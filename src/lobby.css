@@ -80,9 +80,10 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .portrait-card::before, .portrait-card::after { content: ''; position: absolute; left: calc(50% - 10px); width: 20px; height: 20px; background: url('../public/ui/cardbacks/px_clearing_plaque.png') center / contain no-repeat; image-rendering: pixelated; pointer-events: none; z-index: 1; }
 .portrait-card::before { top: -8px; }
 .portrait-card::after { bottom: -8px; }
-/* 캐릭터 바로 뒤만 매끈한 바탕 (10/17 — docs/import/lobby_preview_2026-10-17.md): 몸 뒤 큰 픽셀 무늬가 '해상도 낮음'으로 읽혀, 가운데는 무늬 없이 부드러운 빛 웅덩이 ·
-   가장자리로 갈수록 투명해져 카드 무늬(겉 — 그림 그대로)가 비친다. 색은 카드 바탕 색(그림 쪽 — UI 색에 세지 않음) · 값은 사장님 확인 전 */
-.character-view { position: relative; flex: 1; min-height: 0; touch-action: none; cursor: grab; image-rendering: auto; background: radial-gradient(ellipse 64% 54% at 50% 54%, #3d3328 0%, #30291f 55%, rgba(44, 39, 31, 0) 100%); }
+/* 캐릭터 뒤 바탕 = 무늬 없는 매끈한 바탕 (사장님 10/17 '대기실 미리보기 캐릭터 뒤 배경도 고친다 그랬잖아' — docs/import/lobby_preview_2026-10-17.md §11):
+   몸 뒤 픽셀 무늬(카드 뒷면 조각)가 '해상도 낮음'으로 읽혀 카드 안쪽 전체를 덮는다 — 가운데 따뜻한 빛 → 가장자리 어둡게(빛 웅덩이). 무늬는 사슬 틀 · 위아래 쇠 장식(겉 — 픽셀 그대로)에만.
+   전(같은 날 첫 판): 가운데만 옅은 빛을 얹고 가장자리는 투명이라 무늬가 몸 뒤에 그대로 보였다. 색은 카드 바탕 색에서(그림 쪽 — UI 색에 세지 않음) · 값은 사장님 확인 전 */
+.character-view { position: relative; flex: 1; min-height: 0; touch-action: none; cursor: grab; image-rendering: auto; background: radial-gradient(ellipse 72% 58% at 50% 46%, #5a4b38 0%, #403427 48%, #261f19 85%, #1d1813 100%); }
 .character-view:active { cursor: grabbing; }
 .character-view canvas { display: block; width: 100%; height: 100%; }
 /* 알림 줄(인장 → 금화 · 이름 저장 · 출발 실패): 제목 줄 가운데 작은 창 — 전엔 출발 단추 밑이라 칸 아래 줄을 밀었다(카드 위에 띄우면 캐릭터 머리를 가린다) */

@@ -18,6 +18,7 @@ const seed = () => {
   if (sessionStorage.getItem('seeded')) return;
   sessionStorage.setItem('seeded', '1');
   localStorage.setItem('stillness.journeyClears.v1', '37');
+  localStorage.setItem('stillness.lobby.neck.v1', '{"version":1,"neck":null}'); // 용사의 눈물은 벗고 (10/17 기본 장착 — 아래 내 기력 막대 사진이 그대로 나오게)
   const books = ['german:1', 'german:2', 'german:3', 'japanese:1', 'japanese:5'];
   localStorage.setItem('stillness.lobby.progress.v1', JSON.stringify({ version: 1, coins: 940, heads: 3, titles: [], title: '여행자', acquisitions: books.map((b) => ({ receipt: `skillbook:${b}`, kind: 'skillbook' })) }));
   localStorage.setItem('stillness.lobby.skillbooks.v1', JSON.stringify({ version: 1, sealed: ['german:2'] }));

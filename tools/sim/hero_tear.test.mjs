@@ -38,13 +38,14 @@ test('방어구 칸: 케틀 햇 · 용사의 눈물 차례 · 자리(머리 · �
   assert.equal(LOBBY_ARMORS[0], LOBBY_ARMOR); assert.equal(LOBBY_ARMORS[1], HERO_TEAR);
   assert.deepEqual([armorSlot('kettle'), armorSlot('hero_tear')], ['head', 'neck']);
   assert.equal(HERO_TEAR.nameKo, '용사의 눈물'); assert.equal(HERO_TEAR.tier, 'legend'); assert.equal(HERO_TEAR.infiniteStamina, true);
-  assert.equal(`${HERO_TEAR.description} ${HERO_TEAR.ability}`, '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다. (불굴: 기력 무한)');
+  assert.equal(`${HERO_TEAR.description} ${HERO_TEAR.ability}`, '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다. (기력 무한)');
   assert.equal(HERO_TEAR.thumbnail, 'ui/armor/hero_tear.webp');
   assert.ok(Object.isFrozen(HERO_TEAR) && Object.isFrozen(LOBBY_ARMORS));
 });
-test('목 자리 저장: 처음엔 안 걸침 · 걸기/벗기 · 다른 이름 거절 · 머리 자리와 따로 · 저장이 막히면 이번 실행 동안', () => {
-  assert.equal(readLobbyNeck(), null); assert.equal(readLobbyArmor(), 'kettle'); // 새 기기: 케틀 햇은 씀 · 용사의 눈물은 칸에만
-  assert.equal(saveLobbyNeck('kettle'), false); assert.equal(saveLobbyNeck('longsword'), false); assert.equal(readLobbyNeck(), null);
+test('목 자리 저장: 처음부터 걸침 · 걸기/벗기 · 다른 이름 거절 · 머리 자리와 따로 · 저장이 막히면 이번 실행 동안', () => {
+  assert.equal(readLobbyNeck(), 'hero_tear'); assert.equal(readLobbyArmor(), 'kettle'); // 새 기기: 케틀 햇 · 용사의 눈물 둘 다 씀 (사장님 10/17 '장착을 기본으로')
+  assert.equal(saveLobbyNeck('kettle'), false); assert.equal(saveLobbyNeck('longsword'), false); assert.equal(readLobbyNeck(), 'hero_tear');
+  assert.equal(saveLobbyNeck(null), true); assert.equal(readLobbyNeck(), null); assert.equal(storage.get('stillness.lobby.neck.v1'), '{"version":1,"neck":null}'); // 벗으면 벗은 채로 남는다
   assert.equal(saveLobbyNeck('hero_tear'), true); assert.equal(readLobbyNeck(), 'hero_tear');
   assert.equal(storage.get('stillness.lobby.neck.v1'), '{"version":1,"neck":"hero_tear"}');
   assert.equal(saveLobbyArmor(null), true); assert.equal(readLobbyNeck(), 'hero_tear'); assert.equal(readLobbyArmor(), null); // 케틀 햇을 벗어도 목걸이는 그대로

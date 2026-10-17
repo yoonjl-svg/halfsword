@@ -110,8 +110,8 @@ try {
     await P.p.locator('#tabArmor').tap();
     await P.p.locator('.inventory-item img').evaluateAll((els) => Promise.all(els.map((i) => i.decode().catch(() => {}))));
     await P.p.waitForTimeout(400); await shot(P.p, '01_lobby_armor_list');
-    await P.p.locator('button[data-armor=hero_tear]').tap(); await P.p.waitForTimeout(200); await shot(P.p, '02_tear_card');
-    await P.p.locator('#equipItem').tap(); await P.p.waitForTimeout(200); await shot(P.p, '03_tear_equipped');
+    await P.p.locator('button[data-armor=hero_tear]').tap(); await P.p.waitForTimeout(200); await shot(P.p, '02_tear_card'); // 새 기기 = 처음부터 장착 중 (사장님 10/17)
+    await P.p.locator('#unequipItem').tap(); await P.p.waitForTimeout(200); await shot(P.p, '03_tear_unequipped');
     await P.ctx.close();
   }
   // ── ① 대기실 ──
@@ -124,31 +124,35 @@ try {
   const thumbs = await p.locator('.inventory-item img').evaluateAll((els) => Promise.all(els.map((i) => i.decode().catch(() => {}).then(() => ({ src: i.getAttribute('src'), alt: i.alt, ok: i.complete && i.naturalWidth === 256, fit: i.dataset.fit })))));
   assert.deepEqual(thumbs.map((t) => [t.src, t.alt, t.ok]), [['ui/armor/kettle.webp', '케틀 햇', true], ['ui/armor/hero_tear.webp', '용사의 눈물', true]], JSON.stringify(thumbs));
   assert.deepEqual(await p.locator('.inventory-item').evaluateAll((els) => els.map((e) => [e.dataset.armor, e.dataset.tier])), [['kettle', 'legend'], ['hero_tear', 'legend']]);
-  assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', false]]); // 새 기기: 케틀 햇만 씀
+  assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', true]]); // 새 기기: 둘 다 씀 (사장님 10/17 '용사의 눈물은 장착을 기본으로')
   await p.waitForTimeout(400);
-  checks.push('lobby armor tab: 2 items (kettle hat · hero tear), both thumbnails load at 256 px, legend glow; new device = kettle on, tear off');
+  checks.push('lobby armor tab: 2 items (kettle hat · hero tear), both thumbnails load at 256 px, legend glow; new device = kettle on, tear on (default equipped)');
   const view = await p.locator('#characterView').boundingBox();
   const frames = () => p.locator('#characterView').getAttribute('data-frames');
   const before = await p.screenshot({ clip: view }), framesBefore = await frames();
   await p.locator('button[data-armor=hero_tear]').tap();
   const k = await card(p);
-  assert.deepEqual([k.hidden, k.tier, k.name, k.rarity, k.description], [false, 'legend', '용사의 눈물', '레전드', '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다. (불굴: 기력 무한)']);
+  assert.deepEqual([k.hidden, k.tier, k.name, k.rarity, k.description], [false, 'legend', '용사의 눈물', '레전드', '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다. (기력 무한)']);
   assert.equal(k.abilityColor, 'rgb(255, 210, 74)'); assert.ok(k.inside && !k.overflow, JSON.stringify(k));
-  assert.equal(await p.locator('#equipItem').isEnabled(), true); assert.equal(await p.locator('#unequipItem').isEnabled(), false);
+  assert.equal(await p.locator('#equipItem').isEnabled(), false); assert.equal(await p.locator('#unequipItem').isEnabled(), true); // 처음부터 장착 중
+  await p.locator('#unequipItem').tap();
+  assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', false]]); // 벗음 — 케틀 햇은 그대로 (자리가 다름)
+  assert.match(await p.locator('#equipmentStatus').textContent(), /^용사의 눈물 장착 해제/);
+  assert.equal(await p.evaluate(() => localStorage.getItem('stillness.lobby.neck.v1')), '{"version":1,"neck":null}'); // 벗은 채로 저장
   await p.locator('#equipItem').tap();
-  assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', true]]); // 둘 다 장착 (자리가 다름)
+  assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', true]]); // 다시 둘 다 장착
   assert.match(await p.locator('#equipmentStatus').textContent(), /^용사의 눈물 장착/);
   assert.equal(await p.locator('#equipItem').isEnabled(), false); assert.equal(await p.locator('#unequipItem').isEnabled(), true);
   assert.equal(await p.locator('#characterView').getAttribute('data-armor'), 'kettle'); // 미리보기 투구 그대로
   assert.equal(await p.evaluate(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('characterView').lobbyPreview.fighter.helmetGroup.visible), true);
   await p.waitForTimeout(300);
   const after = await p.screenshot({ clip: view });
-  assert.ok(before.equals(after), 'preview pixels changed after equipping the tear'); // 겉모습 변화 없음 — 미리보기 화소가 한 점도 안 바뀜
+  assert.ok(before.equals(after), 'preview pixels changed after unequipping/equipping the tear'); // 겉모습 변화 없음 — 미리보기 화소가 한 점도 안 바뀜
   assert.equal(await frames(), framesBefore); // 미리보기를 다시 그리지도 않았다 (목 자리는 미리보기에 손대지 않음)
   assert.deepEqual(await p.evaluate(() => [localStorage.getItem('stillness.lobby.armor.v1'), localStorage.getItem('stillness.lobby.neck.v1')]), [null, '{"version":1,"neck":"hero_tear"}']); // 케틀 햇은 기본 장착(저장 없음) 그대로
   await p.locator('button[data-armor=hero_tear]').tap(); assert.equal((await card(p)).hidden, true); await p.locator('button[data-armor=hero_tear]').tap(); assert.equal((await card(p)).hidden, false); // 카드 닫았다 다시 — 장착 중 그대로
   assert.deepEqual((await badges(p)).map((b) => b.on), [true, true]);
-  checks.push('tear card: 용사의 눈물 · 레전드 · description + (불굴: 기력 무한) in legend colour, inside the frame; equip → both items 장착 중; preview pixels identical before/after (no look change); saved in stillness.lobby.neck.v1');
+  checks.push('tear card: 용사의 눈물 · 레전드 · description + (기력 무한) in legend colour, inside the frame; new device = 장착 중; unequip → saved null, kettle stays; equip again → both items 장착 중; preview pixels identical before/after (no look change); saved in stillness.lobby.neck.v1');
 
   // ── ② 장착하고 싸움 ──
   await depart(p);
@@ -173,8 +177,8 @@ try {
   checks.push(`tear fight: infinite on player only (foe false) · max 130 with kettle · my bar never shown, foe bar shown · guard phase ${sTear.blocks} blocked foe attacks + ${sTear.swings} swings/thrusts + parry hold over ${sTear.simSeconds} s game time: min value 130, level 0, exhausted 0, speed 1, spent 0 (tried ${JSON.stringify(sTear.tried)})`);
   await A.ctx.close();
 
-  // ── ③ 용사의 눈물 없이 (전과 같음) ──
-  const B = await context();
+  // ── ③ 용사의 눈물 없이 (전과 같음 — 이제 처음부터 걸려 있으니 벗은 저장으로 시작) ──
+  const B = await context({ 'stillness.lobby.neck.v1': '{"version":1,"neck":null}' });
   await lobby(B.p);
   await depart(B.p);
   const plainFight = await B.p.evaluate(() => ({ infinite: game.player.stamina.infinite, max: game.player.stamina.max, value: game.player.stamina.value, helmet: game.player.hasHelmet }));

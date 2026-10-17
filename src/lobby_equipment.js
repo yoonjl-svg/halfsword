@@ -26,7 +26,7 @@ export const HERO_TEAR = Object.freeze({
   nameKo: '용사의 눈물', // 사장님 이름 그대로
   tier: 'legend', // 사장님 확인 전 — 케틀 햇(+30)과 같은 레전드 (기력 무한이 더 세다 · 등급 위가 없다)
   description: '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다.', // 사장님 확인 전 — '외형 변화는 없음'을 글로
-  ability: '(불굴: 기력 무한)', // 효과 '기력 무한'은 사장님 말 그대로 · 능력 이름 '불굴'은 사장님 확인 전 (케틀 햇 '생존술'과 같은 꼴)
+  ability: '(기력 무한)', // 사장님 10/17 "'불굴'은 빼고 '기력 무한'만 써" (전 '(불굴: 기력 무한)')
   infiniteStamina: true,
   thumbnail: 'ui/armor/hero_tear.webp', // tools/browser/item_thumbs.mjs tear (금화 · 주머니 · 스킬북과 같은 도구 · 같은 빛 · 같은 금속)
 });
@@ -39,7 +39,7 @@ const ARMOR_KEY = 'stillness.lobby.armor.v1';
 const NECK_KEY = 'stillness.lobby.neck.v1';
 let equipped = null;
 let armor = 'kettle';
-let neck = null; // 처음엔 안 걸었다 (사장님 확인 전 — 케틀 햇은 처음부터 씀 · 용사의 눈물은 칸에 넣어 두기만)
+let neck = HERO_TEAR.id; // 처음부터 걸었다 (사장님 10/17 "용사의 눈물은 '장착'을 기본으로 해" — 케틀 햇처럼. 벗으면 null 이 저장되어 그대로)
 /** 목 자리 (용사의 눈물 또는 null) — 머리 자리 readLobbyArmor 와 같은 규칙 */
 export function readLobbyNeck() {
   try {

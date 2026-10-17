@@ -34,7 +34,7 @@ const closeBook = (p) => p.locator('.detail-close').click();
 try {
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
   await noAuth(ctx);
-  await ctx.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('stillness.journeyClears.v1', '0'); } });
+  await ctx.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('stillness.journeyClears.v1', '0'); localStorage.setItem('stillness.lobby.neck.v1', '{"version":1,"neck":null}'); } }); // 용사의 눈물은 벗고 (10/17 기본 장착 — 걸면 기력이 늘 가득이라 아래 130 막대 확인이 안 됨 · 건 쪽은 hero_tear_smoke)
   const p = await ctx.newPage(); watch(p);
 
   // ① 장착한 무기로 곧장 · 해제하면 카드

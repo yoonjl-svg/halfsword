@@ -103,6 +103,9 @@
         font-family: var(--font-ui); font-weight: var(--fw-body);
         font-synthesis: none; /* 흉내 굵기·기울임을 만들지 않는다 (쓰는 굵기는 모두 파일이 있다 — 혹시 없는 굵기를 부르면 가까운 파일 그대로) */
         touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none;
+        /* 브라우저가 글자를 제멋대로 키우지 않게 (아이폰 가로 화면 자동 키움 끔 — 사장님 10/17 '자동키움 끄는 두 줄 넣어' · 첫 화면 공지 src/entrance_type.css 와 같은 두 줄) */
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
       }
       #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
       #game.pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
