@@ -1,6 +1,8 @@
 // 첫 화면·대기실 디자인 맞추기 시안 (docs/design/ui_unify_2026-10-16.md §3 — 검토용, 코드 안 바꿈): 전투 화면 창·단추 규칙을 CSS 로 덧입혀 찍는다 — 폰 가로 844×390 · 화소 비 3
 //  npm run build && npx vite preview --port 5241 →  node tools/ui/ui_unify_mock.mjs http://127.0.0.1:5241 /tmp/<빈 폴더>
+//  10/18: 대기실 가는 길 = 첫 화면 → 곧바로 여정 → 정지 → 대기실(10/17 11:2x · to_lobby.mjs — 전 3D 미리보기 그리개를 기다림) · 케틀 햇은 아이템 칸 한 판에(04:1x — 전 방어구 탭)
 import { chromium } from 'playwright';
+import { titleToLobby } from '../browser/to_lobby.mjs';
 import fs from 'node:fs';
 const [base, out] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
@@ -34,8 +36,8 @@ if (await p.locator('#noticeDialog').evaluate((d) => d.open)) await p.locator('#
 await p.waitForFunction(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('entrance').dataset.phase === 'ready', null, { timeout: 20000 });
 await p.waitForTimeout(500);
 await p.screenshot({ path: `${out}/mock_title_before.png` }); await inject(); await p.waitForTimeout(200); await p.screenshot({ path: `${out}/mock_title_after.png` });
-await p.locator('#newJourney').tap(); await p.locator('#characterView canvas').waitFor({ timeout: 20000 }); await p.waitForTimeout(1200);
-await p.locator('#tabArmor').tap(); await p.locator('button[data-armor=kettle]').tap(); await p.waitForTimeout(400);
+await titleToLobby(p, '#newJourney', 'tap'); await p.waitForTimeout(1200);
+await p.locator('button[data-armor=kettle]').tap(); await p.waitForTimeout(400);
 await p.evaluate(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('mockcss')?.remove());
 const zoom = async (name, sel, pad = 2) => { const b = await p.locator(sel).first().boundingBox(); await p.screenshot({ path: `${out}/${name}.png`, clip: { x: b.x - pad, y: b.y - pad, width: b.width + pad * 2, height: b.height + pad * 2 } }); };
 await p.screenshot({ path: `${out}/mock_lobby_before.png` }); await zoom('mz_kettle_before', 'button[data-armor=kettle]');

@@ -1445,23 +1445,7 @@ function validJourney() {
   return out;
 }
 export const canContinueJourney = () => !!validJourney();
-export const getLobbyPlayer = () => player; // 메뉴 뒤에 세워 둔 판의 플레이어 (시험 도구가 '대기실이 게임 몸·물리를 안 건드린다'를 본다)
-/**
- * 대기실 캐릭터 몸(lobby_rig.js — 사장님 10/16 08:4x '무기 장착도 정교해져야 돼', docs/import/ui_fix_2026-10-16.md §6)이 쓸 값: 물리 모듈과 다음 판의 플레이어와 같은 것
- *  (newRound 의 플레이어 Fighter 값 — 겉모습(?hero 포함) · 무기 · 스킬북 보법·막기 · 검술 층). weaponId 없으면 맨손. 투구는 미리보기가 보이기/숨기기로 (LOOK_BAREHEAD 와 같은 꼴)
- */
-export function lobbyRigSpec(weaponId) {
-  const kit = weaponId ? playerKit(traditionOf(getWeapon(weaponId)), readBooks(), { test: testRoute.active, upTo: UNIQUE_STAGE }) : null;
-  return {
-    RAPIER,
-    name: readProfile().name,
-    look: testRoute.player.look ?? LOOKS.player,
-    weapon: weaponId || null,
-    schoolFootwork: kit ? kit.footwork : undefined,
-    schoolParry: kit ? kit.parry : undefined,
-    skill: { level: +settings.skill, corr: CONFIG.SKILL.corr, corrTip: CONFIG.SKILL.corrTip, autoGuard: true },
-  };
-}
+// (10/18 04:1x 사장님 '옛 3d 지워': 대기실 3D 캐릭터 몸에 주던 lobbyRigSpec · 겉모습 복제용 getLobbyPlayer 를 지움 — 대기실 ① 칸은 10/17 부터 프로필 그림)
 /** 대기실 스킬북 화면이 읽는 이 판의 갈래: test = 테스트 경로(책 모두 열림 · 이미 받은 인장을 금화로 바꾸지 않음) */
 export const getSkillBookContext = () => ({ test: testRoute.active });
 /** 대기실 프로필 칸의 인물 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md): ?hero=<인물 id> 로 다른 영웅이면 그 인물(그림이 없으면 플레이어) · 아니면 플레이어 */
@@ -1583,7 +1567,7 @@ function toLobby() {
   parryHold.key = false;
   applyMoveMode();
   sound.ctx?.suspend?.()?.catch?.(() => {}); // 판이 다시 열리면 startFight 의 sound.unlock 이 되살린다
-  // 싸우던 판은 그대로 멈춰 둔다(덮개 뒤 — 시간 안 흐름). 대기실 캐릭터는 이 판을 읽지 않고 따로 된 몸을 세운다(lobby_rig.js) · 다시 출발하면 startFight 가 판을 새로 연다
+  // 싸우던 판은 그대로 멈춰 둔다(덮개 뒤 — 시간 안 흐름). 대기실은 이 판을 읽지 않는다(① 칸 = 프로필 그림) · 다시 출발하면 startFight 가 판을 새로 연다
   back();
 }
 $('btnStart').addEventListener('click', startFight);

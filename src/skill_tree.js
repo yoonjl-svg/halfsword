@@ -70,10 +70,10 @@ function runeLink(a, b, lit, t0, t1) {
 }
 
 /**
- * root: 스킬북 칸(Shadow root 안의 #skillTreeHost) · test: 테스트 경로(모두 열림 — 사고팔기 없음) · onWallet(): 금화가 바뀌면(대기실 내 정보 칸 다시 그리기) · onBooks(): 책을 사거나 사용/봉인하면(대기실 미리보기 몸) ·
- * announce(text): 화면 읽기 알림
+ * root: 스킬북 칸(Shadow root 안의 #skillTreeHost) · test: 테스트 경로(모두 열림 — 사고팔기 없음) · onWallet(): 금화가 바뀌면(대기실 내 정보 칸 다시 그리기) ·
+ * announce(text): 화면 읽기 알림 (10/18: 대기실 3D 몸에 알리던 onBooks 는 그 몸과 같이 지움)
  */
-export function mountSkillTree(root, { test = false, onWallet = () => {}, onBooks = () => {}, announce = () => {} } = {}) {
+export function mountSkillTree(root, { test = false, onWallet = () => {}, announce = () => {} } = {}) {
   root.innerHTML = `<div class="school-tabs" role="tablist" aria-label="유파">${BOOK_SCHOOLS.map((s, i) => `<button role="tab" data-school="${s}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}">${TRADITIONS[s].nameKo}</button>`).join('')}</div>
     <div class="tree-frame card-frame"><div class="tree-board" role="tabpanel" aria-label="스킬북 별자리"><svg class="tree-links" viewBox="0 0 300 210" preserveAspectRatio="none" aria-hidden="true"></svg><div class="tree-nodes"></div>
     <section class="book-detail" hidden aria-labelledby="bookTitle"><button type="button" class="detail-close" aria-label="설명 닫기">×</button>
@@ -182,13 +182,13 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, onBook
     const b = booksOf(school)[selected - 1];
     const r = buyBook(school, b.tier);
     announce(r.ok ? `${b.title} 구입 — 금화 ${b.price}${r.saved ? '' : '. 이번 실행 동안 유지됩니다.'}` : r.why === 'coins' ? '금화가 모자랍니다.' : '살 수 없습니다.');
-    render(); onWallet(); onBooks();
+    render(); onWallet();
   });
   for (const [id, use] of [['#useBook', true], ['#sealBook', false]]) on($(id), 'click', () => {
     const b = booksOf(school)[selected - 1];
     const saved = setBookInUse(b.id, use);
     announce(`${b.title} ${use ? '사용' : '봉인'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`);
-    render(); onBooks();
+    render();
   });
   render();
   return {

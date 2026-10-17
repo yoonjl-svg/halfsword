@@ -84,7 +84,7 @@ try{
  assert.equal(await p.locator('#duelRecord').textContent(),'0승리 0패배 (0%)');
  assert.equal(await p.locator('#panelInventory').isVisible(),true);
  const thumbs=await p.locator('.inventory-item img').evaluateAll(els=>els.map(e=>({loaded:e.complete&&e.naturalWidth>0,src:e.getAttribute('src')})));
- assert.deepEqual(thumbs.map(t=>t.src),['ui/weapons/tree_branch.webp']);assert.ok(thumbs.every(t=>t.loaded));
+ assert.deepEqual(thumbs.map(t=>t.src),['ui/weapons/tree_branch.webp','ui/armor/kettle.webp','ui/armor/hero_tear.webp']);assert.ok(thumbs.every(t=>t.loaded)); // 아이템 칸 한 판 = 무기 다음 방어구 (10/18 04:1x)
  await screenshot(p,'lobby-phone');
  check('pause → 대기실 during the card draw opens the lobby (depart button Stage 입장; game behind stopped, checkpoint kept); first visit shows the one-time seal → coins notice');
  // 10/17 22:1x 사장님: 3D 미리보기(돌림판) → 정사각 프로필 그림 (전 점검: 끌어 돌리기 180° · 방향키 Home). 이제: 플레이어 그림(low)이 떴나 · 정사각 · 칸 폭 그대로 · 출발 단추와 안 겹침 · 눌러도 판 몸 그대로
@@ -95,7 +95,8 @@ try{
  await p.locator('#lobbyPortrait').tap();
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({p:rb.translation(),q:rb.rotation()}))),beforeBodies);
  await p.locator('[data-weapon=tree_branch]').tap();assert.equal(await p.locator('#equipItem').isEnabled(),true);assert.equal(await p.locator('#unequipItem').isEnabled(),false);
- await p.locator('#editName').tap();await p.locator('#playerNameInput').fill('  바람  ');await p.locator('#nameForm button[type=submit]').click();
+ assert.equal(await p.locator('#lobbyName').textContent(),'Noname');assert.equal(await p.locator('#lobbyPortraitImg').getAttribute('alt'),'Noname 프로필'); // 기본 이름 (사장님 10/18 04:1x — 전 '방랑자')
+ await p.locator('#editName').tap();assert.equal(await p.locator('#playerNameInput').inputValue(),'Noname');await p.locator('#playerNameInput').fill('  바람  ');await p.locator('#nameForm button[type=submit]').click();
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');
  await p.locator('#editName').tap();await p.locator('#playerNameInput').fill('취소할 이름');await p.locator('#cancelName').tap();
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');
@@ -112,7 +113,7 @@ try{
  assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyStatus').textContent(),''); // 인장 → 금화는 한 번만 (대기실에 다시 와도)
  assert.equal(await departTitle(p,'#lobbyDepart','tap'),'draw'); // 대기실 출발도 같은 덮개 — 걷히고 카드 고르기가 될 때까지
  assert.deepEqual(await p.evaluate(()=>game.draw.ids.slice(0,2)),drawn.cards);assert.deepEqual(await checkpoint(p),drawn);
- check('lobby: real character touch rotation with physics untouched; tree branch only; editable name; tabs; account entry; safe back navigation (첫 화면 → 이어하기 = same cards → 대기실 again → Stage 입장 resumes the same checkpoint)',{thumbs});
+ check('lobby: profile picture (tapping it leaves the physics untouched); one item grid tree branch → kettle hat → hero tear; default name Noname, editable; tabs; account entry; safe back navigation (첫 화면 → 이어하기 = same cards → 대기실 again → Stage 입장 resumes the same checkpoint)',{thumbs});
  await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p,'#continueJourney'),'draw');
  const restored=await checkpoint(p);assert.deepEqual(restored,drawn);
  assert.deepEqual(await p.evaluate(()=>game.draw.ids.slice(0,2)),drawn.cards);
@@ -146,7 +147,7 @@ try{
  // 이어하기 경계만 보려고 상대 패배를 강제한다 (승패 실측이 아님). 실제 플레이 사진은 위에서 이미 찍었다.
  await p.evaluate(()=>game.enemy.die('기절',true));
  await p.waitForFunction(k=>JSON.parse(localStorage.getItem(k)).stage==='clearing',key,{timeout:20000});
- assert.deepEqual(await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),profileKey),{version:1,name:'바람',wins:1,losses:0});
+ assert.deepEqual(await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),profileKey),{version:1,name:'바람',wins:1,losses:0,named:true}); // named = 직접 고친 이름 (10/18 — 기본 이름과 가름)
  const wonCoins=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).coins);assert.ok(wonCoins>=405&&wonCoins<=415,`win +5~15: ${wonCoins}`); // 사장님 10/16 04:3x
  await p.waitForFunction(()=>game.state==='paused',null,{timeout:90000});
  assert.equal(await p.locator('#menuReward').textContent(),`금화 +${wonCoins-400}`);assert.equal(await p.locator('#menuReward').isVisible(),true);
@@ -189,8 +190,13 @@ try{
   assert.equal(await q.locator('#lobbyDepart').textContent(),'Stage 입장');
   assert.ok(await q.locator('.lobby').evaluate(el=>el.scrollWidth<=el.clientWidth));
   await q.locator('#lobbyDepart').scrollIntoViewIfNeeded();assert.equal(await q.locator('#lobbyDepart').isVisible(),true);
-  await q.locator('#tabWeapons').focus();await q.keyboard.press('End');assert.equal(await q.locator('#panelSkills').isVisible(),true);
-  check(`${name}: Stage 1 → card draw → pause → 대기실: lobby fits, no overflow, keyboard tab selection works`);await c.close();
+  // 메뉴 2 × 2 (10/18 04:1x — 윗칸 아이템 · 상점 · 아랫칸 스킬북 · 이벤트): ↓ ↑ = 같은 칸 줄 · ← → = 다음 · 앞 · Home · End
+  const shown=()=>q.evaluate(()=>[...document.querySelector('#gameEntrance').shadowRoot.querySelectorAll('.contents-panel > [role=tabpanel]')].filter(e=>!e.hidden).map(e=>e.id).join());
+  await q.locator('#tabItems').focus();
+  await q.keyboard.press('ArrowDown');assert.equal(await shown(),'panelSkills');await q.keyboard.press('ArrowRight');assert.equal(await shown(),'panelEvent');
+  await q.keyboard.press('ArrowUp');assert.equal(await shown(),'panelShop');await q.keyboard.press('Home');assert.equal(await shown(),'panelInventory');
+  await q.keyboard.press('End');assert.equal(await shown(),'panelEvent');assert.equal(await q.locator('#tabEvent').evaluate(e=>e===e.getRootNode().activeElement&&e.getAttribute('aria-selected')),'true');
+  check(`${name}: Stage 1 → card draw → pause → 대기실: lobby fits, no overflow, keyboard tab selection works on the 2×2 menu (↓ 스킬북 · → 이벤트 · ↑ 상점 · Home 아이템 · End 이벤트)`);await c.close();
  }
  const denied=await browser.newContext({viewport:{width:844,height:390},serviceWorkers:'allow',reducedMotion:'reduce'});await noAuth(denied);await denied.addInitScript(()=>{Storage.prototype.getItem=()=>{throw Error('denied');};Storage.prototype.setItem=()=>{throw Error('denied');};});
  const d=await denied.newPage();watch(d);await d.goto(base+'/',{waitUntil:'networkidle'});await title(d);assert.equal(await departTitle(d),'draw');check('storage denied still allows a new game (Stage 1 → card draw)');await denied.close();

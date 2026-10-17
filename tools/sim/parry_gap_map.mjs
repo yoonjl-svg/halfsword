@@ -51,7 +51,7 @@ const RIP_T = +(process.env.RIP_T ?? 1.5);
 const HUM = process.env.HUMAN != null ? +process.env.HUMAN : null; // 사람 흉내 반응 시간(s) — 위 머리말
 const PRESS = process.env.PRESS != null ? +process.env.PRESS : null; // 늦게 누르기: 긋기 시작 + PRESS s 에 막기 단추를 누름 (위 머리말)
 // NOHOLD=1 (같은 연구): 판 시작 발 묶임(ARENA.startHold 2 s — fighter.feetHeld)을 풀고 시작 — 이 판의 공격은 1.2~1.6 s 에 끝나 묶인 발로는 물러서기 · 되찌르기 걸음이 없다.
-//  싸움 한가운데처럼 두 몸 fightT = startHold 로(lobby_rig.js 와 같은 길) · NOHOLD=D = 막는 쪽만(치는 쪽은 묶인 채 — 베기에 몸 내딛기가 안 붙는 지금 판 공격 그대로).
+//  싸움 한가운데처럼 두 몸 fightT = startHold 로(fighter.feetHeld 가 읽는 판 시계를 묶임 끝으로 — 10/18 에 지운 대기실 3D 몸 lobby_rig.js 가 쓰던 길) · NOHOLD=D = 막는 쪽만(치는 쪽은 묶인 채 — 베기에 몸 내딛기가 안 붙는 지금 판 공격 그대로).
 //  물러서기 연구는 바탕까지 모두 같은 판으로 견준다(짝 비교)
 const NOHOLD = process.env.NOHOLD ?? '';
 const byName = Object.fromEntries(TECH.map((t) => [t.name, t]));

@@ -1,6 +1,8 @@
 // 대기실 장착·배치 점검 (샛별 저장소 lobby_equipment_smoke.mjs 를 우리 판에 맞춤 — docs/import/lobby_port_2026-10-16.md §6)
 //  우리 손댐: 무기 칸 = 나뭇가지 하나(롱소드 뺌) · 나뭇가지 설명 카드(weapons.js 이름·등급·설명 그대로) · 방어구 이름 '케틀 햇' · 첫 화면 아래 줄 세 칸
-//  10/17: 방어구 칸 = 케틀 햇 · 용사의 눈물 둘 (용사의 눈물 장착 · 싸움은 tools/browser/hero_tear_smoke.mjs — 여기서는 칸 수 · 차례만)
+//  10/17: 방어구 = 케틀 햇 · 용사의 눈물 둘 (용사의 눈물 장착 · 싸움은 tools/browser/hero_tear_smoke.mjs — 여기서는 칸 수 · 차례만)
+//  10/18 04:1x 사장님 "무기+방어구 합쳐서 '아이템'으로 … 아이템은 현재 가로 5칸에서 6칸으로 확장. 순서는 (윗칸에) 아이템 상점 (아랫칸에) 스킬북 이벤트":
+//   메뉴 [아이템][상점] / [스킬북][이벤트] · 아이템 칸 한 판 = 나뭇가지 → 케틀 햇 → 용사의 눈물 · 6 × 4 = 24 칸 정사각 · 장착 규칙은 종류마다 그대로(무기 한 자리 · 머리 · 목 따로)
 //  10/17 11:2x 흐름: 첫 화면 'Stage 1' → 곧바로 여정(카드, 장착한 무기가 있으면 싸움) → 정지 → 대기실('Stage 입장') — tools/browser/to_lobby.mjs
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/lobby_equipment_smoke.mjs http://127.0.0.1:5201 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
@@ -15,9 +17,10 @@ const IGNORED=/deprecated parameters for the initialization function/;
 const watch=p=>{p.on('pageerror',e=>errors.push(String(e)));p.on('console',m=>{if(m.type()==='error'&&!IGNORED.test(m.text()))errors.push(m.text());});p.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});};
 const noAuth=async c=>c.route('https://*.supabase.co/**',r=>{errors.push('auth server called: '+r.request().url());r.abort();});
 const title=async p=>{await p.waitForFunction(()=>window.game?.player,null,{timeout:60000});if(await p.locator('#noticeDialog').evaluate(d=>d.open))await p.locator('#confirmNotices').click();};
-// 장착한 무기 = 무기 칸의 '장착 중' 표시 (10/17 — 전: 3D 미리보기 #characterView data-equipped · 미리보기를 정사각 프로필 그림으로 바꿈). 방어구 칸이 보이는 동안은 무기 칸이 없어 건너뜀
+// 장착한 무기 = 무기 칸의 '장착 중' 표시 (10/17 — 전: 3D 미리보기 data-equipped · 미리보기를 정사각 프로필 그림으로 바꿈). 아이템 칸이 안 보이면(다른 탭) 건너뜀
 const state=async(p,equip,unequip,weapon)=>{assert.equal(await p.locator('#equipItem').isEnabled(),equip);assert.equal(await p.locator('#unequipItem').isEnabled(),unequip);if(await p.locator('.inventory-item[data-weapon]').count())assert.equal(await p.locator('.inventory-item[data-weapon].is-equipped').evaluateAll(els=>els.map(e=>e.dataset.weapon).join('')),weapon);};
 const armorOn=(p,id)=>p.locator(`.inventory-item[data-armor=${id}]`).evaluate(e=>e.classList.contains('is-equipped'));
+const badges=p=>p.locator('.inventory-item').evaluateAll(els=>els.map(e=>[e.dataset.item,!e.querySelector('.equipped-badge').hidden]));
 const portraitOf=p=>p.locator('#lobbyPortrait').evaluate(f=>[f.dataset.portrait,f.querySelector('img').getAttribute('src'),f.querySelector('img').complete&&f.querySelector('img').naturalWidth>0]);
 const card=p=>p.locator('#itemDetail').evaluate(e=>{const r=e.getBoundingClientRect(),f=e.closest('.inventory-frame').getBoundingClientRect();return {hidden:e.hidden,name:e.querySelector('#itemName').textContent,rarity:e.querySelector('#itemRarity').textContent,description:e.querySelector('#itemDescription').textContent,inside:r.left>=f.left-.5&&r.right<=f.right+.5&&r.top>=f.top-.5&&r.bottom<=f.bottom+.5,overflow:e.scrollHeight>e.clientHeight+1};});
 const shot=(p,name)=>p.screenshot({path:`${out}/${name}.png`});
@@ -35,26 +38,29 @@ try{
  const titleButton=await style('#newJourney');assert.equal(await p.locator('#newJourney').textContent(),'Stage 1');await shot(p,'title-reference');assert.equal(await titleToLobby(p,'#newJourney','tap'),'draw'); // 장착 없음 → 카드 → 정지 → 대기실
  // 글은 싸움 화면 규칙(10/16 entrance_type.css): 첫 화면 주 단추 14·700 · 고른 탭 12·600 · 안 고른 탭 12·400 · 글꼴 줄 Cinzel → 프리텐다드
  //  꼴(10/16 15:3x — 나무 판자 → 싸움 화면 꼴): 주 단추 = 테두리 없는 납작한 금색 · 탭 = 1 px 테두리(고른 것 금색) · 둘 다 잘라 낸 모서리 · 나뭇결 없음
- const lobbyButton=await style('#tabWeapons'),otherTab=await style('#tabArmor');assert.equal(lobbyButton[1],'12px');assert.equal(titleButton[1],'14px');assert.deepEqual([titleButton[2],lobbyButton[2],otherTab[2]],['700','600','400']);
+ const lobbyButton=await style('#tabItems'),otherTab=await style('#tabShop');assert.equal(lobbyButton[1],'12px');assert.equal(titleButton[1],'14px');assert.deepEqual([titleButton[2],lobbyButton[2],otherTab[2]],['700','600','400']);
  assert.ok(titleButton[0].startsWith('Cinzel, Pretendard'),titleButton[0]);assert.equal(lobbyButton[0],titleButton[0]);assert.equal(await p.locator('#lobbyBack').textContent(),'첫 화면');assert.equal(await p.locator('#lobbyDepart').textContent(),'Stage 입장');
  assert.deepEqual(titleButton.slice(4),['0px','none','none']);assert.deepEqual(lobbyButton.slice(3),['rgb(217, 164, 65)','1px','none','none']);assert.deepEqual(otherTab.slice(3),['rgba(243, 233, 216, 0.18)','1px','none','none']);
- await state(p,false,false,'');assert.equal(await p.locator('.inventory-item').count(),1);assert.equal(await p.locator('.inventory-slot').count(),19);
+ await state(p,false,false,'');assert.equal(await p.locator('.inventory-item').count(),3);assert.equal(await p.locator('.inventory-slot').count(),21); // 24 칸 = 물건 3 + 빈 칸 21
+ assert.deepEqual(await p.locator('.inventory-item').evaluateAll(els=>els.map(e=>[e.dataset.item,e.dataset.weapon??null,e.dataset.armor??null,e.dataset.tier])),[['tree_branch','tree_branch',null,'trash'],['kettle',null,'kettle','legend'],['hero_tear',null,'hero_tear','legend']]); // 무기 다음 방어구 한 판
+ assert.deepEqual([await p.locator('#inventoryHeading').textContent(),await p.locator('#inventoryCount').textContent(),await p.locator('.inventory-grid').getAttribute('aria-label')],['아이템','3개','가로 6칸 세로 4칸']);
  assert.equal(await p.locator('[data-weapon=longsword]').count(),0);
  const layout=await p.locator('.inventory-grid').evaluate(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect(),item=e.firstElementChild.getBoundingClientRect(),root=e.getRootNode();return {columns:s.gridTemplateColumns.split(' ').length,rows:s.gridTemplateRows.split(' ').length,cell:[item.width,item.height],width:r.width,frame:root.querySelector('.portrait-card').getBoundingClientRect().toJSON(),panel:root.querySelector('.character-panel').getBoundingClientRect().toJSON(),depart:root.getElementById('lobbyDepart').getBoundingClientRect().toJSON()};});
- assert.equal(layout.columns,5);assert.equal(layout.rows,4);{const k=layout.cell[0]/layout.cell[1];assert.ok(k>.99&&k<1.45,`cell ${layout.cell}`);} // 10/17 23:4x · 10/18: 프로필 칸에서 줄어든 폭만큼 재고 틀이 옆으로 넓어져 칸이 가로로 긺(60 % 판 1.27 ~ 1.34 — 전: 정사각)assert.ok(layout.cell[0]>43.3);
+ assert.equal(layout.columns,6);assert.equal(layout.rows,4);{const k=layout.cell[0]/layout.cell[1];assert.ok(k>.97&&k<1.03,`cell ${layout.cell}`);} // 10/18 04:1x 6 × 4 · 칸 정사각(03:3x — 전 10/17 23:4x 가로로 1.27 ~ 1.34)
  // 10/16 15:3x ⑤: 칸 위 = 카드 위 · 칸 아래 = 출발 단추 아래 (전: 칸의 80 % × 80 %) · 10/17 22:1x: 카드(2 : 3 미리보기) → 정사각 프로필 그림(23:4x 그 80 %) — 출발 단추 폭 = 그림 폭
  const ratio=layout.frame.width/layout.frame.height;assert.ok(ratio>.99&&ratio<1.01,`card ratio ${ratio}`);assert.ok(Math.abs(layout.frame.width-layout.depart.width)<.5,JSON.stringify(layout));
  assert.deepEqual(await portraitOf(p),['player','ui/portraits/player.webp',true]);
  assert.ok(Math.abs(layout.frame.top-layout.panel.top)<1&&Math.abs(layout.depart.bottom-layout.panel.bottom)<1&&layout.depart.y>=layout.frame.bottom&&layout.depart.bottom<=390,JSON.stringify(layout));
  assert.equal((await card(p)).hidden,true);
- await shot(p,'lobby-phone');checks.push({name:'battle-style buttons and tabs, lobby text smaller; square profile picture (player, low) at the column top, departure button at the column bottom (same width); 5×4 square grid; tree branch only (no longsword)',layout});
+ await shot(p,'lobby-phone');checks.push({name:'battle-style buttons and tabs, lobby text smaller; square profile picture (player, low) at the column top, departure button at the column bottom (same width); 6×4 square grid (24 slots); one item list tree branch → kettle hat → hero tear (no longsword)',layout});
  assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleCurrent').textContent(),'여행자');assert.equal(await p.locator('#lobbyCoins').textContent(),'100');
  assert.equal(await p.locator('.duel-record > span').textContent(),'대면 결과');
  const order=await p.locator('.profile-data dd').evaluateAll(els=>els.map(e=>e.id||e.className));assert.deepEqual(order,['lobbyRank','name-row']); // 대표 유파 칸은 뺐다 (10/16 15:3x ⑥)
  const menu=await p.locator('.lobby-tabs button').evaluateAll(els=>els.map(e=>({text:e.textContent,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y})));
- assert.deepEqual(menu.map(m=>m.text),['무기','방어구','상점','스킬북']);assert.equal(menu[0].y,menu[1].y);assert.equal(menu[2].y,menu[3].y);assert.ok(menu[2].y>menu[0].y);
- await p.locator('#tabArmor').tap();assert.equal(await p.locator('.inventory-item').count(),2);assert.equal(await p.locator('.inventory-slot').count(),18); // 10/17 용사의 눈물이 둘째 칸 (hero_tear_smoke 가 자세히 본다)
- assert.deepEqual(await p.locator('.inventory-item').evaluateAll(els=>els.map(e=>e.dataset.armor)),['kettle','hero_tear']);
+ assert.deepEqual(menu.map(m=>m.text),['아이템','상점','스킬북','이벤트']);assert.equal(menu[0].y,menu[1].y);assert.equal(menu[2].y,menu[3].y);assert.ok(menu[2].y>menu[0].y);assert.equal(menu[0].x,menu[2].x);assert.equal(menu[1].x,menu[3].x); // 10/18 04:1x 윗칸 아이템 · 상점 · 아랫칸 스킬북 · 이벤트
+ assert.equal(await p.locator('#tabWeapons, #tabArmor').count(),0);
+ assert.deepEqual(await p.locator('.inventory-item[data-armor]').evaluateAll(els=>els.map(e=>e.dataset.armor)),['kettle','hero_tear']); // 방어구는 무기 다음 칸 (10/17 용사의 눈물이 케틀 햇 다음 — hero_tear_smoke 가 자세히 본다)
+ assert.deepEqual(await badges(p),[['tree_branch',false],['kettle',true],['hero_tear',true]]); // 새 기기: 무기 없음 · 케틀 햇 · 용사의 눈물 장착
  await p.locator('[data-armor=kettle] img').evaluate(img=>img.decode());await p.locator('button[data-armor=kettle]').tap();
  let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','레전드','여행자의 필수품. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
  assert.deepEqual(await p.locator('#itemDetail').evaluate(e=>[getComputedStyle(e.querySelector('#itemRarity')).color,getComputedStyle(e.querySelector('#itemName')).color,getComputedStyle(e.querySelector('.item-ability')).color]),Array(3).fill('rgb(255, 210, 74)')); // 레전드 = --tier-legend (사장님 10/16 03:5x)
@@ -63,16 +69,19 @@ try{
  await p.locator('#unequipItem').tap();assert.equal(await armorOn(p,'kettle'),false);await state(p,true,false,'');await shot(p,'armor-unequipped');
  assert.match(await p.locator('#equipmentStatus').textContent(),/장착 해제/);
  assert.equal(await p.evaluate(()=>game.player.helmetGroup.visible),true);
- await p.locator('#equipItem').tap();assert.match(await p.locator('#equipmentStatus').textContent(),/^케틀 햇 장착/);await p.locator('#tabWeapons').tap();await state(p,false,false,'');
- checks.push({name:'profile order, initial Lv1/traveler/100 coins, 2×2 menus, armor card 케틀 햇 · 커먼 · description, independent armor slot'});
+ await p.locator('#equipItem').tap();assert.match(await p.locator('#equipmentStatus').textContent(),/^케틀 햇 장착/);await p.locator('#tabShop').tap();await p.locator('#tabItems').tap();await state(p,false,false,''); // 탭을 오가면 고른 것 없이
+ assert.equal((await card(p)).hidden,true);
+ checks.push({name:'profile order, initial Lv1/traveler/100 coins, 2×2 menu [아이템][상점] / [스킬북][이벤트], one item grid (weapon then armor), armor card 케틀 햇 · 레전드 · description, independent armor slot'});
  const bodies=await p.evaluate(()=>game.player.meshes.map(({rb})=>({position:rb.translation(),rotation:rb.rotation()})));
  await p.locator('[data-weapon=tree_branch]').tap();await state(p,true,false,'');
  k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,branch.nameKo,TIER_LABEL[branch.tier],branch.desc]);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
  assert.equal(k.rarity,'쓰레기');await shot(p,'branch-selected');
  await p.locator('#equipItem').tap();await state(p,false,true,'tree_branch');await shot(p,'branch-equipped');
+ assert.deepEqual(await badges(p),[['tree_branch',true],['kettle',true],['hero_tear',true]]); // 무기를 걸어도 방어구 자리는 그대로 (자리마다 따로 — 한 판이어도 규칙 그대로)
  assert.equal(await p.locator('[data-weapon=tree_branch] .equipped-badge').isVisible(),true);
  assert.match(await p.locator('#equipmentStatus').textContent(),/나뭇가지 장착/);assert.deepEqual(await portraitOf(p),['player','ui/portraits/player.webp',true]); // 프로필 그림은 장착과 무관
  await p.locator('#unequipItem').tap();await state(p,true,false,'');await shot(p,'unequipped');
+ assert.deepEqual(await badges(p),[['tree_branch',false],['kettle',true],['hero_tear',true]]);
  await p.locator('.inventory-slot').first().tap();await state(p,false,false,'');assert.equal((await card(p)).hidden,true);
  for(let i=0;i<8;i++){await p.locator('[data-weapon=tree_branch]').tap();await p.locator('#equipItem').tap();await p.locator('#unequipItem').tap();await p.locator('.inventory-slot').first().tap();}
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({position:rb.translation(),rotation:rb.rotation()}))),bodies);assert.equal(await p.evaluate(()=>game.stats.simTime),0);
@@ -91,10 +100,12 @@ try{
  for(const [name,width,height] of [['desktop',1280,720],['wide',1440,900],['portrait',390,844],['small-portrait',320,568],['small-landscape',568,320]]){
   const qc=await browser.newContext({viewport:{width,height},reducedMotion:'reduce'});await noAuth(qc);const q=await qc.newPage();watch(q);await q.goto(base+'/',{waitUntil:'networkidle'});await title(q);await titleToLobby(q);
   assert.ok(await q.locator('.lobby').evaluate(e=>e.scrollWidth<=e.clientWidth));await q.locator('.inventory-grid').scrollIntoViewIfNeeded();
+  const g=await q.locator('.inventory-grid').evaluate(e=>{const c=[...e.children].map(x=>x.getBoundingClientRect()),k=c.map(r=>r.width/r.height);return {columns:getComputedStyle(e).gridTemplateColumns.split(' ').length,slots:c.length,rows:new Set(c.map(r=>Math.round(r.y))).size,min:Math.min(...k),max:Math.max(...k),cell:[c[0].width,c[0].height],scroll:e.scrollHeight<=e.clientHeight};});
+  assert.deepEqual([g.columns,g.slots,g.rows,g.scroll],[6,24,4,true],`${name} ${JSON.stringify(g)}`);assert.ok(g.min>.97&&g.max<1.03,`${name} square cells ${JSON.stringify(g)}`); // 6 × 4 정사각 (좁은 화면 568 × 320 · PC 세로 창도)
   await q.locator('[data-weapon=tree_branch]').click();const kk=await card(q);assert.ok(kk.inside&&!kk.overflow,`${name} ${JSON.stringify(kk)}`); // 장착 · 해제는 설명 카드 안 (10/16 15:3x)
   await q.locator('#equipItem').click();await state(q,false,true,'tree_branch');
   await q.locator('#lobbyDepart').scrollIntoViewIfNeeded();await q.locator('#lobbyDepart').click();await q.waitForFunction(()=>game.state==='fight'&&game.player.weapon.id==='tree_branch',null,{timeout:60000});
-  checks.push({name:`${name}: fits, item card inside the frame, equipment buttons and departure reachable`});await qc.close();
+  checks.push({name:`${name}: fits, 6×4 square item grid (cell ${g.cell.map(v=>+v.toFixed(2)).join('×')}), item card inside the frame, equipment buttons and departure reachable`});await qc.close();
  }
  const denied=await browser.newContext({viewport:{width:844,height:390},reducedMotion:'reduce'});await noAuth(denied);
  await denied.addInitScript(()=>{Storage.prototype.getItem=()=>{throw Error('denied');};Storage.prototype.setItem=()=>{throw Error('denied');};});

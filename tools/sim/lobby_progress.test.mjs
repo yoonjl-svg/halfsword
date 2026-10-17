@@ -52,11 +52,26 @@ test('titles: 여행자 always owned · earned titles listed once in order · on
  storage.set(PROGRESS_KEY,before);readProgress();
 });
 test('profile: default name, 16-character trim, literal text, win/loss counts',()=>{
- assert.deepEqual(readProfile(),{name:'방랑자',wins:0,losses:0});
+ assert.deepEqual(readProfile(),{name:'Noname',wins:0,losses:0}); // 사장님 10/18 04:1x — 전 '방랑자'
  assert.equal(renamePlayer('   ').ok,false);
  assert.equal(cleanName('  가나다라마바사아자차카타파하가나다라  '),'가나다라마바사아자차카타파하가나');
  assert.equal(renamePlayer('<b>검객</b>').ok,true);assert.equal(readProfile().name,'<b>검객</b>');
  recordDuel(true);recordDuel(false);recordDuel(false);assert.deepEqual(readProfile(),{name:'<b>검객</b>',wins:1,losses:2});
+});
+// 기본 이름 'Noname' (사장님 10/18 04:1x): 판 끝 저장(recordDuel)이 그때의 기본 이름도 같이 저장해 왔다 — 저장된 이름이 꼭 전 기본 '방랑자'면 'Noname' · 직접 고친 이름은 그대로
+test('profile: saved old default 방랑자 reads as Noname (counts kept); typed names stay; renaming to 방랑자 now is kept; the default is never marked as typed',()=>{
+ const before=storage.get(PROFILE_KEY);
+ storage.set(PROFILE_KEY,JSON.stringify({version:1,name:'방랑자',wins:3,losses:2})); // 10/18 전 기본 이름으로 판 끝에 저장된 것
+ assert.deepEqual(readProfile(),{name:'Noname',wins:3,losses:2});
+ recordDuel(true);assert.deepEqual(JSON.parse(storage.get(PROFILE_KEY)),{version:1,name:'Noname',wins:4,losses:2}); // 다음 저장부터 새 기본 이름 · 고친 표시 없음
+ storage.set(PROFILE_KEY,JSON.stringify({version:1,name:'방랑 검객',wins:1,losses:0})); // 전에 직접 고친 이름 (표시 없는 옛 저장)
+ assert.equal(readProfile().name,'방랑 검객');recordDuel(false);assert.equal(readProfile().name,'방랑 검객');
+ storage.set(PROFILE_KEY,JSON.stringify({version:1,name:'  방랑자 ',wins:0,losses:0}));assert.equal(readProfile().name,'Noname'); // 앞뒤 빈칸만 다른 옛 기본 이름도
+ assert.equal(renamePlayer('방랑자').ok,true);assert.equal(readProfile().name,'방랑자'); // 10/18 부터 직접 '방랑자'로 고치면 그대로
+ assert.deepEqual(JSON.parse(storage.get(PROFILE_KEY)),{version:1,name:'방랑자',wins:0,losses:0,named:true});
+ recordDuel(true);assert.deepEqual(readProfile(),{name:'방랑자',wins:1,losses:0});assert.equal(JSON.parse(storage.get(PROFILE_KEY)).named,true); // 판 끝 저장도 표시를 지킨다
+ storage.set(PROFILE_KEY,JSON.stringify({version:1,name:'',wins:0,losses:0}));assert.equal(readProfile().name,'Noname'); // 빈 이름 = 기본
+ storage.set(PROFILE_KEY,before);readProfile();
 });
 test('blocked storage keeps new acquisitions for the session',()=>{
  globalThis.localStorage={getItem:()=>{throw Error('blocked');},setItem:()=>{throw Error('blocked');}};

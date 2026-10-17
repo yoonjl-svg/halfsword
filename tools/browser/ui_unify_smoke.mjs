@@ -6,7 +6,9 @@
 //  ③ 미닫이: '화면 60 fps 제한' · '지난 업데이트 숨김' = 싸움 화면 .toggle 과 같은 꼴(44 × 24 · 손잡이 18) · role=switch · aria-checked · 하는 일 · 저장 그대로
 //  ④ 호칭 내림 상자(16:0x): 단추 = 부 단추 꼴(금색 아님) · 누르면 바로 아래로 · 반투명(알파 < 1) · 가진 호칭만 · '(호칭 없음)' 같은 글 없음 · Esc · 바깥 누름으로 닫힘 · 방향키 · 고른 호칭 저장(새로 고쳐도)
 //  ⑤ 대표 유파 칸 없음
-//  ⑥ 세 칸 위아래 줄 같음 · 사슬 틀 두께 셋 다 14 · 재고 틀 = 별자리 틀(크기 · 자리) · 재고 틀 안 남는 띠 없음 · 캐릭터 카드 약 2 : 3 · 틀 길이 = 사슬 마디(12 px)의 배수 — 844×390 · 932×430 · 1280×720
+//  ⑥ 세 칸 위아래 줄 같음 · 창 둘 바깥 줄 = 액자 1(프로필과 같은 두께) · 정사각 프로필 — 844×390 · 932×430 · 1280×720
+//     10/18 04:1x 사장님 '무기+방어구 합쳐서 아이템 … 가로 5칸에서 6칸으로' (docs/design/portrait_ui_2026-10-17.md §10): 메뉴 2 × 2 = [아이템][상점] / [스킬북][이벤트] ·
+//     아이템 칸 판 6 × 4 = 24 · 칸 정사각(0.97 ~ 1.03) · 한 변 = min((창 안 높이 − 24) ÷ 4, (창 안 폭 − 32) ÷ 6) 내림 · 3단 가운데 · 무기 다음 방어구 한 판 · 이벤트 = 상점과 같은 꼴의 빈 안내 한 줄
 //  ⑦ 칸 그림: 보이는 부분이 칸의 약 80 % · 매끈하게(픽셀 확대 아님) · 뒤에 등급 빛(케틀 햇 레전드 · 나뭇가지 쓰레기) · '장착 중'이 그림을 안 가림 · 금화 그림 픽셀 확대 아님
 //  10/17 11:2x: 첫 화면 주 단추 = 'Stage 1'(전 '처음부터') · 한글 제목 줄 없음(이름은 Stillness 하나) · 대기실 = 첫 화면 → 곧바로 카드 → 정지 → '대기실'(tools/browser/to_lobby.mjs) — 대기실 출발 단추는 늘 'Stage 입장'(12:1x — 전 '여정 시작' · '여정 이어가기')
 //  npm run build && node tools/pwa/build.mjs && npx vite preview --port 5261 →  node tools/browser/ui_unify_smoke.mjs http://127.0.0.1:5261 /tmp/<빈 폴더>
@@ -145,10 +147,23 @@ try {
     const tabs = await shadow(p, `return [...root.querySelectorAll('.lobby-tabs [role=tab]')].map((e)=>{const s=getComputedStyle(e);return {sel:e.getAttribute('aria-selected'),border:s.borderTopColor,color:s.color,bg:s.backgroundColor,radius:s.borderRadius,w:s.borderTopWidth};})`);
     assert.deepEqual(tabs[0], { sel: 'true', border: 'rgb(217, 164, 65)', color: 'rgb(217, 164, 65)', bg: 'rgba(0, 0, 0, 0)', radius: '8px', w: '1px' });
     assert.deepEqual(tabs[1], { sel: 'false', border: 'rgba(243, 233, 216, 0.18)', color: 'rgb(184, 168, 142)', bg: 'rgba(0, 0, 0, 0)', radius: '8px', w: '1px' });
+    // 메뉴 2 × 2 차례 (사장님 10/18 04:1x '(윗칸에) 아이템 상점 (아랫칸에) 스킬북 이벤트') — 전 무기 · 방어구 탭 없음
+    const menu = await shadow(p, `return [...root.querySelectorAll('.lobby-tabs [role=tab]')].map((e)=>{const r=e.getBoundingClientRect();return {id:e.id,text:e.textContent,x:Math.round(r.x),y:Math.round(r.y),panel:e.getAttribute('aria-controls')};})`);
+    assert.deepEqual(menu.map((m) => [m.id, m.text, m.panel]), [['tabItems', '아이템', 'panelInventory'], ['tabShop', '상점', 'panelShop'], ['tabSkills', '스킬북', 'panelSkills'], ['tabEvent', '이벤트', 'panelEvent']]);
+    assert.ok(menu[0].y === menu[1].y && menu[2].y === menu[3].y && menu[2].y > menu[0].y && menu[0].x === menu[2].x && menu[1].x === menu[3].x && menu[1].x > menu[0].x, JSON.stringify(menu));
+    assert.equal(await shadow(p, `return root.querySelectorAll('#tabWeapons, #tabArmor').length`), 0);
+    // 이벤트 = 상점처럼 아직 비공개: 제목 + 빈 안내 한 줄 — 글 꼴(크기 · 굵기 · 색 · 줄 높이 · 여백)이 상점 줄과 같다
+    const emptyLine = (panel) => shadow(p, `const e=root.querySelector('#${panel} .empty-panel'),s=getComputedStyle(e),r=e.getBoundingClientRect(),h=root.querySelector('#${panel} .panel-heading h2');return {text:e.textContent,heading:h.textContent,font:[s.fontSize,s.fontWeight,s.color,s.lineHeight,s.margin].join(' '),x:Math.round(r.x),y:Math.round(r.y),lines:root.querySelectorAll('#${panel} > :not(.panel-heading)').length};`);
+    await p.locator('#tabShop').tap(); const shopLine = await emptyLine('panelShop');
+    await p.locator('#tabEvent').tap(); const eventLine = await emptyLine('panelEvent');
+    assert.equal(await shadow(p, `return [root.getElementById('panelEvent').hidden, root.getElementById('panelShop').hidden, root.getElementById('panelInventory').hidden, root.getElementById('tabEvent').getAttribute('aria-selected')].join()`), 'false,true,true,true');
+    assert.deepEqual([eventLine.heading, eventLine.text, eventLine.lines], ['이벤트', '아직 진행 중인 이벤트가 없습니다.', 1]);
+    assert.deepEqual([shopLine.heading, shopLine.text], ['상점', '아직 판매 중인 물품이 없습니다.']);
+    assert.deepEqual([eventLine.font, eventLine.x, eventLine.y], [shopLine.font, shopLine.x, shopLine.y], 'event line = shop line look and place');
     await p.locator('#tabSkills').tap();
     const schoolTabs = await shadow(p, `return [...root.querySelectorAll('.school-tabs [role=tab]')].slice(0,2).map((e)=>{const s=getComputedStyle(e);return {sel:e.getAttribute('aria-selected'),border:s.borderTopColor,color:s.color,bg:s.backgroundColor,radius:s.borderRadius,w:s.borderTopWidth};})`);
     assert.deepEqual(schoolTabs, tabs.slice(0, 2)); // 메뉴 탭 = 유파 탭 같은 꼴
-    checks.push('lobby buttons (Stage 입장 · 첫 화면 · 탭 · 장착/해제 · 이름 창) flat, radius 8, no bevel/shadow; pressing Stage 입장 does not drop; category tabs = school tabs (outline · selected accent border + text · radius 8)');
+    checks.push({ check: 'lobby buttons (Stage 입장 · 첫 화면 · 탭 · 장착/해제 · 이름 창) flat, radius 8, no bevel/shadow; pressing Stage 입장 does not drop; menu 2×2 = [아이템][상점] / [스킬북][이벤트] (no 무기 · 방어구 tabs); 이벤트 = heading + one empty line in the shop line look and place; category tabs = school tabs (outline · selected accent border + text · radius 8)', menu, eventLine });
     await c.close();
   }
 
@@ -197,14 +212,17 @@ try {
     await c.close();
   }
 
-  // ── ⑥ 세 칸 · 사슬 틀 · ⑦ 칸 그림 ──
+  // ── ⑥ 세 칸 · 액자 1 틀 · 아이템 칸 판 6 × 4 · ⑦ 칸 그림 ──
   for (const [size, w, h] of [['844x390', 844, 390], ['932x430', 932, 430], ['1280x720', 1280, 720]]) {
     const c = await browser.newContext({ viewport: { width: w, height: h }, reducedMotion: 'reduce' }); await noAuth(c);
     const p = await c.newPage(); watch(p);
     await p.goto(base + '/', { waitUntil: 'networkidle' }); await title(p); await toLobby(p);
     await p.locator('[data-weapon=tree_branch]').click(); await p.locator('#equipItem').click(); await p.locator('[data-weapon=tree_branch]').click(); // 장착 중 표시 · 설명 카드 닫음
     const L = () => shadow(p, `const R=(s)=>{const r=root.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom,r:r.right};};const bw=(s)=>getComputedStyle(root.querySelector(s)).borderTopWidth;
-      return {card:R('.portrait-card'),depart:R('#lobbyDepart'),profile:R('.profile-panel'),contents:R('.contents-panel'),inv:R('.inventory-frame'),grid:R('.inventory-grid'),host:R('.skill-tree-host'),cell:R('.inventory-grid > :first-child'),frames:[bw('.portrait-card'),bw('.profile-panel'),bw('.contents-panel'),bw('.inventory-frame'),bw('.skill-tree-host')],round:CSS.supports('width','round(down, 10px, 3px)')};`);
+      const g=root.querySelector('.inventory-grid'),cells=[...g.children].map((e)=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom,r:r.right};});
+      return {card:R('.portrait-card'),depart:R('#lobbyDepart'),profile:R('.profile-panel'),contents:R('.contents-panel'),inv:R('.inventory-frame'),grid:R('.inventory-grid'),host:R('.skill-tree-host'),cell:R('.inventory-grid > :first-child'),cells,
+        columns:getComputedStyle(g).gridTemplateColumns.split(' ').length,scroll:[g.scrollHeight,g.clientHeight,g.scrollWidth,g.clientWidth],
+        frames:[bw('.portrait-card'),bw('.profile-panel'),bw('.contents-panel'),bw('.inventory-frame'),bw('.skill-tree-host')],round:CSS.supports('width','round(down, 10px, 3px)')};`);
     const a = await L();
     const near = (x, y, what, tol = 1) => assert.ok(Math.abs(x - y) <= tol, `${size} ${what}: ${x} vs ${y}`);
     near(a.card.y, a.profile.y, 'card top = profile top'); near(a.card.y, a.contents.y, 'card top = contents top');
@@ -230,11 +248,16 @@ try {
       assert.match(src, /frame1_portrait/, `${size} ${q} frame 1 border image: ${src.slice(0, 80)}`);
     }
     near(a.grid.x, a.inv.x, 'grid = inventory box (left)', .5); near(a.grid.r, a.inv.r, 'grid = inventory box (right)', .5); near(a.grid.y, a.inv.y, 'grid = inventory box (top)', .5); near(a.grid.b, a.inv.b, 'grid = inventory box (bottom)', .5);
-    // 재고 칸 = 정사각 (10/18 03:3x '재고 칸이 1.3배로 길어진 거 별로야 … 아까와 같은 내부 비율 유지') · 판은 3단 가운데 (넓어진 폭은 양옆 빈자리)
-    const cellRatio = a.cell.w / a.cell.h; assert.ok(cellRatio > 0.97 && cellRatio < 1.03, `${size} inventory cell ratio ${cellRatio.toFixed(3)} (${a.cell.w}×${a.cell.h})`);
+    // 아이템 칸 판 (10/18 04:1x '가로 5칸에서 6칸으로'): 6 열 × 4 줄 = 24 칸 · 칸마다 정사각(03:3x '아까와 같은 내부 비율 유지' — 0.97 ~ 1.03) · 판 = 4 줄 높이 · 내림 없음(물건 3 개) · 판은 3단 가운데
+    assert.equal(a.columns, 6, `${size} grid columns`); assert.equal(a.cells.length, 24, `${size} slots`);
+    const rows = [...new Set(a.cells.map((c) => Math.round(c.y)))]; assert.equal(rows.length, 4, `${size} rows ${rows}`);
+    for (const row of rows) assert.equal(a.cells.filter((c) => Math.round(c.y) === row).length, 6, `${size} 6 cells in row ${row}`);
+    for (const c of a.cells) { const k = c.w / c.h; assert.ok(k > 0.97 && k < 1.03, `${size} cell ratio ${k.toFixed(3)} (${c.w}×${c.h})`); }
+    const cellRatio = a.cell.w / a.cell.h;
+    near(a.cells[23].b + 6, a.inv.b, 'frame bottom = 4th row + grid padding', .5); near(a.cells[5].r + 6, a.inv.r, 'frame right = 6th column + grid padding', .5);
+    assert.ok(a.scroll[0] <= a.scroll[1] && a.scroll[2] <= a.scroll[3], `${size} grid does not scroll with 3 items ${a.scroll}`);
     near((a.inv.x + a.inv.r) / 2, (a.contents.x + a.contents.r) / 2, 'inventory centred in the contents panel', 1);
-    // 사슬 마디 배수 확인은 뺐다 (10/17 — 틀이 액자 1(줄무늬)이라 마디가 없다) — 재고 칸 판 높이만 전처럼 마디 배수
-    if (a.round) { const gh = a.inv.h; assert.ok(Math.abs(((gh % 12) + 12) % 12) < .51 || Math.abs((gh % 12) - 12) < .51, `${size} inv grid height ${gh}: link multiple`); }
+    // (사슬 마디 배수 확인은 10/17 · 판 높이 마디 배수는 10/18 04:1x 뺐다 — 판 높이 = 칸 4 줄 · 칸 한 변은 아래 별자리 판 넓이로 셈해 본다)
     // 칸 그림 (보이는 부분 = 그림 파일의 불투명 상자 × 그린 크기) · 등급 빛 · '장착 중' 자리
     const cells = async () => shadow(p, `return Promise.all([...root.querySelectorAll('.inventory-item')].map(async (b)=>{const img=b.querySelector('img');await img.decode().catch(()=>{});
         const n=64,cv=document.createElement('canvas');cv.width=cv.height=n;const x=cv.getContext('2d');x.drawImage(img,0,0,n,n);const d=x.getImageData(0,0,n,n).data;let x0=n,x1=-1,y0=n,y1=-1;
@@ -244,9 +267,8 @@ try {
         // '장착 중'이 그림을 가리나: 알약 상자 안의 불투명 화소 수 (그림 파일 화소 기준)
         let covered=0;if(br)for(let y=0;y<n;y++)for(let k=0;k<n;k++){if(d[(y*n+k)*4+3]<=24)continue;const px=r.left+(k+.5)/n*r.width,py=r.top+(y+.5)/n*r.height;if(px>br.left&&px<br.right&&py>br.top&&py<br.bottom)covered++;}
         return {item:b.dataset.item,tier:b.dataset.tier,visible:+(Math.max(vis.r-vis.l,vis.b-vis.t)/Math.min(c.width,c.height)).toFixed(3),rendering:i.imageRendering,bg:s.backgroundImage,badge:br?badge.textContent:null,covered};}))`);
-    let got = await cells();
-    assert.equal(got.length, 1); assert.equal(got[0].badge, '장착 중');
-    await p.locator('#tabArmor').click(); got = got.concat(await cells());
+    const got = await cells(); // 한 판에 무기 다음 방어구 (10/18 04:1x — 전 무기 · 방어구 탭 둘)
+    assert.deepEqual(got.map((g) => [g.item, g.badge]), [['tree_branch', '장착 중'], ['kettle', '장착 중'], ['hero_tear', '장착 중']]); // 나뭇가지(위에서 장착) · 케틀 햇 · 용사의 눈물(처음부터 장착)
     for (const g of got) {
       assert.ok(g.visible >= 0.7 && g.visible <= 0.86, `${size} ${g.item} picture ${g.visible} of the cell`);
       assert.notEqual(g.rendering, 'pixelated', `${size} ${g.item} smooth`);
@@ -255,14 +277,18 @@ try {
     assert.match(got.find((g) => g.item === 'tree_branch').bg, /radial-gradient\(closest-side, rgba\(190, 188, 180, 0\.2\)/); // 쓰레기 회색 빛
     assert.match(got.find((g) => g.item === 'kettle').bg, /radial-gradient\(closest-side, rgba\(255, 210, 74, 0\.6\)/); // 레전드 금빛
     assert.notEqual(await shadow(p, `return getComputedStyle(root.querySelector('.coin-icon')).imageRendering`), 'pixelated');
-    // 탭을 바꿔도 판 높이 · 위 줄 그대로 (별자리 판 = 창 안 폭 전부 · 재고 칸 판과 같은 높이 · 같은 가운데 — 10/18 03:3x 안쪽 줄 없음)
+    // 탭을 바꿔도 판 위 줄 그대로 (별자리 판 = 창 안 폭 전부 × 창 안 높이 --grid-h · 같은 가운데 — 10/18 03:3x 안쪽 줄 없음)
     await p.locator('#tabSkills').click(); await p.waitForTimeout(150);
     const s = await L();
-    for (const k of ['y', 'h']) near(s.host[k], a.inv[k], `star board ${k} = inventory grid`, .5);
-    near(s.host.x + s.host.w / 2, a.inv.x + a.inv.w / 2, 'star board centre = inventory centre', 1); assert.ok(s.host.w >= a.inv.w - .5, `${size} star board not narrower than the inventory grid`);
+    near(s.host.y, a.inv.y, 'star board top = inventory grid top', .5);
+    near(s.host.x + s.host.w / 2, a.inv.x + a.inv.w / 2, 'star board centre = inventory centre', 1); assert.ok(s.host.w >= a.inv.w - .5 && s.host.h >= a.inv.h - .5, `${size} inventory grid inside the star board box`);
+    // 칸 한 변 = min((창 안 높이 − 여백 12 − 틈 12) ÷ 4, (창 안 폭 − 여백 12 − 틈 20) ÷ 6) 내림 — 창 안 넓이 = 별자리 판 상자(--grid-w + --grid-x × --grid-h)
+    const want = Math.floor(Math.min((s.host.h - 24) / 4, (s.host.w - 32) / 6));
+    near(a.cell.w, want, `cell side = min(height/4, width/6) (${s.host.w}×${s.host.h})`, .5); near(a.cell.h, want, 'cell height = side', .5);
+    if (Math.abs((s.host.h - 24) / 4 - want) < 1) near(s.host.h, a.inv.h, 'height-limited: star board height = inventory grid height', .5);
     if (size === '844x390') await p.screenshot({ path: `${out}/lobby-skills-844.png` });
-    report[`frames ${size}`] = { card: [a.card.w, a.card.h, +ratio.toFixed(3)], inventory: [a.inv.w, a.inv.h], starBoard: [s.host.w, s.host.h], columns: { top: [a.card.y, a.profile.y, a.contents.y], bottom: [a.depart.b, a.profile.b, a.contents.b] }, pictures: got.map((g) => [g.item, g.visible]) };
-    checks.push(`${size}: columns share top/bottom lines; frame 1 on the info · contents panels = profile-scaled (122/1254 of the profile width; profile picture: none — frame drawn in the picture); inner inventory · star board: no frame; square profile ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); inventory grid ${a.inv.w}×${a.inv.h} centred, square cells ${cellRatio.toFixed(3)}; star board same height and centre${a.round ? ', inventory height in link multiples' : ''}; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
+    report[`frames ${size}`] = { card: [a.card.w, a.card.h, +ratio.toFixed(3)], inventory: [a.inv.w, a.inv.h], cell: [a.cell.w, a.cell.h], starBoard: [s.host.w, s.host.h], columns: { top: [a.card.y, a.profile.y, a.contents.y], bottom: [a.depart.b, a.profile.b, a.contents.b] }, pictures: got.map((g) => [g.item, g.visible]) };
+    checks.push(`${size}: columns share top/bottom lines; frame 1 on the info · contents panels = profile-scaled (122/1254 of the profile width; profile picture: none — frame drawn in the picture); inner inventory · star board: no frame; square profile ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); item grid 6×4 = 24 slots ${a.inv.w}×${a.inv.h} centred, square cells ${a.cell.w}×${a.cell.h} (${cellRatio.toFixed(3)}) = min(height/4, width/6) of the ${s.host.w}×${s.host.h} inner box; one list tree branch → kettle hat → hero tear; star board same top and centre; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
     await c.close();
   }
   assert.deepEqual(errors, []);

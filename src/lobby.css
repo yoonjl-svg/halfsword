@@ -14,11 +14,11 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .sr-only, .lobby-header h1[data-painted=true] > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ── 크기 (사장님 ⑤ "사슬 틀은 3단 구성은 합리적이야. 그런데 각 틀의 사이즈나 비율은 조절해도 될 거 같아"):
-   세 칸(캐릭터 카드 + 출발 · 내 정보 · 재고/스킬북)이 위 · 아래 줄을 같이 쓴다 — 칸 높이 --col-h 하나에서 모두 셈.
+   세 칸(캐릭터 카드 + 출발 · 내 정보 · 아이템/스킬북 …)이 위 · 아래 줄을 같이 쓴다 — 칸 높이 --col-h 하나에서 모두 셈.
    · 틀 두께 --fr 14 px = 틀 그림 한 칸 2 px (세 틀 모두 같게 — 전: 높이가 낮으면 12 px = 1.71 배라 칸이 고르지 않았다)
    · 틀 길이는 사슬 한 마디(--link 12 px = 그림 6 칸)의 배수 — 모서리에서 마디가 잘리지 않게 (round() 를 못 쓰는 브라우저는 반올림 없이)
    · 캐릭터 카드 = 싸움 무기 카드 비(약 2 : 3 — PC 224 × 344 와 같은 쪽) · 높이 = 칸 높이 − 출발 단추 − 틈 · 폭은 줄 폭의 30 % 까지 → 10/17 프로필 칸 = 이 폭의 정사각(폭 · 출발 단추 자리 그대로, 높이만 짧아짐)
-   · 재고 틀 = 칸 5 × 4 를 꼭 맞게 품음(남는 띠 없음) · 별자리 틀(유파 탭 + 판)은 재고 틀과 같은 바깥 크기 — 탭을 바꿔도 틀이 안 움직인다
+   · ③ 창 안 = --grid-w + --grid-x 폭 × --grid-h 높이(전 재고 칸 5 × 4 판 높이 그대로) — 별자리 판은 이 넓이 전부 · 아이템 칸 판(10/18 04:1x 6 × 4 정사각 칸)은 이 안에 드는 가장 큰 판을 가운데에
    값(두께 · 비 · 여백)은 사장님 확인 전 — 확인표 1970~ */
 .lobby {
   --pad-t: 22px; --pad-b: 24px; --pad-l: max(24px, env(safe-area-inset-left)); --pad-r: max(24px, env(safe-area-inset-right));
@@ -38,12 +38,16 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   --card-avail: calc(var(--col-h) - var(--depart) - var(--depart-gap));
   --card-w0: min(var(--card-avail) * 2 / 3, var(--row-w) * .3); /* 전 캐릭터 카드(2 : 3) 폭 — 10/17 22:1x 프로필 칸은 처음에 이 폭의 정사각 */
   --card-w: calc(var(--card-w0) * .6);  /* 프로필 칸 = 그 60 % (정사각 한 변 · 출발 단추 폭 — 사장님 10/17 23:4x '지금의 80%로' → 10/18 00:2x '원래의 70%로' → 01:0x '60%로 하자') */
-  --grid-x: calc(var(--card-w0) - var(--card-w)); /* 줄어든 폭 → 맨 오른쪽 칸(③ 창)에 더함 ('그만큼 맨 우측 3단 영역 늘리고') — 재고 칸 판은 정사각 칸 그대로 가운데(10/18 03:3x) · 별자리 판은 이 폭까지 씀 */
+  --grid-x: calc(var(--card-w0) - var(--card-w)); /* 줄어든 폭 → 맨 오른쪽 칸(③ 창)에 더함 ('그만큼 맨 우측 3단 영역 늘리고') — 별자리 판은 이 폭까지 씀 · 아이템 칸 판의 여섯째 줄도 이 폭에 듦(10/18 04:1x) */
   --chrome-v: calc(2 * var(--fr) + 2 * var(--pp) + var(--title-h) + var(--title-gap)); /* 창 틀(액자 1) 위아래 + 여백 + 제목 줄 — 10/18 03:3x 틀이 창 바깥으로 옮겨 가고 안쪽 재고 틀은 없앰 */
   --chrome-h: calc(2 * var(--fr) + 2 * var(--pp));
   --grid-wmax: calc(var(--row-w) - var(--card-w0) - var(--profile-w) - 2 * var(--gap) - var(--chrome-h));
   --grid-w: max(132px, min((var(--col-h) - var(--chrome-v)) * 1.25, var(--grid-wmax)));
   --grid-h: calc(var(--grid-w) * .8);
+  /* 아이템 칸 한 변 (사장님 10/18 04:1x '가로 5칸에서 6칸으로' · 03:3x 정사각 그대로): 창 안 높이(--grid-h)에 4 줄이 드는 크기와 창 안 폭(--inv-w)에 6 칸이 드는 크기 중 작은 쪽 —
+     판 여백 6 px × 2 · 칸 틈 4 px(3 · 5 개)는 전 판 그대로. 가로 화면들은 높이로 정해져 칸 = 전 5 × 4 칸 높이 그대로(844 × 390 57 px) */
+  --inv-w: calc(var(--grid-w) + var(--grid-x));
+  --cell: min((var(--grid-h) - 24px) / 4, (var(--inv-w) - 32px) / 6);
   position: relative; isolation: isolate; height: 100dvh; overflow: auto;
   display: flex; flex-direction: column; justify-content: safe center;
   padding: var(--pad-t) var(--pad-r) var(--pad-b) var(--pad-l);
@@ -54,6 +58,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
     --card-w: round(down, var(--card-w0) * .6, 1px);
     --grid-w: round(down, max(132px, min(round(nearest, round(down, var(--col-h) - var(--chrome-v), var(--link)) * 1.25, var(--link)), var(--grid-wmax))), var(--link));
     --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
+    --cell: round(down, min((var(--grid-h) - 24px) / 4, (var(--inv-w) - 32px) / 6), 1px); /* 칸 한 변은 정수 px (칸 줄이 흐려지지 않게 — 높이로 정해지는 화면은 원래 정수) */
   }
 }
 @media (max-height: 500px) { .lobby { --depart: 36px; } } /* 싸움 주 단추가 낮은 화면에서 패딩 10 (entrance_ui.css 와 같은 조건) */
@@ -71,7 +76,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .lobby-header h1 canvas { display: block; height: var(--head); width: auto; image-rendering: pixelated; }
 .lobby-columns { flex: none; width: 100%; max-width: 1220px; height: var(--col-h); margin: 0 auto; display: grid; grid-template-columns: var(--card-w) var(--profile-w) calc(var(--grid-w) + var(--grid-x) + var(--chrome-h)); justify-content: center; gap: var(--gap); align-items: stretch; }
 
-/* ── 액자 1 틀: ② 내 정보 · ③ 재고/상점/스킬북 창의 바깥 줄 (① 은 프로필 그림 속 액자 1 이 바깥 줄) — 사장님 10/18 03:3x '모든 1,2,3단 외곽 라인에 액자1 적용할 것 …
+/* ── 액자 1 틀: ② 내 정보 · ③ 아이템/상점/스킬북/이벤트 창의 바깥 줄 (① 은 프로필 그림 속 액자 1 이 바깥 줄) — 사장님 10/18 03:3x '모든 1,2,3단 외곽 라인에 액자1 적용할 것 …
    3단도 액자1을 외곽라인에 적용하고 내부는 지금 외곽라인을 적용하거나 아예 라인을 없애고 인벤토리 격자만 보이게 하거나 해' → 안쪽(재고 칸 판 · 별자리 판)은 줄 · 바탕 없이 격자만.
    전: 10/17 22:1x '대기실에 있는 현재 프레임을 액자1로 고쳐' 로 재고 칸 · 별자리 판에만 액자 1(창 바깥은 1 px --line) · 그 전: 사슬 틀 px_clearing_frame.png.
    10/18 01:2x '3단쪽에 액자 두께가 다르네. 프로필과 똑같아야지' → 틀 그림 = 프로필 그림(플레이어 원본 1254²) 속 액자 1 을 잘라 만든 9 조각 public/ui/frame1_portrait.png
@@ -141,19 +146,21 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .lobby-tabs { margin-top: 0; padding-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .lobby-tabs [role="tab"] { padding: 7px 4px; }
 
-/* ── ③ 재고 · 상점 · 스킬북 ── */
+/* ── ③ 아이템 · 상점 · 스킬북 · 이벤트 (사장님 10/18 04:1x — 상점 · 이벤트는 아직 비공개라 빈 안내 한 줄) ── */
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: var(--title-h); margin: 0 0 var(--title-gap); }
 .panel-heading h2 { margin: 0; font-size: var(--fs-m); line-height: var(--title-h); }
 .panel-heading > span { font-size: var(--fs-s); }
 .empty-panel { margin: 0; font-size: var(--fs-s); }
 .panel-wallet { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
 .panel-wallet .coin-icon { width: 14px; height: 14px; }
-/* 재고 칸 판: 칸 5 × 4 · 칸은 정사각 (사장님 10/18 03:3x '재고 칸이 1.3배로 길어진 거 별로야. 길이가 길어지더라도 아까와 같은 내부 비율 유지하도록 해')
-   판 = --grid-w × --grid-h(= 0.8 배 — 10/17 23:4x 전과 같은 판) · 3단이 넓어진 폭(--grid-x)은 판 양옆 빈자리로(가운데 맞춤) · 줄 · 바탕 없이 격자만(10/18 03:3x — 바깥 줄은 창의 액자 1)
-   전 10/17 23:4x: 판을 --grid-x 만큼 옆으로 늘여 칸이 가로로 1.25 ~ 1.3 배 */
-.inventory-frame { width: var(--grid-w); height: var(--grid-h); margin: 0 auto; }
-.inventory-grid { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 6px; }
-.inventory-item, .inventory-slot { position: relative; display: block; min-width: 0; min-height: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; }
+/* 아이템 칸 판 (사장님 10/18 04:1x '무기+방어구 합쳐서 아이템 … 가로 5칸에서 6칸으로 확장'): 칸 6 × 4 = 24 · 칸은 정사각
+   (10/18 03:3x '재고 칸이 1.3배로 길어진 거 별로야. 길이가 길어지더라도 아까와 같은 내부 비율 유지하도록 해' 그대로) · 한 변 --cell(위 .lobby — 창 안 높이에 4 줄 · 폭에 6 칸이 드는 작은 쪽)
+   판 = 6 칸 + 틈 + 여백 폭 × 4 줄 높이 · ③ 창 가운데 · 줄 · 바탕 없이 격자만(10/18 03:3x — 바깥 줄은 창의 액자 1).
+   물건이 24 개보다 많으면 줄을 더하고(lobby.js) 판 안에서 내려 본다 — 판 높이는 4 줄 그대로 · 칸 비 = aspect-ratio 1(내림 막대가 폭을 먹어도 정사각 · 칸 열은 판 폭을 나눔)
+   전: 10/18 03:3x 칸 5 × 4(넓어진 폭 --grid-x 는 판 양옆 빈자리) · 10/17 23:4x 판을 옆으로 늘여 칸이 가로로 1.25 ~ 1.3 배 */
+.inventory-frame { width: calc(6 * var(--cell) + 32px); height: calc(4 * var(--cell) + 24px); margin: 0 auto; }
+.inventory-grid { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-content: start; gap: 4px; padding: 6px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.inventory-item, .inventory-slot { position: relative; display: block; aspect-ratio: 1; min-width: 0; min-height: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; }
 /* 칸 그림 (사장님 ⑨ 1 단계 — 감독 검토 §2): 보이는 그림이 칸의 80 % · 매끈하게 줄임(픽셀 확대 끔) · 뒤에 등급 빛 = 무기 카드 앞면(.wthumb)과 같은 원 빛 · 같은 그림자.
    그림 상자 = 칸의 80 % × --fit (lobby.js fitThumb 가 그림 파일의 투명한 가장자리를 빼고 잰 값 — 케틀 햇처럼 여백이 큰 그림도 같은 크기로 읽히게) · --fx · --fy = 보이는 부분을 가운데로.
    등급 빛 값은 index.html [data-tier] --tg 그대로 (케틀 햇 = 레전드 금빛 · 나뭇가지 = 쓰레기 회색) */
@@ -174,7 +181,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 @media (max-height: 500px) {
   .inventory-item.is-equipped > img[data-top="busy"] { --box: calc(74% * var(--fit)); top: calc(56% - var(--box) / 2 - var(--fy) * var(--box)); }
 }
-/*  10/17 23:4x: 재고 틀이 옆으로 넓어져 칸이 조금 가로로 길다 — 그림 상자는 칸의 짧은 변 기준 정사각 그대로(80 % · 74 % 를 칸 높이 · 폭 중 짧은 쪽으로).
+/*  그림 상자는 칸의 짧은 변 기준 정사각(80 % · 74 % 를 칸 높이 · 폭 중 짧은 쪽으로 — 10/17 23:4x 칸이 가로로 길던 때 넣음 · 10/18 부터 칸이 정사각이라 두 변 같음).
     container 단위를 못 쓰는 브라우저는 위 % 그대로(그림은 object-fit 으로 짧은 변에 맞춰 같은 크기 — 가운데) */
 @supports (width: 1cqmin) {
   .inventory-item { container-type: size; }
@@ -190,8 +197,8 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .equipment-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; } /* 가운데 맞춤 — 줄로 늘이면 부 단추가 주 단추 높이로 늘어난다(싸움 단추 높이 그대로: 주 36 · 부 34) */
 .equipment-actions button { min-width: 72px; }
 
-/* ── 스킬북 (skill_tree.js): 유파 탭 + 별자리 판 — 창 안 폭 전부 · 재고 칸 판과 같은 높이 (10/18 03:3x 안쪽 액자 1 뺌 — 바깥 줄은 창의 액자 1) ── */
-.skill-tree-host { display: flex; flex-direction: column; width: calc(var(--grid-w) + var(--grid-x)); height: var(--grid-h); } /* 창 안 폭 전부 · 재고 칸 판과 같은 높이 — 줄 · 바탕 없음(10/18 03:3x) */
+/* ── 스킬북 (skill_tree.js): 유파 탭 + 별자리 판 — 창 안 폭 전부 · 창 안 높이 --grid-h(아이템 칸 판이 높이로 정해지면 같은 높이) (10/18 03:3x 안쪽 액자 1 뺌 — 바깥 줄은 창의 액자 1) ── */
+.skill-tree-host { display: flex; flex-direction: column; width: calc(var(--grid-w) + var(--grid-x)); height: var(--grid-h); } /* 창 안 폭 전부 · 창 안 높이 — 줄 · 바탕 없음(10/18 03:3x) */
 .school-tabs { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 6px 6px 0; }
 /* 판 = 별자리 비 300 : 210 그대로(책 자리가 % 라 비가 바뀌면 판 끝의 책 이름이 밖으로 나간다) — 탭 아래 남은 자리에 들어가는 가장 큰 판을 가운데에 (남는 곳은 같은 바탕이라 띠로 안 보임) */
 .skill-tree-host .tree-frame { flex: 1; min-height: 0; display: grid; place-items: center; container-type: size; border: 0; border-image: none; background: none; box-shadow: none; }
@@ -262,16 +269,17 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   .lobby-tabs [role="tab"] { padding: 5px 4px; }
 }
 
-/* ── 좁은 화면 (폭 679 이하 — 작은 가로 폰 568 × 320 · PC 세로 창): 캐릭터 | 내 정보 한 줄 · 그 아래 재고/스킬북, 화면이 아래로 흐른다 ── */
+/* ── 좁은 화면 (폭 679 이하 — 작은 가로 폰 568 × 320 · PC 세로 창): 캐릭터 | 내 정보 한 줄 · 그 아래 아이템/스킬북 …, 화면이 아래로 흐른다 ── */
 @media (max-width: 679px) {
   .lobby {
     --pad-t: 14px; --pad-b: 24px; --pad-l: max(12px, env(safe-area-inset-left)); --pad-r: max(12px, env(safe-area-inset-right));
     --head: 34px; --head-gap: 12px; --gap: 12px; --pp: 16px;
     --card-w0: min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px);
-    --card-w: calc(var(--card-w0) * .6); /* 프로필 칸 60 % (10/18 01:0x — 전 80 · 70 %) — 좁은 화면은 재고가 아래 줄 전체라 더할 칸이 없다 */
+    --card-w: calc(var(--card-w0) * .6); /* 프로필 칸 60 % (10/18 01:0x — 전 80 · 70 %) — 좁은 화면은 ③ 창이 아래 줄 전체라 더할 칸이 없다 */
     --grid-x: 0px;
-    --grid-w: min(100cqw, 408px); /* 100cqw = 재고 창 안 폭 (.contents-panel 이 폭 기준 — 10/18 03:3x 안쪽 틀을 없애 틀 두께를 빼지 않음) */
+    --grid-w: min(100cqw, 408px); /* 100cqw = ③ 창 안 폭 (.contents-panel 이 폭 기준 — 10/18 03:3x 안쪽 틀을 없애 틀 두께를 빼지 않음) */
     --grid-h: calc(var(--grid-w) * .8);
+    --inv-w: 100cqw; /* 아이템 칸 판이 쓸 수 있는 폭 = 창 안 폭 전부 (높이는 전 판 높이 --grid-h 그대로 — 칸 한 변 최대 75 px 는 전 판 408 px 에서 나옴) */
     display: block;
   }
   @supports (width: round(down, 10px, 3px)) {

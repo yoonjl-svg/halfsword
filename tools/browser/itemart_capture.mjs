@@ -68,7 +68,7 @@ try {
   await shot('detail_japanese');
   await p.locator('.detail-close').tap();
   // 이긴 판 결과 창 (금화 + 머리): 여정 → 카드 → 상대 목을 벰
-  await p.locator('#tabWeapons').tap(); await p.locator('#lobbyDepart').tap();
+  await p.locator('#tabItems').tap(); await p.locator('#lobbyDepart').tap(); // 아이템 탭 (10/18 04:1x — 전 무기 탭)
   await p.waitForFunction(() => game.state === 'draw' && game.draw.t > 0.6, null, { timeout: 60000 });
   await p.locator('#draw .wcard[data-i="0"]').tap(); await p.waitForFunction(() => game.state === 'fight', null, { timeout: 60000 });
   await p.waitForFunction(() => game.stats.simTime > 4.5, null, { timeout: 90000 });

@@ -1,19 +1,23 @@
 // 대기실 (샛별 저장소 817db21c · b73a9c82 · 3b280a1b — docs/import/lobby_port_2026-10-16.md §3 · 고친 것 docs/import/lobby_fix_2026-10-16.md): 첫 화면의 처음부터·이어하기와 여정 사이의 세 칸
-//  ① 캐릭터 프로필(정사각 그림 — 10/17 22:1x 사장님: 3D 미리보기(360° · 장착)를 없애고 프로필 사진 자리, docs/design/portrait_ui_2026-10-17.md) + 출발 단추 ② 내 정보(레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 무기 · 방어구 · 상점 · 스킬북
-//  우리 손댐 (사장님 10/16 01:0x): 무기 칸은 나뭇가지 하나(롱소드 뺌) · 나뭇가지도 방어구처럼 설명 카드(이름 · 등급 · 설명 — 우리 weapons.js 의 nameKo · tier · desc 그대로, 등급 글은 무기 카드와 같은 TIER_LABEL)
+//  ① 캐릭터 프로필(정사각 그림 — 10/17 22:1x 사장님: 3D 미리보기(360° · 장착)를 없애고 프로필 사진 자리 · 10/18 04:1x '옛 3d 지워' 로 그 코드도 지움, docs/design/portrait_ui_2026-10-17.md) + 출발 단추
+//  ② 내 정보(레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 아이템 · 상점 · 스킬북 · 이벤트
+//  우리 손댐 (사장님 10/16 01:0x): 무기는 나뭇가지 하나(롱소드 뺌) · 나뭇가지도 방어구처럼 설명 카드(이름 · 등급 · 설명 — 우리 weapons.js 의 nameKo · tier · desc 그대로, 등급 글은 무기 카드와 같은 TIER_LABEL)
 //  10/16 03:5x~04:3x (lobby_fix): 장착은 실제 싸움에 (main.js journeyLoadout) · 케틀 햇 레전드 + '생존술: 기력 +30' · 글자는 싸움 화면 규칙(entrance_type.css) ·
 //   스킬북 = 유파별 별자리(skill_tree.js — 금화로 사고 사용 / 봉인) · 머리(천 주머니) · 이미 받은 인장을 금화로 한 번(seal_coins.js)
 //  10/16 14:0x: 첫 화면·대기실도 가로 화면만 — 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'가 덮어(game_entry.js openHost) 대기실 안 '싸움은 가로 화면입니다' 줄은 지움
 //  10/16 15:3x · 16:0x (사장님 ② ④ ⑤ ⑥ ⑨ — docs/import/ui_unify_2026-10-16.md): 단추 · 탭 = 싸움 화면 꼴(entrance_ui.css) · 창 = 싸움 창 · 세 칸 위아래 줄 맞춤 · 사슬 틀 크기 ·
 //   호칭 내림 상자(대표 유파 칸은 뺌) · 재고 칸 그림 = 매끈 · 칸의 80 % · 등급 빛 · '장착 중'은 칸 귀퉁이 작은 알약 · 장착 · 해제는 설명 카드 안(스킬북 설명 카드의 구입 · 사용 · 봉인과 같은 자리)
 //  10/17 (사장님 '용사의 눈물 … 방어구에 넣어둬' — docs/import/hero_tear_2026-10-17.md): 방어구 칸 = 케틀 햇 · 용사의 눈물 (lobby_equipment.js LOBBY_ARMORS) ·
-//   장착은 물건마다 제 자리(armorSlot — 머리 · 목)라 둘을 같이 건다 · 용사의 눈물은 겉모습 변화가 없어 미리보기에 손대지 않는다
+//   장착은 물건마다 제 자리(armorSlot — 머리 · 목)라 둘을 같이 건다 · 용사의 눈물은 겉모습 변화가 없다(프로필 그림은 장착과 무관)
+//  10/18 04:1x (사장님 "무기+방어구 합쳐서 '아이템'으로 만들고 남는 한 칸은 '이벤트'로. 상점처럼 아직 비공개임. 아이템은 현재 가로 5칸에서 6칸으로 확장. 순서는 (윗칸에) 아이템 상점 (아랫칸에) 스킬북 이벤트"
+//   — docs/design/portrait_ui_2026-10-17.md §10): 메뉴 2 × 2 = [아이템][상점] / [스킬북][이벤트] · 아이템 칸 = 무기 다음 방어구를 한 판에(칸 6 × 4 = 24 · 정사각 — lobby.css) ·
+//   장착 규칙은 물건 종류마다 그대로(무기 = 한 자리 · 방어구 = armorSlot 의 제 자리) · 이벤트 = 상점처럼 빈 안내 한 줄
 import style from './lobby.css?inline';
 import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { LOBBY_ITEMS, LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
-import { portraitSrc, portraitMode } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 lobby_character.js)
+import { portraitSrc, portraitMode } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
 import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress, titleOptions, selectTitle } from './lobby_progress.js';
 import { mountSkillTree } from './skill_tree.js';
@@ -59,21 +63,22 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
         <p class="duel-record"><span>대면 결과</span><b id="duelRecord"></b></p>
         <p class="coin-balance wallet">${COIN_ICON}<span id="lobbyCoins"></span>${POUCH_ICON}<span id="lobbyHeads"></span></p>
         <nav class="lobby-tabs" role="tablist" aria-label="대기실 메뉴">
-          <button role="tab" id="tabWeapons" aria-controls="panelInventory" aria-selected="true" data-panel="Inventory" data-category="weapon">무기</button>
-          <button role="tab" id="tabArmor" aria-controls="panelInventory" aria-selected="false" tabindex="-1" data-panel="Inventory" data-category="armor">방어구</button>
+          <button role="tab" id="tabItems" aria-controls="panelInventory" aria-selected="true" data-panel="Inventory">아이템</button>
           <button role="tab" id="tabShop" aria-controls="panelShop" aria-selected="false" tabindex="-1" data-panel="Shop">상점</button>
           <button role="tab" id="tabSkills" aria-controls="panelSkills" aria-selected="false" tabindex="-1" data-panel="Skills">스킬북</button>
+          <button role="tab" id="tabEvent" aria-controls="panelEvent" aria-selected="false" tabindex="-1" data-panel="Event">이벤트</button>
         </nav>
       </section>
       <section class="contents-panel" aria-label="대기실 상세">
-        <div role="tabpanel" id="panelInventory" aria-labelledby="tabWeapons">
-          <div class="panel-heading"><h2 id="inventoryHeading">무기</h2><span id="inventoryCount"></span></div>
-          <div class="inventory-frame card-frame"><div class="inventory-grid" aria-label="가로 5칸 세로 4칸"></div>
+        <div role="tabpanel" id="panelInventory" aria-labelledby="tabItems">
+          <div class="panel-heading"><h2 id="inventoryHeading">아이템</h2><span id="inventoryCount"></span></div>
+          <div class="inventory-frame card-frame"><div class="inventory-grid" aria-label="가로 6칸 세로 4칸"></div>
           <div class="item-detail" id="itemDetail" hidden><p class="item-head"><b id="itemName"></b><span id="itemRarity"></span></p><p id="itemDescription"></p><div class="equipment-actions"><button type="button" id="equipItem" disabled>장착</button><button type="button" id="unequipItem" disabled>해제</button></div></div></div>
           <p id="equipmentStatus" class="sr-only" role="status"></p>
         </div>
         <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden><div class="panel-heading"><h2>상점</h2></div><p class="empty-panel">아직 판매 중인 물품이 없습니다.</p></div>
         <div role="tabpanel" id="panelSkills" aria-labelledby="tabSkills" hidden><div class="panel-heading"><h2>스킬북</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="skillCoins"></b>${POUCH_ICON}<b id="skillHeads"></b></span></div><div id="skillTreeHost" class="skill-tree-host"></div><p id="skillStatus" class="sr-only" role="status"></p></div>
+        <div role="tabpanel" id="panelEvent" aria-labelledby="tabEvent" hidden><div class="panel-heading"><h2>이벤트</h2></div><p class="empty-panel">아직 진행 중인 이벤트가 없습니다.</p></div>
       </section>
     </div>
   </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>`;
@@ -156,20 +161,17 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   portraitImg.alt = `${profile.name} 프로필`;
   listen(portraitImg, 'error', () => { $('lobbyPortrait').dataset.empty = ''; portraitImg.alt = ''; });
   portraitImg.src = portraitSrc(portraitId) ?? portraitSrc('player');
-  let selectedItem = null, category = 'weapon';
+  let selectedItem = null; // 고른 칸 { kind: 'weapon' | 'armor', id } — 무기 · 방어구가 한 판이라 종류도 같이 쥔다
   // 장착 자리: 무기 · 머리(케틀 햇) · 목(용사의 눈물 — 10/17)
   const equipped = { weapon: readLobbyEquipment(), head: readLobbyArmor(), neck: readLobbyNeck() };
   const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, announce: text => { $('skillStatus').textContent = text; } });
-  const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')];
+  const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')]; // 차례 = 2 × 2 칸 차례(윗줄 아이템 · 상점 · 아랫줄 스킬북 · 이벤트) — ↑ ↓ 는 같은 칸 줄, ← → 는 다음 · 앞
   function selectTab(tab) {
     for (const item of tabs) {
       const selected = item === tab; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1;
     }
     for (const panel of root.querySelectorAll('.contents-panel > [role=tabpanel]')) panel.hidden = panel.id !== 'panel' + tab.dataset.panel;
-    if (tab.dataset.category) {
-      category = tab.dataset.category; selectedItem = null;
-      $('panelInventory').setAttribute('aria-labelledby', tab.id); renderInventory();
-    }
+    if (tab.dataset.panel === 'Inventory') { selectedItem = null; renderInventory(); } // 아이템 칸으로 오면 고른 것 없이 (전 무기 · 방어구 탭과 같게)
     if (tab.dataset.panel === 'Skills') tree.refresh();
     root.querySelector('.contents-panel').scrollTop = 0;
   }
@@ -185,36 +187,43 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   }
   const grid = root.querySelector('.inventory-grid');
   const armorOf = id => LOBBY_ARMORS.find(a => a.id === id);
-  const slotOf = id => category === 'armor' ? armorSlot(id) : 'weapon'; // 이 물건을 거는 자리 (equipped 열쇠)
-  const isOn = id => equipped[slotOf(id)] === id;
-  const itemName = id => category === 'armor' ? armorOf(id).nameKo : getWeapon(id).nameKo;
+  // 아이템 칸 차례 (사장님 10/18 04:1x '무기+방어구 합쳐서 아이템'): 무기 다 → 방어구 다 — lobby_equipment.js 의 두 표 그대로(LOBBY_ITEMS · LOBBY_ARMORS)
+  const ITEMS = Object.freeze([...LOBBY_ITEMS.map(id => ({ kind: 'weapon', id })), ...LOBBY_ARMORS.map(a => ({ kind: 'armor', id: a.id }))]);
+  const COLS = 6, ROWS = 4; // 칸 판 6 × 4 = 24 칸 (사장님 10/18 04:1x '가로 5칸에서 6칸으로' · 세로 4 줄 그대로 — 칸 크기는 lobby.css --cell, 줄 수는 lobby.css 판 높이와 같게)
+  const itemOf = button => ({ kind: 'weapon' in button.dataset ? 'weapon' : 'armor', id: button.dataset.item }); // 칸 단추 → 물건 (data-weapon · data-armor 가 종류)
+  const sameItem = (a, b) => !!a && !!b && a.kind === b.kind && a.id === b.id;
+  const slotOf = item => item.kind === 'armor' ? armorSlot(item.id) : 'weapon'; // 이 물건을 거는 자리 (equipped 열쇠 — 무기 · 머리 · 목)
+  const isOn = item => equipped[slotOf(item)] === item.id;
+  const itemName = item => item.kind === 'armor' ? armorOf(item.id).nameKo : getWeapon(item.id).nameKo;
   // 설명 카드: 방어구는 lobby_equipment.js 의 글(설명 뒤에 특수 능력 — 등급 색), 무기는 우리 무기 자료 그대로 (카드 설명의 줄바꿈은 빈칸으로 — 무기 카드 .wdesc 와 같게)
-  const itemCard = id => {
-    if (category === 'armor') { const a = armorOf(id); return { name: a.nameKo, tier: a.tier, description: a.description, ability: a.ability }; }
-    const spec = getWeapon(id);
+  const itemCard = item => {
+    if (item.kind === 'armor') { const a = armorOf(item.id); return { name: a.nameKo, tier: a.tier, description: a.description, ability: a.ability }; }
+    const spec = getWeapon(item.id);
     return { name: spec.nameKo, tier: TIER_LABEL[spec.tier] ? spec.tier : 'common', description: spec.desc || '', ability: '' };
   };
   // 칸: 그림 = 칸의 80 % · 매끈하게 줄임 · 뒤에 등급 빛(무기 카드 앞면 .wthumb 와 같은 원 빛 — data-tier · lobby.css) — 사장님 ⑨ 1 단계(감독 검토 §2)
+  //  칸 수 = 24(빈 칸이 채움) · 물건이 24 개보다 많으면 6 칸씩 줄을 더한다 — 판 높이는 4 줄 그대로라 판 안에서 내려 본다(숨기지 않음 · 담는 수 규칙 없음)
   function renderInventory() {
-    const items = category === 'armor' ? LOBBY_ARMORS.map(a => a.id) : LOBBY_ITEMS;
-    $('inventoryHeading').textContent = category === 'armor' ? '방어구' : '무기';
-    $('inventoryCount').textContent = `${items.length}개`;
-    grid.innerHTML = Array.from({length:20}, (_, i) => {
-      const id = items[i];
-      if (!id) return '<span class="inventory-slot" aria-hidden="true"></span>';
-      const thumbnail = category === 'armor' ? armorOf(id).thumbnail : `ui/weapons/${id}.webp`;
-      return `<button class="inventory-item" data-item="${id}" data-${category}="${id}" data-tier="${itemCard(id).tier}" aria-pressed="false"><img src="${thumbnail}" alt="${itemName(id)}" draggable="false"><span class="equipped-badge" hidden>장착 중</span></button>`;
+    const slots = Math.max(COLS * ROWS, Math.ceil(ITEMS.length / COLS) * COLS);
+    $('inventoryCount').textContent = `${ITEMS.length}개`;
+    grid.setAttribute('aria-label', `가로 ${COLS}칸 세로 ${slots / COLS}칸`);
+    grid.innerHTML = Array.from({ length: slots }, (_, i) => {
+      const item = ITEMS[i];
+      if (!item) return '<span class="inventory-slot" aria-hidden="true"></span>';
+      const thumbnail = item.kind === 'armor' ? armorOf(item.id).thumbnail : `ui/weapons/${item.id}.webp`;
+      return `<button class="inventory-item" data-item="${item.id}" data-${item.kind}="${item.id}" data-tier="${itemCard(item).tier}" aria-pressed="false"><img src="${thumbnail}" alt="${itemName(item)}" draggable="false"><span class="equipped-badge" hidden>장착 중</span></button>`;
     }).join('');
+    grid.scrollTop = 0;
     for (const img of grid.querySelectorAll('.inventory-item img')) fitThumb(img);
     refreshEquipment();
   }
   function refreshEquipment() {
     for (const button of grid.querySelectorAll('[data-item]')) {
-      const id = button.dataset.item, on = isOn(id);
-      button.setAttribute('aria-pressed', String(id === selectedItem));
+      const item = itemOf(button), on = isOn(item);
+      button.setAttribute('aria-pressed', String(sameItem(item, selectedItem)));
       button.querySelector('.equipped-badge').hidden = !on;
       button.classList.toggle('is-equipped', on); // lobby.css — 알약 자리가 찬 그림은 장착 중일 때 줄여 내림
-      button.setAttribute('aria-label', `${itemName(id)}${on ? ' · 장착 중' : ''} 선택`);
+      button.setAttribute('aria-label', `${itemName(item)}${on ? ' · 장착 중' : ''} 선택`);
     }
     // 장착 · 해제: 지금 누를 수 있는 쪽 = 주 단추 · 다른 쪽 = 누를 수 없는 부 단추 (꼴은 entrance_ui.css — 누를 수 있나로 고른다)
     $('equipItem').disabled = !selectedItem || isOn(selectedItem);
@@ -229,16 +238,16 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     }
   }
   listen(grid, 'click', event => {
-    const id = event.target.closest('[data-item]')?.dataset.item;
-    selectedItem = !id || id === selectedItem ? null : id; refreshEquipment();
+    const button = event.target.closest('[data-item]'), item = button && itemOf(button);
+    selectedItem = !item || sameItem(item, selectedItem) ? null : item; refreshEquipment();
   });
-  // 걸기(on) · 벗기 — 그 물건의 자리만 바뀐다 (케틀 햇을 벗어도 용사의 눈물은 그대로 · 반대도). 프로필 그림은 장착과 무관(10/17 — 3D 미리보기 없앰)
-  function equip(id, on) {
+  // 걸기(on) · 벗기 — 그 물건의 자리만 바뀐다 (무기 = 무기 자리 · 케틀 햇 = 머리 · 용사의 눈물 = 목 — 케틀 햇을 벗어도 용사의 눈물은 그대로 · 반대도). 프로필 그림은 장착과 무관(10/17 — 3D 미리보기 없앰)
+  function equip(item, on) {
     try {
-      const slot = slotOf(id), value = on ? id : null;
+      const slot = slotOf(item), value = on ? item.id : null;
       equipped[slot] = value;
       const saved = slot === 'weapon' ? saveLobbyEquipment(value) : slot === 'head' ? saveLobbyArmor(value) : saveLobbyNeck(value);
-      $('equipmentStatus').textContent = `${itemName(id)} ${on ? '장착' : '장착 해제'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`;
+      $('equipmentStatus').textContent = `${itemName(item)} ${on ? '장착' : '장착 해제'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`;
       refreshEquipment();
     } catch { $('equipmentStatus').textContent = '장비를 표시하지 못했습니다. 다시 시도해 주세요.'; }
   }

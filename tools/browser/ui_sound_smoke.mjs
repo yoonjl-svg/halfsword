@@ -242,7 +242,8 @@ try {
     report.lobbyClickMeter = await meter(p, 1); // 대기실 = 바람 없음 — 딸깍만의 꼭대기
     one(await press(p, '#unequipItem'), '해제');
     one(await press(p, '#equipItem'), '장착');
-    none(await press(p, '#tabArmor'), '방어구 탭');
+    none(await press(p, '#tabEvent'), '이벤트 탭'); // 10/18 04:1x 메뉴 [아이템][상점] / [스킬북][이벤트] (전 방어구 탭)
+    none(await press(p, '#tabShop'), '상점 탭');
     none(await press(p, '#tabSkills'), '스킬북 탭');
     none(await press(p, '.book-node[data-book="1"]'), '책 고르기');
     one(await press(p, '#buyBook'), '스킬북 구입');

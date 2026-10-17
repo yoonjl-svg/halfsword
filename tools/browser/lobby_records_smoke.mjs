@@ -1,5 +1,6 @@
 // 대기실 전적·이름 경계 점검 (샛별 저장소 lobby_records_smoke.mjs 를 우리 열쇠에 맞춤 — docs/import/lobby_port_2026-10-16.md §6)
 //  10/17 11:2x 흐름: 첫 화면 '이어하기' → 곧바로 싸움(저장된 무기) → 정지 → 대기실('Stage 입장') — tools/browser/to_lobby.mjs
+//  10/18 04:1x 기본 이름 'Noname'(전 '방랑자'): 판 끝 저장이 그때의 기본 이름도 저장해 왔다 — 옛 기본 '방랑자'로 저장된 프로필은 'Noname' 으로 보이고 승패는 그대로 (src/player_profile.js)
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/lobby_records_smoke.mjs http://127.0.0.1:5201 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -20,10 +21,11 @@ try{
  await open();
  await p.evaluate(([j,pr])=>{
   localStorage.setItem(j,JSON.stringify({version:1,stage:'poseidon',foe:'heinrich',foeWeapon:'excalibur_replica',weapon:'longsword'}));
-  localStorage.setItem(pr,JSON.stringify({version:1,name:'검객',wins:2,losses:1}));
+  localStorage.setItem(pr,JSON.stringify({version:1,name:'방랑자',wins:2,losses:1})); // 10/18 전 기본 이름으로 저장된 프로필
  },[JOURNEY,PROFILE]);
  assert.equal(await titleToLobby(p,'#continueJourney'),'fight'); // 무기를 골라 둔 지점 → 카드 없이 곧장 싸움 (대기실을 거치지 않음)
  assert.equal(await p.evaluate(()=>[game.stage.id,game.player.weapon.id].join()),'poseidon,longsword');assert.equal(await p.locator('#duelRecord').textContent(),'2승리 1패배 (67%)');
+ assert.equal(await p.locator('#lobbyName').textContent(),'Noname'); // 옛 기본 이름 → 새 기본 이름 (승패 그대로)
  assert.equal(await p.locator('#lobbyDepart').textContent(),'Stage 입장');
  const rect=await p.locator('#lobbyDepart').boundingBox();assert.ok(rect.y>=0&&rect.y+rect.height<=390);
  // 10/17 22:1x: 3D 미리보기(방향키 돌리기 23° · Home 0°)를 정사각 프로필 그림으로 바꿈 — 프로필 칸이 출발 단추 위에 겹치지 않고 그림이 떴나
@@ -32,7 +34,7 @@ try{
  await p.locator('#editName').click();await p.locator('#playerNameInput').fill('   ');await p.locator('#nameForm button[type=submit]').click();assert.match(await p.locator('#nameError').textContent(),/입력/);
  await p.locator('#playerNameInput').fill('<b>검객</b>');await p.locator('#nameForm button[type=submit]').click();
  assert.equal(await p.locator('#lobbyName').textContent(),'<b>검객</b>');assert.equal(await p.locator('#lobbyName b').count(),0);
- checks.push('이어하기 on the title goes straight to the saved fight (poseidon · longsword); pause → 대기실; rounding, departure visibility, profile picture above the departure button, empty-name rejection and literal name rendering');
+ checks.push('이어하기 on the title goes straight to the saved fight (poseidon · longsword); pause → 대기실; a profile saved with the old default name 방랑자 shows Noname (record 2-1 kept); rounding, departure visibility, profile picture above the departure button, empty-name rejection and literal name rendering');
  await p.locator('#lobbyDepart').click();await p.waitForFunction(()=>game.state==='fight',null,{timeout:60000});
  // 전적 저장 경계만 강제로 검사한다 (전투 승패의 실측 자료가 아니다).
  await p.evaluate(()=>game.player.die('기절',true));await p.waitForFunction(k=>JSON.parse(localStorage.getItem(k)).losses===2,PROFILE,{timeout:20000});

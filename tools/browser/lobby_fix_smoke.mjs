@@ -1,7 +1,7 @@
 // 대기실 고친 것 실제 흐름 점검 (docs/import/lobby_fix_2026-10-16.md §9) — 배포판 + 미리 보기 서버, 인증 서버는 막음(부르면 실패)
 //  ① 나뭇가지 장착 → 대기실 출발('Stage 입장') · 첫 화면 'Stage 1' = 카드 없이 나뭇가지 · 해제 → 카드가 돌아옴 ② 케틀 햇: 장착 = 투구 + 최대 기력 130(머리 위 막대 = 130 의 몫) · 벗음 = 맨머리 + 100
 //  ③ 스킬북: 어둡게·값 → 구입 → 사용(둥근 빛) → 봉인 — 봉인/안 삼이면 싸움에서 실제로 꺼짐(일본 보법 · 막기 · 고유 공격 넷 · 비기)
-//  ④ 금화: 진 판 −1~5 · 0 밑으로 안 감 · 결과 창 한 줄 ⑤ 머리: 상대 목을 베면 1(한 번) ⑥ 인장 → 금화 한 번 ⑦ 테스트 경로 = 정지 창에 대기실 없음 · 싸움은 책 모두 · 금화·인장 그대로 ⑧ 세로 폰 = 돌려 달라는 안내가 대기실을 덮음 · 미리보기 화소 비
+//  ④ 금화: 진 판 −1~5 · 0 밑으로 안 감 · 결과 창 한 줄 ⑤ 머리: 상대 목을 베면 1(한 번) ⑥ 인장 → 금화 한 번 ⑦ 테스트 경로 = 정지 창에 대기실 없음 · 싸움은 책 모두 · 금화·인장 그대로 ⑧ 세로 폰 = 돌려 달라는 안내가 대기실을 덮음 · 프로필 그림(768)
 //  10/17 11:2x 흐름: 첫 화면 'Stage 1' · '이어하기' → 곧바로 여정(카드, 장착한 무기가 있으면 싸움) → 정지 → 대기실 (tools/browser/to_lobby.mjs) · 대기실 출발 = 이어하기 지점부터
 //  npm run build && npx vite preview --port 5210 →  node tools/browser/lobby_fix_smoke.mjs http://127.0.0.1:5210 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
@@ -62,7 +62,7 @@ try {
   assert.equal(await lobby(p, '/?title=1&cards=longsword,rapier'), 'fight'); // 장착한 나뭇가지는 첫 화면 출발에도 — 카드 없이 곧장 싸움 (그 뒤 정지 → 대기실)
   assert.equal(await p.evaluate(() => game.player.weapon.id), 'tree_branch');
   await p.locator('[data-weapon=tree_branch]').click(); await p.locator('#unequipItem').click(); // 카드 고정 — 무작위 카드에 나뭇가지가 나와 아래 '나뭇가지 아님'이 가끔 틀리던 것 (10/16 고침)
-  await p.locator('#tabArmor').click(); await p.locator('button[data-armor=kettle]').click(); await p.locator('#unequipItem').click();
+  await p.locator('#tabItems').click(); await p.locator('button[data-armor=kettle]').click(); await p.locator('#unequipItem').click(); // 아이템 칸 한 판 (10/18 04:1x — 전 방어구 탭)
   await depart(p, 'draw'); await pick(p, 0);
   assert.notEqual(await p.evaluate(() => game.player.weapon.id), 'tree_branch');
   assert.deepEqual(await p.evaluate(() => [game.player.hasHelmet, !!game.player.helmetGroup, game.player.stamina.max, game.player.stamina.value]), [false, false, 100, 100]);
@@ -70,7 +70,7 @@ try {
 
   // ③ 스킬북 — 일본 책을 사서 싸움에서 켜고 끔 (카드 고정 ?cards= · 금화 ?coins=)
   assert.equal(await lobby(p, '/?title=1&cards=monohoshizao,rapier&coins=1500'), 'draw'); // 대기실 출발 = 첫 화면에서 펼친 같은 카드 (이어하기 지점)
-  await p.locator('#tabArmor').click(); await p.locator('button[data-armor=kettle]').click(); await p.locator('#equipItem').click(); // 다시 케틀 햇
+  await p.locator('#tabItems').click(); await p.locator('button[data-armor=kettle]').click(); await p.locator('#equipItem').click(); // 다시 케틀 햇
   await book(p, 'japanese', 1);
   assert.equal(await p.locator('.book-detail').getAttribute('data-state'), 'unowned'); assert.equal(await p.locator('#buyBook').textContent(), '구입 · 금화 100');
   const dim = await shadow(p, `return getComputedStyle(root.querySelector('.book-node[data-book="1"] .book-thumb')).filter`); assert.match(dim, /grayscale/);
@@ -168,7 +168,7 @@ try {
   await depart(r, 'draw');
   assert.equal(await r.evaluate(() => getComputedStyle(document.getElementById('rotate')).animationName), 'none'); // 출발 뒤 서서히 나타나던 것 지움
   await r.setViewportSize({ width: 390, height: 844 }); assert.deepEqual(await cover(), { shown: true, top: true }); // 싸움(카드)도 그대로 덮음
-  checks.push('phone: the lobby is landscape-only — in portrait the rotate screen covers it (and takes the taps), back to landscape it is as it was; no in-lobby landscape hint; no fade-in after departure; preview at device ratio 3');
+  checks.push('phone: the lobby is landscape-only — in portrait the rotate screen covers it (and takes the taps), back to landscape it is as it was; no in-lobby landscape hint; no fade-in after departure; profile picture loads (768) at device ratio 3');
   await pc.close();
   assert.deepEqual(errors, []);
 } finally {

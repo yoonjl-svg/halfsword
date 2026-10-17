@@ -1,6 +1,6 @@
 // 첫 화면·대기실 ↔ 전투 화면 맞추기 사진 · 잰 값 (사장님 10/16 15:3x ②~⑥ ⑨ · 16:0x — docs/import/ui_unify_2026-10-16.md)
 //  폰 가로 844×390 · 화소 비 3 · 터치 (장면 전부) + PC 1280×720 (배치). 잰 값(CSS px)은 844×390 · 932×430 · 1280×720 · 568×320 · 390×844(PC 세로 창 — 세로 폰은 돌려 달라는 안내가 덮는다)
-//  장면: notices · title · settings · weapons · armor · skills · shop · titles(호칭 내림 — 있을 때만)
+//  장면: notices · title · settings · weapons(아이템 칸 + 나뭇가지 카드) · armor(같은 아이템 칸 + 케틀 햇 카드 — 10/18 04:1x 무기 · 방어구 합침) · skills · shop · event · titles(호칭 내림 — 있을 때만)
 //  잰 것: 세 칸 위아래 줄 · 사슬 틀 두께 · 캐릭터 카드 비 · 재고 틀 / 별자리 틀 바깥 크기 · 틀 안 남는 띠 · 칸 그림(보이는 부분) 몫 ·
 //         대기실 UI 색 수 (화면에 그려진 계산값 — 그림은 빼고: 숲 · 캐릭터 · '대기실' 글자 캔버스 · 아이템 그림 · 금화/주머니/책 그림 · 사슬 틀 · 카드 바탕 무늬 · 배경 어둡게 막)
 //  저장: <out>/<이름표>_<장면>_<phone|pc>.png · <out>/<이름표>_measure.json — 전(바탕 커밋)/후를 같은 도구로 찍어 tools/ui/uiunify_pair.py 로 붙인다
@@ -51,7 +51,7 @@ const layout = (p) => p.evaluate(async () => {
   return {
     viewport: [innerWidth, innerHeight],
     character: R(q('.character-panel')), card: frame(q('.portrait-card')), cardRatio: R(q('.portrait-card')) ? +(R(q('.portrait-card')).w / R(q('.portrait-card')).h).toFixed(3) : null,
-    view: R(q('#characterView')), depart: R(q('#lobbyDepart')), profile: R(q('.profile-panel')), contents: R(q('.contents-panel')),
+    depart: R(q('#lobbyDepart')), profile: R(q('.profile-panel')), contents: R(q('.contents-panel')), // (10/18: 3D 미리보기 #characterView 잰 칸은 그 코드와 같이 뺌)
     inventory: frame(inv), grid: g, leftover: f && g ? { left: +(g.x - f.x - bw).toFixed(1), right: +(f.r - g.r - bw).toFixed(1), top: +(g.y - f.y - bw).toFixed(1), bottom: +(f.b - g.b - bw).toFixed(1) } : null,
     tree: frame(tree), cell: R(q('.inventory-item')), pictures,
   };
@@ -91,12 +91,13 @@ try {
     await tap(p, '#openSettings'); await p.waitForFunction(() => !document.querySelector('#gameEntrance').shadowRoot.getElementById('titleFps').disabled); await p.waitForTimeout(200); await shot(p, 'settings', size); await tap(p, '#closeSettings');
     await toLobby(p);
     await tap(p, '[data-weapon=tree_branch]'); await p.waitForTimeout(300); await keep(p); await shot(p, 'weapons', size);
-    await tap(p, '#tabArmor'); await p.locator('[data-armor=kettle] img').evaluate((i) => i.decode()); await tap(p, 'button[data-armor=kettle]'); await p.waitForTimeout(300); await keep(p); await shot(p, 'armor', size);
+    await p.locator('[data-armor=kettle] img').evaluate((i) => i.decode()); await tap(p, 'button[data-armor=kettle]'); await p.waitForTimeout(300); await keep(p); await shot(p, 'armor', size); // 같은 아이템 칸
     await tap(p, '#tabSkills'); await p.waitForTimeout(300); await keep(p); await tap(p, '.book-node[data-book="3"]'); await p.waitForTimeout(250); await keep(p); await shot(p, 'skills', size);
     await tap(p, '.detail-close'); await tap(p, '.book-node[data-book="4"]'); await p.waitForTimeout(200); await keep(p); await tap(p, '.detail-close'); // 안 산 책(구입 단추)
     await tap(p, '#tabShop'); await p.waitForTimeout(200); await keep(p); await shot(p, 'shop', size);
+    await tap(p, '#tabEvent'); await p.waitForTimeout(200); await keep(p); await shot(p, 'event', size);
     await tap(p, '#editName'); await p.waitForTimeout(200); await keep(p); await tap(p, '#cancelName');
-    if (await p.locator('#titleSelect').count()) { await tap(p, '#tabWeapons'); await tap(p, '#titleSelect'); await p.waitForTimeout(250); await keep(p); await shot(p, 'titles', size); await p.keyboard.press('Escape'); }
+    if (await p.locator('#titleSelect').count()) { await tap(p, '#tabItems'); await tap(p, '#titleSelect'); await p.waitForTimeout(250); await keep(p); await shot(p, 'titles', size); await p.keyboard.press('Escape'); }
     await ctx.close();
   }
   // ── 배치 잰 값 (화소 비 1 — CSS px) + PC 사진 ──
@@ -107,14 +108,12 @@ try {
     if (size === '1280x720') { await p.waitForTimeout(400); await shot(p, 'title', 'pc'); }
     await toLobby(p);
     await p.waitForTimeout(300);
-    const weapons = await layout(p);
+    const items = await layout(p); // 아이템 칸 한 판 (무기 다음 방어구 — 10/18 04:1x)
     if (size === '1280x720') { await tap(p, '[data-weapon=tree_branch]'); await p.waitForTimeout(250); await shot(p, 'weapons', 'pc'); await tap(p, '[data-weapon=tree_branch]'); }
-    await tap(p, '#tabArmor'); await p.waitForTimeout(300);
-    const armor = await layout(p);
     await tap(p, '#tabSkills'); await p.waitForTimeout(300);
     const skills = await layout(p);
     if (size === '1280x720') await shot(p, 'skills', 'pc');
-    measure[size] = { weapons, armor: { pictures: armor.pictures }, skills: { tree: skills.tree, contents: skills.contents } };
+    measure[size] = { items, skills: { tree: skills.tree, contents: skills.contents } };
     await ctx.close();
   }
 } finally {

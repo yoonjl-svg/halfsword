@@ -1,5 +1,5 @@
 // 용사의 눈물 실제 흐름 점검 (사장님 10/17 — docs/import/hero_tear_2026-10-17.md). 배포판 + 미리 보기 서버, 인증 서버는 막음(부르면 실패)
-//  ① 대기실 방어구 칸: 케틀 햇 · 용사의 눈물 두 칸(그림 256 px · 레전드 빛) · 설명 카드(이름 · 레전드 · 글 · 능력 줄) · 장착 → 둘 다 '장착 중' · 미리보기 그대로(겉모습 변화 없음)
+//  ① 대기실 아이템 칸(10/18 04:1x — 무기 · 방어구를 한 판에: 나뭇가지 다음): 케틀 햇 · 용사의 눈물 두 칸(그림 256 px · 레전드 빛) · 설명 카드(이름 · 레전드 · 글 · 능력 줄) · 장착 → 둘 다 '장착 중' · 프로필 그림 그대로(겉모습 변화 없음)
 //  ② 장착하고 여정 → 카드 → 싸움: 플레이어 기력 무한(케틀 햇 덧까지 130 늘 가득) · 내 머리 위 막대 없음 · 상대 막대 그대로 · 몸에 붙은 것 없음(검객 메쉬 수가 ③과 같음)
 //     상처를 끄고(판이 끝나지 않게 — 시험만) 상대 AI 는 그대로 싸우게 둔 채 손가락 끌기 · 톡 · 막기(F) 로 몰아붙여도 값 · 단계 · 탈진 · 빠르기가 그대로인지 시간에 따라 읽는다
 //     (청구 시도 = 장부 spend 에 들어온 값 — 기력 무한이면 모두 거절되고 spent 0)
@@ -42,7 +42,7 @@ async function lobby(p) { // 첫 화면 'Stage 1' → 곧바로 카드(무기 �
   await lobbyFromBattle(p, 'tap');
 }
 const card = (p) => p.locator('#itemDetail').evaluate((e) => { const r = e.getBoundingClientRect(), f = e.closest('.inventory-frame').getBoundingClientRect(); return { hidden: e.hidden, tier: e.dataset.tier, name: e.querySelector('#itemName').textContent, rarity: e.querySelector('#itemRarity').textContent, description: e.querySelector('#itemDescription').textContent, abilityColor: getComputedStyle(e.querySelector('.item-ability')).color, inside: r.left >= f.left - .5 && r.right <= f.right + .5 && r.top >= f.top - .5 && r.bottom <= f.bottom + .5, overflow: e.scrollHeight > e.clientHeight + 1 }; });
-const badges = (p) => p.locator('.inventory-item').evaluateAll((els) => els.map((e) => ({ id: e.dataset.item, on: !e.querySelector('.equipped-badge').hidden, label: e.getAttribute('aria-label') })));
+const badges = (p) => p.locator('.inventory-item[data-armor]').evaluateAll((els) => els.map((e) => ({ id: e.dataset.item, on: !e.querySelector('.equipped-badge').hidden, label: e.getAttribute('aria-label') })));
 async function pickFirst(p) { // 카드 → 첫 카드(롱소드) → 싸움 · 발이 풀릴 때까지 (첫 무대 훑기)
   await p.waitForFunction(() => game.state === 'draw' && game.draw.t > 0.6, null, { timeout: 90000 });
   await p.locator('#draw .wcard[data-i="0"]').tap();
@@ -116,7 +116,7 @@ try {
   {
     const P = await context(null, 3);
     await lobby(P.p);
-    await P.p.locator('#tabArmor').tap();
+    await P.p.locator('#tabItems').tap(); // 아이템 칸(무기 다음 방어구 — 10/18 전엔 방어구 탭)
     await P.p.locator('.inventory-item img').evaluateAll((els) => Promise.all(els.map((i) => i.decode().catch(() => {}))));
     await P.p.waitForTimeout(400); await shot(P.p, '01_lobby_armor_list');
     await P.p.locator('button[data-armor=hero_tear]').tap(); await P.p.waitForTimeout(200); await shot(P.p, '02_tear_card'); // 새 기기 = 처음부터 장착 중 (사장님 10/17)
@@ -127,15 +127,16 @@ try {
   const A = await context();
   const p = A.p;
   await lobby(p);
-  await p.locator('#tabArmor').tap();
-  assert.equal(await p.locator('#inventoryCount').textContent(), '2개');
-  assert.equal(await p.locator('.inventory-item').count(), 2); assert.equal(await p.locator('.inventory-slot').count(), 18);
-  const thumbs = await p.locator('.inventory-item img').evaluateAll((els) => Promise.all(els.map((i) => i.decode().catch(() => {}).then(() => ({ src: i.getAttribute('src'), alt: i.alt, ok: i.complete && i.naturalWidth === 256, fit: i.dataset.fit })))));
+  assert.equal(await p.locator('#tabItems').getAttribute('aria-selected'), 'true'); // 아이템 칸이 처음 탭 (10/18 04:1x — 무기 · 방어구를 합침)
+  assert.equal(await p.locator('#inventoryCount').textContent(), '3개');
+  assert.equal(await p.locator('.inventory-item').count(), 3); assert.equal(await p.locator('.inventory-slot').count(), 21);
+  assert.deepEqual(await p.locator('.inventory-item').evaluateAll((els) => els.map((e) => e.dataset.item)), ['tree_branch', 'kettle', 'hero_tear']); // 무기 다음 방어구
+  const thumbs = await p.locator('.inventory-item[data-armor] img').evaluateAll((els) => Promise.all(els.map((i) => i.decode().catch(() => {}).then(() => ({ src: i.getAttribute('src'), alt: i.alt, ok: i.complete && i.naturalWidth === 256, fit: i.dataset.fit })))));
   assert.deepEqual(thumbs.map((t) => [t.src, t.alt, t.ok]), [['ui/armor/kettle.webp', '케틀 햇', true], ['ui/armor/hero_tear.webp', '용사의 눈물', true]], JSON.stringify(thumbs));
-  assert.deepEqual(await p.locator('.inventory-item').evaluateAll((els) => els.map((e) => [e.dataset.armor, e.dataset.tier])), [['kettle', 'legend'], ['hero_tear', 'legend']]);
+  assert.deepEqual(await p.locator('.inventory-item[data-armor]').evaluateAll((els) => els.map((e) => [e.dataset.armor, e.dataset.tier])), [['kettle', 'legend'], ['hero_tear', 'legend']]);
   assert.deepEqual((await badges(p)).map((b) => [b.id, b.on]), [['kettle', true], ['hero_tear', true]]); // 새 기기: 둘 다 씀 (사장님 10/17 '용사의 눈물은 장착을 기본으로')
   await p.waitForTimeout(400);
-  checks.push('lobby (title Stage 1 → cards → pause → 대기실) armor tab: 2 items (kettle hat · hero tear), both thumbnails load at 256 px, legend glow; new device = kettle on, tear on (default equipped)');
+  checks.push('lobby (title Stage 1 → cards → pause → 대기실) item grid: tree branch then the two armor items (kettle hat · hero tear), both armor thumbnails load at 256 px, legend glow; new device = kettle on, tear on (default equipped)');
   // 10/17 22:1x: 3D 미리보기를 정사각 프로필 그림으로 바꿈 — 목걸이를 벗고 걸어도 프로필 칸 화소가 한 점도 안 바뀐다(전: 미리보기 화소 · 다시 그린 수)
   const view = await p.locator('#lobbyPortrait').boundingBox();
   const portraitSrc = () => p.locator('#lobbyPortraitImg').getAttribute('src');
@@ -210,7 +211,6 @@ try {
   // ── ④ 케틀 햇만 벗고 용사의 눈물만 ──
   const C = await context({ 'stillness.lobby.armor.v1': '{"version":1,"armor":null}', 'stillness.lobby.neck.v1': '{"version":1,"neck":"hero_tear"}' });
   await lobby(C.p);
-  await C.p.locator('#tabArmor').tap();
   assert.deepEqual((await badges(C.p)).map((b) => [b.id, b.on]), [['kettle', false], ['hero_tear', true]]);
   assert.equal(await C.p.evaluate(() => localStorage.getItem('stillness.lobby.armor.v1')), '{"version":1,"armor":null}'); // 케틀 햇 벗음 (10/17 — 전: 미리보기 data-armor)
   await depart(C.p);
