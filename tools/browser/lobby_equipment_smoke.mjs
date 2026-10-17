@@ -41,8 +41,8 @@ try{
  await state(p,false,false,'');assert.equal(await p.locator('.inventory-item').count(),1);assert.equal(await p.locator('.inventory-slot').count(),19);
  assert.equal(await p.locator('[data-weapon=longsword]').count(),0);
  const layout=await p.locator('.inventory-grid').evaluate(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect(),item=e.firstElementChild.getBoundingClientRect(),root=e.getRootNode();return {columns:s.gridTemplateColumns.split(' ').length,rows:s.gridTemplateRows.split(' ').length,cell:[item.width,item.height],width:r.width,frame:root.querySelector('.portrait-card').getBoundingClientRect().toJSON(),panel:root.querySelector('.character-panel').getBoundingClientRect().toJSON(),depart:root.getElementById('lobbyDepart').getBoundingClientRect().toJSON()};});
- assert.equal(layout.columns,5);assert.equal(layout.rows,4);assert.ok(Math.abs(layout.cell[0]-layout.cell[1])<1);assert.ok(layout.cell[0]>43.3);
- // 10/16 15:3x ⑤: 칸 위 = 카드 위 · 칸 아래 = 출발 단추 아래 (전: 칸의 80 % × 80 %) · 10/17 22:1x: 카드(2 : 3 미리보기) → 같은 폭의 정사각 프로필 그림 — 높이만 짧아짐, 출발 단추 자리 그대로
+ assert.equal(layout.columns,5);assert.equal(layout.rows,4);{const k=layout.cell[0]/layout.cell[1];assert.ok(k>.99&&k<1.25,`cell ${layout.cell}`);} // 10/17 23:4x: 프로필 칸에서 줄어든 폭만큼 재고 틀이 옆으로 넓어져 칸이 조금 가로로 긺 (전: 정사각)assert.ok(layout.cell[0]>43.3);
+ // 10/16 15:3x ⑤: 칸 위 = 카드 위 · 칸 아래 = 출발 단추 아래 (전: 칸의 80 % × 80 %) · 10/17 22:1x: 카드(2 : 3 미리보기) → 정사각 프로필 그림(23:4x 그 80 %) — 출발 단추 폭 = 그림 폭
  const ratio=layout.frame.width/layout.frame.height;assert.ok(ratio>.99&&ratio<1.01,`card ratio ${ratio}`);assert.ok(Math.abs(layout.frame.width-layout.depart.width)<.5,JSON.stringify(layout));
  assert.deepEqual(await portraitOf(p),['player','ui/portraits/player.webp',true]);
  assert.ok(Math.abs(layout.frame.top-layout.panel.top)<1&&Math.abs(layout.depart.bottom-layout.panel.bottom)<1&&layout.depart.y>=layout.frame.bottom&&layout.depart.bottom<=390,JSON.stringify(layout));

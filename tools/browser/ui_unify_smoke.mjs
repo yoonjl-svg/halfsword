@@ -224,7 +224,8 @@ try {
     const src = await shadow(p, `return getComputedStyle(root.querySelector('.inventory-frame')).borderImageSource`);
     assert.ok(src.includes(frame1) || /ui\/px_frame1\.png/.test(src), `${size} frame 1 border image: ${src.slice(0, 80)}`);
     near(a.grid.x - a.inv.x, 14, 'grid fills frame (left)', .5); near(a.inv.r - a.grid.r, 14, 'grid fills frame (right)', .5); near(a.grid.y - a.inv.y, 14, 'grid fills frame (top)', .5); near(a.inv.b - a.grid.b, 14, 'grid fills frame (bottom)', .5);
-    if (a.round) for (const [k, f] of [['card', a.card], ['inv', a.inv]]) for (const d of [f.w, f.h]) assert.ok(Math.abs(((d - 28) % 12 + 12) % 12) < .51 || Math.abs(((d - 28) % 12) - 12) < .51, `${size} ${k} ${d}: whole chain links`);
+    // 사슬 마디 배수 확인은 뺐다 (10/17 — 틀이 액자 1(줄무늬)이라 마디가 없고, 23:4x 프로필 칸 80 % · 재고 틀 폭 + 줄어든 폭이라 12 의 배수가 아니다) — 재고 틀 높이만 전처럼 마디 배수
+    if (a.round) assert.ok(Math.abs(((a.inv.h - 28) % 12 + 12) % 12) < .51 || Math.abs(((a.inv.h - 28) % 12) - 12) < .51, `${size} inv height ${a.inv.h}: link multiple`);
     // 칸 그림 (보이는 부분 = 그림 파일의 불투명 상자 × 그린 크기) · 등급 빛 · '장착 중' 자리
     const cells = async () => shadow(p, `return Promise.all([...root.querySelectorAll('.inventory-item')].map(async (b)=>{const img=b.querySelector('img');await img.decode().catch(()=>{});
         const n=64,cv=document.createElement('canvas');cv.width=cv.height=n;const x=cv.getContext('2d');x.drawImage(img,0,0,n,n);const d=x.getImageData(0,0,n,n).data;let x0=n,x1=-1,y0=n,y1=-1;
@@ -233,7 +234,7 @@ try {
         const badge=b.querySelector('.equipped-badge'),br=badge.hidden?null:badge.getBoundingClientRect(),s=getComputedStyle(b),i=getComputedStyle(img);
         // '장착 중'이 그림을 가리나: 알약 상자 안의 불투명 화소 수 (그림 파일 화소 기준)
         let covered=0;if(br)for(let y=0;y<n;y++)for(let k=0;k<n;k++){if(d[(y*n+k)*4+3]<=24)continue;const px=r.left+(k+.5)/n*r.width,py=r.top+(y+.5)/n*r.height;if(px>br.left&&px<br.right&&py>br.top&&py<br.bottom)covered++;}
-        return {item:b.dataset.item,tier:b.dataset.tier,visible:+(Math.max(vis.r-vis.l,vis.b-vis.t)/c.width).toFixed(3),rendering:i.imageRendering,bg:s.backgroundImage,badge:br?badge.textContent:null,covered};}))`);
+        return {item:b.dataset.item,tier:b.dataset.tier,visible:+(Math.max(vis.r-vis.l,vis.b-vis.t)/Math.min(c.width,c.height)).toFixed(3),rendering:i.imageRendering,bg:s.backgroundImage,badge:br?badge.textContent:null,covered};}))`);
     let got = await cells();
     assert.equal(got.length, 1); assert.equal(got[0].badge, '장착 중');
     await p.locator('#tabArmor').click(); got = got.concat(await cells());
@@ -251,7 +252,7 @@ try {
     for (const k of ['x', 'y', 'w', 'h']) near(s.host[k], a.inv[k], `star-board frame ${k} = inventory frame`, .5);
     if (size === '844x390') await p.screenshot({ path: `${out}/lobby-skills-844.png` });
     report[`frames ${size}`] = { card: [a.card.w, a.card.h, +ratio.toFixed(3)], inventory: [a.inv.w, a.inv.h], starBoard: [s.host.w, s.host.h], columns: { top: [a.card.y, a.profile.y, a.contents.y], bottom: [a.depart.b, a.profile.b, a.contents.b] }, pictures: got.map((g) => [g.item, g.visible]) };
-    checks.push(`${size}: columns share top/bottom lines; frame-1 frames 14 px (profile picture: none — frame drawn in the picture); square profile ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); inventory frame ${a.inv.w}×${a.inv.h} = star-board frame, grid fills it (no strips)${a.round ? ', whole chain links' : ''}; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
+    checks.push(`${size}: columns share top/bottom lines; frame-1 frames 14 px (profile picture: none — frame drawn in the picture); square profile ${a.card.w}×${a.card.h} (${ratio.toFixed(3)}); inventory frame ${a.inv.w}×${a.inv.h} = star-board frame, grid fills it (no strips)${a.round ? ', inventory height in link multiples' : ''}; pictures ${got.map((g) => `${g.item} ${g.visible}`).join(' · ')} smooth with tier glow; 장착 중 covers no picture pixel`);
     await c.close();
   }
   assert.deepEqual(errors, []);
