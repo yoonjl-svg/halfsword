@@ -12,11 +12,14 @@
 //  COVERS=<json> (같은 연구): { 꼴 이름: { 줄: 몸꼴 } } — '무기:꼴 이름' 으로 부르면 그 판에만 막는 쪽 유파 parryCover 에 그 몸꼴을 얹는다
 //   (cover_search.mjs 와 같은 꼴 — 자리 pad 는 유파 parry[줄] 그대로, 몸꼴 칸 hand · blade · pelvisYaw · chestYaw · pitch · drop)
 //  꼴 forte · forte2 (같은 연구): 이탈리아 forte 막기 후보 (가) — 그 판에만 SKILL.itForte = 1 · 2 (판 값 0 — 끔).  예) node tools/sim/parry_gap_map.mjs rapier,rapier:basic,rapier:forte
+//  꼴 cn<배율> (10/17 동방 막기 단추 손 빠르기 — docs/strike/chinese_parry_speed_2026-10-17.md): 그 판에만 SKILL.cnParrySpeedK = 배율 (판 값 1).  예) node tools/sim/parry_gap_map.mjs qinggang,qinggang:cn1.15,qinggang:cn1.3
+//  PRESS=<s> (같은 동방 연구 — 늦게 누르기): 막기 단추를 처음부터 누르지 않고 긋기 시작(대본 3 단계 — 0.15 s 멈춤이 끝난 때) + s 초에 누른다(−0.15 까지 = 멈춤 중 · 99 = 끝까지 안 누름).
+//   json 칸 t3 = 긋기 시작 · tp = 누른 때 · tc = 처음 벤 때 (연구 판 칸 w · dead · d1 도 씀) — 사람이 칼이 오는 것을 보고 얼마나 늦게 눌러도 막나
 //  꼴 retreat · beat (10/17 이탈리아 물러서기 연구 — docs/strike/italian_retreat_2026-10-17.md): 그 판에만 SKILL.itRetreat = 1 · itParryBeat = 1 ('+' 로 잇기 — rapier:retreat+beat).
 //   RETREAT=<json> = SKILL.itRetreatVals 덮기(예 '{"gap":0,"low":0}') · json 칸 rt = 물러선 짝 수 · rtF = 그동안 디딘 발(S 짧은 · L 긴 · s 자세 고치기 · q 기술 걸음) · rtD = 물러선 거리(m) · rtT = 걸린 시간(s — 판이 먼저 끝나면 null)
 //   꼴 retreat2 = SKILL.itRetreat 2(플레이어 스스로 — 막는 동안 스틱을 뒤로 당긴 두 디딤을 물러서는 한 짝으로 셈). HUMAN=<s> = 사람 흉내: 처음 읽은 때 거리가 gap 이상이면 그 s 뒤 스틱을 뒤로 당겨
 //    두 디딤(retreat2 면 그 한 짝이 끝날 때까지 · maxT 안) — 막기 단추의 읽기보다 사람 반응만큼 늦게 물러서는 판
-//   연구 판(RIPOSTE · NOHOLD · HUMAN · 꼴 retreat · retreat2 · beat — 기본 판 json 은 그대로)의 json 칸 w = 막는 쪽이 입은 칼날 상처 [부위 · 자리 · c 베기 / s 찌르기 · 심각도 · J] 모두 · dead = 그 판에 죽은 까닭 · d1 = 처음 읽은 때 거리
+//   연구 판(RIPOSTE · NOHOLD · HUMAN · 꼴 retreat · retreat2 · beat · cn<배율> — 기본 판 json 은 그대로)의 json 칸 w = 막는 쪽이 입은 칼날 상처 [부위 · 자리 · c 베기 / s 찌르기 · 심각도 · J] 모두 · dead = 그 판에 죽은 까닭 · d1 = 처음 읽은 때 거리
 //  RIPOSTE=1 (같은 연구): 막은 판은 막기 판정이 끝나면(긋기 끝 + 0.6 s — 기본 판이 끝나는 때와 같아 막음 · 베임 셈이 기본 판 그대로 · 물러서는 중이면 그 뒤) 막기 단추를 놓고 앞으로 걸으며(스틱 앞 끝) 가슴 사이 거리가 내 무기 reach(한 걸음 내디뎌 닿는 거리) 안이면
 //   탭 찌르기 — json 칸 rp = { d0 시작 거리 · tap {t, d} · hit {t, zone} (상대 몸 칼날 상처) · feet 나아가며 디딘 걷는 발 첫 셋(S · L · u) · cnt 시작 때 박자 셈 · self 그동안 내가 베임 ·
 //   w 그동안 상대가 입은 칼날 상처(위 w 와 같은 꼴) · dead 상대가 죽은 까닭 }, RIP_T s(기본 1.5) 안. 요약 줄 하나 더
@@ -44,6 +47,7 @@ if (process.env.RETREAT) Object.assign(SKILL.itRetreatVals, JSON.parse(process.e
 const RIP = !!process.env.RIPOSTE;
 const RIP_T = +(process.env.RIP_T ?? 1.5);
 const HUM = process.env.HUMAN != null ? +process.env.HUMAN : null; // 사람 흉내 반응 시간(s) — 위 머리말
+const PRESS = process.env.PRESS != null ? +process.env.PRESS : null; // 늦게 누르기: 긋기 시작 + PRESS s 에 막기 단추를 누름 (위 머리말)
 // NOHOLD=1 (같은 연구): 판 시작 발 묶임(ARENA.startHold 2 s — fighter.feetHeld)을 풀고 시작 — 이 판의 공격은 1.2~1.6 s 에 끝나 묶인 발로는 물러서기 · 되찌르기 걸음이 없다.
 //  싸움 한가운데처럼 두 몸 fightT = startHold 로(lobby_rig.js 와 같은 길) · NOHOLD=D = 막는 쪽만(치는 쪽은 묶인 채 — 베기에 몸 내딛기가 안 붙는 지금 판 공격 그대로).
 //  물러서기 연구는 바탕까지 모두 같은 판으로 견준다(짝 비교)
@@ -82,19 +86,25 @@ const ATTACKS = process.env.ATTACKS ? process.env.ATTACKS.split(',').map((n) => 
 
 // 꼴 forte · forte2 (10/17 연구): 이탈리아 forte 막기 후보 (가) — 그 판에만 SKILL.itForte = 1 · 2 (schools.js ITALIAN_FORTE · 끝나면 되돌림 — 판 값 0)
 //  꼴 retreat · beat (10/17 연구): SKILL.itRetreat · itParryBeat = 1 — '+' 로 이은 꼴 이름 낱말마다 (끝나면 되돌림)
+//  꼴 cn<배율> (10/17 동방 막기 단추 손 빠르기): SKILL.cnParrySpeedK = 배율 (끝나면 되돌림)
+let cnTok = false;
 function trial(cfg, atk, gap) {
-  const keep = { f: SKILL.itForte, r: SKILL.itRetreat, b: SKILL.itParryBeat };
+  const keep = { f: SKILL.itForte, r: SKILL.itRetreat, b: SKILL.itParryBeat, k: SKILL.cnParrySpeedK };
   const tok = new Set(cfg.mode.split('+'));
   if (tok.has('forte') || tok.has('forte2')) SKILL.itForte = tok.has('forte2') ? 2 : 1;
   if (tok.has('retreat')) SKILL.itRetreat = 1;
   if (tok.has('retreat2')) SKILL.itRetreat = 2;
   if (tok.has('beat')) SKILL.itParryBeat = 1;
+  const cn = [...tok].find((t) => /^cn[\d.]+$/.test(t));
+  if (cn) SKILL.cnParrySpeedK = +cn.slice(2);
+  cnTok = !!cn; // 연구 판 json 칸(w · dead · d1)을 쓴다 — 'cn1' 이면 판 값 그대로인 판의 상처 기록
   try {
     return trialRun(cfg, atk, gap);
   } finally {
     SKILL.itForte = keep.f;
     SKILL.itRetreat = keep.r;
     SKILL.itParryBeat = keep.b;
+    SKILL.cnParrySpeedK = keep.k;
   }
 }
 
@@ -140,9 +150,9 @@ function trialRun(cfg, atk, gap) {
   }
   Gm.ai.update = () => {};
   A.move.set(0, 0);
-  guard.held = true;
+  guard.held = PRESS == null; // PRESS 판은 누르는 때까지 안 누름
   const setPad = (x, y) => (A.handOffset.set(x, y), A.skill.aimRaw?.set?.(x, y));
-  const r = { cut: null, clash: null, lines: new Set(), nag: false, at: null, atPh: null, atS: null, atE: null, atLn: null, bp: null, d1: null, t1: null };
+  const r = { cut: null, clash: null, lines: new Set(), nag: false, at: null, atPh: null, atS: null, atE: null, atLn: null, bp: null, d1: null, t1: null, t3: null, tp: null };
   const W = [], WA = []; // 칼날 상처 (연구 판 json 칸 w · rp.w): 막는 쪽이 입은 것 · 되찌르기 동안 상대가 입은 것
   let ph = 0, t0 = 0, pts = null;
   // 닿은 자리 = 내 칼 위 몇 할 (0 코등이 → 1 칼끝 · 음수 = 자루·컵 쪽 — deflect_probe.mjs 와 같은 셈)
@@ -225,6 +235,10 @@ function trialRun(cfg, atk, gap) {
     }
   };
   Gm.before = () => {
+    if (PRESS != null && r.tp == null) {
+      const ts = r.t3 ?? (ph === 2 ? t0 + 0.15 : Infinity); // 긋기 시작 (멈춤 중이면 멈춤이 끝나는 때)
+      if (Gm.t >= ts + PRESS - 1e-9) (guard.held = true), (r.tp = Gm.t);
+    }
     human();
     guard.step(DT);
     D.inputActive = guard.active;
@@ -248,7 +262,7 @@ function trialRun(cfg, atk, gap) {
     };
     if (ph === 0 && Gm.t > 0.6) ph = 1;
     else if (ph === 1 && go(atk.from[0], atk.from[1], 3)) (ph = 2), (t0 = Gm.t);
-    else if (ph === 2 && Gm.t - t0 > 0.15) (ph = 3), (pts = atk.path.map((p) => p.slice()));
+    else if (ph === 2 && Gm.t - t0 > 0.15) (ph = 3), (pts = atk.path.map((p) => p.slice())), (r.t3 = Gm.t);
     else if (ph === 3 && go(pts[0][0], pts[0][1], 11) && (pts.shift(), !pts.length)) (ph = 4), (t0 = Gm.t);
     if (r.clash == null && Gm.clashes > c0) r.clash = Gm.t;
     if (!r.cut && !rp) {
@@ -285,7 +299,8 @@ function trialRun(cfg, atk, gap) {
   const at = r.at == null ? {} : { at: r.at, atPh: r.atPh, atS: r.atS, atE: r.atE, atLn: r.atLn };
   if (rt.on) rt.F += feet.slice(rt.f0).map(code).join('');
   const ex = rt.n ? { rt: rt.n, rtF: rt.F, rtD: +rt.D.toFixed(2), rtT: rt.on ? null : +rt.T.toFixed(2) } : {};
-  const research = RIP || NOHOLD || HUM != null || SKILL.itRetreat || SKILL.itParryBeat;
+  const research = RIP || NOHOLD || HUM != null || SKILL.itRetreat || SKILL.itParryBeat || cnTok || PRESS != null;
+  if (PRESS != null) Object.assign(ex, { t3: r.t3 == null ? null : +r.t3.toFixed(3), tp: r.tp == null ? null : +r.tp.toFixed(3), tc: r.cut ? +r.cut.t.toFixed(3) : null }); // 늦게 누르기 판
   if (r.d1 != null && research) ex.d1 = r.d1; // 연구 판에만 (기본 json 칸은 그대로)
   if (research && W.length) ex.w = W; // 막는 쪽 칼날 상처 모두
   if (research && D.state === 'dead') ex.dead = D.causeOfDeath ?? 'dead';

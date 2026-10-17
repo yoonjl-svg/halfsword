@@ -9,6 +9,7 @@
 //   · 막기 자리 = 내 꾸러미 school.parry[줄] (없으면 pose.point — ai.js defend 그대로). 중국·독일(왕관 — 10/12)은 그 줄의 몸꼴 덧씌우기(parryCover — frames.js installCover, AI 와 같은 함수).
 //   · 손 빠르기 = AI 막기 빠르기 L.parrySpeed (L = AI_LEVELS.normal — 플레이어 비기 손 빠르기 바탕과 같은 난이도, skill.js updateSecret). 손 목표를 그 빠르기로 옮긴다
 //     (ai.js moveHand 와 같은 꼴 — 순간이동 없음). 막혔는지는 물리.
+//     동방 막기 책(무기 유파 chinese · 책 사용)만 그 빠르기에 SKILL.cnParrySpeedK 를 곱한다 (10/17 사장님 승인 — 판 값 1 = 그대로, docs/strike/chinese_parry_speed_2026-10-17.md)
 //   · 막기가 끝나는 때 = ai.js defend 의 '공격이 지나갔다'(위협 없음 0.12 s · 상대 손 2.5 m/s 밑 · 막기 0.3 s 지남) 또는 막기 시간 0.65 s (ai.js respond) — 끝나면 기다림.
 //   · 기다림(들어오는 칼이 없음) = ai.js coverFor (AI 가 물러나며 쓰는 '상대가 칼을 든 쪽에서 올 베기를 미리 가리는 자리' — 상대 손이 가운데면 칼끝으로 겨눔 pose.point).
 //  AI 와 다른 것: 굴림이 없다(guardChance·피하기 defVoid·맞받아치기·되받아 치기 없음 — 버튼을 누른 것이 '막는다'는 결정). 발(스틱)은 플레이어 것.
@@ -208,7 +209,8 @@ export class PlayerParryGuard {
     const dx = p[0] - off.x;
     const dy = p[1] - off.y;
     const dd = Math.hypot(dx, dy);
-    const step = L.parrySpeed * (1 + (A >= 1 ? AV.speedK * w : 0)) * dt; // ① 무게 보정 (단계 0 이면 그대로)
+    const cnK = this.chineseBook() ? SKILL.cnParrySpeedK : 1; // 동방 막기 책 손 빠르기 배율 (10/17 — SKILL.cnParrySpeedK, 판 값 1 = 그대로)
+    const step = L.parrySpeed * (1 + (A >= 1 ? AV.speedK * w : 0)) * cnK * dt; // ① 무게 보정 (단계 0 이면 그대로)
     const k = dd > step ? step / dd : 1;
     const mx = dx * k;
     const my = dy * k;
@@ -256,6 +258,12 @@ export class PlayerParryGuard {
     this.retreat = { t: 0, n0: this.footfalls(), own: true };
     this.me.gait.rhythmBeat('retreat');
     this.stats.retreats = (this.stats.retreats ?? 0) + 1;
+  }
+
+  /** 동방 막기 책을 쥔 몸인가 (무기 유파 chinese · 책 해제면 아님) — 막기 단추 손 빠르기 배율 SKILL.cnParrySpeedK 를 받는다 */
+  chineseBook() {
+    const me = this.me;
+    return me.swordArt?.tradition === 'chinese' && me.schoolParry !== false;
   }
 
   /** 이탈리아 막기 책을 쥐고(책 해제면 아님) 박자 걸음이 도는 몸인가 */

@@ -706,6 +706,11 @@ export const SKILL = {
     holdK: 0.5, // ③ 자리 덧힘: 막는 줄의 자리에 손이 닿아 있는 동안 powerMul 에 × (1 + holdK·(1 + w)) — 맞고 밀리지 않게
     holdR: 0.04, // ③ '자리에 닿음' = 손 목표가 막기 자리에서 이 안 (패드 m)
   },
+  // 동방 막기 단추 손 빠르기 (10/17 19:0x 사장님 승인 — 동방 막기 최종 검토 §4 의 2 '동방 막기 단추의 손 옮김 빠르기만 조금 올리기' · **스위치 · 판 값 1 = 끔**,
+  //  docs/strike/chinese_parry_speed_2026-10-17.md · 확인표 2065~ 사장님 확인 전): 동방 막기 책을 쥔 플레이어(무기 유파 chinese · 막기 책 사용 — me.schoolParry !== false)의
+  //  막기 단추가 손 목표를 옮기는 빠르기(AI_LEVELS.normal.parrySpeed 4.5 m/s — 모든 유파 같은 값)에 이 배율을 곱한다(src/parry_button.js).
+  //  AI 막기 · 다른 유파 · 책 없음 · 막기 자리 · 몸꼴 · 줄 읽기 · 비기 손 빠르기는 그대로. `?cnParrySpeed=1.3` · 시뮬 with_config.mjs SKILL.cnParrySpeedK=1.3 · parry_gap_map.mjs 꼴 'cn1.3'
+  cnParrySpeedK: 1,
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 
