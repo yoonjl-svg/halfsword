@@ -143,7 +143,7 @@ function lavaTextures() {
   return { map: canvasTex(1024, 1024, draw(false)), emissiveMap: canvasTex(1024, 1024, draw(true)) };
 }
 
-function landHeight(x, z) {
+export function landHeight(x, z) { // 밤의 화산섬 소품도 이 땅 높이에 앉힌다 (stage_night_fifth.js — 10/17)
   // 같이 쓰는 결투 땅 밖에서만 꾸민다 — 결투장 둘레에 손대지 않은 삼각형 한 바퀴를 더 남긴다
   const d = Math.hypot(x, z), blend = smooth(12, 19, d);
   const broken = .55 * Math.sin(x * .23 + z * .12) + .27 * Math.sin(x * .72 - z * .32) + .16 * Math.cos(z * .81 + x * .46);
