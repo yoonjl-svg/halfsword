@@ -51,6 +51,10 @@ const PAVE = {
   rayA: '#c9b797', rayB: '#d3c3a4', // 나침반 살 두 면 (바탕보다 8~12% 어둡다 — 결투장 밖이라 조금 더 보이게)
   joint: 'rgba(110,98,76,0.24)', // 이음매: 굵고(3.5cm) 옅게
 };
+// 그린 뒤 ⑥ 에서 getImageData 로 화소를 다시 읽으므로 CPU 캔버스(willReadFrequently)에 그린다 (10/17 — docs/perf_loggia_build_2026-10-17.md).
+//  가속 캔버스면 읽는 순간 쌓인 그리기 명령(판석 · 결 · 글자 2천여 개)을 GPU 에서 몰아 그리고 끝날 때까지 기다려,
+//  헤드리스 짓기 시간(1.4 s, 앞 프레임 일과 겹치면 3~4.7 s)의 거의 전부가 여기였다.
+//  그리는 명령 · 화소 계산은 그대로 — 달라지는 것은 가장자리 계단 처리(안티에일리어싱)의 몇 단계뿐
 function pavingTexture(sunOffset) {
   const random = rng(6121);
   const N = 1024;
@@ -286,7 +290,7 @@ function pavingTexture(sunOffset) {
       }
     }
     ctx.putImageData(img, 0, 0);
-  });
+  }, { willReadFrequently: true });
 }
 
 function skyTexture() {

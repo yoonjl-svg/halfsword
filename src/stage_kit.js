@@ -183,11 +183,14 @@ export function limb(K, bin, a, b, r0, r1, color, opt = {}, seg = 7) {
 }
 
 // ── 질감 (캔버스) ──
-export function canvasTex(w, h, draw) {
+//  attrs: getContext('2d', attrs) 에 그대로 넘긴다. 그린 뒤 getImageData 로 화소를 다시 읽는 질감은 { willReadFrequently: true } —
+//   가속 캔버스는 쌓아 둔 그리기 명령을 읽는 순간 GPU 에서 한꺼번에 그리고 끝날 때까지 기다린다
+//   (붉은 회랑 바닥: 헤드리스 1.3 s · 앞 프레임 일과 겹치면 4 s 넘게 → 0.1 s, docs/perf_loggia_build_2026-10-17.md)
+export function canvasTex(w, h, draw, attrs) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
-  draw(c.getContext('2d'), w, h);
+  draw(c.getContext('2d', attrs), w, h);
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
