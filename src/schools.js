@@ -1159,6 +1159,28 @@ TRADITIONS.japanese.parryCover = { highC: JAPANESE_UKENAGASHI };
 TRADITIONS.italian.parry = { highL: G.pflugL, highR: G.ochsR, highC: G.langort, lowL: G.pflugL, lowR: G.pflugR, thrust: G.pflugL };
 // 덮는 자세: 1번 자세(지붕 자리) — 판 64 「parry the said blow in prima with the sword in guardia di testa」(망토와 함께, 칼만 판엔 머리 막기 없음) [원문] · 자리 [해석]
 TRADITIONS.italian.pose = { ...GERMAN.pose, cover: G.tag };
+// ── 이탈리아 forte 막기 (가) — 연구 후보, 판에는 꺼 둠 (10/17 감독 아침 검토 · 사장님 확인 전 — 확인표 2037 · docs/strike/italian_forte_parry_2026-10-17.md) ──
+//  원전 (카포 페로 1610 — Wiktenauer 'Ridolfo Capoferro' 영역 Swanger·Wilson 단락 [n], 괄호 = 원문 번호): [29](용어 15) 「when you parry with the true edge, you must parry with the forte,
+//   from the middle of your sword down to the hilt」 · [37] forte = 코등이 ~ 칼 가운데 · [21](용어 7) 「all the parries require an extended arm」 ·
+//   [115] 「the forte of my sword goes in a straight line, and comes to cover all of my body」 · [16](용어 2) 2번 자세 = 칼자루가 어깨 높이 [원문 영역]
+//  잰 것(456 판 — parry_gap_map.mjs): 위 막기 자리는 패드만 다르고 몸꼴 덧씌우기가 없어 자세표의 원전 꼴(위 ITALIAN_GUARD_TABLE 뻗은 2번 · 3번)이 막을 때 실제로 서지 않는다
+//   (보정 v2 가 칼끝 방향을 패드에서 읽음 — 플레이어 오른쪽 위 칼끝 26° 위로 듦 · 머리 위 손이 왼쪽 0.24 · 앞 0.32 m 에 머묾). 긋기 첫 닿음이 forte(0.5 이하)인 몫:
+//   왼쪽 위 80 % · 오른쪽 위 57 % · 머리 위 45 %. 그래서 오른쪽 위 · 머리 위만 막기 몸꼴 덧씌우기(installCover — 왕관 · 우케나가시와 같은 장치)로 자세표의 원전 꼴을 세운다:
+//   오른쪽 위 forte 57 → 72 % · 머리 위 45 → 70 %. 왼쪽 위는 이미 forte 로 받고(80 %) 원전대로 뻗은 4번 자세를 세우면 맞은 판이 늘어(30 → 38, 부호 검정 p 0.02) 그대로 둔다.
+//  값 = 자세표 값 그대로(새 수 없음): 오른쪽 위 = '황소 (Ochs)' 칸 2번 자세 · 머리 위 = 한손 찌르기 틀 '긴 자세' 손 · 칼끝(이탈리아 자세표 뻗은 3번 자세 — 값 없는 칸) + 몸은 자세표의 낮춤 0.12.
+//  hand [앞, 위, 칼 든 쪽] m 진행 방향 틀 · 가슴 가운데 원점 · blade [올려본 각, 옆 각] ° (frames.js installCover — 막는 줄에서 손 · 칼끝 · 몸을 덮음, 패드는 그대로)
+//  SKILL.itForte (config — 판 값 0 = 끔, 지금 판 바이트 그대로): 1 = 오른쪽 위만 · 2 = 오른쪽 위 + 머리 위. `?itForte=1|2` · 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte|forte2'
+const IT_FORTE_SECONDA = { name: '뻗은 2번 자세 (Seconda)', desc: '팔을 곧게 뻗어 칼자루를 어깨 높이 바깥에, 손바닥은 아래로 · 칼끝은 곧게 상대에게 — 칼 가운데 ~ 코등이(forte)로 받는다', pad: G.ochsR, hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [16](용어 2) · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 이탈리아 자세표 2번 자세 값(Fabris 1606 [21]·[22] 판 3·4) [해석]' };
+const IT_FORTE_TERZA = { name: '뻗은 3번 자세 (Terza)', desc: '팔을 곧게 뻗어 칼끝으로 상대 얼굴을 겨눈다 · 곧은 줄로 치며 막는다 — 곧게 뻗은 칼의 forte 가 몸을 가린다', pad: G.langort, hand: [0.68, 0.08, 0.1], blade: [-3, 0], pelvisYaw: -35, chestYaw: -45, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [115] · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 한손 찌르기 틀 긴 자세 값(이탈리아 자세표 뻗은 3번 자세 — Fabris 1606 [28] 판 10) · 낮춤 0.12 [해석]' };
+export const ITALIAN_FORTE = { 1: { highR: IT_FORTE_SECONDA }, 2: { highR: IT_FORTE_SECONDA, highC: IT_FORTE_TERZA } };
+// 읽을 때마다 스위치를 본다(게터 — 독일 왕관과 같은 꼴). configurable: 도구(parry_gap_map · cover_search · cover_pose_check)가 잠깐 바꿔 끼우고 되돌린다
+Object.defineProperty(TRADITIONS.italian, 'parryCover', {
+  get() {
+    return ITALIAN_FORTE[SKILL.itForte];
+  },
+  enumerable: true,
+  configurable: true,
+});
 // 속임수: Umschlagen 둘(롱소드 고유)을 뺀다 — 남김 위→다리 · 찌르기→베기(권고 22 「these feints strike directly at the opposite of that at which they gesture」 [원문] = 기본 속임).
 //  카포 페로의 칼만 속임(판 45·46 「disengaged the sword by way of a feint」)은 이미 고유 동작 cavazione 다 — 새로 지어 넣지 않는다
 TRADITIONS.italian.feints = FEINTS.filter((f) => !/^(오른쪽→왼쪽|왼쪽→오른쪽)$/.test(f.name));
