@@ -18,9 +18,9 @@
 }
 /* 그림(픽셀 숲) 위에 바로 놓인 부 단추: 싸움 화면 부 단추 뒤에는 늘 창(.card — --panel)이 있다 → 같은 바탕을 단추에 깔아 가장자리가 그림에 묻히지 않게 (사장님 지시 10/16) */
 :host .secondary.on-art { background: var(--panel); }
-/* 작은 부 단추 (첫 화면 아래 줄 · 대기실 '첫 화면으로'): 꼴은 부 단추 그대로 · 글자만 작게(--fs-s) · 높이 28 — 값은 사장님 확인 전 */
+/* 작은 부 단추 (첫 화면 아래 줄 · 대기실 '첫 화면' — 10/17 12:2x 사장님, 전 '첫 화면으로'): 꼴은 부 단추 그대로 · 글자만 작게(--fs-s) · 높이 28 — 값은 사장님 확인 전 */
 :host .secondary.small { padding: 6px 12px; font-size: var(--fs-s); }
-:host .secondary.small.utility { width: 70px; padding-left: 0; padding-right: 0; } /* 첫 화면 아래 줄 셋(공지사항 · 설정 · 계정 연결) · 대기실 '첫 화면으로' — 같은 폭 70 · 옆 패딩 0 (사장님 10/16 17:5x '첫 화면으로 버튼은 … 첫 화면의 공지사항처럼') */
+:host .secondary.small.utility { width: 70px; padding-left: 0; padding-right: 0; } /* 첫 화면 아래 줄 셋(공지사항 · 설정 · 계정 연결) · 대기실 '첫 화면' — 같은 폭 70 · 옆 패딩 0 (사장님 10/16 17:5x '첫 화면으로 버튼은 … 첫 화면의 공지사항처럼') */
 /* 누를 수 없을 때: 싸움 화면엔 이런 단추가 없어 감독 시안 값(흐리게 .4)으로 — 꼴은 그대로 */
 :host .primary:disabled, :host .secondary:disabled { opacity: .4; cursor: default; }
 
