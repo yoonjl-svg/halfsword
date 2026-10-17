@@ -711,6 +711,14 @@ export const SKILL = {
   //  막기 단추가 손 목표를 옮기는 빠르기(AI_LEVELS.normal.parrySpeed 4.5 m/s — 모든 유파 같은 값)에 이 배율을 곱한다(src/parry_button.js).
   //  AI 막기 · 다른 유파 · 책 없음 · 막기 자리 · 몸꼴 · 줄 읽기 · 비기 손 빠르기는 그대로. `?cnParrySpeed=1.3` · 시뮬 with_config.mjs SKILL.cnParrySpeedK=1.3 · parry_gap_map.mjs 꼴 'cn1.3'
   cnParrySpeedK: 1,
+  // 동방 막기 마지막 안 두 가지 (10/17 20:1x 사장님 '그런 방식으로도 막기가 강화될 수 없다면, (동방 유파에만) 막는 힘에 버티는 힘 보너스를 주거나 막는 동안 피해 감소 효과를 부여하는 방안을
+  //  마지막으로 검토해' — **연구 스위치 · 판 값 0 = 끔**, docs/strike/chinese_parry_brace_2026-10-17.md · 확인표 2067~ 사장님 확인 전). 둘 다 동방 막기 책을 쥔 플레이어(parry_button.js chineseBook)의
+  //  막기 단추가 **막는 중**(mode 'defend' — 새 공격을 읽은 때부터 '공격이 지나갔다' 또는 막기 시간 0.65 s 까지)일 때만. 기다림 · AI 막기 · 다른 유파 · 책 없음은 그대로. 새 상한 · 문턱 · 쿨타임 없음:
+  //  cnBraceK = 버티는 힘: 서보 힘 me.powerMul × (1 + cnBraceK) — 손목이 칼을 세워 두는 힘 한도(fighter.driveSword str — 막기 거듦 ①③ 과 같은 칸, 곱). `?cnBrace=0.5` · 시뮬 with_config.mjs SKILL.cnBraceK=0.5 · 빈틈 지도 꼴 'cnB0.5'
+  //  cnParryDmgCut = 막는 동안 피해 감소: 그때 입는 칼날 상처(베기 · 찌르기) 심각도 × (1 − cut) — combat.js analyze(팔다리 기능 · 피 흘림 · 의식 · 죽음 문턱이 모두 심각도에서 나옴 ·
+  //   칼과 몸의 물리 — 가르나 튕기나 · 충격 · 휘청임 — 는 그대로). `?cnParryCut=0.25` · 시뮬 with_config.mjs SKILL.cnParryDmgCut=0.25 · 꼴 'cnD0.25'
+  cnBraceK: 0,
+  cnParryDmgCut: 0,
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 

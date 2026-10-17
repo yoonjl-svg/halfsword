@@ -22,7 +22,7 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
@@ -326,6 +326,10 @@ export class Combat {
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
+        // 동방 막는 동안 피해 감소 (10/17 연구 — SKILL.cnParryDmgCut, 판 값 0 = 끔 · docs/strike/chinese_parry_brace_2026-10-17.md): 받는 쪽이 동방 막기 책을 쥐고
+        //  막기 단추로 막는 중(parry_button.js woundKeep)이면 이 칼날 상처의 심각도만 × (1 − cut). 팔다리 기능 · 피 흘림 · 의식 · 목/머리 죽음 문턱 · 절단이 모두
+        //  심각도에서 나와(fighter.applyWound) 같이 준다. 에너지 · 가르나 튕기나(pass) · 박힘은 그대로 — 칼과 몸의 물리(충격 · 휘청임 · 투구/판 닳음)는 바뀌지 않는다
+        if (SKILL.cnParryDmgCut > 0 && vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
       } else {
         const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
         if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.

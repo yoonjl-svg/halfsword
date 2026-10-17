@@ -10,6 +10,8 @@
 //   · 손 빠르기 = AI 막기 빠르기 L.parrySpeed (L = AI_LEVELS.normal — 플레이어 비기 손 빠르기 바탕과 같은 난이도, skill.js updateSecret). 손 목표를 그 빠르기로 옮긴다
 //     (ai.js moveHand 와 같은 꼴 — 순간이동 없음). 막혔는지는 물리.
 //     동방 막기 책(무기 유파 chinese · 책 사용)만 그 빠르기에 SKILL.cnParrySpeedK 를 곱한다 (10/17 사장님 승인 — 판 값 1 = 그대로, docs/strike/chinese_parry_speed_2026-10-17.md)
+//     동방 막기 마지막 안 둘 (10/17 20:1x 사장님 — 판 값 0 = 끔, docs/strike/chinese_parry_brace_2026-10-17.md): 막는 중(mode 'defend')만 ⓐ 버티는 힘 SKILL.cnBraceK — 서보 힘 × (1 + K)
+//      ⓑ 피해 감소 SKILL.cnParryDmgCut — 그때 입는 칼날 상처 심각도 × (1 − cut) (woundKeep — combat.js analyze 가 읽는다)
 //   · 막기가 끝나는 때 = ai.js defend 의 '공격이 지나갔다'(위협 없음 0.12 s · 상대 손 2.5 m/s 밑 · 막기 0.3 s 지남) 또는 막기 시간 0.65 s (ai.js respond) — 끝나면 기다림.
 //   · 기다림(들어오는 칼이 없음) = ai.js coverFor (AI 가 물러나며 쓰는 '상대가 칼을 든 쪽에서 올 베기를 미리 가리는 자리' — 상대 손이 가운데면 칼끝으로 겨눔 pose.point).
 //  AI 와 다른 것: 굴림이 없다(guardChance·피하기 defVoid·맞받아치기·되받아 치기 없음 — 버튼을 누른 것이 '막는다'는 결정). 발(스틱)은 플레이어 것.
@@ -221,10 +223,14 @@ export class PlayerParryGuard {
     sk.guardDrive = Math.hypot(mx, my) / dt; // 검술 층: 휘두르기 문턱보다 빠르면 AI 막기처럼 휘두르기 꼴의 거르기·몸 따라가기 (skill.js)
     sk.recovering = false;
     sk.cutPending = false;
-    if (A >= 1) {
-      // ① 서보 힘 · ③ 막는 줄의 자리에 닿아 있으면 더 (칼을 단단히 세움)
+    // 동방 버티는 힘 (10/17 연구 — SKILL.cnBraceK, 판 값 0 = 끔): 동방 막기 책을 쥔 몸이 막는 중(mode 'defend')이면 서보 힘 × (1 + cnBraceK).
+    //  기다림(idle)엔 안 줌 · 막기가 끝나거나 단추를 놓으면 아래 boost 되돌림 길로 1 · 막기 거듦(①③)과는 곱
+    const brace = this.mode === 'defend' && SKILL.cnBraceK > 0 && this.chineseBook() ? SKILL.cnBraceK : 0;
+    if (A >= 1 || brace > 0) {
+      // ① 서보 힘 · ③ 막는 줄의 자리에 닿아 있으면 더 (칼을 단단히 세움) — 거듦 단계 0 이면 w = 0 이라 1
       let pm = 1 + AV.powK * w;
       if (A >= 3 && this.mode === 'defend' && Math.hypot(p[0] - off.x, p[1] - off.y) < AV.holdR) pm *= 1 + AV.holdK * (1 + w);
+      if (brace > 0) pm *= 1 + brace;
       me.powerMul = pm;
       this.boost = true;
     } else if (this.boost) (me.powerMul = 1), (this.boost = false);
@@ -260,10 +266,20 @@ export class PlayerParryGuard {
     this.stats.retreats = (this.stats.retreats ?? 0) + 1;
   }
 
-  /** 동방 막기 책을 쥔 몸인가 (무기 유파 chinese · 책 해제면 아님) — 막기 단추 손 빠르기 배율 SKILL.cnParrySpeedK 를 받는다 */
+  /** 동방 막기 책을 쥔 몸인가 (무기 유파 chinese · 책 해제면 아님) — 막기 단추 손 빠르기 배율 SKILL.cnParrySpeedK · 버티는 힘 cnBraceK · 피해 감소 cnParryDmgCut 를 받는다 */
   chineseBook() {
     const me = this.me;
     return me.swordArt?.tradition === 'chinese' && me.schoolParry !== false;
+  }
+
+  /**
+   * 동방 막는 동안 피해 감소 (10/17 연구 — SKILL.cnParryDmgCut, 판 값 0 = 끔 · docs/strike/chinese_parry_brace_2026-10-17.md): 지금 받는 칼날 상처 심각도에 곱할 몫.
+   *  막는 중 = 이번 물리 스텝의 step() 이 손을 쥐고(can) 막는 줄(defLine)을 세운 때(mode 'defend' — 새 공격을 읽은 때부터 '공격이 지나갔다' 또는 막기 시간 0.65 s 까지, 이미 있는 값).
+   *  상처는 그 스텝 물리 뒤(combat.afterStep → analyze)에 판정되므로 그 스텝의 mode 를 읽는다. 기다림(idle) · 단추 놓음 · 다른 유파 · 책 없음 = 1. combat.js analyze 가 부른다
+   */
+  woundKeep() {
+    const cut = SKILL.cnParryDmgCut;
+    return cut > 0 && this.mode === 'defend' && this.chineseBook() ? 1 - cut : 1;
   }
 
   /** 이탈리아 막기 책을 쥐고(책 해제면 아님) 박자 걸음이 도는 몸인가 */

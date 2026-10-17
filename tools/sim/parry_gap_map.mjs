@@ -13,6 +13,8 @@
 //   (cover_search.mjs 와 같은 꼴 — 자리 pad 는 유파 parry[줄] 그대로, 몸꼴 칸 hand · blade · pelvisYaw · chestYaw · pitch · drop)
 //  꼴 forte · forte2 (같은 연구): 이탈리아 forte 막기 후보 (가) — 그 판에만 SKILL.itForte = 1 · 2 (판 값 0 — 끔).  예) node tools/sim/parry_gap_map.mjs rapier,rapier:basic,rapier:forte
 //  꼴 cn<배율> (10/17 동방 막기 단추 손 빠르기 — docs/strike/chinese_parry_speed_2026-10-17.md): 그 판에만 SKILL.cnParrySpeedK = 배율 (판 값 1).  예) node tools/sim/parry_gap_map.mjs qinggang,qinggang:cn1.15,qinggang:cn1.3
+//  꼴 cnB<K> · cnD<몫> (10/17 동방 막기 마지막 안 — docs/strike/chinese_parry_brace_2026-10-17.md): 그 판에만 SKILL.cnBraceK = K(버티는 힘) · SKILL.cnParryDmgCut = 몫(막는 동안 피해 감소) (판 값 0).
+//   연구 판 json 칸 w 를 쓰고, 그 상처마다 여섯째 칸 = 입은 때 막는 중(mode 'defend')이면 1 · 아니면 0.  예) node tools/sim/parry_gap_map.mjs qinggang:cnB0,qinggang:cnB0.5,qinggang:cnD0.25
 //  PRESS=<s> (같은 동방 연구 — 늦게 누르기): 막기 단추를 처음부터 누르지 않고 긋기 시작(대본 3 단계 — 0.15 s 멈춤이 끝난 때) + s 초에 누른다(−0.15 까지 = 멈춤 중 · 99 = 끝까지 안 누름).
 //   json 칸 t3 = 긋기 시작 · tp = 누른 때 · tc = 처음 벤 때 (연구 판 칸 w · dead · d1 도 씀) — 사람이 칼이 오는 것을 보고 얼마나 늦게 눌러도 막나
 //  꼴 retreat · beat (10/17 이탈리아 물러서기 연구 — docs/strike/italian_retreat_2026-10-17.md): 그 판에만 SKILL.itRetreat = 1 · itParryBeat = 1 ('+' 로 잇기 — rapier:retreat+beat).
@@ -87,9 +89,11 @@ const ATTACKS = process.env.ATTACKS ? process.env.ATTACKS.split(',').map((n) => 
 // 꼴 forte · forte2 (10/17 연구): 이탈리아 forte 막기 후보 (가) — 그 판에만 SKILL.itForte = 1 · 2 (schools.js ITALIAN_FORTE · 끝나면 되돌림 — 판 값 0)
 //  꼴 retreat · beat (10/17 연구): SKILL.itRetreat · itParryBeat = 1 — '+' 로 이은 꼴 이름 낱말마다 (끝나면 되돌림)
 //  꼴 cn<배율> (10/17 동방 막기 단추 손 빠르기): SKILL.cnParrySpeedK = 배율 (끝나면 되돌림)
+//  꼴 cnB<K> · cnD<몫> (10/17 동방 막기 마지막 안): SKILL.cnBraceK · SKILL.cnParryDmgCut (끝나면 되돌림)
 let cnTok = false;
+let cnBD = false; // 꼴 cnB · cnD 판: 상처 칸에 막는 중이었나를 더 적는다
 function trial(cfg, atk, gap) {
-  const keep = { f: SKILL.itForte, r: SKILL.itRetreat, b: SKILL.itParryBeat, k: SKILL.cnParrySpeedK };
+  const keep = { f: SKILL.itForte, r: SKILL.itRetreat, b: SKILL.itParryBeat, k: SKILL.cnParrySpeedK, cb: SKILL.cnBraceK, cd: SKILL.cnParryDmgCut };
   const tok = new Set(cfg.mode.split('+'));
   if (tok.has('forte') || tok.has('forte2')) SKILL.itForte = tok.has('forte2') ? 2 : 1;
   if (tok.has('retreat')) SKILL.itRetreat = 1;
@@ -97,7 +101,12 @@ function trial(cfg, atk, gap) {
   if (tok.has('beat')) SKILL.itParryBeat = 1;
   const cn = [...tok].find((t) => /^cn[\d.]+$/.test(t));
   if (cn) SKILL.cnParrySpeedK = +cn.slice(2);
-  cnTok = !!cn; // 연구 판 json 칸(w · dead · d1)을 쓴다 — 'cn1' 이면 판 값 그대로인 판의 상처 기록
+  const cb = [...tok].find((t) => /^cnB[\d.]+$/.test(t));
+  if (cb) SKILL.cnBraceK = +cb.slice(3);
+  const cd = [...tok].find((t) => /^cnD[\d.]+$/.test(t));
+  if (cd) SKILL.cnParryDmgCut = +cd.slice(3);
+  cnBD = !!(cb || cd);
+  cnTok = !!(cn || cnBD); // 연구 판 json 칸(w · dead · d1)을 쓴다 — 'cn1' · 'cnB0' 이면 판 값 그대로인 판의 상처 기록
   try {
     return trialRun(cfg, atk, gap);
   } finally {
@@ -105,6 +114,8 @@ function trial(cfg, atk, gap) {
     SKILL.itRetreat = keep.r;
     SKILL.itParryBeat = keep.b;
     SKILL.cnParrySpeedK = keep.k;
+    SKILL.cnBraceK = keep.cb;
+    SKILL.cnParryDmgCut = keep.cd;
   }
 }
 
@@ -176,6 +187,7 @@ function trialRun(cfg, atk, gap) {
     if (vic === D && res.type !== 'blunt' && r.bp == null) r.bp = pr?.v?.part ?? null; // 처음 벤 몸 부위 (아래 r.cut 과 같은 상처)
     if (res.type !== 'blunt' && res.severity > 0) {
       const w = [pr?.v?.part ?? null, res.zone, res.type === 'stab' ? 's' : 'c', +res.severity.toFixed(3), Math.round(res.energy)];
+      if (cnBD && vic === D) w.push(guard.mode === 'defend' ? 1 : 0); // 꼴 cnB · cnD: 입은 때 막는 중이었나 (피해 감소가 걸리는 때)
       if (vic === D) W.push(w);
       else if (vic === A && att === D && rp) WA.push(w);
     }
