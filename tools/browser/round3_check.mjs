@@ -60,7 +60,7 @@ report.data = { alters: ALTERS.length, proficiencyPairs: ALTERS.length * 5, pair
   proficiency: Object.fromEntries(ALTERS.map((id) => [id, [C[id].ai.proficiency, C[id + '_mad'].ai.proficiency]])), stageOrder: STAGE_ORDER.length };
 save();
 
-const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
 const watch = (p, tag) => { p.on('pageerror', (e) => report.errors.push(`${tag}: ${e}`)); p.on('console', (m) => { if (m.type() === 'error') report.errors.push(`${tag}: ${m.text()}`); }); };
 async function openFight(stage, foe, foeWeapon, { viewport = { width: 960, height: 540 }, render = false } = {}) {
   const p = await browser.newPage({ viewport, hasTouch: true });
