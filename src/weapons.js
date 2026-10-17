@@ -12,6 +12,7 @@
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import { classifyWeapon } from './weapon_class.js';
+import { drawBrothersSword } from './renji_sword_wrap.js'; // 황약사의 검(형의 칼)의 흰 천 감싼 겉모습 (샛별 저장소에서 가져옴 10/17)
 import { MONTANTE } from './config.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -65,6 +66,7 @@ export const TIER_DRAW = { common: 40, rare: 27, epic: 16, legend: 5, trash: 7, 
 //   그 칸이 뽑히면 묶음 안에서 하나를 고르고(난수 한 번 더), 같은 판에 묶음의 다른 무기는 나오지 않는다. 지난 판 무기를 뺄 때도 묶음째 뺀다.
 //   묶음 없는 무기(지금 간장·막야 말고 전부)는 전과 같은 난수 수·같은 결과다.
 export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random } = {}) {
+  pool = pool.filter(id => !getWeapon(id).characterOnly); // characterOnly(인물 전용) 무기는 카드에 안 나온다 — 지금 그런 무기는 없어 뽑기 결과 · 난수 차례는 전과 같다 (샛별 저장소 10/17)
   const groupOf = (id) => getWeapon(id).drawGroup || id;
   const exGroup = exclude == null ? null : groupOf(exclude);
   let left = pool.filter((id) => groupOf(id) !== exGroup);
@@ -1531,6 +1533,34 @@ const goujian = finalizeSpec('goujian', {
   },
 });
 
+// 황약사의 검 (id brothers_sword — 김씨의 형의 칼, 샛별 저장소에서 가져옴 10/17 · docs/import/saetbyeol_round3_2026-10-17.md):
+//  사장님 10/16~17 결정(샛별 쪽): 이름 '황약사의 검' · 에픽 한손 둔기 · 정식 카드 뽑기에 넣음 · 능력 줄 '취생몽사: 몽롱한 일격'(이름뿐 — 상태 이상 · 발동 효과 없음) ·
+//  설명 두 줄(둘째 줄 인용) · 1.6 kg · 둔타 1.6 · 파손 0. 흰 천으로 감싸 날 · 가시가 없다 — 베기 · 찌르기 0. 치수 · 질량은 게임 추정 [추정].
+//  에픽 공통 공격 배율 ×1.1 은 등급표(TIER_DEFAULTS.epic.power — combat.js 가 판정 에너지에 곱함). 둔타 계수 자체는 더 올리지 않았다. 광기의 김씨(renji_mad)가 든다
+const brothersSword = finalizeSpec('brothers_sword', {
+  nameKo: '황약사의 검', nameEn: "Huang Yaoshi's Sword",
+  desc: '흰 천으로 감싼 검. 오랫동안 풀지 않은 듯 단단히 매여 있다.\n“번뇌는 기억력 때문이라더군.”',
+  grip: 'one-hand', material: 'wood', soundMaterial: 'wood', tier: 'epic',
+  // 능력 줄은 이름만 — 더해지는 상태 이상이나 전투 발동이 없다 (사장님 결정, 샛별 쪽)
+  ability: '취생몽사: 몽롱한 일격',
+  edged: false, spike: false, mCut: 0, mThrust: 0, mBlunt: 1.6,
+  fragility: 0, durability: 1, // 파손 0 (사장님 결정, 샛별 쪽): 부러질 주사위 · 부러진 꼴 없음 — 청강검 '창천'(breakMult ×3)에도 0 그대로
+  hiltLength: .12, bladeLength: .81,
+  partMesh: hiddenParts,
+  buildParts() {
+    // 1.60 kg: 롱소드와 같은 총량 — 천에 싸인 칼 · 칼집 몸이 대부분의 질량 (자루 0.28 · 끝 0.10 · 몸 1.22)
+    const grip = boxInertia(.28, .019, .12, .019);
+    const cap = sphereInertia(.10, .015);
+    const body = boxInertia(1.22, .021, .405, .021);
+    return [
+      partTuple(['box', .019, .12, .019], -.012, .28, 0, grip.Ie, grip.It, null),
+      partTuple(['ball', .015], -.121, .10, 0, cap.Ie, cap.It, null),
+      partTuple(['box', .021, .405, .021], .525, 1.22, 0, body.Ie, body.It, null, true),
+    ];
+  },
+  decorate: drawBrothersSword,
+});
+
 // 무기마다 적은 desc 는 무기 뽑기 카드(main.js)의 앞면에 쓰는 한두 줄 설명이다 (\n 으로 줄을 나눈다).
 //  글자 데이터일 뿐 물리·밸런스와는 상관없다. 카드 앞면의 작은 그림은 public/ui/weapons/<id>.webp
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
@@ -1542,6 +1572,7 @@ export const WEAPONS = {
   ganjiang, moye, sain, ice, // 샛별 저장소에서 가져옴 (10/10, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
   flamberge, // 샛별 저장소 생김새를 옮겨 고침 (10/14, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
   goujian, // 샛별 저장소에서 가져옴 (10/14 — 에픽·뽑기에 넣음·와신상담은 사장님 결정) — 같은 까닭으로 끝에 둔다
+  brothers_sword: brothersSword,
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
