@@ -1,0 +1,310 @@
+{
+ "source": "샛별 저장소",
+ "base": "8233ac94",
+ "final": "429751b4",
+ "ours_base": "db9ac3b7",
+ "note": "해시는 파일 내용 sha256 앞 8 자. codeSameAsTheirs = 주석을 뺀 코드가 그쪽 최종본과 같은가(rolldown oxc 줄이기로 비교). false 인 파일은 문서 §3 의 손질(세 갈래 맞춤 · 거절판 덜기 · 글 바꿈)",
+ "files": [
+  {
+   "path": "src/arena_obstacle.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "3c95d6b6",
+   "theirs_sha256": "570f707a",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/etna_ground.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "8bac6ef8",
+   "theirs_sha256": "58763644",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/mad_eyes.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "24f16509",
+   "theirs_sha256": "23df4881",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_alter.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "bd497b32",
+   "theirs_sha256": "1cb231ab",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "src/outfit_renji_baji.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "3e8c756a",
+   "theirs_sha256": "c57208ca",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_silver_wanderer_court_hair.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "f31abba7",
+   "theirs_sha256": "3f97857f",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_silver_wanderer_full_hair.js",
+   "how": "그쪽 최종본 그대로 (우리 파일 = 그쪽 바탕 8233ac94)",
+   "sha256": "12eeca38",
+   "theirs_sha256": "12eeca38",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfits.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "4a825df9",
+   "theirs_sha256": "92ff21dd",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "src/stage_detail_sound.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "513b14f4",
+   "theirs_sha256": "6a50a2da",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_etna.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "ae325717",
+   "theirs_sha256": "3b8a63a9",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_qinglan.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "6648bbe0",
+   "theirs_sha256": "78c8b4e7",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/weapon_measured.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "fb0b3309",
+   "theirs_sha256": "7a53fcf7",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/weapons.js",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "e66c19d2",
+   "theirs_sha256": "43482ed5",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/looks.js",
+   "how": "그쪽 최종본 + 우리 손질 (우리 파일 = 그쪽 9003c0d5 — 그쪽이 우리 v7 에 맞춘 판)",
+   "sha256": "e4a996f1",
+   "theirs_sha256": "863e81ee",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "src/outfit_silver_wanderer.js",
+   "how": "그쪽 최종본 + 우리 손질 (우리 파일 = 그쪽 9003c0d5 — 그쪽이 우리 v7 에 맞춘 판)",
+   "sha256": "5d03b03c",
+   "theirs_sha256": "015a96a3",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_silver_wanderer_detail.js",
+   "how": "그쪽 최종본 + 우리 손질 (우리 파일 = 그쪽 9003c0d5 — 그쪽이 우리 v7 에 맞춘 판)",
+   "sha256": "24f3d55d",
+   "theirs_sha256": "6c6bf2b4",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/characters.js",
+   "how": "세 갈래 맞춤 + 우리 손질",
+   "sha256": "4b891489",
+   "theirs_sha256": "49a5b4e1",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "src/fighter.js",
+   "how": "세 갈래 맞춤 + 우리 손질",
+   "sha256": "8d74fbb8",
+   "theirs_sha256": "f988adc0",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "src/sound.js",
+   "how": "세 갈래 맞춤 + 우리 손질",
+   "sha256": "b4159bc2",
+   "theirs_sha256": "c3316ef3",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stages.js",
+   "how": "세 갈래 맞춤 + 우리 손질",
+   "sha256": "ba462229",
+   "theirs_sha256": "89b0ec20",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "tools/pwa/build.mjs",
+   "how": "세 갈래 맞춤 + 우리 손질",
+   "sha256": "35ae47de",
+   "theirs_sha256": "ea9d3582",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_alter_daraishi.js",
+   "how": "새 파일 + 우리 손질",
+   "sha256": "365622e5",
+   "theirs_sha256": "16ac460f",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "src/outfit_alter_fifth.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "b603232c",
+   "theirs_sha256": "1ebd4215",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_alter_royal_messenger.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "7065ab47",
+   "theirs_sha256": "dc7eff8d",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_alter_terracotta.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "73136374",
+   "theirs_sha256": "cc014637",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_artoria_ballroom.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "ee02d220",
+   "theirs_sha256": "2a7b01e1",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_daraishi_front.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "97e6a5b2",
+   "theirs_sha256": "6a839c15",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/outfit_yue_cloak.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "46cdac3a",
+   "theirs_sha256": "1cde7f4c",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/renji_sword_wrap.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "0538cb15",
+   "theirs_sha256": "a42ebd58",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_courtyard.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "816431a2",
+   "theirs_sha256": "a1b49dea",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_courtyard_cover.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "4d32a7fd",
+   "theirs_sha256": "6efbe80c",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_dayr_blood.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "e0ad63b2",
+   "theirs_sha256": "46b7cf68",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_dayr_caravan.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "74a3da83",
+   "theirs_sha256": "4eb66437",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_dayr_far_side.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "653319a2",
+   "theirs_sha256": "0b72fe5c",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_dayr_night.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "fb37fcb8",
+   "theirs_sha256": "995ffdc9",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_dunhuang_night.js",
+   "how": "새 파일 + 우리 손질",
+   "sha256": "05b002e1",
+   "theirs_sha256": "424e96d7",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "src/stage_night_fifth.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "8c4644a0",
+   "theirs_sha256": "30761138",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "src/stage_yue_apparitions.js",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "af090650",
+   "theirs_sha256": "90c1f6ef",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "tools/sim/brothers_sword_check.mjs",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "8ca20f67",
+   "theirs_sha256": "39834cd3",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "tools/sim/courtyard_cover.mjs",
+   "how": "새 파일 (주석만 우리 말로 — 코드 같음 확인)",
+   "sha256": "d84fd74a",
+   "theirs_sha256": "ad611d44",
+   "codeSameAsTheirs": true
+  },
+  {
+   "path": "tools/browser/alter_pair_capture.mjs",
+   "how": "그쪽 최종본 + 우리 손질(주석 · 거절판 덜기)",
+   "sha256": "f3f56e8d",
+   "theirs_sha256": "3c9bcfc3",
+   "codeSameAsTheirs": false
+  },
+  {
+   "path": "tools/browser/round3_check.mjs",
+   "how": "우리가 새로 씀",
+   "sha256": "ca032de7",
+   "theirs_sha256": null,
+   "codeSameAsTheirs": null
+  },
+  {
+   "path": "public/ui/weapons/brothers_sword.webp",
+   "how": "그쪽 최종본 그대로 (우리 파일 = 그쪽 바탕 8233ac94)",
+   "sha256": "75c9c431",
+   "theirs_sha256": "75c9c431",
+   "codeSameAsTheirs": null
+  }
+ ]
+}

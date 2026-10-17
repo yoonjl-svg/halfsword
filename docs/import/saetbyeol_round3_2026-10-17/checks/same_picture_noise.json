@@ -1,0 +1,25 @@
+{
+ "note": "청람잔도 낮 — 같은 빌드를 두 번 열어 견줌 (옛 빌드끼리 · 새 빌드끼리). 두 그림(48d13c53 · 10c57399)이 어느 빌드에서나 나온다",
+ "old_vs_old": [
+  {
+   "stage": "qinglan",
+   "old": "48d13c5397ba",
+   "new": "10c573993289",
+   "identical": false,
+   "diff": {
+    "pixels": 95,
+    "of": 518400,
+    "maxChannel": 1
+   }
+  }
+ ],
+ "new_vs_new": [
+  {
+   "stage": "qinglan",
+   "old": "48d13c5397ba",
+   "new": "48d13c5397ba",
+   "identical": true,
+   "diff": null
+  }
+ ]
+}

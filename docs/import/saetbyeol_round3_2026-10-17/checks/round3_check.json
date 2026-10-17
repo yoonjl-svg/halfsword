@@ -1,0 +1,842 @@
+{
+ "errors": [],
+ "data": {
+  "alters": 6,
+  "proficiencyPairs": 30,
+  "pairs": {
+   "etna_night": "chanda_mad",
+   "qinglan_night": "renji_mad",
+   "dunhuang_night": "terracotta_mad",
+   "dayr_night": "silver_wanderer_mad",
+   "courtyard": "samira"
+  },
+  "names": {
+   "etna_night": "밤의 화산섬",
+   "qinglan_night": "밤의 청람잔도",
+   "dunhuang_night": "밤의 철불 절벽",
+   "dayr_night": "밤의 소금길 역참",
+   "courtyard": "봉인의 중정"
+  },
+  "proficiency": {
+   "chanda": [
+    2,
+    3
+   ],
+   "renji": [
+    2,
+    3
+   ],
+   "terracotta": [
+    2,
+    3
+   ],
+   "silver_wanderer": [
+    4,
+    5
+   ],
+   "samira": [
+    1,
+    2
+   ],
+   "artoria": [
+    4,
+    5
+   ]
+  },
+  "stageOrder": 24
+ },
+ "runtime": [
+  {
+   "stage": "etna_night",
+   "foe": "chanda_mad",
+   "hour": 3,
+   "stories": 2,
+   "geothermal": {
+    "vents": 12,
+    "particles": 120
+   },
+   "terrain": "etna",
+   "enemyTerrain": "etna",
+   "veil": true,
+   "helmet": null,
+   "steamMoves": true,
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [
+    "etnaCrust"
+   ],
+   "state": "fight",
+   "stageId": "etna_night",
+   "wallSec": 15
+  },
+  {
+   "stage": "qinglan_night",
+   "foe": "renji_mad",
+   "hour": 3,
+   "stories": 2,
+   "swords": 7,
+   "swordsInside": 3,
+   "hair": true,
+   "waistSwordHidden": true,
+   "weapon": "brothers_sword",
+   "wrap": true,
+   "helmet": "kasa",
+   "terrain": null,
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [
+    "springDrip"
+   ],
+   "state": "fight",
+   "stageId": "qinglan_night",
+   "wallSec": 13
+  },
+  {
+   "stage": "dunhuang_night",
+   "foe": "terracotta_mad",
+   "hour": 3,
+   "colliders": 0,
+   "face": 0.88,
+   "cloak": true,
+   "ghosts": {
+    "count": 20,
+    "pairs": 8,
+    "walkers": 4,
+    "spears": 3,
+    "banners": 0,
+    "draws": 32,
+    "colliders": 0
+   },
+   "oldProps": [],
+   "helmet": null,
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [
+    "dunhuangWood"
+   ],
+   "state": "fight",
+   "stageId": "dunhuang_night",
+   "wallSec": 14
+  },
+  {
+   "stage": "dayr_night",
+   "foe": "silver_wanderer_mad",
+   "hour": 3,
+   "stories": 2,
+   "sunHidden": true,
+   "caravan": {
+    "camels": 3,
+    "fallen": 3
+   },
+   "minR": 13,
+   "blood": {
+    "visualOnly": true,
+    "pools": 3,
+    "poolRuns": 1,
+    "crawlTrails": 1,
+    "floorSprays": 2,
+    "wallSprays": 2
+   },
+   "shackle": false,
+   "tie": 2,
+   "front": true,
+   "weapon": "monohoshizao",
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [
+    "caravanRing"
+   ],
+   "state": "fight",
+   "stageId": "dayr_night",
+   "wallSec": 14
+  },
+  {
+   "stage": "courtyard",
+   "foe": "samira",
+   "foeName": "마야 라토르",
+   "weapon": "pistol",
+   "shots": 6,
+   "terrain": null,
+   "sound": "courtyard",
+   "obstacle": {
+    "colliders": 9,
+    "seekSight": true,
+    "radius": 1.45
+   },
+   "env": true,
+   "dispatch": false,
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [
+    "courtyardCloth",
+    "courtyardDrip",
+    "courtyardRing"
+   ],
+   "state": "paused",
+   "stageId": "courtyard",
+   "wallSec": 16
+  },
+  {
+   "stage": "courtyard",
+   "foe": "samira_mad",
+   "dispatch": true,
+   "weapon": "pistol",
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [
+    "courtyardCloth",
+    "courtyardDrip",
+    "courtyardRing"
+   ],
+   "state": "fight",
+   "stageId": "courtyard",
+   "wallSec": 9
+  },
+  {
+   "stage": "corsair",
+   "foe": "artoria_mad",
+   "plate": 0,
+   "plateGait": 0,
+   "helmet": null,
+   "bodice": true,
+   "skirt": true,
+   "crown": true,
+   "braids": true,
+   "necklace": true,
+   "cincture": true,
+   "boots": true,
+   "finite": true,
+   "render": true,
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [
+    "riggingCreak",
+    "waterLap",
+    "gullCall"
+   ],
+   "state": "fight",
+   "stageId": "corsair",
+   "wallSec": 10
+  },
+  {
+   "stage": "dayr",
+   "foe": "silver_wanderer",
+   "front": true,
+   "neck": true,
+   "lock": true,
+   "tie": false,
+   "night": false,
+   "sunVisible": true,
+   "pause": {
+    "paused": "paused",
+    "resumed": "fight"
+   },
+   "events": [],
+   "state": "fight",
+   "stageId": "dayr",
+   "wallSec": 7
+  }
+ ],
+ "transitions": [
+  {
+   "lap": 0,
+   "stage": "etna",
+   "row": {
+    "stage": "etna",
+    "geometries": 141,
+    "textures": 11,
+    "programs": 31,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "etna_night",
+   "row": {
+    "stage": "etna_night",
+    "geometries": 154,
+    "textures": 14,
+    "programs": 41,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "qinglan",
+   "row": {
+    "stage": "qinglan",
+    "geometries": 147,
+    "textures": 10,
+    "programs": 48,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "qinglan_night",
+   "row": {
+    "stage": "qinglan_night",
+    "geometries": 232,
+    "textures": 11,
+    "programs": 50,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "dunhuang",
+   "row": {
+    "stage": "dunhuang",
+    "geometries": 152,
+    "textures": 11,
+    "programs": 48,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "dunhuang_night",
+   "row": {
+    "stage": "dunhuang_night",
+    "geometries": 185,
+    "textures": 12,
+    "programs": 50,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "dayr",
+   "row": {
+    "stage": "dayr",
+    "geometries": 148,
+    "textures": 11,
+    "programs": 46,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "dayr_night",
+   "row": {
+    "stage": "dayr_night",
+    "geometries": 197,
+    "textures": 24,
+    "programs": 67,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "courtyard",
+   "row": {
+    "stage": "courtyard",
+    "geometries": 171,
+    "textures": 11,
+    "programs": 61,
+    "stories": 0,
+    "courtyard": 1,
+    "obstacle": 9
+   }
+  },
+  {
+   "lap": 0,
+   "stage": "loggia",
+   "row": {
+    "stage": "loggia",
+    "geometries": 147,
+    "textures": 11,
+    "programs": 60,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "etna",
+   "row": {
+    "stage": "etna",
+    "geometries": 141,
+    "textures": 11,
+    "programs": 64,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "etna_night",
+   "row": {
+    "stage": "etna_night",
+    "geometries": 154,
+    "textures": 14,
+    "programs": 69,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "qinglan",
+   "row": {
+    "stage": "qinglan",
+    "geometries": 147,
+    "textures": 10,
+    "programs": 62,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "qinglan_night",
+   "row": {
+    "stage": "qinglan_night",
+    "geometries": 232,
+    "textures": 11,
+    "programs": 64,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "dunhuang",
+   "row": {
+    "stage": "dunhuang",
+    "geometries": 152,
+    "textures": 11,
+    "programs": 62,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "dunhuang_night",
+   "row": {
+    "stage": "dunhuang_night",
+    "geometries": 185,
+    "textures": 12,
+    "programs": 64,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "dayr",
+   "row": {
+    "stage": "dayr",
+    "geometries": 148,
+    "textures": 11,
+    "programs": 60,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "dayr_night",
+   "row": {
+    "stage": "dayr_night",
+    "geometries": 197,
+    "textures": 24,
+    "programs": 67,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "courtyard",
+   "row": {
+    "stage": "courtyard",
+    "geometries": 171,
+    "textures": 11,
+    "programs": 61,
+    "stories": 0,
+    "courtyard": 1,
+    "obstacle": 9
+   }
+  },
+  {
+   "lap": 1,
+   "stage": "loggia",
+   "row": {
+    "stage": "loggia",
+    "geometries": 147,
+    "textures": 11,
+    "programs": 60,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "etna",
+   "row": {
+    "stage": "etna",
+    "geometries": 141,
+    "textures": 11,
+    "programs": 64,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "etna_night",
+   "row": {
+    "stage": "etna_night",
+    "geometries": 154,
+    "textures": 14,
+    "programs": 69,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "qinglan",
+   "row": {
+    "stage": "qinglan",
+    "geometries": 147,
+    "textures": 10,
+    "programs": 62,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "qinglan_night",
+   "row": {
+    "stage": "qinglan_night",
+    "geometries": 232,
+    "textures": 11,
+    "programs": 64,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "dunhuang",
+   "row": {
+    "stage": "dunhuang",
+    "geometries": 152,
+    "textures": 11,
+    "programs": 62,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "dunhuang_night",
+   "row": {
+    "stage": "dunhuang_night",
+    "geometries": 185,
+    "textures": 12,
+    "programs": 64,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "dayr",
+   "row": {
+    "stage": "dayr",
+    "geometries": 148,
+    "textures": 11,
+    "programs": 60,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "dayr_night",
+   "row": {
+    "stage": "dayr_night",
+    "geometries": 197,
+    "textures": 24,
+    "programs": 67,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "courtyard",
+   "row": {
+    "stage": "courtyard",
+    "geometries": 171,
+    "textures": 11,
+    "programs": 61,
+    "stories": 0,
+    "courtyard": 1,
+    "obstacle": 9
+   }
+  },
+  {
+   "lap": 2,
+   "stage": "loggia",
+   "row": {
+    "stage": "loggia",
+    "geometries": 147,
+    "textures": 11,
+    "programs": 60,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "etna",
+   "row": {
+    "stage": "etna",
+    "geometries": 141,
+    "textures": 11,
+    "programs": 64,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "etna_night",
+   "row": {
+    "stage": "etna_night",
+    "geometries": 154,
+    "textures": 14,
+    "programs": 69,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "qinglan",
+   "row": {
+    "stage": "qinglan",
+    "geometries": 147,
+    "textures": 10,
+    "programs": 62,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "qinglan_night",
+   "row": {
+    "stage": "qinglan_night",
+    "geometries": 232,
+    "textures": 11,
+    "programs": 64,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "dunhuang",
+   "row": {
+    "stage": "dunhuang",
+    "geometries": 152,
+    "textures": 11,
+    "programs": 62,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "dunhuang_night",
+   "row": {
+    "stage": "dunhuang_night",
+    "geometries": 185,
+    "textures": 12,
+    "programs": 64,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "dayr",
+   "row": {
+    "stage": "dayr",
+    "geometries": 148,
+    "textures": 11,
+    "programs": 60,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "dayr_night",
+   "row": {
+    "stage": "dayr_night",
+    "geometries": 197,
+    "textures": 24,
+    "programs": 67,
+    "stories": 1,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "courtyard",
+   "row": {
+    "stage": "courtyard",
+    "geometries": 171,
+    "textures": 11,
+    "programs": 61,
+    "stories": 0,
+    "courtyard": 1,
+    "obstacle": 9
+   }
+  },
+  {
+   "lap": 3,
+   "stage": "loggia",
+   "row": {
+    "stage": "loggia",
+    "geometries": 147,
+    "textures": 11,
+    "programs": 60,
+    "stories": 0,
+    "courtyard": 0,
+    "obstacle": 0
+   }
+  }
+ ],
+ "title": {
+  "state": "draw",
+  "stage": "poseidon"
+ },
+ "same": [
+  {
+   "stage": "qinglan",
+   "old": "48d13c5397ba",
+   "new": "10c573993289",
+   "identical": false,
+   "diff": {
+    "pixels": 95,
+    "of": 518400,
+    "maxChannel": 1
+   }
+  },
+  {
+   "stage": "etna",
+   "old": "57e43b5a4bd0",
+   "new": "57e43b5a4bd0",
+   "identical": true,
+   "diff": null
+  },
+  {
+   "stage": "dayr",
+   "old": "e7190698d61c",
+   "new": "e7190698d61c",
+   "identical": true,
+   "diff": null
+  },
+  {
+   "stage": "castle_night",
+   "old": "1e915b092b27",
+   "new": "1e915b092b27",
+   "identical": true,
+   "diff": null
+  },
+  {
+   "stage": "sluice_night",
+   "old": "9af3a63cfc72",
+   "new": "9af3a63cfc72",
+   "identical": true,
+   "diff": null
+  }
+ ],
+ "card": {
+  "tier": "epic",
+  "name": "황약사의 검",
+  "sub": "",
+  "rank": "에픽",
+  "desc": "흰 천으로 감싼 검. 오랫동안 풀지 않은 듯 단단히 매여 있다.\n“번뇌는 기억력 때문이라더군.”",
+  "ability": "(취생몽사: 몽롱한 일격)",
+  "thumb": true,
+  "thumbStatus": 200,
+  "thumbType": "image/webp",
+  "flipped": true,
+  "fight": {
+   "id": "brothers_sword",
+   "tier": "epic",
+   "power": 1.1,
+   "blunt": 1.6,
+   "fragility": 0,
+   "stage": "qinglan"
+  }
+ },
+ "pass": true
+}

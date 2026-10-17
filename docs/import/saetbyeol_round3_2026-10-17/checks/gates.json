@@ -1,0 +1,102 @@
+{
+ "note": "해시 = grep -v 'deprecated parameters' <출력> | sha256sum | cut -c1-8 · corr 은 걸린 초 줄이 있어 해시 대신 identical 줄 수 · nice -n 10",
+ "base_db9ac3b7": {
+  "fights12": {
+   "rc": 0,
+   "hash": "5dfe035c",
+   "secs": 36
+  },
+  "live": {
+   "rc": 0,
+   "hash": "648aca66",
+   "secs": 10
+  },
+  "ft": {
+   "rc": 0,
+   "hash": "2de06c03",
+   "secs": 5
+  },
+  "corr": {
+   "rc": 0,
+   "hash": "27358385",
+   "secs": 47,
+   "identical": 12
+  },
+  "smoke": {
+   "rc": 0,
+   "hash": "7085b282",
+   "secs": 16,
+   "ok": 23
+  },
+  "names": {
+   "rc": 0,
+   "hash": "ea870997",
+   "secs": 0,
+   "lines": 925,
+   "violations": 0
+  },
+  "build": {
+   "rc": 0,
+   "hash": "3c232661",
+   "secs": 3,
+   "pwa": {
+    "pwa": true,
+    "version": "a03672f5b094914a2126f3f6",
+    "files": 507,
+    "totalBytes": 15276125
+   }
+  }
+ },
+ "final_49bc2df": {
+  "fights12": {
+   "rc": 0,
+   "hash": "5dfe035c",
+   "secs": 44
+  },
+  "live": {
+   "rc": 0,
+   "hash": "648aca66",
+   "secs": 11
+  },
+  "ft": {
+   "rc": 0,
+   "hash": "2de06c03",
+   "secs": 6
+  },
+  "corr": {
+   "rc": 0,
+   "hash": "55b29730",
+   "secs": 57,
+   "identical": 12
+  },
+  "smoke": {
+   "rc": 0,
+   "hash": "729ce58e",
+   "secs": 18,
+   "ok": 24
+  },
+  "names": {
+   "rc": 0,
+   "hash": "01fd04f9",
+   "secs": 0,
+   "lines": 983,
+   "violations": 0
+  },
+  "build": {
+   "rc": 0,
+   "hash": "2d7f1682",
+   "secs": 4,
+   "pwa": {
+    "pwa": true,
+    "version": "aae3569e3af034a3e9226e70",
+    "files": 387,
+    "totalBytes": 7607065
+   }
+  }
+ },
+ "unit_tests": {
+  "tests": 92,
+  "pass": 92,
+  "fail": 0
+ }
+}
