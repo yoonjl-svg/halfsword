@@ -9,16 +9,16 @@
     "start_exclusive": "2026-10-16T23:30:00+09:00",
     "end_inclusive": "2026-10-17T23:30:00+09:00"
   },
-  "technical_base": "d5fca2f0da066e064878578099438b838ea81f73",
-  "source_sha": "d5fca2f0da066e064878578099438b838ea81f73",
-  "source_observed_head": "d5fca2f0da066e064878578099438b838ea81f73",
-  "source_observed_at": "2026-10-17T22:37:01+09:00",
+  "technical_base": "e92b5a6f3f5a4351712f3182a18c37bff8ee8d36",
+  "source_sha": "9f9898528090428cf8e3d0fb460d869c91a2ef70",
+  "source_observed_head": "9f9898528090428cf8e3d0fb460d869c91a2ef70",
+  "source_observed_at": "2026-10-17T23:23:49+09:00",
   "selection_basis": "director session publishes from the dev branch head at 23:22-23:30 KST; the same commit is pushed to main",
   "authored_decision_record": "present",
   "notes_path": "docs/dev_exchange/notes/2026-10-17.md",
-  "notes_blob_sha": "b0b6258570542ab20db958922a0cab98a1f94bc6",
-  "notes_sha256": "b5d134f4e8f5d4a827d51d27a72f6c9ccc320354baef7a8b98b30db0d3e7d97e",
-  "markdown_sha256": "b5d134f4e8f5d4a827d51d27a72f6c9ccc320354baef7a8b98b30db0d3e7d97e",
+  "notes_blob_sha": "712ce5e223983c56a22ad2e21b74aca334766b56",
+  "notes_sha256": "6d1ded36bef46e21c8fcda0addc6d82c6bca710f66dac5f4dd3dc648bbd6f475",
+  "markdown_sha256": "6d1ded36bef46e21c8fcda0addc6d82c6bca710f66dac5f4dd3dc648bbd6f475",
   "previous_report_id": "yoonjl-svg/halfsword@2026-10-16T23:30+09:00",
   "previous_source_sha": "c4172975e2d97ce32f2d19eb3fb8d9423f0ef9ac"
 }
