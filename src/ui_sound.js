@@ -35,7 +35,7 @@ export const UI_SOUND = Object.freeze({
 
 // 확인 류 단추 — 누르면 딸깍 (사장님 '확인 류의 단추'): 앞으로 나아가거나 정하는 단추만
 //  첫 화면: 공지 확인 · 처음부터 · 이어하기 · 설정 확인 · 인증번호 받기 · 연결하기
-//  대기실: 여정 시작(이어가기) · 장착 · 해제 · 이름 저장 · 스킬북 구입 · 사용 · 봉인
+//  대기실: Stage 입장(전 여정 시작 · 이어가기) · 장착 · 해제 · 이름 저장 · 스킬북 구입 · 사용 · 봉인
 //  뺀 것 (고르기 · 열기 · 닫기 · 되돌리기라 확인이 아님): 탭 · 칸 · 책 고르기 · 미닫이 · 호칭 상자 · 공지사항 · 설정 · 계정 연결 열기 · 닫기 · 취소 · 첫 화면으로 · 계정 글 단추
 export const CONFIRM_BUTTONS = [
   '#confirmNotices', '#newJourney', '#continueJourney', '#closeSettings', '#accountSend', '#accountVerify',

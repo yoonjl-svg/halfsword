@@ -1386,7 +1386,7 @@ async function startFight() {
   openDraw(savedRound?.cards);
 }
 
-// ── 여정 이어하기 (첫 화면 '이어하기' · 대기실 '여정 시작/이어가기' — game_entry.js 가 아래 내보낸 함수를 부른다, docs/import/lobby_port_2026-10-16.md §5) ──
+// ── 여정 이어하기 (첫 화면 'Stage 1' · '이어하기' · 대기실 'Stage 입장' — game_entry.js 가 아래 내보낸 함수를 부른다, docs/import/lobby_port_2026-10-16.md §5) ──
 //  저장 단위는 무대 시작 자리: 카드를 펼치면 { 무대 · 상대 · 상대 무기 · 내 카드 둘 }, 고르면 { … · 내 무기 }, 이기면 곧바로 { 다음 무대 } (같은 승리를 다시 받지 않게).
 //  무대 차례 = STAGE_ORDER (nextStage), 깬 수(통계)는 checkRoundEnd 의 addJourneyClear 만 센다 — 이어하기 지점은 깬 수를 바꾸지 않는다.
 function saveJourneyRound(weapon, cards = null) {
@@ -1519,7 +1519,7 @@ function resume() {
 // ── 싸움 → 대기실 (사장님 10/16 08:3x '전투에서 대기실로 가는 기능이 필요해. 정지 누르면 거기에 넣어' · 결과 창 '다음 여정과 대기실 선택지로' — docs/import/ui_fix_2026-10-16.md §3 · §4) ──
 //  첫 화면·대기실로 연 여정만 (journeySaves + game_entry.js 가 출발할 때 건 setLobbyReturn) — 테스트 경로 · 주소 판 메뉴는 그대로.
 //  판을 떠난다: 금화 · 대면 결과는 안 바뀐다(사장님 08:4x '깎지 마') · 이어하기 지점도 그대로(지금 무대 시작 — 이긴 판이면 이미 다음 무대) · 대기실 동안 게임 소리는 멈춤.
-//  대기실이 다시 '여정 이어가기'로 출발하면 launchJourney('continue') 가 그 지점부터 판을 새로 연다
+//  대기실이 다시 'Stage 입장'으로 출발하면 launchJourney('continue') 가 그 지점부터 판을 새로 연다
 let lobbyReturn = null;
 export function setLobbyReturn(fn) {
   lobbyReturn = typeof fn === 'function' ? fn : null;

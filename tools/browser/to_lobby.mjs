@@ -1,7 +1,7 @@
 // 대기실 가는 길 (점검 도구 공통) — 사장님 10/17 11:2x '첫화면-대기실-전투 흐름이 아니라 첫화면에서 바로 전투로 이동'
 //  첫 화면 'Stage 1'(#newJourney) · '이어하기'(#continueJourney) → 곧바로 여정(카드 고르기, 또는 장착한 무기로 싸움)
 //  → 정지(카드 고르기 중에도 열림 — main.js pause) → '대기실'(#btnLobby — main.js toLobby → game_entry.js backToLobby).
-//  대기실은 언제나 '여정 이어가기'(choice 'continue')로 열린다. how = 'click' | 'tap' (터치 문맥이면 tap)
+//  대기실은 언제나 choice 'continue' 로 열린다(출발 단추 'Stage 입장' — 사장님 10/17 12:1x, 전 '여정 이어가기'). how = 'click' | 'tap' (터치 문맥이면 tap)
 //  첫 화면에서 출발하면 그 판이 이어하기 지점으로 저장된다(카드를 펼칠 때 — main.js saveJourneyRound) — 지점을 보는 점검은 이것을 셈에 넣는다.
 
 /** 첫 화면에서 출발: 덮개가 걷히고 카드 고르기나 싸움이 될 때까지. 돌려줌: 'draw' | 'fight' */

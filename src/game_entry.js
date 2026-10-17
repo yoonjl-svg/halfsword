@@ -2,7 +2,7 @@
 //  인자 없는 주소: 공지 → 첫 화면 → 곧바로 여정(무기 카드, 또는 이어하기 지점) — 사장님 10/17 11:2x '첫화면-대기실-전투 흐름이 아니라 첫화면에서 바로 전투로 이동'
 //   (전: 첫 화면 → 대기실 → 여정). 게임(main.js)은 첫 화면 뒤에서 받아 두고, 첫 화면·대기실이 앞에 있는 동안(html[data-start-open]) 게임의 3D 그리기·물리는 멈춘다 (main.js frame).
 //  대기실은 싸움에서 연다 (사장님 10/16 08:3x — docs/import/ui_fix_2026-10-16.md §3): 첫 화면에서 연 여정이면 정지 · 결과 창의 '대기실'이 이 덮개를 다시 열고
-//   대기실을 '여정 이어가기'로 띄운다 (main.js setLobbyReturn → toLobby). 장비 · 이름 · 스킬북은 저장된 그대로 싸움에 쓰인다. 주소로 연 판 · 테스트 경로는 이 길이 없다.
+//   대기실을 띄운다 — 출발 단추 'Stage 입장'(사장님 10/17 12:1x — 전 '여정 시작' · '여정 이어가기')은 이어하기 지점부터 (main.js setLobbyReturn → toLobby). 장비 · 이름 · 스킬북은 저장된 그대로 싸움에 쓰인다. 주소로 연 판 · 테스트 경로는 이 길이 없다.
 //  게임 인자가 하나라도 있는 주소(?stage= ?weapon= ?foe= ?test=1 ?stamina=0 ?foeWhiff=1 …): 지금처럼 바로 게임 메뉴 (journey_save.js skipsTitle)
 //  첫 화면·대기실은 Shadow DOM 안 — 꾸밈은 그 안에서만, 글자는 게임 HUD 규칙의 토큰(index.html :root)을 물려받아 entrance_type.css 한 곳에서 (lobby_fix §1).
 //   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
@@ -78,7 +78,7 @@ if (skipsTitle(params)) {
       },
     });
   }
-  // 여정 출발 (첫 화면의 Stage 1 · 이어하기 · 대기실의 '여정 이어가기'): choice 'new' = 첫 무대부터 · 'continue' = 이어하기 지점부터.
+  // 여정 출발 (첫 화면의 Stage 1 · 이어하기 · 대기실의 'Stage 입장'): choice 'new' = 첫 무대부터 · 'continue' = 이어하기 지점부터.
   //  판을 세운 뒤 덮개를 0.3 s 걷어 낸다 — 뒤의 카드·싸움 화면이 비쳐 보이며 넘어가게 (리뷰 §8-6 '갑작스럽다'). close = 첫 화면 · 대기실 정리 · fading = 걷어 낼 꺼풀
   async function depart(game, choice, close, fading) {
     if (!await game.launchJourney(choice)) throw new Error('Missing journey');
@@ -103,7 +103,7 @@ if (skipsTitle(params)) {
       await depart(game, choice, () => { gone.destroy(); if (lobby === gone) lobby = null; }, root.querySelector('.lobby'));
     } });
   }
-  // 싸움 → 대기실 (main.js toLobby 가 부른다): 덮개를 다시 열고 대기실을 '여정 이어가기'로 — 이어하기 지점은 지금 무대 시작(이긴 판이면 다음 무대)
+  // 싸움 → 대기실 (main.js toLobby 가 부른다): 덮개를 다시 열고 대기실을 'continue'(출발 단추 'Stage 입장')로 — 이어하기 지점은 지금 무대 시작(이긴 판이면 다음 무대)
   async function backToLobby() {
     const game = await loaded;
     openHost();
