@@ -83,7 +83,8 @@ try {
     same(got['이어하기'], battle.secondary, ALL.filter((k) => k !== 'backgroundColor'), '이어하기'); assert.equal(got['이어하기'].backgroundColor, battle.card.backgroundColor); assert.equal(got['이어하기'].height, battle.secondary.height);
     // 작은 부 단추(아래 줄 · 첫 화면): 글 크기 12 · 패딩만 다름
     same(got['첫 화면'], got['공지사항'], PROPS.filter((k) => !/width|height/i.test(k) || /border|min/i.test(k)), '첫 화면 = 공지사항'); // 사장님 18:0x '첫 화면의 공지사항처럼'
-    for (const k of ['공지사항', '첫 화면']) { same(got[k], battle.secondary, ['borderRadius', 'color', 'fontFamily', 'fontWeight', 'borderTopWidth', 'borderTopStyle', 'borderTopColor', 'minHeight', 'lineHeight', 'letterSpacing'], k); assert.equal(got[k].fontSize, '12px'); assert.equal(got[k].backgroundColor, battle.card.backgroundColor); }
+    // 줄 높이는 글자 크기 + 2px (entrance_ui.css — 10/17 라틴 글자 단추 높이 고침) → 작은 단추는 12 + 2 = 14px, 싸움 부 단추는 16px
+    for (const k of ['공지사항', '첫 화면']) { same(got[k], battle.secondary, ['borderRadius', 'color', 'fontFamily', 'fontWeight', 'borderTopWidth', 'borderTopStyle', 'borderTopColor', 'minHeight', 'letterSpacing'], k); assert.equal(got[k].fontSize, '12px'); assert.equal(got[k].lineHeight, '14px'); assert.equal(got[k].backgroundColor, battle.card.backgroundColor); }
     // 누를 수 없는 짝 단추: 부 단추 꼴 + 흐리게 .4
     for (const k of ['해제(누를 수 없음)', '사용(누를 수 없음)']) { same(got[k], battle.secondary, ALL, k); assert.equal(got[k].opacity, '0.4'); }
     // 미닫이 = 싸움 .toggle (켜진 꼴 — 싸움 메뉴의 60 fps 는 처음에 켜져 있다)
