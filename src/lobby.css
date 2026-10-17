@@ -35,7 +35,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   --row-w: min(100vw - var(--pad-l) - var(--pad-r), 1220px);
   --card-avail: calc(var(--col-h) - var(--depart) - var(--depart-gap));
   --card-w0: min(var(--card-avail) * 2 / 3, var(--row-w) * .3); /* 전 캐릭터 카드(2 : 3) 폭 — 10/17 22:1x 프로필 칸은 처음에 이 폭의 정사각 */
-  --card-w: calc(var(--card-w0) * .8);  /* 프로필 칸 = 그 80 % (정사각 한 변 · 출발 단추 폭 — 사장님 10/17 23:4x '프로필 너무 커. 지금의 80%로 줄여') */
+  --card-w: calc(var(--card-w0) * .7);  /* 프로필 칸 = 그 70 % (정사각 한 변 · 출발 단추 폭 — 사장님 10/17 23:4x '프로필 너무 커. 지금의 80%로 줄여' → 10/18 00:2x '지금도 너무 크다 … 원래의 70%로 재조정') */
   --grid-x: calc(var(--card-w0) - var(--card-w)); /* 줄어든 폭 → 맨 오른쪽 칸(재고 · 별자리 틀)에 더함 ('그만큼 맨 우측 3단 영역 늘리고' — 틀이 그만큼 옆으로 넓어진다) */
   --chrome-v: calc(2px + 2 * var(--pp) + var(--title-h) + var(--title-gap) + 2 * var(--fr));
   --chrome-h: calc(2px + 2 * var(--pp) + 2 * var(--fr));
@@ -49,7 +49,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 @supports (width: round(down, 10px, 3px)) {
   .lobby {
     --card-w0: calc(round(down, min(var(--card-avail) * 2 / 3, var(--row-w) * .3) - 2 * var(--fr), var(--link)) + 2 * var(--fr));
-    --card-w: round(down, var(--card-w0) * .8, 1px);
+    --card-w: round(down, var(--card-w0) * .7, 1px);
     --grid-w: round(down, max(132px, min(round(nearest, round(down, var(--col-h) - var(--chrome-v), var(--link)) * 1.25, var(--link)), var(--grid-wmax))), var(--link));
     --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
   }
@@ -77,7 +77,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .card-frame > *, .skill-tree-host > * { image-rendering: auto; }
 
 /* ── ① 프로필 칸 + 출발 (사장님 10/17 22:1x '캐릭터 미리보기를 없애고 정사각형의 프로필 사진 들어갈 자리를 미리 잡아둬. 전체 3단 레이아웃과 비율은 지금을 유지하고 캐릭터 미리보기 창만 짧아지는 느낌으로'):
-   칸 폭 = 전 캐릭터 카드 폭의 80 %(--card-w — 23:4x '프로필 너무 커. 지금의 80%로' · 줄어든 폭은 맨 오른쪽 칸으로) · 높이 = 폭(정사각) — 칸 위에 붙고 출발 단추는 칸 아래 줄 그대로(전과 같은 자리) · 사이는 비워 둠(나중 '캐릭터 프로필').
+   칸 폭 = 전 캐릭터 카드 폭의 70 %(--card-w — 23:4x '지금의 80%로' → 10/18 00:2x '원래의 70%로 재조정' · 줄어든 폭은 맨 오른쪽 칸으로) · 높이 = 폭(정사각) — 칸 위에 붙고 출발 단추는 칸 아래 줄 그대로(전과 같은 자리) · 사이는 비워 둠(나중 '캐릭터 프로필').
    그림 안에 액자 1(어두운 갈색 바깥 + 금색 이중선 + 모서리 장식)이 있어 CSS 틀(.card-frame)은 걸지 않는다 — 걸면 틀이 두 겹(바깥 CSS 틀 + 그림 틀)으로 보인다 · 위아래 쇠 장식(사슬 틀 짝)도 뺌.
    그림 = 원본을 줄인 그림(기본 — 사장님 23:0x '원본으로 먼저 적용하고 low를 예비로') · 매끈하게 · 예비 low(?portrait=low)는 픽셀 그대로(image-rendering: pixelated — 프로필 검토 페이지와 같은 보기).
    바탕 = 그림 바깥 띠 색(#30261c — 그림이 오기 전 같은 색 네모) · 못 불러오면 빈 액자 1 (data-empty — 같은 틀 그림) · 그림자 = 싸움 카드 뒷면(.wback)과 같은 부드러운 그림자 ── */
@@ -260,7 +260,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
     --pad-t: 14px; --pad-b: 24px; --pad-l: max(12px, env(safe-area-inset-left)); --pad-r: max(12px, env(safe-area-inset-right));
     --head: 34px; --head-gap: 12px; --gap: 12px; --pp: 16px;
     --card-w0: min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px);
-    --card-w: calc(var(--card-w0) * .8); /* 프로필 칸 80 % (10/17 23:4x) — 좁은 화면은 재고가 아래 줄 전체라 더할 칸이 없다 */
+    --card-w: calc(var(--card-w0) * .7); /* 프로필 칸 70 % (10/18 00:2x — 전 80 %) — 좁은 화면은 재고가 아래 줄 전체라 더할 칸이 없다 */
     --grid-x: 0px;
     --grid-w: min(100cqw - 2 * var(--fr), 408px); /* 100cqw = 재고 창 안 폭 (.contents-panel 이 폭 기준) */
     --grid-h: calc(var(--grid-w) * .8);
@@ -269,7 +269,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   @supports (width: round(down, 10px, 3px)) {
     .lobby {
       --card-w0: calc(round(down, min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px) - 2 * var(--fr), var(--link)) + 2 * var(--fr));
-      --card-w: round(down, var(--card-w0) * .8, 1px);
+      --card-w: round(down, var(--card-w0) * .7, 1px);
       --grid-w: round(down, min(100cqw - 2 * var(--fr), 408px), var(--link));
       --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
     }
