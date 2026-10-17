@@ -47,10 +47,12 @@ assert.equal(C.artoria.look.armor, 'plate'); assert.equal(C.artoria_mad.look.arm
 assert.equal(C.silver_wanderer.lookVersion, 'v7-silver-c'); assert.equal(C.silver_wanderer.look.hair, 0x93877e);
 assert.equal(C.silver_wanderer_mad.look.hair, C.silver_wanderer.look.hair); assert.equal(C.silver_wanderer_mad.look.daraishiBlack, 1);
 const PAIRS = { etna_night: 'chanda_mad', qinglan_night: 'renji_mad', dunhuang_night: 'terracotta_mad', dayr_night: 'silver_wanderer_mad', courtyard: 'samira' };
-for (const [s, f] of Object.entries(PAIRS)) { assert.ok(STAGE_IDS.includes(s), s); assert.equal(STAGE_FOE[s], f); assert.ok(!STAGE_ORDER.includes(s), `${s} 는 여정 순서 밖`); }
-// 여정 순서는 우리 판 그대로 (사장님 10/16 19:4x 낮 다섯 · 밤 다섯)
-assert.deepEqual(STAGE_ORDER, ['poseidon', 'clearing', 'castle', 'loggia', 'cathedral', 'poseidon_night', 'clearing_night', 'castle_night', 'loggia_night', 'cathedral_night',
-  'corsair', 'sluice', 'etna', 'qinglan', 'sacred_grove', 'corsair_night', 'sluice_night', 'sacred_grove_night', 'temple_night', 'frozen_bay_night', 'temple', 'frozen_bay', 'dunhuang', 'dayr']);
+for (const [s, f] of Object.entries(PAIRS)) { assert.ok(STAGE_IDS.includes(s), s); assert.equal(STAGE_FOE[s], f); }
+// 여정 순서 (사장님 10/17 14:1x '밤 스테이지와 전용 얼터 캐릭터들은 바로 여정에' — 규칙 10/16 19:4x 낮 다섯 · 밤 다섯):
+//  들여온 밤 넷은 여정 안 · 제 낮 무대보다 뒤. 봉인의 중정은 넣었다면 2 막 산호 항구 바로 다음(사장님 같은 때 — 디자인 리뷰 뒤)
+for (const s of ['etna_night', 'qinglan_night', 'dunhuang_night', 'dayr_night']) { const i = STAGE_ORDER.indexOf(s); assert.ok(i >= 0, `${s} 는 여정 안`); assert.ok(STAGE_ORDER.indexOf(s.replace('_night', '')) < i, `${s} 는 낮 뒤`); }
+if (STAGE_ORDER.includes('courtyard')) assert.equal(STAGE_ORDER[STAGE_ORDER.indexOf('corsair') + 1], 'courtyard');
+assert.equal(STAGE_ORDER.at(-1), 'dayr_night'); // 끝판 = 밤의 소금 사막
 assert.equal(terrainForStage('etna_night'), terrainForStage('etna')); assert.equal(terrainForStage('qinglan_night'), null);
 const w = WEAPONS.brothers_sword;
 assert.equal(w.nameKo, '황약사의 검'); assert.equal(w.tier, 'epic'); assert.equal(w.power, 1.1); assert.equal(w.mBlunt, 1.6);
