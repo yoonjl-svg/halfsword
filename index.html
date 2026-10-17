@@ -346,7 +346,7 @@
          그림 크기 --pf = 같은 화면의 대기실 프로필 칸과 같은 CSS px (사장님 23:4x '패배 팝업 프로필도 같은 크기로 맞추고') — 아래 셈은 lobby.css .lobby 의 --card-w 셈을 그대로 옮긴 것
          (칸 높이 · 줄 폭 · 출발 단추 → 전 카드 폭 --card-w0 → 그 60 % — 10/18 01:0x). lobby.css 의 여백 · 제목 줄 · 단추 값이나 미디어 조건을 바꾸면 여기도 같이 — tools/browser/defeat_portrait_smoke.mjs 가 두 크기를 견준다.
          그림 안에 액자 1 이 있어 CSS 틀은 없다(대기실 프로필 칸과 같은 꼴) · 원본을 줄인 그림은 매끈하게, 예비 low(?portrait=low)는 픽셀 그대로.
-         대사 = 싸움 화면 대사와 같은 꼴(“…” · 보조 색 · 출처가 있으면 아래 줄 작게) · 진 까닭 줄 아래 · 금화 줄은 그 아래 빈 줄 하나 그대로(.reward 위 여백) · 값은 사장님 확인 전 */
+         대사 = 싸움 화면 대사 칸과 같은 꼴(싸움 화면엔 10/18 01:4x 부터 안 띄움 · “…” · 보조 색 · 출처가 있으면 아래 줄 작게) · 진 까닭 줄 아래 · 금화 줄은 그 아래 빈 줄 하나 그대로(.reward 위 여백) · 값은 사장님 확인 전 */
       .card {
         --lb-pt: 22px; --lb-pb: 24px; --lb-pl: max(24px, env(safe-area-inset-left)); --lb-pr: max(24px, env(safe-area-inset-right));
         --lb-head: 42px; --lb-head-gap: 18px; --lb-depart: 42px; --lb-depart-gap: 12px; --lb-col-max: 520px;
@@ -451,7 +451,7 @@
         <div class="card-body">
         <h1 id="menuTitle"><span class="wordmark">Stillness</span></h1>
         <p class="sub" id="menuSub">길 위에선 이름을 묻지 않는다.</p>
-        <p class="foe-line" id="menuFoeLine" hidden><span id="menuFoeQuote"></span><small id="menuFoeSource"></small></p> <!-- 패배 창: 싸움 화면에 띄운 상대의 승리 대사 그대로(출처가 있으면 아래 줄 — showFoeLine 과 같은 꼴) -->
+        <p class="foe-line" id="menuFoeLine" hidden><span id="menuFoeQuote"></span><small id="menuFoeSource"></small></p> <!-- 패배 창: 진 순간 고른 상대의 승리 대사(출처가 있으면 아래 줄 — 싸움 화면 대사 칸과 같은 꼴 · 10/18 01:4x 부터 싸움 화면엔 안 띄움) -->
         <p class="reward" id="menuReward" hidden></p> <!-- 결과 창: 이번 판 금화 · 머리 (첫 화면·대기실 여정만 — main.js) -->
         <!-- 상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js · main.js) -->
         <!-- 검술 보정 단계 메뉴(끔·약·보통·강)는 뺐다 — 사장님 10/8 21:5x "플레이어에겐 구분이 필요 없어. 한 단계로 기본 적용": 보정은 늘 0.7 (main.js DEFAULTS.skill) -->

@@ -965,7 +965,7 @@ function tickHudTimers(dt) {
   tickEmoMsg(dt);
 }
 
-/** 상대의 한마디 (승리 대사): 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 — 싸움 화면 3.4 s (10/16 14:4x 결과 창에서 뺐다가 10/17 22:1x 패배 창에 프로필과 다시 — showDefeatFoe) */
+/** 상대의 한마디: 소개 칸을 다시 써서 이름 + 대사만 잠깐 보여 준다 — 싸움 화면 3.4 s. 지금은 부활 대사만 (승리 대사는 10/18 01:4x 부터 패배 창에만 — showDefeatFoe) */
 function showFoeLine(ch, line) {
   if (!line) return;
   const el = $('foeIntro');
@@ -978,7 +978,7 @@ function showFoeLine(ch, line) {
 }
 
 // 패배 창의 상대 (사장님 10/17 22:1x '패배하면 팝업창에 나를 패배시킨 캐릭터가 프로필이 뜨고, 그 오른쪽이든 아래든 적절한 곳에 대사 출력' — docs/design/portrait_ui_2026-10-17.md §4):
-//  진 순간 고른 승리 대사(싸움 화면 showFoeLine 과 같은 줄)를 들고 있다가 결과 창에서 그 상대의 프로필(portraits.js — 변형은 바탕 인물 그림) 오른쪽에 그대로 · 출처 줄도 같은 꼴.
+//  진 순간 고른 승리 대사(10/18 01:4x 부터 싸움 화면엔 안 띄움 — 패배 창에만)를 들고 있다가 결과 창에서 그 상대의 프로필(portraits.js — 변형은 바탕 인물 그림) 오른쪽에 그대로 · 출처 줄도 같은 꼴.
 //  그림이 없는 상대(?foe=default 기본 상대 등)는 그림 칸을 숨기고(대사가 있으면 글만) · 그림을 못 불러오면 그림 칸만 숨긴다 · 이긴 판 · 정지 · 시작 창은 숨김
 let defeatFoe = null; // { ch, line } — 이번 판에 나를 쓰러뜨린 상대와 그 대사 (판이 끝날 때 정한다)
 $('menuFoeImg').addEventListener('error', () => { $('menuFoe').hidden = true; $('menu').querySelector('.card').classList.remove('foe-shown'); });
@@ -1828,10 +1828,10 @@ function checkRoundEnd(dt) {
         if (journeySaves()) writeJourney({ stage: nextStage(stages.id), lastWeapon: player.weapon.id });
       }
       showRoundResult();
-      // 상대의 승리 대사 (죽은 쪽은 말이 없다) — 싸움 화면 3.4 s · 같은 줄을 패배 창에도 프로필과 함께 (10/17 22:1x — showDefeatFoe)
+      // 상대의 승리 대사 (죽은 쪽은 말이 없다) — 진 순간 골라(randomLine 차례 그대로) 패배 창에만 프로필과 함께 (10/17 22:1x — showDefeatFoe).
+      //  싸움 화면 3.4 s 대사는 뺐다 (사장님 10/18 01:4x '싸움 화면쪽은 빼' — 전: showFoeLine). 결과 창이 뜨는 때는 그대로
       const foeWin = !win && currentFoe ? { ch: currentFoe, line: randomLine(currentFoe, 'win') } : null;
       loadDefeatFoe(foeWin);
-      if (foeWin) showFoeLine(foeWin.ch, foeWin.line);
     }
     return;
   }

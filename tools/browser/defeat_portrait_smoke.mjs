@@ -1,13 +1,18 @@
 // 패배 창 프로필 + 대사 점검 (사장님 10/17 22:1x · 23:4x — docs/design/portrait_ui_2026-10-17.md §4)
-//  ① 여정(첫 화면 Stage 1 → 카드 → 싸움)에서 짐: 싸움 화면 대사(3.4 s — 그대로) → 패배 창 = 상대 프로필(원본을 줄인 768² · 그림 안 액자 1) + 그 오른쪽 같은 대사 ·
+//  ① 여정(첫 화면 Stage 1 → 카드 → 싸움)에서 짐: 싸움 화면엔 승리 대사가 안 뜸(10/18 01:4x '싸움 화면쪽은 빼') → 패배 창 = 상대 프로필(원본을 줄인 768² · 그림 안 액자 1) + 그 오른쪽 같은 대사 ·
 //     그림 한 변 = 같은 화면 대기실 프로필 칸과 같은 CSS px(23:4x '패배 팝업 프로필도 같은 크기로') · 금화 줄 · 단추와 안 겹침 · 창이 화면 안 · 그 뒤 정지 창엔 없음
 //  ② 이긴 판: 프로필 · 대사 없음(전 그대로)  ③ 그림 없는 상대(?foe=default 기본 상대): 그림 칸 숨김 · 대사 없음(전 꼴)  ④ 변형(광기의 하인리히)은 바탕 인물 그림
-//  ⑤ 출처 줄이 있는 대사(병마용)는 대사 아래 작은 줄 — 싸움 화면과 같은 꼴  ⑥ ?portrait=low = 예비 픽셀판(pixelated)
+//  ⑤ 출처 줄이 있는 대사(병마용)는 대사 아래 작은 줄 — 싸움 화면 대사 칸과 같은 꼴  ⑥ ?portrait=low = 예비 픽셀판(pixelated)
 //  npm run build && npx vite preview --port 5182 →  node tools/browser/defeat_portrait_smoke.mjs http://127.0.0.1:5182 /tmp/<빈 폴더> [크기 WxH@dpr,…]
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { departTitle, lobbyFromBattle } from './to_lobby.mjs';
+import { CHARACTERS_BY_ID, lineSourceOf } from '../../src/characters.js';
+// 패배 창 대사 = 그 상대의 승리 대사 중 하나(randomLine — 없으면 taunt) · 출처 줄 = lineSourceOf (이름으로 인물을 찾음 — 이름은 겹치지 않는다)
+const byName = (n) => Object.values(CHARACTERS_BY_ID).find((c) => c.name === n);
+const unq = (q) => (q || '').replace(/^“|”$/g, '');
+const winLineOf = (name, q) => { const c = byName(name); return !!c && [...(c.lines?.win ?? []), c.taunt].filter(Boolean).includes(unq(q)); };
 const base = process.argv[2] || 'http://127.0.0.1:5182', out = process.argv[3] || '/tmp/defeat-portrait';
 const sizes = (process.argv[4] || '844x390@3,932x430@3,740x360@3,667x375@2,568x320@2,1280x720@1,1440x900@1').split(',').map((s) => { const [wh, d] = s.split('@'); const [w, h] = wh.split('x').map(Number); return { w, h, dpr: Number(d || 1) }; });
 fs.mkdirSync(out, { recursive: true });
@@ -26,12 +31,12 @@ const urlFight = async (p, q) => { await p.goto(base + '/?' + q, { waitUntil: 'n
 // 지고 결과 창까지: 싸움 화면 대사(있으면)를 읽어 둔다 — 결과 창은 게임 시간 3.5 s 뒤라 SwiftShader 가 바쁘면 실제로는 훨씬 오래 걸린다(기다림 150 s)
 async function lose(p) {
   await p.waitForFunction(() => !document.getElementById('foeIntro').classList.contains('show'), null, { timeout: 20000 }).catch(() => {}); // 판 시작 소개(같은 칸)가 걷힌 뒤에 — 대사를 소개 글과 헷갈리지 않게
-  const intro = await p.evaluate(() => { const el = document.getElementById('foeIntro'); return el.classList.contains('show') ? el.querySelector('span').textContent : null; }); // 아직 소개가 떠 있으면 그 글은 대사로 치지 않는다
+  // 싸움 화면 대사 칸(#foeIntro)에 진 뒤 뜨는 글을 모두 적어 둔다 — 10/18 01:4x 부터 승리 대사는 안 떠야 한다(부활 대사 등 다른 글은 상관없음)
+  await p.evaluate(() => { const el = document.getElementById('foeIntro'); window.__foeShown = []; new MutationObserver(() => { if (el.classList.contains('show')) window.__foeShown.push(el.querySelector('span').textContent); }).observe(el, { attributes: true, attributeFilter: ['class'], subtree: true, childList: true, characterData: true }); });
   await p.evaluate(() => game.player.die('목', true));
-  const said = await p.waitForFunction((skip) => { const el = document.getElementById('foeIntro'), t = el.querySelector('span').textContent; return el.classList.contains('show') && t !== skip ? [t, el.querySelector('small').textContent] : false; }, intro, { timeout: 30000 }).then((h) => h.jsonValue()).catch(() => null);
   await p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 150000 });
   await p.waitForFunction(() => { const f = document.getElementById('menuFoe'), i = document.getElementById('menuFoeImg'); return f.hidden || (i.complete && i.naturalWidth > 0); }, null, { timeout: 20000 });
-  return said;
+  return p.evaluate(() => window.__foeShown);
 }
 const popup = (p) => p.evaluate(() => {
   const R = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
@@ -61,14 +66,14 @@ try {
     await p.waitForFunction(() => !document.getElementById('gameEntrance') && ['draw', 'fight'].includes(game.state), null, { timeout: 60000 });
     await toFight(p);
     const foe = await p.evaluate(() => game.enemy.name);
-    const said = await lose(p);
+    const shown = await lose(p);
     const a = await popup(p);
     await p.screenshot({ path: `${out}/loss_${tag}.png` });
     assert.equal(a.title, '패배'); assert.equal(a.shown, true, JSON.stringify(a)); assert.equal(a.foeShown, true);
     assert.equal(a.src, `ui/portraits/${a.id}.webp`); assert.equal(a.natural, 768); assert.equal(a.mode, 'original'); assert.notEqual(a.rendering, 'pixelated');
     assert.equal(a.alt, `${foe} 프로필`);
     assert.ok(Math.abs(a.size[0] - lobbySide) < .5 && Math.abs(a.size[1] - lobbySide) < .5, `${tag} popup ${a.size} vs lobby ${lobbySide}`);
-    assert.ok(said && a.line === said[0], `${tag} line ${a.line} vs fight ${said}`); // 싸움 화면 대사와 같은 줄
+    assert.ok(winLineOf(foe, a.line), `${tag} line ${a.line} is not a win line of ${foe}`); assert.ok(!shown.includes(a.line), `${tag} fight screen showed ${shown}`); // 대사는 패배 창에만
     assert.equal(a.lineRightOfPortrait, true); assert.deepEqual(a.overlap, [], `${tag} overlap ${a.overlap}`);
     assert.equal(a.reward, true); assert.ok(a.inView && a.buttons.length === 2 && a.buttons.every(Boolean), `${tag} ${JSON.stringify(a)}`);
     // 다시 겨루기 → 정지 창엔 프로필 · 대사 없음
@@ -76,7 +81,7 @@ try {
     await p.evaluate(() => document.getElementById('btnPause').click()); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 10000 });
     const paused = await popup(p);
     assert.deepEqual([paused.title, paused.shown, paused.foeShown, paused.line], ['일시정지', false, false, null]);
-    checks.push({ check: `${tag}: loss popup shows the foe profile (${a.id}, original 768 webp, smooth) at the lobby profile size ${lobbySide} px, the same line as the fight screen to its right, no overlap with title/cause/reward/buttons, card in view${a.scrolls ? ' (scrolls)' : ''}; pause after a rematch shows none`, foe, line: a.line, size: a.size });
+    checks.push({ check: `${tag}: loss popup shows the foe profile (${a.id}, original 768 webp, smooth) at the lobby profile size ${lobbySide} px, one of the foe's win lines to its right (not shown on the fight screen), no overlap with title/cause/reward/buttons, card in view${a.scrolls ? ' (scrolls)' : ''}; pause after a rematch shows none`, foe, line: a.line, size: a.size });
     await c.close();
   }
   const s = sizes[0], tag = `${s.w}x${s.h}`;
@@ -92,14 +97,14 @@ try {
     assert.deepEqual([d.title, d.shown, d.foeShown, d.line], ['패배', false, false, null]); assert.ok(d.inView && d.buttons.every(Boolean));
     checks.push({ check: 'loss to the default foe (no character, no portrait, no line): portrait slot hidden, card as before' });
     await urlFight(p, 'foe=heinrich_mad&weapon=longsword');
-    const said = await lose(p); const m = await popup(p); await p.screenshot({ path: `${out}/loss_variant_${tag}.png` });
-    assert.equal(m.id, 'heinrich'); assert.equal(m.src, 'ui/portraits/heinrich.webp'); assert.equal(m.line, said[0]);
+    const shownM = await lose(p); const m = await popup(p); await p.screenshot({ path: `${out}/loss_variant_${tag}.png` });
+    assert.equal(m.id, 'heinrich'); assert.equal(m.src, 'ui/portraits/heinrich.webp'); assert.ok(winLineOf('광기의 하인리히 도른', m.line), m.line); assert.ok(!shownM.includes(m.line)); // 변형의 대사 · 바탕 인물 그림
     checks.push({ check: 'variant (heinrich_mad) uses the base character portrait (heinrich)', line: m.line });
     let src = null;
-    for (let i = 0; i < 6 && !src?.sourceShown; i++) { await urlFight(p, 'foe=terracotta&weapon=longsword'); const said2 = await lose(p); src = await popup(p); src.said = said2; }
+    for (let i = 0; i < 6 && !src?.sourceShown; i++) { await urlFight(p, 'foe=terracotta&weapon=longsword'); const shownT = await lose(p); src = await popup(p); src.shown = shownT; }
     await p.screenshot({ path: `${out}/loss_terracotta_${tag}.png` });
-    assert.equal(src.id, 'terracotta'); assert.equal(src.line, src.said[0]); assert.equal(src.source, src.said[1]); assert.deepEqual(src.overlap, []);
-    checks.push({ check: `terracotta: line + source line (same as the fight screen)${src.sourceShown ? '' : ' — no sourced line came up in 6 tries'}`, line: src.line, source: src.source });
+    assert.equal(src.id, 'terracotta'); assert.ok(winLineOf('병마용', src.line), src.line); assert.equal(src.source, lineSourceOf(byName('병마용'), unq(src.line))); assert.ok(!src.shown.includes(src.line)); assert.deepEqual(src.overlap, []);
+    checks.push({ check: `terracotta: win line + source line (lineSourceOf)${src.sourceShown ? '' : ' — no sourced line came up in 6 tries'}`, line: src.line, source: src.source });
     await c.close();
     const c2 = await context(s), q = await c2.newPage(); watch(q, tag);
     await urlFight(q, 'foe=samira&weapon=longsword&portrait=low');

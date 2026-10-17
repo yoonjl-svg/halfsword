@@ -5,7 +5,7 @@
 //     짐: '패배' · '금화 −N'(또는 ±0) · '다시 겨루기'(같은 무대 — 진 판은 넘어가지 않음) · '대기실'
 //     14:0x (같은 문서 §11): 금화 줄은 늘든 줄든 같은 강조 색 · 위 부제와 빈 줄 하나(부제 한 줄 높이) · 앞에 대기실 금화 그림 / 패배 글 = 첫 줄 진 까닭 · 다음 줄 “대사”(이름 없이)
 //     14:4x (같은 문서 §12): 결과 창 부제에서 대사를 뺌 — 진 까닭 한 줄뿐(승리 창과 같은 꼴) · 상대 대사는 결과 창이 뜨기 전 싸움 화면에만
-//     10/17 22:1x (docs/design/portrait_ui_2026-10-17.md §4): 패배 창 = 상대 프로필(왼쪽) + 그 오른쪽 싸움 화면과 같은 “대사” · 부제는 진 까닭 한 줄 그대로 · 금화 줄은 그 위 글(대사)과 빈 줄 하나
+//     10/17 22:1x (docs/design/portrait_ui_2026-10-17.md §4): 패배 창 = 상대 프로필(왼쪽) + 그 오른쪽 “승리 대사” · 부제는 진 까닭 한 줄 그대로 · 금화 줄은 그 위 글(대사)과 빈 줄 하나 · 10/18 01:4x 싸움 화면 대사는 뺌
 //  ③ 테스트 경로 · 주소 판: 정지 · 결과 창에 '대기실' 없음 · 결과 창 설정 줄 그대로 (메뉴 그대로)
 //  ④ 대기실 캐릭터: '드래그하여 회전' 없음 · 10/17 22:1x 돌림판 3D 미리보기를 정사각 프로필 그림으로 바꿈(docs/design/portrait_ui_2026-10-17.md) — 그림이 뜨고 출발 단추 위 · 끌어도 아무 일 없음
 //  ⑤ 대기실 무기 = 싸움 무기 (08:4x — 같은 문서 §6): 나뭇가지를 장착하고 출발하면 그 무기로 싸움 (10/17 전: 대기실 몸 ↔ 판의 플레이어 손목 · 칼끝 · 칼날 축 — 대기실 몸이 없어짐)
@@ -15,6 +15,7 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { departTitle, titleToLobby } from './to_lobby.mjs';
+import { CHARACTERS_BY_ID } from '../../src/characters.js'; // 패배 창 대사가 그 상대의 승리 대사인지 (10/18)
 const base = process.argv[2] || 'http://127.0.0.1:5230', out = process.argv[3] || '/tmp/ui-fix';
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'] });
@@ -97,18 +98,22 @@ try {
     const stage1 = await p.evaluate(() => game.stage.id);
     assert.notEqual(stage1, stage0);
     checks.push({ check: 'win popup: 승리 · 금화 +N (accent · coin icon · one blank line above) · no settings row · 다음 여정 + 대기실; 대기실 shows the new coins; departing opens the next stage', reward: won.reward, look: wonLook, stage1 });
-    // ② 진 판 결과 창 — 상대 대사는 결과 창이 뜨기 전 싸움 화면에 (14:4x) · 10/17 22:1x 패배 창에도 상대 프로필과 같은 대사
+    // ② 진 판 결과 창 — 14:4x 상대 대사는 싸움 화면에만 → 10/17 22:1x 패배 창에도 상대 프로필과 같은 대사 → 10/18 01:4x '싸움 화면쪽은 빼': 대사는 패배 창에만
+    await p.evaluate(() => { const el = document.getElementById('foeIntro'); window.__foeShown = []; new MutationObserver(() => { if (el.classList.contains('show')) window.__foeShown.push(el.querySelector('span').textContent); }).observe(el, { attributes: true, attributeFilter: ['class'], subtree: true, childList: true, characterData: true }); });
+    const foeName = await p.evaluate(() => game.enemy.name);
     await p.evaluate(() => game.player.die('기절', true));
-    const said = await (await p.waitForFunction(() => { const el = document.getElementById('foeIntro'); return el.classList.contains('show') && document.getElementById('menu').classList.contains('show') === false && el.querySelector('span').textContent; }, null, { timeout: 20000 })).jsonValue();
-    assert.match(said, /^“[^“”]+”$/); // 싸움 화면 = 이름 + “대사”
-    await p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 40000 });
+    await p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 150000 }); // 결과 창은 게임 시간 3.5 s 뒤 (그대로)
+    const fightShown = await p.evaluate(() => window.__foeShown);
     const lost = await menu(p);
     assert.equal(lost.title, '패배'); assert.equal(lost.start, '다시 겨루기'); assert.equal(lost.lobby, true); assert.equal(lost.fps, false);
     assert.match(lost.reward, /^금화 (−[1-5]|±0)$/);
     const lostLook = await look(p);
     assert.deepEqual(lostLook.lines, ['기절했다']); // 부제 = 진 까닭 한 줄 (14:4x) — 대사는 10/17 부터 따로 된 줄(#menuFoeLine · 프로필 오른쪽)
     const foeBlock = await p.evaluate(() => ({ shown: !document.getElementById('menuFoe').hidden, src: document.getElementById('menuFoeImg').getAttribute('src'), quote: document.getElementById('menuFoeLine').hidden ? null : document.getElementById('menuFoeQuote').textContent }));
-    assert.equal(foeBlock.shown, true); assert.match(foeBlock.src, /^ui\/portraits\/[a-z_]+\.webp$/); assert.equal(foeBlock.quote, said); // 10/17 22:1x: 상대 프로필 + 싸움 화면과 같은 대사
+    const foeCh = Object.values(CHARACTERS_BY_ID).find((c) => c.name === foeName), said = foeBlock.quote;
+    assert.equal(foeBlock.shown, true); assert.match(foeBlock.src, /^ui\/portraits\/[a-z_]+\.webp$/); assert.match(said, /^“[^“”]+”$/);
+    assert.ok([...(foeCh?.lines?.win ?? []), foeCh?.taunt].includes(said.slice(1, -1)), `${foeName}: ${said}`); // 그 상대의 승리 대사 하나
+    assert.ok(!fightShown.includes(said), `fight screen showed ${fightShown}`); // 싸움 화면엔 안 뜸 (10/18 01:4x)
     assert.equal(lostLook.lines.length, wonLook.lines.length);
     assert.equal(lostLook.color, wonLook.color); assert.deepEqual(lostLook.icons, ['coin-icon']); assert.ok(lostLook.loaded && lostLook.hidden); // 잃어도 같은 색 · 같은 금화 그림
     assert.ok(Math.abs(lostLook.gap - lostLook.line) < 0.6, JSON.stringify(lostLook));
@@ -119,7 +124,7 @@ try {
     await p.locator('#btnPause').click(); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 10000 });
     assert.equal((await menu(p)).fps, true);
     await p.locator('#btnResume').click();
-    checks.push({ said, foe: foeBlock.src, check: 'loss popup: the foe line shows on the fight screen before the popup · 패배 · cause line + (10/17) foe profile with the same line to its right · 금화 −N in the same accent color with the coin icon after one blank line · no settings row · 다시 겨루기 (same stage) + 대기실; the pause menu keeps the settings row', reward: lost.reward, look: lostLook });
+    checks.push({ said, foe: foeBlock.src, check: 'loss popup: no foe line on the fight screen (10/18) · 패배 · cause line + foe profile with one of its win lines to its right · 금화 −N in the same accent color with the coin icon after one blank line · no settings row · 다시 겨루기 (same stage) + 대기실; the pause menu keeps the settings row', reward: lost.reward, look: lostLook });
     await c.close();
   }
   // ③ 테스트 경로 · 주소 판 — 메뉴 그대로
