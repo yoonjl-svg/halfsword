@@ -1,6 +1,6 @@
 /* 대기실 (샛별 저장소 대기실 3b280a1b 에서 들여옴 — docs/import/lobby_port_2026-10-16.md · 고친 것 lobby_fix · ui_fix_2026-10-16.md). game_entry.js 의 Shadow DOM 안.
    10/16 15:3x 사장님 ② ④ ⑤ ⑥ ⑨ (docs/import/ui_unify_2026-10-16.md — 스타일 규칙 '겉은 픽셀, 속은 매끈' docs/design_language.md §5):
-    · 겉(픽셀) = 숲 배경(pixel_grove.js — 첫 화면과 같은 그림, 팔레트 따로) · '대기실' 글자 · 액자 1 틀 둘(재고 칸 · 별자리 판 — 10/17, 전: 사슬 틀 셋) · 프로필 그림(그림 안에 액자 1 — 10/17, 전: 캐릭터 카드 · 바탕 무늬)
+    · 겉(픽셀) = 숲 배경(pixel_grove.js — 첫 화면과 같은 그림, 팔레트 따로) · '대기실' 글자 · 액자 1 틀 둘(② 내 정보 · ③ 창 바깥 줄 — 10/18 03:3x · 10/17 엔 재고 칸 · 별자리 판, 전: 사슬 틀 셋) · 프로필 그림(그림 안에 액자 1 — 10/17, 전: 캐릭터 카드 · 바탕 무늬)
     · 속(매끈) = 창 · 칸 · 단추 · 탭 · 글 = 싸움 화면 규칙. UI 색은 싸움 화면 토큰만 — --panel --line --c-text --c-sub --c-accent --c-on-accent --c-alert --tier-* (index.html :root 에서 물려받음)
       (예외는 싸움 화면 값을 그대로 옮긴 것: 등급 빛 --tg · 이름 창 바탕 막 = 싸움 메뉴 .overlay · 카드 그림자 = 싸움 카드 뒷면 그림자)
     · 단추 · 미닫이 · 탭 꼴은 entrance_ui.css, 글자 크기 · 굵기 · 색은 entrance_type.css */
@@ -38,9 +38,9 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   --card-avail: calc(var(--col-h) - var(--depart) - var(--depart-gap));
   --card-w0: min(var(--card-avail) * 2 / 3, var(--row-w) * .3); /* 전 캐릭터 카드(2 : 3) 폭 — 10/17 22:1x 프로필 칸은 처음에 이 폭의 정사각 */
   --card-w: calc(var(--card-w0) * .6);  /* 프로필 칸 = 그 60 % (정사각 한 변 · 출발 단추 폭 — 사장님 10/17 23:4x '지금의 80%로' → 10/18 00:2x '원래의 70%로' → 01:0x '60%로 하자') */
-  --grid-x: calc(var(--card-w0) - var(--card-w)); /* 줄어든 폭 → 맨 오른쪽 칸(재고 · 별자리 틀)에 더함 ('그만큼 맨 우측 3단 영역 늘리고' — 틀이 그만큼 옆으로 넓어진다) */
-  --chrome-v: calc(2px + 2 * var(--pp) + var(--title-h) + var(--title-gap) + 2 * var(--fr));
-  --chrome-h: calc(2px + 2 * var(--pp) + 2 * var(--fr));
+  --grid-x: calc(var(--card-w0) - var(--card-w)); /* 줄어든 폭 → 맨 오른쪽 칸(③ 창)에 더함 ('그만큼 맨 우측 3단 영역 늘리고') — 재고 칸 판은 정사각 칸 그대로 가운데(10/18 03:3x) · 별자리 판은 이 폭까지 씀 */
+  --chrome-v: calc(2 * var(--fr) + 2 * var(--pp) + var(--title-h) + var(--title-gap)); /* 창 틀(액자 1) 위아래 + 여백 + 제목 줄 — 10/18 03:3x 틀이 창 바깥으로 옮겨 가고 안쪽 재고 틀은 없앰 */
+  --chrome-h: calc(2 * var(--fr) + 2 * var(--pp));
   --grid-wmax: calc(var(--row-w) - var(--card-w0) - var(--profile-w) - 2 * var(--gap) - var(--chrome-h));
   --grid-w: max(132px, min((var(--col-h) - var(--chrome-v)) * 1.25, var(--grid-wmax)));
   --grid-h: calc(var(--grid-w) * .8);
@@ -71,12 +71,15 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .lobby-header h1 canvas { display: block; height: var(--head); width: auto; image-rendering: pixelated; }
 .lobby-columns { flex: none; width: 100%; max-width: 1220px; height: var(--col-h); margin: 0 auto; display: grid; grid-template-columns: var(--card-w) var(--profile-w) calc(var(--grid-w) + var(--grid-x) + var(--chrome-h)); justify-content: center; gap: var(--gap); align-items: stretch; }
 
-/* ── 액자 1 틀: 재고 칸 · 별자리 판 (사장님 10/17 22:1x '대기실에 있는 현재 프레임을 액자1로 고쳐' — 전: 사슬 틀 px_clearing_frame.png).
+/* ── 액자 1 틀: ② 내 정보 · ③ 재고/상점/스킬북 창의 바깥 줄 (① 은 프로필 그림 속 액자 1 이 바깥 줄) — 사장님 10/18 03:3x '모든 1,2,3단 외곽 라인에 액자1 적용할 것 …
+   3단도 액자1을 외곽라인에 적용하고 내부는 지금 외곽라인을 적용하거나 아예 라인을 없애고 인벤토리 격자만 보이게 하거나 해' → 안쪽(재고 칸 판 · 별자리 판)은 줄 · 바탕 없이 격자만.
+   전: 10/17 22:1x '대기실에 있는 현재 프레임을 액자1로 고쳐' 로 재고 칸 · 별자리 판에만 액자 1(창 바깥은 1 px --line) · 그 전: 사슬 틀 px_clearing_frame.png.
    10/18 01:2x '3단쪽에 액자 두께가 다르네. 프로필과 똑같아야지' → 틀 그림 = 프로필 그림(플레이어 원본 1254²) 속 액자 1 을 잘라 만든 9 조각 public/ui/frame1_portrait.png
    (252 × 252 · 조각 122 px — 어두운 바깥 띠 50 · 금색 줄 8 · 틈 8 · 금색 줄 7 · 안쪽 선 5 = 곧은 띠 79 px + 모서리 네모 · 안쪽 계단 장식, 띠 안쪽 투명 · tools/ui/portraits_build.py frame-portrait)
    두께 --fr = 122 × 프로필 표시 폭 ÷ 1254 — 같은 화면에서 금색 줄 굵기 · 간격 · 모서리 장식이 프로필 그림과 같은 CSS px (docs/design/portrait_ui_2026-10-17.md §2).
    매끈하게 줄임(프로필 그림과 같은 보기 — 전 7 px 픽셀 틀 px_frame1.png 은 2 배 픽셀 확대였다) ── */
-.card-frame, .skill-tree-host { position: relative; border: var(--fr) solid transparent; border-image: url('../public/ui/frame1_portrait.png') 122 / var(--fr) / 0 stretch; image-rendering: auto; }
+.profile-panel, .contents-panel { border: var(--fr) solid transparent; border-image: url('../public/ui/frame1_portrait.png') 122 / var(--fr) / 0 stretch; image-rendering: auto; }
+.card-frame, .skill-tree-host { position: relative; }
 .card-frame > *, .skill-tree-host > * { image-rendering: auto; }
 
 /* ── ① 프로필 칸 + 출발 (사장님 10/17 22:1x '캐릭터 미리보기를 없애고 정사각형의 프로필 사진 들어갈 자리를 미리 잡아둬. 전체 3단 레이아웃과 비율은 지금을 유지하고 캐릭터 미리보기 창만 짧아지는 느낌으로'):
@@ -96,9 +99,9 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 @media (max-width: 679px) { .lobby-header { height: auto; min-height: var(--head); } .lobby-status { white-space: normal; } } /* 좁은 화면은 아래로 흐르니 두 줄이 되어도 된다 */
 .character-panel .depart { flex: none; width: var(--card-w); max-width: 100%; }
 
-/* ── 창 (싸움 창 꼴 — --panel 바탕 · 1 px --line. 전: 나무색 불투명 · 두꺼운 볼록 테두리 · 딱딱한 그림자)
+/* ── 창 (싸움 창 꼴 — --panel 바탕 · 바깥 줄 = 액자 1(위 — 10/18 03:3x, 전 1 px --line). 전: 나무색 불투명 · 두꺼운 볼록 테두리 · 딱딱한 그림자)
    세 칸 모서리는 각지게 (사장님 10/16 18:0x "대기실에서 3단 영역 모서리에 애매한 라운딩이 들어간 게 싫어" — 사슬 틀과 나란히 선 큰 영역. 둥근 모서리는 떠 있는 창 · 단추에만) ── */
-.profile-panel, .contents-panel { min-width: 0; min-height: 0; overflow: auto; padding: var(--pp); background: var(--panel); border: 1px solid var(--line); border-radius: 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.profile-panel, .contents-panel { min-width: 0; min-height: 0; overflow: auto; padding: var(--pp); background: var(--panel); border-radius: 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
 /* ── ② 내 정보: 레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리 · 메뉴 넷 — 내용만큼 작게 (사장님 10/16 18:0x "두 번째 영역이 지금 정보에 비해 너무 크네. 상하좌우 다 작아져도 돼"):
    폭 = --profile-w 하나(전: 남는 폭을 다 가짐 1fr) · 높이 = 내용(전: 칸 높이 끝까지) · 위 줄은 다른 두 칸과 같게 · 메뉴 넷은 금화 바로 아래 ── */
@@ -145,8 +148,10 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .empty-panel { margin: 0; font-size: var(--fs-s); }
 .panel-wallet { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
 .panel-wallet .coin-icon { width: 14px; height: 14px; }
-/* 재고 틀: 칸 5 × 4 를 꼭 맞게 (틀 안 = 칸 판 그대로 — 남는 띠 없음) */
-.inventory-frame { width: calc(var(--grid-w) + var(--grid-x) + 2 * var(--fr)); height: calc(var(--grid-h) + 2 * var(--fr)); background: var(--panel); } /* 10/17 23:4x: 프로필 칸에서 줄어든 폭(--grid-x)만큼 옆으로 넓음 — 칸은 그만큼 가로로 조금 긺 */
+/* 재고 칸 판: 칸 5 × 4 · 칸은 정사각 (사장님 10/18 03:3x '재고 칸이 1.3배로 길어진 거 별로야. 길이가 길어지더라도 아까와 같은 내부 비율 유지하도록 해')
+   판 = --grid-w × --grid-h(= 0.8 배 — 10/17 23:4x 전과 같은 판) · 3단이 넓어진 폭(--grid-x)은 판 양옆 빈자리로(가운데 맞춤) · 줄 · 바탕 없이 격자만(10/18 03:3x — 바깥 줄은 창의 액자 1)
+   전 10/17 23:4x: 판을 --grid-x 만큼 옆으로 늘여 칸이 가로로 1.25 ~ 1.3 배 */
+.inventory-frame { width: var(--grid-w); height: var(--grid-h); margin: 0 auto; }
 .inventory-grid { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 6px; }
 .inventory-item, .inventory-slot { position: relative; display: block; min-width: 0; min-height: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; }
 /* 칸 그림 (사장님 ⑨ 1 단계 — 감독 검토 §2): 보이는 그림이 칸의 80 % · 매끈하게 줄임(픽셀 확대 끔) · 뒤에 등급 빛 = 무기 카드 앞면(.wthumb)과 같은 원 빛 · 같은 그림자.
@@ -185,8 +190,8 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .equipment-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; } /* 가운데 맞춤 — 줄로 늘이면 부 단추가 주 단추 높이로 늘어난다(싸움 단추 높이 그대로: 주 36 · 부 34) */
 .equipment-actions button { min-width: 72px; }
 
-/* ── 스킬북 (skill_tree.js): 액자 1 틀(별자리 틀) = 유파 탭 + 별자리 판 — 재고 틀과 같은 바깥 크기 ── */
-.skill-tree-host { display: flex; flex-direction: column; width: calc(var(--grid-w) + var(--grid-x) + 2 * var(--fr)); height: calc(var(--grid-h) + 2 * var(--fr)); background: var(--panel); }
+/* ── 스킬북 (skill_tree.js): 유파 탭 + 별자리 판 — 창 안 폭 전부 · 재고 칸 판과 같은 높이 (10/18 03:3x 안쪽 액자 1 뺌 — 바깥 줄은 창의 액자 1) ── */
+.skill-tree-host { display: flex; flex-direction: column; width: calc(var(--grid-w) + var(--grid-x)); height: var(--grid-h); } /* 창 안 폭 전부 · 재고 칸 판과 같은 높이 — 줄 · 바탕 없음(10/18 03:3x) */
 .school-tabs { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 6px 6px 0; }
 /* 판 = 별자리 비 300 : 210 그대로(책 자리가 % 라 비가 바뀌면 판 끝의 책 이름이 밖으로 나간다) — 탭 아래 남은 자리에 들어가는 가장 큰 판을 가운데에 (남는 곳은 같은 바탕이라 띠로 안 보임) */
 .skill-tree-host .tree-frame { flex: 1; min-height: 0; display: grid; place-items: center; container-type: size; border: 0; border-image: none; background: none; box-shadow: none; }
@@ -265,7 +270,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
     --card-w0: min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px);
     --card-w: calc(var(--card-w0) * .6); /* 프로필 칸 60 % (10/18 01:0x — 전 80 · 70 %) — 좁은 화면은 재고가 아래 줄 전체라 더할 칸이 없다 */
     --grid-x: 0px;
-    --grid-w: min(100cqw - 2 * var(--fr), 408px); /* 100cqw = 재고 창 안 폭 (.contents-panel 이 폭 기준) */
+    --grid-w: min(100cqw, 408px); /* 100cqw = 재고 창 안 폭 (.contents-panel 이 폭 기준 — 10/18 03:3x 안쪽 틀을 없애 틀 두께를 빼지 않음) */
     --grid-h: calc(var(--grid-w) * .8);
     display: block;
   }
@@ -273,7 +278,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
     .lobby {
       --card-w0: calc(round(down, min((100vw - var(--pad-l) - var(--pad-r) - var(--gap)) / 2, 232px) - 2 * var(--fr0), var(--link)) + 2 * var(--fr0));
       --card-w: round(down, var(--card-w0) * .6, 1px);
-      --grid-w: round(down, min(100cqw - 2 * var(--fr), 408px), var(--link));
+      --grid-w: round(down, min(100cqw, 408px), var(--link));
       --grid-h: round(nearest, var(--grid-w) * .8, var(--link));
     }
   }
