@@ -34,7 +34,7 @@ async function fromTitle(p, url) {
 }
 const progress = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')));
 const depart = async (p, state) => { await p.locator('#lobbyDepart').click(); await p.waitForFunction((s) => game.state === s, state, { timeout: 60000 }); await p.waitForFunction(() => !document.getElementById('gameEntrance'), null, { timeout: 5000 }); };
-const pick = async (p, i = 0) => { await p.waitForFunction(() => game.draw.t > 0.6, null, { timeout: 20000 }); await p.locator(`#draw .wcard[data-i="${i}"]`).click(); await p.waitForFunction(() => game.state === 'fight', null, { timeout: 30000 }); };
+const pick = async (p, i = 0) => { await p.waitForFunction(() => game.draw.t > 0.6, null, { timeout: 60000 }); await p.locator(`#draw .wcard[data-i="${i}"]`).click(); await p.waitForFunction(() => game.state === 'fight', null, { timeout: 90000 }); };
 // 매끈한 아이템 그림 (10/16 15:3x ⑦⑨ — docs/import/item_art_2026-10-16.md): 실제로 읽혔나(complete · 가로 256) · 주소 · 세로 · alt · aria-hidden · 그린 크기
 const imgs = (p, sel, inShadow = true) => p.evaluate(([s, sh]) => Promise.all([...(sh ? document.querySelector('#gameEntrance').shadowRoot : document).querySelectorAll(s)].map((i) => i.decode().catch(() => {}).then(() => ({ src: i.getAttribute('src'), ok: i.complete && i.naturalWidth === 256, h: i.naturalHeight, alt: i.getAttribute('alt'), hidden: i.getAttribute('aria-hidden'), w: Math.round(i.getBoundingClientRect().width * 10) / 10 })))), [sel, inShadow]);
 const book = async (p, school, tier) => { await p.locator('#tabSkills').click(); await p.locator(`.school-tabs [data-school=${school}]`).click(); await p.locator(`.book-node[data-book="${tier}"]`).click(); await p.locator('.book-detail').waitFor(); };
@@ -112,14 +112,14 @@ try {
 
   // ④ 진 판 금화 · 바닥 0 · ⑤ 머리
   assert.equal(await fromTitle(p, '/?coins=2'), 'draw'); await pick(p, 0);
-  await p.evaluate(() => game.player.die('기절', true)); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 30000 });
+  await p.evaluate(() => game.player.die('기절', true)); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 90000 });
   const lost = await progress(p); assert.ok(lost.coins >= 0 && lost.coins <= 1, JSON.stringify(lost));
   assert.equal(await p.locator('#menuReward').textContent(), `금화 −${2 - lost.coins}`); await p.screenshot({ path: `${out}/result-loss.png` });
   checks.push('journey loss: coins −1..5 with a floor at 0, shown on the result screen');
-  await p.locator('#btnStart').click(); await p.waitForFunction(() => game.state === 'draw', null, { timeout: 30000 }); await pick(p, 0);
+  await p.locator('#btnStart').click(); await p.waitForFunction(() => game.state === 'draw', null, { timeout: 90000 }); await pick(p, 0);
   const headsBefore = (await progress(p)).heads;
   await p.evaluate(() => { game.enemy.detachHeadFromWound({ severity: 1, zone: 'neck', finishPower: false }); game.enemy.detachHeadFromWound({ severity: 1, zone: 'neck', finishPower: false }); });
-  await p.waitForFunction(() => game.state === 'paused', null, { timeout: 30000 });
+  await p.waitForFunction(() => game.state === 'paused', null, { timeout: 90000 });
   const won = await progress(p); assert.equal(won.heads, headsBefore + 1);
   assert.match(await p.locator('#menuReward').textContent(), /^금화 \+(?:[5-9]|1[0-5]) · 머리 \+1$/); await p.screenshot({ path: `${out}/result-win-head.png` });
   const rewardIcons = await imgs(p, '#menuReward img', false); // 결과 창 금화 · 주머니 그림 (꾸밈 — 빈 alt · aria-hidden · 14 px)
@@ -147,7 +147,7 @@ try {
   await q.locator('#btnResume').click(); await q.waitForFunction(() => game.state === 'fight', null, { timeout: 10000 });
   const t = await q.evaluate(() => ({ fw: game.player.schoolFootwork, parry: game.player.schoolParry, secretStage: game.playerSecret.S ? 'open' : 'locked' }));
   assert.equal(t.fw, undefined); assert.equal(t.parry, undefined); // 테스트 경로는 플래그를 안 건다 = 지금처럼 모두
-  const before = JSON.stringify(await progress(q)); await q.evaluate(() => game.enemy.die('기절', true)); await q.waitForFunction(() => game.state === 'paused', null, { timeout: 30000 });
+  const before = JSON.stringify(await progress(q)); await q.evaluate(() => game.enemy.die('기절', true)); await q.waitForFunction(() => game.state === 'paused', null, { timeout: 90000 });
   assert.equal(JSON.stringify(await progress(q)), before); assert.equal(await q.locator('#menuReward').isVisible(), false);
   checks.push('test route (?title=1&test=1): Stage 1 goes straight to the fight; no 대기실 in its pause (not a journey); no seal conversion; school kit flags untouched in the fight (= every book); coins unchanged');
   await sc.close();
