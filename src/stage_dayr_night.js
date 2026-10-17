@@ -1,4 +1,4 @@
-// 밤의 소금길 역참 03:00 — 상인 위장 · 끊긴 모의 (샛별 저장소에서 가져옴 10/17 — 사장님 10/16~17 결정, 샛별 쪽 · docs/import/saetbyeol_round3_2026-10-17.md).
+// 밤의 소금 사막 03:00 — 상인 위장 · 끊긴 모의 (샛별 저장소에서 가져옴 10/17 — 사장님 10/16~17 결정, 샛별 쪽 · docs/import/saetbyeol_round3_2026-10-17.md).
 // 탈옥 이야기(사장님 거절)는 안 가져옴. 여정 순서에는 넣지 않았다 — ?stage=dayr_night 로 연다 (상대 광기의 다라이시)
 import * as T from 'three';
 import {buildDayr} from './stage_dayr.js';

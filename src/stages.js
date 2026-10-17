@@ -41,7 +41,7 @@ import { buildEtna } from './stage_etna.js';
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
   // 샛별 저장소에서 가져온 무대 다섯 (10/17 — 사장님 10/16~17 결정, 샛별 쪽). 여정 순서(STAGE_ORDER)에는 넣지 않았다 — 주소로 연다 (?stage=<id>, 상대는 STAGE_FOE 짝)
-  dayr_night: buildDayrNight, // 밤의 소금길 역참: 상인으로 위장한 암살단 · 끊긴 모의 · 등불 둘레의 참상 (stage_dayr_night.js) — 광기의 다라이시
+  dayr_night: buildDayrNight, // 밤의 소금 사막: 상인으로 위장한 암살단 · 끊긴 모의 · 등불 둘레의 참상 (stage_dayr_night.js) — 광기의 다라이시
   dunhuang_night: buildDunhuangNight, // 밤의 철불 절벽: 사방에서 겨루고 행군하는 오 · 월의 망령 (stage_dunhuang_night.js) — 광기의 병마용
   courtyard: buildCourtyard, // 봉인의 중정: 라자스탄풍 사암 역참 · 계단 우물 · 가운데 급수정 엄폐물 (stage_courtyard.js) — 마야의 무대 (낮)
   etna_night: buildEtnaNight, qinglan_night: buildQinglanNight, // 밤의 화산섬 · 밤의 청람잔도 (stage_night_fifth.js) — 광기의 찬다 · 광기의 김씨
@@ -94,12 +94,17 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 //  → 낮 다섯 · 밤 다섯이 번갈아 온다. 낮은 위 4 막 차례 그대로(밤의 포세이돈만 빠짐), 밤은 낮과 같은 차례로 다섯씩 (docs/stages.md 표).
 //  밤 첫 다섯 = 방금 지나온 낮 다섯의 밤. 둘째 다섯 = 산호 항구 · 잠든 습지 · 신목의 숲의 밤 + 산사 · 얼어붙은 만의 밤
 //  (화산섬 · 청람잔도의 밤이 아직 없어 다음 낮 묶음 두 곳의 밤을 당겨 씀). 끝 낮 묶음은 지금 네 곳. 밤 무대가 새로 생기면 같은 규칙으로 자리를 다시 잡는다
+// 10/17 14:xx 사장님 "밤 스테이지와 전용 얼터 캐릭터들은 바로 여정에 넣고" — 샛별 저장소 셋째 들여오기의 밤 넷(화산섬 · 청람잔도 · 철불 절벽 · 소금 사막의 밤)을
+//  위 규칙대로 자리 잡음: 둘째 밤 다섯 = 산호 항구 · 잠든 습지 · 화산섬 · 청람잔도 · 신목의 숲의 밤(당겨 쓰던 산사 · 얼어붙은 만의 밤은 제자리로) ·
+//  끝 낮 넷 뒤에 그 넷의 밤(산사 · 얼어붙은 만 · 철불 절벽 · 소금 사막) — 스물여덟 판, 끝판 = 밤의 소금 사막(광기의 다라이시). 그다음은 다시 포세이돈부터.
+//  봉인의 중정(마야 — 낮)은 디자인 리뷰 뒤 2 막 산호 항구와 잠든 습지 사이에 넣는다(사장님 같은 때 — 감독 10/16 제안 그대로). 그때 낮 묶음이 다시 다섯씩 갈린다
 export const STAGE_ORDER = [
   'poseidon', 'clearing', 'castle', 'loggia', 'cathedral',
   'poseidon_night', 'clearing_night', 'castle_night', 'loggia_night', 'cathedral_night',
   'corsair', 'sluice', 'etna', 'qinglan', 'sacred_grove',
-  'corsair_night', 'sluice_night', 'sacred_grove_night', 'temple_night', 'frozen_bay_night',
+  'corsair_night', 'sluice_night', 'etna_night', 'qinglan_night', 'sacred_grove_night',
   'temple', 'frozen_bay', 'dunhuang', 'dayr',
+  'temple_night', 'frozen_bay_night', 'dunhuang_night', 'dayr_night',
 ];
 // 무대 → 그 무대에서 나오는 상대 (캐릭터 id). 여기 없는 무대(어두운 홀)는 무작위 상대
 //  10/14 19:4x: 잠든 습지 = 라트나 · 소금 사막 = 다라이시 (손님 인물 CHARACTER_GUESTS — CHARACTERS_BY_ID 로 풀린다, 무작위 회전에는 그대로 없음).
@@ -112,7 +117,8 @@ export const STAGE_FOE = { dayr_night: 'silver_wanderer_mad', dunhuang_night: 't
 //  10/10 20:4x: 김씨·투야나(eira)는 전용 무대(청람잔도·얼어붙은 만, 위 STAGE_FOE 정식 짝)가 생겨 산사·성 안뜰 후보에서 뺐다 → 랴오·이졸데는 다시 늘 나온다.
 //   아르토리아·사미라는 후보 — 본디 짝과 반반(사장님 '무대 후보 비율은 반반')
 //  10/10 23:3x 사장님 '아르토리아는 대성당으로 반반, 사미라는 볼로냐 도서관으로 반반' → 짝을 바꿨다(대성당 = 마르그레테·아르토리아, 붉은 회랑 = 토메·사미라)
-export const STAGE_FOE_EXTRA = { cathedral_night: ['artoria'], cathedral: ['artoria'], loggia: ['samira'] };
+//  10/17 14:xx 사장님 '전용 얼터 캐릭터들은 바로 여정에' → 밤의 대성당 후보는 광기의 아르토리아(샛별 저장소 셋째 들여오기 — 궁정 예복 · 갑옷 없음). 낮 대성당은 아르토리아 그대로
+export const STAGE_FOE_EXTRA = { cathedral_night: ['artoria_mad'], cathedral: ['artoria'], loggia: ['samira'] };
 /** 이번 판 무대의 검객 id: 후보가 없으면 STAGE_FOE 그대로(난수 안 씀). 지난 상대(prevId)가 이 무대 후보면 그 사람 그대로(진 뒤 다시 싸우기) */
 export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
   const base = STAGE_FOE[stageId];
@@ -126,7 +132,7 @@ export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
 // 무대의 화면 이름 (10/14 왼쪽 위 '스테이지 3 · 산사' — docs/ui/hud_intro_2026-10-14.md). 이름은 docs/stages.md 의 무대 이름 그대로
 //  (보관용 1안 두 무대는 같은 화전 터). 번호는 STAGE_ORDER 의 자리 + 1, 순서표에 없는 무대(어두운 홀 등)는 이름만 (stageLabel)
 export const STAGE_NAME_KO = {
-  dayr_night: '밤의 소금길 역참',
+  dayr_night: '밤의 소금 사막', // 사장님 10/17 14:xx '네 제안대로' — 낮 이름(소금 사막, 사장님 10/14)에 맞춤 (샛별 쪽 '밤의 소금길 역참')
   dunhuang_night: '밤의 철불 절벽',
   courtyard: '봉인의 중정',
   etna_night: '밤의 화산섬', qinglan_night: '밤의 청람잔도',

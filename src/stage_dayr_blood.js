@@ -1,4 +1,4 @@
-// 밤의 소금길 역참 — 사건 뒤의 혈흔 (샛별 저장소에서 가져옴 10/17 — 사장님 10/16~17 결정, 샛별 쪽 · docs/import/saetbyeol_round3_2026-10-17.md).
+// 밤의 소금 사막 — 사건 뒤의 혈흔 (샛별 저장소에서 가져옴 10/17 — 사장님 10/16~17 결정, 샛별 쪽 · docs/import/saetbyeol_round3_2026-10-17.md).
 // 움직이지 않는 자국을 실제 판석 · 벽돌 면에 투영한다 (충돌 · 전투 없음)
 import * as T from 'three';
 import {DecalGeometry} from 'three/addons/geometries/DecalGeometry.js';

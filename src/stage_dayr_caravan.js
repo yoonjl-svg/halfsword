@@ -1,4 +1,4 @@
-// 밤의 소금길 역참 — 상인으로 위장한 암살단 · 끊긴 모의 (샛별 저장소에서 가져옴 10/17 — 사장님 10/16 결정, 샛별 쪽). 배경뿐: 싸움꾼 · 전투 AI 없음
+// 밤의 소금 사막 — 상인으로 위장한 암살단 · 끊긴 모의 (샛별 저장소에서 가져옴 10/17 — 사장님 10/16 결정, 샛별 쪽). 배경뿐: 싸움꾼 · 전투 AI 없음
 import * as T from 'three';
 import {workshop} from './stage_night_second.js';
 import {canvasTex} from './stage_kit.js';
