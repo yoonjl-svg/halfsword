@@ -571,7 +571,7 @@ const VARIANT_PLUS = 1;
 export function aiAtProficiency(c, p) {
   const level = AI_PROFICIENCY.levels[p] ?? 'normal';
   const persona = { ...c.ai.persona, proficiency: { [traditionOf(WEAPONS[c.weapon])]: p } };
-  if (c.mad && !c.appearanceOnly) {
+  if (c.mad && !c.appearanceOnly && !c.retainBaseStats) {
     const base = CHARACTERS.find((x) => x.id === c.variantOf);
     persona.level = scaledLevel({ level, persona: base.ai.persona }, MAD_SCALE);
   }
@@ -781,7 +781,7 @@ export const CHARACTER_GUESTS = [
   {
     id: 'chanda',
     name: '찬다',
-    epithet: '수문지기', // 사장님 결정 10/14 (샛별 쪽 '마지막 수문지기')
+    epithet: '식물학자', // 사장님 10/16 (샛별 쪽 결정 — 전 '수문지기' 사장님 결정 10/14). 얼터도 같은 칭호
     age: 38,
     origin: '동남아시아 · 우림에 남은 옛 물길',
     backstory: '마을이 옮겨 간 뒤에도 옛 수문에 남은 관리인. 빗물이 길을 넘으면 돌을 고르고, 아래쪽 밭이 마르면 막힌 홈을 뚫는다. 오래전 물길을 따라 건너온 흰 검 막야를 수문의 열쇠처럼 물려받았다. 숲을 통과하는 사람에게는 길을 내주지만 물길을 해치는 사람에게는 칼을 든다.',
@@ -890,6 +890,52 @@ const ratnaAlter = { ...ratnaBase, id: 'ratna_mad', variantOf: 'ratna', mad: tru
   look: alterLook(ratnaBase.look, 'ratna'), lookVersion: `${ratnaBase.lookVersion}-alter4`, eyes: 'madGlow' };
 finishAI(ratnaAlter);
 CHARACTER_VARIANTS.push(ratnaAlter);
+
+// ── 샛별 저장소에서 가져온 얼터 여섯 (사장님 10/16~17 결정 — 샛별 쪽 · docs/import/saetbyeol_round3_2026-10-17.md). 원본 시트를 복사해 겉모습만 바꾼다.
+//  retainBaseStats: 실력 숫자 +20%(MAD_SCALE)를 받지 않는다 (aiAtProficiency) — 외양만이 아닌 김씨 · 아르토리아도 원본 실력 그대로.
+//  숙련도 +1 은 아래 '얼터 숙련도 맞춤'이 채운다 (사장님 10/16 22:3x '모든 얼터' — 그쪽 판은 원본 숙련도 그대로였다)
+// 밤 다섯째: 찬다는 외양만 · 김씨는 형의 칼(brothers_sword — 화면 이름 '황약사의 검')을 꺼내 든다 (무기만 바뀌고 성향 · 몸놀림 그대로)
+for(const id of ['chanda','renji']){
+ const base=[...CHARACTERS,...CHARACTER_GUESTS].find(c=>c.id===id);
+ const alter={...base,id:id+'_mad',variantOf:id,mad:true,appearanceOnly:id==='chanda',retainBaseStats:true,
+  name:`광기의 ${base.name}`,ai:JSON.parse(JSON.stringify(base.ai)),look:alterLook(base.look,id),lookVersion:base.lookVersion+'-alter1',eyes:'madGlow'};
+ if(id==='renji'){
+  alter.weapon='brothers_sword';alter.ai.persona.school='brothers_sword';
+  alter.school='흰 천에 감싼 형의 칼을 한 손 둔기로 쓴다. 기존 김씨의 무유파 몸놀림과 성향을 유지한다.';
+  alter.backstory='습격의 흔적이 남은 산길에 혼자 서 있다. 형의 칼을 꺼냈지만 불살을 지키려 흰 천을 풀지 않았다. 날 대신 천으로 감싼 긴 몸으로 길을 지킨다.';
+  alter.movementNotes='기존 한손 둔기 동작에 새 무기의 길이·무게·실측 간격을 적용한다. 적극성과 보법은 강화하지 않는다.';
+  alter.weaknesses='가시 찌르기와 갑옷 무시 효과가 없는 둔기. 길게 휘두른 뒤의 빈틈을 조심해야 한다.';
+  alter.signatureMoves='형의 칼을 한 손으로 휘둘러 밀어낸다. 천에 싸인 날은 베거나 찌르지 않는다.';
+  alter.taunt='오늘은 이 칼을 쓰겠네.';
+  alter.lines={intro:['오늘은 이 칼을 쓰겠네.','차를 권할 때는 지났네.'],win:['…형에게 돌려줄 말이 늘었군.']};
+ }
+ finishAI(alter);CHARACTER_VARIANTS.push(alter);
+}
+
+// 밤 여섯째 (철불 절벽 — 오·월 망령): 채색 갑옷 · 창백한 사람 얼굴 · 흰 망토. 외양만 — 원래 몸 · 전투 그대로
+const terracottaBase=CHARACTER_GUESTS.find(c=>c.id==='terracotta');
+const terracottaAlter={...terracottaBase,id:'terracotta_mad',variantOf:'terracotta',mad:true,appearanceOnly:true,
+ name:`광기의 ${terracottaBase.name}`,ai:JSON.parse(JSON.stringify(terracottaBase.ai)),
+ look:alterLook(terracottaBase.look,'terracotta'),lookVersion:terracottaBase.lookVersion+'-alter2',eyes:'madGlow'};
+finishAI(terracottaAlter);CHARACTER_VARIANTS.push(terracottaAlter);
+
+// 다라이시 흑의 얼터 (사장님 10/16 승인 — 샛별 쪽). 잃어버린 이름은 설정에만 둔다 (화면에 안 나옴)
+const daraishiBase=CHARACTER_GUESTS.find(c=>c.id==='silver_wanderer');
+const daraishiAlter={...daraishiBase,id:'silver_wanderer_mad',variantOf:'silver_wanderer',mad:true,appearanceOnly:true,
+ name:`광기의 ${daraishiBase.name}`,ai:JSON.parse(JSON.stringify(daraishiBase.ai)),
+ look:alterLook({...getLook('silver_wanderer','v7-silver-c'),daraishiBlack:1},'silver_wanderer'),lookVersion:'v7-alter2',eyes:'madGlow',
+ backstory:'흑의에 애쉬 실버 머리의 검사. 머리 뒤에는 짧고 해진 붉은 끈이 묶여 있다. 무엇을 기억하려는 매듭인지 자신도 알지 못한다. 이름을 잃어도, 검을 쥐는 손은 망설이지 않는다.'};
+finishAI(daraishiAlter);CHARACTER_VARIANTS.push(daraishiAlter);
+
+// 마야 · 아르토리아: 원본 무기 · AI 그대로. 아르토리아는 갑옷 없는 궁정 예복이라 실제 판금도 벗는다
+//  (사장님 10/16 승인 예외 — 샛별 쪽: 방어 11 → 0 · 갑옷 감속 없음, outfit_alter.js alterLook). 실력 숫자 덧셈 없음
+for(const id of ['samira','artoria']){
+ const base=[...CHARACTERS,...CHARACTER_GUESTS].find(c=>c.id===id);
+ const alter={...base,id:id+'_mad',variantOf:id,mad:true,appearanceOnly:id==='samira',retainBaseStats:true,
+  name:`광기의 ${base.name}`,ai:JSON.parse(JSON.stringify(base.ai)),
+  look:alterLook(base.look,id),lookVersion:base.lookVersion+(id==='artoria'?'-alter13':'-alter1'),eyes:'madGlow'};
+ finishAI(alter);CHARACTER_VARIANTS.push(alter);
+}
 
 // 얼터 숙련도 맞춤 (사장님 10/16 22:3x "모든 얼터에 숙련도+1을 잊지 말고 적용해 두도록 해"): 변형(variantOf)은 모두 원본 숙련도 +1(상한 AI_PROFICIENCY.max).
 //  시트를 복사해 만든 새 얼터가 +1 을 빠뜨려도 여기서 맞추고 실력 숫자·유파 표를 다시 채운다 (이미 맞으면 손대지 않음 — 광기의 하인리히 등)

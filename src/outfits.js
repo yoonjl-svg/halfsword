@@ -19,6 +19,7 @@ import { weaponEnv } from './weapon_looks.js';
 import { createRenjiOutfit } from './outfit_renji.js'; // 김씨 복식 (샛별 저장소에서 가져옴)
 import { createEiraOutfit } from './outfit_eira.js'; // 에이라 린드(지금 투야나 니콜라예바) 복식 v1 (샛별 저장소에서 가져옴)
 import { createSamiraOutfit } from './outfit_samira.js'; // 사미라 v2 앙가르카 (디자인 리뷰 10/10)
+import { createArtoriaBallroomOutfit } from './outfit_artoria_ballroom.js'; // 광기의 아르토리아 궁정 예복 v4-alter13 (샛별 저장소에서 가져옴 10/17 — 사장님 10/16~17 결정, 샛별 쪽)
 import { createTuyanaOutfit } from './outfit_tuyana.js'; // 투야나 v2 겨울 사제복 (디자인 리뷰 10/10)
 import { createRenjiBajiOutfit } from './outfit_renji_baji.js'; // 김씨 v2 하카마 → 바지·행전 (외형 다듬기 2차 10/10)
 import { createRatnaOutfit } from './outfit_ratna.js'; // 라트나 위라세타쿤 복식 (샛별 저장소에서 가져옴 10/14 — 샛별 v1~v3 + 우리 v4)
@@ -2841,6 +2842,7 @@ export const newOutfitHelpers = { THREE, bake, box, cyl, ball, cone, addMerged, 
 const RENJI_V1 = createRenjiOutfit(newOutfitHelpers); // 김씨 v1 (v2 가 하카마 밖 전부를 이어 받는다)
 
 export const OUTFITS = {
+  artoria_ballroom: createArtoriaBallroomOutfit(newOutfitHelpers, ARTORIA_OUTFIT.head), // 광기의 아르토리아 (outfit_alter.js alterLook) — 머리는 원래 아르토리아 머리 위에 땋은 올림머리 · 백합 금관
   // 샛별 저장소에서 가져온 인물 넷 (10/10) — 위 머리말
   artoria_silver_v2: ARTORIA_OUTFIT_V2,
   artoria_silver_v3: ARTORIA_OUTFIT_V3, // 아르토리아 v2 — 망토·앞자락 (외형 다듬기 2차 10/10)
@@ -2889,15 +2891,16 @@ export const OUTFITS = {
   omari_seafarer_round: OMARI_ROUND,
 };
 
-/** dressPart가 부위 하나를 다 그린 뒤 불린다. look.outfit이 가리키는 세트에 그 부위용 함수가 있으면 얹는다. */
-export function decorateOutfit(dressTo, d, look) {
+/** dressPart가 부위 하나를 다 그린 뒤 불린다. look.outfit이 가리키는 세트에 그 부위용 함수가 있으면 얹는다.
+ *  groups(fighter.js 부위 묶음)는 넷째 인자로 넘긴다 — 지금 읽는 곳은 궁정 예복의 허리끈(골반을 따라 그림만 휨) 하나, 다른 세트는 안 읽는다 */
+export function decorateOutfit(dressTo, d, look, groups) {
   const set = look?.outfit && OUTFITS[look.outfit];
   const fn = set && set[d.name];
   if (!fn) return;
   const before = dressTo.children.length;
   dressTo.userData.outfit = look.outfit;
   dressTo.userData.outfitPart = d.name;
-  fn(dressTo, look, d);
+  fn(dressTo, look, d, groups);
   decorateAlter(dressTo, look, d.name);
   // 방어구 부위: 이 부위에 얹은 판금 메쉬들을 userData.armor로 알려 둔다. 오너 결정("판금도 피해를
   // 줄여 주고, 닳고, 완전히 부서지면 사라진다"): look.armor === 'plate'이고 ARMOR.on이면 fighter.js가 이

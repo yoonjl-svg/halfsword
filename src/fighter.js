@@ -494,7 +494,7 @@ export class Fighter {
       const mesh = dressPart(dressTo, d, o.look);
       // 장식 레이어(outfits.js): 갑옷판·머리모양 등을 얹는다. 무기 겉모습과 같은 이유로 전용 난수를
       // 써서(isolatedVisual) 기존 시드 기준 시뮬(fights12 등)의 결과를 건드리지 않는다.
-      isolatedVisual(() => decorateOutfit(dressTo, d, o.look), 0);
+      isolatedVisual(() => decorateOutfit(dressTo, d, o.look, this.groups), 0); // this.groups: 궁정 예복 허리끈이 골반을 따라 그림만 휜다 (outfits.js — 다른 옷은 안 읽음)
       this.partMesh[d.name] = mesh; // 흔적(데칼)을 붙일 겉면
       if (group.userData.helmet) this.helmetGroup = group.userData.helmet;
       if (dressTo.userData.armor?.length) {

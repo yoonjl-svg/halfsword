@@ -806,6 +806,20 @@ LOOK_ARCHIVE.silver_wanderer.v9 = { ...LOOK_ARCHIVE.silver_wanderer.v8, daraishi
 //  엉덩이 자락과 다리 바깥 자락은 v7 의 자리·벌어짐 그대로, 길이는 v9(옷단 0.30 m, 좌우 같게), 겉감 #66528A · 옷단 테 · 앞섶 테 · 트임 테 · 문양은 v9
 //  (outfit_silver_wanderer_v10.js). 값 모두 사장님 확인 전(확인표 1360~)
 LOOK_ARCHIVE.silver_wanderer.v10 = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishiLower: 10 };
+// 샛별 저장소에서 가져온 다라이시 기본 다듬기 (10/17 — 사장님 10/16 결정, 샛별 쪽). 모두 v7 위에 겉모습만 (outfit_daraishi_front.js · 몸 · 질량 · 충돌 그대로):
+//  v7-front1: 앞판(비스듬한 앞섶 · 금실 잎무늬 · 끈 여밈 셋) + 늘어진 앞머리 한 가닥 — v7-front2 가 앞섶을 수직의 완만한 S 곡선으로 · 옆머리를 더 슬림하게.
+//  v7-front4: 칼집 전체(몸 · 쇠붙이 · 끈 끝)를 8 mm 안쪽으로(daraishiScabbardInset) + 비어 보이던 목 · 셔츠 연결(daraishiNeck).
+//  v7-silver-c: 머리를 따뜻한 애쉬 실버(#93877e — 사장님이 고른 셋째 시안)로. 지금 쓰는 판 · 흑의 얼터도 같은 머리 (characters.js).
+//  거절된 판(에메랄드 머리 · 고르지 않은 은발 시안 둘)은 들이지 않았다 — docs/import/saetbyeol_round3_2026-10-17.md
+LOOK_ARCHIVE.silver_wanderer['v7-front1'] = { ...LOOK_ARCHIVE.silver_wanderer.v7, daraishiFront: 1 };
+LOOK_ARCHIVE.silver_wanderer['v7-front2'] = { ...LOOK_ARCHIVE.silver_wanderer['v7-front1'], daraishiFront: 2 };
+LOOK_ARCHIVE.silver_wanderer['v7-front4'] = {
+  ...LOOK_ARCHIVE.silver_wanderer['v7-front2'], daraishiScabbardInset:.008,daraishiNeck:1,
+};
+LOOK_ARCHIVE.silver_wanderer['v7-silver-c'] = {
+  ...LOOK_ARCHIVE.silver_wanderer['v7-front4'],hair:0x93877e,
+  hairPalette:{soft:0xaa9e93,braid:0xc9c0b3,glint:0xbcb2a6},
+};
 
 // 찬다 (여정 밖 인물 — characters.js CHARACTER_GUESTS, 10/14) — 샛별 저장소 LOOK_ARCHIVE.chanda v1 (675233e2 · origin/main 7684c732, 값 그대로) + 우리 v2.
 //  복식 모듈 하나(outfits.js chanda_watergate = src/outfit_chanda.js)가 chandaRevision 으로 판을 가른다. 방어구·투구 없음
@@ -850,7 +864,7 @@ export const CHARACTER_LOOK_VERSION = {
   renji: 'v3', // 외형 3차 10/11 — 옛 판 ?look=renji:v2(바지·행전) · v1
   eira: 'v5', // 10/11 01:4x 매듭 굵게 — 옛 판 ?look=eira:v4 · v3 · v2 · v1
   ratna: 'v4', // 10/14 여정 밖 인물 (우리 v4) — 샛별 판 ?look=ratna:v3 · v2 · v1
-  silver_wanderer: 'v7', // 다라이시 — 우리 v7(겉모습 덜기 · 빈 검집만 v8 자리): 사장님 10/15 23:1x 'v7이 제일 예쁜 거 같애. 되돌려.' — v10(v7 바탕 + v9 아래 자락, 10/14 18:4x) ?look=silver_wanderer:v10 · v9(v7·v8 절충) :v9 · v8(흰 카바) :v8 · 샛별 판 v6 · v5 · v4 · v2 · v1
+  silver_wanderer: 'v7-silver-c', // 다라이시 — v7 + 앞판 · 앞머리 한 가닥 · 목 연결 · 칼집 8 mm 안쪽 · 애쉬 실버 머리(사장님 10/16 결정, 샛별 쪽 — 10/17 들임). 전 우리 v7(사장님 10/15 23:1x 'v7이 제일 예쁜 거 같애. 되돌려.') ?look=silver_wanderer:v7 · v10 · v9 · v8 · 샛별 판 v6 · v5 · v4 · v2 · v1
   chanda: 'v2', // 10/14 여정 밖 인물 찬다 (우리 v2 — 무릎 틈 메움) — 샛별 판 ?look=chanda:v1
   terracotta: 'v2', // 10/14 여정 밖 인물 병마용 (우리 v2 — 잔선 덜기) — 샛별 판 ?look=terracotta:v1
 };
