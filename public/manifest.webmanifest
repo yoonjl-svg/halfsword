@@ -12,8 +12,8 @@
   "background_color": "#0e0e12",
   "theme_color": "#1b1410",
   "icons": [
-    { "src": "./icons/tree-sword-px28-20261019-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/tree-sword-px28-20261019-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/tree-sword-px28-20261019-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./icons/tree-sword-px22-20261019-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/tree-sword-px22-20261019-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/tree-sword-px22-20261019-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
