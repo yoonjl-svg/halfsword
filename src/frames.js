@@ -71,7 +71,7 @@ export const FRAME_GUARDS = {
   heavy: {
     '지붕 (Vom Tag)': { name: '높이 들기', desc: '한 칼로 내려벤다', hand: [0.2, 0.46, 0.05], blade: [115, 0], pelvisYaw: 15, chestYaw: 15, pitch: -2, drop: 0.05, src: 'kendo jōdan: 이마 위 한 주먹, 칼 45°, 칼끝 뒤 [원전 2차]' },
     '어깨 지붕 (Vom Tag)': { name: '어깨 메기', desc: '어깨에서 비스듬히 내려벤다', hand: [0.12, 0.22, 0.2], blade: [70, 165], pelvisYaw: 35, chestYaw: 45, pitch: 2, drop: 0.06, src: 'hassō: 칼자루 오른 어깨 앞, 칼 약 45°로 뒤로 기움 [원전 2차] · 츠바이핸더는 어깨에 메고 다녔다 [원전 2차]' },
-    '왼쪽 어깨 지붕': { name: '왼 어깨 메기', desc: '왼 어깨에서 비스듬히 내려벤다', hand: [0.16, 0.22, -0.12], blade: [70, -165], pelvisYaw: -30, chestYaw: -40, pitch: 2, drop: 0.06, src: '몬탄테 탈류·레베스 좌우 번갈아(피게이레두 1651 여러 규칙). 첫 규칙(단Ⅰ)은 어깨가 아니라 칼끝을 땅에 두고 시작해 탈류를 올려 얼굴 앞 곧은 자세(postura recta)에 멈춘다 [원전 2차 요약의 오류 고침 10/9]' },
+    '왼 어깨 지붕 (Vom Tag)': { name: '왼 어깨 메기', desc: '왼 어깨에서 비스듬히 내려벤다', hand: [0.16, 0.22, -0.12], blade: [70, -165], pelvisYaw: -30, chestYaw: -40, pitch: 2, drop: 0.06, src: '몬탄테 탈류·레베스 좌우 번갈아(피게이레두 1651 여러 규칙). 첫 규칙(단Ⅰ)은 어깨가 아니라 칼끝을 땅에 두고 시작해 탈류를 올려 얼굴 앞 곧은 자세(postura recta)에 멈춘다 [원전 2차 요약의 오류 고침 10/9]' },
     // (시도했다 뺌) 황소·옆 자세를 무거운 칼이 버티게 고치면(손을 몸 쪽으로, 칼을 세움) 자세는 버티지만(16.9 → 6.1 cm, 20.1 → 2.6 cm)
     //  두 자리가 베기 경유점이라 싸움은 나빠졌다(참치 25 → 10%, 모노호시자오 46 → 33%) — 규칙 1 (docs/weapon_motions.md §5-2).
     //  왼 팔상도 손을 앞으로 [0.24, 0.2, −0.1] 옮기면 츠바이핸더는 17.7 → 13.2 cm 로 버티지만 모노호시자오가 46 → 31% (왼 분노의 베기 시작점)
@@ -85,7 +85,7 @@ export const FRAME_GUARDS = {
     '긴 자세 (Langort)': { name: '3번 자세 (Terza)', desc: '뻗어 겨누고 런지로 찌른다', src: '카포 페로 3번 자세 [해석] — 손 위치는 R2 한손 뻗기 값' },
     '쟁기 (Pflug)': { name: '바깥 막기 (Seconda)', desc: '바깥 선을 닫는다', src: '[해석] — 손 위치는 R2 값' },
     // 안쪽 막기(Quarta)는 이름만 붙인다: 손·칼끝을 바꾸면(손 [0.42,−0.10,0.05]·칼끝 [15,8]) 청강검이 50% → 31% (값 그대로 두면 44%) — 이 자리도 베기 길이 지난다
-    '왼쪽 쟁기': { name: '안쪽 막기 (Quarta)', desc: '안쪽 선을 닫는다', src: '레이피어 4번 자세(quarta) = 손목을 돌린 상태 [원전 2차 카포 페로] — 손 위치는 롱소드 왼쪽 쟁기 그대로' },
+    '왼 쟁기 (Pflug)': { name: '안쪽 막기 (Quarta)', desc: '안쪽 선을 닫는다', src: '레이피어 4번 자세(quarta) = 손목을 돌린 상태 [원전 2차 카포 페로] — 손 위치는 롱소드 왼쪽 쟁기 그대로' },
   },
 
   //  머리 막기(St. George)·걸친 막기(Hanging)는 표에 넣지 않는다 → 아래 COVERS (측정: 표의 지붕·황소 자리를 이 막기 자세로 바꾸자
@@ -148,7 +148,7 @@ export const POLE_GUARDS = {
   '지붕 (Vom Tag)': { name: 'Oberhut', hand: [0.25, 0.5, 0.05], rear: [0.15, 0.0, 0.05], blade: [85, 0], pelvisYaw: 30, chestYaw: 25 },
   '바보 (Alber)': { name: 'Unterhut', hand: [0.4, -0.25, 0.0], rear: [0.05, 0.0, 0.2], blade: [-30, 0], pelvisYaw: 35, chestYaw: 30 },
   '쟁기 (Pflug)': { name: 'Steurhut', hand: [0.25, -0.1, -0.2], rear: [0.3, 0.35, 0.15], blade: [-60, -30], pelvisYaw: 30, chestYaw: 20 },
-  '왼쪽 바꿈': { name: 'Nebenhut', hand: [0.05, -0.3, -0.25], rear: [0.15, -0.1, 0.1], blade: [-20, -150], pelvisYaw: 45, chestYaw: 50 },
+  '왼 바꿈 (Wechsel)': { name: 'Nebenhut', hand: [0.05, -0.3, -0.25], rear: [0.15, -0.1, 0.1], blade: [-20, -150], pelvisYaw: 45, chestYaw: 50 },
   '옆 지킴 (Nebenhut)': { name: 'Wechselhut', hand: [0.0, -0.35, 0.25], rear: [0.1, -0.15, 0.0], blade: [-25, 150], pelvisYaw: 20, chestYaw: 10 },
 };
 // 자세마다 어느 끝이 앞인가(frontEnd): 봉은 모두 'head'. 폴액스·나기나타는 꼬리(butt) 앞 자세가 있어 자세 칸 값으로 둔다 (docs/pole_frame_design.md §4-2)

@@ -55,7 +55,7 @@ export const TOL = {
 export const GUARD_NAMES = {
   tag: '지붕 (Vom Tag)', tagR: '어깨 지붕 (Vom Tag)', ochs: '황소 (Ochs)', langort: '긴 자세 (Langort)', side: '옆 자세',
   pflug: '쟁기 (Pflug)', wechsel: '바꿈 (Wechsel)', neben: '옆 지킴 (Nebenhut)', alber: '바보 (Alber)',
-  tagL: '왼쪽 어깨 지붕', ochsL: '왼쪽 황소', sideL: '왼쪽 옆 자세', pflugL: '왼쪽 쟁기', wechselL: '왼쪽 바꿈',
+  tagL: '왼 어깨 지붕 (Vom Tag)', ochsL: '왼 황소 (Ochs)', sideL: '왼 옆 자세', pflugL: '왼 쟁기 (Pflug)', wechselL: '왼 바꿈 (Wechsel)',
 };
 
 const J = Object.fromEntries(JOINTS.map((n, i) => [n, i]));

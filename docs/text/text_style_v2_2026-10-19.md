@@ -11,9 +11,9 @@
    - 일본: 일본 소리를 한글로 — 손목 치기 (코테) · 흘려 받기 (우케나가시) · 뒤에서 앞서기 (고노센). 한자 · 가나는 쓰지 않는다(10/10 방침을 작은 줄로 옮김)
    - 동방: 한자 + 한국 한자음 — 허리 베기 (腰擊 요격) · 솥 들기 (擧鼎勢 거정세)
    - 원어가 따로 없는 우리 이름(길목 지키기 · 이어 돌기 · 올려 맞받기 · 무유파 자세 · 여러 유파가 같이 쓰는 몸 틀 자세)은 한국어만.
-   - 코드 열쇠로 쓰이는 글은 그대로 둔다: 기본 자세 이름(`src/guards.js` GUARDS — 독일 롱소드 화면 이름이기도 함, 이미 '뜻 (원어)' 꼴) · 속임수 이름(`feint.name`) · 이탈리아 Prima · Seconda · Terza · Quarta 낱말(`hands.js` 가 읽음).
+   - 코드 열쇠로 쓰이던 글도 같은 꼴로 바꾸고 코드 참조를 함께 고쳤다(2차 — 사장님 01:5x '전체를 대상으로 고치고, 그에 따라 코드까지 고쳐버려', §5): 기본 자세 왼쪽 다섯(`src/guards.js` GUARDS — 독일 롱소드 화면 이름이자 모든 자세표의 열쇠) · 유파 속임수 넷(`feint.name`). 이탈리아 Prima · Seconda · Terza · Quarta 낱말은 이름 안에 그대로라 `hands.js` 는 그대로.
 2. **설명 = 한 줄, 20자 안팎, "언제 · 무엇을".** 손 높이 · 칼끝 방향 같은 몸 모양은 화면에 보이므로 뺀다. 출처는 소스의 `src` 칸에 그대로 있다.
-3. **무기 = 두 줄.** 첫 줄 역사나 전설 한 조각, 둘째 줄 손맛 · 특성의 암시 또는 역사 한 줄. 특별한 서사가 없는 보통 무기는 역사적 쓰임 · 객관적 사실. 길이 · 무게 숫자는 쓰지 않는다. 사실과 전설은 가르지 않는다. 이미 서사가 있는 글(엑스칼리버 복제 · 라이트세이버 · 나뭇가지 · 고무 닭 · 냉동 참치 · 리볼버 · 황약사의 검)은 그대로.
+3. **무기 = 두 줄.** 첫 줄 역사나 전설 한 조각, 둘째 줄 손맛 · 특성의 암시 또는 역사 한 줄. 특별한 서사가 없는 보통 무기는 역사적 쓰임 · 객관적 사실. 길이 · 무게 숫자는 쓰지 않는다. 사실과 전설은 가르지 않는다. 사장님이 쓴 글(라이트세이버 · 엑스칼리버 복제 · 건슬링어의 리볼버 · 황약사의 검 — 사장님 01:5x '그런 애들은 고칠 필요 없어')과 이미 서사가 있는 글(나뭇가지 · 고무 닭 · 냉동 참치)은 그대로.
 4. **스킬북 = 개발 말 빼기.** "없거나 봉인하면 …" · "개발 예정 …" · "(임시)" · "— 게임 해석" 을 뺐다. 막기 책은 무엇을 어떻게 받는지 + 막는 동안 피해 감소, 비기 책은 언제 공격하면 무엇이 나가는지(`src/skill_books.js` `SECRET_TEXT` — 비기 판 이름 열쇠라 주소 스위치로 판을 바꿔도 맞는 글).
 5. **등급 이름**(쓰레기 · 커먼 · 레어 · 에픽 · 레전드)은 섞인 그대로 둔다(사장님 3).
 
@@ -21,9 +21,9 @@
 - `tools/text/name_policy.mjs` (`texts.mjs` `chineseFormProblem`): 동방 새 꼴 '(漢字 독음)' 을 받는다 — 괄호 안 한자 수와 독음 음절 수가 같아야 한다. 옛 꼴 '독음 (漢字)'(화면에 안 뜨는 공용 기술 이름 등)도 통과. 일본 글의 한자 · 가나 금지는 그대로. 10/19 실행: 화면 글 984 줄 · 위반 0.
 
 ## 3. 이번에 손대지 않은 것
-- 공용 기술 이름(`TRADITIONS.*.techNames`) — 10/14 상대 기술 표기를 없앤 뒤 화면에 안 뜬다(동방 셋만 고유 동작 · 연환과 같은 이름이라 함께 바뀜).
+- (2차에서 바꿈) 공용 기술 이름(`TRADITIONS.*.techNames`) — 10/14 상대 기술 표기를 없앤 뒤 화면에 안 뜨지만 같은 꼴로 바꿨다(§5).
 - 인물 대사 · 메뉴 · 안내 글 — 다음 차례.
-- 숨은 판(주소 스위치) 비기 이름: 옛 연환삼격 · 비켜 서며 크게 가로베기 · 멈추지 않는 흐름 — 그대로.
+- 숨은 판(주소 스위치) 비기 이름: 비켜 서며 크게 가로베기 · 멈추지 않는 흐름은 이미 '뜻 (원어)' 꼴이라 그대로 · 옛 연환삼격은 2차에서 바꿈(§5).
 - 일본 소리 표기 자체(추단 · 잔신 등)는 10/10 표기 그대로 — 꼴만 바꿨다. 스킬북 '잔심'만 패시브와 같게 '잔신'으로.
 
 ## 4. 바뀐 글 전부 (git diff 에서 뽑음 — 파일:줄 · 전 → 후)
@@ -280,3 +280,88 @@
 | `src/weapons.js:1420` | 세 줄의 홈과 황동 장식을 지닌 대검. / 전체 168 cm, 질량 3.5 kg의 양손검. | 세 줄의 홈과 황동 장식을 지닌 북부의 대검. / 두 손으로도 버거울 만큼 무겁다. |
 | `src/weapons.js:1473` | 불꽃처럼 물결치는 날을 지닌 대검. / 전체 169 cm, 질량 3.0 kg의 양손검. | 독일 용병 란츠크네히트가 들던 불꽃 날 대검. / 물결 날은 벼리기 어려워 값비싼 칼이었다. |
 | `src/weapons.js:1510` | 월왕 구천의 청동검. / 전체 85 cm, 1.21 kg의 한손검. | 이천오백 년을 묻혀 있고도 녹슬지 않은 월왕의 청동검. / 복수의 저주를 받아 다칠수록 매서워진다. |
+
+## 5. 2차 — 열쇠로 쓰이던 이름까지 (사장님 10/19 01:5x)
+
+- 원문: "일부 자세 이름은 코드가 참조하는 키값이라, 고쳐도 되는 칸만 선별하는 중 -> 아니 전체를 대상으로 고치고, 그에 따라 코드까지 고쳐버려. 건슬링어의 리볼버랑 황약사의 검처럼 특정 에픽은 내가 써둔 거야. 그런 애들은 고칠 필요 없어."
+- 열쇠 이름은 따옴표째 저장소 전체(src · tools)에서 한꺼번에 바꿨다 — 자세표 열쇠 · 몸 틀 표 · 도구가 같이 바뀐다. 바꾼 뒤 옛 이름이 코드(주석 밖)에 남은 곳 0. 판 결과(시뮬 해시)는 관문에서 확인.
+- 무기 설명: 사장님이 쓴 넷은 처음부터 손대지 않았다(1차 그대로).
+
+| 자리 (바꾼 수) | 갈래 | 전 | 후 |
+|---|---|---|---|
+| src/guards.js 7 · src/frames.js 1 · src/schools.js 7 · tools/browser/motion_gallery.mjs 1 · tools/sim/qinggang_swing_wrap.mjs 1 · tools/sim/qinggang_diag.mjs 1 · tools/motion/lib/clip_rules.mjs 1 | 기본 자세 이름(열쇠) | 왼쪽 어깨 지붕 | 왼 어깨 지붕 (Vom Tag) |
+| src/guards.js 5 · src/schools.js 7 · tools/browser/motion_gallery.mjs 1 · tools/motion/lib/clip_rules.mjs 1 | 기본 자세 이름(열쇠) | 왼쪽 황소 | 왼 황소 (Ochs) |
+| src/guards.js 7 · src/schools.js 10 · tools/browser/motion_gallery.mjs 1 · tools/sim/qinggang_swing_wrap.mjs 1 · tools/sim/qinggang_diag.mjs 1 · tools/motion/lib/clip_rules.mjs 1 | 기본 자세 이름(열쇠) | 왼쪽 옆 자세 | 왼 옆 자세 |
+| src/guards.js 5 · src/frames.js 1 · src/schools.js 7 · tools/browser/motion_gallery.mjs 1 · tools/motion/lib/clip_rules.mjs 1 | 기본 자세 이름(열쇠) | 왼쪽 쟁기 | 왼 쟁기 (Pflug) |
+| src/guards.js 6 · src/frames.js 1 · src/schools.js 7 · tools/browser/motion_gallery.mjs 1 · tools/sim/qinggang_swing_wrap.mjs 1 · tools/sim/qinggang_diag.mjs 1 · tools/motion/lib/clip_rules.mjs 1 | 기본 자세 이름(열쇠) | 왼쪽 바꿈 | 왼 바꿈 (Wechsel) |
+| src/schools.js 1 | 속임수 이름(열쇠) | cavazione (위 찌르는 척 → 밑으로 돌려 찌름) | 칼끝 돌려 빼기 (cavazione) |
+| src/schools.js 1 | 속임수 이름(열쇠) | 염시 (斂翅) · 찌르는 척 → 거둬 요격 | 날개 접기 (斂翅 염시) |
+| src/schools.js 1 | 속임수 이름(열쇠) | 갓토츠 | 외쳐 치기 (갓토츠) |
+| src/schools.js 1 | 속임수 이름(열쇠) | 니노코시 | 두 박자 치기 (니노코시) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 왼 분노의 베기 | 왼 분노의 베기 (Zornhau) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 정수리 베기 (Oberhau·Scheitelhau 꼴) | 정수리 베기 (Scheitelhau) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 왼 가로베기 | 왼 가로베기 (Zwerchhau) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 왼 올려베기 | 왼 올려베기 (Unterhau) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 왼 쟁기 찌르기 | 왼 쟁기 찌르기 (Pflug) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 왼 황소 찌르기 | 왼 황소 찌르기 (Ochs) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 분노의 베기 좌우 이어 (Zornhau 8자) | 좌우 이어 베기 (Zornhau) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 손 베기 (Abschneiden 꼴) | 손 끊기 (Abschneiden) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 돌려 베기 (Radschlag 꼴) | 바퀴 베기 (Radschlag) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | mandritto squalembrato (오른쪽 사선 내려베기) | 오른 사선 내려베기 (mandritto squalembrato) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | riverso squalembrato (왼쪽 사선) | 왼 사선 내려베기 (riverso squalembrato) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | fendente (곧게 내려베기) | 곧게 내려베기 (fendente) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | mandritto tondo (가로) | 오른 가로베기 (mandritto tondo) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | riverso tondo | 왼 가로베기 (riverso tondo) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | montante (올려베기 — 이탈리아 말) | 올려베기 (montante) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | riverso montante | 왼 올려베기 (riverso montante) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | stoccata (terza 에서 아래로부터) | 아래서 찌르기 (stoccata) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | punta riversa (quarta 에서) | 안쪽 찌르기 (punta riversa) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | punta dritta alta (seconda) | 높이 찌르기 (punta dritta alta) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | punta riversa alta | 왼 높이 찌르기 (punta riversa alta) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | stoccata bassa | 낮게 찌르기 (stoccata bassa) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | mandritto e riverso | 좌우 이어 베기 (mandritto e riverso) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | stramazzone (손목 끝 베기) | 손목 끝 베기 (stramazzone) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | molinello | 돌려 베기 (molinello) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | talho (오른쪽 사선) | 오른 사선 베기 (talho) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | revez (왼쪽 사선) | 왼 사선 베기 (revez) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | altibaxo (위에서 아래로) | 내려베기 (altibaxo) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | talho horizontal | 오른 가로베기 (talho orizontal) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | revez horizontal | 왼 가로베기 (revez orizontal) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | talho de baxo (올려베기) | 오른 올려베기 (talho de baxo) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | revez de baxo | 왼 올려베기 (revez de baxo) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | estocada | 찌르기 (estocada) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | estocada (왼쪽) | 왼 찌르기 (estocada) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | estocada alta | 높이 찌르기 (estocada alta) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | estocada alta (왼쪽) | 왼 높이 찌르기 (estocada alta) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | estocada baixa | 낮게 찌르기 (estocada baixa) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | talho e revez (규칙 Ⅰ) | 좌우 이어 베기 (talho e revez) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | talho curto (손 베기) | 짧게 손 베기 (talho curto) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | molinete | 돌려 베기 (molinete) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 케사기리 | 사선 베기 (케사기리) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 히다리케사 | 왼 사선 베기 (히다리케사) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 맛코 (정수리 베기) · 쇼멘우치 | 정수리 베기 (쇼멘우치) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 도 | 허리 베기 (도) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 갸쿠도 | 왼 허리 베기 (갸쿠도) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 키리아게 | 올려베기 (키리아게) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 갸쿠케사 | 왼 올려베기 (갸쿠케사) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 츠키 (세이간에서) | 찌르기 (츠키) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 츠키 (왼 허리에서) | 왼 허리 찌르기 (츠키) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 츠키 (머리 옆에서) | 높이 찌르기 (츠키) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 츠키 (왼 머리 옆에서) | 왼 높이 찌르기 (츠키) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 츠키 (게단에서) | 아래서 찌르기 (츠키) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 사유스이켄다 | 좌우 이어 베기 (사유스이켄다) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 카타테코테 | 한 손 손목 치기 (카타테코테) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 손목 돌려 베기 (원전 없음) | 손목 돌려 베기 |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 과우격 (跨右擊) | 오른 걸쳐 치기 (跨右擊 과우격) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 과좌격 (跨左擊) | 왼 걸쳐 치기 (跨左擊 과좌격) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 표두격 (豹頭擊) | 표범 머리 치기 (豹頭擊 표두격) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 좌요격 (左腰擊) | 왼 허리 베기 (左腰擊 좌요격) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 요략 (撩掠) | 걷어 올려 베기 (撩掠 요략) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 흔격 (掀擊) | 치켜 올려 치기 (掀擊 흔격) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 좌협자 (左夾刺) | 왼 끼고 찌르기 (左夾刺 좌협자) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 우협자 (右夾刺) | 오른 끼고 찌르기 (右夾刺 우협자) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 점검 (點劍) | 점 찍어 찌르기 (點劍 점검) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 과좌·과우 (跨左·跨右) 번갈아 | 좌우 걸쳐 치기 (跨左·跨右 과좌·과우) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 어거 (御車) 손 깎기 | 손 깎기 (御車 어거) |
+| src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 살화개정 (撒花蓋頂) | 꽃 뿌려 머리 덮기 (撒花蓋頂 살화개정) |
+| src/schools.js CHINESE_SECRET (옛 판) | 비기(숨은 판) | 옛 연환삼격 (첫 칼이 맞으면 잇는 판) · 가칭 | 첫 칼 이어 치기 (連環三擊 연환삼격) |
