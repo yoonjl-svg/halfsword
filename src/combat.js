@@ -612,7 +612,8 @@ export class Combat {
       const st = D.skill?._cover;
       if (!st || D.schoolParry === false || D.swordArt?.tradition !== 'iberian') continue;
       if (!(D.parryGuard ? D.parryGuard.active : st.ai?.mode === 'defend' && !st.ai.defVoid)) continue;
-      if (!(st.w > 0.3) || (st.last !== pc.highL && st.last !== pc.highR)) continue;
+      const nm = st.last?.name; // 깔린 막기 칸은 사본이라 이름으로 맞춘다
+      if (!(st.w > 0.3) || (nm !== pc.highL.name && nm !== pc.highR.name)) continue;
       if (sgn * velAt(SO, point, _n1).dot(nrm) < 0.5) continue; // 상대 칼이 들어오던 중일 때만
       if (beginFlowRecovery(O, D)) {
         this.lastIbArm = { step: this.stepNo, d: D.index };
