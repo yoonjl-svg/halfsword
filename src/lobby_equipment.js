@@ -10,7 +10,7 @@ const KETTLE_STAMINA = 30; // 케틀 햇 특수 능력 '생존술': 최대 기�
 export const LOBBY_ARMOR = Object.freeze({
   id: 'kettle',
   nameKo: '케틀 햇', // 방어구 이름 — 사장님 10/16 01:0x 결정(샛별 쪽 이름에서 바꿈). 이름을 또 바꾸면 이 한 줄만 (대기실 칸·설명 카드·장착 알림·화면 읽기 글이 모두 이것을 읽는다)
-  tier: 'legend', // 사장님 10/16 03:5x '케틀 햇은 전설 등급으로' — 등급 글·색은 무기 카드와 같은 표 (weapons.js TIER_LABEL '레전드' · index.html --tier-legend)
+  tier: 'epic', // 사장님 10/19 03:1x '대기실 케틀 햇은 에픽으로 하자' (전: 10/16 03:5x '전설 등급으로') — 등급 글·색은 무기 카드와 같은 표 (weapons.js TIER_LABEL '레전드' · index.html --tier-legend)
   description: '중세 보병들이 쓰던 챙 넓은 쇠 모자. 뒤집으면 요리를 할 수 있다.', // 샛별 쪽 글 그대로
   ability: `(생존술: 기력 +${KETTLE_STAMINA})`, // 사장님 10/16 03:5x '설명 뒤에 특수능력 문구 추가' — 카드는 설명 뒤에 이 줄을 등급 색으로 (무기 카드 특수 능력 줄 .wabil 과 같은 꼴)
   staminaBonus: KETTLE_STAMINA,

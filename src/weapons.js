@@ -55,11 +55,12 @@ export const TIER_DEFAULTS = {
 /** 카드에 쓰는 등급 이름 (main.js TIER_KO 대신 이것을 쓰면 ??? 도 나온다) */
 // 대기실 아이템 창 스펙 (사장님 10/19 02:0x '무기는 대기실 아이템 창에서만 스펙 병기 — 설명 뒤에 한 칸 띄고 (무기 종류, 길이, 무게)').
 //  길이 · 무게는 몸체 자료(buildParts — 물리와 같은 수)에서 셈: 길이 = 부품 끝에서 끝 · 무게 = 부품 질량 합
+//  종류 = 싸우는 방식의 무기 갈래(한손검 · 양손검 · 한손 둔기 …) — 물건 이름(나뭇가지 · 장난감 · 생선)은 쓰지 않는다 (사장님 10/19 03:1x '나뭇가지 x')
 const KIND_KO = {
   longsword: '양손검', zweihander: '대형 양손검', estoc: '찌르기검', sabre: '한손 곡도', rapier: '한손 찌르기검', falchion: '한손 외날검',
-  monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '빛의 칼',
-  tree_branch: '나뭇가지', rubber_chicken: '장난감', frozen_tuna: '생선', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
-  moye: '한손 양날검', sain: '한손 양날검', ice: '대형 양손검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손검',
+  monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '양손검',
+  tree_branch: '한손 둔기', rubber_chicken: '한손 둔기', frozen_tuna: '양손 둔기', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
+  moye: '한손 양날검', sain: '한손 양날검', ice: '대형 양손검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손 둔기',
 };
 /** '종류, 길이 cm, 무게 kg' (예: '한손 양날검, 95 cm, 0.95 kg') — 자료가 없으면 '' */
 export function weaponSpecText(spec) {
