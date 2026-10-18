@@ -431,7 +431,10 @@ export const FLOW_REDESIGN = {
 };
 // 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s · `?flowArm=0` = 끔
 //  release = 옛 판정(`?flowJudge=0`)에서 받는 몸꼴(NAGASHI.poseT)을 쥔 동안 막기를 풀고 치면 그 몸꼴을 놓는다 (frames.js — 샛별 연구 그대로)
-export const FLOW_RECOVERY = { seconds: 0.36, floor: 0.25, release: true };
+export const FLOW_RECOVERY = { seconds: 0.36, floor: 0.25, release: true, hold: null, recover: null };
+// 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴
+// 이베리아 탈류 · 레베스 쳐내기에 흘림과 같은 팔 늦춤 (사장님 10/19 03:5x 시험 — 기본 끔): 쳐내기 자세로 들어오는 칼을 받으면 공격자 팔에 FLOW_RECOVERY 를 건다
+export const IB_PARRY_ARM = { on: false };
 
 export const STEEL = {
   // 칼(칼날·코등이·손잡이·폼멜) 재질의 반발 값. 둘이 만나면 곱해진다(Multiply): 칼끼리 = 이 값², 몸·땅(0)과는 0.

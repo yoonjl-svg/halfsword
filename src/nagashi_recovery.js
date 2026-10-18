@@ -6,14 +6,15 @@ import { FLOW_RECOVERY } from './config.js';
 export { FLOW_RECOVERY };
 
 export function beginFlowRecovery(f, defender) {
-  const duration = FLOW_RECOVERY.seconds;
+  const hold = FLOW_RECOVERY.hold, recover = FLOW_RECOVERY.recover;
+  const duration = hold != null ? hold + (recover ?? 0) : FLOW_RECOVERY.seconds;
   if (!(duration > 0) || !f.alive || !f.armed || f.state !== 'stand') return false;
   const now = f.stamina.time, id = f.stamina.attackId;
   const old = f.flowRecovery;
   // 공격 하나에 한 번 · 돌아오는 중(끝 + 0.12 s 안)에는 다시 걸지 않는다
   if (old && (now < old.until + 0.12 || (id > 0 && id === old.attackId))) return false;
   f.flowRecovery = { start: now, until: now + duration, duration, attackId: id,
-    defender: defender.index, floor: FLOW_RECOVERY.floor };
+    defender: defender.index, floor: FLOW_RECOVERY.floor, hold: hold ?? null, recover: recover ?? 0 };
   return true;
 }
 
@@ -23,6 +24,8 @@ export function flowRecoveryScale(f) {
   const t = f.stamina.time - s.start;
   if (t >= s.duration) return 1;
   // 처음 1/3: 칼 기세에 끌려감(floor) · 남은 2/3: smoothstep 으로 1 까지
-  const x = Math.max(0, Math.min(1, (t / s.duration - 1 / 3) * 1.5));
+  const x = s.hold != null
+    ? (t < s.hold ? 0 : Math.min(1, (t - s.hold) / Math.max(1e-6, s.recover)))  // 시험 꼴: hold 초 유지 → recover 초 회복
+    : Math.max(0, Math.min(1, (t / s.duration - 1 / 3) * 1.5));
   return s.floor + (1 - s.floor) * x * x * (3 - 2 * x);
 }

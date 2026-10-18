@@ -21,10 +21,11 @@
 //   - 투구·뼈: 날이 들지 못한 타격은 칼이 되튄다. 접촉점의 반발 계수 식으로 필요한 충격량을 계산해
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
+import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
@@ -557,6 +558,7 @@ export class Combat {
     // 우케나가시 흘려 받기 (config NAGASHI): 받은 칼을 칼 지붕을 따라 미끄러뜨리고, 받는 쪽 손 흔들림·무기 닳음을 던다 (아래 feel)
     //  판정 개편(FLOW_REDESIGN.on — 사장님 10/18 22:1x)이면 새로 부딪힌 순간이 아니어도 접촉 창(0.12 s) 안에서 다시 본다 (nagashi_redesign.js)
     const flowD = (fresh || FLOW_REDESIGN.on) && NAGASHI.on && SA && SB && J > 0 ? this.nagashi(A, B, SA, SB, point, nrm, vn) : null;
+    if (!flowD && IB_PARRY_ARM.on && fresh && SA && SB && J > 0) this.ibParryArm(A, B, SA, SB, point, nrm); // 이베리아 쳐내기 팔 늦춤 (시험 · 기본 끔)
     // 새로 부딪혀 튕긴 순간: 칼이 손 안에서 길이 축으로 팽이처럼 도는 몫은 손아귀가 잡는다 (gripTwist)
     if (fresh) for (const f of [A.fighter, B.fighter]) gripTwist(f);
     const va = A.body.velocityAtPoint(point);
@@ -601,6 +603,25 @@ export class Combat {
    *   두 칼 모두 칼날 중심선 위에 건다(rebound 와 같은 까닭 — 날 끝에 걸면 칼이 길이 축으로 팽이처럼 돈다). 그리고 D 의 몸꼴을 poseT 동안 우케나가시로.
    *  돌려줌: 흘려 받은 싸움꾼(D) · 없으면 null
    */
+  /** 이베리아 탈류 · 레베스 쳐내기에 흘림과 같은 팔 늦춤 (사장님 10/19 03:5x 시험 — config IB_PARRY_ARM, 기본 끔).
+   *  받는 쪽 D = 이베리아 막기 칸(탈류 highL · 레베스 highR 쳐내기 몸꼴)을 잡고 막는 중 · 상대 칼이 들어오던 새 맞닿음 → 공격자 O 에 beginFlowRecovery. 돌려줌: D 또는 null */
+  ibParryArm(A, B, SA, SB, point, nrm) {
+    const pc = TRADITIONS.iberian?.parryCover;
+    if (!pc) return null;
+    for (const [D, O, SO, sgn] of [[A.fighter, B.fighter, SB, -1], [B.fighter, A.fighter, SA, 1]]) {
+      const st = D.skill?._cover;
+      if (!st || D.schoolParry === false || D.swordArt?.tradition !== 'iberian') continue;
+      if (!(D.parryGuard ? D.parryGuard.active : st.ai?.mode === 'defend' && !st.ai.defVoid)) continue;
+      if (!(st.w > 0.3) || (st.last !== pc.highL && st.last !== pc.highR)) continue;
+      if (sgn * velAt(SO, point, _n1).dot(nrm) < 0.5) continue; // 상대 칼이 들어오던 중일 때만
+      if (beginFlowRecovery(O, D)) {
+        this.lastIbArm = { step: this.stepNo, d: D.index };
+        return D;
+      }
+    }
+    return null;
+  }
+
   nagashi(A, B, SA, SB, point, nrm, vn) {
     if (FLOW_REDESIGN.on) return this.nagashiExpanded(A, B, SA, SB, point, nrm, vn); // 판정 개편 (사장님 10/18 22:1x · 기본) — 아래는 옛 판정(`?flowJudge=0`)
     for (const [D, O, SO] of [[A.fighter, B.fighter, SB], [B.fighter, A.fighter, SA]]) {
