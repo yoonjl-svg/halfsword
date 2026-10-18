@@ -36,4 +36,4 @@
 
 ## 5. 남은 것
 
-- 미나미 눈꼴: 샛별이 시안 둘(`low-eye-option1.png` · `low-eye-option2.png` — 둘째는 왼눈을 한 칸 오른쪽으로)을 더 올렸다 — 정본 `low.png` 을 썼다. 사장님이 고르시면 바꿈.
+- ~~미나미 눈꼴: 샛별이 시안 둘을 더 올렸다 — 정본 `low.png` 을 썼다.~~ → **10/18 22:1x 사장님 '미나미 눈 모양은 맨 마지막에 만든 작품이 최종'**: 샛별 마지막 판 `a0eb17a1`(10/18 16:29 · `profiles.json` 상태 `user-approved-final-20261018`)의 `minami/low.png` 로 바꿈 — 마지막 시안 `low-eye-option2.png`(왼눈 한 칸 오른쪽)와 같은 바이트(sha256 앞 16 `f18d467c69a95d26`). 마스터 `art/portraits-px-20261018/minami.png` · `profiles.json`(새 판 — 칸 미리보기 · 액자 시안 줄 더함) · `public/ui/portraits/minami.webp` 만 바뀜(다른 32 장 바이트 그대로). 같은 판의 액자 시안 셋(`frame-options/`)은 들이지 않음(지시 없음).

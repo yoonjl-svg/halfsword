@@ -21,6 +21,7 @@
 import { GUARD_BASE, GUARD_BASE_ONE } from './guards.js';
 import { TECH, FEINTS, G, WATCH_GUARDS, TECH_BY_NAME } from './ai_techniques.js';
 import { THRUST, SKILL } from './config.js';
+import { FLOW_RECOVERY } from './nagashi_recovery.js';
 
 export const MOTION = {
   // 본판 스위치 = config SKILL.motionLib (사장님 10/8 18:50 '적용', 확인표 34 — 기본 켬). 켜져 있으면 Fighter·AI 생성자가 sword_art.js resolveSwordArt 로 라이브러리 몫을 입힌다(옛 이름 applyMotionLibrary·libSchool 은 motion_library.js 호환 겉면).
@@ -284,6 +285,13 @@ export function installCover(fighter, ai, covers) {
     const r = upd(dt);
     const st = sk._cover;
     const pose = sk.thrustPose;
+    // 옛 판정(`?flowJudge=0`)의 받는 몸꼴(poseT)을 쥐고 있는 동안 막기를 풀고 치면(플레이어 막기 깨짐 · AI 'attack') 그 몸꼴을 놓는다 (nagashi_recovery.js release — 샛별 연구 그대로)
+    if (FLOW_RECOVERY.release && st.forceT > 0 &&
+        (fighter.parryGuard ? fighter.parryGuard.broken : ai.mode === 'attack')) {
+      st.forceT = 0;
+      st.w = 0;
+      if (!sk.tap && !sk.pom) release(st, pose); // 찌르기가 이미 칸을 가져갔으면 그 몸꼴은 지우지 않는다
+    }
     if (sk.tap || sk.pom || fighter.weapon?.gun) {
       st.w = 0;
       st.own = false; // 찌르기·찍기·사격이 칸을 가져갔다 — 지우지 않는다

@@ -7,6 +7,8 @@ import * as CONFIG from './config.js';
 import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
 import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode·vital·plateNeck (주소 ?finishEntry · ?finishMode · ?vital · ?plateNeck)
 import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨눔 갈래 스위치 (10/12)
+import { FLOW_REDESIGN } from './nagashi_redesign.js'; // 일본 흘림 판정 개편 · 기력 청구 스위치 (10/18 — ?flowJudge · ?flowCost)
+import { FLOW_RECOVERY } from './nagashi_recovery.js'; // 흘림당한 뒤 팔 늦춤 스위치 (10/18 — ?flowArm)
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
 import { createScreenTint } from './screen_tint.js';
@@ -118,6 +120,14 @@ if (params.get('itParryBeat') === '1') CONFIG.SKILL.itParryBeat = 1; // 막기�
 if (+params.get('cnParrySpeed') > 0) CONFIG.SKILL.cnParrySpeedK = +params.get('cnParrySpeed'); // 동방 막기 단추 손 빠르기 배율(10/17 — 판 값 1 = 끔, 사장님 확인 전): `?cnParrySpeed=1.3` = 동방 막기 책 플레이어의 막기 단추 손 옮김 4.5 → 5.85 m/s (docs/strike/chinese_parry_speed_2026-10-17.md)
 if (+params.get('cnBrace') > 0) CONFIG.SKILL.cnBraceK = +params.get('cnBrace'); // 동방 버티는 힘(10/17 연구 — 판 값 0 = 끔, 사장님 확인 전): `?cnBrace=0.5` = 동방 막기 책 플레이어가 막기 단추로 막는 중 서보 힘 × 1.5 (docs/strike/chinese_parry_brace_2026-10-17.md)
 if (params.has('cnParryCut') && +params.get('cnParryCut') >= 0 && +params.get('cnParryCut') <= 1) CONFIG.SKILL.cnParryDmgCut = +params.get('cnParryCut'); // 동방 막는 동안 피해 감소(10/17 — 판 값 0.5, 사장님 22:1x 결정): `?cnParryCut=0` = 끔 · `?cnParryCut=0.25` = 막는 중 입는 칼날 상처 심각도 × 0.75 (몫이라 0~1 만 읽음)
+// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.36 s · 흘림당한 쪽 기력 40 · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
+if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0'; // `?flowJudge=0` = 옛 흘림 판정(내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
+if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
+if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm') <= 2) FLOW_RECOVERY.seconds = +params.get('flowArm'); // `?flowArm=0` = 팔 늦춤 끔 · `?flowArm=0.18` = 0.18 s
+if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
+if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)
+if (params.has('jpParryCut') && +params.get('jpParryCut') >= 0 && +params.get('jpParryCut') <= 1) CONFIG.SKILL.jpParryDmgCut = +params.get('jpParryCut'); // 일본 막는 동안 피해 감소(판 값 0.2) — `?jpParryCut=0` = 끔
+if (params.has('ibParryCut') && +params.get('ibParryCut') >= 0 && +params.get('ibParryCut') <= 1) CONFIG.SKILL.ibParryDmgCut = +params.get('ibParryCut'); // 이베리아 막는 동안 피해 감소(판 값 0.2) — `?ibParryCut=0` = 끔
 if (['1', '2'].includes(params.get('itForte'))) CONFIG.SKILL.itForte = +params.get('itForte'); // 이탈리아 forte 막기 연구 후보 (가)(10/17 — 사장님 확인 전): 기본 0 = 끔, `?itForte=1`·`?itForte=2` = 후보 몸꼴 (docs/strike/italian_forte_parry_2026-10-17.md)
 if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 실험(10/11 — docs/strike/natural_bind_2026-10-11.md): 기본 0, `?bind=1` = 칼끼리 덜 튕기고 더 물림 · 막힌 칼을 노리던 자리로 밂 · 독일 느낌 · 넓은 맞부딪힘
 if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11): 기본 'gilmok'(v6 길목 지키기 — docs/strike/iberian_secret_v6_2026-10-11.md), `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기

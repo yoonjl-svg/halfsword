@@ -88,7 +88,13 @@ export class Stamina {
   // 막기 자세/신뢰도 보정은 보류한 범위다. 기존 방어 근육의 한도는 유지한다.
   get motorSpeed() { return this.guarding && STAMINA.on && !this.exhausted ? this.level === 2 ? .5 : this.level === 1 ? .7 : 1 : this.attackSpeed; }
   get power() { const tune=STAMINA.attackTempo&&!this.guarding;return !STAMINA.on || this.exhausted ? 1 : this.level === 2 ? (tune ? STAMINA.tempoPowerSevere : STAMINA.severePower) : this.level === 1 ? (tune ? STAMINA.tempoPowerTired : STAMINA.tiredPower) : 1; }
-  get progress() { return this.exhausted ? 1 - this.exhaustLeft / STAMINA.exhaustSeconds : 0; }
+  /** 탈진 회복 진행 0 → 1 (기력 막대 · stamina_hud.js): 자연 회복 탈진은 값이 바닥 → 풀리는 자리(severeAt)로 차는 몫 · 옛 고정 탈진(`?exhaust=fixed`)은 지난 시간 몫 */
+  get progress() {
+    if (!this.exhausted) return 0;
+    return this.exhaustNaturalTarget != null
+      ? clamp((this.value - STAMINA.floor) / (this.exhaustNaturalTarget - STAMINA.floor), 0, 1)
+      : 1 - this.exhaustLeft / STAMINA.exhaustSeconds;
+  }
   get guarding() {
     const c = this.controller;
     return !!this.fighter.armed && (this.fighter.aiControlled
@@ -156,7 +162,12 @@ export class Stamina {
     if (this.exhausted) return;
     if (this.value <= STAMINA.floor) {
       this.value = STAMINA.floor;
-      this.exhaustLeft = STAMINA.exhaustSeconds;
+      // 탈진 (사장님 10/18 22:1x '새벽 것이 맞음' — 샛별 연구 규칙): 이동 · 공격 불가 · 막기를 누르고 있어도 자연 회복 빠르기(플레이어 21 · AI 15 /s)로 차서
+      //  severeAt(−35)에서 풀린다(심한 지침 단계로) — 바닥 −70 에서 플레이어 1.667 s · AI 2.333 s. 옛 규칙(`?exhaust=fixed`): exhaustSeconds 2.5 s 숨 고르기 뒤 0(지침)
+      this.exhaustNaturalTarget = STAMINA.exhaustNatural ? STAMINA.severeAt : null;
+      this.exhaustLeft = this.exhaustNaturalTarget != null
+        ? (this.exhaustNaturalTarget - this.value) / (this.fighter.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond)
+        : STAMINA.exhaustSeconds;
       this.level = 3;
       this.counts.exhaustion++;
       this.stroke = null;
@@ -186,6 +197,7 @@ export class Stamina {
   chargeAttack(kind = 'cut', bundled = this.inSecret) {
     if (!STAMINA.on || this.exhausted || !this.fighter.alive) return;
     this.attackId++;
+    this.flowAttackKind = kind; this.flowAttackStart = this.time; // 흘림 판정이 읽는 공격 종류(찌르기는 흘리지 않음 — nagashi_redesign.js) · 사람 · AI 같게
     this.attackUntil = this.time + 1.5;
     if (bundled) return;
     this.counts[kind] = (this.counts[kind] ?? 0) + 1;
@@ -195,6 +207,7 @@ export class Stamina {
   secret() {
     if (!STAMINA.on || this.exhausted) return;
     this.attackId++;
+    this.flowAttackKind = 'secret'; this.flowAttackStart = this.time;
     this.attackUntil = this.time + 1.5;
     if (this.spend('secret', STAMINA.secretCost)) this.counts.secret++;
   }
@@ -306,14 +319,20 @@ export class Stamina {
       const slice = Math.min(dt, this.exhaustLeft);
       const before = this.value;
       this.exhaustLeft = Math.max(0, this.exhaustLeft - slice);
-      this.value = Math.min(0, this.value + STAMINA.exhaustRecover * slice);
+      const target = this.exhaustNaturalTarget ?? 0;
+      const rate = this.exhaustNaturalTarget != null
+        ? (f.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond) : STAMINA.exhaustRecover;
+      this.value = Math.min(target, this.value + rate * slice);
       this.recovered += this.value - before;
       this.pose = Math.min(1, this.pose + dt * 6);
       this.action = 'exhausted';
       this.rest = 0;
       if (this.exhaustLeft < 1e-9) {
-        this.exhaustLeft = 0; this.value = 0; this.level = 1;
-        this.rest = STAMINA.recoverDelay; // 이미 2.5초 쉼. 다음 스텝부터 정상 회복.
+        // 자연 회복 탈진: −35 · 심한 지침(2)에서 풀림(되돌림 +15 그대로 — 지침으로는 −20 에서) · 옛 고정: 0 · 지침(1)
+        this.exhaustLeft = 0; this.value = target;
+        this.level = this.exhaustNaturalTarget != null ? 2 : 1;
+        this.exhaustNaturalTarget = null;
+        this.rest = STAMINA.recoverDelay; // 강제 회복을 마쳤으므로 새 대기 없이 다음 스텝부터 정상 회복 (막기를 쥐고 있으면 다시 멈춤)
       }
       return;
     }

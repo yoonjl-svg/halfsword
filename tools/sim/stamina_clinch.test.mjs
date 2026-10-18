@@ -6,6 +6,10 @@ import { STAMINA, CLOSE } from '../../src/config.js';
 import { newRound, DT } from './harness_m.mjs';
 
 const near = (a, b, e = 1e-7) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
+// 탈진 길이 · 풀리는 값 (STAMINA.exhaustNatural — 사장님 10/18 22:1x 자연 회복 −70 → −35 · `?exhaust=fixed` 옛 2.5 s → 0)
+const exT = (f) => STAMINA.exhaustNatural ? (STAMINA.severeAt - STAMINA.floor) / (f.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond) : STAMINA.exhaustSeconds;
+const exEnd = () => STAMINA.exhaustNatural ? STAMINA.severeAt : 0;
+const bothRules = (fn) => { const was = STAMINA.exhaustNatural; try { for (const natural of [true, false]) { STAMINA.exhaustNatural = natural; fn(); } } finally { STAMINA.exhaustNatural = was; } };
 function pair() {
   const fighters = [1.1, 2.9].map(swordMass => {
     const position = { x: 0, y: 1, z: 0 };
@@ -78,30 +82,30 @@ test('밀기 종료부터0.6초 후 회복, 짧게 놓아도 즉시 회복하지
   fs.forEach(f => { f.stickY = 0; }); tick(fs, 0.2);
   near(fs[0].stamina.value, 73.2); near(fs[1].stamina.value, 72);
 });
-test('기력50 대 탈진+20:2초 뒤30 대 탈진, 갱신 순서에 따른 차이 없이 탈진', () => {
+test('기력50 대 탈진+20:2초 뒤30 대 탈진, 갱신 순서에 따른 차이 없이 탈진', () => bothRules(() => {
   for (const reverse of [false, true]) {
     const fs = pair(); fs[0].stamina.value = 50; fs[1].stamina.value = STAMINA.floor + 20; tick(fs, 2, 1 / 120, reverse);
     near(fs[0].stamina.value, 30); near(fs[1].stamina.value, STAMINA.floor);
     near(fs[0].stamina.spent.clinch, 20); near(fs[1].stamina.spent.clinch, 20);
-    near(fs[1].stamina.exhaustLeft, 2.5);
+    near(fs[1].stamina.exhaustLeft, exT(fs[1]));
     fs.forEach(f => { assert.equal(f.stamina.clinching, false); assert.equal(f.barge, null); });
     fs[1].stamina.controller = { held: true };
-    tick(fs, 2.5, 1 / 120, reverse);
-    near(fs[1].stamina.value, 0); near(fs[1].stamina.exhaustLeft, 0);
+    tick(fs, exT(fs[1]), 1 / 120, reverse);
+    near(fs[1].stamina.value, exEnd()); near(fs[1].stamina.exhaustLeft, 0);
     fs.forEach(f => near(f.stamina.spent.clinch, 20));
   }
-});
-test('탈진 직전 마지막 소수점 비용도 양쪽이 같고, 동시 탈진도 강제 회복', () => {
+}));
+test('탈진 직전 마지막 소수점 비용도 양쪽이 같고, 동시 탈진도 강제 회복', () => bothRules(() => {
   for (const both of [false, true]) {
     const fs = pair(); fs[0].stamina.value = both ? STAMINA.floor + 0.02 : 80; fs[1].stamina.value = STAMINA.floor + 0.02;
     fs[1].stamina.attack('cut', true); // 직전 공격 번호가 남아 있어도 누르기 접촉에 추가 청구하지 않는다.
     tick(fs, 1 / 120); fs[0].stamina.block(fs[1]);
     near(fs[0].stamina.value, both ? STAMINA.floor : 79.98); near(fs[0].stamina.spent.block, 0);
     fs.forEach(f => near(f.stamina.spent.clinch, 0.02));
-    near(fs[1].stamina.value, STAMINA.floor); near(fs[1].stamina.exhaustLeft, 2.5);
-    tick(fs, 2.5); near(fs[1].stamina.value, 0); if (both) near(fs[0].stamina.value, 0);
+    near(fs[1].stamina.value, STAMINA.floor); near(fs[1].stamina.exhaustLeft, exT(fs[1]));
+    tick(fs, exT(fs[1])); near(fs[1].stamina.value, exEnd()); if (both) near(fs[0].stamina.value, exEnd());
   }
-});
+}));
 test('클린치 소모는 물리dt에 비례하고 일시정지·기력 끔·밀기 끔에는 없음', () => {
   for (const dt of [1 / 120, 1 / 60, 0.1]) {
     const fs = pair(); tick(fs, 1.7, dt); fs.forEach(f => near(f.stamina.spent.clinch, 17));
@@ -153,7 +157,7 @@ function physicalClinch(mutual, exhaust = false) {
         fs.forEach(f => assert.equal(f.barge, null));
       }
       if (exhaustedAt != null && !fs[1].stamina.exhausted) {
-        near(g.t - exhaustedAt, 2.5); near(fs[1].stamina.value, 0); break;
+        near(g.t - exhaustedAt, exT(fs[1])); near(fs[1].stamina.value, exEnd()); break;
       }
     }
     assert.ok(activeSteps > 5, `actual contact never drained: ${activeSteps}`);
@@ -164,4 +168,4 @@ function physicalClinch(mutual, exhaust = false) {
 }
 test('실물리: 한쪽 밀기·상대 버티기에서 양쪽 같은 비용, 회복·걸음 중복 없음', () => physicalClinch(false));
 test('실물리: 서로 밀어도10/s 한 번, 실제 접촉 시간만 소모', () => physicalClinch(true));
-test('실물리: 클린치로 상대 탈진·누르기 해제·막기 유지 중2.5초 회복', () => physicalClinch(true, true));
+test('실물리: 클린치로 상대 탈진·누르기 해제·막기 유지 중 강제 회복(자연 회복 −35 · 옛 2.5초)', () => physicalClinch(true, true));

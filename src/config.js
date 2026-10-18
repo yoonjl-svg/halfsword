@@ -34,7 +34,11 @@ export const STAMINA = {
   stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
   // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전) · 막기 유지 중엔 멈춤
   recoverPerSecond: 15, playerRecoverPerSecond: 21, recoverDelay: 0.6,
-  exhaustSeconds: 2.5, exhaustRecover: 28, // 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 끝에서 0(지침 단계)으로. 초당 28 = −floor ÷ 2.5 — 2.5 s 끝에 0 에 닿게(같은 규칙 — 10/16 −80 ÷ 2.5 = 32 · 10/17 탈진 −70 에 맞춤 · 탈진 중 값은 막대에 안 보이고(진행은 시간) 끝에서 0 으로 맞추므로 게임 차이 없음)
+  // 탈진 규칙 (사장님 10/18 22:1x '탈진 규칙은 새벽 것이 맞음' — 샛별 연구 규칙 · docs/strike/japanese_flow_adopt_2026-10-18.md): 바닥(floor −70)에서 이동 · 공격 불가 ·
+  //  막기를 누르고 있어도 자연 회복 빠르기(플레이어 playerRecoverPerSecond 21 · AI recoverPerSecond 15 /s)로 강제로 차서 severeAt(−35)에서 풀림(심한 지침 단계) —
+  //  플레이어 1.667 s · AI 2.333 s. 풀린 뒤는 보통 규칙(되돌림 +15 · 막기 쥐면 회복 멈춤). `?exhaust=fixed` = 옛 규칙(아래 exhaustSeconds · exhaustRecover)
+  exhaustNatural: true,
+  exhaustSeconds: 2.5, exhaustRecover: 28, // (옛 규칙 · `?exhaust=fixed`) 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 끝에서 0(지침 단계)으로. 초당 28 = −floor ÷ 2.5 — 2.5 s 끝에 0 에 닿게(같은 규칙 — 10/16 −80 ÷ 2.5 = 32 · 10/17 탈진 −70 에 맞춤 · 탈진 중 값은 막대에 안 보이고(진행은 시간) 끝에서 0 으로 맞추므로 게임 차이 없음)
   // 실제 접촉 시간 보정 (attackTempo false = 공격 시계에 attackTired · attackSevere 를 그대로 곱함 · 안쪽 계수 없음). 아래 값은 샛별 저장소 19 무기 266 조건 고정 표적 측정에서 정한 것 — 사장님 확인 전
   //  tempoPower*: 공격 중 지친 팔·손목 힘(막는 동안은 아래 tiredPower · severePower 그대로) · tempoRate*: 베기 · 비기 명령 시계 · tempoThrust*: 찌르기(원래 질량 tempoHeavyMass 2.5 kg 넘거나 찌르기 특성 무기는 tempoRate*) · tempoPommel*: 손잡이 찍기
   //  tempoBody: 몸 돌림도 같은 시계 · tempoCaps: 관절 빠르기 한계도 같은 배율(motorSpeed) · tempoInput: 사람 손길을 순서 그대로 늦게 보냄(고유 동작 · 긋기 청구는 원래 손길로 읽음 — src/attack_tempo.js)
@@ -409,6 +413,23 @@ export const STRIKE = {
 //  moveDown = 상대 칼이 '내려온다'로 보는 아래 빠르기 (secret.js threatNow 의 '움직이는 칼' 3.5 m/s 와 같은 값) · zoneHy = 받는 자리 높이 문턱(threatNow 위·아래 가름 가슴 −0.1 m 와 같은 값).
 //  on 0 = 없음. slideK · joltCut · poseT 는 새 값 — 사장님 확인 전(확인표 2014)
 export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: 0.35, moveDown: 3.5, zoneHy: -0.1 };
+// 우케나가시 판정 개편 (샛별 저장소 연구 들여옴 — src/nagashi_redesign.js · docs/strike/japanese_flow_adopt_2026-10-18.md):
+//  사장님 10/18 22:1x "흘림으로 나에게 손해가 발생하지 않으면서 상대의 기력을 뺏을 수 있기 때문 … 판정 개편이든 뭐든 흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편 ·
+//   팔을 0.36초 늦추는 효과와 흘림당한 상대 기력을 40 빼앗는 효과 모두 적용"
+//  on = 새 판정(칼끼리 실제 접촉 · 들어오는 칼 기하 · 접촉 창 window s 안에 몸 바깥으로 빠지나) — `?flowJudge=0` = 옛 판정(NAGASHI — 내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
+//  penalty = 흘림당한 쪽(공격한 쪽) 기력 청구 — 공격 하나에 한 번(옛 · 새 판정 같음) · `?flowCost=0` = 끔
+//  min… / maxHeight / exit… / sideGain / frontClearance = 판정 기하 허용치 — 샛별 연구의 첫 설계 값 그대로(사장님 '판정 개편' 채택 · docs/strike/owner_defaults_table.md)
+//  threatEnd = 공격이 끝났는지를 공격 번호 시간(stamina.attackUntil) 대신 실제 칼 기하(들어오는 칼 — 위 min… 조건)로 본다 — 감독 측정 10/18 23:1x(닿은 공격 중 흘림이 안 된 까닭 1 위 39 % = 공격 번호 시간이 끝남)
+//   → 사장님 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편'. 기력은 그대로 공격 번호 하나에 한 번. `?flowEnd=timer` = 공격 번호 시간으로(샛별 연구 그대로)
+export const FLOW_REDESIGN = {
+  on: true, window: 0.12, penalty: 40, threatEnd: true,
+  minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
+  minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
+  minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,
+};
+// 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s · `?flowArm=0` = 끔
+//  release = 옛 판정(`?flowJudge=0`)에서 받는 몸꼴(NAGASHI.poseT)을 쥔 동안 막기를 풀고 치면 그 몸꼴을 놓는다 (frames.js — 샛별 연구 그대로)
+export const FLOW_RECOVERY = { seconds: 0.36, floor: 0.25, release: true };
 
 export const STEEL = {
   // 칼(칼날·코등이·손잡이·폼멜) 재질의 반발 값. 둘이 만나면 곱해진다(Multiply): 칼끼리 = 이 값², 몸·땅(0)과는 0.
@@ -719,6 +740,10 @@ export const SKILL = {
   //   칼과 몸의 물리 — 가르나 튕기나 · 충격 · 휘청임 — 는 그대로). `?cnParryCut=0.25` · 시뮬 with_config.mjs SKILL.cnParryDmgCut=0.25 · 꼴 'cnD0.25'
   cnBraceK: 0,
   cnParryDmgCut: 0.5, // **판 값 0.5 — 사장님 10/17 22:1x '본판에 50%로 적용할게 너무 과한 거 같으면 나중에 조정하겠음'** (확인표 2068 · 버티는 힘 cnBraceK 는 그대로 끔)
+  // 일본 · 이베리아 막는 동안 피해 감소 (사장님 10/18 22:1x '동방에서 막기 중 피해 50% 감소처럼, 일본과 이베리아도 막기 중 피해 20% 감소 부여' · docs/strike/japanese_flow_adopt_2026-10-18.md):
+  //  동방과 같은 칸(parry_button.js woundKeep — 그 유파 막기 책을 쥔 플레이어가 막기 단추로 막는 중 · 칼날 상처 심각도 × (1 − cut)). `?jpParryCut=0` · `?ibParryCut=0` = 끔
+  jpParryDmgCut: 0.2,
+  ibParryDmgCut: 0.2,
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 

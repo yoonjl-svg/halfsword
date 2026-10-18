@@ -22,6 +22,8 @@
 //     칼과 맞은 부위에 같은 크기, 반대 방향으로 준다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { beginFlowRecovery } from './nagashi_recovery.js';
+import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty } from './nagashi_redesign.js';
 import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
@@ -329,7 +331,8 @@ export class Combat {
         // 동방 막는 동안 피해 감소 (10/17 연구 — SKILL.cnParryDmgCut, 판 값 0 = 끔 · docs/strike/chinese_parry_brace_2026-10-17.md): 받는 쪽이 동방 막기 책을 쥐고
         //  막기 단추로 막는 중(parry_button.js woundKeep)이면 이 칼날 상처의 심각도만 × (1 − cut). 팔다리 기능 · 피 흘림 · 의식 · 목/머리 죽음 문턱 · 절단이 모두
         //  심각도에서 나와(fighter.applyWound) 같이 준다. 에너지 · 가르나 튕기나(pass) · 박힘은 그대로 — 칼과 몸의 물리(충격 · 휘청임 · 투구/판 닳음)는 바뀌지 않는다
-        if (SKILL.cnParryDmgCut > 0 && vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
+        //  일본 · 이베리아도 같은 칸으로 × (1 − 0.2) (사장님 10/18 22:1x — SKILL.jpParryDmgCut · ibParryDmgCut)
+        if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
       } else {
         const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
         if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.
@@ -548,7 +551,8 @@ export class Combat {
     const fresh = this.stepNo - this.bladeLast > STEEL.rearmSteps; // 떨어져 있다가 새로 부딪힘
     this.bladeLast = this.stepNo;
     // 우케나가시 흘려 받기 (config NAGASHI): 받은 칼을 칼 지붕을 따라 미끄러뜨리고, 받는 쪽 손 흔들림·무기 닳음을 던다 (아래 feel)
-    const flowD = fresh && NAGASHI.on && SA && SB && J > 0 ? this.nagashi(A, B, SA, SB, point, nrm, vn) : null;
+    //  판정 개편(FLOW_REDESIGN.on — 사장님 10/18 22:1x)이면 새로 부딪힌 순간이 아니어도 접촉 창(0.12 s) 안에서 다시 본다 (nagashi_redesign.js)
+    const flowD = (fresh || FLOW_REDESIGN.on) && NAGASHI.on && SA && SB && J > 0 ? this.nagashi(A, B, SA, SB, point, nrm, vn) : null;
     // 새로 부딪혀 튕긴 순간: 칼이 손 안에서 길이 축으로 팽이처럼 도는 몫은 손아귀가 잡는다 (gripTwist)
     if (fresh) for (const f of [A.fighter, B.fighter]) gripTwist(f);
     const va = A.body.velocityAtPoint(point);
@@ -594,6 +598,7 @@ export class Combat {
    *  돌려줌: 흘려 받은 싸움꾼(D) · 없으면 null
    */
   nagashi(A, B, SA, SB, point, nrm, vn) {
+    if (FLOW_REDESIGN.on) return this.nagashiExpanded(A, B, SA, SB, point, nrm, vn); // 판정 개편 (사장님 10/18 22:1x · 기본) — 아래는 옛 판정(`?flowJudge=0`)
     for (const [D, O, SO] of [[A.fighter, B.fighter, SB], [B.fighter, A.fighter, SA]]) {
       const st = D.skill?._cover;
       if (!st?.nagashi || D.schoolParry === false || !O.swordProps) continue;
@@ -615,7 +620,40 @@ export class Combat {
       O.sword.applyImpulseAtPoint({ x: dir.x * Jt, y: dir.y * Jt, z: dir.z * Jt }, vp(pO), true);
       D.sword.applyImpulseAtPoint({ x: -dir.x * Jt, y: -dir.y * Jt, z: -dir.z * Jt }, vp(onAxis(D.sword)), true);
       st.forceT = NAGASHI.poseT;
-      this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone() };
+      // 흘림당한 쪽(O) 팔 늦춤 · 기력 청구 — 판정과 따로 켜고 끈다 (nagashi_recovery.js · nagashi_redesign.js — 끄면 옛 판과 같음)
+      const recovery = Jt > 0 && beginFlowRecovery(O, D);
+      const penalty = spendFlowPenalty(O, D);
+      this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(), recovery, penalty };
+      return D;
+    }
+    return null;
+  }
+
+  /**
+   * 우케나가시 판정 개편 (샛별 연구 들여옴 — nagashi_redesign.js · docs/strike/japanese_flow_adopt_2026-10-18.md · 사장님 10/18 22:1x 기본):
+   *  흘리는 미끄럼 충격 계수(NAGASHI.slideK)는 같고 · 칼끼리 실제 접촉만 · 받는 몸꼴로 강제로 옮기지 않는다(옛 판정의 poseT 없음 — 공격 입력과 부딪치지 않게).
+   *  흘림당한 쪽(O): 팔 늦춤(FLOW_RECOVERY 0.36 s) · 기력 −40(공격 하나에 한 번). 돌려줌: 흘려 받은 싸움꾼(D) · 없으면 null
+   */
+  nagashiExpanded(A, B, SA, SB, point, nrm, vn) {
+    for (const [D, O, SO] of [[A.fighter, B.fighter, SB], [B.fighter, A.fighter, SA]]) {
+      const candidate = flowCandidate(D, O, SO, point, nrm, vn, D.stamina.time);
+      if (!candidate) continue;
+      const dir = candidate.direction;
+      const onAxis = (sw) => {
+        const ax = _n3.set(0, 1, 0).applyQuaternion(rotQ(sw));
+        const o = tv(sw.translation());
+        return o.addScaledVector(ax, _n2.copy(point).sub(o).dot(ax));
+      };
+      const pO = onAxis(O.sword);
+      const Jt = gripMass(O.swordProps, liveState(O.sword), pO, dir, STEEL.handMass) * NAGASHI.slideK * candidate.impact;
+      if (!(Jt > 0)) continue;
+      O.sword.applyImpulseAtPoint({ x: dir.x * Jt, y: dir.y * Jt, z: dir.z * Jt }, vp(pO), true);
+      D.sword.applyImpulseAtPoint({ x: -dir.x * Jt, y: -dir.y * Jt, z: -dir.z * Jt }, vp(onAxis(D.sword)), true);
+      const recovery = beginFlowRecovery(O, D);
+      const penalty = spendFlowPenalty(O, D);
+      this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(),
+        recovery, redesign: true, penalty, age: candidate.age,
+        entry: candidate.entry, exitGain: candidate.gain };
       return D;
     }
     return null;

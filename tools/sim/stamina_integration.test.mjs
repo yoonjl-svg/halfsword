@@ -34,12 +34,13 @@ test('AI 실제 공격은 기술당 한 번, 기력 부족 시 휴식 결심',()
  assert.ok(t);a.startAttack(t,'test',{noFeint:true});a.startStrike();near(g.enemy.stamina.spent.attack,t.kind==='thrust'?7:12);
  g.enemy.stamina.value=5;a.mode='watch';a.update(DT);assert.ok(a.staminaRest);assert.equal(a.startAttack(t,'test'),false);
 }));
-test('탈진 중 이동·찌르기·막기·비기 예약 차단,2.5초 뒤0으로 복귀',()=>game(g=>{
+test('탈진 중 이동·찌르기·막기·비기 예약 차단, 자연 회복 1.667초 뒤 −35 · 심한 지침으로 복귀 (옛 규칙 2.5초 뒤 0)',()=>{for(const natural of [true,false]){const was=STAMINA.exhaustNatural;STAMINA.exhaustNatural=natural;try{game(g=>{
  g.ai.update=()=>{};const p=g.player;const guard=new PlayerParryGuard(p,g.enemy);p.stamina.controller=guard;guard.held=true;p.stamina.spend('attack',STAMINA.max-STAMINA.floor);
  p.instantReq={};p.iaiReq={};p.move.set(1,1);assert.equal(p.skill.thrust(),false);
- for(let i=0;i<300;i++){p.move.set(1,1);guard.step(DT);g.step();if(i<299){assert.ok(p.feetHeld);near(p.move.length(),0);assert.equal(guard.active,false);assert.equal(p.skill.swinging,false);}}
- near(p.stamina.value,0);assert.equal(p.stamina.exhausted,false);assert.equal(p.stamina.level,1);assert.equal(p.instantReq,null);assert.equal(p.iaiReq,null);assert.equal(p.state,'stand');
-}));
+ const N=Math.round((natural?(STAMINA.severeAt-STAMINA.floor)/STAMINA.playerRecoverPerSecond:STAMINA.exhaustSeconds)/DT);assert.equal(N,natural?200:300);
+ for(let i=0;i<N;i++){p.move.set(1,1);guard.step(DT);g.step();if(i<N-1){assert.ok(p.feetHeld);near(p.move.length(),0);assert.equal(guard.active,false);assert.equal(p.skill.swinging,false);}}
+ near(p.stamina.value,natural?STAMINA.severeAt:0);assert.equal(p.stamina.exhausted,false);assert.equal(p.stamina.level,natural?2:1);assert.equal(p.instantReq,null);assert.equal(p.iaiReq,null);assert.equal(p.state,'stand');
+});}finally{STAMINA.exhaustNatural=was;}}});
 test('AI 탈진은 지형 우회보다 우선하여 자발적 이동을 막음',()=>game(g=>{g.enemy.stamina.spend('attack',STAMINA.max-STAMINA.floor);g.ai.update(DT);near(g.enemy.move.length(),0);assert.equal(g.ai.mode,'watch');}));
 test('진행 중 발도는 탈진 때 끝나고 팔·칼의 동적 물리와 양손 잡기를 복구',()=>{
  const previous=SECRET.iaiKinematic;
