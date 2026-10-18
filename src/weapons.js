@@ -722,7 +722,7 @@ const falchion = finalizeSpec('falchion', {
 // ═════════════════════════════════════════════════════════════
 const monohoshizao = finalizeSpec('monohoshizao', {
   nameKo: '모노호시자오', nameEn: 'Monohoshizao',
-  desc: '간류지마에서 무사시와 겨룬 사사키 코지로의 긴 칼.\n빨래 장대라 불릴 만큼 길었다.',
+  desc: '간류지마에서 무사시와 겨룬 사사키 코지로의 칼.\n빨래 장대라 불릴 만큼 길었다.',
   grip: 'two-hand', material: 'steel',
   school: 'japanese', // 유파(schools.js TRADITIONS): 틀은 앞무게(이베리아가 기본)지만 일본 도검술 — 10/8 ① 구조 (일본 유파는 아직 이베리아와 같은 내용의 자리만)
   tier: 'epic',
