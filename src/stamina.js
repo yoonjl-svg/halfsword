@@ -162,7 +162,7 @@ export class Stamina {
     if (this.exhausted) return;
     if (this.value <= STAMINA.floor) {
       this.value = STAMINA.floor;
-      // 탈진 (사장님 10/18 22:1x '새벽 것이 맞음' — 샛별 연구 규칙): 이동 · 공격 불가 · 막기를 누르고 있어도 자연 회복 빠르기(플레이어 21 · AI 15 /s)로 차서
+      // 탈진 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙): 이동 · 공격 불가 · 막기를 누르고 있어도 자연 회복 빠르기(플레이어 21 · AI 15 /s)로 차서
       //  severeAt(−35)에서 풀린다(심한 지침 단계로) — 바닥 −70 에서 플레이어 1.667 s · AI 2.333 s. 옛 규칙(`?exhaust=fixed`): exhaustSeconds 2.5 s 숨 고르기 뒤 0(지침)
       this.exhaustNaturalTarget = STAMINA.exhaustNatural ? STAMINA.severeAt : null;
       this.exhaustLeft = this.exhaustNaturalTarget != null

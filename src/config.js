@@ -34,7 +34,7 @@ export const STAMINA = {
   stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
   // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전) · 막기 유지 중엔 멈춤
   recoverPerSecond: 15, playerRecoverPerSecond: 21, recoverDelay: 0.6,
-  // 탈진 규칙 (사장님 10/18 22:1x '탈진 규칙은 새벽 것이 맞음' — 샛별 연구 규칙 · docs/strike/japanese_flow_adopt_2026-10-18.md): 바닥(floor −70)에서 이동 · 공격 불가 ·
+  // 탈진 규칙 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙 · docs/strike/japanese_flow_adopt_2026-10-18.md): 바닥(floor −70)에서 이동 · 공격 불가 ·
   //  막기를 누르고 있어도 자연 회복 빠르기(플레이어 playerRecoverPerSecond 21 · AI recoverPerSecond 15 /s)로 강제로 차서 severeAt(−35)에서 풀림(심한 지침 단계) —
   //  플레이어 1.667 s · AI 2.333 s. 풀린 뒤는 보통 규칙(되돌림 +15 · 막기 쥐면 회복 멈춤). `?exhaust=fixed` = 옛 규칙(아래 exhaustSeconds · exhaustRecover)
   exhaustNatural: true,
