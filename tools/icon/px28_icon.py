@@ -83,17 +83,37 @@ def build(K=16, contrast=1.06, sharpen=0.25, leaf_t=0.16, smooth=2, seed=7):
     gab = np.median(grippx[:, 1:], 0)
     c_grip1 = np.array([np.percentile(grippx[:, 0], 75), *gab]); c_grip2 = np.array([np.percentile(grippx[:, 0], 25), *gab])
     c_dark = lab[(L < 20) & reg].mean(0)
+    # 칼 다시 (사장님 10/19 02:4x '너무 희고 그냥 나뭇가지 막대기 같애'): 칼 축(머리 A → 땅속 끝 B)을 따라 칸마다 부위를 정해 찍음 —
+    #  칼날 2 칸 너비(달 쪽 밝은 강철 · 반대쪽 짙은 강철 · 코등이 곁 두 칸만 반짝임 — 흰 막대가 아니라 쇠로) · 놋쇠 코등이(2 줄 두께) · 가죽 손잡이 · 놋쇠 머리 + 짙은 윤곽
+    rgbl = lambda *c: to_lab(np.array(c, float))
+    K = dict(steel_hi=rgbl(214, 220, 226), steel=rgbl(172, 181, 192), steel_lo=rgbl(100, 110, 126), brass=rgbl(198, 160, 82), brass_lo=rgbl(122, 90, 46),
+             grip=rgbl(88, 56, 33), grip_hi=rgbl(122, 80, 45), pommel=rgbl(206, 168, 88))
+    A = np.array([19.5, 8.5]); Bp = np.array([12.5, 23.5])
+    d = (Bp - A) / np.linalg.norm(Bp - A); nrm = np.array([d[1], -d[0]])  # nrm = 칼날의 달 쪽(오른쪽 아래)
+    axis_x = lambda y: A[0] + d[0] / d[1] * (y + 0.5 - A[1])
     sword = {}
-    for p in POMMEL: sword[p] = c_light
-    for i, p in enumerate(GRIP): sword[p] = c_grip2 if i % 2 == 0 else c_grip1
-    for p in GUARD: sword[p] = c_mid
-    for p in BLADE: sword[p] = c_light
+    for y in range(N):
+        for x in range(N):
+            c = np.array([x + 0.5, y + 0.5]); sa = (c - A) @ d; ta = (c - A) @ nrm
+            if -0.7 <= sa <= 0.7 and abs(ta) <= 0.8: sword[(x, y)] = K['pommel']
+            elif 2.9 < sa <= 4.4 and abs(ta) <= 2.6: sword[(x, y)] = K['brass'] if sa <= 3.65 else K['brass_lo']
+    for y in range(9, 11):  # 손잡이: 줄마다 축에 가장 가까운 한 칸 (감은 가죽 — 두 빛)
+        sword[(int(np.floor(axis_x(y))), y)] = K['grip'] if y % 2 else K['grip_hi']
+    blade_rows = [y for y in range(N) if 4.4 < (np.array([axis_x(y), y + 0.5]) - A) @ d and y <= 22]
+    for i, y in enumerate(blade_rows):  # 칼날: 줄마다 축을 사이에 둔 두 칸 — 오른쪽(달 쪽) 밝음 · 왼쪽 짙음
+        xl = int(np.floor(axis_x(y) - 0.5))
+        if (xl, y) in sword or (xl + 1, y) in sword: continue
+        sword[(xl + 1, y)] = K['steel_hi'] if i < 2 else K['steel']
+        sword[(xl, y)] = K['steel_lo']
     mask = np.zeros((N, N), bool)
     for (x, y), c in sword.items(): out[y, x] = c; mask[y, x] = True
     ring = ndimage.binary_dilation(mask, structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]]) & ~mask
-    tip_y = max(y for (x, y) in sword)
     for (y, x) in zip(*np.where(ring)):
-        if y < tip_y: out[y, x] = c_dark
+        if y < 23: out[y, x] = c_dark
+    xb = int(np.floor(axis_x(22) - 0.5))  # 칼날이 땅에 드는 두 칸
+    MOUND = {(xb - 1, 23): 'hi', (xb, 23): 'slit', (xb + 1, 23): 'slit', (xb + 2, 23): 'hi',
+             (xb - 2, 24): 'lo', (xb - 1, 24): 'mid', (xb, 24): 'mid', (xb + 1, 24): 'mid', (xb + 2, 24): 'mid', (xb + 3, 24): 'lo'}
+    MOUND_EDGE = [(xb - 2, 23), (xb + 3, 23), (xb - 3, 24), (xb + 4, 24)]
     # 흙무덤: 바탕 땅색(무덤 아래 · 둘레 칸 평균)에서 밝기만 바꿔 같은 흙으로 — 칼날 끝 칸을 덮어 '꽂힘'
     ground = np.array([out[y, x] for y in range(24, 27) for x in range(8, 17)]).mean(0)
     a, b = ground[1], ground[2]  # 땅의 색조는 그대로, 밝기만 칼 둘레가 읽히게 (어두운 땅에 묻히지 않게)
@@ -122,8 +142,8 @@ if __name__ == '__main__':
         out = sys.argv[sys.argv.index('--preview') + 1]
         old = Image.open(os.path.join(ROOT, 'art', 'app-icon-20261017', 'px32-native.png')).resize((448, 448), Image.NEAREST)
         new = px.resize((448, 448), Image.NEAREST)
-        zoom = px.crop((6, 15, 20, 28)).resize((14 * 24, 13 * 24), Image.NEAREST)
-        sheet = Image.new('RGB', (448 * 2 + 16 + 14 * 24 + 16, 448), (30, 30, 30)); sheet.paste(old, (0, 0)); sheet.paste(new, (464, 0)); sheet.paste(zoom, (928, 0)); sheet.save(out)
+        zoom = px.crop((6, 6, 24, 27)).resize((18 * 20, 21 * 20), Image.NEAREST)
+        sheet = Image.new('RGB', (448 * 2 + 16 + 18 * 20 + 16, 448), (30, 30, 30)); sheet.paste(old, (0, 0)); sheet.paste(new, (464, 0)); sheet.paste(zoom, (928, 0)); sheet.save(out)
         print('preview', out); raise SystemExit
     px.save(os.path.join(ROOT, 'art', 'app-icon-20261017', 'px28-native.png'), optimize=True)
     big = {s: grow(px, s) for s in (512, 192, 180, 64, 32)}
