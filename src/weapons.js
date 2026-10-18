@@ -860,7 +860,7 @@ const uchigatana = finalizeSpec('uchigatana', {
 const QINGGANG_LOOK = { grip: 0x17171f, hilt: 0x8a6d3b };
 const qinggang = finalizeSpec('qinggang', {
   nameKo: '청강검', nameEn: 'Qinggang Sword',
-  desc: '장판파에서 조자룡이 조조의 장수에게서 빼앗은 보검.\n쇠를 진흙처럼 벤다.',
+  desc: '장판파에서 조자룡이 하후은에게서 빼앗은 보검.\n쇠도 진흙처럼 자른다.',
   grip: 'one-hand', material: 'steel',
   school: 'chinese', // 유파(schools.js TRADITIONS): 틀은 한손 두루(독일이 기본)지만 劍 — 10/8 ① 구조 (중국 유파 = 전 지안 꾸러미 그대로)
   enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
