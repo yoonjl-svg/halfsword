@@ -170,3 +170,13 @@
 | S-164 | 2026-10-17 | Stillness | 대기실 프로필(샛별 프로필 17 명 · 액자 1 들여오기) · 패배 팝업 | 진행 중 | — | — | — | 열림 |
 | S-165 | 2026-10-17 | Stillness | 운영: 관문 그대로(smoke 23 → 24) · 단위 시험 93/93 · 샛별 열람 00:0x · 00:3x + 사장님 요청 둘 | 기록 | — | — | — | 닫힘 |
 | S-166 | 2026-10-17 | 샛별→Stillness | 앱 아이콘 새 그림(나무 뿌리 · 꽂힌 검 · 낙엽) 들여옴 | 끝남 | e92b5a6 | 쉬움 | public/icons · index.html · manifest.webmanifest · tools/pwa | 닫힘 |
+| S-164 | 2026-10-18 | Stillness | 대기실 프로필(60 % 칸 · 액자 1) · 패배 창(상대 프로필 + 승리 대사) 마무리 | 끝남 · 기본 플레이 반영 | 645fe63·1d7d5a4·53815ce·5b4c64c·948c1c8·c6f6198·7823bdb·4991b87 | 쉬움(화면 값) | src/lobby.css·src/lobby.js·index.html·src/main.js | 닫힘 |
+| S-167 | 2026-10-18 | Stillness | 대기실 세 칸 바깥 줄 = 액자 1 · 재고 칸 정사각 · 3단 안쪽은 격자만 | 기본 플레이 반영 | b0f2338 | 쉬움 | src/lobby.css | 닫힘 |
+| S-168 | 2026-10-18 | Stillness | 앱 아이콘 32 × 32 도트 · 홈 화면 이름 Stillness(매니페스트 새 이름 · 네트워크 먼저) | 기본 플레이 반영 | 664331c | 쉬움 | public/icons·tools/icon·tools/pwa·index.html | 닫힘 |
+| S-169 | 2026-10-18 | Stillness | 대기실 메뉴 아이템 · 이벤트 · 아이템 칸 6 × 4 · 옛 3D 지움 · 기본 이름 Noname | 기본 플레이 반영 | 32b4dab | 손봐서(대기실 구조) | src/lobby*.js·src/player_profile.js | 닫힘 |
+| S-170 | 2026-10-18 | 샛별→Stillness | 캐릭터 프로필 = 샛별 투명 배경 도트판 33 장(얼터 자기 그림 · 플레이어 = player2) · ?portraitGrid=1 | 기본 플레이 반영 | 02e1f13 | 해당 없음(그쪽 그림) | public/ui/portraits·src/portraits.js | 닫힘 |
+| S-171 | 2026-10-18 | Stillness | 프로필 도트 재구성 시안 16 · 32 · 64배(저장소 밖) → 32배가 앱 아이콘 기준 | 시안 | — | — | — | 닫힘 |
+| S-172 | 2026-10-18 | 샛별→Stillness | 일본 막기 · 흘림 연구 재현(30 초 72 조건 · AI 끼리 36 판) — 판정 개편 채택 · 선제 받기 보류 | 연구 · 판정 | — | — | — | 닫힘 |
+| S-173 | 2026-10-18 | Stillness | 일본 흘림 묶음: 판정 개편 · 팔 늦춤 0.36 s · 기력 40 · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % | 진행 중(관문 전) | — | 손봐서 | combat.js·stamina.js·fighter.js·frames.js·parry_button.js·config.js·nagashi_*.js | 열림 |
+| S-174 | 2026-10-18 | 샛별→Stillness | 미나미 눈 = 샛별 마지막 판(a0eb17a1) | 진행 중(S-173 과 함께) | — | 해당 없음 | art/portraits-px-20261018·public/ui/portraits | 열림 |
+| S-175 | 2026-10-18 | Stillness | 운영: 컨테이너 재시작 셋 · 개발 서버 · 샛별 열람 00:0x · 00:2x + 요청 둘 · 막기 도구 기력 연결 점검(영향 없음) | 기록 | 57fdf3e·d666f07·03d6519 | — | — | 닫힘 |
