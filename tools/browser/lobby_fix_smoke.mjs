@@ -48,7 +48,7 @@ try {
 
   // ① 장착한 무기로 곧장 · 해제하면 카드
   assert.equal(await lobby(p, '/'), 'draw'); // 새 프로필 = 장착 없음 → 첫 화면에서 곧바로 카드 (그 뒤 정지 → 대기실)
-  // 10/17 22:1x: 3D 미리보기(기기 화소 비 · 그리개 폭 확인)를 정사각 프로필 그림으로 바꿈 — 그림(원본을 줄인 768² — 23:0x 원본 기본)이 떴나
+  // 10/17 22:1x: 3D 미리보기(기기 화소 비 · 그리개 폭 확인)를 정사각 프로필 그림으로 바꿈 — 그림(768² — 10/18 16:3x 부터 투명 배경 도트판 · player2)이 떴나
   assert.deepEqual(await p.locator('#lobbyPortraitImg').evaluate((i) => [i.getAttribute('src'), i.naturalWidth]), ['ui/portraits/player.webp', 768]);
   await p.locator('[data-weapon=tree_branch]').click(); await p.locator('#equipItem').click();
   await depart(p, 'fight');

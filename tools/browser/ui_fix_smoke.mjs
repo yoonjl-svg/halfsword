@@ -153,7 +153,7 @@ try {
     assert.ok(!/드래그/.test(await inRoot(p, `return root.querySelector('.lobby').textContent`)), 'drag hint text is gone');
     assert.equal(await inRoot(p, `return root.querySelectorAll('.rotate-hint, #characterView, .character-view canvas').length`), 0);
     const pf = await inRoot(p, `const f=root.getElementById('lobbyPortrait'),i=f.querySelector('img'),r=f.getBoundingClientRect(),d=root.getElementById('lobbyDepart').getBoundingClientRect();return {id:f.dataset.portrait,src:i.getAttribute('src'),w:i.naturalWidth,box:[r.width,r.height],gap:d.top-r.bottom}`);
-    assert.deepEqual([pf.id, pf.src, pf.w], ['player', 'ui/portraits/player.webp', 768], JSON.stringify(pf));
+    assert.deepEqual([pf.id, pf.src, pf.w], ['player', 'ui/portraits/player.webp', 768], JSON.stringify(pf)); // 10/18 16:3x 부터 같은 주소 = 투명 배경 도트판(player2)
     assert.ok(Math.abs(pf.box[0] - pf.box[1]) < 0.5 && pf.gap >= 0, JSON.stringify(pf));
     const bodies = await p.evaluate(() => game.player.meshes.map(({ rb }) => ({ p: rb.translation(), q: rb.rotation() })));
     const box = await p.locator('#lobbyPortrait').boundingBox(), cdp = await c.newCDPSession(p), y = box.y + box.height * 0.5;

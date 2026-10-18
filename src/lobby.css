@@ -90,12 +90,14 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 /* ── ① 프로필 칸 + 출발 (사장님 10/17 22:1x '캐릭터 미리보기를 없애고 정사각형의 프로필 사진 들어갈 자리를 미리 잡아둬. 전체 3단 레이아웃과 비율은 지금을 유지하고 캐릭터 미리보기 창만 짧아지는 느낌으로'):
    칸 폭 = 전 캐릭터 카드 폭의 60 %(--card-w — 23:4x 80 % → 10/18 00:2x 70 % → 01:0x '60%로 하자' · 줄어든 폭은 맨 오른쪽 칸으로) · 높이 = 폭(정사각) — 칸 위에 붙고 출발 단추는 칸 아래 줄 그대로(전과 같은 자리) · 사이는 비워 둠(나중 '캐릭터 프로필').
    그림 안에 액자 1(어두운 갈색 바깥 + 금색 이중선 + 모서리 장식)이 있어 CSS 틀(.card-frame)은 걸지 않는다 — 걸면 틀이 두 겹(바깥 CSS 틀 + 그림 틀)으로 보인다 · 위아래 쇠 장식(사슬 틀 짝)도 뺌.
-   그림 = 원본을 줄인 그림(기본 — 사장님 23:0x '원본으로 먼저 적용하고 low를 예비로') · 매끈하게 · 예비 low(?portrait=low)는 픽셀 그대로(image-rendering: pixelated — 프로필 검토 페이지와 같은 보기).
+   그림 = 10/18 16:3x 부터 샛별 새 투명 배경 도트판(기본 · 22 × 22 칸 · 768² — 칸이 커서 매끈하게 줄여도 또렷 · 투명한 곳은 이 칸의 바탕 #30261c) · 예비 ?portrait=hd(10/17 원본) · ?portrait=low(4 px 판 — 픽셀 그대로).
    바탕 = 그림 바깥 띠 색(#30261c — 그림이 오기 전 같은 색 네모) · 못 불러오면 빈 액자 1 (data-empty — 같은 틀 그림) · 그림자 = 싸움 카드 뒷면(.wback)과 같은 부드러운 그림자 ── */
 .character-panel { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
 .portrait-card { flex: none; position: relative; width: var(--card-w); height: var(--card-w); margin: 0; background: #30261c; box-shadow: 0 8px 20px rgba(0, 0, 0, .5); }
 .portrait-card img { display: block; width: 100%; height: 100%; image-rendering: auto; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
 .portrait-card[data-mode="low"] img { image-rendering: pixelated; }
+/* ?portraitGrid=1 (사장님 10/18 16:3x '그리드가 보이는 것도 내가 확인'): 그림 위에 22 × 22 칸 줄 — 1254 좌표 SVG 를 그림과 같은 크기로 겹침 */
+.portrait-card[data-grid]::after { content: ''; position: absolute; inset: 0; background: url('../public/ui/portraits/grid-overlay.svg') 0 0 / 100% 100% no-repeat; pointer-events: none; }
 .portrait-card[data-empty] { border: var(--fr) solid transparent; border-image: url('../public/ui/frame1_portrait.png') 122 / var(--fr) / 0 stretch; }
 .portrait-card[data-empty] img { display: none; }
 /* 알림 줄(인장 → 금화 · 이름 저장 · 출발 실패): 제목 줄 가운데 작은 창 — 전엔 출발 단추 밑이라 칸 아래 줄을 밀었다(카드 위에 띄우면 캐릭터 머리를 가린다) */

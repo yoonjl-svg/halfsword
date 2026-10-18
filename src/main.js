@@ -46,7 +46,7 @@ import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setItalianRhythm, setItalianStride, traditionOf } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
-import { portraitIdOf, portraitSrc, portraitMode } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
+import { portraitIdOf, portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
@@ -994,7 +994,7 @@ function showDefeatFoe(foe) {
   const broken = !!src && img.getAttribute('src') === src && img.complete && img.naturalWidth === 0; // 같은 그림을 전에 못 불러왔으면(예: 오프라인에서 예비 low) 칸을 숨긴 채로
   fig.hidden = !src || broken;
   if (src && !broken) {
-    fig.dataset.portrait = portraitIdOf(foe.ch.id); fig.dataset.mode = portraitMode();
+    fig.dataset.portrait = portraitIdOf(foe.ch.id); fig.dataset.mode = portraitMode(); fig.toggleAttribute('data-grid', portraitGrid()); // ?portraitGrid=1 칸 줄 (10/18 16:3x 확인용)
     img.alt = `${foe.ch.name} 프로필`;
     if (img.getAttribute('src') !== src) img.src = src;
   }

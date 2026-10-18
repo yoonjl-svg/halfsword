@@ -1,7 +1,7 @@
 // 패배 창 프로필 + 대사 점검 (사장님 10/17 22:1x · 23:4x — docs/design/portrait_ui_2026-10-17.md §4)
 //  ① 여정(첫 화면 Stage 1 → 카드 → 싸움)에서 짐: 싸움 화면엔 승리 대사가 안 뜸(10/18 01:4x '싸움 화면쪽은 빼') → 패배 창 = 상대 프로필(원본을 줄인 768² · 그림 안 액자 1) + 그 오른쪽 같은 대사 ·
 //     그림 한 변 = 같은 화면 대기실 프로필 칸과 같은 CSS px(23:4x '패배 팝업 프로필도 같은 크기로') · 금화 줄 · 단추와 안 겹침 · 창이 화면 안 · 그 뒤 정지 창엔 없음
-//  ② 이긴 판: 프로필 · 대사 없음(전 그대로)  ③ 그림 없는 상대(?foe=default 기본 상대): 그림 칸 숨김 · 대사 없음(전 꼴)  ④ 변형(광기의 하인리히)은 바탕 인물 그림
+//  ② 이긴 판: 프로필 · 대사 없음(전 그대로)  ③ 그림 없는 상대(?foe=default 기본 상대): 그림 칸 숨김 · 대사 없음(전 꼴)  ④ 변형(광기의 하인리히)은 자기 그림(10/18 16:3x — 전: 바탕 인물) · ?portrait=hd 예비 · ?portraitGrid=1 칸 줄
 //  ⑤ 출처 줄이 있는 대사(병마용)는 대사 아래 작은 줄 — 싸움 화면 대사 칸과 같은 꼴  ⑥ ?portrait=low = 예비 픽셀판(pixelated)
 //  npm run build && npx vite preview --port 5182 →  node tools/browser/defeat_portrait_smoke.mjs http://127.0.0.1:5182 /tmp/<빈 폴더> [크기 WxH@dpr,…]
 import { chromium } from 'playwright';
@@ -70,7 +70,7 @@ try {
     const a = await popup(p);
     await p.screenshot({ path: `${out}/loss_${tag}.png` });
     assert.equal(a.title, '패배'); assert.equal(a.shown, true, JSON.stringify(a)); assert.equal(a.foeShown, true);
-    assert.equal(a.src, `ui/portraits/${a.id}.webp`); assert.equal(a.natural, 768); assert.equal(a.mode, 'original'); assert.notEqual(a.rendering, 'pixelated');
+    assert.equal(a.src, `ui/portraits/${a.id}.webp`); assert.equal(a.natural, 768); assert.equal(a.mode, 'pixel'); assert.notEqual(a.rendering, 'pixelated'); // 10/18 16:3x 투명 배경 도트판(768² · 매끈하게 줄임)
     assert.equal(a.alt, `${foe} 프로필`);
     assert.ok(Math.abs(a.size[0] - lobbySide) < .5 && Math.abs(a.size[1] - lobbySide) < .5, `${tag} popup ${a.size} vs lobby ${lobbySide}`);
     assert.ok(winLineOf(foe, a.line), `${tag} line ${a.line} is not a win line of ${foe}`); assert.ok(!shown.includes(a.line), `${tag} fight screen showed ${shown}`); // 대사는 패배 창에만
@@ -81,11 +81,11 @@ try {
     await p.evaluate(() => document.getElementById('btnPause').click()); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 10000 });
     const paused = await popup(p);
     assert.deepEqual([paused.title, paused.shown, paused.foeShown, paused.line], ['일시정지', false, false, null]);
-    checks.push({ check: `${tag}: loss popup shows the foe profile (${a.id}, original 768 webp, smooth) at the lobby profile size ${lobbySide} px, one of the foe's win lines to its right (not shown on the fight screen), no overlap with title/cause/reward/buttons, card in view${a.scrolls ? ' (scrolls)' : ''}; pause after a rematch shows none`, foe, line: a.line, size: a.size });
+    checks.push({ check: `${tag}: loss popup shows the foe profile (${a.id}, transparent pixel 768 webp, smooth) at the lobby profile size ${lobbySide} px, one of the foe's win lines to its right (not shown on the fight screen), no overlap with title/cause/reward/buttons, card in view${a.scrolls ? ' (scrolls)' : ''}; pause after a rematch shows none`, foe, line: a.line, size: a.size });
     await c.close();
   }
   const s = sizes[0], tag = `${s.w}x${s.h}`;
-  // ② 이긴 판 · ③ 기본 상대(그림 없음) · ④ 변형 · ⑤ 출처 줄 · ⑥ ?portrait=low
+  // ② 이긴 판 · ③ 기본 상대(그림 없음) · ④ 변형(자기 그림) · hd 예비 · 칸 줄 · ⑤ 출처 줄 · ⑥ ?portrait=low
   {
     const c = await context(s), p = await c.newPage(); watch(p, tag);
     await urlFight(p, 'foe=heinrich&weapon=longsword');
@@ -98,8 +98,17 @@ try {
     checks.push({ check: 'loss to the default foe (no character, no portrait, no line): portrait slot hidden, card as before' });
     await urlFight(p, 'foe=heinrich_mad&weapon=longsword');
     const shownM = await lose(p); const m = await popup(p); await p.screenshot({ path: `${out}/loss_variant_${tag}.png` });
-    assert.equal(m.id, 'heinrich'); assert.equal(m.src, 'ui/portraits/heinrich.webp'); assert.ok(winLineOf('광기의 하인리히 도른', m.line), m.line); assert.ok(!shownM.includes(m.line)); // 변형의 대사 · 바탕 인물 그림
-    checks.push({ check: 'variant (heinrich_mad) uses the base character portrait (heinrich)', line: m.line });
+    assert.equal(m.id, 'heinrich_mad'); assert.equal(m.src, 'ui/portraits/heinrich_mad.webp'); assert.ok(winLineOf('광기의 하인리히 도른', m.line), m.line); assert.ok(!shownM.includes(m.line)); // 변형의 대사 · 10/18 16:3x 부터 얼터 자기 그림
+    checks.push({ check: 'variant (heinrich_mad) has its own portrait (10/18 — was the base character portrait)', line: m.line });
+    await urlFight(p, 'foe=heinrich_mad&weapon=longsword&portrait=hd');
+    await lose(p); const h = await popup(p);
+    assert.deepEqual([h.id, h.mode, h.src, h.natural], ['heinrich', 'hd', 'encounters/portraits-hd-20261017/heinrich.webp', 768]); // 예비 hd = 10/17 원본 판 · 얼터는 바탕 인물
+    checks.push({ check: '?portrait=hd: the 10/17 high-resolution backup (variant → base portrait)' });
+    await urlFight(p, 'foe=heinrich&weapon=longsword&portraitGrid=1');
+    await lose(p); const g = await popup(p);
+    assert.equal(await p.evaluate(() => { const f = document.getElementById('menuFoe'); return f.hasAttribute('data-grid') && /grid-overlay\.svg/.test(getComputedStyle(f, '::after').backgroundImage); }), true);
+    await p.screenshot({ path: `${out}/loss_grid_${tag}.png` }); assert.equal(g.id, 'heinrich');
+    checks.push({ check: '?portraitGrid=1: 22×22 grid lines over the portrait' });
     let src = null;
     for (let i = 0; i < 6 && !src?.sourceShown; i++) { await urlFight(p, 'foe=terracotta&weapon=longsword'); const shownT = await lose(p); src = await popup(p); src.shown = shownT; }
     await p.screenshot({ path: `${out}/loss_terracotta_${tag}.png` });

@@ -17,7 +17,7 @@ import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { LOBBY_ITEMS, LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
-import { portraitSrc, portraitMode } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
+import { portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
 import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress, titleOptions, selectTitle } from './lobby_progress.js';
 import { mountSkillTree } from './skill_tree.js';
@@ -154,10 +154,11 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   $('duelRecord').textContent = `${profile.wins}승리 ${profile.losses}패배 (${total ? Math.round(profile.wins / total * 100) : 0}%)`;
   if (converted?.coins) status(`인장 ${converted.seals}개를 금화 ${converted.coins.toLocaleString('ko-KR')}으로 바꿨습니다.`, 'notice');
   // ① 프로필 칸 (사장님 10/17 22:1x — 3D 미리보기를 없애고 정사각 프로필 사진 자리 · docs/design/portrait_ui_2026-10-17.md): 지금 플레이어의 프로필
-  //  (23:0x 원본이 기본 — 원본을 줄인 768² 그림 · ?portrait=low 이면 예비 픽셀판, portraits.js).
+  //  (10/18 16:3x 기본 = 샛별 새 투명 배경 도트판 · 플레이어 = player2 그림 · ?portrait=hd / low 예비 · ?portraitGrid=1 칸 줄 — portraits.js).
   //  ?hero=<인물 id> 로 다른 영웅이면 그 그림(main.js lobbyPortraitId). 그림 안에 액자 1 이 있어 CSS 틀은 없다 · 못 불러오면 빈 액자 1(data-empty — lobby.css)
   const portraitId = game.lobbyPortraitId?.() ?? 'player', portraitImg = $('lobbyPortraitImg');
   $('lobbyPortrait').dataset.portrait = portraitId; $('lobbyPortrait').dataset.mode = portraitMode();
+  if (portraitGrid()) $('lobbyPortrait').dataset.grid = '';
   portraitImg.alt = `${profile.name} 프로필`;
   listen(portraitImg, 'error', () => { $('lobbyPortrait').dataset.empty = ''; portraitImg.alt = ''; });
   portraitImg.src = portraitSrc(portraitId) ?? portraitSrc('player');

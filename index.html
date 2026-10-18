@@ -345,7 +345,7 @@
       /* 패배 창 프로필 + 대사 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md §4): 그림이 있으면 창이 옆으로 넓어진다 — 왼쪽 정사각 그림 --pf · 틈 16 · 오른쪽 칸은 전 창 폭(340) 그대로 · 위에 붙임.
          그림 크기 --pf = 같은 화면의 대기실 프로필 칸과 같은 CSS px (사장님 23:4x '패배 팝업 프로필도 같은 크기로 맞추고') — 아래 셈은 lobby.css .lobby 의 --card-w 셈을 그대로 옮긴 것
          (칸 높이 · 줄 폭 · 출발 단추 → 전 카드 폭 --card-w0 → 그 60 % — 10/18 01:0x). lobby.css 의 여백 · 제목 줄 · 단추 값이나 미디어 조건을 바꾸면 여기도 같이 — tools/browser/defeat_portrait_smoke.mjs 가 두 크기를 견준다.
-         그림 안에 액자 1 이 있어 CSS 틀은 없다(대기실 프로필 칸과 같은 꼴) · 원본을 줄인 그림은 매끈하게, 예비 low(?portrait=low)는 픽셀 그대로.
+         그림 안에 액자 1 이 있어 CSS 틀은 없다(대기실 프로필 칸과 같은 꼴) · 기본 = 투명 배경 도트판(10/18 16:3x — 투명한 곳은 이 칸의 바탕 #30261c · 매끈하게 줄임) · 예비 low(?portrait=low)는 픽셀 그대로.
          대사 = 싸움 화면 대사 칸과 같은 꼴(싸움 화면엔 10/18 01:4x 부터 안 띄움 · “…” · 보조 색 · 출처가 있으면 아래 줄 작게) · 진 까닭 줄 아래 · 금화 줄은 그 아래 빈 줄 하나 그대로(.reward 위 여백) · 값은 사장님 확인 전 */
       .card {
         --lb-pt: 22px; --lb-pb: 24px; --lb-pl: max(24px, env(safe-area-inset-left)); --lb-pr: max(24px, env(safe-area-inset-right));
@@ -375,6 +375,8 @@
       .foe-portrait[hidden], .foe-line[hidden] { display: none; }
       .foe-portrait img { display: block; width: 100%; height: 100%; image-rendering: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
       .foe-portrait[data-mode="low"] img { image-rendering: pixelated; }
+      .foe-portrait { position: relative; } /* ?portraitGrid=1 칸 줄 덮개 자리 (10/18 16:3x 확인용 — lobby.css .portrait-card[data-grid] 와 같은 꼴) */
+      .foe-portrait[data-grid]::after { content: ''; position: absolute; inset: 0; background: url('./ui/portraits/grid-overlay.svg') 0 0 / 100% 100% no-repeat; pointer-events: none; }
       .foe-line { margin: 0; color: var(--c-sub); font-size: var(--fs-m); line-height: var(--lh-text); word-break: keep-all; overflow-wrap: anywhere; }
       .foe-line small { display: block; margin-top: 2px; font-size: var(--fs-s); line-height: 1.4; }
       .foe-line small:empty { display: none; }
