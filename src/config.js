@@ -421,8 +421,10 @@ export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: 0.35, moveDown
 //  min… / maxHeight / exit… / sideGain / frontClearance = 판정 기하 허용치 — 샛별 연구의 첫 설계 값 그대로(사장님 '판정 개편' 채택 · docs/strike/owner_defaults_table.md)
 //  threatEnd = 공격이 끝났는지를 공격 번호 시간(stamina.attackUntil) 대신 실제 칼 기하(들어오는 칼 — 위 min… 조건)로 본다 — 감독 측정 10/18 23:1x(닿은 공격 중 흘림이 안 된 까닭 1 위 39 % = 공격 번호 시간이 끝남)
 //   → 사장님 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편'. 기력은 그대로 공격 번호 하나에 한 번. `?flowEnd=timer` = 공격 번호 시간으로(샛별 연구 그대로)
+//  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여'): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
+//   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 · `?flowDmgCut=0` = 끔 (combat.js analyze · 흘림 표시 flowShield)
 export const FLOW_REDESIGN = {
-  on: true, window: 0.12, penalty: 40, threatEnd: true,
+  on: true, window: 0.12, penalty: 40, threatEnd: true, flowDmgCut: 0.8,
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
   minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
   minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,
@@ -989,11 +991,17 @@ export const AI_LEVELS = {
 //   ② 고유 동작: 손에 든 무기 유파의 고유 동작 가운데 단계 ≤ 숙련도인 것만 (unique_assist.js PLAYER_UNIQUE 단계 — sword_art.js·ai.js)
 //   ③ 비기: 손에 든 무기 유파의 숙련도가 secretAt(5) 일 때만 그 유파 비기 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀' — ai.js). 지금 인물 값으론 아무도 안 쓴다(최고 아르토리아 4)
 //  ofLevel: 숙련도를 주지 않은 AI(인물 시트 없이 난이도 이름만 받는 도구·기본 상대)의 숙련도 = 난이도 이름에서. 기본 상대(?foe=default) = normal = 2
+//  ④ 유파 고유 특성을 쓰는 적극성 (사장님 10/18 23:4x 'ai 캐릭터마다 숙련도가 있잖아. 높을 수록 유파 고유 특성을 더 적극적으로 활용하게 해' — docs/strike/flow_round2_2026-10-19.md):
+//     schoolK[숙련도] = 패시브 고유 동작이 걸릴 확률(ai.js passiveRoll) · 고유 동작(길)을 고르는 가중치(sword_art.js applySchoolArt)에 곱함 — 숙련도 2(기본 상대 · 시험 도구) = 1 이라 그대로.
+//     flowReady = 일본 AI 가 흘려 받기를 노리는 자세: 'defend'(막는 중)는 늘 · 'watch'(간 보기 — 겨눈 칼)는 이 숙련도부터 · 'withdraw'(물러남)는 이 숙련도부터 (nagashi_redesign.js aiFlowReady).
+//     값은 감독 안 — 사장님 확인 전 (확인표 2092 · 2093)
 export const AI_PROFICIENCY = {
   levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'hard'],
   max: 5,
   secretAt: UNIQUE_ASSIST.secretStage,
   ofLevel: { easy: 1, normal: 2, hard: 3 },
+  schoolK: [0.7, 0.85, 1, 1.15, 1.3, 1.45],
+  flowReady: { watch: 2, withdraw: 4 },
 };
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)

@@ -4,7 +4,7 @@
 //   window(0.12 s) 안에 지금 칼 기하(칼끝 쪽으로 미끄러뜨려 몸 바깥으로 빠지나 · 정면으로 맞받지 않나)와 막기(플레이어 막기 단추 · AI 'defend')를 다시 본다.
 //   붙어 있는 접촉은 창을 늘리지 않고, 떨어졌다 다시 닿으면 새 창이지만 기력은 공격 하나에 한 번만. 찌르기 · 공격 번호 없음 · 끝난 공격은 흘리지 않는다.
 import * as THREE from 'three';
-import { STEEL, PHYSICS, FLOW_REDESIGN } from './config.js';
+import { STEEL, PHYSICS, FLOW_REDESIGN, AI_PROFICIENCY } from './config.js';
 export { FLOW_REDESIGN };
 const v = x => new THREE.Vector3(x.x, x.y, x.z);
 const velocity = (s, p) => v(p).sub(s.com).cross(s.w).negate().add(s.v);
@@ -50,7 +50,7 @@ export function flowCandidate(D, O, SO, point, normal, impact, now) {
   if (O.flowSpentAttack === s.attackId) return no('already-paid');
   if (entry.attackId !== s.attackId) return no('new-command-in-bind');
   const age = now - entry.start;
-  const guard = D.parryGuard ? D.parryGuard.active && D.parryGuard.held && !D.parryGuard.broken : st.ai?.mode === 'defend' && !st.ai.defVoid;
+  const guard = D.parryGuard ? D.parryGuard.active && D.parryGuard.held && !D.parryGuard.broken : aiFlowReady(st.ai);
   if (!guard) return no('not-guarding');
   if (!entry.eligible) return no('entry-path', { entry: { ...entry } });
   if (age < -1e-9 || age > FLOW_REDESIGN.window + 1e-9) return no('window-expired', { age });
@@ -73,6 +73,24 @@ export function flowCandidate(D, O, SO, point, normal, impact, now) {
   if (!(impact > 0)) return no('no-current-approach');
   D.flowCheck = { time: now, attackId: s.attackId, reason: 'eligible', age, gain, sideGain };
   return { direction, entry, age, gain, sideGain, height, impact: Math.min(entry.impact, impact) };
+}
+
+/**
+ * AI 가 흘려 받기를 노리는 자세인가 (사장님 10/18 23:4x '일본 ai도 흘리게 해 · 숙련도 높을수록 유파 고유 특성을 더 적극적으로' — config AI_PROFICIENCY.flowReady):
+ *  막는 중('defend' · 헛막기 아님)은 늘 · 간 보기('watch' — 겨눈 칼로 받음)는 숙련도 flowReady.watch 부터 · 물러남('withdraw')은 flowReady.withdraw 부터 · 공격 중은 아님.
+ *  흘림이 실제로 되는지는 그 뒤 기하(들어오는 칼 · 몸 바깥으로 빠지나)가 정한다 — 여기는 '받을 마음'만
+ */
+export function aiFlowReady(ai) {
+  if (!ai) return false;
+  if (ai.mode === 'defend') return !ai.defVoid;
+  const prof = ai.proficiency ?? AI_PROFICIENCY.ofLevel.normal, R = AI_PROFICIENCY.flowReady;
+  return (ai.mode === 'watch' && prof >= R.watch) || (ai.mode === 'withdraw' && prof >= R.withdraw);
+}
+
+/** 흘린 공격의 피해 감소 몫 (config FLOW_REDESIGN.flowDmgCut — combat.js analyze): 받는 쪽(vic)이 칼 주인(att)의 지금 공격 번호를 흘렸으면 1 − 몫, 아니면 1 */
+export function flowShieldKeep(vic, att) {
+  const fs = vic?.flowShield;
+  return FLOW_REDESIGN.flowDmgCut > 0 && fs && fs.from === att && fs.attackId && fs.attackId === att?.stamina?.attackId ? 1 - FLOW_REDESIGN.flowDmgCut : 1;
 }
 
 /** 흘림당한 쪽(O) 기력 청구 — 공격 번호 하나에 한 번(같은 공격의 재접촉 · 다른 방어자를 만난 재접촉도 다시 안 냄) · 바닥(탈진 문턱)에 닿으면 덜 깎일 수 있음 · 기력 무한 장비는 청구 없음(stamina.spend) */

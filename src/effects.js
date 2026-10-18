@@ -76,6 +76,21 @@ export class Particles {
     }
   }
 
+  /**
+   * 흘려 받기(우케나가시) 불꽃 줄 (사장님 10/18 23:4x '흘림을 보이고 들리게'): 맞닿은 자리에서 받은 칼이 미끄러진 쪽(dir — combat.js lastNagashi.dir, 받는 칼 코등이 → 칼끝)으로
+   *  길이 len(m)만큼 불꽃을 줄지어 흩뿌린다 — 보통 부딪힘(sparks)보다 길고 밝게, 미끄러진 방향을 따라 흐른다. 물리 · 판정과 무관(그림만)
+   */
+  flowSparks(point, dir, len = 0.32) {
+    const d = dir && dir.lengthSq() > 1e-8 ? dir.clone().normalize() : new THREE.Vector3(0, -1, 0);
+    const p = new THREE.Vector3();
+    for (let i = 0; i < 22; i++) {
+      const u = i / 21;
+      p.copy(point).addScaledVector(d, u * len);
+      const v = d.clone().multiplyScalar(3.5 + 4 * Math.random()).add(new THREE.Vector3((Math.random() - 0.5) * 1.6, Math.random() * 1.8, (Math.random() - 0.5) * 1.6));
+      this.add(p, v, i % 3 ? 0xffe2a0 : 0xfff4d6, 0.013 + Math.random() * 0.012, 0.3 + 0.35 * Math.random() + 0.2 * (1 - u), false);
+    }
+  }
+
   add(p, v, color, size, life, sticks) {
     if (this.list.length >= MAX) this.list.shift();
     this.list.push({ p: p.clone(), v, color: new THREE.Color(color), size, life, sticks, stuck: false });

@@ -5,8 +5,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2 } from 'three';
 import { Stamina } from '../../src/stamina.js';
-import { STAMINA, SKILL } from '../../src/config.js';
-import { FLOW_REDESIGN, spendFlowPenalty } from '../../src/nagashi_redesign.js';
+import { STAMINA, SKILL, AI_PROFICIENCY } from '../../src/config.js';
+import { FLOW_REDESIGN, spendFlowPenalty, aiFlowReady, flowShieldKeep } from '../../src/nagashi_redesign.js';
 import { FLOW_RECOVERY, beginFlowRecovery, flowRecoveryScale } from '../../src/nagashi_recovery.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 const near = (a, b, e = 1e-7) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
@@ -58,4 +58,29 @@ test('막는 동안 피해 감소: 일본 · 이베리아 × 0.8 · 동방 × 0.
   for (const t of ['german', 'italian', 'none', undefined]) near(keep(t), 1);
   near(keep('japanese', { mode: 'idle' }), 1); near(keep('iberian', { schoolParry: false }), 1);
   const was = { ...SKILL }; try { SKILL.jpParryDmgCut = 0; SKILL.ibParryDmgCut = 0; near(keep('japanese'), 1); near(keep('iberian'), 1); near(keep('chinese'), 0.5); } finally { SKILL.jpParryDmgCut = was.jpParryDmgCut; SKILL.ibParryDmgCut = was.ibParryDmgCut; }
+});
+
+test('흘린 공격의 피해 감소 0.8 (사장님 10/18 23:4x): 흘린 그 공격 번호만 × 0.2 · 다른 칼 주인 · 새 공격 · 표시 없음 = 1 · 끄면 1', () => {
+  assert.equal(FLOW_REDESIGN.flowDmgCut, 0.8);
+  const O = actor({ index: 1 }), D = actor(), X = actor({ index: 2 });
+  O.stamina.attack(); D.flowShield = { from: O, attackId: O.stamina.attackId };
+  near(flowShieldKeep(D, O), 0.2); near(flowShieldKeep(D, X), 1); near(flowShieldKeep(actor(), O), 1);
+  O.stamina.attack(); near(flowShieldKeep(D, O), 1); // 다음 공격(새 번호)
+  D.flowShield = { from: O, attackId: O.stamina.attackId };
+  const was = FLOW_REDESIGN.flowDmgCut; try { FLOW_REDESIGN.flowDmgCut = 0; near(flowShieldKeep(D, O), 1); } finally { FLOW_REDESIGN.flowDmgCut = was; }
+});
+
+test('일본 AI 흘림 자세 (사장님 10/18 23:4x): 막는 중은 늘 · 간 보기는 숙련도 2 부터 · 물러남은 4 부터 · 공격 중 · 헛막기는 아님', () => {
+  const R = AI_PROFICIENCY.flowReady; assert.deepEqual(R, { watch: 2, withdraw: 4 });
+  for (const p of [0, 1, 2, 3, 4, 5]) {
+    assert.equal(aiFlowReady({ mode: 'defend', proficiency: p }), true); assert.equal(aiFlowReady({ mode: 'defend', defVoid: true, proficiency: p }), false);
+    assert.equal(aiFlowReady({ mode: 'watch', proficiency: p }), p >= 2); assert.equal(aiFlowReady({ mode: 'withdraw', proficiency: p }), p >= 4);
+    assert.equal(aiFlowReady({ mode: 'attack', proficiency: p }), false);
+  }
+  assert.equal(aiFlowReady(null), false); assert.equal(aiFlowReady({ mode: 'watch' }), true); // 숙련도 없는 AI = 기본 2
+});
+
+test('숙련도별 유파 고유 특성 배율 (사장님 10/18 23:4x): 숙련도 2 = 1(그대로) · 숙련도가 오를수록 커짐', () => {
+  const K = AI_PROFICIENCY.schoolK; assert.equal(K.length, AI_PROFICIENCY.max + 1); assert.equal(K[2], 1);
+  for (let i = 1; i < K.length; i++) assert.ok(K[i] > K[i - 1], `${i}`);
 });

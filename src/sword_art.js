@@ -34,7 +34,7 @@
 //   그래서 인물 없는 기본 AI 가 모노호시자오를 쥐면 독일 꾸러미 위에 일본 가중치가 얹힌다(꾸러미는 오늘 그대로 독일 — 그것은 바꾸지 않았다, 사장님 확인 전).
 //   이름 덮기는 스위치와 상관없이 늘 한다(HUD 만)
 // ─────────────────────────────────────────────────────────────
-import { SKILL } from './config.js';
+import { SKILL, AI_PROFICIENCY } from './config.js';
 import { GUARDS, guardBaseOne, guardBaseTwo, applySchoolGuardTable } from './guards.js';
 import { classifyStyle } from './weapon_class.js';
 import { G, TECH, WATCH_GUARDS } from './ai_techniques.js';
@@ -118,7 +118,10 @@ function applySchoolArt(school, tradition, frame, style, prof = null) {
   }
   const uqAll = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false) : [];
   const stage = prof == null ? null : aiUniqueStages(tradition).unique;
-  const uq = stage ? uqAll.filter((u) => !stage.has(u.name) || stage.get(u.name) <= prof) : uqAll; // 숙련도 거르기 (10/13)
+  const uqOpen = stage ? uqAll.filter((u) => !stage.has(u.name) || stage.get(u.name) <= prof) : uqAll; // 숙련도 거르기 (10/13)
+  // 숙련도가 높을수록 고유 동작(길)을 더 자주 고른다 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK: 가중치 base × k · 숙련도 2 · 플레이어 · 도구(prof null) = 그대로)
+  const kq = prof == null ? 1 : AI_PROFICIENCY.schoolK?.[prof] ?? 1;
+  const uq = kq === 1 ? uqOpen : uqOpen.map((u) => (!u.feint && !u.counter && u.base != null ? { ...u, base: u.base * kq } : u));
   if (uq.length) out = mergeUnique(out, uq.filter((u) => !u.counter)); // 고유 동작(길·속임수) — 맞받아치기 꼴은 유파 counterArt 뒤에
   const C = SCHOOL_ART.counter ? T.counterArt : null;
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };

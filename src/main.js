@@ -122,6 +122,7 @@ if (+params.get('cnBrace') > 0) CONFIG.SKILL.cnBraceK = +params.get('cnBrace'); 
 if (params.has('cnParryCut') && +params.get('cnParryCut') >= 0 && +params.get('cnParryCut') <= 1) CONFIG.SKILL.cnParryDmgCut = +params.get('cnParryCut'); // 동방 막는 동안 피해 감소(10/17 — 판 값 0.5, 사장님 22:1x 결정): `?cnParryCut=0` = 끔 · `?cnParryCut=0.25` = 막는 중 입는 칼날 상처 심각도 × 0.75 (몫이라 0~1 만 읽음)
 // 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.36 s · 흘림당한 쪽 기력 40 · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
 if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0'; // `?flowJudge=0` = 옛 흘림 판정(내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
+if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.8) — `?flowDmgCut=0` = 끔
 if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
 if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm') <= 2) FLOW_RECOVERY.seconds = +params.get('flowArm'); // `?flowArm=0` = 팔 늦춤 끔 · `?flowArm=0.18` = 0.18 s
 if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
@@ -828,6 +829,16 @@ function onWound(att, vic, r, point, pr) {
 
 function onClash(point, speed, touch) {
   if (touch?.fresh && touch.vn > 3 && player?.alive && player.tipVel.length() > 6) playerEv.parried = true; // 감정 사건: 내 베기가 막혔다
+  // 흘려 받기(우케나가시 — combat.js nagashi) 한 번 (사장님 10/18 23:4x '흘림을 보이고 들리게. 지친 표시는 X'): 긴 "스르르릉" · 미끄러진 쪽으로 흐르는 불꽃 줄 · 짧은 멈칫.
+  //  사람 · AI 누가 흘려도 같다. 보통 부딪힘 연출(아래)은 이 순간 건너뛴다 — 흘림은 '쨍' 대신 미끄러짐으로 읽히게
+  if (touch?.nagashi) {
+    sound.flow(Math.max(touch.vn ?? 0, 3));
+    particles.flowSparks(point, combat?.lastNagashi?.dir);
+    hitStop = Math.max(hitStop, 0.035);
+    clashCooldown = Math.max(clashCooldown, 0.12);
+    haptic(0.5);
+    return;
+  }
   // 소리: 새로 부딪힌 순간(또는 맞댄 채 다시 세게 친 순간)에만 "쨍". 맞댄 채 미끄러지는 동안은 긁히는 소리(updateBindSound)
   //  touch.vn = 부딪히기 직전 맞닿는 방향 속도(부딪히는 세기), touch.vt = 칼날을 따라 스치는 속도 (combat.js bladeClash)
   if (touch && (touch.fresh || touch.vn > 3)) {

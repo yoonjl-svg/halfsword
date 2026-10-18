@@ -2092,6 +2092,22 @@ export class Sound {
     if (glance > 0) this.shing(ev, glance, slide);
   }
 
+  /**
+   * 흘려 받기(우케나가시) 한 번 — 받은 칼이 칼을 타고 미끄러지는 긴 "스르르릉" (사장님 10/18 23:4x '흘림을 보이고 들리게' · main.js onClash 의 touch.nagashi).
+   *  보통 부딪힘의 스치는 소리(shing)를 낮고 길게 두 겹 + 녹음 미끄럼 · 짧은 둔탁한 맞닿음 — 보통 "쨍"보다 길고 미끄러지는 소리로 들리게
+   */
+  flow(impact = 3) {
+    if (!this._on || !this.ctx) return;
+    const x = clamp01((impact - 0.3) / 7.5);
+    const ev = this.event({ bus: this.metalBus, gain: 0.6 + 0.3 * x, bright: 0, prio: 3 });
+    this.layer(ev, this.pick('clashSoft'), { gain: 0.45, rate: between(Math.random, 0.95, 1.02), dur: 0.3 });
+    this.layer(ev, this.pick('shing'), { gain: 1, rate: 0.7, delay: 0.004 });
+    this.layer(ev, this.pick('shing'), { gain: 0.65, rate: 0.9, delay: 0.06 });
+    const rec = this.pickSample('slide');
+    if (rec) this.layer(ev, rec, { gain: 0.85, rate: 0.8, delay: 0.01 });
+    this._lastClash = { t: this.ctx.currentTime, x: 1 }; // 같은 순간 보통 "쨍"이 겹쳐 덮지 않게
+  }
+
   /** 스치는 "스르릉" 한 번 (clash 가 부른다) */
   shing(ev, amount, slide) {
     const rate = 0.85 + 0.25 * clamp01(slide / 10);

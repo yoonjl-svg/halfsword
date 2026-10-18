@@ -23,7 +23,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
-import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty } from './nagashi_redesign.js';
+import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
 import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
@@ -346,6 +346,10 @@ export class Combat {
       }
     }
     if (type === 'blunt') energy *= power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
+    // 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여' — config FLOW_REDESIGN.flowDmgCut): 받는 쪽이 이 칼 주인의 지금 공격(번호)을 흘렸으면
+    //  그 공격의 칼날 상처 심각도 · 둔타 에너지 × (1 − flowDmgCut). 새 공격(번호가 바뀜)부터는 그대로 · 물리(충격 · 가르나 튕기나)는 그대로
+    const keepFlow = flowShieldKeep(pr.v.fighter, att);
+    if (keepFlow !== 1) { if (type === 'blunt') energy *= keepFlow; else severity *= keepFlow; }
     return {
       type,
       zone,
@@ -623,6 +627,7 @@ export class Combat {
       // 흘림당한 쪽(O) 팔 늦춤 · 기력 청구 — 판정과 따로 켜고 끈다 (nagashi_recovery.js · nagashi_redesign.js — 끄면 옛 판과 같음)
       const recovery = Jt > 0 && beginFlowRecovery(O, D);
       const penalty = spendFlowPenalty(O, D);
+      D.flowShield = { from: O, attackId: O.stamina?.attackId ?? 0 }; // 흘린 공격의 피해 감소 표시 (analyze — FLOW_REDESIGN.flowDmgCut)
       this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(), recovery, penalty };
       return D;
     }
@@ -651,6 +656,7 @@ export class Combat {
       D.sword.applyImpulseAtPoint({ x: -dir.x * Jt, y: -dir.y * Jt, z: -dir.z * Jt }, vp(onAxis(D.sword)), true);
       const recovery = beginFlowRecovery(O, D);
       const penalty = spendFlowPenalty(O, D);
+      D.flowShield = { from: O, attackId: O.stamina?.attackId ?? 0 }; // 흘린 공격의 피해 감소 표시 (analyze — FLOW_REDESIGN.flowDmgCut)
       this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(),
         recovery, redesign: true, penalty, age: candidate.age,
         entry: candidate.entry, exitGain: candidate.gain };

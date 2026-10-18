@@ -1892,3 +1892,12 @@
 | 2089 | 일본 · 이베리아 막는 동안 피해 감소 **0.2**(칼날 상처 심각도 × 0.8 · 막기 단추로 막는 중 · 사람만) · 동방 0.5 그대로 | src/config.js SKILL.jpParryDmgCut · ibParryDmgCut · src/parry_button.js woundKeep | 사장님 22:1x '일본과 이베리아도 막기 중 피해 20% 감소 부여' | 묶음에서 사지 손실 0.85 → 0.72 (감소 뺀 판 대비) | **사장님 결정** | adopt §1 |
 | 2090 | 미나미 프로필 = 샛별 마지막 판 `a0eb17a1` `minami/low.png`(= 마지막 시안 option2) | art/portraits-px-20261018/minami.png · public/ui/portraits/minami.webp | 사장님 22:1x '미나미 눈 모양은 맨 마지막에 만든 작품이 최종' | — | **사장님 결정** | import portraits_px §5 |
 | 2091 | 흘림 판정의 공격 끝 = **실제 칼 기하**(공격 번호 시간이 지나도 들어오는 칼이 2085 기하를 넘으면 봄 · 기력은 공격 번호 하나에 한 번 그대로) | src/config.js FLOW_REDESIGN.threatEnd · src/nagashi_redesign.js | 사장님 22:1x 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편' — 감독 측정(닿은 공격 중 흘림 안 된 까닭 1 위 39 % = 공격 번호 시간 끝) | 144 조건 흘림 129 → 174 · 사지 −0.03(우연 범위) | **감독 적용 (사장님 3 의 위임 — 사장님 확인 전)** · `?flowEnd=timer` = 끔 | adopt §1 · §4-0 |
+
+### 흘림 2차 — 소리 · 불꽃 · 흘린 공격 피해 80 % · 일본 AI 흘림 · 숙련도별 유파 특성 (10/18 23:4x 사장님 — docs/strike/flow_round2_2026-10-19.md)
+
+| 번호 | 값 | 어디 | 근거 | 측정 | 상태 | 문서 |
+|---|---|---|---|---|---|---|
+| 2092 | 흘린 공격의 피해 감소 **0.8**(흘린 그 공격 번호의 칼날 상처 심각도 · 둔타 에너지 × 0.2 · 사람 · AI 같게) | src/config.js FLOW_REDESIGN.flowDmgCut · src/nagashi_redesign.js flowShieldKeep · src/combat.js analyze | 사장님 23:4x '흘린 공격의 피해 80% 줄여' | — | **사장님 결정** · `?flowDmgCut=0` = 끔 | round2 §1 |
+| 2093 | 흘림 소리(`sound.flow` — 스치는 소리 둘 rate 0.7 · 0.9 · 녹음 미끄럼 0.8 · 둔탁 0.45) · 불꽃 줄(32 cm · 22 알 · 수명 0.3 ~ 0.85 s) · 멈칫 0.035 s · 진동 0.5 · 그 순간 보통 '쨍' 건너뜀 · 지친 표시 없음 | src/sound.js flow · src/effects.js flowSparks · src/main.js onClash | 사장님 23:4x '흘림을 보이고 들리게 해. 지친 표시는 X' | — | 화면 · 소리 값 — 사장님 확인 전(손맛) | round2 §1 |
+| 2094 | 일본 AI 흘림 자세 — 막는 중 늘 · 간 보기 숙련도 **2** 부터 · 물러남 **4** 부터 | src/config.js AI_PROFICIENCY.flowReady · src/nagashi_redesign.js aiFlowReady | 사장님 23:4x '일본 ai도 흘리게 해' · '숙련도 높을수록 … 더 적극적으로' — 문턱 둘은 감독 안 | AI 끼리 36 판 흘림: 숙련도 1 · 3 · 5 = 1 · 2 · 15 (전 1) | **사장님 확인 전** | round2 §3 |
+| 2095 | 숙련도별 유파 고유 특성 배율 `schoolK` = [0.7, 0.85, **1**, 1.15, 1.3, 1.45] — 패시브 고유 동작 확률 · 고유 동작(길) 가중치에 곱함(숙련도 2 = 그대로 · 확률 1 넘지 않음) | src/config.js AI_PROFICIENCY.schoolK · src/ai.js passiveRoll · src/sword_art.js applySchoolArt | 사장님 23:4x '높을 수록 유파 고유 특성을 더 적극적으로 활용하게 해' — 값은 감독 안(숙련도 하나에 ±0.15) | 관문(숙련도 2) 그대로 | **사장님 확인 전** | round2 §1 |

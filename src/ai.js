@@ -2371,7 +2371,9 @@ export class AI {
   passiveRoll(P) {
     const R = (this.stats.passiveRolls ??= {});
     R[P.name] = (R[P.name] ?? 0) + 1;
-    return Math.random() < P.p * (0.5 + 0.5 * this.level.read);
+    // 숙련도가 높을수록 유파 고유 특성을 더 적극적으로 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK, 숙련도 2 = 1 · 1 을 넘으면 1)
+    const k = AI_PROFICIENCY.schoolK?.[this.proficiency] ?? 1;
+    return Math.random() < (k === 1 ? P.p * (0.5 + 0.5 * this.level.read) : Math.min(1, P.p * (0.5 + 0.5 * this.level.read) * k));
   }
 
   /** 낸 수를 센다 */
