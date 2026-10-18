@@ -53,6 +53,26 @@ export const TIER_DEFAULTS = {
   mystery: { power: 1.0, durability: 0.8 },
 };
 /** 카드에 쓰는 등급 이름 (main.js TIER_KO 대신 이것을 쓰면 ??? 도 나온다) */
+// 대기실 아이템 창 스펙 (사장님 10/19 02:0x '무기는 대기실 아이템 창에서만 스펙 병기 — 설명 뒤에 한 칸 띄고 (무기 종류, 길이, 무게)').
+//  길이 · 무게는 몸체 자료(buildParts — 물리와 같은 수)에서 셈: 길이 = 부품 끝에서 끝 · 무게 = 부품 질량 합
+const KIND_KO = {
+  longsword: '양손검', zweihander: '대형 양손검', estoc: '찌르기검', sabre: '한손 곡도', rapier: '한손 찌르기검', falchion: '한손 외날검',
+  monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '빛의 칼',
+  tree_branch: '나뭇가지', rubber_chicken: '장난감', frozen_tuna: '생선', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
+  moye: '한손 양날검', sain: '한손 양날검', ice: '대형 양손검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손검',
+};
+/** '종류, 길이 cm, 무게 kg' (예: '한손 양날검, 95 cm, 0.95 kg') — 자료가 없으면 '' */
+export function weaponSpecText(spec) {
+  let parts;
+  try { parts = spec?.buildParts?.({}) ?? []; } catch { return ''; }
+  if (!parts.length) return '';
+  const ext = (sh) => (sh[0] === 'box' ? sh[2] : sh[1]);
+  const lo = Math.min(...parts.map((q) => q[1] - ext(q[0])));
+  const hi = Math.max(...parts.map((q) => q[1] + ext(q[0])));
+  const kg = parts.reduce((a, q) => a + q[2][0], 0);
+  const kind = KIND_KO[spec.id] ?? (spec.grip === 'two-hand' ? '양손 무기' : '한손 무기');
+  return `${kind}, ${Math.round((hi - lo) * 100)} cm, ${String(+kg.toFixed(2))} kg`;
+}
 export const TIER_LABEL = { trash: '쓰레기', common: '커먼', rare: '레어', epic: '에픽', legend: '레전드', mystery: '???' };
 
 // ── 무기 카드 뽑기 확률 (사장님 결정): 등급을 먼저 뽑고, 그 등급 안에서 무기를 고르게 뽑는다 ──
@@ -708,7 +728,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   ability: '제비 베기: 출혈',
   // 동작 라이브러리(motion_library.js, 기본 꺼짐)의 앞무게 자세표에서 상단(上段)은 쓰지 않는다: 긴 자루·앞무게 칼이 칼끝을 뒤로 눕힌
   //  상단에서 빠르게 내리면 날이 서지 않는다(날 세움 0~0.7) → 실제 싸움 48판 31% (상단 빼면 46%, 라이브러리 끔 50%). 지붕 자세 그대로
-  motionSkip: ['지붕 (Vom Tag)'],
+  motionSkip: ['지붕 (폼 타크)'],
   bleedMult: 2, // 에픽 특수 능력 '제비 베기: 출혈' (사장님 b안): 이 칼에 베이고 찔린 상처의 출혈 ×2 (롱소드 상대 ×1 38% · ×1.5 44% · ×2 50%, 48판씩 — 에픽 폭 45~65% 안)
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
   mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)

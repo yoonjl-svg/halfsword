@@ -75,6 +75,20 @@ const BOOK_TEXT = {
   ],
 };
 const short = (t) => String(t ?? '').replace(/\s*[(·].*$/, '');
+// 원어 (사장님 10/19 02:0x '대기실 스킬북에서만 원어 병기') — 책 이름의 원어. 기술 이름은 '뜻 (독음 · 원어)' (bookLabel)
+const BOOK_ORIG = {
+  german: ['Liechtenauer', 'Meyer', 'Ringeck', 'Indes'],
+  italian: ['Capo Ferro', 'Giganti', 'Fabris', 'cavazione'],
+  iberian: ['Figueiredo', 'Godinho', 'montante', null],
+  japanese: ['日本剣道形', '五輪書', '倭劍', '残心'],
+  chinese: ['朝鮮勢法', '武藝圖譜通志', '銳刀', '劍訣歌'],
+};
+/** 스킬북 기술 이름: '뜻 (독음)' + 원어 → '뜻 (독음 · 원어)'. 원어가 없으면 그대로 */
+export function bookLabel(nameKo, orig) {
+  const m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(nameKo ?? '');
+  if (!orig) return nameKo ?? '';
+  return m ? `${m[1]} (${m[2]} · ${orig})` : `${nameKo} (${orig})`;
+}
 // 효과 한 줄 — 지금 게임에 있는 그 유파 몫 (docs/strike/school_kit_map.md §2 · 공지 글과 같은 말)
 const FOOTWORK_TEXT = {
   german: '뒤로 박차 빠지고, 헛친 상대와 거리를 잰다',
@@ -113,11 +127,13 @@ export function bookOf(school, tier) {
   if (!T || !B || !text) return null;
   const name = text[0] ?? short(T.secret?.nameKo);
   const book = { id: bookId(school, tier), school, schoolKo: T.nameKo, tier, kind: B.kind, label: B.label, rarity: B.rarity, rarityKo: BOOK_RARITY_LABEL[B.rarity], price: B.price, name, title: `${B.label}: ${name}`, source: text[1] };
+  const reading = /\(([^()]*)\)/.exec(T.secret?.nameKo ?? '')?.[1];
+  book.orig = B.kind === 'secret' ? [reading, T.secret?.orig].filter(Boolean).join(' · ') || null : BOOK_ORIG[school]?.[tier - 1] ?? null; // 스킬북에서만 원어
   if (B.kind === 'footwork') book.effect = FOOTWORK_TEXT[school];
   else if (B.kind === 'parry') book.effect = PARRY_TEXT[school];
   else if (B.kind === 'unique') {
     book.effect = '고유 공격 넷을 쓸 수 있다';
-    book.list = (PLAYER_UNIQUE[school] ?? []).map((e) => uniqueDef(school, e)?.nameKo).filter(Boolean);
+    book.list = (PLAYER_UNIQUE[school] ?? []).map((e) => { const u = uniqueDef(school, e); return u?.nameKo ? bookLabel(u.nameKo, u.orig) : null; }).filter(Boolean); // '뜻 (독음 · 원어)'
     book.provisional = true; // 사장님 04:0x '나중에 바꿔도 되니까' — 고유자세 한 가지로 바꿀 때까지 임시
   } else if (B.kind === 'passive') {
     book.effect = '준비 중';

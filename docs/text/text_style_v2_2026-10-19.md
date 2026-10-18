@@ -6,6 +6,8 @@
 
 ## 1. 원칙
 
+> **3차(10/19 02:0x, §6)로 바뀜**: 괄호 안은 모든 유파 **한글 소리(독음)** — 원어 글자(Zornhau · 腰擊 · 小手)는 **대기실 스킬북에서만**. 무기 스펙(종류 · 길이 · 무게)은 **대기실 아이템 창에서만** 설명 뒤에. 아래 1 · 2 의 '원어 철자 · (漢字 독음)' 꼴은 옛 판.
+
 1. **이름 = "뜻 (원어)" — 모든 유파.** 화면은 괄호 앞을 큰 줄, 괄호 안을 작은 줄로 그린다(`src/main.js` `splitName`). 흐름 중에 뜨는 이름을 바로 알아듣게 하고, 원어의 맛은 작은 줄이 지킨다.
    - 서양(독일 · 이탈리아 · 이베리아): 원어 철자 — 굽은 베기 (Krumphau) · 위에서 내려 찌르기 (imbroccata) · 돌며 베기 (talho rodeado)
    - 일본: 일본 소리를 한글로 — 손목 치기 (코테) · 흘려 받기 (우케나가시) · 뒤에서 앞서기 (고노센). 한자 · 가나는 쓰지 않는다(10/10 방침을 작은 줄로 옮김)
@@ -365,3 +367,211 @@
 | src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 어거 (御車) 손 깎기 | 손 깎기 (御車 어거) |
 | src/schools.js TECH_NAMES | 공용 기술 이름(화면에 안 뜸) | 살화개정 (撒花蓋頂) | 꽃 뿌려 머리 덮기 (撒花蓋頂 살화개정) |
 | src/schools.js CHINESE_SECRET (옛 판) | 비기(숨은 판) | 옛 연환삼격 (첫 칼이 맞으면 잇는 판) · 가칭 | 첫 칼 이어 치기 (連環三擊 연환삼격) |
+
+## 6. 3차 — 모든 유파 한글 소리 · 원어는 스킬북에서만 · 무기 스펙은 아이템 창에서만 (사장님 10/19 02:0x)
+
+- 원문: "일본어처럼 다른 유파도 모두 독음 방식으로 바꾸자. 대기실 스킬북애서만 원어 병기. 무기는 대기실 아이탬 창에서만 스펙 병기. 원래 정해진 설명 뒤에 한 칸 띄고 (무기 종류(예를 들어 한손검, 길이, 무기)"
+- 이름 = **'뜻 (한글 소리)'** — 모든 유파. 서양은 원어 발음을 한글로(외래어 표기 — 독일 Zornhau → 초른하우 · 이탈리아 imbroccata → 임브로카타 · 포르투갈 talho → 탈류), 동방은 한국 한자음(腰擊 → 요격), 일본은 그대로(코테). 싸움 화면 · 자세 칸 · 기술 칸 어디에도 원어 글자가 없다.
+- **원어는 대기실 스킬북에서만**: 책 제목 '보법: 리히테나워 (Liechtenauer)' · 비기 '비기: 받아 베기 (페어제첸 · Versetzen)' · 고유 공격 목록 '굽은 베기 (크룸프하우 · Krumphau)' · 일본은 원어 글자 그대로(뒤에서 앞서기 (고노센 · 後の先)). 원어는 자료의 `orig` 칸(고유 동작 · 패시브 · 비기 · 사람 고유 동작 표)과 `src/skill_books.js` `BOOK_ORIG` 에 있고 `bookLabel` 이 붙인다. 표기 검사기는 `orig` 를 읽지 않는다(스킬북 전용).
+- **무기 스펙은 대기실 아이템 창에서만**: 설명 뒤에 한 칸 띄고 '(종류, 길이, 무게)' — 예 '… (한손 양날검, 95 cm, 0.95 kg)'. 길이 · 무게는 몸체 자료(`buildParts` — 물리와 같은 수)에서 셈(`src/weapons.js` `weaponSpecText` · 종류 이름 `KIND_KO`). 카드 뽑기 · 싸움 화면에는 없다. 사장님이 쓴 설명도 설명은 그대로, 뒤에 스펙만.
+- 코드: 기본 자세 이름(열쇠 12)은 따옴표째 같은 글만 저장소 전체에서 바꿈 · 레이피어 손 돌림(`src/hands.js`)은 이름 속 '프리마 · 세콘다 · 테르차 · 콰르타' 를 읽음. 인물 대사 · 출처(src · cite) · 연구 도구 글은 그대로.
+- 남긴 것: 자루 무기 초안 표(`frames.js` POLE_GUARDS — 화면에 안 나옴)의 독일 이름.
+
+| 자리 (처음 나온 곳) | 전 | 후 |
+|---|---|---|
+| `src/frames.js:72` | 지붕 (Vom Tag) | 지붕 (폼 타크) |
+| `src/frames.js:73` | 어깨 지붕 (Vom Tag) | 어깨 지붕 (폼 타크) |
+| `src/frames.js:74` | 왼 어깨 지붕 (Vom Tag) | 왼 어깨 지붕 (폼 타크) |
+| `src/frames.js:78` | 긴 자세 (Langort) | 긴 자세 (랑오르트) |
+| `src/frames.js:79` | 옆 지킴 (Nebenhut) | 옆 지킴 (네벤후트) |
+| `src/frames.js:85` | 3번 자세 (Terza) | 3번 자세 (테르차) |
+| `src/frames.js:86` | 쟁기 (Pflug) | 쟁기 (플루크) |
+| `src/frames.js:86` | 바깥 막기 (Seconda) | 바깥 막기 (세콘다) |
+| `src/frames.js:88` | 왼 쟁기 (Pflug) | 왼 쟁기 (플루크) |
+| `src/frames.js:88` | 안쪽 막기 (Quarta) | 안쪽 막기 (콰르타) |
+| `src/frames.js:107` | 2번 자세 (Seconda) | 2번 자세 (세콘다) |
+| `src/frames.js:118` | 머리 막기 (St. George) | 머리 막기 (세인트 조지) |
+| `src/frames.js:119` | 걸친 막기 (Hanging guard) | 걸친 막기 (행잉 가드) |
+| `src/frames.js:128` | 황소 (Ochs) | 황소 (옥스) |
+| `src/frames.js:149` | 바보 (Alber) | 바보 (알버) |
+| `src/frames.js:151` | 왼 바꿈 (Wechsel) | 왼 바꿈 (베크셀) |
+| `src/guards.js:33` | 바꿈 (Wechsel) | 바꿈 (베크셀) |
+| `src/guards.js:38` | 왼 황소 (Ochs) | 왼 황소 (옥스) |
+| `src/hands.js:29` | Prima | 프리마 |
+| `src/hands.js:30` | Seconda | 세콘다 |
+| `src/hands.js:31` | Terza | 테르차 |
+| `src/hands.js:32` | Quarta | 콰르타 |
+| `src/schools.js:205` |  | 燕返し |
+| `src/schools.js:207` |  | 小手 |
+| `src/schools.js:210` |  | 跨虎 |
+| `src/schools.js:214` |  | 開き斬り |
+| `src/schools.js:218` |  | 表五 |
+| `src/schools.js:225` | 표범 머리 (豹頭勢 표두세) | 표범 머리 (표두세) |
+| `src/schools.js:226` | 오른 날개 (右翼勢 우익세) | 오른 날개 (우익세) |
+| `src/schools.js:227` | 턱밑 비늘 (逆鱗勢 역린세) | 턱밑 비늘 (역린세) |
+| `src/schools.js:228` | 곧게 보내기 (直符送書 직부송서) | 곧게 보내기 (직부송서) |
+| `src/schools.js:229` | 허리 베기 (腰擊勢 요격세) | 허리 베기 (요격세) |
+| `src/schools.js:230` | 배 겨눔 (坦腹勢 탄복세) | 배 겨눔 (탄복세) |
+| `src/schools.js:231` | 걷어 올리기 (撩掠勢 요략세) | 걷어 올리기 (요략세) |
+| `src/schools.js:232` | 지켜보기 (看守勢 간수세) | 지켜보기 (간수세) |
+| `src/schools.js:233` | 점 찍기 (點劍勢 점검세) | 점 찍기 (점검세) |
+| `src/schools.js:234` | 왼 날개 (左翼勢 좌익세) | 왼 날개 (좌익세) |
+| `src/schools.js:235` | 봉황 머리 (鳳頭勢 봉두세) | 봉황 머리 (봉두세) |
+| `src/schools.js:236` | 왼 허리 베기 (腰擊勢 요격세) | 왼 허리 베기 (요격세) |
+| `src/schools.js:237` | 왼 끼기 (左夾勢 좌협세) | 왼 끼기 (좌협세) |
+| `src/schools.js:238` | 왼 걸치기 (跨左勢 과좌세) | 왼 걸치기 (과좌세) |
+| `src/schools.js:246` | 머리 위 (altibaxo) | 머리 위 (알티바슈) |
+| `src/schools.js:247` | 오른 베기 준비 (talho) | 오른 베기 준비 (탈류) |
+| `src/schools.js:248` | 귀 앞 겨눔 (orelha direyta) | 귀 앞 겨눔 (오렐랴 디레이타) |
+| `src/schools.js:249` | 곧은 자세 (postura recta) | 곧은 자세 (포스투라 레타) |
+| `src/schools.js:250` | 오른 가로베기 (talho orizontal) | 오른 가로베기 (탈류 오리존탈) |
+| `src/schools.js:251` | 비낀 자세 (postura obtusa) | 비낀 자세 (포스투라 옵투자) |
+| `src/schools.js:252` | 오른 올려베기 (talho de baxo) | 오른 올려베기 (탈류 드 바슈) |
+| `src/schools.js:253` | 뒤에서 오른 베기 (talho por detras) | 뒤에서 오른 베기 (탈류 포르 드트라스) |
+| `src/schools.js:254` | 칼끝 땅에 (ponta no chão) | 칼끝 땅에 (폰타 누 샹) |
+| `src/schools.js:255` | 왼 베기 준비 (revez) | 왼 베기 준비 (레베스) |
+| `src/schools.js:256` | 왼 높이 비낌 (linha obtusa) | 왼 높이 비낌 (리냐 옵투자) |
+| `src/schools.js:257` | 왼 가로베기 (revez orizontal) | 왼 가로베기 (레베스 오리존탈) |
+| `src/schools.js:258` | 왼 비낀 자세 (postura obtusa) | 왼 비낀 자세 (포스투라 옵투자) |
+| `src/schools.js:259` | 왼 올려베기 (revez de baxo) | 왼 올려베기 (레베스 드 바슈) |
+| `src/schools.js:264` | 망루 (Wacht) | 망루 (바흐트) |
+| `src/schools.js:265` | 분노 자세 (Zornhut) | 분노 자세 (초른후트) |
+| `src/schools.js:266` | 황소 (Stier) | 황소 (슈티어) |
+| `src/schools.js:268` | 가운데 지킴 (Mittelhut) | 가운데 지킴 (미텔후트) |
+| `src/schools.js:269` | 멧돼지 (Eber) | 멧돼지 (에버) |
+| `src/schools.js:272` | 보루 (Bastei) | 보루 (바스타이) |
+| `src/schools.js:273` | 왼 분노 자세 (Zornhut) | 왼 분노 자세 (초른후트) |
+| `src/schools.js:274` | 왼 황소 (Stier) | 왼 황소 (슈티어) |
+| `src/schools.js:275` | 왼 가운데 지킴 (Mittelhut) | 왼 가운데 지킴 (미텔후트) |
+| `src/schools.js:437` | 허리 베기 (腰擊 요격) | 허리 베기 (요격) · 腰擊 |
+| `src/schools.js:439` | 왼 날개 치기 (左翼擊 좌익격) | 왼 날개 치기 (좌익격) · 左翼擊 |
+| `src/schools.js:442` | 날개 접기 (斂翅 염시) | 날개 접기 (염시) |
+| `src/schools.js:445` | 끌어 딛고 허리 베기 (掣步腰擊 체보요격) | 끌어 딛고 허리 베기 (체보요격) · 掣步腰擊 |
+| `src/schools.js:458` | 굽은 베기 (Krumphau) | 굽은 베기 (크룸프하우) · Krumphau |
+| `src/schools.js:460` | 곁눈 베기 (Schielhau) | 곁눈 베기 (실하우) · Schielhau |
+| `src/schools.js:462` | 겹치기 (Duplieren) | 겹치기 (두플리렌) · Duplieren |
+| `src/schools.js:468` | 비껴 딛는 가로베기 (Zwerch mit Abtritt) | 비껴 딛는 가로베기 (츠베르히 미트 압트리트) · Zwerch mit Abtritt |
+| `src/schools.js:474` | 위에서 내려 찌르기 (imbroccata) | 위에서 내려 찌르기 (임브로카타) |
+| `src/schools.js:477` | 밑으로 들어가 찌르기 (passata sotto) | 밑으로 들어가 찌르기 (파사타 소토) · passata sotto |
+| `src/schools.js:479` | 칼끝 돌려 빼기 (cavazione) | 칼끝 돌려 빼기 (카바치오네) |
+| `src/schools.js:481` | 비껴서며 찌르기 (inquartata) | 비껴서며 찌르기 (인콰르타타) |
+| `src/schools.js:524` | 머리 위 돌려 베기 (redondo) | 머리 위 돌려 베기 (레돈두) |
+| `src/schools.js:526` | 위아래 베기 (altibaxo) | 위아래 베기 (알티바슈) · altibaxo |
+| `src/schools.js:533` | 번갈아 올려베기 (talho e revez de baxo) | 번갈아 올려베기 (탈류 이 레베스 드 바슈) · talho e revez de baxo |
+| `src/schools.js:534` | 돌며 베기 (talho rodeado) | 돌며 베기 (탈류 로데아두) · talho rodeado |
+| `src/schools.js:554` | 맞받기 (Indes) | 맞받기 (인데스) · Indes |
+| `src/schools.js:556` | 따라 들어가기 (Nachreisen) | 따라 들어가기 (나흐라이젠) · Nachreisen |
+| `src/schools.js:564` | 빼서 찌르기 (cavazione) | 빼서 찌르기 (카바치오네) |
+| `src/schools.js:570` | 베어서 막기 (talho) | 베어서 막기 (탈류) · talho |
+| `src/schools.js:586` |  | 残心 |
+| `src/schools.js:588` |  | 出鼻 |
+| `src/schools.js:590` |  | 返し |
+| `src/schools.js:596` | 찌르고 이어 베기 (刺→擊 자→격) | 찌르고 이어 베기 (자→격) · 刺→擊 |
+| `src/schools.js:612` | 받아 베기 (Versetzen) | 받아 베기 (페어제첸) · Versetzen |
+| `src/schools.js:623` | 엇박 찌르기 (passata in contratempo) | 엇박 찌르기 (파사타 인 콘트라템포) · passata in contratempo |
+| `src/schools.js:633` | 비켜 서며 크게 가로베기 (talho de través) | 비켜 서며 크게 가로베기 (탈류 드 트라베스) · talho de través |
+| `src/schools.js:656` | 멈추지 않는 흐름 (talho e revez) | 멈추지 않는 흐름 (탈류 이 레베스) · talho e revez |
+| `src/schools.js:713` |  | 後の先 |
+| `src/schools.js:738` | 첫 칼 이어 치기 (連環三擊 연환삼격) | 첫 칼 이어 치기 (연환삼격) · 連環三擊 |
+| `src/schools.js:749` | 걷어 올려 베기 (撩掠 요략) | 걷어 올려 베기 (요략) · 撩掠 |
+| `src/schools.js:750` | 배 찌르기 (坦腹刺 탄복자) | 배 찌르기 (탄복자) · 坦腹刺 |
+| `src/schools.js:801` | 당겨 허리 베기 (腰擊 요격) | 당겨 허리 베기 (요격) · 腰擊 |
+| `src/schools.js:802` | 목 찌르기 (逆鱗刺 역린자) | 목 찌르기 (역린자) · 逆鱗刺 |
+| `src/schools.js:837` | 찌르기 (刺 자) | 찌르기 (자) · 刺 |
+| `src/schools.js:838` | 끊어 베기 (剪 전) | 끊어 베기 (전) · 剪 |
+| `src/schools.js:856` | 내려 베기 (中殺 중살) | 내려 베기 (중살) |
+| `src/schools.js:857` | 목 찌르기 (逆鱗刺 역린자) | 목 찌르기 (역린자) |
+| `src/schools.js:858` | 물러 허리 베기 (退步腰擊 퇴보요격) | 물러 허리 베기 (퇴보요격) |
+| `src/schools.js:864` | 오른 날개 (右翼 우익) | 오른 날개 (우익) |
+| `src/schools.js:865` | 물러 왼 날개 치기 (掣步左翼擊 체보좌익격) | 물러 왼 날개 치기 (체보좌익격) |
+| `src/schools.js:870` | 찌르기 (刺 자) | 찌르기 (자) |
+| `src/schools.js:871` | 끊어 베기 (剪 전) | 끊어 베기 (전) |
+| `src/schools.js:872` | 물러 베기 (殺 살) | 물러 베기 (살) |
+| `src/schools.js:886` | 감아 들기 (Indes) | 감아 들기 (인데스) · Indes |
+| `src/schools.js:897` | 왕관 → 뛰어들기 (Einlaufen) · 뛰어들기 (Einlaufen) | 왕관 → 뛰어들기 (아인라우펜) · Einlaufen · 뛰어들기 (아인라우펜) · Einlaufen |
+| `src/schools.js:898` | 황소 걸이 → 겹치기 (Duplieren) · 겹치기 (Duplieren) | 황소 걸이 → 겹치기 (두플리렌) · Duplieren · 겹치기 (두플리렌) · Duplieren |
+| `src/schools.js:899` | 왼 걸이 → 바꾸기 (Mutieren) · 바꾸기 (Mutieren) | 왼 걸이 → 바꾸기 (무티렌) · Mutieren · 바꾸기 (무티렌) · Mutieren |
+| `src/schools.js:910` | 분노의 베기 (Zornhau) | 분노의 베기 (초른하우) |
+| `src/schools.js:910` | 왼 분노의 베기 (Zornhau) | 왼 분노의 베기 (초른하우) |
+| `src/schools.js:910` | 정수리 베기 (Scheitelhau) | 정수리 베기 (샤이텔하우) |
+| `src/schools.js:910` | 가로베기 (Zwerchhau) | 가로베기 (츠베르히하우) |
+| `src/schools.js:910` | 왼 가로베기 (Zwerchhau) | 왼 가로베기 (츠베르히하우) |
+| `src/schools.js:911` | 올려베기 (Unterhau) | 올려베기 (운터하우) |
+| `src/schools.js:911` | 왼 올려베기 (Unterhau) | 왼 올려베기 (운터하우) |
+| `src/schools.js:911` | 쟁기 찌르기 (Pflug) | 쟁기 찌르기 (플루크) |
+| `src/schools.js:911` | 왼 쟁기 찌르기 (Pflug) | 왼 쟁기 찌르기 (플루크) |
+| `src/schools.js:911` | 황소 찌르기 (Ochs) | 황소 찌르기 (옥스) |
+| `src/schools.js:911` | 왼 황소 찌르기 (Ochs) | 왼 황소 찌르기 (옥스) |
+| `src/schools.js:911` | 바보 찌르기 (Alber) | 바보 찌르기 (알버) |
+| `src/schools.js:912` | 좌우 이어 베기 (Zornhau) | 좌우 이어 베기 (초른하우) |
+| `src/schools.js:912` | 손 끊기 (Abschneiden) | 손 끊기 (압슈나이덴) |
+| `src/schools.js:912` | 바퀴 베기 (Radschlag) | 바퀴 베기 (라트슐라크) |
+| `src/schools.js:915` | 오른 사선 내려베기 (mandritto squalembrato) | 오른 사선 내려베기 (만드리토 스콸렘브라토) |
+| `src/schools.js:915` | 왼 사선 내려베기 (riverso squalembrato) | 왼 사선 내려베기 (리베르소 스콸렘브라토) |
+| `src/schools.js:915` | 곧게 내려베기 (fendente) | 곧게 내려베기 (펜덴테) |
+| `src/schools.js:915` | 오른 가로베기 (mandritto tondo) | 오른 가로베기 (만드리토 톤도) |
+| `src/schools.js:915` | 왼 가로베기 (riverso tondo) | 왼 가로베기 (리베르소 톤도) |
+| `src/schools.js:916` | 올려베기 (montante) | 올려베기 (몬탄테) |
+| `src/schools.js:916` | 왼 올려베기 (riverso montante) | 왼 올려베기 (리베르소 몬탄테) |
+| `src/schools.js:916` | 아래서 찌르기 (stoccata) | 아래서 찌르기 (스토카타) |
+| `src/schools.js:916` | 안쪽 찌르기 (punta riversa) | 안쪽 찌르기 (푼타 리베르사) |
+| `src/schools.js:917` | 높이 찌르기 (punta dritta alta) | 높이 찌르기 (푼타 드리타 알타) |
+| `src/schools.js:917` | 왼 높이 찌르기 (punta riversa alta) | 왼 높이 찌르기 (푼타 리베르사 알타) |
+| `src/schools.js:917` | 낮게 찌르기 (stoccata bassa) | 낮게 찌르기 (스토카타 바사) |
+| `src/schools.js:918` | 좌우 이어 베기 (mandritto e riverso) | 좌우 이어 베기 (만드리토 에 리베르소) |
+| `src/schools.js:918` | 손목 끝 베기 (stramazzone) | 손목 끝 베기 (스트라마초네) |
+| `src/schools.js:918` | 돌려 베기 (molinello) | 돌려 베기 (몰리넬로) |
+| `src/schools.js:921` | 오른 사선 베기 (talho) | 오른 사선 베기 (탈류) |
+| `src/schools.js:921` | 왼 사선 베기 (revez) | 왼 사선 베기 (레베스) |
+| `src/schools.js:921` | 내려베기 (altibaxo) | 내려베기 (알티바슈) |
+| `src/schools.js:922` | 찌르기 (estocada) | 찌르기 (에스토카다) |
+| `src/schools.js:922` | 왼 찌르기 (estocada) | 왼 찌르기 (에스토카다) |
+| `src/schools.js:922` | 높이 찌르기 (estocada alta) | 높이 찌르기 (에스토카다 알타) |
+| `src/schools.js:922` | 왼 높이 찌르기 (estocada alta) | 왼 높이 찌르기 (에스토카다 알타) |
+| `src/schools.js:922` | 낮게 찌르기 (estocada baixa) | 낮게 찌르기 (에스토카다 바이샤) |
+| `src/schools.js:923` | 좌우 이어 베기 (talho e revez) | 좌우 이어 베기 (탈류 이 레베스) |
+| `src/schools.js:923` | 짧게 손 베기 (talho curto) | 짧게 손 베기 (탈류 쿠르투) |
+| `src/schools.js:923` | 돌려 베기 (molinete) | 돌려 베기 (몰리네트) |
+| `src/schools.js:931` | 오른 걸쳐 치기 (跨右擊 과우격) | 오른 걸쳐 치기 (과우격) |
+| `src/schools.js:931` | 왼 걸쳐 치기 (跨左擊 과좌격) | 왼 걸쳐 치기 (과좌격) |
+| `src/schools.js:931` | 표범 머리 치기 (豹頭擊 표두격) | 표범 머리 치기 (표두격) |
+| `src/schools.js:931` | 허리 베기 (腰擊 요격) | 허리 베기 (요격) |
+| `src/schools.js:931` | 왼 허리 베기 (左腰擊 좌요격) | 왼 허리 베기 (좌요격) |
+| `src/schools.js:932` | 걷어 올려 베기 (撩掠 요략) | 걷어 올려 베기 (요략) |
+| `src/schools.js:932` | 치켜 올려 치기 (掀擊 흔격) | 치켜 올려 치기 (흔격) |
+| `src/schools.js:932` | 배 찌르기 (坦腹刺 탄복자) | 배 찌르기 (탄복자) |
+| `src/schools.js:932` | 왼 끼고 찌르기 (左夾刺 좌협자) | 왼 끼고 찌르기 (좌협자) |
+| `src/schools.js:933` | 오른 끼고 찌르기 (右夾刺 우협자) | 오른 끼고 찌르기 (우협자) |
+| `src/schools.js:933` | 점 찍어 찌르기 (點劍 점검) | 점 찍어 찌르기 (점검) |
+| `src/schools.js:934` | 좌우 걸쳐 치기 (跨左·跨右 과좌·과우) | 좌우 걸쳐 치기 (과좌·과우) |
+| `src/schools.js:934` | 손 깎기 (御車 어거) | 손 깎기 (어거) |
+| `src/schools.js:934` | 꽃 뿌려 머리 덮기 (撒花蓋頂 살화개정) | 꽃 뿌려 머리 덮기 (살화개정) |
+| `src/schools.js:992` | 왕관 (Kron) | 왕관 (크론) |
+| `src/schools.js:1023` | 1번 자세 (Prima) | 1번 자세 (프리마) |
+| `src/schools.js:1029` | 뻗은 3번 자세 (Terza) | 뻗은 3번 자세 (테르차) |
+| `src/schools.js:1031` | 4번 자세 (Quarta) | 4번 자세 (콰르타) |
+| `src/schools.js:1178` | 뻗은 2번 자세 (Seconda) | 뻗은 2번 자세 (세콘다) |
+| `src/schools.js:1209` | 높은 자세 (guardia alta) | 높은 자세 (과르디아 알타) |
+| `src/schools.js:1211` | 넓은 자세 (guardia larga) | 넓은 자세 (과르디아 라르가) |
+| `src/schools.js:1214` | 낮은 3번 자세 (Terza) | 낮은 3번 자세 (테르차) |
+| `src/schools.js:1216` | 당긴 3번 자세 (Terza) | 당긴 3번 자세 (테르차) |
+| `src/schools.js:1217` | 낮은 자세 (guardia bassa) | 낮은 자세 (과르디아 바사) |
+| `src/schools.js:1219` | 높은 4번 자세 (Quarta) | 높은 4번 자세 (콰르타) |
+| `src/schools.js:1220` | 머리 높이 4번 자세 (Quarta) | 머리 높이 4번 자세 (콰르타) |
+| `src/schools.js:1222` | 굽힌 4번 자세 (Quarta) | 굽힌 4번 자세 (콰르타) |
+| `src/schools.js:1224` | 낮은 4번 자세 (Quarta) | 낮은 4번 자세 (콰르타) |
+| `src/schools.js:1249` | 오른 쳐내기 (talho) | 오른 쳐내기 (탈류) |
+| `src/schools.js:1253` | 왼 쳐내기 (revés) | 왼 쳐내기 (레베스) |
+| `src/schools.js:1273` | 솥 들기 (擧鼎勢 거정세) | 솥 들기 (거정세) |
+| `src/schools.js:1277` | 수레 몰기 (御車勢 어거세) | 수레 몰기 (어거세) |
+| `src/secret.js:358` | 오른쪽으로 떨어뜨림 (altibaxo) | 오른쪽으로 떨어뜨림 (알티바슈) |
+| `src/secret.js:358` | 왼쪽으로 떨어뜨림 (altibaxo de revez) | 왼쪽으로 떨어뜨림 (알티바슈 드 레베스) |
+| `src/secret.js:359` | 올려 탈류 (talho de baxo) | 올려 탈류 (탈류 드 바슈) |
+| `src/secret.js:359` | 올려 레베스 (revez de baxo) | 올려 레베스 (레베스 드 바슈) |
+| `src/test_pick.js:78` | 기본 · 받아 베기 (Versetzen) | 기본 · 받아 베기 (페어제첸) |
+| `src/test_pick.js:79` | 시험 · 감아 들기 (Indes) | 시험 · 감아 들기 (인데스) |
+| `src/unique_assist.js:75` | 날개 접기 (斂翅 염시) | 날개 접기 (염시) · 斂翅 |
+| `src/unique_assist.js:77` | 찌르고 베기 (刺→擊 자→격) | 찌르고 베기 (자→격) · 刺→擊 |
+| `tools/ui/hud_shots.mjs:92` | 맞받기 (Indes) | 맞받기 (인데스) |
+| `tools/ui/hud_shots.mjs:92` | 받아 베기 (Versetzen) | 받아 베기 (페어제첸) |
+| `tools/ui/hud_shots.mjs:92` | 따라 들어가기 (Nachreisen) | 따라 들어가기 (나흐라이젠) |
