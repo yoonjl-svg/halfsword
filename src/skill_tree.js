@@ -139,7 +139,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     // 급 · 등급 · 유파 · 지금 상태(사용 중 = 싸움에서 켜짐 · 봉인 = 꺼짐) 한 줄 — 폰 가로의 좁은 판에서도 단추까지 한눈에 들어오게
     $('#bookMeta').textContent = `${ROMAN[b.tier]}급 · ${b.rarityKo} · ${b.schoolKo} 유파${test ? '' : st === 'use' ? ' · 사용 중' : st === 'sealed' ? ' · 봉인' : ''}`;
     $('#bookMeta').dataset.tier = b.rarity;
-    $('#bookEffect').textContent = b.effect + (b.provisional ? ' (임시)' : '');
+    $('#bookEffect').textContent = b.effect; // '(임시)' 꼬리는 개발 말이라 뺌 (10/19 글 방침 2판 — 자료 provisional 은 그대로)
     $('#bookList').hidden = !b.list;
     $('#bookList').innerHTML = (b.list ?? []).map((n) => `<li>${short(n)}</li>`).join(''); // 고유 공격 넷 — 한글 이름만 이어서(원어는 싸움 화면 기술 칸에)
     $('#bookSource').textContent = `출처 · ${b.source}`;

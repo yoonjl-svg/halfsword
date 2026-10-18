@@ -72,9 +72,9 @@ export const PLAYER_UNIQUE = {
   chinese: [
     { stage: 1, name: 'chebuYaoji', body: [-15, -20, 1.5, 0.02], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기
     { stage: 2, name: 'zuoyi', anchor: 'start', body: [5, 3, 5, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 좌익격 ← 코테와 같음
-    { stage: 3, name: 'lianchi', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시(속임 then 길) ← 쟁기 찌르기를 시작했다가 짧은 창 안에 거둠
+    { stage: 3, name: 'lianchi', nameKo: '날개 접기 (斂翅 염시)', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시(속임 then 길) ← 쟁기 찌르기를 시작했다가 짧은 창 안에 거둠
     // 자→격 (刺→擊): 새 표 항목이지만 새 길은 없다 — yaoji 길(긴 자세 자리에서 시작하는 허리 베기). 출처는 schools.js ciji 패시브와 같은 「向前進步腰擊」
-    { stage: 4, name: 'ciji', path: 'yaoji', nameKo: '자→격 (刺→擊)', body: [-15, -20, 1.5, 0.015], on: [{ prev: 'thrust', when: 'any', dir: 'horiz' }] }, // ← 내 찌르기(맞든 빗나가든) 뒤 짧은 창 안의 가로 긋기
+    { stage: 4, name: 'ciji', path: 'yaoji', nameKo: '찌르고 베기 (刺→擊 자→격)', body: [-15, -20, 1.5, 0.015], on: [{ prev: 'thrust', when: 'any', dir: 'horiz' }] }, // ← 내 찌르기(맞든 빗나가든) 뒤 짧은 창 안의 가로 긋기
   ],
 };
 

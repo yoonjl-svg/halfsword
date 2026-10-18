@@ -117,41 +117,41 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //  값은 모두 사장님 확인 전 (확인표 720~)
 const JAPANESE_GUARDTABLE = {
   // 조단(諸手左上段): 두 손을 이마 위로 — 「両腕の間から相手の全体が見えるぐらいまで上げ、剣先が両拳より下がらないように」 · 왼발 앞(打太刀 「左足から」) → 칼 든 어깨가 뒤
-  '지붕 (Vom Tag)': { name: '조단', desc: '두 손을 이마 위로 들고 칼끝은 뒤로 비스듬히, 왼발 앞 · 상대가 치려는 박자에 한 칼로 내려벤다', hand: [0.18, 0.55, 0.06], blade: [100, 0], pelvisYaw: 25, chestYaw: 30, pitch: 0, drop: 0.05, src: '검도형 p22 留意点 十一·p06 1본 打太刀 「諸手左上段」 [원문] · 오륜서 p23 表2 「上段に構へ、敵打ちかくる所、一度に敵を打つ」 [원문] · 수 = 롱소드 지붕 값(칼 100° — 칼끝이 두 주먹보다 위, 모노호시자오 motionSkip 과 같은 값. 105°·손 낮춤은 48 판 −8 %p) [해석]' },
+  '지붕 (Vom Tag)': { name: '높은 자세 (조단)', desc: '치려는 박자에 한 칼로 내려벤다', hand: [0.18, 0.55, 0.06], blade: [100, 0], pelvisYaw: 25, chestYaw: 30, pitch: 0, drop: 0.05, src: '검도형 p22 留意点 十一·p06 1본 打太刀 「諸手左上段」 [원문] · 오륜서 p23 表2 「上段に構へ、敵打ちかくる所、一度に敵を打つ」 [원문] · 수 = 롱소드 지붕 값(칼 100° — 칼끝이 두 주먹보다 위, 모노호시자오 motionSkip 과 같은 값. 105°·손 낮춤은 48 판 −8 %p) [해석]' },
   // 핫소: 「諸手左上段の構えから、そのまま右拳を右肩のあたりまで下ろした形」 · 날밑은 입 높이, 입에서 주먹 하나 · 「刃先は相手に向ける」 · 「左足を踏み出し」 · 「やや半身」은 지움(부록 9) → 몸을 크게 틀지 않는다
-  '어깨 지붕 (Vom Tag)': { name: '핫소', desc: '조단에서 오른 주먹을 오른 어깨까지 내린 꼴 · 날밑은 입 높이, 칼은 서고 날은 상대 쪽, 왼발 앞', hand: [0.12, 0.22, 0.2], blade: [70, 165], pelvisYaw: 35, chestYaw: 45, pitch: 2, drop: 0.06, src: '검도형 p10/9 八相の構え 본문·p33 부록9 [원문] · 수 = 앞무게 틀 핫소 값(frames.js — 칼 70° 세움, 날밑 입 아래) [해석]' },
+  '어깨 지붕 (Vom Tag)': { name: '어깨 세움 (핫소)', desc: '어깨에 세워 비스듬히 내려벤다', hand: [0.12, 0.22, 0.2], blade: [70, 165], pelvisYaw: 35, chestYaw: 45, pitch: 2, drop: 0.06, src: '검도형 p10/9 八相の構え 본문·p33 부록9 [원문] · 수 = 앞무게 틀 핫소 값(frames.js — 칼 70° 세움, 날밑 입 아래) [해석]' },
   // 히키나가시(오른 어깨로 끌어 흘려 받기): 「我太刀にて敵の目をつく樣にして、敵の太刀を我が右の肩へ引流して受くべし」 — 칼끝은 상대 눈, 손은 오른 어깨 앞.
   //  같은 자리가 오륜서 表4 올려베기의 끝(「我肩の上へ筋かひにきるべし」 — 키리아게가 여기서 끝난다) · 막기 자리(highR)가 이 꼴이 된다. 전 '머리 옆 겨눔'(황소 = 롱소드 고유)
-  '황소 (Ochs)': { name: '히키나가시', desc: '칼끝으로 상대 눈을 찌를 듯 겨누며 손을 오른 어깨 앞으로 끌어 상대 칼을 흘려 받는다 · 왼쪽에서 올려벤 칼이 끝나는 자리', hand: [0.28, 0.29, 0.22], blade: [-15, -12], pelvisYaw: 25, chestYaw: 30, pitch: 0, drop: 0.07, src: '오륜서 p32-33 「三つの受」 (1) [원문] · p24 表4 [원문] · 수 = 바탕 자리 값(손 오른 어깨 앞·칼끝 눈 높이 — 이 자리는 올려베기 끝·찌르기 시작이라 손 옮김은 48 판 −8 %p·넘어짐 +6) [해석]' },
+  '황소 (Ochs)': { name: '끌어 흘리기 (히키나가시)', desc: '손을 끌어 상대 칼을 흘린다', hand: [0.28, 0.29, 0.22], blade: [-15, -12], pelvisYaw: 25, chestYaw: 30, pitch: 0, drop: 0.07, src: '오륜서 p32-33 「三つの受」 (1) [원문] · p24 表4 [원문] · 수 = 바탕 자리 값(손 오른 어깨 앞·칼끝 눈 높이 — 이 자리는 올려베기 끝·찌르기 시작이라 손 옮김은 48 판 −8 %p·넘어짐 +6) [해석]' },
   // 추단(中段 = 晴眼): 「剣先を顔の中心(両眼の間)につける」 · 「中段は構への本意也…大將の座也」 · 각 본이 「相中段」에서 시작해 돌아온다 · 오른발 앞(2본 「右足から」), 몸은 바로(반신 아님).
   //  손은 배꼽 앞 — 롱소드 긴 자세처럼 팔을 다 뻗지 않는다(초안 §4 '뻗은 中段' 고침). 찌르기 다섯 길의 끝 자리이자 쉴 자세(rest 'langort')
-  '긴 자세 (Langort)': { name: '추단', desc: '칼끝을 상대 두 눈 사이에 두고 두 손은 배꼽 앞 · 오른발 앞, 몸은 바로 · 자세의 본뜻, 쉴 자세', hand: [0.36, -0.12, 0.03], blade: [15, 0], pelvisYaw: -5, chestYaw: -5, pitch: 0, drop: 0.06, src: '검도형 p05·p33 부록 (3)(4)·p02 명칭 통일 [원문] · 오륜서 p21 「五方の構」·p22 表1 「太刀先を敵の顏へ付けて」 [원문] · 수 [해석]' },
+  '긴 자세 (Langort)': { name: '가운데 겨눔 (추단)', desc: '칼끝을 두 눈 사이에 둔 기본 자세', hand: [0.36, -0.12, 0.03], blade: [15, 0], pelvisYaw: -5, chestYaw: -5, pitch: 0, drop: 0.06, src: '검도형 p05·p33 부록 (3)(4)·p02 명칭 통일 [원문] · 오륜서 p21 「五方の構」·p22 表1 「太刀先を敵の顏へ付けて」 [원문] · 수 [해석]' },
   // 미기와키(右脇): 「我右の肩に横に構へて、敵打ちかくる所の位をうけ、我太刀の下の横より筋かひに、上段に振り上げ、上より直ちにきるべし」 — 어깨 높이에 칼을 가로로(롱소드 옆 자세는 가슴 높이)
-  '옆 자세': { name: '미기와키', desc: '칼을 오른 어깨 높이에 가로로 눕힌다 · 받아서 조단으로 올려 곧장 내려벤다 (오모테 5) · 위나 옆이 막힌 곳의 자세', hand: [0.14, 0.16, 0.24], blade: [0, 115], pelvisYaw: 30, chestYaw: 40, pitch: 0, drop: 0.06, src: '오륜서 p21 「右のわきに構ゆる事」·p24-25 表5 [원문] · 수 [해석]' },
+  '옆 자세': { name: '오른 옆구리 (미기와키)', desc: '받아서 곧장 내려벤다', hand: [0.14, 0.16, 0.24], blade: [0, 115], pelvisYaw: 30, chestYaw: 40, pitch: 0, drop: 0.06, src: '오륜서 p21 「右のわきに構ゆる事」·p24-25 表5 [원문] · 수 [해석]' },
   // 히라세이간(平正眼): 검도형 부록에 5본 仕太刀 칼날 방향의 한 설로 나온다 — 손을 조금 오른쪽·낮게, 칼끝은 상대 왼눈, 칼날을 오른쪽으로 비튼 낮은 추단 [해석].
   //  오륜서 有構無構 「上段も時に隨ひ少し下る心なれば中段となり…下段もをりにふれ少し上ぐれば中段となる」 — 추단에서 조금 내린 꼴. 전 '세이간'(쟁기 값 그대로 — 손 허리, 칼끝 30° 위)
-  '쟁기 (Pflug)': { name: '히라세이간', desc: '추단에서 손을 조금 오른쪽·아래로 내리고 칼끝은 상대 왼눈 · 칼날을 오른쪽으로 비튼다', hand: [0.32, -0.22, 0.1], blade: [20, -8], pelvisYaw: 5, chestYaw: 5, pitch: 0, drop: 0.06, src: '검도형 p33 부록10 9.(1) 「平正眼」 [원문 — 한 설] · 오륜서 p25-26 有構無構 [원문] · 자리·수 [해석]' },
+  '쟁기 (Pflug)': { name: '눕힌 겨눔 (히라세이간)', desc: '날을 비틀어 왼눈을 겨눈다', hand: [0.32, -0.22, 0.1], blade: [20, -8], pelvisYaw: 5, chestYaw: 5, pitch: 0, drop: 0.06, src: '검도형 p33 부록10 9.(1) 「平正眼」 [원문 — 한 설] · 오륜서 p25-26 有構無構 [원문] · 자리·수 [해석]' },
   // 우게조(右下藏): 교전 「垂劍一打右下藏」·유피류 「右下藏右手右脚戴劍」 — 친 칼을 오른쪽 아래로 감추었다 다시 머리 위로 인다. 감춤이라 칼끝을 롱소드 바꿈(40°)보다 뒤로
-  '바꿈 (Wechsel)': { name: '우게조', desc: '친 칼을 오른쪽 아래로 감춘다 · 여기서 올려베거나 (키리아게) 다시 머리 위로 든다', hand: [0.22, -0.32, 0.18], blade: [-40, 60], pelvisYaw: 15, chestYaw: 20, pitch: 2, drop: 0.07, src: '무도 권2 p144/136 교전·p110/102 유피류 [원문 이름] · 꼴·수 [해석]' },
+  '바꿈 (Wechsel)': { name: '오른 아래 감춤 (우게조)', desc: '여기서 올려베거나 다시 든다', hand: [0.22, -0.32, 0.18], blade: [-40, 60], pelvisYaw: 15, chestYaw: 20, pitch: 2, drop: 0.07, src: '무도 권2 p144/136 교전·p110/102 유피류 [원문 이름] · 꼴·수 [해석]' },
   // 와키가마에: 「右足を後ろにし、左半身となり、刀を右脇にとり剣先を後ろにし、刃先は右斜め下…剣先は下段の構えより少し下げた位置…刀身が相手から見えないように」
-  '옆 지킴 (Nebenhut)': { name: '와키가마에', desc: '오른발을 뒤로 왼 반신, 칼을 오른 옆에 두고 칼끝은 뒤 아래로 · 칼 길이를 상대에게 감춘다', hand: [0.05, -0.25, 0.2], blade: [-30, 165], pelvisYaw: 45, chestYaw: 55, pitch: 0, drop: 0.07, src: '검도형 p11/10 脇構え 본문 [원문] · 4본 仕太刀 시작·7본 残心 · 수 [해석]' },
+  '옆 지킴 (Nebenhut)': { name: '숨긴 칼 (와키가마에)', desc: '칼 길이를 상대에게 감춘다', hand: [0.05, -0.25, 0.2], blade: [-30, 165], pelvisYaw: 45, chestYaw: 55, pitch: 0, drop: 0.07, src: '검도형 p11/10 脇構え 본문 [원문] · 4본 仕太刀 시작·7본 残心 · 수 [해석]' },
   // 게단: 칼끝을 「相手の左膝頭から三ないし六センチ下」로 · 오륜서 表3 「太刀を下段に持ち、提げたる心にて、敵の打ちかく所を下より手をはる」 — 손은 추단 그대로, 칼끝만 내린다.
   //  1.7 m 앞 상대 무릎으로 셈하면 약 −22° (롱소드 바보 −40°는 땅을 겨눔) · 3본 「右足から」
-  '바보 (Alber)': { name: '게단', desc: '손은 추단 그대로 두고 칼끝을 상대 무릎 조금 아래로 내린다 · 아래에서 상대 손을 친다', hand: [0.34, -0.2, 0.03], blade: [-22, 4], pelvisYaw: -5, chestYaw: -5, pitch: 0, drop: 0.06, src: '검도형 p04/3 注2·p08 3본 「相下段」 [원문] · 오륜서 p23-24 表3 [원문] · 각 [해석: 무릎까지 셈]' },
+  '바보 (Alber)': { name: '낮은 겨눔 (게단)', desc: '아래에서 상대 손을 친다', hand: [0.34, -0.2, 0.03], blade: [-22, 4], pelvisYaw: -5, chestYaw: -5, pitch: 0, drop: 0.06, src: '검도형 p04/3 注2·p08 3본 「相下段」 [원문] · 오륜서 p23-24 表3 [원문] · 각 [해석: 무릎까지 셈]' },
   // 사타이켄(左戴劍, 왼쪽에 칼을 인 꼴): 검도형 핫소는 오른쪽만이고 오륜서 다섯 자세에도 왼 어깨 자세는 없다. 더 찾은 원전 — 무예도보통지 권2 왜검 千柳流
   //  「藏劍正立 左手左脚戴劍 進坐後顧」(무도 권2 p096)·「右手右脚前一打 又左手左脚戴劍」(p097): 왼손·왼발 쪽으로 칼을 들어 인다(戴劍 = 칼을 머리에 인 듯 올림 — 같은 책 용어 풀이 §3) [원문].
   //  이름은 같은 책 왜검 낱말로 지은 우게조(右下藏)·사조(左藏)와 같은 읽기 [해석]. 그림 원본이 이 기계에 없어 손 높이·칼끝은 원문으로 정하지 못한다 →
   //  꼴은 핫소(「諸手左上段から右拳を右肩まで下ろした形」)의 거울 — 왼 케사(zornhauL·히라키기리)가 지나는 자리라 핫소처럼 칼을 세운다 [추정, 앞무게 틀 왼 핫소 값]. 간 보는 자세에서는 뺀다
-  '왼쪽 어깨 지붕': { name: '사타이켄', desc: '왼손·왼발 쪽으로 칼을 들어 왼 어깨 위에 세운다 · 왼쪽 사선 베기가 지나는 자리', hand: [0.16, 0.22, -0.12], blade: [70, -165], pelvisYaw: -30, chestYaw: -40, pitch: 2, drop: 0.06, src: '무도 권2 p096·p097 千柳流 「左手左脚戴劍」 [원문 — 이름] · 꼴 = 핫소 거울(검도형 p10/9 八相) [추정 — 앞무게 틀 왼 핫소 값 그대로]' },
+  '왼쪽 어깨 지붕': { name: '왼 어깨 세움 (사타이켄)', desc: '왼쪽 사선 베기가 지나는 자리', hand: [0.16, 0.22, -0.12], blade: [70, -165], pelvisYaw: -30, chestYaw: -40, pitch: 2, drop: 0.06, src: '무도 권2 p096·p097 千柳流 「左手左脚戴劍」 [원문 — 이름] · 꼴 = 핫소 거울(검도형 p10/9 八相) [추정 — 앞무게 틀 왼 핫소 값 그대로]' },
   // 우케나가시(왼쪽): 소태도 2본 「左足を左斜め前に、右足をその後ろに」 몸을 왼쪽으로 열며 「右鎬で受け流し」 — 상대 칼을 왼쪽 위에서 칼 옆면으로 흘린다.
   //  같은 자리가 오른 아래에서 올려벤(갸쿠케사) 칼의 끝. 전 '왼 머리 옆 겨눔'(왼쪽 황소 = 롱소드 고유)
-  '왼쪽 황소': { name: '우케나가시', desc: '몸을 왼쪽으로 열며 칼을 왼쪽 위로 들어 상대 칼을 칼 옆면으로 흘린다 · 오른쪽 아래에서 올려벤 칼이 끝나는 자리', hand: [0.28, 0.29, -0.12], blade: [-15, 12], pelvisYaw: -20, chestYaw: -30, pitch: 0, drop: 0.07, src: '검도형 p17 소태도 2본 [원문] · 꼴·수 [해석] — 손·칼끝은 바탕 자리 값(히키나가시 거울)' },
+  '왼쪽 황소': { name: '흘려 받기 (우케나가시)', desc: '칼 옆면으로 상대 칼을 흘린다', hand: [0.28, 0.29, -0.12], blade: [-15, 12], pelvisYaw: -20, chestYaw: -30, pitch: 0, drop: 0.07, src: '검도형 p17 소태도 2본 [원문] · 꼴·수 [해석] — 손·칼끝은 바탕 자리 값(히키나가시 거울)' },
   // 히다리와키(左脇): 「左の脇に横に構へて、敵の打ちかくる手を下よりはるべし…我肩の上へ筋かひにきるべし」 — 왼 옆구리에 가로로(오른쪽과 달리 어깨가 아니라 옆구리)
-  '왼쪽 옆 자세': { name: '히다리와키', desc: '칼을 왼 옆구리에 가로로 · 아래에서 상대 손을 치고 내 어깨 위로 비스듬히 벤다 (오모테 4)', hand: [0.18, 0.0, -0.16], blade: [0, -115], pelvisYaw: -30, chestYaw: -40, pitch: 0, drop: 0.06, src: '오륜서 p21·p24 表4 [원문] · 수 [해석]' },
+  '왼쪽 옆 자세': { name: '왼 옆구리 (히다리와키)', desc: '아래에서 손을 치고 비스듬히 벤다', hand: [0.18, 0.0, -0.16], blade: [0, -115], pelvisYaw: -30, chestYaw: -40, pitch: 0, drop: 0.06, src: '오륜서 p21·p24 表4 [원문] · 수 [해석]' },
   // 사사에(받침): 7본 仕太刀 「左足から体をひく」と同時に 「諸手を伸ばし」 칼끝을 왼쪽 아래로 비스듬히, 「物打の鎬で打太刀の刀を支える」 — 찌르기를 받는 꼴. 막기 자리(thrust)가 이 꼴이 된다. 전 '왼 허리 겨눔'(원전 없음)
-  '왼쪽 쟁기': { name: '사사에', desc: '두 손을 뻗어 칼끝을 왼쪽 아래로 비스듬히 · 칼 옆면으로 상대 찌르기를 받친다 (7본)', hand: [0.42, -0.14, -0.02], blade: [-10, -20], pelvisYaw: -10, chestYaw: -10, pitch: 0, drop: 0.06, src: '검도형 p13~14 7본 仕太刀 [원문] · 수 [해석]' },
+  '왼쪽 쟁기': { name: '받치기 (사사에)', desc: '칼 옆면으로 찌르기를 받친다', hand: [0.42, -0.14, -0.02], blade: [-10, -20], pelvisYaw: -10, chestYaw: -10, pitch: 0, drop: 0.06, src: '검도형 p13~14 7본 仕太刀 [원문] · 수 [해석]' },
   // 사조(左藏): 토유류 「右手左脚左藏」·교전 「甲乙各左藏」 — 왼쪽으로 감춤 · 케사가 끝나는 자리(1본 「打ち下ろした剣先は下段の構えよりやや低くなる」)
-  '왼쪽 바꿈': { name: '사조', desc: '칼끝을 왼쪽 아래로 감춘다 · 케사가 끝나는 자리, 여기서 갸쿠케사로 되올린다', hand: [0.3, -0.3, -0.08], blade: [-40, -45], pelvisYaw: -20, chestYaw: -25, pitch: 3, drop: 0.07, src: '무도 권2 p068/60 토유류·p134/126 교전 [원문 이름, 읽기 담당 표] · 검도형 p06 1본 注1 · 꼴·수 [해석]' },
+  '왼쪽 바꿈': { name: '왼 아래 감춤 (사조)', desc: '여기서 비스듬히 되올린다', hand: [0.3, -0.3, -0.08], blade: [-40, -45], pelvisYaw: -20, chestYaw: -25, pitch: 3, drop: 0.07, src: '무도 권2 p068/60 토유류·p134/126 교전 [원문 이름, 읽기 담당 표] · 검도형 p06 1본 注1 · 꼴·수 [해석]' },
 };
 const JAPANESE_NAMES = Object.fromEntries(Object.entries(JAPANESE_GUARDTABLE).map(([k, v]) => [k, { name: v.name, desc: v.desc, src: v.src }])); // HUD 자세 이름 (sword_art.js schoolNames)
 // 일본 간 보는 자세 (10/10 — 전 HIGH_GUARDS: 지붕·어깨 지붕 + 황소 둘(롱소드 고유), 수는 롱소드 WATCH_GUARDS 값).
@@ -202,40 +202,40 @@ const JAPANESE_TECHK = {
 //  燕返し 길은 초안 안 3-가 그대로(지붕 → 곧장 바보까지 내려벤 뒤 오른 황소로 퍼올림). 다른 꼴(왼쪽 바꿈을 지나 왼 황소로)은 안 쓴 후보로 문서에만
 //  고유 동작 단계(10/9): 小手·跨虎 연타를 더해 셋. 表5 는 남은 후보(JAPANESE_SPARE, ai:false). 켜고 끈 까닭·수는 docs/strike/school_unique_2026-10-09.md
 const JAPANESE_UNIQUE = [
-  { name: 'tsubameGaeshi', nameKo: '츠바메가에시', from: G.tag, path: [[0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR], open: 'H', kind: 'cut', reach: -0.05, base: 0.8, presses: true, chain: 2, src: '이름 [전승] · 동작 오륜서 表2 R0000015/23 「打ちはづしたる太刀其儘置きて…下よりすくひ上げて打つ」 [원문] · 길의 수 [추정]' },
+  { name: 'tsubameGaeshi', nameKo: '제비 베기 (츠바메가에시)', from: G.tag, path: [[0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR], open: 'H', kind: 'cut', reach: -0.05, base: 0.8, presses: true, chain: 2, src: '이름 [전승] · 동작 오륜서 表2 R0000015/23 「打ちはづしたる太刀其儘置きて…下よりすくひ上げて打つ」 [원문] · 길의 수 [추정]' },
   // 小手 — 길은 중국 zuoyi 와 같은 것 하나로 둔다(두 초안이 같은 꼴이라 적음). 유파마다 이름만 다르다
-  { name: 'kote', nameKo: '코테', from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, fit: { online: 1.4 }, src: '검도형 2본·6본 小手 (읽기 담당 표) · 오륜서 「手をはる」 [원문] · 길은 중국 zuoyi 와 같음 [추정]' },
+  { name: 'kote', nameKo: '손목 치기 (코테)', from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, fit: { online: 1.4 }, src: '검도형 2본·6본 小手 (읽기 담당 표) · 오륜서 「手をはる」 [원문] · 길은 중국 zuoyi 와 같음 [추정]' },
   // 跨虎 연타 — 발을 바꿔 디디며 앞으로 거듭 친다. 원문은 네 번이지만 길 하나에 넷을 넣으면 몰리넬로처럼 가운데가 오래 빈다 → 두 번(袈裟 → 왼쪽으로 들어 올려 真向).
   //  나머지 이음은 앞무게 흐름(installFlow — 내리치기를 ×3 먼저 고른다)이 맡는다. 오른 어깨 → 왼쪽 바꿈 → 지붕 → 바보
-  { name: 'kokoRenda', nameKo: '코코 연타', from: G.tagR, path: [[0.12, 0.14], G.wechselL, [-0.14, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'UL', kind: 'cut', reach: 0.05, base: 0.9, presses: true, chain: 2, src: '왜검 運光流 「作跨虎勢 兩手前一打 右手左脚前一打 右手右脚前一打 右手右脚前一跳前一打」 무도 권2 p076~p087/68~79 [원문] · 네 번 → 두 번으로 줄임 [해석] · 길의 수 [추정]' },
+  { name: 'kokoRenda', nameKo: '범 타기 연타 (코코)', from: G.tagR, path: [[0.12, 0.14], G.wechselL, [-0.14, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'UL', kind: 'cut', reach: 0.05, base: 0.9, presses: true, chain: 2, src: '왜검 運光流 「作跨虎勢 兩手前一打 右手左脚前一打 右手右脚前一打 右手右脚前一跳前一打」 무도 권2 p076~p087/68~79 [원문] · 네 번 → 두 번으로 줄임 [해석] · 길의 수 [추정]' },
   // 開き斬り(体捌き): 오른쪽 앞으로 비스듬히 몸을 열어 딛고(먼저 비킴) 왼 어깨에서 逆袈裟 쪽으로 — 길 = 공용 zornhauL, base = 앞무게 꾸러미 zornhauL 1.4.
   //  step 칸 뜻은 아래 GERMAN_UNIQUE 의 zwerchAbtritt 주석 (lat 오른쪽 + m · fwd 앞 m · when)
   //  걸음 기술 다섯: 48 판 측정에서 걸음이 승률을 깎았으나(세 무기 144 판 40 대 51 %) **사장님 10/9 12:xx "우선 다 켜봐. 내가 겪어 봐야 판단"** 으로 켬. 끄려면 ai:false (재기: motion_lab SCHOOL_UNIQUE=이름)
-  { name: 'hirakiGiri', nameKo: '히라키기리', from: G.tagL, path: [[-0.1, 0.14], G.wechselR], open: 'UR', kind: 'cut', reach: -0.05, base: 1.4, presses: true, step: { lat: 0.3, fwd: 0.3, when: 'approach' }, src: '開き(체捌き)·斜めに開いて斬る [전승] · 오륜서 水の巻 「足づかひ」(陰陽の足) 항목 [원문 — 쪽 확인 전] · 길은 공용 逆袈裟 · 수 [추정]' },
+  { name: 'hirakiGiri', nameKo: '비껴 베기 (히라키기리)', from: G.tagL, path: [[-0.1, 0.14], G.wechselR], open: 'UR', kind: 'cut', reach: -0.05, base: 1.4, presses: true, step: { lat: 0.3, fwd: 0.3, when: 'approach' }, src: '開き(체捌き)·斜めに開いて斬る [전승] · 오륜서 水の巻 「足づかひ」(陰陽の足) 항목 [원문 — 쪽 확인 전] · 길은 공용 逆袈裟 · 수 [추정]' },
 ];
 // 일본 남은 후보 (고유 셋에 들지 못함 — ai:false 자료)
 const JAPANESE_SPARE = [
-  { name: 'omote5', nameKo: '오모테 5', ai: false, from: G.sideR, path: [[0.3, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'H', kind: 'cut', reach: -0.05, base: 0.6, presses: true, chain: 1, src: '오륜서 水の巻 表5 「我右の肩に横に構へて…上段に振り上げ、上より直ちにきる」 R0000016/24 [원문] · 길의 수 [추정]' },
+  { name: 'omote5', nameKo: '다섯째 겉수 (오모테 5)', ai: false, from: G.sideR, path: [[0.3, 0.3], G.tag, [0.0, 0.14], G.alber], open: 'H', kind: 'cut', reach: -0.05, base: 0.6, presses: true, chain: 1, src: '오륜서 水の巻 表5 「我右の肩に横に構へて…上段に振り上げ、上より直ちにきる」 R0000016/24 [원문] · 길의 수 [추정]' },
 ];
 
 // 중국 (劍 — 지금 청강검 = 한손 두루 틀, 한손 찌르기 자세표 위). 이름 14 자리 — 조선세법 24 세 12 + 세 안 자세 이름(直符送書) 1 + 봉두세 1 (10/10 자세 고증: 원전 없음 '왼 머리 옆 겨눔' → 鳳頭勢).
 //  10/10 자세 고증: 자세표 값은 아래 CHINESE_GUARDTABLE (desc 가 그 꼴을 말한다 — docs/motion/chinese_guards_2026-10-10.md)
 //  바탕 글은 《무비지》 劍 장의 조선세법(저자가 '조선에서 얻었다'고 적음 — 조선/중국 어느 쪽 것인지 학설이 갈림). 사장님 10/9 01:4x: 게임에 '중국 유파' 이름표가 보이는 것은 아니니 그대로 섞어 쓴다(본국검 낱말도 됨)
 const CHINESE_NAMES = {
-  '지붕 (Vom Tag)': { name: '표두세 (豹頭勢)', desc: '높이 든 손에서 벼락같이 위로부터 친다', src: '무비지 쪽157/0571 · 무도 권2 p036/28' },
-  '어깨 지붕 (Vom Tag)': { name: '우익세 (右翼勢)', desc: '오른 날개 — 오른 어깨 높이에서 친다', src: '무비지 쪽168/0582 · 자리 [해석]' },
-  '황소 (Ochs)': { name: '역린세 (逆鱗勢)', desc: '손을 어깨 높이에, 칼끝은 상대 목 줄로 곧게 · 비늘을 거슬러 목구멍·목을 곧게 찌른다', src: '무비지 쪽173/0587 · 무도 p044/36 그림' },
-  '긴 자세 (Langort)': { name: '직부송서 (直符送書)', desc: '팔을 뻗어 칼끝을 가운데 높이로 곧게 보낸다 · 쉴 자세', src: '무비지 쪽156/0570 左翼勢 안의 자세 이름 · 본국검 무도 권3 p033/25 「作直符送書勢 右手左脚一刺」 [원문]. 中平은 劍 장에 없는 창 장(권87) 낱말이라 뺌 — 사장님 10/9 01:4x' },
-  '옆 자세': { name: '요격세 (腰擊勢)', desc: '칼을 오른 허리 높이에 수평으로 눕혀 든다 · 허리를 가로질러 가운데를 친다 — 검 중 으뜸 치기', src: '무비지 쪽166/0580 「劍中之首擊」 · 무도 p041/33 그림' },
-  '쟁기 (Pflug)': { name: '탄복세 (坦腹勢)', desc: '칼자루를 오른 허리에, 칼끝은 상대 배 높이로 수평 · 산이 무너지듯 나아가 가운데(배)를 찌른다 · 쉴 자세 안 B', src: '무비지 쪽158/0572 · 무도 p037/29 그림' },
-  '바꿈 (Wechsel)': { name: '요략세 (撩掠勢)', desc: '칼을 낮게 앞으로 수평, 칼끝을 왼쪽으로 비껴 왼쪽을 가린다 · 걷어 올려 막고 아래로 친다', src: '무도 권2 p038/30 「蔽左護右」 · 그림' },
-  '옆 지킴 (Nebenhut)': { name: '간수세 (看守勢)', desc: '호준 (虎蹲) — 웅크린 범처럼 몸을 낮추고 칼을 오른 아래에, 칼끝은 앞 아래로 · 굳게 지키며 살피다 기미를 따라 굴려 친다', src: '무도 권2 p039/31' },
-  '바보 (Alber)': { name: '점검세 (點劍勢)', desc: '점 찍듯 찌른다 — 칼끝을 낮게 겨눈다', src: '무비지 쪽155/0569' },
-  '왼쪽 어깨 지붕': { name: '좌익세 (左翼勢)', desc: '치켜 올렸다 눌러 상대 손아귀인 호구 (虎口)를 바로 친다', src: '무비지 쪽156/0570 · 자리 [해석]' },
-  '왼쪽 황소': { name: '봉두세 (鳳頭勢)', desc: '칼을 머리 높이에 비껴 든다 · 씻어 찌르고 얽어 친다', src: '무비지 쪽176/0590 「洗刺剪殺」 · 무도 p046/38 그림 · 왼쪽 자리 [해석] (전 \'왼 머리 옆 겨눔\' — 원전 없음)' },
-  '왼쪽 옆 자세': { name: '왼 요격세 (腰擊勢)', desc: '왼쪽에서 허리를 가로질러 친다 — 오른쪽 요격 (腰擊)과 번갈아', src: '본국검 p036/28 左腰擊 · 무비지 쪽152/0566 抹腰' },
-  '왼쪽 쟁기': { name: '좌협세 (左夾勢)', desc: '칼자루를 왼 허리에 끼고 칼끝은 배 높이로 수평 · 가운데를 찌른다', src: '무도 권2 p043/35 · 그림' },
-  '왼쪽 바꿈': { name: '과좌세 (跨左勢)', desc: '왼편을 걸쳐 쓸어 아래로 친다', src: '무비지 쪽171/0585 · 자리 [해석]' },
+  '지붕 (Vom Tag)': { name: '표범 머리 (豹頭勢 표두세)', desc: '높이 든 칼로 벼락같이 내려친다', src: '무비지 쪽157/0571 · 무도 권2 p036/28' },
+  '어깨 지붕 (Vom Tag)': { name: '오른 날개 (右翼勢 우익세)', desc: '오른 어깨 높이에서 벤다', src: '무비지 쪽168/0582 · 자리 [해석]' },
+  '황소 (Ochs)': { name: '턱밑 비늘 (逆鱗勢 역린세)', desc: '목을 곧게 찌른다', src: '무비지 쪽173/0587 · 무도 p044/36 그림' },
+  '긴 자세 (Langort)': { name: '곧게 보내기 (直符送書 직부송서)', desc: '칼끝을 곧게 뻗는 쉬는 자세', src: '무비지 쪽156/0570 左翼勢 안의 자세 이름 · 본국검 무도 권3 p033/25 「作直符送書勢 右手左脚一刺」 [원문]. 中平은 劍 장에 없는 창 장(권87) 낱말이라 뺌 — 사장님 10/9 01:4x' },
+  '옆 자세': { name: '허리 베기 (腰擊勢 요격세)', desc: '허리를 가로질러 벤다', src: '무비지 쪽166/0580 「劍中之首擊」 · 무도 p041/33 그림' },
+  '쟁기 (Pflug)': { name: '배 겨눔 (坦腹勢 탄복세)', desc: '산이 무너지듯 나아가 배를 찌른다', src: '무비지 쪽158/0572 · 무도 p037/29 그림' },
+  '바꿈 (Wechsel)': { name: '걷어 올리기 (撩掠勢 요략세)', desc: '걷어 올려 막고 아래로 친다', src: '무도 권2 p038/30 「蔽左護右」 · 그림' },
+  '옆 지킴 (Nebenhut)': { name: '지켜보기 (看守勢 간수세)', desc: '웅크린 범처럼 낮게 기다린다', src: '무도 권2 p039/31' },
+  '바보 (Alber)': { name: '점 찍기 (點劍勢 점검세)', desc: '점 찍듯 낮게 찌른다', src: '무비지 쪽155/0569' },
+  '왼쪽 어깨 지붕': { name: '왼 날개 (左翼勢 좌익세)', desc: '눌러서 상대 손아귀를 친다', src: '무비지 쪽156/0570 · 자리 [해석]' },
+  '왼쪽 황소': { name: '봉황 머리 (鳳頭勢 봉두세)', desc: '쳐내고 찌르고 끊어 벤다', src: '무비지 쪽176/0590 「洗刺剪殺」 · 무도 p046/38 그림 · 왼쪽 자리 [해석] (전 \'왼 머리 옆 겨눔\' — 원전 없음)' },
+  '왼쪽 옆 자세': { name: '왼 허리 베기 (腰擊勢 요격세)', desc: '왼쪽에서 허리를 가로질러 벤다', src: '본국검 p036/28 左腰擊 · 무비지 쪽152/0566 抹腰' },
+  '왼쪽 쟁기': { name: '왼 끼기 (左夾勢 좌협세)', desc: '왼 허리에 끼고 배를 찌른다', src: '무도 권2 p043/35 · 그림' },
+  '왼쪽 바꿈': { name: '왼 걸치기 (跨左勢 과좌세)', desc: '왼편을 걸쳐 쓸어 내린다', src: '무비지 쪽171/0585 · 자리 [해석]' },
 };
 
 // ── 서양·무유파 이름 (10/9, docs/motion/schools/names_west_none_2026-10-09.md §2-3·§3-4·§4 그대로 — 사장님 결정: 이베리아는 포르투갈어 철자(피게이레두),
@@ -243,55 +243,55 @@ const CHINESE_NAMES = {
 // 이베리아 (몬탄테 — 츠바이핸더, 앞무게 틀). 이름 14 자리 — 피게이레두 1651 원문 낱말 + 자리 근거 7, 자리 [해석] 7.
 //  피 단Ⅰ = 단순 규칙 Ⅰ, 피 복Ⅱ = 복합 규칙 Ⅱ (Myers·Hick 전사). 고디뉴 = Arte de Esgrima 1599 fol (PDF 쪽 = 2×fol − 7)
 const IBERIAN_NAMES = {
-  '지붕 (Vom Tag)': { name: '머리 위 (altibaxo)', desc: '두 손을 머리 위로(날밑이 머리를 덮음), 칼은 어깨 뒤로 넘어가는 길 · 곧게 내려친다', src: '피 단Ⅸ·복ⅩⅤ altibaxo · 머리 위로 넘김 피 복Ⅱ·복ⅩⅥ · 고 규칙 3·4·5 · 고디뉴 fol.113r de arriba abajo · 자리 [해석]' },
-  '어깨 지붕 (Vom Tag)': { name: '탈류 준비 (talho)', desc: '손은 머리 오른쪽 높이, 칼은 오른 어깨 뒤로 늘어뜨려 칼끝은 땅 쪽 · 뒤에서 감아 비스듬히 벤다', src: '피 단Ⅰ·단Ⅲ talho por detras · 고 규칙 4·6 · 고디뉴 fol.113r tajo · 자리 [해석]' },
-  '황소 (Ochs)': { name: '귀 앞 겨눔 (orelha direyta)', desc: '칼자루를 오른 귀 앞 높이에, 칼끝은 오른 대각으로 들어 · 올려 벤 레베스가 멈추는 자리', src: '피 복Ⅱ·복ⅩⅤ (10/10 자세표 고증)' },
-  '긴 자세 (Langort)': { name: '곧은 자세 (postura recta)', desc: '칼을 얼굴 앞 가운데에 곧게 · 베기마다 여기 멈춘다', src: '피 단Ⅰ·단Ⅱ·복Ⅶ · 손 높이는 [해석]' },
-  '옆 자세': { name: '가로 탈류 (talho orizontal)', desc: '칼을 오른쪽 몸 가운데 높이에 눕혀 뒤로 감는다 · 가로로 벤다', src: '피 단Ⅺ·복Ⅺ · 고 규칙 9' },
-  '쟁기 (Pflug)': { name: '비낀 자세 (postura obtusa)', desc: '오른손을 허리띠 앞에, 칼은 오른 대각으로 비껴 · 찌르기를 받아 탈류로 쳐낸다', src: '피 단ⅩⅣ·복ⅩⅣ' },
-  '바꿈 (Wechsel)': { name: '아래 탈류 (talho de baxo)', desc: '오른쪽으로 떨어진 칼, 칼끝은 오른쪽 아래 뒤로 · 뒤에서 아래에서 위로 탈류를 올린다', src: '피 단Ⅰ·복Ⅰ · 자리 [해석]' },
-  '옆 지킴 (Nebenhut)': { name: '뒤 탈류 (talho por detras)', desc: '칼이 오른 옆구리를 휘감아 뒤로 · 뒤에서 앞으로 탈류', src: '피 단Ⅲ·복ⅩⅤ · 고 규칙 8 · 자리 [해석] (대안 고디뉴 fol.117v tajo rastero)' },
-  '바보 (Alber)': { name: '칼끝 땅에 (ponta no chão)', desc: '몸을 곧게, 칼끝을 앞 땅으로 · 모든 규칙이 여기서 시작해 여기로 끝난다', src: '피 단Ⅰ' },
-  '왼쪽 어깨 지붕': { name: '레베스 준비 (revez)', desc: '머리 위로 넘긴 칼을 왼 어깨에 떨군다 · 왼쪽에서 감아 벤다', src: '피 복Ⅱ revez cingido · 복ⅩⅤ · 고 규칙 4 · 고디뉴 fol.113r' },
-  '왼쪽 황소': { name: '왼 높이 비낌 (linha obtusa)', desc: '칼을 머리 앞 왼쪽 높이에 비껴 멈춘다', src: '피 복ⅩⅤ · 칼끝 방향 [해석]' },
-  '왼쪽 옆 자세': { name: '가로 레베스 (revez orizontal)', desc: '오른팔이 엇갈려 칼을 왼쪽 몸 가운데 높이에 뒤로 감는다 · 왼쪽에서 가로로 벤다', src: '피 단Ⅺ·복Ⅰ·복Ⅺ · 고 규칙 9' },
-  '왼쪽 쟁기': { name: '왼 비낀 자세 (postura obtusa)', desc: '칼을 왼 대각으로 비껴 · 찌르기를 레베스로 쳐낸다', src: '피 복ⅩⅣ 둘째 postura' },
-  '왼쪽 바꿈': { name: '아래 레베스 (revez de baxo)', desc: '왼쪽으로 떨군 칼(오른팔이 왼팔 위로 엇갈림), 칼끝은 왼쪽 아래 뒤로 · 아래에서 위로 레베스를 올린다', src: '피 복Ⅰ·복ⅩⅤ · 자리 [해석]' },
+  '지붕 (Vom Tag)': { name: '머리 위 (altibaxo)', desc: '머리 위에서 곧게 내려친다', src: '피 단Ⅸ·복ⅩⅤ altibaxo · 머리 위로 넘김 피 복Ⅱ·복ⅩⅥ · 고 규칙 3·4·5 · 고디뉴 fol.113r de arriba abajo · 자리 [해석]' },
+  '어깨 지붕 (Vom Tag)': { name: '오른 베기 준비 (talho)', desc: '뒤로 감았다가 오른쪽에서 벤다', src: '피 단Ⅰ·단Ⅲ talho por detras · 고 규칙 4·6 · 고디뉴 fol.113r tajo · 자리 [해석]' },
+  '황소 (Ochs)': { name: '귀 앞 겨눔 (orelha direyta)', desc: '올려 벤 칼이 멈추는 자리', src: '피 복Ⅱ·복ⅩⅤ (10/10 자세표 고증)' },
+  '긴 자세 (Langort)': { name: '곧은 자세 (postura recta)', desc: '베기마다 여기서 멈춘다', src: '피 단Ⅰ·단Ⅱ·복Ⅶ · 손 높이는 [해석]' },
+  '옆 자세': { name: '오른 가로베기 (talho orizontal)', desc: '몸 가운데 높이로 가로 벤다', src: '피 단Ⅺ·복Ⅺ · 고 규칙 9' },
+  '쟁기 (Pflug)': { name: '비낀 자세 (postura obtusa)', desc: '찌르기를 받아 쳐낸다', src: '피 단ⅩⅣ·복ⅩⅣ' },
+  '바꿈 (Wechsel)': { name: '오른 올려베기 (talho de baxo)', desc: '아래에서 위로 벤다', src: '피 단Ⅰ·복Ⅰ · 자리 [해석]' },
+  '옆 지킴 (Nebenhut)': { name: '뒤에서 오른 베기 (talho por detras)', desc: '옆구리를 휘감아 뒤에서 벤다', src: '피 단Ⅲ·복ⅩⅤ · 고 규칙 8 · 자리 [해석] (대안 고디뉴 fol.117v tajo rastero)' },
+  '바보 (Alber)': { name: '칼끝 땅에 (ponta no chão)', desc: '모든 규칙이 여기서 시작해 끝난다', src: '피 단Ⅰ' },
+  '왼쪽 어깨 지붕': { name: '왼 베기 준비 (revez)', desc: '왼 어깨에서 감아 벤다', src: '피 복Ⅱ revez cingido · 복ⅩⅤ · 고 규칙 4 · 고디뉴 fol.113r' },
+  '왼쪽 황소': { name: '왼 높이 비낌 (linha obtusa)', desc: '머리 앞 왼쪽에 비껴 멈춘다', src: '피 복ⅩⅤ · 칼끝 방향 [해석]' },
+  '왼쪽 옆 자세': { name: '왼 가로베기 (revez orizontal)', desc: '왼쪽에서 가로로 벤다', src: '피 단Ⅺ·복Ⅰ·복Ⅺ · 고 규칙 9' },
+  '왼쪽 쟁기': { name: '왼 비낀 자세 (postura obtusa)', desc: '찌르기를 왼쪽으로 쳐낸다', src: '피 복ⅩⅣ 둘째 postura' },
+  '왼쪽 바꿈': { name: '왼 올려베기 (revez de baxo)', desc: '왼쪽 아래에서 올려벤다', src: '피 복Ⅰ·복ⅩⅤ · 자리 [해석]' },
 };
 // 독일 두삭 가지 (한손 베기 — 세이버·팔쉬온). 이름 14 자리 — 마이어 1570 두삭 편 원문 이름 12 + 쉬운 말 2.
 //  롱소드와 같은 독일 유파라 TRADITIONS.german.names 가 아니라 가지에 둔다 (6절 — sword_art.js 가 가지 이름을 읽어야 함)
 const DUSSACK_NAMES = {
-  '지붕 (Vom Tag)': { name: '망루 (Wacht)', desc: '칼을 머리 위로 · 위에서 곧게 내려벤다', src: '마이어 1570 Ⅱ.20r.2' },
-  '어깨 지붕 (Vom Tag)': { name: '분노 자세 (Zornhut)', desc: '칼을 오른 어깨에 메어 칼날은 뒤로 · 비스듬히 내려벤다', src: '마이어 Ⅱ.2r.2·Ⅱ.29r.1 · 꼴은 장검 Ⅰ.7v.3 [해석]' },
-  '황소 (Ochs)': { name: '황소 (Stier)', desc: '칼자루를 머리 오른쪽에, 칼끝은 상대 얼굴 · 위에서 찌른다', src: '마이어 Ⅱ.22r.3' },
-  '긴 자세 (Langort)': { name: '긴 자세 (Langort)', desc: '팔을 쭉 뻗어 칼끝으로 겨눈다 · 막기가 끝나는 자리', src: '마이어 Ⅱ.2r.2·Ⅱ.16r' },
-  '옆 자세': { name: '가운데 지킴 (Mittelhut)', desc: '칼을 오른 옆 뒤로 눕힌다 · 가로로 벤다 (가운데 베기)', src: '마이어 Ⅱ.2r.2·Ⅱ.43r.2 · 오른쪽 꼴 [해석]' },
-  '쟁기 (Pflug)': { name: '멧돼지 (Eber)', desc: '칼자루를 오른 허리 아래에, 칼끝은 상대 얼굴 · 아래에서 찌르고 올려벤다', src: '마이어 Ⅱ.41r.3 · 자리 [해석] (레크퀴흐너 Eber = Pflug)' },
-  '바꿈 (Wechsel)': { name: '바꿈 (Wechsel)', desc: '칼끝을 오른쪽 아래 땅으로 · 올려베기 준비', src: '마이어 Ⅱ.45v.2' },
-  '옆 지킴 (Nebenhut)': { name: '옆 지킴', desc: '칼을 오른 허리 뒤로 숨긴다', src: '두삭 편에 없음 (쉬운 말)' },
-  '바보 (Alber)': { name: '보루 (Bastei)', desc: '칼끝을 앞 땅으로 멀리 · 아래를 막고 올려친다', src: '마이어 Ⅱ.47v.4 「gleich dem Olber」' },
-  '왼쪽 어깨 지붕': { name: '왼 분노 자세 (Zornhut)', desc: '칼을 왼 어깨에 메어 칼날은 뒤로 · 왼쪽에서 비스듬히 내려벤다', src: '마이어 Ⅱ.29r.1 「zu beiden seiten」' },
-  '왼쪽 황소': { name: '왼 황소 (Stier)', desc: '칼자루를 머리 왼쪽에, 칼끝은 상대 얼굴', src: '마이어 Ⅱ.2r.2' },
-  '왼쪽 옆 자세': { name: '왼 가운데 지킴 (Mittelhut)', desc: '가로베기가 끝나 칼이 왼 옆에 눕는다 · 되받아 가로로', src: '마이어 Ⅱ.43r.2' },
-  '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '칼자루를 왼 허리에, 칼끝은 상대 얼굴', src: '원전 없음 (마이어 Ⅱ.41r.3: Eber 는 오른쪽만)' },
-  '왼쪽 바꿈': { name: '왼 바꿈 (Wechsel)', desc: '칼끝을 왼쪽 아래로 · 분노의 베기가 끝나는 자리', src: '마이어 Ⅱ.45v.2 「zu beiden seiten」' },
+  '지붕 (Vom Tag)': { name: '망루 (Wacht)', desc: '위에서 곧게 내려벤다', src: '마이어 1570 Ⅱ.20r.2' },
+  '어깨 지붕 (Vom Tag)': { name: '분노 자세 (Zornhut)', desc: '어깨에서 비스듬히 내려벤다', src: '마이어 Ⅱ.2r.2·Ⅱ.29r.1 · 꼴은 장검 Ⅰ.7v.3 [해석]' },
+  '황소 (Ochs)': { name: '황소 (Stier)', desc: '위에서 찌른다', src: '마이어 Ⅱ.22r.3' },
+  '긴 자세 (Langort)': { name: '긴 자세 (Langort)', desc: '막기가 끝나는 자리', src: '마이어 Ⅱ.2r.2·Ⅱ.16r' },
+  '옆 자세': { name: '가운데 지킴 (Mittelhut)', desc: '가로로 벤다', src: '마이어 Ⅱ.2r.2·Ⅱ.43r.2 · 오른쪽 꼴 [해석]' },
+  '쟁기 (Pflug)': { name: '멧돼지 (Eber)', desc: '아래에서 찌르고 올려벤다', src: '마이어 Ⅱ.41r.3 · 자리 [해석] (레크퀴흐너 Eber = Pflug)' },
+  '바꿈 (Wechsel)': { name: '바꿈 (Wechsel)', desc: '아래에서 올려벤다', src: '마이어 Ⅱ.45v.2' },
+  '옆 지킴 (Nebenhut)': { name: '옆 지킴', desc: '칼을 허리 뒤로 숨긴다', src: '두삭 편에 없음 (쉬운 말)' },
+  '바보 (Alber)': { name: '보루 (Bastei)', desc: '아래를 막고 올려친다', src: '마이어 Ⅱ.47v.4 「gleich dem Olber」' },
+  '왼쪽 어깨 지붕': { name: '왼 분노 자세 (Zornhut)', desc: '왼쪽에서 비스듬히 내려벤다', src: '마이어 Ⅱ.29r.1 「zu beiden seiten」' },
+  '왼쪽 황소': { name: '왼 황소 (Stier)', desc: '왼쪽 위에서 찌른다', src: '마이어 Ⅱ.2r.2' },
+  '왼쪽 옆 자세': { name: '왼 가운데 지킴 (Mittelhut)', desc: '왼쪽에서 되받아 가로 벤다', src: '마이어 Ⅱ.43r.2' },
+  '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '왼 허리에서 겨눈다', src: '원전 없음 (마이어 Ⅱ.41r.3: Eber 는 오른쪽만)' },
+  '왼쪽 바꿈': { name: '왼 바꿈 (Wechsel)', desc: '분노의 베기가 끝나는 자리', src: '마이어 Ⅱ.45v.2 「zu beiden seiten」' },
 };
 // 무유파 (둔기·총 — 냉동 참치·나뭇가지·고무 닭·모르겐슈테른·권총). 쉬운 말 14 — 역사 낱말 없음. 앞무게 표·한손 표에 같은 말
 const NONE_NAMES = {
-  '지붕 (Vom Tag)': { name: '머리 위', desc: '머리 위로 높이 든다 · 내려친다', src: '쉬운 말' },
-  '어깨 지붕 (Vom Tag)': { name: '오른 어깨 메기', desc: '오른 어깨에 메어 끝을 뒤로 · 비스듬히 내려친다', src: '쉬운 말' },
-  '황소 (Ochs)': { name: '머리 옆 겨눔', desc: '손을 머리 오른쪽에, 끝은 상대 얼굴', src: '쉬운 말' },
-  '긴 자세 (Langort)': { name: '앞으로 겨눔', desc: '끝을 상대에게 곧게 겨눈다 · 쉴 때 돌아오는 자리', src: '쉬운 말' },
-  '옆 자세': { name: '오른쪽 젖히기', desc: '오른쪽 뒤로 젖혀 둔다 · 옆으로 후려친다', src: '쉬운 말' },
-  '쟁기 (Pflug)': { name: '허리 겨눔', desc: '손을 오른 허리에, 끝은 상대 얼굴', src: '쉬운 말' },
-  '바꿈 (Wechsel)': { name: '오른 아래로 내림', desc: '끝을 오른쪽 아래로 · 올려친다', src: '쉬운 말' },
-  '옆 지킴 (Nebenhut)': { name: '오른 뒤로 숨김', desc: '오른 허리 뒤로 숨겨 길이를 감춘다', src: '쉬운 말' },
-  '바보 (Alber)': { name: '앞으로 늘어뜨림', desc: '끝을 앞 아래로 늘어뜨린다 · 머리를 비워 끌어들인다', src: '쉬운 말' },
-  '왼쪽 어깨 지붕': { name: '왼 어깨 메기', desc: '왼 어깨에 메어 끝을 뒤로 · 반대쪽으로 비스듬히 내려친다', src: '쉬운 말' },
-  '왼쪽 황소': { name: '왼 머리 옆 겨눔', desc: '손을 머리 왼쪽에, 끝은 상대 얼굴', src: '쉬운 말' },
-  '왼쪽 옆 자세': { name: '왼쪽 젖히기', desc: '왼쪽 뒤로 젖혀 둔다 · 반대쪽으로 후려친다', src: '쉬운 말' },
-  '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '손을 왼 허리에, 끝은 상대 얼굴', src: '쉬운 말' },
-  '왼쪽 바꿈': { name: '왼 아래로 내림', desc: '끝을 왼쪽 아래로 · 내려친 끝, 여기서 되올린다', src: '쉬운 말' },
+  '지붕 (Vom Tag)': { name: '머리 위', desc: '높이 들어 내려친다', src: '쉬운 말' },
+  '어깨 지붕 (Vom Tag)': { name: '오른 어깨 메기', desc: '어깨에서 비스듬히 내려친다', src: '쉬운 말' },
+  '황소 (Ochs)': { name: '머리 옆 겨눔', desc: '머리 옆에서 얼굴을 겨눈다', src: '쉬운 말' },
+  '긴 자세 (Langort)': { name: '앞으로 겨눔', desc: '쉴 때 돌아오는 자리', src: '쉬운 말' },
+  '옆 자세': { name: '오른쪽 젖히기', desc: '옆으로 후려친다', src: '쉬운 말' },
+  '쟁기 (Pflug)': { name: '허리 겨눔', desc: '허리에서 얼굴을 겨눈다', src: '쉬운 말' },
+  '바꿈 (Wechsel)': { name: '오른 아래로 내림', desc: '아래에서 올려친다', src: '쉬운 말' },
+  '옆 지킴 (Nebenhut)': { name: '오른 뒤로 숨김', desc: '칼 길이를 감춘다', src: '쉬운 말' },
+  '바보 (Alber)': { name: '앞으로 늘어뜨림', desc: '머리를 비워 끌어들인다', src: '쉬운 말' },
+  '왼쪽 어깨 지붕': { name: '왼 어깨 메기', desc: '왼 어깨에서 비스듬히 내려친다', src: '쉬운 말' },
+  '왼쪽 황소': { name: '왼 머리 옆 겨눔', desc: '왼쪽 머리 옆에서 겨눈다', src: '쉬운 말' },
+  '왼쪽 옆 자세': { name: '왼쪽 젖히기', desc: '반대쪽으로 후려친다', src: '쉬운 말' },
+  '왼쪽 쟁기': { name: '왼 허리 겨눔', desc: '왼 허리에서 겨눈다', src: '쉬운 말' },
+  '왼쪽 바꿈': { name: '왼 아래로 내림', desc: '내려친 끝, 여기서 되올린다', src: '쉬운 말' },
 };
 // 유파 기질 (10/9 유파 걸음 '싼 층 먼저' — docs/strike/school_temper_2026-10-09.md): AI 성격(ai.js this.pers)의 기본 범위를 유파마다.
 //  [lo, hi] = 그 사이에서 rand 로 한 번 굴림, 숫자 = 그 값 그대로. 없는 칸은 예전 기본값. 인물(characters.js persona.pers)이 정한 값이 늘 이긴다.
@@ -434,15 +434,15 @@ export const CHINESE_TECHK_B = { '*': { ...CHINESE_TECHK['*'], thrust: 1.87 } };
 // 중국 고유 동작 셋 (초안 §4: 刺·擊 고리 둘 + 斂翅. 수는 [추정])
 const CHINESE_UNIQUE = [
   // 찌른 뒤(긴 자세) 오른쪽으로 당겨 가로로 — 坦腹·左夾 → 腰擊
-  { name: 'yaoji', nameKo: '요격 (腰擊)', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.3, chain: 1, src: '조선세법 「向前進步腰擊」 무비지 쪽158/0572·쪽170/0584 [원문]' },
+  { name: 'yaoji', nameKo: '허리 베기 (腰擊 요격)', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.3, chain: 1, src: '조선세법 「向前進步腰擊」 무비지 쪽158/0572·쪽170/0584 [원문]' },
   // 찌른 뒤 치켜 올렸다 눌러 손을 침 — 逆鱗刺 → 左翼擊 「上挑下壓 直殺虎口」
-  { name: 'zuoyi', nameKo: '좌익격 (左翼擊)', from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, fit: { online: 1.4 }, src: '조선세법 左翼勢 무비지 쪽156/0570·쪽173/0587 [원문]' },
+  { name: 'zuoyi', nameKo: '왼 날개 치기 (左翼擊 좌익격)', from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 0.5, fast: true, fit: { online: 1.4 }, src: '조선세법 左翼勢 무비지 쪽156/0570·쪽173/0587 [원문]' },
   // 斂翅 — 패한 척 물러났다가 갑자기 腰擊. 속임수 꼴: 찌르는 척(坦腹)하다 칼을 옆 뒤로 거둬들이고(물러나는 척) 오른 옆에서 허리를 가로 벤다.
   //  속임수는 가짜 몫 동안 발을 내딛지 않는다 — 몸이 실제로 물러나는 것은 그리지 못한다(손만 거둬들임) [해석]
   { name: 'lianchi', feint: { name: '염시 (斂翅) · 찌르는 척 → 거둬 요격', fake: 'stichPflug', at: 0.3, then: [G.nebenR, G.sideR, [0.0, 0.1], G.sideL], open: 'UL' }, src: '조선세법 斂翅勢 무비지 쪽174/0588 · 무도 권2 p045/37 「法能佯北誘賺 … 倒退進步腰擊」 [원문] · 물러남을 손 거둠으로 [해석]' },
   // 掣步 腰擊: 앞발을 왼쪽 앞으로 비껴 딛고(뒷발 끌어붙임) 찌른 자리(긴 자세)에서 오른쪽으로 당겨 허리를 가로 벤다 — 길 = 위 yaoji, base = yaoji × 1.1.
   //  처음엔 공용 zwerch 길(오른 옆 시작·base 0.5)이었으나 48 판에 한 번도 안 골랐다(청강검 손이 오른 옆에 거의 안 감) → 원문 「向前進步腰擊」(찌른 뒤 腰擊)대로 yaoji 길로 (10/9 잼)
-  { name: 'chebuYaoji', nameKo: '체보요격 (掣步腰擊)', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.25, fwd: 0.25, when: 'strike' }, src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
+  { name: 'chebuYaoji', nameKo: '끌어 딛고 허리 베기 (掣步腰擊 체보요격)', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.25, fwd: 0.25, when: 'strike' }, src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
 ];
 
 // ── 고유 동작 (10/9 — 사장님 01:5x '각 유파마다 강점과 특징을 살릴 고유 동작', docs/strike/school_unique_2026-10-09.md) ──
@@ -523,7 +523,7 @@ const IBERIAN_UNIQUE = [
   //  같은 자리의 분노의 베기(1.96)에 밀린 것이라 base 를 같은 몬탄테 여러 칼 길 talhoReves 와 같은 1.1 로 (10/9 잼)
   { name: 'redondo', nameKo: '머리 위 돌려 베기 (redondo)', from: G.tagR, path: [G.sideR, [0.0, 0.1], G.sideL, [-0.3, 0.45], [0.3, 0.45], G.sideR, [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0.05, base: 1.1, chain: 2, src: '피 복Ⅱ 「pass it over the head and behind the shoulders, such that it falls over the left arm to give a circling revez」 · 고디뉴 규칙 4·5 탈류가 「läuft durch bis er über deinem Kopf dreht」 [원문 영역] · 길 [해석] · 수 [추정]' },
   // 내려 올려 베기(altibaixo): 지붕에서 곧게 내려베고(altabaixo) 같은 줄로 곧장 되올려 다시 지붕 — 흐름이 다음 내려베기로 잇는다
-  { name: 'altibaixo', nameKo: '위아래 사슬 (altibaxo)', from: G.tag, path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], open: 'H', kind: 'cut', reach: 0, base: 0.9, presses: true, chain: 2, src: '피 단Ⅸ 「letting the montante fall to the same right side you will give on that side an altibaxo」·복Ⅰ·복ⅩⅤ(altibaxo 뒤 곧장 올려 벰) [원문 영역] · 되올림 [해석] · 수 [추정]' },
+  { name: 'altibaixo', nameKo: '위아래 베기 (altibaxo)', from: G.tag, path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], open: 'H', kind: 'cut', reach: 0, base: 0.9, presses: true, chain: 2, src: '피 단Ⅸ 「letting the montante fall to the same right side you will give on that side an altibaxo」·복Ⅰ·복ⅩⅤ(altibaxo 뒤 곧장 올려 벰) [원문 영역] · 되올림 [해석] · 수 [추정]' },
   // 바퀴로 받기: 맞받아 베기를 탈류→레베스(8자)로 — 몬탄테는 받는 칼도 멈추지 않고 돌린다. 맞받아치기 목록 꼴(같은 거리면 앞 이름이 이긴다)
   { name: 'rodaCounter', counter: { highR: ['talhoReves', 'zornhauL', 'oberhau', 'zornhau'], default: ['talhoReves', 'zornhau', 'oberhau', 'zornhauL'] }, src: '몬탄테 규칙 1 탈류·레베스를 받는 자리에서 [원전 2차] · 맞받아치기에 씀 [해석]' },
   // 돌아 들며 탈류(talho rodeado): 오른쪽 앞으로 둥글게 돌아 딛으며 오른 어깨에서 사선 내려베기 — 길 = 공용 zornhau(talho), base = 앞무게 꾸러미 zornhau 1.96
@@ -531,7 +531,7 @@ const IBERIAN_UNIQUE = [
   //  the montante to give a revez cutting from behind with the other edge … also from low to high」(피 단Ⅰ — 「whoever performs it well will be able to perform them all」).
   //  오른 아래 → 올려 탈류 → 왼 높이 비낌(피 복ⅩⅤ 멈춤 자리) → 왼쪽으로 떨궈(「let fall the montante to the left」 피 복Ⅰ) → 왼 아래 → 올려 레베스 → 오른 높이 비낌. chain 2 = 흐름이 이어 돈다
   { name: 'talhoRevezBaixo', nameKo: '번갈아 올려베기 (talho e revez de baxo)', from: G.wechselR, path: [[0.04, -0.08], G.ochsL, [-0.5, 0.0], G.wechselL, [-0.04, -0.08], G.ochsR], open: 'LL', kind: 'cut', reach: 0, base: 0.9, chain: 2, src: '피게이레두 1651 단순 규칙 Ⅰ·복합 규칙 Ⅰ·Ⅶ(「always from low to high, alternating talho and revez」) [원문 영역] · 길의 수 [추정]' },
-  { name: 'talhoRodeado', nameKo: '둥근 걸음 탈류 (talho rodeado)', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
+  { name: 'talhoRodeado', nameKo: '돌며 베기 (talho rodeado)', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
@@ -561,7 +561,7 @@ const GERMAN_PASSIVES = [
 //  10/9 유파 설계 v3(사장님 승인 '제안대로'): contratempo(박자 찌르기) 패시브는 지웠다 — 비기 Passata in contratempo 가 상대 박자를 맡는다. cavazione p 0.7 → 0.5
 const ITALIAN_PASSIVES = [
   // 칼이 맞물리면 빼서 반대편으로 찌른다 (stichPflug ↔ stichPflugL, 지금 손에서 먼 쪽)
-  { name: 'cavazione', nameKo: '맞물림에서 빼 찌르기 (cavazione)', when: ['parried', 'bindDef'], do: { tech: ['stichPflug', 'stichPflugL'], far: true, why: 'riposte' }, p: 0.5, src: 'Capo Ferro 1610 「si caverà」 PDF 80쪽 [원전 2차]' },
+  { name: 'cavazione', nameKo: '빼서 찌르기 (cavazione)', when: ['parried', 'bindDef'], do: { tech: ['stichPflug', 'stichPflugL'], far: true, why: 'riposte' }, p: 0.5, src: 'Capo Ferro 1610 「si caverà」 PDF 80쪽 [원전 2차]' },
 ];
 // 이베리아 (몬탄테, 츠바이핸더)
 //  10/9 유파 설계 v3(사장님 승인 '제안대로'): 베어서 막기 p 0.8 → 0.4 · 이어 돌기 0.9 그대로 · 돌려 물러남 지움(48 판에 거의 안 났다 — 몰린 물러남 자체가 드묾)
@@ -583,17 +583,17 @@ const IBERIAN_PASSIVES = [
 // 일본 (카타나 가족, 모노호시자오). 10/9 유파 설계 v3(사장님 승인 '제안대로'): 残心 1.0 그대로 · 出端 1.0 → 0.6(비기 後の先 조건이 차면 비기가 먼저) · 返し 0.8 → 0.5
 const JAPANESE_PASSIVES = [
   // 残心: 맞힌 뒤 이어 치지 않고 中段(긴 자세)으로 칼끝을 겨눈 채 길게 물러난다. 일본 간 보는 자세(높은 자세)에 긴 자세가 없어 그 자세 하나만 빌려 쓴다(ai.js passiveGuard)
-  { name: 'zanshin', nameKo: '잔신', when: 'landed', do: { withdraw: 'langort', time: 1.2 }, p: 1.0, src: '兵法家伝書 p18/18 「殘心之事 懸待ともに用」 [원문] · 검도형 각 本 끝 残心 [원문]' },
+  { name: 'zanshin', nameKo: '남은 마음 (잔신)', when: 'landed', do: { withdraw: 'langort', time: 1.2 }, p: 1.0, src: '兵法家伝書 p18/18 「殘心之事 懸待ともに用」 [원문] · 검도형 각 本 끝 残心 [원문]' },
   // 出端: 상대가 칼을 들거나 걸어 드는 순간 먼저 친다 — 치기 가지를 늘 고르고, 빠른 기술 ×2 · 누르는 베기 ×1.5
-  { name: 'debana', nameKo: '데바나', when: ['foeRaise', 'foeStepIn'], do: { prefer: { fast: 2.0, presses: 1.5 } }, p: 0.6, src: '兵法家伝書 p16/15 「一ッ上れば、つけて打」 [원문] · 오륜서 表4 [원문]' },
+  { name: 'debana', nameKo: '나설 때 치기 (데바나)', when: ['foeRaise', 'foeStepIn'], do: { prefer: { fast: 2.0, presses: 1.5 } }, p: 0.6, src: '兵法家伝書 p16/15 「一ッ上れば、つけて打」 [원문] · 오륜서 表4 [원문]' },
   // 返し: 받은 칼을 그대로 되받아 벤다 — 燕返し 길(없으면 정수리 베기)
-  { name: 'kaeshi', nameKo: '카에시', when: 'bindDef', do: { tech: 'tsubameGaeshi', alt: 'oberhau', why: 'riposte' }, p: 0.5, src: '오륜서 表2 [원문]' },
+  { name: 'kaeshi', nameKo: '되받아 치기 (카에시)', when: 'bindDef', do: { tech: 'tsubameGaeshi', alt: 'oberhau', why: 'riposte' }, p: 0.5, src: '오륜서 表2 [원문]' },
 ];
 // 중국 (조선세법, 청강검)
 //  10/9 유파 설계 v3(사장님 승인 '제안대로'): 斂翅(물러남 끝 腰擊)·看守(대치에서 굴려 침) 패시브는 지웠다 — 이어 치는 결은 비기 連環三擊 로 올렸다(斂翅 속임수 고유 동작 lianchi 는 그대로). 刺→擊 0.8 그대로
 const CHINESE_PASSIVES = [
   // 刺→擊 고리: 찌른 뒤(맞든 헛치든) 곧장 腰擊 (yaoji 길, 없으면 zwerch)
-  { name: 'ciji', nameKo: '자→격 (刺→擊) 고리', when: ['missed', 'landed'], cond: { myThrust: true }, do: { chain: ['yaoji'], alt: 'zwerch' }, p: 0.8, src: '무비지 쪽158/0572 「向前進步腰擊」 [원문]' },
+  { name: 'ciji', nameKo: '찌르고 이어 베기 (刺→擊 자→격)', when: ['missed', 'landed'], cond: { myThrust: true }, do: { chain: ['yaoji'], alt: 'zwerch' }, p: 0.8, src: '무비지 쪽158/0572 「向前進步腰擊」 [원문]' },
 ];
 
 // ── 비기 (10/9 유파 설계 v3 — 사장님 승인, docs/strike/school_secret_2026-10-09.md) ──
@@ -620,7 +620,7 @@ const GERMAN_SECRET = {
 // 이탈리아 Passata in contratempo: 상대가 칼을 들거나 달려드는 박자에, 높은 칼 밑으로 뒷발을 지나 보내며 찌른다 (고유 passata sotto 길 + 런지)
 const ITALIAN_SECRET = {
   name: 'passataContratempo',
-  nameKo: '박자 밑 찌르기 (passata in contratempo)',
+  nameKo: '엇박 찌르기 (passata in contratempo)',
   when: ['foeRaise', 'foeCharge'],
   cond: { dist: 'italianDist', commit: 'italianCommit' }, // commit: 칼을 드는 사건은 결심한 공격(손 빠르기 문턱)만 — 10/9 23:5x 발동 줄이기
   do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'lunge', push: 'stepPush' }, stance: 'lunge' }, // 10/10 04:2x 런지 사진: 앞발을 멀리(lunge — 전: 뒷발 지나 보내기 pass), 찌르는 동안 런지 자세(SECRET.stance.lunge) // push: 10/9 4차 걸음 밀기
@@ -710,7 +710,7 @@ const IBERIAN_SECRET_GILMOK = {
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
 const JAPANESE_SECRET = {
   name: 'goNoSen',
-  nameKo: '고노센', // 이름은 가칭(사장님 확인 전) — 화면에선 '· 가칭' 꼬리를 뺌 (10/10 17:1x 문구 정리)
+  nameKo: '뒤에서 앞서기 (고노센)', // 이름은 가칭(사장님 확인 전) — 화면에선 '· 가칭' 꼬리를 뺌 (10/10 17:1x 문구 정리)
   // 10/9 사장님 추가 지시: 헛스윙을 본 뒤가 아니라 한 박자 빠르게 — 상대가 '내 비기는 닿고 상대는 명백히 안 닿을 간격에서 무의미하게 허점을 노출하는 공격 동작'을
   //  시작하는 순간(칼을 듦·달려듦, 지금 모습). 헛침(foeRecover)은 같은 창에서 보조 사건(칼끝 추정 에너지 문턱 whiff)
   when: ['foeRaise', 'foeCharge', 'foeRecover'],
@@ -744,10 +744,10 @@ const CHINESE_SECRET = {
   //  (전: 첫 칼의 무리로 두 수 — 아래 next·group 은 자료로 남김, seq 가 있으면 seq)
   do: {
     seq: [
-      { name: 'lianhuanYao', nameKo: '요격 (腰擊)', pre: [[-0.3, 0.42], [0.08, 0.58], [0.46, 0.4]], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      { name: 'lianhuanYao', nameKo: '허리 베기 (腰擊 요격)', pre: [[-0.3, 0.42], [0.08, 0.58], [0.46, 0.4]], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
       // pre (10/10 04:4x 사장님 '현란한 고리 궤적은 중국 연환삼격으로 — 세 수 이음새에 고리, 검무처럼'): 앞 수 끝에서 다음 수 준비 자세(from)로 가는 동안 손이 머리 위로 한 바퀴 도는 패드 점 (물레 점 대신 — ai.js flowInto · skill.js secretNextMove)
-      { name: 'lianhuanLiao', nameKo: '요략 (撩掠) · 걷어 올려 베기', pre: [[-0.42, 0.4], [0.02, 0.56], [0.42, 0.42], [0.1, 0.3], [-0.3, 0.1]], from: [-0.46, -0.4], path: [[-0.22, -0.3], [0.08, -0.06], [0.44, 0.38]], open: 'UR', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
-      { name: 'lianhuanTanfu', nameKo: '탄복자 (坦腹刺)', pre: [[0.1, 0.56], [-0.4, 0.42], [-0.2, 0.15], [0.2, 0.0]], from: G.pflugR, path: [[0.08, -0.14], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      { name: 'lianhuanLiao', nameKo: '걷어 올려 베기 (撩掠 요략)', pre: [[-0.42, 0.4], [0.02, 0.56], [0.42, 0.42], [0.1, 0.3], [-0.3, 0.1]], from: [-0.46, -0.4], path: [[-0.22, -0.3], [0.08, -0.06], [0.44, 0.38]], open: 'UR', kind: 'cut', reach: 0, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
+      { name: 'lianhuanTanfu', nameKo: '배 찌르기 (坦腹刺 탄복자)', pre: [[0.1, 0.56], [-0.4, 0.42], [-0.2, 0.15], [0.2, 0.0]], from: G.pflugR, path: [[0.08, -0.14], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' } },
     ],
     next: {
       yao: [['stichOchs'], ['zuoyi']], // 腰擊 「向前進步逆鱗」 쪽166/0580 → 逆鱗刺 「寃步左翼擊」 쪽173/0587 → 左翼擊
@@ -772,7 +772,7 @@ const step25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' }; //
 const stepBack25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'retreat', back: true }; // 10/12 3 연격 마지막 수: 반걸음 물러남 退步·掣步 (같은 칸 SECRET.chineseStep — 부르는 쪽이 fwd 를 음수로 푼다)
 const CHINESE_SECRET_PARRY = {
   name: 'lianhuanParry',
-  get nameKo() { return SECRET.cnCombo === 2 ? '연환 (連環)' : '연환삼격 (連環三擊)'; }, // 10/12 사장님 '3연격(이름 뭘로 하지?)' → 디렉터 제안 연환삼격(초기 계획 이름 · 검결가 「滾手連環」) · `?cnCombo=2` 전 두 수 판은 '연환'
+  get nameKo() { return SECRET.cnCombo === 2 ? '이어 치기 (連環 연환)' : '세 번 이어 치기 (連環三擊 연환삼격)'; }, // 10/12 사장님 '3연격(이름 뭘로 하지?)' → 디렉터 제안 연환삼격(초기 계획 이름 · 검결가 「滾手連環」) · `?cnCombo=2` 전 두 수 판은 '연환'
   when: 'parry',
   // 거정세(highC — 擧鼎格 「鼎格上殺」, 몸꼴 덧씌우기)·표두세(highR — 칼을 세운 표두세 자리)·봉두세(highL — 10/12 더함, SECRET.cnBongdu). 어거세(thrust)·요략세(lowL·lowR)는 아님
   //  봉두세 (10/12 사장님 01:1x '타격 대부분이 가로로 들어오더라' — docs/strike/cn_combo_play_2026-10-12.md §2): 막기 버튼이 고른 줄을 재니 highL 25 % · highC 29 % · highR 10 % (네 상대 410 수) —
@@ -793,19 +793,19 @@ const CHINESE_SECRET_PARRY = {
       //  'thrustFirst' 면 다른 두 자리처럼 찌름 → 찌른 곳에서 당겨 벰
       geojeong: {
         get nameKo() {
-          return SECRET.cnCombo !== 2 ? CN3.names.geojeong : '거정격 → 요격 → 역린자';
+          return SECRET.cnCombo !== 2 ? CN3.names.geojeong : '솥 들기 → 허리 베기 → 목 찌르기';
         },
         get seq() {
           if (SECRET.cnCombo !== 2) return CN3.geojeong; // 10/12 08:2x 3 연격 (아래 CN3) — `?cnCombo=2` 면 아래 두 수 그대로
-          const cut = { name: 'pcYao', nameKo: '요격 (腰擊) · 당겨 벰', pre: [], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [-15, 30], el: [45, -40], from: 'prep' } }; // 패드 길 = 연환삼격 腰擊 길 그대로
-          const thrust = { name: 'pcNiLinL', nameKo: '역린자 (逆鱗刺)', pre: [], from: [-0.34, 0.02], path: [[-0.12, 0.06], [0.0, 0.12]], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust', back: true } }; // 패드 길: 腰擊 끝(왼쪽)에서 목을 올려 찌름 — 逆鱗 = 턱 밑 비늘 [해석] · 길 [추정]
+          const cut = { name: 'pcYao', nameKo: '당겨 허리 베기 (腰擊 요격)', pre: [], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [-15, 30], el: [45, -40], from: 'prep' } }; // 패드 길 = 연환삼격 腰擊 길 그대로
+          const thrust = { name: 'pcNiLinL', nameKo: '목 찌르기 (逆鱗刺 역린자)', pre: [], from: [-0.34, 0.02], path: [[-0.12, 0.06], [0.0, 0.12]], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust', back: true } }; // 패드 길: 腰擊 끝(왼쪽)에서 목을 올려 찌름 — 逆鱗 = 턱 밑 비늘 [해석] · 길 [추정]
           return SECRET.cnGeojeongOrder === 'thrustFirst' ? [{ ...thrust, dyn: { kind: 'thrust' } }, { ...cut, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }] : [cut, thrust];
         },
       },
       // 표두세 → 挑刺 → 掣步左翼擊: 豹頭勢 「… 寃步挑刺」(쪽157/0571 · 역주25) — 높이 든 칼에서 올려 찌름 = 逆鱗刺 [해석] → 逆鱗勢 「掣步左翼擊」(쪽173/0587)
       pyodu: {
         get nameKo() {
-          return SECRET.cnCombo !== 2 ? CN3.names.pyodu : '표두세 → 역린자 → 좌익격';
+          return SECRET.cnCombo !== 2 ? CN3.names.pyodu : '표범 머리 → 목 찌르기 → 왼 날개 치기';
         },
         get seq() {
           return SECRET.cnCombo !== 2 ? CN3.pyodu : CN2.pyodu;
@@ -816,7 +816,7 @@ const CHINESE_SECRET_PARRY = {
       //  剪 = 끊어 벰 — 右翼勢 「法能剪殺兩翼」(쪽168/0582)의 날개 치기를 찌른 끝 긴 자세에서 좌익격 길로 [해석] (표두세 둘째 수와 같은 길) · 걸음 = 반걸음 進步(같은 칸)
       bongdu: {
         get nameKo() {
-          return SECRET.cnCombo !== 2 ? CN3.names.bongdu : '봉두세 → 찌름(刺) → 끊어 벰(剪)';
+          return SECRET.cnCombo !== 2 ? CN3.names.bongdu : '봉황 머리 → 찌르기 → 끊어 베기';
         },
         get seq() {
           return SECRET.cnCombo !== 2 ? CN3.bongdu : CN2.bongdu;
@@ -829,12 +829,12 @@ const CHINESE_SECRET_PARRY = {
 // 10/12 01:1x~03:0x 두 수 (`?cnCombo=2` — 표두세·봉두세. 거정세는 위 seq 게터 안)
 const CN2 = {
   pyodu: [
-          { name: 'pcNiLin', nameKo: '역린자 (逆鱗刺)', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchs(역린자) 그대로 · dyn = 칼이 떨어진 자리에서 몸통 가장 가까운 점으로 곧게 (挑刺 — 높이 든 칼이라 대개 내려 찌름이 된다 [해석])
-          { name: 'pcZuoyi', nameKo: '좌익격 (左翼擊)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 掣步左翼擊: 찌른 곳에서 팔을 뻗은 채 내 왼쪽으로 크게 호 → 당겨 거둠 [해석] · 각 [추정]
+          { name: 'pcNiLin', nameKo: '목 찌르기 (逆鱗刺 역린자)', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchs(역린자) 그대로 · dyn = 칼이 떨어진 자리에서 몸통 가장 가까운 점으로 곧게 (挑刺 — 높이 든 칼이라 대개 내려 찌름이 된다 [해석])
+          { name: 'pcZuoyi', nameKo: '왼 날개 치기 (左翼擊 좌익격)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 掣步左翼擊: 찌른 곳에서 팔을 뻗은 채 내 왼쪽으로 크게 호 → 당겨 거둠 [해석] · 각 [추정]
   ],
   bongdu: [
-          { name: 'pcFengCi', nameKo: '찌름 (刺)', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchsL 그대로 · dyn = 洗 뒤 곧장 몸통 가장 가까운 점으로 (刺)
-          { name: 'pcFengJian', nameKo: '끊어 벰 (剪)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: 1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 剪: 찌른 곳에서 팔을 뻗은 채 내 오른쪽(칼 든 쪽)으로 크게 호 → 당겨 거둠 — 표두세와 반대쪽 [해석] · 각 [추정]
+          { name: 'pcFengCi', nameKo: '찌르기 (刺 자)', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchsL 그대로 · dyn = 洗 뒤 곧장 몸통 가장 가까운 점으로 (刺)
+          { name: 'pcFengJian', nameKo: '끊어 베기 (剪 전)', pre: [], from: G.langort, path: [[0.05, 0.2], [0.03, -0.05]], open: 'UL', kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'draw', side: 1, yaw: [0, 70], el: [10, -25], from: 'stab' } }, // 패드 길 = 꾸러미 zuoyi 그대로 · dyn = 剪: 찌른 곳에서 팔을 뻗은 채 내 오른쪽(칼 든 쪽)으로 크게 호 → 당겨 거둠 — 표두세와 반대쪽 [해석] · 각 [추정]
   ],
 };
 // ── 10/12 08:2x 3 연격 (사장님 '초기 계획대로 3연격 … 방어 자세 후 가장 자연스러운 최단거리 공격, 그다음 2연격이 어떻게 이어지는 게 물 흐르듯 … 반걸음 물러나도록' —
@@ -848,27 +848,27 @@ const CN2 = {
 const CN3_CUT = (name, nameKo, from, path, dyn, step = step25) => ({ name, nameKo, pre: [], from, path, open: 'UL', kind: 'cut', reach: 0.2, base: 1, step, dyn: { kind: 'draw', side: 1, ...dyn } });
 const CN3_THRUST = (name, nameKo, from, path, step = step25) => ({ name, nameKo, pre: [], from, path, open: 'C', kind: 'thrust', reach: 0.1, base: 1, step, dyn: { kind: 'thrust' } });
 const CN3 = {
-  names: { geojeong: '거정격 → 중살 → 역린자 → 퇴보 요격', pyodu: '표두세 → 역린자 → 우익 → 철보 좌익격', bongdu: '봉두세 → 찌름(刺) → 끊어 벰(剪) → 물러 벰(殺)' },
+  names: { geojeong: '솥 들기 → 내려 베기 → 목 찌르기 → 물러 허리 베기', pyodu: '표범 머리 → 목 찌르기 → 오른 날개 → 물러 왼 날개', bongdu: '봉황 머리 → 찌르기 → 끊어 베기 → 물러 베기' },
   // 거정세: 擧鼎格 → 掣擊中殺(머리 위 칼을 그대로 가운데로 내려 당겨 벰 — 오른 위 → 왼 아래, 전 첫 수 그대로) → 進步逆鱗(내려온 칼끝을 올려 몸통으로 곧게 — 腰擊勢 「向前進步逆鱗」 쪽166) →
   //  退步 腰擊(굴려 오른 허리 높이로 → 반걸음 물러나며 오른쪽 → 왼쪽 가로로 허리를 당겨 벰 — 勢 이름 腰擊 [원문] · 셋째 수로 놓음 [해석])
   geojeong: [
-    CN3_CUT('pcZhongSha', '중살 (中殺) · 내려 벰', G.sideR, [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], { yaw: [15, -30], el: [45, -40], from: 'prep' }, null),
-    CN3_THRUST('pcNiLinL', '역린자 (逆鱗刺)', [-0.34, 0.02], [[-0.12, 0.06], [0.0, 0.12]], null),
-    CN3_CUT('pcYaoBack', '퇴보 요격 (退步腰擊)', [0.3, -0.05], [[0.0, -0.08], [-0.35, -0.08]], { yaw: [32, -32], el: [0, -8], from: 'roll', roll: 20 }, stepBack25),
+    CN3_CUT('pcZhongSha', '내려 베기 (中殺 중살)', G.sideR, [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], { yaw: [15, -30], el: [45, -40], from: 'prep' }, null),
+    CN3_THRUST('pcNiLinL', '목 찌르기 (逆鱗刺 역린자)', [-0.34, 0.02], [[-0.12, 0.06], [0.0, 0.12]], null),
+    CN3_CUT('pcYaoBack', '물러 허리 베기 (退步腰擊 퇴보요격)', [0.3, -0.05], [[0.0, -0.08], [-0.35, -0.08]], { yaw: [32, -32], el: [0, -8], from: 'roll', roll: 20 }, stepBack25),
   ],
   // 표두세: 寃步挑刺(높이 든 칼에서 곧게 — 쪽157) → 右翼(굴려 오른 위로 → 오른 위 → 왼 아래 비껴 벰) → 掣步左翼擊(그 끝에서 손목만 뒤집어 왼 아래 → 오른 위로 올려 벰, 반걸음 물러나며 — 쪽173)
   //  = 「剪殺兩翼」 두 날개 [원문] · 날개 순서·각 [해석·추정]
   pyodu: [
-    CN3_THRUST('pcNiLin', '역린자 (逆鱗刺)', G.ochsR, [[0.08, 0.12], G.langort], null),
-    CN3_CUT('pcYouyi', '우익 (右翼)', [0.3, 0.25], [[0.0, 0.08], [-0.3, -0.12]], { yaw: [30, -30], el: [25, -20], from: 'roll', roll: 20, pull: false }, null),
-    CN3_CUT('pcZuoyiBack', '철보 좌익격 (掣步左翼擊)', [-0.3, -0.12], [[0.0, 0.05], [0.3, 0.22]], { yaw: [-30, 30], el: [-20, 15], from: 'stab' }, stepBack25),
+    CN3_THRUST('pcNiLin', '목 찌르기 (逆鱗刺 역린자)', G.ochsR, [[0.08, 0.12], G.langort], null),
+    CN3_CUT('pcYouyi', '오른 날개 (右翼 우익)', [0.3, 0.25], [[0.0, 0.08], [-0.3, -0.12]], { yaw: [30, -30], el: [25, -20], from: 'roll', roll: 20, pull: false }, null),
+    CN3_CUT('pcZuoyiBack', '물러 왼 날개 치기 (掣步左翼擊 체보좌익격)', [-0.3, -0.12], [[0.0, 0.05], [0.3, 0.22]], { yaw: [-30, 30], el: [-20, 15], from: 'stab' }, stepBack25),
   ],
   // 봉두세: 洗(막기) → 刺(곧게) → 剪(굴려 왼 아래로 → 왼 아래 → 오른 위 올려 벰) → 殺(손목만 뒤집어 오른 위 → 왼 아래로 내려 벰, 반걸음 물러나며) — 「洗刺剪殺」 네 낱말 그대로 [원문] ·
   //  표두세(내려 → 올려)와 거꾸로 올려 → 내려 [해석] · 각 [추정]. 처음엔 왼 위 → 오른 아래로 짰으나 8 판 중 3 판이 상대 칼에 먼저 닿아 막혀(왼 위 = 상대 칼 쪽) 아래에서 올림
   bongdu: [
-    CN3_THRUST('pcFengCi', '찌름 (刺)', G.ochsL, [[-0.08, 0.12], G.langort], null),
-    CN3_CUT('pcFengJian', '끊어 벰 (剪)', [-0.3, -0.12], [[0.0, 0.05], [0.3, 0.22]], { yaw: [-30, 30], el: [-25, 20], from: 'roll', roll: 20, pull: false }, null),
-    CN3_CUT('pcFengSha', '물러 벰 (殺)', [0.3, 0.22], [[0.0, 0.08], [-0.3, -0.12]], { yaw: [30, -30], el: [20, -25], from: 'stab' }, stepBack25),
+    CN3_THRUST('pcFengCi', '찌르기 (刺 자)', G.ochsL, [[-0.08, 0.12], G.langort], null),
+    CN3_CUT('pcFengJian', '끊어 베기 (剪 전)', [-0.3, -0.12], [[0.0, 0.05], [0.3, 0.22]], { yaw: [-30, 30], el: [-25, 20], from: 'roll', roll: 20, pull: false }, null),
+    CN3_CUT('pcFengSha', '물러 베기 (殺 살)', [0.3, 0.22], [[0.0, 0.08], [-0.3, -0.12]], { yaw: [30, -30], el: [20, -25], from: 'stab' }, stepBack25),
   ],
 };
 // 독일 막기 연환 — 감아 들기 (Indes · 10/11 19:1x 사장님 '두 수면 너무 비슷하니까 한 수로 … 오래 붙어 있었을수록 깊고 강한 공격'):
@@ -927,9 +927,9 @@ export const TECH_NAMES = {
     talhoReves: nm('사유스이켄다', '무도 권2 p142/134 교전 [원문] · 이름 붙임 [해석]'), wristCut: nm('카타테코테', '[해석]'), molinello: nm('손목 돌려 베기 (원전 없음)'),
   },
   chinese: {
-    zornhau: nm('과우격 (跨右擊)', '무비지 跨右 「撩剪下殺」 [원문] · 자리 [해석]'), zornhauL: nm('과좌격 (跨左擊)', '무비지 쪽171/0585 「掃掠下殺」'), oberhau: nm('표두격 (豹頭擊)', '무비지 쪽157/0571 「霹擊上殺」'), zwerch: nm('요격 (腰擊)', '무비지 쪽166/0580 「劍中之首擊」'), zwerchL: nm('좌요격 (左腰擊)', '본국검 p036/28'),
-    unterhau: nm('요략 (撩掠)', '무도 권2 p038/30 「遮駕下殺」'), unterhauL: nm('흔격 (掀擊)', '「掀抵上殺」 [원문] · 자리 [해석]'), stichPflug: nm('탄복자 (坦腹刺)', '무비지 쪽158/0572'), stichPflugL: nm('좌협자 (左夾刺)', '무도 권2 p043/35'),
-    stichOchs: nm('역린자 (逆鱗刺)', '무비지 쪽173/0587'), stichOchsL: nm('우협자 (右夾刺)', '[해석]'), stichAlber: nm('점검 (點劍)', '무비지 쪽155/0569'),
+    zornhau: nm('과우격 (跨右擊)', '무비지 跨右 「撩剪下殺」 [원문] · 자리 [해석]'), zornhauL: nm('과좌격 (跨左擊)', '무비지 쪽171/0585 「掃掠下殺」'), oberhau: nm('표두격 (豹頭擊)', '무비지 쪽157/0571 「霹擊上殺」'), zwerch: nm('허리 베기 (腰擊 요격)', '무비지 쪽166/0580 「劍中之首擊」'), zwerchL: nm('좌요격 (左腰擊)', '본국검 p036/28'),
+    unterhau: nm('요략 (撩掠)', '무도 권2 p038/30 「遮駕下殺」'), unterhauL: nm('흔격 (掀擊)', '「掀抵上殺」 [원문] · 자리 [해석]'), stichPflug: nm('배 찌르기 (坦腹刺 탄복자)', '무비지 쪽158/0572'), stichPflugL: nm('좌협자 (左夾刺)', '무도 권2 p043/35'),
+    stichOchs: nm('목 찌르기 (逆鱗刺 역린자)', '무비지 쪽173/0587'), stichOchsL: nm('우협자 (右夾刺)', '[해석]'), stichAlber: nm('점검 (點劍)', '무비지 쪽155/0569'),
     talhoReves: nm('과좌·과우 (跨左·跨右) 번갈아', '[해석]'), wristCut: nm('어거 (御車) 손 깎기', '무비지 쪽161/0575 「削殺雙手」'), molinello: nm('살화개정 (撒花蓋頂)', '검결가 쪽151/0565 「右滾花六劍」'),
   },
   none: {
@@ -988,7 +988,7 @@ export const TRADITIONS = {
 // 왕관 손·칼끝 (10/12 08:2x 사장님 '막기의 효용이 가장 큰 자세이되, 원전의 설명을 해치지 않는 자세로' — docs/strike/kron_shape_2026-10-12.md §9):
 //  1 = 정적 막기 쓸기(손 높이 0.45~0.64 · 앞 0.08~0.24 · 칼 70~90° — 45 자리 × 간격 12, 다시 12)에서 '칼날 상처 없이 받음'이 가장 많은 자리 · 0 = 10/12 00:1x 값. SKILL.deKronH, `?kronH=0`
 const KRON_AT = { 1: { hand: [0.16, 0.5, 0.04], blade: [70, 0] }, 0: { hand: [0.16, 0.6, 0.04], blade: [80, 0] } };
-export const GERMAN_KRON = { name: '왕관 (Kron)', desc: '칼자루를 머리 위로 높이 들고 코등이를 가로로 세워 위에서 떨어지는 칼을 코등이·밑동으로 받는다 · 거기서 뛰어든다', pad: G.kron, get hand() { return this.handSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].hand; }, set hand(v) { this.handSet = v; }, get blade() { return this.bladeSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].blade; }, set blade(v) { this.bladeSet = v; }, face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
+export const GERMAN_KRON = { name: '왕관 (Kron)', desc: '칼자루로 받고 그대로 뛰어든다', pad: G.kron, get hand() { return this.handSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].hand; }, set hand(v) { this.handSet = v; }, get blade() { return this.bladeSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].blade; }, set blade(v) { this.bladeSet = v; }, face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
 // 독일만(롱소드·엑스칼리버·라이트세이버·에스톡·세이버·팔쉬온 — 독일 전통 무기 모두). 무유파(none)는 GERMAN 막기 패드를 같이 쓰지만 이 덧씌우기는 받지 않는다(유파 칸이 따로 — 바이트 그대로).
 //  읽을 때마다 스위치를 본다(게터): SKILL.deKron 0 → 없음(긴 자세 자리) · SKILL.deKronShape 'pad' → 없음(10/11 패드 꼴)
 Object.defineProperty(TRADITIONS.german, 'parryCover', {
@@ -1019,15 +1019,15 @@ TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 �
 //  값은 모두 사장님 확인 전 (확인표 640~)
 const ITALIAN_GUARD_TABLE = {
   // 1번 자세: 팔을 앞·위로 뻗어 손은 얼굴 높이, 칼끝은 곧게 상대 쪽(조금 처짐), 몸을 앞으로 숙임 — imbroccata 가 여기서 나간다(Capo Ferro [31])
-  '지붕 (Vom Tag)': { name: '1번 자세 (Prima)', desc: '팔을 앞·위로 뻗어 손을 얼굴 높이에, 칼끝은 곧게 상대에게 · 몸을 숙인다 · 팔이 쉬 지친다', hand: [0.5, 0.28, 0.12], blade: [-8, -4], pelvisYaw: -40, chestYaw: -50, pitch: 12, drop: 0.12, src: 'Fabris 1606 [20] 판 2 [원문·도판] · 수 [추정]' },
+  '지붕 (Vom Tag)': { name: '1번 자세 (Prima)', desc: '위에서 내려 찌르는 자세', hand: [0.5, 0.28, 0.12], blade: [-8, -4], pelvisYaw: -40, chestYaw: -50, pitch: 12, drop: 0.12, src: 'Fabris 1606 [20] 판 2 [원문·도판] · 수 [추정]' },
   // 2번 자세: 팔을 뻗어 손은 어깨 높이, 손등 위(손톱 아래), 칼끝 곧게 — 몸을 숙여 머리가 칼 팔 뒤
-  '황소 (Ochs)': { name: '2번 자세 (Seconda)', desc: '팔을 뻗어 손을 어깨 높이에, 손바닥을 아래로 · 칼끝은 곧게 상대에게', hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Fabris 1606 [21]·[22] 판 3·4 [원문·도판] · Capo Ferro [16] 「even with the shoulder」 · 수 [추정]' },
+  '황소 (Ochs)': { name: '2번 자세 (Seconda)', desc: '어깨 높이에서 곧게 찌른다', hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Fabris 1606 [21]·[22] 판 3·4 [원문·도판] · Capo Ferro [16] 「even with the shoulder」 · 수 [추정]' },
   // 3번 자세 (주 자세): 칼 팔을 조금 굽혀 팔꿈치는 몸의 굽은 곳·오른 무릎 줄, 손은 높지도 낮지도 않게 몸 가운데, 칼끝은 상대 몸 가운데. 몸은 옆으로 세워 뒤로 기댐
-  '쟁기 (Pflug)': { name: '3번 자세 (Terza)', desc: '칼 팔을 조금 굽혀 손을 몸 가운데 높이에, 칼끝은 상대 몸 가운데 · 몸을 옆으로 세워 뒤로 기댄다 · 여기서 찌른다 (stoccata)', hand: [0.5, -0.06, 0.18], blade: [6, -4], pelvisYaw: -50, chestYaw: -60, pitch: -3, drop: 0.12, src: 'Capo Ferro 1610 [6]·[74]·[97]·[98] 판 6 [원문·도판] · [67] 몸 뒤로 · Giganti 1606 [13] 그림 2·3 · 수 [추정]' },
+  '쟁기 (Pflug)': { name: '3번 자세 (Terza)', desc: '가운데를 지키는 으뜸 자세', hand: [0.5, -0.06, 0.18], blade: [6, -4], pelvisYaw: -50, chestYaw: -60, pitch: -3, drop: 0.12, src: 'Capo Ferro 1610 [6]·[74]·[97]·[98] 판 6 [원문·도판] · [67] 몸 뒤로 · Giganti 1606 [13] 그림 2·3 · 수 [추정]' },
   // 뻗은 3번 자세: 찌르기 끝(모든 찌르기 길의 끝 자리)이라 손·칼끝은 무기 틀 값 그대로, 이름만 — 파브리스의 팔 뻗은 테르차(판 10)
-  '긴 자세 (Langort)': { name: '뻗은 3번 자세 (Terza)', desc: '팔을 곧게 뻗어 칼끝으로 상대 얼굴을 겨눈다 · 찌르기가 끝나는 자리', src: 'Fabris 1606 [28] 판 10 [원문·도판] · 손 위치는 R2 한손 뻗기 값 그대로' },
+  '긴 자세 (Langort)': { name: '뻗은 3번 자세 (Terza)', desc: '찌르기가 끝나는 자리', src: 'Fabris 1606 [28] 판 10 [원문·도판] · 손 위치는 R2 한손 뻗기 값 그대로' },
   // 4번 자세: 손바닥을 위로 돌려 안쪽 줄에 팔을 뻗음, 칼끝 곧게 — 파브리스 '뻗은 콰르타'. 카포 페로는 자세가 아니라 치는 꼴이라 했다([99])
-  '왼쪽 쟁기': { name: '4번 자세 (Quarta)', desc: '손바닥을 위로 돌려 팔을 안쪽 줄로 뻗는다 · 칼끝은 곧게 상대에게', hand: [0.55, 0.04, 0.02], blade: [0, 4], pelvisYaw: -40, chestYaw: -50, pitch: 6, drop: 0.12, src: 'Fabris 1606 [32] 판 14 [원문·도판] · Capo Ferro [99] 「a way of striking」 · 수 [추정]' },
+  '왼쪽 쟁기': { name: '4번 자세 (Quarta)', desc: '안쪽 줄을 닫고 찌른다', hand: [0.55, 0.04, 0.02], blade: [0, 4], pelvisYaw: -40, chestYaw: -50, pitch: 6, drop: 0.12, src: 'Fabris 1606 [32] 판 14 [원문·도판] · Capo Ferro [99] 「a way of striking」 · 수 [추정]' },
 };
 const ITALIAN_NAMES = Object.fromEntries(Object.entries(ITALIAN_GUARD_TABLE).map(([k, v]) => [k, { name: v.name, desc: v.desc, src: v.src }])); // HUD 자세 이름 (sword_art.js schoolNames)
 TRADITIONS.italian.guardTable = ITALIAN_GUARD_TABLE; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
@@ -1150,7 +1150,7 @@ TRADITIONS.japanese.pose = { ...GERMAN.pose, cover: G.tag };
 //   칼 든 어깨 수평 모음 130° — 문헌 끝(AAOS 약 130°)에 닿음(탈류 쳐내기와 같음).
 //   비스듬한 지붕 u56(칼끝 아래 11°)과 막기는 같은 수준(456 판 맞대 5 : 10)이나 정수리 베기 26 판에서 흘림이 이 꼴 9/13 · u56 3/13 이라 이 꼴로(§12-2).
 //  nagashi = 흘려 받기 칸 (config NAGASHI · combat.js nagashi — 막는 중 위에서 내려오는 칼을 칼끝이 아래로 기운 칼로 받으면 그 칼을 칼끝 쪽으로 미끄러뜨림). 사장님 확인 전(확인표 2011 · 2014)
-export const JAPANESE_UKENAGASHI = { name: '우케나가시 (受け流し)', desc: '두 손을 머리 앞으로 높이 들고 칼끝을 오른쪽 뒤로 조금 낮춰 지붕처럼 받는다 · 떨어지는 칼이 칼등을 타고 미끄러져 흘러내린다', pad: G.langort, hand: [0.33, 0.35, -0.24], blade: [-4, 120], pelvisYaw: -14, chestYaw: 2, pitch: 6, drop: 0, nagashi: true, src: '검도형 p17 소태도 2본 「体を左に開き…右鎬で受け流し」 [원문] · 줄 highC [해석] · 수 물리 찾기 [추정]' };
+export const JAPANESE_UKENAGASHI = { name: '흘려 받기 (우케나가시)', desc: '머리 위로 오는 칼을 흘려 받는다', pad: G.langort, hand: [0.33, 0.35, -0.24], blade: [-4, 120], pelvisYaw: -14, chestYaw: 2, pitch: 6, drop: 0, nagashi: true, src: '검도형 p17 소태도 2본 「体を左に開き…右鎬で受け流し」 [원문] · 줄 highC [해석] · 수 물리 찾기 [추정]' };
 TRADITIONS.japanese.parryCover = { highC: JAPANESE_UKENAGASHI };
 
 // 이탈리아 막기 자리 (카포 페로 1610 — Wiktenauer 영역 단락 [n]·권고 n·판 번호). 막기는 칼끝을 곧게 두고 forte 로 받는다:
@@ -1174,8 +1174,8 @@ TRADITIONS.italian.pose = { ...GERMAN.pose, cover: G.tag };
 //  값 = 자세표 값 그대로(새 수 없음): 오른쪽 위 = '황소 (Ochs)' 칸 2번 자세 · 머리 위 = 한손 찌르기 틀 '긴 자세' 손 · 칼끝(이탈리아 자세표 뻗은 3번 자세 — 값 없는 칸) + 몸은 자세표의 낮춤 0.12.
 //  hand [앞, 위, 칼 든 쪽] m 진행 방향 틀 · 가슴 가운데 원점 · blade [올려본 각, 옆 각] ° (frames.js installCover — 막는 줄에서 손 · 칼끝 · 몸을 덮음, 패드는 그대로)
 //  SKILL.itForte (config — 판 값 0 = 끔, 지금 판 바이트 그대로): 1 = 오른쪽 위만 · 2 = 오른쪽 위 + 머리 위. `?itForte=1|2` · 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte|forte2'
-const IT_FORTE_SECONDA = { name: '뻗은 2번 자세 (Seconda)', desc: '팔을 곧게 뻗어 칼자루를 어깨 높이 바깥에, 손바닥은 아래로 · 칼끝은 곧게 상대에게 — 칼 가운데 ~ 코등이(forte)로 받는다', pad: G.ochsR, hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [16](용어 2) · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 이탈리아 자세표 2번 자세 값(Fabris 1606 [21]·[22] 판 3·4) [해석]' };
-const IT_FORTE_TERZA = { name: '뻗은 3번 자세 (Terza)', desc: '팔을 곧게 뻗어 칼끝으로 상대 얼굴을 겨눈다 · 곧은 줄로 치며 막는다 — 곧게 뻗은 칼의 forte 가 몸을 가린다', pad: G.langort, hand: [0.68, 0.08, 0.1], blade: [-3, 0], pelvisYaw: -35, chestYaw: -45, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [115] · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 한손 찌르기 틀 긴 자세 값(이탈리아 자세표 뻗은 3번 자세 — Fabris 1606 [28] 판 10) · 낮춤 0.12 [해석]' };
+const IT_FORTE_SECONDA = { name: '뻗은 2번 자세 (Seconda)', desc: '뻗은 칼 밑동으로 받는다', pad: G.ochsR, hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [16](용어 2) · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 이탈리아 자세표 2번 자세 값(Fabris 1606 [21]·[22] 판 3·4) [해석]' };
+const IT_FORTE_TERZA = { name: '뻗은 3번 자세 (Terza)', desc: '곧은 줄로 치며 막는다', pad: G.langort, hand: [0.68, 0.08, 0.1], blade: [-3, 0], pelvisYaw: -35, chestYaw: -45, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [115] · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 한손 찌르기 틀 긴 자세 값(이탈리아 자세표 뻗은 3번 자세 — Fabris 1606 [28] 판 10) · 낮춤 0.12 [해석]' };
 export const ITALIAN_FORTE = { 1: { highR: IT_FORTE_SECONDA }, 2: { highR: IT_FORTE_SECONDA, highC: IT_FORTE_TERZA } };
 // 읽을 때마다 스위치를 본다(게터 — 독일 왕관과 같은 꼴). configurable: 도구(parry_gap_map · cover_search · cover_pose_check)가 잠깐 바꿔 끼우고 되돌린다
 Object.defineProperty(TRADITIONS.italian, 'parryCover', {
@@ -1205,22 +1205,22 @@ const IT_FAB2 = 'Fabris 1606 [2] 자세 = 손을 돌린 꼴 [원문] · 이 자�
 TRADITIONS.italian.names = {
   ...ITALIAN_NAMES,
   // 디 그라시 높은 자세: 「the very same which every man frames at the drawing of the sword out of the sheath」 · 「by turning the point of the sword downward, it wards the whole person」 — 손을 높이, 칼끝을 상대 쪽으로 내림. 이 자리 값(손 오른 어깨 앞 높이 · 칼끝 −12°)이 그 꼴
-  '어깨 지붕 (Vom Tag)': { name: '높은 자세 (guardia alta)', desc: '칼을 뽑아 든 그대로 손을 오른 어깨 앞 높이에, 칼끝은 상대 쪽으로 내려 온몸을 덮는다 · 위에서 찌른다', src: 'di Grassi 1570 (영역 1594 \'The high ward\') [원문] · 손 위치는 한손 찌르기 틀 값' },
+  '어깨 지붕 (Vom Tag)': { name: '높은 자세 (guardia alta)', desc: '칼을 뽑아 든 그대로의 자세', src: 'di Grassi 1570 (영역 1594 \'The high ward\') [원문] · 손 위치는 한손 찌르기 틀 값' },
   // 디 그라시 넓은 자세: 팔을 오른쪽으로 「widening and stretching it self directly as much as is possible from the right side」, 칼끝은 「bending toward the left side」 상대를 겨눔 — 이 자리 값(손 오른 바깥 가슴 높이 · 칼끝 안쪽 −16°)이 그 꼴
-  '옆 자세': { name: '넓은 자세 (guardia larga)', desc: '팔을 오른 바깥으로 넓게 벌리되 칼끝은 안쪽으로 굽혀 상대를 겨눈다', src: 'di Grassi 1570 (영역 1594 \'The broad ward\') [원문] · 손 위치는 한손 찌르기 틀 값' },
+  '옆 자세': { name: '넓은 자세 (guardia larga)', desc: '팔을 넓게 벌리고 겨눈다', src: 'di Grassi 1570 (영역 1594 \'The broad ward\') [원문] · 손 위치는 한손 찌르기 틀 값' },
   // 낮은 3번 자세: 카포 페로 [16] 흔한 테르차 정의 「hilt outside the right knee」(그가 자기 테르차로는 버린 꼴, [98]) · 디 그라시 낮은 자세 「beareth his arm directly downwards near his knee (but yet without it)」 —
   //  손을 오른 무릎 바깥 쪽 아래로. 칼끝은 디 그라시가 조금 든다 하나 파브리스 [27] 이 '칼끝이 위로 꺾인 테르차'를 나무라 이 자리 값(상대 쪽 조금 아래 −10°) 그대로 [해석]
-  '바꿈 (Wechsel)': { name: '낮은 3번 자세 (Terza)', desc: '손을 오른 무릎 바깥 쪽 아래로 내리고 칼끝은 상대 쪽 조금 아래 · 밑으로 들어가 찌르기 (passata sotto)가 여기서 나간다', src: 'Capo Ferro 1610 [16]·[98] · di Grassi 1594 \'The low ward\' [원문] · 칼끝 Fabris [27] [해석] · 손 위치는 한손 찌르기 틀 값' },
+  '바꿈 (Wechsel)': { name: '낮은 3번 자세 (Terza)', desc: '밑으로 들어가 찌른다', src: 'Capo Ferro 1610 [16]·[98] · di Grassi 1594 \'The low ward\' [원문] · 칼끝 Fabris [27] [해석] · 손 위치는 한손 찌르기 틀 값' },
   // 당긴 3번 자세: 원전 자세 이름 없음 — 손을 오른 허리 곁으로 당기고 칼끝은 상대 쪽(자연 손 = 3번, 파브리스 [2]). 카포 페로 [82] 「I cannot approve of having the arm fully extended in guard」와 맞는 굽힌 팔 [해석]
-  '옆 지킴 (Nebenhut)': { name: '당긴 3번 자세 (Terza)', desc: '손을 오른 허리 곁으로 당겨 팔을 굽히고 칼끝은 상대 쪽 · 3번 자세에서 손만 당긴 꼴', src: `${IT_FAB2} · Capo Ferro [82] [원문]` },
-  '바보 (Alber)': { name: '낮은 자세 (guardia bassa)', desc: '팔을 앞으로 내리고 칼끝을 낮게 상대 쪽으로 · 밑으로 들어가 찌른 칼이 머무는 자리', src: 'Capo Ferro 1610 「ritrovandosi la spada in guardia bassa」 PDF 53쪽 [원문] · 손 위치는 한손 찌르기 틀 값' },
+  '옆 지킴 (Nebenhut)': { name: '당긴 3번 자세 (Terza)', desc: '손을 당겨 찌를 힘을 모은다', src: `${IT_FAB2} · Capo Ferro [82] [원문]` },
+  '바보 (Alber)': { name: '낮은 자세 (guardia bassa)', desc: '밑으로 찌른 칼이 머무는 자리', src: 'Capo Ferro 1610 「ritrovandosi la spada in guardia bassa」 PDF 53쪽 [원문] · 손 위치는 한손 찌르기 틀 값' },
   // 안쪽(왼쪽) 줄 넷: 안쪽에서 칼끝을 상대에게 두려면 손바닥을 위로 돌린다 = 4번(파브리스 [2]·카포 페로 [16]). 높이만 다르다
-  '왼쪽 어깨 지붕': { name: '높은 4번 자세 (Quarta)', desc: '손바닥을 위로 돌려 손을 왼 어깨 앞 높이에, 칼끝은 상대 쪽', src: IT_FAB2 },
-  '왼쪽 황소': { name: '머리 높이 4번 자세 (Quarta)', desc: '손바닥을 위로 돌려 손을 머리 높이 안쪽에, 칼끝은 상대 쪽', src: IT_FAB2 },
+  '왼쪽 어깨 지붕': { name: '높은 4번 자세 (Quarta)', desc: '왼 어깨 앞에서 안쪽을 겨눈다', src: IT_FAB2 },
+  '왼쪽 황소': { name: '머리 높이 4번 자세 (Quarta)', desc: '머리 높이에서 안쪽을 겨눈다', src: IT_FAB2 },
   // 굽힌 4번 자세: 파브리스 [31] 판 13 콰르타 — 팔에 각을 두고 손은 가슴 높이, 손바닥 위, 칼끝 상대 쪽 [원문·도판]. 이 자리 값(손 안쪽 가슴 높이)이 그 꼴
-  '왼쪽 옆 자세': { name: '굽힌 4번 자세 (Quarta)', desc: '팔을 굽혀 손을 안쪽 가슴 높이에, 손바닥은 위로 · 칼끝은 상대 쪽', src: 'Fabris 1606 [31] 판 13 [원문·도판] · 손 위치는 한손 찌르기 틀 값' },
+  '왼쪽 옆 자세': { name: '굽힌 4번 자세 (Quarta)', desc: '가슴 높이에서 안쪽을 겨눈다', src: 'Fabris 1606 [31] 판 13 [원문·도판] · 손 위치는 한손 찌르기 틀 값' },
   // 낮은 4번 자세: 카포 페로 [16] 콰르타 정의 「hilt is inside the thigh」 — 손을 안쪽 넓적다리 높이로 [원문]. 이 자리 값(손 안쪽 허리 아래)이 그 꼴
-  '왼쪽 바꿈': { name: '낮은 4번 자세 (Quarta)', desc: '손바닥을 위로 돌려 손을 안쪽 넓적다리 높이로 내리고 칼끝은 상대 쪽 조금 아래', src: 'Capo Ferro 1610 [16] [원문] · 손 위치는 한손 찌르기 틀 값' },
+  '왼쪽 바꿈': { name: '낮은 4번 자세 (Quarta)', desc: '낮게 안쪽을 겨눈다', src: 'Capo Ferro 1610 [16] [원문] · 손 위치는 한손 찌르기 틀 값' },
 };
 
 // 이베리아 막기 자리 (피게이레두 1651 — Myers·Hick 영역). 몬탄테는 베어서 쳐낸다: 「deflect it with a talho … or else deflect with a revez, according to which side」(단ⅩⅣ) ·
@@ -1245,11 +1245,11 @@ TRADITIONS.iberian.withdraw = { pressed: 'langort', calm: ['langort', 'alber'] }
 //  꼴: 쳐낸 칼이 멈춘 자리 — 두 손을 머리 앞 왼쪽 높이로(앞 0.41 · 위 0.32 · 왼 0.40 m), 칼은 위로 38° 세워 비스듬히(옆 −6°). 몸은 왼 어깨를 조금 앞으로(골반 26° · 가슴 12°).
 //  수는 물리 찾기(tools/sim/cover_search.mjs RANGE=talho — 상위 7 을 치는 칼 셋 × 간격 8 × 빠르기 3 × 성난 베기 · 가로 베기 = 144 판): 맞은 판 11 → 10 — 막음은 이미 높아(따라가기 뒤)
 //   더 막지는 않고 손해 없음(원전 꼴 중 맞은 판이 가장 적은 것). 사장님 확인 전(확인표 2012)
-export const IBERIAN_TALHO = { name: '탈류 쳐내기 (talho)', desc: '왼쪽으로 오는 칼을 오른 어깨에서 비스듬히 베어 쳐낸다 · 쳐낸 칼은 머리 앞 왼쪽에 비스듬히 선다', pad: G.ochsL, hand: [0.41, 0.32, -0.4], blade: [38, -6], pelvisYaw: 26, chestYaw: 12, pitch: 1, drop: 0.02, src: '피게이레두 1651 단ⅩⅣ 「deflect it with a talho」 · 복ⅩⅤ 「high in front of the head on the left side, in obtuse line」 [원문 영역] · 줄 highL [해석] · 수 물리 찾기 [추정]' };
+export const IBERIAN_TALHO = { name: '오른 쳐내기 (talho)', desc: '왼쪽으로 오는 칼을 베어 쳐낸다', pad: G.ochsL, hand: [0.41, 0.32, -0.4], blade: [38, -6], pelvisYaw: 26, chestYaw: 12, pitch: 1, drop: 0.02, src: '피게이레두 1651 단ⅩⅣ 「deflect it with a talho」 · 복ⅩⅤ 「high in front of the head on the left side, in obtuse line」 [원문 영역] · 줄 highL [해석] · 수 물리 찾기 [추정]' };
 // 오른쪽 짝 — 레베스 쳐내기 (revés) (10/17 02:xx — 사장님 '탈류 레베스도 한 쌍으로 만들어'): 원전은 「오는 쪽에 따라 탈류로, 아니면 레베스로 쳐낸다」(단ⅩⅣ) —
 //  오른쪽으로 오는 칼을 레베스(왼 어깨에서 비스듬히 내려 베기)로 쳐내면 그 칼이 「high along the right diagonal in an obtuse line」(복ⅩⅤ — 위 막기 자리 '오른 높이 비낌'과 같은 근거)에 멈춘다 [원문 영역] → 줄 highR [해석]
 //  꼴: 탈류 쳐내기의 거울 — 두 손을 머리 앞 오른쪽 높이로, 칼은 위로 비스듬히. 수는 물리 찾기(cover_search RANGE=talho · LINE=highR — 성난 베기 왼쪽 · 가로 베기 오른쪽 144 판: 맞은 판 11 → 8) [추정] — 사장님 확인 전(확인표 2013)
-export const IBERIAN_REVES = { name: '레베스 쳐내기 (revés)', desc: '오른쪽으로 오는 칼을 왼 어깨에서 비스듬히 베어 쳐낸다 · 쳐낸 칼은 머리 앞 오른쪽에 비스듬히 선다', pad: G.ochsR, hand: [0.41, 0.32, 0.4], blade: [38, 6], pelvisYaw: -26, chestYaw: -12, pitch: 1, drop: 0.02, src: '피게이레두 1651 단ⅩⅣ 「or else deflect with a revez, according to which side」 · 복ⅩⅤ 「high along the right diagonal in an obtuse line」 [원문 영역] · 줄 highR [해석] · 수 물리 찾기 [추정]' };
+export const IBERIAN_REVES = { name: '왼 쳐내기 (revés)', desc: '오른쪽으로 오는 칼을 베어 쳐낸다', pad: G.ochsR, hand: [0.41, 0.32, 0.4], blade: [38, 6], pelvisYaw: -26, chestYaw: -12, pitch: 1, drop: 0.02, src: '피게이레두 1651 단ⅩⅣ 「or else deflect with a revez, according to which side」 · 복ⅩⅤ 「high along the right diagonal in an obtuse line」 [원문 영역] · 줄 highR [해석] · 수 물리 찾기 [추정]' };
 TRADITIONS.iberian.parryCover = { highL: IBERIAN_TALHO, highR: IBERIAN_REVES };
 
 // 중국 막기 자리 (조선세법 — 24 세 가운데 格·洗, 무비지 국역 쪽/원서 쪽 · 무도 권2 p). 전: 독일 표 그대로(위 옛 기록 — 擧鼎格 을 왕관 자리로 넣어 본 일은 chinese_guards 문서 §3)
@@ -1269,11 +1269,11 @@ const CHINESE_PARRY_SLOTS = {
   //  솥(鼎)을 들어 올리듯, 平擡(평대 = 평평하게 들어 올림): 칼자루를 머리 위 오른쪽에 들고 칼날은 머리 위를 가로질러 왼쪽으로 수평 [해석].
   //  손 높이 = 세이버 지붕(표두세 자리) 손 높이 그대로 0.46 m · 앞 0.26 m(칼 든 어깨에서 0.46 m — 팔 길이 0.565 안), 칼은 수평에서 5° 들고 옆 −85°(칼끝이 왼쪽, 앞으로 5°) [추정].
   //  몸 = 표두세 자리(세이버 지붕) 몸 값 그대로 — 원문이 몸 돌림을 말하지 않음(손발 짝 보류와 같은 까닭)
-  geojeong: { name: '거정세 (擧鼎勢)', desc: '솥을 들어 올리듯 칼을 머리 위로 가로 들어 위에서 오는 칼을 받는다 · 거정격', pad: G.tag, hand: [0.26, 0.46, 0.1], blade: [5, -85], pelvisYaw: 5, chestYaw: -10, pitch: 0, drop: 0.05, src: '무비지 쪽154/0568 「擧鼎格 … 鼎格上殺 … 平擡勢」 · 무도 권2 p035/27 그림 [원문·그림 해석] · 수 [추정]' },
+  geojeong: { name: '솥 들기 (擧鼎勢 거정세)', desc: '머리 위로 가로 들어 받는다', pad: G.tag, hand: [0.26, 0.46, 0.1], blade: [5, -85], pelvisYaw: 5, chestYaw: -10, pitch: 0, drop: 0.05, src: '무비지 쪽154/0568 「擧鼎格 … 鼎格上殺 … 平擡勢」 · 무도 권2 p035/27 그림 [원문·그림 해석] · 수 [추정]' },
   // 御車勢 「卽御車格, 法能駕御中殺 削殺兩手. 左脚右手衝鋒勢. 向前退步鳳頭洗」(무비지 쪽161/0575 · 역주24 '말고삐 당기듯 상하로 끄덕이는 형상') · 무도 권2 p038/30 그림 '두 손 앞쪽으로' [원문·그림 해석] —
   //  수레를 몰듯(駕御) 가운데를 다스린다: 고삐를 쥔 듯 손을 가슴 앞으로 내밀되 팔은 다 펴지 않고(직부송서 0.68 → 0.40 m), 칼끝은 衝鋒(칼끝이 앞을 찌를 듯)으로 앞 위로 세워(30°)
   //  가운데로 오는 찌르기를 위아래로 눌러 다스린다 [해석]. 退步(물러나며) — 숙임은 직부송서보다 적게(10 → 4°) [해석]. 몸 돌림은 직부송서(찌르기 표 긴 자세)보다 덜 틂 [추정]
-  eogeo: { name: '어거세 (御車勢)', desc: '고삐를 쥔 듯 손을 가슴 앞으로 내밀고 칼끝을 앞 위로 세워 가운데로 오는 칼을 위아래로 눌러 다스린다 · 어거격', pad: G.langort, hand: [0.4, 0.06, 0.06], blade: [30, -4], pelvisYaw: -20, chestYaw: -35, pitch: 4, drop: 0.06, src: '무비지 쪽161/0575 「御車格 … 駕御中殺 … 衝鋒勢」 역주24 · 무도 권2 p038/30 그림 [원문·그림 해석] · 수 [추정]' },
+  eogeo: { name: '수레 몰기 (御車勢 어거세)', desc: '가운데로 오는 칼을 눌러 막는다', pad: G.langort, hand: [0.4, 0.06, 0.06], blade: [30, -4], pelvisYaw: -20, chestYaw: -35, pitch: 4, drop: 0.06, src: '무비지 쪽161/0575 「御車格 … 駕御中殺 … 衝鋒勢」 역주24 · 무도 권2 p038/30 그림 [원문·그림 해석] · 수 [추정]' },
   // 요략세 — 아래 왼쪽(lowL)을 받는 자리 (사장님 00:2x '왼쪽 요격세로 막되 이름은 요략세로 써. 왜 그렇게 했는지 주석만 남기고'):
   //  원전은 이 줄을 撩掠格 「遮駕下殺 蔽左護右」(왼쪽을 가리고 오른쪽을 지킴 — 무도 권2 p038/30)로 받는다. 그러나 한손 검의 요략세 꼴(바꿈 자리 — 칼을 낮게 앞으로 수평)은 우리 물리에서
   //  이 줄(아래에서 왼쪽으로 올려베기)을 0/8 막고, 15 자리 가운데 막는 자리는 왼 요격세(본국검 左腰擊 「左劒洗左項」 — 洗 씻어 침) 2/8 하나뿐이었다(10/10 막기 점검).
@@ -1283,7 +1283,7 @@ const CHINESE_PARRY_SLOTS = {
   //   원전 짝: 撩(아래에서 걷어 올림)은 낮게 드리운 데서 시작한다 · 跨左勢 「提水」(칼끝을 왼 아래로 늘어뜨림, 무비지 쪽171/0585) [해석].
   //   수 = 물리 찾기(tools/sim/yoryak_search.mjs RANGE=hang FOLLOW=1 — 후보 246 → 상위 7, 롱소드·츠바이핸더·레이피어 × 간격 8 × 빠르기 3 = 72 판 72 막음) [측정] · 사장님 확인 전 숫자
   //   막기 단추 따라가기(SKILL.parryFollow — parry_button.js)와 짝: 상대가 칼을 낮게 준비하면 긋기 전에 이 자리로 가 있는다
-  yoryak: { name: '요략세 (撩掠勢)', desc: '칼자루를 배꼽 아래 앞에 두고 칼끝을 왼 앞 아래로 드리워 왼 다리까지 가린다 — 아래에서 걷어 올라오는 칼을 덮어 받는다 · 요략격 「왼쪽을 가리고 오른쪽을 지킨다」', pad: G.sideL,
+  yoryak: { name: '걷어 올리기 (撩掠勢 요략세)', desc: '아래로 오는 칼을 걷어 올린다', pad: G.sideL,
     hand: [0.2, -0.48, -0.08], blade: [-63, -54], pelvisYaw: 2, chestYaw: -30, pitch: 8, drop: 0.11,
     src: '무도 권2 p038/30 「撩掠格 … 遮駕下殺 蔽左護右」 [원문 이름] · 드리운 꼴 = 跨左勢 「提水」 짝 [해석] · 수 = 물리 찾기 [측정 — 72/72] (10/16 전: 왼 요격세 꼴 — 가까운 간격 0/15)' },
 };
