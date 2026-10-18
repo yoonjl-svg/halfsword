@@ -58,7 +58,7 @@ try{
  assert.equal(await p.evaluate(()=>game.settings.fpsCap),true);
  check('title settings dialog reads/writes the game fps setting (same gladiator-settings value and menu toggle)');
  await p.locator('#continueJourney').click();await p.waitForTimeout(150);
- assert.equal(await p.locator('#selectionStatus').textContent(),'이어갈 여정이 없습니다. Stage 1로 시작해 주세요.');assert.equal(await p.evaluate(()=>game.state),'menu');assert.equal(await p.locator('#gameEntrance').count(),1);
+ assert.equal(await p.locator('#selectionStatus').textContent(),'이어갈 여정이 없습니다. Stage 1로 시작해 주십시오.');assert.equal(await p.evaluate(()=>game.state),'menu');assert.equal(await p.locator('#gameEntrance').count(),1);
  check('이어하기 without a checkpoint stays on the title with the Stage 1 hint');
  // Stage 1 → 곧바로 카드 고르기 (대기실을 거치지 않음 — game_entry.js depart): 덮개 안에 대기실이 붙는지 · 첫 화면이 걷히는지(data-leaving) 지켜본다
  await p.evaluate(()=>{const root=document.querySelector('#gameEntrance').shadowRoot;window.__entry={lobby:false,leaving:false};new MutationObserver(()=>{if(root.querySelector('.lobby'))__entry.lobby=true;if(root.getElementById('entrance')?.hasAttribute('data-leaving'))__entry.leaving=true;}).observe(root,{childList:true,subtree:true,attributes:true});});

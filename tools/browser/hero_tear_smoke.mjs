@@ -143,7 +143,7 @@ try {
   const before = await p.screenshot({ clip: view }), srcBefore = await portraitSrc();
   await p.locator('button[data-armor=hero_tear]').tap();
   const k = await card(p);
-  assert.deepEqual([k.hidden, k.tier, k.name, k.rarity, k.description], [false, 'legend', '용사의 눈물', '레전드', '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다. (기력 무한)']);
+  assert.deepEqual([k.hidden, k.tier, k.name, k.rarity, k.description], [false, 'legend', '용사의 눈물', '레전드', '용사가 흘린 눈물이 굳었다는 물방울 모양의 다이아. 옷 안에 걸어 겉으로는 보이지 않는다. (기력 무한)']);
   assert.equal(k.abilityColor, 'rgb(255, 210, 74)'); assert.ok(k.inside && !k.overflow, JSON.stringify(k));
   assert.equal(await p.locator('#equipItem').isEnabled(), false); assert.equal(await p.locator('#unequipItem').isEnabled(), true); // 처음부터 장착 중
   await p.locator('#unequipItem').tap();

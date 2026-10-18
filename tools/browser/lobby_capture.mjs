@@ -2,7 +2,7 @@
 //  폰 가로 844×390 · 작은 가로 폰 740×360 · 좁은 가로 폰 568×320(좁은 화면 — 아래로 흐름) · PC 1280×720 마다: 공지 · 첫 화면 · 대기실(아이템 · 상점 · 스킬북 · 이벤트) ·
 //   나뭇가지 장착과 설명 카드 · 케틀 햇 설명 카드(같은 아이템 칸 — 10/18 04:1x 무기 · 방어구를 합침) · 무기 카드 · 첫 판 시작
 //  폰은 계정 연결 창(이메일 · 번호 단계 — 인증 서버 응답은 가짜, 메일 안 보냄)도 · 깬 무대 37(인장 셋 — 사장님처럼 여정을 꽤 한 상태)로 찍는다. 폰은 터치 화면 흉내
-//  (세로 터치 폰은 10/16 14:0x 부터 첫 화면 · 대기실도 '폰을 가로로 돌려 주세요'가 덮어 누를 수 없다 — 크기 표에서 뺐다. 세로 크기를 넣으면 PC 창(터치 없음)으로)
+//  (세로 터치 폰은 10/16 14:0x 부터 첫 화면 · 대기실도 '폰을 가로로 돌려 주십시오'가 덮어 누를 수 없다 — 크기 표에서 뺐다. 세로 크기를 넣으면 PC 창(터치 없음)으로)
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/lobby_capture.mjs http://127.0.0.1:5201 docs/handoff
 import { chromium } from 'playwright';
 import { titleToLobby } from './to_lobby.mjs'; // 10/17: 첫 화면 → 곧바로 여정 → 정지 → 대기실 (사장님 '첫화면에서 바로 전투로')
@@ -50,13 +50,13 @@ for(const [size,width,height,phone] of SIZES){
  await p.locator('#tabItems').scrollIntoViewIfNeeded();await tap('#tabItems');
  await p.locator('#lobbyDepart').scrollIntoViewIfNeeded();await tap('#lobbyDepart');
  await p.waitForFunction(()=>game.state==='draw'&&game.draw.t>.6,null,{timeout:60000});await p.waitForTimeout(300);await shot('draw');
- // 세로 터치 화면은 '폰을 가로로 돌려 주세요'(#rotate)가 카드를 덮는다(실제 모습) — 사진을 이으려고 카드 누름만 페이지 안에서 보낸다
+ // 세로 터치 화면은 '폰을 가로로 돌려 주십시오'(#rotate)가 카드를 덮는다(실제 모습) — 사진을 이으려고 카드 누름만 페이지 안에서 보낸다
  if(phone&&height>width)await p.evaluate(()=>document.querySelector('#draw .wcard[data-i="0"]').click());else await tap('#draw .wcard[data-i="0"]');
  await p.waitForFunction(()=>game.state==='fight',null,{timeout:60000});
  // 첫 판 시작: 무대 훑기 뒤 판 알림 '대면'과 상대 소개가 뜨는 때
  await p.waitForFunction(()=>{const t=document.getElementById('toast');return t.classList.contains('show')&&t.textContent==='대면';},null,{timeout:120000});
  await p.waitForTimeout(250);await shot('fight-start');
- if(phone&&height>width){ // 세로: 실제로는 '폰을 가로로 돌려 주세요'가 덮는다(위 사진) — 그 뒤의 HUD 를 보려고 안내만 숨긴 사진 하나 더
+ if(phone&&height>width){ // 세로: 실제로는 '폰을 가로로 돌려 주십시오'가 덮는다(위 사진) — 그 뒤의 HUD 를 보려고 안내만 숨긴 사진 하나 더
   await p.addStyleTag({content:'#rotate.enabled{display:none!important}'});await p.waitForTimeout(150);await shot('fight-start-hud');
  }
  await ctx.close();

@@ -4,7 +4,7 @@
 //  우리 손댐 (사장님 10/16 01:0x): 무기는 나뭇가지 하나(롱소드 뺌) · 나뭇가지도 방어구처럼 설명 카드(이름 · 등급 · 설명 — 우리 weapons.js 의 nameKo · tier · desc 그대로, 등급 글은 무기 카드와 같은 TIER_LABEL)
 //  10/16 03:5x~04:3x (lobby_fix): 장착은 실제 싸움에 (main.js journeyLoadout) · 케틀 햇 레전드 + '생존술: 기력 +30' · 글자는 싸움 화면 규칙(entrance_type.css) ·
 //   스킬북 = 유파별 별자리(skill_tree.js — 금화로 사고 사용 / 봉인) · 머리(천 주머니) · 이미 받은 인장을 금화로 한 번(seal_coins.js)
-//  10/16 14:0x: 첫 화면·대기실도 가로 화면만 — 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'가 덮어(game_entry.js openHost) 대기실 안 '싸움은 가로 화면입니다' 줄은 지움
+//  10/16 14:0x: 첫 화면·대기실도 가로 화면만 — 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주십시오'가 덮어(game_entry.js openHost) 대기실 안 '싸움은 가로 화면입니다' 줄은 지움
 //  10/16 15:3x · 16:0x (사장님 ② ④ ⑤ ⑥ ⑨ — docs/import/ui_unify_2026-10-16.md): 단추 · 탭 = 싸움 화면 꼴(entrance_ui.css) · 창 = 싸움 창 · 세 칸 위아래 줄 맞춤 · 사슬 틀 크기 ·
 //   호칭 내림 상자(대표 유파 칸은 뺌) · 재고 칸 그림 = 매끈 · 칸의 80 % · 등급 빛 · '장착 중'은 칸 귀퉁이 작은 알약 · 장착 · 해제는 설명 카드 안(스킬북 설명 카드의 구입 · 사용 · 봉인과 같은 자리)
 //  10/17 (사장님 '용사의 눈물 … 방어구에 넣어둬' — docs/import/hero_tear_2026-10-17.md): 방어구 칸 = 케틀 햇 · 용사의 눈물 (lobby_equipment.js LOBBY_ARMORS) ·
@@ -251,7 +251,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
       const saved = slot === 'weapon' ? saveLobbyEquipment(value) : slot === 'head' ? saveLobbyArmor(value) : saveLobbyNeck(value);
       $('equipmentStatus').textContent = `${itemName(item)} ${on ? '장착' : '장착 해제'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`;
       refreshEquipment();
-    } catch { $('equipmentStatus').textContent = '장비를 표시하지 못했습니다. 다시 시도해 주세요.'; }
+    } catch { $('equipmentStatus').textContent = '장비를 표시하지 못했습니다. 다시 시도해 주십시오.'; }
   }
   // 누른 단추가 사라지지 않게 초점을 짝 단추로 (장착하면 해제가, 해제하면 장착이 주 단추가 된다)
   listen($('equipItem'), 'click', () => { if (selectedItem && !isOn(selectedItem)) { equip(selectedItem, true); $('unequipItem').focus({ preventScroll: true }); } });
@@ -261,7 +261,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   listen($('cancelName'), 'click', () => $('nameDialog').close());
   listen($('nameForm'), 'submit', e => {
     e.preventDefault(); const result = renamePlayer($('playerNameInput').value);
-    if (!result.ok) { $('nameError').textContent = '이름을 입력해 주세요.'; return; }
+    if (!result.ok) { $('nameError').textContent = '이름을 입력해 주십시오.'; return; }
     $('lobbyName').textContent = readProfile().name; $('nameDialog').close();
     status(result.saved ? '' : '이름은 이번 실행 동안 유지됩니다.');
   });
@@ -269,7 +269,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   let departing = false;
   listen($('lobbyDepart'), 'click', async () => {
     if (departing) return; departing = true; $('lobbyDepart').disabled = true; $('lobbyBack').disabled = true;
-    try { await onDepart(); } catch { status('여정을 열지 못했습니다. 다시 시도해 주세요.'); }
+    try { await onDepart(); } catch { status('여정을 열지 못했습니다. 다시 시도해 주십시오.'); }
     finally { departing = false; $('lobbyDepart').disabled = false; $('lobbyBack').disabled = false; }
   });
   $('lobbyHeading').focus();

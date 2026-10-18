@@ -171,7 +171,7 @@ try {
     none(await press(p, '#hideRead'), '지난 업데이트 숨김 미닫이');
     one(await press(p, '#confirmNotices'), '공지 확인(첫 화면에서 연 공지)');
     one(await press(p, '#continueJourney', 'tap', 300), '이어하기 (여정 없음 — 첫 화면에 남음)');
-    assert.equal(await p.locator('#selectionStatus').textContent(), '이어갈 여정이 없습니다. Stage 1로 시작해 주세요.');
+    assert.equal(await p.locator('#selectionStatus').textContent(), '이어갈 여정이 없습니다. Stage 1로 시작해 주십시오.');
     // 연타: 이어하기 다섯 번 40 ms 사이 — 딸깍마다 앞 딸깍을 끈다 (겹쳐 커지지 않게)
     const box = await p.locator('#continueJourney').boundingBox();
     let m = await mark(p);

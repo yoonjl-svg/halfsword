@@ -25,7 +25,7 @@ if (skipsTitle(params)) {
 } else {
   let host = null, root = null, covered = [];
   // 덮개(Shadow DOM 을 단 #gameEntrance) 열기 — 처음 열 때 · 싸움에서 대기실로 돌아올 때. 뒤의 게임은 숨기고(index.html html[data-start-open]) 누를 수 없게(inert)
-  //  첫 화면 · 공지 · 계정 · 대기실도 가로 화면만 (사장님 10/16 14:0x '첫 화면이나 대기실도 가로 화면에서만 볼 수 있게 해'): 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주세요'(#rotate)가
+  //  첫 화면 · 공지 · 계정 · 대기실도 가로 화면만 (사장님 10/16 14:0x '첫 화면이나 대기실도 가로 화면에서만 볼 수 있게 해'): 세로 폰이면 싸움과 같은 '폰을 가로로 돌려 주십시오'(#rotate)가
   //   이 덮개 위를 덮는다 — 조건도 싸움과 같다(세로 + 터치 · PC 는 그대로). 안내는 inert 로 두지 않는다(inert 면 누름이 뒤의 첫 화면·대기실로 지나간다).
   //   창(공지 · 설정 · 계정 · 이름 — showModal)은 맨 위 층이라 안내보다 위에 그려져 같은 조건에서 감춘다 (entrance_ui.css 끝)
   function openHost() {
@@ -66,13 +66,13 @@ if (skipsTitle(params)) {
         try {
           const game = await loaded;
           if (choice === 'continue' && !game.canContinueJourney()) {
-            screen.setStatus('이어갈 여정이 없습니다. Stage 1로 시작해 주세요.');
+            screen.setStatus('이어갈 여정이 없습니다. Stage 1로 시작해 주십시오.');
             screen.setBusy(false); choosing = false; return;
           }
           await depart(game, choice, () => { screen?.destroy(); screen = null; }, root.getElementById('entrance')); // 첫 화면 → 곧바로 싸움 (대기실을 거치지 않음)
         } catch {
           if (!root.getElementById('selectionStatus')) showTitle();
-          screen.setStatus('게임을 준비하지 못했습니다. 다시 시도해 주세요.');
+          screen.setStatus('게임을 준비하지 못했습니다. 다시 시도해 주십시오.');
           choosing = false; screen.setBusy(false);
         }
       },
@@ -108,8 +108,8 @@ if (skipsTitle(params)) {
     const game = await loaded;
     openHost();
     try { await showLobby(game, 'continue'); }
-    catch { showTitle(); screen.setStatus('대기실을 열지 못했습니다. 다시 시도해 주세요.'); }
+    catch { showTitle(); screen.setStatus('대기실을 열지 못했습니다. 다시 시도해 주십시오.'); }
   }
   showTitle();
-  loaded.catch(() => screen?.setStatus('게임을 준비하지 못했습니다. 새로고침해 주세요.'));
+  loaded.catch(() => screen?.setStatus('게임을 준비하지 못했습니다. 새로고침해 주십시오.'));
 }

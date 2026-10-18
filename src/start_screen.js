@@ -33,7 +33,7 @@ export const ENTRANCE_HTML = `<main id="entrance" data-phase="notice">
     <header class="notice-header">
       <h2 id="noticeHeading" tabindex="-1">공지사항</h2>
       <span id="noticeCount" class="notice-count"></span>
-      <p id="noticeIntro" class="sr-only">최근 업데이트를 확인하세요.</p>
+      <p id="noticeIntro" class="sr-only">최근 업데이트를 확인하십시오.</p>
     </header>
     <div id="noticeList" class="notice-list" tabindex="0" aria-label="업데이트 목록, 스크롤 가능"></div>
     <footer class="notice-footer">
@@ -153,7 +153,7 @@ if (settings) {
       const api = await settings();
       if (events.signal.aborted) return;
       setOn($('titleFps'), api.get().fpsCap); $('titleFps').disabled = false;
-    } catch { if (!events.signal.aborted) $('settingsStatus').textContent = '설정을 불러오지 못했습니다. 다시 시도해 주세요.'; }
+    } catch { if (!events.signal.aborted) $('settingsStatus').textContent = '설정을 불러오지 못했습니다. 다시 시도해 주십시오.'; }
   });
   // 미닫이를 누르면 바로 바꾸고 바로 저장 (전 체크 상자의 change 와 같은 때) — 저장을 못 하면 되돌린다
   listen($('titleFps'), 'click', async () => {

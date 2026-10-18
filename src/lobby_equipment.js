@@ -11,7 +11,7 @@ export const LOBBY_ARMOR = Object.freeze({
   id: 'kettle',
   nameKo: '케틀 햇', // 방어구 이름 — 사장님 10/16 01:0x 결정(샛별 쪽 이름에서 바꿈). 이름을 또 바꾸면 이 한 줄만 (대기실 칸·설명 카드·장착 알림·화면 읽기 글이 모두 이것을 읽는다)
   tier: 'legend', // 사장님 10/16 03:5x '케틀 햇은 전설 등급으로' — 등급 글·색은 무기 카드와 같은 표 (weapons.js TIER_LABEL '레전드' · index.html --tier-legend)
-  description: '여행자의 필수품. 뒤집으면 요리를 할 수 있다.', // 샛별 쪽 글 그대로
+  description: '중세 보병들이 쓰던 챙 넓은 쇠 모자. 뒤집으면 요리를 할 수 있다.', // 샛별 쪽 글 그대로
   ability: `(생존술: 기력 +${KETTLE_STAMINA})`, // 사장님 10/16 03:5x '설명 뒤에 특수능력 문구 추가' — 카드는 설명 뒤에 이 줄을 등급 색으로 (무기 카드 특수 능력 줄 .wabil 과 같은 꼴)
   staminaBonus: KETTLE_STAMINA,
   thumbnail: 'ui/armor/kettle.webp',
@@ -25,7 +25,7 @@ export const HERO_TEAR = Object.freeze({
   id: 'hero_tear',
   nameKo: '용사의 눈물', // 사장님 이름 그대로
   tier: 'legend', // 사장님 확인 전 — 케틀 햇(+30)과 같은 레전드 (기력 무한이 더 세다 · 등급 위가 없다)
-  description: '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다.', // 사장님 확인 전 — '외형 변화는 없음'을 글로
+  description: '용사가 흘린 눈물이 굳었다는 물방울 모양의 다이아. 옷 안에 걸어 겉으로는 보이지 않는다.', // 사장님 확인 전 — '외형 변화는 없음'을 글로
   ability: '(기력 무한)', // 사장님 10/17 "'불굴'은 빼고 '기력 무한'만 써" (전 '(불굴: 기력 무한)')
   infiniteStamina: true,
   thumbnail: 'ui/armor/hero_tear.webp', // tools/browser/item_thumbs.mjs tear (금화 · 주머니 · 스킬북과 같은 도구 · 같은 빛 · 같은 금속)

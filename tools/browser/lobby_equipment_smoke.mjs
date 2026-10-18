@@ -62,7 +62,7 @@ try{
  assert.deepEqual(await p.locator('.inventory-item[data-armor]').evaluateAll(els=>els.map(e=>e.dataset.armor)),['kettle','hero_tear']); // 방어구는 무기 다음 칸 (10/17 용사의 눈물이 케틀 햇 다음 — hero_tear_smoke 가 자세히 본다)
  assert.deepEqual(await badges(p),[['tree_branch',false],['kettle',true],['hero_tear',true]]); // 새 기기: 무기 없음 · 케틀 햇 · 용사의 눈물 장착
  await p.locator('[data-armor=kettle] img').evaluate(img=>img.decode());await p.locator('button[data-armor=kettle]').tap();
- let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','레전드','여행자의 필수품. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
+ let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','레전드','중세 보병들이 쓰던 챙 넓은 쇠 모자. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
  assert.deepEqual(await p.locator('#itemDetail').evaluate(e=>[getComputedStyle(e.querySelector('#itemRarity')).color,getComputedStyle(e.querySelector('#itemName')).color,getComputedStyle(e.querySelector('.item-ability')).color]),Array(3).fill('rgb(255, 210, 74)')); // 레전드 = --tier-legend (사장님 10/16 03:5x)
  assert.equal(await p.locator('[data-armor=kettle] img').getAttribute('alt'),'케틀 햇');
  assert.equal(await armorOn(p,'kettle'),true);await state(p,false,true,'');await shot(p,'armor-equipped');

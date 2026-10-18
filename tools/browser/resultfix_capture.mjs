@@ -1,7 +1,7 @@
 // 결과 창 · 가로 화면만 · 공지 제목 사진 (사장님 10/16 14:0x — docs/import/ui_fix_2026-10-16.md §11). 저장 docs/handoff/resultfix_<장면>_<크기>.png
 //  크기: phone-landscape 844×390 · phone-portrait 390×844 (둘 다 화소 비 2 · 터치)
 //  장면: result-win · result-win-head · result-loss(폰 가로 — 금화 줄 같은 색 · 빈 줄 하나 · 대기실 금화 그림 · 진 까닭 / “대사”) · notices(폰 가로 — 공지 제목 10)
-//        title-rotate(폰 세로 — 첫 화면을 '폰을 가로로 돌려 주세요'가 덮음)
+//        title-rotate(폰 세로 — 첫 화면을 '폰을 가로로 돌려 주십시오'가 덮음)
 //  npm run build && npx vite preview --port 5240 →  node tools/browser/resultfix_capture.mjs http://127.0.0.1:5240 docs/handoff
 import { chromium } from 'playwright';
 import { titleToLobby } from './to_lobby.mjs'; // 10/17: 첫 화면 → 곧바로 여정 → 정지 → 대기실 (사장님 '첫화면에서 바로 전투로')

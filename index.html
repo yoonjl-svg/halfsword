@@ -196,7 +196,7 @@
       #foeIntro small:empty { display: none; }
       @media (orientation: portrait) { #foeIntro { max-width: calc(100vw - 2 * var(--safe-l)); } }
       /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): 오른쪽 위 칸과 거울. 첫 줄 .stg = '스테이지 N · 무대 이름'.
-         무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르세요' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
+         무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르십시오' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
          자리(칸 마지막 줄, 위 6px)·꼴 그대로: --fw-label · --ls-label · 강조 색. 크기는 칸 전체 작게 --fs-s (10/14 글자 규칙 §16). 카드를 고르면 .off 로 숨고 자리는 둔다 — main.js setDrawGuide).
          둘째 줄 'AI 이름 · 자세 / 기술'(.foe)은 10/14 03:3x 사장님 'AI 이름·기술명 표기는 아예 없앤다'로 걷어냈다. 카드 줄은 이 칸 아래에서 시작한다 (main.js layoutDraw) */
       #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); font-size: var(--fs-s); font-weight: var(--fw-head); line-height: var(--lh-tight); word-break: keep-all; }
@@ -471,7 +471,7 @@
       </div>
     </div>
 
-    <div id="rotate"><div>📱↻<br />폰을 가로로 돌려 주세요<small>돌리면 바로 이어집니다</small></div></div>
+    <div id="rotate"><div>📱↻<br />폰을 가로로 돌려 주십시오<small>돌리면 바로 이어집니다</small></div></div>
 
     <!-- 첫 모듈 = 게임 들머리: 인자 없는 주소는 첫 화면 → 대기실 → 여정, 게임 인자가 있는 주소는 지금처럼 곧바로 게임(main.js) -->
     <script type="module" src="/src/game_entry.js"></script>

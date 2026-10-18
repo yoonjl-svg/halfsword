@@ -15,7 +15,7 @@ test('our key names (no fork names, no clash with existing keys)',()=>{
 test('owner changes: weapon slot is tree branch only; armor name is one constant; kettle hat = legend + 생존술 +30 (10/16 03:5x)',()=>{
  assert.deepEqual([...LOBBY_ITEMS],['tree_branch']);
  assert.equal(LOBBY_ARMOR.nameKo,'케틀 햇');assert.equal(LOBBY_ARMOR.tier,'legend');assert.equal(LOBBY_ARMOR.staminaBonus,30);
- assert.equal(`${LOBBY_ARMOR.description} ${LOBBY_ARMOR.ability}`,'여행자의 필수품. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)');
+ assert.equal(`${LOBBY_ARMOR.description} ${LOBBY_ARMOR.ability}`,'중세 보병들이 쓰던 챙 넓은 쇠 모자. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)');
  assert.equal(saveLobbyEquipment('longsword'),false);assert.equal(saveLobbyEquipment('tree_branch'),true);assert.equal(readLobbyEquipment(),'tree_branch');
  storage.set(EQUIPMENT_KEY,JSON.stringify({version:1,weapon:'longsword'}));assert.equal(readLobbyEquipment(),null); // 옛 롱소드 장착 기록은 맨손으로
  assert.equal(saveLobbyArmor(null),true);assert.equal(readLobbyArmor(),null);assert.equal(saveLobbyArmor('kettle'),true);assert.equal(readLobbyArmor(),'kettle');

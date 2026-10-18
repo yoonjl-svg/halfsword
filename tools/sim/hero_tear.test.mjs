@@ -38,7 +38,7 @@ test('방어구 칸: 케틀 햇 · 용사의 눈물 차례 · 자리(머리 · �
   assert.equal(LOBBY_ARMORS[0], LOBBY_ARMOR); assert.equal(LOBBY_ARMORS[1], HERO_TEAR);
   assert.deepEqual([armorSlot('kettle'), armorSlot('hero_tear')], ['head', 'neck']);
   assert.equal(HERO_TEAR.nameKo, '용사의 눈물'); assert.equal(HERO_TEAR.tier, 'legend'); assert.equal(HERO_TEAR.infiniteStamina, true);
-  assert.equal(`${HERO_TEAR.description} ${HERO_TEAR.ability}`, '물방울 모양의 작은 다이아 목걸이. 옷 안에 걸어 겉으로는 보이지 않는다. (기력 무한)');
+  assert.equal(`${HERO_TEAR.description} ${HERO_TEAR.ability}`, '용사가 흘린 눈물이 굳었다는 물방울 모양의 다이아. 옷 안에 걸어 겉으로는 보이지 않는다. (기력 무한)');
   assert.equal(HERO_TEAR.thumbnail, 'ui/armor/hero_tear.webp');
   assert.ok(Object.isFrozen(HERO_TEAR) && Object.isFrozen(LOBBY_ARMORS));
 });

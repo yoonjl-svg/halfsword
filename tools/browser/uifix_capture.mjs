@@ -1,5 +1,5 @@
 // 화면 고침 사진 (우리 게임 실제 화면 — docs/import/ui_fix_2026-10-16.md §8). 저장 docs/handoff/uifix_<장면>_<크기>.png
-//  크기: phone-landscape 844×390 · phone-portrait 390×844 (둘 다 화소 비 2 · 터치). 세로에서 싸움 창(정지 · 결과)은 '폰을 가로로 돌려 주세요'가 덮으므로
+//  크기: phone-landscape 844×390 · phone-portrait 390×844 (둘 다 화소 비 2 · 터치). 세로에서 싸움 창(정지 · 결과)은 '폰을 가로로 돌려 주십시오'가 덮으므로
 //   창 꼴만 보려고 그 셋은 터치 없이(같은 크기 · 화소 비) 찍는다.
 //  장면: notices(본문·날짜 10) · lobby(안내 줄 없음) · pause(정지 창 '대기실') · result-win · result-loss(금화 줄 · 설정 줄 없음 · 다음 여정/다시 겨루기 · 대기실)
 //  npm run build && npx vite preview --port 5230 →  node tools/browser/uifix_capture.mjs http://127.0.0.1:5230 docs/handoff

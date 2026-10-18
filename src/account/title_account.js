@@ -32,11 +32,11 @@ function getClient() {
 }
 export const connectedEmail = user => user && !user.is_anonymous && user.email_confirmed_at && typeof user.email === 'string' ? user.email : '';
 export const accountLabel = user => connectedEmail(user).split('@')[0] || '계정 연결';
-const failure = error => error?.status === 429 ? '요청이 많습니다. 잠시 후 다시 시도해 주세요.'
+const failure = error => error?.status === 429 ? '요청이 많습니다. 잠시 후 다시 시도해 주십시오.'
   : ['otp_expired','otp_disabled','validation_failed'].includes(error?.code) ? '인증번호를 확인하거나 새 번호를 받아 주세요.'
   : ['email_exists','user_already_exists','identity_already_exists'].includes(error?.code) ? '이미 연결된 이메일입니다. 기존 계정으로 로그인해 주세요.'
   : error?.code === 'signup_disabled' ? '가입이 제한되어 있습니다. 기존 계정으로 로그인해 주세요.'
-  : error?.status >= 500 ? '메일 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+  : error?.status >= 500 ? '메일 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주십시오.'
   : '연결하지 못했습니다. 인터넷 연결과 입력 내용을 확인해 주세요.';
 
 export function mountTitleAccount(root, { auth = getClient().auth } = {}) {

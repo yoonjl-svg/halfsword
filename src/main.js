@@ -934,8 +934,8 @@ let roundOverTime = 0;
 let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
 
 $('howto').innerHTML = input.isTouchDevice
-  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직여요. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기.</li><li>왼쪽 아래 조이스틱으로 걸어요. 화면을 톡 치면 찔러요.</li><li>오른쪽 아래 막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받아요. 누른 채 휘두르면 바로 공격해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>'
-  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘둘러요.</li><li>WASD 또는 방향키로 걸어요. F를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받아요.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지해요.</li><li>칼을 빠르게 휘둘러야 세게 들어가요. 머리가 약점이에요.</li>';
+  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직입니다. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기입니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다. 화면을 톡 치면 찌릅니다.</li><li>오른쪽 아래 막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>'
+  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘두릅니다.</li><li>WASD 또는 방향키로 걷습니다. F를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>';
 
 // 설정 창: 남은 설정(화면 60 fps 제한)만 [data-setting] 줄이 있다 (상대 난이도 줄은 10/13 에 뺐다)
 function refreshSettingsUI() {
@@ -1049,7 +1049,7 @@ function hideFoeIntro() {
 
 // ── 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): docs/ui/hud_intro_2026-10-14.md · hud_type_system_2026-10-10.md §15 ──
 //  첫 줄 = '스테이지 N · 무대 이름'(stages.js stageLabel — 순서표 밖 무대는 이름만).
-//  무기 카드를 고르는 동안만 그 아래에 카드 안내 '무기 카드를 한 장 고르세요'(PC '(1 · 2)') — 10/14 03:3x 사장님 '이전처럼 복구'(00:4x 에 뺐던 줄).
+//  무기 카드를 고르는 동안만 그 아래에 카드 안내 '무기 카드를 한 장 고르십시오'(PC '(1 · 2)') — 10/14 03:3x 사장님 '이전처럼 복구'(00:4x 에 뺐던 줄).
 //   예전 자리(왼쪽 위 칸의 마지막 줄, 위 6px)·꼴(--fw-label · --ls-label · 강조 색) 그대로, 크기는 칸 전체 작게 --fs-s (10/14 글자 규칙) (index.html #stageInfo em). 카드를 고르면 숨는다 — 자리는 두어
 //   화면이 바뀌어 카드 자리를 다시 재도 들썩이지 않는다. 카드 줄은 이 칸 아래에서 시작한다 (layoutDraw)
 //  10/14 03:3x 사장님 'AI 이름·기술명 표기는 아예 없앤다': 둘째 줄 'AI 이름 · 자세 / 기술'(foeLine · startFoeLine · paintFoeLine · updateFoeLine · foeTechPut)은 걷어냈다.
@@ -1063,7 +1063,7 @@ function showStageInfo() {
 }
 /** 카드 안내 줄: 'on' = 고르는 동안 보임 · 'off' = 카드를 고른 뒤 숨김(자리는 둔다) · null = 비움(뽑기가 끝남 — 자리도 없앤다) */
 function setDrawGuide(mode) {
-  drawGuide.textContent = mode ? (input.isTouchDevice ? '무기 카드를 한 장 고르세요' : '무기 카드를 한 장 고르세요 (1 · 2)') : '';
+  drawGuide.textContent = mode ? (input.isTouchDevice ? '무기 카드를 한 장 고르십시오' : '무기 카드를 한 장 고르십시오 (1 · 2)') : '';
   drawGuide.classList.toggle('off', mode === 'off');
 }
 
@@ -1181,7 +1181,7 @@ function openDraw(savedCards = null) {
     el.className = i === FOE_CARD ? 'wcard foe' : 'wcard';
     el.dataset.tier = w.tier || 'common';
     el.classList.toggle('grand', GRAND_WEAPONS.has(w.id));
-    el.setAttribute('aria-label', i === FOE_CARD ? '상대 무기 카드 (고를 수 없어요)' : `${i + 1}번 카드`); // 뒤집히면 무기 이름·등급·설명으로 바뀐다 (revealLabel)
+    el.setAttribute('aria-label', i === FOE_CARD ? '상대 무기 카드 (고를 수 없습니다)' : `${i + 1}번 카드`); // 뒤집히면 무기 이름·등급·설명으로 바뀐다 (revealLabel)
     const [, main, sub] = w.nameKo.match(/^(.*?)\s*\((.*)\)\s*$/) || [null, w.nameKo, ''];
     el.querySelector('.wthumb').style.backgroundImage = `url("ui/weapons/${w.id}.webp"), radial-gradient(closest-side, var(--tg), transparent)`;
     el.querySelector('.wname').textContent = main;
@@ -1292,7 +1292,7 @@ function pickCard(i) {
   drawEl.classList.replace('choose', 'reveal');
   sound.cardFlip({ pick: true, tier: getWeapon(draw.ids[i]).tier, grand }); // 두꺼운 카드 "촥" → 앞면이 드러나며 낮은 "둥" (레전드·에픽은 작은 반짝임)
   haptic(grand ? 1 : 0.35);
-  setDrawGuide('off'); // "무기 카드를 한 장 고르세요"는 고르는 동안만 (예전처럼)
+  setDrawGuide('off'); // "무기 카드를 한 장 고르십시오"는 고르는 동안만 (예전처럼)
 }
 
 /** 뒤집힌 카드를 화면 읽기 프로그램이 무기 이름으로 읽게 한다 */
@@ -1437,7 +1437,7 @@ async function startFight() {
   state = 'draw';
   input.enabled = false;
   applyMoveMode();
-  setDrawGuide('on'); // 왼쪽 위 무대 줄 아래 "무기 카드를 한 장 고르세요" (10/14 03:3x 되살림 — 카드 자리를 재기 전에)
+  setDrawGuide('on'); // 왼쪽 위 무대 줄 아래 "무기 카드를 한 장 고르십시오" (10/14 03:3x 되살림 — 카드 자리를 재기 전에)
   openDraw(savedRound?.cards);
 }
 
@@ -1531,7 +1531,7 @@ function pause() {
   input.resetTransient();
   document.exitPointerLock?.();
   $('menuTitle').textContent = '일시정지';
-  $('menuSub').textContent = '설정을 바꾸거나 계속할 수 있어요.';
+  $('menuSub').textContent = '설정을 바꾸거나 계속할 수 있습니다.';
   $('menuReward').hidden = true;
   showDefeatFoe(null); // 패배 창의 상대 프로필 · 대사는 정지 창에 남기지 않는다
   $('btnStart').textContent = '처음부터 다시';

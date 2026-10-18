@@ -152,7 +152,7 @@ try {
   checks.push('test route (?title=1&test=1): Stage 1 goes straight to the fight; no 대기실 in its pause (not a journey); no seal conversion; school kit flags untouched in the fight (= every book); coins unchanged');
   await sc.close();
 
-  // ⑧ 폰: 대기실은 가로 화면만 (사장님 10/16 14:0x — docs/import/ui_fix_2026-10-16.md §11). 세로로 돌리면 싸움과 같은 '폰을 가로로 돌려 주세요'가 대기실을 덮고(누름도 막음)
+  // ⑧ 폰: 대기실은 가로 화면만 (사장님 10/16 14:0x — docs/import/ui_fix_2026-10-16.md §11). 세로로 돌리면 싸움과 같은 '폰을 가로로 돌려 주십시오'가 대기실을 덮고(누름도 막음)
   //  가로로 돌리면 그대로 · 대기실 안 '싸움은 가로 화면입니다' 줄은 없다(전 ⑧ 은 그 줄과 출발 뒤 안내가 서서히 나타나는 것을 봤다) · 프로필 그림이 뜸 (10/17 — 전: 미리보기 기기 화소 비 3)
   const pc = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }); await noAuth(pc);
   const r = await pc.newPage(); watch(r);
