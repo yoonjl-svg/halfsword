@@ -971,7 +971,7 @@ function excaliburGems(group) {
 
 const excalibur = finalizeSpec('excalibur', {
   nameKo: '엑스칼리버', nameEn: 'Excalibur',
-  desc: '호수의 여인이 아서왕에게 내린 왕의 검.\n왕이 죽자 호수에 던져졌고, 물속에서 손이 나와 받아 갔다.',
+  desc: '호수의 여인이 아서에게 내린 왕의 검.\n왕이 죽자 호수에 던져졌고, 물속의 손이 받아 갔다.',
   grip: 'two-hand', material: 'steel',
   tier: 'legend', // 감독 등급: 레전드 → power 1.2·durability 1.0. 진품은 플레이어 카드와 아르토리아(사장님 10/10 20:3x '진품 그대로') — 하인리히는 복제품
   hiltLength: 0.13, bladeLength: 1.0, gripAlong: -0.15,
