@@ -435,9 +435,9 @@ export const FLOW_RECOVERY = { seconds: 0.36, floor: 0.25, release: true, hold: 
 // 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴
 // 이베리아 탈류 · 레베스 쳐내기에 흘림과 같은 팔 늦춤 (사장님 10/19 03:5x 시험 — 기본 끔): 쳐내기 자세로 들어오는 칼을 받으면 공격자 팔에 FLOW_RECOVERY 를 건다
 export const IB_PARRY_ARM = { on: false };
-// 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' 시험 — 기본 끔 · k 는 새 값, 사장님 확인 전):
+// 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' → 10/20 00:4x '탈류레베스에 쳐내기튕김 1.6 적용해' — 판 값 · `?ibBeat=0` 끔):
 //  쳐내기 자세로 들어오는 칼을 받으면 상대 칼을 받는 사람 몸 가운데선에서 바깥쪽(맞닿은 쪽)으로 민다 — 빠르기 k × 맞부딪는 빠르기 (흘림 NAGASHI.slideK 와 같은 꼴), 반대 충격은 받는 사람 몸통이 받는다
-export const IB_PARRY_BEAT = { on: false, k: 0.8 };
+export const IB_PARRY_BEAT = { on: true, k: 1.6 };
 
 export const STEEL = {
   // 칼(칼날·코등이·손잡이·폼멜) 재질의 반발 값. 둘이 만나면 곱해진다(Multiply): 칼끼리 = 이 값², 몸·땅(0)과는 0.

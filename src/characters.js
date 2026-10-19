@@ -480,7 +480,7 @@ export const CHARACTERS = [
     weaknesses: '장전 중의 빈틈과 총구 안쪽으로 파고드는 근거리 압박.',
     weapon: 'pistol', // 건슬링어의 리볼버(??? 등급) — 그쪽 '전용 리볼버'는 새 무기가 아니라 이 권총이다. AI 는 gun.js(간격 벌려 쏘기)
     voice: 'maya', // 목소리: 마야 전용 녹음(AuraVoice, CC0) — 10/13 사장님 지시로 샛별 저장소 3f330f7·b75013b·9d1b56a 배정을 가져옴 (전 'isolde')
-    ai: { proficiency: 1, persona: { // 숙련도 1 (사장님 결정 10/13 — 전: 그쪽 '마지막 문지기' 자리라 hard)
+    ai: { proficiency: 3, persona: { // 숙련도 3 (사장님 10/20 00:4x '마야 숙련도 3을 적용해' — 전 1 · 10/13)
       gunCooldownK: 1.5, // 핸디캡: 사격 사이 쿨타임 1.5 배 (GUN.cooldown 0.8 → 1.2 s, AI 가 몰면 GUN.aiCooldownK 1.8 을 더 곱해 2.16 s — 확인표 2022) — 사장님 지시 10/10 20:0x (기본 무작위 상대에서 빼는 대신, 확인표 750)
       level: { reaction: 0.16, guardChance: 0.88, counter: 0.55, feint: 0.15, followUp: 0.65, read: 0.9, discipline: 0.95, strength: 1.1, aggression: 0.9, windup: 0.36, strikeSpeed: 13, skill: 0.95 },
       pers: { precision: 0.95, guardStick: 4, fearful: 0.08, angry: 0.12, dogged: 0.4, guardSpeed: 0.7, rhythm: 4, margin: 0.3, aggr: 0.95, vor: 0.45, patienceTime: 6, circleRate: 0.18 },
@@ -669,7 +669,8 @@ export const CHARACTER_VARIANTS = [
   // Visual previews: the original proficiency, persona and combat stats are unchanged.
   ...['eira', 'liao', 'margarethe', 'isolde', 'tome', 'omari', 'bran', 'minami'].map((id) => {
     const base = CHARACTERS.find((c) => c.id === id);
-    return { ...base, id: `${id}_mad`, variantOf: id, mad: true, appearanceOnly: true,
+    return { ...base, ...(id === 'bran' ? { weapon: 'falchion', weaponAlt: null } : {}), // 얼터 브론은 늘 팔쉬온 (사장님 10/20 00:4x)
+      id: `${id}_mad`, variantOf: id, mad: true, appearanceOnly: true,
       name: `광기의 ${base.name}`, ai: madVariantAI(base), // 숙련도 +1 (사장님 10/16 22:3x — 모든 얼터)
       look: alterLook(base.look, id), lookVersion: `${base.lookVersion}-alter${id==='isolde'?3:['margarethe','tome','bran'].includes(id)?2:1}`,
       eyes: id === 'liao' ? 'clothGlow' : 'madGlow',
@@ -931,7 +932,8 @@ finishAI(daraishiAlter);CHARACTER_VARIANTS.push(daraishiAlter);
 //  (사장님 10/16 승인 예외 — 샛별 쪽: 방어 11 → 0 · 갑옷 감속 없음, outfit_alter.js alterLook). 실력 숫자 덧셈 없음
 for(const id of ['samira','artoria']){
  const base=[...CHARACTERS,...CHARACTER_GUESTS].find(c=>c.id===id);
- const alter={...base,id:id+'_mad',variantOf:id,mad:true,appearanceOnly:id==='samira',retainBaseStats:true,
+ // 얼터 마야는 늘 세이버(사장님 10/20 00:4x '얼터 마야는 항상 세이버를 들고 나오도록') — 빼 둔 무기(RETIRED)라도 인물은 든다
+ const alter={...base,...(id==='samira'?{weapon:'sabre',weaponAlt:null}:{}),id:id+'_mad',variantOf:id,mad:true,appearanceOnly:id==='samira',retainBaseStats:true,
   name:`광기의 ${base.name}`,ai:JSON.parse(JSON.stringify(base.ai)),
   look:alterLook(base.look,id),lookVersion:base.lookVersion+(id==='artoria'?'-alter13':'-alter1'),eyes:'madGlow'};
  finishAI(alter);CHARACTER_VARIANTS.push(alter);

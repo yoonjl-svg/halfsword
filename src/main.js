@@ -125,7 +125,7 @@ if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0';
 if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.8) — `?flowDmgCut=0` = 끔
 if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
 if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm') <= 2) FLOW_RECOVERY.seconds = +params.get('flowArm'); // `?flowArm=0` = 팔 늦춤 끔 · `?flowArm=0.18` = 0.18 s
-if (params.has('ibBeat') && +params.get('ibBeat') > 0 && +params.get('ibBeat') <= 3) Object.assign(CONFIG.IB_PARRY_BEAT, { on: true, k: +params.get('ibBeat') }); // `?ibBeat=1.6` = 이베리아 탈류 · 레베스 쳐내기 튕김 켬 · 세기 k (시험 · 기본 끔 — 10/19)
+if (params.has('ibBeat') && +params.get('ibBeat') >= 0 && +params.get('ibBeat') <= 3) Object.assign(CONFIG.IB_PARRY_BEAT, { on: +params.get('ibBeat') > 0, k: +params.get('ibBeat') || CONFIG.IB_PARRY_BEAT.k }); // 이베리아 탈류 · 레베스 쳐내기 튕김 세기 k (판 값 1.6 — 사장님 10/20) · `?ibBeat=0` = 끔
 if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
 if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)
 if (params.has('jpParryCut') && +params.get('jpParryCut') >= 0 && +params.get('jpParryCut') <= 1) CONFIG.SKILL.jpParryDmgCut = +params.get('jpParryCut'); // 일본 막는 동안 피해 감소(판 값 0.2) — `?jpParryCut=0` = 끔
@@ -608,7 +608,7 @@ function newRound(weaponId) {
     index: 1,
     name: currentFoe ? currentFoe.name : '상대',
     x: ARENA.startGap / 2,
-    z: startZ,
+    z: stageStartZ(stages.id, 1), // 중정은 상대가 다른 자리 (샛별 제안 ② — 다른 무대는 startZ 와 같음)
     heading: Math.PI,
     terrain,
     look: enemyLook,
@@ -1912,7 +1912,7 @@ function planOpening() {
     ARENA.startHold = (camOpen.mode === 'sweep' ? CAMERA.open.sweepSec : CAMERA.open.settleSec) * TEMPO;
   }
   camOpen.params = sweepParams(stages.id);
-  camOpen.centre = { x: 0, z: stageStartZ(stages.id) }; // 두 사람 시작 자리의 가운데 (잠든 습지는 +z 로 비켜 선다)
+  camOpen.centre = { x: 0, z: (stageStartZ(stages.id) + stageStartZ(stages.id, 1)) / 2 }; // 두 사람 시작 자리의 가운데 (잠든 습지는 +z 로 비켜 선다)
   camOpen.cue = camOpen.introUp = false;
 }
 /** 판 시작 카메라의 자리 0~1 (1 = 끝 — 발이 풀린다) */

@@ -51,7 +51,7 @@ for(let i=0;i<64;i++){
  const a=i*Math.PI/32,origin={x:Math.cos(a)*2,z:Math.sin(a)*2,y:1.1},camera={x:-origin.x*2,z:-origin.z*2,y:2.6};
  clampStageCamera(origin,camera,nav);const radius=Math.hypot(camera.x,camera.z);assert.ok(radius>=nav.radius+.27);report.camera.push(radius);
 }
-assert.equal(stageStartZ('courtyard'),1.85);assert.equal(stageStartZ('sluice'),.5);assert.equal(stageStartZ('poseidon'),0);
+assert.equal(stageStartZ('courtyard'),1.10);assert.equal(stageStartZ('courtyard',1),1.60);assert.equal(stageStartZ('sluice'),.5);assert.equal(stageStartZ('poseidon'),0);
 {
  const G=newRound({weapon:'longsword'}),base=G.world.colliders.len();let previous;
  for(const id of ['courtyard','sluice','poseidon','courtyard','poseidon']){previous=configureStageObstacle(RAPIER,G.world,id,GROUND_GROUPS,previous);report.cleanup.push({id,count:G.world.colliders.len()});if(id==='poseidon')assert.equal(G.world.colliders.len(),base);}

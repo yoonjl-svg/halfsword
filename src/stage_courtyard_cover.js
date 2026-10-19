@@ -23,7 +23,9 @@ export const COURTYARD_COVER_SHAPES=LOCAL_SHAPES.map(s=>({...s,center:turn(s.cen
   ...(s.halfExtents?{halfExtents:turn(s.halfExtents).map(Math.abs)}:{}),
   ...(s.points?{points:s.points.flatMap((_,i)=>i%3?[]:turn(s.points.slice(i,i+3)))}:{})}));
 export const COURTYARD_NAVIGATION=Object.freeze({x:0,z:0,radius:1.45,seekSight:true});
-export const COURTYARD_START_Z=1.85;
+// 시작 자리 (사장님 10/20 00:4x — 샛별 제안 ②, 전 두 사람 모두 1.85): 플레이어 1.10 · 상대 1.60 — 처음엔 서로 6 점이 다 보이고 한 번 옆걸음이면 급수정 뒤
+export const COURTYARD_START_Z=1.10;
+export const COURTYARD_START_Z_FOE=1.60;
 
 // 고운 사암 결 — 거대한 그린 벽돌 격자는 없다: 아래 이음매는 실제 크기로 모델링. 급수정 전체가 무늬 하나 · 합친 메쉬 하나
 export function courtyardCoverTexture(){

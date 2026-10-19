@@ -4,7 +4,8 @@
 //   반지름(0.90 m, 확인표 1113)에 맞췄다. 보이지 않는 몸 끌기는 없다: AI 는 스틱 입력의 방향만 바꾸고, 플레이어는 직접 돌아가야 한다.
 //   카메라 보호는 10/17 에 돌의 실제 꼴로 다시 짰다(아래 CAMERA_GUARD — 봉인의 중정 디자인 리뷰 고칠 목록 1, 확인표 2050).
 // ─────────────────────────────────────────────────────────────
-import { COURTYARD_COVER_SHAPES, COURTYARD_NAVIGATION, COURTYARD_START_Z } from './stage_courtyard_cover.js'; // 봉인의 중정 가운데 급수정 (샛별 저장소에서 가져옴 10/17 — 중정만 등록 · 시작 자리 · 총수 우회)
+import { COURTYARD_COVER_SHAPES, COURTYARD_NAVIGATION, COURTYARD_START_Z, COURTYARD_START_Z_FOE } from './stage_courtyard_cover.js';
+import { COVER_SIGHT, coverSight } from './courtyard_cover.js'; // 중정 실제 사선 (사장님 10/20 00:4x — 샛별 제안 ①) // 봉인의 중정 가운데 급수정 (샛별 저장소에서 가져옴 10/17 — 중정만 등록 · 시작 자리 · 총수 우회)
 import { BEAR_OBSTACLE_SHAPES, BEAR_AVOID_RADIUS } from './stage_sluice_bear.js';
 
 export const BEAR_NAVIGATION = Object.freeze({ x: 0, z: 0, radius: BEAR_AVOID_RADIUS });
@@ -37,7 +38,8 @@ export const CAMERA_GUARD = Object.freeze({
 //  판 시작 카메라(열림 1 · 0.5 · 0)에서 상대 머리·가슴(가운데·좌우 0.2)·골반·무릎까지 광선이 석상(곰 + 받침)에 하나도 안 닿는 가장 작은 값 (0.05 m 간격으로 잼).
 //  곰 3.0 m 에서 0.45 → 사장님 10/14 10:3x 곰 3.2 m 에서 0.50 (0.45 면 열림 1 카메라 → 상대 가슴 오른쪽 0.2 광선 하나가 석상에 닿는다)
 export const START_SIDE = 0.5;
-export const stageStartZ = (stageId) => (stageId === 'courtyard' ? COURTYARD_START_Z : stageId === 'sluice' || stageId === 'sluice_night' ? START_SIDE : 0);
+// who 0 = 플레이어 · 1 = 상대. 중정은 비대칭(사장님 10/20 00:4x — 샛별 제안 ②: 처음엔 마야가 보이고 한 번 옆걸음이면 급수정 뒤로)
+export const stageStartZ = (stageId, who = 0) => (stageId === 'courtyard' ? (who ? COURTYARD_START_Z_FOE : COURTYARD_START_Z) : stageId === 'sluice' || stageId === 'sluice_night' ? START_SIDE : 0);
 
 /**
  * 판(물리 세계)마다 부른다: 습지 석상 또는 중정 급수정의 고정 충돌체를 만들고, 다른 무대는 null. previous 가 같은 세계의 것이면 먼저 지운다.
@@ -55,6 +57,7 @@ export function configureStageObstacle(RAPIER, world, stageId, groups, previous 
     if (s.rotation) d.setRotation(s.rotation);
     handles.add(world.createCollider(d, body).handle);
   }
+  if (courtyard) COVER_SIGHT.handles.set(world, handles);
   return { world, body, handles, navigation: courtyard ? COURTYARD_NAVIGATION : BEAR_NAVIGATION };
 }
 
@@ -90,7 +93,18 @@ export function routeAroundStageObstacle(ai) {
   }
   const c = Math.cos(f.heading);
   const s = Math.sin(f.heading);
-  const seekingShot = obstacle.seekSight && f.weapon?.gun; // 중정 급수정만(seekSight — stage_courtyard_cover.js): 사선이 막힌 총수는 쏠 각을 찾아 걸어 돈다 (샛별 저장소 10/17). 석상(습지)은 전 그대로
+  let seekingShot = obstacle.seekSight && f.weapon?.gun;
+  // 중정 실제 사선 (사장님 10/20 00:4x — 샛별 제안 ①): 사선 확보용 우회는 총구 → 상대 6 점이 모두 급수정에 가릴 때만. 하나라도 열렸으면 원으로 강제 우회하지 않는다
+  //  (가까운 돌로 향하는 이동 충돌 회피 — 입력 방향 0.75 m 앞 — 는 그대로)
+  if (COVER_SIGHT.on && seekingShot) {
+    seekingShot = coverSight(f, foe).blocked;
+    const len = Math.hypot(f.move.x, f.move.y);
+    const vx = f.move.x * s + f.move.y * c, vz = f.move.x * c - f.move.y * s;
+    const ahead = { x: p.x + (vx / Math.max(len, 1e-9)) * 0.75, z: p.z + (vz / Math.max(len, 1e-9)) * 0.75 };
+    const inward = vx * (obstacle.x - p.x) + vz * (obstacle.z - p.z) > 0;
+    if (!seekingShot && !(len > 0.01 && inward && obstacleSegmentBlocked(p, ahead, clearRadius, obstacle))) { ai.obstacleSide = null; return; }
+  }
+  // // 중정 급수정만(seekSight — stage_courtyard_cover.js): 사선이 막힌 총수는 쏠 각을 찾아 걸어 돈다 (샛별 저장소 10/17). 석상(습지)은 전 그대로
   const speed = Math.max(seekingShot ? .65 : 0, Math.hypot(f.move.x, f.move.y));
   const mx = f.move.x * s + f.move.y * c;
   const mz = f.move.x * c - f.move.y * s;
@@ -289,7 +303,8 @@ export function clampStageCamera(origin, camera, obstacle, opts = {}) {
   if (!cameraClear(bodies, origin, camera.x, camera.y, camera.z)) {
     const need = { [-1]: clearAngle(bodies, origin, camera, -1), [1]: clearAngle(bodies, origin, camera, 1) };
     side = st?.side || -1; // 고른 쪽 (처음엔 어깨 쪽)
-    if (need[side] == null || (need[-side] != null && need[-side] + (G.sideBias * Math.PI) / 180 < need[side])) side = -side;
+    // 중정(seekSight)은 고른 어깨 쪽에 길이 남아 있으면 반대쪽이 더 짧아도 바로 갈아타지 않는다 (사장님 10/20 00:4x — 샛별 제안 ③, 습지는 가림이 늘어 전 그대로)
+    if (need[side] == null || (!obstacle.seekSight && need[-side] != null && need[-side] + (G.sideBias * Math.PI) / 180 < need[side])) side = -side;
     if (need[side] != null) target = side * need[side];
     else side = 0; // 양쪽 모두 막힘 — 평소 자리 그대로 (바닥 지도에서는 없음)
   }
