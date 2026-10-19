@@ -177,6 +177,13 @@
 | S-170 | 2026-10-18 | 샛별→Stillness | 캐릭터 프로필 = 샛별 투명 배경 도트판 33 장(얼터 자기 그림 · 플레이어 = player2) · ?portraitGrid=1 | 기본 플레이 반영 | 02e1f13 | 해당 없음(그쪽 그림) | public/ui/portraits·src/portraits.js | 닫힘 |
 | S-171 | 2026-10-18 | Stillness | 프로필 도트 재구성 시안 16 · 32 · 64배(저장소 밖) → 32배가 앱 아이콘 기준 | 시안 | — | — | — | 닫힘 |
 | S-172 | 2026-10-18 | 샛별→Stillness | 일본 막기 · 흘림 연구 재현(30 초 72 조건 · AI 끼리 36 판) — 판정 개편 채택 · 선제 받기 보류 | 연구 · 판정 | — | — | — | 닫힘 |
-| S-173 | 2026-10-18 | Stillness | 일본 흘림 묶음: 판정 개편 · 팔 늦춤 0.36 s · 기력 40 · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % | 진행 중(관문 전) | — | 손봐서 | combat.js·stamina.js·fighter.js·frames.js·parry_button.js·config.js·nagashi_*.js | 열림 |
-| S-174 | 2026-10-18 | 샛별→Stillness | 미나미 눈 = 샛별 마지막 판(a0eb17a1) | 진행 중(S-173 과 함께) | — | 해당 없음 | art/portraits-px-20261018·public/ui/portraits | 열림 |
+| S-173 | 2026-10-18 | Stillness | 일본 흘림 묶음: 판정 개편 · 팔 늦춤 0.36 s · 기력 40 · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % | 닫음 — 본판 | 2976918 | 손봐서 | combat.js·stamina.js·fighter.js·frames.js·parry_button.js·config.js·nagashi_*.js | 닫힘 |
+| S-174 | 2026-10-18 | 샛별→Stillness | 미나미 눈 = 샛별 마지막 판(a0eb17a1) | 닫음 — S-173 과 함께 | 2976918 | 해당 없음 | art/portraits-px-20261018·public/ui/portraits | 닫힘 |
 | S-175 | 2026-10-18 | Stillness | 운영: 컨테이너 재시작 셋 · 개발 서버 · 샛별 열람 00:0x · 00:2x + 요청 둘 · 막기 도구 기력 연결 점검(영향 없음) | 기록 | 57fdf3e·d666f07·03d6519 | — | — | 닫힘 |
+| S-176 | 2026-10-19 | Stillness | 흘림 2차: 소리 · 불꽃 줄 · 흘린 공격 피해 × 0.2 · 일본 AI 흘림 · 숙련도별 유파 특성 | 본판 | 73b391a | 손봐서 | combat.js·sound.js·effects.js·ai.js·config.js | 닫힘 |
+| S-177 | 2026-10-19 | Stillness | 화면 글 방침 2 · 3판(뜻 (한글 소리) · 원어는 스킬북 · 스펙은 아이템 창 · '~합니다') · 편집 지침 | 본판 | 8d063f9·5c10364·63ec586·cd6d12a | 충돌 예상 | schools.js·weapons.js·skill_books.js·hands.js | 닫힘 |
+| S-178 | 2026-10-19 | Stillness | 앱 아이콘 = 플레이어2 프사(22 × 22 · 어두운 바탕 · 칸 줄) | 본판 | 253d0e4 | 해당 없음 | public 아이콘 · tools/icon | 닫힘 |
+| S-179 | 2026-10-19 | Stillness | 케틀 햇 에픽 · 무기 종류 표기 · 청강검 · 모노호시자오 · 엑스칼리버 사장님 문구 | 본판 | 3de255d·5677336·98a83cf | 쉬움 | weapons.js·lobby_equipment.js | 닫힘 |
+| S-180 | 2026-10-19 | Stillness | 팔 늦춤 시험 둘(흘림 0.6 s 80 % · 탈류 · 레베스) — 판 결과 개선 없음 | 기본 끔 · 채택 안 함 권고 | dd6b5ae·ba7e06d | 쉬움 | config.js·nagashi_recovery.js·combat.js | 닫힘 |
+| S-181 | 2026-10-19 | Stillness | 쳐내기 튕김 ?ibBeat=k — 칼끝 바깥 +22 / +44 cm · 반격 1.01 → 1.22(k 1.6) | 기본 끔 · 사장님 확인 대기 | 9ebaeab·44b17d8 | 쉬움 | combat.js·config.js·main.js | 열림 |
+| S-182 | 2026-10-19 | Stillness | 운영: 샛별 열람 넷 · 컨테이너 재시작 넷 · 개발 서버 | 기록 | 29fa0ee·54af75f·8c52bfa·b06f51d | — | — | 닫힘 |
