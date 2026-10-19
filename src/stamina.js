@@ -188,20 +188,20 @@ export class Stamina {
     return true;
   }
 
-  attack(kind = 'cut', bundled = this.inSecret) {
+  attack(kind = 'cut', bundled = this.inSecret, credit = 0) {
     // 탭 같은 명시 입력은 직전 준비를 끝내고 새 동작 한 번만 청구한다.
     this.finishStroke();
-    this.chargeAttack(kind, bundled);
+    this.chargeAttack(kind, bundled, credit);
   }
 
-  chargeAttack(kind = 'cut', bundled = this.inSecret) {
+  chargeAttack(kind = 'cut', bundled = this.inSecret, credit = 0) {
     if (!STAMINA.on || this.exhausted || !this.fighter.alive) return;
     this.attackId++;
     this.flowAttackKind = kind; this.flowAttackStart = this.time; // 흘림 판정이 읽는 공격 종류(찌르기는 흘리지 않음 — nagashi_redesign.js) · 사람 · AI 같게
     this.attackUntil = this.time + 1.5;
     if (bundled) return;
     this.counts[kind] = (this.counts[kind] ?? 0) + 1;
-    this.spend('attack', (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight);
+    this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight - credit));
   }
 
   secret() {
@@ -227,7 +227,19 @@ export class Stamina {
     if (this.attacking && !this.guarding) return;
     if (this.blockedAttack.get(attacker) === other.attackId) return;
     this.blockedAttack.set(attacker, other.attackId);
-    if (this.spend('block', STAMINA.blockCost * this.weight)) this.counts.block++;
+    if (this.spend('block', STAMINA.blockCost * this.weight)) {
+      this.counts.block++;
+      this.blockPayment = { attacker, id: other.attackId, amount: STAMINA.blockCost * this.weight };
+    }
+  }
+
+  /** 같은 접촉에서 이미 지불한 막기만 공제: 막기+자동 찌르기 총액은 일반 찌르기 한 번. */
+  parryThrust(attacker) {
+    const credit = this.blockPayment?.attacker === attacker && this.blockPayment.id === attacker.stamina.attackId
+      ? this.blockPayment.amount : 0;
+    this.blockPayment = null;
+    this.attack('thrust', false, credit);
+    return credit;
   }
 
   commitStroke(stroke, kind = stroke?.kind) {

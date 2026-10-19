@@ -35,6 +35,7 @@ import { TRADITIONS } from './schools.js';
 import { GUARD_BASE } from './guards.js';
 import { installCover } from './frames.js';
 import { AI } from './ai.js';
+import { ItalianOpposition } from './italian_opposition.js';
 
 const _r = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -76,6 +77,7 @@ export class PlayerParryGuard {
     this.retreat = null;
     this.retreatEnd = -Infinity;
     this.clock = 0;
+    this.opposition = new ItalianOpposition(me, foe, this);
     // 대기실 스킬북 '막기'를 안 가졌거나 해제한 플레이어(me.schoolParry === false — main.js newRound, 첫 화면·대기실 여정만): 무유파 막기 자리(TRADITIONS.none.parry)·덧씌우기 없음
     const pc = me.schoolParry === false ? null : TRADITIONS[me.swordArt?.tradition]?.parryCover;
     if (pc) {
@@ -119,6 +121,7 @@ export class PlayerParryGuard {
     const me = this.me;
     const sk = me.skill;
     this.clock += dt;
+    this.opposition.beginGuardStep();
     this.sense.record(dt);
     sk.guardDrive = 0;
     const can = !me.stamina.exhausted && this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school;
@@ -235,6 +238,7 @@ export class PlayerParryGuard {
       this.boost = true;
     } else if (this.boost) (me.powerMul = 1), (this.boost = false);
     me.inputActive = true; // 손을 쥐고 있다 — 쉼 무게·되돌아옴·끝점 붙잡음은 손가락이 움직일 때처럼 비킨다 (main.js 가 프레임마다 다시 정함)
+    this.opposition.endGuardStep();
     return true;
   }
 

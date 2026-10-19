@@ -591,6 +591,8 @@ export class Combat {
     }
     for (const f of [A.fighter, B.fighter]) if (f.skill?.corr === 'v2') (f.bladeTouch = true), (f.touchStep = this.stepNo); // 보정 v2: 칼끼리 닿음
     if (BIND.natural) this.bindFeel(pairs, point, A.fighter, B.fighter, fresh);
+    A.fighter.parryGuard?.opposition?.onClash(B.fighter, { vn });
+    B.fighter.parryGuard?.opposition?.onClash(A.fighter, { vn });
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm, nagashi: !!flowD });
   }
 

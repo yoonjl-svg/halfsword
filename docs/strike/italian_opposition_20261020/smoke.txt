@@ -1,0 +1,2 @@
+8s state: {"game":"fight","sim":1.38,"p":"stand","e":"stand","w":"longsword","fw":"excalibur_replica"}
+ZERO console errors

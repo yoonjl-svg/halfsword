@@ -1244,6 +1244,7 @@ export class Skill {
     if (dt <= 0) return;
     const f = this.f;
     const L = this.level;
+    f.parryGuard?.opposition?.beforeSkill();
     if (f.stamina.exhausted) return this.holdExhausted(dt);
     this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     if (this.sec) this.updateSecret(dt); // 플레이어 비기: 손 목표를 비기 길로 (이 스텝의 거르기·몸 따라가기는 아래 그대로)
@@ -1459,5 +1460,6 @@ export class Skill {
       this.updatePommel(dt); // 손잡이 찍기 (시제품, 부를 때만)
       this.activity = Math.max(this.activity, this.thrustPose.w);
     } else if (this.f.weapon?.gun) this.thrustPose.w = gunPose(this.f, this.thrustPose); // 권총: 한 손 사격 자세를 덧씌운다 (gun.js)
+    f.parryGuard?.opposition?.update(dt);
   }
 }
