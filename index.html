@@ -7,12 +7,12 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#1b1410" />
-    <!-- 탭 아이콘 (브라우저의 favicon.ico 자동 요청 404 도 막는다) — 앱 아이콘과 같은 그림, public/icons/ (크기는 파일 그대로). 10/18 32 × 32 도트판은 새 이름 tree-sword-px22-20261019-* — 브라우저·설치된 앱이 옛 그림을 붙잡지 않게 (docs/import/app_icon_px32_2026-10-18.md · 전 10/17 tree-sword-20261017-*) -->
-    <link rel="icon" type="image/png" sizes="32x32" href="./icons/tree-sword-px22-20261019-favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="64x64" href="./icons/tree-sword-px22-20261019-favicon-64.png" />
+    <!-- 탭 아이콘 (브라우저의 favicon.ico 자동 요청 404 도 막는다) — 앱 아이콘과 같은 그림, public/icons/ (크기는 파일 그대로). 10/18 32 × 32 도트판은 새 이름 tree-sword-px32-20261018-* — 브라우저·설치된 앱이 옛 그림을 붙잡지 않게 (docs/import/app_icon_px32_2026-10-18.md · 전 10/17 tree-sword-20261017-*) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/tree-sword-px32-20261018-favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="./icons/tree-sword-px32-20261018-favicon-64.png" />
     <!-- 설치되는 앱(PWA, docs/pwa_2026-10-13.md): 매니페스트 · 아이폰 홈 화면 아이콘·이름 · 전체 화면에서 상태 막대 아래까지 그린다(안전 영역은 아래 --safe-*) -->
     <link rel="manifest" href="./stillness-20261018.webmanifest" /> <!-- 10/18 새 이름: 폰에 남은 옛 서비스 워커가 옛 매니페스트(옛 게임 이름)를 캐시에서 내주던 것을 건너뜀 — 옛 이름 파일도 같은 내용 (docs/import/app_icon_px32_2026-10-18.md) -->
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/tree-sword-px22-20261019-apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/tree-sword-px32-20261018-apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="Stillness" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Stillness</title>
@@ -196,7 +196,7 @@
       #foeIntro small:empty { display: none; }
       @media (orientation: portrait) { #foeIntro { max-width: calc(100vw - 2 * var(--safe-l)); } }
       /* 왼쪽 위 (10/14 사장님 '왼쪽 상단에는 스테이지 번호와 스테이지 이름'): 오른쪽 위 칸과 거울. 첫 줄 .stg = '스테이지 N · 무대 이름'.
-         무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르십시오' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
+         무기 카드를 고르는 동안만 그 아래 em = 카드 안내 '무기 카드를 한 장 고르세요' (10/14 03:3x 사장님 '이전처럼 복구' — 00:4x 에 뺐던 #foeIntro em 의
          자리(칸 마지막 줄, 위 6px)·꼴 그대로: --fw-label · --ls-label · 강조 색. 크기는 칸 전체 작게 --fs-s (10/14 글자 규칙 §16). 카드를 고르면 .off 로 숨고 자리는 둔다 — main.js setDrawGuide).
          둘째 줄 'AI 이름 · 자세 / 기술'(.foe)은 10/14 03:3x 사장님 'AI 이름·기술명 표기는 아예 없앤다'로 걷어냈다. 카드 줄은 이 칸 아래에서 시작한다 (main.js layoutDraw) */
       #stageInfo { position: fixed; z-index: 2; left: var(--safe-l); top: var(--safe-t); width: var(--side-w); text-align: left; pointer-events: none; opacity: 0; transition: opacity .3s; text-shadow: var(--hud-outline); font-size: var(--fs-s); font-weight: var(--fw-head); line-height: var(--lh-tight); word-break: keep-all; }
@@ -345,7 +345,7 @@
       /* 패배 창 프로필 + 대사 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md §4): 그림이 있으면 창이 옆으로 넓어진다 — 왼쪽 정사각 그림 --pf · 틈 16 · 오른쪽 칸은 전 창 폭(340) 그대로 · 위에 붙임.
          그림 크기 --pf = 같은 화면의 대기실 프로필 칸과 같은 CSS px (사장님 23:4x '패배 팝업 프로필도 같은 크기로 맞추고') — 아래 셈은 lobby.css .lobby 의 --card-w 셈을 그대로 옮긴 것
          (칸 높이 · 줄 폭 · 출발 단추 → 전 카드 폭 --card-w0 → 그 60 % — 10/18 01:0x). lobby.css 의 여백 · 제목 줄 · 단추 값이나 미디어 조건을 바꾸면 여기도 같이 — tools/browser/defeat_portrait_smoke.mjs 가 두 크기를 견준다.
-         그림 안에 액자 1 이 있어 CSS 틀은 없다(대기실 프로필 칸과 같은 꼴) · 기본 = 투명 배경 도트판(10/18 16:3x — 투명한 곳은 이 칸의 바탕 #30261c · 매끈하게 줄임) · 예비 low(?portrait=low)는 픽셀 그대로.
+         그림 안에 액자 1 이 있어 CSS 틀은 없다(대기실 프로필 칸과 같은 꼴) · 원본을 줄인 그림은 매끈하게, 예비 low(?portrait=low)는 픽셀 그대로.
          대사 = 싸움 화면 대사 칸과 같은 꼴(싸움 화면엔 10/18 01:4x 부터 안 띄움 · “…” · 보조 색 · 출처가 있으면 아래 줄 작게) · 진 까닭 줄 아래 · 금화 줄은 그 아래 빈 줄 하나 그대로(.reward 위 여백) · 값은 사장님 확인 전 */
       .card {
         --lb-pt: 22px; --lb-pb: 24px; --lb-pl: max(24px, env(safe-area-inset-left)); --lb-pr: max(24px, env(safe-area-inset-right));
@@ -375,8 +375,6 @@
       .foe-portrait[hidden], .foe-line[hidden] { display: none; }
       .foe-portrait img { display: block; width: 100%; height: 100%; image-rendering: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
       .foe-portrait[data-mode="low"] img { image-rendering: pixelated; }
-      .foe-portrait { position: relative; } /* ?portraitGrid=1 칸 줄 덮개 자리 (10/18 16:3x 확인용 — lobby.css .portrait-card[data-grid] 와 같은 꼴) */
-      .foe-portrait[data-grid]::after { content: ''; position: absolute; inset: 0; background: url('./ui/portraits/grid-overlay.svg') 0 0 / 100% 100% no-repeat; pointer-events: none; }
       .foe-line { margin: 0; color: var(--c-sub); font-size: var(--fs-m); line-height: var(--lh-text); word-break: keep-all; overflow-wrap: anywhere; }
       .foe-line small { display: block; margin-top: 2px; font-size: var(--fs-s); line-height: 1.4; }
       .foe-line small:empty { display: none; }
@@ -471,7 +469,7 @@
       </div>
     </div>
 
-    <div id="rotate"><div>📱↻<br />폰을 가로로 돌려 주십시오<small>돌리면 바로 이어집니다</small></div></div>
+    <div id="rotate"><div>📱↻<br />폰을 가로로 돌려 주세요<small>돌리면 바로 이어집니다</small></div></div>
 
     <!-- 첫 모듈 = 게임 들머리: 인자 없는 주소는 첫 화면 → 대기실 → 여정, 게임 인자가 있는 주소는 지금처럼 곧바로 게임(main.js) -->
     <script type="module" src="/src/game_entry.js"></script>
