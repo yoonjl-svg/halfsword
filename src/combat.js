@@ -25,7 +25,7 @@ import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
@@ -559,6 +559,7 @@ export class Combat {
     //  판정 개편(FLOW_REDESIGN.on — 사장님 10/18 22:1x)이면 새로 부딪힌 순간이 아니어도 접촉 창(0.12 s) 안에서 다시 본다 (nagashi_redesign.js)
     const flowD = (fresh || FLOW_REDESIGN.on) && NAGASHI.on && SA && SB && J > 0 ? this.nagashi(A, B, SA, SB, point, nrm, vn) : null;
     if (!flowD && IB_PARRY_ARM.on && fresh && SA && SB && J > 0) this.ibParryArm(A, B, SA, SB, point, nrm); // 이베리아 쳐내기 팔 늦춤 (시험 · 기본 끔)
+    if (!flowD && IB_PARRY_BEAT.on && fresh && SA && SB && J > 0) this.ibParryBeat(A, B, SA, SB, point, nrm, vn); // 이베리아 쳐내기 튕김 (시험 · 기본 끔)
     // 새로 부딪혀 튕긴 순간: 칼이 손 안에서 길이 축으로 팽이처럼 도는 몫은 손아귀가 잡는다 (gripTwist)
     if (fresh) for (const f of [A.fighter, B.fighter]) gripTwist(f);
     const va = A.body.velocityAtPoint(point);
@@ -609,16 +610,49 @@ export class Combat {
     const pc = TRADITIONS.iberian?.parryCover;
     if (!pc) return null;
     for (const [D, O, SO, sgn] of [[A.fighter, B.fighter, SB, -1], [B.fighter, A.fighter, SA, 1]]) {
-      const st = D.skill?._cover;
-      if (!st || D.schoolParry === false || D.swordArt?.tradition !== 'iberian') continue;
-      if (!(D.parryGuard ? D.parryGuard.active : st.ai?.mode === 'defend' && !st.ai.defVoid)) continue;
-      const nm = st.last?.name; // 깔린 막기 칸은 사본이라 이름으로 맞춘다
-      if (!(st.w > 0.3) || (nm !== pc.highL.name && nm !== pc.highR.name)) continue;
+      if (!ibParrying(D, pc)) continue;
       if (sgn * velAt(SO, point, _n1).dot(nrm) < 0.5) continue; // 상대 칼이 들어오던 중일 때만
       if (beginFlowRecovery(O, D)) {
         this.lastIbArm = { step: this.stepNo, d: D.index };
         return D;
       }
+    }
+    return null;
+  }
+
+  /** 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' 시험 — config IB_PARRY_BEAT, 기본 끔).
+   *  ibParryArm 과 같은 때(이베리아 막기 칸 · 막는 중 · 상대 칼이 들어오던 새 맞닿음): 상대 칼을 받는 사람 몸 가운데선에서 바깥쪽으로 민다.
+   *   방향 = 받는 사람 가슴 → 상대 가슴(수평)에 직각인 옆 방향 중 맞닿은 자리 쪽(가운데선 가까우면 탈류 = 왼 · 레베스 = 오른) · 상대 칼 축 성분은 뺀다(칼이 길이 축으로 밀리지 않게)
+   *   충격량 = 그 방향 유효 질량(손 포함 gripMass) × k × vn(맞부딪는 빠르기) — 흘림(NAGASHI.slideK)과 같은 꼴. 반대 충격은 받는 사람 가슴 0.6 · 골반 0.4(팔을 거쳐 몸이 버팀 — 받는 칼은 흔들지 않음)
+   *   k = 0 이면 밀지 않고 알아보기만(측정용). 돌려줌: D 또는 null */
+  ibParryBeat(A, B, SA, SB, point, nrm, vn) {
+    const pc = TRADITIONS.iberian?.parryCover;
+    if (!pc || !(vn > 0)) return null;
+    for (const [D, O, SO, sgn] of [[A.fighter, B.fighter, SB, -1], [B.fighter, A.fighter, SA, 1]]) {
+      if (!ibParrying(D, pc) || !O.sword || !O.swordProps || !D.bodies?.chest || !O.bodies?.chest) continue;
+      if (sgn * velAt(SO, point, _n1).dot(nrm) < 0.5) continue; // 상대 칼이 들어오던 중일 때만
+      const c = tv(D.bodies.chest.translation());
+      const fwd = tv(O.bodies.chest.translation()).sub(c);
+      fwd.y = 0;
+      if (fwd.lengthSq() < 1e-6) continue;
+      fwd.normalize();
+      const left = new THREE.Vector3(0, 1, 0).cross(fwd); // 받는 사람의 왼쪽
+      const side = _n2.copy(point).sub(c).dot(left);
+      const s = Math.abs(side) > 0.03 ? Math.sign(side) : D.skill._cover.last?.name === pc.highL.name ? 1 : -1;
+      const dir = left.multiplyScalar(s);
+      const ax = _n3.set(0, 1, 0).applyQuaternion(rotQ(O.sword));
+      dir.addScaledVector(ax, -dir.dot(ax));
+      if (dir.lengthSq() < 1e-6) continue;
+      dir.normalize();
+      const o = tv(O.sword.translation());
+      const pO = o.addScaledVector(ax, _n2.copy(point).sub(o).dot(ax)); // 맞닿은 자리를 상대 칼 축 위로 (팽이 돌기 없게)
+      const Jt = gripMass(O.swordProps, liveState(O.sword), pO, dir, STEEL.handMass) * IB_PARRY_BEAT.k * vn;
+      if (Jt > 0) {
+        O.sword.applyImpulseAtPoint({ x: dir.x * Jt, y: dir.y * Jt, z: dir.z * Jt }, vp(pO), true);
+        for (const [n, k] of [['chest', 0.6], ['pelvis', 0.4]]) D.bodies[n]?.applyImpulse({ x: -dir.x * Jt * k, y: -dir.y * Jt * k, z: -dir.z * Jt * k }, true);
+      }
+      this.lastIbBeat = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone() };
+      return D;
     }
     return null;
   }
@@ -899,6 +933,15 @@ function onBone(info, point) {
   return axis.multiplyScalar(r.dot(axis)).add(new THREE.Vector3(c.x, c.y, c.z));
 }
 
+/** 이베리아 쳐내기 칸을 잡고 막는 중인가 (ibParryArm · ibParryBeat): 이베리아 · 막기 켬 · 막는 중 · 막기 칸 무게 > 0.3 · 탈류(highL) 또는 레베스(highR) 쳐내기 칸.
+ *  깔린 막기 칸은 사본이라 이름으로 맞춘다 */
+function ibParrying(D, pc) {
+  const st = D.skill?._cover;
+  if (!st || D.schoolParry === false || D.swordArt?.tradition !== 'iberian') return false;
+  if (!(D.parryGuard ? D.parryGuard.active : st.ai?.mode === 'defend' && !st.ai.defVoid)) return false;
+  const nm = st.last?.name;
+  return st.w > 0.3 && (nm === pc.highL.name || nm === pc.highR.name);
+}
 function tv(v) {
   return new THREE.Vector3(v.x, v.y, v.z);
 }
