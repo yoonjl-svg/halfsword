@@ -1468,6 +1468,7 @@ export class Fighter {
    */
   applyWound(h) {
     if (this.state === 'dead' || this.revival) return; // 부활하는 동안엔 상처를 받지 않는다
+    this.parryGuard?.opposition?.onWound(h);
     const sev = h.severity;
     const Z = h.zone;
     // 날이 살을 갈랐나. 보통은 찌르기·베기 = 문턱을 넘음 (못 넘으면 combat.js 가 멍으로 바꿔 보낸다). 내려찍기 즉사 찌르기(h.finish)만

@@ -1,0 +1,32 @@
+using deprecated parameters for the initialization function; pass a single object instead
+✔ automatic thrust lifecycle: release (45.038792ms)
+✔ automatic thrust lifecycle: exhaustion (15.44631ms)
+✔ automatic thrust lifecycle: manual (13.553552ms)
+✔ automatic thrust lifecycle: repeat (9.8436ms)
+✔ automatic thrust lifecycle: move (10.827239ms)
+✔ automatic thrust lifecycle: complete (9.780586ms)
+✔ automatic thrust lifecycle: slow (7.755759ms)
+✔ automatic thrust lifecycle: down (7.947097ms)
+✔ automatic thrust lifecycle: lost (6.604447ms)
+✔ automatic thrust lifecycle: enemyDead (7.877221ms)
+✔ reject invalid contact: late (7.623991ms)
+✔ reject invalid contact: bookOff (6.679419ms)
+✔ reject invalid contact: otherWeapon (5.431322ms)
+✔ reject invalid contact: noAttack (8.267649ms)
+✔ reject invalid contact: outgoing (7.558011ms)
+✔ reject invalid contact: injured (8.702794ms)
+✔ reject invalid contact: disabled (8.663344ms)
+✔ reject invalid contact: slowContact (7.02503ms)
+✔ reject invalid contact: inactive (7.982901ms)
+✔ reject invalid contact: broken (7.251229ms)
+✔ reject invalid contact: distant (5.325453ms)
+✔ no unpaid block credit; duplicate contacts cannot bill twice (7.619754ms)
+✔ real blade collision starts one paid thrust without synthetic contact callbacks (468.459512ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 904.336372

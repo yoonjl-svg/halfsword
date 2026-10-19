@@ -1,0 +1,134 @@
+[
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zwerchL",
+      "gap": 1.4,
+      "press": 0.02,
+      "seed": 1
+    },
+    "fired": 1,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zwerchL",
+      "gap": 1.4,
+      "press": 0.12,
+      "seed": 1
+    },
+    "fired": 1,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zwerchL",
+      "gap": 1.65,
+      "press": 0.02,
+      "seed": 1
+    },
+    "fired": 1,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zwerchL",
+      "gap": 1.65,
+      "press": 0.12,
+      "seed": 1
+    },
+    "fired": 1,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zornhau",
+      "gap": 1.4,
+      "press": 0.02,
+      "seed": 1
+    },
+    "fired": 0,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zornhau",
+      "gap": 1.4,
+      "press": 0.12,
+      "seed": 1
+    },
+    "fired": 1,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zornhau",
+      "gap": 1.65,
+      "press": 0.02,
+      "seed": 1
+    },
+    "fired": 0,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "zornhau",
+      "gap": 1.65,
+      "press": 0.12,
+      "seed": 1
+    },
+    "fired": 1,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "oberhau",
+      "gap": 1.4,
+      "press": 0.02,
+      "seed": 1
+    },
+    "fired": 0,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "oberhau",
+      "gap": 1.4,
+      "press": 0.12,
+      "seed": 1
+    },
+    "fired": 0,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "oberhau",
+      "gap": 1.65,
+      "press": 0.02,
+      "seed": 1
+    },
+    "fired": 0,
+    "exactPhysicalResult": true
+  },
+  {
+    "case": {
+      "weapon": "longsword",
+      "attack": "oberhau",
+      "gap": 1.65,
+      "press": 0.12,
+      "seed": 1
+    },
+    "fired": 0,
+    "exactPhysicalResult": true
+  }
+]

@@ -116,6 +116,7 @@ if (params.has('iaiRise')) CONFIG.SECRET.iaiRise = +params.get('iaiRise') ? 1 : 
 if (params.has('kronH')) CONFIG.SKILL.deKronH = +params.get('kronH') ? 1 : 0; // 왕관 손·칼끝 자리(10/12 08:2x): 기본 1 = 쓸어 고른 자리, `?kronH=0` = 00:1x 값
 if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
 if (params.get('itRetreat') === '1' || params.get('itRetreat') === '2') CONFIG.SKILL.itRetreat = +params.get('itRetreat'); // 이탈리아 물러서기 연구(10/17 — 판 값 끔, 사장님 확인 전): `?itRetreat=1` = 막기 단추가 약한 길에서 실제 디딤 두 번 물러섬 · `?itRetreat=2` = 막는 동안 스틱을 뒤로 당긴 두 디딤을 물러서는 한 짝으로 셈(스틱은 플레이어 것) (docs/strike/italian_retreat_2026-10-17.md)
+if (params.get('itOpposition') === '0') CONFIG.SKILL.itOpposition = 0;
 if (params.get('itParryBeat') === '1') CONFIG.SKILL.itParryBeat = 1; // 막기를 짧은 박자로 셈(10/17 연구 — 사장님 승인 전 제안, 판 값 끔): `?itParryBeat=1`
 if (+params.get('cnParrySpeed') > 0) CONFIG.SKILL.cnParrySpeedK = +params.get('cnParrySpeed'); // 동방 막기 단추 손 빠르기 배율(10/17 — 판 값 1 = 끔, 사장님 확인 전): `?cnParrySpeed=1.3` = 동방 막기 책 플레이어의 막기 단추 손 옮김 4.5 → 5.85 m/s (docs/strike/chinese_parry_speed_2026-10-17.md)
 if (+params.get('cnBrace') > 0) CONFIG.SKILL.cnBraceK = +params.get('cnBrace'); // 동방 버티는 힘(10/17 연구 — 판 값 0 = 끔, 사장님 확인 전): `?cnBrace=0.5` = 동방 막기 책 플레이어가 막기 단추로 막는 중 서보 힘 × 1.5 (docs/strike/chinese_parry_brace_2026-10-17.md)
@@ -2038,6 +2039,10 @@ function paintGuard(key, name, tail) {
 function updateGuardName() {
   if (player?.alive && player.stamina.exhausted) {
     if (guardShown !== 'exhausted') paintGuard('exhausted', '탈진', '숨 고르기 · 이동·공격·막기 불가');
+    return;
+  }
+  if (playerGuard?.opposition?.run && player.alive) {
+    if (guardShown !== 'it-opposition') paintGuard('it-opposition', '막아찌르기', '칼을 받치며 찌르기');
     return;
   }
   // 막기 버튼을 누르는 동안: ① 자세 칸에 지금 잡은 막기 자세 이름 (첫 줄 유파 이름 · 둘째 줄 원어 · 막기 / 막기 기다림). 자리가 바뀔 때마다 바꿔 끼운다
