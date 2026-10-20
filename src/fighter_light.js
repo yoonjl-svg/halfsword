@@ -26,7 +26,7 @@
 //    fighterShade(x, y, z) → 0~1 (선택, 10/17 봉인의 중정): 그 점이 받는 해 몫. 무대의 큰 장애물(급수정)이 해를 가리는 그늘에 든 몸 부위는
 //      해(방향광) 빛을 그만큼 덜 받는다 — 캐릭터는 그림자 지도를 받지 않아(제 그림자 여드름 없게) 땅 그늘과 몸 빛이 어긋나던 것. 부위(재질)마다 셈 · 0.08 s 로 부드럽게
 //   색은 짙게 적어도 한 채널이 밝기의 CHROMA_MAX 배를 넘지 않게 흰색 쪽으로 옅어진다 (새파랑 0x0000ff → 푸르스름한 흰빛)
-//  기본 최소값은 유지. 사용자 지정 밤 습지의 weatherDim(.15~1, 기본1)만 채움/반사를 추가 감쇠한다.
+//  기본 최소값은 유지. 사용자 지정 밤 습지의 weatherDim(.08~1, 기본1)만 채움/반사를 추가 감쇠한다.
 //  자세한 약속은 docs/stages.md 의 "조명 약속".
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -176,7 +176,7 @@ export function createFighterLight(lights, stage = {}) {
     const e = (state.stageLight = stageLight());
     // Explicit weather direction: only the midnight wetland opts into dimming
     // the usual readability fill. Other stages keep their existing minimums.
-    const weatherDim = THREE.MathUtils.clamp(num(cfg.weatherDim, 1), .15, 1);
+    const weatherDim = THREE.MathUtils.clamp(num(cfg.weatherDim, 1), .08, 1); // 밤 습지만 씀 (번개 없을 때 .14 — 10/20)
     const deficit = (state.deficit = state.enabled ? Math.max(0, state.level - e) * weatherDim : 0);
     if (cfgKey) keyHue.copy(cfgKey);
     else hue(lights.sun?.color ?? WHITE, 0.5, keyHue);
