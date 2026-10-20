@@ -129,6 +129,7 @@ if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm
 if (params.has('ibBeat') && +params.get('ibBeat') >= 0 && +params.get('ibBeat') <= 3) Object.assign(CONFIG.IB_PARRY_BEAT, { on: +params.get('ibBeat') > 0, k: +params.get('ibBeat') || CONFIG.IB_PARRY_BEAT.k }); // 이베리아 탈류 · 레베스 쳐내기 튕김 세기 k (판 값 1.6 — 사장님 10/20) · `?ibBeat=0` = 끔
 if (params.has('swingTurn') && +params.get('swingTurn') >= 0 && +params.get('swingTurn') <= 180) Object.assign(CONFIG.SWING_TURN, { on: +params.get('swingTurn') > 0, rate: +params.get('swingTurn') || CONFIG.SWING_TURN.rate }); // 휘두르는 동안 몸 돌림 묶기 °/s (시험 — 기본 끔 · 10/21) · `?swingTurn=30`
 if (params.has('sideDash')) CONFIG.SIDE_DASH.on = params.get('sideDash') !== '0'; // 옆 박차기 명령 (시험 — 기본 끔 · 10/21): A · D 두 번 누름 · 스틱 옆으로 두 번 튕김
+if (params.has('burstWalkSide')) CONFIG.GAIT.burstWalkSide = params.get('burstWalkSide') === '0' ? 0 : 1; // 걷는 중 옆 박차기 (10/21 사장님 '고쳐' — 기본 켬) · `?burstWalkSide=0` = 전 판(걷기 시작 때만)
 if (['strike', 'approach', 'windup'].includes(params.get('swingTurnFrom'))) CONFIG.SWING_TURN.from = params.get('swingTurnFrom'); // 묶기 시작: windup(기본 — 칼 드는 때부터) · approach(들어오는 단계부터) · strike(긋기부터)
 if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
 if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)

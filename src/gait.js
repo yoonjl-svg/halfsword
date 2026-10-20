@@ -765,6 +765,17 @@ export class Gait {
         else if (!side && mv.y < 0) this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
       }
     }
+    // 걷는 중 옆 박차기 (10/21 GAIT.burstWalkSide — 사장님 '옆 박차기가 걷는 중에도 나가게 고쳐'): 이미 걷는 몸이 스틱을 옆으로 확 틀면(옆 몫이 낮던 때에서 burstTurnT 안에
+    //  옆으로 burstStick 넘게 · 앞 몫 < burstFwdMax) 다음 걸음을 옆 박찬 걸음으로(sideDash — 이베리아만). 플레이어만 · 서 있다 떼는 첫 걸음은 위 걷기 시작 박차기 그대로
+    if (pl && GAIT.burstWalkSide && mv) {
+      this.dashClock = (this.dashClock ?? 0) + dt;
+      const m = mv.length();
+      const s = m >= GAIT.burstStick && Math.abs(mv.x) > Math.abs(mv.y) && mv.y / m < GAIT.burstFwdMax ? Math.sign(mv.x) : 0;
+      // 옆에서 거꾸로 옆으로 곧장 튼 것(dashSide ≠ 0)도 확 튼 것으로 센다
+      if (s && s !== this.dashSide && this.walking && (this.dashSide || this.dashClock - (this.dashLowT ?? -1) <= GAIT.burstTurnT)) this.sideDash(s);
+      if (!s && (Math.abs(mv.x) < 0.35 || m < 1e-6)) this.dashLowT = this.dashClock;
+      this.dashSide = s;
+    }
     if (walkNow !== this.walking) {
       this.walking = walkNow;
       this.walkT = 0;
