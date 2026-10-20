@@ -185,5 +185,12 @@
 | S-178 | 2026-10-19 | Stillness | 앱 아이콘 = 플레이어2 프사(22 × 22 · 어두운 바탕 · 칸 줄) | 본판 | 253d0e4 | 해당 없음 | public 아이콘 · tools/icon | 닫힘 |
 | S-179 | 2026-10-19 | Stillness | 케틀 햇 에픽 · 무기 종류 표기 · 청강검 · 모노호시자오 · 엑스칼리버 사장님 문구 | 본판 | 3de255d·5677336·98a83cf | 쉬움 | weapons.js·lobby_equipment.js | 닫힘 |
 | S-180 | 2026-10-19 | Stillness | 팔 늦춤 시험 둘(흘림 0.6 s 80 % · 탈류 · 레베스) — 판 결과 개선 없음 | 기본 끔 · 채택 안 함 권고 | dd6b5ae·ba7e06d | 쉬움 | config.js·nagashi_recovery.js·combat.js | 닫힘 |
-| S-181 | 2026-10-19 | Stillness | 쳐내기 튕김 ?ibBeat=k — 칼끝 바깥 +22 / +44 cm · 반격 1.01 → 1.22(k 1.6) | 기본 끔 · 사장님 확인 대기 | 9ebaeab·44b17d8 | 쉬움 | combat.js·config.js·main.js | 열림 |
+| S-181 | 2026-10-19 | Stillness | 쳐내기 튕김 ?ibBeat=k — 칼끝 바깥 +22 / +44 cm · 반격 1.01 → 1.22(k 1.6) | 판 값 k 1.6 (사장님 10/20) | 9ebaeab·44b17d8 | 쉬움 | combat.js·config.js·main.js | 닫힘 |
 | S-182 | 2026-10-19 | Stillness | 운영: 샛별 열람 넷 · 컨테이너 재시작 넷 · 개발 서버 | 기록 | 29fa0ee·54af75f·8c52bfa·b06f51d | — | — | 닫힘 |
+| S-183 | 2026-10-20 | Stillness | 중정 마야 셋(실제 사선 · 시작 자리 1.10/1.60 · 카메라) · 얼터 브론 팔쉬온 · 마야 숙련도 3 · 얼터 마야 세이버 | 본판 | 085a89d | 쉬움 | arena_obstacle · characters | 닫힘 |
+| S-184 | 2026-10-20 | Stillness | 앱 아이콘 = 처음 그림(e92b5a6, 새 파일 이름) | 본판 | bcc5dd9 | 해당 없음 | public 아이콘 | 닫힘 |
+| S-185 | 2026-10-20 | Stillness | 첫 화면 공지 열 · 동방 막기 글 50 % 감소 | 본판 | 9330817·aae7267 | 쉬움 | update_notes · skill_books | 닫힘 |
+| S-186 | 2026-10-20 | Stillness | 샛별 막아찌르기(9a8f4bc) main 합침 · 관문 푸시 확인 고침 | 본판 | 1cfcd64 | 해당 없음 | combat · config | 닫힘 |
+| S-187 | 2026-10-20 | Stillness | 밤의 습지 번개 없을 때 캐릭터 보조 조명 .30 → .14 | 본판 | adbb35e | 쉬움 | stage_sluice_weather · fighter_light | 닫힘 |
+| S-188 | 2026-10-20 | Stillness | 고유 공격 실험 절반 규모 — AI 켬 손해(−0.06) · 강화 1 독일만 · 곁눈 베기만 막기 뚫음 | 결과 · 판 값 그대로 | 60c0563 | 쉬움 | tools/sim unique_study_* | 사장님 다음 단계 대기 |
+| S-189 | 2026-10-20 | Stillness | 운영: 샛별 열람 · 주간 재설정 · 컨테이너 재시작 | 기록 | 624bdac | — | — | 닫힘 |
