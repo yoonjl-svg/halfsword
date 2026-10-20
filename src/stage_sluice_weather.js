@@ -22,8 +22,8 @@ function overcastTexture(){
 export function addSluiceWeather(scene,lights,root,stage,original){
   const storm=createWetlandStorm();stage.weather=storm.state;root.userData.weather=storm.state;
   stage.sunOffset={x:-8,y:14,z:-9};
-  // 캐릭터 보조 조명: 번개가 없을 때는 .14(전 .30 — 사장님 10/20 18:3x '어둠 속 잘 안 보이는 싸움인데 캐릭터가 너무 밝다 · 이 무대만 자연스럽게 조금 어둡게') · 번개 때 1
-  stage.fighterLight={color:0xb8c6d2,rimColor:0x9caebb,level:.30,rim:.65,weatherDim:.14};
+  // 캐릭터 보조 조명: 번개가 없을 때는 .08(10/20 23:4x 사장님 '좀 더 어둡게' — 전 .14 · 그 전 .30 — 사장님 10/20 18:3x '어둠 속 잘 안 보이는 싸움인데 캐릭터가 너무 밝다 · 이 무대만 자연스럽게 조금 어둡게') · 번개 때 1
+  stage.fighterLight={color:0xb8c6d2,rimColor:0x9caebb,level:.30,rim:.65,weatherDim:.08};
   const dark=new T.Color(0x070b10),litFog=new T.Color(0x283442);
   scene.background=dark.clone();scene.fog=new T.Fog(dark,14,100);
   lights.hemi.color.set(0x9aaabb);lights.hemi.groundColor.set(0x20232c);lights.sun.color.set(0xd9e4f2);
@@ -40,9 +40,10 @@ export function addSluiceWeather(scene,lights,root,stage,original){
   const drops=root.getObjectByName('rain-particles');drops.name='wetland-mist-drizzle';
   const old=stage.update.bind(stage);
   const apply=()=>{const f=storm.state.flash;
-    lights.hemi.intensity=.17+f*.48;lights.sun.intensity=.025+f*5.0;
-    stage.fighterLight.weatherDim=.14+f*.86;
-    material.color.setScalar(.18+f*4.5);scene.fog.color.copy(dark).lerp(litFog,f);
+    // 번개 없을 때 하늘빛 .10 · 하늘 .11 · 캐릭터 보조 .08 (10/20 23:4x '좀 더 어둡게' — 전 .17 · .18 · .14) · 번개 꼭대기 밝기는 그대로
+    lights.hemi.intensity=.10+f*.55;lights.sun.intensity=.025+f*5.0;
+    stage.fighterLight.weatherDim=.08+f*.92;
+    material.color.setScalar(.11+f*4.57);scene.fog.color.copy(dark).lerp(litFog,f);
     drops.material.opacity=.17+f*.10;
   };
   stage.update=dt=>{

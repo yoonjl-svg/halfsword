@@ -176,7 +176,7 @@ export function createFighterLight(lights, stage = {}) {
     const e = (state.stageLight = stageLight());
     // Explicit weather direction: only the midnight wetland opts into dimming
     // the usual readability fill. Other stages keep their existing minimums.
-    const weatherDim = THREE.MathUtils.clamp(num(cfg.weatherDim, 1), .08, 1); // 밤 습지만 씀 (번개 없을 때 .14 — 10/20)
+    const weatherDim = THREE.MathUtils.clamp(num(cfg.weatherDim, 1), .08, 1); // 밤 습지만 씀 (번개 없을 때 .08 — 10/20 23:4x)
     const deficit = (state.deficit = state.enabled ? Math.max(0, state.level - e) * weatherDim : 0);
     if (cfgKey) keyHue.copy(cfgKey);
     else hue(lights.sun?.color ?? WHITE, 0.5, keyHue);
