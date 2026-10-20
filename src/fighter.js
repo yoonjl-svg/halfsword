@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -805,6 +805,16 @@ export class Fighter {
     return out.set(Math.sin(this.heading), 0, Math.cos(this.heading));
   }
 
+  /** AI 반응 시간 (10/21 AI_REACT): 바라볼 지점(faceTarget)을 매 스텝 적어 두고 AI_REACT.face s 전 것을 돌려준다(기록이 그보다 짧으면 가장 오래된 것) */
+  reactTarget(dt) {
+    const h = (this._react ??= { t: 0, buf: [] });
+    h.t += dt;
+    h.buf.push({ t: h.t, x: this.faceTarget.x, z: this.faceTarget.z });
+    const want = h.t - AI_REACT.face;
+    while (h.buf.length > 1 && h.buf[1].t <= want) h.buf.shift();
+    return h.buf[0];
+  }
+
   /** 휘두르는 동안 몸 돌림 묶기(SWING_TURN)가 걸리는 때: AI 는 공격의 긋기 · 따라 긋기(from 'approach' 는 들어오는 단계부터 · 'windup' 은 칼 드는 때부터), 사람은 청구된 긋기 · 탭 · 폼멜 */
   swingTurnLocked() {
     const c = this.aiControlled ? this.stamina?.controller : null;
@@ -819,7 +829,8 @@ export class Fighter {
     if (this.state === 'stand' || this.state === 'getup' || this.state === 'kneel') {
       if (this.faceTarget) {
         const p = this.bodies.pelvis.translation();
-        const want = Math.atan2(-(this.faceTarget.z - p.z), this.faceTarget.x - p.x);
+        const tg = this.aiControlled && AI_REACT.on ? this.reactTarget(dt) : this.faceTarget; // AI 반응 시간(AI_REACT): face s 전의 상대 자리를 본다
+        const want = Math.atan2(-(tg.z - p.z), tg.x - p.x);
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
         // 휘두르는 동안 몸 돌림 묶기 (SWING_TURN — 시험 스위치, 기본 끔): 공격 중엔 돌림 최고 속도를 rate(°/s)까지만 — 칼이 출발한 줄로 나간다

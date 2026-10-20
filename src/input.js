@@ -4,7 +4,7 @@
 //              왼쪽 아래 조이스틱으로 걷는다 (기울여서 걷기는 10/10 사장님 '어차피 안 씀'으로 기능째 지웠다).
 //   - PC: 화면 클릭 → 마우스 잠금. 마우스를 움직이면 칼, 끌지 않고 클릭하면 찌르기, WASD(방향키)로 이동.
 // ─────────────────────────────────────────────────────────────
-import { INPUT, SIDE_DASH } from './config.js';
+import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
 import { configureMobileIntent, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
 
@@ -28,10 +28,6 @@ export class Input {
     this.press = null;
     this.tapOnDown = false; // 권총(main.js 가 켠다): 손가락이 닿는(클릭하는) 순간 한 번 친 것으로 센다 — 떼는 때·누른 시간과 상관없이
 
-    // 옆 박차기 명령(SIDE_DASH — 시험): 두 번 누름 · 두 번 튕김을 읽어 sideDash 에 쪽(−1 왼 · +1 오른)을 남긴다(main.js 가 takeSideDash 로 가져감)
-    this.sideDash = 0;
-    this._dashKey = null; // { side, t } 지난 A · D 누름
-    this._dashStick = { s: 0, armed: false, t: 0 }; // 스틱: 옆으로 민 쪽 · 가운데로 놓았나 · 놓은 때(ms)
     this._resetHooks = new Set(); // 조이스틱처럼 자체 포인터 상태를 가진 입력 장치가 등록한다 (resetTransient 때 함께 초기화)
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
@@ -41,7 +37,7 @@ export class Input {
     //  안 버리면 다음 손가락이 지난 손가락의 이동량·누름을 물려받아 첫 획이 튄다. 입력이 꺼진 동안의 키도 무시한다
     window.addEventListener('pointercancel', (e) => this.onCancel(e));
     canvas.addEventListener('lostpointercapture', (e) => this.onCancel(e));
-    window.addEventListener('keydown', (e) => { if (!e.repeat) this.dashKey(e.code); this.keys.add(e.code); }); // 물리적으로 누른 키는 늘 기록 — 읽는 쪽(move)이 enabled 로 거른다 · 새로 누른 A · D 는 두 번 누름(옆 박차기 명령)도 본다
+    window.addEventListener('keydown', (e) => this.keys.add(e.code)); // 물리적으로 누른 키는 늘 기록 — 읽는 쪽(move)이 enabled 로 거른다
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => { this.resetTransient(); this.keys.clear(); }); // 창을 떠나면 keyup 이 안 오므로 키도 지운다
   }
@@ -63,9 +59,6 @@ export class Input {
   resetTransient() {
     this.resetHand();
     this.stickMove = { x: 0, y: 0 };
-    this.sideDash = 0;
-    this._dashKey = null;
-    this._dashStick = { s: 0, armed: false, t: 0 };
     for (const reset of this._resetHooks) reset();
   }
 
@@ -150,32 +143,6 @@ export class Input {
     return d;
   }
 
-  /** 옆 박차기 명령: A · D(← · →)를 SIDE_DASH.window 안에 두 번 누르면 그 쪽 */
-  dashKey(code) {
-    const side = code === 'KeyA' || code === 'ArrowLeft' ? -1 : code === 'KeyD' || code === 'ArrowRight' ? 1 : 0;
-    if (!side || !this.enabled) return;
-    const now = performance.now(), k = this._dashKey;
-    if (k && k.side === side && now - k.t <= SIDE_DASH.window * 1000) { this.sideDash = side; this._dashKey = null; }
-    else this._dashKey = { side, t: now };
-  }
-
-  /** 옆 박차기 명령(스틱): 옆으로 민 뒤(옆 몫 ≥ 0.7) 가운데로 놓았다가(옆 몫 < 0.3) SIDE_DASH.window 안에 같은 쪽으로 다시 밀면 그 쪽 */
-  dashStick(x, y) {
-    const now = performance.now(), d = this._dashStick;
-    const s = Math.abs(x) >= 0.7 && Math.abs(y) < Math.abs(x) ? Math.sign(x) : 0;
-    if (s) {
-      if (d.armed && d.s === s && now - d.t <= SIDE_DASH.window * 1000) { this.sideDash = s; d.s = 0; d.armed = false; }
-      else if (d.s !== s || d.armed) { d.s = s; d.armed = false; }
-    } else if (d.s && Math.abs(x) < 0.3 && !d.armed) { d.armed = true; d.t = now; }
-  }
-
-  /** 남은 옆 박차기 명령을 가져간다(−1 · 0 · +1) */
-  takeSideDash() {
-    const s = this.sideDash;
-    this.sideDash = 0;
-    return s;
-  }
-
   /** { x: 옆걸음 -1(왼)~1(오른), y: -1(뒤)~1(앞) } */
   get move() {
     if (!this.enabled) return { x: 0, y: 0 };
@@ -210,7 +177,6 @@ export function attachStick(input, pad, knob) {
     id = null;
     knob.style.transform = '';
     input.stickMove = { x: 0, y: 0 };
-    if (captured !== null) input.dashStick(0, 0); // 손가락을 떼는 것도 '가운데로 놓음'
     if (captured !== null && pad.releasePointerCapture) {
       try {
         if (!pad.hasPointerCapture || pad.hasPointerCapture(captured)) pad.releasePointerCapture(captured);
@@ -234,7 +200,6 @@ export function attachStick(input, pad, knob) {
     const m = Math.hypot(x, y);
     const k = m < DEAD ? 0 : (m - DEAD) / (1 - DEAD) / m;
     input.stickMove = { x: x * k, y: y * k };
-    input.dashStick(x * k, y * k);
   };
   pad.addEventListener('pointerdown', (e) => {
     e.stopPropagation();

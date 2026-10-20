@@ -662,6 +662,12 @@ export class Gait {
       const wl = want.x * rgt.x + want.z * rgt.z;
       want.addScaledVector(rgt, wl * (this.P.sideMul - 1));
     }
+    // 비스듬히 앞으로 박차기 (10/21 GAIT.burstFwdDeg — 이베리아 둥근 걸음): 옆 박찬 걸음(fastSide · fastK > 1) 동안 가려는 빠르기에 옆 몫 × tan(각)만큼 앞(상대 쪽)을 더한다.
+    //  스틱에 뒤 몫이 있으면(물러나며 옆) 더하지 않음 · 플레이어 몸만(AI 는 박차지 않음)
+    if (GAIT.burstFwdDeg > 0 && this.fastSide && this.fastK > 1 && !f.feetHeld && f.move.y > -0.05) {
+      const wl = Math.abs(want.x * rgt.x + want.z * rgt.z);
+      want.addScaledVector(fwd, wl * Math.tan((GAIT.burstFwdDeg * Math.PI) / 180));
+    }
     // 막대가 가리키는 걷기 빠르기(유파 옆 빠르기까지) — 아래 붙잡기 반사 느림(slow)·reachSlow·좌우 흔들기로 줄기 전 값. 첫 걸음 박차기 뒤 세게 멈춤의 바닥(아래 ⑥ 앞)만 읽는다
     const wsx = want.x;
     const wsz = want.z;
@@ -765,16 +771,18 @@ export class Gait {
         else if (!side && mv.y < 0) this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
       }
     }
-    // 걷는 중 옆 박차기 (10/21 GAIT.burstWalkSide — 사장님 '옆 박차기가 걷는 중에도 나가게 고쳐'): 이미 걷는 몸이 스틱을 옆으로 확 틀면(옆 몫이 낮던 때에서 burstTurnT 안에
-    //  옆으로 burstStick 넘게 · 앞 몫 < burstFwdMax) 다음 걸음을 옆 박찬 걸음으로(sideDash — 이베리아만). 플레이어만 · 서 있다 떼는 첫 걸음은 위 걷기 시작 박차기 그대로
+    // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 GAIT.burstWalkSide — 사장님 '그냥 옆 누르면 첫 걸음에 무조건 나가야지'): 스틱이 옆으로 바뀌는 순간(옆 몫 > 앞뒤 몫 ·
+    //  burstStick 넘게 · 앞 몫 < burstFwdMax — 서 있든 걷든 · 거꾸로 옆으로 틀어도) 다음에 떼는 걸음을 옆 박찬 걸음으로(sideDash — 이베리아만). 아직 걷기 문턱 전이면
+    //  걷기 시작할 때까지(0.3 s 안) 미뤄 둔다(걷지 않는 몸에 건 박차기는 아래에서 버려지므로). 플레이어만
     if (pl && GAIT.burstWalkSide && mv) {
       this.dashClock = (this.dashClock ?? 0) + dt;
       const m = mv.length();
       const s = m >= GAIT.burstStick && Math.abs(mv.x) > Math.abs(mv.y) && mv.y / m < GAIT.burstFwdMax ? Math.sign(mv.x) : 0;
-      // 옆에서 거꾸로 옆으로 곧장 튼 것(dashSide ≠ 0)도 확 튼 것으로 센다
-      if (s && s !== this.dashSide && this.walking && (this.dashSide || this.dashClock - (this.dashLowT ?? -1) <= GAIT.burstTurnT)) this.sideDash(s);
-      if (!s && (Math.abs(mv.x) < 0.35 || m < 1e-6)) this.dashLowT = this.dashClock;
+      if (s && s !== this.dashSide) this.dashPend = { s, t: this.dashClock };
       this.dashSide = s;
+      const pend = this.dashPend;
+      if (pend && (!s || s !== pend.s || this.dashClock - pend.t > 0.3)) this.dashPend = null;
+      else if (pend && walkNow) { if (!this.burst && !(this.fastK > 1)) this.sideDash(pend.s); this.dashPend = null; }
     }
     if (walkNow !== this.walking) {
       this.walking = walkNow;
