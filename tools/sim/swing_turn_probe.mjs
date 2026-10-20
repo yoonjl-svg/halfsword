@@ -3,15 +3,17 @@
 //  그 뒤 긋기는 0.1 s 남짓) DODGE s 에 옆으로 0.4 s 비킨다(스틱 옆 끝 — 이베리아는 옆 박차기 첫 걸음 · 왼 · 오른 번갈아). 비킨 뒤 바로 탭 찌르기 한 번(되받기).
 //  DODGE=none 은 비키지 않고 0.15 + 0.4 s 에 탭만 · DODGE=circle 은 늘 옆으로 돌며(2.5 s 마다 방향 바꿈) 같은 때에 탭. AI 공격(들어옴 → 긋기 → 따라 긋기) 하나마다: 그동안(+0.3 s) 플레이어가 입은 칼날 상처 ·
 //  긋기 시작 때 AI 정면과 '플레이어 쪽' 사이 각(°) · 탭 뒤 0.8 s 안 AI 가 입은 상처.
-//  TURN=off | 30 | 60 (°/s) · FROM=windup | approach | strike · DODGE=none | circle | 0 | 0.15 | 0.3 · WEAPON · SEEDS · OPPS · SECS(판 길이, 기본 20) · OUT
+//  TURN=off | 30 | 60 (°/s) · FROM=windup | approach | strike · BURST=<옆 박차기 m/s> · TWIST=<허리 한도 rad> · DODGE=none | circle | 0 | 0.15 | 0.3 · WEAPON · SEEDS · OPPS · SECS(판 길이, 기본 20) · OUT
 import { newRound, DT } from './harness_m.mjs';
-import { SWING_TURN } from '../../src/config.js';
+import { SWING_TURN, GAIT } from '../../src/config.js';
 import { writeFileSync } from 'node:fs';
 const OPP = ['longsword', 'uchigatana', 'zweihander', 'qinggang', 'rapier', 'flamberge'];
 const turn = process.env.TURN ?? 'off', from = process.env.FROM ?? 'windup', dodgeEnv = process.env.DODGE ?? 'none', W = process.env.WEAPON ?? 'zweihander', out = process.env.OUT;
 const seeds = (process.env.SEEDS ?? '901,902,903').split(',').map(Number), opps = (process.env.OPPS ?? OPP.join(',')).split(',');
 const SECS = +(process.env.SECS ?? 20), circle = dodgeEnv === 'circle', dodge = dodgeEnv === 'none' || circle ? null : +dodgeEnv;
 Object.assign(SWING_TURN, turn === 'off' ? { on: false } : { on: true, rate: +turn, from });
+if (process.env.BURST) GAIT.burstSideV = +process.env.BURST; // 옆 박차기 첫 걸음 목표 빠르기(m/s, 판 값 1.5 — 이베리아만)
+if (process.env.TWIST) GAIT.maxTwist = +process.env.TWIST; // 발 안 옮기고 허리로 도는 한도(rad, 판 값 0.9)
 const angTo = (E, P) => {
   const pe = E.bodies.pelvis.translation(), pp = P.bodies.pelvis.translation(), f = E.forward();
   const vx = pp.x - pe.x, vz = pp.z - pe.z;
@@ -54,7 +56,7 @@ for (const seed of seeds) for (const opp of opps) {
   let end = SECS;
   for (let i = 0; i < SECS / DT; i++) { G.step(); if ((!P.alive || !E.alive) && end === SECS) end = G.t + 0.5; if (G.t >= end) break; }
   const U = units.filter((u) => u.tS != null);
-  rows.push({ turn, from, dodge: dodgeEnv, weapon: W, seed, opp, dur: +G.t.toFixed(2), pAlive: P.alive, eAlive: E.alive, attacks: U.length,
+  rows.push({ turn, from, burst: GAIT.burstSideV, twist: GAIT.maxTwist, dodge: dodgeEnv, weapon: W, seed, opp, dur: +G.t.toFixed(2), pAlive: P.alive, eAlive: E.alive, attacks: U.length,
     hits: U.filter((u) => u.hit).length, sev: +U.reduce((s, u) => s + u.sev, 0).toFixed(3),
     counters: U.filter((u) => u.counter).length, csev: +U.reduce((s, u) => s + u.csev, 0).toFixed(3), taps: U.filter((u) => u.tapT > 0).length,
     angS: U.map((u) => u.angS), angE: U.filter((u) => u.angE != null).map((u) => u.angE), appr: U.map((u) => +(u.tS - u.tA).toFixed(2)), ms: Date.now() - t0 });
