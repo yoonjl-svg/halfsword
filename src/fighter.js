@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -805,6 +805,15 @@ export class Fighter {
     return out.set(Math.sin(this.heading), 0, Math.cos(this.heading));
   }
 
+  /** 휘두르는 동안 몸 돌림 묶기(SWING_TURN)가 걸리는 때: AI 는 공격의 긋기 · 따라 긋기(from 'approach' 는 들어오는 단계부터 · 'windup' 은 칼 드는 때부터), 사람은 청구된 긋기 · 탭 · 폼멜 */
+  swingTurnLocked() {
+    const c = this.aiControlled ? this.stamina?.controller : null;
+    if (!c) return !!this.stamina?.attacking;
+    if (c.mode !== 'attack') return false;
+    const from = SWING_TURN.from;
+    return c.phase === 'strike' || c.phase === 'follow' || (c.phase === 'approach' && from !== 'strike') || (c.phase === 'windup' && from === 'windup');
+  }
+
   // 상대 쪽으로 몸을 천천히 돌린다 (한 번에 휙 돌지 못하게 회전 속도 제한)
   updateHeading(dt) {
     if (this.state === 'stand' || this.state === 'getup' || this.state === 'kneel') {
@@ -813,7 +822,9 @@ export class Fighter {
         const want = Math.atan2(-(this.faceTarget.z - p.z), this.faceTarget.x - p.x);
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        const maxTurn = BODY.turnSpeed * this.muscle * dt;
+        // 휘두르는 동안 몸 돌림 묶기 (SWING_TURN — 시험 스위치, 기본 끔): 공격 중엔 돌림 최고 속도를 rate(°/s)까지만 — 칼이 출발한 줄로 나간다
+        const turnRate = SWING_TURN.on && this.swingTurnLocked() ? Math.min(BODY.turnSpeed, (SWING_TURN.rate * Math.PI) / 180) : BODY.turnSpeed;
+        const maxTurn = turnRate * this.muscle * dt;
         let turn = THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
         // 다리가 체중을 싣는 걸음: 딛은 발은 땅에 붙어 있어서, 엉덩이가 비틀 수 있는 만큼만 몸을 돌린다 (그 다음은 발을 돌려 딛는다)
         if (this.gait?.active && this.state === 'stand') turn = this.gait.limitTurn(turn);
