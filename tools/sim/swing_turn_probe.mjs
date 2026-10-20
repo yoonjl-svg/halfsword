@@ -3,13 +3,14 @@
 //  그 뒤 긋기는 0.1 s 남짓) DODGE s 에 옆으로 0.4 s 비킨다(스틱 옆 끝 — 이베리아는 옆 박차기 첫 걸음 · 왼 · 오른 번갈아). 비킨 뒤 바로 탭 찌르기 한 번(되받기).
 //  DODGE=none 은 비키지 않고 0.15 + 0.4 s 에 탭만 · DODGE=circle 은 늘 옆으로 돌며(2.5 s 마다 방향 바꿈) 같은 때에 탭. AI 공격(들어옴 → 긋기 → 따라 긋기) 하나마다: 그동안(+0.3 s) 플레이어가 입은 칼날 상처 ·
 //  긋기 시작 때 AI 정면과 '플레이어 쪽' 사이 각(°) · 탭 뒤 0.8 s 안 AI 가 입은 상처.
-//  TURN=off | 30 | 60 (°/s) · FROM=windup | approach | strike · BURST=<옆 박차기 m/s> · TWIST=<허리 한도 rad> · DODGE=none | circle | 0 | 0.15 | 0.3 · WEAPON · SEEDS · OPPS · SECS(판 길이, 기본 20) · OUT
+//  TURN=off | 30 | 60 (°/s) · FROM=windup | approach | strike · DASH=1(비킬 때 옆 박차기 명령) · BURST=<옆 박차기 m/s> · TWIST=<허리 한도 rad> · DODGE=none | circle | 0 | 0.15 | 0.3 · WEAPON · SEEDS · OPPS · SECS(판 길이, 기본 20) · OUT
 import { newRound, DT } from './harness_m.mjs';
 import { SWING_TURN, GAIT } from '../../src/config.js';
 import { writeFileSync } from 'node:fs';
 const OPP = ['longsword', 'uchigatana', 'zweihander', 'qinggang', 'rapier', 'flamberge'];
 const turn = process.env.TURN ?? 'off', from = process.env.FROM ?? 'windup', dodgeEnv = process.env.DODGE ?? 'none', W = process.env.WEAPON ?? 'zweihander', out = process.env.OUT;
 const seeds = (process.env.SEEDS ?? '901,902,903').split(',').map(Number), opps = (process.env.OPPS ?? OPP.join(',')).split(',');
+const DASH = process.env.DASH === '1'; // 비킬 때 옆 박차기 명령(gait.sideDash — 이베리아만 · 사람의 두 번 누름과 같은 몫)
 const SECS = +(process.env.SECS ?? 20), circle = dodgeEnv === 'circle', dodge = dodgeEnv === 'none' || circle ? null : +dodgeEnv;
 Object.assign(SWING_TURN, turn === 'off' ? { on: false } : { on: true, rate: +turn, from });
 if (process.env.BURST) GAIT.burstSideV = +process.env.BURST; // 옆 박차기 첫 걸음 목표 빠르기(m/s, 판 값 1.5 — 이베리아만)
@@ -46,7 +47,12 @@ for (const seed of seeds) for (const opp of opps) {
     let mx = circle ? (Math.floor(t / 2.5) % 2 ? -1 : 1) : 0, my = d < 1.45 ? -0.5 : d > 1.8 ? 0.45 : 0; // circle = 늘 옆으로 돈다(2.5 s 마다 방향 바꿈 · 간격은 지킴)
     if (cur) {
       const age = t - cur.tA, at = dodge ?? 0.15;
-      if (dodge != null && age >= at && age < at + 0.4) { mx = cur.side; my = 0; }
+      if (dodge != null && age >= at && age < at + 0.4) {
+        mx = cur.side; my = 0;
+        if (cur.p0 == null) { const pp = P.bodies.pelvis.translation(); cur.p0 = { x: pp.x, z: pp.z }; cur.r0 = E.right(); if (DASH) cur.dash = P.gait?.sideDash?.(cur.side) ?? false; }
+        if ((P.gait?.fastK ?? 1) > 1) cur.fast = true;
+      }
+      if (cur.p0 && cur.lat == null && age >= at + 0.4) { const pp = P.bodies.pelvis.translation(); cur.lat = +Math.abs((pp.x - cur.p0.x) * cur.r0.x + (pp.z - cur.p0.z) * cur.r0.z).toFixed(3); }
       if (cur.tapT == null && age >= at + 0.4) cur.tapT = P.skill.thrust() ? t : -1;
       if (age > 2.5) cur = null;
     }
@@ -56,11 +62,12 @@ for (const seed of seeds) for (const opp of opps) {
   let end = SECS;
   for (let i = 0; i < SECS / DT; i++) { G.step(); if ((!P.alive || !E.alive) && end === SECS) end = G.t + 0.5; if (G.t >= end) break; }
   const U = units.filter((u) => u.tS != null);
-  rows.push({ turn, from, burst: GAIT.burstSideV, twist: GAIT.maxTwist, dodge: dodgeEnv, weapon: W, seed, opp, dur: +G.t.toFixed(2), pAlive: P.alive, eAlive: E.alive, attacks: U.length,
+  rows.push({ turn, from, dash: DASH, burst: GAIT.burstSideV, twist: GAIT.maxTwist, dodge: dodgeEnv, weapon: W, seed, opp, dur: +G.t.toFixed(2), pAlive: P.alive, eAlive: E.alive, attacks: U.length,
     hits: U.filter((u) => u.hit).length, sev: +U.reduce((s, u) => s + u.sev, 0).toFixed(3),
     counters: U.filter((u) => u.counter).length, csev: +U.reduce((s, u) => s + u.csev, 0).toFixed(3), taps: U.filter((u) => u.tapT > 0).length,
+    dashes: U.filter((u) => u.dash).length, fast: U.filter((u) => u.fast).length, lat: U.filter((u) => u.lat != null).map((u) => u.lat),
     angS: U.map((u) => u.angS), angE: U.filter((u) => u.angE != null).map((u) => u.angE), appr: U.map((u) => +(u.tS - u.tA).toFixed(2)), ms: Date.now() - t0 });
-  console.log(JSON.stringify({ ...rows.at(-1), angS: undefined, angE: undefined, appr: undefined }));
+  console.log(JSON.stringify({ ...rows.at(-1), angS: undefined, angE: undefined, appr: undefined, lat: undefined }));
   G.eventQueue.free?.(); G.world.free?.();
 }
 if (out) writeFileSync(out, JSON.stringify(rows));

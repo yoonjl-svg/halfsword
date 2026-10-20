@@ -609,6 +609,17 @@ export class Gait {
   }
 
   /** 몸을 turn(라디안)만큼 돌리려 할 때, 딛은 발에 대해 엉덩이가 비틀 수 있는 만큼으로 줄인다 */
+  /**
+   * 옆 박차기 명령 (10/21 SIDE_DASH — 시험): 걷는 중에도 다음에 떼는 걸음을 옆 박찬 걸음으로(update 의 걷기 시작 박차기와 같은 this.burst — fastBegin 이 쓴다).
+   *  옆 박차기는 유파 걸음 칸 burstSide(이베리아)만(10/15 사장님 결정) · 판 시작 정지 · 마무리 · 박찬 뒤 세게 멈춤 · 이미 박찬 걸음 중이면 무시. 걸었으면 true
+   */
+  sideDash(side) {
+    const f = this.f;
+    if (!side || !this.P.burstSide || !GAIT.stepBurst || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
+    this.burst = { fore: 0, side: Math.sign(side), lat: 1 };
+    return true;
+  }
+
   limitTurn(turn) {
     if (!turn) return turn;
     const f = this.f;

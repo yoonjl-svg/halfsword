@@ -444,6 +444,10 @@ export const IB_PARRY_BEAT = { on: true, k: 1.6 };
 //  from(AI 쪽 묶기 시작): 'strike' = 긋기(0.1 s 남짓) · 따라 긋기만 · 'approach' = 칼을 내밀며 들어오는 단계부터 · 'windup' = 준비 자세로 칼을 드는 때부터(공격 전체 —
 //   사람이 칼 드는 것을 보고 비킬 틈). 사람 쪽은 셋 다 청구된 긋기 · 탭 · 폼멜
 export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
+// 옆 박차기 명령 (10/21 사장님 '저 기술을 인간 플레이어가 커맨드 입력해서 구사할 방법이 있어야 돼' — 시험 스위치, 기본 끔 · 사장님 확인 전):
+//  PC 는 A · D(← · →)를 window s 안에 두 번 누름 · 폰은 스틱을 옆으로 두 번 튕김(옆으로 민 뒤 가운데로 놓았다 window s 안에 같은 쪽으로 다시) →
+//  걷는 중에도 다음 걸음을 옆 박찬 걸음으로(gait.js sideDash — 옆 박차기는 이베리아만: 10/15 사장님 결정 그대로 · 기력 박차기 값 그대로). `?sideDash=1`
+export const SIDE_DASH = { on: false, window: 0.3 };
 
 export const STEEL = {
   // 칼(칼날·코등이·손잡이·폼멜) 재질의 반발 값. 둘이 만나면 곱해진다(Multiply): 칼끼리 = 이 값², 몸·땅(0)과는 0.
