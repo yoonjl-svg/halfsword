@@ -141,6 +141,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     $('#bookMeta').dataset.tier = b.rarity;
     $('#bookEffect').textContent = b.effect; // '(임시)' 꼬리는 개발 말이라 뺌 (10/19 글 방침 2판 — 자료 provisional 은 그대로)
     $('#bookList').hidden = !b.list;
+    $('#bookList').classList.toggle('lines', !!b.lines); // 고유 공격 책: 한 줄에 하나 · 쓰는 법 (10/21)
     $('#bookList').innerHTML = (b.list ?? []).map((n) => `<li>${n}</li>`).join(''); // 고유 공격 넷 — 한글 이름만 이어서(원어는 싸움 화면 기술 칸에)
     $('#bookSource').textContent = `출처 · ${b.source}`;
     const head = headPriceOf(b.tier); // 머리로 사는 값 — 사장님 확인 전 (지금 null — 단추 없음)

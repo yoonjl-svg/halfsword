@@ -2059,6 +2059,13 @@ function updateGuardName() {
     }
     return;
   }
+  // 이어 긋기 창 (10/21 강화동작 · 명령 — unique_assist.js readyChain): 앞 동작 뒤 이어 그을 수 있는 동안 자세 칸에 그 기술 이름 · '이어 긋기'
+  const uqReady = playerUnique?.ready;
+  if (uqReady && player.alive) {
+    const key = `uq:${uqReady.name}`;
+    if (key !== guardShown) paintGuard(key, uqReady.nameKo, '이어 긋기');
+    return;
+  }
   const gun = player.weapon?.gun; // 권총: 칼 자세 대신 '사격 자세' 하나만 (gun.js GUN_STANCE)
   // 보정 v2 (s > 0): 날것 자세라 휘두르지도(quiet > 0) 되돌아오지도 않을 때만 이름을 바꾼다 (여쭘 20, 기존 깃발만)
   const sk = player.skill;

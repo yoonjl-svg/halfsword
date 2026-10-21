@@ -246,6 +246,8 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .detail-list { margin: 1px 0 3px; padding: 0; list-style: none; }
 .detail-list li { display: inline; white-space: nowrap; }
 .detail-list li + li::before { content: ' · '; white-space: normal; color: var(--c-sub); }
+.detail-list.lines li { display: block; white-space: normal; } /* 고유 공격 책: 한 줄에 하나 · 쓰는 법 (10/21) */
+.detail-list.lines li + li::before { content: none; }
 .book-detail[data-state=unowned] .detail-state { color: var(--c-accent); }
 .detail-state[hidden] { display: none; }
 .detail-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }

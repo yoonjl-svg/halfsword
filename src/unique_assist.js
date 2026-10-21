@@ -52,31 +52,37 @@ export const RETIRED_UNIQUE = new Set(['krumphau', 'passataSotto', 'altibaixo', 
 //  비슷 — 머리 위 돌려 베기로 모음, 이어 그을수록 힘이 쌓이는 강화는 다음 단계) · 일본 코코 연타(이베리아 돌려 베기와 같은 몸 뒤집는 이어 긋기) · 동방 좌익격(일본 코테와 같은 동작).
 //  동방 체보요격은 독일 비껴 딛는 가로베기와 걸음 · 몸 값이 같아 앞으로 끌어 딛는 걸음(schools.js step — AI 같이) · 낮은 몸(body — 플레이어)으로 바꿈(값은 사장님 확인 전).
 //  단계 번호는 그대로(빈 번호는 뺀 것). AI 도 이 표를 따른다(10/21 'ai 도 줄이고' — 아래 aiUniqueStages · RETIRED_UNIQUE)
+// 강화동작 · 명령 (10/21 사장님 '그걸 강화동작이라고 부르자. 그 구조로 진행해'): 유파마다 기본 동작 하나가 강화동작으로 바뀌고(그 기본 동작은 없어짐 — 늘 강화동작),
+//  나머지는 명령으로 쓴다. role 칸 —
+//   'enh'   강화동작: replaces 의 기본 동작을 그으면 늘 이것(명령 없음 · 끝 힘 UNIQUE_ASSIST.enhPower · stack 이면 이어 그을수록 + stack 씩, 셋까지). AI 도 그 기본 동작 대신 이것(sword_art.js)
+//   'step'  걸음 명령: 긋기를 시작할 때 스틱(키)을 stick 쪽('side' 옆 · 'fwd' 앞)으로 밀고 있으면 그 쪽으로 디디며(옆은 스틱 쪽으로 걸음 좌우를 맞춤). 안 밀면 기본 동작 그대로
+//   'chain' 이어 긋기: 앞 동작 뒤 창 안의 긋기 — 창이 열리면 자세 칸에 이름이 뜬다(ready · main.js updateGuardName)
+//  hint = 대기실 스킬북 목록의 쓰는 법 한 줄
 export const PLAYER_UNIQUE = {
   german: [
-    { stage: 1, name: 'zwerchAbtritt', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 가로베기
-    { stage: 3, name: 'duplieren', far: true, body: [5, -3, 3, 0], on: [{ prev: 'cut', when: 'bound' }], chain: { at: 1 } }, // 겹치기 ← 내 베기가 맞물린 뒤 다음 긋기 (맞물린 자리가 어디든 — 칼자루를 들어 다시 머리로)
-    { stage: 4, name: 'schielhau', body: [12, 8, 2, 0.02], on: [{ tech: 'stichOchs' }] }, // 곁눈 베기 ← 황소 찌르기
+    { stage: 1, name: 'zwerchAbtritt', role: 'step', stick: 'side', hint: '옆으로 걸으며 가로 긋기', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 옆 + 가로베기
+    { stage: 3, name: 'duplieren', role: 'chain', hint: '칼이 맞물린 뒤 다시 긋기', far: true, body: [5, -3, 3, 0], on: [{ prev: 'cut', when: 'bound' }], chain: { at: 1 } }, // 겹치기 ← 내 베기가 맞물린 뒤 다음 긋기
+    { stage: 4, name: 'schielhau', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 황소 찌르기 대신', body: [12, 8, 2, 0.02], on: [{ tech: 'stichOchs' }] }, // 곁눈 베기 ← 황소 찌르기 (늘)
   ],
   italian: [
-    { stage: 1, name: 'inquartata', body: [18, 10, 5, 0.025], on: [{ tech: 'stichPflugL' }] }, // 비껴서며 찌르기 ← 왼 쟁기 찌르기
-    { stage: 2, name: 'imbroccata', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기
-    { stage: 3, name: 'cavazione', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }] }, // 칼끝 돌려 빼기(속임 then 길) ← 내 찌르기가 맞물림 · 찌르다 꺾음
+    { stage: 1, name: 'inquartata', role: 'step', stick: 'side', hint: '옆으로 걸으며 찌르기', body: [18, 10, 5, 0.025], on: [{ tech: 'stichPflugL' }, { tech: 'stichPflug' }] }, // 비껴서며 찌르기 ← 옆 + 쟁기 찌르기(왼 · 오른)
+    { stage: 2, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 황소 찌르기 대신', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기 (늘)
+    { stage: 3, name: 'cavazione', role: 'chain', hint: '찌르기가 맞물리거나 꺾인 뒤 찌르기', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }] }, // 칼끝 돌려 빼기
   ],
   iberian: [
-    { stage: 1, name: 'talhoRodeado', body: [15, 8, 4, 0.02], on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 분노의 베기
-    { stage: 3, name: 'redondo', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerch' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 가로베기
+    { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [15, 8, 4, 0.02], on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
+    { stage: 3, name: 'redondo', role: 'enh', replaces: 'zwerch', stack: 0.06, hint: '강화동작 · 가로베기 대신 · 이어 그을수록 강해짐', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerch' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 가로베기 (늘)
   ],
   japanese: [
-    { stage: 1, name: 'hirakiGiri', body: [-18, -12, 2, 0.02], on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 왼 분노의 베기
-    { stage: 2, name: 'kote', anchor: 'start', body: [5, 3, 4, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 가운데(긴 자세)에서 짧게 내려베기 (머리 위 시작 정수리 베기와는 시작 패드로 가름)
-    { stage: 3, name: 'tsubameGaeshi', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시 ← 정수리 베기가 빗나가거나 막힌 뒤 위로 이어 그음
+    { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
+    { stage: 2, name: 'kote', role: 'enh', replaces: 'langortDown', hint: '강화동작 · 가운데서 짧게 내려베기 대신', anchor: 'start', body: [5, 3, 4, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 긴 자세에서 짧게 내려베기 (늘)
+    { stage: 3, name: 'tsubameGaeshi', role: 'chain', hint: '정수리 베기가 빗나간 뒤 위로 긋기', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시
   ],
   chinese: [
-    { stage: 1, name: 'chebuYaoji', body: [-8, -12, 4, 0.045], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기 — 앞으로 끌어 딛고(掣步) 낮게 (10/21 독일 비껴 딛는 가로베기와 가름)
-    { stage: 3, name: 'lianchi', nameKo: '날개 접기 (염시)', orig: '斂翅', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시(속임 then 길) ← 쟁기 찌르기를 시작했다가 짧은 창 안에 거둠
-    // 자→격 (刺→擊): 새 표 항목이지만 새 길은 없다 — yaoji 길(긴 자세 자리에서 시작하는 허리 베기). 출처는 schools.js ciji 패시브와 같은 「向前進步腰擊」
-    { stage: 4, name: 'ciji', path: 'yaoji', nameKo: '찌르고 베기 (자→격)', orig: '刺→擊', body: [-15, -20, 1.5, 0.015], on: [{ prev: 'thrust', when: 'any', dir: 'horiz' }] }, // ← 내 찌르기(맞든 빗나가든) 뒤 짧은 창 안의 가로 긋기
+    { stage: 1, name: 'chebuYaoji', role: 'step', stick: 'fwd', hint: '앞으로 걸으며 가로 긋기', body: [-8, -12, 4, 0.045], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 앞 + 가로베기 (앞으로 끌어 딛고 낮게)
+    { stage: 3, name: 'lianchi', role: 'chain', hint: '찌르다가 거두어 베기', nameKo: '날개 접기 (염시)', orig: '斂翅', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시
+    // 요격(腰擊) 강화동작 — 전 표의 자→격(ciji)을 모음: 가로베기가 늘 요격이라 찌른 뒤 가로로 그으면 그대로 자→격. AI 의 자→격 패시브 단계는 aiPassive 로 그대로
+    { stage: 4, name: 'yaoji', role: 'enh', replaces: 'zwerch', aiPassive: 'ciji', hint: '강화동작 · 가로베기 대신', body: [-12, -16, 2, 0.02], on: [{ tech: 'zwerch' }] }, // 요격 ← 가로베기 (늘)
   ],
 };
 
@@ -92,8 +98,14 @@ export function aiUniqueStages(tradition) {
   for (const e of PLAYER_UNIQUE[tradition] ?? []) {
     unique.set(e.path ?? e.name, e.stage);
     if (e.path) passive.set(e.name, e.stage);
+    if (e.aiPassive) passive.set(e.aiPassive, e.stage); // 동방 자→격 패시브(yaoji 이음)는 요격 강화동작과 같은 단계
   }
   return { unique, passive, retired: RETIRED_UNIQUE };
+}
+
+/** 강화동작 (10/21): 유파 → [{ base 기본 동작, name 강화동작, stage }] — 기본 동작이 TECH 이름인 것만(일본 코테의 '가운데서 짧게 내려베기'는 AI 기술이 아님). sword_art.js 가 AI 꾸러미를 바꿀 때 읽는다 */
+export function enhancedMoves(tradition) {
+  return (PLAYER_UNIQUE[tradition] ?? []).filter((e) => e.role === 'enh' && TECH_BY_NAME[e.replaces]).map((e) => ({ base: e.replaces, name: e.path ?? e.name, stage: e.stage }));
 }
 
 const D2R = Math.PI / 180;
@@ -161,6 +173,7 @@ export class PlayerUniqueAssist {
     this.cur = null; // 지금 긋기 { tech, kind, pad, t0, dir, landed, bound, tEnd, unique }
     this.last = null; // 바로 앞 긋기 (끝난 것 — 결과는 다음 긋기가 시작될 때까지 계속 적는다)
     this.chainFrom = null; // 뒷몫을 이을 수 있는 앞 긋기 { e, U, tEnd } — 플레이어가 박자 창(chainWait) 안에 이어 그으면 그 긋기가 뒷몫
+    this.ready = null; // 이어 긋기 창이 열린 동작 { name, nameKo } (10/21 — 자세 칸 표시)
     this.tapRec = null; // 진행 중인 탭 찌르기 (끝나면 last 로)
     this.wasSwing = false;
     this.quietT = 1;
@@ -290,13 +303,40 @@ export class PlayerUniqueAssist {
     let best = null;
     for (const e of this.list) {
       if (!e.on.some((c) => this.condOk(c, cur, dir, now))) continue;
+      if (e.stick && !this.stickOk(e.stick)) continue; // 걸음 명령: 긋기 시작 때 스틱이 그 쪽이 아니면 기본 동작 그대로
       const after = e.on.some((c) => c.prev);
-      const j = after ? { o: 0 } : this.join(e.U.pts, hand, dir, Infinity, e.anchor === 'start' ? cur.start : null);
+      // 10/21 강화동작 · 명령: 기본 동작 · 스틱 · 앞 동작 조건만 본다(길과의 거리 join 은 보지 않음 — 칼 길은 늘 손가락)
+      const j = after || e.role ? { o: 0 } : this.join(e.U.pts, hand, dir, Infinity, e.anchor === 'start' ? cur.start : null);
       if (!j) continue;
-      const rank = after ? 0 : 1;
+      const rank = e.role === 'step' ? -1 : after ? 0 : 1; // 명령(걸음) > 이어 긋기 > 강화동작
       if (!best || rank < best.rank || (rank === best.rank && j.o < best.j.o - 1e-6)) best = { e, j, rank };
     }
     return best;
+  }
+
+  /** 걸음 명령의 스틱: 'side' = 옆 몫이 0.5 넘고 앞뒤 몫 이상 · 'fwd' = 앞 몫이 0.5 넘고 옆 몫보다 큼 (플레이어 스틱 원값 f.stickX · stickY — 키도 같은 값) */
+  stickOk(want) {
+    const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
+    if (want === 'side') return Math.abs(x) >= 0.5 && Math.abs(x) >= Math.abs(y);
+    if (want === 'fwd') return y >= 0.5 && y > Math.abs(x);
+    return true;
+  }
+
+  /** 이어 긋기 창이 열렸나 (자세 칸 표시 — main.js updateGuardName): 잇는 동작의 뒷몫(chainFrom · chainWait) 또는 앞 동작 조건(맞물림 · 빗나감 · 아무거나 — afterWindow)이 찬 이어 긋기. 없으면 null */
+  readyChain(now) {
+    const C = this.chainFrom;
+    if (C && now - C.tEnd <= UA.chainWait) return C.e;
+    const L = this.last;
+    if (!L || L.tEnd == null || now - L.tEnd > UA.afterWindow || this.busy()) return null;
+    for (const e of this.list) {
+      if (e.role !== 'chain') continue;
+      for (const c of e.on) {
+        if (!c.prev || c.when === 'turn') continue;
+        if (c.prev === 'cut' || c.prev === 'thrust' ? L.kind !== c.prev : L.tech !== c.prev) continue;
+        if (c.when === 'bound' ? L.bound : c.when === 'miss' ? !L.landed : true) return e;
+      }
+    }
+    return null;
   }
 
   /** 기술 걸음 (ai.js techStepRequest 와 같은 꼴): 비껴 가는 쪽 발이 앞발이면 내딛고(lunge), 뒷발이면 앞발을 지나(pass). 받으면 true. 걸음 크기 × min(1, 세기) */
@@ -335,12 +375,15 @@ export class PlayerUniqueAssist {
     const hand = [f.handOffset.x, f.handOffset.y];
     if (this.r) this.r.travel += hyp(inputVelocity.x, inputVelocity.y) * dt; // 이 긋기에서 손 목표가 간 길 (끝 힘 '뒷몫' 판단)
     if (!swinging) {
+      const ready = this.readyChain(now); // 이어 긋기 창 (10/21 — 자세 칸에 이름)
+      this.ready = ready ? { name: ready.U.name, nameKo: ready.U.nameKo } : null;
       this.quietT += dt;
       if (this.cur && this.quietT >= UA.onsetQuiet) this.closeStroke(now - this.quietT);
       if (this.fSpeed < SKILL.swingSpeed) this.restPos = hand; // 시작 자리 = 손가락이 빨라지기 직전 자리 (검술 층 휘두르기 판단은 손 목표 속도를 고르느라 한두 프레임 늦다)
       return;
     }
     this.quietT = 0;
+    this.ready = null;
     const v = inputVelocity;
     const sp = hyp(v.x, v.y);
     const dir = [v.x / sp, v.y / sp];
@@ -371,6 +414,8 @@ export class PlayerUniqueAssist {
     const at = e.chain ? Math.min(e.chain.at, U.pts.length - 1) : U.pts.length - 1;
     const len = part === 2 ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
     this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
+    // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 chainWait 안에 다시 그으면 하나씩(셋까지) — 끝 힘 + stack × 그 수
+    if (e.stack) { this.stackN = this.stackE === e.name && this.t - (this.stackT ?? -9) <= UA.chainWait + 0.3 ? Math.min(3, (this.stackN ?? 0) + 1) : 0; this.stackE = e.name; }
     cur.kind = part === 2 ? cur.kind : U.kind;
     cur.unique = U.name;
     if (part === 2) {
@@ -379,7 +424,9 @@ export class PlayerUniqueAssist {
     }
     this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
     f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
-    if (U.step && UA.enhance > 0) this.r.stepAsked = this.askStep(U.step);
+    // 걸음 명령의 옆 걸음은 스틱 쪽으로(표의 lat 크기 · 부호는 스틱) — 10/21
+    if (U.step && e.stick === 'side' && Math.abs(this.f.stickX ?? 0) > 0.01) this.r.step = { ...U.step, lat: Math.abs(U.step.lat) * Math.sign(this.f.stickX) };
+    if (U.step && UA.enhance > 0) this.r.stepAsked = this.askStep(this.r.step ?? U.step);
   }
 
   /** 매 스텝, 검술 층 머리 (비기 updateSecret 자리 옆): 강화 몫 갱신 — 손 목표는 건드리지 않는다 */
@@ -391,7 +438,7 @@ export class PlayerUniqueAssist {
     if (R) {
       R.t += dt;
       if (this.busy()) this.end('yield');
-      else if (R.U.step && !R.stepAsked && E > 0 && R.t < 0.3) R.stepAsked = this.askStep(R.U.step); // 못 받았으면(뒤로 당긴 스틱 등) 잠깐 다시 부탁 (AI 와 같음)
+      else if (R.U.step && !R.stepAsked && E > 0 && R.t < 0.3) R.stepAsked = this.askStep(R.step ?? R.U.step); // 못 받았으면(뒤로 당긴 스틱 등) 잠깐 다시 부탁 (AI 와 같음)
     }
     const r = this.r;
     // ② 몸: 긋는 동안 표의 몸 꼴(body · 뒷몫은 body2)을 bodyIn 초에 얹고, 긋기가 끝나면 bodyOut 초에 걷는다 (덧씌우기 칸 몸 값 — fighter.js updateBodyPose 가 더한다)
@@ -414,7 +461,9 @@ export class PlayerUniqueAssist {
       ub.drop = this.body[3];
     } else if (sk.uniqBody) sk.uniqBody = null;
     // ③ 끝 힘: 긋기 뒷몫(손 목표가 그 몫 길이의 powerAt 넘게 간 뒤 · 시작부터 powerMax 초까지)에 팔 서보 힘 × (1 + (endPower − 1)·세기) — 비기 힘 창 SECRET.power 와 같은 칸(f.powerMul)
-    const pv = r && E > 0 && r.travel >= UA.powerAt * r.len && r.t <= UA.powerMax ? 1 + (UA.endPower - 1) * E : 0;
+    // 강화동작(role 'enh')은 끝 힘 enhPower · 이어 그을수록 + stack × 수 (10/21)
+    const pw = r ? (r.e.role === 'enh' ? UA.enhPower ?? UA.endPower : UA.endPower) - 1 + (r.e.stack ? r.e.stack * (this.stackN ?? 0) : 0) : 0;
+    const pv = r && E > 0 && r.travel >= UA.powerAt * r.len && r.t <= UA.powerMax ? 1 + pw * E : 0;
     if (pv) {
       if (f.powerMul === 1 || f.powerMul === this.powV) {
         if (!this.powV) this.stats.power++;
@@ -435,6 +484,7 @@ export class PlayerUniqueAssist {
   end(why, tEnd = this.t) {
     const R = this.r;
     this.r = null;
+    if (R?.e.stack) this.stackT = tEnd; // 이어 그을수록 강해짐 — 끝난 때부터 chainWait 를 잰다
     this.dropPower();
     this.stats.ends[why] = (this.stats.ends[why] ?? 0) + 1;
     if (why === 'done' && R?.part === 1 && R.e.chain) this.chainFrom = { e: R.e, U: R.U, tEnd };

@@ -42,7 +42,7 @@ import { MOTION, buildFrameTable, styleTech, styleFeints, frameWatchGuards, weig
 import { TRADITIONS, SCHOOL_ART, traditionOf, schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
 import { MEASURED, WEAPON_BASELINE } from './weapon_measured.js';
-import { aiUniqueStages } from './unique_assist.js'; // AI 숙련도 거르기 (10/13): 고유 동작 단계 표는 그 파일 한 곳
+import { aiUniqueStages, enhancedMoves } from './unique_assist.js'; // AI 숙련도 거르기 (10/13): 고유 동작 단계 표는 그 파일 한 곳
 
 const LS_MEASURED = MEASURED.longsword;
 
@@ -129,6 +129,16 @@ function applySchoolArt(school, tradition, frame, style, prof = null) {
   const C = SCHOOL_ART.counter ? T.counterArt : null;
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
   if (uq.length) out = mergeUnique(out, uq.filter((u) => u.counter));
+  // 강화동작 (10/21 사장님 '강화동작' — unique_assist.js enhancedMoves): 이 꾸러미에 강화동작이 열려 있으면(숙련도 거르기 뒤) 그 기본 동작을 고르는 목록에서 빼고
+  //  그 몫(가중치)을 강화동작에 더한다 — 기본 동작 이름으로 찾는 자리(맞받아치기 · 비기 · 패시브)는 강화동작을 받는다(이름 표에 그 이름으로 강화동작)
+  for (const m of SCHOOL_ART.unique ? enhancedMoves(tradition) : []) {
+    const E = out.techByName[m.name];
+    const B0 = out.techByName[m.base];
+    if (!E || !B0 || E === B0 || !out.tech.includes(B0)) continue;
+    const E2 = { ...E, base: (E.base ?? 1) + (B0.base ?? 1) };
+    const tech = out.tech.filter((t) => t !== B0).map((t) => (t === E ? E2 : t));
+    out = { ...out, tech, techByName: { ...Object.fromEntries(tech.map((t) => [t.name, t])), [m.base]: E2 } };
+  }
   if (retiredPaths.length) out = { ...out, techByName: { ...out.techByName, ...Object.fromEntries(retiredPaths.filter((u) => !out.techByName[u.name]).map((u) => [u.name, u])) } }; // 비기만 빌려 쓰는 길 (10/21)
   return out;
 }
