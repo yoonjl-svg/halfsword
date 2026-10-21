@@ -674,7 +674,7 @@ const DARTAGNAN_COLORS = { grip: 0x203b6c, hilt: 0xa1834e };
 const dartagnan = finalizeSpec('dartagnan', {
   ...RAPIER_SPEC,
   nameKo: '달타냥', nameEn: "D’Artagnan", tier: 'epic',
-  desc: '세 벗과 맹세를 나눈 총사의 검.\n파리에 온 첫날, 그 셋과 차례로 결투를 약속했다.', // 편집 지침 두 줄: 전설 + 역사(뒤마 소설 4~5장). 생김새는 그림에 보이니 뺌 (10/21 들여올 때)
+  desc: '세 벗과 맹세를 나눈 총사의 검.\n푸른 가죽 손잡이와 빛바랜 금빛 코등이.', // 편집 지침 두 줄: 전설 + 생김새(사장님 10/21 '이전의 외형 정보가 더 나은 거 같다')
   partMesh: swordKit({
     blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0045, bevel: 0.0015, tip: 'needle', tipLen: 0.12 },
     grip: { style: 'leather', color: DARTAGNAN_COLORS.grip },

@@ -745,8 +745,11 @@ export const SKILL = {
   itRetreatVals: { gap: 1.35, low: 0, stick: 1, maxT: 1.2, room: 1.0, cool: 1.2 },
   itParryBeat: 0,
   itOpposition: 1, // 10/20 사장님 직접 적용 지시: 플레이어 레이피어 막아찌르기. 비교/되돌림 ?itOpposition=0
-  itOppositionVals: { window: .4, /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — .32 → .4 (짧은 효과 칸) */ aim: .12, extend: .32, reach: .28, turn: .65, side: .04,
-    hold: .08, recover: .20, maxGap: 1.85, minVn: .6, injuryGrace: .08 },
+  // 10/21 사장님 '입력형 50% 0.6초로 넣어' — 막기 단추 새 누름 = 바로 약한 찌르기 한 번 (src/italian_opposition.js · 확인표 2124~2126).
+  //  shield 누른 때부터 받는 피해 감소 시간(실제 초 · 지쳐 동작이 느려져도 늘지 않음) · shieldCut 그동안 칼날 상처 감소(동방 막기와 같은 칸 50 %) · dealt 찌르는 동안 주는 피해 몫
+  //  동작(샛별 저장소 입력형 개선안 값): 겨눔 aim · 뻗기 extend · 끝 유지 hold · 거둠 recover(합 0.66 s) · 손 당김 pull 뒤 뻗기 reach · 겨눔 = 상대 칼 든 쪽 위팔을 lead 초 앞(leadMax m 까지)
+  //  옛 접촉형(10/20 — 누르고 0.4 s 안 실제 칼 접촉)의 window · maxGap · minVn · injuryGrace 는 걷어냄
+  itOppositionVals: { shield: .6, shieldCut: .5, dealt: .6, aim: .10, extend: .28, hold: .12, recover: .16, pull: .10, reach: .42, turn: .65, side: .04, lead: .15, leadMax: .2 },
   itForte: 0, // 이탈리아 forte 막기 연구 후보 (가) (10/17 감독 요청 — **연구 · 사장님 확인 전**, 확인표 2037): 0 = 끔(지금 판 그대로 — 이탈리아 막기 몸꼴 덧씌우기 없음) · 1·2 = 후보 몸꼴(schools.js ITALIAN_FORTE — 위 줄을 팔 뻗은 원전 꼴로 세워 forte 로 받게). `?itForte=1`, 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte'·'무기:forte2' — docs/strike/italian_forte_parry_2026-10-17.md
   // 플레이어 막기 버튼 거듦 (10/12 — 사장님 01:1x '무기가 무거울수록 성공률이 너무 떨어져서 거의 무용지물 … 지금보다는 성공률이 올라야 해'. docs/strike/parry_assist_2026-10-12.md · 확인표 990~993, **사장님 확인 전**).
   //  막기 버튼을 누르고 있는 동안만, 플레이어만(src/parry_button.js). AI 막기·시뮬 판은 읽지 않는다. 새 상한·쿨타임 없음.

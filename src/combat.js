@@ -356,6 +356,9 @@ export class Combat {
     //  그 공격의 칼날 상처 심각도 · 둔타 에너지 × (1 − flowDmgCut). 새 공격(번호가 바뀜)부터는 그대로 · 물리(충격 · 가르나 튕기나)는 그대로
     const keepFlow = flowShieldKeep(pr.v.fighter, att);
     if (keepFlow !== 1) { if (type === 'blunt') energy *= keepFlow; else severity *= keepFlow; }
+    // 이탈리아 막아찌르기(10/21 입력형 — 약한 찌르기): 찌르는 동안 주는 칼날 상처 심각도 · 둔타 에너지 × dealt(0.6). 물리는 그대로
+    const oppK = att.parryGuard?.opposition?.dealtK?.() ?? 1;
+    if (oppK !== 1) { if (type === 'blunt') energy *= oppK; else severity *= oppK; }
     // 무기 비검 (10/21 — weapons.js secretBlade, 모노호시자오: 츠바메가에시 되돌려 올려 벤 칼 피해 × k): 그 기술을 긋는 중이고 칼이 위로 움직일 때만
     const SB = att.weapon?.secretBlade;
     if (SB && dir.y > SB.upY && strokeTechOf(att) === SB.tech) { if (type === 'blunt') energy *= SB.k; else severity *= SB.k; }

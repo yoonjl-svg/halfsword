@@ -225,6 +225,7 @@ export class Stamina {
     const other = attacker?.stamina;
     if (!other || !other.attackId || other.time > other.attackUntil) return;
     if (this.attacking && !this.guarding) return;
+    if (this.controller?.opposition?.run) return; // 막아찌르기 동안 맞닿은 막아 받기는 그 찌르기 값에 들어 있다 (10/21 입력형)
     if (this.blockedAttack.get(attacker) === other.attackId) return;
     this.blockedAttack.set(attacker, other.attackId);
     if (this.spend('block', STAMINA.blockCost * this.weight)) {

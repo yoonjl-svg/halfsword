@@ -282,12 +282,13 @@ export class PlayerParryGuard {
    *  상처는 그 스텝 물리 뒤(combat.afterStep → analyze)에 판정되므로 그 스텝의 mode 를 읽는다. 기다림(idle) · 단추 놓음 · 다른 유파 · 책 없음 = 1. combat.js analyze 가 부른다
    */
   woundKeep() {
-    if (this.mode !== 'defend') return 1;
+    const press = this.opposition?.keep?.() ?? 1; // 이탈리아 막아찌르기: 누른 때부터 0.6 s 칼날 상처 × 0.5 (10/21 — 막는 중이 아니어도)
+    if (this.mode !== 'defend') return press;
     const me = this.me;
     if (me.schoolParry === false) return 1;
     // 유파별 몫: 동방 cnParryDmgCut 0.5(10/17) · 일본 jpParryDmgCut · 이베리아 ibParryDmgCut 0.2(사장님 10/18 22:1x) — 다른 유파 · 책 해제 = 1
     const cut = { chinese: SKILL.cnParryDmgCut, japanese: SKILL.jpParryDmgCut, iberian: SKILL.ibParryDmgCut }[me.swordArt?.tradition] ?? 0;
-    return cut > 0 ? 1 - cut : 1;
+    return (cut > 0 ? 1 - cut : 1) * press;
   }
 
   /** 이탈리아 막기 책을 쥐고(책 해제면 아님) 박자 걸음이 도는 몸인가 */
