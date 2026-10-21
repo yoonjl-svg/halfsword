@@ -1698,7 +1698,7 @@ const hwando = finalizeSpec('hwando', {
 
 const kriegsmesser = finalizeSpec('kriegsmesser', {
   nameKo: '크리그스메서', nameEn: 'Kriegsmesser', tier: 'rare',
-  desc: '식칼처럼 자루 양쪽에 나무판을 대어 만든 전쟁의 칼.\n날에 긴 홈이 패고, 코등이 옆에 손을 지키는 못이 솟았다.', // 10/21 감독 고침: 나겔은 자루가 아니라 코등이에 달림 · 용병 이야기는 츠바이핸더 · 플랑베르주와 겹쳐 뺌(사장님)
+  desc: '‘전쟁의 칼’이라 불린 독일의 양손 외날검.\n날에 긴 홈이 패고, 코등이 옆에 손을 지키는 못이 솟았다.', // 10/21 감독 고침: 나겔은 자루가 아니라 코등이에 달림 · 용병 이야기는 츠바이핸더 · 플랑베르주와 겹쳐 뺌 · '식칼처럼'은 우스꽝스러워 뺌(사장님)
   school: 'german', grip: 'two-hand', material: 'steel',
   // 바탕 = 알비온 Knecht Mark II(날 85 cm · 전체 113 cm · 1.38 kg)에 사장님이 날 10 cm · 120 g 을 더함 → 날 95 cm · 전체 123 cm · 1.50 kg.
   hiltLength: .10, bladeLength: .95, gripAlong: -.14,
