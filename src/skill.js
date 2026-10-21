@@ -1,4 +1,5 @@
 import { tempoHand, observeTempoInput } from './attack_tempo.js';
+import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 사람 공격이 상대 칼에 막히면 막은 쪽 기력 −, whiffEnd)
 // ─────────────────────────────────────────────────────────────
 //  검술 층 (숙련도 보정)
 //
@@ -1225,6 +1226,7 @@ export class Skill {
     W.on = false;
     if (!W.landed && !W.bound) foe?.gait?.foeWhiff();
     if (W.att && !W.landed) foe?.schoolPassive?.foeFailed(W.bound ? 'blocked' : 'whiff'); // 독일 인데스 (10/21)
+    if (W.att && !W.landed && W.bound && foe) spendAweDrain(this.f, foe); // 티소나 '위세' (10/21 — stamina.js): 위와 같은 '막힘'이면 막은 쪽 기력 −
   }
 
   /** 기력 탈진 (샛별 저장소 6ac1070d — docs/strike/stamina_import_2026-10-15.md): 비기·찌르기·손잡이 찍기·고유 동작을 거두고 손을 늘어뜨린 자리로 — 입력은 main.js 가 0 으로 */

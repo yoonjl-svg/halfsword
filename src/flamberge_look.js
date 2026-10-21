@@ -10,7 +10,7 @@
 //   · 부품: 우리 칼 네 부품(weapons.js buildParts 차례 — 자루 0 · 폼멜 1 · 코등이 2 · 칼날 3)으로 나눠 partMesh 가 부품마다 그린다.
 //     리카소·보조 갈고리·이음 덩이는 츠바이핸더처럼 decorate 가 칼 그룹에 그린다(칼날 콜라이더 안 — 리카소 날 판정은 츠바이핸더와 같다).
 //   · 같은 재질·같은 부품의 잔 조각(리벳·이음 띠·말림·새김 줄)은 지오메트리를 하나로 합쳐 그리기 호출을 줄였다(모양·빛깔은 같다 — outfits.js 와 같은 방식).
-//   · 칼날만 에픽 마감(weapon_looks.js FINISH.epic — 거칠기·금속·반사 세기·은은한 푸른 윤). 나머지 재질(검갈색 가죽·황동 리벳·청동 폼멜·
+//   · 칼날만 등급 마감(weapon_looks.js FINISH — 처음 에픽, 10/21 부터 레어). 나머지 재질(검갈색 가죽·황동 리벳·청동 폼멜·
 //     어두운 리카소)은 그쪽 값 그대로. 기운·불꽃 없음.
 //   · 물결 날(bladeGeometry 의 edgeX·backX)·리카소·앞으로 휜 보조 갈고리·말린 넓은 코등이·가죽 손잡이·황동 리벳·청동 폼멜은 치수 그대로.
 //  난수는 쓰지 않는다(시뮬 재현성).
@@ -21,10 +21,19 @@ import { bladeGeometry, metalMat, FINISH } from './weapon_looks.js';
 
 // 박물관 실측 [M] (m) — 전체 · 날(리카소 포함) · 리카소 · 코등이 폭 · 손잡이(폼멜 포함)
 export const FLAMBERGE_MUSEUM = Object.freeze({ overall: 1.689, blade: 1.187, ricasso: 0.267, guard: 0.505, handle: 0.492 });
+// 게임 치수 (사장님 10/21 23:5x '플랑베르주는 전체 4 cm 줄여' — 나누기는 감독): 박물관 실측은 위 기록 그대로 두고 게임은 이것을 쓴다 [I].
+//  날 −2.5 cm(물결 날 칼끝 쪽 — 리카소 26.7 cm 그대로) · 손잡이 −1.5 cm(왼손 아래 — 폼멜이 1.5 cm 올라옴 · 오른손 · 날밑 · 손 사이 0.24 m 그대로) → 전체 164.9 cm.
+//  손잡이가 츠바이핸더 것(날밑 아랫면 ~ 폼멜 끝 0.398 m)보다 9 cm 길어 자루에서 비례 몫(1.2 cm)보다 조금 더 덜었다
+export const FLAMBERGE_GAME = Object.freeze({ overall: 1.649, blade: 1.162, ricasso: 0.267, guard: 0.505, handle: 0.477 });
 
 // 그쪽 모델 좌표(폼멜 끝 = 0, 칼끝 +y)에서 칼날 밑동·물결 날 시작
 const ROOT_SB = FLAMBERGE_MUSEUM.overall - FLAMBERGE_MUSEUM.blade; // 0.502
 const EDGE_SB = ROOT_SB + FLAMBERGE_MUSEUM.ricasso; // 0.769
+// 손잡이 줄임 (게임 치수): 그쪽 y 로 손잡이 아래 끝(0.059) ~ 아래 마디 위 이음 띠(0.167) 사이를 1.5 cm 줄이고 그 아래(폼멜)는 통째로 1.5 cm 올린다.
+//  이음 띠 0.167 위(왼손이 쥐는 아래 마디 윗부분 · 위 마디 · 날밑 · 칼날)는 그대로 — 박물관 그림의 모양은 아래 마디가 조금 짧아질 뿐
+const HANDLE_CUT = FLAMBERGE_MUSEUM.handle - FLAMBERGE_GAME.handle; // 0.015
+const CUT_LO = 0.059, CUT_HI = 0.167;
+const H = (ySb) => (ySb >= CUT_HI ? ySb : ySb <= CUT_LO ? ySb + HANDLE_CUT : CUT_HI - ((CUT_HI - ySb) * (CUT_HI - CUT_LO - HANDLE_CUT)) / (CUT_HI - CUT_LO));
 // 우리 칼 원점(오른손 주먹 가운데)의 그쪽 y: 칼날 밑동 0.085 m 아래
 export const FLAMBERGE_HILT = 0.085; // = weapons.js flamberge.hiltLength (손 → 칼날 밑동)
 const ORIGIN = ROOT_SB - FLAMBERGE_HILT; // 0.417
@@ -94,7 +103,7 @@ function gripGroup(y0) {
   const leather = new THREE.MeshStandardMaterial({ color: FLAMBERGE_COLORS.leather, roughness: 0.94 });
   const seam = new THREE.MeshStandardMaterial({ color: FLAMBERGE_COLORS.seam, roughness: 0.95 });
   const brass = metalMat(FLAMBERGE_COLORS.brass, { rough: 0.38, metal: 0.78 });
-  const grip = new THREE.Mesh(new THREE.LatheGeometry(GRIP_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(y) - y0)), 16), leather);
+  const grip = new THREE.Mesh(new THREE.LatheGeometry(GRIP_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(H(y)) - y0)), 16), leather);
   grip.scale.z = 0.86;
   grip.name = 'leather-grip';
   grip.castShadow = true;
@@ -102,10 +111,10 @@ function gripGroup(y0) {
   // 가죽 이음 띠와 황동 리벳 (지어낸 금실 감개가 아니다 — 그쪽 주석 그대로)
   merged(group, SEAMS.map((y) => {
     const r = (y < 0.15 ? 0.0145 : 0.0182) + 0.0004;
-    return bake(new THREE.CylinderGeometry(r, r, 0.002, 16), [0, Y(y) - y0, 0], [1, 1, 0.87]);
+    return bake(new THREE.CylinderGeometry(r, r, 0.002, 16), [0, Y(H(y)) - y0, 0], [1, 1, 0.87]);
   }), seam, 'grip-seams');
   const rivets = [];
-  for (const y of RIVETS) for (const side of [-1, 1]) rivets.push(bake(new THREE.SphereGeometry(0.0024, 8, 6), [0.006, Y(y) - y0, side * (y < 0.15 ? 0.0125 : 0.0156)], [1, 1, 0.45]));
+  for (const y of RIVETS) for (const side of [-1, 1]) rivets.push(bake(new THREE.SphereGeometry(0.0024, 8, 6), [0.006, Y(H(y)) - y0, side * (y < 0.15 ? 0.0125 : 0.0156)], [1, 1, 0.45]));
   merged(group, rivets, brass, 'brass-rivets');
   return group;
 }
@@ -115,7 +124,7 @@ const POMMEL_PROFILE = [[0, 0], [0.011, 0.014], [0.024, 0.034], [0.021, 0.044], 
 function pommelGroup(y0) {
   const group = new THREE.Group();
   const bronze = metalMat(FLAMBERGE_COLORS.bronze, { rough: 0.45, metal: 0.75 });
-  const m = new THREE.Mesh(new THREE.LatheGeometry(POMMEL_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(y) - y0)), 8), bronze);
+  const m = new THREE.Mesh(new THREE.LatheGeometry(POMMEL_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(y + HANDLE_CUT) - y0)), 8), bronze); // 폼멜은 모양 그대로 1.5 cm 올림 (게임 치수)
   m.name = 'bronze-pommel';
   m.castShadow = true;
   group.add(m);
@@ -164,13 +173,14 @@ function guardGroup(y0) {
   return group;
 }
 
-// ── 부품 3: 촘촘하고 얕은 물결 양날 (그쪽 y 0.769~1.689 — 날 세운 92.0 cm) ──
-//  22 주기·6.4 mm 밑동 단면은 그림 어림 [추정]. 물결 = 칼몸 가운데 선이 ±3.6 mm 로 흔들린다(칼몸 폭 3.4 cm 는 그대로)
+// ── 부품 3: 촘촘하고 얕은 물결 양날 (그쪽 y 0.769~1.689 — 날 세운 92.0 cm · 게임 치수는 칼끝 쪽 2.5 cm 짧은 89.5 cm) ──
+//  22 주기(박물관 날 길이에서 — 게임 날은 같은 물결 길이로 21.4 주기)·6.4 mm 밑동 단면은 그림 어림 [추정]. 물결 = 칼몸 가운데 선이 ±3.6 mm 로 흔들린다(칼몸 폭 3.4 cm 는 그대로)
 const WAVE = { cycles: 22, amp: 0.0036 };
 export function flambergeBladeGeometry() {
-  const L = FLAMBERGE_MUSEUM.blade - FLAMBERGE_MUSEUM.ricasso;
-  const wave = (t) => WAVE.amp * Math.sin(t * WAVE.cycles * Math.PI * 2) * Math.min(1, t / 0.025) * Math.min(1, (1 - t) / 0.07);
-  const half = (t) => 0.017 * (1 - 0.12 * t) + 0.0006 * Math.sin(t * 44 * Math.PI * 2);
+  const L = FLAMBERGE_GAME.blade - FLAMBERGE_GAME.ricasso;
+  const k = L / (FLAMBERGE_MUSEUM.blade - FLAMBERGE_MUSEUM.ricasso); // 물결 · 잔물결 한 주기의 길이는 박물관 날 그대로 (칼끝 쪽만 잘린 꼴)
+  const wave = (t) => WAVE.amp * Math.sin(t * WAVE.cycles * k * Math.PI * 2) * Math.min(1, t / 0.025) * Math.min(1, (1 - t) / 0.07);
+  const half = (t) => 0.017 * (1 - 0.12 * t) + 0.0006 * Math.sin(t * 44 * k * Math.PI * 2);
   return bladeGeometry(0.017, L / 2, 0.0032, {
     edge: 'double', thick: 0.0032, segs: 352,
     edgeX: (t) => wave(t) + half(t), backX: (t) => wave(t) - half(t),
@@ -178,9 +188,9 @@ export function flambergeBladeGeometry() {
   });
 }
 function bladeMesh(y0, tier) {
-  const L = FLAMBERGE_MUSEUM.blade - FLAMBERGE_MUSEUM.ricasso;
+  const L = FLAMBERGE_GAME.blade - FLAMBERGE_GAME.ricasso;
   const F = FINISH[tier] ?? FINISH.common;
-  // 에픽 마감: 그쪽 값(거칠기 0.30 · 금속 0.9 · 반사 1)을 등급표(FINISH)로 — 빛깔 0xa3adb4 와 날 세움 꼭짓점 색은 그대로
+  // 등급 마감: 그쪽 값(거칠기 0.30 · 금속 0.9 · 반사 1) 대신 등급표(FINISH — 처음 에픽, 10/21 부터 레어)로 — 빛깔 0xa3adb4 와 날 세움 꼭짓점 색은 그대로
   const mat = metalMat(FLAMBERGE_COLORS.blade, {
     rough: F.blade, metal: F.metal, env: F.env, vertexColors: true, side: THREE.DoubleSide,
     ...(F.sheen ? { emissive: F.sheen, emissiveIntensity: 0.06 } : {}),

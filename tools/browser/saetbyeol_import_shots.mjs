@@ -10,7 +10,7 @@ const CASES = [
   { tag: 'artoria_ganjiang', weapon: 'ganjiang', hero: 'player', foe: 'artoria', stage: 'loggia', foeWeapon: 'excalibur', aura: ['ganjiang', 'excalibur'] },
   { tag: 'samira_moye', weapon: 'moye', hero: 'player', foe: 'samira', stage: 'cathedral', foeWeapon: 'pistol', aura: ['moye'] },
   { tag: 'renji_sain', weapon: 'sain', hero: 'player', foe: 'renji', stage: 'temple', foeWeapon: 'morgenstern', aura: [] },
-  { tag: 'eira_ice', weapon: 'ice', hero: 'player', foe: 'eira', stage: 'castle', foeWeapon: 'rapier', aura: [] },
+  // (넷째 판 eira_ice — 북부 대공의 검(옛 아이스)은 10/21 사장님 결정으로 지움)
 ];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 let fail = 0;
@@ -81,11 +81,11 @@ for (const c of CASES) {
   watch(page, errors);
   await page.goto(`${base}/test.html`, { waitUntil: 'networkidle' });
   const txt = await page.evaluate(() => document.body.innerText);
-  const want = ['간장', '막야', '사인검', '아이스', '아르토리아', '마야 라토르', '김씨', '투야나 니콜라예바'];
+  const want = ['간장', '막야', '사인검', '아르토리아', '마야 라토르', '김씨', '투야나 니콜라예바']; // 아이스(북부 대공의 검)는 10/21 지움
   const missing = want.filter((w) => !txt.includes(w));
   if (missing.length) errors.push('test.html 에 없음: ' + missing.join(', '));
   await page.screenshot({ path: `${out}/saetbyeol_import_test_list.png`, fullPage: true });
-  console.log('test.html', missing.length ? '' : `8/8 보임`, errors.length ? 'ERRORS:\n  ' + errors.join('\n  ') : 'ZERO console errors');
+  console.log('test.html', missing.length ? '' : `${want.length}/${want.length} 보임`, errors.length ? 'ERRORS:\n  ' + errors.join('\n  ') : 'ZERO console errors');
   fail += errors.length;
   await page.close();
 }

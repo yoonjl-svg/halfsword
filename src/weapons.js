@@ -18,10 +18,11 @@ import { MONTANTE } from './config.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
-import { SAIN_COLORS, ICE_COLORS, sainPartMesh, sainDecorate, icePartMesh, iceDecorate } from './rare_sword_details.js'; // 사인검·아이스 겉모습 (샛별 저장소에서 가져옴 6e71ba2·4a425f9)
-import { FLAMBERGE_MUSEUM, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
+import { SAIN_COLORS, sainPartMesh, sainDecorate } from './rare_sword_details.js'; // 사인검 겉모습 (샛별 저장소에서 가져옴 6e71ba2 — 북부 대공의 검(옛 아이스)은 10/21 지움)
+import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
+import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
 import { BALISARDA_COLORS, balisardaPartMesh } from './balisarda_details.js'; // 발리사르다 겉모습 (샛별 저장소 c89e827c6 — 10/21)
 import { MURAMASA_COLORS, MURAMASA_PROFILE, muramasaPartMesh, muramasaDecorate } from './muramasa_details.js'; // 무라마사 겉모습 (샛별 저장소 29e543555 · d46e09b96 · 82818cc3d — 10/21)
 
@@ -61,13 +62,13 @@ export const TIER_DEFAULTS = {
 //  길이 · 무게는 몸체 자료(buildParts — 물리와 같은 수)에서 셈: 길이 = 부품 끝에서 끝 · 무게 = 부품 질량 합
 //  종류 = 싸우는 방식의 무기 갈래(한손검 · 양손검 · 한손 둔기 …) — 물건 이름(나뭇가지 · 장난감 · 생선)은 쓰지 않는다 (사장님 10/19 03:1x '나뭇가지 x')
 const KIND_KO = {
-  hwando: '한손 외날도', kriegsmesser: '양손 외날검',
+  hwando: '한손 외날도', kriegsmesser: '양손 외날검', tizona: '대형 양손검',
   balisarda: '한손 찌르기검', muramasa: '일본도',
   dartagnan: '한손 찌르기검', kusanagi: '양손 직검',
   longsword: '양손검', zweihander: '대형 양손검', estoc: '찌르기검', sabre: '한손 곡도', rapier: '한손 찌르기검', falchion: '한손 외날검',
   monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '양손검',
   tree_branch: '한손 둔기', rubber_chicken: '한손 둔기', frozen_tuna: '양손 둔기', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
-  moye: '한손 양날검', sain: '한손 양날검', ice: '대형 양손검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손 둔기',
+  moye: '한손 양날검', sain: '한손 양날검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손 둔기',
 };
 /** '종류, 길이 cm, 무게 kg' (예: '한손 양날검, 95 cm, 0.95 kg') — 자료가 없으면 '' */
 export function weaponSpecText(spec) {
@@ -496,22 +497,29 @@ const longsword = finalizeSpec('longsword', {
 //     2.892kg·칼날 117cm [M]. 균형점 실측 자료를 못 찾아(연구 노트 §14) 롱소드 가문의
 //     비율로 크기만 올려서 추정 [I]
 // ═════════════════════════════════════════════════════════════
-// 쥠 세 꼴 (MONTANTE.hand, config.js — docs/motion/iberian_montante_2026-10-10.md §10·§12·§15). 칼 원점 = 오른손 주먹 가운데, 손~칼끝 1.36 m 는 모두 같다.
+// 쥠 세 꼴 (MONTANTE.hand, config.js — docs/motion/iberian_montante_2026-10-10.md §10·§12·§15). 칼 원점 = 오른손 주먹 가운데, 손~칼끝 1.335 m 는 모두 같다.
+//  칼날 길이 (사장님 10/21 23:5x '츠바이핸더는 손~칼끝 2.5 cm 줄여'): 네 꼴 모두 칼끝 쪽에서 0.025 m 씩 — 손~칼끝 1.36 → 1.335 m · 기본 꼴 전체 165 → 162 cm.
+//   칼날 질량은 길이 비(1.7 × 1.19/1.215 → 1.665 kg — 합 2.865 kg) · 칼날 질량 분포는 아침 꼴 칼날(1.17 → 1.145)에 대한 같은 비(무게중심 0.34 · 회전 반경 0.253)로
+//   함께 줄임(ZW_OLD_BLADE · ZW_REACH) → 손 기준 관성 0.787 → 0.748 (롱소드 0.272 의 2.75 배). 바탕 알비온 'The Wallace' 날 117 cm 보다는 아직 길다.
+//   (아래 꼴별 글의 칼날 · 무게중심 숫자는 10/10 판 — 지금은 각각 0.025 m 짧다)
 //  'mid'(기본 — 사장님 10/10 20:4x '초기 그립과 지금의 중간', 확인표 760~): 손 사이 0.24 m(gripAlong −0.24) · 오른손 주먹 가운데 ~ 날밑 아랫면 0.11 m ·
 //    hiltLength(손 → 칼날 밑동) 0.145 · 칼날 1.215 · 날밑 가운데 0.13 · 폼멜 가운데 −0.25(왼손 폼멜 목, 폼멜 끝 −0.288) · 자루 상자 날밑 밑 0.115 ~ −0.25.
 //    날밑 아랫면 ~ 폼멜 끝 0.398 m (톨레도 몬탄테 Cleveland 1916.1509 · 1916.1507 자루 41.3 · 40.0 cm 안).
 //  'guard'(10/10 14:5x '넣어' — 고디뉴 1599 규칙 3 '오른손 날밑 가까이', §12): 손 사이 0.30 · 날밑 0.065 m · hiltLength 0.10 · 칼날 1.26 · 폼멜 −0.31 — `?montanteHand=guard`
 //  'old'(10/10 아침 꼴 — §10 넓힘 전): 손 사이 0.18 · 날밑 0.155 m · hiltLength 0.19 · 칼날 1.17 · 자루 ±0.16(0.32 m) · 폼멜 −0.16 · 서보 덮개 28 — `?montanteHand=old`
 //  'wide'(§10~§11 꼴 — 자루만 넓힘, 오른손은 아직 날밑에서 0.155 m): 손 사이 0.30 · hiltLength 0.19 · 칼날 1.17 · 폼멜 −0.31 — `?montanteHand=wide` (§12 의 옛 꼴 'old')
-//  칼날 1.7 kg 의 질량 분포는 네 꼴이 같다(손에서 칼날 무게중심 0.588 m · 그 둘레 관성 같음 — 칼날이 길어진 몫은 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
-//  자루 상자는 날밑 아랫면 0.005 위 ~ 폼멜 가운데, 부품 질량 그대로(자루 0.26 · 폼멜 0.62 · 날밑 0.32 · 칼날 1.7 = 2.9 kg)
-const ZW_BLADE_COM = 0.19 + 0.34 * 1.17; // 손에서 칼날 무게중심 (아침 꼴 값 — 모든 꼴이 지킨다)
-const zwShift = (hilt) => ({ com: (ZW_BLADE_COM - hilt) / (1.36 - hilt), gyr: (0.253 * 1.17) / (1.36 - hilt) });
+//  칼날의 질량 분포는 네 꼴이 같다(손에서 칼날 무게중심 0.588 → 10/21 0.579 m · 그 둘레 관성 같음 — 칼날이 길어진 몫은 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
+//  자루 상자는 날밑 아랫면 0.005 위 ~ 폼멜 가운데, 부품 질량 그대로(자루 0.26 · 폼멜 0.62 · 날밑 0.32 · 칼날 1.7 → 10/21 1.665 = 2.865 kg)
+const ZW_OLD_BLADE = 1.145; // 아침 꼴 칼날 (10/21 23:5x 1.17 → 1.145) — 칼날 질량 분포의 잣대
+const ZW_REACH = 1.335; // 손 ~ 칼끝 (네 꼴 같음 — 10/21 23:5x 1.36 → 1.335)
+const ZW_BLADE_MASS = 1.665; // 칼날 질량 (10/21 23:5x 1.7 → 1.7 × 1.19/1.215 — 같은 단면 · 길이 비)
+const ZW_BLADE_COM = 0.19 + 0.34 * ZW_OLD_BLADE; // 손에서 칼날 무게중심 (아침 꼴 값 — 모든 꼴이 지킨다)
+const zwShift = (hilt) => ({ com: (ZW_BLADE_COM - hilt) / (ZW_REACH - hilt), gyr: (0.253 * ZW_OLD_BLADE) / (ZW_REACH - hilt) });
 const ZW_FORMS = {
-  old: { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: 0, gripH: 0.16, pommelY: -0.16, gripAlong: -0.18, com: 0.34, gyr: 0.253, cap: 28 },
-  wide: { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: -0.075, gripH: 0.235, pommelY: -0.31, gripAlong: -0.3, com: 0.34, gyr: 0.253 },
-  guard: { hilt: 0.1, blade: 1.26, crossY: 0.085, gripY: -0.12, gripH: 0.19, pommelY: -0.31, gripAlong: -0.3, com: (0.19 + 0.34 * 1.17 - 0.1) / 1.26, gyr: (0.253 * 1.17) / 1.26 },
-  mid: { hilt: 0.145, blade: 1.215, crossY: 0.13, gripY: -0.0675, gripH: 0.1825, pommelY: -0.25, gripAlong: -0.24, ...zwShift(0.145) },
+  old: { hilt: 0.19, blade: 1.145, crossY: 0.175, gripY: 0, gripH: 0.16, pommelY: -0.16, gripAlong: -0.18, com: 0.34, gyr: 0.253, cap: 28 },
+  wide: { hilt: 0.19, blade: 1.145, crossY: 0.175, gripY: -0.075, gripH: 0.235, pommelY: -0.31, gripAlong: -0.3, com: 0.34, gyr: 0.253 },
+  guard: { hilt: 0.1, blade: 1.235, crossY: 0.085, gripY: -0.12, gripH: 0.19, pommelY: -0.31, gripAlong: -0.3, ...zwShift(0.1) },
+  mid: { hilt: 0.145, blade: 1.19, crossY: 0.13, gripY: -0.0675, gripH: 0.1825, pommelY: -0.25, gripAlong: -0.24, ...zwShift(0.145) },
 };
 const ZW = ZW_FORMS[MONTANTE.hand] ?? ZW_FORMS.mid; // 모르는 이름은 기본(중간)
 const zweihander = finalizeSpec('zweihander', {
@@ -543,12 +551,12 @@ const zweihander = finalizeSpec('zweihander', {
     const grip = boxInertia(0.26, 0.02, ZW.gripH, 0.02);
     const pommel = sphereInertia(0.62, 0.038);
     const cross = boxInertia(0.32, 0.14, 0.02, 0.026);
-    const blade = bladeInertia(1.7, L, ZW.com, ZW.gyr, 0.056, 0.018);
+    const blade = bladeInertia(ZW_BLADE_MASS, L, ZW.com, ZW.gyr, 0.056, 0.018);
     return [
       partTuple(['box', 0.02, ZW.gripH, 0.02], ZW.gripY, 0.26, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.038], ZW.pommelY, 0.62, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.14, 0.02, 0.026], ZW.crossY, 0.32, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.028, L / 2, 0.009], this.hiltLength + L / 2, 1.7, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
+      partTuple(['box', 0.028, L / 2, 0.009], this.hiltLength + L / 2, ZW_BLADE_MASS, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];
   },
   // 레어 등급 마감 (전부 물리 무관, 콜라이더에서 ~1cm 안):
@@ -700,21 +708,45 @@ const RAPIER_SPEC = {
 const rapier = finalizeSpec('rapier', RAPIER_SPEC);
 
 // 달타냥: 뒤마의 소설 속 총사를 모티프로 한 창작 무기 [I]. 실존 인물의 유물 복원이 아니다.
-// 날·질량·관성·사거리는 레이피어와 같고, 등급의 공통 공격력/파손 차이만 적용한다.
+//  처음(10/21 샛별 저장소)에는 날 · 질량 · 관성 · 사거리가 레이피어와 같았다(RAPIER_SPEC 통째로 물려받음 — '같은 몸' 문제).
+//  10/21 23:xx 사장님 '달타냥은 너의 제안대로 바꿔' → 제 몸으로 나눔 (레이피어는 바이트 그대로):
+//   근거 [I] 각색: 17세기 총사의 칼은 결투용 레이피어보다 짧고 베기도 되는 군용 칼(병사 칼)이었다 — 그래서 짧고 가볍게, 베기는 올리고 찌르기는 조금 내림.
+//   칼날 0.95 → 0.85 m · 손 ~ 칼끝 1.05 → 0.95 m · 질량 1.10 → 1.00 kg · 베기 0.5 → 0.8 · 찌르기 1.3 → 1.15 · 둔타 0.7 · 등급 에픽 그대로.
+//   질량 배분: 칼날은 같은 단면으로 길이 비만큼(0.38 × 0.85/0.95 = 0.34) · 나머지 0.66 은 자루 · 폼멜 · 컵을 레이피어 비율로 줄임(× 0.66/0.72 —
+//    자루 0.073 · 폼멜 0.083 · 컵 0.504). 칼날 무게중심 · 회전 반경 비(0.3 · 0.24)와 부품 자리(자루 0 · 폼멜 −0.07 · 컵 0.06 · 칼날 밑동 0.1)는 레이피어 그대로.
+//   칼날 콜라이더 반폭 0.009 → 0.011 (베기도 되는 칼 — 겉모습 폭도 같이 넓어짐 · swordKit 은 콜라이더 폭을 따른다). 비틀림 관성은 바닥 0.45 배라 그대로.
+//   찌르기 1.15 · 베기 0.8 은 자동 판정(weapon_class.js CLASS_RULE — 찌르기 1.25 이상 · 베기 0.6 이하)으로 '두루'가 되어 유파가 독일로 넘어간다
+//    → school 'italian' · style 'thrust' 를 적어 지금 이탈리아 찌르기 몸놀림(런지 · 기술 가중치 · 탭 찌르기 장점 thrustStyle)을 그대로 둔다.
+//   들어가며 막기(enterParry — 짧은 한손 칼 관례: 세이버 0.83 · 팔쉬온 0.80 m 이하는 켬)는 0.85 m 로 경계에 걸리나 켜지 않았다(새 기능 — 확인표 2163).
 // finalizeSpec 이전 원본을 공유해야 커먼의 계산된 power/fragility가 에픽에 섞이지 않는다.
 const DARTAGNAN_COLORS = { grip: 0x203b6c, hilt: 0xa1834e };
+const DARTAGNAN_MASS = { grip: 0.073, pommel: 0.083, cup: 0.504, blade: 0.34 }; // 합 1.000 kg
 const dartagnan = finalizeSpec('dartagnan', {
   ...RAPIER_SPEC,
   nameKo: '달타냥', nameEn: "D’Artagnan", tier: 'epic',
   desc: '세 벗과 맹세를 나눈 총사의 검.\n푸른 가죽 손잡이와 빛바랜 금빛 코등이.', // 편집 지침 두 줄: 전설 + 생김새(사장님 10/21 '이전의 외형 정보가 더 나은 거 같다')
+  school: 'italian', style: 'thrust', // 위 머리말: 배율이 자동 판정 경계를 넘어 '두루' · 독일로 가지 않게 지금 유파 · 방식을 적음
+  bladeLength: 0.85,
+  mCut: 0.8, mThrust: 1.15,
   partMesh: swordKit({
     blade: { edge: 'double', width: (t) => 1 - 0.4 * t, thick: 0.0045, bevel: 0.0015, tip: 'needle', tipLen: 0.12 },
     grip: { style: 'leather', color: DARTAGNAN_COLORS.grip },
     pommel: { style: 'pear', color: DARTAGNAN_COLORS.hilt },
     guard: { style: 'cup', color: DARTAGNAN_COLORS.hilt },
   }),
-  buildParts(look) {
-    return RAPIER_SPEC.buildParts.call(this, { ...look, ...DARTAGNAN_COLORS });
+  buildParts() {
+    const L = this.bladeLength;
+    const M = DARTAGNAN_MASS;
+    const grip = boxInertia(M.grip, 0.014, 0.055, 0.014);
+    const pommel = sphereInertia(M.pommel, 0.018);
+    const cup = sphereInertia(M.cup, 0.05); // 컵 힐트 (레이피어와 같은 크기 — 질량만 줄임)
+    const blade = bladeInertia(M.blade, L, 0.3, 0.24, 0.022, 0.012); // 폭 1.8 → 2.2 cm (베기도 되는 칼날)
+    return [
+      partTuple(['box', 0.014, 0.055, 0.014], 0, M.grip, 0, grip.Ie, grip.It, DARTAGNAN_COLORS.grip),
+      partTuple(['ball', 0.018], -0.07, M.pommel, 0, pommel.Ie, pommel.It, DARTAGNAN_COLORS.hilt),
+      partTuple(['ball', 0.05], 0.06, M.cup, 0, cup.Ie, cup.It, DARTAGNAN_COLORS.hilt),
+      partTuple(['box', 0.011, L / 2, 0.006], 0.1 + L / 2, M.blade, blade.comY, blade.Ie, blade.It, 0xdfe4e8, true),
+    ];
   },
   decorate(group, look) {
     RAPIER_SPEC.decorate(group, { ...look, ...DARTAGNAN_COLORS });
@@ -1561,14 +1593,6 @@ const moye = legendaryJianSpec('moye', '막야', 'Moye',
 //      의례검이라 실전 성능 근거는 없다 — mCut 1.10 · mThrust 1.0 · mBlunt 0.95 는 샛별 쪽 시작값.
 //      겉모습(rare_sword_details.js): 꽃잎 폼멜·판형 코등이·북두칠성 금입사와 전서 리듬의 기하(유물 27 자 복제 아님)·은입사 선.
 //      유파: 중국 (school 'chinese') — 우리 중국 유파의 바탕 글이 《무비지》의 조선세법·본국검이라(schools.js 중국 절) 조선 검에 그대로 맞는다.
-//  20) 아이스 (레어) — 샛별 저장소에서 가져옴 (6e71ba2 · 4a425f9 겉모습, 기준 5a4e96c). 소설 속 북부 영주 가문의 대검(창작물의 검).
-//      [I] 전부 게임 설계: 전체 168 cm(소설 6 ft = 183 cm 에서 샛별 쪽 사용자 지시로 15 cm 줄임) · 칼날 1.25 m · 폭 9 cm · 3.5 kg.
-//       비교 [M]: Met 14.25.935 양손검 전체 168.9 cm · 2.78 kg / Cleveland 1919.68 전체 191.5 cm · 3.95 kg — 같은 길이 실물보다 약 0.7 kg(26 %) 무겁다.
-//       부품 질량 자루 .30 · 폼멜 .70 · 코등이 .35 · 칼날 2.15 kg, 칼날 무게중심 비율 0.33·회전 반경 0.25 [I].
-//      mCut 1.10 · mThrust 0.85 · mBlunt 1.15 = 츠바이핸더 배율 그대로(샛별 쪽 결정). 유파는 앞무게 틀 자동 → 이베리아.
-//      우리 쪽에서 바꾼 것: 손목 서보 상한 28 덮개를 뺐다 → 두 손 쥠 기본값 26 (우리 츠바이핸더도 10/10 쥠 넓힘 때 28 을 뺐다, 확인표 682.
-//       샛별 쪽 근거가 '지금 대검과 같은 28' 이었으니 우리 대검 값 26 이 같은 뜻). 쥠 자리(손 사이 0.20 m, 오른손은 날밑 0.185 m 아래)는 샛별 그대로 —
-//       우리 츠바이핸더의 고디뉴 쥠(오른손 날밑·손 사이 0.30 m)으로 바꿀지는 사장님 확인 전(docs/import/saetbyeol_new_2026-10-10.md).
 // ═════════════════════════════════════════════════════════════
 const sain = finalizeSpec('sain', {
   nameKo: '사인검', nameEn: 'Sain Sword',
@@ -1595,39 +1619,11 @@ const sain = finalizeSpec('sain', {
   },
 });
 
-const ice = finalizeSpec('ice', {
-  nameKo: '북부 대공의 검', nameEn: 'Sword of the Northern Grand Duke', // 사장님 10/11 01:4x 이름 바꿈(전 '아이스' — 설명에 '북부 가문의 검')
-  desc: '세 줄의 홈과 황동 장식을 지닌 북부의 대검.\n두 손으로도 버거울 만큼 무겁다.', // 사장님 10/10 20:0x: '스타크의 대검' → '북부 가문의 검' (이름 '아이스'는 일반명사로 그대로)
-  grip: 'two-hand', material: 'steel', tier: 'rare',
-  hiltLength: 0.20, bladeLength: 1.21, gripAlong: -0.22, // 칼날 1.25 → 1.21 (사장님 10/11 01:5x '4cm 줄여' — 쥠을 넓히며 172 cm 가 된 전체를 처음 정한 168 cm 로, 칼날 무게중심·관성은 칼날 길이 비율 그대로)
-  // 쥠 (10/10 23:5x 사장님 지시 '이베리아 유파는 츠바이핸더처럼 쥐는 걸 기본으로 해서 아이스도 그렇게 — 0.22~0.24 사이', 확인표 825·826 — 몬탄테 문서 §17):
-  //  손 사이 0.20 → 0.22 m. 왼손은 폼멜 목(츠바이핸더 §15 규칙: 폼멜 끝 = 왼손 − 0.048 → 폼멜 가운데 −0.238, 공 반지름 0.030),
-  //  자루 상자는 위 끝(0.185, 날밑 바로 밑) 그대로 아래로만 늘림(아래 끝 = 폼멜 가운데 + 0.015 — 전 꼴과 같은 겹침) → 가운데 −0.019 · 반 길이 0.204.
-  //  0.22 를 고른 까닭: 오른손이 날밑 아랫면에서 0.17 m 아래로 이미 멀어(츠바이핸더 0.11) 날밑 밑 자루가 길다 — 0.22 면 날밑 아랫면~폼멜 끝 0.438 m 로
-  //  같은 시대 톨레도 몬탄테 자루(0.413·0.400 — 문서 §10-2)에 가장 가깝다(0.24 면 0.458). 오른손을 날밑 가까이 옮기려면 칼 원점이 칼날 쪽으로 가야 하는데,
-  //  손~칼끝 1.45 m 를 지키면 칼날을 늘려야 하고(겉모양 바뀜) 칼날을 지키면 손~칼끝이 준다 — 둘 다 지킬 것이라 오른손은 그대로 두었다.
-  //  칼날·날밑·홈 겉모양·부품 질량(자루 .30 · 폼멜 .70 · 날밑 .35 · 칼날 2.15)·칼날 무게중심·관성·서보 26 그대로. 전체 길이 168 → 172 cm(자루가 3.8 cm 늘어남)
-  mCut: 1.10, mThrust: 0.85, mBlunt: 1.15,
-  // 손목 서보 상한: 두 손 쥠 기본값 26 (샛별 쪽 28 덮개는 뺐다 — 위 머리말 · 우리 츠바이핸더와 같은 값)
-  partMesh: icePartMesh, decorate: iceDecorate,
-  buildParts() {
-    const L = this.bladeLength;
-    const grip = boxInertia(0.30, 0.022, 0.204, 0.020);
-    const pommel = sphereInertia(0.70, 0.030);
-    const guard = boxInertia(0.35, 0.14, 0.015, 0.022);
-    const blade = bladeInertia(2.15, L, 0.33, 0.25, 0.09, 0.009);
-    return [
-      partTuple(['box', 0.022, 0.204, 0.020], -0.019, 0.30, 0, grip.Ie, grip.It, ICE_COLORS.grip),
-      partTuple(['ball', 0.030], -0.238, 0.70, 0, pommel.Ie, pommel.It, ICE_COLORS.metal),
-      partTuple(['box', 0.14, 0.015, 0.022], 0.185, 0.35, 0, guard.Ie, guard.It, ICE_COLORS.metal),
-      partTuple(['box', 0.045, L / 2, 0.0045], this.hiltLength + L / 2, 2.15,
-        blade.comY, blade.Ie, blade.It, ICE_COLORS.blade, true),
-    ];
-  },
-});
+// (옛 20 '북부 대공의 검'(ice — 샛별 저장소에서 가져옴 10/10, 처음 이름 아이스) 은 사장님 결정 10/21 로 삭제 — 'ice' 는 별칭으로 츠바이핸더를 가리킨다.
+//  라트나는 츠바이핸더를 든다 — characters.js. 겉모습(rare_sword_details.js 아이스 몫) · 카드 그림(public/ui/weapons/ice.webp) · 간격 실측도 같이 지움)
 
 // ═════════════════════════════════════════════════════════════
-//  21) 플랑베르주 (에픽) — 샛별 저장소 origin/main 325a5c38 의 flamberge_design.js 생김새를 옮겨 고침 (겉모습 src/flamberge_look.js).
+//  21) 플랑베르주 (레어 — 10/21 사장님 결정으로 에픽에서 내림) — 샛별 저장소 origin/main 325a5c38 의 flamberge_design.js 생김새를 옮겨 고침 (겉모습 src/flamberge_look.js).
 //      원형: 클리블랜드 미술관 1919.71 「Two-Handed Sword with Flamboyant Blade」, 독일 1550–1600 (박물관 열린 자료 CC0).
 //       실측 [M]: 전체 168.9 · 날 118.7(리카소 26.7 포함) · 코등이 50.5 · 손잡이(폼멜 포함) 49.2 cm. 무게는 자료에 없다 → 3.0 kg 은 우리 안 [I].
 //      그쪽 모델은 겉모습 시안뿐이라(질량·쥠·충돌체·등급·카드 없음) 아래 값은 모두 우리가 새로 정했다 — 확인표 1140~, docs/import/flamberge_port_2026-10-14.md.
@@ -1642,29 +1638,39 @@ const ice = finalizeSpec('ice', {
 //      배율은 츠바이핸더 그대로(베기 1.1 · 찌르기 0.85 · 둔타 1.15) → 자동 판정 앞무게·베기 → 이베리아 (독일로 지정하지 않는다 — 독일 유파엔 대검 가지가 없다).
 //      리카소(날 안 세운 26.7 cm)는 칼날 콜라이더 안에 겉모습으로만 둔다(츠바이핸더와 같은 방식 — 날 판정 그대로). 보조 갈고리(축에서 8.9 cm)는 콜라이더 밖 장식.
 //      코등이 콜라이더는 박물관 폭 그대로 50.5 cm(겉모습 약속 ~1 cm — 휜 끝 판만 1.2 cm 위로 나온다). 물결 날에 출혈·파손 특례 없음 · 특수 능력 없음.
+//      등급 (10/21 사장님 '플랑베르주는 레어로'): 에픽 → 레어 — 특수 능력이 없는 칼이라 따로 보정 없이 등급 기본값을 따른다
+//       → power 1.1 → 1.05 · 내구 0.95 → 0.85 · 파손 0.0104 → 0.032 (TIER_DEFAULTS · TIER_FRAGILITY 그대로).
+//      게임 치수 (사장님 10/21 23:5x '플랑베르주는 전체 4 cm 줄여' — 나누기는 감독 · flamberge_look.js FLAMBERGE_GAME — 박물관 실측 기록은 그대로):
+//       날 1.187 → 1.162 m(물결 날 칼끝 쪽 −2.5 cm · 리카소 그대로) · 손잡이 49.2 → 47.7 cm(왼손 아래 −1.5 cm — 폼멜 가운데 −0.385 → −0.370 · 자루 상자 0.070 ~ −0.370) ·
+//       오른손 · 날밑 자리(hiltLength 0.085) · 손 사이 0.24 m 그대로 → 전체 164.9 cm · 손 ~ 칼끝 1.272 → 1.247 m.
+//      질량 (사장님 10/21 24:0x '손이 묵직한 느낌이 과하더라 … 진짜 약간만' · '2.5배 이상이 되도록'): 합 3.0 kg 그대로 — 자루 0.325 × 0.44/0.455(자루 상자 길이 비) = 0.314 ·
+//       폼멜 0.43 → 0.35(청동 덩이 부피 49 cm³ 는 사진 어림이라 오차 안에서 40 cm³ 쪽으로 — 손 쪽이 지나치게 묵직하다는 사장님 체감을 따른 각색 [I]) · 날밑 0.58 ·
+//       칼날 1.665 × 1.162/1.187(길이당 질량) + 폼멜에서 옮긴 0.08 + 4 cm 줄이며 빠진 0.046 = 1.756. 칼날 무게중심 · 회전 반경 비(0.353 · 0.272)는 그대로.
+//       → 무게중심 손에서 0.226 → 0.250 m · 손 기준 관성 0.692 → 0.684(롱소드 0.272 의 2.54 → 2.51 배). 모양 · 충돌체 크기 · 겉모습은 그대로(줄인 치수만)
 // ═════════════════════════════════════════════════════════════
+const FL_MASS = { grip: 0.325 * (0.44 / 0.455), pommel: 0.35, guard: 0.58 };
 const FL = {
-  // 부품 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.385(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.187 m
-  y: [-0.1575, -0.385, 0.097, FLAMBERGE_HILT + FLAMBERGE_MUSEUM.blade / 2],
-  mass: { grip: 0.325, pommel: 0.43, guard: 0.58, blade: 1.665 },
+  // 부품 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.370(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.162 m
+  y: [-0.15, -0.37, 0.097, FLAMBERGE_HILT + FLAMBERGE_GAME.blade / 2],
+  mass: { ...FL_MASS, blade: 3.0 - FL_MASS.grip - FL_MASS.pommel - FL_MASS.guard }, // 칼날 1.756 kg (위 머리말 — 합 3.000)
 };
 const flamberge = finalizeSpec('flamberge', {
   nameKo: '플랑베르주 (물결 날 양손검)', nameEn: 'Flamberge',
   desc: '독일 용병 란츠크네히트가 들던 불꽃 날 대검.\n물결 날은 벼리기 어려워 값비싼 칼이었다.',
-  grip: 'two-hand', material: 'steel', tier: 'epic',
-  hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_MUSEUM.blade, gripAlong: -0.24,
+  grip: 'two-hand', material: 'steel', tier: 'rare', // 10/21 사장님 결정: 에픽 → 레어 (보정 없음 — 위 머리말)
+  hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_GAME.blade, gripAlong: -0.24,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
-  // 손목 서보 상한: 두 손 쥠 기본값 26 (츠바이핸더·북부 대공의 검과 같다)
+  // 손목 서보 상한: 두 손 쥠 기본값 26 (츠바이핸더와 같다)
   partMesh: flambergePartMesh(FL.y), decorate: flambergeDecorate,
   buildParts() {
     const L = this.bladeLength;
     const M = FL.mass;
-    const grip = boxInertia(M.grip, 0.019, 0.2275, 0.0165);
+    const grip = boxInertia(M.grip, 0.019, 0.22, 0.0165);
     const pommel = sphereInertia(M.pommel, 0.03);
     const guard = boxInertia(M.guard, 0.2525, 0.03, 0.0155);
     const blade = bladeInertia(M.blade, L, 0.353, 0.272, 0.04, 0.009);
     return [
-      partTuple(['box', 0.019, 0.2275, 0.0165], FL.y[0], M.grip, 0, grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
+      partTuple(['box', 0.019, 0.22, 0.0165], FL.y[0], M.grip, 0, grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
       partTuple(['ball', 0.03], FL.y[1], M.pommel, 0, pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
       partTuple(['box', 0.2525, 0.03, 0.0155], FL.y[2], M.guard, 0, guard.Ie, guard.It, FLAMBERGE_COLORS.steel),
       partTuple(['box', 0.02, L / 2, 0.0045], FL.y[3], M.blade, blade.comY, blade.Ie, blade.It, FLAMBERGE_COLORS.blade, true),
@@ -1796,19 +1802,68 @@ const kriegsmesser = finalizeSpec('kriegsmesser', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  티소나 (에픽 · 이베리아) — 샛별 저장소 f9aea01a 에서 가져옴 (10/21 — 들이기 · 능력 '위세'는 사장님 결정). 겉모습 src/tizona_details.js.
+//      원형: 『엘 시드의 노래』 속 엘 시드의 칼 — 상아색 감개 · 검은 쇠 날밑 · 금빛 상감 시안을 이베리아 양손 대검(몬탄테)으로 각색한 것.
+//      몸 (사장님 10/21 23:4x '티소나는 바꾼 안으로 해' · 23:5x '무게감을 조금 더 올림 좋겠어 어쨌든 대검이니까'): 샛별 쪽은 츠바이핸더 몸을 통째로 썼다
+//       (칼날 1.215 m · 2.9 kg) → 칼날 1.05 m · 2.3 kg 으로. 근거 [I] 게임 각색: 실물 티소나(전래품 — 날 약 103 cm · 1.1 kg 의 한손검)에 가까운 쪽으로
+//       줄이되 대검의 무게감 · 몬탄테 쥠 · 유파는 지킨다. 23:4x 안(2.1 kg — 칼날 같은 단면 길이 비 1.469 · 나머지 비례)에서 0.2 kg 을 칼날에 실음
+//       (손잡이 쪽에 실으면 휘두름 관성이 거의 안 오른다 — 비례 배분 2.3 kg 이면 0.540).
+//       칼날 1.62 kg · 무게중심 · 회전 반경은 칼날 길이에 대한 츠바이핸더 비(10/21 츠바이핸더 칼날 1.215 m 때의 값 — 츠바이핸더가 바뀌어도 고정).
+//       자루 · 폼멜 · 날밑은 츠바이핸더 질량(0.26 · 0.62 · 0.32)을 같은 비로 줄여 합 0.68 kg(0.147 · 0.351 · 0.181) — 모양 · 크기 · 자리는 그대로.
+//       쥠 자리(gripAlong · 자루 길이 · 폼멜 · 날밑 자리)는 츠바이핸더 고디뉴 쥠 기본 꼴('mid') 그대로 — 손 사이 0.24 m 를 지키려면 자루가 그만큼 있어야 해서
+//       줄이지 않았다. 쥠 꼴 비교 스위치(`?montanteHand=`)는 츠바이핸더만 바꾼다.
+//       → 전체 148 cm · 손 ~ 칼끝 1.195 m · 무게중심 손에서 0.34 m · 손 기준 관성 0.586 kg·m²(롱소드 0.272 의 2.15 배 · 츠바이핸더 0.787) — 앞무게 틀(관성 0.3 · 무게중심 0.33 넘음).
+//      배율은 츠바이핸더 그대로(베기 1.1 · 찌르기 0.85 · 둔타 1.15). 간격은 다시 잼(weapon_measured.js) · 막기 자리(frames.js LIB_PARRY — 기본 끔)는 츠바이핸더 값을 빌림.
+//      특수 능력 '위세' (사장님 10/21 23:xx — 값 config.js WEAPON_ABILITY · 샛별 저장소 제안 값): 이 칼의 공격이 상대 칼에 막히면 막은 쪽 기력 − 8 ·
+//       한 공격에 한 번 · 1.5 s 에 한 번 (stamina.js spendAweDrain — 사람 · AI 같이)
+// ═════════════════════════════════════════════════════════════
+const TZ_GRIP = ZW_FORMS.mid; // 츠바이핸더 기본 쥠 꼴의 자루 · 폼멜 · 날밑 자리 (칼날 칸은 쓰지 않는다)
+const TZ = {
+  hilt: 0.145, blade: 1.05, // 손 → 칼날 밑동 · 칼날 (손 ~ 칼끝 1.195 m)
+  com: (0.19 + 0.34 * 1.17 - 0.145) / (1.36 - 0.145), gyr: (0.253 * 1.17) / (1.36 - 0.145), // 칼날 무게중심 · 회전 반경 비 (0.3644 · 0.2436 — 위 머리말)
+  mass: { grip: 0.26 * (0.68 / 1.2), pommel: 0.62 * (0.68 / 1.2), cross: 0.32 * (0.68 / 1.2), blade: 1.62 }, // 합 2.30 kg
+};
+const tizona = finalizeSpec('tizona', {
+  nameKo: '티소나', nameEn: 'Tizona', tier: 'epic', school: 'iberian',
+  desc: '엘 시드가 부카르를 쓰러뜨리고 얻은 명검.\n그의 적들은 티소나를 알아보고 두려움에 사로잡혔다.', // 사장님 글 (10/21 23:xx — 한 글자도 고치지 않는다)
+  ability: '위세: 막아 낸 상대의 기력 감소', // 에픽 특수 능력 (사장님 10/21 23:xx — 카드 능력 줄 문구 그대로)
+  awe: true, // '위세': 이 칼의 공격이 막히면 막은 쪽 기력 − (값 config.js WEAPON_ABILITY · 계산 stamina.js spendAweDrain)
+  grip: 'two-hand', material: 'steel',
+  hiltLength: TZ.hilt, bladeLength: TZ.blade, gripAlong: TZ_GRIP.gripAlong,
+  mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
+  partMesh: tizonaPartMesh, // 겉모습은 콜라이더 크기를 따른다(칼날 길이 · 상감 자리 — tizona_details.js)
+  // 부품 모양 · 자리는 츠바이핸더 buildParts(기본 쥠 꼴)와 같고 질량 · 칼날만 위 TZ (츠바이핸더와 따로 — 츠바이핸더 몸이 바뀌어도 티소나는 그대로)
+  buildParts() {
+    const L = this.bladeLength;
+    const M = TZ.mass, G = TZ_GRIP;
+    const grip = boxInertia(M.grip, 0.02, G.gripH, 0.02);
+    const pommel = sphereInertia(M.pommel, 0.038);
+    const cross = boxInertia(M.cross, 0.14, 0.02, 0.026);
+    const blade = bladeInertia(M.blade, L, TZ.com, TZ.gyr, 0.056, 0.018);
+    return [
+      partTuple(['box', 0.02, G.gripH, 0.02], G.gripY, M.grip, 0, grip.Ie, grip.It, TIZONA_COLORS.grip),
+      partTuple(['ball', 0.038], G.pommelY, M.pommel, 0, pommel.Ie, pommel.It, TIZONA_COLORS.hilt),
+      partTuple(['box', 0.14, 0.02, 0.026], G.crossY, M.cross, 0, cross.Ie, cross.It, TIZONA_COLORS.hilt),
+      partTuple(['box', 0.028, L / 2, 0.009], this.hiltLength + L / 2, M.blade, blade.comY, blade.Ie, blade.It, TIZONA_COLORS.blade, true),
+    ];
+  },
+});
+
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
   rubber_chicken: rubberChicken, frozen_tuna: frozenTuna, pistol, morgenstern,
   uchigatana, // 제안 가지 (10/9, 사장님 확인 전) — 끝에 둬서 다른 무기의 목록 순서를 바꾸지 않는다
-  ganjiang, moye, sain, ice, // 샛별 저장소에서 가져옴 (10/10, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
-  flamberge, // 샛별 저장소 생김새를 옮겨 고침 (10/14, 사장님 확인 전) — 같은 까닭으로 끝에 둔다
+  ganjiang, moye, sain, // 샛별 저장소에서 가져옴 (10/10, 사장님 확인 전) — 같은 까닭으로 끝에 둔다 (넷째 북부 대공의 검은 10/21 사장님 결정으로 지움 — 아래 별칭)
+  flamberge, // 샛별 저장소 생김새를 옮겨 고침 (10/14 · 10/21 사장님 결정으로 에픽 → 레어) — 같은 까닭으로 끝에 둔다
   goujian, // 샛별 저장소에서 가져옴 (10/14 — 에픽·뽑기에 넣음·와신상담은 사장님 결정) — 같은 까닭으로 끝에 둔다
   brothers_sword: brothersSword,
   dartagnan, // 사장님 10/21(샛별 저장소 경유): 이탈리아 에픽
   kusanagi, // 사장님 10/21(샛별 저장소 경유): 일본 레전드
   hwando, kriegsmesser,
   balisarda, muramasa, // 사장님 10/21 23:3x(샛별 저장소 경유): 이탈리아 레전드 · 일본 레어
+  tizona, // 사장님 10/21(샛별 저장소 경유): 이베리아 에픽 · 능력 '위세'
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
@@ -1819,6 +1874,7 @@ export const WEAPON_ALIASES = {
   katana: 'monohoshizao', // 옛 id (카타나 → 모노호시자오 에픽, 감독 결정)
   longsword_sharp: 'longsword', sharp: 'longsword', // 실전용 롱소드는 기본 롱소드와 합침 (감독 결정)
   messer: 'falchion', hwandudaedo: 'longsword', // 삭제된 무기 (감독 결정) — 옛 id 로 죽지 않게
+  ice: 'zweihander', // 삭제된 무기 북부 대공의 검 (사장님 10/21) — 옛 저장 · 주소의 'ice' 가 죽지 않게 같은 몬탄테 대검으로
   arming_sword: 'longsword', arming: 'longsword', // 삭제된 무기 (감독 결정)
   replica: 'excalibur_replica', saber: 'lightsaber',
   morningstar: 'morgenstern', mace: 'morgenstern', // 모르겐슈테른 (영어 이름·둔기 통칭)

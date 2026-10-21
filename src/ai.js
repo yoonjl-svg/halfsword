@@ -26,6 +26,7 @@ import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
+import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { aiUniqueStages } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
@@ -1420,6 +1421,8 @@ export class AI {
     if (!this.hitLanded && !this.bound) this.foe.gait?.foeWhiff();
     // 독일 인데스 (10/21 — school_passive.js foeFailed): 내 공격이 상대를 못 벰 — 헛침(위와 같은 가름) · 막힘(칼끼리 닿음) → 상대 몸에 되받아 칠 창. 읽기 · 알림만
     if (!this.hitLanded) this.foe.schoolPassive?.foeFailed(this.bound ? 'blocked' : 'whiff');
+    // 티소나 '위세' (10/21 — stamina.js spendAweDrain): 위와 같은 '막힘'(못 벰 · 칼끼리 닿음)이면 막은 쪽 기력 − · 능력 없는 칼은 아무 일 없음
+    if (!this.hitLanded && this.bound) spendAweDrain(this.me, this.foe);
     if (this.hitLanded && !this.strikeTallied) {
       this.stats.landed++;
       this.evLanded = true; // 감정층 사건: 맞혔다

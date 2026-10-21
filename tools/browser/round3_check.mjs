@@ -246,7 +246,7 @@ try {
   }
   // ── ⑤ 옛 빌드와 같은 그림 ──
   if (sameAs) {
-    const VIEWS = [['qinglan', 'renji', 'morgenstern'], ['etna', 'chanda', 'moye'], ['dayr', 'silver_wanderer', 'monohoshizao'], ['castle_night', 'isolde_mad', 'longsword'], ['sluice_night', 'ratna_mad', 'ice']];
+    const VIEWS = [['qinglan', 'renji', 'morgenstern'], ['etna', 'chanda', 'moye'], ['dayr', 'silver_wanderer', 'monohoshizao'], ['castle_night', 'isolde_mad', 'longsword'], ['sluice_night', 'ratna_mad', 'zweihander']];
     const pick = arg('views')?.split(',');
     for (const [stage, foe, weapon] of VIEWS.filter(([s]) => !pick || pick.includes(s))) {
       const pics = [];
