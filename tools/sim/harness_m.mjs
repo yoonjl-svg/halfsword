@@ -79,7 +79,9 @@ export function newRound(opts = {}) {
   // look/look2 = 플레이어·상대 자리 겉모습 (캐릭터 look 을 주면 투구·판금이 판정에 들어간다, config.js ARMOR). 생략하면 예전 그대로
   //  breakSeed(판 시드)는 무기 파손 굴림과 방어구 연출 전용 난수의 씨앗 (fighter.js — 한 프로세스에서 판을 어떤 순서로 돌려도 같은 판은 같게)
   //  schoolPassive: false = 4급 패시브 책 없는 플레이어 (main.js kit.passive 와 같은 칸 — 생략하면 책 있음, 예전 그대로)
-  const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: opts.look ?? LOOKS.player, weapon: opts.weapon, breakSeed: opts.seed, revive: opts.revive2, schoolPassive: opts.schoolPassive });
+  //  kit: 플레이어 스킬트리 몫(10/21 — src/skill_tree_data.js kitFromNodes) — main.js newRound 가 넘기는 칸 그대로(보법 I · 막기 I · 패시브 + skillKit). 생략하면 예전 그대로(몫 없음 = 모두 켬)
+  const kitOpts = opts.kit ? { skillKit: opts.kit, schoolFootwork: opts.kit.footwork, schoolParry: opts.kit.parry, schoolPassive: opts.kit.passive } : {};
+  const player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: -gap / 2, heading: 0, look: opts.look ?? LOOKS.player, weapon: opts.weapon, breakSeed: opts.seed, revive: opts.revive2, schoolPassive: opts.schoolPassive, ...kitOpts });
   const enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: gap / 2, heading: Math.PI, look: opts.look2 ?? (opts.sameLook ? LOOKS.player : LOOKS.enemy), weapon: opts.weapon2 ?? opts.weapon, breakSeed: opts.seed, revive: opts.revive });
   // 부활(캐릭터 시트 revive, src/revive.js): persona 와 같은 짝 — opts.revive = enemy(AI 쪽 캐릭터), opts.revive2 = player
   if (opts.onFighter) { opts.onFighter(player, world, RAPIER); opts.onFighter(enemy, world, RAPIER); }

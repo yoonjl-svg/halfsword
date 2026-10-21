@@ -5,6 +5,7 @@
 //   붙어 있는 접촉은 창을 늘리지 않고, 떨어졌다 다시 닿으면 새 창이지만 기력은 공격 하나에 한 번만. 찌르기 · 공격 번호 없음 · 끝난 공격은 흘리지 않는다.
 import * as THREE from 'three';
 import { STEEL, PHYSICS, FLOW_REDESIGN, AI_PROFICIENCY } from './config.js';
+import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 일본 막기 II 흘려 받기 J3 · 막기 III 흘린 칼 J4)
 export { FLOW_REDESIGN };
 const v = x => new THREE.Vector3(x.x, x.y, x.z);
 const velocity = (s, p) => v(p).sub(s.com).cross(s.w).negate().add(s.v);
@@ -15,7 +16,7 @@ export function flowCandidate(D, O, SO, point, normal, impact, now) {
   const st = D.skill?._cover, s = O.stamina;
   const no = (reason, details = {}) => { D.flowCheck = { time: now, attackId: s.attackId, reason, ...details }; return null; };
   if (!D.alive || !O.alive || !D.armed || !O.armed || D.state !== 'stand' ||
-      D.stamina.exhausted || s.exhausted || O.state !== 'stand' || !st?.nagashi || D.schoolParry === false ||
+      D.stamina.exhausted || s.exhausted || O.state !== 'stand' || !st?.nagashi || D.schoolParry === false || kitOff(D, 'flow') ||
       !O.swordProps) return no('scope');
   O.flowContactWindows ??= new WeakMap();
   let entry = O.flowContactWindows.get(D);
@@ -90,6 +91,7 @@ export function aiFlowReady(ai) {
 /** 흘린 공격의 피해 감소 몫 (config FLOW_REDESIGN.flowDmgCut — combat.js analyze): 받는 쪽(vic)이 칼 주인(att)의 지금 공격 번호를 흘렸으면 1 − 몫, 아니면 1 */
 export function flowShieldKeep(vic, att) {
   const fs = vic?.flowShield;
+  if (kitOff(vic, 'flowShield')) return 1; // 사람은 스킬트리 J4 '막기 III · 흘린 칼' (10/21)
   return FLOW_REDESIGN.flowDmgCut > 0 && fs && fs.from === att && fs.attackId && fs.attackId === att?.stamina?.attackId ? 1 - FLOW_REDESIGN.flowDmgCut : 1;
 }
 

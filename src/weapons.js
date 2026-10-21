@@ -90,7 +90,10 @@ export const TIER_DRAW = { common: 40, rare: 27, epic: 16, legend: 5, trash: 7, 
 //  묶음 (drawGroup, 샛별 저장소에서 가져옴 b4464ef weapon_draw.js — 간장·막야): 같은 drawGroup 무기는 등급 안에서 한 칸으로 센다.
 //   그 칸이 뽑히면 묶음 안에서 하나를 고르고(난수 한 번 더), 같은 판에 묶음의 다른 무기는 나오지 않는다. 지난 판 무기를 뺄 때도 묶음째 뺀다.
 //   묶음 없는 무기(지금 간장·막야 말고 전부)는 전과 같은 난수 수·같은 결과다.
-export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random } = {}) {
+//  편지 (10/21 스킬트리 — docs/design/skill_tree_2026-10-21/README.md '00에서 온 편지'): weightOf(id) = 그 무기 칸의 무게 배율(편지를 가진 유파 무기 2 · 그 밖 1 — main.js drawCardIds).
+//   등급은 그대로 먼저 뽑고, 그 등급 안에서 칸을 무게로 고른다 = 유파를 '그 유파 칸 수 × 배율'의 무게로 고른 뒤 그 유파 안에서 고르게 고르는 것과 같은 확률(난수 한 번).
+//   그 등급의 칸 무게가 모두 1 이면(편지가 없거나 그 등급에 편지 유파 무기가 없음) 전과 같은 줄 — 같은 난수 · 같은 결과.
+export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random, weightOf = null } = {}) {
   pool = pool.filter(id => !getWeapon(id).characterOnly); // characterOnly(인물 전용) 무기는 카드에 안 나온다 — 지금 그런 무기는 없어 뽑기 결과 · 난수 차례는 전과 같다 (샛별 저장소 10/17)
   const groupOf = (id) => getWeapon(id).drawGroup || id;
   const exGroup = exclude == null ? null : groupOf(exclude);
@@ -111,7 +114,15 @@ export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random
     let t = tiers[tiers.length - 1];
     for (const k of tiers) if ((r -= TIER_DRAW[k]) < 0) { t = k; break; }
     const slots = byTier[t] ? [...byTier[t].entries()] : left.map((id) => [groupOf(id), [id]]);
-    const [g, members] = slots[Math.floor(rnd() * slots.length)];
+    const w = weightOf ? slots.map(([, m]) => Math.max(0, weightOf(m[0]) ?? 1)) : null;
+    let pick = 0;
+    if (!w || w.every((x) => x === 1)) pick = Math.floor(rnd() * slots.length);
+    else {
+      let r = rnd() * w.reduce((a, x) => a + x, 0);
+      pick = slots.length - 1;
+      for (let i = 0; i < slots.length; i++) if ((r -= w[i]) < 0) { pick = i; break; }
+    }
+    const [g, members] = slots[pick];
     const id = members.length === 1 ? members[0] : members[Math.floor(rnd() * members.length)];
     out.push(id);
     left = left.filter((x) => groupOf(x) !== g);

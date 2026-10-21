@@ -1,172 +1,216 @@
-// 대기실 스킬북 화면 (docs/import/lobby_fix_2026-10-16.md §6) — 유파 탭 다섯 · 탭마다 책 다섯을 별자리처럼 룬 줄로 잇는다.
-//  사장님 10/16 03:5x '스킬트리처럼 유파별 문서가 박힌 … 해금되면 색이 밝아지고 누르면 설명과 함께' · 04:3x '책은 책이지만 별자리나 스킬트리처럼 룬 문자처럼 연결돼 있어.
-//   구입하면 밝아지고 사용 봉인 선택 가능. 사용하면 섬네일 자리를 둥근 빛이 감쌈.'
-//  상태 셋 (skill_books.js bookState): 안 삼 = 어둡게 + 값 · 사용 = 밝게 + 둥근 빛 · 봉인 = 밝게, 빛 없음(판에서 꺼짐). 줄은 꾸밈 — 아무 차례로나 산다.
-//  책을 누르면 판 위에 설명 카드: 이름 · 급 · 등급 · 유파 · 효과 한 줄(고유자세는 넷을 적고 '임시') · 짧은 출처 · 구입(안 삼) 또는 사용 / 봉인(산 책).
-//  꾸밈: 판 틀은 픽셀 결(카드 틀 — 겉) · 책 · 금화 그림은 매끈한 3D 그림(속 — 스타일 규칙 '겉은 픽셀, 속은 매끈', docs/design_language.md §5) — 글자는 entrance_type.css 규칙, 색·자리는 lobby.css '스킬북' 칸.
-import { BOOK_SCHOOLS, ROMAN, booksOf, readBooks, bookState, setBookInUse, buyBook, headPriceOf } from './skill_books.js';
+// 대기실 스킬 화면 (10/21 사장님 확정 스킬트리 — docs/design/skill_tree_2026-10-21/ · IMPLEMENTATION.md §5) — 유파 탭 다섯 · 탭마다 11 칸 트리.
+//  사장님 10/21 18:3x '디아블로나 WOW처럼. 어떤 스킬을 찍으면 다음 스킬을 찍을 수 있고, 어떤 건 분기점이 되기도 … 유파마다 분기점이나 갈래의 모양이 조금씩 다르면 좋아' ·
+//   18:4x '시작은 무조건 보법부터 … 보법 심화는 선택적인 곁가지로'. (전: 10/16 별자리 다섯 권 — 옛 스킬북은 skill_tree_store.js 가 한 번 거두고 돌려줌)
+//  칸 상태 넷 (skill_tree_data.js nodeState): 잠김 = 흐리게(앞 칸이 모자람) · 배울 수 있음 = 금색 테두리 + 값 · 익힘 = 갈래 색으로 채우고 빛 · 준비 중 = 점선(닫힌 비기 · 일본 손목 치기 심화).
+//  줄 = 그림 모양 그대로(앞 칸 아래 → 뒤 칸 위 곡선): 곁가지(편지 · 보법 II)는 점선 · 앞 칸을 '모두' 익혀야 하는 칸은 줄이 만나는 곳에 금색 점 · 독일 2단계 관문은 가로 띠 하나.
+//  칸을 누르면 판 위에 상세 카드: 이름(원어는 여기서만 — 화면 글 지침 §1) · 갈래 · 효과 한 줄 · 먼저 익힐 칸 · 값(금화 · 머리 그림) · '배우기'(또는 못 배우는 까닭).
+//  유파 초기화: 판 오른쪽 위 '초기화' — 머리 1 · 확인 단계(돌려받는 금화 · 머리와 드는 머리를 보임) · 익힌 칸이 없거나 머리 0 이면 못 누름 · 다른 유파는 그대로.
+//  꾸밈: 판 틀은 픽셀 결(창의 액자 1 — 겉) · 칸 · 줄 · 카드는 매끈(속 — 스타일 규칙 '겉은 픽셀, 속은 매끈', docs/design_language.md §5). 색은 싸움 화면 토큰과 등급 색(--tier-*) — 글자는 entrance_type.css, 자리는 lobby.css '스킬' 칸.
+//  폰 가로(844 × 390 — 판 약 386 × 216 px)에 맞게 칸 크기 · 줄 간격을 판 크기에서 셈(layout). 줄이 많아 판에 안 들면(이탈리아 6 줄) 판 안에서 아래로 내려 본다. 잰 도구 tools/browser/skill_tree_layout.mjs
+import { TREE_SCHOOLS, TREE, NODE_CAT, nodesOf, nodeOf, nodeState, canLearn, isClosed, nodeEff, RESET_HEADS } from './skill_tree_data.js';
+import { readLearned, learnNode, resetPreview, resetSchool } from './skill_tree_store.js';
 import { readProgress } from './lobby_progress.js';
 import { TRADITIONS } from './schools.js';
-import { COIN_SRC } from './wallet_icons.js';
-const short = (t) => String(t ?? '').replace(/\s*[(·].*$/, ''); // 고유 공격 이름에서 한글만 (괄호 원어 · 가운뎃점 뒤 설명은 뺀다)
-
-// 별자리 꼴 (판 좌표 300 × 210 — 유파 무기·몸놀림을 본뜸): at = 책 I~V 자리 · links = 이은 줄 (책 번호 1~5).
-//  폰 가로 판(263 px)에서 책·이름·값이 안 겹치고, 줄마다 책 칸 밖으로 룬 꾸밈이 들어갈 만큼 비스듬히 떨어지게 (위아래로 붙은 줄은 이름에 가려 안 쓴다).
-//  판이 더 좁으면 책 크기를 판에 맞춰 줄인다(--s · 아래 fit) — 잰 도구 tools/browser/skill_tree_layout.mjs (문서 §6)
-export const CONSTELLATIONS = Object.freeze({
-  german: { at: [[70, 36], [70, 160], [150, 98], [230, 36], [230, 160]], links: [[1, 3], [2, 3], [3, 4], [3, 5]] }, // 엇갈린 두 칼(X): 가운데 III 에서 네 귀로
-  italian: { at: [[36, 110], [104, 36], [196, 36], [264, 110], [150, 166]], links: [[1, 2], [2, 3], [3, 4], [4, 5], [5, 1]] }, // 레이피어 컵 고리(오각 고리)
-  iberian: { at: [[32, 166], [82, 84], [150, 34], [218, 84], [268, 166]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 몬탄테: 머리 위로 크게 도는 호
-  japanese: { at: [[240, 36], [136, 36], [60, 100], [136, 164], [240, 164]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 휜 칼날(초승달 꼴)
-  chinese: { at: [[42, 46], [96, 164], [150, 70], [204, 164], [258, 46]], links: [[1, 2], [2, 3], [3, 4], [4, 5]] }, // 검무의 꺾이는 걸음(W)
-});
-const BOARD_PX = 263; // 폰 가로 844 × 390 의 판 너비 — 이보다 좁으면 책·이름·값을 같은 비로 줄인다(0.6 까지) · 넓으면 그대로
-const GAP = 3; // 책 칸과 줄 끝 사이 (판 좌표)
+import { PLAYER_UNIQUE, uniqueDef } from './unique_assist.js';
+import { COIN_SRC, POUCH_SRC } from './wallet_icons.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-/**
- * 책 섬네일 — 매끈한 3D 그림 public/ui/books/<유파>_<급>.webp (256 × 336 = 책 칸 32 × 42 와 같은 비 — .book-svg 가 칸을 꽉 채운다):
- *  유파마다 실제 옛 문서 꼴 하나(독일 가죽 펜히트부흐 · 이탈리아 그림 낱장 묶음 · 이베리아 말린 양피지와 밀랍 인장 · 일본 오륜서 두루마리 · 동방 죽간) ·
- *  급은 볼륨(두께 · 높이 · 길이 · 대쪽 수)과 끈 · 리본의 등급 색으로만 (로마 숫자 없음). 사장님 10/16 14:4x ③ · 15:3x ⑨ '무기 그림과 같은 방식' ·
- *  16:1x '유파별로 … 급수 별로 … 사실성' · 17:3x '말린 양피지나 서류더미처럼 여러 가지 형태 … 로마자는 빼도 돼' · 17:4x '실제 오륜서 … 동방 죽간'
- *  (만드는 도구 tools/browser/item_thumbs.mjs — docs/import/item_art_2026-10-16.md). 꾸밈 그림이라 화면 읽기에선 감춘다(책 단추가 이름 · 급 · 상태를 읽는다)
- */
-const bookImg = (school, tier) => `<img class="book-svg" src="ui/books/${BOOK_SCHOOLS.includes(school) ? school : 'german'}_${tier}.webp" alt="" aria-hidden="true" draggable="false">`;
-// 값 표지 금화 — 대기실 지갑과 같은 금화 그림 (wallet_icons.js — 꾸밈이라 감춤: 단추 이름이 '금화 N' 을 읽는다)
-const PRICE_COIN = `<img class="price-coin" src="${COIN_SRC}" alt="" aria-hidden="true" draggable="false">`;
+// 값 그림 — 대기실 지갑과 같은 금화 · 천 주머니(wallet_icons.js — 꾸밈이라 감춤: 단추 이름이 '금화 N · 머리 N' 을 읽는다)
+const COIN = `<img class="price-icon" src="${COIN_SRC}" alt="" aria-hidden="true" draggable="false">`;
+const POUCH = `<img class="price-icon" src="${POUCH_SRC}" alt="" aria-hidden="true" draggable="false">`;
+const won = (v) => v.toLocaleString('ko-KR');
+/** 값 표시 (그림 + 숫자 — 글 없음): 금화만 · 머리만 · 둘 다 */
+const priceHtml = (coins, heads) => [coins ? `<span class="price-part">${COIN}${won(coins)}</span>` : '', heads ? `<span class="price-part">${POUCH}${won(heads)}</span>` : ''].join('');
+const priceWords = (coins, heads) => [coins ? `금화 ${won(coins)}` : '', heads ? `머리 ${won(heads)}` : ''].filter(Boolean).join(' · ');
+const STATE_KO = { learned: '익힘', open: '배울 수 있음', locked: '잠김', closed: '준비 중' };
 
-/** 책 자리 a 에서 b 쪽으로 — 그 책의 칸(섬네일 · 값 · 이름, 판 좌표 상자들)을 마지막으로 벗어나는 거리 + 틈 (칸 사이 작은 틈에서 멈추지 않게 끝까지 본다) */
-function trimAt(a, b, boxes) {
-  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
-  let last = -0.5;
-  for (let t = 0; t < len; t += 0.5) {
-    const x = a[0] + (dx * t) / len, y = a[1] + (dy * t) / len;
-    if (boxes.some((r) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3])) last = t;
-  }
-  return last + 0.5 + GAP;
+// 원어 (사장님 10/19 02:0x '대기실 스킬에서만 원어 병기') — 패시브 이름 · 원어 (config SCHOOL_PASSIVE 이름 — 10/21)
+const PASSIVE_NAME = {
+  german: ['인데스', 'Indes'],
+  italian: ['곧은 선 (리네아 레타)', 'linea retta'],
+  iberian: ['손목 힘', null],
+  japanese: ['기다림과 침 (켄타이)', '懸待'],
+  chinese: ['숨 바꾸기 (토납)', '吐納'],
+};
+/** 기술 이름: '뜻 (소리)' + 원어 → '뜻 (소리 · 원어)'. 원어가 없으면 그대로 */
+export function withOrig(nameKo, orig) {
+  const m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(nameKo ?? '');
+  if (!orig) return nameKo ?? '';
+  return m ? `${m[1]} (${m[2]} · ${orig})` : `${nameKo} (${orig})`;
 }
+const ROLE_KO = { enh: '강화동작', step: '걸음 명령', chain: '이어 긋기' };
+/** 상세 카드 제목 · 갈래 글 */
+export function nodeTitle(school, n) {
+  const cat = NODE_CAT[n.cat];
+  if (isClosed(school, n)) return { title: n.cat === 'secret' ? '비기' : n.title ?? `${n.l1} · ${n.l2}`, kind: cat.label };
+  if (n.u) {
+    const e = PLAYER_UNIQUE[school]?.find((x) => x.name === n.u), U = e && uniqueDef(school, e);
+    return { title: U ? withOrig(U.nameKo, U.orig) : `${n.l1} ${n.l2}`, kind: e ? `${cat.label} · ${ROLE_KO[e.role] ?? ''}`.replace(/ · $/, '') : cat.label };
+  }
+  if (n.cat === 'passive') { const [nm, o] = PASSIVE_NAME[school] ?? [n.l2, null]; return { title: `패시브 · ${withOrig(nm, o)}`, kind: cat.label }; }
+  if (n.cat === 'secret') { const S = TRADITIONS[school]?.secret, rd = /\(([^()]*)\)/.exec(S?.nameKo ?? '')?.[1]; return { title: `비기 · ${S?.orig && rd ? `${S.nameKo.replace(/\s*\(.*$/, '')} (${rd} · ${S.orig})` : S?.nameKo ?? n.l2}`, kind: cat.label }; }
+  return { title: n.title ?? `${n.l1} · ${n.l2}`, kind: cat.label };
+}
+const shortName = (school, n) => (n.u || n.cat === 'atk' ? `${n.l1} ${n.l2}` : n.title ?? `${n.l1} · ${n.l2}`);
 
-/** 룬 줄 하나 (판 좌표): 두 책 칸 사이에 보이는 곧은 줄(t0 · t1 = 양 끝에서 비운 거리) + 그 가운데 룬 꺾쇠 둘(ᚲ 꼴) + 작은 마름모 — 짧으면 마름모만 */
-function runeLink(a, b, lit, t0, t1) {
-  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
-  const p = (t, n = 0) => `${(a[0] + ux * t + nx * n).toFixed(1)} ${(a[1] + uy * t + ny * n).toFixed(1)}`;
-  const vis = len - t0 - t1, m = t0 + vis / 2, rune = vis >= 22 ? 'full' : vis >= 10 ? 'gem' : 'line';
-  let d = vis > 1 ? `M${p(t0)} L${p(len - t1)}` : '';
-  if (rune === 'full') d += ` M${p(m - 9, 6)} L${p(m - 3)} L${p(m - 9, -6)} M${p(m + 3, 6)} L${p(m + 9)} L${p(m + 3, -6)}`;
-  const g = document.createElementNS(SVG_NS, 'g');
-  g.setAttribute('class', `rune-link${lit ? ' lit' : ''}`);
-  g.dataset.visible = vis.toFixed(1); // 시험 도구가 읽는다 (skill_tree_layout.mjs)
-  g.dataset.rune = rune;
-  const path = document.createElementNS(SVG_NS, 'path');
-  path.setAttribute('d', d);
-  g.append(path);
-  if (rune !== 'line') {
-    const gem = document.createElementNS(SVG_NS, 'path');
-    gem.setAttribute('class', 'rune-gem');
-    gem.setAttribute('d', `M${p(m, 0)} m0 -3 l3 3 l-3 3 l-3 -3 z`);
-    g.append(gem);
-  }
-  return g;
-}
+// 글 폭 (em) — 한글 1 · 빈칸 0.3 · 그 밖 0.6 (칸에 글이 안 들면 글자를 줄인다)
+const emWidth = (t) => [...String(t)].reduce((a, ch) => a + (/[가-힣]/.test(ch) ? 1 : ch === ' ' ? 0.3 : 0.62), 0);
+const CX0 = 70, CX1 = 940; // 가로 자리(cx) 범위 — 다섯 유파 칸이 모두 든다 (data.mjs 84 ~ 924)
 
 /**
- * root: 스킬북 칸(Shadow root 안의 #skillTreeHost) · test: 테스트 경로(모두 열림 — 사고팔기 없음) · onWallet(): 금화가 바뀌면(대기실 내 정보 칸 다시 그리기) ·
- * announce(text): 화면 읽기 알림 (10/18: 대기실 3D 몸에 알리던 onBooks 는 그 몸과 같이 지움)
+ * root: 스킬 칸(Shadow root 안의 #skillTreeHost) · test: 테스트 경로(모든 칸 익힘 — 배우기 · 초기화 없음) · onWallet(): 금화 · 머리 · 레벨이 바뀌면(대기실 내 정보 칸 다시 그리기) ·
+ * announce(text): 화면 읽기 알림
  */
 export function mountSkillTree(root, { test = false, onWallet = () => {}, announce = () => {} } = {}) {
-  root.innerHTML = `<div class="school-tabs" role="tablist" aria-label="유파">${BOOK_SCHOOLS.map((s, i) => `<button role="tab" data-school="${s}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}">${TRADITIONS[s].nameKo}</button>`).join('')}</div>
-    <div class="tree-frame card-frame"><div class="tree-board" role="tabpanel" aria-label="스킬북 별자리"><svg class="tree-links" viewBox="0 0 300 210" preserveAspectRatio="none" aria-hidden="true"></svg><div class="tree-nodes"></div>
-    <section class="book-detail" hidden aria-labelledby="bookTitle"><button type="button" class="detail-close" aria-label="설명 닫기">×</button>
-      <div class="detail-head"><span class="book-thumb detail-thumb"></span><div><b id="bookTitle" tabindex="-1"></b><small id="bookMeta"></small></div></div>
-      <p id="bookEffect" class="detail-effect"></p><ul id="bookList" class="detail-list" hidden></ul><p id="bookSource" class="detail-source"></p><p id="bookState" class="detail-state" role="status"></p>
-      <div class="detail-actions start-actions"><button type="button" id="buyBook">구입</button><button type="button" id="useBook">사용</button><button type="button" id="sealBook">봉인</button></div>
-    </section></div></div>`;
+  root.innerHTML = `<div class="school-tabs" role="tablist" aria-label="유파">${TREE_SCHOOLS.map((s, i) => `<button role="tab" data-school="${s}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}">${TRADITIONS[s].nameKo}</button>`).join('')}</div>
+    <div class="tree-frame card-frame"><div class="tree-scroll"><div class="tree-board" role="tabpanel"><svg class="tree-links" aria-hidden="true"></svg><div class="tree-nodes"></div></div></div>
+    <button type="button" class="tree-reset" id="treeReset"><span>초기화</span><span class="price-part">${POUCH}${RESET_HEADS}</span></button>
+    <section class="node-detail" hidden aria-labelledby="nodeTitle"><button type="button" class="detail-close" aria-label="설명 닫기">×</button>
+      <div class="detail-head"><b id="nodeTitle" tabindex="-1"></b><small id="nodeMeta"></small></div>
+      <p id="nodeEffect" class="detail-effect"></p><p id="nodePre" class="detail-pre"></p><p id="nodePrice" class="detail-price"></p><p id="nodeState" class="detail-state" role="status"></p>
+      <div class="detail-actions start-actions"><button type="button" id="learnNode">배우기</button></div>
+    </section>
+    <section class="reset-confirm" hidden aria-labelledby="resetTitle"><b id="resetTitle" tabindex="-1"></b><p id="resetBody"></p><p id="resetPrice" class="detail-price"></p>
+      <div class="confirm-actions"><button type="button" class="secondary" id="resetCancel">취소</button><button type="button" class="primary" id="resetOk">초기화</button></div>
+    </section></div>`;
   const events = new AbortController();
   const on = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const $ = (sel) => root.querySelector(sel);
   const tabs = [...root.querySelectorAll('.school-tabs [role=tab]')];
-  let school = BOOK_SCHOOLS[0], selected = null, lastNode = null;
-  const stateOf = (books, id) => (test ? 'use' : bookState(books, id));
+  const frame = $('.tree-frame'), scroller = $('.tree-scroll'), board = $('.tree-board');
+  let school = TREE_SCHOOLS[0], selected = null, lastNode = null, geo = null;
+  const learnedNow = () => (test ? new Set(nodesOf(school).map((n) => n.id)) : readLearned()[school]);
+  const stateOf = (n, learned) => (test && !isClosed(school, n) ? 'learned' : nodeState(school, n, learned));
 
-  // 줄은 책 칸을 잰 뒤 그린다 (책 크기는 판 너비를 따른다 — 판이 숨어 있으면 보일 때 ResizeObserver 가 다시 부른다)
-  function drawLinks(books = readBooks()) {
-    const board = $('.tree-board'), br = board.getBoundingClientRect(), C = CONSTELLATIONS[school], list = booksOf(school);
-    if (!br.width || !br.height) return;
-    const kx = 300 / br.width, ky = 210 / br.height;
-    const boxes = [...root.querySelectorAll('.book-node')].map((n) => [...n.querySelectorAll('.book-thumb, .book-cat, .book-price')].map((e) => {
-      const r = e.getBoundingClientRect();
-      return [(r.left - br.left) * kx, (r.top - br.top) * ky, (r.right - br.left) * kx, (r.bottom - br.top) * ky];
-    }));
-    $('.tree-links').replaceChildren(...C.links.map(([i, j]) => {
-      const a = C.at[i - 1], b = C.at[j - 1], lit = stateOf(books, list[i - 1].id) !== 'unowned' && stateOf(books, list[j - 1].id) !== 'unowned';
-      return runeLink(a, b, lit, trimAt(a, b, boxes[i - 1]), trimAt(b, a, boxes[j - 1]));
-    }));
+  // ── 자리 셈: 판 폭 · 높이에서 칸 크기 · 줄 간격 (줄이 많아 판에 안 들면 판을 늘려 안에서 내려 본다) ──
+  function layout() {
+    const W = scroller.clientWidth, H = scroller.clientHeight;
+    if (!W || !H) return null;
+    const nodes = nodesOf(school), rows = Math.max(...nodes.map((n) => n.d)) + 1;
+    let gap = Infinity; // 같은 줄 칸 사이 가장 좁은 cx
+    for (const a of nodes) for (const b of nodes) if (a !== b && a.d === b.d) gap = Math.min(gap, Math.abs(a.cx - b.cx));
+    const s = Math.min(1.5, Math.max(0.85, W / 386)); // 글자 · 틈 비 (폰 가로 판 386 px = 1)
+    const nodeW = Math.round(Math.max(50, Math.min(84 * s, ((W - 8) * gap) / (CX1 - CX0) - 5 * s)));
+    const nodeH = Math.round(Math.max(28, Math.min(40, 29 * s)));
+    const top = 6, bottom = 10; // 위 여백 · 아래 여백(값 알약이 칸 아래로 반쯤 나옴)
+    const pitch = Math.max(nodeH + 10 * s, rows > 1 ? (H - top - bottom - nodeH) / (rows - 1) : 0);
+    const height = Math.ceil(top + nodeH + pitch * (rows - 1) + bottom);
+    const padX = nodeW / 2 + 3;
+    const x = (cx) => padX + ((cx - CX0) / (CX1 - CX0)) * (W - 2 * padX);
+    const y = (d) => top + nodeH / 2 + d * pitch;
+    return { W, H, height, nodeW, nodeH, pitch, s, x, y, scroll: height > H + 0.5 };
   }
-  const board = $('.tree-board');
-  function fit() {
-    const w = board.clientWidth;
-    if (w) board.style.setProperty('--s', Math.min(1, Math.max(0.6, w / BOARD_PX)).toFixed(3));
-    drawLinks();
-  }
-  const sizer = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
-  sizer?.observe(board);
 
+  function drawLinks(learned) {
+    const svg = $('.tree-links'), g = geo, T = TREE[school];
+    svg.setAttribute('viewBox', `0 0 ${g.W} ${g.height}`);
+    svg.setAttribute('width', g.W);
+    svg.setAttribute('height', g.height);
+    const parts = [];
+    const bottomOf = (n) => [g.x(n.cx), g.y(n.d) + g.nodeH / 2], topOf = (n) => [g.x(n.cx), g.y(n.d) - g.nodeH / 2];
+    const curve = ([x0, y0], [x1, y1]) => { const m = (y0 + y1) / 2; return `M${x0.toFixed(1)} ${y0.toFixed(1)} C${x0.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+    const cls = (from, to) => ['tree-link', to.opt ? 'opt' : '', learned.has(from.id) && learned.has(to.id) ? 'lit' : learned.has(from.id) && !isClosed(school, to) ? 'ready' : ''].filter(Boolean).join(' ');
+    const gate = T.gate;
+    if (gate) { // 독일 관문 — 2단계 셋 아래 가로 띠 하나 → 3단계 셋 (사장님 18:5x '기본기를 중시')
+      const from = gate.from.map((id) => nodeOf(school, id)), to = gate.to.map((id) => nodeOf(school, id));
+      const yb = (g.y(from[0].d) + g.nodeH / 2 + g.y(to[0].d) - g.nodeH / 2) / 2;
+      const xs = [...from, ...to].map((n) => g.x(n.cx));
+      const allIn = from.every((n) => learned.has(n.id));
+      parts.push(`<path class="tree-link gate${allIn ? ' lit' : ''}" d="M${Math.min(...xs).toFixed(1)} ${yb.toFixed(1)} H${Math.max(...xs).toFixed(1)}"/>`);
+      for (const n of from) { const [x0, y0] = bottomOf(n); parts.push(`<path class="tree-link${learned.has(n.id) ? ' lit' : ''}" d="M${x0.toFixed(1)} ${y0.toFixed(1)} V${yb.toFixed(1)}"/>`); }
+      for (const n of to) { const [x1, y1] = topOf(n); parts.push(`<path class="tree-link${allIn && learned.has(n.id) ? ' lit' : allIn ? ' ready' : ''}" d="M${x1.toFixed(1)} ${yb.toFixed(1)} V${y1.toFixed(1)}"/>`); }
+    }
+    for (const n of nodesOf(school)) {
+      if (gate?.to.includes(n.id)) continue;
+      for (const pid of n.pre) parts.push(`<path class="${cls(nodeOf(school, pid), n)}" d="${curve(bottomOf(nodeOf(school, pid)), topOf(n))}"/>`);
+      if (n.pre.length > 1) { const [x1, y1] = topOf(n); parts.push(`<circle class="tree-join" cx="${x1.toFixed(1)}" cy="${(y1 - 1).toFixed(1)}" r="${(2.6 * g.s).toFixed(1)}"/>`); } // '모두 익혀야' 표지 (그림의 금색 줄)
+    }
+    svg.innerHTML = parts.join('');
+  }
+
+  function size() {
+    geo = layout();
+    if (!geo) return;
+    board.style.width = `${geo.W}px`;
+    board.style.height = `${geo.height}px`;
+    board.style.setProperty('--nw', `${geo.nodeW}px`);
+    board.style.setProperty('--nh', `${geo.nodeH}px`);
+    board.style.setProperty('--s', geo.s.toFixed(3));
+    scroller.dataset.scroll = geo.scroll ? 'y' : '';
+  }
   function render() {
-    const books = readBooks(), C = CONSTELLATIONS[school], list = booksOf(school);
-    $('.tree-nodes').innerHTML = list.map((b, k) => {
-      const st = stateOf(books, b.id), [x, y] = C.at[k];
-      const label = `${b.title} · ${ROMAN[b.tier]}급 ${b.rarityKo} · ${st === 'unowned' ? `금화 ${b.price} · 사지 않음` : st === 'use' ? '사용 중' : '봉인'}`;
-      return `<button type="button" class="book-node" data-tier="${b.rarity}" data-book="${b.tier}" data-state="${st}" style="left:${(x / 3).toFixed(2)}%;top:${(y / 2.1).toFixed(2)}%" aria-label="${label}" aria-pressed="${selected === b.tier}">
-        <span class="book-thumb" data-tier="${b.rarity}">${bookImg(school, b.tier)}</span>
-        <span class="book-cat">${b.label}</span>${st === 'unowned' ? `<span class="book-price">${PRICE_COIN}${b.price}</span>` : ''}</button>`;
-    }).join('');
+    size();
+    if (geo && scroller.clientWidth !== geo.W) size(); // 내림 막대가 생기거나 없어져 폭이 바뀌면 한 번 더 (가로로 넘치지 않게)
+    const learned = learnedNow(), P = readProgress();
     root.dataset.school = school;
-    drawLinks(books);
-    renderDetail(books);
+    board.setAttribute('aria-label', `${TRADITIONS[school].nameKo} 스킬트리`);
+    if (geo) {
+      $('.tree-nodes').innerHTML = nodesOf(school).map((n) => {
+        const st = stateOf(n, learned), cat = NODE_CAT[n.cat];
+        const l2 = st === 'closed' ? '준비 중' : n.l2;
+        const f1 = Math.min(11 * geo.s, (geo.nodeW - 6) / emWidth(n.l1)), f2 = Math.min(10 * geo.s, (geo.nodeW - 6) / emWidth(l2));
+        const price = st === 'open' ? `<span class="node-price">${priceHtml(n.price, n.heads)}</span>` : '';
+        const label = `${shortName(school, n)} · ${STATE_KO[st]}${st === 'open' ? ` · ${priceWords(n.price, n.heads)}` : ''}`;
+        return `<button type="button" class="tree-node" data-node="${n.id}" data-cat="${n.cat}" data-tier="${cat.tier}" data-state="${st}" style="left:${geo.x(n.cx).toFixed(1)}px;top:${geo.y(n.d).toFixed(1)}px" aria-label="${label}" aria-pressed="${selected === n.id}">
+          <span class="node-l1" style="font-size:${f1.toFixed(2)}px">${n.l1}</span><span class="node-l2" style="font-size:${f2.toFixed(2)}px">${l2}</span>${price}</button>`;
+      }).join('');
+      drawLinks(learned);
+    }
+    renderReset(learned, P);
+    renderDetail(learned, P);
   }
 
-  function renderDetail(books = readBooks()) {
-    const box = $('.book-detail');
-    if (!selected) { box.hidden = true; return; }
-    const b = booksOf(school)[selected - 1], st = stateOf(books, b.id), coins = readProgress().coins;
+  function renderReset(learned, P) {
+    const btn = $('#treeReset'), pre = resetPreview(school, P);
+    btn.hidden = test;
+    btn.disabled = !pre.ok;
+    const why = pre.why === 'empty' ? '익힌 칸이 없습니다' : pre.why === 'heads' ? '머리가 모자랍니다' : '';
+    btn.setAttribute('aria-label', `${TRADITIONS[school].nameKo} 스킬 초기화 · 머리 ${RESET_HEADS}${why ? ` · ${why}` : ''}`);
+    btn.title = why;
+  }
+
+  function renderDetail(learned = learnedNow(), P = readProgress()) {
+    const box = $('.node-detail');
+    const n = selected && nodeOf(school, selected);
+    if (!n) { box.hidden = true; return; }
+    const st = stateOf(n, learned), cat = NODE_CAT[n.cat], { title, kind } = nodeTitle(school, n);
     box.hidden = false;
     box.dataset.state = st;
-    $('.detail-thumb').dataset.tier = b.rarity;
-    $('.detail-thumb').innerHTML = bookImg(school, b.tier);
-    $('.detail-head').dataset.state = st;
-    $('#bookTitle').textContent = b.orig ? `${b.title} (${b.orig})` : b.title; // 원어는 스킬북에서만 (10/19 3차)
-    $('#bookTitle').dataset.tier = b.rarity;
-    // 급 · 등급 · 유파 · 지금 상태(사용 중 = 싸움에서 켜짐 · 봉인 = 꺼짐) 한 줄 — 폰 가로의 좁은 판에서도 단추까지 한눈에 들어오게
-    $('#bookMeta').textContent = `${ROMAN[b.tier]}급 · ${b.rarityKo} · ${b.schoolKo} 유파${test ? '' : st === 'use' ? ' · 사용 중' : st === 'sealed' ? ' · 봉인' : ''}`;
-    $('#bookMeta').dataset.tier = b.rarity;
-    $('#bookEffect').textContent = b.effect; // '(임시)' 꼬리는 개발 말이라 뺌 (10/19 글 방침 2판 — 자료 provisional 은 그대로)
-    $('#bookList').hidden = !b.list;
-    $('#bookList').classList.toggle('lines', !!b.lines); // 고유 공격 책: 한 줄에 하나 · 쓰는 법 (10/21)
-    $('#bookList').innerHTML = (b.list ?? []).map((n) => `<li>${n}</li>`).join(''); // 고유 공격 넷 — 한글 이름만 이어서(원어는 싸움 화면 기술 칸에)
-    $('#bookSource').textContent = `출처 · ${b.source}`;
-    const head = headPriceOf(b.tier); // 머리로 사는 값 — 사장님 확인 전 (지금 null — 단추 없음)
-    const note = test ? '테스트 경로 — 모든 책이 열려 있습니다'
-      : st === 'unowned' && coins < b.price ? `금화가 모자랍니다 — 가진 금화 ${coins}${head != null ? ` · 머리 ${head}` : ''}` : st === 'unowned' && head != null ? `머리 ${head}` : '';
-    $('#bookState').textContent = note;
-    $('#bookState').hidden = !note;
-    $('#buyBook').hidden = test || st !== 'unowned';
-    $('#buyBook').textContent = `구입 · 금화 ${b.price}`;
-    $('#buyBook').disabled = coins < b.price || (b.planned && b.kind === 'secret'); // 닫힌 비기 책은 살 수 없음 (10/21)
-    if (b.planned && b.kind === 'secret') $('#buyBook').textContent = '준비 중';
-    for (const id of ['#useBook', '#sealBook']) $(id).hidden = test || st === 'unowned';
-    $('#useBook').disabled = st === 'use';
-    $('#sealBook').disabled = st === 'sealed';
+    box.dataset.tier = cat.tier;
+    $('#nodeTitle').textContent = title;
+    $('#nodeTitle').dataset.tier = cat.tier;
+    $('#nodeMeta').textContent = `${kind} · ${TRADITIONS[school].nameKo} 유파${test ? '' : ` · ${STATE_KO[st]}`}`;
+    $('#nodeMeta').dataset.tier = cat.tier;
+    $('#nodeEffect').textContent = st === 'closed' ? '준비 중입니다.' : nodeEff(school, n);
+    const pre = n.pre.map((id) => shortName(school, nodeOf(school, id)));
+    $('#nodePre').textContent = pre.length ? `먼저 익힐 칸 · ${pre.join(' · ')}${pre.length > 1 ? ' — 모두' : ''}` : '처음 익히는 칸 — 모든 칸이 이 아래';
+    $('#nodePrice').innerHTML = st === 'closed' ? '' : `<span class="sr-only">값 ${priceWords(n.price, n.heads)}</span><span aria-hidden="true">${priceHtml(n.price, n.heads)}</span>`;
+    $('#nodePrice').hidden = st === 'closed' || st === 'learned' || test;
+    const can = canLearn(school, n, learned, P);
+    const note = test ? '테스트 경로 — 모든 칸을 익힌 것으로 봅니다.'
+      : st === 'learned' ? '익힌 칸입니다.'
+      : st === 'closed' ? '아직 배울 수 없습니다.'
+      : can.why === 'pre' ? '먼저 익힐 칸이 있습니다.'
+      : can.why === 'coins' ? `금화가 모자랍니다 — 가진 금화 ${won(P.coins)}`
+      : can.why === 'heads' ? `머리가 모자랍니다 — 가진 머리 ${won(P.heads)}` : '';
+    $('#nodeState').textContent = note;
+    $('#nodeState').hidden = !note;
+    const btn = $('#learnNode');
+    btn.hidden = test || st === 'learned';
+    btn.disabled = !can.ok;
+    btn.innerHTML = st === 'closed' ? '준비 중' : `배우기`;
   }
 
-  function select(tier, node = null) {
-    selected = selected === tier ? null : tier;
+  function select(id, node = null) {
+    selected = selected === id ? null : id;
     lastNode = node;
+    closeReset(false);
     render();
-    if (selected) $('#bookTitle').focus({ preventScroll: true });
+    if (selected) $('#nodeTitle').focus({ preventScroll: true });
   }
   function selectTab(tab) {
     for (const t of tabs) { const sel = t === tab; t.setAttribute('aria-selected', String(sel)); t.tabIndex = sel ? 0 : -1; }
-    school = tab.dataset.school; selected = null; render();
+    school = tab.dataset.school; selected = null; closeReset(false); scroller.scrollTop = 0; render();
   }
   for (const tab of tabs) {
     on(tab, 'click', () => selectTab(tab));
@@ -178,24 +222,49 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
       selectTab(next); next.focus();
     });
   }
-  on($('.tree-nodes'), 'click', (e) => { const n = e.target.closest('.book-node'); if (n) select(+n.dataset.book, n); });
-  on($('.detail-close'), 'click', () => { const n = lastNode; selected = null; render(); root.querySelector(`.book-node[data-book="${n?.dataset.book}"]`)?.focus(); });
-  on($('#buyBook'), 'click', () => {
-    const b = booksOf(school)[selected - 1];
-    const r = buyBook(school, b.tier);
-    announce(r.ok ? `${b.title} 구입 — 금화 ${b.price}${r.saved ? '' : '. 이번 실행 동안 유지됩니다.'}` : r.why === 'coins' ? '금화가 모자랍니다.' : '살 수 없습니다.');
+  on($('.tree-nodes'), 'click', (e) => { const n = e.target.closest('.tree-node'); if (n) select(n.dataset.node, n); });
+  on($('.detail-close'), 'click', () => { const id = lastNode?.dataset.node; selected = null; render(); root.querySelector(`.tree-node[data-node="${id}"]`)?.focus(); });
+  on($('#learnNode'), 'click', () => {
+    const n = nodeOf(school, selected);
+    if (!n) return;
+    const r = learnNode(school, n.id);
+    announce(r.ok ? `${shortName(school, n)} 익힘 — ${priceWords(n.price, n.heads)}${r.saved ? '' : '. 이번 실행 동안 유지됩니다.'}` : r.why === 'coins' ? '금화가 모자랍니다.' : r.why === 'heads' ? '머리가 모자랍니다.' : '배울 수 없습니다.');
     render(); onWallet();
   });
-  for (const [id, use] of [['#useBook', true], ['#sealBook', false]]) on($(id), 'click', () => {
-    const b = booksOf(school)[selected - 1];
-    const saved = setBookInUse(b.id, use);
-    announce(`${b.title} ${use ? '사용' : '봉인'}${saved ? '' : '. 이번 실행 동안 유지됩니다.'}`);
-    render();
+  // ── 유파 초기화 (머리 1 · 확인 단계) ──
+  function openReset() {
+    const pre = resetPreview(school);
+    if (!pre.ok || test) return;
+    selected = null; render();
+    const box = $('.reset-confirm');
+    $('#resetTitle').textContent = `${TRADITIONS[school].nameKo} 스킬 초기화`;
+    $('#resetBody').textContent = `익힌 칸 ${pre.count}개를 모두 지우고 쓴 값을 돌려받습니다. 레벨도 ${pre.count}만큼 내려갑니다.`;
+    $('#resetPrice').innerHTML = `<span class="price-row"><span class="price-label">돌려받음</span>${priceHtml(pre.coins, pre.heads) || '<span class="price-part">0</span>'}</span><span class="price-row"><span class="price-label">드는 값</span>${priceHtml(0, pre.cost)}</span>`;
+    box.hidden = false;
+    $('#resetTitle').focus({ preventScroll: true });
+  }
+  function closeReset(refocus = true) {
+    const box = $('.reset-confirm');
+    if (box.hidden) return;
+    box.hidden = true;
+    if (refocus) $('#treeReset').focus({ preventScroll: true });
+  }
+  on($('#treeReset'), 'click', openReset);
+  on($('#resetCancel'), 'click', () => closeReset());
+  on($('#resetOk'), 'click', () => {
+    const r = resetSchool(school);
+    closeReset(false);
+    announce(r.ok ? `${TRADITIONS[school].nameKo} 스킬 초기화 — 칸 ${r.count}개 · 돌려받음 ${priceWords(r.coins, r.heads) || '0'} · 머리 ${RESET_HEADS} 사용${r.saved ? '' : '. 이번 실행 동안 유지됩니다.'}` : r.why === 'heads' ? '머리가 모자랍니다.' : '초기화할 칸이 없습니다.');
+    render(); onWallet();
+    $('#treeReset').focus({ preventScroll: true });
   });
+  on(root, 'keydown', (e) => { if (e.key === 'Escape' && !$('.reset-confirm').hidden) { e.preventDefault(); closeReset(); } });
+  const sizer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => render()) : null;
+  sizer?.observe(frame);
   render();
   return {
     refresh: render,
-    show(s, tier = null) { const tab = tabs.find((t) => t.dataset.school === s); if (tab) selectTab(tab); if (tier) select(tier); },
+    show(s, id = null) { const tab = tabs.find((t) => t.dataset.school === s); if (tab) selectTab(tab); if (id) select(id); },
     destroy() { events.abort(); sizer?.disconnect(); },
   };
 }

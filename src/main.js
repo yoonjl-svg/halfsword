@@ -18,7 +18,8 @@ import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이�
 import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
 import { journeyCoins, awardHead } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x)
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
-import { readBooks, playerKit, kitUniqueStage, bookTierParam } from './skill_books.js'; // 대기실 스킬북 = 플레이어 유파 몫 — 모든 판 (사장님 10/16 04:1x 산 책만 · 08:1x 인장 없앰, docs/strike/school_kit_map.md §2 · §3)
+import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
+import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
@@ -73,6 +74,9 @@ const testRoute = createTestRoute(params); // 인자가 없으면 아무것도 �
 // 이미 받은 인장 → 금화 (사장님 10/16 04:2x · 08:1x '인장 제도 없애' — seal_coins.js): 이 판을 처음 연 때 한 번, 첫 화면 · 옛 메뉴 · 주소 판 어느 길이든(테스트 경로만 빼고).
 //  대기실을 기다리면 인장을 없앤 뒤 옛 메뉴·주소 판에서 깬 무대까지 옛 셈으로 금화가 된다 — 그래서 여기서 (확인표 1928). 알림은 다음 대기실이 한 번 (lobby.js)
 if (!testRoute.active) convertSeals();
+// 옛 스킬북 → 스킬트리 옮기기 (사장님 10/21 — skill_tree_store.js): 이 판을 처음 연 때 한 번(모든 플레이어 · 새 플레이어도 · 어느 길이든 · 테스트 경로만 빼고) — 산 책을 거두고 쓴 금화를 돌려준 뒤 금화 500.
+//  두 번 일하지 않는다(진행 저장 안의 기록 · 짝 열쇠). 알림은 다음 대기실이 한 번 (lobby.js takeTreeNotice)
+if (!testRoute.active) migrateSkillBooks();
 // 테스트용 ?morgTorque=33 : 모르겐슈테른 손목 겨눔 토크 상한(기본 22 = 한손 무기 공통, 확인표 169)을 이번 실행에만 바꾼다 — 사장님 비교용, 저장하지 않는다
 const morgTorque = +params.get('morgTorque');
 if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = morgTorque;
@@ -163,7 +167,8 @@ if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.ge
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
 // 테스트 경로도 기본 켬 (사장님 10/14 03:1x '테스트에서 켜' — 10/14 02:0x 부터 '궤적은 내 것' 강화 판으로 다시 만드는 동안 꺼 두었던 것). 끄려면 `?uniqueAssist=0`
 if (params.has('uniqueEnhance')) CONFIG.UNIQUE_ASSIST.enhance = Math.max(0, +params.get('uniqueEnhance') || 0); // 고유 동작 강화 세기(10/14): 기본 1 · 0 = 기술 이름 알림만 · 0.5 = 절반 (걸음·몸·끝 힘 한꺼번에)
-const UNIQUE_STAGE = bookTierParam(params.get('uniqueStage')); // 개발 인자 `?uniqueStage=0..5`: 손에 든 무기 유파의 N 급까지 스킬북을 '사용'으로 (0 = 책 없음 · 2 = 보법·막기 · 5 = 모두 — 산 책·테스트 경로보다 먼저, skill_books.js playerKit). 없으면 산 책 · 테스트 경로는 모두
+const UNIQUE_STAGE = stageParam(params.get('uniqueStage')); // 개발 인자 `?uniqueStage=0..5`: 손에 든 무기 유파의 옛 급 N 까지의 스킬트리 칸을 켬 (0 = 칸 없음 · 1 = 보법 · 2 = + 막기 · 3 = + 고유 공격 · 심화 · 4 = + 패시브 · 5 = 모두 — 익힌 칸 · 테스트 경로보다 먼저, skill_tree_store.js playerKit). 없으면 익힌 칸 · 테스트 경로는 모두
+const SKILL_NODES = params.get('skillNodes'); // 개발 인자 `?skillNodes=G1,G5`(10/21): 그 칸만 켬 · `all` = 모두 · 빈 값 = 없음 — ?uniqueStage 보다도 먼저 (칸 하나씩 시험)
 const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..5` (실력 숫자 이름·고유 동작 거르기·5 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
 const FOE_PROF = /^[0-9]$/.test(FOE_PROF_PARAM ?? '') && +FOE_PROF_PARAM <= AI_PROFICIENCY.max ? +FOE_PROF_PARAM : null;
 // 마무리 스위치 (10/12 샛별 가져오기 2차 — docs/import/saetbyeol_round2_2026-10-12.md, 기본은 둘 다 끔):
@@ -239,7 +244,9 @@ function drawCardIds() {
   const forced = (params.get('cards') || '').split(',').filter((id) => id && getWeapon(id).id === id).slice(0, 2);
   if (forced.length === 2 && forced[0] !== forced[1]) return forced;
   // 등급을 먼저 뽑고 그 등급 안에서 고른다 (사장님 결정: 커먼 40 · 레어 27 · 에픽 16 · 레전드 5 · 쓰레기 7 · ??? 5, weapons.js TIER_DRAW)
-  return drawWeaponCards(PLAYER_WEAPON_POOL, 2);
+  // 편지 (스킬트리 — 사장님 10/21): 등급은 그대로 먼저 뽑고, 그 등급 안에서 편지를 가진 유파의 무기 칸 무게 × 2 (편지가 없으면 지금 확률과 같음 — weapons.js drawWeaponCards weightOf)
+  const letters = playerLetters({ test: testRoute.active });
+  return drawWeaponCards(PLAYER_WEAPON_POOL, 2, letters.size ? { weightOf: (id) => letterMul(traditionOf(getWeapon(id)), letters) } : {});
 }
 
 // ── 설정 (브라우저에 저장) ──
@@ -361,7 +368,7 @@ const journeySaves = () => journeyMode && JOURNEY_PURE;
 // 대기실 장착을 싸움에 (docs/import/lobby_fix_2026-10-16.md §3): 첫 화면·대기실에서 연 여정만(journeySaves — 주소 고정 판·테스트 경로·옛 메뉴 판은 지금 그대로).
 //  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리) ·
 //  neck = 용사의 눈물(있으면 플레이어 기력 무한 + 내 기력 막대 없음 · 겉모습 그대로 — 10/17, docs/import/hero_tear_2026-10-17.md).
-//  스킬북(유파 몫)은 여기가 아니라 모든 판이 읽는다 — newRound 의 playerKit (10/16 08:1x 인장 없앰)
+//  스킬트리(유파 몫)는 여기가 아니라 모든 판이 읽는다 — newRound 의 playerKit (10/16 08:1x 인장 없앰 · 10/21 스킬트리)
 const journeyLoadout = () => (journeySaves() ? { weapon: readLobbyEquipment(), armor: readLobbyArmor(), neck: readLobbyNeck() } : null);
 const LOOK_BAREHEAD = { ...LOOKS.player, helmet: null }; // 케틀 햇을 벗은 주인공 — 겉모습·머리 방어 둘 다 없음 (fighter.js look.helmet)
 // 이번 판 금화 · 머리 (결과 창 한 줄 — showRewardLine). 첫 화면·대기실 여정만 바뀐다 (주소 고정 판 · 테스트 경로 · 옛 메뉴 판은 그대로)
@@ -610,8 +617,9 @@ function newRound(weaponId) {
   const before = new Set(scene.children);
   const foeWeapon = foeWeaponId;
   const loadout = journeyLoadout();
-  // 손에 든 무기 유파의 스킬북 — 모든 판 (첫 화면·대기실 여정 · 옛 메뉴 판 · 주소 판 — 10/16 08:1x 인장 없앰). 테스트 경로 = 모두 · ?uniqueStage=N = N 급까지 (무유파 무기 = null — 유파 몫이 원래 없다)
-  const kit = playerKit(traditionOf(getWeapon(weaponId)), readBooks(), { test: testRoute.active, upTo: UNIQUE_STAGE });
+  // 손에 든 무기 유파의 스킬트리 — 모든 판 (첫 화면·대기실 여정 · 옛 메뉴 판 · 주소 판). 테스트 경로 = 모두 · ?uniqueStage=N = 옛 급 N 까지 · ?skillNodes= 그 칸만 (무유파 무기 = null — 유파 몫이 원래 없다)
+  const kitSchool = traditionOf(getWeapon(weaponId));
+  const kit = playerKit(kitSchool, readLearned(), { test: testRoute.active, upTo: UNIQUE_STAGE, nodes: skillNodesParam(SKILL_NODES, kitSchool) });
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
     name: journeyMode ? readProfile().name : '나', // 대기실 이름 (첫 화면에서 연 여정만 — 화면에 플레이어 이름이 나오는 자리는 없다. 메뉴 뒤 판·주소 판은 그대로 '나')
@@ -621,10 +629,12 @@ function newRound(weaponId) {
     terrain, // 지형 무대만 땅 계약 (평지 null)
     look: loadout && loadout.armor !== LOBBY_ARMOR.id ? LOOK_BAREHEAD : LOOKS.player, // 대기실에서 케틀 햇을 벗었으면 맨머리 (여정만 — 그 밖은 지금처럼 케틀 햇)
     weapon: weaponId,
-    // 스킬북 (사람만): 보법 책 없음·봉인 = 기본 걸음(gait.js · stamina.js — schools.js footworkTradition) · 막기 책 없음·봉인 = 무유파 막기 자리(parry_button.js) — 걸음을 만들기 전에 넘긴다
+    // 스킬트리 (사람만 — 10/21): 보법 I 없음 = 기본 걸음(gait.js · stamina.js — schools.js footworkTradition) · 막기 I 없음 = 무유파 막기 자리(parry_button.js) — 걸음을 만들기 전에 넘긴다
+    //  칸마다의 몫(보법 II · 막기 II · III · 이어 긋기 흐름 · 강화동작 이점 …)은 skillKit(skill_kit.js kitOff · perkOff 가 읽는다)
     schoolFootwork: kit ? kit.footwork : undefined,
     schoolParry: kit ? kit.parry : undefined,
-    schoolPassive: kit ? kit.passive : undefined, // 4급 패시브 책 (10/21 — 이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
+    schoolPassive: kit ? kit.passive : undefined, // 패시브 칸 (이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
+    skillKit: kit ?? undefined,
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
@@ -678,12 +688,11 @@ function newRound(weaponId) {
   const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...foeAI.persona, school: foeWeapon } : foeAI.persona;
   ai = new AI(enemy, player, foeAI.level, persona);
   if (testRoute.foeWhiff) ai.drill = new WhiffDrill(); // ?foeWhiff=1: 상대가 닿지 않는 거리에서 2~3 s 마다 허공을 벤다 (whiff_drill.js — 판마다 새 바깥 거리). 없으면 평소 그대로
-  // 손에 든 무기 유파의 고유 공격 · 비기 = 위의 스킬북 몫 kit (고유자세 책 = 고유 공격 넷 한꺼번에 · 비기 책 = 비기 — 사장님 10/16 04:1x · 08:1x 인장 없앰)
-  const uniqueStage = kitUniqueStage(kit);
-  playerSecret = new PlayerSecretWatch(player, enemy, { locked: !kit?.secret }); // 내 무기 유파의 비기 — 비기 책이 '사용'일 때만. 그 밖·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
+  // 손에 든 무기 유파의 고유 공격 · 비기 = 위의 스킬트리 몫 kit (고유 공격 칸 하나 = 기술 하나 · 비기 칸 = 비기 — 사장님 10/21)
+  playerSecret = new PlayerSecretWatch(player, enemy, { locked: !kit?.secret }); // 내 무기 유파의 비기 — 비기 칸을 익혔을 때만. 그 밖·스위치 끔·무유파·권총이면 S = null — 아무 일도 없다
   playerGuard = new PlayerParryGuard(player, enemy); // 막기 버튼 (누르는 동안만 손을 쥔다 — 권총·맨손이면 아무 일도 없다)
   player.stamina.controller = playerGuard;
-  playerUnique = new PlayerUniqueAssist(player, { stage: uniqueStage }); // 고유 동작 강화: 고유자세 책이 '사용'이면 넷 모두 (단계 0 · 무유파 · 끔이면 붙지 않음)
+  playerUnique = new PlayerUniqueAssist(player, { names: kit?.unique ?? new Set() }); // 고유 동작 강화: 익힌 고유 공격 칸의 기술만 (없음 · 무유파 · 끔이면 붙지 않음 — 무기 비검은 칸과 상관없이)
   uniqueCueSeen = null;
   secretSlow = 0;
   secretBurstsSeen = 0;
@@ -1496,7 +1505,7 @@ function validJourney() {
 }
 export const canContinueJourney = () => !!validJourney();
 // (10/18 04:1x 사장님 '옛 3d 지워': 대기실 3D 캐릭터 몸에 주던 lobbyRigSpec · 겉모습 복제용 getLobbyPlayer 를 지움 — 대기실 ① 칸은 10/17 부터 프로필 그림)
-/** 대기실 스킬북 화면이 읽는 이 판의 갈래: test = 테스트 경로(책 모두 열림 · 이미 받은 인장을 금화로 바꾸지 않음) */
+/** 대기실 스킬트리 화면이 읽는 이 판의 갈래: test = 테스트 경로(칸 모두 익힘 · 이미 받은 인장 · 옛 스킬북을 금화로 바꾸지 않음) */
 export const getSkillBookContext = () => ({ test: testRoute.active });
 /** 대기실 프로필 칸의 인물 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md): ?hero=<인물 id> 로 다른 영웅이면 그 인물(그림이 없으면 플레이어) · 아니면 플레이어 */
 export const lobbyPortraitId = () => (testRoute.hero && portraitIdOf(testRoute.hero.id)) || 'player';

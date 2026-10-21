@@ -30,9 +30,10 @@ import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
 import { requestArtReturn, setArtTechOf } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21)
+import { perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
-//  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1 (10/21 통폐합으로 둘~셋 — 아래 머리말). stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 고유자세 책 하나로 넷 모두: skill_books.js kitUniqueStage). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
+//  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1 (10/21 통폐합으로 둘~셋 — 아래 머리말). stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 스킬트리 칸마다 하나 — 10/21 skill_tree_data.js u 칸). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
 //  on = 여는 조건 목록(하나라도 맞으면):
 //   { tech }        이 긋기가 그 기본 동작(시작 패드 + 첫 방향)
 //   { pad, dir }    시작 패드 + 방향('up' | 'down' | 'horiz')
@@ -125,7 +126,7 @@ const STACK_BY_NAME = Object.fromEntries(Object.values(PLAYER_UNIQUE).flat().fil
 /** 이어 그을수록 강해짐의 판정 에너지 배율 (10/21): 지금 긋는 기술에 stack 이 있으면 1 + stack × 이어 그은 수(플레이어 PlayerUniqueAssist.stackN · AI ai.stackN — 셋까지) · 아니면 1 */
 export function strokeHitK(f) {
   const name = strokeTechOf(f);
-  const s = name ? STACK_BY_NAME[name] : 0;
+  const s = name && !perkOff(f, name) ? STACK_BY_NAME[name] : 0; // 사람은 심화 칸(이베리아 B6 쌓기 — 10/21)을 익혀야
   if (!s) return 1;
   const n = f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
   return 1 + s * n;
@@ -180,7 +181,8 @@ export function uniqueDef(tradition, e) {
   return { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, orig: e.orig ?? u.orig ?? null, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: e.step ?? u.step ?? null }; // step = 표 칸이 있으면 그것(플레이어만 — 10/21 체보요격)
 }
 
-// 해금은 이 파일 밖 — 플레이어에게 무엇이 열리는지는 스킬북 하나(skill_books.js playerKit · kitUniqueStage → 아래 PlayerUniqueAssist 의 stage).
+// 해금은 이 파일 밖 — 플레이어에게 무엇이 열리는지는 스킬트리 하나(10/21 — skill_tree_store.js playerKit → 칸마다 기술 하나 · 아래 PlayerUniqueAssist 의 names).
+//  강화동작 이점(곁눈 베기 무릎 꺾기 · 내려 찌르기 틈 · 돌려 베기 쌓기 · 허리 베기 출혈)은 기술 칸과 따로 심화 칸(skill_kit.js perkOff — combat.js · 아래 strokeHitK).
 //  10/13 의 여정 인장(깬 수 → 인장 → 유파 숙련도 · 인장 이름 · 인장 알림)은 10/16 08:1x 사장님 '인장 제도 없애'로 지웠다. 깬 수는 통계로만 journey_save.js 에 남는다
 
 /**
@@ -190,15 +192,17 @@ export function uniqueDef(tradition, e) {
  *  열린 동작이 없으면(단계 0 · 표에 없는 유파 · 스위치 끔) 붙지 않는다 → 검술 층은 전과 같다
  */
 export class PlayerUniqueAssist {
-  constructor(f, { stage = 0, tradition = f.swordArt?.tradition } = {}) {
+  constructor(f, { stage = 0, names = null, tradition = f.swordArt?.tradition } = {}) {
     this.f = f;
     this.stage = stage;
+    this.names = names; // 스킬트리(10/21): 열린 고유 공격 이름 모음(칸 하나 = 기술 하나 — main.js · skill_tree_data.js kitFromNodes) · 없으면 단계(stage — 시험 · 도구)로 거른다
     this.tradition = tradition;
     // 무기 비검 (10/21 — weapons.js secretBlade): open 이면 그 기술은 책(단계)과 상관없이 열리고, prev 가 있으면 앞 칼 조건을 그 칼들로 넓힌다(진 · 츠바메가에시)
     const SB = f.weapon?.secretBlade;
     const sbOn = (e) => SB?.open && SB.tech === e.name;
     const widen = (e) => (sbOn(e) && SB.prev && e.on?.length ? { ...e, on: [...e.on, ...SB.prev.filter((p) => !e.on.some((c) => c.prev === p)).map((p) => ({ ...e.on[0], prev: p }))] } : e);
-    this.list = UA.on && !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter((e) => e.stage <= stage || sbOn(e)).map(widen).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
+    const opened = (e) => (names ? names.has(e.name) : e.stage <= stage) || sbOn(e);
+    this.list = UA.on && !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter(opened).map(widen).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
     this.r = null; // 강화 중인 긋기 { e, U, part(1 앞 긋기 | 2 잇는 뒷몫), t, travel, len, stepAsked, chainable }
     this.t = 0;
     this.cur = null; // 지금 긋기 { tech, kind, pad, t0, dir, landed, bound, tEnd, unique }
@@ -532,7 +536,7 @@ export class PlayerUniqueAssist {
 /** 지금 긋는 기술의 이어 그은 수 (stack 이 있는 기술만 — 이베리아 머리 위 돌려 베기 · 없으면 0) */
 export function strokeStackN(f) {
   const name = strokeTechOf(f);
-  if (!name || !STACK_BY_NAME[name]) return 0;
+  if (!name || !STACK_BY_NAME[name] || perkOff(f, name)) return 0; // 쌓기 잔상도 심화 칸과 같이 (10/21)
   return f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
 }
 setArtTechOf(strokeTechOf, strokeStackN); // 고유 동작 잔상(secret_instant.js artTrailTick · artFlash)이 지금 기술 이름 · 이어 그은 수를 읽게

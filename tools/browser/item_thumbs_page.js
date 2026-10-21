@@ -22,7 +22,10 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { metalMat } from '../../src/weapon_looks.js';
-import { BOOK_SCHOOLS, BOOK_TIERS, ROMAN } from '../../src/skill_books.js';
+// 옛 스킬북 다섯 급 (10/21 스킬트리로 바뀌며 src/skill_books.js 를 지움 — 그림 public/ui/books/*.webp 를 다시 만들 때만 쓰는 값이라 여기 얼려 둔다)
+const BOOK_SCHOOLS = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
+const BOOK_TIERS = [['common', 1], ['uncommon', 2], ['rare', 3], ['epic', 4], ['legend', 5]].map(([rarity, tier]) => ({ tier, rarity }));
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 
 const SS = 2; // 두 배로 그린 뒤 줄여서 가장자리를 곱게 (무기 그림과 같다)
 const QUALITY = 0.86; // webp 품질 (무기 그림과 같다)

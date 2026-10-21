@@ -27,6 +27,7 @@ import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩�
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
 import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
 import { reviveOf, tryRevive, reviveTick } from './revive.js';
+import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이베리아 이어 긋기 흐름 B5)
 import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
 import { fighterWetlandMoveScale } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
@@ -306,8 +307,9 @@ export class Fighter {
    * @param {object} [o.terrain] 땅 계약 { heightAt(x, z), normalAt(x, z), … } (화산섬만 — 없으면 평평한 y 0)
    * @param {number} o.heading 처음 바라보는 방향(라디안). 0 = +x
    * @param {object} o.look    겉모습(색, 투구 등) — looks.js 참고
-   * @param {boolean} [o.schoolFootwork] [o.schoolParry] false = 대기실 스킬북 보법·막기를 안 가졌거나 봉인한 플레이어(main.js — 첫 화면·대기실 여정만).
+   * @param {boolean} [o.schoolFootwork] [o.schoolParry] false = 대기실 스킬트리 보법 I · 막기 I 을 안 익힌 플레이어(main.js newRound — 모든 판).
    *        걸음 값을 처음부터 기본으로 고르게 걸음(Gait)을 만들기 전에 적는다. 없으면 속성도 없다(시뮬·AI 그대로)
+   * @param {object} [o.skillKit] 플레이어 스킬트리 몫(10/21 — skill_tree_data.js kitFromNodes · 읽는 곳 skill_kit.js kitOff · perkOff). 없으면 속성도 없다(AI · 시뮬 = 지금 규칙 그대로)
    */
   constructor(RAPIER, world, scene, colliderInfo, o) {
     this.R = RAPIER;
@@ -318,6 +320,7 @@ export class Fighter {
     this.passiveBook = o.schoolPassive !== false;
     if (o.schoolFootwork === false) this.schoolFootwork = false; // schools.js footworkTradition — gait.js · stamina.js
     if (o.schoolParry === false) this.schoolParry = false; // parry_button.js
+    if (o.skillKit) this.skillKit = o.skillKit; // 스킬트리 칸마다의 몫 (10/21 — 걸음 · 막기 · 흘림 · 이어 긋기 흐름 · 강화동작 이점을 칸 하나씩 켬, 사람만)
     this.name = o.name;
     this.side = 1; // 오른손잡이
     this.heading = o.heading ?? 0;
@@ -1829,7 +1832,7 @@ export class Fighter {
    *  IB_FLOW.a 를 끄면 읽지도 않는다. (B 손목 힘 한도는 10/21 유파 패시브 wristK 로 옮김 — 이어 긋기와 상관없이 늘)
    */
   updateIbFlow(dt) {
-    if (!IB_FLOW.a || this.swordArt?.tradition !== 'iberian') { this.ibFlowOn = false; return; }
+    if (!IB_FLOW.a || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibFlow')) { this.ibFlowOn = false; return; } // 사람은 스킬트리 B5 '이어 긋기 · 흐름' (10/21)
     const win = UNIQUE_ASSIST.afterWindow; // 이어짐 창 0.6 s (게임 하나 — 10/21)
     const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
     const sk = this.skill, sw = !!sk.swinging, v = sk.vel;

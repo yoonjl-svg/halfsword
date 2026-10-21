@@ -11,6 +11,7 @@
 //  · 사람만(AI 는 안 씀). 옛 접촉형(10/20)은 걷어냄. 이탈리아 유파 전체(10/21 사장님 확인 — 샛별 저장소 fb5b344e 와 같은 뜻, 우리가 새로 고침).
 import * as THREE from 'three';
 import { SKILL } from './config.js';
+import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이탈리아 막기 II 막아찌르기 I6)
 const V = () => new THREE.Vector3();
 const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 
@@ -28,7 +29,7 @@ export class ItalianOpposition {
   eligible() {
     const f = this.f, sk = f.skill, g = this.guard;
     return SKILL.itOpposition && f.swordArt?.tradition === 'italian' // 10/21 사장님 '이탈리아 유파 전체로 넓히는 거 맞아' — 무기 이름 조건 없음(지금 이탈리아 무기 = 레이피어 · 달타냥)
-      && f.schoolParry !== false && !g.broken && f.alive && this.foe.alive
+      && f.schoolParry !== false && !kitOff(f, 'opposition') && !g.broken && f.alive && this.foe.alive
       && f.armed && !f.stamina.exhausted && ['stand', 'kneel'].includes(f.state)
       && !sk.tap && !sk.sec && !sk.pom && !f.secretStiff;
   }
