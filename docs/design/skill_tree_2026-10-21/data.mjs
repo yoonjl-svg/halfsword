@@ -27,7 +27,7 @@ export const SCHOOLS = [
     { id: 'I8', cat: 'deep', name: '내려 찌르기 심화', sub: '틈 파고들기', eff: '옷 · 갑옷 틈을 더 깊이 파고든다', pre: ['I7'], price: 400, st: 'split', d: 4, cx: 330 },
     { id: 'I9', cat: 'atk', name: '칼끝', sub: '돌려 빼기', eff: '찌르기가 맞물리면 돌려 뺀다 (이어 긋기)', pre: ['I6'], price: 300, st: 'split', d: 4, cx: 670 },
     { id: 'I4', cat: 'secret', name: '비기', sub: '밑으로 들어가 찌르기', eff: '상대가 칼을 들 때 밑으로 찌른다', pre: ['I8'], price: 400, heads: 20, st: 'now', d: 5, cx: 330 },
-    { id: 'I10', cat: 'passive', name: '패시브', sub: '카바치오네', eff: '맞물린 칼에서 빠져나오는 손이 빠르다 (후보)', pre: ['I9'], price: 0, heads: 10, st: 'new', d: 5, cx: 670 },
+    { id: 'I10', cat: 'passive', name: '패시브', sub: '리네아 레타', eff: '곧은 선 (리네아 레타) — 찌르는 동안 칼끝이 상대를 따라간다 (최대 12° · 초당 60° · AI 는 절반)', pre: ['I9'], price: 0, heads: 10, st: 'new', d: 5, cx: 670 },
   ] },
   { id: 'iberian', ko: '이베리아', title: '이베리아 — 고리', bw: 158, shape: '손목 힘 패시브를 보법 바로 아래에서 먼저 익힌다(큰 칼을 돌리는 바탕) — 비기에도 필요. 둥근 걸음 길과 돌려 베기 길이 비기에서 닫혀 원을 이룬다.', nodes: [
     { id: 'B1', cat: 'foot', name: '보법 I', sub: '넓은 옆걸음', eff: '옆으로 1.3배 빠르게 돈다', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
@@ -51,7 +51,7 @@ export const SCHOOLS = [
     { id: 'J9', cat: 'atk', name: '츠바메가에시', sub: '이어 긋기', eff: '내려벤 칼이 빗나간 뒤 위로', pre: ['J6', 'J7'], price: 300, st: 'split', d: 2, cx: 200 },
     { id: 'J8', cat: 'deep', name: '코테 심화', sub: '이점 정할 것', eff: '코테의 이점 (확인표 2107 — 미정)', pre: ['J7'], price: 300, st: 'new', d: 2, cx: 420 },
     { id: 'J3', cat: 'parry', name: '막기 II', sub: '흘려 받기', eff: '흘리면 상대 팔 늦춤 · 기력 −40', pre: ['J2'], price: 300, st: 'split', d: 2, cx: 650 },
-    { id: 'J10', cat: 'passive', name: '패시브', sub: '잔신', eff: '공격 뒤 굳음이 짧다 (후보)', pre: ['J9'], price: 0, heads: 10, st: 'new', d: 3, cx: 200 },
+    { id: 'J10', cat: 'passive', name: '패시브', sub: '켄타이', eff: '기다림과 침 (켄타이) — 공격 없이 기다린 만큼 다음 칼이 세다 (1.5초에 +30%) · 빗나가면 츠바메가에시로 이어짐 · 비기엔 안 실림', pre: ['J9'], price: 0, heads: 10, st: 'new', d: 3, cx: 200 },
     { id: 'J4', cat: 'parry', name: '막기 III', sub: '흘린 칼', eff: '흘린 공격의 피해 80% 감소', pre: ['J3'], price: 400, st: 'split', d: 3, cx: 650 },
     { id: 'J5', cat: 'secret', name: '비기', sub: '뒤에서 앞서기', eff: '상대가 치려 할 때 먼저 벤다 (고노센)', pre: ['J4'], price: 400, heads: 20, st: 'now', d: 4, cx: 650 },
   ] },
@@ -65,7 +65,7 @@ export const SCHOOLS = [
     { id: 'C5', cat: 'atk', name: '체보요격', sub: '걸음 명령', eff: '앞으로 끌어 딛으며 요격', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 310 },
     { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '찌르다가 거둔다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 490 },
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
-    { id: 'C10', cat: 'passive', name: '패시브', sub: '검결가', eff: '기력이 빨리 찬다 (후보)', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
+    { id: 'C10', cat: 'passive', name: '패시브', sub: '검결', eff: '칼의 요결 (검결) — 칼을 긋고 손을 떼면 기다림 없이 바로 자세로 돌아온다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
     { id: 'C9', cat: 'secret', name: '비기', sub: '연환', eff: '높이 막아 낸 직후 세 번 이어 친다', pre: ['C6', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 },
   ] },
 ];
