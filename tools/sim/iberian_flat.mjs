@@ -30,7 +30,8 @@
 //    flGuardIt=K|ZW  플랑베르주 코등이 칼날 축 관성 × K (ZW = 칼 전체가 츠바이핸더 값) · flGuardW=X  코등이 충돌체 반폭 X m · flGuardOff  코등이 충돌체 끔
 //    flBlade=hx+hz   플랑베르주 칼날 충돌체 반폭 · 반두께 · tsCap=K  잰 쪽 twistScale ≤ K · flHiltCut=Y  자루 상자 밑 · 폼멜 공 충돌체를 Y m 로 올림 (질량 · 무게중심 · 관성 그대로)
 //    colOff=i+j      잰 쪽 칼 부품(자루 0 · 폼멜 1 · 코등이 2) 충돌체 끔 · selfOff=i+j  그 부품만 제 몸통과 안 닿음
-//    flHilt[=Y]      플랑베르주 짧은 칼자루 충돌체 시험 스위치 켬 (config FL_HILT — 시제품, 판 끔 · main.js ?flHilt=short) — flHiltCut=Y 와 같은 몸을 판 길로
+//    flHilt[=Y|real] 플랑베르주 짧은 칼자루 충돌체 시험 스위치 켬 (config FL_HILT — 시제품, 판 끔 · main.js ?flHilt=short — flHiltCut=Y 와 같은 몸을 판 길로) · real = 손잡이를 진짜로 35.7 cm (?flHilt=real)
+//    flGrip[=Y]      플랑베르주 왼손 쥘 자리 −0.24 → −0.33 (config FL_GRIP — main.js ?flGrip=pommel)
 //   pad 더: --rep0=N (첫 되풀이 번호 — 새 표본을 sum 으로 합침) · --trace=N (칼 면 맞음 앞 자취) · --pen (칼자루가 제 몸 속으로 든 깊이)
 //   pad 획 따라감 표: 움직이는 칼 날 어긋남 · 밧줄 끝 · 칼날 축 팽이 · 칼끝 최고 · 맞음/획 · 에너지 · 칼끼리 닿은 스텝 · 제 몸 닿음 스텝(부품마다)
 //   쥠 꼴은 모듈이 처음 읽힐 때 정해져 환경 변수로만: MONTANTE_HAND=old|wide|guard (츠바이핸더만 — 무기 몸 시험)
@@ -142,13 +143,21 @@ if (FL_ABL) {
 if (ablVal('flHilt') != null) {
   if (!CONFIG.FL_HILT) throw new Error('이 트리에 FL_HILT 가 없다');
   CONFIG.FL_HILT.on = true;
-  if (ablVal('flHilt') !== true) CONFIG.FL_HILT.cut = +ablVal('flHilt');
+  const v = ablVal('flHilt');
+  if (v === 'real' || v === 'short') CONFIG.FL_HILT.mode = v; // real = 손잡이를 진짜로 35.7 cm 로 (겉모습 · 충돌체 · 자루 질량 — 감독 B 안)
+  else if (v !== true) CONFIG.FL_HILT.cut = +v;
+}
+// flGrip[=Y]  플랑베르주 왼손 폼멜 가까이 시험 (config FL_GRIP — 감독 C 안 · main.js ?flGrip=pommel 과 같은 뜻 · Y 를 주면 쥘 자리 바꿈)
+if (ablVal('flGrip') != null) {
+  if (!CONFIG.FL_GRIP) throw new Error('이 트리에 FL_GRIP 가 없다');
+  CONFIG.FL_GRIP.on = true;
+  if (ablVal('flGrip') !== true) CONFIG.FL_GRIP.along = +ablVal('flGrip');
 }
 const TSK = ablVal('ts');
 const TS_CAP = ablVal('tsCap');
 const SELF_PEN = !!arg('pen', false); // --pen: 획마다 칼자루가 제 몸통 속으로 가장 깊이 든 겹침(m)을 잰다 (느림)
 const SELF_PEN_PARTS = ['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']; // fighter.js TORSO_PARTS (제 칼과 닿는 제 몸)
-const VIS_HILT_LO = (f) => (f.weaponSpecId === 'flamberge' ? -0.4 : f.weaponSpecId === 'zweihander' ? -0.288 : -0.15); // 그려진 손잡이 · 폼멜 끝 (칼 원점 기준 m — 플랑베르주 폼멜 −0.37 − 0.03 · 츠바이핸더 mid −0.25 − 0.038 · 롱소드 −0.12 − 0.03)
+const VIS_HILT_LO = (f) => (f.weaponSpecId === 'flamberge' ? (CONFIG.FL_HILT?.on && CONFIG.FL_HILT.mode === 'real' ? -0.28 : -0.4) : f.weaponSpecId === 'zweihander' ? -0.288 : -0.15); // 그려진 손잡이 · 폼멜 끝 (칼 원점 기준 m — 플랑베르주 폼멜 −0.37 − 0.03 · 츠바이핸더 mid −0.25 − 0.038 · 롱소드 −0.12 − 0.03)
 /** 잰 쪽 검객에 판 뒤 시험 몫을 건다 */
 function postBuild(f) {
   if (TSK === 'L') f.twistScale = 1;

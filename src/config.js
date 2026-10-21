@@ -469,8 +469,13 @@ export const IB_EDGE = { on: false, edge: 'motor' };
 //  까닭: 손잡이 47.7 cm(폼멜 가운데가 오른손 아래 0.37 m)라 칼끝을 내리면 자루 · 폼멜 충돌체가 제 배 · 가슴(BODY.humanLimits 제 몸 충돌)에 걸린다 —
 //   칼끝 땅에 자리에서 칼끝이 30° 위에 머물고(츠바이핸더 −43°) 올려베기가 상대에 닿지 않으며, 맞는 수가 줄어 느린 칼 면 닿음의 몫이 커진다.
 //  on = 플랑베르주 자루 상자의 밑과 폼멜 공 충돌체를 cut(오른손 기준 m — −0.25 = 츠바이핸더 mid 폼멜 자리)으로 올린다. 질량 · 무게중심 · 관성 · 겉모습은 그대로(weapons.js flamberge).
-//  끄면(on false) 판 그대로(같은 float). `?flHilt=short` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=flHilt
-export const FL_HILT = { on: false, cut: -0.25 };
+//  mode 'real' (`?flHilt=real` — 10/22 감독 B 안): 손잡이를 진짜로 줄인다 — 폼멜 가운데를 오른손 아래 0.37 → 0.25 m(츠바이핸더 mid 자리)로 올리는 만큼 겉모습(flamberge_look.js FLAMBERGE_SHORT_HANDLE 47.7 → 35.7 cm) ·
+//   자루 상자 충돌체 · 자루 질량(길이 비 0.314 → 0.229 kg)을 함께 줄이고 폼멜 0.35 kg · 손 ~ 칼끝 · 칼날 · 코등이는 그대로 → 합 3.0 → 2.914 kg (무게중심 · 관성은 바뀜).
+//  끄면(on false) 판 그대로(같은 float). `?flHilt=short` · `?flHilt=real` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=flHilt · --abl=flHilt=real
+export const FL_HILT = { on: false, mode: 'short', cut: -0.25 };
+// 플랑베르주 왼손 폼멜 가까이 시험 (10/22 감독 C 안 — 기본 끔 · 사장님 확인 전, 같은 문서 §8): on = 플랑베르주 빈손 쥘 자리(gripAlong)를 −0.24 → along(폼멜 목 근처)으로.
+//  고디뉴 몬탄테 규칙 3 '오른손 날밑 가까이, 왼손 폼멜 가까이'(츠바이핸더 쥠 규칙과 같은 근거). 손잡이 · 겉모습 · 질량 그대로. `?flGrip=pommel` (main.js) · 시뮬 --abl=flGrip
+export const FL_GRIP = { on: false, along: -0.33 };
 // 유파 패시브 (스킬북 4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬 … 이베리아 유파의 경우에는 손목 힘을 증가하는 걸 넣자' · 확인표 2110):
 //  이베리아 = 칼을 돌리는 손목 힘 한도(maxAimTorque) × wrist — 늘(이어 긋기 시험 B 를 패시브로 옮김). 사람 = 4급 책 '사용'(테스트 경로는 모두 켬) · AI = 숙련도 at 이상.
 //  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. `?ibWrist=0` = 이베리아만 끔
