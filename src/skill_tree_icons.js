@@ -8,3 +8,5 @@
 export const ICON_ART = Object.freeze({ foot: '1', parry: '2', atk: '3', deep: 'deep', passive: '4', secret: '5', letter: 'letter' });
 /** 칸 그림 주소 (public/ 기준 — wallet_icons.js 와 같은 꼴) */
 export const nodeIconSrc = (school, node) => `ui/books/${school}_${ICON_ART[node.cat] ?? '1'}.webp`;
+/** 칸 그림 열쇠 '<유파>_<1..5 · deep · letter>' (skill_tree_icon_fit.js 표 열쇠 — 그림에 꼭 맞는 원, 10/22 01:5x) */
+export const nodeIconKey = (school, node) => `${school}_${ICON_ART[node.cat] ?? '1'}`;

@@ -2,7 +2,8 @@
 #  1) 유파 판: skill_tree_layout.mjs 가 SHOTS 폴더에 찍은 사진(844 × 390 · 844 × 340 · 기기 화소 비 2)을 스킬 창 자리(rects.json)대로 잘라
 #     [판 위 · 끝까지 내린 판 · 상세 카드] 를 한 줄로 → <out>/tree_<유파>_<화면>.png · 초기화 확인 → <out>/reset_confirm_<화면>.png
 #  2) 간격 전후: [전 폴더]/before_<유파>_844x390.png (전 판 — 기기 화소 비 1 · 같은 자리) 와 후 판 위 사진을 유파 다섯 줄로 → <out>/spacing_before_after_<화면>.png
-#  2b) 원 칸 전후 (10/22 01:2x): --prev=<앞 SHOTS 폴더>(같은 도구로 찍은 네모 칸 사진) 와 이번 판 위 사진을 유파 다섯 줄로 → <out>/ring_before_after_844x390.png
+#  2b) 전후 (같은 도구로 찍은 앞 SHOTS 폴더 --prev= 와 이번 판 위 사진을 유파 다섯 줄로): --tag=ring → <out>/ring_before_after_844x390.png (10/22 01:2x 네모 칸 → 원 칸) ·
+#      --tag=fit → <out>/ring_fit_before_after_844x390.png (01:5x 원 40 px → 그림에 맞춘 원)
 #  3) 그림 판: public/ui/books 의 유파마다 일곱 장(보법 1 · 막기 2 · 고유 공격 3 · 심화 deep · 패시브 4 · 비기 5 · 편지 letter)을 큰 꼴 + 칸 크기(21 × 28)로 → <out>/icons_sheet.png
 #  모두 256 색 PNG (크기를 줄임). 글자는 한글 글꼴(WenQuanYi Zen Hei)이 있으면 그것, 없으면 라틴 기본 글꼴
 #   python3 tools/browser/skill_tree_icons_sheet.py <SHOTS 폴더> docs/design/skill_tree_2026-10-21/icons [--before=<전 폴더>] [--prev=<앞 SHOTS 폴더>]
@@ -79,19 +80,26 @@ def spacing(shots, before, out):
             save(sheet, os.path.join(out, f'spacing_before_after_{size}.png'))
 
 
-def ring_compare(shots, prev, out, size='844x390'):
+COMPARE = {  # --tag= → (파일 앞 이름, 전 · 후 꼬리표)
+    'ring': ('ring', '전 (네모 칸)', '후 (원 + 이름)'),  # 10/22 01:2x
+    'fit': ('ring_fit', '전 (원 40 px)', '후 (그림에 맞춘 원)'),  # 10/22 01:5x · 02:0x
+}
+
+
+def ring_compare(shots, prev, out, size='844x390', tag='ring'):
+    name, la, lb = COMPARE[tag]
     rect = json.load(open(os.path.join(shots, 'rects.json')))[size]
     lines = []
     for s in SCHOOLS:
         pre = crop(os.path.join(prev, f'tree_{s}_{size}.png'), rect, 2)
         post = crop(os.path.join(shots, f'tree_{s}_{size}.png'), rect, 2)
         pre, post = [i.resize((i.width // 2, i.height // 2), Image.LANCZOS) for i in (pre, post)]
-        lines.append(row([pre, post], top=40, labels=[f'{KO[s]} — 전 (네모 칸)', f'{KO[s]} — 후 (원 + 이름)']))
+        lines.append(row([pre, post], top=40, labels=[f'{KO[s]} — {la}', f'{KO[s]} — {lb}']))
     W, H = max(l.width for l in lines), sum(l.height for l in lines) + 10 * (len(lines) - 1)
     sheet, y = Image.new('RGB', (W, H), BG), 0
     for l in lines:
         sheet.paste(l, (0, y)); y += l.height + 10
-    save(sheet, os.path.join(out, f'ring_before_after_{size}.png'))
+    save(sheet, os.path.join(out, f'{name}_before_after_{size}.png'))
 
 
 def icons(out):
@@ -120,5 +128,5 @@ if __name__ == '__main__':
     if 'before' in opt:
         spacing(shots, opt['before'], out)
     if 'prev' in opt:
-        ring_compare(shots, opt['prev'], out)
+        ring_compare(shots, opt['prev'], out, tag=opt.get('tag', 'ring'))
     icons(out)
