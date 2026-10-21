@@ -212,16 +212,32 @@ function addMerged(group, pieces, mat) {
   return m;
 }
 
+// 겉모습만 자루 끝을 칼 축 아래(폼멜 쪽)로 늘인다 — 두 손 무기의 빈손 주먹(gripAlong)이 자루 끝 밖 허공을 쥐지 않게 (사장님 10/21, 모노호시자오 · 라이트세이버).
+//  콜라이더 · 질량 · 관성(buildParts)은 그대로라 싸움 · 해시가 같다. 폼멜(부품 1)은 dy 만큼 내려 그리고(물리 공은 늘인 자루 속에 남는다),
+//  gripExt 를 주면 자루(부품 0)도 같은 자루 꼴 그대로 아래로 그만큼 늘여 그린다. 늘인 몫만큼은 겉모습이 콜라이더보다 길다(자루 끝이라 판정 영향은 거의 없다)
+function lowerPommelLook(kit, dy, gripExt = 0) {
+  return (idx, isBlade, shape, ...rest) => {
+    if (idx === 0 && gripExt && shape[0] === 'box') {
+      const m = kit(idx, isBlade, ['box', shape[1], shape[2] + gripExt / 2, shape[3]], ...rest);
+      if (m) for (const c of m.children) c.position.y -= gripExt / 2;
+      return m;
+    }
+    const m = kit(idx, isBlade, shape, ...rest);
+    if (idx === 1 && m) for (const c of m.children) c.position.y += dy;
+    return m;
+  };
+}
+
 // 츠카이토 (모노호시자오·우치가타나): 납작한 비단 끈이 앞뒤 면에서 X 자로 엇갈려 감기고 옆면에서 꺾여 넘어가는 매듭 —
-//  y0(카시라 쪽 첫 줄)부터 0.034 m 마다 0.205 까지. 끈·매듭 상자는 자리·기울기째 구워 메쉬 하나('tsukaIto')로 그린다 — 상자마다
+//  y0(카시라 쪽 첫 줄)부터 0.034 m 마다 y1(츠바 쪽 끝 줄, 기본 0.205 — 모노호시자오) 까지. 끈·매듭 상자는 자리·기울기째 구워 메쉬 하나('tsukaIto')로 그린다 — 상자마다
 //  메쉬였을 땐 그림자 그리기까지 그리기 호출이 상자 수 × 2 들었다(성 안뜰 폰 가로: 미나미 + 모노호시자오 404 → 262, 같은 미나미 + 롱소드 266 ·
 //  이졸데 + 우치가타나 343 → 225, 롱소드 230). 자리·각도·색·그림자 드리우기는 상자마다 그리던 때와 같다.
-function addTsukaIto(group, silk, y0) {
+function addTsukaIto(group, silk, y0, y1 = 0.205) {
   const step = 0.034;
   const strip = new THREE.BoxGeometry(0.0062, step * 0.78, 0.0022);
   const knot = new THREE.BoxGeometry(0.0026, 0.007, 0.022);
   const ito = [];
-  for (let y = y0; y <= 0.205; y += step) {
+  for (let y = y0; y <= y1 + 1e-9; y += step) {
     for (const sz of [-1, 1]) {
       for (const lean of [-1, 1]) ito.push([strip, [0, y, sz * 0.0162], lean * 0.72]);
     }
@@ -769,12 +785,14 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   controlOverrides: { aimStiffness: 70, wristVmax: 34 },
   // 노다치: 살짝 휜 긴 곡도, 등마루(시노기)가 등 쪽에 선 단면, 날 쪽의 흰 물결 담금질 무늬(하몬), 둥글게 올라가는
   //  키사키 칼끝. 흰 상어가죽 츠카(비단 끈은 decorate), 쇠 츠바, 카시라.
-  partMesh: swordKit({
+  //  카시라는 겉모습만 콜라이더(−0.2)보다 6.6 cm 아래(−0.266, 끝 −0.276)에 그린다 — 왼손 주먹(gripAlong −0.22, 주먹 −0.272…−0.172)이
+  //  카시라 끝 밖 허공을 쥐지 않게 (사장님 10/21 · lowerPommelLook — 물리 · 해시 그대로). 늘인 츠카는 아래 decorate
+  partMesh: lowerPommelLook(swordKit({
     blade: { edge: 'single', width: (t) => 1 - 0.28 * t, thick: 0.0035, ridge: 0.3, hamon: true, curve: 0.008, tip: 'kissaki', tipLen: 0.055, overshoot: 0.008 },
     grip: { style: 'plain', color: 0xe8e2d0 },
     pommel: { style: 'cap', color: 0x2b2e33 },
     guard: { style: 'disc', color: 0x2b2e33 },
-  }),
+  }), -0.066),
   buildParts(look) {
     const L = this.bladeLength;
     // 균형 재분배 (밸런스 시뮬로 확인한 근본 원인 — 3라운드 카타나와 같은 처방): 칼날 0.85kg(총중량의 74%)이
@@ -795,8 +813,9 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   // 에픽 명검의 세공 (전부 물리 무관, 콜라이더에서 ~1cm 안):
   //  - 둥근 츠바(철) + 가는 금 테두리, 칼날 밑동의 금빛 하바키(목띠)
   //  - 츠카: 검은 비단 끈(츠카이토)을 X 자로 엇갈려 감고 그 사이로 흰 상어가죽(사메) 마름모 — 긴 츠카가 노다치답게 읽힌다
-  //  - 츠카는 콜라이더(±0.14m)보다 츠바 쪽 9cm·카시라 쪽 5cm 더 길게 그린다: 콜라이더대로만 그리면 자루와
+  //  - 츠카는 콜라이더(±0.14m)보다 츠바 쪽 9cm·카시라 쪽 12.2cm 더 길게 그린다: 콜라이더대로만 그리면 자루와
   //    츠바·카시라 사이가 비어 부품이 공중에 떠 보였다(자루 부분이라 판정 영향 없음). 츠바 쪽 끝에 쇠 테(후치).
+  //    카시라 쪽은 10/21 에 5 → 12.2 cm (겉 카시라를 −0.266 으로 내린 만큼 — 왼손 주먹이 츠카 위에 온다, 물리 카시라 공은 그 속)
   decorate(group) {
     const iron = metalMat(0x2b2e33, { rough: 0.45 });
     const gold = metalMat(0xc9a14a, { rough: 0.22 });
@@ -806,7 +825,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
     habaki.castShadow = true;
     const silk = new THREE.MeshStandardMaterial({ color: 0x1b1d2e, roughness: 0.85 });
     const same = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.7 });
-    for (const [yc, h] of [[0.186, 0.092], [-0.168, 0.056]]) {
+    for (const [yc, h] of [[0.186, 0.092], [-0.201, 0.122]]) {
       const ext = addMesh(group, new THREE.CylinderGeometry(0.0132, 0.0132, h, 14), same, [0, yc, 0]); // 츠카 연장 (츠바 쪽·카시라 쪽)
       ext.scale.z = 1.2;
       ext.castShadow = true;
@@ -814,8 +833,9 @@ const monohoshizao = finalizeSpec('monohoshizao', {
     const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.231, 0]);
     fuchi.scale.z = 1.2;
     // 츠카이토: 납작한 비단 끈이 앞뒤 면에서 X 자로 엇갈려 감기고, 엇갈린 사이사이로 흰 사메가 마름모꼴로 드러난다
-    //  (고리 모양으로 감으면 장난감처럼 보였다). 옆면에서는 끈이 꺾여 넘어가는 매듭이 보인다. 끈 48 · 매듭 24 상자가 메쉬 하나
-    addTsukaIto(group, silk, -0.178);
+    //  (고리 모양으로 감으면 장난감처럼 보였다). 옆면에서는 끈이 꺾여 넘어가는 매듭이 보인다. 끈 56 · 매듭 28 상자가 메쉬 하나
+    //  (10/21 츠카를 카시라 쪽으로 늘인 만큼 두 줄 더 — 같은 간격 그대로 −0.178 → −0.246 부터)
+    addTsukaIto(group, silk, -0.246);
   },
 });
 
@@ -851,7 +871,9 @@ const kusanagi = finalizeSpec('kusanagi', {
 //      (사장님 확인 전 — docs/weapons/uchigatana_proposal_2026-10-09.md).
 //      허리띠에 날을 위로 꽂는 칼. 에도 정치수 약 70 cm, 흔한 실물 칼날 68~73 cm·휨 1.5~2 cm·츠카 단 채 1.1~1.4 kg [원전 2차 요약].
 //      칼날 0.71 m·총 1.10 kg (츠카 0.26 · 카시라 0.06 · 츠바 0.12 · 칼날 0.66, 칼날 무게중심 0.40) [추정 — 위 범위 안에서]
-//      → 무게중심 손에서 0.338 m, 관성 0.221 (롱소드 0.272 보다 가볍게 돈다) = 자동으로도 두손 보통(two)이지만,
+//      쥠(10/21 사장님 승인 A안): 오른손 주먹 바로 위에 츠바, 왼손 주먹 끝에 카시라 — 츠카 30 cm · 손 간격 0.20 (아래 쥠 주석)
+//      → 손~칼끝 0.785 m, 무게중심 손에서 0.19 m, 손 기준 관성 0.116 (롱소드 0.272 보다 훨씬 가볍게 돈다 — 쿠사나기 0.128 과 비슷)
+//      (전: 모노호시자오 자루 자리를 그대로 써 손~칼끝 0.96 · 무게중심 0.338 · 관성 0.221). 자동으로도 두손 보통(two)이지만,
 //      80 cm 명도가 앞무게 경계(관성 0.3)에 걸리므로 카타나 가족은 frame 'two' 를 직접 적어 고정한다(제안서 §0-3).
 //      방식은 두루(찌르기 0.9 > 0.85) — 일본 가중치(two:* 真向 ×1.3 · 袈裟 ×1.2 · 胴 ×0.8 · 突き ×0.8)가 처음 일하는 무기.
 //      겉모습은 모노호시자오의 칼 꼴(외날·시노기·하몬·키사키)을 칼날 0.71 m 로 그대로 쓰고, 금 장식을 뺀 커먼 마감.
@@ -865,7 +887,12 @@ const uchigatana = finalizeSpec('uchigatana', {
   style: 'versatile', // 두루 (제안서 §7-2 권고) — 자동 판정도 두루지만 가족 안에서 묶으려고 적는다
   tier: 'common',
   strayPick: false, // 브란이 '주워 온 커먼 칼'(characters.js shortest_common) 후보에서 뺀다 — 칼날 0.71 m 로 가장 짧아 팔쉬온 자리를 빼앗기 때문 (사장님 확인 전)
-  hiltLength: 0.25, bladeLength: 0.71, gripAlong: -0.2,
+  // 쥠 고침 A안 (사장님 10/21 '뒷손이 손잡이를 넘어간다면 고쳐야' → A안 승인 · '베기 배율은 바꾸지 마'): 전엔 모노호시자오 자루 자리(hiltLength 0.25 · 츠바 0.24)를 그대로 써
+  //  오른손 주먹이 츠바 아래 0.235 m(츠카 한가운데)에 있고 왼손 주먹(gripAlong −0.2)은 카시라 끝(−0.16)보다 4 cm 밖 — 주먹 폭 10 cm 중 9 cm 가 허공을 쥐었다.
+  //  이제 칼날 · 츠바를 통째로 손 쪽으로 0.175 m 내려 츠바 아랫면이 오른손 주먹 바로 위(0.065), 카시라가 왼손 주먹 끝(−0.245)에 오게 했다 —
+  //  츠카 30 cm(카시라까지 32 cm) · 손 간격 0.20 그대로. 쿠사나기(자루 30 cm · 손 간격 0.20)와 같은 쥠. 칼날 0.71 · 부품 질량 그대로라
+  //  손~칼끝 0.96 → 0.785 m · 무게중심 손에서 0.338 → 0.19 m · 손 기준 관성 0.221 → 0.116. 간격 표(weapon_measured.js)는 다시 쟀고, 베기 배율(mCut)은 그대로
+  hiltLength: 0.075, bladeLength: 0.71, gripAlong: -0.2,
   mCut: 1.2, mThrust: 0.9, mBlunt: 0.95,
   partMesh: swordKit({
     blade: { edge: 'single', width: (t) => 1 - 0.28 * t, thick: 0.0035, ridge: 0.3, hamon: true, curve: 0.008, tip: 'kissaki', tipLen: 0.05, overshoot: 0.008 },
@@ -875,34 +902,28 @@ const uchigatana = finalizeSpec('uchigatana', {
   }),
   buildParts(look) {
     const L = this.bladeLength;
-    const grip = boxInertia(0.26, 0.014, 0.13, 0.017); // 츠카
+    const grip = boxInertia(0.26, 0.014, 0.15, 0.017); // 츠카: 츠바 아랫면(0.065) ~ 카시라 윗면(−0.235)
     const pommel = sphereInertia(0.06, 0.014); // 카시라
     const cross = boxInertia(0.12, 0.04, 0.005, 0.04); // 츠바 (커먼 철 츠바라 모노호시자오보다 무겁다)
     const blade = bladeInertia(0.66, L, 0.4, 0.26, 0.03, 0.007);
     return [
-      partTuple(['box', 0.014, 0.13, 0.017], 0, 0.26, 0, grip.Ie, grip.It, look.grip),
-      partTuple(['ball', 0.014], -0.15, 0.06, 0, pommel.Ie, pommel.It, look.hilt),
-      partTuple(['box', 0.04, 0.005, 0.04], 0.24, 0.12, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.015, L / 2, 0.0035], 0.25 + L / 2, 0.66, blade.comY, blade.Ie, blade.It, 0xc9d1d6, true),
+      partTuple(['box', 0.014, 0.15, 0.017], -0.085, 0.26, 0, grip.Ie, grip.It, look.grip),
+      partTuple(['ball', 0.014], -0.245, 0.06, 0, pommel.Ie, pommel.It, look.hilt),
+      partTuple(['box', 0.04, 0.005, 0.04], 0.07, 0.12, 0, cross.Ie, cross.It, look.hilt),
+      partTuple(['box', 0.015, L / 2, 0.0035], this.hiltLength + L / 2, 0.66, blade.comY, blade.Ie, blade.It, 0xc9d1d6, true),
     ];
   },
-  // 커먼 마감 (물리 무관, 콜라이더에서 ~1cm 안): 모노호시자오의 츠카 꼴(검은 비단 끈 X 감기 + 흰 사메)·츠카 연장·후치를 같은 식으로,
-  //  금 테두리는 없고 하바키는 구리. 츠카 연장 = 콜라이더(±0.13)와 츠바(0.24)·카시라(-0.15) 사이
+  // 커먼 마감 (물리 무관, 콜라이더에서 ~1cm 안): 모노호시자오의 츠카 꼴(검은 비단 끈 X 감기 + 흰 사메)·후치를 같은 식으로,
+  //  금 테두리는 없고 하바키는 구리. 츠카 콜라이더가 츠바 · 카시라에 바로 닿아 연장은 없다
   decorate(group) {
     const iron = metalMat(0x2b2e33, { rough: 0.45 });
     const copper = metalMat(0xa0623a, { rough: 0.35 });
-    const habaki = addMesh(group, new THREE.BoxGeometry(0.034, 0.03, 0.011), copper, [0, 0.262, 0]);
+    const habaki = addMesh(group, new THREE.BoxGeometry(0.034, 0.03, 0.011), copper, [0, this.hiltLength + 0.012, 0]);
     habaki.castShadow = true;
     const silk = new THREE.MeshStandardMaterial({ color: 0x1b1d2e, roughness: 0.85 });
-    const same = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.7 });
-    for (const [yc, h] of [[0.181, 0.102], [-0.135, 0.012]]) {
-      const ext = addMesh(group, new THREE.CylinderGeometry(0.0132, 0.0132, h, 14), same, [0, yc, 0]);
-      ext.scale.z = 1.2;
-      ext.castShadow = true;
-    }
-    const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.231, 0]);
+    const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.061, 0]);
     fuchi.scale.z = 1.2;
-    addTsukaIto(group, silk, -0.12); // 모노호시자오와 같은 끈 — 츠카가 짧아 카시라 쪽 첫 줄이 위다 (끈 40 · 매듭 20 상자가 메쉬 하나)
+    addTsukaIto(group, silk, -0.215, 0.03); // 모노호시자오와 같은 끈 — 카시라 위 −0.215 부터 후치 밑 0.03 까지 여덟 줄 (끈 32 · 매듭 16 상자가 메쉬 하나)
   },
 });
 
@@ -1080,12 +1101,14 @@ const lightsaber = finalizeSpec('lightsaber', {
   controlOverrides: { wristVmax: 36, aimDamping: 9 }, // 가볍고 매끄러운 이미터: 손목이 더 빨리 돌아간다
   // 플라스마 칼날은 각진 막대가 아니라 매끄러운 원기둥이어야 "에너지 칼날"답다. 자루는 홈이 파인 금속 원통,
   //  끝마개·이미터(칼날이 나오는 쇠 머리)는 어두운 금속.
-  partMesh: swordKit({
+  //  자루 · 끝마개는 겉모습만 콜라이더보다 6 cm 아래까지 그린다(자루 −0.17 · 끝마개 가운데 −0.18, 끝 −0.193) — 왼손 주먹(gripAlong −0.14,
+  //  주먹 −0.192…−0.092)이 끝마개 밖 허공을 쥐지 않게 (사장님 10/21 · lowerPommelLook — 물리 · 해시 그대로, 무거운 끝 공은 −0.12 그대로)
+  partMesh: lowerPommelLook(swordKit({
     bladeMesh: (shape, color, matOpts) => curvedBlade((hx, hy, hz) => rodGeometry(hx, hy, hz, { sides: 18 }))(3, true, shape, color, matOpts),
     grip: { style: 'metal' },
     pommel: { style: 'cap' },
     guard: { style: 'block' },
-  }),
+  }), -0.06, 0.06),
   buildParts(look) {
     const L = this.bladeLength;
     const grip = boxInertia(0.25, 0.016, 0.11, 0.016);

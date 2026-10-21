@@ -42,7 +42,8 @@ export const MEASURED = {
   morgenstern: [0.88, 1.0, 0.68, 0.39],
   // 打刀 (제안 가지 10/9, 사장님 확인 전): `with_config ARENA.startHold=0 weapon_measures.mjs --gen --down` 생성 값(contact 1.41 · reach 1.53 · clinch 1.09 · 날것 0.27 s,
   //  같은 생성의 롱소드 1.62/1.73/1.25/0.28)을 롱소드 손 값(1.57/1.8/1.25/0.41)에 비율로 붙인 값 — docs/strike/weapon_measures_review_2026-10-09.md §4 '비율값' 규칙
-  uchigatana: [1.37, 1.59, 1.09, 0.4],
+  //  10/21 쥠 고침 A안(사장님 승인 — 칼날 · 츠바를 손 쪽으로 0.175 m — weapons.js) 뒤 같은 생성 1.16/1.24/0.90/0.21 을 같은 실행 롱소드 1.62/1.75/1.25/0.28 대비로 (전 1.37/1.59/1.09/0.4)
+  uchigatana: [1.12, 1.28, 0.9, 0.31],
   // 쿠사나기 10/21 자루 단축 후: startHold=0/--down 생성1.23/1.31/.95/.21를
   // 같은 실행 롱소드1.62/1.75/1.25/.28 대비 기존 손 값으로 보정. 원자료 docs/design/kusanagi_20261021/measured.json.
   kusanagi: [1.19, 1.35, 0.95, 0.31],
@@ -84,7 +85,7 @@ export const CUT_TIME_30 = {
   rubber_chicken: 0.13,
   frozen_tuna: 0.32,
   morgenstern: 0.29, // 0.30 × 0.39/0.41
-  uchigatana: 0.29, // 0.30 × 0.27/0.28 (같은 생성의 롱소드 날것에 대한 비율)
+  uchigatana: 0.23, // 0.30 × 0.21/0.28 (같은 생성의 롱소드 날것에 대한 비율 — 10/21 쥠 고침 A안 뒤, 전 0.29)
   kusanagi: 0.23, // 0.30 × 0.21/0.28, 같은 실행의 롱소드에 대한 비율.
   ganjiang: 0.26, // 0.30 × 0.24/0.28 (샛별 저장소에서 가져온 넷 — 위 MEASURED 와 같은 생성)
   moye: 0.27, // 0.30 × 0.25/0.28
