@@ -12,6 +12,7 @@ import { FLOW_RECOVERY } from './nagashi_recovery.js'; // 흘림당한 뒤 팔 �
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
 import { createScreenTint } from './screen_tint.js';
+import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 긋기 · 비기 · 인데스 창 동안 상대 머리 위 '!' (10/21 · ?strikeCue=mark|edge|both|0)
 import { readJourney, writeJourney, addJourneyClear } from './journey_save.js'; // 여정 이어하기 지점 · 깬 무대 수(통계) (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
@@ -332,6 +333,7 @@ scene.add(sun, sun.target);
 const fighterLight = createFighterLight({ hemi, sun });
 // 부활 연출 (이졸데, src/revive_fx.js): 하늘에서 내린 빛기둥·빛 알갱이·땅의 빛·진짜 빛 하나·몸의 빛. 부활하는 동안만 장면에 붙는다
 const reviveFx = new ReviveFx(scene, { renderer, camera, fighterLight });
+const strikeCue = createStrikeCue(scene, screenTint, params.get('strikeCue')); // 칠 때 알림 (strike_cue.js): 느낌표 하나를 장면에 먼저 붙여 둔다
 
 // ── 배경(스테이지): 판마다 정해진 순서 ─────────────────────────────────────
 //  오너 결정: 고르는 화면 없이 늘 포세이돈 신전 → 성 안뜰 → 산사 → 대성당 순서. 대성당 다음 판은 다시 포세이돈 (stages.js STAGE_ORDER)
@@ -2458,6 +2460,7 @@ function frame(now) {
   }
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
   staminaHud.update([player, enemy], camera, state === 'fight' && !roundOver);
+  strikeCue.update(dt, camera, state === 'fight' && !roundOver, player, enemy, playerUnique, playerSecret); // 칠 때 알림: 카메라가 정해진 뒤 · 그리기 전
   screenTint.update(dt);
   let renderMs = 0;
   if (paint) {
@@ -2551,6 +2554,7 @@ window.game = {
   renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
   renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 60 fps 제한' (game.settings.fpsCap)
   screenTint,
+  strikeCue, // 칠 때 알림 (style · state) — tools/browser/strike_cue_shots.mjs 가 읽는다
   // 배경: game.stage 로 지금 배경·짓는 시간 확인, game.setStage('castle') 로 바로 바꿔 보기 (싸우는 중이면 잠깐 멈칫한다)
   get stage() {
     return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
