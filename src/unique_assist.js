@@ -62,11 +62,11 @@ export const PLAYER_UNIQUE = {
   german: [
     { stage: 1, name: 'zwerchAbtritt', role: 'step', stick: 'side', hint: '옆으로 걸으며 가로 긋기', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 옆 + 가로베기
     { stage: 3, name: 'duplieren', role: 'chain', hint: '칼이 맞물린 뒤 다시 긋기', far: true, body: [5, -3, 3, 0], on: [{ prev: 'cut', when: 'bound' }], chain: { at: 1 } }, // 겹치기 ← 내 베기가 맞물린 뒤 다음 긋기
-    { stage: 4, name: 'schielhau', role: 'enh', replaces: 'zornhau', hint: '강화동작 · 분노의 베기 대신', body: [-12, -8, 2, 0.02], /* 10/21 전수 조사: 오른쪽 위 → 왼쪽 아래 긋기라 몸도 왼쪽(−) — 전 +12 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 곁눈 베기 ← 분노의 베기 (늘 — 같은 시작 자리 오른쪽 머리 위 · 10/21 사장님 '분노의 베기를 바꾸는 걸로' · 전 황소 찌르기는 찌르기 → 베기로 어긋나 AI 손해)
+    { stage: 4, name: 'schielhau', role: 'enh', replaces: 'zornhau', hint: '강화동작 · 분노의 베기 대신 · 맞은 상대가 무릎을 꿇기도 함', body: [-12, -8, 2, 0.02], /* 10/21 전수 조사: 오른쪽 위 → 왼쪽 아래 긋기라 몸도 왼쪽(−) — 전 +12 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 곁눈 베기 ← 분노의 베기 (늘 — 같은 시작 자리 오른쪽 머리 위 · 10/21 사장님 '분노의 베기를 바꾸는 걸로' · 전 황소 찌르기는 찌르기 → 베기로 어긋나 AI 손해)
   ],
   italian: [
     { stage: 1, name: 'inquartata', role: 'step', stick: 'side', hint: '옆으로 걸으며 찌르기', body: [18, 10, 5, 0.025], bodyMirror: 1, /* 몸을 칼 줄 밖으로 빼는 쪽 = 디딘 쪽(10/21 — 걸음이 스틱 쪽을 따르므로 몸도) */ on: [{ tech: 'stichPflugL' }, { tech: 'stichPflug' }] }, // 비껴서며 찌르기 ← 옆 + 쟁기 찌르기(왼 · 오른)
-    { stage: 2, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 황소 찌르기 대신', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기 (늘)
+    { stage: 2, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 황소 찌르기 대신 · 옷과 갑옷 틈을 더 파고듦', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기 (늘)
     { stage: 3, name: 'cavazione', role: 'chain', hint: '찌르기가 맞물리거나 꺾인 뒤 찌르기', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }] }, // 칼끝 돌려 빼기
   ],
   iberian: [
@@ -104,6 +104,21 @@ export function aiUniqueStages(tradition) {
 }
 
 /** 강화동작 (10/21): 유파 → [{ base 기본 동작, name 강화동작, stage }] — 기본 동작이 TECH 이름인 것만(일본 코테의 '가운데서 짧게 내려베기'는 AI 기술이 아님). sword_art.js 가 AI 꾸러미를 바꿀 때 읽는다 */
+/**
+ * 지금 이 싸움꾼이 긋는 기술 이름 (10/21 강화동작 이점 — combat.js 가 맞는 순간 읽는다): 플레이어 = 강화 중인 고유 동작(긋기가 끝난 뒤 0.2 s 까지 — 칼은 손가락보다 늦게 멎는다) ·
+ *  AI = 공격 중인 기술(강화동작은 기본 동작 자리에서 그 이름으로 나온다 — sword_art.js). 아니면 null
+ */
+export function strokeTechOf(f) {
+  const u = f?.skill?.uniq;
+  if (u) {
+    if (u.r) return u.r.e.name;
+    if (u.cur?.unique) return u.cur.unique;
+    if (u.last?.unique && u.last.tEnd != null && u.t - u.last.tEnd <= 0.2) return u.last.unique;
+  }
+  const ai = f?.aiCtl;
+  return ai && ai.mode === 'attack' ? ai.tech?.name ?? null : null;
+}
+
 export function enhancedMoves(tradition) {
   return (PLAYER_UNIQUE[tradition] ?? []).filter((e) => e.role === 'enh' && TECH_BY_NAME[e.replaces]).map((e) => ({ base: e.replaces, name: e.path ?? e.name, stage: e.stage }));
 }

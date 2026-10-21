@@ -70,6 +70,7 @@ export class AI {
     me.stamina.controller = this; // 공통 기력 장부의 방어 상태
     this.foe = foe;
     this.sense = new Senses(me, foe);
+    me.aiCtl = this; // 강화동작 이점(10/21 — unique_assist.js strokeTechOf): 맞는 순간 지금 기술 이름을 읽는다 · 읽기만
     me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
     this.persona = persona || {};
     // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)

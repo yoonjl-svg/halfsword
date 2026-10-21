@@ -31,6 +31,8 @@ import { updateGun } from './gun.js';
 import { runInstants } from './secret_instant.js';
 import { FINISH } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
 import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
+import { UNIQUE_ASSIST as UA } from './config.js';
+import { strokeTechOf } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
 const IAI_GHOST_PARTS = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']);
@@ -291,14 +293,16 @@ export class Combat {
       // 팔다리 판(견갑·팔 통판·손목 보호대·허벅지 판·정강이받이·쇠신)은 몸통 판보다 얇다: 문턱 × ARMOR.plate.limb
       if (plate && (zone === 'arm' || zone === 'leg')) plateGuard *= ARMOR.plate.limb;
     }
+    let gapV = 0; // 찌르기가 틈을 파고드는 값 (아래 — 무기 THRUST_STYLE gap · 강화동작)
     if (att.weaponCfg.ignoreArmor) (guard = 1), (plateGuard = 0); // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
     else if (att.weaponCfg.ignoreArmorDamage) plateGuard = 0; // 모르겐슈테른: 판금은 막아주지 않되 누비옷(guard)은 그대로
     // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구·판금은 gap 의 절반을 무시한다
-    else if (type === 'stab' && ts?.gap) {
-      if (helmOn) guard *= 1 - 0.5 * ts.gap;
+    else if (type === 'stab' && (gapV = strokeTechOf(att) === 'imbroccata' ? Math.max(ts?.gap ?? 0, UA.imbroccataGap ?? 0) : ts?.gap)) {
+      // 위에서 내려 찌르기(이탈리아 강화동작 — 10/21 사장님 '파고드는 값 0.6'): 이 찌르기만 gap 을 UA.imbroccataGap 으로 (다른 찌르기 · 다른 무기는 그대로)
+      if (helmOn) guard *= 1 - 0.5 * gapV;
       else if (body) {
-        guard -= ts.gap * Math.max(0, guard - 0.55);
-        plateGuard *= 1 - 0.5 * ts.gap;
+        guard -= gapV * Math.max(0, guard - 0.55);
+        plateGuard *= 1 - 0.5 * gapV;
       }
     }
 
@@ -842,9 +846,29 @@ export class Combat {
     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
+      if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
     }
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
+  }
+
+  /**
+   * 곁눈 베기 무릎 꺾기 (독일 강화동작 이점 — 10/21 사장님, config UNIQUE_ASSIST.buckle): 곁눈 베기의 칼날이 들어간 베기가 머리 · 가슴(목) · 위팔(어깨)에 맞으면
+   *  p 로 맞은 쪽이 한쪽 무릎을 꿇는다(knockDown(false) — 넘어졌다 일어날 때의 무릎 자세 · 꿇는 시간만 kneel 초 꼴). 그 상대에게는 cool 초 안에 다시 굴리지 않는다.
+   *  굴림은 친 쪽 전용 난수(fighter.buckleRandom — Math.random 순서는 그대로). 기록 this.buckleLog { t, att, vic, part, hit }
+   */
+  buckleCheck(att, vic, part) {
+    const B = UA.buckle;
+    if (!(B?.p > 0) || !vic?.alive || vic.state !== 'stand' || vic.revival || !B.parts.includes(part)) return;
+    if (strokeTechOf(att) !== 'schielhau') return;
+    const t = this.stepNo * (this.dt ?? 1 / 60);
+    if (vic.buckleAt != null && t - vic.buckleAt < B.cool) return; // cool 은 꿇은 뒤부터 (빗나간 굴림은 세지 않는다)
+    const hit = att.buckleRandom() < B.p;
+    (this.buckleLog ??= []).push({ t: +t.toFixed(2), att: att.index, vic: vic.index, part, hit });
+    if (!hit) return;
+    vic.buckleAt = t;
+    vic.buckleKneel = B.kneel;
+    vic.knockDown(false);
   }
 }
 

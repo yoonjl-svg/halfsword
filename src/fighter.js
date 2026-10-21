@@ -622,6 +622,7 @@ export class Fighter {
     //  (자리 번호만으로 씨앗을 잡으면 매 판 같은 굴림이 나와 한쪽 자리만 계속 부러지거나 안 부러지는 편향이 생겼다)
     const breakSeed = o.breakSeed ?? (Fighter._breakCount = (Fighter._breakCount ?? 0) + 1);
     this._breakSeed = (Math.imul(0x9e3779b9, breakSeed) ^ ((o.index + 1) * 0x85ebca6b)) >>> 0;
+    this._buckleSeed = (this._breakSeed ^ 0x27d4eb2d) >>> 0; // 곁눈 베기 무릎 꺾기 굴림 전용 (10/21 — combat.js buckleCheck · Math.random 순서는 그대로)
     // 방어구 연출(벗겨진 케틀햇이 도는 힘, 부서진 투구·판금 조각이 흩어지는 방향·시간)용 전용 난수도 같은 까닭으로 따로 두고,
     //  씨앗도 같은 것(판 시드, 없으면 몇 번째 파이터인가)에서 다른 수로 섞어 잡는다 — 파손 굴림과 겹치지 않고,
     //  시뮬에서는 한 프로세스에서 다른 판을 먼저 몇 판 돌렸든 같은 판은 같은 굴림이 나온다
@@ -1383,7 +1384,7 @@ export class Fighter {
     const tilt = this.tiltDeg();
     const leg = Math.max(0.3, this.legHealth);
     // 일어나는 데 걸리는 시간: 다리가 다칠수록, 피를 흘릴수록 오래
-    this.kneelTime = (1.1 / leg) / Math.max(0.5, this.vigor);
+    this.kneelTime = ((this.buckleKneel ?? 1.1) / leg) / Math.max(0.5, this.vigor); // buckleKneel: 곁눈 베기 무릎 꺾기는 꿇는 시간만 그 값 꼴(10/21 — 0.4 s)
     this.riseTime = (0.9 / leg) / Math.max(0.5, this.vigor);
     if (this.revival) reviveTick(this, dt); // 부활: 쓰러져 누웠다가 정한 때에 일어난다 (revive.js)
     if (this.state === 'stand') {
@@ -1430,6 +1431,7 @@ export class Fighter {
   setState(s) {
     if (s === 'dead' && !this.canDie) return; // 흙 몸(병마용): 머리가 떨어지기 전에는 죽은 상태로 가지 않는다 (사람은 늘 canDie)
     this.state = s;
+    if (s !== 'getup') this.buckleKneel = null; // 무릎 꺾기 꿇는 시간은 그 한 번의 일어나기에만
     this.stateTime = 0;
   }
 
@@ -1803,6 +1805,12 @@ export class Fighter {
       if (d < bd) (bd = d), (best = b.mesh);
     }
     return best;
+  }
+
+  /** 곁눈 베기 무릎 꺾기 굴림 전용 난수 (파이터별 LCG, 결정적, Math.random 과 무관 — 10/21) */
+  buckleRandom() {
+    this._buckleSeed = (Math.imul(this._buckleSeed, 1664525) + 1013904223) >>> 0;
+    return this._buckleSeed / 4294967296;
   }
 
   /** 방어구 연출 전용 난수 (파이터별 LCG, 결정적, Math.random 과 무관) */
