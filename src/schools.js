@@ -684,7 +684,7 @@ const IBERIAN_SECRET = {
 //   ② 순간: 상대 가슴이 그 경계(reach)를 다가오며 넘어 들어오는 그 스텝 (secret.js gilmokEvent — 안에 머무는 것은 세지 않는다). 창을 열면(AI 는 내면) 준비가 풀린다 — 한 번 준비에 한 번 기회.
 //      AI 는 준비된 동안 먼저 치지 않고 칼끝 거리 선 밖에 선다(ai.js watch·holdDist — 길목을 지킴)
 //   ③ 한 칼: 감아 둔 쪽에서 몸 가운데 높이로 반대쪽 끝까지 둘러 벰 (secret.js gilmokSeq — 길은 v5 마지막 칼 = zwerch·zwerchL 줄, 물리 서보 길) · 힘 창·보조 힘 = 이베리아 값 재사용
-//   ④ 끝나면 경직 SECRET.stiff.iberian 0.5 s 그대로 (맞히면 결정타 SECRET.hitMul 그대로). v4 의 '막히면 밀어냄'(iberianShove)은 넣지 않았다 — 실패 대가를 지우지 않게
+//   ④ 끝나면 경직 SECRET.stiff.iberian (10/21 0.4 s) (맞히면 결정타 SECRET.hitMul 그대로). v4 의 '막히면 밀어냄'(iberianShove)은 넣지 않았다 — 실패 대가를 지우지 않게
 //  근거: 피 단Ⅶ 「This rule serves to deter people in a street and impede them moving from one end to another」·복Ⅶ [원문 영역] — 몬탄테는 자리를 지키는 칼 [해석] ·
 //   단Ⅺ 「talho orizontal」·복Ⅺ 「revez orizontal cingido」 [원문] · 고 규칙 9 「Tajos … in mittlerer Höhe zu einer der Seiten」 [원문 독일어 역]. 경계 넘음을 순간으로 삼는 것·준비 셈은 [해석] · 수 [추정] · 이름 가칭
 //  걸음: 넣지 않음 — 상대가 경계를 넘어 들어오는 중이라 칼이 닿는 동안 거리가 더 줄어든다(피 복Ⅶ 「in each step you must give a blow」는 밀고 드는 무리를 쫓을 때의 걸음) [해석]

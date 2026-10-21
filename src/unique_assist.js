@@ -82,7 +82,7 @@ export const PLAYER_UNIQUE = {
     { stage: 1, name: 'chebuYaoji', role: 'step', stick: 'fwd', hint: '앞으로 걸으며 가로 긋기', body: [-8, -12, 4, 0.045], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 앞 + 가로베기 (앞으로 끌어 딛고 낮게)
     { stage: 3, name: 'lianchi', role: 'chain', hint: '찌르다가 거두어 베기', nameKo: '날개 접기 (염시)', orig: '斂翅', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시
     // 요격(腰擊) 강화동작 — 전 표의 자→격(ciji)을 모음: 가로베기가 늘 요격이라 찌른 뒤 가로로 그으면 그대로 자→격. AI 의 자→격 패시브 단계는 aiPassive 로 그대로
-    { stage: 4, name: 'yaoji', role: 'enh', replaces: 'zwerch', aiPassive: 'ciji', hint: '강화동작 · 가로베기 대신', body: [-12, -16, 2, 0.02], on: [{ tech: 'zwerch' }] }, // 요격 ← 가로베기 (늘)
+    { stage: 4, name: 'yaoji', role: 'enh', replaces: 'zwerch', aiPassive: 'ciji', hint: '강화동작 · 가로베기 대신 · 몸통을 베면 피를 더 흘림', body: [-12, -16, 2, 0.02], on: [{ tech: 'zwerch' }] }, // 요격 ← 가로베기 (늘)
   ],
 };
 

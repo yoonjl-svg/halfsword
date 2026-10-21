@@ -144,6 +144,7 @@ if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.on = false; // 유파 패시브 끔 (10/21 — 이베리아 손목 힘 · test.html '이베리아 시험')
 if (params.has('buckle')) CONFIG.UNIQUE_ASSIST.buckle.p = +params.get('buckle') || 0; // 곁눈 베기 무릎 꺾기 확률(10/21 — 판 값 0.15 · `?buckle=0` 끔)
+if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
 // 테스트 경로도 기본 켬 (사장님 10/14 03:1x '테스트에서 켜' — 10/14 02:0x 부터 '궤적은 내 것' 강화 판으로 다시 만드는 동안 꺼 두었던 것). 끄려면 `?uniqueAssist=0`

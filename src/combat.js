@@ -365,7 +365,7 @@ export class Combat {
       severity,
       pass,
       absorb: A.absorb ?? 100,
-      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1), // 모노호시자오 '제비 베기': 출혈 배율
+      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1) * (UA.yaojiBleed?.k > 0 && UA.yaojiBleed.zones.includes(zone) && strokeTechOf(att) === 'yaoji' ? UA.yaojiBleed.k : 1), // 모노호시자오 '제비 베기': 출혈 배율 · 요격 몸통 깊은 출혈(10/21 UA.yaojiBleed)
       local: vicLocal,
       point: point.clone(),
       dir,
