@@ -1,17 +1,22 @@
 // 대기실 스킬 화면 (10/21 사장님 확정 스킬트리 — docs/design/skill_tree_2026-10-21/ · IMPLEMENTATION.md §5 · §8) — 유파 탭 다섯 · 탭마다 11 칸 트리.
 //  사장님 10/21 18:3x '디아블로나 WOW처럼. 어떤 스킬을 찍으면 다음 스킬을 찍을 수 있고, 어떤 건 분기점이 되기도 … 유파마다 분기점이나 갈래의 모양이 조금씩 다르면 좋아' ·
 //   18:4x '시작은 무조건 보법부터 … 보법 심화는 선택적인 곁가지로'. (전: 10/16 별자리 다섯 권 — 옛 스킬북은 skill_tree_store.js 가 한 번 거두고 돌려줌)
-//  칸 = 그림 + 기술 이름 (사장님 10/22 00:2x '기존에 가지고 있던 아이콘이 사라져서 서운한데?' · 00:4x '보법1 보법2 이런 건 우리가 보려고 만든 범주 구분 … 기술 이름이 보이는 게'):
-//   그림은 옛 스킬북 그림을 갈래대로(skill_tree_icons.js) · 이름은 칸 name(긴 이름은 낱말 경계에서 두 줄) · 갈래 말(보법 I · 막기 II · 심화 …)은 상세 카드 갈래 줄에만.
-//  칸 상태 넷 (skill_tree_data.js nodeState): 잠김 = 이름 보조 색 · 그림 조금 흐리게(앞 칸이 모자람) · 배울 수 있음 = 금색 테두리 + 값 알약 · 익힘 = 갈래 색으로 채우고 빛 · 그림 제 색 ·
-//   준비 중 = 점선 · 그림 잿빛 + 칸 아래 '준비 중' 알약(닫힌 비기 · 일본 손목 치기 심화).
-//  줄 = 그림 모양 그대로(앞 칸 아래 → 뒤 칸 위 곡선): 곁가지(편지 · 보법 II)는 점선 · 앞 칸을 '모두' 익혀야 하는 칸은 줄이 만나는 곳에 금색 점 · 독일 2단계 관문은 가로 띠 하나.
+//  칸 = 둥근 원 안의 그림 + 원 밑 기술 이름 (사장님 10/22 00:2x '기존에 가지고 있던 아이콘이 사라져서 서운한데?' · 00:4x '보법1 보법2 이런 건 우리가 보려고 만든 범주 구분 … 기술 이름이 보이는 게' ·
+//   01:2x '스킬북 아이콘에만 원형 테두리가 있고 텍스트는 그 밑에 나오는 게 낫겠어. 초기화도 원형으로'):
+//   그림은 옛 스킬북 그림을 갈래대로(skill_tree_icons.js) · 원 테두리 = 갈래 색(--tier-*) · 이름은 칸 name(원 밑 · 낱말 경계에서 두 줄, 좁으면 세 줄 — 9 px 밑으로 줄이지 않음) ·
+//   갈래 말(보법 I · 막기 II · 심화 …)은 상세 카드 갈래 줄에만. 누르는 자리 = 원 + 이름 (폭 · 높이 40 px 이상).
+//  칸 상태 넷 (skill_tree_data.js nodeState — 원에 보임): 잠김 = 원 · 그림 조금 흐림 · 이름 보조 색(앞 칸이 모자람) · 배울 수 있음 = 원 바깥 금색 테 + 원 아래 가장자리 값 알약 ·
+//   익힘 = 원 테두리 밝게 + 빛 + 갈래 색 안쪽 · 준비 중 = 원 테두리 점선 · 그림 잿빛 + 원 아래 가장자리 '준비 중' 알약(닫힌 비기 · 일본 손목 치기 심화).
+//  줄 = 그림 모양 그대로(앞 칸 원 아래 가장자리에서 이름표 뒤로 곧게 내려와 → 뒤 칸 원 위 가장자리까지 곡선): 곁가지(편지 · 보법 II)는 점선 ·
+//   앞 칸을 '모두' 익혀야 하는 칸은 원 위에 금색 점 · 독일 2단계 관문은 두 줄 사이 가로 띠 하나.
 //  칸을 누르면 상세 카드(유파 탭까지 덮음): 그림 · 이름(원어는 여기서만 — 화면 글 지침 §1) · 검술서 오의(lore) · 출처(src) · 효과 한 줄(작게) · 갈래 · 유파 · 상태 · 먼저 익힐 칸(잠김일 때) · 값 · '배우기'.
 //   화면 읽기 차례 = 이름 · 오의 · 출처 · 효과 (사장님 10/22 00:5x '검술서나 참고 문헌에서의 오의를 밝힌 예전 방식이 더 나았던 거 같아' — 갈래 줄은 보이기만 위, 읽기는 효과 뒤).
-//  유파 초기화: 판 맨 위 오른쪽(뿌리 칸 줄 · 판과 함께 내려감) '초기화' — 머리 1 · 확인 단계 · 누르는 높이 40 px(10/22 '너무 낮아 누르기 힘듭니다') · 익힌 칸이 없거나 머리 0 이면 못 누름.
+//  유파 초기화: 판 맨 위 오른쪽(뿌리 칸 줄 · 판과 함께 내려감) 둥근 단추 — 원(지름 42) 안에 머리 그림 + 1 · 원 밑 '초기화' (10/22 '너무 낮아 누르기 힘듭니다' · '초기화도 원형으로') ·
+//   머리 1 · 확인 단계 · 익힌 칸이 없거나 머리 0 이면 못 누름.
 //  꾸밈: 판 틀은 픽셀 결(창의 액자 1 — 겉) · 칸 · 줄 · 카드는 매끈(속 — 스타일 규칙 '겉은 픽셀, 속은 매끈', docs/design_language.md §5). 색은 싸움 화면 토큰과 등급 색(--tier-*) — 글자는 entrance_type.css, 자리는 lobby.css '스킬' 칸.
 //  자리(layout): 모든 유파가 판 안에서 아래로 내려 보는 판 (사장님 10/22 00:3x '이탈리아 스킬트리처럼, 어차피 … 스크롤이 필요하니까, 지금보다 간격을 더 넓고 자연스럽게') —
-//   칸 크기 · 줄 간격은 판 폭에서 셈(높이에 맞춰 줄이지 않음) · 가로는 판 폭 안(가장 붐비는 줄의 틈에서 칸 폭) · 이름이 좁으면 그 칸만 이웃이 허락하는 만큼 넓힘.
+//   원 · 줄 간격은 판 폭에서 셈(높이에 맞춰 줄이지 않음) · 가로 내려 보기 없음(01:3x '가로 스크롤은 하지 마') — 줄마다 칸 폭(원 · 이름)을 판 폭 안에 나눠 넣고,
+//   좁으면 넓은 이름부터 한 줄 더 접고(세 줄까지) · 그래도 안 들면 그 줄 원만 작게 · 설계 자리(cx)에서 덜 밀리게.
 //   첫 화면에 뿌리 줄이 보이고 아래 끝은 흐림 + 꺾쇠(더 있음). 잰 도구 tools/browser/skill_tree_layout.mjs
 import { TREE_SCHOOLS, TREE, NODE_CAT, nodesOf, nodeOf, nodeState, canLearn, isClosed, nodeEff, RESET_HEADS } from './skill_tree_data.js';
 import { readLearned, learnNode, resetPreview, resetSchool } from './skill_tree_store.js';
@@ -60,27 +65,65 @@ export function nodeTitle(school, n) {
   return { title: withOrig(n.title ?? `${n.l1} · ${n.l2}`, n.orig), kind: cat.label };
 }
 
-// 글 폭 (em) — 한글 1 · 빈칸 0.3 · 그 밖 0.6 (칸에 글이 안 들면 글자를 줄인다)
+// 글 폭 (em) — 한글 1 · 빈칸 0.3 · 그 밖 0.6
 const emWidth = (t) => [...String(t)].reduce((a, ch) => a + (/[가-힣]/.test(ch) ? 1 : ch === ' ' ? 0.3 : 0.62), 0);
-/** 이름의 줄 나눔 후보: 한 줄 + 낱말 경계 두 줄 (한글은 낱말 가운데서 줄을 바꾸지 않는다 — entrance_type.css keep-all) */
-const splits = (name) => { const w = String(name).split(' '); return [[w.join(' ')], ...w.slice(1).map((_, k) => [w.slice(0, k + 1).join(' '), w.slice(k + 1).join(' ')])]; };
 const lineEm = (lines) => Math.max(...lines.map(emWidth));
 /**
- * 칸 이름 줄 (tw = 글 폭 px · F = 글자 크기 상한) → { lines, font }: 글자가 가장 크게 드는 나눔 — 두 줄끼리 같으면 고른 쪽.
- *  예: '뉘른베르크에서 온 편지' → ['뉘른베르크에서', '온 편지'] · '돌며 베기'(한 줄에 듦) → ['돌며 베기'] — 두 줄은 글자가 6 % 넘게 커질 때만
+ * 칸 이름 접기 후보 (f = 이름 글자 px): 한 줄 · 두 줄 · 세 줄 가운데 줄마다 가장 고른 나눔 — 낱말 경계에서만(한글은 낱말 가운데서 안 끊음 · entrance_type.css keep-all).
+ *  list = 좁아지는 차례(같은 폭이면 줄이 적은 쪽만) · pref = 바라는 접기(여섯 자 안팎은 한 줄 · 넘으면 두 줄)
+ *  예: '뉘른베르크에서 온 편지' → ['뉘른베르크에서', '온 편지'] · '머리 위 돌려 베기' → ['머리 위', '돌려 베기'] (더 좁으면 세 줄 ['머리 위', '돌려', '베기'])
  */
-export function nameLines(name, tw, F) {
-  let best = null;
-  for (const lines of splits(name)) {
-    const em = lineEm(lines), font = Math.min(F, tw / em);
-    // 두 줄은 글자가 6 % 넘게 커질 때만 (거의 같으면 한 줄 — 짧은 이름이 괜히 접히지 않게)
-    const gain = best ? (best.lines.length === 1 ? font / best.font - 1.06 : font - best.font - 0.01) : 1;
-    if (!best || gain > 0 || (Math.abs(font - best.font) <= 0.01 && lines.length === 2 && best.lines.length === 2 && em < best.em)) best = { lines, font, em };
+export function nameOptions(name, f) {
+  const w = String(name).split(' '), out = [];
+  for (let k = 1; k <= Math.min(3, w.length); k++) {
+    let best = null;
+    const rec = (start, left, acc) => {
+      if (left === 1) { const lines = [...acc, w.slice(start).join(' ')], em = lineEm(lines); if (!best || em < best.em - 1e-9) best = { lines, em }; return; }
+      for (let e = start + 1; e <= w.length - left + 1; e++) rec(e, left - 1, [...acc, w.slice(start, e).join(' ')]);
+    };
+    rec(0, k, []);
+    if (best && (!out.length || best.em < out[out.length - 1].em - 1e-9)) out.push({ ...best, w: Math.ceil(best.em * f) + 2 });
   }
-  return best;
+  return { list: out, pref: out[0].em <= 6 || out.length === 1 ? 0 : 1 };
 }
-/** 이름이 바랄 수 있는 가장 좁은 글 폭 (em — 가장 고른 나눔) */
-const minNameEm = (name) => Math.min(...splits(name).map(lineEm));
+/**
+ * 한 줄 칸 자리 (P = [{ c 바라는 가운데, w 폭 }] 왼쪽부터): 이웃 사이 틈 gap · 판 가장자리 edge 안 — 부딪는 칸만 밀어냄(앞뒤로 몇 번).
+ *  돌려줌 { ok 판 폭에 다 듦, p 가운데들, shift 가장 많이 밀린 px }
+ */
+function relaxRow(P, W, gap, edge) {
+  const n = P.length, p = P.map((q) => q.c);
+  if (P.reduce((a, q) => a + q.w, 0) + gap * (n - 1) > W - 2 * edge + 0.01) return { ok: false, p, shift: Infinity };
+  const clamp = () => { for (let i = 0; i < n; i++) p[i] = Math.min(Math.max(p[i], edge + P[i].w / 2), W - edge - P[i].w / 2); };
+  for (let it = 0; it < 40; it++) {
+    clamp();
+    for (let i = 1; i < n; i++) p[i] = Math.max(p[i], p[i - 1] + (P[i - 1].w + P[i].w) / 2 + gap);
+    clamp();
+    for (let i = n - 2; i >= 0; i--) p[i] = Math.min(p[i], p[i + 1] - (P[i].w + P[i + 1].w) / 2 - gap);
+  }
+  clamp();
+  return { ok: true, p, shift: Math.max(0, ...p.map((x, i) => Math.abs(x - P[i].c))) };
+}
+/**
+ * 한 줄 칸 폭 · 접기 정하기: 바라는 접기에서 시작해 판 폭에 안 들거나 너무 밀리면(이웃 간격의 30 % 넘게) 가장 넓은 칸을 한 단계 더 접음 (세 줄까지).
+ *  칸 폭 = max(원 지름, 누르는 자리 40, 이름 폭). 돌려줌 { ok, p, w, pick } — ok 가 아니면 부르는 쪽이 원을 줄인다
+ */
+function fitRow(items, D, W, gap, edge, hit) {
+  const pick = items.map((it) => it.opts.pref);
+  const width = (i, k = pick[i]) => Math.max(D, hit, items[i].opts.list[k].w);
+  let space = Infinity;
+  for (let i = 1; i < items.length; i++) space = Math.min(space, items[i].c - items[i - 1].c);
+  const tooFar = Number.isFinite(space) ? 0.3 * space : Infinity;
+  const place = () => relaxRow(items.map((it, i) => ({ c: it.c, w: width(i) })), W, gap, edge);
+  let r = place();
+  while (!r.ok || r.shift > tooFar) {
+    let k = -1;
+    items.forEach((it, i) => { if (it.opts.list[pick[i] + 1] && width(i, pick[i] + 1) < width(i) && (k < 0 || width(i) > width(k))) k = i; });
+    if (k < 0) break;
+    pick[k]++;
+    r = place();
+  }
+  return { ok: r.ok, p: r.p, w: items.map((_, i) => width(i)), pick };
+}
 
 /**
  * root: 스킬 칸(Shadow root 안의 #skillTreeHost) · test: 테스트 경로(모든 칸 익힘 — 배우기 · 초기화 없음) · onWallet(): 금화 · 머리 · 레벨이 바뀌면(대기실 내 정보 칸 다시 그리기) ·
@@ -89,7 +132,7 @@ const minNameEm = (name) => Math.min(...splits(name).map(lineEm));
 export function mountSkillTree(root, { test = false, onWallet = () => {}, announce = () => {} } = {}) {
   root.innerHTML = `<div class="school-tabs" role="tablist" aria-label="유파">${TREE_SCHOOLS.map((s, i) => `<button role="tab" data-school="${s}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}">${TRADITIONS[s].nameKo}</button>`).join('')}</div>
     <div class="tree-frame card-frame"><div class="tree-scroll"><div class="tree-board" role="tabpanel"><svg class="tree-links" aria-hidden="true"></svg><div class="tree-nodes"></div>
-      <button type="button" class="tree-reset" id="treeReset"><span>초기화</span><span class="price-part">${POUCH}${RESET_HEADS}</span></button></div></div>
+      <button type="button" class="tree-reset" id="treeReset"><span class="reset-ring"><span class="price-part">${POUCH}${RESET_HEADS}</span></span><span class="reset-label">초기화</span></button></div></div>
     <section class="reset-confirm" hidden aria-labelledby="resetTitle"><b id="resetTitle" tabindex="-1"></b><p id="resetBody"></p><p id="resetPrice" class="detail-price"></p>
       <div class="confirm-actions"><button type="button" class="secondary" id="resetCancel">취소</button><button type="button" class="primary" id="resetOk">초기화</button></div>
     </section></div>
@@ -109,46 +152,34 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
   const learnedNow = () => (test ? new Set(nodesOf(school).map((n) => n.id)) : readLearned()[school]);
   const stateOf = (n, learned) => (test && !isClosed(school, n) ? 'learned' : nodeState(school, n, learned));
 
-  // ── 자리 셈: 판 폭에서 칸 크기 · 줄 간격 (높이는 판에 맞춰 줄이지 않는다 — 넘치면 판 안에서 아래로 내려 봄) ──
+  // ── 자리 셈: 판 폭에서 원 · 이름 · 줄 간격 (높이는 판에 맞춰 줄이지 않는다 — 넘치면 판 안에서 아래로 내려 봄 · 가로는 늘 판 폭 안) ──
   function layout() {
     const W = scroller.clientWidth, H = scroller.clientHeight;
     if (!W || !H) return null;
     const nodes = nodesOf(school), rows = Math.max(...nodes.map((n) => n.d)) + 1;
-    let gap = Infinity; // 같은 줄 칸 사이 가장 좁은 cx
-    for (const a of nodes) for (const b of nodes) if (a !== b && a.d === b.d) gap = Math.min(gap, Math.abs(a.cx - b.cx));
     const half = Math.max(...nodes.map((n) => Math.abs(n.cx - 500))); // 가로 범위 = 뿌리(500) 둘레로 맞춤 — 뿌리가 늘 가운데
     const c0 = 500 - half, span = 2 * half || 1;
-    const s = Math.min(1.5, Math.max(0.85, W / 386)); // 글자 · 틈 비 (폰 가로 판 386 px = 1)
-    const g = Math.min(1, gap / span);
-    // 바탕 칸 폭: 가장 붐비는 줄의 이웃 칸 사이 틈 m — 넉넉히 10·s (칸 폭 w 일 때 이웃 간격 = g × (W − w − 6) ≥ w + m), 그래서 너무 좁으면 틈 5 까지
-    const fit = (m) => (g * (W - 6) - m) / (1 + g);
-    let nodeW = Math.min(80 * s, fit(10 * s));
-    if (nodeW < 56 * s) nodeW = Math.min(56 * s, fit(5));
-    nodeW = Math.floor(Math.max(44, nodeW));
-    const F = 10.5 * s, Fok = 9.5 * s, inner = 6; // 이름 글자 상한 · 넉넉한 크기 · 칸 안 옆 여백 합(테두리 1 + 안쪽 2 — 양쪽)
-    const ih = Math.round(28 * s), lh = Math.round(F * 1.16); // 그림 높이(256 × 336 비 — 폭 ≈ 0.76 ih) · 이름 줄 높이
-    const nodeH = 2 + 3 + ih + 2 + 2 * lh + 3 + 1; // 위 띠 · 안쪽 · 그림 · 틈 · 이름 두 줄 · 안쪽 · 아래 테
-    const pill = Math.round(10 * s); // 값 · '준비 중' 알약이 칸 아래로 나오는 몫
-    const rowGap = Math.round(32 * s); // 칸 아래 끝 ~ 다음 줄 칸 위 끝 (알약 포함 — 줄 곡선이 보일 만큼)
-    const top = 6, bottom = pill + 8, pitch = nodeH + rowGap;
-    const height = Math.ceil(top + nodeH + pitch * (rows - 1) + bottom);
-    const padX = nodeW / 2 + 3;
+    const s = Math.min(1.5, Math.max(0.85, W / 386)); // 틈 · 줄 간격 비 (폰 가로 판 386 px = 1)
+    const f = Math.max(9, 10.5 * s), lh = Math.round(f * 1.2); // 이름 글자 · 줄 높이 — 9 px 밑으로 안 내림 (좁으면 접기 · 원 줄이기로 푼다)
+    const D0 = Math.max(40, Math.round(40 * s)), hit = 40; // 원 지름 · 누르는 자리 (폭 · 높이)
+    const gap = Math.round(6 * s), edge = 3, nameGap = Math.round(7 * s), rowGap = Math.round(30 * s), top = 6, bottom = 10;
+    const padX = D0 / 2 + edge;
     const X = (cx) => padX + ((cx - c0) / span) * (W - 2 * padX);
-    const y = (d) => top + nodeH / 2 + d * pitch;
-    // 칸마다 폭: 이름이 바탕 폭에서 넉넉한 크기(Fok)를 못 얻으면 이웃(틈 5)과 판 가장자리(3)가 허락하는 만큼 넓힘 — 가장자리 칸은 안쪽으로 조금 밀림
-    const pos = {};
+    const pos = {}, row = [];
     for (let d = 0; d < rows; d++) {
-      const P = nodes.filter((n) => n.d === d).sort((a, b) => a.cx - b.cx).map((n) => ({ n, x: X(n.cx), w: nodeW }));
-      P.forEach((p, i) => {
-        const want = Math.min(Math.ceil(minNameEm(nameOf(p.n)) * Fok + inner), Math.round(nodeW * 1.4));
-        if (want <= p.w) return;
-        const L = P[i - 1], R = P[i + 1], lo = L ? L.x + L.w / 2 + 5 : 3, hi = R ? R.x - R.w / 2 - 5 : W - 3;
-        const w = Math.floor(Math.min(want, hi - lo));
-        if (w > p.w) { p.w = w; p.x = Math.min(Math.max(p.x, lo + w / 2), hi - w / 2); }
-      });
-      for (const p of P) pos[p.n.id] = { x: p.x, y: y(d), w: p.w };
+      const R = nodes.filter((n) => n.d === d).sort((a, b) => a.cx - b.cx);
+      const items = R.map((n) => ({ n, c: X(n.cx), opts: nameOptions(nameOf(n), f) }));
+      let D = D0, plan = fitRow(items, D, W, gap, edge, hit);
+      while (!plan.ok && D > 30) { D -= 2; plan = fitRow(items, D, W, gap, edge, Math.min(hit, D)); } // 그래도 안 들면 이 줄 원만 작게
+      const L = Math.max(...items.map((it, i) => it.opts.list[plan.pick[i]].lines.length));
+      row[d] = { D, L };
+      items.forEach((it, i) => { pos[it.n.id] = { x: plan.p[i], w: plan.w[i], D, lines: it.opts.list[plan.pick[i]].lines, d }; });
     }
-    return { W, H, height, nodeW, nodeH, ih, lh, F, inner, pitch, s, pos, scroll: height > H + 0.5 };
+    let y = top;
+    for (let d = 0; d < rows; d++) { row[d].top = y; row[d].nameBottom = y + row[d].D + nameGap + row[d].L * lh; y = row[d].nameBottom + rowGap; }
+    for (const id in pos) pos[id].top = row[pos[id].d].top;
+    const height = Math.ceil(row[rows - 1].nameBottom + bottom);
+    return { W, H, height, s, f, lh, nameGap, pos, row, scroll: height > H + 0.5 };
   }
 
   function drawLinks(learned) {
@@ -157,14 +188,15 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     svg.setAttribute('width', g.W);
     svg.setAttribute('height', g.height);
     const parts = [];
-    const px = (n) => g.pos[n.id].x, py = (n) => g.pos[n.id].y;
-    const bottomOf = (n) => [px(n), py(n) + g.nodeH / 2], topOf = (n) => [px(n), py(n) - g.nodeH / 2];
-    const curve = ([x0, y0], [x1, y1]) => { const m = (y0 + y1) / 2; return `M${x0.toFixed(1)} ${y0.toFixed(1)} C${x0.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+    const px = (n) => g.pos[n.id].x;
+    const bottomOf = (n) => [px(n), g.pos[n.id].top + g.pos[n.id].D], topOf = (n) => [px(n), g.pos[n.id].top]; // 원 아래 · 위 가장자리
+    const stemOf = (n) => { const q = g.pos[n.id]; return q.top + q.D + g.nameGap + q.lines.length * g.lh; }; // 이름표 아래 끝 — 원에서 여기까지 곧게 내려와(이름표 뒤) 갈라진다
+    const curve = (from, to) => { const [x0, y0] = bottomOf(from), ys = stemOf(from), [x1, y1] = topOf(to), m = (ys + y1) / 2; return `M${x0.toFixed(1)} ${y0.toFixed(1)} V${ys.toFixed(1)} C${x0.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
     const cls = (from, to) => ['tree-link', to.opt ? 'opt' : '', learned.has(from.id) && learned.has(to.id) ? 'lit' : learned.has(from.id) && !isClosed(school, to) ? 'ready' : ''].filter(Boolean).join(' ');
     const gate = T.gate;
     if (gate) { // 독일 관문 — 2단계 셋 아래 가로 띠 하나 → 3단계 셋 (사장님 18:5x '기본기를 중시')
       const from = gate.from.map((id) => nodeOf(school, id)), to = gate.to.map((id) => nodeOf(school, id));
-      const yb = (py(from[0]) + g.nodeH / 2 + py(to[0]) - g.nodeH / 2) / 2 + 4 * g.s; // 띠 = 두 줄 사이 가운데에서 조금 아래 (위 칸 값 알약과 떨어지게)
+      const yb = (g.row[from[0].d].nameBottom + g.row[to[0].d].top) / 2; // 띠 = 위 줄 이름 밑 ~ 아래 줄 원 위 사이 가운데
       const xs = [...from, ...to].map(px);
       const allIn = from.every((n) => learned.has(n.id));
       parts.push(`<path class="tree-link gate${allIn ? ' lit' : ''}" d="M${Math.min(...xs).toFixed(1)} ${yb.toFixed(1)} H${Math.max(...xs).toFixed(1)}"/>`);
@@ -173,8 +205,8 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     }
     for (const n of nodesOf(school)) {
       if (gate?.to.includes(n.id)) continue;
-      for (const pid of n.pre) parts.push(`<path class="${cls(nodeOf(school, pid), n)}" d="${curve(bottomOf(nodeOf(school, pid)), topOf(n))}"/>`);
-      if (n.pre.length > 1) { const [x1, y1] = topOf(n); parts.push(`<circle class="tree-join" cx="${x1.toFixed(1)}" cy="${(y1 - 1).toFixed(1)}" r="${(2.8 * g.s).toFixed(1)}"/>`); } // '모두 익혀야' 표지 (그림의 금색 줄)
+      for (const pid of n.pre) parts.push(`<path class="${cls(nodeOf(school, pid), n)}" d="${curve(nodeOf(school, pid), n)}"/>`);
+      if (n.pre.length > 1) { const [x1, y1] = topOf(n); parts.push(`<circle class="tree-join" cx="${x1.toFixed(1)}" cy="${(y1 - 2).toFixed(1)}" r="${(2.8 * g.s).toFixed(1)}"/>`); } // '모두 익혀야' 표지 (원 위 — 그림의 금색 줄)
     }
     svg.innerHTML = parts.join('');
   }
@@ -184,10 +216,8 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     if (!geo) return;
     board.style.width = `${geo.W}px`;
     board.style.height = `${geo.height}px`;
-    board.style.setProperty('--nw', `${geo.nodeW}px`);
-    board.style.setProperty('--nh', `${geo.nodeH}px`);
-    board.style.setProperty('--ih', `${geo.ih}px`);
     board.style.setProperty('--lh', `${geo.lh}px`);
+    board.style.setProperty('--ng', `${geo.nameGap}px`);
     board.style.setProperty('--s', geo.s.toFixed(3));
     scroller.dataset.scroll = geo.scroll ? 'y' : '';
     more();
@@ -206,11 +236,10 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     if (geo) {
       $('.tree-nodes').innerHTML = nodesOf(school).map((n) => {
         const st = stateOf(n, learned), cat = NODE_CAT[n.cat], p = geo.pos[n.id];
-        const nl = nameLines(nameOf(n), p.w - geo.inner, geo.F);
         const tail = st === 'open' ? `<span class="node-price">${priceHtml(n.price, n.heads)}</span>` : st === 'closed' ? '<span class="node-soon">준비 중</span>' : '';
         const label = `${nameOf(n)} · ${STATE_KO[st]}${st === 'open' ? ` · ${priceWords(n.price, n.heads)}` : ''}`;
-        return `<button type="button" class="tree-node" data-node="${n.id}" data-cat="${n.cat}" data-tier="${cat.tier}" data-state="${st}" style="left:${p.x.toFixed(1)}px;top:${p.y.toFixed(1)}px;width:${p.w}px;margin-left:${(-p.w / 2).toFixed(1)}px" aria-label="${label}" aria-pressed="${selected === n.id}">
-          <img class="node-icon" src="${nodeIconSrc(school, n)}" alt="" aria-hidden="true" draggable="false"><span class="node-name" style="font-size:${nl.font.toFixed(2)}px">${nl.lines.map((t) => `<span class="node-line">${t}</span>`).join('')}</span>${tail}</button>`;
+        return `<button type="button" class="tree-node" data-node="${n.id}" data-cat="${n.cat}" data-tier="${cat.tier}" data-state="${st}" style="left:${(p.x - p.w / 2).toFixed(1)}px;top:${p.top.toFixed(1)}px;width:${p.w}px;--d:${p.D}px" aria-label="${label}" aria-pressed="${selected === n.id}">
+          <span class="node-ring"><img class="node-icon" src="${nodeIconSrc(school, n)}" alt="" aria-hidden="true" draggable="false"></span><span class="node-name" style="font-size:${geo.f.toFixed(2)}px">${p.lines.map((t) => `<span class="node-line">${t}</span>`).join('')}</span>${tail}</button>`;
       }).join('');
       drawLinks(learned);
     }

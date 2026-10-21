@@ -1,6 +1,7 @@
 // 스킬트리 판 겹침 점검 + 사진 (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5 · §8 · 전: 10/16 별자리 다섯 권 점검)
 //  옛 스킬북을 가진 저장(옮기기 알림이 뜨는 꼴)과 몇 칸 익힌 저장으로 첫 화면 → 여정 → 정지 → 대기실 '스킬' — 유파 다섯 × 화면 여섯(폰 가로 844 × 390 · 844 × 340 · 740 · 680 · 작은 가로 568 · PC):
-//  ① 칸끼리(값 · '준비 중' 알약 포함) 겹치는지 ② 칸이 판 폭 밖으로 나가는지 ③ 칸 이름이 칸 밖으로 넘치는지 ④ 줄(곡선)이 다른 칸을 지나는지 ⑤ 초기화 단추가 칸과 겹치는지 · 누르는 높이 40 px
+//  ① 칸끼리(값 · '준비 중' 알약 포함) 겹치는지 ② 칸이 판 폭 밖으로 나가는지 ③ 칸 이름이 칸 밖으로 넘치는지 ④ 줄(곡선)이 다른 칸을 지나는지 ⑤ 초기화 단추가 칸과 겹치는지 · 둥근 단추 지름 40 px 이상
+//  (10/22 01:2x 칸 = 원 안 그림 + 원 밑 이름: 칸 = 원 + 이름 전체 · 누르는 자리 40 × 40 이상 · 이름 글자 9 px 이상 · 01:3x 가로 내려 보기 0)
 //  ⑥ 값 그림 · 칸 그림(옛 스킬북 그림 256 × 336 — 10/22)이 읽혔는지 ⑦ 내려 보는 판(10/22): 첫 화면에 뿌리 칸이 다 보이는지 · 더 있으면 아래 흐림 표시 · 가로로 넘치지 않는지
 //  ⑧ 상세 카드: 모든 칸을 하나씩 열어 카드가 넘치지 않는지(세로 · 가로) · 카드 그림이 읽혔는지 · 갈래 말이 판 칸 글에 없는지 ⑨ 초기화 확인 단추 높이 ≥ 40
 //  + 844 × 390 에서 손가락 끌기(터치)로 판이 실제로 내려가는지.
@@ -95,7 +96,14 @@ for (const [name, w, h] of sizes) {
       if (sc.scrollWidth > sc.clientWidth + 0.5) scroll.push(`h-overflow ${sc.scrollWidth}>${sc.clientWidth}`);
       const fonts = [...root.querySelectorAll('.node-name')].map((e) => parseFloat(e.style.fontSize));
       const widths = [...root.querySelectorAll('.tree-node')].map((e) => e.getBoundingClientRect().width);
-      return { hits, out, texts, words, through: [...new Set(through)], resetHit, icons, scroll, board: [Math.round(board.width), Math.round(board.height)], view: [Math.round(sr.width), Math.round(sr.height)], states, font: [Math.min(...fonts), Math.max(...fonts)].map((v) => +v.toFixed(1)), cell: [Math.min(...widths), Math.max(...widths)].map(Math.round), scrollable: sc.scrollHeight > sc.clientHeight + 2 };
+      const rings = [...root.querySelectorAll('.node-ring')].map((e) => e.getBoundingClientRect().width);
+      // 누르는 자리 · 이름 글자 · 가로 넘침 (10/22 01:2x · 01:3x)
+      const small = boxes.filter((b) => b.part === 'node' && (b.r - b.l < 39.5 || b.b - b.t < 39.5)).map((b) => `${b.id} ${Math.round(b.r - b.l)}×${Math.round(b.b - b.t)}`);
+      if (Math.min(...fonts) < 8.95) scroll.push(`name font ${Math.min(...fonts)}`);
+      if (board.width > sr.width + 0.5) scroll.push(`board ${board.width}>${sr.width}`);
+      const rr = root.querySelector('#treeReset .reset-ring')?.getBoundingClientRect();
+      if (!rr || rr.width < 39.5 || rr.height < 39.5) resetHit.push(`reset ring ${rr ? Math.round(rr.width) : 'none'}`);
+      return { hits, out, texts, words, small, ring: [Math.min(...rings), Math.max(...rings)].map(Math.round), through: [...new Set(through)], resetHit, icons, scroll, board: [Math.round(board.width), Math.round(board.height)], view: [Math.round(sr.width), Math.round(sr.height)], states, font: [Math.min(...fonts), Math.max(...fonts)].map((v) => +v.toFixed(1)), cell: [Math.min(...widths), Math.max(...widths)].map(Math.round), scrollable: sc.scrollHeight > sc.clientHeight + 2 };
     }, CAT_WORDS.source);
     // ⑧ 상세 카드: 칸을 하나씩 열어 넘침 · 그림
     const cards = await p.evaluate(async () => {
@@ -113,8 +121,8 @@ for (const [name, w, h] of sizes) {
       }
       return out;
     });
-    bad += r.hits.length + r.out.length + r.texts.length + r.words.length + r.through.length + r.resetHit.length + r.icons + r.scroll.length + cards.length;
-    report.push(`${school}: ${[r.hits.length ? 'overlap ' + r.hits.join(',') : '', r.out.length ? 'outside ' + r.out.join(',') : '', r.texts.length ? 'text ' + r.texts.join(',') : '', r.words.length ? 'category words ' + r.words.join(',') : '', r.through.length ? 'links through ' + r.through.join(',') : '', r.resetHit.length ? 'reset × ' + r.resetHit.join(',') : '', r.icons ? `icons ${r.icons}` : '', r.scroll.length ? 'scroll ' + r.scroll.join(',') : '', cards.length ? 'card ' + cards.join(',') : ''].filter(Boolean).join(' | ') || 'ok'} (board ${r.board} · view ${r.view}${r.scrollable ? ' · 내려 봄' : ''} · 칸 폭 ${r.cell.join('~')} · 이름 ${r.font.join('~')} px · ${JSON.stringify(r.states)})`);
+    bad += r.hits.length + r.out.length + r.texts.length + r.words.length + r.small.length + r.through.length + r.resetHit.length + r.icons + r.scroll.length + cards.length;
+    report.push(`${school}: ${[r.hits.length ? 'overlap ' + r.hits.join(',') : '', r.out.length ? 'outside ' + r.out.join(',') : '', r.texts.length ? 'text ' + r.texts.join(',') : '', r.words.length ? 'category words ' + r.words.join(',') : '', r.small.length ? 'touch < 40 ' + r.small.join(',') : '', r.through.length ? 'links through ' + r.through.join(',') : '', r.resetHit.length ? 'reset × ' + r.resetHit.join(',') : '', r.icons ? `icons ${r.icons}` : '', r.scroll.length ? 'scroll ' + r.scroll.join(',') : '', cards.length ? 'card ' + cards.join(',') : ''].filter(Boolean).join(' | ') || 'ok'} (board ${r.board} · view ${r.view}${r.scrollable ? ' · 내려 봄' : ''} · 원 ${r.ring.join('~')} · 칸 폭 ${r.cell.join('~')} · 이름 ${r.font.join('~')} px · ${JSON.stringify(r.states)})`);
     if (SHOTS) {
       await settle(p);
       await p.screenshot({ path: `${SHOTS}/tree_${school}_${w}x${h}.png` });
@@ -160,5 +168,5 @@ for (const [name, w, h] of sizes) {
 }
 await browser.close();
 if (SHOTS) writeFileSync(`${SHOTS}/rects.json`, JSON.stringify(rects));
-console.log(bad ? `FAIL ${bad}` : `PASS 칸 · 알약 · 줄 · 초기화 단추 겹침 없음 · 이름 · 그림 넘침 없음 · 내려 보기 · 상세 카드 넘침 없음 · 옮김 알림 (5 유파 × ${sizes.length} 화면)`);
+console.log(bad ? `FAIL ${bad}` : `PASS 칸 · 알약 · 줄 · 초기화 단추 겹침 없음 · 이름 · 그림 넘침 없음 · 누르는 자리 40 · 이름 9 px 이상 · 가로 넘침 0 · 내려 보기 · 상세 카드 넘침 없음 · 옮김 알림 (5 유파 × ${sizes.length} 화면)`);
 if (bad) process.exit(1);
