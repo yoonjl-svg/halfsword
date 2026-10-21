@@ -863,7 +863,8 @@ export class Combat {
     if (strokeTechOf(att) !== 'schielhau') return;
     const t = this.stepNo * (this.dt ?? 1 / 60);
     if (vic.buckleAt != null && t - vic.buckleAt < B.cool) return; // cool 은 꿇은 뒤부터 (빗나간 굴림은 세지 않는다)
-    const hit = att.buckleRandom() < B.p;
+    // 버티기(일본 steady — fighter.swayScale 0.75)는 휘청 · 넘어짐을 덜 받듯 무릎 꺾기 확률도 그만큼 덜 받는다 (10/21 사장님 '더 강인하게 버티는 거 맞지?' — 25 % → 18.75 %)
+    const hit = att.buckleRandom() < B.p * (vic.swayScale ?? 1);
     (this.buckleLog ??= []).push({ t: +t.toFixed(2), att: att.index, vic: vic.index, part, hit });
     if (!hit) return;
     vic.buckleAt = t;

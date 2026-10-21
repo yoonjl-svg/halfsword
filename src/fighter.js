@@ -766,6 +766,7 @@ export class Fighter {
    *  곱하는 곳 둘: ① 무게중심이 발 밖으로 벗어난 몫 offBalance(updateFooting) — 휘청 걸음·서두름(GAIT.hurryFrom)·붙잡기 반사(gait levC)·
    *  발 디딤 잃음(offBalanceTime)·기준 막대 풀림이 모두 이 값을 읽는다 ② 맞아서 깎이는 휘청임 게이지(applyWound — balance ≤ 0 넘어짐).
    *  머리 맞아 주저앉음(타격 에너지 문턱)·다리가 못 버팀(legsCannotSupport)은 부상이라 곱하지 않는다.
+   *  곁눈 베기 무릎 꺾기(combat.js buckleCheck — 부상이 아니라 균형의 일)는 그 확률에 곱한다 (10/21).
    *  steady 칸이 없는 유파(독일·무유파 …)·`?jpSteady=0`·`?schoolGait=0`(걸음 값이 GAIT 그 자체)은 1 → 두 곳 모두 곱하는 줄을 건너뛴다(지금 길 그대로).
    *  나중에 스태미너가 들어오면 여기에 곱한다 — 두 곳에 한꺼번에 걸린다.
    */
