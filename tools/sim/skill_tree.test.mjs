@@ -320,14 +320,14 @@ test('둘째 장: 첫 장 칸(묶음째)을 뺀 남은 칸으로 다시 셈 — 
     for (let i = 0; i < 300; i++) { const ids = drawWeaponCards(POOL, 2, { weightOf: weightFor(new Set([traditionOf(getWeapon(grouped))])) }); assert.ok(!(mates.includes(ids[0]) && mates.includes(ids[1]))); }
   }
 });
-test('배율은 config 한 곳(LETTER.mult — 사장님 결정 2) · 편지 칸 글이 배율을 따름', () => {
+test('배율은 config 한 곳(LETTER.mult — 사장님 결정 2) · 편지 칸 글에는 배율 숫자를 쓰지 않음(10/22 사장님 \'뽑기 무게 2배\' 빼)', () => {
   assert.equal(LETTER.mult, 2);
-  assert.equal(D.nodeEff('german', D.nodeOf('german', 'G11')), '독일 무기 카드가 더 자주 나온다 · 뽑기 무게 2배');
+  assert.equal(D.nodeEff('german', D.nodeOf('german', 'G11')), '독일 무기 카드가 더 자주 나온다');
   const keep = LETTER.mult; LETTER.mult = 3;
   try {
     const l = new Set(['italian']);
     close(implDist(l).school, exactDist(l).school, 2e-4, '×3');
-    assert.match(D.nodeEff('italian', D.nodeOf('italian', 'I11')), /3배/);
+    assert.equal(D.nodeEff('italian', D.nodeOf('italian', 'I11')), '이탈리아 무기 카드가 더 자주 나온다');
   } finally { LETTER.mult = keep; }
 });
 test('편지 가진 유파 읽기 · 테스트 경로는 모두', () => {

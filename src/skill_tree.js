@@ -38,7 +38,7 @@ export function withOrig(nameKo, orig) {
   if (!orig) return nameKo ?? '';
   return m ? `${m[1]} (${m[2]} · ${orig})` : `${nameKo} (${orig})`;
 }
-const ROLE_KO = { enh: '강화동작', step: '걸음 명령', chain: '이어 긋기' };
+const ROLE_KO = { enh: '강화동작', step: '걸음 기술', chain: '이어 긋기' }; // 공지와 같은 말 (10/22 '걸음 명령' → '걸음 기술')
 /** 상세 카드 제목 · 갈래 글 */
 export function nodeTitle(school, n) {
   const cat = NODE_CAT[n.cat];
@@ -200,16 +200,16 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     $('#nodeMeta').dataset.tier = cat.tier;
     $('#nodeEffect').textContent = st === 'closed' ? '준비 중입니다.' : nodeEff(school, n);
     const pre = n.pre.map((id) => preName(school, nodeOf(school, id)));
-    $('#nodePre').textContent = pre.length ? `먼저 익힐 칸 · ${pre.join(' · ')}${pre.length > 1 ? ' — 모두' : ''}` : '처음 익히는 칸 — 모든 칸이 이 아래';
+    $('#nodePre').textContent = pre.length ? `먼저 익힐 칸: ${pre.join(' · ')}${pre.length > 1 ? ' (모두)' : ''}` : '처음 익히는 칸입니다.';
     $('#nodePrice').innerHTML = st === 'closed' ? '' : `<span class="sr-only">값 ${priceWords(n.price, n.heads)}</span><span aria-hidden="true">${priceHtml(n.price, n.heads)}</span>`;
     $('#nodePrice').hidden = st === 'closed' || st === 'learned' || test;
     const can = canLearn(school, n, learned, P);
-    const note = test ? '테스트 경로 — 모든 칸을 익힌 것으로 봅니다.'
+    const note = test ? '테스트 경로에서는 모든 칸을 익힌 것으로 봅니다.'
       : st === 'learned' ? '익힌 칸입니다.'
       : st === 'closed' ? '아직 배울 수 없습니다.'
       : can.why === 'pre' ? '먼저 익힐 칸이 있습니다.'
-      : can.why === 'coins' ? `금화가 모자랍니다 — 가진 금화 ${won(P.coins)}`
-      : can.why === 'heads' ? `머리가 모자랍니다 — 가진 머리 ${won(P.heads)}` : '';
+      : can.why === 'coins' ? `금화가 모자랍니다. 가진 금화 ${won(P.coins)}`
+      : can.why === 'heads' ? `머리가 모자랍니다. 가진 머리 ${won(P.heads)}` : '';
     $('#nodeState').textContent = note;
     $('#nodeState').hidden = !note;
     const btn = $('#learnNode');
