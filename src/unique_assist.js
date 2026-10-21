@@ -17,7 +17,7 @@ import { classifyStroke } from './attack_stroke.js';
 //   · 끝 힘 — 긋기 뒷몫(손 목표가 그 몫 길이의 powerAt 넘게 간 뒤)에 팔 서보 힘을 조금 올린다(비기 힘 창 SECRET.power 와 같은 칸 f.powerMul)
 //   · 날 세우기 — 손 목표가 손가락 그대로라 플레이어 날 세우기(fighter.js inputEdgeLead)가 읽는 손 목표는 실제 칼 움직임과 같다. 덧씌운 몸 돌림 몫만 날이 늦게 따라가서
 //          그 빠르기(uniqBody.yawRate)를 날 세우기 앞당김에 더했다(10/14 탐침 — 문서)
-//  잇는 동작(chain 칸 — 머리 위 돌려 베기·코코 연타·위아래 사슬·번갈아 올려베기·겹치기)은 플레이어가 박자 창(chainWait) 안에 실제로 이어 그을 때만 그 긋기에 뒷몫 강화를 얹는다.
+//  잇는 동작(chain 칸 — 머리 위 돌려 베기·겹치기 · 10/21 통폐합 전엔 코코 연타·위아래 사슬·번갈아 올려베기도)은 플레이어가 박자 창(chainWait) 안에 실제로 이어 그을 때만 그 긋기에 뒷몫 강화를 얹는다.
 //   자동으로 두 번째 칼을 내지 않는다. 앞 긋기 조건으로 여는 것(츠바메가에시·카바치오네·염시·자→격)은 그 긋기 자체가 이어 그은 것이다.
 //  비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌고 있으면 발동하지 않고, 강화 중에 그것들이 시작되면 곧장 물러난다.
 //  발동하면 기술 이름 알림(main.js showTechCue 'unique' — AI 고유 동작 알림과 같은 칸, '내 · 굽은 베기' 꼴).
@@ -31,23 +31,35 @@ import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
-//  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1. stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 고유자세 책 하나로 넷 모두: skill_books.js kitUniqueStage). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
+//  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1 (10/21 통폐합으로 둘~셋 — 아래 머리말). stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 고유자세 책 하나로 넷 모두: skill_books.js kitUniqueStage). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
 //  on = 여는 조건 목록(하나라도 맞으면):
 //   { tech }        이 긋기가 그 기본 동작(시작 패드 + 첫 방향)
 //   { pad, dir }    시작 패드 + 방향('up' | 'down' | 'horiz')
 //   { prev, when, dir? } 앞 긋기 뒤: prev = 'cut' | 'thrust' | 기본 동작 이름 · when = 'bound'(앞 긋기가 칼에 맞물림·막힘) | 'miss'(못 맞힘 — 막힘 포함) |
 //                   'any'(맞든 빗나가든) — 셋 다 앞 긋기가 끝나고 afterWindow 안 · 'turn'(앞 찌르기가 시작되고 turnWindow 안에 방향을 허용 각 넘게 꺾음)
 //  far = 조건으로 여는 동작이지만 길과의 거리(joinMax)를 보지 않는다(겹치기: 맞물린 자리가 길에서 멀어도 다음 긋기 방향만 맞으면 — 어긋남은 blend 로 줄어든다)
-//  anchor 'start' = 고유 동작 길이 기본 긋기보다 짧아 손이 곧 지나쳐 버리는 것(코테·좌익격 — 끝 자리가 긴 자세 바로 밑): 길 토막을 긋기 시작 자리에 옮겨 놓고 그 위에서 잇는다
+//  anchor 'start' = 고유 동작 길이 기본 긋기보다 짧아 손이 곧 지나쳐 버리는 것(코테 — 끝 자리가 긴 자세 바로 밑 · 10/21 통폐합 전엔 좌익격도): 길 토막을 긋기 시작 자리에 옮겨 놓고 그 위에서 잇는다
 //  chain = 두 번 잇는 동작: at = 뒷부분이 시작되는 길 점 번호(점 목록 = [from, ...path] 또는 [가짜 자리, ...then]) · dir = 그 자리에서 손가락이 그쪽으로 그어야 이음
 //  탭 찌르기도 '내 찌르기'로 센다(prev 'thrust' — 맞물림·any). 이베리아 rodaCounter(길 없는 맞받아치기 목록)는 플레이어 표에서 뺀다(AI 데이터는 그대로)
 //  body = 플레이어 강화의 몸 꼴 (10/14, 플레이어만 — AI 는 읽지 않는다) [골반 돌림 °, 가슴 돌림 °, 숙임 °, 낮춤 m] · body2 = 잇는 동작 뒷몫(플레이어가 이어 그은 긋기)의 몸 꼴(없으면 body).
 //   돌림 부호는 자세표(guards.js)와 같음(+ 오른쪽으로 감음 · − 왼쪽). 값 = 고유 동작 몸 꼴 점검(10/12 …/body-audit-2q36ha, 모두 [추정]·[해석])의 절반 안팎 — 사장님 확인 전.
 //   한 동작 안에서 두 방향으로 도는 것(머리 위 돌려 베기 +40 → −40 등)은 앞 긋기 = 앞 방향, 이어 그은 뒷몫 = 뒤 방향. 세기는 UNIQUE_ASSIST.enhance 로 한꺼번에
+// AI 단계표 (10/21 — 플레이어 표 통폐합 때 AI 는 그대로 두려고 지금의 넷씩을 따로 얼려 둠 · 사장님이 AI 쪽을 정하면 바꾼다). aiUniqueStages 가 읽는다
+const AI_UNIQUE_STAGES = {
+  german: [['zwerchAbtritt', 1], ['krumphau', 2], ['duplieren', 3], ['schielhau', 4]],
+  italian: [['inquartata', 1], ['imbroccata', 2], ['cavazione', 3], ['passataSotto', 4]],
+  iberian: [['talhoRodeado', 1], ['altibaixo', 2], ['redondo', 3], ['talhoRevezBaixo', 4]],
+  japanese: [['hirakiGiri', 1], ['kote', 2], ['tsubameGaeshi', 3], ['kokoRenda', 4]],
+  chinese: [['chebuYaoji', 1], ['zuoyi', 2], ['lianchi', 3], ['ciji', 4, 'yaoji']], // ciji = 길은 yaoji(단독 동작) · 같은 이름 패시브
+};
+
+// 통폐합 (10/21 사장님 '판정표대로 통폐합 해' — 판정은 docs/strike/unique_attack_study_result_2026-10-20.md 뒤 의견 · 사람 기술 기준): 유파마다 넷 → 둘~셋.
+//  뺀 것: 독일 굽은 베기(분노의 베기와 구별 안 됨 · 쓰임 최저) · 이탈리아 밑으로 들어가 찌르기(드묾 · 비기 런지와 겹침) · 이베리아 위아래 사슬 · 번갈아 올려베기(이어 긋기 셋이
+//  비슷 — 머리 위 돌려 베기로 모음, 이어 그을수록 힘이 쌓이는 강화는 다음 단계) · 일본 코코 연타(이베리아 돌려 베기와 같은 몸 뒤집는 이어 긋기) · 동방 좌익격(일본 코테와 같은 동작).
+//  동방 체보요격은 독일 비껴 딛는 가로베기와 걸음 · 몸 값이 같아 앞으로 끌어 딛는 걸음 · 낮은 몸으로 바꿈(step 칸 — 플레이어만 · 값은 사장님 확인 전). 단계 번호는 그대로(빈 번호는 뺀 것)
 export const PLAYER_UNIQUE = {
   german: [
     { stage: 1, name: 'zwerchAbtritt', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 가로베기
-    { stage: 2, name: 'krumphau', body: [-8, -10, 4, 0.015], on: [{ tech: 'zornhau' }] }, // 굽은 베기 ← 분노의 베기
     { stage: 3, name: 'duplieren', far: true, body: [5, -3, 3, 0], on: [{ prev: 'cut', when: 'bound' }], chain: { at: 1 } }, // 겹치기 ← 내 베기가 맞물린 뒤 다음 긋기 (맞물린 자리가 어디든 — 칼자루를 들어 다시 머리로)
     { stage: 4, name: 'schielhau', body: [12, 8, 2, 0.02], on: [{ tech: 'stichOchs' }] }, // 곁눈 베기 ← 황소 찌르기
   ],
@@ -55,23 +67,18 @@ export const PLAYER_UNIQUE = {
     { stage: 1, name: 'inquartata', body: [18, 10, 5, 0.025], on: [{ tech: 'stichPflugL' }] }, // 비껴서며 찌르기 ← 왼 쟁기 찌르기
     { stage: 2, name: 'imbroccata', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기
     { stage: 3, name: 'cavazione', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }] }, // 칼끝 돌려 빼기(속임 then 길) ← 내 찌르기가 맞물림 · 찌르다 꺾음
-    { stage: 4, name: 'passataSotto', body: [8, 5, 12, 0.08], on: [{ tech: 'stichPflug' }] }, // 밑으로 들어가 찌르기 ← 쟁기 찌르기 (런지 자세는 이탈리아 비기 몫 — 붙이지 않음)
   ],
   iberian: [
     { stage: 1, name: 'talhoRodeado', body: [15, 8, 4, 0.02], on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 분노의 베기
-    { stage: 2, name: 'altibaixo', body: [8, 5, 10, 0.03], body2: [8, 5, 0, 0.03], on: [{ tech: 'oberhau' }], chain: { at: 2, dir: 'up' } }, // 위아래 사슬 ← 정수리 베기 (내려벤 뒤 위로 이어 그으면 되올림)
     { stage: 3, name: 'redondo', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerch' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 가로베기
-    { stage: 4, name: 'talhoRevezBaixo', body: [8, 6, -2, 0.04], body2: [-8, -6, -2, 0], on: [{ tech: 'unterhau' }], chain: { at: 2 } }, // 번갈아 올려베기 ← 올려베기
   ],
   japanese: [
     { stage: 1, name: 'hirakiGiri', body: [-18, -12, 2, 0.02], on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 왼 분노의 베기
     { stage: 2, name: 'kote', anchor: 'start', body: [5, 3, 4, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 가운데(긴 자세)에서 짧게 내려베기 (머리 위 시작 정수리 베기와는 시작 패드로 가름)
     { stage: 3, name: 'tsubameGaeshi', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시 ← 정수리 베기가 빗나가거나 막힌 뒤 위로 이어 그음
-    { stage: 4, name: 'kokoRenda', body: [12, 8, 3, 0.015], body2: [-12, -8, 3, 0.015], on: [{ tech: 'zornhau' }], chain: { at: 2 } }, // 코코 연타 ← 분노의 베기
   ],
   chinese: [
-    { stage: 1, name: 'chebuYaoji', body: [-15, -20, 1.5, 0.02], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기
-    { stage: 2, name: 'zuoyi', anchor: 'start', body: [5, 3, 5, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 좌익격 ← 코테와 같음
+    { stage: 1, name: 'chebuYaoji', body: [-8, -12, 4, 0.045], step: { lat: -0.05, fwd: 0.35, when: 'strike' }, on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기 — 앞으로 끌어 딛고(掣步) 낮게 (10/21 독일 비껴 딛는 가로베기와 가름)
     { stage: 3, name: 'lianchi', nameKo: '날개 접기 (염시)', orig: '斂翅', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시(속임 then 길) ← 쟁기 찌르기를 시작했다가 짧은 창 안에 거둠
     // 자→격 (刺→擊): 새 표 항목이지만 새 길은 없다 — yaoji 길(긴 자세 자리에서 시작하는 허리 베기). 출처는 schools.js ciji 패시브와 같은 「向前進步腰擊」
     { stage: 4, name: 'ciji', path: 'yaoji', nameKo: '찌르고 베기 (자→격)', orig: '刺→擊', body: [-15, -20, 1.5, 0.015], on: [{ prev: 'thrust', when: 'any', dir: 'horiz' }] }, // ← 내 찌르기(맞든 빗나가든) 뒤 짧은 창 안의 가로 긋기
@@ -87,9 +94,9 @@ export const PLAYER_UNIQUE = {
 export function aiUniqueStages(tradition) {
   const unique = new Map();
   const passive = new Map();
-  for (const e of PLAYER_UNIQUE[tradition] ?? []) {
-    unique.set(e.path ?? e.name, e.stage);
-    if (e.path) passive.set(e.name, e.stage);
+  for (const [name, stage, path] of AI_UNIQUE_STAGES[tradition] ?? []) {
+    unique.set(path ?? name, stage);
+    if (path) passive.set(name, stage);
   }
   return { unique, passive };
 }
@@ -136,7 +143,7 @@ export function uniqueDef(tradition, e) {
     return { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.feint.name, orig: e.orig ?? u.orig ?? null, kind: u.feint.open === 'C' ? 'thrust' : 'cut', pts: [p0, ...u.feint.then.map((p) => p.slice())], step: null };
   }
   if (!u.path?.length) return null; // 길 없는 것(맞받아치기 목록 등)은 플레이어 몫이 아니다
-  return { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, orig: e.orig ?? u.orig ?? null, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: u.step ?? null };
+  return { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, orig: e.orig ?? u.orig ?? null, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: e.step ?? u.step ?? null }; // step = 표 칸이 있으면 그것(플레이어만 — 10/21 체보요격)
 }
 
 // 해금은 이 파일 밖 — 플레이어에게 무엇이 열리는지는 스킬북 하나(skill_books.js playerKit · kitUniqueStage → 아래 PlayerUniqueAssist 의 stage).

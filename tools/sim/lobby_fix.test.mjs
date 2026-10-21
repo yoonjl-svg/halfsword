@@ -69,7 +69,7 @@ test('책 값 100~500 · 산 책만 열림 · 금화가 모자라면 못 삼 · 
   assert.equal(booksOf('german').length, 5);
   assert.equal(bookOf('german', 1).title, '보법: 리히테나워');
   assert.equal(bookOf('japanese', 5).title, '비기: 뒤에서 앞서기');
-  assert.equal(bookOf('german', 3).list.length, 4); assert.equal(bookOf('german', 3).provisional, true);
+  assert.equal(bookOf('german', 3).list.length, 3); assert.equal(bookOf('german', 3).provisional, true); // 10/21 통폐합 — 독일 셋(굽은 베기 뺌)
   assert.equal(bookOf('italian', 4).planned, true);
   assert.equal(readProgress().coins, 100);
   let books = readBooks(); assert.equal(bookState(books, 'german:1'), 'unowned');
@@ -138,7 +138,7 @@ test('실제 판: 고유자세 · 비기 봉인 = 고유 공격 없음 · 비기
   const g = newRound({ weapon: 'longsword', seed: 9 });
   try {
     const on = new PlayerUniqueAssist(g.player, { stage: kitUniqueStage({ unique: true }) });
-    assert.equal(on.list.length, 4); assert.equal(g.player.skill.uniq, on);
+    assert.equal(on.list.length, 3); assert.equal(g.player.skill.uniq, on); // 10/21 통폐합 — 독일 셋
     const off = new PlayerUniqueAssist(g.player, { stage: kitUniqueStage({ unique: false }) });
     assert.equal(off.list.length, 0); assert.equal(g.player.skill.uniq, null);
     assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: true }).S, null);

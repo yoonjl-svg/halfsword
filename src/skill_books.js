@@ -132,7 +132,7 @@ export function bookOf(school, tier) {
   if (B.kind === 'footwork') book.effect = FOOTWORK_TEXT[school];
   else if (B.kind === 'parry') book.effect = PARRY_TEXT[school];
   else if (B.kind === 'unique') {
-    book.effect = '고유 공격 넷을 쓸 수 있다';
+    book.effect = '고유 공격을 쓸 수 있다'; // 10/21 통폐합으로 유파마다 둘~셋 — 수는 목록이 보여 줌
     book.list = (PLAYER_UNIQUE[school] ?? []).map((e) => { const u = uniqueDef(school, e); return u?.nameKo ? bookLabel(u.nameKo, u.orig) : null; }).filter(Boolean); // '뜻 (독음 · 원어)'
     book.provisional = true; // 사장님 04:0x '나중에 바꿔도 되니까' — 고유자세 한 가지로 바꿀 때까지 임시
   } else if (B.kind === 'passive') {
