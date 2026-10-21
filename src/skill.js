@@ -1194,16 +1194,18 @@ export class Skill {
    *  칼끝이 6 m/s 아래로, 늦어도 0.5 s). 그 사이 다시 휘두르면 같은 공격으로 잇는다 — 감기 + 긋기, 잇따른 긋기는 한 번(AI 도 감기·베기·지나감이 한 공격) · 그 사이 한 번이라도 닿으면 헛침 아님.
    *  맞힘 = 상대 아픔 +0.05(AI hitLanded·unique_assist 와 같은 눈) · 맞물림 = 칼끼리 0.07 m(ai.js checkBind 와 같은 기하). 끝날 때 둘 다 없으면 상대 걸음에 알린다
    *  (gait.foeWhiff — 독일 유파 몸만 받음). 손 목표·몸·난수는 건드리지 않는다
+   *  독일 인데스 (10/21 — school_passive.js foeFailed): 그 사이 기력 장부가 공격으로 셈(att — 준비 동작 빼고)했고 맞히지 못했으면 상대 몸에 '헛침' · '막힘'(맞물림)을 알린다
    */
   whiffTrack(dt, swinging) {
     const f = this.f;
     const foe = f.foe;
-    const W = (this.whiff ??= { on: false, quiet: 0, tail: 0, landed: false, bound: false, pain: null });
+    const W = (this.whiff ??= { on: false, quiet: 0, tail: 0, landed: false, bound: false, att: false, pain: null });
     if (swinging || this.tap) {
       if (!W.on) {
         W.on = true;
         W.landed = false;
         W.bound = false;
+        W.att = false;
       }
       W.quiet = 0;
       W.tail = 0;
@@ -1211,6 +1213,7 @@ export class Skill {
       W.tail += dt;
       if ((W.tail >= 0.3 && f.tipVel.length() < 6) || W.tail >= 0.5) this.whiffEnd(W, foe);
     }
+    if (W.on && (f.stamina.attacking || f.stamina.inSecret)) W.att = true;
     if (W.on && foe) {
       if (W.pain != null && foe.pain > W.pain + 0.05) W.landed = true;
       if (!W.bound && foe.armed && f.tipPrev && foe.tipPrev && segDist(f.bladePoint(0.1, _wa), f.tipPrev, foe.bladePoint(0.1, _wb), foe.tipPrev) < 0.07) W.bound = true;
@@ -1221,6 +1224,7 @@ export class Skill {
   whiffEnd(W, foe) {
     W.on = false;
     if (!W.landed && !W.bound) foe?.gait?.foeWhiff();
+    if (W.att && !W.landed) foe?.schoolPassive?.foeFailed(W.bound ? 'blocked' : 'whiff'); // 독일 인데스 (10/21)
   }
 
   /** 기력 탈진 (샛별 저장소 6ac1070d — docs/strike/stamina_import_2026-10-15.md): 비기·찌르기·손잡이 찍기·고유 동작을 거두고 손을 늘어뜨린 자리로 — 입력은 main.js 가 0 으로 */
@@ -1274,7 +1278,7 @@ export class Skill {
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
     this.swinging = swinging;
     this.inputSwinging = this.inputMotion ? this.inputMotion.vel.length() > SKILL.swingSpeed && f.alive && f.armed : swinging;
-    if (GAIT.deChase && !f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 간격 잡기, 10/15). AI 는 ai.js afterStrike 가 알린다
+    if (!f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 간격 잡기, 10/15 — gait.foeWhiff 가 GAIT.deChase 를 봄) · 헛침 · 막힘 → 상대 인데스(10/21). AI 는 ai.js afterStrike 가 알린다
     if (this.uniq) this.uniq.detect(dt, this.inputSwinging, this.inputMotion?.vel); // 원래 입력 시계/방향으로 인식. 유파 동작·보법 정의는 그대로.
     // 플레이어 막기 버튼 (10/11 — parry_button.js): 버튼이 손 목표를 휘두르기 문턱보다 빠르게 옮기는 동안은 AI 막기(손이 parrySpeed 로 옮겨져 휘두르기로 잡힘)처럼
     //  휘두르기 꼴의 거르기·몸 따라가기를 쓴다. 휘두르기 사건(swinging — 내딛기·베기 덩이·자세로 돌아가기)은 손가락 끌기만 (버튼이 prev 도 옮긴다). 버튼이 없으면 guardDrive 없음 → 그대로

@@ -70,7 +70,7 @@ test('책 값 100~500 · 산 책만 열림 · 금화가 모자라면 못 삼 · 
   assert.equal(bookOf('german', 1).title, '보법: 리히테나워');
   assert.equal(bookOf('japanese', 5).title, '비기: 뒤에서 앞서기');
   assert.equal(bookOf('german', 3).list.length, 3); assert.equal(bookOf('german', 3).provisional, true); // 10/21 통폐합 — 독일 셋(굽은 베기 뺌)
-  assert.equal(bookOf('italian', 4).planned, true);
+  for (const s of ['german', 'italian', 'iberian', 'japanese', 'chinese']) assert.equal(bookOf(s, 4).planned, undefined, s); // 10/21 유파 패시브 다섯 모두 효과가 있음 (준비 중 없음)
   assert.equal(readProgress().coins, 100);
   let books = readBooks(); assert.equal(bookState(books, 'german:1'), 'unowned');
   assert.equal(buyBook('german', 2).why, 'coins'); // 200 > 100

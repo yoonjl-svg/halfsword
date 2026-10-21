@@ -5,7 +5,7 @@
 //   04:3x '책은 책이지만 별자리나 스킬트리처럼 룬 문자처럼 연결돼 있어. 구입하면 밝아지고 사용 봉인 선택 가능. 사용하면 섬네일 자리를 둥근 빛이 감쌈'.
 //  급 차례·책 이름 갈래는 샛별 저장소 기획(1급 보법 → 2급 막기 → 3급 고유자세 → 4급 패시브 → 5급 비기, 커먼~레전드) — 출처 줄은 우리 조사 문서(docs/motion/)에서 새로 씀.
 //  책 내용 = 지금 게임에 있는 것 (사장님 04:0x): 1 보법 = 지금 유파 걸음 · 2 막기 = 지금 유파 막기 자리 · 3 고유자세 = 지금 고유 공격 넷(한꺼번에 — 임시) ·
-//   4 패시브 = 개발 예정(사람 몫이 아직 없다 — 지금 패시브는 모두 AI 몫) · 5 비기 = 지금 비기.
+//   4 패시브 = 유파 패시브(10/21 — 이베리아 손목 힘 · 이탈리아 곧은 선 · 일본 기다림과 침 · 독일 인데스 · 동방 숨 바꾸기 (토납), config SCHOOL_PASSIVE) · 5 비기 = 지금 비기.
 //  산 책만 열린다(가진 것 = lobby_progress.js 얻은 것 'skillbook:<유파>:<급>') · 순서·조건 없음(별자리 줄은 꾸밈) · 산 책은 '사용'으로 시작, '봉인'하면 판에서 꺼진다(봉인 목록 = 아래 BOOK_STATE_KEY).
 //  판에 미치는 곳 (사람만 — AI·시뮬은 그대로): 모든 판이 playerKit 을 읽는다(main.js newRound — 첫 화면·대기실 여정 · 옛 메뉴 판 · 주소 판, 10/16 08:1x 인장 없앰부터).
 //   테스트 경로는 모두 열림 · 개발 인자 `?uniqueStage=N` 은 그 유파의 N 급까지 '사용'(0 = 책 없음 · 5 = 모두 — bookTierParam).
@@ -137,13 +137,20 @@ export function bookOf(school, tier) {
     book.lines = true; // 한 줄에 하나씩 (쓰는 법이 붙어 길다)
     book.provisional = true; // 사장님 04:0x '나중에 바꿔도 되니까' — 고유자세 한 가지로 바꿀 때까지 임시
   } else if (B.kind === 'passive') {
-    book.effect = PASSIVE_TEXT[school] ?? '준비 중'; // 10/21 이베리아부터 (config SCHOOL_PASSIVE)
+    book.effect = PASSIVE_TEXT[school] ?? '준비 중'; // 10/21 다섯 유파 모두 (config SCHOOL_PASSIVE)
     if (!PASSIVE_TEXT[school]) book.planned = true;
   } else book.effect = SECRET_TEXT[T.secret?.name] ?? '';
   return book;
 }
-// 패시브 책 (4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬'): 유파마다 하나씩 채운다. 없는 유파는 '준비 중'
-const PASSIVE_TEXT = { iberian: '손목 힘이 세져 큰 칼을 더 빨리 돌린다 · 손목 힘 30% 증가' };
+// 패시브 책 (4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬'): 유파마다 하나씩 (config SCHOOL_PASSIVE · school_passive.js). 없는 유파는 '준비 중'
+//  이탈리아 · 일본 · 독일 · 동방 (10/21 사장님 결정 — 값은 config 주석). 동방 패시브 이름 숨 바꾸기 (토납 — 『장자』 각의편 吐故納新, 10/21 사장님) · 책 이름 줄(BOOK_TEXT)은 그대로
+const PASSIVE_TEXT = {
+  iberian: '손목 힘이 세져 큰 칼을 더 빨리 돌린다 · 손목 힘 30% 증가',
+  italian: '찌르는 동안 칼끝이 상대를 따라 돈다 · 최대 12°',
+  japanese: '공격 없이 기다린 만큼 다음 칼이 세다 · 1.5초에 피해 30% 증가',
+  german: '상대 공격이 빗나가거나 막힌 직후 친 칼이 세다 · 피해 30% 증가',
+  chinese: '휘두르지 않는 동안 피가 빨리 멎는다 · 지혈 2배',
+};
 export const booksOf = (school) => BOOK_TIERS.map((B) => bookOf(school, B.tier)).filter(Boolean);
 
 // ── 사용 · 봉인 (산 책은 '사용'으로 시작 — 봉인한 책만 적는다) ──

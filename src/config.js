@@ -458,8 +458,25 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 export const IB_FLOW = { a: true, brake: 0.5 };
 // 유파 패시브 (스킬북 4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬 … 이베리아 유파의 경우에는 손목 힘을 증가하는 걸 넣자' · 확인표 2110):
 //  이베리아 = 칼을 돌리는 손목 힘 한도(maxAimTorque) × wrist — 늘(이어 긋기 시험 B 를 패시브로 옮김). 사람 = 4급 책 '사용'(테스트 경로는 모두 켬) · AI = 숙련도 at 이상.
-//  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. 다른 유파는 아직 없음(책 '준비 중'). `?ibWrist=0` = 끔
-export const SCHOOL_PASSIVE = { on: true, at: 4, iberian: { wrist: 1.3 } };
+//  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. `?ibWrist=0` = 이베리아만 끔
+//  유파마다 on(false = 그 유파만 끔) · 모두 끔 `?schoolPassive=0` · 고른 유파만 `?schoolPassive=italian,german` (main.js). 사람 · AI 같은 칸, AI 몫은 aiK (school_passive.js)
+//  나머지 넷 (10/21 사장님 결정 — 이탈리아 · 일본 · 독일 · 동방, src/school_passive.js · 확인표 2133~2136):
+//   italian 곧은 선 (리네아 레타) — 찌르는 동안(탭 찌르기 · 그어 찌르기 · AI 찌르기 — 막아찌르기 · 비기 빼고) 칼끝이 상대 쪽으로 돈다: 처음 찌르는 줄에서 tipMax ° 까지 ·
+//    초당 tipRate ° 까지(부드럽게 — 튀지 않음). AI 는 × aiK (사장님 'AI는 약하게' — 6° · 30°/s)
+//   japanese 기다림과 침 (켄타이) — 공격하지 않는 동안 full 초에 걸쳐 0 → gain 만큼 쌓이고(곧은 오름 — 감독, 사장님 확인 전), 칼을 내는 순간 그 칼에 묶이고 다시 0 부터.
+//    그 칼이 상처를 내면 주는 피해(칼날 상처 심각도 · 둔타 에너지) × (1 + 묶인 몫) 뒤 씀 · 빗나가거나 막히면 이어짐 창(UNIQUE_ASSIST.afterWindow 0.6 s) 안에 시작한 츠바메가에시로 넘어감 · 비기엔 안 실림
+//   german 인데스 — 상대 공격이 내게 실패하면(헛침 = 칼에도 몸에도 안 닿음 · 막힘 = 내 칼에 닿고 나를 못 벰) 이어짐 창(afterWindow 0.6 s)이 열리고, 그 안에 시작한 내 칼은 주는 피해 × (1 + gain × aiK(AI)).
+//    간격 잡기 빠른 디딤이 창 안에서 시작되면 빠른 디딤 · 잡기 동안 창 시계가 멈추고 잡기가 끝날 때 닫힘 · 비기엔 안 실림 · aiK 1 = AI 도 같음(반으로 줄일 자리 — 사장님 확인 전)
+//   chinese 숨 바꾸기 (토납 — 『장자』 각의편 吐故納新, 10/21 사장님 이름) — 휘두르지 않는 동안(긋기 · 탭 · 손잡이 찍기 · 비기 없음) 피가 굳는 빠르기(VITALS.clotting) × clot. 휘두르는 동안은 그대로
+export const SCHOOL_PASSIVE = {
+  on: true,
+  at: 4,
+  iberian: { on: true, wrist: 1.3 },
+  italian: { on: true, tipMax: 12, tipRate: 60, aiK: 0.5 }, // 사장님 10/21 '최대 12° · 초당 60° · AI는 약하게'(절반)
+  japanese: { on: true, full: 1.5, gain: 0.3 }, // 사장님 10/21 '1.5초에 +30%' · 곧은 오름은 감독
+  german: { on: true, gain: 0.3, aiK: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리)
+  chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
+};
 // AI 반응 시간 (10/21 사장님 '당장해' — 옆 공략: 박찬 직후 짧게 옆이 열리고 그때 치는 플레이): AI 는 상대 쪽으로 몸을 돌릴 때 face s 전의 상대 자리를 본다
 //  (사람처럼 보고 알아채는 시간 — 서 있는 상대는 같은 자리라 그대로). AI 만(플레이어 몸은 그대로) · 감독 값 0.2 s — 사장님 확인 전. `?aiReact=0` = 끔 · `?aiReact=0.25`
 export const AI_REACT = { on: true, face: 0.2 };
