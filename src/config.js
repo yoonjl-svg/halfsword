@@ -451,6 +451,13 @@ export const IB_PARRY_BEAT = { on: true, k: 1.6 };
 //  from(AI 쪽 묶기 시작): 'strike' = 긋기(0.1 s 남짓) · 따라 긋기만 · 'approach' = 칼을 내밀며 들어오는 단계부터 · 'windup' = 준비 자세로 칼을 드는 때부터(공격 전체 —
 //   사람이 칼 드는 것을 보고 비킬 틈). 사람 쪽은 셋 다 청구된 긋기 · 탭 · 폼멜
 export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
+// 이베리아 이어 긋기 흐름 (10/21 사장님 'A와 B를 테스트 스위치로 줘' — 시험 · 기본 끔 · test.html '이베리아 이어 긋기' · `?ibFlow=a|b|ab` · 확인표 2109):
+//  이베리아 유파 몸이 휘두르기를 이어 갈 때 — 앞 휘두르기가 끝난 뒤 window 초 안에 다시 휘두르거나, 휘두르는 채로 손 방향이 90° 넘게 꺾일 때(둥글게 돌리기) —
+//  그 휘두르기 동안과 끝난 뒤 window 초까지 (fighter.js updateIbFlow · ibFlowOn):
+//   A 제동 줄이기 = 손목 제동을 '멈출 거리 × releaseMargin' 의 (1 − brake) 몫에서 늦게 시작 → 칼이 서지 않고 다음 긋기로 흐른다
+//   B 손목 힘 한도 = 칼을 돌리는 손목 힘 한도(maxAimTorque 22 N·m) × torque → 무거운 칼을 더 빨리 돌린다(10/8 한손 시험: 한도 28 에서 칼끝 8.8 → 9.7 m/s)
+//  사람 · AI 같이(몸의 일). 수는 감독 시험 값 — 사장님 확인 전
+export const IB_FLOW = { a: false, b: false, window: 0.45, brake: 0.5, torque: 28 / 22 };
 // AI 반응 시간 (10/21 사장님 '당장해' — 옆 공략: 박찬 직후 짧게 옆이 열리고 그때 치는 플레이): AI 는 상대 쪽으로 몸을 돌릴 때 face s 전의 상대 자리를 본다
 //  (사람처럼 보고 알아채는 시간 — 서 있는 상대는 같은 자리라 그대로). AI 만(플레이어 몸은 그대로) · 감독 값 0.2 s — 사장님 확인 전. `?aiReact=0` = 끔 · `?aiReact=0.25`
 export const AI_REACT = { on: true, face: 0.2 };

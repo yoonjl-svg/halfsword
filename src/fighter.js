@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -1357,6 +1357,7 @@ export class Fighter {
     this.applyPose(dt);
     if (this.canShove && CLOSE.on) this.closeStep(); // 근접 밀치기: 누르기 동안 다리 밀기만 더한다 (shove() 의 힘 순서 그대로)
     this.shove();
+    this.updateIbFlow(dt); // 이베리아 이어 긋기 흐름 (시험 IB_FLOW — 끄면 아무것도 안 함)
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
     this.driveJoints(); // 모든 관절 근육을 움직인다
@@ -1806,6 +1807,25 @@ export class Fighter {
       if (d < bd) (bd = d), (best = b.mesh);
     }
     return best;
+  }
+
+  /**
+   * 이베리아 이어 긋기 흐름 (10/21 시험 — config IB_FLOW, 기본 끔): 휘두르기(skill.swinging — 사람 · AI 같은 문턱)를 이어 가는지 읽어 ibFlowOn 을 둔다.
+   *  이어 감 = 앞 휘두르기가 끝난 뒤 window 초 안에 다시 휘두름 · 휘두르는 채로 손 방향이 90° 넘게 꺾임(둥글게 돌리기). 켜진 채로 그 휘두르기 동안 + 끝난 뒤 window 초까지.
+   *  A · B 둘 다 끄면 읽지도 않는다(오늘 길 그대로).
+   */
+  updateIbFlow(dt) {
+    if (!(IB_FLOW.a || IB_FLOW.b) || this.swordArt?.tradition !== 'iberian') { this.ibFlowOn = false; return; }
+    const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
+    const sk = this.skill, sw = !!sk.swinging, v = sk.vel;
+    if (sw) {
+      const sp = Math.hypot(v.x, v.y) || 1;
+      if (!this.ibFlowSw) { this.ibFlowChain = t - (this.ibFlowEnd ?? -9) <= IB_FLOW.window; this.ibFlowDir = [v.x / sp, v.y / sp]; }
+      else if (this.ibFlowDir && (v.x * this.ibFlowDir[0] + v.y * this.ibFlowDir[1]) / sp < 0) { this.ibFlowChain = true; this.ibFlowDir = [v.x / sp, v.y / sp]; } // 90° 넘게 꺾임 = 둥글게 이어 감
+    } else if (this.ibFlowSw) this.ibFlowEnd = t;
+    this.ibFlowSw = sw;
+    this.ibFlowOn = !!this.ibFlowChain && (sw || t - (this.ibFlowEnd ?? -9) <= IB_FLOW.window);
+    if (!this.ibFlowOn && !sw) this.ibFlowChain = false;
   }
 
   /** 곁눈 베기 무릎 꺾기 굴림 전용 난수 (파이터별 LCG, 결정적, Math.random 과 무관 — 10/21) */
@@ -3201,7 +3221,8 @@ export class Fighter {
     const wSwing = w.clone().sub(wTwist);
     wAim.addScaledVector(blade, -wAim.dot(blade));
     // 손목(두 손)의 힘은 사람 수준으로 제한된다 → 칼을 순식간에 돌리지 못하고, 칼의 무게와 관성이 느껴진다
-    let cap = this.weaponCfg.maxAimTorque * str;
+    const flowK = this.ibFlowOn && IB_FLOW.b ? IB_FLOW.torque : 1; // 이베리아 이어 긋기 B: 손목 힘 한도 (시험 — 끄면 1)
+    let cap = this.weaponCfg.maxAimTorque * str * flowK;
     // 놓아주기: 칼이 목표를 향해 날아가는 동안엔 붙잡지 않는다(관성으로 간다). 남은 각도가 "멈출 수 있는 거리"
     //  (각속도² / (2 × 최대 제동 각가속도)) 안으로 들어오면 그때부터 제동한다. 한 번 제동을 시작하면 이어 간다.
     let damp = this.weaponCfg.aimDamping;
@@ -3214,7 +3235,7 @@ export class Fighter {
         const stopAngle = (toward * toward) / (2 * brakeAcc);
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
         const tap = this.skill.tap;
-        const fr = this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1;
+        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 이어 긋기 A: 제동을 늦게 (시험)
         if (angle * leadK > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
@@ -3240,7 +3261,7 @@ export class Fighter {
     if (tl > cap) torque.setLength(cap);
     if (tempoGravity) {
       torque.add(_mG);
-      const fullCap = this.weaponCfg.maxAimTorque * str / this.stamina.power;
+      const fullCap = this.weaponCfg.maxAimTorque * str * flowK / this.stamina.power;
       if (torque.length() > fullCap) torque.setLength(fullCap);
     }
     // 측정용 (테스트 도구가 읽는다)

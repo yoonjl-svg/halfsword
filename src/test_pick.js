@@ -97,6 +97,13 @@ const WHIFF_PICKS = [
   { id: 'off', name: '끔', sub: '평소 상대' },
   { id: 'on', name: '켬', sub: '닿지 않는 거리에서 2~3초마다 허공을 벰 · 다가가면 평소대로' },
 ];
+// 이베리아 이어 긋기 흐름 (10/21 사장님 'A와 B를 테스트 스위치로 줘' — config IB_FLOW): 이베리아 유파(나와 상대 모두)가 휘두르기를 이어 갈 때만. 기억하지 않는다(열 때마다 끔)
+const IBFLOW_PICKS = [
+  { id: 'off', name: '끔', sub: '지금 게임 그대로' },
+  { id: 'a', name: 'A 제동 줄이기', sub: '이어 그을 때 칼을 덜 세워 다음 긋기로 흐름' },
+  { id: 'b', name: 'B 손목 힘', sub: '이어 그을 때 손목 힘 한도 22 → 28 N·m' },
+  { id: 'ab', name: 'A + B', sub: '둘 다' },
+];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
@@ -107,6 +114,7 @@ const pick = {
   deSecret: SECRET.deSecret,
   stage: 'random', // 무대도 기억하지 않는다 (열 때마다 무작위에서 — 고른 무대가 남아 '왜 늘 습지인가' 헷갈리지 않게)
   whiff: 'off', // 상대 헛스윙도 기억하지 않는다 (열 때마다 끔)
+  ibFlow: 'off', // 이베리아 이어 긋기 흐름도 기억하지 않는다 (열 때마다 끔)
 };
 
 function weaponButton(w, big) {
@@ -203,6 +211,7 @@ function render() {
   for (const el of document.querySelectorAll('#deSecret .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.deSecret));
   for (const el of document.querySelectorAll('#stagePick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.stage));
   for (const el of document.querySelectorAll('#whiffPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.whiff));
+  for (const el of document.querySelectorAll('#ibFlowPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibFlow));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -215,7 +224,7 @@ function render() {
   const f = foes.find((x) => x.id === pick.foe);
   const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
   const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
-  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}`);
+  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이어 긋기 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}`);
 }
 
 function startUrl() {
@@ -223,6 +232,7 @@ function startUrl() {
   if (pick.ibSecret !== SECRET.iberianSecret) q.set('ibSecret', pick.ibSecret); // 본판 기본값이 아니면 판을 주소에 (10/13 — 전엔 독일 기본을 'parry' 로 잘못 알아 감아 들기를 고를 수 없었다)
   if (pick.cnSecret !== SECRET.cnSecret) q.set('cnSecret', pick.cnSecret);
   if (pick.deSecret !== SECRET.deSecret) q.set('deSecret', pick.deSecret);
+  if (pick.ibFlow !== 'off') q.set('ibFlow', pick.ibFlow); // 이베리아 이어 긋기 흐름 (main.js → config IB_FLOW)
   if (pick.whiff === 'on') q.set('foeWhiff', '1'); // 상대 헛스윙 (main.js → whiff_drill.js) — 끄면 주소에 안 적는다
   return `./index.html?${q.toString()}`;
 }
@@ -239,6 +249,7 @@ for (const x of CN_SECRETS) $('cnSecret').append(ibSecretButton(x, 'cnSecret'));
 for (const x of DE_SECRETS) $('deSecret').append(ibSecretButton(x, 'deSecret'));
 for (const x of STAGE_PICKS) $('stagePick').append(ibSecretButton(x, 'stage'));
 for (const x of WHIFF_PICKS) $('whiffPick').append(ibSecretButton(x, 'whiff'));
+for (const x of IBFLOW_PICKS) $('ibFlowPick').append(ibSecretButton(x, 'ibFlow'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +
