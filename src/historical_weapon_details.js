@@ -1,9 +1,10 @@
 // 환도 · 크리그스메서 생김새 (10/21 — 샛별 저장소에서 들여옴): 환도는 부산박물관 군용 환도(구입10194), 크리그스메서는 알비온 Knecht Mark II 를 본뜸.
-//  꼴만 참고했고, 날 길이는 사장님이 고른 대로 늘렸다 — 실측 복제품이 아니다.
+//  꼴만 참고했고, 날 길이는 사장님이 고른 대로 늘렸다 — 실측 복제품이 아니다. 환도 날은 10/21 23:3x 사장님 '4 cm 짧게'로 0.72 → 0.68 m.
+//  칼날 그림 · 칼집은 weapons.js 의 날 길이(콜라이더 상자 · this.bladeLength)를 따른다 — 아래 표의 blade 는 기록용.
 import * as THREE from 'three';
 import { metalMat, weaponEnv } from './weapon_looks.js';
 export const HISTORICAL_WEAPON = {
-  hwando: { blade: .72, width: .036, sag: .009, grip: .145, guardWidth: .071 },
+  hwando: { blade: .68, width: .036, sag: .009, grip: .145, guardWidth: .071 },
   kriegsmesser: { blade: .95, width: .0445, sag: .014, grip: .235, guardWidth: .25 },
 };
 const iron = () => metalMat(0x39372f, { rough: .57 });
@@ -113,7 +114,7 @@ export function historicalDecorate(group){
 }
 
 // 빈 칼집은 따로 허리에 단다(움직이는 칼에는 달지 않음). 박물관 칼집 길이를 늘린 날 길이만큼 늘였다.
-export function hwandoScabbard(bladeLength=.72){
+export function hwandoScabbard(bladeLength=HISTORICAL_WEAPON.hwando.blade){
  const group=new THREE.Group();group.name='hwando-black-scabbard';const L=bladeLength+.05;
  const s=new THREE.Shape();s.moveTo(-.023,0);
  for(let i=0;i<=32;i++){const t=i/32,c=4*.009*t*(1-t),w=.023*(1-.17*t);s.lineTo(c-w,-t*L);}

@@ -1,7 +1,7 @@
 // 월왕구천검 브라우저 확인 + 그림 (10/14, docs/import/goujian_port_2026-10-14.md)
 //  ① 카드 앞면: ?cards=goujian,qinggang 로 첫 카드에 월왕구천검 → 고르고 뒤집힌 뒤 멈춤(game.draw.hold) → 이름·등급 글자·설명·능력 줄·글 넘침 · 화면 크기 셋(가로만)
 //  ② 쥔 모습: ?weapon=goujian&foeWeapon=longsword (플레이어가 월왕구천검) → 싸움 시작 → 판 시작 정지 동안 앞 · 옆(칼 든 쪽) · 쥔 손 가까이 (game.freeCam)
-//     유파·틀·방식·쉴 자세(swordArt)·질량·관성과 디버그 줄 game.woundRage(피를 잠깐 0.725 로 두면 d 0.5 · 배율 1.15 인지)를 적는다. 콘솔 오류를 센다.
+//     유파·틀·방식·쉴 자세(swordArt)·질량·관성과 디버그 줄 game.woundRage(피를 잠깐 0.725 로 두면 d 0.5 · 배율 1.25 인지 — 10/21 23:4x 상한 0.5, 전 1.15)를 적는다. 콘솔 오류를 센다.
 //  실행: 개발 서버를 띄운 뒤  node tools/browser/goujian_shots.mjs http://127.0.0.1:<포트> [출력 폴더(기본 docs/import/goujian)]
 //   PNG 로 찍는다(webp 로 바꾸기는 따로). 화면 배율 1 (헤드리스 SwiftShader — 게임 시간이 실제보다 느리게 흐른다). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
@@ -81,7 +81,7 @@ const art = await page.evaluate(() => {
 console.log('hold art', JSON.stringify(art));
 if (art.weapon !== 'goujian') errors.push(`내 무기 ${art.weapon}`);
 if (art.tradition !== 'chinese') errors.push(`유파 ${art.tradition}`);
-if (art.woundRage?.[0]?.mult !== 1 || art.woundRageAtBlood0725?.[0]?.mult !== 1.15 || art.woundRageAtBlood0725?.[1]?.mult !== 1) errors.push(`디버그 줄 ${JSON.stringify(art.woundRageAtBlood0725)}`);
+if (art.woundRage?.[0]?.mult !== 1 || art.woundRageAtBlood0725?.[0]?.mult !== 1.25 || art.woundRageAtBlood0725?.[1]?.mult !== 1) errors.push(`디버그 줄 ${JSON.stringify(art.woundRageAtBlood0725)}`);
 const shot = async (view, path) => {
   await page.evaluate((view) => {
     const g = window.game;
