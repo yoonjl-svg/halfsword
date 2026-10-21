@@ -29,7 +29,7 @@ export const SCHOOLS = [
     { id: 'I4', cat: 'secret', name: '비기', sub: '밑으로 들어가 찌르기', eff: '상대가 칼을 들 때 밑으로 찌른다', pre: ['I8'], price: 400, heads: 20, st: 'now', d: 5, cx: 330 },
     { id: 'I10', cat: 'passive', name: '패시브', sub: '카바치오네', eff: '맞물린 칼에서 빠져나오는 손이 빠르다 (후보)', pre: ['I9'], price: 0, heads: 10, st: 'new', d: 5, cx: 670 },
   ] },
-  { id: 'iberian', ko: '이베리아', title: '이베리아 — 고리', bw: 158, shape: '손목 힘 패시브를 보법 바로 아래에서 먼저 익힌다(큰 칼을 돌리는 바탕). 둥근 걸음 길과 돌려 베기 길이 비기에서 닫혀 원을 이룬다.', nodes: [
+  { id: 'iberian', ko: '이베리아', title: '이베리아 — 고리', bw: 158, shape: '손목 힘 패시브를 보법 바로 아래에서 먼저 익힌다(큰 칼을 돌리는 바탕) — 비기에도 필요. 둥근 걸음 길과 돌려 베기 길이 비기에서 닫혀 원을 이룬다.', nodes: [
     { id: 'B1', cat: 'foot', name: '보법 I', sub: '넓은 옆걸음', eff: '옆으로 1.3배 빠르게 돈다', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
     { id: 'B2', cat: 'foot', name: '보법 II', sub: '옆 박차기', eff: '옆으로 첫 걸음을 박찬다', pre: ['B1'], price: 100, st: 'split', opt: true, d: 1, cx: 84 },
     { id: 'B10', cat: 'passive', name: '패시브', sub: '손목 힘', eff: '손목 힘 30% — 큰 칼을 빨리 돌린다 (보법 바로 아래)', pre: ['B1'], price: 0, heads: 10, st: 'now', d: 1, cx: 252 },
@@ -39,7 +39,7 @@ export const SCHOOLS = [
     { id: 'B11', cat: 'letter', name: '리스본에서', sub: '온 편지', eff: '이베리아 무기가 나올 확률 ×2', pre: ['B1'], price: 100, st: 'new', opt: true, d: 1, cx: 924 },
     { id: 'B5', cat: 'atk', name: '이어 긋기', sub: '흐름', eff: '이어 그을 때 칼을 덜 세워 흐르듯', pre: ['B4'], price: 300, st: 'split', d: 2, cx: 560 },
     { id: 'B9', cat: 'parry', name: '막기 II', sub: '굳은 받기', eff: '막는 동안 피해 20% 감소', pre: ['B8'], price: 300, st: 'split', d: 2, cx: 800 },
-    { id: 'B7', cat: 'secret', name: '비기', sub: '몰리네테 탈류', eff: '칼 호 안으로 들면 비켜 서며 가로 벤다', pre: ['B3', 'B5'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
+    { id: 'B7', cat: 'secret', name: '비기', sub: '몰리네테 탈류', eff: '칼 호 안으로 들면 비켜 서며 가로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
     { id: 'B6', cat: 'deep', name: '돌려 베기 심화', sub: '쌓기', eff: '이어 그을수록 맞는 힘 +10% (셋까지)', pre: ['B5'], price: 400, st: 'split', d: 3, cx: 680 },
   ] },
   { id: 'japanese', ko: '일본', title: '일본 — 막기 줄기', shape: '받기를 세 번 깊이 익혀야 고노센(받아서 먼저 친다). 보법은 나누기 어려워 하나로 두고, 대신 막기를 셋으로 나눴다.', nodes: [
