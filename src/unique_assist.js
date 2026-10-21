@@ -76,7 +76,7 @@ export const PLAYER_UNIQUE = {
   japanese: [
     { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
     { stage: 2, name: 'kote', role: 'enh', replaces: 'langortDown', hint: '강화동작 · 가운데서 짧게 내려베기 대신', anchor: 'start', body: [5, 3, 4, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 긴 자세에서 짧게 내려베기 (늘)
-    { stage: 3, name: 'tsubameGaeshi', role: 'chain', hint: '정수리 베기가 빗나간 뒤 위로 긋기', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시
+    { stage: 3, name: 'tsubameGaeshi', role: 'chain', hint: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋기', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }, { prev: 'zornhau', when: 'miss', dir: 'up' }, { prev: 'zornhauL', when: 'miss', dir: 'up' }], /* 10/21 15:4x 사장님 '츠바메가에시 자체의 발동을 완화하고 데미지는 진에서 세게' — 정수리 · 좌우 사선 내려베기가 빗나가거나 막힌 뒤 위로 */ chain: { at: 2 } }, // 츠바메가에시
   ],
   chinese: [
     { stage: 1, name: 'chebuYaoji', role: 'step', stick: 'fwd', hint: '앞으로 걸으며 가로 긋기', body: [-8, -12, 4, 0.045], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 앞 + 가로베기 (앞으로 끌어 딛고 낮게)
@@ -192,7 +192,7 @@ export class PlayerUniqueAssist {
     this.f = f;
     this.stage = stage;
     this.tradition = tradition;
-    // 무기 비검 (10/21 — weapons.js secretBlade): open 이면 그 기술은 책(단계)과 상관없이 열리고, prev 가 있으면 앞 칼 조건을 그 칼들로 넓힌다(진 츠바메가에시)
+    // 무기 비검 (10/21 — weapons.js secretBlade): open 이면 그 기술은 책(단계)과 상관없이 열리고, prev 가 있으면 앞 칼 조건을 그 칼들로 넓힌다(진 · 츠바메가에시)
     const SB = f.weapon?.secretBlade;
     const sbOn = (e) => SB?.open && SB.tech === e.name;
     const widen = (e) => (sbOn(e) && SB.prev && e.on?.length ? { ...e, on: [...e.on, ...SB.prev.filter((p) => !e.on.some((c) => c.prev === p)).map((p) => ({ ...e.on[0], prev: p }))] } : e);
