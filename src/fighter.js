@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -3153,7 +3153,9 @@ export class Fighter {
     // 칼날 가운데쯤이 실제로 움직이는 방향 (손잡이 속도와 다르다: 칼은 손을 축으로 돈다)
     const bv = this.hitPointVel;
     const edgeDir = new THREE.Vector3(bv.x, bv.y, bv.z);
-    const em = JOINTS.playerEdgeMode && playerArm(this) ? JOINTS.playerEdgeMode : edgeMode(); // 플레이어 칼만 다른 날 세우기 방식 (JOINTS.playerEdgeMode, 기본 null = 같음)
+    // 이베리아 날 세우기 시험 (config IB_EDGE — 10/22, 기본 끔 · 사장님 확인 전): 이베리아 유파 몸(사람 · AI)만 다른 날 세우기 방식(IB_EDGE.edge — JOINTS.edge 와 같은 이름). 끄면 오늘 줄 그대로
+    const ibEdge = IB_EDGE.on && this.swordArt?.tradition === 'iberian' ? IB_EDGE.edge : null;
+    const em = JOINTS.playerEdgeMode && playerArm(this) ? JOINTS.playerEdgeMode : ibEdge ?? edgeMode(); // 플레이어 칼만 다른 날 세우기 방식 (JOINTS.playerEdgeMode, 기본 null = 같음)
     // 날 세우기 ⓒ 미리 돌리기 (JOINTS.edge 'pre'): 명령 겨눔이 도는 빠르기(wAim, 서보 목표)로 칼날 70 % 지점이 곧 갈 속도를 읽어 더한다 —
     //  칼이 실제로 빨라지기 전(준비 자세에서 길의 첫 방향으로 손이 움직이기 시작할 때)에 날이 그쪽을 먼저 본다. 'pre' 가 아니면 오늘 줄 그대로
     if (em === 'pre') edgeDir.addScaledVector(_edL.crossVectors(wAim, blade), (this.weaponCfg.hiltLength + 0.7 * this.weaponCfg.bladeLength) * JOINTS.edgeLead);

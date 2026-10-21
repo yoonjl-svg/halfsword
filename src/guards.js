@@ -257,6 +257,20 @@ export const IBERIAN_TABLE = {
  *  보이는 이름·설명은 바꾸지 않는다(HUD 이름은 TRADITIONS[t].names). 단 칸에 name·desc 가 적혀 있으면 그 칸 이름도 바꾼다 — 10/10 이탈리아 레이피어 고증:
  *   hands.js 레이피어 손 돌림이 표 칸 이름의 Prima·Seconda·Terza·Quarta 를 읽기 때문(이베리아 칸엔 name 이 없어 그대로)
  */
+// 이베리아 자세표 칸 걷기 시험 (10/22 — docs/strike/iberian_flat_hits_2026-10-22.md · 기본 판은 부르지 않음 · 사장님 확인 전): 짧은 이름 → 칸 이름 · 묶음
+//  wait = 기다리는 자리 여섯 · pass = 지나는 자리 여덟 (위 머리말). 걷은 칸은 앞무게 틀 표 값으로 돌아간다(frames.js FRAME_GUARDS.heavy · 교본 표)
+export const IBERIAN_TABLE_KEYS = { tag: '지붕 (폼 타크)', tagR: '어깨 지붕 (폼 타크)', tagL: '왼 어깨 지붕 (폼 타크)', langort: '긴 자세 (랑오르트)', ochsR: '황소 (옥스)', ochsL: '왼 황소 (옥스)', pflugR: '쟁기 (플루크)', pflugL: '왼 쟁기 (플루크)', alber: '바보 (알버)', sideR: '옆 자세', sideL: '왼 옆 자세', wechselR: '바꿈 (베크셀)', wechselL: '왼 바꿈 (베크셀)', neben: '옆 지킴 (네벤후트)' };
+const IBERIAN_TABLE_GROUPS = { wait: ['langort', 'ochsR', 'ochsL', 'pflugR', 'pflugL', 'alber'], pass: ['tag', 'tagR', 'tagL', 'sideR', 'sideL', 'wechselR', 'wechselL', 'neben'] };
+/** 시험: 이베리아 자세표에서 고른 칸을 걷는다 (짧은 이름 · 묶음 목록 — 판이 만들어지기 전에 부른다 · 프로세스 동안 남음). 모르는 이름은 던진다 */
+export function skipIberianTable(names) {
+  const out = [];
+  for (const k of names.flatMap((x) => IBERIAN_TABLE_GROUPS[x] ?? [x])) {
+    if (!IBERIAN_TABLE_KEYS[k]) throw new Error(`이베리아 자세표 칸 ${k}?`);
+    if (delete IBERIAN_TABLE[IBERIAN_TABLE_KEYS[k]]) out.push(k);
+  }
+  return out;
+}
+
 export function applySchoolGuardTable(table, tradition) {
   const over = tradition?.guardTable;
   if (!over) return table;

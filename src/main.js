@@ -9,6 +9,7 @@ import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 en
 import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨눔 갈래 스위치 (10/12)
 import { FLOW_REDESIGN } from './nagashi_redesign.js'; // 일본 흘림 판정 개편 · 기력 청구 스위치 (10/18 — ?flowJudge · ?flowCost)
 import { FLOW_RECOVERY } from './nagashi_recovery.js'; // 흘림당한 뒤 팔 늦춤 스위치 (10/18 — ?flowArm)
+import { skipIberianTable } from './guards.js'; // 이베리아 자세표 칸 걷기 시험 (10/22 — ?ibTableSkip, 기본 끔)
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
 import { createScreenTint } from './screen_tint.js';
@@ -148,6 +149,10 @@ if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.g
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
+// 이베리아 날 세우기 시험 (10/22 — 기본 끔 · 사장님 확인 전, config IB_EDGE · docs/strike/iberian_flat_hits_2026-10-22.md): `?ibEdge=motor` · `?ibEdge=ff` · `?ibEdge=pre` = 이베리아 유파만 그 날 세우기 방식
+if (['motor', 'ff', 'pre'].includes(params.get('ibEdge'))) Object.assign(CONFIG.IB_EDGE, { on: true, edge: params.get('ibEdge') });
+// 이베리아 자세표 칸 걷기 시험 (10/22 — 기본 끔 · 사장님 확인 전, docs/strike/iberian_flat_hits_2026-10-22.md): `?ibTableSkip=sideR,sideL` 처럼 칸 짧은 이름(guards.js IBERIAN_TABLE_KEYS) · 묶음 wait · pass — 걷은 칸은 앞무게 틀 표 값
+if (params.get('ibTableSkip')) skipIberianTable(params.get('ibTableSkip').split(',').map((x) => x.trim()).filter(Boolean));
 { // 열린 비기 유파 (10/21 — config SECRET.openSchools): `?secretOpen=all` 옛 판 · `?secretOpen=japanese,german` 고르기
   const so = params.get('secretOpen');
   if (so) CONFIG.SECRET.openSchools = so === 'all' ? ['german', 'italian', 'iberian', 'japanese', 'chinese'] : so.split(',').map((x) => x.trim()).filter(Boolean);
