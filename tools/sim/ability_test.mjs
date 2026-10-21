@@ -17,6 +17,7 @@ const N = +nArg || 5;
 const pairs = rest.some((a) => a.includes('=')) ? rest.map((a) => a.split('=')) : rest.length ? [[rest[0], rest[1]]] : [];
 for (const [k, v] of pairs) {
   if (k.startsWith('GUN.')) GUN[k.slice(4)] = +v;
+  else if (k.includes('.')) { const [a, b] = k.split('.'); WEAPONS[id][a] = { ...WEAPONS[id][a], [b]: +v }; } // 칸 안의 값 (예: secretBlade.k=1 · secretBlade.kin=0.3 — 10/21)
   else WEAPONS[id][k] = +v;
 }
 const field = pairs.map(([k]) => k).join(',');
