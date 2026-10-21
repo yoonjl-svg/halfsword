@@ -28,7 +28,7 @@ import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from '
 import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
-import { runInstants } from './secret_instant.js';
+import { runInstants, artFlash } from './secret_instant.js'; // artFlash: 이점이 터진 순간 잔상 (10/21)
 import { FINISH } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
 import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA } from './config.js';
@@ -851,6 +851,8 @@ export class Combat {
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
+      // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
+      if (r.severity > 0) { const tn = strokeTechOf(att); if ((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) artFlash(att, this.dt); }
     }
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
@@ -874,6 +876,7 @@ export class Combat {
     vic.buckleAt = t;
     vic.buckleKneel = B.kneel;
     vic.knockDown(false);
+    artFlash(att, this.dt); // 무릎이 꺾인 그 칼에 잔상 (10/21 — 이점이 터진 순간)
   }
 }
 

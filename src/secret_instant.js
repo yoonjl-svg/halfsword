@@ -1307,29 +1307,53 @@ function endCombo(f, combat) {
 //   · artTrailTick: 끌고 가지 않는 보통 츠바메가에시의 되돌림 칼(칼끝이 위로 움직이는 동안)에 잔상 — 비기 잔상과 같은 그림(sword_trail.js f.instantArc · kind 'combo'),
 //     세기 = 그 칼끝 평균 빠르기 / 고노센 칼끝 빠르기 (잔상은 빠르기의 표시 — 연환 · 진과 같은 체계). 물리 · 판정 무관(읽기만)
 // ─────────────────────────────────────────────────────────────
-export const ART_TRAIL = new Set(['tsubameGaeshi']); // 잔상을 남기는 고유 동작 (되돌림 칼)
+export const ART_TRAIL = new Set(['tsubameGaeshi']); // 되돌림 칼이 그리는 동안 잔상 (칼끝이 위로)
+//  이점이 터진 순간 잔상 (10/21 16:1x 사장님 '잔상은 이점 터진 순간만 넣는 안으로 해'): 칼은 늘 최근 ART_HIST 초의 길(칼자루 · 칼끝)을 기억하고,
+//  이점이 터지면(곁눈 베기 무릎 꺾임 · 내려 찌르기 상처 · 요격 몸통 출혈 — combat.js) 그 길을 한 번에 잔상으로 그린다(artFlash). 이베리아 머리 위 돌려 베기는
+//  이어 그은 둘째 칼부터 그리는 동안 잔상(세기 + ART_STACK × 쌓인 수 — 몰아치는 흐름). 세기는 늘 칼끝 평균 빠르기 ÷ 고노센 칼끝 빠르기(0.1 ~ 1)
 /** 진 · 츠바메가에시 되돌림 칼: from(패드) → path(패드들)를 끌고 간다. 이미 끌고 가는 중이면 거절(false) */
 export function requestArtReturn(f, from, path, SB) {
   if (f.iai || f.iaiReq || !SB?.kin || !path?.length) return false;
   requestCombo(f, { moves: [{ from, path, kind: 'cut', name: SB.tech }], share: SB.kin, hold: SB.hold ?? 0.2, hitMul: 1, tech: SB.tech });
   return true;
 }
+export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)
+export const ART_STACK = 0.1; // 이어 그은 수 하나마다 더하는 잔상 세기 (감독 값)
+const HIST_N = 64;
+function speedShare(f, sum, n) { return clamp(sum / Math.max(1, n) / Math.max(1, iaiTipSpeed(f)), 0.1, 1); }
 function artTrailTick(f) {
-  if (f.iai || !f.armed || !f.sword) { f.artTrail = null; return; }
-  const name = artTechOf(f);
-  const up = (f.tipVel?.y ?? 0) > 1.5;
-  if (!name || !ART_TRAIL.has(name) || !up) { f.artTrail = null; return; }
-  let A = f.artTrail;
-  if (!A) {
-    A = f.artTrail = { arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: 0.1, pts: [] }, sum: 0, n: 0, ref: Math.max(1, iaiTipSpeed(f)) };
-    f.instantArc = A.arc;
-  }
+  if (!f.armed || !f.sword) { f.artTrail = null; f.bladeHist = null; return; }
   const a = f.bladePoint(0, new THREE.Vector3());
   const b = f.bladePoint(1, new THREE.Vector3());
+  const sp = f.tipVel?.length?.() ?? 0;
+  const H = (f.bladeHist ??= { pts: [], t: 0 });
+  H.pts.push([a.x, a.y, a.z, b.x, b.y, b.z, sp, H.t]);
+  H.t += 1;
+  if (H.pts.length > HIST_N) H.pts.shift();
+  if (f.iai) { f.artTrail = null; return; }
+  const name = artTechOf(f);
+  const stack = name ? artStackOf(f) : 0;
+  const on = name && ((ART_TRAIL.has(name) && (f.tipVel?.y ?? 0) > 1.5) || (stack >= 1 && sp > 8));
+  if (!on) { f.artTrail = null; return; }
+  let A = f.artTrail;
+  if (!A || A.name !== name) {
+    A = f.artTrail = { name, arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: 0.1, pts: [] }, sum: 0, n: 0 };
+    f.instantArc = A.arc;
+  }
   A.arc.pts.push([a.x, a.y, a.z, b.x, b.y, b.z]);
-  A.sum += f.tipVel.length();
+  A.sum += sp;
   A.n++;
-  A.arc.share = clamp(A.sum / A.n / A.ref, 0.1, 1);
+  A.arc.share = clamp(speedShare(f, A.sum, A.n) + ART_STACK * stack, 0.1, 1);
 }
-let artTechOf = () => null; // unique_assist.js strokeTechOf 를 main · 하니스가 이어 둔다 (서로 부르는 고리를 피함)
-export function setArtTechOf(fn) { artTechOf = fn; }
+/** 이점이 터진 순간: 그 칼이 지나온 최근 ART_HIST 초의 길을 잔상으로 (비기 · 끌고 가는 칼이 그리는 중이면 안 함) */
+export function artFlash(f, dt = 1 / 120) {
+  if (f.iai || !f.bladeHist?.pts.length) return;
+  const n = Math.max(2, Math.round(ART_HIST / Math.max(1e-3, dt)));
+  const P = f.bladeHist.pts.slice(-n);
+  const sum = P.reduce((s, p) => s + p[6], 0);
+  f.instantArc = { id: (f.instantArc?.id ?? 0) + 1, kind: 'art', share: speedShare(f, sum, P.length), pts: P.map((p) => p.slice(0, 6)) };
+  f.artTrail = null;
+}
+let artTechOf = () => null; // unique_assist.js strokeTechOf 를 이어 둔다 (서로 부르는 고리를 피함)
+let artStackOf = () => 0; // unique_assist.js strokeStackN
+export function setArtTechOf(fn, stackFn) { artTechOf = fn; if (stackFn) artStackOf = stackFn; }

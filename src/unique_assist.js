@@ -529,4 +529,10 @@ export class PlayerUniqueAssist {
     if (why === 'done' && R?.part === 1 && R.e.chain) this.chainFrom = { e: R.e, U: R.U, tEnd };
   }
 }
-setArtTechOf(strokeTechOf); // 고유 동작 잔상(secret_instant.js artTrailTick)이 지금 기술 이름을 읽게
+/** 지금 긋는 기술의 이어 그은 수 (stack 이 있는 기술만 — 이베리아 머리 위 돌려 베기 · 없으면 0) */
+export function strokeStackN(f) {
+  const name = strokeTechOf(f);
+  if (!name || !STACK_BY_NAME[name]) return 0;
+  return f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
+}
+setArtTechOf(strokeTechOf, strokeStackN); // 고유 동작 잔상(secret_instant.js artTrailTick · artFlash)이 지금 기술 이름 · 이어 그은 수를 읽게
