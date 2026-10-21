@@ -14,7 +14,7 @@ export const SCHOOLS = [
     { id: 'G6', cat: 'deep', name: '곁눈 베기 심화', sub: '무릎 꺾기', eff: '머리 · 어깨 · 가슴에 들면 50% 무릎을 꿇린다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 500 },
     { id: 'G4', cat: 'parry', name: '막기 II', sub: '왕관', eff: '머리 위 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 690 },
     { id: 'G9', cat: 'passive', name: '패시브', sub: '인데스', eff: '그 순간 (인데스) — 상대 칼이 헛치거나 막힌 뒤 0.6초 안에 친 칼 피해 +30% · 간격 잡기 중엔 시간이 멈춤 · 비기엔 안 실림', pre: ['G2'], price: 0, heads: 10, st: 'new', d: 2, cx: 100 },
-    { id: 'G10', cat: 'secret', name: '비기', sub: '받아 베기', eff: '치명적인 칼을 받아내며 동시에 벤다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
+    { id: 'G10', closed: true, cat: 'secret', name: '비기', sub: '받아 베기', eff: '치명적인 칼을 받아내며 동시에 벤다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
   ] },
   { id: 'italian', ko: '이탈리아', title: '이탈리아 — 긴 줄기', shape: '거리가 생명이라 보법 II(물러서기)를 반드시 거친다. 찌르기 줄기는 내려 찌르기 → 심화 → 비기로 한 줄, 막기 줄기가 나란히 뻗는다.', nodes: [
     { id: 'I1', cat: 'foot', name: '보법 I', sub: '박자 걸음', eff: '짧게 둘 · 길게 둘, 잦은 걸음', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
@@ -26,7 +26,7 @@ export const SCHOOLS = [
     { id: 'I6', cat: 'parry', name: '막기 II', sub: '막아찌르기', eff: '누르면 바로 짧게 찌름 · 피해 50% 감소', pre: ['I5'], price: 300, st: 'split', d: 3, cx: 670 },
     { id: 'I8', cat: 'deep', name: '내려 찌르기 심화', sub: '틈 파고들기', eff: '옷 · 갑옷 틈을 더 깊이 파고든다', pre: ['I7'], price: 400, st: 'split', d: 4, cx: 330 },
     { id: 'I9', cat: 'atk', name: '칼끝', sub: '돌려 빼기', eff: '찌르기가 맞물리면 돌려 뺀다 (이어 긋기)', pre: ['I6'], price: 300, st: 'split', d: 4, cx: 670 },
-    { id: 'I4', cat: 'secret', name: '비기', sub: '밑으로 들어가 찌르기', eff: '상대가 칼을 들 때 밑으로 찌른다', pre: ['I8'], price: 400, heads: 20, st: 'now', d: 5, cx: 330 },
+    { id: 'I4', closed: true, cat: 'secret', name: '비기', sub: '밑으로 들어가 찌르기', eff: '상대가 칼을 들 때 밑으로 찌른다', pre: ['I8'], price: 400, heads: 20, st: 'now', d: 5, cx: 330 },
     { id: 'I10', cat: 'passive', name: '패시브', sub: '리네아 레타', eff: '곧은 선 (리네아 레타) — 찌르는 동안 칼끝이 상대를 따라간다 (최대 12° · 초당 60° · AI 는 절반)', pre: ['I9'], price: 0, heads: 10, st: 'new', d: 5, cx: 670 },
   ] },
   { id: 'iberian', ko: '이베리아', title: '이베리아 — 고리', bw: 158, shape: '손목 힘 패시브를 보법 바로 아래에서 먼저 익힌다(큰 칼을 돌리는 바탕) — 비기에도 필요. 둥근 걸음 길과 돌려 베기 길이 비기에서 닫혀 원을 이룬다.', nodes: [
@@ -39,7 +39,7 @@ export const SCHOOLS = [
     { id: 'B11', cat: 'letter', name: '리스본에서', sub: '온 편지', eff: '이베리아 무기가 나올 확률 ×2', pre: ['B1'], price: 100, st: 'new', opt: true, d: 1, cx: 924 },
     { id: 'B5', cat: 'atk', name: '이어 긋기', sub: '흐름', eff: '이어 그을 때 칼을 덜 세워 흐르듯', pre: ['B4'], price: 300, st: 'split', d: 2, cx: 560 },
     { id: 'B9', cat: 'parry', name: '막기 II', sub: '굳은 받기', eff: '막는 동안 피해 20% 감소', pre: ['B8'], price: 300, st: 'split', d: 2, cx: 800 },
-    { id: 'B7', cat: 'secret', name: '비기', sub: '몰리네테 탈류', eff: '칼 호 안으로 들면 비켜 서며 가로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
+    { id: 'B7', closed: true, cat: 'secret', name: '비기', sub: '몰리네테 탈류', eff: '칼 호 안으로 들면 비켜 서며 가로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
     { id: 'B6', cat: 'deep', name: '돌려 베기 심화', sub: '쌓기', eff: '이어 그을수록 맞는 힘 +10% (셋까지)', pre: ['B5'], price: 400, st: 'split', d: 3, cx: 680 },
   ] },
   { id: 'japanese', ko: '일본', title: '일본 — 막기 줄기', shape: '받기를 세 번 깊이 익혀야 고노센(받아서 먼저 친다). 보법은 나누기 어려워 하나로 두고, 대신 막기를 셋으로 나눴다.', nodes: [
@@ -66,6 +66,6 @@ export const SCHOOLS = [
     { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '찌르다가 거둔다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 490 },
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
     { id: 'C10', cat: 'passive', name: '패시브', sub: '토납', eff: '숨 바꾸기 (토납) — 칼을 휘두르지 않는 동안 피가 2배 빨리 멎는다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
-    { id: 'C9', cat: 'secret', name: '비기', sub: '연환', eff: '높이 막아 낸 직후 세 번 이어 친다', pre: ['C6', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 },
+    { id: 'C9', closed: true, cat: 'secret', name: '비기', sub: '연환', eff: '높이 막아 낸 직후 세 번 이어 친다', pre: ['C6', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 },
   ] },
 ];
