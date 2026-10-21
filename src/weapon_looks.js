@@ -67,10 +67,10 @@ export function weaponEnv() {
   return envTex;
 }
 
-// 등급별 마감: 등급이 높을수록 더 곱게 갈아 거울처럼 비친다. 쓰레기는 녹슬고 흐릿하다.
+// 등급별 마감: 등급이 높을수록 더 곱게 갈아 거울처럼 비친다. 쓰레기는 커먼과 같다(10/21 22:xx 사장님 '쓰레기 등급이 겉면 마감이 흐릿할 이유는 없는 거 같아' — 전엔 녹슬고 흐릿하게).
 //  (레전드에 자체 발광은 없다 — 레전드 등급의 표식은 aura.js 기운이다. 사장님 10/10 20:0x, 전엔 "진짜 엑스칼리버의 표식")
 export const FINISH = {
-  trash: { blade: 0.62, hilt: 0.75, metal: 0.55, env: 0.5 },
+  trash: { blade: 0.3, hilt: 0.42, metal: 0.9, env: 1.0 }, // = common (10/21 · 전 0.62 · 0.75 · 0.55 · 0.5)
   common: { blade: 0.3, hilt: 0.42, metal: 0.9, env: 1.0 },
   rare: { blade: 0.22, hilt: 0.34, metal: 0.92, env: 1.1 },
   epic: { blade: 0.15, hilt: 0.28, metal: 0.94, env: 1.2, sheen: 0x9fd8e8 },
