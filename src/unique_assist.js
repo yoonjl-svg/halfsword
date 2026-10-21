@@ -439,8 +439,8 @@ export class PlayerUniqueAssist {
     const at = e.chain ? Math.min(e.chain.at, U.pts.length - 1) : U.pts.length - 1;
     const len = part === 2 ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
     this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
-    // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 chainWait 안에 다시 그으면 하나씩(셋까지) — 맞는 순간 에너지 × (1 + stack × 그 수) (strokeHitK)
-    if (e.stack) { this.stackN = this.stackE === e.name && this.t - (this.stackT ?? -9) <= UA.chainWait + 0.3 ? Math.min(3, (this.stackN ?? 0) + 1) : 0; this.stackE = e.name; }
+    // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 이어짐 창(afterWindow 0.6 s — 10/21 0.45 에서 통일) 안에 다시 그으면 하나씩(셋까지) — 맞는 순간 에너지 × (1 + stack × 그 수) (strokeHitK)
+    if (e.stack) { this.stackN = this.stackE === e.name && this.t - (this.stackT ?? -9) <= UA.afterWindow ? Math.min(3, (this.stackN ?? 0) + 1) : 0; this.stackE = e.name; }
     cur.kind = part === 2 ? cur.kind : U.kind;
     cur.unique = U.name;
     if (part === 2) {

@@ -97,12 +97,12 @@ const WHIFF_PICKS = [
   { id: 'off', name: '끔', sub: '평소 상대' },
   { id: 'on', name: '켬', sub: '닿지 않는 거리에서 2~3초마다 허공을 벰 · 다가가면 평소대로' },
 ];
-// 이베리아 이어 긋기 흐름 (10/21 사장님 'A와 B를 테스트 스위치로 줘' — config IB_FLOW): 이베리아 유파(나와 상대 모두)가 휘두르기를 이어 갈 때만. 기억하지 않는다(열 때마다 끔)
+// 이베리아 시험 (10/21 — config IB_FLOW · SCHOOL_PASSIVE): 둘 다 본판 기본 켬 — 하나씩 꺼서 견줘 본다. 이베리아 유파(나와 상대 모두). 기억하지 않는다(열 때마다 기본)
 const IBFLOW_PICKS = [
-  { id: 'off', name: '끔', sub: '지금 게임 그대로' },
-  { id: 'a', name: 'A 제동 줄이기', sub: '이어 그을 때 칼을 덜 세워 다음 긋기로 흐름' },
-  { id: 'b', name: 'B 손목 힘', sub: '이어 그을 때 손목 힘 한도 22 → 28 N·m' },
-  { id: 'ab', name: 'A + B', sub: '둘 다' },
+  { id: 'off', name: '기본', sub: '이어 긋기 흐름 켬 · 손목 힘 패시브 켬 (지금 게임)' },
+  { id: 'noflow', name: '흐름 끔', sub: '이어 그을 때도 칼을 보통대로 세움' },
+  { id: 'nowrist', name: '손목 힘 끔', sub: '패시브 없이 손목 힘 그대로' },
+  { id: 'none', name: '둘 다 끔', sub: '오늘 아침 손맛' },
 ];
 const saved = loadPick();
 const pick = {
@@ -114,7 +114,7 @@ const pick = {
   deSecret: SECRET.deSecret,
   stage: 'random', // 무대도 기억하지 않는다 (열 때마다 무작위에서 — 고른 무대가 남아 '왜 늘 습지인가' 헷갈리지 않게)
   whiff: 'off', // 상대 헛스윙도 기억하지 않는다 (열 때마다 끔)
-  ibFlow: 'off', // 이베리아 이어 긋기 흐름도 기억하지 않는다 (열 때마다 끔)
+  ibFlow: 'off', // 이베리아 시험도 기억하지 않는다 (열 때마다 기본)
 };
 
 function weaponButton(w, big) {
@@ -224,7 +224,7 @@ function render() {
   const f = foes.find((x) => x.id === pick.foe);
   const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
   const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
-  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이어 긋기 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}`);
+  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이베리아 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}`);
 }
 
 function startUrl() {
@@ -232,7 +232,8 @@ function startUrl() {
   if (pick.ibSecret !== SECRET.iberianSecret) q.set('ibSecret', pick.ibSecret); // 본판 기본값이 아니면 판을 주소에 (10/13 — 전엔 독일 기본을 'parry' 로 잘못 알아 감아 들기를 고를 수 없었다)
   if (pick.cnSecret !== SECRET.cnSecret) q.set('cnSecret', pick.cnSecret);
   if (pick.deSecret !== SECRET.deSecret) q.set('deSecret', pick.deSecret);
-  if (pick.ibFlow !== 'off') q.set('ibFlow', pick.ibFlow); // 이베리아 이어 긋기 흐름 (main.js → config IB_FLOW)
+  if (pick.ibFlow === 'noflow' || pick.ibFlow === 'none') q.set('ibFlow', '0'); // 이베리아 이어 긋기 흐름 끔 (main.js → config IB_FLOW)
+  if (pick.ibFlow === 'nowrist' || pick.ibFlow === 'none') q.set('ibWrist', '0'); // 유파 패시브 끔 (main.js → config SCHOOL_PASSIVE)
   if (pick.whiff === 'on') q.set('foeWhiff', '1'); // 상대 헛스윙 (main.js → whiff_drill.js) — 끄면 주소에 안 적는다
   return `./index.html?${q.toString()}`;
 }

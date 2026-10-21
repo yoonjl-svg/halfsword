@@ -137,11 +137,13 @@ export function bookOf(school, tier) {
     book.lines = true; // 한 줄에 하나씩 (쓰는 법이 붙어 길다)
     book.provisional = true; // 사장님 04:0x '나중에 바꿔도 되니까' — 고유자세 한 가지로 바꿀 때까지 임시
   } else if (B.kind === 'passive') {
-    book.effect = '준비 중';
-    book.planned = true;
+    book.effect = PASSIVE_TEXT[school] ?? '준비 중'; // 10/21 이베리아부터 (config SCHOOL_PASSIVE)
+    if (!PASSIVE_TEXT[school]) book.planned = true;
   } else book.effect = SECRET_TEXT[T.secret?.name] ?? '';
   return book;
 }
+// 패시브 책 (4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬'): 유파마다 하나씩 채운다. 없는 유파는 '준비 중'
+const PASSIVE_TEXT = { iberian: '손목 힘이 세져 큰 칼을 더 빨리 돌린다 · 손목 힘 30% 증가' };
 export const booksOf = (school) => BOOK_TIERS.map((B) => bookOf(school, B.tier)).filter(Boolean);
 
 // ── 사용 · 봉인 (산 책은 '사용'으로 시작 — 봉인한 책만 적는다) ──

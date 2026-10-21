@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -313,6 +313,8 @@ export class Fighter {
     this.world = world;
     this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
     this.index = o.index;
+    // 유파 패시브 (10/21 — config SCHOOL_PASSIVE): 이베리아 손목 힘. 사람은 4급 책(o.schoolPassive — main.js), AI 는 ai.js 가 숙련도로 다시 둔다
+    this.passiveBook = o.schoolPassive !== false;
     if (o.schoolFootwork === false) this.schoolFootwork = false; // schools.js footworkTradition — gait.js · stamina.js
     if (o.schoolParry === false) this.schoolParry = false; // parry_button.js
     this.name = o.name;
@@ -614,6 +616,7 @@ export class Fighter {
     //  AI 기술 목록·간격은 ai.js 생성자가 같은 함수(인물을 넘겨)로 읽는다. 손 모양(hands.js)·HUD 이름(main.js)은 this.swordArt 를 읽는다
     const art = resolveSwordArt(spec);
     this.swordArt = art;
+    this.wristK = SCHOOL_PASSIVE.on && this.passiveBook && art.tradition === 'iberian' ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — AI 는 ai.js 가 숙련도로 다시 둔다)
     this.guardPose.table = this.bodyGuard.table = art.table;
     if (art.lib) applySwordArt(this, art, { cover: false });
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
@@ -1810,21 +1813,22 @@ export class Fighter {
   }
 
   /**
-   * 이베리아 이어 긋기 흐름 (10/21 시험 — config IB_FLOW, 기본 끔): 휘두르기(skill.swinging — 사람 · AI 같은 문턱)를 이어 가는지 읽어 ibFlowOn 을 둔다.
-   *  이어 감 = 앞 휘두르기가 끝난 뒤 window 초 안에 다시 휘두름 · 휘두르는 채로 손 방향이 90° 넘게 꺾임(둥글게 돌리기). 켜진 채로 그 휘두르기 동안 + 끝난 뒤 window 초까지.
-   *  A · B 둘 다 끄면 읽지도 않는다(오늘 길 그대로).
+   * 이베리아 이어 긋기 흐름 A (10/21 — config IB_FLOW, 기본 켬): 휘두르기(skill.swinging — 사람 · AI 같은 문턱)를 이어 가는지 읽어 ibFlowOn 을 둔다.
+   *  이어 감 = 앞 휘두르기가 끝난 뒤 이어짐 창(0.6 s) 안에 다시 휘두름 · 휘두르는 채로 손 방향이 90° 넘게 꺾임(둥글게 돌리기). 켜진 채로 그 휘두르기 동안 + 끝난 뒤 창까지.
+   *  IB_FLOW.a 를 끄면 읽지도 않는다. (B 손목 힘 한도는 10/21 유파 패시브 wristK 로 옮김 — 이어 긋기와 상관없이 늘)
    */
   updateIbFlow(dt) {
-    if (!(IB_FLOW.a || IB_FLOW.b) || this.swordArt?.tradition !== 'iberian') { this.ibFlowOn = false; return; }
+    if (!IB_FLOW.a || this.swordArt?.tradition !== 'iberian') { this.ibFlowOn = false; return; }
+    const win = UNIQUE_ASSIST.afterWindow; // 이어짐 창 0.6 s (게임 하나 — 10/21)
     const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
     const sk = this.skill, sw = !!sk.swinging, v = sk.vel;
     if (sw) {
       const sp = Math.hypot(v.x, v.y) || 1;
-      if (!this.ibFlowSw) { this.ibFlowChain = t - (this.ibFlowEnd ?? -9) <= IB_FLOW.window; this.ibFlowDir = [v.x / sp, v.y / sp]; }
+      if (!this.ibFlowSw) { this.ibFlowChain = t - (this.ibFlowEnd ?? -9) <= win; this.ibFlowDir = [v.x / sp, v.y / sp]; }
       else if (this.ibFlowDir && (v.x * this.ibFlowDir[0] + v.y * this.ibFlowDir[1]) / sp < 0) { this.ibFlowChain = true; this.ibFlowDir = [v.x / sp, v.y / sp]; } // 90° 넘게 꺾임 = 둥글게 이어 감
     } else if (this.ibFlowSw) this.ibFlowEnd = t;
     this.ibFlowSw = sw;
-    this.ibFlowOn = !!this.ibFlowChain && (sw || t - (this.ibFlowEnd ?? -9) <= IB_FLOW.window);
+    this.ibFlowOn = !!this.ibFlowChain && (sw || t - (this.ibFlowEnd ?? -9) <= win);
     if (!this.ibFlowOn && !sw) this.ibFlowChain = false;
   }
 
@@ -3221,7 +3225,7 @@ export class Fighter {
     const wSwing = w.clone().sub(wTwist);
     wAim.addScaledVector(blade, -wAim.dot(blade));
     // 손목(두 손)의 힘은 사람 수준으로 제한된다 → 칼을 순식간에 돌리지 못하고, 칼의 무게와 관성이 느껴진다
-    const flowK = this.ibFlowOn && IB_FLOW.b ? IB_FLOW.torque : 1; // 이베리아 이어 긋기 B: 손목 힘 한도 (시험 — 끄면 1)
+    const flowK = this.wristK ?? 1; // 유파 패시브 손목 힘 (이베리아 — config SCHOOL_PASSIVE · 없으면 1)
     let cap = this.weaponCfg.maxAimTorque * str * flowK;
     // 놓아주기: 칼이 목표를 향해 날아가는 동안엔 붙잡지 않는다(관성으로 간다). 남은 각도가 "멈출 수 있는 거리"
     //  (각속도² / (2 × 최대 제동 각가속도)) 안으로 들어오면 그때부터 제동한다. 한 번 제동을 시작하면 이어 간다.

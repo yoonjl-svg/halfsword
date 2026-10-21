@@ -21,7 +21,7 @@ import { STAMINA } from './config.js';
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -94,6 +94,7 @@ export class AI {
     const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.persona.proficiency ?? AI_PROFICIENCY.ofLevel[levelName] ?? AI_PROFICIENCY.ofLevel.normal });
     this.art = art;
     this.proficiency = art.proficiency;
+    me.wristK = SCHOOL_PASSIVE.on && art.tradition === 'iberian' && this.proficiency >= SCHOOL_PASSIVE.at ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — 4급 책 = 숙련도 at 이상)
     this.school = art.school;
     // 유파 막기 자리 몸꼴 (10/11 — schools.js TRADITIONS[유파].parryCover, 중국 · 독일 왕관 10/12): 막는 동안(mode 'defend', 피하기 아님)만 그 줄의 막기 자세로 손·칼끝·몸을 덮는다.
     //  14 자리 섞기에 넣으면 그 자리를 지나는 베기 길이 휘고 원전 꼴(가로 든 칼)이 섞여 사라져서 덧씌우기로 둔다(frames.js COVERS 와 같은 까닭). 칸 없는 유파는 아무것도 안 붙인다(바이트 그대로)
@@ -980,8 +981,8 @@ export class AI {
     }
     const L = this.level;
     const hand = [this.me.handOffset.x, this.me.handOffset.y];
-    // 이어 그을수록 강해짐 (강화동작 stack — 10/21, unique_assist.js strokeHitK): 앞 공격도 같은 기술이고 그 공격 꼴이 끝난 뒤 chainWait + 0.3 s 안에 다시 시작하면 하나씩(셋까지) — 플레이어와 같은 셈 · 난수 없음
-    this.stackN = tech.name === this.prevAtkName && this.sense.t - this.lastAtkT <= UA.chainWait + 0.3 ? Math.min(3, (this.stackN ?? 0) + 1) : 0;
+    // 이어 그을수록 강해짐 (강화동작 stack — 10/21, unique_assist.js strokeHitK): 앞 공격도 같은 기술이고 그 공격 꼴이 끝난 뒤 이어짐 창(afterWindow 0.6 s) 안에 다시 시작하면 하나씩(셋까지) — 플레이어와 같은 셈 · 난수 없음
+    this.stackN = tech.name === this.prevAtkName && this.sense.t - this.lastAtkT <= UA.afterWindow ? Math.min(3, (this.stackN ?? 0) + 1) : 0;
     this.prevAtkName = tech.name;
     this.mode = 'attack';
     this.drillAtk = !!opt.drill; // 시험: 헛스윙 연습 공격 — 그 자리에서 친다 (attack 다가가기·stepTime·moveFeet)
