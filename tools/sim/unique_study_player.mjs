@@ -22,6 +22,9 @@ const BASE = [...TECH.map((t) => ({ name: t.name, from: t.from, path: t.path }))
 const ringNames = new Set();
 for (const e of PLAYER_UNIQUE[trad] ?? []) for (const c of e.on ?? []) { if (c.tech) ringNames.add(c.tech); if (c.pad === 'langort' && c.dir === 'down') ringNames.add('langortDown'); if (c.prev && TECH.find((t) => t.name === c.prev)) ringNames.add(c.prev); }
 const RING = BASE.filter((b) => ringNames.has(b.name)), OTHER = BASE.filter((b) => !ringNames.has(b.name));
+// 걸음 명령 (10/21 강화동작 · 명령): 그 걸음 기술의 기본 동작을 그을 때 절반은 스틱을 옆(동방은 앞)으로 민 채 — 손을 시작 자리로 옮기는 동안부터 0.8 s
+const STEP_CMD = {};
+for (const e of PLAYER_UNIQUE[trad] ?? []) if (e.role === 'step') for (const c of e.on ?? []) if (c.tech) STEP_CMD[c.tech] = e.stick;
 const rows = [];
 for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
   const t0 = Date.now();
@@ -35,7 +38,7 @@ for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
   const uq = new PlayerUniqueAssist(D, { stage: 4 });
   const hD = observeHealth(D, () => Gm.t), hA = observeHealth(A, () => Gm.t);
   // 손가락 행동 줄: 프레임마다 {dx, dy, held}
-  let queue = [], fx = D.handOffset.x, fy = D.handOffset.y, nextAtk = 2.6, due = Infinity, heldUntil = 0, lastMotion = -1, notice = false, strokes = 0, taps = 0;
+  let cmd = null, queue = [], fx = D.handOffset.x, fy = D.handOffset.y, nextAtk = 2.6, due = Infinity, heldUntil = 0, lastMotion = -1, notice = false, strokes = 0, taps = 0;
   const to = (p, v, held) => { const fr = []; let x = fx, y = fy; for (let k = 0; k < 400; k++) { const dx = p[0] - x, dy = p[1] - y, d = Math.hypot(dx, dy); if (d < 1e-6) break; const st = Math.min(d, v * FRAME); x += (dx / d) * st; y += (dy / d) * st; fr.push([(dx / d) * st, (dy / d) * st, held]); } fx = x; fy = y; return fr; };
   const stroke = (b, back) => { let fr = to(b.from, 1.6, false); fr.push(...Array(4).fill([0, 0, false])); for (const p of b.path) fr.push(...to(p, 4, true)); if (back) { fr.push(...Array(3).fill([0, 0, true])); fr.push(...to(b.from, 4, true)); } fr.push(...Array(6).fill([0, 0, false])); return fr; };
   let step = 0;
@@ -47,7 +50,7 @@ for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
     guard.held = t < heldUntil && !queue.length && !D.skill.tap; guard.broken = !!(D.skill.tap || D.skill.pom || queue.length);
     if (!guard.held && !queue.length && t >= nextAtk && dist < 2.0 && D.alive && D.armed && !D.stamina.exhausted) {
       if (rnd() < 0.15) { if (D.skill.thrust()) taps++; }
-      else { const b = rnd() < 0.6 && RING.length ? RING[Math.floor(rnd() * RING.length)] : OTHER[Math.floor(rnd() * OTHER.length)]; queue = stroke(b, rnd() < 0.4); strokes++; }
+      else { const b = rnd() < 0.6 && RING.length ? RING[Math.floor(rnd() * RING.length)] : OTHER[Math.floor(rnd() * OTHER.length)]; queue = stroke(b, rnd() < 0.4); strokes++; if (STEP_CMD[b.name] && rnd() < 0.5) cmd = { until: t + 0.8, x: STEP_CMD[b.name] === 'side' ? (rnd() < 0.5 ? -1 : 1) : 0, y: STEP_CMD[b.name] === 'fwd' ? 1 : 0 }; }
       nextAtk = t + 1.0 + rnd() * 0.6;
     }
     guard.step(DT); D.inputActive = guard.active;
@@ -58,7 +61,7 @@ for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
       D.handHeld = f[2]; if (Math.abs(f[0]) + Math.abs(f[1]) > 1e-5) D.inputActive = true;
       if (!queue.length) { fx = D.handOffset.x; fy = D.handOffset.y; }
     }
-    if (D.stamina.exhausted || !D.alive) D.move.set(0, 0); else D.move.set(0.18 * Math.sin(t * 0.65 + seed), dist < 1.35 ? -0.55 : dist > 1.85 ? 0.45 : 0);
+    if (D.stamina.exhausted || !D.alive) D.move.set(0, 0); else if (cmd && t < cmd.until) D.move.set(cmd.x, cmd.y); else D.move.set(0.18 * Math.sin(t * 0.65 + seed), dist < 1.35 ? -0.55 : dist > 1.85 ? 0.45 : 0);
     D.stickX = D.move.x; D.stickY = D.move.y;
   };
   let end = 30;
