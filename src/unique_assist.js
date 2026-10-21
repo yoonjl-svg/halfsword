@@ -192,7 +192,11 @@ export class PlayerUniqueAssist {
     this.f = f;
     this.stage = stage;
     this.tradition = tradition;
-    this.list = UA.on && !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter((e) => e.stage <= stage).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
+    // 무기 비검 (10/21 — weapons.js secretBlade): open 이면 그 기술은 책(단계)과 상관없이 열리고, prev 가 있으면 앞 칼 조건을 그 칼들로 넓힌다(진 츠바메가에시)
+    const SB = f.weapon?.secretBlade;
+    const sbOn = (e) => SB?.open && SB.tech === e.name;
+    const widen = (e) => (sbOn(e) && SB.prev && e.on?.length ? { ...e, on: [...e.on, ...SB.prev.filter((p) => !e.on.some((c) => c.prev === p)).map((p) => ({ ...e.on[0], prev: p }))] } : e);
+    this.list = UA.on && !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter((e) => e.stage <= stage || sbOn(e)).map(widen).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
     this.r = null; // 강화 중인 긋기 { e, U, part(1 앞 긋기 | 2 잇는 뒷몫), t, travel, len, stepAsked, chainable }
     this.t = 0;
     this.cur = null; // 지금 긋기 { tech, kind, pad, t0, dir, landed, bound, tEnd, unique }

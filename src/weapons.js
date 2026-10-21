@@ -732,7 +732,9 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   motionSkip: ['지붕 (폼 타크)'],
   // 에픽 특수 능력 '비검' (10/21 — 전 출혈 ×2 '제비 베기: 출혈' 를 바꿈): 이 칼로 츠바메가에시(제비 베기)를 그어 되돌려 올려 벤 칼(칼이 위로 움직임 — dir.y > upY)에
   //  맞으면 칼날 상처 심각도 · 둔타 에너지 × k (combat.js analyze · 흘림 피해 감소와 같은 자리). 사람 · AI 같이. 내려 베는 앞 칼은 그대로
-  secretBlade: { tech: 'tsubameGaeshi', k: 3, upY: 0.2 },
+  //  open = 이 칼을 들면 스킬북 · 숙련도와 상관없이 그 기술이 열림(사람 · AI) · prev = 사람의 발동 조건을 넓힌 앞 칼(빗나가거나 막힌 정수리 · 좌우 사선 내려베기 뒤 0.6 s 안에 위로) —
+  //  10/21 15:3x 사장님 '1~2번 넣어'(진 츠바메가에시: 무기에 딸린 능력 · 발동 완화)
+  secretBlade: { tech: 'tsubameGaeshi', k: 3, upY: 0.2, open: true, prev: ['oberhau', 'zornhau', 'zornhauL'] },
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
   mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)
   controlOverrides: { aimStiffness: 70, wristVmax: 34 },

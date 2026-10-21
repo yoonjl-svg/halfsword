@@ -104,7 +104,7 @@ function restGuardOf(names, tradition) {
  *  숙련도(prof — 10/13 사장님 '숙련도 수치에 따라 쓸지 말지'): null 이면 거르지 않는다(플레이어·도구). 숫자면 고유 동작 단계 표(unique_assist.js aiUniqueStages)에서
  *   단계 > prof 인 것을 뺀다(표에 없는 것 — 이베리아 rodaCounter — 은 그대로). 비기는 숙련도 5 에서만이라(ai.js) 그때는 고유 동작이 다 열려 비기가 찾는 이름이 모두 있다
  */
-function applySchoolArt(school, tradition, frame, style, prof = null) {
+function applySchoolArt(school, tradition, frame, style, prof = null, openTech = null) {
   const T = TRADITIONS[tradition];
   if (!school || !T) return school;
   let out = school;
@@ -121,7 +121,7 @@ function applySchoolArt(school, tradition, frame, style, prof = null) {
   const uqAll = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false && !ST.retired.has(u.name)) : [];
   const retiredPaths = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false && ST.retired.has(u.name) && u.path && !u.feint && !u.counter) : [];
   const stage = prof == null ? null : ST.unique;
-  const uqOpen = stage ? uqAll.filter((u) => !stage.has(u.name) || stage.get(u.name) <= prof) : uqAll; // 숙련도 거르기 (10/13)
+  const uqOpen = stage ? uqAll.filter((u) => !stage.has(u.name) || stage.get(u.name) <= prof || u.name === openTech) : uqAll; // 숙련도 거르기 (10/13) · 무기 비검이 여는 기술은 늘(10/21 — weapons.js secretBlade.open)
   // 숙련도가 높을수록 고유 동작(길)을 더 자주 고른다 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK: 가중치 base × k · 숙련도 2 · 플레이어 · 도구(prof null) = 그대로)
   const kq = prof == null ? 1 : AI_PROFICIENCY.schoolK?.[prof] ?? 1;
   const uq = kq === 1 ? uqOpen : uqOpen.map((u) => (!u.feint && !u.counter && u.base != null ? { ...u, base: u.base * kq } : u));
@@ -284,7 +284,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   lazy(art, 'school', () => {
     const pkg = 'school' in opts ? opts.school : schoolOf(persona?.school ?? w.id); // 인물이 없으면 무기 유파 꾸러미(weaponSchool) — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율)
     const s = lib ? mergeLibSchool(pkg, spec) : pkg;
-    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style, art.proficiency) : s;
+    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style, art.proficiency, w.secretBlade?.open ? w.secretBlade.tech : null) : s;
   });
   lazy(art, 'tech', () => art.school.tech);
   lazy(art, 'feints', () => art.school.feints);
