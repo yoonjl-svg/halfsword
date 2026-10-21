@@ -32,7 +32,7 @@ import { runInstants } from './secret_instant.js';
 import { FINISH } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
 import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA } from './config.js';
-import { strokeTechOf } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
+import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
 const IAI_GHOST_PARTS = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']);
@@ -207,7 +207,8 @@ export class Combat {
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
     // 결정타 (10/9 23:5x — 유파 비기, AI·플레이어 공통): 비기 베기 동안 공격자 secretHit(SECRET.hitMul)를 상처 에너지에 곱한다. 물리(속도·질량)는 그대로, 판정만. 1 이면 그대로
-    const hk = att.secretHit ?? 1;
+    // 이어 그을수록 강해짐 (이베리아 머리 위 돌려 베기 — 10/21 사장님 '너의 제안대로'): 이어 그은 수 × stack 만큼 같은 자리(판정 에너지)에 곱한다 · 물리는 그대로
+    const hk = (att.secretHit ?? 1) * strokeHitK(att);
     let energy = ephys * STRIKE.energyScale * hk;
     let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 
@@ -863,7 +864,7 @@ export class Combat {
     if (strokeTechOf(att) !== 'schielhau') return;
     const t = this.stepNo * (this.dt ?? 1 / 60);
     if (vic.buckleAt != null && t - vic.buckleAt < B.cool) return; // cool 은 꿇은 뒤부터 (빗나간 굴림은 세지 않는다)
-    // 버티기(일본 steady — fighter.swayScale 0.75)는 휘청 · 넘어짐을 덜 받듯 무릎 꺾기 확률도 그만큼 덜 받는다 (10/21 사장님 '더 강인하게 버티는 거 맞지?' — 25 % → 18.75 %)
+    // 버티기(일본 steady — fighter.swayScale 0.75)는 휘청 · 넘어짐을 덜 받듯 무릎 꺾기 확률도 그만큼 덜 받는다 (10/21 사장님 '더 강인하게 버티는 거 맞지?' — 일본 50 % → 37.5 %)
     const hit = att.buckleRandom() < B.p * (vic.swayScale ?? 1);
     (this.buckleLog ??= []).push({ t: +t.toFixed(2), att: att.index, vic: vic.index, part, hit });
     if (!hit) return;

@@ -71,7 +71,7 @@ export const PLAYER_UNIQUE = {
   ],
   iberian: [
     { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
-    { stage: 3, name: 'redondo', role: 'enh', replaces: 'zwerchL', stack: 0.06, hint: '강화동작 · 왼 가로베기 대신 · 이어 그을수록 강해짐', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerchL' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 왼 가로베기 (늘 — 10/21 전수 조사: 왼쪽 → 오른쪽으로 떨어지는 레베스라 왼 가로베기와 짝 · 전 가로베기(오른쪽 → 왼쪽)는 방향이 거꾸로)
+    { stage: 3, name: 'redondo', role: 'enh', replaces: 'zwerchL', stack: 0.1, /* 이어 그을 때마다 맞는 순간 에너지 + 10 %(셋까지 × 1.3 — 10/21 사장님 '너의 제안대로' · 전 끝 힘 + 0.06 은 근육 힘이라 효과 없음) · AI 도 */ hint: '강화동작 · 왼 가로베기 대신 · 이어 그을수록 강해짐', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerchL' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 왼 가로베기 (늘 — 10/21 전수 조사: 왼쪽 → 오른쪽으로 떨어지는 레베스라 왼 가로베기와 짝 · 전 가로베기(오른쪽 → 왼쪽)는 방향이 거꾸로)
   ],
   japanese: [
     { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
@@ -117,6 +117,16 @@ export function strokeTechOf(f) {
   }
   const ai = f?.aiCtl;
   return ai && ai.mode === 'attack' ? ai.tech?.name ?? null : null;
+}
+
+const STACK_BY_NAME = Object.fromEntries(Object.values(PLAYER_UNIQUE).flat().filter((e) => e.stack).map((e) => [e.name, e.stack]));
+/** 이어 그을수록 강해짐의 판정 에너지 배율 (10/21): 지금 긋는 기술에 stack 이 있으면 1 + stack × 이어 그은 수(플레이어 PlayerUniqueAssist.stackN · AI ai.stackN — 셋까지) · 아니면 1 */
+export function strokeHitK(f) {
+  const name = strokeTechOf(f);
+  const s = name ? STACK_BY_NAME[name] : 0;
+  if (!s) return 1;
+  const n = f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
+  return 1 + s * n;
 }
 
 export function enhancedMoves(tradition) {
@@ -429,7 +439,7 @@ export class PlayerUniqueAssist {
     const at = e.chain ? Math.min(e.chain.at, U.pts.length - 1) : U.pts.length - 1;
     const len = part === 2 ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
     this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
-    // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 chainWait 안에 다시 그으면 하나씩(셋까지) — 끝 힘 + stack × 그 수
+    // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 chainWait 안에 다시 그으면 하나씩(셋까지) — 맞는 순간 에너지 × (1 + stack × 그 수) (strokeHitK)
     if (e.stack) { this.stackN = this.stackE === e.name && this.t - (this.stackT ?? -9) <= UA.chainWait + 0.3 ? Math.min(3, (this.stackN ?? 0) + 1) : 0; this.stackE = e.name; }
     cur.kind = part === 2 ? cur.kind : U.kind;
     cur.unique = U.name;
@@ -479,7 +489,7 @@ export class PlayerUniqueAssist {
     } else if (sk.uniqBody) sk.uniqBody = null;
     // ③ 끝 힘: 긋기 뒷몫(손 목표가 그 몫 길이의 powerAt 넘게 간 뒤 · 시작부터 powerMax 초까지)에 팔 서보 힘 × (1 + (endPower − 1)·세기) — 비기 힘 창 SECRET.power 와 같은 칸(f.powerMul)
     // 강화동작(role 'enh')은 끝 힘 enhPower · 이어 그을수록 + stack × 수 (10/21)
-    const pw = r ? (r.e.role === 'enh' ? UA.enhPower ?? UA.endPower : UA.endPower) - 1 + (r.e.stack ? r.e.stack * (this.stackN ?? 0) : 0) : 0;
+    const pw = r ? (r.e.role === 'enh' ? UA.enhPower ?? UA.endPower : UA.endPower) - 1 : 0; // 이어 그을수록(stack)은 끝 힘이 아니라 맞는 순간 에너지 (strokeHitK — 10/21)
     const pv = r && E > 0 && r.travel >= UA.powerAt * r.len && r.t <= UA.powerMax ? 1 + pw * E : 0;
     if (pv) {
       if (f.powerMul === 1 || f.powerMul === this.powV) {
