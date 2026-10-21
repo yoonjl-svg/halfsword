@@ -153,6 +153,10 @@ if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 
 if (['motor', 'ff', 'pre'].includes(params.get('ibEdge'))) Object.assign(CONFIG.IB_EDGE, { on: true, edge: params.get('ibEdge') });
 // 이베리아 자세표 칸 걷기 시험 (10/22 — 기본 끔 · 사장님 확인 전, docs/strike/iberian_flat_hits_2026-10-22.md): `?ibTableSkip=sideR,sideL` 처럼 칸 짧은 이름(guards.js IBERIAN_TABLE_KEYS) · 묶음 wait · pass — 걷은 칸은 앞무게 틀 표 값
 if (params.get('ibTableSkip')) skipIberianTable(params.get('ibTableSkip').split(',').map((x) => x.trim()).filter(Boolean));
+// 플랑베르주 짧은 칼자루 충돌체 시험 (10/22 사장님 답 뒤 — 기본 끔 · 사장님 확인 전, config FL_HILT · docs/strike/iberian_flat_hits_2026-10-22.md '플랑베르주' 절): `?flHilt=short` = 자루 · 폼멜 충돌체 밑을 −0.25 m 로 (겉모습 · 질량 그대로)
+if (params.get('flHilt') === 'short' || params.get('flHilt') === 'real') Object.assign(CONFIG.FL_HILT, { on: true, mode: params.get('flHilt') }); // `?flHilt=real` = 손잡이를 진짜로 35.7 cm 로 (겉모습 · 충돌체 · 자루 질량 함께)
+// 플랑베르주 왼손 폼멜 가까이 시험 (10/22 — 기본 끔 · 사장님 확인 전, config FL_GRIP): `?flGrip=pommel` = 빈손 쥘 자리 −0.24 → −0.33 m
+if (params.get('flGrip') === 'pommel') CONFIG.FL_GRIP.on = true;
 { // 열린 비기 유파 (10/21 — config SECRET.openSchools): `?secretOpen=all` 옛 판 · `?secretOpen=japanese,german` 고르기
   const so = params.get('secretOpen');
   if (so) CONFIG.SECRET.openSchools = so === 'all' ? ['german', 'italian', 'iberian', 'japanese', 'chinese'] : so.split(',').map((x) => x.trim()).filter(Boolean);

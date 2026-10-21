@@ -34,6 +34,15 @@ const EDGE_SB = ROOT_SB + FLAMBERGE_MUSEUM.ricasso; // 0.769
 const HANDLE_CUT = FLAMBERGE_MUSEUM.handle - FLAMBERGE_GAME.handle; // 0.015
 const CUT_LO = 0.059, CUT_HI = 0.167;
 const H = (ySb) => (ySb >= CUT_HI ? ySb : ySb <= CUT_LO ? ySb + HANDLE_CUT : CUT_HI - ((CUT_HI - ySb) * (CUT_HI - CUT_LO - HANDLE_CUT)) / (CUT_HI - CUT_LO));
+// 짧은 손잡이 시험 (config FL_HILT mode 'real' — 10/22 감독 B 안, 기본 끔 · 사장님 확인 전): 게임 손잡이 47.7 cm 에서 extra(m)만큼 더 줄인 겉모습.
+//  손잡이 아래 끝 ~ 오른손 바로 밑 이음 띠(그쪽 y 0.369 — 오른손 주먹 아래 끝 근처)를 고르게 줄이고 그 아래(폼멜)는 통째로 올린다. 오른손 쪽 위 마디 · 날밑 · 칼날은 그대로
+export const FLAMBERGE_SHORT_HANDLE = 0.357; // 폼멜 가운데 오른손 아래 0.37 → 0.25 m (츠바이핸더 mid 폼멜 자리) — 47.7 − 12 cm [I]
+const CUT_HI_SHORT = 0.369;
+const Hx = (ySb, extra) => {
+  if (!extra) return H(ySb);
+  const cut = HANDLE_CUT + extra;
+  return ySb >= CUT_HI_SHORT ? ySb : ySb <= CUT_LO ? ySb + cut : CUT_HI_SHORT - ((CUT_HI_SHORT - ySb) * (CUT_HI_SHORT - CUT_LO - cut)) / (CUT_HI_SHORT - CUT_LO);
+};
 // 우리 칼 원점(오른손 주먹 가운데)의 그쪽 y: 칼날 밑동 0.085 m 아래
 export const FLAMBERGE_HILT = 0.085; // = weapons.js flamberge.hiltLength (손 → 칼날 밑동)
 const ORIGIN = ROOT_SB - FLAMBERGE_HILT; // 0.417
@@ -98,12 +107,12 @@ function merged(group, pieces, material, name) {
 const GRIP_PROFILE = [[0.011, 0.059], [0.014, 0.086], [0.017, 0.18], [0.018, 0.241], [0.015, 0.252], [0.018, 0.278], [0.018, 0.37], [0.019, 0.475], [0.017, 0.492]];
 const SEAMS = [0.085, 0.167, 0.245, 0.284, 0.369, 0.449, 0.483];
 const RIVETS = [0.108, 0.153, 0.202, 0.305, 0.35, 0.404, 0.452];
-function gripGroup(y0) {
+function gripGroup(y0, extra = 0) {
   const group = new THREE.Group();
   const leather = new THREE.MeshStandardMaterial({ color: FLAMBERGE_COLORS.leather, roughness: 0.94 });
   const seam = new THREE.MeshStandardMaterial({ color: FLAMBERGE_COLORS.seam, roughness: 0.95 });
   const brass = metalMat(FLAMBERGE_COLORS.brass, { rough: 0.38, metal: 0.78 });
-  const grip = new THREE.Mesh(new THREE.LatheGeometry(GRIP_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(H(y)) - y0)), 16), leather);
+  const grip = new THREE.Mesh(new THREE.LatheGeometry(GRIP_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(Hx(y, extra)) - y0)), 16), leather);
   grip.scale.z = 0.86;
   grip.name = 'leather-grip';
   grip.castShadow = true;
@@ -111,20 +120,20 @@ function gripGroup(y0) {
   // 가죽 이음 띠와 황동 리벳 (지어낸 금실 감개가 아니다 — 그쪽 주석 그대로)
   merged(group, SEAMS.map((y) => {
     const r = (y < 0.15 ? 0.0145 : 0.0182) + 0.0004;
-    return bake(new THREE.CylinderGeometry(r, r, 0.002, 16), [0, Y(H(y)) - y0, 0], [1, 1, 0.87]);
+    return bake(new THREE.CylinderGeometry(r, r, 0.002, 16), [0, Y(Hx(y, extra)) - y0, 0], [1, 1, 0.87]);
   }), seam, 'grip-seams');
   const rivets = [];
-  for (const y of RIVETS) for (const side of [-1, 1]) rivets.push(bake(new THREE.SphereGeometry(0.0024, 8, 6), [0.006, Y(H(y)) - y0, side * (y < 0.15 ? 0.0125 : 0.0156)], [1, 1, 0.45]));
+  for (const y of RIVETS) for (const side of [-1, 1]) rivets.push(bake(new THREE.SphereGeometry(0.0024, 8, 6), [0.006, Y(Hx(y, extra)) - y0, side * (y < 0.15 ? 0.0125 : 0.0156)], [1, 1, 0.45]));
   merged(group, rivets, brass, 'brass-rivets');
   return group;
 }
 
 // ── 부품 1: 각진 청동 폼멜 (그쪽 y 0~0.066, 여덟 모 회전체) ──
 const POMMEL_PROFILE = [[0, 0], [0.011, 0.014], [0.024, 0.034], [0.021, 0.044], [0.012, 0.061], [0.010, 0.066]];
-function pommelGroup(y0) {
+function pommelGroup(y0, extra = 0) {
   const group = new THREE.Group();
   const bronze = metalMat(FLAMBERGE_COLORS.bronze, { rough: 0.45, metal: 0.75 });
-  const m = new THREE.Mesh(new THREE.LatheGeometry(POMMEL_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(y + HANDLE_CUT) - y0)), 8), bronze); // 폼멜은 모양 그대로 1.5 cm 올림 (게임 치수)
+  const m = new THREE.Mesh(new THREE.LatheGeometry(POMMEL_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(y + HANDLE_CUT + extra) - y0)), 8), bronze); // 폼멜은 모양 그대로 1.5 cm 올림 (게임 치수)
   m.name = 'bronze-pommel';
   m.castShadow = true;
   group.add(m);
@@ -207,7 +216,7 @@ function bladeMesh(y0, tier) {
  *  fighter.js 가 부품마다 부르고 그 자리를 메쉬에 준다 → 여기서는 부품 안 좌표(우리 y − 부품 자리)로 그린다.
  *  칼날(3)은 물결 날 메쉬 하나를 그룹에 넣어 돌려준다 — 피 묻히기(fighter.bladeMesh)는 decorate 가 group.userData.bladeMesh 로 그 메쉬를 가리킨다.
  */
-export function flambergePartMesh(partY) {
+export function flambergePartMesh(partY, extra = 0) {
   return (index, isBlade, shape, color, opts, look, tier) => {
     const y0 = partY[index];
     if (isBlade) {
@@ -215,8 +224,8 @@ export function flambergePartMesh(partY) {
       group.add(bladeMesh(y0, tier));
       return group;
     }
-    if (index === 0) return gripGroup(y0);
-    if (index === 1) return pommelGroup(y0);
+    if (index === 0) return gripGroup(y0, extra);
+    if (index === 1) return pommelGroup(y0, extra);
     if (index === 2) return guardGroup(y0);
     return new THREE.Group();
   };

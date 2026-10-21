@@ -14,12 +14,12 @@ import { historicalPartMesh, historicalDecorate, hwandoScabbard } from './histor
 // ─────────────────────────────────────────────────────────────
 import { classifyWeapon } from './weapon_class.js';
 import { drawBrothersSword } from './renji_sword_wrap.js'; // 황약사의 검(형의 칼)의 흰 천 감싼 겉모습 (샛별 저장소에서 가져옴 10/17)
-import { MONTANTE } from './config.js';
+import { MONTANTE, FL_HILT } from './config.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 import { SAIN_COLORS, sainPartMesh, sainDecorate } from './rare_sword_details.js'; // 사인검 겉모습 (샛별 저장소에서 가져옴 6e71ba2 — 북부 대공의 검(옛 아이스)은 10/21 지움)
-import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
+import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, FLAMBERGE_SHORT_HANDLE, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
 import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
@@ -1654,6 +1654,18 @@ const FL = {
   y: [-0.15, -0.37, 0.097, FLAMBERGE_HILT + FLAMBERGE_GAME.blade / 2],
   mass: { ...FL_MASS, blade: 3.0 - FL_MASS.grip - FL_MASS.pommel - FL_MASS.guard }, // 칼날 1.756 kg (위 머리말 — 합 3.000)
 };
+// 짧은 칼자루 충돌체 시험 (config FL_HILT — 10/22, 기본 끔 · 사장님 확인 전 · docs/strike/iberian_flat_hits_2026-10-22.md '플랑베르주' 절):
+//  켜면 자루 상자 밑 끝과 폼멜 공을 FL_HILT.cut 으로 올린다(자루 상자 위 끝 0.070 그대로). 부품 질량의 자리는 무게중심(comY)을 그만큼 옮겨 그대로 —
+//  질량 · 무게중심 · 관성 · 휘두르는 느낌은 판과 같고 충돌체만 짧다. 겉모습도 그대로(partMesh 가 같은 자리 표로 그려 부품 그림이 제자리에 남는다).
+//  끄면 FL.y 그대로 · 무게중심 0 · 자루 반길이 0.22 — 판과 같은 float
+const FL_GRIP_TOP = FL.y[0] + 0.22; // 자루 상자 위 끝 (날밑 덩이 안)
+// mode 'real' (`?flHilt=real` — 감독 B 안): 손잡이를 진짜로 줄인다 — 겉모습(flamberge_look.js FLAMBERGE_SHORT_HANDLE) · 자루 상자 · 자루 질량(길이 비)을 함께, 폼멜(0.35 kg)은 그만큼 올림.
+//  손 ~ 칼끝 · 칼날 · 코등이 그대로 — 질량 · 무게중심 · 관성은 바뀐다(무게중심 0.250 → 0.272 m 쪽 · 합 2.914 kg). 'short' 는 위 그대로(충돌체만)
+const FL_REAL_EXTRA = FLAMBERGE_GAME.handle - FLAMBERGE_SHORT_HANDLE; // 더 줄이는 손잡이 길이 (0.12 m)
+const flReal = () => FL_HILT.on && FL_HILT.mode === 'real';
+const flCut = () => (flReal() ? FL.y[1] + FL_REAL_EXTRA : FL_HILT.cut); // 자루 상자 밑 끝 · 폼멜 공 자리
+const flY = () => (FL_HILT.on ? [(FL_GRIP_TOP + flCut()) / 2, flCut(), FL.y[2], FL.y[3]] : FL.y);
+const flPartMesh = flambergePartMesh(FL.y);
 const flamberge = finalizeSpec('flamberge', {
   nameKo: '플랑베르주 (물결 날 양손검)', nameEn: 'Flamberge',
   desc: '독일 용병 란츠크네히트가 들던 불꽃 날 대검.\n물결 날은 벼리기 어려워 값비싼 칼이었다.',
@@ -1661,17 +1673,22 @@ const flamberge = finalizeSpec('flamberge', {
   hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_GAME.blade, gripAlong: -0.24,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
   // 손목 서보 상한: 두 손 쥠 기본값 26 (츠바이핸더와 같다)
-  partMesh: flambergePartMesh(FL.y), decorate: flambergeDecorate,
+  // 짧은 칼자루 시험(FL_HILT)이 켜지면 부품 자리 표가 바뀌므로 그 표로 그린다 (끄면 판 그대로 FL.y 로 만든 그리개)
+  partMesh: (...a) => (FL_HILT.on ? flambergePartMesh(flY(), flReal() ? FL_REAL_EXTRA : 0)(...a) : flPartMesh(...a)), decorate: flambergeDecorate,
   buildParts() {
     const L = this.bladeLength;
     const M = FL.mass;
-    const grip = boxInertia(M.grip, 0.019, 0.22, 0.0165);
+    const Y = flY();
+    const gripHy = FL_HILT.on ? (FL_GRIP_TOP - flCut()) / 2 : 0.22; // 자루 상자 반길이 (시험이면 짧게)
+    const real = flReal();
+    const mGrip = real ? (M.grip * (2 * gripHy)) / 0.44 : M.grip; // 'real': 자루 질량 길이 비 (0.314 → 0.229 kg)
+    const grip = real ? boxInertia(mGrip, 0.019, gripHy, 0.0165) : boxInertia(M.grip, 0.019, 0.22, 0.0165); // 'short' 는 관성 판 그대로 · 'real' 은 짧은 자루
     const pommel = sphereInertia(M.pommel, 0.03);
     const guard = boxInertia(M.guard, 0.2525, 0.03, 0.0155);
     const blade = bladeInertia(M.blade, L, 0.353, 0.272, 0.04, 0.009);
     return [
-      partTuple(['box', 0.019, 0.22, 0.0165], FL.y[0], M.grip, 0, grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
-      partTuple(['ball', 0.03], FL.y[1], M.pommel, 0, pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
+      partTuple(['box', 0.019, gripHy, 0.0165], Y[0], mGrip, real ? 0 : FL.y[0] - Y[0], grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
+      partTuple(['ball', 0.03], Y[1], M.pommel, real ? 0 : FL.y[1] - Y[1], pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
       partTuple(['box', 0.2525, 0.03, 0.0155], FL.y[2], M.guard, 0, guard.Ie, guard.It, FLAMBERGE_COLORS.steel),
       partTuple(['box', 0.02, L / 2, 0.0045], FL.y[3], M.blade, blade.comY, blade.Ie, blade.It, FLAMBERGE_COLORS.blade, true),
     ];
