@@ -28,7 +28,7 @@ export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10
 
 // 칸 하나: id · cat · pre(모두) · price(금화) · heads(머리) · opt(곁가지 — 점선) · closed(늘 닫힘) · d(줄) · cx(가로 0~1000 — data.mjs 그대로)
 //  name = 트리 판 칸에 보이는 기술 이름 (사장님 10/22 '보법1 보법2 이런 건 우리가 보려고 만든 범주 구분 … 아이콘만 보이거나 기술 이름이 보이는 게' — 갈래(보법 I · 막기 II · 패시브 …)는 상세 카드에만)
-//  l1 · l2 = 옛 판 칸의 두 줄(갈래 · 이름 — 알림 · 읽기 이름에 남음) · title · orig = 상세 카드 제목(없으면 두 줄 · 원어는 대기실 스킬에서만 — 화면 글 지침 §1) · eff = 상세 카드 효과 한 줄 · f = 켜는 몫 열쇠 · u = 켜는 고유 공격(unique_assist.js PLAYER_UNIQUE name) · perk = 켜는 강화동작 이점 · letter = 편지
+//  l1 · l2 = 옛 판 칸의 두 줄(갈래 · 이름 — 알림 · 읽기 이름에 남음) · title · orig = 상세 카드 제목(없으면 두 줄 · 원어는 대기실 스킬에서만 — 화면 글 지침 §1) · eff = 상세 카드 효과 한 줄 · lore · src = 오의 한 줄 · 출처(아래 NODE_LORE — 10/22) · f = 켜는 몫 열쇠 · u = 켜는 고유 공격(unique_assist.js PLAYER_UNIQUE name) · perk = 켜는 강화동작 이점 · letter = 편지
 const N = (o) => Object.freeze({ pre: [], heads: 0, ...o, pre: Object.freeze(o.pre ?? []), f: Object.freeze(o.f ?? []) });
 const TREE_SRC = {
   german: {
@@ -108,8 +108,76 @@ const TREE_SRC = {
     ],
   },
 };
+// 칸 오의 (사장님 10/22 00:5x '지금과 같은 설명이 아니라 검술서나 참고 문헌에서의 오의를 밝힌 예전 방식이 더 나았던 거 같아' — 10/21 전 스킬북 출처 줄을 칸마다):
+//  lore = 그 칸 뒤의 원전이 밝힌 이치 한 줄(원전 말투 · 한글만 · 숫자 · 놀이 셈 · 개발 말 없음 · 45 자 안) · src = 출처 줄 '저자 『책』(연도) — 갈래나 장'(원어 책 이름은 『』 안에서만).
+//  상세 카드는 lore + src 를 위에, eff 를 아래 작은 줄로 그린다(화면은 skill_tree.js). 원문 · 쪽 · 저장소 근거 표 = docs/text/skill_lore_2026-10-22.md · 글 규칙 = docs/text/editing_guide.md §4.
+//  편지 칸은 출처를 쓰지 않는다(편지에 한한 예외 — 사장님 10/22 01:1x) · 닫힌 칸(일본 밖 비기 · J8)도 글은 미리 둔다(화면은 '준비 중').
+const NODE_LORE = {
+  // 독일 — 리히테나워 운문 (Wiktenauer 'Johannes Liechtenauer' · Tobler 영역)
+  G1: { lore: '걸음을 내딛거든 굼뜨지 마라', src: '리히테나워 『Zettel』(14세기) — 속임 베기' },
+  G2: { lore: '따라 들기는 두 겹으로 익혀라, 아니면 칼을 베어 들어라', src: '리히테나워 『Zettel』(14세기) — 따라 들기' },
+  G5: { lore: '곁눈 베기는 들소 같은 자가 치고 찌르는 것을 꺾는다', src: '리히테나워 『Zettel』(14세기) — 곁눈 베기' },
+  G8: { lore: '가로베기를 잘하는 자는 뛰어 딛으며 머리를 위협한다', src: '리히테나워 『Zettel』(14세기) — 가로베기' },
+  G3: { lore: '젖혀 막기를 배워, 치고 찌르는 것을 솜씨 있게 막아라', src: '리히테나워 『Zettel』(14세기) — 젖혀 막기' },
+  G11: { lore: '좋은 칼이 나거든 네게 먼저 보내라고 대장장이들에게 일러 두었다' },
+  G7: { lore: '위에서는 겹쳐 치고, 아래에서는 바르게 바꿔 쳐라', src: '리히테나워 『Zettel』(14세기) — 겹치기와 바꾸기' },
+  G6: { lore: '세게 몰아치려거든 온몸으로 싸워라', src: '리히테나워 『Zettel』(14세기) — 긴 칼 첫 가르침' },
+  G4: { lore: '그에게서 오는 것은 무엇이든 왕관이 걷어 낸다', src: '리히테나워 『Zettel』(14세기) — 정수리 베기와 왕관' },
+  G9: { lore: '앞과 뒤가 모든 기예의 샘이니, 약함과 셈, 그 사이라는 말을 새겨라', src: '리히테나워 『Zettel』(14세기) — 앞과 뒤 · 인데스' },
+  G10: { lore: '받아 베기는 넷이니, 네 자세를 크게 다치게 한다', src: '리히테나워 『Zettel』(14세기) — 네 가지 받아 베기' },
+  // 이탈리아 — 카포 페로 (Wiktenauer 'Ridolfo Capoferro' · Wilson · Swanger 영역 / 저장소 원문 PDF 쪽)
+  I1: { lore: '박자란 고요와 움직임을 재는 것일 뿐이다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 박자' },
+  I11: { lore: '시에나의 칼 장인들이 이제 네 이름을 안다' },
+  I3: { lore: '왼 다리로 물러서고 오른 다리가 따르면, 상대에게서 안전하다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 물러서기' },
+  I2: { lore: '몸을 비켜 빼며, 넷째 자세로 돌려 찌른다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 그림 풀이' },
+  I5: { lore: '팔을 잘 뻗어 두면, 상대의 칼을 모두 몸에서 멀리 쳐낸다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 막기' },
+  I7: { lore: '첫째 자세에서 떠나 상대의 왼 어깨에서 오른 무릎으로, 던지듯 찔러라', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 찌르기 이름' },
+  I6: { lore: '좋은 검객은 막고서 되받아 치지 않는 일이 결코 없다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 막고 치기' },
+  I8: { lore: '언제나 찌르기로 쳐라, 찌르기가 더 치명적이다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 찌르기' },
+  I9: { lore: '그 순간 칼끝을 빼 돌리고 조이며 나아가, 가슴을 찔러라', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 칼 빼기' },
+  I4: { lore: '막지 않고 엇박에, 적의 칼 밑으로 찔러 든다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 그림 풀이 · 엇박' },
+  I10: { lore: '곧은 선은 하나이니, 기예를 아는 자만이 그것을 긋는다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 곧은 선' },
+  // 이베리아 — 피게이레두 몬탄테 (Wiktenauer 'Diogo Gomes de Figueyredo' · Myers · Hick 영역) · 고디뉴 몬탄테 장 (저장소 독일어 역 인용)
+  B1: { lore: '박자 맞고 무게 실린 잰 걸음으로 가되, 춤추듯 걷지 마라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장' },
+  B2: { lore: '오른발을 오른쪽 끝없는 선으로 옮기고, 왼발이 따르게 하라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 12' },
+  B10: { lore: '왼손을 낮춰 몸에 붙여 굳게 하면, 칼이 더 큰 힘으로 나간다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 13' },
+  B3: { lore: '같은 오른발을 다시 들이며, 왼발 위로 나사처럼 돌아 걸어라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 단순 규칙 13' },
+  B4: { lore: '칼을 머리 위로 넘겨 어깨 뒤로 보내, 왼팔 위로 떨어뜨리며 둘러 벤다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 2' },
+  B8: { lore: '맞선 무기가 오는 쪽에 따라, 탈류로 아니면 레베스로 쳐내라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 단순 규칙 14' },
+  B11: { lore: '리스본 항구에 큰 칼이 들거든, 가장 먼저 네게 실어 보내마' },
+  B5: { lore: '탈류에서 다른 탈류가 나고, 레베스에서 다른 레베스가 난다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 맺음말' },
+  B9: { lore: '큰 칼의 쳐내기와 막기와 치기는 모두 몸놀림이 거들어야 한다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 6' },
+  B7: { lore: '거리에서 사람들을 막아, 이 끝에서 저 끝으로 지나지 못하게 한다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 단순 규칙 7' },
+  B6: { lore: '걸음마다 한 칼씩, 늘 아래에서 위로, 사람들이 멈출 때까지 번갈아 쳐라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 7' },
+  // 일본 — 오륜서 · 병법가전서 · 일본검도형 (사장님이 주신 원본 읽기표 — docs/motion/schools/)
+  J1: { lore: '발끝을 조금 띄우고 뒤꿈치를 세게 디뎌, 늘 걷듯이 걸어라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 발 쓰기' },
+  J6: { lore: '벨 때도 물러설 때도 받을 때도, 좌우를 번갈아 디뎌라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 음양의 발' },
+  J7: { lore: '적이 치고 들 때, 아래에서 그 손을 쳐라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 다섯 겉' },
+  J2: { lore: '받는 것도 쳐내는 것도 붙는 것도, 모두 적을 베는 계기로 여겨라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 자세 있고 자세 없음' },
+  J11: { lore: '좋은 칼은 좋은 손을 찾아간다고, 에도의 스승이 적어 보냈다' },
+  J9: { lore: '빗나간 칼을 그대로 두었다가, 적이 칠 때 아래에서 퍼 올려 쳐라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 다섯 겉' },
+  J8: { lore: '손을 친 칼을 적이 쳐 떨구려 하면, 넘기는 박자로 팔을 가로 베라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 다섯 겉' },
+  J3: { lore: '적의 눈을 찌르듯 하며, 그 칼을 오른 어깨로 끌어 흘려 받아라', src: '미야모토 무사시 『오륜서』(1645) — 세 가지 받기' },
+  J10: { lore: '몸과 발은 걸어 들고, 칼은 기다린다', src: '야규 무네노리 『병법가전서』(1632) — 걸기와 기다림' },
+  J4: { lore: '몸을 왼쪽으로 열며, 칼 옆면으로 흘려 받는다', src: '『일본검도형』(1912) — 소태도 둘째 본' },
+  J5: { lore: '적이 내게 걸어올 때의 앞섬, 이를 기다림의 앞섬이라 한다', src: '미야모토 무사시 『오륜서』(1645) — 불의 권 세 가지 앞섬' },
+  // 동방 — 조선세법(무비지) · 무예도보통지 예도 · 장자 (사장님이 주신 원본 읽기표 — docs/motion/schools/)
+  C1: { lore: '한 걸음 한 걸음, 잰걸음으로 파고든다', src: '모원의 『무비지』(1621) 권86 조선세법 — 게격세' },
+  C2: { lore: '열 걸음에 한 사람을 베고, 천 리를 가도 걸음을 멈추지 않는다', src: '『장자』 설검편' },
+  C3: { lore: '몸과 걸음과 손과 칼이 빠른 우레 같으니, 이 한 칼이 칼의 으뜸이다', src: '모원의 『무비지』(1621) 권86 조선세법 — 요격세' },
+  C7: { lore: '손을 굴려 이어 가며 위아래를 막는다', src: '모원의 『무비지』(1621) 권86 — 검결가' },
+  C11: { lore: '훈련도감에 쓸 만한 칼이 들면, 네 쪽으로 먼저 돌려 두마' },
+  C4: { lore: '가로로 내질러 가운데를 죽이는 것이 그 법이다', src: '『무예도보통지』(1790) 권2 예도 — 요격세' },
+  C5: { lore: '앞발을 내딛고 뒷발을 끌어 붙이며, 나아가 허리를 친다', src: '모원의 『무비지』(1621) 권86 조선세법 — 체보' },
+  C6: { lore: '거짓으로 지는 척 적을 꾀어, 물러나다 문득 나아가 허리를 친다', src: '모원의 『무비지』(1621) 권86 조선세법 — 염시세' },
+  C8: { lore: '솥을 들 듯 막아 위로 죽이는 것이 그 법이다', src: '『무예도보통지』(1790) 권2 예도 — 거정세' },
+  C10: { lore: '숨을 불고 내쉬어, 묵은 것을 뱉고 새것을 들인다', src: '『장자』 각의편 — 토고납신' },
+  C9: { lore: '씻어 쳐 내고, 찌르고, 끊어 베어 죽인다', src: '『무예도보통지』(1790) 권2 예도 — 봉두세' },
+};
+/** 칸 + 오의 (lore · src — 편지는 lore 만) */
+const withLore = (n) => Object.freeze({ ...n, ...NODE_LORE[n.id] });
 /** 유파 → { gate?, nodes } (얼림) */
-export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).map(([s, t]) => [s, Object.freeze({ ...t, nodes: Object.freeze(t.nodes) })])));
+export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).map(([s, t]) => [s, Object.freeze({ ...t, nodes: Object.freeze(t.nodes.map(withLore)) })])));
 
 export const nodesOf = (school) => TREE[school]?.nodes ?? [];
 export const nodeOf = (school, id) => nodesOf(school).find((n) => n.id === id) ?? null;
