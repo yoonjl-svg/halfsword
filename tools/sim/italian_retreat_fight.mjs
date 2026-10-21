@@ -77,7 +77,7 @@ function fightRun(id, seed, tok) {
   const reads = [];
   Gm.before = () => {
     // 사람 흉내 (own): 새 공격을 읽은 다음 스텝에 그 거리를 보고 HUM_RT s 뒤 스틱을 뒤로 (main.js 가 스틱을 정한 뒤 막기 단추가 도는 차례와 같게 막기 단추보다 먼저)
-    if (tok.has('own') && !rip) {
+    if ((tok.has('own') || tok.has('hum')) && !rip) { // hum = 같은 사람 흉내를 판 값(itRetreat 0) 그대로 — 막는 채 스틱을 뒤로 maxT s (10/21 보법 빠르기 제안 재기)
       if (guard.stats.threats > lastThreats) {
         lastThreats = guard.stats.threats;
         if (!hum && d1 != null && d1 >= SKILL.itRetreatVals.gap) hum = { at: Gm.t + HUM_RT, on: false, seen: false, t0: 0 };
@@ -137,7 +137,7 @@ function fightRun(id, seed, tok) {
     id, seed, t: +Gm.t.toFixed(2), attacks, threats: guard.stats.threats, retreats: guard.stats.retreats ?? 0, overT: +overT.toFixed(2),
     W, dDead: D.alive ? null : D.causeOfDeath ?? 'dead', blood: +D.blood.toFixed(3),
     rips, taps, ripHits, WA, aDead: A.alive ? null : A.causeOfDeath ?? 'dead', reads,
-    r: +Math.hypot(p.x, p.z).toFixed(2), maxR: +maxR.toFixed(2),
+    r: +Math.hypot(p.x, p.z).toFixed(2), maxR: +maxR.toFixed(2), opp: guard.opposition?.starts ?? 0,
   };
 }
 
@@ -148,6 +148,6 @@ for (const v of VARIANTS) {
   out.runs[v] = rows;
   const sum = (f) => rows.reduce((a, r) => a + f(r), 0);
   const sev = sum((r) => r.W.reduce((a, w) => a + w[3], 0));
-  console.log(`${v.padEnd(20)} 싸움 ${rows.length} · 공격 ${sum((r) => r.attacks)} · 물러섬 ${sum((r) => r.retreats)} · 칼날 상처 ${sum((r) => r.W.length)} (심각도 합 ${sev.toFixed(1)}) · 내가 죽음 ${sum((r) => (r.dDead ? 1 : 0))} · 상대 죽음 ${sum((r) => (r.aDead ? 1 : 0))} · 되찌르기 ${sum((r) => r.rips)} 탭 ${sum((r) => r.taps)} 맞힘 ${sum((r) => r.ripHits)} · 스틱 쥔 시간 ${sum((r) => r.overT).toFixed(1)} s`);
+  console.log(`${v.padEnd(20)} 싸움 ${rows.length} · 공격 ${sum((r) => r.attacks)} · 물러섬 ${sum((r) => r.retreats)} · 칼날 상처 ${sum((r) => r.W.length)} (심각도 합 ${sev.toFixed(1)}) · 내가 죽음 ${sum((r) => (r.dDead ? 1 : 0))} · 상대 죽음 ${sum((r) => (r.aDead ? 1 : 0))} · 되찌르기 ${sum((r) => r.rips)} 탭 ${sum((r) => r.taps)} 맞힘 ${sum((r) => r.ripHits)} · 스틱 쥔 시간 ${sum((r) => r.overT).toFixed(1)} s · 막아찌르기 ${sum((r) => r.opp)} · 준 칼날 상처 ${sum((r) => r.WA.length)} (심각도 합 ${sum((r) => r.WA.reduce((a, w) => a + w[3], 0)).toFixed(1)}) · 끝 피 평균 ${(sum((r) => r.blood) / rows.length).toFixed(2)}`);
 }
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(out));

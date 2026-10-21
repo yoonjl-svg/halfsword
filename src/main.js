@@ -46,7 +46,7 @@ import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
-import { TRADITIONS, setItalianRhythm, setItalianStride, traditionOf } from './schools.js';
+import { TRADITIONS, setItalianRhythm, setItalianStride, setItalianWalk, traditionOf } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 import { portraitIdOf, portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
@@ -172,8 +172,9 @@ if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady'
 // 이탈리아 박자 걸음 셈(10/15 — schools.js ITALIAN_GAIT.rhythm · setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9 · §10): 기본 디딤 셈 2 + 2 · ×1.5(보통 디딤 둘 → 빠른 디딤 둘 — 사장님 10/15 15:1x 2 + 2 · 19:3x '50%로 해'),
 //  15:1x 판(×1.3) 비교 `?itRhythm=2+2x1.3`('N+MxK' = 배율 손으로) ·
 //  지난 판 비교(그때 ×1.5): `?itRhythm=4+2`(13:2x 판) · `?itRhythm=3+2` · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판 — 짝걸음 한 짝 = 한 걸음) · `?itRhythm=4` = 옛 짝 셈 4 + 1 · `?itRhythm=0` = 끔
-if (params.has('itStride')) setItalianStride(params.get('itStride')); // 이탈리아 보폭 박자(10/15 22:1x · 22:5x — 짧은 디딤 둘 0.8 + 몸 ×1.3 → 긴 디딤 둘 1.1): `?itStride=0` = 22:0x 판(속도 ×1.5 · 계수 0.7) · `?itStride=a,b[,c]` = 짧은·긴 계수·짧은 디딤 빠르기(예 0.8,1.1 = 보폭만 · 0.7,1.2 · 0.8,0.8,1.5)
+if (params.has('itStride')) setItalianStride(params.get('itStride')); // 이탈리아 보폭 박자(10/15 22:1x · 22:5x — 짧은 디딤 둘 0.8 + 몸 ×1.3 → 긴 디딤 둘 1.1): `?itStride=0` = 22:0x 판(속도 ×1.5 · 계수 0.7) · `?itStride=a,b[,c[,p]]` = 짧은·긴 계수·짧은 디딤 빠르기 · 가까이 짝걸음 보폭 상한(예 0.8,1.1 = 보폭만 · 0.7,1.2 · 0.8,0.8,1.5 · 0.62,0.85,1.3,0.44)
 if (params.has('itRhythm')) setItalianRhythm(params.get('itRhythm'));
+if (params.has('itWalk')) setItalianWalk(params.get('itWalk')); // 이탈리아 보법 빠르기 시험(10/21 — 판 값 없음): `?itWalk=1,1.15,1.5` = 앞 · 뒤 걷는 빠르기 배율 · 짧은 디딤 가속 한도 배율(사람 · AI) · `?itWalk=p:1,1.15` = 앞뒤 배율만 플레이어만 — 제안 갈래(10/21 재기): R0 `?itStride=0.62,0.85,1.3,0.44&itWalk=1,1,1.5` · R `?itStride=0.62,0.85,1.3,0.44&itWalk=1,1.1,1.5`
 if (params.has('itGait')) CONFIG.GAIT.itEven = params.get('itGait') === 'old' ? 0 : 1; // 이탈리아 고른 바탕 걸음(10/15 19:3x 사장님 '이탈리아 보법 자체가 이미 불균질' — 고른 짝걸음, docs/strike/italian_rhythm_2026-10-15.md §10): 기본 켬, `?itGait=old` = 옛 짝걸음('따·닥 + 쉼')
 if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 간격 잡기의 빠른 디딤(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기'): 기본 1, `?deChase=0` = 끔(잡기도 없음)
 if (params.has('deHold')) CONFIG.GAIT.deHold = +params.get('deHold') ? 1 : 0; // 독일 간격 잡기의 잡기(10/15 18:0x — 칼이 제대로 들어가는 거리 contact 에서 서고 0.6 s 앞 몫 0 · 스틱 놓았다 밀면 풀림 · 플레이어만, docs/strike/german_hold_2026-10-15.md): 기본 1, `?deHold=0` = 끔(빠른 디딤만 — 지금 판)

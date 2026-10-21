@@ -1316,7 +1316,7 @@ export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: tr
  */
 /**
  * 이탈리아 보폭 박자 (10/15 22:1x 사장님 시험 — ITALIAN_STRIDE): '0' = 22:0x 판(박자 걸음 몸 빠르기·발 박자 ×1.5 · 바탕 보폭 계수 0.7 · 짝 보폭 0.28) ·
- *  'a,b[,c]' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수) · 짧은 디딤 몸 빠르기 c(기본 0.8,1.1,1.3 — c 없으면 1 = 보폭만). main.js `?itStride=` · `?itRhythm=` 보다 먼저 부른다
+ *  'a,b[,c[,p]]' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수) · 짧은 디딤 몸 빠르기 c(기본 0.8,1.1,1.3 — c 없으면 1 = 보폭만) · p = 가까이 짝걸음 보폭 상한(없으면 0.28 × b ÷ 0.7). main.js `?itStride=` · `?itRhythm=` 보다 먼저 부른다
  */
 export function setItalianStride(v) {
   const g = TRADITIONS.italian.gait;
@@ -1328,12 +1328,31 @@ export function setItalianStride(v) {
     g.even.pair.stride = 0.28;
     return true;
   }
-  const m = s.match(/^(\d*\.?\d+)\s*,\s*(\d*\.?\d+)(?:\s*,\s*(\d*\.?\d+))?$/);
+  const m = s.match(/^(\d*\.?\d+)\s*,\s*(\d*\.?\d+)(?:\s*,\s*(\d*\.?\d+))?(?:\s*,\s*(\d*\.?\d+))?$/);
   const c = m?.[3] ? +m[3] : 1; // 짧은 디딤 몸 빠르기 배율(없으면 1 = 보폭만)
-  if (!m || !(+m[1] > 0) || !(+m[2] >= +m[1]) || !(c >= 1) || !((+m[2] * c) / +m[1] > 1)) return false;
+  if (!m || !(+m[1] > 0) || !(+m[2] >= +m[1]) || !(c >= 1) || !((+m[2] * c) / +m[1] > 1) || (m[4] != null && !(+m[4] > 0))) return false;
   Object.assign(R, { mul: (+m[2] * c) / +m[1], speedMul: c, timeOnly: true, shortFirst: true });
   g.strideK = +m[2];
-  g.even.pair.stride = (0.28 * +m[2]) / 0.7;
+  g.even.pair.stride = m[4] != null ? +m[4] : (0.28 * +m[2]) / 0.7; // 넷째 값 = 가까이 짝걸음 보폭 상한(m)을 손으로 (10/21 보법 빠르기 제안 — 없으면 0.28 × 긴 계수 ÷ 0.7)
+  return true;
+}
+
+/**
+ * 이탈리아 보법 빠르기 시험 (10/21 사장님 '레이피어는 거리를 벌리며 싸우는 게 중요 … 보폭을 약간 줄이는 대신 속도를 빠르게 해' — 제안 재기용, 판 값 없음):
+ *  'f,b[,a]' = 걷는 빠르기의 앞 몫 × f · 뒤 몫 × b(사람 · AI 같이 — 걸음 칸 foreMul · backMul) · a = 짧은 디딤(박자 걸음 빠른 몫) 몸 가속 한도 × a(rhythm.accel —
+ *   fighter.js driveBalance fastAcc · 독일 간격 잡기 chase.accel 1.5 와 같은 칸, 사람 · AI 같이) · 'p:f,b' = 앞 · 뒤 배율만 플레이어만(player 칸) · '1' · '0' = 없앰.
+ *  옆 몫 · 박자 걸음 셈 · 짧은 디딤 몸 빠르기(speedMul)는 그대로 — 박자는 gait.js 가 빠르기 ÷ 보폭으로 따라 올린다. 주소 `?itWalk=` (main.js)
+ */
+export function setItalianWalk(v) {
+  const g = TRADITIONS.italian.gait;
+  const s = String(v ?? '').trim();
+  for (const o of [g, g.player]) delete o.foreMul, delete o.backMul;
+  delete g.rhythm.accel;
+  if (s === '0' || s === '1') return true;
+  const m = s.match(/^(p:)?(\d*\.?\d+)\s*,\s*(\d*\.?\d+)(?:\s*,\s*(\d*\.?\d+))?$/);
+  if (!m || !(+m[2] > 0) || !(+m[3] > 0) || (m[4] != null && !(+m[4] > 0))) return false;
+  Object.assign(m[1] ? g.player : g, { foreMul: +m[2], backMul: +m[3] });
+  if (m[4] != null) g.rhythm.accel = +m[4];
   return true;
 }
 
