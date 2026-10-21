@@ -2,10 +2,13 @@
 //  스킬북 25 장 public/ui/books/<유파>_<급>.webp (256 × 336 — 유파마다 실제 옛 문서 꼴 하나: 독일 펜히트부흐 · 이탈리아 낱장 묶음 · 이베리아 말린 양피지 ·
 //  일본 오륜서 두루마리 · 동방 죽간, 급은 볼륨과 등급 색 끈으로만) · 금화 public/ui/wallet/coins.webp · 머리(천 주머니) public/ui/wallet/pouch.webp (256 × 256)
 //  · 용사의 눈물(물방울 모양 다이아 목걸이 — 대기실 방어구 칸, 사장님 10/17 · docs/import/hero_tear_2026-10-17.md) public/ui/armor/hero_tear.webp (256 × 256)
+//  · 스킬트리 칸 그림 10 장(사장님 10/22 — 편지 public/ui/books/<유파>_letter.webp · 심화 <유파>_deep.webp — 책 그림과 같은 256 × 336 · 같은 유파 틀 ·
+//    docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §8). 칸은 이 열 장 + 옛 스킬북 25 장을 갈래대로 쓴다(src/skill_tree_icons.js)
 //  무기 카드 그림(weapon_thumbs.mjs)과 같은 빛 · 같은 금속 재질 · 투명 배경 webp. 문서 꼴 · 등급 색 · 모양을 바꾸면 다시 돌린다.
 //  실행: vite 개발 서버를 띄운 뒤 playwright 가 있는 곳에서
 //    node tools/browser/item_thumbs.mjs http://127.0.0.1:5251                    (전체 28 장)
-//    node tools/browser/item_thumbs.mjs http://127.0.0.1:5251 coins pouch german_3 (몇 개만 — books · coins · pouch · tear · <유파>_<급>)
+//    node tools/browser/item_thumbs.mjs http://127.0.0.1:5251 coins pouch german_3 (몇 개만 — books · coins · pouch · tear · skills · <유파>_<급> · <유파>_letter · <유파>_deep)
+//    (전체는 기본 28 장 — 스킬트리 열 장은 'skills' 로 따로: node tools/browser/item_thumbs.mjs http://127.0.0.1:5251 skills)
 //    --out=<폴더> 로 다른 곳에 저장(시험) · --q='cx=0.7' 로 구도 시험값을 넘긴다 (item_thumbs_page.js 머리말)
 //  찍는 쪽은 tools/browser/item_thumbs.html (+ item_thumbs_page.js) — 브라우저로 열면 256 px 그림과 실제 화면 크기를 눈으로 볼 수 있다.
 //  한자(일본 제목 쪽지 · 죽간 글자)는 이 컴퓨터의 한자 글꼴(IPAGothic · WenQuanYi)로 쓴다 — 글꼴이 없으면 네모가 찍히니 그림 판으로 확인

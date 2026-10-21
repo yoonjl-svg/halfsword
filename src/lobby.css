@@ -199,15 +199,18 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .equipment-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; } /* 가운데 맞춤 — 줄로 늘이면 부 단추가 주 단추 높이로 늘어난다(싸움 단추 높이 그대로: 주 36 · 부 34) */
 .equipment-actions button { min-width: 72px; }
 
-/* ── 스킬 (skill_tree.js — 10/21 스킬트리): 유파 탭 + 트리 판 — 창 안 폭 전부 · 창 안 높이 --grid-h (10/18 03:3x 안쪽 액자 1 뺌 — 바깥 줄은 창의 액자 1) ──
-   칸 크기 · 줄 간격 · 글자 크기는 skill_tree.js layout 이 판 크기에서 셈(--nw · --nh · --s) — 폰 가로 판 약 386 × 216 px. 줄이 많은 유파(이탈리아 6 줄)는 판 안에서 내려 본다 */
+/* ── 스킬 (skill_tree.js — 10/21 스킬트리 · 10/22 칸 = 그림 + 이름 · 내려 보는 판): 유파 탭 + 트리 판 — 창 안 폭 전부 · 창 안 높이 --grid-h (10/18 03:3x 안쪽 액자 1 뺌 — 바깥 줄은 창의 액자 1) ──
+   칸 크기 · 줄 간격 · 글자 크기는 skill_tree.js layout 이 판 폭에서 셈(--nw · --nh · --ih · --lh · --s · 칸마다 폭은 칸 style) — 폰 가로 판 약 386 × 213 px(844 × 390) · 312 × 165 px(844 × 340).
+   모든 유파가 판 안에서 아래로 내려 본다 (사장님 10/22 00:3x '이탈리아 스킬트리처럼 … 간격을 더 넓고 자연스럽게') */
 .skill-tree-host { display: flex; flex-direction: column; width: calc(var(--grid-w) + var(--grid-x)); height: var(--grid-h); } /* 창 안 폭 전부 · 창 안 높이 — 줄 · 바탕 없음(10/18 03:3x) */
 .school-tabs { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 6px 6px 0; }
 .skill-tree-host .tree-frame { flex: 1; min-height: 0; position: relative; margin-top: 4px; border: 0; border-image: none; background: none; box-shadow: none; }
-.tree-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-/* 판이 창보다 길면(이탈리아 6 줄) 아래 끝을 흐리게 — 더 내려 볼 칸이 있다는 표시 (끝까지 내리면 걷힘 — skill_tree.js data-more) */
-.tree-frame[data-more]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 22px; pointer-events: none; background: linear-gradient(transparent, rgba(24, 18, 14, .9)); }
-.tree-board { --s: 1; --nw: 58px; --nh: 29px; position: relative; }
+/* 판 내려 보기: 손가락으로 위아래만(가로는 판 폭 안 — 넘치지 않음) · 끝에서 대기실 창이 같이 끌려가지 않게 */
+.tree-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* 아래로 더 볼 칸이 있으면 아래 끝을 흐리게 + 가운데 작은 꺾쇠 — 끝까지 내리면 걷힘 (skill_tree.js data-more) */
+.tree-frame[data-more]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 26px; pointer-events: none; background: linear-gradient(transparent, rgba(24, 18, 14, .92)); }
+.tree-frame[data-more]::before { content: ''; position: absolute; z-index: 1; left: 50%; bottom: 7px; width: 7px; height: 7px; margin-left: -4px; pointer-events: none; border: solid var(--c-sub); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); opacity: .85; }
+.tree-board { --s: 1; --nw: 66px; --nh: 63px; --ih: 28px; --lh: 12px; position: relative; }
 .tree-links { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 /* 줄: 보조 색 흐리게 · 앞 칸을 익혀 배울 수 있는 칸으로 가는 줄은 조금 밝게 · 둘 다 익힌 줄은 강조 색 · 곁가지(편지 · 보법 II)는 점선 · '모두 익혀야' 칸 위 금색 점 · 독일 관문 띠 */
 .tree-link { fill: none; stroke: var(--c-sub); stroke-width: 1.4; opacity: .32; }
@@ -217,42 +220,67 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .tree-link.gate { stroke-width: 2.4; stroke-linecap: round; }
 .tree-join { fill: var(--c-accent); opacity: .9; }
 .tree-nodes { position: absolute; inset: 0; }
-/* 칸: 판 좌표가 칸 가운데 · 위 띠 = 갈래 색(등급 색 --tc — 보법 커먼 · 막기 언커먼 · 고유 공격 · 심화 레어 · 패시브 에픽 · 비기 레전드 · 편지 ???) */
-.tree-node { position: absolute; width: var(--nw); height: var(--nh); margin: calc(var(--nh) / -2) 0 0 calc(var(--nw) / -2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 0; padding: 1px 2px; overflow: visible;
-  background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--tc); border-radius: 6px; color: var(--c-text); line-height: 1.08; white-space: nowrap; }
-.node-l1 { display: block; font-weight: var(--fw-label); color: var(--c-text); }
-.node-l2 { display: block; color: var(--c-sub); }
-/* 잠김: 흐리게 (앞 칸이 모자람) */
-.tree-node[data-state=locked] { opacity: .5; border-top-color: color-mix(in srgb, var(--tc) 45%, transparent); }
-.tree-node[data-state=locked] .node-l1 { color: var(--c-sub); }
-/* 배울 수 있음: 금색 테두리 + 값 알약 (칸 아래 끝에 걸침) */
+/* 칸: 판 좌표가 칸 가운데 · 위 띠 = 갈래 색(등급 색 --tc — 보법 커먼 · 막기 언커먼 · 고유 공격 · 심화 레어 · 패시브 에픽 · 비기 레전드 · 편지 ???) · 그림 위 · 이름 아래(한두 줄) */
+.tree-node { position: absolute; width: var(--nw); height: var(--nh); margin: calc(var(--nh) / -2) 0 0 calc(var(--nw) / -2); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; min-height: 0; padding: 3px 2px; overflow: visible;
+  background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--tc); border-radius: 6px; color: var(--c-text); line-height: var(--lh); white-space: nowrap; }
+/* 그림: 옛 스킬북 그림(256 × 336 — skill_tree_icons.js) · 꾸밈이라 감춤(칸 이름표가 '이름 · 상태 · 값'을 읽는다) */
+.node-icon { flex: none; display: block; width: calc(var(--ih) * 256 / 336); height: var(--ih); object-fit: contain; pointer-events: none; -webkit-user-drag: none; user-select: none; }
+.node-name { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 100%; color: var(--c-text); }
+.node-line { display: block; }
+/* 잠김: 이름 보조 색 · 그림 조금 흐리게 · 테두리 옅게 (앞 칸이 모자람 — 전엔 칸 전체 50 % 였으나 그림이 너무 죽어 그림 · 글만 흐림) */
+.tree-node[data-state=locked] { border-color: color-mix(in srgb, var(--line) 75%, transparent); border-top-color: color-mix(in srgb, var(--tc) 40%, transparent); }
+.tree-node[data-state=locked] .node-name { color: var(--c-sub); }
+.tree-node[data-state=locked] .node-icon { opacity: .62; filter: saturate(.6); }
+/* 배울 수 있음: 금색 테두리 + 값 알약 (칸 아래 끝에 걸침) · 그림 제 색 */
 .tree-node[data-state=open] { border-color: var(--c-accent); border-top-color: var(--tc); box-shadow: 0 0 0 .5px var(--c-accent); }
-.node-price { position: absolute; left: 50%; top: calc(100% - 2px); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; padding: 0 4px 0 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+.node-price, .node-soon { position: absolute; left: 50%; top: calc(100% - 2px); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; padding: 0 4px 0 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
   font-family: var(--font-ui); font-weight: 600; font-size: max(8px, calc(8.5px * var(--s))); line-height: calc(10px * var(--s)); color: var(--c-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .price-part { display: inline-flex; align-items: center; gap: 1px; }
 .price-icon { display: block; width: 1.05em; height: 1.05em; }
-/* 익힘: 갈래 색으로 채우고 빛 (10/16 책 '사용' 빛과 같은 색 — 등급 색) */
+/* 익힘: 갈래 색으로 채우고 빛 (10/16 책 '사용' 빛과 같은 색 — 등급 색) · 그림 제 색 */
 .tree-node[data-state=learned] { background: linear-gradient(color-mix(in srgb, var(--tc) 24%, transparent), color-mix(in srgb, var(--tc) 24%, transparent)), var(--panel); border-color: var(--tc); box-shadow: 0 0 calc(7px * var(--s)) color-mix(in srgb, var(--tc) 55%, transparent); }
-.tree-node[data-state=learned] .node-l2 { color: var(--c-text); }
-/* 준비 중: 점선 · 흐리게 */
-.tree-node[data-state=closed] { opacity: .55; border-style: dashed; border-top-style: dashed; }
+/* 준비 중: 점선 · 흐리게 · 그림 잿빛 · 칸 아래 '준비 중' 알약(값 알약 자리 — 보조 색) */
+.tree-node[data-state=closed] { opacity: .6; border-style: dashed; border-top-style: dashed; }
+.tree-node[data-state=closed] .node-icon { filter: grayscale(1) brightness(.75); opacity: .7; }
+.tree-node[data-state=closed] .node-name { color: var(--c-sub); }
+.node-soon { padding: 0 5px; font-family: inherit; font-weight: var(--fw-body); color: var(--c-sub); border-style: dashed; }
 .tree-node[aria-pressed=true], .tree-node:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
-/* 유파 초기화 (판 오른쪽 위 — 머리 1): 작은 부 단추 꼴 */
-.tree-reset { position: absolute; z-index: 1; top: 2px; right: 4px; display: inline-flex; align-items: center; gap: 4px; min-height: 0; padding: 2px 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-xs); line-height: 16px; color: var(--c-text); }
+/* 유파 초기화 (판 맨 위 오른쪽 — 뿌리 칸 줄 · 판과 함께 내려감 · 머리 1): 누르는 높이 40 px (사장님 10/22 '너무 낮아 누르기 힘듭니다' — 대기실 단추 · 탭과 비슷하게) */
+.tree-reset { position: absolute; z-index: 1; top: 6px; right: 4px; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-s); line-height: 16px; color: var(--c-text); }
 .tree-reset:disabled { opacity: .4; }
-.tree-reset .price-icon { width: 12px; height: 12px; }
+.tree-reset .price-icon { width: 15px; height: 15px; }
 @media (hover: hover) { .tree-reset:not(:disabled):hover { border-color: var(--c-sub); } }
-/* 상세 카드 · 초기화 확인 (판 위) — 싸움 창 꼴 */
+/* 상세 카드 (스킬 칸 전체 — 유파 탭까지 덮음: 오의 · 출처가 들어 폰 가로 844 × 340 에서도 넘치지 않게) · 초기화 확인 (판 위) — 싸움 창 꼴 */
 .node-detail, .reset-confirm { position: absolute; inset: 2px; z-index: 2; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.4; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* 카드 자리 (격자): 위 = 그림 · 이름 · 갈래 줄 / 오의 · 출처 (온 폭) / 아래 = 효과 · 먼저 익힐 칸 · 까닭 (왼쪽) + 값 · '배우기' (오른쪽 아래)
+   읽기 차례(DOM) = 이름 · 오의 · 출처 · 효과 · … · 갈래 줄 · 값 · 단추 — 갈래 줄은 격자 자리로만 이름 밑에 보인다 (사장님 10/22 00:5x) */
+.node-detail { z-index: 3; padding: 7px 10px 6px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "icon title title" "icon meta meta" "lore lore lore" "body body act"; column-gap: 10px; align-content: start; }
+.node-detail[hidden] { display: none; }
 .detail-close { position: absolute; top: 0; right: 2px; width: 28px; min-height: 28px; padding: 0; font-size: 17px; line-height: 1; color: var(--c-sub); }
 @media (hover: hover) { .detail-close:hover { color: var(--c-text); } }
-.detail-head { margin: 0 26px 4px 0; }
-.detail-head b, .reset-confirm > b { display: block; font-size: var(--fs-m); line-height: 1.3; outline: none; }
-.detail-head b { color: var(--tc); }
-.detail-head small { display: block; font-size: var(--fs-s); letter-spacing: var(--ls-label); color: var(--tc); }
-.node-detail p, .reset-confirm p { margin: 3px 0; }
-.detail-effect, .detail-state, .reset-confirm p { color: var(--c-text); }
-.detail-pre { color: var(--c-sub); }
+/* 카드 그림: 왼쪽 위 (칸 그림의 큰 꼴 · 꾸밈) — 잠김은 조금 · 준비 중은 잿빛 */
+.detail-icon { grid-area: icon; align-self: start; display: block; width: 40px; height: 52px; object-fit: contain; }
+.node-detail[data-state=closed] .detail-icon { filter: grayscale(1) brightness(.75); opacity: .75; }
+.node-detail[data-state=locked] .detail-icon { opacity: .8; filter: saturate(.75); }
+.detail-title { grid-area: title; align-self: end; display: block; margin-right: 22px; font-size: var(--fs-m); line-height: 1.3; outline: none; color: var(--tc); }
+.detail-meta { grid-area: meta; align-self: start; display: block; font-size: 11px; line-height: 1.35; letter-spacing: var(--ls-label); color: var(--tc); }
+/* 오의(검술서 한 줄 — 인용): 옅은 큰 따옴표 + 왼쪽 가는 줄 · 본문 색 / 출처: 작고 옅게 */
+.detail-lore { grid-area: lore; position: relative; margin: 6px 0 0; padding: 0 0 0 14px; border-left: 2px solid color-mix(in srgb, var(--tc) 45%, transparent); }
+.detail-lore[hidden] { display: none; }
+.detail-lore::before { content: '\201C'; position: absolute; left: 3px; top: -4px; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; line-height: 1; color: var(--tc); opacity: .55; }
+.detail-lore blockquote { margin: 0; font-size: var(--fs-s); line-height: 1.36; color: var(--c-text); }
+.detail-lore figcaption { margin-top: 1px; font-size: 10.5px; line-height: 1.35; color: var(--c-sub); opacity: .85; }
+.detail-lore figcaption[hidden] { display: none; }
+.node-detail p { margin: 0; }
+.detail-body { grid-area: body; align-self: start; min-width: 0; margin-top: 5px; }
+.detail-effect { font-size: 11px; line-height: 1.35; color: var(--c-text); }
+.node-detail[data-lore=y] .detail-effect { color: var(--c-sub); }
+.detail-pre { margin-top: 2px !important; font-size: 11px; line-height: 1.35; color: var(--c-sub); }
+.detail-pre[hidden] { display: none; }
+.detail-state { margin-top: 2px !important; font-size: 11px; line-height: 1.35; color: var(--c-text); }
+/* 값 · '배우기' (오른쪽 아래 한 줄 — 값 왼쪽 · 단추 오른쪽) */
+.detail-act { grid-area: act; align-self: end; display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+.detail-act .detail-actions { margin: 0; }
 .detail-price { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-variant-numeric: tabular-nums; }
 .detail-price[hidden] { display: none; }
 .detail-price .price-part { gap: 3px; }
@@ -261,8 +289,19 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .price-label { color: var(--c-sub); }
 .node-detail[data-state=open] .detail-state, .node-detail[data-state=locked] .detail-state { color: var(--c-accent); }
 .detail-state[hidden] { display: none; }
+/* 낮은 폰 가로(높이 370 이하 — 844 × 340 · 680 × 360 · 568 × 320): 카드 글을 한 단계 촘촘히 (오의 두세 줄 + 출처 + 효과 + 단추가 카드 안에) */
+@media (max-height: 370px) {
+  .detail-title { font-size: 13px; line-height: 1.25; }
+  .detail-lore { margin-top: 4px; }
+  .detail-lore blockquote { font-size: 11.5px; line-height: 1.33; }
+  .detail-body, .detail-act { margin-top: 4px; }
+}
+.reset-confirm > b { display: block; font-size: var(--fs-m); line-height: 1.3; outline: none; }
+.reset-confirm p { margin: 3px 0; color: var(--c-text); }
 .detail-actions, .confirm-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .detail-actions button, .confirm-actions button { min-width: 72px; }
+/* 누르는 높이 40 px (사장님 10/22 — 초기화 단추와 함께 확인 창 단추 · '배우기'도): entrance_ui.css 의 :host 단추 규칙(min-height 0)보다 세게 */
+.skill-tree-host .reset-confirm .confirm-actions button, .skill-tree-host .node-detail .detail-actions button { min-height: 40px; }
 @media (max-height: 500px) { .confirm-actions .primary, .confirm-actions .secondary { padding-top: 8px; padding-bottom: 8px; } }
 
 /* ── 이름 수정 창 (싸움 창 꼴 · 폭 = 싸움 메뉴 창 340) ── */
