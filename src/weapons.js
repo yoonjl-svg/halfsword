@@ -1671,7 +1671,7 @@ const brothersSword = finalizeSpec('brothers_sword', {
 //  치수 · 질량은 게임용으로 정한 값 [I] — 특정 유물을 실측해 되살린 것이 아니다. 생김새는 historical_weapon_details.js.
 const hwando = finalizeSpec('hwando', {
   nameKo: '환도', nameEn: 'Hwando', tier: 'common',
-  desc: '조선 군졸의 외날 도검.\n조금 휜 날과 무늬를 뚫은 코등이를 지녔다.',
+  desc: '조선 군졸의 외날 도검.\n가볍고 짧아 재빨리 베어 든다.', // 10/21 22:4x 사장님 고름(전 둘째 줄 생김새 — '조금 휜 날과 무늬를 뚫은 코등이를 지녔다')
   school: 'chinese', grip: 'one-hand', material: 'steel', enterParry: true,
   hiltLength: .085, bladeLength: .72,
   mCut: 1.10, mThrust: .95, mBlunt: .95,
