@@ -19,7 +19,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 import { SAIN_COLORS, sainPartMesh, sainDecorate } from './rare_sword_details.js'; // 사인검 겉모습 (샛별 저장소에서 가져옴 6e71ba2 — 북부 대공의 검(옛 아이스)은 10/21 지움)
-import { FLAMBERGE_MUSEUM, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
+import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
 import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
@@ -494,22 +494,29 @@ const longsword = finalizeSpec('longsword', {
 //     2.892kg·칼날 117cm [M]. 균형점 실측 자료를 못 찾아(연구 노트 §14) 롱소드 가문의
 //     비율로 크기만 올려서 추정 [I]
 // ═════════════════════════════════════════════════════════════
-// 쥠 세 꼴 (MONTANTE.hand, config.js — docs/motion/iberian_montante_2026-10-10.md §10·§12·§15). 칼 원점 = 오른손 주먹 가운데, 손~칼끝 1.36 m 는 모두 같다.
+// 쥠 세 꼴 (MONTANTE.hand, config.js — docs/motion/iberian_montante_2026-10-10.md §10·§12·§15). 칼 원점 = 오른손 주먹 가운데, 손~칼끝 1.335 m 는 모두 같다.
+//  칼날 길이 (사장님 10/21 23:5x '츠바이핸더는 손~칼끝 2.5 cm 줄여'): 네 꼴 모두 칼끝 쪽에서 0.025 m 씩 — 손~칼끝 1.36 → 1.335 m · 기본 꼴 전체 165 → 162 cm.
+//   칼날 질량은 길이 비(1.7 × 1.19/1.215 → 1.665 kg — 합 2.865 kg) · 칼날 질량 분포는 아침 꼴 칼날(1.17 → 1.145)에 대한 같은 비(무게중심 0.34 · 회전 반경 0.253)로
+//   함께 줄임(ZW_OLD_BLADE · ZW_REACH) → 손 기준 관성 0.787 → 0.748 (롱소드 0.272 의 2.75 배). 바탕 알비온 'The Wallace' 날 117 cm 보다는 아직 길다.
+//   (아래 꼴별 글의 칼날 · 무게중심 숫자는 10/10 판 — 지금은 각각 0.025 m 짧다)
 //  'mid'(기본 — 사장님 10/10 20:4x '초기 그립과 지금의 중간', 확인표 760~): 손 사이 0.24 m(gripAlong −0.24) · 오른손 주먹 가운데 ~ 날밑 아랫면 0.11 m ·
 //    hiltLength(손 → 칼날 밑동) 0.145 · 칼날 1.215 · 날밑 가운데 0.13 · 폼멜 가운데 −0.25(왼손 폼멜 목, 폼멜 끝 −0.288) · 자루 상자 날밑 밑 0.115 ~ −0.25.
 //    날밑 아랫면 ~ 폼멜 끝 0.398 m (톨레도 몬탄테 Cleveland 1916.1509 · 1916.1507 자루 41.3 · 40.0 cm 안).
 //  'guard'(10/10 14:5x '넣어' — 고디뉴 1599 규칙 3 '오른손 날밑 가까이', §12): 손 사이 0.30 · 날밑 0.065 m · hiltLength 0.10 · 칼날 1.26 · 폼멜 −0.31 — `?montanteHand=guard`
 //  'old'(10/10 아침 꼴 — §10 넓힘 전): 손 사이 0.18 · 날밑 0.155 m · hiltLength 0.19 · 칼날 1.17 · 자루 ±0.16(0.32 m) · 폼멜 −0.16 · 서보 덮개 28 — `?montanteHand=old`
 //  'wide'(§10~§11 꼴 — 자루만 넓힘, 오른손은 아직 날밑에서 0.155 m): 손 사이 0.30 · hiltLength 0.19 · 칼날 1.17 · 폼멜 −0.31 — `?montanteHand=wide` (§12 의 옛 꼴 'old')
-//  칼날 1.7 kg 의 질량 분포는 네 꼴이 같다(손에서 칼날 무게중심 0.588 m · 그 둘레 관성 같음 — 칼날이 길어진 몫은 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
-//  자루 상자는 날밑 아랫면 0.005 위 ~ 폼멜 가운데, 부품 질량 그대로(자루 0.26 · 폼멜 0.62 · 날밑 0.32 · 칼날 1.7 = 2.9 kg)
-const ZW_BLADE_COM = 0.19 + 0.34 * 1.17; // 손에서 칼날 무게중심 (아침 꼴 값 — 모든 꼴이 지킨다)
-const zwShift = (hilt) => ({ com: (ZW_BLADE_COM - hilt) / (1.36 - hilt), gyr: (0.253 * 1.17) / (1.36 - hilt) });
+//  칼날의 질량 분포는 네 꼴이 같다(손에서 칼날 무게중심 0.588 → 10/21 0.579 m · 그 둘레 관성 같음 — 칼날이 길어진 몫은 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
+//  자루 상자는 날밑 아랫면 0.005 위 ~ 폼멜 가운데, 부품 질량 그대로(자루 0.26 · 폼멜 0.62 · 날밑 0.32 · 칼날 1.7 → 10/21 1.665 = 2.865 kg)
+const ZW_OLD_BLADE = 1.145; // 아침 꼴 칼날 (10/21 23:5x 1.17 → 1.145) — 칼날 질량 분포의 잣대
+const ZW_REACH = 1.335; // 손 ~ 칼끝 (네 꼴 같음 — 10/21 23:5x 1.36 → 1.335)
+const ZW_BLADE_MASS = 1.665; // 칼날 질량 (10/21 23:5x 1.7 → 1.7 × 1.19/1.215 — 같은 단면 · 길이 비)
+const ZW_BLADE_COM = 0.19 + 0.34 * ZW_OLD_BLADE; // 손에서 칼날 무게중심 (아침 꼴 값 — 모든 꼴이 지킨다)
+const zwShift = (hilt) => ({ com: (ZW_BLADE_COM - hilt) / (ZW_REACH - hilt), gyr: (0.253 * ZW_OLD_BLADE) / (ZW_REACH - hilt) });
 const ZW_FORMS = {
-  old: { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: 0, gripH: 0.16, pommelY: -0.16, gripAlong: -0.18, com: 0.34, gyr: 0.253, cap: 28 },
-  wide: { hilt: 0.19, blade: 1.17, crossY: 0.175, gripY: -0.075, gripH: 0.235, pommelY: -0.31, gripAlong: -0.3, com: 0.34, gyr: 0.253 },
-  guard: { hilt: 0.1, blade: 1.26, crossY: 0.085, gripY: -0.12, gripH: 0.19, pommelY: -0.31, gripAlong: -0.3, com: (0.19 + 0.34 * 1.17 - 0.1) / 1.26, gyr: (0.253 * 1.17) / 1.26 },
-  mid: { hilt: 0.145, blade: 1.215, crossY: 0.13, gripY: -0.0675, gripH: 0.1825, pommelY: -0.25, gripAlong: -0.24, ...zwShift(0.145) },
+  old: { hilt: 0.19, blade: 1.145, crossY: 0.175, gripY: 0, gripH: 0.16, pommelY: -0.16, gripAlong: -0.18, com: 0.34, gyr: 0.253, cap: 28 },
+  wide: { hilt: 0.19, blade: 1.145, crossY: 0.175, gripY: -0.075, gripH: 0.235, pommelY: -0.31, gripAlong: -0.3, com: 0.34, gyr: 0.253 },
+  guard: { hilt: 0.1, blade: 1.235, crossY: 0.085, gripY: -0.12, gripH: 0.19, pommelY: -0.31, gripAlong: -0.3, ...zwShift(0.1) },
+  mid: { hilt: 0.145, blade: 1.19, crossY: 0.13, gripY: -0.0675, gripH: 0.1825, pommelY: -0.25, gripAlong: -0.24, ...zwShift(0.145) },
 };
 const ZW = ZW_FORMS[MONTANTE.hand] ?? ZW_FORMS.mid; // 모르는 이름은 기본(중간)
 const zweihander = finalizeSpec('zweihander', {
@@ -541,12 +548,12 @@ const zweihander = finalizeSpec('zweihander', {
     const grip = boxInertia(0.26, 0.02, ZW.gripH, 0.02);
     const pommel = sphereInertia(0.62, 0.038);
     const cross = boxInertia(0.32, 0.14, 0.02, 0.026);
-    const blade = bladeInertia(1.7, L, ZW.com, ZW.gyr, 0.056, 0.018);
+    const blade = bladeInertia(ZW_BLADE_MASS, L, ZW.com, ZW.gyr, 0.056, 0.018);
     return [
       partTuple(['box', 0.02, ZW.gripH, 0.02], ZW.gripY, 0.26, 0, grip.Ie, grip.It, look.grip),
       partTuple(['ball', 0.038], ZW.pommelY, 0.62, 0, pommel.Ie, pommel.It, look.hilt),
       partTuple(['box', 0.14, 0.02, 0.026], ZW.crossY, 0.32, 0, cross.Ie, cross.It, look.hilt),
-      partTuple(['box', 0.028, L / 2, 0.009], this.hiltLength + L / 2, 1.7, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
+      partTuple(['box', 0.028, L / 2, 0.009], this.hiltLength + L / 2, ZW_BLADE_MASS, blade.comY, blade.Ie, blade.It, 0xd8dde3, true),
     ];
   },
   // 레어 등급 마감 (전부 물리 무관, 콜라이더에서 ~1cm 안):
@@ -1570,29 +1577,37 @@ const sain = finalizeSpec('sain', {
 //      코등이 콜라이더는 박물관 폭 그대로 50.5 cm(겉모습 약속 ~1 cm — 휜 끝 판만 1.2 cm 위로 나온다). 물결 날에 출혈·파손 특례 없음 · 특수 능력 없음.
 //      등급 (10/21 사장님 '플랑베르주는 레어로'): 에픽 → 레어 — 특수 능력이 없는 칼이라 따로 보정 없이 등급 기본값을 따른다
 //       → power 1.1 → 1.05 · 내구 0.95 → 0.85 · 파손 0.0104 → 0.032 (TIER_DEFAULTS · TIER_FRAGILITY 그대로).
+//      게임 치수 (사장님 10/21 23:5x '플랑베르주는 전체 4 cm 줄여' — 나누기는 감독 · flamberge_look.js FLAMBERGE_GAME — 박물관 실측 기록은 그대로):
+//       날 1.187 → 1.162 m(물결 날 칼끝 쪽 −2.5 cm · 리카소 그대로) · 손잡이 49.2 → 47.7 cm(왼손 아래 −1.5 cm — 폼멜 가운데 −0.385 → −0.370 · 자루 상자 0.070 ~ −0.370) ·
+//       오른손 · 날밑 자리(hiltLength 0.085) · 손 사이 0.24 m 그대로 → 전체 164.9 cm · 손 ~ 칼끝 1.272 → 1.247 m.
+//      질량 (사장님 10/21 24:0x '손이 묵직한 느낌이 과하더라 … 진짜 약간만' · '2.5배 이상이 되도록'): 합 3.0 kg 그대로 — 자루 0.325 × 0.44/0.455(자루 상자 길이 비) = 0.314 ·
+//       폼멜 0.43 → 0.35(청동 덩이 부피 49 cm³ 는 사진 어림이라 오차 안에서 40 cm³ 쪽으로 — 손 쪽이 지나치게 묵직하다는 사장님 체감을 따른 각색 [I]) · 날밑 0.58 ·
+//       칼날 1.665 × 1.162/1.187(길이당 질량) + 폼멜에서 옮긴 0.08 + 4 cm 줄이며 빠진 0.046 = 1.756. 칼날 무게중심 · 회전 반경 비(0.353 · 0.272)는 그대로.
+//       → 무게중심 손에서 0.226 → 0.250 m · 손 기준 관성 0.692 → 0.684(롱소드 0.272 의 2.54 → 2.51 배). 모양 · 충돌체 크기 · 겉모습은 그대로(줄인 치수만)
 // ═════════════════════════════════════════════════════════════
+const FL_MASS = { grip: 0.325 * (0.44 / 0.455), pommel: 0.35, guard: 0.58 };
 const FL = {
-  // 부품 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.385(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.187 m
-  y: [-0.1575, -0.385, 0.097, FLAMBERGE_HILT + FLAMBERGE_MUSEUM.blade / 2],
-  mass: { grip: 0.325, pommel: 0.43, guard: 0.58, blade: 1.665 },
+  // 부품 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.370(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.162 m
+  y: [-0.15, -0.37, 0.097, FLAMBERGE_HILT + FLAMBERGE_GAME.blade / 2],
+  mass: { ...FL_MASS, blade: 3.0 - FL_MASS.grip - FL_MASS.pommel - FL_MASS.guard }, // 칼날 1.756 kg (위 머리말 — 합 3.000)
 };
 const flamberge = finalizeSpec('flamberge', {
   nameKo: '플랑베르주 (물결 날 양손검)', nameEn: 'Flamberge',
   desc: '독일 용병 란츠크네히트가 들던 불꽃 날 대검.\n물결 날은 벼리기 어려워 값비싼 칼이었다.',
   grip: 'two-hand', material: 'steel', tier: 'rare', // 10/21 사장님 결정: 에픽 → 레어 (보정 없음 — 위 머리말)
-  hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_MUSEUM.blade, gripAlong: -0.24,
+  hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_GAME.blade, gripAlong: -0.24,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
   // 손목 서보 상한: 두 손 쥠 기본값 26 (츠바이핸더와 같다)
   partMesh: flambergePartMesh(FL.y), decorate: flambergeDecorate,
   buildParts() {
     const L = this.bladeLength;
     const M = FL.mass;
-    const grip = boxInertia(M.grip, 0.019, 0.2275, 0.0165);
+    const grip = boxInertia(M.grip, 0.019, 0.22, 0.0165);
     const pommel = sphereInertia(M.pommel, 0.03);
     const guard = boxInertia(M.guard, 0.2525, 0.03, 0.0155);
     const blade = bladeInertia(M.blade, L, 0.353, 0.272, 0.04, 0.009);
     return [
-      partTuple(['box', 0.019, 0.2275, 0.0165], FL.y[0], M.grip, 0, grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
+      partTuple(['box', 0.019, 0.22, 0.0165], FL.y[0], M.grip, 0, grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
       partTuple(['ball', 0.03], FL.y[1], M.pommel, 0, pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
       partTuple(['box', 0.2525, 0.03, 0.0155], FL.y[2], M.guard, 0, guard.Ie, guard.It, FLAMBERGE_COLORS.steel),
       partTuple(['box', 0.02, L / 2, 0.0045], FL.y[3], M.blade, blade.comY, blade.Ie, blade.It, FLAMBERGE_COLORS.blade, true),

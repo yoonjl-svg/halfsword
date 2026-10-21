@@ -176,3 +176,17 @@ test('북부 대공의 검 지움: 무기 목록에 없음 · 옛 id ice = 츠�
   assert.equal(F.tier, 'rare'); near(F.power, 1.05); near(F.fragility, 0.032); assert.ok(!F.ability);
   assert.equal(Object.keys(WEAPONS).length, 28);
 });
+
+test('몸 길이 (사장님 10/21 23:5x): 츠바이핸더 손 ~ 칼끝 1.335 m · 2.865 kg · 플랑베르주 전체 −4 cm · 3.0 kg(폼멜 0.35) · 티소나는 그대로', async () => {
+  const { weaponPhysics } = await import('../../src/weapon_class.js');
+  const { FLAMBERGE_MUSEUM, FLAMBERGE_GAME } = await import('../../src/flamberge_look.js');
+  const Z = getWeapon('zweihander'), F = getWeapon('flamberge'), T = getWeapon('tizona');
+  const pz = weaponPhysics(Z), pf = weaponPhysics(F), pt = weaponPhysics(T);
+  near(Z.hiltLength + Z.bladeLength, 1.335, 1e-9); near(pz.mass, 2.865, 1e-9); near(pz.I, 0.749, 0.001);
+  assert.deepEqual({ ...FLAMBERGE_MUSEUM }, { overall: 1.689, blade: 1.187, ricasso: 0.267, guard: 0.505, handle: 0.492 }); // 박물관 기록은 그대로
+  near(FLAMBERGE_GAME.blade, 1.162); near(FLAMBERGE_GAME.handle, 0.477); near(F.bladeLength, 1.162); near(F.hiltLength + F.bladeLength, 1.247, 1e-9);
+  const fm = F.buildParts({}).map((p) => p[2][0]);
+  near(pf.mass, 3.0, 1e-9); near(fm[1], 0.35); near(fm[3], 1.756, 0.001); near(pf.com, 0.25, 0.001); assert.ok(pf.I / 0.2724 >= 2.5, `플랑베르주 관성 ${pf.I}`);
+  near(pt.mass, 2.3, 1e-9); near(pt.I, 0.586, 0.001); near(T.hiltLength + T.bladeLength, 1.195, 1e-9);
+  for (const w of [Z, F, T]) assert.equal(w.frame, 'heavy');
+});
