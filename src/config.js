@@ -465,6 +465,12 @@ export const IB_FLOW = { a: true, brake: 0.5 };
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
 export const IB_EDGE = { on: false, edge: 'motor' };
+// 플랑베르주 짧은 칼자루 충돌체 시험 (10/22 사장님 답 '수직이든 수평이든 플랑베르주가 유독 그랬던 것 같다' 뒤 — docs/strike/iberian_flat_hits_2026-10-22.md '플랑베르주' 절 · **기본 끔 · 사장님 확인 전**).
+//  까닭: 손잡이 47.7 cm(폼멜 가운데가 오른손 아래 0.37 m)라 칼끝을 내리면 자루 · 폼멜 충돌체가 제 배 · 가슴(BODY.humanLimits 제 몸 충돌)에 걸린다 —
+//   칼끝 땅에 자리에서 칼끝이 30° 위에 머물고(츠바이핸더 −43°) 올려베기가 상대에 닿지 않으며, 맞는 수가 줄어 느린 칼 면 닿음의 몫이 커진다.
+//  on = 플랑베르주 자루 상자의 밑과 폼멜 공 충돌체를 cut(오른손 기준 m — −0.25 = 츠바이핸더 mid 폼멜 자리)으로 올린다. 질량 · 무게중심 · 관성 · 겉모습은 그대로(weapons.js flamberge).
+//  끄면(on false) 판 그대로(같은 float). `?flHilt=short` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=flHilt
+export const FL_HILT = { on: false, cut: -0.25 };
 // 유파 패시브 (스킬북 4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬 … 이베리아 유파의 경우에는 손목 힘을 증가하는 걸 넣자' · 확인표 2110):
 //  이베리아 = 칼을 돌리는 손목 힘 한도(maxAimTorque) × wrist — 늘(이어 긋기 시험 B 를 패시브로 옮김). 사람 = 4급 책 '사용'(테스트 경로는 모두 켬) · AI = 숙련도 at 이상.
 //  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. `?ibWrist=0` = 이베리아만 끔

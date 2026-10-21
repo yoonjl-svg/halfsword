@@ -26,6 +26,13 @@
 //    edge=M  날 세우기 방식 (JOINTS.edge = motor | ff | pre — 있는 시험 스위치)
 //    edgeAt  JOINTS.edgeAt = 'near' (있는 시험 스위치) · edgeRel  JOINTS.edgeRel = true · edgeArm=K  JOINTS.edgeArm = K (팔 나눔 ⓓ — edge=motor 와 함께)
 //    ibEdge=motor|ff|pre  이베리아 유파만 그 날 세우기 방식 (config IB_EDGE — 이 조사의 시제품, 판 끔 · main.js ?ibEdge= 와 같은 뜻)
+//   10/22 플랑베르주 절 (문서 '플랑베르주 (10/22 사장님 답 뒤)'):
+//    flGuardIt=K|ZW  플랑베르주 코등이 칼날 축 관성 × K (ZW = 칼 전체가 츠바이핸더 값) · flGuardW=X  코등이 충돌체 반폭 X m · flGuardOff  코등이 충돌체 끔
+//    flBlade=hx+hz   플랑베르주 칼날 충돌체 반폭 · 반두께 · tsCap=K  잰 쪽 twistScale ≤ K · flHiltCut=Y  자루 상자 밑 · 폼멜 공 충돌체를 Y m 로 올림 (질량 · 무게중심 · 관성 그대로)
+//    colOff=i+j      잰 쪽 칼 부품(자루 0 · 폼멜 1 · 코등이 2) 충돌체 끔 · selfOff=i+j  그 부품만 제 몸통과 안 닿음
+//    flHilt[=Y]      플랑베르주 짧은 칼자루 충돌체 시험 스위치 켬 (config FL_HILT — 시제품, 판 끔 · main.js ?flHilt=short) — flHiltCut=Y 와 같은 몸을 판 길로
+//   pad 더: --rep0=N (첫 되풀이 번호 — 새 표본을 sum 으로 합침) · --trace=N (칼 면 맞음 앞 자취) · --pen (칼자루가 제 몸 속으로 든 깊이)
+//   pad 획 따라감 표: 움직이는 칼 날 어긋남 · 밧줄 끝 · 칼날 축 팽이 · 칼끝 최고 · 맞음/획 · 에너지 · 칼끼리 닿은 스텝 · 제 몸 닿음 스텝(부품마다)
 //   쥠 꼴은 모듈이 처음 읽힐 때 정해져 환경 변수로만: MONTANTE_HAND=old|wide|guard (츠바이핸더만 — 무기 몸 시험)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
@@ -85,11 +92,75 @@ if (ablVal('ibEdge') != null) {
   if (!['motor', 'ff', 'pre'].includes(ablVal('ibEdge'))) throw new Error(`ibEdge=${ablVal('ibEdge')}?`);
   Object.assign(CONFIG.IB_EDGE, { on: true, edge: ablVal('ibEdge') });
 }
+// 플랑베르주 몸 시험 (10/22 사장님 답 뒤 — 문서 '플랑베르주' 절, 이 도구 안에서만 · 판 값은 그대로): 코등이(부품 2)만 바꾼다. 겉모습(partMesh)은 부품 치수를 읽지 않아 그대로다
+//  flGuardIt=K   코등이 칼날 축 관성 × K (K = ZW 면 칼 전체 칼날 축 관성이 츠바이핸더와 같아지게) — 질량 · 휘두르는 축 관성 · 충돌체 그대로, twistScale 은 판 규칙대로 따라 준다
+//  flGuardW=X    코등이 충돌체 반폭 X m (판 0.2525 · 츠바이핸더 0.14) — 질량 · 관성 그대로
+//  flGuardOff    코등이 충돌체가 아무것과도 안 닿음 (질량 · 관성 그대로)
+//  tsCap=K       잰 쪽 twistScale 을 K 로 묶음 (min)
+const FL_ABL = ['flGuardIt', 'flGuardW', 'flGuardOff', 'flBlade', 'flHiltCut'].some((k) => ablVal(k) != null);
+if (FL_ABL) {
+  const { WEAPONS } = await import('../../src/weapons.js');
+  const sp = WEAPONS.flamberge;
+  const orig = sp.buildParts;
+  sp.buildParts = function (look) {
+    const parts = orig.call(this, look).map((p) => [...p]);
+    const g = parts[2];
+    const [shape, y, mp] = g;
+    const m = [...mp];
+    if (ablVal('flGuardIt') != null) {
+      const v = ablVal('flGuardIt');
+      if (v === 'ZW') {
+        const rest = parts.reduce((s, p, i) => s + (i === 2 ? 0 : p[2][3]), 0);
+        m[3] = Math.max(1e-6, 0.0027817 - rest); // 츠바이핸더 칼 전체 칼날 축 관성 (probe — 0.00278)
+      } else m[3] *= +v;
+    }
+    g[2] = m;
+    if (ablVal('flGuardW') != null) g[0] = [shape[0], +ablVal('flGuardW'), shape[2], shape[3]];
+    void y;
+    if (ablVal('flHiltCut') != null) {
+      // 칼자루 충돌체만 짧게 (판: 자루 상자 +0.07 ~ −0.37 · 폼멜 공 −0.37): 자루 상자 밑을 Y 로 · 폼멜 공을 Y 로 올림 — 질량 · 무게중심 · 관성은 무게중심 자리(comY)를 옮겨 그대로 둔다
+      const Yc = +ablVal('flHiltCut');
+      const gp = parts[0], pp = parts[1];
+      const top = gp[1] + gp[0][2];
+      const gy = (top + Yc) / 2;
+      gp[2] = [gp[2][0], gp[1] + gp[2][1] - gy, gp[2][2], gp[2][3]];
+      gp[0] = [gp[0][0], gp[0][1], (top - Yc) / 2, gp[0][3]];
+      gp[1] = gy;
+      pp[2] = [pp[2][0], pp[1] + pp[2][1] - Yc, pp[2][2], pp[2][3]];
+      pp[1] = Yc;
+    }
+    if (ablVal('flBlade') != null) {
+      // 칼날 충돌체 단면 반폭 · 반두께 (판 0.02 · 0.0045 — 츠바이핸더 0.028 · 0.009 · 겉모습 0.017 · 0.0016) — 질량 · 관성 그대로
+      const [hx, hz] = String(ablVal('flBlade')).split('+').map(Number);
+      const b = parts[3];
+      b[0] = [b[0][0], hx, b[0][2], hz];
+    }
+    return parts;
+  };
+}
+// flHilt[=Y]  플랑베르주 짧은 칼자루 충돌체 시험 스위치 켬 (config FL_HILT — 이 조사의 시제품, 판 끔 · main.js ?flHilt=short 와 같은 뜻 · Y 를 주면 cut 바꿈)
+if (ablVal('flHilt') != null) {
+  if (!CONFIG.FL_HILT) throw new Error('이 트리에 FL_HILT 가 없다');
+  CONFIG.FL_HILT.on = true;
+  if (ablVal('flHilt') !== true) CONFIG.FL_HILT.cut = +ablVal('flHilt');
+}
 const TSK = ablVal('ts');
+const TS_CAP = ablVal('tsCap');
+const SELF_PEN = !!arg('pen', false); // --pen: 획마다 칼자루가 제 몸통 속으로 가장 깊이 든 겹침(m)을 잰다 (느림)
+const SELF_PEN_PARTS = ['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']; // fighter.js TORSO_PARTS (제 칼과 닿는 제 몸)
+const VIS_HILT_LO = (f) => (f.weaponSpecId === 'flamberge' ? -0.4 : f.weaponSpecId === 'zweihander' ? -0.288 : -0.15); // 그려진 손잡이 · 폼멜 끝 (칼 원점 기준 m — 플랑베르주 폼멜 −0.37 − 0.03 · 츠바이핸더 mid −0.25 − 0.038 · 롱소드 −0.12 − 0.03)
 /** 잰 쪽 검객에 판 뒤 시험 몫을 건다 */
 function postBuild(f) {
   if (TSK === 'L') f.twistScale = 1;
   else if (TSK != null) f.twistScale *= +TSK;
+  if (TS_CAP != null) f.twistScale = Math.min(f.twistScale, +TS_CAP);
+  if (ablVal('flGuardOff') && f.weaponSpecId === 'flamberge') f.sword.collider(2).setCollisionGroups(0);
+  // colOff=i+j   잰 쪽 칼 부품 충돌체(자루 0 · 폼멜 1 · 코등이 2)가 아무것과도 안 닿음 · selfOff=i+j  그 부품만 제 몸통(골반 · 배 · 가슴 · 허벅지)과 안 닿음 (BODY.humanLimits 제 몸 충돌)
+  if (ablVal('colOff')) for (const i of String(ablVal('colOff')).split('+').map(Number)) f.sword.collider(i).setCollisionGroups(0);
+  if (ablVal('selfOff')) {
+    const tm = (f.bodies.chest.collider(0).collisionGroups() >>> 16) & 0xffff; // 제 몸통 소속 비트 (myBody | myTorso)
+    for (const i of String(ablVal('selfOff')).split('+').map(Number)) { const c = f.sword.collider(i); c.setCollisionGroups(c.collisionGroups() & ~tm); }
+  }
   if (ablVal('roll') && f.gripCone?.[1]) {
     f.world.removeImpulseJoint(f.gripCone[1], true); // 아래팔 돌림 밧줄(HUMAN.forearmRoll 80°)만 걷음 — 양날 고르기(rollSide)는 그대로
     f.gripCone.splice(1, 1);
@@ -212,8 +283,10 @@ tap.listeners.add((rec, r) => {
   const at = (dtBack) => { const k0 = stepK - Math.round(dtBack / DT); for (let i = hist.length - 1; i >= 0; i--) if (hist[i].k <= k0) return hist[i]; return hist[0]; };
   const h0 = hist[hist.length - 1];
   const h15 = at(0.15), h30 = at(0.3);
+  const lp = point.clone().sub(S.p).applyQuaternion(S.q.clone().invert()); // 칼 몸 안 닿은 자리 (x 날 · y 칼끝 · z 칼 면) — 코등이 · 자루 · 폼멜 가름
   recs.push({
     k: stepK, att: att.index, vic: rec.vic.index, part: rec.part, kind: rec.kind, isBlade: rec.isBlade, ea: rec.ea, eaDeg: rec.eaDeg, t: rec.t, speed: rec.speed, energy: rec.energy,
+    lx: lp.x, ly: lp.y, lz: lp.z, wPart: pr.w.part,
     landed: rec.energy >= STRIKE.minEnergy, stabCand, geo, tilt, nr, nf,
     vB: vBp.length(), vV: vVp.length(), vVall: vV.length(),
     targetErr: ownOk ? foldAngle(nOwn, n, axis) : null, // 제 칼 목표 → 이상 면 (°)
@@ -352,6 +425,7 @@ const FAM_CLS2 = { chainV: 'vUp', chainD: 'dUp' };
 function runPad() {
   const FL = list('fams', 'vDown,vUp,dDown,dUp,hor,chainV');
   const REPS = +arg('reps', 6);
+  const REP0 = +arg('rep0', 0); // 첫 되풀이 번호 (흔들기 · 과녁 걸음이 rep 로 정해져 --rep0=8 --reps=8 이면 앞 판 0~7 에 이어지는 새 표본 — sum 으로 합친다)
   const VS = list('v', '12,5').map(Number);
   const DISTS = list('dist', '1.4,1.6,1.8').map(Number);
   const FOEM = arg('foe', 'stand'); // stand = 서 있는 과녁 · block = 막기만 하는 AI · ai = 보통 AI
@@ -363,7 +437,7 @@ function runPad() {
     for (const fam of FL) {
       const F = FAMS[fam];
       if (!F) throw new Error(`모르는 무리 ${fam}`);
-      for (const v of VS) for (const dist of DISTS) for (const hold of HOLDS) for (let rep = 0; rep < REPS; rep++) {
+      for (const v of VS) for (const dist of DISTS) for (const hold of HOLDS) for (let rep = REP0; rep < REP0 + REPS; rep++) {
         recs.length = 0;
         padHist.clear();
         stepK = 0;
@@ -392,15 +466,101 @@ function runPad() {
         setPad(P, PAD.Pflug);
         aiOf = new Map();
         lastClash = -1e9;
-        { const bc = G.combat.bladeClash.bind(G.combat); G.combat.bladeClash = (world, pairs) => { if (pairs.length) lastClash = stepK; return bc(world, pairs); }; }
+        { const bc = G.combat.bladeClash.bind(G.combat); G.combat.bladeClash = (world, pairs) => { if (pairs.length) { lastClash = stepK; if (st.on) st.clash = (st.clash ?? 0) + 1; } return bc(world, pairs); }; }
         measure = (f) => f === P;
         inputPump(G, deps, { pace: pacer('60', seed) });
-        const step = () => { trackPads([P]); G.step(); stepK++; };
+        // 획 따라감 (긋기 시작 뒤 — 10/22 플랑베르주 절): 움직이는 칼(섞기 ≥ 0.99 · 70 % 점 ≥ 3 m/s)의 날 어긋남 · > 45° 몫 · 아래팔 돌림 밧줄 끝(≥ 78°) 몫 · 칼날 축 각속도 최대 · 칼끝 최고
+        const st = { mv: 0, lag: 0, lag45: 0, rope: 0, wT: 0, tip: 0, on: false, self: [0, 0, 0, 0], selfAny: 0 };
+        // 제 몸 닿음 (BODY.humanLimits — 제 칼 ↔ 제 골반 · 배 · 가슴 · 허벅지): 칼 부품(자루 0 · 폼멜 1 · 코등이 2 · 칼날 3)마다 닿은 스텝 수
+        const ownBodies = new Set(Object.values(P.bodies).map((b) => b.handle));
+        const nCol = Math.min(4, P.sword.numColliders());
+        const track = () => {
+          if (!st.on) return;
+          let any = false;
+          for (let ci = 0; ci < nCol; ci++) {
+            const c1 = P.sword.collider(ci);
+            let hit = false;
+            G.world.contactPairsWith(c1, (c2) => {
+              if (hit || !c2.parent() || !ownBodies.has(c2.parent().handle)) return;
+              G.world.contactPair(c1, c2, (m) => { if (m.numContacts() > 0) hit = true; });
+            });
+            if (hit) (st.self[ci]++, (any = true));
+            // 제 몸 파고듦 (겉모습 부작용 — selfOff 일 때 칼자루가 제 몸 속으로 얼마나 드나): 칼자루 부품 ↔ 제 골반 · 배 · 가슴 · 허벅지 가장 깊은 겹침 (m)
+            if (ci < 3 && SELF_PEN) for (const b of SELF_PEN_PARTS) {
+              const rb = P.bodies[b];
+              if (!rb) continue;
+              for (let j = 0; j < rb.numColliders(); j++) {
+                const sc = c1.contactCollider(rb.collider(j), 0);
+                if (sc && sc.distance < (st.pen ?? 0)) st.pen = sc.distance;
+              }
+            }
+          }
+          if (any) st.selfAny++;
+          // 겉모습 칼자루 파고듦 (--pen): 그려진 손잡이 축(칼 원점 기준 +0.07 ~ 폼멜 끝 VIS_HILT_LO, 2 cm 마다) 점이 제 몸통 충돌체 안에 든 가장 깊은 거리 (m) — 충돌체를 줄이거나 끈 시험의 겉모습 부작용
+          if (SELF_PEN) {
+            const sp = P.sword.translation(), sr0 = P.sword.rotation();
+            _qs.set(sr0.x, sr0.y, sr0.z, sr0.w);
+            const ax0 = _ax.set(0, 1, 0).applyQuaternion(_qs);
+            for (let yy = 0.07; yy >= VIS_HILT_LO(P) - 1e-9; yy -= 0.02) {
+              const pt = { x: sp.x + ax0.x * yy, y: sp.y + ax0.y * yy, z: sp.z + ax0.z * yy };
+              for (const b of SELF_PEN_PARTS) {
+                const rb = P.bodies[b];
+                if (!rb) continue;
+                for (let j = 0; j < rb.numColliders(); j++) {
+                  const pj = rb.collider(j).projectPoint(pt, false);
+                  if (pj?.isInside) { const d = Math.hypot(pj.point.x - pt.x, pj.point.y - pt.y, pj.point.z - pt.z); if (d > (st.vpen ?? 0)) st.vpen = d; }
+                }
+              }
+            }
+          }
+          const tv = P.tipVel.length();
+          if (tv > st.tip) st.tip = tv;
+          const sr = P.sword.rotation();
+          _qs.set(sr.x, sr.y, sr.z, sr.w);
+          const ax = _ax.set(0, 1, 0).applyQuaternion(_qs);
+          const w = P.sword.angvel();
+          const wTs = ax.x * w.x + ax.y * w.y + ax.z * w.z;
+          const wT = Math.abs(wTs);
+          if (wT > st.wT) st.wT = wT;
+          // 칼날 축 떨림: 칼날 축 각속도가 15 rad/s 넘게 한 쪽 → 다음 스텝 15 넘게 반대쪽 (부호 바뀜) — 느린 칼(70 % 점 < 3 m/s)일 때 · 빠를 때 따로
+          if (st.wPrev != null && Math.abs(st.wPrev) > 15 && wT > 15 && Math.sign(st.wPrev) !== Math.sign(wTs)) {
+            if (P.hitPointVel.length() < 3) st.chatS = (st.chatS ?? 0) + 1;
+            else st.chatF = (st.chatF ?? 0) + 1;
+          }
+          st.wPrev = wTs;
+          if (P.hitPointVel.length() < 3) st.slow = (st.slow ?? 0) + 1;
+          if ((P.edgeMoving ?? 0) >= 0.99 && P.hitPointVel.length() >= 3) {
+            st.mv++;
+            st.lag += P.edgeLag;
+            if (P.edgeLag > Math.PI / 4) st.lag45++;
+            const fr = P.bodies.farmS.rotation();
+            const zf = _zf.set(0, 0, 1).applyQuaternion(_qf.set(fr.x, fr.y, fr.z, fr.w));
+            const fz = _fz.set(0, 0, 1).applyQuaternion(_qs);
+            if (Math.abs(fz.dot(zf)) < COS78) st.rope++;
+          }
+        };
+        const ring = []; // --trace (pad): 잰 쪽 스텝 자취 — 칼 면 맞음 앞 30 스텝을 찍는다
+        const step = () => {
+          trackPads([P]);
+          const nRec = recs.length;
+          G.step();
+          stepK++;
+          track();
+          if (TRACE) {
+            ring.push(traceSnap(P, null, stepK));
+            if (ring.length > 30) ring.shift();
+            for (let j = nRec; j < recs.length; j++) {
+              const r = recs[j];
+              if (st.on && r.att === P.index && r.kind === 'flat' && r.landed && !r.stabCand && traces.length < TRACE) traces.push({ w: `${w} ${fam} v${v} d${dist} h${hold} rep${rep}`, seed, r, ring: ring.slice() });
+            }
+          }
+        };
         const runUntil = (q, max = 8 / DT) => { let g = 0; while (!q.done && g++ < max) step(); };
         for (let i = 0; i < Math.round(1.5 / DT); i++) step();
         const off0 = [P.handOffset.x, P.handOffset.y];
         runUntil(feedTrace(G, stroke(J.ch[0] - off0[0], J.ch[1] - off0[1], 3, { lift: false, hold: J.hold })));
         const k1 = stepK;
+        st.on = true;
         const cur = [P.handOffset.x, P.handOffset.y];
         const s1 = feedTrace(G, stroke(J.end[0] - cur[0], J.end[1] - cur[1], J.v, { lift: !F.then, down: false, hold: F.then ? 60 : 0 }));
         runUntil(s1);
@@ -413,6 +573,9 @@ function runPad() {
         for (let i = 0; i < Math.round(0.6 / DT); i++) step();
         const ev = events(recs.filter((r) => r.k >= k1));
         for (const r of ev) rows.push({ ...r, weapon: w, fam, famCls: k2 != null && r.k >= k2 + 3 ? FAM_CLS2[fam] : FAM_CLS[fam], v, dist, hold, rep, seed, foe: FOEM, fight: `${w}:${fam}:${v}:${dist}:${hold}:${rep}` });
+        delete st.on;
+        delete st.wPrev;
+        fights.push({ weapon: w, fam, famCls: FAM_CLS[fam], v, dist, hold, rep, st });
         G.world.free();
       }
       if (!QUIET) console.error(`… ${w} ${fam}`);
@@ -500,6 +663,22 @@ if (SRC === 'ai') {
     const sum = (k) => S.reduce((a, x) => a + x[k], 0);
     const stTxt = S.length ? ` · 휘두르는 스텝 밧줄 끝 ${(100 * sum('rope') / Math.max(1, sum('sw'))).toFixed(1)}% · 움직이는 칼 날 어긋남 평균 ${((sum('lag') / Math.max(1, sum('mv'))) * R2D).toFixed(1)}° · > 45° ${(100 * sum('lag45') / Math.max(1, sum('mv'))).toFixed(1)}% · 먼 길 뒤집힘 조건 ${(100 * sum('flip') / Math.max(1, sum('mv'))).toFixed(1)}%` : '';
     console.log(`${w.padEnd(12)} 판 ${F.length} 이김 ${(100 * mean(F.map((f) => f.win))).toFixed(0)}% · 준 ${mean(F.map((f) => f.dmgDealt)).toFixed(2)} · 받은 ${mean(F.map((f) => f.dmgTaken)).toFixed(2)} · 맞힘 ${mean(F.map((f) => f.hitsDealt)).toFixed(1)} · 공격 ${mean(F.map((f) => f.attacks ?? 0)).toFixed(1)} · 칼끝 ${(mean(F.map((f) => f.tipPk)) ?? 0).toFixed(1)} m/s${stTxt}`);
+  }
+}
+if (SRC === 'pad' && fights.some((f) => f.st)) {
+  // 획 따라감 요약 (10/22 플랑베르주 절): 무기 × 손가락 길 갈래 — 움직이는 칼 날 어긋남 평균 · > 45° 몫 · 밧줄 끝 몫 · 획마다 칼날 축 각속도 최대(중앙) · 칼끝 최고(중앙) · 맞음/획 · 맞음 판정 에너지 중앙
+  console.log('\n## 획 따라감 (pad · 긋기 시작 뒤): 움직이는 칼 날 어긋남 평균 · > 45° · 밧줄 끝 · 칼날 축 팽이 최대(중앙) · 칼끝 최고(중앙) · 맞음/획 · 맞음 에너지(중앙)');
+  const grp = { 수직: ['vDown', 'vUp'], 사선: ['dDown', 'dUp'], 가로: ['hor'] };
+  const medA = (a) => { const b = a.filter((x) => Number.isFinite(x)).sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
+  for (const w of [...new Set(fights.map((f) => f.weapon))]) {
+    for (const [gn, cl] of Object.entries(grp)) {
+      const F = fights.filter((f) => f.weapon === w && f.st && cl.includes(f.famCls));
+      if (!F.length) continue;
+      const s = (k) => F.reduce((a, f) => a + (f.st[k] ?? 0), 0);
+      const keys = new Set(F.map((f) => `${w}:${f.fam}:${f.v}:${f.dist}:${f.hold}:${f.rep}`));
+      const H = rows.filter((r) => keys.has(r.fight) && r.landed && r.isBlade && !r.stabCand);
+      console.log(`${w.padEnd(12)} ${gn} 획 ${String(F.length).padEnd(4)} 날 어긋남 ${((s('lag') / Math.max(1, s('mv'))) * R2D).toFixed(1)}° · > 45° ${(100 * s('lag45') / Math.max(1, s('mv'))).toFixed(1)}% · 밧줄 끝 ${(100 * s('rope') / Math.max(1, s('mv'))).toFixed(1)}% · 팽이 ${medA(F.map((f) => f.st.wT)).toFixed(1)} rad/s · 칼끝 ${medA(F.map((f) => f.st.tip)).toFixed(1)} m/s · 맞음/획 ${(H.length / F.length).toFixed(2)} · 에너지 ${medA(H.map((r) => r.energy)).toFixed(0)} J · 칼날 축 떨림 느릴 때 ${(s('chatS') / Math.max(1, s('slow')) * 100).toFixed(1)}% · 빠를 때 ${(s('chatF') / F.length).toFixed(2)}/획${SELF_PEN ? ` · 칼자루 제 몸 파고듦 획 중앙 ${(-100 * medA(F.map((f) => f.st.pen ?? 0))).toFixed(1)} cm · 최대 ${(-100 * Math.min(...F.map((f) => f.st.pen ?? 0))).toFixed(1)} cm · 3 cm 넘는 획 ${F.filter((f) => (f.st.pen ?? 0) < -0.03).length} · 겉모습 손잡이 파고듦 획 중앙 ${(100 * medA(F.map((f) => f.st.vpen ?? 0))).toFixed(1)} cm · 최대 ${(100 * Math.max(...F.map((f) => f.st.vpen ?? 0))).toFixed(1)} cm` : ''} · 칼끼리 닿은 스텝/획 ${(s('clash') / F.length).toFixed(1)} · 제 몸 닿음 스텝/획 ${(s('selfAny') / F.length).toFixed(1)} (자루 · 폼멜 · 코등이 · 칼날 ${[0, 1, 2, 3].map((i) => (F.reduce((a, f) => a + (f.st.self?.[i] ?? 0), 0) / F.length).toFixed(1)).join(' · ')})`);
+    }
   }
 }
 if (traces.length) {
