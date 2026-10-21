@@ -215,16 +215,16 @@ if (trunkArcSpeed > 0) CONFIG.BODY.trunkArcSpeed = trunkArcSpeed;
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
 const chainParam = params.get('chain');
 if (chainParam === 'legs' || chainParam === 'anchor') CONFIG.BODY.chain = chainParam;
-let lastPlayerWeapon = null; // 지난 판에 고른 무기 (다음 판 카드에서 되도록 뺀다)
+let lastPlayerWeapon = null; // 지난 판에 고른 무기 (여정 이어하기 저장용 — 10/21 16:3x 사장님 '이전 판 무기 다시 안 나오게 하는 제한 없애' 로 카드에서 빼지 않는다)
 /** 이번 판 내 카드 두 장 (맨 오른쪽 세 번째 칸은 상대 무기라 여기서 뽑지 않는다): 뽑기 목록에서 겹치지 않게 고르게 뽑는다
- *  (지난 판 무기는 되도록 빼서 같은 무기가 두 판 연속 나오지 않게).
+ *  (지난 판 무기를 빼던 규칙은 10/21 사장님 지시로 없앰 — 9/27 첫 카드 뽑기 때 감독이 넣은 것, 사장님 지시 기록 없음).
  *  테스트용 ?cards=excalibur,rubber_chicken 으로 두 장을 정할 수 있다 (세 번째 id 를 적어도 버린다: 상대 카드는 상대 무기다) */
 function drawCardIds() {
   // 모르는 id 는 버리고(getWeapon 이 롱소드로 바꿔 버린다) 서로 다른 두 장일 때만 쓴다
   const forced = (params.get('cards') || '').split(',').filter((id) => id && getWeapon(id).id === id).slice(0, 2);
   if (forced.length === 2 && forced[0] !== forced[1]) return forced;
   // 등급을 먼저 뽑고 그 등급 안에서 고른다 (사장님 결정: 커먼 40 · 레어 27 · 에픽 16 · 레전드 5 · 쓰레기 7 · ??? 5, weapons.js TIER_DRAW)
-  return drawWeaponCards(PLAYER_WEAPON_POOL, 2, { exclude: lastPlayerWeapon });
+  return drawWeaponCards(PLAYER_WEAPON_POOL, 2);
 }
 
 // ── 설정 (브라우저에 저장) ──
