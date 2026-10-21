@@ -233,7 +233,7 @@ export class AI {
     this.stepinArmed = true; // foeStepIn: 상대가 걸어 드는 한 번에 한 번만 굴린다
     // 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 … 화면 중앙에 기술명', docs/strike/tech_cue_2026-10-09.md):
     //  이 유파 고유 동작(길·속임수) 이름 표 — 꾸러미에 실제로 들어간 것(SKILL.schoolArt 켬 · ai:false 아님)만. 읽기만 하고 결정에는 안 쓴다(난수 없음)
-    const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter && open(ST.unique, u.name)) : []; // 숙련도로 뺀 것은 꾸러미에 없다
+    const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter && !ST.retired.has(u.name) && open(ST.unique, u.name)) : []; // 숙련도로 뺀 것 · 통폐합으로 뺀 것(10/21)은 꾸러미에 없다
     this.uniqueByName = new Map(UQ.map((u) => [u.feint ? u.feint.name : u.name, u]));
     this.standoffArmed = true; // standoff: 대치 한 번에 한 번만 굴린다
     // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나 (SKILL.schoolArt·schoolSecret 일 때).

@@ -44,19 +44,14 @@ import { segDist } from './skill.js';
 //  body = 플레이어 강화의 몸 꼴 (10/14, 플레이어만 — AI 는 읽지 않는다) [골반 돌림 °, 가슴 돌림 °, 숙임 °, 낮춤 m] · body2 = 잇는 동작 뒷몫(플레이어가 이어 그은 긋기)의 몸 꼴(없으면 body).
 //   돌림 부호는 자세표(guards.js)와 같음(+ 오른쪽으로 감음 · − 왼쪽). 값 = 고유 동작 몸 꼴 점검(10/12 …/body-audit-2q36ha, 모두 [추정]·[해석])의 절반 안팎 — 사장님 확인 전.
 //   한 동작 안에서 두 방향으로 도는 것(머리 위 돌려 베기 +40 → −40 등)은 앞 긋기 = 앞 방향, 이어 그은 뒷몫 = 뒤 방향. 세기는 UNIQUE_ASSIST.enhance 로 한꺼번에
-// AI 단계표 (10/21 — 플레이어 표 통폐합 때 AI 는 그대로 두려고 지금의 넷씩을 따로 얼려 둠 · 사장님이 AI 쪽을 정하면 바꾼다). aiUniqueStages 가 읽는다
-const AI_UNIQUE_STAGES = {
-  german: [['zwerchAbtritt', 1], ['krumphau', 2], ['duplieren', 3], ['schielhau', 4]],
-  italian: [['inquartata', 1], ['imbroccata', 2], ['cavazione', 3], ['passataSotto', 4]],
-  iberian: [['talhoRodeado', 1], ['altibaixo', 2], ['redondo', 3], ['talhoRevezBaixo', 4]],
-  japanese: [['hirakiGiri', 1], ['kote', 2], ['tsubameGaeshi', 3], ['kokoRenda', 4]],
-  chinese: [['chebuYaoji', 1], ['zuoyi', 2], ['lianchi', 3], ['ciji', 4, 'yaoji']], // ciji = 길은 yaoji(단독 동작) · 같은 이름 패시브
-};
-
+// 통폐합으로 뺀 고유 동작 (10/21 — 사장님 'ai 도 줄이고'): AI 도 평소 고르는 꾸러미에서 뺀다. 다만 비기가 빌려 쓰는 길(이탈리아 엇박 찌르기 = passataSotto ·
+//  옛 판 비기 독일 v1 krumphau · 동방 v1 zuoyi)은 꾸러미의 이름 표(techByName)에만 남겨 둔다(고르는 목록 tech 에는 없음 — sword_art.js applySchoolArt)
+export const RETIRED_UNIQUE = new Set(['krumphau', 'passataSotto', 'altibaixo', 'talhoRevezBaixo', 'kokoRenda', 'zuoyi']);
 // 통폐합 (10/21 사장님 '판정표대로 통폐합 해' — 판정은 docs/strike/unique_attack_study_result_2026-10-20.md 뒤 의견 · 사람 기술 기준): 유파마다 넷 → 둘~셋.
 //  뺀 것: 독일 굽은 베기(분노의 베기와 구별 안 됨 · 쓰임 최저) · 이탈리아 밑으로 들어가 찌르기(드묾 · 비기 런지와 겹침) · 이베리아 위아래 사슬 · 번갈아 올려베기(이어 긋기 셋이
 //  비슷 — 머리 위 돌려 베기로 모음, 이어 그을수록 힘이 쌓이는 강화는 다음 단계) · 일본 코코 연타(이베리아 돌려 베기와 같은 몸 뒤집는 이어 긋기) · 동방 좌익격(일본 코테와 같은 동작).
-//  동방 체보요격은 독일 비껴 딛는 가로베기와 걸음 · 몸 값이 같아 앞으로 끌어 딛는 걸음 · 낮은 몸으로 바꿈(step 칸 — 플레이어만 · 값은 사장님 확인 전). 단계 번호는 그대로(빈 번호는 뺀 것)
+//  동방 체보요격은 독일 비껴 딛는 가로베기와 걸음 · 몸 값이 같아 앞으로 끌어 딛는 걸음(schools.js step — AI 같이) · 낮은 몸(body — 플레이어)으로 바꿈(값은 사장님 확인 전).
+//  단계 번호는 그대로(빈 번호는 뺀 것). AI 도 이 표를 따른다(10/21 'ai 도 줄이고' — 아래 aiUniqueStages · RETIRED_UNIQUE)
 export const PLAYER_UNIQUE = {
   german: [
     { stage: 1, name: 'zwerchAbtritt', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 가로베기
@@ -78,7 +73,7 @@ export const PLAYER_UNIQUE = {
     { stage: 3, name: 'tsubameGaeshi', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시 ← 정수리 베기가 빗나가거나 막힌 뒤 위로 이어 그음
   ],
   chinese: [
-    { stage: 1, name: 'chebuYaoji', body: [-8, -12, 4, 0.045], step: { lat: -0.05, fwd: 0.35, when: 'strike' }, on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기 — 앞으로 끌어 딛고(掣步) 낮게 (10/21 독일 비껴 딛는 가로베기와 가름)
+    { stage: 1, name: 'chebuYaoji', body: [-8, -12, 4, 0.045], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 가로베기 — 앞으로 끌어 딛고(掣步) 낮게 (10/21 독일 비껴 딛는 가로베기와 가름)
     { stage: 3, name: 'lianchi', nameKo: '날개 접기 (염시)', orig: '斂翅', body: [-15, -20, 0, 0], on: [{ prev: 'stichPflug', when: 'turn' }] }, // 염시(속임 then 길) ← 쟁기 찌르기를 시작했다가 짧은 창 안에 거둠
     // 자→격 (刺→擊): 새 표 항목이지만 새 길은 없다 — yaoji 길(긴 자세 자리에서 시작하는 허리 베기). 출처는 schools.js ciji 패시브와 같은 「向前進步腰擊」
     { stage: 4, name: 'ciji', path: 'yaoji', nameKo: '찌르고 베기 (자→격)', orig: '刺→擊', body: [-15, -20, 1.5, 0.015], on: [{ prev: 'thrust', when: 'any', dir: 'horiz' }] }, // ← 내 찌르기(맞든 빗나가든) 뒤 짧은 창 안의 가로 긋기
@@ -94,11 +89,11 @@ export const PLAYER_UNIQUE = {
 export function aiUniqueStages(tradition) {
   const unique = new Map();
   const passive = new Map();
-  for (const [name, stage, path] of AI_UNIQUE_STAGES[tradition] ?? []) {
-    unique.set(path ?? name, stage);
-    if (path) passive.set(name, stage);
+  for (const e of PLAYER_UNIQUE[tradition] ?? []) {
+    unique.set(e.path ?? e.name, e.stage);
+    if (e.path) passive.set(e.name, e.stage);
   }
-  return { unique, passive };
+  return { unique, passive, retired: RETIRED_UNIQUE };
 }
 
 const D2R = Math.PI / 180;

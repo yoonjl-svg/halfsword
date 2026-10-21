@@ -116,8 +116,11 @@ function applySchoolArt(school, tradition, frame, style, prof = null) {
     });
     out = { ...out, tech, techByName: Object.fromEntries(tech.map((t) => [t.name, t])) };
   }
-  const uqAll = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false) : [];
-  const stage = prof == null ? null : aiUniqueStages(tradition).unique;
+  const ST = aiUniqueStages(tradition);
+  // 통폐합으로 뺀 것(10/21 RETIRED_UNIQUE)은 고르는 목록에서 빼고, 비기가 빌려 쓰는 길만 이름 표에 남긴다(아래 끝)
+  const uqAll = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false && !ST.retired.has(u.name)) : [];
+  const retiredPaths = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false && ST.retired.has(u.name) && u.path && !u.feint && !u.counter) : [];
+  const stage = prof == null ? null : ST.unique;
   const uqOpen = stage ? uqAll.filter((u) => !stage.has(u.name) || stage.get(u.name) <= prof) : uqAll; // 숙련도 거르기 (10/13)
   // 숙련도가 높을수록 고유 동작(길)을 더 자주 고른다 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK: 가중치 base × k · 숙련도 2 · 플레이어 · 도구(prof null) = 그대로)
   const kq = prof == null ? 1 : AI_PROFICIENCY.schoolK?.[prof] ?? 1;
@@ -126,6 +129,7 @@ function applySchoolArt(school, tradition, frame, style, prof = null) {
   const C = SCHOOL_ART.counter ? T.counterArt : null;
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
   if (uq.length) out = mergeUnique(out, uq.filter((u) => u.counter));
+  if (retiredPaths.length) out = { ...out, techByName: { ...out.techByName, ...Object.fromEntries(retiredPaths.filter((u) => !out.techByName[u.name]).map((u) => [u.name, u])) } }; // 비기만 빌려 쓰는 길 (10/21)
   return out;
 }
 
