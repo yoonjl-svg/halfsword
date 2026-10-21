@@ -22,6 +22,7 @@
 import * as THREE from 'three';
 import { BODY, GAIT } from './config.js';
 import { TRADITIONS, FAST_ACCENT, footworkTradition } from './schools.js';
+import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이탈리아 물러서기 I3 · 이베리아 옆 박차기 B2 · 독일 간격 잡기 G2)
 import { GUARD_BASE } from './guards.js';
 
 // 자세 이름 → 바탕 자세표 차례 (유파 걸음 P.guardLow — 몸 틀 자세표도 같은 패드 자리·같은 순서라 bodyGuard.nearest 와 견줄 수 있다)
@@ -130,7 +131,7 @@ function mkLeg(k, side) {
 export function gaitParams(f, isPlayer = false) {
   if (!GAIT.school) return GAIT;
   const art = f.swordArt;
-  const g = TRADITIONS[footworkTradition(f)]?.gait; // 대기실 스킬북 '보법' 없음·해제(플레이어만 — schools.js footworkTradition)이면 기본 걸음
+  const g = TRADITIONS[footworkTradition(f)]?.gait; // 대기실 스킬트리 보법 I 을 안 익혔으면(플레이어만 — schools.js footworkTradition) 기본 걸음
   if (!g) return GAIT;
   const P = Object.create(GAIT);
   const put = (o) => {
@@ -148,6 +149,10 @@ export function gaitParams(f, isPlayer = false) {
     P.maxStride = GAIT.maxStride * g.strideK;
     P.cadence0 = GAIT.cadence0 / g.strideK;
   }
+  // 스킬트리 (10/21 — 사람만 · skill_kit.js): 보법 I 은 유파 걸음 칸 전부, 보법 II 칸 몫만 따로 — 이탈리아 I3 물러서기 = 뒤 느려짐 없앰(backMul) ·
+  //  이베리아 B2 옆 박차기 = burstSide(첫 걸음 옆 박차기 · 옆 누르면 늘 박차기 · 비스듬히 앞으로). 그 칸을 안 익혔으면 그 몫만 걸음 칸에서 뺀다. AI 는 skillKit 이 없어 그대로
+  if (kitOff(f, 'backFlat')) P.backMul = undefined;
+  if (kitOff(f, 'burstSide')) P.burstSide = false;
   P.tradition = art.tradition;
   return P;
 }
@@ -352,8 +357,8 @@ export class Gait {
    */
   foeWhiff() {
     if (!GAIT.deChase || !this.active || this.f.state !== 'stand') return;
-    const def = TRADITIONS[footworkTradition(this.f)]?.chase; // 독일 간격 잡기 — 보법 책이 없거나 해제한 플레이어는 없음
-    if (!def) return;
+    const def = TRADITIONS[footworkTradition(this.f)]?.chase; // 독일 간격 잡기 — 보법 I 을 안 익힌 플레이어는 없음
+    if (!def || kitOff(this.f, 'chase')) return; // 사람은 스킬트리 G2 '보법 II · 간격 잡기' (10/21 — G1 은 뒤 박차기만)
     if (GAIT.deHold && !this.f.aiControlled && this.f.foeDistance() <= this.f.swordArt.measure.contact) return;
     this.chase = { def, t: 0, left: def.steps, got: false };
   }
@@ -650,10 +655,11 @@ export class Gait {
     const f = this.f;
     // 유파 걸음 값: 무기(검술 풀이)가 바뀌었거나 조종이 바뀌었으면(AI 가 몰면 aiControlled) 다시 고른다 — 칸 없는 유파는 늘 GAIT 그대로
     const pl = !f.aiControlled;
-    if (this._art !== f.swordArt || this._pl !== pl || this._fw !== f.schoolFootwork) {
+    if (this._art !== f.swordArt || this._pl !== pl || this._fw !== f.schoolFootwork || this._kit !== f.skillKit) {
       this._art = f.swordArt;
       this._pl = pl;
-      this._fw = f.schoolFootwork; // 대기실 스킬북 '보법'(플레이어만 — 판을 세울 때 정한다)
+      this._kit = f.skillKit; // 스킬트리 칸 몫 (10/21 — 사람만 · AI 는 늘 없음)
+      this._fw = f.schoolFootwork; // 대기실 스킬트리 보법 I (플레이어만 — 판을 세울 때 정한다 · 칸 몫 skillKit 도 그때)
       this.P = gaitParams(f, pl);
     }
     // 유파 옆 빠르기(P.sideMul — 10/10 이베리아 데스트레사 둥근 걸음, 사장님 '사이드스텝 이동량 증가' · 확인표 623): 조종 스틱에 옆 몫이 있을 때 가려는 속도의 옆 몫을 배율만큼.

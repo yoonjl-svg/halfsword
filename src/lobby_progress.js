@@ -1,30 +1,39 @@
-// 대기실 레벨·호칭·금화·머리 (샛별 저장소 3b280a1b): 레벨 = 1 + 얻은 물건·스킬북 수. 시작 지급품(나뭇가지 · 방어구 kettle)은 세지 않는다.
+// 대기실 레벨·호칭·금화·머리 (샛별 저장소 3b280a1b): 레벨 = 1 + 얻은 물건 · 익힌 스킬 칸 수(10/21 — 전: 물건 · 스킬북). 시작 지급품(나뭇가지 · 방어구 kettle)은 세지 않는다.
 // 전리품/구매가 생기면 획득 사건마다 고유 receipt 를 넘긴다. 같은 사건을 재처리해도 중복 상승하지 않으며, 장착/해제는 레벨에 영향이 없다.
-// 10/16 (docs/import/lobby_fix_2026-10-16.md §6): 스킬북을 금화로 산다(purchase — 사장님 04:1x '금화나 머리를 얻으면 교환해서 개방') · 산 책은 receipt 'skillbook:<유파>:<급>' 으로
-//  acquisitions 에 남는다(가진 책 = 이것 하나 — 금화와 같은 저장에 같이 써서 반쯤 산 채로 남지 않는다) · 이미 받은 인장을 금화로(seal_coins.js addCoins).
+// 10/16 (docs/import/lobby_fix_2026-10-16.md §6): 스킬북을 금화로 샀다(purchase — 사장님 04:1x '금화나 머리를 얻으면 교환해서 개방') · 산 책은 receipt 'skillbook:<유파>:<급>' 으로
+//  acquisitions 에 남았다(10/21 스킬트리로 바뀜 — 아래) · 이미 받은 인장을 금화로(seal_coins.js addCoins).
 //  금화 벌기 (사장님 결정 04:3x '승리시 랜덤으로 벌어. 5~15원 중 랜덤. 패배시 1~5원 감소'): 첫 화면·대기실 여정의 판 끝마다 journeyCoins — 0 아래로는 안 내려간다.
 //  머리 (사장님 결정 04:3x '적의 머리를 베면 1개씩 주는 재화'): 같은 여정에서 상대의 목을 베면 1 (main.js — COMBAT_HOOKS.onDecapitate · 한 상대에 한 번, awardHead).
-//   머리로 무엇을 사는지는 사장님 확인 전 (skill_books.js BOOK_HEAD_PRICE null). 디자인 보기용 주소 `?coins=N`(game_entry.js setCoins).
+//   머리로 사는 것 (10/21 스킬트리 — 사장님 19:0x): 패시브 칸 머리 10 · 비기 칸 금화 400 + 머리 20 · 유파 초기화 머리 1 (skill_tree_store.js). 디자인 보기용 주소 `?coins=N`(game_entry.js setCoins).
+//  10/21 스킬트리 (docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md): 익힌 칸은 receipt 'skill:<유파>:<칸 id>' · kind 'skill' · paid { coins, heads }(낸 값 — 초기화 때 그대로 돌려줌)로
+//   acquisitions 에 남는다(값과 같은 저장 — 반쯤 산 채로 남지 않음). 옛 스킬북('skillbook:<유파>:<급>')은 옮기기(skill_tree_store.js migrateSkillBooks)가 한 번의 저장으로 거두고 돌려준다 —
+//   그 기록 = tree { v, at, books, coins, heads, bonus, notice }(이 저장 안 — 금화와 같은 저장이라 '금화만 받고 기록이 없음' · '기록만 있고 금화가 없음'이 생기지 않는다). update = 그 한 번의 저장 틀.
 //  호칭 (사장님 10/16 15:3x ⑥ "호칭 시스템을 나중에 추가할 거라서 '여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" · 16:0x "… 이미 가진 호칭인 여행자가 보이고"
 //   — docs/import/ui_unify_2026-10-16.md §5): 기본 호칭 '여행자'는 늘 가짐 · 얻은 호칭은 titles(unlockEventTitle — 앞으로 호칭 제도가 부른다) · 고른 호칭은 title(selectTitle).
 //   호칭을 새로 지어 넣지 않는다(지금 얻을 수 있는 호칭은 없다).
 export const PROGRESS_KEY = 'stillness.lobby.progress.v1';
 export const DEFAULT_TITLE = '여행자';
-let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: DEFAULT_TITLE };
+/** 얻은 것 갈래: item 물건 · skill 스킬트리 칸(10/21) · skillbook 옛 스킬북(읽기만 — 옮기기가 거둔다) */
+export const ACQ_KINDS = Object.freeze(['item', 'skill', 'skillbook']);
+let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: DEFAULT_TITLE, tree: null };
 const validText = s => typeof s === 'string' && s.length > 0 && s.length <= 160;
 const count = n => Number.isSafeInteger(n) && n >= 0;
+const paidOf = p => (p && count(p.coins) && count(p.heads) ? { coins: p.coins, heads: p.heads } : null);
+/** 스킬트리 옮기기 기록 (skill_tree_store.js) — 모양이 맞으면 사본, 아니면 null */
+const treeOf = t => (t?.v === 1 && count(t.books) && count(t.coins) && count(t.heads) && count(t.bonus)
+  ? { v: 1, at: validText(t.at) ? t.at : '', books: t.books, coins: t.coins, heads: t.heads, bonus: t.bonus, notice: t.notice === true } : null);
 export function readProgress() {
   try {
     const value = JSON.parse(localStorage.getItem(PROGRESS_KEY));
     if (value?.version === 1) {
       const seen = new Set();
       const acquisitions = (Array.isArray(value.acquisitions) ? value.acquisitions : []).filter(a => {
-        if (!a || !validText(a.receipt) || !['item', 'skillbook'].includes(a.kind) || seen.has(a.receipt)) return false;
+        if (!a || !validText(a.receipt) || !ACQ_KINDS.includes(a.kind) || seen.has(a.receipt)) return false;
         seen.add(a.receipt); return true;
-      }).map(({receipt, kind}) => ({receipt, kind}));
+      }).map(({receipt, kind, paid}) => (paidOf(paid) ? {receipt, kind, paid: paidOf(paid)} : {receipt, kind}));
       const titles = (Array.isArray(value.titles) ? value.titles : []).filter(t => t && validText(t.event) && validText(t.name));
       session = { acquisitions, titles, title: titles.some(t => t.name === value.title) ? value.title : DEFAULT_TITLE,
-        coins: count(value.coins) ? value.coins : 100, heads: count(value.heads) ? value.heads : 0 };
+        coins: count(value.coins) ? value.coins : 100, heads: count(value.heads) ? value.heads : 0, tree: treeOf(value.tree) };
     }
   } catch { /* 이번 실행 동안 유지한다. */ }
   return { ...structuredClone(session), level: 1 + session.acquisitions.length };
@@ -35,25 +44,40 @@ function save() {
 }
 export function recordAcquisition({ receipt, kind, source }) {
   readProgress();
-  if (source === 'starter' || !validText(receipt) || !['item', 'skillbook'].includes(kind) || session.acquisitions.some(a => a.receipt === receipt)) return false;
+  if (source === 'starter' || !validText(receipt) || !ACQ_KINDS.includes(kind) || session.acquisitions.some(a => a.receipt === receipt)) return false;
   session.acquisitions.push({ receipt, kind }); save(); return true;
 }
-/** 이 receipt 를 이미 얻었나 (스킬북 'skillbook:<유파>:<급>') */
+/** 이 receipt 를 이미 얻었나 (스킬트리 칸 'skill:<유파>:<칸 id>') */
 export function owns(receipt) {
   return readProgress().acquisitions.some(a => a.receipt === receipt);
 }
 /**
- * 사기: 금화 price 를 내고 receipt 를 얻는다 — 한 번의 저장(금화·얻은 것 같이). 이미 가졌거나 금화가 모자라면 아무것도 안 바뀐다.
- *  돌려줌 { ok, saved, why } — why: 'owned' · 'coins' · 'bad'. 레벨 = 1 + 얻은 수라 스킬북 한 권마다 Lv +1 (지금 레벨 규칙 그대로)
+ * 사기: 금화 price · 머리 heads 를 내고 receipt 를 얻는다 — 한 번의 저장(금화 · 머리 · 얻은 것 같이). 이미 가졌거나 돈이 모자라면 아무것도 안 바뀐다.
+ *  낸 값은 paid 로 남긴다(유파 초기화가 그대로 돌려줌 — skill_tree_store.js resetSchool).
+ *  돌려줌 { ok, saved, why } — why: 'owned' · 'coins' · 'heads' · 'bad'. 레벨 = 1 + 얻은 수라 칸 하나마다 Lv +1
  */
-export function purchase({ receipt, kind, price }) {
+export function purchase({ receipt, kind, price, heads = 0 }) {
   readProgress();
-  if (!validText(receipt) || !['item', 'skillbook'].includes(kind) || !count(price)) return { ok: false, saved: false, why: 'bad' };
+  if (!validText(receipt) || !ACQ_KINDS.includes(kind) || kind === 'skillbook' || !count(price) || !count(heads)) return { ok: false, saved: false, why: 'bad' };
   if (session.acquisitions.some(a => a.receipt === receipt)) return { ok: false, saved: false, why: 'owned' };
   if (session.coins < price) return { ok: false, saved: false, why: 'coins' };
+  if (session.heads < heads) return { ok: false, saved: false, why: 'heads' };
   session.coins -= price;
-  session.acquisitions.push({ receipt, kind });
+  session.heads -= heads;
+  session.acquisitions.push({ receipt, kind, paid: { coins: price, heads } });
   return { ok: true, saved: save(), why: null };
+}
+/**
+ * 한 번의 저장으로 고치기 (스킬트리 옮기기 · 유파 초기화 — skill_tree_store.js): fn(draft) 가 지금 값의 사본을 고치고 참을 돌려주면 그 사본이 지금 값이 되고 한 번 저장한다.
+ *  거짓이면 아무것도 안 바뀐다. 저장이 막히면 이번 실행 동안만 그 값(다음 실행은 저장된 옛 값에서 다시 — 금화가 사라지거나 두 번 생기지 않는다).
+ *  돌려줌 { changed, saved }
+ */
+export function update(fn) {
+  readProgress();
+  const draft = structuredClone(session);
+  if (!fn(draft)) return { changed: false, saved: false };
+  session = { ...draft, coins: count(draft.coins) ? draft.coins : session.coins, heads: count(draft.heads) ? draft.heads : session.heads, tree: treeOf(draft.tree) };
+  return { changed: true, saved: save() };
 }
 /** 금화 더하기 (인장 → 금화 바꾸기 — seal_coins.js). 돌려줌: 저장했나 */
 export function addCoins(amount) {

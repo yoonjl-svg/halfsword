@@ -80,7 +80,7 @@ export function weaponSpecText(spec) {
 }
 export const TIER_LABEL = { trash: '쓰레기', common: '커먼', rare: '레어', epic: '에픽', legend: '레전드', mystery: '???' };
 
-// ── 무기 카드 뽑기 확률 (사장님 결정): 등급을 먼저 뽑고, 그 등급 안에서 무기를 고르게 뽑는다 ──
+// ── 무기 카드 뽑기 확률 (사장님 결정): 등급을 먼저 뽑고, 그 등급 안에서 무기를 고르게 뽑는다 (스킬트리 편지가 있으면 칸마다 무게 — 아래 drawWeaponCards) ──
 //  카드 한 장마다의 등급 확률(%). 무기가 늘거나 줄어도 등급 확률은 그대로다. ??? 는 등급 전체가 5%.
 export const TIER_DRAW = { common: 40, rare: 26, epic: 18, legend: 6, trash: 4, mystery: 6 }; // 10/21 22:xx 사장님 '커먼 40 레어 26 에픽 18 레전드 6 ??? 6 쓰레기 4' (전 40 · 27 · 16 · 5 · 7 · 5)
 /**
@@ -90,7 +90,11 @@ export const TIER_DRAW = { common: 40, rare: 26, epic: 18, legend: 6, trash: 4, 
 //  묶음 (drawGroup, 샛별 저장소에서 가져옴 b4464ef weapon_draw.js — 간장·막야): 같은 drawGroup 무기는 등급 안에서 한 칸으로 센다.
 //   그 칸이 뽑히면 묶음 안에서 하나를 고르고(난수 한 번 더), 같은 판에 묶음의 다른 무기는 나오지 않는다. 지난 판 무기를 뺄 때도 묶음째 뺀다.
 //   묶음 없는 무기(지금 간장·막야 말고 전부)는 전과 같은 난수 수·같은 결과다.
-export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random } = {}) {
+//  편지 (10/21 스킬트리 — 사장님 결정 '칸마다 무게' · docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5): weightOf(id) = 그 무기 칸의 편지 배율(편지를 가진 유파 = config LETTER.mult · 그 밖 1 — main.js drawCardIds).
+//   남은 칸 가운데 배율이 1 이 아닌 칸이 하나라도 있으면 등급을 따로 뽑지 않고 — 칸마다 무게 = 그 등급 TIER_DRAW ÷ 그 등급의 남은 칸 수 × 배율 — 모든 등급의 칸을 그 무게로 한 번에 고른다(난수 한 번 + 묶음 안 고르기).
+//   그래서 편지 유파 칸만 늘고 나머지(쓰레기 · ??? 포함)는 그만큼 조금씩 준다. 둘째 장도 같은 규칙(첫 장 칸 · 묶음을 뺀 남은 칸으로 다시 셈).
+//   편지가 없으면(weightOf 없음 · 모든 칸 배율 1) 아래 전 줄 그대로 — 같은 난수 · 같은 결과(AI · 편지 없는 플레이어 판 그대로).
+export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random, weightOf = null } = {}) {
   pool = pool.filter(id => !getWeapon(id).characterOnly); // characterOnly(인물 전용) 무기는 카드에 안 나온다 — 지금 그런 무기는 없어 뽑기 결과 · 난수 차례는 전과 같다 (샛별 저장소 10/17)
   const groupOf = (id) => getWeapon(id).drawGroup || id;
   const exGroup = exclude == null ? null : groupOf(exclude);
@@ -106,12 +110,22 @@ export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random
       slots.get(g).push(id);
     }
     const tiers = Object.keys(byTier).filter((t) => (TIER_DRAW[t] ?? 0) > 0);
-    const total = tiers.reduce((a, t) => a + TIER_DRAW[t], 0);
-    let r = rnd() * total;
-    let t = tiers[tiers.length - 1];
-    for (const k of tiers) if ((r -= TIER_DRAW[k]) < 0) { t = k; break; }
-    const slots = byTier[t] ? [...byTier[t].entries()] : left.map((id) => [groupOf(id), [id]]);
-    const [g, members] = slots[Math.floor(rnd() * slots.length)];
+    const mul = weightOf ? (m) => Math.max(0, weightOf(m[0]) ?? 1) : null;
+    let g, members;
+    if (mul && tiers.some((t) => [...byTier[t].values()].some((m) => mul(m) !== 1))) {
+      // 편지: 칸마다 무게 = TIER_DRAW[등급] ÷ 그 등급 칸 수 × 배율 — 모든 등급에서 한 번에
+      const all = tiers.flatMap((t) => { const sl = [...byTier[t].entries()]; return sl.map(([k, m]) => [k, m, (TIER_DRAW[t] / sl.length) * mul(m)]); });
+      let r = rnd() * all.reduce((a, x) => a + x[2], 0);
+      [g, members] = all[all.length - 1];
+      for (const x of all) if ((r -= x[2]) < 0) { [g, members] = x; break; }
+    } else {
+      const total = tiers.reduce((a, t) => a + TIER_DRAW[t], 0);
+      let r = rnd() * total;
+      let t = tiers[tiers.length - 1];
+      for (const k of tiers) if ((r -= TIER_DRAW[k]) < 0) { t = k; break; }
+      const slots = byTier[t] ? [...byTier[t].entries()] : left.map((id) => [groupOf(id), [id]]);
+      [g, members] = slots[Math.floor(rnd() * slots.length)];
+    }
     const id = members.length === 1 ? members[0] : members[Math.floor(rnd() * members.length)];
     out.push(id);
     left = left.filter((x) => groupOf(x) !== g);

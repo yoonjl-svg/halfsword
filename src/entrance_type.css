@@ -66,8 +66,12 @@
 :host .title-list [aria-selected="true"] { font-weight: var(--fw-label); } /* 지금 호칭 = 600 + ✓ */
 :host .profile-data .name-row span { font-weight: var(--fw-head); }
 :host .duel-record b, :host .coin-balance, :host .wallet b { font-weight: var(--fw-body); color: var(--c-text); }
-:host .panel-heading h2, :host .name-dialog h2 { font-weight: var(--fw-head); text-shadow: none; }
-:host .name-dialog h2 { font-size: var(--fs-l); }
+:host .panel-heading h2, :host .name-dialog h2, :host .tree-dialog h2 { font-weight: var(--fw-head); text-shadow: none; }
+:host .name-dialog h2, :host .tree-dialog h2 { font-size: var(--fs-l); }
+:host .tree-dialog p { font-weight: var(--fw-body); color: var(--c-text); } /* 스킬트리 옮김 알림 (10/21) */
+/* 스킬트리 칸 (10/21 — skill_tree.js): 첫 줄 600 · 둘째 줄 보조 색 400 · 값 알약 강조 색 (크기는 칸 폭에 맞춰 skill_tree.js 가 줄임) */
+:host .tree-node .node-l1 { font-weight: var(--fw-label); }
+:host .tree-node .node-l2, :host .tree-reset { font-weight: var(--fw-body); }
 :host .name-dialog label, :host .name-error { color: var(--c-sub); font-weight: var(--fw-body); }
 :host .equipped-badge { font-weight: var(--fw-label); }
 :host .lobby-status[data-tone=notice] { color: var(--c-accent); font-weight: var(--fw-label); }

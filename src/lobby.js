@@ -1,6 +1,8 @@
 // 대기실 (샛별 저장소 817db21c · b73a9c82 · 3b280a1b — docs/import/lobby_port_2026-10-16.md §3 · 고친 것 docs/import/lobby_fix_2026-10-16.md): 첫 화면의 처음부터·이어하기와 여정 사이의 세 칸
 //  ① 캐릭터 프로필(정사각 그림 — 10/17 22:1x 사장님: 3D 미리보기(360° · 장착)를 없애고 프로필 사진 자리 · 10/18 04:1x '옛 3d 지워' 로 그 코드도 지움, docs/design/portrait_ui_2026-10-17.md) + 출발 단추
-//  ② 내 정보(레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 아이템 · 상점 · 스킬북 · 이벤트
+//  ② 내 정보(레벨 · 호칭 · 이름 · 대면 결과 · 금화 · 머리) + 메뉴 넷 ③ 아이템 · 상점 · 스킬 · 이벤트
+//  10/21 (사장님 스킬트리 확정 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md): '스킬북' 칸 → '스킬'(책이 없어짐) · 유파마다 11 칸 트리(skill_tree.js — 금화 · 머리로 배우기 · 유파 초기화) ·
+//   옛 스킬북은 판을 처음 연 때 한 번 거두고 돌려준 뒤 금화 500(skill_tree_store.js migrateSkillBooks — main.js · 여기서도 안전하게 한 번 더) · 알림 창 한 번(takeTreeNotice)
 //  우리 손댐 (사장님 10/16 01:0x): 무기는 나뭇가지 하나(롱소드 뺌) · 나뭇가지도 방어구처럼 설명 카드(이름 · 등급 · 설명 — 우리 weapons.js 의 nameKo · tier · desc 그대로, 등급 글은 무기 카드와 같은 TIER_LABEL)
 //  10/16 03:5x~04:3x (lobby_fix): 장착은 실제 싸움에 (main.js journeyLoadout) · 케틀 햇 레전드 + '생존술: 기력 +30' · 글자는 싸움 화면 규칙(entrance_type.css) ·
 //   스킬북 = 유파별 별자리(skill_tree.js — 금화로 사고 사용 / 봉인) · 머리(천 주머니) · 이미 받은 인장을 금화로 한 번(seal_coins.js)
@@ -22,6 +24,7 @@ import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress, titleOptions, selectTitle } from './lobby_progress.js';
 import { mountSkillTree } from './skill_tree.js';
 import { convertSeals, takeSealNotice } from './seal_coins.js';
+import { migrateSkillBooks, takeTreeNotice, treeNoticeText } from './skill_tree_store.js'; // 옛 스킬북 → 스킬트리 (10/21 — 한 번)
 import { getWeapon, TIER_LABEL, weaponSpecText } from './weapons.js';
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 금화 · 머리 그림 — 결과 창 금화 줄과 같은 그림
 
@@ -65,7 +68,7 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
         <nav class="lobby-tabs" role="tablist" aria-label="대기실 메뉴">
           <button role="tab" id="tabItems" aria-controls="panelInventory" aria-selected="true" data-panel="Inventory">아이템</button>
           <button role="tab" id="tabShop" aria-controls="panelShop" aria-selected="false" tabindex="-1" data-panel="Shop">상점</button>
-          <button role="tab" id="tabSkills" aria-controls="panelSkills" aria-selected="false" tabindex="-1" data-panel="Skills">스킬북</button>
+          <button role="tab" id="tabSkills" aria-controls="panelSkills" aria-selected="false" tabindex="-1" data-panel="Skills">스킬</button>
           <button role="tab" id="tabEvent" aria-controls="panelEvent" aria-selected="false" tabindex="-1" data-panel="Event">이벤트</button>
         </nav>
       </section>
@@ -77,11 +80,12 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
           <p id="equipmentStatus" class="sr-only" role="status"></p>
         </div>
         <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden><div class="panel-heading"><h2>상점</h2></div><p class="empty-panel">아직 판매 중인 물품이 없습니다.</p></div>
-        <div role="tabpanel" id="panelSkills" aria-labelledby="tabSkills" hidden><div class="panel-heading"><h2>스킬북</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="skillCoins"></b>${POUCH_ICON}<b id="skillHeads"></b></span></div><div id="skillTreeHost" class="skill-tree-host"></div><p id="skillStatus" class="sr-only" role="status"></p></div>
+        <div role="tabpanel" id="panelSkills" aria-labelledby="tabSkills" hidden><div class="panel-heading"><h2>스킬</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="skillCoins"></b>${POUCH_ICON}<b id="skillHeads"></b></span></div><div id="skillTreeHost" class="skill-tree-host"></div><p id="skillStatus" class="sr-only" role="status"></p></div>
         <div role="tabpanel" id="panelEvent" aria-labelledby="tabEvent" hidden><div class="panel-heading"><h2>이벤트</h2></div><p class="empty-panel">아직 진행 중인 이벤트가 없습니다.</p></div>
       </section>
     </div>
-  </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>`;
+  </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>
+  <dialog class="tree-dialog" id="treeDialog" aria-labelledby="treeHeading" aria-describedby="treeText"><h2 id="treeHeading">스킬트리</h2><p id="treeText"></p><div class="dialog-actions"><button type="button" id="closeTree" class="primary">확인</button></div></dialog>`;
   const $ = id => root.getElementById(id), events = new AbortController();
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();
@@ -89,6 +93,8 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   // 이미 받은 인장 → 금화 (사장님 10/16 04:2x — 한 번만, seal_coins.js · 인장 제도는 08:1x 에 없앰). 바꾸기는 판을 처음 연 때 main.js 가 이미 했다 — 여기선 남은 것만(안전)
   //  알림은 아직 안 띄운 바꿈이 있을 때 한 번 (takeSealNotice). 테스트 경로에서는 바꾸지도 알리지도 않는다
   const converted = ctx.test ? null : (convertSeals(), takeSealNotice());
+  // 옛 스킬북 → 스킬트리 (사장님 10/21 — skill_tree_store.js): 옮기기는 판을 처음 연 때 main.js 가 이미 했다 — 여기선 남은 것만(안전). 알림은 아직 안 띄웠으면 한 번(창). 테스트 경로는 안 함
+  const treeNotice = ctx.test ? null : (migrateSkillBooks(), takeTreeNotice());
   const profile = readProfile();
   const status = (text, tone = '') => { $('lobbyStatus').textContent = text; if (tone) $('lobbyStatus').dataset.tone = tone; else delete $('lobbyStatus').dataset.tone; };
   // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥ '대표 유파 정보는 없어도 되겠다')
@@ -153,6 +159,8 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   const total = profile.wins + profile.losses;
   $('duelRecord').textContent = `${profile.wins}승리 ${profile.losses}패배 (${total ? Math.round(profile.wins / total * 100) : 0}%)`;
   if (converted?.coins) status(`인장 ${converted.seals}개를 금화 ${converted.coins.toLocaleString('ko-KR')}으로 바꿨습니다.`, 'notice');
+  if (treeNotice) { $('treeText').textContent = treeNoticeText(treeNotice); try { $('treeDialog').showModal(); } catch { $('treeDialog').setAttribute('open', ''); } }
+  listen($('closeTree'), 'click', () => $('treeDialog').close());
   // ① 프로필 칸 (사장님 10/17 22:1x — 3D 미리보기를 없애고 정사각 프로필 사진 자리 · docs/design/portrait_ui_2026-10-17.md): 지금 플레이어의 프로필
   //  (10/18 16:3x 기본 = 샛별 새 투명 배경 도트판 · 플레이어 = player2 그림 · ?portrait=hd / low 예비 · ?portraitGrid=1 칸 줄 — portraits.js).
   //  ?hero=<인물 id> 로 다른 영웅이면 그 그림(main.js lobbyPortraitId). 그림 안에 액자 1 이 있어 CSS 틀은 없다 · 못 불러오면 빈 액자 1(data-empty — lobby.css)
@@ -275,6 +283,6 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
   $('lobbyHeading').focus();
   return {
     tree, // 시험·사진 도구: lobby.tree.show('german', 2)
-    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); grove.dispose(); },
+    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); $('treeDialog').close(); grove.dispose(); },
   };
 }

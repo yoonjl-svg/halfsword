@@ -1,4 +1,5 @@
-// 대기실 고친 것 시험 (docs/import/lobby_fix_2026-10-16.md): 케틀 햇 최대 기력 130 · 스킬북(사기 · 사용/봉인 · 판에서 켜고 끔 · ?uniqueStage) · 이미 받은 인장 → 금화 · 여정 금화 · 머리
+// 대기실 고친 것 시험 (docs/import/lobby_fix_2026-10-16.md): 케틀 햇 최대 기력 130 · 이미 받은 인장 → 금화 · 여정 금화 · 머리
+//  10/21 스킬북 → 스킬트리: 사기 · 판에서 켜고 끔 · ?uniqueStage 시험은 tools/sim/skill_tree.test.mjs 로 옮김 (src/skill_books.js 지움)
 //  10/16 08:1x 인장 없앰(docs/strike/school_kit_map.md §3): 인장 셈은 seal_coins.js 의 얼린 상수 · 깬 수는 journey_save.js 통계
 //  node --test tools/sim/lobby_fix.test.mjs   (시뮬 판은 tools/sim/harness_m.mjs — 플래그는 main.js newRound 가 플레이어에게만 거는 것과 같은 자리)
 import test from 'node:test';
@@ -7,24 +8,18 @@ import { Vector2 } from 'three';
 const storage = new Map();
 globalThis.localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) };
 const { Stamina } = await import('../../src/stamina.js');
-const { STAMINA, GAIT, UNIQUE_ASSIST, SECRET } = await import('../../src/config.js');
+const { STAMINA } = await import('../../src/config.js');
 const { readProgress, journeyCoins, rollInt, awardHead, JOURNEY_COINS, PROGRESS_KEY, setCoins } = await import('../../src/lobby_progress.js');
-const { BOOK_TIERS, booksOf, bookOf, buyBook, readBooks, bookState, setBookInUse, playerKit, kitUniqueStage, bookTierParam, BOOK_HEAD_PRICE, headPriceOf, BOOK_STATE_KEY } = await import('../../src/skill_books.js');
 const { convertSeals, takeSealNotice, sealCount, OLD_SEALS, COINS_PER_SEAL, SEAL_COINS_KEY } = await import('../../src/seal_coins.js');
 const { CLEAR_KEY, journeyClears, addJourneyClear } = await import('../../src/journey_save.js');
 const { newRound, DT } = await import('./harness_m.mjs');
-const { PlayerParryGuard } = await import('../../src/parry_button.js');
-const { PlayerUniqueAssist } = await import('../../src/unique_assist.js');
-const { PlayerSecretWatch } = await import('../../src/secret.js');
-const { TRADITIONS } = await import('../../src/schools.js');
 
 const near = (a, b, e = 1e-7) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
 // 새 기기처럼: 저장을 비우고 모듈이 이번 실행 동안 들고 있는 값도 새 값으로 덮는다(저장이 비면 모듈은 지난 값을 그대로 쓰므로)
 const reset = () => {
   storage.clear();
   storage.set(PROGRESS_KEY, JSON.stringify({ version: 1, acquisitions: [], coins: 100, heads: 0, titles: [], title: '여행자' }));
-  storage.set(BOOK_STATE_KEY, JSON.stringify({ version: 1, sealed: [] }));
-  readProgress(); readBooks();
+  readProgress();
 };
 function actor(extra = {}) {
   const pos = { x: 0, y: 1, z: 0 };
@@ -59,92 +54,6 @@ test('실제 판: 케틀 햇 플레이어는 130까지 회복, 상대는 100', (
     for (const f of [g.player, g.enemy]) { f.stamina.value = 20; f.stamina.rest = 0; }
     for (let i = 0; i < 1200; i++) g.step();
     near(g.player.stamina.value, 130, 1e-5); near(g.enemy.stamina.value, 100, 1e-5);
-  } finally { g.world.free(); }
-});
-
-// ── 스킬북: 사기 · 사용 / 봉인 (사장님 10/16 04:1x · 04:3x) ──
-test('책 값 100~500 · 산 책만 열림 · 금화가 모자라면 못 삼 · 새 책은 사용 · 봉인/사용', () => {
-  reset();
-  assert.deepEqual(BOOK_TIERS.map((b) => b.price), [100, 200, 300, 400, 500]);
-  assert.equal(booksOf('german').length, 5);
-  assert.equal(bookOf('german', 1).title, '보법: 리히테나워');
-  assert.equal(bookOf('japanese', 5).title, '비기: 뒤에서 앞서기');
-  assert.equal(bookOf('german', 3).list.length, 3); assert.equal(bookOf('german', 3).provisional, true); // 10/21 통폐합 — 독일 셋(굽은 베기 뺌)
-  for (const s of ['german', 'italian', 'iberian', 'japanese', 'chinese']) assert.equal(bookOf(s, 4).planned, undefined, s); // 10/21 유파 패시브 다섯 모두 효과가 있음 (준비 중 없음)
-  assert.equal(readProgress().coins, 100);
-  let books = readBooks(); assert.equal(bookState(books, 'german:1'), 'unowned');
-  assert.equal(buyBook('german', 2).why, 'coins'); // 200 > 100
-  const r = buyBook('german', 1); assert.equal(r.ok, true); assert.equal(readProgress().coins, 0); assert.equal(readProgress().level, 2);
-  assert.equal(buyBook('german', 1).why, 'owned');
-  books = readBooks(); assert.equal(bookState(books, 'german:1'), 'use');
-  setBookInUse('german:1', false); assert.equal(bookState(readBooks(), 'german:1'), 'sealed');
-  assert.deepEqual(JSON.parse(storage.get(BOOK_STATE_KEY)), { version: 1, sealed: ['german:1'] });
-  setBookInUse('german:1', true); assert.equal(bookState(readBooks(), 'german:1'), 'use');
-  assert.equal(BOOK_HEAD_PRICE, null); assert.equal(headPriceOf(1), null); // 머리로 사기는 사장님 확인 전 — 꺼 둠
-});
-test('playerKit: 산 책이 사용일 때만 켬 · 봉인·안 삼은 끔 · 테스트 경로 모두 켬 · 무유파 null', () => {
-  const books = { owned: new Set(['italian:1', 'italian:3', 'italian:5']), sealed: new Set(['italian:5']) };
-  assert.deepEqual(playerKit('italian', books), { footwork: true, parry: false, unique: true, passive: false, secret: false });
-  assert.deepEqual(playerKit('italian', { owned: new Set(), sealed: new Set() }), { footwork: false, parry: false, unique: false, passive: false, secret: false });
-  assert.deepEqual(playerKit('japanese', { owned: new Set(), sealed: new Set() }, { test: true }), { footwork: true, parry: true, unique: true, passive: true, secret: true });
-  assert.equal(playerKit('none', books), null);
-  assert.equal(kitUniqueStage({ unique: true }), 4); assert.equal(kitUniqueStage({ unique: false }), 0);
-});
-test('개발 인자 ?uniqueStage=N: 0 = 책 없음 · N 급까지 · 5 = 모두 — 산 책·테스트 경로보다 먼저 · 범위 밖은 산 책대로', () => {
-  assert.deepEqual([null, '', '0', '2', '5', '6', '-1', '2.5', 'x'].map(bookTierParam), [null, null, 0, 2, 5, null, null, null, null]);
-  const none = { owned: new Set(), sealed: new Set() };
-  const all = { owned: new Set([1, 2, 3, 4, 5].map((t) => `german:${t}`)), sealed: new Set() };
-  assert.deepEqual(playerKit('german', all, { upTo: 0 }), { footwork: false, parry: false, unique: false, passive: false, secret: false });
-  assert.deepEqual(playerKit('german', none, { upTo: 2 }), { footwork: true, parry: true, unique: false, passive: false, secret: false }); // 10/16 전 주소 판 기본(보법·막기 늘 켬 · 깬 수 0)과 같은 몫
-  assert.deepEqual(playerKit('japanese', none, { upTo: 5 }), { footwork: true, parry: true, unique: true, passive: true, secret: true });
-  assert.deepEqual(playerKit('japanese', none, { test: true, upTo: 1 }), { footwork: true, parry: false, unique: false, passive: false, secret: false }); // ?uniqueStage 가 테스트 경로를 덮는다 (10/13 차례)
-  assert.equal(kitUniqueStage(playerKit('german', none, { upTo: 3 })), 4); assert.equal(kitUniqueStage(playerKit('german', all, { upTo: 2 })), 0);
-  assert.equal(playerKit('none', all, { upTo: 5 }), null);
-});
-test('실제 판: 보법 봉인 = 기본 걸음 (일본 버티기·낮은 자세·걷기 기력 2.1 없음), 사용 = 유파 걸음', () => {
-  for (const on of [true, false]) {
-    const g = newRound({ weapon: 'monohoshizao', seed: 3, onFighter: (f) => { if (f.index === 0 && !on) f.schoolFootwork = false; } });
-    try {
-      g.ai.update = () => {}; g.step();
-      const P = g.player.gait.P;
-      if (on) { assert.equal(P.tradition, 'japanese'); near(g.player.swayScale, 0.75); }
-      else { assert.equal(P, GAIT); near(g.player.swayScale, 1); }
-      assert.equal(g.enemy.gait.P.tradition, 'japanese'); // 상대(AI)는 그대로
-    } finally { g.world.free(); }
-  }
-  // 걷기 기력: 보법 몫 — 봉인한 플레이어는 보통 1.4 (0.62 m 마다)
-  for (const [flag, want] of [[undefined, 2.1], [false, 1.4]]) {
-    const f = actor({ swordArt: { tradition: 'japanese' }, schoolFootwork: flag, aiControlled: false });
-    f.move.set(0, 1); f.stamina.step(1 / 120); f.pos.z = 0; f.pos.x = 0;
-    for (let i = 0; i < 40; i++) { f.pos.x += 0.0175; f.stamina.step(1 / 120); } // 0.7 m 앞으로 (heading 0 = +x)
-    near(f.stamina.spent.move, want, 1e-9);
-  }
-});
-test('실제 판: 막기 봉인 = 무유파 막기 자리·덧씌우기 없음 (일본 · 동방), 사용 = 유파 자리', () => {
-  for (const [weapon, line] of [['monohoshizao', 'lowR'], ['qinggang', 'highR']]) {
-    for (const on of [true, false]) {
-      const g = newRound({ weapon, seed: 5, onFighter: (f) => { if (f.index === 0 && !on) f.schoolParry = false; } });
-      try {
-        const guard = new PlayerParryGuard(g.player, g.enemy);
-        const want = on ? g.player.swordArt.school.parry[line] : TRADITIONS.none.parry[line];
-        assert.deepEqual(guard.padOf(line), want);
-        if (weapon === 'qinggang') assert.equal(guard.nameOf(line)?.name === TRADITIONS.chinese.parryCover.highR?.name, on && !!TRADITIONS.chinese.parryCover.highR);
-      } finally { g.world.free(); }
-    }
-  }
-  assert.notDeepEqual(TRADITIONS.japanese.parry.lowR, TRADITIONS.none.parry.lowR); // 일본은 자리가 실제로 다르다
-});
-test('실제 판: 고유자세 · 비기 봉인 = 고유 공격 없음 · 비기 창 없음', () => {
-  const g = newRound({ weapon: 'longsword', seed: 9 });
-  try {
-    const on = new PlayerUniqueAssist(g.player, { stage: kitUniqueStage({ unique: true }) });
-    assert.equal(on.list.length, 3); assert.equal(g.player.skill.uniq, on); // 10/21 통폐합 — 독일 셋
-    const off = new PlayerUniqueAssist(g.player, { stage: kitUniqueStage({ unique: false }) });
-    assert.equal(off.list.length, 0); assert.equal(g.player.skill.uniq, null);
-    assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: true }).S, null);
-    assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: false }).S, null); // 10/21 독일 비기 닫힘 (SECRET.openSchools = 일본만)
-    const keep = SECRET.openSchools; SECRET.openSchools = ['german'];
-    try { assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: false }).S, TRADITIONS.german.secret); } finally { SECRET.openSchools = keep; }
   } finally { g.world.free(); }
 });
 

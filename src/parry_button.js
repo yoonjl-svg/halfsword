@@ -36,6 +36,7 @@ import { GUARD_BASE } from './guards.js';
 import { installCover } from './frames.js';
 import { AI } from './ai.js';
 import { ItalianOpposition } from './italian_opposition.js';
+import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 몸꼴 덧씌우기 parryCover · 막는 동안 피해 감소 parryCut)
 
 const _r = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -78,8 +79,9 @@ export class PlayerParryGuard {
     this.retreatEnd = -Infinity;
     this.clock = 0;
     this.opposition = new ItalianOpposition(me, foe, this);
-    // 대기실 스킬북 '막기'를 안 가졌거나 해제한 플레이어(me.schoolParry === false — main.js newRound, 첫 화면·대기실 여정만): 무유파 막기 자리(TRADITIONS.none.parry)·덧씌우기 없음
-    const pc = me.schoolParry === false ? null : TRADITIONS[me.swordArt?.tradition]?.parryCover;
+    // 대기실 스킬트리 막기 I 을 안 익힌 플레이어(me.schoolParry === false — main.js newRound, 모든 판): 무유파 막기 자리(TRADITIONS.none.parry)·덧씌우기 없음
+    //  몸꼴 덧씌우기는 칸 몫 parryCover(10/21 — 독일은 막기 II 왕관 G4 · 이베리아 B8 · 일본 J2 · 동방 C7 · 이탈리아 I5 는 막기 I 과 같이)
+    const pc = me.schoolParry === false || kitOff(me, 'parryCover') ? null : TRADITIONS[me.swordArt?.tradition]?.parryCover;
     if (pc) {
       const { down, ...covers } = pc; // 쓰러져 머리 가리기(down)는 AI 몫 — 플레이어 몸엔 막기 줄만
       if (Object.keys(covers).length) installCover(me, this, covers);
@@ -103,7 +105,7 @@ export class PlayerParryGuard {
   nameOf(line) {
     const me = this.me;
     const tr = me.swordArt?.tradition;
-    const slot = line && line !== 'point' && me.schoolParry !== false ? TRADITIONS[tr]?.parryCover?.[line] : null;
+    const slot = line && line !== 'point' && me.schoolParry !== false && !kitOff(me, 'parryCover') ? TRADITIONS[tr]?.parryCover?.[line] : null;
     if (slot?.name) return { name: slot.name, desc: slot.desc };
     const p = this.padOf(line);
     if (!p) return null;
@@ -286,6 +288,7 @@ export class PlayerParryGuard {
     if (this.mode !== 'defend') return press;
     const me = this.me;
     if (me.schoolParry === false) return 1;
+    if (kitOff(me, 'parryCut')) return press; // 스킬트리(10/21): 막는 동안 피해 감소는 일본 J2 · 이베리아 B9 · 동방 C8
     // 유파별 몫: 동방 cnParryDmgCut 0.5(10/17) · 일본 jpParryDmgCut · 이베리아 ibParryDmgCut 0.2(사장님 10/18 22:1x) — 다른 유파 · 책 해제 = 1
     const cut = { chinese: SKILL.cnParryDmgCut, japanese: SKILL.jpParryDmgCut, iberian: SKILL.ibParryDmgCut }[me.swordArt?.tradition] ?? 0;
     return (cut > 0 ? 1 - cut : 1) * press;

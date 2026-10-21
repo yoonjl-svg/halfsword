@@ -33,6 +33,7 @@ import { FINISH } from './finish.js'; // 마무리 스위치 entry·mode·power 
 import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA } from './config.js';
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
+import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
 const IAI_GHOST_PARTS = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']);
@@ -298,7 +299,7 @@ export class Combat {
     if (att.weaponCfg.ignoreArmor) (guard = 1), (plateGuard = 0); // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
     else if (att.weaponCfg.ignoreArmorDamage) plateGuard = 0; // 모르겐슈테른: 판금은 막아주지 않되 누비옷(guard)은 그대로
     // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구·판금은 gap 의 절반을 무시한다
-    else if (type === 'stab' && (gapV = strokeTechOf(att) === 'imbroccata' ? Math.max(ts?.gap ?? 0, UA.imbroccataGap ?? 0) : ts?.gap)) {
+    else if (type === 'stab' && (gapV = strokeTechOf(att) === 'imbroccata' && !perkOff(att, 'imbroccata') ? Math.max(ts?.gap ?? 0, UA.imbroccataGap ?? 0) : ts?.gap)) {
       // 위에서 내려 찌르기(이탈리아 강화동작 — 10/21 사장님 '파고드는 값 0.6'): 이 찌르기만 gap 을 UA.imbroccataGap 으로 (다른 찌르기 · 다른 무기는 그대로)
       if (helmOn) guard *= 1 - 0.5 * gapV;
       else if (body) {
@@ -374,7 +375,7 @@ export class Combat {
       severity,
       pass,
       absorb: A.absorb ?? 100,
-      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1) * (UA.yaojiBleed?.k > 0 && UA.yaojiBleed.zones.includes(zone) && strokeTechOf(att) === 'yaoji' ? UA.yaojiBleed.k : 1), // 모노호시자오 '제비 베기': 출혈 배율 · 요격 몸통 깊은 출혈(10/21 UA.yaojiBleed)
+      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1) * (UA.yaojiBleed?.k > 0 && UA.yaojiBleed.zones.includes(zone) && strokeTechOf(att) === 'yaoji' && !perkOff(att, 'yaoji') ? UA.yaojiBleed.k : 1), // 모노호시자오 '제비 베기': 출혈 배율 · 요격 몸통 깊은 출혈(10/21 UA.yaojiBleed)
       local: vicLocal,
       point: point.clone(),
       dir,
@@ -678,7 +679,7 @@ export class Combat {
     if (FLOW_REDESIGN.on) return this.nagashiExpanded(A, B, SA, SB, point, nrm, vn); // 판정 개편 (사장님 10/18 22:1x · 기본) — 아래는 옛 판정(`?flowJudge=0`)
     for (const [D, O, SO] of [[A.fighter, B.fighter, SB], [B.fighter, A.fighter, SA]]) {
       const st = D.skill?._cover;
-      if (!st?.nagashi || D.schoolParry === false || !O.swordProps) continue;
+      if (!st?.nagashi || D.schoolParry === false || kitOff(D, 'flow') || !O.swordProps) continue;
       if (!(D.parryGuard ? D.parryGuard.active : st.ai?.mode === 'defend' && !st.ai.defVoid)) continue;
       if (velAt(SO, point, _n1).y > -NAGASHI.moveDown) continue; // 상대 칼이 내려오지 않음
       if (point.y < D.bodies.chest.translation().y + NAGASHI.zoneHy) continue; // 받는 자리가 낮음
@@ -860,7 +861,7 @@ export class Combat {
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
-      if (r.severity > 0) { const tn = strokeTechOf(att); if ((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) artFlash(att, this.dt); }
+      if (r.severity > 0) { const tn = strokeTechOf(att); if (((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) && !perkOff(att, tn)) artFlash(att, this.dt); }
     }
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
@@ -874,7 +875,7 @@ export class Combat {
   buckleCheck(att, vic, part) {
     const B = UA.buckle;
     if (!(B?.p > 0) || !vic?.alive || vic.state !== 'stand' || vic.revival || !B.parts.includes(part)) return;
-    if (strokeTechOf(att) !== 'schielhau') return;
+    if (strokeTechOf(att) !== 'schielhau' || perkOff(att, 'schielhau')) return; // 사람은 스킬트리 G6 '곁눈 베기 심화 · 무릎 꺾기' (10/21)
     const t = this.stepNo * (this.dt ?? 1 / 60);
     if (vic.buckleAt != null && t - vic.buckleAt < B.cool) return; // cool 은 꿇은 뒤부터 (빗나간 굴림은 세지 않는다)
     // 버티기(일본 steady — fighter.swayScale 0.75)는 휘청 · 넘어짐을 덜 받듯 무릎 꺾기 확률도 그만큼 덜 받는다 (10/21 사장님 '더 강인하게 버티는 거 맞지?' — 일본 50 % → 37.5 %)

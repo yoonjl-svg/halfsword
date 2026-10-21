@@ -13,7 +13,7 @@ import { Fighter, GROUND_GROUPS } from '../../src/fighter.js';
 import { LOOKS } from '../../src/looks.js';
 import { Combat } from '../../src/combat.js';
 import { PlayerUniqueAssist, PLAYER_UNIQUE } from '../../src/unique_assist.js';
-import { playerKit, kitUniqueStage, bookTierParam } from '../../src/skill_books.js';
+import { playerKit, stageParam } from '../../src/skill_tree_store.js'; // 10/21 스킬트리 (전 skill_books.js)
 import { TECH, G } from '../../src/ai_techniques.js';
 import crypto from 'node:crypto';
 import { segDist } from '../../src/skill.js';
@@ -542,15 +542,15 @@ for (const school of SCHOOLS) {
   log(`합: 손 목표 차이 RMS ${Math.sqrt(six.s2 / Math.max(1, six.n)).toExponential(2)} · 최대 ${six.mx.toExponential(2)} · 칼끝 차이 RMS ${Math.sqrt(six.t2 / Math.max(1, six.n)).toFixed(3)} · 최대 ${six.tmx.toFixed(3)} m · 날 각(${six.eaOn.length} 스텝) 붙임 ${ea(six.eaOn)} / 안 붙임 ${ea(six.eaOff)}`);
 }
 
-log("\n## ⑤ 해금 (10/16 08:1x 사장님 '인장 제도 없애' — 스킬북 하나: skill_books.js playerKit · kitUniqueStage)");
+log("\n## ⑤ 해금 (10/21 스킬트리 — skill_tree_store.js playerKit: 고유 공격 칸 하나 = 기술 하나)");
 {
-  const none = { owned: new Set(), sealed: new Set() };
+  const none = { german: new Set() };
+  const kitText = (k) => (k ? `고유 공격 [${[...k.unique].join(', ')}] · 이점 [${[...k.perk].join(', ')}]` : 'null');
   for (const raw of [null, '0', '1', '2', '3', '4', '5', '6']) {
-    const upTo = bookTierParam(raw);
-    const k = playerKit('german', none, { upTo });
-    log(`?uniqueStage=${raw ?? '(없음)'} → 급 ${upTo ?? '산 책'} · ${JSON.stringify(k)} · 고유 공격 단계 ${kitUniqueStage(k)}`);
+    const upTo = stageParam(raw);
+    log(`?uniqueStage=${raw ?? '(없음)'} → 급 ${upTo ?? '익힌 칸'} · ${kitText(playerKit('german', none, { upTo }))}`);
   }
-  const some = { owned: new Set(['german:1', 'german:3', 'german:5']), sealed: new Set(['german:5']) };
-  log(`산 책 독일 I·III·V (V 봉인) → ${JSON.stringify(playerKit('german', some))} · 단계 ${kitUniqueStage(playerKit('german', some))} · 테스트 경로 ${JSON.stringify(playerKit('german', none, { test: true }))} · 무유파 ${playerKit('none', some)}`);
+  const some = { german: new Set(['G1', 'G5', 'G8']) };
+  log(`익힌 칸 독일 G1 · G5 · G8 → ${kitText(playerKit('german', some))} · 테스트 경로 ${kitText(playerKit('german', none, { test: true }))} · 무유파 ${playerKit('none', some)}`);
 }
 log(`\n합계 ① 기본 긋기: 맞게 발동 ${tally.ok} · 정답 없음·발동 없음 ${tally.okNone} · 잘못 발동 ${tally.wrong} · 안 발동 ${tally.miss}`);

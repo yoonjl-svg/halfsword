@@ -1,6 +1,7 @@
 import { classifyStroke } from './attack_stroke.js';
 import { STAMINA, UNIQUE_ASSIST, CLOSE } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
+import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -369,7 +370,7 @@ export class Stamina {
       const steps = Math.floor((this.distance + 1e-9) / STAMINA.stepDistance);
       if (steps) {
         this.distance -= steps * STAMINA.stepDistance;
-        const cost = STAMINA.stepCosts[f.schoolFootwork === false ? 'default' : f.swordArt?.tradition] ?? STAMINA.stepCosts.default; // 유파 걷기 기력은 보법 몫 — 대기실 스킬북 '보법'이 없거나 해제한 플레이어는 보통 1.4
+        const cost = STAMINA.stepCosts[f.schoolFootwork === false || kitOff(f, 'stepCost') ? 'default' : f.swordArt?.tradition] ?? STAMINA.stepCosts.default; // 유파 걷기 기력은 보법 몫 — 대기실 스킬트리(10/21) 일본 보법 J1 · 동방 보법 II C2 를 안 익힌 플레이어는 보통 1.4
         this.spend('move', steps * cost);
       }
     }

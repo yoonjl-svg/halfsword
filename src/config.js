@@ -812,6 +812,11 @@ export const SKILL = {
   enterCool: 1.0, // 한 번 들어간 뒤 다시 들어가기까지 (초)
 };
 
+// ── 스킬트리 편지 '00에서 온 편지' (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5 · skill_tree_data.js letterMul · weapons.js drawWeaponCards weightOf) ──
+//  사장님 결정 '칸마다 무게': 뽑기 칸(무기 하나 · 같은 drawGroup 은 한 칸)마다 무게 = 그 등급 TIER_DRAW ÷ 그 등급 칸 수 — 편지를 가진 유파 칸은 × mult — 모든 등급에서 무게로 한 칸.
+//  편지가 없으면 지금 뽑기와 같다(같은 난수 · 같은 결과). mult 2 = 사장님 결정(10/21 — 지금은 2)
+export const LETTER = { mult: 2 };
+
 // ── 유파 비기 (10/9 — 사장님 승인 '유파 설계 v3: 기질·비기·동작', docs/strike/school_secret_2026-10-09.md) ──
 //  비기 = 조건이 차면 그 유파의 대표 동작을 '완벽 실행'한다. 굴림이 없다(조건이 차면 확정). 결과는 보장하지 않는다 — 맞고 안 맞고는 물리가 정한다.
 //  완벽 실행 = 반응 지연 0(상대를 늦게 보지 않고 지금 모습으로 조건을 본다 — ai.js secretScan) · 정확도 1(pers.precision 을 그 한 번만 1) ·
@@ -985,11 +990,11 @@ export const SECRET = {
 // ── 플레이어 고유 동작 이어 주기 → 10/14 강화 (10/13 사장님 '플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 그 고유 동작의 궤적으로 이어 준다' ·
 //    '이질감보다는 자연스러운 향상' — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md). 플레이어만 (AI 는 읽지 않는다).
 //  표(어느 긋기가 어느 고유 동작을 여는가 — 사장님 확정 10/13 22:3x)는 unique_assist.js 한 곳. 수는 [추정] · 사장님 확인 전 (확인표 1040~1049)
-//  플레이어에게 무엇이 열리는지는 스킬북 하나(skill_books.js playerKit — 고유자세 책 = 고유 공격 넷 · 비기 책 = 비기). 10/13 의 인장 해금 수(sealEvery·sealOrder·sealMax·testStage)는
+//  플레이어에게 무엇이 열리는지는 스킬트리 하나(10/21 — skill_tree_store.js playerKit: 고유 공격 칸 하나 = 기술 하나 · 심화 칸 = 강화동작 이점 · 비기 칸 = 비기). 10/13 의 인장 해금 수(sealEvery·sealOrder·sealMax·testStage)는
 //   10/16 08:1x 사장님 '인장 제도 없애'로 지웠다 — 이미 받은 인장을 금화로 한 번 바꾸는 옛 셈만 seal_coins.js 에 얼려 둔다 (확인표 1920~)
 export const UNIQUE_ASSIST = {
   on: 1, // 0 = 끔 (`?uniqueAssist=0` — 플레이어 칼은 지금처럼 손가락만 따른다)
-  secretStage: 5, // 사장님 결정 10/13 23:1x: 숙련도 5 = 비기 (AI 비기 — AI_PROFICIENCY.secretAt). 플레이어는 비기 책 · 고유자세 책 = 고유 공격 단계 secretStage − 1 (skill_books.js kitUniqueStage)
+  secretStage: 5, // 사장님 결정 10/13 23:1x: 숙련도 5 = 비기 (AI 비기 — AI_PROFICIENCY.secretAt). 플레이어는 스킬트리 비기 칸 · 고유 공격 칸마다 하나 (10/21 — skill_tree_data.js)
   // 긋기 읽기 (손이 빠르게 움직이기 시작하는 순간 — 검술 층의 휘두르기 문턱 SKILL.swingSpeed 를 넘는 스텝)
   padRadius: 0.15, // 시작 자리 = 가장 가까운 자세 패드(G.*), 이 거리(패드 m) 안일 때만 그 자세에서 시작한 긋기로 본다 (패드 사이 간격 0.25~0.4 의 절반쯤)
   angle: 40, // 허용 각(°): 처음 손 방향 ↔ 기본 동작 첫 방향 · 조건의 방향(위·아래·가로) · 이어 들어갈 고유 동작 길의 첫 방향

@@ -199,71 +199,84 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .equipment-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; } /* 가운데 맞춤 — 줄로 늘이면 부 단추가 주 단추 높이로 늘어난다(싸움 단추 높이 그대로: 주 36 · 부 34) */
 .equipment-actions button { min-width: 72px; }
 
-/* ── 스킬북 (skill_tree.js): 유파 탭 + 별자리 판 — 창 안 폭 전부 · 창 안 높이 --grid-h(아이템 칸 판이 높이로 정해지면 같은 높이) (10/18 03:3x 안쪽 액자 1 뺌 — 바깥 줄은 창의 액자 1) ── */
+/* ── 스킬 (skill_tree.js — 10/21 스킬트리): 유파 탭 + 트리 판 — 창 안 폭 전부 · 창 안 높이 --grid-h (10/18 03:3x 안쪽 액자 1 뺌 — 바깥 줄은 창의 액자 1) ──
+   칸 크기 · 줄 간격 · 글자 크기는 skill_tree.js layout 이 판 크기에서 셈(--nw · --nh · --s) — 폰 가로 판 약 386 × 216 px. 줄이 많은 유파(이탈리아 6 줄)는 판 안에서 내려 본다 */
 .skill-tree-host { display: flex; flex-direction: column; width: calc(var(--grid-w) + var(--grid-x)); height: var(--grid-h); } /* 창 안 폭 전부 · 창 안 높이 — 줄 · 바탕 없음(10/18 03:3x) */
 .school-tabs { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 6px 6px 0; }
-/* 판 = 별자리 비 300 : 210 그대로(책 자리가 % 라 비가 바뀌면 판 끝의 책 이름이 밖으로 나간다) — 탭 아래 남은 자리에 들어가는 가장 큰 판을 가운데에 (남는 곳은 같은 바탕이라 띠로 안 보임) */
-.skill-tree-host .tree-frame { flex: 1; min-height: 0; display: grid; place-items: center; container-type: size; border: 0; border-image: none; background: none; box-shadow: none; }
-.tree-board { --s: 1; position: relative; width: 100%; width: min(100cqw, 100cqh * 300 / 210); aspect-ratio: 300 / 210; } /* --s = 책 크기 비 (skill_tree.js fit — 판 263 px 보다 좁으면 줄임) */
-.tree-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.rune-link path { fill: none; stroke: var(--c-sub); stroke-width: 1.5; stroke-linecap: square; stroke-linejoin: miter; opacity: .4; }
-.rune-link .rune-gem { fill: var(--c-sub); stroke: none; }
-.rune-link.lit path { stroke: var(--c-accent); opacity: .9; }
-.rune-link.lit .rune-gem { fill: var(--c-accent); opacity: 1; }
+.skill-tree-host .tree-frame { flex: 1; min-height: 0; position: relative; margin-top: 4px; border: 0; border-image: none; background: none; box-shadow: none; }
+.tree-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* 판이 창보다 길면(이탈리아 6 줄) 아래 끝을 흐리게 — 더 내려 볼 칸이 있다는 표시 (끝까지 내리면 걷힘 — skill_tree.js data-more) */
+.tree-frame[data-more]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 22px; pointer-events: none; background: linear-gradient(transparent, rgba(24, 18, 14, .9)); }
+.tree-board { --s: 1; --nw: 58px; --nh: 29px; position: relative; }
+.tree-links { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+/* 줄: 보조 색 흐리게 · 앞 칸을 익혀 배울 수 있는 칸으로 가는 줄은 조금 밝게 · 둘 다 익힌 줄은 강조 색 · 곁가지(편지 · 보법 II)는 점선 · '모두 익혀야' 칸 위 금색 점 · 독일 관문 띠 */
+.tree-link { fill: none; stroke: var(--c-sub); stroke-width: 1.4; opacity: .32; }
+.tree-link.ready { opacity: .75; }
+.tree-link.lit { stroke: var(--c-accent); opacity: .95; }
+.tree-link.opt { stroke-dasharray: 3 3; }
+.tree-link.gate { stroke-width: 2.4; stroke-linecap: round; }
+.tree-join { fill: var(--c-accent); opacity: .9; }
 .tree-nodes { position: absolute; inset: 0; }
-.book-node { position: absolute; width: calc(58px * var(--s)); margin-left: calc(-29px * var(--s)); margin-top: calc(-21px * var(--s)); display: flex; flex-direction: column; align-items: center; gap: calc(2px * var(--s)); min-height: 0; padding: 0; background: none; border: 0; color: var(--c-text); }
-.book-thumb { position: relative; display: block; width: calc(32px * var(--s)); height: calc(42px * var(--s)); isolation: isolate; }
-.book-svg { position: relative; display: block; width: 100%; height: 100%; }
-/* 책 그림 색 (그림 쪽 — skill_tree.js bookSvg · UI 색에 세지 않음 · 다른 작업자가 새 그림으로 바꾸는 중) */
-/* 책 그림은 매끈한 그림 파일(public/ui/books/<유파>_<급>.webp — skill_tree.js bookSvg) — 옛 픽셀 SVG 색 줄은 지움 (10/16 병합) */
-.book-cat { font-size: calc(12px * var(--s)); line-height: calc(14px * var(--s)); color: var(--c-text); white-space: nowrap; }
-/* 값 표지: 어두운 책 아래쪽에 걸친다 (옆으로 내밀면 룬 줄·이웃 책과 부딪힌다) — 싸움 창 꼴의 작은 알약 */
-.book-price { position: absolute; left: 50%; top: calc(27px * var(--s)); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-family: var(--font-ui); font-weight: 600; font-size: max(8px, calc(10px * var(--s))); line-height: calc(14px * var(--s)); color: var(--c-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.book-price .price-coin { display: block; width: calc(9px * var(--s)); height: calc(9px * var(--s)); }
-/* 안 삼: 어둡게 (값만 밝게) */
-.book-node[data-state=unowned] .book-thumb, .detail-head[data-state=unowned] .book-thumb { filter: grayscale(1) brightness(.42); }
-.book-node[data-state=unowned] .book-cat { color: var(--c-sub); opacity: .75; }
-/* 사용: 섬네일을 둥근 빛이 감싼다 (사장님 04:3x '사용하면 섬네일 자리를 둥근 빛이 감쌈') — 빛 색 = 등급 색 */
-.book-node[data-state=use] .book-thumb::before, .detail-head[data-state=use] .book-thumb::before { content: ''; position: absolute; left: 50%; top: 50%; width: calc(54px * var(--s)); height: calc(54px * var(--s)); margin: calc(-27px * var(--s)) 0 0 calc(-27px * var(--s)); border-radius: 50%; z-index: -1; background: radial-gradient(circle, transparent 49%, var(--tc) 55%, transparent 71%); box-shadow: 0 0 calc(14px * var(--s)) calc(2px * var(--s)) var(--tc); opacity: .62; animation: book-glow 2.6s ease-in-out infinite; }
-.detail-head[data-state=use] .book-thumb::before { width: 40px; height: 40px; margin: -20px 0 0 -20px; box-shadow: 0 0 8px 1px var(--tc); } /* 설명 카드 섬네일 빛은 작게 — 옆 제목에 안 번지게 */
-@keyframes book-glow { 50% { opacity: .4; } }
-@media (prefers-reduced-motion: reduce) { .book-node[data-state=use] .book-thumb::before, .detail-head[data-state=use] .book-thumb::before { animation: none; } }
-/* 봉인: 밝게, 빛 없음 — 이름 줄만 보조 색 */
-.book-node[data-state=sealed] .book-cat { color: var(--c-sub); }
-.book-node[aria-pressed=true] .book-thumb, .book-node:focus-visible .book-thumb { outline: 2px solid var(--c-accent); outline-offset: 3px; }
-.book-node:focus-visible { outline: none; }
-/* 설명 카드 (판 위) — 싸움 창 꼴 */
-.book-detail { position: absolute; inset: 2px; z-index: 2; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.4; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* 칸: 판 좌표가 칸 가운데 · 위 띠 = 갈래 색(등급 색 --tc — 보법 커먼 · 막기 언커먼 · 고유 공격 · 심화 레어 · 패시브 에픽 · 비기 레전드 · 편지 ???) */
+.tree-node { position: absolute; width: var(--nw); height: var(--nh); margin: calc(var(--nh) / -2) 0 0 calc(var(--nw) / -2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 0; padding: 1px 2px; overflow: visible;
+  background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--tc); border-radius: 6px; color: var(--c-text); line-height: 1.08; white-space: nowrap; }
+.node-l1 { display: block; font-weight: var(--fw-label); color: var(--c-text); }
+.node-l2 { display: block; color: var(--c-sub); }
+/* 잠김: 흐리게 (앞 칸이 모자람) */
+.tree-node[data-state=locked] { opacity: .5; border-top-color: color-mix(in srgb, var(--tc) 45%, transparent); }
+.tree-node[data-state=locked] .node-l1 { color: var(--c-sub); }
+/* 배울 수 있음: 금색 테두리 + 값 알약 (칸 아래 끝에 걸침) */
+.tree-node[data-state=open] { border-color: var(--c-accent); border-top-color: var(--tc); box-shadow: 0 0 0 .5px var(--c-accent); }
+.node-price { position: absolute; left: 50%; top: calc(100% - 2px); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; padding: 0 4px 0 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+  font-family: var(--font-ui); font-weight: 600; font-size: max(8px, calc(8.5px * var(--s))); line-height: calc(10px * var(--s)); color: var(--c-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.price-part { display: inline-flex; align-items: center; gap: 1px; }
+.price-icon { display: block; width: 1.05em; height: 1.05em; }
+/* 익힘: 갈래 색으로 채우고 빛 (10/16 책 '사용' 빛과 같은 색 — 등급 색) */
+.tree-node[data-state=learned] { background: linear-gradient(color-mix(in srgb, var(--tc) 24%, transparent), color-mix(in srgb, var(--tc) 24%, transparent)), var(--panel); border-color: var(--tc); box-shadow: 0 0 calc(7px * var(--s)) color-mix(in srgb, var(--tc) 55%, transparent); }
+.tree-node[data-state=learned] .node-l2 { color: var(--c-text); }
+/* 준비 중: 점선 · 흐리게 */
+.tree-node[data-state=closed] { opacity: .55; border-style: dashed; border-top-style: dashed; }
+.tree-node[aria-pressed=true], .tree-node:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+/* 유파 초기화 (판 오른쪽 위 — 머리 1): 작은 부 단추 꼴 */
+.tree-reset { position: absolute; z-index: 1; top: 2px; right: 4px; display: inline-flex; align-items: center; gap: 4px; min-height: 0; padding: 2px 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-xs); line-height: 16px; color: var(--c-text); }
+.tree-reset:disabled { opacity: .4; }
+.tree-reset .price-icon { width: 12px; height: 12px; }
+@media (hover: hover) { .tree-reset:not(:disabled):hover { border-color: var(--c-sub); } }
+/* 상세 카드 · 초기화 확인 (판 위) — 싸움 창 꼴 */
+.node-detail, .reset-confirm { position: absolute; inset: 2px; z-index: 2; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.4; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .detail-close { position: absolute; top: 0; right: 2px; width: 28px; min-height: 28px; padding: 0; font-size: 17px; line-height: 1; color: var(--c-sub); }
 @media (hover: hover) { .detail-close:hover { color: var(--c-text); } }
-.detail-head { display: flex; gap: 14px; align-items: center; margin: 0 26px 4px 0; }
-.detail-head .book-thumb { flex: none; width: 26px; height: 34px; margin-left: 6px; }
-.detail-head b { display: block; font-size: var(--fs-m); line-height: 1.3; color: var(--tc); outline: none; }
+.detail-head { margin: 0 26px 4px 0; }
+.detail-head b, .reset-confirm > b { display: block; font-size: var(--fs-m); line-height: 1.3; outline: none; }
+.detail-head b { color: var(--tc); }
 .detail-head small { display: block; font-size: var(--fs-s); letter-spacing: var(--ls-label); color: var(--tc); }
-.book-detail p { margin: 3px 0; }
-.detail-effect, .detail-list, .detail-state { color: var(--c-text); }
-.detail-source { color: var(--c-sub); }
-.detail-list { margin: 1px 0 3px; padding: 0; list-style: none; }
-.detail-list li { display: inline; white-space: nowrap; }
-.detail-list li + li::before { content: ' · '; white-space: normal; color: var(--c-sub); }
-.detail-list.lines li { display: block; white-space: normal; } /* 고유 공격 책: 한 줄에 하나 · 쓰는 법 (10/21) */
-.detail-list.lines li + li::before { content: none; }
-.book-detail[data-state=unowned] .detail-state { color: var(--c-accent); }
+.node-detail p, .reset-confirm p { margin: 3px 0; }
+.detail-effect, .detail-state, .reset-confirm p { color: var(--c-text); }
+.detail-pre { color: var(--c-sub); }
+.detail-price { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-variant-numeric: tabular-nums; }
+.detail-price[hidden] { display: none; }
+.detail-price .price-part { gap: 3px; }
+.detail-price .price-icon { width: 15px; height: 15px; }
+.price-row { display: inline-flex; align-items: center; gap: 6px; }
+.price-label { color: var(--c-sub); }
+.node-detail[data-state=open] .detail-state, .node-detail[data-state=locked] .detail-state { color: var(--c-accent); }
 .detail-state[hidden] { display: none; }
-.detail-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.detail-actions button { min-width: 64px; }
+.detail-actions, .confirm-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.detail-actions button, .confirm-actions button { min-width: 72px; }
+@media (max-height: 500px) { .confirm-actions .primary, .confirm-actions .secondary { padding-top: 8px; padding-bottom: 8px; } }
 
 /* ── 이름 수정 창 (싸움 창 꼴 · 폭 = 싸움 메뉴 창 340) ── */
-.name-dialog { width: min(340px, calc(100vw - 32px)); padding: 20px; color: var(--c-text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
-.name-dialog::backdrop { background: radial-gradient(ellipse at center, rgba(27, 20, 16, .55), rgba(27, 20, 16, .92)); } /* 싸움 메뉴 덮개(.overlay)와 같은 막 */
-.name-dialog h2 { margin: 0 0 12px; font-size: var(--fs-l); line-height: var(--lh-tight); }
+.name-dialog, .tree-dialog { width: min(340px, calc(100vw - 32px)); padding: 20px; color: var(--c-text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.tree-dialog p { margin: 0; font-size: var(--fs-s); line-height: var(--lh-text); } /* 스킬트리 옮김 알림 (10/21 — 한 번) */
+.name-dialog::backdrop, .tree-dialog::backdrop { background: radial-gradient(ellipse at center, rgba(27, 20, 16, .55), rgba(27, 20, 16, .92)); } /* 싸움 메뉴 덮개(.overlay)와 같은 막 */
+.name-dialog h2, .tree-dialog h2 { margin: 0 0 12px; font-size: var(--fs-l); line-height: var(--lh-tight); }
 .name-dialog label { font-size: var(--fs-s); }
 .name-dialog input { display: block; width: 100%; margin: 8px 0; padding: 10px; background: transparent; border: 1px solid var(--line); border-radius: 8px; color: var(--c-text); }
 .name-dialog input:focus-visible { outline: none; border-color: var(--c-accent); } /* 입력 칸: 가는 테두리 · 누르면 금색 테두리 (감독 검토 §1) */
 .name-error { min-height: 18px; margin: 0; font-size: var(--fs-s); }
 .dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .dialog-actions button { min-width: 72px; }
-@media (max-height: 500px) { .name-dialog { padding: 12px 18px; } }
+@media (max-height: 500px) { .name-dialog, .tree-dialog { padding: 12px 18px; } .tree-dialog h2 { margin-bottom: 8px; } .tree-dialog .dialog-actions { margin-top: 12px; } }
 
 /* ── 아주 낮은 가로 화면 (높이 370 이하): 내 정보 칸 틈만 줄인다 ── */
 @media (max-height: 370px) and (min-width: 680px) {
