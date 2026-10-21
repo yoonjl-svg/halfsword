@@ -109,6 +109,12 @@ const ITWALK_PICKS = [
   { id: 'cur', name: '지금', sub: '뒤 느려짐 없음 · 보폭 줄이고 빠르게 (지금 게임)' },
   { id: 'old', name: '이전', sub: '오늘 오후까지 — 뒤는 앞의 70% · 보폭 넓게' },
 ];
+// 유파 패시브 시험 (10/21 — config SCHOOL_PASSIVE · school_passive.js): 4급 책의 다섯 유파 패시브(이베리아 손목 힘 · 이탈리아 곧은 선 · 일본 기다림과 침 · 독일 인데스 · 동방 숨 바꾸기)를
+//  모두 끄고 견줘 본다. 손에 든 무기의 유파로 고른다(테스트 경로는 책 모두 '사용' · 상대 AI 는 숙련도 4 이상일 때). 나와 상대 모두 · 기억하지 않는다
+const PASSIVE_PICKS = [
+  { id: 'on', name: '켬', sub: '4급 패시브 책 효과 (지금 게임)' },
+  { id: 'off', name: '끔', sub: '다섯 유파 패시브 모두 없이' },
+];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
@@ -121,6 +127,7 @@ const pick = {
   whiff: 'off', // 상대 헛스윙도 기억하지 않는다 (열 때마다 끔)
   ibFlow: 'off', // 이베리아 시험도 기억하지 않는다 (열 때마다 기본)
   itWalk: 'cur', // 이탈리아 걸음 시험도 기억하지 않는다
+  passive: 'on', // 유파 패시브 시험도 기억하지 않는다
 };
 
 function weaponButton(w, big) {
@@ -219,6 +226,7 @@ function render() {
   for (const el of document.querySelectorAll('#whiffPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.whiff));
   for (const el of document.querySelectorAll('#ibFlowPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibFlow));
   for (const el of document.querySelectorAll('#itWalkPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.itWalk));
+  for (const el of document.querySelectorAll('#passivePick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.passive));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -231,7 +239,7 @@ function render() {
   const f = foes.find((x) => x.id === pick.foe);
   const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
   const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
-  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이베리아 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}${pick.itWalk !== 'cur' ? ` · 이탈리아 걸음 ${ITWALK_PICKS.find((x) => x.id === pick.itWalk)?.name ?? ''}` : ''}`);
+  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이베리아 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}${pick.itWalk !== 'cur' ? ` · 이탈리아 걸음 ${ITWALK_PICKS.find((x) => x.id === pick.itWalk)?.name ?? ''}` : ''}${pick.passive === 'off' ? ' · 유파 패시브 끔' : ''}`);
 }
 
 function startUrl() {
@@ -242,6 +250,7 @@ function startUrl() {
   if (pick.ibFlow === 'noflow' || pick.ibFlow === 'none') q.set('ibFlow', '0'); // 이베리아 이어 긋기 흐름 끔 (main.js → config IB_FLOW)
   if (pick.ibFlow === 'nowrist' || pick.ibFlow === 'none') q.set('ibWrist', '0'); // 유파 패시브 끔 (main.js → config SCHOOL_PASSIVE)
   if (pick.itWalk === 'old') q.set('itStride', '0.8,1.1,1.3,0.44'), q.set('itWalk', '1'); // 이탈리아 걸음 이전 판 (main.js → schools.js setItalianStride · setItalianWalk '1' = 뒤 느려짐 되살림 · 짧은 디딤 가속 없앰)
+  if (pick.passive === 'off') q.set('schoolPassive', '0'); // 유파 패시브 모두 끔 (main.js → config SCHOOL_PASSIVE.on)
   if (pick.whiff === 'on') q.set('foeWhiff', '1'); // 상대 헛스윙 (main.js → whiff_drill.js) — 끄면 주소에 안 적는다
   return `./index.html?${q.toString()}`;
 }
@@ -260,6 +269,7 @@ for (const x of STAGE_PICKS) $('stagePick').append(ibSecretButton(x, 'stage'));
 for (const x of WHIFF_PICKS) $('whiffPick').append(ibSecretButton(x, 'whiff'));
 for (const x of IBFLOW_PICKS) $('ibFlowPick').append(ibSecretButton(x, 'ibFlow'));
 for (const x of ITWALK_PICKS) $('itWalkPick').append(ibSecretButton(x, 'itWalk'));
+for (const x of PASSIVE_PICKS) $('passivePick').append(ibSecretButton(x, 'passive'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +

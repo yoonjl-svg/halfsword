@@ -195,6 +195,7 @@ export class Stamina {
   }
 
   chargeAttack(kind = 'cut', bundled = this.inSecret, credit = 0) {
+    if (this.fighter.alive && !this.exhausted) this.fighter.schoolPassive?.strokeStart(bundled || this.inSecret); // 유파 패시브: 칼을 낸 순간 (10/21 켄타이 · 인데스 — school_passive.js, 기력을 꺼도 같은 때)
     if (!STAMINA.on || this.exhausted || !this.fighter.alive) return;
     this.attackId++;
     this.flowAttackKind = kind; this.flowAttackStart = this.time; // 흘림 판정이 읽는 공격 종류(찌르기는 흘리지 않음 — nagashi_redesign.js) · 사람 · AI 같게
@@ -205,6 +206,7 @@ export class Stamina {
   }
 
   secret() {
+    if (this.fighter.alive && !this.exhausted) this.fighter.schoolPassive?.strokeStart(true); // 비기 칼 — 유파 패시브 몫 없음 (school_passive.js)
     if (!STAMINA.on || this.exhausted) return;
     this.attackId++;
     this.flowAttackKind = 'secret'; this.flowAttackStart = this.time;

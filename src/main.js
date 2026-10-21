@@ -142,7 +142,16 @@ if (['v4', 'flow', 'gilmok'].includes(params.get('ibSecret'))) CONFIG.SECRET.ibe
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
-if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.on = false; // 유파 패시브 끔 (10/21 — 이베리아 손목 힘 · test.html '이베리아 시험')
+if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
+{
+  // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)
+  const sp = params.get('schoolPassive');
+  if (sp === '0') CONFIG.SCHOOL_PASSIVE.on = false;
+  else if (sp && sp !== '1') {
+    const keep = new Set(sp.split(','));
+    for (const k of ['iberian', 'italian', 'japanese', 'german', 'chinese']) CONFIG.SCHOOL_PASSIVE[k].on = keep.has(k);
+  }
+}
 if (params.has('buckle')) CONFIG.UNIQUE_ASSIST.buckle.p = +params.get('buckle') || 0; // 곁눈 베기 무릎 꺾기 확률(10/21 — 판 값 0.15 · `?buckle=0` 끔)
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
@@ -609,7 +618,7 @@ function newRound(weaponId) {
     // 스킬북 (사람만): 보법 책 없음·봉인 = 기본 걸음(gait.js · stamina.js — schools.js footworkTradition) · 막기 책 없음·봉인 = 무유파 막기 자리(parry_button.js) — 걸음을 만들기 전에 넘긴다
     schoolFootwork: kit ? kit.footwork : undefined,
     schoolParry: kit ? kit.parry : undefined,
-    schoolPassive: kit ? kit.passive : undefined, // 4급 패시브 책 (10/21 — 이베리아 손목 힘)
+    schoolPassive: kit ? kit.passive : undefined, // 4급 패시브 책 (10/21 — 이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;

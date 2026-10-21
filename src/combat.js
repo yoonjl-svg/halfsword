@@ -359,6 +359,9 @@ export class Combat {
     // 이탈리아 막아찌르기(10/21 입력형 — 약한 찌르기): 찌르는 동안 주는 칼날 상처 심각도 · 둔타 에너지 × dealt(0.6). 물리는 그대로
     const oppK = att.parryGuard?.opposition?.dealtK?.() ?? 1;
     if (oppK !== 1) { if (type === 'blunt') energy *= oppK; else severity *= oppK; }
+    // 유파 패시브 (10/21 사장님 — school_passive.js dealtK): 일본 켄타이 · 독일 인데스 — 이 칼에 묶인 몫만큼 주는 칼날 상처 심각도 · 둔타 에너지 ×. 비기 칼은 1 · 물리는 그대로
+    const spK = att.schoolPassive?.dealtK?.() ?? 1;
+    if (spK !== 1) { if (type === 'blunt') energy *= spK; else severity *= spK; }
     // 무기 비검 (10/21 — weapons.js secretBlade, 모노호시자오: 츠바메가에시 되돌려 올려 벤 칼 피해 × k): 그 기술을 긋는 중이고 칼이 위로 움직일 때만
     const SB = att.weapon?.secretBlade;
     if (SB && dir.y > SB.upY && strokeTechOf(att) === SB.tech) { if (type === 'blunt') energy *= SB.k; else severity *= SB.k; }
@@ -388,6 +391,7 @@ export class Combat {
       finish, // 내려찍기 즉사 (사장님 결정 9/30, fighter.applyWound)
       ...(finishPower ? { finishPower: FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기 (FINISH.mode 'power25' 때만 붙는다)
       ...(att.weapon?.woundRage ? { woundRage: rage } : {}), // 와신상담 배율 (그 능력이 있는 칼만 붙는다 — 시험·디버그가 읽는다)
+      ...(spK !== 1 ? { schoolK: spK, schoolLock: att.schoolPassive.lastLock } : {}), // 유파 패시브 배율이 실렸을 때만 (strike → onHit 이 켄타이를 씀)
     };
   }
 
@@ -853,6 +857,7 @@ export class Combat {
     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
+      if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
       if (r.severity > 0) { const tn = strokeTechOf(att); if ((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) artFlash(att, this.dt); }

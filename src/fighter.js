@@ -27,6 +27,7 @@ import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩�
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
 import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
 import { reviveOf, tryRevive, reviveTick } from './revive.js';
+import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
 import { fighterWetlandMoveScale } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
@@ -313,7 +314,7 @@ export class Fighter {
     this.world = world;
     this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
     this.index = o.index;
-    // 유파 패시브 (10/21 — config SCHOOL_PASSIVE): 이베리아 손목 힘. 사람은 4급 책(o.schoolPassive — main.js), AI 는 ai.js 가 숙련도로 다시 둔다
+    // 유파 패시브 (10/21 — config SCHOOL_PASSIVE): 이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방(school_passive.js). 사람은 4급 책(o.schoolPassive — main.js), AI 는 ai.js 가 숙련도로 다시 둔다
     this.passiveBook = o.schoolPassive !== false;
     if (o.schoolFootwork === false) this.schoolFootwork = false; // schools.js footworkTradition — gait.js · stamina.js
     if (o.schoolParry === false) this.schoolParry = false; // parry_button.js
@@ -616,7 +617,9 @@ export class Fighter {
     //  AI 기술 목록·간격은 ai.js 생성자가 같은 함수(인물을 넘겨)로 읽는다. 손 모양(hands.js)·HUD 이름(main.js)은 this.swordArt 를 읽는다
     const art = resolveSwordArt(spec);
     this.swordArt = art;
-    this.wristK = SCHOOL_PASSIVE.on && this.passiveBook && art.tradition === 'iberian' ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — AI 는 ai.js 가 숙련도로 다시 둔다)
+    this.wristK = schoolPassiveOn('iberian') && this.passiveBook && art.tradition === 'iberian' ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — AI 는 ai.js 가 숙련도로 다시 둔다)
+    this.schoolPassive = new SchoolPassive(this); // 나머지 넷 (school_passive.js — 받은 유파가 없으면 아무 일 없음 · AI 는 ai.js 가 숙련도로 다시 둔다)
+    this.schoolPassive.set(this.passiveBook ? art.tradition : null);
     this.guardPose.table = this.bodyGuard.table = art.table;
     if (art.lib) applySwordArt(this, art, { cover: false });
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
@@ -1353,6 +1356,7 @@ export class Fighter {
     updateFinish(this, dt); // 상대가 쓰러져 있으면 아래쪽 자세를 내려찍기로 (finish.js)
     this.skill.update(dt);
     this.stamina.step(dt);
+    this.schoolPassive?.update(dt); // 유파 패시브: 켄타이 쌓임 · 인데스 창 시계 · 휘두르는 중 (기력 장부의 공격 중을 읽는다)
     this.flowArmScale = flowRecoveryScale(this); // 흘림당한 뒤 팔 늦춤 (nagashi_recovery.js — 사장님 10/18 22:1x 0.36 s · 없으면 1)
     this.updateBodyPose(dt);
     this.driveBalance(dt);
@@ -1375,6 +1379,10 @@ export class Fighter {
     }
     this.fightT += dt;
   }
+
+  // 인데스 창 (독일 패시브 10/21 — school_passive.js · 읽기만): indesOpen = 열림(간격 잡기로 시계가 멈춘 동안 포함) · indesLeft = 남은 초(멈춘 동안 · 닫힘 = null) — 상대 머리 위 표시가 읽는다
+  get indesOpen() { return !!this.schoolPassive?.indesOpen; }
+  get indesLeft() { return this.schoolPassive?.indesLeft ?? null; }
 
   /** 판 시작 뒤 ARENA.startHold 초 동안 발이 묶였나 (사장님 9/30: 시작 2초 뒤 움직여). 걷기·기술 걸음·자세 고쳐 딛기만 막고 팔·칼·균형 걸음(stumble·닿지 않는 발)은 그대로 */
   get feetHeld() {
@@ -1478,9 +1486,10 @@ export class Fighter {
     }
     if (this.bleed > 0) {
       this.blood = Math.max(0, this.blood - this.bleed * dt);
-      // 피가 굳으며 출혈이 줄어든다 (큰 상처일수록 느리게)
-      this.bleed = Math.max(0, this.bleed - this.bleed * VITALS.clotting * dt);
-      for (const w of this.wounds) w.bleed *= 1 - VITALS.clotting * dt;
+      // 피가 굳으며 출혈이 줄어든다 (큰 상처일수록 느리게) · 동방 유파 패시브: 휘두르지 않는 동안 × clot (10/21 — school_passive.js clotK · 없으면 1)
+      const clot = VITALS.clotting * (this.schoolPassive?.clotK() ?? 1);
+      this.bleed = Math.max(0, this.bleed - this.bleed * clot * dt);
+      for (const w of this.wounds) w.bleed *= 1 - clot * dt;
     }
     this.pain = Math.max(0, this.pain - dt * 0.6);
     if (this.state === 'dead') return;
@@ -3081,6 +3090,7 @@ export class Fighter {
       if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);
       aim.normalize();
     }
+    if (this.schoolPassive?.school === 'italian') this.schoolPassive.tipAim(aim, this.lastDt || 0); // 이탈리아 곧은 선 (10/21 — 찌르는 동안 칼끝이 상대 쪽으로 · 12° · 60°/s, school_passive.js)
     aim.applyQuaternion(this.yaw);
     // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
     if (v2) corrStep(this, aim, sv);

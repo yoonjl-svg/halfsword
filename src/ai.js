@@ -26,6 +26,7 @@ import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
+import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { aiUniqueStages } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
@@ -94,7 +95,8 @@ export class AI {
     const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.persona.proficiency ?? AI_PROFICIENCY.ofLevel[levelName] ?? AI_PROFICIENCY.ofLevel.normal });
     this.art = art;
     this.proficiency = art.proficiency;
-    me.wristK = SCHOOL_PASSIVE.on && art.tradition === 'iberian' && this.proficiency >= SCHOOL_PASSIVE.at ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — 4급 책 = 숙련도 at 이상)
+    me.wristK = schoolPassiveOn('iberian') && art.tradition === 'iberian' && this.proficiency >= SCHOOL_PASSIVE.at ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — 4급 책 = 숙련도 at 이상)
+    me.schoolPassive?.set(this.proficiency >= SCHOOL_PASSIVE.at ? art.tradition : null, { ai: true }); // 나머지 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, school_passive.js · AI 몫 aiK)
     this.school = art.school;
     // 유파 막기 자리 몸꼴 (10/11 — schools.js TRADITIONS[유파].parryCover, 중국 · 독일 왕관 10/12): 막는 동안(mode 'defend', 피하기 아님)만 그 줄의 막기 자세로 손·칼끝·몸을 덮는다.
     //  14 자리 섞기에 넣으면 그 자리를 지나는 베기 길이 휘고 원전 꼴(가로 든 칼)이 섞여 사라져서 덧씌우기로 둔다(frames.js COVERS 와 같은 까닭). 칸 없는 유파는 아무것도 안 붙인다(바이트 그대로)
@@ -1416,6 +1418,8 @@ export class AI {
     // 헛침(아래 패시브 사건 'missed' 와 같은 가름 — 몸에도 칼에도 안 닿음)이면 상대 걸음에 알린다: 독일 유파 몸이면 간격 잡기 받을 창(gait.js foeWhiff — 10/15).
     //  GAIT.deChase 0 이면 걸음 쪽이 아무것도 안 한다. 읽기·알림만(난수·이 AI 상태 그대로)
     if (!this.hitLanded && !this.bound) this.foe.gait?.foeWhiff();
+    // 독일 인데스 (10/21 — school_passive.js foeFailed): 내 공격이 상대를 못 벰 — 헛침(위와 같은 가름) · 막힘(칼끼리 닿음) → 상대 몸에 되받아 칠 창. 읽기 · 알림만
+    if (!this.hitLanded) this.foe.schoolPassive?.foeFailed(this.bound ? 'blocked' : 'whiff');
     if (this.hitLanded && !this.strikeTallied) {
       this.stats.landed++;
       this.evLanded = true; // 감정층 사건: 맞혔다
