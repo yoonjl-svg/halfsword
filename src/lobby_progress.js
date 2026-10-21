@@ -94,7 +94,9 @@ export function setCoins(amount) {
   return save();
 }
 // ── 여정 판 끝 금화 · 머리 (사장님 결정 10/16 04:3x) ──
-export const JOURNEY_COINS = Object.freeze({ win: [5, 15], loss: [1, 5] }); // 이기면 +5~15 · 지면 −1~5 (정수, 양 끝 포함)
+// 사장님 10/22 01:5x '획득량이라도 지금의 2배로 · 밤 스테이지에서는 다시 그 2배 · 대신 밤 스테이지에서는 패배 시 잃어버리는 양을 지금의 2배로'
+//  낮: 이기면 +10~30(전 5~15) · 지면 −1~5 그대로 / 밤(무대 id 끝 _night): 이기면 +20~60 · 지면 −2~10 (정수, 양 끝 포함)
+export const JOURNEY_COINS = Object.freeze({ win: [10, 30], loss: [1, 5], night: Object.freeze({ win: [20, 60], loss: [2, 10] }) });
 /** [lo, hi] 정수 하나 — 게임 난수(Math.random — AI 가 쓰는 흐름)를 건드리지 않게 crypto 로 */
 export function rollInt(lo, hi) {
   const span = hi - lo + 1;
@@ -103,12 +105,14 @@ export function rollInt(lo, hi) {
   return lo + Math.min(span - 1, Math.floor(u * span));
 }
 /**
- * 판 끝 금화 (main.js checkRoundEnd — 첫 화면·대기실 여정만): 이기면 +rollInt(5, 15) · 지면 −rollInt(1, 5), 0 아래로는 안 내려간다.
+ * 판 끝 금화 (main.js checkRoundEnd — 첫 화면·대기실 여정만): 낮 무대는 이기면 +rollInt(10, 30) · 지면 −rollInt(1, 5) ·
+ *  밤 무대(opts.night)는 이기면 +rollInt(20, 60) · 지면 −rollInt(2, 10) — 0 아래로는 안 내려간다 (JOURNEY_COINS · 사장님 10/22).
  *  돌려줌 { delta: 실제로 바뀐 값(지면 음수 — 금화가 모자라면 그만큼만), coins: 바뀐 뒤 금화, saved }
  */
-export function journeyCoins(win, roll = rollInt) {
+export function journeyCoins(win, roll = rollInt, { night = false } = {}) {
   readProgress();
-  const [lo, hi] = win ? JOURNEY_COINS.win : JOURNEY_COINS.loss;
+  const T = night ? JOURNEY_COINS.night : JOURNEY_COINS;
+  const [lo, hi] = win ? T.win : T.loss;
   const amount = roll(lo, hi);
   const before = session.coins;
   session.coins = win ? before + amount : Math.max(0, before - amount);

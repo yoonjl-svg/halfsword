@@ -1859,8 +1859,8 @@ function checkRoundEnd(dt) {
       const win = !enemy.alive;
       if (journeySaves()) {
         recordDuel(win); // 대기실 '대면 결과' — 첫 화면에서 연 여정의 판마다 한 번
-        // 금화 (사장님 결정 10/16 04:3x '승리시 랜덤으로 벌어. 5~15원 중 랜덤. 패배시 1~5원 감소' — 0 아래로는 안 내려감, lobby_progress.js journeyCoins)
-        roundReward = { heads: roundReward?.heads ?? 0, coins: journeyCoins(win).delta };
+        // 금화 (사장님 결정 10/16 04:3x · 10/22 01:5x — 낮 +10~30 / −1~5 · 밤 +20~60 / −2~10, 0 아래로는 안 내려감, lobby_progress.js journeyCoins)
+        roundReward = { heads: roundReward?.heads ?? 0, coins: journeyCoins(win, undefined, { night: /_night$/.test(stages.id ?? '') }).delta };
       }
       lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
       // 여정(무대마다 그곳 검객 — 이기면 다음 무대로 넘어간다: nextRoundStage 의 advance)에서 이긴 판 = 무대 하나 깸 → 깬 수 +1 (통계 — journey_save.js).
