@@ -4,7 +4,7 @@ import { alterLook } from './outfit_alter.js';
 //
 //  ai.persona가 ai.js의 AI 클래스에 그대로 전달된다:
 //   - ai.proficiency: 숙련도 (사장님 결정 10/13 — 자기 유파 = 시트 값, 다른 유파 = 0). 실력 숫자 이름 ai.level 과 persona.proficiency 는 finishAI 가 채운다
-//   - level: AI_LEVELS(실력 숫자 — 숙련도가 고른 이름) 위에 캐릭터별로 덮어쓰는 값 (반응 시간·막기 확률·읽는 눈·힘 등)
+//   - level: AI_LEVELS(실력 숫자 — 숙련도가 고른 이름) 위에 캐릭터별로 덮어쓰는 값 (막기 확률·읽는 눈·힘 등 — 반응 시간 reaction 은 10/21 부터 숙련도 표 AI_PROFICIENCY.reaction 이 이김: 여기 적힌 reaction 은 쓰지 않음)
 //   - pers:  성격(자세 취향·간격·박자·속임수) 위에 덮어쓰는 값. guardStick이 이번에 새로 생긴 핵심 손잡이:
 //            크면(예: 6) 가까운 자세만 고집하는 신중한 검객, 작으면(예: 0.6) 먼 자세로도 서슴없이
 //            건너뛰는 변덕스러운 검객이 된다. guardPref는 자세 이름별 선호도를 부분적으로 못박아 둔다.

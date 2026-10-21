@@ -264,6 +264,8 @@ export class AI {
     // persona.level: 반응 시간·막기 확률·읽는 눈·힘 같은 "실력 숫자"를 난이도 기본값 위에 캐릭터별로 덮어쓴다
     const PL = this.persona?.level;
     this.level = PL ? { ...base, ...PL } : base;
+    const RX = AI_PROFICIENCY.reaction; // AI 반응 시간은 숙련도로 (10/21 — 인물 시트 · 이름 값보다 이김)
+    if (RX) this.level = { ...this.level, reaction: RX[Math.max(0, Math.min(RX.length - 1, Math.round(this.proficiency ?? 2)))] };
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
     this.me.skill.corr = SKILL.corrAI; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)

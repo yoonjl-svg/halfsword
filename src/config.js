@@ -431,14 +431,14 @@ export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: 0.35, moveDown
 //  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여'): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
 //   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 · `?flowDmgCut=0` = 끔 (combat.js analyze · 흘림 표시 flowShield)
 export const FLOW_REDESIGN = {
-  on: true, window: 0.12, penalty: 40, threatEnd: true, flowDmgCut: 0.8,
+  on: true, window: 0.2, /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 40, threatEnd: true, flowDmgCut: 0.8,
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
   minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
   minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,
 };
 // 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s · `?flowArm=0` = 끔
 //  release = 옛 판정(`?flowJudge=0`)에서 받는 몸꼴(NAGASHI.poseT)을 쥔 동안 막기를 풀고 치면 그 몸꼴을 놓는다 (frames.js — 샛별 연구 그대로)
-export const FLOW_RECOVERY = { seconds: 0.36, floor: 0.25, release: true, hold: null, recover: null };
+export const FLOW_RECOVERY = { seconds: 0.4, /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.36 → 0.4 (짧은 효과 칸) */ floor: 0.25, release: true, hold: null, recover: null };
 // 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴
 // 이베리아 탈류 · 레베스 쳐내기에 흘림과 같은 팔 늦춤 (사장님 10/19 03:5x 시험 — 기본 끔): 쳐내기 자세로 들어오는 칼을 받으면 공격자 팔에 FLOW_RECOVERY 를 건다
 export const IB_PARRY_ARM = { on: false };
@@ -745,7 +745,7 @@ export const SKILL = {
   itRetreatVals: { gap: 1.35, low: 0, stick: 1, maxT: 1.2, room: 1.0, cool: 1.2 },
   itParryBeat: 0,
   itOpposition: 1, // 10/20 사장님 직접 적용 지시: 플레이어 레이피어 막아찌르기. 비교/되돌림 ?itOpposition=0
-  itOppositionVals: { window: .32, aim: .12, extend: .32, reach: .28, turn: .65, side: .04,
+  itOppositionVals: { window: .4, /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — .32 → .4 (짧은 효과 칸) */ aim: .12, extend: .32, reach: .28, turn: .65, side: .04,
     hold: .08, recover: .20, maxGap: 1.85, minVn: .6, injuryGrace: .08 },
   itForte: 0, // 이탈리아 forte 막기 연구 후보 (가) (10/17 감독 요청 — **연구 · 사장님 확인 전**, 확인표 2037): 0 = 끔(지금 판 그대로 — 이탈리아 막기 몸꼴 덧씌우기 없음) · 1·2 = 후보 몸꼴(schools.js ITALIAN_FORTE — 위 줄을 팔 뻗은 원전 꼴로 세워 forte 로 받게). `?itForte=1`, 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte'·'무기:forte2' — docs/strike/italian_forte_parry_2026-10-17.md
   // 플레이어 막기 버튼 거듦 (10/12 — 사장님 01:1x '무기가 무거울수록 성공률이 너무 떨어져서 거의 무용지물 … 지금보다는 성공률이 올라야 해'. docs/strike/parry_assist_2026-10-12.md · 확인표 990~993, **사장님 확인 전**).
@@ -943,8 +943,8 @@ export const SECRET = {
   hitMul: 1.3, // 판정 어드밴티지: 비기 베기(베기 길·따라 지나감 동안)가 낸 상처 에너지 배율 (combat.js analyze — 공격자 fighter.secretHit) [확인 전]
   slowMo: { scale: 0.4, dur: 0.25 }, // 연출: 비기가 터뜨려지는 순간 화면 시간 배율 scale 을 dur 초(실시간) 동안 (main.js 프레임 dt — 물리 스텝 dt 는 그대로, 스텝 수만 준다). `?slowMo=0` 끔 [확인 전]
   // 플레이어 비기 (SKILL.playerSecret)
-  playerWindow: 0.5, // 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
-  cnParryWindow: 1.0, // 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
+  playerWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.5 → 0.6 (이어짐 · 입력 칸) · 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
+  cnParryWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 1.0 → 0.6 (이어짐 · 입력 칸) · 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
   // 중국 막기 연환 사람이 쓰게 (사장님 10/12 01:1x 플레이 시험 — docs/strike/cn_combo_play_2026-10-12.md) [모두 사장님 확인 전 — 확인표 970~]
   cnBongdu: 1, // 1 = 봉두세(highL) 막기도 정한 자세 (schools.js CHINESE_SECRET_PARRY cond.slots — 오는 줄 25 %), 0 = 전 두 자리(거정세·표두세). `?cnBongdu=0`
   cnBuffer: 1, // 1 = 정한 자세로 막아 칼이 맞닿은 동안 온 공격 입력을 미리 받아 두고 칼이 떨어지는 순간 연환 (secret.js PlayerSecretWatch.buffer — 플레이어만), 0 = 전(그 입력은 보통 공격 · 기다림 취소). `?cnBuffer=0`
@@ -1047,6 +1047,10 @@ export const AI_PROFICIENCY = {
   ofLevel: { easy: 1, normal: 2, hard: 3 },
   schoolK: [0.7, 0.85, 1, 1.15, 1.3, 1.45],
   flowReady: { watch: 2, withdraw: 4 },
+  // AI 반응 시간 (s · 숙련도 0~5 — 10/21 14:3x 사장님 'ai 막기 반응은 … 난이도가 없어졌으니 숙련도에 따라 달라지게 개편해' · 확인표 2114):
+  //  AI 의 눈(sense.seen — 막기 · 틈 읽기 · 미리 보기가 모두 읽는 한 값)이 이만큼 늦게 본다. 숙련도 한 단계마다 0.05 s 빨라짐 · 2 = 0.25(전 normal 0.26) · 3 = 0.2.
+  //  인물 시트의 reaction 덮어쓰기와 이름(easy · normal · hard) 값보다 이것이 이긴다(ai.js). 광기 인물은 숙련도 + 1 이라 한 단계 빠름. 수는 감독 — 사장님 확인 전
+  reaction: [0.35, 0.3, 0.25, 0.2, 0.15, 0.1],
 };
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)

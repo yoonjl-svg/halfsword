@@ -1,5 +1,5 @@
 // 일본 흘림 묶음 시험 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md)
-//  흘림당한 쪽 기력 40(공격 하나에 한 번) · 팔 늦춤 0.36 s · 일본/이베리아 막는 동안 피해 20 % 감소(동방 50 % 그대로) · 판 값
+//  흘림당한 쪽 기력 40(공격 하나에 한 번) · 팔 늦춤 0.4 s(10/21 시간 통일 — 전 0.36) · 일본/이베리아 막는 동안 피해 20 % 감소(동방 50 % 그대로) · 판 값
 //  node --test tools/sim/japanese_flow.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,9 +16,9 @@ function actor(extra = {}) {
   f.stamina = new Stamina(f); return f;
 }
 
-test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 40 · 창 0.12 s · 팔 늦춤 0.36 s(바닥 0.25) · 자연 회복 탈진 · 일본/이베리아 0.2 · 동방 0.5', () => {
-  assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 40); assert.equal(FLOW_REDESIGN.window, 0.12); assert.equal(FLOW_REDESIGN.threatEnd, true);
-  assert.equal(FLOW_RECOVERY.seconds, 0.36); assert.equal(FLOW_RECOVERY.floor, 0.25); assert.equal(STAMINA.exhaustNatural, true);
+test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 40 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본/이베리아 0.2 · 동방 0.5', () => {
+  assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 40); assert.equal(FLOW_REDESIGN.window, 0.2); assert.equal(FLOW_REDESIGN.threatEnd, true);
+  assert.equal(FLOW_RECOVERY.seconds, 0.4); assert.equal(FLOW_RECOVERY.floor, 0.25); assert.equal(STAMINA.exhaustNatural, true);
   assert.equal(SKILL.jpParryDmgCut, 0.2); assert.equal(SKILL.ibParryDmgCut, 0.2); assert.equal(SKILL.cnParryDmgCut, 0.5);
 });
 
@@ -39,13 +39,13 @@ test('흘림당한 쪽 기력 40: 바닥(−70)에서 멈추고 탈진 · 기력
   const H = actor({ index: 1 }); H.stamina.infinite = true; H.stamina.attack(); const h0 = H.stamina.value; const eh = spendFlowPenalty(H, D); assert.equal(eh.charged, false); near(H.stamina.value, h0);
 });
 
-test('팔 늦춤 0.36 s: 처음 1/3 은 0.25 · 끝에서 1 · 같은 공격 · 돌아오는 중 다시 안 걸림 · 쓰러짐/칼 놓침 = 1 · 0 이면 끔', () => {
+test('팔 늦춤 0.4 s: 처음 1/3 은 0.25 · 끝에서 1 · 같은 공격 · 돌아오는 중 다시 안 걸림 · 쓰러짐/칼 놓침 = 1 · 0 이면 끔', () => {
   const O = actor({ index: 1 }), D = actor(); O.stamina.attack();
   assert.equal(beginFlowRecovery(O, D), true); assert.equal(beginFlowRecovery(O, D), false);
   const at = (t) => { O.stamina.time = O.flowRecovery.start + t; return flowRecoveryScale(O); };
-  near(at(0), 0.25); near(at(0.12 - 1e-9), 0.25, 1e-6); near(at(0.24), 0.25 + 0.75 * 0.5); near(at(0.36), 1); near(at(1), 1);
-  O.stamina.time = O.flowRecovery.start + 0.40; O.stamina.attack(); assert.equal(beginFlowRecovery(O, D), false); // 끝 + 0.12 s 안
-  O.stamina.time = O.flowRecovery.start + 0.60; assert.equal(beginFlowRecovery(O, D), true); // 새 공격 · 충분히 뒤
+  const T = FLOW_RECOVERY.seconds; near(at(0), 0.25); near(at(T / 3 - 1e-9), 0.25, 1e-6); near(at((2 * T) / 3), 0.25 + 0.75 * 0.5); near(at(T), 1); near(at(1), 1);
+  O.stamina.time = O.flowRecovery.start + T + 0.04; O.stamina.attack(); assert.equal(beginFlowRecovery(O, D), false); // 끝 + 0.12 s 안
+  O.stamina.time = O.flowRecovery.start + T + 0.24; assert.equal(beginFlowRecovery(O, D), true); // 새 공격 · 충분히 뒤
   O.stamina.time = O.flowRecovery.start; O.state = 'down'; near(flowRecoveryScale(O), 1); O.state = 'stand'; O.armed = false; near(flowRecoveryScale(O), 1);
   const was = FLOW_RECOVERY.seconds; try { FLOW_RECOVERY.seconds = 0; const P = actor({ index: 1 }); P.stamina.attack(); assert.equal(beginFlowRecovery(P, D), false); near(flowRecoveryScale(P), 1); } finally { FLOW_RECOVERY.seconds = was; }
 });

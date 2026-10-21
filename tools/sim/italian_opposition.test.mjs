@@ -43,7 +43,7 @@ for (const mode of ['late', 'bookOff', 'otherWeapon', 'noAttack', 'outgoing', 'i
   test(`reject invalid contact: ${mode}`, () => {
     const { g, f, a, guard, mod, clash } = fixture();
     try {
-      if (mode === 'late') guard.clock += .33;
+      if (mode === 'late') guard.clock += CONFIG.SKILL.itOppositionVals.window + .01; // 창(10/21 0.4 s) 바로 뒤
       if (mode === 'bookOff') f.schoolParry = false;
       if (mode === 'otherWeapon') f.weapon = { id: 'longsword' };
       if (mode === 'noAttack') a.stamina.attackId = 0;
