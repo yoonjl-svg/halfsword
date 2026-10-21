@@ -521,3 +521,9 @@ test('실제 몸 — 고유 공격 · 비기: 익힌 칸의 기술만 · 비기�
     assert.equal(new PlayerSecretWatch(j.player, j.enemy, { locked: !kitOf('japanese', 'J1', 'J2', 'J3', 'J4').secret }).S, null);
   } finally { j.world.free(); }
 });
+test('판 칸 이름(name)이 모든 칸에 있고 갈래 말(보법 · 막기 · 패시브 · 비기 · 심화)로 시작하지 않음 (사장님 10/22)', () => {
+  for (const s of D.TREE_SCHOOLS) for (const n of D.nodesOf(s)) {
+    assert.ok(n.name && n.name.length <= 12, `${n.id} name`);
+    assert.ok(!/^(보법|막기|패시브|비기|심화)( |$)/.test(n.name), `${n.id} ${n.name}`);
+  }
+});
