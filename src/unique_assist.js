@@ -62,19 +62,19 @@ export const PLAYER_UNIQUE = {
   german: [
     { stage: 1, name: 'zwerchAbtritt', role: 'step', stick: 'side', hint: '옆으로 걸으며 가로 긋기', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 옆 + 가로베기
     { stage: 3, name: 'duplieren', role: 'chain', hint: '칼이 맞물린 뒤 다시 긋기', far: true, body: [5, -3, 3, 0], on: [{ prev: 'cut', when: 'bound' }], chain: { at: 1 } }, // 겹치기 ← 내 베기가 맞물린 뒤 다음 긋기
-    { stage: 4, name: 'schielhau', role: 'enh', replaces: 'zornhau', hint: '강화동작 · 분노의 베기 대신', body: [12, 8, 2, 0.02], on: [{ tech: 'zornhau' }] }, // 곁눈 베기 ← 분노의 베기 (늘 — 같은 시작 자리 오른쪽 머리 위 · 10/21 사장님 '분노의 베기를 바꾸는 걸로' · 전 황소 찌르기는 찌르기 → 베기로 어긋나 AI 손해)
+    { stage: 4, name: 'schielhau', role: 'enh', replaces: 'zornhau', hint: '강화동작 · 분노의 베기 대신', body: [-12, -8, 2, 0.02], /* 10/21 전수 조사: 오른쪽 위 → 왼쪽 아래 긋기라 몸도 왼쪽(−) — 전 +12 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 곁눈 베기 ← 분노의 베기 (늘 — 같은 시작 자리 오른쪽 머리 위 · 10/21 사장님 '분노의 베기를 바꾸는 걸로' · 전 황소 찌르기는 찌르기 → 베기로 어긋나 AI 손해)
   ],
   italian: [
-    { stage: 1, name: 'inquartata', role: 'step', stick: 'side', hint: '옆으로 걸으며 찌르기', body: [18, 10, 5, 0.025], on: [{ tech: 'stichPflugL' }, { tech: 'stichPflug' }] }, // 비껴서며 찌르기 ← 옆 + 쟁기 찌르기(왼 · 오른)
+    { stage: 1, name: 'inquartata', role: 'step', stick: 'side', hint: '옆으로 걸으며 찌르기', body: [18, 10, 5, 0.025], bodyMirror: 1, /* 몸을 칼 줄 밖으로 빼는 쪽 = 디딘 쪽(10/21 — 걸음이 스틱 쪽을 따르므로 몸도) */ on: [{ tech: 'stichPflugL' }, { tech: 'stichPflug' }] }, // 비껴서며 찌르기 ← 옆 + 쟁기 찌르기(왼 · 오른)
     { stage: 2, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 황소 찌르기 대신', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }] }, // 위에서 내려 찌르기 ← 황소 찌르기 (늘)
     { stage: 3, name: 'cavazione', role: 'chain', hint: '찌르기가 맞물리거나 꺾인 뒤 찌르기', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }] }, // 칼끝 돌려 빼기
   ],
   iberian: [
-    { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [15, 8, 4, 0.02], on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
-    { stage: 3, name: 'redondo', role: 'enh', replaces: 'zwerch', stack: 0.06, hint: '강화동작 · 가로베기 대신 · 이어 그을수록 강해짐', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerch' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 가로베기 (늘)
+    { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
+    { stage: 3, name: 'redondo', role: 'enh', replaces: 'zwerchL', stack: 0.06, hint: '강화동작 · 왼 가로베기 대신 · 이어 그을수록 강해짐', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerchL' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 왼 가로베기 (늘 — 10/21 전수 조사: 왼쪽 → 오른쪽으로 떨어지는 레베스라 왼 가로베기와 짝 · 전 가로베기(오른쪽 → 왼쪽)는 방향이 거꾸로)
   ],
   japanese: [
-    { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
+    { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
     { stage: 2, name: 'kote', role: 'enh', replaces: 'langortDown', hint: '강화동작 · 가운데서 짧게 내려베기 대신', anchor: 'start', body: [5, 3, 4, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 긴 자세에서 짧게 내려베기 (늘)
     { stage: 3, name: 'tsubameGaeshi', role: 'chain', hint: '정수리 베기가 빗나간 뒤 위로 긋기', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }], chain: { at: 2 } }, // 츠바메가에시
   ],
@@ -442,7 +442,9 @@ export class PlayerUniqueAssist {
     }
     const r = this.r;
     // ② 몸: 긋는 동안 표의 몸 꼴(body · 뒷몫은 body2)을 bodyIn 초에 얹고, 긋기가 끝나면 bodyOut 초에 걷는다 (덧씌우기 칸 몸 값 — fighter.js updateBodyPose 가 더한다)
-    const B = r && E > 0 ? (r.part === 2 ? r.e.body2 ?? r.e.body : r.e.body) : null;
+    let B = r && E > 0 ? (r.part === 2 ? r.e.body2 ?? r.e.body : r.e.body) : null;
+    // bodyMirror (10/21): 몸 돌림 쪽을 이 긋기의 걸음 쪽에 맞춘다 — 1 = 디딘 쪽 · −1 = 디딘 쪽의 반대 (걸음은 스틱 쪽 · 없으면 표의 걸음)
+    if (B && r.e.bodyMirror) { const lat = (r.step ?? r.U.step)?.lat ?? 0; if (lat) { const sg = Math.sign(lat) * r.e.bodyMirror; B = [Math.abs(B[0]) * sg, Math.abs(B[1]) * sg, B[2], B[3]]; } }
     const k = Math.min(1, dt / (B ? UA.bodyIn : UA.bodyOut));
     let any = false;
     for (let i = 0; i < 4; i++) {
