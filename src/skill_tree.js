@@ -151,7 +151,8 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     $('#bookState').hidden = !note;
     $('#buyBook').hidden = test || st !== 'unowned';
     $('#buyBook').textContent = `구입 · 금화 ${b.price}`;
-    $('#buyBook').disabled = coins < b.price;
+    $('#buyBook').disabled = coins < b.price || (b.planned && b.kind === 'secret'); // 닫힌 비기 책은 살 수 없음 (10/21)
+    if (b.planned && b.kind === 'secret') $('#buyBook').textContent = '준비 중';
     for (const id of ['#useBook', '#sealBook']) $(id).hidden = test || st === 'unowned';
     $('#useBook').disabled = st === 'use';
     $('#sealBook').disabled = st === 'sealed';

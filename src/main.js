@@ -144,6 +144,10 @@ if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.g
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
+{ // 열린 비기 유파 (10/21 — config SECRET.openSchools): `?secretOpen=all` 옛 판 · `?secretOpen=japanese,german` 고르기
+  const so = params.get('secretOpen');
+  if (so) CONFIG.SECRET.openSchools = so === 'all' ? ['german', 'italian', 'iberian', 'japanese', 'chinese'] : so.split(',').map((x) => x.trim()).filter(Boolean);
+}
 {
   // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)
   const sp = params.get('schoolPassive');

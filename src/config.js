@@ -818,6 +818,10 @@ export const SKILL = {
 //   손 속도 최대(fastChamber + handSpeed 배율) · 걸음 결심(비기 동안 위협이 와도 막기로 거두지 않는다) · 서보 힘 창(그 한 번의 베기 구간만 칼을 미는 힘 × power — fighter.powerMul).
 //  끝나면 경직(stiff s: 공격·응답 없음, 손 빠르기 ×0.5, 걸음 없음 — 핸디캡). 횟수 제한 없음(사장님 결정). 수는 모두 사장님 확인 전(확인표 263~)
 export const SECRET = {
+  // 열린 비기 (10/21 20:xx 사장님 '스킬트리에서 비기는 고노센 빼고 모두 미구현으로 닫아놔 — 성능과 컨셉이 불안정' · 'AI 비기도 닫아. 다 바꿀거야'):
+  //  여기 있는 유파만 비기를 쓴다 — 사람(비기 책 · PlayerSecretWatch) · AI(ai.js) 모두. 닫힌 유파의 비기 책은 '준비 중'(살 수 없음).
+  //  `?secretOpen=all` = 옛 판(다섯 유파 모두) · `?secretOpen=japanese,german` 처럼 고를 수 있음 (main.js)
+  openSchools: ['japanese'],
   power: 1.3, // 서보 힘 창: 비기 베기 동안 칼을 미는 손목 힘 배율 (fighter.js driveSword 의 str 에 곱함)
   handSpeed: 1.5, // 10/9 4차 사장님 '비기는 통상보다 훨씬 빨라야' — 사다리 1.5 → 2.0 → 2.5 (문서 §11): 1.5 에서 서보 포화(닿기까지 ms 가 더 줄지 않고 J 가 떨어짐) → 1.5 에서 멈춤. 1.3 에서 올림. 손 속도 배율: 비기의 준비(빠른 준비 parrySpeed)·베기(strikeSpeed) 손 빠르기에 곱함
   stepPush: 2.0, // 10/9 4차 1.8 → 2.0 (일본·이탈리아 비기 걸음). 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8

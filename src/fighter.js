@@ -701,6 +701,8 @@ export class Fighter {
       }
     }
     isolatedVisual(() => spec.decorate?.(group, o.look), 0);
+    // 무기에 딸린 옷 · 차림 그림(환도 빈 칼집 — weapons.js dressWeapon): 질량 · 싸움 충돌 없음, 그림만 (샛별 저장소 10/21)
+    if (spec.dressWeapon) isolatedVisual(() => spec.dressWeapon(this.groups.pelvis), 0);
     if (group.userData.bladeMesh) {
       this.bladeMesh = group.userData.bladeMesh; // decorate 가 칼날을 따로 그렸으면 피는 거기에 묻는다
       this.bladeBaseColor = this.bladeMesh.material.color.clone();

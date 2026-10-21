@@ -537,7 +537,7 @@ export class PlayerSecretWatch {
   constructor(me, foe, { locked = false } = {}) {
     this.me = me;
     this.foe = foe;
-    this.S = locked ? null : playerSecretOf(me);
+    this.S = locked || !SECRET.openSchools.includes(me.swordArt?.tradition) ? null : playerSecretOf(me); // 10/21 닫힌 유파 비기 없음 (config SECRET.openSchools)
     this.sense = new Senses(me, foe);
     this.ev = { armed: true, off: 0 };
     this.open = null; // 열린 창 { S, ctx, t }

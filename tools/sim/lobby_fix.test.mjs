@@ -7,7 +7,7 @@ import { Vector2 } from 'three';
 const storage = new Map();
 globalThis.localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) };
 const { Stamina } = await import('../../src/stamina.js');
-const { STAMINA, GAIT, UNIQUE_ASSIST } = await import('../../src/config.js');
+const { STAMINA, GAIT, UNIQUE_ASSIST, SECRET } = await import('../../src/config.js');
 const { readProgress, journeyCoins, rollInt, awardHead, JOURNEY_COINS, PROGRESS_KEY, setCoins } = await import('../../src/lobby_progress.js');
 const { BOOK_TIERS, booksOf, bookOf, buyBook, readBooks, bookState, setBookInUse, playerKit, kitUniqueStage, bookTierParam, BOOK_HEAD_PRICE, headPriceOf, BOOK_STATE_KEY } = await import('../../src/skill_books.js');
 const { convertSeals, takeSealNotice, sealCount, OLD_SEALS, COINS_PER_SEAL, SEAL_COINS_KEY } = await import('../../src/seal_coins.js');
@@ -142,7 +142,9 @@ test('실제 판: 고유자세 · 비기 봉인 = 고유 공격 없음 · 비기
     const off = new PlayerUniqueAssist(g.player, { stage: kitUniqueStage({ unique: false }) });
     assert.equal(off.list.length, 0); assert.equal(g.player.skill.uniq, null);
     assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: true }).S, null);
-    assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: false }).S, TRADITIONS.german.secret);
+    assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: false }).S, null); // 10/21 독일 비기 닫힘 (SECRET.openSchools = 일본만)
+    const keep = SECRET.openSchools; SECRET.openSchools = ['german'];
+    try { assert.equal(new PlayerSecretWatch(g.player, g.enemy, { locked: false }).S, TRADITIONS.german.secret); } finally { SECRET.openSchools = keep; }
   } finally { g.world.free(); }
 });
 

@@ -10,6 +10,7 @@
 //  판에 미치는 곳 (사람만 — AI·시뮬은 그대로): 모든 판이 playerKit 을 읽는다(main.js newRound — 첫 화면·대기실 여정 · 옛 메뉴 판 · 주소 판, 10/16 08:1x 인장 없앰부터).
 //   테스트 경로는 모두 열림 · 개발 인자 `?uniqueStage=N` 은 그 유파의 N 급까지 '사용'(0 = 책 없음 · 5 = 모두 — bookTierParam).
 import { TRADITIONS } from './schools.js';
+import { SECRET } from './config.js';
 import { PLAYER_UNIQUE, uniqueDef } from './unique_assist.js';
 import { readProgress, purchase } from './lobby_progress.js';
 import { UNIQUE_ASSIST } from './config.js';
@@ -139,6 +140,9 @@ export function bookOf(school, tier) {
   } else if (B.kind === 'passive') {
     book.effect = PASSIVE_TEXT[school] ?? '준비 중'; // 10/21 다섯 유파 모두 (config SCHOOL_PASSIVE)
     if (!PASSIVE_TEXT[school]) book.planned = true;
+  } else if (!SECRET.openSchools.includes(school)) {
+    book.effect = '준비 중'; // 10/21 20:xx 사장님 '비기는 고노센 빼고 모두 미구현으로 닫아놔' — 살 수 없음 (buyBook · skill_tree.js)
+    book.planned = true;
   } else book.effect = SECRET_TEXT[T.secret?.name] ?? '';
   return book;
 }
@@ -181,6 +185,7 @@ export function setBookInUse(id, use) {
 export function buyBook(school, tier) {
   const b = bookOf(school, tier);
   if (!b) return { ok: false, saved: false, why: 'bad' };
+  if (b.planned && b.kind === 'secret') return { ok: false, saved: false, why: 'planned' }; // 닫힌 비기 책 (10/21)
   const result = purchase({ receipt: bookReceipt(school, tier), kind: 'skillbook', price: b.price });
   if (result.ok) setBookInUse(b.id, true);
   return result;
