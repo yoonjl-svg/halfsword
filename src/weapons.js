@@ -1751,6 +1751,7 @@ const brothersSword = finalizeSpec('brothers_sword', {
 //   → 손~칼끝 0.805 → 0.765 m · 전체 0.89 → 0.85 m · 총 0.90 → 0.87 kg · 손 기준 관성 0.098 → 0.084 (무게중심 손에서 0.242 → 0.228 m). 허리 칼집 그림도 날 길이를 따라 줄어든다(hwandoScabbard).
 const hwando = finalizeSpec('hwando', {
   nameKo: '환도', nameEn: 'Hwando', tier: 'common',
+  strayPick: false, // 브론 오소리 '주워 온 커먼 칼'(characters.js shortest_common) 후보에서 뺀다 — 환도가 들어온 뒤(10/21) 가장 짧은 커먼 칼이 되어 팔쉬온 자리를 빼앗았다(우치가타나와 같은 까닭 · 검은숲 사람이 조선 칼을 줍지 않게). 감독 10/22 되돌림
   desc: '조선 군졸의 외날 도검.\n가볍고 짧아 재빨리 베어 든다.', // 10/21 22:4x 사장님 고름(전 둘째 줄 생김새 — '조금 휜 날과 무늬를 뚫은 코등이를 지녔다')
   school: 'chinese', grip: 'one-hand', material: 'steel', enterParry: true,
   hiltLength: .085, bladeLength: .68, // 10/21 23:3x 0.72 → 0.68 (위 머리말)
