@@ -733,10 +733,11 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   // 에픽 특수 능력 '비검' (10/21 — 전 출혈 ×2 '제비 베기: 출혈' 를 바꿈): 이 칼로 츠바메가에시(제비 베기)를 그어 되돌려 올려 벤 칼(칼이 위로 움직임 — dir.y > upY)에
   //  맞으면 칼날 상처 심각도 · 둔타 에너지 × k (combat.js analyze · 흘림 피해 감소와 같은 자리). 사람 · AI 같이. 내려 베는 앞 칼은 그대로
   //  open = 이 칼을 들면 스킬북 · 숙련도와 상관없이 그 기술이 열림(사람 · AI — 10/21 15:3x 사장님 '1~2번 넣어'). 발동 완화(정수리 · 좌우 사선 뒤)는 15:4x 부터
-  //  츠바메가에시 자체(unique_assist.js)로 옮김 — 진 · 츠바메가에시의 다름은 피해 × 3 · 책 없이 열림
+  //  츠바메가에시 자체(unique_assist.js)로 옮김 — 진 · 츠바메가에시의 다름은 책 없이 열림 · 되돌림 칼 끌고 감(kin)
   //  kin = 되돌림 칼을 연환과 같은 틀(정해진 길로 끌고 감 · secret_instant.js requestArtReturn)로 — 빠르기 · 잔상 세기 = 고노센의 이 몫(10/21 15:5x 사장님 '고노센의 50% 빠르기에 잔상도 그에 비례해서')
   //  hold = 끝 자세 붙잡기(s — 비기 굳음이 아니라 되돌림 칼을 거두는 짧은 몫, 감독 값 · 반응 칸 0.2)
-  secretBlade: { tech: 'tsubameGaeshi', k: 3, upY: 0.2, open: true, kin: 0.5, hold: 0.2 },
+  //  k = 피해 배율 — 10/21 16:0x 사장님 '너무 세면 속도 보너스만 줘. 속도가 오르면 어차피 데미지는 따라 오르니' → 1 (전 3: 끌고 간 되돌림 칼 160~180 J × 3 = 상처 깊이 10 안팎, 확실한 즉사)
+  secretBlade: { tech: 'tsubameGaeshi', k: 1, upY: 0.2, open: true, kin: 0.5, hold: 0.2 },
   hiltLength: 0.25, bladeLength: 0.9, gripAlong: -0.22,
   mCut: 1.7, mThrust: 0.85, mBlunt: 0.95, // 1.5 로는 롱소드 상대 4% (긴 칼이라 간격에서 이기지 못한다) → 1.7 (실효 1.87)
   controlOverrides: { aimStiffness: 70, wristVmax: 34 },
