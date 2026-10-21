@@ -1,3 +1,4 @@
+import { buildCourtyardNight } from './stage_courtyard_night.js'; // 밤의 봉인의 중정 — 샛별 저장소에서 가져옴 (10/21, docs/import/courtyard_night_2026-10-21.md)
 import { buildCourtyard } from './stage_courtyard.js'; // 봉인의 중정 · 밤 다섯째 ~ 일곱째 넷 — 샛별 저장소에서 가져옴 (10/17, docs/import/saetbyeol_round3_2026-10-17.md). 중정은 디자인 리뷰 뒤 고쳐 여정에 (docs/design/courtyard_fix_2026-10-17.md)
 import { buildDunhuangNight } from './stage_dunhuang_night.js';
 import { buildDayrNight } from './stage_dayr_night.js';
@@ -40,6 +41,7 @@ import { buildEtna } from './stage_etna.js';
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
+  courtyard_night: buildCourtyardNight, // 밤의 봉인의 중정: 비밀회담 · 늦게 닿은 명령 · 잘못된 교전 끝에 새벽 3 시 포격으로 무너진 중정 · 검은 연기 · 깨진 급수정의 새는 물 (stage_courtyard_night.js) — 광기의 마야 (여정 17)
   // 샛별 저장소에서 가져온 무대 다섯 (10/17 — 사장님 10/16~17 결정, 샛별 쪽). 밤 넷은 10/17 14:xx · 중정은 디자인 리뷰를 고친 뒤 10/17 15:4x 여정 순서(STAGE_ORDER)에 들어갔다
   dayr_night: buildDayrNight, // 밤의 소금 사막: 상인으로 위장한 암살단 · 끊긴 모의 · 등불 둘레의 참상 (stage_dayr_night.js) — 광기의 다라이시
   dunhuang_night: buildDunhuangNight, // 밤의 철불 절벽: 사방에서 겨루고 행군하는 오 · 월의 망령 (stage_dunhuang_night.js) — 광기의 병마용
@@ -101,11 +103,13 @@ const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배
 // 10/17 15:4x 사장님 '다 고쳐서 올려'(봉인의 중정 디자인 리뷰 '고쳐서 넣기'의 답) — 고친 중정을 2 막 산호 항구 바로 뒤(12 번째)에 넣었다. 낮 다섯 · 밤 같은 곳 규칙(10/16 19:4x) 그대로:
 //  둘째 낮 = 산호 항구 · 봉인의 중정 · 잠든 습지 · 화산섬 · 청람잔도 → 그 밤 넷(중정은 밤 짝이 없다) → 셋째 낮 = 신목의 숲 · 산사 · 얼어붙은 만 · 철불 절벽 · 소금 사막 → 그 밤 다섯.
 //  스물아홉 판, 끝판은 그대로 밤의 소금 사막. 2 막 색 차례 = 바다 파랑(산호 항구) → 장밋빛 · 주황(중정) → 초록(습지) → 검정 · 빨강(화산섬)
+// 10/21 사장님 승인(샛별 저장소 밤의 봉인의 중정 — 디자인 · 성능 리뷰 뒤, docs/import/courtyard_night_2026-10-21.md): 같은 규칙(10/16 19:4x)대로 둘째 밤 묶음을
+//  낮 묶음과 같은 차례로 — 밤의 산호 항구 바로 뒤(17 번째)에 밤의 봉인의 중정(광기의 마야). 둘째 밤 묶음이 다섯이 되어 서른 판 · 끝판은 그대로 밤의 소금 사막
 export const STAGE_ORDER = [
   'poseidon', 'clearing', 'castle', 'loggia', 'cathedral',
   'poseidon_night', 'clearing_night', 'castle_night', 'loggia_night', 'cathedral_night',
   'corsair', 'courtyard', 'sluice', 'etna', 'qinglan',
-  'corsair_night', 'sluice_night', 'etna_night', 'qinglan_night',
+  'corsair_night', 'courtyard_night', 'sluice_night', 'etna_night', 'qinglan_night',
   'sacred_grove', 'temple', 'frozen_bay', 'dunhuang', 'dayr',
   'sacred_grove_night', 'temple_night', 'frozen_bay_night', 'dunhuang_night', 'dayr_night',
 ];
@@ -113,7 +117,8 @@ export const STAGE_ORDER = [
 //  10/14 19:4x: 잠든 습지 = 라트나 · 소금 사막 = 다라이시 (손님 인물 CHARACTER_GUESTS — CHARACTERS_BY_ID 로 풀린다, 무작위 회전에는 그대로 없음).
 //   철불 절벽(dunhuang) = 병마용(terracotta, 손님 인물 — 10/14 감독 짝, 사장님 19:4x 정식 경로 결정에 따름)
 //   화산섬(etna) = 찬다(사장님 10/14 19:4x '찬다는 화산섬이 전용 스테이지' — 10/14 감독이 병합 때 짝 지음)
-export const STAGE_FOE = { dayr_night: 'silver_wanderer_mad', dunhuang_night: 'terracotta_mad', courtyard: 'samira', etna_night: 'chanda_mad', qinglan_night: 'renji_mad', sluice_night: 'ratna_mad', loggia_night: 'tome_mad', sacred_grove_night: 'minami_mad', corsair_night: 'omari_mad', clearing_night: 'bran_mad', castle_night: 'isolde_mad', cathedral_night: 'margarethe_mad', frozen_bay_night: 'eira_mad', temple_night: 'liao_mad', poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji', sluice: 'ratna', dayr: 'silver_wanderer', dunhuang: 'terracotta', etna: 'chanda' };
+//  10/21: 밤의 봉인의 중정 = 광기의 마야(samira_mad — 늘 세이버, characters.js)
+export const STAGE_FOE = { courtyard_night: 'samira_mad', dayr_night: 'silver_wanderer_mad', dunhuang_night: 'terracotta_mad', courtyard: 'samira', etna_night: 'chanda_mad', qinglan_night: 'renji_mad', sluice_night: 'ratna_mad', loggia_night: 'tome_mad', sacred_grove_night: 'minami_mad', corsair_night: 'omari_mad', clearing_night: 'bran_mad', castle_night: 'isolde_mad', cathedral_night: 'margarethe_mad', frozen_bay_night: 'eira_mad', temple_night: 'liao_mad', poseidon: 'heinrich', clearing: 'bran', clearing_a: 'bran', clearing_a_dry: 'bran', temple: 'liao', castle: 'isolde', poseidon_night: 'heinrich_mad', cathedral: 'margarethe', loggia: 'tome', corsair: 'omari', sacred_grove: 'minami', frozen_bay: 'eira', qinglan: 'renji', sluice: 'ratna', dayr: 'silver_wanderer', dunhuang: 'terracotta', etna: 'chanda' };
 // 그 무대 검객 후보 (사장님 10/10 20:0x — 샛별 저장소에서 가져온 넷의 무대 짝. 무대마다 한 명뿐인 STAGE_FOE 짝을 밀어내지 않고 후보로 더한다, 확인표 752).
 //  여정(foe=stage)에서 그 무대를 열 때 [본디 짝, ...후보] 가운데 하나를 고르게 고른다 → 본디 짝은 그 무대에서 절반만 나온다.
 //  졌을 때 같은 무대를 다시 열면 같은 상대(아래 stageFoeId 의 prevId). STAGE_FOE 자체는 그대로다
@@ -136,6 +141,7 @@ export function stageFoeId(stageId, prevId = null, rnd = Math.random) {
 // 무대의 화면 이름 (10/14 왼쪽 위 '스테이지 3 · 산사' — docs/ui/hud_intro_2026-10-14.md). 이름은 docs/stages.md 의 무대 이름 그대로
 //  (보관용 1안 두 무대는 같은 화전 터). 번호는 STAGE_ORDER 의 자리 + 1, 순서표에 없는 무대(어두운 홀 등)는 이름만 (stageLabel)
 export const STAGE_NAME_KO = {
+  courtyard_night: '밤의 봉인의 중정', // 10/21 — 낮 이름(봉인의 중정)에 '밤의'를 붙이는 다른 밤 무대 규칙대로
   dayr_night: '밤의 소금 사막', // 사장님 10/17 14:xx '네 제안대로' — 낮 이름(소금 사막, 사장님 10/14)에 맞춤 (샛별 쪽 '밤의 소금길 역참')
   dunhuang_night: '밤의 철불 절벽',
   courtyard: '봉인의 중정',
