@@ -22,6 +22,8 @@ import { SAIN_COLORS, ICE_COLORS, sainPartMesh, sainDecorate, icePartMesh, iceDe
 import { FLAMBERGE_MUSEUM, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
+import { BALISARDA_COLORS, balisardaPartMesh } from './balisarda_details.js'; // 발리사르다 겉모습 (샛별 저장소 c89e827c6 — 10/21)
+import { MURAMASA_COLORS, MURAMASA_PROFILE, muramasaPartMesh, muramasaDecorate } from './muramasa_details.js'; // 무라마사 겉모습 (샛별 저장소 29e543555 · d46e09b96 · 82818cc3d — 10/21)
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -60,6 +62,7 @@ export const TIER_DEFAULTS = {
 //  종류 = 싸우는 방식의 무기 갈래(한손검 · 양손검 · 한손 둔기 …) — 물건 이름(나뭇가지 · 장난감 · 생선)은 쓰지 않는다 (사장님 10/19 03:1x '나뭇가지 x')
 const KIND_KO = {
   hwando: '한손 외날도', kriegsmesser: '양손 외날검',
+  balisarda: '한손 찌르기검', muramasa: '일본도',
   dartagnan: '한손 찌르기검', kusanagi: '양손 직검',
   longsword: '양손검', zweihander: '대형 양손검', estoc: '찌르기검', sabre: '한손 곡도', rapier: '한손 찌르기검', falchion: '한손 외날검',
   monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '양손검',
@@ -718,6 +721,35 @@ const dartagnan = finalizeSpec('dartagnan', {
   },
 });
 
+// 발리사르다 (레전드 · 이탈리아 — 사장님 10/21 승인 시안, 샛별 저장소 c89e827c6 에서 들여옴): 이탈리아 기사 문학(보이아르도 · 아리오스토) 속 마법검을 이탈리아 찌르기검으로 각색 [I].
+//  샛별 쪽은 레이피어 몸체를 그대로 썼다. 우리는 사장님 10/21 23:3x 결정대로 칼날만 0.95 → 0.99 m —
+//  같은 단면이라 칼날 질량은 길이에 비례(0.38 → 0.396 kg), 자루 · 폼멜 · 덩굴 코등이(레이피어 컵과 같은 공 근사)는 레이피어 그대로.
+//  → 손~칼끝 1.05 → 1.09 m · 전체 1.14 → 1.18 m · 총 1.10 → 1.12 kg · 손 기준 관성 0.079 → 0.088 (무게중심 손에서 0.157 → 0.165 m).
+//  찌르기 장점 · 베기/찌르기 배율 · 동작은 레이피어 그대로. 레전드 공통(공격력 1.2 · 비파손)만 다르다. 특수 능력 없음 —
+//  전승의 마법 갑옷 베기는 따로 방어 무시로 만들지 않았다. 레이피어 · 달타냥 몸체는 손대지 않는다(아래 buildParts 는 발리사르다 몫만).
+const balisarda = finalizeSpec('balisarda', {
+  ...RAPIER_SPEC,
+  nameKo: '발리사르다', nameEn: 'Balisarda', tier: 'legend', school: 'italian',
+  desc: '마녀 팔레리나가 마법의 갑옷을 베도록 만든 검.\n은과 금의 덩굴이 상아색 자루를 감싼다.',
+  bladeLength: 0.99,
+  partMesh: balisardaPartMesh,
+  decorate: undefined, // 열린 덩굴 코등이는 partMesh 가 다 그린다 — 레이피어 컵 장식 고리를 겹쳐 그리지 않는다
+  buildParts() {
+    const L = this.bladeLength;
+    const grip = boxInertia(0.08, 0.014, 0.055, 0.014);
+    const pommel = sphereInertia(0.09, 0.018);
+    const cup = sphereInertia(0.55, 0.05); // 덩굴 코등이: 레이피어 컵과 같은 공 근사 (바구니 틈은 따로 풀지 않는다)
+    const bladeMass = 0.38 * L / 0.95; // 같은 단면: 레이피어 날(0.95 m · 0.38 kg)을 날 길이 비로 — 0.99 m → 0.396 kg
+    const blade = bladeInertia(bladeMass, L, 0.3, 0.24, 0.018, 0.012);
+    return [
+      partTuple(['box', 0.014, 0.055, 0.014], 0, 0.08, 0, grip.Ie, grip.It, BALISARDA_COLORS.grip),
+      partTuple(['ball', 0.018], -0.07, 0.09, 0, pommel.Ie, pommel.It, BALISARDA_COLORS.hilt),
+      partTuple(['ball', 0.05], 0.06, 0.55, 0, cup.Ie, cup.It, BALISARDA_COLORS.hilt),
+      partTuple(['box', 0.009, L / 2, 0.006], 0.1 + L / 2, bladeMass, blade.comY, blade.Ie, blade.It, BALISARDA_COLORS.blade, true),
+    ];
+  },
+});
+
 
 // ═════════════════════════════════════════════════════════════
 //  8) 팔쉬온 — Thorpe falchion(13세기 원본) 0.904kg·칼날 80.3cm [M]. 균형점 자료 없음
@@ -891,7 +923,8 @@ const kusanagi = finalizeSpec('kusanagi', {
 //      방식은 두루(찌르기 0.9 > 0.85) — 일본 가중치(two:* 真向 ×1.3 · 袈裟 ×1.2 · 胴 ×0.8 · 突き ×0.8)가 처음 일하는 무기.
 //      겉모습은 모노호시자오의 칼 꼴(외날·시노기·하몬·키사키)을 칼날 0.71 m 로 그대로 쓰고, 금 장식을 뺀 커먼 마감.
 // ═════════════════════════════════════════════════════════════
-const uchigatana = finalizeSpec('uchigatana', {
+// finalizeSpec 앞 원본을 무라마사(아래)와 나눠 쓴다 — 레이피어 · 달타냥과 같은 꼴. 우치가타나 자체는 전과 같은 객체를 finalizeSpec 에 넘긴다(물리 · 스펙 그대로).
+const UCHIGATANA_SPEC = {
   nameKo: '우치가타나', nameEn: 'Uchigatana',
   desc: '날을 위로 하여 허리띠에 꽂던 무사의 칼.\n뽑는 동작이 곧 베기다.',
   grip: 'two-hand', material: 'steel',
@@ -937,6 +970,36 @@ const uchigatana = finalizeSpec('uchigatana', {
     const fuchi = addMesh(group, new THREE.CylinderGeometry(0.0148, 0.0148, 0.008, 14), iron, [0, 0.061, 0]);
     fuchi.scale.z = 1.2;
     addTsukaIto(group, silk, -0.215, 0.03); // 모노호시자오와 같은 끈 — 카시라 위 −0.215 부터 후치 밑 0.03 까지 여덟 줄 (끈 32 · 매듭 16 상자가 메쉬 하나)
+  },
+};
+const uchigatana = finalizeSpec('uchigatana', UCHIGATANA_SPEC);
+
+// 무라마사 (레어 · 일본 — 사장님 10/21 승인, 샛별 저장소 29e543555 · d46e09b96 · 82818cc3d 에서 들여옴): 이세의 도공 무라마사 일문은 실존하나 외장 · 게임 규격은 각색 [I].
+//  우치가타나의 쥠(10/21 A안 — 츠카 30 cm · 손 간격 0.20 · 츠바 · 카시라 자리)과 자루 · 카시라 · 츠바 질량을 그대로 쓰고 칼날만 다르다:
+//  날 0.68 m(등 밑동~칼끝 직선 — 사장님 10/21 23:3x, 샛별 쪽 0.70 에서 2 cm 짧게) · 휨 2 cm(그대로 — 그림만 휘고 콜라이더는 반폭 2.4 cm 상자가 덮는다) ·
+//  총 1.05 kg(사장님 10/21 23:4x — 샛별 쪽 1.12 에서 내림). 덜어 낸 몫은 모두 칼날이 진다(샛별 massRatio 방식): 칼날 0.66 → 0.61 kg, 칼날의 무게중심 비 · 회전 반경 비는 우치가타나 그대로.
+//  → 손~칼끝 0.755 m(우치 0.785) · 전체 1.014 m · 무게중심 손에서 0.175 m(우치 0.190) · 손 기준 관성 0.101(우치 0.116). 베기 · 찌르기 배율은 우치가타나 그대로, 레어 공통 계수만 다르다. 특수 능력 없음.
+const muramasa = finalizeSpec('muramasa', {
+  ...UCHIGATANA_SPEC,
+  nameKo: '무라마사', nameEn: 'Muramasa', tier: 'rare',
+  desc: '이세의 도공 무라마사 일문의 칼.\n도쿠가와 집안에 화를 부른 요도라 불렸다.',
+  bladeLength: MURAMASA_PROFILE.length,
+  partMesh: muramasaPartMesh,
+  decorate: muramasaDecorate,
+  buildParts(look) {
+    const parts = UCHIGATANA_SPEC.buildParts.call(this, { ...look, ...MURAMASA_COLORS });
+    const blade = parts[3];
+    blade[3] = MURAMASA_COLORS.blade;
+    // 총질량은 칼날이 맞춘다: 칼날 = 총 1.05 − (츠카 + 카시라 + 츠바). 관성 둘은 질량에 비례하므로 같은 비로 (무게중심 자리는 그대로)
+    const bladeMass = MURAMASA_PROFILE.mass - parts.slice(0, 3).reduce((sum, p) => sum + p[2][0], 0);
+    const massRatio = bladeMass / blade[2][0];
+    blade[2][0] = bladeMass;
+    blade[2][2] *= massRatio;
+    blade[2][3] *= massRatio;
+    // 휜 칼날이 상자에서 1 cm 안에 들도록 기존 상자 근사의 반폭만 넓힌다. 질량 축은 가운데에 둔다 —
+    //  상자를 비켜 놓으면 Rapier 의 주관성 축이 돌아가는데, 지금 두 손 서보가 그것을 안정하게 다루지 못한다.
+    blade[0][1] = MURAMASA_PROFILE.colliderHalfWidth;
+    return parts;
   },
 });
 
@@ -1612,8 +1675,9 @@ const flamberge = finalizeSpec('flamberge', {
 // ═════════════════════════════════════════════════════════════
 //  22) 월왕구천검 (에픽) — 샛별 저장소에서 가져옴 (origin/main 7684c732 — 그쪽 c9719902 처음 80 cm · e7eb2f5c 85 cm). 겉모습 src/goujian_details.js.
 //      원형: 춘추 말기 월나라 왕 구천의 청동 직선 양날검 (1965 호북 강릉 망산 1호묘 출토) — [M] 소장 기관 기록 길이 55.7 cm · 폭 4.6 cm, 참고 사전 875 g.
-//      게임판은 실물의 복제가 아니라 늘린 각색 [I] (샛별 쪽 사용자 요청 '모르겐슈테른 69 cm 이상'): 전체 85 cm(손 기준 −0.09 ~ +0.76 m) · 날 67 cm ·
-//       질량 1.213 kg = 날 0.843(80 cm 판 날 0.78 kg 을 같은 단면으로 날 길이 비 0.67/0.62 만큼) + 자루 0.13 + 폼멜 0.14 + 코등이 0.10 ·
+//      게임판은 실물의 복제가 아니라 늘린 각색 [I] (샛별 쪽 사용자 요청 '모르겐슈테른 69 cm 이상' — 80 cm 로도 지켜진다): 전체 80 cm(손 기준 −0.09 ~ +0.71 m) · 날 62 cm ·
+//       질량 1.15 kg = 날 0.78 + 자루 0.13 + 폼멜 0.14 + 코등이 0.10 · 손 기준 관성 0.105 (무게중심 손에서 0.218 m) ·
+//       (사장님 10/21 23:4x 날 0.67 → 0.62 m — 샛별 쪽 처음 80 cm 판과 같은 길이. 전: 전체 85 cm · 날 67 cm · 1.213 kg(날 0.843) · 손~칼끝 0.76 m · 관성 0.128) ·
 //       칼날 무게중심 비율 0.38 · 회전 반경 비 0.26 [I] · 폭 4.6 cm · 한손 · 배율 베기·찌르기 1.05 · 둔타 1.0 — 제원은 모두 샛별 값 그대로.
 //      재질 steel (샛별 그대로): 우리 재질표(MATERIALS · SOUND_MATERIAL · MATERIAL_TOUGHNESS)와 소리 재질(sound.js)에 청동이 없다. 칼끼리 닿는 소리는 쇳소리
 //       (종도 청동이다), 반발은 쇠끼리(0.7), 부러짐은 등급표대로(재질 몫 1) — 청동이 강철보다 잘 부러지는 몫을 따로 두려면 새 재질·새 수가 들어 하지 않았다.
@@ -1629,13 +1693,13 @@ const goujian = finalizeSpec('goujian', {
   school: 'chinese', // 동방 유파 (사장님 결정 10/14 — 청강검·간장·막야·사인검과 같은 劍)
   enterParry: true, // 들어가며 막기 (짧은 한손 칼 관례 — 간장·막야·사인검과 같은 까닭, 샛별 쪽엔 없음)
   ability: '와신상담: 다칠수록 공격력 증폭', // 에픽 특수 능력 (사장님 결정 10/14 — 카드 능력 줄 문구 그대로)
-  woundRage: 0.3, // '와신상담': 칼 주인이 다친 정도 d(0~1)만큼 이 칼의 공격력(power)이 × (1 + 0.3·d) — 최대 +30 % 는 사장님 결정. d 정의는 combat.js woundDegree
-  hiltLength: 0.09, bladeLength: 0.67, gripAlong: -0.10,
+  woundRage: 0.5, // '와신상담': 칼 주인이 다친 정도 d(0~1)만큼 이 칼의 공격력(power)이 × (1 + 0.5·d) — 최대 +50 %(사장님 10/21 23:4x '상한을 올린다' · 감독 권고 50 % — 전 30 %, 10/14 사장님). d 정의는 combat.js woundDegree
+  hiltLength: 0.09, bladeLength: 0.62, gripAlong: -0.10, // 10/21 23:4x 날 0.67 → 0.62 (위 머리말)
   mCut: 1.05, mThrust: 1.05, mBlunt: 1.0,
   partMesh: goujianPartMesh, decorate: goujianDecorate,
   buildParts() {
     const L = this.bladeLength;
-    const bladeMass = 0.78 * L / 0.62; // 같은 단면·재질: 80 cm 판 날 0.78 kg 을 날 길이 비로 늘림 (샛별 식 그대로 — 0.843 kg)
+    const bladeMass = 0.78 * L / 0.62; // 같은 단면·재질: 80 cm 판 날(0.62 m · 0.78 kg)을 날 길이 비로 (샛별 식 그대로 — 지금 날 0.62 m 라 0.78 kg, 전 0.67 m 일 때 0.843 kg)
     const grip = boxInertia(0.13, 0.016, 0.079, 0.014);
     const pommel = boxInertia(0.14, 0.026, 0.004, 0.026); // 원반 폼멜 (상자 콜라이더 — 샛별 그대로)
     const guard = boxInertia(0.10, 0.034, 0.007, 0.016);
@@ -1683,11 +1747,13 @@ const brothersSword = finalizeSpec('brothers_sword', {
 //  (tools/browser/weapon_thumbs.mjs 로 이 무기 모델을 그대로 찍어 만든다 — 겉모습을 바꾸면 다시 돌린다).
 // 10/21 사장님 선택(샛별 저장소에서 들여옴): 동방 커먼 환도 · 독일 레어 크리그스메서.
 //  치수 · 질량은 게임용으로 정한 값 [I] — 특정 유물을 실측해 되살린 것이 아니다. 생김새는 historical_weapon_details.js.
+//  환도 날 (사장님 10/21 23:3x '4 cm 짧게'): 0.72 → 0.68 m. 같은 단면이라 칼날 질량은 길이에 비례 0.62 → 0.586 kg (자루 · 폼멜 · 코등이 그대로)
+//   → 손~칼끝 0.805 → 0.765 m · 전체 0.89 → 0.85 m · 총 0.90 → 0.87 kg · 손 기준 관성 0.098 → 0.084 (무게중심 손에서 0.242 → 0.228 m). 허리 칼집 그림도 날 길이를 따라 줄어든다(hwandoScabbard).
 const hwando = finalizeSpec('hwando', {
   nameKo: '환도', nameEn: 'Hwando', tier: 'common',
   desc: '조선 군졸의 외날 도검.\n가볍고 짧아 재빨리 베어 든다.', // 10/21 22:4x 사장님 고름(전 둘째 줄 생김새 — '조금 휜 날과 무늬를 뚫은 코등이를 지녔다')
   school: 'chinese', grip: 'one-hand', material: 'steel', enterParry: true,
-  hiltLength: .085, bladeLength: .72,
+  hiltLength: .085, bladeLength: .68, // 10/21 23:3x 0.72 → 0.68 (위 머리말)
   mCut: 1.10, mThrust: .95, mBlunt: .95,
   partMesh: (...args) => historicalPartMesh('hwando', ...args),
   decorate: historicalDecorate,
@@ -1698,12 +1764,12 @@ const hwando = finalizeSpec('hwando', {
   },
   buildParts() {
     const L=this.bladeLength, grip=boxInertia(.12,.015,.0625,.013), pommel=sphereInertia(.08,.011),
-      cross=boxInertia(.08,.0355,.002,.0275), blade=bladeInertia(.62,L,.37,.25,.036,.0062);
+      cross=boxInertia(.08,.0355,.002,.0275), bladeMass=.62*L/.72, blade=bladeInertia(bladeMass,L,.37,.25,.036,.0062); // 칼날 질량: 처음 날(0.72 m · 0.62 kg)과 같은 단면으로 날 길이 비
     return [
       partTuple(['box',.015,.0625,.013],0,.12,0,grip.Ie,grip.It,0x856444),
       partTuple(['ball',.011],-.073,.08,0,pommel.Ie,pommel.It,0x9a8050),
       partTuple(['box',.0355,.002,.0275],.072,.08,0,cross.Ie,cross.It,0x39372f),
-      partTuple(['box',.024,L/2,.0031],.085+L/2,.62,blade.comY,blade.Ie,blade.It,0xc4c8c7,true),
+      partTuple(['box',.024,L/2,.0031],.085+L/2,bladeMass,blade.comY,blade.Ie,blade.It,0xc4c8c7,true),
     ];
   },
 });
@@ -1741,6 +1807,7 @@ export const WEAPONS = {
   dartagnan, // 사장님 10/21(샛별 저장소 경유): 이탈리아 에픽
   kusanagi, // 사장님 10/21(샛별 저장소 경유): 일본 레전드
   hwando, kriegsmesser,
+  balisarda, muramasa, // 사장님 10/21 23:3x(샛별 저장소 경유): 이탈리아 레전드 · 일본 레어
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
