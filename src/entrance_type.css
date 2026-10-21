@@ -70,7 +70,7 @@
 :host .name-dialog h2, :host .tree-dialog h2 { font-size: var(--fs-l); }
 :host .tree-dialog p { font-weight: var(--fw-body); color: var(--c-text); } /* 스킬트리 옮김 알림 (10/21) */
 /* 스킬트리 칸 (10/21 — skill_tree.js · 10/22 그림 + 이름): 이름 600 · 초기화 400 · 값 알약 강조 색 (이름 크기는 칸 폭에 맞춰 skill_tree.js 가 줄임) */
-:host .tree-node .node-name { font-weight: var(--fw-label); }
+:host .tree-node .node-name, :host .tree-reset .reset-label { font-weight: var(--fw-label); } /* 초기화 글자 = 칸 이름과 같은 굵기 (10/22 02:0x) */
 :host .tree-reset, :host .tree-node .node-soon { font-weight: var(--fw-body); }
 :host .name-dialog label, :host .name-error { color: var(--c-sub); font-weight: var(--fw-body); }
 :host .equipped-badge { font-weight: var(--fw-label); }
