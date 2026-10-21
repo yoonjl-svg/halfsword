@@ -14,12 +14,12 @@ import { historicalPartMesh, historicalDecorate, hwandoScabbard } from './histor
 // ─────────────────────────────────────────────────────────────
 import { classifyWeapon } from './weapon_class.js';
 import { drawBrothersSword } from './renji_sword_wrap.js'; // 황약사의 검(형의 칼)의 흰 천 감싼 겉모습 (샛별 저장소에서 가져옴 10/17)
-import { MONTANTE, FL_HILT } from './config.js';
+import { MONTANTE } from './config.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
 import { SAIN_COLORS, sainPartMesh, sainDecorate } from './rare_sword_details.js'; // 사인검 겉모습 (샛별 저장소에서 가져옴 6e71ba2 — 북부 대공의 검(옛 아이스)은 10/21 지움)
-import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, FLAMBERGE_SHORT_HANDLE, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
+import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, flambergeDecorate } from './flamberge_look.js'; // 플랑베르주 겉모습 (샛별 저장소 325a5c38 의 생김새를 옮겨 고침)
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
 import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
@@ -1647,25 +1647,22 @@ const sain = finalizeSpec('sain', {
 //       폼멜 0.43 → 0.35(청동 덩이 부피 49 cm³ 는 사진 어림이라 오차 안에서 40 cm³ 쪽으로 — 손 쪽이 지나치게 묵직하다는 사장님 체감을 따른 각색 [I]) · 날밑 0.58 ·
 //       칼날 1.665 × 1.162/1.187(길이당 질량) + 폼멜에서 옮긴 0.08 + 4 cm 줄이며 빠진 0.046 = 1.756. 칼날 무게중심 · 회전 반경 비(0.353 · 0.272)는 그대로.
 //       → 무게중심 손에서 0.226 → 0.250 m · 손 기준 관성 0.692 → 0.684(롱소드 0.272 의 2.54 → 2.51 배). 모양 · 충돌체 크기 · 겉모습은 그대로(줄인 치수만)
+//      손잡이 (사장님 10/22 03:3x 'a로 하고 길이는 4cm만 줄여. a와 b의 절충.' — docs/strike/iberian_flat_hits_2026-10-22.md §8): 긴 손잡이가 칼끝을 내릴 때 제 배에 걸려
+//       (칼끝 땅에 자리 +30° · 수직 올려베기가 안 닿음) 칼 면 맞음 몫이 컸다 → ① 손잡이 47.7 → 43.7 cm(왼손 아래 −4 cm — 폼멜 가운데 −0.370 → −0.330 · 자루 상자 0.070 ~ −0.330) ·
+//       전체 164.9 → 160.9 cm · 오른손 · 날밑 자리 · 손 사이 0.24 · 칼날 · 코등이 그대로. 자루 0.314 → 0.281 kg(길이 비 0.40/0.44 = 0.286 에서 줄어든 0.029 kg 를 칼날로 옮기면 손 기준 관성이 0.6806 — 롱소드 0.2724 의 2.499 배로 2.5 배에 모자라
+//       5 g 를 더 칼날로) · 칼날 1.756 → 1.789 kg · 합 3.0 그대로 → 무게중심 0.250 → 0.263 m · 손 기준 관성 0.684 → 0.682(롱소드의 2.51 → 2.50 배 이상 — 사장님 10/21 결정 지킴). ② 칼자루 충돌체(자루 상자 밑 · 폼멜 공)는 손에서 FL_HILT_CUT 까지만 —
+//       부품 질량의 자리는 무게중심(comY)으로 그대로 두어 질량 · 관성은 ① 그대로, 겉모습도 그대로(partMesh 가 충돌체 자리 표로 그려 그림이 제자리). 그림 폼멜 끝(−0.36)이 제 배에 조금 묻힐 수 있다(획 중앙 1.6 cm · 최대 4 cm — §8-9).
 // ═════════════════════════════════════════════════════════════
-const FL_MASS = { grip: 0.325 * (0.44 / 0.455), pommel: 0.35, guard: 0.58 };
+const FL_MASS = { grip: 0.325 * (0.4 / 0.455) - 0.005, pommel: 0.35, guard: 0.58 }; // 자루: 길이 비 0.286 에서 5 g 를 칼날로 더 (손 기준 관성 롱소드의 2.5 배 이상 — 아래 머리말)
 const FL = {
-  // 부품 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.370(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.162 m
-  y: [-0.15, -0.37, 0.097, FLAMBERGE_HILT + FLAMBERGE_GAME.blade / 2],
-  mass: { ...FL_MASS, blade: 3.0 - FL_MASS.grip - FL_MASS.pommel - FL_MASS.guard }, // 칼날 1.756 kg (위 머리말 — 합 3.000)
+  // 부품 질량 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.330(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.162 m
+  y: [-0.13, -0.33, 0.097, FLAMBERGE_HILT + FLAMBERGE_GAME.blade / 2],
+  mass: { ...FL_MASS, blade: 3.0 - FL_MASS.grip - FL_MASS.pommel - FL_MASS.guard }, // 칼날 1.789 kg (위 머리말 — 합 3.000)
 };
-// 짧은 칼자루 충돌체 시험 (config FL_HILT — 10/22, 기본 끔 · 사장님 확인 전 · docs/strike/iberian_flat_hits_2026-10-22.md '플랑베르주' 절):
-//  켜면 자루 상자 밑 끝과 폼멜 공을 FL_HILT.cut 으로 올린다(자루 상자 위 끝 0.070 그대로). 부품 질량의 자리는 무게중심(comY)을 그만큼 옮겨 그대로 —
-//  질량 · 무게중심 · 관성 · 휘두르는 느낌은 판과 같고 충돌체만 짧다. 겉모습도 그대로(partMesh 가 같은 자리 표로 그려 부품 그림이 제자리에 남는다).
-//  끄면 FL.y 그대로 · 무게중심 0 · 자루 반길이 0.22 — 판과 같은 float
-const FL_GRIP_TOP = FL.y[0] + 0.22; // 자루 상자 위 끝 (날밑 덩이 안)
-// mode 'real' (`?flHilt=real` — 감독 B 안): 손잡이를 진짜로 줄인다 — 겉모습(flamberge_look.js FLAMBERGE_SHORT_HANDLE) · 자루 상자 · 자루 질량(길이 비)을 함께, 폼멜(0.35 kg)은 그만큼 올림.
-//  손 ~ 칼끝 · 칼날 · 코등이 그대로 — 질량 · 무게중심 · 관성은 바뀐다(무게중심 0.250 → 0.272 m 쪽 · 합 2.914 kg). 'short' 는 위 그대로(충돌체만)
-const FL_REAL_EXTRA = FLAMBERGE_GAME.handle - FLAMBERGE_SHORT_HANDLE; // 더 줄이는 손잡이 길이 (0.12 m)
-const flReal = () => FL_HILT.on && FL_HILT.mode === 'real';
-const flCut = () => (flReal() ? FL.y[1] + FL_REAL_EXTRA : FL_HILT.cut); // 자루 상자 밑 끝 · 폼멜 공 자리
-const flY = () => (FL_HILT.on ? [(FL_GRIP_TOP + flCut()) / 2, flCut(), FL.y[2], FL.y[3]] : FL.y);
-const flPartMesh = flambergePartMesh(FL.y);
+const FL_GRIP_TOP = FL.y[0] + 0.2; // 자루 상자 위 끝 0.070 (날밑 덩이 안)
+const FL_HILT_CUT = -0.28; // 칼자루 충돌체 끝 (손에서 m — 자루 상자 밑 · 폼멜 공 충돌체 자리) — 사장님 10/22 03:3x 'a로'. −0.25(츠바이핸더 mid 폼멜 자리)는 그림 폼멜이 제 배에 획 중앙 3 cm 묻혀 −0.28 로(중앙 1.6 cm · 칼 면 몫은 잡음 안 — §8-9)
+// 충돌체 자리 [자루 상자 · 폼멜 공 · 코등이 · 칼날] — 자루 상자는 위 끝 그대로 밑만 FL_HILT_CUT 까지, 폼멜 공은 FL_HILT_CUT 에
+const FL_COL_Y = [(FL_GRIP_TOP + FL_HILT_CUT) / 2, FL_HILT_CUT, FL.y[2], FL.y[3]];
 const flamberge = finalizeSpec('flamberge', {
   nameKo: '플랑베르주 (물결 날 양손검)', nameEn: 'Flamberge',
   desc: '독일 용병 란츠크네히트가 들던 불꽃 날 대검.\n물결 날은 벼리기 어려워 값비싼 칼이었다.',
@@ -1673,22 +1670,19 @@ const flamberge = finalizeSpec('flamberge', {
   hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_GAME.blade, gripAlong: -0.24,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
   // 손목 서보 상한: 두 손 쥠 기본값 26 (츠바이핸더와 같다)
-  // 짧은 칼자루 시험(FL_HILT)이 켜지면 부품 자리 표가 바뀌므로 그 표로 그린다 (끄면 판 그대로 FL.y 로 만든 그리개)
-  partMesh: (...a) => (FL_HILT.on ? flambergePartMesh(flY(), flReal() ? FL_REAL_EXTRA : 0)(...a) : flPartMesh(...a)), decorate: flambergeDecorate,
+  // 그림은 충돌체 자리 표로 그린다 — fighter.js 가 부품 그림을 충돌체 자리에 놓으므로 그림이 제자리(질량 자리)에 남는다
+  partMesh: flambergePartMesh(FL_COL_Y), decorate: flambergeDecorate,
   buildParts() {
     const L = this.bladeLength;
     const M = FL.mass;
-    const Y = flY();
-    const gripHy = FL_HILT.on ? (FL_GRIP_TOP - flCut()) / 2 : 0.22; // 자루 상자 반길이 (시험이면 짧게)
-    const real = flReal();
-    const mGrip = real ? (M.grip * (2 * gripHy)) / 0.44 : M.grip; // 'real': 자루 질량 길이 비 (0.314 → 0.229 kg)
-    const grip = real ? boxInertia(mGrip, 0.019, gripHy, 0.0165) : boxInertia(M.grip, 0.019, 0.22, 0.0165); // 'short' 는 관성 판 그대로 · 'real' 은 짧은 자루
+    const gripHy = (FL_GRIP_TOP - FL_HILT_CUT) / 2; // 자루 상자 충돌체 반길이 (0.175)
+    const grip = boxInertia(M.grip, 0.019, 0.2, 0.0165); // 관성은 손잡이 자루 상자 그대로 (0.40 m)
     const pommel = sphereInertia(M.pommel, 0.03);
     const guard = boxInertia(M.guard, 0.2525, 0.03, 0.0155);
     const blade = bladeInertia(M.blade, L, 0.353, 0.272, 0.04, 0.009);
     return [
-      partTuple(['box', 0.019, gripHy, 0.0165], Y[0], mGrip, real ? 0 : FL.y[0] - Y[0], grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
-      partTuple(['ball', 0.03], Y[1], M.pommel, real ? 0 : FL.y[1] - Y[1], pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
+      partTuple(['box', 0.019, gripHy, 0.0165], FL_COL_Y[0], M.grip, FL.y[0] - FL_COL_Y[0], grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
+      partTuple(['ball', 0.03], FL_COL_Y[1], M.pommel, FL.y[1] - FL_COL_Y[1], pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
       partTuple(['box', 0.2525, 0.03, 0.0155], FL.y[2], M.guard, 0, guard.Ie, guard.It, FLAMBERGE_COLORS.steel),
       partTuple(['box', 0.02, L / 2, 0.0045], FL.y[3], M.blade, blade.comY, blade.Ie, blade.It, FLAMBERGE_COLORS.blade, true),
     ];

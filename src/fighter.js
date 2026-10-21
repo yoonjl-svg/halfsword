@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, FL_GRIP, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -598,7 +598,7 @@ export class Fighter {
       ...spec.controlOverrides,
       bladeLength: spec.bladeLength,
       hiltLength: spec.hiltLength,
-      gripAlong: FL_GRIP.on && spec.id === 'flamberge' ? FL_GRIP.along : spec.gripAlong, // 플랑베르주 왼손 폼멜 가까이 시험 (config FL_GRIP — 10/22, 기본 끔 · 사장님 확인 전)
+      gripAlong: spec.gripAlong,
       edged: spec.edged,
       mCut: spec.mCut,
       mThrust: spec.mThrust,

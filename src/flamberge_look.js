@@ -24,25 +24,17 @@ export const FLAMBERGE_MUSEUM = Object.freeze({ overall: 1.689, blade: 1.187, ri
 // 게임 치수 (사장님 10/21 23:5x '플랑베르주는 전체 4 cm 줄여' — 나누기는 감독): 박물관 실측은 위 기록 그대로 두고 게임은 이것을 쓴다 [I].
 //  날 −2.5 cm(물결 날 칼끝 쪽 — 리카소 26.7 cm 그대로) · 손잡이 −1.5 cm(왼손 아래 — 폼멜이 1.5 cm 올라옴 · 오른손 · 날밑 · 손 사이 0.24 m 그대로) → 전체 164.9 cm.
 //  손잡이가 츠바이핸더 것(날밑 아랫면 ~ 폼멜 끝 0.398 m)보다 9 cm 길어 자루에서 비례 몫(1.2 cm)보다 조금 더 덜었다
-export const FLAMBERGE_GAME = Object.freeze({ overall: 1.649, blade: 1.162, ricasso: 0.267, guard: 0.505, handle: 0.477 });
+//  사장님 10/22 03:3x 'a로 하고 길이는 4cm만 줄여' (긴 손잡이가 칼끝을 내릴 때 제 배에 걸림 — docs/strike/iberian_flat_hits_2026-10-22.md §8): 손잡이 47.7 → 43.7 cm(왼손 아래 −4 cm — 폼멜 가운데 오른손 아래 0.37 → 0.33 m) → 전체 160.9 cm
+export const FLAMBERGE_GAME = Object.freeze({ overall: 1.609, blade: 1.162, ricasso: 0.267, guard: 0.505, handle: 0.437 });
 
 // 그쪽 모델 좌표(폼멜 끝 = 0, 칼끝 +y)에서 칼날 밑동·물결 날 시작
 const ROOT_SB = FLAMBERGE_MUSEUM.overall - FLAMBERGE_MUSEUM.blade; // 0.502
 const EDGE_SB = ROOT_SB + FLAMBERGE_MUSEUM.ricasso; // 0.769
-// 손잡이 줄임 (게임 치수): 그쪽 y 로 손잡이 아래 끝(0.059) ~ 아래 마디 위 이음 띠(0.167) 사이를 1.5 cm 줄이고 그 아래(폼멜)는 통째로 1.5 cm 올린다.
-//  이음 띠 0.167 위(왼손이 쥐는 아래 마디 윗부분 · 위 마디 · 날밑 · 칼날)는 그대로 — 박물관 그림의 모양은 아래 마디가 조금 짧아질 뿐
-const HANDLE_CUT = FLAMBERGE_MUSEUM.handle - FLAMBERGE_GAME.handle; // 0.015
-const CUT_LO = 0.059, CUT_HI = 0.167;
+// 손잡이 줄임 (게임 치수): 그쪽 y 로 손잡이 아래 끝(0.059) ~ 오른손 바로 밑 이음 띠(0.369 — 오른손 주먹 아래 끝 근처) 사이를 고르게 HANDLE_CUT(5.5 cm) 줄이고 그 아래(폼멜)는 통째로 올린다.
+//  이음 띠 0.369 위(오른손이 쥐는 위 마디 · 날밑 · 칼날)는 그대로 — 박물관 그림의 모양은 아래 · 가운데 마디가 0.82 배로 짧아질 뿐 (10/21 −1.5 cm 때는 아래 마디 0.059 ~ 0.167 만 줄였다)
+const HANDLE_CUT = FLAMBERGE_MUSEUM.handle - FLAMBERGE_GAME.handle; // 0.055
+const CUT_LO = 0.059, CUT_HI = 0.369;
 const H = (ySb) => (ySb >= CUT_HI ? ySb : ySb <= CUT_LO ? ySb + HANDLE_CUT : CUT_HI - ((CUT_HI - ySb) * (CUT_HI - CUT_LO - HANDLE_CUT)) / (CUT_HI - CUT_LO));
-// 짧은 손잡이 시험 (config FL_HILT mode 'real' — 10/22 감독 B 안, 기본 끔 · 사장님 확인 전): 게임 손잡이 47.7 cm 에서 extra(m)만큼 더 줄인 겉모습.
-//  손잡이 아래 끝 ~ 오른손 바로 밑 이음 띠(그쪽 y 0.369 — 오른손 주먹 아래 끝 근처)를 고르게 줄이고 그 아래(폼멜)는 통째로 올린다. 오른손 쪽 위 마디 · 날밑 · 칼날은 그대로
-export const FLAMBERGE_SHORT_HANDLE = 0.357; // 폼멜 가운데 오른손 아래 0.37 → 0.25 m (츠바이핸더 mid 폼멜 자리) — 47.7 − 12 cm [I]
-const CUT_HI_SHORT = 0.369;
-const Hx = (ySb, extra) => {
-  if (!extra) return H(ySb);
-  const cut = HANDLE_CUT + extra;
-  return ySb >= CUT_HI_SHORT ? ySb : ySb <= CUT_LO ? ySb + cut : CUT_HI_SHORT - ((CUT_HI_SHORT - ySb) * (CUT_HI_SHORT - CUT_LO - cut)) / (CUT_HI_SHORT - CUT_LO);
-};
 // 우리 칼 원점(오른손 주먹 가운데)의 그쪽 y: 칼날 밑동 0.085 m 아래
 export const FLAMBERGE_HILT = 0.085; // = weapons.js flamberge.hiltLength (손 → 칼날 밑동)
 const ORIGIN = ROOT_SB - FLAMBERGE_HILT; // 0.417
@@ -107,12 +99,12 @@ function merged(group, pieces, material, name) {
 const GRIP_PROFILE = [[0.011, 0.059], [0.014, 0.086], [0.017, 0.18], [0.018, 0.241], [0.015, 0.252], [0.018, 0.278], [0.018, 0.37], [0.019, 0.475], [0.017, 0.492]];
 const SEAMS = [0.085, 0.167, 0.245, 0.284, 0.369, 0.449, 0.483];
 const RIVETS = [0.108, 0.153, 0.202, 0.305, 0.35, 0.404, 0.452];
-function gripGroup(y0, extra = 0) {
+function gripGroup(y0) {
   const group = new THREE.Group();
   const leather = new THREE.MeshStandardMaterial({ color: FLAMBERGE_COLORS.leather, roughness: 0.94 });
   const seam = new THREE.MeshStandardMaterial({ color: FLAMBERGE_COLORS.seam, roughness: 0.95 });
   const brass = metalMat(FLAMBERGE_COLORS.brass, { rough: 0.38, metal: 0.78 });
-  const grip = new THREE.Mesh(new THREE.LatheGeometry(GRIP_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(Hx(y, extra)) - y0)), 16), leather);
+  const grip = new THREE.Mesh(new THREE.LatheGeometry(GRIP_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(H(y)) - y0)), 16), leather);
   grip.scale.z = 0.86;
   grip.name = 'leather-grip';
   grip.castShadow = true;
@@ -120,20 +112,20 @@ function gripGroup(y0, extra = 0) {
   // 가죽 이음 띠와 황동 리벳 (지어낸 금실 감개가 아니다 — 그쪽 주석 그대로)
   merged(group, SEAMS.map((y) => {
     const r = (y < 0.15 ? 0.0145 : 0.0182) + 0.0004;
-    return bake(new THREE.CylinderGeometry(r, r, 0.002, 16), [0, Y(Hx(y, extra)) - y0, 0], [1, 1, 0.87]);
+    return bake(new THREE.CylinderGeometry(r, r, 0.002, 16), [0, Y(H(y)) - y0, 0], [1, 1, 0.87]);
   }), seam, 'grip-seams');
   const rivets = [];
-  for (const y of RIVETS) for (const side of [-1, 1]) rivets.push(bake(new THREE.SphereGeometry(0.0024, 8, 6), [0.006, Y(Hx(y, extra)) - y0, side * (y < 0.15 ? 0.0125 : 0.0156)], [1, 1, 0.45]));
+  for (const y of RIVETS) for (const side of [-1, 1]) rivets.push(bake(new THREE.SphereGeometry(0.0024, 8, 6), [0.006, Y(H(y)) - y0, side * (y < 0.15 ? 0.0125 : 0.0156)], [1, 1, 0.45]));
   merged(group, rivets, brass, 'brass-rivets');
   return group;
 }
 
 // ── 부품 1: 각진 청동 폼멜 (그쪽 y 0~0.066, 여덟 모 회전체) ──
 const POMMEL_PROFILE = [[0, 0], [0.011, 0.014], [0.024, 0.034], [0.021, 0.044], [0.012, 0.061], [0.010, 0.066]];
-function pommelGroup(y0, extra = 0) {
+function pommelGroup(y0) {
   const group = new THREE.Group();
   const bronze = metalMat(FLAMBERGE_COLORS.bronze, { rough: 0.45, metal: 0.75 });
-  const m = new THREE.Mesh(new THREE.LatheGeometry(POMMEL_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(y + HANDLE_CUT + extra) - y0)), 8), bronze); // 폼멜은 모양 그대로 1.5 cm 올림 (게임 치수)
+  const m = new THREE.Mesh(new THREE.LatheGeometry(POMMEL_PROFILE.map(([r, y]) => new THREE.Vector2(r, Y(y + HANDLE_CUT) - y0)), 8), bronze); // 폼멜은 모양 그대로 HANDLE_CUT(5.5 cm) 올림 (게임 치수)
   m.name = 'bronze-pommel';
   m.castShadow = true;
   group.add(m);
@@ -216,7 +208,7 @@ function bladeMesh(y0, tier) {
  *  fighter.js 가 부품마다 부르고 그 자리를 메쉬에 준다 → 여기서는 부품 안 좌표(우리 y − 부품 자리)로 그린다.
  *  칼날(3)은 물결 날 메쉬 하나를 그룹에 넣어 돌려준다 — 피 묻히기(fighter.bladeMesh)는 decorate 가 group.userData.bladeMesh 로 그 메쉬를 가리킨다.
  */
-export function flambergePartMesh(partY, extra = 0) {
+export function flambergePartMesh(partY) {
   return (index, isBlade, shape, color, opts, look, tier) => {
     const y0 = partY[index];
     if (isBlade) {
@@ -224,8 +216,8 @@ export function flambergePartMesh(partY, extra = 0) {
       group.add(bladeMesh(y0, tier));
       return group;
     }
-    if (index === 0) return gripGroup(y0, extra);
-    if (index === 1) return pommelGroup(y0, extra);
+    if (index === 0) return gripGroup(y0);
+    if (index === 1) return pommelGroup(y0);
     if (index === 2) return guardGroup(y0);
     return new THREE.Group();
   };

@@ -184,9 +184,13 @@ test('몸 길이 (사장님 10/21 23:5x): 츠바이핸더 손 ~ 칼끝 1.335 m �
   const pz = weaponPhysics(Z), pf = weaponPhysics(F), pt = weaponPhysics(T);
   near(Z.hiltLength + Z.bladeLength, 1.335, 1e-9); near(pz.mass, 2.865, 1e-9); near(pz.I, 0.749, 0.001);
   assert.deepEqual({ ...FLAMBERGE_MUSEUM }, { overall: 1.689, blade: 1.187, ricasso: 0.267, guard: 0.505, handle: 0.492 }); // 박물관 기록은 그대로
-  near(FLAMBERGE_GAME.blade, 1.162); near(FLAMBERGE_GAME.handle, 0.477); near(F.bladeLength, 1.162); near(F.hiltLength + F.bladeLength, 1.247, 1e-9);
+  near(FLAMBERGE_GAME.blade, 1.162); near(FLAMBERGE_GAME.handle, 0.437); near(FLAMBERGE_GAME.overall, 1.609); // 손잡이 47.7 → 43.7 cm (사장님 10/22 03:3x) near(F.bladeLength, 1.162); near(F.hiltLength + F.bladeLength, 1.247, 1e-9);
   const fm = F.buildParts({}).map((p) => p[2][0]);
-  near(pf.mass, 3.0, 1e-9); near(fm[1], 0.35); near(fm[3], 1.756, 0.001); near(pf.com, 0.25, 0.001); assert.ok(pf.I / 0.2724 >= 2.5, `플랑베르주 관성 ${pf.I}`);
+  near(pf.mass, 3.0, 1e-9); near(fm[1], 0.35); near(fm[3], 1.789, 0.001); near(pf.com, 0.263, 0.001); // 10/22 03:3x 손잡이 −4 cm 뒤 (전 칼날 1.756 · 무게중심 0.250)
+  { // 칼자루 충돌체는 손에서 −0.28 m 까지만 (사장님 10/22 03:3x 'a로' — 묻힘 균형으로 −0.25 → −0.28) — 폼멜 질량은 −0.33 에 그대로
+    const fp = F.buildParts({});
+    near(fp[0][1] - fp[0][0][2], -0.28, 1e-9); near(fp[1][1], -0.28, 1e-9); near(fp[1][1] + fp[1][2][1], -0.33, 1e-9); near(fp[0][1] + fp[0][2][1], -0.13, 1e-9);
+  } assert.ok(pf.I / 0.2724 >= 2.5, `플랑베르주 관성 ${pf.I}`);
   near(pt.mass, 2.3, 1e-9); near(pt.I, 0.586, 0.001); near(T.hiltLength + T.bladeLength, 1.195, 1e-9);
   for (const w of [Z, F, T]) assert.equal(w.frame, 'heavy');
 });
