@@ -662,11 +662,11 @@ export class Gait {
       const wl = want.x * rgt.x + want.z * rgt.z;
       want.addScaledVector(rgt, wl * (this.P.sideMul - 1));
     }
-    // 이탈리아 보법 빠르기 시험 (10/21 — schools.js setItalianWalk · `?itWalk=` · 판 값 없음): 걸음 칸 foreMul · backMul 이 있으면 가려는 속도의 앞 · 뒤 몫을 그 배율로(옆 몫 그대로).
+    // 이탈리아 보법 빠르기 시험 (10/21 — 판 값: 이탈리아 backMul 'flat' = 뒤 느려짐 없앰 · 시험 schools.js setItalianWalk · `?itWalk=`): 걸음 칸 foreMul · backMul 이 있으면 가려는 속도의 앞 · 뒤 몫을 그 배율로(옆 몫 그대로).
     //  박자는 아래 cad(빠르기 ÷ 보폭)가 따라 올린다. 칸 없으면 셈하지 않는다(바이트 같음)
     if ((this.P.foreMul || this.P.backMul) && !f.feetHeld) {
       const wf = want.x * fwd.x + want.z * fwd.z;
-      const k = wf > 0 ? this.P.foreMul ?? 1 : this.P.backMul ?? 1;
+      const k = wf > 0 ? this.P.foreMul ?? 1 : this.P.backMul === 'flat' ? 1 / GAIT.backFactor : this.P.backMul ?? 1; // 'flat' = 뒤 느려짐(GAIT.backFactor) 없앰 — 이탈리아 10/21
       if (k !== 1) want.addScaledVector(fwd, wf * (k - 1));
     }
     // 비스듬히 앞으로 박차기 (10/21 GAIT.burstFwdDeg — 이베리아 둥근 걸음): 옆 박찬 걸음(fastSide · fastK > 1) 동안 가려는 빠르기에 옆 몫 × tan(각)만큼 앞(상대 쪽)을 더한다.

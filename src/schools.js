@@ -335,7 +335,7 @@ const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.
 //   even = 디딤 간격이 늘 한 걸음 시간(이끄는 발 → 따라붙는 발 → 이끄는 발 … 같은 간격 — gait.js update ③ gate · 박자 걸음 빠른 디딤은 그 간격 ÷ mul — fastPeek) · 몸 박자 없음(leadV·trailV·restV 칸 없음 — 몸 빠르기 고르게) ·
 //   두 발 다 Tsw × lead · trail(0.7 — 옛 0.45 · 0.4 의 짧게 채는 발은 고른 간격에서도 골반을 멈칫하게 함)로 들고 나머지는 두 발 — 한 발로 오래 버티지 않게(10/10 '저는 느낌' — 골반이 짝마다 8 cm 주저앉던 고른 셔플과 다름).
 //   stride = 한 짝에 한 발이 옮기는 거리 상한(작게 빨리 0.36 → 0.28 — 넘으면 박자를 올림) · len · stop 은 옛 짝과 같음. 값은 사장님 확인 전 (확인표 1711~1713)
-const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, stride: 0.44, len: 0.7, stop: true }; // stride 0.28 → 0.44(10/15 22:1x 보폭 박자 시험 — 0.28 × 1.1 ÷ 0.7 · `?itStride=0` 이면 0.28)
+const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, stride: 0.44, len: 0.7, stop: true }; // stride 0.44 는 10/21 R0(긴 계수 0.85)에도 그대로 — 줄이면 AI 가 크게 손해(docs/strike/italian_gait_speed_2026-10-21.md) · 처음 값은 0.28 → 0.44(10/15 22:1x 보폭 박자 시험 — 0.28 × 1.1 ÷ 0.7 · `?itStride=0` 이면 0.28)
 //  박자 걸음 rhythm (10/15 사장님 '앞이든 뒤든 4걸음마다 다음 1걸음이 50% 빨라질 수 있어? … 3걸음마다 1걸음이 더 박자 감각이 생길까?' → 감독 권고 3 + 1 —
 //   docs/strike/italian_rhythm_2026-10-15.md): 빠른 걸음은 몸 빠르기 ×mul · 발 박자 ×mul(한 걸음 길이는 그대로, 시간만 ÷mul) — gait.js fastBegin.
 //   count 'foot' (기본 — 10/15 13:2x 사장님 '디딤 기준으로 통일하자 … 3+2? 4+2?' → 감독 권고 4 + 2, 확인표 1604~): 앞뒤 **디딤** normal 번 보통 → 다음 fast 디딤이 빠름.
@@ -362,12 +362,14 @@ const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`?itRhythm=4+2` · `3+2
 //   **10/15 22:5x 사장님** '별로 박자 감각이 안 느껴져 … 뭐가 제일 리듬감 있는가?' → 감독 권고 '보폭 차이 + 빠르기 결합': 짧은 디딤은 몸 빠르기도 × speed(1.3) —
 //    짧은 디딤 간격 = (short ÷ speed) ÷ long = 긴 디딤 간격의 0.56 배(보폭만일 때 0.73) · 짧은 짝에서 몸이 치고 나감 · 평균 빠르기 +11 %(옛 × 1.5 는 +20 %).
 //    발 박자 배율 mul = long × speed ÷ short · 몸 빠르기 배율 speedMul = speed(gait.js fastBegin · update — timeOnly 일 때 몸은 speedMul, 박자는 mul). `?itStride=a,b,c` = 짧은·긴 계수·짧은 디딤 빠르기
-const ITALIAN_STRIDE = { short: 0.8, long: 1.1, speed: 1.3 };
+//   **10/21 사장님** '뒤로 물러설 때 느려짐 보정을 없애서 앞과 뒤 속도가 같아지게 … 롱소드보다 빠르다면 R0' → 보폭 계수 0.8 · 1.1 → **0.62 · 0.85**(둘 다 −23 % · 짧은/긴 비 0.73 그대로)
+//    + 짧은 디딤 가속 한도 × 1.5(ITALIAN_RHYTHM.accel) + 뒤 느려짐 없앰(ITALIAN_GAIT.backMul 'flat'). docs/strike/italian_gait_speed_2026-10-21.md · 확인표 2127~2128
+const ITALIAN_STRIDE = { short: 0.62, long: 0.85, speed: 1.3 };
 //   **10/17 14:5x 사장님 결정** '멈춤 기준을 0.6초로 하고(왜냐하면 독일 박차기로 0.6초 멈춤이 기준이기 때문) 막기 중엔 셈을 지우지 않게 함' → idle **0.7 → 0.6 s**.
 //    독일 쪽 0.6 s 는 독일 보법 '간격 잡기'(아래 GERMAN_CHASE.window)의 값이다: 받은 빠른 디딤 사이 걸음이 끝나고 0.6 s 안에 새 걸음이 없으면 남은 빠른 디딤이 사라지는 멈춤 기준
 //    (헛침 뒤 받을 창 · 잡기 시간도 같은 0.6 s). 첫 걸음 박차기(config GAIT.stepBurst)에는 시간 문턱이 없다 — 골반 수평 빠르기 0.3 m/s(burstStandV) 밑이면 '서 있음'.
 //    막는 동안은 셈 시계가 0 에 머문다(gait.js parrying — 같은 결정 · 확인표 2038 · 2039)
-const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, timeOnly: true, shortFirst: true, idle: 0.6, brake: 0.2, accent: FAST_ACCENT };
+const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, timeOnly: true, shortFirst: true, idle: 0.6, brake: 0.2, accel: 1.5, accent: FAST_ACCENT }; // accel: 짧은 디딤 몸 가속 한도 × 1.5 (10/21 R0 — 독일 간격 잡기 chase.accel 과 같은 값 · 없으면 몸 가속 한도에 막혀 짧은 디딤이 빨라지지 않았다)
 //  ⓐ″ 독일 보법 '간격 잡기'의 빠른 디딤 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' — 10/15 18:0x 부터 '간격 잡기',
 //   AI 패시브 '따라 들어가기 (Nachreisen)'(GERMAN_PASSIVES)와 다른 것. 잡기 = config GAIT.deHold · gait.js holdTick — docs/strike/german_hold_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
 //   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —
@@ -384,7 +386,7 @@ const GERMAN_CHASE = { window: 0.6, steps: 2, mul: 1.5, brake: 0.2, accel: 1.5, 
 //  even: 고른 바탕 걸음 (10/15 — config GAIT.itEven 1 일 때 gait.js gaitParams 가 위에 덮음 · `?itGait=old` = 덮지 않음, 옛 짝걸음 바이트 같음 · docs/strike/italian_rhythm_2026-10-15.md §10):
 //   짝걸음(가까이 · 앞뒤로 천천히)을 고른 짝(ITALIAN_PAIR_EVEN)으로. 지나 딛기(멀리·빨리)의 보폭·박자는 보폭 규칙(strideK 0.7 — 아래 칸 · config GAIT.strideRule)이 맡는다. 값은 사장님 확인 전 (확인표 1710~)
 const ITALIAN_EVEN = { pair: ITALIAN_PAIR_EVEN, dsFrac: 0.21, player: { dsFrac: 0.21 } };
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 1.1, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.85, backMul: 'flat', even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
 //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)

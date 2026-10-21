@@ -12,10 +12,11 @@ const [s0, s1] = (process.env.SEEDS ?? '1-3').split('-').map(Number);
 const DUR = +(process.env.DUR ?? 20), HUM_RT = +(process.env.HUM_RT ?? 0.2), GAP = +(process.env.GAP ?? 2.0);
 const journey = [...new Set(STAGE_ORDER.flatMap((st) => [STAGE_FOE[st], ...(STAGE_FOE_EXTRA[st] ?? [])]))].filter((id) => id && (!id.endsWith('_mad') || id === 'heinrich_mad'));
 const FOES = (process.env.FOES ? process.env.FOES.split(',') : journey).filter((id) => CHARACTERS_BY_ID[id] && !getWeapon(CHARACTERS_BY_ID[id].weapon)?.gun);
-const keep0 = { on: SKILL.itOpposition, cut: SKILL.itOppositionVals.shieldCut };
+const keep0 = { on: SKILL.itOpposition, cut: SKILL.itOppositionVals.shieldCut, dealt: SKILL.itOppositionVals.dealt };
 function fight(id, seed, v) {
   SKILL.itOpposition = v === 'off' ? 0 : 1;
-  SKILL.itOppositionVals.shieldCut = v === 'p65' ? 0.65 : v === 'p0' ? 0 : 0.5;
+  SKILL.itOppositionVals.shieldCut = v.startsWith('p65') ? 0.65 : v.startsWith('p0') ? 0 : 0.5;
+  const dm = v.match(/d(\d+)$/); SKILL.itOppositionVals.dealt = dm ? +dm[1] / 100 : keep0.dealt; // 'p50d100' = 주는 피해 100 %
   SKILL.parryAssist = 0;
   const F = CHARACTERS_BY_ID[id];
   const G = newRound({ seed, difficulty: F.ai.level, persona: F.ai.persona, weapon2: F.weapon, weapon: 'rapier', revive: F.revive });
@@ -23,13 +24,13 @@ function fight(id, seed, v) {
   D.skill.corr = SKILL.corr; D.skill.corrTip = SKILL.corrTip; D.skill.autoGuard = true;
   const guard = new PlayerParryGuard(D, A); D.stamina.controller = guard;
   guard.held = true; guard.opposition.lastHeld = true; // 판 시작에 누른 것으로 치지 않음
-  let got = 0, gave = 0; const presses = []; const clashes = [];
+  let got = 0, gave = 0; const presses = []; const clashes = []; const oppHits = [];
   const pw = G.combat.hooks.onWound;
   G.combat.hooks.onWound = (att, vic, res, point, pr) => {
     pw?.(att, vic, res, point, pr);
     if (res.type === 'blunt' || !(res.severity > 0)) return;
     if (vic === D) { got += res.severity; for (const p of presses) if (G.t - p.t <= 1) p.got += res.severity; }
-    else if (vic === A && att === D) { gave += res.severity; for (const p of presses) if (G.t - p.t <= 1) p.gave += res.severity; }
+    else if (vic === A && att === D) { gave += res.severity; for (const p of presses) if (G.t - p.t <= 1) p.gave += res.severity; if (guard.opposition.run) oppHits.push(+res.severity.toFixed(3)); }
   };
   const pc = G.combat.hooks.onClash;
   G.combat.hooks.onClash = (point, sp, touch) => {
@@ -49,16 +50,16 @@ function fight(id, seed, v) {
   };
   for (let i = 0; i < Math.round(DUR / DT); i++) { G.step(); if (!D.alive || !A.alive) break; }
   const r = { id, seed, v, t: +G.t.toFixed(2), got: +got.toFixed(3), gave: +gave.toFixed(3), dDead: !D.alive, aDead: !A.alive, presses: presses.length, starts: guard.opposition.starts,
-    p1got: +presses.reduce((s, p) => s + p.got, 0).toFixed(3), p1gave: +presses.reduce((s, p) => s + p.gave, 0).toFixed(3), clashes, stam: +D.stamina.value.toFixed(1) };
+    p1got: +presses.reduce((s, p) => s + p.got, 0).toFixed(3), p1gave: +presses.reduce((s, p) => s + p.gave, 0).toFixed(3), clashes, oppHits, stam: +D.stamina.value.toFixed(1) };
   G.world.free();
   return r;
 }
 const out = [];
 for (const id of FOES) for (let s = s0; s <= s1; s++) for (const v of VARIANTS) { out.push(fight(id, s, v)); }
-SKILL.itOpposition = keep0.on; SKILL.itOppositionVals.shieldCut = keep0.cut;
+SKILL.itOpposition = keep0.on; SKILL.itOppositionVals.shieldCut = keep0.cut; SKILL.itOppositionVals.dealt = keep0.dealt;
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(out));
 for (const v of VARIANTS) {
   const R = out.filter((r) => r.v === v), n = R.length, sum = (k) => R.reduce((s, r) => s + r[k], 0);
   console.log(v, 'n', n, 'got', (sum('got') / n).toFixed(2), 'gave', (sum('gave') / n).toFixed(2), 'dDead', R.filter((r) => r.dDead).length, 'aDead', R.filter((r) => r.aDead).length,
-    'presses', (sum('presses') / n).toFixed(1), '1s got', (sum('p1got') / n).toFixed(2), '1s gave', (sum('p1gave') / n).toFixed(2), 'stam', (sum('stam') / n).toFixed(0));
+    'presses', (sum('presses') / n).toFixed(1), 'thrust hits', R.reduce((s, r) => s + r.oppHits.length, 0), 'hit sev', (R.reduce((s, r) => s + r.oppHits.reduce((a, b) => a + b, 0), 0) / Math.max(1, R.reduce((s, r) => s + r.oppHits.length, 0))).toFixed(3), '1s got', (sum('p1got') / n).toFixed(2), '1s gave', (sum('p1gave') / n).toFixed(2), 'stam', (sum('stam') / n).toFixed(0));
 }

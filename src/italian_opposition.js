@@ -1,4 +1,4 @@
-// 막아찌르기 — 플레이어 이탈리아 유파(레이피어 · 달타냥) 막기 단추의 새 누름 한 번에 약한 찌르기 한 번 (입력형).
+// 막아찌르기 — 플레이어 이탈리아 유파(무기 이름 조건 없음 — 지금은 레이피어 · 달타냥) 막기 단추의 새 누름 한 번에 약한 찌르기 한 번 (입력형).
 //  10/21 사장님 '입력형 50% 0.6초로 넣어' — 샛별 저장소 입력형 개선안(10/21 인계)의 설계를 우리 판에 맞춰 새로 짰다
 //  (docs/strike/italian_opposition_2026-10-20.md 10/21 절).
 //  · 누르는 순간 바로 시작: 상대 칼 접촉 · 상대 공격 · 시간 창 · 거리를 기다리지 않는다. 허공에도 찌르고 기력을 낸다.
@@ -8,7 +8,7 @@
 //  · 받는 피해: 누른 때부터 shield 초 동안 칼날 상처 심각도 × (1 − shieldCut) — 동방 · 일본 · 이베리아 막기 피해 감소와 같은 칸(parry_button.js woundKeep).
 //  · 주는 피해: 찌르는 동안 칼날 상처 심각도 · 둔타 에너지 × dealt (combat.js analyze).
 //  · 기력: 보통 찌르기 한 번(막아 받기 값 포함 — 찌르는 동안 칼이 맞닿아도 막기 값을 따로 내지 않음, stamina.js block).
-//  · 사람만(AI 는 안 씀). 옛 접촉형(10/20)은 걷어냄.
+//  · 사람만(AI 는 안 씀). 옛 접촉형(10/20)은 걷어냄. 이탈리아 유파 전체(10/21 사장님 확인 — 샛별 저장소 fb5b344e 와 같은 뜻, 우리가 새로 고침).
 import * as THREE from 'three';
 import { SKILL } from './config.js';
 const V = () => new THREE.Vector3();
@@ -27,7 +27,7 @@ export class ItalianOpposition {
   /** 이 몸이 막아찌르기를 쓸 수 있는 꼴인가 (유파 · 책 · 몸 상태) — 이어 가기 조건. 시작은 여기에 막기 단추 새 누름을 더한다 */
   eligible() {
     const f = this.f, sk = f.skill, g = this.guard;
-    return SKILL.itOpposition && f.swordArt?.tradition === 'italian' && ['rapier', 'dartagnan'].includes(f.weapon?.id)
+    return SKILL.itOpposition && f.swordArt?.tradition === 'italian' // 10/21 사장님 '이탈리아 유파 전체로 넓히는 거 맞아' — 무기 이름 조건 없음(지금 이탈리아 무기 = 레이피어 · 달타냥)
       && f.schoolParry !== false && !g.broken && f.alive && this.foe.alive
       && f.armed && !f.stamina.exhausted && ['stand', 'kneel'].includes(f.state)
       && !sk.tap && !sk.sec && !sk.pom && !f.secretStiff;

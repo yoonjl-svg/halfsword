@@ -104,11 +104,10 @@ const IBFLOW_PICKS = [
   { id: 'nowrist', name: '손목 힘 끔', sub: '패시브 없이 손목 힘 그대로' },
   { id: 'none', name: '둘 다 끔', sub: '오늘 아침 손맛' },
 ];
-// 이탈리아 걸음 시험 (10/21 사장님 '보폭을 약간 줄이는 대신 속도를 빠르게 해' — 제안 R0 · R, docs/strike/italian_gait_speed_2026-10-21.md)
+// 이탈리아 걸음 시험 (10/21 사장님 '뒤로 물러설 때 느려짐 보정을 없애 … 롱소드보다 빠르다면 R0' — docs/strike/italian_gait_speed_2026-10-21.md)
 const ITWALK_PICKS = [
-  { id: 'cur', name: '지금', sub: '짧은 디딤 0.8 · 긴 디딤 1.1 (지금 게임)' },
-  { id: 'r0', name: '제안 R0', sub: '보폭 −23% · 짧은 디딤 가속 ×1.5 — 뒷걸음 +10%' },
-  { id: 'r', name: '제안 R', sub: 'R0 + 뒤 빠르기 ×1.1 — 뒷걸음 +18%' },
+  { id: 'cur', name: '지금', sub: '뒤 느려짐 없음 · 보폭 줄이고 빠르게 (지금 게임)' },
+  { id: 'old', name: '이전', sub: '오늘 오후까지 — 뒤는 앞의 70% · 보폭 넓게' },
 ];
 const saved = loadPick();
 const pick = {
@@ -242,9 +241,7 @@ function startUrl() {
   if (pick.deSecret !== SECRET.deSecret) q.set('deSecret', pick.deSecret);
   if (pick.ibFlow === 'noflow' || pick.ibFlow === 'none') q.set('ibFlow', '0'); // 이베리아 이어 긋기 흐름 끔 (main.js → config IB_FLOW)
   if (pick.ibFlow === 'nowrist' || pick.ibFlow === 'none') q.set('ibWrist', '0'); // 유파 패시브 끔 (main.js → config SCHOOL_PASSIVE)
-  if (pick.itWalk !== 'cur') q.set('itStride', '0.62,0.85,1.3,0.44'); // 이탈리아 걸음 제안 (main.js → schools.js setItalianStride · 짝걸음 보폭 0.44 그대로)
-  if (pick.itWalk === 'r0') q.set('itWalk', '1,1,1.5'); // 짧은 디딤 가속 한도 × 1.5 (setItalianWalk)
-  if (pick.itWalk === 'r') q.set('itWalk', '1,1.1,1.5'); // + 뒤 빠르기 × 1.1
+  if (pick.itWalk === 'old') q.set('itStride', '0.8,1.1,1.3,0.44'), q.set('itWalk', '1'); // 이탈리아 걸음 이전 판 (main.js → schools.js setItalianStride · setItalianWalk '1' = 뒤 느려짐 되살림 · 짧은 디딤 가속 없앰)
   if (pick.whiff === 'on') q.set('foeWhiff', '1'); // 상대 헛스윙 (main.js → whiff_drill.js) — 끄면 주소에 안 적는다
   return `./index.html?${q.toString()}`;
 }

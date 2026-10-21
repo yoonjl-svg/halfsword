@@ -40,13 +40,15 @@ const SCRIPTS = {
 
 // 갈래 칸 되돌리기 — 지금 판 값을 그대로 적어 두었다가 판마다 되돌린다
 const g = TRADITIONS.italian.gait;
-const SNAP = { rhythm: { ...g.rhythm }, strideK: g.strideK, pairStride: g.even.pair.stride };
+const SNAP = { rhythm: { ...g.rhythm }, strideK: g.strideK, pairStride: g.even.pair.stride, foreMul: g.foreMul, backMul: g.backMul }; // 앞 · 뒤 배율도 판 값(10/21 이탈리아 backMul 'flat')
 function reset() {
   for (const k of Object.keys(g.rhythm)) if (!(k in SNAP.rhythm)) delete g.rhythm[k];
   Object.assign(g.rhythm, SNAP.rhythm);
   g.strideK = SNAP.strideK;
   g.even.pair.stride = SNAP.pairStride;
   setItalianWalk('1');
+  if (SNAP.foreMul != null) g.foreMul = SNAP.foreMul;
+  if (SNAP.backMul != null) g.backMul = SNAP.backMul;
 }
 function apply(v) {
   reset();
