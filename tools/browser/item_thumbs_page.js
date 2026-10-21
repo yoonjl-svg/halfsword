@@ -31,7 +31,8 @@ const SS = 2; // 두 배로 그린 뒤 줄여서 가장자리를 곱게 (무기 
 const QUALITY = 0.86; // webp 품질 (무기 그림과 같다)
 const PAD = 0.035; // 틀 가장자리 여백 (비율)
 // 등급 색 = index.html :root --tier-* (언커먼만 entrance_type.css :host --tier-uncommon) — 그 값을 바꾸면 여기도 바꾸고 다시 찍는다
-const TIER_COLOR = { common: 0xfff3c4, uncommon: 0xa8d67e, rare: 0x8cc4ff, epic: 0xd6a8ff, legend: 0xffd24a };
+//  mystery(??? 청록)는 스킬트리 편지 칸의 끈 (10/22 — 편지 갈래 색 = ??? · skill_tree_data.js NODE_CAT)
+const TIER_COLOR = { common: 0xfff3c4, uncommon: 0xa8d67e, rare: 0x8cc4ff, epic: 0xd6a8ff, legend: 0xffd24a, mystery: 0x8fe3c6 };
 // 글자 (일본 제목 쪽지 · 죽간): 이 컴퓨터의 한자 글꼴. 글자는 256 px 그림에서도 몇 px — 화면에선 읽히지 않는 먹 점 줄이 된다 (사장님 17:4x '어차피 글자가 읽히지 않을 정도로 작기 때문에')
 const CJK_FONT = '"IPAGothic", "WenQuanYi Zen Hei", "Noto Sans CJK JP", sans-serif';
 
@@ -425,8 +426,8 @@ function rollBody(R, L, sideMat, endTex) {
 }
 const waxMat = new THREE.MeshStandardMaterial({ color: 0x8e1b13, roughness: 0.36, metalness: 0.02 });
 const waxDeepMat = new THREE.MeshStandardMaterial({ color: 0x6a120c, roughness: 0.42, metalness: 0.02 });
-/** 밀랍 인장 (얼굴이 +z · 가장자리가 고르지 않게 · 눌린 테 · 가운데 문양) */
-function waxSeal(rs) {
+/** 밀랍 인장 (얼굴이 +z · 가장자리가 고르지 않게 · 눌린 테 · 가운데 문양 — 문양은 이베리아 칼이 기본 · 독일 편지는 롱소드) */
+function waxSeal(rs, emblem = EMBLEM.iberian) {
   const g = new THREE.Group();
   const prof = [[0, 0.03], [0.7, 0.03], [0.78, 0.05], [0.9, 0.055], [0.98, 0.03], [1, 0], [0.96, -0.03], [0, -0.03]].map(([x, y]) => new THREE.Vector2(x, y)).reverse();
   const geo = new THREE.LatheGeometry(prof, 64), pos = geo.attributes.position;
@@ -436,7 +437,7 @@ function waxSeal(rs) {
   disc0.rotation.x = Math.PI / 2; // 얼굴(+y) → +z
   disc0.scale.set(rs, rs * 1.4, rs);
   g.add(disc0);
-  const em = relief(EMBLEM.iberian(), waxDeepMat, { depth: 0.08, bevel: 0.04 });
+  const em = relief(emblem(), waxDeepMat, { depth: 0.08, bevel: 0.04 });
   em.scale.setScalar(rs * 0.6);
   em.position.z = rs * 0.042;
   g.add(em);
@@ -580,6 +581,202 @@ function chineseSlips(tier, rarity) {
 
 const BOOK = { german: germanBook, italian: italianLeaves, iberian: iberianRoll, japanese: japaneseScroll, chinese: chineseSlips };
 const buildBook = (school, tier, rarity) => BOOK[school](tier, rarity);
+
+// ── 스킬트리 칸 그림 (사장님 10/22 00:2x '기존 아이콘 최대한 쓰고 보강해야 되는 아이콘은 새로' — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §8) ──
+//  칸은 옛 책 그림을 갈래대로 다시 쓴다(보법 _1 · 막기 _2 · 고유 공격 _3 · 패시브 _4 · 비기 _5 — src/skill_tree_icons.js). 새로 찍는 것은 열 장:
+//   · 편지 다섯 books/<유파>_letter.webp — 그 유파 문서 집안의 접어 봉한 편지 · 끈 = ??? 청록(편지 갈래 색)
+//      독일 뉘른베르크 = 접은 종이 꾸러미 + 붉은 밀랍 인장(롱소드) · 이탈리아 시에나 = 세로로 접은 편지 + 나비 매듭 리본 ·
+//      이베리아 리스본 = 접은 양피지 + 리본에 매단 밀랍 인장 · 일본 에도 = 다테부미(立文 — 길게 싸서 두 끝을 비튼 편지) · 동방 한양 = 세로 피봉(皮封) + 붉은 네모 도장
+//   · 심화 다섯 books/<유파>_deep.webp — 그 유파 3급(고유 공격) 문서 그대로 + 위에 놓인 깃펜(독일 · 이탈리아 · 이베리아) / 붓(일본 · 동방):
+//      '그 기술을 더 적어 넣은 책'. 같은 칸 줄의 고유 공격 그림과 윤곽이 갈린다(펜이 비스듬히 가로지름)
+//  틀은 그 유파 다섯 급과 같은 틀(같은 배율) — 옛 그림을 다시 찍지 않고 나란히 놓아도 크기가 맞는다
+const inkLines = (g, r, x0, x1, y0, n, lh, h = 3.2, col = 'rgba(46,30,18,0.8)') => {
+  g.fillStyle = col;
+  for (let k = 0; k < n; k++) { let x = x0; const y = y0 + k * lh, end = x1 - (k === n - 1 ? (x1 - x0) * 0.35 : 0); while (x < end - 10) { const ww = Math.min(end - x, 10 + r() * 30); g.fillRect(x, y, ww, h); x += ww + 6 + r() * 4; } }
+};
+/** 편지 겉면 결 (종이 얼룩 + 겉봉 글 줄) — kind 'de' 독일 · 'it' 이탈리아 · 'ib' 이베리아 */
+const letterTex = (kind, hex) => cached(`letter:${kind}:${hex}`, () => canvasTex(512, 512, (g, w, h) => {
+  const r = rng({ de: 701, it: 709, ib: 719 }[kind]);
+  g.fillStyle = hexStr(hex); g.fillRect(0, 0, w, h);
+  g.filter = 'blur(9px)';
+  for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(${r() < 0.6 ? '120,84,40' : '255,248,230'},${0.025 + r() * 0.04})`; g.beginPath(); g.arc(r() * w, r() * h, 12 + r() * 40, 0, Math.PI * 2); g.fill(); }
+  g.filter = 'none';
+  if (kind === 'de') inkLines(g, r, w * 0.14, w * 0.62, h * 0.66, 3, 26, 4.4); // 받는 이 (덮개 아래 왼쪽)
+  if (kind === 'it') { inkLines(g, r, w * 0.2, w * 0.82, h * 0.16, 2, 30, 4.6, 'rgba(70,40,24,0.85)'); g.strokeStyle = 'rgba(110,40,30,0.7)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.2, h * 0.34); g.bezierCurveTo(w * 0.4, h * 0.28, w * 0.6, h * 0.4, w * 0.8, h * 0.32); g.stroke(); } // 겉봉 글 두 줄 + 붉은 먹 꾸밈선
+  if (kind === 'ib') inkLines(g, r, w * 0.12, w * 0.7, h * 0.18, 2, 28, 4.2);
+  const v = g.createRadialGradient(w / 2, h / 2, w * 0.25, w / 2, h / 2, w * 0.72); v.addColorStop(0, 'rgba(255,248,230,0)'); v.addColorStop(1, 'rgba(110,72,30,0.26)'); g.fillStyle = v; g.fillRect(0, 0, w, h);
+}));
+/** 세로 먹 글 결 (일본 다테부미 겉 · 동방 피봉) — 글자는 256 px 에서도 몇 px: 화면에선 먹 점 줄 (옛 두루마리 · 죽간과 같은 결) */
+const vertTex = (kind, hex) => cached(`vtex:${kind}:${hex}`, () => canvasTex(160, 512, (g, w, h) => {
+  const r = rng(kind === 'jp' ? 733 : 739);
+  g.fillStyle = hexStr(hex); g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 700; i++) { g.strokeStyle = r() < 0.5 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; const x = r() * w, y = r() * h, a = r() * Math.PI; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); g.stroke(); } // 종이 섬유
+  g.fillStyle = '#1d140d'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const col = (txt, x, y0, size) => { g.font = `600 ${size}px ${CJK_FONT}`; [...txt].forEach((ch, i) => { g.globalAlpha = 0.85 + r() * 0.12; g.fillText(ch, x + (r() - 0.5) * 1.5, y0 + i * (size + 4)); }); g.globalAlpha = 1; };
+  if (kind === 'jp') { col('江戸より', w * 0.5, 110, 30); col('参る', w * 0.5, 330, 26); } // 다테부미 겉 (가운데 한 줄 — 위는 끈 자리)
+  else { col('漢陽', w * 0.62, 70, 34); col('上書', w * 0.62, 170, 30); col('謹封', w * 0.34, 330, 28); } // 피봉: 한양 · 올리는 글 / 삼가 봉함
+  const v = g.createLinearGradient(0, 0, w, 0); v.addColorStop(0, 'rgba(90,60,30,0.14)'); v.addColorStop(0.5, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(90,60,30,0.14)'); g.fillStyle = v; g.fillRect(0, 0, w, h);
+}));
+const sealRedMat = new THREE.MeshStandardMaterial({ color: 0xa8231a, roughness: 0.5 });
+/** 붉은 네모 도장 결 (흰 글자 넷 — 음각 인장) */
+const chopTex = () => cached('chop', () => canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#b0261c'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#f3e3cc'; g.font = `700 50px ${CJK_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  [['謹', 0.3, 0.3], ['封', 0.3, 0.72], ['漢', 0.72, 0.3], ['陽', 0.72, 0.72]].forEach(([c, x, y]) => g.fillText(c, w * x, h * y));
+  g.strokeStyle = '#f3e3cc'; g.lineWidth = 6; g.strokeRect(5, 5, w - 10, h - 10);
+}));
+/** 상자 둘레를 감은 납작한 끈 한 바퀴 (축 = 'x' 이면 세로로 감김: 위 · 앞 · 아래 · 뒤 / 'y' 이면 가로) — 앞면에 끈 그늘 */
+function wrapBand(g, axis, at, w, h, t, bw, mat, e = 0.004) {
+  const P = axis === 'x'
+    ? [[at, h / 2 + e, t / 2 + e], [at, -h / 2 - e, t / 2 + e], [at, -h / 2 - e, -t / 2 - e], [at, h / 2 + e, -t / 2 - e]]
+    : [[-w / 2 - e, at, t / 2 + e], [w / 2 + e, at, t / 2 + e], [w / 2 + e, at, -t / 2 - e], [-w / 2 - e, at, -t / 2 - e]];
+  const dir = axis === 'x' ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+  g.add(band(P, bw, mat, dir, true));
+  const s = axis === 'x' ? [[at, h / 2, t / 2 + e * 0.6], [at, -h / 2, t / 2 + e * 0.6]] : [[-w / 2, at, t / 2 + e * 0.6], [w / 2, at, t / 2 + e * 0.6]];
+  g.add(band(s, bw + 0.016, cordShadowMat, dir));
+}
+/** 접은 편지 몸 (둥근 모 납작 상자 · 앞면 결) */
+function letterBody(g, w, h, t, faceMat, paperHex) {
+  const side = edgeMat(shade(paperHex, 0.9), 'h'), back = plainMat(shade(paperHex, 0.9), 0.85);
+  const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, t, 2, Math.min(0.008, t / 3)), [side, side, side, side, faceMat, back]);
+  g.add(m);
+  return m;
+}
+
+// 독일 — 뉘른베르크에서 온 편지: 가로로 접은 종이 꾸러미 · 위 덮개(세모)가 가운데로 내려와 붉은 밀랍 인장(롱소드)으로 봉함 · 세로로 감은 끈(??? 청록) · 받는 이 글 줄
+function germanLetter(rarity) {
+  const g = new THREE.Group(), w = 0.86, h = 0.58, t = 0.045, hex = 0xe6d6b2;
+  letterBody(g, w, h, t, new THREE.MeshStandardMaterial({ map: letterTex('de', hex), roughness: 0.82 }), hex);
+  const tip = -0.04, flap = poly([[-w / 2 + 0.012, h / 2 - 0.012], [w / 2 - 0.012, h / 2 - 0.012], [0.02, tip]]);
+  plate(g, flap, surfaceMat('vellum', shade(hex, 1.02), 73), t / 2, { depth: 0.004, bevel: 0.0025 });
+  plate(g, stroke([[-w / 2 + 0.012, h / 2 - 0.012], [0.02, tip], [w / 2 - 0.012, h / 2 - 0.012]], 0.006), plainMat(shade(hex, 0.62), 0.8), t / 2 - 0.0005, { depth: 0.0008, bevel: 0 }); // 덮개 그늘 (접힌 금)
+  wrapBand(g, 'x', 0.02, w, h, t + 0.008, 0.058, tierCordMat[rarity]);
+  const seal = waxSeal(0.1, EMBLEM.german); seal.position.set(0.02, tip + 0.01, t / 2 + 0.016); seal.rotation.z = 0.15; g.add(seal);
+  g.rotation.set(-0.5, 0.42, 0.1); // 3/4 보기 (탁자에 놓인 꾸러미 — 오른쪽 옆 두께가 보이게)
+  return g;
+}
+// 이탈리아 — 시에나에서 온 편지: 세로로 접은 편지 · 겉봉 글(먹 두 줄 + 붉은 꾸밈선) · 가로 · 세로로 건 리본(??? 청록) + 나비 매듭 · 꼬리 둘이 아래로 늘어짐 (낱장 묶음과 같은 매듭)
+function italianLetter(rarity) {
+  const g = new THREE.Group(), w = 0.53, h = 0.73, t = 0.04, hex = 0xe8d9b4;
+  letterBody(g, w, h, t, new THREE.MeshStandardMaterial({ map: letterTex('it', hex), roughness: 0.82 }), hex);
+  const mat = tierCordMat[rarity], yb = -0.08, xb = 0.04;
+  wrapBand(g, 'y', yb, w, h, t, 0.042, mat);
+  wrapBand(g, 'x', xb, w, h, t + 0.004, 0.042, mat, 0.006);
+  const kz = t / 2 + 0.008;
+  for (const [len, ang] of [[0.13, 2.7], [0.12, 0.45]]) { const l = new THREE.Mesh(new THREE.ExtrudeGeometry(loopShape(len, 0.075, 0.02, ang), { depth: 0.008, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 1 }), mat); l.position.set(xb, yb, kz); g.add(l); }
+  const knot = new THREE.Mesh(new RoundedBoxGeometry(0.046, 0.05, 0.02, 2, 0.008), mat); knot.position.set(xb, yb, kz + 0.008); g.add(knot);
+  const yE = -h / 2 - 0.01;
+  for (const [dx, len] of [[-0.05, 0.12], [0.045, 0.09]]) {
+    const pts = smoothPts([[xb, yb - 0.02, kz], [xb + dx * 0.5, (yb + yE) / 2, t / 2 + 0.004], [xb + dx * 0.8, yE + 0.01, t / 2], [xb + dx, yE - 0.006, 0], [xb + dx * 1.2, yE - len, -t / 2 - 0.004]], 32);
+    g.add(band(pts, 0.038, mat, () => new THREE.Vector3(1, 0.1 * Math.sign(dx), 0).normalize()));
+  }
+  g.rotation.set(-0.62, 0.32, -0.08);
+  return g;
+}
+// 이베리아 — 리스본에서 온 편지: 가로로 접은 양피지(접힌 금 하나) · 세로로 감은 리본(??? 청록) · 리본 두 끝이 아래로 내려와 붉은 밀랍 인장(이베리아 칼)을 단다 (말린 증서와 같은 인장)
+function iberianLetter(rarity) {
+  const holder = new THREE.Group(), g = new THREE.Group(), w = 0.74, h = 0.47, t = 0.036, hex = 0xebdcbc;
+  letterBody(g, w, h, t, new THREE.MeshStandardMaterial({ map: letterTex('ib', hex), roughness: 0.6 }), hex);
+  plate(g, rect(-w / 2 + 0.01, -0.004, w / 2 - 0.01, 0.004), plainMat(shade(hex, 0.7), 0.7), t / 2, { depth: 0.0008, bevel: 0 }); // 접힌 금
+  const mat = tierCordMat[rarity], xb = 0.08;
+  wrapBand(g, 'x', xb, w, h, t, 0.05, mat);
+  g.rotation.set(-0.45, 0.35, 0.12);
+  holder.add(g);
+  holder.updateMatrixWorld(true);
+  const a = new THREE.Vector3(xb, -h / 2 - 0.004, t / 2 + 0.004).applyMatrix4(g.matrixWorld), rs = 0.088, drop = 0.16, sy = a.y - drop;
+  for (const dx of [-0.018, 0.016]) holder.add(band(smoothPts([[a.x + dx * 0.3, a.y + 0.01, a.z], [a.x + dx * 0.9, a.y - drop * 0.4, a.z + 0.02], [a.x + dx * 1.2, sy + rs * 0.6, a.z + 0.03], [a.x + dx * 1.2, sy, a.z + 0.03]], 24), 0.03, mat, new THREE.Vector3(1, 0, 0)));
+  const seal = waxSeal(rs); seal.position.set(a.x, sy, a.z + 0.045); seal.rotation.set(0.12, -0.18, 0.08); holder.add(seal);
+  return holder;
+}
+// 일본 — 에도에서 온 편지: 다테부미(立文) — 편지를 흰 종이로 길게 싸고 두 끝을 접어 비튼 꼴 · 겉에 세로 먹 글 · 위쪽을 두 번 감은 끈(??? 청록 — 끝이 늘어짐)
+//  두루마리와 같은 '\' 로 눕힘 (일본 문서 집안의 윤곽)
+function japaneseLetter(rarity) {
+  const holder = new THREE.Group(), body = new THREE.Group(), L = 0.74, W = 0.16, T = 0.064, hex = 0xf2ece0;
+  const face = new THREE.MeshStandardMaterial({ map: vertTex('jp', hex), roughness: 0.8 }), paperM = surfaceMat('paper', hex, 47), side = plainMat(shade(hex, 0.9), 0.82);
+  body.add(new THREE.Mesh(new RoundedBoxGeometry(W, L, T, 3, 0.02), [side, side, paperM, paperM, face, paperM]));
+  for (const s of [1, -1]) { // 비튼 끝 (납작한 원뿔 · 조금 비틀림)
+    const c = new THREE.Mesh(new THREE.ConeGeometry(W * 0.48, 0.11, 24, 1, true), paperM);
+    c.scale.z = 0.4; c.position.y = s * (L / 2 + 0.05); c.rotation.set(s > 0 ? Math.PI : 0, 0.5 * s, 0); body.add(c);
+    const tw = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.05, 12), side); tw.position.y = s * (L / 2 + 0.005); body.add(tw);
+  }
+  const mat = tierCordMat[rarity], yc = L * 0.3;
+  for (const dy of [0.018, -0.018]) body.add(band([[-W / 2 - 0.006, yc + dy, T / 2 + 0.006], [W / 2 + 0.006, yc + dy, T / 2 + 0.006], [W / 2 + 0.006, yc + dy, -T / 2 - 0.006], [-W / 2 - 0.006, yc + dy, -T / 2 - 0.006]], 0.026, mat, new THREE.Vector3(0, 1, 0), true));
+  const mid = new THREE.Group(); mid.add(body); mid.rotation.z = Math.PI / 2 - 0.92;
+  const outer = new THREE.Group(); outer.add(mid); outer.rotation.set(0.25, -0.35, 0);
+  holder.add(outer);
+  holder.updateMatrixWorld(true);
+  const a = new THREE.Vector3(0, yc - 0.03, T / 2 + 0.008).applyMatrix4(body.matrixWorld);
+  const tail = smoothPts([[a.x, a.y + 0.01, a.z], [a.x - 0.02, a.y - 0.06, a.z + 0.02], [a.x - 0.012, a.y - 0.13, a.z + 0.03], [a.x + 0.012, a.y - 0.18, a.z + 0.03]], 32);
+  holder.add(band(tail, 0.024, mat, new THREE.Vector3(1, 0.15, 0).normalize()));
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.02, 16, 12), mat); knot.position.copy(tail[tail.length - 1]); holder.add(knot);
+  return holder;
+}
+// 동방 — 한양에서 온 편지: 세로 피봉(皮封 — 조선 편지 겉봉) · 세로 먹 글(漢陽 · 上書 · 謹封) · 봉한 자리에 붉은 네모 도장 · 가로로 두 번 감은 끈(??? 청록 — 끝이 오른쪽으로 늘어짐)
+function chineseLetter(rarity) {
+  const g = new THREE.Group(), w = 0.46, h = 0.8, t = 0.03, hex = 0xece0c0;
+  letterBody(g, w, h, t, new THREE.MeshStandardMaterial({ map: vertTex('cn', hex), roughness: 0.8 }), hex);
+  plate(g, rect(-w / 2 + 0.008, h / 2 - 0.13, w / 2 - 0.008, h / 2 - 0.008), plainMat(shade(hex, 0.95), 0.8), t / 2, { depth: 0.003, bevel: 0.0015 }); // 위 접은 덮개
+  const chop = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.006), [sealRedMat, sealRedMat, sealRedMat, sealRedMat, new THREE.MeshStandardMaterial({ map: chopTex(), roughness: 0.55 }), sealRedMat]);
+  chop.position.set(-0.07, h / 2 - 0.135, t / 2 + 0.006); chop.rotation.z = 0.06; g.add(chop);
+  const mat = tierCordMat[rarity], cr = 0.011;
+  for (const [yy, k] of [[-0.06, 0], [-0.1, 1]]) {
+    g.add(band([[-w / 2 - 0.005, yy, t / 2 + 0.005], [w / 2 + 0.005, yy, t / 2 + 0.005], [w / 2 + 0.005, yy, -t / 2 - 0.005], [-w / 2 - 0.005, yy, -t / 2 - 0.005]], 0.022, mat, new THREE.Vector3(0, 1, 0), true));
+    if (k === 1) { const loose = [[w / 2 + 0.006, yy, t / 2], [w / 2 + 0.03, yy - 0.04, t / 2], [w / 2 + 0.036, yy - 0.12, t / 4]]; g.add(cord(loose, cr, mat, 24)); const end = new THREE.Mesh(new THREE.SphereGeometry(cr * 1.8, 12, 10), mat); end.position.set(...loose[2]); g.add(end); }
+  }
+  g.rotation.set(-0.58, -0.25, 0.06);
+  g.position.x = 0.22; // 죽간 틀의 가운데 (말린 뭉치 왼쪽 · 펼친 대쪽 오른쪽 — 틀 가운데가 오른쪽으로 치우침)
+  return g;
+}
+const LETTER = { german: germanLetter, italian: italianLetter, iberian: iberianLetter, japanese: japaneseLetter, chinese: chineseLetter };
+
+// 깃펜 (깃 = 크림 바탕 · 끝 마디 짙은 갈색 띠 · 먹 묻은 펜촉) — 축 +y (펜촉 y = 0 → 깃 끝 y = len) · 앞면 = +z. 깃 밑에 짙은 그늘을 깔아 밝은 종이 위에서도 윤곽이 읽히게
+const vaneMat = (c) => cached(`vane:${c}`, () => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75, side: THREE.DoubleSide }));
+const quillShaft = plainMat(0xd9cdb4, 0.5), inkMat = plainMat(0x1a120c, 0.35);
+/** 깃 윤곽 (u0 ~ u1 = 깃 길이에서 고른 몫 · k = 너비 배율) */
+function vaneShape(len, k, u0 = 0, u1 = 1) {
+  const y0 = len * 0.26, at = (u) => y0 + (len - y0) * u, sw = (u) => Math.sin(Math.PI * Math.min(1, u * 1.1 + 0.02)) ** 0.7, N = 24;
+  const L = [], R = [];
+  for (let i = 0; i <= N; i++) { const u = u0 + ((u1 - u0) * i) / N; L.push([-0.075 * k * sw(u) + 0.012 * u, at(u)]); R.push([0.05 * k * sw(u) + 0.012 * u, at(u)]); }
+  return poly([...L, ...R.reverse()]);
+}
+/** dark = 짙은 깃(갈색 매 깃 — 밝은 낱장 위에 놓을 때 · 이탈리아) */
+function quill(len, dark = false) {
+  const g = new THREE.Group(), quillVane = vaneMat(dark ? 0x6a5442 : 0xeee6d4), quillTip = vaneMat(dark ? 0x2c2016 : 0x5a4532);
+  const under = new THREE.Mesh(new THREE.ShapeGeometry(vaneShape(len, 1.2)), cordShadowMat); under.position.z = -0.002; g.add(under);
+  g.add(new THREE.Mesh(new THREE.ShapeGeometry(vaneShape(len, 1)), quillVane));
+  const tip = new THREE.Mesh(new THREE.ShapeGeometry(vaneShape(len, 1.01, 0.7, 1)), quillTip); tip.position.z = 0.001; g.add(tip);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.011, len * 0.97, 12), quillShaft); shaft.position.set(0.006, len * 0.485, 0.003); g.add(shaft);
+  const nib = new THREE.Mesh(new THREE.ConeGeometry(0.011, 0.05, 12), inkMat); nib.rotation.x = Math.PI; nib.position.y = -0.02; g.add(nib);
+  return g;
+}
+// 붓 — 축 +y (붓끝 y = 0) · 먹 머금은 검은 털 · 대 자루(마디 둘) · 끝에 붉은 고리 끈. handle = 자루 재질
+const brushRed = plainMat(0xa3221a, 0.55);
+function brush(len, handle) {
+  const g = new THREE.Group(), hl = len - 0.12;
+  g.add(new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [0.008, 0.012], [0.02, 0.045], [0.026, 0.08], [0.024, 0.11], [0.02, 0.122]].map(([r, y]) => new THREE.Vector2(r, y)), 24), plainMat(0x141010, 0.32)));
+  const h = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.021, hl, 20), handle); h.position.y = 0.12 + hl / 2; g.add(h);
+  for (const k of [0.12 + 0.02, 0.12 + hl * 0.55]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.021, 0.004, 8, 24), plainMat(shade(handle.color.getHex(), 0.7), 0.5)); ring.rotation.x = Math.PI / 2; ring.position.y = k; g.add(ring); }
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.019, 0.02, 16), plainMat(0x1a120c, 0.3)); cap.position.y = 0.12 + hl + 0.01; g.add(cap);
+  const loop = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 8, 24), brushRed); loop.position.y = 0.12 + hl + 0.045; g.add(loop);
+  return g;
+}
+/** 심화: 그 유파 3급 문서 + 위에 놓인 깃펜 / 붓 (책 · 낱장 · 죽간은 문서 앞면 좌표에 눕혀 문서와 함께 돈다 — 두루마리 둘은 문서 앞을 가로지르는 X 꼴) */
+function deepVariant(school) {
+  const doc = buildBook(school, 3, 'rare');
+  const put = (obj, x, y, z, rz, parent = doc) => { obj.position.set(x, y, z); obj.rotation.z = rz; parent.add(obj); return obj; };
+  if (school === 'german') put(quill(0.86), -0.2, -0.36, 0.17 / 2 + 0.04 + 0.012, -0.5); // 앞 표지 위 (가운데 문양을 비스듬히 가로지름)
+  else if (school === 'italian') put(quill(0.66, true), -0.2, -0.24, 0.03, -0.62); // 맨 위 장 위 (리본 매듭 위쪽 · 짙은 깃 — 크림 종이 위에서 읽히게)
+  else if (school === 'chinese') put(brush(0.66, plainMat(0x2a1410, 0.28)), 0.05, -0.36, 0.014 + 0.04, -0.42); // 펼친 대쪽 위 (검은 옻칠 자루 — 누런 대 위에서 읽히게)
+  else { // 두루마리 둘: 앞을 가로지르는 X (문서 모음 holder 좌표 — 앞쪽 z)
+    const p = school === 'iberian' ? quill(0.74) : brush(0.72, plainMat(0xc9a56a, 0.55));
+    const holder = new THREE.Group(); holder.add(doc);
+    p.rotation.x = -0.25;
+    if (school === 'iberian') put(p, -0.2, 0.3, 0.32, -2.3, holder); // 말린 증서('/')를 '\' 로 — 깃 끝이 왼쪽 위
+    else put(p, -0.24, -0.26, 0.3, -0.72, holder); // 오륜서('\')를 '/' 로 — 붓끝이 왼쪽 아래
+    return holder;
+  }
+  return doc;
+}
 
 // ── 금화 ──
 const coinGold = metalMat(parseInt(params.get('kc') || 'f0b840', 16), { rough: num('kr', 0.2), metal: num('km', 0.9), env: num('ke', 1.5) });
@@ -840,6 +1037,11 @@ for (const s of BOOK_SCHOOLS) for (const T of BOOK_TIERS) {
   const id = `${s}_${T.tier}`;
   // 책 그림 세로 = 336 (책 칸 32 × 42 비). ?bookh=256 이면 정사각형 — 그때는 lobby.css .book-svg 에 object-fit: contain 이 있어야 안 찌그러진다
   if (want.includes('books') || want.includes(id)) jobs.push({ path: `books/${id}.webp`, label: `${s} ${ROMAN[T.tier]}`, w: 256, h: num('bookh', 336), school: s, build: () => buildBook(s, T.tier, T.rarity), show: [[32, 42], [26, 34]] });
+}
+// 스킬트리 칸 그림 열 장 (10/22 — 위 책 그림과 같은 256 × 336 · 같은 유파 틀): ?ids=skills 또는 german_letter · german_deep 처럼
+for (const s of BOOK_SCHOOLS) for (const [kind, label, build] of [['letter', '편지', () => LETTER[s]('mystery')], ['deep', '심화', () => deepVariant(s)]]) {
+  const id = `${s}_${kind}`;
+  if (want.includes('skills') || want.includes(id)) jobs.push({ path: `books/${id}.webp`, label: `${s} ${label}`, w: 256, h: num('bookh', 336), school: s, build, show: [[21, 28], [48, 63]] });
 }
 if (want.includes('coins')) jobs.push({ path: 'wallet/coins.webp', label: '금화', w: 256, h: 256, build: buildCoins, show: [[20, 20], [14, 14], [9, 9]] });
 if (want.includes('pouch')) jobs.push({ path: 'wallet/pouch.webp', label: '머리', w: 256, h: 256, build: buildPouch, show: [[20, 20], [14, 14]] });
