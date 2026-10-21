@@ -456,6 +456,10 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 //  그 휘두르기 동안과 끝난 뒤 창까지 손목 제동을 '멈출 거리 × releaseMargin' 의 (1 − brake) 몫에서 늦게 시작 → 칼이 서지 않고 다음 긋기로 흐른다 (fighter.js updateIbFlow).
 //  test.html '이베리아 시험' · `?ibFlow=0` = 끔. brake 0.5 는 감독 값 — 사장님 확인 전
 export const IB_FLOW = { a: true, brake: 0.5 };
+// 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2154~ · **기본 끔 · 사장님 확인 전**).
+//  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
+//   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
+export const IB_EDGE = { on: false, edge: 'motor' };
 // 유파 패시브 (스킬북 4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬 … 이베리아 유파의 경우에는 손목 힘을 증가하는 걸 넣자' · 확인표 2110):
 //  이베리아 = 칼을 돌리는 손목 힘 한도(maxAimTorque) × wrist — 늘(이어 긋기 시험 B 를 패시브로 옮김). 사람 = 4급 책 '사용'(테스트 경로는 모두 켬) · AI = 숙련도 at 이상.
 //  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. `?ibWrist=0` = 이베리아만 끔
