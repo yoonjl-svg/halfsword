@@ -1,18 +1,19 @@
 import { Scene, OrthographicCamera, PlaneGeometry, Mesh, ShaderMaterial } from 'three';
 
 /** 출혈·감정 색을 장면과 같은 drawing buffer에 합성한다.
- *  Safari의 별도 전체 화면 CSS 층/타일 크기가 남아 오른쪽 색이 갈리는 경로를 없앤다. */
+ *  Safari의 별도 전체 화면 CSS 층/타일 크기가 남아 오른쪽 색이 갈리는 경로를 없앤다.
+ *  칠 때 알림 테두리(strike_cue.js — 10/21)는 따로 칸(cue · cueGold): 피 · 감정 값과 다투지 않고 맨 위에 좁고 옅은 띠로 얹는다. */
 export function createScreenTint() {
   const scene = new Scene();
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const uniforms = { blood: { value: 0 }, emotion: { value: 0 }, kind: { value: 0 } };
+  const uniforms = { blood: { value: 0 }, emotion: { value: 0 }, kind: { value: 0 }, cue: { value: 0 }, cueGold: { value: 0 } };
   const material = new ShaderMaterial({
     uniforms, transparent: true, depthTest: false, depthWrite: false, toneMapped: false,
     vertexShader: `varying vec2 vUv;
       void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
     fragmentShader: `precision highp float;
       varying vec2 vUv;
-      uniform float blood, emotion, kind;
+      uniform float blood, emotion, kind, cue, cueGold;
       // CSS radial-gradient(ellipse farthest-corner)와 같은 좌표·정지점.
       vec4 gradient(float r, float start, float middle, vec3 a, float aa, vec3 b, float ba) {
         vec4 mid = vec4(a * aa, aa);
@@ -28,6 +29,10 @@ export function createScreenTint() {
         else if (kind > .5) e = gradient(r, .5, .85, vec3(60.,80.,110.)/255., .5, vec3(20.,30.,50.)/255., .8);
         e *= emotion;
         vec4 c = e + b * (1.0 - e.a);
+        // 칠 때 알림: 피(.55 · .9)의 반쯤 옅고 바깥으로 좁은 띠 — 보통 창 옅은 금빛 · 비기 창 금빛. 세기는 strike_cue.js 가 매 프레임 바로 준다(고르기 없음)
+        vec4 q = cueGold > .5 ? gradient(r, .5, .86, vec3(255.,186.,40.)/255., .32, vec3(215.,130.,0.)/255., .5)
+          : gradient(r, .5, .86, vec3(255.,218.,140.)/255., .28, vec3(235.,178.,90.)/255., .45);
+        c = q * cue + c * (1.0 - q.a * cue);
         // 위 식은 premultiplied, Three의 일반 투명 블렌딩에는 straight RGBA.
         gl_FragColor = vec4(c.rgb / max(c.a, .00001), c.a);
       }`,
@@ -43,19 +48,24 @@ export function createScreenTint() {
       uniforms.kind.value = { fear: 1, anger: 2, obsession: 3 }[name] ?? 0;
       emotionTarget = Math.min(1, Math.max(0, value));
     },
+    /** 칠 때 알림 테두리 (strike_cue.js): 0~1 · gold = 비기 창 */
+    setCue(value, gold = false) {
+      uniforms.cue.value = Math.min(1, Math.max(0, value));
+      uniforms.cueGold.value = gold ? 1 : 0;
+    },
     update(dt) {
       uniforms.blood.value += (bloodTarget - uniforms.blood.value) * (1 - Math.exp(-dt / .06));
       uniforms.emotion.value += (emotionTarget - uniforms.emotion.value) * (1 - Math.exp(-dt / .12));
     },
     render(renderer) {
-      if (!tint.visible || Math.max(uniforms.blood.value, uniforms.emotion.value) < .0001) return;
+      if (!tint.visible || Math.max(uniforms.blood.value, uniforms.emotion.value, uniforms.cue.value) < .0001) return;
       const clear = renderer.autoClear, reset = renderer.info.autoReset;
       renderer.autoClear = false;
       renderer.info.autoReset = false;
       try { renderer.render(scene, camera); }
       finally { renderer.autoClear = clear; renderer.info.autoReset = reset; }
     },
-    get state() { return { blood: uniforms.blood.value, emotion: uniforms.emotion.value, kind: uniforms.kind.value }; },
+    get state() { return { blood: uniforms.blood.value, emotion: uniforms.emotion.value, kind: uniforms.kind.value, cue: uniforms.cue.value, cueGold: uniforms.cueGold.value }; },
   };
   return tint;
 }

@@ -109,6 +109,14 @@ const ITWALK_PICKS = [
   { id: 'cur', name: '지금', sub: '뒤 느려짐 없음 · 보폭 줄이고 빠르게 (지금 게임)' },
   { id: 'old', name: '이전', sub: '오늘 오후까지 — 뒤는 앞의 70% · 보폭 넓게' },
 ];
+// 칠 때 알림 (10/21 사장님 — 오른쪽 위 글은 사람이 못 알아챈다 · 붉은 화면 테두리나 머리 위 느낌표처럼, src/strike_cue.js): 시작 주소의 strikeCue 로 (main.js)
+//  기본은 느낌표 — 기본이 아니면 주소에 적는다. 기억하지 않는다
+const STRIKE_CUE_PICKS = [
+  { id: 'mark', name: '느낌표', sub: '상대 머리 위에 작은 ! (지금 게임)' },
+  { id: 'edge', name: '테두리', sub: '화면 가장자리가 옅은 금빛으로' },
+  { id: 'both', name: '둘 다', sub: '느낌표와 테두리를 함께' },
+  { id: 'off', name: '끔', sub: '자세 칸 글만 (전과 같음)' },
+];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
@@ -121,6 +129,7 @@ const pick = {
   whiff: 'off', // 상대 헛스윙도 기억하지 않는다 (열 때마다 끔)
   ibFlow: 'off', // 이베리아 시험도 기억하지 않는다 (열 때마다 기본)
   itWalk: 'cur', // 이탈리아 걸음 시험도 기억하지 않는다
+  strikeCue: 'mark', // 칠 때 알림도 기억하지 않는다 (열 때마다 기본 느낌표)
 };
 
 function weaponButton(w, big) {
@@ -219,6 +228,7 @@ function render() {
   for (const el of document.querySelectorAll('#whiffPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.whiff));
   for (const el of document.querySelectorAll('#ibFlowPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibFlow));
   for (const el of document.querySelectorAll('#itWalkPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.itWalk));
+  for (const el of document.querySelectorAll('#strikeCuePick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.strikeCue));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -231,7 +241,7 @@ function render() {
   const f = foes.find((x) => x.id === pick.foe);
   const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
   const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
-  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이베리아 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}${pick.itWalk !== 'cur' ? ` · 이탈리아 걸음 ${ITWALK_PICKS.find((x) => x.id === pick.itWalk)?.name ?? ''}` : ''}`);
+  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이베리아 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}${pick.itWalk !== 'cur' ? ` · 이탈리아 걸음 ${ITWALK_PICKS.find((x) => x.id === pick.itWalk)?.name ?? ''}` : ''}${pick.strikeCue !== 'mark' ? ` · 칠 때 알림 ${STRIKE_CUE_PICKS.find((x) => x.id === pick.strikeCue)?.name ?? ''}` : ''}`);
 }
 
 function startUrl() {
@@ -242,6 +252,7 @@ function startUrl() {
   if (pick.ibFlow === 'noflow' || pick.ibFlow === 'none') q.set('ibFlow', '0'); // 이베리아 이어 긋기 흐름 끔 (main.js → config IB_FLOW)
   if (pick.ibFlow === 'nowrist' || pick.ibFlow === 'none') q.set('ibWrist', '0'); // 유파 패시브 끔 (main.js → config SCHOOL_PASSIVE)
   if (pick.itWalk === 'old') q.set('itStride', '0.8,1.1,1.3,0.44'), q.set('itWalk', '1'); // 이탈리아 걸음 이전 판 (main.js → schools.js setItalianStride · setItalianWalk '1' = 뒤 느려짐 되살림 · 짧은 디딤 가속 없앰)
+  if (pick.strikeCue !== 'mark') q.set('strikeCue', pick.strikeCue === 'off' ? '0' : pick.strikeCue); // 칠 때 알림 꼴 (main.js → strike_cue.js) — 기본 느낌표면 안 적는다
   if (pick.whiff === 'on') q.set('foeWhiff', '1'); // 상대 헛스윙 (main.js → whiff_drill.js) — 끄면 주소에 안 적는다
   return `./index.html?${q.toString()}`;
 }
@@ -260,6 +271,7 @@ for (const x of STAGE_PICKS) $('stagePick').append(ibSecretButton(x, 'stage'));
 for (const x of WHIFF_PICKS) $('whiffPick').append(ibSecretButton(x, 'whiff'));
 for (const x of IBFLOW_PICKS) $('ibFlowPick').append(ibSecretButton(x, 'ibFlow'));
 for (const x of ITWALK_PICKS) $('itWalkPick').append(ibSecretButton(x, 'itWalk'));
+for (const x of STRIKE_CUE_PICKS) $('strikeCuePick').append(ibSecretButton(x, 'strikeCue'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +
