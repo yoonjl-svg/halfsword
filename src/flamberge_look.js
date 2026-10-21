@@ -10,7 +10,7 @@
 //   · 부품: 우리 칼 네 부품(weapons.js buildParts 차례 — 자루 0 · 폼멜 1 · 코등이 2 · 칼날 3)으로 나눠 partMesh 가 부품마다 그린다.
 //     리카소·보조 갈고리·이음 덩이는 츠바이핸더처럼 decorate 가 칼 그룹에 그린다(칼날 콜라이더 안 — 리카소 날 판정은 츠바이핸더와 같다).
 //   · 같은 재질·같은 부품의 잔 조각(리벳·이음 띠·말림·새김 줄)은 지오메트리를 하나로 합쳐 그리기 호출을 줄였다(모양·빛깔은 같다 — outfits.js 와 같은 방식).
-//   · 칼날만 에픽 마감(weapon_looks.js FINISH.epic — 거칠기·금속·반사 세기·은은한 푸른 윤). 나머지 재질(검갈색 가죽·황동 리벳·청동 폼멜·
+//   · 칼날만 등급 마감(weapon_looks.js FINISH — 처음 에픽, 10/21 부터 레어). 나머지 재질(검갈색 가죽·황동 리벳·청동 폼멜·
 //     어두운 리카소)은 그쪽 값 그대로. 기운·불꽃 없음.
 //   · 물결 날(bladeGeometry 의 edgeX·backX)·리카소·앞으로 휜 보조 갈고리·말린 넓은 코등이·가죽 손잡이·황동 리벳·청동 폼멜은 치수 그대로.
 //  난수는 쓰지 않는다(시뮬 재현성).
@@ -180,7 +180,7 @@ export function flambergeBladeGeometry() {
 function bladeMesh(y0, tier) {
   const L = FLAMBERGE_MUSEUM.blade - FLAMBERGE_MUSEUM.ricasso;
   const F = FINISH[tier] ?? FINISH.common;
-  // 에픽 마감: 그쪽 값(거칠기 0.30 · 금속 0.9 · 반사 1)을 등급표(FINISH)로 — 빛깔 0xa3adb4 와 날 세움 꼭짓점 색은 그대로
+  // 등급 마감: 그쪽 값(거칠기 0.30 · 금속 0.9 · 반사 1) 대신 등급표(FINISH — 처음 에픽, 10/21 부터 레어)로 — 빛깔 0xa3adb4 와 날 세움 꼭짓점 색은 그대로
   const mat = metalMat(FLAMBERGE_COLORS.blade, {
     rough: F.blade, metal: F.metal, env: F.env, vertexColors: true, side: THREE.DoubleSide,
     ...(F.sheen ? { emissive: F.sheen, emissiveIntensity: 0.06 } : {}),

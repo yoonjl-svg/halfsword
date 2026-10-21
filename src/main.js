@@ -685,7 +685,7 @@ function newRound(weaponId) {
   //  ?foeProficiency=N 이면 그 판 상대의 숙련도를 N 으로 (시험)
   //  캐릭터가 평소와 다른 무기를 들었으면(브란의 주워 온 칼) 유파 꾸러미도 그 무기 것으로 (없으면 롱소드 기본) — 숙련도 표는 시트 무기 유파 열쇠라 그 무기 유파는 0(고유 동작 없음)
   const foeAI = currentFoe ? (FOE_PROF != null ? aiAtProficiency(currentFoe, FOE_PROF) : currentFoe.ai) : FOE_PROF != null ? { level: AI_PROFICIENCY.levels[FOE_PROF], persona: { proficiency: FOE_PROF } } : { level: 'normal', persona: null };
-  const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...foeAI.persona, school: foeWeapon } : foeAI.persona;
+  const persona = currentFoe && foeWeapon !== currentFoe.weapon ? { ...foeAI.persona, school: getWeapon(foeWeapon).id } : foeAI.persona; // 꾸러미 id 는 정식 무기 id 로 (별칭 · 지운 무기 'ice' 같은 옛 id 가 롱소드 꾸러미로 떨어지지 않게 — 10/21)
   ai = new AI(enemy, player, foeAI.level, persona);
   if (testRoute.foeWhiff) ai.drill = new WhiffDrill(); // ?foeWhiff=1: 상대가 닿지 않는 거리에서 2~3 s 마다 허공을 벤다 (whiff_drill.js — 판마다 새 바깥 거리). 없으면 평소 그대로
   // 손에 든 무기 유파의 고유 공격 · 비기 = 위의 스킬트리 몫 kit (고유 공격 칸 하나 = 기술 하나 · 비기 칸 = 비기 — 사장님 10/21)

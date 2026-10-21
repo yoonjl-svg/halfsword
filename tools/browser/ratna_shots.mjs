@@ -7,7 +7,7 @@
 //   duel     게임 카메라 그대로 폰 가로 844×390 (화면 배율 2) — 판 시작 1.0 s(가운데 소개 글) · 싸우는 중 6 s, 무대 여럿
 //   monkey   원숭이 겹침 모음: 어깨 자리(샛별 v3)가 가장 깊이 겹친 자세 넷·기술 둘을 같은 자리에서 v3 · v4 로 (왼쪽 앞 3/4, 480×480)
 //   route    실제 테스트 경로: test.html 에서 '상대' 줄의 라트나를 눌러 시작 → 싸움 25 s (라트나 AI 대 가만히 선 나) — 상대 이름·무기·유파·소개 글·왼쪽 위 줄을 읽고 찍는다.
-//            이어 ?test=1&hero=ratna(라트나 겉모습의 나, 북부 대공의 검) 대 오마리 25 s — 라트나 옷에 상처 자국·절단이 붙는지 (콘솔 오류 0 이 관문)
+//            이어 ?test=1&hero=ratna(라트나 겉모습의 나, 츠바이핸더 — 10/21 전엔 북부 대공의 검) 대 오마리 25 s — 라트나 옷에 상처 자국·절단이 붙는지 (콘솔 오류 0 이 관문)
 //   (route 는 기본 묶음에 들지 않는다 — 갈래 이름을 적어야 돈다)
 //  출력은 png (문서 그림은 tools/browser/ratna_sheets.py 가 묶어 webp 로)
 //  playwright 는 저장소 의존성에 없다. 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
@@ -28,7 +28,7 @@ async function open(look, { stage = 'arena', viewport = { width: 640, height: 80
   page.on('pageerror', (e) => errors.push(`pageerror (${look}): ${e}`));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console (${look}): ${m.text()}`); });
   page.on('response', (r) => { if (r.status() >= 400) errors.push(`http ${r.status()}: ${r.url()}`); });
-  await page.goto(`${base}/?stage=${stage}&foe=ratna&look=${look}&weapon=longsword&foeWeapon=ice&emo=0${extra}`, { waitUntil: 'networkidle' }); // weapon= 은 상대에게도 번지므로 상대 무기를 따로 (라트나 = 북부 대공의 검)
+  await page.goto(`${base}/?stage=${stage}&foe=ratna&look=${look}&weapon=longsword&foeWeapon=zweihander&emo=0${extra}`, { waitUntil: 'networkidle' }); // weapon= 은 상대에게도 번지므로 상대 무기를 따로 (라트나 = 츠바이핸더 — 10/21 전엔 북부 대공의 검)
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 600000 });
   await page.getByText('여정 시작').click({ timeout: 300000 });
   if (!ai) await page.evaluate(() => { window.game.ai.update = () => {}; });
@@ -205,7 +205,7 @@ if (on('route')) {
   const p2 = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   p2.on('pageerror', (e) => errors.push(`pageerror (route hero): ${e}`));
   p2.on('console', (m) => { if (m.type() === 'error') errors.push(`console (route hero): ${m.text()}`); });
-  await p2.goto(`${base}/index.html?test=1&weapon=ice&hero=ratna&foe=omari&stage=castle`, { waitUntil: 'networkidle' });
+  await p2.goto(`${base}/index.html?test=1&weapon=zweihander&hero=ratna&foe=omari&stage=castle`, { waitUntil: 'networkidle' });
   await p2.waitForFunction(() => window.game?.player?.sword, null, { timeout: 600000 });
   await p2.click('#btnStart', { timeout: 300000 });
   await p2.waitForFunction(() => window.game.state !== 'fight' || window.game.stats.simTime > 25, null, { timeout: 1800000 });

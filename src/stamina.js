@@ -1,5 +1,5 @@
 import { classifyStroke } from './attack_stroke.js';
-import { STAMINA, UNIQUE_ASSIST, CLOSE } from './config.js';
+import { STAMINA, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 
@@ -385,4 +385,27 @@ export class Stamina {
     }
     this.stages();
   }
+}
+
+/**
+ * 티소나 '위세' (사장님 10/21 23:xx — 값 config.js WEAPON_ABILITY · 무기 스펙 awe): 칼 주인(att)의 공격이 상대(vic) 칼에 막혀 끝났다(못 벰 · 칼끼리 닿음).
+ *  부르는 곳 = 독일 인데스 '막힘'과 같은 가름 — AI 는 ai.js afterStrike(!hitLanded · bound) · 사람은 skill.js whiffEnd(공격으로 셈 · !landed · bound). 둘 다 공격 하나 끝에 한 번 부른다.
+ *  막은 쪽 기력 − aweDrain · 칼 주인 시계(stamina.time)로 aweGap 초 안에는 다시 깎지 않는다(깎았을 때만 시계를 다시 셈).
+ *  능력 없는 칼 · 부러진 칼 · 빈손이면 아무 일도 없다(난수 · 몸 · 장부 그대로 — 다른 무기 판은 바이트 같음). 청구는 spend('awe'):
+ *  기력 끔 · 기력 무한(용사의 눈물) · 탈진 · 죽음이면 깎이지 않는다. 깎인 값은 머리 위 기력 막대(stamina_hud.js)에 다른 청구처럼 보인다
+ */
+export function spendAweDrain(att, vic) {
+  const W = WEAPON_ABILITY;
+  const A = att?.stamina, s = vic?.stamina;
+  if (!att?.weapon?.awe || !att.armed || att.weaponBroken || !A || !s || !(W.aweDrain > 0)) return null;
+  if (att.aweLast != null && A.time - att.aweLast < W.aweGap - 1e-9) return null;
+  s.spent.awe ??= 0;
+  s.counts.awe ??= 0;
+  const before = s.value;
+  if (!s.spend('awe', W.aweDrain)) return null;
+  s.counts.awe++;
+  att.aweLast = A.time;
+  const event = { time: A.time, attacker: att.index, requested: W.aweDrain, before, after: s.value, actual: before - s.value };
+  vic.lastAwe = event;
+  return event;
 }
