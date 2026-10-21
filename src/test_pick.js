@@ -104,6 +104,12 @@ const IBFLOW_PICKS = [
   { id: 'nowrist', name: '손목 힘 끔', sub: '패시브 없이 손목 힘 그대로' },
   { id: 'none', name: '둘 다 끔', sub: '오늘 아침 손맛' },
 ];
+// 이탈리아 걸음 시험 (10/21 사장님 '보폭을 약간 줄이는 대신 속도를 빠르게 해' — 제안 R0 · R, docs/strike/italian_gait_speed_2026-10-21.md)
+const ITWALK_PICKS = [
+  { id: 'cur', name: '지금', sub: '짧은 디딤 0.8 · 긴 디딤 1.1 (지금 게임)' },
+  { id: 'r0', name: '제안 R0', sub: '보폭 −23% · 짧은 디딤 가속 ×1.5 — 뒷걸음 +10%' },
+  { id: 'r', name: '제안 R', sub: 'R0 + 뒤 빠르기 ×1.1 — 뒷걸음 +18%' },
+];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
@@ -115,6 +121,7 @@ const pick = {
   stage: 'random', // 무대도 기억하지 않는다 (열 때마다 무작위에서 — 고른 무대가 남아 '왜 늘 습지인가' 헷갈리지 않게)
   whiff: 'off', // 상대 헛스윙도 기억하지 않는다 (열 때마다 끔)
   ibFlow: 'off', // 이베리아 시험도 기억하지 않는다 (열 때마다 기본)
+  itWalk: 'cur', // 이탈리아 걸음 시험도 기억하지 않는다
 };
 
 function weaponButton(w, big) {
@@ -212,6 +219,7 @@ function render() {
   for (const el of document.querySelectorAll('#stagePick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.stage));
   for (const el of document.querySelectorAll('#whiffPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.whiff));
   for (const el of document.querySelectorAll('#ibFlowPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.ibFlow));
+  for (const el of document.querySelectorAll('#itWalkPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.itWalk));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -224,7 +232,7 @@ function render() {
   const f = foes.find((x) => x.id === pick.foe);
   const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
   const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
-  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이베리아 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}`);
+  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.ibFlow !== 'off' ? ` · 이베리아 ${IBFLOW_PICKS.find((x) => x.id === pick.ibFlow)?.name ?? ''}` : ''}${pick.itWalk !== 'cur' ? ` · 이탈리아 걸음 ${ITWALK_PICKS.find((x) => x.id === pick.itWalk)?.name ?? ''}` : ''}`);
 }
 
 function startUrl() {
@@ -234,6 +242,9 @@ function startUrl() {
   if (pick.deSecret !== SECRET.deSecret) q.set('deSecret', pick.deSecret);
   if (pick.ibFlow === 'noflow' || pick.ibFlow === 'none') q.set('ibFlow', '0'); // 이베리아 이어 긋기 흐름 끔 (main.js → config IB_FLOW)
   if (pick.ibFlow === 'nowrist' || pick.ibFlow === 'none') q.set('ibWrist', '0'); // 유파 패시브 끔 (main.js → config SCHOOL_PASSIVE)
+  if (pick.itWalk !== 'cur') q.set('itStride', '0.62,0.85,1.3,0.44'); // 이탈리아 걸음 제안 (main.js → schools.js setItalianStride · 짝걸음 보폭 0.44 그대로)
+  if (pick.itWalk === 'r0') q.set('itWalk', '1,1,1.5'); // 짧은 디딤 가속 한도 × 1.5 (setItalianWalk)
+  if (pick.itWalk === 'r') q.set('itWalk', '1,1.1,1.5'); // + 뒤 빠르기 × 1.1
   if (pick.whiff === 'on') q.set('foeWhiff', '1'); // 상대 헛스윙 (main.js → whiff_drill.js) — 끄면 주소에 안 적는다
   return `./index.html?${q.toString()}`;
 }
@@ -251,6 +262,7 @@ for (const x of DE_SECRETS) $('deSecret').append(ibSecretButton(x, 'deSecret'));
 for (const x of STAGE_PICKS) $('stagePick').append(ibSecretButton(x, 'stage'));
 for (const x of WHIFF_PICKS) $('whiffPick').append(ibSecretButton(x, 'whiff'));
 for (const x of IBFLOW_PICKS) $('ibFlowPick').append(ibSecretButton(x, 'ibFlow'));
+for (const x of ITWALK_PICKS) $('itWalkPick').append(ibSecretButton(x, 'itWalk'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +
