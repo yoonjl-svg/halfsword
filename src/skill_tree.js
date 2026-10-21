@@ -10,6 +10,7 @@
 //  칸 상태 넷 (skill_tree_data.js nodeState — 원에 보임): 잠김 = 원 · 그림 조금 흐림 · 이름 보조 색(앞 칸이 모자람) · 배울 수 있음 = 원 바깥 금색 테 + 원 아래 가장자리 값 알약 ·
 //   익힘 = 원 테두리 밝게 + 빛 + 갈래 색 안쪽 · 준비 중 = 원 테두리 점선 · 그림 잿빛 + 원 아래 가장자리 '준비 중' 알약(닫힌 비기 · 일본 손목 치기 심화).
 //  줄 = 그림 모양 그대로(앞 칸 원 아래 가장자리에서 이름표 뒤로 곧게 내려와 → 뒤 칸 원 위 가장자리까지 곡선): 곁가지(편지 · 보법 II)는 점선 ·
+//   편지는 뿌리와 같은 줄 왼쪽(사장님 10/22 02:1x) — 뿌리 원 왼쪽 가장자리 → 편지 원 오른쪽 가장자리 수평 점선 ·
 //   앞 칸을 '모두' 익혀야 하는 칸은 원 위에 금색 점 · 독일 2단계 관문은 두 줄 사이 가로 띠 하나.
 //  칸을 누르면 상세 카드(유파 탭까지 덮음): 그림 · 이름(원어는 여기서만 — 화면 글 지침 §1) · 검술서 오의(lore) · 출처(src) · 효과 한 줄(작게) · 갈래 · 유파 · 상태 · 먼저 익힐 칸(잠김일 때) · 값 · '배우기'.
 //   화면 읽기 차례 = 이름 · 오의 · 출처 · 효과 (사장님 10/22 00:5x '검술서나 참고 문헌에서의 오의를 밝힌 예전 방식이 더 나았던 거 같아' — 갈래 줄은 보이기만 위, 읽기는 효과 뒤).
@@ -210,7 +211,14 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     const px = (n) => g.pos[n.id].x;
     const bottomOf = (n) => [px(n), g.pos[n.id].ringTop + g.pos[n.id].D], topOf = (n) => [px(n), g.pos[n.id].ringTop]; // 그 칸 원의 아래 · 위 가장자리
     const stemOf = (n) => { const q = g.pos[n.id]; return q.top + q.Db + g.nameGap + q.lines.length * g.lh; }; // 이름표 아래 끝 — 원에서 여기까지 곧게 내려와(이름표 뒤) 갈라진다
-    const curve = (from, to) => { const [x0, y0] = bottomOf(from), ys = stemOf(from), [x1, y1] = topOf(to), m = (ys + y1) / 2; return `M${x0.toFixed(1)} ${y0.toFixed(1)} V${ys.toFixed(1)} C${x0.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+    const curve = (from, to) => {
+      if (from.d === to.d) { // 같은 줄(편지 — 뿌리 왼쪽 · 10/22 02:1x): 앞 칸 원 옆 가장자리 → 뒤 칸 원 옆 가장자리 수평 한 줄 (원 가운데 높이)
+        const a = g.pos[from.id], b = g.pos[to.id], dir = Math.sign(b.x - a.x) || 1, yc = a.ringTop + a.D / 2;
+        return `M${(a.x + (dir * a.D) / 2).toFixed(1)} ${yc.toFixed(1)} H${(b.x - (dir * b.D) / 2).toFixed(1)}`;
+      }
+      const [x0, y0] = bottomOf(from), ys = stemOf(from), [x1, y1] = topOf(to), m = (ys + y1) / 2;
+      return `M${x0.toFixed(1)} ${y0.toFixed(1)} V${ys.toFixed(1)} C${x0.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+    };
     const cls = (from, to) => ['tree-link', to.opt ? 'opt' : '', learned.has(from.id) && learned.has(to.id) ? 'lit' : learned.has(from.id) && !isClosed(school, to) ? 'ready' : ''].filter(Boolean).join(' ');
     const gate = T.gate;
     if (gate) { // 독일 관문 — 2단계 셋 아래 가로 띠 하나 → 3단계 셋 (사장님 18:5x '기본기를 중시')

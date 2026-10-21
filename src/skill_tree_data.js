@@ -27,6 +27,7 @@ export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSi
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
 // 칸 하나: id · cat · pre(모두) · price(금화) · heads(머리) · opt(곁가지 — 점선) · closed(늘 닫힘) · d(줄) · cx(가로 0~1000 — data.mjs 그대로)
+//  편지 다섯은 뿌리(보법 I)와 같은 줄 왼쪽 — d 0 · cx 250 (사장님 10/22 02:1x '어디 어디에서 온 편지 아이콘은 가장 처음에 배우게 되는 보법 아이콘 왼쪽으로 수평으로 점선을 뺀 다음에 똑같은 높이에') · 앞 칸은 그대로 뿌리
 //  name = 트리 판 칸에 보이는 기술 이름 (사장님 10/22 '보법1 보법2 이런 건 우리가 보려고 만든 범주 구분 … 아이콘만 보이거나 기술 이름이 보이는 게' — 갈래(보법 I · 막기 II · 패시브 …)는 상세 카드에만)
 //  l1 · l2 = 옛 판 칸의 두 줄(갈래 · 이름 — 알림 · 읽기 이름에 남음) · title · orig = 상세 카드 제목(없으면 두 줄 · 원어는 대기실 스킬에서만 — 화면 글 지침 §1) · eff = 상세 카드 효과 한 줄 · lore · src = 오의 한 줄 · 출처(아래 NODE_LORE — 10/22) · f = 켜는 몫 열쇠 · u = 켜는 고유 공격(unique_assist.js PLAYER_UNIQUE name) · perk = 켜는 강화동작 이점 · letter = 편지
 const N = (o) => Object.freeze({ pre: [], heads: 0, ...o, pre: Object.freeze(o.pre ?? []), f: Object.freeze(o.f ?? []) });
@@ -39,7 +40,7 @@ const TREE_SRC = {
       N({ id: 'G5', name: '곁눈 베기', cat: 'atk', l1: '곁눈 베기', l2: '강화동작', eff: '분노의 베기를 그으면 더 힘 있는 곁눈 베기가 나간다', pre: ['G1'], price: 200, d: 1, cx: 310, u: 'schielhau' }),
       N({ id: 'G8', name: '비껴 딛는 가로베기', cat: 'atk', l1: '비껴 딛는', l2: '가로베기', eff: '옆으로 걸으며 가로로 긋는다', pre: ['G1'], price: 200, d: 1, cx: 500, u: 'zwerchAbtritt' }),
       N({ id: 'G3', name: '세워 받기', cat: 'parry', l1: '막기 I', l2: '막기 자리', eff: '오는 칼 쪽에 칼을 세워 받는다', pre: ['G1'], price: 200, d: 1, cx: 690, f: ['parry'] }),
-      N({ id: 'G11', name: '뉘른베르크에서 온 편지', cat: 'letter', l1: '뉘른베르크', l2: '온 편지', title: '뉘른베르크에서 온 편지', pre: ['G1'], price: 100, opt: true, d: 1, cx: 900, letter: true }),
+      N({ id: 'G11', name: '뉘른베르크에서 온 편지', cat: 'letter', l1: '뉘른베르크', l2: '온 편지', title: '뉘른베르크에서 온 편지', pre: ['G1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'G7', name: '겹치기', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물리면 곧바로 다시 그어 들어간다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 310, u: 'duplieren' }),
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 500, perk: 'schielhau' }),
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
@@ -50,7 +51,7 @@ const TREE_SRC = {
   italian: {
     nodes: [
       N({ id: 'I1', name: '박자 걸음', cat: 'foot', l1: '보법 I', l2: '박자 걸음', eff: '짧게 두 번, 길게 두 번 박자를 타며 걷는다', price: 100, d: 0, cx: 500, f: ['footwork'] }),
-      N({ id: 'I11', name: '시에나에서 온 편지', cat: 'letter', l1: '시에나에서', l2: '온 편지', title: '시에나에서 온 편지', pre: ['I1'], price: 100, opt: true, d: 1, cx: 860, letter: true }),
+      N({ id: 'I11', name: '시에나에서 온 편지', cat: 'letter', l1: '시에나에서', l2: '온 편지', title: '시에나에서 온 편지', pre: ['I1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'I3', name: '물러서기', cat: 'foot', l1: '보법 II', l2: '물러서기', eff: '뒤로 걸어도 느려지지 않는다', pre: ['I1'], price: 100, d: 1, cx: 500, f: ['backFlat'] }),
       N({ id: 'I2', name: '비껴서며 찌르기', cat: 'atk', l1: '비껴서며', l2: '찌르기', eff: '옆으로 걸으며 찌른다', pre: ['I3'], price: 200, d: 2, cx: 330, u: 'inquartata' }),
       N({ id: 'I5', name: '뻗어 받기', cat: 'parry', l1: '막기 I', l2: '막기 자리', eff: '팔을 뻗고 칼끝을 곧게 둔 채 받는다', pre: ['I3'], price: 200, d: 2, cx: 670, f: ['parry', 'parryCover'] }),
@@ -70,7 +71,7 @@ const TREE_SRC = {
       N({ id: 'B3', name: '돌며 베기', cat: 'atk', l1: '돌며 베기', l2: '걸음 기술', eff: '옆으로 걸으며 사선으로 내려 긋는다', pre: ['B1'], price: 200, d: 1, cx: 420, u: 'talhoRodeado' }),
       N({ id: 'B4', name: '머리 위 돌려 베기', cat: 'atk', l1: '머리 위', l2: '돌려 베기', eff: '왼 가로베기를 그으면 머리 위로 돌려 베기가 나간다', pre: ['B1'], price: 200, d: 1, cx: 588, u: 'redondo' }),
       N({ id: 'B8', name: '쳐내기', cat: 'parry', l1: '막기 I', l2: '쳐내기', title: '막기 I · 쳐내기 (탈류 · 레베스)', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, d: 1, cx: 756, f: ['parry', 'parryCover'] }),
-      N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 1, cx: 924, letter: true }),
+      N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B4'], price: 300, d: 2, cx: 560, f: ['ibFlow'] }),
       N({ id: 'B9', name: '굳은 받기', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해가 줄어든다', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
       N({ id: 'B7', name: '길목 지키기', cat: 'secret', l1: '비기', l2: '길목 지키기', eff: '칼끝 거리 밖에서 기다리다 상대가 넘어올 때 공격하면, 크게 둘러 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }),
@@ -83,7 +84,7 @@ const TREE_SRC = {
       N({ id: 'J6', name: '비껴 베기', cat: 'atk', l1: '비껴 베기', l2: '걸음 기술', eff: '옆으로 걸으며 왼 사선으로 내려 긋는다', pre: ['J1'], price: 200, d: 1, cx: 120, u: 'hirakiGiri' }),
       N({ id: 'J7', name: '손목 치기', cat: 'atk', l1: '손목 치기', l2: '강화동작', eff: '가운데서 짧게 내려베면 더 힘 있는 손목 치기가 나간다', pre: ['J1'], price: 200, d: 1, cx: 360, u: 'kote' }),
       N({ id: 'J2', name: '머리 위 받기', cat: 'parry', l1: '막기 I', l2: '머리 위 받기', eff: '머리 위로 오는 칼을 받고, 막는 동안 받는 피해가 줄어든다', pre: ['J1'], price: 200, d: 1, cx: 650, f: ['parry', 'parryCover', 'parryCut'] }),
-      N({ id: 'J11', name: '에도에서 온 편지', cat: 'letter', l1: '에도에서', l2: '온 편지', title: '에도에서 온 편지', pre: ['J1'], price: 100, opt: true, d: 1, cx: 890, letter: true }),
+      N({ id: 'J11', name: '에도에서 온 편지', cat: 'letter', l1: '에도에서', l2: '온 편지', title: '에도에서 온 편지', pre: ['J1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'J9', name: '제비 베기', cat: 'atk', l1: '제비 베기', l2: '이어 긋기', eff: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋는다', pre: ['J6', 'J7'], price: 300, d: 2, cx: 200, u: 'tsubameGaeshi' }),
       N({ id: 'J8', name: '손목 치기 심화', cat: 'deep', closed: true, l1: '심화', l2: '손목 치기', title: '손목 치기 심화', eff: '준비 중입니다', pre: ['J7'], price: 300, d: 2, cx: 420 }), // 이점 미정(확인표 2107) — 닫힘 · 몫 없음
       N({ id: 'J3', name: '흘려 받기', cat: 'parry', l1: '막기 II', l2: '흘려 받기', title: '막기 II · 흘려 받기 (우케나가시)', orig: '受け流し', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow'] }),
@@ -98,7 +99,7 @@ const TREE_SRC = {
       N({ id: 'C2', name: '덜 지치는 걸음', cat: 'foot', l1: '보법 II', l2: '덜 지치는 걸음', eff: '걸을 때 기력이 덜 든다', pre: ['C1'], price: 100, opt: true, d: 1, cx: 110, f: ['stepCost'] }),
       N({ id: 'C3', name: '허리 베기', cat: 'atk', l1: '허리 베기', l2: '강화동작', eff: '가로베기를 그으면 더 힘 있는 허리 베기가 나간다', pre: ['C1'], price: 200, d: 1, cx: 380, u: 'yaoji' }),
       N({ id: 'C7', name: '세 자세 받기', cat: 'parry', l1: '막기 I', l2: '세 자세 받기', eff: '위 · 가운데 · 아래로 오는 칼을 세 자세로 받는다', pre: ['C1'], price: 200, d: 1, cx: 660, f: ['parry', 'parryCover'] }),
-      N({ id: 'C11', name: '한양에서 온 편지', cat: 'letter', l1: '한양에서', l2: '온 편지', title: '한양에서 온 편지', pre: ['C1'], price: 100, opt: true, d: 1, cx: 900, letter: true }),
+      N({ id: 'C11', name: '한양에서 온 편지', cat: 'letter', l1: '한양에서', l2: '온 편지', title: '한양에서 온 편지', pre: ['C1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'C4', name: '깊은 허리 베기', cat: 'deep', l1: '심화', l2: '출혈', title: '허리 베기 심화 · 출혈', eff: '허리 베기로 몸통을 베면 피를 더 흘린다', pre: ['C3'], price: 300, d: 2, cx: 130, perk: 'yaoji' }),
       N({ id: 'C5', name: '끌어 딛고 허리 베기', cat: 'atk', l1: '끌어 딛고', l2: '허리 베기', eff: '앞으로 끌어 딛으며 가로로 긋는다', pre: ['C3'], price: 300, d: 2, cx: 310, u: 'chebuYaoji' }),
       N({ id: 'C6', name: '날개 접기', cat: 'atk', l1: '날개 접기', l2: '이어 긋기', eff: '찌르다가 칼을 거두며 벤다', pre: ['C3'], price: 300, d: 2, cx: 490, u: 'lianchi' }),
