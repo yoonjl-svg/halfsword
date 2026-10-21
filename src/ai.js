@@ -37,7 +37,7 @@ import { gunAI } from './gun.js';
 import { FINISH } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
-import { requestInstant, requestIai, requestSweep, requestCombo, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -1131,6 +1131,12 @@ export class AI {
       this.handSpeed = L.strikeSpeed;
       if (this.secretRun) this.secretStrike(dt); // 비기: 손 속도 배율 · 서보 힘 창 · 재기
       this.checkBind();
+      // 진 · 츠바메가에시 (10/21 — 무기 비검 kin): 내려 벤 칼이 끝나 되돌림 몫(기술 chain 점부터)에 들면 남은 길을 끌고 가는 되돌림 칼로
+      const SBk = me.weapon?.secretBlade;
+      if (SBk?.kin && this.tech?.name === SBk.tech && !this.feint && !this.sbFired && this.path.length && this.path.length <= (this.tech.path?.length ?? 0) - (this.tech.chain ?? 0)) {
+        this.sbFired = true;
+        if (requestArtReturn(me, [me.handOffset.x, me.handOffset.y], this.path.map((p) => p.slice()), SBk)) this.path.length = 0;
+      }
       if (BIND.natural && this.natPress(dt)) return; // 자연 바인드 실험 ②③: 막힌 칼을 노리던 자리로 밀고 · 독일은 느낌으로 감거나 밀고 들어감
       if (!this.path.length) {
         // 유파 비기 (10/9): 베기 길이 끝난 순간 — 비기가 이어 칠 수(連環·Duplieren)가 있으면 곧장, 첫 칼이 닿았으면 連環三擊 을 낸다
@@ -1245,6 +1251,7 @@ export class AI {
     this.me.stamina.attack(t.kind === 'thrust' ? 'thrust' : 'cut');
     this.phase = 'strike';
     this.path.length = 0;
+    this.sbFired = false; // 진 · 츠바메가에시 되돌림 칼 (한 공격에 한 번)
     this.strikeCue(t); // 기술 알림 (고유 동작 — 칼이 실제로 나가는 순간)
     if (this.feint) {
       // 속임수: 가짜 기술의 앞부분만 가다가(내딛지 않고) 진짜 길로 바꾼다

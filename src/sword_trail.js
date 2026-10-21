@@ -105,6 +105,7 @@ export function createSwordTrails(scene) {
         // 중국 빠른 연환: 두 수 길이(0.3~0.4 s)가 남는 시간(instantArcLife)에 가까워 — 그리는 동안은 옅어지지 않고 다 그린 때부터 같은 시간에 옅어진다 (섬광은 처음 그대로)
         arcs[k].t0 = performance.now();
         arcs[k].n = A.pts.length;
+        arcs[k].share = A.share ?? arcs[k].share; // 고유 동작 잔상은 그리는 동안 세기(빠르기 몫)가 바뀐다 (10/21 — secret_instant.js artTrailTick)
       }
     }
     for (const s of slots) {

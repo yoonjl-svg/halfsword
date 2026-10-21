@@ -59,6 +59,7 @@ export function runInstants(combat) {
     if (f.iai) (f.iai.kind === 'combo' ? stepCombo : stepIai)(f, combat);
     if (f.iaiHoldT > 0 || f.iaiFade > 0) holdIai(f, combat.dt || 1 / 120);
     stanceTick(f, combat.dt || 1 / 120);
+    artTrailTick(f);
   }
 }
 
@@ -294,7 +295,7 @@ function runInstant(f, combat) {
 }
 
 /** 쓸린 자리의 첫 부위에 기존 상처 함수(combat.analyze → applyWound)로 상처. 에너지 = instantJ × hitMul 이 나오게 분석 속도를 고른다 */
-function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0) {
+function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul) {
   const { i, best } = hit;
   const P = cut[i];
   const P0 = cut[i - 1];
@@ -319,9 +320,9 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0) 
   const S = { p: sp, q: qs, com: sp.clone().addScaledVector(P.D, f.swordCom ?? 0.3), v: new THREE.Vector3(), w: new THREE.Vector3() };
   const vb = best.info.body;
   const Pst = { p: tv(vb.translation(), new THREE.Vector3()), q: tq(vb.rotation(), new THREE.Quaternion()), com: tv(vb.worldCom(), new THREE.Vector3()), v: tv(vb.linvel(), new THREE.Vector3()), w: tv(vb.angvel(), new THREE.Vector3()) };
-  const target = J * SECRET.hitMul;
+  const target = J * hitMul;
   const h0 = f.secretHit;
-  f.secretHit = SECRET.hitMul;
+  f.secretHit = hitMul; // 비기 판정 배율 (진 · 츠바메가에시 되돌림 칼은 1 — 비기가 아니다)
   let r = null;
   if (dtSub > 0) {
     // 중국 빠른 연환 (10/12): 에너지를 정하지 않고 쓸린 그 점의 실제 빠르기로 분석 (기존 상처 함수 그대로 — 판정 배율 hitMul 은 아래 secretHit)
@@ -934,7 +935,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [] };
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, tech: opt.tech };
   f.instantResult = null;
 }
 
@@ -989,18 +990,20 @@ function startCombo(f, combat, req) {
   const c = f.bodies.chest.translation();
   const AH = tv(f.sword.translation(), new THREE.Vector3()).sub(tv(c, new THREE.Vector3())).applyQuaternion(inv);
   const AD = f.bladePoint(1, new THREE.Vector3()).sub(f.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv);
-  const v = Math.max(1e-3, SECRET.cnFastShare * iaiTipSpeed(f));
+  const share = req.share ?? SECRET.cnFastShare; // 빠르기 · 잔상 몫 (연환 cnFastShare · 진 · 츠바메가에시 되돌림 칼 secretBlade.kin — 10/21)
+  const v = Math.max(1e-3, share * iaiTipSpeed(f));
   if (!req.moves.length) {
     f.instantResult = { ok: false, hit: false };
     return;
   }
   f.iai = {
     kind: 'combo', moves: req.moves, segs: [], si: 0, ts: 0, t: 0, v, yaw, mi: -1, moveName: null, cutting: false, cur: { H: AH, D: AD, px: f.handOffset.x }, last: null,
-    body: comboBody(f.handOffset.x), bodyAt: null, hold: SECRET.stiff[f.swordArt?.tradition] ?? 0.3,
+    body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, tech: req.tech ?? null,
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
-    arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: SECRET.cnFastShare, pts: [] }, slide: null,
+    arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [] }, slide: null,
   };
   f.instantArc = f.iai.arc;
+  f.artTech = req.tech ?? null; // 이 끌고 가는 칼이 어떤 기술인가 (unique_assist.js strokeTechOf — 진 · 츠바메가에시 피해 × 3)
   setKinematic(f, true);
   f.instantGhost = Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)) + 1; // 수를 짤 때마다·스텝마다 다시 채운다 (stepCombo)
   f.iai.prev = placeIai(f, AH, AD, true);
@@ -1241,7 +1244,7 @@ function stepCombo(f, combat) {
       const prevW = Math.max(0, w - 1 / subs);
       const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
       I.hitM = true;
-      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs);
+      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs, I.hitMul);
       if (res) {
         I.hits++;
         I.E += res.energy;
@@ -1292,6 +1295,41 @@ function endCombo(f, combat) {
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
-  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t };
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech };
   f.iai = null;
+  f.artTech = null;
 }
+
+// ─────────────────────────────────────────────────────────────
+//  고유 동작 잔상 · 진 · 츠바메가에시 (10/21 15:5x 사장님 '고노센의 50% 빠르기에 잔상도 그에 비례해서 … 일반 츠바메가에시에도 잔상은 넣자')
+//   · requestArtReturn: 무기 비검(weapons.js secretBlade.kin)의 되돌림 칼을 연환과 같은 틀로 — 칼끝 빠르기 = 고노센(발도 베는 몫)의 kin 몫 · 잔상 세기도 같은 몫 ·
+//     맞음은 쓸린 자리의 실제 빠르기로 기존 상처 함수(비기 판정 배율 없음 — hitMul 1) · 끝 자세 붙잡기 hold s. 사람 · AI 같이 (unique_assist.js start · ai.js 베기 중)
+//   · artTrailTick: 끌고 가지 않는 보통 츠바메가에시의 되돌림 칼(칼끝이 위로 움직이는 동안)에 잔상 — 비기 잔상과 같은 그림(sword_trail.js f.instantArc · kind 'combo'),
+//     세기 = 그 칼끝 평균 빠르기 / 고노센 칼끝 빠르기 (잔상은 빠르기의 표시 — 연환 · 진과 같은 체계). 물리 · 판정 무관(읽기만)
+// ─────────────────────────────────────────────────────────────
+export const ART_TRAIL = new Set(['tsubameGaeshi']); // 잔상을 남기는 고유 동작 (되돌림 칼)
+/** 진 · 츠바메가에시 되돌림 칼: from(패드) → path(패드들)를 끌고 간다. 이미 끌고 가는 중이면 거절(false) */
+export function requestArtReturn(f, from, path, SB) {
+  if (f.iai || f.iaiReq || !SB?.kin || !path?.length) return false;
+  requestCombo(f, { moves: [{ from, path, kind: 'cut', name: SB.tech }], share: SB.kin, hold: SB.hold ?? 0.2, hitMul: 1, tech: SB.tech });
+  return true;
+}
+function artTrailTick(f) {
+  if (f.iai || !f.armed || !f.sword) { f.artTrail = null; return; }
+  const name = artTechOf(f);
+  const up = (f.tipVel?.y ?? 0) > 1.5;
+  if (!name || !ART_TRAIL.has(name) || !up) { f.artTrail = null; return; }
+  let A = f.artTrail;
+  if (!A) {
+    A = f.artTrail = { arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: 0.1, pts: [] }, sum: 0, n: 0, ref: Math.max(1, iaiTipSpeed(f)) };
+    f.instantArc = A.arc;
+  }
+  const a = f.bladePoint(0, new THREE.Vector3());
+  const b = f.bladePoint(1, new THREE.Vector3());
+  A.arc.pts.push([a.x, a.y, a.z, b.x, b.y, b.z]);
+  A.sum += f.tipVel.length();
+  A.n++;
+  A.arc.share = clamp(A.sum / A.n / A.ref, 0.1, 1);
+}
+let artTechOf = () => null; // unique_assist.js strokeTechOf 를 main · 하니스가 이어 둔다 (서로 부르는 고리를 피함)
+export function setArtTechOf(fn) { artTechOf = fn; }

@@ -29,6 +29,7 @@ import { UNIQUE_ASSIST as UA, SKILL } from './config.js';
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
+import { requestArtReturn, setArtTechOf } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
 //  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1 (10/21 통폐합으로 둘~셋 — 아래 머리말). stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 고유자세 책 하나로 넷 모두: skill_books.js kitUniqueStage). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
@@ -109,6 +110,7 @@ export function aiUniqueStages(tradition) {
  *  AI = 공격 중인 기술(강화동작은 기본 동작 자리에서 그 이름으로 나온다 — sword_art.js). 아니면 null
  */
 export function strokeTechOf(f) {
+  if (f?.artTech) return f.artTech; // 끌고 가는 되돌림 칼 (진 · 츠바메가에시 — secret_instant.js requestArtReturn)
   const u = f?.skill?.uniq;
   if (u) {
     if (u.r) return u.r.e.name;
@@ -456,6 +458,12 @@ export class PlayerUniqueAssist {
     // 걸음 명령의 옆 걸음은 스틱 쪽으로(표의 lat 크기 · 부호는 스틱) — 10/21
     if (U.step && e.stick === 'side' && Math.abs(this.f.stickX ?? 0) > 0.01) this.r.step = { ...U.step, lat: Math.abs(U.step.lat) * Math.sign(this.f.stickX) };
     if (U.step && UA.enhance > 0) this.r.stepAsked = this.askStep(this.r.step ?? U.step);
+    // 진 · 츠바메가에시 (10/21 — 무기 비검 kin): 되돌림 칼을 고노센의 kin 몫 빠르기로 끌고 간다 (길 = 이 기술의 되돌림 몫 — 이어 긋기 at 부터)
+    const SB = f.weapon?.secretBlade;
+    if (SB?.kin && SB.tech === e.name) {
+      const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
+      if (requestArtReturn(f, U.pts[at], U.pts.slice(at + 1), SB)) this.end('yield');
+    }
   }
 
   /** 매 스텝, 검술 층 머리 (비기 updateSecret 자리 옆): 강화 몫 갱신 — 손 목표는 건드리지 않는다 */
@@ -521,3 +529,4 @@ export class PlayerUniqueAssist {
     if (why === 'done' && R?.part === 1 && R.e.chain) this.chainFrom = { e: R.e, U: R.U, tEnd };
   }
 }
+setArtTechOf(strokeTechOf); // 고유 동작 잔상(secret_instant.js artTrailTick)이 지금 기술 이름을 읽게
