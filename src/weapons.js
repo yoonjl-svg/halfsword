@@ -82,7 +82,7 @@ export const TIER_LABEL = { trash: '쓰레기', common: '커먼', rare: '레어'
 
 // ── 무기 카드 뽑기 확률 (사장님 결정): 등급을 먼저 뽑고, 그 등급 안에서 무기를 고르게 뽑는다 ──
 //  카드 한 장마다의 등급 확률(%). 무기가 늘거나 줄어도 등급 확률은 그대로다. ??? 는 등급 전체가 5%.
-export const TIER_DRAW = { common: 40, rare: 27, epic: 16, legend: 5, trash: 7, mystery: 5 };
+export const TIER_DRAW = { common: 40, rare: 26, epic: 18, legend: 6, trash: 4, mystery: 6 }; // 10/21 22:xx 사장님 '커먼 40 레어 26 에픽 18 레전드 6 ??? 6 쓰레기 4' (전 40 · 27 · 16 · 5 · 7 · 5)
 /**
  * 서로 다른 무기 n장을 뽑는다. pool: 뽑을 수 있는 무기 id 목록, exclude: 되도록 빼는 id(지난 판 무기).
  *  빈 등급(뽑을 무기가 없는 등급)은 건너뛰고 남은 등급끼리 비율을 다시 맞춘다. rnd: 0~1 난수 (기본 Math.random)
@@ -1213,8 +1213,9 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   hiltLength: 0.15, bladeLength: 0.75, gripAlong: -0.17,
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
   // mBlunt 2.2 → 2.8 (10라운드: hybrid 롱소드 상대 192판 12% → 17%, 모든 무기 목표 15~85%. 스펙 조정은 최소로)
-  tier: 'mystery', // 사장님 결정: ??? 등급 (계수는 커먼 그대로, 카드에 드물게 나온다 — 등급 전체 5%)
-  edged: false, mBlunt: 2.4, fragility: 0, // 감독 지시: 참치는 부러지지 않는다 (통째로 얼린 덩어리). mBlunt 2.8 → 2.6: 사장님 10/8 14:50(모르겐슈테른 1.6 과 함께 둔타 계수 정리) → 2.4: 사장님 10/16 지시 (샛별 쪽 메모로 전달 — 10/17 들여옴, 확인표 2020)
+  tier: 'trash', // 10/21 22:xx 사장님 '냉동 참치는 쓰레기로' (전 ??? — 사장님 결정: ??? 등급 (계수는 커먼 그대로, 카드에 드물게 나온다 — 등급 전체 5%))
+  edged: false, mBlunt: 3.4, fragility: 0, // 10/21 22:xx 쓰레기 등급(힘 0.7)으로 옮기며 2.4 → 3.4 — 2.4 × 1.0 ≈ 3.4 × 0.7 로 지금 세기 그대로(사장님 '현재와 비슷해지나?' · 확인 전)
+  // 지난 기록: 감독 지시 — 참치는 부러지지 않는다 (통째로 얼린 덩어리). mBlunt 2.8 → 2.6: 사장님 10/8 14:50(모르겐슈테른 1.6 과 함께 둔타 계수 정리) → 2.4: 사장님 10/16 지시 (샛별 쪽 메모로 전달 — 10/17 들여옴, 확인표 2020)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
   // 겉모습: 꼬리자루를 쥔 참치 — 주먹 아래 초승달 꼬리, 칼끝 쪽 머리. 역그늘 색·노란 토막지느러미·서리와 얼음막.
@@ -1309,7 +1310,7 @@ const morgenstern = finalizeSpec('morgenstern', {
   nameKo: '모르겐슈테른 (가시 철퇴)', nameEn: 'Morgenstern', // 카드 글 초안 — 줄 148 (문구는 사장님 확인 전)
   desc: '독일 말로 ‘샛별’. 가시 돋친 쇠머리를 별에 빗댔다.\n갑옷 위로도 충격이 들어가고 투구를 벗긴다.',
   grip: 'one-hand', material: 'steel', // 틀 C 한손 → 세이버 자세표 guardBaseOne('blunt'); 대안 'hand-and-half'(B 앞무게) — 줄 133. 재질 steel: 자루에 쇠 보강띠·소리는 쇠 (줄 146)
-  tier: 'rare', // 등급표 기본값 power 1.05 · durability 0.85 · fragility 0.032 — 줄 136 (확인만)
+  tier: 'mystery', // 10/21 22:xx 사장님 '모르겐슈테른은 ???로 · 따로 보정 없이 등급을 옮겨' — ??? = 커먼 계수(힘 1.0 · 내구 0.8 · 파손 0.056). 전 레어(1.05 · 0.85 · 0.032)
   edged: false, // 날 없음 → 늘 둔기 (classifyStyle 'blunt')
   mBlunt: 1.6, // 둔타 E 배율 — 줄 134. **사장님 10/8 14:50: 1.3 → 1.6**(값별 48 판: 1.3 6 % · 1.6 15 % · 1.8/2.2 13 % — 1.6 위로는 사정이 상한). 같은 날 참치 2.8 → 2.6, 고무 닭 2.6 → 1.6, 나뭇가지 1(기본) 그대로
   spike: true, mThrust: 0.35, mCut: 0, // 가시 = 약한 찌르기 — 줄 135 (mCut 은 베기 길이 없어 안 읽힌다, 0 으로 적어 둔다)
@@ -1645,7 +1646,7 @@ const goujian = finalizeSpec('goujian', {
 const brothersSword = finalizeSpec('brothers_sword', {
   nameKo: '황약사의 검', nameEn: "Huang Yaoshi's Sword",
   desc: '흰 천으로 감싼 검. 오랫동안 풀지 않은 듯 단단히 매여 있다.\n“번뇌는 기억력 때문이라더군.”',
-  grip: 'one-hand', material: 'wood', soundMaterial: 'wood', tier: 'epic',
+  grip: 'one-hand', material: 'wood', soundMaterial: 'wood', tier: 'mystery', // 10/21 22:xx 사장님 '황약사의 검은 ???로' — 힘 1.1 → 1.0(??? = 커먼 계수) · 파손 0 · 내구 1 은 아래에 따로 정해 그대로
   // 능력 줄은 이름만 — 더해지는 상태 이상이나 전투 발동이 없다 (사장님 결정, 샛별 쪽)
   ability: '취생몽사: 몽롱한 일격',
   edged: false, spike: false, mCut: 0, mThrust: 0, mBlunt: 1.6,
