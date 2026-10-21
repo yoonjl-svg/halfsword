@@ -1,5 +1,6 @@
 // 와신상담 시험 (월왕구천검 에픽 특수 능력 — combat.js WOUND_RAGE · woundDegree · woundRageMult, docs/import/goujian_port_2026-10-14.md §5)
-//  A0. 대본 베기(live_battery hit() 꼴): 같은 타격(같은 순간의 같은 접촉)을 칼 주인 상태만 바꿔 analyze 로 다시 셈 → 에너지 배율이 1 · 1.15 · 1.30 인가
+//  A0. 대본 베기(live_battery hit() 꼴): 같은 타격(같은 순간의 같은 접촉)을 칼 주인 상태만 바꿔 analyze 로 다시 셈 → 에너지 배율이 1 · 1.25 · 1.50 인가
+//      (배율 = 1 + woundRage × d — 10/21 23:4x 사장님 상한 0.3 → 0.5. 기대값은 weapons.js 의 woundRage 에서 셈)
 //      (사람: 피로 d · 피 없는 몸: 상처 심각도만 · 팔다리 하나). 롱소드는 일곱 상태 모두 같은 값(===)이고 결과에 woundRage 칸이 없는가
 //  A · B. AI 판: 월왕구천검 쪽 타격은 같은 배율 · 롱소드 쪽 타격은 칼 주인이 중상이어도 배율 1
 //  C. 피 없는 몸 흉내(매 스텝 blood 1 · bleed 0 — 병마용처럼 피가 줄지 않는 몸)에 진짜 fighter.applyWound 로 상처 → d 가 오르는가
@@ -7,6 +8,7 @@
 //  analyze 는 읽기만 하므로 같은 순간에 여러 번 불러도 판이 안 바뀐다 (끝나면 칼 주인 상태를 되돌림). 실행: node tools/sim/wound_rage_check.mjs (실패가 있으면 종료 코드 1)
 import { newRound, DT, AI, THREE, CONFIG } from './harness_m.mjs';
 import { woundDegree, woundRageMult, WOUND_RAGE } from '../../src/combat.js';
+import { getWeapon } from '../../src/weapons.js';
 const { VITALS } = CONFIG;
 const f4 = (x) => (x == null ? null : +x.toFixed(4));
 const sevSum = (f) => f.wounds.reduce((a, w) => a + w.severity, 0);
@@ -23,7 +25,8 @@ const STATES = [
   { key: 'c15', note: '피 없는 몸 — 피 1 · 상처 심각도 합 6 (d 1 에서 멈춤)', set: (f) => { f.blood = 1; f.wounds = [{ part: 'chest', type: 'cut', severity: 6, bleed: 0 }]; for (const k in f.limbs) f.limbs[k] = 1; } },
   { key: 'l05', note: '팔다리 — 빈팔 기능 0.5 (d 0.5)', set: (f) => { f.blood = 1; f.wounds = []; for (const k in f.limbs) f.limbs[k] = 1; f.limbs.armO = 0.5; } },
 ];
-const want = { d0: 1, h05: 1.15, h1: 1.3, c05: 1.15, c1: 1.3, c15: 1.3, l05: 1.15 };
+const RAGE = getWeapon('goujian').woundRage; // 0.5 (10/21 23:4x — 전 0.3)
+const want = { d0: 1, h05: 1 + RAGE * 0.5, h1: 1 + RAGE, c05: 1 + RAGE * 0.5, c1: 1 + RAGE, c15: 1 + RAGE, l05: 1 + RAGE * 0.5 };
 
 function probe(G, holder, maxHits, minJ = 15) {
   const orig = G.combat.analyze.bind(G.combat);
@@ -77,7 +80,7 @@ function scripted(weapon, name, gap, sp = 13) {
 
 // ── A0: 대본 베기 — 월왕구천검 · 롱소드 (같은 접촉을 칼 주인 상태만 바꿔 다시 셈) ──
 {
-  console.log(`# A0. 대본 베기 (sevRef ${WOUND_RAGE.sevRef} · 월왕구천검 woundRage 0.3)`);
+  console.log(`# A0. 대본 베기 (sevRef ${WOUND_RAGE.sevRef} · 월왕구천검 woundRage ${RAGE})`);
   for (const [weapon, gaps] of [['goujian', [0.9, 1.0]], ['longsword', [1.2, 1.3]]]) {
     for (const gap of gaps) for (const name of Object.keys(CUTS)) {
       const row = scripted(weapon, name, gap);
@@ -189,7 +192,7 @@ for (const seed of [1]) {
   for (const l of log) console.log('  ' + l);
   console.log(`  P 가 낸 타격 ${pHits.length}: ${pHits.map((h) => `${h.t}s ${h.type} ×${h.rage}`).join(' · ')}`);
   if (P.wounds.length) check(P.blood === 1 && woundDegree(P) > 0, `D 피 없이 상처 ${P.wounds.length} → d ${f4(woundDegree(P))} > 0`);
-  check(pHits.every((h) => h.rage >= 1 && h.rage <= 1.3 + 1e-12), 'D 월왕구천검 타격 배율 1~1.3 안');
+  check(pHits.every((h) => h.rage >= 1 && h.rage <= 1 + RAGE + 1e-12), `D 월왕구천검 타격 배율 1~${1 + RAGE} 안`);
 }
 console.log(fail ? `\n실패 ${fail}` : '\n모두 통과');
 process.exit(fail ? 1 : 0);

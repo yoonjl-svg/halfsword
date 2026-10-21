@@ -54,7 +54,7 @@ export const STAMINA = {
   aiRestAt: 20, aiAggressiveRestAt: -10, aiResumeAt: 35, // AI: 20 아래(공격적 기질 −10 아래) 새 공격 멈추고 물러남 · 35 에서 다시(되돌림 35 는 샛별 저장소 값 — 사장님 확인 전)
 };
 // 무기 특수 능력 값 (능력은 무기 스펙에 적고 — weapons.js — 값만 여기. 와신상담 woundRage · 창천 breakMult 처럼 늘 켜져 있다)
-//  티소나 '위세' (사장님 10/21 23:xx — 능력은 사장님 결정 · 값은 샛별 저장소 제안 그대로 · 확인표 2155): 칼 주인의 공격이 상대 칼에 막혀 끝나면(못 벰 · 칼끼리 닿음 —
+//  티소나 '위세' (사장님 10/21 23:xx — 능력은 사장님 결정 · 값은 샛별 저장소 제안 그대로 · 확인표 2160): 칼 주인의 공격이 상대 칼에 막혀 끝나면(못 벰 · 칼끼리 닿음 —
 //   독일 인데스 '막힘'과 같은 가름: AI ai.js afterStrike · 사람 skill.js whiffEnd) 막은 쪽 기력 − aweDrain(8) · 한 공격에 한 번 · 칼 주인 시계로 aweGap(1.5 s) 안에는 다시 안 깎음.
 //   계산은 stamina.js spendAweDrain. aweDrain 0 = 끔
 export const WEAPON_ABILITY = { aweDrain: 8, aweGap: 1.5 };
