@@ -327,21 +327,18 @@ function curvedBlade(build) {
 
 /**
  * 등급 마감: 같은 재질이라도 등급이 겉면에서 한눈에 읽히게 한다 (감독 지시 — 물리에는 영향 없음).
- *  쓰레기 = 더 칙칙하고 거칠게(광 없음), 커먼 = 있는 그대로(회귀 기준이라 절대 안 바꾼다),
+ *  쓰레기 = 커먼과 같다(10/21 22:xx 사장님 — 전엔 더 칙칙하고 거칠게), 커먼 = 있는 그대로(회귀 기준이라 절대 안 바꾼다),
  *  레어 = 손질된 마감(광이 돌기 시작), 에픽 = 고운 세공 + 은은한 광택(sheen), 레전드 = 최상급 연마.
  *  레전드에 자체 발광은 안 준다 — 레전드 등급의 표식은 aura.js 기운 하나여야 해서 (사장님 10/10 20:0x "빛 나는 건 레전드 등급 특성" — 전엔 "진짜 엑스칼리버의 표식")
  *  (복제품이 finishTier 'legend'로 같은 마감을 받아도 눈으로 구분이 안 되게).
  *  이미 자체 발광이 있는 재질(플라스마 칼날)의 emissive는 건드리지 않는다.
  */
 function tierFinish(base, tier, isBlade) {
-  if (!tier || tier === 'common') return base;
+  if (!tier || tier === 'common' || tier === 'trash') return base; // 쓰레기 = 커먼 마감 (10/21 사장님)
   const o = { ...(base || {}) };
   const r = o.roughness ?? (isBlade ? 0.3 : 0.85);
   const m = o.metalness ?? (isBlade ? 0.35 : 0.05);
-  if (tier === 'trash') {
-    o.roughness = Math.min(1, r + 0.25);
-    o.metalness = m * 0.4;
-  } else if (tier === 'rare') {
+  if (tier === 'rare') {
     o.roughness = r * 0.7;
     o.metalness = Math.min(0.7, m + 0.1);
   } else if (tier === 'epic') {
@@ -1214,7 +1211,7 @@ const frozenTuna = finalizeSpec('frozen_tuna', {
   // 날이 없어 몸통 타격은 무해하다(§고무 닭 주석) → 머리에 맞았을 때만 확실히 세게 만든다
   // mBlunt 2.2 → 2.8 (10라운드: hybrid 롱소드 상대 192판 12% → 17%, 모든 무기 목표 15~85%. 스펙 조정은 최소로)
   tier: 'trash', // 10/21 22:xx 사장님 '냉동 참치는 쓰레기로' (전 ??? — 사장님 결정: ??? 등급 (계수는 커먼 그대로, 카드에 드물게 나온다 — 등급 전체 5%))
-  edged: false, mBlunt: 3.4, fragility: 0, // 10/21 22:xx 쓰레기 등급(힘 0.7)으로 옮기며 2.4 → 3.4 — 2.4 × 1.0 ≈ 3.4 × 0.7 로 지금 세기 그대로(사장님 '현재와 비슷해지나?' · 확인 전)
+  edged: false, mBlunt: 3.0, fragility: 0, // 10/21 22:xx 사장님 '냉동 참치 둔타 3.0으로 해' — 쓰레기 등급(힘 0.7)으로 옮기며 2.4 → 3.0 (실제 3.0 × 0.7 = 2.1 · 전 2.4 × 1.0)
   // 지난 기록: 감독 지시 — 참치는 부러지지 않는다 (통째로 얼린 덩어리). mBlunt 2.8 → 2.6: 사장님 10/8 14:50(모르겐슈테른 1.6 과 함께 둔타 계수 정리) → 2.4: 사장님 10/16 지시 (샛별 쪽 메모로 전달 — 10/17 들여옴, 확인표 2020)
   techReachScale: 1, // 짧고 둔한 무기의 다가서기 계산 완화 (메서·팔쉬온과 같은 근본 원인)
   controlOverrides: { aimStiffness: 46, maxAimTorque: 16 }, // 미끄러운 꼬리를 쥐고 있어 손아귀 힘이 잘 안 실린다 (한손·양손과 무관한 참치 고유 성질 — 연구 세션 스펙 그대로)
