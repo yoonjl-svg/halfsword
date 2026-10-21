@@ -527,3 +527,17 @@ test('판 칸 이름(name)이 모든 칸에 있고 갈래 말(보법 · 막기 �
     assert.ok(!/^(보법|막기|패시브|비기|심화)( |$)/.test(n.name), `${n.id} ${n.name}`);
   }
 });
+test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝힌 예전 방식): 모든 칸에 lore · 45 자 안 · 숫자 · 로마자 · 한자 · 가나 없음 / 편지 아닌 칸은 src 있음 · 편지 칸은 src 없음(편지에 한한 예외 — 10/22 01:1x)', () => {
+  let n = 0;
+  for (const s of D.TREE_SCHOOLS) for (const x of D.nodesOf(s)) {
+    n++;
+    assert.equal(typeof x.lore, 'string', `${x.id} lore`);
+    assert.ok(x.lore.trim().length > 0, `${x.id} lore 빈칸`);
+    assert.ok([...x.lore].length <= 45, `${x.id} lore ${[...x.lore].length} 자`);
+    assert.ok(!/[0-9０-９]/u.test(x.lore), `${x.id} lore 숫자: ${x.lore}`);
+    assert.ok(!/[\p{Script=Latin}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(x.lore), `${x.id} lore 원어 글자: ${x.lore}`);
+    if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
+    else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
+  }
+  assert.equal(n, 55);
+});
