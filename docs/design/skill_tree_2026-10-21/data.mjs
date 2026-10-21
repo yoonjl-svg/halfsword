@@ -13,7 +13,7 @@ export const SCHOOLS = [
     { id: 'G7', cat: 'atk', name: '겹치기', sub: '이어 긋기', eff: '칼이 맞물린 뒤 다음 긋기', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 310 },
     { id: 'G6', cat: 'deep', name: '곁눈 베기 심화', sub: '무릎 꺾기', eff: '머리 · 어깨 · 가슴에 들면 50% 무릎을 꿇린다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 500 },
     { id: 'G4', cat: 'parry', name: '막기 II', sub: '왕관', eff: '머리 위 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 690 },
-    { id: 'G9', cat: 'passive', name: '패시브', sub: '인데스', eff: '칼이 맞물린 순간 더 빨리 반응한다 (후보)', pre: ['G2'], price: 0, heads: 10, st: 'new', d: 2, cx: 100 },
+    { id: 'G9', cat: 'passive', name: '패시브', sub: '인데스', eff: '그 순간 (인데스) — 상대 칼이 헛치거나 막힌 뒤 0.6초 안에 친 칼 피해 +30% · 간격 잡기 중엔 시간이 멈춤 · 비기엔 안 실림', pre: ['G2'], price: 0, heads: 10, st: 'new', d: 2, cx: 100 },
     { id: 'G10', cat: 'secret', name: '비기', sub: '받아 베기', eff: '치명적인 칼을 받아내며 동시에 벤다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
   ] },
   { id: 'italian', ko: '이탈리아', title: '이탈리아 — 긴 줄기', shape: '거리가 생명이라 보법 II(물러서기)를 반드시 거친다. 찌르기 줄기는 내려 찌르기 → 심화 → 비기로 한 줄, 막기 줄기가 나란히 뻗는다.', nodes: [
@@ -65,7 +65,7 @@ export const SCHOOLS = [
     { id: 'C5', cat: 'atk', name: '체보요격', sub: '걸음 명령', eff: '앞으로 끌어 딛으며 요격', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 310 },
     { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '찌르다가 거둔다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 490 },
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
-    { id: 'C10', cat: 'passive', name: '패시브', sub: '검결', eff: '칼의 요결 (검결) — 칼을 긋고 손을 떼면 기다림 없이 바로 자세로 돌아온다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
+    { id: 'C10', cat: 'passive', name: '패시브', sub: '토납', eff: '숨 바꾸기 (토납) — 칼을 휘두르지 않는 동안 피가 2배 빨리 멎는다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
     { id: 'C9', cat: 'secret', name: '비기', sub: '연환', eff: '높이 막아 낸 직후 세 번 이어 친다', pre: ['C6', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 },
   ] },
 ];
