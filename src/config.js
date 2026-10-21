@@ -812,9 +812,9 @@ export const SKILL = {
   enterCool: 1.0, // 한 번 들어간 뒤 다시 들어가기까지 (초)
 };
 
-// ── 스킬트리 편지 '00에서 온 편지' (10/21 — docs/design/skill_tree_2026-10-21/README.md · skill_tree_data.js letterMul · weapons.js drawWeaponCards weightOf) ──
-//  카드 뽑기: 등급을 먼저 뽑고(TIER_DRAW 그대로) → 그 등급 안의 뽑기 칸(간장 · 막야처럼 같은 drawGroup 은 한 칸)마다 무게 = 그 칸 유파의 편지를 가졌으면 mult · 아니면 1 → 무게로 한 칸.
-//  편지가 없으면 지금 뽑기와 같다(같은 난수 · 같은 결과). mult 2 는 README 가안 — 사장님이 2 · 3 중에 고르는 중(사장님 확인 전)
+// ── 스킬트리 편지 '00에서 온 편지' (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5 · skill_tree_data.js letterMul · weapons.js drawWeaponCards weightOf) ──
+//  사장님 결정 '칸마다 무게': 뽑기 칸(무기 하나 · 같은 drawGroup 은 한 칸)마다 무게 = 그 등급 TIER_DRAW ÷ 그 등급 칸 수 — 편지를 가진 유파 칸은 × mult — 모든 등급에서 무게로 한 칸.
+//  편지가 없으면 지금 뽑기와 같다(같은 난수 · 같은 결과). mult 2 = 사장님 결정(10/21 — 지금은 2)
 export const LETTER = { mult: 2 };
 
 // ── 유파 비기 (10/9 — 사장님 승인 '유파 설계 v3: 기질·비기·동작', docs/strike/school_secret_2026-10-09.md) ──

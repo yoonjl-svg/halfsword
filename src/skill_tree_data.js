@@ -27,7 +27,7 @@ export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSi
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
 // 칸 하나: id · cat · pre(모두) · price(금화) · heads(머리) · opt(곁가지 — 점선) · closed(늘 닫힘) · d(줄) · cx(가로 0~1000 — data.mjs 그대로)
-//  l1 · l2 = 판 칸의 두 줄 · eff = 상세 카드 효과 한 줄 · f = 켜는 몫 열쇠 · u = 켜는 고유 공격(unique_assist.js PLAYER_UNIQUE name) · perk = 켜는 강화동작 이점 · letter = 편지
+//  l1 · l2 = 판 칸의 두 줄 · title · orig = 상세 카드 제목(없으면 두 줄 · 원어는 대기실 스킬에서만 — 화면 글 지침 §1) · eff = 상세 카드 효과 한 줄 · f = 켜는 몫 열쇠 · u = 켜는 고유 공격(unique_assist.js PLAYER_UNIQUE name) · perk = 켜는 강화동작 이점 · letter = 편지
 const N = (o) => Object.freeze({ pre: [], heads: 0, ...o, pre: Object.freeze(o.pre ?? []), f: Object.freeze(o.f ?? []) });
 const TREE_SRC = {
   german: {
@@ -41,7 +41,7 @@ const TREE_SRC = {
       N({ id: 'G11', cat: 'letter', l1: '뉘른베르크', l2: '온 편지', title: '뉘른베르크에서 온 편지', pre: ['G1'], price: 100, opt: true, d: 1, cx: 900, letter: true }),
       N({ id: 'G7', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물린 뒤 다시 긋는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 310, u: 'duplieren' }),
       N({ id: 'G6', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 500, perk: 'schielhau' }),
-      N({ id: 'G4', cat: 'parry', l1: '막기 II', l2: '왕관', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
+      N({ id: 'G4', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
       N({ id: 'G9', cat: 'passive', l1: '패시브', l2: '인데스', eff: '상대 공격이 빗나가거나 막힌 직후 친 칼이 세다 · 피해 30% 증가', pre: ['G2'], price: 0, heads: 10, d: 2, cx: 100, f: ['passive'] }),
       N({ id: 'G10', cat: 'secret', l1: '비기', l2: '받아 베기', eff: '치명적인 칼이 들어올 때 공격하면, 받아내며 동시에 벤다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }),
     ],
@@ -68,7 +68,7 @@ const TREE_SRC = {
       N({ id: 'B10', cat: 'passive', l1: '패시브', l2: '손목 힘', eff: '큰 칼을 더 빨리 돌린다 · 손목 힘 30% 증가', pre: ['B1'], price: 0, heads: 10, d: 1, cx: 252, f: ['passive'] }),
       N({ id: 'B3', cat: 'atk', l1: '돌며 베기', l2: '걸음 명령', eff: '옆으로 걸으며 사선으로 내려 긋는다', pre: ['B1'], price: 200, d: 1, cx: 420, u: 'talhoRodeado' }),
       N({ id: 'B4', cat: 'atk', l1: '머리 위', l2: '돌려 베기', eff: '왼 가로베기가 머리 위 돌려 베기로 바뀐다', pre: ['B1'], price: 200, d: 1, cx: 588, u: 'redondo' }),
-      N({ id: 'B8', cat: 'parry', l1: '막기 I', l2: '쳐내기', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, d: 1, cx: 756, f: ['parry', 'parryCover'] }),
+      N({ id: 'B8', cat: 'parry', l1: '막기 I', l2: '쳐내기', title: '막기 I · 쳐내기 (탈류 · 레베스)', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, d: 1, cx: 756, f: ['parry', 'parryCover'] }),
       N({ id: 'B11', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 1, cx: 924, letter: true }),
       N({ id: 'B5', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 서지 않고 흐른다', pre: ['B4'], price: 300, d: 2, cx: 560, f: ['ibFlow'] }),
       N({ id: 'B9', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해 20% 감소', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
@@ -81,11 +81,11 @@ const TREE_SRC = {
       N({ id: 'J1', cat: 'foot', l1: '보법', l2: '낮은 걸음', eff: '흔들려도 버티는 낮은 몸 · 걷기 기력 1.5배', price: 100, d: 0, cx: 500, f: ['footwork', 'stepCost'] }),
       N({ id: 'J6', cat: 'atk', l1: '비껴 베기', l2: '걸음 명령', eff: '옆으로 걸으며 왼 사선으로 내려 긋는다', pre: ['J1'], price: 200, d: 1, cx: 120, u: 'hirakiGiri' }),
       N({ id: 'J7', cat: 'atk', l1: '손목 치기', l2: '강화동작', eff: '가운데서 짧게 내려베기가 손목 치기로 바뀐다', pre: ['J1'], price: 200, d: 1, cx: 360, u: 'kote' }),
-      N({ id: 'J2', cat: 'parry', l1: '막기 I', l2: '우케나가시', eff: '머리 위로 오는 칼을 받는다 · 막는 동안 피해 20% 감소', pre: ['J1'], price: 200, d: 1, cx: 650, f: ['parry', 'parryCover', 'parryCut'] }),
+      N({ id: 'J2', cat: 'parry', l1: '막기 I', l2: '머리 위 받기', eff: '머리 위로 오는 칼을 받는다 · 막는 동안 피해 20% 감소', pre: ['J1'], price: 200, d: 1, cx: 650, f: ['parry', 'parryCover', 'parryCut'] }),
       N({ id: 'J11', cat: 'letter', l1: '에도에서', l2: '온 편지', title: '에도에서 온 편지', pre: ['J1'], price: 100, opt: true, d: 1, cx: 890, letter: true }),
       N({ id: 'J9', cat: 'atk', l1: '제비 베기', l2: '이어 긋기', eff: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋는다', pre: ['J6', 'J7'], price: 300, d: 2, cx: 200, u: 'tsubameGaeshi' }),
       N({ id: 'J8', cat: 'deep', closed: true, l1: '심화', l2: '손목 치기', title: '손목 치기 심화', eff: '손목 치기의 이점을 정하는 중입니다', pre: ['J7'], price: 300, d: 2, cx: 420 }), // 이점 미정(확인표 2107) — 닫힘 · 몫 없음
-      N({ id: 'J3', cat: 'parry', l1: '막기 II', l2: '흘려 받기', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow'] }),
+      N({ id: 'J3', cat: 'parry', l1: '막기 II', l2: '흘려 받기', title: '막기 II · 흘려 받기 (우케나가시)', orig: '受け流し', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow'] }),
       N({ id: 'J10', cat: 'passive', l1: '패시브', l2: '기다림과 침', eff: '공격 없이 기다린 만큼 다음 칼이 세다 · 1.5초에 피해 30% 증가', pre: ['J9'], price: 0, heads: 10, d: 3, cx: 200, f: ['passive'] }),
       N({ id: 'J4', cat: 'parry', l1: '막기 III', l2: '흘린 칼', eff: '흘린 공격의 피해가 80% 줄어든다', pre: ['J3'], price: 400, d: 3, cx: 650, f: ['flowShield'] }),
       N({ id: 'J5', cat: 'secret', l1: '비기', l2: '뒤에서 앞서기', eff: '간격 밖에서 기다리다 상대가 치려 할 때 공격하면, 먼저 벤다', pre: ['J4'], price: 400, heads: 20, d: 4, cx: 650, f: ['secret'] }),
@@ -171,8 +171,7 @@ export function nodesParam(raw, school) {
   return new Set(String(raw).split(',').map((s) => s.trim()).filter((id) => nodeOf(school, id)));
 }
 
-// ── 편지 (README '00에서 온 편지' — 뽑기 규칙: 등급을 먼저 뽑고 · 그 등급 안에서 뽑기 칸(같은 drawGroup = 한 칸)마다 무게 = 그 유파 편지 배율(config LETTER.mult · 사장님 확인 전) · 아니면 1) ──
-//  = 유파를 '그 등급의 그 유파 칸 수 × 배율'의 무게로 고르고 그 유파 안에서 고르게 고르는 것과 같은 확률
+// ── 편지 (사장님 결정 '칸마다 무게' — 뽑기 칸마다 무게 = 그 등급 TIER_DRAW ÷ 그 등급 칸 수 · 편지 유파 칸 × config LETTER.mult · 모든 등급에서 한 번에 — weapons.js drawWeaponCards) ──
 /** 익힌 칸 모음(유파 → Set) → 편지를 가진 유파 모음 */
 export function letterSchools(learnedBySchool) {
   const out = new Set();
@@ -182,5 +181,5 @@ export function letterSchools(learnedBySchool) {
 /** 무기 유파 → 뽑기 칸 무게 배율 (편지가 있으면 config LETTER.mult · 아니면 1 — 무유파 무기도 1) */
 export const letterMul = (school, letters) => (letters?.has(school) ? LETTER.mult : 1);
 /** 칸 효과 한 줄 — 편지는 배율(config LETTER.mult)을 읽어 쓴다 (값이 바뀌어도 글이 맞게) */
-export const nodeEff = (school, n) => (n.letter ? `같은 등급 안에서 ${SCHOOL_KO[school]} 무기 카드가 ${LETTER.mult}배 잘 나온다` : n.eff);
+export const nodeEff = (school, n) => (n.letter ? `${SCHOOL_KO[school]} 무기 카드가 더 자주 나온다 · 뽑기 무게 ${LETTER.mult}배` : n.eff);
 const SCHOOL_KO = { german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본', chinese: '동방' }; // schools.js TRADITIONS.*.nameKo 와 같은 말 (이 파일은 schools.js 를 들여오지 않는다)

@@ -243,8 +243,8 @@ function drawCardIds() {
   // 모르는 id 는 버리고(getWeapon 이 롱소드로 바꿔 버린다) 서로 다른 두 장일 때만 쓴다
   const forced = (params.get('cards') || '').split(',').filter((id) => id && getWeapon(id).id === id).slice(0, 2);
   if (forced.length === 2 && forced[0] !== forced[1]) return forced;
-  // 등급을 먼저 뽑고 그 등급 안에서 고른다 (사장님 결정: 커먼 40 · 레어 27 · 에픽 16 · 레전드 5 · 쓰레기 7 · ??? 5, weapons.js TIER_DRAW)
-  // 편지 (스킬트리 — 사장님 10/21): 등급은 그대로 먼저 뽑고, 그 등급 안에서 편지를 가진 유파의 무기 칸 무게 × 2 (편지가 없으면 지금 확률과 같음 — weapons.js drawWeaponCards weightOf)
+  // 등급을 먼저 뽑고 그 등급 안에서 고른다 (사장님 결정 — 등급 확률은 weapons.js TIER_DRAW 한 곳 · 편지가 있으면 아래 칸마다 무게)
+  // 편지 (스킬트리 — 사장님 10/21 '칸마다 무게'): 칸마다 무게 = 등급 확률 ÷ 그 등급 칸 수, 편지를 가진 유파 칸은 × LETTER.mult — 모든 등급에서 한 번에 (편지가 없으면 지금 뽑기 그대로 — weapons.js drawWeaponCards weightOf)
   const letters = playerLetters({ test: testRoute.active });
   return drawWeaponCards(PLAYER_WEAPON_POOL, 2, letters.size ? { weightOf: (id) => letterMul(traditionOf(getWeapon(id)), letters) } : {});
 }

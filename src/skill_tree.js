@@ -49,13 +49,20 @@ export function nodeTitle(school, n) {
   }
   if (n.cat === 'passive') { const [nm, o] = PASSIVE_NAME[school] ?? [n.l2, null]; return { title: `패시브 · ${withOrig(nm, o)}`, kind: cat.label }; }
   if (n.cat === 'secret') { const S = TRADITIONS[school]?.secret, rd = /\(([^()]*)\)/.exec(S?.nameKo ?? '')?.[1]; return { title: `비기 · ${S?.orig && rd ? `${S.nameKo.replace(/\s*\(.*$/, '')} (${rd} · ${S.orig})` : S?.nameKo ?? n.l2}`, kind: cat.label }; }
-  return { title: n.title ?? `${n.l1} · ${n.l2}`, kind: cat.label };
+  return { title: withOrig(n.title ?? `${n.l1} · ${n.l2}`, n.orig), kind: cat.label };
 }
-const shortName = (school, n) => (n.u || n.cat === 'atk' ? `${n.l1} ${n.l2}` : n.title ?? `${n.l1} · ${n.l2}`);
+/** 칸 이름 (알림 · 화면 읽기 — 가운뎃점 없이): 고유 공격 = 기술 이름의 뜻(비껴 딛는 가로베기) · 심화 = '곁눈 베기 심화' · 편지 = '뉘른베르크에서 온 편지' · 그 밖 = 두 줄 이어서(보법 II 간격 잡기) */
+function nameOf(school, n) {
+  if (n.u) { const e = PLAYER_UNIQUE[school]?.find((x) => x.name === n.u), U = e && uniqueDef(school, e); if (U?.nameKo) return U.nameKo.replace(/\s*\(.*$/, ''); }
+  if (n.title && (n.cat === 'deep' || n.cat === 'letter')) return n.title.split(' · ')[0];
+  return `${n.l1} ${n.l2}`;
+}
+/** 먼저 익힐 칸 글: 보법 · 막기 · 패시브 · 비기는 갈래 이름(보법 I · 막기 II), 그 밖은 칸 이름 */
+const preName = (school, n) => (['foot', 'parry', 'passive', 'secret'].includes(n.cat) ? n.l1 : nameOf(school, n));
+const shortName = nameOf;
 
 // 글 폭 (em) — 한글 1 · 빈칸 0.3 · 그 밖 0.6 (칸에 글이 안 들면 글자를 줄인다)
 const emWidth = (t) => [...String(t)].reduce((a, ch) => a + (/[가-힣]/.test(ch) ? 1 : ch === ' ' ? 0.3 : 0.62), 0);
-const CX0 = 70, CX1 = 940; // 가로 자리(cx) 범위 — 다섯 유파 칸이 모두 든다 (data.mjs 84 ~ 924)
 
 /**
  * root: 스킬 칸(Shadow root 안의 #skillTreeHost) · test: 테스트 경로(모든 칸 익힘 — 배우기 · 초기화 없음) · onWallet(): 금화 · 머리 · 레벨이 바뀌면(대기실 내 정보 칸 다시 그리기) ·
@@ -89,14 +96,18 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     const nodes = nodesOf(school), rows = Math.max(...nodes.map((n) => n.d)) + 1;
     let gap = Infinity; // 같은 줄 칸 사이 가장 좁은 cx
     for (const a of nodes) for (const b of nodes) if (a !== b && a.d === b.d) gap = Math.min(gap, Math.abs(a.cx - b.cx));
+    const half = Math.max(...nodes.map((n) => Math.abs(n.cx - 500))); // 가로 범위 = 뿌리(500) 둘레로 맞춤 — 뿌리가 늘 가운데
+    const c0 = 500 - half, span = 2 * half || 1;
     const s = Math.min(1.5, Math.max(0.85, W / 386)); // 글자 · 틈 비 (폰 가로 판 386 px = 1)
-    const nodeW = Math.round(Math.max(50, Math.min(84 * s, ((W - 8) * gap) / (CX1 - CX0) - 5 * s)));
-    const nodeH = Math.round(Math.max(28, Math.min(40, 29 * s)));
-    const top = 6, bottom = 10; // 위 여백 · 아래 여백(값 알약이 칸 아래로 반쯤 나옴)
-    const pitch = Math.max(nodeH + 10 * s, rows > 1 ? (H - top - bottom - nodeH) / (rows - 1) : 0);
+    const g = gap / span, m = 5 * s; // 칸 사이 틈 m: 칸 폭 w 일 때 이웃 칸 간격 = g × (W − w − 6) ≥ w + m
+    const nodeW = Math.floor(Math.max(46, Math.min(84 * s, (g * (W - 6) - m) / (1 + g))));
+    const nodeH = Math.round(Math.max(28, Math.min(40, 28 * s)));
+    const pill = Math.round(10 * s); // 값 알약이 칸 아래로 나오는 몫
+    const top = 5, bottom = pill + 2;
+    const pitch = Math.max(nodeH + pill + 2, rows > 1 ? (H - top - bottom - nodeH) / (rows - 1) : 0);
     const height = Math.ceil(top + nodeH + pitch * (rows - 1) + bottom);
     const padX = nodeW / 2 + 3;
-    const x = (cx) => padX + ((cx - CX0) / (CX1 - CX0)) * (W - 2 * padX);
+    const x = (cx) => padX + ((cx - c0) / span) * (W - 2 * padX);
     const y = (d) => top + nodeH / 2 + d * pitch;
     return { W, H, height, nodeW, nodeH, pitch, s, x, y, scroll: height > H + 0.5 };
   }
@@ -137,6 +148,12 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     board.style.setProperty('--nh', `${geo.nodeH}px`);
     board.style.setProperty('--s', geo.s.toFixed(3));
     scroller.dataset.scroll = geo.scroll ? 'y' : '';
+    more();
+  }
+  // 아래로 더 볼 칸이 있나 (판이 창보다 길고 아직 끝까지 안 내림) — 아래 끝 흐림 (lobby.css .tree-frame[data-more])
+  function more() {
+    const left = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+    if (left > 2) frame.dataset.more = ''; else delete frame.dataset.more;
   }
   function render() {
     size();
@@ -148,7 +165,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
       $('.tree-nodes').innerHTML = nodesOf(school).map((n) => {
         const st = stateOf(n, learned), cat = NODE_CAT[n.cat];
         const l2 = st === 'closed' ? '준비 중' : n.l2;
-        const f1 = Math.min(11 * geo.s, (geo.nodeW - 6) / emWidth(n.l1)), f2 = Math.min(10 * geo.s, (geo.nodeW - 6) / emWidth(l2));
+        const f1 = Math.min(10.5 * geo.s, (geo.nodeW - 6) / emWidth(n.l1)), f2 = Math.min(9.5 * geo.s, (geo.nodeW - 6) / emWidth(l2));
         const price = st === 'open' ? `<span class="node-price">${priceHtml(n.price, n.heads)}</span>` : '';
         const label = `${shortName(school, n)} · ${STATE_KO[st]}${st === 'open' ? ` · ${priceWords(n.price, n.heads)}` : ''}`;
         return `<button type="button" class="tree-node" data-node="${n.id}" data-cat="${n.cat}" data-tier="${cat.tier}" data-state="${st}" style="left:${geo.x(n.cx).toFixed(1)}px;top:${geo.y(n.d).toFixed(1)}px" aria-label="${label}" aria-pressed="${selected === n.id}">
@@ -182,7 +199,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     $('#nodeMeta').textContent = `${kind} · ${TRADITIONS[school].nameKo} 유파${test ? '' : ` · ${STATE_KO[st]}`}`;
     $('#nodeMeta').dataset.tier = cat.tier;
     $('#nodeEffect').textContent = st === 'closed' ? '준비 중입니다.' : nodeEff(school, n);
-    const pre = n.pre.map((id) => shortName(school, nodeOf(school, id)));
+    const pre = n.pre.map((id) => preName(school, nodeOf(school, id)));
     $('#nodePre').textContent = pre.length ? `먼저 익힐 칸 · ${pre.join(' · ')}${pre.length > 1 ? ' — 모두' : ''}` : '처음 익히는 칸 — 모든 칸이 이 아래';
     $('#nodePrice').innerHTML = st === 'closed' ? '' : `<span class="sr-only">값 ${priceWords(n.price, n.heads)}</span><span aria-hidden="true">${priceHtml(n.price, n.heads)}</span>`;
     $('#nodePrice').hidden = st === 'closed' || st === 'learned' || test;
@@ -249,6 +266,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     box.hidden = true;
     if (refocus) $('#treeReset').focus({ preventScroll: true });
   }
+  on(scroller, 'scroll', more);
   on($('#treeReset'), 'click', openReset);
   on($('#resetCancel'), 'click', () => closeReset());
   on($('#resetOk'), 'click', () => {

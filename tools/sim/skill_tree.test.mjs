@@ -233,88 +233,102 @@ test('옮기기: 옛 판(다른 탭)이 진행 저장의 기록 칸을 떨어뜨
   assert.equal(S.migrateSkillBooks().saved, false); // 다시 부르면 할 일 없음
 });
 
-// ── 편지 뽑기 셈 ──
+// ── 편지 뽑기 셈 (사장님 결정 '칸마다 무게': 칸 무게 = 그 등급 TIER_DRAW ÷ 그 등급 칸 수 · 편지 유파 칸 × LETTER.mult · 모든 등급에서 한 번에) ──
 const POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // main.js PLAYER_WEAPON_POOL 과 같은 목록
-function firstCardDist(weightOf, K = 4000) { // 첫 카드 유파 확률 — 등급 난수는 그 등급 칸 가운데, 고르기 난수는 고른 격자(K)로 drawWeaponCards 를 그대로 부름
-  const tiers = Object.keys(TIER_DRAW).filter((t) => POOL.some((id) => getWeapon(id).tier === t) && TIER_DRAW[t] > 0);
-  const order = [...new Set(POOL.filter((id) => !getWeapon(id).characterOnly).map((id) => getWeapon(id).tier))].filter((t) => tiers.includes(t)); // drawWeaponCards 의 등급 차례(목록에 처음 나온 차례)
-  const total = order.reduce((a, t) => a + TIER_DRAW[t], 0);
-  const out = {};
+const groupOf = (id) => getWeapon(id).drawGroup || id;
+const weightFor = (letters) => (id) => D.letterMul(traditionOf(getWeapon(id)), letters);
+/** 정확한 셈(열거): 남은 칸마다 무게 → 칸 · 유파 · 등급 확률 */
+function exactDist(letters, removed = new Set()) {
+  const pool = POOL.filter((id) => !getWeapon(id).characterOnly && !removed.has(groupOf(id)));
+  const slots = [...new Map(pool.map((id) => [groupOf(id), id])).values()].filter((id) => TIER_DRAW[getWeapon(id).tier] > 0);
+  const n = {};
+  for (const id of slots) n[getWeapon(id).tier] = (n[getWeapon(id).tier] ?? 0) + 1;
+  const w = slots.map((id) => (TIER_DRAW[getWeapon(id).tier] / n[getWeapon(id).tier]) * D.letterMul(traditionOf(getWeapon(id)), letters));
+  const W = w.reduce((a, x) => a + x, 0), school = {}, tier = {};
+  slots.forEach((id, i) => { const s = traditionOf(getWeapon(id)), t = getWeapon(id).tier; school[s] = (school[s] ?? 0) + w[i] / W; tier[t] = (tier[t] ?? 0) + w[i] / W; });
+  return { school, tier };
+}
+const seqRnd = (seq) => () => seq.shift() ?? 0.5;
+/** 편지 길(난수 하나로 칸)을 실제 함수로 — 첫 난수를 고른 격자 K 로 */
+function implDist(letters, { first = null, K = 20000 } = {}) {
+  const school = {}, tier = {};
+  for (let k = 0; k < K; k++) {
+    const seq = first ? [...first, (k + 0.5) / K, 0.5] : [(k + 0.5) / K, 0.5];
+    const ids = drawWeaponCards(POOL, first ? 2 : 1, { rnd: seqRnd(seq), weightOf: weightFor(letters) });
+    const id = ids[ids.length - 1], s = traditionOf(getWeapon(id)), t = getWeapon(id).tier;
+    school[s] = (school[s] ?? 0) + 1 / K; tier[t] = (tier[t] ?? 0) + 1 / K;
+  }
+  return { school, tier };
+}
+/** 편지 없는 길(지금 그대로 — 등급 난수 + 칸 난수)을 실제 함수로: 등급 난수는 그 등급 칸 가운데, 칸 난수는 격자 */
+function oldDist(K = 4000) {
+  const order = [...new Set(POOL.filter((id) => !getWeapon(id).characterOnly).map((id) => getWeapon(id).tier))].filter((t) => TIER_DRAW[t] > 0);
+  const total = order.reduce((a, t) => a + TIER_DRAW[t], 0), school = {};
   let acc = 0;
   for (const t of order) {
     const r1 = (acc + TIER_DRAW[t] / 2) / total; acc += TIER_DRAW[t];
     for (let k = 0; k < K; k++) {
-      const seq = [r1, (k + 0.5) / K, 0.5];
-      const [id] = drawWeaponCards(POOL, 1, { rnd: () => seq.shift() ?? 0.5, weightOf });
-      const s = traditionOf(getWeapon(id));
-      out[s] = (out[s] ?? 0) + TIER_DRAW[t] / total / K;
+      const [id] = drawWeaponCards(POOL, 1, { rnd: seqRnd([r1, (k + 0.5) / K, 0.5]) });
+      const s = traditionOf(getWeapon(id)); school[s] = (school[s] ?? 0) + TIER_DRAW[t] / total / K;
     }
   }
-  return out;
+  return { school };
 }
-function formulaDist(letters) { // README 규칙: 등급 → 유파(칸 수 × 편지 배율) → 유파 안에서 고르게
-  const groupOf = (id) => getWeapon(id).drawGroup || id;
-  const pool = POOL.filter((id) => !getWeapon(id).characterOnly);
-  const tiers = [...new Set(pool.map((id) => getWeapon(id).tier))].filter((t) => TIER_DRAW[t] > 0);
-  const total = tiers.reduce((a, t) => a + TIER_DRAW[t], 0);
-  const out = {};
-  for (const t of tiers) {
-    const slots = [...new Map(pool.filter((id) => getWeapon(id).tier === t).map((id) => [groupOf(id), id])).values()];
-    const n = {};
-    for (const id of slots) { const s = traditionOf(getWeapon(id)); n[s] = (n[s] ?? 0) + 1; }
-    const W = Object.entries(n).reduce((a, [s, c]) => a + c * D.letterMul(s, letters), 0);
-    for (const [s, c] of Object.entries(n)) out[s] = (out[s] ?? 0) + (TIER_DRAW[t] / total) * (c * D.letterMul(s, letters)) / W;
-  }
-  return out;
-}
-test('편지 없음 = 지금 뽑기와 같다: weightOf 가 모두 1 이면 같은 난수 · 같은 결과 (난수 600 벌)', () => {
+const close = (a, b, e, msg) => { for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) assert.ok(Math.abs((a[k] ?? 0) - (b[k] ?? 0)) < e, `${msg} ${k}: ${a[k]} vs ${b[k]}`); };
+test('편지 없음 = 지금 뽑기와 같다: 같은 난수 · 같은 결과(난수 600 벌 · 두 장) · 확률 = 칸 무게 셈(배율 1)', () => {
   let seed = 7; const lcg = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
   for (let i = 0; i < 600; i++) {
     const seq = Array.from({ length: 8 }, lcg);
-    const a = drawWeaponCards(POOL, 2, { rnd: ((q) => () => q.shift())([...seq]) });
-    const b = drawWeaponCards(POOL, 2, { rnd: ((q) => () => q.shift())([...seq]), weightOf: () => 1 });
-    const c = drawWeaponCards(POOL, 2, { rnd: ((q) => () => q.shift())([...seq]), weightOf: (id) => D.letterMul(traditionOf(getWeapon(id)), new Set()) });
-    assert.deepEqual(b, a); assert.deepEqual(c, a);
+    const a = drawWeaponCards(POOL, 2, { rnd: seqRnd([...seq]) });
+    assert.deepEqual(drawWeaponCards(POOL, 2, { rnd: seqRnd([...seq]), weightOf: () => 1 }), a);
+    assert.deepEqual(drawWeaponCards(POOL, 2, { rnd: seqRnd([...seq]), weightOf: weightFor(new Set()) }), a);
   }
-  const plain = firstCardDist(null), none = formulaDist(new Set());
-  for (const s of Object.keys(none)) assert.ok(Math.abs(plain[s] - none[s]) < 1e-3, `${s} ${plain[s]} vs ${none[s]}`); // 등급 안 고르게 = 유파 무게(칸 수)와 같음
+  close(oldDist().school, exactDist(new Set()).school, 1e-3, '편지 없음');
+  const base = exactDist(new Set()).tier;
+  for (const [t, p] of Object.entries(base)) assert.ok(Math.abs(p - TIER_DRAW[t] / 100) < 1e-9, `${t} 등급 ${p}`); // 등급 확률 = TIER_DRAW 그대로
 });
-test('편지 × 2: 등급을 먼저 뽑고 그 등급 안에서 그 유파 칸 무게 × 2 — 첫 카드 유파 확률이 규칙(칸 수 × 배율)과 같고 그 유파가 늘어난다', () => {
+test('편지 하나: 그 유파 칸만 × 배율 · 나머지 칸은 같은 비로 줄어듦(쓰레기 · ??? 도) — 실제 함수 = 정확한 셈', () => {
+  const base = exactDist(new Set());
   for (const s of D.TREE_SCHOOLS) {
-    const letters = new Set([s]);
-    const got = firstCardDist((id) => D.letterMul(traditionOf(getWeapon(id)), letters)), want = formulaDist(letters), base = formulaDist(new Set());
-    for (const k of Object.keys(want)) assert.ok(Math.abs((got[k] ?? 0) - want[k]) < 1e-3, `${s}: ${k} ${got[k]} vs ${want[k]}`);
-    assert.ok(want[s] > base[s], `${s} 늘어남`);
+    const letters = new Set([s]), want = exactDist(letters), got = implDist(letters);
+    close(got.school, want.school, 2e-4, s); close(got.tier, want.tier, 2e-4, `${s} 등급`);
+    const W = 1 + base.school[s] * (LETTER.mult - 1); // 전체 무게 (편지 없음 = 1)
+    assert.ok(Math.abs(want.school[s] - (base.school[s] * LETTER.mult) / W) < 1e-12, `${s} 늘어남`);
+    for (const o of Object.keys(base.school)) if (o !== s) assert.ok(Math.abs(want.school[o] - base.school[o] / W) < 1e-12, `${s}: ${o} 같은 비로 줄어듦`);
   }
-  const letters = new Set(['german', 'iberian']);
-  const got = firstCardDist((id) => D.letterMul(traditionOf(getWeapon(id)), letters)), want = formulaDist(letters);
-  for (const k of Object.keys(want)) assert.ok(Math.abs((got[k] ?? 0) - want[k]) < 1e-3, `둘: ${k}`);
-  const keep = LETTER.mult; LETTER.mult = 3; // 배율은 config 한 곳 (사장님 2 · 3 고르는 중)
+});
+test('편지 다섯: 쓰레기 4 → 약 2.1 % · ??? 6 → 약 3.2 % (지금 무기 — 정확한 셈과 실제 함수)', () => {
+  const all = new Set(D.TREE_SCHOOLS), want = exactDist(all), got = implDist(all);
+  close(got.tier, want.tier, 2e-4, '다섯');
+  const schoolShare = 1 - (TIER_DRAW.trash + TIER_DRAW.mystery) / 100; // 쓰레기 · ??? 는 무유파 무기뿐
+  const W = schoolShare * LETTER.mult + (1 - schoolShare);
+  assert.ok(Math.abs(want.tier.trash - TIER_DRAW.trash / 100 / W) < 1e-12 && Math.abs(want.tier.mystery - TIER_DRAW.mystery / 100 / W) < 1e-12);
+  if (TIER_DRAW.trash === 4 && TIER_DRAW.mystery === 6 && LETTER.mult === 2) { assert.ok(Math.abs(want.tier.trash - 0.021) < 0.001); assert.ok(Math.abs(want.tier.mystery - 0.032) < 0.001); }
+});
+test('둘째 장: 첫 장 칸(묶음째)을 뺀 남은 칸으로 다시 셈 — 실제 함수 = 정확한 셈', () => {
+  const letters = new Set(['german']);
+  let lo = null, hi = null; // 첫 장이 롱소드가 되는 첫 난수 구간의 가운데
+  for (let k = 0; k < 20000; k++) { const [id] = drawWeaponCards(POOL, 1, { rnd: seqRnd([(k + 0.5) / 20000]), weightOf: weightFor(letters) }); if (id === 'longsword') { lo ??= k; hi = k; } }
+  assert.ok(lo != null, '롱소드가 뽑기 목록에 있어야');
+  const r1 = ((lo + hi) / 2 + 0.5) / 20000;
+  const got = implDist(letters, { first: [r1] }), want = exactDist(letters, new Set(['longsword']));
+  close(got.school, want.school, 2e-4, '둘째 장'); close(got.tier, want.tier, 2e-4, '둘째 장 등급');
+  const grouped = POOL.find((id) => getWeapon(id).drawGroup); // 묶음(간장 · 막야)은 한 칸 — 한 장이 나오면 묶음째 빠짐
+  if (grouped) {
+    const g = getWeapon(grouped).drawGroup, mates = POOL.filter((id) => getWeapon(id).drawGroup === g);
+    assert.ok(mates.length >= 2);
+    for (let i = 0; i < 300; i++) { const ids = drawWeaponCards(POOL, 2, { weightOf: weightFor(new Set([traditionOf(getWeapon(grouped))])) }); assert.ok(!(mates.includes(ids[0]) && mates.includes(ids[1]))); }
+  }
+});
+test('배율은 config 한 곳(LETTER.mult — 사장님 결정 2) · 편지 칸 글이 배율을 따름', () => {
+  assert.equal(LETTER.mult, 2);
+  assert.equal(D.nodeEff('german', D.nodeOf('german', 'G11')), '독일 무기 카드가 더 자주 나온다 · 뽑기 무게 2배');
+  const keep = LETTER.mult; LETTER.mult = 3;
   try {
-    const l3 = new Set(['italian']), g3 = firstCardDist((id) => D.letterMul(traditionOf(getWeapon(id)), l3)), w3 = formulaDist(l3);
-    for (const k of Object.keys(w3)) assert.ok(Math.abs((g3[k] ?? 0) - w3[k]) < 1e-3, `×3: ${k}`);
-    assert.ok(w3.italian > formulaDist(new Set()).italian);
+    const l = new Set(['italian']);
+    close(implDist(l).school, exactDist(l).school, 2e-4, '×3');
     assert.match(D.nodeEff('italian', D.nodeOf('italian', 'I11')), /3배/);
   } finally { LETTER.mult = keep; }
-  assert.equal(D.nodeEff('german', D.nodeOf('german', 'G11')), '같은 등급 안에서 독일 무기 카드가 2배 잘 나온다');
-});
-test('뽑기 칸은 무기가 아니라 칸: 같은 drawGroup(간장 · 막야)은 한 칸 — 편지 무게도 칸마다 한 번', () => {
-  const grouped = POOL.filter((id) => getWeapon(id).drawGroup);
-  assert.ok(grouped.length >= 2, '묶음 무기가 있어야 이 시험이 뜻이 있음');
-  const g = getWeapon(grouped[0]).drawGroup, tier = getWeapon(grouped[0]).tier, s = traditionOf(getWeapon(grouped[0]));
-  const slots = new Set(POOL.filter((id) => getWeapon(id).tier === tier).map((id) => getWeapon(id).drawGroup || id));
-  const want = formulaDist(new Set([s])), got = firstCardDist((id) => D.letterMul(traditionOf(getWeapon(id)), new Set([s])));
-  assert.ok(Math.abs(got[s] - want[s]) < 1e-3, `${g} ${tier} 칸 ${slots.size}`);
-});
-test('편지는 등급 확률을 바꾸지 않는다 (첫 카드 등급 = TIER_DRAW 비율 그대로)', () => {
-  const letters = new Set(['chinese']);
-  let seed = 3; const lcg = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-  for (let i = 0; i < 2000; i++) { // 같은 난수로 한 장씩 — 등급 난수는 첫 번째라 편지가 있어도 등급은 같다
-    const seq = [lcg(), lcg(), lcg()];
-    const [a] = drawWeaponCards(POOL, 1, { rnd: ((q) => () => q.shift())([...seq]) });
-    const [b] = drawWeaponCards(POOL, 1, { rnd: ((q) => () => q.shift())([...seq]), weightOf: (id) => D.letterMul(traditionOf(getWeapon(id)), letters) });
-    assert.equal(getWeapon(b).tier, getWeapon(a).tier);
-  }
 });
 test('편지 가진 유파 읽기 · 테스트 경로는 모두', () => {
   wallet(1000);
