@@ -1,18 +1,19 @@
 // 스킬트리 가안 v2 (10/21 사장님 '시작은 무조건 보법부터 · 보법 심화는 선택적인 곁가지') — 유파마다 11 칸 · 뿌리 = 보법 I
 // cat: foot 보법 · parry 막기 · atk 고유 공격 · deep 심화 · secret 비기 · passive 패시브 · letter 편지 / st: now 지금 그대로 · split 지금 묶음에서 나눔 · new 새로 / opt: 곁가지(다음을 막지 않음)
 export const SCHOOLS = [
-  { id: 'german', ko: '독일', title: '독일 — 다이아몬드', shape: '공격 길(곁눈 베기 → 겹치기)과 막기 길(왕관)이 비기에서 만난다. 둘 다 익혀야 받아 베기.', nodes: [
+  { id: 'german', ko: '독일', title: '독일 — 부채꼴 + 관문', gapAfter: 1, gate: { from: ['G5', 'G8', 'G3'], to: ['G7', 'G6', 'G4'], label: '2단계 셋을 모두 익히면 열림' },
+    shape: '기본기가 먼저 — 보법 I 에서 펼쳐진 2단계 기술 셋(곁눈 베기 · 비껴 딛는 가로베기 · 막기 I)을 모두 익혀야 3단계가 열린다. 비기는 공격 길과 막기 길이 만나는 곳.', nodes: [
     { id: 'G1', cat: 'foot', name: '보법 I', sub: '뒤 박차기', eff: '서 있다가 뒤로 밀면 첫 걸음이 빠르다', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
-    { id: 'G2', cat: 'foot', name: '보법 II', sub: '간격 잡기', eff: '상대가 헛치면 두 걸음 빠르게 들어간다', pre: ['G1'], price: 200, st: 'split', opt: true, d: 1, cx: 110 },
-    { id: 'G5', cat: 'atk', name: '곁눈 베기', sub: '강화동작', eff: '분노의 베기가 곁눈 베기로 바뀐다', pre: ['G1'], price: 200, st: 'split', d: 1, cx: 390 },
-    { id: 'G3', cat: 'parry', name: '막기 I', sub: '막기 자리', eff: '막기 단추로 독일 막기 자리를 잡는다', pre: ['G1'], price: 200, st: 'split', d: 1, cx: 660 },
-    { id: 'G11', cat: 'letter', name: '뉘른베르크에서', sub: '온 편지', eff: '독일 무기가 나올 확률 ×2', pre: ['G1'], price: 300, st: 'new', opt: true, d: 1, cx: 890 },
-    { id: 'G8', cat: 'atk', name: '비껴 딛는', sub: '가로베기', eff: '옆으로 걸으며 가로베기 (걸음 명령)', pre: ['G5'], price: 300, st: 'split', d: 2, cx: 140 },
-    { id: 'G6', cat: 'deep', name: '곁눈 베기 심화', sub: '무릎 꺾기', eff: '머리 · 어깨 · 가슴에 들면 50% 무릎을 꿇린다', pre: ['G5'], price: 300, st: 'split', d: 2, cx: 360 },
-    { id: 'G7', cat: 'atk', name: '겹치기', sub: '이어 긋기', eff: '칼이 맞물린 뒤 다음 긋기', pre: ['G5'], price: 300, st: 'split', d: 2, cx: 580 },
-    { id: 'G4', cat: 'parry', name: '막기 II', sub: '왕관', eff: '머리 위 칼을 칼자루로 받는다', pre: ['G3'], price: 300, st: 'split', d: 2, cx: 820 },
-    { id: 'G9', cat: 'passive', name: '패시브', sub: '인데스', eff: '칼이 맞물린 순간 더 빨리 반응한다 (후보)', pre: ['G7'], price: 400, st: 'new', d: 3, cx: 470 },
-    { id: 'G10', cat: 'secret', name: '비기', sub: '받아 베기', eff: '치명적인 칼을 받아내며 동시에 벤다', pre: ['G7', 'G4'], price: 500, st: 'now', d: 3, cx: 740 },
+    { id: 'G2', cat: 'foot', name: '보법 II', sub: '간격 잡기', eff: '상대가 헛치면 두 걸음 빠르게 들어간다', pre: ['G1'], price: 200, st: 'split', opt: true, d: 1, cx: 100 },
+    { id: 'G5', cat: 'atk', name: '곁눈 베기', sub: '강화동작', eff: '분노의 베기가 곁눈 베기로 바뀐다', pre: ['G1'], price: 200, st: 'split', d: 1, cx: 310 },
+    { id: 'G8', cat: 'atk', name: '비껴 딛는', sub: '가로베기', eff: '옆으로 걸으며 가로베기 (걸음 명령)', pre: ['G1'], price: 200, st: 'split', d: 1, cx: 500 },
+    { id: 'G3', cat: 'parry', name: '막기 I', sub: '막기 자리', eff: '막기 단추로 독일 막기 자리를 잡는다', pre: ['G1'], price: 200, st: 'split', d: 1, cx: 690 },
+    { id: 'G11', cat: 'letter', name: '뉘른베르크에서', sub: '온 편지', eff: '독일 무기가 나올 확률 ×2', pre: ['G1'], price: 300, st: 'new', opt: true, d: 1, cx: 900 },
+    { id: 'G7', cat: 'atk', name: '겹치기', sub: '이어 긋기', eff: '칼이 맞물린 뒤 다음 긋기', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 310 },
+    { id: 'G6', cat: 'deep', name: '곁눈 베기 심화', sub: '무릎 꺾기', eff: '머리 · 어깨 · 가슴에 들면 50% 무릎을 꿇린다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 500 },
+    { id: 'G4', cat: 'parry', name: '막기 II', sub: '왕관', eff: '머리 위 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 690 },
+    { id: 'G9', cat: 'passive', name: '패시브', sub: '인데스', eff: '칼이 맞물린 순간 더 빨리 반응한다 (후보)', pre: ['G7'], price: 400, st: 'new', d: 3, cx: 220 },
+    { id: 'G10', cat: 'secret', name: '비기', sub: '받아 베기', eff: '치명적인 칼을 받아내며 동시에 벤다', pre: ['G7', 'G4'], price: 500, st: 'now', d: 3, cx: 560 },
   ] },
   { id: 'italian', ko: '이탈리아', title: '이탈리아 — 긴 줄기', shape: '거리가 생명이라 보법 II(물러서기)를 반드시 거친다. 찌르기 줄기는 내려 찌르기 → 심화 → 비기로 한 줄, 막기 줄기가 나란히 뻗는다.', nodes: [
     { id: 'I1', cat: 'foot', name: '보법 I', sub: '박자 걸음', eff: '짧게 둘 · 길게 둘, 잦은 걸음', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
