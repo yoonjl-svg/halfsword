@@ -5,7 +5,7 @@
 //   상대 = 인물 AI (characters.js — 무기 · 겉모습(갑옷 · 투구) · 숙련도 · 부활 그대로) · 'longsword' = 기본 상대(롱소드 · 보통).
 //
 //  node tools/sim/iberian_spin.mjs duel  [--weapons=zweihander,flamberge] [--opps=longsword,isolde,heinrich,tome,omari,minami,renji,eira] [--seeds=1-3] [--dur=30]
-//                                        [--fire=0.6] [--hit=hitMul|finish|one] [--power=1.3] [--yaw=110] [--json=파일]
+//                                        [--fire=0.6] [--hit=hitMul|finish|one] [--power=1.3] [--yaw=110] [--stiff=1.3] [--torso=0|1] [--settle=0|1] [--json=파일]
 //  node tools/sim/iberian_spin.mjs probe [--weapons=…] [--gaps=2.3,2.6,2.9] [--hit=…] [--power=…]   서 있는 과녁(칼 충돌 끔 · 죽지 않음) 앞에서 한 번씩: 칼끝 빠르기 · 판정 에너지 · 나아간 거리
 //   판당: 무장 수 · 낸 수 · 맞힘(상대 칼날 상처 심각도 > 0) · 막힘(칼끼리 닿고 못 맞힘) · 칼면 맞음(칼날이 면으로 몸에 닿음 — tapEdge 'flat') · 헛침 · 준 심각도 · 도는 동안(낸 때 ~ 경직 끝) 맞은 수
 //   판정 배율 · 서보 힘은 SECRET.ibSpin.hit · power 를 이 도구 안에서만 바꾼다 (판 값 그대로)
@@ -40,6 +40,8 @@ const { SECRET, SKILL, STRIKE } = CONFIG;
 if (args.hit) SECRET.ibSpin.hit = args.hit;
 if (args.power) SECRET.ibSpin.power = +args.power;
 if (args.yaw) SECRET.ibSpin.wind.yaw = +args.yaw;
+if (args.stiff) SECRET.stiff.iberian = +args.stiff; // 비기 뒤 굳음 견줌 (10/23 판 값 1.3 — 전 0.4)
+for (const k of ['torso', 'settle']) if (args[k] != null) SECRET.ibSpin[k] = +args[k]; // 10/23 몸꼴 고침 견줌
 const WEAPONS = list('weapons', 'zweihander,flamberge');
 const tap = tapEdge(Combat, THREE, CONFIG);
 const BY = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));

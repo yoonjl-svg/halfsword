@@ -171,6 +171,7 @@ if (params.get('ibTurnFrom') === '1') CONFIG.SECRET.ibSpin.stickFrom = 1; // 시
 if (params.get('ibTorso') === '0') CONFIG.SECRET.ibSpin.torso = 0; // 휘감아 돌기 칼 높이 몸통 안 끔 (10/22 판 — 판 값 1 · 사장님 10/23 01:0x)
 if (params.get('ibReverse') === '0') CONFIG.SECRET.ibSpin.reverse = 0; // 스틱을 돌린 쪽으로 돌기 끔 (늘 칼 든 쪽 — 판 값 1)
 if (params.get('ibSettle') === '0') CONFIG.SECRET.ibSpin.settle = 0; // 마무리 받기 끔 (곧장 놓음 — 판 값 1)
+if (['all', 'cut', '0'].includes(params.get('ibTrail'))) CONFIG.SECRET.ibSpin.trail = params.get('ibTrail') === '0' ? 0 : params.get('ibTrail'); // 휘감아 돌기 비기 잔상: 판 값 'cut'(놓은 뒤 가로지르는 몫) · `?ibTrail=all` 내내 · `?ibTrail=0` 끔
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')

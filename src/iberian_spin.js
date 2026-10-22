@@ -22,6 +22,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SECRET, ARM } from './config.js';
+import { iaiTipSpeed, ART_MIN } from './secret_instant.js'; // 비기 잔상 밝기 = 칼끝 빠르기 ÷ 고노센 칼끝 빠르기 (10/23 — 연환 · 진 · 츠바메가에시와 같은 체계)
 
 const TAU = Math.PI * 2;
 const D2R = Math.PI / 180;
@@ -480,6 +481,37 @@ export function spinFootTarget(f, l, out, ankleH, lift) {
 }
 
 /**
+ * 비기 잔상 (10/23 사장님 02:0x '잔상과 궤적도 비기에 걸맞는지 체크해' — 감독 지시): 고노센 · 격살 · 죽음의 일격과 같은 그림(sword_trail.js f.instantArc · kind 'combo').
+ *  칼을 놓은 뒤(대본 안 free · 받아 멈춤 포함) ~ 따라 지나감 동안 — 맞음이 날 수 있는 가로지르는 몫 — 스텝마다 칼자루 · 칼끝 점을 모으고, 밝기 share = 그동안 칼끝 평균 빠르기 ÷
+ *  고노센 칼끝 빠르기(secret_instant.js iaiTipSpeed — artTrailTick speedShare 와 같은 셈 · ART_MIN ~ 1). 굳음에서 멈춘다(호는 sword_trail 이 instantArcLife 동안 옅게).
+ *  SECRET.ibSpin.trail: 'cut'(기본 — 위) · 'all'(감는 몫부터 내내 — 견줌) · 0(끔). 물리 · 판정 무관(읽기만)
+ */
+function spinTrail(f) {
+  const mode = SECRET.ibSpin.trail;
+  const run = f.skill.sec;
+  const st = run?.S?.do?.spin ? run.stage : null;
+  const S = f.ibSpin;
+  const on = mode && f.armed && (st === 'follow' || (st === 'spin' && S && (mode === 'all' || S.free)));
+  if (!on) {
+    f.spinArc = null;
+    return;
+  }
+  let A = f.spinArc;
+  if (!A) {
+    A = f.spinArc = { arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: ART_MIN, pts: [] }, sum: 0, n: 0, v0: Math.max(1, iaiTipSpeed(f)) };
+    f.instantArc = A.arc;
+  }
+  const a = f.bladePoint(0, _ta);
+  const b = f.bladePoint(1, _tb);
+  A.arc.pts.push([a.x, a.y, a.z, b.x, b.y, b.z]);
+  A.sum += f.tipVel?.length?.() ?? 0;
+  A.n++;
+  A.arc.share = clamp(A.sum / A.n / A.v0, ART_MIN, 1);
+}
+const _ta = new THREE.Vector3();
+const _tb = new THREE.Vector3();
+
+/**
  * 팔 · 칼 덧씌우기 자세 (skill.js update 머리 — 플레이어 비기 동안 · 끝난 뒤 걷음): skill.thrustPose 에 손 · 칼날 방향 · 몸 비틀기 목표 (물리 서보 목표).
  *  돌기(틀에 묶인 동안) = SECRET.ibSpin.wind(칼 든 쪽 뒤로 칼을 수평으로 감음) · 놓은 뒤 = 발도 길 끝 SECRET.iaiPath.E 를 거울로(가로로 반대쪽 끝까지 — 길목 지키기 끝과 같은 수) ·
  *  높이 각은 그 순간 내 칼자루 → 상대 몸 자리(SECRET.gilmokAim — 길목 지키기 gilmokCutPose 와 같은 식 · 같은 칸). phase: 'wind' | 'cut' | null(끔 — 0.12 s 에 걷음)
@@ -487,6 +519,7 @@ export function spinFootTarget(f, l, out, ankleH, lift) {
 const _gh = new THREE.Vector3();
 const _gt = new THREE.Vector3();
 export function spinCutPose(f, phase, dt) {
+  spinTrail(f);
   const th = f.skill.thrustPose;
   const w0 = f.spinPoseW ?? 0;
   if (!phase && w0 <= 0) return;

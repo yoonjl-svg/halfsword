@@ -4,7 +4,8 @@
 //   ② 다시 무장 → 왼쪽 아래 이동 스틱을 손가락으로 원 그리듯 반시계로 돌림(터치 포인터 — TURN° 를 게임 시간 DUR 초에) → 몸이 왼쪽으로 도는지 · 연속 그림
 //   ③ 다시 무장 → 같은 몸짓을 시계로 → 몸이 오른쪽으로(칼 든 쪽이 오른쪽이면 반대로 — 레베스) 도는지 · 연속 그림
 //   ④ (② 앞에서) 다시 무장 → 키보드 W → W+D → D → D+S → S (이웃한 방향키 차례 — 시계) → 나가는지
-//  연속 그림 = 무장 · 몸짓 가운데 · 돌기 ½ · 대본 끝(받아 멈춤) · 끝난 뒤 0.4 s (게임 카메라 + 옆 카메라 두 줄) → 띠 그림 JPEG (방향마다).
+//  연속 그림 = 무장 · 몸짓 가운데 · 돌기 ½ · 대본 끝(받아 멈춤) · 끝난 뒤 0.4 · 1.0 s (굳음 1.3 s 안 — 게임 카메라 + 옆 카메라 두 줄) → 띠 그림 JPEG (방향마다).
+//  비기 잔상(10/23 — 칼을 놓은 뒤 가로지르는 몫, sword_trail.js 비기 색 호)이 그림에 남는다(화면 시계를 세운 동안 옅어지지 않음). 견줌: Q=ibTrail=all TAG=…
 //  화면 시계를 늦춰(requestAnimationFrame · performance.now 를 __timeK 배 — 게임 코드는 그대로) 소프트웨어 GL 에서도 몸짓 동안 프레임이 촘촘하게 한다(게임 시간으로 잼).
 //  실행 (저장소 뿌리에서): npx vite --port 5417 --strictPort &
 //        node tools/browser/iberian_stick_shots.mjs http://127.0.0.1:5417 [그림 폴더 (기본 docs/handoff/iberian_spin)]
@@ -137,7 +138,7 @@ out.save(f"{d}/{name}.jpg", quality=82, optimize=True)
   shots = [];
 };
 const checks = {};
-const K = 0.25;
+const K = +(process.env.STICK_K ?? 0.1); // 몸짓 동안 화면 시계 배 (소프트웨어 GL 은 느려 프레임이 드물다 — 늦출수록 게임 시간에 표본이 촘촘)
 
 // ① 무장 동안 톡 → 보통 찌르기
 await waitArm();
@@ -197,6 +198,8 @@ async function stickSpin(sense, name) {
     const tE = await page.evaluate(() => window.game.stats.simTime);
     await page.waitForFunction((t) => window.game.stats.simTime >= t + 0.4, tE, { timeout: 120000, polling: 'raf' });
     await shoot(4, '끝난 뒤 0.4 s');
+    await page.waitForFunction((t) => window.game.stats.simTime >= t + 1.0, tE, { timeout: 120000, polling: 'raf' });
+    await shoot(5, '끝난 뒤 1.0 s (굳음)');
     const r = await page.evaluate((n) => window.__rec.slice(n), n1);
     const sp = r.filter((x) => x.spin);
     let turned = 0;

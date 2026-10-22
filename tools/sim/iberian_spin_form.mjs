@@ -2,7 +2,7 @@
 //  iberian_spin_form.mjs — 휘감아 돌기 몸꼴 재기 (10/23 사장님 01:0x '동작에 따라 너무 위로 치솟더라 … 높이가 몸통부를 넘지 않게' ·
 //   '조이스틱 회전에 따라 반대로도' · '마무리 동작이 날아갈 것처럼 너무 휘청거리니까' — src/iberian_spin.js · docs/strike/iberian_spin_2026-10-22.md §11)
 //
-//  node tools/sim/iberian_spin_form.mjs [--torso=0|1] [--settle=0|1] [--reverse=0|1] [--weapons=zweihander,flamberge] [--starts=tag,ochsR,langort,wechselR,ochsL] [--dirs=0,1,-1] [--targets=none,stand,guard] [--gap=2.3] [--json=파일]
+//  node tools/sim/iberian_spin_form.mjs [--win=0.6|sec] [--stiff=1.3] [--torso=0|1] [--settle=0|1] [--reverse=0|1] [--weapons=zweihander,flamberge] [--starts=tag,ochsR,langort,wechselR,ochsL] [--dirs=0,1,-1] [--targets=none,stand,guard] [--gap=2.3] [--json=파일]
 //   start = 낼 때 손 자리(자세 패드 — ai_techniques.js G) · dir 0 = 칼 든 쪽이 정하는 쪽(공격 입력 판 · 10/22 그대로) · 1 = 왼쪽으로(heading +) · −1 = 오른쪽으로
 //   target none = 상대를 8 m 앞에(몸꼴만) · stand = 서 있는 과녁(칼 충돌 끔 · 죽지 않음) · guard = 칼을 앞에 든 과녁(칼 충돌 켬 — 막혀 튐)
 //   잰 것 (낸 때 ~ 비기 끝 + 0.6 s, 물리 스텝마다):
@@ -91,7 +91,7 @@ function run(w, start, dir, target, gap) {
     }
     wasSpin = !!S;
     if (!sec && tEnd == null) tEnd = G.t;
-    if (fin && G.t - tFin <= 0.6) {
+    if (fin && (G.t - tFin <= WIN || (WIN < 0 && sec))) {
       const pp = P.bodies.pelvis.translation();
       const hd = P.bodies.head.translation();
       fin.path += Math.hypot(pp.x - fin.last.x, pp.z - fin.last.z);
@@ -151,6 +151,8 @@ const STARTS = list('starts', 'tag,ochsR,langort,wechselR,ochsL');
 const DIRS = list('dirs', '0').map(Number);
 const TARGETS = list('targets', 'none,stand,guard');
 const gap = +arg('gap', 2.3);
+const WIN = arg('win', '0.6') === 'sec' ? -1 : +arg('win', 0.6); // 끝난 뒤 휘청을 재는 창 (s) · sec = 비기가 끝날 때(굳음 끝)까지
+if (args.stiff) SECRET.stiff.iberian = +args.stiff; // 굳음 견줌
 const all = [];
 for (const w of WEAPONS) for (const target of TARGETS) for (const dir of DIRS) for (const s of STARTS) all.push(run(w, s, dir, target, gap));
 const f2 = (x) => (x < -8 || x > 8 ? '-' : (x >= 0 ? '+' : '') + x.toFixed(2));
