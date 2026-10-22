@@ -743,6 +743,8 @@ export class Fighter {
     this.twistScale = spec.id === 'longsword' ? 1 : (this.weaponCfg.twistScale ?? pI.y / TWIST_I_BASE);
     // 관절 가동 범위 교정 (JOINTS edgeK, 10/9 3차): 위팔 비틀기 서보를 세게(twistK) 하면 날 세우기 힘이 상대적으로 밀려 칼 면으로 맞았다 → 같은 묶음에서 날 세우기 힘도 배율 (1 = 오늘 그대로)
     if (edgeK() !== 1) this.twistScale *= edgeK();
+    // 무기별 날 세우기 힘 배율 (weapons.js twistK — 10/22 청강검 1.25, 사람 · AI 같음). 없으면 1 (지금 그대로)
+    if (spec.twistK) this.twistScale *= spec.twistK;
     this.handTarget = new THREE.Vector3();
     this.tipPrev = null;
     this.tipVel = new THREE.Vector3();

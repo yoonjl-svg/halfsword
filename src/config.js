@@ -474,7 +474,7 @@ export const IB_EDGE = { on: false, edge: 'motor' };
 //   fast = 날 세우기 목표가 쉼 → 날 방향으로 넘어가는 칼날 빠르기 0.5~2.5 m/s 를 mv 로 (빨리 넘어감)
 //   latch = 손가락을 대고 멈춰 있는 동안 쉼 목표(칼 면 오른쪽) 대신 마지막으로 움직이던 때의 칼 면을 쥔다 (손을 떼면 오늘 줄)
 //   tsw  = tsW 에 적힌 무기만 날 세우기 힘(강성 · 감쇠 함께) × 그 수 — 청강검 날 세우기 힘이 롱소드의 0.072 배로 다섯 무기 가운데 가장 약하다 (× 3 은 칼이 팽이처럼 돎)
-export const EDGE_REST = { on: false, pre: false, preV: 2, kick: false, kickK: 1.5, kickT: 0.12, fast: false, mv: [0.2, 1.0], latch: false, tsw: false, tsW: { qinggang: 1.5 } };
+export const EDGE_REST = { on: false, pre: false, preV: 2, kick: false, kickK: 1.5, kickT: 0.12, fast: false, mv: [0.2, 1.0], latch: false, tsw: false, tsW: { qinggang: 1.2 } }; // tsW 청강검 1.2 = 판 기본 twistK 1.25 위에 곱해 시험 때 모두 1.5 (10/22 판 1.25 확정 뒤)
 // 유파 패시브 (스킬북 4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬 … 이베리아 유파의 경우에는 손목 힘을 증가하는 걸 넣자' · 확인표 2110):
 //  이베리아 = 칼을 돌리는 손목 힘 한도(maxAimTorque) × wrist — 늘(이어 긋기 시험 B 를 패시브로 옮김). 사람 = 4급 책 '사용'(테스트 경로는 모두 켬) · AI = 숙련도 at 이상.
 //  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. `?ibWrist=0` = 이베리아만 끔

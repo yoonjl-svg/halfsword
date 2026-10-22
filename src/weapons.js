@@ -1053,6 +1053,7 @@ const qinggang = finalizeSpec('qinggang', {
   school: 'chinese', // 유파(schools.js TRADITIONS): 틀은 한손 두루(독일이 기본)지만 劍 — 10/8 ① 구조 (중국 유파 = 전 지안 꾸러미 그대로)
   enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
   tier: 'epic',
+  twistK: 1.25, // 날 세우기 힘 배율 (사장님 10/22 '1.25배로 하고 AI에도 걸어' — 사람 · AI 같은 칼): 칼날 축 관성 비 0.072 로 다섯 무기 가운데 날 세우기가 가장 약해 가로 칼 면 60 % → × 1.25 로 칼 면 22 → 13 % · 빠를 때 떨림 2.3 → 3.6 /획 (docs/strike/edge_rest_hold_2026-10-22.md · 확인표 2182)
   ability: '창천: 무기 절단',
   fragility: TIER_FRAGILITY.epic * 0.5, // 특수 능력 (사장님, 카드 표기 없음): 자기가 부러질 확률 50% 감소 (에픽 0.0104 → 0.0052)
   breakMult: 3, // 에픽 특수 능력 '창천: 무기 절단' (사장님): 칼끼리 부딪힐 때 상대 무기가 부러질 확률 ×3 (안 부러지는 무기는 그대로 0)
