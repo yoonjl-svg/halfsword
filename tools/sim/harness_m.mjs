@@ -38,6 +38,8 @@ export { RAPIER, THREE, CONFIG, AI };
     if (['0', '1'].includes(process.env.FINISH_CLEAVE)) FINISH.cleave.player = process.env.FINISH_CLEAVE === '1';
     if (['0', '1'].includes(process.env.FINISH_CLEAVE_AI)) FINISH.cleave.ai = process.env.FINISH_CLEAVE_AI === '1';
     if (process.env.FINISH_CLEAVE_CHARGE) FINISH.cleave.charge = +process.env.FINISH_CLEAVE_CHARGE;
+    if (['0', '1'].includes(process.env.FINISH_CLEAVE_LOW)) FINISH.cleave.anyHeight = process.env.FINISH_CLEAVE_LOW === '1'; // 10/22 23:0x 상태로 열기 · 땅까지 (0 = 첫 판)
+    if (process.env.FINISH_CLEAVE_POWER) FINISH.cleave.power = +process.env.FINISH_CLEAVE_POWER;
   }
 }
 // 이탈리아 박자 걸음 셈 (10/15 — src/schools.js setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9): IT_RHYTHM=2+2(기본 · ×1.3) · 4+2 · 3+2 · 3(옛 짝 셈 3 + 1 — 지난 판 비교, 그때 ×1.5) · 0(끔). 안 주면 src 기본 그대로

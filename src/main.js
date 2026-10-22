@@ -213,6 +213,7 @@ if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = pa
 if (['0', '1'].includes(params.get('finishCleave'))) FINISH_SWITCH.cleave.player = params.get('finishCleave') === '1';
 if (['0', '1'].includes(params.get('finishCleaveAi'))) FINISH_SWITCH.cleave.ai = params.get('finishCleaveAi') === '1';
 if (params.has('finishCleaveCharge') && Number.isFinite(+params.get('finishCleaveCharge'))) FINISH_SWITCH.cleave.charge = Math.max(0, +params.get('finishCleaveCharge'));
+if (['0', '1'].includes(params.get('finishCleaveLow'))) FINISH_SWITCH.cleave.anyHeight = params.get('finishCleaveLow') === '1'; // 10/22 23:0x 꿇기 이하 어떤 높이든(상태로 열기) · 땅까지 — 0 = 첫 판(찍기와 같은 문 · 몸 점까지)
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 if (params.has('strideRule')) CONFIG.GAIT.strideRule = +params.get('strideRule') ? 1 : 0; // 보폭 규칙(10/15 20:3x 사장님 — 유파 보폭 상한 0.62 × k · 박자 2.05 ÷ k, 최고 빠르기 같음 · docs/strike/stride_rule_2026-10-15.md): 기본 1, `?strideRule=0` = 옛 유파 값
 if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady') ? 1 : 0; // 일본 보법 버티기(10/15 — 흔들림 × 0.75, fighter.js swayScale): 기본 1, `?jpSteady=0` = 끔
