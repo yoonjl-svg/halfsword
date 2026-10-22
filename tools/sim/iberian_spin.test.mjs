@@ -101,11 +101,12 @@ test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 �
   for (let i = 0; i < E.sword.numColliders(); i++) E.sword.collider(i).setCollisionGroups(0);
   E.die = () => {};
   const W = new PlayerSecretWatch(P, E, { locked: false });
-  let started = null, turned = 0, last = null, x0 = null, tipMax = 0, ended = null;
+  let started = null, turned = 0, last = null, x0 = null, tipMax = 0, ended = null, extra = 0;
   G.before = () => {
     W.update(DT, !!P.skill.sec);
     if (started == null && G.t > 2.6 && P.skill.secret({ S: W.S, ctx: { ev: 'spin' } })) {
       started = G.t;
+      extra = P.ibSpin.pre + (SECRET.ibSpin.settle ? SECRET.ibSpin.ramp : 0); // 10/23: 먼저 감기(칼이 가슴보다 높으면 ramp) · 마무리 받기(ramp)
       last = P.heading;
       const p = P.bodies.pelvis.translation();
       x0 = { x: p.x, z: p.z };
@@ -121,7 +122,7 @@ test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 �
   }
   assert.ok(started != null, '비기를 냄');
   assert.ok(Math.abs(turned - 2 * Math.PI) < 0.05, `돈 각 ${turned}`);
-  assert.ok(Math.abs(ended - started - SECRET.ibSpin.time) < 0.03, `도는 시간 ${ended - started}`);
+  assert.ok(Math.abs(ended - started - SECRET.ibSpin.time - extra) < 0.03, `도는 시간 ${ended - started} (먼저 감기 · 받기 ${extra})`);
   const p = P.bodies.pelvis.translation();
   const travel = Math.hypot(p.x - x0.x, p.z - x0.z);
   assert.ok(travel > 0.3 && travel < 1.2, `나아간 거리 ${travel}`);

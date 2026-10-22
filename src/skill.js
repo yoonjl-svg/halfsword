@@ -615,7 +615,7 @@ export class Skill {
       run.risoluto = true;
     } else if (D.spin) {
       // 이베리아 휘감아 돌기 (10/22): 앞발을 축으로 몸을 한 바퀴 돌리는 대본 (iberian_spin.js) — 두 발로 딛고 있어야 건다(못 걸면 비기 아님 · 창은 이미 썼다)
-      if (!requestSpin(f)) return false;
+      if (!requestSpin(f, run.ctx?.turnDir ?? 0)) return false; // 10/23 스틱 판: 스틱을 돌린 쪽 (ctx.turnDir — secret.js spinStick) · 공격 입력 판은 0 = 칼 든 쪽
       run.stage = 'spin';
       this.secretBursts++;
     } else if (D.break) {

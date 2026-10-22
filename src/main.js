@@ -162,6 +162,16 @@ if (params.has('ibParryCut') && +params.get('ibParryCut') >= 0 && +params.get('i
 if (['1', '2'].includes(params.get('itForte'))) CONFIG.SKILL.itForte = +params.get('itForte'); // 이탈리아 forte 막기 연구 후보 (가)(10/17 — 사장님 확인 전): 기본 0 = 끔, `?itForte=1`·`?itForte=2` = 후보 몸꼴 (docs/strike/italian_forte_parry_2026-10-17.md)
 if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 실험(10/11 — docs/strike/natural_bind_2026-10-11.md): 기본 0, `?bind=1` = 칼끼리 덜 튕기고 더 물림 · 막힌 칼을 노리던 자리로 밂 · 독일 느낌 · 넓은 맞부딪힘
 if (['v4', 'flow', 'gilmok', 'spin'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11 · 10/22): 기본 'spin'(휘감아 돌기 — docs/strike/iberian_spin_2026-10-22.md), `?ibSecret=gilmok` = v6 길목 지키기, `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
+if (['stick', 'attack'].includes(params.get('ibInput'))) CONFIG.SECRET.ibSpin.input = params.get('ibInput'); // 휘감아 돌기 내는 조작 (10/23): 기본 'stick'(무장 동안 이동 스틱 반 바퀴) · `?ibInput=attack` = 10/22 판(무장 동안 공격 입력 하나)
+if ([90, 180, 270, 360].includes(+params.get('ibTurn'))) CONFIG.SECRET.ibSpin.stickTurn = +params.get('ibTurn'); // 스틱 돌림 각 ° (판 값 180 — 사장님 10/23 '반 바퀴 이상') · 시험 `?ibTurn=360`
+if ([0.4, 0.6].includes(+params.get('ibTurnTime'))) CONFIG.SECRET.ibSpin.stickTime = +params.get('ibTurnTime'); // 그 각을 이 초 안에 (판 값 0.6 — 사다리 칸만) · 시험 `?ibTurnTime=0.4`
+if (params.get('ibTurnPath') === '0') CONFIG.SECRET.ibSpin.stickPath = 0; // 표본 사이 데드존 건너뜀을 놓음으로 보지 않음 (판 값 1)
+if (params.get('ibTurnRate') === '1') CONFIG.SECRET.ibSpin.stickRate = 1; // 시험: 느린 각 흐름은 안 셈 (판 값 0)
+if (params.get('ibTurnFrom') === '1') CONFIG.SECRET.ibSpin.stickFrom = 1; // 시험: 스틱을 가운데에서 밀어 낸 때부터 0.6 s 안 (판 값 0)
+if (params.get('ibTorso') === '0') CONFIG.SECRET.ibSpin.torso = 0; // 휘감아 돌기 칼 높이 몸통 안 끔 (10/22 판 — 판 값 1 · 사장님 10/23 01:0x)
+if (params.get('ibReverse') === '0') CONFIG.SECRET.ibSpin.reverse = 0; // 스틱을 돌린 쪽으로 돌기 끔 (늘 칼 든 쪽 — 판 값 1)
+if (params.get('ibSettle') === '0') CONFIG.SECRET.ibSpin.settle = 0; // 마무리 받기 끔 (곧장 놓음 — 판 값 1)
+if (['all', 'cut', '0'].includes(params.get('ibTrail'))) CONFIG.SECRET.ibSpin.trail = params.get('ibTrail') === '0' ? 0 : params.get('ibTrail'); // 휘감아 돌기 비기 잔상: 판 값 'cut'(놓은 뒤 가로지르는 몫) · `?ibTrail=all` 내내 · `?ibTrail=0` 끔
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
@@ -2404,7 +2414,11 @@ function frame(now) {
     // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
     const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
     const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // 이탈리아 거침없이 나아가 찌르기(10/22)는 찌르기 입력(톡)만 — 끌기는 보통 베기로
-    if ((playerSecret?.open || gilReady) && !secBusy && player.alive && (taps > 0 || secSwipe)) {
+    // 이베리아 휘감아 돌기 스틱 판 (10/23 사장님 '공격 버튼 대신 이동 버튼을 360도 돌린다거나' · '반 바퀴 이상으로' — SECRET.ibSpin.input 'stick'): 무장 창은 공격 입력으로 나가지 않고
+    //  (무장 동안의 톡 · 끌기는 보통 공격) 이동 스틱을 stickTime 초 안에 stickTurn° 돌리면 같은 길(fire → skill.secret → showPlayerCue)로 낸다. 몸짓 셈 = 실제 프레임 시간 (secret.js spinStick)
+    const atkWin = !!playerSecret?.open && !playerSecret.stickOwns();
+    const stickGo = !!playerSecret?.spinStick(dt, input.move, !secBusy && player.alive);
+    if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo) && !secBusy && player.alive) {
       const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();
       if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
       if (player.skill.secret(o)) {
