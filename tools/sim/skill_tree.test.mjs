@@ -93,9 +93,9 @@ test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 �
 });
 
 // ── 닫힌 칸 ──
-test('닫힌 칸: 비기는 일본 고노센만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
+test('닫힌 칸: 비기는 일본 고노센 · 동방 막아 죽이기(10/22)만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
-  assert.deepEqual(closed.sort(), ['B7', 'C9', 'G10', 'I4', 'J8']);
+  assert.deepEqual(closed.sort(), ['B7', 'G10', 'I4', 'J8']);
   for (const s of DESIGN) for (const d of s.nodes) if (d.closed) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
   const all = D.allNodeIds('german');

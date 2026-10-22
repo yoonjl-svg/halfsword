@@ -295,7 +295,7 @@ function runInstant(f, combat) {
 }
 
 /** 쓸린 자리의 첫 부위에 기존 상처 함수(combat.analyze → applyWound)로 상처. 에너지 = instantJ × hitMul 이 나오게 분석 속도를 고른다 */
-function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul) {
+function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul, effMul = null) {
   const { i, best } = hit;
   const P = cut[i];
   const P0 = cut[i - 1];
@@ -326,8 +326,12 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
   let r = null;
   if (dtSub > 0) {
     // 중국 빠른 연환 (10/12): 에너지를 정하지 않고 쓸린 그 점의 실제 빠르기로 분석 (기존 상처 함수 그대로 — 판정 배율 hitMul 은 아래 secretHit)
+    //  격살(10/22): effMul 이 있으면 그 분석 동안만 f.effMul — combat.js analyze 가 문턱과 견주는 판정 에너지(eff)에 곱한다 (마무리 찍기 FINISH.power 와 같은 자리)
     S.v.copy(tang).multiplyScalar(swept / dtSub).add(Pst.v);
+    const e0 = f.effMul;
+    if (effMul) f.effMul = effMul;
     r = combat.analyze(pr, point, S, Pst);
+    f.effMul = e0;
     f.secretHit = h0;
     if (!r || r.energy < STRIKE.minEnergy) return null;
     foe.hitCooldowns.set(`${f.index}:${best.info.part}`, STRIKE.hitCooldown);
@@ -935,7 +939,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, tech: opt.tech };
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, tech: opt.tech }; // effMul: 격살(10/22) 판정 에너지 배율 (combat.js analyze — 마무리 찍기 FINISH.power 와 같은 자리)
   f.instantResult = null;
 }
 
@@ -998,7 +1002,7 @@ function startCombo(f, combat, req) {
   }
   f.iai = {
     kind: 'combo', moves: req.moves, segs: [], si: 0, ts: 0, t: 0, v, yaw, mi: -1, moveName: null, cutting: false, cur: { H: AH, D: AD, px: f.handOffset.x }, last: null,
-    body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, tech: req.tech ?? null,
+    body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, effMul: req.effMul ?? null, tech: req.tech ?? null,
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
     arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [] }, slide: null,
   };
@@ -1084,6 +1088,7 @@ function comboDir(psi, eps, out = new THREE.Vector3()) {
  */
 function comboPlanDyn(f, I, m, A) {
   const D = m.dyn;
+  if (D.kind === 'aim') return comboPlanAim(f, I, m, A, D); // 격살 (10/22): 그 순간 상대 몸의 겨눌 곳으로
   const S = comboShoulder(f, I.yaw);
   const Lf = comboArmLen();
   const Lb = f.weaponCfg.hiltLength + f.weaponCfg.bladeLength;
@@ -1142,6 +1147,95 @@ function comboPlanDyn(f, I, m, A) {
     push(H, comboDir(psi, eps), j > 0 || D.from === 'stab', j === N ? comboPad(H) : null);
   }
   return segs; // 끝 = 호 끝(손을 당긴 자리, 칼은 상대 몸 옆 밖). 지킴 자세(긴 자세)로 더 거두면 칼끝이 상대를 겨눠 가까운 거리에서 몸통에 꽂힌 채 붙잡혔다(48 판 상처 최대 811 J)
+}
+
+/**
+ * 격살 겨눌 곳 (10/22 — schools.js CHINESE_SECRET_GYEOKSAL dyn.target): 몸 틀(시작 yaw · 가슴 원점 · 이 수의 반걸음만큼 당김 — comboTorso 와 같음)의 점 { P, part }.
+ *  head = 머리 가운데에서 목 쪽으로 (가슴 → 머리 사이 0.8 — 목 점 0.6(lethalPath)과 머리 사이 · 「上殺」 머리 · 목) ·
+ *  arm = 칼 든 팔꿈치(아래팔 관절) — 절단은 관절 곁 0.11 m 안 베기만(COMBAT.limbSeverRadius) · 「削殺兩手」 ·
+ *  leg = 나에게 가까운 다리의 무릎(정강이 관절) · 「下殺」 · lung = 가슴 몸체 가운데 0.05 m 위(허파 — 0.11 m 위부터는 목) · 「刺」. 자리 [추정]
+ */
+function comboAimPoint(f, I, target) {
+  const foe = f.foe;
+  const B = foe.bodies;
+  const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const inv = I.yaw.clone().invert();
+  const sl = I.slide ? new THREE.Vector3(I.slide.dx * I.slide.slide, 0, I.slide.dz * I.slide.slide) : new THREE.Vector3();
+  const at = (w) => w.clone().sub(c).sub(sl).applyQuaternion(inv);
+  const W = (b) => tv(b.translation(), new THREE.Vector3());
+  const jointW = (child, own) => {
+    const J = foe.jointByName?.[child]?.joint;
+    const body = own ? B[child] : B[{ farmS: 'uarmS', farmO: 'uarmO', shinF: 'thighF', shinB: 'thighB' }[child]];
+    if (!J || !body) return null;
+    const a = own ? J.anchor2() : J.anchor1();
+    return new THREE.Vector3(a.x, a.y, a.z).applyQuaternion(tq(body.rotation(), new THREE.Quaternion())).add(W(body));
+  };
+  if (target === 'head' && B.head) return { P: at(W(B.chest).lerp(W(B.head), 0.8)), part: 'head' };
+  if (target === 'arm' && B.farmS) {
+    const e = jointW('farmS', false) ?? W(B.farmS); // 팔꿈치 — 절단은 관절 곁 0.11 m 안(COMBAT.limbSeverRadius): 아래팔 가운데를 겨누면 관절에서 0.15 ~ 0.17 m 라 잘리지 않았다(탐침)
+    return { P: at(e), part: 'arm' };
+  }
+  if (target === 'leg') {
+    let best = null;
+    for (const k of ['shinF', 'shinB']) {
+      if (foe.detachedParts?.has(k)) continue;
+      const q = jointW(k, false);
+      if (q && (!best || Math.hypot(q.x - c.x, q.z - c.z) < Math.hypot(best.x - c.x, best.z - c.z))) best = q;
+    }
+    if (best) return { P: at(best), part: 'leg' }; // 무릎 — 넓적다리 가운데와 무릎 사이를 겨누면 관절에서 0.18 m 라 잘리지 않았다(탐침)
+  }
+  const up = new THREE.Vector3(0, 0.05, 0); // 가슴 몸체 가운데에서 0.05 m 위 — 허파 (가슴 몸체 0.11 m 위부터는 목 — combat.js zoneOf · [추정])
+  return { P: at(W(B.chest)).add(up), part: 'lung' }; // lung · 또는 겨눌 곳이 없어짐(이미 잘림) — 가슴
+}
+
+/**
+ * 격살 한 칼의 길 (10/22): 겨눌 곳 P 를 지나도록 짠다.
+ *  thrust — 어깨 → P 줄 위로 칼을 끌어 겨눈 뒤(맞힘 없음) 그 줄을 따라 곧게 찌름(손은 팔 길이까지 · 칼끝이 P 까지 · 4 토막 맞힘) + back(겨눈 자리로 뽑아 거둠, 맞힘 없음)
+ *  벰 — 연환 'draw' 와 같은 큰 호(가로 각 side × yaw · 높이 각 el, 6 토막 · 마지막 ⅓ 은 손을 당겨 벰)인데 가운데 줄이 상대 몸통이 아니라 P 이고,
+ *   손 거리 r 은 칼날 dyn.at(기본 0.6) 자리가 P 에 오게(칼자루 + 칼날 × at 을 뺀 거리 — [0.15, 팔 길이] 로 자름 · 비율 [추정]). from 'prep' = 호 첫 자리로 옮기는 이음 토막은 맞힘 없음.
+ */
+function comboPlanAim(f, I, m, A, D) {
+  const S = comboShoulder(f, I.yaw);
+  const Lf = comboArmLen();
+  const HL = f.weaponCfg.hiltLength;
+  const BL = f.weaponCfg.bladeLength;
+  const { P, part } = comboAimPoint(f, I, D.target);
+  I.aim = part;
+  const segs = [];
+  let cur = A;
+  const push = (H, Dv, cut, pad = null) => {
+    const B = { H, D: Dv, px: H.z - 0.1, pad };
+    const sg = { cut, A: cur, B };
+    sg.T = comboSegLen(f, sg) / I.v;
+    segs.push(sg);
+    cur = B;
+  };
+  const dc = P.clone().sub(S);
+  const dist = dc.length();
+  dc.normalize();
+  if (D.thrust) {
+    // 겨눔 (맞힘 없음): 칼을 어깨 → P 줄 위에 눕혀 칼끝이 P 앞 D.draw(0.35 m) 에 오게 끌어 둔다 → 찌름: 그 줄을 따라 곧게 (칼끝이 P 까지 — 몸 안, 겉을 뚫음 · 4 토막 맞힘).
+    //  (지금 칼끝에서 곧장 찌르면 막은 자리에서 칼날이 상대 팔을 먼저 가로질러 찌르기가 아닌 벰으로 닿았다 — 탐침)
+    const H1 = S.clone().addScaledVector(dc, clamp(dist - HL - BL, 0.15, Lf));
+    const H0 = S.clone().addScaledVector(dc, clamp(dist - HL - BL - (D.draw ?? 0.35), 0.1, Lf));
+    push(H0, dc.clone(), false);
+    for (let k = 1; k <= 4; k++) push(H0.clone().lerp(H1, k / 4), dc.clone(), true);
+    if (D.back) push(H0.clone(), dc.clone(), false, comboPad(H0));
+    return segs;
+  }
+  const psi0 = Math.atan2(dc.z, dc.x);
+  const eps0 = Math.asin(clamp(dc.y, -1, 1));
+  const r0 = clamp(dist - HL - BL * (D.at ?? 0.6), 0.15, Lf); // 칼날 D.at 자리가 겨눈 곳에 오게 (넘어선 칼날이 뒤의 몸을 먼저 건드리지 않게 — 끝 쪽)
+  const N = 6;
+  for (let j = 0; j <= N; j++) {
+    const w = j / N;
+    const psi = psi0 + D.side * (D.yaw[0] + (D.yaw[1] - D.yaw[0]) * w) * D2R;
+    const eps = eps0 + (D.el[0] + (D.el[1] - D.el[0]) * w) * D2R;
+    const r = r0 * (w <= 2 / 3 ? 1 : 1 - 0.25 * ((w - 2 / 3) / (1 / 3)));
+    const H = S.clone().addScaledVector(comboDir(psi0 + 0.5 * (psi - psi0), eps0 + 0.5 * (eps - eps0)), r);
+    push(H, comboDir(psi, eps), j > 0 || D.from === 'stab', j === N ? comboPad(H) : null);
+  }
+  return segs;
 }
 
 /** 몸 틀 손 자리 → 그 손을 부르는 패드 (날것 매핑 z = 0.1 + x · y = 0.1 + y 를 거꾸로, 패드 안으로) — 연환이 끝난 뒤 손 목표를 그 자리에 둔다 (endCombo snapAim) */
@@ -1244,7 +1338,7 @@ function stepCombo(f, combat) {
       const prevW = Math.max(0, w - 1 / subs);
       const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
       I.hitM = true;
-      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs, I.hitMul);
+      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs, I.hitMul, I.effMul);
       if (res) {
         I.hits++;
         I.E += res.energy;
@@ -1252,6 +1346,7 @@ function stepCombo(f, combat) {
         I.part = best.info.part;
         I.zone = res.zone;
         I.type = res.type;
+        I.sev = Math.max(I.sev ?? 0, res.severity ?? 0); // 격살 재기 (판정에는 안 씀)
       }
     }
   }
@@ -1295,7 +1390,7 @@ function endCombo(f, combat) {
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
-  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech };
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0 };
   f.iai = null;
   f.artTech = null;
 }

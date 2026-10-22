@@ -112,6 +112,8 @@ if (['v1', 'parry'].includes(params.get('cnSecret'))) CONFIG.SECRET.cnSecret = p
 if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = params.get('deSecret'); // 독일 비기 판(10/11): 기본 'parry'(막기 연환 — 감아 들기), `?deSecret=v1` = Versetzen
 if (params.has('parryAssist')) CONFIG.SKILL.parryAssist = Math.max(0, Math.min(3, +params.get('parryAssist') || 0)); // 플레이어 막기 버튼 거듦 단계(10/12 — parry_button.js, 확인표 990): `?parryAssist=0` = 끔(10/11 판) · 1 무게 보정 · 2 + 일찍 읽기 · 3 + 자리 덧힘
 if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
+if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') ? 1 : 0; // 동방 막아 죽이기 (10/22 — 사람 동방 비기): `?gyeoksal=0` = 옛 판(막기 연환)
+if (+params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = +params.get('gyeoksalPow'); // 격살 판정 에너지 배율 시험 (기본 'finish' = FINISH.power 2.5)
 for (const k of ['cnBongdu', 'cnBuffer', 'cnFast']) if (params.has(k)) CONFIG.SECRET[k] = +params.get(k) ? 1 : 0; // 중국 막기 연환 사람이 쓰게 (10/12 — docs/strike/cn_combo_play_2026-10-12.md): 봉두세 자리 · 미리 받기 · 빠른 연환. 기본 1, `?cnBongdu=0` · `?cnBuffer=0` · `?cnFast=0` = 전
 if (+params.get('cnFastShare') > 0) CONFIG.SECRET.cnFastShare = +params.get('cnFastShare'); // 빠른 연환 비율(빠르기·잔상 같이 — 기본 0.5): 사장님이 한 값만 바꿔 보시게 `?cnFastShare=0.65`
 if (params.get('cnCombo') === '2') CONFIG.SECRET.cnCombo = 2; // 연환 3 연격(10/12 08:2x): 기본 3, `?cnCombo=2` = 전 두 수

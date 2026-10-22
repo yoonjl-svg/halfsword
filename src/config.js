@@ -845,7 +845,7 @@ export const SECRET = {
   // 열린 비기 (10/21 20:xx 사장님 '스킬트리에서 비기는 고노센 빼고 모두 미구현으로 닫아놔 — 성능과 컨셉이 불안정' · 'AI 비기도 닫아. 다 바꿀거야'):
   //  여기 있는 유파만 비기를 쓴다 — 사람(비기 책 · PlayerSecretWatch) · AI(ai.js) 모두. 닫힌 유파의 비기 책은 '준비 중'(살 수 없음).
   //  `?secretOpen=all` = 옛 판(다섯 유파 모두) · `?secretOpen=japanese,german` 처럼 고를 수 있음 (main.js)
-  openSchools: ['japanese'],
+  openSchools: ['japanese', 'chinese'], // 10/22 사람 동방 비기 = 막아 죽이기 (격살 — 아래 gyeoksal · AI 는 aiOpenSchools 로 닫힌 채)
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
   aiOpenSchools: ['japanese'],
@@ -1007,6 +1007,15 @@ export const SECRET = {
   secretReach: 1, // 1 = 비기를 실행하는 동안(경직 빼고 · AI·플레이어 · 모든 유파) 칼 팔이 끝까지 펴질 수 있게 — 역운동학 닿는 거리 위팔 + 아래팔(팔꿈치 0°, 평소 − 0.005 m = 15° · 플레이어 × 0.975 = 26°) · 고노센 발도 길의 가운데·끝 손 자리를 어깨에서 팔 길이까지. 0 = 평소 제한 그대로. `?secretReach=0` (사장님 10/12 03:0x '관절 제한이 문제야. 완화할까?' · 03:1x '고노센도 관절 비기 풀어') [사장님 확인 전 — 확인표 982·983]
   playerChainGap: 0.6, // 플레이어 베기 덩이 사이 쉼이 이 초보다 길면 끊김 (이베리아 이어진 베기 셈 · 중국 '들어가며 친 첫 베기') [해석]
   playerVibrate: 50, // 창이 열릴 때 진동 (ms, navigator.vibrate — 없으면 생략)
+  // 동방 막아 죽이기 (격살 · 格殺 — 10/22 사장님 '앞으로 향하면서 타이밍 맞추어 막기 정도로 조건을 걸게. 대신 다음 공격이 말그대로 살격이 되게' · docs/strike/chinese_gyeoksal_2026-10-22.md):
+  //  사람만 (secret.js PlayerSecretWatch.gyeoksalTick · schools.js CHINESE_SECRET_GYEOKSAL — TRADITIONS.chinese.playerSecret). AI 는 aiOpenSchools 로 닫힘 · 옛 막기 연환은 AI 길과 `?gyeoksal=0` 에 남음.
+  //  조건 = 막기 단추를 누른 뒤 press 초 안에 상대 칼이 내 칼에 닿고 · 그 순간 스틱이 상대 쪽(밀치기 '밂'과 같은 가름 stickY > |stickX|) · 그 공격이 나를 베지 못한 채 칼이 떨어짐 →
+  //  playerWindow 0.6 s 창(미리 받기 cnBuffer 그대로) · 받은 자세(거정 · 어거 · 요략 · 봉두)가 겨눌 곳(머리 · 팔 · 다리 · 허파)을 정한다. 즉사 없음 — 투구 · 갑옷 판정 그대로.
+  gyeoksal: {
+    on: 1, // 1 = 사람 동방 비기가 격살 · 0 = 옛 판(막기 연환 · cnSecret 그대로) `?gyeoksal=0`
+    press: 0.4, // 때맞춤 (s): 막기 단추를 새로 누른 뒤 이 안에 칼이 닿아야 — 시간 사다리 0.4(짧은 효과 — 옛 막아찌르기 접촉 창과 같은 값) [사장님 확인 전 — 확인표 2197]
+    power: 'finish', // 판정 에너지 배율: 'finish' = 마무리 찍기와 같은 FINISH.power(2.5 — 결정타 hitMul 1.3 대신, 겹치지 않음) · 수를 적으면 그 수(시험 `?gyeoksalPow=`) [사장님 확인 전 — 확인표 2199]
+  },
 };
 
 // ── 플레이어 고유 동작 이어 주기 → 10/14 강화 (10/13 사장님 '플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 그 고유 동작의 궤적으로 이어 준다' ·
