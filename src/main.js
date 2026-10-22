@@ -116,6 +116,11 @@ if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
 if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = +params.get('mordPress');
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
 if (params.has('mordOver')) CONFIG.SECRET.mordOver = +params.get('mordOver') ? 1 : 0;
+//  가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔 · 사장님 확인 전): `?mordKin=0.6` 운동학 길(칼자루 끝 = 고노센 칼끝 빠르기 몫) · `?mordAt=0.5` 쥔 자리 · `?mordAim=pull` 머리 겨눔 · `?mordPow=finish` 판정 × FINISH.power
+if (params.has('mordKin')) CONFIG.SECRET.mord.kin = Math.max(0, +params.get('mordKin') || 0);
+if (+params.get('mordAt') > 0) CONFIG.SECRET.mord.at = +params.get('mordAt');
+if (['pad', 'pull'].includes(params.get('mordAim'))) CONFIG.SECRET.mord.aim = params.get('mordAim');
+if (params.has('mordPow')) CONFIG.SECRET.mord.power = params.get('mordPow') === 'finish' || params.get('mordPow') === 'hit' ? params.get('mordPow') : +params.get('mordPow') || 'hit';
 if (params.has('parryAssist')) CONFIG.SKILL.parryAssist = Math.max(0, Math.min(3, +params.get('parryAssist') || 0)); // 플레이어 막기 버튼 거듦 단계(10/12 — parry_button.js, 확인표 990): `?parryAssist=0` = 끔(10/11 판) · 1 무게 보정 · 2 + 일찍 읽기 · 3 + 자리 덧힘
 if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
 if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') ? 1 : 0; // 동방 막아 죽이기 (10/22 — 사람 동방 비기): `?gyeoksal=0` = 옛 판(막기 연환)
