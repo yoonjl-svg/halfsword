@@ -45,7 +45,7 @@ const TREE_SRC = {
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 500, perk: 'schielhau' }),
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
       N({ id: 'G9', name: '인데스', cat: 'passive', l1: '패시브', l2: '인데스', eff: '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 10, d: 2, cx: 100, f: ['passive'] }),
-      N({ id: 'G10', name: '죽음의 일격', cat: 'secret', l1: '비기', l2: '죽음의 일격', eff: '몸을 붙여 한동안 밀어붙인 뒤 공격하면, 칼을 거꾸로 쥐고 칼자루로 머리를 내리친다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }), // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — AI 몫 · `?deMord=0`)
+      N({ id: 'G10', name: '죽음의 일격', cat: 'secret', l1: '비기', l2: '죽음의 일격', eff: '붙어서 밀다가 공격하면, 거꾸로 쥔 칼자루로 머리를 내리친다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }), // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — AI 몫 · `?deMord=0`)
     ],
   },
   italian: {
@@ -59,7 +59,7 @@ const TREE_SRC = {
       N({ id: 'I6', name: '막아찌르기', cat: 'parry', l1: '막기 II', l2: '막아찌르기', eff: '막기를 누르면 바로 짧게 찌르고, 그동안 받는 피해가 줄어든다', pre: ['I5'], price: 300, d: 3, cx: 670, f: ['opposition'] }),
       N({ id: 'I8', name: '틈 파고들기', cat: 'deep', l1: '심화', l2: '틈 파고들기', title: '내려 찌르기 심화 · 틈 파고들기', eff: '내려 찌르기가 옷과 갑옷 틈을 더 파고든다', pre: ['I7'], price: 400, d: 4, cx: 330, perk: 'imbroccata' }),
       N({ id: 'I9', name: '칼끝 돌려 빼기', cat: 'atk', l1: '칼끝', l2: '돌려 빼기', eff: '찌르기가 맞물리거나 꺾인 뒤 다시 찌른다', pre: ['I6'], price: 300, d: 4, cx: 670, u: 'cavazione' }),
-      N({ id: 'I4', name: '거침없이 나아가 찌르기', cat: 'secret', l1: '비기', l2: '거침없이 나아가 찌르기', eff: '상대 칼을 덮은 채 걸어 들어가 찌르면, 묶인 칼을 누르고 곧게 찌른다', pre: ['I8'], price: 400, heads: 20, d: 5, cx: 330, f: ['secret'] }), // 10/22 사람 먼저 — 거침없이 나아가 찌르기 (옛 엇박 찌르기는 ?itSecret=contratempo · 그때 칸 글은 이것 그대로)
+      N({ id: 'I4', name: '거침없이 나아가 찌르기', cat: 'secret', l1: '비기', l2: '거침없이 나아가 찌르기', eff: '상대 칼에 칼을 붙인 채 걸어 들어가 찌르면, 묶인 칼을 누르고 곧게 찌른다', pre: ['I8'], price: 400, heads: 20, d: 5, cx: 330, f: ['secret'] }), // 10/22 사람 먼저 — 거침없이 나아가 찌르기 (옛 엇박 찌르기는 ?itSecret=contratempo · 그때 칸 글은 이것 그대로) · 10/23 넓은 판정에 맞춰 '덮은 채' → '칼을 붙인 채'
       N({ id: 'I10', name: '곧은 선', cat: 'passive', l1: '패시브', l2: '곧은 선', eff: '찌르는 동안 칼끝이 상대를 조금 따라간다', pre: ['I9'], price: 0, heads: 10, d: 5, cx: 670, f: ['passive'] }),
     ],
   },
@@ -105,7 +105,7 @@ const TREE_SRC = {
       N({ id: 'C6', name: '날개 접기', cat: 'atk', l1: '날개 접기', l2: '이어 긋기', eff: '찌르다가 칼을 거두며 벤다', pre: ['C3'], price: 300, d: 2, cx: 490, u: 'lianchi' }),
       N({ id: 'C8', name: '단단한 받기', cat: 'parry', l1: '막기 II', l2: '단단한 받기', eff: '막는 동안 받는 피해가 크게 줄어든다', pre: ['C7'], price: 300, d: 2, cx: 680, f: ['parryCut'] }),
       N({ id: 'C10', name: '숨 바꾸기', cat: 'passive', l1: '패시브', l2: '숨 바꾸기', eff: '휘두르지 않는 동안 출혈이 빨리 잦아든다', pre: ['C7'], price: 0, heads: 10, d: 2, cx: 880, f: ['passive'] }),
-      N({ id: 'C9', name: '막아 죽이기', cat: 'secret', l1: '비기', l2: '막아 죽이기', eff: '앞으로 나서며 때맞춰 막아 낸 직후 공격하면, 받은 자세가 노리는 급소를 깊게 친다', pre: ['C6', 'C8'], price: 400, heads: 20, d: 3, cx: 590, f: ['secret'] }), // 10/22 격살 (사람 — schools.js CHINESE_SECRET_GYEOKSAL) · 전 '세 번 이어 치기'
+      N({ id: 'C9', name: '막아 죽이기', cat: 'secret', l1: '비기', l2: '막아 죽이기', eff: '나서며 때맞춰 막고 공격하면, 받은 자세의 급소를 깊게 친다', pre: ['C6', 'C8'], price: 400, heads: 20, d: 3, cx: 590, f: ['secret'] }), // 10/22 격살 (사람 — schools.js CHINESE_SECRET_GYEOKSAL) · 전 '세 번 이어 치기'
     ],
   },
 };
@@ -125,7 +125,7 @@ const NODE_LORE = {
   G6: { lore: '세게 몰아치려거든 온몸으로 싸워라', src: '리히테나워 『Zettel』(14세기) — 긴 칼 첫 가르침' },
   G4: { lore: '그에게서 오는 것은 무엇이든 왕관이 걷어 낸다', src: '리히테나워 『Zettel』(14세기) — 정수리 베기와 왕관' },
   G9: { lore: '앞과 뒤가 모든 기예의 샘이니, 약함과 셈, 그 사이라는 말을 새겨라', src: '리히테나워 『Zettel』(14세기) — 앞과 뒤 · 인데스' },
-  G10: { lore: '위 자세에서 때가 맞거든, 칼자루 끝으로 쳐라', src: '지그문트 링엑 『Kampffechten』(15세기) — 갑옷 싸움 위 자세' }, // 10/22 죽음의 일격 (전: 받아 베기 — 리히테나워 v70)
+  G10: { lore: '위 자세에서 때가 맞거든, 칼자루 끝으로 쳐라', src: '지그문트 링엑 『Kampffechten』(15세기) — 갑옷 싸움' }, // 10/22 죽음의 일격 (전: 받아 베기 — 리히테나워 v70)
   // 이탈리아 — 카포 페로 (Wiktenauer 'Ridolfo Capoferro' · Wilson · Swanger 영역 / 저장소 원문 PDF 쪽) · 비기 I4 = 파브리스 (Wiktenauer 'Salvator Fabris' 전사 · A. F. Johnson 영역 — 10/22)
   I1: { lore: '박자란 고요와 움직임을 재는 것일 뿐이다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 박자' },
   I11: { lore: '시에나의 칼 장인들이 이제 네 이름을 안다' },

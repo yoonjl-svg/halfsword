@@ -23,6 +23,7 @@ import { newFinish, updateFinish, FINISH, plungeBoost } from './finish.js';
 import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
+import { attachDruidWhip } from './druid_whip.js'; // 휘는 마디 무기(드루이드의 채찍 — spec.flexible, 샛별 저장소 69ef7dac8)
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
 import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
@@ -726,7 +727,11 @@ export class Fighter {
     );
     if (HL) this.gripConeOn();
     this.swordGroup = group;
-    this.swordMass = sword.mass();
+    // 휘는 마디 무기(spec.flexible — 드루이드의 채찍): 덩굴 콜라이더를 마디 강체 8 개로 옮겨 단다(druid_whip.js). 칼 몸체에는 손잡이만 남는다 —
+    //  기력 셈의 무기 질량은 옮기기 전 전체(0.77 kg), 아래 타격용 swordProps · 관성은 남은 손잡이 몸체 그대로(마디를 친 몫은 마디 자기 질량 — combat.js)
+    const fullWeaponMass = sword.mass();
+    if (spec.flexible) this.flexWeapon = attachDruidWhip(this, myTorso);
+    this.swordMass = spec.flexible ? fullWeaponMass : sword.mass();
     this.stamina.captureMass(this.swordMass); // 파손 전 질량 고정
     // 타격 계산용: 칼의 질량·주관성 모멘트(몸체 기준)와 손 기준 회전 관성
     const pI = sword.principalInertia();
@@ -810,6 +815,7 @@ export class Fighter {
 
   /** 칼날 위의 한 지점(0=손잡이, 1=칼끝)의 월드 좌표 */
   bladePoint(t, out = new THREE.Vector3()) {
+    if (this.flexWeapon) return this.flexWeapon.point(t, out); // 휘는 마디 무기: 덩굴 마디를 따라 (0 = 덩굴 시작, 1 = 끝)
     const p = this.sword.translation();
     rot(this.sword, _q1);
     return out.set(0, this.weaponCfg.hiltLength + this.weaponCfg.bladeLength * t, 0).applyQuaternion(_q1).add(_v1.set(p.x, p.y, p.z));
@@ -1383,6 +1389,7 @@ export class Fighter {
     this.driveJoints(); // 모든 관절 근육을 움직인다
     this.elbowGravity();
     if (jm().soft) this.anatSoft(); // 관절 가동 범위 교정 ⓑ 범위 끝 되돌림 (JOINTS, 끔이면 부르지 않는다)
+    this.flexWeapon?.step(dt); // 휘는 마디 무기의 굽힘 복원 (druid_whip.js — 없으면 아무 일 없음)
     this.trackBlade(dt);
     if (this.chainDbg) this.chainProbe(dt); // 탐색판 HUD 측정만 (public/r2p/?chain=…)
 
@@ -2128,7 +2135,7 @@ export class Fighter {
    *  겉모습: 절단선 위 메쉬는 조각이 되어 날아가 사라지고(debris.js), 남는 끝엔 톱니 모양 부러진 면을 얹는다.
    */
   breakWeapon() {
-    if (this.weaponBroken) return; // 한 번만 부러진다
+    if (this.weaponBroken || this.flexWeapon) return; // 한 번만 부러진다 · 휘는 마디 무기(채찍)는 끊어지지 않는다 — 길이 · 질량 그대로
     this.weaponBroken = true;
     const cfg = this.weaponCfg;
     let cutY;
@@ -3723,6 +3730,7 @@ export class Fighter {
       return o;
     };
     c.sword = put(this.sword, c.sword);
+    this.flexWeapon?.cache(put); // 휘는 마디 무기: 마디마다 스텝 전 상태 (combat.js 가 그 마디 접촉에 쓴다)
     for (const name in this.bodies) c.parts[name] = put(this.bodies[name], c.parts[name]);
   }
 
@@ -3738,6 +3746,7 @@ export class Fighter {
       group.position.set(t.x, t.y, t.z);
       group.quaternion.set(r.x, r.y, r.z, r.w);
     }
+    this.flexWeapon?.sync(); // 휘는 마디 무기: 덩굴 메쉬를 마디 자리대로 휜다
   }
 }
 

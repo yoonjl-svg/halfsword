@@ -28,6 +28,7 @@ import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — �
 import * as THREE from 'three';
 import { STAMINA, SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
+import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드루이드의 채찍)의 톡 = 손목 튕기기 (10/23)
 import { FINISH, armRay, updateFinish, finishHands, cleaveFinish, cleaveRaise, cleaveReach, cleaveAnyHeight } from './finish.js';
 import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'; // 약한 자세 겨눔 탭 찌르기 (FINISH.vital, 10/12)
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
@@ -192,6 +193,12 @@ export class Skill {
     if (lowEntry || anyH) updateFinish(f, 0);
     const down = anyH ? f.finish.canStart : lowEntry ? f.finish.canStart && (f.finish.plunge.surfaceInside || (step !== false && f.state === 'stand' && f.finish.plunge.surfaceWalk)) : f.finish.on && f.finish.amt > 0.5;
     if (finishOnly && !down) return false; // 마무리만 (AI 쪼개 내려치기 스위치 — FINISH.cleave.ai): 마무리가 안 열리면 아무것도 하지 않는다
+    // 휘는 무기(채찍 — fighter.flexWeapon): 찌를 끝이 없으니 마무리가 아니면 톡 = 짧게 올렸다 내려 긋는 손목 튕기기 (druid_whip.js WHIP_FLICK — 사람 몫)
+    if (f.flexWeapon?.flick && !down && !rangeCommit) {
+      if (this.flick) return false;
+      if (!f.aiControlled) f.stamina.attack('cut');
+      return startFlick(this);
+    }
     // 찌르기 무기(weapons.js THRUST_STYLE)는 더 멀리 찌르고 더 빨리 자세로 돌아온다.
     //  (겨누기·뻗기까지 빠르게 하면 팔이 손 목표를 따라가지 못해 오히려 덜 뻗는다 — 측정: 레이피어 탭 상처 60% → 20%)
     const ts = f.weaponCfg.thrustStyle;
@@ -1536,6 +1543,7 @@ export class Skill {
       const st = this.sec?.S?.do?.spin ? this.sec.stage : null;
       spinCutPose(f, st === 'spin' ? (f.ibSpin && !f.ibSpin.free ? 'wind' : 'cut') : st === 'follow' || st === 'stiff' ? 'cut' : null, dt);
     }
+    if (this.flick) flickDrive(this, dt); // 채찍 톡 = 손목 튕기기 (손 목표를 손가락 긋기처럼 옮긴다 — druid_whip.js)
     const R = WEAPON.reach;
     if (f.handOffset.length() > R) f.handOffset.setLength(R);
     observeTempoInput(this, dt);
