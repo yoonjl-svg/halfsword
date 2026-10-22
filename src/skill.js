@@ -37,6 +37,7 @@ import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거�
 import { requestSpin, spinAbort, spinCutPose } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
+import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -605,7 +606,8 @@ export class Skill {
         run.stage = 'instant';
         run.instant = true;
         run.queue.length = 0;
-        requestCombo(f, { moves: [{ name: t.name, kind: t.kind, from: t.from, path: t.path }], share: SECRET.mord.kin, hitMul: mordHitMul(), mord: mordKinOf(f, run) });
+        //  잔상(10/23 점검): 베는 토막만(arcCut) · 정수리로 곧게 내리치는 길은 뒤 카메라에서 옆으로 보여 → 마주 보는 띠(face 'path' 칼자루 끝 길 — SECRET.secretStreak, sword_trail.js) · 밝기 바닥 SECRET.secretArcMin
+        requestCombo(f, { moves: [{ name: t.name, kind: t.kind, from: t.from, path: t.path }], share: SECRET.mord.kin, hitMul: mordHitMul(), mord: mordKinOf(f, run), arcCut: true, face: SECRET.secretStreak ? 'path' : null, min: SECRET.secretArcMin ?? 0 });
         this.secretBursts++;
       }
     } else if (D.risoluto) {
@@ -666,7 +668,10 @@ export class Skill {
         // 중국 빠른 연환 (10/12 — SECRET.cnFast): 두 수를 운동학 팔·칼로 길을 따라 (secret_instant.js requestCombo — AI 와 같은 실행부). 결과는 순간 베기와 같은 칸(instant)으로
         run.stage = 'instant';
         run.instant = true;
-        requestCombo(f, { moves: run.queue.splice(0), ...(D.power ? gyeoksalReq(D) : {}) }); // 격살(10/22): 결정타 hitMul 대신 판정 에너지 × FINISH.power (시험 'hit' = 다른 비기와 같은 hitMul) · 시험 칼끝 빠르기 몫 SECRET.gyeoksal.share · 잔상 굵기 trailWidth
+        const moves = run.queue.splice(0);
+        // 격살(10/22): 결정타 hitMul 대신 판정 에너지 × FINISH.power (시험 'hit' = 다른 비기와 같은 hitMul) · 시험 칼끝 빠르기 몫 SECRET.gyeoksal.share · 잔상 굵기 trailWidth ·
+        //  잔상(10/23 점검): 베는 토막만(arcCut — 받은 자세에서 호 첫 자리로 옮기는 이음은 그리지 않음) · 허파 찌르기는 마주 보는 띠(face 'line' 찌르는 줄 — SECRET.secretStreak) · 밝기 바닥 SECRET.secretArcMin
+        requestCombo(f, { moves, ...(D.power ? { ...gyeoksalReq(D), arcCut: true, face: SECRET.secretStreak && moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 } : {}) });
         this.secretBursts++;
       }
       if (S.cond?.window === 'bind') run.gain = bindGain(run.ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창 (secret.js bindGain)
@@ -817,6 +822,7 @@ export class Skill {
       if (this.tap || this.vitalRange) {
         f.powerMul = secVal(D.power ?? 'power');
         f.secretHit = SECRET.hitMul;
+        risolutoTrail(f, run); // 잔상 (10/23 점검): 찌르는 몫에 비기 잔상 — italian_risoluto.js
         return;
       }
       f.powerMul = 1;

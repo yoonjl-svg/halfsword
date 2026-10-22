@@ -129,6 +129,8 @@ if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFI
 if (params.get('gyeoksalTrail') === '1') CONFIG.SECRET.gyeoksal.trailWidth = 1; // 격살 잔상 굵기도 빠르기 몫으로 (시험)
 if (+params.get('gyeoksalShare') > 0) CONFIG.SECRET.gyeoksal.share = +params.get('gyeoksalShare'); // 격살 칼끝 빠르기 몫 시험 (기본 = cnFastShare 0.3 · 0.5 진 · 1 고노센 발도)
 if (params.get('gyeoksalArm') === 'down') CONFIG.SECRET.gyeoksal.armPath = 'down'; // 격살 어거(팔) 길 시험: 위에서 내려 깎음
+if (params.has('secretStreak')) CONFIG.SECRET.secretStreak = +params.get('secretStreak') ? 1 : 0; // 비기 잔상 마주 보는 띠 (10/23 — 사장님 확인 전): 기본 1, `?secretStreak=0` = 호만
+if (params.has('secretArcMin')) CONFIG.SECRET.secretArcMin = Math.max(0, Math.min(1, +params.get('secretArcMin') || 0)); // 결정타 잔상 바닥 (10/23 — 사장님 확인 전): 기본 0.6, `?secretArcMin=0` = 빠르기 몫 그대로
 for (const k of ['cnBongdu', 'cnBuffer', 'cnFast']) if (params.has(k)) CONFIG.SECRET[k] = +params.get(k) ? 1 : 0; // 중국 막기 연환 사람이 쓰게 (10/12 — docs/strike/cn_combo_play_2026-10-12.md): 봉두세 자리 · 미리 받기 · 빠른 연환. 기본 1, `?cnBongdu=0` · `?cnBuffer=0` · `?cnFast=0` = 전
 if (+params.get('cnFastShare') > 0) CONFIG.SECRET.cnFastShare = +params.get('cnFastShare'); // 빠른 연환 비율(빠르기·잔상 같이 — 기본 0.5): 사장님이 한 값만 바꿔 보시게 `?cnFastShare=0.65`
 if (params.get('cnCombo') === '2') CONFIG.SECRET.cnCombo = 2; // 연환 3 연격(10/12 08:2x): 기본 3, `?cnCombo=2` = 전 두 수

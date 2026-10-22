@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import { SECRET, SCHOOL_PASSIVE } from './config.js';
 import { segDist } from './skill.js';
 import { swingingNow } from './school_passive.js';
+import { iaiTipSpeed, ART_MIN } from './secret_instant.js';
 
 const _a0 = new THREE.Vector3();
 const _a1 = new THREE.Vector3();
@@ -188,4 +189,29 @@ export class RisolutoWatch {
     }
     return null;
   }
+}
+
+/**
+ * 잔상 (10/23 사장님 '잔상과 궤적도 비기에 걸맞는지 체크해' — docs/decisions.md 10/23 · 그림 docs/handoff/secret_trails): 비기는 결정타라 보통 칼질과 한눈에 달라 보이게 —
+ *  다른 비기(고노센 · 모르트슐라크 · 격살)와 같은 비기 잔상(f.instantArc · kind 'combo' — sword_trail.js)을 찌르는 몫에 그린다.
+ *  찌르는 몫 = 탭 찌르기가 뻗고 버티는 동안(skill.js updateThrust 의 thrustPush 와 같은 몫 — 겨누며 당기는 몫 · 거두는 몫은 빼고). 스텝마다 칼자루 · 칼끝 점.
+ *  세기 = 칼끝 평균 빠르기 ÷ 같은 칼 고노센 칼끝 빠르기(iaiTipSpeed) — 고유 동작 잔상과 같은 식 · 바닥 ART_MIN(찌르기는 칼끝이 3~4 m/s 라 늘 바닥 0.3) ·
+ *  그리는 밝기는 결정타 잔상 바닥 SECRET.secretArcMin(min — sword_trail.js)까지 올림.
+ *  찌르기는 칼이 제 축을 따라 나가 칼자루 → 칼끝 띠가 거의 겹친다(넓이 0) → 마주 보는 띠(face 'line' — SECRET.secretStreak)로 칼이 지나간 줄(처음 칼자루 → 가장 멀리 간 칼끝)을 그린다. 물리 · 판정 무관(읽기만)
+ */
+export function risolutoTrail(f, run) {
+  const tp = f.skill?.tap;
+  const K = tp?.K;
+  if (!tp || !K || tp.down || tp.t < K.aim || tp.t >= K.aim + K.extend + K.hold || !f.armed) return;
+  const a = f.bladePoint(0, _a0);
+  const b = f.bladePoint(1, _a1);
+  let A = run.arc;
+  if (!A) {
+    A = run.arc = { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: ART_MIN, pts: [], ...(SECRET.secretStreak ? { face: 'line' } : {}), ...(SECRET.secretArcMin > 0 ? { min: SECRET.secretArcMin } : {}) };
+    run.arcSum = 0;
+    f.instantArc = A;
+  }
+  A.pts.push([a.x, a.y, a.z, b.x, b.y, b.z]);
+  run.arcSum += f.tipVel?.length?.() ?? 0;
+  A.share = Math.min(1, Math.max(ART_MIN, run.arcSum / A.pts.length / Math.max(1, iaiTipSpeed(f))));
 }
