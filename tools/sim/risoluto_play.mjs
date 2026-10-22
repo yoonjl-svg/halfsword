@@ -11,16 +11,26 @@ import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { PlayerSecretWatch, bladesTouch } from '../../src/secret.js';
-import { coverDist } from '../../src/italian_risoluto.js';
+import { coverDist, meFree, stickForward } from '../../src/italian_risoluto.js';
+import { swingingNow } from '../../src/school_passive.js';
+import { segDist } from '../../src/skill.js';
 import * as THREE from 'three';
 
 const [Targ = '0.6', beatArg = '0', seedsArg = '3', simArg = '30', wArg = 'rapier,dartagnan', fArg = 'isolde,tome,omari,minami,liao', vArg = '0.6', rArg = '0.25'] = process.argv.slice(2);
 const E = process.env;
 CONFIG.SECRET.risolutoHold = +Targ;
-CONFIG.SECRET.risolutoBeat = +beatArg ? 1 : 0;
+if (beatArg !== '-') CONFIG.SECRET.risolutoBeat = +beatArg ? 1 : 0; // '-' = 판 값 그대로
 if (E.RISO_COVER) CONFIG.SECRET.risolutoCover = +E.RISO_COVER;
 if (E.RISO_CLOSE === '1') CONFIG.SECRET.risolutoClose = 1;
 if (E.RISO_LINE === '1') CONFIG.SECRET.risolutoLine = 1;
+// 10/23 넓은 판정 묶음 RISO_WIDE=1 (칼 어느 부위든 · 너그러움 0.2 · 가슴 사이 조건 뺌 · 다 붙음 · 상대 박자) · RISO_WIDE=0 (10/22 판) — 낱낱이: RISO_ANY · RISO_GRACE · RISO_CLOSING · RISO_CLOSE · 두 번째 길 인자
+if (E.RISO_WIDE === '1') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 1, risolutoGrace: 0.2, risolutoClosing: 0, risolutoClose: 1, risolutoBeat: 1 });
+if (E.RISO_WIDE === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0 });
+if (E.RISO_ANY) CONFIG.SECRET.risolutoAnyPart = +E.RISO_ANY;
+if (E.RISO_GRACE) CONFIG.SECRET.risolutoGrace = +E.RISO_GRACE;
+if (E.RISO_CLOSING) CONFIG.SECRET.risolutoClosing = +E.RISO_CLOSING;
+if (E.RISO_CLOSE === '0') CONFIG.SECRET.risolutoClose = 0;
+if (E.RISO_BEAT) CONFIG.SECRET.risolutoBeat = +E.RISO_BEAT;
 const GUARD = E.RISO_GUARD === '1';
 if (GUARD) CONFIG.SECRET.risolutoGuard = 1;
 if (E.RISO_OPP === '0') CONFIG.SKILL.itOpposition = 0;
@@ -41,7 +51,12 @@ function closest(p1, q1, p2, q2) {
   pa.copy(p1).addScaledVector(_d1, s); pb.copy(p2).addScaledVector(_d2, t);
 }
 const q = (a, f) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(f * s.length))] : NaN; };
-const KEYS = ['rounds', 'hold', 'close', 'beat', 'fired', 'landed', 'blocked', 'armSlow', 'dealt', 'taken', 'pDead', 'fDead', 'foeFirst', 'opp', 'oppCover', 'oppWin', 'lineSteps'];
+const KEYS = ['rounds', 'hold', 'close', 'beat', 'fired', 'landed', 'blocked', 'whiff', 'hit', 'armSlow', 'dealt', 'taken', 'pDead', 'fDead', 'foeFirst', 'opp', 'oppCover', 'oppWin', 'lineSteps'];
+// 막은 조건 (가슴 사이 2.6 m 안 · 둘 다 서 있음 · 비기 실행 아님 — 셈 창일 뿐 판 규칙 아님): 스텝마다 조건 하나하나 · 칼끼리 가까운(어느 부위든) 때 무엇이 막았나 · 끊겼다 0.2 s 안에 다시 붙은 수
+const B = { allWide: 0, base: 0, any: 0, cover: 0, mf: 0, ff: 0, fw: 0, cl: 0, all: 0, aCover: 0, aMf: 0, aFf: 0, aFw: 0, aCl: 0, aOnly: 0, rejoin: 0, onEnds: 0 };
+const c0 = new THREE.Vector3(), c1 = new THREE.Vector3(), c2 = new THREE.Vector3(), c3 = new THREE.Vector3();
+/** 칼끼리 어느 부위든 (칼날 0 ~ 1 두 선분) 가장 가까운 거리 · 실제 맞닿음이면 0 */
+const anyDist = (me, foe) => (!me.armed || !foe.armed ? Infinity : me.feel?.touching ? 0 : segDist(me.bladePoint(0, c0), me.bladePoint(1, c1), foe.bladePoint(0, c2), foe.bladePoint(1, c3)));
 const rows = [];
 for (const w of weapons) for (const id of foes) {
   const C = CHARACTERS_BY_ID[id];
@@ -54,7 +69,7 @@ for (const w of weapons) for (const id of foes) {
     const pg = new PlayerParryGuard(p, e); p.stamina.controller = pg;
     const ps = new PlayerSecretWatch(p, e);
     if (ps.S?.when !== 'risoluto') throw new Error(`${w}: 리솔루토가 아님 (${ps.S?.name})`);
-    let tgt = [0.1, 0.05], due = null, seenOpen = 0, run = null, openT = null, oppSeen = 0, lastHurt = -1;
+    let tgt = [0.1, 0.05], due = null, seenOpen = 0, run = null, openT = null, oppSeen = 0, lastHurt = -1, gapPrev = null, wasOn = false, offT = -9;
     G.onWound = (att, vic, r) => {
       if (vic === p) { R.taken += r.severity ?? 0; if ((r.severity ?? 0) > 0) lastHurt = G.t; if (run && !run.hitFoe && (r.severity ?? 0) > 0) run.foeFirst = true; }
       if (att === p && p.skill.sec?.risoluto) { R.dealt += r.severity ?? 0; if (run) { run.wound = true; run.hitFoe = true; } }
@@ -67,7 +82,7 @@ for (const w of weapons) for (const id of foes) {
         if (GUARD) pg.held = false; // 폰: 막기 단추와 칼 쪽 화면이 같은 엄지 — 톡 하려면 단추를 놓음
         if (ps.open && !p.skill.secretPhase && p.alive) {
           const o = ps.fire();
-          if (o && p.skill.secret(o)) { R.fired++; run = { touch: false, wound: false, hitFoe: false, foeFirst: lastHurt >= openT, openT }; } // 상대 칼 먼저: 창이 열린 뒤 내 찌르기가 맞기 전에 내가 상처(심각도 > 0)를 입음
+          if (o && p.skill.secret(o)) { R.fired++; run = { touch: false, wound: false, hitFoe: false, foeFirst: lastHurt >= openT, openT, pain0: e.pain, pained: false }; } // 상대 칼 먼저: 창이 열린 뒤 내 찌르기가 맞기 전에 내가 상처(심각도 > 0)를 입음
         }
       }
       ps.update(DT, !!p.skill.sec);
@@ -96,7 +111,30 @@ for (const w of weapons) for (const id of foes) {
       p.move.set(0, fwd); p.stickX = 0; p.stickY = fwd;
       // 막힘: 리솔루토 찌르기 동안 칼끼리 닿고 상처를 못 냄 · 상대 칼 먼저: 창이 열린 뒤 내 찌르기가 맞기 전에 내가 상처를 입음
       if (run && p.skill.sec?.risoluto && bladesTouch(p, e)) run.touch = true;
-      if (run && !p.skill.sec) { if (run.touch && !run.wound) R.blocked++; if (run.foeFirst) R.foeFirst++; run = null; }
+      if (run && e.pain > run.pain0 + 0.05) run.pained = true;
+      if (run && !p.skill.sec) {
+        const hit = run.wound || run.pained;
+        if (hit) R.hit++; else if (run.touch) R.blocked++; else R.whiff++; // 맞힘(상처 · 아픔 +0.05) · 막힘(칼끼리 닿고 못 맞힘) · 헛침(아무것도 안 닿음)
+        if (run.foeFirst) R.foeFirst++;
+        run = null;
+      }
+      // 막은 조건 셈 (판정과 같은 함수 — 읽기만)
+      const gNow = p.foeDistance(), closing = gapPrev != null && gNow < gapPrev; gapPrev = gNow;
+      const R0 = ps.riso;
+      if (R0.on && !wasOn && t - offT <= 0.2) B.rejoin++;
+      if (!R0.on && wasOn) { offT = t; B.onEnds++; }
+      wasOn = R0.on;
+      if (gNow <= 2.6 && p.state === 'stand' && e.state === 'stand' && !p.skill.sec && p.armed && e.armed) {
+        B.base++;
+        const any = anyDist(p, e) <= CONFIG.SECRET.risolutoCover, cov = coverDist(p, e) <= CONFIG.SECRET.risolutoCover, mf = meFree(p), ff = !swingingNow(e), fw = stickForward(p);
+        if (any) B.any++; if (cov) B.cover++; if (mf) B.mf++; if (ff) B.ff++; if (fw) B.fw++; if (closing) B.cl++;
+        if (cov && mf && ff && fw && closing) B.all++;
+        if ((cov || any) && mf && ff && fw) B.allWide++; // 넓은 판정 조건 모두 (너그러움 빼고)
+        if (any) {
+          if (!cov) B.aCover++; if (!mf) B.aMf++; if (!ff) B.aFf++; if (!fw) B.aFw++; if (!closing) B.aCl++;
+          if (!cov && mf && ff && fw) B.aOnly++; // 부위만 아니면 다 됨
+        }
+      }
     };
     for (let i = 0; i < SIM / DT; i++) {
       G.step();
@@ -117,7 +155,7 @@ for (const w of weapons) for (const id of foes) {
 }
 const f1 = (x) => (Number.isFinite(x) ? x.toFixed(1) : '-'), f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-');
 const S = CONFIG.SECRET;
-const tags = [PLAIN && '대조: 팔 늦춤 · 비기 배율 끔', S.risolutoClose && '다 붙음 창', S.risolutoLine && '줄 막기 덮음', GUARD && '막기 단추 쥔 채', CONFIG.SKILL.itOpposition ? '' : '막아찌르기 끔'].filter(Boolean);
+const tags = [PLAIN && '대조: 팔 늦춤 · 비기 배율 끔', S.risolutoAnyPart && '칼 어느 부위든', S.risolutoGrace && `너그러움 ${S.risolutoGrace} s`, !S.risolutoClosing && '가슴 사이 조건 없음', S.risolutoClose && '다 붙음 창', S.risolutoLine && '줄 막기 덮음', GUARD && '막기 단추 쥔 채', CONFIG.SKILL.itOpposition ? '' : '막아찌르기 끔'].filter(Boolean);
 console.log(`${tags.length ? `[${tags.join(' · ')}] ` : ''}T ${S.risolutoHold} s · 두 번째 길 ${S.risolutoBeat ? '켬' : '끔'} · 덮음 ${S.risolutoCover} m · 씨앗 ${SEEDS} × ${SIM} s · 손 ${V} · 탭 반응 ${REACT} s`);
 console.log('| 무기 | 상대 | 판 | 덮인 채 나아가기 ≥0.2 s (판당) | 길이 p50 · max | 창 이어짐 · 다 붙음 · 상대 박자 | 탭 | 맞힘 | 막힘 | 상대 칼 먼저 | 준 심각도 | 입은 심각도 | 내 죽음 · 상대 죽음 | 막아찌르기 (덮인 꼴 · 창 중) | 끝난 까닭 (상대 휘두름 · 덮음 풀림 · 가슴 사이 · 스틱 · 내 휘두름) |');
 console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
@@ -132,4 +170,8 @@ const win = T.hold + T.close + T.beat;
 console.log(`| 합 | | ${T.rounds} | ${T.runs.length} (${f2(T.runs.length / T.rounds)}) | ${f2(q(T.runs, 0.5))} · ${f2(q(T.runs, 1))} | ${T.hold} · ${T.close} · ${T.beat} | ${T.fired} | ${T.landed} | ${T.blocked} | ${T.foeFirst} | ${f1(T.dealt)} | ${f1(T.taken)} | ${T.pDead} · ${T.fDead} | ${T.opp} (${T.oppCover} · ${T.oppWin}) | |`);
 console.log(`판당: 창 ${f2(win / T.rounds)} · 탭 ${f2(T.fired / T.rounds)} · 맞힘 ${f2(T.landed / T.rounds)} · 막힘 ${f2(T.blocked / T.rounds)} · 준 심각도 ${f2(T.dealt / T.rounds)} · 상대 칼 먼저 ${T.fired ? Math.round((100 * T.foeFirst) / T.fired) : '-'} % (탭 중) · 막아찌르기 ${f2(T.opp / T.rounds)} (덮인 꼴 ${T.oppCover} · 창 중 ${T.oppWin}) · 줄 막기 스텝 ${T.lineSteps}`);
 const all = rows.flatMap((R) => R.runs);
+const pb_ = (x) => `${((100 * x) / Math.max(1, B.base)).toFixed(1)} %`, pa_ = (x) => `${((100 * x) / Math.max(1, B.any)).toFixed(0)} %`;
+console.log(`막은 조건 (가슴 사이 2.6 m 안 ${(B.base * DT).toFixed(1)} s): 칼끼리 가까움(어느 부위든 0.07 · 맞닿음) ${pb_(B.any)} · 덮음(손 쪽 ↔ 칼끝 쪽) ${pb_(B.cover)} · 나 안 휘두름 ${pb_(B.mf)} · 상대 안 휘두름 ${pb_(B.ff)} · 스틱 앞 ${pb_(B.fw)} · 가슴 사이 줄어듦 ${pb_(B.cl)} · 옛 조건 모두 ${pb_(B.all)} · 넓은 조건 모두 ${pb_(B.allWide)}`);
+console.log(`  칼끼리 가까운 ${(B.any * DT).toFixed(1)} s 가운데 막은 것: 부위(손 쪽 ↔ 칼끝 쪽 아님) ${pa_(B.aCover)} · 내 휘두름 · 막기 ${pa_(B.aMf)} · 상대 휘두름 ${pa_(B.aFf)} · 스틱 ${pa_(B.aFw)} · 가슴 사이 안 줄어듦 ${pa_(B.aCl)} · (부위만 걸림 ${pa_(B.aOnly)}) · 셈이 끊긴 뒤 0.2 s 안에 다시 붙음 ${B.rejoin} / ${B.onEnds}`);
+console.log(`찌르기 결과: 맞힘 ${T.hit} · 막힘 ${T.blocked} · 헛침 ${T.whiff} (판당 ${f2(T.hit / T.rounds)} · ${f2(T.blocked / T.rounds)} · ${f2(T.whiff / T.rounds)})`);
 console.log(`덮인 채 나아가기 길이 (모든 판 · 0 초 넘는 것 ${all.length}): p50 ${f2(q(all, 0.5))} · p90 ${f2(q(all, 0.9))} · ≥0.4 ${all.filter((x) => x >= 0.4).length} · ≥0.6 ${all.filter((x) => x >= 0.6).length} · ≥1.5 ${all.filter((x) => x >= 1.5).length}`);

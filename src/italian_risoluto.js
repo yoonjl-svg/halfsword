@@ -11,8 +11,11 @@
 //  덮인 채 나아가기 = 덮음 · 나도 상대도 휘두르는 중이 아님(school_passive.js swingingNow — 나는 손 휘두르기 · 막기 단추도 아님) ·
 //   스틱이 앞(상대 쪽 90° 부채꼴 — fighter.js 밀치기 걸쇠와 같은 기하 stickY > |stickX|) · 가슴 사이가 줄어듦(지난 스텝보다 가까움).
 //  창: 덮인 채 나아가기가 SECRET.risolutoHold 초 이어지면 비기 창(SECRET.playerWindow — 금색 '!') · 그 안의 탭 하나가 리솔루토 찌르기(skill.js secret · main.js).
-//   두 번째 길(SECRET.risolutoBeat — 기본 끔): 덮인 채 나아가기가 risolutoBeatMin 초 넘게 이어지던 중 상대가 칼을 내거나(휘두름 시작) 덮음이 풀리면
+//   두 번째 길(SECRET.risolutoBeat): 덮인 채 나아가기가 risolutoBeatMin 초 넘게 이어지던 중 상대가 칼을 내거나(휘두름 시작) 덮음이 풀리면
 //   (내가 휘두르거나 스틱을 놓은 게 아닐 때) 곧장 창 — 원전 [156] 「상대가 박자를 내면 그것을 잡아, 멈추지 않고 몸까지」.
+//  10/23 넓은 판정 (사장님 10/23 00:1x '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게' — 기본 · 10/22 판은 `?risoWide=0`):
+//   덮음에 칼 어느 부위든 맞닿음 · 0.07 m(risolutoAnyPart — bladesNear) · 덮음 끊김 0.2 s(risolutoGrace) 너그러움으로 모아서 셈 · 가슴 사이 줄어듦 뺌(risolutoClosing 0) ·
+//   다 붙음 창(risolutoClose — 맞닿기 거리 밖에서 안으로 든 순간) · 상대 박자 창(risolutoBeat) 기본 켬. 노리는 운전 30 판 창 판당 0.07 → 2.27 (문서 §9)
 //  AI 는 쓰지 않는다(SECRET.aiOpenSchools — ai.js 는 TRADITIONS.italian.secret 옛 비기를 보고, 그마저 닫힘). 시뮬 도구엔 PlayerSecretWatch 가 없어 AI 끼리 판 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -59,6 +62,20 @@ export function lineCover(me, foe) {
   return segDist(_a0, _a1, _b0, _b1) <= SECRET.risolutoCover;
 }
 
+/**
+ * 칼끼리 어느 부위든 (10/23 넓은 판정 — SECRET.risolutoAnyPart · 사장님 '칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게'):
+ *  실제 칼끼리 맞닿음(combat.js 가 적는 feel.touching — 접촉 사건) 이거나, 두 칼날 전체(0 ~ 1) 선분 가장 가까운 거리 ≤ SECRET.risolutoCover(0.07 m — 덮음과 같은 수 · 새 문턱 없음)
+ */
+export function bladesNear(me, foe) {
+  if (!me?.armed || !foe?.armed || me.weaponBroken || foe.weaponBroken || me.weapon?.gun || foe.weapon?.gun) return false;
+  if (me.feel?.touching) return true;
+  me.bladePoint(0, _a0);
+  me.bladePoint(1, _a1);
+  foe.bladePoint(0, _b0);
+  foe.bladePoint(1, _b1);
+  return segDist(_a0, _a1, _b0, _b1) <= SECRET.risolutoCover;
+}
+
 /** 나는 휘두르는 중이 아님 (긋기 · 탭 · 손잡이 찍기 · 비기 · 막아찌르기 · 손 휘두르기 · 막기 단추 — 막기 단추는 시험 SECRET.risolutoGuard 1 이면 셈에 넣음) */
 export function meFree(me) {
   return !swingingNow(me) && !me.skill?.swinging && (!me.parryGuard?.held || !!SECRET.risolutoGuard);
@@ -85,8 +102,12 @@ export class RisolutoWatch {
     this.runs = [];
     this.ends = { foeSwing: 0, uncover: 0, meSwing: 0, stick: 0, gap: 0 };
     this.opens = { hold: 0, beat: 0, close: 0 };
-    this.closeDone = false; // 다 붙음 창 (시험 SECRET.risolutoClose): 이번 덮인 채 나아가기에서 이미 열었나
+    this.closeDone = false; // 다 붙음 창 (SECRET.risolutoClose): 이번 덮인 채 나아가기에서 이미 열었나
     this.lineSteps = 0; // 재기: 줄 막기로만 덮음이 된 스텝
+    this.anySteps = 0; // 재기: 칼 어느 부위든(넓은 판정)으로만 덮음이 된 스텝
+    this.off = 0; // 너그러움 (SECRET.risolutoGrace): 덮음 · 가슴 사이가 끊긴 지 지난 시간 — 이 동안은 셈을 쥔 채 기다림
+    this.bridged = 0; // 재기: 너그러움으로 이어 붙인 끊김 수
+    this.closeArmed = false; // 다 붙음: 맞닿기 거리 밖에 있었나 (들어오는 순간만)
   }
 
   reset() {
@@ -95,16 +116,28 @@ export class RisolutoWatch {
     this.on = false;
     this.gap = null;
     this.closeDone = false;
+    this.off = 0;
   }
 
+  /**
+   * 10/23 넓은 판정 (사장님 '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게' — 옛 10/22 판 = `?risoWide=0`):
+   *  덮음 = 손 쪽 ↔ 칼끝 쪽 0.07 m 또는 칼끼리 어느 부위든 맞닿음 · 0.07 m(risolutoAnyPart) · 덮음이나 가슴 사이가 risolutoGrace(0.2 s 반응) 안에 다시 이어지면 같은 덮인 채 나아가기로
+   *  (그동안은 안 셈 — 붙은 시간을 모아서 셈) · 가슴 사이 줄어듦은 risolutoClosing 1 일 때만(기본 0 — 스틱 앞이면 됨) · 다 붙음 창 · 상대 박자 창 기본 켬.
+   *  옛 판과 같은 길: risolutoAnyPart 0 · risolutoGrace 0 · risolutoClosing 1 · risolutoClose 0 · risolutoBeat 0 이면 10/22 판과 스텝마다 같다
+   */
   tick(dt, canOpen) {
     const me = this.me;
     const foe = this.foe;
     const gap = me.foeDistance();
+    if (gap > (me.swordArt?.measure?.contact ?? 0)) this.closeArmed = true; // 맞닿기 거리 밖 — 다음에 들어오는 순간이 '다 붙음'
     const closing = this.gap != null && gap < this.gap;
     this.gap = gap;
     const d = (this.d = coverDist(me, foe));
     let cover = d <= SECRET.risolutoCover;
+    if (!cover && SECRET.risolutoAnyPart && bladesNear(me, foe)) {
+      cover = true; // 칼 어느 부위든 맞닿음 · 가까움 (10/23 넓은 판정)
+      this.anySteps++;
+    }
     if (!cover && SECRET.risolutoLine && lineCover(me, foe)) {
       cover = true; // 칼을 대지 않는 덮음 (줄 막기 — 시험 스위치)
       this.lineSteps++;
@@ -112,8 +145,10 @@ export class RisolutoWatch {
     const mine = meFree(me);
     const fwd = stickForward(me);
     const foeFree = !swingingNow(foe);
-    const on = cover && mine && foeFree && fwd && closing;
+    const on = cover && mine && foeFree && fwd && (closing || !SECRET.risolutoClosing);
     if (on) {
+      if (this.on && this.off > 0) this.bridged++;
+      this.off = 0;
       this.held += dt;
       this.on = true;
       if (canOpen && this.held >= SECRET.risolutoHold) {
@@ -125,7 +160,8 @@ export class RisolutoWatch {
       }
       // 다 붙음 창 (시험 SECRET.risolutoClose — 기본 끔 · 감독 10/22): 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리)에 든 순간 · 시간 조건 없음 · 덮인 채 나아가기 한 번에 한 번
       const contact = me.swordArt?.measure?.contact;
-      if (SECRET.risolutoClose && canOpen && !this.closeDone && contact > 0 && gap <= contact) {
+      if (SECRET.risolutoClose && canOpen && !this.closeDone && this.closeArmed && contact > 0 && gap <= contact) {
+        this.closeArmed = false; // 다시 열려면 맞닿기 거리 밖으로 나갔다 들어와야 (닿은 '순간' — 10/23: 맞닿기 언저리에서 셈이 끊겼다 이어질 때마다 다시 열리지 않게)
         this.closeDone = true;
         const held = this.held;
         this.opens.close++;
@@ -136,6 +172,9 @@ export class RisolutoWatch {
     if (!this.on) return null;
     // 덮인 채 나아가기가 끝남 — 까닭 (재기) · 두 번째 길
     const why = !mine ? 'meSwing' : !fwd ? 'stick' : !foeFree ? 'foeSwing' : !cover ? 'uncover' : 'gap';
+    // 너그러움 (10/23): 덮음이 풀리거나 가슴 사이가 안 줄어든 것은 risolutoGrace 초까지 셈을 쥔 채 기다림 — 내가 휘두름 · 스틱을 놓음 · 상대 휘두름은 곧장 끝
+    if ((why === 'uncover' || why === 'gap') && (this.off += dt) <= (SECRET.risolutoGrace ?? 0)) return null;
+    this.off = 0;
     this.ends[why]++;
     const held = this.held;
     this.runs.push(held);

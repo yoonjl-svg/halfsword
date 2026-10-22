@@ -183,6 +183,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
+  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: 0.6 }); // 10/23 넓은 판정 전 10/22 판 (아래 낱낱 스위치가 덮을 수 있게 먼저)
   if (['risoluto', 'contratempo'].includes(its)) CONFIG.SECRET.itSecret = its;
   if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = +params.get('risoHold');
   if (params.has('risoBeat')) CONFIG.SECRET.risolutoBeat = +params.get('risoBeat') ? 1 : 0;
@@ -190,6 +191,10 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoClose')) CONFIG.SECRET.risolutoClose = +params.get('risoClose') ? 1 : 0; // 시험: '다 붙었을 때' 창
   if (params.has('risoLine')) CONFIG.SECRET.risolutoLine = +params.get('risoLine') ? 1 : 0; // 시험: 칼을 대지 않는 덮음 (줄 막기)
   if (params.has('risoGuard')) CONFIG.SECRET.risolutoGuard = +params.get('risoGuard') ? 1 : 0; // 시험: 막기 단추를 누른 채 나아가기도 셈
+  // 10/23 넓은 판정 (사장님 '칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게'): `?risoWide=0` = 10/22 판(손 쪽 ↔ 칼끝 쪽만 · 끊김 너그러움 없음 · 가슴 사이 줄어듦 · 다 붙음 · 상대 박자 끔) · 낱낱이 `?risoAny=0|1` · `?risoGrace=0.2` · `?risoClosing=0|1`
+  if (params.has('risoAny')) CONFIG.SECRET.risolutoAnyPart = +params.get('risoAny') ? 1 : 0;
+  if (params.has('risoGrace') && +params.get('risoGrace') >= 0) CONFIG.SECRET.risolutoGrace = +params.get('risoGrace');
+  if (params.has('risoClosing')) CONFIG.SECRET.risolutoClosing = +params.get('risoClosing') ? 1 : 0;
 }
 {
   // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)
