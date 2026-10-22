@@ -166,7 +166,7 @@ export class Combat {
     const att = pr.w.fighter;
     const vic = pr.v.fighter;
     if (!att.cache || !vic.cache) return null;
-    const S = att.cache.sword;
+    const S = pr.w.state || att.cache.sword; // 휘는 마디 무기(채찍): 그 마디의 스텝 전 상태 (fighter.flexWeapon.cache) — 그 밖엔 칼 몸체
     const P = vic.cache.parts[pr.v.part];
     const HL = att.weaponCfg.hiltLength;
     const a = _a.set(0, HL, 0).applyQuaternion(S.q).add(S.p);
@@ -202,8 +202,9 @@ export class Combat {
     const isBlade = pr.w.part === 'blade' && local.y > HL - 0.01 && att.weaponCfg.edged && (!att.weaponBroken || BREAK.stubEdge);
 
     // 유효 질량: 맞은 점에서의 강체 칼의 실제 유효 질량 + 팔·몸의 도움
-    const mFree = freeMass(pr.w.fighter.swordProps, S, point, dir);
-    let mEff = mFree + STRIKE.armAssist;
+    //  휘는 마디 무기(채찍 — info.flexible): 맞은 마디 자기 질량 · 관성(info.props)에 팔 보조 info.armAssist (druid_whip.js WHIP — 샛별 값 0.12 kg · 줄이라 팔 · 몸이 손잡이만큼 실리지 않는다)
+    const mFree = freeMass(pr.w.props || pr.w.fighter.swordProps, S, point, dir);
+    let mEff = mFree + (pr.w.flexible ? pr.w.armAssist : STRIKE.armAssist);
     let ephys = 0.5 * mEff * speed * speed; // 실제 운동 에너지 (J)
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
@@ -558,8 +559,8 @@ export class Combat {
     const nrm = n.clone();
     // 부딪히기 직전 상대 속도 (스텝 전 저장값) — 부딪힌 뒤엔 엔진이 이미 속도를 꺾어 놓았다
     //  vn = 맞닿는 방향으로 다가오던 빠르기(부딪히는 세기), vt = 칼날을 따라 스치던 빠르기
-    const SA = A.fighter.cache?.sword;
-    const SB = B.fighter.cache?.sword;
+    const SA = A.state || A.fighter.cache?.sword; // 휘는 마디 무기는 닿은 그 마디의 스텝 전 상태
+    const SB = B.state || B.fighter.cache?.sword;
     let vn = 0;
     let vt = 0;
     if (SA && SB && J > 0) {
@@ -788,6 +789,7 @@ export class Combat {
    * 을 칼과 맞은 부위에 같은 크기, 반대 방향으로 준다 → 운동량은 그대로 보존된다.
    */
   rebound(pr, point, n) {
+    if (pr.w.flexible) return; // 휘는 마디 무기(채찍): 단단한 칼의 되튐을 더하지 않는다 — 엔진 접촉(마디 반발 0.08) 그대로
     const key = `${pr.wc}:${pr.vc}`;
     const last = this.touching.get(key);
     this.touching.set(key, this.stepNo);
@@ -845,7 +847,7 @@ export class Combat {
     const vic = pr.v.fighter;
     const key = `${att.index}:${pr.v.part}`;
     // 속도는 스텝 "직전" 값을 쓴다. 튕긴 충돌은 스텝 뒤엔 이미 속도가 꺾여 있어서 에너지가 작게 나온다.
-    const S = att.cache?.sword || liveState(pr.w.body);
+    const S = pr.w.state || att.cache?.sword || liveState(pr.w.body); // 휘는 마디 무기: 그 마디의 스텝 전 상태
     const P = vic.cache?.parts[pr.v.part] || liveState(pr.v.body);
     if (vic.hitCooldowns.has(key)) {
       // 같은 부위에 방금 상처가 났으면 새 상처는 없지만, 가르고 지나가는 칼은 여전히 저항을 받는다

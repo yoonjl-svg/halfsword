@@ -23,6 +23,7 @@ import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, fl
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
 import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
+import { DRUID, WHIP_NOW, druidParts, drawDruidWhip } from './druid_whip.js'; // 드루이드의 채찍 몸 · 겉모습 (샛별 저장소 69ef7dac8 에서 가져옴 — 10/23)
 import { BALISARDA_COLORS, balisardaPartMesh } from './balisarda_details.js'; // 발리사르다 겉모습 (샛별 저장소 c89e827c6 — 10/21)
 import { MURAMASA_COLORS, MURAMASA_PROFILE, muramasaPartMesh, muramasaDecorate } from './muramasa_details.js'; // 무라마사 겉모습 (샛별 저장소 29e543555 · d46e09b96 · 82818cc3d — 10/21)
 
@@ -69,6 +70,7 @@ const KIND_KO = {
   monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '양손검',
   tree_branch: '한손 둔기', rubber_chicken: '한손 둔기', frozen_tuna: '양손 둔기', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
   moye: '한손 양날검', sain: '한손 양날검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손 둔기',
+  druid_whip: '한손 채찍',
 };
 /** '종류, 길이 cm, 무게 kg' (예: '한손 양날검, 95 cm, 0.95 kg') — 자료가 없으면 '' */
 export function weaponSpecText(spec) {
@@ -1862,6 +1864,21 @@ const tizona = finalizeSpec('tizona', {
   },
 });
 
+// ═════════════════════════════════════════════════════════════
+//  드루이드의 채찍 (??? — 샛별 저장소 커밋 69ef7dac8 에서 들여옴, 10/23 · docs/import/druid_whip_2026-10-23.md)
+//   손잡이(0.26 m) + 마디 8 개 덩굴(1.44 m) · 770 g · 날 없음(늘 둔기 · 둔타 1.5) · 부서지지 않음(fragility 0 + fighter.breakWeapon 막음)
+//   flexible: fighter.js 가 덩굴 콜라이더를 마디 강체로 옮겨 단다(druid_whip.js attachDruidWhip). 유파 없음(무유파 — 비기 · 유파 몫 없음)
+//   덩굴 물리 · 손잡이 서보 값은 druid_whip.js WHIP_NOW (10/23 검수 — 사장님 확인 전, 확인표 2224 ~ 2229)
+// ═════════════════════════════════════════════════════════════
+const druidWhip = finalizeSpec('druid_whip', {
+  nameKo: '드루이드의 채찍', nameEn: "Druid's Whip", tier: 'mystery',
+  desc: '질긴 식물 줄기를 엮은 채찍.\n손을 떠난 힘이 덩굴 끝에서 뒤늦게 맺힌다.',
+  grip: 'one-hand', school: 'none', material: 'wood', flexible: true,
+  hiltLength: 0.13, bladeLength: DRUID.lash, edged: false, mCut: 0, mThrust: 0, mBlunt: 1.5, fragility: 0,
+  controlOverrides: { ...WHIP_NOW.servo }, // 손잡이 서보 (druid_whip.js — 샛별 값 24 · 1.2 · 0.6 · 10 · 0.08 에서 10/23 검수로 10 · 0.2 · 0.1 · 10 · 0.08, 확인표 2226)
+  partMesh: hiddenParts, buildParts: druidParts, decorate: drawDruidWhip,
+});
+
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
@@ -1876,6 +1893,7 @@ export const WEAPONS = {
   hwando, kriegsmesser,
   balisarda, muramasa, // 사장님 10/21 23:3x(샛별 저장소 경유): 이탈리아 레전드 · 일본 레어
   tizona, // 사장님 10/21(샛별 저장소 경유): 이베리아 에픽 · 능력 '위세'
+  druid_whip: druidWhip, // 10/23 샛별 저장소에서 들여옴: ??? · 휘는 마디 채찍 — 같은 까닭으로 끝에 둔다
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)

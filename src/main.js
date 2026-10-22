@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
 import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
+import { setWhipPreset } from './druid_whip.js'; // 드루이드의 채찍 덩굴 값 판 (`?whip=src` = 샛별 값 — 10/23)
 import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode·vital·plateNeck (주소 ?finishEntry · ?finishMode · ?vital · ?plateNeck)
 import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨눔 갈래 스위치 (10/12)
 import { FLOW_REDESIGN } from './nagashi_redesign.js'; // 일본 흘림 판정 개편 · 기력 청구 스위치 (10/18 — ?flowJudge · ?flowCost)
@@ -231,6 +232,7 @@ if (params.get('finishLift') === '1') FINISH_SWITCH.lift = true;
 if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = params.get('finishAim');
 // 10/22 대검 마무리 (docs/strike/greatsword_finish_2026-10-22.md · 확인표 2211~2217): `?finishCleave=0` = 사람 칼도 전 찍기 · `?finishCleaveAi=1` = AI 칼도 쪼개 내려치기 (기본 끔) · `?finishCleaveCharge=초` = 힘 모으기 시간
 if (['0', '1'].includes(params.get('finishCleave'))) FINISH_SWITCH.cleave.player = params.get('finishCleave') === '1';
+if (params.get('whip') === 'src') setWhipPreset('src'); // 10/23 드루이드의 채찍: 샛별 저장소 덩굴 값 그대로(손맛 고치기 전 — 견줌용 · docs/import/druid_whip_2026-10-23.md)
 if (['0', '1'].includes(params.get('finishCleaveAi'))) FINISH_SWITCH.cleave.ai = params.get('finishCleaveAi') === '1';
 if (params.has('finishCleaveCharge') && Number.isFinite(+params.get('finishCleaveCharge'))) FINISH_SWITCH.cleave.charge = Math.max(0, +params.get('finishCleaveCharge'));
 if (['0', '1'].includes(params.get('finishCleaveLow'))) FINISH_SWITCH.cleave.anyHeight = params.get('finishCleaveLow') === '1'; // 10/22 23:0x 꿇기 이하 어떤 높이든(상태로 열기) · 땅까지 — 0 = 첫 판(찍기와 같은 문 · 몸 점까지)
