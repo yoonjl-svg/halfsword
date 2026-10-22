@@ -117,6 +117,7 @@ test('칼날 거꾸로 쥐기: 손목 관절이 그 자리에서 맞음 · 칼�
 });
 
 test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세우기 → 굳음 0.4 s · 끝나면 원래 쥠 · 겨눔 · NaN 없음', () => {
+  SECRET.mord.kin = 0; SECRET.mord.aim = 'pad'; try { // 서보 길 시험 (10/23 판 기본은 운동학 kin 0.3 · pull)
   const { g, P } = fixture('longsword', 0.75);
   try {
     for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
@@ -141,9 +142,11 @@ test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세�
     assert.equal(P.powerMul, 1);
     assert.equal(P.secretHit, 1);
   } finally { g.world.free(); }
+  } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; }
 });
 
 test('넘어 들어감 규칙 (mordOver — 기본 끔): 켜면 내리치는 동안만 내 칼이 상대 칼과 부딪히지 않고, 끝나면 원래 그룹', () => {
+  SECRET.mord.kin = 0; SECRET.mord.aim = 'pad'; try { // 서보 길 시험 (10/23 판 기본은 운동학 kin 0.3 · pull)
   const { g, P } = fixture('longsword', 0.75);
   SECRET.mordOver = 1;
   try {
@@ -161,11 +164,12 @@ test('넘어 들어감 규칙 (mordOver — 기본 끔): 켜면 내리치는 동
     assert.ok(off);
     assert.deepEqual(P.swordColliders.map((c) => c.collisionGroups()), g0);
   } finally { SECRET.mordOver = 0; g.world.free(); }
+  } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; }
 });
 
-test('가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔): kin 0 · aim pad · power hit = 판정 배율 hitMul 그대로 · finish = FINISH.power · 수 = 그 수', () => {
-  assert.equal(SECRET.mord.kin, 0);
-  assert.equal(SECRET.mord.aim, 'pad');
+test('가볍고 느림을 고칠 안 (10/23 확정 — kin 0.3 · aim pull): kin · aim · power hit = 판정 배율 hitMul 그대로 · finish = FINISH.power · 수 = 그 수', () => {
+  assert.equal(SECRET.mord.kin, 0.3); // 사장님 10/23 '죽음의 일격 30%'
+  assert.equal(SECRET.mord.aim, 'pull');
   assert.equal(SECRET.mord.power, 'hit');
   assert.equal(mordHitMul(), SECRET.hitMul);
   SECRET.mord.power = 'finish';
@@ -178,7 +182,7 @@ test('가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔): ki
     const M = mordKinOf(P, run);
     assert.ok(Math.abs(M.Lc - (M.g - P.weaponCfg.hiltLength)) < 1e-9); // 손 → 코등이
     assert.ok(Math.abs(M.Lp - (M.g + 0.15)) < 1e-6, `손 → 칼자루 끝 ${M.Lp}`); // 롱소드 폼멜 공 밑 −0.15
-    assert.equal(M.pull, false);
+    assert.equal(M.pull, true); // 10/23 aim 'pull' 기본
   } finally { g.world.free(); }
 });
 
@@ -218,6 +222,6 @@ test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠
         assert.ok(P.instantResult.pullD > 0);
         assert.ok(hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(hits));
       }
-    } finally { SECRET.mord.kin = 0; SECRET.mord.aim = 'pad'; g.world.free(); }
+    } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; g.world.free(); }
   }
 });
