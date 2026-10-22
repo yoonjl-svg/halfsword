@@ -7,6 +7,7 @@
 import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
 import { configureMobileIntent, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
+import { STICK_DEAD } from './stick_turn.js'; // 조이스틱 데드존 0.15 — 스틱 돌리기 몸짓 읽기(10/23 이베리아 휘감아 돌기)와 같은 수 한 곳
 
 export class Input {
   constructor(canvas, params = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : new URLSearchParams()) {
@@ -171,7 +172,7 @@ export class Input {
 export function attachStick(input, pad, knob) {
   let id = null;
   const R = 40;
-  const DEAD = 0.15; // 가운데 근처 살짝 건드린 건 무시
+  const DEAD = STICK_DEAD; // 가운데 근처 살짝 건드린 건 무시 (0.15)
   const reset = () => {
     const captured = id;
     id = null;

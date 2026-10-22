@@ -80,8 +80,10 @@ function pelvisAt(S, q, out) {
 /**
  * 대본을 건다 (플레이어 비기 — skill.js secret). 서서 한 발 이상 딛고 있어야 한다. 시작했으면 true.
  *  dir: 도는 쪽 (+1 = heading + = 왼쪽으로 — 칼 든 쪽이 오른쪽인 몸은 왼쪽으로 돌며 칼이 오른쪽 뒤에 감겨 따라오다 오른쪽 → 왼쪽으로 가로 벤다 = 탈류)
+ *  want: 바라는 쪽 (10/23 스틱 판 — 돌린 쪽 · ±1). SECRET.ibSpin.reverse 면 그쪽으로(칼 든 쪽의 반대면 ws = −1 — 감는 자세 · 끝 각 · 몸 비틀기 거울 = 레베스), 아니면 칼 든 쪽이 정함
+ *  (10/23 torso) 칼(손 · 칼날)이 내 가슴 점보다 높게 있으면 pre = ramp 초 동안 돌지 않고 먼저 감은 자세로 내린다 — 높은 자세에서 낸 칼이 도는 동안 머리 위로 치솟지 않게
  */
-export function requestSpin(f) {
+export function requestSpin(f, want = 0) {
   const G = f.gait;
   if (!G?.active || f.state !== 'stand' || f.ibSpin) return false;
   if (!G.legs.F.stance && !G.legs.B.stance) return false; // 두 발이 다 떠 있으면(뛰듯 걷는 한순간) 축발이 없다
@@ -102,7 +104,9 @@ export function requestSpin(f) {
   const lon = Math.abs(rx * fwd.x + rz * fwd.z); // 두 발 사이 앞뒤 거리 = 나아가는 거리
   const lat = rx * rgt.x + rz * rgt.z; // 옆 거리 (그대로 둔다 — 디딘 뒤 다리가 엇갈리지 않게)
   const B1 = P.clone().addScaledVector(fwd, lon).addScaledVector(rgt, lat);
-  const dir = f.side >= 0 ? 1 : -1;
+  const nat = f.side >= 0 ? 1 : -1; // 칼 든 쪽이 정하는 쪽 (10/22 판)
+  const dir = S.reverse && (want === 1 || want === -1) ? want : nat;
+  const pre = S.torso && f.armed && swordTop(f) > f.bodies.chest.translation().y ? r : 0;
   const pel = f.bodies.pelvis.translation();
   const c0 = new THREE.Vector3(pel.x, 0, pel.z);
   const D = fwd.clone().multiplyScalar(lon);
@@ -112,8 +116,9 @@ export function requestSpin(f) {
   const b1 = toBody(B1.x - c0.x - D.x, B1.z - c0.z - D.z);
   const a0 = Math.atan2(b0.z, b0.x);
   const da = wrap(Math.atan2(b1.z, b1.x) - a0);
+  f.spinLow = false; // 가로질렀거나 막혔나 (spinCutPose — 그 뒤 칼끝을 가슴 높이로)
   f.ibSpin = {
-    t: 0, T, r, dir, h0: f.heading, q: 0, rate: 0,
+    t: 0, T, r, dir, ws: dir * nat, pre, tp: 0, settle: null, h0: f.heading, q: 0, rate: 0,
     pk, sk, P, B0, B1, br0: Math.hypot(b0.x, b0.z), br1: Math.hypot(b1.x, b1.z), a0, da,
     c0, D, lon,
     o0: new THREE.Vector3(c0.x - P.x, 0, c0.z - P.z), o1: new THREE.Vector3(c0.x + D.x - P.x, 0, c0.z + D.z - P.z),
@@ -127,9 +132,19 @@ export function requestSpin(f) {
     want: new THREE.Vector3(), // 골반이 가려는 빠르기 (fighter.driveBalance 의 want)
     stats: { tipMax: 0, tipAtTouch: null, cutTipMax: 0 },
   };
-  G.begin(Ls, 'spin', T);
-  G.footMass(Ls, false);
+  if (!pre) {
+    G.begin(Ls, 'spin', T);
+    G.footMass(Ls, false);
+  }
   return true;
+}
+
+/** 칼(손 · 칼날 다섯 점)의 가장 높은 점 (월드 y) */
+const _sp = new THREE.Vector3();
+function swordTop(f) {
+  let y = f.sword.translation().y;
+  for (const u of [0, 0.25, 0.5, 0.75, 1]) y = Math.max(y, f.bladePoint(u, _sp).y);
+  return y;
 }
 
 /** 대본 진행 중인가 */
@@ -148,13 +163,57 @@ function finish(f, why) {
   f.heading = wrap(f.heading);
   f.yaw.setFromAxisAngle(_w.set(0, 1, 0), f.heading);
   if (G) G.prevHead = f.heading;
-  f.ibSpinDone = { why, blocked: S.blocked, touchT: S.touchT, freeT: S.freeT, q: S.q, stats: S.stats, travel: Math.hypot(f.bodies.pelvis.translation().x - S.c0.x, f.bodies.pelvis.translation().z - S.c0.z) };
+  f.ibSpinDone = { why: S.settle?.why ?? why, blocked: S.blocked, touchT: S.touchT, freeT: S.freeT, q: S.q, ws: S.ws, pre: S.pre, stats: S.stats, travel: Math.hypot(f.bodies.pelvis.translation().x - S.c0.x, f.bodies.pelvis.translation().z - S.c0.z) };
   f.ibSpin = null;
 }
 
 /** 대본을 끊는다 (넘어짐 · 칼 놓침 · 비기 끝) */
 export function spinAbort(f, why = 'abort') {
   if (f.ibSpin) finish(f, why);
+}
+
+/**
+ * 마무리 받기 (10/23 사장님 '쓰고나서 마무리 동작이 날아갈 것처럼 너무 휘청거리니까 현실감 있게' — SECRET.ibSpin.settle):
+ *  잰 원인 — 대본이 틀을 한 번에 놓으면 ① 막힌 때는 몸이 한 바퀴 빠르기(최고 15.7 rad/s) 그대로 풀려나 골반이 5 m/s · 700°/s 로 날아가고
+ *  ② 다 돈 때도 놓은 칼(0.4 s 부터 서보로 가로지름)이 아직 도는 중이라 그 되받음이 틀 없는 몸통을 비틀고, 도는 발은 끝에서야 딛는다.
+ *  → 끝(또는 막힘) 순간 도는 발을 곧장 딛고, ramp 초 동안 몸통 틀의 목표를 '멈춤'(도는 빠르기 0 · 골반 수평 빠르기 0)으로 두되 그 붙드는 몫을 1 → 0 으로 부드럽게 줄인다
+ *  (큰 칼을 한 바퀴 돌린 사람이 뒷발을 딛고 몸을 받아 멈추는 몫). 그동안 균형 걸음 · 걸음 셈은 쉰다(f.ibSpin 이 남아 있음). 두 팔 · 칼은 이미 놓여 서보대로.
+ */
+function beginSettle(f, S, why) {
+  const G = f.gait;
+  const Ls = G?.legs?.[S.sk];
+  if (Ls && !Ls.stance) G.touchdown(Ls, 0.5); // 도는 발을 그 자리에 딛는다 (막혔으면 돌던 중 자리)
+  S.free = true;
+  S.settle = { t: 0, why, h: f.heading };
+}
+function settleStep(f, S, dt) {
+  const st = S.settle;
+  st.t += dt;
+  if (st.t >= S.r) return finish(f, st.why);
+  const g = 1 - smooth(st.t / S.r); // 붙드는 몫
+  f.heading = st.h;
+  f.yaw.setFromAxisAngle(_w.set(0, 1, 0), f.heading);
+  S.want.set(0, 0, 0);
+  S.wt = 0;
+  const pel = f.bodies.pelvis;
+  const ca = pel.translation();
+  const pv = pel.linvel();
+  const dvx = -pv.x * g;
+  const dvz = -pv.z * g;
+  const dw = -pel.angvel().y * g;
+  for (const k of UPPER) {
+    const b = f.bodies[k];
+    if (!b) continue;
+    const p = b.translation();
+    const v = b.linvel();
+    const w = b.angvel();
+    b.setLinvel({ x: v.x + dvx + dw * (p.z - ca.z), y: v.y, z: v.z + dvz - dw * (p.x - ca.x) }, true);
+    b.setAngvel({ x: w.x, y: w.y + dw, z: w.z }, true);
+  }
+  const Lp = f.gait.legs[S.pk];
+  const fb = f.bodies[Lp.foot];
+  const fw = fb.angvel();
+  fb.setAngvel({ x: fw.x, y: fw.y * (1 - g), z: fw.z }, true);
 }
 
 /**
@@ -196,6 +255,22 @@ export function spinStep(f, dt) {
   const S = f.ibSpin;
   if (!S) return;
   if (f.state !== 'stand' || !f.alive || !f.gait?.active) return finish(f, 'state');
+  if (S.settle) return settleStep(f, S, dt);
+  if (S.tp < S.pre) {
+    // 먼저 감기 (10/23 torso): 몸은 돌지 않고 서 있고, 두 팔 · 칼만 지금 자세 → 감은 자세로 (placeArms — 같은 기하). 끝나면 도는 발을 떼고 돌기 시작
+    S.tp += dt;
+    f.heading = S.h0;
+    f.yaw.setFromAxisAngle(_w.set(0, 1, 0), f.heading);
+    S.want.set(0, 0, 0);
+    S.wt = 0;
+    if (f.armed) placeArms(f, S, dt);
+    if (S.tp >= S.pre) {
+      const G = f.gait;
+      G.begin(G.legs[S.sk], 'spin', S.T);
+      G.footMass(G.legs[S.sk], false);
+    }
+    return;
+  }
   S.t += dt;
   const { T, r } = S;
   // 칼이 무엇에 닿았나 (지난 스텝 접촉 — 칼끼리 feel.touching · 그 밖은 Rapier 접촉 쌍): 상대 몸이면 놓고(베는 칼은 물리대로 지나감) · 상대 칼 · 벽 · 땅이면 놓고 멈춤
@@ -209,8 +284,8 @@ export function spinStep(f, dt) {
       if (on === 'other') S.blocked = true;
     }
   }
-  if (S.blocked) return finish(f, 'blocked'); // 상대 칼에 막힘 → 몸 돌림도 여기서 멈춘다 (몸은 물리대로)
-  if (S.t >= T) return finish(f, 'done');
+  if (S.blocked) return SECRET.ibSpin.settle ? beginSettle(f, S, 'blocked') : finish(f, 'blocked'); // 상대 칼에 막힘 → 몸 돌림도 여기서 멈춘다 (settle: ramp 초에 걸쳐 받아 멈춤)
+  if (S.t >= T) return SECRET.ibSpin.settle ? beginSettle(f, S, 'done') : finish(f, 'done');
   if (!S.free && S.t >= T - r) {
     S.free = true; // 도는 빠르기가 줄기 시작 — 칼은 관성 · 서보로 앞을 가로지른다
     S.freeT = S.t;
@@ -315,7 +390,7 @@ function placeArms(f, S, dt) {
   const ct = chest.translation();
   _c.set(ct.x, ct.y, ct.z);
   const inv = _qi.copy(f.yaw).invert();
-  const sd = f.side >= 0 ? 1 : -1;
+  const sd = (f.side >= 0 ? 1 : -1) * (S.ws ?? 1); // 감는 쪽 (ws −1 = 반대로 돎 — 칼을 칼 없는 쪽 뒤로 감음)
   if (!S.arm) {
     const sw = f.sword.translation();
     const AH = new THREE.Vector3(sw.x - _c.x, sw.y - _c.y, sw.z - _c.z).applyQuaternion(inv);
@@ -326,7 +401,7 @@ function placeArms(f, S, dt) {
     S.arm = { AH, AD, WH: new THREE.Vector3(Wp.hand[0], Wp.hand[1], sd * Wp.hand[2]), WD: new THREE.Vector3(Math.cos(e) * Math.cos(a), Math.sin(e), sd * Math.cos(e) * Math.sin(a)), prev: new Map() };
   }
   const A = S.arm;
-  const k = smooth(S.t / S.r);
+  const k = S.pre ? (S.tp < S.pre ? smooth(S.tp / S.pre) : 1) : smooth(S.t / S.r); // 먼저 감았으면(pre) 도는 동안은 감은 자세 그대로
   const H = A.AH.clone().lerp(A.WH, k);
   const D = A.AD.clone().applyQuaternion(new THREE.Quaternion().slerp(new THREE.Quaternion().setFromUnitVectors(A.AD, A.WD), k)).normalize();
   const target = H.clone().applyQuaternion(f.yaw).add(_c);
@@ -420,24 +495,20 @@ export function spinCutPose(f, phase, dt) {
   th.w = w;
   if (!phase) return;
   f.skill.activity = 1; // 몸도 벨 때처럼 빠르게 따라온다 (탭 찌르기와 같은 몫)
-  const s = f.side >= 0 ? 1 : -1;
-  const P = phase === 'wind' ? SECRET.ibSpin.wind : SECRET.iaiPath.E;
+  const V = SECRET.ibSpin;
+  const ws = f.ibSpin?.ws ?? f.spinWs ?? 1; // 반대로 돎(−1) — 감는 쪽 · 끝 각 · 몸 비틀기 거울 (대본이 끝난 뒤 따라 지나감 · 굳음도 같은 쪽: f.spinWs)
+  if (f.ibSpin) f.spinWs = ws;
+  if (f.ibSpin?.blocked) f.spinLow = true; // 막혔으면 낮게 붙듦 (아래 torso — 막혀 튄 칼을 상대 머리 위로 다시 들지 않게)
+  const s = (f.side >= 0 ? 1 : -1) * ws;
+  const P = phase === 'wind' ? V.wind : SECRET.iaiPath.E;
   const m = phase === 'wind' ? 1 : -1; // 끝 자세는 발도 끝(칼 든 쪽으로 벰)을 거울로 — 탈류는 칼 든 쪽 → 반대쪽
   th.hand[0] = P.hand[0];
   th.hand[1] = P.hand[1];
   th.hand[2] = m * s * P.hand[2];
   let el = P.el;
   const foe = f.foe;
-  if (phase === 'cut' && foe?.bodies?.chest && f.armed) {
-    // 겨누는 몸 자리 = 길목 지키기와 같은 칸 SECRET.gilmokAim (사장님 10/11 13:5x '최대한 위를 겨누고 쳐' — 둘러 베는 칼이 명령보다 처지는 몫을 겨눔으로 받는다)
-    const hp = f.bladePoint(0, _gh);
-    const tp = f.bladePoint(1, _gt);
-    const L = hp.distanceTo(tp);
-    const Aim = SECRET.gilmokAim;
-    const ty = Aim === 'chest' || !foe.bodies.head ? foe.bodies.chest.translation().y : foe.bodies.head.translation().y + (Aim === 'headTop' ? foe.headR ?? 0 : 0);
-    if (L > 0) el = Math.asin(clamp((ty - hp.y) / L, -1, 1)) / D2R;
-  }
   let yaw = m * P.yaw;
+  let cur = null; // 지금 칼 가로 각 (° — 감는 쪽 + · 몸 앞 0 · 끝 쪽 −)
   if (phase === 'cut' && f.armed) {
     // 가로로 끝까지: 목표 가로 각을 지금 칼 각보다 SECRET.ibSpin.lead 만큼만 앞에 둔다 (끝 각까지) — 감은 칼(칼 든 쪽 뒤)과 끝 각(반대쪽 앞)이 180° 가까이 벌어져
     //  한 번에 끝 자세를 주면 서보가 칼을 머리 위로 넘겨 돌렸다(브라우저 첫 그림). 앞선 목표가 늘 수평으로 lead 만큼이라 칼이 수평으로 앞을 가로지르고 제동도 늦게 걸린다
@@ -447,8 +518,27 @@ export function spinCutPose(f, phase, dt) {
     const fz = -Math.sin(f.heading);
     const dx = tp.x - hp.x;
     const dz = tp.z - hp.z;
-    const cur = Math.atan2(s * (dx * -fz + dz * fx), dx * fx + dz * fz) / D2R; // 칼 든 쪽 + (몸 기준 오른쪽 = (−fz, fx))
-    yaw = Math.max(yaw, cur - SECRET.ibSpin.lead);
+    cur = Math.atan2(s * (dx * -fz + dz * fx), dx * fx + dz * fz) / D2R; // 감는 쪽 + (몸 기준 오른쪽 = (−fz, fx) × s)
+    yaw = Math.max(yaw, cur - V.lead);
+  }
+  if (phase === 'cut' && foe?.bodies?.chest && f.armed) {
+    // 겨누는 몸 자리 = 길목 지키기와 같은 칸 SECRET.gilmokAim (사장님 10/11 13:5x '최대한 위를 겨누고 쳐' — 둘러 베는 칼이 명령보다 처지는 몫을 겨눔으로 받는다)
+    const hp = f.bladePoint(0, _gh);
+    const tp = f.bladePoint(1, _gt);
+    const L = hp.distanceTo(tp);
+    const Aim = SECRET.gilmokAim;
+    const ty0 = Aim === 'chest' || !foe.bodies.head ? foe.bodies.chest.translation().y : foe.bodies.head.translation().y + (Aim === 'headTop' ? foe.headR ?? 0 : 0);
+    // 10/23 torso: 칼이 몸 앞 가운데를 지난 뒤(따라 지나감 · 굳음) · 막힌 뒤에는 칼끝을 내 가슴 점 높이로 붙든다 (사장님 '높이가 몸통부를 넘지 않게' — 전 겨눔은 가로지른 뒤
+    //  칼을 상대 머리 위로 들어 올렸다 = 끝의 치솟음). 가로지르기 전은 전 겨눔 그대로(빠르게 도는 칼은 명령보다 처진다 — 츠바이핸더 −15° · 맞힘 그대로).
+    //  명령 높이 = 가슴 + (가슴 − 지금 칼끝): 처지면 더 위를 · 넘으면 아래를 명령 — 골반 점 ~ 전 겨눔 사이로 자름
+    const cy = f.bodies.chest.translation().y;
+    if (cur != null && cur < 0) f.spinLow = true; // 한 번 가로질렀으면 끝까지 (따라 지나감 · 굳음)
+    //  가로지르기 전이라도 칼끝이 몸통 위 끝(어깨 관절 높이 = 가슴 점 + ARM.shoulder[1] 0.1)을 넘으면 같은 식으로 끌어내린다. 반대로 돎(ws −1 — 레베스: 칼 든 팔이 펴지며
+    //  벤다 · 처지지 않음)은 처음부터 이 식 — 전 겨눔을 따르면 플랑베르주가 +15° 로 솟아 넘겼다. 칼 든 쪽으로 돎(탈류 — 팔이 몸 앞을 건넘)은 처지므로 전 겨눔 그대로
+    //  (가슴 점부터 끌면 츠바이핸더가 더 처져 서 있는 과녁 맞힘 4 → 2 / 5 — docs/strike/iberian_spin_2026-10-22.md §11)
+    const fb = clamp(2 * cy - tp.y, f.bodies.pelvis.translation().y, ty0);
+    const ty = V.torso && (f.spinLow || ws < 0 || tp.y > cy + ARM.shoulder[1]) ? fb : ty0;
+    if (L > 0) el = Math.asin(clamp((ty - hp.y) / L, -1, 1)) / D2R;
   }
   const a = yaw * D2R;
   const e = el * D2R;
@@ -457,8 +547,8 @@ export function spinCutPose(f, phase, dt) {
   th.dir[2] = s * Math.cos(e) * Math.sin(a);
   // 몸 비틀기: 덧씌우기 칸 부호 그대로 (끝 = 길목 지키기 탈류 끝과 같은 부호 — 몸이 벤 쪽으로 돌아감)
   const B = P.body ?? { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
-  th.pelvisYaw = B.pelvisYaw * D2R;
-  th.chestYaw = B.chestYaw * D2R;
+  th.pelvisYaw = ws * B.pelvisYaw * D2R;
+  th.chestYaw = ws * B.chestYaw * D2R;
   th.pitch = B.pitch * D2R;
   th.drop = B.drop;
 }

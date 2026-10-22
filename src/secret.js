@@ -15,6 +15,7 @@ import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
 import { RisolutoWatch } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
+import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
 
 const clamp = THREE.MathUtils.clamp;
 const _r = new THREE.Vector3();
@@ -672,7 +673,8 @@ export class PlayerSecretWatch {
 
   /**
    * 이베리아 휘감아 돌기 무장 (10/22 — schools.js IBERIAN_SECRET_SPIN): 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.ibSpin.armTime 초 머물면 무장(발도 대기 IaiArm 과 같은 셈 —
-   *  휘두르거나 비기 중이면 풀림 · 간격 안으로 들어와도 armGrace 초 남음). 무장이 이어지는 동안 창이 열려 있다(끝 없음 — 금색 '!' · 비기 이름 알림) → 공격 입력 하나가 휘감아 돌기.
+   *  휘두르거나 비기 중이면 풀림 · 간격 안으로 들어와도 armGrace 초 남음). 무장이 이어지는 동안 창이 열려 있다(끝 없음 — 금색 '!' · 비기 이름 알림) → 이동 스틱 반 바퀴(10/23 스틱 판 — 아래 spinStick) ·
+   *  옛 판(SECRET.ibSpin.input 'attack')은 공격 입력 하나가 휘감아 돌기.
    *  hurtDisarm: 무장 동안 내 몸에 상처가 나면 곧장 풀림(발도 대기에 없는 규칙 — 스위치). 창을 쓰면(fire) 무장도 풀린다 — 한 번 무장에 한 번
    */
   spinTick(dt, d0, V, busy) {
@@ -685,6 +687,30 @@ export class PlayerSecretWatch {
     if (this.spinArm.armed) {
       if (!o && !busy) this.openWindow({ ev: 'spin' }, Infinity);
     } else if (o?.ctx?.ev === 'spin') this.open = null;
+  }
+
+  /** 이베리아 휘감아 돌기 창이 스틱 판인가 (SECRET.ibSpin.input 'stick') — 참이면 그 창은 공격 입력으로 나가지 않는다(공격은 보통 공격 · main.js) */
+  stickOwns() {
+    return SECRET.ibSpin.input === 'stick' && this.open?.ctx?.ev === 'spin';
+  }
+
+  /**
+   * 이베리아 휘감아 돌기 스틱 판 (10/23 사장님 '공격 버튼 대신 이동 버튼을 360도 돌린다거나' · '한 바퀴로 하지 말고 반 바퀴 이상으로' — main.js 가 프레임마다 부른다):
+   *  무장 창이 열려 있고 낼 수 있는 동안(can — 공격 입력 길과 같은 조건: 기력 · 굳음 · 비기 중 아님 · 살아 있음) 이동 스틱 m(input.move)을 읽어
+   *  최근 SECRET.ibSpin.stickTime 초 안에 어느 쪽으로든 stickTurn° 돌았으면 참(그 스텝에 fire() → skill.secret — 공격 입력 길과 같은 함수).
+   *  창이 없거나 · 낼 수 없거나 · 'attack' 판이면 셈을 비우고 거짓. 몸짓 셈 = src/stick_turn.js (순수 함수).
+   *  참이면 창 ctx 에 돌린 쪽 turnDir(+1 반시계 · −1 시계)을 적는다 — 몸이 그쪽으로 돈다(10/23 사장님 '조이스틱 회전에 따라 반대로도' · SECRET.ibSpin.reverse)
+   */
+  spinStick(dt, m, can) {
+    const st = (this.turn ??= stickTurnState());
+    if (!can || !this.stickOwns()) {
+      stickTurnClear(st);
+      return false;
+    }
+    const V = SECRET.ibSpin;
+    const go = stickTurnStep(st, dt, m.x, m.y, { time: V.stickTime, need: (V.stickTurn * Math.PI) / 180, path: !!V.stickPath, rate: !!V.stickRate, from: !!V.stickFrom });
+    if (go) this.open.ctx = { ...this.open.ctx, turnDir: st.sgn }; // 돌린 쪽 (+1 = 반시계 = 몸이 왼쪽으로 · −1 = 시계 = 오른쪽으로 — iberian_spin.js requestSpin want)
+    return go;
   }
 
   /**
