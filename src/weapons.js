@@ -1,4 +1,4 @@
-import { historicalPartMesh, historicalDecorate, hwandoScabbard } from './historical_weapon_details.js';
+import { historicalPartMesh, historicalDecorate } from './historical_weapon_details.js'; // 환도 칼집(hwandoScabbard)은 10/23 사장님 '환도에 검집까지 나오는 거 없애'로 뺌
 // ─────────────────────────────────────────────────────────────
 //  무기고: 실제 자료 기반(+부족한 곳은 물리적으로 추정) 데이터 중심 무기 목록.
 //
@@ -847,7 +847,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   grip: 'two-hand', material: 'steel',
   school: 'japanese', // 유파(schools.js TRADITIONS): 틀은 앞무게(이베리아가 기본)지만 일본 도검술 — 10/8 ① 구조 (일본 유파는 아직 이베리아와 같은 내용의 자리만)
   tier: 'epic',
-  ability: '비검: 진 · 츠바메가에시', // 10/21 15:4x 사장님 '진과 츠바메가에시 사이에 가운뎃점' // 10/21 15:2x 사장님 '비검: 진 츠바메가에시 이렇게 하자' · 15:0x 사장님 '모노호시자오 출혈 옵션 빼고 대신 츠바메가에시 데미지 3배 … 옵션 이름은 비검으로' (전 '제비 베기: 출혈')
+  ability: '비검: 진 · 제비 베기', // 10/23 02:2x 사장님 '모노호시자오 에픽 설명 진제비베기로 바꿔야겠네'(기술 이름 '제비 베기'에 맞춤 — 전 '진 · 츠바메가에시') // 10/21 15:4x 사장님 '진과 츠바메가에시 사이에 가운뎃점' // 10/21 15:2x 사장님 '비검: 진 츠바메가에시 이렇게 하자' · 15:0x 사장님 '모노호시자오 출혈 옵션 빼고 대신 츠바메가에시 데미지 3배 … 옵션 이름은 비검으로' (전 '제비 베기: 출혈')
   // 동작 라이브러리(motion_library.js, 기본 꺼짐)의 앞무게 자세표에서 상단(上段)은 쓰지 않는다: 긴 자루·앞무게 칼이 칼끝을 뒤로 눕힌
   //  상단에서 빠르게 내리면 날이 서지 않는다(날 세움 0~0.7) → 실제 싸움 48판 31% (상단 빼면 46%, 라이브러리 끔 50%). 지붕 자세 그대로
   motionSkip: ['지붕 (폼 타크)'],
@@ -1778,11 +1778,6 @@ const hwando = finalizeSpec('hwando', {
   mCut: 1.10, mThrust: .95, mBlunt: .95,
   partMesh: (...args) => historicalPartMesh('hwando', ...args),
   decorate: historicalDecorate,
-  dressWeapon(pelvis) {
-    const scabbard=hwandoScabbard(this.bladeLength);
-    scabbard.position.set(-.07,.075,.23);scabbard.rotation.set(-.08,0,-.45);
-    pelvis.add(scabbard);
-  },
   buildParts() {
     const L=this.bladeLength, grip=boxInertia(.12,.015,.0625,.013), pommel=sphereInertia(.08,.011),
       cross=boxInertia(.08,.0355,.002,.0275), bladeMass=.62*L/.72, blade=bladeInertia(bladeMass,L,.37,.25,.036,.0062); // 칼날 질량: 처음 날(0.72 m · 0.62 kg)과 같은 단면으로 날 길이 비
@@ -1874,6 +1869,7 @@ const druidWhip = finalizeSpec('druid_whip', {
   nameKo: '드루이드의 채찍', nameEn: "Druid's Whip", tier: 'mystery',
   desc: '질긴 식물 줄기를 엮은 채찍.\n손을 떠난 힘이 덩굴 끝에서 뒤늦게 맺힌다.',
   grip: 'one-hand', school: 'none', material: 'wood', flexible: true,
+  kneelHit: true, // 맞은 쪽 무릎 꿇리기 (사장님 10/23 — config WHIP_KNEEL · combat.js whipKneelCheck)
   hiltLength: 0.13, bladeLength: DRUID.lash, edged: false, mCut: 0, mThrust: 0, mBlunt: 1.5, fragility: 0,
   controlOverrides: { ...WHIP_NOW.servo }, // 손잡이 서보 (druid_whip.js — 샛별 값 24 · 1.2 · 0.6 · 10 · 0.08 에서 10/23 검수로 10 · 0.2 · 0.1 · 10 · 0.08, 확인표 2226)
   partMesh: hiddenParts, buildParts: druidParts, decorate: drawDruidWhip,

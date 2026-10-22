@@ -301,3 +301,43 @@ revolver/  — 2026-10-12, imported on the owner's instruction from the Saetbyeo
 
 Thank you, Reitanna, Sadiquecat, thebardofblasphemy, AugustSandberg, AuraVoice,
 Nocturnal_Vanguard, Cici Fyre, SkyRae and HaelDB!
+
+-------------------------------------------------------------------------------
+whip/  — 2026-10-23, Druid's Whip sounds (the owner asked for real whip sounds; recordings only, no synthesis).
+Every file: decoded once to PCM, mono 44.1 kHz, high-passed / low-passed as below, short fade in / out,
+peak-normalized to -1 dBFS, MP3 (LAME VBR q4). No pitch or tempo change, no synthesized layers.
+Exact ranges, filters, gains and SHA-256 of every source and output: whip/provenance.json.
+
+  Public domain — Wikimedia Commons user "Basel", "Peitschen.ogg" (own work, 5 December 2008):
+    "Men (Geislechlepfer) cracking whips. Klausjagen, Küssnacht, Switzerland."
+    https://commons.wikimedia.org/wiki/File:Peitschen.ogg
+    Released by the copyright holder into the public domain (attribution not required).
+    The original OGG was rate-limited at download time; Commons' own MP3 transcode of the same file was used:
+    https://upload.wikimedia.org/wikipedia/commons/transcoded/3/30/Peitschen.ogg/Peitschen.ogg.mp3
+    (SHA-256 238a2b6093c592bb80e806987e7e6d089d49cbd78c666c36b1fa4e1ae268e746). Three isolated cracks were picked by isolation and crest factor
+    (250 Hz high-pass, 12 kHz low-pass, 3 ms in / 90 ms out):
+      whip/crack1.mp3 <- Peitschen.mp3 15.928+0.210 s, gain -0.6 dB (sha256 e2df41bcd784e708…)
+      whip/crack2.mp3 <- Peitschen.mp3 18.023+0.210 s, gain -0.7 dB (sha256 80283b14f7ea77c3…)
+      whip/crack3.mp3 <- Peitschen.mp3 19.683+0.210 s, gain +4.3 dB (sha256 b797e1b90e722350…)
+  CC0 (public domain) — qubodup, "Swish - bamboo stick weapon swhoshes" ("I waved my bamboo stick in front of the mic")
+    https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  (swoshes.7z)
+    120 Hz high-pass, 4 ms in / 50-80 ms out:
+      whip/swish1.mp3 <- swosh-01.flac 0.000+0.280 s, gain +1.8 dB (sha256 e36e9ec4f4e34796…)
+      whip/swish2.mp3 <- swosh-06.flac 0.000+0.280 s, gain +11.7 dB (sha256 21a61ca881293bd5…)
+      whip/swish3.mp3 <- swosh-09.flac 0.000+0.190 s, gain +6.4 dB (sha256 3fb2d998f1e72811…)
+      whip/swish4.mp3 <- swosh-12.flac 0.000+0.300 s, gain +0.3 dB (sha256 9f625291921f4bf0…)
+  CC0 (public domain) — Jordan Irwin (AntumDeluge), "Thwack Sounds" 1.0 ("made by hitting things")
+    https://opengameart.org/content/thwack-sounds  (thwack-1.0.zip, PCM/*.wav)
+    80 Hz high-pass, 1 ms in / 50-80 ms out:
+      whip/hit1.mp3 <- thwack-02.wav 0.000+0.160 s, gain -0.2 dB (sha256 db49a2d4910b9141…)
+      whip/hit2.mp3 <- thwack-03.wav 0.000+0.140 s, gain +1.0 dB (sha256 fd5d59f24ac4a347…)
+      whip/hit3.mp3 <- thwack-05.wav 0.000+0.260 s, gain -0.3 dB (sha256 9e260783df7fc0d0…)
+  CC0 (public domain) — Kenney (www.kenney.nl), "Impact Sounds" (kenney_impact-sounds.zip)
+    impactPlate_light_000-002.ogg (whip on helmet / plate) and impactMetal_light_000-002.ogg (whip on a blade),
+    90 Hz high-pass, 1 ms in / 50 ms out:
+      whip/armor1.mp3 <- impactPlate_light_000.ogg 0.000+0.542 s, gain +1.9 dB (sha256 97a82b963d8007bb…)
+      whip/armor2.mp3 <- impactPlate_light_001.ogg 0.000+0.655 s, gain +2.1 dB (sha256 7174180031244dd0…)
+      whip/armor3.mp3 <- impactPlate_light_002.ogg 0.000+0.489 s, gain +1.0 dB (sha256 3c093f257bd64c2d…)
+      whip/clash1.mp3 <- impactMetal_light_000.ogg 0.000+0.351 s, gain +0.7 dB (sha256 fd781533ea14f02c…)
+      whip/clash2.mp3 <- impactMetal_light_001.ogg 0.000+0.252 s, gain +0.7 dB (sha256 c23bec83c5a71a51…)
+      whip/clash3.mp3 <- impactMetal_light_002.ogg 0.000+0.236 s, gain +0.7 dB (sha256 078d8e07c85e8a31…)

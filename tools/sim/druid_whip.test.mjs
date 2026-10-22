@@ -120,3 +120,39 @@ test('톡 = 손목 튕기기 (사람 · 마무리 아님): 손 목표가 올라�
   g2.world.free();
   setWhipPreset('now');
 });
+
+test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 획에 한 번(첫 맞음) · p 1 이면 맞은 쪽이 꿇음 · p 0 이면 없음 · AI 채찍은 스위치 끔이면 굴리지 않음', async () => {
+  const { WHIP_KNEEL } = await import('../../src/config.js');
+  assert.equal(WHIP_KNEEL.p, 0.5); assert.equal(WHIP_KNEEL.kneel, 0.4); assert.equal(WHIP_KNEEL.ai, false);
+  assert.equal(W().kneelHit, true);
+  for (const w of WEAPON_LIST) if (w.id !== 'druid_whip') assert.ok(!w.kneelHit, w.id);
+  CONFIG.ARENA.startHold = 0;
+  const p0 = WHIP_KNEEL.p;
+  const run = (p, aiWhip = false) => {
+    WHIP_KNEEL.p = p;
+    const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', seed: 13, gap: 1.5, AIClass: Quiet, ...(aiWhip ? { AI2Class: AI } : {}) });
+    const f = g.player, e = g.enemy;
+    let kneeled = false;
+    for (let k = 0; k < 4; k++) {
+      for (let i = 0; i < 1.0 / DT; i++) { g.step(); if (e.state === 'getup') kneeled = true; }
+      if (!aiWhip) f.skill.thrust();
+      for (let i = 0; i < 0.8 / DT; i++) { g.step(); if (e.state === 'getup') kneeled = true; }
+    }
+    const log = g.combat.whipKneelLog ?? [];
+    const hits = g.wounds.filter((x) => x.att === f).length;
+    g.world.free();
+    return { log, hits, kneeled };
+  };
+  const a = run(1);
+  assert.ok(a.hits > a.log.length, `판정 ${a.hits} · 굴림 ${a.log.length}`); // 한 획에 판정이 여럿이어도 굴림은 하나
+  const perStroke = new Map();
+  for (const x of a.log) perStroke.set(x.stroke, (perStroke.get(x.stroke) ?? 0) + 1);
+  for (const n of perStroke.values()) assert.equal(n, 1);
+  assert.ok(a.log.some((x) => x.hit) && a.kneeled, '꿇음');
+  const b = run(0);
+  assert.equal(b.log.length, 0);
+  assert.equal(b.kneeled, false);
+  const c = run(1, true); // AI 가 든 채찍 (스위치 끔) — 굴리지 않음
+  assert.equal(c.log.filter((x) => x.att === 0).length, 0);
+  WHIP_KNEEL.p = p0;
+});

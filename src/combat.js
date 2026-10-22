@@ -25,7 +25,7 @@ import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT, WHIP_KNEEL } from './config.js';
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants, artFlash } from './secret_instant.js'; // artFlash: 이점이 터진 순간 잔상 (10/21)
@@ -868,8 +868,32 @@ export class Combat {
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
       if (r.severity > 0) { const tn = strokeTechOf(att); if (((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) && !perkOff(att, tn)) artFlash(att, this.dt); }
     }
+    if (att.weapon?.kneelHit) this.whipKneelCheck(att, vic, pr.v.part); // 채찍 무릎 꿇리기 (10/23 — 한 획에 한 번 · 아래)
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
+  }
+
+  /**
+   * 채찍 무릎 꿇리기 (사장님 10/23 — config WHIP_KNEEL): 채찍(무기 칸 kneelHit)이 판정을 낸 맞음(strike 가 돌려준 맞음 — 둔타 · 멍 · 상처 모두, 부위 가리지 않음)에서
+   *  그 획의 첫 맞음이면 한 번 굴린다(획 = 손 휘두르기가 시작될 때마다 · 톡 튕기기 — fighter.flexWeapon.strokes, 굴린 획은 rolled).
+   *  맞은 쪽이 서 있고 살아 있고 부활 중이 아니면 p × 버티기(swayScale) 로 knockDown(false) — 곁눈 베기 무릎 꺾기와 같은 꿇기(꿇는 시간 kneel 초 꼴) · 잔상.
+   *  굴림은 친 쪽 전용 난수(fighter.buckleRandom — Math.random 순서 그대로). 기록 this.whipKneelLog { t, att, vic, part, stroke, hit, stand }
+   */
+  whipKneelCheck(att, vic, part) {
+    const K = WHIP_KNEEL, X = att.flexWeapon;
+    if (!(K.p > 0) || !X || (att.aiControlled && !K.ai)) return;
+    const n = X.strokes ?? 0;
+    if (n <= (X.rolled ?? 0)) return; // 이 획은 이미 굴렸다 (마디가 여러 번 닿아도 한 번)
+    X.rolled = n;
+    const t = this.stepNo * (this.dt ?? 1 / 60);
+    const stand = !!vic?.alive && vic.state === 'stand' && !vic.revival;
+    const hit = stand && att.buckleRandom() < K.p * (vic.swayScale ?? 1);
+    (this.whipKneelLog ??= []).push({ t: +t.toFixed(2), att: att.index, vic: vic?.index, part, stroke: n, hit, stand });
+    if (!hit) return;
+    vic.buckleAt = t;
+    vic.buckleKneel = K.kneel;
+    vic.knockDown(false);
+    artFlash(att, this.dt); // 꿇린 그 채찍에 잔상 (곁눈 베기와 같게)
   }
 
   /**
