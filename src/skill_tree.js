@@ -234,7 +234,13 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
       for (const pid of n.pre) parts.push(`<path class="${cls(nodeOf(school, pid), n)}" d="${curve(nodeOf(school, pid), n)}"/>`);
       if (n.pre.length > 1) { const [x1, y1] = topOf(n); parts.push(`<circle class="tree-join" cx="${x1.toFixed(1)}" cy="${(y1 - 2).toFixed(1)}" r="${(2.8 * g.s).toFixed(1)}"/>`); } // '모두 익혀야' 표지 (원 위 — 그림의 금색 줄)
     }
-    svg.innerHTML = parts.join('');
+    // 이어진 줄(lit)은 얇은 흰 줄 두 겹 (10/23 사장님): 같은 길에 판 바탕 색 속줄을 한 번 더 그어 가운데를 비운다 (lobby.css .tree-link-core)
+    const out = [];
+    for (const p of parts) {
+      out.push(p);
+      if (p.startsWith('<path') && /class="[^"]*\blit\b/.test(p)) out.push(p.replace(/class="([^"]*)"/, (m, c) => `class="tree-link-core${/\bgate\b/.test(c) ? ' gate' : ''}${/\bopt\b/.test(c) ? ' opt' : ''}"`));
+    }
+    svg.innerHTML = out.join('');
   }
 
   function size() {
