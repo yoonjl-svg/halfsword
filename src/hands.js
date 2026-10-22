@@ -134,6 +134,7 @@ export function attachHands(f) {
   const offFist = G.off === 'fist';
   const rapier = G.turn === 'posture'; // 자세별 손 돌림 (레이피어 — frames.js HAND_GRIPS turn)
   let aCur = G.a; // 지금 손 돌림(도) — 레이피어만 자세에 따라 움직인다
+  let mordSeen = null; // 마지막으로 맞춘 거꾸로 쥠 (f.mordGrip — 죽음의 일격)
   let tPrev = 0;
 
   const api = {
@@ -151,6 +152,14 @@ export function attachHands(f) {
         const step = 540 * dt;
         aCur += Math.abs(d) <= step ? d : Math.sign(d) * step;
         fistS.rotation.y = aCur * D2R;
+      }
+      // 칼날을 거꾸로 쥔 동안 (독일 비기 죽음의 일격 — fighter.reverseGrip · f.mordGrip { g, gOff }): 주먹을 칼날 위 쥔 자리로 옮기고 칼 축 둘레가 아닌 칼 면 축으로 뒤집는다(엄지가 칼자루 쪽)
+      const rg = f.mordGrip;
+      if (rg !== mordSeen) {
+        mordSeen = rg;
+        fistS.position.y = rg ? rg.g : 0;
+        fistO.position.y = rg ? rg.gOff : f.weaponCfg?.gripAlong ?? -0.14;
+        fistS.rotation.z = fistO.rotation.z = rg ? Math.PI : 0;
       }
       const twoHold = armed && !!f.gripping;
       fistO.visible = twoHold;

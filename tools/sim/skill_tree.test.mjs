@@ -93,22 +93,32 @@ test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 �
 });
 
 // ── 닫힌 칸 ──
-test('닫힌 칸: 비기는 일본 고노센 · 동방 막아 죽이기(10/22)만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
+test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 동방 막아 죽이기(10/22 사람 먼저)만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
-  assert.deepEqual(closed.sort(), ['B7', 'G10', 'I4', 'J8']);
+  assert.deepEqual(closed.sort(), ['B7', 'I4', 'J8']);
   for (const s of DESIGN) for (const d of s.nodes) if (d.closed) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
+  assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), false); // 10/22 독일 죽음의 일격 — 사람 먼저
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese']); // AI 는 닫힌 채 (ai.js 는 이 목록만)
   const all = D.allNodeIds('german');
-  assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), all), 'learned'); // 이미 가진 것으로 친 판(시험)이라도
-  assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), ids(...[...all].filter((x) => x !== 'G10'))), 'closed');
-  assert.equal(D.kitFromNodes('german', all).secret, false); // 닫힌 비기는 몫 없음
+  assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), ids(...[...all].filter((x) => x !== 'G10'))), 'open');
+  assert.equal(D.kitFromNodes('german', all).secret, true);
   assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).secret, true);
   assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).perk.has('kote'), false); // J8 몫 없음
-  const keep = SECRET.openSchools; SECRET.openSchools = [...D.TREE_SCHOOLS];
-  try { assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), true); } finally { SECRET.openSchools = keep; }
+  assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, false); // 닫힌 비기는 몫 없음
+  const keep = SECRET.openSchools; SECRET.openSchools = ['japanese'];
+  try {
+    assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), true); // 독일을 빼면 다시 '준비 중'
+    assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), all), 'learned'); // 이미 가진 것으로 친 판(시험)이라도
+    assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), ids(...[...all].filter((x) => x !== 'G10'))), 'closed');
+    assert.equal(D.kitFromNodes('german', all).secret, false);
+  } finally { SECRET.openSchools = keep; }
+  SECRET.openSchools = [...D.TREE_SCHOOLS];
+  try { assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), true); } finally { SECRET.openSchools = keep; }
   wallet(99999, 999);
+  assert.deepEqual(S.learnNode('italian', 'I4'), { ok: false, saved: false, why: 'closed' }); // 닫힌 칸은 못 배움
   for (const id of ['G1', 'G2', 'G5', 'G8', 'G3', 'G7', 'G4', 'G9']) assert.equal(S.learnNode('german', id).ok, true, id);
-  assert.deepEqual(S.learnNode('german', 'G10'), { ok: false, saved: false, why: 'closed' });
+  assert.equal(S.learnNode('german', 'G10').ok, true); // 비기 칸 값 그대로 (금화 400 + 머리 20)
 });
 
 // ── 배우기 · 레벨 ──
@@ -396,7 +406,8 @@ test('판 몫 차례: ?skillNodes → ?uniqueStage(옛 급 N 까지의 칸) → 
   assert.equal(S.playerKit('german', learned).footwork, true);
   assert.equal(S.playerKit('none', learned), null);
   const t = S.playerKit('german', learned, { test: true });
-  assert.equal(t.unique.size, 3); assert.equal(t.chase && t.parryCover && t.passive, true); assert.equal(t.secret, false); // 닫힌 비기
+  assert.equal(t.unique.size, 3); assert.equal(t.chase && t.parryCover && t.passive, true); assert.equal(t.secret, true); // 10/22 독일 비기 열림 (죽음의 일격)
+  assert.equal(S.playerKit('italian', {}, { test: true }).secret, false); // 닫힌 비기
   assert.deepEqual([null, '', '0', '2', '5', '6', '-1', '2.5', 'x'].map(S.stageParam), [null, null, 0, 2, 5, null, null, null, null]);
   const k2 = S.playerKit('german', learned, { upTo: 2 });
   assert.deepEqual([k2.footwork, k2.chase, k2.parry, k2.parryCover, k2.unique.size, k2.passive], [true, true, true, true, 0, false]); // 보법 · 막기 칸 모두

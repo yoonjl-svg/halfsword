@@ -936,6 +936,17 @@ const GERMAN_SECRET_PARRY = {
   },
   src: 'Ringeck 주해 Vor·Nach 「make the displacement simultaneously (Indes) and from the bind strike immediately at his nearest opening」 · Duplieren 「thrust the pommel … under your right arm … strike him behind his blade」 · Mutieren 「wind the short edge at his sword, raise your arms and thrust at the lower opening from the outside along his blade」 [원전 2차 영역] · Meyer Duplieren (맞붙은 칼을 떼지 않고 곧장 다른 쪽으로) [원전 2차] · 걸이 자리 = 황소 · 자리별 한 수 표 [해석] · 길 [추정]',
 };
+// 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
+//  '1.5로 해' · 사람 먼저 — docs/strike/german_mordschlag_2026-10-22.md): 사람(플레이어) 비기만 — TRADITIONS.german.playerSecret (SECRET.deMord). AI 는 TRADITIONS.german.secret 그대로.
+//  when 'press' = 밀치기 누르기(fighter.barge 'press')가 cond.press 초(SECRET.mordPress) 끊기지 않고 이어짐 (secret.js PlayerSecretWatch) · do.mord = mordschlag.js 덧씌우기 동작
+const GERMAN_MORDSCHLAG = {
+  name: 'mordschlag',
+  nameKo: '죽음의 일격 (모르트슐라크)', orig: 'Mordschlag',
+  when: 'press',
+  cond: { press: 'mordPress' },
+  do: { mord: true },
+  src: '탈호퍼 그림책(1459 · 1467) — 칼날을 거꾸로 쥐고 코등이 · 폼멜로 치기 · 링엑 · 단치히 사본 갑옷 싸움 해설 [원전 2차] · 거리 · 시간 [사장님 결정] · 길 [추정]',
+};
 
 // ── 공용 동작 이름 (techNames — 10/9 고유 동작 단계, 자료만) ──
 //  공용 동작 = TECH 12 + 라이브러리 셋(talhoReves·wristCut·molinello). 동작은 같고 유파 말만 다르다. HUD 는 기술 이름을 보이지 않는다(코드 없음) — 문서·갤러리용
@@ -988,7 +999,7 @@ export const footworkTradition = (f) => (f?.schoolFootwork === false ? null : f?
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로) · 이름은 DUSSACK_NAMES (sword_art.js schoolNames 가 가지 이름을 먼저 읽는다)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, chase: GERMAN_CHASE, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, get secret() { return this.secretSet ?? (SECRET.deSecret === 'v1' ? GERMAN_SECRET : GERMAN_SECRET_PARRY); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.deSecret 'parry' 기본(막기 연환 — 감아 들기) · 'v1' 옛 Versetzen (`?deSecret=v1`)
+  german: { id: 'german', nameKo: '독일', ...GERMAN, chase: GERMAN_CHASE, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, get secret() { return this.secretSet ?? (SECRET.deSecret === 'v1' ? GERMAN_SECRET : GERMAN_SECRET_PARRY); }, set secret(v) { this.secretSet = v; }, get playerSecret() { return SECRET.deMord ? GERMAN_MORDSCHLAG : this.secret; } }, // 비기 판 (10/11): SECRET.deSecret 'parry' 기본(막기 연환 — 감아 들기) · 'v1' 옛 Versetzen (`?deSecret=v1`) — AI 몫. 사람 몫 playerSecret = 죽음의 일격 (10/22 SECRET.deMord · `?deMord=0` = 옛 판)
   // 이탈리아 물러남(10/9 패시브 단계 — Ritirata): 몰리면 테르차(긴 자세)로 칼끝을 겨눈 채 물러난다, 그 밖엔 긴 자세·쟁기 (전 독일 값 황소 · 쟁기·긴 자세).
   //  레이피어 간 보는 자세(WATCH_GUARDS)에 긴 자세가 있다 — 재기 손잡이 motion_lab SCHOOL_RITIRATA=0 (전 값)
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
