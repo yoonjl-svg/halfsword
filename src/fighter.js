@@ -3314,6 +3314,24 @@ export class Fighter {
         if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
       }
     }
+    // 쪼개 내려치기 (10/22 대검 마무리 — skill.cleavePose 의 tp.face, 몸 기준): 드는 때부터 칼 면이 내려치는 수직 면의 법선을 보게 덮는다 — 날이 그 면 안(칼이 돌아 내려갈 쪽)에 선다.
+    //  칼이 그 면 안에서 돌아 내려오므로 내려치는 내내 날이 선 채다 (움직임만 따라 세우면 앞무게 칼은 날이 늦게 돌아 칼 면으로 맞았다 — 문서 §4). 고르는 법은 위 덮개와 같다.
+    //  쪼개 내려치기 탭이 아니면 지나치기만 한다
+    const ctp = this.skill.tap;
+    if (ctp?.cleave && ctp.face && !ctp.abort && this.skill.thrustPose.w > 0) {
+      const fw = _cvFace.set(ctp.face[0], ctp.face[1], ctp.face[2]).applyQuaternion(this.yaw);
+      fw.addScaledVector(blade, -fw.dot(blade));
+      if (fw.lengthSq() > 1e-4) {
+        fw.normalize();
+        if (fw.dot(flat) < 0) fw.negate();
+        if (zf) rollSide(fw, zf);
+        if (flatTarget.dot(fw) < 0) flatTarget.negate();
+        flatTarget.lerp(fw, this.skill.thrustPose.w);
+        if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(fw);
+        flatTarget.normalize();
+        if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
+      }
+    }
     // 칼날 축(길쭉한 방향)으로 도는 회전은 관성이 아주 작아서, 큰 힘을 주면
     // 계산이 폭주해 칼이 팽이처럼 돈다. 그래서 비틀림은 아주 약하게 따로 다룬다.
     const w = angvel(sword, new THREE.Vector3());

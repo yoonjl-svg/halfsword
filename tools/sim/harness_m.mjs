@@ -33,6 +33,12 @@ export { RAPIER, THREE, CONFIG, AI };
   if (process.env.FINISH_ARM) FINISH.strikeArm = +process.env.FINISH_ARM;
   if (process.env.FINISH_WRIST) FINISH.strikeWrist = +process.env.FINISH_WRIST;
   if (process.env.FINISH_CHEST_S) FINISH.chestS = +process.env.FINISH_CHEST_S;
+  // 10/22 대검 마무리 (docs/strike/greatsword_finish_2026-10-22.md): FINISH_CLEAVE=0 = 사람 칼도 전 찍기 · FINISH_CLEAVE_AI=1 = AI 칼도 쪼개 내려치기 · FINISH_CLEAVE_CHARGE=초
+  if (FINISH.cleave) {
+    if (['0', '1'].includes(process.env.FINISH_CLEAVE)) FINISH.cleave.player = process.env.FINISH_CLEAVE === '1';
+    if (['0', '1'].includes(process.env.FINISH_CLEAVE_AI)) FINISH.cleave.ai = process.env.FINISH_CLEAVE_AI === '1';
+    if (process.env.FINISH_CLEAVE_CHARGE) FINISH.cleave.charge = +process.env.FINISH_CLEAVE_CHARGE;
+  }
 }
 // 이탈리아 박자 걸음 셈 (10/15 — src/schools.js setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9): IT_RHYTHM=2+2(기본 · ×1.3) · 4+2 · 3+2 · 3(옛 짝 셈 3 + 1 — 지난 판 비교, 그때 ×1.5) · 0(끔). 안 주면 src 기본 그대로
 if (process.env.IT_RHYTHM != null) {

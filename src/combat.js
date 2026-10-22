@@ -263,7 +263,8 @@ export class Combat {
     const tp = att.skill?.tap;
     // 낮은 상대 진입(FINISH.entry 'low', 기본 끔): 'down' 이름 대신 시작한 그 상대의 실제 몸 높이 (예측 중엔 스텝 전 저장값만 — 엔진을 부르지 않는다)
     const finishTarget = lowFinishOn(FINISH) ? tp?.foe === vic && !tp.abort && !tp.ended && lowFinishPosture(att, vic, true, predicting) : downLowTarget(FINISH, att, vic, true, predicting);
-    let finish = type === 'stab' && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && finishTarget && FINISH_PARTS.has(pr.v.part);
+    // 10/22 대검 마무리 (finish.js FINISH.cleave): 쪼개 내려치기(tp.cleave)는 칼날로 맞는다 — 베기도 같은 마무리 (그 밖은 그대로 찌르기만)
+    let finish = (type === 'stab' || (type === 'cut' && !!tp?.cleave)) && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && finishTarget && FINISH_PARTS.has(pr.v.part);
     // 즉사 대신 힘 (FINISH.mode 'power25', 기본 끔 — 샛별 저장소 7fd7f592): 찍기 찌르기는 즉사 표시(finish)를 끄고, 판정 에너지에 FINISH.power 를 곱해
     //  갑옷·옷·살 문턱을 그대로 거친다. 문턱을 못 넘으면 보통처럼 멍(판금·투구가 막음). 치명상(목·머리)으로 죽으면 부활 없음(fighter.applyWound)
     const finishPower = finish && FINISH.mode === 'power25';
