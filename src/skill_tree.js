@@ -5,8 +5,8 @@
 //   01:2x '스킬북 아이콘에만 원형 테두리가 있고 텍스트는 그 밑에 나오는 게 낫겠어. 초기화도 원형으로'):
 //   그림은 옛 스킬북 그림을 갈래대로(skill_tree_icons.js) · 원 테두리 = 갈래 색(--tier-*) · 이름은 칸 name(원 밑 · 낱말 경계에서 두 줄, 좁으면 세 줄 — 9 px 밑으로 줄이지 않음) ·
 //   갈래 말(보법 I · 막기 II · 심화 …)은 상세 카드 갈래 줄에만. 누르는 자리 = 원 + 이름 (폭 · 높이 40 px 이상 — 원보다 큰 투명 자리).
-//   01:5x '원형 테두리 크기를 지금보다 작게. 아이콘에 fit하게 맞춰': 원 = 그 그림의 '가장 작은 둘레 원'(skill_tree_icon_fit.js) + 틈 1.5 px + 테 1.5 px — 원 크기가 그림마다 다르다
-//   (옛 책 급 볼륨이 원 크기로도 보임) · 그림은 그 둘레 원의 가운데가 원 가운데에 오게 놓음 · 한 줄의 원은 가운데를 맞추고 이름은 그 줄 가장 큰 원 밑에 나란히.
+//   01:5x '원형 테두리 크기를 지금보다 작게. 아이콘에 fit하게 맞춰' · 08:2x '한 크기로 통일': 원은 모든 칸 같은 지름(폰 가로 32 px) · 그림을 그림마다 키우거나 줄여
+//   그 그림의 '가장 작은 둘레 원'(skill_tree_icon_fit.js) + 틈 1.5 px = 원 안쪽이 되게(원을 꼭 채움) · 그림은 둘레 원 가운데가 원 가운데에 오게 놓음.
 //  칸 상태 넷 (skill_tree_data.js nodeState — 원에 보임): 잠김 = 원 · 그림 조금 흐림 · 이름 보조 색(앞 칸이 모자람) · 배울 수 있음 = 원 바깥 금색 테 + 원 아래 가장자리 값 알약 ·
 //   익힘 = 원 테두리 밝게 + 빛 + 갈래 색 안쪽 · 준비 중 = 원 테두리 점선 · 그림 잿빛 + 원 아래 가장자리 '준비 중' 알약(닫힌 비기 · 일본 손목 치기 심화).
 //  줄 = 그림 모양 그대로(앞 칸 원 아래 가장자리에서 이름표 뒤로 곧게 내려와 → 뒤 칸 원 위 가장자리까지 곡선): 곁가지(편지 · 보법 II)는 점선 ·
@@ -109,13 +109,12 @@ function relaxRow(P, W, gap, edge) {
   return { ok: true, p, shift: Math.max(0, ...p.map((x, i) => Math.abs(x - P[i].c))) };
 }
 /**
- * 그림에 꼭 맞는 원 (ih = 그림 높이 px · 그림 256 × 336): 지름 = 둘레 원 지름 + 틈 1.5 · 테 1.5 양쪽 (24 px 밑으로는 안 줄임) ·
- *  그림 자리 = 둘레 원 가운데가 원 가운데에 오게 (원 안쪽 기준 left · top px)
+ * 원을 꼭 채우는 그림 (D = 원 지름 px — 모든 칸 같음 · 그림 256 × 336): 그림 둘레 원 + 틈 1.5 = 원 안쪽이 되게 그림 배율을 그림마다 정함 ·
+ *  그림 자리 = 둘레 원 가운데가 원 가운데에 오게 (원 안쪽 기준 left · top px) — 사장님 10/22 08:2x '한 크기로 통일'
  */
 const RING_GAP = 1.5, RING_EDGE = 1.5;
-function ringFit(key, ih) {
-  const [fx, fy, fr] = ICON_FIT[key] ?? [0.5, 0.5, 0.5], iw = (ih * 256) / 336;
-  const D = Math.max(24, Math.round(2 * (fr * ih + RING_GAP + RING_EDGE))), c = D / 2 - RING_EDGE;
+function ringFit(key, D) {
+  const [fx, fy, fr] = ICON_FIT[key] ?? [0.5, 0.5, 0.5], c = D / 2 - RING_EDGE, ih = (c - RING_GAP) / fr, iw = (ih * 256) / 336;
   return { D, ih, iw, left: c - fx * iw, top: c - fy * ih };
 }
 /**
@@ -176,7 +175,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     const c0 = 500 - half, span = 2 * half || 1;
     const s = Math.min(1.5, Math.max(0.85, W / 386)); // 틈 · 줄 간격 비 (폰 가로 판 386 px = 1)
     const f = Math.max(9, 10.5 * s), lh = Math.round(f * 1.2); // 이름 글자 · 줄 높이 — 9 px 밑으로 안 내림 (좁으면 접기 · 원 줄이기로 푼다)
-    const ih0 = Math.round(28 * Math.max(1, s)), hit = 40; // 그림 높이(전 30 → 28 · 원은 그림에 맞춤) · 누르는 자리 (폭 · 높이)
+    const D0 = Math.round(32 * Math.max(1, s)), hit = 40; // 원 지름(모든 칸 같음 — 08:2x · 전 24 ~ 36) · 누르는 자리 (폭 · 높이)
     const gap = Math.round(6 * s), edge = 3, nameGap = Math.round(10 * s), rowGap = Math.round(30 * s), top = 6, bottom = 10; // nameGap = 원 아래 가장자리에 걸친 값 알약 밑까지
     const padX = hit / 2 + edge;
     const X = (cx) => padX + ((cx - c0) / span) * (W - 2 * padX);
@@ -184,12 +183,12 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     for (let d = 0; d < rows; d++) {
       const R = nodes.filter((n) => n.d === d).sort((a, b) => a.cx - b.cx);
       const items = R.map((n) => ({ n, c: X(n.cx), opts: nameOptions(nameOf(n), f) }));
-      let ih = ih0, plan;
-      for (;;) { // 그래도 판 폭에 안 들면 이 줄 그림(과 원)만 조금씩 작게 (22 px 까지 — 지금 화면들에서는 안 씀)
-        for (const it of items) { it.ring = ringFit(nodeIconKey(school, it.n), ih); it.D = it.ring.D; }
+      let D = D0, plan;
+      for (;;) { // 그래도 판 폭에 안 들면 이 줄 원(과 그림)만 조금씩 작게 (24 px 까지 — 지금 화면들에서는 안 씀)
+        for (const it of items) { it.ring = ringFit(nodeIconKey(school, it.n), D); it.D = D; }
         plan = fitRow(items, W, gap, edge, hit);
-        if (plan.ok || ih <= 22) break;
-        ih -= 2;
+        if (plan.ok || D <= 24) break;
+        D -= 2;
       }
       const L = Math.max(...items.map((it, i) => it.opts.list[plan.pick[i]].lines.length)), Db = Math.max(...items.map((it) => it.D));
       row[d] = { Db, L };
@@ -267,7 +266,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
         const tail = st === 'open' ? `<span class="node-price">${priceHtml(n.price, n.heads)}</span>` : st === 'closed' ? '<span class="node-soon">준비 중</span>' : '';
         const label = `${nameOf(n)} · ${STATE_KO[st]}${st === 'open' ? ` · ${priceWords(n.price, n.heads)}` : ''}`;
         return `<button type="button" class="tree-node" data-node="${n.id}" data-cat="${n.cat}" data-tier="${cat.tier}" data-state="${st}" style="left:${(p.x - p.w / 2).toFixed(1)}px;top:${p.top.toFixed(1)}px;width:${p.w}px;--d:${p.D}px;--db:${p.Db}px" aria-label="${label}" aria-pressed="${selected === n.id}">
-          <span class="node-ring"><img class="node-icon" src="${nodeIconSrc(school, n)}" alt="" aria-hidden="true" draggable="false" style="width:${p.ring.iw.toFixed(1)}px;height:${p.ring.ih}px;left:${p.ring.left.toFixed(1)}px;top:${p.ring.top.toFixed(1)}px"></span><span class="node-name" style="font-size:${geo.f.toFixed(2)}px">${p.lines.map((t) => `<span class="node-line">${t}</span>`).join('')}</span>${tail}</button>`;
+          <span class="node-ring"><img class="node-icon" src="${nodeIconSrc(school, n)}" alt="" aria-hidden="true" draggable="false" style="width:${p.ring.iw.toFixed(1)}px;height:${p.ring.ih.toFixed(1)}px;left:${p.ring.left.toFixed(1)}px;top:${p.ring.top.toFixed(1)}px"></span><span class="node-name" style="font-size:${geo.f.toFixed(2)}px">${p.lines.map((t) => `<span class="node-line">${t}</span>`).join('')}</span>${tail}</button>`;
       }).join('');
       drawLinks(learned);
     }
