@@ -99,6 +99,7 @@ export function createSwordTrails(scene) {
         arcs[k].id = A.id;
         arcs[k].pts = A.pts;
         arcs[k].share = A.share ?? 1; // 잔상 세기 몫 (중국 빠른 연환 — SECRET.cnFastShare: 빠르기와 같은 비율, 사장님 10/12 01:2x). 그 밖 비기는 1
+        arcs[k].width = A.width ?? 1; // 잔상 굵기 몫 (격살 시험 스위치 SECRET.gyeoksal.trailWidth — 칼끝에서 칼날 쪽으로 덮는 몫 · 기본 1 = 칼날 전부, 그대로)
         arcs[k].t0 = arcs[k].tf = performance.now();
         arcs[k].n = A.pts.length;
       } else if (A && A.kind === 'combo' && arcs[k].pts === A.pts && A.pts.length !== arcs[k].n) {
@@ -248,10 +249,16 @@ export function createSwordTrails(scene) {
         return [q[3] + (q[3] - q[0]) * 0.08, q[4] + (q[4] - q[1]) * 0.08, q[5] + (q[5] - q[2]) * 0.08];
       };
       for (let q = 0; q < P.length - 1 && an + 6 <= ARC_MAX; q++) {
-        const a = P[q];
-        const b = P[q + 1];
+        let a = P[q];
+        let b = P[q + 1];
         const ta = tipOf(a);
         const tb = tipOf(b);
+        if (A.width < 1) {
+          // 굵기 몫 (격살 시험): 안쪽 끝을 칼끝 쪽으로 — 칼자루 쪽 (1 − width) 를 비움
+          const k = 1 - A.width;
+          a = [a[0] + (a[3] - a[0]) * k, a[1] + (a[4] - a[1]) * k, a[2] + (a[5] - a[2]) * k];
+          b = [b[0] + (b[3] - b[0]) * k, b[1] + (b[4] - b[1]) * k, b[2] + (b[5] - b[2]) * k];
+        }
         const h = w * 0.35;
         aput(a[0], a[1], a[2], h);
         aput(ta[0], ta[1], ta[2], w);

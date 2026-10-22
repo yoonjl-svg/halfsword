@@ -52,7 +52,14 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
 /** 격살(10/22 — schools.js CHINESE_SECRET_GYEOKSAL do.power 'gyeoksal'): 판정 에너지 배율 = SECRET.gyeoksal.power ('finish' = 마무리 찍기와 같은 FINISH.power · 수면 그 수) */
 const secretEffMul = (D) => {
   const v = D.power === 'gyeoksal' ? SECRET.gyeoksal?.power : D.power;
-  return v === 'finish' ? FINISH.power : +v || 1;
+  return v === 'finish' ? FINISH.power : v === 'hit' ? 1 : +v || 1;
+};
+/** 격살 판정 묶음 (requestCombo 칸): 'hit' = 다른 비기와 같은 결정타 SECRET.hitMul(판정 에너지 · secretHit) · 그 밖 = 결정타 없이 eff × secretEffMul · 시험 빠르기 몫 share · 잔상 굵기 width(trailWidth 켬일 때 = 빠르기 몫) */
+const gyeoksalReq = (D) => {
+  const G = SECRET.gyeoksal ?? {};
+  const pw = D.power === 'gyeoksal' ? G.power : D.power;
+  const share = G.share > 0 ? G.share : SECRET.cnFastShare;
+  return { ...(pw === 'hit' ? { hitMul: SECRET.hitMul } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
 };
 const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
@@ -620,7 +627,7 @@ export class Skill {
         // 중국 빠른 연환 (10/12 — SECRET.cnFast): 두 수를 운동학 팔·칼로 길을 따라 (secret_instant.js requestCombo — AI 와 같은 실행부). 결과는 순간 베기와 같은 칸(instant)으로
         run.stage = 'instant';
         run.instant = true;
-        requestCombo(f, { moves: run.queue.splice(0), ...(D.power ? { hitMul: 1, effMul: secretEffMul(D) } : {}) }); // 격살(10/22): 결정타 hitMul 대신 판정 에너지 × FINISH.power
+        requestCombo(f, { moves: run.queue.splice(0), ...(D.power ? gyeoksalReq(D) : {}) }); // 격살(10/22): 결정타 hitMul 대신 판정 에너지 × FINISH.power (시험 'hit' = 다른 비기와 같은 hitMul) · 시험 칼끝 빠르기 몫 SECRET.gyeoksal.share · 잔상 굵기 trailWidth
         this.secretBursts++;
       }
       if (S.cond?.window === 'bind') run.gain = bindGain(run.ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창 (secret.js bindGain)
@@ -817,8 +824,9 @@ export class Skill {
     if (run.stage === 'strike') {
       const inLoop = !!run.cur?.pre?.length && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
       f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power') * (run.gain ?? 1); // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
-      f.secretHit = inLoop ? 1 : D.power ? 1 : SECRET.hitMul * (run.gain ?? 1);
-      if (D.power) f.effMul = secretEffMul(D); // 격살 서보 길(cnFast 0): 판정 에너지 × FINISH.power — 따라 지나감까지 (secretEnd 에서 지움)
+      const gkHit = D.power && (D.power === 'gyeoksal' ? SECRET.gyeoksal?.power : D.power) === 'hit'; // 격살 시험 'hit' = 다른 비기와 같은 결정타
+      f.secretHit = inLoop ? 1 : D.power && !gkHit ? 1 : SECRET.hitMul * (run.gain ?? 1);
+      if (D.power && !gkHit) f.effMul = secretEffMul(D); // 격살 서보 길(cnFast 0): 판정 에너지 × FINISH.power — 따라 지나감까지 (secretEnd 에서 지움)
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);
       // 길목 디딤 (10/11 v6 6차): 걸음은 받아 줘도(다리) 플레이어 스틱이 0 이면 몸이 거의 안 따라갔다(브라우저: 가운데 선까지 몸 옮김 0.01~0.02 m). AI 는 내딛는 동안 스틱을

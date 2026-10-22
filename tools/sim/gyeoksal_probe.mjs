@@ -6,7 +6,7 @@
 //   ③ 치기: 칼이 닿고 격살 기다림(pend)이 걸리면 그로부터 HIT(0.25) s 뒤 공격 입력 하나 — 창이 열렸으면 곧장 격살, 칼이 아직 붙어 있으면 미리 받기(떨어지는 순간 나감), 창이 닫혔으면 놓침
 //  센 것: 판당 창 · 자세별(거정 · 어거 · 요략 · 봉두 — 줄로 정함 / 손에서 가까운 자리로 정함) · 거절 까닭(누르지 않음 · 때 늦음 · 스틱 · 느린 칼 · 다침 · 자세 없음) ·
 //   격살 낸 수 · 맞힘 · 맞은 곳 · 겨눈 곳 맞힘 · 절단 · 깊은 출혈(상처 하나 심각도 ≥ 1.0 — 절단 문턱과 같은 '살 문턱 위 90 J' · 재는 이름) · 참수 · 상대 죽음 · 갑옷 · 문턱에 막혀 멍 · 칼에 막힘 · 플레이어 죽음
-//  node tools/sim/gyeoksal_probe.mjs [무기들 qinggang,hwando] [상대 인물 id 들 — '-' = 롱소드 AI] [씨앗 1,2,3] [초 45]   ·   REACT= · HIT= · POW=(판정 배율) · CSV=1(격살마다 한 줄)
+//  node tools/sim/gyeoksal_probe.mjs [무기들 qinggang,hwando] [상대 인물 id 들 — '-' = 롱소드 AI] [씨앗 1,2,3] [초 45]   ·   REACT= · HIT= · POW=(판정 배율) · SHARE=(칼끝 빠르기 몫) · ARM=down · CSV=1(격살마다 한 줄)
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
@@ -18,7 +18,9 @@ const SEEDS = (process.argv[4] || '1,2,3').split(',').map(Number);
 const SIM = +(process.argv[5] || 45);
 const REACT = +(process.env.REACT ?? 0.25);
 const HIT = +(process.env.HIT ?? 0.25);
-if (+process.env.POW > 0) CONFIG.SECRET.gyeoksal.power = +process.env.POW; // 판정 배율 시험 (기본 'finish' = FINISH.power)
+if (process.env.POW === 'hit' || +process.env.POW > 0) CONFIG.SECRET.gyeoksal.power = process.env.POW === 'hit' ? 'hit' : +process.env.POW; // 판정 배율 시험 (기본 'finish' = FINISH.power · 'hit' = 다른 비기와 같은 hitMul 1.3)
+if (+process.env.SHARE > 0) CONFIG.SECRET.gyeoksal.share = +process.env.SHARE; // 시험: 격살 칼끝 빠르기 몫 (기본 cnFastShare)
+if (process.env.ARM) CONFIG.SECRET.gyeoksal.armPath = process.env.ARM; // 시험: 어거 길 'down'
 const WANT = { geojeong: ['head'], eogeo: ['uarmS', 'farmS', 'uarmO', 'farmO'], yoryak: ['thighF', 'shinF', 'thighB', 'shinB', 'footF', 'footB'], bongdu: ['chest'] };
 const SKO = { geojeong: '거정', eogeo: '어거', yoryak: '요략', bongdu: '봉두' };
 
@@ -106,10 +108,12 @@ for (const wid of weapons) {
         return as0(d);
       };
       while (G.t < SIM && P.alive && E.alive && E.state !== 'dead') G.step();
+      const tEnd = G.t;
+      while (run && P.skill.sec && G.t < tEnd + 2) G.step(); // 판이 격살 도중 끝났으면(상대가 죽음) 그 칼의 결과까지 (맞힘 · 맞은 곳을 셈)
       if (run) done();
       const K = watch.pc?.gk ?? {};
       T.rounds++;
-      T.simT += G.t;
+      T.simT += tEnd;
       T.open += K.open ?? 0;
       T.edges += K.edges ?? 0;
       T.pend += K.pend ?? 0;
@@ -139,7 +143,7 @@ const per = (x, n) => (x / Math.max(1, n)).toFixed(2);
     rows.push({ wid, fid: '합', T: A });
   }
 }
-console.log(`격살 사람 손맛 (판정 배율 ${CONFIG.SECRET.gyeoksal.power}) — 보고 누름 +${REACT}s · 누르는 동안 스틱 앞 · 기다림 + ${HIT}s 에 침 · 씨앗 ${SEEDS.join(',')} × ${SIM} s`);
+console.log(`격살 사람 손맛 (판정 배율 ${CONFIG.SECRET.gyeoksal.power} · 빠르기 몫 ${CONFIG.SECRET.gyeoksal.share ?? CONFIG.SECRET.cnFastShare} · 어거 길 ${CONFIG.SECRET.gyeoksal.armPath}) — 보고 누름 +${REACT}s · 누르는 동안 스틱 앞 · 기다림 + ${HIT}s 에 침 · 씨앗 ${SEEDS.join(',')} × ${SIM} s`);
 for (const { wid, fid, T } of rows) {
   const st = Object.entries(T.st).map(([k, v]) => `${SKO[k] ?? k} ${v}`).join(' · ');
   const bs = Object.entries(T.bySt).map(([k, b]) => `${SKO[k] ?? k} ${b.hit}/${b.n}(겨눈 곳 ${b.aim} · 절단 ${b.sever} · 깊은 출혈 ${b.deep} · 죽임 ${b.kill})`).join(' · ');

@@ -155,6 +155,40 @@ test('한 칼 세기: 판정 에너지 × FINISH.power (결정타 hitMul 대신)
   }
 });
 
+test('시험 스위치(기본 끔): 칼끝 빠르기 몫 SECRET.gyeoksal.share · 어거 길 armPath down · 잔상 굵기 trailWidth', () => {
+  assert.equal(SECRET.gyeoksal.share, null);
+  assert.equal(SECRET.gyeoksal.trailWidth, 0);
+  assert.equal(SECRET.gyeoksal.armPath, 'across');
+  const S = TRADITIONS.chinese.playerSecret;
+  assert.equal(S.do.combo.eogeo.seq[0].name, 'gkArm');
+  const T = (share) => {
+    SECRET.gyeoksal.share = share;
+    const G = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1, gap: 1.35 });
+    G.ai.update = () => {};
+    while (G.t < 1.0) G.step();
+    assert.ok(G.player.skill.secret({ S, ctx: { slot: 'yoryak', stance: 'yoryak' } }));
+    const t0 = G.t;
+    while (G.t < t0 + 1.2 && G.player.skill.sec) G.step();
+    arc = G.player.instantArc;
+    return G.player.instantResult.T;
+  };
+  let arc = null;
+  try {
+    SECRET.gyeoksal.armPath = 'down';
+    assert.equal(S.do.combo.eogeo.seq[0].name, 'gkArmDown');
+    assert.ok(T(1) < T(null), '고노센 빠르기 몫이면 한 칼이 더 짧다');
+    assert.equal(arc.width, undefined); // 잔상 굵기 스위치 끔 = 칼날 전부 (지금 그대로)
+    SECRET.gyeoksal.trailWidth = 1;
+    T(0.6);
+    assert.equal(arc.share, 0.6);
+    assert.equal(arc.width, 0.6); // 켬 = 굵기도 빠르기 몫
+  } finally {
+    SECRET.gyeoksal.share = null;
+    SECRET.gyeoksal.armPath = 'across';
+    SECRET.gyeoksal.trailWidth = 0;
+  }
+});
+
 test('스킬트리 C9 막아 죽이기: 열림 · 익히면 비기 몫 · 글은 숫자 없는 온전한 한 문장', () => {
   const n = D.nodeOf('chinese', 'C9');
   assert.equal(D.isClosed('chinese', n), false);
