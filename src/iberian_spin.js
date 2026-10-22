@@ -498,7 +498,7 @@ function spinTrail(f) {
   }
   let A = f.spinArc;
   if (!A) {
-    A = f.spinArc = { arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: ART_MIN, pts: [] }, sum: 0, n: 0, v0: Math.max(1, iaiTipSpeed(f)) };
+    A = f.spinArc = { arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: ART_MIN, pts: [], ...(SECRET.secretArcMin > 0 ? { min: SECRET.secretArcMin } : {}) }, sum: 0, n: 0, v0: Math.max(1, iaiTipSpeed(f)) }; // 10/23 결정타 잔상 바닥(secretArcMin — 다른 비기와 같게 · 감독 병합 때)
     f.instantArc = A.arc;
   }
   const a = f.bladePoint(0, _ta);

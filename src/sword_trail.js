@@ -57,7 +57,11 @@ export function createSwordTrails(scene) {
   // 비기 잔상 (10/10 — secret_instant.js 가 f.instantArc 에 쓸린 호의 조각마다 칼자루·칼끝 점: 순간 베기·발도·이베리아 휩쓸기): 호 전체를 한 번에, SECRET.instantArcLife 초(실시간) 동안 옅어지며.
   //  10/10 03:0x 사장님 '잔상 색은 통일해' → 색 값은 **보통 띠와 같다**(그 칼의 base = 칼날 재질 색 × dim, 같은 보통 섞기). 비기는 더 짙고(불투명) 오래 남고, 칼끝 쪽으로 8 % 넓혀 굵다.
   //  베는 순간 0.08 s 흰 섬광 선(칼끝 길, 더하기 섞기)만 흰색. 물리·판정 무관(읽기만)
-  const ARC_MAX = MAX_FIGHTERS * 240 * 6;
+  //  10/23 마주 보는 띠 (SECRET.secretStreak — 사장님 확인 전 · 확인표 2265 · docs/decisions.md 10/23 · 그림 docs/handoff/secret_trails): 비기 잔상에 face 가 있으면(정수리 내리치기 · 찌르기 —
+  //  칼이 쓴 면이 뒤 카메라에서 옆으로 보여 호가 선 하나로 줄어드는 비기) 호에 더해 카메라 쪽으로 펼친 띠로도 그린다 — face 'path' = 치는 끝(호의 바깥 끝과 같은 점)의 길
+  //  (정수리 내리치기) · 'line' = 칼이 지나간 곧은 줄(처음 칼자루 → 가장 멀리 간 칼끝 — 찌르기는 칼끝이 제 축을 따라 20 cm 안팎만 나가 끝 길이 점에 가깝다).
+  //  반 폭 = 칼자루 → 끝 길이의 8 %(호를 칼끝 쪽으로 넓히는 몫과 같은 수) · 가운데 짙고 가장자리 0 · 밝기 · 남는 시간 · 색 · 섬광은 호와 같다. 카메라는 그리기 직전 콜백(onBeforeRender)에서 받아 둔다
+  const ARC_MAX = MAX_FIGHTERS * 480 * 6; // 조각 480 개 몫 (10/23 — 마주 보는 띠는 조각마다 사각형 둘을 더 쓴다)
   const apos = new Float32Array(ARC_MAX * 3);
   const acol = new Float32Array(ARC_MAX * 4);
   const ageo = new THREE.BufferGeometry();
@@ -71,7 +75,7 @@ export function createSwordTrails(scene) {
   amesh.visible = false;
   scene.add(amesh);
   // 섬광 선 (흰색, 더하기 섞기, 0.08 s)
-  const FL_MAX = MAX_FIGHTERS * 240 * 6;
+  const FL_MAX = MAX_FIGHTERS * 480 * 6;
   const fpos = new Float32Array(FL_MAX * 3);
   const fcol = new Float32Array(FL_MAX * 4);
   const fgeo = new THREE.BufferGeometry();
@@ -86,6 +90,11 @@ export function createSwordTrails(scene) {
   scene.add(fmesh);
   const FLASH_MS = 80;
   const arcs = Array.from({ length: MAX_FIGHTERS }, () => ({ id: 0, pts: null, t0: 0 }));
+  let cam = null; // 마주 보는 띠가 바라볼 카메라 (그려질 때 받아 둔 같은 물체 — 자리는 그때그때 읽는다)
+  const grab = (r, sc, c) => void (cam = c);
+  mesh.onBeforeRender = grab;
+  amesh.onBeforeRender = grab;
+  fmesh.onBeforeRender = grab;
 
   const slots = Array.from({ length: MAX_FIGHTERS }, makeSlot);
   let now = 0; // 게임 시간 (스텝 합)
@@ -98,15 +107,16 @@ export function createSwordTrails(scene) {
       if (A && A.id !== arcs[k].id) {
         arcs[k].id = A.id;
         arcs[k].pts = A.pts;
-        arcs[k].share = A.share ?? 1; // 잔상 세기 몫 (중국 빠른 연환 — SECRET.cnFastShare: 빠르기와 같은 비율, 사장님 10/12 01:2x). 그 밖 비기는 1
+        arcs[k].share = Math.max(A.share ?? 1, A.min ?? 0); // 잔상 세기 몫 (중국 빠른 연환 — SECRET.cnFastShare: 빠르기와 같은 비율, 사장님 10/12 01:2x). 그 밖 비기는 1 · min = 결정타 잔상 바닥 (10/23 SECRET.secretArcMin — 사람 비기)
         arcs[k].width = A.width ?? 1; // 잔상 굵기 몫 (격살 시험 스위치 SECRET.gyeoksal.trailWidth — 칼끝에서 칼날 쪽으로 덮는 몫 · 기본 1 = 칼날 전부, 그대로)
+        arcs[k].face = A.face || null; // 마주 보는 띠 'path' | 'line' (10/23 — 위 머리말)
         arcs[k].t0 = arcs[k].tf = performance.now();
         arcs[k].n = A.pts.length;
       } else if (A && A.kind === 'combo' && arcs[k].pts === A.pts && A.pts.length !== arcs[k].n) {
         // 중국 빠른 연환: 두 수 길이(0.3~0.4 s)가 남는 시간(instantArcLife)에 가까워 — 그리는 동안은 옅어지지 않고 다 그린 때부터 같은 시간에 옅어진다 (섬광은 처음 그대로)
         arcs[k].t0 = performance.now();
         arcs[k].n = A.pts.length;
-        arcs[k].share = A.share ?? arcs[k].share; // 고유 동작 잔상은 그리는 동안 세기(빠르기 몫)가 바뀐다 (10/21 — secret_instant.js artTrailTick)
+        arcs[k].share = Math.max(A.share ?? arcs[k].share, A.min ?? 0); // 고유 동작 잔상은 그리는 동안 세기(빠르기 몫)가 바뀐다 (10/21 — secret_instant.js artTrailTick)
       }
     }
     for (const s of slots) {
@@ -213,6 +223,87 @@ export function createSwordTrails(scene) {
       fcol[c + 3] = a;
       fn++;
     };
+    const tipOf = (q) => {
+      // 칼끝 쪽으로 8 % 더 (굵게)
+      return [q[3] + (q[3] - q[0]) * 0.08, q[4] + (q[4] - q[1]) * 0.08, q[5] + (q[5] - q[2]) * 0.08];
+    };
+    // 마주 보는 띠: 치는 끝 E(호의 바깥 끝) 길 · 옆 방향 n = (길 방향 × 카메라 쪽) · 반 폭 hw — 가운데 a · 가장자리 0 인 사각형 둘씩 (put = aput | fput)
+    const streak = (P, put, a, max, count, mode) => {
+      const N = P.length;
+      if (N < 2) return;
+      if (mode === 'line') {
+        // 찌르는 줄: 처음 칼자루 H → 처음 칼날 방향으로 가장 멀리 간 끝 E 한 띠 (칼자루 쪽은 호처럼 0.35 배)
+        const h = P[0];
+        const e0 = tipOf(h);
+        const dx = e0[0] - h[0], dy = e0[1] - h[1], dz = e0[2] - h[2];
+        let E = e0, best = -Infinity;
+        for (const q of P) {
+          const e = tipOf(q);
+          const d = (e[0] - h[0]) * dx + (e[1] - h[1]) * dy + (e[2] - h[2]) * dz;
+          if (d > best) [best, E] = [d, e];
+        }
+        const tx = E[0] - h[0], ty = E[1] - h[1], tz = E[2] - h[2];
+        let vx = 0, vy = 1, vz = 0;
+        if (cam) [vx, vy, vz] = [cam.position.x - (h[0] + E[0]) / 2, cam.position.y - (h[1] + E[1]) / 2, cam.position.z - (h[2] + E[2]) / 2];
+        let nx = ty * vz - tz * vy, ny = tz * vx - tx * vz, nz = tx * vy - ty * vx;
+        const nl = Math.hypot(nx, ny, nz);
+        if (nl < 1e-9 || count() + 12 > max) return;
+        const hw = (0.08 * Math.hypot(P[0][3] - h[0], P[0][4] - h[1], P[0][5] - h[2])) / nl;
+        [nx, ny, nz] = [nx * hw, ny * hw, nz * hw];
+        for (const sgn of [-1, 1]) {
+          put(h[0] + nx * sgn, h[1] + ny * sgn, h[2] + nz * sgn, 0);
+          put(h[0], h[1], h[2], a * 0.35);
+          put(E[0], E[1], E[2], a);
+          put(h[0] + nx * sgn, h[1] + ny * sgn, h[2] + nz * sgn, 0);
+          put(E[0], E[1], E[2], a);
+          put(E[0] + nx * sgn, E[1] + ny * sgn, E[2] + nz * sgn, 0);
+        }
+        return;
+      }
+      const E = P.map(tipOf);
+      let px = 0, py = 0, pz = 0, pw = 0, qx = 0, qy = 0, qz = 0; // 앞 점 E · 반 폭 · 옆 방향
+      for (let q = 0; q < N; q++) {
+        const e = E[q];
+        const ea = E[Math.max(0, q - 1)];
+        const eb = E[Math.min(N - 1, q + 1)];
+        const tx = eb[0] - ea[0], ty = eb[1] - ea[1], tz = eb[2] - ea[2];
+        let vx = 0, vy = 1, vz = 0;
+        if (cam) {
+          vx = cam.position.x - e[0];
+          vy = cam.position.y - e[1];
+          vz = cam.position.z - e[2];
+        }
+        let nx = ty * vz - tz * vy, ny = tz * vx - tx * vz, nz = tx * vy - ty * vx;
+        let nl = Math.hypot(nx, ny, nz);
+        if (nl < 1e-9) {
+          // 길이 멈췄거나 카메라 쪽으로 곧장 — 앞 옆 방향 그대로 (처음이면 카메라 쪽 × 위)
+          if (q > 0) [nx, ny, nz, nl] = [qx, qy, qz, 1];
+          else [nx, ny, nz] = [-vz, 0, vx];
+          nl = Math.hypot(nx, ny, nz) || 1;
+        }
+        nx /= nl;
+        ny /= nl;
+        nz /= nl;
+        if (q > 0 && nx * qx + ny * qy + nz * qz < 0) {
+          nx = -nx;
+          ny = -ny;
+          nz = -nz;
+        }
+        const p = P[q];
+        const hw = 0.08 * Math.hypot(p[3] - p[0], p[4] - p[1], p[5] - p[2]);
+        if (q > 0 && count() + 12 <= max) {
+          for (const sgn of [-1, 1]) {
+            put(px + qx * pw * sgn, py + qy * pw * sgn, pz + qz * pw * sgn, 0);
+            put(px, py, pz, a);
+            put(e[0], e[1], e[2], a);
+            put(px + qx * pw * sgn, py + qy * pw * sgn, pz + qz * pw * sgn, 0);
+            put(e[0], e[1], e[2], a);
+            put(e[0] + nx * hw * sgn, e[1] + ny * hw * sgn, e[2] + nz * hw * sgn, 0);
+          }
+        }
+        [px, py, pz, pw, qx, qy, qz] = [e[0], e[1], e[2], hw, nx, ny, nz];
+      }
+    };
     for (let k = 0; k < arcs.length; k++) {
       const A = arcs[k];
       if (!A.pts) continue;
@@ -242,12 +333,10 @@ export function createSwordTrails(scene) {
           fput(b1[0], b1[1], b1[2], fw);
           fput(b0[0], b0[1], b0[2], fw * 0.3);
         }
+        if (A.face) streak(Q, fput, fw, FL_MAX, () => fn, A.face);
       }
       const P = A.pts;
-      const tipOf = (q) => {
-        // 칼끝 쪽으로 8 % 더 (굵게)
-        return [q[3] + (q[3] - q[0]) * 0.08, q[4] + (q[4] - q[1]) * 0.08, q[5] + (q[5] - q[2]) * 0.08];
-      };
+      if (A.face) streak(P, aput, w, ARC_MAX, () => an, A.face);
       for (let q = 0; q < P.length - 1 && an + 6 <= ARC_MAX; q++) {
         let a = P[q];
         let b = P[q + 1];
