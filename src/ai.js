@@ -36,7 +36,7 @@ import { avoidEtnaLava } from './terrain_navigation.js'; // 화산섬 용암: �
 import { wetlandWetness, WETLAND_RIM, WETLAND_CORE_SPEED } from './wetland_ground.js'; // 마른 길을 아는 AI (라트나 · 잠든 습지만 — 아래 dry* · config.js DRYPATH): 물리와 같은 젖음 지도
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
-import { FINISH } from './finish.js';
+import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
@@ -1304,6 +1304,9 @@ export class AI {
       this.vitalStrike = { t: this.sense.t, kind: V.kind, zone: V.zone, tech: t.name };
     }
     if (t.kind === 'thrust' && !this.feint && (this.me.weaponCfg.thrustStyle || V?.kind === 'thrust')) this.me.skill.thrust({ step: false, vital: V?.kind === 'thrust' ? V : null });
+    // 10/22 대검 마무리 (finish.js FINISH.cleave.ai, 기본 끔 — 끄면 이 줄은 아무것도 하지 않는다): 쓰러진 · 낮은 상대를 마무리하는 칼이면 플레이어 탭과 같은
+    //  쪼개 내려치기 (skill.cleavePose). 마무리가 안 열리면(finishOnly) 그대로 기술 길만 간다
+    else if (FINISH.cleave.ai && this.why === 'finish' && !this.feint && cleaveFinish(this.me)) this.me.skill.thrust({ step: false, finishOnly: true });
   }
 
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */

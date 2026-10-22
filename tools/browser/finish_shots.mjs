@@ -8,7 +8,7 @@
 //  시간은 playwright 가짜 시계로 한 프레임(1/60초)씩 돌린다 (느린 소프트웨어 렌더링에서도 같은 순간이 찍힌다)
 //  실행: vite 개발 서버를 띄운 뒤
 //    node tools/browser/finish_shots.mjs http://127.0.0.1:5173 <출력 폴더> [거리 m = 1.5] [--guard=쟁기|황소|지붕|바보]
-//  [--q=주소 값 (예: finishLift=0)] [--tag=파일 이름 덧말]
+//  [--q=주소 값 (예: finishLift=0)] [--tag=파일 이름 덧말] [--weapon=무기 id (기본 longsword — 10/22 대검 마무리: --weapon=zweihander · --q=finishCleave=0 = 전 찍기)] [--side = 탭 직전 카메라를 옆으로]
 //  파일 이름: finish_<자세>[_덧말]_0_before_tap · _1_hover · _2_plunge · _3_after
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
@@ -27,6 +27,8 @@ if (!PADS[GUARD]) throw new Error(`자세 없음: ${GUARD} (${Object.keys(PADS)}
 const PAD = PADS[GUARD];
 const Q = argv.find((a) => a.startsWith('--q='))?.slice(4) ?? ''; // 덧붙일 주소 값 (10/13: --q=finishLift=0 = 전 동작 · --q=finishAim=chest)
 const TAG = argv.find((a) => a.startsWith('--tag='))?.slice(6) ?? ''; // 파일 이름 덧말
+const WEAPON = argv.find((a) => a.startsWith('--weapon='))?.slice(9) ?? 'longsword'; // 플레이어 무기 (10/22)
+const SIDE = argv.includes('--side'); // 탭 직전에 카메라를 옆으로 (window.game.freeCam — 두 사람 가운데를 옆 3 m 에서 본다, 10/22)
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
@@ -39,7 +41,7 @@ page.on('response', (r) => r.status() >= 400 && errors.push(`http ${r.status()}:
 await page.clock.install({ time: new Date('2026-09-30T12:00:00') });
 await page.clock.pauseAt(new Date('2026-09-30T12:00:01'));
 // openSweep=0: 판 시작을 9/30 꼴(정지 2 s)로 — 10/15 무대 훑기는 첫 판 3.3 게임 초 발을 묶어 아래 2.6 s 가 어긋난다 (docs/strike/camera_open_2026-10-15.md)
-await page.goto(`${base}/?weapon=longsword&openSweep=0${Q ? `&${Q}` : ''}`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=${WEAPON}&openSweep=0${Q ? `&${Q}` : ''}`, { waitUntil: 'networkidle' });
 for (let i = 0; i < 300 && !(await page.evaluate(() => !!window.game?.player?.sword)); i++) await page.waitForTimeout(100);
 await page.clock.runFor(200);
 await page.evaluate(() => document.getElementById('btnStart').click());
@@ -124,6 +126,20 @@ const pre = await page.evaluate(() => {
   const pl = p.finish.plunge;
   return { fin: p.finish.on, amt: +p.finish.amt.toFixed(2), inside: pl.inside ?? null, short: +pl.short.toFixed(3) };
 });
+if (SIDE)
+  await page.evaluate(() => {
+    const g = window.game;
+    const a = g.player.bodies.pelvis.translation();
+    const b = g.enemy.bodies.pelvis.translation();
+    const mx = (a.x + b.x) / 2;
+    const mz = (a.z + b.z) / 2;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const n = Math.hypot(dx, dz) || 1;
+    g.freeCam = true;
+    g.camera.position.set(mx - (dz / n) * 3.2, 1.3, mz + (dx / n) * 3.2);
+    g.camera.lookAt(mx, 0.7, mz);
+  });
 const name = (k) => `finish_${GUARD}${TAG ? `_${TAG}` : ''}_${k}`;
 const files = [await shot(name('0_before_tap'))];
 const n0 = await page.evaluate(() => window.game.player.skill.thrusts);
@@ -141,7 +157,7 @@ for (let t = 0; t < 4000; t += 17) {
     const c = p.bodies.chest.translation();
     const g = p.sword.translation();
     return {
-      thrusts: p.skill.thrusts, down: !!tp?.down, walking: !!tp?.walking, walkEnd: tp?.walkEnd ?? null, go: !!tp?.go, w: +p.skill.thrustPose.w.toFixed(2), push: p.skill.thrustPush,
+      thrusts: p.skill.thrusts, down: !!tp?.down, cleave: !!tp?.cleave, walking: !!tp?.walking, walkEnd: tp?.walkEnd ?? null, go: !!tp?.go, w: +p.skill.thrustPose.w.toFixed(2), push: p.skill.thrustPush,
       gripY: +(g.y - c.y).toFixed(3), lastTD: G?.lastTD, sinceTD: G ? +G.sinceTD.toFixed(3) : null, hits: window.__hits.length, enemy: window.game.enemy.state,
     };
   });

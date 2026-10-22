@@ -21,6 +21,7 @@
 import * as THREE from 'three';
 import { MEASURED } from './weapon_measured.js'; // 무기별 간격 실측 한 곳 (10/8 ① 구조 — 전엔 ai.js 에서 읽었다, 같은 객체)
 import { ARM } from './config.js';
+import { GUARDS } from './guards.js'; // 쪼개 내려치기(FINISH.cleave)의 들기 자세 = 교본 지붕 자세 (guards.js 는 이 파일을 읽지 않는다 — 고리 없음)
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js';
 
 export const FINISH = {
@@ -110,7 +111,40 @@ export const FINISH = {
   //  (tools/sim/down_diag.mjs: 롱소드 AI 가 1.5m 안으로 들어가지 않았다). 겨눌 점(ideal 0.85m)보다 조금 멀리서 들어가 내려치고,
   //  발밑(minFwd)에 가까울 때만 물러난다. 1.0/1.3/0.5 · 1.1/1.4/0.6 · 1.2/1.5/0.6 을 48판씩 견줘 첫 상처가 가장 빠른 값
   ai: { contact: 1.1, reach: 1.4, clinch: 0.6 },
+  // ── 10/22 대검 마무리: 쪼개듯 내려치기 (사장님 10/22 밤 '상대가 넘어졌거나 무릎을 꿇거나 하여튼 중심을 잃고 자세가 낮아졌을 때 쪼갤 듯이 강렬하게
+  //  힘을 모아 내려치는 거야. 대검이 길다보니 내려찍기가 무용지물이거든. 그걸 보완하는거지' → '2번도 따로 고쳐' · docs/strike/greatsword_finish_2026-10-22.md ·
+  //  확인표 2211~2217, 사장님 확인 전). 탭 마무리가 열리는 문(entry · range · canStart)은 찍기와 같다. 이 길을 쓰는 칼은 칼끝으로 찍는 대신
+  //  머리 위(교본 지붕 자세)로 들어 힘을 모았다가, 자세 지도 내려찍기 자리(fin.strike — 칼날 hitAt 지점이 몸 겉면에 닿는 손 · 몸 너머 땅속을 겨눈 칼끝)로
+  //  칼날을 곧게 내려친다 (skill.cleavePose). 세기는 찍기와 같은 판정 에너지 × power (combat.js — 베기에도), 투구 · 갑옷 · 옷 · 살 문턱은 그대로.
+  //  찍는 동안 팔 · 손목 힘 배율(strikeArm · strikeWrist) · 손목 제동 늦춤(brakeRelief)도 찍기와 같이 걸린다. 새 상한 · 문턱 없음
+  cleave: {
+    player: true, // 사람(플레이어) 칼 — 주소 ?finishCleave=0 = 전 찍기 (시뮬 FINISH_CLEAVE=0)
+    ai: false, // AI 칼 — 기본 끔(AI 마무리 그대로 — 자세 지도 내려베기). 주소 ?finishCleaveAi=1 (시뮬 FINISH_CLEAVE_AI=1)
+    // 쓰는 칼: 몸 틀(weapons.js frame = weapon_class.js 'B 양손 앞무게' — 두 손 · 무겁거나 칼끝 쪽 무게)이 이 값이고 날 있는 칼(부러지지 않은).
+    //  지금 로스터: 츠바이핸더 · 플랑베르주 · 티소나 · 모노호시자오 (냉동 참치는 날이 없어 찍기 그대로 — 머리를 내려찍는다). 무기 칸 finishCleave(true | false)가 있으면 그 값
+    frame: 'heavy',
+    charge: 0.2, // 머리 위에 든 뒤 힘을 모으는 시간 (s, 시간 사다리 0.2 반응 — 사장님 확인 전). 주소 ?finishCleaveCharge=초
+  },
 };
+
+/** 이 파이터의 탭 마무리가 쪼개 내려치기인가 (FINISH.cleave — 사람 · AI 스위치, 몸 틀, 무기 칸 finishCleave) */
+export function cleaveFinish(f) {
+  const C = FINISH.cleave;
+  if (!(f.aiControlled ? C.ai : C.player) || !f.weaponCfg?.edged || f.weaponBroken) return false;
+  return f.weapon?.finishCleave ?? f.weapon?.frame === C.frame;
+}
+
+let _raise = null;
+/** 쪼개 내려치기 들기 자세: 교본 지붕 자세(guards.js '지붕 (폼 타크)' — 머리 위 손, 칼이 서서 조금 뒤로)의 손 · 칼끝 방향 (몸 기준 [앞, 위, 칼 든 쪽]) */
+export function cleaveRaise() {
+  return (_raise ??= GUARDS.find((g) => g.name === '지붕 (폼 타크)'));
+}
+
+/** 쪼개 내려치기가 닿는 곳 (내려찍기 손 fin.strike 가 앞으로 뻗을 수 있는 strikeFwd 안에 칼날 hitAt 지점이 몸 겉면에 닿나) — 걸어 들어가기가 읽는다 */
+export function cleaveReach(fin) {
+  const short = fin.strikeX - FINISH.strikeFwd[1];
+  return { inside: short <= 0, walk: short > 0, short: Math.max(0, short) };
+}
 
 // 칼 길이에 따른 마무리 거리: 누운 몸(어깨 아래 약 1.2m)까지 수평으로 닿는 거리는 칼이 짧을수록 훨씬 짧아진다.
 //  무기 실측 사거리(weapon_measured.js MEASURED 의 contact — 칼날 70% 지점이 머리 높이에 닿는 가슴 기준 거리)를 반지름으로 보고
@@ -154,7 +188,7 @@ function pose(body) {
 
 /** 이 파이터의 마무리 상태 (guards.js guardAt 의 fin) */
 export function newFinish() {
-  return { amt: 0, on: false, k: null, gap: null, target: [0, 0, 0], hover: pose(FINISH.hover), strike: pose(FINISH.strike), plunge: { T: [0, 0, 0], tip: [0, 0, 0], dir: [0, -1, 0], u: [0, -1, 0], n: 0, D: 0, Dmax: 0, short: 0, inside: false, walk: false } };
+  return { amt: 0, on: false, k: null, gap: null, target: [0, 0, 0], strikeX: 0, strikeReach: 0, hover: pose(FINISH.hover), strike: pose(FINISH.strike), plunge: { T: [0, 0, 0], tip: [0, 0, 0], dir: [0, -1, 0], u: [0, -1, 0], n: 0, D: 0, Dmax: 0, short: 0, inside: false, walk: false } };
 }
 
 /**
@@ -262,6 +296,9 @@ function aimPoses(f, fin, T, Tp) {
   const xWant = T.x - Math.sqrt(Math.max(0, reach * reach - dv * dv)); // 손이 가야 할 앞 거리 (닿을 수 있는 범위로 자르기 전)
   sh[0] = clamp(xWant, FINISH.strikeFwd[0], FINISH.strikeFwd[1]);
   sh[2] = 0.06 + clamp(0.35 * T.z, -0.15, 0.2); // 옆으로 누운 쪽으로 조금 따라간다
+  // 쪼개 내려치기(FINISH.cleave)가 읽는다: 자르기 전 앞 거리 · 이 손에서 몸 겉면 점까지 (칼 길이보다 멀면 칼끝도 못 닿는다). 읽기만 — 자세 계산은 그대로
+  fin.strikeX = xWant;
+  fin.strikeReach = Math.hypot(T.x - sh[0], dv, T.z - sh[2]);
   // 칼 선: 내려찍기 손에서 몸 중심 T 를 지나 sink 만큼 더 (몸 밑 땅속). 그 끝이 겨눈 점
   //  (T 바로 아래를 겨누면 선이 몸 윗면 높이에서 몸 앞을 지나가 버린다 — 측정: 가까이 누운 몸에서 칼이 몸 앞 땅을 쳤다)
   let dx = T.x - sh[0];
@@ -351,6 +388,13 @@ function aimPoses(f, fin, T, Tp) {
   //  (10/13: 자세 지도 겨눔 자리는 전 FINISH.hands 그대로 — 높이 든 손은 탭 찍기만)
   const hh = H.hand;
   const hd = H.dir;
+  if (cleaveFinish(f)) {
+    // 10/22 쪼개 내려치기 칼 (FINISH.cleave): 겨눔 자리 = 들기 자세(지붕 — 머리 위로 들어 힘을 모은 채). 탭하면 곧 힘 모으기 → 내려치기 (skill.cleavePose).
+    //  사람 칼만 (AI 는 스위치 FINISH.cleave.ai 를 켰을 때만 — 기본은 이 줄을 타지 않아 자세 지도가 예전 그대로)
+    const R = cleaveRaise();
+    for (let k = 0; k < 3; k++) (hh[k] = k === 2 ? R.hand[2] * side : R.hand[k]), (hd[k] = k === 2 ? R.dir[2] * side : R.dir[k]);
+    return;
+  }
   const h0 = FINISH.hands;
   for (let k = 0; k < 3; k++) (hh[k] = k === 2 ? h0[2] * side : h0[k]), (hd[k] = pd[k]);
 }

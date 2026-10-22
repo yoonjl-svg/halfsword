@@ -198,6 +198,10 @@ if (['power25', 'kill'].includes(params.get('finishMode'))) FINISH_SWITCH.mode =
 if (params.get('finishLift') === '0') FINISH_SWITCH.lift = false;
 if (params.get('finishLift') === '1') FINISH_SWITCH.lift = true;
 if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = params.get('finishAim');
+// 10/22 대검 마무리 (docs/strike/greatsword_finish_2026-10-22.md · 확인표 2211~2217): `?finishCleave=0` = 사람 칼도 전 찍기 · `?finishCleaveAi=1` = AI 칼도 쪼개 내려치기 (기본 끔) · `?finishCleaveCharge=초` = 힘 모으기 시간
+if (['0', '1'].includes(params.get('finishCleave'))) FINISH_SWITCH.cleave.player = params.get('finishCleave') === '1';
+if (['0', '1'].includes(params.get('finishCleaveAi'))) FINISH_SWITCH.cleave.ai = params.get('finishCleaveAi') === '1';
+if (params.has('finishCleaveCharge') && Number.isFinite(+params.get('finishCleaveCharge'))) FINISH_SWITCH.cleave.charge = Math.max(0, +params.get('finishCleaveCharge'));
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 if (params.has('strideRule')) CONFIG.GAIT.strideRule = +params.get('strideRule') ? 1 : 0; // 보폭 규칙(10/15 20:3x 사장님 — 유파 보폭 상한 0.62 × k · 박자 2.05 ÷ k, 최고 빠르기 같음 · docs/strike/stride_rule_2026-10-15.md): 기본 1, `?strideRule=0` = 옛 유파 값
 if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady') ? 1 : 0; // 일본 보법 버티기(10/15 — 흔들림 × 0.75, fighter.js swayScale): 기본 1, `?jpSteady=0` = 끔
