@@ -215,14 +215,14 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 /* 줄: 보조 색 흐리게 · 앞 칸을 익혀 배울 수 있는 칸으로 가는 줄은 조금 밝게 · 둘 다 익힌 줄은 강조 색 · 곁가지(편지 · 보법 II)는 점선 · '모두 익혀야' 칸 위 금색 점 · 독일 관문 띠 */
 .tree-link { fill: none; stroke: var(--c-sub); stroke-width: 1.4; opacity: .32; }
 .tree-link.ready { opacity: .75; }
-.tree-link.lit { stroke: var(--c-text); stroke-width: 3.4; opacity: .92; } /* 이어진 줄 = 얇은 흰 줄 두 겹 (10/23 사장님 '두꺼운 노랑 대신 … 얇은 흰색 선 두겹') — 흰 줄 위에 판 바탕 색 속줄(.tree-link-core)을 겹쳐 가운데를 비움 */
-.tree-link-core { fill: none; stroke: #1d1711; stroke-width: 1.3; pointer-events: none; }
+.tree-link.lit { stroke: var(--c-text); stroke-width: 2.2; opacity: .5; } /* 이어진 줄 = 얇은 흰 줄 두 겹 (10/23 사장님 '두꺼운 노랑 대신 … 얇은 흰색 선 두겹' → '너무 눈에 띈다. 얇게 두겹' — 흰 줄 2.2 · 속줄 0.8 · 반투명 .5) — 흰 줄 위에 판 바탕 색 속줄(.tree-link-core)을 겹쳐 가운데를 비움 */
+.tree-link-core { fill: none; stroke: #1d1711; stroke-width: 0.8; pointer-events: none; }
 .tree-link-core.opt { stroke-dasharray: 3 3; }
-.tree-link-core.gate { stroke-width: 2.2; }
+.tree-link-core.gate { stroke-width: 1.2; }
 .tree-link.opt { stroke-dasharray: 3 3; }
 .tree-link.gate { stroke-width: 2.4; stroke-linecap: round; }
-.tree-link.gate.lit { stroke-width: 4.4; }
-.tree-join { fill: var(--c-text); opacity: .9; } /* '모두 익혀야' 표지 — 이어진 줄과 같은 흰빛 (10/23) */
+.tree-link.gate.lit { stroke-width: 3; }
+.tree-join { fill: var(--c-text); opacity: .6; } /* '모두 익혀야' 표지 — 이어진 줄과 같은 흰빛 (10/23) */
 .tree-nodes { position: absolute; inset: 0; }
 /* 칸 (10/22 01:2x 사장님 '스킬북 아이콘에만 원형 테두리가 있고 텍스트는 그 밑에'): 네모 카드 없음 — 원(지름 --d · 테두리 = 갈래 색 --tc) 안에 그림 + 원 밑 이름표.
    갈래 색 = 등급 색(보법 커먼 · 막기 언커먼 · 고유 공격 · 심화 레어 · 패시브 에픽 · 비기 레전드 · 편지 ???) · 자리 · 폭 · 원 지름 · 그림 자리는 skill_tree.js layout (칸 · 그림 style)
