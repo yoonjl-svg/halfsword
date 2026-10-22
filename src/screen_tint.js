@@ -6,14 +6,14 @@ import { Scene, OrthographicCamera, PlaneGeometry, Mesh, ShaderMaterial, Vector2
 export function createScreenTint() {
   const scene = new Scene();
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const uniforms = { blood: { value: 0 }, emotion: { value: 0 }, kind: { value: 0 }, cue: { value: 0 }, cueGold: { value: 0 }, secret: { value: 0 }, secretW: { value: 0.03 }, secretA: { value: 0.8 }, res: { value: new Vector2(1, 1) } };
+  const uniforms = { blood: { value: 0 }, emotion: { value: 0 }, kind: { value: 0 }, cue: { value: 0 }, cueGold: { value: 0 }, secret: { value: 0 }, secretW: { value: 0.03 }, secretA: { value: 0.8 }, secretL: { value: 0.3 }, secretBand: { value: 0 }, res: { value: new Vector2(1, 1) } };
   const material = new ShaderMaterial({
     uniforms, transparent: true, depthTest: false, depthWrite: false, toneMapped: false,
     vertexShader: `varying vec2 vUv;
       void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
     fragmentShader: `precision highp float;
       varying vec2 vUv;
-      uniform float blood, emotion, kind, cue, cueGold, secret, secretW, secretA;
+      uniform float blood, emotion, kind, cue, cueGold, secret, secretW, secretA, secretL, secretBand;
       uniform vec2 res;
       // CSS radial-gradient(ellipse farthest-corner)와 같은 좌표·정지점.
       vec4 gradient(float r, float start, float middle, vec3 a, float aa, vec3 b, float ba) {
@@ -30,12 +30,21 @@ export function createScreenTint() {
         else if (kind > .5) e = gradient(r, .5, .85, vec3(60.,80.,110.)/255., .5, vec3(20.,30.,50.)/255., .8);
         e *= emotion;
         vec4 c = e + b * (1.0 - e.a);
-        // 비기 창 금색 테두리 (10/23 사장님 '훨씬 얇아서 테두리에만'): 화면 네 변에서 짧은 변의 secretW 몫 안쪽까지만 · 변에서 secretA → 안쪽 0 (제곱으로 빠르게 옅어짐).
-        //  겹치면 금색 우선: 띠가 덮는 몫만큼 그 자리의 피 · 감정 색을 지운다 (띠 밖의 붉은 테두리는 그대로)
-        float dpx = min(min(gl_FragCoord.x, res.x - gl_FragCoord.x), min(gl_FragCoord.y, res.y - gl_FragCoord.y));
-        float m = 1.0 - clamp(dpx / max(secretW * min(res.x, res.y), 1.0), 0.0, 1.0);
-        m *= m * secret;
-        c = vec4(vec3(255.,186.,40.)/255. * secretA * m, secretA * m) + c * (1.0 - m);
+        // 비기 창 금색 테두리 (10/23 사장님): 기본 = 피 테두리와 같은 꼴(같은 정지점)을 금색으로 · 세기는 붉은 테두리가 가장 옅게 보일 때의 값 secretL ('빨간 테두리가 가장 얇을 때를 기준으로').
+        //  secretBand 1 = 앞 판(화면 네 변의 얇은 띠 — 짧은 변의 secretW 몫 · 가장자리 불투명 secretA). 겹치면 금색 우선: 금색이 덮는 몫만큼 그 자리의 피 · 감정 색을 지운다
+        vec4 g;
+        float m;
+        if (secretBand > .5) {
+          float dpx = min(min(gl_FragCoord.x, res.x - gl_FragCoord.x), min(gl_FragCoord.y, res.y - gl_FragCoord.y));
+          m = 1.0 - clamp(dpx / max(secretW * min(res.x, res.y), 1.0), 0.0, 1.0);
+          m *= m * secret;
+          g = vec4(vec3(255.,186.,40.)/255. * secretA * m, secretA * m);
+        } else {
+          vec4 shape = gradient(r, .45, .78, vec3(255.,186.,40.)/255., .55, vec3(140.,90.,0.)/255., .9);
+          m = clamp(shape.a / .55, 0.0, 1.0) * secret;
+          g = shape * secretL * secret;
+        }
+        c = g + c * (1.0 - m);
         // 칠 때 알림: 피(.55 · .9)의 반쯤 옅고 바깥으로 좁은 띠 — 보통 창 옅은 금빛 · 비기 창 금빛. 세기는 strike_cue.js 가 매 프레임 바로 준다(고르기 없음)
         vec4 q = cueGold > .5 ? gradient(r, .5, .86, vec3(255.,186.,40.)/255., .32, vec3(215.,130.,0.)/255., .5)
           : gradient(r, .5, .86, vec3(255.,218.,140.)/255., .28, vec3(235.,178.,90.)/255., .45);
@@ -56,10 +65,12 @@ export function createScreenTint() {
       emotionTarget = Math.min(1, Math.max(0, value));
     },
     /** 비기 창 금색 테두리 (strike_cue.js — 10/23): 0~1 · 피 · 감정 테두리보다 우선 */
-    setSecretEdge(value, width, alpha) {
+    setSecretEdge(value, o = {}) {
       uniforms.secret.value = Math.min(1, Math.max(0, value));
-      if (Number.isFinite(width) && width > 0) uniforms.secretW.value = width;
-      if (Number.isFinite(alpha) && alpha >= 0) uniforms.secretA.value = Math.min(1, alpha);
+      if (o.style) uniforms.secretBand.value = o.style === 'band' ? 1 : 0;
+      if (Number.isFinite(o.level) && o.level >= 0) uniforms.secretL.value = Math.min(1, o.level);
+      if (Number.isFinite(o.width) && o.width > 0) uniforms.secretW.value = o.width;
+      if (Number.isFinite(o.alpha) && o.alpha >= 0) uniforms.secretA.value = Math.min(1, o.alpha);
     },
     /** 칠 때 알림 테두리 (strike_cue.js): 0~1 · gold = 비기 창 */
     setCue(value, gold = false) {
@@ -80,7 +91,7 @@ export function createScreenTint() {
       try { renderer.render(scene, camera); }
       finally { renderer.autoClear = clear; renderer.info.autoReset = reset; }
     },
-    get state() { return { blood: uniforms.blood.value, emotion: uniforms.emotion.value, kind: uniforms.kind.value, cue: uniforms.cue.value, cueGold: uniforms.cueGold.value, secret: uniforms.secret.value, secretW: uniforms.secretW.value, secretA: uniforms.secretA.value }; },
+    get state() { return { blood: uniforms.blood.value, emotion: uniforms.emotion.value, kind: uniforms.kind.value, cue: uniforms.cue.value, cueGold: uniforms.cueGold.value, secret: uniforms.secret.value, secretW: uniforms.secretW.value, secretA: uniforms.secretA.value, secretL: uniforms.secretL.value, secretBand: uniforms.secretBand.value }; },
   };
   return tint;
 }

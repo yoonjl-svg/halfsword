@@ -32,9 +32,11 @@ export const STRIKE_CUE = {
   edgeEnd: 0.45, // 닫힐 즈음 테두리 세기 몫
   plain: 0xfff0d2, // 보통 창 — 따뜻한 흰빛
   anchor: 'self', // 느낌표 자리 — 사장님 10/23 00:2x '상대 머리가 아니라 내 머리에 뜨는 게 자연스러움' ('self' 내 머리 · 'foe' 전 상대 머리 — `?cueAnchor=foe`)
-  secretEdge: 1, // 비기 창 금색 화면 테두리 — 사장님 10/23 '붉은 테두리와 동일하게, 색만 금색 · 겹치면 금색 우선' → 시험 뒤 '너무 과해 훨씬 얇아서 테두리에만' (screen_tint.js secret 칸 · `?secretEdge=0` 끔)
-  secretEdgeWidth: 0.03, // 금색 띠 두께 = 화면 짧은 변의 이 몫 (폰 가로 화면 390 px 높이에서 약 12 px · 안쪽으로 빠르게 옅어짐 · `?secretEdgeW=`)
-  secretEdgeAlpha: 0.8, // 금색 띠 맨 가장자리 불투명 (`?secretEdgeA=`)
+  secretEdge: 1, // 비기 창 금색 화면 테두리 — 사장님 10/23 '붉은 테두리와 동일하게, 색만 금색 · 겹치면 금색 우선' → '너무 과해 훨씬 얇아서' → '빨간 테두리가 가장 얇을 때를 기준으로 금색 띠도 맞춰' (screen_tint.js secret 칸 · `?secretEdge=0` 끔)
+  secretEdgeStyle: 'red', // 'red' = 피 테두리와 같은 꼴 · 세기 secretEdgeLevel (기본) · 'band' = 앞 판 화면 네 변의 얇은 띠 (`?secretEdgeStyle=band`)
+  secretEdgeLevel: 0.3, // 'red' 꼴의 세기 = 붉은 테두리가 이 세기일 때와 같음 (0.1 은 거의 안 보이고 0.2 는 모서리만 겨우 — 폰 그림 docs/ui/secret_edge_2026-10-23/ · `?secretEdgeLevel=`)
+  secretEdgeWidth: 0.03, // 'band' 꼴: 금색 띠 두께 = 화면 짧은 변의 이 몫 (폰 가로 화면 390 px 높이에서 약 12 px · 안쪽으로 빠르게 옅어짐 · `?secretEdgeW=`)
+  secretEdgeAlpha: 0.8, // 'band' 꼴: 금색 띠 맨 가장자리 불투명 (`?secretEdgeA=`)
   gold: 0xffc23a, // 비기 창 — 금빛
 };
 
@@ -134,6 +136,7 @@ export function createStrikeCue(scene, tint, param, opts = {}) {
   const num = (v, d) => (v == null || v === '' || !Number.isFinite(+v) ? d : +v);
   const edgeW = num(opts.secretEdgeW, C.secretEdgeWidth); // 금색 띠 두께 · 불투명 (10/23)
   const edgeA = num(opts.secretEdgeA, C.secretEdgeAlpha);
+  const edgeLook = { style: opts.secretEdgeStyle === 'band' || opts.secretEdgeStyle === 'red' ? opts.secretEdgeStyle : C.secretEdgeStyle, level: num(opts.secretEdgeLevel, C.secretEdgeLevel), width: edgeW, alpha: edgeA };
   const useMark = style === 'mark' || style === 'both';
   const useEdge = style === 'edge' || style === 'both';
   const win = {};
@@ -210,7 +213,7 @@ export function createStrikeCue(scene, tint, param, opts = {}) {
           mat.color.copy(S.gold ? gold : plain);
         }
       }
-      if (tint?.setSecretEdge) tint.setSecretEdge(secretEdge && S.gold ? (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env : 0, edgeW, edgeA); // 비기 창 금색 테두리 (화면 가장자리 얇은 띠 — 10/23)
+      if (tint?.setSecretEdge) tint.setSecretEdge(secretEdge && S.gold ? (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env : 0, edgeLook); // 비기 창 금색 테두리 (화면 가장자리 얇은 띠 — 10/23)
       if (useEdge && tint?.setCue) {
         S.edge = C.edge * (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env;
         tint.setCue(S.edge, S.gold);
@@ -218,7 +221,7 @@ export function createStrikeCue(scene, tint, param, opts = {}) {
     },
     /** 탐침 · 스크린샷용 (tools/browser/strike_cue_shots.mjs) */
     get state() {
-      return { style, anchor, secretEdge, open: S.open, kind: S.kind, gold: S.gold, frac: +S.frac.toFixed(3), alpha: +S.alpha.toFixed(3), shown: S.shown, px: +S.px.toFixed(1), edge: +S.edge.toFixed(3) };
+      return { style, anchor, secretEdge, edgeLook, open: S.open, kind: S.kind, gold: S.gold, frac: +S.frac.toFixed(3), alpha: +S.alpha.toFixed(3), shown: S.shown, px: +S.px.toFixed(1), edge: +S.edge.toFixed(3) };
     },
   };
 }
