@@ -27,7 +27,7 @@ export const SCHOOLS = [
     { id: 'I6', cat: 'parry', name: '막기 II', sub: '막아찌르기', eff: '누르면 바로 짧게 찌름 · 피해 50% 감소', pre: ['I5'], price: 300, st: 'split', d: 3, cx: 670 },
     { id: 'I8', cat: 'deep', name: '내려 찌르기 심화', sub: '틈 파고들기', eff: '옷 · 갑옷 틈을 더 깊이 파고든다', pre: ['I7'], price: 400, st: 'split', d: 4, cx: 330 },
     { id: 'I9', cat: 'atk', name: '칼끝', sub: '돌려 빼기', eff: '찌르기가 맞물리면 돌려 뺀다 (이어 긋기)', pre: ['I6'], price: 300, st: 'split', d: 4, cx: 670 },
-    { id: 'I4', closed: true, cat: 'secret', name: '비기', sub: '밑으로 들어가 찌르기', eff: '상대가 칼을 들 때 밑으로 찌른다', pre: ['I8'], price: 400, heads: 20, st: 'now', d: 5, cx: 330 },
+    { id: 'I4', cat: 'secret', name: '비기', sub: '거침없이 나아가 찌르기', eff: '상대 칼을 덮은 채 걸어 들어가다 찌른다 — 10/22 사람 먼저 열림(전: 밑으로 들어가 찌르기 · 닫힘)', pre: ['I8'], price: 400, heads: 20, st: 'new', d: 5, cx: 330 },
     { id: 'I10', cat: 'passive', name: '패시브', sub: '리네아 레타', eff: '곧은 선 (리네아 레타) — 찌르는 동안 칼끝이 상대를 따라간다 (최대 12° · 초당 60° · AI 는 절반)', pre: ['I9'], price: 0, heads: 10, st: 'new', d: 5, cx: 670 },
   ] },
   { id: 'iberian', ko: '이베리아', title: '이베리아 — 고리', bw: 158, shape: '손목 힘 패시브를 보법 바로 아래에서 먼저 익힌다(큰 칼을 돌리는 바탕) — 비기에도 필요. 둥근 걸음 길과 돌려 베기 길이 비기에서 닫혀 원을 이룬다.', nodes: [

@@ -32,6 +32,7 @@ import { FINISH, armRay, updateFinish, finishHands } from './finish.js';
 import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'; // 약한 자세 겨눔 탭 찌르기 (FINISH.vital, 10/12)
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 
 const D2R = Math.PI / 180;
@@ -567,7 +568,12 @@ export class Skill {
       return best;
     };
     const run = { S, ctx: o.ctx ?? null, tr: f.swordArt.tradition, stage: null, t: 0, queue: [], cur: null, path: [], landed: false, bound: false, str0: f.strength, painFoe: f.foe.pain, painMe: f.pain };
-    if (D.break) {
+    if (D.risoluto) {
+      // 이탈리아 거침없이 나아가 찌르기 (10/22 사람 먼저 — italian_risoluto.js · schools.js ITALIAN_RISOLUTO): 탭 찌르기 그대로 + 찌르기가 시작될 때 상대 팔 늦춤
+      //  (흘림과 같은 장치 — nagashi_recovery.js beginFlowRecovery · FLOW_RECOVERY) + 비기 배율(power · hitMul — updateSecret 'riso'). 찌르기는 아래 this.sec 를 건 뒤(기력은 비기 값 하나)
+      run.stage = 'riso';
+      run.risoluto = true;
+    } else if (D.break) {
       // 독일 Versetzen: 들어오는 줄을 깨는 비밀 베기 (창을 연 위협의 줄)
       const th = run.ctx ?? {};
       const key = th.line === 'thrust' ? (th.high ? 'thrustHigh' : 'thrust') : th.line;
@@ -631,10 +637,19 @@ export class Skill {
     } else return false;
     this.sec = run;
     f.stamina.secret();
+    if (run.risoluto) {
+      if (!this.thrust()) {
+        this.sec = null; // 찌르기를 못 냄 (기력 탈진 · 칼 없음 …) — 비기도 없음
+        return false;
+      }
+      run.armSlow = beginFlowRecovery(f.foe, f); // 상대 칼이 묶여 막을 수 없다 — 찌르기가 시작될 때 상대 두 팔 늦춤 (흘림과 같은 0.4 s)
+      this.secretBursts++; // 결정타 연출
+    }
     this.recovering = false;
     this.cutPending = true;
     const st = (this.secretStats[S.name] ??= { fired: 0, landed: 0 });
     st.fired++;
+    if (run.risoluto) st.armSlow = (st.armSlow ?? 0) + (run.armSlow ? 1 : 0);
     if (!run.stage) this.secretNextMove();
     return true;
   }
@@ -741,7 +756,7 @@ export class Skill {
     const foe = f.foe;
     if (!f.alive || !f.armed || f.state !== 'stand' || !foe) return this.secretEnd();
     // 맞힘 (AI 와 같은 눈: 상대 아픔 +0.05)
-    if (foe.pain > run.painFoe + 0.05 && (run.stage === 'strike' || run.stage === 'follow')) run.landed = run.segHit = true; // segHit: 이 토막이 맞힘 (이베리아 흐름 문 — 10/11)
+    if (foe.pain > run.painFoe + 0.05 && (run.stage === 'strike' || run.stage === 'follow' || run.stage === 'riso')) run.landed = run.segHit = true; // segHit: 이 토막이 맞힘 (이베리아 흐름 문 — 10/11)
     run.painFoe = foe.pain;
     const hurt = f.pain > run.painMe + 0.05;
     run.painMe = f.pain;
@@ -750,6 +765,21 @@ export class Skill {
     const handMul = secVal(D.hand ?? 'handSpeed');
     const g = f.gait;
     const ask = (o) => !!(g?.requestStep && g.active && g.requestStep(o));
+    if (run.stage === 'riso') {
+      // 이탈리아 거침없이 나아가 찌르기: 탭 찌르기(updateThrust)가 도는 동안 비기 배율 — 끝나면 굳음 (SECRET.stiff.italian)
+      if (this.tap || this.vitalRange) {
+        f.powerMul = secVal(D.power ?? 'power');
+        f.secretHit = SECRET.hitMul;
+        return;
+      }
+      f.powerMul = 1;
+      f.secretHit = 1;
+      if (run.landed) this.secretStats[run.S.name].landed++;
+      run.stage = 'stiff';
+      run.t = 0;
+      run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+      return;
+    }
     if (run.stage === 'instant') {
       const R = f.instantResult;
       if (!R) return;

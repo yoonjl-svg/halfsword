@@ -93,9 +93,12 @@ test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 �
 });
 
 // ── 닫힌 칸 ──
-test('닫힌 칸: 비기는 일본 고노센만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
+test('닫힌 칸: 비기는 일본 고노센 · 이탈리아 거침없이 나아가 찌르기(10/22 사람 먼저)만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
-  assert.deepEqual(closed.sort(), ['B7', 'C9', 'G10', 'I4', 'J8']);
+  assert.deepEqual(closed.sort(), ['B7', 'C9', 'G10', 'J8']);
+  assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false);
+  assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, true);
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese']); // AI 는 닫힌 채 (ai.js 는 aiOpenSchools 만 본다)
   for (const s of DESIGN) for (const d of s.nodes) if (d.closed) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
   const all = D.allNodeIds('german');
@@ -515,6 +518,11 @@ test('실제 몸 — 고유 공격 · 비기: 익힌 칸의 기술만 · 비기�
     assert.equal(new PlayerUniqueAssist(g.player, { names: new Set() }).list.length, 0);
     assert.equal(new PlayerUniqueAssist(g.player, { stage: 4 }).list.length, 3); // 단계로 거르는 길(시험 · 도구)은 그대로
   } finally { g.world.free(); }
+  const it = round('rapier', kitOf('italian', 'I1', 'I3', 'I2', 'I7', 'I8', 'I4'), 9);
+  try {
+    assert.equal(new PlayerSecretWatch(it.player, it.enemy, { locked: !kitOf('italian', 'I4').secret }).S?.name, 'andareRisoluto'); // 10/22 이탈리아 사람 비기
+    assert.equal(new PlayerSecretWatch(it.player, it.enemy, { locked: !kitOf('italian', 'I8').secret }).S, null);
+  } finally { it.world.free(); }
   const j = round('monohoshizao', kitOf('japanese', 'J1', 'J2', 'J3', 'J4', 'J5'), 9);
   try {
     assert.ok(new PlayerSecretWatch(j.player, j.enemy, { locked: !kitOf('japanese', 'J1', 'J2', 'J3', 'J4', 'J5').secret }).S);

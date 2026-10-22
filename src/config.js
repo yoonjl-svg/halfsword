@@ -845,7 +845,8 @@ export const SECRET = {
   // 열린 비기 (10/21 20:xx 사장님 '스킬트리에서 비기는 고노센 빼고 모두 미구현으로 닫아놔 — 성능과 컨셉이 불안정' · 'AI 비기도 닫아. 다 바꿀거야'):
   //  여기 있는 유파만 비기를 쓴다 — 사람(비기 책 · PlayerSecretWatch) · AI(ai.js) 모두. 닫힌 유파의 비기 책은 '준비 중'(살 수 없음).
   //  `?secretOpen=all` = 옛 판(다섯 유파 모두) · `?secretOpen=japanese,german` 처럼 고를 수 있음 (main.js)
-  openSchools: ['japanese'],
+  //  10/22 사장님 '리솔루토 덮음은 모양으로 재고 사람 먼저' → 이탈리아(사람 길 = 거침없이 나아가 찌르기 — 아래 itSecret · src/italian_risoluto.js)
+  openSchools: ['japanese', 'italian'],
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
   aiOpenSchools: ['japanese'],
@@ -995,6 +996,13 @@ export const SECRET = {
   slowMo: { scale: 0.4, dur: 0.25 }, // 연출: 비기가 터뜨려지는 순간 화면 시간 배율 scale 을 dur 초(실시간) 동안 (main.js 프레임 dt — 물리 스텝 dt 는 그대로, 스텝 수만 준다). `?slowMo=0` 끔 [확인 전]
   // 플레이어 비기 (SKILL.playerSecret)
   playerWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.5 → 0.6 (이어짐 · 입력 칸) · 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
+  // 이탈리아 사람 비기 — 거침없이 나아가 찌르기 (안다레 리솔루토) (사장님 10/22 '덮음은 모양으로 재고 사람 먼저' — src/italian_risoluto.js · docs/strike/italian_risoluto_2026-10-22.md · 확인표 2190~2196)
+  //  사람 길만 바꾼다(schools.js playerSecretDef) — AI 는 TRADITIONS.italian.secret(옛 엇박 찌르기)를 보고 aiOpenSchools 로 닫혀 있다
+  itSecret: 'risoluto', // 'risoluto' = 거침없이 나아가 찌르기 · 'contratempo' = 옛 엇박 찌르기(박자 밑 찌르기 — `?itSecret=contratempo`)
+  risolutoCover: 0.07, // 덮음 거리 (m): 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 가장 가까운 거리 — ai.js checkBind · secret.js bladesTouch 의 맞물림 기하 0.07 과 같은 수 (잰 값 — 문서 §3) [사장님 확인 전]
+  risolutoHold: 0.6, // 덮인 채 나아가기가 이 초 이어지면 창 — 시간 사다리 0.6(이어짐) · 1.5(무장) 둘 다 잼 (`?risoHold=1.5`) [사장님 확인 전]
+  risolutoBeat: 0, // 두 번째 길 (1 = 켬): 덮인 채 나아가던 중 상대가 칼을 내거나 덮음이 풀리면 곧장 창 — 원전 '상대가 박자를 내면 잡아라' (`?risoBeat=1`) [사장님 확인 전 · 기본 끔]
+  risolutoBeatMin: 0.2, // 두 번째 길: 그 전에 덮인 채 나아가기가 이 초 넘게 이어졌어야 (시간 사다리 0.2 반응) [사장님 확인 전]
   cnParryWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 1.0 → 0.6 (이어짐 · 입력 칸) · 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
   // 중국 막기 연환 사람이 쓰게 (사장님 10/12 01:1x 플레이 시험 — docs/strike/cn_combo_play_2026-10-12.md) [모두 사장님 확인 전 — 확인표 970~]
   cnBongdu: 1, // 1 = 봉두세(highL) 막기도 정한 자세 (schools.js CHINESE_SECRET_PARRY cond.slots — 오는 줄 25 %), 0 = 전 두 자리(거정세·표두세). `?cnBongdu=0`
