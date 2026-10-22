@@ -237,8 +237,8 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .tree-node[data-state=locked] .node-ring { border-color: color-mix(in srgb, var(--tc) 35%, transparent); }
 .tree-node[data-state=locked] .node-icon { opacity: .58; filter: saturate(.55); }
 .tree-node[data-state=locked] .node-name { color: var(--c-sub); }
-/* 배울 수 있음: 원 테두리 갈래 색 + 바깥 금색 테 · 원 아래 가장자리 값 알약 */
-.tree-node[data-state=open] .node-ring { border-color: var(--tc); box-shadow: 0 0 0 1.5px var(--c-accent); }
+/* 배울 수 있음: 보통 원(바탕 칸 그대로 — 10/23 01:1x 사장님 '배울 수 있는 애가 너무 강조돼서 시선을 끌어' → 바깥 금색 테 뺌) · 그림은 또렷(잠김과 가름) · 원 아래 가장자리 값 알약은 차분한 색 */
+.tree-node[data-state=open] .node-price { color: var(--c-sub); border-color: color-mix(in srgb, var(--line) 70%, transparent); }
 .node-price, .node-soon { position: absolute; left: 50%; top: calc((var(--db, var(--d)) + var(--d)) / 2 - 3px * var(--s)); /* 원 아래 가장자리에 3 px 만 걸침 — 작아진 원의 그림을 덜 가림 (01:5x) */ transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; padding: 0 4px 0 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
   font-family: var(--font-ui); font-weight: 600; font-size: max(8px, calc(8.5px * var(--s))); line-height: calc(10px * var(--s)); color: var(--c-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .price-part { display: inline-flex; align-items: center; gap: 1px; }
@@ -246,7 +246,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 /* 익힘: 원 테두리 밝게(갈래 색 그대로) + 갈래 색 안쪽 + 원 바깥 은은한 후광 (10/23 사장님 '배운 스킬은 원형 테두리 바깥에 은은한 후광' — 배울 수 있음(바깥 금색 테)과 가름 ·
    익힘이 풀리면(유파 초기화) 함께 사라짐). 후광 = 원 둘레에서 갈래 색이 바깥으로 번짐(가까운 띠 + 넓고 옅은 띠) */
 .tree-node[data-state=learned] .node-ring { border-color: var(--tc); background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--tc) 30%, rgba(64, 50, 38, .96)), rgba(22, 17, 13, .96) 74%);
-  box-shadow: 0 0 calc(5px * var(--s)) calc(1px * var(--s)) color-mix(in srgb, var(--tc) 70%, transparent), 0 0 calc(14px * var(--s)) calc(4px * var(--s)) color-mix(in srgb, var(--tc) 32%, transparent), inset 0 0 calc(4px * var(--s)) color-mix(in srgb, var(--tc) 35%, transparent); }
+  box-shadow: 0 0 calc(6px * var(--s)) calc(1.5px * var(--s)) color-mix(in srgb, var(--tc) 80%, transparent), 0 0 calc(16px * var(--s)) calc(5px * var(--s)) color-mix(in srgb, var(--tc) 40%, transparent), inset 0 0 calc(5px * var(--s)) color-mix(in srgb, var(--tc) 45%, transparent); }
 /* 준비 중: 원 테두리 점선 · 그림 잿빛 · 이름 보조 색 · 원 아래 가장자리 '준비 중' 알약(값 알약 자리 — 보조 색) */
 .tree-node[data-state=closed] .node-ring { border-style: dashed; border-color: color-mix(in srgb, var(--tc) 55%, transparent); }
 .tree-node[data-state=closed] .node-icon { filter: grayscale(1) brightness(.75); opacity: .65; }

@@ -31,7 +31,8 @@ export function createScreenTint() {
         e *= emotion;
         vec4 c = e + b * (1.0 - e.a);
         // 비기 창 금색 테두리 (10/23 사장님): 기본 = 피 테두리와 같은 꼴(같은 정지점)을 금색으로 · 세기는 붉은 테두리가 가장 옅게 보일 때의 값 secretL ('빨간 테두리가 가장 얇을 때를 기준으로').
-        //  secretBand 1 = 앞 판(화면 네 변의 얇은 띠 — 짧은 변의 secretW 몫 · 가장자리 불투명 secretA). 겹치면 금색 우선: 금색이 덮는 몫만큼 그 자리의 피 · 감정 색을 지운다
+        //  secretBand 1 = 앞 판(화면 네 변의 얇은 띠 — 짧은 변의 secretW 몫 · 가장자리 불투명 secretA).
+        //  겹치면 금색만 (10/23 01:1x '둘 중 하나만 보이게. 금색 우선'): 금색이 조금이라도 켜져 있으면 피 · 감정 테두리는 그리지 않는다
         vec4 g;
         float m;
         if (secretBand > .5) {
@@ -44,7 +45,7 @@ export function createScreenTint() {
           m = clamp(shape.a / .55, 0.0, 1.0) * secret;
           g = shape * secretL * secret;
         }
-        c = g + c * (1.0 - m);
+        c = secret > .0001 ? g : c;
         // 칠 때 알림: 피(.55 · .9)의 반쯤 옅고 바깥으로 좁은 띠 — 보통 창 옅은 금빛 · 비기 창 금빛. 세기는 strike_cue.js 가 매 프레임 바로 준다(고르기 없음)
         vec4 q = cueGold > .5 ? gradient(r, .5, .86, vec3(255.,186.,40.)/255., .32, vec3(215.,130.,0.)/255., .5)
           : gradient(r, .5, .86, vec3(255.,218.,140.)/255., .28, vec3(235.,178.,90.)/255., .45);
