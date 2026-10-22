@@ -271,6 +271,32 @@ export function skipIberianTable(names) {
   return out;
 }
 
+/** 시험: 이베리아 자세표 칸 하나를 고친다 (짧은 이름 · { blade: [올려본 각, 옆 각], hand: [앞, 위, 칼 든 쪽] } 가운데 적은 것만 — 판이 만들어지기 전에 부른다 · 프로세스 동안 남음) */
+export function setIberianTable(key, o) {
+  const name = IBERIAN_TABLE_KEYS[key];
+  if (!name || !IBERIAN_TABLE[name]) throw new Error(`이베리아 자세표 칸 ${key}?`);
+  IBERIAN_TABLE[name] = { ...IBERIAN_TABLE[name], ...o };
+}
+
+// 이베리아 자세표 v2 (10/22 — 칸별 시험으로 고름 · **사장님 확인 전** · docs/strike/iberian_flat_hits_2026-10-22.md §9 · 확인표 2174~): set = 고친 칸(짧은 이름 → 바꾼 값) · skip = 걷은 칸.
+//  판 기본은 부르지 않는다 — `?ibTable=v2`(사람 · AI 모두 — useIberianTableV2) · `?ibTable=v2p`(사람만 — main.js 가 플레이어 몸에 iberianTableV2() 를 넘김)
+//  고른 값 (§9 칸별 시험 — 사람식 긋기 서 있는 과녁 · 막는 상대, 츠바이핸더 · 플랑베르주 · 티소나): 어느 칸도 하나만 걷거나 각을 바꿔 칼 면이 뚜렷이 줄지 않았다 —
+//   점 추정이 가장 좋은 쪽만 묶음: 옆 자세 둘 옆 각 130 → 100°('몸 가운데 높이에 눕혀 뒤로 감아 둔다' 안 — 옆보다 조금 뒤) · 어깨 지붕(오른) · 왼 바꿈 걷음. 옆 자세 오른 · 옆 지킴은 걷으면 나빠져 그대로
+export const IBERIAN_TABLE_V2 = { set: { sideR: { blade: [10, 100] }, sideL: { blade: [10, -100] } }, skip: ['tagR', 'wechselL'] };
+/** v2 묶음을 적용한 새 자세표 칸 객체 (IBERIAN_TABLE 은 그대로) */
+export function iberianTableV2() {
+  const t = { ...IBERIAN_TABLE };
+  for (const [k, o] of Object.entries(IBERIAN_TABLE_V2.set)) t[IBERIAN_TABLE_KEYS[k]] = { ...t[IBERIAN_TABLE_KEYS[k]], ...o };
+  for (const k of IBERIAN_TABLE_V2.skip) delete t[IBERIAN_TABLE_KEYS[k]];
+  return t;
+}
+/** v2 묶음을 판의 이베리아 자세표(사람 · AI 모두)에 건다 — 판이 만들어지기 전에 한 번 */
+export function useIberianTableV2() {
+  const t = iberianTableV2();
+  for (const k of Object.keys(IBERIAN_TABLE)) delete IBERIAN_TABLE[k];
+  Object.assign(IBERIAN_TABLE, t);
+}
+
 export function applySchoolGuardTable(table, tradition) {
   const over = tradition?.guardTable;
   if (!over) return table;
