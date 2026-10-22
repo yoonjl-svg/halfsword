@@ -245,7 +245,7 @@ export class AI {
     // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나 (SKILL.schoolArt·schoolSecret 일 때).
     //  굴림이 없다 — 조건이 차면 확정. 무유파는 null → 아래 비기 자리들은 난수도 코드 길도 전과 같다
     //  숙련도 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀'): 손에 든 유파의 숙련도가 AI_PROFICIENCY.secretAt(5) 아래면 null — 무유파처럼 비기 자리들이 전 코드 그대로 지나간다
-    this.secret = SKILL.schoolArt && SKILL.schoolSecret && this.proficiency >= AI_PROFICIENCY.secretAt && SECRET.openSchools.includes(art.tradition) ? TRADITIONS[art.tradition]?.secret ?? null : null; // 10/21 닫힌 유파 비기 없음 (config SECRET.openSchools)
+    this.secret = SKILL.schoolArt && SKILL.schoolSecret && this.proficiency >= AI_PROFICIENCY.secretAt && SECRET.aiOpenSchools.includes(art.tradition) ? TRADITIONS[art.tradition]?.secret ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저)
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)

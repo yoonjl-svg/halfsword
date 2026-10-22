@@ -846,6 +846,9 @@ export const SECRET = {
   //  여기 있는 유파만 비기를 쓴다 — 사람(비기 책 · PlayerSecretWatch) · AI(ai.js) 모두. 닫힌 유파의 비기 책은 '준비 중'(살 수 없음).
   //  `?secretOpen=all` = 옛 판(다섯 유파 모두) · `?secretOpen=japanese,german` 처럼 고를 수 있음 (main.js)
   openSchools: ['japanese'],
+  // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
+  //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
+  aiOpenSchools: ['japanese'],
   power: 1.3, // 서보 힘 창: 비기 베기 동안 칼을 미는 손목 힘 배율 (fighter.js driveSword 의 str 에 곱함)
   handSpeed: 1.5, // 10/9 4차 사장님 '비기는 통상보다 훨씬 빨라야' — 사다리 1.5 → 2.0 → 2.5 (문서 §11): 1.5 에서 서보 포화(닿기까지 ms 가 더 줄지 않고 J 가 떨어짐) → 1.5 에서 멈춤. 1.3 에서 올림. 손 속도 배율: 비기의 준비(빠른 준비 parrySpeed)·베기(strikeSpeed) 손 빠르기에 곱함
   stepPush: 2.0, // 10/9 4차 1.8 → 2.0 (일본·이탈리아 비기 걸음). 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8
