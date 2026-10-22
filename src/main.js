@@ -171,6 +171,9 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = +params.get('risoHold');
   if (params.has('risoBeat')) CONFIG.SECRET.risolutoBeat = +params.get('risoBeat') ? 1 : 0;
   if (params.has('risoCover') && +params.get('risoCover') > 0) CONFIG.SECRET.risolutoCover = +params.get('risoCover');
+  if (params.has('risoClose')) CONFIG.SECRET.risolutoClose = +params.get('risoClose') ? 1 : 0; // 시험: '다 붙었을 때' 창
+  if (params.has('risoLine')) CONFIG.SECRET.risolutoLine = +params.get('risoLine') ? 1 : 0; // 시험: 칼을 대지 않는 덮음 (줄 막기)
+  if (params.has('risoGuard')) CONFIG.SECRET.risolutoGuard = +params.get('risoGuard') ? 1 : 0; // 시험: 막기 단추를 누른 채 나아가기도 셈
 }
 {
   // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)

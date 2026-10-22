@@ -158,3 +158,33 @@ test('창 안의 끌기(베기)는 비기가 아님 · 내가 베기를 시작�
     assert.equal(ps.open, null);
   } finally { g.world.free(); }
 });
+
+test('시험 스위치 (기본 끔 — 감독 10/22 측정용): 다 붙음 창(risolutoClose — 맞닿기 거리에 든 순간 · 시간 조건 없음) · 칼을 대지 않는 덮음(risolutoLine — 겨눔 곧은 선 12° 안 · 강한 쪽이 상대 칼끝 → 내 가슴 줄 위)', () => {
+  assert.equal(SECRET.risolutoClose, 0);
+  assert.equal(SECRET.risolutoLine, 0);
+  // 다 붙음: 1.6 m 에서 0.01 m 씩 다가감 · 맞닿기 1.5 m → 1.5 를 넘는 스텝에 창 (0.6 s 전)
+  keep(SECRET, 'risolutoClose', 1, () => {
+    const f = fake(); f.me.gap = 1.6; f.me.swordArt = { measure: { contact: 1.5 } };
+    const W = new RisolutoWatch(f.me, f.foe);
+    const r = tick(W, f, 30);
+    assert.equal(r?.path, 'close'); assert.ok(r.held < SECRET.risolutoHold);
+    assert.equal(tick(W, f, 20), null, '덮인 채 나아가기 한 번에 한 번');
+  });
+  // 줄 막기: 칼끼리는 멀지만(덮음 거리 > 0.07) 내 칼끝이 상대 가슴을 겨누고 강한 쪽이 상대 칼끝 → 내 가슴 줄 위
+  const mk = () => {
+    const f = fake({ foeA: [2.0, 1.4, 0.5], foeB: [1.2, 1.0, 0.1] });
+    f.me.bodies = { chest: { translation: () => ({ x: 0, y: 1, z: 0 }) } };
+    f.foe.bodies = { chest: { translation: () => ({ x: 2.0, y: 1, z: 0 }) } };
+    return f;
+  };
+  const a = mk();
+  assert.ok(coverDist(a.me, a.foe) > SECRET.risolutoCover);
+  const n = Math.round(SECRET.risolutoHold / DT) + 4;
+  assert.equal(tick(new RisolutoWatch(a.me, a.foe), a, n), null, '끔이면 덮음 아님');
+  keep(SECRET, 'risolutoLine', 1, () => {
+    const b = mk();
+    assert.equal(tick(new RisolutoWatch(b.me, b.foe), b, n)?.path, 'hold');
+    const c = mk(); c.foe.bodies.chest.translation = () => ({ x: 2.0, y: 1, z: 0.8 }); // 칼끝이 상대 가슴을 안 겨눔 (≈ 22°)
+    assert.equal(tick(new RisolutoWatch(c.me, c.foe), c, n), null);
+  });
+});
