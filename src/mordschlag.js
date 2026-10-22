@@ -15,6 +15,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SECRET } from './config.js';
+import { FINISH } from './finish.js';
 
 /** 이 몸의 판: 'reverse'(칼날을 거꾸로 쥠) | 'hilt'(쥠 그대로 폼멜) — 칼날을 잡을 수 없는 칼(날 없는 무기 · 라이트세이버 · 부러진 칼)은 늘 'hilt' */
 export function mordMode(f) {
@@ -121,3 +122,30 @@ export function mordEnd(f) {
   f.mordHold = null;
 }
 const UP = { x: 0, y: 1, z: 0 };
+
+// ── 가볍고 느림을 고칠 안 (10/22 밤 감독 — 스위치 · 기본 끔 · 문서 §11) ──
+
+/** 판정 배율 (SECRET.mord.power): 'hit' = 결정타 SECRET.hitMul · 'finish' = 마무리 찍기 FINISH.power (겹치지 않고 그 자리에) · 수 = 그 수. 둔타도 듣는 자리(f.secretHit — combat.js hk) */
+export function mordHitMul() {
+  const v = SECRET.mord.power;
+  return v === 'finish' ? FINISH.power : v === 'hit' || v == null ? SECRET.hitMul : +v || SECRET.hitMul;
+}
+
+/**
+ * 운동학 길(SECRET.mord.kin)의 칼 자리 (칼 축 m · 칼 든 손 기준): g = 칼 든 손이 쥔 칼 축 자리(쥠 그대로 'hilt' 판은 0) · gOff = 빈손 ·
+ *  Lc = 손 → 코등이(칼날 시작 hiltLength) · Lp = 손 → 칼자루 끝(칼자루 부품 가운데 가장 아래 끝 — 폼멜 공 밑) · 치는 쪽 = 칼 축 −y (겨눔 뒤집기와 같음).
+ *  end = 끝날 때 원래 쥠으로 (secret_instant.js endCombo 가 부름 — 굳음 붙잡기 전에)
+ */
+export function mordKinOf(f, run) {
+  const W = f.weaponCfg;
+  const G = run.mord.G ?? { g: 0, gOff: W.twoHand ? W.gripAlong ?? -0.14 : 0 };
+  let yp = 0;
+  for (const c of f.swordColliders ?? []) {
+    if (f.colliderInfo?.get(c.handle)?.part !== 'hilt') continue;
+    const y = c.translationWrtParent().y;
+    const t = c.shapeType();
+    const h = t === 0 ? c.radius() : t === 1 ? c.halfExtents().y : 0; // 공(ball) · 상자(cuboid)
+    yp = Math.min(yp, y - h);
+  }
+  return { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, pull: SECRET.mord.aim === 'pull', over: !!SECRET.mordOver, end: mordEnd };
+}

@@ -33,7 +33,7 @@ import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
-import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
+import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -579,6 +579,15 @@ export class Skill {
       if (!t) return false;
       run.queue.push(t);
       if (!mordStart(f, run, t)) return false;
+      if (SECRET.mord.kin > 0) {
+        // 운동학 길 (10/22 밤 — 스위치 SECRET.mord.kin · 기본 끔): 쥠을 바꾼 채 그 길(시작 자세 → 기술 길 → 시작 자세)을 연환 틀(secret_instant.js requestCombo)로 몬다.
+        //  칼자루 끝 빠르기 = 고노센 칼끝 빠르기 × kin · 판정 배율 mordHitMul · 결과는 순간 베기와 같은 칸(instant) → 굳음
+        run.stage = 'instant';
+        run.instant = true;
+        run.queue.length = 0;
+        requestCombo(f, { moves: [{ name: t.name, kind: t.kind, from: t.from, path: t.path }], share: SECRET.mord.kin, hitMul: mordHitMul(), mord: mordKinOf(f, run) });
+        this.secretBursts++;
+      }
     } else if (D.break) {
       // 독일 Versetzen: 들어오는 줄을 깨는 비밀 베기 (창을 연 위협의 줄)
       const th = run.ctx ?? {};
@@ -826,7 +835,7 @@ export class Skill {
     if (run.stage === 'strike') {
       const inLoop = !!run.cur?.pre?.length && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
       f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power') * (run.gain ?? 1); // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
-      f.secretHit = inLoop ? 1 : D.power ? 1 : SECRET.hitMul * (run.gain ?? 1);
+      f.secretHit = inLoop ? 1 : D.power ? 1 : run.mord ? mordHitMul() : SECRET.hitMul * (run.gain ?? 1); // 죽음의 일격: SECRET.mord.power (기본 'hit' = hitMul 그대로)
       if (D.power) f.effMul = secretEffMul(D); // 격살 서보 길(cnFast 0): 판정 에너지 × FINISH.power — 따라 지나감까지 (secretEnd 에서 지움)
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);

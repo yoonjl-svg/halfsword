@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI, THREE } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
-import { mordMode, mordGripOf } from '../../src/mordschlag.js';
+import { mordMode, mordGripOf, mordHitMul, mordKinOf } from '../../src/mordschlag.js';
+import { FINISH } from '../../src/finish.js';
 const { SECRET } = CONFIG;
 
 class Still {
@@ -160,4 +161,63 @@ test('넘어 들어감 규칙 (mordOver — 기본 끔): 켜면 내리치는 동
     assert.ok(off);
     assert.deepEqual(P.swordColliders.map((c) => c.collisionGroups()), g0);
   } finally { SECRET.mordOver = 0; g.world.free(); }
+});
+
+test('가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔): kin 0 · aim pad · power hit = 판정 배율 hitMul 그대로 · finish = FINISH.power · 수 = 그 수', () => {
+  assert.equal(SECRET.mord.kin, 0);
+  assert.equal(SECRET.mord.aim, 'pad');
+  assert.equal(SECRET.mord.power, 'hit');
+  assert.equal(mordHitMul(), SECRET.hitMul);
+  SECRET.mord.power = 'finish';
+  try { assert.equal(mordHitMul(), FINISH.power); } finally { SECRET.mord.power = 'hit'; }
+  SECRET.mord.power = 2;
+  try { assert.equal(mordHitMul(), 2); } finally { SECRET.mord.power = 'hit'; }
+  const { g, P } = fixture();
+  try {
+    const run = { mord: { G: mordGripOf(P) } };
+    const M = mordKinOf(P, run);
+    assert.ok(Math.abs(M.Lc - (M.g - P.weaponCfg.hiltLength)) < 1e-9); // 손 → 코등이
+    assert.ok(Math.abs(M.Lp - (M.g + 0.15)) < 1e-6, `손 → 칼자루 끝 ${M.Lp}`); // 롱소드 폼멜 공 밑 −0.15
+    assert.equal(M.pull, false);
+  } finally { g.world.free(); }
+});
+
+test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠 · 밧줄 다시 · 굳음 0.4 s · 입력 → 굳음 끝 1 s 안 · pull 이면 칼자루가 머리에', () => {
+  for (const aim of ['pad', 'pull']) {
+    const { g, P } = fixture('longsword', 0.65);
+    SECRET.mord.kin = 0.6;
+    SECRET.mord.aim = aim;
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const cone = !!P.gripCone;
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      assert.equal(P.skill.sec.stage, 'instant');
+      assert.ok(P.mordGrip && P.mordAim);
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part }); };
+      const seen = new Set();
+      let t = 0, kin = false;
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
+        g.step();
+        t += DT;
+        if (P.skill.sec) seen.add(P.skill.sec.stage);
+        if (P.iai) kin ||= P.iai.kind === 'combo' && !!P.iai.mord;
+        const s = P.sword.translation();
+        assert.ok(Number.isFinite(s.x + s.y + s.z));
+      }
+      assert.ok(kin, '연환 틀로 몬다');
+      assert.equal(P.skill.sec, null);
+      assert.ok(seen.has('instant') && seen.has('stiff'));
+      assert.ok(t < 1, `입력 → 굳음 끝 ${t.toFixed(2)} s`);
+      assert.equal(P.mordGrip, null);
+      assert.equal(P.mordAim, false);
+      assert.equal(!!P.gripCone, cone, '손목 밧줄 다시');
+      assert.deepEqual(anc(P), [0, 0, 0]);
+      assert.ok(P.instantResult?.mord);
+      if (aim === 'pull') {
+        assert.ok(P.instantResult.pullD > 0);
+        assert.ok(hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(hits));
+      }
+    } finally { SECRET.mord.kin = 0; SECRET.mord.aim = 'pad'; g.world.free(); }
+  }
 });
