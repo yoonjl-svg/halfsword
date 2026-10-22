@@ -39,7 +39,7 @@ test('자세 → 겨눌 곳: 거정(위 가운데 · 위 오른) 머리 · 어�
   assert.deepEqual(aim, { geojeong: ['head'], eogeo: ['arm'], yoryak: ['leg'], bongdu: ['lung'] });
   assert.equal(S.do.combo.bongdu.seq[0].kind, 'thrust');
   assert.equal(S.do.power, 'gyeoksal');
-  assert.equal(SECRET.gyeoksal.power, 'finish');
+  assert.equal(SECRET.gyeoksal.power, 'hit'); // 10/22 23:0x 사장님 확정 (전 'finish')
 });
 
 /** 칼이 들어오는 중인 상대 (지난 0.6 s 칼끝 ≥ 3.5 m/s — foeRecentTipSp 가 읽는 눈)를 흉내 */
@@ -151,12 +151,12 @@ test('한 칼 세기: 판정 에너지 × FINISH.power (결정타 hitMul 대신)
     assert.ok(fin.sev > one.sev, `${fin.sev} > ${one.sev}`);
     assert.equal(FINISH.power, 2.5);
   } finally {
-    SECRET.gyeoksal.power = 'finish';
+    SECRET.gyeoksal.power = 'hit';
   }
 });
 
-test('시험 스위치(기본 끔): 칼끝 빠르기 몫 SECRET.gyeoksal.share · 어거 길 armPath down · 잔상 굵기 trailWidth', () => {
-  assert.equal(SECRET.gyeoksal.share, null);
+test('스위치: 칼끝 빠르기 몫 SECRET.gyeoksal.share(10/22 확정 0.6) · 어거 길 armPath down · 잔상 굵기 trailWidth', () => {
+  assert.equal(SECRET.gyeoksal.share, 0.6); // 10/22 23:0x 사장님 확정 (전 null = 연환 0.3)
   assert.equal(SECRET.gyeoksal.trailWidth, 0);
   assert.equal(SECRET.gyeoksal.armPath, 'across');
   const S = TRADITIONS.chinese.playerSecret;
@@ -183,7 +183,7 @@ test('시험 스위치(기본 끔): 칼끝 빠르기 몫 SECRET.gyeoksal.share �
     assert.equal(arc.share, 0.6);
     assert.equal(arc.width, 0.6); // 켬 = 굵기도 빠르기 몫
   } finally {
-    SECRET.gyeoksal.share = null;
+    SECRET.gyeoksal.share = 0.6;
     SECRET.gyeoksal.armPath = 'across';
     SECRET.gyeoksal.trailWidth = 0;
   }

@@ -332,7 +332,7 @@ export class Combat {
       // 투구: 찌그러지고 틈을 파고들어도 맨머리보다 약해지지는 않는다 (케틀햇은 가장 약할 때도 맨머리보다 세서 그대로)
       if (helmet) thr = Math.max(thr, type === 'cut' ? ANATOMY.head.cut : ANATOMY.head.stab);
       eff = energy * quality * wMult * emoDealt * emoTaken;
-      if (finishPower) eff *= FINISH.power; // 찍기 힘 배율 (상한 없음 — 사장님 확인 전, 확인표 958). 무기 속도·질량은 그대로, 판정 에너지에만 한 번
+      if (finishPower) eff *= tp?.cleave ? (FINISH.cleave?.power ?? FINISH.power) : FINISH.power; // 찍기 힘 배율 (10/22 대검 쪼개 내려치기는 FINISH.cleave.power 2 — 사장님 '대검은 마무리를 2.5 말고 2로') (상한 없음 — 사장님 확인 전, 확인표 958). 무기 속도·질량은 그대로, 판정 에너지에만 한 번
       if (att.effMul) eff *= att.effMul; // 동방 격살 (10/22 — secret_instant.js instantWound · skill.js): 그 한 칼 동안만 같은 자리에 FINISH.power(SECRET.gyeoksal.power) · 다른 칼은 없음(그대로)
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
@@ -392,7 +392,7 @@ export class Combat {
       eff,
       bladeAxis: axis.clone(),
       finish, // 내려찍기 즉사 (사장님 결정 9/30, fighter.applyWound)
-      ...(finishPower ? { finishPower: FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기 (FINISH.mode 'power25' 때만 붙는다)
+      ...(finishPower ? { finishPower: tp?.cleave ? (FINISH.cleave?.power ?? FINISH.power) : FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기 (FINISH.mode 'power25' 때만 붙는다)
       ...(att.weapon?.woundRage ? { woundRage: rage } : {}), // 와신상담 배율 (그 능력이 있는 칼만 붙는다 — 시험·디버그가 읽는다)
       ...(spK !== 1 ? { schoolK: spK, schoolLock: att.schoolPassive.lastLock } : {}), // 유파 패시브 배율이 실렸을 때만 (strike → onHit 이 켄타이를 씀)
     };

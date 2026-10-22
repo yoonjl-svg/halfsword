@@ -123,6 +123,7 @@ export const FINISH = {
     // 쓰는 칼: 몸 틀(weapons.js frame = weapon_class.js 'B 양손 앞무게' — 두 손 · 무겁거나 칼끝 쪽 무게)이 이 값이고 날 있는 칼(부러지지 않은).
     //  지금 로스터: 츠바이핸더 · 플랑베르주 · 티소나 · 모노호시자오 (냉동 참치는 날이 없어 찍기 그대로 — 머리를 내려찍는다). 무기 칸 finishCleave(true | false)가 있으면 그 값
     frame: 'heavy',
+    power: 2, // 쪼개 내려치기의 판정 에너지 배율 (사장님 10/22 23:0x '대검은 마무리를 2.5 말고 2로 해' — 찍기는 FINISH.power 2.5 그대로)
     charge: 0.2, // 머리 위에 든 뒤 힘을 모으는 시간 (s, 시간 사다리 0.2 반응 — 사장님 확인 전). 주소 ?finishCleaveCharge=초
   },
 };
