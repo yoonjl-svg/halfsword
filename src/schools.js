@@ -890,6 +890,8 @@ const CN3 = {
 //   비기 뒤 굳음 SECRET.stiff.chinese 그대로. 겨눔 자리 · 호의 각 [추정] · 패드 길(from · path)은 cnFast 0 일 때의 서보 길 [추정]
 const GYEOKSAL_STANCE = { highC: 'geojeong', highR: 'geojeong', thrust: 'eogeo', lowL: 'yoryak', lowR: 'yoryak', highL: 'bongdu' };
 const GK_CUT = (name, nameKo, orig, target, from, path, dyn, open) => ({ name, nameKo, orig, pre: [], from, path, open, kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'aim', target, from: 'prep', ...dyn } });
+const GK_ARM = [GK_CUT('gkArm', '팔 깎기 (삭살)', '削殺', 'arm', [0.3, 0.1], [[0.05, 0.0], [-0.3, -0.05]], { side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 }, 'UL')];
+const GK_ARM_DOWN = [GK_CUT('gkArmDown', '팔 내려 깎기 (삭살)', '削殺', 'arm', [0.1, 0.4], [[0.05, 0.1], [-0.05, -0.3]], { side: -1, yaw: [-10, 10], el: [40, -40], at: 0.8 }, 'UL')];
 const CHINESE_SECRET_GYEOKSAL = {
   name: 'gyeoksal',
   nameKo: '막아 죽이기 (격살)', orig: '格殺',
@@ -900,7 +902,13 @@ const CHINESE_SECRET_GYEOKSAL = {
     power: 'gyeoksal', // 판정 = SECRET.gyeoksal.power (skill.js — 'finish' 면 FINISH.power)
     combo: {
       geojeong: { nameKo: '솥 들기 → 머리 베기', seq: [GK_CUT('gkHead', '머리 베기 (상살)', '上殺', 'head', G.tag, [[0.12, 0.2], [-0.2, -0.15]], { side: -1, yaw: [-35, 35], el: [25, -25], at: 0.75 }, 'H')] },
-      eogeo: { nameKo: '수레 몰기 → 팔 깎기', seq: [GK_CUT('gkArm', '팔 깎기 (삭살)', '削殺', 'arm', [0.3, 0.1], [[0.05, 0.0], [-0.3, -0.05]], { side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 }, 'UL')] },
+      eogeo: {
+        nameKo: '수레 몰기 → 팔 깎기',
+        // 기본 = 가로 호(오른 → 왼) · 시험 SECRET.gyeoksal.armPath 'down' = 위에서 아래로 팔꿈치를 내려 깎음(削 — 거의 곧게 내림, 가로 ±10°) [추정]
+        get seq() {
+          return SECRET.gyeoksal?.armPath === 'down' ? GK_ARM_DOWN : GK_ARM;
+        },
+      },
       yoryak: { nameKo: '걷어 올리기 → 다리 베기', seq: [GK_CUT('gkLeg', '다리 베기 (하살)', '下殺', 'leg', [0.4, -0.2], [[0.0, -0.42], [-0.4, -0.46]], { side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 }, 'LL')] },
       bongdu: { nameKo: '봉황 머리 → 허파 찌르기', seq: [{ name: 'gkLung', nameKo: '허파 찌르기 (자)', orig: '刺', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }] },
     },

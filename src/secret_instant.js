@@ -939,7 +939,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, tech: opt.tech }; // effMul: 격살(10/22) 판정 에너지 배율 (combat.js analyze — 마무리 찍기 FINISH.power 와 같은 자리)
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech }; // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js · 없으면 칼날 전부) // effMul: 격살(10/22) 판정 에너지 배율 (combat.js analyze — 마무리 찍기 FINISH.power 와 같은 자리)
   f.instantResult = null;
 }
 
@@ -1004,7 +1004,7 @@ function startCombo(f, combat, req) {
     kind: 'combo', moves: req.moves, segs: [], si: 0, ts: 0, t: 0, v, yaw, mi: -1, moveName: null, cutting: false, cur: { H: AH, D: AD, px: f.handOffset.x }, last: null,
     body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, effMul: req.effMul ?? null, tech: req.tech ?? null,
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
-    arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [] }, slide: null,
+    arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [], ...(req.width > 0 && req.width < 1 ? { width: req.width } : {}) }, slide: null,
   };
   f.instantArc = f.iai.arc;
   f.artTech = req.tech ?? null; // 이 끌고 가는 칼이 어떤 기술인가 (unique_assist.js strokeTechOf — 진 · 츠바메가에시 피해 × 3)
