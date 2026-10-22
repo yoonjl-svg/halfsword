@@ -18,6 +18,7 @@
 //    flow    이베리아 이어 긋기 흐름 A 끔 (IB_FLOW.a = false)
 //    table   이베리아 몬탄테 자세표 끔 (SCHOOL_ART.table = false → 앞무게 틀 표)
 //    tableSkip=a+b  그 칸만 걷음 (tag · tagR · tagL · langort · ochsR · ochsL · pflugR · pflugL · alber · sideR · sideL · wechselR · wechselL · neben · 묶음 wait · pass)
+//    tableSet=k:el/az[:x/y/z]+…  그 칸의 칼끝 각(올려본 · 옆 °) · 손 자리(m)를 바꿈 (guards.js setIberianTable · 빈 칸은 그대로) · ibTable=v2  자세표 v2 묶음 (IBERIAN_TABLE_V2)
 //    heavy   앞무게 틀 흐름 덧씌우기(SKILL.flow) 끔 — skill._flow 감싸기를 판 뒤 걷어 낸다
 //    limits  사람 관절 범위 끔 (BODY.humanLimits = false — 손목 밧줄 · 아래팔 돌림 범위 · 양날 고르기)
 //    joints  관절 교정 묶음 끔 (JOINTS.mode = 'off')
@@ -78,6 +79,22 @@ if (ablVal('tableSkip')) {
   // 이베리아 자세표 칸만 골라 걷음 (+ 로 여럿 · wait = 기다리는 자리 여섯 · pass = 지나는 자리 여덟 — guards.js skipIberianTable · main.js ?ibTableSkip 와 같은 길)
   const { skipIberianTable } = await import('../../src/guards.js');
   skipIberianTable(String(ablVal('tableSkip')).split('+'));
+}
+if (ablVal('ibTable') === 'v2') {
+  // 이베리아 자세표 v2 묶음 (guards.js IBERIAN_TABLE_V2 — main.js ?ibTable=v2 와 같은 길 · pad 는 잰 쪽만 이베리아라 ?ibTable=v2p 와 같은 판)
+  const { useIberianTableV2 } = await import('../../src/guards.js');
+  useIberianTableV2();
+}
+if (ablVal('tableSet')) {
+  // 이베리아 자세표 칸 고치기 (+ 로 여럿): 짧은이름:올려본각/옆각[:앞/위/옆] — 예 sideR:10/110 · tagR:-15/130:0.08/0.36/0.18 (guards.js setIberianTable)
+  const { setIberianTable } = await import('../../src/guards.js');
+  for (const it of String(ablVal('tableSet')).split('+')) {
+    const [k, b, h] = it.split(':');
+    const o = {};
+    if (b) o.blade = b.split('/').map(Number);
+    if (h) o.hand = h.split('/').map(Number);
+    setIberianTable(k, o);
+  }
 }
 if (ablVal('limits')) BODY.humanLimits = false;
 if (ablVal('joints')) JOINTS.mode = 'off';

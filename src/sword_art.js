@@ -259,7 +259,9 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   const skip = w.motionSkip ?? [];
   const pkgId = 'school' in opts ? null : persona?.school;
   const tradition = (pkgId != null ? schoolOf(pkgId).tradition : null) ?? traditionOf(w);
-  const schoolTable = (t) => (SCHOOL_ART.table ? applySchoolGuardTable(t, TRADITIONS[tradition]) : t); // 유파 자세표 (10/10 이베리아 몬탄테 고증 — guardTable 없는 유파는 그대로 = 전과 같음)
+  // opts.guardTables (10/22 이베리아 자세표 v2 '사람만' 시험 — 기본 없음): { 유파: 자세표 칸 } 이 있으면 그 유파는 TRADITIONS 의 guardTable 대신 그 칸으로 덮는다 (main.js 가 플레이어 몸에만 넘김)
+  const ownTable = opts.guardTables?.[tradition];
+  const schoolTable = (t) => (SCHOOL_ART.table ? applySchoolGuardTable(t, ownTable ? { guardTable: ownTable } : TRADITIONS[tradition]) : t); // 유파 자세표 (10/10 이베리아 몬탄테 고증 — guardTable 없는 유파는 그대로 = 전과 같음)
   const libTable = lib ? schoolTable(buildFrameTable(frame, style, skip, libBase)) : null;
   const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
   const names = schoolNames(guardNames(table), tradition, frame, style);
