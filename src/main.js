@@ -151,6 +151,11 @@ if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이�
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
 // 이베리아 날 세우기 시험 (10/22 — 기본 끔 · 사장님 확인 전, config IB_EDGE · docs/strike/iberian_flat_hits_2026-10-22.md): `?ibEdge=motor` · `?ibEdge=ff` · `?ibEdge=pre` = 이베리아 유파만 그 날 세우기 방식
 if (['motor', 'ff', 'pre'].includes(params.get('ibEdge'))) Object.assign(CONFIG.IB_EDGE, { on: true, edge: params.get('ibEdge') });
+// 쉬는 날 방향 시험 (10/22 — 기본 끔 · 사장님 확인 전, config EDGE_REST · docs/strike/edge_rest_hold_2026-10-22.md): `?edgeRest=pre` · `kick` · `fast` · `latch` · `tsw` · 쉼표로 여럿 — 사람 칼만
+if (params.get('edgeRest')) {
+  const m = params.get('edgeRest').split(',').filter((x) => ['pre', 'kick', 'fast', 'latch', 'tsw'].includes(x));
+  if (m.length) { CONFIG.EDGE_REST.on = true; for (const x of m) CONFIG.EDGE_REST[x] = true; }
+}
 // 이베리아 자세표 칸 걷기 시험 (10/22 — 기본 끔 · 사장님 확인 전, docs/strike/iberian_flat_hits_2026-10-22.md): `?ibTableSkip=sideR,sideL` 처럼 칸 짧은 이름(guards.js IBERIAN_TABLE_KEYS) · 묶음 wait · pass — 걷은 칸은 앞무게 틀 표 값
 if (params.get('ibTableSkip')) skipIberianTable(params.get('ibTableSkip').split(',').map((x) => x.trim()).filter(Boolean));
 // 이베리아 자세표 v2 (10/22 — 기본 끔 · 사장님 확인 전, guards.js IBERIAN_TABLE_V2): `?ibTable=v2` = 사람 · AI 모두 · `?ibTable=v2p` = 사람만(플레이어 몸에만 덮음 — 아래 newRound)

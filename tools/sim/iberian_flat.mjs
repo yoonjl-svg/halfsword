@@ -18,6 +18,7 @@
 //    flow    이베리아 이어 긋기 흐름 A 끔 (IB_FLOW.a = false)
 //    table   이베리아 몬탄테 자세표 끔 (SCHOOL_ART.table = false → 앞무게 틀 표)
 //    tableSkip=a+b  그 칸만 걷음 (tag · tagR · tagL · langort · ochsR · ochsL · pflugR · pflugL · alber · sideR · sideL · wechselR · wechselL · neben · 묶음 wait · pass)
+//    edgeRest=pre+kick+fast+latch+tsw  쉬는 날 방향 시험 (config EDGE_REST — 사람 칼만) · preV=수 · kickK=수 · kickT=수
 //    tableSet=k:el/az[:x/y/z]+…  그 칸의 칼끝 각(올려본 · 옆 °) · 손 자리(m)를 바꿈 (guards.js setIberianTable · 빈 칸은 그대로) · ibTable=v2  자세표 v2 묶음 (IBERIAN_TABLE_V2)
 //    heavy   앞무게 틀 흐름 덧씌우기(SKILL.flow) 끔 — skill._flow 감싸기를 판 뒤 걷어 낸다
 //    limits  사람 관절 범위 끔 (BODY.humanLimits = false — 손목 밧줄 · 아래팔 돌림 범위 · 양날 고르기)
@@ -80,6 +81,13 @@ if (ablVal('tableSkip')) {
   const { skipIberianTable } = await import('../../src/guards.js');
   skipIberianTable(String(ablVal('tableSkip')).split('+'));
 }
+if (ablVal('edgeRest')) {
+  // 쉬는 날 방향 시험 (config EDGE_REST — main.js ?edgeRest= 와 같은 뜻, 사람 칼만): pre · kick · fast (+ 로 여럿) · preV=수 · kickK=수 는 따로 칸으로
+  if (!CONFIG.EDGE_REST) throw new Error('이 트리에 EDGE_REST 가 없다');
+  CONFIG.EDGE_REST.on = true;
+  for (const x of String(ablVal('edgeRest')).split('+')) { if (!['pre', 'kick', 'fast', 'latch', 'tsw'].includes(x)) throw new Error(`edgeRest ${x}?`); CONFIG.EDGE_REST[x] = true; }
+}
+for (const k of ['preV', 'kickK', 'kickT']) if (ablVal(k) != null) CONFIG.EDGE_REST[k] = +ablVal(k);
 if (ablVal('ibTable') === 'v2') {
   // 이베리아 자세표 v2 묶음 (guards.js IBERIAN_TABLE_V2 — main.js ?ibTable=v2 와 같은 길 · pad 는 잰 쪽만 이베리아라 ?ibTable=v2p 와 같은 판)
   const { useIberianTableV2 } = await import('../../src/guards.js');

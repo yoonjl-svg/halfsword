@@ -465,6 +465,16 @@ export const IB_FLOW = { a: true, brake: 0.5 };
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
 export const IB_EDGE = { on: false, edge: 'motor' };
+// 쉬는 날 방향 시험 (10/22 — 사장님 09:5x '유파 공통 과제로 이어가', docs/strike/edge_rest_hold_2026-10-22.md · 확인표 2177~ · **기본 끔 · 사장님 확인 전**):
+//  감는 자리에서 오래 쥐면 칼이 서고, 칼이 서면 날 세우기 목표가 쉼 쪽(칼 면이 몸 오른쪽)으로 돌아와 다음 긋기의 날이 누운 채 출발한다(1000 ms 쥔 가로 칼 면 24 % · 300 ms 6 %).
+//  사람 손가락 칼(fighter.js playerArm)만 — 모든 유파 · 무기. AI 는 그대로. 끄면(on false) 판 그대로(같은 float). 칸은 하나씩 켠다(`?edgeRest=pre` · `kick` · `fast` · `pre,kick`):
+//   pre  = 손가락을 대고 쥐고 있는 동안 '다음에 그을 쪽'(패드 가운데 — 지금 손 자리의 반대쪽)으로 손가락이 preV 패드 m/s 로 움직인다고 보고 날 세우기 목표를 미리 돌림
+//          (손가락이 실제로 움직이면 그 몫이 preV 까지 줄며 넘겨받는다 — fighter.js inputEdgeLead)
+//   kick = 휘두르기를 시작한 첫 kickT 초 동안 날 세우기 힘(강성 · 감쇠) × kickK
+//   fast = 날 세우기 목표가 쉼 → 날 방향으로 넘어가는 칼날 빠르기 0.5~2.5 m/s 를 mv 로 (빨리 넘어감)
+//   latch = 손가락을 대고 멈춰 있는 동안 쉼 목표(칼 면 오른쪽) 대신 마지막으로 움직이던 때의 칼 면을 쥔다 (손을 떼면 오늘 줄)
+//   tsw  = tsW 에 적힌 무기만 날 세우기 힘(강성 · 감쇠 함께) × 그 수 — 청강검 날 세우기 힘이 롱소드의 0.072 배로 다섯 무기 가운데 가장 약하다 (× 3 은 칼이 팽이처럼 돎)
+export const EDGE_REST = { on: false, pre: false, preV: 2, kick: false, kickK: 1.5, kickT: 0.12, fast: false, mv: [0.2, 1.0], latch: false, tsw: false, tsW: { qinggang: 1.5 } };
 // 유파 패시브 (스킬북 4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬 … 이베리아 유파의 경우에는 손목 힘을 증가하는 걸 넣자' · 확인표 2110):
 //  이베리아 = 칼을 돌리는 손목 힘 한도(maxAimTorque) × wrist — 늘(이어 긋기 시험 B 를 패시브로 옮김). 사람 = 4급 책 '사용'(테스트 경로는 모두 켬) · AI = 숙련도 at 이상.
 //  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. `?ibWrist=0` = 이베리아만 끔

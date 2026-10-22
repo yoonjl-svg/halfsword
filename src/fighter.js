@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -192,6 +192,7 @@ function ikReach(a, b, player = false) {
  *  corr_s0 (모든 파이터 corr old/v2 바꿔 끼움)의 '설정 0 동일'이 깨져서 쓰지 않는다 */
 const playerArm = (f) => f.skill?.autoGuard === true;
 const _pe0 = new THREE.Vector3(), _pe1 = new THREE.Vector3(); // inputEdgeLead scratch
+const _erF = new THREE.Vector3(), _erQ = new THREE.Quaternion(); // 쉬는 날 방향 시험 latch scratch (config EDGE_REST)
 /** 위팔 비틀기 서보 강성 (N·m/rad): JOINTS.twistK 가 있으면 그것, 없으면 켠 묶음의 twistK, 둘 다 없으면 25 (오늘 값). 감쇠·상한은 같은 배율 (manualMuscle) */
 const twistK = () => JOINTS.twistK ?? jm().twistK ?? 25;
 /** 날 세우기 힘(twistScale) 배율: JOINTS.edgeK 가 있으면 그것, 없으면 켠 묶음의 edgeK, 둘 다 없으면 1 */
@@ -3169,7 +3170,8 @@ export class Fighter {
     const pem = JOINTS.playerEdge ?? 'off';
     if (pem !== 'off' && playerArm(this)) this.inputEdgeLead(edgeDir, blade, pem);
     edgeDir.addScaledVector(blade, -edgeDir.dot(blade));
-    const mv0 = em === 'torque' ? 0.5 : JOINTS.edgeMove0, mv1 = em === 'torque' ? 2.5 : JOINTS.edgeMove1; // 날을 세우기 시작하는 칼날 빠르기 (m/s, 오늘 0.5~2.5)
+    const erFast = EDGE_REST.on && EDGE_REST.fast && playerArm(this); // 쉬는 날 방향 시험 fast (10/22 — config EDGE_REST, 기본 끔): 사람 칼만 빨리 날 방향으로 넘어감
+    const mv0 = erFast ? EDGE_REST.mv[0] : em === 'torque' ? 0.5 : JOINTS.edgeMove0, mv1 = erFast ? EDGE_REST.mv[1] : em === 'torque' ? 2.5 : JOINTS.edgeMove1; // 날을 세우기 시작하는 칼날 빠르기 (m/s, 오늘 0.5~2.5)
     // 가만히 있을 때: 칼 면이 몸 오른쪽을 본다 / 움직일 때: 날이 움직이는 쪽을 향한다.
     // 속도에 따라 둘을 부드럽게 섞는다 (딱 잘라 바꾸면 경계 속도에서 칼이 매 순간 90°씩 비틀리며 떤다)
     const flatTarget = RIGHT_LOCAL.clone().applyQuaternion(this.yaw);
@@ -3177,6 +3179,14 @@ export class Fighter {
     if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(flat);
     flatTarget.normalize();
     if (flatTarget.dot(flat) < 0) flatTarget.negate();
+    // 쉬는 날 방향 시험 latch (10/22 — config EDGE_REST, 기본 끔): 사람 칼이 손가락을 대고 멈춰 있는 동안 쉼 목표(칼 면 오른쪽) 대신
+    //  마지막으로 움직이던 때의 칼 면(몸 돌림 기준으로 기억)을 쥔다 — 감는 자리로 옮긴 길과 다음 긋기는 대개 같은 줄이라 양날 칼 면이 그대로 맞는다. 손을 떼면 오늘 줄 그대로
+    const erLatch = EDGE_REST.on && EDGE_REST.latch && playerArm(this);
+    if (erLatch && this.handHeld && this.erFace) {
+      const lf = _erF.copy(this.erFace).applyQuaternion(this.yaw);
+      lf.addScaledVector(blade, -lf.dot(blade));
+      if (lf.lengthSq() > 1e-2) { lf.normalize(); if (lf.dot(flat) < 0) lf.negate(); flatTarget.copy(lf); }
+    }
     // 사람 관절 범위(BODY.humanLimits): 가까운 쪽 칼 면이 아래팔 돌림 범위(HUMAN.forearmRoll, 손목 밧줄) 밖이고 반대쪽은 안이면 반대쪽 날을 쓴다 (양날)
     const zf = BODY.humanLimits ? _cr2.set(0, 0, 1).applyQuaternion(rot(forearm, _cq)) : null;
     if (zf) rollSide(flatTarget, zf);
@@ -3216,6 +3226,10 @@ export class Fighter {
         flatTarget.normalize();
       }
       if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
+    }
+    if (erLatch) {
+      if (!this.handHeld) this.erFace = null;
+      else if (this.edgeMoving > 0.9) (this.erFace ??= new THREE.Vector3()).copy(flatTarget).applyQuaternion(_erQ.copy(this.yaw).invert());
     }
     // 막기 자리 몸꼴의 칼 면 (10/12 독일 왕관 — frames.js installCover 의 face, schools.js GERMAN_KRON): 덮개가 덧씌우기 칸을 쥔 동안 날 세우기 목표를 덮는 무게만큼
     //  그 쪽(왕관 = 칼 면이 상대 쪽, 날·코등이가 좌우)으로. 고르는 법은 위와 같다(가까운 칼 면 → 아래팔 돌림 범위). face 없는 덮개(중국 셋)·덮지 않는 때는 지나치기만 한다
@@ -3293,9 +3307,21 @@ export class Fighter {
     // 이 축 관성이 롱소드보다 작은/큰 무기는 twistScale만큼 힘도 같이 줄이거나 늘려서
     // (관성이 작을수록 같은 힘에도 더 빨리 도니까) 안정성을 맞춘다.
     let twist;
+    // 쉬는 날 방향 시험 kick (10/22 — config EDGE_REST, 기본 끔): 사람 칼이 휘두르기를 시작한 첫 kickT 초 동안 날 세우기 힘 × kickK
+    let tsE = this.twistScale;
+    if (EDGE_REST.on && EDGE_REST.tsw && playerArm(this)) tsE *= EDGE_REST.tsW?.[this.weaponSpecId] ?? 1; // 쉬는 날 방향 시험 tsw (10/22 — 기본 끔): 적힌 무기만 날 세우기 힘 배율 (사람 칼만)
+    if (EDGE_REST.on && EDGE_REST.kick && playerArm(this)) {
+      const swN = !!this.skill.swinging;
+      if (swN && !this.erSw) this.erKickT = EDGE_REST.kickT;
+      this.erSw = swN;
+      if (this.erKickT > 0) {
+        tsE *= EDGE_REST.kickK;
+        this.erKickT -= this.lastDt || 1 / 120;
+      }
+    }
     if (em === 'torque') {
-      twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * this.twistScale);
-      twist.addScaledVector(wTwist, -0.12 * this.twistScale);
+      twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * tsE);
+      twist.addScaledVector(wTwist, -0.12 * tsE);
     } else twist = this.edgeTwist(em, blade, flat, flatTarget, w.dot(blade));
     torque.add(twist);
     sword.addTorque(vecArg(torque), true);
@@ -3325,6 +3351,16 @@ export class Fighter {
     const kw = 1 - (sk.thrustPose?.w ?? 0);
     vx *= kw;
     vy *= kw;
+    // 쉬는 날 방향 시험 pre (10/22 — config EDGE_REST, 기본 끔): 손가락을 대고 쥐고 있는 동안 '다음에 그을 쪽'(패드 가운데 — 지금 손 자리의 반대쪽)으로
+    //  손가락이 preV 로 움직인다고 본다. 손가락이 실제로 움직이면 그 빠르기만큼 줄여 넘겨준다 (가운데 0.15 m 안에서는 걸지 않음)
+    if (EDGE_REST.on && EDGE_REST.pre && this.handHeld) {
+      const rr = Math.hypot(sk.aim.x, sk.aim.y);
+      const kPre = rr > 0.15 ? Math.max(0, 1 - Math.hypot(sk.vel.x, sk.vel.y) / EDGE_REST.preV) : 0;
+      if (kPre > 0) {
+        vx -= (sk.aim.x / rr) * EDGE_REST.preV * kPre;
+        vy -= (sk.aim.y / rr) * EDGE_REST.preV * kPre;
+      }
+    }
     // 플레이어 고유 동작 강화의 몸 돌림 (10/14 — skill.uniqBody.yawRate, 플레이어만 · 없으면 그대로): 덧씌운 가슴 돌림이 바뀌는 빠르기(가슴 명령 cT 에 − 로 더함 → 위축 둘레 −yawRate)로
     //  칼날 70 % 지점이 곧 낼 속도를 날 방향에 더한다 — 손가락 몫(위)만 읽으면 몸이 더 도는 몫을 날이 늦게 따라간다 (탐침 unique_enhance_measure feel: 날 각 23.4 → 22.2°, 부호를 뒤집으면 더 나빠짐 — 문서 §7)
     const ub = sk.uniqBody;
