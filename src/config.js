@@ -58,6 +58,11 @@ export const STAMINA = {
 //   독일 인데스 '막힘'과 같은 가름: AI ai.js afterStrike · 사람 skill.js whiffEnd) 막은 쪽 기력 − aweDrain(8) · 한 공격에 한 번 · 칼 주인 시계로 aweGap(1.5 s) 안에는 다시 안 깎음.
 //   계산은 stamina.js spendAweDrain. aweDrain 0 = 끔
 export const WEAPON_ABILITY = { aweDrain: 8, aweGap: 1.5 };
+// 드루이드의 채찍 무릎 꿇리기 (사장님 10/23 01:5x '특수효과 넣어서 채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘.(모든 종류의 타격 대상) 곁눈베기 맞았을 때처럼' — 확인표 2255 ~ 2257 사장님 확인 전)
+//  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
+//  다른 점: 부위 · 판정 종류(둔타 · 멍 · 상처)를 가리지 않는다 · 굴림은 한 획(휘두름 · 톡)에 한 번 — 그 획의 첫 맞음에서만(마디가 여러 번 닿아도) · 무기 칸 kneelHit 이 있는 무기만(채찍).
+//  p · kneel 은 곁눈 베기 값 그대로(0.5 · 0.4 s) · ai 기본 끔(사람 먼저 — `?whipKneelAi=1`) · `?whipKneel=0` 끔
+export const WHIP_KNEEL = { p: 0.5, kneel: 0.4, ai: false };
 
 // 바닥 면적 2배: 길이는 √2배. 인물·무기·시작 간격은 확대하지 않는다.
 export const ARENA_SCALE = Math.SQRT2;

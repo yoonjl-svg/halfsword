@@ -1874,6 +1874,7 @@ const druidWhip = finalizeSpec('druid_whip', {
   nameKo: '드루이드의 채찍', nameEn: "Druid's Whip", tier: 'mystery',
   desc: '질긴 식물 줄기를 엮은 채찍.\n손을 떠난 힘이 덩굴 끝에서 뒤늦게 맺힌다.',
   grip: 'one-hand', school: 'none', material: 'wood', flexible: true,
+  kneelHit: true, // 맞은 쪽 무릎 꿇리기 (사장님 10/23 — config WHIP_KNEEL · combat.js whipKneelCheck)
   hiltLength: 0.13, bladeLength: DRUID.lash, edged: false, mCut: 0, mThrust: 0, mBlunt: 1.5, fragility: 0,
   controlOverrides: { ...WHIP_NOW.servo }, // 손잡이 서보 (druid_whip.js — 샛별 값 24 · 1.2 · 0.6 · 10 · 0.08 에서 10/23 검수로 10 · 0.2 · 0.1 · 10 · 0.08, 확인표 2226)
   partMesh: hiddenParts, buildParts: druidParts, decorate: drawDruidWhip,
