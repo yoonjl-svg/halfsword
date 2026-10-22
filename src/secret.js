@@ -10,10 +10,11 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SECRET, SKILL, BIND } from './config.js';
-import { TRADITIONS } from './schools.js';
+import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
+import { RisolutoWatch } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 
 const clamp = THREE.MathUtils.clamp;
 const _r = new THREE.Vector3();
@@ -552,6 +553,7 @@ export class PlayerSecretWatch {
     this.swing = null; // 지금 베기 { first, landed }
     this.prevFoePain = foe.pain;
     this.opened = 0; // 창이 열린 수 (재기)
+    this.riso = this.S?.when === 'risoluto' ? new RisolutoWatch(me, foe) : null; // 이탈리아 거침없이 나아가 찌르기 (10/22 — italian_risoluto.js)
   }
 
   /** 판정 쪽 간격 (검술 풀이의 꾸러미 값 — AI 와 같은 수) */
@@ -578,8 +580,10 @@ export class PlayerSecretWatch {
       this.iaiArm.tick(0, false, true);
       this.gilArm.tick(0, false, true);
       if (this.pc) this.pc.pend = this.pc.buf = null;
+      this.riso?.reset();
       return;
     }
+    if (this.riso) return this.risoTick(dt, busy); // 이탈리아 거침없이 나아가 찌르기: 덮인 채 나아가기만 본다 (상대 사건 · 내 베기 사건 없음)
     const c = me.bodies.chest.translation();
     const s0 = this.sense.seen(0);
     const dx = s0.cx - c.x;
@@ -866,6 +870,18 @@ export class PlayerSecretWatch {
     return !!(this.pc?.buf || this.queued);
   }
 
+  /**
+   * 이탈리아 거침없이 나아가 찌르기 (10/22 — italian_risoluto.js RisolutoWatch): 덮인 채 나아가기가 risolutoHold 초 이어지거나(두 번째 길: 그러던 중 상대 박자)
+   *  창(playerWindow)을 연다. 창이 열린 동안 내가 베기를 시작하면(손 휘두르기 · 긋기) 창을 닫는다 — 덮음을 버리고 벤 것이라 [해석]. busy(비기 실행 중) = 셈을 새로
+   */
+  risoTick(dt, busy) {
+    const R = this.riso;
+    if (busy) return void R.reset();
+    if (this.open && (this.me.skill?.swinging || this.me.stamina?.stroke?.paid)) this.open = null;
+    const ctx = R.tick(dt, !this.open);
+    if (ctx) this.openWindow(ctx);
+  }
+
   openWindow(ctx, t = SECRET.playerWindow) {
     this.open = { S: this.S, ctx, t };
     this.opened++;
@@ -903,6 +919,5 @@ export class PlayerSecretWatch {
 /** 플레이어 무기의 유파 비기 (내 무기 전통 = 검술 풀이 tradition — schoolOf(w.id)). 스위치(SKILL.schoolArt·schoolSecret·playerSecret)가 꺼졌거나 무유파면 null */
 export function playerSecretOf(f) {
   if (!(SKILL.schoolArt && SKILL.schoolSecret && SKILL.playerSecret) || f.weapon?.gun) return null;
-  const T = TRADITIONS[f.swordArt?.tradition];
-  return T?.playerSecret ?? T?.secret ?? null; // 사람 몫이 따로 있는 유파(10/22 독일 죽음의 일격 · 동방 막아 죽이기 — schools.js TRADITIONS.*.playerSecret)는 그것, 없으면 AI 와 같은 비기
+  return playerSecretDef(f.swordArt?.tradition); // 사람 비기 판 (10/22 — 이탈리아는 거침없이 나아가 찌르기 · schools.js playerSecretDef)
 }

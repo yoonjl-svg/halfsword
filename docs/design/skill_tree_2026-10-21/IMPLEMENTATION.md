@@ -48,7 +48,7 @@
 | I8 심화 · 틈 파고들기 | `perk: imbroccata` — 틈 0.6 · 잔상 | `combat.js` gap |
 | I9 칼끝 돌려 빼기 | `u: cavazione` | `PlayerUniqueAssist` |
 | I10 패시브 · 곧은 선 | `passive` | `school_passive.js` |
-| I4 비기 | `secret` — **준비 중** | |
+| I4 비기 | `secret` — 10/22 열림(사람 — 거침없이 나아가 찌르기 · `docs/strike/italian_risoluto_2026-10-22.md`) | |
 | I11 시에나에서 온 편지 | 카드 뽑기 | §5 |
 
 ### 이베리아
@@ -107,6 +107,7 @@
 ## 3. 닫힌 칸 · 화면 이름
 
 - 닫힘 = `isClosed`: 비기는 `SECRET.openSchools`(config — 지금 `['japanese']`)에 없는 유파 → 독일 G10 · 이탈리아 I4 · 이베리아 B7 · (동방 C9 는 10/22 격살로 열림 — `openSchools` 에 'chinese') '준비 중'(설계 `closed: true` 와 같음 · `?secretOpen=all` 이면 열림) · 일본 J8 은 늘 닫힘. 닫힌 칸은 못 익히고(`learnNode` → `'closed'`), 어느 길로도(테스트 경로 · `?skillNodes`) 판 몫이 없다.
+- 닫힘 = `isClosed`: 비기는 `SECRET.openSchools`(config — 지금 `['japanese', 'italian']` · 10/22 이탈리아 사람 먼저)에 없는 유파 → 독일 G10 · 이베리아 B7 · 동방 C9 '준비 중'(10/22 전엔 이탈리아 I4 도)(설계 `closed: true` 와 같음 · `?secretOpen=all` 이면 열림) · 일본 J8 은 늘 닫힘. 닫힌 칸은 못 익히고(`learnNode` → `'closed'`), 어느 길로도(테스트 경로 · `?skillNodes`) 판 몫이 없다.
 - 비기는 어느 칸의 앞 칸도 아니라 닫아도 다른 칸을 막지 않는다(설계 그대로).
 - 칸 글: 판 칸 두 줄(`l1` · `l2`) · 상세 카드 제목(고유 공격 = 게임 기술 이름 '뜻 (소리 · 원어)' — `uniqueDef` · 패시브 · 비기 = 게임 이름 + 원어) · 효과 한 줄(설계 eff 를 '언제 · 무엇을'로 고쳐 씀 — 화면 글 지침 §2). 설계 이름과 게임 기술 이름이 다른 칸은 게임 이름을 따랐다: 히라키기리 → 비껴 베기 · 코테 → 손목 치기 · 츠바메가에시 → 제비 베기 · 요격 → 허리 베기 · 체보요격 → 끌어 딛고 허리 베기 · 둥근 걸음 탈류 → 돌며 베기 · 이베리아 비기 → 길목 지키기(지금 판의 비기).
 

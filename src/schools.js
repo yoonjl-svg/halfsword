@@ -628,6 +628,18 @@ const ITALIAN_SECRET = {
   do: { tech: 'passataSotto', step: { lat: 0, fwd: 'italianStep', when: 'strike', kind: 'lunge', push: 'stepPush' }, stance: 'lunge' }, // 10/10 04:2x 런지 사진: 앞발을 멀리(lunge — 전: 뒷발 지나 보내기 pass), 찌르는 동안 런지 자세(SECRET.stance.lunge) // push: 10/9 4차 걸음 밀기
   src: 'Capo Ferro 1610 contratempo · passata sotto 「punta in falso, che vien di giù in su」 PDF 53쪽 [원문·원전 2차] · 뒷발 지나 보내기(passata) [원전 2차] · 걸음 수 [추정]',
 };
+// 이탈리아 사람 비기 — 거침없이 나아가 찌르기 (안다레 리솔루토) (사장님 10/22 '리솔루토 덮음은 모양으로 재고 사람 먼저' — src/italian_risoluto.js · docs/strike/italian_risoluto_2026-10-22.md):
+//  막지도 휘두르지도 않은 채 내 칼 손 쪽(강한 쪽)으로 상대 칼끝 쪽(약한 쪽)을 덮어 맞대고 걸어 들어간다 → 이어지면 창 → 탭 하나 = 상대 칼이 묶여 막을 수 없는 곧은 찌르기.
+//  사람 길만(playerSecretDef — SECRET.itSecret 'risoluto'). AI 는 위 ITALIAN_SECRET 그대로(aiOpenSchools 로 닫힘).
+//  찌르기 = 탭 찌르기 그대로(skill.js thrust — 걸음 · 겨눔 · 시간 · 패시브 곧은 선은 비기라 안 실림) + 찌르기가 시작될 때 상대 팔 늦춤(흘림과 같은 장치 nagashi_recovery.js
+//  beginFlowRecovery — FLOW_RECOVERY 0.4 s) + 비기 배율(SECRET.power 서보 힘 · hitMul 판정). 새 힘 · 새 문턱 없음. 끝나면 굳음 SECRET.stiff.italian
+const ITALIAN_RISOLUTO = {
+  name: 'andareRisoluto',
+  nameKo: '거침없이 나아가 찌르기 (안다레 리솔루토)', orig: 'andare risoluto',
+  when: 'risoluto', // secret.js PlayerSecretWatch → italian_risoluto.js RisolutoWatch (덮인 채 나아가기)
+  do: { risoluto: true, tapOnly: true, power: 'power' }, // tapOnly: 창 안의 탭(찌르기 입력)만 비기 — 끌기(베기)는 보통 베기로 (main.js) · 내가 베기를 시작하면 창이 닫힘
+  src: 'Fabris 1606 둘째 책 [153] 「andare di risolutione」 · [155] 「che quando la nimica si moue para essere legata dalla propria … che siano sempre unite」 · [156] 「tenendo fermo il braccio andare scorrendo il filo di detta nimica sino al corpo auerso senza mai abbandonarla」 [원문 — Wiktenauer 전사 · A. F. Johnson 영역] · 덮음을 칼 모양으로 재기 · 상대 팔 늦춤 [해석] · 수 [추정]',
+};
 // 이베리아 v4 (10/10 04:4x — 10/11 부터 옛 판, SECRET.iberianSecret 'v4' · 주소 `?ibSecret=v4`): 호 안쪽에서 비켜 서며 크게 가로베기 (휩쓸기 secret_instant.js sweepPose)
 //  (그 전: Molinete altibaixo 휘돌려 내려치기 — 끊기지 않은 베기 셋 뒤, 옆으로 비껴 딛으며 칼을 한 바퀴 휘돌려(몰리넬로 고리) 지붕에서 곧게 내려친다)
 export const IBERIAN_SECRET_V4 = {
@@ -1028,6 +1040,13 @@ export const TRADITIONS = {
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
+
+/** 사람 비기 판 (secret.js playerSecretOf · skill_tree.js 상세 카드 제목): 이탈리아는 사람 길만 거침없이 나아가 찌르기(10/22 — SECRET.itSecret 'risoluto'), 그 밖은 TRADITIONS 비기 그대로 */
+export function playerSecretDef(tradition) {
+  if (tradition === 'italian' && SECRET.itSecret === 'risoluto') return ITALIAN_RISOLUTO;
+  const T = TRADITIONS[tradition];
+  return T?.playerSecret ?? T?.secret ?? null; // 사람 몫이 따로 있는 유파(10/22 독일 죽음의 일격 · 동방 막아 죽이기 — TRADITIONS.*.playerSecret)는 그것
+}
 
 // 독일 왕관 꼴 (Kron — 사장님 10/12 00:1x '왕관 꼴 만들어 일단', docs/strike/kron_shape_2026-10-12.md). 10/11 왕관은 패드 G.kron 뿐이라 손·칼끝은 14 자리 섞기(지붕·황소 둘·긴 자세)가
 //  정했고, 그 섞기가 지붕 쪽이라 칼이 거의 서고 칼 면이 옆(날이 앞뒤 — 코등이도 앞뒤)이었다. 진짜 왕관 꼴은 중국 거정세와 같은 막기 자리 몸꼴 덧씌우기(parryCover → frames.js installCover)로 준다.

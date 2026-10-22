@@ -134,7 +134,7 @@ export function treeNoticeText(n) {
 /**
  * 플레이어가 이 판에 가진 유파 몫 — 해금 규칙의 오직 한 자리. tradition = 손에 든 무기 유파 · learned = readLearned().
  *  차례: nodes(개발 인자 `?skillNodes=G1,G5` · 'all' — 칸 그대로) → upTo(`?uniqueStage=N` — 옛 급 N 까지의 칸: 1 보법 · 2 막기 · 3 고유 공격 · 심화 · 4 패시브 · 5 비기) → test(테스트 경로 = 모두) → 익힌 칸.
- *  닫힌 칸은 어느 길이든 몫이 없다(비기는 SECRET.openSchools — 지금 일본 · 독일). 유파 칸이 없는 무기(무유파)는 null.
+ *  닫힌 칸은 어느 길이든 몫이 없다(비기는 SECRET.openSchools — 지금 일본 · 독일 · 이탈리아 · 동방(10/22)). 유파 칸이 없는 무기(무유파)는 null.
  *  돌려줌 skill_tree_data.js kitFromNodes 의 몫
  */
 export function playerKit(tradition, learned, { test = false, upTo = null, nodes = null } = {}) {

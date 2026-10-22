@@ -25,7 +25,7 @@
 import { TREE_SCHOOLS, TREE, NODE_CAT, nodesOf, nodeOf, nodeState, canLearn, isClosed, nodeEff, RESET_HEADS } from './skill_tree_data.js';
 import { readLearned, learnNode, resetPreview, resetSchool } from './skill_tree_store.js';
 import { readProgress } from './lobby_progress.js';
-import { TRADITIONS } from './schools.js';
+import { TRADITIONS, playerSecretDef } from './schools.js';
 import { PLAYER_UNIQUE, uniqueDef } from './unique_assist.js';
 import { COIN_SRC, POUCH_SRC } from './wallet_icons.js';
 import { nodeIconSrc, nodeIconKey } from './skill_tree_icons.js';
@@ -66,7 +66,7 @@ export function nodeTitle(school, n) {
     return { title: U ? withOrig(U.nameKo, U.orig) : nameOf(n), kind: e ? `${cat.label} · ${ROLE_KO[e.role] ?? ''}`.replace(/ · $/, '') : cat.label };
   }
   if (n.cat === 'passive') { const [nm, o] = PASSIVE_NAME[school] ?? [n.l2, null]; return { title: `패시브 · ${withOrig(nm, o)}`, kind: cat.label }; }
-  if (n.cat === 'secret') { const S = TRADITIONS[school]?.playerSecret ?? TRADITIONS[school]?.secret, rd = /\(([^()]*)\)/.exec(S?.nameKo ?? '')?.[1]; return { title: `비기 · ${S?.orig && rd ? `${S.nameKo.replace(/\s*\(.*$/, '')} (${rd} · ${S.orig})` : S?.nameKo ?? n.l2}`, kind: cat.label }; }
+  if (n.cat === 'secret') { const S = playerSecretDef(school), rd = /\(([^()]*)\)/.exec(S?.nameKo ?? '')?.[1]; return { title: `비기 · ${S?.orig && rd ? `${S.nameKo.replace(/\s*\(.*$/, '')} (${rd} · ${S.orig})` : S?.nameKo ?? n.l2}`, kind: cat.label }; }
   return { title: withOrig(n.title ?? `${n.l1} · ${n.l2}`, n.orig), kind: cat.label };
 }
 

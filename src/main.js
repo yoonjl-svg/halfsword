@@ -176,6 +176,16 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   const so = params.get('secretOpen');
   if (so) CONFIG.SECRET.openSchools = CONFIG.SECRET.aiOpenSchools = so === 'all' ? ['german', 'italian', 'iberian', 'japanese', 'chinese'] : so.split(',').map((x) => x.trim()).filter(Boolean); // 사람 · AI 둘 다 (10/22 aiOpenSchools)
 }
+{ // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
+  const its = params.get('itSecret');
+  if (['risoluto', 'contratempo'].includes(its)) CONFIG.SECRET.itSecret = its;
+  if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = +params.get('risoHold');
+  if (params.has('risoBeat')) CONFIG.SECRET.risolutoBeat = +params.get('risoBeat') ? 1 : 0;
+  if (params.has('risoCover') && +params.get('risoCover') > 0) CONFIG.SECRET.risolutoCover = +params.get('risoCover');
+  if (params.has('risoClose')) CONFIG.SECRET.risolutoClose = +params.get('risoClose') ? 1 : 0; // 시험: '다 붙었을 때' 창
+  if (params.has('risoLine')) CONFIG.SECRET.risolutoLine = +params.get('risoLine') ? 1 : 0; // 시험: 칼을 대지 않는 덮음 (줄 막기)
+  if (params.has('risoGuard')) CONFIG.SECRET.risolutoGuard = +params.get('risoGuard') ? 1 : 0; // 시험: 막기 단추를 누른 채 나아가기도 셈
+}
 {
   // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)
   const sp = params.get('schoolPassive');
@@ -2359,7 +2369,8 @@ function frame(now) {
     let secBusy = exhausted || !!player.skill.secretPhase;
     // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
     const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
-    if ((playerSecret?.open || gilReady) && !secBusy && player.alive && (taps > 0 || swipe)) {
+    const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // 이탈리아 거침없이 나아가 찌르기(10/22)는 찌르기 입력(톡)만 — 끌기는 보통 베기로
+    if ((playerSecret?.open || gilReady) && !secBusy && player.alive && (taps > 0 || secSwipe)) {
       const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();
       if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
       if (player.skill.secret(o)) {

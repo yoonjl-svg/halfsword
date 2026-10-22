@@ -93,9 +93,12 @@ test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 �
 });
 
 // ── 닫힌 칸 ──
-test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 동방 막아 죽이기(10/22 사람 먼저)만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
+test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 동방 막아 죽이기(10/22 사람 먼저)만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
-  assert.deepEqual(closed.sort(), ['B7', 'I4', 'J8']);
+  assert.deepEqual(closed.sort(), ['B7', 'J8']);
+  assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false);
+  assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, true);
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese']); // AI 는 닫힌 채 (ai.js 는 aiOpenSchools 만 본다)
   for (const s of DESIGN) for (const d of s.nodes) if (d.closed) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
   assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), false); // 10/22 독일 죽음의 일격 — 사람 먼저
@@ -105,7 +108,7 @@ test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 동�
   assert.equal(D.kitFromNodes('german', all).secret, true);
   assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).secret, true);
   assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).perk.has('kote'), false); // J8 몫 없음
-  assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, false); // 닫힌 비기는 몫 없음
+  assert.equal(D.kitFromNodes('iberian', D.allNodeIds('iberian')).secret, false); // 닫힌 비기는 몫 없음 (10/22 이탈리아도 열려 이베리아로)
   const keep = SECRET.openSchools; SECRET.openSchools = ['japanese'];
   try {
     assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), true); // 독일을 빼면 다시 '준비 중'
@@ -116,7 +119,7 @@ test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 동�
   SECRET.openSchools = [...D.TREE_SCHOOLS];
   try { assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), true); } finally { SECRET.openSchools = keep; }
   wallet(99999, 999);
-  assert.deepEqual(S.learnNode('italian', 'I4'), { ok: false, saved: false, why: 'closed' }); // 닫힌 칸은 못 배움
+  assert.deepEqual(S.learnNode('iberian', 'B7'), { ok: false, saved: false, why: 'closed' }); // 닫힌 칸은 못 배움 (10/22 이탈리아도 열려 이베리아로)
   for (const id of ['G1', 'G2', 'G5', 'G8', 'G3', 'G7', 'G4', 'G9']) assert.equal(S.learnNode('german', id).ok, true, id);
   assert.equal(S.learnNode('german', 'G10').ok, true); // 비기 칸 값 그대로 (금화 400 + 머리 20)
 });
@@ -407,7 +410,7 @@ test('판 몫 차례: ?skillNodes → ?uniqueStage(옛 급 N 까지의 칸) → 
   assert.equal(S.playerKit('none', learned), null);
   const t = S.playerKit('german', learned, { test: true });
   assert.equal(t.unique.size, 3); assert.equal(t.chase && t.parryCover && t.passive, true); assert.equal(t.secret, true); // 10/22 독일 비기 열림 (죽음의 일격)
-  assert.equal(S.playerKit('italian', {}, { test: true }).secret, false); // 닫힌 비기
+  assert.equal(S.playerKit('iberian', {}, { test: true }).secret, false); // 닫힌 비기 (10/22 이탈리아도 열려 이베리아로)
   assert.deepEqual([null, '', '0', '2', '5', '6', '-1', '2.5', 'x'].map(S.stageParam), [null, null, 0, 2, 5, null, null, null, null]);
   const k2 = S.playerKit('german', learned, { upTo: 2 });
   assert.deepEqual([k2.footwork, k2.chase, k2.parry, k2.parryCover, k2.unique.size, k2.passive], [true, true, true, true, 0, false]); // 보법 · 막기 칸 모두
@@ -526,6 +529,11 @@ test('실제 몸 — 고유 공격 · 비기: 익힌 칸의 기술만 · 비기�
     assert.equal(new PlayerUniqueAssist(g.player, { names: new Set() }).list.length, 0);
     assert.equal(new PlayerUniqueAssist(g.player, { stage: 4 }).list.length, 3); // 단계로 거르는 길(시험 · 도구)은 그대로
   } finally { g.world.free(); }
+  const it = round('rapier', kitOf('italian', 'I1', 'I3', 'I2', 'I7', 'I8', 'I4'), 9);
+  try {
+    assert.equal(new PlayerSecretWatch(it.player, it.enemy, { locked: !kitOf('italian', 'I4').secret }).S?.name, 'andareRisoluto'); // 10/22 이탈리아 사람 비기
+    assert.equal(new PlayerSecretWatch(it.player, it.enemy, { locked: !kitOf('italian', 'I8').secret }).S, null);
+  } finally { it.world.free(); }
   const j = round('monohoshizao', kitOf('japanese', 'J1', 'J2', 'J3', 'J4', 'J5'), 9);
   try {
     assert.ok(new PlayerSecretWatch(j.player, j.enemy, { locked: !kitOf('japanese', 'J1', 'J2', 'J3', 'J4', 'J5').secret }).S);

@@ -1,7 +1,7 @@
 // 스킬트리 자료 · 규칙 (10/21 사장님 확정 — docs/design/skill_tree_2026-10-21/README.md · data.mjs 가 원본 · 이 파일 = 게임이 읽는 판)
 //  유파마다 11 칸 · 뿌리 = 보법 I · pre = 먼저 익힐 칸 '모두'(독일 2단계 관문 · 이탈리아 보법 II 줄기 · 이베리아 패시브 → 비기 · 독일 보법 II → 패시브 → 비기가 이미 여기 들어 있다).
 //  값(사장님 10/21 19:0x): 편지 금화 100 · 패시브 머리 10(금화 없음) · 보법 II 금화 100 · 비기 금화 400 + 머리 20 · 나머지는 깊이마다 금화 — data.mjs 그대로.
-//  닫힌 칸: 비기는 SECRET.openSchools(config — 지금 일본 · 독일 · 동방 — 10/22 독일 죽음의 일격 · 동방 격살 사람 먼저)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · 일본 J8 손목 치기 심화는 이점이 아직 없어 '준비 중'(확인표 2107).
+//  닫힌 칸: 비기는 SECRET.openSchools(config — 지금 일본 · 독일 · 이탈리아 · 동방 — 10/22 사람 먼저)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · 일본 J8 손목 치기 심화는 이점이 아직 없어 '준비 중'(확인표 2107).
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
@@ -59,7 +59,7 @@ const TREE_SRC = {
       N({ id: 'I6', name: '막아찌르기', cat: 'parry', l1: '막기 II', l2: '막아찌르기', eff: '막기를 누르면 바로 짧게 찌르고, 그동안 받는 피해가 줄어든다', pre: ['I5'], price: 300, d: 3, cx: 670, f: ['opposition'] }),
       N({ id: 'I8', name: '틈 파고들기', cat: 'deep', l1: '심화', l2: '틈 파고들기', title: '내려 찌르기 심화 · 틈 파고들기', eff: '내려 찌르기가 옷과 갑옷 틈을 더 파고든다', pre: ['I7'], price: 400, d: 4, cx: 330, perk: 'imbroccata' }),
       N({ id: 'I9', name: '칼끝 돌려 빼기', cat: 'atk', l1: '칼끝', l2: '돌려 빼기', eff: '찌르기가 맞물리거나 꺾인 뒤 다시 찌른다', pre: ['I6'], price: 300, d: 4, cx: 670, u: 'cavazione' }),
-      N({ id: 'I4', name: '엇박 찌르기', cat: 'secret', l1: '비기', l2: '엇박 찌르기', eff: '상대가 칼을 들거나 달려들 때 공격하면, 밑으로 들어가 찌른다', pre: ['I8'], price: 400, heads: 20, d: 5, cx: 330, f: ['secret'] }),
+      N({ id: 'I4', name: '거침없이 나아가 찌르기', cat: 'secret', l1: '비기', l2: '거침없이 나아가 찌르기', eff: '상대 칼을 덮은 채 걸어 들어가 찌르면, 묶인 칼을 누르고 곧게 찌른다', pre: ['I8'], price: 400, heads: 20, d: 5, cx: 330, f: ['secret'] }), // 10/22 사람 먼저 — 거침없이 나아가 찌르기 (옛 엇박 찌르기는 ?itSecret=contratempo · 그때 칸 글은 이것 그대로)
       N({ id: 'I10', name: '곧은 선', cat: 'passive', l1: '패시브', l2: '곧은 선', eff: '찌르는 동안 칼끝이 상대를 조금 따라간다', pre: ['I9'], price: 0, heads: 10, d: 5, cx: 670, f: ['passive'] }),
     ],
   },
@@ -126,7 +126,7 @@ const NODE_LORE = {
   G4: { lore: '그에게서 오는 것은 무엇이든 왕관이 걷어 낸다', src: '리히테나워 『Zettel』(14세기) — 정수리 베기와 왕관' },
   G9: { lore: '앞과 뒤가 모든 기예의 샘이니, 약함과 셈, 그 사이라는 말을 새겨라', src: '리히테나워 『Zettel』(14세기) — 앞과 뒤 · 인데스' },
   G10: { lore: '위 자세에서 때가 맞거든, 칼자루 끝으로 쳐라', src: '지그문트 링엑 『Kampffechten』(15세기) — 갑옷 싸움 위 자세' }, // 10/22 죽음의 일격 (전: 받아 베기 — 리히테나워 v70)
-  // 이탈리아 — 카포 페로 (Wiktenauer 'Ridolfo Capoferro' · Wilson · Swanger 영역 / 저장소 원문 PDF 쪽)
+  // 이탈리아 — 카포 페로 (Wiktenauer 'Ridolfo Capoferro' · Wilson · Swanger 영역 / 저장소 원문 PDF 쪽) · 비기 I4 = 파브리스 (Wiktenauer 'Salvator Fabris' 전사 · A. F. Johnson 영역 — 10/22)
   I1: { lore: '박자란 고요와 움직임을 재는 것일 뿐이다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 박자' },
   I11: { lore: '시에나의 칼 장인들이 이제 네 이름을 안다' },
   I3: { lore: '왼 다리로 물러서고 오른 다리가 따르면, 상대에게서 안전하다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 물러서기' },
@@ -136,7 +136,7 @@ const NODE_LORE = {
   I6: { lore: '좋은 검객은 막고서 되받아 치지 않는 일이 결코 없다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 막고 치기' },
   I8: { lore: '언제나 찌르기로 쳐라, 찌르기가 더 치명적이다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 찌르기' },
   I9: { lore: '그 순간 칼끝을 빼 돌리고 조이며 나아가, 가슴을 찔러라', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 칼 빼기' },
-  I4: { lore: '막지 않고 엇박에, 적의 칼 밑으로 찔러 든다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 그림 풀이 · 엇박' },
+  I4: { lore: '팔을 굳게 두고 상대 칼날을 놓지 말고, 따라 미끄러져 몸까지 가라', src: '살바토르 파브리스 『Lo Schermo』(1606) — 결연히 나아가기' }, // 10/22 거침없이 나아가 찌르기 (전 엇박 찌르기 — 카포 페로)
   I10: { lore: '곧은 선은 하나이니, 기예를 아는 자만이 그것을 긋는다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 곧은 선' },
   // 이베리아 — 피게이레두 몬탄테 (Wiktenauer 'Diogo Gomes de Figueyredo' · Myers · Hick 영역) · 고디뉴 몬탄테 장 (저장소 독일어 역 인용)
   B1: { lore: '박자 맞고 무게 실린 잰 걸음으로 가되, 춤추듯 걷지 마라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장' },
