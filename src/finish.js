@@ -113,7 +113,7 @@ export const FINISH = {
   ai: { contact: 1.1, reach: 1.4, clinch: 0.6 },
   // ── 10/22 대검 마무리: 쪼개듯 내려치기 (사장님 10/22 밤 '상대가 넘어졌거나 무릎을 꿇거나 하여튼 중심을 잃고 자세가 낮아졌을 때 쪼갤 듯이 강렬하게
   //  힘을 모아 내려치는 거야. 대검이 길다보니 내려찍기가 무용지물이거든. 그걸 보완하는거지' → '2번도 따로 고쳐' · docs/strike/greatsword_finish_2026-10-22.md ·
-  //  확인표 2211~2217, 사장님 확인 전). 탭 마무리가 열리는 문(entry · range · canStart)은 찍기와 같다. 이 길을 쓰는 칼은 칼끝으로 찍는 대신
+  //  확인표 2211~2217, 사장님 확인 전). 탭 마무리가 열리는 문은 10/22 23:0x 부터 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐 — anyHeight · cleaveFoe, 거리 range 는 같다). 이 길을 쓰는 칼은 칼끝으로 찍는 대신
   //  머리 위(교본 지붕 자세)로 들어 힘을 모았다가, 자세 지도 내려찍기 자리(fin.strike — 칼날 hitAt 지점이 몸 겉면에 닿는 손 · 몸 너머 땅속을 겨눈 칼끝)로
   //  칼날을 곧게 내려친다 (skill.cleavePose). 세기는 찍기와 같은 판정 에너지 × power (combat.js — 베기에도), 투구 · 갑옷 · 옷 · 살 문턱은 그대로.
   //  찍는 동안 팔 · 손목 힘 배율(strikeArm · strikeWrist) · 손목 제동 늦춤(brakeRelief)도 찍기와 같이 걸린다. 새 상한 · 문턱 없음
@@ -125,14 +125,29 @@ export const FINISH = {
     frame: 'heavy',
     power: 2, // 쪼개 내려치기의 판정 에너지 배율 (사장님 10/22 23:0x '대검은 마무리를 2.5 말고 2로 해' — 찍기는 FINISH.power 2.5 그대로)
     charge: 0.2, // 머리 위에 든 뒤 힘을 모으는 시간 (s, 시간 사다리 0.2 반응 — 사장님 확인 전). 주소 ?finishCleaveCharge=초
+    // 사장님 10/22 23:0x '내 최초 의도는 … 어떤 높이이든 꿇기 이하로 낮아지면 내려치라는 거였어. 강렬한 수직베기를 지면까지 그대로 내리꽂는 것' →
+    //  true: 몸 높이(낮은 상대 진입 LOW_FINISH) 대신 상대 상태로 연다 — 무릎 꿇음(kneel) · 일어나는 중(getup) · 쓰러짐(down)이면 높이와 상관없이 (cleaveFoe).
+    //   내려치는 칼끝 목표도 몸 점이 아니라 그 밑 땅까지(칼끝이 땅에 닿는 각 — skill.cleavePose). 새 문턱 없음(상태 가름만).
+    //  false: 10/22 첫 판(찍기와 같은 문 · 몸 점까지). 주소 ?finishCleaveLow=0 (시뮬 FINISH_CLEAVE_LOW=0) — 확인표 2218
+    anyHeight: true,
   },
 };
+
+/** 쪼개 내려치기를 여는 상대 상태 (FINISH.cleave.anyHeight): 살아 있고 무릎 꿇음 · 일어나는 중 · 쓰러짐 — 몸 높이는 보지 않는다 (엔진을 부르지 않는다) */
+export function cleaveFoe(vic) {
+  return !!vic?.alive && (vic.state === 'kneel' || vic.state === 'getup' || vic.state === 'down');
+}
 
 /** 이 파이터의 탭 마무리가 쪼개 내려치기인가 (FINISH.cleave — 사람 · AI 스위치, 몸 틀, 무기 칸 finishCleave) */
 export function cleaveFinish(f) {
   const C = FINISH.cleave;
   if (!(f.aiControlled ? C.ai : C.player) || !f.weaponCfg?.edged || f.weaponBroken) return false;
   return f.weapon?.finishCleave ?? f.weapon?.frame === C.frame;
+}
+
+/** 쪼개 내려치기를 상대 상태로 여는가 (사람 대검 · FINISH.cleave.anyHeight) */
+export function cleaveAnyHeight(f) {
+  return FINISH.cleave.anyHeight && cleaveFinish(f);
 }
 
 let _raise = null;
@@ -204,8 +219,10 @@ export function updateFinish(f, dt) {
   let on = false;
   // 낮은 상대 진입 (FINISH.entry 'low'): state 이름 대신 몸 높이로 연다. 새로 시작해도 되나(canStart)는 이어 가기 여유 없이 따로 본다
   const low = lowFinishOn(FINISH);
-  if (low) fin.canStart = false;
-  if (foe && (low ? lowFinishPosture(f, foe, lowFinishContinuing(f, foe)) : downLowTarget(FINISH, f, foe, lowFinishContinuing(f, foe))) && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
+  // 10/22 23:0x 쪼개 내려치기 칼(사람 대검 · FINISH.cleave.anyHeight): 몸 높이 대신 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐)로 연다. 그 밖은 예전 그대로
+  const anyH = cleaveAnyHeight(f);
+  if (low || anyH) fin.canStart = false;
+  if (foe && (anyH ? cleaveFoe(foe) : low ? lowFinishPosture(f, foe, lowFinishContinuing(f, foe)) : downLowTarget(FINISH, f, foe, lowFinishContinuing(f, foe))) && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
     const c = f.bodies.chest.translation();
     _c.set(c.x, c.y, c.z);
     _yawInv.copy(f.yaw).invert();
@@ -249,7 +266,8 @@ export function updateFinish(f, dt) {
         _tp.copy(_a).lerp(_b, sp);
       }
       aimPoses(f, fin, _t, _tp);
-      if (low) {
+      if (anyH) fin.canStart = on; // 상태로 연다: 닿는 곳은 skill.cleavePose 가 본다 (걸어 들어가기 · 칼끝도 못 닿으면 거둠)
+      else if (low) {
         // 몸 겉면에 닿기만 하면 된다 — 몸 너머(sink) 끝은 짧은·부러진 칼에 멀 수 있다
         const pl = fin.plunge;
         on = pl.surfaceInside || pl.surfaceWalk;

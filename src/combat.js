@@ -29,7 +29,7 @@ import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_
 import { BREAK } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants, artFlash } from './secret_instant.js'; // artFlash: 이점이 터진 순간 잔상 (10/21)
-import { FINISH } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
+import { FINISH, cleaveFoe } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
 import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA } from './config.js';
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
@@ -262,7 +262,8 @@ export class Combat {
     //  팔다리 (부위) · 내가 넘어졌을 때 (att.state) · 다른 상대 (att.foe). 판단만 한다 — 예측(predicting)·측정 도구가 불러도 부작용 없음
     const tp = att.skill?.tap;
     // 낮은 상대 진입(FINISH.entry 'low', 기본 끔): 'down' 이름 대신 시작한 그 상대의 실제 몸 높이 (예측 중엔 스텝 전 저장값만 — 엔진을 부르지 않는다)
-    const finishTarget = lowFinishOn(FINISH) ? tp?.foe === vic && !tp.abort && !tp.ended && lowFinishPosture(att, vic, true, predicting) : downLowTarget(FINISH, att, vic, true, predicting);
+    //  10/22 23:0x 상태로 연 쪼개 내려치기(tp.cleave · FINISH.cleave.anyHeight): 시작한 그 상대가 아직 무릎 꿇음 · 일어나는 중 · 쓰러짐이면 (높이는 보지 않는다)
+    const finishTarget = tp?.cleave && FINISH.cleave.anyHeight ? tp.foe === vic && !tp.abort && !tp.ended && cleaveFoe(vic) : lowFinishOn(FINISH) ? tp?.foe === vic && !tp.abort && !tp.ended && lowFinishPosture(att, vic, true, predicting) : downLowTarget(FINISH, att, vic, true, predicting);
     // 10/22 대검 마무리 (finish.js FINISH.cleave): 쪼개 내려치기(tp.cleave)는 칼날로 맞는다 — 베기도 같은 마무리 (그 밖은 그대로 찌르기만)
     let finish = (type === 'stab' || (type === 'cut' && !!tp?.cleave)) && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && finishTarget && FINISH_PARTS.has(pr.v.part);
     // 즉사 대신 힘 (FINISH.mode 'power25', 기본 끔 — 샛별 저장소 7fd7f592): 찍기 찌르기는 즉사 표시(finish)를 끄고, 판정 에너지에 FINISH.power 를 곱해

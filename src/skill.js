@@ -28,7 +28,7 @@ import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — �
 import * as THREE from 'three';
 import { STAMINA, SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
-import { FINISH, armRay, updateFinish, finishHands, cleaveFinish, cleaveRaise, cleaveReach } from './finish.js';
+import { FINISH, armRay, updateFinish, finishHands, cleaveFinish, cleaveRaise, cleaveReach, cleaveAnyHeight } from './finish.js';
 import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'; // 약한 자세 겨눔 탭 찌르기 (FINISH.vital, 10/12)
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
@@ -188,8 +188,9 @@ export class Skill {
     //  낮은 상대 진입(FINISH.entry 'low'): 탭은 파이터 스텝보다 먼저 오므로 지금 몸으로 다시 잰다(dt 0 — 자세 섞기 amt 는 그대로).
     //  시작 허가는 amt 를 기다리지 않는다: 새로 열림(canStart) + 칼끝이 몸 겉면에 닿음(서서 걸을 수 있으면 걸어서 닿음도)
     const lowEntry = lowFinishOn(FINISH);
-    if (lowEntry) updateFinish(f, 0);
-    const down = lowEntry ? f.finish.canStart && (f.finish.plunge.surfaceInside || (step !== false && f.state === 'stand' && f.finish.plunge.surfaceWalk)) : f.finish.on && f.finish.amt > 0.5;
+    const anyH = cleaveAnyHeight(f); // 10/22 23:0x 사람 대검: 상대 상태(무릎 · 일어나는 중 · 쓰러짐)로 여는 쪼개 내려치기 — 닿는 곳은 cleavePose 가 본다
+    if (lowEntry || anyH) updateFinish(f, 0);
+    const down = anyH ? f.finish.canStart : lowEntry ? f.finish.canStart && (f.finish.plunge.surfaceInside || (step !== false && f.state === 'stand' && f.finish.plunge.surfaceWalk)) : f.finish.on && f.finish.amt > 0.5;
     if (finishOnly && !down) return false; // 마무리만 (AI 쪼개 내려치기 스위치 — FINISH.cleave.ai): 마무리가 안 열리면 아무것도 하지 않는다
     // 찌르기 무기(weapons.js THRUST_STYLE)는 더 멀리 찌르고 더 빨리 자세로 돌아온다.
     //  (겨누기·뻗기까지 빠르게 하면 팔이 손 목표를 따라가지 못해 오히려 덜 뻗는다 — 측정: 레이피어 탭 상처 60% → 20%)
@@ -230,7 +231,7 @@ export class Skill {
       }
       this.vitalThrusts = (this.vitalThrusts ?? 0) + 1;
     }
-    if (lowEntry && down) this.tap.foe = f.foe; // 낮은 상대 진입: 시작한 상대 (바뀌면 거둔다)
+    if ((lowEntry || anyH) && down) this.tap.foe = f.foe; // 낮은 상대 진입 · 상태로 연 쪼개 내려치기: 시작한 상대 (바뀌면 거둔다)
     if (down && cleaveFinish(f)) this.tap.cleave = true; // 10/22 대검 마무리: 찍기 대신 쪼개 내려치기 (cleavePose — finish.js FINISH.cleave)
     // 칼 길 잡기(R6): 칼이 맞닿았으면 그 칼 선 (아니면 null). 바로 앞 찌르기가 끝나고 bindRest 초 안의 탭(연타)은 잡지 않는다
     this.tap.bound = down || this.sinceThrust < THRUST.bindRest ? null : this.boundAxis();
@@ -1212,7 +1213,7 @@ export class Skill {
 
   /**
    * 쪼개 내려치기 (10/22 대검 마무리 — finish.js FINISH.cleave · cleaveFinish, 사장님 10/22 밤 '쪼갤 듯이 강렬하게 힘을 모아 내려치는 거야').
-   * 찍기(plungePose)와 같은 문 · 같은 거둠(updateThrust 의 abort)에 길만 다르다. 매 스텝 차례로:
+   * 거둠(updateThrust 의 abort)은 찍기(plungePose)와 같다. 문은 10/22 23:0x 부터 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐 — FINISH.cleave.anyHeight, 끄면 찍기와 같은 문). 매 스텝 차례로:
    *  1) 걸어 들어가기 (walkIn — 찍기와 같은 걸음): 내려찍기 손(fin.strike)을 앞으로 strikeFwd 끝까지 뻗어도 칼날 hitAt 지점이 몸 겉면에 못 닿으면 걷는다.
    *     낮은 상대 진입에서 다 걸었거나 걸을 수 없는데 칼끝(칼 길이)도 몸 겉면에 못 닿으면 허공을 치지 않고 거둔다
    *  2) 들기 · 힘 모으기: 손 · 칼끝을 교본 지붕 자세(머리 위, 칼이 서서 조금 뒤로 — finish.js cleaveRaise)로. 오르던 칼자루가 멈춘 봉우리가 머리 꼭대기 이상이거나
@@ -1220,7 +1221,8 @@ export class Skill {
    *  3) 내려치기: 손 목표 = 내려찍기 손, 칼끝 = 지금 칼자루에서 몸 너머(sink) 땅속 겨눈 점 (fin.strike — 매 스텝 finish.js 가 다시 잡는다).
    *     칼이 머리 위 뒤에서 앞 아래로 크게 돌아 칼날로 맞는다 (날 방향은 driveSword 날 세우기가 칼이 움직이는 쪽으로 세운다). 찍기처럼 팔 · 손목 힘 배율
    *     (finish.js plungeBoost)과 손목 제동 늦춤(brakeRelief)이 걸리고, 이 동안의 몸통 · 머리 접촉은 판정 에너지 × FINISH.power (combat.js)
-   *     끝: 내려가던 칼(칼 축 높이)이 멈춘 때 — 칼끝이 누운 몸 윗면 높이 아래면(몸 · 땅에 막힘) 끝, 아니면 앞 멈춤보다 더 내려가지 못했으면 끝
+   *     '지면까지'(anyHeight): 마지막 칼끝 목표는 몸 점 쪽과 칼끝이 땅에 닿는 각 가운데 가파른 쪽 — 몸에서 멈추지 않고 땅까지 내리꽂는다.
+   *     끝: 내려가던 칼(칼 축 높이)이 멈춘 때 — 칼끝이 땅(첫 판: 누운 몸 윗면) 높이 + FINISH.top 아래면 끝, 아니면 앞 멈춤보다 더 내려가지 못했으면 끝
    *  시간으로 끝내는 것은 없다 (힘 모으기 charge 만 시간)
    */
   cleavePose(tp, K) {
@@ -1239,6 +1241,12 @@ export class Skill {
     const G = _p.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv); // 칼자루 (몸 기준)
     const q = f.sword.rotation();
     const bAx = _u.set(0, 1, 0).applyQuaternion(_sq.set(q.x, q.y, q.z, q.w)).applyQuaternion(_yawInv); // 칼 축 (몸 기준)
+    // 10/22 23:0x '강렬한 수직베기를 지면까지 그대로 내리꽂는 것' (FINISH.cleave.anyHeight): 칼끝 목표 · 끝을 몸 점 대신 땅으로.
+    //  땅 높이(가슴 기준)는 상대 골반 밑 — 지형 무대는 그 자리 땅 (finish_entry.js lowFinishPosture 와 같은 꼴)
+    const toGround = FINISH.cleave.anyHeight;
+    const fp = f.foe?.bodies.pelvis.translation();
+    const ter = f.foe?.terrain ?? f.terrain;
+    const groundRel = (fp && ter ? ter.heightAt(fp.x, fp.z) : 0) - c.y;
     // ── 1) 걸어 들어가기
     this.walkIn(tp, inside, walk, short, lowEntry);
     if (lowEntry && !tp.go && !inside && (tp.walkDone || !canWalk) && fin.strikeReach > L) {
@@ -1286,7 +1294,7 @@ export class Skill {
       const el = bAx.y; // 칼 축 높이 성분 (머리 위 1 → 앞 아래 −)
       const va = tp.el != null ? tp.el - el : 0; // 한 스텝 동안 내려간 만큼
       if (tp.va > 0 && va <= 0) {
-        const tipLow = G.y + el * L <= fin.target[1] + FINISH.top; // 칼끝이 누운 몸 윗면 높이에 닿았거나 아래
+        const tipLow = G.y + el * L <= (toGround ? groundRel : fin.target[1]) + FINISH.top; // 칼끝이 땅(첫 판: 누운 몸 윗면) 높이에 닿았거나 아래
         if (tipLow || (tp.revEl != null && el >= tp.revEl)) {
           tp.ended = true;
           tp.tEnd = tp.t;
@@ -1337,7 +1345,10 @@ export class Skill {
       pose.hand[1] = hy;
       pose.hand[2] = hz0;
       if (hn > 1e-6) {
-        const a = Math.max(Math.atan2(T[1] - hy, hn), Math.atan2(bAx.y, bAx.x * hx + bAx.z * hz) - Math.PI / 2); // 면 안 올려본 각: 몸 점 쪽 · 칼보다 직각 앞 가운데 높은 쪽
+        // 마지막 목표 (면 안 올려본 각): 몸 점 쪽 — 땅까지(toGround)면 그보다, 칼끝이 땅에 닿는 각(손 높이 − 땅 = 칼 길이 × sin)이 더 가파르면 그 각까지
+        let aEnd = Math.atan2(T[1] - hy, hn);
+        if (toGround) aEnd = Math.min(aEnd, -Math.asin(THREE.MathUtils.clamp((hy - groundRel) / L, 0, 1)));
+        const a = Math.max(aEnd, Math.atan2(bAx.y, bAx.x * hx + bAx.z * hz) - Math.PI / 2); // 마지막 목표 · 칼보다 직각 앞 가운데 높은 쪽
         const ca = Math.cos(a);
         pose.dir[0] = ca * hx;
         pose.dir[1] = Math.sin(a);

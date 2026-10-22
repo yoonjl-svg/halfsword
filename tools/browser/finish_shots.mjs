@@ -9,6 +9,7 @@
 //  실행: vite 개발 서버를 띄운 뒤
 //    node tools/browser/finish_shots.mjs http://127.0.0.1:5173 <출력 폴더> [거리 m = 1.5] [--guard=쟁기|황소|지붕|바보]
 //  [--q=주소 값 (예: finishLift=0)] [--tag=파일 이름 덧말] [--weapon=무기 id (기본 longsword — 10/22 대검 마무리: --weapon=zweihander · --q=finishCleave=0 = 전 찍기)] [--side = 탭 직전 카메라를 옆으로]
+//  [--kneel = 쓰러뜨리는 대신 무릎 꿇은 채 버티게]
 //  파일 이름: finish_<자세>[_덧말]_0_before_tap · _1_hover · _2_plunge · _3_after
 //  playwright 는 저장소 의존성에 없다 (npm i --no-save playwright). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
@@ -29,6 +30,7 @@ const Q = argv.find((a) => a.startsWith('--q='))?.slice(4) ?? ''; // 덧붙일 �
 const TAG = argv.find((a) => a.startsWith('--tag='))?.slice(6) ?? ''; // 파일 이름 덧말
 const WEAPON = argv.find((a) => a.startsWith('--weapon='))?.slice(9) ?? 'longsword'; // 플레이어 무기 (10/22)
 const SIDE = argv.includes('--side'); // 탭 직전에 카메라를 옆으로 (window.game.freeCam — 두 사람 가운데를 옆 3 m 에서 본다, 10/22)
+const KNEEL = argv.includes('--kneel'); // 상대를 쓰러뜨리는 대신 무릎 꿇은 채 버티게 (state kneel — 10/22 둘째 판 '꿇기 이하 어떤 높이든 내려치기')
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
@@ -65,11 +67,16 @@ const dist = () =>
   });
 await run(2600); // 판 시작 정지(ARENA.startHold) 지나기
 // 상대를 쓰러뜨려 일어나지 못하게, AI 는 멈춤. 접촉 기록 (플레이어 칼 → 상대 몸)
-await page.evaluate(() => {
+await page.evaluate((kneel) => {
   const g = window.game;
   g.ai.update = () => {};
-  g.enemy.knockDown(true);
-  g.enemy.downTime = 1e9;
+  if (kneel) {
+    g.enemy.knockDown(false);
+    g.enemy.setState('kneel');
+  } else {
+    g.enemy.knockDown(true);
+    g.enemy.downTime = 1e9;
+  }
   const C = g.combat;
   const orig = C.strike.bind(C);
   window.__hits = [];
@@ -78,7 +85,7 @@ await page.evaluate(() => {
     if (pr.w.fighter === g.player && pr.v?.fighter === g.enemy && r) window.__hits.push({ part: pr.v.part, type: r.type, energy: +r.energy.toFixed(1), thr: r.thr, sev: +r.severity.toFixed(3) });
     return r;
   };
-});
+}, KNEEL);
 await run(2500);
 // 누운 몸통까지 DIST 가 되게 걷는다: 걷는 입력을 이 시험 동안만 줄여(W 키 × 0.3) 천천히 다가가고, 닿으면 놓고 멈춰 선 뒤 잰다
 await page.evaluate(() => {
