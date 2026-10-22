@@ -93,10 +93,12 @@ test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 �
 });
 
 // ── 닫힌 칸 ──
-test('닫힌 칸: 비기는 일본 고노센만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
+test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람 쪽 일본 고노센 · 이베리아 휘감아 돌기) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
-  assert.deepEqual(closed.sort(), ['B7', 'C9', 'G10', 'I4', 'J8']);
-  for (const s of DESIGN) for (const d of s.nodes) if (d.closed) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음
+  const SECRET_NODE = { german: 'G10', italian: 'I4', iberian: 'B7', japanese: 'J5', chinese: 'C9' };
+  assert.deepEqual(closed.sort(), ['J8', ...D.TREE_SCHOOLS.filter((s) => !SECRET.openSchools.includes(s)).map((s) => SECRET_NODE[s])].sort());
+  assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B7')), false); // 10/22 휘감아 돌기 열림
+  for (const s of DESIGN) for (const d of s.nodes) if (d.closed && !(d.cat === 'secret' && SECRET.openSchools.includes(s.id))) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음 (그 뒤 연 비기는 뺌)
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
   const all = D.allNodeIds('german');
   assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), all), 'learned'); // 이미 가진 것으로 친 판(시험)이라도

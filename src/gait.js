@@ -24,6 +24,7 @@ import { BODY, GAIT } from './config.js';
 import { TRADITIONS, FAST_ACCENT, footworkTradition } from './schools.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이탈리아 물러서기 I3 · 이베리아 옆 박차기 B2 · 독일 간격 잡기 G2)
 import { GUARD_BASE } from './guards.js';
+import { spinFootTarget } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 — 도는 발 자리 (10/22 · f.ibSpin 이 없으면 부르지 않는다)
 
 // 자세 이름 → 바탕 자세표 차례 (유파 걸음 P.guardLow — 몸 틀 자세표도 같은 패드 자리·같은 순서라 bodyGuard.nearest 와 견줄 수 있다)
 const _guardIdx = new Map();
@@ -690,6 +691,17 @@ export class Gait {
     else this.follow = false;
     if (!this.active) this.enter();
     else this.sense();
+    if (f.ibSpin) {
+      // 이베리아 휘감아 돌기 (10/22 — iberian_spin.js): 도는 동안 발은 대본이 딛는다 (축발은 디딘 채 · 도는 발은 poseLegs 가 대본 자리로). 걸음 셈 · 박자 · 고쳐 딛기는 쉰다
+      this.prevHead = f.heading;
+      this.sinceTD += dt;
+      for (const k of ['F', 'B']) {
+        const l = this.legs[k];
+        if (l.stance) l.tLand += dt;
+        else l.t += dt;
+      }
+      return;
+    }
     if (f.terrain) {
       // 지형 무대: h·hNom 은 월드 높이 — 골반이 비탈을 오르내린 땅 높이만큼 목표를 같이 옮긴다 (몸이 아니라 목표만. 거르기·hv 는 땅 위 자세 높이)
       const pp = f.bodies.pelvis.translation();
@@ -1599,6 +1611,16 @@ export class Gait {
         // R2′ 'legs' (124): 골반 yaw 목표(Δψ, fighter.driveBalance)의 하중 몫 w_l = Nf_l/ΣNf (걸러진 발 하중, 128 의 나눔) 을 이 다리 엉덩이에
         const dpsi = BODY.chain === 'legs' ? this.chainShare(l) * (f.chainDpsi || 0) : 0;
         this.legIK(l, _h, _a, l.yaw, -l.heel, capK ? legLen(Math.max(l.phi, l.phiTD) + GAIT.stanceKneeMax * (1 - GAIT.runKneeCut * this.runW)) : 0, dpsi);
+      } else if (f.ibSpin && f.ibSpin.sk === k) {
+        // 휘감아 돌기 (10/22 — iberian_spin.js): 도는 발은 축발 둘레 반 바퀴 넘는 원을 따라 앞에 딛는다 (몸이 돈 몫만큼 · 발 드는 높이 P.lift)
+        const yaw = spinFootTarget(f, l, _a, ANKLE_H, this.P.lift);
+        _d.subVectors(_a, l.hip);
+        l.rel.copy(_d);
+        if (l.relOk && GAIT.swingK) this.swingPull(l, _a);
+        else l.desV.set(0, 0, 0);
+        l.relOk = true;
+        l.des.copy(_a);
+        this.legIK(l, l.hip, _a, yaw, 0);
       } else {
         const u = clamp(l.t / l.T, 0, 1);
         // 앞뒤·옆으로는 발을 든 시간의 앞쪽 hFrac 동안 옮기고, 나머지 동안 거의 제자리에서 내려 딛는다
@@ -1854,6 +1876,8 @@ export class Gait {
       _p.y = pt.y;
       _p.z = pt.z;
       fb.addForceAtPoint(_f, _p, true);
+      // 휘감아 돌기 (10/22 — iberian_spin.js): 축발은 발바닥 가운데를 축으로 몸과 함께 돈다 — 발 돌림 마찰을 걸지 않는다 (자리 붙잡기는 위 그대로)
+      if (f.ibSpin && f.ibSpin.pk === k) continue;
       // 발이 땅 위에서 도는 것도 마찰이 붙잡는다 (한계 = 마찰 × 무게 × 발바닥 크기). 넘으면 딛은 방향도 따라 돈다
       const lt = GAIT.pinMu * l.Nf * 0.05;
       let ye = wrap(l.yaw - l.footYaw);
