@@ -3,7 +3,7 @@
 //  화면 시계를 늦춰(requestAnimationFrame 시각을 __timeK 배 — 게임 코드는 그대로) 긋기 시작부터 정한 게임 시각마다 찍는다.
 //  낱장은 띠 그림(JPEG — 저장소 크기)으로 묶고(파이썬 PIL) 지운다. 같은 획을 `?whip=src`(샛별 값)와 지금 값으로 한 번씩.
 //  실행 (저장소 뿌리에서): npx vite --port 5394 --strictPort &
-//        node tools/browser/druid_whip_shots.mjs http://127.0.0.1:5394 [그림 폴더 (기본 docs/handoff/druid_whip)] [판 'src,now' · 'card' = 카드 앞면 (?cards=druid_whip,longsword — 화면 셋 · 글 넘침 · 등급 글자)]
+//        node tools/browser/druid_whip_shots.mjs http://127.0.0.1:5394 [그림 폴더 (기본 docs/handoff/druid_whip)] [판 'src,now' · 'card' = 카드 앞면 (?cards=druid_whip,longsword — 화면 셋 · 글 넘침 · 등급 글자) · 'sound' = 채찍 녹음이 읽혔나 · 긋기 · 톡에 휙 · 딱 · 맞음 소리가 불렸나 · 무릎 꿇리기 (10/23)]
 //  끝 코드 0 = 콘솔 에러 0. 소프트웨어 GL 이라 느리다(판마다 1 ~ 3 분)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -19,6 +19,54 @@ const W = 844, H = 390;
 const errors = [];
 const report = {};
 for (const preset of presets) {
+  if (preset === 'sound') {
+    const ctx = await browser.newContext({ viewport: { width: W, height: H }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.addInitScript(() => (window.__gap = 1.55));
+    page.on('pageerror', (e) => errors.push(`sound pageerror ${e}`));
+    page.on('console', (m) => m.type() === 'error' && errors.push(`sound console ${m.text()}`));
+    page.on('response', (r) => r.status() >= 400 && errors.push(`sound http ${r.status()} ${r.url()}`));
+    await page.goto(`${base}/?test=1&weapon=druid_whip&hero=player&foe=isolde&stage=castle&slowMo=0`, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000 });
+    const start = page.getByText('여정 시작');
+    if (await start.count()) await start.first().click(); else await page.tap('#btnStart');
+    await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });
+    await page.waitForFunction(() => window.game.stats.simTime > 2.6, null, { timeout: 400000 });
+    await page.evaluate(() => {
+      const g = window.game, p = g.player, e = g.enemy;
+      g.ai.update = () => e.move.set(0, 0);
+      const pc = p.bodies.chest.translation(), ec = e.bodies.chest.translation(), fw0 = p.forward();
+      const dx = pc.x + fw0.x * window.__gap - ec.x, dz = pc.z + fw0.z * window.__gap - ec.z;
+      for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true); }
+      const at = e.anchor.translation(); e.anchor.setTranslation({ x: at.x + dx, y: at.y, z: at.z + dz }, true);
+      if (e.gait) for (const k of ['F', 'B']) { const l = e.gait.legs[k]; for (const key of ['plant', 'hip', 'ankle', 'p0', 'p1', 'des', 'fp', 'pinC', 'pinT']) if (l[key]) { l[key].x += dx; l[key].z += dz; } }
+      const s = g.sound, calls = (window.__whipCalls = { swish: 0, crack: 0, hit: 0, armor: 0, clash: 0 });
+      const w0 = s.whip.bind(s);
+      s.whip = (kind, x, armor) => { calls[kind === 'hit' && armor ? 'armor' : kind]++; return w0(kind, x, armor); };
+    });
+    const cdp = await ctx.newCDPSession(page);
+    const touch = async (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
+    const sim = () => page.evaluate(() => window.game.stats.simTime);
+    const waitTo = (t) => page.waitForFunction((x) => window.game.stats.simTime >= x, t, { timeout: 400000, polling: 16 });
+    for (let k = 0; k < 6; k++) {
+      if (k % 2) { await page.touchscreen.tap(0.72 * W, 0.45 * H); }
+      else {
+        await touch('touchStart', 0.6 * W, 0.85 * H);
+        for (let i = 1; i <= 6; i++) { await touch('touchMove', (0.6 + 0.22 * i / 6) * W, (0.85 - 0.7 * i / 6) * H); await page.waitForTimeout(40); }
+        for (let i = 1; i <= 6; i++) { await touch('touchMove', (0.82 - 0.3 * i / 6) * W, (0.15 + 0.65 * i / 6) * H); await page.waitForTimeout(20); }
+        await touch('touchEnd');
+      }
+      await waitTo((await sim()) + 1.4);
+    }
+    report.sound = await page.evaluate(() => {
+      const g = window.game, s = g.sound;
+      const loaded = Object.fromEntries(['whipSwish', 'whipCrack', 'whipHit', 'whipArmor', 'whipClash'].map((k) => [k, s.samples?.[k]?.length ?? 0]));
+      return { loaded, calls: window.__whipCalls, kneels: (g.combat.whipKneelLog ?? []).map((x) => `${x.part}:${x.hit ? '꿇음' : '버팀'}`), hits: g.enemy.wounds?.length ?? null, strokes: g.player.flexWeapon?.strokes };
+    });
+    if (Object.values(report.sound.loaded).some((n) => n < 3)) errors.push(`채찍 녹음 못 읽음 ${JSON.stringify(report.sound.loaded)}`);
+    await ctx.close();
+    continue;
+  }
   if (preset === 'card') {
     for (const [w, h] of [[844, 390], [568, 320], [1280, 800]]) {
       const touch = w < 1000;

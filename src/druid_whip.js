@@ -50,6 +50,7 @@ export const WHIP_FLICK = { up: 0.5, down: -0.45, rise: 0.14, snap: 0.12 };
 export function startFlick(skill) {
   const o = skill.f.handOffset;
   skill.flick = { t: 0, x: o.x, y: o.y };
+  if (skill.f.flexWeapon) { skill.f.flexWeapon.strokes++; skill.strokeOn = true; } // 톡도 한 획 (무릎 꿇리기 — combat.js whipKneelCheck · 튕기는 손 길이 다시 세지 않게)
   return true;
 }
 /** 튕기기 한 스텝 (skill.update 앞머리): 손 목표(handOffset)를 길대로 옮기고 손가락이 닿아 움직이는 것처럼 알린다. 끝나면 놓는다 */
@@ -194,7 +195,7 @@ export function attachDruidWhip(f, ownTorsoBit) {
     segments.push({ body, col, state, info, group }); previous = body;
   }
   root.recomputeMassPropertiesFromColliders();
-  const flex = { segments, joints, active: DRUID.count, L, flick: WHIP.flick };
+  const flex = { segments, joints, active: DRUID.count, L, flick: WHIP.flick, strokes: 0, rolled: 0 }; // strokes · rolled: 획 수 · 무릎 꿇리기를 굴린 획 (combat.js)
   const lash = f.swordGroup.userData.bladeMesh;
   const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), a = new THREE.Vector3(), b = new THREE.Vector3(), torque = new THREE.Vector3();
   const K = [...WHIP.bend.k], fold = WHIP.bend.fold; // 이 몸이 만들어질 때의 값 (판 도중에 바꾸지 않는다)

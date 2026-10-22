@@ -206,6 +206,8 @@ if (IB_TABLE === 'v2') useIberianTableV2();
     for (const k of ['iberian', 'italian', 'japanese', 'german', 'chinese']) CONFIG.SCHOOL_PASSIVE[k].on = keep.has(k);
   }
 }
+if (params.has('whipKneel')) CONFIG.WHIP_KNEEL.p = +params.get('whipKneel') || 0; // 채찍 무릎 꿇리기 확률 (10/23 — 판 값 0.5 · `?whipKneel=0` 끔)
+if (params.get('whipKneelAi') === '1') CONFIG.WHIP_KNEEL.ai = true; // AI 가 든 채찍도 꿇리기 (기본 끔 — 사람 먼저)
 if (params.has('buckle')) CONFIG.UNIQUE_ASSIST.buckle.p = +params.get('buckle') || 0; // 곁눈 베기 무릎 꺾기 확률(10/21 — 판 값 0.15 · `?buckle=0` 끔)
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
@@ -885,7 +887,9 @@ function onWound(att, vic, r, point, pr) {
   //  날이 들지 못했으면 판금이 막는 소리(때린 무기 재질대로), 판을 뚫고 들어갔으면 강철 소리 한 번 (살 소리는 아래에서 따로)
   //  불꽃: 막혔으면 더 많고, 판을 뚫고 들어가도 강철을 긁은 불꽃이 조금 튄다 (ARMOR 를 켰을 때만 — 끄면 예전 그대로)
   const mat = att.weapon?.material || 'steel';
-  if (r.helmet) sound.helmet(e);
+  const whipHit = !!att.weapon?.flexible; // 드루이드의 채찍 (10/23): 투구 · 판금 · 살 모두 채찍 녹음으로 (흙 몸은 아래 마른 타격음 그대로)
+  if (whipHit) { if (!clay) sound.whip('hit', e, !!(r.helmet || r.plate)); }
+  else if (r.helmet) sound.helmet(e);
   else if (r.plate) {
     if (opened) sound.impact({ a: mat, b: 'armor', energy: e * 0.8 });
     else sound.plateBlock(e, { material: mat });
@@ -897,6 +901,7 @@ function onWound(att, vic, r, point, pr) {
     sound.plateBreak(e);
   }
   if (clay) sound.clay(e, point); // 흙 몸: 마른 타격음 하나 (살·뼈 소리 대신 — 샛별 값, 확인표 1422)
+  else if (whipHit) { /* 채찍: 위에서 냈다 */ }
   else if (r.type === 'cut') sound.cut(e, r.pass);
   else if (r.type === 'stab' && opened) sound.stab(e); // 날이 들지 못한 내려찍기 즉사 찌르기(r.finish, 심각도 0)는 막힌 타격 소리
   else sound.blunt(e);
@@ -935,7 +940,8 @@ function onClash(point, speed, touch) {
     // 두 무기의 재질이 둘 다 강철이면 칼끼리 "쨍", 아니면 재질에 맞는 소리 (나뭇가지 "딱", 광검 "파직", 고무 닭 "삑", 언 참치 "텅")
     const ma = player?.weapon?.material || 'steel';
     const mb = enemy?.weapon?.material || 'steel';
-    if (ma === 'steel' && mb === 'steel') sound.clash(touch.vn, touch.vt);
+    if (player?.weapon?.flexible || enemy?.weapon?.flexible) sound.whip('clash', touch.vn); // 드루이드의 채찍이 칼에 감기며 부딪힘 (녹음 — 10/23)
+    else if (ma === 'steel' && mb === 'steel') sound.clash(touch.vn, touch.vt);
     else sound.impact({ a: ma, b: mb, energy: 12 * touch.vn });
   }
   // 연출의 세기는 "부딪히기 직전" 속도로 정한다 (부딪힌 뒤 속도엔 튕겨 나온 몫이 섞여 있다)
@@ -977,7 +983,22 @@ function updateWhoosh(f, dt) {
     st.loop = sound.whooshLoop(mat);
     st.mat = mat;
   }
+  if (f.flexWeapon) return whipWhoosh(f, st); // 드루이드의 채찍: 합성 바람 고리 대신 녹음 "휙" · "딱" (아래)
   st.loop?.set(f.armed ? f.tipVel.length() : 0);
+}
+// 드루이드의 채찍 소리 (10/23 사장님 '휘두르고 때릴 때 실제 채찍 소리' — 녹음만, sound.js whip): 끝 빠르기(fighter.tipVel)를 화면마다 보고
+//  swishOn m/s 를 넘어 오를 때 "휙" 한 번(swishOff 아래로 내려오면 다시 걸림) · crack m/s 넘게 오른 뒤 최고점에서 15 % 꺾이면 그 최고 빠르기로 "딱" 한 번(crack × 0.6 아래로 내려오면 다시 걸림).
+//  값은 소리 걸쇠일 뿐 판정 · 물리와 무관 (확인표 2259 — 사장님 확인 전)
+const WHIP_SOUND = { swishOn: 9, swishOff: 5, crack: 14 };
+function whipWhoosh(f, st) {
+  st.loop?.set(0);
+  const v = f.armed ? f.tipVel.length() : 0;
+  const W = (st.whip ??= { up: false, pk: 0, lock: false });
+  if (!W.up && v > WHIP_SOUND.swishOn) { W.up = true; sound.whip('swish', v); }
+  else if (W.up && v < WHIP_SOUND.swishOff) W.up = false;
+  if (W.lock) { if (v < WHIP_SOUND.crack * 0.6) W.lock = false; return; }
+  if (v > WHIP_SOUND.crack && v > W.pk) W.pk = v;
+  else if (W.pk > 0 && v < W.pk * 0.85) { sound.whip('crack', W.pk); W.pk = 0; W.lock = true; }
 }
 /** 싸움 화면이 아닐 때(메뉴·일시정지)는 바람 소리·긁는 소리를 끈다 */
 function muteWhoosh() {

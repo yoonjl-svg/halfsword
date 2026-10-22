@@ -1562,6 +1562,12 @@ export class Skill {
     this.vel.y += (ry - this.vel.y) * k;
     const sp = this.vel.length();
     const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
+    // 휘는 무기(채찍)의 획 세기 — 무릎 꿇리기는 한 획에 한 번 (combat.js whipKneelCheck): 사람 = 손가락을 댄 한 번에 하나(댄 동안 처음 휘두르기 빠르기를 넘을 때) ·
+    //  손가락이 없는 몸(AI · 마우스)은 휘두르기가 시작될 때마다 하나 · 톡 튕기기는 startFlick 이 센다
+    if (f.flexWeapon) {
+      if (swinging && !this.strokeOn) { f.flexWeapon.strokes++; this.strokeOn = true; }
+      if (!(f.aiControlled ? swinging : f.handHeld || swinging)) this.strokeOn = false;
+    }
     this.swinging = swinging;
     this.inputSwinging = this.inputMotion ? this.inputMotion.vel.length() > SKILL.swingSpeed && f.alive && f.armed : swinging;
     if (!f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 간격 잡기, 10/15 — gait.foeWhiff 가 GAIT.deChase 를 봄) · 헛침 · 막힘 → 상대 인데스(10/21). AI 는 ai.js afterStrike 가 알린다
