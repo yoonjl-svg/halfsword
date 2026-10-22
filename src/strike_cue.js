@@ -32,7 +32,9 @@ export const STRIKE_CUE = {
   edgeEnd: 0.45, // 닫힐 즈음 테두리 세기 몫
   plain: 0xfff0d2, // 보통 창 — 따뜻한 흰빛
   anchor: 'self', // 느낌표 자리 — 사장님 10/23 00:2x '상대 머리가 아니라 내 머리에 뜨는 게 자연스러움' ('self' 내 머리 · 'foe' 전 상대 머리 — `?cueAnchor=foe`)
-  secretEdge: 1, // 비기 창 금색 화면 테두리 — 사장님 10/23 '체력이 많이 줄었을 때 붉은 테두리와 동일하게, 색만 금색 · 겹치면 금색 우선' (screen_tint.js secret 칸 · `?secretEdge=0` 끔)
+  secretEdge: 1, // 비기 창 금색 화면 테두리 — 사장님 10/23 '붉은 테두리와 동일하게, 색만 금색 · 겹치면 금색 우선' → 시험 뒤 '너무 과해 훨씬 얇아서 테두리에만' (screen_tint.js secret 칸 · `?secretEdge=0` 끔)
+  secretEdgeWidth: 0.03, // 금색 띠 두께 = 화면 짧은 변의 이 몫 (폰 가로 화면 390 px 높이에서 약 12 px · 안쪽으로 빠르게 옅어짐 · `?secretEdgeW=`)
+  secretEdgeAlpha: 0.8, // 금색 띠 맨 가장자리 불투명 (`?secretEdgeA=`)
   gold: 0xffc23a, // 비기 창 — 금빛
 };
 
@@ -129,6 +131,9 @@ export function createStrikeCue(scene, tint, param, opts = {}) {
   const style = cueStyle(param);
   const anchor = opts.anchor === 'foe' || opts.anchor === 'self' ? opts.anchor : C.anchor; // 느낌표 자리 (10/23)
   const secretEdge = opts.secretEdge == null || opts.secretEdge === '' ? !!C.secretEdge : !['0', 'off', 'false'].includes(String(opts.secretEdge)); // 비기 금색 테두리 (10/23)
+  const num = (v, d) => (v == null || v === '' || !Number.isFinite(+v) ? d : +v);
+  const edgeW = num(opts.secretEdgeW, C.secretEdgeWidth); // 금색 띠 두께 · 불투명 (10/23)
+  const edgeA = num(opts.secretEdgeA, C.secretEdgeAlpha);
   const useMark = style === 'mark' || style === 'both';
   const useEdge = style === 'edge' || style === 'both';
   const win = {};
@@ -205,7 +210,7 @@ export function createStrikeCue(scene, tint, param, opts = {}) {
           mat.color.copy(S.gold ? gold : plain);
         }
       }
-      if (tint?.setSecretEdge) tint.setSecretEdge(secretEdge && S.gold ? (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env : 0); // 비기 창 금색 테두리 (피 테두리 꼴 · 금빛 — 10/23)
+      if (tint?.setSecretEdge) tint.setSecretEdge(secretEdge && S.gold ? (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env : 0, edgeW, edgeA); // 비기 창 금색 테두리 (화면 가장자리 얇은 띠 — 10/23)
       if (useEdge && tint?.setCue) {
         S.edge = C.edge * (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env;
         tint.setCue(S.edge, S.gold);
