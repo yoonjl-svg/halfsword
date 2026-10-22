@@ -593,6 +593,7 @@ export class PlayerSecretWatch {
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
     if (S.when === 'parry') this.parryTick(dt, BIND.natural ? bindTouch(me, foe) : touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11) · 자연 바인드 실험이면 넓은 맞부딪힘도 (bindTouch)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
+    if (S.when === 'press') this.pressTick(dt, busy);
     if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;
@@ -634,6 +635,26 @@ export class PlayerSecretWatch {
       this.gilWins++;
     }
     this.openWindow(ctx);
+  }
+
+  /**
+   * 독일 죽음의 일격 (10/22 사장님 '막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' · '1.5로 해' — mordschlag.js):
+   *  밀치기 누르기(fighter.closeStep 의 barge phase 'press' — 가슴 사이 CLOSE.reach 안에서 스틱을 놓았다 민 뒤 이어 미는 동안)가 끊기지 않고 cond.press 초(SECRET.mordPress)
+   *  이어지면 창(playerWindow)을 연다. 누르기가 끝나면(떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 베기 · 넘어짐) 셈 0 · 창을 열면 셈 0(계속 누르면 다시 cond.press 초 뒤 또 창).
+   *  비기 실행 · 굳음 동안은 셈 0. 상대가 막는 중이든 몸만 붙었든 같다. 새 값 없음(누르기 판정은 밀치기 그대로). 재기: pressT(지금 셈) · pressRuns(창까지 이어진 수) · pressMax(가장 긴 누르기)
+   */
+  pressTick(dt, busy) {
+    const b = this.me.barge;
+    if (b?.phase === 'press') {
+      this.pressT = (this.pressT ?? 0) + dt;
+      this.pressHeld = (this.pressHeld ?? 0) + dt;
+      if (this.pressHeld > (this.pressMax ?? 0)) this.pressMax = this.pressHeld;
+    } else this.pressT = this.pressHeld = 0;
+    if (busy) this.pressT = 0; // 비기 실행 · 굳음 동안은 세지 않는다 (끝난 뒤 다시 cond.press 초)
+    if (busy || this.open || !(this.pressT >= secretVal(this.S.cond.press))) return;
+    this.pressT = 0;
+    this.pressRuns = (this.pressRuns ?? 0) + 1;
+    this.openWindow({ ev: 'press', held: this.pressHeld });
   }
 
   /**
@@ -801,5 +822,6 @@ export class PlayerSecretWatch {
 /** 플레이어 무기의 유파 비기 (내 무기 전통 = 검술 풀이 tradition — schoolOf(w.id)). 스위치(SKILL.schoolArt·schoolSecret·playerSecret)가 꺼졌거나 무유파면 null */
 export function playerSecretOf(f) {
   if (!(SKILL.schoolArt && SKILL.schoolSecret && SKILL.playerSecret) || f.weapon?.gun) return null;
-  return TRADITIONS[f.swordArt?.tradition]?.secret ?? null;
+  const T = TRADITIONS[f.swordArt?.tradition];
+  return T?.playerSecret ?? T?.secret ?? null; // 사람 몫이 따로 있는 유파(독일 죽음의 일격 — 10/22 사람 먼저)는 그것, 없으면 AI 와 같은 비기
 }

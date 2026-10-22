@@ -33,6 +33,7 @@ import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
+import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -567,7 +568,13 @@ export class Skill {
       return best;
     };
     const run = { S, ctx: o.ctx ?? null, tr: f.swordArt.tradition, stage: null, t: 0, queue: [], cur: null, path: [], landed: false, bound: false, str0: f.strength, painFoe: f.foe.pain, painMe: f.pain };
-    if (D.break) {
+    if (D.mord) {
+      // 독일 죽음의 일격 (10/22 — mordschlag.js): 꾸러미의 기본 동작 하나(SECRET.mord.tech) 길을 — 베기 길을 열 때 칼날을 거꾸로 쥐고 겨눔을 뒤집어 칼자루로 휘두른다
+      const t = mordTech(byName);
+      if (!t) return false;
+      run.queue.push(t);
+      if (!mordStart(f, run, t)) return false;
+    } else if (D.break) {
       // 독일 Versetzen: 들어오는 줄을 깨는 비밀 베기 (창을 연 위협의 줄)
       const th = run.ctx ?? {};
       const key = th.line === 'thrust' ? (th.high ? 'thrustHigh' : 'thrust') : th.line;
@@ -750,6 +757,7 @@ export class Skill {
     const handMul = secVal(D.hand ?? 'handSpeed');
     const g = f.gait;
     const ask = (o) => !!(g?.requestStep && g.active && g.requestStep(o));
+    if (run.mord) mordStep(f, run); // 죽음의 일격: 넘어 들어감 규칙 창 (스위치 SECRET.mordOver — 기본 끔)
     if (run.stage === 'instant') {
       const R = f.instantResult;
       if (!R) return;
@@ -806,7 +814,8 @@ export class Skill {
     }
     if (run.stage === 'chamber') {
       const t = run.cur;
-      if (this.secretMove(t.from[0], t.from[1], L.parrySpeed * handMul, dt) || run.t > 0.6) this.secretStrikeStart();
+      // 죽음의 일격: 손 목표가 닿은 뒤에도 실제 손이 시작 자세에 들 때까지 기다린다(mordReady — 붙어 밀던 낮은 손을 머리 위로 드는 시간) · 0.6 s 까지는 같음
+      if ((this.secretMove(t.from[0], t.from[1], L.parrySpeed * handMul, dt) && (!run.mord || mordReady(f))) || run.t > 0.6) this.secretStrikeStart();
       return;
     }
     if (run.stage === 'strike') {
@@ -858,9 +867,26 @@ export class Skill {
     }
     if (run.stage === 'follow') {
       // 손은 끝 자세에 닿았지만 칼은 아직 지나가는 중 — 판정 배율은 칼이 지나갈 때까지
-      if ((run.t >= 0.3 && f.tipVel.length() < 6) || run.t > 0.5) {
+      // 죽음의 일격은 치는 끝이 칼자루라 칼끝(손 뒤 꼬리) 대신 코등이 빠르기를 칼끝 거리 비로 줄인 문턱에 견준다 (mordSwinging — 같은 6 m/s · 같은 0.3 · 0.5 s)
+      if ((run.t >= 0.3 && (run.mord ? !mordSwinging(f) : f.tipVel.length() < 6)) || run.t > 0.5) {
         f.secretHit = 1;
         if (run.landed) this.secretStats[run.S.name].landed++;
+        if (run.mord) {
+          run.stage = 'mordBack'; // 죽음의 일격: 칼자루를 다시 세운 뒤 원래 쥠으로 (아래)
+          run.t = 0;
+          return;
+        }
+        run.stage = 'stiff';
+        run.t = 0;
+        run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+      }
+      return;
+    }
+    if (run.stage === 'mordBack') {
+      // 죽음의 일격 ④ (mordschlag.js): 손을 기술의 시작 자세로 되돌려(준비와 같은 빠르기 · 실제 손이 들 때까지 — 준비 칸과 같은 기다림 · 0.6 s 까지) 칼자루를 세우고, 원래 쥠으로 돌아가 굳음
+      const t = run.cur;
+      if ((this.secretMove(t.from[0], t.from[1], L.parrySpeed * handMul, dt) && mordReady(f)) || run.t > 0.6) {
+        mordEnd(f);
         run.stage = 'stiff';
         run.t = 0;
         run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
@@ -879,6 +905,7 @@ export class Skill {
     const f = this.f;
     const run = this.sec;
     this.sec = null;
+    if (f.mordGrip || f.mordAim) mordEnd(f); // 죽음의 일격이 끊겼으면 원래 쥠 · 겨눔으로 (mordschlag.js)
     f.powerMul = 1;
     f.secretHit = 1;
     if (run && run.str0 != null) f.strength = run.str0;

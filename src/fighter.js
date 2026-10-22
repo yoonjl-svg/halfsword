@@ -394,6 +394,9 @@ export class Fighter {
     this.armFull = false; // 칼 든 팔이 이번 IK 에서 다 펴졌나 (목표가 팔 길이 밖)
     this.strength = o.strength ?? 1;
     this.powerMul = 1; // 서보 힘 창 (유파 비기 — ai.js 가 비기 베기 동안만 SECRET.power 로 둔다). 1 = 그대로 (driveSword)
+    this.mordGrip = null; // 칼날을 거꾸로 쥔 동안 { g, gOff } (죽음의 일격 — reverseGrip · 사람 독일 비기만). null = 원래 쥠
+    this.mordAim = false; // 칼자루로 치는 동안 겨눔 뒤집기 (죽음의 일격 — driveSword)
+    this.mordHold = null; // 그 준비 동안 칼자루 겨눔 [앞, 위, 옆] (몸 틀 — 시작 자세 패드의 칼끝 겨눔) · null = 패드 그대로
     this.secretHit = 1; // 결정타 판정 배율 (유파 비기 — 비기 베기 동안 SECRET.hitMul, combat.js 가 상처 에너지에 곱한다). 1 = 그대로
     this.gaitPhase = 0;
     this.gaitWeight = 0; // 0 = 서 있음, 1 = 걷는 중 (부드럽게 바뀜)
@@ -2009,6 +2012,60 @@ export class Fighter {
   }
 
   /**
+   * 칼날을 거꾸로 쥐기 (독일 비기 죽음의 일격 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md). G = { g, gOff } 면 칼 든 손이 칼 축 g(칼날 위),
+   *  빈손이 gOff 를 쥐고 칼끝이 손 뒤로 — 코등이 · 폼멜이 치는 끝이 된다. null 이면 원래 쥠(칼 든 손 = 칼 원점 · 빈손 = gripAlong).
+   *  바꾸는 한 스텝에 칼 몸을 옮긴다: 칼끝 방향(칼 축 +y)을 yW(월드, 주면 — 없으면 지금 칼 축의 반대)로 두고 칼 면(z)은 아래팔 경첩 축에 가장 가깝게(손목 굴림 0) ·
+   *  새 쥠 자리가 손목에 오는 자리(손목 공 관절은 그 자리에서 맞음). 손목 밧줄은 길이 그대로 칼 쪽 닻만 옮긴다 — 굽힘 밧줄은 칼끝 대신 치는 끝(−y)을,
+   *  굴림 밧줄은 같은 칼 면을 본다. 속도는 아래팔과 같이 도는 굳은 몸으로. 손 기준 칼 관성(swordIhand — 손목 제동 셈)도 그 손 자리로.
+   *  사람(플레이어) 비기만 부른다 — 부르지 않으면 아무것도 안 바뀐다
+   */
+  reverseGrip(G, yW = null) {
+    if (!!this.mordGrip === !!G || !this.armed || !this.sword || !this.gripJoint) return false;
+    const sword = this.sword;
+    const fa = this.bodies.farmS;
+    rot(fa, _rgQ);
+    const ft = fa.translation();
+    const W = _rgW.set(0.13, 0, 0).applyQuaternion(_rgQ).add(_rgV.set(ft.x, ft.y, ft.z)); // 손목 (아래팔 앞끝 — gripJoint 닻 1)
+    const q1 = rot(sword, _rgQ);
+    if (yW) {
+      // 칼 축을 yW 로: 칼 면(z)은 아래팔 경첩 축(z — 손목 굴림 밧줄이 보는 축)을 새 축에 수직으로 깎아 쓴다 — 굴림 0 에서 시작 (거의 나란하면 지금 날 방향 x)
+      const y1 = _rgY.copy(yW).normalize();
+      const z1 = _rgZ.set(0, 0, 1).applyQuaternion(rot(fa, _rgQ2));
+      z1.addScaledVector(y1, -z1.dot(y1));
+      if (z1.lengthSq() < 1e-4) z1.set(1, 0, 0).applyQuaternion(q1).addScaledVector(y1, -_rgX.set(1, 0, 0).applyQuaternion(q1).dot(y1));
+      z1.normalize();
+      const x1 = _rgX.crossVectors(y1, z1);
+      q1.setFromRotationMatrix(_rgM.makeBasis(x1, y1, z1));
+    } else q1.multiply(_rgFlip);
+    const g = G ? G.g : 0;
+    const p1 = _rgV.set(0, -g, 0).applyQuaternion(q1).add(W); // 새 원점: 새 쥠 자리(0, g, 0)가 손목에 오게
+    const vW = fa.velocityAtPoint(vecArg(W));
+    const w = fa.angvel();
+    sword.setTranslation(vecArg(p1), true);
+    sword.setRotation({ x: q1.x, y: q1.y, z: q1.z, w: q1.w }, true);
+    sword.setAngvel({ x: w.x, y: w.y, z: w.z }, true);
+    // 손목을 지나 아래팔과 같이 도는 굳은 몸처럼: 손목 속도 + 각속도 × (원점 − 손목)
+    sword.setLinvel({ x: vW.x + w.y * (p1.z - W.z) - w.z * (p1.y - W.y), y: vW.y + w.z * (p1.x - W.x) - w.x * (p1.z - W.z), z: vW.z + w.x * (p1.y - W.y) - w.y * (p1.x - W.x) }, true);
+    this.gripJoint.setAnchor2({ x: 0, y: g, z: 0 });
+    if (this.gripCone) {
+      const L = ROPE_L;
+      const s = G ? -1 : 1;
+      this.gripCone[0].setAnchor2({ x: 0, y: g + s * L, z: 0 }); // 굽힘: 아래팔 ↔ 치는 끝 쪽 칼 축
+      this.gripCone[1].setAnchor2({ x: 0, y: g, z: L }); // 굴림: 칼 면
+      for (let i = 2; i < this.gripCone.length; i++) this.gripCone[i].setAnchor2({ x: 0, y: g + s * L, z: 0 }); // 손목 굽힘 · 폄 (hard)
+    }
+    const lc = sword.localCom();
+    const pI = sword.principalInertia();
+    this.swordIhand = Math.max(pI.x, pI.z) + sword.mass() * (lc.y - g) * (lc.y - g);
+    this.mordGrip = G ?? null;
+    // 한 스텝에 옮긴 칼끝 · 겨눔을 속도로 읽지 않게 (trackBlade · 손목 제동 목표 빠르기)
+    this.tipPrev = null;
+    this.hitPointPrev = null;
+    this.prevAim = null;
+    return true;
+  }
+
+  /**
    * 칼 어깨 들림 면 −45°~130° (수평 벌림 45 · 수평 모음 130, HUMAN.shoulderPlane): 면 = atan2(앞, 바깥) 인 위팔 방향 u 가 두 반공간
    *  (면 40° 쪽 수평 n1 과 u 의 각 ≤ 90° → 면 −50~130, 면 45° 쪽 n2 → 면 −45~135) 의 교집합 = 쐐기 −45~130 에 있게 한다. 위팔 끝 쪽 점(어깨에서 L)
    *  ↔ 가슴에 붙은 먼 점(어깨에서 n 쪽 K) 밧줄 둘. 쐐기는 곧게 위·아래(들림 0·180)를 품으므로 들림 0~180 은 따로 막지 않는다.
@@ -3099,6 +3156,13 @@ export class Fighter {
       aim.normalize();
     }
     if (this.schoolPassive?.school === 'italian') this.schoolPassive.tipAim(aim, this.lastDt || 0); // 이탈리아 곧은 선 (10/21 — 찌르는 동안 칼끝이 상대 쪽으로 · 12° · 60°/s, school_passive.js)
+    // 죽음의 일격 (사람 독일 비기 — src/mordschlag.js): 칼자루로 치는 동안(mordAim) 겨눔을 뒤집는다 — 자세 지도 · 길이 칼끝에 정한 쪽으로 칼자루(칼 축 −y)가 간다.
+    //  칼날을 거꾸로 쥐었으면(mordGrip) 칼자루가 칼날 자리에서 같은 길로 휘둘린다(손목 · 팔 · 빈손이 보통 베기와 같은 꼴로 돈다). 준비 동안(mordHold — 몸 틀)은
+    //  지나는 패드 대신 시작 자세의 겨눔으로(칼자루가 상대 쪽을 거쳐 서지 않게). 없으면 오늘 줄 그대로
+    if (this.mordAim) {
+      if (this.mordHold) aim.set(this.mordHold[0], this.mordHold[1], this.mordHold[2]);
+      aim.negate();
+    }
     aim.applyQuaternion(this.yaw);
     // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
     if (v2) corrStep(this, aim, sv);
@@ -3518,14 +3582,15 @@ export class Fighter {
       GRIP.on;
     this.gripping = false;
     if (!want) return;
-    const along = this.weaponCfg.gripAlong;
+    const rg = this.mordGrip; // 칼날을 거꾸로 쥔 동안(죽음의 일격 — reverseGrip): 빈손은 칼날 위 gOff (칼 든 손 g 보다 칼끝 쪽). 없으면 아래 줄 그대로
+    const along = rg ? rg.gOff : this.weaponCfg.gripAlong;
     const sword = this.sword;
     rot(sword, _q1);
     const st = sword.translation();
     const pommel = _gp.set(0, along, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z));
     // 빈손은 칼자루가 "있어야 할 곳"(칼끝이 향해야 할 방향 기준)을 향해 뻗는다 → 두 손이 칼자루를 밀고 당겨
     //  (손 사이 지렛대) 칼을 돌린다. 손목 힘이 사람 수준이라도 칼끝이 흔들리지 않는 이유
-    const gripAim = _gw.copy(this.aimDirW).multiplyScalar(along).add(_v7.set(st.x, st.y, st.z));
+    const gripAim = rg ? _gw.set(0, rg.g, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z)).addScaledVector(this.aimDirW, rg.gOff - rg.g) : _gw.copy(this.aimDirW).multiplyScalar(along).add(_v7.set(st.x, st.y, st.z));
     this.offArmIK(gripAim);
     // 빈손 위치 (아래팔 끝)
     const fo = this.bodies.farmO;
@@ -3887,6 +3952,15 @@ const _oaP = new THREE.Vector3(); // 유파 빈팔 (offArmSchool)
 const _oaC = new THREE.Vector3();
 const _oaQ = new THREE.Quaternion();
 const _oaI = new THREE.Quaternion();
+const _rgQ = new THREE.Quaternion(); // 칼날 거꾸로 쥐기 (reverseGrip — 죽음의 일격)
+const _rgW = new THREE.Vector3();
+const _rgV = new THREE.Vector3();
+const _rgFlip = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
+const _rgX = new THREE.Vector3();
+const _rgQ2 = new THREE.Quaternion();
+const _rgY = new THREE.Vector3();
+const _rgZ = new THREE.Vector3();
+const _rgM = new THREE.Matrix4();
 const _qp = new THREE.Quaternion();
 const _qc = new THREE.Quaternion();
 const _qt2 = new THREE.Quaternion();

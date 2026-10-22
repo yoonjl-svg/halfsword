@@ -845,10 +845,25 @@ export const SECRET = {
   // 열린 비기 (10/21 20:xx 사장님 '스킬트리에서 비기는 고노센 빼고 모두 미구현으로 닫아놔 — 성능과 컨셉이 불안정' · 'AI 비기도 닫아. 다 바꿀거야'):
   //  여기 있는 유파만 비기를 쓴다 — 사람(비기 책 · PlayerSecretWatch) · AI(ai.js) 모두. 닫힌 유파의 비기 책은 '준비 중'(살 수 없음).
   //  `?secretOpen=all` = 옛 판(다섯 유파 모두) · `?secretOpen=japanese,german` 처럼 고를 수 있음 (main.js)
-  openSchools: ['japanese'],
+  openSchools: ['japanese', 'german'], // 10/22 독일 죽음의 일격 — 사람 먼저 (AI 는 아래 aiOpenSchools 그대로)
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
   aiOpenSchools: ['japanese'],
+  // ── 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
+  //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). AI 는 이 칸들을 안 본다(aiOpenSchools · TRADITIONS.german.secret 그대로)
+  deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기). `?deMord=0`
+  mordPress: 1.5, // 밀치기 누르기(fighter.barge phase 'press')가 끊기지 않고 이 초 이어지면 창(playerWindow) — 사장님 결정 '1.5로 해'(시간 사다리 '무장' 칸 · 확인표 2113). 누르기가 끝나면 셈 0. `?mordPress=0.6` 비교
+  // 동작 값 (사장님 확인 전 — 확인표 2185 · 2186): 다른 비기와 같은 길 틀(준비 → 베기 길 → 따라 지나감 → 굳음 — 손 빠르기 handSpeed · 서보 힘 창 power · 판정 배율 hitMul 그대로)에
+  //  쥠 바꿈 · 겨눔 뒤집기 · 다시 세우기 셋을 더함 (src/mordschlag.js). grip 'reverse' = 칼날을 거꾸로 쥠(칼 든 손이 칼날 at 몫 자리 · 빈손이 그보다 칼끝 쪽 — 코등이 · 폼멜이 치는 끝, fighter.reverseGrip) ·
+  //  'hilt' = 쥠 그대로 겨눔만 뒤집어 폼멜로(가장 가까운 판 — 지레가 폼멜까지뿐). `?mordGrip=hilt`
+  mord: {
+    grip: 'reverse',
+    at: 0.6, // 칼 든 손이 쥐는 칼날 자리 (칼날 길이 몫, 코등이에서 — 탈호퍼 그림: 두 손이 칼날 가운데에서 칼끝 쪽) — 롱소드 칼 축 0.76 m · 코등이까지 지레 0.63 · 폼멜 0.88 · 손 뒤 칼끝 0.42 (0.45 · 0.5 · 0.7 견줌 — 문서 §3)
+    tech: 'oberhau', // 휘두르는 기본 동작 (꾸러미 기술 — 지붕에서 정수리로 내리치는 길. 'zornhau' = 어깨 지붕에서 사선)
+    ready: 0.1, // 준비 끝: 실제 손목이 시작 자세 손 목표에서 이 거리(m) 안에 들면 내리친다 (못 들면 준비 칸의 0.6 s 에서 그대로)
+  },
+  // 넘어 들어감 규칙 (사장님 확인 전 · 기본 끔 — 확인표 2187): 1 = 내리치는 동안(③) 내 칼자루 · 칼날 ↔ 상대 칼 충돌을 끈다(상대가 막아도 칼 위로 지나 머리에). 0 = 물리 그대로. `?mordOver=1`
+  mordOver: 0,
   power: 1.3, // 서보 힘 창: 비기 베기 동안 칼을 미는 손목 힘 배율 (fighter.js driveSword 의 str 에 곱함)
   handSpeed: 1.5, // 10/9 4차 사장님 '비기는 통상보다 훨씬 빨라야' — 사다리 1.5 → 2.0 → 2.5 (문서 §11): 1.5 에서 서보 포화(닿기까지 ms 가 더 줄지 않고 J 가 떨어짐) → 1.5 에서 멈춤. 1.3 에서 올림. 손 속도 배율: 비기의 준비(빠른 준비 parrySpeed)·베기(strikeSpeed) 손 빠르기에 곱함
   stepPush: 2.0, // 10/9 4차 1.8 → 2.0 (일본·이탈리아 비기 걸음). 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8
