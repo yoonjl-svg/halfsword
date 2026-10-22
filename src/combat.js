@@ -332,6 +332,7 @@ export class Combat {
       if (helmet) thr = Math.max(thr, type === 'cut' ? ANATOMY.head.cut : ANATOMY.head.stab);
       eff = energy * quality * wMult * emoDealt * emoTaken;
       if (finishPower) eff *= FINISH.power; // 찍기 힘 배율 (상한 없음 — 사장님 확인 전, 확인표 958). 무기 속도·질량은 그대로, 판정 에너지에만 한 번
+      if (att.effMul) eff *= att.effMul; // 동방 격살 (10/22 — secret_instant.js instantWound · skill.js): 그 한 칼 동안만 같은 자리에 FINISH.power(SECRET.gyeoksal.power) · 다른 칼은 없음(그대로)
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
         pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)

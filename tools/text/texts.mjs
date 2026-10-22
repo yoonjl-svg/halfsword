@@ -269,6 +269,8 @@ export async function collectTexts({ characters = true } = {}) {
     for (const p of T.passives ?? []) add('패시브', tid, `${at('passives')}[${p.name}].nameKo`, p.nameKo, { field: 'passive.nameKo', key: p.name, src: p.src, note: p.ai === false ? 'ai:false' : '' });
     if (T.secret) add('비기', tid, `${at('secret')}.nameKo`, T.secret.nameKo, { field: 'secret.nameKo', key: T.secret.name, src: T.secret.src });
     for (const q of T.secret?.do?.seq ?? []) add('비기', tid, `${at('secret')}.do.seq[${q.name}].nameKo`, q.nameKo, { field: 'secret.seq.nameKo', key: q.name, note: '비기 안의 수 이름 (지금 화면엔 비기 이름만 뜸 — 자료)' });
+    const PS = T.playerSecret; // 사람 길 비기 (10/22 동방 막아 죽이기 — 판 알림에 뜨는 이름)
+    if (PS && PS !== T.secret) add('비기', tid, `${at('playerSecret')}.nameKo`, PS.nameKo, { field: 'secret.nameKo', key: PS.name, src: PS.src, note: '사람 길 (AI 는 secret)' });
   }
   // 공용 속임수 (모든 유파 — 기술 이름 모두 표시 설정에서 보임)
   for (const f of AT.FEINTS) add('속임수', '', `src/ai_techniques.js FEINTS[${f.fake}]`, f.name, { field: 'feint.name', note: '공용 (모든 유파)' });

@@ -67,6 +67,6 @@ export const SCHOOLS = [
     { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '찌르다가 거둔다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 490 },
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
     { id: 'C10', cat: 'passive', name: '패시브', sub: '토납', eff: '숨 바꾸기 (토납) — 칼을 휘두르지 않는 동안 피가 2배 빨리 멎는다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
-    { id: 'C9', closed: true, cat: 'secret', name: '비기', sub: '연환', eff: '높이 막아 낸 직후 세 번 이어 친다', pre: ['C6', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 },
+    { id: 'C9', cat: 'secret', name: '비기', sub: '막아 죽이기', eff: '앞으로 나서며 때맞춰 막아 낸 직후 받은 자세가 노리는 급소를 깊게 친다', pre: ['C6', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 }, // 10/22 격살로 열림 (전 '연환' · 준비 중)
   ] },
 ];

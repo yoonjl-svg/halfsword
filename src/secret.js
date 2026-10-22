@@ -13,6 +13,7 @@ import { SECRET, SKILL, BIND } from './config.js';
 import { TRADITIONS } from './schools.js';
 import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
+import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
 
 const clamp = THREE.MathUtils.clamp;
 const _r = new THREE.Vector3();
@@ -591,6 +592,7 @@ export class PlayerSecretWatch {
     if (this.swing && painUp) this.swing.landed = true;
     const touch = bladesTouch(me, foe);
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
+    if (S.when === 'gyeoksal') this.gyeoksalTick(dt, touch, sw || !!me.skill.tap, busy); // 동방 막아 죽이기 (10/22 — 막기 단추 · 때맞춤 · 스틱 앞)
     if (S.when === 'parry') this.parryTick(dt, BIND.natural ? bindTouch(me, foe) : touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11) · 자연 바인드 실험이면 넓은 맞부딪힘도 (bindTouch)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
@@ -742,6 +744,85 @@ export class PlayerSecretWatch {
   }
 
   /**
+   * 동방 막아 죽이기 (격살 · 10/22 — schools.js CHINESE_SECRET_GYEOKSAL · SECRET.gyeoksal · docs/strike/chinese_gyeoksal_2026-10-22.md). 플레이어만 (main.js · 시뮬 도구가 부른다).
+   *  ① 때맞춤: 막기 단추(me.parryGuard — parry_button.js)를 새로 누른 뒤 SECRET.gyeoksal.press 초 안에 칼끼리 새로 닿음 (닿는 그 순간 단추를 쥐고 있어야 — held · broken 아님)
+   *  ② 앞으로: 그 순간 이동 스틱이 상대 쪽 — 근접 밀치기의 '밂'과 같은 가름 stickY > |stickX| (docs/strike/shove_design_2026-09-30.md 트리거)
+   *  ③ 받은 자세: 막기 단추가 막는 중이면 그 줄(defLine), 기다림이면 닿은 순간 손(패드)에서 가장 가까운 막기 자리(0.15 안 — parrySlotOf 와 같은 폭) → cond.stances.
+   *     스킬트리 동방 막기 I(C7 — 자리 + 몸꼴)이 없으면(무유파 자리) 동방 자세가 아니라 창 없음
+   *  ④ 받아 냄: 그 공격이 나를 베지 못함 — 상대 칼이 들어오던 중(지난 0.6 s 칼끝 ≥ 3.5 m/s — 막기 연환과 같은 셈)이고, 닿기 전 0.6 s · 닿아 있는 동안 내 칼날 상처가 없고,
+   *     칼이 떨어지는 순간 창(SECRET.playerWindow) — 그동안 온 공격 입력은 미리 받아 둔다(canBuffer · SECRET.cnBuffer). 내가 휘두르거나 찌르면(단추가 풀림) 취소.
+   *  재기: pc.gk = { edges, busy, atk, noPress, late, notFwd, slow, hurt, noStance, pend, cut, open, stance: {거정 …}, by: { line, pad } } (판정에는 안 씀)
+   */
+  gyeoksalTick(dt, touch, attacking, busy) {
+    const me = this.me;
+    const S = this.S;
+    const G = me.parryGuard;
+    const P = (this.pc ??= { prev: false, nw: me.wounds?.length ?? 0, woundAge: Infinity, pend: null, pressAge: Infinity, held: false });
+    const K = (P.gk ??= { edges: 0, noPress: 0, late: 0, notFwd: 0, slow: 0, hurt: 0, atk: 0, noStance: 0, pend: 0, cut: 0, open: 0, stance: {}, by: { line: 0, pad: 0 } });
+    const nw = me.wounds?.length ?? 0;
+    P.woundAge = nw > P.nw ? 0 : P.woundAge + dt;
+    P.nw = nw;
+    const held = !!G?.held;
+    P.pressAge = held && !P.held ? 0 : P.pressAge + dt; // 새 누름부터 센다 (떼면 더 늘기만)
+    P.held = held;
+    const start = touch && !P.prev;
+    const sep = !touch && P.prev;
+    P.prev = touch;
+    if (P.buf && (P.buf.t += dt) > secretVal(S.cond.time)) {
+      P.buf = null; // 미리 받은 입력: 칼이 붙은 채 창 길이보다 오래면 버린다 (막기 연환과 같은 꼴 — 떨어지면 창은 열린다)
+      P.bufDrop = (P.bufDrop ?? 0) + 1;
+    }
+    if (this.open?.ctx?.ev === 'gyeoksal' && P.woundAge === 0) this.open = null; // 창이 열린 뒤 베이면 닫힘 (막기 연환과 같음)
+    if (P.pend) {
+      if (P.woundAge === 0 || attacking) {
+        if (P.woundAge === 0) K.cut++;
+        P.pend = P.buf = null; // 뚫림(받아 내지 못함) · 내가 공격 — 창 없음
+      } else if (sep) {
+        if (!busy && !this.open) {
+          this.openWindow({ ev: 'gyeoksal', slot: P.pend.stance, stance: P.pend.stance, line: P.pend.line, by: P.pend.by }, SECRET.playerWindow);
+          K.open++;
+          K.stance[P.pend.stance] = (K.stance[P.pend.stance] ?? 0) + 1;
+          if (P.buf) (this.queued = P.buf), (P.bufFired = (P.bufFired ?? 0) + 1); // 미리 받은 입력 → 이 스텝 곧장 (main.js 가 update 뒤에 fire)
+        }
+        P.pend = P.buf = null;
+      }
+    }
+    if (!start) return;
+    K.edges++;
+    if (busy) return void (K.busy = (K.busy ?? 0) + 1); // 내 비기가 도는 중 (그 칼이 상대 칼에 닿음)
+    if (attacking) return void K.atk++;
+    if (!held || G.broken) return void K.noPress++;
+    if (!(P.pressAge <= SECRET.gyeoksal.press)) return void K.late++;
+    if (!(me.stickY > Math.abs(me.stickX))) return void K.notFwd++;
+    if (!(foeRecentTipSp(this.sense, 0.6) >= 3.5)) return void K.slow++;
+    if (P.woundAge < 0.6) return void K.hurt++;
+    const st = this.gyeoksalStance(G);
+    if (!st) return void K.noStance++;
+    K.pend++;
+    K.by[st.by]++;
+    P.pend = { stance: st.stance, line: st.line, by: st.by, t: 0 };
+  }
+
+  /** 격살 받은 자세 { stance, line, by: 'line' | 'pad' } 또는 null — 막기 단추가 막는 중이면 그 줄, 아니면 손에서 가장 가까운 막기 자리(0.15 안). 동방 막기 I(C7) 없음 = null */
+  gyeoksalStance(G) {
+    const me = this.me;
+    const map = this.S.cond.stances;
+    const school = me.swordArt?.school;
+    if (!school || me.schoolParry === false || kitOff(me, 'parryCover')) return null;
+    if (G?.mode === 'defend' && map[G.defLine]) return { stance: map[G.defLine], line: G.defLine, by: 'line' };
+    const h = [me.handOffset.x, me.handOffset.y];
+    let best = null;
+    let bd = 0.15; // parrySlotOf 의 패드 폭 (v5 · v6 '이미 그 자세' 판정 — 새 값 아님)
+    for (const ln of Object.keys(map)) {
+      const p = school.parry?.[ln];
+      if (!p) continue;
+      const d = Math.hypot(h[0] - p[0], h[1] - p[1]);
+      if (d <= bd) (bd = d), (best = ln);
+    }
+    return best ? { stance: map[best], line: best, by: 'pad' } : null;
+  }
+
+  /**
    * 미리 받기 (10/12 사장님 01:1x '그런 공격을 운 좋게 막아도 인간 반사신경으로 커맨드 넣기 어려웠어' — SECRET.cnBuffer, docs/strike/cn_combo_play_2026-10-12.md §4):
    *  중국 막기 연환(window 'apart')에서 정한 자세로 막아 칼이 맞닿아 있는 동안(pend) 온 공격 입력(톡·빠른 끌기 — main.js 의 비기 입력과 같은 문턱)을 취소 대신 받아 둔다.
    *  그동안 그 입력은 보통 공격으로 새지 않는다(main.js 가 칼 입력을 삼킴 — bufferHold). 칼이 떨어지는 스텝에 창이 열리며 곧장 연환(내는 순간은 떨어진 뒤 — '떨어짐' 그대로).
@@ -749,7 +830,7 @@ export class PlayerSecretWatch {
    */
   canBuffer() {
     const P = this.pc;
-    return !!(SECRET.cnBuffer && this.S?.when === 'parry' && this.S.cond?.window === 'apart' && P?.pend && !P.buf && !this.open && !this.queued);
+    return !!(SECRET.cnBuffer && ((this.S?.when === 'parry' && this.S.cond?.window === 'apart') || this.S?.when === 'gyeoksal') && P?.pend && !P.buf && !this.open && !this.queued); // 격살(10/22)도 같은 미리 받기
   }
 
   /** 입력을 받아 둔다 (dir = 그 끌기의 방향 — fire 의 o.dir 와 같은 꼴) */
@@ -801,5 +882,6 @@ export class PlayerSecretWatch {
 /** 플레이어 무기의 유파 비기 (내 무기 전통 = 검술 풀이 tradition — schoolOf(w.id)). 스위치(SKILL.schoolArt·schoolSecret·playerSecret)가 꺼졌거나 무유파면 null */
 export function playerSecretOf(f) {
   if (!(SKILL.schoolArt && SKILL.schoolSecret && SKILL.playerSecret) || f.weapon?.gun) return null;
-  return TRADITIONS[f.swordArt?.tradition]?.secret ?? null;
+  const T = TRADITIONS[f.swordArt?.tradition];
+  return T?.playerSecret ?? T?.secret ?? null; // 사람 길 비기가 따로 있으면 그것 (10/22 동방 막아 죽이기 — schools.js TRADITIONS.chinese.playerSecret · AI 는 secret 그대로)
 }

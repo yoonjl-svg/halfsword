@@ -874,6 +874,39 @@ const CN3 = {
     CN3_CUT('pcFengSha', '물러 베기 (살)', [0.3, 0.22], [[0.0, 0.08], [-0.3, -0.12]], { yaw: [30, -30], el: [20, -25], from: 'stab' }, stepBack25),
   ],
 };
+// ── 동방 막아 죽이기 (격살 · 格殺 — 10/22 사장님 '앞으로 향하면서 타이밍 맞추어 막기 정도로 조건을 걸게. 대신 다음 공격이 말그대로 살격이 되게 하자. 기술 이름이 격살이니까'
+//   · '거정세는 머리를 베고 어거세는 팔을 베고 요략세는 다리를 베고? 구체적으로 절단이나 깊을 출혈을 목표로 … 투구와 갑옷 판정은 당연히 거쳐야 해' · 봉두세 '깊을 출혈을 목표하는 허파 찌르기로'
+//   — docs/strike/chinese_gyeoksal_2026-10-22.md). 사람만 — TRADITIONS.chinese.playerSecret (SECRET.gyeoksal.on). AI 는 그대로 위 막기 연환(SECRET.aiOpenSchools 로 닫힘).
+//  조건 (secret.js PlayerSecretWatch.gyeoksalTick): 막기 단추를 새로 누른 뒤 SECRET.gyeoksal.press 초 안에 상대 칼이 내 칼에 닿고 · 그 순간 스틱이 상대 쪽(stickY > |stickX|) ·
+//   그 공격이 나를 베지 못한 채 칼이 떨어지면 → 창 SECRET.playerWindow (막는 동안 넣은 공격 입력은 미리 받아 두었다가 칼이 떨어지는 순간 — SECRET.cnBuffer 그대로).
+//  받은 자세 = 막기 단추가 정한 줄(defLine) · 줄을 정하기 전(기다림)이면 닿은 순간 손에서 가장 가까운 막기 자리(패드 0.15 안 — parrySlotOf 와 같은 폭) · 못 정하면 창 없음.
+//  자세 → 겨눌 곳 (줄 → 자세는 위 동방 막기 자리 표 그대로):
+//   거정세(highC · highR) → 머리 — 擧鼎格 「鼎格上殺」(위를 죽인다): 위에서 머리 · 목으로 비껴 내려 벤다
+//   어거세(thrust) → 팔 — 御車格 「駕御中殺 削殺兩手」(무비지 쪽161/0575 — 두 손을 깎아 죽인다): 칼 든 팔의 팔꿈치 곁을 비껴 깎아 벤다
+//   요략세(lowL · lowR) → 다리 — 撩掠格 「遮駕下殺」(아래를 죽인다): 앞에 둔 다리의 무릎 높이를 가로로 걷어 벤다
+//   봉두세(highL) → 허파 — 鳳頭洗 「洗刺剪殺」 의 찌름(刺): 가슴을 곧게 찔러 깊은 출혈
+//  한 칼 = 연환과 같은 운동학 틀(SECRET.cnFast — secret_instant.js requestCombo · 빠르기 cnFastShare · 잔상) · 길은 그 순간 상대 몸을 겨눠 짠다(comboPlanDyn 'aim') ·
+//   판정 = 마무리 찍기와 같은 판정 에너지 × FINISH.power (SECRET.gyeoksal.power — 결정타 hitMul 대신) · 즉사 규칙 없음(투구 · 판금 · 옷 · 살 문턱 그대로 — 목을 가르면 물리대로 참수될 수 있음) ·
+//   비기 뒤 굳음 SECRET.stiff.chinese 그대로. 겨눔 자리 · 호의 각 [추정] · 패드 길(from · path)은 cnFast 0 일 때의 서보 길 [추정]
+const GYEOKSAL_STANCE = { highC: 'geojeong', highR: 'geojeong', thrust: 'eogeo', lowL: 'yoryak', lowR: 'yoryak', highL: 'bongdu' };
+const GK_CUT = (name, nameKo, orig, target, from, path, dyn, open) => ({ name, nameKo, orig, pre: [], from, path, open, kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'aim', target, from: 'prep', ...dyn } });
+const CHINESE_SECRET_GYEOKSAL = {
+  name: 'gyeoksal',
+  nameKo: '막아 죽이기 (격살)', orig: '格殺',
+  when: 'gyeoksal',
+  cond: { stances: GYEOKSAL_STANCE, time: 'playerWindow' }, // time: 미리 받은 입력을 칼이 붙은 채 이 초까지 기다림 (막기 연환 cnParryWindow 와 같은 0.6)
+  do: {
+    fast: 'cnFast',
+    power: 'gyeoksal', // 판정 = SECRET.gyeoksal.power (skill.js — 'finish' 면 FINISH.power)
+    combo: {
+      geojeong: { nameKo: '솥 들기 → 머리 베기', seq: [GK_CUT('gkHead', '머리 베기 (상살)', '上殺', 'head', G.tag, [[0.12, 0.2], [-0.2, -0.15]], { side: -1, yaw: [-35, 35], el: [25, -25], at: 0.75 }, 'H')] },
+      eogeo: { nameKo: '수레 몰기 → 팔 깎기', seq: [GK_CUT('gkArm', '팔 깎기 (삭살)', '削殺', 'arm', [0.3, 0.1], [[0.05, 0.0], [-0.3, -0.05]], { side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 }, 'UL')] },
+      yoryak: { nameKo: '걷어 올리기 → 다리 베기', seq: [GK_CUT('gkLeg', '다리 베기 (하살)', '下殺', 'leg', [0.4, -0.2], [[0.0, -0.42], [-0.4, -0.46]], { side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 }, 'LL')] },
+      bongdu: { nameKo: '봉황 머리 → 허파 찌르기', seq: [{ name: 'gkLung', nameKo: '허파 찌르기 (자)', orig: '刺', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }] },
+    },
+  },
+  src: '擧鼎勢 「擧鼎格 … 鼎格上殺」 무비지 쪽154/0568 · 御車勢 「御車格 … 駕御中殺 削殺兩手」 쪽161/0575 · 撩掠勢 「撩掠格 … 遮駕下殺」 무도 권2 p038 · 鳳頭勢 「法能洗刺剪殺」 쪽176/0590 [원문] · 받은 자세로 겨눌 곳을 정함 · 한 칼 [해석] · 겨눔 자리 · 호의 각 [추정]',
+};
 // 독일 막기 연환 — 감아 들기 (Indes · 10/11 19:1x 사장님 '두 수면 너무 비슷하니까 한 수로 … 오래 붙어 있었을수록 깊고 강한 공격'):
 //  걸이 막기(황소 Ochs — 칼자루를 머리 곁에 들고 칼끝을 상대 얼굴로 걸어 받음)로 받아 칼이 맞붙은 채 이어지는 동안(Indes — 맞붙은 그 사이) 받은 칼을 타고 감아 드는 한 수.
 //  막은 자리에 따라 한 수를 고르는 표: 오른 황소(높이, 칼 든 쪽)에서 맞붙음 → Duplieren(칼을 떼지 않고 상대 칼 뒤로 머리 — 위 빈틈) ·
@@ -972,7 +1005,7 @@ export const TRADITIONS = {
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
   //  물러남(10/9 腰擊 쓰임): 몰려 물러날 때 腰擊勢(옆 자세)로 거둔다 — 斂翅 「佯北誘賺… 倒退進步腰擊」(무비지 쪽174/0588 [원문]): 물러나며 腰擊을 들고 있다가 들어가 벤다.
   //   그 밖(calm)은 독일 그대로(쟁기·긴 자세 — 坦腹·中平, 찌르기 쪽). 전엔 독일 값(pressed 황소)이라 기술을 고를 때 손이 옆 자세 0.2 m 안에 있던 적이 48 판 pickTech 502 번 가운데 0 번
-  chinese: { id: 'chinese', nameKo: '동방', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, get secret() { return this.secretSet ?? (SECRET.cnSecret === 'v1' ? CHINESE_SECRET : CHINESE_SECRET_PARRY); }, set secret(v) { this.secretSet = v; } }, // 화면 이름 '동방' (사장님 10/13 22:5x '중국 대신 동방' — 원전이 중국·조선 함께라서 · 코드 열쇠 chinese 그대로) · 비기 판 (10/11): SECRET.cnSecret 'parry' 기본(막기 연환 — 연환) · 'v1' 옛 連環三擊 (`?cnSecret=v1`)
+  chinese: { id: 'chinese', nameKo: '동방', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, get secret() { return this.secretSet ?? (SECRET.cnSecret === 'v1' ? CHINESE_SECRET : CHINESE_SECRET_PARRY); }, set secret(v) { this.secretSet = v; }, get playerSecret() { return SECRET.gyeoksal?.on && !this.secretSet ? CHINESE_SECRET_GYEOKSAL : this.secret; } }, // 화면 이름 '동방' (사장님 10/13 22:5x '중국 대신 동방' — 원전이 중국·조선 함께라서 · 코드 열쇠 chinese 그대로) · 비기 판 (10/11): SECRET.cnSecret 'parry' 기본(막기 연환 — 연환) · 'v1' 옛 連環三擊 (`?cnSecret=v1`)
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
