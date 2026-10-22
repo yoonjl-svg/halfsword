@@ -33,6 +33,7 @@ import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
+import { requestSpin, spinAbort, spinCutPose } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 
@@ -595,6 +596,11 @@ export class Skill {
       //  (흘림과 같은 장치 — nagashi_recovery.js beginFlowRecovery · FLOW_RECOVERY) + 비기 배율(power · hitMul — updateSecret 'riso'). 찌르기는 아래 this.sec 를 건 뒤(기력은 비기 값 하나)
       run.stage = 'riso';
       run.risoluto = true;
+    } else if (D.spin) {
+      // 이베리아 휘감아 돌기 (10/22): 앞발을 축으로 몸을 한 바퀴 돌리는 대본 (iberian_spin.js) — 두 발로 딛고 있어야 건다(못 걸면 비기 아님 · 창은 이미 썼다)
+      if (!requestSpin(f)) return false;
+      run.stage = 'spin';
+      this.secretBursts++;
     } else if (D.break) {
       // 독일 Versetzen: 들어오는 줄을 깨는 비밀 베기 (창을 연 위협의 줄)
       const th = run.ctx ?? {};
@@ -672,6 +678,7 @@ export class Skill {
     const st = (this.secretStats[S.name] ??= { fired: 0, landed: 0 });
     st.fired++;
     if (run.risoluto) st.armSlow = (st.armSlow ?? 0) + (run.armSlow ? 1 : 0);
+    if (run.stage === 'spin') f.stamina.attack('cut', true); // 휘감아 돌기: 기력은 큰 동작 · 비기 그대로 (위 secret() + 베기 한 번 — 흐름 토막과 같은 셈)
     if (!run.stage) this.secretNextMove();
     return true;
   }
@@ -778,7 +785,7 @@ export class Skill {
     const foe = f.foe;
     if (!f.alive || !f.armed || f.state !== 'stand' || !foe) return this.secretEnd();
     // 맞힘 (AI 와 같은 눈: 상대 아픔 +0.05)
-    if (foe.pain > run.painFoe + 0.05 && (run.stage === 'strike' || run.stage === 'follow' || run.stage === 'riso')) run.landed = run.segHit = true; // segHit: 이 토막이 맞힘 (이베리아 흐름 문 — 10/11)
+    if (foe.pain > run.painFoe + 0.05 && (run.stage === 'strike' || run.stage === 'follow' || run.stage === 'riso' || run.stage === 'spin')) run.landed = run.segHit = true; // segHit: 이 토막이 맞힘 (이베리아 흐름 문 — 10/11)
     run.painFoe = foe.pain;
     const hurt = f.pain > run.painMe + 0.05;
     run.painMe = f.pain;
@@ -813,6 +820,21 @@ export class Skill {
       run.stage = 'stiff';
       run.t = 0;
       run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+      return;
+    }
+    if (run.stage === 'spin') {
+      // 이베리아 휘감아 돌기 (10/22 — iberian_spin.js): 도는 동안 서보 힘 창 · 보조 힘 · 판정 배율. 대본이 끝나면(막힘 포함) 칼이 지나갈 때까지 따라 지나감 → 경직
+      const H = SECRET.ibSpin.hit;
+      f.powerMul = SECRET.ibSpin.power;
+      f.secretHit = H === 'finish' ? FINISH.power : H === 'one' ? 1 : SECRET.hitMul; // 판정 에너지 배율 (마무리 찍기 FINISH.power 와 같은 칸 — 갑옷 · 투구 판정은 그대로 거친다)
+      if (D.strength) f.strength = run.str0 * secVal(D.strength);
+      if (f.ibSpin) return;
+      run.spin = f.ibSpinDone ?? null;
+      f.ibSpinDone = null;
+      run.stage = 'follow';
+      run.t = 0;
+      f.powerMul = 1;
+      if (D.strength) f.strength = run.str0;
       return;
     }
     if (run.stage === 'back') {
@@ -954,6 +976,7 @@ export class Skill {
     const run = this.sec;
     this.sec = null;
     if (f.mordGrip || f.mordAim) mordEnd(f); // 죽음의 일격이 끊겼으면 원래 쥠 · 겨눔으로 (mordschlag.js)
+    if (f.ibSpin) spinAbort(f, 'end'); // 휘감아 돌기 대본이 아직 돌면 끊는다 (넘어짐 · 칼 놓침 — 10/22)
     f.powerMul = 1;
     f.secretHit = 1;
     if (f.effMul != null) f.effMul = null;
@@ -1487,6 +1510,11 @@ export class Skill {
       // 이베리아 길목 한 칼의 덧씌우기 자세 (10/11 v6 2차 — AI 와 같은 함수 secret_instant.js gilmokCutPose): 팔을 앞으로 뻗어 몸통 높이로 둘러 벰
       const g = this.sec ? gilmokSeg(this.sec.cur?.name, this.sec.stage === 'stiff') : { seg: null, s: 1 };
       gilmokCutPose(f, g.seg, g.s, dt);
+    }
+    if (this.sec?.S?.do?.spin || f.spinPoseW > 0) {
+      // 이베리아 휘감아 돌기의 팔 · 칼 덧씌우기 (10/22 — iberian_spin.js): 도는 동안 칼을 칼 든 쪽 뒤로 수평으로 감고, 칼을 놓은 뒤 · 따라 지나감 · 경직 동안 가로 베기 끝 자세
+      const st = this.sec?.S?.do?.spin ? this.sec.stage : null;
+      spinCutPose(f, st === 'spin' ? (f.ibSpin && !f.ibSpin.free ? 'wind' : 'cut') : st === 'follow' || st === 'stiff' ? 'cut' : null, dt);
     }
     const R = WEAPON.reach;
     if (f.handOffset.length() > R) f.handOffset.setLength(R);

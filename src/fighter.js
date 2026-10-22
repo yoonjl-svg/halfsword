@@ -29,7 +29,8 @@ import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './out
 import { reviveOf, tryRevive, reviveTick } from './revive.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이베리아 이어 긋기 흐름 B5)
 import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
-import { fighterWetlandMoveScale } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
+import { fighterWetlandMoveScale } from './wetland_ground.js';
+import { spinStep } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 — 한 바퀴 도는 대본 (10/22 · f.ibSpin 이 없으면 부르지 않는다) // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
@@ -1358,7 +1359,8 @@ export class Fighter {
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
     this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
 
-    this.updateHeading(dt);
+    if (this.ibSpin) spinStep(this, dt); // 이베리아 휘감아 돌기 (10/22 — iberian_spin.js): 몸 방향 · 틀 빠르기를 대본이 (상대 쪽으로 천천히 돌기 대신)
+    else this.updateHeading(dt);
     if (this.stamina.exhausted) {
       this.move.set(0, 0); this.stickX = this.stickY = 0;
       this.barge = null;
@@ -2315,6 +2317,7 @@ export class Fighter {
     const along = mv.y * speed * (mv.y < 0 ? (hybrid ? GAIT.backFactor : 0.75) : 1);
     const side = mv.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
     const want = _v4.set(fwd.x * along + rgt.x * side, 0, fwd.z * along + rgt.z * side);
+    if (this.ibSpin && hybrid) want.copy(this.ibSpin.want); // 휘감아 돌기 (10/22): 골반이 가려는 빠르기 = 대본 (스틱 · 균형 걸음 대신)
     this.updateFooting(dt, fwd, rgt, want);
     if (hybrid) G.update(dt, want, fwd, rgt);
     else if (G?.active) G.exit();
@@ -2525,6 +2528,13 @@ export class Fighter {
     const k = Math.min(1, dt * 25);
     this.footLoad.F += (loadOf(a) - this.footLoad.F) * k;
     this.footLoad.B += (loadOf(b) - this.footLoad.B) * k;
+    if (this.ibSpin) {
+      // 휘감아 돌기 (10/22 — iberian_spin.js): 도는 동안 발은 대본이 딛는다 — 균형 걸음(stumble)을 걸지 않고 발 밖 벗어남도 세지 않는다 (무게중심 com 은 위에서 그대로 셈)
+      this.offBalance = 0;
+      this.offBalanceTime = Math.max(0, this.offBalanceTime - dt * 2);
+      this.stumble.set(0, 0);
+      return;
+    }
     const offFrom = (x, z) => {
       if (ga && gb) return distToSegment2D(x, z, a.x, a.z, b.x, b.z);
       if (ga || gb) {

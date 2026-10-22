@@ -1,7 +1,7 @@
 // 스킬트리 자료 · 규칙 (10/21 사장님 확정 — docs/design/skill_tree_2026-10-21/README.md · data.mjs 가 원본 · 이 파일 = 게임이 읽는 판)
 //  유파마다 11 칸 · 뿌리 = 보법 I · pre = 먼저 익힐 칸 '모두'(독일 2단계 관문 · 이탈리아 보법 II 줄기 · 이베리아 패시브 → 비기 · 독일 보법 II → 패시브 → 비기가 이미 여기 들어 있다).
 //  값(사장님 10/21 19:0x): 편지 금화 100 · 패시브 머리 10(금화 없음) · 보법 II 금화 100 · 비기 금화 400 + 머리 20 · 나머지는 깊이마다 금화 — data.mjs 그대로.
-//  닫힌 칸: 비기는 SECRET.openSchools(config — 지금 일본 · 독일 · 이탈리아 · 동방 — 10/22 사람 먼저)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · 일본 J8 손목 치기 심화는 이점이 아직 없어 '준비 중'(확인표 2107).
+//  닫힌 칸: 비기는 SECRET.openSchools(config — 10/22 사람 쪽 다섯 유파 모두: 일본 · 독일 · 이탈리아 · 이베리아 · 동방)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · 일본 J8 손목 치기 심화는 이점이 아직 없어 '준비 중'(확인표 2107).
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
@@ -74,7 +74,7 @@ const TREE_SRC = {
       N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B4'], price: 300, d: 2, cx: 560, f: ['ibFlow'] }),
       N({ id: 'B9', name: '굳은 받기', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해가 줄어든다', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
-      N({ id: 'B7', name: '길목 지키기', cat: 'secret', l1: '비기', l2: '길목 지키기', eff: '칼끝 거리 밖에서 기다리다 상대가 넘어올 때 공격하면, 크게 둘러 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }),
+      N({ id: 'B7', name: '휘감아 돌기', cat: 'secret', l1: '비기', l2: '휘감아 돌기', eff: '칼끝 거리 밖에서 버티다 공격하면, 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }), // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
       N({ id: 'B6', name: '거듭 돌려 베기', cat: 'deep', l1: '심화', l2: '쌓기', title: '돌려 베기 심화 · 쌓기', eff: '돌려 베기를 이어 그을수록 피해가 증가한다', pre: ['B5'], price: 400, d: 3, cx: 680, perk: 'redondo' }),
     ],
   },
@@ -148,7 +148,7 @@ const NODE_LORE = {
   B11: { lore: '리스본 항구에 큰 칼이 들거든, 가장 먼저 네게 실어 보내마' },
   B5: { lore: '탈류에서 다른 탈류가 나고, 레베스에서 다른 레베스가 난다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 맺음말' },
   B9: { lore: '큰 칼의 쳐내기와 막기와 치기는 모두 몸놀림이 거들어야 한다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 6' },
-  B7: { lore: '거리에서 사람들을 막아, 이 끝에서 저 끝으로 지나지 못하게 한다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 단순 규칙 7' },
+  B7: { lore: '큰 칼로 갈비를 온통 휘감고, 온몸을 돌려라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 8' }, // 10/22 휘감아 돌기 (전 길목 지키기 — 피게이레두 단순 규칙 7)
   B6: { lore: '걸음마다 한 칼씩, 늘 아래에서 위로, 사람들이 멈출 때까지 번갈아 쳐라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 7' },
   // 일본 — 오륜서 · 병법가전서 · 일본검도형 (사장님이 주신 원본 읽기표 — docs/motion/schools/)
   J1: { lore: '발끝을 조금 띄우고 뒤꿈치를 세게 디뎌, 늘 걷듯이 걸어라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 발 쓰기' },

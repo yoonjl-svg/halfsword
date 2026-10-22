@@ -846,7 +846,7 @@ export const SECRET = {
   //  여기 있는 유파만 비기를 쓴다 — 사람(비기 책 · PlayerSecretWatch) · AI(ai.js) 모두. 닫힌 유파의 비기 책은 '준비 중'(살 수 없음).
   //  `?secretOpen=all` = 옛 판(다섯 유파 모두) · `?secretOpen=japanese,german` 처럼 고를 수 있음 (main.js)
   //  10/22 사장님 '리솔루토 덮음은 모양으로 재고 사람 먼저' → 이탈리아(사람 길 = 거침없이 나아가 찌르기 — 아래 itSecret · src/italian_risoluto.js)
-  openSchools: ['japanese', 'german', 'italian', 'chinese'], // 10/22 사람 먼저 — 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 동방 막아 죽이기(격살 — 아래 gyeoksal). AI 는 aiOpenSchools 로 닫힌 채
+  openSchools: ['japanese', 'german', 'italian', 'iberian', 'chinese'], // 10/22 사람 먼저 — 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기(격살 — 아래 gyeoksal). AI 는 aiOpenSchools 로 닫힌 채
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
   aiOpenSchools: ['japanese'],
@@ -931,7 +931,28 @@ export const SECRET = {
   //  'v4' = 10/10 04:4x 판(비켜 서며 크게 가로베기 — 아래 iberianSweep 휩쓸기, schools.js IBERIAN_SECRET_V4). 주소 `?ibSecret=v4` · 시뮬 `with_config.mjs SECRET.iberianSecret=v4`
   //  'gilmok' = 10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — 기본 (docs/strike/iberian_secret_v6_2026-10-11.md): 간격 밖에 gilmokArmTime 초 버텨 준비(칼을 몸 옆으로 감음) →
   //   상대 가슴이 내 칼끝 거리(reach) 경계를 다가오며 넘는 순간 → 몸 가운데 높이로 둘러 베는 한 칼 → 경직. 'flow' 는 v5(주소 `?ibSecret=flow`)
-  iberianSecret: 'gilmok',
+  //  'spin' = 10/22 사장님 '이베리아는 새로 지은 기술을 만들면 어떨까 … 빙글 한바퀴 돌면서' — 기본: 휘감아 돌기 (싱지르) (아래 ibSpin · src/iberian_spin.js ·
+  //   docs/strike/iberian_spin_2026-10-22.md). 길목 지키기는 `?ibSecret=gilmok`
+  iberianSecret: 'spin',
+  // 이베리아 비기 '휘감아 돌기 (싱지르)' (10/22 — 사람 먼저, AI 는 aiOpenSchools 로 닫힘) [모두 사장님 확인 전 — 확인표 2204~2210]:
+  //  무장 = 상대 가슴이 내 칼끝 거리(검술 풀이 measure.reach) 밖에 armTime 초 (일본 발도 대기와 같은 틀 — secret.js IaiArm) → 금색 '!' · 무장이 이어지는 동안 공격 입력 하나 →
+  //  한 발을 축으로 몸을 한 바퀴 돌리는 대본(src/iberian_spin.js — 물리 원칙의 예외: 몸놀림만, 맞음은 물리 판정 그대로) → 경직 stiff.iberian
+  ibSpin: {
+    armTime: 1.5, // 무장까지 (s — 시간 사다리 '무장' 칸 · 발도 대기 iaiArmTime 과 같은 수, 새 열쇠)
+    armGrace: 0.6, // 간격 안으로 들어와도 무장이 이 초 남는다 (s — '이어짐/입력' 칸 · 발도 대기 iaiArmGrace 0.5 와 같은 뜻을 사다리 값으로)
+    hurtDisarm: 1, // 1 = 무장 동안 내 몸에 상처가 나면 곧장 풀림(설계 '맞으면 풀림' — 발도 대기에는 없는 규칙이라 스위치) · 0 = 발도 대기와 똑같이
+    time: 0.6, // 한 바퀴 (s — '이어짐/입력' 칸). 0.4 면 칼끝이 판정 빠르기 상한(combat.js analyze 30 m/s)을 넘는다
+    ramp: 0.2, // 도는 빠르기가 오르고(처음) 내리는(끝) 시간 (s — '반응' 칸) → 가운데 빠르기 2π ÷ (time − ramp) = 15.7 rad/s · 칼을 놓는 때 = time − ramp
+    track: 10, // 골반 자리 · 방향의 어긋남을 메우는 세기 (1/s — 대본 따라가기, 판정과 무관)
+    // 도는 동안 손 · 칼 (몸 기준 — 가슴 원점 · x 앞 · y 위 · z 칼 든 쪽 m, 칼날 가로 각 yaw ° 앞 0 → 칼 든 쪽 +, 높이 각 el °): 두 팔을 앞으로 뻗고 칼을 칼 든 쪽 뒤로 수평으로 감는다
+    //  (고디뉴 규칙 8 「umgürtet das Montante die gesamten Rippen」 — 갈비를 휘감음). 칼이 제 머리 · 다리를 지나지 않는 높이 (허리 ~ 가슴)
+    wind: { hand: [0.32, -0.16, 0.06], yaw: 110, el: 0 },
+    lead: 60, // 칼을 놓은 뒤 가로 베기 목표 각을 지금 칼 각보다 이만큼(°) 앞에 둔다 — 끝 각(발도 끝 SECRET.iaiPath.E 거울 −75°)까지. 칼이 수평으로 앞을 가로지르게 (iberian_spin.js spinCutPose)
+    // 세기 (설계 '먼저 회전만으로 재고 모자라면 비기 배율 → 판정 에너지 × FINISH.power'): 회전만으로 맞힌 칼 첫 닿음 판정 에너지 평균 367 J(츠바이핸더) · 522 J(플랑베르주) — 사람 손가락 보통 가로베기 79 J 의 5 ~ 7 배라
+    //  비기 배율도 × 2.5 도 쓰지 않는다(docs/strike/iberian_spin_2026-10-22.md §4). 스위치로 남김
+    power: 1, // 칼을 놓은 뒤 · 따라 지나감 동안 서보 힘 창 (1 = 회전만 · 1.3 = 지금 비기 배율 SECRET.power)
+    hit: 'one', // 판정 에너지 배율: 'one' = 1(회전만) · 'hitMul' = 보통 비기(SECRET.hitMul 1.3) · 'finish' = 마무리 찍기와 같은 × FINISH.power(2.5)
+  },
   // 중국·독일 비기 판 (10/11 18:3x 사장님 '중국 안2로 가자 … 중국과 독일 이런 컨셉으로' — docs/strike/parry_combo_secret_2026-10-11.md) [사장님 확인 전]:
   //  'parry' = 막기 연환(정한 자세의 막기가 성공하면 짧은 기회 안의 입력으로 빠른 2 연격 — schools.js *_SECRET_PARRY) · 'v1' = 그 전 판(중국 連環三擊 · 독일 Versetzen).
   //  주소 `?cnSecret=v1` · `?deSecret=v1` · 시뮬 `with_config.mjs SECRET.cnSecret=v1` · test.html 고르기

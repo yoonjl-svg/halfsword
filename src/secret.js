@@ -251,12 +251,14 @@ export class BindCount {
  */
 //  10/11 이베리아 길목 지키기(v6)도 같은 셈을 쓴다 — 열쇠만 다르다(new IaiArm('gilmokArmTime', 'gilmokArmGrace'), outside = 내 칼끝 거리 reach 밖). 일본은 열쇠 없이 부르니 전과 같다.
 //  ons = 준비가 켜진 수 (재기 — 판정에는 안 씀) · consume() = 창을 열었거나 비기를 냄 → 준비가 풀림 (길목: 한 번 준비에 한 번 기회)
+//  10/22 이베리아 휘감아 돌기도 같은 셈 — 값 칸이 SECRET.ibSpin 안이라 group 'ibSpin' 으로 연다(new IaiArm('armTime', 'armGrace', 'ibSpin')). 열쇠 없이 부르면 전과 같다.
 export class IaiArm {
-  constructor(timeKey = 'iaiArmTime', graceKey = 'iaiArmGrace') {
+  constructor(timeKey = 'iaiArmTime', graceKey = 'iaiArmGrace', group = null) {
     this.t = 0;
     this.armed = false;
     this.timeKey = timeKey;
     this.graceKey = graceKey;
+    this.group = group;
     this.ons = 0;
   }
   tick(dt, outside, busy) {
@@ -266,10 +268,11 @@ export class IaiArm {
       return;
     }
     if (outside) {
+      const V = this.group ? SECRET[this.group] : SECRET;
       this.t += dt;
-      this.grace = SECRET[this.graceKey];
+      this.grace = V[this.graceKey];
       const was = this.armed;
-      this.armed = this.t >= SECRET[this.timeKey];
+      this.armed = this.t >= V[this.timeKey];
       if (this.armed && !was) this.ons++;
       return;
     }
@@ -549,6 +552,8 @@ export class PlayerSecretWatch {
     this.iaiArm = new IaiArm(); // 일본 발도 대기 (10/10 02:4x — 플레이어는 표시만)
     this.gilArm = new IaiArm('gilmokArmTime', 'gilmokArmGrace'); // 이베리아 길목 지키기 준비 (10/11 v6 — 플레이어는 표시만, AI 와 같은 셈)
     this.gilWins = 0; // 길목 창 수 (재기)
+    this.spinArm = new IaiArm('armTime', 'armGrace', 'ibSpin'); // 이베리아 휘감아 돌기 무장 (10/22 — 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초, 발도 대기와 같은 셈) · 무장 동안 창이 열려 있다
+    this.spinW = me.wounds?.length ?? 0; // 무장 동안 상처 셈 (SECRET.ibSpin.hurtDisarm)
     this.gap = Infinity; // 마지막 베기 끝에서 지난 시간
     this.swing = null; // 지금 베기 { first, landed }
     this.prevFoePain = foe.pain;
@@ -579,6 +584,7 @@ export class PlayerSecretWatch {
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
       this.gilArm.tick(0, false, true);
+      this.spinArm.tick(0, false, true);
       if (this.pc) this.pc.pend = this.pc.buf = null;
       this.riso?.reset();
       return;
@@ -606,6 +612,7 @@ export class PlayerSecretWatch {
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
       this.gilmokRest(dt, was, s0, c, d0, V, sw || busy);
     }
+    if (S.do?.spin) this.spinTick(dt, d0, V, sw || busy);
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
@@ -661,6 +668,23 @@ export class PlayerSecretWatch {
     this.pressT = 0;
     this.pressRuns = (this.pressRuns ?? 0) + 1;
     this.openWindow({ ev: 'press', held: this.pressHeld });
+  }
+
+  /**
+   * 이베리아 휘감아 돌기 무장 (10/22 — schools.js IBERIAN_SECRET_SPIN): 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.ibSpin.armTime 초 머물면 무장(발도 대기 IaiArm 과 같은 셈 —
+   *  휘두르거나 비기 중이면 풀림 · 간격 안으로 들어와도 armGrace 초 남음). 무장이 이어지는 동안 창이 열려 있다(끝 없음 — 금색 '!' · 비기 이름 알림) → 공격 입력 하나가 휘감아 돌기.
+   *  hurtDisarm: 무장 동안 내 몸에 상처가 나면 곧장 풀림(발도 대기에 없는 규칙 — 스위치). 창을 쓰면(fire) 무장도 풀린다 — 한 번 무장에 한 번
+   */
+  spinTick(dt, d0, V, busy) {
+    const me = this.me;
+    const nw = me.wounds?.length ?? 0;
+    const hurt = !!SECRET.ibSpin.hurtDisarm && nw > this.spinW;
+    this.spinW = nw;
+    this.spinArm.tick(dt, d0 > V.reach, busy || hurt);
+    const o = this.open;
+    if (this.spinArm.armed) {
+      if (!o && !busy) this.openWindow({ ev: 'spin' }, Infinity);
+    } else if (o?.ctx?.ev === 'spin') this.open = null;
   }
 
   /**
@@ -896,6 +920,7 @@ export class PlayerSecretWatch {
     if (o) {
       this.combo = 0;
       this.binds.reset(); // 비기를 내면 0
+      if (o.ctx?.ev === 'spin') this.spinArm.consume(); // 휘감아 돌기: 한 번 무장에 한 번 (10/22)
     }
     return o;
   }

@@ -72,7 +72,7 @@
 | B11 | 리스본에서 온 편지 | 리스본 항구에 큰 칼이 들거든, 가장 먼저 네게 실어 보내마 | (없음) | — | [편지] |
 | B5 | 흐르는 긋기 | 탈류에서 다른 탈류가 나고, 레베스에서 다른 레베스가 난다 | 피게이레두 『Memorial da Prattica do Montante』(1651) — 맺음말 | 「E que ultimamente do talhos nacem outros talhos, e dos revezes outros revezes」 (from talhos are born other talhos, and from revezes other revezes) — 저장소 `docs/motion/iberian_montante_2026-10-10.md:29` | [원문] |
 | B9 | 굳은 받기 | 큰 칼의 쳐내기와 막기와 치기는 모두 몸놀림이 거들어야 한다 | 피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 6 | 'all the deflections, parries and attacks of the montante must be helped by the movements of the body' (영역) — 저장소 `docs/motion/iberian_montante_2026-10-10.md:25` · `src/schools.js:1230` | [원문] |
-| B7 | 길목 지키기 | 거리에서 사람들을 막아, 이 끝에서 저 끝으로 지나지 못하게 한다 | 피게이레두 『Memorial da Prattica do Montante』(1651) — 단순 규칙 7 | 「Serve esta regra para deter gente em hũa rua e impeder que não passe de hũa parte para a outra」 (This rule serves to deter people in a street and impede them moving from one end to another) — 저장소 `src/schools.js:690` | [원문] |
+| B7 | 휘감아 돌기 (10/22 — 전 길목 지키기) | 큰 칼로 갈비를 온통 휘감고, 온몸을 돌려라 | 고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 8 | 「umgürtet das Montante die gesamten Rippen, auch den gesamten Körper herumdrehend」 (독일어 역 — 몬탄테가 갈비 전체를 휘감고, 온몸을 돌리며) — 저장소 `docs/motion/iberian_montante_2026-10-10.md:25` · `:612` · 원문은 서술(…하며)이라 명령꼴로 옮김 | [풀이] |
 | B6 | 거듭 돌려 베기 | 걸음마다 한 칼씩, 늘 아래에서 위로, 사람들이 멈출 때까지 번갈아 쳐라 | 피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 7 | 'in each step you must give a blow, always from low to high, alternating talho and revez, until the people stop' (영역) — 저장소 `docs/motion/iberian_montante_2026-10-10.md:882` · `src/schools.js:581` | [원문] |
 
 ### 일본

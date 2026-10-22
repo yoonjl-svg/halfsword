@@ -721,6 +721,23 @@ const IBERIAN_SECRET_GILMOK = {
   },
   src: '피게이레두 1651 단Ⅶ·복Ⅶ(길목을 막는 규칙)·단Ⅺ·복Ⅺ(가로를 몸에 감아 둘러 벰) [원문·원문 영역] · 고디뉴 1599 규칙 9(몸 가운데 높이) [원문 독일어 역] · 준비 → 경계 넘음 순간 → 한 칼 틀 [해석] · 수 [추정] · 이름 가칭',
 };
+// 이베리아 휘감아 돌기 (10/22 사장님 '이베리아는 새로 지은 기술을 만들면 어떨까 … 충분한 거리가 확보되어 있을 때 빙글 한바퀴 돌면서 엄청 강렬한 회전력을 발생시켜 일격' ·
+//  '애니메이션으로 한 발을 축으로 해서 빠르게 빙글 도는 모션' — docs/strike/iberian_spin_2026-10-22.md · SECRET.iberianSecret 'spin' 기본 · 값 SECRET.ibSpin):
+//   ① 무장: 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.ibSpin.armTime 초 (일본 발도 대기와 같은 틀 — secret.js PlayerSecretWatch spinArm) → 무장이 이어지는 동안 창(금색 '!')
+//   ② 공격 입력 하나 → 앞발을 축으로 몸을 한 바퀴 돌리는 대본(src/iberian_spin.js) — 칼은 칼 든 쪽 뒤로 수평으로 감겨 따라오다, 돌기 끝에 몸이 서는 동안 앞을 가로로 친다(탈류)
+//   ③ 경직 SECRET.stiff.iberian. 맞음 · 막힘 · 상처는 물리 판정 그대로 (판정 에너지 배율 SECRET.ibSpin.hit)
+//  근거: 고디뉴 1599 규칙 8 「umgürtet das Montante die gesamten Rippen, auch den gesamten Körper herumdrehend」 [원문 독일어 역] ·
+//   피게이레두 1651 단Ⅰ 「the body must always turn toward where the montante cuts」 [원문 영역] · 단Ⅺ 「talho orizontal」 · 복ⅩⅥ 「para vir a cingir pello lado dereyto」 [원문] ·
+//   한 바퀴를 도는 대본 · 무장 틀 · 수 [해석 · 추정]. 이름 = 원전 낱말 cingir(띠를 두르다 — 칼이 몸을 휘감음)
+const IBERIAN_SECRET_SPIN = {
+  name: 'ibSpin',
+  nameKo: '휘감아 돌기 (싱지르)', orig: 'cingir',
+  when: 'spinArm', // 상대 사건 없음 — 무장 셈만 (secret.js PlayerSecretWatch)
+  do: {
+    spin: true, // 실행 = skill.js secret → iberian_spin.js requestSpin · 서보 힘 창 · 판정 배율은 SECRET.ibSpin.power · hit
+  },
+  src: '고디뉴 1599 규칙 8(갈비를 휘감고 온몸을 돌림) [원문 독일어 역] · 피게이레두 1651 단Ⅰ(몸은 베는 쪽으로 돈다)·단Ⅺ(가로 탈류)·복ⅩⅥ(감아 돎) [원문·원문 영역] · 무장 틀 · 한 바퀴 대본 [해석] · 수 [추정]',
+};
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
 const JAPANESE_SECRET = {
   name: 'goNoSen',
@@ -1026,7 +1043,7 @@ export const TRADITIONS = {
   italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES, temper: ITALIAN_TEMPER, gait: ITALIAN_GAIT, secret: ITALIAN_SECRET },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
   // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(guardTable — guards.js IBERIAN_TABLE, 앞무게 틀 표를 고른 뒤 덮음)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, get secret() { return this.secretSet ?? (SECRET.iberianSecret === 'v4' ? IBERIAN_SECRET_V4 : SECRET.iberianSecret === 'flow' ? IBERIAN_SECRET : IBERIAN_SECRET_GILMOK); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11): SECRET.iberianSecret 'gilmok' 기본(v6 길목 지키기) · 'flow' v5 · 'v4' 옛 판 — 읽는 때(AI·플레이어 창이 생길 때) 고른다
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, get secret() { return this.secretSet ?? (SECRET.iberianSecret === 'v4' ? IBERIAN_SECRET_V4 : SECRET.iberianSecret === 'flow' ? IBERIAN_SECRET : SECRET.iberianSecret === 'gilmok' ? IBERIAN_SECRET_GILMOK : IBERIAN_SECRET_SPIN); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11 · 10/22): SECRET.iberianSecret 'spin' 기본(휘감아 돌기 — 10/22) · 'gilmok' v6 길목 지키기 · 'flow' v5 · 'v4' 옛 판 — 읽는 때(AI·플레이어 창이 생길 때) 고른다
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세 = JAPANESE_WATCH(10/10 원전 — 추단 위주 + 조단·핫소, 전 HIGH_GUARDS 의 황소 둘 뺌) · 자세표 = JAPANESE_GUARDTABLE · 속임수 = JAPANESE_FEINTS(Umschlagen 둘 → 갓토츠·니노코시) · 막기 = JAPANESE_PARRY(10/10 빌린 칸 걷어내기 — 줄마다 원전 받는 꼴의 자리).
   //  물러남 = 한 칼 자세(上段·八相 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).

@@ -93,13 +93,15 @@ test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 �
 });
 
 // ── 닫힌 칸 ──
-test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 동방 막아 죽이기(10/22 사람 먼저)만 열림(SECRET.openSchools) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
+test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람 쪽 다섯 유파 — 일본 고노센 · 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
-  assert.deepEqual(closed.sort(), ['B7', 'J8']);
+  const SECRET_NODE = { german: 'G10', italian: 'I4', iberian: 'B7', japanese: 'J5', chinese: 'C9' };
+  assert.deepEqual(closed.sort(), ['J8', ...D.TREE_SCHOOLS.filter((s) => !SECRET.openSchools.includes(s)).map((s) => SECRET_NODE[s])].sort());
+  assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B7')), false); // 10/22 휘감아 돌기 열림
   assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false);
   assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, true);
   assert.deepEqual(SECRET.aiOpenSchools, ['japanese']); // AI 는 닫힌 채 (ai.js 는 aiOpenSchools 만 본다)
-  for (const s of DESIGN) for (const d of s.nodes) if (d.closed) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음
+  for (const s of DESIGN) for (const d of s.nodes) if (d.closed && !(d.cat === 'secret' && SECRET.openSchools.includes(s.id))) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음 (그 뒤 연 비기는 뺌)
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
   assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), false); // 10/22 독일 죽음의 일격 — 사람 먼저
   assert.deepEqual(SECRET.aiOpenSchools, ['japanese']); // AI 는 닫힌 채 (ai.js 는 이 목록만)
@@ -108,7 +110,7 @@ test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 이�
   assert.equal(D.kitFromNodes('german', all).secret, true);
   assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).secret, true);
   assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).perk.has('kote'), false); // J8 몫 없음
-  assert.equal(D.kitFromNodes('iberian', D.allNodeIds('iberian')).secret, false); // 닫힌 비기는 몫 없음 (10/22 이탈리아도 열려 이베리아로)
+  { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.equal(D.kitFromNodes('iberian', D.allNodeIds('iberian')).secret, false); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 비기는 몫 없음 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
   const keep = SECRET.openSchools; SECRET.openSchools = ['japanese'];
   try {
     assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), true); // 독일을 빼면 다시 '준비 중'
@@ -119,7 +121,7 @@ test('닫힌 칸: 비기는 일본 고노센 · 독일 죽음의 일격 · 이�
   SECRET.openSchools = [...D.TREE_SCHOOLS];
   try { assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), true); } finally { SECRET.openSchools = keep; }
   wallet(99999, 999);
-  assert.deepEqual(S.learnNode('iberian', 'B7'), { ok: false, saved: false, why: 'closed' }); // 닫힌 칸은 못 배움 (10/22 이탈리아도 열려 이베리아로)
+  { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.deepEqual(S.learnNode('iberian', 'B7'), { ok: false, saved: false, why: 'closed' }); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 칸은 못 배움 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
   for (const id of ['G1', 'G2', 'G5', 'G8', 'G3', 'G7', 'G4', 'G9']) assert.equal(S.learnNode('german', id).ok, true, id);
   assert.equal(S.learnNode('german', 'G10').ok, true); // 비기 칸 값 그대로 (금화 400 + 머리 20)
 });
@@ -410,7 +412,7 @@ test('판 몫 차례: ?skillNodes → ?uniqueStage(옛 급 N 까지의 칸) → 
   assert.equal(S.playerKit('none', learned), null);
   const t = S.playerKit('german', learned, { test: true });
   assert.equal(t.unique.size, 3); assert.equal(t.chase && t.parryCover && t.passive, true); assert.equal(t.secret, true); // 10/22 독일 비기 열림 (죽음의 일격)
-  assert.equal(S.playerKit('iberian', {}, { test: true }).secret, false); // 닫힌 비기 (10/22 이탈리아도 열려 이베리아로)
+  { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.equal(S.playerKit('iberian', {}, { test: true }).secret, false); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 비기 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
   assert.deepEqual([null, '', '0', '2', '5', '6', '-1', '2.5', 'x'].map(S.stageParam), [null, null, 0, 2, 5, null, null, null, null]);
   const k2 = S.playerKit('german', learned, { upTo: 2 });
   assert.deepEqual([k2.footwork, k2.chase, k2.parry, k2.parryCover, k2.unique.size, k2.passive], [true, true, true, true, 0, false]); // 보법 · 막기 칸 모두
