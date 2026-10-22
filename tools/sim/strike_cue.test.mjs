@@ -106,3 +106,35 @@ test('off draws nothing', () => {
   assert.equal(seen.length, 0);
   assert.equal(cue.sprite, null);
 });
+
+test('10/23: mark sits over my own head by default; gold screen edge only for a secret window and can be switched off', () => {
+  assert.equal(STRIKE_CUE.anchor, 'self');
+  assert.equal(createStrikeCue(null, null, null).state.anchor, 'self');
+  assert.equal(createStrikeCue(null, null, null, { anchor: 'foe' }).state.anchor, 'foe');
+  assert.equal(createStrikeCue(null, null, null, { anchor: 'sky' }).state.anchor, 'self');
+  const gold = [];
+  const tint = { setSecretEdge: (v) => gold.push(v) };
+  const cue = createStrikeCue(null, tint, null);
+  const secret = { open: { t: 0.6 } };
+  for (let i = 0; i < 12; i++) {
+    cue.update(1 / 60, null, true, alive, null, null, secret);
+    secret.open.t -= 1 / 60;
+  }
+  assert.ok(gold.at(-1) > 0.5, `gold edge on (${gold.at(-1)})`);
+  // 끝없는 창(무장 동안)은 늘 다 켜짐
+  const armed = createStrikeCue(null, tint, null);
+  const endless = { open: { t: Infinity } };
+  for (let i = 0; i < 12; i++) armed.update(1 / 60, null, true, alive, null, null, endless);
+  assert.ok(near(gold.at(-1), 1));
+  // 이어 긋기(금빛 아님) 창은 금색 테두리 없음
+  const plain = createStrikeCue(null, tint, null);
+  const unique = { ready: { name: 'x' }, t: 0.1, last: { tEnd: 0 }, chainFrom: null };
+  for (let i = 0; i < 12; i++) plain.update(1 / 60, null, true, alive, null, unique, null);
+  assert.equal(gold.at(-1), 0);
+  // 끔 스위치 · 싸움 밖
+  const off = createStrikeCue(null, tint, null, { secretEdge: '0' });
+  off.update(1 / 60, null, true, alive, null, null, { open: { t: 0.6 } });
+  assert.equal(gold.at(-1), 0);
+  cue.update(1 / 60, null, false, alive, null, null, secret);
+  assert.equal(gold.at(-1), 0);
+});

@@ -388,7 +388,7 @@ scene.add(sun, sun.target);
 const fighterLight = createFighterLight({ hemi, sun });
 // 부활 연출 (이졸데, src/revive_fx.js): 하늘에서 내린 빛기둥·빛 알갱이·땅의 빛·진짜 빛 하나·몸의 빛. 부활하는 동안만 장면에 붙는다
 const reviveFx = new ReviveFx(scene, { renderer, camera, fighterLight });
-const strikeCue = createStrikeCue(scene, screenTint, params.get('strikeCue')); // 칠 때 알림 (strike_cue.js): 느낌표 하나를 장면에 먼저 붙여 둔다
+const strikeCue = createStrikeCue(scene, screenTint, params.get('strikeCue'), { anchor: params.get('cueAnchor'), secretEdge: params.get('secretEdge') }); // 칠 때 알림 (strike_cue.js): 느낌표 하나를 장면에 먼저 붙여 둔다
 
 // ── 배경(스테이지): 판마다 정해진 순서 ─────────────────────────────────────
 //  오너 결정: 고르는 화면 없이 늘 포세이돈 신전 → 성 안뜰 → 산사 → 대성당 순서. 대성당 다음 판은 다시 포세이돈 (stages.js STAGE_ORDER)

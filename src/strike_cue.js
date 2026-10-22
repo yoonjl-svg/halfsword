@@ -31,6 +31,8 @@ export const STRIKE_CUE = {
   edge: 1, // 테두리 세기 (screen_tint.js cue 칸 — 값 1 이어도 피 테두리보다 옅다)
   edgeEnd: 0.45, // 닫힐 즈음 테두리 세기 몫
   plain: 0xfff0d2, // 보통 창 — 따뜻한 흰빛
+  anchor: 'self', // 느낌표 자리 — 사장님 10/23 00:2x '상대 머리가 아니라 내 머리에 뜨는 게 자연스러움' ('self' 내 머리 · 'foe' 전 상대 머리 — `?cueAnchor=foe`)
+  secretEdge: 1, // 비기 창 금색 화면 테두리 — 사장님 10/23 '체력이 많이 줄었을 때 붉은 테두리와 동일하게, 색만 금색 · 겹치면 금색 우선' (screen_tint.js secret 칸 · `?secretEdge=0` 끔)
   gold: 0xffc23a, // 비기 창 — 금빛
 };
 
@@ -122,9 +124,11 @@ function markTexture() {
  * 칠 때 알림 하나 (main.js 가 처음에 한 번 만든다). scene: 느낌표를 붙일 장면 · tint: screen_tint.js · param: 주소 `?strikeCue=` 값
  *  update(dt, camera, live, player, foe, unique, secret) — 매 프레임 그리기 전 (카메라 자리가 정해진 뒤). live = 싸움 화면이고 판이 안 끝났나
  */
-export function createStrikeCue(scene, tint, param) {
+export function createStrikeCue(scene, tint, param, opts = {}) {
   const C = STRIKE_CUE;
   const style = cueStyle(param);
+  const anchor = opts.anchor === 'foe' || opts.anchor === 'self' ? opts.anchor : C.anchor; // 느낌표 자리 (10/23)
+  const secretEdge = opts.secretEdge == null || opts.secretEdge === '' ? !!C.secretEdge : !['0', 'off', 'false'].includes(String(opts.secretEdge)); // 비기 금색 테두리 (10/23)
   const useMark = style === 'mark' || style === 'both';
   const useEdge = style === 'edge' || style === 'both';
   const win = {};
@@ -143,10 +147,10 @@ export function createStrikeCue(scene, tint, param) {
     scene.add(sprite); // 장면 짓기(stages.js · main.js newRound)보다 먼저 붙어 무대 · 검객 물건으로 세지 않는다. 숨겨도 stages.warm 의 compile 이 셰이더를 미리 만든다
   }
 
-  /** 느낌표를 상대 머리 위에 (그릴 수 없으면 false) */
-  function place(camera, foe, viewH) {
-    if (!foe?.alive || foe.decapitated || foe.revival) return false;
-    const head = foe.cache?.parts?.head?.p; // 지난 물리 스텝의 머리 자리 (fighter.js cacheState — 새 객체를 만들지 않는다)
+  /** 느낌표를 머리 위에 (who = 내 몸 · 상대 몸 — anchor · 그릴 수 없으면 false) */
+  function place(camera, who, viewH) {
+    if (!who?.alive || who.decapitated || who.revival) return false;
+    const head = who.cache?.parts?.head?.p; // 지난 물리 스텝의 머리 자리 (fighter.js cacheState — 새 객체를 만들지 않는다)
     if (!head || !camera) return false;
     P.set(head.x, head.y + C.lift, head.z);
     Q.copy(P).applyMatrix4(camera.matrixWorldInverse);
@@ -194,13 +198,14 @@ export function createStrikeCue(scene, tint, param) {
       S.env = !live ? 0 : S.open ? Math.min(1, S.age / C.pop) : Math.max(0, 1 - S.out / C.fade); // 싸움 밖이면 바로 숨김
       S.alpha = (C.alphaEnd + (C.alphaOpen - C.alphaEnd) * S.frac) * S.env;
       if (sprite) {
-        S.shown = S.env > 0.001 && place(camera, foe, viewH);
+        S.shown = S.env > 0.001 && place(camera, anchor === 'self' ? player : foe, viewH); // 10/23 내 머리 위 (전 상대 머리)
         sprite.visible = S.shown;
         if (S.shown) {
           mat.opacity = S.alpha;
           mat.color.copy(S.gold ? gold : plain);
         }
       }
+      if (tint?.setSecretEdge) tint.setSecretEdge(secretEdge && S.gold ? (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env : 0); // 비기 창 금색 테두리 (피 테두리 꼴 · 금빛 — 10/23)
       if (useEdge && tint?.setCue) {
         S.edge = C.edge * (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env;
         tint.setCue(S.edge, S.gold);
@@ -208,7 +213,7 @@ export function createStrikeCue(scene, tint, param) {
     },
     /** 탐침 · 스크린샷용 (tools/browser/strike_cue_shots.mjs) */
     get state() {
-      return { style, open: S.open, kind: S.kind, gold: S.gold, frac: +S.frac.toFixed(3), alpha: +S.alpha.toFixed(3), shown: S.shown, px: +S.px.toFixed(1), edge: +S.edge.toFixed(3) };
+      return { style, anchor, secretEdge, open: S.open, kind: S.kind, gold: S.gold, frac: +S.frac.toFixed(3), alpha: +S.alpha.toFixed(3), shown: S.shown, px: +S.px.toFixed(1), edge: +S.edge.toFixed(3) };
     },
   };
 }
