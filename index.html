@@ -49,6 +49,10 @@
         --c-accent: #d9a441; /* 강조: 금색 — 누를 것·꼭 봐야 할 것만 (카드 고르기 안내 · 누를 번호 · 비기 창 열림 · 주 단추·'내 무기' 바탕) */
         --c-alert: #e48e8b; /* 상태·상대: 옅은 붉은색 — 감정 문장(상태 3종, 사장님 10/10 '한 색') · '상대 무기' 알약 바탕은 같은 계열의 짙은 색 */
         --c-on-accent: #1b1410; /* 강조 바탕(금색 단추·알약) 위 글자 = 판 바탕색 */
+        /* 방랑 단추 색 (청동 녹 — 사장님 10/23 18:3x · 확인표 2296): 대기실 '방랑'(src/lobby.css .wander — Shadow DOM 안으로 물려받음) · 방랑 알림 창 '확인' · 방랑 승리 창 '다음 방랑'(아래 .primary.wander — 사장님 10/24 00:3x '버튼 색 대기실의 방랑과 동일하게') 이 함께 쓴다.
+           바탕 · 테(안쪽 1 px 그림자) · 글은 본문 색 --c-text */
+        --c-wander: #3d6b62;
+        --c-wander-line: #6f9c8f;
         --ink: var(--c-text);
         --dim: var(--c-sub);
         --accent: var(--c-accent);
@@ -382,6 +386,8 @@
       .foe-line { margin: 0; color: var(--c-sub); font-size: var(--fs-m); line-height: var(--lh-text); word-break: keep-all; overflow-wrap: anywhere; }
       .foe-line small { display: block; margin-top: 2px; font-size: var(--fs-s); line-height: 1.4; }
       .foe-line small:empty { display: none; }
+      /* 방랑 전용 상대 알림 창 (사장님 10/24 01:1x — main.js wanderEncounter): 패배 창과 같은 꼴(왼쪽 프로필 --pf · 오른쪽 칸) · 제목 = 장면 글 · 이름(본문 색) · “대사”(보조 색 — .foe-line) · 확인(방랑 단추 색 .primary.wander) */
+      .encounter-name { margin: 10px 0 2px; font-size: var(--fs-m); font-weight: var(--fw-head); line-height: var(--lh-text); color: var(--c-text); }
       .card.foe-shown .actions { margin-left: 0; padding-left: 0; } /* 단추 줄 바탕이 왼쪽 그림 위로 번지지 않게 (다른 창은 카드 여백까지 덮는 그대로) */
       .row[hidden] { display: none; } /* 결과 창(첫 화면·대기실 여정)엔 설정 줄을 뺀다 — 정지 창 · 첫 화면 설정에는 그대로 (10/16 08:3x, main.js) */
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-m); }
@@ -393,6 +399,7 @@
       .toggle.on { background: var(--c-accent); }
       .toggle.on::after { left: 22px; background: #1b1410; }
       .primary { width: 100%; margin-top: 14px; padding: 13px; font-size: var(--fs-m); line-height: calc(var(--fs-m) + 2px); font-weight: var(--fw-head); border: 0; border-radius: 8px; background: var(--c-accent); color: var(--c-on-accent); }
+      .primary.wander { background: var(--c-wander); color: var(--c-text); box-shadow: inset 0 0 0 1px var(--c-wander-line); } /* 방랑 알림 창 '확인' · 방랑 승리 창 '다음 방랑' = 대기실 방랑 단추 색 (사장님 10/24 00:3x) — 꼴(폭 · 여백 · 모서리)은 주 단추 그대로 */
       .secondary { width: 100%; margin-top: 8px; padding: 11px; font-size: var(--fs-m); line-height: calc(var(--fs-m) + 2px); border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--c-text); }
       .actions { position: sticky; bottom: -20px; margin: 0 -20px -20px; padding: 0 20px 20px; background: var(--panel); }
       .howto { font-size: var(--fs-s); color: var(--c-sub); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
@@ -478,7 +485,21 @@
       <div class="card">
         <h1 id="wanderNoticeTitle">방랑</h1>
         <p class="sub" id="wanderNoticeText"></p>
-        <div class="actions"><button class="primary" id="btnWanderNotice">확인</button></div>
+        <div class="actions"><button class="primary wander" id="btnWanderNotice">확인</button></div> <!-- 확인 = 대기실 방랑 단추 색 (사장님 10/24 00:3x) -->
+      </div>
+    </div>
+
+    <!-- 방랑 전용 상대 알림 창 (사장님 10/24 01:1x '방랑에서 방랑 전용 캐릭터가 등장했을 땐 카드 고르기 전에 알림 팝업 띄우고 낯선 발걸음 소리가 들린다. 이렇게 쓰고 프로필 사진과 대사 출력. 확인 단추는 청동색으로'):
+         카드 고르기(대기실 장착 무기면 싸움) 전에 대면마다 한 번 · main.js wanderEncounter. 꼴은 패배 창(프로필 + 대사)과 같다 -->
+    <div class="overlay notice" id="wanderEncounter" role="dialog" aria-modal="true" aria-labelledby="encounterTitle" aria-describedby="encounterName encounterLine">
+      <div class="card foe-shown">
+        <figure class="foe-portrait" id="encounterFoe"><img id="encounterFoeImg" alt="" draggable="false" decoding="async"></figure>
+        <div class="card-body">
+          <h1 id="encounterTitle">낯선 발걸음 소리가 들린다.</h1>
+          <p class="encounter-name" id="encounterName"></p>
+          <p class="foe-line" id="encounterLine"><span id="encounterQuote"></span><small id="encounterSource"></small></p>
+          <div class="actions"><button class="primary wander" id="btnEncounter">확인</button></div>
+        </div>
       </div>
     </div>
 

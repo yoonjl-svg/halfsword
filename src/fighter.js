@@ -334,6 +334,9 @@ export class Fighter {
     this.blood = 1; // 남은 피 (1 = 100%)
     this.bleed = 0; // 초당 출혈량 (전체 피 대비 비율)
     this.consciousness = 1; // 의식. 0이 되면 기절(패배)
+    // 버티는 힘 (캐릭터 시트 vitality — 사장님 10/24 01:5x '롤랑과 베르나르도는 체력도 +10%' · 확인표 2338 '사장님 확인 전'): 1 = 사람 그대로(나머지 모두).
+    //  초당 잃는 피 · 머리를 맞아 잃는 의식을 1/vitality 로 — 1.1 이면 피가 10 % 많은 것과 같다. 피 · 의식은 1(100 %)에서 시작 · 쓰러지는 문턱 · 즉사(참수 · 머리 · 내려찍기)는 그대로
+    this.vitality = o.vitality > 0 ? o.vitality : 1;
     this.pain = 0; // 통증: 크게 맞으면 잠깐 힘이 빠진다
     this.limbs = { armS: 1, armO: 1, legF: 1, legB: 1 }; // 팔다리 기능 (1 = 멀쩡)
     this.wounds = []; // { part, type, severity, bleed, local(몸 기준 위치) }
@@ -1505,7 +1508,7 @@ export class Fighter {
       for (const w of this.wounds) w.bleed = 0;
     }
     if (this.bleed > 0) {
-      this.blood = Math.max(0, this.blood - this.bleed * dt);
+      this.blood = Math.max(0, this.blood - (this.bleed * dt) / this.vitality); // 버티는 힘 (10/24 — 1 이면 그대로)
       // 피가 굳으며 출혈이 줄어든다 (큰 상처일수록 느리게) · 동방 유파 패시브: 휘두르지 않는 동안 × clot (10/21 — school_passive.js clotK · 없으면 1)
       const clot = VITALS.clotting * (this.schoolPassive?.clotK() ?? 1);
       this.bleed = Math.max(0, this.bleed - this.bleed * clot * dt);
@@ -1568,7 +1571,7 @@ export class Fighter {
       //  곱하기로 되어 있다. 아픔·균형·판 닳음은 위에서 E 전체로 적었다. 머리·목은 판이 덮지 않는다 (투구는 helmetBlunt)
       if (Z === 'head' || Z === 'neck') {
         const k = h.helmet ? h.helmetBlunt : 1;
-        this.consciousness -= h.energy * VITALS.concussionPerJoule * k;
+        this.consciousness -= (h.energy * VITALS.concussionPerJoule * k) / this.vitality; // 버티는 힘 (10/24 — 1 이면 그대로 · 주저앉음 · 멍함은 에너지 그대로)
         if (h.energy * k > 45) this.knockDown(h.energy * k > 90); // 머리를 세게 맞으면 주저앉거나 쓰러진다
         this.daze = Math.min(1, (this.daze || 0) + h.energy * k / 100); // 멍함
         // 흙 몸(병마용): 사람을 기절로 끝내는 같은 머리·목 둔타 문턱(의식 ≤ 0)에서 목이 부러져 머리가 떨어진다 (샛별 901b1f39 — 새 문턱 없음).
@@ -1604,7 +1607,7 @@ export class Fighter {
       this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * 0.7);
       if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
     }
-    if (Z === 'head' && h.type === 'cut') this.consciousness -= sev * 0.5;
+    if (Z === 'head' && h.type === 'cut') this.consciousness -= (sev * 0.5) / this.vitality; // 버티는 힘 (10/24)
   }
 
   /**

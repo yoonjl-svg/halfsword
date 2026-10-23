@@ -112,8 +112,9 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 /* 방랑 단추 색 (사장님 18:3x '지금 버튼 색을 다른 색으로 바꾸고 싶음' — 값은 사장님 확인 전): 청동 녹(verdigris) --c-wander.
    'Stage 입장'의 금(주 단추 --c-accent)과 한눈에 갈리는 차가운 쪽 색이면서, 대기실이 쓰는 쇠붙이 색 줄(스킬트리 금속 단계 — 철 · 청동 · 구리 · 은 · 금 · 봉랍)과 같은 '오래된 쇠' 계열이라
    어두운 갈색 바탕 · 금 장식과 어울린다(녹슨 청동의 푸른 녹). 금 단추처럼 납작하게 채우되 글은 본문 색(밝은 글 — 바탕이 어두워서). 붉은 봉랍은 '위험' · '지움'으로 읽혀 뺐다.
-   꼴은 주 단추와 같다(모서리 8 · 패딩 13 · 굵기) — 둘이 나란한 출발 단추. 잠김(aria-disabled) = 누를 수 없는 단추처럼 흐리게 .4 (눌러 보면 위 알림 줄에 열리는 조건) */
-.lobby { --c-wander: #3d6b62; --c-wander-line: #6f9c8f; }
+   꼴은 주 단추와 같다(모서리 8 · 패딩 13 · 굵기) — 둘이 나란한 출발 단추. 잠김(aria-disabled) = 누를 수 없는 단추처럼 흐리게 .4 (눌러 보면 위 알림 줄에 열리는 조건)
+   색 변수 --c-wander · --c-wander-line 은 index.html :root 에 (10/24 — 싸움 화면의 방랑 알림 창 '확인' · 승리 창 '다음 방랑'과 함께 쓰려고 옮김. 전: 여기 .lobby).
+   대기실 방랑 알림 창의 '확인'(lobby.js #closeWander)도 이 .wander 꼴 (사장님 10/24 00:3x '확인 버튼 색 대기실의 방랑과 동일하게') */
 :host .wander {
   min-height: 0; margin: 0; line-height: calc(var(--fs-m) + 2px); letter-spacing: normal; text-shadow: none; box-shadow: inset 0 0 0 1px var(--c-wander-line); transform: none; transition: none;
   font-family: inherit; font-size: var(--fs-m); border-radius: 8px; cursor: pointer;

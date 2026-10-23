@@ -69,16 +69,18 @@ test('대면 뽑기: 무대 · 상대를 따로 · 방랑 전용 다섯은 모�
   assert.deepEqual([...WANDER_EXCLUSIVE], ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo']);
   for (const id of WANDER_EXCLUSIVE) assert.ok(CHARACTERS_BY_ID[id], id);
   assert.deepEqual(Object.keys(WANDER_BONUS), ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo']);
-  assert.deepEqual(wanderReward(true, 'roland', 12), { coins: 274, heads: 0, bonus: { coins: 250, heads: 0 } }, '롤랑 금화 +250 (사장님 10/23 저녁) · 일반 12 × 2 뒤에 더함');
-  assert.deepEqual(wanderReward(true, 'bernardo', 12), { coins: 274, heads: 0, bonus: { coins: 250, heads: 0 } }, '베르나르도 = 롤랑과 같은 몫 (사장님 10/23 저녁)');
-  assert.deepEqual(wanderReward(true, 'artoria', 12), { coins: 224, heads: 0, bonus: { coins: 200, heads: 0 } }, '아르토리아 금화 +200 그대로');
-  assert.deepEqual(wanderReward(true, 'artoria_mad', 12), { coins: 224, heads: 0, bonus: { coins: 200, heads: 0 } });
+  assert.deepEqual(wanderReward(true, 'roland', 12), { coins: 424, heads: 0, bonus: { coins: 400, heads: 0 } }, '롤랑 금화 +400 (사장님 10/24 01:5x — 전 250) · 일반 12 × 2 뒤에 더함');
+  assert.deepEqual(wanderReward(true, 'bernardo', 12), { coins: 424, heads: 0, bonus: { coins: 400, heads: 0 } }, '베르나르도 = 롤랑과 같은 몫 (사장님 10/23 저녁 · 10/24 400)');
+  assert.deepEqual(wanderReward(true, 'artoria', 12), { coins: 274, heads: 0, bonus: { coins: 250, heads: 0 } }, '아르토리아 금화 +250 (사장님 10/24 01:5x — 전 200)');
+  assert.deepEqual(wanderReward(true, 'artoria_mad', 12), { coins: 274, heads: 0, bonus: { coins: 250, heads: 0 } });
   assert.deepEqual(wanderReward(false, 'bernardo', 4), { coins: -4, heads: 0, bonus: { coins: 0, heads: 0 } });
   assert.deepEqual(wanderReward(true, 'white_scale', 12), { coins: 24, heads: 10, bonus: { coins: 0, heads: 10 } }, '백린 머리 +10 (사장님 10/23 저녁)');
   assert.deepEqual(wanderReward(false, 'roland', 3), { coins: -3, heads: 0, bonus: { coins: 0, heads: 0 } }, '지면 특별 몫 없음 · 일반 차감');
   assert.equal(WANDER_HEAD, 2);
   assert.match(WANDER_NOTICE_TEXT, /방랑이 열렸습니다/);
   assert.doesNotMatch(WANDER_NOTICE_TEXT, /\(/, '알림 글에 괄호 없음');
+  assert.equal(WANDER_NOTICE_TEXT.split('\n').length, 2, '알림 글 두 문단 (사장님 10/24 — 셋째 문단 뺌)');
+  assert.doesNotMatch(WANDER_NOTICE_TEXT, /아르토리아|롤랑|베르나르도|백린/, '방랑 전용 상대 줄 없음 (사장님 10/24)');
 });
 
 test('판 저장 · 보상: 다시 열어도 같은 판 · 머리 한 번 · 정산 한 번 · 이긴 뒤 다음 판 · 진 뒤 새 연속', async () => {
@@ -91,7 +93,7 @@ test('판 저장 · 보상: 다시 열어도 같은 판 · 머리 한 번 · 정
   assert.equal(p.ensureWanderRun(() => { throw new Error('진행 중 판을 다시 뽑으면 안 됨'); }).weapon, 'rapier');
   assert.ok(p.awardWanderHead());
   assert.ok(!p.awardWanderHead(), '판마다 한 번');
-  assert.deepEqual(p.settleWander(true, () => 10), { coins: 270, heads: 2, bonus: { coins: 250, heads: 0 } }, '롤랑: 10 × 2 + 250 · 참수 머리 2');
+  assert.deepEqual(p.settleWander(true, () => 10), { coins: 420, heads: 2, bonus: { coins: 400, heads: 0 } }, '롤랑: 10 × 2 + 400 · 참수 머리 2');
   const wallet = p.readProgress();
   p = await fresh();
   assert.equal(p.settleWander(true, () => 10), null, '새로고침 뒤 같은 판을 또 셈하지 않는다');
@@ -103,9 +105,9 @@ test('판 저장 · 보상: 다시 열어도 같은 판 · 머리 한 번 · 정
   assert.equal(second.lastWeapon, 'rapier');
   assert.deepEqual(p.settleWander(true, () => 5), { coins: 10, heads: 10, bonus: { coins: 0, heads: 10 } }, '백린 머리 10 은 참수와 무관');
   p.ensureWanderRun(encounter('artoria_mad'));
-  assert.equal(p.settleWander(true, () => 15).coins, 230);
+  assert.equal(p.settleWander(true, () => 15).coins, 280, '광기의 아르토리아 금화 +250 (15 × 2 + 250 — 10/24, 전 200)');
   p.ensureWanderRun(encounter('bernardo'));
-  assert.deepEqual(p.settleWander(true, () => 15), { coins: 280, heads: 0, bonus: { coins: 250, heads: 0 } }, '베르나르도 금화 +250 (일반 15 × 2 + 250)');
+  assert.deepEqual(p.settleWander(true, () => 15), { coins: 430, heads: 0, bonus: { coins: 400, heads: 0 } }, '베르나르도 금화 +400 (일반 15 × 2 + 400)');
   p.ensureWanderRun(encounter('white_scale'));
   assert.ok(p.awardWanderHead());
   assert.equal(p.settleWander(true, () => 5).heads, 12, '백린을 베어 이기면 머리 12 (특별 10 + 참수 2)');
@@ -203,13 +205,13 @@ test('저장 실패: 방랑 거래는 이번 실행 동안 지킨다(보상 두 
   const realSet = localStorage.setItem;
   localStorage.setItem = () => { throw new Error('quota'); };
   p.settleWander(true, () => 10);
-  assert.equal(p.readProgress().coins, 1270);
+  assert.equal(p.readProgress().coins, 1420);
   assert.equal(p.settleWander(true, () => 10), null);
-  assert.equal(p.readProgress().coins, 1270, '옛 지갑을 다시 읽어 또 주지 않는다');
+  assert.equal(p.readProgress().coins, 1420, '옛 지갑을 다시 읽어 또 주지 않는다');
   const buy = p.purchase({ receipt: 'skill:german:footwork', kind: 'skill', price: 100 });
   assert.equal(buy.ok, true);
   assert.equal(buy.saved, false);
-  assert.equal(p.readProgress().coins, 1270, '막힌 구매는 다음 읽기에서 되돌아간다(방랑 거래는 남음)');
+  assert.equal(p.readProgress().coins, 1420, '막힌 구매는 다음 읽기에서 되돌아간다(방랑 거래는 남음)');
   assert.ok(!p.readProgress().acquisitions.some((a) => a.receipt === 'skill:german:footwork'));
   localStorage.setItem = realSet;
   // 바깥 교체(?coins= 같은) — 저장소 글이 바뀌면 메모리 보관을 버린다
@@ -250,6 +252,21 @@ test('방랑 알림 창: 열린 뒤 한 번 — 확인하면 저장에 남아 �
   p = await fresh();
   assert.equal(p.wanderNoticeDue(), false);
   assert.equal(p.readProgress().wander.noticeSeen, true);
+});
+
+test('방랑 전용 상대 알림 창 (사장님 10/24 01:1x): 대면마다 한 번 — 확인하면 그 판에 남아 처음부터 다시 · 다시 열기에도 안 뜸 · 다음 대면은 새로', async () => {
+  let p = await reset();
+  unlock(p);
+  assert.equal(p.ensureWanderRun(encounter('roland')).encounterSeen, false);
+  assert.ok(p.markWanderEncounter());
+  assert.ok(!p.markWanderEncounter(), '한 번만 적는다');
+  p.resetWanderLoadout(); // 정지 '처음부터 다시'
+  p = await fresh(); // 새로고침 · 대기실 → '방랑 이어가기'
+  assert.equal(p.ensureWanderRun(() => { throw new Error('진행 중 판을 다시 뽑으면 안 됨'); }).encounterSeen, true, '같은 대면은 다시 안 뜬다');
+  p.settleWander(true, () => 10);
+  assert.equal(p.ensureWanderRun(encounter('bernardo')).encounterSeen, false, '다음 대면은 새로');
+  assert.equal(normalizeWander({ run: { ...p.readProgress().wander.run, encounterSeen: 'yes' } }).run.encounterSeen, true);
+  assert.equal(normalizeWander({ run: { ...p.readProgress().wander.run, encounterSeen: undefined } }).run.encounterSeen, false, '옛 저장(칸 없음) = 안 봄');
 });
 
 test('아르토리아 방랑 전용 (사장님 10/23 18:3x): 대성당 · 밤의 대성당 후보 없음 · 무작위 상대에 방랑 전용 없음', async () => {

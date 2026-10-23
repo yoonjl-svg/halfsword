@@ -454,7 +454,7 @@ export const CHARACTERS = [
     weaknesses: '큰 베기가 빗나간 뒤 몸 가까이 파고드는 연속 압박에는 빈틈이 생긴다.',
     weapon: 'excalibur', // 진품(레전드, 금빛 기운) — 사장님 10/10 20:3x '진품 그대로 들게 해'. 하인리히는 복제품 그대로, 플레이어도 카드로 진품을 뽑을 수 있다
     voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 에이라와 같이) — 10/12 사장님 지시로 샛별 저장소 04311ff 배정을 가져옴 (전 'isolde')
-    ai: { proficiency: 4, persona: {
+    ai: { proficiency: 5, persona: { // 숙련도 5 (사장님 10/24 01:5x '아르토리아 5로' — 전 4 · 광기의 아르토리아도 5 그대로: 원본 +1 이 상한 5 에서 멈춤)
       school: 'excalibur',
       level: { reaction: 0.26, guardChance: 0.7, counter: 0.35, feint: 0.2, followUp: 0.42, read: 0.75, discipline: 0.88, strength: 1, aggression: 0.8, windup: 0.7, skill: 0.82 },
       pers: { precision: 0.85, guardStick: 2.5, fearful: 0.2, angry: 0.2, dogged: 0.45, guardSpeed: 0.85, rhythm: 2.6, margin: 0.22, aggr: 0.85, vor: 0.45, patienceTime: 4.5, circleRate: 0.22,
@@ -886,7 +886,9 @@ export const CHARACTER_GUESTS = [
     },
   },
 ];
-// 10/23 손님 인물 셋 (샛별 저장소 전달본 977c2a43 — 마지막 모습만): 롤랑 · 베르나르도는 아르토리아(숙련도 4)의 실력 숫자를 빌려 이베리아 유파로 · 백린의 전사는 일본 유파 숙련도 3.
+// 10/23 손님 인물 셋 (샛별 저장소 전달본 977c2a43 — 마지막 모습만): 롤랑 · 베르나르도는 아르토리아의 실력 숫자(persona.level)를 빌려 이베리아 유파로 · 백린의 전사는 일본 유파.
+//  (아르토리아 숙련도가 5 로 올라도(10/24) 롤랑 시트가 숙련도를 6 으로 따로 적어 빌리는 것은 실력 숫자뿐)
+//  숙련도 (사장님 10/24 01:1x '백린 전사는 5 롤랑과 베르나르도는 6'): 롤랑 · 베르나르도 6 (전 4 — config AI_PROFICIENCY 의 6 칸) · 백린의 전사 5 (전 3).
 //  셋 다 방랑에서만 나온다(wander_rules.js WANDER_EXCLUSIVE — 베르나르도는 사장님 10/23 저녁 결정) · 시험 경로 고르기 · ?foe=<id> 로도 부른다
 {
   const artoria = CHARACTERS.find((c) => c.id === 'artoria');

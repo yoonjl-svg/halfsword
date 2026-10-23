@@ -2,15 +2,21 @@
 //  ① 잠김: 새 저장 — 방랑 단추가 흐리고(aria-disabled) 누르면 위 알림 줄에 열리는 조건 · 단추 밑 글 없음
 //  ② 옛 저장 인정 + 대기실 알림 창: 이어하기 지점 포세이돈 · 깬 수 30(한 바퀴 돈 옛 저장) → 대기실에 처음 들어올 때 알림 창 한 번 → 확인 → 다시 열어도 안 뜸 · 단추 새 색
 //  ③ 30 무대 처음 깸: 29 무대를 깬 저장 · 지점 마지막 무대 → 그 판을 이김(상대 쓰러뜨림은 연결 확인용으로 강제) → 결과 창 위 알림 창 → 확인
-//  ④ 방랑: 대기실 '방랑' → 이김 · 보상 → '다음 대면'(2 번 판) → 정지 '처음부터 다시'(같은 상대 · 카드부터 · 금화 그대로) → 대기실 → '방랑 이어가기'(같은 대면) → 짐 → '방랑 종료' · '대기실'만 → 대기실 '방랑'
-//  ⑤ 특별 보상: 대성당 · 롤랑 판을 저장에 넣고 이어 감 → 이김 → '금화 +… (특별 보상 금화 +250 포함)'
+//  ④ 방랑: 대기실 '방랑' → 이김 · 보상 → '다음 방랑'(2 번 판) → 정지 '처음부터 다시'(같은 상대 · 카드부터 · 금화 그대로) → 대기실 → '방랑 이어가기'(같은 대면) → 짐 → '방랑 종료' · '대기실'만 → 대기실 '방랑'
+//  ⑤ 특별 보상: 대성당 · 롤랑 판을 저장에 넣고 이어 감 → 이김 → '금화 +… (특별 보상 금화 +400 포함)' (10/24 — 전 +250)
 //  ⑥ 세 인물: 롤랑 · 백린의 전사 · 베르나르도를 ?foe=<id> 로 세워 앞 3/4 에서 한 장씩
+//  10/24 (사장님 00:3x — 알림 창 글은 앞 두 문단 · 알림 창 '확인' · 승리 창 '다음 방랑' = 대기실 방랑 단추 색): ② ③ 글 두 문단 · '아르토리아' 없음 ·
+//   두 '확인' · '다음 방랑'의 바탕 · 테(안쪽 그림자) · 글 색 = ② 의 대기실 방랑 단추 계산값 · 여정 결과 창 '다음 여정' · 정지 창 '처음부터 다시'는 금색 그대로
+//  10/24 (사장님 01:1x — 방랑 전용 상대 알림 창): 판을 열 때마다 알림 창이 떴는지 본다(toFight) — 여정 판 · 방랑 전용이 아닌 상대 · 같은 대면을 다시 연 판은 없음 · 방랑 전용 상대의 첫 판은 있음.
+//   ⑤ 롤랑(카드 고르기 판): 창 글 · 이름 · 소개 대사 · 프로필 그림 · 확인 색 → 확인 → 카드 → 대기실 → '방랑 이어가기' → 창 다시 안 뜸 · ⑦ 백린의 전사(이미 고른 무기 — 싸움 전에 창)
 //  실행: vite 개발 서버를 띄운 뒤  node tools/browser/wander_flow_check.mjs http://127.0.0.1:5173 <그림 폴더>
 //  출력: 그림 폴더에 PNG · 끝에 결과 줄(어긋나면 exit 1). 크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 import { titleToLobby, departTitle, lobbyFromBattle } from './to_lobby.mjs';
 import { UPDATE_NOTES } from '../../src/update_notes.js';
 import { STAGE_ORDER } from '../../src/stages.js';
+import { WANDER_EXCLUSIVE } from '../../src/wander_rules.js';
+import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const out = process.argv[3] || 'docs/handoff/wander_import';
@@ -43,14 +49,27 @@ async function open(seed = {}) {
 }
 const shadow = (page, fn, arg) => page.evaluate(([src, arg]) => { const r = document.querySelector('#gameEntrance').shadowRoot; return new Function('r', 'arg', src)(r, arg); }, [fn, arg]);
 const progress = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1') || 'null'));
-/** 카드 고르기면 첫 카드 → 싸움까지 */
+/** 방랑 전용 상대 알림 창 (10/24) — 떠 있는 동안 읽는 값 */
+const encounterState = (page) => page.evaluate(() => {
+  const $ = (id) => document.getElementById(id), img = $('encounterFoeImg');
+  return { shown: $('wanderEncounter').classList.contains('show'), state: window.game.state, title: $('encounterTitle').textContent, name: $('encounterName').textContent, quote: $('encounterQuote').textContent,
+    portrait: !$('encounterFoe').hidden && img.complete && img.naturalWidth > 0, src: img.getAttribute('src') ?? '', side: $('wanderEncounter').querySelector('.card').classList.contains('foe-shown'), draw: $('draw').className };
+});
+const encounterImg = (page) => page.waitForFunction(() => { const i = document.getElementById('encounterFoeImg'); return i.complete && i.naturalWidth > 0; }, null, { timeout: 30000 }).catch(() => {});
+/** 카드 고르기면 첫 카드 → 싸움까지. 방랑 전용 상대 알림 창이 뜨면 확인을 누르고 간다 — 돌려줌: 창이 떴나 (10/24) */
 async function toFight(page) {
-  await page.waitForFunction(() => ['draw', 'fight'].includes(window.game.state), null, { timeout: 120000 });
+  await page.waitForFunction(() => ['draw', 'fight', 'encounter'].includes(window.game.state), null, { timeout: 120000 });
+  const met = await page.evaluate(() => window.game.state === 'encounter');
+  if (met) {
+    await page.locator('#btnEncounter').click();
+    await page.waitForFunction(() => ['draw', 'fight'].includes(window.game.state), null, { timeout: 120000 });
+  }
   if (await page.evaluate(() => window.game.state) === 'draw') {
     await page.waitForFunction(() => window.game.state === 'draw' && window.game.draw.stage === 'choose' && window.game.draw.t > 0.6, null, { timeout: 120000 });
     await page.locator('#draw .wcard[data-i="0"]').click();
   }
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });
+  return met;
 }
 /** 판을 끝낸다 (연결 확인용 — 승률 자료 아님) → 결과 창이 뜰 때까지 */
 async function finish(page, win) {
@@ -63,11 +82,17 @@ const menuText = (page) => page.evaluate(() => ({
   start: document.getElementById('btnStart').hidden ? null : document.getElementById('btnStart').textContent,
   lobby: !document.getElementById('btnLobby').hidden, stage: document.querySelector('#stageInfo .stg').textContent,
 }));
+/** 단추 색 셋 (바탕 · 테 = 안쪽 그림자 · 글) — 10/24 '방랑 단추와 같은 색' 견주기 */
+const lookOf = (el) => { const c = getComputedStyle(el); return { bg: c.backgroundColor, line: c.boxShadow, fg: c.color }; };
+const sameLook = (a, b) => !!a && !!b && a.bg === b.bg && a.line === b.line && a.fg === b.fg;
+const looks = (page, id) => page.evaluate(`(${lookOf})(document.getElementById('${id}'))`);
+const noticeOk = (text) => text.split('\n').length === 2 && !/아르토리아|롤랑|베르나르도|백린/.test(text) && /방랑이 열렸습니다/.test(text);
+let wanderLook = null; // ② 대기실 방랑 단추의 계산값 (③ ④ 가 견줌)
 const lobbyState = (page) => shadow(page, `const b = r.getElementById('lobbyWander'); return { text: b.textContent, locked: b.getAttribute('aria-disabled'), status: r.getElementById('lobbyStatus').textContent, dialog: r.getElementById('wanderDialog').open, hint: !!r.querySelector('.wander-hint'), bg: getComputedStyle(b).backgroundColor, depart: getComputedStyle(r.getElementById('lobbyDepart')).backgroundColor };`);
 /** 대기실 단추 누르고 싸움(또는 카드)까지 */
 async function lobbyGo(page, id) {
   await shadow(page, `r.getElementById(arg).click();`, id);
-  await page.waitForFunction(() => !document.getElementById('gameEntrance') && ['draw', 'fight', 'paused'].includes(window.game?.state), null, { timeout: 120000 });
+  await page.waitForFunction(() => !document.getElementById('gameEntrance') && ['draw', 'fight', 'paused', 'encounter'].includes(window.game?.state), null, { timeout: 120000 });
 }
 
 // ① 잠김
@@ -94,6 +119,10 @@ async function lobbyGo(page, id) {
   check(s.dialog, '② 옛 저장(지점 포세이돈 · 깬 수 30) → 대기실 알림 창');
   const text = await shadow(page, `return r.getElementById('wanderText').textContent;`);
   notes.push('알림 글: ' + text.replace(/\n/g, ' / '));
+  check(noticeOk(text), `② 알림 글 두 문단 · 방랑 전용 상대 줄 없음 (${text.split('\n').length} 문단)`);
+  const dlg = await shadow(page, `const look = ${lookOf}; return { ok: look(r.getElementById('closeWander')), wander: look(r.getElementById('lobbyWander')) };`);
+  wanderLook = dlg.wander;
+  check(sameLook(dlg.ok, dlg.wander), `② 알림 창 '확인' 색 = 방랑 단추 (바탕 ${dlg.ok.bg} · 테 ${dlg.ok.line} · 글 ${dlg.ok.fg})`);
   await page.screenshot({ path: `${out}/popup_lobby.png` });
   await shadow(page, `r.getElementById('closeWander').click();`);
   s = await lobbyState(page);
@@ -120,11 +149,16 @@ async function lobbyGo(page, id) {
   };
   const { ctx, page } = await open(seed);
   await departTitle(page, '#continueJourney');
-  await toFight(page);
+  check(!(await toFight(page)), '③ 여정 판: 방랑 전용 상대 알림 창 없음');
   await finish(page, true);
   await page.waitForFunction(() => document.getElementById('wanderNotice').classList.contains('show'), null, { timeout: 30000 }).catch(() => {});
   const shown = await page.evaluate(() => document.getElementById('wanderNotice').classList.contains('show'));
   check(shown, `③ 마지막 무대(${last}) 이김 → 결과 창 위 방랑 알림 창`);
+  const text3 = await page.evaluate(() => document.getElementById('wanderNoticeText').textContent);
+  check(noticeOk(text3), `③ 알림 글 두 문단 · 방랑 전용 상대 줄 없음`);
+  const ok3 = await looks(page, 'btnWanderNotice'), next3 = await looks(page, 'btnStart');
+  check(sameLook(ok3, wanderLook), `③ 알림 창 '확인' 색 = 방랑 단추 (바탕 ${ok3.bg})`);
+  check(next3.bg === 'rgb(217, 164, 65)' && !sameLook(next3, wanderLook), `③ 뒤 여정 결과 창 '${await page.evaluate(() => document.getElementById('btnStart').textContent)}' 금색 그대로 (${next3.bg})`);
   await page.screenshot({ path: `${out}/popup_first_clear.png` });
   await page.locator('#btnWanderNotice').click();
   let p = await progress(page);
@@ -136,7 +170,9 @@ async function lobbyGo(page, id) {
   check(!s.dialog && s.locked === 'false' && s.text === '방랑', `④ 대기실: 알림 창 없음 · 단추 '${s.text}'`);
   const coins0 = (await progress(page)).coins;
   await lobbyGo(page, 'lobbyWander');
-  await toFight(page);
+  let met = await toFight(page);
+  let foe = (await progress(page)).wander.run.foe;
+  check(met === WANDER_EXCLUSIVE.includes(foe), `④ 방랑 1 판 상대 ${foe}: 알림 창 ${met ? '뜸' : '없음'} (방랑 전용 ${WANDER_EXCLUSIVE.includes(foe) ? '맞음' : '아님'})`);
   let m = await menuText(page);
   check(/^방랑 1 · /.test(m.stage), `④ 방랑 1 판 무대 줄 '${m.stage}'`);
   await page.waitForTimeout(2500);
@@ -144,35 +180,42 @@ async function lobbyGo(page, id) {
   await finish(page, true);
   m = await menuText(page);
   p = await progress(page);
-  check(m.title === '승리' && /^방랑 1 · /.test(m.sub) && m.start === '다음 대면' && m.lobby, `④ 이김: '${m.sub}' · 보상 '${m.reward}' · 단추 '${m.start}' · 대기실`);
+  check(m.title === '승리' && /^방랑 1 · /.test(m.sub) && m.start === '다음 방랑' && m.lobby, `④ 이김: '${m.sub}' · 보상 '${m.reward}' · 단추 '${m.start}' · 대기실`);
   check(p.wander.run.status === 'won' && p.coins > coins0 && p.coins - coins0 === Number(m.reward.match(/금화 \+(\d+)/)?.[1]), `④ 저장: 판 won · 금화 ${coins0} → ${p.coins}`);
+  const win4 = await looks(page, 'btnStart'), lobby4 = await looks(page, 'btnLobby');
+  check(sameLook(win4, wanderLook), `④ '다음 방랑' 색 = 방랑 단추 (바탕 ${win4.bg} · 테 ${win4.line})`);
+  check(lobby4.bg === 'rgba(0, 0, 0, 0)' && !sameLook(lobby4, wanderLook), `④ '대기실' 단추 그대로 (부 단추 · 바탕 ${lobby4.bg})`);
   await page.screenshot({ path: `${out}/wander_win.png` });
-  // 다음 대면 → 2 번 판
+  // 다음 방랑 → 2 번 판
   await page.locator('#btnStart').click();
-  await toFight(page);
+  met = await toFight(page);
   m = await menuText(page);
   p = await progress(page);
   const foe2 = p.wander.run.foe, coins2 = p.coins;
-  check(/^방랑 2 · /.test(m.stage) && p.wander.run.round === 2, `④ 다음 대면: '${m.stage}' · 상대 ${foe2}`);
+  check(met === WANDER_EXCLUSIVE.includes(foe2), `④ 방랑 2 판 상대 ${foe2}: 알림 창 ${met ? '뜸' : '없음'}`);
+  check(/^방랑 2 · /.test(m.stage) && p.wander.run.round === 2, `④ 다음 방랑: '${m.stage}' · 상대 ${foe2}`);
   // 정지 → 처음부터 다시 (기본 — 일반 여정과 같게): 같은 상대 · 카드부터 · 금화 그대로
   await page.evaluate(() => document.getElementById('btnPause').click());
   await page.waitForFunction(() => window.game.state === 'paused', null, { timeout: 30000 });
   const pauseSub = await page.evaluate(() => document.getElementById('menuSub').textContent);
+  const pause4 = await looks(page, 'btnStart');
+  check(pause4.bg === 'rgb(217, 164, 65)', `④ 정지 창 '${await page.evaluate(() => document.getElementById('btnStart').textContent)}' 금색 그대로 (${pause4.bg})`);
   await page.locator('#btnStart').click();
   await page.waitForFunction(() => ['draw', 'fight'].includes(window.game.state), null, { timeout: 120000 });
   p = await progress(page);
   const st = await page.evaluate(() => window.game.state);
   check(p.wander.run.foe === foe2 && p.wander.run.round === 2 && p.coins === coins2 && p.wander.run.status === 'active', `④ 처음부터 다시: 같은 상대 ${p.wander.run.foe} · 2 번 판 · 금화 그대로 · ${st === 'draw' ? '카드부터' : '대기실 무기로 바로'} · 정지 창 '${pauseSub}'`);
-  await toFight(page);
+  check(!(await toFight(page)), '④ 처음부터 다시: 같은 대면 — 알림 창 다시 없음');
   // 싸우는 도중 대기실 → 방랑 이어가기 → 같은 대면
   await lobbyFromBattle(page);
   s = await lobbyState(page);
   check(s.text === '방랑 이어가기', `④ 싸움 도중 대기실 → 단추 '${s.text}' (금화 ${(await progress(page)).coins} = ${coins2})`);
   await page.screenshot({ path: `${out}/lobby_wander_continue.png` });
   await lobbyGo(page, 'lobbyWander');
-  await toFight(page);
+  met = await toFight(page);
   p = await progress(page);
   m = await menuText(page);
+  check(!met, '④ 이어가기: 같은 대면 — 알림 창 다시 없음');
   check(p.wander.run.foe === foe2 && /^방랑 2 · /.test(m.stage) && p.coins === coins2, `④ 이어가기: 같은 대면(${p.wander.run.foe}) · '${m.stage}'`);
   // 짐 → 방랑 종료
   await finish(page, false);
@@ -199,16 +242,56 @@ async function lobbyGo(page, id) {
   const s = await lobbyState(page);
   check(s.text === '방랑 이어가기', `⑤ 저장된 롤랑 판 → '${s.text}'`);
   await lobbyGo(page, 'lobbyWander');
-  await toFight(page);
+  // 방랑 전용 상대 알림 창 (10/24): 카드 고르기 전에 — 창 글 · 이름 · 소개 대사 · 프로필 · 확인 색
+  await page.waitForFunction(() => window.game.state === 'encounter', null, { timeout: 30000 }).catch(() => {});
+  await encounterImg(page);
+  let e = await encounterState(page);
+  const R = CHARACTERS_BY_ID.roland;
+  check(e.shown && e.state === 'encounter' && !/show/.test(e.draw), `⑤ 롤랑 판: 카드 고르기 전에 알림 창 (state ${e.state} · 카드 '${e.draw}')`);
+  check(e.title === '낯선 발걸음 소리가 들린다.' && e.name === R.name && e.quote === `“${R.lines.intro[0]}”`, `⑤ 창 글 '${e.title}' · 이름 '${e.name}' · 대사 ${e.quote}`);
+  check(e.portrait && e.side && /roland/.test(e.src), `⑤ 프로필 그림 ${e.src} (패배 창과 같은 칸 · 왼쪽)`);
+  const okE = await looks(page, 'btnEncounter');
+  check(sameLook(okE, wanderLook), `⑤ 알림 창 '확인' 색 = 방랑 단추 (바탕 ${okE.bg})`);
+  await page.screenshot({ path: `${out}/encounter_roland.png` });
+  await page.locator('#btnEncounter').click();
+  await page.waitForFunction(() => window.game.state === 'draw', null, { timeout: 30000 }).catch(() => {});
+  check(await page.evaluate(() => window.game.state === 'draw' && !document.getElementById('wanderEncounter').classList.contains('show')) && (await progress(page)).wander.run.encounterSeen === true, '⑤ 확인 → 창 닫힘 · 카드 고르기 · 저장 encounterSeen');
+  // 같은 대면을 다시 열면 (대기실 → 방랑 이어가기) 창 없음
+  await lobbyFromBattle(page);
+  await lobbyGo(page, 'lobbyWander');
+  check(!(await toFight(page)), '⑤ 대기실 → 방랑 이어가기: 같은 대면 — 알림 창 다시 없음');
   const foe = await page.evaluate(() => window.game.enemy.name);
+  const vit = await page.evaluate(() => ({ v: window.game.enemy.vitality, blood: window.game.enemy.blood, me: window.game.player.vitality }));
+  check(vit.v === 1.1 && vit.blood === 1 && vit.me === 1, `⑤ 롤랑 버티는 힘 ${vit.v} (사장님 10/24 '체력 +10%') · 피 ${vit.blood * 100} % 에서 시작 · 나 ${vit.me}`);
   await page.waitForTimeout(3000);
   await page.screenshot({ path: `${out}/wander_fight_roland.png` });
   await finish(page, true);
   const m = await menuText(page);
-  check(foe === '롤랑' && /\(특별 보상 금화 \+250 포함\)/.test(m.reward), `⑤ 롤랑 이김: 보상 '${m.reward}'`);
+  check(foe === '롤랑' && /\(특별 보상 금화 \+400 포함\)/.test(m.reward), `⑤ 롤랑 이김: 보상 '${m.reward}'`);
   const gap = await page.evaluate(() => { const b = document.querySelector('#menuReward .bonus'), prev = b?.previousElementSibling; return b && prev ? Math.round(b.getBoundingClientRect().left - prev.getBoundingClientRect().right) : null; });
   check(gap >= 3, `⑤ 괄호 앞 틈 ${gap} px`);
   await page.screenshot({ path: `${out}/wander_reward.png` });
+  await ctx.close();
+}
+
+// ⑦ 방랑 전용 상대 알림 창 — 백린의 전사 · 무기를 이미 고른 판(카드 없이 싸움): 싸움 전에 창 (10/24)
+{
+  const run = { id: 'check-white', round: 3, wins: 2, stage: 'qinglan', foe: 'white_scale', foeWeapon: 'muramasa', status: 'active', weapon: 'longsword', cards: ['longsword', 'rapier'], lastWeapon: 'longsword', headTaken: false };
+  const seed = {
+    'stillness.journey.checkpoint.v1': { version: 1, stage: 'poseidon' },
+    'stillness.lobby.progress.v1': progressSeed({ wander: { cleared: STAGE_ORDER, unlocked: true, legacyChecked: true, noticeSeen: true, run } }),
+  };
+  const { ctx, page } = await open(seed);
+  await titleToLobby(page, '#continueJourney');
+  await lobbyGo(page, 'lobbyWander');
+  await page.waitForFunction(() => window.game.state === 'encounter', null, { timeout: 30000 }).catch(() => {});
+  await encounterImg(page);
+  const e = await encounterState(page), W = CHARACTERS_BY_ID.white_scale;
+  check(e.shown && e.name === W.name && e.quote === `“${W.lines.intro[0]}”` && e.portrait && /white_scale/.test(e.src), `⑦ 백린의 전사(고른 무기 판): 싸움 전에 알림 창 · '${e.name}' · ${e.quote} · 그림 ${e.src}`);
+  await page.screenshot({ path: `${out}/encounter_white_scale.png` });
+  await page.locator('#btnEncounter').click();
+  await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 30000 }).catch(() => {});
+  check(await page.evaluate(() => window.game.state === 'fight' && window.game.enemy.name === '백린의 전사' && window.game.enemy.vitality === 1), '⑦ 확인 → 카드 없이 싸움 (백린의 전사 · 버티는 힘 1 그대로)');
   await ctx.close();
 }
 

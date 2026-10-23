@@ -216,6 +216,7 @@ export function ensureWanderRun(makeEncounter, isValid = () => true) {
     lastWeapon: won ? old.weapon || old.lastWeapon : redraw ? old.lastWeapon : null,
     headTaken: false,
     fighting: false,
+    encounterSeen: false, // 방랑 전용 상대 알림 창 (10/24 — 대면마다 한 번 · 다시 뽑은 대면도 새로)
     reward: null,
   };
   save(true);
@@ -284,6 +285,14 @@ export function settleWander(win, roll = rollInt) {
   run.reward = { coins: session.coins - before, heads: reward.heads + (run.headTaken ? WANDER_HEAD : 0), bonus: reward.bonus };
   save(true);
   return structuredClone(run.reward);
+}
+/** 방랑 전용 상대 알림 창을 봤다 (main.js wanderEncounter 의 확인 — 사장님 10/24 01:1x): 진행 중 판에 적어 같은 대면(처음부터 다시 · 방랑 이어가기)에서 다시 띄우지 않는다. 돌려줌: 저장했나 */
+export function markWanderEncounter() {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.status !== 'active' || run.encounterSeen) return false;
+  run.encounterSeen = true;
+  return save(true);
 }
 /** 방랑 알림 창을 띄울 때인가 (열렸고 아직 안 봄 — 30 무대를 처음 다 깼을 때 · 이미 깬 사람은 대기실에 처음 들어올 때) */
 export function wanderNoticeDue() {

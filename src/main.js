@@ -18,7 +18,7 @@ import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 
 import { readJourney, writeJourney, addJourneyClear, journeyClears } from './journey_save.js'; // 여정 이어하기 지점 · 깬 무대 수(통계) (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
-import { journeyCoins, awardHead, readProgress, rand01, recordCampaignStage, migrateCampaignStages, ensureWanderRun, saveWanderLoadout, resetWanderLoadout, markWanderFighting, settleAbandonedWander, awardWanderHead, settleWander, wanderNoticeDue, markWanderNotice } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x) · 방랑 저장 (10/23)
+import { journeyCoins, awardHead, readProgress, rand01, recordCampaignStage, migrateCampaignStages, ensureWanderRun, saveWanderLoadout, resetWanderLoadout, markWanderFighting, settleAbandonedWander, awardWanderHead, settleWander, wanderNoticeDue, markWanderNotice, markWanderEncounter } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x) · 방랑 저장 (10/23) · 방랑 전용 상대 알림 창 본 기록 (10/24)
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
 import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
@@ -229,8 +229,8 @@ if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAss
 if (params.has('uniqueEnhance')) CONFIG.UNIQUE_ASSIST.enhance = Math.max(0, +params.get('uniqueEnhance') || 0); // 고유 동작 강화 세기(10/14): 기본 1 · 0 = 기술 이름 알림만 · 0.5 = 절반 (걸음·몸·끝 힘 한꺼번에)
 const UNIQUE_STAGE = stageParam(params.get('uniqueStage')); // 개발 인자 `?uniqueStage=0..5`: 손에 든 무기 유파의 옛 급 N 까지의 스킬트리 칸을 켬 (0 = 칸 없음 · 1 = 보법 · 2 = + 막기 · 3 = + 고유 공격 · 심화 · 4 = + 패시브 · 5 = 모두 — 익힌 칸 · 테스트 경로보다 먼저, skill_tree_store.js playerKit). 없으면 익힌 칸 · 테스트 경로는 모두
 const SKILL_NODES = params.get('skillNodes'); // 개발 인자 `?skillNodes=G1,G5`(10/21): 그 칸만 켬 · `all` = 모두 · 빈 값 = 없음 — ?uniqueStage 보다도 먼저 (칸 하나씩 시험)
-const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..5` (실력 숫자 이름·고유 동작 거르기·5 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
-const FOE_PROF = /^[0-9]$/.test(FOE_PROF_PARAM ?? '') && +FOE_PROF_PARAM <= AI_PROFICIENCY.max ? +FOE_PROF_PARAM : null;
+const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..6` (실력 숫자 이름·고유 동작 거르기·5 이상 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
+const FOE_PROF = /^[0-9]$/.test(FOE_PROF_PARAM ?? '') && +FOE_PROF_PARAM < AI_PROFICIENCY.levels.length ? +FOE_PROF_PARAM : null; // 0 ~ 6 (10/24 — 6 칸 · 전 0 ~ max 5)
 // 마무리 스위치 (10/12 샛별 가져오기 2차 — docs/import/saetbyeol_round2_2026-10-12.md, 기본은 둘 다 끔):
 //  `?finishEntry=low` = 낮은 상대 진입(몸 높이로 내려찍기를 연다, finish_entry.js) · `?finishMode=power25` = 즉사 대신 판정 에너지 2.5 배 + 갑옷 판정
 if (['down', 'low', 'downlow', 'auto'].includes(params.get('finishEntry'))) FINISH_SWITCH.entry = params.get('finishEntry'); // downlow = 고친 판 (큰 쓰러짐은 지금처럼 + 일어나는 중 낮은 몸) · 기본 auto (10/12)
@@ -434,7 +434,7 @@ const journeySaves = () => journeyMode && JOURNEY_PURE;
 // 방랑 (10/23 — wander_rules.js · 대기실 '방랑' 단추 → game_entry.js → launchWander): 무작위 무대 · 상대 · 보상 두 배 · 저장은 lobby_progress.js 의 wander 칸(여정 이어하기 지점 · 깬 수는 안 건드림).
 //  주소 고정 판 · 테스트 경로에서는 열리지 않는다(JOURNEY_PURE). 여정과 같은 몫: 대기실 장착 · 대기실 이름 · 대면 결과 · 정지 · 결과 창의 '대기실'(careerSaves)
 let wanderMode = false;
-let wanderResume = false; // 이번 startFight 가 대기실에서 들어온 것인가(저장된 판 그대로 — 카드 · 고른 무기까지) · 아니면 '처음부터 다시' · '다음 대면'
+let wanderResume = false; // 이번 startFight 가 대기실에서 들어온 것인가(저장된 판 그대로 — 카드 · 고른 무기까지) · 아니면 '처음부터 다시' · '다음 방랑'
 const wanderSaves = () => wanderMode && JOURNEY_PURE;
 const careerSaves = () => journeySaves() || wanderSaves();
 // 방랑 풀: 무대 = 여정 30곳(보관용 화전 터 · 어두운 홀 빼고) · 상대 = 그 무대 상대 + 방랑 전용 다섯(아르토리아 두 모습 · 롤랑 · 백린의 전사 · 베르나르도)
@@ -744,6 +744,7 @@ function newRound(weaponId) {
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
     revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
     physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 — fighter.js HUMAN_BODY). 없으면 사람
+    vitality: currentFoe?.vitality, // 버티는 힘 (10/24 — 롤랑 · 베르나르도 1.1 · 없으면 1, fighter.js)
   });
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −35 · −70 그대로 · 기력 끔이면 아무 일 없음)
   //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
@@ -1076,7 +1077,7 @@ const topButtons = $('topButtons');
 const toast = $('toast');
 const hint = $('hint');
 attachStick(input, $('moveStick'), $('moveKnob'));
-let state = 'menu'; // menu | fight | paused
+let state = 'menu'; // menu | fight | paused | draw(무기 카드) | encounter(방랑 전용 상대 알림 창 — 10/24 wanderEncounter)
 let roundOver = false;
 let roundOverTime = 0;
 let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
@@ -1157,20 +1158,25 @@ function loadDefeatFoe(foe) {
   const src = foe ? portraitSrc(foe.ch.id) : null, img = $('menuFoeImg');
   if (src && img.getAttribute('src') !== src) img.src = src;
 }
-function showDefeatFoe(foe) {
-  const fig = $('menuFoe'), img = $('menuFoeImg'), lineEl = $('menuFoeLine');
-  const src = foe ? portraitSrc(foe.ch.id) : null;
+/** 상대 프로필 칸 (패배 창 · 10/24 방랑 전용 상대 알림 창 — 같은 꼴): ch 의 그림(portraits.js)을 건다. 그림이 없거나 전에 못 불러왔으면 칸을 숨긴다. 돌려줌: 칸이 보이나 */
+function setFoePortrait(fig, img, ch) {
+  const src = ch ? portraitSrc(ch.id) : null;
   const broken = !!src && img.getAttribute('src') === src && img.complete && img.naturalWidth === 0; // 같은 그림을 전에 못 불러왔으면(예: 오프라인에서 예비 low) 칸을 숨긴 채로
   fig.hidden = !src || broken;
   if (src && !broken) {
-    fig.dataset.portrait = portraitIdOf(foe.ch.id); fig.dataset.mode = portraitMode(); fig.toggleAttribute('data-grid', portraitGrid()); // ?portraitGrid=1 칸 줄 (10/18 16:3x 확인용)
-    img.alt = `${foe.ch.name} 프로필`;
+    fig.dataset.portrait = portraitIdOf(ch.id); fig.dataset.mode = portraitMode(); fig.toggleAttribute('data-grid', portraitGrid()); // ?portraitGrid=1 칸 줄 (10/18 16:3x 확인용)
+    img.alt = `${ch.name} 프로필`;
     if (img.getAttribute('src') !== src) img.src = src;
   }
+  return !fig.hidden;
+}
+function showDefeatFoe(foe) {
+  const lineEl = $('menuFoeLine');
+  const shown = setFoePortrait($('menuFoe'), $('menuFoeImg'), foe?.ch);
   lineEl.hidden = !foe?.line;
   $('menuFoeQuote').textContent = foe?.line ? `“${foe.line}”` : '';
   $('menuFoeSource').textContent = foe?.line ? lineSourceOf(foe.ch, foe.line) || '' : ''; // 병마용의 고전 인용 출처 (없는 인물은 빈칸이라 줄이 숨는다 — showFoeLine 과 같음)
-  $('menu').querySelector('.card').classList.toggle('foe-shown', !fig.hidden);
+  $('menu').querySelector('.card').classList.toggle('foe-shown', shown);
 }
 
 // 이번 상대 소개 (이름 · 칭호 · 한마디) — 화면 가운데, 판 알림(toast) 바로 아래 (10/14 사장님 '사이즈 통일해서 예전처럼 시작 때 보이게 가운데로').
@@ -1513,8 +1519,8 @@ function showToast(text, ms = 1200) {
 
 // 터치 이동 조이스틱: 싸움 중에만 보인다 (무기 뽑기 동안에는 걸을 수 없으니 감춘다 — 카드 자리도 넓어진다)
 function applyMoveMode() {
-  $('moveStick').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw');
-  $('btnParry').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw'); // 막기 단추: 조이스틱과 같은 때 (오른쪽 아래)
+  $('moveStick').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw' && state !== 'encounter');
+  $('btnParry').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw' && state !== 'encounter'); // 막기 단추: 조이스틱과 같은 때 (오른쪽 아래)
 }
 
 function showHint(text, ms = 3500) {
@@ -1566,6 +1572,7 @@ async function startFight() {
     lastPlayerWeapon = lobbyWeapon;
     newRound(lobbyWeapon);
     saveJourneyRound(null);
+    if (wanderEncounter(beginFight)) return; // 방랑 전용 상대면 싸움 전에 알림 창 (10/24 — 확인을 누르면 싸움)
     beginFight();
     return;
   }
@@ -1573,6 +1580,7 @@ async function startFight() {
     // 이어하기: 무기를 이미 골라 둔 판 — 그 무기로 무대 시작부터 (카드 없이)
     lastPlayerWeapon = savedRound.weapon;
     newRound(savedRound.weapon);
+    if (wanderEncounter(beginFight)) return; // 방랑 전용 상대 알림 창 (10/24 — 같은 대면에서 이미 봤으면 없음)
     beginFight();
     return;
   }
@@ -1585,11 +1593,15 @@ async function startFight() {
   // 무기 뽑기: 판은 임시 무기로 세워 두기만 하고(시간은 멈춤, 무기는 감춤) 카드 세 장(내 카드 둘 + 상대 칸)을 띄운다
   newRound('longsword');
   setWeaponsVisible(false);
-  state = 'draw';
-  input.enabled = false;
-  applyMoveMode();
-  setDrawGuide('on'); // 왼쪽 위 무대 줄 아래 "무기 카드를 한 장 고르십시오" (10/14 03:3x 되살림 — 카드 자리를 재기 전에)
-  openDraw(savedRound?.cards);
+  const toDraw = () => {
+    state = 'draw';
+    input.enabled = false;
+    applyMoveMode();
+    setDrawGuide('on'); // 왼쪽 위 무대 줄 아래 "무기 카드를 한 장 고르십시오" (10/14 03:3x 되살림 — 카드 자리를 재기 전에)
+    openDraw(savedRound?.cards);
+  };
+  if (wanderEncounter(toDraw)) return; // 방랑 전용 상대면 카드 고르기 전에 알림 창 (사장님 10/24 01:1x — 확인을 누르면 카드)
+  toDraw();
 }
 
 // ── 여정 이어하기 (첫 화면 'Stage 1' · '이어하기' · 대기실 'Stage 입장' — game_entry.js 가 아래 내보낸 함수를 부른다, docs/import/lobby_port_2026-10-16.md §5) ──
@@ -1648,7 +1660,7 @@ function openWanderRound() {
       showWanderForfeit(lost);
       return false;
     }
-  } else if (!resume) resetWanderLoadout(); // 처음부터 다시 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 대면'은 새 판)
+  } else if (!resume) resetWanderLoadout(); // 처음부터 다시 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 방랑'은 새 판)
   const run = ensureWanderRun(drawWanderEncounter, validWanderRun);
   if (!run) throw new Error('방랑이 잠겨 있음');
   // 저장된 내 무기 · 카드가 지금 뽑기 목록에 없으면 카드부터 (여정 validJourney 와 같게)
@@ -1791,6 +1803,7 @@ function pause() {
   $('menuReward').hidden = true;
   showDefeatFoe(null); // 패배 창의 상대 프로필 · 대사는 정지 창에 남기지 않는다
   $('btnStart').textContent = '처음부터 다시';
+  $('btnStart').classList.remove('wander'); // 방랑 승리 창의 '다음 방랑' 색을 정지 창에 남기지 않는다 (금색 주 단추)
   $('btnResume').style.display = '';
   $('btnLobby').hidden = !lobbyMenu(); // 첫 화면·대기실 여정만 — 판을 떠나 대기실로 (아래 toLobby)
   $('fpsRow').hidden = false;
@@ -2137,11 +2150,13 @@ function checkRoundEnd(dt) {
     showDefeatFoe(win ? null : defeatFoe);
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
     $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '다시 겨루기'; // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
-    // 방랑: 이기면 '다음 대면'(새로 뽑은 다음 판) · 지면 그 연속은 끝 — '대기실'만 (다시 들어가면 새 조합)
+    // 방랑: 이기면 '다음 방랑'(새로 뽑은 다음 판 — 사장님 10/24 00:3x, 전 '다음 대면') · 지면 그 연속은 끝 — '대기실'만 (다시 들어가면 새 조합)
+    //  '다음 방랑' 색 = 대기실 방랑 단추 (index.html .primary.wander — 같은 10/24 말씀). 여정 결과 창 · 정지 창(pause)은 금색 그대로
     if (wanderMode) {
-      $('btnStart').textContent = '다음 대면';
+      $('btnStart').textContent = '다음 방랑';
       $('btnStart').hidden = !win;
     }
+    $('btnStart').classList.toggle('wander', wanderMode && win);
     $('btnResume').style.display = 'none';
     // 첫 화면·대기실 여정 (사장님 10/16 08:3x '팝업에선 얻은 금화나 잃은 금화 표시하고, 그 화면에서 설정은 빼고, 다음 여정과 대기실 선택지로'): 금화 줄(showRewardLine) ·
     //  '다음 여정'(진 판은 '다시 겨루기' — 같은 무대) · '대기실'. 설정 줄은 정지 창 · 첫 화면 설정에만. 그 밖 판은 지금 그대로
@@ -2172,6 +2187,43 @@ function showWanderNotice() {
 $('btnWanderNotice').addEventListener('click', () => {
   markWanderNotice();
   $('wanderNotice').classList.remove('show');
+});
+
+// ── 방랑 전용 상대 알림 창 (사장님 10/24 01:1x '방랑에서 방랑 전용 캐락터가 등장했을 땐 카드 고르기 전에 알림 팝업 띄우고 낯선 발걸음 소리가 들린다. 이렇게 쓰고 프로필 사진과 대사 출력. 확인 단추는 청동색으로') ──
+//  방랑 판의 상대가 방랑 전용(wander_rules.js WANDER_EXCLUSIVE)이면 카드 고르기 전에 한 번(대기실 장착 무기 · 이미 고른 무기로 바로 싸우는 판이면 싸움 전에 — startFight).
+//  창 = 패배 창 꼴(index.html #wanderEncounter): 프로필(setFoePortrait — 대기실 · 패배 창과 같은 그림 길) · 장면 글 '낯선 발걸음 소리가 들린다.' · 이름 · 소개 대사 첫 줄(lines.intro[0] — 없으면 taunt) · 확인(방랑 단추 색).
+//  대면마다 한 번: 확인을 누르면 저장 run.encounterSeen(lobby_progress.js markWanderEncounter) — 정지 '처음부터 다시' · 대기실 → '방랑 이어가기'로 같은 대면을 다시 열면 안 뜬다
+//  (확인 전에 앱을 닫으면 다음에 다시). 창이 떠 있는 동안 state 'encounter' — 판 시간 · 정지 · 키 · 조이스틱이 쉰다.
+//  startFight 는 창을 기다리지 않고 끝난다(then 을 확인 때 부름) — 대기실에서 연 판은 launchWander 가 끝나야 덮개가 걷혀 창이 보인다
+let encounterThen = null;
+/** 창이 필요하면 띄우고 true (확인을 누르면 then()) · 아니면 false */
+function wanderEncounter(then) {
+  const ch = currentFoe;
+  if (!wanderMode || !ch || !WANDER_EXCLUSIVE.includes(ch.id) || readProgress().wander.run?.encounterSeen) return false;
+  const line = ch.lines?.intro?.[0] ?? ch.taunt ?? '';
+  $('wanderEncounter').querySelector('.card').classList.toggle('foe-shown', setFoePortrait($('encounterFoe'), $('encounterFoeImg'), ch));
+  $('encounterName').textContent = ch.name;
+  $('encounterLine').hidden = !line;
+  $('encounterQuote').textContent = line ? `“${line}”` : '';
+  $('encounterSource').textContent = line ? lineSourceOf(ch, line) || '' : '';
+  state = 'encounter';
+  input.enabled = false;
+  applyMoveMode();
+  $('wanderEncounter').classList.add('show');
+  $('btnEncounter').focus({ preventScroll: true });
+  encounterThen = then;
+  return true;
+}
+$('encounterFoeImg').addEventListener('error', () => {
+  $('encounterFoe').hidden = true;
+  $('wanderEncounter').querySelector('.card').classList.remove('foe-shown');
+});
+$('btnEncounter').addEventListener('click', () => {
+  markWanderEncounter();
+  $('wanderEncounter').classList.remove('show');
+  const next = encounterThen;
+  encounterThen = null;
+  next?.();
 });
 
 // ── 카메라: 내 캐릭터 오른쪽 어깨 너머에서 상대를 바라본다 ──
@@ -2566,7 +2618,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   // 첫 화면·대기실이 앞에 있는 동안(game_entry.js — html[data-start-open])에는 뒤의 3D 그리기·물리 시간을 멈춘다 (화면이 가려져 있다)
   if (document.documentElement.hasAttribute('data-start-open')) { last = now; acc = 0; return; }
-  sound.setPaused(state !== 'fight' && state !== 'draw'); // 샛별 저장소 무대 셋의 배경음·세부음만 메뉴·일시정지 동안 줄인다 (stage_detail_sound.js)
+  sound.setPaused(state !== 'fight' && state !== 'draw' && state !== 'encounter'); // 샛별 저장소 무대 셋의 배경음·세부음만 메뉴·일시정지 동안 줄인다 (stage_detail_sound.js)
   const frameMs = now - last;
   let dt = Math.min(0.1, frameMs / 1000);
   last = now;
@@ -2732,7 +2784,7 @@ function frame(now) {
     if (state === 'draw') {
       updateDraw(dt);
       arena.update(dt);
-    }
+    } else if (state === 'encounter') arena.update(dt); // 방랑 전용 상대 알림 창 (10/24): 판은 멈춘 채 바다 · 먼지만
     // 판이 끝나 메뉴가 뜬 뒤에도 흩어지던 칼·투구·판금 조각은 마저 날아 사라진다 (판 끝 슬로모션 0.5배 그대로. 싸움 중 일시정지면 멈춘 채)
     if (roundOver) tickDebris(dt * 0.5);
   }

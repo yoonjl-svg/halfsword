@@ -1,6 +1,6 @@
 // 백린의 전사(가칭 — 사장님 이름 미정) — 초원의 검객 (샛별 저장소 전달본 977c2a43 — 그쪽 id 그대로 'white_scale', docs/import/wander_heroes_import_2026-10-23.md)
 //  손님 인물(characters.js CHARACTER_GUESTS — 무작위 회전 밖) · 방랑 전용(wander_rules.js WANDER_EXCLUSIVE).
-//  몽골에서 태어나 일본 검술을 배운 전사(샛별 쪽 사용자 설정). 새 유파 동작 · 실력 덧셈 없음 — 무라마사 · 일본 유파 · 숙련도 3.
+//  몽골에서 태어나 일본 검술을 배운 전사(샛별 쪽 사용자 설정). 새 유파 동작 · 실력 덧셈 없음 — 무라마사 · 일본 유파 · 숙련도 5(사장님 10/24 01:1x '백린 전사는 5' — 전 3: 고유 동작 넷 · 비기 고노센 · 미나미와 같은 단).
 import { getLook } from './looks.js';
 
 export function createWhiteScaleWarrior() {
@@ -22,7 +22,7 @@ export function createWhiteScaleWarrior() {
     voice: 'renji',
     look: getLook('white_scale'),
     lookVersion: 'v2', // 10/23 줄인 판 (looks.js LOOK_ARCHIVE.white_scale.v2 — 전달본 판 v1 은 ?look=white_scale:v1)
-    ai: { proficiency: 3, persona: { school: 'muramasa', pers: {} } },
+    ai: { proficiency: 5, persona: { school: 'muramasa', pers: {} } }, // 사장님 10/24 01:1x (전 3)
     taunt: '…검으로 이야기하자.',
     lines: {
       intro: ['…검으로 이야기하자.'],
