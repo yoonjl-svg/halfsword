@@ -1,7 +1,7 @@
 // 대기실 고친 것 실제 흐름 점검 (docs/import/lobby_fix_2026-10-16.md §9) — 배포판 + 미리 보기 서버, 인증 서버는 막음(부르면 실패)
 //  ① 나뭇가지 장착 → 대기실 출발('Stage 입장') · 첫 화면 'Stage 1' = 카드 없이 나뭇가지 · 해제 → 카드가 돌아옴 ② 케틀 햇: 장착 = 투구 + 최대 기력 130(머리 위 막대 = 130 의 몫) · 벗음 = 맨머리 + 100
 //  ③ 스킬북: 어둡게·값 → 구입 → 사용(둥근 빛) → 봉인 — 봉인/안 삼이면 싸움에서 실제로 꺼짐(일본 보법 · 막기 · 고유 공격 넷 · 비기)
-//  ④ 금화: 진 판 −1~5 · 0 밑으로 안 감 · 결과 창 한 줄 ⑤ 머리: 상대 목을 베면 1(한 번) ⑥ 인장 → 금화 한 번 ⑦ 테스트 경로 = 정지 창에 대기실 없음 · 싸움은 책 모두 · 금화·인장 그대로 ⑧ 세로 폰 = 돌려 달라는 안내가 대기실을 덮음 · 프로필 그림(768)
+//  ④ 금화: 진 판 −5~10(10/24 03:0x — 전 −1~5) · 0 밑으로 안 감 · 결과 창 한 줄 ⑤ 머리: 상대 목을 베면 1(한 번) ⑥ 인장 → 금화 한 번 ⑦ 테스트 경로 = 정지 창에 대기실 없음 · 싸움은 책 모두 · 금화·인장 그대로 ⑧ 세로 폰 = 돌려 달라는 안내가 대기실을 덮음 · 프로필 그림(768)
 //  10/17 11:2x 흐름: 첫 화면 'Stage 1' · '이어하기' → 곧바로 여정(카드, 장착한 무기가 있으면 싸움) → 정지 → 대기실 (tools/browser/to_lobby.mjs) · 대기실 출발 = 이어하기 지점부터
 //  npm run build && npx vite preview --port 5210 →  node tools/browser/lobby_fix_smoke.mjs http://127.0.0.1:5210 /tmp/<빈 폴더>
 import { chromium } from 'playwright';
@@ -115,13 +115,13 @@ try {
   await p.evaluate(() => game.player.die('기절', true)); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 90000 });
   const lost = await progress(p); assert.ok(lost.coins >= 0 && lost.coins <= 1, JSON.stringify(lost));
   assert.equal(await p.locator('#menuReward').textContent(), `금화 −${2 - lost.coins}`); await p.screenshot({ path: `${out}/result-loss.png` });
-  checks.push('journey loss: coins −1..5 with a floor at 0, shown on the result screen');
+  checks.push('journey loss: coins −5..10 with a floor at 0, shown on the result screen');
   await p.locator('#btnStart').click(); await p.waitForFunction(() => game.state === 'draw', null, { timeout: 90000 }); await pick(p, 0);
   const headsBefore = (await progress(p)).heads;
   await p.evaluate(() => { game.enemy.detachHeadFromWound({ severity: 1, zone: 'neck', finishPower: false }); game.enemy.detachHeadFromWound({ severity: 1, zone: 'neck', finishPower: false }); });
   await p.waitForFunction(() => game.state === 'paused', null, { timeout: 90000 });
   const won = await progress(p); assert.equal(won.heads, headsBefore + 1);
-  assert.match(await p.locator('#menuReward').textContent(), /^금화 \+(?:[5-9]|1[0-5]) · 머리 \+1$/); await p.screenshot({ path: `${out}/result-win-head.png` });
+  assert.match(await p.locator('#menuReward').textContent(), /^금화 \+(?:1[0-9]|2[0-5]) · 머리 \+1$/); // 이기면 +10 ~ 25 (사장님 10/24 03:0x) await p.screenshot({ path: `${out}/result-win-head.png` });
   const rewardIcons = await imgs(p, '#menuReward img', false); // 결과 창 금화 · 주머니 그림 (꾸밈 — 빈 alt · aria-hidden · 14 px)
   assert.deepEqual(rewardIcons.map(({ src, ok, alt, hidden, w }) => ({ src, ok, alt, hidden, w })), [{ src: 'ui/wallet/coins.webp', ok: true, alt: '', hidden: 'true', w: 14 }, { src: 'ui/wallet/pouch.webp', ok: true, alt: '', hidden: 'true', w: 14 }], JSON.stringify(rewardIcons));
   checks.push('decapitating the foe in a journey gives one head (once per foe) and the result line shows coins + head (smooth coin + pouch pictures load, 14 px, hidden from screen readers)');

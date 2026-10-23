@@ -97,14 +97,14 @@ test('바꾼 알림은 한 번: 판을 처음 연 때 바꾸고(어느 길이든
 });
 
 // ── 여정 금화 · 머리 (사장님 10/16 04:3x) ──
-test('판 끝 금화: 낮 이기면 +10~30 · 지면 −1~5 · 밤 이기면 +20~60 · 지면 −2~10 (정수) · 0 아래로 안 내려감 (사장님 10/22)', () => {
-  assert.deepEqual(JSON.parse(JSON.stringify(JOURNEY_COINS)), { win: [10, 30], loss: [1, 5], night: { win: [20, 60], loss: [2, 10] } });
+test('판 끝 금화: 낮 · 밤 같음 — 이기면 +10~25 · 지면 −5~10 (정수) · 0 아래로 안 내려감 (사장님 10/24 03:0x — 전 낮 +10~30 / −1~5 · 밤 +20~60 / −2~10)', () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(JOURNEY_COINS)), { win: [10, 25], loss: [5, 10], night: { win: [10, 25], loss: [5, 10] } });
   reset();
-  assert.deepEqual(journeyCoins(true, (lo) => lo).delta, 10); assert.deepEqual(journeyCoins(true, (lo, hi) => hi).delta, 30);
-  assert.equal(readProgress().coins, 140);
-  assert.equal(journeyCoins(false, (lo, hi) => hi).delta, -5); assert.equal(readProgress().coins, 135);
-  assert.equal(journeyCoins(true, (lo, hi) => hi, { night: true }).delta, 60); assert.equal(journeyCoins(false, (lo, hi) => hi, { night: true }).delta, -10);
-  assert.equal(journeyCoins(true, (lo) => lo, { night: true }).delta, 20); assert.equal(readProgress().coins, 205);
+  assert.deepEqual(journeyCoins(true, (lo) => lo).delta, 10); assert.deepEqual(journeyCoins(true, (lo, hi) => hi).delta, 25);
+  assert.equal(readProgress().coins, 135);
+  assert.equal(journeyCoins(false, (lo, hi) => hi).delta, -10); assert.equal(journeyCoins(false, (lo) => lo).delta, -5); assert.equal(readProgress().coins, 120);
+  assert.equal(journeyCoins(true, (lo, hi) => hi, { night: true }).delta, 25); assert.equal(journeyCoins(false, (lo, hi) => hi, { night: true }).delta, -10);
+  assert.equal(journeyCoins(true, (lo) => lo, { night: true }).delta, 10); assert.equal(journeyCoins(false, (lo) => lo, { night: true }).delta, -5); assert.equal(readProgress().coins, 140);
   setCoins(3); assert.equal(journeyCoins(false, (lo, hi) => hi).delta, -3); assert.equal(readProgress().coins, 0); // 바닥 0
   assert.equal(journeyCoins(false, (lo, hi) => hi).delta, 0); assert.equal(readProgress().coins, 0);
   const seen = { win: new Set(), loss: new Set() };

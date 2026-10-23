@@ -1,5 +1,5 @@
 // 판 시작 카메라 흐름 확인 (10/15 — docs/strike/camera_open_2026-10-15.md §3): 실제 페이지를 가상 시계 60 fps 로 돌려 판을 여러 번 연다.
-//  ① 여정: 메뉴에서 시작(포세이돈 — 훑기) → 상대를 쓰러뜨려 '다음 여정'(화전 터 — 훑기) → 내가 쓰러져 '다시 겨루기'(같은 무대 — 내려앉기 1 s) → 일시정지 '처음부터 다시'(내려앉기)
+//  ① 여정: 메뉴에서 시작(포세이돈 — 훑기) → 상대를 쓰러뜨려 '다음 여정'(화전 터 — 훑기) → 내가 쓰러져 '다시 겨루기'(같은 무대 — 내려앉기 1 s) → 일시정지 '재대결'(내려앉기 — 10/24 02:4x 전 '처음부터 다시')
 //  ② `?openSweep=0`: 9/30 판 시작 (정지 2 s · 소개는 정지 동안)
 //  ③ 카드 뽑기 흐름(?weapon 없이 · ?stage=castle): 카드를 고르는 동안 카메라가 훑기 시작 자리에 서 있나 → 카드가 사라지면 훑기
 //  ④ 기본 상대(?foe=default — 판 시작 몸짓 persona.idle 이 없는 AI): 훑기 동안 나서거나 휘두르지 않나
@@ -88,10 +88,10 @@ const expect = (cond, msg) => { if (!cond) { bad++; console.log(`   ✗ ${msg}`)
   console.log(`   결과 단추: ${label2}`);
   const c = await watchRound(page, `'${label2}'`, () => page.evaluate(() => document.getElementById('btnStart').click()));
   expect(c.mode === 'settle' && c.stage === 'clearing' && Math.abs(c.hold - 1.1) < 1e-3, "'다시 겨루기'는 내려앉기 1.1 s");
-  // 일시정지 → 처음부터 다시
+  // 일시정지 → 재대결
   await page.evaluate(() => { window.__tick(30); document.getElementById('btnPause').click(); window.__tick(2); });
-  const d = await watchRound(page, '처음부터 다시', () => page.evaluate(() => document.getElementById('btnStart').click()));
-  expect(d.mode === 'settle', '처음부터 다시도 내려앉기');
+  const d = await watchRound(page, '재대결', () => page.evaluate(() => document.getElementById('btnStart').click()));
+  expect(d.mode === 'settle', '재대결도 내려앉기');
   for (const r of [a, b, c, d]) {
     expect(r.bothHeldBefore, `${r.stage}/${r.mode}: 판 시작 동안 두 발 묶임`);
     expect(r.foeFreeAtLand, `${r.stage}/${r.mode}: 카메라가 닿는 화면에서 발이 풀림`);

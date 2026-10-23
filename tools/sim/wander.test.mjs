@@ -8,7 +8,7 @@ const memory = new Map();
 globalThis.localStorage = { getItem: (k) => memory.get(k) ?? null, setItem: (k, v) => memory.set(k, String(v)), removeItem: (k) => memory.delete(k) };
 let freshId = 0;
 const fresh = () => import(`../../src/lobby_progress.js?wander=${freshId++}`); // 새로고침 흉내 (모듈 메모리 비움)
-const { WANDER, WANDER_EXCLUSIVE, WANDER_BONUS, WANDER_HEAD, WANDER_NOTICE_TEXT, wanderReward, normalizeWander, chooseWanderEncounter, legacyWanderStages } = await import('../../src/wander_rules.js');
+const { WANDER, WANDER_EXCLUSIVE, WANDER_BONUS, WANDER_BONUS_LABEL, WANDER_COINS, WANDER_STREAK, WANDER_HEAD, WANDER_NOTICE_TEXT, wanderReward, wanderStreakPct, wanderStreakBonus, normalizeWander, chooseWanderEncounter, legacyWanderStages } = await import('../../src/wander_rules.js');
 const { STAGE_ORDER } = await import('../../src/stages.js');
 const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
 const encounter = (foe = 'roland', stage = 'poseidon') => () => ({ stage, foe, foeWeapon: 'tizona' });
@@ -69,14 +69,20 @@ test('대면 뽑기: 무대 · 상대를 따로 · 방랑 전용 다섯은 모�
   assert.deepEqual([...WANDER_EXCLUSIVE], ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo']);
   for (const id of WANDER_EXCLUSIVE) assert.ok(CHARACTERS_BY_ID[id], id);
   assert.deepEqual(Object.keys(WANDER_BONUS), ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo']);
-  assert.deepEqual(wanderReward(true, 'roland', 12), { coins: 424, heads: 0, bonus: { coins: 400, heads: 0 } }, '롤랑 금화 +400 (사장님 10/24 01:5x — 전 250) · 일반 12 × 2 뒤에 더함');
-  assert.deepEqual(wanderReward(true, 'bernardo', 12), { coins: 424, heads: 0, bonus: { coins: 400, heads: 0 } }, '베르나르도 = 롤랑과 같은 몫 (사장님 10/23 저녁 · 10/24 400)');
-  assert.deepEqual(wanderReward(true, 'artoria', 12), { coins: 274, heads: 0, bonus: { coins: 250, heads: 0 } }, '아르토리아 금화 +250 (사장님 10/24 01:5x — 전 200)');
-  assert.deepEqual(wanderReward(true, 'artoria_mad', 12), { coins: 274, heads: 0, bonus: { coins: 250, heads: 0 } });
-  assert.deepEqual(wanderReward(false, 'bernardo', 4), { coins: -4, heads: 0, bonus: { coins: 0, heads: 0 } });
-  assert.deepEqual(wanderReward(true, 'white_scale', 12), { coins: 24, heads: 10, bonus: { coins: 0, heads: 10 } }, '백린 머리 +10 (사장님 10/23 저녁)');
-  assert.deepEqual(wanderReward(false, 'roland', 3), { coins: -3, heads: 0, bonus: { coins: 0, heads: 0 } }, '지면 특별 몫 없음 · 일반 차감');
-  assert.equal(WANDER_HEAD, 2);
+  const Z = { coins: 0, heads: 0 };
+  assert.deepEqual(wanderReward(true, 'roland', 32), { coins: 232, heads: 0, bonus: { coins: 200, heads: 0 }, streak: 0 }, '롤랑 왕의 금고 +200 (사장님 10/24 02:4x — 전 400) · 판 금화 32 뒤에 더함');
+  assert.deepEqual(wanderReward(true, 'bernardo', 32), { coins: 232, heads: 0, bonus: { coins: 200, heads: 0 }, streak: 0 }, '베르나르도 = 롤랑과 같은 몫 (사장님 10/23 저녁 · 10/24 02:4x 200)');
+  assert.deepEqual(wanderReward(true, 'artoria', 32), { coins: 132, heads: 0, bonus: { coins: 100, heads: 0 }, streak: 0 }, '아르토리아 왕의 금고 +100 (사장님 10/24 02:4x — 전 250)');
+  assert.deepEqual(wanderReward(true, 'artoria_mad', 32), { coins: 132, heads: 0, bonus: { coins: 100, heads: 0 }, streak: 0 });
+  assert.deepEqual(wanderReward(true, 'heinrich', 32), { coins: 32, heads: 0, bonus: Z, streak: 0 }, '방랑 전용이 아닌 상대 = 판 금화 그대로');
+  assert.deepEqual(wanderReward(false, 'bernardo', 14), { coins: -14, heads: 0, bonus: Z, streak: 0 });
+  assert.deepEqual(wanderReward(true, 'white_scale', 32), { coins: 32, heads: 10, bonus: { coins: 0, heads: 10 }, streak: 0 }, '백린 빼앗은 수급 머리 +10 (사장님 10/23 저녁 · 10/24 그대로)');
+  assert.deepEqual(wanderReward(false, 'roland', 13, 5), { coins: -13, heads: 0, bonus: Z, streak: 0 }, '지면 특별 몫 · 연승 보너스 없음');
+  assert.deepEqual(wanderReward(true, 'roland', 31, 3), { coins: 236, heads: 0, bonus: { coins: 200, heads: 0 }, streak: 5 }, '3승째 롤랑: 31 + 연승 보너스 15 % 올림(4.65) 5 + 왕의 금고 200 (왕의 금고에는 % 를 걸지 않음)');
+  assert.deepEqual(JSON.parse(JSON.stringify(WANDER_COINS)), { win: [20, 50], loss: [10, 20] }, '방랑 판 금화 (사장님 10/24 03:0x — 낮 · 밤 같음)');
+  assert.equal(WANDER_HEAD, 1, '참수 머리 1 — 여정과 같음 (사장님 10/24 02:4x — 전 2)');
+  assert.deepEqual({ ...WANDER_BONUS_LABEL }, { coins: '왕의 금고', heads: '빼앗은 수급', streak: '연승 보너스' }, '보너스 이름 (사장님 10/24 02:4x · 03:0x)');
+  assert.match(WANDER_NOTICE_TEXT, /이기면 보상이 두 배입니다/, '알림 글 그대로 — 방랑 +20~50 = 여정 +10~25 의 두 배 (10/24 03:0x)');
   assert.match(WANDER_NOTICE_TEXT, /방랑이 열렸습니다/);
   assert.doesNotMatch(WANDER_NOTICE_TEXT, /\(/, '알림 글에 괄호 없음');
   assert.equal(WANDER_NOTICE_TEXT.split('\n').length, 2, '알림 글 두 문단 (사장님 10/24 — 셋째 문단 뺌)');
@@ -93,50 +99,101 @@ test('판 저장 · 보상: 다시 열어도 같은 판 · 머리 한 번 · 정
   assert.equal(p.ensureWanderRun(() => { throw new Error('진행 중 판을 다시 뽑으면 안 됨'); }).weapon, 'rapier');
   assert.ok(p.awardWanderHead());
   assert.ok(!p.awardWanderHead(), '판마다 한 번');
-  assert.deepEqual(p.settleWander(true, () => 10), { coins: 420, heads: 2, bonus: { coins: 400, heads: 0 } }, '롤랑: 10 × 2 + 400 · 참수 머리 2');
+  assert.deepEqual(p.settleWander(true, () => 30), { coins: 230, heads: 1, bonus: { coins: 200, heads: 0 }, streak: 0 }, '롤랑 1승째: 30 + 왕의 금고 200 · 참수 머리 1 · 연승 보너스 없음');
   const wallet = p.readProgress();
   p = await fresh();
-  assert.equal(p.settleWander(true, () => 10), null, '새로고침 뒤 같은 판을 또 셈하지 않는다');
+  assert.equal(p.settleWander(true, () => 30), null, '새로고침 뒤 같은 판을 또 셈하지 않는다');
   assert.equal(p.readProgress().coins, wallet.coins);
   assert.equal(p.readProgress().heads, wallet.heads);
   const second = p.ensureWanderRun(encounter('white_scale'));
   assert.equal(second.id, first.id);
   assert.equal(second.round, 2);
   assert.equal(second.lastWeapon, 'rapier');
-  assert.deepEqual(p.settleWander(true, () => 5), { coins: 10, heads: 10, bonus: { coins: 0, heads: 10 } }, '백린 머리 10 은 참수와 무관');
+  assert.deepEqual(p.settleWander(true, () => 25), { coins: 25, heads: 10, bonus: { coins: 0, heads: 10 }, streak: 0 }, '백린 2승째: 빼앗은 수급 머리 10 은 참수와 무관 · 연승 보너스 없음');
   p.ensureWanderRun(encounter('artoria_mad'));
-  assert.equal(p.settleWander(true, () => 15).coins, 280, '광기의 아르토리아 금화 +250 (15 × 2 + 250 — 10/24, 전 200)');
+  assert.deepEqual(p.settleWander(true, () => 35), { coins: 141, heads: 0, bonus: { coins: 100, heads: 0 }, streak: 6 }, '광기의 아르토리아 3승째: 35 + 연승 보너스 15 % 올림(5.25) 6 + 왕의 금고 100');
   p.ensureWanderRun(encounter('bernardo'));
-  assert.deepEqual(p.settleWander(true, () => 15), { coins: 430, heads: 0, bonus: { coins: 400, heads: 0 } }, '베르나르도 금화 +400 (일반 15 × 2 + 400)');
+  assert.deepEqual(p.settleWander(true, () => 35), { coins: 242, heads: 0, bonus: { coins: 200, heads: 0 }, streak: 7 }, '베르나르도 4승째: 35 + 20 % 7 + 왕의 금고 200');
   p.ensureWanderRun(encounter('white_scale'));
   assert.ok(p.awardWanderHead());
-  assert.equal(p.settleWander(true, () => 5).heads, 12, '백린을 베어 이기면 머리 12 (특별 10 + 참수 2)');
+  assert.deepEqual(p.settleWander(true, () => 25), { coins: 32, heads: 11, bonus: { coins: 0, heads: 10 }, streak: 7 }, '백린 5승째를 베어 이기면: 25 + 25 % 올림(6.25) 7 · 머리 11 (빼앗은 수급 10 + 참수 1)');
   p.ensureWanderRun(encounter('heinrich'));
-  assert.equal(p.settleWander(true, () => 15).coins, 30);
+  assert.deepEqual(p.settleWander(true, () => 40), { coins: 52, heads: 0, bonus: { coins: 0, heads: 0 }, streak: 12 }, '일반 상대 6승째: 40 + 30 % 12');
+  assert.equal(p.readProgress().wander.run.wins, 6);
   p.ensureWanderRun(encounter('roland'));
-  assert.equal(p.settleWander(false, () => 3).coins, -3);
+  assert.deepEqual(p.settleWander(false, () => 13), { coins: -13, heads: 0, bonus: { coins: 0, heads: 0 }, streak: 0 }, '7번째 판에서 짐: 판 금화만 잃음 · 연승 보너스 없음');
   assert.equal(p.readProgress().wander.run.status, 'lost');
   const again = p.ensureWanderRun(encounter());
   assert.equal(again.round, 1, '진 뒤엔 새 연속');
   assert.notEqual(again.id, first.id);
   p.setCoins(1);
-  assert.equal(p.settleWander(false, () => 5).coins, -1, '0 아래로는 안 내려감');
+  assert.equal(p.settleWander(false, () => 15).coins, -1, '0 아래로는 안 내려감');
   assert.equal(p.readProgress().coins, 0);
-  assert.equal(p.journeyCoins(true, () => 5).delta, 5, '일반 판 보상은 그대로');
+  assert.equal(p.journeyCoins(true, () => 15).delta, 15, '여정 판 보상은 따로');
 });
 
-test('보상 범위: 낮 무대 일반 판(10~30)의 두 배 · 밤 무대(20~60)의 두 배', async () => {
+test('보상 범위 (사장님 10/24 03:0x): 방랑 낮 · 밤 무대 모두 이기면 20~50 · 지면 10~20 (전 일반 판 × 2 — 낮 20~60 · 밤 40~120 · 지면 일반 차감)', async () => {
   const p = await reset();
   unlock(p);
   p.ensureWanderRun(encounter('heinrich', 'poseidon_night'));
-  assert.equal(p.settleWander(true, (lo, hi) => { assert.deepEqual([lo, hi], [20, 60]); return hi; }).coins, 120);
+  assert.equal(p.settleWander(true, (lo, hi) => { assert.deepEqual([lo, hi], [20, 50]); return hi; }).coins, 50);
   p.ensureWanderRun(encounter('heinrich', 'poseidon'));
-  assert.equal(p.settleWander(true, (lo, hi) => { assert.deepEqual([lo, hi], [10, 30]); return lo; }).coins, 20);
+  assert.equal(p.settleWander(true, (lo, hi) => { assert.deepEqual([lo, hi], [20, 50]); return lo; }).coins, 20);
+  p.ensureWanderRun(encounter('roland', 'castle_night'));
+  assert.equal(p.settleWander(true, (lo, hi) => hi).coins, 258, '밤 무대 롤랑 3승째: 50 + 연승 보너스 15 % 올림(7.5) 8 + 왕의 금고 200');
   p.ensureWanderRun(encounter('heinrich', 'castle_night'));
-  assert.equal(p.settleWander(false, (lo, hi) => { assert.deepEqual([lo, hi], [2, 10]); return hi; }).coins, -10);
+  assert.equal(p.settleWander(false, (lo, hi) => { assert.deepEqual([lo, hi], [10, 20]); return hi; }).coins, -20);
+  p.ensureWanderRun(encounter('heinrich', 'castle'));
+  assert.equal(p.settleWander(false, (lo, hi) => { assert.deepEqual([lo, hi], [10, 20]); return lo; }).coins, -10);
 });
 
-test('쓰러뜨린 뒤 벤 목도 센다 (리뷰 2-9 — 여정과 같게): 정산 뒤 참수면 머리 +2 · 판 보상에도 · 두 번은 없음', async () => {
+test('연승 보너스 (사장님 10/24 03:0x · 04:3x — 3승째 +15 % 부터 한 판마다 +5 %p · 그 판 금화에만 · 금화 한 닢 단위로 올림)', async () => {
+  assert.deepEqual({ ...WANDER_STREAK }, { from: 3, basePct: 15, stepPct: 5 });
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 10, 20, 30].map(wanderStreakPct), [0, 0, 15, 20, 25, 30, 50, 100, 150], '1 · 2승째 0 · 3승째 15 % (04:3x 기본 15 % 시작) · 4승째 20 % … 30승째 150 % · 상한 없음');
+  assert.equal(wanderStreakPct(0), 0);
+  assert.equal(wanderStreakBonus(1, 50), 0);
+  assert.equal(wanderStreakBonus(2, 50), 0);
+  assert.equal(wanderStreakBonus(3, 20), 3, '3승째 20 × 15 % = 3 딱 — 소수 오차로 4 가 되지 않음');
+  assert.equal(wanderStreakBonus(3, 21), 4, '3승째 21 × 15 % = 3.15 → 올림 4');
+  assert.equal(wanderStreakBonus(3, 25), 4, '3.75 → 4');
+  assert.equal(wanderStreakBonus(3, 50), 8, '7.5 → 8');
+  assert.equal(wanderStreakBonus(4, 20), 4, '4승째 20 × 20 % = 4');
+  assert.equal(wanderStreakBonus(4, 21), 5, '4승째 21 × 20 % = 4.2 → 올림 5');
+  assert.equal(wanderStreakBonus(5, 40), 10, '5승째 40 × 25 % = 10');
+  assert.equal(wanderStreakBonus(30, 20), 30, '30승째 20 × 150 % = 30');
+  assert.equal(wanderStreakBonus(30, 21), 32, '30승째 21 × 150 % = 31.5 → 올림 32');
+  assert.equal(wanderStreakBonus(30, 50), 75, '30승째 50 × 150 % = 75');
+  for (let win = 1; win <= 30; win++) for (let c = 20; c <= 50; c++) {
+    const pct = win < 3 ? 0 : 15 + 5 * (win - 3), whole = Math.floor((c * pct) / 100);
+    assert.equal(wanderStreakBonus(win, c), (c * pct) % 100 === 0 ? whole : whole + 1, `${win}승째 ${c}`);
+  }
+  // 저장 판으로: 한 방랑 1 ~ 4승 → 새로고침 → 5승 → 짐 → 새 방랑 1승 (연승 리셋) · 새로고침 뒤 두 번 받지 않음
+  let p = await reset();
+  unlock(p);
+  const got = [];
+  for (const foe of ['heinrich', 'heinrich', 'roland', 'heinrich']) {
+    p.ensureWanderRun(encounter(foe));
+    got.push(p.settleWander(true, () => 21));
+  }
+  assert.deepEqual(got.map((r) => r.streak), [0, 0, 4, 5], '3승째 21 × 15 % = 3.15 → 4 · 4승째 21 × 20 % = 4.2 → 5');
+  assert.deepEqual(got.map((r) => r.coins), [21, 21, 225, 26], '3승째 롤랑 = 21 + 4 + 왕의 금고 200 (왕의 금고에는 % 를 걸지 않음)');
+  const coins = p.readProgress().coins;
+  assert.equal(p.readProgress().wander.run.reward.streak, 5, '판 보상에 연승 보너스도 남는다 (같은 저장)');
+  p = await fresh();
+  assert.equal(p.settleWander(true, () => 21), null, '새로고침 뒤 같은 판을 또 셈하지 않는다');
+  assert.equal(p.readProgress().coins, coins);
+  assert.equal(p.ensureWanderRun(encounter('heinrich')).wins, 4, '다음 판 = 5승째 자리');
+  p = await fresh(); // 카드 고르다 새로고침 — 같은 판 · 같은 연승 수
+  assert.equal(p.ensureWanderRun(() => { throw new Error('진행 중 판을 다시 뽑으면 안 됨'); }).wins, 4);
+  assert.equal(p.settleWander(true, () => 40).streak, 10, '5승째 40 × 25 %');
+  p.ensureWanderRun(encounter('heinrich'));
+  assert.equal(p.settleWander(false, () => 10).streak, 0);
+  const next = p.ensureWanderRun(encounter('heinrich'));
+  assert.equal(next.wins, 0, '진 뒤 새 방랑 — 연승 0 부터');
+  assert.equal(p.settleWander(true, () => 21).streak, 0, '새 방랑 1승째는 보너스 없음');
+});
+
+test('쓰러뜨린 뒤 벤 목도 센다 (리뷰 2-9 — 여정과 같게): 정산 뒤 참수면 머리 +1 · 판 보상에도 · 두 번은 없음', async () => {
   const p = await reset();
   unlock(p);
   p.ensureWanderRun(encounter('heinrich'));
@@ -144,8 +201,8 @@ test('쓰러뜨린 뒤 벤 목도 센다 (리뷰 2-9 — 여정과 같게): 정�
   assert.equal(r.heads, 0);
   const heads = p.readProgress().heads;
   assert.ok(p.awardWanderHead());
-  assert.equal(p.readProgress().heads, heads + 2);
-  assert.equal(p.readProgress().wander.run.reward.heads, 2);
+  assert.equal(p.readProgress().heads, heads + 1);
+  assert.equal(p.readProgress().wander.run.reward.heads, 1);
   assert.ok(!p.awardWanderHead());
   assert.ok(!(await fresh()).awardWanderHead(), '새로고침 뒤에도 한 번');
 });
@@ -168,7 +225,7 @@ test('무효 판 (리뷰 2-3): 진행 중 판의 상대 · 무대가 지금 목�
   assert.equal(p.ensureWanderRun(() => { throw new Error('고친 판은 그대로'); }, valid).foe, 'roland');
 });
 
-test('도중에 그만두기: 기본 끔(일반 여정과 같게 — 처음부터 다시 = 같은 대면 카드부터 · 나가기 = 같은 대면) · 켬이면 싸우던 판을 버리면 패배', async () => {
+test('도중에 그만두기: 기본 끔(일반 여정과 같게 — 정지 창 재대결 = 같은 대면 카드부터 · 나가기 = 같은 대면) · 켬이면 싸우던 판을 버리면 패배', async () => {
   assert.equal(WANDER.quitAsLoss, false, '기본 끔 (사장님 18:5x 언제든 들어가는 자유 무대 — 감독 판단)');
   const p = await reset();
   unlock(p);
@@ -186,7 +243,7 @@ test('도중에 그만두기: 기본 끔(일반 여정과 같게 — 처음부�
   assert.ok(p.markWanderFighting(true));
   const q = await fresh();
   const lost = q.settleAbandonedWander(() => 3);
-  assert.deepEqual(lost, { coins: -3, heads: 0, bonus: { coins: 0, heads: 0 }, round: 1 });
+  assert.deepEqual(lost, { coins: -3, heads: 0, bonus: { coins: 0, heads: 0 }, streak: 0, round: 1 });
   assert.equal(q.readProgress().wander.run.status, 'lost');
   assert.equal(q.readProgress().coins, coins - 3);
   assert.equal(q.settleAbandonedWander(() => 3), null, '한 번만');
@@ -205,13 +262,13 @@ test('저장 실패: 방랑 거래는 이번 실행 동안 지킨다(보상 두 
   const realSet = localStorage.setItem;
   localStorage.setItem = () => { throw new Error('quota'); };
   p.settleWander(true, () => 10);
-  assert.equal(p.readProgress().coins, 1420);
+  assert.equal(p.readProgress().coins, 1210, '1000 + 롤랑 10 + 왕의 금고 200');
   assert.equal(p.settleWander(true, () => 10), null);
-  assert.equal(p.readProgress().coins, 1420, '옛 지갑을 다시 읽어 또 주지 않는다');
+  assert.equal(p.readProgress().coins, 1210, '옛 지갑을 다시 읽어 또 주지 않는다');
   const buy = p.purchase({ receipt: 'skill:german:footwork', kind: 'skill', price: 100 });
   assert.equal(buy.ok, true);
   assert.equal(buy.saved, false);
-  assert.equal(p.readProgress().coins, 1420, '막힌 구매는 다음 읽기에서 되돌아간다(방랑 거래는 남음)');
+  assert.equal(p.readProgress().coins, 1210, '막힌 구매는 다음 읽기에서 되돌아간다(방랑 거래는 남음)');
   assert.ok(!p.readProgress().acquisitions.some((a) => a.receipt === 'skill:german:footwork'));
   localStorage.setItem = realSet;
   // 바깥 교체(?coins= 같은) — 저장소 글이 바뀌면 메모리 보관을 버린다
@@ -254,13 +311,13 @@ test('방랑 알림 창: 열린 뒤 한 번 — 확인하면 저장에 남아 �
   assert.equal(p.readProgress().wander.noticeSeen, true);
 });
 
-test('방랑 전용 상대 알림 창 (사장님 10/24 01:1x): 대면마다 한 번 — 확인하면 그 판에 남아 처음부터 다시 · 다시 열기에도 안 뜸 · 다음 대면은 새로', async () => {
+test('방랑 전용 상대 알림 창 (사장님 10/24 01:1x): 대면마다 한 번 — 확인하면 그 판에 남아 재대결 · 다시 열기에도 안 뜸 · 다음 대면은 새로', async () => {
   let p = await reset();
   unlock(p);
   assert.equal(p.ensureWanderRun(encounter('roland')).encounterSeen, false);
   assert.ok(p.markWanderEncounter());
   assert.ok(!p.markWanderEncounter(), '한 번만 적는다');
-  p.resetWanderLoadout(); // 정지 '처음부터 다시'
+  p.resetWanderLoadout(); // 정지 '재대결'
   p = await fresh(); // 새로고침 · 대기실 → '방랑 이어가기'
   assert.equal(p.ensureWanderRun(() => { throw new Error('진행 중 판을 다시 뽑으면 안 됨'); }).encounterSeen, true, '같은 대면은 다시 안 뜬다');
   p.settleWander(true, () => 10);
@@ -277,6 +334,11 @@ test('아르토리아 방랑 전용 (사장님 10/23 18:3x): 대성당 · 밤의
   assert.equal(stageFoeId('cathedral_night', 'artoria_mad'), 'margarethe_mad');
   for (let n = 0; n < 300; n++) assert.ok(!WANDER_EXCLUSIVE.includes(randomCharacter().id));
   for (let n = 0; n < 50; n++) assert.notEqual(randomCharacter('heinrich').id, 'heinrich');
+});
+
+test('칭호 왕 (사장님 10/24 02:4x \'셋 다 칭호는 왕으로 해\'): 아르토리아 · 광기의 아르토리아(아르토리아 시트를 복사) · 롤랑 · 베르나르도', () => {
+  for (const id of ['artoria', 'artoria_mad', 'roland', 'bernardo']) assert.equal(CHARACTERS_BY_ID[id].epithet, '왕', id);
+  assert.equal(CHARACTERS_BY_ID.white_scale.epithet, '초원의 검객', '백린의 전사는 그대로');
 });
 
 test('저장 칸 거르기: 모양이 틀린 판은 버리고 나머지는 지킨다', () => {

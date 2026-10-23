@@ -17,7 +17,7 @@ export function createBernardo(baseline) {
     ...base,
     id: 'bernardo',
     name: '베르나르도',
-    epithet: '롤랑의 숙적',
+    epithet: '왕', // 사장님 10/24 02:4x '셋 다 칭호는 왕으로 해' (아르토리아 · 롤랑 · 베르나르도 — 전 '롤랑의 숙적')
     origin: '레온 왕국 · 카르피오',
     look: getLook('bernardo'),
     lookVersion: CHARACTER_LOOK_VERSION.bernardo, // v2 (10/23) — 옛 판 v1

@@ -66,7 +66,7 @@ try {
     // ① 일시정지 → 대기실
     await p.locator('#btnPause').click(); await p.waitForFunction(() => game.state === 'paused', null, { timeout: 10000 });
     const paused = await menu(p);
-    assert.deepEqual({ ...paused, reward: undefined }, { title: '일시정지', start: '처음부터 다시', resume: true, lobby: true, lobbyText: '대기실', fps: true, reward: undefined, test: false });
+    assert.deepEqual({ ...paused, reward: undefined }, { title: '일시정지', start: '재대결', resume: true, lobby: true, lobbyText: '대기실', fps: true, reward: undefined, test: false });
     await shot(p, 'pause-journey');
     const before = await store(p);
     await p.locator('#btnLobby').click(); await inLobby(p);
@@ -106,7 +106,7 @@ try {
     const fightShown = await p.evaluate(() => window.__foeShown);
     const lost = await menu(p);
     assert.equal(lost.title, '패배'); assert.equal(lost.start, '다시 겨루기'); assert.equal(lost.lobby, true); assert.equal(lost.fps, false);
-    assert.match(lost.reward, /^금화 (−[1-5]|±0)$/);
+    assert.match(lost.reward, /^금화 (−(?:[1-9]|10)|±0)$/); // 지면 −5 ~ 10 (사장님 10/24 03:0x — 금화가 모자라면 그만큼만)
     const lostLook = await look(p);
     assert.deepEqual(lostLook.lines, ['기절했다']); // 부제 = 진 까닭 한 줄 (14:4x) — 대사는 10/17 부터 따로 된 줄(#menuFoeLine · 프로필 오른쪽)
     const foeBlock = await p.evaluate(() => ({ shown: !document.getElementById('menuFoe').hidden, src: document.getElementById('menuFoeImg').getAttribute('src'), quote: document.getElementById('menuFoeLine').hidden ? null : document.getElementById('menuFoeQuote').textContent }));

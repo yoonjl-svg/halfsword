@@ -47,7 +47,7 @@ const reward = (p) => p.evaluate(() => { const el = document.getElementById('men
   await p.locator('#btnStart').click(); await pick(p); await settle(p);
   await end(p, 'player');
   const loss = await reward(p);
-  assert.match(loss.text, /^금화 (−\d|±0)$/); assert.equal(loss.icons, 1); assert.equal(loss.color, win.color);
+  assert.match(loss.text, /^금화 (−\d+|±0)$/); // 지면 −5 ~ 10 (10/24 03:0x — 두 자리도) assert.equal(loss.icons, 1); assert.equal(loss.color, win.color);
   assert.equal(await p.locator('#btnStart').textContent(), '다시 겨루기');
   await shot(p, 'result-loss', size);
   await p.locator('#btnStart').click(); await pick(p); await settle(p);
