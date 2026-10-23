@@ -2,6 +2,7 @@ import { alterLook } from './outfit_alter.js';
 import { createRoland } from './character_roland.js'; // 손님 인물 롤랑 (10/23 — 방랑 전용, docs/import/wander_heroes_import_2026-10-23.md)
 import { createWhiteScaleWarrior } from './character_white_scale.js'; // 손님 인물 백린의 전사(가칭 — 방랑 전용)
 import { createBernardo } from './character_bernardo.js'; // 손님 인물 베르나르도 (롤랑의 숙적 — 방랑 전용)
+import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 방랑에서만 나오는 상대 — 무작위 상대에서 뺀다 (사장님 10/23 18:3x '아르토리아 방랑 전용')
 // ─────────────────────────────────────────────────────────────
 //  상대 캐릭터 12인(다섯 + 샛별 저장소에서 가져온 셋 6~8 · 넷 9~12): 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
 //
@@ -992,8 +993,9 @@ export function lineSourceOf(char, line) {
   return (line && char?.lineSources?.[line]) || '';
 }
 
-/** id가 없거나 목록에 없으면 무작위 캐릭터 (excludeId가 있으면 그 캐릭터는 뺀다) */
+/** id가 없거나 목록에 없으면 무작위 캐릭터 (excludeId가 있으면 그 캐릭터는 뺀다) · 방랑 전용(WANDER_EXCLUSIVE — 기본 회전에는 아르토리아)은 늘 뺀다 (10/23).
+ *  시뮬 라운드로빈은 CHARACTERS 를 그대로 쓰니 아르토리아가 남는다(관문 해시 그대로) */
 export function randomCharacter(excludeId) {
-  const pool = excludeId ? CHARACTERS.filter((c) => c.id !== excludeId) : CHARACTERS;
+  const pool = CHARACTERS.filter((c) => c.id !== excludeId && !WANDER_EXCLUSIVE.includes(c.id));
   return pool[Math.floor(Math.random() * pool.length)];
 }

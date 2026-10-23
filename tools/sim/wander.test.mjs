@@ -252,6 +252,16 @@ test('방랑 알림 창: 열린 뒤 한 번 — 확인하면 저장에 남아 �
   assert.equal(p.readProgress().wander.noticeSeen, true);
 });
 
+test('아르토리아 방랑 전용 (사장님 10/23 18:3x): 대성당 · 밤의 대성당 후보 없음 · 무작위 상대에 방랑 전용 없음', async () => {
+  const { STAGE_FOE_EXTRA, stageFoeId } = await import('../../src/stages.js');
+  const { randomCharacter } = await import('../../src/characters.js');
+  assert.deepEqual(STAGE_FOE_EXTRA, {});
+  assert.equal(stageFoeId('cathedral', 'artoria'), 'margarethe', '저장된 상대가 아르토리아여도 마르그레테');
+  assert.equal(stageFoeId('cathedral_night', 'artoria_mad'), 'margarethe_mad');
+  for (let n = 0; n < 300; n++) assert.ok(!WANDER_EXCLUSIVE.includes(randomCharacter().id));
+  for (let n = 0; n < 50; n++) assert.notEqual(randomCharacter('heinrich').id, 'heinrich');
+});
+
 test('저장 칸 거르기: 모양이 틀린 판은 버리고 나머지는 지킨다', () => {
   assert.deepEqual(normalizeWander(null), { cleared: [], unlocked: false, legacyChecked: false, noticeSeen: false, run: null });
   const w = normalizeWander({ cleared: ['poseidon', 'poseidon', 'X!', 3], unlocked: true, noticeSeen: true, run: { id: 'a', round: 0, wins: 0, stage: 'poseidon', foe: 'roland', foeWeapon: 'tizona', status: 'active' } });
