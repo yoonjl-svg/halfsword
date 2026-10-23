@@ -5,7 +5,7 @@
 //  무기 칸: 나뭇가지 하나 (사장님 10/16 01:0x '무기에 롱소드는 삭제') — 설명 카드는 우리 무기 자료(weapons.js nameKo · desc · tier)를 lobby.js 가 읽는다.
 //  방어구 칸: 둘 — 케틀 햇(머리 · 플레이어 겉모습의 머리 장비 looks.js helmet 'kettle') · 용사의 눈물(목 · 겉모습 그대로, 10/17 아래 HERO_TEAR).
 //   거는 자리가 달라 둘 다 걸 수 있다 (armorSlot — 머리는 전 저장 armor.v1 그대로 · 목은 neck.v1).
-export const LOBBY_ITEMS = Object.freeze(['tree_branch']);
+export const LOBBY_ITEMS = Object.freeze(['tree_branch', 'druid_whip']); // 10/24 01:3x 사장님 '드루이드의 채찍 … 모든 플레이어 인벤토리에 지급해' — 나뭇가지처럼 모두가 가진 시작 무기(레벨 셈 밖)
 const KETTLE_STAMINA = 30; // 케틀 햇 특수 능력 '생존술': 최대 기력 100 → 130 (사장님 10/16 03:5x — 플레이어만, 문턱·그 밖 규칙 그대로 · stamina.js setMaxBonus)
 export const LOBBY_ARMOR = Object.freeze({
   id: 'kettle',

@@ -84,7 +84,7 @@ try{
  assert.equal(await p.locator('#duelRecord').textContent(),'0승리 0패배 (0%)');
  assert.equal(await p.locator('#panelInventory').isVisible(),true);
  const thumbs=await p.locator('.inventory-item img').evaluateAll(els=>els.map(e=>({loaded:e.complete&&e.naturalWidth>0,src:e.getAttribute('src')})));
- assert.deepEqual(thumbs.map(t=>t.src),['ui/weapons/tree_branch.webp','ui/armor/kettle.webp','ui/armor/hero_tear.webp']);assert.ok(thumbs.every(t=>t.loaded)); // 아이템 칸 한 판 = 무기 다음 방어구 (10/18 04:1x)
+ assert.deepEqual(thumbs.map(t=>t.src),['ui/weapons/tree_branch.webp','ui/weapons/druid_whip.webp','ui/armor/kettle.webp','ui/armor/hero_tear.webp']);assert.ok(thumbs.every(t=>t.loaded)); // 아이템 칸 한 판 = 무기 다음 방어구 (10/18 04:1x)
  await screenshot(p,'lobby-phone');
  check('pause → 대기실 during the card draw opens the lobby (depart button Stage 입장; game behind stopped, checkpoint kept); first visit shows the one-time seal → coins notice');
  // 10/17 22:1x 사장님: 3D 미리보기(돌림판) → 정사각 프로필 그림 (전 점검: 끌어 돌리기 180° · 방향키 Home). 이제: 플레이어 그림(10/18 16:3x 투명 배경 도트판 · player2)이 떴나 · 정사각 · 칸 폭 그대로 · 출발 단추와 안 겹침 · 눌러도 판 몸 그대로

@@ -13,7 +13,7 @@ test('our key names (no fork names, no clash with existing keys)',()=>{
  for(const k of keys)assert.ok(!/fork/i.test(k)&&!['stillness.journeyClears.v1','stillness.testRoute.v1','gladiator-settings'].includes(k));
 });
 test('owner changes: weapon slot is tree branch only; armor name is one constant; kettle hat = epic (10/19 03:1x · 전 legend 10/16 03:5x) + 생존술 +30',()=>{
- assert.deepEqual([...LOBBY_ITEMS],['tree_branch']);
+ assert.deepEqual([...LOBBY_ITEMS],['tree_branch','druid_whip']);
  assert.equal(LOBBY_ARMOR.nameKo,'케틀 햇');assert.equal(LOBBY_ARMOR.tier,'epic');assert.equal(LOBBY_ARMOR.staminaBonus,30);
  assert.equal(`${LOBBY_ARMOR.description} ${LOBBY_ARMOR.ability}`,'중세 보병들이 쓰던 챙 넓은 쇠 모자. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)');
  assert.equal(saveLobbyEquipment('longsword'),false);assert.equal(saveLobbyEquipment('tree_branch'),true);assert.equal(readLobbyEquipment(),'tree_branch');

@@ -128,9 +128,9 @@ try {
   const p = A.p;
   await lobby(p);
   assert.equal(await p.locator('#tabItems').getAttribute('aria-selected'), 'true'); // 아이템 칸이 처음 탭 (10/18 04:1x — 무기 · 방어구를 합침)
-  assert.equal(await p.locator('#inventoryCount').textContent(), '3개');
-  assert.equal(await p.locator('.inventory-item').count(), 3); assert.equal(await p.locator('.inventory-slot').count(), 21);
-  assert.deepEqual(await p.locator('.inventory-item').evaluateAll((els) => els.map((e) => e.dataset.item)), ['tree_branch', 'kettle', 'hero_tear']); // 무기 다음 방어구
+  assert.equal(await p.locator('#inventoryCount').textContent(), '4개');
+  assert.equal(await p.locator('.inventory-item').count(), 4); assert.equal(await p.locator('.inventory-slot').count(), 20);
+  assert.deepEqual(await p.locator('.inventory-item').evaluateAll((els) => els.map((e) => e.dataset.item)), ['tree_branch', 'druid_whip', 'kettle', 'hero_tear']); // 무기 다음 방어구
   const thumbs = await p.locator('.inventory-item[data-armor] img').evaluateAll((els) => Promise.all(els.map((i) => i.decode().catch(() => {}).then(() => ({ src: i.getAttribute('src'), alt: i.alt, ok: i.complete && i.naturalWidth === 256, fit: i.dataset.fit })))));
   assert.deepEqual(thumbs.map((t) => [t.src, t.alt, t.ok]), [['ui/armor/kettle.webp', '케틀 햇', true], ['ui/armor/hero_tear.webp', '용사의 눈물', true]], JSON.stringify(thumbs));
   assert.deepEqual(await p.locator('.inventory-item[data-armor]').evaluateAll((els) => els.map((e) => [e.dataset.armor, e.dataset.tier])), [['kettle', 'legend'], ['hero_tear', 'legend']]);

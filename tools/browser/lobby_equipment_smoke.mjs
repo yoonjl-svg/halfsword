@@ -41,9 +41,9 @@ try{
  const lobbyButton=await style('#tabItems'),otherTab=await style('#tabShop');assert.equal(lobbyButton[1],'12px');assert.equal(titleButton[1],'14px');assert.deepEqual([titleButton[2],lobbyButton[2],otherTab[2]],['700','600','400']);
  assert.ok(titleButton[0].startsWith('Cinzel, Pretendard'),titleButton[0]);assert.equal(lobbyButton[0],titleButton[0]);assert.equal(await p.locator('#lobbyBack').textContent(),'첫 화면');assert.equal(await p.locator('#lobbyDepart').textContent(),'Stage 입장');
  assert.deepEqual(titleButton.slice(4),['0px','none','none']);assert.deepEqual(lobbyButton.slice(3),['rgb(217, 164, 65)','1px','none','none']);assert.deepEqual(otherTab.slice(3),['rgba(243, 233, 216, 0.18)','1px','none','none']);
- await state(p,false,false,'');assert.equal(await p.locator('.inventory-item').count(),3);assert.equal(await p.locator('.inventory-slot').count(),21); // 24 칸 = 물건 3 + 빈 칸 21
- assert.deepEqual(await p.locator('.inventory-item').evaluateAll(els=>els.map(e=>[e.dataset.item,e.dataset.weapon??null,e.dataset.armor??null,e.dataset.tier])),[['tree_branch','tree_branch',null,'trash'],['kettle',null,'kettle','legend'],['hero_tear',null,'hero_tear','legend']]); // 무기 다음 방어구 한 판
- assert.deepEqual([await p.locator('#inventoryHeading').textContent(),await p.locator('#inventoryCount').textContent(),await p.locator('.inventory-grid').getAttribute('aria-label')],['아이템','3개','가로 6칸 세로 4칸']);
+ await state(p,false,false,'');assert.equal(await p.locator('.inventory-item').count(),4);assert.equal(await p.locator('.inventory-slot').count(),20); // 24 칸 = 물건 4(채찍 10/24) + 빈 칸 20
+ assert.deepEqual(await p.locator('.inventory-item').evaluateAll(els=>els.map(e=>[e.dataset.item,e.dataset.weapon??null,e.dataset.armor??null,e.dataset.tier])),[['tree_branch','tree_branch',null,'trash'],['druid_whip','druid_whip',null,'mystery'],['kettle',null,'kettle','epic'],['hero_tear',null,'hero_tear','legend']]); // 무기 다음 방어구 한 판
+ assert.deepEqual([await p.locator('#inventoryHeading').textContent(),await p.locator('#inventoryCount').textContent(),await p.locator('.inventory-grid').getAttribute('aria-label')],['아이템','4개','가로 6칸 세로 4칸']);
  assert.equal(await p.locator('[data-weapon=longsword]').count(),0);
  const layout=await p.locator('.inventory-grid').evaluate(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect(),item=e.firstElementChild.getBoundingClientRect(),root=e.getRootNode();return {columns:s.gridTemplateColumns.split(' ').length,rows:s.gridTemplateRows.split(' ').length,cell:[item.width,item.height],width:r.width,frame:root.querySelector('.portrait-card').getBoundingClientRect().toJSON(),panel:root.querySelector('.character-panel').getBoundingClientRect().toJSON(),depart:root.getElementById('lobbyDepart').getBoundingClientRect().toJSON()};});
  assert.equal(layout.columns,6);assert.equal(layout.rows,4);{const k=layout.cell[0]/layout.cell[1];assert.ok(k>.97&&k<1.03,`cell ${layout.cell}`);} // 10/18 04:1x 6 × 4 · 칸 정사각(03:3x — 전 10/17 23:4x 가로로 1.27 ~ 1.34)
@@ -60,7 +60,7 @@ try{
  assert.deepEqual(menu.map(m=>m.text),['아이템','상점','스킬북','이벤트']);assert.equal(menu[0].y,menu[1].y);assert.equal(menu[2].y,menu[3].y);assert.ok(menu[2].y>menu[0].y);assert.equal(menu[0].x,menu[2].x);assert.equal(menu[1].x,menu[3].x); // 10/18 04:1x 윗칸 아이템 · 상점 · 아랫칸 스킬북 · 이벤트
  assert.equal(await p.locator('#tabWeapons, #tabArmor').count(),0);
  assert.deepEqual(await p.locator('.inventory-item[data-armor]').evaluateAll(els=>els.map(e=>e.dataset.armor)),['kettle','hero_tear']); // 방어구는 무기 다음 칸 (10/17 용사의 눈물이 케틀 햇 다음 — hero_tear_smoke 가 자세히 본다)
- assert.deepEqual(await badges(p),[['tree_branch',false],['kettle',true],['hero_tear',true]]); // 새 기기: 무기 없음 · 케틀 햇 · 용사의 눈물 장착
+ assert.deepEqual(await badges(p),[['tree_branch',false],['druid_whip',false],['kettle',true],['hero_tear',true]]); // 새 기기: 무기 없음 · 케틀 햇 · 용사의 눈물 장착
  await p.locator('[data-armor=kettle] img').evaluate(img=>img.decode());await p.locator('button[data-armor=kettle]').tap();
  let k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,'케틀 햇','레전드','중세 보병들이 쓰던 챙 넓은 쇠 모자. 뒤집으면 요리를 할 수 있다. (생존술: 기력 +30)']);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
  assert.deepEqual(await p.locator('#itemDetail').evaluate(e=>[getComputedStyle(e.querySelector('#itemRarity')).color,getComputedStyle(e.querySelector('#itemName')).color,getComputedStyle(e.querySelector('.item-ability')).color]),Array(3).fill('rgb(255, 210, 74)')); // 레전드 = --tier-legend (사장님 10/16 03:5x)
@@ -77,11 +77,11 @@ try{
  k=await card(p);assert.deepEqual([k.hidden,k.name,k.rarity,k.description],[false,branch.nameKo,TIER_LABEL[branch.tier],branch.desc]);assert.ok(k.inside&&!k.overflow,JSON.stringify(k));
  assert.equal(k.rarity,'쓰레기');await shot(p,'branch-selected');
  await p.locator('#equipItem').tap();await state(p,false,true,'tree_branch');await shot(p,'branch-equipped');
- assert.deepEqual(await badges(p),[['tree_branch',true],['kettle',true],['hero_tear',true]]); // 무기를 걸어도 방어구 자리는 그대로 (자리마다 따로 — 한 판이어도 규칙 그대로)
+ assert.deepEqual(await badges(p),[['tree_branch',true],['druid_whip',false],['kettle',true],['hero_tear',true]]); // 무기를 걸어도 방어구 자리는 그대로 (자리마다 따로 — 한 판이어도 규칙 그대로)
  assert.equal(await p.locator('[data-weapon=tree_branch] .equipped-badge').isVisible(),true);
  assert.match(await p.locator('#equipmentStatus').textContent(),/나뭇가지 장착/);assert.deepEqual(await portraitOf(p),['player','ui/portraits/player.webp',true]); // 프로필 그림은 장착과 무관
  await p.locator('#unequipItem').tap();await state(p,true,false,'');await shot(p,'unequipped');
- assert.deepEqual(await badges(p),[['tree_branch',false],['kettle',true],['hero_tear',true]]);
+ assert.deepEqual(await badges(p),[['tree_branch',false],['druid_whip',false],['kettle',true],['hero_tear',true]]);
  await p.locator('.inventory-slot').first().tap();await state(p,false,false,'');assert.equal((await card(p)).hidden,true);
  for(let i=0;i<8;i++){await p.locator('[data-weapon=tree_branch]').tap();await p.locator('#equipItem').tap();await p.locator('#unequipItem').tap();await p.locator('.inventory-slot').first().tap();}
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({position:rb.translation(),rotation:rb.rotation()}))),bodies);assert.equal(await p.evaluate(()=>game.stats.simTime),0);
