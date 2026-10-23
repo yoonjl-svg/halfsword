@@ -9,17 +9,18 @@ import * as THREE from 'three';
 
 // grip 손잡이(덩굴 시작까지) · lash 덩굴 길이 · count 마디 수 · mass 전체 질량 · handleMass 손잡이 + 끝 공 · tipWeight 끝 두 마디에 더한 무게(kg)
 export const DRUID = Object.freeze({ grip: .26, lash: 1.44, count: 8, mass: .77, handleMass: .21, tipWeight: .12 });
-// 덩굴 물리 값. SRC = 샛별 값 그대로(`?whip=src` 로 견줌) · NOW = 10/23 검수 뒤 지금 값(확인표 2224 ~ 2229 '사장님 확인 전' — 잰 값은 docs/import/druid_whip_2026-10-23.md §5)
+// 덩굴 물리 값. SRC = 샛별 값 그대로(`?whip=src` 로 견줌) · NOW = 10/23 검수 뒤 지금 값(확인표 2224 ~ 2229 · 2273 '사장님 확인 전' — 잰 값은 docs/import/druid_whip_2026-10-23.md §5)
 //  tip: 끝 두 마디에 더한 무게(kg — 합 질량 DRUID.mass 는 그대로, 나머지 줄 몫에서 뺀다) · tipSplit: 그 무게를 [끝에서 둘째, 끝] 마디에 나누는 몫 · taper: 마디 1 ~ 8 의 줄 질량 비
 //  bend: 굽힘 용수철 N·m/rad — 관절 i(0 = 손잡이 ~ 마디 1) 의 굳기 = k[i] + fold × max(0, .5 − cos 꺾인 각) (샛별 값 k[i] = .035 × (1 − i/10) + (i < 2 ? .08 : .025))
 //  bendDamp: 굽힘 감쇠 1/s — 관절 양쪽 몸의 상대 굽힘 빠르기를 줄이는 몫(엮은 줄기의 속 마찰 · 0 = 없음)
 //  angDamp · linDamp: 마디 회전 · 이동 감쇠(공기) · friction · restitution: 마디 마찰 · 반발 · armAssist: 마디로 친 몫의 팔 보조 질량(kg — combat.js)
 //  iters: 마디 몸의 덧 풀이 횟수(엔진 additionalSolverIterations — 마디가 든 섬, 곧 칼 주인 몸 전체에 걸린다)
+//  bladeFrom: 이 번호(0 = 마디 1)부터의 마디만 상대 칼과 부딪힌다(그 앞 마디는 상대 칼을 지나간다 — 상대 몸 · 땅 · 장애물과는 그대로) · 0 = 모두(샛별 값)
 //  servo: 손잡이 손목 서보(weapons.js controlOverrides 와 같은 칸 — fighter.weaponCfg 에 덮는다) · flick: 톡 = 손목 튕기기(아래 WHIP_FLICK — 샛별 판은 보통 탭 찌르기)
 export const WHIP_SRC = Object.freeze({
   tip: .12, tipSplit: [.25, .75], taper: [1.8, 1.65, 1.5, 1.35, 1.2, 1.05, .9, .75],
   bend: { k: Array.from({ length: 8 }, (_, i) => .035 * (1 - i / 10) + (i < 2 ? .08 : .025)), fold: .12 },
-  bendDamp: Array(8).fill(0), angDamp: .15, linDamp: .15, friction: .65, restitution: .08, armAssist: .12, iters: 8,
+  bendDamp: Array(8).fill(0), angDamp: .15, linDamp: .15, friction: .65, restitution: .08, armAssist: .12, iters: 8, bladeFrom: 0,
   servo: { aimStiffness: 24, aimDamping: 1.2, releaseDamping: .6, maxAimTorque: 10, twistScale: .08 }, flick: false,
 });
 // 10/23 검수 (사장님 '채찍은 너가 검수해서 다 낫게 고쳐봐') — 바꾼 다섯, 나머지는 샛별 값 그대로 (잰 값: tools/sim/druid_whip.mjs · docs/import/druid_whip_2026-10-23.md §5):
@@ -31,8 +32,12 @@ export const WHIP_SRC = Object.freeze({
 //  ④ tip .12 → .06: 끝을 조금 가볍게 — 끝이 손잡이 끝보다 빨라지는 몫(채찍 꼴 '끝에서 터짐')을 키움. 덜어 낸 60 g 은 줄 몫(taper)으로 — 합 770 g 그대로
 //  ⑤ flick: 톡을 손목 튕기기로(아래 WHIP_FLICK)
 //  다 합쳐(샛별 → 지금): 쉬는 자세 손잡이 떨림 25 → 1.5 rad/s · 끝 빠르기 3.8 → 0.4 m/s · 긋기 끝 ÷ 손잡이 끝 빠르기 2.5 → 3.2 · 되풀이 휘두르기 앞 도달 0.83 ~ 1.15 → 1.24 ~ 1.42 m
+//  ⑥ bladeFrom 0 → 3 (10/23 셋째 일 — 사장님 '(가)와 둔타계수 올리기?' · 확인표 2273 — 사장님 확인 전): 손 쪽 마디 1 ~ 3(덩굴 0.54 m)은 상대 칼을 지나가고 마디 4 ~ 8 은 그대로 부딪힌다.
+//     잰 값(tools/sim/whip_duel.mjs --stand=contact · 인물 여섯 × 시드 여섯): 채찍이 닿는 간격(1.25 m)에 서도 상대 칼이 덩굴 길 한가운데에 있어 획의 88 % 가 칼에 닿고
+//     판당 7.3 s 붙어 있었다(칼 닿음 시간의 56 % 가 마디 1 ~ 3). 마찰 0.3 · 0.2 는 붙은 시간 5.5 · 5.7 s · 몸 닿을 기회 획 49 · 44 % 로 모자랐고, 3 이면 칼 닿은 획 54 % · 1.3 s · 몸 닿을 기회 44 → 53 %
+//     (2 = 42 % · 4 = 52 % · 5 = 54 % — 3 위로는 늘지 않음). 마찰 · 반지름 · 굽힘 용수철 · 몸 · 땅과의 닿음은 그대로
 export const WHIP_NOW = Object.freeze({
-  ...WHIP_SRC, iters: 1, bendDamp: Array(8).fill(8), tip: .06,
+  ...WHIP_SRC, iters: 1, bendDamp: Array(8).fill(8), tip: .06, bladeFrom: 3,
   servo: { aimStiffness: 10, aimDamping: .2, releaseDamping: .1, maxAimTorque: 10, twistScale: .08 }, flick: true,
 });
 const copyWhip = (P) => ({ ...P, bend: { ...P.bend, k: [...P.bend.k] }, bendDamp: [...P.bendDamp], tipSplit: [...P.tipSplit], taper: [...P.taper], servo: { ...P.servo } });
@@ -161,10 +166,10 @@ export function drawDruidWhip(group) {
 /**
  * 칼 몸체(손잡이)에 붙어 만들어진 마디 콜라이더 8 개를 떼어 마디 강체 8 개로 옮기고 구면 관절로 잇는다 (fighter.js 생성자 — spec.flexible).
  *  ownTorsoBit: 제 몸통 · 허벅지 충돌 비트(BODY.humanLimits). 단단한 손잡이는 사람 관절 · 몸 한계를 그대로 지키고,
- *  휘는 덩굴만 제 몸에서 빼 준다 — 마찰 있는 마디가 제 몸에 감겨 다시 휘두르지 못하던 것(샛별 749a7b367). 상대 몸 · 상대 무기 · 땅 · 장애물 비트는 그대로.
+ *  휘는 덩굴만 제 몸에서 빼 준다 — 마찰 있는 마디가 제 몸에 감겨 다시 휘두르지 못하던 것(샛별 749a7b367). 상대 몸 · 땅 · 장애물 비트는 그대로 · 상대 무기 비트(foeWeaponBit)는 WHIP.bladeFrom 번 마디부터만.
  *  돌려줌 flex: step(dt) 굽힘 복원 · cache(put) 스텝 전 상태 · point(t, out) 덩굴 위 한 점 · sync() 메쉬 휨
  */
-export function attachDruidWhip(f, ownTorsoBit) {
+export function attachDruidWhip(f, ownTorsoBit, foeWeaponBit = 0) {
   const R = f.R, world = f.world, root = f.sword;
   Object.assign(f.weaponCfg, WHIP.servo); // 손잡이 서보 (판 고르기 — 기본은 weapons.js controlOverrides 와 같은 값)
   const parts = f.weapon.buildParts({}), L = DRUID.lash / DRUID.count;
@@ -173,7 +178,7 @@ export function attachDruidWhip(f, ownTorsoBit) {
   let previous = root;
   for (let i = 0; i < DRUID.count; i++) {
     const part = parts[i + 2], old = f.swordColliders[i + 2];
-    const groups = old.collisionGroups() & ~ownTorsoBit;
+    const groups = old.collisionGroups() & ~ownTorsoBit & ~(i < WHIP.bladeFrom ? foeWeaponBit : 0);
     f.colliderInfo.delete(old.handle); world.removeCollider(old, true);
     const pos = new THREE.Vector3(0, part[1], 0).applyQuaternion(q0).add(p0);
     const body = world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setRotation(q0)

@@ -1870,7 +1870,11 @@ const druidWhip = finalizeSpec('druid_whip', {
   desc: '질긴 식물 줄기를 엮은 채찍.\n손을 떠난 힘이 덩굴 끝에서 뒤늦게 맺힌다.',
   grip: 'one-hand', school: 'none', material: 'wood', flexible: true,
   kneelHit: true, // 맞은 쪽 무릎 꿇리기 (사장님 10/23 — config WHIP_KNEEL · combat.js whipKneelCheck)
-  hiltLength: 0.13, bladeLength: DRUID.lash, edged: false, mCut: 0, mThrust: 0, mBlunt: 1.5, fragility: 0,
+  hiltLength: 0.13, bladeLength: DRUID.lash, edged: false, mCut: 0, mThrust: 0, fragility: 0,
+  // 둔타 계수 1.5(샛별 값) → 3 (사장님 10/23 08:0x '(가)와 둔타계수 올리기?' — 사장님 확인 전, 확인표 2274): 덩굴 마디가 가벼워(마디 하나 0.05 ~ 0.09 kg) 맞음 하나의 J 가 작다.
+  //  사람처럼 쓰는 봇 · 인물 여섯 × 시드 여섯(tools/sim/whip_duel.mjs --stand=contact): 판당 판정 2.9 → 6.1 · J 39 → 90 — 롱소드 12 · 250 J · 모르겐슈테른 20 · 337 J 에 한참 못 미치고 36 판 0 승(쓸만하지만 세지 않게)
+  //  · 연달아 꿇림 가장 긴 줄 늘지 않음(4 → 3). 한 번 맞음의 J 는 13 ~ 15 그대로 — 늘어난 것은 맞음 문턱(6 J)을 넘는 가벼운 스침. 기록 docs/import/druid_whip_2026-10-23.md §12
+  mBlunt: 3,
   controlOverrides: { ...WHIP_NOW.servo }, // 손잡이 서보 (druid_whip.js — 샛별 값 24 · 1.2 · 0.6 · 10 · 0.08 에서 10/23 검수로 10 · 0.2 · 0.1 · 10 · 0.08, 확인표 2226)
   partMesh: hiddenParts, buildParts: druidParts, decorate: drawDruidWhip,
 });

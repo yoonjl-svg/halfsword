@@ -13,7 +13,7 @@ import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
 class Quiet { update() {} }
 const W = () => getWeapon('druid_whip');
 
-test('스펙 · 글: ??? · 한손 · 무유파 · 나무 · 날 없음 · 둔타 1.5 · 부서지지 않음 · 770 g · 173 cm · 두 줄 숫자 없음', () => {
+test('스펙 · 글: ??? · 한손 · 무유파 · 나무 · 날 없음 · 둔타 3(10/23 셋째 일 — 샛별 값 1.5) · 부서지지 않음 · 770 g · 173 cm · 두 줄 숫자 없음', () => {
   const w = W();
   assert.equal(w.id, 'druid_whip');
   assert.equal(w.nameKo, '드루이드의 채찍');
@@ -23,7 +23,7 @@ test('스펙 · 글: ??? · 한손 · 무유파 · 나무 · 날 없음 · 둔�
   assert.equal(traditionOf(w), 'none');
   assert.equal(w.material, 'wood');
   assert.equal(w.edged, false);
-  assert.equal(w.mBlunt, 1.5);
+  assert.equal(w.mBlunt, 3);
   assert.equal(w.fragile, false);
   assert.equal(w.breakChance(1e9), 0);
   assert.equal(weaponSpecText(w), '한손 채찍, 173 cm, 0.77 kg');
@@ -59,6 +59,27 @@ test('판 고르기: 기본 = 지금 값 · src = 샛별 값 (덧 풀이 8 · �
   setWhipPreset('now');
   assert.equal(WHIP.iters, WHIP_NOW.iters); assert.equal(WHIP.tip, WHIP_NOW.tip); assert.equal(WHIP.flick, true);
   assert.deepEqual(W().controlOverrides, { ...W().controlOverrides, ...WHIP_NOW.servo });
+});
+
+test('칼 닿는 마디 (10/23 셋째 일 · WHIP.bladeFrom): 지금 = 마디 4 ~ 8 만 상대 칼과 부딪힘 · 상대 몸은 모든 마디 · 제 몸통은 빠짐 · 샛별 값 = 모든 마디', () => {
+  CONFIG.ARENA.startHold = 0;
+  assert.equal(WHIP_SRC.bladeFrom, 0);
+  assert.equal(WHIP_NOW.bladeFrom, 3);
+  for (const [p, from] of [['now', 3], ['src', 0]]) {
+    setWhipPreset(p);
+    const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 3, AIClass: Quiet, AI2Class: Quiet });
+    const P = g.player, E = g.enemy;
+    const foeBlade = E.swordColliders[0].collisionGroups() >>> 16, foeBody = E.bodies.chest.collider(0).collisionGroups() >>> 16;
+    const myTorso = P.bodies.chest.collider(0).collisionGroups() >>> 16;
+    P.flexWeapon.segments.forEach((sg, i) => {
+      const filter = sg.col.collisionGroups() & 0xffff;
+      assert.equal(!!(filter & foeBlade), i >= from, `${p} 마디 ${i + 1} 상대 칼`);
+      assert.ok(filter & foeBody, `${p} 마디 ${i + 1} 상대 몸`);
+      assert.equal(filter & myTorso, 0, `${p} 마디 ${i + 1} 제 몸통`);
+    });
+    g.world.free();
+  }
+  setWhipPreset('now');
 });
 
 test('마디 물리: 8 마디 · AI 끼리 6 s 벌어짐 3 cm 안 · 유한 · 끝 점 = 덩굴 마디 · 세게 쳐도 · 직접 불러도 안 부러짐', () => {
