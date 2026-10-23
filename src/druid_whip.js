@@ -13,7 +13,7 @@ export const DRUID = Object.freeze({ grip: .26, lash: 1.44, count: 8, mass: .77,
 //  tip: 끝 두 마디에 더한 무게(kg — 합 질량 DRUID.mass 는 그대로, 나머지 줄 몫에서 뺀다) · tipSplit: 그 무게를 [끝에서 둘째, 끝] 마디에 나누는 몫 · taper: 마디 1 ~ 8 의 줄 질량 비
 //  bend: 굽힘 용수철 N·m/rad — 관절 i(0 = 손잡이 ~ 마디 1) 의 굳기 = k[i] + fold × max(0, .5 − cos 꺾인 각) (샛별 값 k[i] = .035 × (1 − i/10) + (i < 2 ? .08 : .025))
 //  bendDamp: 굽힘 감쇠 1/s — 관절 양쪽 몸의 상대 굽힘 빠르기를 줄이는 몫(엮은 줄기의 속 마찰 · 0 = 없음)
-//  angDamp · linDamp: 마디 회전 · 이동 감쇠(공기) · friction · restitution: 마디 마찰 · 반발 · armAssist: 마디로 친 몫의 팔 보조 질량(kg — combat.js)
+//  angDamp · linDamp: 마디 회전 · 이동 감쇠(공기) · friction · restitution: 마디 마찰 · 반발 · armAssist: 마디로 친 몫의 팔 보조 질량(kg — combat.js · 수 하나면 모든 마디 · 여덟 칸이면 마디마다)
 //  iters: 마디 몸의 덧 풀이 횟수(엔진 additionalSolverIterations — 마디가 든 섬, 곧 칼 주인 몸 전체에 걸린다)
 //  bladeFrom: 이 번호(0 = 마디 1)부터의 마디만 상대 칼과 부딪힌다(그 앞 마디는 상대 칼을 지나간다 — 상대 몸 · 땅 · 장애물과는 그대로) · 0 = 모두(샛별 값)
 //  lash · mass: 덩굴 길이(m — 마디 8 개가 나눔 · 무기 칸 bladeLength) · 전체 질량(kg — 손잡이 · 끝 공 0.21 kg 은 그대로, 나머지가 줄 몫 · 끝 무게) — 샛별 값 DRUID.lash · DRUID.mass
@@ -42,11 +42,15 @@ export const WHIP_SRC = Object.freeze({
 //     실물 채찍처럼 손 쪽은 굵고 무겁게, 끝으로 갈수록 가늘고 가볍게(끝 매듭 무게 60 → 20 g · 마디 1 ~ 8 질량 88 · 81 · 74 · 66 · 59 · 51 · 59 · 82 → 115 · 100 · 86 · 72 · 57 · 45 · 41 · 44 g). 길이 1.44 m · 무게 0.77 kg 그대로.
 //     잰 값(tools/sim/druid_whip.mjs --var · whip_duel.mjs 두 거리 × 36 판): 긋기 끝 빠르기 20.9 → 27.0 m/s · 끝 ÷ 손잡이 끝 3.20 → 3.90 · 맞닿는 간격 판정 6.1 → 7.6 · J 90 → 129 / 판 ·
 //     1.69 m 3.0 → 4.7 · 51 → 82 J — 덩굴을 1.8 · 2.1 m · 0.9 kg 으로 늘이면 오히려 덜 맞았다(5.6 · 4.7 / 판 — 끝이 늦어짐). 마디 벌어짐(AI 끼리 6 s) 3.0 → 1.3 cm
+//  ⑧ tip .02 → 0 · taper 4 : 1 → 3 · 2.5 · 2 · 1.6 · 1.25 · .95 · .7 · .5(6 : 1) (10/23 다섯째 일 — 사장님 '채찍 더 세게 해 롱소드급으로' · 확인표 2286 — 사장님 확인 전):
+//     끝 매듭 무게를 없애고 테이퍼를 더 세게(마디 1 ~ 8 질량 134 · 112 · 90 · 72 · 56 · 43 · 31 · 22 g) — 넷째 일 견줌 '테이퍼 더' 판. 팔 보조 질량 0.12 · 길이 · 무게 그대로.
+//     잰 값(빠르기 상한 60 바탕 · 맞닿는 간격 72 판): 판정 7.6 → 10.1 · J 129 → 230 / 판 · 2 승(롱소드 13.1 · 277 J · 5 승) — 긋기 끝 27.0 → 33.1 m/s · 끝 ÷ 손잡이 끝 3.90 → 4.89.
+//     팔 보조 질량 0.13 · 0.14 는 J 235 · 256 으로 조금 오를 뿐 AI 채찍 머리 140 J 넘는 판이 5 → 10 / 72 로 늘어 그대로 둠(docs/import/druid_whip_2026-10-23.md §16)
 export const WHIP_NOW = Object.freeze({
-  ...WHIP_SRC, iters: 1, bendDamp: Array(8).fill(8), tip: .02, taper: [2.4, 2.1, 1.8, 1.5, 1.2, .95, .75, .6], bladeFrom: 3,
+  ...WHIP_SRC, iters: 1, bendDamp: Array(8).fill(8), tip: 0, taper: [3, 2.5, 2, 1.6, 1.25, .95, .7, .5], bladeFrom: 3,
   servo: { aimStiffness: 10, aimDamping: .2, releaseDamping: .1, maxAimTorque: 10, twistScale: .08 }, flick: true,
 });
-const copyWhip = (P) => ({ ...P, bend: { ...P.bend, k: [...P.bend.k] }, bendDamp: [...P.bendDamp], tipSplit: [...P.tipSplit], taper: [...P.taper], servo: { ...P.servo } });
+const copyWhip = (P) => ({ ...P, bend: { ...P.bend, k: [...P.bend.k] }, bendDamp: [...P.bendDamp], tipSplit: [...P.tipSplit], taper: [...P.taper], servo: { ...P.servo }, armAssist: Array.isArray(P.armAssist) ? [...P.armAssist] : P.armAssist });
 export const WHIP = copyWhip(WHIP_NOW);
 /** 덩굴 값 판 고르기 ('src' = 샛별 값 · 그 밖 = 지금 기본) — fighter 를 만들기 전에 부른다 (main.js `?whip=src`) */
 export function setWhipPreset(name) {
@@ -197,7 +201,7 @@ export function attachDruidWhip(f, ownTorsoBit, foeWeaponBit = 0) {
       .setActiveEvents(R.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(.1), body);
     const state = {};
     // 접촉 기록(combat.js): 이 마디의 스텝 전 상태(state) · 질량 · 관성(props)으로 둔타를 셈 · flexible = 팔 보조 질량 0.12 · 되튐 없음
-    const info = { fighter: f, kind: 'weapon', part: 'blade', body, flexible: true, armAssist: WHIP.armAssist, state,
+    const info = { fighter: f, kind: 'weapon', part: 'blade', body, flexible: true, armAssist: Array.isArray(WHIP.armAssist) ? WHIP.armAssist[i] : WHIP.armAssist, state,
       props: { m, I: { x: Ie, y: It, z: Ie }, frame: new THREE.Quaternion() } };
     f.colliderInfo.set(col.handle, info);
     f.swordColliders[i + 2] = col; f.bladeColliders[i] = col;

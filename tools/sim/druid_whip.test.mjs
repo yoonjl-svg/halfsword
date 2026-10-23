@@ -82,16 +82,16 @@ test('칼 닿는 마디 (10/23 셋째 일 · WHIP.bladeFrom): 지금 = 마디 4 
   setWhipPreset('now');
 });
 
-test('덩굴 길이 · 무게 · 테이퍼 (10/23 넷째 일 · WHIP.lash · mass · tip · taper): 지금 = 끝 매듭 20 g · 테이퍼 4 : 1 · 길이 1.44 m · 0.77 kg 그대로 · 길이 · 무게는 판을 따라 무기 칸 · 카드 스펙 · 마디가 바뀜', () => {
+test('덩굴 길이 · 무게 · 테이퍼 (10/23 넷째 · 다섯째 일 · WHIP.lash · mass · tip · taper): 지금 = 끝 매듭 없음 · 테이퍼 6 : 1 · 길이 1.44 m · 0.77 kg 그대로 · 길이 · 무게는 판을 따라 무기 칸 · 카드 스펙 · 마디가 바뀜', () => {
   CONFIG.ARENA.startHold = 0;
   assert.equal(WHIP_SRC.lash, 1.44); assert.equal(WHIP_SRC.mass, 0.77);
   assert.equal(WHIP_NOW.lash, 1.44); assert.equal(WHIP_NOW.mass, 0.77);
-  assert.equal(WHIP_NOW.tip, 0.02);
-  assert.equal(WHIP_NOW.taper[0] / WHIP_NOW.taper[7], 4);
+  assert.equal(WHIP_NOW.tip, 0);
+  assert.equal(WHIP_NOW.taper[0] / WHIP_NOW.taper[7], 6);
   setWhipPreset('now');
   const parts = W().buildParts({}).slice(2).map((q) => q[2][0]);
-  for (let i = 1; i < 6; i++) assert.ok(parts[i] < parts[i - 1], `마디 ${i + 1} 이 손 쪽보다 가볍다`);
-  assert.ok(parts[0] > 2.5 * parts[7], '손 쪽 마디가 끝 마디의 2.5 배 넘게 무겁다');
+  for (let i = 1; i < 8; i++) assert.ok(parts[i] < parts[i - 1], `마디 ${i + 1} 이 손 쪽보다 가볍다`);
+  assert.ok(parts[0] > 5 * parts[7], '손 쪽 마디가 끝 마디의 5 배 넘게 무겁다');
   // 판 고르기로 길이 · 무게를 바꾸면 무기 칸 · 카드 스펙 · 마디 길이가 따른다 (시험 도구 --whip · with_whip.mjs 와 같은 길)
   Object.assign(WHIP, { lash: 1.8, mass: 0.9 });
   assert.equal(W().bladeLength, 1.8);
