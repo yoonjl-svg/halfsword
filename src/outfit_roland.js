@@ -2,6 +2,7 @@
 //  들여오기 기록 docs/import/wander_heroes_import_2026-10-23.md · 옛 시안(v1 · 왕관 · 붉은 깃털)은 들이지 않았다.
 //  모든 메쉬는 원래 몸 부위에 얹는다 — 뼈대 크기 · 충돌체 · 모터 · 질량 · 유파 동작은 건드리지 않는다.
 //  무겁다(몸 하나 약 9.7 만 삼각형 — 하인리히의 25 배 · 덩굴 새김 · 말총 · 금테 줄이 대부분). 자리 표는 docs/import/wander_heroes_import_2026-10-23.md §6 (사장님 10/23 19:0x '롤랑은 네 말대로 개선해' — 개선안대로 다시 만드는 일은 다른 작업. 이 파일은 전달본 모양 그대로)
+//  10/23 다시 만든 판(기본)은 outfit_roland_v2.js (looks.js LOOK_ARCHIVE.roland.v2) — 이 판은 ?look=roland:v1 로 남긴다
 //  좌표: +X 앞 · +Y 위 · +Z 오른쪽 (다른 복식 모듈과 같다)
 export function createRolandOutfit(h) {
   const { THREE, bake, box, cyl, ball, addMerged, artoriaCloth, taperedTube } = h;

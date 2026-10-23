@@ -8,7 +8,7 @@ const foeArg = process.argv[3] || 'renji';
 const out = process.argv[4] || `docs/handoff/${foeArg.replace(':', '_')}_phone.png`;
 const stage = process.argv[5] || 'arena';
 const secs = Number(process.argv[6] || 8); // 두 사람이 다가와 맞붙은 뒤
-const FOE_WEAPON = { artoria: 'excalibur', samira: 'pistol', renji: 'morgenstern', eira: 'rapier' };
+const FOE_WEAPON = { artoria: 'excalibur', samira: 'pistol', renji: 'morgenstern', eira: 'rapier', roland: 'zweihander' };
 const foe = foeArg.split(':')[0];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];

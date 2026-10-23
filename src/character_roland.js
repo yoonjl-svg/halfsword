@@ -3,7 +3,7 @@
 //  겉모습 · 이야기는 샛별 쪽 승인 판. 실력은 따로 맞추지 않았다 — 숙련도 4 인물(아르토리아)의 실력 숫자를 빌리고,
 //  자세 · 기술은 이베리아 유파가 스스로 고르게 아르토리아의 자세 · 기술 취향은 지운다.
 //  무기 = 츠바이핸더 (사장님 10/23 저녁 — 임시 · 뒤에 뒤랑달 무기로 바꿀 자리. 전달본은 티소나): AI 꾸러미도 츠바이핸더(schools.js — 무거운 틀이라 이베리아 유파)
-import { getLook } from './looks.js';
+import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
 
 /** baseline = 실력 숫자를 빌릴 인물 시트(아르토리아) */
 export function createRoland(baseline) {
@@ -30,7 +30,7 @@ export function createRoland(baseline) {
     voice: 'tome',
     ai,
     look: getLook('roland'),
-    lookVersion: 'v1',
+    lookVersion: CHARACTER_LOOK_VERSION.roland, // v2 (10/23 줄이면서 다듬은 판) — 옛 판 ?look=roland:v1
     taunt: '성문을 열어라. 아직 돌아올 자들이 있다.',
     lines: {
       intro: ['성문을 열어라. 아직 돌아올 자들이 있다.', '…너도 저 발소리가 들리느냐.'],

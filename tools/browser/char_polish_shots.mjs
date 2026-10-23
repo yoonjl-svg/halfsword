@@ -12,7 +12,7 @@ const foe = foeArg.split(':')[0];
 const prefix = process.argv[4] || `${foe}_shot`;
 const out = process.argv[5] || 'docs/handoff';
 const stage = process.argv[6] || 'arena';
-const FOE_WEAPON = { minami: 'monohoshizao', omari: 'zweihander', tome: 'rapier', artoria: 'excalibur', samira: 'pistol', renji: 'morgenstern', eira: 'rapier', isolde: 'saber', liao: 'qinggang', heinrich: 'excalibur_replica', bran: 'tree_branch' }; // characters.js 의 무기 그대로
+const FOE_WEAPON = { minami: 'monohoshizao', omari: 'zweihander', tome: 'rapier', artoria: 'excalibur', samira: 'pistol', renji: 'morgenstern', eira: 'rapier', isolde: 'saber', liao: 'qinggang', heinrich: 'excalibur_replica', bran: 'tree_branch', roland: 'zweihander' }; // characters.js 의 무기 그대로
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
 const nextFrames = (page, n = 3) => page.evaluate((n) => new Promise((ok) => { const f = () => (--n <= 0 ? ok() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
