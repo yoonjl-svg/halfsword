@@ -6,6 +6,8 @@
   판에 쓰는 것 = public/ui/portraits/<id>.webp — 768² (PIL LANCZOS) · WebP 손실 품질 95 · 투명도 품질 100 · method 6 (한 장 약 30 KB).
   플레이어('player') = player2 그림(최초 오른쪽 3/4 — 사장님 '플래이어2'로). player1 은 마스터만 둠.
   public/ui/portraits/grid-overlay.svg = 칸 줄(22 × 22 · 1254 좌표) — 주소 ?portraitGrid=1 이면 그림 위에 겹쳐 보임(확인용).
+  10/24 손님 인물 셋(롤랑 · 백린의 전사 · 베르나르도) = 샛별 저장소 손그림 확정본 art/hero-profiles-20261024/<id>/low.png(같은 꼴 · 같은 값으로 줄임 —
+       docs/import/hero_profiles_import_2026-10-24.md). 10/23 임시 그림(art/portraits-temp-20261023/)은 기록으로만 둔다.
 
 실행 (저장소 뿌리에서):  python3 -I tools/ui/portraits_px_build.py
 """
@@ -18,14 +20,16 @@ SRC, OUT = 'art/portraits-px-20261018', 'public/ui/portraits'
 SIDE, QUALITY, ALPHA_Q, METHOD = 768, 95, 100, 6
 PLAYER_FROM = 'player2'
 SKIP = {'player1', 'player2', 'frame1'}
+HERO_SRC, HERO_IDS = 'art/hero-profiles-20261024', ('roland', 'white_scale', 'bernardo')  # <id>/low.png (original · grid 는 마스터만)
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    jobs = [('player', PLAYER_FROM)] + [(f[:-4], f[:-4]) for f in sorted(os.listdir(SRC)) if f.endswith('.png') and f[:-4] not in SKIP]
-    for out_id, src_id in jobs:
-        im = Image.open(os.path.join(SRC, src_id + '.png')).convert('RGBA')
-        assert im.size == (1254, 1254), (src_id, im.size)
+    jobs = [('player', os.path.join(SRC, PLAYER_FROM + '.png'))] + [(f[:-4], os.path.join(SRC, f)) for f in sorted(os.listdir(SRC)) if f.endswith('.png') and f[:-4] not in SKIP]
+    jobs += [(i, os.path.join(HERO_SRC, i, 'low.png')) for i in HERO_IDS]
+    for out_id, src in jobs:
+        im = Image.open(src).convert('RGBA')
+        assert im.size == (1254, 1254), (src, im.size)
         im.resize((SIDE, SIDE), Image.LANCZOS).save(os.path.join(OUT, out_id + '.webp'), 'WEBP', quality=QUALITY, alpha_quality=ALPHA_Q, method=METHOD)
     shutil.copyfile(os.path.join(SRC, 'grid-overlay.svg'), os.path.join(OUT, 'grid-overlay.svg'))
     print(len(jobs), 'portraits →', OUT)

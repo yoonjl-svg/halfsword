@@ -135,6 +135,8 @@
 | 연승 | 보상에 걸지 않음(지금 판 그대로) |
 
 ## 5. 임시 프로필 그림 (진짜 그림은 감독이 샛별 저장소에 따로 부탁)
+> 10/24 — 셋 모두 샛별 저장소 손그림 확정본으로 바뀜(사장님 "샛별이가 프로필 사진 보냈대. 모두 적용해." · `docs/import/hero_profiles_import_2026-10-24.md`). 아래는 지난 내용 — 임시 마스터 · 도구는 기록으로 남김.
+
 - 우리 도트 프로필 꼴(22 × 22 칸 · 칸 50 px · 칸 시작 (77, 77) · 액자 1 공유 · 투명 바탕 · 1254² 마스터 → 768² WebP)에 맞춰 **게임 모델을 찍어 줄인 그림**: 얼굴 · 가슴 위 · 오른쪽 3/4 · 겨눈 팔뚝은 감춤.
   - 찍기 `tools/browser/portrait_temp_shots.mjs`(바탕 검정 · 흰색 두 장 → 차이로 투명도) → 줄이기 `tools/ui/portraits_temp_build.py`(칸 덮인 몫 절반 넘으면 칸 가운데 60 % 의 평균색 · 밝기 1.15 · 대비 1.3 · 채도 1.35 · 24 색).
   - 마스터 `art/portraits-temp-20261023/{roland,white_scale,bernardo}.png` · 판 `public/ui/portraits/{roland,white_scale,bernardo}.webp`.
