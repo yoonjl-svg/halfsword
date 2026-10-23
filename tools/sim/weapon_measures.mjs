@@ -35,6 +35,7 @@ export function applyWeaponMeasure(ai, weaponId) {
 //   --down (10/9 검토): 칼날 70% 가 내려오는 동안만 센다 — 레이피어·에스톡처럼 준비 자세에서 칼이 앞으로 누운 무기가
 //   휘두르기 시작에 머리 높이를 '올라가며' 지나는 순간을 닿는 순간으로 세지 않게 (docs/strike/weapon_measures_review_2026-10-09.md)
 //   마지막 칸은 손 표의 CUT_TIME_30 을 손 표의 날것으로 다시 셈한 값(0.30 × 날것 ÷ 롱소드 날것, 둘째 자리)과 견준다
+//   휘는 무기(채찍 — 10/23): 3 s 를 다 보므로 베기 뒤 한 바퀴 돌아 머리 높이를 다시 지나는 덩굴을 센다(걸으면 reach 3.07 처럼 닿을 수 없는 값). 거리는 flex_reach.mjs 로 잰다
 if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const fs = await import('node:fs');
   const path = await import('node:path');
