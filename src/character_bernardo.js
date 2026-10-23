@@ -4,7 +4,7 @@
 //  설정(감독 — 사장님께 말씀드림): 스페인 전승(13세기 연대기 · 로망세)의 레온 영웅 베르나르도 델 카르피오. 레온 왕이 샤를마뉴에게 나라를 넘기려 하자
 //   외국 왕의 지배에 맞서, 론세스바예스에서 롤랑을 쓰러뜨린다고 전해진다. 샛별 저장소의 왕실 시안 'bernardo'(면갑을 올린 투구)와는 다른 인물이다.
 //  손님 인물(characters.js CHARACTER_GUESTS — 무작위 회전 밖) · 방랑 전용(wander_rules.js WANDER_EXCLUSIVE — 사장님 10/23 저녁 '롤랑과 같은 방랑 보상': 이기면 금화 +250).
-//  실력 · 유파(이베리아) · 목소리는 롤랑 시트를 복사해 같다 · 무기는 티소나(사장님 10/23 저녁 — 롤랑은 츠바이핸더). 투구가 없어 머리가 드러난다. 화면에 나오는 글 = 이름 · 별칭 · 대사(docs/text/editing_guide.md)
+//  실력 · 유파(이베리아) · 목소리는 롤랑 시트를 복사해 같다 · 무기는 티소나(사장님 10/23 저녁 — 롤랑은 10/24 부터 뒤랑달 · 그 전 츠바이핸더). 투구가 없어 머리가 드러난다. 화면에 나오는 글 = 이름 · 별칭 · 대사(docs/text/editing_guide.md)
 import { CHARACTER_LOOK_VERSION, getLook } from './looks.js';
 import { createRoland } from './character_roland.js';
 

@@ -2,14 +2,15 @@
 //  손님 인물(characters.js CHARACTER_GUESTS — 무작위 회전 밖) · 방랑 전용(wander_rules.js WANDER_EXCLUSIVE — 일반 여정 무대에는 나오지 않는다).
 //  겉모습 · 이야기는 샛별 쪽 승인 판. 실력 숫자(persona.level)는 아르토리아의 것을 빌리고, 숙련도는 6(사장님 10/24 01:1x '롤랑과 베르나르도는 6' — 전 4 · config AI_PROFICIENCY 6 칸),
 //  자세 · 기술은 이베리아 유파가 스스로 고르게 아르토리아의 자세 · 기술 취향은 지운다.
-//  무기 = 츠바이핸더 (사장님 10/23 저녁 — 임시 · 뒤에 뒤랑달 무기로 바꿀 자리. 전달본은 티소나): AI 꾸러미도 츠바이핸더(schools.js — 무거운 틀이라 이베리아 유파)
+//  무기 = 뒤랑달 (사장님 10/24 — 샛별 저장소 c039bcc7 에서 들여온 이베리아 레전드 · docs/import/durandal_import_2026-10-24.md): AI 꾸러미도 뒤랑달(schools.js — 스펙 school 'iberian'
+//   · 무거운 틀이라 츠바이핸더와 같은 이베리아 몬탄테 동작 · 간격은 weapon_measured.js 뒤랑달 줄). 10/23 저녁 ~ 10/24 는 츠바이핸더(임시), 방랑 전달본은 티소나였다
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
 
 /** baseline = 실력 숫자를 빌릴 인물 시트(아르토리아) */
 export function createRoland(baseline) {
   const ai = JSON.parse(JSON.stringify(baseline.ai));
   ai.proficiency = 6; // 사장님 10/24 01:1x — 이베리아 숙련도 6 (실력 이름 hard · 반응 0.05 s · 고유 특성 적극성 1.6 — 6 칸 수는 사장님 확인 전 · AI 이베리아 비기는 aiOpenSchools 로 닫힌 채)
-  ai.persona.school = 'zweihander';
+  ai.persona.school = 'durandal'; // 유파 꾸러미 id = 무기 id (10/24 — 전 'zweihander')
   delete ai.persona.pers.guardPref;
   delete ai.persona.pers.techPref;
   ai.persona.idle = { guard: 'wechselR', gesture: 'still' };
@@ -27,7 +28,7 @@ export function createRoland(baseline) {
     temperament: '승리한 왕의 위엄을 잃지 않았으나, 상대를 보는지 그 너머의 행군을 보는지 알 수 없다.',
     movementNotes: '새 전용 기술 없이 기존 이베리아 동작과 판금 감속을 적용한다. 전투 수치는 검토용 시작값이다.',
     weaknesses: '무거운 판금과 큰 검의 회수. 목은 기존 판금 규칙대로 보호하지 않는다.',
-    weapon: 'zweihander', // 임시 — 뒤에 뒤랑달 무기 (사장님 10/23 저녁)
+    weapon: 'durandal', // 롤랑의 성검 (사장님 10/24 — 전 츠바이핸더 임시)
     voice: 'tome',
     vitality: 1.1, // 버티는 힘 +10 % (사장님 10/24 01:5x '롤랑과 베르나르도는 체력도 +10%' — 초당 잃는 피 · 머리를 맞아 잃는 의식 ÷ 1.1, fighter.js · 방법은 사장님 확인 전)
     ai,
