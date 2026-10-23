@@ -16,7 +16,7 @@
 //   천 층(artoriaCloth)이라 판금이 아니다(덮은 곳 · 닳음 · 부서져 날아감에서 빠지고, 판이 다 부서져도 남는다). 쇠 깃 · 테 · 금테 · 놋쇠 고리 · 무릎 덮개는 판의 자식이라 판과 같이 움직이고 떨어진다.
 //  삼각형은 tools/sim/look_tris.mjs (몸 하나 · 칼 뺌) — 확인표 2318 · 2321 ~ 2325. 좌표: +X 앞 · +Y 위 · +Z 오른쪽
 export function createBernardoOutfitV2(h) {
-  const { THREE, bake, box, cyl, ball, addMerged, artoriaCloth, quietFace, taperedTube } = h;
+  const { THREE, bake, box, cyl, ball, addMerged, artoriaCloth, quietFace, taperedTube, capeSway } = h;
   const IRON = 0x484b46, EDGE = 0x858575, BRASS = 0x9c7b36, MAIL = 0x50534e, LEATHER = 0x4a3526;
   const TABARD = 0xe6e0d0, SABLE = 0x221f1c, GOLD = 0xb08a2c, GOLD_IN = 0x705222, TRIM = 0xc29b40;
   const metal = { metalness: 0.68, roughness: 0.52, steel: 0.75, side: THREE.DoubleSide };
@@ -306,15 +306,20 @@ export function createBernardoOutfitV2(h) {
       }
     });
     const sheet = mesh(p, ix, cols);
-    add(layer, [sheet.clone()], GOLD, { ...shaded, side: THREE.FrontSide }).name = 'bernardo-gold-mantle';
-    add(layer, [sheet], GOLD_IN, { ...shaded, side: THREE.BackSide }).name = 'bernardo-mantle-lining';
+    const outer = add(layer, [sheet.clone()], GOLD, { ...shaded, side: THREE.FrontSide });
+    outer.name = 'bernardo-gold-mantle';
+    const lining = add(layer, [sheet], GOLD_IN, { ...shaded, side: THREE.BackSide });
+    lining.name = 'bernardo-mantle-lining';
     // 가장자리 단(안감 색 · 두꺼운 모직 천의 결): 어깨 위 접힌 단 지름 6 mm · 앞 끝 · 먼 끝 · 아랫단 3.6 mm (그 전 12 · 7 mm)
-    add(layer, [
+    const hems = add(layer, [
       curve(Array.from({ length: 17 }, (_, i) => at(0, i / 16)), 0.003, 16, 3),
       curve(T.map(t => at(t, 0)), 0.0018, 14, 3),
       curve(T.map(t => at(t, 1)), 0.0018, 14, 3),
       curve(Array.from({ length: 21 }, (_, i) => at(1, i / 20)), 0.0018, 20, 3),
     ], GOLD_IN, cloth);
+    // 흔들림 (10/24 — src/cape_sway.js): 겉감 · 안감 · 단을 같은 뼈에 건다 — 꼴 · 주름 · 색 · 길이 · 매단 곳 그대로, 아래쪽이 몸통을 반 박자 늦게 따라온다.
+    //  브로치는 어깨 위 끝(흔들림 0)이라 그대로 둔다
+    capeSway(layer, [outer, lining, hems]);
     // 앞 끝 놋쇠 브로치 (오른쇄골)
     const [bx, by, bz] = at(0.012, 0), psi = Math.atan2(bz, bx);
     add(layer, [cyl(0.016, 0.016, 0.006, 12, false, [bx + 0.004 * Math.cos(psi), by, bz + 0.004 * Math.sin(psi)], [0, -psi, -Math.PI / 2]), ball(0.006, 6, 4, [bx + 0.008 * Math.cos(psi), by, bz + 0.008 * Math.sin(psi)])], BRASS, metal);

@@ -46,6 +46,7 @@ import { attachHands } from './hands.js';
 import { PerfMeter } from './perfmeter.js';
 import { createRenderCap } from './render_cap.js';
 import { createFighterLight } from './fighter_light.js';
+import { updateCapeSway } from './cape_sway.js'; // 긴 망토 흔들림 (10/24 — 롤랑 · 베르나르도 · 아르토리아, 겉모습만)
 import { tickDebris, clearDebris, debrisCount, DEBRIS } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
@@ -2708,6 +2709,7 @@ function frame(now) {
     player.syncMeshes();
     enemy.syncMeshes();
     for (const f of [player, enemy]) {
+      updateCapeSway(f, steps * PHYSICS.timestep); // 긴 망토 흔들림 (10/24 — 겉모습만, 이번 프레임에 흐른 게임 시간 · 가슴 그림 그룹만 읽음)
       updateWhoosh(f, dt * scale);
       updateDrips(f, dt * scale);
     }
