@@ -8,6 +8,7 @@
 //  상대 헛스윙(10/15 사장님 '테스트 경로에 헛스윙 넣어' — src/whiff_drill.js): 켜면 시작 주소에 foeWhiff=1. 기본 끔이고 기억하지 않는다(비기 판·무대와 같음)
 import { WEAPON_LIST, TIER_LABEL, RETIRED_WEAPONS, WEAPONS } from './weapons.js';
 import { CHARACTERS, CHARACTER_GUESTS } from './characters.js';
+import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 무작위 줄 인원에서 방랑 전용을 뺀다 (10/23)
 import { TRADITIONS, traditionOf } from './schools.js';
 import { SECRET } from './config.js'; // 비기 판 기본값 = 본판(main) 기본값 (10/13 — 고른 판을 기억하지 않는다)
 
@@ -58,7 +59,7 @@ const heroes = [
 // 상대 (10/14 — 사장님 '라트나는 테스트 경로의 상대 고르기와 ?foe=ratna 로'): 무작위(본판 회전) + 손님 인물. 손님 인물은 본판 무작위 상대 목록에 없다
 //  (10/14 19:4x 사장님 결정으로 여정에서는 제 무대 — 잠든 습지 · 소금 사막 — 의 검객으로 나온다. 그래서 '여정 밖' 대신 '무작위 밖')
 const foes = [
-  { id: 'random', name: '무작위', sub: `본판 인물 ${CHARACTERS.length}명 · 판마다`, armour: '고른 캐릭터는 빼고' },
+  { id: 'random', name: '무작위', sub: `본판 인물 ${CHARACTERS.filter((c) => !WANDER_EXCLUSIVE.includes(c.id)).length}명 · 판마다`, armour: '고른 캐릭터는 빼고' }, // 방랑 전용(아르토리아)은 무작위에서 빠짐 (10/23)
   ...CHARACTER_GUESTS.map((c) => ({ id: c.id, name: c.name, sub: `${c.epithet} · 무작위 밖`, armour: WEAPONS[c.weapon]?.nameKo ?? c.weapon })),
 ];
 

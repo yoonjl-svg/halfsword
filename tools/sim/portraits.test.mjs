@@ -1,11 +1,11 @@
 // 캐릭터 프로필 표 시험 (src/portraits.js — docs/import/portraits_px_2026-10-18.md · 전 판 docs/import/portraits_2026-10-17.md §5)
-//  기본(pixel) = 샛별 새 투명 배경 도트판 33 장(얼터 16 명도 자기 그림 · 플레이어 = player2) · 예비 hd / low = 10/17 판 17 장(얼터는 바탕 인물 그림)
+//  기본(pixel) = 샛별 새 투명 배경 도트판 33 장(얼터 16 명도 자기 그림 · 플레이어 = player2) + 임시 그림 3 장(10/23 손님 인물 — 게임 모델을 찍어 줄임) · 예비 hd / low = 10/17 판 17 장(얼터는 바탕 인물 그림)
 //  node --test tools/sim/portraits.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
-const { PORTRAIT_IDS, BACKUP_PORTRAIT_IDS, portraitIdOf, portraitSrc, portraitMode, portraitGrid, PORTRAIT_GRID_SRC } = await import('../../src/portraits.js');
+const { PORTRAIT_IDS, BACKUP_PORTRAIT_IDS, TEMP_PORTRAIT_IDS, portraitIdOf, portraitSrc, portraitMode, portraitGrid, PORTRAIT_GRID_SRC } = await import('../../src/portraits.js');
 const pub = (src) => new URL(`../../public/${src}`, import.meta.url);
 
 test('기본 판(pixel): 모든 인물 · 얼터가 자기 그림 (사장님 10/18 16:3x — 얼터까지 모두) · 그림 없는 상대는 null', () => {
@@ -16,17 +16,23 @@ test('기본 판(pixel): 모든 인물 · 얼터가 자기 그림 (사장님 10/
   for (const none of ['default', 'bear', '', null, undefined]) assert.equal(portraitIdOf(none), null, String(none)); // 기본 상대(?foe=default) · 동물 · 빈 값
 });
 
-test('예비 판(hd · low): 얼터는 바탕 인물 그림 (10/18 01:0x 판 그대로)', () => {
+test('예비 판(hd · low): 얼터는 바탕 인물 그림 (10/18 01:0x 판 그대로) · 임시 그림 셋은 예비 판에 없어 기본 판 그림', () => {
   for (const mode of ['hd', 'low']) {
-    for (const id of Object.keys(CHARACTERS_BY_ID)) assert.equal(portraitIdOf(id, mode), CHARACTERS_BY_ID[id].variantOf || id, `${mode} ${id}`);
+    for (const id of Object.keys(CHARACTERS_BY_ID)) {
+      if (TEMP_PORTRAIT_IDS.includes(id)) {
+        assert.equal(portraitIdOf(id, mode), null, `${mode} ${id}`);
+        assert.equal(portraitSrc(id, mode), `ui/portraits/${id}.webp`, `${mode} ${id}`);
+      } else assert.equal(portraitIdOf(id, mode), CHARACTERS_BY_ID[id].variantOf || id, `${mode} ${id}`);
+    }
   }
 });
 
-test('그림 파일: 기본 33 장(768² WebP · 마스터 art/portraits-px-20261018) · 예비 hd / low 17 장 · 칸 줄 SVG — 주소 ?portrait=hd|low · ?portraitGrid=1', () => {
-  assert.equal(PORTRAIT_IDS.length, 33); assert.equal(BACKUP_PORTRAIT_IDS.length, 17);
+test('그림 파일: 기본 36 장(768² WebP · 마스터 art/portraits-px-20261018 · 임시 셋은 art/portraits-temp-20261023) · 예비 hd / low 17 장 · 칸 줄 SVG — 주소 ?portrait=hd|low · ?portraitGrid=1', () => {
+  assert.equal(PORTRAIT_IDS.length, 36); assert.equal(BACKUP_PORTRAIT_IDS.length, 17); assert.deepEqual([...TEMP_PORTRAIT_IDS], ['roland', 'white_scale', 'bernardo']);
   for (const id of PORTRAIT_IDS) {
     assert.ok(fs.existsSync(pub(portraitSrc(id, 'pixel'))), id);
-    assert.ok(fs.existsSync(new URL(`../../art/portraits-px-20261018/${id === 'player' ? 'player2' : id}.png`, import.meta.url)), id);
+    const master = TEMP_PORTRAIT_IDS.includes(id) ? `portraits-temp-20261023/${id}` : `portraits-px-20261018/${id === 'player' ? 'player2' : id}`;
+    assert.ok(fs.existsSync(new URL(`../../art/${master}.png`, import.meta.url)), id);
   }
   for (const id of BACKUP_PORTRAIT_IDS) for (const mode of ['hd', 'low']) assert.ok(fs.existsSync(pub(portraitSrc(id, mode))), `${mode} ${id}`);
   assert.ok(fs.existsSync(pub(PORTRAIT_GRID_SRC)));

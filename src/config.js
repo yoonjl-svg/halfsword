@@ -649,6 +649,13 @@ export const ARMOR = {
     //  (perHit 1 은 제대로 된 타격에도 한 번에 끝난다는 뜻을 겹쳐 적은 것). 막음은 그 한 번만: 그 타격은 문턱(40·25J)으로 거르고, 다음 타격부터 맨머리.
     //  (전: wear 150 · perHit 0.5 = 제대로 된 타격 두 번). shed [] = 완전 파손 때 한꺼번에 흩어진다
     kasa: { cut: 40, stab: 25, blunt: 0.9, guardMin: 0, wear: 6, perHit: 1, knockBlunt: 80, shed: [] },
+    // 롤랑 닫힌 면갑 투구 · 백린의 전사(가칭) 뿔 가면 투구 (샛별 저장소 전달본 977c2a43 — 10/23, docs/import/wander_heroes_import_2026-10-23.md):
+    //  막는 숫자는 마르그레테 뿔 투구(horned)와 똑같다 — 방어는 기존과 같다. 다른 것은 파손 조각(shed)뿐:
+    //  롤랑은 둘째 단계(0.45)에 말총('crest' — outfit_roland.js) · 백린은 뿔 투구처럼 맞은 쪽 뿔(0.9) → 남은 뿔 · 받침(0.45).
+    //  판정은 다른 모든 투구와 같은 줄(combat.js — 머리 좌표 y > −0.01 이면 투구, 아래면 맨머리)이라, 면갑 · 가면이 얼굴을 덮어 보여도 얼굴 아래쪽은 맨머리로 맞는다.
+    //  (샛별 판의 얼굴 덮음 칸 coverMinY 는 읽는 곳이 없어 뺐다 — 얼굴까지 막게 하려면 사장님 결정 뒤 따로)
+    royal_close: { cut: 80, stab: 50, blunt: 0.5, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, knockBlunt: 200, shed: [[0.45, ['crest']]] },
+    kabuto_masked: { cut: 80, stab: 50, blunt: 0.5, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, knockBlunt: 200, shed: [[0.9, ['horn']], [0.45, ['horn', 'crest']]] },
   },
   // 판금 (하인리히 v2 13부위, 마르그레테 몸통 3부위와 양쪽 견갑). 문턱은 강철판 하나의 값이다(팔다리 판만 limb 배).
   //  단, 판 밑에 누비옷이 있어서 판이 닳아도 누비옷 판정(ANATOMY × 옷 guard)보다 약해지지는 않는다.

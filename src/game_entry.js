@@ -78,10 +78,10 @@ if (skipsTitle(params)) {
       },
     });
   }
-  // 여정 출발 (첫 화면의 Stage 1 · 이어하기 · 대기실의 'Stage 입장'): choice 'new' = 첫 무대부터 · 'continue' = 이어하기 지점부터.
+  // 여정 출발 (첫 화면의 Stage 1 · 이어하기 · 대기실의 'Stage 입장'): choice 'new' = 첫 무대부터 · 'continue' = 이어하기 지점부터 · 'wander' = 방랑(대기실 '방랑' — main.js launchWander, 10/23).
   //  판을 세운 뒤 덮개를 0.3 s 걷어 낸다 — 뒤의 카드·싸움 화면이 비쳐 보이며 넘어가게 (리뷰 §8-6 '갑작스럽다'). close = 첫 화면 · 대기실 정리 · fading = 걷어 낼 꺼풀
   async function depart(game, choice, close, fading) {
-    if (!await game.launchJourney(choice)) throw new Error('Missing journey');
+    if (!await (choice === 'wander' ? game.launchWander() : game.launchJourney(choice))) throw new Error(choice === 'wander' ? 'Missing wander' : 'Missing journey');
     titleWind(false); // 첫 화면 바람은 싸움으로 이어지지 않는다 (잦아들어 꺼짐)
     game.setLobbyReturn?.(backToLobby); // 이 여정의 정지 · 결과 창에 '대기실' (main.js lobbyMenu)
     document.documentElement.removeAttribute('data-start-open');
@@ -98,10 +98,11 @@ if (skipsTitle(params)) {
     const { mountLobby } = await import('./lobby.js'); // 대기실 묶음은 열 때 받는다 — 첫 화면을 늦추지 않게 (10/17 3D 미리보기를 프로필 그림으로 바꿔 묶음이 가벼워짐)
     titleWind(false);
     screen?.destroy(); screen = null;
-    lobby = mountLobby({ root, game, choice, onBack: showTitle, async onDepart() {
+    const leave = async (how) => {
       const gone = lobby;
-      await depart(game, choice, () => { gone.destroy(); if (lobby === gone) lobby = null; }, root.querySelector('.lobby'));
-    } });
+      await depart(game, how, () => { gone.destroy(); if (lobby === gone) lobby = null; }, root.querySelector('.lobby'));
+    };
+    lobby = mountLobby({ root, game, choice, onBack: showTitle, onDepart: () => leave(choice), onWander: () => leave('wander') });
   }
   // 싸움 → 대기실 (main.js toLobby 가 부른다): 덮개를 다시 열고 대기실을 'continue'(출발 단추 'Stage 입장')로 — 이어하기 지점은 지금 무대 시작(이긴 판이면 다음 무대)
   async function backToLobby() {

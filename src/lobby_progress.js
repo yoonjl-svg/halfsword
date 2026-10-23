@@ -11,11 +11,17 @@
 //  호칭 (사장님 10/16 15:3x ⑥ "호칭 시스템을 나중에 추가할 거라서 '여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" · 16:0x "… 이미 가진 호칭인 여행자가 보이고"
 //   — docs/import/ui_unify_2026-10-16.md §5): 기본 호칭 '여행자'는 늘 가짐 · 얻은 호칭은 titles(unlockEventTitle — 앞으로 호칭 제도가 부른다) · 고른 호칭은 title(selectTitle).
 //   호칭을 새로 지어 넣지 않는다(지금 얻을 수 있는 호칭은 없다).
+//  10/23 방랑 (wander_rules.js — 샛별 저장소 전달본 977c2a43, docs/import/wander_heroes_import_2026-10-23.md): 같은 저장에 wander 칸(깬 무대 · 열림 · 알림 창 · 지금 판)을 더했다 —
+//   판 결과와 보상을 한 번의 저장에 같이 써서 새로고침 · 대기실 왕복 · 다시 열기로 같은 보상을 두 번 받지 않는다. 옛 판(wander 를 모르는 판)으로 되돌리면 이 칸은 버려진다(금화 · 머리는 남음).
+//   저장이 막히면 방랑 거래만 이번 실행 메모리에 남긴다(pendingSave — 옛 지갑을 다시 읽어 같은 보상을 또 주지 않게). 다른 거래는 전처럼 '실패하면 다음 읽기에서 옛 값'.
+import { normalizeWander, wanderReward, WANDER_HEAD, legacyWanderStages } from './wander_rules.js';
 export const PROGRESS_KEY = 'stillness.lobby.progress.v1';
 export const DEFAULT_TITLE = '여행자';
 /** 얻은 것 갈래: item 물건 · skill 스킬트리 칸(10/21) · skillbook 옛 스킬북(읽기만 — 옮기기가 거둔다) */
 export const ACQ_KINDS = Object.freeze(['item', 'skill', 'skillbook']);
-let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: DEFAULT_TITLE, tree: null };
+let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: DEFAULT_TITLE, tree: null, wander: normalizeWander(null) };
+// 저장이 막혔을 때 이번 실행 동안 지킬 방랑 거래(저장하려던 글 · 그때 저장소에 있던 글 · 그 저장소). 저장소 글이 바뀌면(?coins= · 바깥에서 바꿈) 버린다
+let pendingSave = null, pendingBase = null, pendingStore = null;
 const validText = s => typeof s === 'string' && s.length > 0 && s.length <= 160;
 const count = n => Number.isSafeInteger(n) && n >= 0;
 const paidOf = p => (p && count(p.coins) && count(p.heads) ? { coins: p.coins, heads: p.heads } : null);
@@ -24,7 +30,9 @@ const treeOf = t => (t?.v === 1 && count(t.books) && count(t.coins) && count(t.h
   ? { v: 1, at: validText(t.at) ? t.at : '', books: t.books, coins: t.coins, heads: t.heads, bonus: t.bonus, notice: t.notice === true } : null);
 export function readProgress() {
   try {
-    const value = JSON.parse(localStorage.getItem(PROGRESS_KEY));
+    const stored = localStorage.getItem(PROGRESS_KEY);
+    if (pendingSave != null && (pendingStore !== localStorage || stored !== pendingBase)) pendingSave = null; // 바깥에서 지갑을 바꿨으면 그쪽이 먼저
+    const value = JSON.parse(pendingSave ?? stored);
     if (value?.version === 1) {
       const seen = new Set();
       const acquisitions = (Array.isArray(value.acquisitions) ? value.acquisitions : []).filter(a => {
@@ -33,14 +41,31 @@ export function readProgress() {
       }).map(({receipt, kind, paid}) => (paidOf(paid) ? {receipt, kind, paid: paidOf(paid)} : {receipt, kind}));
       const titles = (Array.isArray(value.titles) ? value.titles : []).filter(t => t && validText(t.event) && validText(t.name));
       session = { acquisitions, titles, title: titles.some(t => t.name === value.title) ? value.title : DEFAULT_TITLE,
-        coins: count(value.coins) ? value.coins : 100, heads: count(value.heads) ? value.heads : 0, tree: treeOf(value.tree) };
+        coins: count(value.coins) ? value.coins : 100, heads: count(value.heads) ? value.heads : 0, tree: treeOf(value.tree), wander: normalizeWander(value.wander) };
     }
   } catch { /* 이번 실행 동안 유지한다. */ }
   return { ...structuredClone(session), level: 1 + session.acquisitions.length };
 }
-function save() {
-  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ version: 1, ...session })); return true; }
-  catch { return false; }
+/**
+ * 저장. 막히면 false — 방랑 거래(wander = true)만 이번 실행 메모리에 남긴다(pendingSave).
+ *  다른 거래(구매 · 초기화 · 옮기기 …)가 막히면 전처럼 다음 읽기에서 옛 값으로 돌아간다 — 앞서 남겨 둔 방랑 거래가 있으면 그 판(구매 전)으로 (리뷰 2-8: 전달본은 이때 구매도 메모리에 남았다)
+ */
+function save(wander = false) {
+  const text = JSON.stringify({ version: 1, ...session });
+  let before = null;
+  try { before = localStorage.getItem(PROGRESS_KEY); } catch { /* 저장소를 못 엶 */ }
+  try {
+    localStorage.setItem(PROGRESS_KEY, text);
+    pendingSave = null;
+    return true;
+  } catch {
+    if (wander) {
+      pendingSave = text;
+      pendingBase = before;
+      try { pendingStore = globalThis.localStorage; } catch { pendingStore = null; }
+    }
+    return false;
+  }
 }
 export function recordAcquisition({ receipt, kind, source }) {
   readProgress();
@@ -100,9 +125,12 @@ export const JOURNEY_COINS = Object.freeze({ win: [10, 30], loss: [1, 5], night:
 /** [lo, hi] 정수 하나 — 게임 난수(Math.random — AI 가 쓰는 흐름)를 건드리지 않게 crypto 로 */
 export function rollInt(lo, hi) {
   const span = hi - lo + 1;
+  return lo + Math.min(span - 1, Math.floor(rand01() * span));
+}
+/** [0, 1) 하나 — rollInt 와 같은 crypto 흐름 (방랑 대면 뽑기도 이것 — main.js) */
+export function rand01() {
   const c = globalThis.crypto;
-  const u = c?.getRandomValues ? c.getRandomValues(new Uint32Array(1))[0] / 4294967296 : Math.random();
-  return lo + Math.min(span - 1, Math.floor(u * span));
+  return c?.getRandomValues ? c.getRandomValues(new Uint32Array(1))[0] / 4294967296 : Math.random();
 }
 /**
  * 판 끝 금화 (main.js checkRoundEnd — 첫 화면·대기실 여정만): 낮 무대는 이기면 +rollInt(10, 30) · 지면 −rollInt(1, 5) ·
@@ -132,6 +160,143 @@ export function awardHead(foe) {
   addHeads(1);
   return true;
 }
+// ── 방랑 (wander_rules.js — 10/23) ── 판 결과 · 보상 · 머리를 같은 저장에 한 번에 쓴다(save(true) — 막혀도 이번 실행 동안은 지킨다)
+const newRunId = () => {
+  const c = globalThis.crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return `${Date.now().toString(36)}-${Math.floor(rand01() * 2 ** 32).toString(36)}`;
+};
+/** 여정에서 이긴 무대를 적는다 (main.js checkRoundEnd — 첫 화면 · 대기실 여정만). 무대를 모두(required) 깨면 방랑이 열린다(한 번 열리면 계속). 돌려줌 { unlocked, opened: 이번에 처음 열렸나 } */
+export function recordCampaignStage(stage, required) {
+  readProgress();
+  const w = session.wander;
+  if (!required.includes(stage)) return { unlocked: w.unlocked, opened: false };
+  const was = w.unlocked;
+  if (!w.cleared.includes(stage)) w.cleared.push(stage);
+  w.unlocked ||= required.every((s) => w.cleared.includes(s));
+  save(true);
+  return { unlocked: w.unlocked, opened: w.unlocked && !was };
+}
+/** 옛 저장 인정 (한 번 — legacyChecked): 방랑이 들어오기 전 저장의 이어하기 지점 · 누적 깬 수로 깬 무대를 적는다 (wander_rules.js legacyWanderStages). 돌려줌: 이번에 열렸나 */
+export function migrateCampaignStages(checkpointStage, clears, required) {
+  readProgress();
+  const w = session.wander;
+  if (w.legacyChecked) return false;
+  w.legacyChecked = true;
+  const was = w.unlocked;
+  w.cleared = [...new Set([...w.cleared, ...legacyWanderStages(checkpointStage, clears, required)])];
+  w.unlocked ||= required.every((s) => w.cleared.includes(s));
+  save(true);
+  return w.unlocked && !was;
+}
+/**
+ * 지금 방랑 판 (main.js startFight): 진행 중(active) 판이 있으면 그 판 · 없거나 끝났으면 makeEncounter() → { stage, foe, foeWeapon } 로 새로 뽑는다
+ *  (이긴 판 뒤면 같은 연속의 다음 판 — 판 번호 +1 · 진 판 뒤면 새 연속 1 번).
+ *  진행 중 판이 지금 목록에 없는 무대 · 상대 · 무기면(isValid 거짓 — 인물 · 무대를 바꾼 뒤) 그 대면만 새로 뽑는다(연속 · 판 번호는 그대로)
+ *   — 리뷰 2-3: 전달본은 이때 대기실 '대면을 열지 못했습니다'로 방랑이 영영 막혔다. 잠겨 있으면 null
+ */
+export function ensureWanderRun(makeEncounter, isValid = () => true) {
+  readProgress();
+  const w = session.wander;
+  if (!w.unlocked) return null;
+  const old = w.run;
+  if (old?.status === 'active' && isValid(old)) return structuredClone(old);
+  const won = old?.status === 'won', redraw = old?.status === 'active'; // redraw = 무효라 대면만 다시 뽑는 판
+  const next = makeEncounter();
+  w.run = {
+    id: won || redraw ? old.id : newRunId(),
+    round: won ? old.round + 1 : redraw ? old.round : 1,
+    wins: won || redraw ? old.wins : 0,
+    stage: next.stage,
+    foe: next.foe,
+    foeWeapon: next.foeWeapon,
+    status: 'active',
+    weapon: null,
+    cards: null,
+    lastWeapon: won ? old.weapon || old.lastWeapon : redraw ? old.lastWeapon : null,
+    headTaken: false,
+    fighting: false,
+    reward: null,
+  };
+  save(true);
+  return structuredClone(w.run);
+}
+/** 카드를 펼치거나 무기를 고름 (main.js saveJourneyRound — 여정 이어하기 지점과 같은 몫): 진행 중 판에 내 카드 · 무기를 적는다 */
+export function saveWanderLoadout({ weapon, cards, lastWeapon }) {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.status !== 'active') return false;
+  Object.assign(run, { weapon, cards, lastWeapon });
+  return save(true);
+}
+/** '처음부터 다시' (WANDER.quitAsLoss 끔 — 일반 여정과 같게): 같은 대면을 카드부터 다시 — 고른 무기 · 카드만 지운다 */
+export function resetWanderLoadout() {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.status !== 'active') return false;
+  Object.assign(run, { weapon: null, cards: null, fighting: false });
+  return save(true);
+}
+/** 싸움이 시작됨 / 끝남 (WANDER.quitAsLoss 켬 — main.js beginFight): 싸우는 동안 판을 버리면(새로고침 · 대기실 · 처음부터 다시) 다음에 패배로 셈한다 */
+export function markWanderFighting(on = true) {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.status !== 'active' || run.fighting === on) return false;
+  run.fighting = on;
+  return save(true);
+}
+/** 싸우던 중 버린 판이 있으면(WANDER.quitAsLoss 켬) 패배로 셈한다 — 돌려줌: 그 판 보상(settleWander 와 같은 꼴 + round) · 없으면 null */
+export function settleAbandonedWander(roll = rollInt) {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.status !== 'active' || !run.fighting) return null;
+  const round = run.round;
+  const reward = settleWander(false, roll);
+  return reward && { ...reward, round };
+}
+/** 방랑 판에서 상대의 목을 벰 (main.js COMBAT_HOOKS.onDecapitate): 판마다 한 번 머리 WANDER_HEAD. 판이 끝난 뒤(쓰러뜨린 뒤) 벤 목도 센다 — 여정과 같게(리뷰 2-9). 돌려줌: 이번에 더했나 */
+export function awardWanderHead() {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.headTaken) return false;
+  run.headTaken = true;
+  session.heads += WANDER_HEAD;
+  if (run.reward) run.reward.heads += WANDER_HEAD; // 이미 셈한 판이면 그 판 보상에도
+  save(true);
+  return true;
+}
+/**
+ * 판 끝 (main.js checkRoundEnd): 진행 중 판만 한 번 — 금화(일반 판 보상 × 2 + 특별 몫 · 지면 일반 차감 · 0 아래 없음) · 특별 머리 · 판 결과를 한 번에 적는다.
+ *  돌려줌 { coins: 실제로 바뀐 금화, heads: 이 판 머리(특별 + 참수), bonus } · 진행 중 판이 없으면 null (같은 판을 두 번 셈하지 않는다)
+ */
+export function settleWander(win, roll = rollInt) {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.status !== 'active') return null;
+  const T = /_night$/.test(run.stage) ? JOURNEY_COINS.night : JOURNEY_COINS;
+  const reward = wanderReward(win, run.foe, roll(...(win ? T.win : T.loss)));
+  const before = session.coins;
+  session.coins = Math.max(0, before + reward.coins);
+  session.heads += reward.heads;
+  run.status = win ? 'won' : 'lost';
+  run.fighting = false;
+  if (win) run.wins++;
+  run.reward = { coins: session.coins - before, heads: reward.heads + (run.headTaken ? WANDER_HEAD : 0), bonus: reward.bonus };
+  save(true);
+  return structuredClone(run.reward);
+}
+/** 방랑 알림 창을 띄울 때인가 (열렸고 아직 안 봄 — 30 무대를 처음 다 깼을 때 · 이미 깬 사람은 대기실에 처음 들어올 때) */
+export function wanderNoticeDue() {
+  const w = readProgress().wander;
+  return w.unlocked && !w.noticeSeen;
+}
+/** 방랑 알림 창을 봤다 (확인) — 다시 띄우지 않는다. 돌려줌: 저장했나 */
+export function markWanderNotice() {
+  readProgress();
+  session.wander.noticeSeen = true;
+  return save(true);
+}
+
 // ── 호칭 ──
 /**
  * 호칭 얻기 (앞으로 호칭 제도가 부른다 — 지금은 부르는 곳 없음): 사건(event)마다 한 번 · 이벤트 조건은 해당 이벤트에서 판정한다.

@@ -105,6 +105,24 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .lobby-status:empty { display: none; }
 @media (max-width: 679px) { .lobby-header { height: auto; min-height: var(--head); } .lobby-status { white-space: normal; } } /* 좁은 화면은 아래로 흐르니 두 줄이 되어도 된다 */
 .character-panel .depart { flex: none; width: var(--card-w); max-width: 100%; }
+/* 출발 단추 둘 (10/23 방랑 — lobby.js): 'Stage 입장' 아래 '방랑' · 같은 폭(프로필 칸 폭) · 사이 8 px(낮은 화면 6) · 단추 밑 글 없음(사장님 18:3x '버튼 밑에 설명 쓰는 거 싫음') */
+.departure-options { flex: none; width: var(--card-w); max-width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.character-panel .departure-options .depart { width: 100%; padding-left: 2px; padding-right: 2px; white-space: nowrap; }
+@media (max-height: 500px) { .departure-options { gap: 6px; } }
+/* 방랑 단추 색 (사장님 18:3x '지금 버튼 색을 다른 색으로 바꾸고 싶음' — 값은 사장님 확인 전): 청동 녹(verdigris) --c-wander.
+   'Stage 입장'의 금(주 단추 --c-accent)과 한눈에 갈리는 차가운 쪽 색이면서, 대기실이 쓰는 쇠붙이 색 줄(스킬트리 금속 단계 — 철 · 청동 · 구리 · 은 · 금 · 봉랍)과 같은 '오래된 쇠' 계열이라
+   어두운 갈색 바탕 · 금 장식과 어울린다(녹슨 청동의 푸른 녹). 금 단추처럼 납작하게 채우되 글은 본문 색(밝은 글 — 바탕이 어두워서). 붉은 봉랍은 '위험' · '지움'으로 읽혀 뺐다.
+   꼴은 주 단추와 같다(모서리 8 · 패딩 13 · 굵기) — 둘이 나란한 출발 단추. 잠김(aria-disabled) = 누를 수 없는 단추처럼 흐리게 .4 (눌러 보면 위 알림 줄에 열리는 조건) */
+.lobby { --c-wander: #3d6b62; --c-wander-line: #6f9c8f; }
+:host .wander {
+  min-height: 0; margin: 0; line-height: calc(var(--fs-m) + 2px); letter-spacing: normal; text-shadow: none; box-shadow: inset 0 0 0 1px var(--c-wander-line); transform: none; transition: none;
+  font-family: inherit; font-size: var(--fs-m); border-radius: 8px; cursor: pointer;
+  padding: 13px; font-weight: var(--fw-head); border: 0; background: var(--c-wander); color: var(--c-text);
+}
+@media (max-height: 500px) { :host .wander { padding: 10px; } }
+:host .wander[aria-disabled=true], :host .wander:disabled { opacity: .4; cursor: default; }
+:host .wander:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.wander-text { white-space: pre-line; word-break: keep-all; } /* 방랑 알림 창 글 — 문단마다 한 줄 (wander_rules.js WANDER_NOTICE_TEXT) · 낱말 안에서 꺾지 않음 */
 
 /* ── 창 (싸움 창 꼴 — --panel 바탕 · 바깥 줄 = 액자 1(위 — 10/18 03:3x, 전 1 px --line). 전: 나무색 불투명 · 두꺼운 볼록 테두리 · 딱딱한 그림자)
    세 칸 모서리는 각지게 (사장님 10/16 18:0x "대기실에서 3단 영역 모서리에 애매한 라운딩이 들어간 게 싫어" — 사슬 틀과 나란히 선 큰 영역. 둥근 모서리는 떠 있는 창 · 단추에만) ── */
