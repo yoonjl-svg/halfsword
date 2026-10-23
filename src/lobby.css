@@ -151,7 +151,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .title-select[aria-expanded="true"] .chevron { rotate: 180deg; }
 /* 열린 창: 단추 바로 아래로 · 반투명(싸움 창 --panel 그대로 — 뒤 대기실이 조금 비친다) · 1 px --line · 모서리 10 · 가진 호칭만 (시스템 알림 · 빈 줄 없음) */
 /*  열린 창 폭 = 가장 긴 호칭만큼 · 내 정보 칸 안쪽 오른쪽 끝(--title-room — lobby.js 가 열 때 잼)까지만 — 넘으면 그 호칭만 낱말 사이에서 두 줄 (칸이 옆으로 밀리지 않음) */
-.title-list { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: max-content; min-width: min(max(100%, 140px), var(--title-room, 100vw)); max-width: var(--title-room, none); max-height: 168px; overflow: auto; margin: 0; padding: 4px; list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.title-list { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: max-content; min-width: min(max(100%, 140px), var(--title-room, 100vw)); max-width: var(--title-room, none); max-height: 168px; overflow: auto; margin: 0; padding: 4px; list-style: none; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 10px; } /* 10/24 두 겹(.item-detail 과 같음) — 두 줄 호칭 아래로 뒤 글이 비치지 않게 */
 .title-list [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; padding: 6px 10px; border-radius: 6px; font-size: var(--fs-m); line-height: var(--lh-tight); color: var(--c-text); white-space: normal; word-break: keep-all; cursor: pointer; }
 .title-list .title-name { min-width: 0; }
 .title-list [role="option"]:focus { outline: none; background: var(--line); }

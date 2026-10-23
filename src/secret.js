@@ -16,6 +16,7 @@ import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
 import { RisolutoWatch } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
+import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
 
 const clamp = THREE.MathUtils.clamp;
 const _r = new THREE.Vector3();
@@ -613,7 +614,7 @@ export class PlayerSecretWatch {
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
       this.gilmokRest(dt, was, s0, c, d0, V, sw || busy);
     }
-    if (S.do?.spin) this.spinTick(dt, d0, V, sw || busy);
+    if (S.do?.spin) this.spinTick(dt, d0, V, busy, sw);
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
@@ -673,16 +674,25 @@ export class PlayerSecretWatch {
 
   /**
    * 이베리아 휘감아 돌기 무장 (10/22 — schools.js IBERIAN_SECRET_SPIN): 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.ibSpin.armTime 초 머물면 무장(발도 대기 IaiArm 과 같은 셈 —
-   *  휘두르거나 비기 중이면 풀림 · 간격 안으로 들어와도 armGrace 초 남음). 무장이 이어지는 동안 창이 열려 있다(끝 없음 — 금색 '!' · 비기 이름 알림) → 이동 스틱 반 바퀴(10/23 스틱 판 — 아래 spinStick) ·
-   *  옛 판(SECRET.ibSpin.input 'attack')은 공격 입력 하나가 휘감아 돌기.
+   *  휘두르거나 비기 중이면 풀림 · 간격 안으로 들어와도 armGrace 초 남음). 무장이 이어지는 동안 창이 열려 있다(끝 없음 — 금색 '!' · 비기 이름 알림) → 공격 입력으로 원 한 바퀴
+   *  (10/24 공격 원 판 기본 — 아래 spinCircle) · 이동 스틱 반 바퀴(10/23 스틱 판 'stick' — 아래 spinStick) · 옛 판(SECRET.ibSpin.input 'attack')은 공격 입력 하나가 휘감아 돌기.
    *  hurtDisarm: 무장 동안 내 몸에 상처가 나면 곧장 풀림(발도 대기에 없는 규칙 — 스위치). 창을 쓰면(fire) 무장도 풀린다 — 한 번 무장에 한 번
    */
-  spinTick(dt, d0, V, busy) {
+  spinTick(dt, d0, V, busy, sw = false) {
     const me = this.me;
     const nw = me.wounds?.length ?? 0;
     const hurt = !!SECRET.ibSpin.hurtDisarm && nw > this.spinW;
     this.spinW = nw;
-    this.spinArm.tick(dt, d0 > V.reach, busy || hurt);
+    // 공격 원 판 (10/24 — SECRET.ibSpin.input 'attackCircle'): 원을 그리는 손은 칼을 휘두른다 — 무장된 동안은 휘두름을 그 획이 끝날 때(손가락을 떼거나 멈춤 ·
+    //  circleTime 초가 지남) 센다: 그 획이 원이 되면(spinCircle → fire) 무장은 비기로 쓰이고, 안 되면 그때 풀린다(보통 공격 — 스틱 판과 같은 규칙). 무장 전에는 전처럼 곧장 셈을 비운다
+    let swing = sw;
+    if (SECRET.ibSpin.input === 'attackCircle' && this.spinArm.armed) {
+      if (sw) this.circSwung = true;
+      const live = !!this.circ && circleLive(this.circ, SECRET.ibSpin.circleTime);
+      swing = !!this.circSwung && !live;
+      if (!live) this.circSwung = false;
+    } else this.circSwung = false;
+    this.spinArm.tick(dt, d0 > V.reach, busy || swing || hurt);
     const o = this.open;
     if (this.spinArm.armed) {
       if (!o && !busy) this.openWindow({ ev: 'spin' }, Infinity);
@@ -692,6 +702,33 @@ export class PlayerSecretWatch {
   /** 이베리아 휘감아 돌기 창이 스틱 판인가 (SECRET.ibSpin.input 'stick') — 참이면 그 창은 공격 입력으로 나가지 않는다(공격은 보통 공격 · main.js) */
   stickOwns() {
     return SECRET.ibSpin.input === 'stick' && this.open?.ctx?.ev === 'spin';
+  }
+
+  /** 싱지르 창이 공격 원 판인가 (10/24 — SECRET.ibSpin.input 'attackCircle') — 참이면 그 창은 톡 · 끌기 하나로 나가지 않는다(원이 아닌 공격은 보통 공격 · main.js) */
+  circleOwns() {
+    return SECRET.ibSpin.input === 'attackCircle' && this.open?.ctx?.ev === 'spin';
+  }
+
+  /**
+   * 싱지르 공격 원 판 (10/24 사장님 02:5x '커맨드를 방향키 말고 공격 동작 360도 원형 입력으로 변경' — main.js 가 프레임마다 부른다):
+   *  무장 창이 열려 있고 낼 수 있는 동안(can — 스틱 판과 같은 조건) 이 프레임의 공격 손 움직임 d(input.consumeHandDelta — 손 m) · 손가락이 닿아 있나(down — 마우스는 늘)를 읽어
+   *  최근 SECRET.ibSpin.circleTime 초 안에 원을 한 바퀴(그 길의 가운데 둘레로 360° · 반지름 circleR 이상) 그렸으면 참(그 스텝에 fire() → skill.secret).
+   *  창이 없거나 · 낼 수 없거나 · 다른 판이면 셈을 비우고 거짓. 몸짓 셈 = src/attack_circle.js (순수 함수). 참이면 창 ctx 에 그린 쪽 turnDir(+1 반시계 · −1 시계 — 몸이 그쪽으로 돈다)
+   */
+  spinCircle(dt, d, down, can) {
+    const st = (this.circ ??= circleState());
+    if (!can || !this.circleOwns()) {
+      circleClear(st);
+      st.t += dt;
+      return false;
+    }
+    const V = SECRET.ibSpin;
+    const go = circleStep(st, dt, d.x, d.y, down, { time: V.circleTime, need: 2 * Math.PI, rMin: V.circleR, gap: V.circleGap, inner: V.circleInner });
+    if (go) {
+      this.open.ctx = { ...this.open.ctx, turnDir: st.sgn };
+      this.circleFires = (this.circleFires ?? 0) + 1;
+    }
+    return go;
   }
 
   /**

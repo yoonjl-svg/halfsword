@@ -4,7 +4,7 @@
 //  ② 픽셀 단추 흔적 없음: 누르는 동안 내려앉기 없음 · 모서리 8 · 납작한 바탕(그러데이션 · 그림자 · 잘라 낸 모서리 · 글 그림자 없음) · 나무 판자 CSS 없음 ·
 //     첫 화면 나타나기 = 픽셀 제목 글자만 steps(7), 단추 · 아래 줄은 매끈하게
 //  ③ 미닫이: '화면 60 fps 제한' · '지난 업데이트 숨김' = 싸움 화면 .toggle 과 같은 꼴(44 × 24 · 손잡이 18) · role=switch · aria-checked · 하는 일 · 저장 그대로
-//  ④ 호칭 내림 상자(16:0x): 단추 = 부 단추 꼴(금색 아님) · 누르면 바로 아래로 · 반투명(알파 < 1) · 가진 호칭만 · '(호칭 없음)' 같은 글 없음 · Esc · 바깥 누름으로 닫힘 · 방향키 · 고른 호칭 저장(새로 고쳐도)
+//  ④ 호칭 내림 상자(16:0x): 단추 = 부 단추 꼴(금색 아님) · 누르면 바로 아래로 · --panel 두 겹(10/24 — 전 반투명 · 두 줄 호칭 아래로 뒤 글이 비쳐 읽기 어려움) · 가진 호칭만 · '(호칭 없음)' 같은 글 없음 · Esc · 바깥 누름으로 닫힘 · 방향키 · 고른 호칭 저장(새로 고쳐도)
 //     10/24 (docs/handoff/school_titles_2026-10-24/README.md): '여행자'는 호칭이 아님 — 없으면 흐린 '호칭 없음'(단추 없음 · 한 줄 높이 그대로) · 옛 '여행자' 고름 = 가진 호칭의 첫째
 //   ④-2 호칭 얻기: 독일 칸 11 개를 ?coins= 로 모두 배움 → 스킬 화면 위 알림 창 한 번(금색 확인 = 대기실 확인 꼴) · Lv +1 · 내림 상자에서 고름 · 다시 열어도 창 없음 · 초기화 뒤에도 호칭
 //   ④-3 긴 호칭(캄프페히텐 계승자 · 에스그리마 계승자)이 잘리지 않음: 667×375 · 740×360 · 844×390 · 932×430 · 1024×768 — 단추 · 열린 창 · 알림 창 넘침 없음 · 칸 · 화면 가로 넘침 없음
@@ -226,11 +226,11 @@ try {
     assert.deepEqual(btn, { popup: 'listbox', expanded: 'false', color: 'rgb(243, 233, 216)', border: '1px solid rgba(243, 233, 216, 0.18)', radius: '8px', bg: 'rgba(0, 0, 0, 0)', level: 'rgb(243, 233, 216)' }); // 금색 아님
     await p.locator('#titleSelect').click();
     const opened = await shadow(p, `const b=root.getElementById('titleSelect').getBoundingClientRect(),l=root.getElementById('titleList'),r=l.getBoundingClientRect(),s=getComputedStyle(l);
-      return {expanded:root.getElementById('titleSelect').getAttribute('aria-expanded'),hidden:l.hidden,role:l.getAttribute('role'),gap:+(r.top-b.bottom).toFixed(1),dx:+(r.left-b.left).toFixed(1),bg:s.backgroundColor,border:s.borderTopWidth+' '+s.borderTopStyle+' '+s.borderTopColor,radius:s.borderRadius,
+      return {expanded:root.getElementById('titleSelect').getAttribute('aria-expanded'),hidden:l.hidden,role:l.getAttribute('role'),gap:+(r.top-b.bottom).toFixed(1),dx:+(r.left-b.left).toFixed(1),bg:s.backgroundColor,bgImage:s.backgroundImage,border:s.borderTopWidth+' '+s.borderTopStyle+' '+s.borderTopColor,radius:s.borderRadius,
         options:[...l.querySelectorAll('[role=option]')].map((o)=>[o.textContent,o.getAttribute('aria-selected')]),text:l.textContent,focus:root.activeElement?.textContent}`);
     assert.equal(opened.expanded, 'true'); assert.equal(opened.hidden, false); assert.equal(opened.role, 'listbox');
     assert.ok(opened.gap >= 0 && opened.gap <= 8 && Math.abs(opened.dx) < 1, `opens directly below the control: ${JSON.stringify(opened)}`);
-    const alpha = +(opened.bg.match(/rgba\(.*,\s*([\d.]+)\)/)?.[1] ?? 1); assert.ok(alpha < 1, `translucent box: ${opened.bg}`);
+    assert.ok(/linear-gradient/.test(opened.bgImage), `two-layer panel (10/24 — no text showing through): ${opened.bgImage}`);
     assert.equal(opened.bg, 'rgba(24, 18, 14, 0.88)'); assert.equal(opened.border, '1px solid rgba(243, 233, 216, 0.18)'); assert.equal(opened.radius, '10px');
     assert.deepEqual(opened.options, [['시험용 호칭', 'true'], ['둘째 시험용', 'false']]); // 가진 호칭만 (여행자 없음)
     assert.ok(!/호칭 없음|여행자/.test(opened.text), 'no (호칭 없음) / 여행자 line in the box');

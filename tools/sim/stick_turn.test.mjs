@@ -26,8 +26,8 @@ function hold(st, x, y, dur, o = opt()) {
   return any;
 }
 
-test('판 값: 스틱 판 기본 · 반 바퀴 180° (사장님 10/23 00:4x) · 0.6 s (사다리 이어짐/입력) · 데드존 0.15', () => {
-  assert.equal(SECRET.ibSpin.input, 'stick');
+test('판 값: 스틱 판(10/24 부터 스위치 — 기본은 공격 원 판 attackCircle) · 반 바퀴 180° (사장님 10/23 00:4x) · 0.6 s (사다리 이어짐/입력) · 데드존 0.15', () => {
+  assert.equal(SECRET.ibSpin.input, 'attackCircle');
   assert.equal(SECRET.ibSpin.stickTurn, 180);
   assert.equal(SECRET.ibSpin.stickTime, 0.6);
   assert.equal(SECRET.ibSpin.stickPath, 1);
@@ -108,6 +108,8 @@ test('여덟 방향 키보드: W → WD → D → SD → S (45° 넷 = 반 바�
 });
 
 test('사람 몸: 무장 창이 열린 동안 스틱 반 바퀴 → 참 (공격 입력 창 아님) · attack 판이면 거짓 · 창 없으면 셈 비움', async () => {
+  const prevIn = SECRET.ibSpin.input;
+  SECRET.ibSpin.input = 'stick'; // 10/24 부터 기본은 공격 원 판 — 스틱 판을 스위치로 켜고 잰다
   const { newRound, DT } = await import('./harness_m.mjs');
   const { PlayerSecretWatch } = await import('../../src/secret.js');
   const G = newRound({ seed: 2, weapon: 'zweihander', weapon2: 'longsword', gap: 3.4 });
@@ -144,4 +146,5 @@ test('사람 몸: 무장 창이 열린 동안 스틱 반 바퀴 → 참 (공격 
   assert.equal(o.ctx.ev, 'spin');
   assert.ok(P.skill.secret(o), '휘감아 돌기 냄');
   G.world.free();
+  SECRET.ibSpin.input = prevIn;
 });

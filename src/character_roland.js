@@ -9,7 +9,7 @@ import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
 /** baseline = 실력 숫자를 빌릴 인물 시트(아르토리아) */
 export function createRoland(baseline) {
   const ai = JSON.parse(JSON.stringify(baseline.ai));
-  ai.proficiency = 6; // 사장님 10/24 01:1x — 이베리아 숙련도 6 (실력 이름 hard · 반응 0.05 s · 고유 특성 적극성 1.6 — 6 칸 수는 사장님 확인 전 · AI 이베리아 비기는 aiOpenSchools 로 닫힌 채)
+  ai.proficiency = 6; // 사장님 10/24 01:1x — 이베리아 숙련도 6 (실력 이름 hard · 반응 0.05 s · 고유 특성 적극성 1.6 — 6 칸 수는 사장님 확인 전 · AI 이베리아 비기 싱지르는 10/24 부터 열림 — aiOpenSchools 'iberian' · 숙련도 5 이상)
   ai.persona.school = 'durandal'; // 유파 꾸러미 id = 무기 id (10/24 — 전 'zweihander')
   delete ai.persona.pers.guardPref;
   delete ai.persona.pers.techPref;
