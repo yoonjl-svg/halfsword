@@ -1,4 +1,7 @@
 import { alterLook } from './outfit_alter.js';
+import { createRoland } from './character_roland.js'; // 손님 인물 롤랑 (10/23 — 방랑 전용, docs/import/wander_heroes_import_2026-10-23.md)
+import { createWhiteScaleWarrior } from './character_white_scale.js'; // 손님 인물 백린의 전사(가칭 — 방랑 전용)
+import { createBernardo } from './character_bernardo.js'; // 손님 인물 베르나르도 (롤랑의 숙적 — 방랑 전용)
 // ─────────────────────────────────────────────────────────────
 //  상대 캐릭터 12인(다섯 + 샛별 저장소에서 가져온 셋 6~8 · 넷 9~12): 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
 //
@@ -882,6 +885,12 @@ export const CHARACTER_GUESTS = [
     },
   },
 ];
+// 10/23 손님 인물 셋 (샛별 저장소 전달본 977c2a43 — 마지막 모습만): 롤랑 · 베르나르도는 아르토리아(숙련도 4)의 실력 숫자를 빌려 이베리아 유파로 · 백린의 전사는 일본 유파 숙련도 3.
+//  셋 다 방랑에서만 나온다(wander_rules.js WANDER_EXCLUSIVE — 베르나르도는 사장님 10/23 저녁 결정) · 시험 경로 고르기 · ?foe=<id> 로도 부른다
+{
+  const artoria = CHARACTERS.find((c) => c.id === 'artoria');
+  CHARACTER_GUESTS.push(createRoland(artoria), createWhiteScaleWarrior(), createBernardo(artoria));
+}
 for (const c of CHARACTER_GUESTS) finishAI(c);
 
 // Guests are declared after the base rotation. Register Ratna's visual variant

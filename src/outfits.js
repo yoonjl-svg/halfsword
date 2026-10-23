@@ -27,6 +27,9 @@ import { createSilverWandererOutfit } from './outfit_silver_wanderer.js'; // 다
 import { createSilverWandererDetail } from './outfit_silver_wanderer_detail.js'; // 다라이시 v2~ (장식 · 긴 머리 · 반묶음 · 땋음 — 샛별 v2·v4~v6 + 우리 v7~v10)
 import { createChandaOutfit } from './outfit_chanda.js'; // 찬다 복식 (샛별 저장소에서 가져옴 10/14 — 샛별 v1 + 우리 v2 무릎)
 import { createTerracottaOutfit } from './outfit_terracotta.js'; // 병마용 복식 (샛별 저장소에서 가져옴 10/14 — 샛별 v1 + 우리 v2 잔선 덜기)
+import { createRolandOutfit } from './outfit_roland.js'; // 롤랑 복식 (샛별 저장소에서 가져옴 10/23 — 마지막 판만, docs/import/wander_heroes_import_2026-10-23.md)
+import { createWhiteScaleOutfit } from './outfit_white_scale.js'; // 백린의 전사(가칭) 복식 (같은 전달본)
+import { createBernardoOutfit } from './outfit_bernardo.js'; // 베르나르도 복식 (같은 전달본 — 그쪽 올리비에 마지막 판 · 겉모습 그대로)
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -2865,6 +2868,9 @@ export const OUTFITS = {
   silver_wanderer_detail: createSilverWandererDetail(newOutfitHelpers), // 다라이시 v2·v4~v6 (look.hairStyle 로 가름) + 우리 v7~v9 (look.daraishiRevision) · v10 (v7 + look.daraishiLower 10)
   chanda_watergate: createChandaOutfit(newOutfitHelpers), // 찬다 (여정 밖 인물, 10/14) — 모듈 하나가 look.chandaRevision 으로 샛별 v1 · 우리 v2(무릎)를 가른다. 이름은 샛별 쪽 열쇠 그대로
   terracotta_guard: createTerracottaOutfit(newOutfitHelpers), // 병마용 (여정 밖 인물, 10/14) — look.terracottaRevision 으로 샛별 v1 · 우리 v2(잔선 덜기)를 가른다. 이름은 샛별 쪽 열쇠 그대로
+  roland: createRolandOutfit(newOutfitHelpers), // 롤랑 (손님 인물 · 방랑 전용, 10/23) — 판금 13 부위 · 닫힌 투구(royal_close) · 망토
+  white_scale: createWhiteScaleOutfit(newOutfitHelpers), // 백린의 전사(가칭 · 손님 인물 · 방랑 전용, 10/23) — 판금 11 부위(발은 가죽) · 뿔 가면 투구(kabuto_masked)
+  bernardo: createBernardoOutfit(newOutfitHelpers), // 베르나르도 (손님 인물, 10/23) — 판금 13 부위 · 투구 없음
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,

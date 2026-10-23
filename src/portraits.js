@@ -12,8 +12,14 @@ import { CHARACTERS_BY_ID } from './characters.js';
 
 const BASE_IDS = ['player', 'bran', 'isolde', 'artoria', 'chanda', 'eira', 'heinrich', 'liao', 'margarethe', 'minami', 'omari', 'ratna', 'renji', 'samira', 'silver_wanderer', 'terracotta', 'tome'];
 const ALTER_IDS = ['heinrich_mad', 'eira_mad', 'liao_mad', 'margarethe_mad', 'isolde_mad', 'tome_mad', 'omari_mad', 'bran_mad', 'minami_mad', 'ratna_mad', 'chanda_mad', 'renji_mad', 'terracotta_mad', 'silver_wanderer_mad', 'samira_mad', 'artoria_mad'];
-/** 기본 판(pixel)에 그림이 있는 id 33 (바탕 17 + 얼터 16) */
-export const PORTRAIT_IDS = Object.freeze([...BASE_IDS, ...ALTER_IDS]);
+// 임시 그림 (10/23 — 손님 인물 롤랑 · 백린의 전사 · 베르나르도): 게임 모델을 찍어 도트 프로필 꼴로 줄인 그림(같은 22 × 22 칸 · 액자 1 · 투명 바탕 · 같은 크기 —
+//  tools/browser/portrait_temp_shots.mjs → tools/ui/portraits_temp_build.py · 마스터 art/portraits-temp-20261023/). 진짜 그림은 샛별 저장소에 따로 부탁 — 오면 BASE_IDS 로 옮기고 여기서 뺀다.
+//  예비 판(hd · low)에는 없어서 기본 판 그림을 쓴다(portraitSrc)
+const TEMP_IDS = ['roland', 'white_scale', 'bernardo'];
+/** 임시 그림 id (위) */
+export const TEMP_PORTRAIT_IDS = Object.freeze([...TEMP_IDS]);
+/** 기본 판(pixel)에 그림이 있는 id 36 (바탕 17 + 얼터 16 + 임시 3) */
+export const PORTRAIT_IDS = Object.freeze([...BASE_IDS, ...ALTER_IDS, ...TEMP_IDS]);
 /** 예비 판(hd · low)에 그림이 있는 id 17 (얼터는 바탕 인물 그림) */
 export const BACKUP_PORTRAIT_IDS = Object.freeze([...BASE_IDS]);
 export const PORTRAIT_FILES = Object.freeze({
@@ -44,8 +50,12 @@ export function portraitIdOf(characterId, mode = portraitMode()) {
   return id && has.has(id) ? id : null;
 }
 
-/** 프로필 그림 주소 (페이지 기준 상대 주소 — vite base './'). 그림이 없는 인물이면 null */
+/** 프로필 그림 주소 (페이지 기준 상대 주소 — vite base './'). 그림이 없는 인물이면 null · 예비 판에 없는 그림(임시 그림 셋)은 기본 판 그림 */
 export function portraitSrc(characterId, mode = portraitMode()) {
-  const f = PORTRAIT_FILES[mode] ?? PORTRAIT_FILES.pixel, id = portraitIdOf(characterId, mode);
+  let f = PORTRAIT_FILES[mode] ?? PORTRAIT_FILES.pixel, id = portraitIdOf(characterId, mode);
+  if (!id && f !== PORTRAIT_FILES.pixel) {
+    f = PORTRAIT_FILES.pixel;
+    id = portraitIdOf(characterId, 'pixel');
+  }
   return id ? `${f.dir}${id}${f.ext}` : null;
 }

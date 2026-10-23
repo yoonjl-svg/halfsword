@@ -849,6 +849,29 @@ LOOK_ARCHIVE.terracotta = { v1: {
 //  갑옷 조각·상투·관·눈썹·수염 덩어리·다리 감은 천 같은 큰 꼴은 그대로. 모듈 쪽 '── v2' 줄 (값 사장님 확인 전 — 확인표 1416~1417)
 LOOK_ARCHIVE.terracotta.v2 = { ...LOOK_ARCHIVE.terracotta.v1, terracottaRevision: 2 };
 
+// 롤랑 · 백린의 전사 · 베르나르도 (손님 인물 — characters.js CHARACTER_GUESTS, 10/23) — 샛별 저장소 전달본 977c2a43 의 마지막 판만 (값 그대로 · docs/import/wander_heroes_import_2026-10-23.md).
+//  우리 저장소엔 처음 들어오는 인물이라 판 이름은 모두 v1 — 롤랑 v1 = 그쪽 sebastian v2 · 베르나르도 v1 = 그쪽 black_king v4(올리비에 — 사장님 10/23 19:0x 베르나르도로 바꿈) · 백린 v1 = 그쪽 white_scale v1.
+//   옛 시안(그쪽 v1 ~ v3)은 들이지 않았다 — 그쪽 LOOK_ARCHIVE 의 'bernardo'(왕실 시안 · 면갑을 올린 투구 royal_open)도 안 들였다: 이름만 같고 다른 인물이다.
+//  롤랑 · 백린: 판금(armor 'plate') + 닫힌 투구(helmet 'royal_close' · 'kabuto_masked' — config.js ARMOR.helmets) · 베르나르도: 판금 · 투구 없음 · 눈 기본 크기(stockEyes)
+LOOK_ARCHIVE.roland = { v1: {
+  tunic: 0x352e28, quilt: 0x352e28, sleeve: 0x352e28, straps: null, belt: 0x4a4134,
+  hoseUpper: 0x541f2a, hoseLower: 0x352e28, shoes: 0x655c48, skin: 0xbfa78c, hands: 0xc2b79d,
+  helmet: 'royal_close', metal: 0xd7cfba, hair: 0x4d4b43, headband: null,
+  grip: 0xcab995, hilt: 0xae8e49, accent: 0x541f2a, outfit: 'roland', armor: 'plate',
+} };
+LOOK_ARCHIVE.white_scale = { v1: {
+  tunic: 0x242827, quilt: 0x3d413b, sleeve: 0x3c4037, straps: null, belt: 0x473c30,
+  hoseUpper: 0x252d2c, hoseLower: 0x3e423a, shoes: 0x473c30, skin: 0xb49c7c, hands: 0x4e493b,
+  helmet: 'kabuto_masked', metal: 0xc3c4b7, hair: 0x282b25, headband: null,
+  grip: 0x4d2525, hilt: 0x8e804f, accent: 0x79282d, outfit: 'white_scale', armor: 'plate',
+} };
+LOOK_ARCHIVE.bernardo = { v1: {
+  tunic: 0x292b29, quilt: 0x34352f, sleeve: 0x47473c, straps: null, belt: 0x493a2c,
+  hoseUpper: 0x393a30, hoseLower: 0x2c2d28, shoes: 0x39352b, skin: 0xa67553, hands: 0x393b38,
+  helmet: null, metal: 0x393b38, hair: 0x1e1d1a, headband: null,
+  grip: 0x282c29, hilt: 0x887548, accent: 0x89763c, outfit: 'bernardo', armor: 'plate', stockEyes: true,
+} };
+
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
   bran: 'v1',
@@ -867,6 +890,9 @@ export const CHARACTER_LOOK_VERSION = {
   silver_wanderer: 'v7-silver-c', // 다라이시 — v7 + 앞판 · 앞머리 한 가닥 · 목 연결 · 칼집 8 mm 안쪽 · 애쉬 실버 머리(사장님 10/16 결정, 샛별 쪽 — 10/17 들임). 전 우리 v7(사장님 10/15 23:1x 'v7이 제일 예쁜 거 같애. 되돌려.') ?look=silver_wanderer:v7 · v10 · v9 · v8 · 샛별 판 v6 · v5 · v4 · v2 · v1
   chanda: 'v2', // 10/14 여정 밖 인물 찬다 (우리 v2 — 무릎 틈 메움) — 샛별 판 ?look=chanda:v1
   terracotta: 'v2', // 10/14 여정 밖 인물 병마용 (우리 v2 — 잔선 덜기) — 샛별 판 ?look=terracotta:v1
+  roland: 'v1', // 10/23 손님 인물 롤랑 (방랑 전용) — 그쪽 sebastian v2
+  white_scale: 'v1', // 10/23 손님 인물 백린의 전사(가칭 · 방랑 전용)
+  bernardo: 'v1', // 10/23 손님 인물 베르나르도 (방랑 전용) — 그쪽 black_king v4(올리비에)
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
