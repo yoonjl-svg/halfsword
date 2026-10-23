@@ -730,7 +730,7 @@ export class Fighter {
     // 휘는 마디 무기(spec.flexible — 드루이드의 채찍): 덩굴 콜라이더를 마디 강체 8 개로 옮겨 단다(druid_whip.js). 칼 몸체에는 손잡이만 남는다 —
     //  기력 셈의 무기 질량은 옮기기 전 전체(0.77 kg), 아래 타격용 swordProps · 관성은 남은 손잡이 몸체 그대로(마디를 친 몫은 마디 자기 질량 — combat.js)
     const fullWeaponMass = sword.mass();
-    if (spec.flexible) this.flexWeapon = attachDruidWhip(this, myTorso);
+    if (spec.flexible) this.flexWeapon = attachDruidWhip(this, myTorso, otherWeapon);
     this.swordMass = spec.flexible ? fullWeaponMass : sword.mass();
     this.stamina.captureMass(this.swordMass); // 파손 전 질량 고정
     // 타격 계산용: 칼의 질량·주관성 모멘트(몸체 기준)와 손 기준 회전 관성
