@@ -76,7 +76,7 @@ try{
  assert.equal(await p.evaluate(()=>game.state),'menu');
  assert.equal(await p.evaluate(()=>document.documentElement.hasAttribute('data-start-open')),true);
  assert.deepEqual(await checkpoint(p),drawn);
- assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleCurrent').textContent(),'여행자'); // 10/16 15:3x ⑥: 레벨 글 + 호칭 내림 상자
+ assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleNone').textContent(),'호칭 없음');assert.equal(await p.locator('#titleSelect').isVisible(),false); // 10/16 15:3x ⑥: 레벨 글 + 호칭 내림 상자 · 10/24 '여행자'는 호칭이 아님 — 새 저장은 흐린 '호칭 없음'(단추 없음)
  // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥) · 깬 수 37 = 옛 인장 3 → 금화 100 + 300 (한 번 — 인장 제도는 08:1x 에 없앰, 바꾸기만 남음) · 알림 한 줄
  assert.equal(await p.locator('#lobbySchool').count(),0);
  assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyHeads').textContent(),'0');

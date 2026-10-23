@@ -24,7 +24,8 @@ import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { LOBBY_ITEMS, LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
 import { portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
 import { readProfile, renamePlayer } from './player_profile.js';
-import { readProgress, titleOptions, selectTitle, markWanderNotice } from './lobby_progress.js';
+import { readProgress, titleOptions, selectTitle, markWanderNotice, checkTitles, titleNotices, markTitleSeen } from './lobby_progress.js';
+import { TITLE_NOTICE_HEAD, NO_TITLE_TEXT } from './title_rules.js'; // 호칭 알림 창 (10/24 — 싸움 결과 창 위 title_notice.js 와 같은 글) · 호칭이 없을 때 글
 import { WANDER_NOTICE_TEXT } from './wander_rules.js'; // 방랑 알림 창 글 (결과 창 위 알림 창과 같은 글)
 import { mountSkillTree } from './skill_tree.js';
 import { convertSeals, takeSealNotice } from './seal_coins.js';
@@ -66,7 +67,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
     <div class="lobby-columns">
       <section class="character-panel"><figure class="portrait-card" id="lobbyPortrait" aria-label="내 캐릭터 프로필"><img id="lobbyPortraitImg" alt="" draggable="false" decoding="async"></figure><div class="departure-options"><button class="primary depart" id="lobbyDepart">Stage 입장</button><button class="wander depart" id="lobbyWander">방랑</button></div></section>
       <section class="profile-panel" aria-label="내 정보">
-        <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank" class="rank-row"><span id="lobbyLevel"></span><span class="title-picker"><button type="button" id="titleSelect" class="title-select" aria-haspopup="listbox" aria-expanded="false" aria-controls="titleList" aria-labelledby="titleLabel titleCurrent"><span id="titleLabel" class="sr-only">호칭</span><span id="titleCurrent"></span>${CHEVRON}</button><ul id="titleList" class="title-list" role="listbox" aria-labelledby="titleLabel" hidden></ul></span></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd></dl>
+        <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank" class="rank-row"><span id="lobbyLevel"></span><span class="title-picker"><button type="button" id="titleSelect" class="title-select" aria-haspopup="listbox" aria-expanded="false" aria-controls="titleList" aria-labelledby="titleLabel titleCurrent"><span id="titleLabel" class="sr-only">호칭</span><span id="titleCurrent"></span>${CHEVRON}</button><ul id="titleList" class="title-list" role="listbox" aria-labelledby="titleLabel" hidden></ul></span><span id="titleNone" class="title-none" hidden>${NO_TITLE_TEXT}</span></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd></dl>
         <p class="duel-record"><span>대면 결과</span><b id="duelRecord"></b></p>
         <p class="coin-balance wallet">${COIN_ICON}<span id="lobbyCoins"></span>${POUCH_ICON}<span id="lobbyHeads"></span></p>
         <nav class="lobby-tabs" role="tablist" aria-label="대기실 메뉴">
@@ -90,7 +91,8 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
     </div>
   </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>
   <dialog class="tree-dialog" id="treeDialog" aria-labelledby="treeHeading" aria-describedby="treeText"><h2 id="treeHeading">스킬트리</h2><p id="treeText"></p><div class="dialog-actions"><button type="button" id="closeTree" class="primary">확인</button></div></dialog>
-  <dialog class="tree-dialog" id="wanderDialog" aria-labelledby="wanderHeading" aria-describedby="wanderText"><h2 id="wanderHeading">방랑</h2><p id="wanderText" class="wander-text"></p><div class="dialog-actions"><button type="button" id="closeWander" class="wander">확인</button></div></dialog>`;
+  <dialog class="tree-dialog" id="wanderDialog" aria-labelledby="wanderHeading" aria-describedby="wanderText"><h2 id="wanderHeading">방랑</h2><p id="wanderText" class="wander-text"></p><div class="dialog-actions"><button type="button" id="closeWander" class="wander">확인</button></div></dialog>
+  <dialog class="tree-dialog title-dialog" id="titleDialog" aria-labelledby="titleHeading" aria-describedby="titleEarned titleWhy"><h2 id="titleHeading">${TITLE_NOTICE_HEAD}</h2><p id="titleEarned" class="title-earned"></p><p id="titleWhy"></p><div class="dialog-actions"><button type="button" id="closeTitle" class="primary">확인</button></div></dialog>`;
   const $ = id => root.getElementById(id), events = new AbortController();
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();
@@ -100,6 +102,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   const converted = ctx.test ? null : (convertSeals(), takeSealNotice());
   // 옛 스킬북 → 스킬트리 (사장님 10/21 — skill_tree_store.js): 옮기기는 판을 처음 연 때 main.js 가 이미 했다 — 여기선 남은 것만(안전). 알림은 아직 안 띄웠으면 한 번(창). 테스트 경로는 안 함
   const treeNotice = ctx.test ? null : (migrateSkillBooks(), takeTreeNotice());
+  checkTitles(); // 호칭 (10/24): 조건을 이미 채운 옛 저장(유파 칸 모두 · 방랑 열림 …)에 한 번 — 알림 창은 아래(다른 창 뒤에 차례로)
   const profile = readProfile();
   const status = (text, tone = '') => { $('lobbyStatus').textContent = text; if (tone) $('lobbyStatus').dataset.tone = tone; else delete $('lobbyStatus').dataset.tone; };
   // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥ '대표 유파 정보는 없어도 되겠다')
@@ -111,13 +114,20 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   }
   // ── 호칭 내림 상자 (사장님 10/16 15:3x ⑥ "'여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" ·
   //    16:0x "호칭 내림 상자를 누르면 아래로 열리는 투명도를 가진 박스에 이미 가진 호칭인 여행자가 보이고, '호칭 없음' 같은 시스템 알림은 거기서 빼자"):
-  //  단추 = 지금 호칭 + 작은 갈매기표(싸움 화면 부 단추 꼴 — 금색 아님) · 누르면 바로 아래로 반투명 창(--panel)이 열려 가진 호칭만 보인다(지금은 기본 '여행자' 하나 — 지금 호칭 = ✓).
+  //  단추 = 지금 호칭 + 작은 갈매기표(싸움 화면 부 단추 꼴 — 금색 아님) · 누르면 바로 아래로 반투명 창(--panel)이 열려 가진 호칭만 보인다(지금 호칭 = ✓).
+  //  10/24 사장님: '여행자'는 호칭이 아님 — 얻은 호칭이 없으면 단추 대신 흐린 '호칭 없음' 글(누를 수 없음 · 창은 열리지 않음 — 창 안의 '호칭 없음' 줄을 뺀 16:0x 그대로) · 처음 얻은 호칭이 저절로 지금 호칭.
   //  고르면 title 에 저장(lobby_progress.js selectTitle). 키보드: 단추에서 ↓ ↑ = 열기 · 목록에서 ↑ ↓ Home End = 옮기기 · Enter Space = 고르기 · Esc = 닫고 단추로 · Tab = 닫기 / 바깥을 누르면 닫힘
   const picker = $('titleSelect'), titleList = $('titleList');
   const titleItems = () => [...titleList.querySelectorAll('[role=option]')];
+  // 긴 호칭 (10/24 — lobby.css #titleCurrent): 낱말 사이 두 줄로도 넘치면(낱말 하나가 칸보다 김) 글자 한 단계 작게 — 자르지 않는다
+  const fitTitle = (box, text) => { delete box.dataset.fit; if (text.scrollWidth > text.clientWidth + .5) box.dataset.fit = 'small'; };
   function renderTitles() {
-    const { title } = readProgress();
+    const { title } = readProgress(), none = !titleOptions().length;
+    // 호칭이 없으면 (10/24 사장님 — '여행자'는 호칭이 아님): 레벨 옆에 흐린 '호칭 없음' 글만 · 갈매기표 · 누르기 · 내림 상자 없음 (줄 높이는 단추와 같게 — lobby.css .title-none)
+    $('titleNone').hidden = !none; picker.parentElement.hidden = none;
+    if (none) { titleList.hidden = true; picker.setAttribute('aria-expanded', 'false'); titleList.replaceChildren(); return; }
     $('titleCurrent').textContent = title;
+    fitTitle(picker, $('titleCurrent'));
     titleList.replaceChildren(...titleOptions().map((name, i) => {
       const li = document.createElement('li');
       li.id = `titleOption${i}`; li.setAttribute('role', 'option'); li.tabIndex = -1; li.dataset.title = name;
@@ -128,7 +138,12 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   }
   function openTitles(at = 'current') {
     renderTitles();
+    // 열린 창이 내 정보 칸 안쪽 오른쪽 끝을 넘지 않게 (lobby.css --title-room) — 칸 안쪽 = 테두리 · 여백을 뺀 곳
+    const panel = picker.closest('.profile-panel'), ps = getComputedStyle(panel), pr = panel.getBoundingClientRect();
+    const room = pr.right - parseFloat(ps.borderRightWidth) - parseFloat(ps.paddingRight) - picker.getBoundingClientRect().left;
+    titleList.style.setProperty('--title-room', `${Math.max(96, Math.floor(room))}px`);
     titleList.hidden = false; picker.setAttribute('aria-expanded', 'true');
+    for (const li of titleItems()) fitTitle(li, li.firstChild);
     const items = titleItems(), current = items.findIndex(o => o.getAttribute('aria-selected') === 'true');
     items[at === 'last' ? items.length - 1 : Math.max(0, current)]?.focus({ preventScroll: true });
   }
@@ -178,7 +193,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   let selectedItem = null; // 고른 칸 { kind: 'weapon' | 'armor', id } — 무기 · 방어구가 한 판이라 종류도 같이 쥔다
   // 장착 자리: 무기 · 머리(케틀 햇) · 목(용사의 눈물 — 10/17)
   const equipped = { weapon: readLobbyEquipment(), head: readLobbyArmor(), neck: readLobbyNeck() };
-  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: renderWallet, announce: text => { $('skillStatus').textContent = text; } });
+  const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: () => { renderWallet(); showTitleNotice(); }, announce: text => { $('skillStatus').textContent = text; } }); // 칸을 사서 호칭을 얻으면 스킬 화면 위에 알림 창
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')]; // 차례 = 2 × 2 칸 차례(윗줄 아이템 · 상점 · 아랫줄 스킬북 · 이벤트) — ↑ ↓ 는 같은 칸 줄, ← → 는 다음 · 앞
   function selectTab(tab) {
     for (const item of tabs) {
@@ -296,6 +311,21 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
     if ($('treeDialog').open) listen($('treeDialog'), 'close', showWanderNotice);
     else showWanderNotice();
   }
+  // ── 호칭 알림 창 (사장님 10/24 03:2x '처음 호칭을 받을 때 알림 뜨게하고'): 아직 안 본 호칭을 얻은 차례로 한 창씩 · 다른 창(스킬트리 옮김 · 방랑 · 이름)이 떠 있으면 닫힌 뒤 ──
+  //  확인(또는 Esc)으로 닫으면 본 것으로 적고(seen — 다시 안 뜸) 다음 호칭. 글: '호칭을 얻었습니다' · 호칭 이름(금색) · 얻은 까닭 한 줄(title_rules.js titleReason). 테스트 경로는 띄우지 않음
+  function showTitleNotice() {
+    const box = $('titleDialog');
+    if (ctx.test || box.open || ['treeDialog', 'wanderDialog', 'nameDialog'].some(id => $(id).open)) return;
+    const next = titleNotices()[0];
+    if (!next) return;
+    box.dataset.event = next.event; $('titleEarned').textContent = next.name; $('titleWhy').textContent = next.why;
+    renderWallet(); renderTitles(); // 레벨(호칭 하나 = Lv +1) · 내림 상자
+    try { box.showModal(); } catch { box.setAttribute('open', ''); }
+  }
+  listen($('closeTitle'), 'click', () => $('titleDialog').close());
+  listen($('titleDialog'), 'close', () => { markTitleSeen($('titleDialog').dataset.event); showTitleNotice(); });
+  for (const id of ['treeDialog', 'wanderDialog']) listen($(id), 'close', showTitleNotice); // 방랑 알림 창 다음 (위 방랑 창 듣기가 먼저 걸려 있어 차례가 지켜진다)
+  showTitleNotice();
   let departing = false;
   const departButtons = ['lobbyDepart', 'lobbyWander', 'lobbyBack'];
   async function leave(action, failText) {
@@ -313,6 +343,6 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   $('lobbyHeading').focus();
   return {
     tree, // 시험·사진 도구: lobby.tree.show('german', 2)
-    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); $('treeDialog').close(); $('wanderDialog').close(); grove.dispose(); },
+    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); $('treeDialog').close(); $('wanderDialog').close(); $('titleDialog').close(); grove.dispose(); },
   };
 }

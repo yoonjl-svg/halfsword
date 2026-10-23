@@ -19,6 +19,9 @@ import { readJourney, writeJourney, addJourneyClear, journeyClears } from './jou
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
 import { journeyCoins, awardHead, readProgress, rand01, recordCampaignStage, migrateCampaignStages, ensureWanderRun, saveWanderLoadout, resetWanderLoadout, markWanderFighting, settleAbandonedWander, awardWanderHead, settleWander, wanderNoticeDue, markWanderNotice, markWanderEncounter } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x) · 방랑 저장 (10/23) · 방랑 전용 상대 알림 창 본 기록 (10/24)
+import { showTitleNotice } from './title_notice.js'; // 결과 창 위 호칭 알림 창 (10/24)
+import { titleTierDraw } from './lobby_progress.js'; // 호칭 하나마다 레전드 확률 (10/24 — drawCardIds)
+import { TIER_DRAW } from './weapons.js';
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
 import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
@@ -313,7 +316,9 @@ function drawCardIds() {
   // 등급을 먼저 뽑고 그 등급 안에서 고른다 (사장님 결정 — 등급 확률은 weapons.js TIER_DRAW 한 곳 · 편지가 있으면 아래 칸마다 무게)
   // 편지 (스킬트리 — 사장님 10/21 '칸마다 무게'): 칸마다 무게 = 등급 확률 ÷ 그 등급 칸 수, 편지를 가진 유파 칸은 × LETTER.mult — 모든 등급에서 한 번에 (편지가 없으면 지금 뽑기 그대로 — weapons.js drawWeaponCards weightOf)
   const letters = playerLetters({ test: testRoute.active });
-  return drawWeaponCards(PLAYER_WEAPON_POOL, 2, letters.size ? { weightOf: (id) => letterMul(traditionOf(getWeapon(id)), letters) } : {});
+  // 호칭 (사장님 10/24 04:0x): 가진 호칭 하나마다 레전드 +0.2 %p · 커먼 −0.2 %p — 여정 · 방랑의 내 카드만(테스트 경로 · 고정 주소 판은 기본 표)
+  const tierDraw = careerSaves() && !testRoute.active ? titleTierDraw(TIER_DRAW) : TIER_DRAW;
+  return drawWeaponCards(PLAYER_WEAPON_POOL, 2, { tierDraw, ...(letters.size ? { weightOf: (id) => letterMul(traditionOf(getWeapon(id)), letters) } : {}) });
 }
 
 // ── 설정 (브라우저에 저장) ──
@@ -2171,6 +2176,7 @@ function checkRoundEnd(dt) {
     clearEmoMsg();
     showMenu();
     if (wanderNoticeAfterResult) showWanderNotice();
+    if (!$('wanderNotice').classList.contains('show')) showTitleNotice(); // 판 끝에 얻은 호칭 (10/24 — 방랑자 · 왕 시해자 · 정복자: title_notice.js) · 방랑 알림 창이 떠 있으면 그 창 다음
   }
 }
 
@@ -2188,6 +2194,7 @@ function showWanderNotice() {
 $('btnWanderNotice').addEventListener('click', () => {
   markWanderNotice();
   $('wanderNotice').classList.remove('show');
+  showTitleNotice(); // 30 무대를 처음 다 깬 판: 방랑 알림 창 다음 방랑자 호칭 창 (10/24)
 });
 
 // ── 방랑 전용 상대 알림 창 (사장님 10/24 01:1x '방랑에서 방랑 전용 캐락터가 등장했을 땐 카드 고르기 전에 알림 팝업 띄우고 낯선 발걸음 소리가 들린다. 이렇게 쓰고 프로필 사진과 대사 출력. 확인 단추는 청동색으로') ──

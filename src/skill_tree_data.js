@@ -252,4 +252,4 @@ export function letterSchools(learnedBySchool) {
 export const letterMul = (school, letters) => (letters?.has(school) ? LETTER.mult : 1);
 /** 칸 효과 한 줄 — 편지는 배율(config LETTER.mult)을 읽어 쓴다 (값이 바뀌어도 글이 맞게) */
 export const nodeEff = (school, n) => (n.letter ? `${SCHOOL_KO[school]} 무기 카드가 더 자주 나온다` : n.eff);
-const SCHOOL_KO = { german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본', chinese: '동방' }; // schools.js TRADITIONS.*.nameKo 와 같은 말 (이 파일은 schools.js 를 들여오지 않는다)
+export const SCHOOL_KO = Object.freeze({ german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본', chinese: '동방' }); // schools.js TRADITIONS.*.nameKo 와 같은 말 (이 파일은 schools.js 를 들여오지 않는다) · 호칭 알림 글도 씀(title_rules.js)

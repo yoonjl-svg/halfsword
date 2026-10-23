@@ -53,7 +53,7 @@ try{
  assert.ok(Math.abs(layout.frame.top-layout.panel.top)<1&&Math.abs(layout.depart.bottom-layout.panel.bottom)<1&&layout.depart.y>=layout.frame.bottom&&layout.depart.bottom<=390,JSON.stringify(layout));
  assert.equal((await card(p)).hidden,true);
  await shot(p,'lobby-phone');checks.push({name:'battle-style buttons and tabs, lobby text smaller; square profile picture (player, low) at the column top, departure button at the column bottom (same width); 6×4 square grid (24 slots); one item list tree branch → kettle hat → hero tear (no longsword)',layout});
- assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleCurrent').textContent(),'여행자');assert.equal(await p.locator('#lobbyCoins').textContent(),'100');
+ assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleNone').textContent(),'호칭 없음');assert.equal(await p.locator('#lobbyCoins').textContent(),'100');
  assert.equal(await p.locator('.duel-record > span').textContent(),'대면 결과');
  const order=await p.locator('.profile-data dd').evaluateAll(els=>els.map(e=>e.id||e.className));assert.deepEqual(order,['lobbyRank','name-row']); // 대표 유파 칸은 뺐다 (10/16 15:3x ⑥)
  const menu=await p.locator('.lobby-tabs button').evaluateAll(els=>els.map(e=>({text:e.textContent,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y})));
