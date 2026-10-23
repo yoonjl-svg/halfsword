@@ -35,7 +35,7 @@ import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMe
 import { Sound, BodySounds } from './sound.js';
 import { Combat, woundDegree, woundRageMult, COMBAT_HOOKS } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_ORDER, STAGE_FOE, STAGE_FOE_EXTRA, stageFoeId, stageLabel, STAGE_NAME_KO } from './stages.js';
-import { WANDER, WANDER_NAME, WANDER_EXCLUSIVE, WANDER_HEAD, WANDER_NOTICE_TEXT, chooseWanderEncounter } from './wander_rules.js'; // 방랑 (10/23 — 대기실 '방랑' 단추, docs/import/wander_heroes_import_2026-10-23.md)
+import { WANDER, WANDER_NAME, WANDER_EXCLUSIVE, WANDER_HEAD, WANDER_BONUS_LABEL, WANDER_NOTICE_TEXT, chooseWanderEncounter } from './wander_rules.js'; // 방랑 (10/23 — 대기실 '방랑' 단추, docs/import/wander_heroes_import_2026-10-23.md)
 import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
@@ -432,10 +432,10 @@ let journeyMode = false;
 let pendingJourney = null; // 이어하기: 다음 startFight 가 되살릴 무대 시작 지점 (validJourney 가 고른 것 · 방랑이면 지금 판)
 const JOURNEY_PURE = foeParam === 'stage' && !STAGE_PIN && !testRoute.active && !FIXED_WEAPON;
 const journeySaves = () => journeyMode && JOURNEY_PURE;
-// 방랑 (10/23 — wander_rules.js · 대기실 '방랑' 단추 → game_entry.js → launchWander): 무작위 무대 · 상대 · 보상 두 배 · 저장은 lobby_progress.js 의 wander 칸(여정 이어하기 지점 · 깬 수는 안 건드림).
+// 방랑 (10/23 — wander_rules.js · 대기실 '방랑' 단추 → game_entry.js → launchWander): 무작위 무대 · 상대 · 방랑 보상(이기면 +20~50 · 연승 보너스 · 특별 몫 — 10/24 03:0x) · 저장은 lobby_progress.js 의 wander 칸(여정 이어하기 지점 · 깬 수는 안 건드림).
 //  주소 고정 판 · 테스트 경로에서는 열리지 않는다(JOURNEY_PURE). 여정과 같은 몫: 대기실 장착 · 대기실 이름 · 대면 결과 · 정지 · 결과 창의 '대기실'(careerSaves)
 let wanderMode = false;
-let wanderResume = false; // 이번 startFight 가 대기실에서 들어온 것인가(저장된 판 그대로 — 카드 · 고른 무기까지) · 아니면 '처음부터 다시' · '다음 방랑'
+let wanderResume = false; // 이번 startFight 가 대기실에서 들어온 것인가(저장된 판 그대로 — 카드 · 고른 무기까지) · 아니면 정지 창 '재대결' · '다음 방랑'
 const wanderSaves = () => wanderMode && JOURNEY_PURE;
 const careerSaves = () => journeySaves() || wanderSaves();
 // 방랑 풀: 무대 = 여정 30곳(보관용 화전 터 · 어두운 홀 빼고) · 상대 = 그 무대 상대 + 방랑 전용 다섯(아르토리아 두 모습 · 롤랑 · 백린의 전사 · 베르나르도)
@@ -454,11 +454,11 @@ const LOOK_BAREHEAD = { ...LOOKS.player, helmet: null }; // 케틀 햇을 벗은
 let roundReward = null;
 // 머리 (사장님 결정 10/16 04:3x '적의 머리를 베면 1개씩 주는 재화'): 참수가 일어난 순간 한 번 부르는 자리(combat.js COMBAT_HOOKS.onDecapitate — fighter.js applyWound ·
 //  흙 몸의 머리 떨어짐 detachHeadFromWound)에 건다. 이 판 상대만 · 한 상대에 한 번(lobby_progress.js awardHead). 시뮬은 이 훅을 걸지 않는다(null)
-//  방랑은 머리 2(WANDER_HEAD) · 판마다 한 번 — 판 결과와 같은 저장에 적어 다시 열어도 두 번 받지 않는다(awardWanderHead). 쓰러뜨린 뒤 벤 목도 센다(여정과 같게)
+//  방랑도 머리 1(WANDER_HEAD — 10/24 02:4x, 전 2) · 판마다 한 번 — 판 결과와 같은 저장에 적어 다시 열어도 두 번 받지 않는다(awardWanderHead). 쓰러뜨린 뒤 벤 목도 센다(여정과 같게)
 COMBAT_HOOKS.onDecapitate = (f) => {
   if (f !== enemy || !careerSaves()) return;
   if (wanderMode) {
-    if (awardWanderHead()) roundReward = { coins: roundReward?.coins ?? 0, heads: (roundReward?.heads ?? 0) + WANDER_HEAD, bonus: roundReward?.bonus };
+    if (awardWanderHead()) roundReward = { coins: roundReward?.coins ?? 0, heads: (roundReward?.heads ?? 0) + WANDER_HEAD, bonus: roundReward?.bonus, streak: roundReward?.streak };
     return;
   }
   if (!awardHead(f)) return;
@@ -475,7 +475,7 @@ function useStage(id) {
 }
 /**
  * 판을 열 때(startFight) 부른다: 지난 판을 이겼으면 순서대로 다음 배경을 짓는다 (첫 판은 메뉴 뒤 배경 그대로).
- *  지거나 도중에 "처음부터 다시"를 누르면 같은 배경 — 상대도 배경을 따르니 같은 상대와 다시 싸운다 (사장님 결정)
+ *  지거나 도중에 정지 창 "재대결"(10/24 02:4x — 전 '처음부터 다시')을 누르면 같은 배경 — 상대도 배경을 따르니 같은 상대와 다시 싸운다 (사장님 결정)
  */
 function nextRoundStage() {
   if (wanderMode) {
@@ -1502,7 +1502,7 @@ function updateDraw(dt) {
   }
 }
 
-/** 카드를 치운다 (다 끝났을 때, 또는 뽑기 도중에 "처음부터 다시") */
+/** 카드를 치운다 (다 끝났을 때, 또는 뽑기 도중에 "재대결") */
 function closeDraw() {
   draw.stage = null;
   drawEl.className = '';
@@ -1552,7 +1552,7 @@ async function startFight() {
   menu.classList.remove('show');
   screenTint.visible = true;
   topButtons.classList.add('show');
-  closeDraw(); // 뽑기 도중에 "처음부터 다시"를 눌렀으면 그 카드는 치운다
+  closeDraw(); // 뽑기 도중에 "재대결"을 눌렀으면 그 카드는 치운다
   toast.classList.remove('show');
   nextRoundStage(); // 배경: 첫 판은 메뉴 뒤 그대로, 그 다음 판부터는 정해진 순서로 다음 배경 (짓는 멈칫은 메뉴가 아직 떠 있는 동안)
   planOpening(); // 판 시작 카메라: 이 무대 첫 판이면 무대 훑기, 같은 무대 다시면 내려앉기 — 정지(발 묶임) 길이도 여기서 (카드 고르는 동안 카메라는 그 시작 자리)
@@ -1649,8 +1649,8 @@ function migrateLegacyWander() {
 /**
  * 방랑 판을 연다 (startFight 앞): 지금 판(ensureWanderRun — 없거나 끝났으면 새로 뽑음)의 무대를 짓고 pendingJourney 에 넣는다. 돌려줌: 판을 여나
  *  도중에 그만두기 (WANDER.quitAsLoss — 기본 끔, 일반 여정과 같게): 대기실에서 들어오면 저장된 판 그대로(카드 · 고른 무기까지 — 여정 '이어하기'처럼) ·
- *   정지 창 '처음부터 다시'면 같은 대면을 카드부터 다시(여정 '처음부터 다시'처럼) · 금화는 판이 끝날 때만 바뀐다.
- *   켬: 싸우던 중 버린 판(새로고침 · 대기실 · 처음부터 다시)은 패배로 셈하고 진 판 결과 창을 띄운다(판을 열지 않음)
+ *   정지 창 '재대결'이면 같은 대면을 카드부터 다시(여정 '재대결'처럼) · 금화는 판이 끝날 때만 바뀐다.
+ *   켬: 싸우던 중 버린 판(새로고침 · 대기실 · 재대결)은 패배로 셈하고 진 판 결과 창을 띄운다(판을 열지 않음)
  */
 function openWanderRound() {
   const resume = wanderResume;
@@ -1661,7 +1661,7 @@ function openWanderRound() {
       showWanderForfeit(lost);
       return false;
     }
-  } else if (!resume) resetWanderLoadout(); // 처음부터 다시 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 방랑'은 새 판)
+  } else if (!resume) resetWanderLoadout(); // 재대결 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 방랑'은 새 판)
   const run = ensureWanderRun(drawWanderEncounter, validWanderRun);
   if (!run) throw new Error('방랑이 잠겨 있음');
   // 저장된 내 무기 · 카드가 지금 뽑기 목록에 없으면 카드부터 (여정 validJourney 와 같게)
@@ -1676,7 +1676,7 @@ function openWanderRound() {
   sound.setStage(stages.id);
   return true;
 }
-/** 싸우던 중 버린 방랑 판을 패배로 셈한 결과 창 (WANDER.quitAsLoss 켬 — 정지 창 '처음부터 다시'): 진 판 결과 창과 같은 꼴 · '대기실'만 */
+/** 싸우던 중 버린 방랑 판을 패배로 셈한 결과 창 (WANDER.quitAsLoss 켬 — 정지 창 '재대결'): 진 판 결과 창과 같은 꼴 · '대기실'만 */
 function showWanderForfeit(lost) {
   recordDuel(false);
   roundReward = lost;
@@ -1803,7 +1803,7 @@ function pause() {
   $('btnStart').hidden = false; // 방랑 진 판 결과 창이 숨긴 단추
   $('menuReward').hidden = true;
   showDefeatFoe(null); // 패배 창의 상대 프로필 · 대사는 정지 창에 남기지 않는다
-  $('btnStart').textContent = '처음부터 다시';
+  $('btnStart').textContent = '재대결'; // 사장님 10/24 02:4x "스테이지 모드에서 일시 정지 누른 화면에서 '처음부터 다시'를 '재대결'로 고쳐" — 방랑 정지 창도 같은 단추(전 '처음부터 다시')
   $('btnStart').classList.remove('wander'); // 방랑 승리 창의 '다음 방랑' 색을 정지 창에 남기지 않는다 (금색 주 단추)
   $('btnResume').style.display = '';
   $('btnLobby').hidden = !lobbyMenu(); // 첫 화면·대기실 여정만 — 판을 떠나 대기실로 (아래 toLobby)
@@ -2081,15 +2081,13 @@ function showRewardLine() {
   el.hidden = !r;
   if (!r) return;
   const sign = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
-  el.innerHTML = `${COIN_ICON}<span>금화 ${sign(r.coins)}</span>${r.heads ? `<span class="sep"> · </span>${POUCH_ICON}<span>머리 +${r.heads}</span>` : ''}`;
-  // 방랑 특별 상대 몫 (wander_rules.js WANDER_BONUS): 줄 끝에 '(특별 보상 금화 +200 포함)' — 괄호 앞 한 칸은 index.html .reward .bonus 여백(줄이 flex 라 글의 빈칸은 접힌다)
-  const bonus = r.bonus?.coins ? `금화 +${r.bonus.coins}` : r.bonus?.heads ? `머리 +${r.bonus.heads}` : '';
-  if (bonus) {
-    const note = document.createElement('span');
-    note.className = 'bonus';
-    note.textContent = ` (특별 보상 ${bonus} 포함)`;
-    el.append(note);
-  }
+  // 방랑 보너스 (wander_rules.js WANDER_BONUS · WANDER_STREAK · 이름 WANDER_BONUS_LABEL — 사장님 10/24 02:4x '왕의 금고' · '빼앗은 수급' · 03:0x '연승보너스'):
+  //  금화 바로 뒤 '(왕의 금고 +200 · 연승 보너스 +5 포함)' · 머리 바로 뒤 '(빼앗은 수급 +10 포함)'. 전: 줄 끝에 '(특별 보상 금화 +200 포함)'.
+  //  괄호 앞 한 칸은 index.html .reward .bonus 여백(줄이 flex 라 글의 빈칸은 접힌다)
+  const L = WANDER_BONUS_LABEL;
+  const parts = { coins: [r.bonus?.coins && `${L.coins} +${r.bonus.coins}`, r.streak && `${L.streak} +${r.streak}`], heads: [r.bonus?.heads && `${L.heads} +${r.bonus.heads}`] };
+  const note = (kind) => { const p = parts[kind].filter(Boolean); return p.length ? `<span class="bonus"> (${p.join(' · ')} 포함)</span>` : ''; };
+  el.innerHTML = `${COIN_ICON}<span>금화 ${sign(r.coins)}</span>${note('coins')}${r.heads ? `<span class="sep"> · </span>${POUCH_ICON}<span>머리 +${r.heads}</span>${note('heads')}` : ''}`;
   for (const icon of el.querySelectorAll('img')) { icon.alt = ''; icon.setAttribute('aria-hidden', 'true'); } // 매끈한 그림(wallet_icons.js — 10/16 15:3x ⑦): 빈 alt = 꾸밈
 }
 
@@ -2100,7 +2098,7 @@ function checkRoundEnd(dt) {
       resultShown = false;
       const win = !enemy.alive;
       if (wanderSaves()) {
-        // 방랑 (wander_rules.js): 금화(일반 판 보상 × 2 + 특별 몫 · 지면 일반 차감) · 특별 머리 · 판 결과를 한 번의 저장에 (lobby_progress.js settleWander — 진행 중 판만 한 번)
+        // 방랑 (wander_rules.js): 금화(이기면 +20~50 + 연승 보너스 + 특별 몫 '왕의 금고' · 지면 −10~20 — 10/24 03:0x) · 특별 머리 · 판 결과를 한 번의 저장에 (lobby_progress.js settleWander — 진행 중 판만 한 번)
         const reward = settleWander(win);
         if (reward) {
           recordDuel(win);
@@ -2108,7 +2106,7 @@ function checkRoundEnd(dt) {
         }
       } else if (journeySaves()) {
         recordDuel(win); // 대기실 '대면 결과' — 첫 화면에서 연 여정의 판마다 한 번
-        // 금화 (사장님 결정 10/16 04:3x · 10/22 01:5x — 낮 +10~30 / −1~5 · 밤 +20~60 / −2~10, 0 아래로는 안 내려감, lobby_progress.js journeyCoins)
+        // 금화 (사장님 결정 10/16 04:3x · 10/22 01:5x · 10/24 03:0x — 낮 · 밤 같음: 이기면 +10~25 · 지면 −5~10, 0 아래로는 안 내려감, lobby_progress.js journeyCoins)
         roundReward = { heads: roundReward?.heads ?? 0, coins: journeyCoins(win, undefined, { night: /_night$/.test(stages.id ?? '') }).delta };
       }
       lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
@@ -2193,7 +2191,7 @@ $('btnWanderNotice').addEventListener('click', () => {
 // ── 방랑 전용 상대 알림 창 (사장님 10/24 01:1x '방랑에서 방랑 전용 캐락터가 등장했을 땐 카드 고르기 전에 알림 팝업 띄우고 낯선 발걸음 소리가 들린다. 이렇게 쓰고 프로필 사진과 대사 출력. 확인 단추는 청동색으로') ──
 //  방랑 판의 상대가 방랑 전용(wander_rules.js WANDER_EXCLUSIVE)이면 카드 고르기 전에 한 번(대기실 장착 무기 · 이미 고른 무기로 바로 싸우는 판이면 싸움 전에 — startFight).
 //  창 = 패배 창 꼴(index.html #wanderEncounter): 프로필(setFoePortrait — 대기실 · 패배 창과 같은 그림 길) · 장면 글 '낯선 발걸음 소리가 들린다.' · 이름 · 소개 대사 첫 줄(lines.intro[0] — 없으면 taunt) · 확인(방랑 단추 색).
-//  대면마다 한 번: 확인을 누르면 저장 run.encounterSeen(lobby_progress.js markWanderEncounter) — 정지 '처음부터 다시' · 대기실 → '방랑 이어가기'로 같은 대면을 다시 열면 안 뜬다
+//  대면마다 한 번: 확인을 누르면 저장 run.encounterSeen(lobby_progress.js markWanderEncounter) — 정지 '재대결' · 대기실 → '방랑 이어가기'로 같은 대면을 다시 열면 안 뜬다
 //  (확인 전에 앱을 닫으면 다음에 다시). 창이 떠 있는 동안 state 'encounter' — 판 시간 · 정지 · 키 · 조이스틱이 쉰다.
 //  startFight 는 창을 기다리지 않고 끝난다(then 을 확인 때 부름) — 대기실에서 연 판은 launchWander 가 끝나야 덮개가 걷혀 창이 보인다
 let encounterThen = null;
@@ -2247,7 +2245,7 @@ let camSteps = 0; // 이번 화면에 돈 물리 스텝 수 (게임 루프가 �
 
 // ── 판 시작 카메라 (10/15 사장님 '첫 전투 시작 시 스테이지 전체를 빠르게 슥 훑고 기본 카메라 화면으로 다가가게 해. 3초 정도? … 카메라가 캐릭터에 따라 붙으면 바로 전투 시작') ──
 //  mode 'sweep' = 그 무대의 첫 판(메뉴에서 시작 · '다음 여정'으로 새 무대 · 테스트 경로 새 무대 · ?stage= 고정 무대의 첫 판): 무대 훑기 CAMERA.open.sweepSec 초
-//       'settle' = 같은 무대를 다시('다시 겨루기' · 처음부터 다시): 짧은 내려앉기 settleSec 초 · 'old' = `?openSweep=0` (9/30 판 시작, 정지 2 s)
+//       'settle' = 같은 무대를 다시('다시 겨루기' · 정지 창 '재대결'): 짧은 내려앉기 settleSec 초 · 'old' = `?openSweep=0` (9/30 판 시작, 정지 2 s)
 //  정지(발 묶임 fighter.feetHeld · AI 판 시작 몸짓)는 이 브라우저에서만 판 시작 카메라 길이와 같다: ARENA.startHold 를 판마다 바꾼다(게임 시간 = 실제 초 × 템포).
 //   시뮬 도구는 이 파일을 읽지 않아 config 값(SIM_HOLD 2.0)을 그대로 쓴다 — 관문 그대로
 const SIM_HOLD = ARENA.startHold;

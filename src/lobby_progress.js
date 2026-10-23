@@ -14,7 +14,7 @@
 //  10/23 방랑 (wander_rules.js — 샛별 저장소 전달본 977c2a43, docs/import/wander_heroes_import_2026-10-23.md): 같은 저장에 wander 칸(깬 무대 · 열림 · 알림 창 · 지금 판)을 더했다 —
 //   판 결과와 보상을 한 번의 저장에 같이 써서 새로고침 · 대기실 왕복 · 다시 열기로 같은 보상을 두 번 받지 않는다. 옛 판(wander 를 모르는 판)으로 되돌리면 이 칸은 버려진다(금화 · 머리는 남음).
 //   저장이 막히면 방랑 거래만 이번 실행 메모리에 남긴다(pendingSave — 옛 지갑을 다시 읽어 같은 보상을 또 주지 않게). 다른 거래는 전처럼 '실패하면 다음 읽기에서 옛 값'.
-import { normalizeWander, wanderReward, WANDER_HEAD, legacyWanderStages } from './wander_rules.js';
+import { normalizeWander, wanderReward, WANDER_HEAD, WANDER_COINS, legacyWanderStages } from './wander_rules.js';
 export const PROGRESS_KEY = 'stillness.lobby.progress.v1';
 export const DEFAULT_TITLE = '여행자';
 /** 얻은 것 갈래: item 물건 · skill 스킬트리 칸(10/21) · skillbook 옛 스킬북(읽기만 — 옮기기가 거둔다) */
@@ -120,8 +120,9 @@ export function setCoins(amount) {
 }
 // ── 여정 판 끝 금화 · 머리 (사장님 결정 10/16 04:3x) ──
 // 사장님 10/22 01:5x '획득량이라도 지금의 2배로 · 밤 스테이지에서는 다시 그 2배 · 대신 밤 스테이지에서는 패배 시 잃어버리는 양을 지금의 2배로'
-//  낮: 이기면 +10~30(전 5~15) · 지면 −1~5 그대로 / 밤(무대 id 끝 _night): 이기면 +20~60 · 지면 −2~10 (정수, 양 끝 포함)
-export const JOURNEY_COINS = Object.freeze({ win: [10, 30], loss: [1, 5], night: Object.freeze({ win: [20, 60], loss: [2, 10] }) });
+//  → 10/24 02:4x '스테이지 모드에서도 밤에 금화 보상 2배 주던 거 낮과 똑같이 바꿔' · 03:0x '스테이지 승리 +10~25 패배 -5~10': 낮 · 밤 같음 —
+//  이기면 +10~25 · 지면 −5~10 (정수, 양 끝 포함 · 전 낮 +10~30 / −1~5 · 밤 +20~60 / −2~10). night 칸은 낮과 같은 값(밤 무대 갈래를 남겨 두어 다시 가를 때 한 곳만)
+export const JOURNEY_COINS = Object.freeze({ win: [10, 25], loss: [5, 10], night: Object.freeze({ win: [10, 25], loss: [5, 10] }) });
 /** [lo, hi] 정수 하나 — 게임 난수(Math.random — AI 가 쓰는 흐름)를 건드리지 않게 crypto 로 */
 export function rollInt(lo, hi) {
   const span = hi - lo + 1;
@@ -133,8 +134,8 @@ export function rand01() {
   return c?.getRandomValues ? c.getRandomValues(new Uint32Array(1))[0] / 4294967296 : Math.random();
 }
 /**
- * 판 끝 금화 (main.js checkRoundEnd — 첫 화면·대기실 여정만): 낮 무대는 이기면 +rollInt(10, 30) · 지면 −rollInt(1, 5) ·
- *  밤 무대(opts.night)는 이기면 +rollInt(20, 60) · 지면 −rollInt(2, 10) — 0 아래로는 안 내려간다 (JOURNEY_COINS · 사장님 10/22).
+ * 판 끝 금화 (main.js checkRoundEnd — 첫 화면·대기실 여정만): 이기면 +rollInt(10, 25) · 지면 −rollInt(5, 10) — 밤 무대(opts.night)도 같음(10/24 03:0x) ·
+ *  0 아래로는 안 내려간다 (JOURNEY_COINS · 사장님 10/22 · 10/24).
  *  돌려줌 { delta: 실제로 바뀐 값(지면 음수 — 금화가 모자라면 그만큼만), coins: 바뀐 뒤 금화, saved }
  */
 export function journeyCoins(win, roll = rollInt, { night = false } = {}) {
@@ -230,7 +231,7 @@ export function saveWanderLoadout({ weapon, cards, lastWeapon }) {
   Object.assign(run, { weapon, cards, lastWeapon });
   return save(true);
 }
-/** '처음부터 다시' (WANDER.quitAsLoss 끔 — 일반 여정과 같게): 같은 대면을 카드부터 다시 — 고른 무기 · 카드만 지운다 */
+/** 정지 창 '재대결'(10/24 02:4x — 전 '처음부터 다시') (WANDER.quitAsLoss 끔 — 일반 여정과 같게): 같은 대면을 카드부터 다시 — 고른 무기 · 카드만 지운다 */
 export function resetWanderLoadout() {
   readProgress();
   const run = session.wander.run;
@@ -238,7 +239,7 @@ export function resetWanderLoadout() {
   Object.assign(run, { weapon: null, cards: null, fighting: false });
   return save(true);
 }
-/** 싸움이 시작됨 / 끝남 (WANDER.quitAsLoss 켬 — main.js beginFight): 싸우는 동안 판을 버리면(새로고침 · 대기실 · 처음부터 다시) 다음에 패배로 셈한다 */
+/** 싸움이 시작됨 / 끝남 (WANDER.quitAsLoss 켬 — main.js beginFight): 싸우는 동안 판을 버리면(새로고침 · 대기실 · 재대결) 다음에 패배로 셈한다 */
 export function markWanderFighting(on = true) {
   readProgress();
   const run = session.wander.run;
@@ -255,7 +256,7 @@ export function settleAbandonedWander(roll = rollInt) {
   const reward = settleWander(false, roll);
   return reward && { ...reward, round };
 }
-/** 방랑 판에서 상대의 목을 벰 (main.js COMBAT_HOOKS.onDecapitate): 판마다 한 번 머리 WANDER_HEAD. 판이 끝난 뒤(쓰러뜨린 뒤) 벤 목도 센다 — 여정과 같게(리뷰 2-9). 돌려줌: 이번에 더했나 */
+/** 방랑 판에서 상대의 목을 벰 (main.js COMBAT_HOOKS.onDecapitate): 판마다 한 번 머리 WANDER_HEAD(1 — 여정과 같음 · 10/24 02:4x, 전 2). 판이 끝난 뒤(쓰러뜨린 뒤) 벤 목도 센다 — 여정과 같게(리뷰 2-9). 돌려줌: 이번에 더했나 */
 export function awardWanderHead() {
   readProgress();
   const run = session.wander.run;
@@ -267,26 +268,26 @@ export function awardWanderHead() {
   return true;
 }
 /**
- * 판 끝 (main.js checkRoundEnd): 진행 중 판만 한 번 — 금화(일반 판 보상 × 2 + 특별 몫 · 지면 일반 차감 · 0 아래 없음) · 특별 머리 · 판 결과를 한 번에 적는다.
- *  돌려줌 { coins: 실제로 바뀐 금화, heads: 이 판 머리(특별 + 참수), bonus } · 진행 중 판이 없으면 null (같은 판을 두 번 셈하지 않는다)
+ * 판 끝 (main.js checkRoundEnd): 진행 중 판만 한 번 — 금화(WANDER_COINS 이기면 +20 ~ 50 + 연승 보너스 + 특별 몫 '왕의 금고' · 지면 −10 ~ 20 · 0 아래 없음) · 특별 머리 '빼앗은 수급' · 판 결과를 한 번에 적는다.
+ *  연승 보너스는 이 방랑에서 몇 번째 승리인가(run.wins + 1 — 진 판에서 연속이 끝나 새 방랑은 0 부터)로 셈 · 판 결과와 같은 한 번의 저장이라 새로고침 · 다시 열기로 두 번 받지 않는다.
+ *  돌려줌 { coins: 실제로 바뀐 금화, heads: 이 판 머리(특별 + 참수), bonus, streak: 연승 보너스 금화 } · 진행 중 판이 없으면 null (같은 판을 두 번 셈하지 않는다)
  */
 export function settleWander(win, roll = rollInt) {
   readProgress();
   const run = session.wander.run;
   if (!run || run.status !== 'active') return null;
-  const T = /_night$/.test(run.stage) ? JOURNEY_COINS.night : JOURNEY_COINS;
-  const reward = wanderReward(win, run.foe, roll(...(win ? T.win : T.loss)));
+  const reward = wanderReward(win, run.foe, roll(...(win ? WANDER_COINS.win : WANDER_COINS.loss)), run.wins + 1);
   const before = session.coins;
   session.coins = Math.max(0, before + reward.coins);
   session.heads += reward.heads;
   run.status = win ? 'won' : 'lost';
   run.fighting = false;
   if (win) run.wins++;
-  run.reward = { coins: session.coins - before, heads: reward.heads + (run.headTaken ? WANDER_HEAD : 0), bonus: reward.bonus };
+  run.reward = { coins: session.coins - before, heads: reward.heads + (run.headTaken ? WANDER_HEAD : 0), bonus: reward.bonus, streak: reward.streak };
   save(true);
   return structuredClone(run.reward);
 }
-/** 방랑 전용 상대 알림 창을 봤다 (main.js wanderEncounter 의 확인 — 사장님 10/24 01:1x): 진행 중 판에 적어 같은 대면(처음부터 다시 · 방랑 이어가기)에서 다시 띄우지 않는다. 돌려줌: 저장했나 */
+/** 방랑 전용 상대 알림 창을 봤다 (main.js wanderEncounter 의 확인 — 사장님 10/24 01:1x): 진행 중 판에 적어 같은 대면(재대결 · 방랑 이어가기)에서 다시 띄우지 않는다. 돌려줌: 저장했나 */
 export function markWanderEncounter() {
   readProgress();
   const run = session.wander.run;

@@ -386,7 +386,8 @@
       .foe-line { margin: 0; color: var(--c-sub); font-size: var(--fs-m); line-height: var(--lh-text); word-break: keep-all; overflow-wrap: anywhere; }
       .foe-line small { display: block; margin-top: 2px; font-size: var(--fs-s); line-height: 1.4; }
       .foe-line small:empty { display: none; }
-      /* 방랑 전용 상대 알림 창 (사장님 10/24 01:1x — main.js wanderEncounter): 패배 창과 같은 꼴(왼쪽 프로필 --pf · 오른쪽 칸) · 제목 = 장면 글 · 이름(본문 색) · “대사”(보조 색 — .foe-line) · 확인(방랑 단추 색 .primary.wander) */
+      /* 방랑 전용 상대 알림 창 (사장님 10/24 01:1x — main.js wanderEncounter): 패배 창과 같은 꼴(왼쪽 프로필 --pf · 오른쪽 칸) · 장면 글 · 이름(본문 색) · “대사”(보조 색 — .foe-line) · 확인(방랑 단추 색 .primary.wander)
+         장면 글 '낯선 발걸음 소리가 들린다.' = 아래 대사와 같은 색 · 같은 크기(같은 .foe-line — 사장님 10/24 02:4x '아래 대사와 같은 색, 같은 크기로' · 전: 굵은 제목 h1) */
       .encounter-name { margin: 10px 0 2px; font-size: var(--fs-m); font-weight: var(--fw-head); line-height: var(--lh-text); color: var(--c-text); }
       .card.foe-shown .actions { margin-left: 0; padding-left: 0; } /* 단추 줄 바탕이 왼쪽 그림 위로 번지지 않게 (다른 창은 카드 여백까지 덮는 그대로) */
       .row[hidden] { display: none; } /* 결과 창(첫 화면·대기실 여정)엔 설정 줄을 뺀다 — 정지 창 · 첫 화면 설정에는 그대로 (10/16 08:3x, main.js) */
@@ -400,6 +401,11 @@
       .toggle.on::after { left: 22px; background: #1b1410; }
       .primary { width: 100%; margin-top: 14px; padding: 13px; font-size: var(--fs-m); line-height: calc(var(--fs-m) + 2px); font-weight: var(--fw-head); border: 0; border-radius: 8px; background: var(--c-accent); color: var(--c-on-accent); }
       .primary.wander { background: var(--c-wander); color: var(--c-text); box-shadow: inset 0 0 0 1px var(--c-wander-line); } /* 방랑 알림 창 '확인' · 방랑 승리 창 '다음 방랑' = 대기실 방랑 단추 색 (사장님 10/24 00:3x) — 꼴(폭 · 여백 · 모서리)은 주 단추 그대로 */
+      /* 방랑 전용 상대 알림 창 '확인' = 대기실 알림 창 '확인'(스킬트리 · 방랑 알림 창 — lobby.css .dialog-actions · entrance_ui.css .primary · lobby.css :host .wander)과 같은 크기 (사장님 10/24 02:4x '확인 박스는 대기실에서 쓰던 다른 확인 박스와 크기 맞춰'):
+         폭 = 글 + 패딩 · 최소 72 px · 오른쪽 끝 · 패딩 13 px(낮은 화면 10 px) · 글 --fs-m · 줄 --fs-m + 2 px(높이 42 · 낮은 화면 36) · 위 틈 16 px(낮은 화면 12 px). 색은 청동 그대로(.primary.wander) — 전: 창 폭 가득 · 높이 42 */
+      #wanderEncounter .actions { display: flex; justify-content: flex-end; }
+      #btnEncounter { width: auto; min-width: 72px; margin-top: 16px; }
+      @media (max-height: 500px) { #btnEncounter { padding: 10px; margin-top: 12px; } }
       .secondary { width: 100%; margin-top: 8px; padding: 11px; font-size: var(--fs-m); line-height: calc(var(--fs-m) + 2px); border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--c-text); }
       .actions { position: sticky; bottom: -20px; margin: 0 -20px -20px; padding: 0 20px 20px; background: var(--panel); }
       .howto { font-size: var(--fs-s); color: var(--c-sub); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
@@ -495,7 +501,7 @@
       <div class="card foe-shown">
         <figure class="foe-portrait" id="encounterFoe"><img id="encounterFoeImg" alt="" draggable="false" decoding="async"></figure>
         <div class="card-body">
-          <h1 id="encounterTitle">낯선 발걸음 소리가 들린다.</h1>
+          <p class="foe-line" id="encounterTitle">낯선 발걸음 소리가 들린다.</p> <!-- 장면 글 = 아래 대사와 같은 꼴(.foe-line — 사장님 10/24 02:4x · 전 h1) -->
           <p class="encounter-name" id="encounterName"></p>
           <p class="foe-line" id="encounterLine"><span id="encounterQuote"></span><small id="encounterSource"></small></p>
           <div class="actions"><button class="primary wander" id="btnEncounter">확인</button></div>
