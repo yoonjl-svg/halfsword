@@ -1,24 +1,30 @@
-// 베르나르도 복식 v2 (10/23 — 사장님 10/23 '줄이면서 디자인 개선' · 앞 · 3/4 · 뒤 · 싸우는 화면을 보고 내린 여섯 가지)
+// 베르나르도 복식 v2 (10/23 — 사장님 10/23 '줄이면서 디자인 개선' · 앞 · 3/4 · 뒤 · 싸우는 화면을 보고 내린 여섯 가지 → 같은 날 밤 다듬기 둘)
 //  v1(src/outfit_bernardo.js — 전달본 올리비에 그대로)과 같은 몸 · 같은 판금 13 부위 · 투구 없음 · 얼굴(피부 · 코 · 턱) · 칼(티소나)은 그대로. 바뀐 것:
-//   ① 목에 밝은 누빔 깃 띠 · 곱슬머리는 귀 뒤 · 어깨 뒤로 — 검은 머리 · 수염(0x1e1d1a)이 먹빛 갑옷(0x393b38)에 묻히지 않게
-//   ② 몸통: 가로 테를 겹친 통 대신 가슴판 한 장 + 배 쇠띠 셋 + 짧은 흰 겉옷(앞판 · 뒤판 — 옆이 트여 갑옷이 보임) · 허리띠
-//   ③ 넓적다리 상자 판 · 황토빛 단 → 어두운 사슬 치마(아랫단 톱니 · 놋쇠 고리) + 겉옷 자락(앞 · 뒤 — 다리마다 따로 붙어 걸음에 갈라짐)
-//   ④ 작은 무릎 덮개(사슬 치마에 매달림 — 사슬이 다 부서질 때 같이 떨어진다)
-//   ⑤ 망토: 맑고 짙은 금빛 · v1 과 같은 어깨(인물 오른어깨 = 앞에서 보아 왼쪽)에 짧게(허리 아래까지) · 굵은 주름 둘(골 둘) · 짙은 금빛 안감 · 앞 끝 놋쇠 브로치 · 넓적다리 뒤 황토빛 없앰
-//   ⑥ 겉옷 가슴에 레온 왕국의 보랏빛 선 사자 하나(평면 실루엣 · 문장의 오른쪽(+Z)을 봄) — 보라는 사자에만
-//  판금(look.armor 'plate'): 부위마다 판금 메쉬 = 그 부위에 바로 붙인 메쉬(outfits.js decorateOutfit) — 겉옷 · 망토 · 깃 · 허리띠는 몸 바탕 메쉬에 매단
-//   천 층(artoriaCloth)이라 판금이 아니다(덮은 곳 · 닳음 · 부서져 날아감에서 빠지고, 판이 다 부서져도 남는다). 테 · 놋쇠 고리 · 무릎 덮개는 판의 자식이라 판과 같이 움직이고 떨어진다.
-//  삼각형(tools/sim/look_tris.mjs — 몸 하나 · 칼 뺌): v1 52,000 → v2 21,567 — 곱슬 · 수염 가닥 수와 관 마디 · 면 수, 테 · 리벳 해상도를 줄였다. 좌표: +X 앞 · +Y 위 · +Z 오른쪽
+//   ① 머리 · 목: 곱슬 중단발은 v1 그대로 · 목은 v1 의 쇠 깃 그대로 (10/23 23:4x 사장님 '머리스타일과 목깃은 원래 디자인이 나아' — 그 전의 밝은 누빔 깃 띠 · 어깨 뒤로 넘긴 곱슬은 뺌)
+//      수염은 다듬은 턱수염 — 얼굴에서 떨어진 거리(길이 · 튀어나옴)와 가닥 수를 반으로 (같은 때 '지금의 50% 정도로 하자 밀도와 길이를')
+//   ② 몸통: 가로 테를 겹친 통 대신 가슴판 한 장 + 배 쇠띠 셋 + 흰 겉옷(앞판 · 뒤판 — 옆이 트여 갑옷이 보임 · 무릎까지 · 둘레에 금테) · 허리띠
+//   ③ 넓적다리 상자 판 · 황토빛 단 → 어두운 사슬 치마(아랫단 톱니 · 놋쇠 고리) + 겉옷 자락(앞 · 뒤 — 다리마다 따로 붙어 걸음에 앞뒤 가운데가 갈라짐 · 무릎 위까지)
+//   ④ 작은 무릎 덮개(사슬 치마에 매달림 — 사슬이 다 부서질 때 같이 떨어진다 · 위아래 금테)
+//   ⑤ 망토: 맑고 짙은 금빛 · v1 과 같은 어깨(인물 오른어깨 = 앞에서 보아 왼쪽)에 걸쳐 종아리까지 길게 · 등을 비스듬히 덮고 왼허리 뒤로 내려감 ·
+//      깊은 주름 셋 · 짙은 금갈색 안감 · 앞 끝 놋쇠 브로치 (10/23 23:5x 사장님 — 레온 왕가의 피 · 롤랑의 숙적다운 위엄)
+//   ⑥ 겉옷 가슴 한가운데에 크게, 금관을 쓴 레온 왕국의 보랏빛 선 사자(평면 실루엣 · 문장의 오른쪽(+Z)을 봄) — 보라는 사자에만
+//   ⑦ 검은 갑옷에 가는 금테(견갑 단 · 팔뚝 보호대 양끝 · 무릎 덮개) — 상아와 금의 롤랑 ↔ 검정과 금의 베르나르도
+//   ⑧ (시험) 곱슬 위 가는 금빛 머리띠 — look.circlet 일 때만(looks.js · 감독이 빼려면 그 칸만 지운다) · 머리 그룹 장식이라 투구 · 판금 판정과 무관
+//  판금(look.armor 'plate'): 부위마다 판금 메쉬 = 그 부위에 바로 붙인 메쉬(outfits.js decorateOutfit) — 겉옷 · 망토 · 허리띠는 몸 바탕 메쉬에 매단
+//   천 층(artoriaCloth)이라 판금이 아니다(덮은 곳 · 닳음 · 부서져 날아감에서 빠지고, 판이 다 부서져도 남는다). 쇠 깃 · 테 · 금테 · 놋쇠 고리 · 무릎 덮개는 판의 자식이라 판과 같이 움직이고 떨어진다.
+//  삼각형은 tools/sim/look_tris.mjs (몸 하나 · 칼 뺌) — 확인표 2318 · 2321 ~ 2325. 좌표: +X 앞 · +Y 위 · +Z 오른쪽
 export function createBernardoOutfitV2(h) {
   const { THREE, bake, box, cyl, ball, addMerged, artoriaCloth, quietFace, taperedTube } = h;
   const IRON = 0x484b46, EDGE = 0x858575, BRASS = 0x9c7b36, MAIL = 0x50534e, LEATHER = 0x4a3526;
-  const TABARD = 0xe6e0d0, TABARD_HEM = 0xc9c0aa, LION = 0x8b45b5, GOLD = 0xb08a2c, GOLD_IN = 0x846421, COLLAR = 0xc9ad80;
+  const TABARD = 0xe6e0d0, LION = 0x8b45b5, GOLD = 0xb08a2c, GOLD_IN = 0x705222, TRIM = 0xc29b40;
   const metal = { metalness: 0.68, roughness: 0.52, steel: 0.75, side: THREE.DoubleSide };
+  const gilt = { metalness: 0.72, roughness: 0.36, steel: 0.6, side: THREE.DoubleSide };
   const mailMat = { metalness: 0.6, roughness: 0.6, steel: 0.55, side: THREE.DoubleSide, vertexColors: true };
   const cloth = { metalness: 0, roughness: 0.97, side: THREE.DoubleSide };
   const shaded = { ...cloth, vertexColors: true };
   const add = (g, p, c = IRON, m = metal) => addMerged(g, p, c, m);
   const curve = (p, r = 0.0018, n = 12, radial = 4) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p.map(v => new THREE.Vector3(...v))), n, r, radial, false);
+  const smooth = x => x * x * (3 - 2 * x);
   function mesh(p, ix, cols) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
@@ -33,7 +39,7 @@ export function createBernardoOutfitV2(h) {
     const [y, d, w, x = 0] = row, c = Math.cos(a);
     return [x + d * Math.sign(c) * Math.pow(Math.abs(c), 0.78), y, w * Math.sin(a)];
   }
-  /** 줄들을 이은 겉면. tint(j, i) 가 있으면 꼭짓점 밝기(재질 색에 곱함 — 주름 · 누빔 · 사슬 줄) */
+  /** 줄들을 이은 겉면. tint(j, i) 가 있으면 꼭짓점 밝기(재질 색에 곱함 — 주름 · 사슬 줄) */
   function shell(rows, a0 = -Math.PI, a1 = Math.PI, N = 16, tint = null) {
     const p = [], ix = [], cols = tint ? [] : null;
     for (let j = 0; j < rows.length; j++) for (let i = 0; i <= N; i++) {
@@ -58,6 +64,8 @@ export function createBernardoOutfitV2(h) {
     return a.map((v, i) => v + ((b[i] ?? 0) - v) * t);
   }
   const grow = (row, o) => [row[0], row[1] + o, row[2] + o, row[3] ?? 0];
+  /** 판 겉면을 따라 y0 → y1 을 두르는 납작한 띠(금테 — 관 대신 면 하나라 삼각형이 적다) */
+  const band = (rows, y0, y1, lift = 0.0016, a0 = -Math.PI, a1 = Math.PI, N = 16) => shell([grow(rowAt(rows, y0), lift), grow(rowAt(rows, y1), lift)], a0, a1, N);
   /** 겉옷 판: 줄 [y, d, w, x, 반폭] — 줄마다 반폭(z)에 맞춰 각도 폭을 정한다. back 이면 뒤판(π 둘레) */
   function panel(rows, back = false, N = 8) {
     const p = [], ix = [];
@@ -73,13 +81,54 @@ export function createBernardoOutfitV2(h) {
     });
     return mesh(p, ix);
   }
+  /** 겉옷 판의 금테: 양옆 끝(폭 edge) · top 이면 윗단도 — 판에서 lift 만큼 띄운 납작한 띠 */
+  function panelTrim(rows, back = false, { top = false, edge = 0.008, lift = 0.0012 } = {}) {
+    const c0 = back ? Math.PI : 0, ang = (row, half) => Math.asin(Math.min(0.97, half / row[2])), out = [];
+    for (const sgn of [-1, 1]) {
+      const p = [], ix = [];
+      rows.forEach((row, j) => {
+        const r = [row[0], row[1] + lift, row[2] + lift, row[3]];
+        p.push(...point(r, c0 + sgn * ang(row, row[4] - edge)), ...point(r, c0 + sgn * ang(row, row[4])));
+        if (j < rows.length - 1) ix.push(2 * j, 2 * j + 2, 2 * j + 1, 2 * j + 1, 2 * j + 2, 2 * j + 3);
+      });
+      out.push(mesh(p, ix));
+    }
+    if (top) {
+      const y1 = rows.at(-1)[0], a = rowAt(rows, y1 - edge), b = rows.at(-1);
+      out.push(panel([[a[0], a[1] + lift, a[2] + lift, a[3], a[4]], [b[0], b[1] + lift, b[2] + lift, b[3], b[4]]], back, 8));
+    }
+    return out;
+  }
   function base(g, rows, N = 16) {
     for (const c of g.children.slice(1)) c.visible = false;
     g.children[0].geometry.dispose();
     g.children[0].geometry = shell(rows, -Math.PI, Math.PI, N);
   }
 
-  // ── 머리: 얼굴은 v1 그대로 · 곱슬은 귀 뒤로 넘겨 어깨 뒤로 떨어지게 · 가닥 수와 관 마디를 줄임 ──
+  // ── 머리: 얼굴은 v1 그대로 · 곱슬 중단발은 v1 그대로 · 수염은 다듬어 반으로 ──
+  //  얼굴 공(아래 head 에서 고친 꼴 — 입 아래는 옆으로 넓고 앞으로 5 mm)의 겉면까지 거리: 머리 가운데에서 단위 방향 (x, y, z) 로
+  function faceRadius(x, y, z) {
+    let lo = 0.04, hi = 0.2;
+    for (let k = 0; k < 22; k++) {
+      const r = (lo + hi) / 2, py = y * r, low = py < -0.035;
+      const px = low && x > 0 ? Math.max(0, x * r - 0.005) : x * r, pz = low ? z * r / (1 + 0.14 * Math.min(1, (-py - 0.035) / 0.055)) : z * r;
+      if (px * px + py * py + pz * pz < 0.01) lo = r;
+      else hi = r;
+    }
+    return (lo + hi) / 2;
+  }
+  /** 다듬은 수염(10/23 23:4x): 얼굴 겉면에서 떨어진 거리를 k 배로 — 턱 아래로 늘어진 길이 · 앞으로 튀어나온 만큼 · 가닥 굵기가 얼굴 쪽으로 같이 줄고,
+   *  구레나룻 · 콧수염과 이어진 자리(얼굴에 붙은 뿌리)는 그대로 남는다. 겉면에서 1.2 mm 안쪽의 점은 그대로(얼굴과 겹쳐 깜빡이지 않게) */
+  function groom(geo, k = 0.5) {
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), r = Math.hypot(x, y, z), s = faceRadius(x / r, y / r, z / r), o = r - s;
+      const q = (s + (o > 0 ? Math.max(k * o, Math.min(o, 0.0012)) : k * o)) / r;
+      p.setXYZ(i, x * q, y * q, z * q);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
   function head(g, look) {
     quietFace(g, look, 'omari');
     for (const eye of g.children.slice(1, 3)) {
@@ -101,34 +150,37 @@ export function createBernardoOutfitV2(h) {
     nose.geometry = bake(new THREE.SphereGeometry(1, 10, 8), null, null, [0.016, 0.021, 0.013]);
     nose.position.set(0.101, -0.012, 0);
     const locks = [[], [], []], beard = [[], [], []], detail = [];
-    // 정수리 위로 넘긴 물결 머리 — 머리선은 두 눈 위 · 끝은 뒤통수 아래로 (뒤 곱슬과 이어짐)
-    for (let i = 0; i < 16; i++) {
-      const z = (i - 7.5) * 0.0126, a = Math.abs(z) / 0.105, y = 0.062 - 0.020 * a + 0.007 * Math.sin(i * 2.2);
-      locks[i % 3].push(taperedTube([[0.088 - 0.028 * a, y, z], [0.060, 0.085 - 0.032 * a + 0.011 * Math.sin(i * 1.8), z + 0.010 * Math.sin(i * 1.4)], [-0.002, 0.108 - 0.055 * a ** 1.4, z * 1.10 + 0.005 * Math.cos(i * 1.4)], [-0.066, 0.083 - 0.035 * a, z * 1.10], [-0.098, -0.004, z * 1.05]], [0.001, 0.0125, 0.0135, 0.0125, 0.003], 14, 5));
+    // 머리는 v1(outfit_bernardo.js) 그대로 — 가닥 수 · 길 · 굵기 · 색이 같고, 관 마디 · 면 수만 v2 만큼(삼각형)
+    // 정수리 위로 넘긴 물결 머리 — 머리선은 두 눈 위에 둔다
+    for (let i = 0; i < 22; i++) {
+      const z = (i - 10.5) * 0.009, a = Math.abs(z) / 0.105, y = 0.062 - 0.020 * a + 0.007 * Math.sin(i * 1.6);
+      locks[i % 3].push(taperedTube([[0.088 - 0.028 * a, y, z], [0.060, 0.085 - 0.032 * a + 0.011 * Math.sin(i * 1.3), z + 0.009 * Math.sin(i)], [-0.002, 0.108 - 0.055 * a ** 1.4, z * 1.10 + 0.005 * Math.cos(i)], [-0.064, 0.085 - 0.035 * a, z * 1.10], [-0.091, 0.008, z * 1.05]], [0.001, 0.011, 0.012, 0.011, 0.002], 14, 5));
     }
-    // 곱슬: 귀 위에서 시작해 뒤로 쓸려 내려간다 — 옆 가닥일수록 더 뒤로(어깨 앞에 얹히지 않게). 목덜미는 숱 많게 · 끝은 고르지 않게 말림
-    for (let i = 0; i < 30; i++) {
-      const a = 1.5 + i / 29 * (Math.PI * 2 - 3.0), x = 0.103 * Math.cos(a) - 0.012, z = 0.104 * Math.sin(a);
-      const len = 0.145 + 0.045 * (0.5 + 0.5 * Math.sin(i * 2.3)), back = 0.016 + 0.05 * Math.abs(Math.sin(a)), path = [];
+    // 중단발 곱슬: 귀 뒤로 넘기고, 목덜미는 숱 많게, 끝은 고르지 않게 말림
+    for (let i = 0; i < 41; i++) {
+      const a = 0.72 + i / 40 * (Math.PI * 2 - 1.44), x = 0.103 * Math.cos(a) - 0.012, z = 0.104 * Math.sin(a), len = 0.145 + 0.045 * (0.5 + 0.5 * Math.sin(i * 2.3));
+      const path = [];
       for (let j = 0; j < 9; j++) {
-        const t = j / 8, w = 0.011 * Math.sin(t * Math.PI * 3.3 + i * 0.9);
-        path.push([x - back * t + w * Math.cos(a), 0.035 - len * t, z * (1 + 0.10 * t) + w * Math.sin(a)]);
+        const t = j / 8, w = 0.010 * Math.sin(t * Math.PI * 3.3 + i * 0.9);
+        path.push([x - 0.016 * t + w * Math.cos(a), 0.035 - len * t, z * (1 + 0.17 * t) + w * Math.sin(a)]);
       }
-      locks[i % 3].push(taperedTube(path, [0.011, 0.0135, 0.0135, 0.0125, 0.0115, 0.0125, 0.009, 0.007, 0.001], 16, 5));
+      locks[i % 3].push(taperedTube(path, [0.010, 0.012, 0.012, 0.011, 0.010, 0.011, 0.008, 0.006, 0.001], 16, 5));
     }
-    // 턱을 두르는 이어진 수염 바탕 + 굽은 가닥(부피와 결) — v1 과 같은 자리 · 마디만 줄임
+    // 수염: 턱을 두르는 이어진 바탕 + 굽은 가닥(부피와 결) — 자리 · 색은 v1 · 그 전 v2 그대로, 가닥은 반(턱선 6 → 3 · 턱 끝 5 → 2 · 콧수염 1 — 한쪽),
+    //  다 지은 뒤 groom 으로 얼굴에서 떨어진 거리를 반으로 (이름 'beard' — look_tris 밖 재는 도구가 수염 조각을 고른다)
     const beardRows = [[-0.107, 0.067, 0.049, 0.016], [-0.093, 0.095, 0.074, 0.007], [-0.065, 0.101, 0.087, 0], [-0.041, 0.093, 0.091, 0]];
-    add(g, [shell(beardRows, -1.72, 1.72, 24)], look.hair, cloth);
+    const tag = geo => Object.assign(groom(geo), { name: 'beard' });
+    add(g, [tag(shell(beardRows, -1.72, 1.72, 24))], look.hair, cloth);
     for (const side of [-1, 1]) {
-      for (let i = 0; i < 6; i++) {
-        const t = i / 5, z = side * (0.081 - 0.059 * t), x = 0.047 + 0.049 * t, y = 0.014 - 0.063 * t;
-        beard[i % 3].push(taperedTube([[x, y, z], [x + 0.012, y - 0.034, z * 0.98], [x + 0.008, y - 0.060, z * 0.86], [x - 0.008, y - 0.079, z * 0.73]], [0.008, 0.013, 0.012, 0.001], 10, 5));
-      }
-      for (let i = 0; i < 5; i++) {
+      [0, 0.5, 1].forEach((t, i) => {
+        const z = side * (0.081 - 0.059 * t), x = 0.047 + 0.049 * t, y = 0.014 - 0.063 * t;
+        beard[i % 3].push(tag(taperedTube([[x, y, z], [x + 0.012, y - 0.034, z * 0.98], [x + 0.008, y - 0.060, z * 0.86], [x - 0.008, y - 0.079, z * 0.73]], [0.008, 0.013, 0.012, 0.001], 10, 5)));
+      });
+      [0.3, 2.3].forEach((i, n) => {
         const z = side * (0.008 + i * 0.014), x = 0.107 - 0.020 * (i / 4) ** 2;
-        beard[(i + 1) % 3].push(taperedTube([[x, -0.057, z], [x + 0.004, -0.080, z], [x - 0.013, -0.104, z * 0.84], [x - 0.030, -0.116 + 0.014 * i / 4, z * 0.69]], [0.009, 0.012, 0.009, 0.001], 10, 5));
-      }
-      beard[0].push(taperedTube([[0.119, -0.035, side * 0.003], [0.117, -0.038, side * 0.019], [0.102, -0.046, side * 0.040]], [0.007, 0.009, 0.004], 8, 5));
+        beard[(n + 1) % 3].push(tag(taperedTube([[x, -0.057, z], [x + 0.004, -0.080, z], [x - 0.013, -0.104, z * 0.84], [x - 0.030, -0.116 + 0.014 * i / 4, z * 0.69]], [0.009, 0.012, 0.009, 0.001], 10, 5)));
+      });
+      beard[0].push(tag(taperedTube([[0.119, -0.035, side * 0.003], [0.117, -0.038, side * 0.019], [0.102, -0.046, side * 0.040]], [0.007, 0.009, 0.004], 8, 5)));
       detail.push(curve([[0.092, 0.038, side * 0.020], [0.099, 0.041, side * 0.036], [0.091, 0.035, side * 0.053]], 0.003, 8));
     }
     for (let i = 0; i < 3; i++) {
@@ -136,10 +188,28 @@ export function createBernardoOutfitV2(h) {
       o.name = 'bernardo-curls-and-beard-' + i;
     }
     add(g, detail, look.hair, cloth);
-    add(g, [curve([[0.110, -0.048, -0.014], [0.113, -0.049, 0], [0.110, -0.048, 0.014]], 0.0017, 8)], 0x704534, cloth);
+    // 입술 선: 수염 겉면 위에 그은 선이라 수염과 같이 안으로 (꼴 · 색 그대로)
+    add(g, [groom(curve([[0.110, -0.048, -0.014], [0.113, -0.049, 0], [0.110, -0.048, 0.014]], 0.0017, 8))], 0x704534, cloth);
+    if (look.circlet) circlet(g);
+  }
+  // 가는 금빛 머리띠(시험 · 10/23 23:5x — 왕가의 피를 넌지시): 이마의 머리선 바로 위 → 옆 · 뒤는 곱슬 겉으로 (뾰족한 끝 · 보석 없음 — 이마 가운데 작은 금 마름모 하나)
+  //  둘레 반지름 앞 0.095 · 옆 0.117 · 뒤 0.131 m(가운데 4 mm 뒤) · 높이 앞 0.054 → 뒤 0.030 · 폭 5 mm — 앞은 머리 덮개 위 2 mm, 옆 · 뒤는 곱슬 사이로 지나가 몇 가닥이 띠를 덮는다(머리 위에 뜬 고리로 보이지 않게)
+  function circlet(g) {
+    const N = 40, H = 0.005, ring = (a, dy) => {
+      const c = Math.cos(a), r = c > 0 ? 0.117 + (0.095 - 0.117) * c ** 1.5 : 0.117 + (0.131 - 0.117) * (-c) ** 1.2;
+      return [r * c - 0.004, 0.042 + 0.012 * c + dy, r * Math.sin(a)];
+    };
+    const p = [], ix = [];
+    for (let i = 0; i <= N; i++) {
+      const a = i / N * Math.PI * 2;
+      p.push(...ring(a, -H / 2), ...ring(a, H / 2));
+      if (i < N) ix.push(2 * i, 2 * i + 2, 2 * i + 1, 2 * i + 1, 2 * i + 2, 2 * i + 3);
+    }
+    const [fx, fy] = ring(0, 0), x0 = fx + 0.0015, gem = [x0, fy + 0.0065, 0, x0, fy, 0.0045, x0, fy - 0.0065, 0, x0, fy, -0.0045, x0 + 0.003, fy, 0];
+    add(g, [mesh(p, ix), mesh(gem, [0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4])], TRIM, gilt).name = 'bernardo-circlet';
   }
 
-  // ── 가슴: 가슴판 한 장 · 흰 겉옷 앞판(사자) · 뒤판 · 누빔 깃 띠 · 금빛 망토 ──
+  // ── 가슴: 가슴판 한 장 · v1 쇠 깃 · 흰 겉옷 앞판(금관 쓴 사자) · 뒤판 · 금테 · 금빛 긴 망토 ──
   const chestRows = [[-0.146, 0.103, 0.138, 0], [-0.095, 0.119, 0.151, 0], [0.018, 0.137, 0.176, -0.008], [0.091, 0.125, 0.170, -0.008], [0.142, 0.073, 0.107, -0.005]];
   // 겉옷은 가슴의 가장 넓은 곳에서 곧게 떨어진다 (판에 바짝 붙지 않게) — [y, d, w, x, 반폭]
   const tabardChest = [[-0.158, 0.134, 0.168, 0, 0.104], [-0.060, 0.146, 0.182, -0.004, 0.102], [0.018, 0.151, 0.190, -0.008, 0.100], [0.091, 0.139, 0.184, -0.008, 0.092], [0.124, 0.104, 0.142, -0.006, 0.075]];
@@ -172,10 +242,9 @@ export function createBernardoOutfitV2(h) {
     return [
       ell(0.02, 0.45, 0.14, 0.26, -0.40), // 몸통 (위가 앞으로 기욺)
       ell(0.10, 0.70, 0.17, 0.16, -0.2, 16, 0.28), // 갈기
-      ell(0.20, 0.82, 0.10, 0.085, 0, 12), // 머리
+      ell(0.20, 0.82, 0.10, 0.085, 0, 12), // 머리 (귀 자리에 금관 — lionCrown)
       [[0.25, 0.88], [0.37, 0.87], [0.38, 0.80], [0.27, 0.775]], // 윗주둥이
       [[0.25, 0.78], [0.35, 0.755], [0.33, 0.715], [0.23, 0.73]], // 벌린 아래턱
-      [[0.15, 0.90], [0.17, 0.96], [0.22, 0.955], [0.23, 0.90]], // 귀
       ...limb([[0.16, 0.68], [0.29, 0.79], [0.39, 0.90]], 0.085, 0.055), // 높이 든 앞발
       [[0.37, 0.94], [0.45, 0.99], [0.42, 0.93], [0.48, 0.93], [0.42, 0.89], [0.46, 0.85], [0.38, 0.86]],
       ...limb([[0.15, 0.57], [0.29, 0.61], [0.40, 0.69]], 0.08, 0.05), // 낮은 앞발
@@ -189,36 +258,47 @@ export function createBernardoOutfitV2(h) {
       ell(-0.19, 0.725, 0.045, 0.085, -0.5, 10, 0.2), // 꼬리 끝 술
     ];
   }
+  // 사자 머리 위 작은 금관 (레온 왕국 문장 — 관을 쓴 보랏빛 사자): 띠 + 낮은 끝 셋
+  const lionCrown = [[0.125, 0.885], [0.285, 0.885], [0.292, 0.985], [0.255, 0.935], [0.205, 1.005], [0.155, 0.935], [0.118, 0.985]];
   function cape(g) {
-    // 망토: t 0 어깨 → 1 아랫단 · s 0 앞 끝 → 1 등 가운데 너머. 위 끝은 목 둘레를 따라 어깨 위를 넘고, 앞 끝은 쇄골의 브로치에서 옆 뒤로 비스듬히 내려간다
-    const layer = artoriaCloth(g, 'bernardo-gold-mantle'), R = 10, C = 20;
-    const fold = (t, s) => (0.006 + 0.045 * t) * Math.sin(Math.PI * 4 * s + 0.6);
+    // 긴 망토(10/23 23:5x): t 0 어깨 → 1 아랫단(종아리) · s 0 앞 끝(오른쇄골 브로치) → 1 먼 끝. 위 끝은 목 둘레를 따라 오른어깨를 넘고,
+    //  앞 끝은 어깨에서 오른옆 뒤로 · 먼 끝은 목 뒤 등줄 오른쪽에서 왼허리 뒤로 비스듬히 내려가 한쪽 어깨에 걸쳐 등을 덮은 천이 된다(왼어깨 · 왼등 위는 드러남).
+    //  롤랑 v2 망토처럼 가슴에 매단 한 장(천 층) · 줄 간격은 어깨에서 촘촘하게(T) · 허리 아래는 엉덩이 · 다리에서 떨어져 뒤로 처진다
+    //  (아랫단 반지름 앞뒤 0.34 · 옆 0.30 m · 먼 끝 3.9 rad — tools/sim/cape_clip.mjs 로 잰 다리 · 칼 겹침이 롤랑 v2 망토만큼 되게 고른 값, 확인표 2322)
+    const layer = artoriaCloth(g, 'bernardo-gold-mantle'), C = 20;
+    const T = [0, 0.012, 0.03, 0.055, 0.09, 0.14, 0.21, 0.30, 0.40, 0.51, 0.63, 0.75, 0.86, 0.94, 1];
+    const TOP = 0.155, DROP = 1.18;
+    const wave = (t, s) => Math.sin(Math.PI * 5 * s + 0.4 + 1.1 * t); // 주름 셋 (골 둘 · 아래로 갈수록 비스듬히)
     const at = (t, s, inset = 0) => {
-      const e = 1 - (1 - Math.min(1, t / 0.22)) ** 2, f = fold(t, s) - inset, front = 1.05 + 0.75 * Math.min(1, t / 0.35);
-      const y = 0.155 - (0.47 + 0.09 * s + 0.015 * Math.sin(s * 9)) * t;
-      return point([y, 0.095 + 0.090 * e + 0.04 * t + f, 0.135 + 0.090 * e + 0.03 * t + f, -0.008], front + (3.45 - front) * s);
+      const yd = (DROP - 0.14 * s) * t, u = yd / DROP, e = 1 - (1 - Math.min(1, yd / 0.12)) ** 2, q = u ** 1.5;
+      const f = (0.005 + 0.050 * u ** 1.1) * wave(t, s) - inset;
+      const front = 1.05 + 0.95 * smooth(Math.min(1, yd / 0.35)), far = 2.95 + 0.95 * smooth(Math.min(1, yd / 0.75));
+      return point([TOP - yd, 0.095 + 0.09 * e + 0.150 * q + f, 0.135 + 0.10 * e + 0.065 * q + f, -0.008], front + (far - front) * s);
     };
     for (const [inset, color] of [[0, GOLD], [0.005, GOLD_IN]]) {
       const p = [], ix = [], cols = [];
-      for (let j = 0; j <= R; j++) for (let i = 0; i <= C; i++) {
-        const t = j / R, s = i / C, k = 1 - 0.5 * (0.5 - 0.5 * Math.sin(Math.PI * 4 * s + 0.6)) * Math.min(1, 0.25 + t);
-        p.push(...at(t, s, inset));
-        cols.push(k, k, k);
-        if (j < R && i < C) {
-          const q = j * (C + 1) + i;
-          ix.push(q, q + 1, q + C + 1, q + 1, q + C + 2, q + C + 1);
+      T.forEach((t, j) => {
+        for (let i = 0; i <= C; i++) {
+          const s = i / C, k = 1 - 0.6 * (0.5 - 0.5 * wave(t, s)) * Math.min(1, 0.25 + t);
+          p.push(...at(t, s, inset));
+          cols.push(k, k, k);
+          if (j < T.length - 1 && i < C) {
+            const n = j * (C + 1) + i;
+            ix.push(n, n + 1, n + C + 1, n + 1, n + C + 2, n + C + 1);
+          }
         }
-      }
-      add(layer, [mesh(p, ix, cols)], color, shaded);
+      });
+      add(layer, [mesh(p, ix, cols)], color, shaded).name = inset ? 'bernardo-mantle-lining' : 'bernardo-gold-mantle';
     }
-    // 두께가 보이게: 어깨 위 접힌 단 · 앞 끝 단 · 아랫단
+    // 두께가 보이게(안감 색 단): 어깨 위 접힌 단 · 앞 끝 · 먼 끝 · 아랫단
     add(layer, [
       curve(Array.from({ length: 17 }, (_, i) => at(0, i / 16)), 0.006, 16),
-      curve(Array.from({ length: 11 }, (_, i) => at(i / 10, 0)), 0.0035, 12),
-      curve(Array.from({ length: 17 }, (_, i) => at(1, i / 16)), 0.0035, 16),
+      curve(T.map(t => at(t, 0)), 0.0035, 14),
+      curve(T.map(t => at(t, 1)), 0.0035, 14),
+      curve(Array.from({ length: 21 }, (_, i) => at(1, i / 20)), 0.0035, 20),
     ], GOLD_IN, cloth);
     // 앞 끝 놋쇠 브로치 (오른쇄골)
-    const [bx, by, bz] = at(0.03, 0), psi = Math.atan2(bz, bx);
+    const [bx, by, bz] = at(0.012, 0), psi = Math.atan2(bz, bx);
     add(layer, [cyl(0.016, 0.016, 0.006, 12, false, [bx + 0.004 * Math.cos(psi), by, bz + 0.004 * Math.sin(psi)], [0, -psi, -Math.PI / 2]), ball(0.006, 6, 4, [bx + 0.008 * Math.cos(psi), by, bz + 0.008 * Math.sin(psi)])], BRASS, metal);
   }
   function chest(g) {
@@ -227,44 +307,48 @@ export function createBernardoOutfitV2(h) {
     const plate = add(g, [plateShell(chestRows)]);
     plate.name = 'bernardo-breastplate';
     add(plate, [rim(chestRows[0], -Math.PI, Math.PI, 0.0022, 20), rim(chestRows.at(-1), -Math.PI, Math.PI, 0.0022, 16)], EDGE);
-    // 천 층 (판금 아님)
+    // 목: v1 의 쇠 깃 그대로(줄 · 테 · 색 — 10/23 23:4x). v1 은 따로 붙인 판이었고 여기선 가슴판의 자식(판 목록 · 파손 때 떨어지는 곁 판 수는 그 전 v2 그대로)
+    add(plate, [shell([[0.126, 0.082, 0.105, 0], [0.177, 0.059, 0.066, 0]], -Math.PI, Math.PI, 24)], IRON).name = 'bernardo-iron-collar';
+    add(plate, [rim([0.177, 0.060, 0.067, 0], -Math.PI, Math.PI, 0.0017, 24, 4)], EDGE);
+    // 천 층 (판금 아님): 겉옷 앞판 · 뒤판 + 금테(양옆 · 목 둘레)
     const layer = artoriaCloth(g, 'bernardo-tabard');
     add(layer, [panel(tabardChest), panel(tabardChest, true)], TABARD, cloth);
-    // 레온의 사자 — 겉옷 앞판 겉면에 2.5 mm 띄워 굽혀 붙인다 (키 0.145 m · 가슴 아래쪽 — 겨눈 팔뚝 밑으로 보이게)
-    const S = 0.145, y0 = -0.125, du = -0.075;
-    add(layer, lion().map(poly => {
+    add(layer, [...panelTrim(tabardChest, false, { top: true }), ...panelTrim(tabardChest, true, { top: true })], TRIM, gilt);
+    // 레온의 사자 — 겉옷 앞판 한가운데에 금테 안쪽을 꽉 채울 만큼 크게(키 0.205 m · 폭 0.17 m — 그 전 0.145 m), 겉면에 2.5 mm 띄워 굽혀 붙인다
+    const S = 0.205, y0 = -0.128, du = -0.0725;
+    const onTabard = (poly, lift) => {
       const tris = THREE.ShapeUtils.triangulateShape(poly.map(([u, v]) => new THREE.Vector2(u, v)), []);
       return mesh(poly.flatMap(([u, v]) => {
         const y = y0 + v * S, z = (u + du) * S, [, d, w, x0] = rowAt(tabardChest, y);
-        return [x0 + d * Math.pow(Math.sqrt(Math.max(0, 1 - (z / w) ** 2)), 0.78) + 0.0025, y, z];
+        return [x0 + d * Math.pow(Math.sqrt(Math.max(0, 1 - (z / w) ** 2)), 0.78) + lift, y, z];
       }), tris.flat());
-    }), LION, cloth);
-    // 밝은 누빔 깃 띠 — 수염 아래 · 갑옷 위에서 얼굴 테두리가 된다 (세로 누빔 골은 꼭짓점 밝기로)
-    const collarRows = [[0.122, 0.112, 0.148, -0.006], [0.140, 0.096, 0.120, -0.006], [0.162, 0.080, 0.094, -0.005], [0.184, 0.068, 0.076, -0.004]];
-    add(layer, [shell(collarRows, -Math.PI, Math.PI, 36, (j, i) => (i % 4 < 2 ? 1 : 0.84))], COLLAR, shaded);
-    add(layer, [rim(collarRows.at(-1), -Math.PI, Math.PI, 0.005, 24, 4)], 0xb39466, cloth);
+    };
+    add(layer, lion().map(poly => onTabard(poly, 0.0025)), LION, cloth);
+    add(layer, [onTabard(lionCrown, 0.003)], TRIM, gilt).name = 'bernardo-lion-crown';
     cape(g);
   }
   function shoulder(g) {
     const rows = [[-0.04, 0.088, 0.090, 0], [0.045, 0.096, 0.103, 0], [0.117, 0.072, 0.083, 0], [0.148, 0.031, 0.038, 0], [0.155, 0.004, 0.006, 0]];
     const cap = add(g, [shell(rows)], IRON);
     cap.name = 'bernardo-low-pauldron';
-    add(cap, [rim(rows[0])], EDGE);
+    // 견갑 단의 가는 금테 (10/23 23:5x — 검정과 금) · 판의 자식이라 판과 같이 떨어진다
+    add(cap, [band(rows, -0.04, -0.034)], TRIM, gilt);
     for (let i = 0; i < 3; i++) {
       const y = 0.003 - i * 0.041, r = 0.091 - i * 0.008, lame = [[y - 0.045, r - 0.009, r - 0.008, 0], [y, r, r, 0]], o = add(g, [shell(lame)], IRON);
-      add(o, [rim(lame[0])], EDGE);
+      add(o, [band(lame, y - 0.045, y - 0.040)], TRIM, gilt);
     }
     add(g, [shell([[-0.151, 0.047, 0.048, 0], [-0.109, 0.054, 0.056, 0], [-0.075, 0.061, 0.064, 0]])], IRON);
   }
-  // ── 배: 쇠띠 셋(옆에서 보임) · 겉옷 앞판 · 뒤판 ──
+  // ── 배: 쇠띠 셋(옆에서 보임) · 겉옷 앞판 · 뒤판 · 양옆 금테 ──
   function abdomen(g) {
     base(g, [[-0.082, 0.092, 0.127, 0], [0, 0.088, 0.120, 0], [0.080, 0.099, 0.134, 0]]);
     for (let i = 0; i < 3; i++) {
       const top = 0.082 - i * 0.052, lame = [[top - 0.060, 0.109, 0.141, 0], [top, 0.104, 0.137, 0]], o = add(g, [shell(lame, -Math.PI, Math.PI, 20)]);
       add(o, [rim(lame[0], -Math.PI, Math.PI, 0.0019, 20)], EDGE);
     }
-    const tab = [[-0.090, 0.126, 0.152, 0, 0.098], [0.000, 0.124, 0.150, 0, 0.098], [0.075, 0.126, 0.154, 0, 0.100]];
-    add(artoriaCloth(g, 'bernardo-tabard'), [panel(tab, false, 6), panel(tab, true, 6)], TABARD, cloth);
+    const tab = [[-0.090, 0.126, 0.152, 0, 0.098], [0.000, 0.124, 0.150, 0, 0.098], [0.075, 0.126, 0.154, 0, 0.100]], layer = artoriaCloth(g, 'bernardo-tabard');
+    add(layer, [panel(tab, false, 6), panel(tab, true, 6)], TABARD, cloth);
+    add(layer, [...panelTrim(tab), ...panelTrim(tab, true)], TRIM, gilt);
   }
   // 사슬: 줄마다 밝기를 번갈아 (고리 줄의 결)
   const mailTint = (j) => (j % 2 ? 0.78 : 1);
@@ -276,11 +360,13 @@ export function createBernardoOutfitV2(h) {
     const layer = artoriaCloth(g, 'bernardo-tabard');
     const tab = [[-0.100, 0.116, 0.152, 0, 0.108], [-0.020, 0.122, 0.156, 0, 0.104], [0.090, 0.121, 0.153, 0, 0.100]];
     add(layer, [panel(tab, false, 6), panel(tab, true, 6)], TABARD, cloth);
+    add(layer, [...panelTrim(tab), ...panelTrim(tab, true)], TRIM, gilt);
     add(layer, [shell([[0.052, 0.131, 0.159, 0], [0.088, 0.130, 0.157, 0]], -Math.PI, Math.PI, 20)], LEATHER, { ...cloth, roughness: 0.8 });
     add(layer, [box(0.008, 0.040, 0.034, [0.134, 0.070, -0.022]), box(0.006, 0.026, 0.022, [0.138, 0.070, -0.022])], BRASS, metal);
     add(layer, [box(0.005, 0.070, 0.018, [0.134, 0.030, -0.046], [0.12, 0, 0])], LEATHER, cloth);
   }
-  // ── 넓적다리: 어두운 사슬 치마(톱니 아랫단 · 놋쇠 고리) · 무릎 덮개 · 겉옷 자락 앞뒤 ──
+  // ── 넓적다리: 어두운 사슬 치마(톱니 아랫단 · 놋쇠 고리) · 무릎 덮개 · 무릎 위까지 오는 겉옷 자락 앞뒤 ──
+  const SKIRT_HEM = -0.150; // 겉옷 아랫단(넓적다리 좌표 — 무릎 덮개 볼록한 곳 바로 위 · 무릎 관절은 −0.215)
   function thigh(g, look, d) {
     const side = Math.sign(d?.pos?.[2] || 1), N = 20;
     const ys = [-0.078, -0.044, -0.010, 0.024, 0.058, 0.092, 0.126, 0.160, 0.215];
@@ -294,28 +380,29 @@ export function createBernardoOutfitV2(h) {
     const mail = add(g, [geo], MAIL, mailMat);
     mail.name = 'bernardo-mail-skirt';
     add(mail, [curve(hem, 0.0026, 40, 3)], BRASS);
-    // 무릎 덮개: 앞 반구 + 바깥 날개 — 사슬 치마의 자식(덮은 곳 상자는 사슬 치마 그대로 · 사슬이 다 부서지면 같이 떨어진다)
+    // 무릎 덮개: 앞 반구 + 바깥 날개 — 사슬 치마의 자식(덮은 곳 상자는 사슬 치마 그대로 · 사슬이 다 부서지면 같이 떨어진다) · 위아래 단에 가는 금테
     const cop = [[-0.240, 0.040, 0.044, 0.012], [-0.215, 0.061, 0.060, 0.014], [-0.180, 0.071, 0.066, 0.012], [-0.140, 0.065, 0.062, 0.006], [-0.108, 0.052, 0.056, 0.002]];
     const kc = add(mail, [shell(cop, -1.35, 1.35, 12), bake(new THREE.SphereGeometry(1, 8, 6), [0.012, -0.172, side * 0.058], [0, side * 0.35, 0], [0.034, 0.030, 0.008])], IRON, { ...metal, steel: 1, roughness: 0.42 });
     kc.name = 'bernardo-knee-cop';
-    add(kc, [rim(cop.at(-1), -1.35, 1.35, 0.0026, 12), rim(cop[0], -1.35, 1.35, 0.0024, 12), curve(cop.map(r => [r[3] + r[1] + 0.003, r[0], 0]), 0.0022, 8, 3)], EDGE);
-    // 겉옷 자락 (천 층): 앞판 · 뒤판을 다리마다 반쪽씩 — 안쪽 끝이 몸 가운데 줄에서 만나 선 자세에선 한 장의 치마로 보이고, 걸으면 가운데가 갈라진다.
-    //  다리를 감싸는 통이면 반바지로 읽혀(사장님 10/23 ③) 평평하게 늘어뜨린다. 아랫단은 사슬 단보다 7 cm 위
-    const layer = artoriaCloth(g, 'bernardo-tabard-skirt'), cloths = [], hems = [];
+    add(kc, [band(cop, -0.240, -0.2345, 0.0016, -1.35, 1.35, 12), band(cop, -0.1135, -0.108, 0.0016, -1.35, 1.35, 12)], TRIM, gilt);
+    add(kc, [curve(cop.map(r => [r[3] + r[1] + 0.003, r[0], 0]), 0.0022, 8, 3)], EDGE);
+    // 겉옷 자락 (천 층): 앞판 · 뒤판을 다리마다 반쪽씩 — 안쪽 끝이 몸 가운데 줄에서 만나 선 자세에선 한 장으로 보이고, 걸으면 앞뒤 가운데가 갈라진다.
+    //  다리를 감싸는 통이면 반바지로 읽혀(사장님 10/23 ③) 평평하게 늘어뜨린다. 둘레(아랫단 · 가운데 트임 · 바깥 끝)에 금테
+    const layer = artoriaCloth(g, 'bernardo-tabard-skirt'), cloths = [], trims = [], ysCloth = [0.215, 0.11, 0.0, -0.075, SKIRT_HEM], du = 0.055;
     for (const back of [false, true]) {
-      cloths.push(skirtHalf(side, back, [0.215, 0.11, -0.005], 0));
-      hems.push(skirtHalf(side, back, [0.008, -0.005], 0.0008));
+      cloths.push(skirtHalf(side, back, ysCloth, 0));
+      trims.push(skirtHalf(side, back, [SKIRT_HEM + 0.009, SKIRT_HEM], 0.0012), skirtHalf(side, back, ysCloth, 0.0012, 0, du, 1), skirtHalf(side, back, ysCloth, 0.0012, 1 - du, 1, 1));
     }
     add(layer, cloths, TABARD, cloth);
-    add(layer, hems, TABARD_HEM, cloth);
+    add(layer, trims, TRIM, gilt);
   }
-  /** 겉옷 자락 반쪽 (넓적다리 좌표 — 다리 가운데가 z 0, 몸 가운데 줄은 z = −side × 0.095) */
-  function skirtHalf(side, back, ys, lift) {
-    const p = [], ix = [], C = 6;
+  /** 겉옷 자락 반쪽 (넓적다리 좌표 — 다리 가운데가 z 0, 몸 가운데 줄은 z = −side × 0.095) · u0 → u1 = 안쪽 끝 → 바깥 끝 가운데 몫 */
+  function skirtHalf(side, back, ys, lift, u0 = 0, u1 = 1, C = 6) {
+    const p = [], ix = [];
     ys.forEach((y, j) => {
       const flare = (0.215 - y) / 0.22, z0 = -0.093 * side, z1 = (0.048 + 0.012 * flare) * side;
       for (let i = 0; i <= C; i++) {
-        const u = i / C;
+        const u = u0 + (u1 - u0) * i / C;
         p.push((0.097 + 0.006 * flare + 0.010 * Math.sin(Math.PI * 0.9 * u) - 0.022 * u ** 4 + lift) * (back ? -1 : 1), y, z0 + (z1 - z0) * u); // 바깥 끝은 다리 옆으로 감겨 들어감
         if (j < ys.length - 1 && i < C) {
           const k = j * (C + 1) + i;
@@ -333,7 +420,9 @@ export function createBernardoOutfitV2(h) {
   function forearm(g) {
     const rows = [[-0.127, 0.046, 0.046, 0], [-0.065, 0.047, 0.047, 0], [0.070, 0.059, 0.059, 0], [0.134, 0.060, 0.063, 0]];
     const brace = add(g, [shell(rows)]);
-    add(brace, [rim(rows[0]), rim(rows.at(-1)), curve([[0.048, -0.12, 0], [0.051, 0, 0], [0.063, 0.129, 0]], 0.0017, 8, 3)], EDGE);
+    // 팔뚝 보호대 양끝(손목 · 팔꿈치)의 가는 금테 (10/23 23:5x) · 가운데 능선은 쇠빛 그대로
+    add(brace, [band(rows, -0.127, -0.120), band(rows, 0.127, 0.134)], TRIM, gilt);
+    add(brace, [curve([[0.048, -0.12, 0], [0.051, 0, 0], [0.063, 0.129, 0]], 0.0017, 8, 3)], EDGE);
   }
   function foot(g) {
     const rows = [[-0.034, 0.113, 0.047, 0], [0, 0.127, 0.053, 0], [0.032, 0.090, 0.046, -0.015]];

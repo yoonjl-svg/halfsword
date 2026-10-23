@@ -31,7 +31,7 @@ import { createRolandOutfit } from './outfit_roland.js'; // 롤랑 복식 (샛�
 import { createRolandOutfitV2 } from './outfit_roland_v2.js'; // 롤랑 복식 v2 (사장님 10/23 결정 — 줄이면서 다듬은 판 · 관절 사슬 · 겉옷 앞판 · 뿔피리)
 import { createWhiteScaleOutfit } from './outfit_white_scale.js'; // 백린의 전사(가칭) 복식 (같은 전달본)
 import { createBernardoOutfit } from './outfit_bernardo.js'; // 베르나르도 복식 (같은 전달본 — 그쪽 올리비에 마지막 판 · 겉모습 그대로)
-import { createBernardoOutfitV2 } from './outfit_bernardo_v2.js'; // 베르나르도 v2 (우리 판 10/23 — 사장님 '줄이면서 디자인 개선': 흰 겉옷 · 레온 사자 · 금빛 망토 · 사슬 치마)
+import { createBernardoOutfitV2 } from './outfit_bernardo_v2.js'; // 베르나르도 v2 (우리 판 10/23 — 사장님 '줄이면서 디자인 개선' · 같은 날 밤 다듬기: 흰 겉옷 · 금관 쓴 레온 사자 · 금빛 긴 망토 · 사슬 치마)
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -2874,7 +2874,7 @@ export const OUTFITS = {
   roland_v2: createRolandOutfitV2(newOutfitHelpers), // 롤랑 v2 (10/23 — 약 9.7 만 → 1.x 만 삼각형) — 판금 13 부위 그대로 · 투구 royal_close 그대로 · v1 은 ?look=roland:v1
   white_scale: createWhiteScaleOutfit(newOutfitHelpers), // 백린의 전사(가칭 · 손님 인물 · 방랑 전용, 10/23) — 판금 11 부위(발은 가죽) · 뿔 가면 투구(kabuto_masked)
   bernardo: createBernardoOutfit(newOutfitHelpers), // 베르나르도 (손님 인물, 10/23) — 판금 13 부위 · 투구 없음
-  bernardo_v2: createBernardoOutfitV2(newOutfitHelpers), // 베르나르도 v2 (10/23 — 판금 13 부위 그대로 · 겉옷 · 망토 · 깃은 천 층)
+  bernardo_v2: createBernardoOutfitV2(newOutfitHelpers), // 베르나르도 v2 (10/23 — 판금 13 부위 그대로 · 겉옷 · 망토는 천 층 · 쇠 깃은 가슴판의 자식)
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,

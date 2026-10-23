@@ -883,12 +883,14 @@ LOOK_ARCHIVE.bernardo = { v1: {
   helmet: null, metal: 0x393b38, hair: 0x1e1d1a, headband: null,
   grip: 0x282c29, hilt: 0x887548, accent: 0x89763c, outfit: 'bernardo', armor: 'plate', stockEyes: true,
 } };
-// 베르나르도 v2 (우리 판 — 사장님 10/23 '줄이면서 디자인 개선', 복식 src/outfit_bernardo_v2.js): 목에 밝은 누빔 깃 띠 · 곱슬은 어깨 뒤로 ·
-//  가슴판 한 장 + 배 쇠띠 셋 + 짧은 흰 겉옷(가슴에 레온의 보랏빛 선 사자) · 넓적다리 상자 판 → 어두운 사슬 치마 + 겉옷 자락 · 작은 무릎 덮개 ·
-//  맑고 짙은 금빛 짧은 망토(주름 셋 · 안감). 판금 13 부위 · 투구 없음 · 피부 · 머리 · 수염 색 · 칼은 v1 그대로.
+// 베르나르도 v2 (우리 판 — 사장님 10/23 '줄이면서 디자인 개선' · 같은 날 밤 다듬기 둘, 복식 src/outfit_bernardo_v2.js): 곱슬 중단발 · 쇠 깃은 v1 그대로 · 다듬은 턱수염(v1 의 반) ·
+//  가슴판 한 장 + 배 쇠띠 셋 + 무릎까지 오는 흰 겉옷(금테 · 가슴 한가운데에 금관 쓴 레온의 보랏빛 선 사자) · 넓적다리 상자 판 → 어두운 사슬 치마 + 겉옷 자락 · 작은 무릎 덮개 ·
+//  오른어깨에 걸쳐 종아리까지 비스듬히 떨어지는 맑고 짙은 금빛 긴 망토(깊은 주름 셋 · 짙은 금갈색 안감) · 견갑 단 · 팔뚝 보호대 양끝 · 무릎 덮개의 가는 금테.
+//  판금 13 부위 · 투구 없음 · 피부 · 머리 · 수염 색 · 칼은 v1 그대로.
 //  몸 색은 다리 속옷만(넓적다리 hoseUpper = 사슬 색 · 정강이 hoseLower 조금 밝게 — 무릎 뒤가 검은 공으로 보이지 않게) · accent 는 망토 금빛(복식 모듈은 읽지 않음 — 표시용).
-//  옛 판 ?look=bernardo:v1 (확인표 2318 ~ 2320)
-LOOK_ARCHIVE.bernardo.v2 = { ...LOOK_ARCHIVE.bernardo.v1, hoseUpper: 0x50534e, hoseLower: 0x3c3e38, accent: 0xb08a2c, outfit: 'bernardo_v2' };
+//  circlet: 곱슬 위 가는 금빛 머리띠(시험 — 사장님 10/23 23:5x '4번도 넣어봐' · 남길지는 사장님 확인 전 · 빼려면 이 칸만 지운다 · 머리 그룹 장식이라 투구 · 판금 판정과 무관)
+//  옛 판 ?look=bernardo:v1 (확인표 2318 ~ 2325)
+LOOK_ARCHIVE.bernardo.v2 = { ...LOOK_ARCHIVE.bernardo.v1, hoseUpper: 0x50534e, hoseLower: 0x3c3e38, accent: 0xb08a2c, outfit: 'bernardo_v2', circlet: true };
 
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
@@ -910,7 +912,7 @@ export const CHARACTER_LOOK_VERSION = {
   terracotta: 'v2', // 10/14 여정 밖 인물 병마용 (우리 v2 — 잔선 덜기) — 샛별 판 ?look=terracotta:v1
   roland: 'v2', // 10/23 손님 인물 롤랑 (방랑 전용) — v2 줄이면서 다듬은 판(사장님 10/23 결정) · 들인 그대로의 판(그쪽 sebastian v2) ?look=roland:v1
   white_scale: 'v2', // 10/23 손님 인물 백린의 전사(가칭 · 방랑 전용) — 우리 v2 (줄이기만 · 사장님 10/23 19:0x) · 전달본 판 ?look=white_scale:v1
-  bernardo: 'v2', // 10/23 손님 인물 베르나르도 (방랑 전용) — 우리 v2(흰 겉옷 · 레온 사자 · 금빛 망토 · 사슬 치마 — 사장님 10/23). 옛 판 ?look=bernardo:v1 = 그쪽 black_king v4(올리비에)
+  bernardo: 'v2', // 10/23 손님 인물 베르나르도 (방랑 전용) — 우리 v2(흰 겉옷 · 금관 쓴 레온 사자 · 금빛 긴 망토 · 사슬 치마 — 사장님 10/23). 옛 판 ?look=bernardo:v1 = 그쪽 black_king v4(올리비에)
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
