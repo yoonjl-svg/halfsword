@@ -5,6 +5,7 @@
 //    node tools/browser/portrait_temp_shots.mjs http://127.0.0.1:5173 <출력 폴더> <인물 id> [인물 id …]
 //  출력: <id>_black.png · <id>_white.png
 //  크롬 경로는 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
+//  10/24 — 세 인물 모두 샛별 저장소 손그림 확정본으로 바뀜(docs/import/hero_profiles_import_2026-10-24.md) · 이 도구는 기록으로 둔다
 import { chromium } from 'playwright';
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const out = process.argv[3] || 'docs/handoff';

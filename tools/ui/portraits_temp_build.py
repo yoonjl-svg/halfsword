@@ -8,7 +8,10 @@
   4) 1254² 캔버스에 칸 50 px · 칸 시작 (77, 77) 로 그리고 공유 액자 1(art/portraits-px-20261018/frame1.png)을 덮는다 — 다른 프로필과 같은 꼴 · 같은 크기
   마스터 = art/portraits-temp-20261023/<id>.png · 판에 쓰는 것 = public/ui/portraits/<id>.webp (768² · portraits_px_build.py 와 같은 WebP 값)
 
-실행 (저장소 뿌리에서):  python3 -I tools/ui/portraits_temp_build.py <찍은 폴더> roland white_scale bernardo
+10/24 — 세 인물 모두 샛별 저장소 손그림 확정본으로 바뀜(art/hero-profiles-20261024/ · tools/ui/portraits_px_build.py · docs/import/hero_profiles_import_2026-10-24.md).
+  이 도구와 마스터는 기록으로 둔다. 판 그림(public/ui/portraits/<id>.webp)은 --public 을 붙일 때만 덮어쓴다(확정본을 잘못 덮지 않게).
+
+실행 (저장소 뿌리에서):  python3 -I tools/ui/portraits_temp_build.py <찍은 폴더> roland white_scale bernardo [--public]
 """
 import os
 import sys
@@ -24,7 +27,7 @@ COVER = 0.5
 CORE = 0.6
 
 
-def build(shots, pid):
+def build(shots, pid, public=False):
     black = Image.open(os.path.join(shots, pid + '_black.png')).convert('RGB')
     white = Image.open(os.path.join(shots, pid + '_white.png')).convert('RGB')
     w, h = black.size
@@ -67,14 +70,16 @@ def build(shots, pid):
     canvas.alpha_composite(Image.open(FRAME).convert('RGBA'))
     os.makedirs(MASTER, exist_ok=True)
     canvas.save(os.path.join(MASTER, pid + '.png'), optimize=True)
-    canvas.resize((SIDE, SIDE), Image.LANCZOS).save(os.path.join(OUT, pid + '.webp'), 'WEBP', quality=QUALITY, alpha_quality=ALPHA_Q, method=METHOD)
+    if public:
+        canvas.resize((SIDE, SIDE), Image.LANCZOS).save(os.path.join(OUT, pid + '.webp'), 'WEBP', quality=QUALITY, alpha_quality=ALPHA_Q, method=METHOD)
     print(pid, '칸', len(cells), '/', CELLS * CELLS)
 
 
 def main():
-    shots, ids = sys.argv[1], sys.argv[2:]
+    args = [a for a in sys.argv[1:] if a != '--public']
+    shots, ids, public = args[0], args[1:], '--public' in sys.argv[1:]
     for pid in ids:
-        build(shots, pid)
+        build(shots, pid, public)
 
 
 if __name__ == '__main__':
