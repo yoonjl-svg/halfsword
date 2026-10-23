@@ -2,6 +2,7 @@
 //  샛별 저장소 69ef7dac8 의 docs/design/druid_whip_release_20261022 repeat.mjs · verify.mjs 와 같은 측정에, 10/23 검수 잣대(쉬는 자세 · 끝에서 터짐)를 더해
 //  샛별 값(`src` — druid_whip.js WHIP_SRC)과 지금 값(`now` — WHIP_NOW)을 나란히 잰다.
 //   node tools/sim/druid_whip.mjs [repeat] [swing] [tap] [rest] [verify] [draw] [perf]   (안 적으면 다)
+//   [--var=이름:{덩굴 값 JSON} …] [--only=now,이름]  지금 값 위에 덮은 판을 더해 잼(10/23 넷째 일 — 길이 lash · 무게 mass · 끝 매듭 tip · taper · bend) · 긋기 표에 다루기 넷(손 최대 빠르기 · 손목 서보 상한 몫 · 겨눔 어긋남 · 기력 / 획)
 //  repeat: 샛별 표 그대로 — 손 목표를 1.6 s 마다 같은 길로 여덟 번, 2 ~ 8 번째 평균(앞 도달 · 몸통 높이 도달 · 접힘 · 제 몸 실제 접촉 · 끝 최대 빠르기).
 //   before = 샛별 749a7b367 전(제 몸통 비트 되돌림 + 굽힘 .035 만 — 샛별 표의 '기존') · src · now. 판마다 시작을 0 · 0.1 · 0.2 s 늦춰 셋 평균(되풀이 휘두름은 시작 상태에 민감하다)
 //  swing: 손가락 긋기 셋(가로 · 내려 · 사선) × 빠르기 둘(0.12 · 0.25 s) × 시작 셋 — 끝 최대 빠르기 · 손잡이 끝(덩굴 시작) 최대 빠르기와 그 비(채찍 꼴 '끝에서 터짐') ·
@@ -18,10 +19,16 @@ import { WEAPONS, WEAPON_LIST, RETIRED_WEAPONS, TIER_DRAW, drawWeaponCards, weap
 import { TECH_BY_NAME } from '../../src/ai_techniques.js';
 import { traditionOf } from '../../src/schools.js';
 import { letterMul } from '../../src/skill_tree_data.js';
-import { setWhipPreset } from '../../src/druid_whip.js';
+import { setWhipPreset, WHIP } from '../../src/druid_whip.js';
 
-const want = process.argv.slice(2);
+const argv = process.argv.slice(2);
+const want = argv.filter((x) => !x.startsWith('--'));
 const on = (k) => !want.length || want.includes(k);
+// --var=이름:{덩굴 값 JSON} (여럿) : 지금 값(now) 위에 덮은 판을 더해 잰다 (10/23 넷째 일 — 길이 · 무게 · 테이퍼) · --only=now,이름 : 잴 판만
+const VARS = Object.fromEntries(argv.filter((x) => x.startsWith('--var=')).map((x) => { const v = x.slice(6), k = v.indexOf(':'); return [v.slice(0, k), JSON.parse(v.slice(k + 1))]; }));
+const ONLY = argv.find((x) => x.startsWith('--only='))?.slice(7).split(',');
+const PRESETS = ONLY ?? ['src', 'now', ...Object.keys(VARS)];
+const use = (p) => { setWhipPreset(p === 'src' ? 'src' : 'now'); if (VARS[p]) Object.assign(WHIP, VARS[p]); };
 CONFIG.ARENA.startHold = 0;
 class Quiet { update() {} }
 const Yv = new THREE.Vector3(0, 1, 0);
@@ -69,10 +76,10 @@ if (on('repeat')) {
   console.log('| 판 | 길 | 앞 도달 m | 몸통 높이 도달 m | 접힘 s | 제 몸 접촉 s | 끝 최대 m/s |');
   console.log('|---|---|---|---|---|---|---|');
   const G = { cross: [[-0.6, 0.25], [0.6, 0.25]], down: [[0.1, 0.65], [0.1, -0.55]], diagonal: [[-0.5, 0.65], [0.5, -0.5]] };
-  for (const mode of ['before', 'src', 'now']) for (const [gesture, [from, to]] of Object.entries(G)) {
+  for (const mode of ONLY ?? ['before', 'src', 'now', ...Object.keys(VARS)]) for (const [gesture, [from, to]] of Object.entries(G)) {
     const acc = { reach: [], torso: [], fold: [], touch: [], speed: [] };
     for (const lead of LEADS) {
-      setWhipPreset(mode === 'now' ? 'now' : 'src');
+      use(mode === 'before' ? 'src' : mode);
       const g = newRound({ weapon: 'druid_whip', weapon2: 'tree_branch', seed: 13, gap: 1.3, AIClass: Quiet });
       g.park();
       const f = g.player, flex = f.flexWeapon;
@@ -113,14 +120,15 @@ if (on('repeat')) {
 
 /** 손가락 긋기 한 판(6 획): 획마다 잰 값의 2 ~ 6 번째 평균 */
 function swing(preset, gesture, dur, lead, target) {
-  setWhipPreset(preset);
+  use(preset);
   const G = { cross: [[-0.55, 0.2], [0.55, 0.2]], down: [[0.1, 0.6], [0.1, -0.5]], diag: [[0.42, 0.42], [-0.4, -0.42]] };
   const [from, to] = G[gesture];
   const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', seed: 13, gap: target ? 1.55 : 1.3, AIClass: Quiet });
   if (!target) g.park();
   const f = g.player, flex = f.flexWeapon, C = 1.6, n = 6;
   g.before = drive(f, from, to, dur, C, lead);
-  const S = Array.from({ length: n }, () => ({ tip: 0, root: 0, extPk: 0, pkFwd: 0, pkY: 0, fold: 0, behind: 0, hits: 0, J: 0 }));
+  const S = Array.from({ length: n }, () => ({ tip: 0, root: 0, hand: 0, extPk: 0, pkFwd: 0, pkY: 0, fold: 0, behind: 0, hits: 0, J: 0, sat: 0, aimErr: 0, k: 0 }));
+  const st0 = f.stamina.value;
   for (let i = 0; i < (n * C + lead) / DT; i++) {
     g.step();
     const t = g.t - DT - lead;
@@ -130,27 +138,35 @@ function swing(preset, gesture, dur, lead, target) {
     const tip = f.bladePoint(1).clone(), root = f.bladePoint(0), cl = tip.distanceTo(root), rel = local(f, tip);
     const rv = flex.segments[0].body.linvel(), vt = f.tipVel.length();
     r.root = Math.max(r.root, Math.hypot(rv.x, rv.y, rv.z));
-    if (vt > r.tip) Object.assign(r, { tip: vt, extPk: cl / 1.44, pkFwd: rel.x, pkY: tip.y });
+    const hv = f.sword.linvel(); r.hand = Math.max(r.hand, Math.hypot(hv.x, hv.y, hv.z));
+    if (ph < 0.55 + dur + 0.15) { // 긋는 동안(+0.15 s): 손목 서보가 상한에 걸린 몫 · 손잡이 축과 겨눔의 어긋남(도)
+      r.k++; if (f.debug.wristTorque.length() >= 0.999 * f.debug.wristCap) r.sat++;
+      r.aimErr += THREE.MathUtils.radToDeg(axisOf(f.sword).angleTo(f.debug.aim));
+    }
+    if (vt > r.tip) Object.assign(r, { tip: vt, extPk: cl / WHIP.lash, pkFwd: rel.x, pkY: tip.y });
     if (cl < 0.6) r.fold += DT;
     if (ph >= 0.55 + dur && rel.x < -0.05) r.behind += DT;
   }
   for (const w of g.wounds) if (w.att === f) { const r = S[Math.min(n - 1, Math.floor((w.t - lead) / C))]; if (r) { r.hits++; r.J = Math.max(r.J, w.energy); } }
+  const stamPer = (st0 - f.stamina.value) / n;
+  for (const r of S) { r.sat /= Math.max(1, r.k); r.aimErr /= Math.max(1, r.k); }
   g.world.free();
   const out = {};
   for (const k of Object.keys(S[0])) out[k] = mean(S.slice(1).map((s) => s[k]));
   out.over30 = mean(S.slice(1).map((s) => (s.tip > 30 ? 1 : 0)));
+  out.stamPer = stamPer;
   return out;
 }
 
 if (on('swing')) {
   console.log('\n## 손가락 긋기 (가로 · 내려 · 사선 × 0.12 · 0.25 s × 시작 셋 평균 — 2 ~ 6 번째 획)');
-  console.log('| 판 | 끝 최대 m/s | 손잡이 끝 최대 m/s | 비 | 끝 최고 때 펴짐 | 그때 앞 m | 그때 높이 m | 접힘 s | 몸 뒤로 s | 30 m/s 넘음 | 선 상대 판정 수 / 획 | 가장 센 판정 J |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
-  for (const preset of ['src', 'now']) {
+  console.log('| 판 | 끝 최대 m/s | 손잡이 끝 최대 m/s | 비 | 끝 최고 때 펴짐 | 그때 앞 m | 그때 높이 m | 접힘 s | 몸 뒤로 s | 30 m/s 넘음 | 선 상대 판정 수 / 획 | 가장 센 판정 J | 손 최대 m/s | 손목 서보 상한 몫 | 겨눔 어긋남 ° | 기력 / 획 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const preset of PRESETS) {
     const A = [], T = [];
     for (const gs of ['cross', 'down', 'diag']) for (const d of [0.12, 0.25]) for (const lead of LEADS) { A.push(swing(preset, gs, d, lead, false)); if (lead === 0) T.push(swing(preset, gs, d, lead, true)); }
     const m = (k, L = A) => mean(L.map((x) => x[k]));
-    console.log(`| ${preset} | ${m('tip').toFixed(1)} | ${m('root').toFixed(1)} | ${(m('tip') / m('root')).toFixed(2)} | ${m('extPk').toFixed(2)} | ${m('pkFwd').toFixed(2)} | ${m('pkY').toFixed(2)} | ${m('fold').toFixed(3)} | ${m('behind').toFixed(3)} | ${(100 * m('over30')).toFixed(0)} % | ${m('hits', T).toFixed(1)} | ${m('J', T).toFixed(0)} |`);
+    console.log(`| ${preset} | ${m('tip').toFixed(1)} | ${m('root').toFixed(1)} | ${(m('tip') / m('root')).toFixed(2)} | ${m('extPk').toFixed(2)} | ${m('pkFwd').toFixed(2)} | ${m('pkY').toFixed(2)} | ${m('fold').toFixed(3)} | ${m('behind').toFixed(3)} | ${(100 * m('over30')).toFixed(0)} % | ${m('hits', T).toFixed(1)} | ${m('J', T).toFixed(0)} | ${m('hand').toFixed(1)} | ${(100 * m('sat')).toFixed(0)} % | ${m('aimErr').toFixed(0)} | ${m('stamPer').toFixed(1)} |`);
   }
   setWhipPreset('now');
 }
@@ -159,10 +175,10 @@ if (on('tap')) {
   console.log('\n## 톡 (네 번)');
   console.log('| 무기 · 판 | 끝 최대 m/s | 끝 앞 도달 최대 m | 선 상대 판정 수 | 가장 센 J | 맞은 곳 |');
   console.log('|---|---|---|---|---|---|');
-  for (const [w, preset] of [['longsword', 'now'], ['druid_whip', 'src'], ['druid_whip', 'now']]) {
+  for (const [w, preset] of [['longsword', 'now'], ...PRESETS.map((p) => ['druid_whip', p])]) {
     const row = {};
     for (const gap of [3.0, 1.55]) {
-      setWhipPreset(preset);
+      use(preset);
       const g = newRound({ weapon: w, weapon2: 'longsword', seed: 13, gap, AIClass: Quiet });
       const f = g.player;
       let tip = 0, fwd = -9;
@@ -190,8 +206,8 @@ if (on('rest')) {
   console.log('\n## 쉬는 자세 (6 s · 처음 1 s 뺌)');
   console.log('| 판 | 손잡이 흔들림 rad/s | 끝 빠르기 평균 m/s | 끝이 땅에 닿은 몫 | 가장 낮은 마디 m |');
   console.log('|---|---|---|---|---|');
-  for (const preset of ['src', 'now']) {
-    setWhipPreset(preset);
+  for (const preset of PRESETS) {
+    use(preset);
     const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', seed: 13, gap: 1.3, AIClass: Quiet });
     g.park();
     const f = g.player;
@@ -218,8 +234,8 @@ if (on('verify')) {
   console.log('| 판 | 상황 | 마디 벌어짐 최대 m | 마디 빠르기 최대 m/s | 곧은 끝과 거리 최대 m | 맞힘 (P→ · E→) | 칼끼리 | 유한 |');
   console.log('|---|---|---|---|---|---|---|---|');
   const w = WEAPONS.druid_whip;
-  for (const preset of ['src', 'now']) for (const mode of ['rest', 'stroke', 'ai', 'both']) {
-    setWhipPreset(preset);
+  for (const preset of PRESETS) for (const mode of ['rest', 'stroke', 'ai', 'both']) {
+    use(preset);
     const g = newRound({ weapon: 'druid_whip', weapon2: mode === 'both' ? 'druid_whip' : 'tree_branch', gap: 1.35, seed: 11, AIClass: mode === 'rest' ? Quiet : AI, AI2Class: mode === 'ai' || mode === 'both' ? AI : Quiet });
     const f = g.player;
     let gap = 0, speed = 0, bend = 0, finite = true;

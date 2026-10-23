@@ -9,6 +9,8 @@
 //  node tools/sim/whip_duel.mjs [--weapons=druid_whip,druid_whip:k,longsword,morgenstern] [--opps=longsword,isolde,heinrich,tome,omari,minami] [--seeds=1-3] [--dur=40] [--kneelP=0.5] [--json=파일]
 //                                [--whip='{"friction":0.2}'] [--mBlunt=2] [--label=이름]   덩굴 값(druid_whip.js WHIP 칸) · 채찍 둔타 계수를 이 실행에서만 바꿔 견줌 (판 값은 그대로)
 //                                [--stand=reach|contact|수]  봇이 서는 간격 끝(기본 reach = 한 걸음 내디뎌 닿는 거리 — 둘째 일 표 · contact = 맞닿는 간격 — 셋째 일 표, §12)
+//                                [--measure=c,r,cl,cut] 채찍 간격표 · [--flexMax=] 휘는 마디 물리 튐 문턱(STRIKE.flexSpeedMax) · [--speedBonus=k] 견줌만(게임에 없음) 판정 에너지 × (1 + k × 닿은 빠르기 ÷ 20) — 넷째 일 §14
+//   (채찍) 판마다 덩굴 닿음 빠르기도 셈: 닿음 수 cN · 30 m/s 넘음 c30 · 문턱에 버려짐 cDrop · 가장 빠른 닿음 cMax · 30 넘어 난 판정 J fastJ · 그 마디 fastSeg · 마디 최고 빠르기 segVmax · 기력 평균 stam · 지친 시간 exhaustT
 //                                [--diag]  획 진단: 몸 닿음 · 칼만 · 둘 다 아님 갈래마다 시작 거리 · 덩굴 끝이 상대 쪽으로 간 거리 · 상대 몸통 · 머리와 가장 가까움 · 상대가 서 있던 획 몫
 //   무기 뒤 ':k' = 채찍 무릎 꿇리기 켬(WHIP_KNEEL.p 판 값) · 없으면 끔(p 0 — 꿇리기 전) · ':ai' = 플레이어 자리도 AI 가 채찍(AI 스위치 WHIP_KNEEL.ai 켬) · ':ai0' = 같은 AI 채찍 · 스위치 끔(견줌)
 //  판마다: 판정 수(strike 가 낸 맞음) · 가장 큰 한 맞음 J(maxJ · 머리 · 목 maxHeadJ) · 판정 J 합(머리 · 목 따로 — 둔기는 심각도 대신 J · 넘어짐 · 의식으로 친다) · 상대 넘어짐(down) · 의식 잃은 몫 · 상처 맞힘(심각도 > 0) · 준 심각도 · 받은 심각도 · 이김(상대 죽음 — 부활 뒤 마지막) / 짐 / 시간 끝 · 이긴 때 · 휘두른 획 · 막힌 획(칼끼리 닿고 못 맞힘) ·
@@ -23,6 +25,7 @@ import { TECH } from '../../src/ai_techniques.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { WHIP, setWhipPreset } from '../../src/druid_whip.js';
+import { MEASURED } from '../../src/weapon_measured.js';
 
 const args = {};
 for (const a of process.argv.slice(2)) {
@@ -37,6 +40,12 @@ const { SKILL, STRIKE, WHIP_KNEEL } = CONFIG;
 const BY = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));
 const STAND = String(arg('stand', 'reach')), DIAG = !!args.diag, tipV = new THREE.Vector3(); // --diag : 획 진단 (아래)
 const WHIP_OVR = args.whip ? JSON.parse(args.whip) : null, MB = args.mBlunt != null ? +args.mBlunt : null;
+// --measure=c,r,cl,cut : 이 실행에서만 채찍 간격표(weapon_measured.js MEASURED.druid_whip — 맞닿음 · 한 걸음 · 너무 붙음 · 베는 시간) 바꿈 (덩굴 길이를 바꾼 판은 그 판으로 잰 간격을 넣어 견준다)
+if (args.measure) MEASURED.druid_whip = String(args.measure).split(',').map(Number);
+// --flexMax= : 휘는 무기 마디 닿음의 물리 튐 문턱(config STRIKE.flexSpeedMax) 이 실행에서만
+if (args.flexMax != null) STRIKE.flexSpeedMax = +args.flexMax;
+// --speedBonus=k : (견줌만 — 게임에 없음) 채찍 판정 에너지 × (1 + k × 닿은 빠르기 ÷ 20 m/s) — 사장님이 말한 '속도 보너스'(가짜 힘)가 어느 정도면 롱소드에 가까워지나
+const SPEED_K = args.speedBonus != null ? +args.speedBonus : 0;
 const P0 = WHIP_KNEEL.p, PK = args.kneelP != null ? +args.kneelP : P0; // --kneelP= : ':k' · ':ai' 판의 꿇리기 확률 (견줌용 — 판 값은 그대로)
 const CUTS = TECH.filter((t) => t.kind === 'cut');
 const FRAME = 2 * DT;
@@ -101,9 +110,26 @@ function duel(wSpec, oppId, seed, dur) {
   };
   let endT = null, nk = 0, sits = 0, wrapT = 0, wrapOn = -1, prevE = E.state;
   const eps = [], segT = Array(8).fill(0), X = P.flexWeapon;
+  // 덩굴 닿음 빠르기 (combat.analyze 를 감싸 잼 — 판정은 그대로): 닿음 수 · 30 m/s 넘음(칼 문턱) · 문턱에 버려짐 · 가장 빠른 닿음 · 30 넘게 닿아 판정이 난 J · 그 마디
+  const CS = { n: 0, o30: 0, drop: 0, max: 0, fastJ: [], fastSeg: Array(8).fill(0) }, A0 = G.combat.analyze.bind(G.combat), vA = new THREE.Vector3(), vB = new THREE.Vector3();
+  if (X) G.combat.analyze = (pr, point, S, Pp, predicting = false) => {
+    const r = A0(pr, point, S, Pp, predicting);
+    if (!predicting && pr.w.fighter === P && pr.w.flexible) {
+      vA.copy(point).sub(S.com).cross(S.w).negate().add(S.v); vB.copy(point).sub(Pp.com).cross(Pp.w).negate().add(Pp.v);
+      const sp = vA.sub(vB).length();
+      if (r && SPEED_K) r.energy *= 1 + SPEED_K * sp / 20;
+      CS.n++; CS.max = Math.max(CS.max, sp);
+      if (sp > 30) { CS.o30++; const j = X.segments.findIndex((sg) => sg.body === pr.w.body); if (j >= 0) CS.fastSeg[j]++; if (r) CS.fastJ.push(r.energy); }
+      if (!r && sp > STRIKE.flexSpeedMax) CS.drop++;
+    }
+    return r;
+  };
+  let segVmax = 0, stamSum = 0, stamN = 0, exhaustT = 0;
   const touches = (col, want) => { let hit = false; G.world.contactPairsWith(col, (c) => { if (hit) return; const info = G.combat.info?.get?.(c.handle) ?? P.colliderInfo.get(c.handle); if (info?.fighter === E && want(info)) G.world.contactPair(col, c, (m) => { if (m.numSolverContacts() > 0) hit = true; }); }); return hit; };
   while (G.t < dur && P.alive && E.alive) {
     G.step();
+    stamSum += P.stamina.value; stamN++; if (P.stamina.exhausted) exhaustT += DT;
+    if (X) for (const sg of X.segments) { const v = sg.body.linvel(); segVmax = Math.max(segVmax, Math.hypot(v.x, v.y, v.z)); }
     if (E.state === 'getup' && prevE === 'stand') sits++;
     prevE = E.state;
     if (X) {
@@ -145,6 +171,8 @@ function duel(wSpec, oppId, seed, dur) {
     strokes: strokes.length, blocked: strokes.filter((s) => s.blocked).length, kneels: log.filter((x) => x.hit && x.att === 0).length, rolls: log.filter((x) => x.att === 0).length,
     aiKneels: log.filter((x) => x.hit && x.att === 1).length, rekneel, chainMax, kneelT: +kneelT.toFixed(1),
     heads: dealt.filter((x) => x.zone === 'head' || x.zone === 'neck').length, sits: sits - log.filter((x) => x.hit && x.att === 0).length,
+    stam: +(stamSum / Math.max(1, stamN)).toFixed(1), exhaustT: +exhaustT.toFixed(1),
+    ...(X ? { cN: CS.n, c30: CS.o30, cDrop: CS.drop, cMax: +CS.max.toFixed(1), fastJ: CS.fastJ.map((x) => Math.round(x)), fastSeg: CS.fastSeg, segVmax: +segVmax.toFixed(1) } : {}),
     ...(diag ? { diag } : {}),
     ...(X ? { wrapT: +wrapT.toFixed(2), wrapEp: eps.length, wrapLong: eps.filter((e) => e >= 0.3).length, wrapMed: eps.length ? +[...eps].sort((a, b) => a - b)[eps.length >> 1].toFixed(2) : 0, segT: segT.map((x) => +x.toFixed(2)), bodyN: strokes.filter((st) => st.body).length, bladeN: strokes.filter((st) => st.blade).length } : {}),
   };

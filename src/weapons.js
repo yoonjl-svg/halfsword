@@ -23,7 +23,7 @@ import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, fl
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
 import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
-import { DRUID, WHIP_NOW, druidParts, drawDruidWhip } from './druid_whip.js'; // 드루이드의 채찍 몸 · 겉모습 (샛별 저장소 69ef7dac8 에서 가져옴 — 10/23)
+import { WHIP, WHIP_NOW, druidParts, drawDruidWhip } from './druid_whip.js'; // 드루이드의 채찍 몸 · 겉모습 (샛별 저장소 69ef7dac8 에서 가져옴 — 10/23)
 import { BALISARDA_COLORS, balisardaPartMesh } from './balisarda_details.js'; // 발리사르다 겉모습 (샛별 저장소 c89e827c6 — 10/21)
 import { MURAMASA_COLORS, MURAMASA_PROFILE, muramasaPartMesh, muramasaDecorate } from './muramasa_details.js'; // 무라마사 겉모습 (샛별 저장소 29e543555 · d46e09b96 · 82818cc3d — 10/21)
 
@@ -1870,7 +1870,7 @@ const druidWhip = finalizeSpec('druid_whip', {
   desc: '질긴 식물 줄기를 엮은 채찍.\n손을 떠난 힘이 덩굴 끝에서 뒤늦게 맺힌다.',
   grip: 'one-hand', school: 'none', material: 'wood', flexible: true,
   kneelHit: true, // 맞은 쪽 무릎 꿇리기 (사장님 10/23 — config WHIP_KNEEL · combat.js whipKneelCheck)
-  hiltLength: 0.13, bladeLength: DRUID.lash, edged: false, mCut: 0, mThrust: 0, fragility: 0,
+  hiltLength: 0.13, bladeLength: WHIP.lash, edged: false, mCut: 0, mThrust: 0, fragility: 0,
   // 둔타 계수 1.5(샛별 값) → 3 (사장님 10/23 08:0x '(가)와 둔타계수 올리기?' — 사장님 확인 전, 확인표 2274): 덩굴 마디가 가벼워(마디 하나 0.05 ~ 0.09 kg) 맞음 하나의 J 가 작다.
   //  사람처럼 쓰는 봇 · 인물 여섯 × 시드 여섯(tools/sim/whip_duel.mjs --stand=contact): 판당 판정 2.9 → 6.1 · J 39 → 90 — 롱소드 12 · 250 J · 모르겐슈테른 20 · 337 J 에 한참 못 미치고 36 판 0 승(쓸만하지만 세지 않게)
   //  · 연달아 꿇림 가장 긴 줄 늘지 않음(4 → 3). 한 번 맞음의 J 는 13 ~ 15 그대로 — 늘어난 것은 맞음 문턱(6 J)을 넘는 가벼운 스침. 기록 docs/import/druid_whip_2026-10-23.md §12
@@ -1878,6 +1878,8 @@ const druidWhip = finalizeSpec('druid_whip', {
   controlOverrides: { ...WHIP_NOW.servo }, // 손잡이 서보 (druid_whip.js — 샛별 값 24 · 1.2 · 0.6 · 10 · 0.08 에서 10/23 검수로 10 · 0.2 · 0.1 · 10 · 0.08, 확인표 2226)
   partMesh: hiddenParts, buildParts: druidParts, decorate: drawDruidWhip,
 });
+// 덩굴 길이는 판 고르기(druid_whip.js WHIP.lash — `?whip=src` · 시험 도구)를 따른다: 싸움꾼이 만들어질 때 읽는다
+Object.defineProperty(druidWhip, 'bladeLength', { get: () => WHIP.lash, enumerable: true });
 
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
