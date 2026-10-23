@@ -5,6 +5,10 @@
 //     첫 화면 나타나기 = 픽셀 제목 글자만 steps(7), 단추 · 아래 줄은 매끈하게
 //  ③ 미닫이: '화면 60 fps 제한' · '지난 업데이트 숨김' = 싸움 화면 .toggle 과 같은 꼴(44 × 24 · 손잡이 18) · role=switch · aria-checked · 하는 일 · 저장 그대로
 //  ④ 호칭 내림 상자(16:0x): 단추 = 부 단추 꼴(금색 아님) · 누르면 바로 아래로 · 반투명(알파 < 1) · 가진 호칭만 · '(호칭 없음)' 같은 글 없음 · Esc · 바깥 누름으로 닫힘 · 방향키 · 고른 호칭 저장(새로 고쳐도)
+//     10/24 (docs/handoff/school_titles_2026-10-24/README.md): '여행자'는 호칭이 아님 — 없으면 흐린 '호칭 없음'(단추 없음 · 한 줄 높이 그대로) · 옛 '여행자' 고름 = 가진 호칭의 첫째
+//   ④-2 호칭 얻기: 독일 칸 11 개를 ?coins= 로 모두 배움 → 스킬 화면 위 알림 창 한 번(금색 확인 = 대기실 확인 꼴) · Lv +1 · 내림 상자에서 고름 · 다시 열어도 창 없음 · 초기화 뒤에도 호칭
+//   ④-3 긴 호칭(캄프페히텐 계승자 · 에스그리마 계승자)이 잘리지 않음: 667×375 · 740×360 · 844×390 · 932×430 · 1024×768 — 단추 · 열린 창 · 알림 창 넘침 없음 · 칸 · 화면 가로 넘침 없음
+//   ④-4 결과 창 위 호칭 알림 창: 30 무대를 처음 다 깬 판 → 방랑 알림 창 다음 방랑자 호칭 창(금색 확인)
 //  ⑤ 대표 유파 칸 없음
 //  ⑥ 세 칸 위아래 줄 같음 · 창 둘 바깥 줄 = 액자 1(프로필과 같은 두께) · 정사각 프로필 — 844×390 · 932×430 · 1280×720
 //     10/18 04:1x 사장님 '무기+방어구 합쳐서 아이템 … 가로 5칸에서 6칸으로' (docs/design/portrait_ui_2026-10-17.md §10): 메뉴 2 × 2 = [아이템][상점] / [스킬북][이벤트] ·
@@ -15,7 +19,11 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { titleToLobby } from './to_lobby.mjs';
+import { titleToLobby, departTitle } from './to_lobby.mjs';
+import { TITLE_NAMES, titleNodes } from '../../src/title_rules.js'; // ④ 호칭 (10/24)
+import { nodesOf } from '../../src/skill_tree_data.js';
+import { STAGE_ORDER } from '../../src/stages.js';
+import { UPDATE_NOTES } from '../../src/update_notes.js';
 const base = process.argv[2] || 'http://127.0.0.1:5261', out = process.argv[3] || '/tmp/ui-unify';
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'] });
@@ -38,10 +46,36 @@ async function title(p) {
 }
 const toLobby = (p) => titleToLobby(p); // 첫 화면 'Stage 1' → 곧바로 카드 → 정지 → '대기실'
 const report = {};
+// 나눠 돌리기: ONLY=buttons,switches,titles,earn,fit,result,frames (없으면 모두) · SHOTS=<폴더> 면 ④ 호칭 그림(PNG — 기록용은 WebP 로 바꿈)
+const ONLY = (process.env.ONLY || '').split(',').filter(Boolean), want = (k) => !ONLY.length || ONLY.includes(k);
+const SHOTS = process.env.SHOTS || ''; if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
+// ④ 호칭 (10/24) 도움: 다른 알림 창(스킬트리 옮김 · 인장 → 금화 · 공지)이 뜨지 않는 저장 · 대기실 알림 창 닫기 · 칸 배우는 차례 · 그림 전 기다림 · 긴 호칭 잼
+const quietSeed = (progress = {}) => ({
+  'stillness.lobby.progress.v1': { version: 1, coins: 500, heads: 0, acquisitions: [], titles: [], title: '', earned: { coins: 0, heads: 0 }, tree: { v: 1, at: '2026-10-21', books: 0, coins: 0, heads: 0, bonus: 500, notice: false }, ...progress },
+  'stillness.lobby.sealCoins.v1': { version: 1, converted: 0, at: '2026-10-16', notice: false },
+  'stillness.title.notices.v1': { hideRead: true, readIds: UPDATE_NOTES.map((n) => n.id) },
+});
+const closeLobbyNotices = async (p) => { for (const id of ['treeDialog', 'wanderDialog', 'titleDialog']) while (await shadow(p, `return root.getElementById('${id}').open`)) await shadow(p, `root.getElementById('${id}').close()`); };
+function learnOrder(school) { // 앞 칸을 먼저 — 호칭에 드는 칸(닫힌 칸 뺌 · title_rules.js titleNodes)
+  const need = titleNodes(school), done = new Set(), out = [];
+  while (out.length < need.length) { const n = nodesOf(school).find((x) => need.includes(x.id) && !done.has(x.id) && x.pre.every((q) => done.has(q))); done.add(n.id); out.push(n.id); }
+  return out;
+}
+const settle = (p) => p.evaluate(() => Promise.all([...document.querySelector('#gameEntrance').shadowRoot.querySelectorAll('img')].map((i) => i.decode().catch(() => {}))).then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+// 지금 호칭 단추 · 내 정보 칸 (줄 수 = 글 상자 줄 · 칸 안쪽 = 테두리 · 여백 뺀 곳)
+const PANEL_BOX = `const panel=root.querySelector('.profile-panel'),ps=getComputedStyle(panel),pr=panel.getBoundingClientRect(),L=pr.left+parseFloat(ps.borderLeftWidth)+parseFloat(ps.paddingLeft),R=pr.right-parseFloat(ps.borderRightWidth)-parseFloat(ps.paddingRight),lobby=root.querySelector('.lobby');`;
+const FIT = `${PANEL_BOX}const cur=root.getElementById('titleCurrent'),b=root.getElementById('titleSelect'),br=b.getBoundingClientRect(),lv=root.getElementById('lobbyLevel').getBoundingClientRect(),nm=root.querySelector('.name-row').getBoundingClientRect();
+  const rg=document.createRange();rg.selectNodeContents(cur);const lines=new Set([...rg.getClientRects()].map((r)=>Math.round(r.top))).size;
+  return {current:cur.textContent,text:[cur.scrollWidth,cur.clientWidth],btn:[b.scrollWidth,b.clientWidth],inPanel:br.left>=L-.5&&br.right<=R+.5,noOverlap:(br.top>=lv.bottom-.5||br.left>=lv.right-.5)&&nm.top>=br.bottom-.5,
+    panel:[panel.scrollWidth,panel.clientWidth],page:[Math.max(lobby.scrollWidth,document.documentElement.scrollWidth),Math.min(lobby.clientWidth,innerWidth)],lines,small:b.dataset.fit==='small',btnRect:[br.width,br.height].map(Math.round),inner:Math.round(R-L),
+    vpanel:[panel.scrollHeight,panel.clientHeight],tabsIn:root.querySelector('.lobby-tabs').getBoundingClientRect().bottom<=pr.bottom+.5};`;
+const OPEN_FIT = `${PANEL_BOX}const l=root.getElementById('titleList'),lr=l.getBoundingClientRect();
+  return {options:[...l.querySelectorAll('.title-name')].map((n)=>({name:n.textContent,fit:n.scrollWidth<=n.clientWidth+.5&&n.parentElement.scrollWidth<=n.parentElement.clientWidth+.5})),inPanel:lr.left>=L-.5&&lr.right<=R+.5,
+    panel:[panel.scrollWidth,panel.clientWidth],page:[Math.max(lobby.scrollWidth,document.documentElement.scrollWidth),Math.min(lobby.clientWidth,innerWidth)],list:[lr.width,lr.height].map(Math.round)};`;
 
 try {
   // ── ① 싸움 화면 단추 = 첫 화면 · 대기실 단추 (낮은 화면 844×390 = 패딩 10/8 · 큰 화면 1280×720 = 13/11) ──
-  for (const [size, w, h] of [['844x390', 844, 390], ['1280x720', 1280, 720]]) {
+  if (want('buttons')) for (const [size, w, h] of [['844x390', 844, 390], ['1280x720', 1280, 720]]) {
     const bc = await browser.newContext({ viewport: { width: w, height: h }, reducedMotion: 'reduce' }); await noAuth(bc);
     const b = await bc.newPage(); watch(b);
     await b.goto(base + '/?stage=poseidon&weapon=longsword', { waitUntil: 'networkidle' }); await b.waitForFunction(() => window.game?.player, null, { timeout: 60000 });
@@ -97,7 +131,7 @@ try {
   }
 
   // ── ② 픽셀 단추 흔적 · ③ 미닫이 (폰 가로 844×390 · 터치) ──
-  {
+  if (want('switches')) {
     const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await noAuth(c);
     const p = await c.newPage(); watch(p);
     await p.goto(base + '/', { waitUntil: 'networkidle' }); await p.waitForFunction(() => window.game?.player, null, { timeout: 60000 });
@@ -167,14 +201,27 @@ try {
     await c.close();
   }
 
-  // ── ④ 호칭 내림 상자 · ⑤ 대표 유파 없음 ──
-  {
+  // ── ④ 호칭 내림 상자 · ⑤ 대표 유파 없음 (10/24 사장님 '여행자'는 호칭이 아님 — 없으면 흐린 '호칭 없음' · 처음 얻은 호칭이 저절로 지금 호칭) ──
+  if (want('titles')) {
     const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, reducedMotion: 'reduce' }); await noAuth(c);
     const p = await c.newPage(); watch(p);
-    await p.goto(base + '/', { waitUntil: 'networkidle' }); await title(p); await toLobby(p);
+    await p.goto(base + '/', { waitUntil: 'networkidle' }); await title(p); await toLobby(p); await closeLobbyNotices(p);
     const text = await shadow(p, `return root.querySelector('.lobby').textContent`);
     assert.ok(!/대표 유파/.test(text), 'no 대표 유파'); assert.equal(await shadow(p, `return root.querySelectorAll('#lobbySchool').length`), 0);
-    assert.equal(await p.locator('#lobbyLevel').textContent(), 'Lv.1'); assert.equal(await p.locator('#titleCurrent').textContent(), '여행자');
+    assert.ok(!/여행자/.test(text), "no 여행자 (10/24 — not a title any more)");
+    assert.equal(await p.locator('#lobbyLevel').textContent(), 'Lv.1');
+    const none = await shadow(p, `const n=root.getElementById('titleNone'),s=getComputedStyle(n),r=n.getBoundingClientRect(),l=root.getElementById('lobbyLevel').getBoundingClientRect(),row=root.getElementById('lobbyRank').getBoundingClientRect();
+      return {text:n.textContent,shown:!n.hidden&&r.width>0,tag:n.tagName,color:s.color,sub:getComputedStyle(root.querySelector('.title-select .chevron')).color,body:getComputedStyle(root.getElementById('lobbyLevel')).color,button:root.getElementById('titleSelect').getClientRects().length,chevron:n.querySelector('svg')?1:0,sameRow:Math.abs(r.top-l.top)<1,rowH:row.height,levelH:l.height,h:r.height}`);
+    assert.deepEqual({ text: none.text, shown: none.shown, tag: none.tag, button: none.button, chevron: none.chevron, sameRow: none.sameRow }, { text: '호칭 없음', shown: true, tag: 'SPAN', button: 0, chevron: 0, sameRow: true });
+    assert.equal(none.color, none.sub, `dim colour (--c-sub) ${none.color}`); assert.notEqual(none.color, none.body);
+    assert.equal(none.rowH, none.levelH, `rank row stays one line high (${none.rowH})`); assert.equal(none.h, 28);
+    await p.screenshot({ path: `${out}/titles-none.png` }); if (SHOTS) await p.screenshot({ path: `${SHOTS}/no_title_844x390.png` });
+    checks.push({ check: "no title: 'Lv.1' + dim '호칭 없음' text (span · --c-sub · no button · no chevron · not clickable) on the same 28 px row; no 여행자 anywhere; no 대표 유파", none });
+    // 얻은 호칭 (시험용 이름 — 게임에 넣는 호칭 아님) · 고른 호칭이 없는 저장 → 가진 호칭의 첫째가 지금 호칭 · 방향키 · Enter · 저장
+    await p.evaluate(() => { const v = JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')); v.titles = [{ event: 'smoke-a', name: '시험용 호칭', seen: true }, { event: 'smoke-b', name: '둘째 시험용', seen: true }]; v.title = '여행자'; localStorage.setItem('stillness.lobby.progress.v1', JSON.stringify(v)); });
+    await p.locator('#lobbyBack').click(); await title(p); await toLobby(p);
+    assert.equal(await p.locator('#titleCurrent').textContent(), '시험용 호칭'); assert.equal(await shadow(p, `return root.getElementById('titleNone').hidden`), true);
+    assert.equal(await p.locator('#lobbyLevel').textContent(), 'Lv.3'); // 호칭 하나 = Lv +1 (10/24)
     const btn = await shadow(p, `const e=root.getElementById('titleSelect'),s=getComputedStyle(e),l=getComputedStyle(root.getElementById('lobbyLevel'));return {popup:e.getAttribute('aria-haspopup'),expanded:e.getAttribute('aria-expanded'),color:s.color,border:s.borderTopWidth+' '+s.borderTopStyle+' '+s.borderTopColor,radius:s.borderRadius,bg:s.backgroundColor,level:l.color}`);
     assert.deepEqual(btn, { popup: 'listbox', expanded: 'false', color: 'rgb(243, 233, 216)', border: '1px solid rgba(243, 233, 216, 0.18)', radius: '8px', bg: 'rgba(0, 0, 0, 0)', level: 'rgb(243, 233, 216)' }); // 금색 아님
     await p.locator('#titleSelect').click();
@@ -185,35 +232,157 @@ try {
     assert.ok(opened.gap >= 0 && opened.gap <= 8 && Math.abs(opened.dx) < 1, `opens directly below the control: ${JSON.stringify(opened)}`);
     const alpha = +(opened.bg.match(/rgba\(.*,\s*([\d.]+)\)/)?.[1] ?? 1); assert.ok(alpha < 1, `translucent box: ${opened.bg}`);
     assert.equal(opened.bg, 'rgba(24, 18, 14, 0.88)'); assert.equal(opened.border, '1px solid rgba(243, 233, 216, 0.18)'); assert.equal(opened.radius, '10px');
-    assert.deepEqual(opened.options, [['여행자', 'true']]); // 가진 호칭만 — 지금은 기본 '여행자' 하나(지금 호칭)
-    assert.ok(!/호칭 없음/.test(opened.text) && !/호칭 없음/.test(await shadow(p, `return root.querySelector('.lobby').textContent`)), 'no (호칭 없음) / system text in the box');
-    assert.equal(opened.focus, '여행자');
+    assert.deepEqual(opened.options, [['시험용 호칭', 'true'], ['둘째 시험용', 'false']]); // 가진 호칭만 (여행자 없음)
+    assert.ok(!/호칭 없음|여행자/.test(opened.text), 'no (호칭 없음) / 여행자 line in the box');
+    assert.equal(opened.focus, '시험용 호칭');
     await p.screenshot({ path: `${out}/titles-open.png` });
     await p.keyboard.press('Escape');
     assert.deepEqual(await shadow(p, `return [root.getElementById('titleList').hidden, root.getElementById('titleSelect').getAttribute('aria-expanded'), root.activeElement?.id]`), [true, 'false', 'titleSelect']);
     await p.locator('#titleSelect').click(); await p.locator('.panel-heading h2').first().click(); // 바깥 누름
     assert.equal(await shadow(p, `return root.getElementById('titleList').hidden`), true);
-    checks.push({ check: 'title dropdown: battle secondary look (body text · 1 px line · radius 8 · not gold) · Lv plain body text · opens directly below (gap/dx) · translucent --panel box (alpha < 1) · 1 px line · radius 10 · lists only owned titles (여행자 current) · no (호칭 없음) text · Escape and outside tap close · no 대표 유파', opened });
-    // 얻은 호칭이 있으면 같은 목록에 (시험용 이름 — 게임에 넣는 호칭 아님) · 방향키 · Enter · 저장
-    await p.evaluate(() => { const v = JSON.parse(localStorage.getItem('stillness.lobby.progress.v1') || '{"version":1,"acquisitions":[],"coins":100,"heads":0,"titles":[],"title":"여행자"}'); v.titles = [{ event: 'smoke-test', name: '시험용 호칭' }]; localStorage.setItem('stillness.lobby.progress.v1', JSON.stringify(v)); });
-    await p.locator('#lobbyBack').click(); await title(p); await toLobby(p);
+    checks.push({ check: 'title dropdown: battle secondary look (body text · 1 px line · radius 8 · not gold) · Lv plain body text · opens directly below (gap/dx) · translucent --panel box (alpha < 1) · 1 px line · radius 10 · lists only owned titles (no 여행자) · old stored 여행자 → first owned title · Escape and outside tap close', opened });
     await p.locator('#titleSelect').focus(); await p.keyboard.press('ArrowDown');
-    assert.deepEqual(await shadow(p, `return [[...root.querySelectorAll('#titleList [role=option]')].map((o)=>o.textContent), root.activeElement?.textContent]`), [['여행자', '시험용 호칭'], '여행자']);
-    await p.keyboard.press('ArrowDown'); assert.equal(await shadow(p, `return root.activeElement?.textContent`), '시험용 호칭');
-    await p.keyboard.press('ArrowUp'); assert.equal(await shadow(p, `return root.activeElement?.textContent`), '여행자');
+    assert.deepEqual(await shadow(p, `return [[...root.querySelectorAll('#titleList [role=option]')].map((o)=>o.textContent), root.activeElement?.textContent]`), [['시험용 호칭', '둘째 시험용'], '시험용 호칭']);
+    await p.keyboard.press('ArrowDown'); assert.equal(await shadow(p, `return root.activeElement?.textContent`), '둘째 시험용');
+    await p.keyboard.press('ArrowUp'); assert.equal(await shadow(p, `return root.activeElement?.textContent`), '시험용 호칭');
     await p.keyboard.press('End'); await p.keyboard.press('Enter');
-    assert.equal(await p.locator('#titleCurrent').textContent(), '시험용 호칭'); assert.equal(await shadow(p, `return root.getElementById('titleList').hidden`), true);
-    assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).title), '시험용 호칭');
+    assert.equal(await p.locator('#titleCurrent').textContent(), '둘째 시험용'); assert.equal(await shadow(p, `return root.getElementById('titleList').hidden`), true);
+    assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).title), '둘째 시험용');
     await p.reload({ waitUntil: 'networkidle' }); await title(p); await toLobby(p);
-    assert.equal(await p.locator('#titleCurrent').textContent(), '시험용 호칭');
-    await p.locator('#titleSelect').click(); await p.locator('#titleList [role=option] >> text=여행자').click();
-    assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).title), '여행자');
-    checks.push('earned titles join the same list; ArrowDown opens on the current option, ArrowUp/Down/End move, Enter selects; selection saved in title and still shown after reload; tap selects back to 여행자');
+    assert.equal(await p.locator('#titleCurrent').textContent(), '둘째 시험용');
+    await p.locator('#titleSelect').click(); await p.locator('#titleList [role=option] >> text=시험용 호칭').first().click();
+    assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).title), '시험용 호칭');
+    checks.push('earned titles in the list; ArrowDown opens on the current option, ArrowUp/Down/End move, Enter selects; selection saved in title and still shown after reload; tap selects back');
+    await c.close();
+  }
+
+  // ── ④-2 호칭 얻기 (10/24): 독일 칸 11 개를 모두 배움(?coins= · 머리는 저장에) → 스킬 화면 위 알림 창 한 번(금색 확인 = 대기실 확인 단추 꼴) → 레벨 +1 → 내림 상자에서 고름 ──
+  if (want('earn')) {
+    const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, reducedMotion: 'reduce' }); await noAuth(c);
+    await c.addInitScript((seed) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, JSON.stringify(v)); } }, quietSeed({ coins: 0, heads: 60, titles: [{ event: 'wander', name: '방랑자', seen: true }], title: '방랑자' }));
+    const p = await c.newPage(); watch(p);
+    await p.goto(base + '/?coins=99999', { waitUntil: 'networkidle' }); await title(p); await toLobby(p);
+    assert.equal(await shadow(p, `return [root.getElementById('treeDialog').open, root.getElementById('titleDialog').open].join()`), 'false,false');
+    assert.equal(await p.locator('#titleCurrent').textContent(), '방랑자'); assert.equal(await p.locator('#lobbyLevel').textContent(), 'Lv.2');
+    await p.locator('#tabSkills').click(); await p.locator('.school-tabs [data-school=german]').click();
+    const order = learnOrder('german');
+    assert.equal(order.length, 11);
+    for (const [i, id] of order.entries()) {
+      await p.locator(`.tree-node[data-node="${id}"]`).click();
+      await p.locator('#learnNode').click();
+      await p.waitForFunction((nid) => document.querySelector('#gameEntrance').shadowRoot.querySelector(`.tree-node[data-node="${nid}"]`)?.dataset.state === 'learned', id, { timeout: 10000 });
+      if (i < order.length - 1) {
+        assert.equal(await shadow(p, `return root.getElementById('titleDialog').open`), false, `no popup before the last node (${id})`);
+        await p.locator('.detail-close').click();
+      }
+    }
+    await p.waitForFunction(() => document.querySelector('#gameEntrance').shadowRoot.getElementById('titleDialog').open, null, { timeout: 5000 });
+    const pop = await shadow(p, `const d=root.getElementById('titleDialog'),b=root.getElementById('closeTitle'),t=root.getElementById('closeTree'),S=(e)=>{const s=getComputedStyle(e);return [s.backgroundColor,s.color,s.fontSize,s.fontWeight,s.paddingTop,s.paddingRight,s.borderRadius,s.minWidth,s.borderTopWidth].join(' ');};
+      const r=b.getBoundingClientRect(),n=root.getElementById('titleEarned');
+      return {head:root.getElementById('titleHeading').textContent,name:n.textContent,why:root.getElementById('titleWhy').textContent,nameColor:getComputedStyle(n).color,nameFit:n.scrollWidth<=n.clientWidth,btn:S(b),tree:S(t),cls:b.className,label:b.textContent,h:+r.height.toFixed(1),focus:root.activeElement?.id}`);
+    assert.deepEqual({ head: pop.head, name: pop.name, why: pop.why, cls: pop.cls, label: pop.label }, { head: '호칭을 얻었습니다', name: '캄프페히텐 계승자', why: '독일 유파의 모든 기술을 익혀 캄프페히텐 계승자가 되었습니다.', cls: 'primary', label: '확인' });
+    assert.equal(pop.btn, pop.tree, 'confirm = the lobby confirm button (skill tree notice 확인) look'); assert.match(pop.btn, /^rgb\(217, 164, 65\) /, `gold confirm, not the wander bronze: ${pop.btn}`);
+    assert.equal(pop.nameColor, 'rgb(217, 164, 65)'); assert.ok(pop.nameFit);
+    if (SHOTS) { await settle(p); await p.screenshot({ path: `${SHOTS}/popup_skill_tree_844x390.png` }); }
+    await p.locator('#closeTitle').click();
+    assert.equal(await shadow(p, `return root.getElementById('titleDialog').open`), false);
+    let saved = await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')));
+    assert.deepEqual(saved.titles.map((t) => [t.event, t.name, t.seen]), [['wander', '방랑자', true], ['school:german', '캄프페히텐 계승자', true]]);
+    assert.equal(await p.locator('#lobbyLevel').textContent(), 'Lv.14'); // 1 + 칸 11 + 호칭 둘
+    assert.equal(await p.locator('#titleCurrent').textContent(), '방랑자', 'second title does not change the selection');
+    await p.locator('#titleSelect').click();
+    assert.deepEqual(await shadow(p, `return [...root.querySelectorAll('#titleList [role=option]')].map((o)=>o.textContent)`), ['방랑자', '캄프페히텐 계승자']);
+    if (SHOTS) { await settle(p); await p.screenshot({ path: `${SHOTS}/dropdown_new_title_844x390.png` }); }
+    await p.locator('#titleList [role=option] >> text=캄프페히텐 계승자').click();
+    assert.equal(await p.locator('#titleCurrent').textContent(), '캄프페히텐 계승자');
+    saved = await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1'))); assert.equal(saved.title, '캄프페히텐 계승자');
+    // 한 번만: 다시 열어도 창 없음 · 고른 호칭 그대로
+    await p.reload({ waitUntil: 'networkidle' }); await title(p); await toLobby(p);
+    assert.equal(await shadow(p, `return root.getElementById('titleDialog').open`), false, 'popup only once');
+    assert.equal(await p.locator('#titleCurrent').textContent(), '캄프페히텐 계승자');
+    // 초기화해도 호칭은 남음 (레벨은 칸 몫만 내려감)
+    await p.locator('#tabSkills').click(); await p.locator('.school-tabs [data-school=german]').click();
+    await shadow(p, `root.getElementById('treeReset').click()`); await shadow(p, `root.getElementById('resetOk').click()`);
+    assert.equal(await p.locator('#lobbyLevel').textContent(), 'Lv.3'); assert.equal(await p.locator('#titleCurrent').textContent(), '캄프페히텐 계승자');
+    checks.push({ check: 'earn: buying all 11 German nodes (?coins=) shows one popup over the skill screen only after the last node — 호칭을 얻었습니다 · gold name · reason line · gold 확인 = skill-tree notice 확인 look (not wander bronze); seen saved; Lv +1; listed in the dropdown and selectable; no popup after reload; title kept after school reset', pop });
+    await c.close();
+  }
+
+  // ── ④-3 긴 호칭이 잘리지 않음 (10/24 사장님 '책 이름이 긴데 … 안 잘리고 표시 가능해?'): 폰 가로 넷 + 태블릿 — 단추 · 열린 창 · 알림 창 · 내 정보 칸 가로 넘침 없음 ──
+  if (want('fit')) {
+    const LONG = ['캄프페히텐 계승자', '에스그리마 계승자']; // 가장 긴 둘 (아래에서 잰 폭으로 어느 쪽이 더 긴지 적음)
+    const all = Object.entries(TITLE_NAMES).map(([event, name]) => ({ event, name, seen: !LONG.includes(name) }));
+    for (const [w, h] of [[667, 375], [740, 360], [844, 390], [932, 430], [1024, 768]]) {
+      const shot = SHOTS && (w === 667 || w === 844);
+      const c = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: shot ? 2 : 1, reducedMotion: 'reduce' }); await noAuth(c);
+      await c.addInitScript((seed) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, JSON.stringify(v)); } }, quietSeed({ titles: all, title: LONG[0] }));
+      const p = await c.newPage(); watch(p);
+      await p.goto(base + '/', { waitUntil: 'networkidle' }); await title(p); await toLobby(p);
+      // 알림 창 둘 (긴 두 호칭 — 안 본 것으로 넣음): 이름이 넘치지 않음 · 창이 화면 안
+      for (const name of LONG) {
+        await p.waitForFunction((n) => { const r = document.querySelector('#gameEntrance').shadowRoot; return r.getElementById('titleDialog').open && r.getElementById('titleEarned').textContent === n; }, name, { timeout: 5000 }).catch(() => {}); // 다음 창은 앞 창이 닫힌 뒤(close 알림)
+        const d = await shadow(p, `const d=root.getElementById('titleDialog'),n=root.getElementById('titleEarned'),r=d.getBoundingClientRect();return {open:d.open,name:n.textContent,fit:n.scrollWidth<=n.clientWidth+.5&&d.scrollWidth<=d.clientWidth+.5,inside:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight}`);
+        assert.deepEqual(d, { open: true, name, fit: true, inside: true }, `${w}x${h} popup ${name}`);
+        if (shot && name === LONG[0]) { await settle(p); await p.screenshot({ path: `${SHOTS}/popup_long_${w}x${h}.png` }); }
+        await p.locator('#closeTitle').click();
+      }
+      const widths = await shadow(p, `const s=getComputedStyle(root.getElementById('titleCurrent')),g=document.createElement('canvas').getContext('2d');g.font=s.fontWeight+' '+s.fontSize+' '+s.fontFamily;return ${JSON.stringify(LONG)}.map((t)=>+g.measureText(t).width.toFixed(1))`);
+      for (const name of LONG) {
+        if (name !== LONG[0]) { await p.locator('#titleSelect').click(); await p.locator(`#titleList [role=option] >> text=${name}`).click(); }
+        const m = await shadow(p, FIT);
+        assert.equal(m.current, name);
+        assert.ok(m.text[0] <= m.text[1] + .5 && m.btn[0] <= m.btn[1] + .5, `${w}x${h} ${name}: title overflows ${JSON.stringify(m)}`);
+        assert.ok(m.inPanel && m.noOverlap && m.panel[0] <= m.panel[1] && m.page[0] <= m.page[1], `${w}x${h} ${name}: layout ${JSON.stringify(m)}`);
+        assert.ok(m.lines <= 2 && !m.small, `${w}x${h} ${name}: at most two lines at the normal size ${JSON.stringify(m)}`);
+        assert.ok(m.vpanel[0] <= m.vpanel[1] + 1 && m.tabsIn, `${w}x${h} ${name}: info panel grows to fit (no inner scroll · menu tabs inside) ${JSON.stringify(m)}`);
+        if (shot && name === LONG[0]) { await settle(p); await p.screenshot({ path: `${SHOTS}/panel_${w}x${h}.png` }); }
+        await p.locator('#titleSelect').click();
+        const o = await shadow(p, OPEN_FIT);
+        assert.ok(o.options.every((x) => x.fit) && o.inPanel && o.panel[0] <= o.panel[1] && o.page[0] <= o.page[1], `${w}x${h} ${name}: open list ${JSON.stringify(o)}`);
+        if (shot && name === LONG[0]) { await settle(p); await p.screenshot({ path: `${SHOTS}/dropdown_${w}x${h}.png` }); }
+        await p.keyboard.press('Escape');
+        report[`title fit ${w}x${h} ${name}`] = { lines: m.lines, button: m.btnRect, panelInner: m.inner, list: o.list, widths };
+      }
+      checks.push(`${w}x${h}: longest titles (${LONG.map((n, i) => `${n} ${widths[i]} px`).join(' · ')}) shown whole — button text/box no overflow (≤ 2 lines at the word break, normal size), inside the info panel, no overlap with Lv/name, no horizontal scroll (panel · page); open list options all fit inside the panel; popups fit on screen`);
+      await c.close();
+    }
+  }
+
+  // ── ④-4 결과 창 위 호칭 알림 창 (10/24): 30 무대를 처음 다 깬 판 → 방랑 알림 창 → 확인 → 방랑자 호칭 창(금색 확인) → 확인 → 저장 seen ──
+  if (want('result')) {
+    const last = STAGE_ORDER.at(-1);
+    const c = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2 }); await noAuth(c);
+    await c.addInitScript((seed) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } },
+      { ...quietSeed({ wander: { cleared: STAGE_ORDER.slice(0, -1), unlocked: false, legacyChecked: true } }), 'stillness.journey.checkpoint.v1': { version: 1, stage: last }, 'stillness.journeyClears.v1': '29' });
+    const p = await c.newPage(); watch(p);
+    await p.goto(base + '/', { waitUntil: 'networkidle' }); await title(p);
+    await departTitle(p, '#continueJourney');
+    await p.waitForFunction(() => ['draw', 'fight'].includes(window.game.state), null, { timeout: 120000 });
+    if (await p.evaluate(() => window.game.state) === 'draw') { await p.waitForFunction(() => window.game.draw.stage === 'choose' && window.game.draw.t > 0.6, null, { timeout: 120000 }); await p.locator('#draw .wcard[data-i="0"]').click(); }
+    await p.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });
+    await p.evaluate(() => window.game.enemy.die('출혈', true)); // 판 끝 연결 확인용 (승률 자료 아님)
+    await p.waitForFunction(() => document.getElementById('wanderNotice').classList.contains('show'), null, { timeout: 180000 });
+    assert.equal(await p.evaluate(() => document.getElementById('titleNotice')?.classList.contains('show') ?? false), false, 'title popup waits for the wander popup');
+    let saved = await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')));
+    assert.deepEqual(saved.titles, [{ event: 'wander', name: '방랑자', seen: false }]); assert.equal(saved.title, '방랑자'); // 방랑이 열린 저장에 같이 · 처음 호칭 = 지금 호칭
+    await p.locator('#btnWanderNotice').click();
+    const r = await p.evaluate(() => { const b = document.getElementById('titleNotice'), k = b?.querySelector('button'), s = k && getComputedStyle(k), w = document.getElementById('btnWanderNotice');
+      return { shown: !!b?.classList.contains('show'), wander: document.getElementById('wanderNotice').classList.contains('show'), head: b?.querySelector('h1').textContent, name: document.getElementById('titleNoticeName')?.textContent, why: document.getElementById('titleNoticeWhy')?.textContent, bg: s?.backgroundColor, wanderBg: getComputedStyle(w).backgroundColor, cls: k?.className, focus: document.activeElement?.id }; });
+    assert.deepEqual({ ...r, wanderBg: undefined }, { shown: true, wander: false, head: '호칭을 얻었습니다', name: '방랑자', why: '모든 무대를 깨고 방랑을 열어 방랑자가 되었습니다.', bg: 'rgb(217, 164, 65)', wanderBg: undefined, cls: 'primary', focus: 'btnTitleNotice' });
+    assert.notEqual(r.bg, r.wanderBg, 'gold, not the wander bronze');
+    if (SHOTS) await p.screenshot({ path: `${SHOTS}/popup_result_844x390.png` });
+    await p.locator('#btnTitleNotice').click();
+    assert.equal(await p.evaluate(() => document.getElementById('titleNotice').classList.contains('show')), false);
+    saved = await p.evaluate(() => JSON.parse(localStorage.getItem('stillness.lobby.progress.v1'))); assert.equal(saved.titles[0].seen, true);
+    await p.locator('#btnLobby').click(); await p.locator('#lobbyPortraitImg').waitFor({ state: 'attached', timeout: 60000 });
+    assert.equal(await shadow(p, `return root.getElementById('titleDialog').open`), false, 'lobby does not show it again');
+    assert.equal(await p.locator('#titleCurrent').textContent(), '방랑자');
+    checks.push({ check: 'result screen: clearing the 30th stage saves 방랑자 with the wander unlock (selected — first title); wander popup first, then the title popup (gold 확인, focused); confirm saves seen; lobby does not repeat it', r });
     await c.close();
   }
 
   // ── ⑥ 세 칸 · 액자 1 틀 · 아이템 칸 판 6 × 4 · ⑦ 칸 그림 ──
-  for (const [size, w, h] of [['844x390', 844, 390], ['932x430', 932, 430], ['1280x720', 1280, 720]]) {
+  if (want('frames')) for (const [size, w, h] of [['844x390', 844, 390], ['932x430', 932, 430], ['1280x720', 1280, 720]]) {
     const c = await browser.newContext({ viewport: { width: w, height: h }, reducedMotion: 'reduce' }); await noAuth(c);
     const p = await c.newPage(); watch(p);
     await p.goto(base + '/', { waitUntil: 'networkidle' }); await title(p); await toLobby(p);

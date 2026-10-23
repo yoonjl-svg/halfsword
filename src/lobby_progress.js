@@ -1,4 +1,5 @@
-// 대기실 레벨·호칭·금화·머리 (샛별 저장소 3b280a1b): 레벨 = 1 + 얻은 물건 · 익힌 스킬 칸 수(10/21 — 전: 물건 · 스킬북). 시작 지급품(나뭇가지 · 방어구 kettle)은 세지 않는다.
+// 대기실 레벨·호칭·금화·머리 (샛별 저장소 3b280a1b): 레벨 = 1 + 얻은 물건 · 익힌 스킬 칸 수(10/21 — 전: 물건 · 스킬북) + 얻은 호칭 수(10/24 사장님 '호칭 하나마다 레벨+1 해' —
+//  title_rules.js TITLE.countsLevel). 시작 지급품(나뭇가지 · 방어구 kettle)은 세지 않는다.
 // 전리품/구매가 생기면 획득 사건마다 고유 receipt 를 넘긴다. 같은 사건을 재처리해도 중복 상승하지 않으며, 장착/해제는 레벨에 영향이 없다.
 // 10/16 (docs/import/lobby_fix_2026-10-16.md §6): 스킬북을 금화로 샀다(purchase — 사장님 04:1x '금화나 머리를 얻으면 교환해서 개방') · 산 책은 receipt 'skillbook:<유파>:<급>' 으로
 //  acquisitions 에 남았다(10/21 스킬트리로 바뀜 — 아래) · 이미 받은 인장을 금화로(seal_coins.js addCoins).
@@ -9,22 +10,34 @@
 //   acquisitions 에 남는다(값과 같은 저장 — 반쯤 산 채로 남지 않음). 옛 스킬북('skillbook:<유파>:<급>')은 옮기기(skill_tree_store.js migrateSkillBooks)가 한 번의 저장으로 거두고 돌려준다 —
 //   그 기록 = tree { v, at, books, coins, heads, bonus, notice }(이 저장 안 — 금화와 같은 저장이라 '금화만 받고 기록이 없음' · '기록만 있고 금화가 없음'이 생기지 않는다). update = 그 한 번의 저장 틀.
 //  호칭 (사장님 10/16 15:3x ⑥ "호칭 시스템을 나중에 추가할 거라서 '여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" · 16:0x "… 이미 가진 호칭인 여행자가 보이고"
-//   — docs/import/ui_unify_2026-10-16.md §5): 기본 호칭 '여행자'는 늘 가짐 · 얻은 호칭은 titles(unlockEventTitle — 앞으로 호칭 제도가 부른다) · 고른 호칭은 title(selectTitle).
-//   호칭을 새로 지어 넣지 않는다(지금 얻을 수 있는 호칭은 없다).
+//   — docs/import/ui_unify_2026-10-16.md §5): 얻은 호칭은 titles { event, name, seen } · 고른 호칭은 title(selectTitle) · (10/16 ~ 10/23 기본 호칭 '여행자' — 10/24 뺌, 아래).
+//  10/24 호칭 (사장님 03:2x ~ 04:2x — title_rules.js · docs/handoff/school_titles_2026-10-24/README.md): 유파 계승자 다섯 · 소드마스터 · 방랑자 · 왕 시해자 · 정복자 · 도살자 · 대부호 · 나무꾼.
+//   '여행자'는 호칭이 아니다(사장님 10/24 — 전 기본 호칭 DEFAULT_TITLE 은 지움): 호칭이 없으면 title = ''(대기실 '호칭 없음') · 처음 얻은 호칭이 저절로 고른 호칭 ·
+//   저장된 고름이 가진 호칭이 아니면(옛 '여행자' 포함) 가진 호칭의 첫째 · 없으면 ''.
+//   얻는 조건은 title_rules.js dueTitles 한 곳 — 저장할 때마다(save) 맞춰 그 거래와 같은 저장에 들어간다(칸을 산 저장 · 방랑이 열린 저장 · 이긴 판 저장 — 반쯤 남지 않음).
+//   대기실을 열 때 한 번 더(checkTitles — 이미 조건을 채운 옛 저장). 얻은 호칭은 잃지 않는다(유파 초기화 · 방랑 패배 뒤에도) · seen = 알림 창을 봤나(titleNotices · markTitleSeen).
+//   이름은 사건 열쇠로 표에서 읽는다(표 이름을 바꾸면 저장된 호칭 · 고른 호칭도 새 이름). 왕 시해자 기록 regicide { run, foes } = 이번 방랑(run.id)에서 이긴 왕(같은 저장 — 방랑 칸 밖에 둠).
+//   번 것 earned { coins, heads } (도살자 · 대부호 — 감독 기본 '가진 것'이 아니라 '번 것'): 싸움 보상만(여정 이긴 판 금화 · 방랑 이긴 판 금화(특별 몫 포함) · 벤 머리 · 방랑 특별 머리) —
+//    보상을 주는 그 저장에서 더한다(noteEarned — 새로고침해도 두 번 세지 않음). 초기화 돌려받기 · `?coins=` · 테스트 경로 · 인장 바꾸기는 세지 않는다.
+//    옛 저장(earned 가 없음)은 처음 읽을 때 지금 금화 · 머리 + 칸 · 물건에 낸 값으로 셈해 두고 다음 저장에 한 번 적는다(earnedSeed).
 //  10/23 방랑 (wander_rules.js — 샛별 저장소 전달본 977c2a43, docs/import/wander_heroes_import_2026-10-23.md): 같은 저장에 wander 칸(깬 무대 · 열림 · 알림 창 · 지금 판)을 더했다 —
 //   판 결과와 보상을 한 번의 저장에 같이 써서 새로고침 · 대기실 왕복 · 다시 열기로 같은 보상을 두 번 받지 않는다. 옛 판(wander 를 모르는 판)으로 되돌리면 이 칸은 버려진다(금화 · 머리는 남음).
 //   저장이 막히면 방랑 거래만 이번 실행 메모리에 남긴다(pendingSave — 옛 지갑을 다시 읽어 같은 보상을 또 주지 않게). 다른 거래는 전처럼 '실패하면 다음 읽기에서 옛 값'.
 import { normalizeWander, wanderReward, WANDER_HEAD, WANDER_COINS, legacyWanderStages } from './wander_rules.js';
+import { TITLE, TITLE_NAMES, titleName, titleReason, dueTitles, noteKing, regicideOf, tierDrawFor } from './title_rules.js';
 export const PROGRESS_KEY = 'stillness.lobby.progress.v1';
-export const DEFAULT_TITLE = '여행자';
 /** 얻은 것 갈래: item 물건 · skill 스킬트리 칸(10/21) · skillbook 옛 스킬북(읽기만 — 옮기기가 거둔다) */
 export const ACQ_KINDS = Object.freeze(['item', 'skill', 'skillbook']);
-let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: DEFAULT_TITLE, tree: null, wander: normalizeWander(null) };
+let session = { acquisitions: [], coins: 100, heads: 0, titles: [], title: '', tree: null, wander: normalizeWander(null), regicide: null, earned: { coins: 0, heads: 0 } };
 // 저장이 막혔을 때 이번 실행 동안 지킬 방랑 거래(저장하려던 글 · 그때 저장소에 있던 글 · 그 저장소). 저장소 글이 바뀌면(?coins= · 바깥에서 바꿈) 버린다
 let pendingSave = null, pendingBase = null, pendingStore = null;
 const validText = s => typeof s === 'string' && s.length > 0 && s.length <= 160;
 const count = n => Number.isSafeInteger(n) && n >= 0;
 const paidOf = p => (p && count(p.coins) && count(p.heads) ? { coins: p.coins, heads: p.heads } : null);
+/** 번 것 (도살자 · 대부호 — title_rules.js) — 모양이 맞으면 사본, 아니면 null */
+const earnedOf = e => (e && count(e.coins) && count(e.heads) ? { coins: e.coins, heads: e.heads } : null);
+/** 옛 저장의 번 것 = 지금 가진 것 + 칸 · 물건에 낸 값 (적어도 이만큼은 벌었다 — 감독 10/24) */
+const earnedSeed = (coins, heads, acquisitions) => acquisitions.reduce((e, a) => ({ coins: e.coins + (a.paid?.coins ?? 0), heads: e.heads + (a.paid?.heads ?? 0) }), { coins, heads });
 /** 스킬트리 옮기기 기록 (skill_tree_store.js) — 모양이 맞으면 사본, 아니면 null */
 const treeOf = t => (t?.v === 1 && count(t.books) && count(t.coins) && count(t.heads) && count(t.bonus)
   ? { v: 1, at: validText(t.at) ? t.at : '', books: t.books, coins: t.coins, heads: t.heads, bonus: t.bonus, notice: t.notice === true } : null);
@@ -39,18 +52,52 @@ export function readProgress() {
         if (!a || !validText(a.receipt) || !ACQ_KINDS.includes(a.kind) || seen.has(a.receipt)) return false;
         seen.add(a.receipt); return true;
       }).map(({receipt, kind, paid}) => (paidOf(paid) ? {receipt, kind, paid: paidOf(paid)} : {receipt, kind}));
-      const titles = (Array.isArray(value.titles) ? value.titles : []).filter(t => t && validText(t.event) && validText(t.name));
-      session = { acquisitions, titles, title: titles.some(t => t.name === value.title) ? value.title : DEFAULT_TITLE,
-        coins: count(value.coins) ? value.coins : 100, heads: count(value.heads) ? value.heads : 0, tree: treeOf(value.tree), wander: normalizeWander(value.wander) };
+      // 호칭: 사건마다 하나 · 표에 있는 사건은 표 이름(이름을 바꿔도 따라감 — 고른 호칭도 옛 이름이면 새 이름으로) · seen 이 없는 옛 줄은 본 것으로
+      //  고른 호칭 = 가진 호칭 중 저장된 고름 · 아니면(옛 '여행자' · 안 가진 이름) 가진 호칭의 첫째 · 없으면 ''
+      const titles = [];
+      let title = '';
+      for (const t of Array.isArray(value.titles) ? value.titles : []) {
+        if (!t || !validText(t.event) || !validText(t.name) || titles.some(x => x.event === t.event)) continue;
+        const name = titleName(t.event) ?? t.name;
+        titles.push({ event: t.event, name, seen: t.seen !== false });
+        if (value.title === name || (value.title === t.name && !title)) title = name;
+      }
+      title ||= titles[0]?.name ?? '';
+      const coins = count(value.coins) ? value.coins : 100, heads = count(value.heads) ? value.heads : 0;
+      session = { acquisitions, titles, title, coins, heads, tree: treeOf(value.tree), wander: normalizeWander(value.wander), regicide: regicideOf(value.regicide),
+        earned: earnedOf(value.earned) ?? earnedSeed(coins, heads, acquisitions) };
     }
   } catch { /* 이번 실행 동안 유지한다. */ }
-  return { ...structuredClone(session), level: 1 + session.acquisitions.length };
+  return { ...structuredClone(session), level: levelOf(session) };
+}
+/** 가진 호칭 수 (이름 하나에 하나 — 레벨 · 레전드 확률이 같이 쓰는 셈) */
+const titleCount = (s) => new Set(s.titles.map(t => t.name)).size;
+/** 레벨 = 1 + 얻은 것 + 얻은 호칭(TITLE.countsLevel 이 켜졌을 때 — 사장님 10/24 03:4x) */
+const levelOf = (s) => 1 + s.acquisitions.length + (TITLE.countsLevel ? titleCount(s) : 0);
+/** 내 카드 뽑기 등급 확률 (사장님 10/24 04:0x — 호칭 하나마다 레전드 +0.2 %p · 커먼 −0.2 %p · main.js drawCardIds 가 여정 · 방랑에서만): base = weapons.js TIER_DRAW */
+export function titleTierDraw(base) {
+  readProgress();
+  return tierDrawFor(base, titleCount(session));
+}
+/** 싸움 보상으로 번 것 더하기 (도살자 · 대부호 — 보상 거래 안에서 저장 전에 부른다 · 음수는 0) */
+function noteEarned(coins, heads) {
+  session.earned.coins += Math.max(0, coins);
+  session.earned.heads += Math.max(0, heads);
+}
+/** 호칭 맞춤 (저장할 때마다 — 그 거래와 같은 저장): 방랑 이긴 판이면 왕 기록에 더하고 · 조건을 채운 호칭을 얻는다(seen false — 알림 한 번). 돌려줌: 이번에 얻은 사건 */
+function grantTitles() {
+  session.regicide = noteKing(session.regicide, session.wander?.run);
+  const due = dueTitles(session);
+  for (const event of due) session.titles.push({ event, name: titleName(event), seen: false });
+  if (!session.titles.some(t => t.name === session.title)) session.title = session.titles[0]?.name ?? ''; // 처음 얻은 호칭 = 저절로 고른 호칭
+  return due;
 }
 /**
  * 저장. 막히면 false — 방랑 거래(wander = true)만 이번 실행 메모리에 남긴다(pendingSave).
  *  다른 거래(구매 · 초기화 · 옮기기 …)가 막히면 전처럼 다음 읽기에서 옛 값으로 돌아간다 — 앞서 남겨 둔 방랑 거래가 있으면 그 판(구매 전)으로 (리뷰 2-8: 전달본은 이때 구매도 메모리에 남았다)
  */
 function save(wander = false) {
+  grantTitles();
   const text = JSON.stringify({ version: 1, ...session });
   let before = null;
   try { before = localStorage.getItem(PROGRESS_KEY); } catch { /* 저장소를 못 엶 */ }
@@ -145,20 +192,22 @@ export function journeyCoins(win, roll = rollInt, { night = false } = {}) {
   const amount = roll(lo, hi);
   const before = session.coins;
   session.coins = win ? before + amount : Math.max(0, before - amount);
+  noteEarned(session.coins - before, 0); // 대부호 — 이긴 판만(진 판 차감은 빼지 않음)
   return { delta: session.coins - before, coins: session.coins, saved: save() };
 }
-/** 머리 더하기 (상대의 목을 벤 판 — main.js). 돌려줌: 저장했나 */
-export function addHeads(amount = 1) {
+/** 머리 더하기 (상대의 목을 벤 판 — main.js). fight = 싸움 보상(도살자 셈 — awardHead). 돌려줌: 저장했나 */
+export function addHeads(amount = 1, fight = false) {
   readProgress();
   if (!count(amount)) return false;
   session.heads += amount;
+  if (fight) noteEarned(0, amount);
   return save();
 }
 /** 이 상대의 머리를 처음 벤 때만 1 (한 상대에 한 번 — 같은 몸이 두 번 알려도) · 돌려줌: 이번에 더했나 */
 export function awardHead(foe) {
   if (!foe || foe.headTaken) return false;
   foe.headTaken = true;
-  addHeads(1);
+  addHeads(1, true);
   return true;
 }
 // ── 방랑 (wander_rules.js — 10/23) ── 판 결과 · 보상 · 머리를 같은 저장에 한 번에 쓴다(save(true) — 막혀도 이번 실행 동안은 지킨다)
@@ -263,6 +312,7 @@ export function awardWanderHead() {
   if (!run || run.headTaken) return false;
   run.headTaken = true;
   session.heads += WANDER_HEAD;
+  noteEarned(0, WANDER_HEAD); // 도살자
   if (run.reward) run.reward.heads += WANDER_HEAD; // 이미 셈한 판이면 그 판 보상에도
   save(true);
   return true;
@@ -280,6 +330,7 @@ export function settleWander(win, roll = rollInt) {
   const before = session.coins;
   session.coins = Math.max(0, before + reward.coins);
   session.heads += reward.heads;
+  noteEarned(session.coins - before, reward.heads); // 대부호 · 도살자 — 특별 몫 포함 · 진 판 차감은 빼지 않음
   run.status = win ? 'won' : 'lost';
   run.fighting = false;
   if (win) run.wins++;
@@ -309,17 +360,37 @@ export function markWanderNotice() {
 
 // ── 호칭 ──
 /**
- * 호칭 얻기 (앞으로 호칭 제도가 부른다 — 지금은 부르는 곳 없음): 사건(event)마다 한 번 · 이벤트 조건은 해당 이벤트에서 판정한다.
- *  호칭은 레벨/유파로 자동 해금하지 않는다. 기본 호칭 '여행자'는 얻을 것이 아니라 늘 가진 것. 돌려줌: 이번에 얻었나
+ * 이벤트 호칭 얻기 (표 밖 — 앞으로 이벤트가 부른다 · 지금은 부르는 곳 없음): 사건(event)마다 한 번 · 이벤트 조건은 해당 이벤트에서 판정한다.
+ *  표 호칭(title_rules.js TITLE_NAMES — 유파 계승자 · 방랑자 …)은 조건으로만 얻는다(여기로 못 얻음). 처음 얻은 호칭이면 저절로 고른 호칭(저장 때). 돌려줌: 이번에 얻었나
  */
 export function unlockEventTitle(event, name) {
   readProgress();
-  if (!validText(event) || !validText(name) || name === DEFAULT_TITLE || session.titles.some(t => t.event === event)) return false;
-  session.titles.push({ event, name }); save(); return true;
+  if (!validText(event) || !validText(name) || Object.hasOwn(TITLE_NAMES, event) || session.titles.some(t => t.event === event)) return false;
+  session.titles.push({ event, name, seen: false }); save(); return true;
 }
-/** 가진 호칭 — 기본 '여행자' 먼저, 그 뒤 얻은 호칭(얻은 차례 · 같은 이름은 하나). 대기실 호칭 내림 상자가 이것만 보인다 (사장님 16:0x '이미 가진 호칭') */
+/** 대기실을 열 때 한 번 (lobby.js): 조건을 이미 채운 저장(옛 저장 — 유파 칸을 모두 익힘 · 방랑이 열림 …)에 호칭을 준다 · 줄 것이 있을 때만 저장. 돌려줌: 이번에 얻은 사건 */
+export function checkTitles() {
+  readProgress();
+  if (!dueTitles(session).length) return [];
+  const before = session.titles.length;
+  save();
+  return session.titles.slice(before).map(t => t.event);
+}
+/** 아직 알리지 않은 호칭 { event, name, why } — 얻은 차례 (알림 창이 하나씩 — lobby.js · title_notice.js) */
+export function titleNotices() {
+  return readProgress().titles.filter(t => !t.seen).map(t => ({ event: t.event, name: t.name, why: titleReason(t.event, t.name) }));
+}
+/** 호칭 알림 창을 봤다(확인) — 다시 띄우지 않는다. 돌려줌: 저장했나 */
+export function markTitleSeen(event) {
+  readProgress();
+  const t = session.titles.find(x => x.event === event);
+  if (!t || t.seen) return false;
+  t.seen = true;
+  return save();
+}
+/** 가진 호칭 — 얻은 차례 · 같은 이름은 하나 (10/24 — '여행자'는 호칭이 아님 · 없으면 빈 목록). 대기실 호칭 내림 상자가 이것만 보인다 (사장님 16:0x '이미 가진 호칭') */
 export function titleOptions() {
-  return [...new Set([DEFAULT_TITLE, ...readProgress().titles.map(t => t.name)])];
+  return [...new Set(readProgress().titles.map(t => t.name))];
 }
 /** 호칭 고르기: 가진 호칭만 · 고른 것은 title 에 저장. 돌려줌 { ok, saved } (저장 못 하면 이번 실행 동안 유지) */
 export function selectTitle(name) {

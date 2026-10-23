@@ -77,10 +77,13 @@ async function toFight(page) {
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });
   return met;
 }
+/** 결과 창 위 호칭 알림 창(10/24 — title_notice.js: 방랑자 · 왕 시해자 · 나무꾼 …)이 떠 있으면 확인 — 이 점검의 단추를 가리지 않게 (호칭 점검은 ui_unify_smoke ④-4) */
+const dismissTitles = async (page) => { while (await page.evaluate(() => document.getElementById('titleNotice')?.classList.contains('show') ?? false)) await page.locator('#btnTitleNotice').click(); };
 /** 판을 끝낸다 (연결 확인용 — 승률 자료 아님) → 결과 창이 뜰 때까지 */
 async function finish(page, win) {
   await page.evaluate((win) => { const g = window.game; (win ? g.enemy : g.player).die('출혈', true); }, win);
   await page.waitForFunction(() => document.getElementById('menu').classList.contains('show') && /승리|패배/.test(document.getElementById('menuTitle').textContent), null, { timeout: 180000 });
+  await dismissTitles(page);
 }
 const menuText = (page) => page.evaluate(() => ({
   title: document.getElementById('menuTitle').textContent, sub: document.getElementById('menuSub').textContent,
@@ -204,6 +207,7 @@ async function lobbyGo(page, id) {
   check(next3.bg === 'rgb(217, 164, 65)' && !sameLook(next3, wanderLook), `③ 뒤 여정 결과 창 '${await page.evaluate(() => document.getElementById('btnStart').textContent)}' 금색 그대로 (${next3.bg})`);
   await page.screenshot({ path: `${out}/popup_first_clear.png` });
   await page.locator('#btnWanderNotice').click();
+  await dismissTitles(page); // 방랑 알림 창 다음 방랑자 호칭 창 (10/24)
   let p = await progress(page);
   check(p.wander.unlocked && p.wander.noticeSeen && !(await page.evaluate(() => document.getElementById('wanderNotice').classList.contains('show'))), '③ 확인 → 닫힘 · 저장 열림 · noticeSeen');
   // ④ 대기실 → 방랑

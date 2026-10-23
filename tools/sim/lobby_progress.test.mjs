@@ -4,7 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 const storage = new Map();
 globalThis.localStorage = { getItem:k=>storage.get(k)??null, setItem:(k,v)=>storage.set(k,v) };
-const { readProgress, recordAcquisition, unlockEventTitle, titleOptions, selectTitle, DEFAULT_TITLE, PROGRESS_KEY } = await import('../../src/lobby_progress.js');
+const { readProgress, recordAcquisition, unlockEventTitle, titleOptions, selectTitle, PROGRESS_KEY } = await import('../../src/lobby_progress.js');
+const { TITLE } = await import('../../src/title_rules.js');
 const { readProfile, renamePlayer, recordDuel, cleanName, PROFILE_KEY } = await import('../../src/player_profile.js');
 const { LOBBY_ITEMS, LOBBY_ARMOR, EQUIPMENT_KEY, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor } = await import('../../src/lobby_equipment.js');
 test('our key names (no fork names, no clash with existing keys)',()=>{
@@ -20,8 +21,9 @@ test('owner changes: weapon slot is tree branch only; armor name is one constant
  storage.set(EQUIPMENT_KEY,JSON.stringify({version:1,weapon:'longsword'}));assert.equal(readLobbyEquipment(),null); // 옛 롱소드 장착 기록은 맨손으로
  assert.equal(saveLobbyArmor(null),true);assert.equal(readLobbyArmor(),null);assert.equal(saveLobbyArmor('kettle'),true);assert.equal(readLobbyArmor(),'kettle');
 });
-test('starter grants excluded; acquisition receipts count both kinds once, independently of titles',()=>{
- assert.equal(readProgress().level,1); assert.equal(readProgress().coins,100); assert.equal(readProgress().title,'여행자');
+// 10/24 사장님 '호칭 하나마다 레벨+1 해' (title_rules.js TITLE.countsLevel — 켜면 얻은 호칭 하나 = Lv +1 · 끄면 전처럼 얻은 것만)
+test('starter grants excluded; acquisition receipts count both kinds once; each earned title adds one level (TITLE.countsLevel)',()=>{
+ assert.equal(readProgress().level,1); assert.equal(readProgress().coins,100); assert.equal(readProgress().title,''); // 10/24 — '여행자'는 호칭이 아님: 처음엔 호칭 없음
  for(const id of ['tree_branch','longsword','kettle'])assert.equal(recordAcquisition({receipt:id,kind:'item',source:'starter'}),false);
  assert.equal(readProgress().level,1);
  assert.equal(recordAcquisition({receipt:'drop-1',kind:'item',source:'loot'}),true);
@@ -30,25 +32,29 @@ test('starter grants excluded; acquisition receipts count both kinds once, indep
  assert.equal(readProgress().level,3);
  assert.equal(unlockEventTitle('test-event','검증용 호칭'),true);
  assert.equal(unlockEventTitle('test-event','중복'),false);
- assert.equal(readProgress().level,3);assert.equal(readProgress().title,'여행자');
+ assert.equal(TITLE.countsLevel,true);assert.equal(readProgress().level,4);assert.equal(readProgress().title,'검증용 호칭'); // 처음 얻은 호칭 = 저절로 고른 호칭
+ TITLE.countsLevel=false;assert.equal(readProgress().level,3);TITLE.countsLevel=true; // 스위치를 끄면 전 셈 그대로
  assert.equal(JSON.parse(storage.get(PROGRESS_KEY)).acquisitions.length,2);
 });
 test('malformed and duplicated saved receipts cannot inflate level; invalid currency/title fall back',()=>{
  storage.set(PROGRESS_KEY,JSON.stringify({version:1,acquisitions:[null,{receipt:'x',kind:'item'},{receipt:'x',kind:'skillbook'},{receipt:'bad',kind:'unknown'}],coins:-20,title:'unearned',titles:[]}));
- assert.equal(readProgress().level,2);assert.equal(readProgress().coins,100);assert.equal(readProgress().title,'여행자');
+ assert.equal(readProgress().level,2);assert.equal(readProgress().coins,100);assert.equal(readProgress().title,'');
 });
-// 호칭 내림 상자의 자료 (사장님 10/16 15:3x ⑥ · 16:0x '이미 가진 호칭인 여행자가 보이고' — docs/import/ui_unify_2026-10-16.md §6). '검증용 호칭'은 시험에만 쓰는 이름 (게임에 넣는 호칭 아님)
-test('titles: 여행자 always owned · earned titles listed once in order · only owned can be selected · selection saved in title',()=>{
+// 호칭 내림 상자의 자료 (사장님 10/16 15:3x ⑥ · 16:0x '이미 가진 호칭' — docs/import/ui_unify_2026-10-16.md §5 · 10/24 '여행자'는 호칭이 아님). '검증용 호칭'은 시험에만 쓰는 이름 (게임에 넣는 호칭 아님)
+test('titles: no title at first (옛 여행자 = 없음) · first earned title is selected by itself · earned titles listed once in order · only owned can be selected · selection saved in title',()=>{
  const before=storage.get(PROGRESS_KEY); // 아래 '저장 막힘' 시험이 앞 시험들의 상태를 이어 쓴다 — 끝에 되돌린다
- storage.set(PROGRESS_KEY,JSON.stringify({version:1,acquisitions:[],coins:100,heads:0,titles:[],title:'여행자'}));
- assert.equal(DEFAULT_TITLE,'여행자');assert.deepEqual(titleOptions(),['여행자']);
- assert.deepEqual(selectTitle('없는 호칭'),{ok:false,saved:false});assert.equal(readProgress().title,'여행자');
- assert.equal(unlockEventTitle('e0','여행자'),false); // 기본 호칭은 얻는 것이 아니라 늘 가진 것
- assert.equal(unlockEventTitle('e1','검증용 호칭'),true);assert.equal(unlockEventTitle('e2','검증용 호칭'),true);assert.equal(unlockEventTitle('e3','둘째 검증용'),true);
- assert.deepEqual(titleOptions(),['여행자','검증용 호칭','둘째 검증용']);
- assert.deepEqual(selectTitle('검증용 호칭'),{ok:true,saved:true});assert.equal(readProgress().title,'검증용 호칭');
- assert.equal(JSON.parse(storage.get(PROGRESS_KEY)).title,'검증용 호칭');
- assert.deepEqual(selectTitle('여행자'),{ok:true,saved:true});assert.equal(JSON.parse(storage.get(PROGRESS_KEY)).title,'여행자');
+ storage.set(PROGRESS_KEY,JSON.stringify({version:1,acquisitions:[],coins:100,heads:0,titles:[],title:'여행자'})); // 옛 저장의 기본 호칭
+ assert.deepEqual(titleOptions(),[]);assert.equal(readProgress().title,'');
+ assert.deepEqual(selectTitle('없는 호칭'),{ok:false,saved:false});assert.deepEqual(selectTitle('여행자'),{ok:false,saved:false});assert.equal(readProgress().title,'');
+ assert.equal(unlockEventTitle('e1','검증용 호칭'),true);
+ assert.equal(readProgress().title,'검증용 호칭');assert.equal(JSON.parse(storage.get(PROGRESS_KEY)).title,'검증용 호칭'); // 처음 얻은 호칭 = 지금 호칭 (같은 저장)
+ assert.equal(unlockEventTitle('e2','검증용 호칭'),true);assert.equal(unlockEventTitle('e3','둘째 검증용'),true);
+ assert.deepEqual(titleOptions(),['검증용 호칭','둘째 검증용']);assert.equal(readProgress().title,'검증용 호칭'); // 둘째부터는 고른 그대로
+ assert.deepEqual(selectTitle('둘째 검증용'),{ok:true,saved:true});assert.equal(readProgress().title,'둘째 검증용');
+ assert.equal(JSON.parse(storage.get(PROGRESS_KEY)).title,'둘째 검증용');
+ // 옛 저장: 고른 호칭이 '여행자'인데 가진 호칭이 있으면 가진 호칭의 첫째
+ storage.set(PROGRESS_KEY,JSON.stringify({version:1,acquisitions:[],coins:100,heads:0,titles:[{event:'wander',name:'방랑자'},{event:'e9',name:'둘째'}],title:'여행자'}));
+ assert.equal(readProgress().title,'방랑자');assert.deepEqual(titleOptions(),['방랑자','둘째']);
  storage.set(PROGRESS_KEY,before);readProgress();
 });
 test('profile: default name, 16-character trim, literal text, win/loss counts',()=>{

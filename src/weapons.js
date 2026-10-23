@@ -101,7 +101,9 @@ export const TIER_DRAW = { common: 40, rare: 26, epic: 18, legend: 6, trash: 4, 
 //   남은 칸 가운데 배율이 1 이 아닌 칸이 하나라도 있으면 등급을 따로 뽑지 않고 — 칸마다 무게 = 그 등급 TIER_DRAW ÷ 그 등급의 남은 칸 수 × 배율 — 모든 등급의 칸을 그 무게로 한 번에 고른다(난수 한 번 + 묶음 안 고르기).
 //   그래서 편지 유파 칸만 늘고 나머지(쓰레기 · ??? 포함)는 그만큼 조금씩 준다. 둘째 장도 같은 규칙(첫 장 칸 · 묶음을 뺀 남은 칸으로 다시 셈).
 //   편지가 없으면(weightOf 없음 · 모든 칸 배율 1) 아래 전 줄 그대로 — 같은 난수 · 같은 결과(AI · 편지 없는 플레이어 판 그대로).
-export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random, weightOf = null } = {}) {
+//  등급 확률 tierDraw (10/24 사장님 '호칭 하나마다 레전드 +0.2 %p · 커먼 −0.2 %p' — lobby_progress.js titleTierDraw): 기본 = TIER_DRAW(바꾸지 않음).
+//   여정 · 방랑의 내 카드만 바꾼 표를 넘긴다(main.js drawCardIds) — 상대 무기 · AI · 시뮬 · 테스트 경로 · 고정 주소 판은 기본 그대로. 등급 뽑기 · 편지 길 모두 이 표를 쓴다.
+export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random, weightOf = null, tierDraw = TIER_DRAW } = {}) {
   pool = pool.filter(id => !getWeapon(id).characterOnly); // characterOnly(인물 전용) 무기는 카드에 안 나온다 — 지금 그런 무기는 없어 뽑기 결과 · 난수 차례는 전과 같다 (샛별 저장소 10/17)
   const groupOf = (id) => getWeapon(id).drawGroup || id;
   const exGroup = exclude == null ? null : groupOf(exclude);
@@ -116,20 +118,20 @@ export function drawWeaponCards(pool, n = 2, { exclude = null, rnd = Math.random
       if (!slots.has(g)) slots.set(g, []);
       slots.get(g).push(id);
     }
-    const tiers = Object.keys(byTier).filter((t) => (TIER_DRAW[t] ?? 0) > 0);
+    const tiers = Object.keys(byTier).filter((t) => (tierDraw[t] ?? 0) > 0);
     const mul = weightOf ? (m) => Math.max(0, weightOf(m[0]) ?? 1) : null;
     let g, members;
     if (mul && tiers.some((t) => [...byTier[t].values()].some((m) => mul(m) !== 1))) {
-      // 편지: 칸마다 무게 = TIER_DRAW[등급] ÷ 그 등급 칸 수 × 배율 — 모든 등급에서 한 번에
-      const all = tiers.flatMap((t) => { const sl = [...byTier[t].entries()]; return sl.map(([k, m]) => [k, m, (TIER_DRAW[t] / sl.length) * mul(m)]); });
+      // 편지: 칸마다 무게 = tierDraw[등급] ÷ 그 등급 칸 수 × 배율 — 모든 등급에서 한 번에
+      const all = tiers.flatMap((t) => { const sl = [...byTier[t].entries()]; return sl.map(([k, m]) => [k, m, (tierDraw[t] / sl.length) * mul(m)]); });
       let r = rnd() * all.reduce((a, x) => a + x[2], 0);
       [g, members] = all[all.length - 1];
       for (const x of all) if ((r -= x[2]) < 0) { [g, members] = x; break; }
     } else {
-      const total = tiers.reduce((a, t) => a + TIER_DRAW[t], 0);
+      const total = tiers.reduce((a, t) => a + tierDraw[t], 0);
       let r = rnd() * total;
       let t = tiers[tiers.length - 1];
-      for (const k of tiers) if ((r -= TIER_DRAW[k]) < 0) { t = k; break; }
+      for (const k of tiers) if ((r -= tierDraw[k]) < 0) { t = k; break; }
       const slots = byTier[t] ? [...byTier[t].entries()] : left.map((id) => [groupOf(id), [id]]);
       [g, members] = slots[Math.floor(rnd() * slots.length)];
     }
