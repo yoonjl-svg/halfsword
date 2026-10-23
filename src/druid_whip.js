@@ -16,11 +16,13 @@ export const DRUID = Object.freeze({ grip: .26, lash: 1.44, count: 8, mass: .77,
 //  angDamp · linDamp: 마디 회전 · 이동 감쇠(공기) · friction · restitution: 마디 마찰 · 반발 · armAssist: 마디로 친 몫의 팔 보조 질량(kg — combat.js)
 //  iters: 마디 몸의 덧 풀이 횟수(엔진 additionalSolverIterations — 마디가 든 섬, 곧 칼 주인 몸 전체에 걸린다)
 //  bladeFrom: 이 번호(0 = 마디 1)부터의 마디만 상대 칼과 부딪힌다(그 앞 마디는 상대 칼을 지나간다 — 상대 몸 · 땅 · 장애물과는 그대로) · 0 = 모두(샛별 값)
+//  lash · mass: 덩굴 길이(m — 마디 8 개가 나눔 · 무기 칸 bladeLength) · 전체 질량(kg — 손잡이 · 끝 공 0.21 kg 은 그대로, 나머지가 줄 몫 · 끝 무게) — 샛별 값 DRUID.lash · DRUID.mass
 //  servo: 손잡이 손목 서보(weapons.js controlOverrides 와 같은 칸 — fighter.weaponCfg 에 덮는다) · flick: 톡 = 손목 튕기기(아래 WHIP_FLICK — 샛별 판은 보통 탭 찌르기)
 export const WHIP_SRC = Object.freeze({
   tip: .12, tipSplit: [.25, .75], taper: [1.8, 1.65, 1.5, 1.35, 1.2, 1.05, .9, .75],
   bend: { k: Array.from({ length: 8 }, (_, i) => .035 * (1 - i / 10) + (i < 2 ? .08 : .025)), fold: .12 },
   bendDamp: Array(8).fill(0), angDamp: .15, linDamp: .15, friction: .65, restitution: .08, armAssist: .12, iters: 8, bladeFrom: 0,
+  lash: DRUID.lash, mass: DRUID.mass,
   servo: { aimStiffness: 24, aimDamping: 1.2, releaseDamping: .6, maxAimTorque: 10, twistScale: .08 }, flick: false,
 });
 // 10/23 검수 (사장님 '채찍은 너가 검수해서 다 낫게 고쳐봐') — 바꾼 다섯, 나머지는 샛별 값 그대로 (잰 값: tools/sim/druid_whip.mjs · docs/import/druid_whip_2026-10-23.md §5):
@@ -36,8 +38,12 @@ export const WHIP_SRC = Object.freeze({
 //     잰 값(tools/sim/whip_duel.mjs --stand=contact · 인물 여섯 × 시드 여섯): 채찍이 닿는 간격(1.25 m)에 서도 상대 칼이 덩굴 길 한가운데에 있어 획의 88 % 가 칼에 닿고
 //     판당 7.3 s 붙어 있었다(칼 닿음 시간의 56 % 가 마디 1 ~ 3). 마찰 0.3 · 0.2 는 붙은 시간 5.5 · 5.7 s · 몸 닿을 기회 획 49 · 44 % 로 모자랐고, 3 이면 칼 닿은 획 54 % · 1.3 s · 몸 닿을 기회 44 → 53 %
 //     (2 = 42 % · 4 = 52 % · 5 = 54 % — 3 위로는 늘지 않음). 마찰 · 반지름 · 굽힘 용수철 · 몸 · 땅과의 닿음은 그대로
+//  ⑦ tip .06 → .02 · taper 1.8 ~ .75(2.4 : 1) → 2.4 ~ .6(4 : 1) (10/23 넷째 일 — 사장님 '덩굴 조금 길게하고 무게도 조금 올리면? … 실물 채찍처럼' · 확인표 2279 — 사장님 확인 전):
+//     실물 채찍처럼 손 쪽은 굵고 무겁게, 끝으로 갈수록 가늘고 가볍게(끝 매듭 무게 60 → 20 g · 마디 1 ~ 8 질량 88 · 81 · 74 · 66 · 59 · 51 · 59 · 82 → 115 · 100 · 86 · 72 · 57 · 45 · 41 · 44 g). 길이 1.44 m · 무게 0.77 kg 그대로.
+//     잰 값(tools/sim/druid_whip.mjs --var · whip_duel.mjs 두 거리 × 36 판): 긋기 끝 빠르기 20.9 → 27.0 m/s · 끝 ÷ 손잡이 끝 3.20 → 3.90 · 맞닿는 간격 판정 6.1 → 7.6 · J 90 → 129 / 판 ·
+//     1.69 m 3.0 → 4.7 · 51 → 82 J — 덩굴을 1.8 · 2.1 m · 0.9 kg 으로 늘이면 오히려 덜 맞았다(5.6 · 4.7 / 판 — 끝이 늦어짐). 마디 벌어짐(AI 끼리 6 s) 3.0 → 1.3 cm
 export const WHIP_NOW = Object.freeze({
-  ...WHIP_SRC, iters: 1, bendDamp: Array(8).fill(8), tip: .06, bladeFrom: 3,
+  ...WHIP_SRC, iters: 1, bendDamp: Array(8).fill(8), tip: .02, taper: [2.4, 2.1, 1.8, 1.5, 1.2, .95, .75, .6], bladeFrom: 3,
   servo: { aimStiffness: 10, aimDamping: .2, releaseDamping: .1, maxAimTorque: 10, twistScale: .08 }, flick: true,
 });
 const copyWhip = (P) => ({ ...P, bend: { ...P.bend, k: [...P.bend.k] }, bendDamp: [...P.bendDamp], tipSplit: [...P.tipSplit], taper: [...P.taper], servo: { ...P.servo } });
@@ -78,13 +84,13 @@ export function druidParts() {
     [['box', .023, .13, .023], 0, [.18, 0, .00105, .000065], null, false],
     [['ball', .025], -.135, [.03, 0, .0000075, .0000075], null, false],
   ];
-  const L = DRUID.lash / DRUID.count;
+  const L = WHIP.lash / DRUID.count;
   const weights = WHIP.taper;
   const sum = weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < DRUID.count; i++) {
     // 줄 몫은 taper 비로 나누고, 더한 끝 무게(WHIP.tip)는 마지막 두 마디에 모은다(tipSplit)
     const added = i === 7 ? WHIP.tip * WHIP.tipSplit[1] : i === 6 ? WHIP.tip * WHIP.tipSplit[0] : 0;
-    const m = (DRUID.mass - DRUID.handleMass - WHIP.tip) * weights[i] / sum + added;
+    const m = (WHIP.mass - DRUID.handleMass - WHIP.tip) * weights[i] / sum + added;
     const r = i === 7 ? .024 : i === 6 ? .012 : .022 - .016 * i / (DRUID.count - 1);
     out.push([['box', r, L / 2, r], .13 + (i + .5) * L,
       [m, 0, m * (L * L + 4 * r * r) / 12, m * r * r * 2 / 3], null, true]);
@@ -147,7 +153,8 @@ export function drawDruidWhip(group) {
   group.add(grip);
   const lash = makeBraid();
   lash.name = 'druid-lash';
-  lash.userData.bend([new THREE.Vector3(0, .13, 0), new THREE.Vector3(.04, .55, 0), new THREE.Vector3(-.09, 1.0, 0), new THREE.Vector3(.14, 1.55, 0)]);
+  const sy = WHIP.lash / DRUID.lash; // 늘어진 첫 꼴도 덩굴 길이를 따라 (판 고르기)
+  lash.userData.bend([new THREE.Vector3(0, .13, 0), new THREE.Vector3(.04, .13 + .42 * sy, 0), new THREE.Vector3(-.09, .13 + .87 * sy, 0), new THREE.Vector3(.14, .13 + 1.42 * sy, 0)]);
   group.add(lash); group.userData.bladeMesh = lash;
   const bark = new THREE.MeshStandardMaterial({ color: 0x6d573d, roughness: 1 });
   for (const y of [-.12, -.10, .095, .115]) {
@@ -172,7 +179,7 @@ export function drawDruidWhip(group) {
 export function attachDruidWhip(f, ownTorsoBit, foeWeaponBit = 0) {
   const R = f.R, world = f.world, root = f.sword;
   Object.assign(f.weaponCfg, WHIP.servo); // 손잡이 서보 (판 고르기 — 기본은 weapons.js controlOverrides 와 같은 값)
-  const parts = f.weapon.buildParts({}), L = DRUID.lash / DRUID.count;
+  const parts = f.weapon.buildParts({}), L = WHIP.lash / DRUID.count;
   const p0 = new THREE.Vector3().copy(root.translation()), q0 = new THREE.Quaternion().copy(root.rotation());
   const segments = [], joints = [];
   let previous = root;

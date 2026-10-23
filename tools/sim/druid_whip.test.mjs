@@ -82,6 +82,30 @@ test('칼 닿는 마디 (10/23 셋째 일 · WHIP.bladeFrom): 지금 = 마디 4 
   setWhipPreset('now');
 });
 
+test('덩굴 길이 · 무게 · 테이퍼 (10/23 넷째 일 · WHIP.lash · mass · tip · taper): 지금 = 끝 매듭 20 g · 테이퍼 4 : 1 · 길이 1.44 m · 0.77 kg 그대로 · 길이 · 무게는 판을 따라 무기 칸 · 카드 스펙 · 마디가 바뀜', () => {
+  CONFIG.ARENA.startHold = 0;
+  assert.equal(WHIP_SRC.lash, 1.44); assert.equal(WHIP_SRC.mass, 0.77);
+  assert.equal(WHIP_NOW.lash, 1.44); assert.equal(WHIP_NOW.mass, 0.77);
+  assert.equal(WHIP_NOW.tip, 0.02);
+  assert.equal(WHIP_NOW.taper[0] / WHIP_NOW.taper[7], 4);
+  setWhipPreset('now');
+  const parts = W().buildParts({}).slice(2).map((q) => q[2][0]);
+  for (let i = 1; i < 6; i++) assert.ok(parts[i] < parts[i - 1], `마디 ${i + 1} 이 손 쪽보다 가볍다`);
+  assert.ok(parts[0] > 2.5 * parts[7], '손 쪽 마디가 끝 마디의 2.5 배 넘게 무겁다');
+  // 판 고르기로 길이 · 무게를 바꾸면 무기 칸 · 카드 스펙 · 마디 길이가 따른다 (시험 도구 --whip · with_whip.mjs 와 같은 길)
+  Object.assign(WHIP, { lash: 1.8, mass: 0.9 });
+  assert.equal(W().bladeLength, 1.8);
+  assert.equal(weaponSpecText(W()), '한손 채찍, 209 cm, 0.9 kg');
+  const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 3, AIClass: Quiet, AI2Class: Quiet });
+  assert.ok(Math.abs(g.player.flexWeapon.L - 0.225) < 1e-9);
+  assert.equal(g.player.weaponCfg.bladeLength, 1.8);
+  assert.ok(Math.abs(g.player.stamina.originalMass - 0.9) < 1e-6);
+  g.world.free();
+  setWhipPreset('now');
+  assert.equal(W().bladeLength, 1.44);
+  assert.equal(weaponSpecText(W()), '한손 채찍, 173 cm, 0.77 kg');
+});
+
 test('마디 물리: 8 마디 · AI 끼리 6 s 벌어짐 3 cm 안 · 유한 · 끝 점 = 덩굴 마디 · 세게 쳐도 · 직접 불러도 안 부러짐', () => {
   CONFIG.ARENA.startHold = 0;
   const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 11, AIClass: AI, AI2Class: AI });
