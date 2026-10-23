@@ -188,8 +188,8 @@ export class Combat {
     const rel = vBlade.sub(vBody);
     const speed = rel.length();
     if (speed < 0.5) return null;
-    // 사람이 휘두르는 칼은 칼끝도 초속 20m 남짓. 그보다 훨씬 빠르면 물리 계산이 튄 것이니 무시한다 (휘는 무기 마디는 STRIKE.flexSpeedMax)
-    if (speed > (pr.w.flexible ? STRIKE.flexSpeedMax : 30)) return null;
+    // 터무니없이 빠르면 물리 계산이 튄 것이니 무시한다 — 상한 STRIKE.speedMax 60 (10/23 사장님 · 전 30: '사람 칼끝은 초속 20m 남짓') · 휘는 무기 마디는 STRIKE.flexSpeedMax
+    if (speed > (pr.w.flexible ? STRIKE.flexSpeedMax : STRIKE.speedMax)) return null;
     const dir = rel.clone().divideScalar(speed);
 
     // 칼 기준 축: y = 칼끝 방향, x = 날 방향, z = 칼 면(납작한 쪽)
