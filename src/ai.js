@@ -251,6 +251,8 @@ export class AI {
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
     this.iaiArm = this.secret?.do?.instant ? new IaiArm() : null; // 일본 발도 대기 (10/10 02:4x — 상대 간격 밖 iaiArmTime 초)
     this.gilArm = this.secret?.do?.gilmok ? new IaiArm('gilmokArmTime', 'gilmokArmGrace') : null; // 이베리아 길목 지키기 준비 (10/11 v6 — 내 칼끝 거리 밖 gilmokArmTime 초, 같은 셈)
+    this.spinArm = this.secret?.do?.spin ? new IaiArm('armTime', 'armGrace', 'ibSpin') : null; // 싱지르 무장 (10/24 사장님 '싱지르 ai에게도 열어' — 사람 PlayerSecretWatch.spinArm 과 같은 셈 · 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초)
+    this.spinW = 0; // 무장 동안 상처 셈 (SECRET.ibSpin.hurtDisarm — 사람과 같은 규칙)
     this.binds = this.secret?.when === 'bindCount' ? new BindCount() : null; // 이베리아 맺힘 셈 (10/10 — secret.js, 플레이어 창과 같은 셈)
     this.lastAtkT = -Infinity; // 마지막으로 공격 꼴이던 때 (중국 chineseRest)
     this.restBefore = Infinity; // 이번 공격을 시작하기 전 내 공격 없이 지난 시간 (s)
@@ -326,7 +328,7 @@ export class AI {
     const me = this.me;
     const foe = this.foe;
     this.sense.record(dt);
-    me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12)
+    me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff' && this.secretRun.stage !== 'spin'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12) · 싱지르는 사람과 같게(대본이 팔을 쥠 — 10/24)
     this.coverLine = null; // 물러나며 가리는 줄 (withdraw 가 그 스텝에 정함 — frames.js installCover 의 watch 덮개가 읽음, 10/12 왕관)
     const L = this.level;
     // 패시브 확정(10/9 13:xx, docs/strike/passive_fire_2026-10-09.md): 패시브가 낸 공격의 걸쇠(0.5 s)와 미룬 패시브의 남은 시간을 줄인다
@@ -444,7 +446,7 @@ export class AI {
     if (hurt) {
       // 생각보다 멀리서 맞았으면 상대 칼이 더 멀리 닿는다고 고쳐 생각한다
       if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.foeM.reach, 2.5);
-      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
+      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
     this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * 0.03; // 천천히 원래 생각으로
 
@@ -471,6 +473,7 @@ export class AI {
     if (!this.secretRun && me.secretHit !== 1) me.secretHit = 1; // 결정타 판정 배율도 비기 밖에선 1
     if (kneeling && this.secretRun) this.secretAbort();
     if (this.secret && !kneeling && !this.secretRun && !this.drillOut) this.secretScan(dt, c, r); // 헛스윙 연습 동안은 비기 사건을 보지 않는다 (whiff_drill.js)
+    if (this.spinArm) this.spinTick(dt, kneeling); // 싱지르 (10/24 AI 열림): 칼끝 거리 밖 무장 → 상대가 들어오면 한 바퀴 (상대 사건 없음 — secretScan 은 건너뜀)
 
     if (kneeling) {
       // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
@@ -655,6 +658,9 @@ export class AI {
     // 이베리아 길목 지키기 준비 (10/11 v6): 준비된 동안은 먼저 치지도(기회·패시브) 낌새에 앞질러 치거나 물러나지도(preThreat·seize) 않고 칼끝 거리 선을 지킨다 —
     //  48 판 첫 측정: 이 걸쇠 없이는 상대가 칼끝 거리에 들자마자 내가 먼저 공격을 열어 준비가 풀려 창 0 번. 들어오는 칼(위 respond)은 그대로 받는다. 자세 손은 update 끝에서 옆 자세로 덮는다
     if (this.gilArm?.armed) return;
+    // 싱지르 무장 (10/24): 같은 걸쇠 — 무장된 동안은 먼저 치지 않고 간을 보며(발은 holdDist 그대로 다가섬) 상대가 칼끝 거리 + aiFire 안에 들면 spinTick 이 한 바퀴.
+    //  걸쇠가 없으면 롤랑이 무장한 뒤 상대가 칼끝 거리 + 0.6 m 에 오자마자 보통 공격을 열어 무장이 풀렸다(첫 시험 — 낸 수 0). 들어오는 칼(위 respond)은 그대로 받는다
+    if (this.spinArm?.armed) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
@@ -1960,6 +1966,49 @@ export class AI {
     return secretCond(S, ctx, d, { reach: this.M.reach, foeReach: this.foeReach, clinch: this.M.clinch, contact: this.M.contact, armed: !!this.iaiArm?.armed }); // 플레이어 창과 같은 함수 (secret.js) · armed: 발도 대기 (일본)
   }
 
+  /**
+   * 싱지르 무장 · 내기 (10/24 사장님 02:5x '싱지르 ai에게도 열어' — SECRET.aiOpenSchools 'iberian' · 숙련도 AI_PROFICIENCY.secretAt 이상 · TRADITIONS.iberian.secret 'spin'):
+   *  무장은 사람과 같은 셈(secret.js IaiArm — 상대 가슴이 내 칼끝 거리 M.reach 밖에 SECRET.ibSpin.armTime 초 · 들어와도 armGrace 초 남음 · 무장 동안 상처 나면 풀림 hurtDisarm) —
+   *  공격 · 막기 · 비기 중이면 풀림(사람의 '휘두르면 풀림'과 같은 몫 · 발도 대기 iaiArm 과 같은 칸). 무장된 채 상대 가슴이 칼끝 거리 + SECRET.ibSpin.aiFire 안에 들면
+   *  (지금 모습 — 반응 지연 0, 다른 비기 secretScan 과 같은 '완벽 실행') 칼 든 쪽으로 한 바퀴. 굴림 없음. 간 보는 거리(holdDist)는 바꾸지 않는다 — 무장은 물러났을 때 · 판 시작처럼 저절로 밖에 선 때 켜진다
+   */
+  spinTick(dt, kneeling) {
+    const me = this.me;
+    const s0 = this.sense.seen(0);
+    const c = me.bodies.chest.translation();
+    const d0 = Math.hypot(s0.cx - c.x, s0.cz - c.z);
+    const nw = me.wounds?.length ?? 0;
+    const hurt = !!SECRET.ibSpin.hurtDisarm && nw > this.spinW;
+    this.spinW = nw;
+    const busy = this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun || this.drillOut || kneeling;
+    this.spinArm.tick(dt, d0 > this.M.reach && !kneeling, busy || hurt);
+    if (!this.spinArm.armed || busy || !this.secretFree() || !this.foe.alive || s0.state !== 'stand' || !me.armed || me.state !== 'stand') return false;
+    if (d0 > this.M.reach + SECRET.ibSpin.aiFire) return false;
+    return this.spinGo();
+  }
+
+  /** 싱지르를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: iberian_spin.js 대본 · 기력 · 굳음). 냈으면 true */
+  spinGo() {
+    const me = this.me;
+    const S = this.secret;
+    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
+    if (!me.skill.secret({ S, ctx: { ev: 'spin', turnDir: me.side >= 0 ? 1 : -1 } })) {
+      this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
+      return false;
+    }
+    this.spinArm.consume(); // 한 번 무장에 한 번
+    this.secretRun = { S, stage: 'spin', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
+    this.mode = 'secret';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.stepT = 0;
+    this.hand.set(me.handOffset.x, me.handOffset.y);
+    this.secretStat(S).fired++;
+    this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
+    this.setTechCue(S.nameKo ?? S.name, 'secret');
+    return true;
+  }
+
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
   secretGo(S, ctx = {}) {
     if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
@@ -2229,6 +2278,18 @@ export class AI {
       this.mode = 'watch';
       return;
     }
+    if (run.stage === 'spin') {
+      // 싱지르 (10/24): 실행은 검술 층 skill.sec — 사람과 같은 길(iberian_spin.js 대본 → 따라 지나감 → 굳음 SECRET.stiff.iberian). 손 · 발은 쥐지 않고(moveHand · moveFeet) 끝나기를 기다린다
+      const sec = this.me.skill.sec;
+      if (sec?.landed) run.landed = true;
+      if (sec) return;
+      if (run.landed) this.secretStat(run.S).landed++;
+      this.secretRun = null;
+      this.me.powerMul = 1;
+      this.me.secretHit = 1;
+      this.startWithdraw(0.6, this.school.withdraw.calm[0]); // 한 번 주고받았으니 다시 간을 본다 (다른 비기 굳음 끝과 같은 꼴)
+      return;
+    }
     if (run.stage === 'back') {
       const B = run.S.do.back;
       run.t += dt;
@@ -2355,6 +2416,7 @@ export class AI {
   secretAbort() {
     const run = this.secretRun;
     this.secretRun = null;
+    if (run?.stage === 'spin' && this.me.skill.sec) this.me.skill.secretEnd(); // 싱지르 (10/24): 검술 층 대본도 끊는다 (쓰러짐 · 탈진 — 검술 층도 스스로 끊지만 같은 스텝에)
     this.me.powerMul = 1;
     this.me.secretHit = 1;
     if (run?.S.do.strength) this.secretStrength(1);
@@ -2565,6 +2627,7 @@ export class AI {
     // 비기 경직 (사장님 10/10 20:5x '잠깐 아예 못 움직이게'): 손 목표를 그대로 둔다 — 떨림도 없음. 검술 층(skill.js update)이 secretStiff 를 보고 걸러진 목표까지 붙든다
     this.me.secretStiff = this.secretRun?.stage === 'stiff';
     if (this.me.secretStiff) return;
+    if (this.secretRun?.stage === 'spin') return; // 싱지르 (10/24): 대본 · 따라 지나감 · 굳음 동안 손 목표는 검술 층(skill.sec — 덧씌우기 · holdStiff)이 쥔다
     if (this.feintHold > 0) {
       this.feintHold -= dt;
       if (this.feintHold <= 0) this.stepT = this.stepTime(); // 이제 진짜로 내디디며 친다
@@ -2735,7 +2798,7 @@ export class AI {
       side = 0;
     }
     if (!this.foe.alive) fwd = side = 0;
-    if (this.secretRun?.stage === 'stiff') fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x)
+    if (this.secretRun?.stage === 'stiff' || this.secretRun?.stage === 'spin') fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다)
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)

@@ -34,7 +34,7 @@ import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
-import { requestSpin, spinAbort, spinCutPose } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
+import { requestSpin, spinAbort, spinCutPose, spinCap } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
@@ -957,6 +957,7 @@ export class Skill {
       if (D.strength) f.strength = run.str0;
       return;
     }
+    if (run.stage === 'follow' && run.spin?.vmax < Infinity) spinCap(f, run.spin.vmax); // 휘감아 돌기 share 판 (10/24): 따라 지나가는 칼도 칼끝 상한 (iberian_spin.js)
     if (run.stage === 'follow') {
       // 손은 끝 자세에 닿았지만 칼은 아직 지나가는 중 — 판정 배율은 칼이 지나갈 때까지
       // 죽음의 일격은 치는 끝이 칼자루라 칼끝(손 뒤 꼬리) 대신 코등이 빠르기를 칼끝 거리 비로 줄인 문턱에 견준다 (mordSwinging — 같은 6 m/s · 같은 0.3 · 0.5 s)

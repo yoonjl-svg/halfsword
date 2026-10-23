@@ -41,7 +41,7 @@ if (args.hit) SECRET.ibSpin.hit = args.hit;
 if (args.power) SECRET.ibSpin.power = +args.power;
 if (args.yaw) SECRET.ibSpin.wind.yaw = +args.yaw;
 if (args.stiff) SECRET.stiff.iberian = +args.stiff; // 비기 뒤 굳음 견줌 (10/23 판 값 1.3 — 전 0.4)
-for (const k of ['torso', 'settle']) if (args[k] != null) SECRET.ibSpin[k] = +args[k]; // 10/23 몸꼴 고침 견줌
+for (const k of ['torso', 'settle', 'share', 'upright']) if (args[k] != null) SECRET.ibSpin[k] = +args[k]; // 10/23 몸꼴 고침 · 10/24 빠르기 몫 · 몸 곧게 견줌 (--share=0 --upright=0 = 10/23 판)
 const WEAPONS = list('weapons', 'zweihander,flamberge');
 const tap = tapEdge(Combat, THREE, CONFIG);
 const BY = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));
@@ -94,7 +94,8 @@ function duel(w, oppId, seed) {
       const o = watch.fire();
       const ok = !!o && P.skill.secret(o);
       if (ok) {
-        cur = { t: G.t, d, ev0: log.ev.length, w0: G.wounds.length, pw0: pW0(), blocked: false, done: null };
+        const pp0 = P.bodies.pelvis.translation();
+        cur = { t: G.t, d, ev0: log.ev.length, w0: G.wounds.length, pw0: pW0(), blocked: false, done: null, p0: { x: pp0.x, z: pp0.z }, tilt: 0, move: 0 };
         fires.push(cur);
         log.on.v = true;
       }
@@ -105,6 +106,7 @@ function duel(w, oppId, seed) {
     }
     if (cur && !cur.done) {
       if (P.feel?.touching) cur.blocked = true;
+      { const pp = P.bodies.pelvis.translation(), hd = P.bodies.head.translation(); cur.tilt = Math.max(cur.tilt, (Math.atan2(Math.hypot(hd.x - pp.x, hd.z - pp.z), hd.y - pp.y) * 180) / Math.PI); cur.move = Math.hypot(pp.x - cur.p0.x, pp.z - cur.p0.z); } // 10/24 몸 기울기 최대 · 골반 옮김 (낸 때 ~ 비기 끝)
       if (!cur.spin && P.skill.sec?.spin) cur.spin = P.skill.sec.spin; // 대본 끝 기록 (막혀 멈춤 · 닿은 때 · 진행)
       if (!P.skill.sec) {
         cur.done = G.t;
@@ -123,11 +125,14 @@ function duel(w, oppId, seed) {
     const ev = log.ev.slice(f.ev0);
     const hit = dealt.some((x) => x.severity > 0);
     const flat = ev.filter((e) => e.kind === 'flat' && e.landed).length;
+    const fast = ev.filter((e) => e.landed && e.speed > 30).length; // 10/24: 판정 빠르기 30 m/s 넘는 맞음 사건 (옛 상한 30 이면 버려졌을 것 — 지금 STRIKE.speedMax 60)
+    const fastHit = hit && ev.filter((e) => e.landed).every((e) => e.speed > 30); // 맞힘이 30 넘는 사건뿐 (옛 상한이면 못 맞혔을 것)
     const first = ev[0] ?? null;
     return {
       w, opp: oppId, seed, t: +f.t.toFixed(2), d: +f.d.toFixed(2), hit, blocked: !hit && f.blocked, flat, contact: ev.length, whiff: !hit && !f.blocked && !ev.length,
       sev: +dealt.reduce((a, x) => a + x.severity, 0).toFixed(3), zones: dealt.filter((x) => x.severity > 0).map((x) => x.zone),
-      why: f.spin?.why ?? null, touchQ: f.spin?.touchT != null ? +(f.spin.touchT / SECRET.ibSpin.time).toFixed(2) : null,
+      why: f.spin?.why ?? null, touchQ: f.spin?.touchT != null ? +(f.spin.touchT / (f.spin.T ?? SECRET.ibSpin.time)).toFixed(2) : null,
+      fast, fastHit, vmax: ev.length ? +Math.max(...ev.map((e) => e.speed)).toFixed(1) : null, tilt: Math.round(f.tilt), move: +f.move.toFixed(2),
       hurt: hurt.length, hurtSev: +hurt.reduce((a, x) => a + x.severity, 0).toFixed(3), firstKind: first?.kind ?? null, firstSpeed: first ? +first.speed.toFixed(1) : null, firstE: first ? +first.energy.toFixed(0) : null,
     };
   });
@@ -228,5 +233,12 @@ if (MODE === 'probe') {
   for (const x of all1) whyN[x.why ?? '-'] = (whyN[x.why ?? '-'] ?? 0) + 1;
   const tq = all1.filter((x) => x.touchQ != null).map((x) => x.touchQ).sort((a, b) => a - b);
   console.log(`대본 끝: ${Object.entries(whyN).map(([k, v]) => `${k} ${v}`).join(' · ')} · 칼이 처음 닿은 돌기 시각(몫 — 1 = 한 바퀴) 중앙 ${tq.length ? tq[Math.floor(tq.length / 2)] : '-'} (n ${tq.length})`);
+  // 10/24: 판정 빠르기 30 m/s 넘는 맞음 (옛 상한 30 이면 버려졌을 것 — STRIKE.speedMax 60 이라 지금은 셈) · 몸 기울기 · 골반 옮김 (무기마다)
+  for (const w of WEAPONS) {
+    const R = all1.filter((x) => x.w === w);
+    const H = R.filter((x) => x.hit);
+    const mean = (a) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length);
+    console.log(`${w}: 30 m/s 넘는 맞음 사건 ${R.reduce((a, x) => a + x.fast, 0)} (낸 수 ${R.length} 가운데 그 사건이 있는 낸 수 ${R.filter((x) => x.fast).length} · 30 넘는 사건뿐인 맞힘 ${R.filter((x) => x.fastHit).length} / 맞힘 ${H.length}) · 닿은 빠르기 최고 ${fmt(Math.max(0, ...R.map((x) => x.vmax ?? 0)))} m/s · 몸 기울기 최대 평균 ${fmt(mean(R.map((x) => x.tilt)))}° (최대 ${Math.max(0, ...R.map((x) => x.tilt))}) · 골반 옮김 평균 ${fmt(mean(R.map((x) => x.move)))} m (최대 ${fmt(Math.max(0, ...R.map((x) => x.move)))})`);
+  }
   if (args.json) writeFileSync(args.json, JSON.stringify(all));
 }

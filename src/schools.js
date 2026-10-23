@@ -724,7 +724,7 @@ const IBERIAN_SECRET_GILMOK = {
 // 이베리아 휘감아 돌기 (10/22 사장님 '이베리아는 새로 지은 기술을 만들면 어떨까 … 충분한 거리가 확보되어 있을 때 빙글 한바퀴 돌면서 엄청 강렬한 회전력을 발생시켜 일격' ·
 //  '애니메이션으로 한 발을 축으로 해서 빠르게 빙글 도는 모션' — docs/strike/iberian_spin_2026-10-22.md · SECRET.iberianSecret 'spin' 기본 · 값 SECRET.ibSpin):
 //   ① 무장: 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.ibSpin.armTime 초 (일본 발도 대기와 같은 틀 — secret.js PlayerSecretWatch spinArm) → 무장이 이어지는 동안 창(금색 '!')
-//   ② 공격 입력 하나 → 앞발을 축으로 몸을 한 바퀴 돌리는 대본(src/iberian_spin.js) — 칼은 칼 든 쪽 뒤로 수평으로 감겨 따라오다, 돌기 끝에 몸이 서는 동안 앞을 가로로 친다(탈류)
+//   ② 내는 조작(10/24 — 무장 동안 공격으로 원 한 바퀴 · 10/23 스틱 반 바퀴 · 10/22 공격 입력 하나는 스위치 SECRET.ibSpin.input · AI 는 상대가 들어오면 — ai.js spinTick) → 앞발을 축으로 몸을 한 바퀴 돌리는 대본(src/iberian_spin.js) — 칼은 칼 든 쪽 뒤로 수평으로 감겨 따라오다, 돌기 끝에 몸이 서는 동안 앞을 가로로 친다(탈류)
 //   ③ 경직 SECRET.stiff.iberian. 맞음 · 막힘 · 상처는 물리 판정 그대로 (판정 에너지 배율 SECRET.ibSpin.hit)
 //  근거: 고디뉴 1599 규칙 8 「umgürtet das Montante die gesamten Rippen, auch den gesamten Körper herumdrehend」 [원문 독일어 역] ·
 //   피게이레두 1651 단Ⅰ 「the body must always turn toward where the montante cuts」 [원문 영역] · 단Ⅺ 「talho orizontal」 · 복ⅩⅥ 「para vir a cingir pello lado dereyto」 [원문] ·

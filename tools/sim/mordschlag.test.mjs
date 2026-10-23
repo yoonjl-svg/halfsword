@@ -37,7 +37,7 @@ test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s · �
   assert.equal(SECRET.stiff.german, 0.4);
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
   assert.ok(SECRET.openSchools.includes('german') && SECRET.openSchools.includes('japanese'));
-  assert.deepEqual(SECRET.aiOpenSchools, ['japanese']);
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian']); // 10/24 이베리아 싱지르 AI 열림 — 독일은 그대로 닫힘
   const S = TRADITIONS.german.playerSecret;
   assert.equal(S.name, 'mordschlag');
   assert.equal(S.nameKo, '모르트슐라크');
