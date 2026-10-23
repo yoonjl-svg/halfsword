@@ -871,6 +871,12 @@ LOOK_ARCHIVE.bernardo = { v1: {
   helmet: null, metal: 0x393b38, hair: 0x1e1d1a, headband: null,
   grip: 0x282c29, hilt: 0x887548, accent: 0x89763c, outfit: 'bernardo', armor: 'plate', stockEyes: true,
 } };
+// 베르나르도 v2 (우리 판 — 사장님 10/23 '줄이면서 디자인 개선', 복식 src/outfit_bernardo_v2.js): 목에 밝은 누빔 깃 띠 · 곱슬은 어깨 뒤로 ·
+//  가슴판 한 장 + 배 쇠띠 셋 + 짧은 흰 겉옷(가슴에 레온의 보랏빛 선 사자) · 넓적다리 상자 판 → 어두운 사슬 치마 + 겉옷 자락 · 작은 무릎 덮개 ·
+//  맑고 짙은 금빛 짧은 망토(주름 셋 · 안감). 판금 13 부위 · 투구 없음 · 피부 · 머리 · 수염 색 · 칼은 v1 그대로.
+//  몸 색은 다리 속옷만(넓적다리 hoseUpper = 사슬 색 · 정강이 hoseLower 조금 밝게 — 무릎 뒤가 검은 공으로 보이지 않게) · accent 는 망토 금빛(복식 모듈은 읽지 않음 — 표시용).
+//  옛 판 ?look=bernardo:v1 (확인표 2318 ~ 2320)
+LOOK_ARCHIVE.bernardo.v2 = { ...LOOK_ARCHIVE.bernardo.v1, hoseUpper: 0x50534e, hoseLower: 0x3c3e38, accent: 0xb08a2c, outfit: 'bernardo_v2' };
 
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
@@ -892,7 +898,7 @@ export const CHARACTER_LOOK_VERSION = {
   terracotta: 'v2', // 10/14 여정 밖 인물 병마용 (우리 v2 — 잔선 덜기) — 샛별 판 ?look=terracotta:v1
   roland: 'v1', // 10/23 손님 인물 롤랑 (방랑 전용) — 그쪽 sebastian v2
   white_scale: 'v1', // 10/23 손님 인물 백린의 전사(가칭 · 방랑 전용)
-  bernardo: 'v1', // 10/23 손님 인물 베르나르도 (방랑 전용) — 그쪽 black_king v4(올리비에)
+  bernardo: 'v2', // 10/23 손님 인물 베르나르도 (방랑 전용) — 우리 v2(흰 겉옷 · 레온 사자 · 금빛 망토 · 사슬 치마 — 사장님 10/23). 옛 판 ?look=bernardo:v1 = 그쪽 black_king v4(올리비에)
 };
 
 /** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */

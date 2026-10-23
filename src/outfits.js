@@ -30,6 +30,7 @@ import { createTerracottaOutfit } from './outfit_terracotta.js'; // 병마용 �
 import { createRolandOutfit } from './outfit_roland.js'; // 롤랑 복식 (샛별 저장소에서 가져옴 10/23 — 마지막 판만, docs/import/wander_heroes_import_2026-10-23.md)
 import { createWhiteScaleOutfit } from './outfit_white_scale.js'; // 백린의 전사(가칭) 복식 (같은 전달본)
 import { createBernardoOutfit } from './outfit_bernardo.js'; // 베르나르도 복식 (같은 전달본 — 그쪽 올리비에 마지막 판 · 겉모습 그대로)
+import { createBernardoOutfitV2 } from './outfit_bernardo_v2.js'; // 베르나르도 v2 (우리 판 10/23 — 사장님 '줄이면서 디자인 개선': 흰 겉옷 · 레온 사자 · 금빛 망토 · 사슬 치마)
 
 const _m4 = new THREE.Matrix4();
 const _euler = new THREE.Euler();
@@ -2871,6 +2872,7 @@ export const OUTFITS = {
   roland: createRolandOutfit(newOutfitHelpers), // 롤랑 (손님 인물 · 방랑 전용, 10/23) — 판금 13 부위 · 닫힌 투구(royal_close) · 망토
   white_scale: createWhiteScaleOutfit(newOutfitHelpers), // 백린의 전사(가칭 · 손님 인물 · 방랑 전용, 10/23) — 판금 11 부위(발은 가죽) · 뿔 가면 투구(kabuto_masked)
   bernardo: createBernardoOutfit(newOutfitHelpers), // 베르나르도 (손님 인물, 10/23) — 판금 13 부위 · 투구 없음
+  bernardo_v2: createBernardoOutfitV2(newOutfitHelpers), // 베르나르도 v2 (10/23 — 판금 13 부위 그대로 · 겉옷 · 망토 · 깃은 천 층)
   bran_farmer: BRAN_FARMER,
   isolde_saber: ISOLDE_SABER,
   isolde_longhair: ISOLDE_LONGHAIR,
