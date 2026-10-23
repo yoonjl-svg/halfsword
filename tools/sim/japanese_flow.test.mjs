@@ -81,6 +81,7 @@ test('일본 AI 흘림 자세 (사장님 10/18 23:4x): 막는 중은 늘 · 간 
 });
 
 test('숙련도별 유파 고유 특성 배율 (사장님 10/18 23:4x): 숙련도 2 = 1(그대로) · 숙련도가 오를수록 커짐', () => {
-  const K = AI_PROFICIENCY.schoolK; assert.equal(K.length, AI_PROFICIENCY.max + 1); assert.equal(K[2], 1);
+  // 표 길이 = 숙련도 칸 수(levels — 0 ~ 6, 10/24 롤랑 · 베르나르도 6). max(5)는 얼터 +1 의 상한이라 표 끝과 다르다
+  const K = AI_PROFICIENCY.schoolK; assert.equal(K.length, AI_PROFICIENCY.levels.length); assert.equal(AI_PROFICIENCY.reaction.length, AI_PROFICIENCY.levels.length); assert.equal(K[2], 1);
   for (let i = 1; i < K.length; i++) assert.ok(K[i] > K[i - 1], `${i}`);
 });

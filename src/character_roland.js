@@ -1,6 +1,6 @@
 // 롤랑 — 돌아온 왕 (샛별 저장소 전달본 977c2a43 — 그쪽 id 'sebastian' · 들여오며 id 를 이름에 맞춤, docs/import/wander_heroes_import_2026-10-23.md)
 //  손님 인물(characters.js CHARACTER_GUESTS — 무작위 회전 밖) · 방랑 전용(wander_rules.js WANDER_EXCLUSIVE — 일반 여정 무대에는 나오지 않는다).
-//  겉모습 · 이야기는 샛별 쪽 승인 판. 실력은 따로 맞추지 않았다 — 숙련도 4 인물(아르토리아)의 실력 숫자를 빌리고,
+//  겉모습 · 이야기는 샛별 쪽 승인 판. 실력 숫자(persona.level)는 아르토리아의 것을 빌리고, 숙련도는 6(사장님 10/24 01:1x '롤랑과 베르나르도는 6' — 전 4 · config AI_PROFICIENCY 6 칸),
 //  자세 · 기술은 이베리아 유파가 스스로 고르게 아르토리아의 자세 · 기술 취향은 지운다.
 //  무기 = 츠바이핸더 (사장님 10/23 저녁 — 임시 · 뒤에 뒤랑달 무기로 바꿀 자리. 전달본은 티소나): AI 꾸러미도 츠바이핸더(schools.js — 무거운 틀이라 이베리아 유파)
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
@@ -8,6 +8,7 @@ import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
 /** baseline = 실력 숫자를 빌릴 인물 시트(아르토리아) */
 export function createRoland(baseline) {
   const ai = JSON.parse(JSON.stringify(baseline.ai));
+  ai.proficiency = 6; // 사장님 10/24 01:1x — 이베리아 숙련도 6 (실력 이름 hard · 반응 0.05 s · 고유 특성 적극성 1.6 — 6 칸 수는 사장님 확인 전 · AI 이베리아 비기는 aiOpenSchools 로 닫힌 채)
   ai.persona.school = 'zweihander';
   delete ai.persona.pers.guardPref;
   delete ai.persona.pers.techPref;
@@ -28,6 +29,7 @@ export function createRoland(baseline) {
     weaknesses: '무거운 판금과 큰 검의 회수. 목은 기존 판금 규칙대로 보호하지 않는다.',
     weapon: 'zweihander', // 임시 — 뒤에 뒤랑달 무기 (사장님 10/23 저녁)
     voice: 'tome',
+    vitality: 1.1, // 버티는 힘 +10 % (사장님 10/24 01:5x '롤랑과 베르나르도는 체력도 +10%' — 초당 잃는 피 · 머리를 맞아 잃는 의식 ÷ 1.1, fighter.js · 방법은 사장님 확인 전)
     ai,
     look: getLook('roland'),
     lookVersion: CHARACTER_LOOK_VERSION.roland, // v2 (10/23 줄이면서 다듬은 판) — 옛 판 ?look=roland:v1

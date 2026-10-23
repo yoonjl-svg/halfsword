@@ -16,7 +16,7 @@
 //   장착 규칙은 물건 종류마다 그대로(무기 = 한 자리 · 방어구 = armorSlot 의 제 자리) · 이벤트 = 상점처럼 빈 안내 한 줄
 //  10/23 방랑 (main.js getWanderStatus · launchWander — docs/import/wander_heroes_import_2026-10-23.md): 'Stage 입장' 아래 '방랑' 단추(같은 폭 · 다른 색 — lobby.css .wander) ·
 //   사장님 18:3x '버튼 밑에 설명 쓰는 거 싫음' — 단추 밑 글 없음. 잠겼을 때 누르면 위 알림 줄에 열리는 조건 · 깬 무대 수 · 판이 남아 있으면 '방랑 이어가기'
-//   이미 다 깬 사람(옛 저장 인정 — 저장 wander.noticeSeen 없음)은 대기실에 처음 들어올 때 알림 창 한 번(스킬트리 알림 창과 같은 꼴)
+//   이미 다 깬 사람(옛 저장 인정 — 저장 wander.noticeSeen 없음)은 대기실에 처음 들어올 때 알림 창 한 번(스킬트리 알림 창과 같은 꼴 · '확인'은 방랑 단추 색 — 사장님 10/24 00:3x)
 import style from './lobby.css?inline';
 import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
@@ -90,7 +90,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
     </div>
   </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>
   <dialog class="tree-dialog" id="treeDialog" aria-labelledby="treeHeading" aria-describedby="treeText"><h2 id="treeHeading">스킬트리</h2><p id="treeText"></p><div class="dialog-actions"><button type="button" id="closeTree" class="primary">확인</button></div></dialog>
-  <dialog class="tree-dialog" id="wanderDialog" aria-labelledby="wanderHeading" aria-describedby="wanderText"><h2 id="wanderHeading">방랑</h2><p id="wanderText" class="wander-text"></p><div class="dialog-actions"><button type="button" id="closeWander" class="primary">확인</button></div></dialog>`;
+  <dialog class="tree-dialog" id="wanderDialog" aria-labelledby="wanderHeading" aria-describedby="wanderText"><h2 id="wanderHeading">방랑</h2><p id="wanderText" class="wander-text"></p><div class="dialog-actions"><button type="button" id="closeWander" class="wander">확인</button></div></dialog>`;
   const $ = id => root.getElementById(id), events = new AbortController();
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();

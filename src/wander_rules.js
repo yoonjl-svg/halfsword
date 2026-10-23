@@ -1,6 +1,6 @@
 // 방랑 — 일반 무대 30곳을 모두 깨면 열리는 무작위 대면 (샛별 저장소 전달본 977c2a43 — 사장님 10/23 18:3x '방랑은 이름 확정', docs/import/wander_heroes_import_2026-10-23.md)
 //  대기실 '방랑' 단추로 언제든 들어간다(사장님 10/23 18:5x '언제든 들어가서 플레이할 수 있는 자유 스테이지'). 무대(여정 30곳)와 상대(무대 상대 + 방랑 전용 다섯)를 따로 뽑는다.
-//  이기면 '다음 대면'(새로 뽑은 다음 판) · 지면 그 연속이 끝나 대기실로 · 다시 들어가면 새 조합. 판과 판 사이에 대기실로 나갔다 오면 같은 판을 이어 간다.
+//  이기면 '다음 방랑'(새로 뽑은 다음 판 — 사장님 10/24 00:3x, 전 '다음 대면') · 지면 그 연속이 끝나 대기실로 · 다시 들어가면 새 조합. 판과 판 사이에 대기실로 나갔다 오면 같은 판을 이어 간다.
 //  보상: 일반 판 보상(lobby_progress.js JOURNEY_COINS — 낮 · 밤)의 두 배를 셈한 뒤 특별 상대 몫을 더한다(특별 몫은 두 배 하지 않음) · 지면 일반 판과 같은 차감 · 참수 머리 2.
 //  연승 횟수는 보상에 걸지 않는다(몇 번째 판이든 같다 — 사장님 결정 전). 저장은 lobby_progress.js 의 wander 칸(보상과 같은 저장 — 새로고침 · 다시 열기로 두 번 받지 않음).
 export const WANDER_NAME = '방랑';
@@ -9,18 +9,19 @@ export const WANDER_NAME = '방랑';
  *  (사장님 10/23 18:3x '아르토리아 방랑 전용' · 롤랑 · 백린은 전달본 그대로 · 베르나르도는 사장님 10/23 저녁 '롤랑과 같은 방랑 보상') */
 export const WANDER_EXCLUSIVE = Object.freeze(['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo']);
 
-/** 특별 상대 몫 (이긴 판만 · 일반 판 보상 × 2 뒤에 더하고 두 배 하지 않음 — 사장님 10/23 저녁): 아르토리아 두 모습 금화 200 · 롤랑 · 베르나르도 금화 250 · 백린의 전사 머리 10 (참수와 무관 — 참수까지 하면 머리 12) */
+/** 특별 상대 몫 (이긴 판만 · 일반 판 보상 × 2 뒤에 더하고 두 배 하지 않음 — 사장님 10/23 저녁): 아르토리아 두 모습 금화 250 · 롤랑 · 베르나르도 금화 400 · 백린의 전사 머리 10 (참수와 무관 — 참수까지 하면 머리 12)
+ *  (사장님 10/24 01:5x '아르토리아 금화 보너스는 250, 롤랑과 베르나르도는 400' — 전 200 · 250) */
 export const WANDER_BONUS = Object.freeze({
-  artoria: Object.freeze({ coins: 200, heads: 0 }),
-  artoria_mad: Object.freeze({ coins: 200, heads: 0 }),
-  roland: Object.freeze({ coins: 250, heads: 0 }),
+  artoria: Object.freeze({ coins: 250, heads: 0 }),
+  artoria_mad: Object.freeze({ coins: 250, heads: 0 }),
+  roland: Object.freeze({ coins: 400, heads: 0 }),
   white_scale: Object.freeze({ coins: 0, heads: 10 }),
-  bernardo: Object.freeze({ coins: 250, heads: 0 }), // 사장님 10/23 저녁 '롤랑과 같은 방랑 금화 보상'
+  bernardo: Object.freeze({ coins: 400, heads: 0 }), // 사장님 10/23 저녁 '롤랑과 같은 방랑 금화 보상' · 10/24 01:5x 400
 });
-/** 방랑 알림 창 글 (30 무대를 처음 다 깬 판의 결과 창 위 — main.js · 이미 깬 사람은 대기실에 처음 들어올 때 — lobby.js · 한 번). 줄바꿈은 창에서 줄로 */
+/** 방랑 알림 창 글 (30 무대를 처음 다 깬 판의 결과 창 위 — main.js · 이미 깬 사람은 대기실에 처음 들어올 때 — lobby.js · 한 번). 줄바꿈은 창에서 줄로.
+ *  두 문단만 (사장님 10/24 00:3x "'아르토리아~' 부터는 삭제" — 셋째 문단 '아르토리아와 롤랑, 베르나르도, 백린의 전사는 방랑에서만 만납니다.' 뺌) */
 export const WANDER_NOTICE_TEXT = '모든 무대를 깨서 방랑이 열렸습니다. 대기실의 방랑 단추로 언제든 들어갈 수 있습니다.\n'
-  + '방랑에서는 무대와 상대를 무작위로 만나고, 이기면 보상이 두 배입니다. 지면 그 방랑이 끝나고, 다시 들어가면 새로 시작합니다.\n'
-  + '아르토리아와 롤랑, 베르나르도, 백린의 전사는 방랑에서만 만납니다.';
+  + '방랑에서는 무대와 상대를 무작위로 만나고, 이기면 보상이 두 배입니다. 지면 그 방랑이 끝나고, 다시 들어가면 새로 시작합니다.';
 /** 방랑 판에서 상대의 목을 베면 머리 (일반 여정 1) */
 export const WANDER_HEAD = 2;
 
@@ -60,11 +61,12 @@ function validRun(run) {
 /**
  * 저장 칸 wander 를 거른다:
  *  { cleared: 깬 무대 id, unlocked: 열렸나(한 번 열리면 계속), legacyChecked: 옛 저장을 한 번 봤나, noticeSeen: 방랑 알림 창을 봤나,
- *    run: { id, round, wins, stage, foe, foeWeapon, status: active|won|lost, weapon, cards, lastWeapon, headTaken, fighting, reward } | null }
+ *    run: { id, round, wins, stage, foe, foeWeapon, status: active|won|lost, weapon, cards, lastWeapon, headTaken, fighting, encounterSeen, reward } | null }
+ *  encounterSeen: 이 대면의 방랑 전용 상대 알림 창을 봤나 (10/24 — main.js wanderEncounter · 같은 대면을 다시 열면 안 뜬다)
  */
 export function normalizeWander(value) {
   const cleared = Array.isArray(value?.cleared) ? [...new Set(value.cleared.filter(isId))] : [];
-  const run = validRun(value?.run) ? { ...value.run, headTaken: !!value.run.headTaken, fighting: !!value.run.fighting } : null;
+  const run = validRun(value?.run) ? { ...value.run, headTaken: !!value.run.headTaken, fighting: !!value.run.fighting, encounterSeen: !!value.run.encounterSeen } : null;
   return { cleared, unlocked: value?.unlocked === true, legacyChecked: value?.legacyChecked === true, noticeSeen: value?.noticeSeen === true, run };
 }
 
