@@ -28,6 +28,7 @@ import { createSilverWandererDetail } from './outfit_silver_wanderer_detail.js';
 import { createChandaOutfit } from './outfit_chanda.js'; // 찬다 복식 (샛별 저장소에서 가져옴 10/14 — 샛별 v1 + 우리 v2 무릎)
 import { createTerracottaOutfit } from './outfit_terracotta.js'; // 병마용 복식 (샛별 저장소에서 가져옴 10/14 — 샛별 v1 + 우리 v2 잔선 덜기)
 import { createRolandOutfit } from './outfit_roland.js'; // 롤랑 복식 (샛별 저장소에서 가져옴 10/23 — 마지막 판만, docs/import/wander_heroes_import_2026-10-23.md)
+import { createRolandOutfitV2 } from './outfit_roland_v2.js'; // 롤랑 복식 v2 (사장님 10/23 결정 — 줄이면서 다듬은 판 · 관절 사슬 · 겉옷 앞판 · 뿔피리)
 import { createWhiteScaleOutfit } from './outfit_white_scale.js'; // 백린의 전사(가칭) 복식 (같은 전달본)
 import { createBernardoOutfit } from './outfit_bernardo.js'; // 베르나르도 복식 (같은 전달본 — 그쪽 올리비에 마지막 판 · 겉모습 그대로)
 import { createBernardoOutfitV2 } from './outfit_bernardo_v2.js'; // 베르나르도 v2 (우리 판 10/23 — 사장님 '줄이면서 디자인 개선': 흰 겉옷 · 레온 사자 · 금빛 망토 · 사슬 치마)
@@ -2870,6 +2871,7 @@ export const OUTFITS = {
   chanda_watergate: createChandaOutfit(newOutfitHelpers), // 찬다 (여정 밖 인물, 10/14) — 모듈 하나가 look.chandaRevision 으로 샛별 v1 · 우리 v2(무릎)를 가른다. 이름은 샛별 쪽 열쇠 그대로
   terracotta_guard: createTerracottaOutfit(newOutfitHelpers), // 병마용 (여정 밖 인물, 10/14) — look.terracottaRevision 으로 샛별 v1 · 우리 v2(잔선 덜기)를 가른다. 이름은 샛별 쪽 열쇠 그대로
   roland: createRolandOutfit(newOutfitHelpers), // 롤랑 (손님 인물 · 방랑 전용, 10/23) — 판금 13 부위 · 닫힌 투구(royal_close) · 망토
+  roland_v2: createRolandOutfitV2(newOutfitHelpers), // 롤랑 v2 (10/23 — 약 9.7 만 → 1.x 만 삼각형) — 판금 13 부위 그대로 · 투구 royal_close 그대로 · v1 은 ?look=roland:v1
   white_scale: createWhiteScaleOutfit(newOutfitHelpers), // 백린의 전사(가칭 · 손님 인물 · 방랑 전용, 10/23) — 판금 11 부위(발은 가죽) · 뿔 가면 투구(kabuto_masked)
   bernardo: createBernardoOutfit(newOutfitHelpers), // 베르나르도 (손님 인물, 10/23) — 판금 13 부위 · 투구 없음
   bernardo_v2: createBernardoOutfitV2(newOutfitHelpers), // 베르나르도 v2 (10/23 — 판금 13 부위 그대로 · 겉옷 · 망토 · 깃은 천 층)

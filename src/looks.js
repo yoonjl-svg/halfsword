@@ -859,6 +859,13 @@ LOOK_ARCHIVE.roland = { v1: {
   helmet: 'royal_close', metal: 0xd7cfba, hair: 0x4d4b43, headband: null,
   grip: 0xcab995, hilt: 0xae8e49, accent: 0x541f2a, outfit: 'roland', armor: 'plate',
 } };
+// 롤랑 v2 (사장님 10/23 결정: 디자인을 낫게 하면서 줄인다 — 확인표 2311 ~ 2314): 복식 모듈 outfit_roland_v2.js (약 9.7 만 → 1.x 만 삼각형 · 몸 하나 · 칼 뺌).
+//  상아빛 닫힌 투구 · 말총(넓은 다발 일곱) · 솟은 견갑 · 포도주색 망토는 지키고, 관절에 짙은 사슬 · 금테 두른 포도주색 겉옷 앞판 · 허리 상아 뿔피리를 더했다.
+//  판 밑 옷(가슴 · 배 · 골반 바탕 · 소매 · 정강이 — 관절 틈과 파낸 겨드랑이로 보이는 곳)은 짙은 사슬 색 · 넓적다리는 v1 처럼 포도주색. 투구 · 판금 판정(armor 'plate' · helmet 'royal_close')과 나머지 색은 v1 그대로
+LOOK_ARCHIVE.roland.v2 = {
+  ...LOOK_ARCHIVE.roland.v1,
+  tunic: 0x3c3d41, quilt: 0x3c3d41, sleeve: 0x3c3d41, hoseLower: 0x3c3d41, outfit: 'roland_v2',
+};
 LOOK_ARCHIVE.white_scale = { v1: {
   tunic: 0x242827, quilt: 0x3d413b, sleeve: 0x3c4037, straps: null, belt: 0x473c30,
   hoseUpper: 0x252d2c, hoseLower: 0x3e423a, shoes: 0x473c30, skin: 0xb49c7c, hands: 0x4e493b,
@@ -896,7 +903,7 @@ export const CHARACTER_LOOK_VERSION = {
   silver_wanderer: 'v7-silver-c', // 다라이시 — v7 + 앞판 · 앞머리 한 가닥 · 목 연결 · 칼집 8 mm 안쪽 · 애쉬 실버 머리(사장님 10/16 결정, 샛별 쪽 — 10/17 들임). 전 우리 v7(사장님 10/15 23:1x 'v7이 제일 예쁜 거 같애. 되돌려.') ?look=silver_wanderer:v7 · v10 · v9 · v8 · 샛별 판 v6 · v5 · v4 · v2 · v1
   chanda: 'v2', // 10/14 여정 밖 인물 찬다 (우리 v2 — 무릎 틈 메움) — 샛별 판 ?look=chanda:v1
   terracotta: 'v2', // 10/14 여정 밖 인물 병마용 (우리 v2 — 잔선 덜기) — 샛별 판 ?look=terracotta:v1
-  roland: 'v1', // 10/23 손님 인물 롤랑 (방랑 전용) — 그쪽 sebastian v2
+  roland: 'v2', // 10/23 손님 인물 롤랑 (방랑 전용) — v2 줄이면서 다듬은 판(사장님 10/23 결정) · 들인 그대로의 판(그쪽 sebastian v2) ?look=roland:v1
   white_scale: 'v1', // 10/23 손님 인물 백린의 전사(가칭 · 방랑 전용)
   bernardo: 'v2', // 10/23 손님 인물 베르나르도 (방랑 전용) — 우리 v2(흰 겉옷 · 레온 사자 · 금빛 망토 · 사슬 치마 — 사장님 10/23). 옛 판 ?look=bernardo:v1 = 그쪽 black_king v4(올리비에)
 };
