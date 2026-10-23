@@ -7,7 +7,9 @@
 //   ④ 작은 무릎 덮개(사슬 치마에 매달림 — 사슬이 다 부서질 때 같이 떨어진다 · 위아래 금테)
 //   ⑤ 망토: 맑고 짙은 금빛 · v1 과 같은 어깨(인물 오른어깨 = 앞에서 보아 왼쪽)에 걸쳐 종아리까지 길게 · 등을 비스듬히 덮고 왼허리 뒤로 내려감 ·
 //      깊은 주름 셋 · 짙은 금갈색 안감 · 앞 끝 놋쇠 브로치 (10/23 23:5x 사장님 — 레온 왕가의 피 · 롤랑의 숙적다운 위엄)
-//   ⑥ 겉옷 가슴 한가운데에 크게, 금관을 쓴 레온 왕국의 보랏빛 선 사자(평면 실루엣 · 문장의 오른쪽(+Z)을 봄) — 보라는 사자에만
+//      겉감 · 안감은 한 장의 두 면 · 가장자리 단은 가는 관 · 앞 끝 쪽 아랫단은 옆으로 덜 벌어짐(10/24 사장님 '망토가 너무 두꺼워보여' — 그 전 안감 5 mm 안쪽 둘째 겹 · 굵은 단을 덜어 얇은 천으로)
+//   ⑥ 겉옷 가슴 한가운데에 크게, 금관을 쓴 레온 왕국의 선 사자(평면 실루엣 · 문장의 오른쪽(+Z)을 봄) — 빛깔은 look.lion:
+//      'black'(기본 — 흰 바탕에 검은 사자 · 검정과 금) · 'gold'(금빛 사자 + 가는 검은 테두리) (10/24 사장님 '사자 색이 너무 튄다. 그냥 검게 하거나 금색으로' — 그 전 보랏빛)
 //   ⑦ 검은 갑옷에 가는 금테(견갑 단 · 팔뚝 보호대 양끝 · 무릎 덮개) — 상아와 금의 롤랑 ↔ 검정과 금의 베르나르도
 //   ⑧ (시험) 곱슬 위 가는 금빛 머리띠 — look.circlet 일 때만(looks.js · 감독이 빼려면 그 칸만 지운다) · 머리 그룹 장식이라 투구 · 판금 판정과 무관
 //  판금(look.armor 'plate'): 부위마다 판금 메쉬 = 그 부위에 바로 붙인 메쉬(outfits.js decorateOutfit) — 겉옷 · 망토 · 허리띠는 몸 바탕 메쉬에 매단
@@ -16,7 +18,7 @@
 export function createBernardoOutfitV2(h) {
   const { THREE, bake, box, cyl, ball, addMerged, artoriaCloth, quietFace, taperedTube } = h;
   const IRON = 0x484b46, EDGE = 0x858575, BRASS = 0x9c7b36, MAIL = 0x50534e, LEATHER = 0x4a3526;
-  const TABARD = 0xe6e0d0, LION = 0x8b45b5, GOLD = 0xb08a2c, GOLD_IN = 0x705222, TRIM = 0xc29b40;
+  const TABARD = 0xe6e0d0, SABLE = 0x221f1c, GOLD = 0xb08a2c, GOLD_IN = 0x705222, TRIM = 0xc29b40;
   const metal = { metalness: 0.68, roughness: 0.52, steel: 0.75, side: THREE.DoubleSide };
   const gilt = { metalness: 0.72, roughness: 0.36, steel: 0.6, side: THREE.DoubleSide };
   const mailMat = { metalness: 0.6, roughness: 0.6, steel: 0.55, side: THREE.DoubleSide, vertexColors: true };
@@ -258,50 +260,66 @@ export function createBernardoOutfitV2(h) {
       ell(-0.19, 0.725, 0.045, 0.085, -0.5, 10, 0.2), // 꼬리 끝 술
     ];
   }
-  // 사자 머리 위 작은 금관 (레온 왕국 문장 — 관을 쓴 보랏빛 사자): 띠 + 낮은 끝 셋
+  // 사자 머리 위 작은 금관 (레온 왕국 문장 — 관을 쓴 사자): 띠 + 낮은 끝 셋
   const lionCrown = [[0.125, 0.885], [0.285, 0.885], [0.292, 0.985], [0.255, 0.935], [0.205, 1.005], [0.155, 0.935], [0.118, 0.985]];
+  /** 다각형을 바깥으로 o 만큼 넓힌다(금빛 사자의 검은 테두리 — 꼭짓점마다 두 변의 바깥 법선 사이로, 뾰족한 끝은 2o 까지만) */
+  function grownPoly(poly, o) {
+    const n = poly.length;
+    let area = 0;
+    for (let i = 0; i < n; i++) area += poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1];
+    const out = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) * Math.sign(area); return [dy / L, -dx / L]; };
+    return poly.map((q, i) => {
+      const n1 = out(poly[(i + n - 1) % n], q), n2 = out(q, poly[(i + 1) % n]), mx = n1[0] + n2[0], my = n1[1] + n2[1], L = Math.hypot(mx, my) || 1;
+      const k = o * Math.min(2, 1 / Math.max(0.5, (mx * n1[0] + my * n1[1]) / L));
+      return [q[0] + mx / L * k, q[1] + my / L * k];
+    });
+  }
   function cape(g) {
     // 긴 망토(10/23 23:5x): t 0 어깨 → 1 아랫단(종아리) · s 0 앞 끝(오른쇄골 브로치) → 1 먼 끝. 위 끝은 목 둘레를 따라 오른어깨를 넘고,
     //  앞 끝은 어깨에서 오른옆 뒤로 · 먼 끝은 목 뒤 등줄 오른쪽에서 왼허리 뒤로 비스듬히 내려가 한쪽 어깨에 걸쳐 등을 덮은 천이 된다(왼어깨 · 왼등 위는 드러남).
     //  롤랑 v2 망토처럼 가슴에 매단 한 장(천 층) · 줄 간격은 어깨에서 촘촘하게(T) · 허리 아래는 엉덩이 · 다리에서 떨어져 뒤로 처진다
     //  (아랫단 반지름 앞뒤 0.34 · 옆 0.30 m · 먼 끝 3.9 rad — tools/sim/cape_clip.mjs 로 잰 다리 · 칼 겹침이 롤랑 v2 망토만큼 되게 고른 값, 확인표 2322)
+    //  10/24 얇게: 옆으로 벌어지는 몫(0.065 q)을 앞 끝 쪽에서 35 % 로(먼 끝 쪽은 그대로) — 아랫단 앞 끝 옆 반지름 0.30 → 0.26 m. 앞에서 보이던 안감 띠(옆으로 벌어진 천의 안쪽)가
+    //  판자 옆면처럼 넓게 읽혀 좁힘 · 길이 · 주름 · 뒤로 처짐(앞뒤 0.34)은 그대로 (다리 겹침 1.7 → 1.9 % — 확인표 2329)
     const layer = artoriaCloth(g, 'bernardo-gold-mantle'), C = 20;
     const T = [0, 0.012, 0.03, 0.055, 0.09, 0.14, 0.21, 0.30, 0.40, 0.51, 0.63, 0.75, 0.86, 0.94, 1];
     const TOP = 0.155, DROP = 1.18;
     const wave = (t, s) => Math.sin(Math.PI * 5 * s + 0.4 + 1.1 * t); // 주름 셋 (골 둘 · 아래로 갈수록 비스듬히)
-    const at = (t, s, inset = 0) => {
+    const at = (t, s) => {
       const yd = (DROP - 0.14 * s) * t, u = yd / DROP, e = 1 - (1 - Math.min(1, yd / 0.12)) ** 2, q = u ** 1.5;
-      const f = (0.005 + 0.050 * u ** 1.1) * wave(t, s) - inset;
+      const f = (0.005 + 0.050 * u ** 1.1) * wave(t, s);
       const front = 1.05 + 0.95 * smooth(Math.min(1, yd / 0.35)), far = 2.95 + 0.95 * smooth(Math.min(1, yd / 0.75));
-      return point([TOP - yd, 0.095 + 0.09 * e + 0.150 * q + f, 0.135 + 0.10 * e + 0.065 * q + f, -0.008], front + (far - front) * s);
+      return point([TOP - yd, 0.095 + 0.09 * e + 0.150 * q + f, 0.135 + 0.10 * e + 0.065 * q * (0.35 + 0.65 * s) + f, -0.008], front + (far - front) * s);
     };
-    for (const [inset, color] of [[0, GOLD], [0.005, GOLD_IN]]) {
-      const p = [], ix = [], cols = [];
-      T.forEach((t, j) => {
-        for (let i = 0; i <= C; i++) {
-          const s = i / C, k = 1 - 0.6 * (0.5 - 0.5 * wave(t, s)) * Math.min(1, 0.25 + t);
-          p.push(...at(t, s, inset));
-          cols.push(k, k, k);
-          if (j < T.length - 1 && i < C) {
-            const n = j * (C + 1) + i;
-            ix.push(n, n + 1, n + C + 1, n + 1, n + C + 2, n + C + 1);
-          }
+    // 겉감 · 안감 = 한 장의 두 면(10/24 — 사장님 '망토가 너무 두꺼워보여'): 겉감 재질은 앞면(몸 밖을 보는 면)만, 안감 재질은 뒷면만 그려 두께 0 · 겹친 면 깜빡임 없음.
+    //  (그 전: 안감을 5 mm 안쪽에 따로 둔 둘째 겹 — 비스듬히 보면 두 겹 사이 금빛 틈이 판자 모서리처럼 읽혔다.) 줄은 바깥에서 보아 반시계 = 앞면이 몸 밖
+    const p = [], ix = [], cols = [];
+    T.forEach((t, j) => {
+      for (let i = 0; i <= C; i++) {
+        const s = i / C, k = 1 - 0.6 * (0.5 - 0.5 * wave(t, s)) * Math.min(1, 0.25 + t);
+        p.push(...at(t, s));
+        cols.push(k, k, k);
+        if (j < T.length - 1 && i < C) {
+          const n = j * (C + 1) + i;
+          ix.push(n, n + 1, n + C + 1, n + 1, n + C + 2, n + C + 1);
         }
-      });
-      add(layer, [mesh(p, ix, cols)], color, shaded).name = inset ? 'bernardo-mantle-lining' : 'bernardo-gold-mantle';
-    }
-    // 두께가 보이게(안감 색 단): 어깨 위 접힌 단 · 앞 끝 · 먼 끝 · 아랫단
+      }
+    });
+    const sheet = mesh(p, ix, cols);
+    add(layer, [sheet.clone()], GOLD, { ...shaded, side: THREE.FrontSide }).name = 'bernardo-gold-mantle';
+    add(layer, [sheet], GOLD_IN, { ...shaded, side: THREE.BackSide }).name = 'bernardo-mantle-lining';
+    // 가장자리 단(안감 색 · 두꺼운 모직 천의 결): 어깨 위 접힌 단 지름 6 mm · 앞 끝 · 먼 끝 · 아랫단 3.6 mm (그 전 12 · 7 mm)
     add(layer, [
-      curve(Array.from({ length: 17 }, (_, i) => at(0, i / 16)), 0.006, 16),
-      curve(T.map(t => at(t, 0)), 0.0035, 14),
-      curve(T.map(t => at(t, 1)), 0.0035, 14),
-      curve(Array.from({ length: 21 }, (_, i) => at(1, i / 20)), 0.0035, 20),
+      curve(Array.from({ length: 17 }, (_, i) => at(0, i / 16)), 0.003, 16, 3),
+      curve(T.map(t => at(t, 0)), 0.0018, 14, 3),
+      curve(T.map(t => at(t, 1)), 0.0018, 14, 3),
+      curve(Array.from({ length: 21 }, (_, i) => at(1, i / 20)), 0.0018, 20, 3),
     ], GOLD_IN, cloth);
     // 앞 끝 놋쇠 브로치 (오른쇄골)
     const [bx, by, bz] = at(0.012, 0), psi = Math.atan2(bz, bx);
     add(layer, [cyl(0.016, 0.016, 0.006, 12, false, [bx + 0.004 * Math.cos(psi), by, bz + 0.004 * Math.sin(psi)], [0, -psi, -Math.PI / 2]), ball(0.006, 6, 4, [bx + 0.008 * Math.cos(psi), by, bz + 0.008 * Math.sin(psi)])], BRASS, metal);
   }
-  function chest(g) {
+  function chest(g, look) {
     base(g, chestRows.map(([y, d, w, x]) => [y, d - 0.012, w - 0.012, x]), 20);
     // 판금 (이 부위에 바로 붙인 메쉬 = 판금 — 가슴판이 첫 판이라 금(plateCrack)이 이 판의 앞에 붙는다)
     const plate = add(g, [plateShell(chestRows)]);
@@ -323,8 +341,20 @@ export function createBernardoOutfitV2(h) {
         return [x0 + d * Math.pow(Math.sqrt(Math.max(0, 1 - (z / w) ** 2)), 0.78) + lift, y, z];
       }), tris.flat());
     };
-    add(layer, lion().map(poly => onTabard(poly, 0.0025)), LION, cloth);
-    add(layer, [onTabard(lionCrown, 0.003)], TRIM, gilt).name = 'bernardo-lion-crown';
+    // 사자 빛깔(10/24 — look.lion): 'black' 기본 = 검은 사자 + 금관 / 'gold' = 망토와 같은 금빛 사자(무광 천) — 흰 바탕에서 묻히지 않게 사자 · 관 둘레에 검은 테두리(3.5 mm),
+    //  관은 밝은 금속 금(TRIM)이라 사자 금빛과 결이 다르고, 관의 테두리를 사자 위에 한 겹 더 그려 머리와 관 사이에 검은 줄이 선다.
+    //  겹친 넷(사자 테두리 → 사자 → 관 테두리 → 관 — 2.5 · 3 · 3.5 · 4 mm 띄움)은 그리는 차례로 덮는다: 큰 조각의 삼각형은 굽은 겉옷에서 2 mm 쯤 안으로 처져
+    //  띄운 높이만으로는 밑의 테두리가 사자 안에 줄로 비친다 → renderOrder 1 ~ 4 차례로 그리고 앞의 셋은 깊이를 쓰지 않는다(depthWrite — 관만 씀) · 겉옷 · 팔 · 칼이 가리는 것은 그대로
+    if (look?.lion === 'gold') {
+      const o = 0.0035 / S, decal = (m, k) => { m.renderOrder = k; m.material.depthWrite = k === 4; return m; };
+      decal(add(layer, lion().map(poly => onTabard(grownPoly(poly, o), 0.0025)), SABLE, cloth), 1).name = 'bernardo-lion-outline';
+      decal(add(layer, lion().map(poly => onTabard(poly, 0.003)), GOLD, cloth), 2).name = 'bernardo-lion';
+      decal(add(layer, [onTabard(grownPoly(lionCrown, o), 0.0035)], SABLE, cloth), 3).name = 'bernardo-lion-crown-outline';
+      decal(add(layer, [onTabard(lionCrown, 0.004)], TRIM, gilt), 4).name = 'bernardo-lion-crown';
+    } else {
+      add(layer, lion().map(poly => onTabard(poly, 0.0025)), SABLE, cloth).name = 'bernardo-lion';
+      add(layer, [onTabard(lionCrown, 0.003)], TRIM, gilt).name = 'bernardo-lion-crown';
+    }
     cape(g);
   }
   function shoulder(g) {

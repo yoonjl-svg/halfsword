@@ -1,8 +1,9 @@
 // 긴 망토 겹침 재기 (10/23 — 베르나르도 v2 긴 망토 · 사장님 10/23 23:5x '다리 · 칼과 걸리지 않게'): AI 끼리 판에서 망토 메쉬가
 //  ① 제 다리(넓적다리 · 정강이 — 보이는 굵기: 사슬 · 정강이받이까지)에 들어간 프레임 몫 · ② 제 칼날(손잡이 끝 → 칼끝 선분)이 망토 겉면을 뚫은 프레임 몫 ·
 //  ③ 상대 칼날이 뚫은 프레임 몫(망토는 충돌체가 없어 맞아도 지나간다 — 참고)을 센다. 롤랑 v2 긴 망토가 견줄 기준.
-//  node tools/sim/cape_clip.mjs <인물 id> [판 수 12] [초 20] [--mod=<복식 모듈 경로>:<내보낸 함수>:<OUTFITS 열쇠>]
+//  node tools/sim/cape_clip.mjs <인물 id> [판 수 12] [초 20] [--mod=<복식 모듈 경로>:<내보낸 함수>:<OUTFITS 열쇠>] [--mesh=<메쉬 이름>]
 //   예) node tools/sim/cape_clip.mjs bernardo · node tools/sim/cape_clip.mjs roland
+//   --mesh: 겉감 대신 이 이름의 메쉬를 잰다(10/24 — 베르나르도 그 전 망토의 5 mm 안쪽 안감 'bernardo-mantle-lining' 을 견주려고)
 //  망토 메쉬 = 가슴 부위의 천 층에서 이름이 CAPE_MESH 에 있는 메쉬(겉감만 · 이름 없는 옛 망토는 망토 천 층의 첫 메쉬). 4 걸음마다 한 번 잰다. 시뮬 해시 · 게임 코드와 무관(재기만)
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -19,7 +20,8 @@ if (modArg) {
   const [file, fn, key] = modArg.slice(6).split(':');
   OUTFITS[key] = (await import(pathToFileURL(path.resolve(file)).href))[fn](newOutfitHelpers);
 }
-const CAPE_MESH = new Set(['bernardo-gold-mantle', 'roland-wine-cape']);
+const meshArg = process.argv.find((a) => a.startsWith('--mesh='));
+const CAPE_MESH = new Set(meshArg ? [meshArg.slice(7)] : ['bernardo-gold-mantle', 'roland-wine-cape']);
 const ME = CHARACTERS_BY_ID[id];
 const FOES = ['heinrich', 'liao', 'margarethe', 'isolde', 'omari', 'minami'].filter((f) => CHARACTERS_BY_ID[f]);
 const LEG = { thighF: [0.15, 0.095], thighB: [0.15, 0.095], shinF: [0.16, 0.065], shinB: [0.16, 0.065] }; // [반 길이, 보이는 반지름]
@@ -103,6 +105,6 @@ for (let k = 0; k < n; k++) {
   }
 }
 const pc = (x) => (100 * x / frames).toFixed(1) + ' %';
-console.log(`${id}${modArg ? ' (' + modArg.slice(6) + ')' : ''}: 판 ${n} × ${dur} 초 · 잰 프레임 ${frames}`);
+console.log(`${id}${modArg ? ' (' + modArg.slice(6) + ')' : ''}${meshArg ? ' [' + meshArg.slice(7) + ']' : ''}: 판 ${n} × ${dur} 초 · 잰 프레임 ${frames}`);
 console.log(`  다리에 들어감 ${pc(legHit)} (넓적다리 앞 ${pc(perLeg.thighF)} · 뒤 ${pc(perLeg.thighB)} · 정강이 앞 ${pc(perLeg.shinF)} · 뒤 ${pc(perLeg.shinB)}) · 가장 깊이 ${(legDepthMax * 100).toFixed(1)} cm · 들어간 꼭짓점 프레임당 ${(legVerts / frames).toFixed(1)}`);
 console.log(`  제 칼이 뚫음 ${pc(ownBlade)} · 상대 칼이 뚫음 ${pc(foeBlade)}`);
