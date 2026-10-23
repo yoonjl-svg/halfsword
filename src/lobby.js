@@ -14,6 +14,9 @@
 //  10/18 04:1x (사장님 "무기+방어구 합쳐서 '아이템'으로 만들고 남는 한 칸은 '이벤트'로. 상점처럼 아직 비공개임. 아이템은 현재 가로 5칸에서 6칸으로 확장. 순서는 (윗칸에) 아이템 상점 (아랫칸에) 스킬북 이벤트"
 //   — docs/design/portrait_ui_2026-10-17.md §10): 메뉴 2 × 2 = [아이템][상점] / [스킬북][이벤트] · 아이템 칸 = 무기 다음 방어구를 한 판에(칸 6 × 4 = 24 · 정사각 — lobby.css) ·
 //   장착 규칙은 물건 종류마다 그대로(무기 = 한 자리 · 방어구 = armorSlot 의 제 자리) · 이벤트 = 상점처럼 빈 안내 한 줄
+//  10/23 방랑 (main.js getWanderStatus · launchWander — docs/import/wander_heroes_import_2026-10-23.md): 'Stage 입장' 아래 '방랑' 단추(같은 폭 · 다른 색 — lobby.css .wander) ·
+//   사장님 18:3x '버튼 밑에 설명 쓰는 거 싫음' — 단추 밑 글 없음. 잠겼을 때 누르면 위 알림 줄에 열리는 조건 · 깬 무대 수 · 판이 남아 있으면 '방랑 이어가기'
+//   이미 다 깬 사람(옛 저장 인정 — 저장 wander.noticeSeen 없음)은 대기실에 처음 들어올 때 알림 창 한 번(스킬트리 알림 창과 같은 꼴)
 import style from './lobby.css?inline';
 import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
@@ -21,7 +24,8 @@ import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { LOBBY_ITEMS, LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
 import { portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
 import { readProfile, renamePlayer } from './player_profile.js';
-import { readProgress, titleOptions, selectTitle } from './lobby_progress.js';
+import { readProgress, titleOptions, selectTitle, markWanderNotice } from './lobby_progress.js';
+import { WANDER_NOTICE_TEXT } from './wander_rules.js'; // 방랑 알림 창 글 (결과 창 위 알림 창과 같은 글)
 import { mountSkillTree } from './skill_tree.js';
 import { convertSeals, takeSealNotice } from './seal_coins.js';
 import { migrateSkillBooks, takeTreeNotice, treeNoticeText } from './skill_tree_store.js'; // 옛 스킬북 → 스킬트리 (10/21 — 한 번)
@@ -54,13 +58,13 @@ function fitThumb(img) {
 const CHEVRON = '<svg class="chevron" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5 8 3.5"/></svg>';
 const CHECK = '<svg class="check" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9 9.5 3.5"/></svg>';
 
-export function mountLobby({ root, game, choice, onDepart, onBack }) {
+export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   const ctx = game.getSkillBookContext?.() ?? { test: false };
   root.innerHTML = `<style>${uiStyle}\n${style}\n${typeStyle}</style><main class="lobby" aria-labelledby="lobbyHeading">
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><p id="lobbyStatus" class="lobby-status" role="status"></p><button id="lobbyBack" class="secondary small on-art utility">첫 화면</button></header>
     <div class="lobby-columns">
-      <section class="character-panel"><figure class="portrait-card" id="lobbyPortrait" aria-label="내 캐릭터 프로필"><img id="lobbyPortraitImg" alt="" draggable="false" decoding="async"></figure><button class="primary depart" id="lobbyDepart">Stage 입장</button></section>
+      <section class="character-panel"><figure class="portrait-card" id="lobbyPortrait" aria-label="내 캐릭터 프로필"><img id="lobbyPortraitImg" alt="" draggable="false" decoding="async"></figure><div class="departure-options"><button class="primary depart" id="lobbyDepart">Stage 입장</button><button class="wander depart" id="lobbyWander">방랑</button></div></section>
       <section class="profile-panel" aria-label="내 정보">
         <dl class="profile-data"><dt class="sr-only">레벨과 호칭</dt><dd id="lobbyRank" class="rank-row"><span id="lobbyLevel"></span><span class="title-picker"><button type="button" id="titleSelect" class="title-select" aria-haspopup="listbox" aria-expanded="false" aria-controls="titleList" aria-labelledby="titleLabel titleCurrent"><span id="titleLabel" class="sr-only">호칭</span><span id="titleCurrent"></span>${CHEVRON}</button><ul id="titleList" class="title-list" role="listbox" aria-labelledby="titleLabel" hidden></ul></span></dd><dt class="sr-only">이름</dt><dd class="name-row"><span id="lobbyName"></span><button class="edit-name" id="editName" aria-label="이름 수정"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3M2 14h12"/></svg></button></dd></dl>
         <p class="duel-record"><span>대면 결과</span><b id="duelRecord"></b></p>
@@ -85,7 +89,8 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
       </section>
     </div>
   </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>
-  <dialog class="tree-dialog" id="treeDialog" aria-labelledby="treeHeading" aria-describedby="treeText"><h2 id="treeHeading">스킬트리</h2><p id="treeText"></p><div class="dialog-actions"><button type="button" id="closeTree" class="primary">확인</button></div></dialog>`;
+  <dialog class="tree-dialog" id="treeDialog" aria-labelledby="treeHeading" aria-describedby="treeText"><h2 id="treeHeading">스킬트리</h2><p id="treeText"></p><div class="dialog-actions"><button type="button" id="closeTree" class="primary">확인</button></div></dialog>
+  <dialog class="tree-dialog" id="wanderDialog" aria-labelledby="wanderHeading" aria-describedby="wanderText"><h2 id="wanderHeading">방랑</h2><p id="wanderText" class="wander-text"></p><div class="dialog-actions"><button type="button" id="closeWander" class="primary">확인</button></div></dialog>`;
   const $ = id => root.getElementById(id), events = new AbortController();
   const listen = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
   const grove = createPixelGrove($('lobbyGrove'), matchMedia('(prefers-reduced-motion: reduce)')); grove.gust();
@@ -274,15 +279,40 @@ export function mountLobby({ root, game, choice, onDepart, onBack }) {
     status(result.saved ? '' : '이름은 이번 실행 동안 유지됩니다.');
   });
   listen($('lobbyBack'), 'click', onBack);
+  // ── 방랑 단추 (10/23): 잠겼으면 흐리게(aria-disabled — 눌러서 열리는 조건을 위 알림 줄에) · 판이 남아 있으면 '방랑 이어가기' ──
+  const wander = game.getWanderStatus?.() ?? { unlocked: false, cleared: 0, total: 30, ongoing: false, name: '방랑', notice: false, forfeit: null };
+  const wanderBtn = $('lobbyWander');
+  wanderBtn.textContent = wander.unlocked && wander.ongoing ? `${wander.name} 이어가기` : wander.name;
+  wanderBtn.setAttribute('aria-disabled', String(!wander.unlocked));
+  if (!wander.unlocked) wanderBtn.setAttribute('aria-label', `${wander.name} (잠김 · 깬 무대 ${wander.cleared}/${wander.total})`);
+  if (wander.forfeit) status(`싸움 도중에 나간 방랑을 패배로 셈했습니다. (금화 ${wander.forfeit.coins < 0 ? `−${-wander.forfeit.coins}` : '±0'})`); // 도중에 그만두기 켬(WANDER.quitAsLoss)일 때만
+  // 알림 창 (이미 다 깬 사람 — 한 번): 스킬트리 알림 창이 떠 있으면 그 창을 닫은 뒤
+  const showWanderNotice = () => {
+    $('wanderText').textContent = WANDER_NOTICE_TEXT;
+    try { $('wanderDialog').showModal(); } catch { $('wanderDialog').setAttribute('open', ''); }
+  };
+  listen($('closeWander'), 'click', () => { markWanderNotice(); $('wanderDialog').close(); });
+  if (wander.notice) {
+    if ($('treeDialog').open) listen($('treeDialog'), 'close', showWanderNotice);
+    else showWanderNotice();
+  }
   let departing = false;
-  listen($('lobbyDepart'), 'click', async () => {
-    if (departing) return; departing = true; $('lobbyDepart').disabled = true; $('lobbyBack').disabled = true;
-    try { await onDepart(); } catch { status('여정을 열지 못했습니다. 다시 시도해 주십시오.'); }
-    finally { departing = false; $('lobbyDepart').disabled = false; $('lobbyBack').disabled = false; }
+  const departButtons = ['lobbyDepart', 'lobbyWander', 'lobbyBack'];
+  async function leave(action, failText) {
+    if (departing) return;
+    departing = true;
+    for (const id of departButtons) $(id).disabled = true;
+    try { await action(); } catch { status(failText); }
+    finally { departing = false; for (const id of departButtons) $(id).disabled = false; }
+  }
+  listen($('lobbyDepart'), 'click', () => leave(onDepart, '여정을 열지 못했습니다. 다시 시도해 주십시오.'));
+  listen(wanderBtn, 'click', () => {
+    if (!wander.unlocked) { status(`방랑은 모든 무대를 깨면 열립니다. (깬 무대 ${wander.cleared}/${wander.total})`); return; }
+    if (onWander) leave(onWander, '방랑을 열지 못했습니다. 다시 시도해 주십시오.');
   });
   $('lobbyHeading').focus();
   return {
     tree, // 시험·사진 도구: lobby.tree.show('german', 2)
-    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); $('treeDialog').close(); grove.dispose(); },
+    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); $('treeDialog').close(); $('wanderDialog').close(); grove.dispose(); },
   };
 }
