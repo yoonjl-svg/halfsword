@@ -1,0 +1,43 @@
+{
+ "report": {
+  "card_844x390": {
+   "name": "뒤랑달",
+   "tier": "레전드",
+   "desc": "롤랑이 바위에 내리쳐도 부서지지 않았다는 성검.\n금빛 자루에는 성인들의 유물이 봉해져 있다.",
+   "img": null,
+   "imgOk": null,
+   "overflow": false
+  },
+  "card_568x320": {
+   "name": "뒤랑달",
+   "tier": "레전드",
+   "desc": "롤랑이 바위에 내리쳐도 부서지지 않았다는 성검.\n금빛 자루에는 성인들의 유물이 봉해져 있다.",
+   "img": null,
+   "imgOk": null,
+   "overflow": false
+  },
+  "card_1280x800": {
+   "name": "뒤랑달",
+   "tier": "레전드",
+   "desc": "롤랑이 바위에 내리쳐도 부서지지 않았다는 성검.\n금빛 자루에는 성인들의 유물이 봉해져 있다.",
+   "img": null,
+   "imgOk": null,
+   "overflow": false
+  },
+  "roland": {
+   "weapon": "durandal",
+   "mass": 2.2,
+   "school": "iberian",
+   "gripping": true,
+   "aura": true,
+   "name": null
+  },
+  "rolandFight": {
+   "t": 4.57,
+   "weapon": "durandal",
+   "gripping": true,
+   "broken": false
+  }
+ },
+ "errors": []
+}
