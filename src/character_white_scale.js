@@ -21,7 +21,7 @@ export function createWhiteScaleWarrior() {
     weapon: 'muramasa',
     voice: 'renji',
     look: getLook('white_scale'),
-    lookVersion: 'v1',
+    lookVersion: 'v2', // 10/23 줄인 판 (looks.js LOOK_ARCHIVE.white_scale.v2 — 전달본 판 v1 은 ?look=white_scale:v1)
     ai: { proficiency: 3, persona: { school: 'muramasa', pers: {} } },
     taunt: '…검으로 이야기하자.',
     lines: {

@@ -872,6 +872,11 @@ LOOK_ARCHIVE.white_scale = { v1: {
   helmet: 'kabuto_masked', metal: 0xc3c4b7, hair: 0x282b25, headband: null,
   grip: 0x4d2525, hilt: 0x8e804f, accent: 0x79282d, outfit: 'white_scale', armor: 'plate',
 } };
+// 백린 v2 (우리 판 — 사장님 10/23 19:0x '백린의 전사는 디자인 바꾸지 말고 줄이기만 해'): 같은 모양 · 같은 색을 적은 삼각형으로 (몸 하나 121,398 → 26,648 · 칼 뺌 · tools/sim/look_tris.mjs).
+//  비늘 줄은 긴 띠 조각(비늘마다 세 은빛 꼭짓점 색 · 기운 법선) · 치마 판의 끈 · 구멍 구슬은 띠 · 비단 무늬는 작은 무늬 그림 · 비늘 리벳 없음 · 뿔 마디 덜기.
+//  복식 모듈 하나(outfits.js white_scale = src/outfit_white_scale.js)가 whiteScaleRevision 으로 판을 가른다(모듈 쪽 '── v2' 줄 · v1 은 꼭짓점 해시 그대로).
+//  판금 부위 · 덮은 곳 · 투구 조각 · 판정 · 몸 그대로(비늘 리벳 판금 조각만 빠짐). 전 판 ?look=white_scale:v1 (전후 그림 docs/handoff/hero_models_2026-10-23/white_scale_*.webp · 확인표 2315 ~ 2317)
+LOOK_ARCHIVE.white_scale.v2 = { ...LOOK_ARCHIVE.white_scale.v1, whiteScaleRevision: 2 };
 LOOK_ARCHIVE.bernardo = { v1: {
   tunic: 0x292b29, quilt: 0x34352f, sleeve: 0x47473c, straps: null, belt: 0x493a2c,
   hoseUpper: 0x393a30, hoseLower: 0x2c2d28, shoes: 0x39352b, skin: 0xa67553, hands: 0x393b38,
@@ -904,7 +909,7 @@ export const CHARACTER_LOOK_VERSION = {
   chanda: 'v2', // 10/14 여정 밖 인물 찬다 (우리 v2 — 무릎 틈 메움) — 샛별 판 ?look=chanda:v1
   terracotta: 'v2', // 10/14 여정 밖 인물 병마용 (우리 v2 — 잔선 덜기) — 샛별 판 ?look=terracotta:v1
   roland: 'v2', // 10/23 손님 인물 롤랑 (방랑 전용) — v2 줄이면서 다듬은 판(사장님 10/23 결정) · 들인 그대로의 판(그쪽 sebastian v2) ?look=roland:v1
-  white_scale: 'v1', // 10/23 손님 인물 백린의 전사(가칭 · 방랑 전용)
+  white_scale: 'v2', // 10/23 손님 인물 백린의 전사(가칭 · 방랑 전용) — 우리 v2 (줄이기만 · 사장님 10/23 19:0x) · 전달본 판 ?look=white_scale:v1
   bernardo: 'v2', // 10/23 손님 인물 베르나르도 (방랑 전용) — 우리 v2(흰 겉옷 · 레온 사자 · 금빛 망토 · 사슬 치마 — 사장님 10/23). 옛 판 ?look=bernardo:v1 = 그쪽 black_king v4(올리비에)
 };
 
