@@ -884,13 +884,16 @@ LOOK_ARCHIVE.bernardo = { v1: {
   grip: 0x282c29, hilt: 0x887548, accent: 0x89763c, outfit: 'bernardo', armor: 'plate', stockEyes: true,
 } };
 // 베르나르도 v2 (우리 판 — 사장님 10/23 '줄이면서 디자인 개선' · 같은 날 밤 다듬기 둘, 복식 src/outfit_bernardo_v2.js): 곱슬 중단발 · 쇠 깃은 v1 그대로 · 다듬은 턱수염(v1 의 반) ·
-//  가슴판 한 장 + 배 쇠띠 셋 + 무릎까지 오는 흰 겉옷(금테 · 가슴 한가운데에 금관 쓴 레온의 보랏빛 선 사자) · 넓적다리 상자 판 → 어두운 사슬 치마 + 겉옷 자락 · 작은 무릎 덮개 ·
-//  오른어깨에 걸쳐 종아리까지 비스듬히 떨어지는 맑고 짙은 금빛 긴 망토(깊은 주름 셋 · 짙은 금갈색 안감) · 견갑 단 · 팔뚝 보호대 양끝 · 무릎 덮개의 가는 금테.
+//  가슴판 한 장 + 배 쇠띠 셋 + 무릎까지 오는 흰 겉옷(금테 · 가슴 한가운데에 금관 쓴 레온의 검은 선 사자) · 넓적다리 상자 판 → 어두운 사슬 치마 + 겉옷 자락 · 작은 무릎 덮개 ·
+//  오른어깨에 걸쳐 종아리까지 비스듬히 떨어지는 맑고 짙은 금빛 긴 망토(깊은 주름 셋 · 짙은 금갈색 안감 · 얇은 천 — 10/24) · 견갑 단 · 팔뚝 보호대 양끝 · 무릎 덮개의 가는 금테.
 //  판금 13 부위 · 투구 없음 · 피부 · 머리 · 수염 색 · 칼은 v1 그대로.
 //  몸 색은 다리 속옷만(넓적다리 hoseUpper = 사슬 색 · 정강이 hoseLower 조금 밝게 — 무릎 뒤가 검은 공으로 보이지 않게) · accent 는 망토 금빛(복식 모듈은 읽지 않음 — 표시용).
 //  circlet: 곱슬 위 가는 금빛 머리띠(시험 — 사장님 10/23 23:5x '4번도 넣어봐' · 남길지는 사장님 확인 전 · 빼려면 이 칸만 지운다 · 머리 그룹 장식이라 투구 · 판금 판정과 무관)
-//  옛 판 ?look=bernardo:v1 (확인표 2318 ~ 2325)
-LOOK_ARCHIVE.bernardo.v2 = { ...LOOK_ARCHIVE.bernardo.v1, hoseUpper: 0x50534e, hoseLower: 0x3c3e38, accent: 0xb08a2c, outfit: 'bernardo_v2', circlet: true };
+//  lion: 겉옷 사자 빛깔 — 'black'(기본 · 사장님 10/24 '사자 색이 너무 튄다. 그냥 검게 하거나 금색으로') · 'gold'(금빛 사자 + 가는 검은 테두리 — 사장님 확인 전). 금빛으로 바꾸려면 이 칸만 'gold' 로
+//   (미리보기 ?look=bernardo:v2-gold · 그 전 보랏빛 사자는 판으로 남기지 않음 — 확인표 2328 · 2329)
+//  옛 판 ?look=bernardo:v1 (확인표 2318 ~ 2325 · 2328 · 2329)
+LOOK_ARCHIVE.bernardo.v2 = { ...LOOK_ARCHIVE.bernardo.v1, hoseUpper: 0x50534e, hoseLower: 0x3c3e38, accent: 0xb08a2c, outfit: 'bernardo_v2', circlet: true, lion: 'black' };
+LOOK_ARCHIVE.bernardo['v2-gold'] = { ...LOOK_ARCHIVE.bernardo.v2, lion: 'gold' }; // 금빛 사자 미리보기 (10/24 — 사장님 고르실 것)
 
 // 지금 게임에서 실제로 쓰는 버전 (감독/오너가 확정하면 여기만 바꾸면 됨)
 export const CHARACTER_LOOK_VERSION = {
