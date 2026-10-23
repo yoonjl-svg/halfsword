@@ -8,7 +8,7 @@
 //   겉옷 앞판 · 허리띠 · 뿔피리 · 겨드랑이 사슬 · 넓적다리 속치마 · 무릎 위 사슬은 천 층(artoriaCloth — 판 목록 밖: 덮은 곳 · 파손에 안 듦 · 판이 다 부서져도 남는다)
 //  좌표: +X 앞 · +Y 위 · +Z 오른쪽 (다른 복식 모듈과 같다)
 export function createRolandOutfitV2(h) {
-  const { THREE, bake, cyl, addMerged, artoriaCloth, taperedTube } = h;
+  const { THREE, bake, cyl, addMerged, artoriaCloth, taperedTube, capeSway } = h;
   const IVORY = 0xd7cfba, GOLD = 0xad8848, WINE = 0x541f2a, MAIL = 0x5b5d61, LEATHER = 0x463727, HORN = 0xe4d9bf;
   const metal = { metalness: 0.73, roughness: 0.34, steel: 0.9 }, cloth = { roughness: 0.96, metalness: 0, side: THREE.DoubleSide };
   const chain = { metalness: 0.62, roughness: 0.5, steel: 0.55 };
@@ -172,13 +172,16 @@ export function createRolandOutfitV2(h) {
     }
     const geo = mesh(p, uv, ix);
     geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    add(layer, [geo], 0xffffff, { ...cloth, vertexColors: true }).name = 'roland-wine-cape';
+    const capeMesh = add(layer, [geo], 0xffffff, { ...cloth, vertexColors: true });
+    capeMesh.name = 'roland-wine-cape';
     const hem = grid(C, 1, (u, t) => {
       const q = at(0.935 + 0.02 * t, u * 2 - 1);
       q[0] -= 0.002;
       return q;
     });
-    add(layer, [hem], 0x997b49, cloth);
+    const band = add(layer, [hem], 0x997b49, cloth);
+    // 흔들림 (10/24 — src/cape_sway.js): 망토 천 · 금빛 띠를 같은 뼈에 건다 — 꼴 · 주름 · 색 · 길이 · 매단 곳 그대로, 아래쪽이 몸통을 반 박자 늦게 따라온다
+    capeSway(layer, [capeMesh, band]);
   }
   function helmet(g) {
     const helm = new THREE.Group();

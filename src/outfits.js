@@ -16,6 +16,7 @@ import { decorateAlter } from './outfit_alter.js';
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { weaponEnv } from './weapon_looks.js';
+import { attachCapeSway } from './cape_sway.js'; // 긴 망토 흔들림 (10/24 — 아르토리아 망토 · 롤랑 · 베르나르도 v2 는 newOutfitHelpers.capeSway)
 import { createRenjiOutfit } from './outfit_renji.js'; // 김씨 복식 (샛별 저장소에서 가져옴)
 import { createEiraOutfit } from './outfit_eira.js'; // 에이라 린드(지금 투야나 니콜라예바) 복식 v1 (샛별 저장소에서 가져옴)
 import { createSamiraOutfit } from './outfit_samira.js'; // 사미라 v2 앙가르카 (디자인 리뷰 10/10)
@@ -2575,12 +2576,15 @@ function artoriaCapeV4(g) {
   cape.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   cape.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   cape.setIndex(indices); cape.computeVertexNormals();
-  addMerged(layer, [cape], 0xffffff, { ...CLOTH, side: THREE.DoubleSide, vertexColors: true }).name = 'artoria-cape';
+  const capeMesh = addMerged(layer, [cape], 0xffffff, { ...CLOTH, side: THREE.DoubleSide, vertexColors: true });
+  capeMesh.name = 'artoria-cape';
   const edgeN = 12, hemN = columns + 1;
   const borders = [-1, 1].map((u) => taperedTube(Array.from({ length: edgeN }, (_, i) => at(i / (edgeN - 1), u)), Array(edgeN).fill(0.0022), 32, 4));
   borders.push(taperedTube(Array.from({ length: hemN }, (_, i) => at(1, i / ((hemN - 1) / 2) - 1)), Array(hemN).fill(0.0022), 320, 4));
   borders.push(taperedTube(Array.from({ length: 9 }, (_, i) => at(0, i / 4 - 1)), Array(9).fill(0.003), 32, 4));
-  addMerged(layer, borders, ARTORIA_GOLD, CLOTH);
+  const trim = addMerged(layer, borders, ARTORIA_GOLD, CLOTH);
+  // 흔들림 (10/24 — src/cape_sway.js): 망토 천 · 금빛 테를 같은 뼈에 건다 — 꼴 · 주름 · 색 · 길이 · 매단 곳 그대로, 아래쪽이 몸통을 반 박자 늦게 따라온다
+  attachCapeSway(layer, [capeMesh, trim]);
 }
 const ARTORIA_OUTFIT_V5 = {
   ...ARTORIA_OUTFIT_V4,
@@ -2842,7 +2846,8 @@ const CROWN_ROSE_UNIFORM = Object.fromEntries(Object.entries(CROWN_BLUE_UNIFORM)
 export const newOutfitHelpers = { THREE, bake, box, cyl, ball, cone, addMerged, CLOTH, quietFace, isoldeLock, artoriaCloth, sleeveVolume, clothNeck,
   // 디자인 리뷰 10/10 (사미라 v2·투야나 v2 복식 모듈)이 더 쓰는 것 — 열쇠만 늘림, 기존 모듈은 그대로
   taperedTube, clothPanel, reshapeMain, hangingClothShading, roseUniformHead,
-  artoriaRoundedBox }; // 라트나 복식 모듈(outfit_ratna.js, 10/14)이 더 쓰는 것 — 샛별 쪽 묶음과 같은 열쇠
+  artoriaRoundedBox, // 라트나 복식 모듈(outfit_ratna.js, 10/14)이 더 쓰는 것 — 샛별 쪽 묶음과 같은 열쇠
+  capeSway: attachCapeSway }; // 긴 망토 흔들림(10/24 — 롤랑 v2 · 베르나르도 v2 복식 모듈 · src/cape_sway.js)
 
 const RENJI_V1 = createRenjiOutfit(newOutfitHelpers); // 김씨 v1 (v2 가 하카마 밖 전부를 이어 받는다)
 
