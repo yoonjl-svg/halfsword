@@ -20,9 +20,11 @@
 //  부르는 곳: skill.js secret()(플레이어 — 비기 '휘감아 돌기') → requestSpin · fighter.js step(spinStep · driveBalance 의 want) · gait.js update · poseLegs · pinFeet ·
 //   skill.js update(spinCutPose). 대본이 없으면(f.ibSpin = null) 아무 일도 없다. 10/24 부터 AI 도 쓴다(SECRET.aiOpenSchools 'iberian' — ai.js spinTick → skill.secret · 숙련도 5 이상 이베리아 인물만).
 //  10/24 사장님 02:5x '속도가 너무 과도하게 헛돌아. 몸이 종잇장처럼 날라다니듯 기울어' → 빠르기 = 고노센 칼끝의 몫(spinPlan · spinCap — SECRET.ibSpin.share) · 몸 곧게(uprightStep · 골반 높이 · 도는 발 자리 — SECRET.ibSpin.upright).
+//  10/24 10:4x '싱지르 개편 뒤에 또 허공 위로 날아가는 싱지르가 많아졌어' · 10:5x '고노센의 70%로' → share 0.7 · 낼 때 손 목표 쉼 자리(spinHandRest) · 몸통 뚜껑(spinLid) · 땅은 막힘 아님(swordContact) —
+//   docs/strike/iberian_spin_2026-10-22.md §16.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, ARM } from './config.js';
+import { SECRET, ARM, SKILL } from './config.js';
 import { iaiTipSpeed, ART_MIN } from './secret_instant.js'; // 비기 잔상 밝기 = 칼끝 빠르기 ÷ 고노센 칼끝 빠르기 (10/23 — 연환 · 진 · 츠바메가에시와 같은 체계)
 
 const TAU = Math.PI * 2;
@@ -197,6 +199,29 @@ export function requestSpin(f, want = 0) {
   return true;
 }
 
+/**
+ * 손 목표를 쉼 자세로 (10/24 10:4x 사장님 '싱지르 개편 뒤에 또 허공 위로 날아가는 싱지르가 많아졌어. 몸통을 겨누기로 했었는데' — SECRET.ibSpin.handRest · 사장님 확인 전, 확인표 2384):
+ *  잰 원인(docs/strike/iberian_spin_2026-10-22.md §16-2) — 공격 원 판은 원을 그리는 손가락이 손 목표(handOffset)를 원이 끝난 자리(큰 원이면 손 닿는 끝 0.62 m 에 걸린 옆 · 아래)에
+ *  둔 채 싱지르가 나간다. 대본은 두 팔 · 칼(감기)과 덧씌우기 자세(손 · 칼끝 방향)를 쥐지만, 몸통 비틀기 목표는 덧씌우기 몫이 숙련도 몫뿐이라(fighter.updateBodyPose kt = w · s)
+ *  나머지와 '손이 안 닿으면 더 트는 몫'(순서 결합) · 가슴 비틀기의 손 쪽 몫(applyPose −aim.x)이 그 낡은 손 목표 · 이어 베기(follow)를 끝까지 따른다 → 몸통이 원 끝 쪽으로 틀린 채 돌다
+ *  칼을 놓으면 그 비틀림에 칼이 머리 위로 솟았다(원 판 큰 원 · 칼 든 쪽 4 ~ 9 %). 공격 하나 · 스틱 판은 손 목표가 자세 패드에 그대로라 0 %.
+ *  → 사람이 싱지르를 내는 순간 손 목표를 유파 쉴 자세(sword_art restGuard — 이베리아 긴 자세)로 옮기고, 손 움직임 셈(앞 자리 · 빠르기 · 이어 베기 · 가죽끈 · 거르기 전 목표)을 그 자리로 비운다.
+ *  걸러진 손(skill.aim)은 그대로 둬 거르기(aimFilter)로 부드럽게 따라가게 한다(한 스텝에 옮기면 몸 목표가 튄다). 대본 · 굳음 동안 손 목표는 main.js 가 움직이지 않는다(secBusy). 새 수 없음
+ */
+export function spinHandRest(f) {
+  const sk = f.skill;
+  const pad = f.swordArt?.restGuard?.pad ?? SKILL.homeGuard;
+  f.handOffset.set(pad[0], pad[1]);
+  for (const k of ['anchor', 'aimRaw', 'prev']) sk[k]?.copy(f.handOffset);
+  sk.follow?.set(0, 0);
+  sk.vel?.set(0, 0);
+  if (sk.inputMotion) {
+    sk.inputMotion.prev.copy(f.handOffset);
+    sk.inputMotion.vel.set(0, 0);
+  }
+  sk.tempoInput = null;
+}
+
 /** 칼(손 · 칼날 다섯 점)의 가장 높은 점 (월드 y) */
 const _sp = new THREE.Vector3();
 function swordTop(f) {
@@ -275,6 +300,7 @@ function settleStep(f, S, dt) {
   fb.setAngvel({ x: fw.x, y: fw.y * (1 - g), z: fw.z }, true);
   if (V.upright) uprightStep(f, V.track, 1, dt); // 10/24 받아 멈추는 동안도 몸통을 곧게 (붙드는 몫은 줄이지 않음 — 놓은 칼이 아직 돈다)
   spinCap(f, S.vmax); // 10/24 share 판: 받아 멈추는 동안도 칼끝 상한
+  spinLid(f); // 10/24 10:4x 몸통 뚜껑
 }
 
 /**
@@ -327,9 +353,49 @@ function uprightStep(f, k, hold, dt) {
 }
 
 /**
+ * 몸통 뚜껑 (10/24 10:4x 사장님 '싱지르 개편 뒤에 또 허공 위로 날아가는 싱지르가 많아졌어. 몸통을 겨누기로 했었는데' — SECRET.ibSpin.lid · 사장님 확인 전, 확인표 2385 ·
+ *  10/23 '높이가 몸통부를 넘지 않게 휘둘러야 함'): 칼을 놓은 뒤(대본 안 free · 받아 멈춤 · 따라 지나감) 칼끝이 몸통 위 끝(어깨 관절 높이 = 가슴 점 + ARM.shoulder[1] — 10/23 torso 와 같은 줄)
+ *  쪽으로 오르는 빠르기를 '남은 높이 × SECRET.ibSpin.track'(골반 따라가기와 같은 세기 10 /s — 줄에 다가갈수록 0, 넘었으면 그만큼 내려 보냄)까지로 자른다.
+ *  잰 원인(§16-2): 손 목표를 쉼 자세로 옮긴 뒤에도(spinHandRest) 놓는 순간 칼에 남는 물리 몫 — 감은 칼자루가 제 배 몸체에 2 ~ 5 cm 파고든 채(대본이 스텝마다 자리를 놓음 · BODY.humanLimits
+ *  제 칼 ↔ 제 몸통 충돌) 놓이면 밀어내는 힘 · 두 손 쥠 용수철 — 이 칼을 위로 차 올려(칼 각속도 30 ~ 50 rad/s) 서보(가슴 높이 겨눔)가 막기 전에 머리 위로 넘겼다.
+ *  고침은 칼 몸체만 칼 손(칼 몸체 원점) 둘레로 돌려(Δω = r × Δv ÷ |r|² — 칼날에 수직인 몫 · 놓은 칼은 거의 수평이라 위아래 몫이 거의 다 고쳐지고 가로 빠르기는 거의 그대로) 한다. 새 수 없음
+ */
+const _lt = new THREE.Vector3();
+export function spinLid(f) {
+  const V = SECRET.ibSpin;
+  if (!V.lid || !f.armed) return;
+  const lid = f.bodies.chest.translation().y + ARM.shoulder[1];
+  const tip = f.bladePoint(1, _lt);
+  const vt = f.sword.velocityAtPoint({ x: tip.x, y: tip.y, z: tip.z });
+  const allow = V.track * (lid - tip.y);
+  if (vt.y <= allow) return;
+  const o = f.sword.translation();
+  const rx = tip.x - o.x;
+  const ry = tip.y - o.y;
+  const rz = tip.z - o.z;
+  const r2 = rx * rx + ry * ry + rz * rz;
+  if (r2 < 1e-6) return;
+  const dvy = allow - vt.y; // 위로 넘친 몫 (음수)
+  const dwx = (-rz * dvy) / r2; // Δω = r × (0, dvy, 0) / |r|²
+  const dwz = (rx * dvy) / r2;
+  const w = f.sword.angvel();
+  f.sword.setAngvel({ x: w.x + dwx, y: w.y, z: w.z + dwz }, true);
+  const c = f.sword.worldCom(); // 무게 가운데 빠르기도 원점 둘레 같은 돌림 몫: Δv = Δω × (c − o)
+  const cx = c.x - o.x;
+  const cyy = c.y - o.y;
+  const cz = c.z - o.z;
+  const v = f.sword.linvel();
+  f.sword.setLinvel({ x: v.x + -dwz * cyy, y: v.y + (dwz * cx - dwx * cz), z: v.z + dwx * cyy }, true);
+  f.spinLidN = (f.spinLidN ?? 0) + 1; // 자른 스텝 수 (재기)
+}
+
+/**
  * 내 칼이 무엇에 닿아 있나 (Rapier 접촉 — 읽기만): 'body' = 칼날이 상대 몸에(접촉 쌍 — 베는 칼은 물리대로 지나간다) ·
  *  'other' = 칼(칼날 · 칼자루)이 싸움꾼 밖의 것(무대 벽 · 땅 · 석상)에 실제로 닿음(접촉 거리 ≤ 0) · null = 없음. 상대 칼은 여기서 보지 않는다(칼끼리 feel.touching).
  *  무대 벽 곁에서 돌면 감은 칼이 벽에 걸린다 — 놓지 않으면 다음 스텝 대본 자리로 다시 놓여 칼이 튄다(브라우저 시험: 칼끝 73 m/s) → 막힘과 같이 놓고 멈춘다
+ *  10/24 10:4x 땅 (SECRET.ibSpin.floor · 사장님 확인 전, 확인표 2386 — 사장님 '작게 그으면 싱지르가 나가다 말고 좀 이상한 작은 동작이 되어 실패'): 공격 원을 다 그린 순간 칼이 아래(칼끝이 땅 가까이)에
+ *  있으면 감기 첫 0.0x s 에 칼이 땅을 스쳐 'other' → 막힘 → 한 바퀴를 거의 못 돌고(진행 0 ~ 0.01) 받아 멈춤 · 굳음 1.3 s 로 끝났다(원 판 2.5 % — §16-3). 대본이 칼을 감은 자세로 들어 올리는 길이라
+ *  땅은 막는 것이 아니다 → 맞닿은 면이 누운 접촉(면의 법선이 수평보다 세로에 가까움 — 바닥)은 셈하지 않는다. 벽 · 석상(선 면)은 그대로 막힘
  */
 function swordContact(f) {
   const W = f.world;
@@ -339,6 +405,7 @@ function swordContact(f) {
   const foeB = new Set(foe?.bodies ? Object.values(foe.bodies).map((b) => b.handle) : []);
   const foeSword = foe?.sword?.handle;
   const blades = new Set(f.bladeColliders ?? []);
+  const floorOK = !!SECRET.ibSpin.floor;
   let out = null;
   for (const c1 of f.swordColliders ?? []) {
     W.contactPairsWith(c1, (c2) => {
@@ -349,6 +416,10 @@ function swordContact(f) {
       const body = h != null && foeB.has(h);
       if (body && (!blades.has(c1) || out)) return;
       W.contactPair(c1, c2, (m) => {
+        if (!body && floorOK) {
+          const n = m.normal();
+          if (Math.abs(n.y) > Math.hypot(n.x, n.z)) return; // 바닥 (10/24 floor) — 막힘 아님
+        }
         for (let i = 0; i < m.numContacts(); i++) if (body || m.contactDist(i) <= 0) { out = body ? 'body' : 'other'; return; }
       });
     });
@@ -373,6 +444,20 @@ export function spinStep(f, dt) {
     f.yaw.setFromAxisAngle(_w.set(0, 1, 0), f.heading);
     S.want.set(0, 0, 0);
     S.wt = 0;
+    if (SECRET.ibSpin.upright && SECRET.ibSpin.handRest) {
+      // 10/24 10:4x: 먼저 감는 동안도 몸 곧게 · 골반 높이 (돌기와 같은 uprightStep · dvy — 전엔 돌기부터). 큰 원을 그린 뒤 높은 칼을 내리는 0.2 s 에 몸이 25 ~ 50° 숙고
+      //  골반이 0.2 m 주저앉아 넘어진 판이 있었다(§16-2). 새 수 없음 — handRest 와 함께 켜고 끈다(0 이면 10/24 02:5x 판 그대로)
+      const K = SECRET.ibSpin.track;
+      const pel = f.bodies.pelvis;
+      const dvy = f.gait?.h ? K * (f.gait.h - pel.translation().y) - pel.linvel().y : 0;
+      for (const k of UPPER) {
+        const b = f.bodies[k];
+        if (!b) continue;
+        const v = b.linvel();
+        b.setLinvel({ x: v.x, y: v.y + dvy, z: v.z }, true);
+      }
+      uprightStep(f, K, 1, dt);
+    }
     if (f.armed) placeArms(f, S, dt);
     if (S.tp >= S.pre) {
       const G = f.gait;
@@ -474,6 +559,7 @@ export function spinStep(f, dt) {
   Lp.pinC.z = S.pinC0.z;
   Lp.yaw = S.pivotYaw0 + turn;
   if (S.free) spinCap(f, S.vmax); // 10/24 share 판: 놓은 칼의 칼끝 빠르기 상한 (share 0 이면 ∞ — 아무 일 없음)
+  if (S.free) spinLid(f); // 10/24 10:4x 몸통 뚜껑: 놓은 칼끝이 몸통 위 끝을 넘어 오르지 않게
   // 재기 (읽기만): 칼끝 빠르기
   if (f.armed) {
     const tv = f.tipVel.length();

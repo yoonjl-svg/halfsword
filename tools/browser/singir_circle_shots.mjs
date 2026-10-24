@@ -7,6 +7,7 @@
 //  실행 (저장소 뿌리에서): npx vite --port 5417 --strictPort &
 //        node tools/browser/singir_circle_shots.mjs http://127.0.0.1:5417 [그림 폴더 (기본 docs/handoff/singir_2026-10-24)]
 //        WEAPON=flamberge · FOE=isolde · GAP=0.3 · MODE=circle|direct · DIR=ccw|cw · Q=주소에 더할 것 · NAME=그림 이름 · NOSHOT=1
+//        (10/24 10:4x 더함) A0=원 시작 각°(0 = 원의 오른쪽 끝에서 · iberian_spin_circle.mjs a0 와 같은 뜻) · NOSWIPE=1(① 곧은 끌기 건너뜀) · SCALE=2(기기 픽셀 배) · 칼 가장 높은 점 − 가슴 최대를 적음
 //  끝 코드 0 = 확인 모두 맞음 · 콘솔 에러 0
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -21,11 +22,13 @@ const SENSE = process.env.DIR === 'cw' ? -1 : 1;
 const CIRCLE = +(process.env.CIRCLE ?? 400);
 const DUR = +(process.env.DUR ?? 0.8);
 const RPX = +(process.env.RPX ?? 60);
+const A0 = +(process.env.A0 ?? 0); // 원 시작 각 (°) — 손가락이 원의 이 각 자리에서 닿는다
+const NOSWIPE = process.env.NOSWIPE === '1';
 const NOSHOT = process.env.NOSHOT === '1';
 const NAME = process.env.NAME || `${MODE}_${WEAPON}`;
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
-const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, deviceScaleFactor: 1 });
+const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, deviceScaleFactor: +(process.env.SCALE ?? 1) });
 await ctx.addInitScript(() => {
   const raf = window.requestAnimationFrame.bind(window);
   const pn = performance.now.bind(performance);
@@ -60,7 +63,9 @@ const info0 = await page.evaluate(() => {
     step0(dt);
     const S = p.ibSpin;
     const pp = p.bodies.pelvis.translation(), hd = p.bodies.head.translation();
-    rec.push({ t: g.stats.simTime, open: W.open?.ctx?.ev ?? null, armed: !!W.spinArm?.armed, sec: p.skill.sec?.stage ?? null, spin: !!S, settle: !!S?.settle, q: S ? S.q : null, dir: S ? S.dir : null, swing: !!p.skill.swinging, x: pp.x, z: pp.z, tilt: (Math.atan2(Math.hypot(hd.x - pp.x, hd.z - pp.z), hd.y - pp.y) * 180) / Math.PI });
+    let top = p.sword.translation().y;
+    for (const u of [0, 0.25, 0.5, 0.75, 1]) top = Math.max(top, p.bladePoint(u).y);
+    rec.push({ top: top - p.bodies.chest.translation().y, t: g.stats.simTime, open: W.open?.ctx?.ev ?? null, armed: !!W.spinArm?.armed, sec: p.skill.sec?.stage ?? null, spin: !!S, settle: !!S?.settle, q: S ? S.q : null, dir: S ? S.dir : null, swing: !!p.skill.swinging, x: pp.x, z: pp.z, tilt: (Math.atan2(Math.hypot(hd.x - pp.x, hd.z - pp.z), hd.y - pp.y) * 180) / Math.PI });
   };
   return { S: W.S?.name, input: g.config.SECRET.ibSpin.input, share: g.config.SECRET.ibSpin.share, upright: g.config.SECRET.ibSpin.upright, reach: p.swordArt.measure.reach, side: p.side };
 });
@@ -92,7 +97,7 @@ let fire0 = null;
 const shoot = async (k, label) => {
   const s = await page.evaluate(() => { const r = window.__rec[window.__rec.length - 1]; return r; });
   const mv = fire0 ? Math.hypot(s.x - fire0.x, s.z - fire0.z) : 0;
-  shots.push({ k, label, q: s.q, sec: s.sec, tilt: s.tilt, mv });
+  shots.push({ k, label, q: s.q, sec: s.sec, tilt: s.tilt, mv, top: s.top });
   console.log(`SHOT ${k} ${label} · 단계 ${s.sec} · 진행 ${s.q?.toFixed(2) ?? '-'} · 기울기 ${s.tilt.toFixed(0)}° · 골반 옮김 ${mv.toFixed(2)} m`);
   if (NOSHOT) return;
   const k0 = await page.evaluate(() => { const k = window.__timeK; window.__timeK = 0.003; return k; });
@@ -129,7 +134,7 @@ dr.text((6, 3), meta['title'], fill=(255, 214, 90))
 for i, (im, s) in enumerate(zip(ims, meta['shots'])):
     x = i * cw
     out.paste(im.resize((cw, ch)), (x, 40))
-    dr.text((x + 6, 20), f"{s['label']}  tilt {s['tilt']:.0f} deg  pelvis {s['mv']:.2f} m", fill=(255, 255, 255))
+    dr.text((x + 6, 20), f"{s['label']}  blade top {s['top']:+.2f} m over chest  tilt {s['tilt']:.0f} deg", fill=(255, 255, 255))
 out.save(f"{d}/{name}.webp", quality=80, method=6)
 `;
   execFileSync('python3', ['-c', py, dir, name]);
@@ -145,7 +150,7 @@ const touch = (type, x, y, id = 71) => page.evaluate(([type, x, y, id]) => {
 const gt = () => page.evaluate(() => performance.now());
 const K = +(process.env.DRAW_K ?? 0.1); // 그리는 동안 화면 시계 배 (소프트웨어 GL — 늦출수록 게임 시간에 표본이 촘촘)
 
-if (MODE === 'circle') {
+if (MODE === 'circle' && !NOSWIPE) {
   // ① 무장 동안 곧은 끌기 → 보통 베기 · 싱지르 안 나감 · 획이 끝난 뒤 무장 풀림
   await waitArm();
   const n0 = await page.evaluate(() => window.__rec.length);
@@ -172,7 +177,7 @@ const nA = await page.evaluate(() => window.__rec.length);
 if (MODE === 'circle') {
   await page.evaluate((K) => (window.__timeK = K), K);
   const cx = 640, cy = 200;
-  const at = (a) => [cx + RPX * Math.cos((a * Math.PI) / 180), cy - RPX * Math.sin((a * Math.PI) / 180)];
+  const at = (a) => [cx + RPX * Math.cos(((a + A0) * Math.PI) / 180), cy - RPX * Math.sin(((a + A0) * Math.PI) / 180)];
   await touch('pointerdown', ...at(0));
   const t0 = await gt();
   for (;;) {
@@ -192,8 +197,10 @@ if (fired) {
   await page.evaluate(() => (window.__timeK = 0.08));
   await page.waitForFunction(() => { const S = window.game.player.ibSpin; return !S || S.q >= 0.5; }, null, { timeout: 120000, polling: 'raf' });
   await shoot(1, 'spin 1/2');
+  await page.waitForFunction(() => { const S = window.game.player.ibSpin; return !S || S.settle || S.q >= 0.9; }, null, { timeout: 120000, polling: 'raf' });
+  await shoot(2, 'spin 0.9 (released)');
   await page.waitForFunction(() => { const S = window.game.player.ibSpin; return !S || S.settle || S.q >= 1; }, null, { timeout: 120000, polling: 'raf' });
-  await shoot(2, 'turn end');
+  await shoot(4, 'turn end');
   await page.waitForFunction(() => !window.game.player.ibSpin, null, { timeout: 120000, polling: 'raf' });
   const tE = await page.evaluate(() => window.game.stats.simTime);
   await page.waitForFunction((t) => window.game.stats.simTime >= t + 0.6, tE, { timeout: 120000, polling: 'raf' });
@@ -208,13 +215,15 @@ if (fired) {
   res.spinT = sp.length ? +(sp[sp.length - 1].t - sp[0].t).toFixed(2) : 0;
   console.log(`  대본 스텝 ${res.spinSteps} · 진행 최고 ${res.qMax.toFixed(2)} · 대본 시간 ${res.spinT} s`);
   res.tiltMax = Math.max(...r.filter((x) => x.sec).map((x) => x.tilt));
+  res.topSpin = Math.max(...sp.map((x) => x.top)); // 대본(돌기 · 받아 멈춤) 동안 칼 가장 높은 점 − 가슴 (m)
+  res.topSec = Math.max(...r.filter((x) => x.sec).map((x) => x.top)); // 낸 때 ~ 굳음 끝
   const last = r.filter((x) => x.sec).pop();
   res.move = last ? Math.hypot(last.x - fire0.x, last.z - fire0.z) : null;
   strip(NAME, `${WEAPON} · ${MODE} · share ${info0.share} · upright ${info0.upright}`);
 }
 checks.spin = res;
-console.log(`② 싱지르: 나감 ${res.fired} · 도는 쪽 ${res.dir} (바란 쪽 ${MODE === 'circle' ? SENSE : '칼 든 쪽'}) · 몸 기울기 최대 ${res.tiltMax?.toFixed(0)}° · 골반 옮김 ${res.move?.toFixed(2)} m`);
+console.log(`② 싱지르: 나감 ${res.fired} · 도는 쪽 ${res.dir} (바란 쪽 ${MODE === 'circle' ? SENSE : '칼 든 쪽'}) · 몸 기울기 최대 ${res.tiltMax?.toFixed(0)}° · 골반 옮김 ${res.move?.toFixed(2)} m · 칼 가장 높은 점 − 가슴 최대 대본 ${res.topSpin?.toFixed(2)} · 굳음까지 ${res.topSec?.toFixed(2)} m`);
 console.log(`콘솔 에러 ${errors.length}${errors.length ? ': ' + errors.slice(0, 5).join(' | ') : ''}`);
 await browser.close();
-const ok = errors.length === 0 && res.fired && (MODE !== 'circle' || (res.dir === SENSE && checks.swipe?.swing && !checks.swipe?.spin && checks.swipe?.disarmed));
+const ok = errors.length === 0 && res.fired && (MODE !== 'circle' || (res.dir === SENSE && (NOSWIPE || (checks.swipe?.swing && !checks.swipe?.spin && checks.swipe?.disarmed))));
 process.exit(ok ? 0 : 1);

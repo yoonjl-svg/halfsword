@@ -228,3 +228,116 @@ test('AI 싱지르 (10/24): 롤랑(이베리아 숙련도 6)이 칼끝 거리 �
   assert.equal(G.ai.stats.secrets.ibSpin.fired, 1);
   G.world.free();
 });
+
+// ── 10/24 10:4x 사장님 '싱지르 개편 뒤에 또 허공 위로 날아가는 싱지르가 많아졌어. 몸통을 겨누기로 했었는데' · '작게 그으면 … 나가다 말고 좀 이상한 작은 동작이 되어 실패' (§16) ──
+const withSpin = async (vals, fn) => {
+  const old = {};
+  for (const k of Object.keys(vals)) {
+    old[k] = SECRET.ibSpin[k];
+    SECRET.ibSpin[k] = vals[k];
+  }
+  try {
+    return await fn();
+  } finally {
+    Object.assign(SECRET.ibSpin, old);
+  }
+};
+const HEAD = 0.45; // 시험 눈금 — 칼 가장 높은 점이 가슴 점 + 0.45 m(머리 꼭대기 언저리)를 넘으면 '허공' (판 값 아님)
+const spinTop = (r) => Math.max(...['ramp', 'wind', 'free', 'settle', 'follow'].filter((p) => r.ph[p].n).map((p) => r.ph[p].top));
+
+test('손 목표 쉼 자리 (10/24 handRest): 사람이 싱지르를 내면 손 목표 = 유파 쉴 자세 · 이어 베기 · 손 빠르기 0', () => {
+  assert.equal(SECRET.ibSpin.handRest, 1);
+  const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 8, walls: false });
+  const P = G.player, E = G.enemy;
+  setup(P);
+  G.ai.update = () => E.move.set(0, 0);
+  const W = new PlayerSecretWatch(P, E, { locked: false });
+  G.before = () => W.update(DT, !!P.skill.sec);
+  while (G.t < 2.6) G.step();
+  P.handOffset.set(-0.6, -0.17); // 큰 원이 끝난 자리 (손 닿는 끝)
+  P.skill.follow.set(0.2, -0.1);
+  P.skill.vel.set(3, 1);
+  assert.ok(P.skill.secret({ S: W.S, ctx: { ev: 'spin', turnDir: 1 } }));
+  const pad = P.swordArt.restGuard.pad;
+  assert.deepEqual([P.handOffset.x, P.handOffset.y], [pad[0], pad[1]]);
+  assert.deepEqual([P.skill.aimRaw.x, P.skill.aimRaw.y], [pad[0], pad[1]]);
+  assert.equal(P.skill.follow.length(), 0);
+  assert.equal(P.skill.vel.length(), 0);
+  G.world.free();
+});
+
+test('몸통 뚜껑 (10/24 lid): 놓은 칼끝이 몸통 위 끝 쪽으로 오르는 빠르기를 남은 높이 × track 쪽으로 자름(칼날에 수직인 몫) · 끄면 그대로', async () => {
+  const { spinLid } = await import('../../src/iberian_spin.js');
+  const { ARM } = await import('../../src/config.js');
+  for (const lid of [1, 0]) {
+    await withSpin({ lid }, () => {
+      const G = newRound({ seed: 7, weapon: 'flamberge', weapon2: 'longsword', gap: 8, walls: false });
+      const P = G.player;
+      while (G.t < 1) G.step();
+      const tip = P.bladePoint(1);
+      const o = P.sword.translation();
+      const rx = tip.x - o.x, rz = tip.z - o.z;
+      const h = Math.hypot(rx, rz);
+      const k = 12 / h; // 칼끝을 위로 12 m/s 차 올리는 돌림 (칼날 수평 성분에 수직인 수평 축) + 세로 축 돌림 3 rad/s
+      P.sword.setAngvel({ x: (-rz / h) * k, y: 3, z: (rx / h) * k }, true);
+      const v0 = P.sword.velocityAtPoint(tip);
+      assert.ok(v0.y > 5, `차 올림 ${v0.y}`);
+      spinLid(P);
+      const v1 = P.sword.velocityAtPoint(tip);
+      const allow = SECRET.ibSpin.track * (P.bodies.chest.translation().y + ARM.shoulder[1] - tip.y);
+      if (lid) {
+        // 고침은 칼날에 수직인 몫만(칼 손 둘레 돌림) — 위아래 몫은 (1 − 칼 방향 세로 성분²) 만큼 (놓은 칼은 거의 수평이라 거의 다)
+        const ry = tip.y - o.y;
+        const keep = (rx * rx + rz * rz) / (rx * rx + rz * rz + ry * ry);
+        assert.ok(v1.y <= v0.y + (allow - v0.y) * keep + 1e-6, `칼끝 위 빠르기 ${v1.y} (전 ${v0.y} · 허용 ${allow} · 몫 ${keep.toFixed(2)})`);
+        assert.ok(v1.y < v0.y - 0.5 * (v0.y - allow) * keep, '위 빠르기가 줄었다');
+      } else assert.ok(Math.abs(v1.y - v0.y) < 1e-9, '끄면 그대로');
+      G.world.free();
+    });
+  }
+});
+
+test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 원 셋 — 고친 판은 한 바퀴 다 돌고 칼 가장 높은 점 ≤ 가슴 + 0.45 m · 고침을 끄면 솟음', async () => {
+  const { runCircle } = await import('./iberian_spin_circle.mjs');
+  const cases = [
+    ['zweihander', 'langort', { r: 80, T: 0.8, a0: 180, dir: 'ccw', close: 380 }],
+    ['flamberge', 'tag', { r: 80, T: 0.8, a0: 180, dir: 'ccw', close: 380 }],
+    ['tizona', 'wechselR', { r: 80, T: 0.8, a0: 180, dir: 'ccw', close: 380 }],
+  ];
+  let highOff = 0;
+  for (const [w, s, c] of cases) {
+    const r = runCircle(w, s, 'circle', c);
+    assert.ok(r.fired, `${w} ${s} 냄`);
+    assert.equal(r.why, 'done', `${w} ${s} 한 바퀴`);
+    assert.ok(!r.fell, `${w} ${s} 넘어짐`);
+    assert.ok(spinTop(r) <= HEAD, `${w} ${s} 칼 가장 높은 점 − 가슴 ${spinTop(r).toFixed(2)}`);
+    const b = await withSpin({ handRest: 0, lid: 0, floor: 0 }, () => runCircle(w, s, 'circle', c));
+    if (spinTop(b) > HEAD) highOff++;
+  }
+  assert.ok(highOff >= 2, `고침을 끈 판 솟음 ${highOff} / 3`);
+});
+
+test('땅은 막힘 아님 (10/24 floor): 원을 아래에서 끝내 감기 첫 스텝에 칼끝이 땅을 스친 판 — 고친 판은 한 바퀴 · 끄면 막힘(진행 ≈ 0)', async () => {
+  const { runCircle } = await import('./iberian_spin_circle.mjs');
+  const c = { r: 50, T: 0.8, a0: 0, dir: 'ccw', close: 380 };
+  const r = runCircle('zweihander', 'langort', 'circle', c);
+  assert.equal(r.why, 'done');
+  assert.equal(r.q, 1);
+  const b = await withSpin({ floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c));
+  assert.equal(b.why, 'blocked');
+  assert.ok(b.q < 0.05, `진행 ${b.q}`);
+});
+
+test('작은 원 (10/24 circleR 0): 반지름 8 · 15 px 원도 싱지르가 한 바퀴 다 돌고 몸통 높이 · 하한 0.15 m 판은 원으로 안 읽힘', async () => {
+  const { runCircle } = await import('./iberian_spin_circle.mjs');
+  assert.equal(SECRET.ibSpin.circleR, 0);
+  for (const [s, rp] of [['langort', 8], ['wechselR', 15]]) {
+    const c = { r: rp, T: 0.5, a0: 90, dir: 'cw', close: 380 };
+    const r = runCircle('flamberge', s, 'circle', c);
+    assert.ok(r.fired && r.circle, `${s} ${rp}px 냄`);
+    assert.equal(r.why, 'done');
+    assert.ok(spinTop(r) <= HEAD, `${s} ${rp}px 높이 ${spinTop(r)}`);
+    const b = await withSpin({ circleR: 0.15 }, () => runCircle('flamberge', s, 'circle', c));
+    assert.ok(!b.fired && !b.circle, `${s} ${rp}px 하한 0.15 → 안 읽힘`);
+  }
+});
