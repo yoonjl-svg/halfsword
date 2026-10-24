@@ -13,6 +13,9 @@ const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const ids = process.argv.slice(3);
 const outDir = new URL('../../public/ui/weapons/', import.meta.url);
 fs.mkdirSync(outDir, { recursive: true });
+// 확정 그림을 쓰는 무기 — 모델을 다시 찍어도 덮어쓰지 않고 마스터를 그대로 복사한다 (샛별 저장소 537a7bd8 의 같은 예외를 옮김)
+//  드루이드의 채찍 = 처음 만든 넓은 원형 그림 (사장님 10/24 확정 · art/druid-whip-thumb-20261024/manifest.json)
+const KEEP = { druid_whip: '../../art/druid-whip-thumb-20261024/game.webp' };
 
 const browser = await chromium.launch({
   executablePath: process.env.PW_CHROMIUM || undefined,
@@ -26,6 +29,11 @@ await page.goto(`${base}/tools/browser/weapon_thumbs.html${ids.length ? '?ids=' 
 await page.waitForFunction(() => window.thumbs?.done, null, { timeout: 180000 });
 const list = await page.evaluate(() => window.thumbs.list);
 for (const { id, url } of list) {
+  if (KEEP[id]) {
+    fs.copyFileSync(new URL(KEEP[id], import.meta.url), new URL(`${id}.webp`, outDir));
+    console.log(`${id.padEnd(18)} 확정 그림 그대로 (${KEEP[id].slice(6)})`);
+    continue;
+  }
   if (!url.startsWith('data:image/webp')) throw new Error(`${id}: webp 로 저장되지 않았다 (${url.slice(0, 30)})`);
   const buf = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
   fs.writeFileSync(new URL(`${id}.webp`, outDir), buf);

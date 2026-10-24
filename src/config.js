@@ -1369,6 +1369,12 @@ export const SOUND = {
   stageHitGap: 10,
   // 칼이 몸을 칠 때의 소리 (31·33차 후보, 사장님 "전자 파리채로 모기 잡는 소리 같아"): 'legacy' 지금 / 'synth' 날 선 칼 합성 / 'rec' 날 선 칼 녹음 / 'samsho' 대전 게임식 2.
   // 사장님이 고르시기 전까지 'legacy' (게임 소리 그대로). sounds.html "칼→몸 소리 후보" 에서 비교
+  // 드루이드의 채찍 살 · 옷 맞음 소리 (10/24 사장님 'c2로 할게' · 샛별 저장소 3912e1ec — src/sound.js whip · src/whip_sound.js · docs/import/bernardo_whip_import_2026-10-24.md)
+  //  'c2' = SciFiSounds 'Whip Crack'(freesound 529925 · CC0)의 딱 부분(public/sfx/whip/lash1.mp3) · 'old' = 10/23 AntumDeluge Thwack (주소 ?whipHit=old)
+  whipHit: 'c2',
+  whipLashGain: 1, // C2 맞음 녹음 한 겹 음량 (event 음량은 칼 둔타와 같은 눈금 그대로 · 파일 최고 −1 dBFS 는 다른 채찍 녹음과 같음) — 확인표 2443 · 사장님 확인 전
+  whipLashGap: 0.2, // s: C2 맞음 뒤 이 시간 안의 끝 '딱' · 다른 C2 맞음은 내지 않음 (한 맞음이 두 번 터지지 않게) — 확인표 2444 · 사장님 확인 전
+  whipFlam: 0.06, // s: 끝 '딱' 뒤 이 시간 안의 C2 맞음은 내지 않음 (거의 같은 때 — 이미 난 '딱'이 대신) — 확인표 2444 · 사장님 확인 전
   fleshHit: 'drawn', // 10/7 사장님 지시로 샛별 일반판의 사용자 선택을 그대로: 'drawn' = A2 단축 약베기(.26 s)/B2 단축 강베기(.35 s, 112 J 경계), 찌르기는 samsho 유지 (샛별 7cbac07, 사용자 선택 10/2·'15 % 크게' 10/3). 'samsho' = 10/1 21:10 사장님 선택(35차 강베기)이던 전 기본값, sounds.html 에 그대로
 };
 

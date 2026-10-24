@@ -190,5 +190,19 @@
   "fadeOut": 0.05,
   "gainDb": 0.7,
   "sha256": "078d8e07c85e8a31acb27fd40a672680acbeb180f9321ce0e10ee3e26b630f71"
+ },
+ "lash1": {
+  "src": "c2/C2-hq-preview.mp3",
+  "srcSha256": "5273b7064ed9da3807f97d48e7d6e806097fef816b797c363567e780a19546e7",
+  "approvedSingleSha256": "ebff24d3fdd3e4c318c4878f650a2df5e75b22ed20ded077068b8afde81e47d0",
+  "mono": "L+R average",
+  "start": 0.21,
+  "dur": 0.3,
+  "hp": 80,
+  "lp": 12000,
+  "fadeIn": 0.001,
+  "fadeOut": 0.08,
+  "gainDb": 3.0,
+  "sha256": "deeeb2d8ce671525c3c83367c0e2d2b2e9aad039de7708e165d04831451e0f25"
  }
 }

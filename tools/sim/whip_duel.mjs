@@ -13,6 +13,7 @@
 //   (채찍) 판마다 덩굴 닿음 빠르기도 셈: 닿음 수 cN · 30 m/s 넘음 c30 · 문턱에 버려짐 cDrop · 가장 빠른 닿음 cMax · 30 넘어 난 판정 J fastJ · 그 마디 fastSeg · 마디 최고 빠르기 segVmax · 기력 평균 stam · 지친 시간 exhaustT
 //   상대는 인물 시트 모두(손님 인물 롤랑 · 베르나르도 · 백린 포함 — CHARACTERS_BY_ID · 10/24) · 시트에 버티는 힘(vitality)이 있으면 상대 몸에 그대로
 //   (10/24) 획마다 손맛도 셈: 긋기 시작(감기 · 멈춤 뒤) → 칼끝(몸통 기준) 가장 빠른 때 swingT · 그 빠르기 tipV · 손가락을 뗀 뒤 칼끝이 몸통 기준 3 m/s 아래로 0.1 s 머물기까지 recT(회수) · 판정 하나의 J 평균
+//                                [--sound]  (10/24) 채찍 소리 때: 게임과 같은 휙 · 딱 걸쇠(src/whip_sound.js whipTipStep)를 화면마다(물리 2 스텝 = 60 fps) 돌려 딱이 난 때와 채찍 맞음(판정 5 J 넘음 · 살 · 옷 / 투구 · 판금) 때를 적고 맞음마다 가장 가까운 딱까지 시간을 셈 — 맞음 소리와 딱이 겹치나 (docs/import/bernardo_whip_import_2026-10-24.md)
 //                                [--diag]  획 진단: 몸 닿음 · 칼만 · 둘 다 아님 갈래마다 시작 거리 · 덩굴 끝이 상대 쪽으로 간 거리 · 상대 몸통 · 머리와 가장 가까움 · 상대가 서 있던 획 몫
 //   무기 뒤 ':k' = 채찍 무릎 꿇리기 켬(WHIP_KNEEL.p 판 값) · 없으면 끔(p 0 — 꿇리기 전) · ':ai' = 플레이어 자리도 AI 가 채찍(AI 스위치 WHIP_KNEEL.ai 켬) · ':ai0' = 같은 AI 채찍 · 스위치 끔(견줌)
 //  판마다: 판정 수(strike 가 낸 맞음) · 가장 큰 한 맞음 J(maxJ · 머리 · 목 maxHeadJ) · 판정 J 합(머리 · 목 따로 — 둔기는 심각도 대신 J · 넘어짐 · 의식으로 친다) · 상대 넘어짐(down) · 의식 잃은 몫 · 상처 맞힘(심각도 > 0) · 준 심각도 · 받은 심각도 · 이김(상대 죽음 — 부활 뒤 마지막) / 짐 / 시간 끝 · 이긴 때 · 휘두른 획 · 막힌 획(칼끼리 닿고 못 맞힘) ·
@@ -28,6 +29,7 @@ import { PlayerParryGuard } from '../../src/parry_button.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { WHIP, setWhipPreset } from '../../src/druid_whip.js';
 import { MEASURED } from '../../src/weapon_measured.js';
+import { whipTipStep, whipCrackGate } from '../../src/whip_sound.js';
 
 const args = {};
 for (const a of process.argv.slice(2)) {
@@ -38,8 +40,9 @@ for (const a of process.argv.slice(2)) {
 const arg = (k, d) => (args[k] === undefined ? d : args[k]);
 const list = (k, d) => String(arg(k, d)).split(',').filter(Boolean);
 const range = (s) => String(s).split(',').flatMap((p) => { const m = p.match(/^(\d+)-(\d+)$/); return m ? Array.from({ length: +m[2] - +m[1] + 1 }, (_, i) => +m[1] + i) : [+p]; });
-const { SKILL, STRIKE, WHIP_KNEEL } = CONFIG;
+const { SKILL, STRIKE, WHIP_KNEEL, SOUND } = CONFIG;
 const BY = CHARACTERS_BY_ID; // 손님 인물(롤랑 · 베르나르도 · 백린) · 변형도 (10/24 — 전 CHARACTERS 만 · 그 인물들 값은 같음)
+const SND = !!args.sound; // --sound (10/24): 맞음 소리 · 딱 때 (아래)
 const STAND = String(arg('stand', 'reach')), DIAG = !!args.diag, tipV = new THREE.Vector3(); // --diag : 획 진단 (아래)
 const WHIP_OVR = args.whip ? JSON.parse(args.whip) : null, MB = args.mBlunt != null ? +args.mBlunt : null;
 // --measure=c,r,cl,cut : 이 실행에서만 채찍 간격표(weapon_measured.js MEASURED.druid_whip — 맞닿음 · 한 걸음 · 너무 붙음 · 베는 시간) 바꿈 (덩굴 길이를 바꾼 판은 그 판으로 잰 간격을 넣어 견준다)
@@ -52,6 +55,13 @@ const P0 = WHIP_KNEEL.p, PK = args.kneelP != null ? +args.kneelP : P0; // --knee
 const CUTS = TECH.filter((t) => t.kind === 'cut');
 const FRAME = 2 * DT;
 
+// --sound: 게임의 겹침 막기(whipCrackGate · SOUND.whipLashGap · whipFlam)를 판 시계로 다시 돌려 낸 · 막힌 수 [C2 맞음 낸, 막힌, 끝 딱 낸, 막힌] (멈칫 시간은 셈 밖)
+function gateCount(SD) {
+  const ev = [...SD.crack.map((t) => [t, 'crack']), ...SD.hit.filter((h) => !h[1]).map((h) => [h[0], 'lash'])].sort((a, b) => a[0] - b[0] || (a[1] === 'lash' ? -1 : 1));
+  const G = {}, n = [0, 0, 0, 0];
+  for (const [t, k] of ev) n[(k === 'lash' ? 0 : 2) + (whipCrackGate(G, k, t, SOUND) ? 0 : 1)]++;
+  return n;
+}
 function duel(wSpec, oppId, seed, dur) {
   const [w, mode] = wSpec.split(':');
   WHIP_KNEEL.p = mode === 'k' || mode === 'ai' || mode === 'ai0' ? PK : 0;
@@ -113,6 +123,8 @@ function duel(wSpec, oppId, seed, dur) {
   };
   let endT = null, nk = 0, sits = 0, wrapT = 0, wrapOn = -1, prevE = E.state;
   const eps = [], segT = Array(8).fill(0), X = P.flexWeapon;
+  const SD = SND && X ? { W: {}, crack: [], swish: 0, hit: [], k: 0 } : null; // --sound: 딱 때 · 휙 수 · 맞음 [때, 갑옷, J]
+  if (SD) G.onWound = (att, vic, r) => { if (att === P && r.energy >= 5) SD.hit.push([G.t, !!(r.helmet || r.plate), r.energy]); };
   // 덩굴 닿음 빠르기 (combat.analyze 를 감싸 잼 — 판정은 그대로): 닿음 수 · 30 m/s 넘음(칼 문턱) · 문턱에 버려짐 · 가장 빠른 닿음 · 30 넘게 닿아 판정이 난 J · 그 마디
   const CS = { n: 0, o30: 0, drop: 0, max: 0, fastJ: [], fastSeg: Array(8).fill(0) }, A0 = G.combat.analyze.bind(G.combat), vA = new THREE.Vector3(), vB = new THREE.Vector3();
   if (X) G.combat.analyze = (pr, point, S, Pp, predicting = false) => {
@@ -133,6 +145,7 @@ function duel(wSpec, oppId, seed, dur) {
   const touches = (col, want) => { let hit = false; G.world.contactPairsWith(col, (c) => { if (hit) return; const info = G.combat.info?.get?.(c.handle) ?? P.colliderInfo.get(c.handle); if (info?.fighter === E && want(info)) G.world.contactPair(col, c, (m) => { if (m.numSolverContacts() > 0) hit = true; }); }); return hit; };
   while (G.t < dur && P.alive && E.alive) {
     G.step();
+    if (SD && (++SD.k & 1) === 0) for (const [kind] of whipTipStep(SD.W, P.armed ? P.tipVel.length() : 0)) { if (kind === 'crack') SD.crack.push(G.t); else SD.swish++; }
     { P.bladePoint(1, tipNow); const cv = P.bodies.chest.linvel(), tv = Math.hypot((tipNow.x - tipPrev.x) / DT - cv.x, (tipNow.y - tipPrev.y) / DT - cv.y, (tipNow.z - tipPrev.z) / DT - cv.z); tipPrev.copy(tipNow);
       for (const st of strokes) if (st.cutAt != null && st.recT == null) {
         if (G.t >= st.cutAt && G.t <= st.cutAt + 0.8 && tv > (st.tipV ?? 0)) { st.tipV = tv; st.swingT = G.t - st.cutAt; }
@@ -189,6 +202,7 @@ function duel(wSpec, oppId, seed, dur) {
     stam: +(stamSum / Math.max(1, stamN)).toFixed(1), exhaustT: +exhaustT.toFixed(1),
     ...(X ? { cN: CS.n, c30: CS.o30, cDrop: CS.drop, cMax: +CS.max.toFixed(1), fastJ: CS.fastJ.map((x) => Math.round(x)), fastSeg: CS.fastSeg, segVmax: +segVmax.toFixed(1) } : {}),
     ...(diag ? { diag } : {}),
+    ...(SD ? { snd: { swish: SD.swish, crack: SD.crack.length, gate: gateCount(SD), hit: SD.hit.map(([t, a, e]) => { const d = SD.crack.map((c) => c - t).sort((x, y) => Math.abs(x) - Math.abs(y))[0]; return [+t.toFixed(3), a ? 1 : 0, Math.round(e), d == null ? null : +d.toFixed(4)]; }) } } : {}),
     ...(X ? { wrapT: +wrapT.toFixed(2), wrapEp: eps.length, wrapLong: eps.filter((e) => e >= 0.3).length, wrapMed: eps.length ? +[...eps].sort((a, b) => a - b)[eps.length >> 1].toFixed(2) : 0, segT: segT.map((x) => +x.toFixed(2)), bodyN: strokes.filter((st) => st.body).length, bladeN: strokes.filter((st) => st.blade).length } : {}),
   };
   G.world.free();
@@ -239,6 +253,18 @@ if (DIAG) { // 획 진단 묶음: 몸 닿음 · 칼만 · 둘 다 아님 — 몫
     for (const k of ['body', 'blade', 'none']) { const E = D.filter((x) => x.k === k); console.log(`| ${w}${LABEL} | ${k} | ${(100 * E.length / Math.max(1, D.length)).toFixed(0)} % | ${(100 * E.filter((x) => x.tap).length / Math.max(1, E.length)).toFixed(0)} % | ${med(E.map((x) => x.d0))} | ${med(E.map((x) => x.reach))} | ${med(E.map((x) => x.dmin))} |`); }
     const U = D.filter((x) => x.up), N = D.filter((x) => !x.up); // 상대가 서 있을 때 시작한 획 · 아닌 획(꿇음 · 넘어짐 · 일어나는 중)
     console.log(`| ${w}${LABEL} | 상대 서 있음 · 아님 | ${(100 * U.length / Math.max(1, D.length)).toFixed(0)} % · ${(100 * N.length / Math.max(1, D.length)).toFixed(0)} % | 몸 닿음 ${(100 * U.filter((x) => x.k === 'body').length / Math.max(1, U.length)).toFixed(0)} % · ${(100 * N.filter((x) => x.k === 'body').length / Math.max(1, N.length)).toFixed(0)} % | | | |`);
+  }
+}
+if (SND) { // 맞음마다 가장 가까운 딱까지 (딱 − 맞음 s): 같은 화면(±1/60 s) · 맞음 뒤 · 맞음 앞 · 0.3 s 안에 없음 — 살 · 옷 / 투구 · 판금 따로
+  console.log('\n| 무기 | 판 | 휙 / 판 | 딱 / 판 | 맞음 갈래 | 맞음 수 | 같은 화면 ±1/60 s | 뒤 0.017 ~ 0.1 | 뒤 0.1 ~ 0.3 | 앞 0.017 ~ 0.1 | 앞 0.1 ~ 0.3 | 0.3 s 안에 딱 없음 |\n|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const w of W) {
+    const R = rows.filter((r) => r.w === w && r.snd); if (!R.length) continue;
+    for (const [lab, a] of [['살 · 옷', 0], ['투구 · 판금', 1]]) {
+      const H = R.flatMap((r) => r.snd.hit).filter((h) => h[1] === a), n = H.length || 1, c = (f) => `${H.filter((h) => f(h[3])).length} (${Math.round(100 * H.filter((h) => f(h[3])).length / n)} %)`;
+      const F = 1 / 60 + 1e-6, near = (d) => d != null && Math.abs(d) <= 0.3;
+      if (a) { const g = R.reduce((s, r) => s.map((x, i) => x + r.snd.gate[i]), [0, 0, 0, 0]); console.log(`| ${w}${LABEL} | ${R.length} | 겹침 막기(${SOUND.whipLashGap} · ${SOUND.whipFlam} s) | | C2 맞음 낸 ${g[0]} · 막힌 ${g[1]} | 끝 딱 낸 ${g[2]} · 막힌 ${g[3]} | | | | | | |`); }
+      console.log(`| ${w}${LABEL} | ${R.length} | ${(R.reduce((s, r) => s + r.snd.swish, 0) / R.length).toFixed(1)} | ${(R.reduce((s, r) => s + r.snd.crack, 0) / R.length).toFixed(1)} | ${lab} | ${H.length} | ${c((d) => near(d) && Math.abs(d) <= F)} | ${c((d) => near(d) && d > F && d <= 0.1)} | ${c((d) => near(d) && d > 0.1)} | ${c((d) => near(d) && d < -F && d >= -0.1)} | ${c((d) => near(d) && d < -0.1)} | ${c((d) => !near(d))} |`);
+    }
   }
 }
 if (args.json) writeFileSync(args.json, JSON.stringify(rows));

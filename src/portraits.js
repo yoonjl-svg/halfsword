@@ -15,7 +15,8 @@ const BASE_IDS = ['player', 'bran', 'isolde', 'artoria', 'chanda', 'eira', 'hein
 const ALTER_IDS = ['heinrich_mad', 'eira_mad', 'liao_mad', 'margarethe_mad', 'isolde_mad', 'tome_mad', 'omari_mad', 'bran_mad', 'minami_mad', 'ratna_mad', 'chanda_mad', 'renji_mad', 'terracotta_mad', 'silver_wanderer_mad', 'samira_mad', 'artoria_mad'];
 // 손님 인물 셋(롤랑 · 백린의 전사 · 베르나르도 — 방랑 전용): 사장님 10/24 "샛별이가 프로필 사진 보냈대. 모두 적용해." → 샛별 저장소 손그림 확정본
 //  (같은 22 × 22 칸 · 액자 1 · 투명 바탕 · 마스터 art/hero-profiles-20261024/<id>/low.png → tools/ui/portraits_px_build.py · docs/import/hero_profiles_import_2026-10-24.md).
-//  베르나르도 그림은 받은 그대로 v1 복식(먹빛 갑옷 · 황토빛 망토) — 지금 모델 v2 와 다르다. 예비 판(hd · low)에는 없어서 기본 판 그림을 쓴다(portraitSrc)
+//  베르나르도 그림 = 10/24 복식 수정본(샛별 저장소 100a5971 — 흰 금테 겉옷 · 금관 쓴 검은 사자 · 금빛 망토 · 얼굴 그대로)으로 지금 모델 v2 와 같은 옷
+//  (전 판은 v1 복식 — docs/import/bernardo_whip_import_2026-10-24.md). 예비 판(hd · low)에는 없어서 기본 판 그림을 쓴다(portraitSrc)
 const GUEST_IDS = ['roland', 'white_scale', 'bernardo'];
 /** 손님 인물 그림 id (위) */
 export const GUEST_PORTRAIT_IDS = Object.freeze([...GUEST_IDS]);

@@ -341,3 +341,14 @@ Exact ranges, filters, gains and SHA-256 of every source and output: whip/proven
       whip/clash1.mp3 <- impactMetal_light_000.ogg 0.000+0.351 s, gain +0.7 dB (sha256 fd781533ea14f02c…)
       whip/clash2.mp3 <- impactMetal_light_001.ogg 0.000+0.252 s, gain +0.7 dB (sha256 c23bec83c5a71a51…)
       whip/clash3.mp3 <- impactMetal_light_002.ogg 0.000+0.236 s, gain +0.7 dB (sha256 078d8e07c85e8a31…)
+  CC0 1.0 (public domain) — SciFiSounds, "Whip Crack" (Whip Crack.m4a), added 2026-10-24 as the default whip hit
+  on flesh / cloth (the owner picked this recording, "C2"; received from the Saetbyeol repository, commit 3912e1ec):
+    https://freesound.org/people/SciFiSounds/sounds/529925/
+    https://creativecommons.org/publicdomain/zero/1.0/  (no attribution required; kept here for the record)
+    Source used: the site's public HQ preview MP3 (stereo; SHA-256 5273b7064ed9da3807f97d48e7d6e806097fef816b797c363567e780a19546e7),
+    not the uploaded M4A. The 0.534 s single the owner listened to (SHA-256 ebff24d3fdd3e4c3…) is the same audio
+    (mono, -6 dBFS). The recording is a swing whoosh followed by the crack at 0.212 s; only the crack is used so the
+    sound lands on the hit (the game already plays its own swing whoosh). L+R averaged to mono, 80 Hz high-pass,
+    12 kHz low-pass, 1 ms in / 80 ms out:
+      whip/lash1.mp3 <- C2-hq-preview.mp3 0.210+0.300 s, gain +3.0 dB (sha256 deeeb2d8ce671525…)
+    The earlier hit sounds whip/hit1-3.mp3 (Thwack) stay on disk; the URL switch ?whipHit=old plays them instead.
