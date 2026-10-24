@@ -26,12 +26,12 @@ test('실제 막기 버튼의 자세 이동은 비용 없음, 유지 중 회복 
  for(let i=0;i<120;i++){guard.step(DT);g.step();}near(p.stamina.spent.attack,0);near(p.stamina.spent.block,0);near(p.stamina.value,50);
  guard.held=false;for(let i=0;i<120;i++){guard.step(DT);g.step();}assert.ok(p.stamina.value>50);
 }));
-test('실제 탭 찌르기 한 번은7, 프레임 수와 관계없이 한 번',()=>game(g=>{
- g.ai.update=()=>{};g.step();assert.ok(g.player.skill.thrust());for(let i=0;i<120;i++)g.step();near(g.player.stamina.spent.attack,7);
+test('실제 탭 찌르기 한 번은10, 프레임 수와 관계없이 한 번',()=>game(g=>{
+ g.ai.update=()=>{};g.step();assert.ok(g.player.skill.thrust());for(let i=0;i<120;i++)g.step();near(g.player.stamina.spent.attack,10);
 }));
 test('AI 실제 공격은 기술당 한 번, 기력 부족 시 휴식 결심',()=>game(g=>{
  const a=g.ai;const t=a.school.techs?.[0]??a.school.techByName.zornhau;
- assert.ok(t);a.startAttack(t,'test',{noFeint:true});a.startStrike();near(g.enemy.stamina.spent.attack,t.kind==='thrust'?7:12);
+ assert.ok(t);a.startAttack(t,'test',{noFeint:true});a.startStrike();near(g.enemy.stamina.spent.attack,t.kind==='thrust'?10:12);
  g.enemy.stamina.value=5;a.mode='watch';a.update(DT);assert.ok(a.staminaRest);assert.equal(a.startAttack(t,'test'),false);
 }));
 test('탈진 중 이동·찌르기·막기·비기 예약 차단, 자연 회복 1.667초 뒤 −35 · 심한 지침으로 복귀 (옛 규칙 2.5초 뒤 0)',()=>{for(const natural of [true,false]){const was=STAMINA.exhaustNatural;STAMINA.exhaustNatural=natural;try{game(g=>{

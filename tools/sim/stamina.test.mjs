@@ -11,8 +11,8 @@ function actor(extra={}) {
 }
 const tick=(f,seconds,dt=1/120)=>{for(let t=0;t<seconds-1e-9;t+=dt)f.stamina.step(Math.min(dt,seconds-t));};
 const swing=(f,seconds,x,y=0)=>{f.skill.swinging=true;f.skill.vel.set(x,y);for(let t=0;t<seconds-1e-9;t+=1/120){const dt=Math.min(1/120,seconds-t);f.handOffset.x+=x*dt;f.handOffset.y+=y*dt;f.stamina.step(dt);}};
-test('공격은 한 번에 베기12/찌르기7, 막기3; 무게는 원래 질량으로 고정',()=>{
- const f=actor(); f.stamina.attack(); f.stamina.attack('thrust');near(f.stamina.value,81);
+test('공격은 한 번에 베기12/찌르기10, 막기3; 무게는 원래 질량으로 고정',()=>{
+ const f=actor(); f.stamina.attack(); f.stamina.attack('thrust');near(f.stamina.value,78);
  const w=actor({swordMass:2.9}); const k=Math.sqrt(2.9/1.6);near(w.stamina.weight,k);w.swordMass=.4;near(w.stamina.weight,k);w.stamina.attack();near(w.stamina.spent.attack,12*k);
 });
 test('무게 배율은 0.75~1.5',()=>{near(actor({swordMass:.1}).stamina.weight,.75);near(actor({swordMass:20}).stamina.weight,1.5);});

@@ -135,3 +135,8 @@ node tools/sim/thrust_stamina.mjs ai set=rapier S.recoverDelay=1.0 prof=2 seeds=
 node tools/sim/thrust_stamina.mjs bot thrust=10 seeds=3 gaps=0,0.6,1.0 opps=still,longsword   # §6
 ```
 전 판(200 판) 한 줄이 약 13 분 (4 코어에 네 줄을 나란히 돌린 때).
+
+## 9. 사장님 결정 (10/24 12:5x)
+
+"모든 찌르기 10으로" → `STAMINA.thrustCost` 7 → 10, 모든 유파 같이(확인표 2419). 이탈리아만 나누는 안은 쓰지 않았다. 옛 값은 `?thrustCost=7`.
+

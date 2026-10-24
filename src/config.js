@@ -23,9 +23,9 @@ export const STAMINA = {
   // 지친 배율(사장님 10/16 샛별 쪽 지시 '이동 −30 % · −60 %, 공격 −20 % · −40 %' → 10/17 본판 적용): 이동 × 0.7 · × 0.4 (전 0.7 · 0.5) · 공격 × 0.8 · × 0.6 (전 0.7 · 0.5)
   //  공격 배율의 뜻 = 공격 시작부터 첫 실제 접촉까지 시간이 1 ÷ 0.8 = 1.25 배 · 1 ÷ 0.6 = 1.667 배 (칼끝 최고 빠르기 시각이 아님) — 그 시간비를 맞추는 안쪽 계수가 아래 tempo* (재는 도구 tools/sim/stamina_contact_probe.mjs)
   moveTired: 0.7, moveSevere: 0.4, attackTired: 0.8, attackSevere: 0.6,
-  // 비용: 베기 12 · 찌르기 7 · 막아 받기 3(상대 공격 한 번에 한 번) — × 무게 · 비기 35 · 첫 걸음 박차기 12(우리 본판 gait.js fastBegin — 독일 뒤 · 이베리아 옆) — 무게 없음.
+  // 비용: 베기 12 · 찌르기 10(사장님 10/24 12:5x '모든 찌르기 10으로' — 전 7 · 이탈리아 거의 무한 공격 · docs/strike/thrust_stamina_2026-10-24.md) · 막아 받기 3(상대 공격 한 번에 한 번) — × 무게 · 비기 35 · 첫 걸음 박차기 12(우리 본판 gait.js fastBegin — 독일 뒤 · 이베리아 옆) — 무게 없음.
   //  shotCost: 권총 한 발 2 × 무게(샛별 저장소 첫 판부터 — 설계안에 없음, 사장님 확인 전)
-  cutCost: 12, thrustCost: 7, blockCost: 3, secretCost: 35, pushCost: 12, shotCost: 2,
+  cutCost: 12, thrustCost: 10, blockCost: 3, secretCost: 35, pushCost: 12, shotCost: 2,
   clinchPerSecond: 10, // 붙어 밀고 버티는 동안(밀치기 누르기 + 팔·칼 닿음) 두 몸 각각 초당 10 · 회복 멈춤(샛별 저장소 ba14a6f8 — 설계안에 없음, 사장님 확인 전)
   // 사람 긋기 청구(샛별 저장소 f933bc07): 끊김 0.12 s 넘으면 새 긋기(설계안은 고유 동작의 onsetQuiet 0.06) · 손이 0.06 m 넘게 움직여야 · 겨눔 가운데 0.22 m 를 가르는 긋기는 바로 확정
   strokeQuiet: 0.12, strokeTravel: 0.06, strokeCenter: 0.22,

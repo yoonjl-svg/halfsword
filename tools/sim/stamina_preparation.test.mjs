@@ -42,17 +42,17 @@ test('지친 물리 명령과 원래 손길 판정: 준비 비용0·12종 한 �
   for(const stage of [0,5])for(const tech of TECH){let reference;
    for(const fatigue of [0,1,2]){const g=setup(tech.from,stage,fatigue);try{
     for(const to of tech.path){const from=g.player.handOffset;g.move(to,Math.hypot(to[0]-from.x,to[1]-from.y)/3);}
-    g.hold();near(g.player.stamina.spent.attack,tech.kind==='thrust'?7:12);
+    g.hold();near(g.player.stamina.spent.attack,tech.kind==='thrust'?10:12);
     const recognized={techs:g.player.skill.uniq?.stats.techs??{},fired:g.player.skill.uniq?.stats.fired??{}};
     if(reference)assert.deepEqual(recognized,reference,`${tech.name}, stage ${stage}, fatigue ${fatigue}`);else reference=structuredClone(recognized);
    }finally{g.world.free();}}
   }
  }finally{Object.assign(STAMINA,saved);}
 });
-test('당겼다가 탭 찌르기는7 한 번; 준비 뒤 공격 취소는0',()=>{
+test('당겼다가 탭 찌르기는10 한 번; 준비 뒤 공격 취소는0',()=>{
  for(const attack of [false,true]){const g=setup();try{
   g.move(G.pflugR,.1);g.hold();near(g.player.stamina.spent.attack,0);
-  if(attack){assert.ok(g.player.skill.thrust());g.hold();near(g.player.stamina.spent.attack,7);}
+  if(attack){assert.ok(g.player.skill.thrust());g.hold();near(g.player.stamina.spent.attack,10);}
  }finally{g.world.free();}}
 });
 test('중앙에서 머리·양 어깨·옆·허리로 준비만 하는 입력은0',()=>{
@@ -60,9 +60,9 @@ test('중앙에서 머리·양 어깨·옆·허리로 준비만 하는 입력은
   const g=setup();try{g.move(G[key],.14);g.hold();near(g.player.stamina.spent.attack,0);}finally{g.world.free();}
  }
 });
-test('해금0/5: 12종 실제 긋기는 빗나가도 각각 베기12/찌르기7',()=>{
+test('해금0/5: 12종 실제 긋기는 빗나가도 각각 베기12/찌르기10',()=>{
  for(const stage of [0,5])for(const tech of TECH){const g=setup(tech.from,stage);try{
   for(const to of tech.path){const from=g.player.handOffset;g.move(to,Math.hypot(to[0]-from.x,to[1]-from.y)/3);}
-  g.hold();near(g.player.stamina.spent.attack,tech.kind==='thrust'?7:12);assert.equal(g.hits.length,0);
+  g.hold();near(g.player.stamina.spent.attack,tech.kind==='thrust'?10:12);assert.equal(g.hits.length,0);
  }finally{g.world.free();}}
 });

@@ -113,7 +113,7 @@ test('클린치: 기력 무한 쪽은 0 · 상대는 전처럼 초당 10 (스텝
 });
 
 // ── 실제 판 (헤드리스 물리) ──
-test('실제 판 · 사람 길: 진짜 긋기 열두 가지를 거듭해도 기력 무한은 0 청구 · 보통 몸은 12 / 7 씩', () => {
+test('실제 판 · 사람 길: 진짜 긋기 열두 가지를 거듭해도 기력 무한은 0 청구 · 보통 몸은 12 / 10 씩', () => {
   const setup = (infinite, from) => {
     const g = newRound({ weapon: 'longsword', seed: 23, gap: 8, walls: false }); g.ai.update = () => {};
     g.player.handHeld = true; g.player.inputActive = true; g.player.handOffset.set(...from);
@@ -129,7 +129,7 @@ test('실제 판 · 사람 길: 진짜 긋기 열두 가지를 거듭해도 기�
       try {
         for (const to of tech.path) { const from = g.player.handOffset; g.move(to, Math.hypot(to[0] - from.x, to[1] - from.y) / 3); low = Math.min(low, g.player.stamina.value); }
         for (let i = 0; i < 30; i++) g.step();
-        spent += g.player.stamina.spent.attack; want += tech.kind === 'thrust' ? 7 : 12; strokes += g.player.stamina.counts.cut + g.player.stamina.counts.thrust;
+        spent += g.player.stamina.spent.attack; want += tech.kind === 'thrust' ? 10 : 12; strokes += g.player.stamina.counts.cut + g.player.stamina.counts.thrust;
       } finally { g.world.free(); }
     }
     assert.equal(strokes, TECH.length); // 열두 긋기 모두 공격으로 셈 (번호 · 횟수)

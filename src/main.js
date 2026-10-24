@@ -165,6 +165,7 @@ if (params.has('aiReact') && +params.get('aiReact') >= 0 && +params.get('aiReact
 if (['strike', 'approach', 'windup'].includes(params.get('swingTurnFrom'))) CONFIG.SWING_TURN.from = params.get('swingTurnFrom'); // 묶기 시작: windup(기본 — 칼 드는 때부터) · approach(들어오는 단계부터) · strike(긋기부터)
 if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
 if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)
+if (params.get('thrustCost') === '7') CONFIG.STAMINA.thrustCost = 7; // `?thrustCost=7` = 옛 찌르기 기력 7 (10/24 사장님 결정 전)
 if (params.has('jpParryCut') && +params.get('jpParryCut') >= 0 && +params.get('jpParryCut') <= 1) CONFIG.SKILL.jpParryDmgCut = +params.get('jpParryCut'); // 일본 막는 동안 피해 감소(판 값 0.2) — `?jpParryCut=0` = 끔
 if (params.has('ibParryCut') && +params.get('ibParryCut') >= 0 && +params.get('ibParryCut') <= 1) CONFIG.SKILL.ibParryDmgCut = +params.get('ibParryCut'); // 이베리아 막는 동안 피해 감소(판 값 0.2) — `?ibParryCut=0` = 끔
 if (['1', '2'].includes(params.get('itForte'))) CONFIG.SKILL.itForte = +params.get('itForte'); // 이탈리아 forte 막기 연구 후보 (가)(10/17 — 사장님 확인 전): 기본 0 = 끔, `?itForte=1`·`?itForte=2` = 후보 몸꼴 (docs/strike/italian_forte_parry_2026-10-17.md)
