@@ -30,11 +30,14 @@ export const AURA_PROFILES = Object.freeze({
   //  10:2x 1차 성유물 금빛은 엑스칼리버 금빛과 겹침(사장님 10:4x '뒤랑달 빛 색을 바꿔 ex 일본 레전드 초록색이잖아') → 2차 하늘빛:
   //  천사가 샤를마뉴에게 내린 칼 · 자루 안 성모의 옷자락 — 성모의 푸른빛. 엑스칼리버 금 · 쿠사나기 옥 · 간장 흰 · 막야 먹 · 발리사르다 샴페인과 겹치지 않는다.
   //  푸른빛은 돌 · 눈밭 위에서 금빛보다 도드라져 쿠사나기처럼 아지랑이만 0.8 배 · 흰 하늘빛 티끌 5 개(작고 적게) · 세기 0.5 그대로('은은하게 있다')
-  durandal: { tone: 'azure', color: [0.55, 0.74, 1.0], light: 0x9cc4ff, emissive: 0xa8ccff,
-    gain: 0.8,
-    motes: { n: 5, size: 0.016, alpha: 0.45, color: [0.93, 0.96, 1.0], rim: [0.62, 0.78, 1.0], far: 0.0 } },
-  // 발리사르다 (10/21 — 샛별 저장소 c89e827c6 그대로): 은금 덩굴의 칼이라 옅은 샴페인빛. 쿠사나기처럼 아지랑이만 0.8 배.
-  balisarda: { tone: 'champagne', color: [1.0, 0.91, 0.70], light: 0xffedc2, emissive: 0xffebbc, gain: 0.8 },
+  //  10:5x 사장님 '하늘빛이 희게만 보여 좀더 파랗게' → 3차: 더 짙은 푸른빛 · 아지랑이 1 배(옅은 하늘빛은 은빛 칼몸 위에서 흰빛으로 섞여 보였다)
+  durandal: { tone: 'azure', color: [0.30, 0.55, 1.0], light: 0x5c9bff, emissive: 0x6aa2ff,
+    motes: { n: 5, size: 0.016, alpha: 0.5, color: [0.72, 0.85, 1.0], rim: [0.40, 0.62, 1.0], far: 0.0 } },
+  // 발리사르다 (10/21 — 샛별 저장소 c89e827c6 의 옅은 샴페인빛 0.8 배는 칼날 위에서 거의 안 보였고 엑스칼리버 금빛과도 겹쳤다 → 사장님 10/24 10:5x '이탈리아 레전드 무기도 글로우 효과 없지?'):
+  //  보랏빛 — 마녀 팔레리나가 벼려 마법에 걸린 것도 벨 수 있다는 칼(『사랑에 빠진 오를란도』 · 『광란의 오를란도』 루지에로의 칼). 레전드 여섯 색이 모두 다르다
+  //  (엑스칼리버 금 · 쿠사나기 옥 · 간장 흰 · 막야 먹 · 뒤랑달 푸름 · 발리사르다 보라) · 아지랑이 1 배 · 옅은 보랏빛 티끌 5 개 · 세기 0.5 그대로
+  balisarda: { tone: 'violet', color: [0.72, 0.52, 1.0], light: 0xb48cff, emissive: 0xbf9bff,
+    motes: { n: 5, size: 0.016, alpha: 0.5, color: [0.92, 0.86, 1.0], rim: [0.70, 0.55, 1.0], far: 0.0 } },
   excalibur: { tone: 'gold', color: [1.0, 0.82, 0.45], light: 0xffd98a, emissive: 0xffe2a0 },
   ganjiang: { tone: 'white', color: [0.92, 0.96, 1.0], light: 0xf3f7ff, emissive: null,
     gain: 1.1,
