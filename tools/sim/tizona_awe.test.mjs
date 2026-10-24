@@ -147,8 +147,9 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     return r;
   };
   try {
-    // 씨앗 9 · 상대 자리: 10.1 · 10.7 s 에 막힘 (둘째는 1.5 s 안) / 씨앗 9 · 플레이어 자리: 7.1 s 에 막힘 — 몸 · AI 가 바뀌면 씨앗을 다시 고른다
-    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 9, 11, 1, 1], ['tizona', 'longsword', 9, 7.5, 1, 0]]) {
+    // 씨앗 1 · 상대 자리: 8.0 s 에 깎음 (그 뒤 1.5 s 안 막힘 하나 건너뜀) / 씨앗 9 · 플레이어 자리: 7.4 s 에 깎음 — 몸 · AI 가 바뀌면 씨앗을 다시 고른다
+    //  (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정으로 상대 자리 씨앗을 다시 고름 — 전 씨앗 9: 10.1 · 10.7 s)
+    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 1, 11, 1, 1], ['tizona', 'longsword', 9, 7.5, 1, 0]]) {
       log.length = 0;
       const G = newRound({ walls: true, weapon: w1, weapon2: w2, seed, AI2Class: AI });
       for (let i = 0; i < secs / DT; i++) G.step();

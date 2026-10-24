@@ -4,8 +4,17 @@
 //   lunge  — 안다레 리솔루토 런지: 상대를 세워 두고(STILL · 상처 끔 시연) 가슴 사이 2.2 m 까지 걸어 들어가 창을 열고 낸다 → lunge_hit(맞힌 스텝) · lunge_hold(굳음 0.3 s) ·
 //            lunge_hold_hand(같은 때 손 가까이). 전 = 쿼리 `&thrustArm=0` (파일 이름 앞 before_ · 후 after_)
 //   guards — GUARDS='무기:자세 이름 일부,…' 의 자세를 손 목표로 1.4 s 붙잡고 옆 · 손 가까이 (guard_<무기>_<번호>_{side,hand}) · SWIVEL=1 이면 시험 `&elbowSwivel=1` 로 한 번 더 (swivel_…)
+//   10/24 17:2x (팔꿈치 돌림 켬 · 비정상 손목 교정 — 기록 §9): 전 = 쿼리 `&elbowSwivel=0&wristGuard=0` (파일 이름 앞 before_) · 후 = 기본 (after_)
+//   pair     — GUARDS 자세를 전 · 후 둘 다 (before_guard_… · after_guard_…)
+//   tap      — 탭 찌르기: 가슴 사이 1.8 m 에 서서 TAP_PAD(기본 황소 [0.22, 0.26])를 1.0 s 붙잡고 톡 → 뻗어 머무는 때(hold 첫 스텝) 옆 · 손 가까이 (tap_{side,hand})
+//   gyeoksal — 동방 격살(청강검): 가슴 사이 1.4 m 에서 GK_STANCE(기본 eogeo — 팔 깎기) → 굳음 0.2 s 옆 · 손 가까이 (gyeoksal_{side,hand})
+//   close    — 바짝 붙음: 롱소드가 가슴 사이 CLOSE_GAP(기본 0.95 m)까지 걸어 들어가 CLOSE_GUARD(기본 황소) 자리를 1.2 s 붙잡음 → 옆 · 손 가까이 (close_{side,hand})
+//   10/24 17:2x 뒤 (탭 찌르기 고침 · 기록 §9-9): TAGS='이름:쿼리,…' 로 tap · gyeoksal · close 의 판을 고름 (기본 before · after) — 예 TAGS='fixed:' = 지금 기본만
+//   ghost    — 맞힌 런지의 굳음 동안 옆 그림(칼이 상대 몸을 뚫고 나가 보이나): 상대를 세워 두고 걸어 들어가다 가슴 사이 LUNGE_GAP(기본 1.46 m — 같은 운전에서 낸 가장 가까운 런지
+//              달타냥 1.39 m 언저리 · 화면 한 장에 여러 스텝이 지나 맞닿기 안으로 넘지 않게 조금 앞에서)에서 곧장 낸다 → 맞힌 스텝 · 굳음 0.2 s · 0.4 s
+//              (ghost_<판>_lunge_hit · _hold2(+ _hand) · _hold4) · 판 = `&holdDepth=0`(손을 안 거둠 — before) · `&holdDepth=1`(시험 — after)
 //  npx vite build --outDir <tmp>/dist && node tools/pwa/build.mjs <tmp>/dist && npx vite preview --outDir <tmp>/dist --port 5567 --strictPort &
-//  node tools/browser/wrist_audit_shots.mjs http://127.0.0.1:5567 <그림 폴더> [lunge|guards]
+//  node tools/browser/wrist_audit_shots.mjs http://127.0.0.1:5567 <그림 폴더> [lunge|guards|pair|tap|gyeoksal|close|ghost]   (SHOT_WAIT=ms — 장면 기다림, 기계가 바쁠 때 늘림)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -103,24 +112,34 @@ const READ = () => {
   return { dev: +dev.toFixed(0), wrist: +wrist.toFixed(0), elbow: +elbow.toFixed(0), along: +(W.clone().sub(S).dot(fwd) / 0.57).toFixed(2), gap: +p.foeDistance().toFixed(2) };
 };
 
-async function lungeScene(tag, extra) {
+async function lungeScene(tag, extra, gap = 2.25, also = []) {
   const { ctx, page } = await open(process.env.WEAPON || 'rapier', extra);
+  await page.evaluate(([gap, also]) => {
+    window.drvGap = gap;
+    window.drvAlso = also;
+  }, [gap, also]);
   await page.evaluate(() => {
     const g = window.game, p = g.player, e = g.enemy, ps = g.playerSecret, orig = ps.update.bind(ps);
     const D = (window.drv = { want: null, done: {}, t0: null, fired: false, hitSeen: false });
+    window.drvGap ??= 2.25;
     ps.update = (dt, busy) => {
       orig(dt, busy);
       const sec = p.skill.sec;
       if (!D.fired) {
-        const go = p.foeDistance() > 2.25;
+        // 가슴 사이 2 m 안에서 칼끼리 걸려 더 못 들어가면(1.5 s 동안 0.01 m 도 안 가까워짐) 그 자리에서 낸다
+        const d = p.foeDistance();
+        if (D.minGap == null || d < D.minGap - 0.01) (D.minGap = d), (D.tMin = g.stats.simTime);
+        const go = d > window.drvGap && !(d < 2 && g.stats.simTime - D.tMin > 1.5);
         p.move.set(0, go ? 1 : 0);
         p.stickX = 0;
         p.stickY = go ? 1 : 0;
         if (!go) {
           D.t0 ??= g.stats.simTime;
-          if (g.stats.simTime - D.t0 > 0.6) {
+          if (g.stats.simTime - D.t0 > (window.drvAlso?.includes('now') ? 0 : 0.6)) {
             ps.openWindow({ ev: 'risoluto', path: 'close', held: 0.6 });
-            D.fired = p.skill.secret(ps.fire());
+            const o = ps.fire();
+            D.why ??= { o: !!o, exh: !!p.stamina.exhausted, sec: !!p.skill.sec, tap: !!p.skill.tap, pom: !!p.skill.pom, state: p.state, d: +p.foeDistance().toFixed(2) };
+            D.fired = p.skill.secret(o);
           }
         }
         return;
@@ -135,18 +154,22 @@ async function lungeScene(tag, extra) {
       };
       if (D.hitSeen) freeze('lunge_hit'); // 맞힌 스텝 다음 스텝(그 자리가 그려진 몸)
       if (p.iai?.hitM) D.hitSeen = true;
-      if (sec?.lunge && sec.stage === 'stiff' && sec.t >= 0.3) freeze('lunge_hold');
+      if (window.drvAlso?.includes('ghost')) {
+        // ghost: 굳음 0.2 s · 0.4 s (시간 사다리)
+        if (sec?.lunge && sec.stage === 'stiff' && sec.t >= 0.2) freeze('hold2');
+        if (D.done.hold2 && sec?.lunge && sec.stage === 'stiff' && sec.t >= 0.4) freeze('hold4');
+      } else if (sec?.lunge && sec.stage === 'stiff' && sec.t >= 0.3) freeze('lunge_hold');
     };
   });
   const t0 = Date.now();
-  while (Date.now() - t0 < 240000) {
+  while (Date.now() - t0 < Math.max(240000, +(process.env.SHOT_WAIT || 0))) {
     await page.waitForTimeout(80);
     const k = await page.evaluate(() => window.drv.want);
     if (!k) continue;
     await page.waitForTimeout(250);
     const v = await page.evaluate(READ);
     await shot(page, `${tag}_${k}`, 'side');
-    if (k === 'lunge_hold') await shot(page, `${tag}_${k}_hand`, 'hand');
+    if (k === 'lunge_hold' || k === 'hold2') await shot(page, `${tag}_${k}_hand`, 'hand');
     log.push(`${tag} ${k} ${JSON.stringify(v)}`);
     console.log(`SHOT ${tag} ${k} ${JSON.stringify(v)}`);
     await page.evaluate((k) => {
@@ -154,8 +177,10 @@ async function lungeScene(tag, extra) {
       window.drv.want = null;
       window.game.config.PHYSICS.maxStepsPerFrame = 8;
     }, k);
-    if (k === 'lunge_hold') break;
+    if (k === (also.includes('ghost') ? 'hold4' : 'lunge_hold')) break;
   }
+  const dbg = await page.evaluate(() => ({ drv: { fired: !!window.drv.fired, done: window.drv.done, minGap: window.drv.minGap, why: window.drv.why }, gap: window.game.player.foeDistance(), t: window.game.stats.simTime, S: window.game.playerSecret?.S?.name, when: window.game.playerSecret?.S?.when, weapon: window.game.player.weapon?.id }));
+  if (!dbg.drv.done.lunge_hold && !dbg.drv.done.hold4) console.log(`런지 장면 못 찍음 ${tag} ${JSON.stringify(dbg)}`);
   await ctx.close();
 }
 
@@ -186,7 +211,7 @@ async function guardScene(weapon, names, extra = '', pfx = 'guard') {
         }
       };
     }, G.pad);
-    await page.waitForFunction(() => window.drv.want, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.drv.want, null, { timeout: +(process.env.SHOT_WAIT || 120000) });
     await page.waitForTimeout(250);
     const v = await page.evaluate(READ);
     const tag = `${pfx}_${weapon}_${i + 1}`;
@@ -201,9 +226,75 @@ async function guardScene(weapon, names, extra = '', pfx = 'guard') {
   await ctx.close();
 }
 
+/** 대본 한 장면: drive(page 안에서 스텝마다 — 걸어 들어가고 · 내고 · 멈출 때 window.drv.want 를 세움) → 멈춘 자세를 옆 · 손 가까이 */
+async function scene(weapon, extra, tag, drive, arg) {
+  const { ctx, page } = await open(weapon, extra);
+  await page.evaluate(
+    ([src, arg]) => {
+      const g = window.game, p = g.player, ps = g.playerSecret, orig = ps.update.bind(ps);
+      const fn = new Function('g', 'p', 'ps', 'D', 'arg', src);
+      const D = (window.drv = { want: null, n: 0 });
+      ps.update = (dt, busy) => {
+        orig(dt, busy);
+        if (D.want) return;
+        D.n++;
+        if (fn(g, p, ps, D, arg)) {
+          D.want = 'shot';
+          g.config.PHYSICS.maxStepsPerFrame = 0;
+        }
+      };
+    },
+    [drive, arg],
+  );
+  try {
+    await page.waitForFunction(() => window.drv.want, null, { timeout: +(process.env.SHOT_WAIT || 120000) });
+  } catch (e) {
+    const dbg = await page.evaluate(() => ({ n: window.drv.n, t0: window.drv.t0, gap: window.game.player.foeDistance(), state: window.game.state, p: window.game.player.state }));
+    console.log(`장면 시간 넘김 ${tag} ${JSON.stringify(dbg)}`);
+    await ctx.close();
+    return;
+  }
+  await page.waitForTimeout(250);
+  const v = await page.evaluate(READ);
+  await shot(page, `${tag}_side`, 'pside');
+  await shot(page, `${tag}_hand`, 'hand');
+  log.push(`${tag} ${JSON.stringify(v)}`);
+  console.log(`SHOT ${tag} ${JSON.stringify(v)}`);
+  await ctx.close();
+}
+const HOLD = (pad) => `p.handOffset.set(${pad[0]}, ${pad[1]}); for (const k of ['prev', 'aim', 'aimRaw', 'anchor']) p.skill[k]?.set?.(${pad[0]}, ${pad[1]});`;
+const WALK = (gap) => `const go = p.foeDistance() > ${gap}; p.move.set(0, go ? 1 : 0); p.stickX = 0; p.stickY = go ? 1 : 0;`;
+const BEFORE = '&elbowSwivel=0&wristGuard=0'; // 10/24 17:2x 전 판
+const TAGS = process.env.TAGS ? process.env.TAGS.split(',').map((x) => [x.split(':')[0], x.slice(x.indexOf(':') + 1)]) : [['before', BEFORE], ['after', '']];
+
+if (what.includes('tap')) {
+  const pad = (process.env.TAP_PAD || '0.22,0.26').split(',').map(Number);
+  const drive = `if (!D.fired) { ${WALK(1.85)} ${HOLD(pad)} if (!go) { D.t0 ??= D.n; if (D.n - D.t0 > 120) D.fired = p.skill.thrust(); } return false; }
+    p.move.set(0, 0); p.stickY = 0; const tp = p.skill.tap; return !!tp && tp.t >= tp.K.aim + tp.K.extend;`;
+  for (const [pf, ex] of TAGS) await scene(process.env.WEAPON || 'longsword', ex, `${pf}_tap`, drive);
+}
+if (what.includes('gyeoksal')) {
+  const st = process.env.GK_STANCE || 'eogeo';
+  const drive = `if (!D.fired) { ${WALK(1.4)} if (!go) { D.t0 ??= D.n; if (D.n - D.t0 > 72) D.fired = p.skill.secret({ S: ps.S, ctx: { slot: '${st}', stance: '${st}' } }); } return false; }
+    p.move.set(0, 0); p.stickY = 0; if (!p.iai && p.skill.sec?.stage === 'stiff') D.s = (D.s ?? 0) + 1; return (D.s ?? 0) >= 24;`;
+  for (const [pf, ex] of TAGS) await scene('qinggang', ex, `${pf}_gyeoksal`, drive);
+}
+if (what.includes('close')) {
+  const nm = process.env.CLOSE_GUARD || '황소';
+  const G = GUARD_BASE.find((x) => x.name.includes(nm));
+  const gap = +(process.env.CLOSE_GAP || 0.95); // 걸어 들어가 멈출 가슴 사이 (밀치기에 밀려 0.85 m 안으로는 잘 안 들어감)
+  // 두 칼 부딪힘 끔 (전 판은 황소에서 앞 · 아래로 누운 칼이 상대 몸 · 칼에 걸려 1.2 ~ 1.5 m 에서 못 들어감 — 두 판을 같은 거리에서 보려고 · 자세 그림)
+  const drive = `if (!D.init) { D.init = 1; for (const f of [g.enemy, p]) for (let i = 0; i < f.sword.numColliders(); i++) f.sword.collider(i).setCollisionGroups(0); } ${WALK(gap)} ${HOLD(G.pad)} if (!go) D.t0 ??= D.n; return D.t0 != null && D.n - D.t0 > 144;`;
+  for (const [pf, ex] of TAGS) await scene('longsword', ex, `${pf}_close`, drive);
+}
 if (what.includes('lunge')) {
   await lungeScene('before', '&thrustArm=0');
   await lungeScene('after', '');
+}
+if (what.includes('ghost')) {
+  const gap = +(process.env.LUNGE_GAP || 1.46);
+  await lungeScene('ghost_before', '&holdDepth=0', gap, ['ghost', 'now']);
+  await lungeScene('ghost_after', '&holdDepth=1', gap, ['ghost', 'now']);
 }
 if (what.includes('guards')) {
   const spec = (process.env.GUARDS || 'rapier:프리마,rapier:세콘다,rapier:3번 자세 (테르차),longsword:황소,longsword:옆 지킴,longsword:바보,sabre:황소,qinggang:옆 자세,uchigatana:흘려 받기,zweihander:허리 뒤').split(',');
@@ -215,6 +306,17 @@ if (what.includes('guards')) {
   }
   for (const [w, ns] of by) await guardScene(w, ns);
   if (process.env.SWIVEL === '1') for (const [w, ns] of by) await guardScene(w, ns, '&elbowSwivel=1', 'swivel'); // 시험 JOINTS.elbowSwivel 켬 (같은 자세 · 같은 손 자리)
+}
+if (what.includes('pair')) {
+  const spec = (process.env.GUARDS || 'rapier:프리마,rapier:세콘다,longsword:황소,qinggang:황소,sabre:왼 황소,uchigatana:흘려 받기,zweihander:어깨 메기,tizona:허리 뒤').split(',');
+  const by = new Map();
+  for (const s of spec) {
+    const [w, n] = s.split(':');
+    if (!by.has(w)) by.set(w, []);
+    by.get(w).push(n);
+  }
+  for (const [w, ns] of by) await guardScene(w, ns, BEFORE, 'before_guard');
+  for (const [w, ns] of by) await guardScene(w, ns, '', 'after_guard');
 }
 fs.writeFileSync(`${out}/shots_log.txt`, log.join('\n') + '\n');
 console.log(`ERRORS ${JSON.stringify(errors)}`);

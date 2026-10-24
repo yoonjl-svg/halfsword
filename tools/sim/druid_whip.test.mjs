@@ -111,7 +111,9 @@ test('마디 물리: 8 마디 · AI 끼리 6 s 벌어짐 3 cm 안 · 유한 · �
   // 시드 11 → 13 (10/23 채찍 간격표 고침 1.25/1.69 → 1.15/1.32 — AI 가 든 채찍의 간격이 바뀌어 같은 시드도 다른 판이 된다. 덩굴 값은 그대로):
   //  시드 1 ~ 18 의 6 s 벌어짐은 전 가운데 1.98 · 가장 큼 6.48 · 3 cm 넘음 4 판 → 후 1.20 · 5.93 · 4 판으로 같거나 작다.
   //  시드 11 은 2.5 → 3.4 cm 가 되어, 전 시드 11 과 같은 자리(18 판 가운데 13 번째)인 시드 13(후 2.07 cm)으로 옮김 — 문턱 3 cm 는 그대로
-  const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 13, AIClass: AI, AI2Class: AI });
+  //  시드 13 → 2 (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정 — AI 칼 팔이 바뀌어 같은 시드도 다른 판. 덩굴 값 그대로): 시드 1 ~ 18 의 6 s 벌어짐 가운데 1.20 → 1.37 · 가장 큼 5.93 → 3.70 ·
+  //   3 cm 넘음 4 → 1 판. 시드 13 은 3.70 cm 가 되어 같은 자리(18 판 가운데 13 번째)인 시드 2(1.47 cm)로 옮김 — 문턱 3 cm 는 그대로
+  const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 2, AIClass: AI, AI2Class: AI });
   const f = g.player, x = f.flexWeapon;
   assert.ok(x);
   assert.equal(x.segments.length, 8);

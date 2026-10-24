@@ -236,6 +236,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.get('risoRecover') === '0') CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 }; // 10/24 14:0x 전 걸음 = 디딘 뒤 뒷발 끌어붙임 (몸 따라감 배율 · 몸 가속 · 앞발 거둠은 없음)
   if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
   if (params.has('thrustArm')) CONFIG.SECRET.thrustArm = +params.get('thrustArm') ? 1 : 0; // 10/24 15:5x 운동학 겨눈 찌름(런지 · 격살 허파 찌르기) — 0 = 전 손 자리(어깨 가까이 · 칼이 새끼 쪽으로 꺾여 거꾸로 쥔 꼴)
+  if (params.has('holdDepth')) CONFIG.SECRET.holdDepth = +params.get('holdDepth') ? 1 : 0; // 시험 (10/24 17:2x 뒤 · 기본 끔): 1 = 맞힌 겨눈 찌름(런지 · 격살 허파 찌르기)의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 (fighter.js holdDepthHand — 끄면 런지 앞발을 따라 칼이 상대 등 뒤로 나옴)
 }
 {
   // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)
@@ -327,7 +328,10 @@ const trunkFollow = +params.get('trunkFollow');
 if (trunkFollow >= 0 && params.has('trunkFollow')) CONFIG.BODY.trunkFollow = trunkFollow;
 const trunkArcSpeed = +params.get('trunkArcSpeed');
 if (trunkArcSpeed > 0) CONFIG.BODY.trunkArcSpeed = trunkArcSpeed;
-if (params.has('elbowSwivel')) CONFIG.JOINTS.elbowSwivel = +params.get('elbowSwivel') ? 1 : 0; // 시험 (10/24 손목 검사 · 기본 끔): 칼이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 (fighter.js elbowSwivel — 사람 · AI 모두)
+if (params.has('elbowSwivel')) CONFIG.JOINTS.elbowSwivel = +params.get('elbowSwivel') ? 1 : 0; // 기본 켬 (사장님 10/24 17:2x · `?elbowSwivel=0` 전 판): 칼이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 (fighter.js elbowSwivel — 사람 · AI 모두)
+if (params.has('wristGuard')) CONFIG.JOINTS.wristGuard = +params.get('wristGuard') ? 1 : 0; // 기본 켬 (사장님 10/24 17:2x · `?wristGuard=0` 전 판): 사람 손목 범위 밖 칼 겨눔을 범위 끝으로 (fighter.js wristClamp — 사람 · AI 모두 · 밧줄은 아래 wristRope)
+if (params.has('swivelThrust')) CONFIG.JOINTS.swivelThrust = +params.get('swivelThrust') ? 1 : 0; // 10/24 17:2x 뒤 고침 (기본 켬 · `?swivelThrust=0` = 17:2x 판): 탭 찌르기 동안 팔꿈치 돌림이 칼을 아래팔의 연장 쪽으로 (fighter.js elbowSwivel align)
+if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
 const chainParam = params.get('chain');
 if (chainParam === 'legs' || chainParam === 'anchor') CONFIG.BODY.chain = chainParam;

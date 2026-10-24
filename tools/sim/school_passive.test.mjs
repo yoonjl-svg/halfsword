@@ -272,7 +272,7 @@ test('chinese: bleeding clots ×2 only while not swinging', () => {
 // ── 실제 판 (AI 대 AI · 숙련도 4) — 배율이 실제 맞음에 실린다 ──
 test('real fight: kentai and indes bonuses reach real wounds', () => {
   for (const [w, key] of [['uchigatana', 'ken'], ['longsword', 'indes']]) {
-    const g = newRound({ weapon: w, weapon2: 'longsword', seed: 1001, AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } });
+    const g = newRound({ weapon: w, weapon2: 'longsword', seed: 1002, AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } }); // 씨앗 1001 → 1002 (10/24 17:2x 팔꿈치 돌림 · 손목 교정 — 1001 은 30 s 안에 독일 indes 가 안 터짐 · 1002 = ken 2 · indes 1)
     try {
       let boosted = 0;
       const pw = g.combat.hooks.onWound;

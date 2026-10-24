@@ -15,7 +15,10 @@
 //    up    = 아래팔이 위로 선 몫 (아래팔 방향 세로 성분 — 0.5 넘으면 아래팔이 30° 넘게 섬)
 //   묶음: 동작마다 스텝 수 · 아래팔-칼 최대 · > 135 몫 · dev 최소 · < −30 몫(사람 척측 한도 밖) · 거꾸로 몫(dev < −45 · 아래팔이 칼 면에서 45° 안) · 거꾸로이며 아래팔이 섬 몫 · along · 팔꿈치 · 굽힘·폄 · 굴림
 //   거꾸로 보임: 'Y' = 스텝 10 % 이상이 '거꾸로 · 아래팔 섬'(사장님 그림 꼴) 또는 아래팔-칼 > 135 · '△' = 새끼 쪽이나 아래팔은 눕거나 내려감 · 'N'
-//  사용법: node tools/sim/wrist_audit.mjs [--modes=lunge,gyeoksal,gonosen,tap,guards,cuts,ai] [--weapons=…] [--set=SECRET.thrustArm=0] [--json=파일] [--trace=lunge:rapier]
+//  사용법: node tools/sim/wrist_audit.mjs [--modes=lunge,gyeoksal,gonosen,tap,close,guards,cuts,ai] [--weapons=…] [--set=SECRET.thrustArm=0] [--json=파일] [--trace=lunge:rapier]
+//   10/24 17:2x (팔꿈치 돌림 켬 · 비정상 손목 교정 — 기록 §9): 칸 더함 — 범위 밖 % (손 면 안 각이 사람 범위 [−HUMAN.ulnarDev, HUMAN.wristThumb] 밖으로 1° 넘게 · 아래팔이 칼 면에서 JOINTS.wristFE 안) ·
+//    > 10° % (끝을 10° 넘게) · 최대 넘침 · 굽힘 · 폄 > wristFE % · 굴림 ≥ 78 % (손목 밧줄 80 끝) · 교정 % · 평균 · 최대 (JOINTS.wristGuard 가 칼 겨눔을 돌린 스텝 · 각) ·
+//    close = 바짝 붙음 (가슴 사이 0.7 · 0.9 m — 자세표 붙잡기 + 탭 찌르기). 줄마다 c = 셈 (묶음 합을 내는 데 — --json)
 //   lunge    = 안다레 리솔루토 런지 (rapier · dartagnan · balisarda) — 멈춘 상대 · 가슴 사이 1.8 · 2.0 · 2.2 · 2.4 m · 창을 바로 열고 톡 (italian_risoluto.test.mjs 와 같은 자리)
 //              단계: guard(내기 전 0.3 s) · prep(찌르기 첫 자리로 옮김) · thrust(찌르는 토막 — 맞힘) · back(뽑음 — thrustArm 1 이면 뻗은 채 머묾) · stiff(굳음 0.6 s) · recover(앞발 거둠) · after · hit(맞힌 스텝의 그려지는 자세)
 //   gyeoksal = 동방 격살 네 칼 (허파 찌르기 · 머리 · 팔 · 다리 — qinggang · moye) · gonosen = 일본 고노센 발도 (uchigatana · monohoshizao · 사람 길)
@@ -30,9 +33,10 @@ import { PlayerParryGuard } from '../../src/parry_button.js';
 import { TRADITIONS, playerSecretDef } from '../../src/schools.js';
 import { TECH } from '../../src/ai_techniques.js';
 import { GUARD_BASE } from '../../src/guards.js';
+import { HUMAN } from '../../src/fighter.js';
 import { isMain } from './is_main.mjs';
 
-const { ARM } = CONFIG;
+const { ARM, JOINTS } = CONFIG;
 const R2D = 180 / Math.PI;
 export const ARM_LEN = ARM.upper + ARM.fore; // 팔 길이 (m)
 export const REV = -45; // 거꾸로: 칼이 아래팔 줄(0)보다 새끼 쪽 수직(−90)에 더 가까움 — 두 방향의 가운데
@@ -40,6 +44,9 @@ export const ULNAR = -30; // 사람 척측 편위 한도 (AAOS 30 — grip_rules
 export const WRIST_HI = 135; // 아래팔-칼 '무리' 시작 (봉투 손목 칸 135 ~ 160)
 export const FE_IN = 45; // 거꾸로 셈은 아래팔이 칼 면에서 45° 안(굽힘 · 폄보다 치우침이 큰 때)만 — 두 방향의 가운데
 export const UP = 0.5; // 아래팔이 섬: 아래팔 방향 세로 몫 > 0.5 (수평에서 30° 넘게 위)
+export const OOR_EPS = 1; // 범위 밖 셈 문턱 (°): 밧줄이 팽팽한 끝(−30.0x · 135.0x)은 범위 끝으로 본다 (측정 문턱)
+export const OOR_X = 10; // 범위 밖 '크게': 사람 손 면 범위 끝을 10° 넘게 (칼 서보가 목표를 쫓는 동안 끝 바로 밖에 머무는 몫과 가름 — 측정 문턱)
+export const ROLL_AT = 78; // 아래팔 굴림이 손목 밧줄 끝(HUMAN.forearmRoll 80)에 닿음 — 2° 안 (측정 문턱)
 
 const V = (t) => new THREE.Vector3(t.x, t.y, t.z);
 const Q = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
@@ -78,7 +85,19 @@ export function wristSample(f) {
     along: W.clone().sub(S).dot(fwd) / ARM_LEN,
     reach: W.distanceTo(S) / ARM_LEN,
     up: fx.y,
+    fix: f.wristFixDeg ?? 0, // 이 스텝 손목 교정이 칼 겨눔을 돌린 각 (°, JOINTS.wristGuard — fighter.js wristClamp)
   };
+}
+
+/** 사람 손 면 범위 [−HUMAN.ulnarDev, HUMAN.wristThumb] 밖으로 넘은 각 (°, 0 = 안). 아래팔이 칼 면에서 wristFE 넘게 벗어나면 0 (면 안 각이 뜻이 없음 — 굽힘 · 폄 칸이 맡음) */
+export function outOfRange(s) {
+  if (Math.abs(s.fe) > JOINTS.wristFE) return 0;
+  const lo = -HUMAN.ulnarDev;
+  const hi = HUMAN.wristThumb;
+  const a = (((s.dev - hi) % 360) + 360) % 360;
+  const span = 360 - (hi - lo);
+  if (a === 0 || a >= span) return 0;
+  return Math.min(a, span - a);
 }
 
 /** 동작별 묶음 */
@@ -89,8 +108,19 @@ export class WristTally {
   add(key, s) {
     if (!s) return;
     let P = this.k.get(key);
-    if (!P) this.k.set(key, (P = { n: 0, wMax: -Infinity, w135: 0, devMin: Infinity, ulnar: 0, rev: 0, revUp: 0, aMin: Infinity, aMax: -Infinity, aSum: 0, eMax: -Infinity, wSum: 0, devSum: 0, feMax: 0, rollSum: 0 }));
+    if (!P) this.k.set(key, (P = { n: 0, wMax: -Infinity, w135: 0, devMin: Infinity, ulnar: 0, rev: 0, revUp: 0, aMin: Infinity, aMax: -Infinity, aSum: 0, eMax: -Infinity, wSum: 0, devSum: 0, feMax: 0, rollSum: 0, oor: 0, oorX: 0, oorMax: 0, feOut: 0, roll78: 0, fixN: 0, fixSum: 0, fixMax: 0 }));
     P.n++;
+    const o = outOfRange(s);
+    if (o > OOR_EPS) P.oor++;
+    if (o > OOR_X) P.oorX++;
+    P.oorMax = Math.max(P.oorMax, o);
+    if (Math.abs(s.fe) > JOINTS.wristFE) P.feOut++;
+    if (s.roll >= ROLL_AT) P.roll78++;
+    if (s.fix) {
+      P.fixN++;
+      P.fixSum += Math.abs(s.fix);
+      P.fixMax = Math.max(P.fixMax, Math.abs(s.fix));
+    }
     P.wMax = Math.max(P.wMax, s.wrist);
     P.wSum += s.wrist;
     P.devSum += s.dev;
@@ -116,7 +146,9 @@ export class WristTally {
         continue;
       }
       P.n += Q.n;
-      for (const f of ['w135', 'ulnar', 'rev', 'revUp', 'aSum', 'wSum', 'devSum', 'rollSum']) P[f] += Q[f];
+      for (const f of ['w135', 'ulnar', 'rev', 'revUp', 'aSum', 'wSum', 'devSum', 'rollSum', 'oor', 'oorX', 'feOut', 'roll78', 'fixN', 'fixSum']) P[f] += Q[f];
+      P.oorMax = Math.max(P.oorMax, Q.oorMax);
+      P.fixMax = Math.max(P.fixMax, Q.fixMax);
       P.feMax = Math.max(P.feMax, Q.feMax);
       P.wMax = Math.max(P.wMax, Q.wMax);
       P.devMin = Math.min(P.devMin, Q.devMin);
@@ -135,7 +167,7 @@ export class WristTally {
     const L = [];
     for (const [k, P] of this.k) {
       const pc = (x) => Math.round((100 * x) / P.n);
-      L.push({ label, key: k, n: P.n, wMax: +P.wMax.toFixed(0), wAvg: +(P.wSum / P.n).toFixed(0), w135: pc(P.w135), devMin: +P.devMin.toFixed(0), devAvg: +(P.devSum / P.n).toFixed(0), ulnar: pc(P.ulnar), rev: pc(P.rev), revUp: pc(P.revUp), aMin: +P.aMin.toFixed(2), aAvg: +(P.aSum / P.n).toFixed(2), aMax: +P.aMax.toFixed(2), eMax: +P.eMax.toFixed(0), feMax: +P.feMax.toFixed(0), rollAvg: +(P.rollSum / P.n).toFixed(0), flag: WristTally.flag(P) });
+      L.push({ label, key: k, n: P.n, wMax: +P.wMax.toFixed(0), wAvg: +(P.wSum / P.n).toFixed(0), w135: pc(P.w135), devMin: +P.devMin.toFixed(0), devAvg: +(P.devSum / P.n).toFixed(0), ulnar: pc(P.ulnar), rev: pc(P.rev), revUp: pc(P.revUp), aMin: +P.aMin.toFixed(2), aAvg: +(P.aSum / P.n).toFixed(2), aMax: +P.aMax.toFixed(2), eMax: +P.eMax.toFixed(0), feMax: +P.feMax.toFixed(0), rollAvg: +(P.rollSum / P.n).toFixed(0), oor: pc(P.oor), oorX: pc(P.oorX), oorMax: +P.oorMax.toFixed(0), feOut: pc(P.feOut), roll78: pc(P.roll78), fixPc: pc(P.fixN), fixAvg: P.fixN ? +(P.fixSum / P.fixN).toFixed(0) : 0, fixMax: +P.fixMax.toFixed(0), c: { n: P.n, oor: P.oor, oorX: P.oorX, rev: P.rev, revUp: P.revUp, feOut: P.feOut, roll78: P.roll78, fixN: P.fixN, fixSum: P.fixSum, w135: P.w135 }, flag: WristTally.flag(P) });
     }
     return L;
   }
@@ -276,6 +308,7 @@ export function gonosenRun(weapon, { gap = 2.0, seed = 7 } = {}) {
 
 // ── 탭 찌르기 (skill.thrust) ──
 const TAP_PADS = { pflug: [0.18, -0.28], ochs: [0.22, 0.26], langort: [0.0, 0.03] };
+const CLOSE_GAPS = [0.7, 0.9]; // 바짝 붙음 판 가슴 사이 (m) — closeReach 가 손을 0.4 · 0.6 m 로 접는 자리 (재는 자리)
 export function tapRun(weapon, guard, { gap = 1.8, seed = 311 } = {}) {
   const g = stillRound(weapon, { gap, seed });
   const p = g.player;
@@ -304,9 +337,9 @@ export function tapRun(weapon, guard, { gap = 1.8, seed = 311 } = {}) {
 
 // ── 자세표 (무기 guardPose.table — 없으면 롱소드 바탕 표 GUARD_BASE) · 자세마다 새 판(앞 자세의 손목 꼬임을 이어받지 않게): 1.4 s 붙잡고 끝 0.6 s ──
 //  seq = true 면 한 판에서 표 차례로 1.2 s 씩 (자세 사이를 옮겨 다닐 때 칼이 손목 둘레로 뒤집혀 걸린 채 남는지 — 참고)
-export function guardsRun(weapon, { seed = 7, seq = false } = {}) {
+export function guardsRun(weapon, { seed = 7, seq = false, gap = 2.6 } = {}) {
   const T = new WristTally();
-  const probe = stillRound(weapon, { gap: 2.6, seed });
+  const probe = stillRound(weapon, { gap, seed });
   const table = (probe.player.guardPose.table ?? GUARD_BASE).filter((G) => G?.pad && !G.finish);
   probe.world.free();
   const hold = (g, p, G, t0, t1) => {
@@ -317,7 +350,7 @@ export function guardsRun(weapon, { seed = 7, seq = false } = {}) {
     }
   };
   if (seq) {
-    const g = stillRound(weapon, { gap: 2.6, seed });
+    const g = stillRound(weapon, { gap, seed });
     try {
       g.player.skill.autoGuard = true;
       while (g.t < 0.8) g.step();
@@ -328,7 +361,7 @@ export function guardsRun(weapon, { seed = 7, seq = false } = {}) {
     return { T };
   }
   for (const G of table) {
-    const g = stillRound(weapon, { gap: 2.6, seed });
+    const g = stillRound(weapon, { gap, seed });
     try {
       g.player.skill.autoGuard = true;
       hold(g, g.player, G, 0, 1.4);
@@ -428,9 +461,9 @@ export function aiRun(weapon, { seed = 11, secs = 15 } = {}) {
 }
 
 // ── 표 ──
-export const HEAD = '| 판 | 동작 · 단계 | 스텝 | 아래팔-칼 최대 · 평균 | > 135 % | dev 최소 · 평균 | < −30 % | < −45 % (거꾸로) | 거꾸로 · 아래팔 섬 % | 손 앞 (팔 길이) 최소 · 평균 · 최대 | 팔꿈치 최대 | 굽힘·폄 최대 · 굴림 평균 | 거꾸로 보임 |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|';
+export const HEAD = '| 판 | 동작 · 단계 | 스텝 | 아래팔-칼 최대 · 평균 | > 135 % | dev 최소 · 평균 | < −30 % | < −45 % (거꾸로) | 거꾸로 · 아래팔 섬 % | 손 앞 (팔 길이) 최소 · 평균 · 최대 | 팔꿈치 최대 | 굽힘·폄 최대 · 굴림 평균 | 범위 밖 % · > 10° % · 최대 | 굽힘·폄 > 70 % | 굴림 ≥ 78 % | 교정 % · 평균 · 최대 | 거꾸로 보임 |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
 export function fmtRow(r) {
-  return `| ${r.label} | ${r.key} | ${r.n} | ${r.wMax} · ${r.wAvg} | ${r.w135} | ${r.devMin} · ${r.devAvg} | ${r.ulnar} | ${r.rev} | ${r.revUp} | ${r.aMin} · ${r.aAvg} · ${r.aMax} | ${r.eMax} | ${r.feMax} · ${r.rollAvg} | ${r.flag === 'Y' ? '**Y**' : r.flag} |`;
+  return `| ${r.label} | ${r.key} | ${r.n} | ${r.wMax} · ${r.wAvg} | ${r.w135} | ${r.devMin} · ${r.devAvg} | ${r.ulnar} | ${r.rev} | ${r.revUp} | ${r.aMin} · ${r.aAvg} · ${r.aMax} | ${r.eMax} | ${r.feMax} · ${r.rollAvg} | ${r.oor} · ${r.oorX} · ${r.oorMax} | ${r.feOut} | ${r.roll78} | ${r.fixPc} · ${r.fixAvg} · ${r.fixMax} | ${r.flag === 'Y' ? '**Y**' : r.flag} |`;
 }
 
 if (isMain(import.meta.url)) {
@@ -449,7 +482,7 @@ if (isMain(import.meta.url)) {
       o[ks.at(-1)] = isNaN(+val) ? val : +val;
     }
   }
-  const modes = String(args.modes ?? 'lunge,gyeoksal,gonosen,tap,guards,cuts,ai').split(',');
+  const modes = String(args.modes ?? 'lunge,gyeoksal,gonosen,tap,close,guards,cuts,ai').split(',');
   const pick = (d) => (args.weapons ? String(args.weapons).split(',') : d);
   const out = [];
   const flaggedOnly = !!args.flagged;
@@ -489,6 +522,16 @@ if (isMain(import.meta.url)) {
         const tot = new WristTally();
         for (const gd of Object.keys(TAP_PADS)) tot.merge(tapRun(w, gd).T, `${gd}:`);
         print(`탭 찌르기 ${w}`, tot);
+      }
+    } else if (mode === 'close') {
+      // 바짝 붙음 (closeReach — 손 앞뒤를 상대 가슴 − 0.3 m 로 접음): 가슴 사이 0.7 · 0.9 m 에서 자세표 자리마다 붙잡기 + 탭 찌르기
+      for (const w of pick(['longsword', 'sabre', 'rapier', 'zweihander', 'uchigatana', 'qinggang'])) {
+        const tot = new WristTally();
+        for (const gap of CLOSE_GAPS) {
+          tot.merge(guardsRun(w, { gap }).T, `${gap} 자세:`);
+          for (const gd of Object.keys(TAP_PADS)) tot.merge(tapRun(w, gd, { gap }).T, `${gap} 탭 ${gd}:`);
+        }
+        print(`바짝 ${w}`, tot);
       }
     } else if (mode === 'guards') {
       for (const w of pick(['longsword', 'sabre', 'rapier', 'dartagnan', 'balisarda', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao', 'qinggang', 'moye'])) print(`자세 ${w}`, guardsRun(w).T);

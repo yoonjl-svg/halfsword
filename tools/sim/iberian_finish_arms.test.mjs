@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spinRun, armSample, RANGE } from './iberian_finish_arms.mjs';
 import { newRound } from './harness_m.mjs';
-import { SECRET } from '../../src/config.js';
+import { SECRET, JOINTS } from '../../src/config.js';
 
 test('잣대: 선 자세 팔 — 과신전 · 경첩 밖 · 손목 범위 안 (재는 식이 맞나)', () => {
   const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 6, walls: false });
@@ -35,13 +35,18 @@ test('싱지르 감기 손 자리 (10/24 14:0x 사장님 결정 — SECRET.ibSpi
   assert.ok(nat <= 135, `칼 든 쪽 감기 아래팔-칼 ${nat}`);
   assert.ok(rev <= 80, `반대 쪽 감기 아래팔-칼 ${rev}`);
   const keep = SECRET.ibSpin.windSide;
+  const keepJ = [JOINTS.elbowSwivel, JOINTS.wristGuard];
   SECRET.ibSpin.windSide = 0;
   try {
+    // 옛 꼴은 옛 손목 판에서 (10/24 17:2x 팔꿈치 돌림 · 손목 교정을 켜면 windSide 0 이어도 손목 교정이 엄지 쪽 135 에서 멈춤)
+    [JOINTS.elbowSwivel, JOINTS.wristGuard] = [0, 0];
     const old = windMax(0);
     assert.ok(old >= 140, `옛 꼴 칼 든 쪽 감기 아래팔-칼 ${old}`);
+    [JOINTS.elbowSwivel, JOINTS.wristGuard] = keepJ;
     assert.equal(windMax(-1), rev, '반대 쪽은 스위치와 상관없음');
   } finally {
     SECRET.ibSpin.windSide = keep;
+    [JOINTS.elbowSwivel, JOINTS.wristGuard] = keepJ;
   }
 });
 

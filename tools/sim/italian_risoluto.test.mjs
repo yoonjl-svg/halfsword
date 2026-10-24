@@ -16,6 +16,7 @@ import { iaiTipSpeed, stanceSpread } from '../../src/secret_instant.js';
 const { SECRET } = CONFIG;
 const keep = (o, k, v, fn) => { const old = o[k]; o[k] = v; try { return fn(); } finally { o[k] = old; } };
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
+const withJ = (vals, fn) => { const J = CONFIG.JOINTS, old = {}; for (const k of Object.keys(vals)) (old[k] = J[k]), (J[k] = vals[k]); try { return fn(); } finally { Object.assign(J, old); } }; // 손목 값 (10/24 17:2x)
 const OLD = { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0 }; // 10/22 판 (main.js ?risoWide=0 과 같은 값)
 const TAP1023 = { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null }; // 10/23 탭 찌르기 판 (main.js ?risoLunge=0 과 같은 값)
 
@@ -289,7 +290,10 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.ok(o.recovered && o.recovered.back > 0, `${w} 앞발 거둠 ${JSON.stringify(o.recovered)}`);
     assert.ok(o.recReq && o.recReq.kind === 'lunge' && o.recReq.fwd < 0 && o.recReq.accel, `${w} 거두는 걸음 ${JSON.stringify(o.recReq)}`);
     assert.ok(o.spreadEnd < o.spreadMax - 0.2, `${w} 두 발 간격 ${o.spreadMax?.toFixed(2)} → ${o.spreadEnd?.toFixed(2)} (런지 전 ${o.spread0?.toFixed(2)})`);
-    assert.ok(o.gapEnd > o.gapLunge, `${w} 가슴 사이 ${o.gapLunge.toFixed(2)} → ${o.gapEnd.toFixed(2)}`);
+    // 가슴 사이가 다시 벌어짐 — 10/24 17:2x 팔꿈치 돌림 · 손목 교정을 켠 판은 이 맞닿은 판(런지 끝 가슴 사이 0.4 m)에서 1 s 안에 안 벌어진다:
+    //  docs/strike/wrist_audit_2026-10-24.md §9 에 숫자와 함께 여쭘 (값은 안 고침) → 이 줄만 옛 손목 판으로 본다 (거둠 걸음 · 두 발 간격은 위에서 새 판으로)
+    const ow = withJ({ elbowSwivel: 0, wristGuard: 0 }, () => lungeRun(w));
+    assert.ok(ow.gapEnd > ow.gapLunge, `${w} 옛 손목 판 가슴 사이 ${ow.gapLunge.toFixed(2)} → ${ow.gapEnd.toFixed(2)}`);
     assert.equal(o.standAll, true, `${w} 넘어지지 않음`);
     assert.ok(o.tilt < 35, `${w} 몸통 기울기 ${o.tilt.toFixed(1)}°`);
     assert.ok(o.pelMove > 0.2, `${w} 몸이 앞으로 ${o.pelMove.toFixed(2)} m`);
