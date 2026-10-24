@@ -119,8 +119,9 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   //  고르면 title 에 저장(lobby_progress.js selectTitle). 키보드: 단추에서 ↓ ↑ = 열기 · 목록에서 ↑ ↓ Home End = 옮기기 · Enter Space = 고르기 · Esc = 닫고 단추로 · Tab = 닫기 / 바깥을 누르면 닫힘
   const picker = $('titleSelect'), titleList = $('titleList');
   const titleItems = () => [...titleList.querySelectorAll('[role=option]')];
-  // 긴 호칭 (10/24 — lobby.css #titleCurrent): 낱말 사이 두 줄로도 넘치면(낱말 하나가 칸보다 김) 글자 한 단계 작게 — 자르지 않는다
-  const fitTitle = (box, text) => { delete box.dataset.fit; if (text.scrollWidth > text.clientWidth + .5) box.dataset.fit = 'small'; };
+  // 긴 호칭 (10/24 — lobby.css #titleCurrent): 늘 한 줄(사장님 10:5x — 전 두 줄) · 한 줄에 안 들면 글자 한 단계 작게(14 → 12 px) — 자르지 않는다
+  const over = (text) => text.scrollWidth > text.clientWidth + .5;
+  const fitTitle = (box, text) => { delete box.dataset.fit; if (over(text)) { box.dataset.fit = 'small'; if (over(text)) box.dataset.fit = 'tiny'; } }; // 14 → 12 → 10 px(좁은 폰 — 740 × 360 칸 안 폭 106 px · 여백도 줄임)
   function renderTitles() {
     const { title } = readProgress(), none = !titleOptions().length;
     // 호칭이 없으면 (10/24 사장님 — '여행자'는 호칭이 아님): 레벨 옆에 흐린 '호칭 없음' 글만 · 갈매기표 · 누르기 · 내림 상자 없음 (줄 높이는 단추와 같게 — lobby.css .title-none)
@@ -138,10 +139,12 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   }
   function openTitles(at = 'current') {
     renderTitles();
-    // 열린 창이 내 정보 칸 안쪽 오른쪽 끝을 넘지 않게 (lobby.css --title-room) — 칸 안쪽 = 테두리 · 여백을 뺀 곳
-    const panel = picker.closest('.profile-panel'), ps = getComputedStyle(panel), pr = panel.getBoundingClientRect();
-    const room = pr.right - parseFloat(ps.borderRightWidth) - parseFloat(ps.paddingRight) - picker.getBoundingClientRect().left;
+    // 열린 창은 한 줄 호칭이 다 들도록 화면 오른쪽 끝(12 px 여백)까지 늘어날 수 있다 (lobby.css --title-room — 10/24 10:5x 한 줄 · 전 내 정보 칸 안쪽 끝까지)
+    const pr = picker.getBoundingClientRect(), room = innerWidth - 12 - pr.left;
     titleList.style.setProperty('--title-room', `${Math.max(96, Math.floor(room))}px`);
+    titleList.style.setProperty('--title-min', `${Math.max(140, Math.ceil(pr.width))}px`);
+    titleList.style.left = `${pr.left}px`; titleList.style.top = `${pr.bottom + 4}px`; // 단추 바로 아래 (화면 기준 — lobby.css .title-list position fixed)
+    titleList.style.maxHeight = `${Math.max(64, Math.min(168, innerHeight - pr.bottom - 12))}px`;
     titleList.hidden = false; picker.setAttribute('aria-expanded', 'true');
     for (const li of titleItems()) fitTitle(li, li.firstChild);
     const items = titleItems(), current = items.findIndex(o => o.getAttribute('aria-selected') === 'true');
@@ -174,6 +177,9 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   });
   listen(titleList, 'click', e => { const item = e.target.closest('[role=option]'); if (item) chooseTitle(item.dataset.title); });
   listen(root, 'pointerdown', e => { if (!titleList.hidden && !e.composedPath().some(n => n === picker || n === titleList)) closeTitles(false); });
+  // 화면 기준 창이라 칸이 스크롤되거나 화면 크기가 바뀌면 닫는다 (단추에서 떨어져 떠 있지 않게 — 10/24)
+  listen(picker.closest('.profile-panel'), 'scroll', () => { if (!titleList.hidden) closeTitles(false); });
+  listen(window, 'resize', () => { if (!titleList.hidden) closeTitles(false); });
   renderWallet(); renderTitles();
   $('lobbyName').textContent = profile.name;
   const total = profile.wins + profile.losses;

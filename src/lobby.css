@@ -140,10 +140,12 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .title-picker { position: relative; display: inline-block; min-width: 0; max-width: 100%; }
 .title-select { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 0; padding: 4px 8px 4px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--c-text); font-size: var(--fs-m); line-height: var(--lh-tight); text-align: left; }
 /* 긴 호칭 (10/24 사장님 '책 이름이 긴데 … 안 잘리고 표시 가능해?' — 캄프페히텐 계승자 · 에스그리마 계승자): 자르지 않는다(말줄임표 없음).
-   ① 단추는 내 정보 칸 안 폭까지 늘어남(레벨 옆에 안 들면 다음 줄 — 줄 바꿈 칸 rank-row) ② 그래도 넘치면 낱말 사이에서 두 줄('캄프페히텐' / '계승자' — 낱말 안에서 꺾지 않음)
-   ③ 낱말 하나가 칸보다 길면 글자를 한 단계 작게(data-fit=small — lobby.js fitTitle) */
-#titleCurrent { min-width: 0; white-space: normal; word-break: keep-all; overflow-wrap: normal; }
+   ① 단추는 내 정보 칸 안 폭까지 늘어남(레벨 옆에 안 들면 다음 줄 — 줄 바꿈 칸 rank-row) ② 늘 한 줄(10/24 10:5x 사장님 '호칭 칸이 2-3줄씩 줄바꿈되는 거 싫은데' — 전 낱말 사이 두 줄)
+   ③ 한 줄에 안 들면 글자를 작게(14 → 12 px small → 좁은 폰에서만 10 px tiny · lobby.js fitTitle) · 열린 창은 화면 오른쪽 끝까지 늘어나 한 줄(내 정보 칸 밖으로 나가도 됨) */
+#titleCurrent { min-width: 0; white-space: nowrap; }
 .title-select[data-fit="small"], .title-list [data-fit="small"] { font-size: var(--fs-s); }
+.title-select[data-fit="tiny"], .title-list [data-fit="tiny"] { font-size: var(--fs-xs); gap: 4px; } /* 12 px 로도 한 줄에 안 들 때만(좁은 폰) */
+.title-select[data-fit="tiny"] { padding: 4px 6px; }
 /* 호칭이 없을 때 (10/24 사장님 — '여행자'는 호칭이 아님): 레벨 옆 흐린 글 '호칭 없음' · 누를 수 없음(단추 · 갈매기표 없음) · 줄 높이 = 단추 높이(28 px — 줄이 그대로) */
 .title-none { font-size: var(--fs-m); line-height: 28px; color: var(--c-sub); white-space: nowrap; }
 .title-select .chevron { flex: none; width: 10px; height: 10px; color: var(--c-sub); transition: rotate .15s; }
@@ -151,8 +153,8 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .title-select[aria-expanded="true"] .chevron { rotate: 180deg; }
 /* 열린 창: 단추 바로 아래로 · 반투명(싸움 창 --panel 그대로 — 뒤 대기실이 조금 비친다) · 1 px --line · 모서리 10 · 가진 호칭만 (시스템 알림 · 빈 줄 없음) */
 /*  열린 창 폭 = 가장 긴 호칭만큼 · 내 정보 칸 안쪽 오른쪽 끝(--title-room — lobby.js 가 열 때 잼)까지만 — 넘으면 그 호칭만 낱말 사이에서 두 줄 (칸이 옆으로 밀리지 않음) */
-.title-list { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: max-content; min-width: min(max(100%, 140px), var(--title-room, 100vw)); max-width: var(--title-room, none); max-height: 168px; overflow: auto; margin: 0; padding: 4px; list-style: none; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 10px; } /* 10/24 두 겹(.item-detail 과 같음) — 두 줄 호칭 아래로 뒤 글이 비치지 않게 */
-.title-list [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; padding: 6px 10px; border-radius: 6px; font-size: var(--fs-m); line-height: var(--lh-tight); color: var(--c-text); white-space: normal; word-break: keep-all; cursor: pointer; }
+.title-list { position: fixed; z-index: 20; width: max-content; /* 10/24 10:5x 한 줄 — 화면 기준 자리(lobby.js openTitles 가 단추 바로 아래 left · top 을 넣음): 스크롤 칸(.profile-panel overflow auto)에 잘리지 않고 칸 밖으로 늘어남 */ min-width: min(var(--title-min, 140px), var(--title-room, 100vw)); /* 단추 폭 이상(화면 기준이라 100 % 는 화면 폭 — lobby.js 가 --title-min 을 넣음) */ max-width: var(--title-room, none); max-height: 168px; overflow: auto; margin: 0; padding: 4px; list-style: none; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 10px; } /* 10/24 두 겹(.item-detail 과 같음) — 두 줄 호칭 아래로 뒤 글이 비치지 않게 */
+.title-list [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; padding: 6px 10px; border-radius: 6px; font-size: var(--fs-m); line-height: var(--lh-tight); color: var(--c-text); white-space: nowrap; cursor: pointer; }
 .title-list .title-name { min-width: 0; }
 .title-list [role="option"]:focus { outline: none; background: var(--line); }
 .title-list .check { flex: none; width: 12px; height: 12px; color: var(--c-accent); }

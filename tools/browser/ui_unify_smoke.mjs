@@ -67,10 +67,10 @@ const PANEL_BOX = `const panel=root.querySelector('.profile-panel'),ps=getComput
 const FIT = `${PANEL_BOX}const cur=root.getElementById('titleCurrent'),b=root.getElementById('titleSelect'),br=b.getBoundingClientRect(),lv=root.getElementById('lobbyLevel').getBoundingClientRect(),nm=root.querySelector('.name-row').getBoundingClientRect();
   const rg=document.createRange();rg.selectNodeContents(cur);const lines=new Set([...rg.getClientRects()].map((r)=>Math.round(r.top))).size;
   return {current:cur.textContent,text:[cur.scrollWidth,cur.clientWidth],btn:[b.scrollWidth,b.clientWidth],inPanel:br.left>=L-.5&&br.right<=R+.5,noOverlap:(br.top>=lv.bottom-.5||br.left>=lv.right-.5)&&nm.top>=br.bottom-.5,
-    panel:[panel.scrollWidth,panel.clientWidth],page:[Math.max(lobby.scrollWidth,document.documentElement.scrollWidth),Math.min(lobby.clientWidth,innerWidth)],lines,small:b.dataset.fit==='small',btnRect:[br.width,br.height].map(Math.round),inner:Math.round(R-L),
+    panel:[panel.scrollWidth,panel.clientWidth],page:[Math.max(lobby.scrollWidth,document.documentElement.scrollWidth),Math.min(lobby.clientWidth,innerWidth)],lines,small:b.dataset.fit||'',btnRect:[br.width,br.height].map(Math.round),inner:Math.round(R-L),
     vpanel:[panel.scrollHeight,panel.clientHeight],tabsIn:root.querySelector('.lobby-tabs').getBoundingClientRect().bottom<=pr.bottom+.5};`;
 const OPEN_FIT = `${PANEL_BOX}const l=root.getElementById('titleList'),lr=l.getBoundingClientRect();
-  return {options:[...l.querySelectorAll('.title-name')].map((n)=>({name:n.textContent,fit:n.scrollWidth<=n.clientWidth+.5&&n.parentElement.scrollWidth<=n.parentElement.clientWidth+.5})),inPanel:lr.left>=L-.5&&lr.right<=R+.5,
+  return {options:[...l.querySelectorAll('.title-name')].map((n)=>({name:n.textContent,fit:n.scrollWidth<=n.clientWidth+.5&&n.parentElement.scrollWidth<=n.parentElement.clientWidth+.5})),inPanel:lr.left>=0&&lr.right<=innerWidth-11.5,
     panel:[panel.scrollWidth,panel.clientWidth],page:[Math.max(lobby.scrollWidth,document.documentElement.scrollWidth),Math.min(lobby.clientWidth,innerWidth)],list:[lr.width,lr.height].map(Math.round)};`;
 
 try {
@@ -333,7 +333,7 @@ try {
         assert.equal(m.current, name);
         assert.ok(m.text[0] <= m.text[1] + .5 && m.btn[0] <= m.btn[1] + .5, `${w}x${h} ${name}: title overflows ${JSON.stringify(m)}`);
         assert.ok(m.inPanel && m.noOverlap && m.panel[0] <= m.panel[1] && m.page[0] <= m.page[1], `${w}x${h} ${name}: layout ${JSON.stringify(m)}`);
-        assert.ok(m.lines <= 2 && !m.small, `${w}x${h} ${name}: at most two lines at the normal size ${JSON.stringify(m)}`);
+        assert.equal(m.lines, 1, `${w}x${h} ${name}: one line (10/24 10:5x — 12 · 10 px if needed) ${JSON.stringify(m)}`);
         assert.ok(m.vpanel[0] <= m.vpanel[1] + 1 && m.tabsIn, `${w}x${h} ${name}: info panel grows to fit (no inner scroll · menu tabs inside) ${JSON.stringify(m)}`);
         if (shot && name === LONG[0]) { await settle(p); await p.screenshot({ path: `${SHOTS}/panel_${w}x${h}.png` }); }
         await p.locator('#titleSelect').click();
@@ -343,7 +343,7 @@ try {
         await p.keyboard.press('Escape');
         report[`title fit ${w}x${h} ${name}`] = { lines: m.lines, button: m.btnRect, panelInner: m.inner, list: o.list, widths };
       }
-      checks.push(`${w}x${h}: longest titles (${LONG.map((n, i) => `${n} ${widths[i]} px`).join(' · ')}) shown whole — button text/box no overflow (≤ 2 lines at the word break, normal size), inside the info panel, no overlap with Lv/name, no horizontal scroll (panel · page); open list options all fit inside the panel; popups fit on screen`);
+      checks.push(`${w}x${h}: longest titles (${LONG.map((n, i) => `${n} ${widths[i]} px`).join(' · ')}) shown whole — button text/box no overflow (one line — 12 px if needed), inside the info panel, no overlap with Lv/name, no horizontal scroll (panel · page); open list options all fit on one line inside the screen (may pass the info panel); popups fit on screen`);
       await c.close();
     }
   }
