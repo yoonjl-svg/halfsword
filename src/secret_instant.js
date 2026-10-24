@@ -501,7 +501,9 @@ function placeIai(f, H, D, now) {
   const edge = M ? new THREE.Vector3(0, 0, 1).applyQuaternion(yaw).cross(yAx) : new THREE.Vector3().crossVectors(Dw, new THREE.Vector3(0, 1, 0)); // 가로로 칼 든 쪽으로 쓸린다 → 날 = D × 위
   const qs = swordQuat(yAx, new THREE.Quaternion(), edge.lengthSq() > 1e-6 ? edge.normalize() : null);
   // 비정상 손목 교정 (JOINTS.wristGuard — driveSword 와 같은 wristClamp): 놓을 아래팔(qf)과 칼날이 사람 손목 범위 밖이면 칼날을 칼 면 안에서 범위 끝으로. 손 자리 · 팔 · 칼 면 그대로
-  f.wristFixDeg = JOINTS.wristGuard && !M ? f.wristClamp(new THREE.Vector3(1, 0, 0).applyQuaternion(qf), Dw, _wz.set(0, 0, 1).applyQuaternion(qs)) : 0; // fighter.js wristClamp (몸의 메서드로 — 이 모듈이 fighter.js 를 부르면 모듈 차례가 꼬인다)
+  //  겨눈 찌름(comboPlanAim thrust · SECRET.thrustArm — 런지 · 격살 허파 찌르기)은 칼이 어깨 → 겨눈 곳 줄 위라 건드리지 않는다: 칼끝을 줄에서 비키면 찌름이 베기가 된다(탭 찌르기와 같은 원칙 — 손목은 팔이 맡음)
+  const thrustSeg = SECRET.thrustArm && f.iai.kind === 'combo' && f.iai.moves?.[f.iai.mi]?.dyn?.thrust;
+  f.wristFixDeg = JOINTS.wristGuard && !M && !thrustSeg ? f.wristClamp(new THREE.Vector3(1, 0, 0).applyQuaternion(qf), Dw, _wz.set(0, 0, 1).applyQuaternion(qs)) : 0; // fighter.js wristClamp (몸의 메서드로 — 이 모듈이 fighter.js 를 부르면 모듈 차례가 꼬인다)
   if (f.wristFixDeg) swordQuat(Dw, qs, _wx.crossVectors(Dw, _wz));
   const kin = SECRET.iaiKinematic;
   const cv = chest.linvel();
@@ -1414,6 +1416,8 @@ function stepCombo(f, combat) {
   if (!f.alive || !f.armed || !foe) return endCombo(f, combat);
   if (I.mord && !f.mordAim) return endCombo(f, combat); // 죽음의 일격이 끊겨(skill.js secretEnd → mordEnd) 이미 원래 쥠이면 거꾸로 놓기를 멈춘다
   const t0 = I.t;
+  const mi0 = I.mi;
+  const si0 = I.si;
   I.t += dt * f.stamina.attackSpeed;
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / dt) + 1);
   // 토막 넘기기 — 이 수의 토막이 끝나면 다음 수를 지금 자리에서 짠다 (없으면 끝)
@@ -1432,6 +1436,18 @@ function stepCombo(f, combat) {
     }
   }
   const sg = I.segs[I.si];
+  // 겨눈 찌름(comboPlanAim thrust — 격살 허파 찌르기): 이 스텝에 맞힘 없는 겨눔 토막에서 찌르는 토막으로 넘어왔으면 쓸린 자리를 찌르는 토막 첫 자리부터 본다.
+  //  지난 스텝 자리(겨눔 토막 가운데)부터 보면 겨눔의 옆 움직임이 찌름 방향에 섞여, 칼끝이 이미 몸 깊이에 든 맞닿기 언저리에서 찌름이 베기로 셈됐다
+  //  (10/24 17:2x 뒤 — 시작 자세가 바뀌면 겨눔이 끝나는 스텝이 달라져 맞닿기 −0.1 ~ +0.1 m 의 찌름 17 → 8 / 20 · 런지 lungeSweep 과 같은 까닭 · SECRET.thrustSweep)
+  if (SECRET.thrustSweep && I.mi === mi0 && I.si > si0 && sg?.cut && !I.mord && I.moves[I.mi]?.dyn?.thrust) {
+    let k = I.si;
+    while (k > si0 && I.segs[k - 1].cut) k--;
+    if (k > si0) {
+      const A = I.segs[k].A;
+      const D = A.D.clone().applyQuaternion(I.yaw).normalize();
+      I.prev = { B: A.H.clone().applyQuaternion(I.yaw).add(tv(f.bodies.chest.translation(), new THREE.Vector3())).addScaledVector(D, f.weaponCfg.hiltLength), D };
+    }
+  }
   // 반걸음 몸 미끄러짐 (발도와 같은 꼴 — 부드럽게 줄며)
   const S = I.slide;
   if (S) {

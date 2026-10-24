@@ -5,6 +5,8 @@
 //   JOINTS.elbowSwivel(10/24 17:2x 기본 켬): 끄면 레이피어 1번 자세(프리마)가 새끼 쪽 · 켜면 척측 한도 안.
 //   10/24 17:2x 비정상 손목 교정 (JOINTS.wristGuard 기본 켬 — 기록 §9): 겨눔 교정 wristClamp 기하 · 끄면(전 판) 범위 밖 몫이 크고 켜면 상한 아래 ·
 //   옛 굽은 팔 길(`?thrustArm=0`)도 교정이 손목을 범위 안으로 · 시험 손목 치우침 밧줄 둘(gripDev · `?wristRope=1`)은 켜면 범위 밖 0 · 칼날을 거꾸로 쥔 동안 뗐다가 돌아오면 다시.
+//   10/24 17:2x 뒤 고침 (기록 §9-9): 탭 찌르기 황소 → 칼 내린 상대 찌름 판정이 전 판만큼은 남(JOINTS.swivelThrust — 0 = 17:2x 판은 찌름 0) ·
+//   격살 허파 찌르기 맞닿기 언저리 첫 맞음이 베기로 셈되지 않음(SECRET.thrustSweep — 겨눔 토막 옆 움직임이 찌름 방향에 섞이지 않게).
 //  node --test tools/sim/wrist_audit.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,6 +14,8 @@ import { CONFIG, newRound, THREE } from './harness_m.mjs';
 import { lungeRun, gyeoksalRun, guardsRun, aiRun, tapRun, wristSample, outOfRange, WristTally, ARM_LEN, REV, ULNAR, OOR_X } from './wrist_audit.mjs';
 import { HUMAN, wristClamp } from '../../src/fighter.js';
 import { mordGripOf } from '../../src/mordschlag.js';
+import { standTrial } from './tap_thrust.mjs';
+import { TRADITIONS } from '../../src/schools.js';
 
 const { SECRET, JOINTS } = CONFIG;
 /** 여러 값을 잠깐 바꿔 fn — [[객체, 열쇠, 값], …] */
@@ -27,9 +31,11 @@ const withSets = (L, fn) => {
 const OLD = [[JOINTS, 'elbowSwivel', 0], [JOINTS, 'wristGuard', 0]]; // 10/24 17:2x 전 판
 const ph = (T, k) => T.k.get(k);
 
-test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 돌림 JOINTS.elbowSwivel 1 (사장님 10/24 17:2x) · 따라감 0.2 s · 손목 교정 wristGuard 1 · 손 면 범위 [−30, 135] · 팔 길이 0.57 m', () => {
+test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 돌림 JOINTS.elbowSwivel 1 (사장님 10/24 17:2x) · 따라감 0.2 s · 손목 교정 wristGuard 1 · 손 면 범위 [−30, 135] · 팔 길이 0.57 m · 찌르는 돌림 swivelThrust 1 · 찌름 쓸린 자리 thrustSweep 1', () => {
   assert.equal(SECRET.thrustArm, 1);
   assert.equal(JOINTS.elbowSwivel, 1);
+  assert.equal(JOINTS.swivelThrust, 1);
+  assert.equal(SECRET.thrustSweep, 1);
   assert.equal(JOINTS.swivelTau, 0.2);
   assert.equal(JOINTS.wristGuard, 1);
   assert.equal(JOINTS.wristRope, 0); // 시험 밧줄 기본 끔 (켜면 AI 베기가 크게 약해짐 — 기록 §9)
@@ -89,6 +95,78 @@ test('격살 허파 찌르기(봉두세)도 같은 길: 굳음 동안 뻗은 채
     const O = ph(old.T, 'stiff');
     assert.ok(O.aSum / O.n < 0.5 && O.devSum / O.n < -60, `옛 굳음 손 앞 ${(O.aSum / O.n).toFixed(2)} · dev ${(O.devSum / O.n).toFixed(0)}`);
   });
+});
+
+test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1.5 ~ 2.3 m): 기본 찌름 판정 수 ≥ 전 판(돌림 · 교정 끔) · 머묾 손목 범위 안 — JOINTS.swivelThrust 0(17:2x 판)은 찌름 0', () => {
+  const run = () => {
+    let stab = 0, dev = 0, n = 0;
+    for (const gap of [1.5, 1.7, 1.9, 2.1, 2.3]) {
+      let hold = null;
+      const r = standTrial({
+        gap,
+        pad: [0.22, 0.26],
+        foePad: [0.0, -0.5],
+        seed: 311 + Math.round(gap * 10),
+        before: (G) => {
+          const st = G.step.bind(G);
+          G.step = () => {
+            st();
+            const tp = G.player.skill.tap;
+            if (tp && !hold && tp.t >= tp.K.aim + tp.K.extend) hold = wristSample(G.player);
+          };
+        },
+      });
+      if (r.stab) stab++;
+      if (hold) (dev += hold.dev), n++;
+    }
+    return { stab, dev: n ? dev / n : NaN };
+  };
+  const old = withSets(OLD, run);
+  const now = run();
+  const v17 = withSets([[JOINTS, 'swivelThrust', 0]], run);
+  assert.ok(old.stab >= 1, `전 판 찌름 ${old.stab} / 5`);
+  assert.ok(now.stab >= old.stab, `기본 찌름 ${now.stab} ≥ 전 판 ${old.stab}`);
+  assert.ok(now.dev >= ULNAR - 5, `기본 머묾 손 면 dev 평균 ${now.dev.toFixed(0)}° (전 판 ${old.dev.toFixed(0)}°)`);
+  assert.equal(v17.stab, 0, `17:2x 판 찌름 ${v17.stab}`);
+});
+
+test('격살 허파 찌르기 맞닿기 언저리 (맞닿기 −0.1 ~ +0.1 m · 상대 롱소드 · 우치가타나 · 청강검 · 사브르): 첫 맞음이 베기 아님 — SECRET.thrustSweep 0 이면 겨눔 토막 옆 움직임이 섞여 베기', () => {
+  const run = () => {
+    const T = { stab: 0, cut: 0, n: 0 };
+    const g0 = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1 });
+    const contact = g0.player.swordArt.measure.contact;
+    g0.world.free();
+    for (const gp of [-0.1, 0, 0.1]) for (const fw of ['longsword', 'uchigatana', 'qinggang', 'sabre']) {
+      const g = newRound({ weapon: 'qinggang', weapon2: fw, seed: 1, gap: contact + gp });
+      try {
+        g.ai.update = () => {};
+        const p = g.player;
+        p.foe = g.enemy;
+        g.enemy.foe = p;
+        p.skill.autoGuard = true;
+        while (g.t < 1.0) g.step();
+        let first = null;
+        const pw = g.combat.hooks.onWound;
+        g.combat.hooks.onWound = (att, vic, r, ...rest) => {
+          pw?.(att, vic, r, ...rest);
+          if (att === p && !first) first = r.type;
+        };
+        p.skill.secret({ S: TRADITIONS.chinese.playerSecret, ctx: { slot: 'bongdu', stance: 'bongdu' } });
+        for (let i = 0; i < 150 && (p.skill.sec || p.iai); i++) g.step();
+        T.n++;
+        if (first === 'stab') T.stab++;
+        if (first === 'cut') T.cut++;
+      } finally {
+        g.world.free();
+      }
+    }
+    return T;
+  };
+  const now = run();
+  assert.equal(now.cut, 0, `기본 첫 맞음 베기 ${now.cut} / ${now.n}`);
+  assert.ok(now.stab >= 10, `기본 첫 맞음 찌름 ${now.stab} / ${now.n}`);
+  const off = withSets([[SECRET, 'thrustSweep', 0]], run);
+  assert.ok(off.cut >= 3, `thrustSweep 0: 첫 맞음 베기 ${off.cut} / ${off.n}`);
 });
 
 test('JOINTS.elbowSwivel: 끄면(전 판) 레이피어 1번 자세(프리마)는 칼이 새끼 쪽 · 켜면(손목 교정 없이도) 같은 손 자리에서 척측 한도 안', () => {
