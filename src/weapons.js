@@ -731,7 +731,7 @@ const dartagnan = finalizeSpec('dartagnan', {
   nameKo: '달타냥', nameEn: "D’Artagnan", tier: 'epic',
   desc: '세 벗과 맹세를 나눈 총사의 검.\n푸른 가죽 손잡이와 빛바랜 금빛 코등이.', // 편집 지침 두 줄: 전설 + 생김새(사장님 10/21 '이전의 외형 정보가 더 나은 거 같다')
   school: 'italian', style: 'thrust', // 위 머리말: 배율이 자동 판정 경계를 넘어 '두루' · 독일로 가지 않게 지금 유파 · 방식을 적음
-  ability: '총사의 결투: 한손검에 강함', // 에픽 특수 능력 (10/25 — 효과는 사장님 결정 · 이 글은 작업자 안, 사장님 확인 전 · 확인표 2493)
+  ability: '총사의 결투: 한손검에 강함', // 에픽 특수 능력 (10/25 — 효과 · 글 모두 사장님 결정 · 확인표 2493)
   duelOneHand: true, // '총사의 결투' (사장님 10/25 01:4x 'B로 하고 배율 1.15'): 한손검(아래 isOneHandSword)을 쥔 상대를 치면 공격력 × config WEAPON_ABILITY.duelOneHand(1.15) — 계산 combat.js duelOneHandMult
   bladeLength: 0.85,
   mCut: 0.8, mThrust: 1.15,
@@ -1959,7 +1959,7 @@ export const WEAPON_LIST = Object.values(WEAPONS);
 export const RETIRED_WEAPONS = new Set(['estoc', 'sabre', 'falchion']);
 
 /**
- * 한손검인가 (달타냥 '총사의 결투' 상대 가름 — 사장님 10/25 · 목록은 사장님 확인 전, 확인표 2492): 한손 쥠(grip 'one-hand') · 날 있음(edged).
+ * 한손검인가 (달타냥 '총사의 결투' 상대 가름 — 사장님 10/25 · 목록도 사장님 10/25 결정, 확인표 2492): 한손 쥠(grip 'one-hand') · 날 있음(edged).
  *  든다: 세이버 · 레이피어 · 팔쉬온 · 청강검 · 간장 · 막야 · 사인검 · 월왕구천검 · 달타냥 · 환도 · 발리사르다
  *  빠진다: 날 없는 한손 무기(나뭇가지 · 고무 닭 · 리볼버 · 모르겐슈테른 · 황약사의 검 · 드루이드의 채찍) · 에스톡(한 손 반) · 양손 무기 모두
  */

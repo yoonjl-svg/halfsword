@@ -65,7 +65,7 @@ export const STAMINA = {
 export const WEAPON_ABILITY = { aweDrain: 0, aweGap: 1.5, aweStart: 15 };
 // 달타냥 '총사의 결투' — 사장님 10/25 결정 (01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대): 칼 주인이 한손검(weapons.js isOneHandSword —
 //  한손 쥠 · 날 있음)을 쥔 상대를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율, 와신상담과 같은 자리 · combat.js duelOneHandMult)이 × duelOneHand.
-//  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 확인 전 (확인표 2491 · 2492)
+//  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 10/25 결정 — 11 개 그대로 (확인표 2491 · 2492)
 WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
 // 드루이드의 채찍 무릎 꿇리기 (사장님 10/23 01:5x '특수효과 넣어서 채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘.(모든 종류의 타격 대상) 곁눈베기 맞았을 때처럼' — 확인표 2255 ~ 2257 사장님 확인 전)
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
