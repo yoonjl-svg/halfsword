@@ -48,7 +48,7 @@ test('blocked storage keeps the checkpoint in memory for this run only (10/17: l
 test('any game argument keeps the old direct entry; plain address shows the title',()=>{
  const p=q=>new URLSearchParams(q);
  for(const query of ['test=1','stage=castle','weapon=longsword','hero=heinrich','foe=random','look=heinrich:v0','lookv=0','foeWeapon=rapier','stamina=0','foeWhiff=1','tempo=1','itRhythm=4','camFollow=old','cards=longsword,rapier','fps=1','offline=1','title=0','title=0&stage=castle'])assert.equal(skipsTitle(p(query)),true,query);
- for(const query of ['','title=1','nosw=1','title=1&stage=castle','title=1&cards=longsword,rapier','utm_source=x','fbclid=abc','gclid=abc'])assert.equal(skipsTitle(p(query)),false,query);
+ for(const query of ['','title=1','nosw=1','title=1&stage=castle','title=1&cards=longsword,rapier','utm_source=x','fbclid=abc','gclid=abc','coins=9','heads=99','coins=9&heads=99'])assert.equal(skipsTitle(p(query)),false,query);
 });
 test('clear count (statistic since seals were removed 10/16): same key, +1 per clear, blocked or bad storage reads 0 without throwing',()=>{
  const s=memory();assert.equal(CLEAR_KEY,'stillness.journeyClears.v1');assert.equal(journeyClears(s),37);

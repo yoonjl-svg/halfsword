@@ -24,6 +24,12 @@ STAGE = {'poseidon': '포세이돈 신전 (밝은 낮)', 'castle': '성 안뜰 (
 VIEW = {'mine': '내 칼 · 게임 화면', 'foe': '상대 칼 · 게임 화면', 'side': '칼 옆 1.25 m', 'sidefar': '칼 옆 4.3 m (게임 거리)'}
 CROP = {'mine': (150, 110, 2.0), 'foe': (150, 110, 2.0), 'side': (400, 290, 1.0), 'sidefar': (150, 110, 2.0)}  # 화면 px 폭 · 높이 · 타일 배율(화면 px → 그림 px)
 FONT = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
+TAG = {'before': ' 전', 'after': ' 후', 'ref': ''}  # 견줌 갈래 이름 → 칸 글 (예: durandal~after → 뒤랑달 후)
+
+
+def label(w):
+    base, _, v = w.partition('~')
+    return (NAME.get(base, base) + TAG.get(v, f' {v}' if v else '')) if base in NAME else w
 
 
 def font(n):
@@ -68,7 +74,7 @@ for v, s in rows:
         im = Image.open(p).convert('RGB').crop((round(k * (cx - cw / 2)), round(k * (cy - ch / 2)), round(k * (cx + cw / 2)), round(k * (cy + ch / 2))))
         sheet.paste(im.resize((tw, th), Image.LANCZOS), (x, y))
         if y == HEAD or (v, s) == rows[0] or s == stages[0]:
-            d.text((x + 6, y + 4), NAME.get(w, w), font=font(15), fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
+            d.text((x + 6, y + 4), label(w), font=font(15), fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
     y += th + GAP
 d.text((10, y + 4), '같은 자세 · 같은 카메라 · 같은 순간(화면 시계 고정). 칼 · 몸은 판 시작 자세에서 멈춤', font=font(14), fill=(170, 170, 170))
 out.parent.mkdir(parents=True, exist_ok=True)

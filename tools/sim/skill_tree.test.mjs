@@ -32,6 +32,7 @@ const fresh = (p = { version: 1, acquisitions: [], coins: 100, heads: 0, titles:
   readProgress();
 };
 const wallet = (coins, heads = 0) => fresh({ version: 1, acquisitions: [], coins, heads, titles: [], title: '여행자' });
+const HEADS_1025 = { passive: 5, secret: 10 }; // 사장님 10/25 01:5x '머리 패시브 5개 비기 10개로' — 설계 자료(data.mjs)의 10 · 20 을 덮음
 const ids = (...a) => new Set(a);
 
 // ── 자료: 설계 data.mjs 와 같은 칸 · 앞 칸 · 값 · 모양 ──
@@ -43,18 +44,18 @@ test('설계 자료(data.mjs)와 같다: 유파마다 11 칸 · id · 갈래 · 
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
       assert.ok(n, `${s.id} ${d.id}`);
-      assert.deepEqual([n.cat, [...n.pre], n.price, n.heads, !!n.opt, n.d, n.cx], [d.cat, d.pre, d.price, d.heads ?? 0, !!d.opt, d.d, d.cx], `${s.id} ${d.id}`);
+      assert.deepEqual([n.cat, [...n.pre], n.price, n.heads, !!n.opt, n.d, n.cx], [d.cat, d.pre, d.price, HEADS_1025[d.cat] ?? d.heads ?? 0, !!d.opt, d.d, d.cx], `${s.id} ${d.id}`);
     }
     assert.deepEqual(D.TREE[s.id].gate ? { from: [...D.TREE[s.id].gate.from], to: [...D.TREE[s.id].gate.to] } : null, s.gate ? { from: s.gate.from, to: s.gate.to } : null);
     assert.equal(mine.filter((n) => n.pre.length === 0).length, 1, `${s.id} 뿌리 하나`);
     assert.equal(mine.find((n) => !n.pre.length).cat, 'foot', `${s.id} 뿌리 = 보법 I`);
   }
 });
-test('값 규칙 (사장님 19:0x): 편지 금화 100 · 패시브 머리 10(금화 0) · 보법 II 금화 100 · 비기 금화 400 + 머리 20', () => {
+test('값 규칙 (사장님 19:0x): 편지 금화 100 · 패시브 머리 5(금화 0 · 10/25 10 → 5) · 보법 II 금화 100 · 비기 금화 400 + 머리 10(10/25 20 → 10)', () => {
   for (const s of D.TREE_SCHOOLS) for (const n of D.nodesOf(s)) {
     if (n.cat === 'letter') assert.deepEqual([n.price, n.heads], [100, 0]);
-    if (n.cat === 'passive') assert.deepEqual([n.price, n.heads], [0, 10]);
-    if (n.cat === 'secret') assert.deepEqual([n.price, n.heads], [400, 20]);
+    if (n.cat === 'passive') assert.deepEqual([n.price, n.heads], [0, 5]); // 10/25 사장님 10 → 5
+    if (n.cat === 'secret') assert.deepEqual([n.price, n.heads], [400, 10]); // 10/25 사장님 20 → 10
     if (n.cat === 'foot' && n.l1 === '보법 II') assert.deepEqual([n.price, n.heads], [100, 0]);
   }
 });
@@ -136,23 +137,23 @@ test('배우기: 금화 · 머리를 낸다 · 앞 칸 · 모자람 · 이미 �
   assert.equal(readProgress().coins, 0); assert.equal(readProgress().level, 2);
   assert.deepEqual(S.learnNode('german', 'G1').why, 'learned');
   assert.deepEqual(S.learnNode('german', 'G2').why, 'coins');
-  wallet(1000, 9);
+  wallet(1000, 4);
   S.learnNode('german', 'G1'); S.learnNode('german', 'G2');
-  assert.deepEqual(S.learnNode('german', 'G9').why, 'heads'); // 패시브 = 머리 10
+  assert.deepEqual(S.learnNode('german', 'G9').why, 'heads'); // 패시브 = 머리 5 (10/25)
   recordAcquisition({ receipt: 'drop-1', kind: 'item', source: 'loot' }); // 물건도 레벨에 센다
   const before = readProgress();
   assert.equal(before.level, 4); // 1 + 칸 둘 + 물건 하나
-  storage.set(PROGRESS_KEY, JSON.stringify({ ...JSON.parse(storage.get(PROGRESS_KEY)), heads: 10 }));
+  storage.set(PROGRESS_KEY, JSON.stringify({ ...JSON.parse(storage.get(PROGRESS_KEY)), heads: 5 }));
   assert.equal(S.learnNode('german', 'G9').ok, true);
   const p = readProgress();
   assert.equal(p.coins, 800); assert.equal(p.heads, 0); assert.equal(p.level, 5);
-  assert.deepEqual(p.acquisitions.find((a) => a.receipt === 'skill:german:G9').paid, { coins: 0, heads: 10 });
+  assert.deepEqual(p.acquisitions.find((a) => a.receipt === 'skill:german:G9').paid, { coins: 0, heads: 5 });
   assert.deepEqual([...S.readLearned().german].sort(), ['G1', 'G2', 'G9']);
-  wallet(2000, 40); // 일본 고노센: 금화 400 + 머리 20
+  wallet(2000, 40); // 일본 고노센: 금화 400 + 머리 10 (10/25)
   for (const id of ['J1', 'J2', 'J3', 'J4']) assert.equal(S.learnNode('japanese', id).ok, true, id);
   const c = readProgress().coins;
   assert.equal(S.learnNode('japanese', 'J5').ok, true);
-  assert.equal(readProgress().coins, c - 400); assert.equal(readProgress().heads, 20);
+  assert.equal(readProgress().coins, c - 400); assert.equal(readProgress().heads, 30);
 });
 
 // ── 유파 초기화 ──
@@ -161,12 +162,12 @@ test('유파 초기화: 머리 1 · 그 유파 칸에 쓴 금화 · 머리를 �
   for (const id of ['G1', 'G2', 'G9', 'G5', 'G8', 'G3', 'G6']) assert.equal(S.learnNode('german', id).ok, true, id);
   assert.equal(S.learnNode('italian', 'I1').ok, true);
   let p = readProgress();
-  assert.equal(p.coins, 5000 - (100 + 100 + 0 + 200 + 200 + 200 + 300) - 100); assert.equal(p.heads, 20); assert.equal(p.level, 9);
-  assert.deepEqual(S.resetPreview('german'), { count: 7, coins: 1100, heads: 10, cost: 1, ok: true, why: null });
+  assert.equal(p.coins, 5000 - (100 + 100 + 0 + 200 + 200 + 200 + 300) - 100); assert.equal(p.heads, 25); assert.equal(p.level, 9);
+  assert.deepEqual(S.resetPreview('german'), { count: 7, coins: 1100, heads: 5, cost: 1, ok: true, why: null });
   const r = S.resetSchool('german');
-  assert.deepEqual(r, { ok: true, saved: true, why: null, count: 7, coins: 1100, heads: 10 });
+  assert.deepEqual(r, { ok: true, saved: true, why: null, count: 7, coins: 1100, heads: 5 });
   p = readProgress();
-  assert.equal(p.coins, 4900); assert.equal(p.heads, 29); assert.equal(p.level, 2); // 20 + 10 − 1 · 이탈리아 I1 만 남음
+  assert.equal(p.coins, 4900); assert.equal(p.heads, 29); assert.equal(p.level, 2); // 25 + 5 − 1 · 이탈리아 I1 만 남음
   assert.deepEqual([...S.readLearned().german], []); assert.deepEqual([...S.readLearned().italian], ['I1']);
   assert.deepEqual(S.resetSchool('german').why, 'empty'); assert.equal(readProgress().heads, 29);
   wallet(1000, 0);

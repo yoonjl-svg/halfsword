@@ -5,7 +5,7 @@
 //  acquisitions 에 남았다(10/21 스킬트리로 바뀜 — 아래) · 이미 받은 인장을 금화로(seal_coins.js addCoins).
 //  금화 벌기 (사장님 결정 04:3x '승리시 랜덤으로 벌어. 5~15원 중 랜덤. 패배시 1~5원 감소'): 첫 화면·대기실 여정의 판 끝마다 journeyCoins — 0 아래로는 안 내려간다.
 //  머리 (사장님 결정 04:3x '적의 머리를 베면 1개씩 주는 재화'): 같은 여정에서 상대의 목을 베면 1 (main.js — COMBAT_HOOKS.onDecapitate · 한 상대에 한 번, awardHead).
-//   머리로 사는 것 (10/21 스킬트리 — 사장님 19:0x): 패시브 칸 머리 10 · 비기 칸 금화 400 + 머리 20 · 유파 초기화 머리 1 (skill_tree_store.js). 디자인 보기용 주소 `?coins=N`(game_entry.js setCoins).
+//   머리로 사는 것 (10/21 스킬트리 — 사장님 19:0x): 패시브 칸 머리 5 · 비기 칸 금화 400 + 머리 10(10/25 01:5x 사장님 — 전 10 · 20) · 유파 초기화 머리 1 (skill_tree_store.js). 디자인 보기용 주소 `?coins=N`(game_entry.js setCoins) · 시험용 `?heads=N`(setHeads).
 //  10/21 스킬트리 (docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md): 익힌 칸은 receipt 'skill:<유파>:<칸 id>' · kind 'skill' · paid { coins, heads }(낸 값 — 초기화 때 그대로 돌려줌)로
 //   acquisitions 에 남는다(값과 같은 저장 — 반쯤 산 채로 남지 않음). 옛 스킬북('skillbook:<유파>:<급>')은 옮기기(skill_tree_store.js migrateSkillBooks)가 한 번의 저장으로 거두고 돌려준다 —
 //   그 기록 = tree { v, at, books, coins, heads, bonus, notice }(이 저장 안 — 금화와 같은 저장이라 '금화만 받고 기록이 없음' · '기록만 있고 금화가 없음'이 생기지 않는다). update = 그 한 번의 저장 틀.
@@ -163,6 +163,13 @@ export function setCoins(amount) {
   readProgress();
   if (!count(amount) || amount > 1e7) return false;
   session.coins = amount;
+  return save();
+}
+/** 머리를 이 값으로 (시험용 주소 `?heads=N` — game_entry.js · 사장님 10/25 01:5x 스킬을 직접 사서 해 보려는데 머리가 모자람) */
+export function setHeads(amount) {
+  readProgress();
+  if (!count(amount) || amount > 1e7) return false;
+  session.heads = amount;
   return save();
 }
 // ── 여정 판 끝 금화 · 머리 (사장님 결정 10/16 04:3x) ──

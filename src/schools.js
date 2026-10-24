@@ -744,7 +744,9 @@ const JAPANESE_SECRET = {
   nameKo: '고노센', orig: '後の先', // 10/23 사장님 '원어를 독음한 것으로 ex 고노센. 그게 멋져' (전 '뒤에서 앞서기 (고노센)') // 이름은 가칭(사장님 확인 전) — 화면에선 '· 가칭' 꼬리를 뺌 (10/10 17:1x 문구 정리)
   // 10/9 사장님 추가 지시: 헛스윙을 본 뒤가 아니라 한 박자 빠르게 — 상대가 '내 비기는 닿고 상대는 명백히 안 닿을 간격에서 무의미하게 허점을 노출하는 공격 동작'을
   //  시작하는 순간(칼을 듦·달려듦, 지금 모습). 헛침(foeRecover)은 같은 창에서 보조 사건(칼끝 추정 에너지 문턱 whiff)
-  when: ['foeRaise', 'foeCharge', 'foeRecover'],
+  //  10/25 01:3x 사장님 '이 경우에 창이 안 열리고 천천히 다가와서 가까이 붙어 버리던데?' → foeEnter: 발도 대기인 채 상대가 들어와 내 발도가 닿는 거리를 넘는 순간(出端 — secret.js enterEvent).
+  //   사람은 SECRET.gnsEnter(기본 켬) · AI 는 SECRET.gnsEnterAI(기본 끔) 일 때만 본다 — 끄면 옛 셋 그대로
+  when: ['foeRaise', 'foeCharge', 'foeRecover', 'foeEnter'],
   cond: { window: true, whiff: 'japaneseWhiffJ', armed: true }, // armed: 10/10 02:4x 발도 대기(상대 간격 밖 SECRET.iaiArmTime 초)에서만 — SECRET.iai 일 때 // window: foeReach + japaneseFoeMargin < d ≤ reach + japaneseReach + japaneseFar (ai.js secretCond)
   do: {
     back: { fwd: 'japaneseBack', guard: G.nebenR },
