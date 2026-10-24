@@ -16,6 +16,9 @@
 //  10/23 넓은 판정 (사장님 10/23 00:1x '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게' — 기본 · 10/22 판은 `?risoWide=0`):
 //   덮음에 칼 어느 부위든 맞닿음 · 0.07 m(risolutoAnyPart — bladesNear) · 덮음 끊김 0.2 s(risolutoGrace) 너그러움으로 모아서 셈 · 가슴 사이 줄어듦 뺌(risolutoClosing 0) ·
 //   다 붙음 창(risolutoClose — 맞닿기 거리 밖에서 안으로 든 순간) · 상대 박자 창(risolutoBeat) 기본 켬. 노리는 운전 30 판 창 판당 0.07 → 2.27 (문서 §9)
+//  10/25 칼끝 얽힘 창 (사장님 10/25 01:0x '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — 기본 · 10/24 판은 `?risoTouch=0` · 문서 §14):
+//   덮인 채 나아가기가 새로 선 그 스텝(칼끼리 어느 부위든 실제 맞닿음 · 0.07 m — 칼끝끼리 · 칼끝이 상대 칼 몸에 엇걸림도)에 곧장 창 · 셈 시간 없음 · 덮인 채 나아가기 한 번에 한 번.
+//   10/24 판에서 첫 닿음을 늦춘 것 = 이어짐 0.6 s(risolutoHold) 하나 — 부위 · 가슴 사이 조건은 10/23 에 이미 풂 · 다 붙음 창은 13:4x 간격 조건(맞닿기 거리)과 같은 자리라 늘 막힘.
 //  AI 는 쓰지 않는다(SECRET.aiOpenSchools — ai.js 는 TRADITIONS.italian.secret 옛 비기를 보고, 그마저 닫힘). 시뮬 도구엔 PlayerSecretWatch 가 없어 AI 끼리 판 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -117,8 +120,9 @@ export class RisolutoWatch {
     this.on = false; // 지금 덮인 채 나아가는 중
     this.runs = [];
     this.ends = { foeSwing: 0, uncover: 0, meSwing: 0, stick: 0, gap: 0 };
-    this.opens = { hold: 0, beat: 0, close: 0 };
+    this.opens = { hold: 0, beat: 0, close: 0, touch: 0 };
     this.closeDone = false; // 다 붙음 창 (SECRET.risolutoClose): 이번 덮인 채 나아가기에서 이미 열었나
+    this.touchDone = false; // 칼끝 얽힘 창 (SECRET.risolutoTouch — 10/25): 이번 덮인 채 나아가기에서 이미 셈했나 (열렸든 가까워 막혔든)
     this.lineSteps = 0; // 재기: 줄 막기로만 덮음이 된 스텝
     this.anySteps = 0; // 재기: 칼 어느 부위든(넓은 판정)으로만 덮음이 된 스텝
     this.off = 0; // 너그러움 (SECRET.risolutoGrace): 덮음 · 가슴 사이가 끊긴 지 지난 시간 — 이 동안은 셈을 쥔 채 기다림
@@ -132,6 +136,7 @@ export class RisolutoWatch {
     this.on = false;
     this.gap = null;
     this.closeDone = false;
+    this.touchDone = false;
     this.off = 0;
   }
 
@@ -167,6 +172,13 @@ export class RisolutoWatch {
       this.off = 0;
       this.held += dt;
       this.on = true;
+      // 칼끝 얽힘 창 (10/25 사장님 '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — SECRET.risolutoTouch · `?risoTouch=0` = 10/24 판): 덮인 채 나아가기가 선 첫 스텝에 곧장 · 셈 시간 없음 ·
+      //  덮인 채 나아가기 한 번에 한 번(같은 묶임에서 다시는 이어짐 · 상대 박자 창으로). 창이 이미 열려 있으면 그 창이 끝난 스텝에
+      if (SECRET.risolutoTouch && canOpen && !this.touchDone) {
+        this.touchDone = true;
+        this.opens.touch++;
+        return { ev: 'risoluto', path: 'touch', held: this.held };
+      }
       if (canOpen && this.held >= SECRET.risolutoHold) {
         const held = this.held;
         this.runs.push(held);
@@ -197,6 +209,7 @@ export class RisolutoWatch {
     this.held = 0;
     this.on = false;
     this.closeDone = false;
+    this.touchDone = false;
     // 두 번째 길: 상대 박자(칼을 냄 · 칼을 빼 덮음이 풀림) — 내가 휘두르거나 스틱을 놓아 끝난 것은 아님
     if (SECRET.risolutoBeat && canOpen && held >= SECRET.risolutoBeatMin && (why === 'foeSwing' || why === 'uncover')) {
       this.opens.beat++;

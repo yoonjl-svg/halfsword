@@ -219,7 +219,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
-  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: 0.6 }); // 10/23 넓은 판정 전 10/22 판 (아래 낱낱 스위치가 덮을 수 있게 먼저)
+  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: 0.6, risolutoTouch: 0 }); // 10/23 넓은 판정 전 10/22 판 (아래 낱낱 스위치가 덮을 수 있게 먼저)
   if (['risoluto', 'contratempo'].includes(its)) CONFIG.SECRET.itSecret = its;
   if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = +params.get('risoHold');
   if (params.has('risoBeat')) CONFIG.SECRET.risolutoBeat = +params.get('risoBeat') ? 1 : 0;
@@ -238,6 +238,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoGlide')) CONFIG.SECRET.risolutoGlide = +params.get('risoGlide') ? 1 : 0; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
   if (params.get('risoRecover') === '0') CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 }; // 10/24 14:0x 전 걸음 = 디딘 뒤 뒷발 끌어붙임 (몸 따라감 배율 · 몸 가속 · 앞발 거둠은 없음)
   if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
+  if (params.has('risoTouch')) CONFIG.SECRET.risolutoTouch = +params.get('risoTouch') ? 1 : 0; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
   if (params.has('thrustArm')) CONFIG.SECRET.thrustArm = +params.get('thrustArm') ? 1 : 0; // 10/24 15:5x 운동학 겨눈 찌름(런지 · 격살 허파 찌르기) — 0 = 전 손 자리(어깨 가까이 · 칼이 새끼 쪽으로 꺾여 거꾸로 쥔 꼴)
   if (params.has('holdDepth')) CONFIG.SECRET.holdDepth = +params.get('holdDepth') ? 1 : 0; // 시험 (10/24 17:2x 뒤 · 기본 끔): 1 = 맞힌 겨눈 찌름(런지 · 격살 허파 찌르기)의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 (fighter.js holdDepthHand — 끄면 런지 앞발을 따라 칼이 상대 등 뒤로 나옴)
 }
