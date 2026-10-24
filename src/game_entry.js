@@ -6,7 +6,7 @@
 //  게임 인자가 하나라도 있는 주소(?stage= ?weapon= ?foe= ?test=1 ?stamina=0 ?foeWhiff=1 …): 지금처럼 바로 게임 메뉴 (journey_save.js skipsTitle)
 //  첫 화면·대기실은 Shadow DOM 안 — 꾸밈은 그 안에서만, 글자는 게임 HUD 규칙의 토큰(index.html :root)을 물려받아 entrance_type.css 한 곳에서 (lobby_fix §1).
 //   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
-//  디자인 보기용 주소 `?coins=N` = 대기실 금화를 N 으로 (lobby_progress.js setCoins — 게임 인자로 세지 않아 첫 화면이 뜬다 · lobby_fix §6)
+//  디자인 보기용 주소 `?coins=N` = 대기실 금화를 N 으로 (lobby_progress.js setCoins — 게임 인자로 세지 않아 첫 화면이 뜬다 · lobby_fix §6) · `?heads=N` = 머리를 N 으로 (10/25 · setHeads — 같은 꼴)
 //  소리 (사장님 10/17 — docs/import/ui_sound_2026-10-17.md · ui_sound.js): 덮개 안 확인 류 단추 = 짧은 딸깍 · 첫 화면 = 바람(첫 누름에 스며들고 싸움 · 대기실로 가면 잦아들어 꺼짐)
 import baseStyle from './start_screen.css?inline';
 import pixelStyle from './start_pixel.css?inline';
@@ -14,11 +14,12 @@ import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { ENTRANCE_HTML, mountStartScreen } from './start_screen.js';
 import { skipsTitle } from './journey_save.js';
-import { setCoins } from './lobby_progress.js';
+import { setCoins, setHeads } from './lobby_progress.js';
 import { wireUiSound, titleWind } from './ui_sound.js';
 
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&'));
 if (params.has('coins')) setCoins(Number(params.get('coins')));
+if (params.has('heads')) setHeads(Number(params.get('heads'))); // 시험용 `?heads=N` = 머리를 N 으로 (10/25 — ?coins 와 같은 꼴)
 if (skipsTitle(params)) {
   document.documentElement.removeAttribute('data-start-open');
   await import('./main.js');

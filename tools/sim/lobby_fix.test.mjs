@@ -9,7 +9,7 @@ const storage = new Map();
 globalThis.localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) };
 const { Stamina } = await import('../../src/stamina.js');
 const { STAMINA } = await import('../../src/config.js');
-const { readProgress, journeyCoins, rollInt, awardHead, JOURNEY_COINS, PROGRESS_KEY, setCoins } = await import('../../src/lobby_progress.js');
+const { readProgress, journeyCoins, rollInt, awardHead, JOURNEY_COINS, PROGRESS_KEY, setCoins, setHeads } = await import('../../src/lobby_progress.js');
 const { convertSeals, takeSealNotice, sealCount, OLD_SEALS, COINS_PER_SEAL, SEAL_COINS_KEY } = await import('../../src/seal_coins.js');
 const { CLEAR_KEY, journeyClears, addJourneyClear } = await import('../../src/journey_save.js');
 const { newRound, DT } = await import('./harness_m.mjs');
@@ -105,6 +105,7 @@ test('판 끝 금화: 낮 · 밤 같음 — 이기면 +10~25 · 지면 −5~10 (
   assert.equal(journeyCoins(false, (lo, hi) => hi).delta, -10); assert.equal(journeyCoins(false, (lo) => lo).delta, -5); assert.equal(readProgress().coins, 120);
   assert.equal(journeyCoins(true, (lo, hi) => hi, { night: true }).delta, 25); assert.equal(journeyCoins(false, (lo, hi) => hi, { night: true }).delta, -10);
   assert.equal(journeyCoins(true, (lo) => lo, { night: true }).delta, 10); assert.equal(journeyCoins(false, (lo) => lo, { night: true }).delta, -5); assert.equal(readProgress().coins, 140);
+  assert.equal(setHeads(77), true); assert.equal(readProgress().heads, 77); assert.equal(setHeads(-1), false); assert.equal(readProgress().heads, 77); setHeads(0); // 시험용 ?heads=N (10/25)
   setCoins(3); assert.equal(journeyCoins(false, (lo, hi) => hi).delta, -3); assert.equal(readProgress().coins, 0); // 바닥 0
   assert.equal(journeyCoins(false, (lo, hi) => hi).delta, 0); assert.equal(readProgress().coins, 0);
   const seen = { win: new Set(), loss: new Set() };

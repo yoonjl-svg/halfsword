@@ -165,6 +165,13 @@ export function setCoins(amount) {
   session.coins = amount;
   return save();
 }
+/** 머리를 이 값으로 (시험용 주소 `?heads=N` — game_entry.js · 사장님 10/25 01:5x 스킬을 직접 사서 해 보려는데 머리가 모자람) */
+export function setHeads(amount) {
+  readProgress();
+  if (!count(amount) || amount > 1e7) return false;
+  session.heads = amount;
+  return save();
+}
 // ── 여정 판 끝 금화 · 머리 (사장님 결정 10/16 04:3x) ──
 // 사장님 10/22 01:5x '획득량이라도 지금의 2배로 · 밤 스테이지에서는 다시 그 2배 · 대신 밤 스테이지에서는 패배 시 잃어버리는 양을 지금의 2배로'
 //  → 10/24 02:4x '스테이지 모드에서도 밤에 금화 보상 2배 주던 거 낮과 똑같이 바꿔' · 03:0x '스테이지 승리 +10~25 패배 -5~10': 낮 · 밤 같음 —
