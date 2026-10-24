@@ -582,6 +582,15 @@ const _qi = new THREE.Quaternion();
 const _m = new THREE.Matrix4();
 const _x = new THREE.Vector3();
 const _z = new THREE.Vector3();
+/**
+ * 감는 손의 옆 자리 (가슴 기준 m — 감는 쪽 +). 칼 든 쪽으로 감으면(ws ≥ 0) SECRET.ibSpin.windSide 1 = 칼 든 어깨의 옆 거리 ARM.shoulder[2]
+ *  (10/24 14:0x 사장님 결정 '손을 칼 든 쪽 옆으로' — 배 앞 가운데(wind.hand[2])에서 감으면 손목이 칼을 팔꿈치 쪽으로 146 ~ 156° 젖혔다 · 확인표 2426) ·
+ *  반대 쪽으로 감으면(레베스) · windSide 0 이면 wind.hand[2] 그대로. 대본 놓기(placeArms)와 덧씌우기 감은 자세(spinCutPose 'wind')가 같은 값을 읽는다
+ */
+function windHandZ(ws) {
+  const V = SECRET.ibSpin;
+  return ws >= 0 && V.windSide ? ARM.shoulder[2] : V.wind.hand[2];
+}
 function placeArms(f, S, dt) {
   const J = f.jointByName;
   const chest = f.bodies.chest;
@@ -598,7 +607,7 @@ function placeArms(f, S, dt) {
     const Wp = SECRET.ibSpin.wind;
     const a = Wp.yaw * D2R;
     const e = Wp.el * D2R;
-    S.arm = { AH, AD, WH: new THREE.Vector3(Wp.hand[0], Wp.hand[1], sd * Wp.hand[2]), WD: new THREE.Vector3(Math.cos(e) * Math.cos(a), Math.sin(e), sd * Math.cos(e) * Math.sin(a)), prev: new Map() };
+    S.arm = { AH, AD, WH: new THREE.Vector3(Wp.hand[0], Wp.hand[1], sd * windHandZ(S.ws ?? 1)), WD: new THREE.Vector3(Math.cos(e) * Math.cos(a), Math.sin(e), sd * Math.cos(e) * Math.sin(a)), prev: new Map() };
   }
   const A = S.arm;
   const k = S.pre ? (S.tp < S.pre ? smooth(S.tp / S.pre) : 1) : smooth(S.t / S.r); // 먼저 감았으면(pre) 도는 동안은 감은 자세 그대로
@@ -736,7 +745,7 @@ export function spinCutPose(f, phase, dt) {
   const m = phase === 'wind' ? 1 : -1; // 끝 자세는 발도 끝(칼 든 쪽으로 벰)을 거울로 — 탈류는 칼 든 쪽 → 반대쪽
   th.hand[0] = P.hand[0];
   th.hand[1] = P.hand[1];
-  th.hand[2] = m * s * P.hand[2];
+  th.hand[2] = m * s * (phase === 'wind' ? windHandZ(ws) : P.hand[2]); // 감은 자세 손 옆 자리 = 대본 놓기와 같은 값 (10/24 14:0x windSide)
   let el = P.el;
   const foe = f.foe;
   let yaw = m * P.yaw;
