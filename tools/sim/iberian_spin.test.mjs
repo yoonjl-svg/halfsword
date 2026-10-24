@@ -3,12 +3,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, AI } from './harness_m.mjs';
-import { SECRET, SKILL } from '../../src/config.js';
+import { SECRET, SKILL, JOINTS } from '../../src/config.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 import { spinProgress, spinRate } from '../../src/iberian_spin.js';
 import * as D from '../../src/skill_tree_data.js';
 
+/** 손목 값을 잠깐 바꿔 fn (10/24 17:2x 팔꿈치 돌림 · 손목 교정 · 손목 치우침 밧줄 — 몸이 만들어질 때 밧줄을 거니 판을 만들기 전에) */
+const withJoints = async (vals, fn) => {
+  const old = {};
+  for (const k of Object.keys(vals)) {
+    old[k] = JOINTS[k];
+    JOINTS[k] = vals[k];
+  }
+  try {
+    return await fn();
+  } finally {
+    Object.assign(JOINTS, old);
+  }
+};
+const WRIST_OLD = { elbowSwivel: 0, wristGuard: 0 }; // 10/24 17:2x 전 판 (옛 결함을 다시 보이는 판)
+// 손목 치우침 밧줄(JOINTS.wristRope)을 켜면 어긋나는 대본 판 둘 — 아래 '한 바퀴'(2.2 m 과녁 가로 베기) · '발디딤'(플랑베르주 곧은 입력 도는 동안 두 발 엇갈림).
+//  대본 · 걸음 기계를 보는 시험이라 밧줄 없이 본다 — 밧줄 판의 어긋남은 docs/strike/wrist_audit_2026-10-24.md §9 에 숫자와 함께 여쭘 (값은 안 고침)
+const NO_ROPE = { wristRope: 0 };
 const setup = (P) => {
   P.skill.corr = SKILL.corr;
   P.skill.corrTip = SKILL.corrTip;
@@ -99,7 +116,7 @@ test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르�
   G.world.free();
 });
 
-test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 · 서 있고 · 끝에 가로로 쳐 서 있는 과녁을 벤다(물리 판정)', () => {
+test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 · 서 있고 · 끝에 가로로 쳐 서 있는 과녁을 벤다(물리 판정) — 손목 치우침 밧줄 없이(위 NO_ROPE)', () => withJoints(NO_ROPE, () => {
   // 과녁 2.2 m (10/24 share 0.7 — 전 2.3 m: 츠바이핸더 칼 든 쪽 2.3 m 는 닿는 끝이라 몫 0.6 은 팔 · 가슴을 베고 0.7 은 비켰다 · 2.1 · 2.2 m 는 둘 다 벰 — docs/strike/iberian_spin_2026-10-22.md §16-1)
   const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 2.2, walls: false });
   const P = G.player, E = G.enemy;
@@ -138,7 +155,7 @@ test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 �
   const cuts = G.wounds.filter((w) => w.att === P && w.vic === E && w.type === 'cut' && w.severity > 0);
   assert.ok(cuts.length > 0, '가로로 벰');
   G.world.free();
-});
+}));
 
 test('빠르기 몫 (10/24 share): 한 바퀴 = ramp + 2π · 칼끝 거리 ÷ (share × 고노센 칼끝) · 칼마다 · share 0 = 0.6 s 판', async () => {
   const { spinPlan } = await import('../../src/iberian_spin.js');
@@ -323,7 +340,7 @@ test('땅은 막힘 아님 (10/24 floor): 원을 아래에서 끝내 감기 첫 
   const r = runCircle('zweihander', 'langort', 'circle', c);
   assert.equal(r.why, 'done');
   assert.equal(r.q, 1);
-  const b = await withSpin({ floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c));
+  const b = await withJoints(WRIST_OLD, () => withSpin({ floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c))); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
   assert.equal(b.why, 'blocked');
   assert.ok(b.q < 0.05, `진행 ${b.q}`);
 });
@@ -345,7 +362,7 @@ test('작은 원 (10/24 circleR 0): 반지름 8 · 15 px 원도 싱지르가 한
 // ── 10/24 12:5x 사장님 '넘어지지 않으려면 다리가 넓게 딛거나 무릎 관절로 몸을 분산 지지해야 하는데 두 다리가 딱 붙어서 곧게 편 채 같은 방향을 지지하고 있음' (§17) ──
 const FOOT_LON = 0.45; // 시험 눈금 — 받아 멈춤 끝 두 발 앞뒤 (이베리아 자세 guardLength 0.62 의 3/4 언저리 · 판 값 아님)
 const PEL_MID = 0.1; // 시험 눈금 — 골반이 두 발 가운데에서 앞뒤로 벗어난 거리 (판 값 아님)
-test('발디딤 (10/24 feet): 한 바퀴 끝 + 받아 멈춤 뒤 두 발이 펜싱 자세 너비(앞뒤 · 옆)로 · 골반은 두 발 사이 · 무게 가운데 발바닥 안 · 안 엇갈림 · 대본 뒤 묵은 지나 딛기 없음 — 끄면 두 발이 붙음', async () => {
+test('발디딤 (10/24 feet): 한 바퀴 끝 + 받아 멈춤 뒤 두 발이 펜싱 자세 너비(앞뒤 · 옆)로 · 골반은 두 발 사이 · 무게 가운데 발바닥 안 · 안 엇갈림 · 대본 뒤 묵은 지나 딛기 없음 — 끄면 두 발이 붙음 (손목 치우침 밧줄 없이 — 위 NO_ROPE)', () => withJoints(NO_ROPE, async () => {
   const { runFeet } = await import('./iberian_spin_feet.mjs');
   const cases = [
     ['tizona', 'langort', 'circle', { r: 80, T: 0.8, a0: 180, dir: 'ccw', close: 380 }], // 사장님 그림 판 (티소나 큰 원)
@@ -369,4 +386,4 @@ test('발디딤 (10/24 feet): 한 바퀴 끝 + 받아 멈춤 뒤 두 발이 펜�
   const [w, s, input, c] = cases[0];
   const b = await withSpin({ feet: 0 }, () => runFeet(w, s, input, c));
   assert.ok(b.feet.fin.lon < 0.2, `끔 앞뒤 ${b.feet.fin.lon.toFixed(2)}`);
-});
+}));

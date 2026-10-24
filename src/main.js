@@ -327,7 +327,9 @@ const trunkFollow = +params.get('trunkFollow');
 if (trunkFollow >= 0 && params.has('trunkFollow')) CONFIG.BODY.trunkFollow = trunkFollow;
 const trunkArcSpeed = +params.get('trunkArcSpeed');
 if (trunkArcSpeed > 0) CONFIG.BODY.trunkArcSpeed = trunkArcSpeed;
-if (params.has('elbowSwivel')) CONFIG.JOINTS.elbowSwivel = +params.get('elbowSwivel') ? 1 : 0; // 시험 (10/24 손목 검사 · 기본 끔): 칼이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 (fighter.js elbowSwivel — 사람 · AI 모두)
+if (params.has('elbowSwivel')) CONFIG.JOINTS.elbowSwivel = +params.get('elbowSwivel') ? 1 : 0; // 기본 켬 (사장님 10/24 17:2x · `?elbowSwivel=0` 전 판): 칼이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 (fighter.js elbowSwivel — 사람 · AI 모두)
+if (params.has('wristGuard')) CONFIG.JOINTS.wristGuard = +params.get('wristGuard') ? 1 : 0; // 기본 켬 (사장님 10/24 17:2x · `?wristGuard=0` 전 판): 사람 손목 범위 밖 칼 겨눔을 범위 끝으로 (fighter.js wristClamp — 사람 · AI 모두 · 밧줄은 아래 wristRope)
+if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
 const chainParam = params.get('chain');
 if (chainParam === 'legs' || chainParam === 'anchor') CONFIG.BODY.chain = chainParam;
