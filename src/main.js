@@ -121,6 +121,7 @@ if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = p
 //  `?mordGrip=hilt` 쥠 그대로 폼멜 판 · `?mordOver=1` 넘어 들어감 규칙 (사장님 확인 전)
 if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
 if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = +params.get('mordPress');
+if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
 if (params.has('mordOver')) CONFIG.SECRET.mordOver = +params.get('mordOver') ? 1 : 0;
 //  가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔 · 사장님 확인 전): `?mordKin=0.6` 운동학 길(칼자루 끝 = 고노센 칼끝 빠르기 몫) · `?mordAt=0.5` 쥔 자리 · `?mordAim=pull` 머리 겨눔 · `?mordPow=finish` 판정 × FINISH.power

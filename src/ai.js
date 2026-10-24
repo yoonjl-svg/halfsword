@@ -666,8 +666,9 @@ export class AI {
     // 싱지르 무장 (10/24): 같은 걸쇠 — 무장된 동안은 먼저 치지 않고 간을 보며(발은 holdDist 그대로 다가섬) 상대가 칼끝 거리 + aiFire 안에 들면 spinTick 이 한 바퀴.
     //  걸쇠가 없으면 롤랑이 무장한 뒤 상대가 칼끝 거리 + 0.6 m 에 오자마자 보통 공격을 열어 무장이 풀렸다(첫 시험 — 낸 수 0). 들어오는 칼(위 respond)은 그대로 받는다
     if (this.spinArm?.armed) return;
-    // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 붙으러 들어가는 · 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다
-    if (this.press?.go) return;
+    // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다.
+    //  붙으러 걸어 들어가는 동안은 칠 때가 오면 친다(10/24 13:3x 사장님 '걸어가며 치기도 같이 넣어' — SECRET.mordWalkStrike · 0 이면 걸어가는 동안도 걸쇠 — 12:0x 판). 치면 붙이기는 끝(mordTick — 간 보기를 벗어남)
+    if (this.press?.go && !(SECRET.mordWalkStrike && this.mordWalking())) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
@@ -2087,6 +2088,12 @@ export class AI {
       this.stepT = 0;
     }
     return true;
+  }
+
+  /** 몸 붙이기로 걸어 들어가는 중인가 (붙이러 간 뒤 아직 밀치기 전 — 밀치기 걸쇠 'barge' 는 아님) */
+  mordWalking() {
+    const P = this.press;
+    return !!P?.go && !P.goBarge && !this.me.barge && P.goWhy !== 'barge';
   }
 
   /** 모르트슐라크를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 칼날 거꾸로 쥐기 · 운동학 길 · 기력 · 굳음). 냈으면 true */
