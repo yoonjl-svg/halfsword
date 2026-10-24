@@ -32,6 +32,22 @@ const _c = new THREE.Vector3();
 const _u = new THREE.Vector3();
 const D2R = Math.PI / 180;
 
+/**
+ * 런지 최소 간격 (m — 10/24 13:2x 사장님 '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게'): 런지 앞발(SECRET.risolutoStep.foot — italianStep 0.9 m)을
+ *  다 내디뎌도 가슴 사이가 맞붙는 거리(무기 실측 measure.clinch) 밖에 남는 간격 = clinch + 앞발. 레이피어 1.19 + 0.9 = 2.09 · 달타냥 1.10 + 0.9 = 2.00 m. 새 수 없음
+ */
+export function lungeGap(me) {
+  const st = SECRET.risolutoStep ?? {};
+  const foot = typeof st.foot === 'string' ? SECRET[st.foot] : st.foot ?? SECRET.italianStep;
+  return (me.swordArt?.measure?.clinch ?? 0) + (foot ?? 0);
+}
+
+/** 런지를 쓸 수 있는 간격인가 (간격 조건 SECRET.risolutoGap · 런지 판 SECRET.risolutoLunge 일 때만 — 아니면 늘 true) */
+export function lungeGapOk(me) {
+  if (!SECRET.risolutoLunge || !SECRET.risolutoGap) return true;
+  return me.foeDistance() >= lungeGap(me);
+}
+
 /** 덮음 거리 (m): 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 가장 가까운 거리. 칼이 없으면 Infinity */
 export function coverDist(me, foe) {
   if (!me?.armed || !foe?.armed || me.weaponBroken || foe.weaponBroken || me.weapon?.gun || foe.weapon?.gun) return Infinity;

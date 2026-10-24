@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
-import { coverDist, RisolutoWatch } from '../../src/italian_risoluto.js';
+import { coverDist, RisolutoWatch, lungeGap, lungeGapOk } from '../../src/italian_risoluto.js';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -183,7 +183,8 @@ test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력�
 
 
 // 10/24 런지 — 상대는 멈춤 · 판 시작 발 묶임(ARENA.startHold) 뒤 · 창을 열어 탭 하나
-function lungeRun(w, { gap = 1.8, seed = 9, foeW = 'longsword', cfg = {} } = {}) {
+// 10/24 13:2x 간격 조건: 런지는 가슴 사이 ≥ 맞붙는 거리 + 앞발(레이피어 2.09 · 달타냥 2.00 m)에서만 — 시험 판은 그 밖 2.2 m 에서 연다
+function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {}) {
   return withCfg(cfg, () => {
     const g = newRound({ weapon: w, weapon2: foeW, gap, seed });
     const p = g.player, e = g.enemy;
@@ -340,5 +341,51 @@ test('다 붙음 창(risolutoClose — 10/23 기본 켬: 맞닿기 거리 밖에
     assert.equal(tick(new RisolutoWatch(b.me, b.foe), b, n)?.path, 'hold');
     const c = mk(); c.foe.bodies.chest.translation = () => ({ x: 2.0, y: 1, z: 0.8 }); // 칼끝이 상대 가슴을 안 겨눔 (≈ 22°)
     assert.equal(tick(new RisolutoWatch(c.me, c.foe), c, n), null);
+  });
+});
+
+test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게\'): 최소 간격 = 맞붙는 거리 + 앞발 · 가까우면 창이 안 뜸 · 뜬 창은 닫힘 · 그때 탭은 비기가 아님', () => {
+  assert.equal(SECRET.risolutoGap, 1);
+  const ctx = { ev: 'risoluto', path: 'hold', held: 0.6 };
+  const at = (w, gap, fn) => {
+    const g = newRound({ weapon: w, weapon2: 'longsword', gap, seed: 9 });
+    const p = g.player, e = g.enemy;
+    g.ai.update = () => {}; p.foe = e; e.foe = p;
+    try {
+      g.step();
+      const ps = new PlayerSecretWatch(p, e);
+      ps.riso.tick = () => ctx; // 창 조건이 찬 스텝 (덮인 채 나아가기 셈은 위 시험들)
+      return fn(p, ps, g);
+    } finally { g.world.free(); }
+  };
+  // 최소 간격 = 무기 실측 맞붙는 거리 + 런지 앞발(italianStep) — 새 수 없음
+  for (const w of ['rapier', 'dartagnan', 'balisarda']) at(w, 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - (p.swordArt.measure.clinch + SECRET.italianStep)) < 1e-9, w));
+  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 2.09) < 0.01, `레이피어 ${lungeGap(p)}`));
+  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 2.0) < 0.01, `달타냥 ${lungeGap(p)}`));
+  // 가까움(1.6 m): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
+  at('rapier', 1.6, (p, ps) => {
+    assert.equal(lungeGapOk(p), false);
+    ps.risoTick(DT, false);
+    assert.equal(ps.open, null, '가까우면 창 없음');
+    assert.equal(ps.riso.gapBlocked, 1);
+    // 간격 조건 끔(?risoGap=0) = 12:1x 판 — 가까워도 뜸 · 10/23 탭 찌르기 판(?risoLunge=0)도 간격 조건 없음
+    withCfg({ risolutoGap: 0 }, () => { ps.risoTick(DT, false); assert.ok(ps.open, '간격 조건 끔'); ps.open = null; });
+    withCfg(TAP1023, () => { assert.equal(lungeGapOk(p), true); ps.risoTick(DT, false); assert.ok(ps.open, '10/23 판'); ps.open = null; });
+  });
+  at('rapier', 2.4, (p, ps) => {
+    assert.equal(lungeGapOk(p), true);
+    ps.risoTick(DT, false);
+    assert.equal(ps.open?.ctx?.path, 'hold', '간격이 있으면 창');
+    // 창이 뜬 뒤 가까워지면 닫힘 (그때의 탭은 보통 탭 찌르기 — 창이 없으니 main.js 가 skill.thrust)
+    p.foeDistance = () => 1.6;
+    ps.riso.tick = () => null;
+    ps.risoTick(DT, false);
+    assert.equal(ps.open, null, '가까워지면 창 닫힘');
+    assert.equal(ps.riso.gapClosed, 1);
+    // 같은 스텝 안의 탭(창은 아직 열림 · 간격은 모자람): fire() = null → 비기 아님
+    ps.openWindow(ctx);
+    assert.equal(ps.fire(), null);
+    assert.equal(ps.open, null);
+    assert.equal(p.skill.secret(null), false);
   });
 });

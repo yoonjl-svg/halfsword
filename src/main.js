@@ -227,6 +227,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare');
   if (params.has('risoRoom')) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +params.get('risoRoom') ? 1 : 0 }; // 1 = 앞발 런지 걸음을 가슴 사이(clinch 밖까지)로 줄임
   if (params.has('risoGlide')) CONFIG.SECRET.risolutoGlide = +params.get('risoGlide') ? 1 : 0; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
+  if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
 }
 {
   // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)
