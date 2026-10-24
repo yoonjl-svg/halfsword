@@ -29,7 +29,7 @@ export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10
 // 칸 하나: id · cat · pre(모두) · price(금화) · heads(머리) · opt(곁가지 — 점선) · closed(늘 닫힘) · d(줄) · cx(가로 0~1000 — data.mjs 그대로)
 //  편지 다섯은 뿌리(보법 I)와 같은 줄 왼쪽 — d 0 · cx 250 (사장님 10/22 02:1x '어디 어디에서 온 편지 아이콘은 가장 처음에 배우게 되는 보법 아이콘 왼쪽으로 수평으로 점선을 뺀 다음에 똑같은 높이에') · 앞 칸은 그대로 뿌리
 //  name = 트리 판 칸에 보이는 기술 이름 (사장님 10/22 '보법1 보법2 이런 건 우리가 보려고 만든 범주 구분 … 아이콘만 보이거나 기술 이름이 보이는 게' — 갈래(보법 I · 막기 II · 패시브 …)는 상세 카드에만)
-//  l1 · l2 = 옛 판 칸의 두 줄(갈래 · 이름 — 알림 · 읽기 이름에 남음) · title · orig = 상세 카드 제목(없으면 두 줄 · 원어는 대기실 스킬에서만 — 화면 글 지침 §1) · eff = 상세 카드 효과 한 줄 · lore · src = 오의 한 줄 · 출처(아래 NODE_LORE — 10/22) · f = 켜는 몫 열쇠 · u = 켜는 고유 공격(unique_assist.js PLAYER_UNIQUE name) · perk = 켜는 강화동작 이점 · letter = 편지
+//  l1 · l2 = 옛 판 칸의 두 줄(갈래 · 이름 — 알림 · 읽기 이름에 남음) · title · orig = 상세 카드 제목(없으면 두 줄 · 원어는 대기실 스킬에서만 — 화면 글 지침 §1) · eff = 상세 카드 효과 한 줄 · lore · src = 오의 한 줄 · 출처(아래 NODE_LORE — 10/22) · cmd = 상세 카드 맨 아래 조작 줄(아래 NODE_CMD — 10/24 · 정해진 입력으로 내는 칸만) · f = 켜는 몫 열쇠 · u = 켜는 고유 공격(unique_assist.js PLAYER_UNIQUE name) · perk = 켜는 강화동작 이점 · letter = 편지
 const N = (o) => Object.freeze({ pre: [], heads: 0, ...o, pre: Object.freeze(o.pre ?? []), f: Object.freeze(o.f ?? []) });
 const TREE_SRC = {
   german: {
@@ -175,8 +175,44 @@ const NODE_LORE = {
   C10: { lore: '숨을 불고 내쉬어, 묵은 것을 뱉고 새것을 들인다', src: '『장자』 각의편 — 토고납신' },
   C9: { lore: '수레를 몰 듯 막아, 가운데를 죽이고 두 손을 깎아 죽인다', src: '모원의 『무비지』(1621) 권86 조선세법 — 어거세' }, // 10/22 격살 (전 봉두세 「洗刺剪殺」 — 세 번 이어 치기)
 };
-/** 칸 + 오의 (lore · src — 편지는 lore 만) */
-const withLore = (n) => Object.freeze({ ...n, ...NODE_LORE[n.id] });
+// 칸 조작 줄 (사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어. 최대한 단순하고 이해하기 쉽게 적어봐'):
+//  정해진 입력으로 내는 칸만 — 고유 공격 · 비기 · 막아찌르기(I6) · 박차기 걸음(G1 · B2) · 간격 잡기(G2). 저절로 붙는 칸(패시브 · 심화 · 편지 · 걷기 맛 · 막기 자리 · 막는 동안 피해 감소 · 흘림)은 없음.
+//  상세 카드 맨 아래 한 줄 '조작 …'(화면 skill_tree.js — 닫힌 칸은 안 보임). 낱말은 화면이 이미 쓰는 말(조작 안내 · 공지): 스틱 · 막기 · 톡 · 긋기 · 공격 · 느낌표(비기 창의 금빛 '!').
+//  꼴: 명사형 '~기'(끝 '공격'), 30 자 안 · 숫자 · 화살표 · 기호 없음. 오른쪽 · 왼쪽 = 화면(손가락) 쪽 = 손 목표 x(main.js handOffset — 자세 패드 G 와 같은 축).
+//  근거(코드 자리)와 표 = docs/text/skill_cmd_2026-10-24.md · 시험 tools/sim/skill_cmd.test.mjs(입력 조건 · 기본값과 글이 맞는지). eff · lore 는 건드리지 않는다.
+const NODE_CMD = {
+  // 독일
+  G1: '멈춰 섰다가 스틱을 뒤로 당기기', // gait.js 첫 걸음 박차기 — 서 있던 몸 · 스틱 뒤(뒤 몫 ≥ 옆 몫) · 독일 보법
+  G2: '상대가 헛치면 스틱을 앞으로 밀기', // gait.js foeWhiff → 받을 창 안의 첫 앞 걸음이 빠른 디딤 둘
+  G5: '오른쪽 위에서 왼쪽 아래로 긋기', // 곁눈 베기 ← 분노의 베기(어깨 지붕 → 왼 아래 — ai_techniques.js zornhau)
+  G8: '스틱을 옆으로 민 채 오른쪽에서 왼쪽으로 가로로 긋기', // 걸음 명령 stick 'side' + 가로베기(zwerch)
+  G7: '벤 칼이 상대 칼에 닿으면 바로 다시 긋기', // 이어 긋기 — 앞 베기 맞물림 뒤 afterWindow 안의 긋기
+  G10: '붙어서 스틱을 놓고 앞으로 밀다가 느낌표가 뜨면 공격', // secret.js pressTick — 밀치기 누르기(스틱을 놓았다 밂 — fighter.js closeStep 걸쇠) mordPress 초 → 창 → 톡 · 긋기
+  // 이탈리아
+  I2: '스틱을 옆으로 민 채 아래에서 가운데로 찌르듯 긋기', // 걸음 명령 stick 'side' + 쟁기 찌르기(stichPflug · stichPflugL)
+  I7: '머리 오른쪽에서 가운데로 찌르듯 내려 긋기', // 위에서 내려 찌르기 ← 황소 찌르기(stichOchs)
+  I6: '막기 누르기', // italian_opposition.js — 막기 단추 새 누름 한 번에 곧장
+  I9: '찌른 칼이 상대 칼에 닿으면 바로 다시 긋기', // 이어 긋기 — 앞 찌르기(톡 포함) 맞물림 뒤 afterWindow 안의 긋기
+  I4: '칼을 맞댄 채 걸어 들어가다 느낌표가 뜨면 톡 치기', // italian_risoluto.js 덮인 채 나아가기(스틱 앞) → 창 → 톡만(tapOnly)
+  // 이베리아
+  B2: '스틱을 옆으로 밀기', // gait.js 옆 누르면 첫 걸음에 늘 옆 박차기(burstWalkSide · sideDash)
+  B3: '스틱을 옆으로 민 채 오른쪽 위에서 왼쪽 아래로 긋기', // 걸음 명령 stick 'side' + 분노의 베기(zornhau)
+  B4: '왼쪽에서 오른쪽으로 가로로 긋기', // 머리 위 돌려 베기 ← 왼 가로베기(zwerchL)
+  B5: '쉬지 않고 이어 긋기', // fighter.js updateIbFlow — 앞 휘두르기 뒤 이어짐 창 안에 다시 휘두름 · 휘두르며 둥글게 꺾음
+  B7: '거리를 두고 버티다 느낌표가 뜨면 원 한 바퀴 그리기', // secret.js spinTick 무장(칼끝 거리 밖 armTime 초 — 금빛 '!') → spinCircle 공격 원 한 바퀴(SECRET.ibSpin.input 'attackCircle')
+  // 일본
+  J6: '스틱을 옆으로 민 채 왼쪽 위에서 오른쪽 아래로 긋기', // 걸음 명령 stick 'side' + 왼 분노의 베기(zornhauL)
+  J7: '가운데서 아래로 짧게 긋기', // 손목 치기 ← 긴 자세(가운데) 자리에서 아래로
+  J9: '내려벤 칼이 안 맞으면 바로 위로 긋기', // 이어 긋기 — 정수리 · 좌우 분노의 베기가 못 맞힌 뒤 afterWindow 안의 위로 긋기
+  J5: '거리를 두고 기다리다 느낌표가 뜨면 공격', // secret.js 발도 대기(상대 칼 거리 밖 iaiArmTime 초 — '고노센 준비') → 상대가 칠 때 창 → 톡 · 긋기
+  // 동방
+  C3: '오른쪽에서 왼쪽으로 가로로 긋기', // 허리 베기 ← 가로베기(zwerch)
+  C5: '스틱을 앞으로 민 채 오른쪽에서 왼쪽으로 가로로 긋기', // 걸음 명령 stick 'fwd' + 가로베기(zwerch)
+  C6: '오른쪽 아래에서 찌르듯 긋다가 바로 꺾기', // 이어 긋기 'turn' — 쟁기 찌르기(긋기 — 톡 아님)를 시작하고 turnWindow 안에 방향을 꺾음
+  C9: '스틱을 앞으로 민 채 칼이 닿기 직전에 막기 누르기', // secret.js gyeoksalTick — 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음 · 그때 스틱 앞 · 받아 내면 저절로(gyeoksal.auto)
+};
+/** 칸 + 오의 (lore · src — 편지는 lore 만) + 조작 줄 (cmd — 정해진 입력으로 내는 칸만) */
+const withLore = (n) => Object.freeze({ ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) });
 /** 유파 → { gate?, nodes } (얼림) */
 export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).map(([s, t]) => [s, Object.freeze({ ...t, nodes: Object.freeze(t.nodes.map(withLore)) })])));
 
