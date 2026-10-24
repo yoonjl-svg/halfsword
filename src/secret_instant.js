@@ -1046,11 +1046,13 @@ function comboNext(f, I) {
   if (I.mi + 1 >= I.moves.length) return false;
   comboMoveStart(f, I, I.mi + 1);
   const m = I.moves[I.mi];
-  I.segs = (I.mord ? comboPlanMord(f, I, m, I.cur) : SECRET.cnPath && m.dyn ? comboPlanDyn(f, I, m, I.cur) : comboPlanPad(f, I, m, I.cur)).filter((sg) => sg.T > 0);
+  const dyn = !!m.dyn && (!!SECRET.cnPath || !!m.lunge); // 안다레 리솔루토 런지(10/24 — m.lunge)는 연환 길 스위치(cnPath)와 따로 늘 그때 계산 찌름
+  I.segs = (I.mord ? comboPlanMord(f, I, m, I.cur) : dyn ? comboPlanDyn(f, I, m, I.cur) : comboPlanPad(f, I, m, I.cur)).filter((sg) => sg.T > 0);
   I.si = 0;
   I.ts = I.t;
+  I.segT0 = I.t; // 이 수 토막들이 시작한 때 (런지 쓸린 자리 — lungeSweep)
   let span = I.segs.reduce((a, sg) => a + sg.T, 0);
-  if (I.slide && I.slide.slide > 0 && SECRET.cnPath && m.dyn && span > 0) {
+  if (I.slide && I.slide.slide > 0 && dyn && span > 0) {
     // 그때 계산 길 (10/12 03:0x): 길은 미끄러진 뒤의 상대 자리로 짜므로 몸 틀 칼끝 길이 짧아진다 — 칼끝이 땅에 대해 지나는 길 = 몸 틀 길 + 반걸음.
     //  그만큼 시간을 늘려 칼끝 빠르기를 같은 값(I.v)에 두고, 반걸음은 그 수 시간 내내 미끄러진다. (안 하면 찌름 길이 0.02 s 로 줄어 몸이 12 m/s 로 미끄러지며 그 빠르기가
     //  찌름에 실려 48 판 찌름 상처가 566~811 J 로 튀었다)
@@ -1357,7 +1359,12 @@ function comboMoveStart(f, I, mi) {
   }
   if (Math.abs(slide) > 1e-3) I.slide = { dx, dz, slide, t0: I.t, span: 1, done: 0 };
 
-  if (f.gait?.active) f.gait.requestStep({ kind: st.kind ?? 'lunge', fwd, side: st.lat ?? 0, duration: st.dur ?? 0.35 });
+  // 앞발 걸음: st.foot 이 있으면 몸 미끄러짐(fwd)과 따로 (안다레 리솔루토 런지 — 앞발 SECRET.italianStep) · st.room 이면 미끄러짐과 같은 한도로 미끄러진 뒤 가슴 사이가
+  //  맞붙는 거리(clinch) 안으로 들지 않을 만큼까지만(걸음 동안 몸이 따라 나가 상대 몸에 붙지 않게 — 브라우저: 0.9 m 그대로 디디면 가슴 사이 1.82 → 0.94 m · 기본 끔 SECRET.risolutoStep.room) ·
+  //  st.draw 면 디딘 뒤 뒷발 끌어붙임 (유파 걸음 drawT — 런지 뒤 자세로). 둘 다 없으면 전과 같음
+  const foot = st.foot != null ? (st.room ? Math.min(st.foot, Math.max(0, d - Math.max(0, slide) - M.clinch)) : st.foot) : fwd;
+  if (st.foot != null) I.footStep = foot; // 재기
+  if (f.gait?.active && (st.foot == null || foot > 1e-3)) f.gait.requestStep({ kind: st.kind ?? 'lunge', fwd: foot, side: st.lat ?? 0, duration: st.dur ?? 0.35, ...(st.draw ? { draw: true } : {}) });
 }
 
 function stepCombo(f, combat) {
@@ -1366,6 +1373,7 @@ function stepCombo(f, combat) {
   const foe = f.foe;
   if (!f.alive || !f.armed || !foe) return endCombo(f, combat);
   if (I.mord && !f.mordAim) return endCombo(f, combat); // 죽음의 일격이 끊겨(skill.js secretEnd → mordEnd) 이미 원래 쥠이면 거꾸로 놓기를 멈춘다
+  const t0 = I.t;
   I.t += dt * f.stamina.attackSpeed;
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / dt) + 1);
   // 토막 넘기기 — 이 수의 토막이 끝나면 다음 수를 지금 자리에서 짠다 (없으면 끝)
@@ -1379,6 +1387,7 @@ function stepCombo(f, combat) {
     if (I.si < I.segs.length) break;
     if (!comboNext(f, I)) {
       placeIai(f, I.cur.H, I.cur.D, false);
+      if (I.moves[I.mi]?.lunge) lungeSweep(f, I, combat, t0, I.t); // 런지: 이 스텝에 남은 토막(찌름 · 뽑음)을 지났으면 그 길도 본다
       return endCombo(f, combat);
     }
   }
@@ -1398,7 +1407,8 @@ function stepCombo(f, combat) {
   I.body = comboBody(P.px);
   I.cur = P;
   const cur = placeIai(f, P.H, P.D, false);
-  const subs = 3;
+  const subs = I.moves[I.mi]?.lunge ? 0 : 3; // 런지는 아래 lungeSweep (지나온 토막 길을 따라)
+  if (!subs) lungeSweep(f, I, combat, t0, I.t);
   for (let k = 1; k <= subs; k++) {
     const w = k / subs;
     const B = I.prev.B.clone().lerp(cur.B, w);
@@ -1448,6 +1458,110 @@ function stepCombo(f, combat) {
   } else if (I.blockM && !I.mord && !comboNext(f, I)) return endCombo(f, combat);
 }
 
+/**
+ * 안다레 리솔루토 런지의 쓸린 자리 (10/24 — 고노센 칼끝 빠르기): 한 물리 스텝에 겨눔 → 찌름 → 뽑음 토막을 여럿 지나므로 연환처럼 '지난 자리 → 지금 자리' 사이만 보면
+ *  찌른 끝을 건너뛴다(탐침: 맞힘 0 · 끝을 스텝마다 놓게 멈추면 빠르기가 줄어 마지막 짧은 스텝에 닿은 찌르기가 3 m/s · 13 J 로 셈됨). 그래서 이 스텝(t0 → t1)에 지난
+ *  토막마다 3 조각으로 길 위 자리(comboLerp — 몸 틀)를 그때 가슴 자리(지난 · 지금 가슴 사이)로 월드에 옮겨(손 = 팔 IK 목표 · 칼자루 → 칼날) 맞힘을 본다 (지난 점도 같은 식 — 빠르기가 한 식에서).
+ *  맞힘 토막만 잔상 · 맞힘(수마다 한 번) — 빠르기 = 그 조각 사이 칼 자리 옮김 ÷ 그 조각의 실제 시간 (연환과 같은 상처 함수 · 판정 배율 hitMul).
+ *  막힘 = 연환과 같은 거리(iberianBlockDist) · 붙은 칼 따라 미끄러짐(m.glide · SECRET.risolutoGlide — 원전 [156] '칼날을 놓지 말고 따라 미끄러져 몸까지'): 처음 붙어 있던 상대 칼에
+ *  닿아 있는 동안은 막힘이 아님 · 한 번 떨어진(같은 거리 밖) 뒤 다시 닿으면 막힘
+ */
+function lungeSweep(f, I, combat, t0, t1) {
+  const foe = f.foe;
+  const c1 = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const c0 = I.cPrev ?? c1;
+  I.cPrev = c1;
+  const HL = f.weaponCfg.hiltLength;
+  const BL = f.weaponCfg.bladeLength;
+  const m = I.moves[I.mi];
+  const T0 = I.segT0 ?? I.ts;
+  const tEnd = I.segs.reduce((a, sg) => a + sg.T, T0);
+  // 길 위 자리 (때 t — 몸 틀 길을 그때 가슴 자리로 월드에: 손 = 팔 IK 목표 · 칼자루 → 칼날). 지난 점 · 지금 점도 같은 식으로 (빠르기가 한 식에서 나오게)
+  const poseAt = (t) => {
+    let s0 = T0;
+    let sg = I.segs[I.segs.length - 1];
+    for (const g of I.segs) {
+      if (t <= s0 + g.T + 1e-12) {
+        sg = g;
+        break;
+      }
+      s0 += g.T;
+    }
+    if (t > s0 + sg.T) s0 = t - sg.T;
+    const P = comboLerp(sg, sg.T > 0 ? clamp((t - s0) / sg.T, 0, 1) : 1);
+    const c = c0.clone().lerp(c1, t1 > t0 ? clamp((t - t0) / (t1 - t0), 0, 1) : 1);
+    const D = P.D.clone().applyQuaternion(I.yaw).normalize();
+    const B = P.H.clone().applyQuaternion(I.yaw).add(c).addScaledVector(D, HL);
+    return { B, D, sg, t };
+  };
+  const ts = [];
+  let s0 = T0;
+  for (const sg of I.segs) {
+    const s1 = s0 + sg.T;
+    const a = Math.max(s0, t0);
+    const b = Math.min(s1, t1, tEnd);
+    if (b > a + 1e-9) for (let k = 1; k <= 3; k++) ts.push(a + ((b - a) * k) / 3);
+    s0 = s1;
+  }
+  const rate = Math.max(1e-3, f.stamina.attackSpeed);
+  let prev = poseAt(Math.min(t0, tEnd));
+  for (const t of ts) {
+    const q = poseAt(t);
+    const { B, D } = q;
+    const tip = B.clone().addScaledVector(D, BL);
+    if (q.sg.cut) {
+      I.arc.pts.push([B.x, B.y, B.z, tip.x, tip.y, tip.z]);
+      if (f.instantArc !== I.arc) f.instantArc = I.arc;
+      // 재기 (판정에는 안 씀): 찌르는 토막 칼끝 빠르기 (월드 — 조각 사이 칼끝 옮김 ÷ 실제 시간) — 같은 칼 고노센 칼끝 iaiTipSpeed 와 견줌
+      const dtq = (t - prev.t) / rate;
+      if (dtq > 1e-6) {
+        const v = tip.distanceTo(prev.B.clone().addScaledVector(prev.D, BL)) / dtq;
+        I.tipL = (I.tipL ?? 0) + v * dtq;
+        I.tipT = (I.tipT ?? 0) + dtq;
+        I.tipVmax = Math.max(I.tipVmax ?? 0, v);
+      }
+    }
+    if (q.sg.cut && !I.hitM && !I.blockM && foe?.alive && foe.state !== 'dead') {
+      let blocked = false;
+      if (foe.armed && foe.sword) {
+        const near = segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist;
+        const glide = !!m?.glide && !I.glideOff;
+        if (glide && !near) I.glideOff = true;
+        if (near && glide) I.glided = (I.glided ?? 0) + 1; // 재기 (판정에는 안 씀)
+        if (near && !glide) {
+          I.blockM = true;
+          I.blocked++;
+          blocked = true;
+        }
+      }
+      let best = null;
+      if (!blocked) {
+        for (const [h, info] of f.colliderInfo) {
+          if (info.fighter !== foe || info.kind === 'weapon' || info.detached) continue;
+          const col = f.world.getCollider(h);
+          if (!col) continue;
+          const r = segToCollider(B, tip, col);
+          if (r <= SECRET.instantTouch && (!best || r < best.r)) best = { h, info, col, r };
+        }
+      }
+      if (best) {
+        I.hitM = true;
+        const res = instantWound(f, foe, [{ B: prev.B, D: prev.D }, { B, D }], { i: 1, best }, combat, 0, Math.max(1e-4, (t - prev.t) / rate), I.hitMul, I.effMul, null);
+        if (res) {
+          I.hits++;
+          I.E += res.energy;
+          I.Emax = Math.max(I.Emax, res.energy);
+          I.part = best.info.part;
+          I.zone = res.zone;
+          I.type = res.type;
+          I.sev = Math.max(I.sev ?? 0, res.severity ?? 0);
+        }
+      }
+    }
+    prev = q;
+  }
+}
+
 function endCombo(f, combat) {
   const I = f.iai;
   setKinematic(f, false);
@@ -1492,7 +1606,7 @@ function endCombo(f, combat) {
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
-  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null } : {}) };
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
   f.iai = null;
   f.artTech = null;
 }

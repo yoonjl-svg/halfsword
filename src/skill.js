@@ -66,6 +66,22 @@ const gyeoksalReq = (D) => {
   const share = G.share > 0 ? G.share : SECRET.cnFastShare;
   return { ...(pw === 'hit' ? { hitMul: SECRET.hitMul } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
 };
+/** 안다레 리솔루토 굳음 (s): 10/24 런지 risolutoStiff 0.6 (사장님) · null 이면 이탈리아 비기 굳음 stiff.italian (10/23 판) */
+const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? 0.3;
+/**
+ * 안다레 리솔루토 런지 (10/24 사장님 '런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어' — docs/strike/italian_risoluto_2026-10-22.md §10): requestCombo 칸.
+ *  한 수 = 격살 허파 찌르기와 같은 길(dyn 'aim' · thrust — secret_instant.js comboPlanAim): 어깨 → 상대 가슴(가슴 몸체 가운데 0.05 m 위) 줄 위로 칼을 눕혀(맞힘 없음 — 칼끝은 그 앞 0.35 m)
+ *   그 줄을 따라 곧게 찌르고(칼 축 방향 — 찌르기로 닿음) 겨눈 자리로 뽑아 칼끝을 상대에게 둔 채 굳음 동안 붙잡음 (back — 몸통 가운데에 꽂힌 채 굳지 않게).
+ *   (지금 칼끝에서 곧장 몸통 쪽으로 가는 연환 찌름 'thrust' 은 칼이 돌며 가로질러 닿아 둔타 40 J 로 그쳤다 — 탐침)
+ *  걸음 = SECRET.risolutoStep: 몸 미끄러짐 한도 slide(고노센 발도 iaiStep — 맞닿기에서 멈춤 · clinch 안 금지) · 앞발 foot(이탈리아 런지 italianStep) · 디딘 뒤 뒷발 끌어붙임 draw.
+ *  빠르기 = 고노센 칼끝 × risolutoShare · 판정 = 다른 비기와 같은 결정타 hitMul · 굳음 붙잡기 = risolutoStiff · 잔상 = 찌르는 토막만(arcCut) · 마주 보는 띠(face 'line') — 격살 허파 찌르기와 같음
+ */
+const risolutoLungeReq = () => {
+  const st = SECRET.risolutoStep ?? {};
+  const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'iaiStep'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}) };
+  const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: !!SECRET.risolutoGlide, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
+  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: SECRET.hitMul, hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
+};
 const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
 const _pt = new THREE.Vector3();
@@ -615,6 +631,14 @@ export class Skill {
       //  (흘림과 같은 장치 — nagashi_recovery.js beginFlowRecovery · FLOW_RECOVERY) + 비기 배율(power · hitMul — updateSecret 'riso'). 찌르기는 아래 this.sec 를 건 뒤(기력은 비기 값 하나)
       run.stage = 'riso';
       run.risoluto = true;
+      if (SECRET.risolutoLunge) {
+        // 10/24 런지 (사장님 '런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어'): 탭 찌르기 대신 고노센 · 격살과 같은 운동학 틀(requestCombo)로 —
+        //  칼끝을 지금 자리(붙은 칼)에서 상대 몸통 가장 가까운 점으로 곧게(연환 그때 계산 찌름 comboPlanDyn 'thrust') · 빠르기 = 고노센 칼끝 × risolutoShare ·
+        //  몸 미끄러짐(고노센 발도와 같은 한도) + 앞발 런지 걸음 + 디딘 뒤 뒷발 끌어붙임 · 붙은 칼을 따라 미끄러지는 동안은 막힘 아님(glide) · 찌른 뒤 온 길로 뽑아 굳음 동안 붙잡음
+        run.stage = 'instant';
+        run.instant = true;
+        run.lunge = true;
+      }
     } else if (D.spin) {
       // 이베리아 휘감아 돌기 (10/22): 앞발을 축으로 몸을 한 바퀴 돌리는 대본 (iberian_spin.js) — 두 발로 딛고 있어야 건다(못 걸면 비기 아님 · 창은 이미 썼다)
       if (!requestSpin(f, run.ctx?.turnDir ?? 0)) return false; // 10/23 스틱 판: 스틱을 돌린 쪽 (ctx.turnDir — secret.js spinStick) · 공격 입력 판은 0 = 칼 든 쪽
@@ -689,11 +713,14 @@ export class Skill {
     this.sec = run;
     f.stamina.secret();
     if (run.risoluto) {
-      if (!this.thrust()) {
+      if (run.lunge) {
+        requestCombo(f, risolutoLungeReq());
+        startLunge(f); // 런지 자세 (SECRET.stance.lunge — 엇박 찌르기 런지와 같은 골반 낮춤 · 몸 숙임 · 빈팔 뒤로 · 넓은 발)
+      } else if (!this.thrust()) {
         this.sec = null; // 찌르기를 못 냄 (기력 탈진 · 칼 없음 …) — 비기도 없음
         return false;
       }
-      run.armSlow = beginFlowRecovery(f.foe, f); // 상대 칼이 묶여 막을 수 없다 — 찌르기가 시작될 때 상대 두 팔 늦춤 (흘림과 같은 0.4 s)
+      run.armSlow = beginFlowRecovery(f.foe, f, SECRET.risolutoArmSlow); // 상대 칼이 묶여 막을 수 없다 — 찌르기가 시작될 때 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/24 0.6 s — null 이면 흘림 FLOW_RECOVERY 0.4)
       this.secretBursts++; // 결정타 연출
     }
     this.recovering = false;
@@ -831,7 +858,7 @@ export class Skill {
       if (run.landed) this.secretStats[run.S.name].landed++;
       run.stage = 'stiff';
       run.t = 0;
-      run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+      run.stiffT = risolutoStiff(); // 10/23 탭 찌르기 판(`?risoLunge=0` — stiff.italian 0.4) · risolutoStiff 가 있으면 그 값
       return;
     }
     if (run.stage === 'instant') {
@@ -840,10 +867,11 @@ export class Skill {
       if (!R.ok) return this.secretEnd();
       run.landed = R.hit;
       if (run.landed) this.secretStats[run.S.name].landed++;
+      if (run.lunge) run.lungeRes = R; // 재기 (안다레 리솔루토 런지 — 막힘 · 미끄러짐 · 몸 미끄러짐)
       f.secretHit = 1;
       run.stage = 'stiff';
       run.t = 0;
-      run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+      run.stiffT = run.lunge ? risolutoStiff() : SECRET.stiff[run.tr] ?? 0.3; // 런지 뒤 굳음 0.6 s (사장님 10/24)
       return;
     }
     if (run.stage === 'spin') {
