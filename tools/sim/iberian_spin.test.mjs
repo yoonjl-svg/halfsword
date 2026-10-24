@@ -100,7 +100,8 @@ test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르�
 });
 
 test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 · 서 있고 · 끝에 가로로 쳐 서 있는 과녁을 벤다(물리 판정)', () => {
-  const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 2.3, walls: false });
+  // 과녁 2.2 m (10/24 share 0.7 — 전 2.3 m: 츠바이핸더 칼 든 쪽 2.3 m 는 닿는 끝이라 몫 0.6 은 팔 · 가슴을 베고 0.7 은 비켰다 · 2.1 · 2.2 m 는 둘 다 벰 — docs/strike/iberian_spin_2026-10-22.md §16-1)
+  const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 2.2, walls: false });
   const P = G.player, E = G.enemy;
   setup(P);
   G.ai.update = () => E.move.set(0, 0);
@@ -142,29 +143,30 @@ test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 �
 test('빠르기 몫 (10/24 share): 한 바퀴 = ramp + 2π · 칼끝 거리 ÷ (share × 고노센 칼끝) · 칼마다 · share 0 = 0.6 s 판', async () => {
   const { spinPlan } = await import('../../src/iberian_spin.js');
   const { iaiTipSpeed } = await import('../../src/secret_instant.js');
-  assert.equal(SECRET.ibSpin.share, 0.6);
+  assert.equal(SECRET.ibSpin.share, 0.7); // 사장님 10/24 10:5x '싱지르 고노센의 70%로' (전 0.6)
+  const share = SECRET.ibSpin.share;
   for (const w of ['zweihander', 'flamberge', 'tizona']) {
     const G = newRound({ seed: 1, weapon: w, weapon2: 'longsword' });
     const P = G.player;
     const p = spinPlan(P);
     const v0 = iaiTipSpeed(P);
-    assert.ok(Math.abs(p.v - 0.6 * v0) < 1e-9, w);
+    assert.ok(Math.abs(p.v - share * v0) < 1e-9, w);
     assert.ok(Math.abs(p.w - p.v / P.swordArt.measure.reach) < 1e-9, w);
     assert.ok(Math.abs(p.T - (0.2 + (2 * Math.PI) / p.w)) < 1e-9, w);
-    assert.ok(p.T > 0.65 && p.T < 0.8, `${w} ${p.T}`); // 0.6 s 보다 느림
+    assert.ok(p.T > 0.6 && p.T < 0.7, `${w} ${p.T}`); // 0.6 s 보다 느림 (0.7 몫 — 0.62 ~ 0.66 s)
     SECRET.ibSpin.share = 0;
     try {
       const q = spinPlan(P);
       assert.equal(q.T, 0.6);
       assert.equal(q.v, Infinity);
     } finally {
-      SECRET.ibSpin.share = 0.6;
+      SECRET.ibSpin.share = share;
     }
     G.world.free();
   }
 });
 
-test('칼끝 자름 · 몸 곧게 (10/24): 두 쪽 모두 칼끝 ≤ 고노센의 64 % · 몸 기울기 ≤ 20° · 골반 옮김 ≤ 0.55 m · 내려앉음 ≤ 0.12 m · 서 있음', async () => {
+test('칼끝 자름 · 몸 곧게 (10/24): 두 쪽 모두 칼끝 ≤ 고노센의 share + 4 %p · 몸 기울기 ≤ 20° · 골반 옮김 ≤ 0.55 m · 내려앉음 ≤ 0.12 m · 서 있음', async () => {
   const { iaiTipSpeed } = await import('../../src/secret_instant.js');
   for (const dir of [1, -1]) {
     const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 2.0, walls: false });
@@ -197,7 +199,7 @@ test('칼끝 자름 · 몸 곧게 (10/24): 두 쪽 모두 칼끝 ≤ 고노센�
     }
     const p = P.bodies.pelvis.translation();
     const travel = Math.hypot(p.x - p0.x, p.z - p0.z);
-    assert.ok(tip / v0 < 0.64, `칼끝 ${tip} / ${v0} (${dir})`); // 전: 반대 쪽 2.0 m 에서 104 %
+    assert.ok(tip / v0 < SECRET.ibSpin.share + 0.04, `칼끝 ${tip} / ${v0} (${dir})`); // 전: 반대 쪽 2.0 m 에서 104 % · 자름 = share
     assert.ok(tilt < 20, `기울기 ${tilt} (${dir})`);
     assert.ok(travel < 0.55, `옮김 ${travel} (${dir})`);
     assert.ok(drop < 0.12, `내려앉음 ${drop} (${dir})`);

@@ -171,7 +171,7 @@ if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // �
 if (['v4', 'flow', 'gilmok', 'spin'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11 · 10/22): 기본 'spin'(휘감아 돌기 — docs/strike/iberian_spin_2026-10-22.md), `?ibSecret=gilmok` = v6 길목 지키기, `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (['stick', 'attack', 'attackCircle'].includes(params.get('ibInput'))) CONFIG.SECRET.ibSpin.input = params.get('ibInput'); // 싱지르 내는 조작: 기본 'attackCircle'(10/24 — 무장 동안 공격으로 원 한 바퀴) · `?ibInput=stick` = 10/23 판(이동 스틱 반 바퀴) · `?ibInput=attack` = 10/22 판(무장 동안 공격 입력 하나)
 if ([0.6, 1.5].includes(+params.get('ibCircleTime'))) CONFIG.SECRET.ibSpin.circleTime = +params.get('ibCircleTime'); // 원 한 바퀴를 이 초 안에 (판 값 1.5 — 사다리 칸만) · 시험 `?ibCircleTime=0.6`
-if (params.get('ibShare') === '0') CONFIG.SECRET.ibSpin.share = 0; // 싱지르 빠르기를 고노센 몫으로 정하지 않음 (10/23 판 — 한 바퀴 time 0.6 s · 칼끝 자름 없음 · 판 값 0.6)
+if (params.get('ibShare') === '0') CONFIG.SECRET.ibSpin.share = 0; // 싱지르 빠르기를 고노센 몫으로 정하지 않음 (10/23 판 — 한 바퀴 time 0.6 s · 칼끝 자름 없음 · 판 값 0.7 — 사장님 10/24 10:5x)
 if (params.get('ibUpright') === '0') CONFIG.SECRET.ibSpin.upright = 0; // 싱지르 몸 곧게 끔 (10/23 판 — 판 값 1)
 if ([90, 180, 270, 360].includes(+params.get('ibTurn'))) CONFIG.SECRET.ibSpin.stickTurn = +params.get('ibTurn'); // 스틱 돌림 각 ° (판 값 180 — 사장님 10/23 '반 바퀴 이상') · 시험 `?ibTurn=360`
 if ([0.4, 0.6].includes(+params.get('ibTurnTime'))) CONFIG.SECRET.ibSpin.stickTime = +params.get('ibTurnTime'); // 그 각을 이 초 안에 (판 값 0.6 — 사다리 칸만) · 시험 `?ibTurnTime=0.4`
