@@ -25,6 +25,11 @@ import * as THREE from 'three';
 //   rim = 아지랑이 바깥 테 색(기본 없음 — 지금 아무도 안 씀) · rimA = 테 투명도 · rimAt = 칼날 가장자리에서 테 한가운데까지(m) · rimW = 테 두께(m)
 //   간장: 흰 아지랑이 1.1 배 + 흰 불티 6 개. 점 조명 그대로, 칼날 발광 없음(어두운 칼몸 그대로).
 //   막야: 먹 아지랑이 1.2 배(보통 섞기라 밝은 바닥 위에서 옅은 먹 그림자) + 먹 연기 8 개. 점 조명·칼날 발광 없음 — 먹은 빛을 내지 않는다.
+//  ★ 사장님 10/24 21:1x "전설급 무기 … 엑스칼리버는 알갱이가 없고 자연스럽고 은은한 glow를 추구했었잖아. 다른 칼들도 그렇게 가는 게 맞아. 엑스칼리버를 기준으로
+//   비슷하게 눈에 띄는 정도가 되게 일괄 맞춰 … 수치상의 스펙을 딱 맞추기보다는 보는 사람에게 눈에 띄는 정도를 맞추는 게 중요해 … 알갱이의 경우 glow가 특별히 눈에 잘 안 띄는
+//   색이나 디자인을 보완하는 기능으로 사용하도록 해." → 엑스칼리버 줄은 그대로(기준). 다른 다섯은 같은 장면의 기운 켬 · 끔 차이(CIEDE2000 — 보이는 칼날 둘레 0.12 m)를
+//   엑스칼리버와 견줘 아지랑이 배율(gain) · 칼날 발광 배율(glow)만 맞췄다(색 · 판 폭 · 세기 0.5 그대로). 티끌(motes)은 기본 없음 — 둘 땐 motes.comp 에 보완 까닭을 적는다
+//   (tools/sim/legend_glow.test.mjs). 위 10/10 ~ 10/11 간장 · 막야 글의 '흰 불티 · 먹 연기' 는 이 결정으로 뺐다. 재는 법 · 표: docs/strike/legend_glow_2026-10-24.md
 export const AURA_PROFILES = Object.freeze({
   // 뒤랑달 (10/24): 샛별 저장소 c039bcc7 의 옅은 상아빛 0.8 배는 은빛 칼몸 위에서 거의 안 보였고(사장님 10:2x '은은한 빛이 없어?') →
   //  10:2x 1차 성유물 금빛은 엑스칼리버 금빛과 겹침(사장님 10:4x '뒤랑달 빛 색을 바꿔 ex 일본 레전드 초록색이잖아') → 2차 하늘빛:
@@ -33,33 +38,43 @@ export const AURA_PROFILES = Object.freeze({
   //  10:5x 사장님 '하늘빛이 희게만 보여 좀더 파랗게' → 3차 짙은 푸른빛(수레국화빛 — 빨강 · 초록이 낮아 파랑으로 보임) → 11:0x '파란색이 되는 건 싫은데 정확한 하늘색이 더 잘 보일 방법은?' →
   //  4차: 하늘색 = 초록이 높은 맑은 푸른빛(#66C7FF 쪽 — 수레국화빛이 아님). 옅은 하늘빛(1·2차)이 흰빛으로 보인 까닭은 색이 옅고(채도 낮음) 칼날 발광이 칼몸을 희게 띄워서 →
   //  색은 하늘색 그대로 채도만 올리고 · 아지랑이를 조금 짙게(1.15 배) · 칼날 발광 · 점 조명 · 티끌도 같은 하늘색으로 맞춰 흰빛으로 바래지 않게
+  //  10/24 21:1x 사장님 '엑스칼리버만큼 눈에 띄게 · 알갱이는 보완용' → 티끌 뺌(하늘색은 은빛 칼몸 · 돌 위에서 아지랑이만으로 보임 — 티끌은 재 보니 보탬 0 ~ 3 %) ·
+  //   아지랑이 1.15 → 1 배(긴 칼날이 곧추선 게임 화면에서 엑스칼리버의 1.2 ~ 2.1 배로 튀었다 · 옆 견줌 81 ~ 117 %)
   durandal: { tone: 'sky', color: [0.40, 0.78, 1.0], light: 0x7fcfff, emissive: 0xa6dcff, // 칼날 발광은 옅은 하늘빛(칼몸이 파랗게 물들지 않게 — 아지랑이가 하늘색을 맡음)
-    gain: 1.15,
-    motes: { n: 5, size: 0.016, alpha: 0.5, color: [0.80, 0.93, 1.0], rim: [0.45, 0.78, 1.0], far: 0.0 } },
+    gain: 1.0 },
   // 발리사르다 (10/21 — 샛별 저장소 c89e827c6 의 옅은 샴페인빛 0.8 배는 칼날 위에서 거의 안 보였고 엑스칼리버 금빛과도 겹쳤다 → 사장님 10/24 10:5x '이탈리아 레전드 무기도 글로우 효과 없지?'):
   //  보랏빛 — 마녀 팔레리나가 벼려 마법에 걸린 것도 벨 수 있다는 칼(『사랑에 빠진 오를란도』 · 『광란의 오를란도』 루지에로의 칼). 레전드 여섯 색이 모두 다르다
   //  (엑스칼리버 금 · 쿠사나기 옥 · 간장 흰 · 막야 먹 · 뒤랑달 하늘 · 발리사르다 보라) · 아지랑이 1 배 · 옅은 보랏빛 티끌 5 개 · 세기 0.5 그대로
+  //  10/24 21:1x → 티끌 뺌 · 아지랑이 1 → 0.7 배 · 칼날 발광 1 → 0.5 배: 보랏빛은 모래 · 돌(누른빛) 위에서 엑스칼리버의 1.7 ~ 1.9 배로 튀었다(칼날 위가 특히 —
+  //   칼날 위 ΔE 15 ~ 21 · 엑스칼리버 9 ~ 16). 색은 그대로라 무대 바탕을 탄다 — 연보랏빛 눈밭 · 밤 남빛 위 71 ~ 86 % · 모래 · 돌 위 118 ~ 138 %
   balisarda: { tone: 'violet', color: [0.72, 0.52, 1.0], light: 0xb48cff, emissive: 0xbf9bff,
-    motes: { n: 5, size: 0.016, alpha: 0.5, color: [0.92, 0.86, 1.0], rim: [0.70, 0.55, 1.0], far: 0.0 } },
+    gain: 0.7, glow: 0.5 },
   excalibur: { tone: 'gold', color: [1.0, 0.82, 0.45], light: 0xffd98a, emissive: 0xffe2a0 },
+  // 간장 · 막야 10/24 21:1x → 티끌 뺌 · 아지랑이만 짙게. 간장 1.1 → 1.4 배(어두운 칼몸은 칼날 발광이 없어 칼날 위가 엑스칼리버의 ⅓ ~ ½ — 흰 아지랑이로 메움 · 옆 견줌 83 ~ 117 %).
+  //   막야 1.2 → 1.8 배(낮 · 실내 79 ~ 130 %). 막야 밤은 14 ~ 16 % — 먹빛은 어두운 바닥 위에서 보일 수가 없고, 옅은 티끌(회청 가운데 · 8 개)도 재 보니 +1 %(옅은 바깥 테 후보 +4 %) 라
+  //   보완이 안 돼 넣지 않음(사장님 여쭘 — docs/strike/legend_glow_2026-10-24.md §5)
   ganjiang: { tone: 'white', color: [0.92, 0.96, 1.0], light: 0xf3f7ff, emissive: null,
-    gain: 1.1,
-    motes: { n: 6, size: 0.016, alpha: 0.5, color: [0.95, 0.97, 1.0], rim: [0.80, 0.88, 1.0], far: 0.0 } },
+    gain: 1.4 },
   moye: { tone: 'ink', color: [0.035, 0.029, 0.045], light: null, emissive: null,
-    gain: 1.2,
-    motes: { n: 8, size: 0.028, alpha: 0.55, color: [0.035, 0.029, 0.045], rim: [0.56, 0.66, 0.76], far: 0.25 } },
+    gain: 1.8 },
   // 쿠사나기 (10/21 사장님 '칼 그래픽과 비슷한 녹색 어때? 아니면 칼의 전설과 더 어울리는 색상이 있나?'): 옥빛 풀색 아지랑이 + 구름빛 흰 입자.
   //  풀색 = 草薙(풀을 베어 불길 속의 길을 연 칼) · 칼몸(0xc0d7d3)과 곡옥(0x559784)의 옥빛에 맞춤, 흰 입자 = 天叢雲剣(큰 뱀 위에 늘 구름이 모여 있던 칼).
   //  같은 세기 0.5 에 아지랑이만 0.8 배 — 녹색은 눈밭 · 돌벽 위에서 금빛보다 더 도드라져 보여, 엑스칼리버와 같은 '은은하게 있다' 결에 맞춤.
   //  입자는 간장 불티 수(6)에 조금 크고 옅게(구름 결). 견줌 후보: 먹구름 회청빛(확인 기록 사진만, 표에 넣지 않음)
+  //  10/24 21:1x → 구름빛 입자 뺌(옥빛은 아지랑이만으로 보임 — 입자는 먼 상대 칼에서만 크게 보였다: 최소 2.5 px 라 멀수록 칼날보다 커짐) · 아지랑이 0.8 → 1 배(옆 견줌 88 ~ 112 %)
   kusanagi: { tone: 'jade', color: [0.64, 0.88, 0.75], light: 0xa6eec4, emissive: 0xb4f0cf,
-    gain: 0.8,
-    motes: { n: 6, size: 0.022, alpha: 0.42, color: [0.95, 0.97, 0.96], rim: [0.78, 0.88, 0.86], far: 0.0 } },
+    gain: 1.0 },
 });
-//   motes = 칼날 둘레에서 피어올라 옅어지는 작은 입자(간장 흰 불티 · 막야 먹 연기). 판 두 장은 플레이어 등 뒤 카메라(칼끝이 화면 안쪽을 향함)에서
+//   motes = 칼날 둘레에서 피어올라 옅어지는 작은 입자 — 10/24 21:1x 부터 보완용(지금 쓰는 줄 없음 · 쓰면 comp: '보완 까닭'). 예전 간장 흰 불티 · 막야 먹 연기. 판 두 장은 플레이어 등 뒤 카메라(칼끝이 화면 안쪽을 향함)에서
 //    옆으로 누워 거의 안 보여서, 어느 쪽에서 봐도 보이는 점 입자를 더한다. n 개수 · size 지름(m) · alpha 투명도(AURA_STRENGTH 곱하기 전) ·
 //    color 가운데 색 · rim 가장자리 색 · far = 화면에서 몇 픽셀로 작아졌을 때 가장자리 색을 섞는 몫(막야: 먹 + 회청 → 어두운 무대·눈밭 둘 다에서 읽히는 먹회색 점)
-const AURA_DEFAULTS = { gain: 1, fall: 0.022, halfW: 0.11, rim: null, rimA: 0, rimAt: 0.05, rimW: 0.02, motes: null };
+const AURA_DEFAULTS = { gain: 1, fall: 0.022, halfW: 0.11, rim: null, rimA: 0, rimAt: 0.05, rimW: 0.02, motes: null, glow: 1, lightGain: 1 };
+//   glow = 칼날 발광 배율(기본 1 — 엑스칼리버) · lightGain = 점 조명 배율(기본 1)
+
+// 보기 손잡이 (재기 · 견줌 사진용 — 게임 값이 아님 · 물리 · 판정과 상관없음. docs/strike/legend_glow_2026-10-24.md)
+//  on = false 면 기운을 그리지 않는다(아지랑이 · 티끌 숨김 · 점 조명 0 · 칼날 발광은 원래 값) — 주소 `?aura=0`.
+//  t = 숫자면 기운 시계를 그 시각에 멈춘다(같은 장면의 켬 · 끔을 견줄 때) · tune = { 무기 id: 프로필 일부 } 판을 세울 때 덮어쓴다(값을 맞추는 동안만 — `?auraTune=`)
+export const AURA_VIEW = { on: true, t: null, tune: null };
 
 const MOTE_VERT = /* glsl */ `
   attribute float aSeed;
@@ -151,8 +166,9 @@ const FRAG = /* glsl */ `
 
 /** 무기를 든 파이터에게 기운을 붙인다 (해당 무기가 아니면 null) */
 export function attachAura(fighter) {
-  const profile = AURA_PROFILES[fighter.weapon?.id];
-  if (!profile) return null;
+  const base = AURA_PROFILES[fighter.weapon?.id];
+  if (!base) return null;
+  const profile = AURA_VIEW.tune?.[fighter.weapon.id] ? { ...base, ...AURA_VIEW.tune[fighter.weapon.id] } : base;
   const entry = fighter.meshes.find((m) => m.kind === 'weapon');
   if (!entry) return null;
   const hilt = fighter.weaponCfg.hiltLength;
@@ -184,7 +200,7 @@ export function attachAura(fighter) {
   const geo = new THREE.PlaneGeometry(2 * look.halfW, L * 1.05);
   const group = new THREE.Group();
   group.name = 'legendaryAura';
-  group.userData.legendaryAura = { weapon: fighter.weapon.id, tone: profile.tone, strength: AURA_STRENGTH };
+  group.userData.legendaryAura = { weapon: fighter.weapon.id, tone: profile.tone, strength: AURA_STRENGTH, look }; // look: 그리는 동안 읽는 값(재기 도구가 gain · glow · lightGain · motes 를 바꿔 견줌)
   group.position.y = midY;
   for (const rot of [0, Math.PI / 2]) {
     const m = new THREE.Mesh(geo, mat);
@@ -194,7 +210,7 @@ export function attachAura(fighter) {
   }
   const light = profile.light === null ? null : new THREE.PointLight(profile.light, 1.2 * AURA_STRENGTH * AURA_LIGHT, 2.0, 2);
   if (light) group.add(light);
-  let moteGeo = null, moteMat = null;
+  let moteGeo = null, moteMat = null, motes = null;
   if (look.motes) {
     const mo = look.motes;
     moteGeo = new THREE.BufferGeometry();
@@ -211,7 +227,7 @@ export function attachAura(fighter) {
       depthWrite: false,
       blending: THREE.NormalBlending,
     });
-    const motes = new THREE.Points(moteGeo, moteMat);
+    motes = new THREE.Points(moteGeo, moteMat);
     motes.frustumCulled = false; // 자리는 셰이더가 정한다 (위치 버퍼는 0)
     motes.renderOrder = 3;
     const view = new THREE.Vector2();
@@ -225,13 +241,29 @@ export function attachAura(fighter) {
   const previousIntensity = bladeMat?.emissiveIntensity;
   if (bladeMat && profile.emissive !== null) bladeMat.emissive = new THREE.Color(profile.emissive);
 
+  const glowColor = bladeMat && profile.emissive !== null ? bladeMat.emissive.clone() : null;
+  const meshes = group.children.filter((o) => o.isMesh);
+
   return {
-    update(t) {
+    update(clock) {
+      const t = AURA_VIEW.t ?? clock;
+      const on = AURA_VIEW.on;
+      for (const m of meshes) m.visible = on;
+      if (motes) motes.visible = on && !!look.motes;
+      mat.uniforms.uGain.value = look.gain;
       mat.uniforms.uTime.value = t;
       if (moteMat) moteMat.uniforms.uTime.value = t;
       const breath = Math.sin(t * 1.3) * 0.5 + 0.5;
-      if (light) light.intensity = (0.8 + 0.5 * breath + 0.12 * Math.sin(t * 4.7)) * AURA_STRENGTH * AURA_LIGHT;
-      if (bladeMat && profile.emissive !== null) bladeMat.emissiveIntensity = (0.18 + 0.22 * breath) * AURA_STRENGTH;
+      if (light) light.intensity = on ? (0.8 + 0.5 * breath + 0.12 * Math.sin(t * 4.7)) * AURA_STRENGTH * AURA_LIGHT * look.lightGain : 0;
+      if (glowColor) {
+        if (on) {
+          bladeMat.emissive.copy(glowColor);
+          bladeMat.emissiveIntensity = (0.18 + 0.22 * breath) * AURA_STRENGTH * look.glow;
+        } else if (previousEmissive) {
+          bladeMat.emissive.copy(previousEmissive);
+          bladeMat.emissiveIntensity = previousIntensity;
+        }
+      }
     },
     dispose() {
       entry.group.remove(group);

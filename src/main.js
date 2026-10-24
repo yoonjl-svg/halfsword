@@ -34,7 +34,7 @@ import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS } from './weapons.js';
-import { attachAura } from './aura.js';
+import { attachAura, AURA_VIEW } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { whipTipStep, whipHitMode } from './whip_sound.js'; // 드루이드의 채찍 휙 · 딱 걸쇠 (10/24 — 아래 whipWhoosh 에서 옮김) · 맞음 소리 주소 스위치
@@ -74,6 +74,9 @@ await RAPIER.init();
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도(…?r2p=1?weapon=…) 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
 if (params.has('stamina')) CONFIG.STAMINA.on = params.get('stamina') !== '0'; // 기력(10/15 — 샛별 저장소 구현, docs/strike/stamina_import_2026-10-15.md): 기본 켬, `?stamina=0` = 기력 없음(막대·비용·지침·탈진 모두 없음 — 지금 본판 그대로)
 CONFIG.SOUND.whipHit = whipHitMode(params, CONFIG.SOUND.whipHit); // 드루이드의 채찍 살 · 옷 맞음 소리(10/24): 기본 C2 채찍 녹음 · `?whipHit=old` = 10/23 판(Thwack — 겹침 막기도 없음)
+// 레전드 기운 보기 손잡이 (재기 · 견줌 사진용 — 그림만, aura.js AURA_VIEW): `?aura=0` = 기운 끔 · `?auraTune={"durandal":{"gain":1}}` = 판을 세울 때 프로필 일부를 덮어씀 (docs/strike/legend_glow_2026-10-24.md)
+if (params.get('aura') === '0') AURA_VIEW.on = false;
+if (params.has('auraTune')) { try { AURA_VIEW.tune = JSON.parse(params.get('auraTune')); } catch { AURA_VIEW.tune = null; } }
 const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
@@ -2911,6 +2914,7 @@ window.game = {
     return fighterMeshes; // 이번 판 두 검객(몸·칼·빛) — 같은 검사에서 무대와 따로 센다
   },
   freeCam: false,
+  auraView: AURA_VIEW, // 레전드 기운 보기 손잡이 (on · t · tune — aura.js · tools/browser/legend_glow_measure.mjs 가 켬 · 끔을 견준다)
   renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
   renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 60 fps 제한' (game.settings.fpsCap)
   screenTint,
