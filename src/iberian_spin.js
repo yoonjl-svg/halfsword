@@ -22,9 +22,11 @@
 //  10/24 사장님 02:5x '속도가 너무 과도하게 헛돌아. 몸이 종잇장처럼 날라다니듯 기울어' → 빠르기 = 고노센 칼끝의 몫(spinPlan · spinCap — SECRET.ibSpin.share) · 몸 곧게(uprightStep · 골반 높이 · 도는 발 자리 — SECRET.ibSpin.upright).
 //  10/24 10:4x '싱지르 개편 뒤에 또 허공 위로 날아가는 싱지르가 많아졌어' · 10:5x '고노센의 70%로' → share 0.7 · 낼 때 손 목표 쉼 자리(spinHandRest) · 몸통 뚜껑(spinLid) · 땅은 막힘 아님(swordContact) —
 //   docs/strike/iberian_spin_2026-10-22.md §16.
+//  10/24 12:5x '3번째 프레임 같은 발디딤 이상하지 않어?' · 13:0x '두 다리가 딱 붙어서 곧게 편 채 같은 방향을 지지' → 발디딤(feetPlan · feetStep — SECRET.ibSpin.feet):
+//   두 발을 끝난 골반 둘레 펜싱 자세 자리에 · 묵은 걸음 부탁 지움 — §17.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, ARM, SKILL } from './config.js';
+import { SECRET, ARM, SKILL, GAIT } from './config.js';
 import { iaiTipSpeed, ART_MIN } from './secret_instant.js'; // 비기 잔상 밝기 = 칼끝 빠르기 ÷ 고노센 칼끝 빠르기 (10/23 — 연환 · 진 · 츠바메가에시와 같은 체계)
 
 const TAU = Math.PI * 2;
@@ -133,6 +135,43 @@ function pelvisAt(S, q, out) {
 }
 
 /**
+ * 발디딤 계획 (10/24 12:5x 사장님 '넘어지지 않으려면 다리가 넓게 딛거나 무릎 관절로 몸을 분산 지지해야 하는데 두 다리가 딱 붙어서 곧게 편 채 같은 방향을 지지하고 있음' —
+ *  SECRET.ibSpin.feet · 사장님 확인 전, 확인표 2420): 끝난 골반 E 둘레 펜싱 자세 자리 — gait.js guardSpot · guardYaw 와 같은 기하(걸음 칸 guardLength · guardWidth · weightFront ·
+ *  GAIT.rearToe — 모두 있는 수 · 이베리아 0.62 · 0.34 · 0.5). 앞발(F)은 E 앞 · 뒷발(B)은 E 뒤, 옆은 제 쪽 — 골반이 두 발 사이에 서고(다리가 'ㅅ' 꼴로 마주 받침) 두 발이 엇갈리지 않는다
+ *  (이베리아 원 걸음 compás curvo — 한 발이 다른 발 둘레를 돌되 두 발은 엇갈리지 않고 자세 너비를 지킨다).
+ *  돌려줌 { B1 도는 발 자리 · P1 축발이 옮겨 딛을 자리 (월드 수평) · yawS · yawP 그 발들의 방향 (heading 기준 rad) }
+ */
+function feetPlan(G, Lp, Ls, E, fwd, rgt) {
+  const P = G.P;
+  const spot = (l) => {
+    const x = l.k === 'F' ? P.guardLength * (1 - P.weightFront) : -P.guardLength * P.weightFront;
+    const z = l.side * P.guardWidth * 0.5;
+    return new THREE.Vector3(E.x + fwd.x * x + rgt.x * z, 0, E.z + fwd.z * x + rgt.z * z);
+  };
+  const yaw = (l) => (l.k === 'B' ? -l.side * GAIT.rearToe : 0);
+  return { B1: spot(Ls), P1: spot(Lp), yawS: yaw(Ls), yawP: yaw(Lp) };
+}
+
+/**
+ * 축발 옮겨 딛기 (10/24 12:5x — SECRET.ibSpin.feet): 한 바퀴를 다 돌면(받아 멈춤 들머리 — beginSettle 'done') 도는 발은 제 자세 자리(feetPlan B1)에 막 딛었고, 축발을 떼어
+ *  받아 멈춤 ramp 초(0.2 s — 시간 사다리 '반응' · 있는 수) 동안 제 자세 자리 P1 으로 한 걸음 옮긴다(spinFootTarget). 한 발 축으로만 다 돌면 골반이 나아간 만큼(advance)
+ *  축발이 몸 밑 · 뒤에 남아 두 발이 골반 뒤에 나란히 섰다 — 나아감(맞힘에 걸림: 0.2 m 로 줄이면 곧장 낸 판 서 있는 과녁 맞힘 15 → 0 / 18)은 그대로 두고 발만 따라 옮긴다.
+ *  돌던 중에 바꾸면(예 진행 0.75 — 90° 남음) 도는 발의 끝 자리가 그때 몸의 반대쪽이라 두 발이 엇갈렸고(19 / 36 판), 남은 돌기를 새로 딛은 뒷발 하나로 받치면 그 발이 0.2 ~ 0.6 m 끌렸다
+ */
+function feetStep(f, S) {
+  const G = f.gait;
+  const Ln = G.legs[S.sk]; // 도는 발 (막 딛음)
+  const Lo = G.legs[S.pk]; // 축발 → 떼어 옮김
+  if (!Ln.stance) G.touchdown(Ln, 0.5);
+  S.feet.step = { f0: new THREE.Vector3(Lo.ankle.x, 0, Lo.ankle.z), y0: Lo.yaw, e: 0 };
+  Lo.yawTD = Lo.yaw;
+  G.begin(Lo, 'spin', S.r);
+  G.footMass(Lo, false);
+  S.pk = Ln.k; // 받아 멈춤의 축(발 돌림을 늦춤) = 딛은 발 · 들린 발(spinFootTarget) = 옮기는 발
+  S.sk = Lo.k;
+}
+
+/**
  * 대본을 건다 (플레이어 비기 — skill.js secret). 서서 한 발 이상 딛고 있어야 한다. 시작했으면 true.
  *  dir: 도는 쪽 (+1 = heading + = 왼쪽으로 — 칼 든 쪽이 오른쪽인 몸은 왼쪽으로 돌며 칼이 오른쪽 뒤에 감겨 따라오다 오른쪽 → 왼쪽으로 가로 벤다 = 탈류)
  *  want: 바라는 쪽 (10/23 스틱 판 — 돌린 쪽 · ±1). SECRET.ibSpin.reverse 면 그쪽으로(칼 든 쪽의 반대면 ws = −1 — 감는 자세 · 끝 각 · 몸 비틀기 거울 = 레베스), 아니면 칼 든 쪽이 정함
@@ -163,13 +202,19 @@ export function requestSpin(f, want = 0) {
   //  균형 걸음이 0.3 m 더 끌려 나갔다: 비기 끝 + 0.6 s 골반 옮김 0.57 ~ 0.85 m — docs/strike/iberian_spin_2026-10-22.md §13) ·
   //  10/24 upright = 나아간 골반 바로 옆(옆 거리 그대로): 골반은 두 발 위에 서고, 걸음은 칼 든 쪽 앞발만 앞으로 고쳐 딛는다(몸은 그 자리 — 서 있는 과녁 앞 0.43 ~ 0.51 m)
   const adv = S.upright ? Math.min(lon, S.advance ?? lon) : lon; // 골반이 나아가는 거리 (10/24 upright: 상한 advance — 걷다 내면 두 발 앞뒤가 0.65 m 까지 벌어져 그만큼 나아갔다)
-  const B1 = P.clone().addScaledVector(fwd, S.upright ? adv - lon : lon).addScaledVector(rgt, lat); // upright: 나아간 골반 바로 옆 (adv = lon 이면 축발 옆 · 못 미치면 그만큼 축발 뒤 — 축발이 앞발인 펜싱 자세)
+  let B1 = P.clone().addScaledVector(fwd, S.upright ? adv - lon : lon).addScaledVector(rgt, lat); // upright: 나아간 골반 바로 옆 (adv = lon 이면 축발 옆 · 못 미치면 그만큼 축발 뒤 — 축발이 앞발인 펜싱 자세)
   const nat = f.side >= 0 ? 1 : -1; // 칼 든 쪽이 정하는 쪽 (10/22 판)
   const dir = S.reverse && (want === 1 || want === -1) ? want : nat;
   const pre = S.torso && f.armed && swordTop(f) > f.bodies.chest.translation().y ? r : 0;
   const pel = f.bodies.pelvis.translation();
   const c0 = new THREE.Vector3(pel.x, 0, pel.z);
   const D = fwd.clone().multiplyScalar(adv);
+  // 10/24 12:5x 발디딤 (SECRET.ibSpin.feet · 사장님 확인 전, 확인표 2420): 두 발이 끝난 골반(E = c0 + D) 둘레 펜싱 자세 자리(걸음 칸 guardLength · guardWidth · weightFront —
+  //  있는 수)에 서게 한다. 도는 발은 한 바퀴 끝에 제 자리에 딛고, 축발은 받아 멈춤 동안 제 자리로 한 걸음 옮긴다(feetStep · spinFootTarget).
+  //  전(10/24 02:5x upright): 도는 발 = 낼 때 그 발의 골반 기준 자리 그대로 + 나아감 · 축발 = 제자리 → 골반이 축발 위 · 앞으로 나가 두 발이 골반 뒤에 나란히(앞뒤 0 ~ 0.2 m),
+  //  두 다리가 같은 쪽으로 기울어 받침(무게 가운데가 발바닥 앞 끝 — docs/strike/iberian_spin_2026-10-22.md §17)
+  const FT = S.upright && S.feet ? feetPlan(G, Lp, Ls, c0.clone().add(D), fwd, rgt) : null;
+  if (FT) B1 = FT.B1;
   // 도는 발 길 (몸 기준 — 골반 원점 · x 앞 · z 오른쪽): 처음 자리 b0 → 끝 자리 b1 (끝 골반 = c0 + D 기준). 각은 짧은 쪽(둘 다 그 발 쪽 옆이라 바깥 옆을 지난다)
   const toBody = (x, z) => ({ x: x * fwd.x + z * fwd.z, z: x * rgt.x + z * rgt.z });
   const b0 = toBody(B0.x - c0.x, B0.z - c0.z);
@@ -185,6 +230,7 @@ export function requestSpin(f, want = 0) {
     oM: rgt.clone().multiplyScalar(-Lp.side * HIP_W), // 축발 엉덩이가 축발 바로 위 (골반 가운데 = 축발에서 엉덩이 폭만큼 안쪽)
     arm: null, // 두 팔 · 칼 대본: 처음 손 · 칼날 (몸 기준) · 지난 스텝 놓은 자리 (빠르기 셈)
     footYaw0: Ls.footYaw, pivotYaw0: Lp.yaw, pinC0: Lp.pinC.clone(), pinT0: Lp.pinT.clone(), plant0: Lp.plant.clone(),
+    feet: FT && { yawFix: wrap(f.heading + FT.yawS - Ls.footYaw), P1: FT.P1, yaw1: FT.yawP, step: null }, // 10/24 12:5x 발디딤 (끔이면 null): 도는 발 방향 고침 · 축발이 옮겨 딛을 자리 · 그 발 방향(heading 기준) · 옮기는 중 { f0 · y0 · e 지난 s }
     free: false, // 두 팔 · 칼을 틀에서 놓았나
     blocked: false, // 상대 칼에 닿아 멈췄나
     touchT: null, // 칼이 상대에 처음 닿은 때 (s)
@@ -192,6 +238,9 @@ export function requestSpin(f, want = 0) {
     want: new THREE.Vector3(), // 골반이 가려는 빠르기 (fighter.driveBalance 의 want)
     stats: { tipMax: 0, tipAtTouch: null, cutTipMax: 0 },
   };
+  // 10/24 12:5x feet: 기술이 부탁해 둔 걸음(gait.req — 공격 원을 그리는 획이 '내딛기' 지나 딛기를 부탁해 두면 그 걸음 중에 싱지르가 나간다)을 대본이 이어받으므로 지운다.
+  //  대본 동안 걸음은 쉬어 그 부탁이 늙지 않고(gait update 의 age 셈이 대본 뒤에 있음) 대본이 끝나자마자 뒷발이 앞발을 지나 한 걸음 더 나가 몸이 두 발 뒤에 남았다(원 판 18 / 18)
+  if (FT) G.req = null;
   if (!pre) {
     G.begin(Ls, 'spin', T);
     G.footMass(Ls, false);
@@ -242,6 +291,7 @@ function finish(f, why) {
   if (Ls && !Ls.stance) G.touchdown(Ls, 0.5); // 도는 발을 그 자리에 딛는다
   const Lp = G?.legs?.[S.pk];
   if (Lp) Lp.yawTD = Lp.yaw; // 축발 디딘 방향 = 지금 (엉덩이 비틀기 한계 limitTurn 이 새 방향에서 센다)
+  if (S.feet && G) G.req = null; // 10/24 feet: 대본 동안 들어온 걸음 부탁도 버린다 (requestSpin 과 같은 까닭)
   // 한 바퀴를 다 돌았으면 heading 을 같은 방향의 작은 각으로 (몸 자세는 그대로)
   f.heading = wrap(f.heading);
   f.yaw.setFromAxisAngle(_w.set(0, 1, 0), f.heading);
@@ -266,6 +316,7 @@ function beginSettle(f, S, why) {
   const G = f.gait;
   const Ls = G?.legs?.[S.sk];
   if (Ls && !Ls.stance) G.touchdown(Ls, 0.5); // 도는 발을 그 자리에 딛는다 (막혔으면 돌던 중 자리)
+  if (G && S.feet && why === 'done') feetStep(f, S); // 10/24 12:5x 발디딤: 다 돌았으면 축발을 제 자세 자리로 옮긴다 (막혔으면 돌던 중이라 그대로)
   S.free = true;
   S.settle = { t: 0, why, h: f.heading };
 }
@@ -273,6 +324,7 @@ function settleStep(f, S, dt) {
   const st = S.settle;
   st.t += dt;
   const V = SECRET.ibSpin;
+  if (S.feet?.step) S.feet.step.e += dt; // 10/24 feet: 옮겨 딛는 걸음 (ramp 초 — 받아 멈춤 끝에 딛음 · finish)
   if (st.t >= S.r) return finish(f, st.why);
   const g = 1 - smooth(st.t / S.r); // 붙드는 몫
   f.heading = st.h;
@@ -673,6 +725,17 @@ function placeArms(f, S, dt) {
 export function spinFootTarget(f, l, out, ankleH, lift) {
   const S = f.ibSpin;
   const q = S.q;
+  const Fp = S.feet;
+  if (Fp?.step) {
+    // 10/24 feet — 디딤을 바꾼 뒤 축발이었던 발: 바꾼 때 자리 → 제 자세 자리 P1 (월드 · 부드럽게 · 들었다 끝에 내림 — 아래 도는 발과 같은 꼴) · 방향은 그때 방향 → 끝 heading + yaw1
+    const st = Fp.step;
+    const u = clamp(st.e / S.r, 0, 1);
+    const s = smooth(u);
+    const w = 2 * u - 1;
+    const up = 1 - w * w * w * w * w * w * w * w;
+    out.set(st.f0.x + (Fp.P1.x - st.f0.x) * s, ankleH + lift * up, st.f0.z + (Fp.P1.z - st.f0.z) * s);
+    return st.y0 + wrap(S.h0 + S.dir * TAU + Fp.yaw1 - st.y0) * s;
+  }
   const a = S.a0 + S.da * q;
   const rr = S.br0 + (S.br1 - S.br0) * q;
   const bx = Math.cos(a) * rr; // 몸 기준 앞
@@ -685,7 +748,7 @@ export function spinFootTarget(f, l, out, ankleH, lift) {
   const u = 2 * q - 1;
   const up = 1 - u * u * u * u * u * u * u * u; // 곧 들고 끝 무렵까지 든 채 (끝에 몸이 서기 전 땅에 끌리지 않게 — sin 꼴은 끝 0.1 에 발이 끌려 바깥으로 밀렸다)
   out.set(cx + bx * Math.cos(h) + bz * Math.sin(h), ankleH + lift * up, cz - bx * Math.sin(h) + bz * Math.cos(h));
-  return S.footYaw0 + S.dir * TAU * q;
+  return Fp ? S.footYaw0 + S.dir * TAU * q + Fp.yawFix * q : S.footYaw0 + S.dir * TAU * q; // feet: 딛을 때 발 방향을 자세 방향으로 (뒷발 발끝 바깥 GAIT.rearToe)
 }
 
 /**

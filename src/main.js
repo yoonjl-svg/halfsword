@@ -182,6 +182,7 @@ if (params.get('ibHandRest') === '0') CONFIG.SECRET.ibSpin.handRest = 0; // 싱�
 if (params.get('ibLid') === '0') CONFIG.SECRET.ibSpin.lid = 0; // 싱지르 몸통 뚜껑 끔 (놓은 칼끝이 몸통 위 끝을 넘어 오를 수 있음 — 판 값 1 · 10/24 10:4x)
 if (params.get('ibWindSide') === '0') CONFIG.SECRET.ibSpin.windSide = 0; // 싱지르 칼 든 쪽으로 감을 때 손을 배 앞 가운데(10/22 판 wind.hand 0.06)에 — 판 값 1 = 칼 든 어깨 앞 (사장님 10/24 14:0x 결정)
 if (params.get('ibFloor') === '0') CONFIG.SECRET.ibSpin.floor = 0; // 싱지르 감는 동안 땅에 닿아도 막힘 (10/22 판 — 판 값 1 · 10/24 10:4x '작게 그으면 … 실패')
+if (params.get('ibFeet') === '0') CONFIG.SECRET.ibSpin.feet = 0; // 싱지르 발디딤 고침 끔 (10/24 02:5x 판 — 도는 발이 축발 옆에 딛고 축발은 제자리 · 판 값 1 · 사장님 10/24 12:5x '두 다리가 딱 붙어서 곧게 편 채')
 if ([90, 180, 270, 360].includes(+params.get('ibTurn'))) CONFIG.SECRET.ibSpin.stickTurn = +params.get('ibTurn'); // 스틱 돌림 각 ° (판 값 180 — 사장님 10/23 '반 바퀴 이상') · 시험 `?ibTurn=360`
 if ([0.4, 0.6].includes(+params.get('ibTurnTime'))) CONFIG.SECRET.ibSpin.stickTime = +params.get('ibTurnTime'); // 그 각을 이 초 안에 (판 값 0.6 — 사다리 칸만) · 시험 `?ibTurnTime=0.4`
 if (params.get('ibTurnPath') === '0') CONFIG.SECRET.ibSpin.stickPath = 0; // 표본 사이 데드존 건너뜀을 놓음으로 보지 않음 (판 값 1)
