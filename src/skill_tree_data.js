@@ -1,6 +1,6 @@
 // 스킬트리 자료 · 규칙 (10/21 사장님 확정 — docs/design/skill_tree_2026-10-21/README.md · data.mjs 가 원본 · 이 파일 = 게임이 읽는 판)
 //  유파마다 11 칸 · 뿌리 = 보법 I · pre = 먼저 익힐 칸 '모두'(독일 2단계 관문 · 이탈리아 보법 II 줄기 · 이베리아 패시브 → 비기 · 독일 보법 II → 패시브 → 비기가 이미 여기 들어 있다).
-//  값(사장님 10/21 19:0x): 편지 금화 100 · 패시브 머리 10(금화 없음) · 보법 II 금화 100 · 비기 금화 400 + 머리 20 · 나머지는 깊이마다 금화 — data.mjs 그대로.
+//  값(사장님 10/21 19:0x): 편지 금화 100 · 패시브 머리 5(금화 없음 · 10/25 01:5x 사장님 10 → 5) · 보법 II 금화 100 · 비기 금화 400 + 머리 10(10/25 01:5x 사장님 20 → 10) · 나머지는 깊이마다 금화 — data.mjs 그대로.
 //  닫힌 칸: 비기는 SECRET.openSchools(config — 10/22 사람 쪽 다섯 유파 모두: 일본 · 독일 · 이탈리아 · 이베리아 · 동방)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · closed 칸(지금 없음 — 일본 J8 손목 치기 심화는 10/24 칼 떨구기로 열림).
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
@@ -44,8 +44,8 @@ const TREE_SRC = {
       N({ id: 'G7', name: '겹치기', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물리면 곧바로 다시 그어 들어간다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 310, u: 'duplieren' }),
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 500, perk: 'schielhau' }),
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
-      N({ id: 'G9', name: '인데스', cat: 'passive', l1: '패시브', l2: '인데스', eff: '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 10, d: 2, cx: 100, f: ['passive'] }),
-      N({ id: 'G10', name: '모르트슐라크', cat: 'secret', l1: '비기', l2: '모르트슐라크', eff: '붙어서 밀다가 공격하면, 거꾸로 쥔 칼자루로 머리를 내리친다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }), // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — `?deMord=0` · 10/24 AI 도 같은 비기 — 사장님 'ai도 비기 쓰게 해')
+      N({ id: 'G9', name: '인데스', cat: 'passive', l1: '패시브', l2: '인데스', eff: '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive'] }),
+      N({ id: 'G10', name: '모르트슐라크', cat: 'secret', l1: '비기', l2: '모르트슐라크', eff: '붙어서 밀다가 공격하면, 거꾸로 쥔 칼자루로 머리를 내리친다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 10, d: 3, cx: 420, f: ['secret'] }), // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — `?deMord=0` · 10/24 AI 도 같은 비기 — 사장님 'ai도 비기 쓰게 해')
     ],
   },
   italian: {
@@ -59,22 +59,22 @@ const TREE_SRC = {
       N({ id: 'I6', name: '막아찌르기', cat: 'parry', l1: '막기 II', l2: '막아찌르기', eff: '막기를 누르면 바로 짧게 찌르고, 그동안 받는 피해가 줄어든다', pre: ['I5'], price: 300, d: 3, cx: 670, f: ['opposition'] }),
       N({ id: 'I8', name: '틈 파고들기', cat: 'deep', l1: '심화', l2: '틈 파고들기', title: '내려 찌르기 심화 · 틈 파고들기', eff: '내려 찌르기가 옷과 갑옷 틈을 더 파고든다', pre: ['I7'], price: 400, d: 4, cx: 330, perk: 'imbroccata' }),
       N({ id: 'I9', name: '칼끝 돌려 빼기', cat: 'atk', l1: '칼끝', l2: '돌려 빼기', eff: '찌르기가 맞물리거나 꺾인 뒤 다시 찌른다', pre: ['I6'], price: 300, d: 4, cx: 670, u: 'cavazione' }),
-      N({ id: 'I4', name: '안다레 리솔루토', cat: 'secret', l1: '비기', l2: '안다레 리솔루토', eff: '상대 칼에 칼을 붙인 채 걸어 들어가 찌르면, 번개 같은 런지로 찔러 든다', pre: ['I8'], price: 400, heads: 20, d: 5, cx: 330, f: ['secret'] }), // 10/22 사람 먼저 — 거침없이 나아가 찌르기 (옛 엇박 찌르기는 ?itSecret=contratempo · 그때 칸 글은 이것 그대로) · 10/23 넓은 판정에 맞춰 '덮은 채' → '칼을 붙인 채' · 10/24 런지(사장님 '런지로 진행해 … 고노센처럼 빠르게') '묶인 칼을 누르고 곧게 찌른다' → '번개 같은 런지로 찔러 든다'
-      N({ id: 'I10', name: '곧은 선', cat: 'passive', l1: '패시브', l2: '곧은 선', eff: '찌르는 동안 칼끝이 상대를 조금 따라간다', pre: ['I9'], price: 0, heads: 10, d: 5, cx: 670, f: ['passive'] }),
+      N({ id: 'I4', name: '안다레 리솔루토', cat: 'secret', l1: '비기', l2: '안다레 리솔루토', eff: '상대 칼에 칼을 붙인 채 걸어 들어가 찌르면, 번개 같은 런지로 찔러 든다', pre: ['I8'], price: 400, heads: 10, d: 5, cx: 330, f: ['secret'] }), // 10/22 사람 먼저 — 거침없이 나아가 찌르기 (옛 엇박 찌르기는 ?itSecret=contratempo · 그때 칸 글은 이것 그대로) · 10/23 넓은 판정에 맞춰 '덮은 채' → '칼을 붙인 채' · 10/24 런지(사장님 '런지로 진행해 … 고노센처럼 빠르게') '묶인 칼을 누르고 곧게 찌른다' → '번개 같은 런지로 찔러 든다'
+      N({ id: 'I10', name: '곧은 선', cat: 'passive', l1: '패시브', l2: '곧은 선', eff: '찌르는 동안 칼끝이 상대를 조금 따라간다', pre: ['I9'], price: 0, heads: 5, d: 5, cx: 670, f: ['passive'] }),
     ],
   },
   iberian: {
     nodes: [
       N({ id: 'B1', name: '넓은 옆걸음', cat: 'foot', l1: '보법 I', l2: '넓은 옆걸음', eff: '넓은 보폭으로 옆으로 빠르게 돈다', price: 100, d: 0, cx: 500, f: ['footwork'] }),
       N({ id: 'B2', name: '옆 박차기', cat: 'foot', l1: '보법 II', l2: '옆 박차기', eff: '옆으로 누르면 첫 걸음을 박찬다', pre: ['B1'], price: 100, opt: true, d: 1, cx: 84, f: ['burstSide'] }),
-      N({ id: 'B10', name: '손목 힘', cat: 'passive', l1: '패시브', l2: '손목 힘', eff: '큰 칼을 돌리는 손목 힘이 세진다', pre: ['B1'], price: 0, heads: 10, d: 1, cx: 252, f: ['passive'] }),
+      N({ id: 'B10', name: '손목 힘', cat: 'passive', l1: '패시브', l2: '손목 힘', eff: '큰 칼을 돌리는 손목 힘이 세진다', pre: ['B1'], price: 0, heads: 5, d: 1, cx: 252, f: ['passive'] }),
       N({ id: 'B3', name: '돌며 베기', cat: 'atk', l1: '돌며 베기', l2: '걸음 기술', eff: '옆으로 걸으며 사선으로 내려 긋는다', pre: ['B1'], price: 200, d: 1, cx: 420, u: 'talhoRodeado' }),
       N({ id: 'B4', name: '머리 위 돌려 베기', cat: 'atk', l1: '머리 위', l2: '돌려 베기', eff: '왼 가로베기를 그으면 머리 위로 돌려 베기가 나간다', pre: ['B1'], price: 200, d: 1, cx: 588, u: 'redondo' }),
       N({ id: 'B8', name: '쳐내기', cat: 'parry', l1: '막기 I', l2: '쳐내기', title: '막기 I · 쳐내기 (탈류 · 레베스)', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, d: 1, cx: 756, f: ['parry', 'parryCover'] }),
       N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B4'], price: 300, d: 2, cx: 560, f: ['ibFlow'] }),
       N({ id: 'B9', name: '굳은 받기', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해가 줄어든다', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
-      N({ id: 'B7', name: '싱지르', cat: 'secret', l1: '비기', l2: '싱지르', eff: '칼끝 거리 밖에서 버티다 공격을 원을 그리듯 한 바퀴 돌리면, 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }), // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
+      N({ id: 'B7', name: '싱지르', cat: 'secret', l1: '비기', l2: '싱지르', eff: '칼끝 거리 밖에서 버티다 공격을 원을 그리듯 한 바퀴 돌리면, 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 10, d: 3, cx: 420, f: ['secret'] }), // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
       N({ id: 'B6', name: '거듭 돌려 베기', cat: 'deep', l1: '심화', l2: '쌓기', title: '돌려 베기 심화 · 쌓기', eff: '돌려 베기를 이어 그을수록 피해가 증가한다', pre: ['B5'], price: 400, d: 3, cx: 680, perk: 'redondo' }),
     ],
   },
@@ -88,9 +88,9 @@ const TREE_SRC = {
       N({ id: 'J9', name: '제비 베기', cat: 'atk', l1: '제비 베기', l2: '이어 긋기', eff: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋는다', pre: ['J6', 'J7'], price: 300, d: 2, cx: 200, u: 'tsubameGaeshi' }),
       N({ id: 'J8', name: '칼 떨구기', cat: 'deep', l1: '심화', l2: '칼 떨구기', title: '손목 치기 심화 · 칼 떨구기', eff: '손목을 맞은 상대가 칼을 놓치기도 한다', pre: ['J7'], price: 300, d: 2, cx: 420, perk: 'kote' }), // 10/24 열림 (사장님 11:4x · 11:5x '너무 강하면 50%로' — 칼 놓침 · config UNIQUE_ASSIST.koteDrop · combat.js koteCheck)
       N({ id: 'J3', name: '흘려 받기', cat: 'parry', l1: '막기 II', l2: '흘려 받기', title: '막기 II · 흘려 받기 (우케나가시)', orig: '受け流し', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow'] }),
-      N({ id: 'J10', name: '기다림과 침', cat: 'passive', l1: '패시브', l2: '기다림과 침', eff: '치지 않고 기다릴수록 다음 칼의 피해가 증가한다', pre: ['J9'], price: 0, heads: 10, d: 3, cx: 200, f: ['passive'] }),
+      N({ id: 'J10', name: '기다림과 침', cat: 'passive', l1: '패시브', l2: '기다림과 침', eff: '치지 않고 기다릴수록 다음 칼의 피해가 증가한다', pre: ['J9'], price: 0, heads: 5, d: 3, cx: 200, f: ['passive'] }),
       N({ id: 'J4', name: '흘린 칼', cat: 'parry', l1: '막기 III', l2: '흘린 칼', eff: '흘린 공격의 피해가 크게 줄어든다', pre: ['J3'], price: 400, d: 3, cx: 650, f: ['flowShield'] }),
-      N({ id: 'J5', name: '고노센', cat: 'secret', l1: '비기', l2: '고노센', eff: '간격 밖에서 기다리다 상대가 치려 할 때 공격하면, 먼저 벤다', pre: ['J4'], price: 400, heads: 20, d: 4, cx: 650, f: ['secret'] }),
+      N({ id: 'J5', name: '고노센', cat: 'secret', l1: '비기', l2: '고노센', eff: '간격 밖에서 기다리다 상대가 치려 할 때 공격하면, 먼저 벤다', pre: ['J4'], price: 400, heads: 10, d: 4, cx: 650, f: ['secret'] }),
     ],
   },
   chinese: {
@@ -104,8 +104,8 @@ const TREE_SRC = {
       N({ id: 'C5', name: '끌어 딛고 허리 베기', cat: 'atk', l1: '끌어 딛고', l2: '허리 베기', eff: '앞으로 끌어 딛으며 가로로 긋는다', pre: ['C3'], price: 300, d: 2, cx: 310, u: 'chebuYaoji' }),
       N({ id: 'C6', name: '날개 접기', cat: 'atk', l1: '날개 접기', l2: '이어 긋기', eff: '찌르다가 칼을 거두며 벤다', pre: ['C3'], price: 300, d: 2, cx: 490, u: 'lianchi' }),
       N({ id: 'C8', name: '단단한 받기', cat: 'parry', l1: '막기 II', l2: '단단한 받기', eff: '막는 동안 받는 피해가 크게 줄어든다', pre: ['C7'], price: 300, d: 2, cx: 680, f: ['parryCut'] }),
-      N({ id: 'C10', name: '숨 바꾸기', cat: 'passive', l1: '패시브', l2: '숨 바꾸기', eff: '휘두르지 않는 동안 출혈이 빨리 잦아든다', pre: ['C7'], price: 0, heads: 10, d: 2, cx: 880, f: ['passive'] }),
-      N({ id: 'C9', name: '격살', cat: 'secret', l1: '비기', l2: '격살', eff: '나서며 때맞춰 막으면, 받은 자세의 급소를 깊게 친다', pre: ['C6', 'C8'], price: 400, heads: 20, d: 3, cx: 590, f: ['secret'] }), // 10/22 격살 (사람 — schools.js CHINESE_SECRET_GYEOKSAL) · 10/24 받아 내면 저절로(글 '막고 공격하면' → '막으면') · 전 '세 번 이어 치기'
+      N({ id: 'C10', name: '숨 바꾸기', cat: 'passive', l1: '패시브', l2: '숨 바꾸기', eff: '휘두르지 않는 동안 출혈이 빨리 잦아든다', pre: ['C7'], price: 0, heads: 5, d: 2, cx: 880, f: ['passive'] }),
+      N({ id: 'C9', name: '격살', cat: 'secret', l1: '비기', l2: '격살', eff: '나서며 때맞춰 막으면, 받은 자세의 급소를 깊게 친다', pre: ['C6', 'C8'], price: 400, heads: 10, d: 3, cx: 590, f: ['secret'] }), // 10/22 격살 (사람 — schools.js CHINESE_SECRET_GYEOKSAL) · 10/24 받아 내면 저절로(글 '막고 공격하면' → '막으면') · 전 '세 번 이어 치기'
     ],
   },
 };
