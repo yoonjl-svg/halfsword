@@ -759,7 +759,7 @@ function newRound(weaponId) {
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −35 · −70 그대로 · 기력 끔이면 아무 일 없음)
   //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
   if (loadout?.neck === HERO_TEAR.id) player.stamina.setInfinite(true); // 용사의 눈물 '기력 무한' (사장님 10/17) — 플레이어만 · 청구 · 지침 · 탈진 없음 · 머리 위 내 막대 없음(stamina_hud.js) · 몸에 붙이는 것 없음(겉모습 그대로)
-  for (const [a, v] of [[player, enemy], [enemy, player]]) applyAweStart(a, v); // 티소나 '위세' (사장님 10/24 11:3x): 상대는 그 판을 최대 기력 − 10 ~ 20 으로 시작 (stamina.js)
+  for (const [a, v] of [[player, enemy], [enemy, player]]) applyAweStart(a, v); // 티소나 '위세' (사장님 10/24 11:3x · 11:4x): 상대는 그 판을 최대 기력 − 15 로 시작 (stamina.js)
   for (const f of [player, enemy]) {
     configureWetlandMovement(f, stages.id); // 진흙 웅덩이 감속 (잠든 습지만)
     f.arenaObstacle = arenaStone?.navigation ?? null; // AI 돌아가기가 읽는다 (석상 없으면 null — 아무 일 없음)

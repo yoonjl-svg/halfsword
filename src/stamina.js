@@ -412,14 +412,12 @@ export function spendAweDrain(att, vic) {
 }
 /**
  * 티소나 '위세' 판 시작 (사장님 10/24 11:3x — config.js WEAPON_ABILITY.aweStart): att 가 위세 칼(weapon.awe)을 들고 판을 시작하면 vic 의 최대 기력을
- *  aweStart[0] ~ [1] 사이 정수만큼 그 판 내내 깎고, 깎인 최대에서 시작한다(기력 무한이면 깎인 최대로 늘 가득 — 청구가 없어 느낄 일 없음).
- *  판을 세울 때 한 번(main.js newRound — 사람 · AI 두 쪽 모두). rnd = 0 ~ 1 난수(시험은 고정값). 돌려줌 { loss } 또는 null(위세 칼 아님 · 끔)
+ *  aweStart(15 — 고정 · 무작위 아님, 사장님 11:4x)만큼 그 판 내내 깎고, 깎인 최대에서 시작한다(기력 무한이면 깎인 최대로 늘 가득 — 청구가 없어 느낄 일 없음).
+ *  판을 세울 때 한 번(main.js newRound — 사람 · AI 두 쪽 모두). 돌려줌 { loss } 또는 null(위세 칼 아님 · 끔)
  */
-export function applyAweStart(att, vic, rnd = Math.random) {
-  const R = WEAPON_ABILITY.aweStart, s = vic?.stamina;
-  if (!att?.weapon?.awe || !s || !Array.isArray(R) || !(R[1] > 0)) return null;
-  const lo = Math.max(0, Math.round(R[0])), hi = Math.max(lo, Math.round(R[1]));
-  const loss = lo + Math.min(hi - lo, Math.floor(rnd() * (hi - lo + 1)));
+export function applyAweStart(att, vic) {
+  const s = vic?.stamina, loss = Math.max(0, Math.round(+WEAPON_ABILITY.aweStart || 0));
+  if (!att?.weapon?.awe || !s || !(loss > 0)) return null;
   s.aweLoss = loss;
   if (STAMINA.on) s.value = s.max;
   if (s.infinite) s.refill();

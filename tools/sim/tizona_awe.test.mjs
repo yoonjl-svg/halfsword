@@ -1,4 +1,4 @@
-// 티소나 '위세' 시험 (사장님 10/21 23:xx 막힘 깎음 → 10/24 11:3x 판 시작 최대 기력 − 10 ~ 20 · 값 config.js WEAPON_ABILITY · 계산 src/stamina.js applyAweStart · 옛 spendAweDrain)
+// 티소나 '위세' 시험 (사장님 10/21 23:xx 막힘 깎음 → 10/24 11:3x · 11:4x 판 시작 최대 기력 − 15 · 값 config.js WEAPON_ABILITY · 계산 src/stamina.js applyAweStart · 옛 spendAweDrain)
 //  이 칼의 공격이 상대 칼에 막히면(못 벰 · 칼끼리 닿음 — 독일 인데스 '막힘'과 같은 가름) 막은 쪽 기력 − 8 · 한 공격에 한 번 · 1.5 s 에 한 번 ·
 //  맞힘 · 헛침은 없음 · 칼 주인이 사람이든(skill.js whiffEnd) AI 든(ai.js afterStrike) 같다
 //  node --test tools/sim/tizona_awe.test.mjs
@@ -23,9 +23,9 @@ const tizona = () => getWeapon('tizona');
 // 옛 판(10/21 — 막힘마다 기력 −8): 10/24 사장님 결정으로 끔(aweDrain 0) · 스위치로 남긴 셈이 그대로 도는지 이 시험들은 8 로 켜고 본다
 const oldDrain = (fn) => () => { const was = WEAPON_ABILITY.aweDrain; WEAPON_ABILITY.aweDrain = 8; try { return fn(); } finally { WEAPON_ABILITY.aweDrain = was; } };
 
-test('값 · 카드 · 몸: 막힘 깎음 끔 · 판 시작 10 ~ 20 · 티소나만 능력 · 카드 능력 줄 · 사장님 설명 그대로 · 칼날 1.05 m · 2.3 kg · 앞무게 이베리아 · 츠바이핸더 그대로', () => {
+test('값 · 카드 · 몸: 막힘 깎음 끔 · 판 시작 15 · 티소나만 능력 · 카드 능력 줄 · 사장님 설명 그대로 · 칼날 1.05 m · 2.3 kg · 앞무게 이베리아 · 츠바이핸더 그대로', () => {
   assert.equal(WEAPON_ABILITY.aweDrain, 0); // 10/24 사장님 — 막힘마다 깎던 몫 끔(옛 판 8)
-  assert.deepEqual(WEAPON_ABILITY.aweStart, [10, 20]); // 판 시작 최대 기력 − 10 ~ 20
+  assert.equal(WEAPON_ABILITY.aweStart, 15); // 판 시작 최대 기력 − 15 (고정 — 사장님 11:4x)
   assert.equal(WEAPON_ABILITY.aweGap, 1.5);
   const T = tizona();
   assert.equal(T.id, 'tizona'); assert.equal(T.tier, 'epic'); assert.equal(T.awe, true);
@@ -198,20 +198,20 @@ test('몸 길이 (사장님 10/21 23:5x): 츠바이핸더 손 ~ 칼끝 1.335 m �
   for (const w of [Z, F, T]) assert.equal(w.frame, 'heavy');
 });
 
-test('위세 판 시작 (사장님 10/24 11:3x): 티소나를 든 쪽의 상대는 최대 기력 − 10 ~ 20 으로 시작 · 그 판 내내 · 막대는 깎인 몫이 빈 칸 · 다른 칼 · 기력 무한', () => {
+test('위세 판 시작 (사장님 10/24 11:3x): 티소나를 든 쪽의 상대는 최대 기력 − 15 로 시작 · 그 판 내내 · 막대는 깎인 몫이 빈 칸 · 다른 칼 · 기력 무한', () => {
   const a = actor({ index: 1, weapon: tizona() });
-  for (const [r, want] of [[0, 10], [0.5, 15], [0.999, 20]]) {
+  for (const want of [15]) { // 고정 15 (무작위 아님 — 몇 번 해도 같다)
     const v = actor();
-    assert.deepEqual(applyAweStart(a, v, () => r), { loss: want });
+    assert.deepEqual(applyAweStart(a, v), { loss: want }); assert.deepEqual(applyAweStart(a, actor()), { loss: want });
     near(v.stamina.max, STAMINA.max - want); near(v.stamina.value, STAMINA.max - want);
     near(v.stamina.ratio, (STAMINA.max - want) / STAMINA.max); // 가득 차도 깎인 몫만큼 빈 칸
   }
-  const v = actor(); assert.equal(applyAweStart(actor({ weapon: getWeapon('zweihander') }), v, () => 0.5), null); near(v.stamina.max, STAMINA.max); // 다른 칼은 없음
-  const t = actor({ weapon: tizona() }); assert.equal(applyAweStart(actor(), t, () => 0.5), null); near(t.stamina.max, STAMINA.max); // 티소나 주인은 안 깎임
-  const h = actor(); h.stamina.setInfinite(true); applyAweStart(a, h, () => 0); near(h.stamina.value, STAMINA.max - 10); assert.equal(h.stamina.infinite, true); // 기력 무한: 깎인 최대로 늘 가득
-  const k = actor(); k.stamina.setMaxBonus(30); applyAweStart(a, k, () => 0); near(k.stamina.max, STAMINA.max + 30 - 10); // 케틀 햇 덧과 함께
+  const v = actor(); assert.equal(applyAweStart(actor({ weapon: getWeapon('zweihander') }), v), null); near(v.stamina.max, STAMINA.max); // 다른 칼은 없음
+  const t = actor({ weapon: tizona() }); assert.equal(applyAweStart(actor(), t), null); near(t.stamina.max, STAMINA.max); // 티소나 주인은 안 깎임
+  const h = actor(); h.stamina.setInfinite(true); applyAweStart(a, h); near(h.stamina.value, STAMINA.max - 15); assert.equal(h.stamina.infinite, true); // 기력 무한: 깎인 최대로 늘 가득
+  const k = actor(); k.stamina.setMaxBonus(30); applyAweStart(a, k); near(k.stamina.max, STAMINA.max + 30 - 15); // 케틀 햇 덧과 함께
   const was = WEAPON_ABILITY.aweStart;
-  try { WEAPON_ABILITY.aweStart = null; const z = actor(); assert.equal(applyAweStart(a, z, () => 0.5), null); near(z.stamina.max, STAMINA.max); } finally { WEAPON_ABILITY.aweStart = was; }
+  try { WEAPON_ABILITY.aweStart = null; const z = actor(); assert.equal(applyAweStart(a, z), null); near(z.stamina.max, STAMINA.max); } finally { WEAPON_ABILITY.aweStart = was; }
 });
 
 test('위세 막힘 깎음은 꺼짐 (10/24): AI 대 AI 실제 판에서 막힌 티소나 공격이 있어도 상대 기력 awe 청구 0', () => {
