@@ -68,7 +68,7 @@ const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM 
   report.drop = await page.evaluate(() => {
     const g = window.game, P = g.player, E = g.enemy, K = g.config.UNIQUE_ASSIST.koteDrop, p0 = K.p;
     P.artTech = 'kote'; K.p = 1; // 손목 치기가 칼 쥔 아래팔을 벤 순간 (굴림 1 — 그림용)
-    try { g.combat.koteCheck(P, E, 'farmS'); } finally { K.p = p0; P.artTech = null; }
+    try { g.combat.koteCheck(P, E, 'farmS', { type: 'cut', severity: 0.2 }); } finally { K.p = p0; P.artTech = null; }
     return { kit: !!P.skillKit?.perk?.has('kote'), armed: E.armed, log: g.combat.koteLog ?? [], weapon: P.weapon.id, foeWeapon: E.weapon.id };
   });
   if (!report.drop.kit || report.drop.armed !== false || report.drop.log.length !== 1) errors.push(`떨굼 ${JSON.stringify(report.drop)}`);

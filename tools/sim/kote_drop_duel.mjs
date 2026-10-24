@@ -1,4 +1,4 @@
-// 손목 치기 칼 떨구기 (일본 심화 칸 J8 — 사장님 10/24 11:5x · 12:0x, config UNIQUE_ASSIST.koteDrop · combat.js koteCheck) 측정
+// 손목 치기 칼 떨구기 (일본 심화 칸 J8 — 사장님 10/24 11:5x · 12:0x · 12:3x 판정 완화, config UNIQUE_ASSIST.koteDrop · combat.js koteCheck · koteSword) 측정
 //  손가락 봇(사람 흉내): 일본 무기 플레이어(고유 공격 강화 — PlayerUniqueAssist 단계 4 = 비껴 베기 · 손목 치기 · 제비 베기). 공격 결정마다 KOTE 몫(기본 0.5)은
 //   긴 자세에서 짧게 내려베기(= 강화동작 손목 치기), 나머지는 다른 기본 긋기 · 그 가운데 15 % 는 탭 찌르기. 그은 뒤 30 % 되긋기.
 //  맞받기 · 막기: 상대 칼이 가까이서 빠르게 움직이면 반응 지연(0.12 ~ 0.22 s) 뒤 COUNTER 몫(기본 0.5)은 손목 치기로 맞받고, 나머지는 0.6 ~ 1.0 s 막기 단추(유파 막기 — main.js 와 같이 PlayerParryGuard.step).
@@ -9,7 +9,9 @@
 //  떨군 뒤 봇은 손목 치기 대신 몸을 노리는 긋기를 0.5 ~ 0.8 s 마다 · 맞닿기 간격까지 끝까지 쫓는다(사람이라면 끝내러 들어간다).
 //  센다(판당): 손목 치기 긋기 · 손목 치기 칼날 맞음(어느 몸체) · 굴림 · 떨굼 · 떨군 때 · 판 결과(누가 · 언제) · 떨군 뒤 끝날 때까지 · 떨군 뒤 AI 공격 시작 수 ·
 //   떨군 뒤 상대가 준 칼날 상처 · 떨어진 칼 높이 · 값 깨짐(NaN)
-//  OPPS=longsword,zweihander,rapier,qinggang SEEDS=901,902,903 PROF=3 W=uchigatana KOTE=0.5 COUNTER=0.5 DUR=30 OUT=<json> node tools/sim/kote_drop_duel.mjs
+//  판정 셋 견줌(10/24 12:3x 판정 완화): 굴림과 상관없이 손목 치기 닿음을 갈래(cut 칼날 베기 · 심각도 > 0 / arm 아래팔 맞음 모두 / sword 상대 칼 손 쪽 절반 세게)로 모두 적어(combat.koteProbe)
+//   떨굼 없는 판(off)에서 판정마다 굴림 기회 · 기대 떨굼(50 % · 100 %)을 셈 · on 판은 JUDGE(기본 config 판정)로 실제로 굴림
+//  OPPS=longsword,zweihander,rapier,qinggang SEEDS=901,902,903 PROF=3 W=uchigatana KOTE=0.5 COUNTER=0.5 DUR=30 JUDGE=all OUT=<json> node tools/sim/kote_drop_duel.mjs
 import { newRound, DT } from './harness_m.mjs';
 import { SKILL, UNIQUE_ASSIST as UA } from '../../src/config.js';
 import { PlayerUniqueAssist, strokeTechOf } from '../../src/unique_assist.js';
@@ -24,7 +26,8 @@ const OPPS = (process.env.OPPS ?? 'longsword,zweihander,rapier,qinggang').split(
 const SEEDS = (process.env.SEEDS ?? '901,902,903').split(',').map(Number);
 const PROF = +(process.env.PROF ?? 3), DUR = +(process.env.DUR ?? 30), KOTE = +(process.env.KOTE ?? 0.5), COUNTER = +(process.env.COUNTER ?? 0.5), FORCE_T = +(process.env.FORCE_T ?? 8);
 const VARIANTS = (process.env.VARIANTS ?? 'off,on').split(',');
-const P_ON = UA.koteDrop.p;
+const P_ON = UA.koteDrop.p, JUDGE = process.env.JUDGE ?? UA.koteDrop.judge;
+const MODES = { cut: ['cut'], arm: ['cut', 'arm'], all: ['cut', 'arm', 'sword'] }; // 판정 셋 (config koteDrop.judge) — 그 판정이 굴리는 닿음 갈래
 const FRAME = 2 * DT;
 const KOTE_BASE = { name: 'langortDown', from: PAD.langort, path: [[0.02, -0.22]] }; // 긴 자세에서 짧게 내려베기 → 강화동작 손목 치기 (unique_assist.js PLAYER_UNIQUE japanese kote)
 const OTHER = TECH.map((t) => ({ name: t.name, from: t.from, path: t.path }));
@@ -33,11 +36,13 @@ const [CONTACT, REACH] = MEASURED[W] ?? MEASURED.longsword; // 내 무기 간격
 
 function fight(opp, seed, v) {
   UA.koteDrop.p = v === 'on' ? P_ON : 0;
+  UA.koteDrop.judge = JUDGE;
   let rs = (seed * 7919) >>> 0; const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
   SKILL.parryAssist = 0;
   const G = newRound({ walls: true, weapon: W, weapon2: opp, seed, persona: { proficiency: PROF } });
   applyWeaponMeasure(G.ai, opp);
   const D = G.player, A = G.enemy;
+  G.combat.koteProbe = []; // 굴림 판정과 상관없이 손목 치기 닿음을 모두 적음 (combat.js koteCheck · koteSword) — 떨굼 없는 판(off)에서 판정 셋을 한꺼번에 견줌
   D.skill.corr = SKILL.corr; D.skill.corrTip = SKILL.corrTip; D.skill.autoGuard = true;
   const guard = new PlayerParryGuard(D, A); D.stamina.controller = guard;
   const uq = new PlayerUniqueAssist(D, { stage: 4 });
@@ -108,6 +113,10 @@ function fight(opp, seed, v) {
     if (G.t >= end) break;
   }
   const log = G.combat.koteLog ?? [];
+  // 판정마다 굴림 기회 = 그 판정이 굴리는 닿음이 있었던 손목 치기 긋기 수(한 긋기에 한 번 — once). 떨굼 전까지 판이 같으므로(굴림은 물리를 안 바꿈)
+  //  기대값: 50 % 떨굼 = 1 − 0.5^n · 굴림 = 2(1 − 0.5^n) · 100 % 떨굼 = 굴림 = (n ≥ 1). 떨군 판(on)은 떨군 뒤 닿음이 없어 기회가 잘림 — off 판으로 견준다
+  r.probe = G.combat.koteProbe;
+  r.chance = Object.fromEntries(Object.entries(MODES).map(([m, kinds]) => [m, new Set(r.probe.filter((e) => kinds.includes(e.kind)).map((e) => e.stroke)).size]));
   r.rolls = log.length; r.drops = log.filter((x) => x.drop).length;
   r.rollParts = log.map((x) => x.part).join(',');
   r.koteStrokes = uq.stats?.fired?.kote ?? 0;
@@ -131,5 +140,7 @@ for (const v of VARIANTS) {
   const hits = sum((r) => Object.values(r.koteHits).reduce((a, b) => a + b, 0)), arm = sum((r) => Object.entries(r.koteHits).filter(([p]) => ARM.has(p)).reduce((a, [, b]) => a + b, 0));
   const D = R.filter((r) => r.dropT != null);
   console.log(`${v} n ${n} · 승 ${R.filter((r) => r.win).length} 패 ${R.filter((r) => r.lose).length} 무 ${R.filter((r) => r.end == null).length} · 손목 치기 긋기 ${(sum((r) => r.koteStrokes) / n).toFixed(2)}/판 · 칼날 맞음 ${(hits / n).toFixed(2)}/판(아래팔 ${(arm / n).toFixed(2)}) · 굴림 ${(sum((r) => r.rolls) / n).toFixed(2)}/판 · 떨굼 ${sum((r) => r.drops)} 판 ${D.length}` +
+    ` · 굴림 기회(긋기) ${Object.keys(MODES).map((m) => `${m} ${(sum((r) => r.chance[m]) / n).toFixed(2)}`).join(' · ')}` +
+    (v === 'off' ? ` · 기대 떨굼/판 50 % ${Object.keys(MODES).map((m) => `${m} ${(sum((r) => 1 - 0.5 ** r.chance[m]) / n).toFixed(3)}`).join(' · ')} · 100 % ${Object.keys(MODES).map((m) => `${m} ${(sum((r) => (r.chance[m] > 0 ? 1 : 0)) / n).toFixed(3)}`).join(' · ')} · 기대 굴림/판 50 % ${Object.keys(MODES).map((m) => `${m} ${(sum((r) => 2 * (1 - 0.5 ** r.chance[m])) / n).toFixed(3)}`).join(' · ')}` : '') +
     (D.length ? ` · 떨군 판 승 ${D.filter((r) => r.win).length}/${D.length} · 떨군 뒤 끝 ${D.filter((r) => r.after != null).map((r) => r.after).join(',')} s · 떨군 뒤 AI 공격 ${sum((r) => r.aiAttackAfter)} · 떨군 뒤 받은 상처 ${sum((r) => r.foeCutAfter)} · 칼 높이 최저 ${Math.min(...D.map((r) => r.swordMinY)).toFixed(2)} m · NaN ${D.filter((r) => r.nan).length}` : ''));
 }

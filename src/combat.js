@@ -59,6 +59,8 @@ const _q = new THREE.Quaternion();
 const _n1 = new THREE.Vector3(); // 흘려 받기 (Combat.nagashi)
 const _n2 = new THREE.Vector3();
 const _n3 = new THREE.Vector3();
+const _k1 = new THREE.Vector3(); // 손목 치기 칼 떨구기 (Combat.koteSword)
+const _k2 = new THREE.Vector3();
 
 /** 강체 상태(p, q, com, v, w)에서 한 점의 속도 */
 function velAt(st, point, out) {
@@ -613,6 +615,7 @@ export class Combat {
     if (BIND.natural) this.bindFeel(pairs, point, A.fighter, B.fighter, fresh);
     A.fighter.parryGuard?.opposition?.onClash(B.fighter, { vn });
     B.fighter.parryGuard?.opposition?.onClash(A.fighter, { vn });
+    if (fresh && SA && SB && J > 0) this.koteSword(A, B, SA, SB, point, nrm, vn); // 손목 치기가 상대 칼 손 쪽 절반을 세게 침 (J8 판정 완화 — 사람만)
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm, nagashi: !!flowD });
   }
 
@@ -864,11 +867,12 @@ export class Combat {
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
-      if (r.type === 'cut' && r.severity > 0) { this.buckleCheck(att, vic, pr.v.part); this.koteCheck(att, vic, pr.v.part); }
+      if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
       if (r.severity > 0) { const tn = strokeTechOf(att); if (((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) && !perkOff(att, tn)) artFlash(att, this.dt); }
     }
     if (att.weapon?.kneelHit) this.whipKneelCheck(att, vic, pr.v.part); // 채찍 무릎 꿇리기 (10/23 — 한 획에 한 번 · 아래)
+    this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 칼 떨구기 (J8 — 아래팔에 판정이 난 맞음: 10/24 12:3x 판정 완화 · 'cut' 판은 칼날 베기 · 심각도 > 0 만)
     this.hooks.onWound?.(att, vic, r, point, pr);
     return r;
   }
@@ -918,18 +922,59 @@ export class Combat {
   }
 
   /**
-   * 손목 치기 칼 떨구기 (일본 강화동작 이점 · 심화 칸 J8 — 사장님 10/24 11:5x · 12:0x, config UNIQUE_ASSIST.koteDrop): 손목 치기의 칼날이 들어간 베기가 칼을 쥔 손의 손목 · 아래팔 · 손(parts — 빈손 쪽은 두 손으로 쥔 동안만)에 맞으면
-   *  친 쪽 전용 난수(fighter.buckleRandom — 무릎 꺾기와 같은 줄)로 굴려 p 로 맞은 쪽이 칼을 떨어뜨린다(fighter.dropSword — 칼 팔을 크게 다쳐 놓칠 때와 같은 길). 못 떨어뜨리면 보통 맞음 그대로.
-   *  사람만(ai 0 — AI 가 모는 몸은 굴리지 않는다 · AI 끼리 판 그대로) · 사람은 J8 을 익혀야(perkOff). 맞은 쪽이 살아 칼을 쥐고 부활 중이 아닐 때만. 기록 this.koteLog { t, att, vic, part, drop }
+   * 손목 치기 칼 떨구기 (일본 강화동작 이점 · 심화 칸 J8 — 사장님 10/24 11:5x · 12:0x · 12:3x, config UNIQUE_ASSIST.koteDrop) — 손목 치기가 칼을 쥔 손의 손목 · 아래팔 · 손(parts — 빈손 쪽은 두 손으로 쥔 동안만)에
+   *  판정이 난 맞음(strike 가 돌려준 맞음 r — STRIKE.minEnergy 를 넘음)이면 koteRoll. judge 'cut'(11:5x 판)은 칼날이 들어간 베기(심각도 > 0)만 · 'arm' · 'all' 은 칼면 · 심각도 0 도.
+   *  사람만(ai 0 — AI 가 모는 몸은 굴리지 않는다 · AI 끼리 판 그대로) · 사람은 J8 을 익혀야(perkOff). 맞은 쪽이 살아 칼을 쥐고 부활 중이 아닐 때만.
    */
-  koteCheck(att, vic, part) {
+  koteCheck(att, vic, part, r) {
     const K = UA.koteDrop;
-    if (!(K?.p > 0) || !vic?.alive || !vic.armed || vic.revival || !K.parts.includes(part)) return;
+    if (!K || !r || !K.parts.includes(part) || !this.koteOn(att, vic)) return;
     if (part === 'farmO' && !vic.gripping) return; // 빈손 쪽 아래팔은 그 손이 칼자루를 쥔 동안(두 손 쥠 — fighter.offHand)만 — 한 손 칼의 빈손을 쳐서는 칼이 안 떨어진다
-    if ((att.aiControlled && !K.ai) || strokeTechOf(att) !== 'kote' || perkOff(att, 'kote')) return;
+    const kind = r.type === 'cut' && r.severity > 0 ? 'cut' : 'arm';
+    this.koteProbe?.push({ t: +(this.stepNo * (this.dt ?? 1 / 60)).toFixed(2), kind, part, stroke: att.skill?.uniq?.stats?.strokes ?? null }); // 재는 도구만 (판정 넷을 한 판에서 견줌 — tools/sim/kote_drop_duel.mjs)
+    if (kind === 'arm' && K.judge === 'cut') return;
+    this.koteRoll(att, vic, part, kind);
+  }
+
+  /**
+   * 손목 치기가 상대 칼의 손 쪽 절반을 친 순간 (J8 판정 완화 'all' — 사장님 10/24 12:3x · 오의 「적의 칼을 세게 치고 … 칼은 반드시 떨어진다」): bladeClash 가 새 부딪힘에서 부른다.
+   *  맞부딪는 빠르기 vn > swordVn(main.js onClash '쨍' 문턱 그대로) · 내 칼이 그 자리로 0.5 m/s 넘게 들어감(contactAttack 과 같은 문) · 맞닿은 자리가 상대 칼 축에서 칼날 0 ~ swordHalf(손 쪽 절반 — 코등이 · 자루 쪽 포함)이면 koteRoll
+   */
+  koteSword(A, B, SA, SB, point, nrm, vn) {
+    const K = UA.koteDrop;
+    if (!K || !(vn > K.swordVn)) return;
+    for (const [att, vic, S, sg] of [[A.fighter, B.fighter, SA, 1], [B.fighter, A.fighter, SB, -1]]) {
+      if (!this.koteOn(att, vic) || !vic.sword || !vic.weaponCfg) continue;
+      if (sg * velAt(S, point, _k1).dot(nrm) <= 0.5) continue; // 내 칼이 들어간 맞부딪힘만 (받는 쪽의 멈춘 칼은 아님)
+      const ax = _k2.set(0, 1, 0).applyQuaternion(rotQ(vic.sword));
+      const at = (_k1.copy(point).sub(tv(vic.sword.translation())).dot(ax) - vic.weaponCfg.hiltLength) / vic.weaponCfg.bladeLength; // 상대 칼 위 자리 (0 = 칼날 밑동 · 1 = 칼끝 · 0 아래 = 코등이 · 자루)
+      if (!(at <= K.swordHalf)) continue;
+      this.koteProbe?.push({ t: +(this.stepNo * (this.dt ?? 1 / 60)).toFixed(2), kind: 'sword', part: 'sword', at: +at.toFixed(2), vn: +vn.toFixed(1), stroke: att.skill?.uniq?.stats?.strokes ?? null });
+      if (K.judge !== 'all') continue;
+      this.koteRoll(att, vic, 'sword', 'sword');
+    }
+  }
+
+  /** 칼 떨구기를 굴릴 수 있는 둘인가: 친 쪽 = 손목 치기 중인 사람(J8) · 맞은 쪽 = 살아 칼을 쥐고 부활 중이 아님 */
+  koteOn(att, vic) {
+    const K = UA.koteDrop;
+    if (!vic?.alive || !vic.armed || vic.revival) return false;
+    return !(att.aiControlled && !K.ai) && strokeTechOf(att) === 'kote' && !perkOff(att, 'kote');
+  }
+
+  /**
+   * 칼 떨구기 굴림: 손목 치기 한 번에 한 번(once — 그 긋기 기록 skill.uniq.cur/last 에 표시) · 친 쪽 전용 난수(fighter.buckleRandom — 무릎 꺾기와 같은 줄)로 p 면 맞은 쪽이 칼을 떨어뜨린다
+   *  (fighter.dropSword — 칼 팔을 크게 다쳐 놓칠 때와 같은 길). 못 떨어뜨리면 보통 맞음 그대로. 기록 this.koteLog { t, att, vic, part, kind('cut' | 'arm' | 'sword'), drop }
+   */
+  koteRoll(att, vic, part, kind) {
+    const K = UA.koteDrop;
+    if (!(K.p > 0)) return;
+    const u = att.skill?.uniq, st = u ? u.cur ?? u.last : null;
+    if (K.once && st?.koteRolled) return;
+    if (st) st.koteRolled = true;
     const t = this.stepNo * (this.dt ?? 1 / 60);
     const drop = att.buckleRandom() < K.p;
-    (this.koteLog ??= []).push({ t: +t.toFixed(2), att: att.index, vic: vic.index, part, drop });
+    (this.koteLog ??= []).push({ t: +t.toFixed(2), att: att.index, vic: vic.index, part, kind, drop });
     if (!drop) return;
     vic.dropSword();
     vic.koteDropAt = t;

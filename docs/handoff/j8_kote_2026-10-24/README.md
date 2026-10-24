@@ -4,7 +4,9 @@
 
 ## 하는 일
 
-- 손목 치기(강화동작 `kote`)의 칼날이 칼을 쥔 손의 아래팔(손 · 손목)을 베면, 두 번에 한 번꼴로(50 %) 상대가 칼을 떨어뜨린다.
+- 손목 치기(강화동작 `kote`)가 칼을 쥔 손의 아래팔(손 · 손목)에 맞거나, 상대 칼의 손 쪽 절반(코등이 · 자루 쪽 포함)을 세게 치면, 두 번에 한 번꼴로(50 %) 상대가 칼을 떨어뜨린다.
+  - 10/24 12:3x 판정 완화(확인표 2415 ~ 2418): 전에는 칼날로 베어 상처가 날 때만이었다. 칼면으로 맞아도 되고, 상대 칼을 쳐도 된다.
+  - 손목 치기 한 번에 한 번만 굴린다.
 - 못 떨어뜨리면 보통 맞음 그대로다.
 - 사람만 쓴다. AI 가 모는 몸은 굴리지 않는다.
 - 떨어진 칼은 줍지 않는다. 부활하는 인물만 일어설 때 칼이 돌아온다.
@@ -22,6 +24,6 @@
 
 ## 코드 자리
 
-- 판정: `src/combat.js` `koteCheck`(`strike` 에서 무릎 꺾기 옆) · 값 `src/config.js` `UNIQUE_ASSIST.koteDrop`
+- 판정: `src/combat.js` `koteCheck`(`strike` — 아래팔 맞음) · `koteSword`(`bladeClash` — 상대 칼 손 쪽 절반) · `koteRoll`(굴림) · 값 `src/config.js` `UNIQUE_ASSIST.koteDrop`
 - 칸: `src/skill_tree_data.js` J8(`perk: 'kote'`) · 떨굼: `src/fighter.js` `dropSword`
 - 시험: `tools/sim/skill_tree.test.mjs` · `tools/sim/titles.test.mjs` · 재기: `tools/sim/kote_drop_duel.mjs`
