@@ -14,7 +14,7 @@ const { SCHOOLS: DESIGN } = await import('../../docs/design/skill_tree_2026-10-2
 const D = await import('../../src/skill_tree_data.js');
 const S = await import('../../src/skill_tree_store.js');
 const { readProgress, recordAcquisition, PROGRESS_KEY } = await import('../../src/lobby_progress.js');
-const { SECRET, STAMINA, GAIT, LETTER } = await import('../../src/config.js');
+const { SECRET, STAMINA, GAIT, LETTER, UNIQUE_ASSIST } = await import('../../src/config.js');
 const { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_DRAW, RETIRED_WEAPONS } = await import('../../src/weapons.js');
 const { traditionOf, TRADITIONS } = await import('../../src/schools.js');
 const { PLAYER_UNIQUE, PlayerUniqueAssist, strokeHitK, enhancedMoves } = await import('../../src/unique_assist.js');
@@ -93,10 +93,10 @@ test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 �
 });
 
 // ── 닫힌 칸 ──
-test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람 쪽 다섯 유파 — 일본 고노센 · 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기) · 일본 손목 치기 심화(J8)는 준비 중 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
+test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람 쪽 다섯 유파 — 일본 고노센 · 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기) · 일본 손목 치기 심화(J8)는 10/24 칼 떨구기로 열림 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
   const SECRET_NODE = { german: 'G10', italian: 'I4', iberian: 'B7', japanese: 'J5', chinese: 'C9' };
-  assert.deepEqual(closed.sort(), ['J8', ...D.TREE_SCHOOLS.filter((s) => !SECRET.openSchools.includes(s)).map((s) => SECRET_NODE[s])].sort());
+  assert.deepEqual(closed.sort(), D.TREE_SCHOOLS.filter((s) => !SECRET.openSchools.includes(s)).map((s) => SECRET_NODE[s]).sort()); // 10/24 J8 열림 — 닫힌 칸은 열린 유파 밖 비기뿐
   assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B7')), false); // 10/22 휘감아 돌기 열림
   assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false);
   assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, true);
@@ -109,7 +109,8 @@ test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람
   assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), ids(...[...all].filter((x) => x !== 'G10'))), 'open');
   assert.equal(D.kitFromNodes('german', all).secret, true);
   assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).secret, true);
-  assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).perk.has('kote'), false); // J8 몫 없음
+  assert.equal(D.kitFromNodes('japanese', D.allNodeIds('japanese')).perk.has('kote'), true); // 10/24 J8 칼 떨구기 = 손목 치기 이점 몫
+  assert.equal(D.kitFromNodes('japanese', ids('J1', 'J7')).perk.has('kote'), false); // J8 을 안 익히면 몫 없음
   { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.equal(D.kitFromNodes('iberian', D.allNodeIds('iberian')).secret, false); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 비기는 몫 없음 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
   const keep = SECRET.openSchools; SECRET.openSchools = ['japanese'];
   try {
@@ -119,7 +120,7 @@ test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람
     assert.equal(D.kitFromNodes('german', all).secret, false);
   } finally { SECRET.openSchools = keep; }
   SECRET.openSchools = [...D.TREE_SCHOOLS];
-  try { assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), true); } finally { SECRET.openSchools = keep; }
+  try { assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), false); } finally { SECRET.openSchools = keep; }
   wallet(99999, 999);
   { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.deepEqual(S.learnNode('iberian', 'B7'), { ok: false, saved: false, why: 'closed' }); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 칸은 못 배움 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
   for (const id of ['G1', 'G2', 'G5', 'G8', 'G3', 'G7', 'G4', 'G9']) assert.equal(S.learnNode('german', id).ok, true, id);
@@ -522,6 +523,84 @@ test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾
       assert.equal(P.ibFlowOn, want);
     } finally { r.world.free(); }
   }
+});
+test('실제 몸 — 손목 치기 칼 떨구기(J8 · 10/24): J8 을 익혀야 · 손목 치기만 · 칼 쥔 아래팔(손 · 손목)만 · 50 % 는 친 쪽 전용 난수 · 떨구면 칼을 놓침 · 못 떨구면 보통 맞음 그대로 · AI 가 모는 몸은 굴리지 않음', () => {
+  const K = UNIQUE_ASSIST.koteDrop;
+  assert.equal(K.p, 0.5); // 사장님 10/24 '너무 강하면 50%로'
+  assert.deepEqual(K.parts, ['farmS', 'farmO']);
+  assert.equal(Object.hasOwn(K, 'loose'), false); // 12:0x '0.6초 동안 한 손을 놓음 이 효과는 빼' — 손 풀림 없음
+  const lcg = (s) => ((Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296; // fighter.buckleRandom 한 번
+  const J = ['J1', 'J7'];
+  // J8 없음 → 굴리지 않음
+  let g = round('monohoshizao', kitOf('japanese', ...J), 9);
+  try {
+    g.player.artTech = 'kote';
+    g.combat.koteCheck(g.player, g.enemy, 'farmS');
+    assert.equal((g.combat.koteLog ?? []).length, 0); assert.equal(g.enemy.armed, true);
+  } finally { g.world.free(); }
+  // J8 있음: 손목 · 아래팔 아닌 곳 · 다른 기술 · 빈손 쪽(두 손으로 쥐지 않은 한 손 칼) · AI 가 모는 몸 → 굴리지 않음
+  g = round('monohoshizao', kitOf('japanese', ...J, 'J8'), 9);
+  try {
+    const P = g.player, E = g.enemy;
+    P.artTech = 'kote';
+    for (const part of ['head', 'chest', 'uarmS', 'uarmO', 'thighF', 'shinB']) g.combat.koteCheck(P, E, part);
+    P.artTech = 'hirakiGiri'; g.combat.koteCheck(P, E, 'farmS');
+    P.artTech = 'kote'; E.gripping = false; g.combat.koteCheck(P, E, 'farmO');
+    P.aiControlled = true; g.combat.koteCheck(P, E, 'farmS'); P.aiControlled = false;
+    assert.equal((g.combat.koteLog ?? []).length, 0); assert.equal(E.armed, true);
+    // 50 %: 친 쪽 전용 난수(무릎 꺾기와 같은 줄)로 한 번 굴림 — 못 떨구면 칼 · 손 · 걸음 그대로
+    const keep = Math.random; Math.random = () => { throw Error('Math.random 을 쓰면 안 됨'); };
+    try {
+      let tries = 0;
+      while (E.armed && tries < 40) {
+        const want = lcg(P._buckleSeed) < K.p;
+        const before = { grip: E.gripJoint, cone: E.gripCone, state: E.state, limbs: { ...E.limbs } };
+        g.combat.koteCheck(P, E, tries % 2 ? 'farmO' : 'farmS'); E.gripping = true; // 짝수 = 칼 든 손 · 홀수 = 두 손으로 쥔 빈손 쪽
+        const last = g.combat.koteLog.at(-1);
+        assert.equal(last.drop, want); tries++;
+        if (!want) { assert.equal(E.armed, true); assert.equal(E.gripJoint, before.grip); assert.equal(E.gripCone, before.cone); assert.equal(E.state, before.state); assert.deepEqual(E.limbs, before.limbs); }
+      }
+      assert.equal(E.armed, false, '떨굼'); assert.ok(g.combat.koteLog.length >= 1);
+      assert.ok(Number.isFinite(E.koteDropAt));
+      const n = g.combat.koteLog.length;
+      g.combat.koteCheck(P, E, 'farmS'); assert.equal(g.combat.koteLog.length, n, '칼이 없으면 더 굴리지 않음');
+    } finally { Math.random = keep; }
+  } finally { g.world.free(); }
+  // 굴린 수 가운데 떨군 몫 ≈ 50 % (같은 난수 줄을 1000 번)
+  let s = 12345, d = 0; for (let i = 0; i < 1000; i++) { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; if (s / 4294967296 < K.p) d++; }
+  assert.ok(d > 450 && d < 550, `${d}`);
+  // 몫 없는 몸(시뮬 · 테스트 경로 = 모두 켬)은 굴림 · p 0 이면 끔
+  g = round('monohoshizao', null, 9);
+  try {
+    g.player.artTech = 'kote';
+    const p0 = K.p; K.p = 0; try { g.combat.koteCheck(g.player, g.enemy, 'farmS'); } finally { K.p = p0; }
+    assert.equal((g.combat.koteLog ?? []).length, 0);
+    K.p = 1; try { g.combat.koteCheck(g.player, g.enemy, 'farmS'); } finally { K.p = p0; }
+    assert.equal(g.combat.koteLog.length, 1); assert.equal(g.enemy.armed, false);
+  } finally { g.world.free(); }
+});
+test('실제 몸 — 칼 떨구기 뒤: 떨어진 칼은 땅으로 (값이 깨지지 않음) · 칼 없는 AI 는 치지 않고 물러남 · 다른 쪽 칼에는 판정 없음', () => {
+  const g = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 4 });
+  try {
+    for (let i = 0; i < 360; i++) g.step(); // 판 시작 정지 뒤
+    const E = g.enemy, K = UNIQUE_ASSIST.koteDrop, p0 = K.p;
+    g.player.artTech = 'kote';
+    K.p = 1; try { g.combat.koteCheck(g.player, E, 'farmS'); } finally { K.p = p0; }
+    g.player.artTech = null;
+    assert.equal(E.armed, false);
+    let attack = 0, minY = Infinity;
+    for (let i = 0; i < 480; i++) {
+      g.step();
+      const p = E.sword.translation(), v = E.sword.linvel();
+      assert.ok([p.x, p.y, p.z, v.x, v.y, v.z].every(Number.isFinite), 'NaN');
+      minY = Math.min(minY, p.y);
+      if (g.ai.mode === 'attack') attack++;
+    }
+    assert.equal(E.armed, false, '줍기 없음');
+    assert.ok(minY < 0.3, `칼이 땅으로 ${minY}`);
+    assert.equal(attack, 0, '칼 없는 AI 는 치지 않음');
+    assert.equal(E.alive, true);
+  } finally { g.world.free(); }
 });
 test('실제 몸 — 고유 공격 · 비기: 익힌 칸의 기술만 · 비기는 비기 칸(열린 유파만)', () => {
   const g = round('longsword', kitOf('german', 'G1', 'G8'), 9);

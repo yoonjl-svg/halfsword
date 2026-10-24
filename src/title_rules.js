@@ -46,7 +46,7 @@ export const titleName = (event) => TITLE_NAMES[event] ?? null;
 
 const SKILL = /^skill:([a-z]+):([A-Z]+\d+)$/;
 /**
- * 유파 호칭에 드는 칸: 그 유파 칸 모두(편지 · 곁가지 포함) — 닫힌 칸('준비 중' · 살 수 없음 — 지금 일본 J8 손목 치기 심화)은 뺀다.
+ * 유파 호칭에 드는 칸: 그 유파 칸 모두(편지 · 곁가지 포함) — 닫힌 칸('준비 중' · 살 수 없음 — 지금 없음 · 일본 J8 손목 치기 심화는 10/24 칼 떨구기로 열려 이제 듦)은 뺀다.
  *  비기는 늘 든다(닫힌 유파면 아직 못 얻음 — SECRET.openSchools · 지금 다섯 유파 모두 열림). 닫힌 칸이 나중에 열려도 이미 얻은 호칭은 그대로
  */
 export const titleNodes = (school) => nodesOf(school).filter((n) => n.cat === 'secret' || !isClosed(school, n)).map((n) => n.id);

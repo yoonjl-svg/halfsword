@@ -1,7 +1,7 @@
 // 스킬트리 자료 · 규칙 (10/21 사장님 확정 — docs/design/skill_tree_2026-10-21/README.md · data.mjs 가 원본 · 이 파일 = 게임이 읽는 판)
 //  유파마다 11 칸 · 뿌리 = 보법 I · pre = 먼저 익힐 칸 '모두'(독일 2단계 관문 · 이탈리아 보법 II 줄기 · 이베리아 패시브 → 비기 · 독일 보법 II → 패시브 → 비기가 이미 여기 들어 있다).
 //  값(사장님 10/21 19:0x): 편지 금화 100 · 패시브 머리 10(금화 없음) · 보법 II 금화 100 · 비기 금화 400 + 머리 20 · 나머지는 깊이마다 금화 — data.mjs 그대로.
-//  닫힌 칸: 비기는 SECRET.openSchools(config — 10/22 사람 쪽 다섯 유파 모두: 일본 · 독일 · 이탈리아 · 이베리아 · 동방)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · 일본 J8 손목 치기 심화는 이점이 아직 없어 '준비 중'(확인표 2107).
+//  닫힌 칸: 비기는 SECRET.openSchools(config — 10/22 사람 쪽 다섯 유파 모두: 일본 · 독일 · 이탈리아 · 이베리아 · 동방)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · closed 칸(지금 없음 — 일본 J8 손목 치기 심화는 10/24 칼 떨구기로 열림).
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
@@ -86,7 +86,7 @@ const TREE_SRC = {
       N({ id: 'J2', name: '머리 위 받기', cat: 'parry', l1: '막기 I', l2: '머리 위 받기', eff: '머리 위로 오는 칼을 받고, 막는 동안 받는 피해가 줄어든다', pre: ['J1'], price: 200, d: 1, cx: 650, f: ['parry', 'parryCover', 'parryCut'] }),
       N({ id: 'J11', name: '에도에서 온 편지', cat: 'letter', l1: '에도에서', l2: '온 편지', title: '에도에서 온 편지', pre: ['J1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'J9', name: '제비 베기', cat: 'atk', l1: '제비 베기', l2: '이어 긋기', eff: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋는다', pre: ['J6', 'J7'], price: 300, d: 2, cx: 200, u: 'tsubameGaeshi' }),
-      N({ id: 'J8', name: '손목 치기 심화', cat: 'deep', closed: true, l1: '심화', l2: '손목 치기', title: '손목 치기 심화', eff: '준비 중입니다', pre: ['J7'], price: 300, d: 2, cx: 420 }), // 이점 미정(확인표 2107) — 닫힘 · 몫 없음
+      N({ id: 'J8', name: '칼 떨구기', cat: 'deep', l1: '심화', l2: '칼 떨구기', title: '손목 치기 심화 · 칼 떨구기', eff: '손목을 맞은 상대가 칼을 놓치기도 한다', pre: ['J7'], price: 300, d: 2, cx: 420, perk: 'kote' }), // 10/24 열림 (사장님 11:4x · 11:5x '너무 강하면 50%로' — 칼 놓침 · config UNIQUE_ASSIST.koteDrop · combat.js koteCheck)
       N({ id: 'J3', name: '흘려 받기', cat: 'parry', l1: '막기 II', l2: '흘려 받기', title: '막기 II · 흘려 받기 (우케나가시)', orig: '受け流し', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow'] }),
       N({ id: 'J10', name: '기다림과 침', cat: 'passive', l1: '패시브', l2: '기다림과 침', eff: '치지 않고 기다릴수록 다음 칼의 피해가 증가한다', pre: ['J9'], price: 0, heads: 10, d: 3, cx: 200, f: ['passive'] }),
       N({ id: 'J4', name: '흘린 칼', cat: 'parry', l1: '막기 III', l2: '흘린 칼', eff: '흘린 공격의 피해가 크게 줄어든다', pre: ['J3'], price: 400, d: 3, cx: 650, f: ['flowShield'] }),
@@ -112,7 +112,7 @@ const TREE_SRC = {
 // 칸 오의 (사장님 10/22 00:5x '지금과 같은 설명이 아니라 검술서나 참고 문헌에서의 오의를 밝힌 예전 방식이 더 나았던 거 같아' — 10/21 전 스킬북 출처 줄을 칸마다):
 //  lore = 그 칸 뒤의 원전이 밝힌 이치 한 줄(원전 말투 · 한글만 · 숫자 · 놀이 셈 · 개발 말 없음 · 45 자 안) · src = 출처 줄 '저자 『책』(연도) — 갈래나 장'(원어 책 이름은 『』 안에서만).
 //  상세 카드는 lore + src 를 위에, eff 를 아래 작은 줄로 그린다(화면은 skill_tree.js). 원문 · 쪽 · 저장소 근거 표 = docs/text/skill_lore_2026-10-22.md · 글 규칙 = docs/text/editing_guide.md §4.
-//  편지 칸은 출처를 쓰지 않는다(편지에 한한 예외 — 사장님 10/22 01:1x) · 닫힌 칸(일본 밖 비기 · J8)도 글은 미리 둔다(화면은 '준비 중').
+//  편지 칸은 출처를 쓰지 않는다(편지에 한한 예외 — 사장님 10/22 01:1x) · 닫힌 칸(열린 유파 밖 비기)도 글은 미리 둔다(화면은 '준비 중').
 const NODE_LORE = {
   // 독일 — 리히테나워 운문 (Wiktenauer 'Johannes Liechtenauer' · Tobler 영역)
   G1: { lore: '걸음을 내딛거든 굼뜨지 마라', src: '리히테나워 『Zettel』(14세기) — 속임 베기' },
@@ -157,7 +157,7 @@ const NODE_LORE = {
   J2: { lore: '받는 것도 쳐내는 것도 붙는 것도, 모두 적을 베는 계기로 여겨라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 자세 있고 자세 없음' },
   J11: { lore: '도공이 새 칼을 벼리다 말고, 이 칼의 주인은 너라 하였다' }, // 10/23 (전 '좋은 칼은 좋은 손을 찾아간다고, …')
   J9: { lore: '빗나간 칼을 그대로 두었다가, 적이 칠 때 아래에서 퍼 올려 쳐라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 다섯 겉' },
-  J8: { lore: '손을 친 칼을 적이 쳐 떨구려 하면, 넘기는 박자로 팔을 가로 베라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 다섯 겉' },
+  J8: { lore: '적의 칼을 세게 치고 그대로 붙어 칼끝을 내려 치면, 칼은 반드시 떨어진다', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 단풍 치기' }, // 10/24 칼 떨구기로 열며 (전: 다섯 겉 셋째 '손을 친 칼을 적이 쳐 떨구려 하면, …' — 다른 기술)
   J3: { lore: '적의 눈을 찌르듯 하며, 그 칼을 오른 어깨로 끌어 흘려 받아라', src: '미야모토 무사시 『오륜서』(1645) — 세 가지 받기' },
   J10: { lore: '몸과 발은 걸어 들고, 칼은 기다린다', src: '야규 무네노리 『병법가전서』(1632) — 걸기와 기다림' },
   J4: { lore: '몸을 왼쪽으로 열며, 칼 옆면으로 흘려 받는다', src: '『일본검도형』(1912) — 소태도 둘째 본' },
@@ -187,7 +187,7 @@ export function schoolOfNode(id) {
   for (const s of TREE_SCHOOLS) if (nodeOf(s, id)) return s;
   return null;
 }
-/** 닫힌 칸('준비 중' — 살 수 없음 · 판 몫 없음): 비기 = SECRET.openSchools 에 없는 유파 · 그 밖 = closed 칸(일본 J8) */
+/** 닫힌 칸('준비 중' — 살 수 없음 · 판 몫 없음): 비기 = SECRET.openSchools 에 없는 유파 · 그 밖 = closed 칸(지금 없음 — 일본 J8 은 10/24 열림) */
 export const isClosed = (school, node) => (node?.cat === 'secret' ? !SECRET.openSchools.includes(school) : !!node?.closed);
 /** 먼저 익힐 칸을 모두 익혔나 (뿌리는 늘 참) */
 export const prereqsMet = (node, learned) => node.pre.every((id) => learned.has(id));

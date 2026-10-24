@@ -50,7 +50,7 @@ export const SCHOOLS = [
     { id: 'J2', cat: 'parry', name: '막기 I', sub: '우케나가시', eff: '머리 위 칼을 받는다 · 피해 20% 감소', pre: ['J1'], price: 200, st: 'split', d: 1, cx: 650 },
     { id: 'J11', cat: 'letter', name: '에도에서', sub: '온 편지', eff: '일본 무기가 나올 확률 ×2', pre: ['J1'], price: 100, st: 'new', opt: true, d: 0, cx: 250 },
     { id: 'J9', cat: 'atk', name: '츠바메가에시', sub: '이어 긋기', eff: '내려벤 칼이 빗나간 뒤 위로', pre: ['J6', 'J7'], price: 300, st: 'split', d: 2, cx: 200 },
-    { id: 'J8', cat: 'deep', name: '코테 심화', sub: '이점 정할 것', eff: '코테의 이점 (확인표 2107 — 미정)', pre: ['J7'], price: 300, st: 'new', d: 2, cx: 420 },
+    { id: 'J8', cat: 'deep', name: '코테 심화', sub: '칼 떨구기', eff: '손목 치기가 칼 쥔 아래팔에 들면 50 % 로 상대가 칼을 떨굼 (10/24 열림 — 확인표 2396)', pre: ['J7'], price: 300, st: 'new', d: 2, cx: 420 },
     { id: 'J3', cat: 'parry', name: '막기 II', sub: '흘려 받기', eff: '흘리면 상대 팔 늦춤 · 기력 −40', pre: ['J2'], price: 300, st: 'split', d: 2, cx: 650 },
     { id: 'J10', cat: 'passive', name: '패시브', sub: '켄타이', eff: '기다림과 침 (켄타이) — 공격 없이 기다린 만큼 다음 칼이 세다 (1.5초에 +30%) · 빗나가면 츠바메가에시로 이어짐 · 비기엔 안 실림', pre: ['J9'], price: 0, heads: 10, st: 'new', d: 3, cx: 200 },
     { id: 'J4', cat: 'parry', name: '막기 III', sub: '흘린 칼', eff: '흘린 공격의 피해 80% 감소', pre: ['J3'], price: 400, st: 'split', d: 3, cx: 650 },
