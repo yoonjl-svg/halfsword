@@ -864,7 +864,7 @@ export class Combat {
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
-      if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
+      if (r.type === 'cut' && r.severity > 0) { this.buckleCheck(att, vic, pr.v.part); this.koteCheck(att, vic, pr.v.part); }
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
       if (r.severity > 0) { const tn = strokeTechOf(att); if (((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) && !perkOff(att, tn)) artFlash(att, this.dt); }
     }
@@ -915,6 +915,25 @@ export class Combat {
     vic.buckleKneel = B.kneel;
     vic.knockDown(false);
     artFlash(att, this.dt); // 무릎이 꺾인 그 칼에 잔상 (10/21 — 이점이 터진 순간)
+  }
+
+  /**
+   * 손목 치기 칼 떨구기 (일본 강화동작 이점 · 심화 칸 J8 — 사장님 10/24 11:5x · 12:0x, config UNIQUE_ASSIST.koteDrop): 손목 치기의 칼날이 들어간 베기가 칼을 쥔 손의 손목 · 아래팔 · 손(parts — 빈손 쪽은 두 손으로 쥔 동안만)에 맞으면
+   *  친 쪽 전용 난수(fighter.buckleRandom — 무릎 꺾기와 같은 줄)로 굴려 p 로 맞은 쪽이 칼을 떨어뜨린다(fighter.dropSword — 칼 팔을 크게 다쳐 놓칠 때와 같은 길). 못 떨어뜨리면 보통 맞음 그대로.
+   *  사람만(ai 0 — AI 가 모는 몸은 굴리지 않는다 · AI 끼리 판 그대로) · 사람은 J8 을 익혀야(perkOff). 맞은 쪽이 살아 칼을 쥐고 부활 중이 아닐 때만. 기록 this.koteLog { t, att, vic, part, drop }
+   */
+  koteCheck(att, vic, part) {
+    const K = UA.koteDrop;
+    if (!(K?.p > 0) || !vic?.alive || !vic.armed || vic.revival || !K.parts.includes(part)) return;
+    if (part === 'farmO' && !vic.gripping) return; // 빈손 쪽 아래팔은 그 손이 칼자루를 쥔 동안(두 손 쥠 — fighter.offHand)만 — 한 손 칼의 빈손을 쳐서는 칼이 안 떨어진다
+    if ((att.aiControlled && !K.ai) || strokeTechOf(att) !== 'kote' || perkOff(att, 'kote')) return;
+    const t = this.stepNo * (this.dt ?? 1 / 60);
+    const drop = att.buckleRandom() < K.p;
+    (this.koteLog ??= []).push({ t: +t.toFixed(2), att: att.index, vic: vic.index, part, drop });
+    if (!drop) return;
+    vic.dropSword();
+    vic.koteDropAt = t;
+    artFlash(att, this.dt); // 칼을 떨군 그 칼에 잔상 (무릎 꺾기와 같게)
   }
 }
 

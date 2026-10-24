@@ -74,7 +74,7 @@
 | J7 손목 치기 (강화동작) | `u: kote` | 〃 |
 | J2 막기 I · 머리 위 받기 | `parry` + `parryCover` + `parryCut` — 자리 + 우케나가시 몸꼴 + 막는 동안 피해 20 % | `parry_button.js` |
 | J9 제비 베기 (이어 긋기) | `u: tsubameGaeshi` (모노호시자오 비검은 칸과 상관없이 그대로) | `PlayerUniqueAssist` |
-| J8 심화 · 손목 치기 | 몫 없음 — **준비 중**(이점 미정 · 확인표 2107) | |
+| J8 심화 · 칼 떨구기 (10/24 열림) | `perk: 'kote'` → combat.js `koteCheck`(손목 치기 칼날이 칼 쥔 아래팔에 들면 50 % 로 상대가 칼을 떨굼 · 사람만 — 확인표 2396 · 2397) | 전: 몫 없음 — 준비 중(이점 미정 · 확인표 2107) |
 | J3 막기 II · 흘려 받기 | `flow` — 흘림 판정(팔 늦춤 · 기력 −40) | `nagashi_redesign.js flowCandidate` · `combat.js` 옛 판정 |
 | J10 패시브 · 기다림과 침 | `passive` | `school_passive.js` |
 | J4 막기 III · 흘린 칼 | `flowShield` — 흘린 공격 피해 80 % 감소 | `nagashi_redesign.js flowShieldKeep` |
@@ -152,7 +152,7 @@
 ## 7. 사장님께 여쭐 것 (확인표 2143~2153)
 1. (편지 배율은 사장님 결정 2 — 바꾸려면 `LETTER.mult` 한 줄.)
 2. 독일 G3 막기 I 이 홀로는 차이가 안 보임 — 다른 몫을 줄지(예: 막는 동안 피해 감소 조금 · 왕관 자리).
-3. 일본 J8 손목 치기 심화 이점(확인표 2107) — 정해지면 `perk: 'kote'` 와 combat.js 한 줄.
+3. ~~일본 J8 손목 치기 심화 이점(확인표 2107) — 정해지면 `perk: 'kote'` 와 combat.js 한 줄.~~ 10/24 칼 떨구기로 열림(`perk: 'kote'` · combat.js `koteCheck` — 확인표 2396 ~ 2399).
 4. 깊이마다 값 100 · 200 · 300 · 400(README 가안) 그대로 갈지.
 5. 유파 초기화를 머리 0 일 때 막는 규칙(돌려받을 머리가 있어도) · 사용 / 봉인 없앰.
 6. 메뉴 칸 이름 '스킬' · 일본 J2 둘째 줄 '머리 위 받기'.
