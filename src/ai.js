@@ -40,7 +40,8 @@ import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24)
+import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -245,7 +246,9 @@ export class AI {
     // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나 (SKILL.schoolArt·schoolSecret 일 때).
     //  굴림이 없다 — 조건이 차면 확정. 무유파는 null → 아래 비기 자리들은 난수도 코드 길도 전과 같다
     //  숙련도 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀'): 손에 든 유파의 숙련도가 AI_PROFICIENCY.secretAt(5) 아래면 null — 무유파처럼 비기 자리들이 전 코드 그대로 지나간다
-    this.secret = SKILL.schoolArt && SKILL.schoolSecret && this.proficiency >= AI_PROFICIENCY.secretAt && SECRET.aiOpenSchools.includes(art.tradition) ? TRADITIONS[art.tradition]?.secret ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저)
+    //  10/24 사장님 12:0x 'ai도 비기 쓰게 해': 유파에 AI 몫(aiSecret — 독일 모르트슐라크, schools.js)이 있으면 그것 · 없으면 secret 그대로
+    const TR = TRADITIONS[art.tradition];
+    this.secret = SKILL.schoolArt && SKILL.schoolSecret && this.proficiency >= AI_PROFICIENCY.secretAt && SECRET.aiOpenSchools.includes(art.tradition) ? (TR?.aiSecret ?? TR?.secret) ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저)
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
@@ -253,6 +256,7 @@ export class AI {
     this.gilArm = this.secret?.do?.gilmok ? new IaiArm('gilmokArmTime', 'gilmokArmGrace') : null; // 이베리아 길목 지키기 준비 (10/11 v6 — 내 칼끝 거리 밖 gilmokArmTime 초, 같은 셈)
     this.spinArm = this.secret?.do?.spin ? new IaiArm('armTime', 'armGrace', 'ibSpin') : null; // 싱지르 무장 (10/24 사장님 '싱지르 ai에게도 열어' — 사람 PlayerSecretWatch.spinArm 과 같은 셈 · 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초)
     this.spinW = 0; // 무장 동안 상처 셈 (SECRET.ibSpin.hurtDisarm — 사람과 같은 규칙)
+    this.press = this.secret?.when === 'press' ? { win: 0, wins: 0, go: false, goBarge: false, goes: 0, inClinch: false } : null; // 모르트슐라크 누르기 셈 · 창 (10/24 'ai도 비기 쓰게 해' — 사람 PlayerSecretWatch.pressTick 과 같은 셈 secret.js pressStep · win = 창 남은 초 · wins = 연 창 수)
     this.binds = this.secret?.when === 'bindCount' ? new BindCount() : null; // 이베리아 맺힘 셈 (10/10 — secret.js, 플레이어 창과 같은 셈)
     this.lastAtkT = -Infinity; // 마지막으로 공격 꼴이던 때 (중국 chineseRest)
     this.restBefore = Infinity; // 이번 공격을 시작하기 전 내 공격 없이 지난 시간 (s)
@@ -328,7 +332,7 @@ export class AI {
     const me = this.me;
     const foe = this.foe;
     this.sense.record(dt);
-    me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff' && this.secretRun.stage !== 'spin'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12) · 싱지르는 사람과 같게(대본이 팔을 쥠 — 10/24)
+    me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff' && this.secretRun.stage !== 'spin' && this.secretRun.stage !== 'mord'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12) · 싱지르 · 모르트슐라크는 사람과 같게(검술 층이 팔을 쥠 — 10/24)
     this.coverLine = null; // 물러나며 가리는 줄 (withdraw 가 그 스텝에 정함 — frames.js installCover 의 watch 덮개가 읽음, 10/12 왕관)
     const L = this.level;
     // 패시브 확정(10/9 13:xx, docs/strike/passive_fire_2026-10-09.md): 패시브가 낸 공격의 걸쇠(0.5 s)와 미룬 패시브의 남은 시간을 줄인다
@@ -446,7 +450,7 @@ export class AI {
     if (hurt) {
       // 생각보다 멀리서 맞았으면 상대 칼이 더 멀리 닿는다고 고쳐 생각한다
       if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.foeM.reach, 2.5);
-      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
+      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin' && this.secretRun?.stage !== 'mord') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
     this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * 0.03; // 천천히 원래 생각으로
 
@@ -474,6 +478,7 @@ export class AI {
     if (kneeling && this.secretRun) this.secretAbort();
     if (this.secret && !kneeling && !this.secretRun && !this.drillOut) this.secretScan(dt, c, r); // 헛스윙 연습 동안은 비기 사건을 보지 않는다 (whiff_drill.js)
     if (this.spinArm) this.spinTick(dt, kneeling); // 싱지르 (10/24 AI 열림): 칼끝 거리 밖 무장 → 상대가 들어오면 한 바퀴 (상대 사건 없음 — secretScan 은 건너뜀)
+    if (this.press) this.mordTick(dt, kneeling); // 모르트슐라크 (10/24 AI 열림): 밀치기 누르기 1.5 s → 창 0.6 s → 상대 머리가 닿으면 일격 (상대 사건 없음)
 
     if (kneeling) {
       // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
@@ -661,6 +666,8 @@ export class AI {
     // 싱지르 무장 (10/24): 같은 걸쇠 — 무장된 동안은 먼저 치지 않고 간을 보며(발은 holdDist 그대로 다가섬) 상대가 칼끝 거리 + aiFire 안에 들면 spinTick 이 한 바퀴.
     //  걸쇠가 없으면 롤랑이 무장한 뒤 상대가 칼끝 거리 + 0.6 m 에 오자마자 보통 공격을 열어 무장이 풀렸다(첫 시험 — 낸 수 0). 들어오는 칼(위 respond)은 그대로 받는다
     if (this.spinArm?.armed) return;
+    // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 붙으러 들어가는 · 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다
+    if (this.press?.go) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
@@ -683,9 +690,17 @@ export class AI {
     if (STAMINA.on && this.foe.stamina.level > 0) need -= this.foe.stamina.exhausted ? 0.45 : 0.2;
     // 겁먹으면 확실한 순간(헛친 뒤·쓰러진 상대)에만 들어간다
     if (opp.kind !== 'recover' && opp.kind !== 'finish') need += this.fear * 0.7;
-    const reachOut = this.chasing ? 1.0 : 0.4; // 빈손 상대는 조금 멀어도 뛰어들며 친다
+    const reachOut = this.watchReachOut();
     if (this.passives.length && this.passiveWatch(s, d, opp, reachOut)) return; // 패시브 (standoff·foeStepIn) — 목록이 비면 건너뜀
-    if (opp.score >= need && d < this.holdDist() + reachOut) this.startAttack(this.pickTech(s, opp.kind), opp.kind);
+    if (opp.score >= need && d < this.holdDist() + reachOut) {
+      if (this.press && this.mordPressGo('watch')) return; // 모르트슐라크 (10/24): 칠 때를 본 순간 인물 밀치기 확률로 베는 대신 몸을 붙여 민다
+      this.startAttack(this.pickTech(s, opp.kind), opp.kind);
+    }
+  }
+
+  /** 간 보기에서 칠 수 있는 거리의 여유 (holdDist 위로): 빈손 상대는 조금 멀어도 뛰어들며 친다 */
+  watchReachOut() {
+    return this.chasing ? 1.0 : 0.4;
   }
 
   /**
@@ -1349,10 +1364,11 @@ export class AI {
     if (ended) {
       this.closeWant = false;
       // then 'cut': 밀고 곧장 벤다. 'recover' 는 손에서 가까운 기술, 'shove' 는 느린 이유 목록에 없어 바로 친다
-      cut = ended !== 'refused' && then === 'cut' && up && this.mode !== 'attack' && this.startAttack(this.pickTech(s, 'recover'), 'shove', { noFeint: true, fastChamber: true });
+      //  모르트슐라크를 내는 동안(10/24 — secretRun 'mord')은 밀치기가 끝나도 베지 · 찍지 않는다(검술 층이 칼을 쥠 — E4 굴림만)
+      cut = ended !== 'refused' && then === 'cut' && up && this.mode !== 'attack' && this.secretRun?.stage !== 'mord' && this.startAttack(this.pickTech(s, 'recover'), 'shove', { noFeint: true, fastChamber: true });
       if (cut) this.closeEv.cut++;
       // then 'pommel': 밀고 곧장 폼멜로 찍는다 (베기 대신). 못 찍었으면(멀어짐·공격 중) 아래 E4 로 다시 굴린다
-      else if (ended !== 'refused' && then === 'pommel' && up) cut = this.closePommel('shove');
+      else if (ended !== 'refused' && then === 'pommel' && up && this.secretRun?.stage !== 'mord') cut = this.closePommel('shove');
     }
     const inside = me.foeDistance() <= CLOSE.reach(me.armed ? me.weapon : null); // 실제 가슴 거리 (플레이어와 같은 안쪽)
     this.closeInside = inside;
@@ -1380,6 +1396,11 @@ export class AI {
     };
     if (!this.closeIn) roll('E1');
     this.closeIn = true;
+    if (this.press?.go && !this.closeWant && !me.barge) {
+      // 모르트슐라크 몸 붙이기 (10/24 — mordPressGo 가 이미 굴림): 닿는 거리 안에 들었으면 민다 (사건 굴림 없이)
+      this.closeWant = true;
+      this.closeEv.won++;
+    }
     let bind = false;
     if (me.armed && foe.armed && me.tipPrev && foe.tipPrev) {
       me.bladePoint(0.1, _a0);
@@ -2009,6 +2030,88 @@ export class AI {
     return true;
   }
 
+  /**
+   * 모르트슐라크 누르기 · 창 · 내기 (10/24 사장님 12:0x 'ai도 비기 쓰게 해' — SECRET.aiOpenSchools 'german' · 숙련도 AI_PROFICIENCY.secretAt 이상 · TRADITIONS.german.aiSecret):
+   *  셈은 사람과 같다(secret.js pressStep — 밀치기 누르기 fighter.barge 'press' 가 끊기지 않고 SECRET.mordPress 초 → 창 SECRET.playerWindow 초 · 창을 열면 셈 0 · 비기 · 굳음 동안 셈 0).
+   *  창이 열린 동안 낼 수 있는 꼴이고(secretFree — 다른 비기와 같음) 상대 머리가 칼자루 길에 닿으면(mordschlag.js mordHeadReach) 곧장(반응 지연 0 — 다른 비기와 같은 '완벽 실행') 사람과 같은 실행부로 낸다.
+   *  창을 놓치면(머리가 안 닿음 · 낼 수 없는 꼴) 사람처럼 지나간다. 굴림 없음
+   */
+  mordTick(dt, kneeling) {
+    const me = this.me;
+    const P = this.press;
+    const busy = !!this.secretRun || this.drillOut || kneeling;
+    // 몸 붙이기 (mordPressGo): 붙은 거리(clinch — 보통은 물러나는 거리)에 들면 인물 밀치기 확률로 물러나는 대신 붙어 민다
+    const inC = this.d < this.M.clinch;
+    if (inC && !P.inClinch && !busy && (this.mode === 'watch' || this.mode === 'withdraw')) this.mordPressGo('clinch');
+    P.inClinch = inC;
+    // 밀치기(닿는 거리 사건 굴림 — closeQuarters)로 민 때도 누르기가 이어지는 동안 먼저 치지 않는다 (몸이 붙으면 계속 민다 — watch 걸쇠)
+    if (me.barge && !P.go && !busy) {
+      P.go = true;
+      P.goWhy = 'barge';
+    }
+    // 몸 붙이기 끝: 밀치기가 끝났거나(어떤 까닭이든 — 그 뒤는 인물 then 그대로) · 밀기 전에 간 보기를 벗어났거나(막기 · 물러남 · 공격) · 상대가 칠 거리 밖으로 갔으면
+    if (P.go) {
+      if (me.barge) P.goBarge = true;
+      else if (P.goBarge || busy || this.mode !== 'watch' || !this.foe.alive || this.foe.state !== 'stand' || this.d >= this.holdDist() + this.watchReachOut()) P.go = P.goBarge = false;
+    }
+    if (P.win > 0) P.win -= dt; // 사람 창(PlayerSecretWatch.update)과 같은 차례: 창 시간을 먼저 줄이고 셈
+    if (pressStep(P, dt, me.barge?.phase === 'press', busy, P.win > 0, secretVal(this.secret.cond.press))) {
+      P.win = SECRET.playerWindow;
+      P.wins++;
+    }
+    if (!(P.win > 0) || busy || !this.secretFree() || !this.foe.alive || this.foe.state !== 'stand' || !me.armed || me.state !== 'stand') return false;
+    if (!mordHeadReach(me)) return false;
+    return this.mordGo();
+  }
+
+  /**
+   * 모르트슐라크 몸 붙이기 (10/24 — 'ai도 비기 쓰게 해'): 이 인물은 몸이 붙는 때가 없었다(아르토리아 60 판 — 누르기 0 · 가슴 사이 가장 가까이 0.89 m > CLOSE.reach 0.77 ·
+   *  상대가 붙은 거리 M.clinch 1.2 안에 들면 물러남). 그래서 두 때에 인물의 밀치기 확률(persona.close.rate — 아르토리아 0.25, 닿는 거리 사건과 같은 굴림)로 몸을 붙인다:
+   *  'watch' = 간 보기에서 칠 때를 본 순간(공격을 열 자리 — 베는 대신) · 'clinch' = 상대가 붙은 거리에 든 순간(간 보기 · 물러남 — 물러나는 대신, mordTick).
+   *  붙이기 = 닿는 거리까지 곧장 걸어 들어가(moveFeet) 밀치기(closeQuarters — 굴림 없이 closeWant) → 밀치는 동안 먼저 치지 않음(watch 걸쇠). 새 값 없음. 붙이기로 갔으면 true
+   */
+  mordPressGo(why) {
+    const C = this.persona.close;
+    if (!CLOSE.on || !C || this.press.go || this.me.barge || this.me.stamina.exhausted || this.foe.state !== 'stand' || !this.me.armed) return false;
+    if (!(Math.random() < C.rate)) return false;
+    this.press.go = true;
+    this.press.goWhy = why;
+    this.press.goes = (this.press.goes ?? 0) + 1;
+    const G = (this.stats.mordGo ??= {});
+    G[why] = (G[why] ?? 0) + 1; // 재기: 붙이기로 간 사건별 수
+    if (this.mode !== 'watch') {
+      // 공격 끝(막힘 — afterStrike) · 물러남(붙은 거리)에서 간 보기로 돌아와 붙으러 간다
+      this.mode = 'watch';
+      this.phase = 'ready';
+      this.path.length = 0;
+      this.stepT = 0;
+    }
+    return true;
+  }
+
+  /** 모르트슐라크를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 칼날 거꾸로 쥐기 · 운동학 길 · 기력 · 굳음). 냈으면 true */
+  mordGo() {
+    const me = this.me;
+    const S = this.secret;
+    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
+    if (!me.skill.secret({ S, ctx: { ev: 'press', held: this.press.pressHeld } })) {
+      this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
+      return false;
+    }
+    this.press.win = 0; // 창 하나에 한 번
+    this.press.go = this.press.goBarge = false;
+    this.secretRun = { S, stage: 'mord', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
+    this.mode = 'secret';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.stepT = 0;
+    this.hand.set(me.handOffset.x, me.handOffset.y);
+    this.secretStat(S).fired++;
+    this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
+    this.setTechCue(S.nameKo ?? S.name, 'secret');
+    return true;
+  }
+
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
   secretGo(S, ctx = {}) {
     if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
@@ -2278,8 +2381,9 @@ export class AI {
       this.mode = 'watch';
       return;
     }
-    if (run.stage === 'spin') {
+    if (run.stage === 'spin' || run.stage === 'mord') {
       // 싱지르 (10/24): 실행은 검술 층 skill.sec — 사람과 같은 길(iberian_spin.js 대본 → 따라 지나감 → 굳음 SECRET.stiff.iberian). 손 · 발은 쥐지 않고(moveHand · moveFeet) 끝나기를 기다린다
+      //  모르트슐라크 (10/24): 같은 꼴 — 검술 층(mordschlag.js · 운동학 길 → 굳음 SECRET.stiff.german)이 손을 쥐고, 발은 누르기가 이어지면 그대로 민다(굳음 동안만 멈춤 — moveFeet)
       const sec = this.me.skill.sec;
       if (sec?.landed) run.landed = true;
       if (sec) return;
@@ -2416,7 +2520,7 @@ export class AI {
   secretAbort() {
     const run = this.secretRun;
     this.secretRun = null;
-    if (run?.stage === 'spin' && this.me.skill.sec) this.me.skill.secretEnd(); // 싱지르 (10/24): 검술 층 대본도 끊는다 (쓰러짐 · 탈진 — 검술 층도 스스로 끊지만 같은 스텝에)
+    if ((run?.stage === 'spin' || run?.stage === 'mord') && this.me.skill.sec) this.me.skill.secretEnd(); // 싱지르 · 모르트슐라크 (10/24): 검술 층 대본도 끊는다 (쓰러짐 · 탈진 — 검술 층도 스스로 끊지만 같은 스텝에)
     this.me.powerMul = 1;
     this.me.secretHit = 1;
     if (run?.S.do.strength) this.secretStrength(1);
@@ -2627,7 +2731,7 @@ export class AI {
     // 비기 경직 (사장님 10/10 20:5x '잠깐 아예 못 움직이게'): 손 목표를 그대로 둔다 — 떨림도 없음. 검술 층(skill.js update)이 secretStiff 를 보고 걸러진 목표까지 붙든다
     this.me.secretStiff = this.secretRun?.stage === 'stiff';
     if (this.me.secretStiff) return;
-    if (this.secretRun?.stage === 'spin') return; // 싱지르 (10/24): 대본 · 따라 지나감 · 굳음 동안 손 목표는 검술 층(skill.sec — 덧씌우기 · holdStiff)이 쥔다
+    if (this.secretRun?.stage === 'spin' || this.secretRun?.stage === 'mord') return; // 싱지르 · 모르트슐라크 (10/24): 대본 · 따라 지나감 · 굳음 동안 손 목표는 검술 층(skill.sec — 덧씌우기 · holdStiff)이 쥔다
     if (this.feintHold > 0) {
       this.feintHold -= dt;
       if (this.feintHold <= 0) this.stepT = this.stepTime(); // 이제 진짜로 내디디며 친다
@@ -2790,6 +2894,11 @@ export class AI {
       side = side * (1 - k) + Math.sign(toCenter || 1) * k;
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * 0.15 * k); // 몰렸으면 먼저 친다
     }
+    // 모르트슐라크 몸 붙이기 (10/24 — mordPressGo): 닿는 거리(CLOSE.reach) 밖이면 곧장 걸어 들어간다 (너무 붙음 · 간 보기 걸음 대신 · 닿으면 아래 밀치기가 스틱을 쥔다)
+    if (this.press?.go && !this.closeInside && this.mode === 'watch' && !me.barge) {
+      fwd = 1;
+      side = 0;
+    }
     // 근접 밀치기: 닿는 거리 안에서 스틱만 (벽 처리 뒤라 side 를 ±k 로 바꾸지 못한다). 걸쇠가 꺼져 있으면 한 스텝 0 으로 장전,
     //  켜져 있으면 1 로 발사, 밀치는 동안 closeWant 면 1 유지(누르기). 휘두르는 중·베는 중(strike·follow, 팔이 묶임)은 미룬다
     const armsBusy = this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow');
@@ -2798,7 +2907,7 @@ export class AI {
       side = 0;
     }
     if (!this.foe.alive) fwd = side = 0;
-    if (this.secretRun?.stage === 'stiff' || this.secretRun?.stage === 'spin') fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다)
+    if (this.secretRun?.stage === 'stiff' || this.secretRun?.stage === 'spin' || (this.secretRun?.stage === 'mord' && me.skill.sec?.stage === 'stiff')) fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다) · 모르트슐라크(10/24 — 사람과 같게 굳음 동안만)
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
