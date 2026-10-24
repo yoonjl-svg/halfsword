@@ -2,7 +2,8 @@
 //  iberian_spin_ai.mjs — AI 싱지르 손맛 · 균형 재기 (10/24 사장님 02:5x '싱지르 ai에게도 열어' — ai.js spinTick · SECRET.aiOpenSchools 'iberian')
 //   이베리아 인물 AI(숙련도 AI_PROFICIENCY.secretAt 이상 — 롤랑 6 · 베르나르도 6) 대 인물 AI 판. --spin=0 = 이베리아를 aiOpenSchools 에서 뺀 판(같은 시드 견줌).
 //
-//  node tools/sim/iberian_spin_ai.mjs [--heroes=roland,bernardo] [--opps=isolde,heinrich,margarethe,minami] [--seeds=1-9] [--dur=30] [--spin=1|0] [--json=파일]
+//  node tools/sim/iberian_spin_ai.mjs [--heroes=roland,bernardo] [--opps=isolde,heinrich,margarethe,minami] [--seeds=1-9] [--dur=30] [--spin=1|0] [--set=lid=0,floor=0,...] [--json=파일]
+//   --set = SECRET.ibSpin 칸을 이 도구 안에서만 바꿈 (10/24 10:4x 전후 견줌 — 판 값 그대로)
 //   판마다: 이긴 쪽(상대가 죽음 · 끝까지 살면 무) · 영웅 싱지르 낸 수 · 맞힌 수(그 비기 동안 상대 아픔 +0.05 — ai.js secretStat landed) · 준 · 받은 상처 심각도 합 · 판 길이
 //   영웅 = 상대 자리(G.ai · 인물 시트의 무기 · 겉모습 · 숙련도 · 부활) · 맞수 = 사람 자리(AI2Class · 인물 시트 그대로)
 // ─────────────────────────────────────────────────────────────
@@ -29,6 +30,11 @@ const range = (s) => {
 };
 const { SECRET } = CONFIG;
 if (arg('spin', '1') === '0') SECRET.aiOpenSchools = SECRET.aiOpenSchools.filter((s) => s !== 'iberian');
+for (const kv of list('set', '')) {
+  const [k, v] = kv.split('=');
+  if (!(k in SECRET.ibSpin)) throw new Error(`SECRET.ibSpin.${k}?`);
+  SECRET.ibSpin[k] = Number.isFinite(+v) ? +v : v;
+}
 const DUR = +arg('dur', 30);
 
 function fight(heroId, oppId, seed) {
