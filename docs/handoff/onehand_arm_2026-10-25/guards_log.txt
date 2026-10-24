@@ -7,3 +7,6 @@ now_guard_sabre_1 황소 (옥스) {"dev":10,"wrist":44,"elbow":109,"along":0.54,
 after_guard_rapier_1 1번 자세 (프리마) {"dev":-34,"wrist":34,"elbow":98,"along":0.59,"gap":5.62}
 after_guard_goujian_1 황소 (옥스) {"dev":-35,"wrist":36,"elbow":130,"along":0.42,"gap":5.63}
 after_guard_sabre_1 황소 (옥스) {"dev":-32,"wrist":32,"elbow":109,"along":0.52,"gap":5.63}
+new_guard_rapier_1 1번 자세 (프리마) {"dev":-28,"wrist":57,"elbow":67,"along":0.79,"gap":5.61}
+new_guard_goujian_1 황소 (옥스) {"dev":-22,"wrist":75,"elbow":130,"along":0.42,"gap":5.63}
+new_guard_sabre_1 황소 (옥스) {"dev":-23,"wrist":74,"elbow":109,"along":0.52,"gap":5.63}

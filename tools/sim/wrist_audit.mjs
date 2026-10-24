@@ -399,6 +399,43 @@ export function guardsRun(weapon, { seed = 7, seq = false, gap = 2.6 } = {}) {
   return { T };
 }
 
+/**
+ * 자세 하나 겨눔 (10/25 감독 '칼끝이 하늘' — 기록 §12): 표 이름에 frag 가 든 자세를 1.4 s 붙잡고 끝 0.4 s 평균.
+ *  pitch = 칼 방향 위아래 각(° · + 위) · foe = 칼 방향 ↔ 손 → 상대 머리 각(°) · up = 팔꿈치가 어깨 → 손목 줄 위(°) · roll · dev · fe = wristSample 과 같음 · rev = dev < REV 몫. 자세가 없으면 null
+ */
+export function guardAimRun(weapon, frag, { seed = 7, gap = 2.6 } = {}) {
+  const g = stillRound(weapon, { gap, seed });
+  try {
+    const G = (g.player.guardPose.table ?? GUARD_BASE).find((x) => x?.pad && x.name.includes(frag));
+    if (!G) return null;
+    const p = g.player;
+    p.skill.autoGuard = true;
+    const a = { n: 0, pitch: 0, foe: 0, up: 0, roll: 0, dev: 0, fe: 0, rev: 0 };
+    while (g.t < 1.4) {
+      setHand(p, G.pad);
+      g.step();
+      if (g.t < 1.0) continue;
+      const s = wristSample(p);
+      if (!s) continue;
+      const b = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(p.sword.rotation()));
+      const hand = p.bladePoint(0, new THREE.Vector3());
+      const toFoe = V(g.enemy.bodies.head.translation()).sub(hand).normalize();
+      a.n++;
+      a.pitch += Math.asin(THREE.MathUtils.clamp(b.y, -1, 1)) * R2D;
+      a.foe += Math.acos(THREE.MathUtils.clamp(b.dot(toFoe), -1, 1)) * R2D;
+      a.up += s.elbowUp;
+      a.roll += s.roll;
+      a.dev += s.dev;
+      a.fe += s.fe;
+      a.rev += s.dev < REV ? 1 : 0;
+    }
+    for (const k of ['pitch', 'foe', 'up', 'roll', 'dev', 'fe', 'rev']) a[k] /= a.n || 1;
+    return { name: G.name, ...a };
+  } finally {
+    g.world.free();
+  }
+}
+
 // ── 기술 길 (유파 기술 · 고유 동작 — 손가락 획과 같은 꼴) ──
 function techList(trad) {
   const S = TRADITIONS[trad];

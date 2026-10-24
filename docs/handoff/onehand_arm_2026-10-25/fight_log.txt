@@ -13,3 +13,8 @@ after fight atk2 {"elbowUp":-41,"mode":"attack","phase":"follow","tech":"unterha
 after fight up {"elbowUp":-42,"mode":"watch","phase":"ready","tech":"stichPflug","weapon":"goujian","upMax":-6,"t":20.02}
 now fight up {"elbowUp":29,"mode":"watch","phase":"ready","tech":null,"weapon":"goujian","upMax":26,"t":8.46}
 before fight up {"elbowUp":-49,"mode":"attack","phase":"strike","tech":"stichPflug","weapon":"goujian","upMax":-29,"t":20.02}
+new fight 6 {"elbowUp":-33,"mode":"watch","phase":"ready","tech":null,"weapon":"goujian","upMax":-27,"t":6.01}
+new fight 9 {"elbowUp":-36,"mode":"attack","phase":"approach","tech":"zwerch","weapon":"goujian","upMax":-27,"t":9.01}
+new fight atk1 {"elbowUp":-49,"mode":"attack","phase":"follow","tech":"zwerch","weapon":"goujian","upMax":-27,"t":10}
+new fight atk2 {"elbowUp":-28,"mode":"attack","phase":"follow","tech":"oberhau","weapon":"goujian","upMax":-19,"t":10.93}
+new fight up {"elbowUp":-62,"mode":"watch","phase":"ready","tech":"zornhau","weapon":"goujian","upMax":8,"t":20.02}
