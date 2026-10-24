@@ -12,6 +12,8 @@
 //    RISO_DUMP=1(열린 창 한 줄씩 'WIN 무기 인물 길 가슴사이 맞닿기 맞붙기' — 대안 셈용) · 실제로 열린 창 · 가까워 안 뜸(gapBlocked) · 뜬 뒤 닫힘(gapClosed) · 열린 때 가슴 사이 · 맞붙는 거리 밖 여유
 //    런지 재기: 칼끝 빠르기(찌르는 스텝의 칼끝 옮김 ÷ 스텝 — 같은 칼 고노센 칼끝 iaiTipSpeed 와 견줌) · 맞힘마다 에너지 · 심각도 · 굳음 동안(되돌아오는 몫) 입은 상처 ·
 //    몸(비기를 낸 때부터 굳음이 끝날 때까지 골반 옮김 · 몸통 기울기 최대 · 골반 가장 낮음 · 넘어짐/주저앉음 — 낸 뒤 1.5 s 안에 서 있지 않음) · 런지 막힘(떨어졌다 다시 닿음) · 붙은 칼 따라 미끄러짐
+//   10/24 14:0x 런지 되돌아오기(기본 — SECRET.risolutoStep.recover): RISO_OLDSTEP=1 = 14:0x 전 걸음(뒷발 끌어붙임 · 앞발 거둠 없음 — main.js ?risoRecover=0 과 같은 값) ·
+//    되돌아오기 재기: 앞발을 거둔 번 수 · 런지 시작부터 걸린 때 · 거둔 길이 · 상대가 살아 있을 때 가슴 사이(거둘 때 → 0.6 s 뒤)
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -49,6 +51,7 @@ if (E.RISO_GLIDE) CONFIG.SECRET.risolutoGlide = +E.RISO_GLIDE; // 0 = 붙은 칼
 if (E.RISO_GAP) CONFIG.SECRET.risolutoGap = +E.RISO_GAP; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판)
 const STOP = E.RISO_STOP === '1';
 const CREEP = +E.RISO_CREEP || 0; // 운전: 칼끼리 가까운 동안 스틱을 이 몫만 (천천히 밀고 들어감 — 간격 조건 판을 아는 사람 흉내 · 0 = 늘 1) // 운전: 창(금색 '!')이 보이면 스틱을 놓고 선다 (간격 조건 판을 아는 사람 흉내 — 기본은 늘 같은 운전)
+if (E.RISO_OLDSTEP === '1') CONFIG.SECRET.risolutoStep = { slide: 'iaiStep', foot: 'italianStep', draw: 1, room: 0 }; // 10/24 14:0x 전 걸음 (뒷발 끌어붙임 · 몸 가속 · 따라감 배율 · 앞발 거둠 없음)
 if (E.RISO_ROOM) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +E.RISO_ROOM }; // 0 = 앞발 런지 걸음을 가슴 사이로 줄이지 않음 (늘 italianStep)
 const LUNGE = !!CONFIG.SECRET.risolutoLunge;
 const SEEDS = +seedsArg, SIM = +simArg, V = +vArg, REACT = +rArg;
@@ -67,7 +70,7 @@ function closest(p1, q1, p2, q2) {
 const q = (a, f) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(f * s.length))] : NaN; };
 const KEYS = ['rounds', 'win', 'winFar', 'winHold', 'winClose', 'winBeat', 'gapBlocked', 'gapClosed', 'hold', 'close', 'beat', 'fired', 'landed', 'blocked', 'whiff', 'hit', 'armSlow', 'dealt', 'taken', 'pDead', 'fDead', 'foeFirst', 'opp', 'oppCover', 'oppWin', 'lineSteps', 'recHit', 'recSev', 'win6Hit', 'win6Sev', 'fall', 'lBlock', 'glide', 'touchMiss', 'kill1'];
 // 런지 재기 (10/24): 맞힘마다 에너지 · 심각도 · 칼끝 빠르기 몫 · 몸 (모든 판 모음)
-const L = { winGap: [], winMargin: [], coverFar: 0, coverAll: 0, E: [], sev: [], tipShare: [], maxShare: [], tipV: [], tipMax: [], stepV: [], gon: [], pel: [], tilt: [], pelLow: [], slide: [], foot: [], gap0: [], gapMin: [], clinch: 0, zone: {} };
+const L = { recDelay: [], recBack: [], recGap0: [], recGap: [], winGap: [], winMargin: [], coverFar: 0, coverAll: 0, E: [], sev: [], tipShare: [], maxShare: [], tipV: [], tipMax: [], stepV: [], gon: [], pel: [], tilt: [], pelLow: [], slide: [], foot: [], gap0: [], gapMin: [], clinch: 0, zone: {} };
 // 막은 조건 (가슴 사이 2.6 m 안 · 둘 다 서 있음 · 비기 실행 아님 — 셈 창일 뿐 판 규칙 아님): 스텝마다 조건 하나하나 · 칼끼리 가까운(어느 부위든) 때 무엇이 막았나 · 끊겼다 0.2 s 안에 다시 붙은 수
 const B = { allWide: 0, base: 0, any: 0, cover: 0, mf: 0, ff: 0, fw: 0, cl: 0, all: 0, aCover: 0, aMf: 0, aFf: 0, aFw: 0, aCl: 0, aOnly: 0, rejoin: 0, onEnds: 0 };
 const c0 = new THREE.Vector3(), c1 = new THREE.Vector3(), c2 = new THREE.Vector3(), c3 = new THREE.Vector3();
@@ -107,7 +110,7 @@ for (const w of weapons) for (const id of foes) {
           R.win++; R[{ hold: 'winHold', close: 'winClose', beat: 'winBeat' }[ps.open.ctx?.path] ?? 'winHold']++; L.winGap.push(p.foeDistance()); // 실제로 열린 창 (간격 조건을 지난 것) · 그때 가슴 사이
           if (E.RISO_DUMP === '1') console.log(`WIN ${w} ${id} ${ps.open.ctx?.path} ${p.foeDistance().toFixed(3)} ${p.swordArt.measure.contact.toFixed(3)} ${p.swordArt.measure.clinch.toFixed(3)}`); // 열린 창 한 줄 (대안 셈용)
           L.winMargin.push(p.foeDistance() - p.swordArt.measure.clinch); // 맞붙는 거리 밖 여유 (런지 앞발을 그만큼까지 줄이는 대안의 셈)
-          if (p.foeDistance() >= lungeGap(p)) R.winFar++; // 런지 최소 간격(맞붙는 거리 + 앞발) 밖에서 열린 창 (간격 조건 끔 판에서 셈 — 켬 판은 모두)
+          if (p.foeDistance() >= lungeGap(p)) R.winFar++; // 런지 최소 간격(13:4x 맞닿기 거리) 밖에서 열린 창 (간격 조건 끔 판에서 셈 — 켬 판은 모두)
         }
       }
       if (due != null && t >= due) {
@@ -115,7 +118,7 @@ for (const w of weapons) for (const id of foes) {
         if (GUARD) pg.held = false; // 폰: 막기 단추와 칼 쪽 화면이 같은 엄지 — 톡 하려면 단추를 놓음
         if (ps.open && !p.skill.secretPhase && p.alive) {
           const o = ps.fire();
-          if (o && p.skill.secret(o)) { R.fired++; const pl = p.bodies.pelvis.translation(); run = { touch: false, wound: false, hitFoe: false, foeFirst: lastHurt >= openT, openT, pain0: e.pain, pained: false, t0: t, pel0: [pl.x, pl.z], tilt: 0, low: pl.y, gap0: p.foeDistance(), gapMin: p.foeDistance(), tipV: 0, gon: iaiTipSpeed(p), stiffAt: null, fallChk: t + 1.5, fell: false, sev0: e.wounds?.length ?? 0 }; } // 상대 칼 먼저: 창이 열린 뒤 내 찌르기가 맞기 전에 내가 상처(심각도 > 0)를 입음
+          if (o && p.skill.secret(o)) { R.fired++; const pl = p.bodies.pelvis.translation(); run = { touch: false, wound: false, hitFoe: false, foeFirst: lastHurt >= openT, openT, pain0: e.pain, pained: false, t0: t, pel0: [pl.x, pl.z], tilt: 0, low: pl.y, gap0: p.foeDistance(), gapMin: p.foeDistance(), tipV: 0, gon: iaiTipSpeed(p), stiffAt: null, fallChk: t + 1.5, fell: false, rec0: p.lungeRecovered ?? null, recT: null, recGap0: null, sev0: e.wounds?.length ?? 0 }; } // 상대 칼 먼저: 창이 열린 뒤 내 찌르기가 맞기 전에 내가 상처(심각도 > 0)를 입음
         }
       }
       ps.update(DT, !!p.skill.sec);
@@ -204,6 +207,11 @@ for (const w of weapons) for (const id of foes) {
         if (e.alive) run.gapMin = Math.min(run.gapMin, p.foeDistance()); // 가슴 사이 가장 가까움 (런지 뒤 상대 몸에 부딪나 — 맞붙는 거리 clinch 와 견줌)
       }
       for (const r of doneRuns) if (!r.fellChecked && G.t <= r.fallChk && p.alive && p.state !== 'stand') { r.fell = true; r.fellChecked = true; R.fall++; }
+      // 10/24 14:0x 되돌아오기 재기: 앞발을 거두기 시작한 때(p.lungeRecovered 가 새로 섬) · 그때 · 0.6 s 뒤 가슴 사이 (런지 시작부터 2 s 안 · 상대가 살아 있을 때만 셈)
+      for (const r of [...doneRuns, ...(run ? [run] : [])]) {
+        if (r.recT == null && p.lungeRecovered && p.lungeRecovered !== r.rec0 && G.t <= r.t0 + 2) { r.recT = G.t; r.recGap0 = p.foeDistance(); r.recAlive = e.alive; L.recDelay.push(G.t - r.t0); L.recBack.push(p.lungeRecovered.back ?? 0); }
+        if (r.recT != null && r.recGap == null && G.t >= r.recT + 0.6) { r.recGap = p.foeDistance(); if (r.recAlive && e.alive) { L.recGap0.push(r.recGap0); L.recGap.push(r.recGap); } }
+      }
       if (!p.alive) break;
       if (!e.alive && (!run || ++after > 1 / DT)) break; // 상대가 죽어도 내 찌르기 셈(굳음 끝)까지는 마저 (판 수는 그대로 — 그 뒤엔 칠 상대가 없음)
     }
@@ -236,10 +244,10 @@ for (const R of rows) {
 }
 const win = T.win; // 실제로 열린 창 (10/24 간격 조건 전에는 이어짐 + 다 붙음 + 상대 박자와 같음)
 console.log(`| 합 | | ${T.rounds} | ${T.runs.length} (${f2(T.runs.length / T.rounds)}) | ${f2(q(T.runs, 0.5))} · ${f2(q(T.runs, 1))} | ${T.hold} · ${T.close} · ${T.beat} | ${T.fired} | ${T.landed} | ${T.blocked} | ${T.foeFirst} | ${f1(T.dealt)} | ${f1(T.taken)} | ${T.pDead} · ${T.fDead} | ${T.opp} (${T.oppCover} · ${T.oppWin}) | |`);
-console.log(`[10/24 13:2x 런지 간격 조건 ${S.risolutoLunge && S.risolutoGap ? '켬' : '끔'}${STOP ? ' · 운전: 창이 보이면 섬' : ''}] 실제로 열린 창 ${T.win} (판당 ${f2(T.win / T.rounds)} — 이어짐 ${T.winHold} · 다 붙음 ${T.winClose} · 상대 박자 ${T.winBeat}) · 창 조건이 찼으나 가까워 안 뜸 ${T.gapBlocked} · 뜬 뒤 가까워져 닫힘 ${T.gapClosed} · 열린 때 가슴 사이 p50 ${f2(q(L.winGap, 0.5))} (${f2(q(L.winGap, 0))} ~ ${f2(q(L.winGap, 1))}) m · 그 가운데 런지 최소 간격(맞붙는 거리 + 앞발) 밖 ${T.winFar}`);
+console.log(`[10/24 13:2x 런지 간격 조건 ${S.risolutoLunge && S.risolutoGap ? '켬' : '끔'}${STOP ? ' · 운전: 창이 보이면 섬' : ''}] 실제로 열린 창 ${T.win} (판당 ${f2(T.win / T.rounds)} — 이어짐 ${T.winHold} · 다 붙음 ${T.winClose} · 상대 박자 ${T.winBeat}) · 창 조건이 찼으나 가까워 안 뜸 ${T.gapBlocked} · 뜬 뒤 가까워져 닫힘 ${T.gapClosed} · 열린 때 가슴 사이 p50 ${f2(q(L.winGap, 0.5))} (${f2(q(L.winGap, 0))} ~ ${f2(q(L.winGap, 1))}) m · 그 가운데 런지 최소 간격(맞닿기 거리) 밖 ${T.winFar}`);
 {
   const m = L.winMargin, n = (x) => m.filter((v) => v >= x).length;
-  console.log(`  열린 창의 맞붙는 거리 밖 여유 (가슴 사이 − clinch) p50 ${f2(q(m, 0.5))} · 최대 ${f2(q(m, 1))} m — 여유 ≥ 0.25(chineseStep) ${n(0.25)} · ≥ 0.45(이탈리아 걸음 보폭 maxStride) ${n(0.45)} · ≥ 0.5(이탈리아 베기 걸음 cutStep) ${n(0.5)} · ≥ 0.6(iaiStep) ${n(0.6)} · ≥ 0.9(italianStep) ${n(0.9)} / ${m.length} · 덮인 채 나아가는 스텝 가운데 런지 최소 간격 밖 ${L.coverFar} / ${L.coverAll}${CREEP ? ` · 운전: 칼이 붙으면 스틱 ${CREEP}` : ''}`);
+  console.log(`  열린 창의 맞붙는 거리 밖 여유 (가슴 사이 − clinch) p50 ${f2(q(m, 0.5))} · 최대 ${f2(q(m, 1))} m — 여유 ≥ 0.25(chineseStep) ${n(0.25)} · ≥ 0.45(이탈리아 걸음 보폭 maxStride) ${n(0.45)} · ≥ 0.5(이탈리아 베기 걸음 cutStep) ${n(0.5)} · ≥ 0.6(iaiStep) ${n(0.6)} · ≥ 0.9(italianStep) ${n(0.9)} / ${m.length} · 덮인 채 나아가는 스텝 가운데 런지 최소 간격(맞닿기 거리) 밖 ${L.coverFar} / ${L.coverAll}${CREEP ? ` · 운전: 칼이 붙으면 스틱 ${CREEP}` : ''}`);
 }
 console.log(`판당: 창 ${f2(win / T.rounds)} · 탭 ${f2(T.fired / T.rounds)} · 맞힘 ${f2(T.landed / T.rounds)} · 막힘 ${f2(T.blocked / T.rounds)} · 준 심각도 ${f2(T.dealt / T.rounds)} · 상대 칼 먼저 ${T.fired ? Math.round((100 * T.foeFirst) / T.fired) : '-'} % (탭 중) · 막아찌르기 ${f2(T.opp / T.rounds)} (덮인 꼴 ${T.oppCover} · 창 중 ${T.oppWin}) · 줄 막기 스텝 ${T.lineSteps}`);
 const all = rows.flatMap((R) => R.runs);
@@ -256,5 +264,6 @@ console.log(`  맞은 곳: ${Object.entries(L.zone).sort((a, b) => b[1] - a[1]).
 console.log(`  되돌아오는 몫 위험: 굳음 동안 입은 상처 ${T.recHit} 번 · 심각도 ${f2(T.recSev)} · 찌르기가 끝난 뒤 0.6 s 안 ${T.win6Hit} 번 · 심각도 ${f2(T.win6Sev)} (찌르기 ${T.fired})`);
 console.log(`  몸: 골반 옮김 p50 ${f2(q(L.pel, 0.5))} · 최대 ${f2(q(L.pel, 1))} m · 몸통 기울기 p50 ${f1(q(L.tilt, 0.5))} · 최대 ${f1(q(L.tilt, 1))}° · 골반 가장 낮음 ${f2(q(L.pelLow, 0))} m · 몸 미끄러짐 p50 ${f2(q(L.slide, 0.5))} m · 낸 뒤 1.5 s 안 서 있지 않음 ${T.fall} / ${T.fired}`);
 console.log(`  런지 막힘 ${T.lBlock} · 붙은 칼 따라 미끄러짐 ${T.glide} · 칼끼리 닿고 못 맞힘 ${T.touchMiss}`);
+console.log(`  되돌아오기(앞발 거둠): ${L.recDelay.length} / ${T.fired} 번 · 런지 시작부터 p50 ${f2(q(L.recDelay, 0.5))} s · 거둔 길이 p50 ${f2(q(L.recBack, 0.5))} m · (상대가 살아 있던 ${L.recGap.length} 번) 가슴 사이 거둘 때 p50 ${f2(q(L.recGap0, 0.5))} → 0.6 s 뒤 p50 ${f2(q(L.recGap, 0.5))} m (${f2(q(L.recGap, 0))} ~ ${f2(q(L.recGap, 1))})`);
 console.log(`  걸음: 낸 때 가슴 사이 p50 ${f2(q(L.gap0, 0.5))} m · 몸 미끄러짐 p50 ${f2(q(L.slide, 0.5))} · 최대 ${f2(q(L.slide, 1))} · 앞발 런지 걸음 p50 ${f2(q(L.foot, 0.5))} · 최대 ${f2(q(L.foot, 1))} m · 그 뒤 가슴 사이 가장 가까움 p50 ${f2(q(L.gapMin, 0.5))} · 가장 작음 ${f2(q(L.gapMin, 0))} m · 맞붙는 거리 안으로 든 찌르기 ${L.clinch} / ${L.gapMin.length}`);
 console.log(`덮인 채 나아가기 길이 (모든 판 · 0 초 넘는 것 ${all.length}): p50 ${f2(q(all, 0.5))} · p90 ${f2(q(all, 0.9))} · ≥0.4 ${all.filter((x) => x >= 0.4).length} · ≥0.6 ${all.filter((x) => x >= 0.6).length} · ≥1.5 ${all.filter((x) => x >= 1.5).length}`);

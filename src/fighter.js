@@ -2404,7 +2404,7 @@ export class Fighter {
     //  동방 보법 '가벼운 발'(10/15 — GAIT.cnLight · 유파 걸음 칸 light, 동방 1.5 · docs/strike/cn_light_feet_2026-10-15.md): 위 셋이 아닌 보통 걸음 몫(× 1)만 곱한다 —
     //  걷기 시작·멈춤·방향 바꿈이 같은 한도라 함께 빨라지고 최고 빠르기(speed)는 그대로. 몸의 일이라 사람·AI 같이. 칸 없는 유파·끔(0)은 × 1 그대로(바이트 같음)
     //  동방 AI 걸음 박자(10/15 — GAIT.cnLightAi · ai.js update 의 aiLightHold): 가벼운 발 몸의 AI 가 공격 꼴이 아닐 때(간 보기·막기·물러남)는 보통 걸음 몫 × 1(옛 가속) — 사람·끔은 그대로
-    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake ? GAIT.burstAccel : GAIT.cnLight && !this.aiLightHold ? (G.P.light ?? 1) : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
+    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake || G.lungeBrake ? GAIT.burstAccel : GAIT.cnLight && !this.aiLightHold ? (G.P.light ?? 1) : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     push(fx, 0, fz);

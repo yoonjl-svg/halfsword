@@ -33,13 +33,12 @@ const _u = new THREE.Vector3();
 const D2R = Math.PI / 180;
 
 /**
- * 런지 최소 간격 (m — 10/24 13:2x 사장님 '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게'): 런지 앞발(SECRET.risolutoStep.foot — italianStep 0.9 m)을
- *  다 내디뎌도 가슴 사이가 맞붙는 거리(무기 실측 measure.clinch) 밖에 남는 간격 = clinch + 앞발. 레이피어 1.19 + 0.9 = 2.09 · 달타냥 1.10 + 0.9 = 2.00 m. 새 수 없음
+ * 런지 최소 간격 (m — 10/24 13:2x 사장님 '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' · 13:4x 대안 ③ '맞닿는 거리만 막기'):
+ *  = 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리). 레이피어 1.54 · 달타냥 1.39 m. 새 수 없음.
+ *  (13:2x 첫 식 '맞붙는 거리 clinch + 런지 앞발 0.9' 는 같은 운전 창 판당 0.97 → 0 이라 버림 · 앞발 0.9 · 몸 미끄러짐은 그대로 — 런지 뒤 몸이 붙는 것은 사장님이 받아들임)
  */
 export function lungeGap(me) {
-  const st = SECRET.risolutoStep ?? {};
-  const foot = typeof st.foot === 'string' ? SECRET[st.foot] : st.foot ?? SECRET.italianStep;
-  return (me.swordArt?.measure?.clinch ?? 0) + (foot ?? 0);
+  return me.swordArt?.measure?.contact ?? 0;
 }
 
 /** 런지를 쓸 수 있는 간격인가 (간격 조건 SECRET.risolutoGap · 런지 판 SECRET.risolutoLunge 일 때만 — 아니면 늘 true) */

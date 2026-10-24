@@ -11,7 +11,7 @@ import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
-import { iaiTipSpeed } from '../../src/secret_instant.js';
+import { iaiTipSpeed, stanceSpread } from '../../src/secret_instant.js';
 
 const { SECRET } = CONFIG;
 const keep = (o, k, v, fn) => { const old = o[k]; o[k] = v; try { return fn(); } finally { o[k] = old; } };
@@ -183,7 +183,7 @@ test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력�
 
 
 // 10/24 런지 — 상대는 멈춤 · 판 시작 발 묶임(ARENA.startHold) 뒤 · 창을 열어 탭 하나
-// 10/24 13:2x 간격 조건: 런지는 가슴 사이 ≥ 맞붙는 거리 + 앞발(레이피어 2.09 · 달타냥 2.00 m)에서만 — 시험 판은 그 밖 2.2 m 에서 연다
+// 10/24 13:2x · 13:4x 간격 조건: 런지는 가슴 사이 ≥ 맞닿기 거리(레이피어 1.54 · 달타냥 1.39 m)에서만 — 시험 판은 그 밖 2.2 m 에서 연다
 function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {}) {
   return withCfg(cfg, () => {
     const g = newRound({ weapon: w, weapon2: foeW, gap, seed });
@@ -194,7 +194,7 @@ function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {})
       const pg = new PlayerParryGuard(p, e); p.stamina.controller = pg;
       const ps = new PlayerSecretWatch(p, e);
       ps.openWindow({ ev: 'risoluto', path: 'close', held: 0.6 });
-      const out = { w, gap0: p.foeDistance(), clinch: p.swordArt.measure.clinch, gon: iaiTipSpeed(p), spent0: p.stamina.spent.attack, secret0: p.stamina.spent.secret, tipV: 0, stiffT: null, stiffSteps: 0, held: false, drew: false, gaitReq: null, standAll: true, tilt: 0, wounds: [] };
+      const out = { w, gap0: p.foeDistance(), clinch: p.swordArt.measure.clinch, gon: iaiTipSpeed(p), spent0: p.stamina.spent.attack, secret0: p.stamina.spent.secret, tipV: 0, stiffT: null, stiffSteps: 0, held: false, drew: false, gaitReq: null, spread0: stanceSpread(p), standAll: true, tilt: 0, wounds: [] };
       const pel0 = new THREE.Vector3().copy(p.bodies.pelvis.translation());
       g.onWound = (a, v, r) => { if (a === p) out.wounds.push(r); };
       const o = ps.fire();
@@ -211,7 +211,7 @@ function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {})
         const tip = p.bladePoint(1, new THREE.Vector3());
         if (comboBefore) out.tipV = Math.max(out.tipV, tip.distanceTo(prev) / DT);
         prev = tip;
-        out.gaitReq ??= p.gait?.req ? { kind: p.gait.req.kind, fwd: p.gait.req.fwd, draw: !!p.gait.req.draw } : null;
+        out.gaitReq ??= p.gait?.req ? { kind: p.gait.req.kind, fwd: p.gait.req.fwd, draw: !!p.gait.req.draw, push: p.gait.req.push ?? 1, accel: !!p.gait.req.accel } : null;
         if (p.skill.sec?.stage === 'stiff') {
           out.stiffT = p.skill.sec.stiffT; out.stiffSteps++;
           out.held ||= p.iaiHoldT > 0 && p.skill.thrustPose.w === 1;
@@ -226,6 +226,18 @@ function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {})
       const pl = p.bodies.pelvis.translation();
       out.pelMove = Math.hypot(pl.x - pel0.x, pl.z - pel0.z);
       out.end = p.skill.sec;
+      // 10/24 14:0x 되돌아오기: 굳음이 끝난 뒤 · 몸이 다 실리면 앞발을 뒤로 거둠 (1 s 더 보며 그 걸음 · 두 발 간격 · 가슴 사이)
+      out.spreadMax = stanceSpread(p);
+      out.gapLunge = p.foeDistance();
+      for (let i = 0; i < Math.round(1.0 / DT); i++) {
+        g.step();
+        out.recReq ??= p.gait?.req && p.gait.req.fwd < 0 ? { kind: p.gait.req.kind, fwd: p.gait.req.fwd, accel: !!p.gait.req.accel } : null;
+        out.spreadMax = Math.max(out.spreadMax ?? 0, out.recReq ? 0 : stanceSpread(p) ?? 0);
+        out.standAll &&= p.state === 'stand';
+      }
+      out.recovered = p.lungeRecovered ?? null;
+      out.spreadEnd = stanceSpread(p);
+      out.gapEnd = p.foeDistance();
       return out;
     } finally { g.world.free(); }
   });
@@ -238,13 +250,14 @@ test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 �
   assert.equal(SECRET.risolutoStiff, 0.6);
   assert.equal(SECRET.hitMul, 1.3); // 판정 배율 그대로 (사장님 지시 — 바꾸지 않음)
   // 걸음은 있던 수: 몸 미끄러짐 = 고노센 발도 iaiStep · 앞발 = 이탈리아 런지 italianStep · 디딘 뒤 뒷발 끌어붙임
-  assert.deepEqual(SECRET.risolutoStep, { slide: 'iaiStep', foot: 'italianStep', draw: 1, room: 0 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
+  // 10/24 14:0x: 디딘 뒤 뒷발 끌어붙임(draw) 대신 앞발을 뒤로 거둠(recover — 걸음 시간 0.4 사다리) · 걸음 동안 몸 따라감 배율 stepPush(엇박 찌르기 런지와 같은 2.0) · 몸 가속 한도 × burstAccel(accel)
+  assert.deepEqual(SECRET.risolutoStep, { slide: 'iaiStep', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
   assert.equal(SECRET.iaiStep, 0.6); assert.equal(SECRET.italianStep, 0.9);
   // 다른 곳 값은 그대로 (흘림 팔 늦춤 · 이탈리아 비기 굳음 — 10/23 판 · AI 칸)
   assert.equal(CONFIG.FLOW_RECOVERY.seconds, 0.4); assert.equal(SECRET.stiff.italian, 0.4);
 });
 
-test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝 빠르기) · 몸 미끄러짐 + 앞발 런지 0.9 m · 상대 팔 늦춤 0.6 s · 굳음 0.6 s(끝 자세 붙잡음 · 뒷발 끌어붙임) · 넘어지지 않음', () => {
+test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝 빠르기) · 몸 미끄러짐 + 앞발 런지 0.9 m · 상대 팔 늦춤 0.6 s · 굳음 0.6 s(끝 자세 붙잡음) · 굳음 뒤 앞발을 뒤로 거둠(14:0x) · 넘어지지 않음', () => {
   for (const w of ['rapier', 'dartagnan']) {
     const o = lungeRun(w);
     assert.equal(o.name, 'andareRisoluto');
@@ -257,7 +270,7 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.equal(o.req.share, SECRET.risolutoShare);
     assert.equal(o.req.hitMul, SECRET.hitMul);
     assert.equal(o.req.hold, 0.6);
-    assert.deepEqual([m.step.fwd, m.step.foot, m.step.draw, !!m.step.room], [SECRET.iaiStep, SECRET.italianStep, true, false]);
+    assert.deepEqual([m.step.fwd, m.step.foot, !!m.step.draw, !!m.step.room, m.step.push, !!m.step.accel], [SECRET.iaiStep, SECRET.italianStep, false, false, SECRET.stepPush, true]);
     assert.equal(m.glide, true);
     assert.equal(o.armSlow, 0.6, '상대 두 팔 늦춤 0.6 s');
     assert.ok(o.lungeT > 0, '런지 자세 (SECRET.stance.lunge)');
@@ -266,12 +279,17 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     // 고노센처럼 빠르게: 길 빠르기 = 같은 칼 고노센 칼끝 빠르기 × 1 · 찌르는 토막 칼끝(월드 — 쓸린 자리 조각) 가장 빠름 ≥ 고노센의 0.9 · 평균 ≥ 0.8 (몸 미끄러짐 몫을 길 시간에 넣어 늘임 — 연환 그때 계산 길과 같음)
     assert.ok(Math.abs(o.res.v - SECRET.risolutoShare * o.gon) < 1e-6, `${w} 길 빠르기 ${o.res.v}`);
     assert.ok(o.res.tipVmax >= 0.9 * o.gon && o.res.tipV >= 0.8 * o.gon, `${w} 칼끝 ${o.res.tipV.toFixed(1)} · 최고 ${o.res.tipVmax.toFixed(1)} / 고노센 ${o.gon.toFixed(1)}`);
-    assert.deepEqual(o.gaitReq, { kind: 'lunge', fwd: SECRET.italianStep, draw: true }, `${w} 앞발 런지 걸음`);
+    assert.deepEqual(o.gaitReq, { kind: 'lunge', fwd: SECRET.italianStep, draw: false, push: SECRET.stepPush, accel: true }, `${w} 앞발 런지 걸음`);
     assert.equal(o.stiffT, 0.6, '굳음 0.6 s');
     assert.ok(Math.abs(o.stiffSteps * DT - 0.6) < 3 * DT, `${w} 굳음 ${(o.stiffSteps * DT).toFixed(3)} s`);
     assert.equal(o.phase, 'stiff'); // main.js 가 칼 입력 · 스틱 · 막기 단추를 막는다
     assert.equal(o.held, true, '굳음 동안 끝 자세 붙잡음');
-    assert.equal(o.drew, true, `${w} 디딘 뒤 뒷발 끌어붙임`);
+    assert.equal(o.drew, false, `${w} 뒷발 끌어붙임 없음 (14:0x)`);
+    // 되돌아오기: 굳음 뒤 앞발을 뒤로 거둠 — 같은 다리 lunge 걸음 · 뒤로(fwd 음수) · 몸 가속 · 두 발 간격이 런지 전 보폭 쪽으로 · 가슴 사이가 다시 벌어짐
+    assert.ok(o.recovered && o.recovered.back > 0, `${w} 앞발 거둠 ${JSON.stringify(o.recovered)}`);
+    assert.ok(o.recReq && o.recReq.kind === 'lunge' && o.recReq.fwd < 0 && o.recReq.accel, `${w} 거두는 걸음 ${JSON.stringify(o.recReq)}`);
+    assert.ok(o.spreadEnd < o.spreadMax - 0.2, `${w} 두 발 간격 ${o.spreadMax?.toFixed(2)} → ${o.spreadEnd?.toFixed(2)} (런지 전 ${o.spread0?.toFixed(2)})`);
+    assert.ok(o.gapEnd > o.gapLunge, `${w} 가슴 사이 ${o.gapLunge.toFixed(2)} → ${o.gapEnd.toFixed(2)}`);
     assert.equal(o.standAll, true, `${w} 넘어지지 않음`);
     assert.ok(o.tilt < 35, `${w} 몸통 기울기 ${o.tilt.toFixed(1)}°`);
     assert.ok(o.pelMove > 0.2, `${w} 몸이 앞으로 ${o.pelMove.toFixed(2)} m`);
@@ -344,7 +362,7 @@ test('다 붙음 창(risolutoClose — 10/23 기본 켬: 맞닿기 거리 밖에
   });
 });
 
-test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게\'): 최소 간격 = 맞붙는 거리 + 앞발 · 가까우면 창이 안 뜸 · 뜬 창은 닫힘 · 그때 탭은 비기가 아님', () => {
+test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게\' · 13:4x \'맞닿는 거리만 막기\'): 최소 간격 = 맞닿기 거리 · 가까우면 창이 안 뜸 · 뜬 창은 닫힘 · 그때 탭은 비기가 아님', () => {
   assert.equal(SECRET.risolutoGap, 1);
   const ctx = { ev: 'risoluto', path: 'hold', held: 0.6 };
   const at = (w, gap, fn) => {
@@ -358,12 +376,12 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
       return fn(p, ps, g);
     } finally { g.world.free(); }
   };
-  // 최소 간격 = 무기 실측 맞붙는 거리 + 런지 앞발(italianStep) — 새 수 없음
-  for (const w of ['rapier', 'dartagnan', 'balisarda']) at(w, 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - (p.swordArt.measure.clinch + SECRET.italianStep)) < 1e-9, w));
-  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 2.09) < 0.01, `레이피어 ${lungeGap(p)}`));
-  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 2.0) < 0.01, `달타냥 ${lungeGap(p)}`));
-  // 가까움(1.6 m): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
-  at('rapier', 1.6, (p, ps) => {
+  // 최소 간격 = 무기 실측 맞닿기 거리 measure.contact (13:4x 대안 ③ '맞닿는 거리만 막기' — 13:2x 첫 식 clinch + 앞발은 버림) — 새 수 없음
+  for (const w of ['rapier', 'dartagnan', 'balisarda']) at(w, 2.5, (p) => assert.equal(lungeGap(p), p.swordArt.measure.contact, w));
+  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.54) < 0.01, `레이피어 ${lungeGap(p)}`));
+  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.39) < 0.01, `달타냥 ${lungeGap(p)}`));
+  // 가까움(1.3 m — 맞닿기 1.54 안): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
+  at('rapier', 1.3, (p, ps) => {
     assert.equal(lungeGapOk(p), false);
     ps.risoTick(DT, false);
     assert.equal(ps.open, null, '가까우면 창 없음');
@@ -377,7 +395,7 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
     ps.risoTick(DT, false);
     assert.equal(ps.open?.ctx?.path, 'hold', '간격이 있으면 창');
     // 창이 뜬 뒤 가까워지면 닫힘 (그때의 탭은 보통 탭 찌르기 — 창이 없으니 main.js 가 skill.thrust)
-    p.foeDistance = () => 1.6;
+    p.foeDistance = () => 1.3;
     ps.riso.tick = () => null;
     ps.risoTick(DT, false);
     assert.equal(ps.open, null, '가까워지면 창 닫힘');
@@ -388,4 +406,52 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
     assert.equal(ps.open, null);
     assert.equal(p.skill.secret(null), false);
   });
+});
+
+// 10/24 14:0x 런지 자세 (사장님 '런지할 때 런지 자세가 되려면 앞무릎을 굽히면서 자세 낮춰야 하는데 지금 그렇게 보여?'): 앞무릎 굽힘 · 뒷다리 펴짐 · 골반 낮춤 — 무릎 굽힘 = 넓적다리(엉덩이 → 무릎)와 정강이(무릎 → 발목) 사이 각
+function lungePose(cfg) {
+  return withCfg(cfg, () => {
+    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 2.2, seed: 9 });
+    const p = g.player, e = g.enemy;
+    g.ai.update = () => {}; p.foe = e; e.foe = p;
+    const V = (t) => new THREE.Vector3(t.x, t.y, t.z);
+    const jw = (c) => { const a = p.jointByName[c].joint.anchor2(), b = p.bodies[c], r = b.rotation(); return new THREE.Vector3(a.x, a.y, a.z).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)).add(V(b.translation())); };
+    const pose = () => {
+      const c = p.bodies.chest.translation(), f = e.bodies.chest.translation(), fw = new THREE.Vector3(f.x - c.x, 0, f.z - c.z).normalize();
+      const leg = (k) => { const h = jw('thigh' + k), kn = jw('shin' + k), an = jw('foot' + k); return { flex: (kn.clone().sub(h).angleTo(an.clone().sub(kn)) * 180) / Math.PI, x: an.dot(fw) }; };
+      const F = leg('F'), B = leg('B'), front = F.x > B.x ? F : B, back = F.x > B.x ? B : F;
+      return { front: front.flex, back: back.flex, spread: front.x - back.x, pel: p.bodies.pelvis.translation().y };
+    };
+    try {
+      for (let i = 0; i < Math.round((CONFIG.ARENA.startHold + 0.5) / DT); i++) g.step();
+      const pel0 = pose().pel;
+      const pg = new PlayerParryGuard(p, e); p.stamina.controller = pg;
+      const ps = new PlayerSecretWatch(p, e);
+      ps.openWindow({ ev: 'risoluto', path: 'hold', held: 0.6 });
+      assert.equal(p.skill.secret(ps.fire()), true);
+      const rows = [];
+      let wasLunge = false, landed = false;
+      for (let i = 0; i < Math.round(1.2 / DT); i++) {
+        g.step();
+        const rq = p.gait?.req;
+        if (rq && rq.fwd > 0) wasLunge = true;
+        if (wasLunge && !(rq && rq.fwd > 0)) landed = true;
+        if (rq && rq.fwd < 0) break; // 앞발을 거두기 시작
+        if (landed && p.gait.legs.F.stance && p.gait.legs.B.stance) rows.push(pose());
+      }
+      const ms = Math.max(...rows.map((r) => r.spread));
+      const wide = rows.filter((r) => r.spread >= 0.85 * ms); // 두 발이 가장 벌어진 몫 (런지 자세)
+      const best = wide.reduce((a, r) => (r.front - r.back > a.front - a.back ? r : a), wide[0]);
+      return { ...best, drop: pel0 - Math.min(...rows.map((r) => r.pel)) };
+    } finally { g.world.free(); }
+  });
+}
+
+test('10/24 14:0x 런지 자세: 앞무릎이 굽고 뒷다리가 펴짐 (전: 앞다리가 곧고 뒷무릎이 굽어 뒤로 주저앉음) · 골반 낮춤', () => {
+  const now = lungePose({});
+  assert.ok(now.front >= 30 && now.back <= 40 && now.front - now.back >= 15, `지금 앞무릎 ${now.front.toFixed(0)}° · 뒷무릎 ${now.back.toFixed(0)}°`);
+  assert.ok(now.drop >= 0.08, `골반 낮춤 ${now.drop.toFixed(3)} m`);
+  // 14:0x 전 걸음 (?risoRecover=0 — 뒷발 끌어붙임 · 몸 따라감 배율 · 몸 가속 없음)
+  const old = lungePose({ risolutoStep: { ...SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 } });
+  assert.ok(old.front - old.back < 0, `전 앞무릎 ${old.front.toFixed(0)}° · 뒷무릎 ${old.back.toFixed(0)}°`);
 });

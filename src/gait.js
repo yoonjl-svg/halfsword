@@ -207,6 +207,7 @@ export class Gait {
     // 첫 걸음 박차기(10/15 — GAIT.stepBurst): burst = 서 있다가 뒤·옆으로 걷기 시작한 순간 걸고(update) 첫 걸음을 뗄 때 쓴다(fastBegin) — { fore, side 스틱 방향 부호 · lat 옆 몫 비율 } ·
     //  burstLeg = 그 걸음의 발(디딜 자리를 박찬 가속으로 내다봄 — burstAhead) · burstBrake = 박찬 쪽 단위 벡터(몸이 따라잡을 때까지 가속 한도 그대로 — 세게 멈춤)
     this.burst = this.burstLeg = this.burstBrake = null;
+    this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
     this.fastFore = false; // 첫 걸음 박차기 비스듬히 뒤(이베리아 아님): 몸 빠르기의 앞뒤 몫만 × fastK — fastBegin 이 정함
   }
 
@@ -265,6 +266,7 @@ export class Gait {
     this.chase = null;
     this.hold = this.holdBrake = null;
     this.burst = this.burstLeg = this.burstBrake = null;
+    this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
   }
 
   exit() {
@@ -278,6 +280,7 @@ export class Gait {
     if (this.hold) this.holdEnd = 'state';
     this.hold = this.holdBrake = null;
     this.burst = this.burstLeg = this.burstBrake = null;
+    this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
     const J = this.f.jointByName;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
@@ -336,6 +339,7 @@ export class Gait {
     if (this.f.move.y < -0.1 && o.kind !== 'retreat') return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0, leg: o.leg ?? null }; // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
     if (o.push) this.req.push = o.push;
+    if (o.accel) this.req.accel = true; // 안다레 리솔루토 런지 · 되돌아오기 (10/24 14:0x): 이 걸음 동안 · 끝난 뒤 몸이 따라잡을 때까지 가속 한도 × GAIT.burstAccel (lungeBrake — fighter.js driveBalance)
     if (o.draw) this.req.draw = true;
     if (o.tech) this.req.tech = o.tech; // 기술 이름 (중국 활 자세 P.bow.tech 가 읽는다 — 다른 유파는 안 읽음) // 유파 걸음(10/10): 디딘 뒤 뒷발 끌어붙임 걸음 하나 (일본 히키츠케·중국 체보)
     // 유파 걸음 follow 안에서는 지나 딛는 기술 걸음(플레이어 베기 걸음·근접 걸음 등 'pass')을 그 유파 꼴로 (P.passAs — 앞발 lunge + 끌어붙임: 앞뒤 발이 안 바뀐다)
@@ -1139,6 +1143,12 @@ export class Gait {
     if (swing && swing.kind === 'req' && this.req) {
       want.addScaledVector(fwd, (this.req.fwd * 0.8 * (this.req.push ?? 1)) / (swing.T + 0.15)); // push: 유파 비기의 강한 걸음 (없으면 ×1 — 같은 수)
       if (this.req.side) want.addScaledVector(rgt, (this.req.side * 0.8) / (swing.T + 0.15));
+      if (this.req.accel) this.lungeBrake = { x: fwd.x * Math.sign(this.req.fwd), z: fwd.z * Math.sign(this.req.fwd), on: true }; // 런지 걸음 (req.accel): 걸음 동안 가속 한도 × burstAccel
+    } else if (this.lungeBrake?.on) this.lungeBrake.on = false;
+    // 런지 걸음이 끝난 뒤: 몸의 그 쪽 빠르기가 가려는 속도 + BRAKE_TOL 안으로 줄 때까지 가속 한도 × burstAccel 그대로(박차기 세게 멈춤과 같은 셈 · 시간 값 없음) — 따라잡으면 끝
+    if (this.lungeBrake && !this.lungeBrake.on) {
+      const lb = this.lungeBrake;
+      if (this.vf.x * lb.x + this.vf.z * lb.z <= Math.max(0, want.x * lb.x + want.z * lb.z) + BRAKE_TOL) this.lungeBrake = null;
     }
     // ④ 좌우 무게 옮기기: 한 발로 서는 동안 무게중심을 딛은 발 쪽으로 (want에 속도로 더한다)
     this.sway.set(0, 0, 0);
