@@ -16,7 +16,7 @@ export function createBernardo(baseline) {
   return {
     ...base,
     id: 'bernardo',
-    name: '베르나르도',
+    name: '베르나르도 델 카르피오', // 사장님 10/24 12:4x '베르나르도 델 카르피오로 바꿔' (전 '베르나르도' — 전설의 정식 이름 · 카르피오의 베르나르도)
     epithet: '왕', // 사장님 10/24 02:4x '셋 다 칭호는 왕으로 해' (아르토리아 · 롤랑 · 베르나르도 — 전 '롤랑의 숙적')
     origin: '레온 왕국 · 카르피오',
     look: getLook('bernardo'),

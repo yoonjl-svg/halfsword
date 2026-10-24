@@ -111,7 +111,7 @@ export function titleReason(event, name = titleName(event) ?? '') {
   const why = school && SCHOOL_KO[school] ? `${SCHOOL_KO[school]} 유파의 모든 기술을 익혀`
     : event === 'swordmaster' ? '다섯 유파의 모든 기술을 익혀'
     : event === 'wander' ? '모든 무대를 깨고 방랑을 열어'
-    : event === 'regicide' ? '한 번의 방랑에서 아르토리아와 롤랑, 베르나르도를 모두 쓰러뜨려'
+    : event === 'regicide' ? '한 번의 방랑에서 아르토리아와 롤랑, 베르나르도 델 카르피오를 모두 쓰러뜨려'
     : event === 'conqueror' ? `한 번의 방랑에서 지지 않고 ${TITLE.conquerWins}번을 내리 이겨`
     : event === 'butcher' ? `지금까지 머리를 ${TITLE.butcherHeads.toLocaleString('ko-KR')}개 얻어`
     : event === 'tycoon' ? `지금까지 금화를 ${TITLE.tycoonCoins.toLocaleString('ko-KR')} 벌어`

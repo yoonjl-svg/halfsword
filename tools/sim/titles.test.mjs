@@ -121,7 +121,7 @@ test('알림은 한 번: 얻은 호칭 = 안 봄(seen false) · 글 · 본 뒤�
   assert.equal(R.titleReason('school:chinese'), '동방 유파의 모든 기술을 익혀 무비지 계승자가 되었습니다.');
   assert.equal(R.titleReason('swordmaster'), '다섯 유파의 모든 기술을 익혀 소드마스터가 되었습니다.');
   assert.equal(R.titleReason('wander'), '모든 무대를 깨고 방랑을 열어 방랑자가 되었습니다.');
-  assert.equal(R.titleReason('regicide'), '한 번의 방랑에서 아르토리아와 롤랑, 베르나르도를 모두 쓰러뜨려 왕 시해자가 되었습니다.');
+  assert.equal(R.titleReason('regicide'), '한 번의 방랑에서 아르토리아와 롤랑, 베르나르도 델 카르피오를 모두 쓰러뜨려 왕 시해자가 되었습니다.');
   assert.equal(R.titleReason('conqueror'), '한 번의 방랑에서 지지 않고 30번을 내리 이겨 정복자가 되었습니다.');
   assert.equal(R.titleReason('butcher'), '지금까지 머리를 100개 얻어 도살자가 되었습니다.');
   assert.equal(R.titleReason('tycoon'), '지금까지 금화를 10,000 벌어 대부호가 되었습니다.');
