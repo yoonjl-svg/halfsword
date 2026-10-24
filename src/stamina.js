@@ -10,6 +10,7 @@ export class Stamina {
   constructor(fighter) {
     this.fighter = fighter;
     this.controller = null;
+    this.aweLoss = 0; // 판 시작 최대 기력 깎임 (티소나 '위세' — applyAweStart · 그 판 내내)
     this.maxBonus = 0; // 최대 기력 덧 (대기실 장비 — 케틀 햇 '생존술: 기력 +30', main.js setMaxBonus · 플레이어만). 문턱 0 · −35 · −70 과 그 밖 규칙은 그대로
     this.infinite = false; // 기력 무한 (대기실 장비 — 용사의 눈물 '기력 무한', main.js setInfinite · 플레이어만). 거짓이면 아래 모든 길이 전과 한 글자도 다르지 않다
     this.value = STAMINA.max;
@@ -39,7 +40,7 @@ export class Stamina {
   }
 
   /** 최대 기력: 100(STAMINA.max) + 장비 덧. 기력을 끄면(STAMINA.on false) 덧 없이 100 — 지금 판 그대로 */
-  get max() { return STAMINA.on ? STAMINA.max + this.maxBonus : STAMINA.max; }
+  get max() { return STAMINA.on ? STAMINA.max + this.maxBonus - this.aweLoss : STAMINA.max; } // − 위세 깎임(10/24)
   /** 판을 세울 때(main.js newRound — 첫 스텝 전) 장비 덧을 정하고 그 최대에서 시작한다 */
   setMaxBonus(bonus) {
     this.maxBonus = Math.max(0, +bonus || 0);
@@ -64,7 +65,7 @@ export class Stamina {
     this.captureMass(this.fighter.swordMass);
     return clamp(Math.sqrt((this.originalMass ?? STAMINA.weaponReferenceMass) / STAMINA.weaponReferenceMass), 0.75, 1.5);
   }
-  get ratio() { return clamp(this.value / this.max, 0, 1); } // 머리 위 막대 = 최대(덧 포함)의 몫
+  get ratio() { return clamp(this.value / (this.max + (STAMINA.on ? this.aweLoss : 0)), 0, 1); } // 머리 위 막대 = 최대(덧 포함)의 몫 — 위세로 깎인 몫은 빈 칸으로 보인다(10/24 — 가득 차도 85 % 쯤)
   get exhausted() { return STAMINA.on && this.exhaustLeft > 0; }
   get speed() { return !STAMINA.on ? 1 : this.exhausted ? 0 : this.level === 2 ? STAMINA.moveSevere : this.level === 1 ? STAMINA.moveTired : 1; }
   get attackSpeed() {
@@ -408,4 +409,20 @@ export function spendAweDrain(att, vic) {
   const event = { time: A.time, attacker: att.index, requested: W.aweDrain, before, after: s.value, actual: before - s.value };
   vic.lastAwe = event;
   return event;
+}
+/**
+ * 티소나 '위세' 판 시작 (사장님 10/24 11:3x — config.js WEAPON_ABILITY.aweStart): att 가 위세 칼(weapon.awe)을 들고 판을 시작하면 vic 의 최대 기력을
+ *  aweStart[0] ~ [1] 사이 정수만큼 그 판 내내 깎고, 깎인 최대에서 시작한다(기력 무한이면 깎인 최대로 늘 가득 — 청구가 없어 느낄 일 없음).
+ *  판을 세울 때 한 번(main.js newRound — 사람 · AI 두 쪽 모두). rnd = 0 ~ 1 난수(시험은 고정값). 돌려줌 { loss } 또는 null(위세 칼 아님 · 끔)
+ */
+export function applyAweStart(att, vic, rnd = Math.random) {
+  const R = WEAPON_ABILITY.aweStart, s = vic?.stamina;
+  if (!att?.weapon?.awe || !s || !Array.isArray(R) || !(R[1] > 0)) return null;
+  const lo = Math.max(0, Math.round(R[0])), hi = Math.max(lo, Math.round(R[1]));
+  const loss = lo + Math.min(hi - lo, Math.floor(rnd() * (hi - lo + 1)));
+  s.aweLoss = loss;
+  if (STAMINA.on) s.value = s.max;
+  if (s.infinite) s.refill();
+  vic.aweStart = { attacker: att.index, loss };
+  return { loss };
 }

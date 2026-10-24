@@ -1,11 +1,11 @@
-// 티소나 '위세' 시험 (사장님 10/21 23:xx — 값 config.js WEAPON_ABILITY · 계산 src/stamina.js spendAweDrain)
+// 티소나 '위세' 시험 (사장님 10/21 23:xx 막힘 깎음 → 10/24 11:3x 판 시작 최대 기력 − 10 ~ 20 · 값 config.js WEAPON_ABILITY · 계산 src/stamina.js applyAweStart · 옛 spendAweDrain)
 //  이 칼의 공격이 상대 칼에 막히면(못 벰 · 칼끼리 닿음 — 독일 인데스 '막힘'과 같은 가름) 막은 쪽 기력 − 8 · 한 공격에 한 번 · 1.5 s 에 한 번 ·
 //  맞힘 · 헛침은 없음 · 칼 주인이 사람이든(skill.js whiffEnd) AI 든(ai.js afterStrike) 같다
 //  node --test tools/sim/tizona_awe.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2, Vector3 } from 'three';
-import { Stamina, spendAweDrain } from '../../src/stamina.js';
+import { Stamina, spendAweDrain, applyAweStart } from '../../src/stamina.js';
 import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST } from '../../src/config.js';
 import { getWeapon, WEAPONS, WEAPON_ALIASES } from '../../src/weapons.js';
 import { Skill } from '../../src/skill.js';
@@ -20,9 +20,12 @@ function actor(extra = {}) {
   return f;
 }
 const tizona = () => getWeapon('tizona');
+// 옛 판(10/21 — 막힘마다 기력 −8): 10/24 사장님 결정으로 끔(aweDrain 0) · 스위치로 남긴 셈이 그대로 도는지 이 시험들은 8 로 켜고 본다
+const oldDrain = (fn) => () => { const was = WEAPON_ABILITY.aweDrain; WEAPON_ABILITY.aweDrain = 8; try { return fn(); } finally { WEAPON_ABILITY.aweDrain = was; } };
 
-test('값 · 카드 · 몸: 기력 8 · 1.5 s · 티소나만 능력 · 카드 능력 줄 · 사장님 설명 그대로 · 칼날 1.05 m · 2.3 kg · 앞무게 이베리아 · 츠바이핸더 그대로', () => {
-  assert.equal(WEAPON_ABILITY.aweDrain, 8);
+test('값 · 카드 · 몸: 막힘 깎음 끔 · 판 시작 10 ~ 20 · 티소나만 능력 · 카드 능력 줄 · 사장님 설명 그대로 · 칼날 1.05 m · 2.3 kg · 앞무게 이베리아 · 츠바이핸더 그대로', () => {
+  assert.equal(WEAPON_ABILITY.aweDrain, 0); // 10/24 사장님 — 막힘마다 깎던 몫 끔(옛 판 8)
+  assert.deepEqual(WEAPON_ABILITY.aweStart, [10, 20]); // 판 시작 최대 기력 − 10 ~ 20
   assert.equal(WEAPON_ABILITY.aweGap, 1.5);
   const T = tizona();
   assert.equal(T.id, 'tizona'); assert.equal(T.tier, 'epic'); assert.equal(T.awe, true);
@@ -38,7 +41,7 @@ test('값 · 카드 · 몸: 기력 8 · 1.5 s · 티소나만 능력 · 카드 �
   assert.equal(T.frame, 'heavy'); assert.equal(T.school, 'iberian');
 });
 
-test('spendAweDrain: 막은 쪽 −8 · 1.5 s 안엔 다시 안 깎음(1.5 s 지나면 다시) · 능력 없는 칼 · 부러진 칼 · 빈손 · 기력 무한 · 0 이면 없음', () => {
+test('spendAweDrain: 막은 쪽 −8 · 1.5 s 안엔 다시 안 깎음(1.5 s 지나면 다시) · 능력 없는 칼 · 부러진 칼 · 빈손 · 기력 무한 · 0 이면 없음', oldDrain(() => {
   const A = actor({ index: 1, weapon: tizona() }), V = actor({ index: 0 });
   const v0 = V.stamina.value;
   const e = spendAweDrain(A, V);
@@ -61,7 +64,7 @@ test('spendAweDrain: 막은 쪽 −8 · 1.5 s 안엔 다시 안 깎음(1.5 s 지
   const e3 = spendAweDrain(a3, low); near(e3.actual, 3); assert.equal(low.stamina.exhausted, true);
   const was = WEAPON_ABILITY.aweDrain;
   try { WEAPON_ABILITY.aweDrain = 0; const a = actor({ index: 1, weapon: tizona() }), v = actor(); assert.equal(spendAweDrain(a, v), null); near(v.stamina.value, STAMINA.max); } finally { WEAPON_ABILITY.aweDrain = was; }
-});
+}));
 
 // ── 사람 칼 주인: skill.js whiffTrack → whiffEnd (공격 하나 = 휘두르기 + 손이 멈춘 뒤 칼이 지나갈 때까지) ──
 function humanAttack({ weapon = tizona(), bound = true, landed = false, att = true, steps = 12 } = {}) {
@@ -86,7 +89,7 @@ function humanAttack({ weapon = tizona(), bound = true, landed = false, att = tr
   return { P, F, sk, before, mid, after: v0() };
 }
 
-test('사람이 든 티소나: 막힘 → 공격이 끝날 때 한 번 −8 · 맞힘 · 헛침 · 공격 아닌 휘두르기 · 다른 칼은 없음', () => {
+test('사람이 든 티소나: 막힘 → 공격이 끝날 때 한 번 −8 · 맞힘 · 헛침 · 공격 아닌 휘두르기 · 다른 칼은 없음', oldDrain(() => {
   const b = humanAttack();
   near(b.mid, b.before); // 칼이 닿는 동안이 아니라 공격 끝에
   near(b.after, b.before - 8); assert.equal(b.F.stamina.counts.awe, 1); assert.equal(b.sk.whiff.on, false);
@@ -94,9 +97,9 @@ test('사람이 든 티소나: 막힘 → 공격이 끝날 때 한 번 −8 · �
     const r = humanAttack(o);
     near(r.after, r.before); assert.equal(r.F.stamina.counts.awe ?? 0, 0, JSON.stringify(Object.keys(o)));
   }
-});
+}));
 
-test('사람이 든 티소나: 막힌 공격 둘이 1.5 s 안이면 둘째는 없음 · 1.5 s 뒤 공격은 다시 −8', () => {
+test('사람이 든 티소나: 막힌 공격 둘이 1.5 s 안이면 둘째는 없음 · 1.5 s 뒤 공격은 다시 −8', oldDrain(() => {
   const b = humanAttack();
   const { P, F, sk } = b;
   const again = () => {
@@ -108,7 +111,7 @@ test('사람이 든 티소나: 막힌 공격 둘이 1.5 s 안이면 둘째는 �
   assert.ok(P.stamina.time - t0 < 1.5); near(F.stamina.value, b.before - 8); assert.equal(F.stamina.counts.awe, 1);
   P.stamina.time = t0 + 1.5; // 1.5 s 지난 뒤 셋째 공격
   again(); near(F.stamina.value, b.before - 16); assert.equal(F.stamina.counts.awe, 2);
-});
+}));
 
 // ── AI 칼 주인: ai.js afterStrike (공격 하나 끝에 한 번 — 막힘 = !hitLanded · bound) ──
 function aiStrikeEnd(ai, { hit = false, bound = true } = {}) {
@@ -117,7 +120,7 @@ function aiStrikeEnd(ai, { hit = false, bound = true } = {}) {
   ai.afterStrike(ai.d ?? 2);
   return v0 - s.value;
 }
-test('AI 가 든 티소나 (상대 자리 · 플레이어 자리 모두): 막힘 −8 · 같은 공격 끝이 다시 와도 1.5 s 안엔 없음 · 맞힘 · 헛침 없음 · 롱소드 AI 는 없음', () => {
+test('AI 가 든 티소나 (상대 자리 · 플레이어 자리 모두): 막힘 −8 · 같은 공격 끝이 다시 와도 1.5 s 안엔 없음 · 맞힘 · 헛침 없음 · 롱소드 AI 는 없음', oldDrain(() => {
   for (const [w1, w2] of [['longsword', 'tizona'], ['tizona', 'longsword']]) {
     const G = newRound({ walls: true, weapon: w1, weapon2: w2, seed: 3, AI2Class: AI });
     for (let i = 0; i < 5; i++) G.step();
@@ -132,9 +135,9 @@ test('AI 가 든 티소나 (상대 자리 · 플레이어 자리 모두): 막힘
     near(aiStrikeEnd(wielder), 8); // 1.5 s 지남
     assert.equal(wielder.foe.stamina.counts.awe, 2);
   }
-});
+}));
 
-test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · 플레이어 자리 7.5 s): 기력 깎음은 티소나의 막힌 공격 끝에서만 · 공격 하나에 한 번 · 8 씩 · 1.5 s 안의 둘째 막힘은 없음', () => {
+test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · 플레이어 자리 7.5 s): 기력 깎음은 티소나의 막힌 공격 끝에서만 · 공격 하나에 한 번 · 8 씩 · 1.5 s 안의 둘째 막힘은 없음', oldDrain(() => {
   const orig = AI.prototype.afterStrike;
   const log = [];
   AI.prototype.afterStrike = function (d) {
@@ -162,7 +165,7 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
   } finally {
     AI.prototype.afterStrike = orig;
   }
-});
+}));
 
 test('북부 대공의 검 지움: 무기 목록에 없음 · 옛 id ice = 츠바이핸더 · 라트나는 츠바이핸더 · 플랑베르주 레어', async () => {
   assert.equal(WEAPONS.ice, undefined);
@@ -193,4 +196,27 @@ test('몸 길이 (사장님 10/21 23:5x): 츠바이핸더 손 ~ 칼끝 1.335 m �
   } assert.ok(pf.I / 0.2724 >= 2.5, `플랑베르주 관성 ${pf.I}`);
   near(pt.mass, 2.3, 1e-9); near(pt.I, 0.586, 0.001); near(T.hiltLength + T.bladeLength, 1.195, 1e-9);
   for (const w of [Z, F, T]) assert.equal(w.frame, 'heavy');
+});
+
+test('위세 판 시작 (사장님 10/24 11:3x): 티소나를 든 쪽의 상대는 최대 기력 − 10 ~ 20 으로 시작 · 그 판 내내 · 막대는 깎인 몫이 빈 칸 · 다른 칼 · 기력 무한', () => {
+  const a = actor({ index: 1, weapon: tizona() });
+  for (const [r, want] of [[0, 10], [0.5, 15], [0.999, 20]]) {
+    const v = actor();
+    assert.deepEqual(applyAweStart(a, v, () => r), { loss: want });
+    near(v.stamina.max, STAMINA.max - want); near(v.stamina.value, STAMINA.max - want);
+    near(v.stamina.ratio, (STAMINA.max - want) / STAMINA.max); // 가득 차도 깎인 몫만큼 빈 칸
+  }
+  const v = actor(); assert.equal(applyAweStart(actor({ weapon: getWeapon('zweihander') }), v, () => 0.5), null); near(v.stamina.max, STAMINA.max); // 다른 칼은 없음
+  const t = actor({ weapon: tizona() }); assert.equal(applyAweStart(actor(), t, () => 0.5), null); near(t.stamina.max, STAMINA.max); // 티소나 주인은 안 깎임
+  const h = actor(); h.stamina.setInfinite(true); applyAweStart(a, h, () => 0); near(h.stamina.value, STAMINA.max - 10); assert.equal(h.stamina.infinite, true); // 기력 무한: 깎인 최대로 늘 가득
+  const k = actor(); k.stamina.setMaxBonus(30); applyAweStart(a, k, () => 0); near(k.stamina.max, STAMINA.max + 30 - 10); // 케틀 햇 덧과 함께
+  const was = WEAPON_ABILITY.aweStart;
+  try { WEAPON_ABILITY.aweStart = null; const z = actor(); assert.equal(applyAweStart(a, z, () => 0.5), null); near(z.stamina.max, STAMINA.max); } finally { WEAPON_ABILITY.aweStart = was; }
+});
+
+test('위세 막힘 깎음은 꺼짐 (10/24): AI 대 AI 실제 판에서 막힌 티소나 공격이 있어도 상대 기력 awe 청구 0', () => {
+  const G = newRound({ walls: true, weapon: 'tizona', weapon2: 'longsword', seed: 9, AI2Class: AI });
+  for (let i = 0; i < 7.5 / DT; i++) G.step();
+  assert.equal(G.enemy.stamina.counts.awe ?? 0, 0);
+  assert.equal(G.player.stamina.counts.awe ?? 0, 0);
 });

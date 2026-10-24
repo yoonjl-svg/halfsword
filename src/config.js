@@ -57,7 +57,10 @@ export const STAMINA = {
 //  티소나 '위세' (사장님 10/21 23:xx — 능력은 사장님 결정 · 값은 샛별 저장소 제안 그대로 · 확인표 2160): 칼 주인의 공격이 상대 칼에 막혀 끝나면(못 벰 · 칼끼리 닿음 —
 //   독일 인데스 '막힘'과 같은 가름: AI ai.js afterStrike · 사람 skill.js whiffEnd) 막은 쪽 기력 − aweDrain(8) · 한 공격에 한 번 · 칼 주인 시계로 aweGap(1.5 s) 안에는 다시 안 깎음.
 //   계산은 stamina.js spendAweDrain. aweDrain 0 = 끔
-export const WEAPON_ABILITY = { aweDrain: 8, aweGap: 1.5 };
+//  10/24 11:3x 사장님 '막은 상대의 기력 줄이는 거 말고 … 시작할 때 감소된 기력으로 시작하는 걸 생각했었어' + 앞서 '10~20 정도':
+//   위세 = 티소나를 든 쪽과 싸우는 상대가 그 판을 최대 기력 − aweStart(10 ~ 20 사이 정수 무작위 — 판마다 한 번)로 시작 · 그 판 내내 그 최대(회복도 거기까지) ·
+//   막힘마다 깎던 몫은 끔(aweDrain 0 — 옛 판 스위치로 남김). 계산 stamina.js applyAweStart · 판을 세울 때 main.js newRound(사람 · AI 두 쪽 모두)
+export const WEAPON_ABILITY = { aweDrain: 0, aweGap: 1.5, aweStart: [10, 20] };
 // 드루이드의 채찍 무릎 꿇리기 (사장님 10/23 01:5x '특수효과 넣어서 채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘.(모든 종류의 타격 대상) 곁눈베기 맞았을 때처럼' — 확인표 2255 ~ 2257 사장님 확인 전)
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
 //  다른 점: 부위 · 판정 종류(둔타 · 멍 · 상처)를 가리지 않는다 · 굴림은 한 획(휘두름 · 톡)에 한 번 — 그 획의 첫 맞음에서만(마디가 여러 번 닿아도) · 무기 칸 kneelHit 이 있는 무기만(채찍).
