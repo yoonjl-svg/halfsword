@@ -26,8 +26,8 @@ test('값 · 카드 · 몸: 기력 8 · 1.5 s · 티소나만 능력 · 카드 �
   assert.equal(WEAPON_ABILITY.aweGap, 1.5);
   const T = tizona();
   assert.equal(T.id, 'tizona'); assert.equal(T.tier, 'epic'); assert.equal(T.awe, true);
-  assert.equal(T.ability, '위세: 막아 낸 상대의 기력 감소');
-  assert.equal(T.desc, '엘 시드가 부카르를 쓰러뜨리고 얻은 명검.\n그의 적들은 티소나를 알아보고 두려움에 사로잡혔다. (위세: 막아 낸 상대의 기력 감소)');
+  assert.equal(T.ability, '위세: 상대 기력 감소'); // 사장님 10/24 11:2x
+  assert.equal(T.desc, '엘 시드가 부카르를 쓰러뜨리고 얻은 명검.\n그의 적들은 티소나를 알아보고 두려움에 사로잡혔다. (위세: 상대 기력 감소)');
   for (const [id, w] of Object.entries(WEAPONS)) if (id !== 'tizona') assert.ok(!w.awe, `${id} 에 위세가 있으면 안 됨`);
   const Z = getWeapon('zweihander');
   const mass = (w) => w.buildParts({}).reduce((a, p) => a + p[2][0], 0);

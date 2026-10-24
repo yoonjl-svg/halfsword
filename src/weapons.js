@@ -1839,7 +1839,7 @@ const TZ = {
 const tizona = finalizeSpec('tizona', {
   nameKo: '티소나', nameEn: 'Tizona', tier: 'epic', school: 'iberian',
   desc: '엘 시드가 부카르를 쓰러뜨리고 얻은 명검.\n그의 적들은 티소나를 알아보고 두려움에 사로잡혔다.', // 사장님 글 (10/21 23:xx — 한 글자도 고치지 않는다)
-  ability: '위세: 막아 낸 상대의 기력 감소', // 에픽 특수 능력 (사장님 10/21 23:xx — 카드 능력 줄 문구 그대로)
+  ability: '위세: 상대 기력 감소', // 에픽 특수 능력 — 사장님 글 (10/24 11:2x '티소나 위세 설명 짧게 바꾸자 - 위세: 상대 기력 감소' · 전 10/21 '위세: 막아 낸 상대의 기력 감소') — 고치지 않는다
   awe: true, // '위세': 이 칼의 공격이 막히면 막은 쪽 기력 − (값 config.js WEAPON_ABILITY · 계산 stamina.js spendAweDrain)
   grip: 'two-hand', material: 'steel',
   hiltLength: TZ.hilt, bladeLength: TZ.blade, gripAlong: TZ_GRIP.gripAlong,
