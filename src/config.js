@@ -873,6 +873,7 @@ export const SECRET = {
   //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). 10/24 AI 도 같은 칸을 본다(aiOpenSchools 'german' — ai.js mordTick · 확인표 2400~2405)
   deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정 · 10/24 AI 도) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기 — 사람 · AI). `?deMord=0`
   mordPress: 1.5, // 밀치기 누르기(fighter.barge phase 'press')가 끊기지 않고 이 초 이어지면 창(playerWindow) — 사장님 결정 '1.5로 해'(시간 사다리 '무장' 칸 · 확인표 2113). 누르기가 끝나면 셈 0. `?mordPress=0.6` 비교
+  mordNear: 1, // AI 몸 붙이기는 경합 중 자연스럽게 가까워졌을 때만 — 상대가 붙은 거리(M.clinch)에 든 순간 · 붙은 거리 안에서 칼이 맞닿은 순간 · 내 칼이 막혀 맞물린 채 붙은 거리 안에서 끝난 순간(인물 밀치기 확률) · 상대가 붙은 거리 밖으로 떨어지면 끝(쫓지 않음). 사장님 10/24 14:2x '무작정 밀며 들어가지 말고, 경합하다가 자연스럽게 가까워졌을 때 전략적으로 밀기 사용'(확인표 2438). 0 = 12:0x · 13:3x 판(칠 때를 본 순간 굴려 멀리서 붙이러 걸어감 · 칠 거리 밖까지 쫓음) `?mordNear=0`
   mordWalkStrike: 1, // AI 몸 붙이기(ai.js mordPressGo)로 걸어 들어가는 동안에도 칠 때가 오면 친다(간 보기 걸쇠는 밀치는 동안만) — 사장님 10/24 13:3x '걸어가며 치기도 같이 넣어. 걸어들어가는 시간 제한은 취소'(확인표 2436). 0 = 걸어가는 동안 안 침(10/24 12:0x 판) `?mordWalkStrike=0`
   // 동작 값 (사장님 확인 전 — 확인표 2185 · 2186): 다른 비기와 같은 길 틀(준비 → 베기 길 → 따라 지나감 → 굳음 — 손 빠르기 handSpeed · 서보 힘 창 power · 판정 배율 hitMul 그대로)에
   //  쥠 바꿈 · 겨눔 뒤집기 · 다시 세우기 셋을 더함 (src/mordschlag.js). grip 'reverse' = 칼날을 거꾸로 쥠(칼 든 손이 칼날 at 몫 자리 · 빈손이 그보다 칼끝 쪽 — 코등이 · 폼멜이 치는 끝, fighter.reverseGrip) ·
