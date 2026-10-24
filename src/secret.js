@@ -136,6 +136,11 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
     return { on: !!ctx, ctx };
   }
   if (!(W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge'))) return { on: false, ctx: null };
+  // 일본 들어옴 (10/25 — enterEvent): 다른 사건보다 먼저 본다(지난 거리를 스텝마다 적어야 넘음을 안다). ex.enterLine 이 있을 때만 — 사람 SECRET.gnsEnter · AI SECRET.gnsEnterAI
+  if (W.includes('foeEnter') && ex?.enterLine > 0) {
+    const en = enterEvent(s0, c, d0, ex, me);
+    if (en.on) return en;
+  }
   const dx = s0.cx - c.x;
   const dz = s0.cz - c.z;
   // preThreat 의 raising·charging 과 같은 꼴 — 지금 모습으로. 거리 창(cond.window)이 있는 비기(일본)는 preThreat 의 '가까움' 문턱 대신 그 창이 거리를 맡는다
@@ -186,6 +191,64 @@ function gilmokEvent(s0, c, d0, ex) {
   if (!ex.armed || prev == null || !(prev >= B && d0 < B)) return { on: false, ctx: null };
   const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0);
   return closing > SECRET.iberianInsideClosing ? { on: true, ctx: { ev: 'gilmok', closing } } : { on: false, ctx: null };
+}
+
+/**
+ * 일본 고노센 '들어옴' 사건 (10/25 01:3x 사장님 '이 경우에 창이 안 열리고 천천히 다가와서 가까이 붙어 버리던데?' — docs/strike/school_secret_2026-10-09.md §16):
+ *  발도 대기(ex.iaiArmed)인 채, 상대 가슴이 내 발도가 닿는 거리(ex.enterLine — gnsEnterLine)를 **안으로 넘는 그 스텝**(지난 스텝 거리 > 선 ≥ 이번 스텝 거리)에 한 번 —
+ *  그 넘음이 상대가 들어와서인가: 최근(GNS_RECENT 0.6 s — 아래 foeRecover 의 '방금' 과 같은 시간) 상대 가슴의 나 쪽 빠르기 > 0 이고 > 내 가슴의 상대 쪽 빠르기.
+ *  내가 걸어 들어가 선을 넘은 것은 상대가 '들어온' 것이 아니다. 문턱 수가 없다(길목 지키기 gilmokEvent 는 0.3 m/s 문턱).
+ *  첫 꼴은 길목과 같은 0.3 m/s 문턱이었으나 AI 는 0.1 ~ 0.25 m/s 로 기어 들어와(넘는 스텝 p50 0.18 ~ 0.26 m/s) 선 안에서 멈추고 유예 0.5 s 가 먼저 지나 창을 놓쳤다(§16-4).
+ *  최근 빠르기(0.6 s 지수 평균)로 보는 까닭: 천천히 걷는 상대의 가슴 빠르기는 걸음마다 0 근처로 출렁인다(시험 걸음 0.47 m/s 에서 −0.01 ~ 0.69).
+ *  창을 연 넘음 뒤로는(st.gnsEnter 'done') 준비가 풀리거나 상대가 선 밖에 iaiArmTime 머물 때까지 다시 걸지 않는다 — 선 언저리에 선 상대가 흔들려 선을 오가도 창이 거듭 뜨지 않게
+ *  (길목 '한 번 준비에 한 번'과 같은 틀). 칼을 듦 · 달려듦 · 헛침 창은 그대로. 칼을 들지도 달려들지도 않고 천천히 걸어 드는 상대에게도 창이 열린다.
+ *  근거: 出端(데바나) — 상대가 나서는 때를 친다(兵法家伝書 p16/15 「一ッ上れば、つけて打」 [원문] — 유령 패시브 debana 와 같은 출처) · 그 때를 '내 간격 선을 넘는 때'로 읽음 [해석]
+ *  ex = { enterLine, iaiArmed, st, dt } · me = 나(가슴 빠르기 — 없으면 0) — st 에 지난 거리 gnsPrevD · 최근 빠르기 gnsFoeIn · gnsMeIn · 넘음 gnsEnter · 선 밖 시간 gnsOutT. 굴림 없음
+ */
+const GNS_RECENT = 0.6;
+function enterEvent(s0, c, d0, ex, me) {
+  const st = ex.st;
+  const prev = st.gnsPrevD;
+  st.gnsPrevD = d0;
+  const ux = (s0.cx - c.x) / d0;
+  const uz = (s0.cz - c.z) / d0;
+  const v = me?.bodies?.chest?.linvel();
+  const k = Math.min(1, (ex.dt ?? 0) / GNS_RECENT);
+  st.gnsFoeIn = (st.gnsFoeIn ?? 0) + (-(s0.vx * ux + s0.vz * uz) - (st.gnsFoeIn ?? 0)) * k; // 상대 가슴이 나 쪽으로 (m/s · 최근)
+  st.gnsMeIn = (st.gnsMeIn ?? 0) + ((v ? v.x * ux + v.z * uz : 0) - (st.gnsMeIn ?? 0)) * k; // 내 가슴이 상대 쪽으로
+  const B = ex.enterLine;
+  if (!ex.iaiArmed) {
+    st.gnsEnter = null; // 준비 풀림 → 다음 준비에서 다시
+    return { on: false, ctx: null };
+  }
+  if (d0 > B) {
+    st.gnsOutT = (st.gnsOutT ?? 0) + (ex.dt ?? 0);
+    if (st.gnsEnter === 'done' && st.gnsOutT >= SECRET.iaiArmTime) st.gnsEnter = null; // 선 밖에 준비 시간만큼 머물면 다시 걸 수 있다 (준비 셈과 같은 수)
+    return { on: false, ctx: null };
+  }
+  st.gnsOutT = 0;
+  if (prev == null || !(prev > B) || st.gnsEnter === 'done') return { on: false, ctx: null };
+  if (!(st.gnsFoeIn > 0 && st.gnsFoeIn > st.gnsMeIn)) return { on: false, ctx: null }; // 내가 들어가 넘음 (또는 둘 다 서 있음)
+  st.gnsEnter = 'done';
+  return { on: true, ctx: { ev: 'enter', closing: st.gnsFoeIn, meIn: st.gnsMeIn } };
+}
+
+/** 고노센 들어옴 선 = 내 발도가 닿는 거리 — secretCond 의 발도 창 위 끝 그대로(맞닿기 + iaiStep + iaiMargin) · iai 0 이면 옛 창 위 끝(reach + japaneseReach + japaneseFar). view = { reach, contact } */
+export function gnsEnterLine(view) {
+  return SECRET.iai ? view.contact + SECRET.iaiStep + SECRET.iaiMargin : view.reach + SECRET.japaneseReach + SECRET.japaneseFar;
+}
+
+/**
+ * 고노센 준비가 쌓이고 이어지는 '밖' (사람 · AI 같은 셈 — IaiArm.tick 의 outside): 상대 칼 거리(view.foeReach) 밖.
+ *  긴 칼 상대 규칙(long — SECRET.gnsLong, 제안 · 기본 끔): 상대 칼 거리 ≥ 내 발도가 닿는 거리(띠가 빈 짝 — 상대 칼 거리 밖에서는 발도가 안 닿음)면,
+ *  이미 준비된 채로는 상대 가슴이 내 발도가 닿는 거리 밖에 있는 동안도 밖으로 친다 — 유예(iaiArmGrace)가 그 사이에서 다 지나 버리지 않고 들어옴 사건까지 이어짐.
+ *  새로 준비를 쌓는 것은 그대로 상대 칼 거리 밖에서만. long 끔이면 d0 > foeReach 그대로(옛 셈)
+ */
+export function gnsOutside(d0, view, armed, long) {
+  if (d0 > view.foeReach) return true;
+  if (!long || !armed) return false;
+  const L = gnsEnterLine(view);
+  return view.foeReach >= L && d0 > L;
 }
 
 /** 비기 조건 (cond) — 굴림 없음. view = { reach, foeReach, clinch } */
@@ -626,7 +689,7 @@ export class PlayerSecretWatch {
     if (S.when === 'parry') this.parryTick(dt, BIND.natural ? bindTouch(me, foe) : touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11) · 자연 바인드 실험이면 넓은 맞부딪힘도 (bindTouch)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.when === 'press') this.pressTick(dt, busy);
-    if (S.do?.instant) this.iaiArm.tick(dt, d0 > V.foeReach, sw || busy);
+    if (S.do?.instant) this.iaiArm.tick(dt, gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), sw || busy); // 긴 칼 상대 규칙(제안 · 기본 끔)이 아니면 d0 > foeReach 그대로
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
@@ -653,7 +716,8 @@ export class PlayerSecretWatch {
     // 상대 사건 (AI secretScan 과 같은 꼴: 사건 한 번에 한 번, 0.3 s 그치면 다시 건다)
     const r = me.right(_r);
     const E = this.ev;
-    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비)
+    const enter = SECRET.gnsEnter && S.do?.instant ? { enterLine: gnsEnterLine(V), iaiArmed: V.armed } : null; // 일본 들어옴 (10/25 — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 듦)
+    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed, ...enter }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비) · 일본 들어옴
     if (!on) {
       E.off += dt;
       if (E.off > 0.3) E.armed = true;
