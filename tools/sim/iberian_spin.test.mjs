@@ -341,3 +341,32 @@ test('작은 원 (10/24 circleR 0): 반지름 8 · 15 px 원도 싱지르가 한
     assert.ok(!b.fired && !b.circle, `${s} ${rp}px 하한 0.15 → 안 읽힘`);
   }
 });
+
+// ── 10/24 12:5x 사장님 '넘어지지 않으려면 다리가 넓게 딛거나 무릎 관절로 몸을 분산 지지해야 하는데 두 다리가 딱 붙어서 곧게 편 채 같은 방향을 지지하고 있음' (§17) ──
+const FOOT_LON = 0.45; // 시험 눈금 — 받아 멈춤 끝 두 발 앞뒤 (이베리아 자세 guardLength 0.62 의 3/4 언저리 · 판 값 아님)
+const PEL_MID = 0.1; // 시험 눈금 — 골반이 두 발 가운데에서 앞뒤로 벗어난 거리 (판 값 아님)
+test('발디딤 (10/24 feet): 한 바퀴 끝 + 받아 멈춤 뒤 두 발이 펜싱 자세 너비(앞뒤 · 옆)로 · 골반은 두 발 사이 · 무게 가운데 발바닥 안 · 안 엇갈림 · 대본 뒤 묵은 지나 딛기 없음 — 끄면 두 발이 붙음', async () => {
+  const { runFeet } = await import('./iberian_spin_feet.mjs');
+  const cases = [
+    ['tizona', 'langort', 'circle', { r: 80, T: 0.8, a0: 180, dir: 'ccw', close: 380 }], // 사장님 그림 판 (티소나 큰 원)
+    ['zweihander', 'ochsR', 'circle', { r: 80, T: 0.8, a0: 180, dir: 'cw', close: 380 }],
+    ['flamberge', 'langort', 'direct', { dir: 'ccw' }],
+  ];
+  assert.equal(SECRET.ibSpin.feet, 1);
+  for (const [w, s, input, c] of cases) {
+    const r = runFeet(w, s, input, c);
+    const n = `${w} ${s} ${input}`;
+    assert.ok(r.fired && !r.fell && r.feet.why === 'done', `${n} 한 바퀴 · 서 있음`);
+    const F = r.feet.fin;
+    assert.ok(F.lon >= FOOT_LON, `${n} 받아 멈춤 끝 앞뒤 ${F.lon.toFixed(2)}`);
+    assert.ok(F.lat >= 0.2, `${n} 옆 ${F.lat.toFixed(2)}`);
+    assert.ok(Math.abs(F.pelFwd) <= PEL_MID, `${n} 골반 − 두 발 가운데 ${F.pelFwd.toFixed(2)}`);
+    assert.ok(F.margin > -0.02, `${n} 무게 가운데 여유 ${F.margin.toFixed(3)}`);
+    assert.equal(r.feet.spin.cross, 0, `${n} 도는 동안 엇갈림`);
+    assert.ok(r.feet.after.lon > 0.2, `${n} 끝난 뒤 0.6 s 앞발이 앞 ${r.feet.after.lon.toFixed(2)}`);
+  }
+  // 끄면 (10/24 02:5x 판): 사장님 그림 판은 받아 멈춤 끝에도 두 발이 앞뒤로 붙어(앞뒤 < 0.2 m) 골반이 두 발 앞에 남는다
+  const [w, s, input, c] = cases[0];
+  const b = await withSpin({ feet: 0 }, () => runFeet(w, s, input, c));
+  assert.ok(b.feet.fin.lon < 0.2, `끔 앞뒤 ${b.feet.fin.lon.toFixed(2)}`);
+});

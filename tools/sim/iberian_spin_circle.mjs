@@ -75,8 +75,9 @@ function circlePath(c, seed) {
   return fr;
 }
 
-/** 판 하나 — w 무기 · start 자세 패드 · input 'direct' | 'circle' · c 원 { r, T, a0, dir, close } (direct 는 { dir }) · target 'none' | 'stand'. 시험(iberian_spin.test.mjs)도 쓴다 */
-export function runCircle(w, start, input, c, target = 'none') {
+/** 판 하나 — w 무기 · start 자세 패드 · input 'direct' | 'circle' · c 원 { r, T, a0, dir, close } (direct 는 { dir }) · target 'none' | 'stand'. 시험(iberian_spin.test.mjs)도 쓴다
+ *  hook (10/24 12:5x — 발디딤 재기 iberian_spin_feet.mjs): 물리 스텝마다 hook({ G, P, E, tFire, tEnd }) — 읽기만 · 없으면 아무 일 없음 */
+export function runCircle(w, start, input, c, target = 'none', hook = null) {
   if (REACH[w] == null) {
     const G0 = newRound({ seed: 7, weapon: w, weapon2: 'longsword', gap: 8, walls: false });
     REACH[w] = G0.player.swordArt.measure.reach;
@@ -225,6 +226,7 @@ export function runCircle(w, start, input, c, target = 'none') {
   while (G.t < 12 && (tEnd == null || G.t < tEnd + 0.65)) {
     G.step();
     after();
+    hook?.({ G, P, E, tFire, tEnd });
     if (input === 'circle' && tFire == null && fi >= path.length && armAfter === undefined) {
       tPathEnd ??= G.t;
       if (G.t >= tPathEnd + 0.3) armAfter = !!W.spinArm.armed;
