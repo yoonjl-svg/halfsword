@@ -2,14 +2,17 @@
 //  mordschlag_ai.mjs — AI 모르트슐라크 재기 (10/24 사장님 12:0x 'ai도 비기 쓰게 해' — ai.js mordTick · SECRET.aiOpenSchools 'german' · docs/strike/german_mordschlag_2026-10-22.md §12)
 //   독일 인물 AI(숙련도 AI_PROFICIENCY.secretAt 이상 — 아르토리아 · 광기의 아르토리아 5) 대 맞수. --mord=0 = 독일을 aiOpenSchools 에서 뺀 판(같은 시드 견줌 — 바꾸기 전).
 //
-//  node tools/sim/mordschlag_ai.mjs [--heroes=artoria] [--opps=human,still,block,back,backblock,isolde,liao,omari,tome,minami] [--seeds=1-6] [--dur=30] [--mord=1|0] [--json=파일] [--quiet]
+//  node tools/sim/mordschlag_ai.mjs [--heroes=artoria] [--opps=human,still,block,back,backblock,isolde,liao,omari,tome,minami] [--seeds=1-6] [--dur=30] [--mord=1|0] [--walkStrike=1|0] [--json=파일] [--quiet]
+//   --walkStrike: SECRET.mordWalkStrike (10/24 13:3x 걸어가며 치기 — 0 = 걸어가는 동안 안 침 12:0x 판) · --near: SECRET.mordNear (10/24 14:2x 자연스럽게 가까울 때만 — 0 = 옛 판)
+//   맞수 hug = 붙어 버티는 사람 봇: 상대 가슴이 닿는 거리(CLOSE.reach) 밖이면 걸어 들어가 그 안에서 서서 막기 단추를 쥠(치지 않음 · 밀지 않음)
 //   맞수: 인물 id = 인물 AI(사람 자리 · 인물 시트 그대로 — AI2Class) ·
 //    사람 자리 봇(롱소드 · 용사의 눈물 = 기력 무한 · 칼은 기본 자세 · 막기 단추 · 스틱만 — 사람 반응 0.12 ~ 0.30 s, mordschlag_duel.mjs 와 같은 수):
 //    human = 기본 AI 'normal'(무작위 성격 — fights12 의 사람 자리와 같은 몸) + 기력 무한 · still = 아무 입력 없음 · block = 막기 단추를 늘 쥠 ·
 //    back = 누르기를 느끼면(상대 밀치기 누르기가 시작되고 반응 시간 뒤) 스틱 뒤로 — 누르기가 끝날 때까지 · backblock = block + back
 //   판마다: 이긴 쪽(먼저 죽은 쪽이 짐 · 같은 스텝이거나 끝까지 살면 무) · 영웅 누르기 시작 수 · 1.5 s(SECRET.mordPress) 넘게 이어진 누르기 수 · 가장 긴 누르기 · 누르기 끝 까닭 ·
 //    몸 붙이기로 간 수(ai.js mordPressGo) · 창 수 · 낸 수 · 맞힘(그 비기 동안 상대 아픔 +0.05 — 검술 층 run.landed) · 머리 맞음 · 머리 J(투구 배율 곱함 — 일격 ~ 끝 + 1.5 s) · 넘어짐(일격 ~ 끝 + 1.5 s 안 무릎 · 쓰러짐 · 일어나기) ·
-//    기절 · 죽음(같은 창 — 의식 0) · 막힘(운동학 길 상대 칼 먼저) · 준 · 받은 상처 심각도 합 · 판 길이
+//    기절 · 죽음(같은 창 — 의식 0) · 막힘(운동학 길 상대 칼 먼저) · 준 · 받은 상처 심각도 합 · 판 길이 ·
+//    걸어 들어간 덩이(ai.js mordWalking — 붙이러 간 뒤 밀치기 전) 하나하나 [초, 끝: barge 밀치기 · attack 걸어가며 침 · 그 밖 꼴(defend · withdraw …)]
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { newRound, AI, CONFIG, DT } from './harness_m.mjs';
@@ -35,6 +38,15 @@ const range = (s) => {
 };
 const { SECRET, CLOSE, SKILL } = CONFIG;
 if (arg('mord', '1') === '0') SECRET.aiOpenSchools = SECRET.aiOpenSchools.filter((s) => s !== 'german');
+if (args.walkStrike != null) SECRET.mordWalkStrike = +args.walkStrike ? 1 : 0; // 걸어가며 치기 (10/24 13:3x — 0 = 12:0x 판)
+if (args.near != null) SECRET.mordNear = +args.near ? 1 : 0; // 자연스럽게 가까울 때만 밀기 (10/24 14:2x — 0 = 12:0x · 13:3x 판)
+// --nearStrike: 견줌만(판에 없음) — 붙은 거리에서 붙는 반 걸음('clinch' · 'bind' · 'after')에도 걸어가며 치기를 건다
+if (args.nearStrike) {
+  AI.prototype.mordWalking = function () {
+    const P = this.press;
+    return !!P?.go && !P.goBarge && !this.me.barge && P.goWhy !== 'barge';
+  };
+}
 const DUR = +arg('dur', 30);
 // --why=watch,clinch: 몸 붙이기 사건 가운데 이것만 (ai.js mordPressGo — 시험 견줌 · 'barge' 걸쇠는 늘)
 if (args.why) {
@@ -44,8 +56,36 @@ if (args.why) {
     return W.has(why) ? orig.call(this, why) : false;
   };
 }
+// --walkVar=react: 견줌만(판에 없음) — 걸어 들어가는 동안 간 보기의 '칠 때 보기'(기회 굴림 decideTimer)는 쉬고 낌새 받아치기(preThreat · seize · 막기)만 둔다
+if (args.walkVar === 'react') {
+  const W0 = AI.prototype.watch;
+  AI.prototype.watch = function (...a) {
+    if (!this.mordWalking?.()) return W0.apply(this, a);
+    const t0 = this.decideTimer;
+    this.decideTimer = 1e9;
+    const r = W0.apply(this, a);
+    if (this.decideTimer >= 1e8) this.decideTimer = t0;
+    return r;
+  };
+}
+// --walkCut=2: 견줌만(판에 없음 — 사장님 13:2x 안 · 13:3x 취소) — 걸어 들어가기가 이 초 안에 닿는 거리에 못 들면 붙이기를 끝냄
+if (args.walkCut) {
+  const C = +args.walkCut;
+  const M0 = AI.prototype.mordTick;
+  AI.prototype.mordTick = function (dt, k) {
+    const out = M0.call(this, dt, k);
+    if (this.mordWalking()) {
+      this.press.wt = (this.press.wt ?? 0) + dt;
+      if (!this.closeInside && this.press.wt >= C) {
+        this.press.go = false;
+        this.press.cuts = (this.press.cuts ?? 0) + 1;
+      }
+    } else this.press.wt = 0;
+    return out;
+  };
+}
 const bump = (o, k) => (o[k] = (o[k] ?? 0) + 1);
-const BOTS = new Set(['human', 'still', 'block', 'back', 'backblock']);
+const BOTS = new Set(['human', 'still', 'block', 'back', 'backblock', 'hug']);
 const FALL = new Set(['kneel', 'down', 'getup']);
 
 function fight(heroId, oppId, seed) {
@@ -68,7 +108,7 @@ function fight(heroId, oppId, seed) {
       P.skill.corrTip = SKILL.corrTip;
       P.skill.autoGuard = true;
       P.canShove = true;
-      if (oppId === 'block' || oppId === 'backblock') {
+      if (oppId === 'block' || oppId === 'backblock' || oppId === 'hug') {
         guard = new PlayerParryGuard(P, E);
         P.stamina.controller = guard; // main.js 와 같게
         guard.held = true;
@@ -77,11 +117,14 @@ function fight(heroId, oppId, seed) {
   }
   let rs = (seed * 2654435761) >>> 0;
   const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
-  const r = { hero: heroId, opp: oppId, seed, presses: 0, press15: 0, maxPress: 0, ends: {}, windows: 0, fired: 0, landed: 0, headHits: 0, headJ: [], falls: 0, ko: 0, blocked: 0, backs: 0, p15By: {}, firedBy: {} };
+  const r = { hero: heroId, opp: oppId, seed, goStart: {}, walks: [], recut: [], presses: 0, press15: 0, maxPress: 0, ends: {}, windows: 0, fired: 0, landed: 0, headHits: 0, headJ: [], falls: 0, ko: 0, blocked: 0, backs: 0, p15By: {}, firedBy: {} };
   let pressRun = null; // 영웅 누르기 한 덩이 { b, t }
   let strike = null; // 일격 하나 { t0, tEnd, headHit, fell, ko }
   let react = null; // 봇 반응 { at, b }
   let lastRun = null;
+  let walk = null; // 걸어 들어가는 덩이 { t0 }
+  let lastCut = null; // 마지막으로 끊긴 때 (--walkCut)
+  let wasGo = false;
   G.combat.hooks.onWound = ((prev) => (att, vic, w, pt, pr) => {
     prev?.(att, vic, w, pt, pr);
     if (att !== E || vic !== P || !strike) return;
@@ -101,7 +144,8 @@ function fight(heroId, oppId, seed) {
       r.backs++;
     }
     if (!pressing && react && P.foeDistance() > CLOSE.reach(E.weapon)) react = null;
-    const y = !P.alive || P.state !== 'stand' ? 0 : backNow ? -1 : 0;
+    const hugIn = oppId === 'hug' && P.foeDistance() > CLOSE.reach(P.weapon); // 붙어 버팀: 닿는 거리 밖이면 걸어 들어감
+    const y = !P.alive || P.state !== 'stand' ? 0 : backNow ? -1 : hugIn ? 1 : 0;
     P.move.set(0, y);
     P.stickX = 0;
     P.stickY = y;
@@ -119,6 +163,22 @@ function fight(heroId, oppId, seed) {
   let tDeadE = null;
   for (let i = 0; i < DUR / DT; i++) {
     G.step();
+    // 붙이기 시작 (때별 — 밀치기 걸쇠 'barge' 포함)
+    const goNow = !!ai.press?.go;
+    if (goNow && !wasGo) bump(r.goStart, ai.press.goWhy ?? '-');
+    wasGo = goNow;
+    // 걸어 들어가는 덩이 (붙이러 간 뒤 밀치기 전)
+    const walking = !!ai.mordWalking?.();
+    if (walking && !walk) {
+      walk = { t0: G.t - DT, cuts: ai.press?.cuts ?? 0 };
+      if (lastCut != null) r.recut.push(+(walk.t0 - lastCut).toFixed(3)); // 끊긴 뒤 다시 걸어 들어가기까지 (--walkCut)
+      lastCut = null;
+    } else if (!walking && walk) {
+      const cut = (ai.press?.cuts ?? 0) > walk.cuts;
+      r.walks.push([+(G.t - DT - walk.t0).toFixed(3), cut ? 'cut' : E.barge ? 'barge' : ai.mode === 'attack' ? 'attack' : ai.secretRun ? 'secret' : ai.mode]);
+      if (cut) lastCut = G.t - DT;
+      walk = null;
+    }
     // 영웅 누르기 덩이
     const b = E.barge?.phase === 'press' ? E.barge : null;
     if (b && (!pressRun || pressRun.b !== b)) {

@@ -274,3 +274,61 @@ test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누�
     assert.equal(mordHeadReach(E), false, '가슴 3 m — 머리가 멂');
   } finally { g.world.free(); }
 });
+
+test('AI 걸어가며 치기 (10/24 13:3x 사장님 \'걸어가며 치기도 같이 넣어\' — SECRET.mordWalkStrike 1): 붙으러 걸어 들어가는 동안은 간 보기가 칠 때를 본다 · 밀치는 동안은 걸쇠 · 0 = 12:0x 판(걸어가는 동안도 걸쇠)', () => {
+  assert.equal(SECRET.mordWalkStrike, 1);
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 1.9, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 }, close: { rate: 0.25, kind: 'barge', then: 'cut' } } });
+  const P = g.player, E = g.enemy, ai = g.ai;
+  try {
+    assert.ok(ai.press);
+    let seen = 0;
+    ai.preThreat = () => { seen++; return true; }; // 걸쇠 바로 뒤 — 불렸으면 간 보기가 칠 때를 보러 간 것
+    const look = () => { seen = 0; ai.watch(DT, null, 1.9, null); return seen > 0; };
+    ai.press.go = false;
+    assert.equal(look(), true, '붙이기 아님 — 평소 간 보기');
+    ai.press.go = true; ai.press.goWhy = 'watch'; ai.press.goBarge = false; E.barge = null;
+    assert.equal(ai.mordWalking(), true);
+    assert.equal(look(), true, '걸어 들어가는 동안 — 칠 때를 본다');
+    SECRET.mordWalkStrike = 0;
+    try { assert.equal(look(), false, '0 = 걸어가는 동안도 먼저 치지 않음'); } finally { SECRET.mordWalkStrike = 1; }
+    E.barge = { phase: 'press' };
+    assert.equal(ai.mordWalking(), false);
+    assert.equal(look(), false, '밀치는 동안은 먼저 치지 않음');
+    E.barge = null; ai.press.goWhy = 'barge';
+    assert.equal(ai.mordWalking(), false, '밀치기 걸쇠(이미 붙어 밂)는 걷기가 아님');
+  } finally { E.barge = null; g.world.free(); }
+});
+
+test('AI 자연스럽게 가까울 때만 밀기 (10/24 14:2x 사장님 \'무작정 밀며 들어가지 말고, 경합하다가 자연스럽게 가까워졌을 때\' — SECRET.mordNear 1): 칠 때 굴림 없음 · 붙은 거리의 반 걸음은 밀기의 일부 · 붙은 거리 밖으로 떨어지면 끝 · 0 = 12:0x 판', () => {
+  assert.equal(SECRET.mordNear, 1);
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 1.9, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 }, close: { rate: 1, kind: 'barge', then: 'cut' } } });
+  const P = g.player, E = g.enemy, ai = g.ai;
+  try {
+    E.foe = P; P.foe = E; // 판 스텝 전 — 거리를 잴 수 있게
+    const calls = [];
+    const go0 = ai.mordPressGo.bind(ai);
+    ai.mordPressGo = (why) => { calls.push(why); return go0(why); };
+    // 칠 때를 본 순간: 14:2x 는 붙이기 굴림 없이 보통 AI 대로 (간 보기 결정 자리를 바로 부름)
+    ai.opportunity = () => ({ score: 9, kind: 'patience' });
+    let attacked = 0;
+    ai.startAttack = () => { attacked++; return true; };
+    ai.preThreat = () => false; ai.seize = () => false; ai.passiveWatch = () => false; ai.pickTech = () => null; ai.guardTimer = 99; // 간 보기의 다른 갈래는 쉼 (결정 자리만 본다)
+    ai.decideTimer = 0; ai.watch(DT, null, 1.9, null);
+    assert.deepEqual(calls, []);
+    assert.equal(attacked, 1, '보통 AI 대로 친다');
+    SECRET.mordNear = 0;
+    try { ai.decideTimer = 0; ai.watch(DT, null, 1.9, null); assert.deepEqual(calls, ['watch'], '0 = 칠 때 굴림(12:0x 판)'); } finally { SECRET.mordNear = 1; }
+    // 붙은 거리에서 붙는 반 걸음은 밀기의 일부 — 걸어가며 치기 대상 아님 (12:0x 판은 걷기)
+    ai.press.go = true; ai.press.goBarge = false; ai.press.goWhy = 'clinch'; E.barge = null;
+    assert.equal(ai.mordWalking(), false);
+    SECRET.mordNear = 0;
+    try { assert.equal(ai.mordWalking(), true); } finally { SECRET.mordNear = 1; }
+    // 상대가 붙은 거리 밖(가슴 1.9 m > M.clinch)이면 끝 — 쫓지 않음 · 12:0x 판은 칠 거리 안이면 이어 감
+    ai.mode = 'watch'; ai.d = E.foeDistance();
+    assert.ok(ai.d > ai.M.clinch && ai.d < ai.holdDist() + ai.watchReachOut());
+    ai.mordTick(DT, false);
+    assert.equal(ai.press.go, false, '붙은 거리 밖 — 끝');
+    SECRET.mordNear = 0;
+    try { ai.press.go = true; ai.press.goWhy = 'clinch'; ai.mordTick(DT, false); assert.equal(ai.press.go, true, '12:0x 판은 칠 거리 안이면 이어 감'); } finally { SECRET.mordNear = 1; ai.press.go = false; }
+  } finally { E.barge = null; g.world.free(); }
+});

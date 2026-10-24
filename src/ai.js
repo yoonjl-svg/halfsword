@@ -666,8 +666,9 @@ export class AI {
     // 싱지르 무장 (10/24): 같은 걸쇠 — 무장된 동안은 먼저 치지 않고 간을 보며(발은 holdDist 그대로 다가섬) 상대가 칼끝 거리 + aiFire 안에 들면 spinTick 이 한 바퀴.
     //  걸쇠가 없으면 롤랑이 무장한 뒤 상대가 칼끝 거리 + 0.6 m 에 오자마자 보통 공격을 열어 무장이 풀렸다(첫 시험 — 낸 수 0). 들어오는 칼(위 respond)은 그대로 받는다
     if (this.spinArm?.armed) return;
-    // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 붙으러 들어가는 · 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다
-    if (this.press?.go) return;
+    // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다.
+    //  붙으러 걸어 들어가는 동안은 칠 때가 오면 친다(10/24 13:3x 사장님 '걸어가며 치기도 같이 넣어' — SECRET.mordWalkStrike · 0 이면 걸어가는 동안도 걸쇠 — 12:0x 판). 치면 붙이기는 끝(mordTick — 간 보기를 벗어남)
+    if (this.press?.go && !(SECRET.mordWalkStrike && this.mordWalking())) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
@@ -693,7 +694,7 @@ export class AI {
     const reachOut = this.watchReachOut();
     if (this.passives.length && this.passiveWatch(s, d, opp, reachOut)) return; // 패시브 (standoff·foeStepIn) — 목록이 비면 건너뜀
     if (opp.score >= need && d < this.holdDist() + reachOut) {
-      if (this.press && this.mordPressGo('watch')) return; // 모르트슐라크 (10/24): 칠 때를 본 순간 인물 밀치기 확률로 베는 대신 몸을 붙여 민다
+      if (this.press && !SECRET.mordNear && this.mordPressGo('watch')) return; // 모르트슐라크 (10/24 12:0x 판 — SECRET.mordNear 0 일 때만): 칠 때를 본 순간 인물 밀치기 확률로 베는 대신 몸을 붙여 민다 · 14:2x 부터는 보통 AI 대로 친다
       this.startAttack(this.pickTech(s, opp.kind), opp.kind);
     }
   }
@@ -1471,6 +1472,8 @@ export class AI {
       if (this.binds) this.binds.strike(SECRET.iberianHurt === 'wound' ? (this.foe.wounds?.length ?? 0) > (this.atkWounds0 ?? 0) : this.hitLanded, this.bound || this.atkClash); // 이베리아 맺힘 셈: 칼끼리 닿고 피해 없음 +1 · 피해 0 · 헛침 그대로
       if (this.secretCombo(d) || this.secretFirstHit(d)) return;
     }
+    // 모르트슐라크 몸 붙이기 'after' (10/24 14:2x — SECRET.mordNear): 내 칼이 막혀 맞물린 채(칼끼리 닿음 · 못 벰) 붙은 거리(M.clinch) 안에서 끝났으면 — 둘이 엉킨 채 가까움 — 인물 밀치기 확률로 이어 치기 · 물러남 대신 붙어 민다
+    if (this.press && SECRET.mordNear && this.bound && !this.hitLanded && this.foe.alive && d < this.M.clinch && this.mordPressGo('after')) return;
     // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
     //  간격 끝(clinch 근처)에서도 짧게 이어 칠 수 있어야 몰아치는 상대에게 계속 밀리지 않는다
     const maxChain = this.obsession > 0.5 ? 3 : 2; // 물고 늘어질 땐 한 번 더 이어 친다
@@ -2044,6 +2047,12 @@ export class AI {
     const inC = this.d < this.M.clinch;
     if (inC && !P.inClinch && !busy && (this.mode === 'watch' || this.mode === 'withdraw')) this.mordPressGo('clinch');
     P.inClinch = inC;
+    // 'bind' (10/24 14:2x — SECRET.mordNear): 붙은 거리 안에서 칼끼리 맞닿은 순간(바인드 — 막고 버팀 · 칼 맞대고 버팀) 간 보기 · 물러남 · 막기 중이면 인물 밀치기 확률로 붙어 민다
+    if (SECRET.mordNear) {
+      const touch = inC && !busy && bladesTouch(me, this.foe);
+      if (touch && !P.touch && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) this.mordPressGo('bind');
+      P.touch = touch;
+    }
     // 밀치기(닿는 거리 사건 굴림 — closeQuarters)로 민 때도 누르기가 이어지는 동안 먼저 치지 않는다 (몸이 붙으면 계속 민다 — watch 걸쇠)
     if (me.barge && !P.go && !busy) {
       P.go = true;
@@ -2052,7 +2061,7 @@ export class AI {
     // 몸 붙이기 끝: 밀치기가 끝났거나(어떤 까닭이든 — 그 뒤는 인물 then 그대로) · 밀기 전에 간 보기를 벗어났거나(막기 · 물러남 · 공격) · 상대가 칠 거리 밖으로 갔으면
     if (P.go) {
       if (me.barge) P.goBarge = true;
-      else if (P.goBarge || busy || this.mode !== 'watch' || !this.foe.alive || this.foe.state !== 'stand' || this.d >= this.holdDist() + this.watchReachOut()) P.go = P.goBarge = false;
+      else if (P.goBarge || busy || this.mode !== 'watch' || !this.foe.alive || this.foe.state !== 'stand' || this.d >= (SECRET.mordNear ? this.M.clinch : this.holdDist() + this.watchReachOut())) P.go = P.goBarge = false; // 14:2x: 상대가 붙은 거리 밖으로 떨어지면 끝(쫓지 않음) · 12:0x 판은 칠 거리 밖까지
     }
     if (P.win > 0) P.win -= dt; // 사람 창(PlayerSecretWatch.update)과 같은 차례: 창 시간을 먼저 줄이고 셈
     if (pressStep(P, dt, me.barge?.phase === 'press', busy, P.win > 0, secretVal(this.secret.cond.press))) {
@@ -2066,9 +2075,11 @@ export class AI {
 
   /**
    * 모르트슐라크 몸 붙이기 (10/24 — 'ai도 비기 쓰게 해'): 이 인물은 몸이 붙는 때가 없었다(아르토리아 60 판 — 누르기 0 · 가슴 사이 가장 가까이 0.89 m > CLOSE.reach 0.77 ·
-   *  상대가 붙은 거리 M.clinch 1.2 안에 들면 물러남). 그래서 두 때에 인물의 밀치기 확률(persona.close.rate — 아르토리아 0.25, 닿는 거리 사건과 같은 굴림)로 몸을 붙인다:
-   *  'watch' = 간 보기에서 칠 때를 본 순간(공격을 열 자리 — 베는 대신) · 'clinch' = 상대가 붙은 거리에 든 순간(간 보기 · 물러남 — 물러나는 대신, mordTick).
-   *  붙이기 = 닿는 거리까지 곧장 걸어 들어가(moveFeet) 밀치기(closeQuarters — 굴림 없이 closeWant) → 밀치는 동안 먼저 치지 않음(watch 걸쇠). 새 값 없음. 붙이기로 갔으면 true
+   *  상대가 붙은 거리 M.clinch 1.2 안에 들면 물러남). 그래서 인물의 밀치기 확률(persona.close.rate — 아르토리아 0.25, 닿는 거리 사건과 같은 굴림)로 몸을 붙인다.
+   *  14:2x 판(SECRET.mordNear 1 — 사장님 '경합하다가 자연스럽게 가까워졌을 때 전략적으로 밀기'): 'clinch' 상대가 붙은 거리에 든 순간(간 보기 · 물러남 — 물러나는 대신) ·
+   *   'bind' 붙은 거리 안에서 칼끼리 맞닿은 순간(간 보기 · 물러남 · 막기 — mordTick) · 'after' 내 칼이 막혀 맞물린 채 붙은 거리 안에서 끝난 순간(afterStrike) — 상대가 붙은 거리 밖으로 떨어지면 끝.
+   *  12:0x 판(mordNear 0): 'watch' 간 보기에서 칠 때를 본 순간(베는 대신 — 멀리서 걸어 들어감) · 'clinch'.
+   *  붙이기 = 닿는 거리 밖이면 그만큼 걸어 들어가(moveFeet — 붙은 거리에서는 반 걸음 안팎) 밀치기(closeQuarters — 굴림 없이 closeWant) → 밀치는 동안 먼저 치지 않음(watch 걸쇠). 새 값 없음. 붙이기로 갔으면 true
    */
   mordPressGo(why) {
     const C = this.persona.close;
@@ -2087,6 +2098,13 @@ export class AI {
       this.stepT = 0;
     }
     return true;
+  }
+
+  /** 몸 붙이기로 걸어 들어가는 중인가 (붙이러 간 뒤 아직 밀치기 전 — 걸어가며 치기 SECRET.mordWalkStrike 가 보는 때). 14:2x 판(mordNear 1)은 멀리서 걸어 들어가는 'watch' 만 —
+   *  붙은 거리에서 붙는 반 걸음('clinch' · 'bind' · 'after')은 밀기의 일부(걸쇠). 12:0x 판은 밀치기 걸쇠 'barge' 밖 모두 */
+  mordWalking() {
+    const P = this.press;
+    return !!P?.go && !P.goBarge && !this.me.barge && (P.goWhy === 'watch' || (!SECRET.mordNear && P.goWhy !== 'barge'));
   }
 
   /** 모르트슐라크를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 칼날 거꾸로 쥐기 · 운동학 길 · 기력 · 굳음). 냈으면 true */
