@@ -32,7 +32,7 @@ import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드�
 import { FINISH, armRay, updateFinish, finishHands, cleaveFinish, cleaveRaise, cleaveReach, cleaveAnyHeight } from './finish.js';
 import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'; // 약한 자세 겨눔 탭 찌르기 (FINISH.vital, 10/12)
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
-import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg, stanceSpread } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
 import { requestSpin, spinAbort, spinCutPose, spinCap, spinHandRest, spinLid } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
@@ -78,7 +78,7 @@ const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? 0.3;
  */
 const risolutoLungeReq = () => {
   const st = SECRET.risolutoStep ?? {};
-  const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'iaiStep'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}) };
+  const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'iaiStep'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}) };
   const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: !!SECRET.risolutoGlide, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
   return { moves, share: SECRET.risolutoShare ?? 1, hitMul: SECRET.hitMul, hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
 };
@@ -867,7 +867,10 @@ export class Skill {
       if (!R.ok) return this.secretEnd();
       run.landed = R.hit;
       if (run.landed) this.secretStats[run.S.name].landed++;
-      if (run.lunge) run.lungeRes = R; // 재기 (안다레 리솔루토 런지 — 막힘 · 미끄러짐 · 몸 미끄러짐)
+      if (run.lunge) {
+        run.lungeRes = R; // 재기 (안다레 리솔루토 런지 — 막힘 · 미끄러짐 · 몸 미끄러짐)
+        if (SECRET.risolutoStep?.recover && f.lungeReq) f.lungeRecover = { foot: R.foot ?? 0, t: 0 }; // 되돌아오기: 앞발이 디디면 뒤로 거둠 (lungeRecoverTick)
+      }
       f.secretHit = 1;
       run.stage = 'stiff';
       run.t = 0;
@@ -1022,6 +1025,32 @@ export class Skill {
     if (run.stage === 'stiff') {
       if (run.t >= run.stiffT) this.secretEnd();
     }
+  }
+
+  /**
+   * 런지 되돌아오기 (사장님 10/24 14:0x '앞발을 뒤로 회수하는 방식으로 자세 마무리' — 펜싱 리커버리): 런지 앞발이 디디면(그 기술 걸음이 끝나면) 굳음 동안
+   *  그 앞발을 내디딘 만큼(런지 앞발 걸음) 뒤로 거둔다 — 같은 다리 lunge 걸음 · fwd 음수 · 몸 따라감도 같은 배율로 뒤로(골반이 뒷발 쪽으로 돌아가 간격이 다시 벌어짐) ·
+   *  걸음 시간 SECRET.risolutoStep.recoverT (시간 사다리 0.4). 런지 걸음이 안 받아졌으면(발 묶임 · 걸음 없음) 거두지 않음. 옛 꼴(뒷발 끌어붙임)은 risolutoStep.draw 1 · recover 0
+   */
+  //  거두는 때: 앞발이 디딤 · 굳음이 끝남 둘 다 찼을 때 (디딘 뒤 굳음 끝까지 몸이 앞발에 실려 앞무릎이 굽고 뒷다리가 펴진 런지 자세가 나옴 — 몸이 다 설 때까지 기다리면
+  //   몸이 상대에 붙어 밀려 절반이 1.5 s 안에 못 거둠: 30 판 1 / 8).
+  //  거두는 길이 = 지금 두 발 앞뒤 간격 − 런지 전 간격(f.lungeSpread0 — 원래 겨눔 보폭까지). 1.5 s(굳음 시작부터 · 시간 사다리 1.5) 안에 안 차면 버림. 재기 f.lungeRecovered
+  lungeRecoverTick(dt) {
+    const f = this.f;
+    const R = f.lungeRecover;
+    if (!R) return;
+    const st = SECRET.risolutoStep ?? {};
+    if ((R.t += dt) > 1.5 || !f.alive || f.state !== 'stand' || !f.gait?.active || !f.lungeReq) {
+      f.lungeRecover = null;
+      return;
+    }
+    if (f.gait.req === f.lungeReq || this.sec) return; // 앞발이 아직 떠 있음 · 굳음 중
+    f.lungeRecover = null;
+    f.lungeReq = null;
+    const s1 = stanceSpread(f);
+    const back = s1 != null && f.lungeSpread0 != null ? s1 - f.lungeSpread0 : R.foot;
+    if (!(back > 1e-3)) return;
+    f.lungeRecovered = f.gait.requestStep({ kind: 'lunge', fwd: -back, side: 0, duration: st.recoverT ?? 0.4, ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}) }) ? { t: R.t, back } : null;
   }
 
   /** 비기를 끝낸다 (끝·끊김): 힘·판정 배율·몸의 힘을 되돌리고 조작으로. dropped = 터뜨림 창을 못 만나 거둠 */
@@ -1569,6 +1598,7 @@ export class Skill {
     if (f.stamina.exhausted) return this.holdExhausted(dt);
     this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     if (this.sec) this.updateSecret(dt); // 플레이어 비기: 손 목표를 비기 길로 (이 스텝의 거르기·몸 따라가기는 아래 그대로)
+    if (this.f.lungeRecover) this.lungeRecoverTick(dt); // 안다레 리솔루토 런지 되돌아오기 (10/24 14:0x — 앞발을 뒤로 거둠)
     if (this.uniq) this.uniq.drive(dt); // 플레이어 고유 동작 강화 (unique_assist.js — main.js 가 플레이어에게만 붙인다, AI 는 없음): 몸 덧씌우기·끝 힘·걸음 (손 목표는 건드리지 않는다)
     if (this.sec?.S?.do?.gilmok || f.gilCutW > 0) {
       // 이베리아 길목 한 칼의 덧씌우기 자세 (10/11 v6 2차 — AI 와 같은 함수 secret_instant.js gilmokCutPose): 팔을 앞으로 뻗어 몸통 높이로 둘러 벰

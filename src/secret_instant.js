@@ -1330,6 +1330,14 @@ function comboPad(H) {
   return [clamp(H.z - 0.1, -0.6, 0.6), clamp(H.y - 0.1, -0.6, 0.6)];
 }
 
+/** 두 발(다리 걸음이 딛은 자리)의 앞뒤 간격 (m — 몸 앞 방향으로) · 다리 걸음이 없으면 null (안다레 리솔루토 런지 되돌아오기 — skill.js) */
+export function stanceSpread(f) {
+  const L = f.gait?.legs;
+  if (!L?.F || !L?.B) return null;
+  const fw = f.forward(new THREE.Vector3());
+  return Math.abs((L.F.plant.x - L.B.plant.x) * fw.x + (L.F.plant.z - L.B.plant.z) * fw.z);
+}
+
 /** 새 수에 들어섬: 이름 · 수마다 한 번 맞음 · 반걸음(몸 미끄러짐 + 다리 걸음 — 시간 몫은 comboNext 가 길을 짠 뒤 채움) */
 function comboMoveStart(f, I, mi) {
   const m = I.moves[mi];
@@ -1364,7 +1372,12 @@ function comboMoveStart(f, I, mi) {
   //  st.draw 면 디딘 뒤 뒷발 끌어붙임 (유파 걸음 drawT — 런지 뒤 자세로). 둘 다 없으면 전과 같음
   const foot = st.foot != null ? (st.room ? Math.min(st.foot, Math.max(0, d - Math.max(0, slide) - M.clinch)) : st.foot) : fwd;
   if (st.foot != null) I.footStep = foot; // 재기
-  if (f.gait?.active && (st.foot == null || foot > 1e-3)) f.gait.requestStep({ kind: st.kind ?? 'lunge', fwd: foot, side: st.lat ?? 0, duration: st.dur ?? 0.35, ...(st.draw ? { draw: true } : {}) });
+  //  st.push 면 걸음 동안 몸 따라감 배율 (런지 — 엇박 찌르기 런지와 같은 SECRET.stepPush: 골반이 앞발 쪽으로 실려 앞무릎이 굽고 뒷다리가 펴짐)
+  const asked = f.gait?.active && (st.foot == null || foot > 1e-3) ? f.gait.requestStep({ kind: st.kind ?? 'lunge', fwd: foot, side: st.lat ?? 0, duration: st.dur ?? 0.35, ...(st.draw ? { draw: true } : {}), ...(st.push ? { push: st.push } : {}), ...(st.accel ? { accel: true } : {}) }) : false;
+  if (st.foot != null) {
+    f.lungeReq = asked ? f.gait.req : null; // 런지 앞발 걸음 (skill.js lungeRecoverTick — 디디고 몸이 다 실리면 앞발을 뒤로 거둠)
+    f.lungeSpread0 = asked ? stanceSpread(f) : null; // 런지 전 두 발 앞뒤 간격 (되돌아오기가 그 보폭까지 거둠)
+  }
 }
 
 function stepCombo(f, combat) {

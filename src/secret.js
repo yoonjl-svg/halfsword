@@ -14,7 +14,7 @@ import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
-import { RisolutoWatch } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
+import { RisolutoWatch, lungeGapOk } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
 import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
 
@@ -975,8 +975,16 @@ export class PlayerSecretWatch {
     const R = this.riso;
     if (busy) return void R.reset();
     if (this.open && (this.me.skill?.swinging || this.me.stamina?.stroke?.paid)) this.open = null;
+    // 런지 간격 조건 (10/24 13:2x 사장님 '간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' — italian_risoluto.js lungeGap): 가슴 사이가 런지 최소 간격보다 가까우면
+    //  창 조건이 차도 창을 열지 않고(금색 '!' 없음 — 재기 gapBlocked) · 열린 창은 닫는다(재기 gapClosed). 창이 없으니 그때의 탭은 보통 탭 찌르기 (main.js)
+    const gapOk = lungeGapOk(this.me);
+    if (this.open && !gapOk) {
+      this.open = null;
+      R.gapClosed = (R.gapClosed ?? 0) + 1;
+    }
     const ctx = R.tick(dt, !this.open);
-    if (ctx) this.openWindow(ctx);
+    if (ctx && !gapOk) R.gapBlocked = (R.gapBlocked ?? 0) + 1;
+    else if (ctx) this.openWindow(ctx);
   }
 
   openWindow(ctx, t = SECRET.playerWindow) {
@@ -986,6 +994,12 @@ export class PlayerSecretWatch {
 
   /** 창 안의 공격 입력: 열린 창을 닫고 그 비기 { S, ctx } 를 돌려준다 (없으면 null) */
   fire() {
+    if (this.riso && this.open && !lungeGapOk(this.me)) {
+      // 런지 간격 조건 (10/24 13:2x): 창이 열린 뒤 이번 물리 스텝 전에 간격이 모자라졌으면 비기가 아님 — 창을 닫고 null (main.js 는 그 탭을 보통 탭 찌르기로)
+      this.open = null;
+      this.riso.gapClosed = (this.riso.gapClosed ?? 0) + 1;
+      return null;
+    }
     const o = this.open;
     this.open = null;
     if (o && this.queued) o.dir = this.queued.dir; // 미리 받은 입력의 끌기 방향
