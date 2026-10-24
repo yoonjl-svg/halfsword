@@ -19,7 +19,7 @@ export function createWhiteScaleWarrior() {
     movementNotes: '갑찰은 기존 판금 규칙으로 처리하며 몸체·질량·관절과 학교 동작은 그대로다.',
     weaknesses: '갑옷의 무게와 기존 목 약점. 가죽 신발은 판금으로 보호하지 않는다.',
     weapon: 'muramasa',
-    voice: 'renji',
+    voice: 'omari', // 목소리: 오마리 묶음(오마리와 같이 — 사장님 10/24 13:0x '백린 전사 사운드셋은 오마리' · 전 짝 없는 열쇠라 기본 목소리로 났음)
     look: getLook('white_scale'),
     lookVersion: 'v2', // 10/23 줄인 판 (looks.js LOOK_ARCHIVE.white_scale.v2 — 전달본 판 v1 은 ?look=white_scale:v1)
     ai: { proficiency: 5, persona: { school: 'muramasa', pers: {} } }, // 사장님 10/24 01:1x (전 3)
