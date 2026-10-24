@@ -49,11 +49,12 @@ export function runInstants(combat) {
       }
       f.secretStance = null;
       f.instantReq = f.iaiReq = f.iai = null;
-      f.instantGhost = f.iaiHoldT = f.iaiFade = 0;
+      f.instantGhost = f.iaiHoldT = f.iaiFade = f.holdGhost = 0;
       f.iaiOneHold = false;
       continue;
     }
     if (f.instantGhost > 0) f.instantGhost--;
+    if (f.holdGhost > 0) f.holdGhost--;
     if (f.instantReq) runInstant(f, combat);
     if (f.iaiReq) startIai(f, combat);
     if (f.iai) (f.iai.kind === 'combo' ? stepCombo : stepIai)(f, combat);
@@ -1300,6 +1301,26 @@ function comboPlanAim(f, I, m, A, D) {
   const dc = P.clone().sub(S);
   const dist = dc.length();
   dc.normalize();
+  if (D.thrust && SECRET.thrustArm) {
+    // 10/24 15:5x 팔을 뻗은 찌름 (SECRET.thrustArm 1 — 사장님 '주먹 아래쪽으로 칼날이 향하도록 거꾸로 쥐고 있는 거 같은데?' · docs/strike/wrist_audit_2026-10-24.md):
+    //  손을 어깨 → P 줄 위 팔 길이(Lf — 팔꿈치 곧게)에 두고 칼을 그 줄 = 곧게 편 아래팔의 연장으로 (카포 페로 · 파브리스 런지 도판: 맞히는 순간 칼 팔이 어깨 높이로 다 펴지고 팔과 칼이 한 줄).
+    //  옛 길(아래 — `?thrustArm=0`)은 칼끝이 꼭 P 에 닿게 손을 어깨에서 dist − 칼 길이(맞닿기 거리에서 0.1 ~ 0.5 m) · 뽑아 붙잡는 자리는 다시 D.draw 만큼 어깨 쪽(0.1 ~ 0.2 m)에
+    //  두고 칼은 같은 어깨 → P 줄로 눕혔다 — 팔꿈치가 굽은 채 칼이 어깨 → 손 줄을 따르면 칼은 늘 아래팔의 새끼 쪽으로, 굽은 팔 세모의 손 쪽 각만큼(팔 길이 18 ~ 37 % 면 75 ~ 85°) 꺾인다 = 거꾸로 쥔 꼴.
+    //  찌름 = 손이 팔 길이 − D.draw 에서 팔 길이까지 그 줄을 따라 곧게 (칼끝 길이 D.draw 그대로 · 4 토막 맞힘) — 칼끝은 P 를 팔 길이 + 칼 길이 − dist 만큼 지난다(맞닿기 거리에서 0 ~ 0.15 m).
+    //  back 이어도 뽑지 않고 다 뻗은 자리를 굳음 동안 붙잡는다(런지 · 맞힌 뒤 팔을 뻗은 채) — 뽑던 토막 자리에 같은 시간(D.draw ÷ 빠르기 — 옛 뽑음과 같은 칼끝 길이)만큼
+    //  뻗은 채 머무는 토막(맞힘 없음)을 두고 그 손의 패드(굳음 뒤 손 목표)를 단다: 길 전체 시간이 옛 길과 같아야 몸 미끄러짐을 그 시간에 나눠 싣는 셈(comboNext)이
+    //  찌르는 토막 칼끝 빠르기(고노센 × risolutoShare)를 옛 길과 같게 둔다 (머무는 토막을 빼면 간격을 아는 운전 30 판 칼끝 몫 p50 0.97 → 0.92). 새 수 없음
+    const H1 = S.clone().addScaledVector(dc, Lf);
+    const H0 = S.clone().addScaledVector(dc, Math.max(0.1, Lf - (D.draw ?? 0.35)));
+    push(H0, dc.clone(), false);
+    for (let k = 1; k <= 4; k++) push(H0.clone().lerp(H1, k / 4), dc.clone(), true);
+    if (D.back) {
+      push(H1.clone(), dc.clone(), false, comboPad(H1));
+      segs[segs.length - 1].T = (D.draw ?? 0.35) / I.v; // 같은 자리 토막은 칼끝 길이 0 — 옛 뽑음 토막의 시간
+    }
+    I.overshoot = Lf + HL + BL - dist; // 재기 (판정에는 안 씀): 칼끝이 겨눈 곳을 지난 길이 (m)
+    return segs;
+  }
   if (D.thrust) {
     // 겨눔 (맞힘 없음): 칼을 어깨 → P 줄 위에 눕혀 칼끝이 P 앞 D.draw(0.35 m) 에 오게 끌어 둔다 → 찌름: 그 줄을 따라 곧게 (칼끝이 P 까지 — 몸 안, 겉을 뚫음 · 4 토막 맞힘).
     //  (지금 칼끝에서 곧장 찌르면 막은 자리에서 칼날이 상대 팔을 먼저 가로질러 찌르기가 아닌 벰으로 닿았다 — 탐침)
@@ -1615,6 +1636,8 @@ function endCombo(f, combat) {
   f.iaiHoldKind = 'combo';
   f.iaiFade = 0;
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
+  // 10/24 15:5x 팔을 뻗은 겨눈 찌름(SECRET.thrustArm)이 맞혔으면: 뻗은 채 굳는 동안 칼은 이미 상처 속 — 내 칼 ↔ 상대 몸만 그 굳음 동안 부딪히지 않음(combat.js filterContactPair · 칼끼리 · 팔은 그대로)
+  if (SECRET.thrustArm && I.hits > 0 && I.moves.some((m) => m.dyn?.thrust)) f.holdGhost = Math.ceil(I.hold / (combat.dt || 1 / 120));
   f.tipPrev = f.bladePoint(1, new THREE.Vector3());
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);

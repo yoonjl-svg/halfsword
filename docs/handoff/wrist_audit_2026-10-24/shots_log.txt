@@ -1,0 +1,22 @@
+# 런지 (tools/browser/wrist_audit_shots.mjs lunge — 레이피어 · 멈춘 상대 · 상처 끔 시연 · 손 앞 = 팔 길이 몫 · dev = 손 면 치우침)
+before lunge_hit {"dev":-96,"wrist":94,"elbow":160,"along":0.18,"gap":1.54}
+before lunge_hold {"dev":-94,"wrist":94,"elbow":151,"along":0.26,"gap":1.23}
+after lunge_hit {"dev":-2,"wrist":3,"elbow":6,"along":0.99,"gap":1.54}
+after lunge_hold {"dev":-7,"wrist":14,"elbow":23,"along":0.95,"gap":1}
+# 자세 (guards · SWIVEL=1 — guard_ = 지금 · swivel_ = 시험 ?elbowSwivel=1)
+guard_rapier_1 1번 자세 (프리마) {"dev":-81,"wrist":82,"elbow":98,"along":0.58,"gap":5.61}
+guard_rapier_2 2번 자세 (세콘다) {"dev":-59,"wrist":59,"elbow":96,"along":0.66,"gap":5.69}
+guard_longsword_1 황소 (옥스) {"dev":-80,"wrist":80,"elbow":89,"along":0.63,"gap":5.62}
+guard_longsword_2 쟁기 (플루크) {"dev":52,"wrist":52,"elbow":39,"along":0.63,"gap":5.67}
+guard_qinggang_1 황소 (옥스) {"dev":-82,"wrist":83,"elbow":130,"along":0.42,"gap":5.63}
+guard_sabre_1 왼 황소 (옥스) {"dev":-126,"wrist":124,"elbow":114,"along":0.36,"gap":5.63}
+guard_uchigatana_1 흘려 받기 (우케나가시) {"dev":-117,"wrist":116,"elbow":97,"along":0.27,"gap":5.72}
+guard_tizona_1 어깨 메기 {"dev":120,"wrist":119,"elbow":92,"along":0.47,"gap":5.65}
+swivel_rapier_1 1번 자세 (프리마) {"dev":19,"wrist":49,"elbow":98,"along":0.6,"gap":5.61}
+swivel_rapier_2 2번 자세 (세콘다) {"dev":7,"wrist":36,"elbow":96,"along":0.64,"gap":5.68}
+swivel_longsword_1 황소 (옥스) {"dev":-40,"wrist":48,"elbow":92,"along":0.63,"gap":5.62}
+swivel_longsword_2 쟁기 (플루크) {"dev":52,"wrist":53,"elbow":39,"along":0.62,"gap":5.67}
+swivel_qinggang_1 황소 (옥스) {"dev":-52,"wrist":56,"elbow":131,"along":0.4,"gap":5.63}
+swivel_sabre_1 왼 황소 (옥스) {"dev":-62,"wrist":64,"elbow":113,"along":0.38,"gap":5.63}
+swivel_uchigatana_1 흘려 받기 (우케나가시) {"dev":-71,"wrist":72,"elbow":85,"along":0.38,"gap":5.72}
+swivel_tizona_1 어깨 메기 {"dev":119,"wrist":119,"elbow":93,"along":0.46,"gap":5.65}

@@ -156,6 +156,7 @@ export const HUMAN = {
   elbow: 150, // 칼 팔꿈치 굽힘 ° (AAOS 150, 봉투 문헌 칸)
   gripFlex: 163, // 아래팔-칼 각 ° 최대: 봉투 손목 칸 클립 크게 최대 163 (135~160 부터 무리), 설계 측정 줄 '> 163'
   forearmRoll: 80, // 아래팔 엎침·뒤침 ° (AAOS 80 · 80)
+  ulnarDev: 30, // 손목 척측(새끼 쪽) 편위 ° (AAOS 30 — docs/motion/grip_rules_2026-10-02.md ③). 시험 JOINTS.elbowSwivel 만 읽는다 (기본 끔) [사장님 확인 전]
 };
 /**
  * BODY.humanLimits 일 때 관절 표를 사람 범위로 (몸이 만들어질 때 한 번). false 면 부르지 않는다 → 오늘 그대로
@@ -3588,6 +3589,7 @@ export class Fighter {
     if (pDir.lengthSq() < 1e-6) pDir.set(0, -1, 0);
     pDir.normalize();
     const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
+    if (JOINTS.elbowSwivel && this.armed && this.aimDirW) elbowSwivel(pDir, Dn, S, d, alpha, _ik8.copy(this.aimDirW).applyQuaternion(_q2), a); // 시험 (기본 끔): 손목이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 — 아래 elbowSwivel
     const u = _ik4.copy(Dn).multiplyScalar(Math.cos(alpha)).addScaledVector(pDir, Math.sin(alpha)); // 위팔 방향
     const flex = Math.PI - Math.acos(THREE.MathUtils.clamp((a * a + b * b - d * d) / (2 * a * b), -1, 1));
     // 위팔 몸체 좌표축: x = 위팔 방향(어깨→팔꿈치), y = 아래팔이 접히는 쪽, z = x × y (팔꿈치 경첩 축)
@@ -3987,7 +3989,54 @@ const _ik4 = new THREE.Vector3();
 const _ik5 = new THREE.Vector3();
 const _ik6 = new THREE.Vector3();
 const _ik7 = new THREE.Vector3();
+const _ik8 = new THREE.Vector3();
 const _ikM = new THREE.Matrix4();
+const _sw1 = new THREE.Vector3();
+const _sw2 = new THREE.Vector3();
+const _sw3 = new THREE.Vector3();
+const _sw4 = new THREE.Vector3();
+const _sw5 = new THREE.Vector3();
+/**
+ * 시험 (JOINTS.elbowSwivel — 기본 끔 · 10/24 15:5x 손목 검사 docs/strike/wrist_audit_2026-10-24.md): 팔꿈치 겨냥(IK_POLE — 늘 아래 · 뒤 · 바깥)으로 손이 머리 곁 · 몸 가까이 있고
+ *  칼이 앞 · 아래를 겨누면 아래팔이 서고 칼이 아래팔의 새끼 쪽으로 꺾인다(황소 · 프리마 · 세콘다 — 거꾸로 쥔 꼴). 같은 손 자리 · 같은 칼 방향에서 팔꿈치만 어깨 → 손 축 둘레로 돌려
+ *  (위팔 · 아래팔 길이 · 손 자리 그대로 — 1 자유도) 칼이 아래팔 줄에서 새끼 쪽으로 사람 척측 편위 한도(HUMAN.ulnarDev 30 — AAOS) 안에 들게 하는 가장 작은 돌림을 고른다.
+ *  이미 한도 안이면 아무것도 바꾸지 않는다(지금 팔과 같은 자세). 한도 안이 없으면 가장 덜 꺾이는 자리. 손목 굴림(엎침 · 뒤침)은 0 으로 어림(아래팔 경첩 면 — joint_range wristDev).
+ *  pDir(가슴 틀 · Dn 에 수직 단위)을 바꿔 쓴다. D = 바랄 칼 방향(가슴 틀 — 지난 스텝 aimDirW)
+ */
+function elbowSwivel(pDir, Dn, S, d, alpha, D, a) {
+  if (alpha < 1e-3) return; // 팔이 곧으면 돌려도 같다
+  const q = _sw1.crossVectors(Dn, pDir); // pDir 를 Dn 둘레로 90° 돌린 것
+  const ca = Math.cos(alpha);
+  const sa = Math.sin(alpha);
+  const lim = -HUMAN.ulnarDev * HD;
+  const dev = (th) => {
+    const p = _sw2.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
+    const u = _sw3.copy(Dn).multiplyScalar(ca).addScaledVector(p, sa); // 위팔 방향
+    const f = _sw4.copy(Dn).multiplyScalar(d).addScaledVector(u, -a).normalize(); // 아래팔 방향 (팔꿈치 → 손)
+    const y = _sw5.copy(u).negate().addScaledVector(f, u.dot(f)); // 아래팔이 접히는 쪽 (위팔 쪽 — 엄지 쪽 반)
+    if (y.lengthSq() < 1e-9) return 0;
+    y.normalize();
+    return Math.atan2(D.dot(y), D.dot(f));
+  };
+  if (dev(0) >= lim) return;
+  let best = 0;
+  let bestDev = dev(0);
+  const STEP = 2 * HD; // 풀이 해상도 (기하)
+  for (let k = 1; k * STEP <= Math.PI; k++) {
+    for (const s of [1, -1]) {
+      const v = dev(s * k * STEP);
+      if (v >= lim) {
+        pDir.multiplyScalar(Math.cos(s * k * STEP)).addScaledVector(q, Math.sin(s * k * STEP)).normalize();
+        return;
+      }
+      if (v > bestDev) {
+        bestDev = v;
+        best = s * k * STEP;
+      }
+    }
+  }
+  pDir.multiplyScalar(Math.cos(best)).addScaledVector(q, Math.sin(best)).normalize();
+}
 const _oaP = new THREE.Vector3(); // 유파 빈팔 (offArmSchool)
 const _oaC = new THREE.Vector3();
 const _oaQ = new THREE.Quaternion();
