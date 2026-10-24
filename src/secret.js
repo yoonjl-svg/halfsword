@@ -895,6 +895,7 @@ export class PlayerSecretWatch {
           K.open++;
           K.stance[P.pend.stance] = (K.stance[P.pend.stance] ?? 0) + 1;
           if (P.buf) (this.queued = P.buf), (P.bufFired = (P.bufFired ?? 0) + 1); // 미리 받은 입력 → 이 스텝 곧장 (main.js 가 update 뒤에 fire)
+          else if (SECRET.gyeoksal.auto) (this.queued = { dir: null, auto: true }), (K.auto = (K.auto ?? 0) + 1); // 10/24 사장님: 받아 내면 저절로 — 스틱 앞(조건 ②)이 곧 입력 · 겨눌 곳은 받은 자세가 정함
         }
         P.pend = P.buf = null;
       }

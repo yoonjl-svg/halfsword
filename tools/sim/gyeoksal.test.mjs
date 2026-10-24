@@ -85,7 +85,7 @@ function script({ wait = 0.2, stick = [0, 1], hurtAt = null, line = null, buffer
   return { w, P, guard };
 }
 
-test('조건: 누른 뒤 0.4 s 안 닿음 · 스틱 앞 · 받아 냄 → 칼이 떨어질 때 창 (playerWindow) · 받은 자세 기억', () => {
+test('조건: 누른 뒤 0.6 s 안 닿음 (10/24 — 전 0.4) · 스틱 앞 · 받아 냄 → 칼이 떨어질 때 창 (playerWindow) · 받은 자세 기억', () => {
   const { w } = script({ wait: 0.2, line: 'highC' });
   assert.ok(w.open, '창');
   assert.equal(w.open.ctx.stance, 'geojeong');
@@ -96,7 +96,7 @@ test('조건: 누른 뒤 0.4 s 안 닿음 · 스틱 앞 · 받아 냄 → 칼이
   assert.equal(script({ wait: 0.2, line: 'highL' }).w.open.ctx.stance, 'bongdu');
 });
 
-test('조건 거절: 때 늦음(0.4 s 넘어 닿음) · 스틱이 앞이 아님 · 그사이 베임', () => {
+test('조건 거절: 때 늦음(0.6 s 넘어 닿음) · 스틱이 앞이 아님 · 그사이 베임', () => {
   const late = script({ wait: SECRET.gyeoksal.press + 0.05, line: 'highC' }).w;
   assert.equal(late.open, null);
   assert.equal(late.pc.gk.late, 1);
@@ -195,4 +195,15 @@ test('스킬트리 C9 막아 죽이기: 열림 · 익히면 비기 몫 · 글은
   assert.equal(n.name, '격살');
   assert.ok(!/[0-9]/.test(n.eff) && !/ · /.test(n.eff) && /다$/.test(n.eff), n.eff);
   assert.equal(D.kitFromNodes('chinese', D.allNodeIds('chinese')).secret, true);
+});
+
+test('저절로 (사장님 10/24 12:2x): 누른 뒤 0.6 s 안 · 받아 내면 창과 함께 곧장 낼 입력(queued auto) — 공격 입력 없음 · auto 0 이면 옛 판(입력 기다림) · 때 늦으면 없음', () => {
+  assert.equal(SECRET.gyeoksal.press, 0.6);
+  assert.equal(SECRET.gyeoksal.auto, 1);
+  const { w } = script({ wait: 0.5, line: 'highC' }); // 0.4 s 넘고 0.6 s 안 — 옛 판이면 늦음
+  assert.ok(w.open, '창'); assert.ok(w.queued?.auto, '저절로 낼 입력');
+  const o = w.fire(); assert.equal(o.ctx.stance, 'geojeong'); assert.equal(w.queued, null); // 받은 자세가 겨눌 곳을 정함
+  const was = SECRET.gyeoksal.auto;
+  try { SECRET.gyeoksal.auto = 0; const { w: w0 } = script({ wait: 0.2, line: 'highC' }); assert.ok(w0.open); assert.equal(w0.queued ?? null, null); } finally { SECRET.gyeoksal.auto = was; }
+  assert.equal(script({ wait: 0.65, line: 'highC' }).w.queued ?? null, null);
 });
