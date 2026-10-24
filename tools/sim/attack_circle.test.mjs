@@ -32,11 +32,10 @@ const poly = (pts) => (u) => {
   return [pts[k][0] + (pts[k + 1][0] - pts[k][0]) * t, pts[k][1] + (pts[k + 1][1] - pts[k][1]) * t];
 };
 
-test('판 값: 공격 원 판 기본 · 1.5 s (사다리 무장) · 반지름 하한 0.15 m (= 자세 패드 반경) · 멈춤 0.2 s (사다리 반응) · 안쪽 문턱 반지름의 0.5', () => {
+test('판 값: 공격 원 판 기본 · 1.5 s (사다리 무장) · 반지름 하한 없음 (사장님 10/24 — 전 0.15 m) · 멈춤 0.2 s (사다리 반응) · 안쪽 문턱 반지름의 0.5', () => {
   assert.equal(V.input, 'attackCircle');
   assert.equal(V.circleTime, 1.5);
-  assert.equal(V.circleR, 0.15);
-  assert.equal(V.circleR, UNIQUE_ASSIST.padRadius);
+  assert.equal(V.circleR, 0); // 하한 없음 (사장님 10/24 10:2x '최소크기 제한 철폐')
   assert.equal(V.circleGap, 0.2);
   assert.equal(V.circleInner, 0.5);
   assert.equal(CIRCLE_INNER, V.circleInner);
@@ -56,9 +55,11 @@ test('한 바퀴 못 미침 거짓: 300° · 340° (가운데가 원호 쪽으�
   for (const turn of [300, 340, -340]) assert.equal(drive(circleState(), arc(0.3, 90, turn), 0.8), null, `${turn}`);
 });
 
-test('작은 원 거짓 (반지름 0.1 m < 0.15) · 같은 원을 크게(0.2 m) 그리면 참', () => {
-  assert.equal(drive(circleState(), arc(0.1, 0, 400), 0.6), null);
+test('작은 원도 참 (하한 없음 — 사장님 10/24: 반지름 0.1 · 0.05 m) · 큰 원(0.2 m) 참 · 시험 값 rMin 0.15 를 주면 작은 원 거짓(옛 판)', () => {
+  assert.notEqual(drive(circleState(), arc(0.1, 0, 400), 0.6), null);
+  assert.notEqual(drive(circleState(), arc(0.05, 0, 400), 0.6), null);
   assert.notEqual(drive(circleState(), arc(0.2, 0, 400), 0.6), null);
+  assert.equal(drive(circleState(), arc(0.1, 0, 400), 0.6, { o: opt({ rMin: 0.15 }) }), null);
 });
 
 test('느린 원 거짓 (한 바퀴 2.5 s — 1.5 s 안에는 216°) · 0.6 s 시험 값이면 0.8 s 원도 거짓', () => {

@@ -26,8 +26,11 @@ import * as THREE from 'three';
 //   간장: 흰 아지랑이 1.1 배 + 흰 불티 6 개. 점 조명 그대로, 칼날 발광 없음(어두운 칼몸 그대로).
 //   막야: 먹 아지랑이 1.2 배(보통 섞기라 밝은 바닥 위에서 옅은 먹 그림자) + 먹 연기 8 개. 점 조명·칼날 발광 없음 — 먹은 빛을 내지 않는다.
 export const AURA_PROFILES = Object.freeze({
-  // 뒤랑달 (10/24 — 샛별 저장소 c039bcc7 그대로): 금빛 자루에 옅은 상아빛. 발리사르다 · 쿠사나기처럼 아지랑이만 0.8 배.
-  durandal: { tone: 'ivory', color: [1.0, 0.93, 0.79], light: 0xffe9c5, emissive: 0xffefd7, gain: 0.8 },
+  // 뒤랑달 (10/24 — 샛별 저장소 c039bcc7 의 옅은 상아빛 0.8 배는 은빛 칼몸 위에서 거의 안 보였다 → 사장님 10:2x '뒤랑달은 레전드인데 은은한 빛이 없어?'):
+  //  성유물의 빛 — 엑스칼리버 금빛보다 옅고 흰 쪽의 따뜻한 금빛 아지랑이(엑스칼리버와 같은 1 배) + 칼날에서 가끔 피어오르는 흰 금빛 티끌 5 개(쿠사나기 입자보다 작고 적게).
+  //  금빛 자루 안 성유물(성 베드로의 이 · 성 바실리오의 피 · 성 드니의 머리카락 · 성모의 옷자락)의 빛 — 엑스칼리버와 같은 '은은하게 있다' 결(세기 0.5 그대로)
+  durandal: { tone: 'relic', color: [1.0, 0.86, 0.58], light: 0xffdfa0, emissive: 0xffe4b0,
+    motes: { n: 5, size: 0.016, alpha: 0.45, color: [1.0, 0.97, 0.86], rim: [1.0, 0.82, 0.5], far: 0.0 } },
   // 발리사르다 (10/21 — 샛별 저장소 c89e827c6 그대로): 은금 덩굴의 칼이라 옅은 샴페인빛. 쿠사나기처럼 아지랑이만 0.8 배.
   balisarda: { tone: 'champagne', color: [1.0, 0.91, 0.70], light: 0xffedc2, emissive: 0xffebbc, gain: 0.8 },
   excalibur: { tone: 'gold', color: [1.0, 0.82, 0.45], light: 0xffd98a, emissive: 0xffe2a0 },
