@@ -406,6 +406,10 @@
       #wanderEncounter .actions { display: flex; justify-content: flex-end; }
       #btnEncounter { width: auto; min-width: 72px; margin-top: 16px; }
       @media (max-height: 500px) { #btnEncounter { padding: 10px; margin-top: 12px; } }
+      /* 방랑 열림 알림 창 '확인'도 대기실 알림 창 확인 크기 (사장님 10/24 08:0x '확인 단추 크기도 대기실처럼' — #btnEncounter 와 같은 값) */
+      #wanderNotice .actions { display: flex; justify-content: flex-end; }
+      #btnWanderNotice { width: auto; min-width: 72px; margin-top: 16px; }
+      @media (max-height: 500px) { #btnWanderNotice { padding: 10px; margin-top: 12px; } }
       .secondary { width: 100%; margin-top: 8px; padding: 11px; font-size: var(--fs-m); line-height: calc(var(--fs-m) + 2px); border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--c-text); }
       .actions { position: sticky; bottom: -20px; margin: 0 -20px -20px; padding: 0 20px 20px; background: var(--panel); }
       .howto { font-size: var(--fs-s); color: var(--c-sub); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }

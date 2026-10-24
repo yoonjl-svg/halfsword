@@ -2156,7 +2156,7 @@ function checkRoundEnd(dt) {
     $('menuSub').textContent = wanderMode ? `${WANDER_NAME} ${readProgress().wander.run?.round ?? 1} · ${cause}${win ? '' : ` · ${WANDER_NAME} 종료`}` : cause;
     showDefeatFoe(win ? null : defeatFoe);
     // 여정(무대마다 그곳 검객): 이기면 다음 상대, 지면 같은 상대와 다시 (주소로 상대·배경을 고정했으면 그냥 다시 싸우기)
-    $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '다시 겨루기'; // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
+    $('btnStart').textContent = win && foeParam === 'stage' && !STAGE_PIN ? '다음 여정' : '재대결'; // 사장님 10/24 08:0x '다시 겨루기와 재대결 통일' — 정지 창과 같은 이름 // 사장님 10/14 11:1x '다음 여정. 다시 겨루기.' (전 '다음 상대' · '다시 싸우기')
     // 방랑: 이기면 '다음 방랑'(새로 뽑은 다음 판 — 사장님 10/24 00:3x, 전 '다음 대면') · 지면 그 연속은 끝 — '대기실'만 (다시 들어가면 새 조합)
     //  '다음 방랑' 색 = 대기실 방랑 단추 (index.html .primary.wander — 같은 10/24 말씀). 여정 결과 창 · 정지 창(pause)은 금색 그대로
     if (wanderMode) {
@@ -2166,7 +2166,7 @@ function checkRoundEnd(dt) {
     $('btnStart').classList.toggle('wander', wanderMode && win);
     $('btnResume').style.display = 'none';
     // 첫 화면·대기실 여정 (사장님 10/16 08:3x '팝업에선 얻은 금화나 잃은 금화 표시하고, 그 화면에서 설정은 빼고, 다음 여정과 대기실 선택지로'): 금화 줄(showRewardLine) ·
-    //  '다음 여정'(진 판은 '다시 겨루기' — 같은 무대) · '대기실'. 설정 줄은 정지 창 · 첫 화면 설정에만. 그 밖 판은 지금 그대로
+    //  '다음 여정'(진 판은 '재대결' — 같은 무대 · 10/24 전 '다시 겨루기') · '대기실'. 설정 줄은 정지 창 · 첫 화면 설정에만. 그 밖 판은 지금 그대로
     const lobbyOk = lobbyMenu();
     $('fpsRow').hidden = lobbyOk;
     $('btnLobby').hidden = !lobbyOk;
@@ -2255,7 +2255,7 @@ let camSteps = 0; // 이번 화면에 돈 물리 스텝 수 (게임 루프가 �
 
 // ── 판 시작 카메라 (10/15 사장님 '첫 전투 시작 시 스테이지 전체를 빠르게 슥 훑고 기본 카메라 화면으로 다가가게 해. 3초 정도? … 카메라가 캐릭터에 따라 붙으면 바로 전투 시작') ──
 //  mode 'sweep' = 그 무대의 첫 판(메뉴에서 시작 · '다음 여정'으로 새 무대 · 테스트 경로 새 무대 · ?stage= 고정 무대의 첫 판): 무대 훑기 CAMERA.open.sweepSec 초
-//       'settle' = 같은 무대를 다시('다시 겨루기' · 정지 창 '재대결'): 짧은 내려앉기 settleSec 초 · 'old' = `?openSweep=0` (9/30 판 시작, 정지 2 s)
+//       'settle' = 같은 무대를 다시('재대결' — 진 판 결과 창 · 정지 창, 10/24 이름 통일): 짧은 내려앉기 settleSec 초 · 'old' = `?openSweep=0` (9/30 판 시작, 정지 2 s)
 //  정지(발 묶임 fighter.feetHeld · AI 판 시작 몸짓)는 이 브라우저에서만 판 시작 카메라 길이와 같다: ARENA.startHold 를 판마다 바꾼다(게임 시간 = 실제 초 × 템포).
 //   시뮬 도구는 이 파일을 읽지 않아 config 값(SIM_HOLD 2.0)을 그대로 쓴다 — 관문 그대로
 const SIM_HOLD = ARENA.startHold;

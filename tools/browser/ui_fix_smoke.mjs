@@ -105,7 +105,7 @@ try {
     await p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 150000 }); // 결과 창은 게임 시간 3.5 s 뒤 (그대로)
     const fightShown = await p.evaluate(() => window.__foeShown);
     const lost = await menu(p);
-    assert.equal(lost.title, '패배'); assert.equal(lost.start, '다시 겨루기'); assert.equal(lost.lobby, true); assert.equal(lost.fps, false);
+    assert.equal(lost.title, '패배'); assert.equal(lost.start, '재대결'); // 10/24 사장님 통일 (전 '다시 겨루기') assert.equal(lost.lobby, true); assert.equal(lost.fps, false);
     assert.match(lost.reward, /^금화 (−(?:[1-9]|10)|±0)$/); // 지면 −5 ~ 10 (사장님 10/24 03:0x — 금화가 모자라면 그만큼만)
     const lostLook = await look(p);
     assert.deepEqual(lostLook.lines, ['기절했다']); // 부제 = 진 까닭 한 줄 (14:4x) — 대사는 10/17 부터 따로 된 줄(#menuFoeLine · 프로필 오른쪽)
