@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI, THREE } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
-import { mordMode, mordGripOf, mordHitMul, mordKinOf } from '../../src/mordschlag.js';
+import { mordMode, mordGripOf, mordHitMul, mordKinOf, mordHeadReach } from '../../src/mordschlag.js';
 import { FINISH } from '../../src/finish.js';
 const { SECRET } = CONFIG;
 
@@ -30,29 +30,36 @@ const wristGap = (P) => {
   return w.distanceTo(gp);
 };
 
-test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 는 일본만', () => {
+test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
   assert.equal(SECRET.deMord, 1);
   assert.equal(SECRET.mordPress, 1.5);
   assert.equal(SECRET.playerWindow, 0.6);
   assert.equal(SECRET.stiff.german, 0.4);
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
   assert.ok(SECRET.openSchools.includes('german') && SECRET.openSchools.includes('japanese'));
-  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian']); // 10/24 이베리아 싱지르 AI 열림 — 독일은 그대로 닫힘
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // 10/24 이베리아 싱지르 · 독일 모르트슐라크 AI 열림 (사장님 12:0x 'ai도 비기 쓰게 해')
   const S = TRADITIONS.german.playerSecret;
   assert.equal(S.name, 'mordschlag');
   assert.equal(S.nameKo, '모르트슐라크');
   assert.equal(S.when, 'press');
-  assert.notEqual(TRADITIONS.german.secret.name, 'mordschlag'); // AI 몫(TRADITIONS.german.secret)은 옛 판 그대로
+  assert.notEqual(TRADITIONS.german.secret.name, 'mordschlag'); // 옛 판(TRADITIONS.german.secret — 받아 베기 · 감아 들기)은 그대로 · `?deMord=0` 에만
+  assert.equal(TRADITIONS.german.aiSecret, S); // 10/24 AI 몫 = 사람과 같은 비기
 });
 
-test('사람 몫만: 플레이어 독일 무기 = 죽음의 일격 · deMord 0 = 옛 판 · AI 독일 숙련도 5 도 비기 없음 (aiOpenSchools)', () => {
+test('사람 · AI 몫: 플레이어 독일 무기 = 죽음의 일격 · deMord 0 = 옛 판 · AI 독일 숙련도 5 = 같은 비기 · 4 = 없음 · aiOpenSchools 에서 빼면 없음 (10/24)', () => {
   const { g, P, E } = fixture();
   try {
     assert.equal(playerSecretOf(P).name, 'mordschlag');
     SECRET.deMord = 0;
     try { assert.equal(playerSecretOf(P), TRADITIONS.german.secret); } finally { SECRET.deMord = 1; }
     const ai = new AI(E, P, 'normal', { proficiency: { german: 5 } });
-    assert.equal(ai.secret, null);
+    assert.equal(ai.secret?.name, 'mordschlag');
+    assert.ok(ai.press && ai.press.win === 0 && !ai.press.go); // 누르기 셈 · 창 (ai.js mordTick)
+    assert.equal(new AI(E, P, 'normal', { proficiency: { german: 4 } }).secret, null); // 숙련도 5 아래는 비기 없음
+    const open0 = SECRET.aiOpenSchools;
+    SECRET.aiOpenSchools = open0.filter((s) => s !== 'german');
+    try { assert.equal(new AI(E, P, 'normal', { proficiency: { german: 5 } }).secret, null); } finally { SECRET.aiOpenSchools = open0; }
+    assert.equal(new AI(E, P, 'normal').press, null); // 기본 AI(숙련도 2) — 관문 판 그대로
   } finally { g.world.free(); }
 });
 
@@ -224,4 +231,46 @@ test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠
       }
     } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; g.world.free(); }
   }
+});
+
+test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 1.5 s → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄', () => {
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
+  const P = g.player, E = g.enemy, ai = g.ai;
+  try {
+    assert.equal(ai.secret?.name, 'mordschlag');
+    assert.equal(E.canShove, false); // persona.close 없는 몸 — 아래 누르기는 시험이 쥔다 (fighter.closeStep 이 돌지 않음)
+    ai.watch = () => {}; // 간 보기 결정 없음 (공격 · 물러남 없이 셈만 본다)
+    ai.moveFeet = function () { this.me.move.set(0, 0); this.me.stickX = 0; this.me.stickY = 0; };
+    const steps = (sec) => Math.round(sec / DT);
+    for (let i = 0; i < steps(0.3); i++) g.step(); // 몸이 선다
+    assert.equal(mordHeadReach(E), true, '가슴 0.7 m — 머리가 칼자루 길 안');
+    E.barge = { phase: 'press' };
+    for (let i = 0; i < steps(1.0); i++) g.step();
+    E.barge = null; // 끊김 → 셈 0
+    g.step();
+    assert.equal(ai.press.pressT, 0);
+    E.barge = { phase: 'press' };
+    let opened = null, fired = null, ended = null;
+    const c0 = E.stamina.counts.secret ?? 0;
+    for (let i = 0; i < steps(3.0); i++) {
+      g.step();
+      if (opened == null && ai.press.wins > 0) opened = ai.press.pressMax;
+      if (fired == null && ai.secretRun?.stage === 'mord') fired = g.t;
+      if (fired != null && ended == null && !ai.secretRun) ended = g.t;
+      const s = E.sword.translation();
+      assert.ok(Number.isFinite(s.x + s.y + s.z));
+    }
+    assert.ok(opened != null && Math.abs(opened - SECRET.mordPress) < 3 * DT, `창은 누르기 ${opened} s 에`);
+    assert.ok(fired != null, '창 안에서 냄');
+    assert.ok(ended != null && ended - fired < 1.5, `냄 → 끝 ${ended - fired} s`);
+    assert.equal(ai.secretStat(ai.secret).fired, 1);
+    assert.equal(ai.press.wins, 1);
+    assert.equal(E.mordGrip, null); // 원래 쥠으로
+    assert.equal(E.skill.sec, null);
+    if (CONFIG.STAMINA.on) assert.equal((E.stamina.counts.secret ?? 0) - c0, 1); // 비기 기력 (사람과 같은 장부)
+    E.barge = null;
+    const pp = P.bodies;
+    for (const k of Object.keys(pp)) { const t = pp[k].translation(); pp[k].setTranslation({ x: t.x - 2.5, y: t.y, z: t.z }, true); } // 상대를 멀리
+    assert.equal(mordHeadReach(E), false, '가슴 3 m — 머리가 멂');
+  } finally { g.world.free(); }
 });

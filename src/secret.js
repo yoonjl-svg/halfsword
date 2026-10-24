@@ -526,6 +526,24 @@ export function foeRecentTipSp(sense, span) {
   return best;
 }
 
+/**
+ * 독일 모르트슐라크 누르기 셈 (10/22 사람 — PlayerSecretWatch.pressTick · 10/24 AI — ai.js mordTick, 같은 셈): st 의 pressT(지금 셈) · pressHeld(이 누르기 길이) ·
+ *  pressMax(가장 긴 누르기) · pressRuns(창까지 이어진 수)를 고친다. pressing = 밀치기 누르기(fighter.barge phase 'press') · busy = 비기 실행 · 굳음(셈 0) ·
+ *  open = 창이 열려 있음(새 창 없음 — 셈은 이어짐) · need = 창까지 초(SECRET.mordPress). 창을 열 때면 셈 0 으로 하고 true
+ */
+export function pressStep(st, dt, pressing, busy, open, need) {
+  if (pressing) {
+    st.pressT = (st.pressT ?? 0) + dt;
+    st.pressHeld = (st.pressHeld ?? 0) + dt;
+    if (st.pressHeld > (st.pressMax ?? 0)) st.pressMax = st.pressHeld;
+  } else st.pressT = st.pressHeld = 0;
+  if (busy) st.pressT = 0; // 비기 실행 · 굳음 동안은 세지 않는다 (끝난 뒤 다시 need 초)
+  if (busy || open || !(st.pressT >= need)) return false;
+  st.pressT = 0;
+  st.pressRuns = (st.pressRuns ?? 0) + 1;
+  return true;
+}
+
 /** 내 베기 사건 비기(combo·firstHit)의 거리: 이어 치기 거리 안 (ai.js secretCombo·secretFirstHit 와 같은 식) */
 export function chainRange(d, view) {
   return d <= view.reach + 0.1 && d >= view.clinch - 0.5;
@@ -657,19 +675,10 @@ export class PlayerSecretWatch {
    *  밀치기 누르기(fighter.closeStep 의 barge phase 'press' — 가슴 사이 CLOSE.reach 안에서 스틱을 놓았다 민 뒤 이어 미는 동안)가 끊기지 않고 cond.press 초(SECRET.mordPress)
    *  이어지면 창(playerWindow)을 연다. 누르기가 끝나면(떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 베기 · 넘어짐) 셈 0 · 창을 열면 셈 0(계속 누르면 다시 cond.press 초 뒤 또 창).
    *  비기 실행 · 굳음 동안은 셈 0. 상대가 막는 중이든 몸만 붙었든 같다. 새 값 없음(누르기 판정은 밀치기 그대로). 재기: pressT(지금 셈) · pressRuns(창까지 이어진 수) · pressMax(가장 긴 누르기)
+   *  셈은 pressStep(위 — 10/24 AI 와 같이 씀 · ai.js mordTick)
    */
   pressTick(dt, busy) {
-    const b = this.me.barge;
-    if (b?.phase === 'press') {
-      this.pressT = (this.pressT ?? 0) + dt;
-      this.pressHeld = (this.pressHeld ?? 0) + dt;
-      if (this.pressHeld > (this.pressMax ?? 0)) this.pressMax = this.pressHeld;
-    } else this.pressT = this.pressHeld = 0;
-    if (busy) this.pressT = 0; // 비기 실행 · 굳음 동안은 세지 않는다 (끝난 뒤 다시 cond.press 초)
-    if (busy || this.open || !(this.pressT >= secretVal(this.S.cond.press))) return;
-    this.pressT = 0;
-    this.pressRuns = (this.pressRuns ?? 0) + 1;
-    this.openWindow({ ev: 'press', held: this.pressHeld });
+    if (pressStep(this, dt, this.me.barge?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press))) this.openWindow({ ev: 'press', held: this.pressHeld });
   }
 
   /**

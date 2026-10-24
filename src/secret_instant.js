@@ -1145,8 +1145,8 @@ function comboShoulder(f, yaw) {
   return new THREE.Vector3(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(tq(chest.rotation(), new THREE.Quaternion())).applyQuaternion(yaw.clone().invert());
 }
 
-/** 칼 팔이 닿는 거리 — fighter.armIK 와 같은 끝 (비기 동안 SECRET.secretReach 면 위팔 + 아래팔, 아니면 평소 여유) */
-function comboArmLen() {
+/** 칼 팔이 닿는 거리 — fighter.armIK 와 같은 끝 (비기 동안 SECRET.secretReach 면 위팔 + 아래팔, 아니면 평소 여유) · 10/24 모르트슐라크 AI 머리 닿음(mordschlag.js mordHeadReach)도 */
+export function comboArmLen() {
   return ARM.upper + ARM.fore - (SECRET.secretReach ? 0 : ARM.slack);
 }
 

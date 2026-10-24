@@ -45,7 +45,7 @@ const TREE_SRC = {
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 500, perk: 'schielhau' }),
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
       N({ id: 'G9', name: '인데스', cat: 'passive', l1: '패시브', l2: '인데스', eff: '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 10, d: 2, cx: 100, f: ['passive'] }),
-      N({ id: 'G10', name: '모르트슐라크', cat: 'secret', l1: '비기', l2: '모르트슐라크', eff: '붙어서 밀다가 공격하면, 거꾸로 쥔 칼자루로 머리를 내리친다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }), // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — AI 몫 · `?deMord=0`)
+      N({ id: 'G10', name: '모르트슐라크', cat: 'secret', l1: '비기', l2: '모르트슐라크', eff: '붙어서 밀다가 공격하면, 거꾸로 쥔 칼자루로 머리를 내리친다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, d: 3, cx: 420, f: ['secret'] }), // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — `?deMord=0` · 10/24 AI 도 같은 비기 — 사장님 'ai도 비기 쓰게 해')
     ],
   },
   italian: {

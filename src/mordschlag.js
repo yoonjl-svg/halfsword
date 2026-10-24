@@ -11,11 +11,13 @@
 //   결과: 판정은 지금 규칙 그대로 — 코등이 · 폼멜은 칼자루 부품이라 둔타(combat.js analyze), 머리 둔타는 의식 · 멍함 · 주저앉음 · 쓰러짐(fighter.applyWound) ·
 //    비기 배율(손 빠르기 SECRET.handSpeed · 서보 힘 창 SECRET.power · 판정 배율 SECRET.hitMul — 다른 비기의 베기 길과 같은 자리)만 곱한다. 새 힘 · 새 넘어뜨리기 · 새 문턱 없음.
 //    넘어 들어감 규칙(SECRET.mordOver — 내리치는 동안 내 칼 ↔ 상대 칼 충돌 끔)은 스위치 · 기본 끔(사장님 확인 전).
-//   사람(플레이어)만 — AI 는 이 비기를 모른다(SECRET.aiOpenSchools · TRADITIONS.german.secret 그대로).
+//   10/24 사장님 12:0x 'ai도 비기 쓰게 해' — AI 도 같은 조건 · 같은 실행부(ai.js mordTick → skill.secret · SECRET.aiOpenSchools 'german' · 숙련도 5 이상).
+//    AI 는 창 안에서 상대 머리가 칼자루 길에 닿을 때(mordHeadReach — 아래) 곧장 낸다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET } from './config.js';
+import { SECRET, ARM } from './config.js';
 import { FINISH } from './finish.js';
+import { comboArmLen } from './secret_instant.js';
 
 /** 이 몸의 판: 'reverse'(칼날을 거꾸로 쥠) | 'hilt'(쥠 그대로 폼멜) — 칼날을 잡을 수 없는 칼(날 없는 무기 · 라이트세이버 · 부러진 칼)은 늘 'hilt' */
 export function mordMode(f) {
@@ -149,3 +151,20 @@ export function mordKinOf(f, run) {
   }
   return { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, pull: SECRET.mord.aim === 'pull', over: !!SECRET.mordOver, end: mordEnd };
 }
+
+/**
+ * 상대 머리가 칼자루 길에 닿나 (10/24 — AI 가 창 안에서 낼 때 · ai.js mordTick): 운동학 길의 머리 겨눔('pull' — secret_instant.js comboPlanMord)은 칼자루 가운데
+ *  (손에서 (Lc + Lp) / 2 — mordKinOf)가 상대 머리 가운데를 지나게 손 길을 옮기고, 손은 팔이 닿는 데까지만 간다(comboArmLen). 그래서 내 칼 어깨에서 상대 머리 가운데까지가
+ *  팔 길이 + 손 → 칼자루 가운데 안이면 그 동작이 머리를 칠 수 있다. 새 값 없음(동작이 쓰는 길이 그대로). 쥔 자리는 이 몸의 판(mordMode — 거꾸로 쥠 · 쥠 그대로)으로
+ */
+export function mordHeadReach(f) {
+  const head = f.foe?.bodies?.head;
+  if (!head || !f.weaponCfg) return false;
+  const K = mordKinOf(f, { mord: { G: mordMode(f) === 'reverse' ? mordGripOf(f) : null } });
+  const q = f.bodies.chest.rotation();
+  const S = _s.set(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(_q.set(q.x, q.y, q.z, q.w)).add(f.bodies.chest.translation());
+  const h = head.translation();
+  return Math.hypot(h.x - S.x, h.y - S.y, h.z - S.z) <= comboArmLen() + (K.Lc + K.Lp) / 2;
+}
+const _s = new THREE.Vector3();
+const _q = new THREE.Quaternion();

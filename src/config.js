@@ -868,10 +868,10 @@ export const SECRET = {
   openSchools: ['japanese', 'german', 'italian', 'iberian', 'chinese'], // 10/22 사람 먼저 — 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기(격살 — 아래 gyeoksal). AI 는 aiOpenSchools 로 따로(10/24 이베리아 엶)
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
-  aiOpenSchools: ['japanese', 'iberian'], // 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6)
+  aiOpenSchools: ['japanese', 'iberian', 'german'], // 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6) · 10/24 12:0x 사장님 'ai도 비기 쓰게 해' — 독일 모르트슐라크 추가 (ai.js mordTick · TRADITIONS.german.aiSecret · 숙련도 5 이상 — 아르토리아 · 광기의 아르토리아)
   // ── 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
-  //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). AI 는 이 칸들을 안 본다(aiOpenSchools · TRADITIONS.german.secret 그대로)
-  deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기). `?deMord=0`
+  //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). 10/24 AI 도 같은 칸을 본다(aiOpenSchools 'german' — ai.js mordTick · 확인표 2400~2405)
+  deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정 · 10/24 AI 도) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기 — 사람 · AI). `?deMord=0`
   mordPress: 1.5, // 밀치기 누르기(fighter.barge phase 'press')가 끊기지 않고 이 초 이어지면 창(playerWindow) — 사장님 결정 '1.5로 해'(시간 사다리 '무장' 칸 · 확인표 2113). 누르기가 끝나면 셈 0. `?mordPress=0.6` 비교
   // 동작 값 (사장님 확인 전 — 확인표 2185 · 2186): 다른 비기와 같은 길 틀(준비 → 베기 길 → 따라 지나감 → 굳음 — 손 빠르기 handSpeed · 서보 힘 창 power · 판정 배율 hitMul 그대로)에
   //  쥠 바꿈 · 겨눔 뒤집기 · 다시 세우기 셋을 더함 (src/mordschlag.js). grip 'reverse' = 칼날을 거꾸로 쥠(칼 든 손이 칼날 at 몫 자리 · 빈손이 그보다 칼끝 쪽 — 코등이 · 폼멜이 치는 끝, fighter.reverseGrip) ·
@@ -1255,7 +1255,7 @@ export const AI_LEVELS = {
 //   ① 실력 숫자: 아래 levels[숙련도] = AI_LEVELS 이름 (인물별 persona.level 덮어쓰기는 그 위에 그대로) — 이 매핑은 사장님 확인 전 (확인표 끝).
 //      4·5 = hard: 지금 hard 보다 센 수가 없다 — 3 과의 차이는 네 번째 고유 동작(4)·비기(5)뿐. 0 = easy (시험 주소 ?foeProficiency=0 으로만 나온다)
 //   ② 고유 동작: 손에 든 무기 유파의 고유 동작 가운데 단계 ≤ 숙련도인 것만 (unique_assist.js PLAYER_UNIQUE 단계 — sword_art.js·ai.js)
-//   ③ 비기: 손에 든 무기 유파의 숙련도가 secretAt(5) 일 때만 그 유파 비기 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀' — ai.js). 5 이상인 인물: 미나미 · 얼터 일부 · 10/24 아르토리아 · 백린의 전사(5) · 롤랑 · 베르나르도(6) — 그 가운데 AI 가 비기를 쓰는 것은 SECRET.aiOpenSchools(지금 일본) 유파 인물뿐
+//   ③ 비기: 손에 든 무기 유파의 숙련도가 secretAt(5) 일 때만 그 유파 비기 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀' — ai.js). 5 이상인 인물: 미나미 · 얼터 일부 · 10/24 아르토리아 · 백린의 전사(5) · 롤랑 · 베르나르도(6) — 그 가운데 AI 가 비기를 쓰는 것은 SECRET.aiOpenSchools(일본 · 10/24 이베리아 · 독일) 유파 인물뿐
 //  ofLevel: 숙련도를 주지 않은 AI(인물 시트 없이 난이도 이름만 받는 도구·기본 상대)의 숙련도 = 난이도 이름에서. 기본 상대(?foe=default) = normal = 2
 //  ④ 유파 고유 특성을 쓰는 적극성 (사장님 10/18 23:4x 'ai 캐릭터마다 숙련도가 있잖아. 높을 수록 유파 고유 특성을 더 적극적으로 활용하게 해' — docs/strike/flow_round2_2026-10-19.md):
 //     schoolK[숙련도] = 패시브 고유 동작이 걸릴 확률(ai.js passiveRoll) · 고유 동작(길)을 고르는 가중치(sword_art.js applySchoolArt)에 곱함 — 숙련도 2(기본 상대 · 시험 도구) = 1 이라 그대로.
