@@ -13,6 +13,8 @@
 //    fe    = 손목 굽힘 · 폄 (아래팔이 칼 면 밖으로 — 손바닥 · 손등 쪽) · roll = 아래팔 굴림 (아래팔 경첩 축 ↔ 칼 면 — 손목 밧줄 HUMAN.forearmRoll 80)
 //    along = 손(손목)이 어깨 앞으로 나간 거리 ÷ 팔 길이 (ARM.upper + ARM.fore 0.57 m · '앞' = 내 가슴 → 상대 가슴 가로 방향) · reach = 어깨 ↔ 손 거리 ÷ 팔 길이
 //    up    = 아래팔이 위로 선 몫 (아래팔 방향 세로 성분 — 0.5 넘으면 아래팔이 30° 넘게 섬)
+//    10/25 01:2x 팔 비틀림 (사장님 '팔 관절이 비틀린 게 많아' — 기록 §10): shRot = 위팔 돌림 (joint_range armAngles · 들림 120° 아래만 — 위는 null · 한도 JOINTS.twist 안쪽 70 · 바깥 90) ·
+//            elbowUp = 팔꿈치가 어깨 관절 → 손목 줄에서 비킨 방향의 가슴 틀 위 몫 (°, asin — 0 아래 = 줄보다 아래 · 기본 팔꿈치 겨냥은 늘 아래 · + = 팔꿈치가 들려 줄 위로 돎)
 //   묶음: 동작마다 스텝 수 · 아래팔-칼 최대 · > 135 몫 · dev 최소 · < −30 몫(사람 척측 한도 밖) · 거꾸로 몫(dev < −45 · 아래팔이 칼 면에서 45° 안) · 거꾸로이며 아래팔이 섬 몫 · along · 팔꿈치 · 굽힘·폄 · 굴림
 //   거꾸로 보임: 'Y' = 스텝 10 % 이상이 '거꾸로 · 아래팔 섬'(사장님 그림 꼴) 또는 아래팔-칼 > 135 · '△' = 새끼 쪽이나 아래팔은 눕거나 내려감 · 'N'
 //  사용법: node tools/sim/wrist_audit.mjs [--modes=lunge,gyeoksal,gonosen,tap,close,guards,cuts,ai] [--weapons=…] [--set=SECRET.thrustArm=0] [--json=파일] [--trace=lunge:rapier]
@@ -47,9 +49,25 @@ export const UP = 0.5; // 아래팔이 섬: 아래팔 방향 세로 몫 > 0.5 (�
 export const OOR_EPS = 1; // 범위 밖 셈 문턱 (°): 밧줄이 팽팽한 끝(−30.0x · 135.0x)은 범위 끝으로 본다 (측정 문턱)
 export const OOR_X = 10; // 범위 밖 '크게': 사람 손 면 범위 끝을 10° 넘게 (칼 서보가 목표를 쫓는 동안 끝 바로 밖에 머무는 몫과 가름 — 측정 문턱)
 export const ROLL_AT = 78; // 아래팔 굴림이 손목 밧줄 끝(HUMAN.forearmRoll 80)에 닿음 — 2° 안 (측정 문턱)
+export const ELBOW_UP_X = 30; // 팔꿈치가 어깨 → 손목 줄보다 30° 넘게 위 — 팔꿈치가 머리 곁으로 꺾여 든 꼴 (10/25 사장님 그림 · 측정 문턱 · 기록 §10)
 
 const V = (t) => new THREE.Vector3(t.x, t.y, t.z);
 const Q = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
+
+/** 팔꿈치가 어깨 관절(위팔 몸 뿌리) → 손목 W 줄에서 비킨 방향의 가슴 틀 위 몫 (°) — 줄 위 = + (팔 비틀림 잣대 · 기록 §10) */
+function elbowUpOf(f, qf, W) {
+  const B = f.bodies;
+  const u = new THREE.Vector3(1, 0, 0).applyQuaternion(Q(B.uarmS.rotation()));
+  const c = V(B.uarmS.translation());
+  const S = c.clone().addScaledVector(u, -ARM.upper / 2);
+  const E = c.addScaledVector(u, ARM.upper / 2);
+  const d = W.clone().sub(S).normalize();
+  const off = E.sub(S);
+  off.addScaledVector(d, -off.dot(d));
+  if (off.lengthSq() < 1e-10) return 0;
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(B.chest.rotation()));
+  return Math.asin(THREE.MathUtils.clamp(off.normalize().dot(up), -1, 1)) * R2D;
+}
 
 /** 한 스텝 손목 표본 (읽기만). 칼이 없거나 칼 팔이 잘렸으면 null */
 export function wristSample(f) {
@@ -85,6 +103,8 @@ export function wristSample(f) {
     along: W.clone().sub(S).dot(fwd) / ARM_LEN,
     reach: W.distanceTo(S) / ARM_LEN,
     up: fx.y,
+    shRot: o.shRot,
+    elbowUp: elbowUpOf(f, qf, W),
     fix: f.wristFixDeg ?? 0, // 이 스텝 손목 교정이 칼 겨눔을 돌린 각 (°, JOINTS.wristGuard — fighter.js wristClamp)
   };
 }
@@ -108,8 +128,15 @@ export class WristTally {
   add(key, s) {
     if (!s) return;
     let P = this.k.get(key);
-    if (!P) this.k.set(key, (P = { n: 0, wMax: -Infinity, w135: 0, devMin: Infinity, ulnar: 0, rev: 0, revUp: 0, aMin: Infinity, aMax: -Infinity, aSum: 0, eMax: -Infinity, wSum: 0, devSum: 0, feMax: 0, rollSum: 0, oor: 0, oorX: 0, oorMax: 0, feOut: 0, roll78: 0, fixN: 0, fixSum: 0, fixMax: 0 }));
+    if (!P) this.k.set(key, (P = { n: 0, wMax: -Infinity, w135: 0, devMin: Infinity, ulnar: 0, rev: 0, revUp: 0, aMin: Infinity, aMax: -Infinity, aSum: 0, eMax: -Infinity, wSum: 0, devSum: 0, feMax: 0, rollSum: 0, oor: 0, oorX: 0, oorMax: 0, feOut: 0, roll78: 0, fixN: 0, fixSum: 0, fixMax: 0, rotN: 0, shOut: 0, up0: 0, up30: 0, upSum: 0 }));
     P.n++;
+    if (s.shRot != null) {
+      P.rotN++;
+      if (s.shRot < JOINTS.twist[0] || s.shRot > JOINTS.twist[1]) P.shOut++;
+    }
+    P.upSum += s.elbowUp;
+    if (s.elbowUp > 0) P.up0++;
+    if (s.elbowUp > ELBOW_UP_X) P.up30++;
     const o = outOfRange(s);
     if (o > OOR_EPS) P.oor++;
     if (o > OOR_X) P.oorX++;
@@ -146,7 +173,7 @@ export class WristTally {
         continue;
       }
       P.n += Q.n;
-      for (const f of ['w135', 'ulnar', 'rev', 'revUp', 'aSum', 'wSum', 'devSum', 'rollSum', 'oor', 'oorX', 'feOut', 'roll78', 'fixN', 'fixSum']) P[f] += Q[f];
+      for (const f of ['w135', 'ulnar', 'rev', 'revUp', 'aSum', 'wSum', 'devSum', 'rollSum', 'oor', 'oorX', 'feOut', 'roll78', 'fixN', 'fixSum', 'rotN', 'shOut', 'up0', 'up30', 'upSum']) P[f] += Q[f];
       P.oorMax = Math.max(P.oorMax, Q.oorMax);
       P.fixMax = Math.max(P.fixMax, Q.fixMax);
       P.feMax = Math.max(P.feMax, Q.feMax);
@@ -167,7 +194,7 @@ export class WristTally {
     const L = [];
     for (const [k, P] of this.k) {
       const pc = (x) => Math.round((100 * x) / P.n);
-      L.push({ label, key: k, n: P.n, wMax: +P.wMax.toFixed(0), wAvg: +(P.wSum / P.n).toFixed(0), w135: pc(P.w135), devMin: +P.devMin.toFixed(0), devAvg: +(P.devSum / P.n).toFixed(0), ulnar: pc(P.ulnar), rev: pc(P.rev), revUp: pc(P.revUp), aMin: +P.aMin.toFixed(2), aAvg: +(P.aSum / P.n).toFixed(2), aMax: +P.aMax.toFixed(2), eMax: +P.eMax.toFixed(0), feMax: +P.feMax.toFixed(0), rollAvg: +(P.rollSum / P.n).toFixed(0), oor: pc(P.oor), oorX: pc(P.oorX), oorMax: +P.oorMax.toFixed(0), feOut: pc(P.feOut), roll78: pc(P.roll78), fixPc: pc(P.fixN), fixAvg: P.fixN ? +(P.fixSum / P.fixN).toFixed(0) : 0, fixMax: +P.fixMax.toFixed(0), c: { n: P.n, oor: P.oor, oorX: P.oorX, rev: P.rev, revUp: P.revUp, feOut: P.feOut, roll78: P.roll78, fixN: P.fixN, fixSum: P.fixSum, w135: P.w135 }, flag: WristTally.flag(P) });
+      L.push({ label, key: k, n: P.n, wMax: +P.wMax.toFixed(0), wAvg: +(P.wSum / P.n).toFixed(0), w135: pc(P.w135), devMin: +P.devMin.toFixed(0), devAvg: +(P.devSum / P.n).toFixed(0), ulnar: pc(P.ulnar), rev: pc(P.rev), revUp: pc(P.revUp), aMin: +P.aMin.toFixed(2), aAvg: +(P.aSum / P.n).toFixed(2), aMax: +P.aMax.toFixed(2), eMax: +P.eMax.toFixed(0), feMax: +P.feMax.toFixed(0), rollAvg: +(P.rollSum / P.n).toFixed(0), oor: pc(P.oor), oorX: pc(P.oorX), oorMax: +P.oorMax.toFixed(0), feOut: pc(P.feOut), roll78: pc(P.roll78), fixPc: pc(P.fixN), fixAvg: P.fixN ? +(P.fixSum / P.fixN).toFixed(0) : 0, fixMax: +P.fixMax.toFixed(0), shOut: P.rotN ? Math.round((100 * P.shOut) / P.rotN) : 0, up0: pc(P.up0), up30: pc(P.up30), c: { n: P.n, rotN: P.rotN, shOut: P.shOut, up0: P.up0, up30: P.up30, oor: P.oor, oorX: P.oorX, rev: P.rev, revUp: P.revUp, feOut: P.feOut, roll78: P.roll78, fixN: P.fixN, fixSum: P.fixSum, w135: P.w135 }, flag: WristTally.flag(P) });
     }
     return L;
   }
@@ -431,15 +458,17 @@ export function cutsRun(weapon, { seed = 7, only = null } = {}) {
 }
 
 // ── AI 끼리 (보통 싸움 — 두 자리 모두 · 기술 이름 · 자세 이름으로 묶음) ──
-export function aiRun(weapon, { seed = 11, secs = 15 } = {}) {
-  const g = newRound({ seed, weapon, weapon2: weapon, AI2Class: AI, walls: true });
+export function aiRun(weapon, { seed = 11, secs = 15, foeW = weapon, persona = null, only = null, wounds = true } = {}) {
+  // foeW = 사람 자리(AI2) 무기 · persona = 상대 자리(이 무기) AI 인물 기질 (예: 병마용 CHARACTERS_BY_ID.terracotta.ai.persona) · only = 'enemy' 면 이 무기 쪽만 잼 · wounds false = 둘 다 상처 끔(판이 일찍 끝나지 않게 — 자세 · 동작만 잼)
+  const g = newRound({ seed, weapon: foeW, weapon2: weapon, AI2Class: AI, walls: true, ...(persona ? { persona } : {}) });
+  if (!wounds) for (const f of [g.player, g.enemy]) f.applyWound = () => {};
   const T = new WristTally();
   const ais = [g.ai2 ?? null, g.ai].filter(Boolean);
   try {
     while (g.t < secs && g.player.alive && g.enemy.alive) {
       g.step();
       if (g.t < 0.5) continue;
-      for (const f of [g.player, g.enemy]) {
+      for (const f of only === 'enemy' ? [g.enemy] : [g.player, g.enemy]) {
         if (f.state !== 'stand') continue;
         const ai = ais.find((a) => a.me === f);
         const s = wristSample(f);

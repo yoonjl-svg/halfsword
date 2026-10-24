@@ -1,0 +1,3 @@
+before_tap {"dev":-46,"wrist":48,"elbow":92,"along":0.66,"gap":1.7}
+now_tap {"dev":-23,"wrist":39,"elbow":79,"along":0.76,"gap":1.66}
+after_tap {"dev":49,"wrist":57,"elbow":46,"along":0.8,"gap":0.83}

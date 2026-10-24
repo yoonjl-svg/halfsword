@@ -169,11 +169,11 @@ test('격살 허파 찌르기 맞닿기 언저리 (맞닿기 −0.1 ~ +0.1 m · 
   assert.ok(off.cut >= 3, `thrustSweep 0: 첫 맞음 베기 ${off.cut} / ${off.n}`);
 });
 
-test('JOINTS.elbowSwivel: 끄면(전 판) 레이피어 1번 자세(프리마)는 칼이 새끼 쪽 · 켜면(손목 교정 없이도) 같은 손 자리에서 척측 한도 안', () => {
+test('JOINTS.elbowSwivel: 끄면(전 판) 레이피어 1번 자세(프리마)는 칼이 새끼 쪽 · 켜면(손목 교정 없이도 · 사람 팔 범위 안 보는 10/24 판 swivelHuman 0) 같은 손 자리에서 척측 한도 안 — 그 값은 팔꿈치를 줄 가까이 들어 얻은 것(10/25 사장님 \'팔 관절이 비틀린 게 많아\' — 기본은 사람 팔 범위 안 돌림만 · onehand_arm.test.mjs)', () => {
   const prima = (T) => [...T.k.entries()].find(([k]) => k.includes('프리마'))?.[1];
   const off = withSets(OLD, () => prima(guardsRun('rapier').T));
   assert.ok(off && off.devSum / off.n < REV, `끔: 프리마 dev ${(off.devSum / off.n).toFixed(0)}°`);
-  const on = withSets([[JOINTS, 'wristGuard', 0]], () => prima(guardsRun('rapier').T));
+  const on = withSets([[JOINTS, 'wristGuard', 0], [JOINTS, 'swivelHuman', 0]], () => prima(guardsRun('rapier').T));
   assert.ok(on && on.devSum / on.n >= ULNAR, `켬: 프리마 dev ${(on.devSum / on.n).toFixed(0)}°`);
   assert.ok(Math.abs(on.aSum / on.n - off.aSum / off.n) < 0.1, `손 자리 그대로 ${(off.aSum / off.n).toFixed(2)} → ${(on.aSum / on.n).toFixed(2)}`);
 });
@@ -231,11 +231,11 @@ test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어
   assert.ok(rope.oorX <= 0.01 && rope.rev <= 0.01, `밧줄: > ${OOR_X}° ${pc(rope.oorX)} % · 거꾸로 ${pc(rope.rev)} %`);
 });
 
-test('AI 끼리 15 s (롱소드 · 사브르): 기본 범위 밖 > 10° ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 5 % · 시험 밧줄 켜면 > 10° ≤ 1 % · 거꾸로 ≤ 1 %', () => {
+test('AI 끼리 15 s (롱소드 · 사브르): 기본 범위 밖 > 10° ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 6 % (10/25 한손 사람 팔 범위 뒤 사브르 3.4 → 5.1 % — 팔 비틀어 맞추던 몫이 손목으로 · 기록 §10-5) · 시험 밧줄 켜면 > 10° ≤ 1 % · 거꾸로 ≤ 1 %', () => {
   for (const w of ['longsword', 'sabre']) {
     const s = shares(aiRun(w, { seed: 11 }).T);
     assert.ok(s.n > 1000, `${w} 스텝 ${s.n}`);
-    assert.ok(s.oorX <= 0.1 && s.revUp <= 0.05, `${w} 기본: > ${OOR_X}° ${pc(s.oorX)} % · 거꾸로 · 아래팔 섬 ${pc(s.revUp)} %`);
+    assert.ok(s.oorX <= 0.1 && s.revUp <= 0.06, `${w} 기본: > ${OOR_X}° ${pc(s.oorX)} % · 거꾸로 · 아래팔 섬 ${pc(s.revUp)} %`);
     const r = withSets(ROPE, () => shares(aiRun(w, { seed: 11 }).T));
     assert.ok(r.oorX <= 0.01 && r.rev <= 0.01, `${w} 밧줄: > ${OOR_X}° ${pc(r.oorX)} % · 거꾸로 ${pc(r.rev)} %`);
   }

@@ -1,0 +1,9 @@
+before_guard_rapier_1 1번 자세 (프리마) {"dev":-81,"wrist":82,"elbow":98,"along":0.58,"gap":5.61}
+before_guard_goujian_1 황소 (옥스) {"dev":-82,"wrist":83,"elbow":130,"along":0.42,"gap":5.63}
+before_guard_sabre_1 황소 (옥스) {"dev":-90,"wrist":90,"elbow":109,"along":0.51,"gap":5.63}
+now_guard_rapier_1 1번 자세 (프리마) {"dev":20,"wrist":48,"elbow":98,"along":0.6,"gap":5.61}
+now_guard_goujian_1 황소 (옥스) {"dev":-23,"wrist":33,"elbow":131,"along":0.41,"gap":5.63}
+now_guard_sabre_1 황소 (옥스) {"dev":10,"wrist":44,"elbow":109,"along":0.54,"gap":5.62}
+after_guard_rapier_1 1번 자세 (프리마) {"dev":-34,"wrist":34,"elbow":98,"along":0.59,"gap":5.62}
+after_guard_goujian_1 황소 (옥스) {"dev":-35,"wrist":36,"elbow":130,"along":0.42,"gap":5.63}
+after_guard_sabre_1 황소 (옥스) {"dev":-32,"wrist":32,"elbow":109,"along":0.52,"gap":5.63}
