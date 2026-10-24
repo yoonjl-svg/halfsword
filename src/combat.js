@@ -144,7 +144,7 @@ export class Combat {
 
   filterContactPair(c1, c2) {
     const pr = this.pairOf(c1, c2);
-    if (pr && pr.w.fighter.instantGhost > 0) return 0; // 순간 베기 직후(SECRET.instantNoCollide): 몸 안에 놓인 칼이 튀지 않게 내 칼 ↔ 상대 몸 충돌 끔
+    if (pr && (pr.w.fighter.instantGhost > 0 || pr.w.fighter.holdGhost > 0)) return 0; // 순간 베기 직후(SECRET.instantNoCollide): 몸 안에 놓인 칼이 튀지 않게 내 칼 ↔ 상대 몸 충돌 끔 · holdGhost = 팔을 뻗은 겨눈 찌름이 맞힌 뒤 굳음 동안 (secret_instant.js endCombo — 10/24 SECRET.thrustArm · 사람 비기만)
     if (!pr && (this.fighters[0]?.instantGhost > 0 || this.fighters[1]?.instantGhost > 0) && iaiGhostPair(this.info.get(c1), this.info.get(c2))) return 0; // 발도(운동학 팔·칼) 동안: 내 칼 ↔ 상대 칼, 내 칼 팔 ↔ 상대 몸·칼 충돌도 끔
     if (!pr || pr.w.part !== 'blade') return 1; // 1 = 평소처럼 부딪힘
     const key = `${pr.wc}:${pr.vc}`;

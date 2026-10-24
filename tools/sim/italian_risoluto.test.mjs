@@ -430,17 +430,21 @@ function lungePose(cfg) {
       ps.openWindow({ ev: 'risoluto', path: 'hold', held: 0.6 });
       assert.equal(p.skill.secret(ps.fire()), true);
       const rows = [];
-      let wasLunge = false, landed = false;
+      let wasLunge = false, landed = false, last = null;
       for (let i = 0; i < Math.round(1.2 / DT); i++) {
         g.step();
         const rq = p.gait?.req;
         if (rq && rq.fwd > 0) wasLunge = true;
         if (wasLunge && !(rq && rq.fwd > 0)) landed = true;
         if (rq && rq.fwd < 0) break; // 앞발을 거두기 시작
-        if (landed && p.gait.legs.F.stance && p.gait.legs.B.stance) rows.push(pose());
+        if (landed) last = pose();
+        if (landed && p.gait.legs.F.stance && p.gait.legs.B.stance) rows.push(last);
       }
       const ms = Math.max(...rows.map((r) => r.spread));
       const wide = rows.filter((r) => r.spread >= 0.85 * ms); // 두 발이 가장 벌어진 몫 (런지 자세)
+      // 10/24 15:5x 손목(SECRET.thrustArm — 팔을 뻗은 채 굳음): 몸이 다 실린 끝 무렵은 걸음 몸의 앞발 '디딤' 표시가 몇 스텝 꺼졌다 켜지는 사이라(옛 팔에서도 0.50 ~ 0.60 s 꺼짐)
+      //  그 몇 스텝이 창 밖으로 밀리면 런지 자세를 못 본다 → 앞발을 거두기 바로 전 자세(문서 §12-1 셋째 줄 '몸이 다 실려 앞발이 뜨기 바로 전')도 런지 자세로 셈
+      if (last && !wide.includes(last)) wide.push(last);
       const best = wide.reduce((a, r) => (r.front - r.back > a.front - a.back ? r : a), wide[0]);
       return { ...best, drop: pel0 - Math.min(...rows.map((r) => r.pel)) };
     } finally { g.world.free(); }
