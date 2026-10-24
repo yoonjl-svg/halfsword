@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "received": "2026-10-24",
+  "weapon": "druid_whip",
+  "name": "드루이드의 채찍",
+  "design": "처음 만든 넓은 원형 그림(1안) — 둥글게 감긴 덩굴 · 감개 손잡이 · 잎 두 장 · 투명 바탕",
+  "source": {
+    "from": "샛별 저장소",
+    "commit": "537a7bd8",
+    "note": "그림 두 장 바이트 그대로. 2안(촘촘 감김) · 3안(8 자)은 고르지 않은 시안이라 들이지 않음"
+  },
+  "ownerDecision": {
+    "date": "2026-10-24",
+    "text": "샛별이 보낸 메시지 확인하고 적용해 (그림은 샛별 저장소에서 사장님 '채찍 처음 만든 원형 섬네일 쓸게')"
+  },
+  "files": {
+    "original": {
+      "path": "art/druid-whip-thumb-20261024/original.png",
+      "sha256": "ed0f4c78f047f47e502906581f4d25d8683c241e7ea1dee78a1cc60e306d5352",
+      "bytes": 849740,
+      "size": [
+        1254,
+        1254
+      ],
+      "note": "고해상도 원본 · RGBA (보관용 — 게임에 안 씀)"
+    },
+    "game": {
+      "path": "art/druid-whip-thumb-20261024/game.webp",
+      "sha256": "a649b44ed7eaba6c4f99440af2b7fb2798c92af193f5add38dd3ec6838612175",
+      "bytes": 23270,
+      "size": [
+        256,
+        256
+      ],
+      "note": "게임용 256² WebP 마스터 — public/ui/weapons/druid_whip.webp 와 같은 바이트"
+    }
+  },
+  "used": [
+    "public/ui/weapons/druid_whip.webp (카드 뽑기 앞면 · 대기실 아이템 칸 · 시험 경로)"
+  ],
+  "regenerate": "tools/browser/weapon_thumbs.mjs 는 이 무기를 모델로 다시 찍지 않고 game.webp 를 그대로 복사한다",
+  "previous": {
+    "note": "10/23 판 = 게임 모델을 찍은 썸네일(샛별 저장소 322c28d90 그대로)",
+    "sha256": "caf42f5b1d672ed7ad59293cbd3fa8476e1ed6b457f068b599b8d0c90a47b59f",
+    "bytes": 3572
+  }
+}

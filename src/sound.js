@@ -17,6 +17,7 @@
 //  들어보기: 메뉴의 "소리 들어보기" (sounds.html)
 // ─────────────────────────────────────────────────────────────
 import { SOUND, VITALS, STAMINA } from './config.js';
+import { whipCrackGate } from './whip_sound.js'; // 드루이드의 채찍 C2 맞음 · 끝 딱 겹침 막기 (10/24)
 import { drawnSlash, DRAWN_SLASH } from './slash_draw.js';
 import { StageDetailSound, hasStageDetails } from './stage_detail_sound.js';
 
@@ -1656,7 +1657,8 @@ const SAMPLES = {
   // 드루이드의 채찍 (10/23 사장님 '휘두르고 때릴 때 실제 채찍 소리 넣어줘' — 녹음만 · 출처 public/sfx/LICENSE.txt whip/): 없으면 그 소리는 나지 않는다(합성으로 대신하지 않음)
   whipSwish: nums('whip/swish', 4), // 휘두르는 바람 "휙" (qubodup 대나무 막대 휘두르기 녹음 · CC0)
   whipCrack: nums('whip/crack', 3), // 끝이 터지는 "딱" (스위스 퀴스나흐트 클라우스야겐 채찍 치기 녹음 · 퍼블릭 도메인)
-  whipHit: nums('whip/hit', 3), // 살 · 옷을 치는 "찰싹" (AntumDeluge Thwack — 물건을 때린 녹음 · CC0)
+  whipHit: nums('whip/hit', 3), // (10/23 판 — 주소 ?whipHit=old) 살 · 옷을 치는 "찰싹" (AntumDeluge Thwack — 물건을 때린 녹음 · CC0)
+  whipLash: nums('whip/lash', 1), // (10/24 기본) 살 · 옷을 치는 채찍 "짝" — SciFiSounds 'Whip Crack'(freesound 529925 · CC0) 의 딱 부분 (사장님 10/24 'c2로 할게' · 샛별 저장소 3912e1ec)
   whipArmor: nums('whip/armor', 3), // 투구 · 판금을 치는 "탱" (Kenney impactPlate_light · CC0)
   whipClash: nums('whip/clash', 3), // 칼에 감기며 부딪는 "칭" (Kenney impactMetal_light · CC0)
 };
@@ -2261,14 +2263,20 @@ export class Sound {
   /**
    * 드루이드의 채찍 소리 (10/23 — 녹음만: 위 SAMPLES whip*. 아직 안 읽혔으면 아무 소리도 내지 않는다 — 합성으로 대신하지 않는다).
    *  swish(speed): 끝 빠르기(m/s)가 오를 때 한 번 "휙" — 빠를수록 크고 조금 높게 · crack(speed): 끝 빠르기 최고점에서 "딱"
-   *  hit(energy, armor): 채찍이 몸을 친 판정 — 살 · 옷 "찰싹" 또는 투구 · 판금 "탱" · clash(vn): 칼에 부딪힘(맞닿는 빠르기 m/s)
+   *  hit(energy, armor): 채찍이 몸을 친 판정 — 살 · 옷 = C2 채찍 "짝"(10/24 · 'old' 판 = Thwack "찰싹") 또는 투구 · 판금 "탱" · clash(vn): 칼에 부딪힘(맞닿는 빠르기 m/s)
    *  음량은 같은 세기의 칼 소리(blunt · clash)와 같은 눈금으로 (event 음량 0.12 + 0.95 e^0.8 꼴)
+   *  (10/24) C2 는 그 자체가 채찍 '딱' 이라 끝 '딱'과 한 맞음에서 두 번 터지지 않게 막는다 — whip_sound.js whipCrackGate (SOUND.whipLashGap · whipFlam).
+   *   'old' 판(?whipHit=old)은 10/23 그대로 막지 않는다
    */
   whip(kind, x = 0, armor = false) {
     if (!this._on || !this.ctx) return;
-    const pick = { swish: 'whipSwish', crack: 'whipCrack', hit: armor ? 'whipArmor' : 'whipHit', clash: 'whipClash' }[kind];
+    const c2 = SOUND.whipHit !== 'old';
+    const lash = c2 && kind === 'hit' && !armor;
+    const pick = { swish: 'whipSwish', crack: 'whipCrack', hit: armor ? 'whipArmor' : c2 ? 'whipLash' : 'whipHit', clash: 'whipClash' }[kind];
     const buf = this.pickSample(pick);
     if (!buf) return;
+    if (kind === 'hit' && x < 5) return; // 스치는 닿음은 blunt 와 같이 소리 없음
+    if (c2 && (kind === 'crack' || lash) && !whipCrackGate((this._whipGate ??= {}), lash ? 'lash' : 'crack', this.ctx.currentTime, SOUND)) return;
     const R = Math.random;
     if (kind === 'swish') {
       const e = clamp01((x - 6) / 16); // 끝 6 → 22 m/s
@@ -2279,10 +2287,9 @@ export class Sound {
       const ev = this.event({ bus: this.metalBus, gain: 0.3 + 0.55 * e, prio: 1.4 });
       this.layer(ev, buf, { gain: 1, rate: between(R, 0.95, 1.06) });
     } else if (kind === 'hit') {
-      if (x < 5) return; // 스치는 닿음은 blunt 와 같이 소리 없음
       const e = clamp01(x / 120);
       const ev = this.event({ bus: armor ? this.metalBus : this.fleshBus, gain: 0.12 + 0.95 * e ** 0.8, prio: 1.5 });
-      this.layer(ev, buf, { gain: armor ? 0.8 : 1, rate: between(R, 0.94, 1.06) });
+      this.layer(ev, buf, { gain: armor ? 0.8 : lash ? SOUND.whipLashGain : 1, rate: between(R, 0.94, 1.06) });
     } else {
       const e = clamp01((x - 0.3) / 7.5); // clash 와 같은 눈금
       const ev = this.event({ bus: this.metalBus, gain: 0.15 + 0.55 * e, prio: 1 + e });

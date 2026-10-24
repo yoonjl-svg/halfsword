@@ -181,6 +181,8 @@
 
 ## 10. 실제 채찍 소리 (`src/sound.js` whip · `src/main.js` whipWhoosh · 확인표 2259 · 2260)
 
+> (10/24 14:3x 바뀜) 살 · 옷 맞음 = C2(SciFiSounds 'Whip Crack' · CC0 — `whip/lash1.mp3`) · 아래 Thwack 은 `?whipHit=old` · 걸쇠 셈은 `src/whip_sound.js` 로 옮김(값 그대로) · 썸네일은 원형 손그림 — `docs/import/bernardo_whip_import_2026-10-24.md` §2 · §3.
+
 | 소리 | 언제 | 녹음 (모두 실제 녹음 · 저작자 표시 필요 없음) |
 |---|---|---|
 | 휙 (넷) | 끝 빠르기가 9 m/s 를 넘어 오를 때 한 번(5 m/s 아래로 내려오면 다시) · 빠를수록 크고 조금 높게 | qubodup 'Swish - bamboo stick weapon swhoshes'(OpenGameArt · CC0 — 대나무 막대를 마이크 앞에서 휘두름) |

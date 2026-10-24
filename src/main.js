@@ -37,6 +37,7 @@ import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RET
 import { attachAura } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
+import { whipTipStep, whipHitMode } from './whip_sound.js'; // 드루이드의 채찍 휙 · 딱 걸쇠 (10/24 — 아래 whipWhoosh 에서 옮김) · 맞음 소리 주소 스위치
 import { Combat, woundDegree, woundRageMult, COMBAT_HOOKS } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_ORDER, STAGE_FOE, STAGE_FOE_EXTRA, stageFoeId, stageLabel, STAGE_NAME_KO } from './stages.js';
 import { WANDER, WANDER_NAME, WANDER_EXCLUSIVE, WANDER_HEAD, WANDER_BONUS_LABEL, WANDER_NOTICE_TEXT, chooseWanderEncounter } from './wander_rules.js'; // 방랑 (10/23 — 대기실 '방랑' 단추, docs/import/wander_heroes_import_2026-10-23.md)
@@ -72,6 +73,7 @@ await RAPIER.init();
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도(…?r2p=1?weapon=…) 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
 if (params.has('stamina')) CONFIG.STAMINA.on = params.get('stamina') !== '0'; // 기력(10/15 — 샛별 저장소 구현, docs/strike/stamina_import_2026-10-15.md): 기본 켬, `?stamina=0` = 기력 없음(막대·비용·지침·탈진 모두 없음 — 지금 본판 그대로)
+CONFIG.SOUND.whipHit = whipHitMode(params, CONFIG.SOUND.whipHit); // 드루이드의 채찍 살 · 옷 맞음 소리(10/24): 기본 C2 채찍 녹음 · `?whipHit=old` = 10/23 판(Thwack — 겹침 막기도 없음)
 const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
@@ -1047,19 +1049,11 @@ function updateWhoosh(f, dt) {
   if (f.flexWeapon) return whipWhoosh(f, st); // 드루이드의 채찍: 합성 바람 고리 대신 녹음 "휙" · "딱" (아래)
   st.loop?.set(f.armed ? f.tipVel.length() : 0);
 }
-// 드루이드의 채찍 소리 (10/23 사장님 '휘두르고 때릴 때 실제 채찍 소리' — 녹음만, sound.js whip): 끝 빠르기(fighter.tipVel)를 화면마다 보고
-//  swishOn m/s 를 넘어 오를 때 "휙" 한 번(swishOff 아래로 내려오면 다시 걸림) · crack m/s 넘게 오른 뒤 최고점에서 15 % 꺾이면 그 최고 빠르기로 "딱" 한 번(crack × 0.6 아래로 내려오면 다시 걸림).
-//  값은 소리 걸쇠일 뿐 판정 · 물리와 무관 (확인표 2259 — 사장님 확인 전)
-const WHIP_SOUND = { swishOn: 9, swishOff: 5, crack: 14 };
+// 드루이드의 채찍 소리 (10/23 사장님 '휘두르고 때릴 때 실제 채찍 소리' — 녹음만, sound.js whip): 끝 빠르기(fighter.tipVel)를 화면마다 보고 "휙" · "딱" 한 번씩.
+//  걸쇠 셈 = src/whip_sound.js whipTipStep (10/24 옮김 — 값 그대로 · 노드 도구 · 시험과 같은 셈). 값은 소리 걸쇠일 뿐 판정 · 물리와 무관 (확인표 2259 — 사장님 확인 전)
 function whipWhoosh(f, st) {
   st.loop?.set(0);
-  const v = f.armed ? f.tipVel.length() : 0;
-  const W = (st.whip ??= { up: false, pk: 0, lock: false });
-  if (!W.up && v > WHIP_SOUND.swishOn) { W.up = true; sound.whip('swish', v); }
-  else if (W.up && v < WHIP_SOUND.swishOff) W.up = false;
-  if (W.lock) { if (v < WHIP_SOUND.crack * 0.6) W.lock = false; return; }
-  if (v > WHIP_SOUND.crack && v > W.pk) W.pk = v;
-  else if (W.pk > 0 && v < W.pk * 0.85) { sound.whip('crack', W.pk); W.pk = 0; W.lock = true; }
+  for (const [kind, x] of whipTipStep((st.whip ??= {}), f.armed ? f.tipVel.length() : 0)) sound.whip(kind, x);
 }
 /** 싸움 화면이 아닐 때(메뉴·일시정지)는 바람 소리·긁는 소리를 끈다 */
 function muteWhoosh() {

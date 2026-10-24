@@ -204,3 +204,17 @@ test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 
   assert.equal(c.log.filter((x) => x.att === 0).length, 0);
   WHIP_KNEEL.p = p0;
 });
+
+test('섬네일 (10/24 사장님 확정 — 처음 만든 넓은 원형 그림 · 샛별 저장소 537a7bd8): 게임 WebP = 승인 해시 = art 마스터 · 원본 1254² PNG 보관 · 다시 찍기 도구가 마스터를 그대로 복사', async () => {
+  const fs = await import('node:fs'), crypto = await import('node:crypto');
+  const root = (p) => new URL(`../../${p}`, import.meta.url), sha = (p) => crypto.createHash('sha256').update(fs.readFileSync(root(p))).digest('hex');
+  const m = JSON.parse(fs.readFileSync(root('art/druid-whip-thumb-20261024/manifest.json'), 'utf8'));
+  assert.equal(sha('public/ui/weapons/druid_whip.webp'), 'a649b44ed7eaba6c4f99440af2b7fb2798c92af193f5add38dd3ec6838612175');
+  for (const f of Object.values(m.files)) assert.equal(sha(f.path), f.sha256, f.path);
+  assert.equal(m.files.game.sha256, sha('public/ui/weapons/druid_whip.webp'));
+  const png = fs.readFileSync(root(m.files.original.path));
+  assert.deepEqual([png.toString('latin1', 12, 16), png.readUInt32BE(16), png.readUInt32BE(20), png[25]], ['IHDR', 1254, 1254, 6]); // 1254² RGBA
+  const webp = fs.readFileSync(root('public/ui/weapons/druid_whip.webp'));
+  assert.deepEqual([webp.toString('latin1', 0, 4), webp.toString('latin1', 8, 12)], ['RIFF', 'WEBP']);
+  assert.match(fs.readFileSync(root('tools/browser/weapon_thumbs.mjs'), 'utf8'), /KEEP = \{ druid_whip: '\.\.\/\.\.\/art\/druid-whip-thumb-20261024\/game\.webp' \}/);
+});
