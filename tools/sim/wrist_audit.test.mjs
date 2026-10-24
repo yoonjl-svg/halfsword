@@ -39,6 +39,7 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
   assert.equal(JOINTS.swivelTau, 0.2);
   assert.equal(JOINTS.wristGuard, 1);
   assert.equal(JOINTS.wristRope, 0); // 시험 밧줄 기본 끔 (켜면 AI 베기가 크게 약해짐 — 기록 §9)
+  assert.equal(JOINTS.wristSwing, 0); // 시험 베는 동안 손목 교정 기본 0 = 지금대로 (10/25 셸하우 — 기록 §11)
   assert.equal(HUMAN.ulnarDev, 30);
   assert.equal(HUMAN.wristThumb, 135);
   assert.ok(Math.abs(ARM_LEN - 0.57) < 1e-9);

@@ -4229,10 +4229,23 @@ const _wgX = new THREE.Vector3();
 function wristGuardAim(f, aim) {
   const J = f.jointByName;
   if (!f.sword || !J.uarmS || !J.farmS) return 0;
+  const sw = JOINTS.wristSwing && cutSwing(f); // 시험 (기본 0 — 지금대로): 베는 토막
+  if (sw && JOINTS.wristSwing === 2) return 0; // 베는 동안 교정 안 함
   rot(f.bodies.chest, _wgQ).multiply(J.uarmS.target).multiply(J.farmS.target);
   const fx = _wgF.set(1, 0, 0).applyQuaternion(_wgQ);
-  const z = _wgZ.set(0, 0, 1).applyQuaternion(_wgQ);
+  // 베는 동안 1: 손 면 = 지금 칼 면(칼 z) — 칼끝을 칼 면 안에서만 들거나 내림(긋는 줄을 따라 앞 · 뒤로). 굴림 0 손 면으로 돌리면 굴린 손에서는 칼끝이 옆으로 돌아 긋는 줄이 비킨다(셸하우 — 기록 §11)
+  const z = sw ? _wgZ.set(0, 0, 1).applyQuaternion(rot(f.sword, _wgQ)) : _wgZ.set(0, 0, 1).applyQuaternion(_wgQ);
   return wristClamp(fx, aim, z);
+}
+/** 베는 중인가 (시험 JOINTS.wristSwing — wristGuardAim): AI = 베기 기술의 긋기 · 따라 베기 · 사람 = 손 휘두르기(skill.swinging). 탭 찌르기 · 손잡이 찍기 · 비기 · 운동학 비기는 아님 */
+function cutSwing(f) {
+  const sk = f.skill;
+  if (!sk || sk.tap || sk.pom || sk.sec || f.iai) return false;
+  if (f.aiControlled) {
+    const c = f.aiCtl;
+    return !!c && c.mode === 'attack' && (c.phase === 'strike' || c.phase === 'follow') && c.tech?.kind === 'cut';
+  }
+  return !!sk.swinging;
 }
 /**
  * 비정상 손목 교정 (JOINTS.wristGuard — 사장님 10/24 17:2x · 기록 docs/strike/wrist_audit_2026-10-24.md §9). 칼 틀(x = 날 · y = 칼 축 · z = 칼 면)은 손 틀이다(주먹이 칼에 붙음).

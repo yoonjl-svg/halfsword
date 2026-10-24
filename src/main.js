@@ -335,6 +335,7 @@ if (params.has('elbowSwivel')) CONFIG.JOINTS.elbowSwivel = +params.get('elbowSwi
 if (params.has('wristGuard')) CONFIG.JOINTS.wristGuard = +params.get('wristGuard') ? 1 : 0; // 기본 켬 (사장님 10/24 17:2x · `?wristGuard=0` 전 판): 사람 손목 범위 밖 칼 겨눔을 범위 끝으로 (fighter.js wristClamp — 사람 · AI 모두 · 밧줄은 아래 wristRope)
 if (params.has('swivelThrust')) CONFIG.JOINTS.swivelThrust = +params.get('swivelThrust') ? 1 : 0; // 10/24 17:2x 뒤 고침 (기본 켬 · `?swivelThrust=0` = 17:2x 판): 탭 찌르기 동안 팔꿈치 돌림이 칼을 아래팔의 연장 쪽으로 (fighter.js elbowSwivel align)
 if (params.has('swivelHuman')) CONFIG.JOINTS.swivelHuman = +params.get('swivelHuman') ? 1 : 0; // 10/25 01:2x (기본 켬 · `?swivelHuman=0` = 10/24 17:2x 뒤 판): 한손 무기 팔꿈치 돌림이 팔꿈치를 줄 위로 · 아래팔 굴림 · 위팔 돌림을 한도 밖으로 밀지 않게 (fighter.js elbowSwivel armOk)
+if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
 if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
 const chainParam = params.get('chain');
