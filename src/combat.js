@@ -26,7 +26,8 @@ import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
 import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT, WHIP_KNEEL } from './config.js';
-import { BREAK } from './weapons.js';
+import { WEAPON_ABILITY } from './config.js'; // 달타냥 '총사의 결투' 배율 (10/25 — duelOneHandMult)
+import { BREAK, isOneHandSword } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants, artFlash } from './secret_instant.js'; // artFlash: 이점이 터진 순간 잔상 (10/21)
 import { FINISH, cleaveFoe } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
@@ -93,6 +94,16 @@ export function woundDegree(f) {
 export function woundRageMult(f) {
   const k = f?.weapon?.woundRage;
   return k ? 1 + k * woundDegree(f) : 1;
+}
+
+// ── 총사의 결투 (달타냥 에픽 특수 능력 — 사장님 10/25 01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대) ──
+//  칼(spec.duelOneHand)의 주인이 지금 한손검(weapons.js isOneHandSword — 한손 쥠 · 날 있음)을 쥔 상대(armed — 놓쳤거나 팔이 잘려 칼이 떨어졌으면 아님 ·
+//  부러진 칼은 그대로 한손검)를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율)이 × WEAPON_ABILITY.duelOneHand(1.15 — config). 와신상담과 같은 자리.
+//  능력 없는 칼 · 한손검이 아닌 상대 · 값 1(`?dartagnanAbility=0`)은 1 — power × 1 은 power 그대로라 다른 판은 바이트까지 같다
+/** 총사의 결투 배율: att 칼에 duelOneHand 가 있고 vic 가 한손검을 쥐고 있으면 WEAPON_ABILITY.duelOneHand, 아니면 1 (시험이 읽는다) */
+export function duelOneHandMult(att, vic) {
+  const k = +WEAPON_ABILITY.duelOneHand;
+  return att?.weapon?.duelOneHand && k > 0 && vic?.armed && isOneHandSword(vic.weapon) ? k : 1;
 }
 
 /** 부위 이름 + 부위 기준 위치 → 해부학적 구역 */
@@ -323,7 +334,9 @@ export class Combat {
     // 와신상담 (월왕구천검 — 위 WOUND_RAGE): 칼 주인이 다칠수록 이 칼의 공격력 × (1 + woundRage × d). 능력 없는 무기는 1 이고 계산도 안 한다
     //  (power × 1 은 power 그대로라 다른 무기·사람 판은 바이트까지 같다). 물리(속도·질량)는 그대로, 판정 에너지에만 — 등급 power 와 같은 자리
     const rage = att.weapon?.woundRage ? woundRageMult(att) : 1;
-    const power = att.weaponCfg.power * rage;
+    // 총사의 결투 (달타냥 — 위 duelOneHandMult · 사장님 10/25): 한손검을 쥔 상대를 치면 같은 자리(공격력)에 × 1.15. 능력 없는 칼은 계산도 안 한다
+    const duel = att.weapon?.duelOneHand ? duelOneHandMult(att, vic) : 1;
+    const power = att.weaponCfg.power * rage * duel;
     let severity = 0;
     let pass = false;
     let thr = null; // 날이 들기 시작하는 문턱(J) — 측정 도구(weapon_anatomy.mjs, armor_eval.mjs)도 읽는다
@@ -398,6 +411,7 @@ export class Combat {
       finish, // 내려찍기 즉사 (사장님 결정 9/30, fighter.applyWound)
       ...(finishPower ? { finishPower: tp?.cleave ? (FINISH.cleave?.power ?? FINISH.power) : FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기 (FINISH.mode 'power25' 때만 붙는다)
       ...(att.weapon?.woundRage ? { woundRage: rage } : {}), // 와신상담 배율 (그 능력이 있는 칼만 붙는다 — 시험·디버그가 읽는다)
+      ...(duel !== 1 ? { duelOneHand: duel } : {}), // 총사의 결투 배율이 실렸을 때만 (달타냥이 한손검 상대를 쳤을 때 — 시험 · 잼이 읽는다)
       ...(spK !== 1 ? { schoolK: spK, schoolLock: att.schoolPassive.lastLock } : {}), // 유파 패시브 배율이 실렸을 때만 (strike → onHit 이 켄타이를 씀)
     };
   }

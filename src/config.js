@@ -63,6 +63,10 @@ export const STAMINA = {
 //   aweStart 15 (사장님 11:4x '10-20 사이로 추천해달라고 한거야 랜덤적용 x' → 감독 추천 고정 15: 베기 한 번 12(× 무게 0.75 ~ 1.5)라
 //    생생한 채 지치기(0 아래) 전까지 베기를 한 번쯤 덜 하게 됨 · 10 은 베기 한 번도 안 됨 · 20 은 두 번 가까이)
 export const WEAPON_ABILITY = { aweDrain: 0, aweGap: 1.5, aweStart: 15 };
+// 달타냥 '총사의 결투' — 사장님 10/25 결정 (01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대): 칼 주인이 한손검(weapons.js isOneHandSword —
+//  한손 쥠 · 날 있음)을 쥔 상대를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율, 와신상담과 같은 자리 · combat.js duelOneHandMult)이 × duelOneHand.
+//  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 확인 전 (확인표 2491 · 2492)
+WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
 // 드루이드의 채찍 무릎 꿇리기 (사장님 10/23 01:5x '특수효과 넣어서 채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘.(모든 종류의 타격 대상) 곁눈베기 맞았을 때처럼' — 확인표 2255 ~ 2257 사장님 확인 전)
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
 //  다른 점: 부위 · 판정 종류(둔타 · 멍 · 상처)를 가리지 않는다 · 굴림은 한 획(휘두름 · 톡)에 한 번 — 그 획의 첫 맞음에서만(마디가 여러 번 닿아도) · 무기 칸 kneelHit 이 있는 무기만(채찍).
