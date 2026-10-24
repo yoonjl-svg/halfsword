@@ -5,9 +5,10 @@
 import { FLOW_RECOVERY } from './config.js';
 export { FLOW_RECOVERY };
 
-export function beginFlowRecovery(f, defender) {
-  const hold = FLOW_RECOVERY.hold, recover = FLOW_RECOVERY.recover;
-  const duration = hold != null ? hold + (recover ?? 0) : FLOW_RECOVERY.seconds;
+/** seconds: 이 늦춤만의 시간 (없으면 FLOW_RECOVERY 그대로 — 흘림). 안다레 리솔루토 런지는 SECRET.risolutoArmSlow 0.6 (사장님 10/24) · 바닥 · 꼴은 같음 */
+export function beginFlowRecovery(f, defender, seconds = null) {
+  const hold = seconds != null ? null : FLOW_RECOVERY.hold, recover = seconds != null ? 0 : FLOW_RECOVERY.recover;
+  const duration = seconds != null ? seconds : hold != null ? hold + (recover ?? 0) : FLOW_RECOVERY.seconds;
   if (!(duration > 0) || !f.alive || !f.armed || f.state !== 'stand') return false;
   const now = f.stamina.time, id = f.stamina.attackId;
   const old = f.flowRecovery;

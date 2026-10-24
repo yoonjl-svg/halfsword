@@ -217,6 +217,11 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoAny')) CONFIG.SECRET.risolutoAnyPart = +params.get('risoAny') ? 1 : 0;
   if (params.has('risoGrace') && +params.get('risoGrace') >= 0) CONFIG.SECRET.risolutoGrace = +params.get('risoGrace');
   if (params.has('risoClosing')) CONFIG.SECRET.risolutoClosing = +params.get('risoClosing') ? 1 : 0;
+  // 10/24 런지 (사장님 '런지로 진행해 … 고노센처럼 빠르게 … 0.6초 내 경직도 0.6초'): `?risoLunge=0` = 10/23 판(탭 찌르기 · 팔 늦춤 FLOW_RECOVERY 0.4 · 굳음 stiff.italian 0.4) · `?risoShare=0.6` 칼끝 빠르기 몫 비교 · `?risoRoom=1` · `?risoGlide=0`
+  if (params.get('risoLunge') === '0') Object.assign(CONFIG.SECRET, { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null });
+  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare');
+  if (params.has('risoRoom')) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +params.get('risoRoom') ? 1 : 0 }; // 1 = 앞발 런지 걸음을 가슴 사이(clinch 밖까지)로 줄임
+  if (params.has('risoGlide')) CONFIG.SECRET.risolutoGlide = +params.get('risoGlide') ? 1 : 0; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
 }
 {
   // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)

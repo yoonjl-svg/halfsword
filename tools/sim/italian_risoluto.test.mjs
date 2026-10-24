@@ -1,6 +1,7 @@
 // 이탈리아 거침없이 나아가 찌르기 (안다레 리솔루토 — 10/22 사람 먼저 · docs/strike/italian_risoluto_2026-10-22.md):
 //  덮음은 칼 모양(내 손 쪽 절반 ↔ 상대 칼끝 쪽 절반 가장 가까운 거리) · 덮인 채 나아가기 셈 · 창 · 두 번째 길(상대 박자) · 실제 몸에서 실행(탭 찌르기 · 상대 팔 늦춤 · 비기 배율 · 굳음) · AI 는 닫힘.
 //  10/23 넓은 판정(기본 — 칼 어느 부위든 · 너그러움 0.2 s · 가슴 사이 조건 없음 · 다 붙음 · 상대 박자 켬) · 10/22 판(?risoWide=0 = OLD)은 그 판으로 시험.
+//  10/24 런지(기본 — 운동학 찌르기 · 고노센 칼끝 빠르기 · 몸 미끄러짐 + 앞발 런지 · 팔 늦춤 0.6 · 굳음 0.6) · 10/23 탭 찌르기 판(?risoLunge=0 = TAP1023)은 그 판으로 시험.
 //  node --test tools/sim/italian_risoluto.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,11 +11,13 @@ import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
+import { iaiTipSpeed } from '../../src/secret_instant.js';
 
 const { SECRET } = CONFIG;
 const keep = (o, k, v, fn) => { const old = o[k]; o[k] = v; try { return fn(); } finally { o[k] = old; } };
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
 const OLD = { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0 }; // 10/22 판 (main.js ?risoWide=0 과 같은 값)
+const TAP1023 = { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null }; // 10/23 탭 찌르기 판 (main.js ?risoLunge=0 과 같은 값)
 
 // 가짜 몸 — 칼은 a(손 쪽 0) → b(칼끝 1) 선분
 const blade = (a, b) => (t, out = new THREE.Vector3()) => out.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
@@ -139,7 +142,7 @@ test('사람 길만: 이탈리아 무기 사람 비기 = 거침없이 나아가 
   }
 });
 
-test('실제 몸 실행: 탭 찌르기 하나 · 기력은 비기 값 하나 · 상대 팔 늦춤(흘림 장치) · 찌르는 동안 비기 배율 · 패시브 곧은 선 안 실림 · 끝나면 굳음 0.4 s', () => {
+test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력은 비기 값 하나 · 상대 팔 늦춤(흘림 장치 0.4 s) · 찌르는 동안 비기 배율 · 패시브 곧은 선 안 실림 · 끝나면 굳음 0.4 s', () => withCfg(TAP1023, () => {
   const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 1.8, seed: 9 });
   const p = g.player, e = g.enemy;
   g.ai.update = () => {}; p.foe = e; e.foe = p;
@@ -176,6 +179,119 @@ test('실제 몸 실행: 탭 찌르기 하나 · 기력은 비기 값 하나 · 
     assert.equal(p.skill.sec, null, '굳음 뒤 끝');
     assert.equal(SECRET.stiff.italian, 0.4);
   } finally { g.world.free(); }
+}));
+
+
+// 10/24 런지 — 상대는 멈춤 · 판 시작 발 묶임(ARENA.startHold) 뒤 · 창을 열어 탭 하나
+function lungeRun(w, { gap = 1.8, seed = 9, foeW = 'longsword', cfg = {} } = {}) {
+  return withCfg(cfg, () => {
+    const g = newRound({ weapon: w, weapon2: foeW, gap, seed });
+    const p = g.player, e = g.enemy;
+    g.ai.update = () => {}; p.foe = e; e.foe = p;
+    try {
+      for (let i = 0; i < Math.round((CONFIG.ARENA.startHold + 0.3) / DT); i++) g.step();
+      const pg = new PlayerParryGuard(p, e); p.stamina.controller = pg;
+      const ps = new PlayerSecretWatch(p, e);
+      ps.openWindow({ ev: 'risoluto', path: 'close', held: 0.6 });
+      const out = { w, gap0: p.foeDistance(), clinch: p.swordArt.measure.clinch, gon: iaiTipSpeed(p), spent0: p.stamina.spent.attack, secret0: p.stamina.spent.secret, tipV: 0, stiffT: null, stiffSteps: 0, held: false, drew: false, gaitReq: null, standAll: true, tilt: 0, wounds: [] };
+      const pel0 = new THREE.Vector3().copy(p.bodies.pelvis.translation());
+      g.onWound = (a, v, r) => { if (a === p) out.wounds.push(r); };
+      const o = ps.fire();
+      out.name = o.S.name;
+      out.ok = p.skill.secret(o);
+      out.stage0 = p.skill.sec?.stage; out.lunge = !!p.skill.sec?.lunge; out.tap = !!p.skill.tap;
+      out.req = p.iaiReq ? { ...p.iaiReq, moves: p.iaiReq.moves.map((m) => ({ ...m })) } : null;
+      out.armSlow = e.flowRecovery?.duration ?? null; out.lungeT = p.lungeT ?? 0;
+      out.spentAttack = p.stamina.spent.attack - out.spent0; out.spentSecret = p.stamina.spent.secret - out.secret0;
+      let prev = p.bladePoint(1, new THREE.Vector3());
+      for (let i = 0; i < Math.round(1.5 / DT) && p.skill.sec; i++) {
+        const comboBefore = p.iai?.kind === 'combo';
+        g.step();
+        const tip = p.bladePoint(1, new THREE.Vector3());
+        if (comboBefore) out.tipV = Math.max(out.tipV, tip.distanceTo(prev) / DT);
+        prev = tip;
+        out.gaitReq ??= p.gait?.req ? { kind: p.gait.req.kind, fwd: p.gait.req.fwd, draw: !!p.gait.req.draw } : null;
+        if (p.skill.sec?.stage === 'stiff') {
+          out.stiffT = p.skill.sec.stiffT; out.stiffSteps++;
+          out.held ||= p.iaiHoldT > 0 && p.skill.thrustPose.w === 1;
+          out.phase = p.skill.secretPhase;
+          out.res ??= p.skill.sec.lungeRes;
+        }
+        out.drew ||= !!p.gait?.drawPending || p.gait?.legs?.F?.kind === 'draw' || p.gait?.legs?.B?.kind === 'draw';
+        out.standAll &&= p.state === 'stand';
+        const ch = p.bodies.chest.translation(), pl = p.bodies.pelvis.translation();
+        out.tilt = Math.max(out.tilt, (Math.atan2(Math.hypot(ch.x - pl.x, ch.z - pl.z), ch.y - pl.y) * 180) / Math.PI);
+      }
+      const pl = p.bodies.pelvis.translation();
+      out.pelMove = Math.hypot(pl.x - pel0.x, pl.z - pel0.z);
+      out.end = p.skill.sec;
+      return out;
+    } finally { g.world.free(); }
+  });
+}
+
+test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어. 상대 팔 늦어지는 효과는 0.6초 내 경직도 0.6초\')', () => {
+  assert.equal(SECRET.risolutoLunge, 1);
+  assert.equal(SECRET.risolutoShare, 1); // 고노센 칼끝 빠르기 그대로
+  assert.equal(SECRET.risolutoArmSlow, 0.6);
+  assert.equal(SECRET.risolutoStiff, 0.6);
+  assert.equal(SECRET.hitMul, 1.3); // 판정 배율 그대로 (사장님 지시 — 바꾸지 않음)
+  // 걸음은 있던 수: 몸 미끄러짐 = 고노센 발도 iaiStep · 앞발 = 이탈리아 런지 italianStep · 디딘 뒤 뒷발 끌어붙임
+  assert.deepEqual(SECRET.risolutoStep, { slide: 'iaiStep', foot: 'italianStep', draw: 1, room: 0 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
+  assert.equal(SECRET.iaiStep, 0.6); assert.equal(SECRET.italianStep, 0.9);
+  // 다른 곳 값은 그대로 (흘림 팔 늦춤 · 이탈리아 비기 굳음 — 10/23 판 · AI 칸)
+  assert.equal(CONFIG.FLOW_RECOVERY.seconds, 0.4); assert.equal(SECRET.stiff.italian, 0.4);
+});
+
+test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝 빠르기) · 몸 미끄러짐 + 앞발 런지 0.9 m · 상대 팔 늦춤 0.6 s · 굳음 0.6 s(끝 자세 붙잡음 · 뒷발 끌어붙임) · 넘어지지 않음', () => {
+  for (const w of ['rapier', 'dartagnan']) {
+    const o = lungeRun(w);
+    assert.equal(o.name, 'andareRisoluto');
+    assert.equal(o.ok, true, w);
+    assert.equal(o.stage0, 'instant', `${w} 런지는 운동학 틀`);
+    assert.equal(o.lunge, true);
+    assert.equal(o.tap, false, '탭 찌르기 아님');
+    const m = o.req?.moves?.[0];
+    assert.ok(o.req?.combo && m?.lunge && m.kind === 'thrust', '운동학 찌르기 한 수');
+    assert.equal(o.req.share, SECRET.risolutoShare);
+    assert.equal(o.req.hitMul, SECRET.hitMul);
+    assert.equal(o.req.hold, 0.6);
+    assert.deepEqual([m.step.fwd, m.step.foot, m.step.draw, !!m.step.room], [SECRET.iaiStep, SECRET.italianStep, true, false]);
+    assert.equal(m.glide, true);
+    assert.equal(o.armSlow, 0.6, '상대 두 팔 늦춤 0.6 s');
+    assert.ok(o.lungeT > 0, '런지 자세 (SECRET.stance.lunge)');
+    assert.equal(o.spentAttack, 0, '찌르기 값은 따로 안 냄');
+    assert.ok(o.spentSecret > 0 || !CONFIG.STAMINA.on, '비기 값 하나');
+    // 고노센처럼 빠르게: 길 빠르기 = 같은 칼 고노센 칼끝 빠르기 × 1 · 찌르는 토막 칼끝(월드 — 쓸린 자리 조각) 가장 빠름 ≥ 고노센의 0.9 · 평균 ≥ 0.8 (몸 미끄러짐 몫을 길 시간에 넣어 늘임 — 연환 그때 계산 길과 같음)
+    assert.ok(Math.abs(o.res.v - SECRET.risolutoShare * o.gon) < 1e-6, `${w} 길 빠르기 ${o.res.v}`);
+    assert.ok(o.res.tipVmax >= 0.9 * o.gon && o.res.tipV >= 0.8 * o.gon, `${w} 칼끝 ${o.res.tipV.toFixed(1)} · 최고 ${o.res.tipVmax.toFixed(1)} / 고노센 ${o.gon.toFixed(1)}`);
+    assert.deepEqual(o.gaitReq, { kind: 'lunge', fwd: SECRET.italianStep, draw: true }, `${w} 앞발 런지 걸음`);
+    assert.equal(o.stiffT, 0.6, '굳음 0.6 s');
+    assert.ok(Math.abs(o.stiffSteps * DT - 0.6) < 3 * DT, `${w} 굳음 ${(o.stiffSteps * DT).toFixed(3)} s`);
+    assert.equal(o.phase, 'stiff'); // main.js 가 칼 입력 · 스틱 · 막기 단추를 막는다
+    assert.equal(o.held, true, '굳음 동안 끝 자세 붙잡음');
+    assert.equal(o.drew, true, `${w} 디딘 뒤 뒷발 끌어붙임`);
+    assert.equal(o.standAll, true, `${w} 넘어지지 않음`);
+    assert.ok(o.tilt < 35, `${w} 몸통 기울기 ${o.tilt.toFixed(1)}°`);
+    assert.ok(o.pelMove > 0.2, `${w} 몸이 앞으로 ${o.pelMove.toFixed(2)} m`);
+    assert.ok(o.res?.ok && o.res.lunge, '런지 결과');
+    assert.equal(o.end, null, '굳음 뒤 끝');
+  }
+});
+
+test('10/24 런지는 멈춘 상대를 칼 축으로 찌른다 (찌르기 상처) · 런지를 끄면(?risoLunge=0) 10/23 탭 찌르기 그대로', () => {
+  const o = lungeRun('rapier');
+  assert.equal(o.res.hit, true);
+  assert.ok(o.wounds.some((r) => r.type === 'stab'), `찌르기 상처 ${o.wounds.map((r) => r.type)}`);
+  // ?risoRoom=1: 앞발 걸음을 미끄러진 뒤 가슴 사이 − clinch 까지만 (가슴 사이 1.8 m → 미끄러짐 뒤 맞닿기 → 앞발은 맞닿기 − clinch 안쪽)
+  const r = lungeRun('rapier', { cfg: { risolutoStep: { ...SECRET.risolutoStep, room: 1 } } });
+  assert.ok(r.res.foot > 0 && r.res.foot < SECRET.italianStep, `앞발 ${r.res.foot}`);
+  assert.ok(r.res.foot <= r.gap0 - r.res.slide - r.clinch + 1e-6, `앞발 ${r.res.foot} · 가슴 사이 ${r.gap0} · 미끄러짐 ${r.res.slide}`);
+  const t = lungeRun('rapier', { cfg: TAP1023 });
+  assert.equal(t.stage0, 'riso');
+  assert.equal(t.tap, true);
+  assert.equal(t.armSlow, CONFIG.FLOW_RECOVERY.seconds);
+  assert.equal(t.stiffT, SECRET.stiff.italian);
 });
 
 test('창 안의 끌기(베기)는 비기가 아님 · 내가 베기를 시작하면 창이 닫힘', () => {
