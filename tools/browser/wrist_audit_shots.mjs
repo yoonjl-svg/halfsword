@@ -17,7 +17,8 @@
 //   tguards  — GUARDS 자세를 TAGS 판마다 (<판>_guard_<무기>_<번호>_{side,hand}) — 예 TAGS='before:&elbowSwivel=0&wristGuard=0&swivelThrust=0,now:&swivelHuman=0,after:'
 //   fight    — 사장님 사진 같은 판: 무대 FIGHT_STAGE(기본 qinglan_night — 밤의 청람잔도) · 상대 FIGHT_FOE(기본 terracotta — 병마용) · 상대 무기 FIGHT_FOE_WEAPON(기본 goujian — 월왕구천검 · 주소에 없으면 내 무기를 받음) · 내 무기 WEAPON(기본 sabre) ·
 //              상대 AI 는 그대로 싸우고(나는 손을 떼고 자세만 · 둘 다 상처 끔) 싸움 FIGHT_T(기본 3,5,7,9 s)마다 멈춰 게임 화면 · 옆 (<판>_fight_<초>_{game,side}) — 상대 팔꿈치 위 각을 기록 ·
-//              상대 공격의 따라 베기(follow) 첫 스텝도 FIGHT_ATK(기본 2) 번 (<판>_fight_atk<n>_{game,side} — 뻗어 휘두른 끝)
+//              상대 공격의 따라 베기(follow) 첫 스텝도 FIGHT_ATK(기본 2) 번 (<판>_fight_atk<n>_{game,side} — 뻗어 휘두른 끝) ·
+//              FIGHT_UP(° · 기본 끔)이면 상대 팔꿈치가 어깨 → 손목 줄보다 그만큼 넘게 위로 간 첫 스텝(<판>_fight_up) — FIGHT_UP_T(기본 20 s)까지 없으면 그때 멈추고 그동안 최대를 기록(<판>_fight_upmax)
 //  npx vite build --outDir <tmp>/dist && node tools/pwa/build.mjs <tmp>/dist && npx vite preview --outDir <tmp>/dist --port 5567 --strictPort &
 //  node tools/browser/wrist_audit_shots.mjs http://127.0.0.1:5567 <그림 폴더> [lunge|guards|pair|tap|gyeoksal|close|ghost]   (SHOT_WAIT=ms — 장면 기다림, 기계가 바쁠 때 늘림)
 import { chromium } from 'playwright';
@@ -139,14 +140,17 @@ const READ_E = () => {
 };
 
 async function fightScene(pf, extra) {
-  const ts = (process.env.FIGHT_T || '3,5,7,9').split(',').map(Number);
+  const ts = process.env.FIGHT_T === 'none' ? [] : (process.env.FIGHT_T || '3,5,7,9').split(',').map(Number); // 'none' = 정한 초에는 안 멈춤
   const nAtk = +(process.env.FIGHT_ATK ?? 2);
-  const keys = [...ts, ...Array.from({ length: nAtk }, (_, i) => `atk${i + 1}`)];
+  const upX = process.env.FIGHT_UP ? +process.env.FIGHT_UP : null;
+  const upT = +(process.env.FIGHT_UP_T || 20);
+  const keys = [...ts, ...Array.from({ length: nAtk }, (_, i) => `atk${i + 1}`), ...(upX != null ? ['up'] : [])];
   const { ctx, page } = await open(process.env.WEAPON || 'sabre', extra, { foe: process.env.FIGHT_FOE || 'terracotta', foeWeapon: process.env.FIGHT_FOE_WEAPON || 'goujian', stage: process.env.FIGHT_STAGE || 'qinglan_night', keepAI: true });
-  await page.evaluate(([ts, nAtk]) => {
+  await page.evaluate(([ts, nAtk, upX, upT, readE]) => {
     const g = window.game, p = g.player, ps = g.playerSecret, orig = ps.update.bind(ps);
     p.skill.autoGuard = true;
-    const D = (window.drv = { want: null, done: {}, t0: g.stats.simTime, atk: 0, prevPh: null });
+    const D = (window.drv = { want: null, done: {}, t0: g.stats.simTime, atk: 0, prevPh: null, upMax: -90 });
+    const elbowUp = new Function(`return (${readE})().elbowUp;`);
     const freeze = (k) => {
       D.want = k;
       g.config.PHYSICS.maxStepsPerFrame = 0;
@@ -159,8 +163,16 @@ async function fightScene(pf, extra) {
       if (!D.want && t > 1.5 && D.atk < nAtk && ph === 'follow' && D.prevPh !== 'follow') freeze(`atk${++D.atk}`);
       D.prevPh = ph;
       for (const k of ts) if (t >= k && !D.done[k] && !D.want) freeze(k);
+      if (upX != null && !D.done.up && !D.want && t > 1.5) {
+        if (g.enemy.state === 'stand') {
+          const u = elbowUp();
+          D.upMax = Math.max(D.upMax, u);
+          if (u > upX) freeze('up');
+        }
+        if (!D.want && t > upT) freeze('up');
+      }
     };
-  }, [ts, nAtk]);
+  }, [ts, nAtk, upX, upT, READ_E.toString()]);
   const left = new Set(keys);
   while (left.size) {
     let k;
@@ -172,7 +184,7 @@ async function fightScene(pf, extra) {
     }
     left.delete(k);
     await page.waitForTimeout(250);
-    const v = await page.evaluate(READ_E);
+    const v = { ...(await page.evaluate(READ_E)), upMax: await page.evaluate(() => +window.drv.upMax.toFixed(0)), t: await page.evaluate(() => +(window.game.stats.simTime - window.drv.t0).toFixed(2)) };
     await shot(page, `${pf}_fight_${k}_game`, 'game');
     await shot(page, `${pf}_fight_${k}_side`, 'side');
     log.push(`${pf} fight ${k} ${JSON.stringify(v)}`);

@@ -663,10 +663,10 @@
 | `guards_compare.webp` | 자세 붙잡기 1.4 s — 레이피어 1번 자세(프리마 — 판 시작 겨눔) 옆 · 손 가까이 · 월왕구천검 황소 · 세이버 황소 (칸 = 전 · 10/24 판 · 지금). 10/24 판 월왕구천검 황소 = 팔꿈치가 머리 위로 꺾이고 아래팔이 늘어진 꼴(사장님 사진의 상대) · 지금 = 팔은 전과 같고 칼끝이 위로 섬 |
 | `{before,now,after}_guard_{rapier,goujian,sabre}_1_{side,hand}.webp` · `guards_log.txt` | 위 원본 · 그때 손목 값(dev · 아래팔-칼 · 팔꿈치 · 손 앞) |
 | `tap_compare.webp` · `{before,now,after}_tap_{side,hand}.webp` · `tap_log.txt` | 레이피어 황소 탭 찌르기 뻗어 머무는 첫 스텝(1.85 m 까지 걸어 들어가 1 s 붙잡고 톡). 지금 판은 칼끝이 올라 두 칼이 안 걸려 가슴 사이 0.83 m 까지 붙은 뒤 찔렀다(다른 둘은 칼끼리 걸려 1.7 m) — 같은 자리 견줌이 아님 |
-| `fight_compare.webp` | 사장님 사진 같은 판: 밤의 청람잔도 · 병마용(월왕구천검 · 병마용 기질 AI) 대 나(레이피어 · 손 뗌 · 상처 끔 시연) — 싸움 3 · 6 · 9 s · 병마용 공격의 따라 베기 첫 스텝 둘 (게임 화면) |
-| `{before,now,after}_fight_{3,6,9,atk1,atk2}_{game,side}.webp` · `fight_log.txt` | 위 원본 (옆 = 두 가슴 줄에 수직 3.2 m) · 그때 병마용 팔꿈치 위 각 · AI 단계 · 기술 |
+| `fight_compare.webp` | 사장님 사진 같은 판: 밤의 청람잔도 · 병마용(월왕구천검 · 병마용 기질 AI) 대 나(레이피어 — 1번 자세 · 손 뗌 · 상처 끔 시연). 줄: 병마용 팔꿈치가 가장 위로 간 순간(줄보다 25° 넘게 위로 간 첫 스텝 — 20 s 안에 없으면 20 s 때: 20 s 동안 최대 전 **−29°** · 10/24 판 8.5 s 에 **+29°**(팔꿈치를 머리 곁으로 들고 칼을 세운 꼴 — 사장님 사진) · 지금 **−6°**) 게임 화면 · 옆 / 병마용 공격의 따라 베기 첫 스텝 둘 / 싸움 6 s. 10/24 판은 내 레이피어도 1번 자세에서 팔을 들고 칼을 세운다(사장님 사진의 나) |
+| `{before,now,after}_fight_{6,9,atk1,atk2,up}_{game,side}.webp` · `fight_log.txt` | 위 원본 (옆 = 두 가슴 줄에 수직 3.2 m) · 그때 병마용 팔꿈치 위 각 · AI 단계 · 기술 · 그때까지 최대 |
 
-그림 도구: `GUARDS='rapier:프리마,goujian:황소 (옥스),sabre:황소 (옥스)' TAGS='before:&elbowSwivel=0&wristGuard=0&swivelThrust=0,now:&swivelHuman=0,after:' … tguards` · `WEAPON=rapier … tap` · `WEAPON=rapier FIGHT_T=3,6,9 FIGHT_ATK=2 … fight` · 견줌 판 `python3 -I tools/browser/onehand_arm_sheet.py`.
+그림 도구: `GUARDS='rapier:프리마,goujian:황소 (옥스),sabre:황소 (옥스)' TAGS='before:&elbowSwivel=0&wristGuard=0&swivelThrust=0,now:&swivelHuman=0,after:' … tguards` · `WEAPON=rapier … tap` · `WEAPON=rapier FIGHT_T=3,6,9 FIGHT_ATK=2 FIGHT_UP=25 FIGHT_UP_T=20 … fight`(3 s 그림은 두 사람이 멀어 뺌) · 견줌 판 `python3 -I tools/browser/onehand_arm_sheet.py`.
 
 ### 10-9. 셸하우
 
