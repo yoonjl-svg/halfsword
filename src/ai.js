@@ -40,7 +40,7 @@ import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -2242,7 +2242,7 @@ export class AI {
         run.instant = true;
         run.t = 0;
         const end = D.tech.path[D.tech.path.length - 1];
-        if (SECRET.iai) requestIai(this.me, SECRET.gnsEnterBlock && ctx.th?.ev === 'enter' ? { block: true } : undefined); // 10/10 발도: 대기 자세(왼 허리)에서 곧장 가로로 (secret_instant.js) · 여쭘 B(10/25 — 기본 끔): 들어옴 창 발도는 상대 칼에 막힐 수 있음 (사람과 같은 규칙)
+        if (SECRET.iai) requestIai(this.me, SECRET.gnsEnterBlock ? { block: gnsBlockOf(ctx.th, this.me) } : undefined); // 10/10 발도: 대기 자세(왼 허리)에서 곧장 가로로 (secret_instant.js) · B(10/25 16:0x 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (사람과 같은 규칙)
         else requestInstant(this.me, { endPad: end });
         this.hand.set(end[0], end[1]);
         this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)

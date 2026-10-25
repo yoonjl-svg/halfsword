@@ -806,7 +806,7 @@ const pappenheimer = finalizeSpec('pappenheimer', {
   desc: '롱소드와 레이피어의 장점을 흡수한 결투용 검.\n구멍 뚫린 두 방호판이 손을 감싸 지킨다.', // 사장님 10/25 글 — 고치지 않는다 (전달본 글은 기록에만)
   grip: 'one-hand', material: 'steel',
   hiltLength: PAPPENHEIMER_DIM.bladeBase, bladeLength: PAPPENHEIMER_DIM.blade,
-  mCut: 0.85, mThrust: 1.1, mBlunt: 0.7, // 사장님 10/25 결정 (전달본 0.60 · 1.30)
+  mCut: 0.9, mThrust: 1.15, mBlunt: 0.7, // 사장님 10/25 결정 (19:0x 베기 0.9 · 찌르기 1.15 — 전 0.85 · 1.10 · 전달본 0.60 · 1.30)
   thrustStyle: THRUST_STYLE.rapier,
   partMesh: pappenheimerPartMesh,
   buildParts() {

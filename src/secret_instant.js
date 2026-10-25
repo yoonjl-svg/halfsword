@@ -389,9 +389,10 @@ const ARM_PARTS = ['uarmS', 'farmS'];
 const OFF_PARTS = ['uarmO', 'farmO'];
 
 /** 발도를 걸어 둔다 (다음 combat.afterStep 이 시작). opt.player: 플레이어(지금 손에서 왼 허리를 거쳐 — 전체 iaiPlayerTime) ·
- *  opt.block: 막힐 수 있는 발도 — 칼이 몸보다 먼저 상대 칼에 닿으면 막힘(이베리아 휩쓸기 · 연환과 같은 거리 iberianBlockDist · 밀어냄 없음). 고노센 여쭘 B(SECRET.gnsEnterBlock — 들어옴 창에서 낸 것만 · 10/25 08:0x) */
+ *  opt.block: 막힐 수 있는 발도 — 칼이 몸보다 먼저 상대 칼에 닿으면 막힘(이베리아 휩쓸기 · 연환과 같은 거리 iberianBlockDist · 밀어냄 없음). 고노센 B(SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 것만 · 10/25) ·
+ *  'cover' = 그에 더해 상대 칼끝이 내 몸을 겨누고 있었음(낼 때 — secret.js foeOnline) — 몸에 닿는 그 자리에서 그 칼에 막힘 (SECRET.gnsEnterBlock 2 · 10/25 16:0x 시험) */
 export function requestIai(f, opt = {}) {
-  f.iaiReq = { player: !!opt.player, block: !!opt.block };
+  f.iaiReq = { player: !!opt.player, block: opt.block === 'cover' ? 'cover' : !!opt.block };
   f.instantResult = null;
 }
 
@@ -574,7 +575,8 @@ function startIai(f, combat) {
   const rise = !!SECRET.iaiRise;
   const oneHand = rise && !!f.weaponCfg.twoHand && f.weapon?.frame !== 'heavy';
   f.iai = { kind: 'iai', K: rise ? SECRET.iaiPathRise : SECRET.iaiPath, oneHand, J: SECRET.instantJ, body: SECRET.iaiPath.E.body, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
-  if (req.block) f.iai.block = true; // 고노센 여쭘 B (SECRET.gnsEnterBlock — 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
+  if (req.block) f.iai.block = true; // 고노센 B (SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
+  if (req.block === 'cover') f.iai.cover = true; // gnsEnterBlock 2: 칼끝이 내 몸을 겨눈 채 천천히 든 상대 — 몸에 닿는 자리에서 막힘
   setKinematic(f, true);
   if (f.gait?.active && SECRET.iaiDrawStep > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.iaiDrawStep, duration: 0.3 }); // 발도 순간 앞발을 크게 (10/10 04:2x)
   f.instantGhost = Math.ceil((T + SECRET.instantNoCollide) / (combat.dt || 1 / 120)) + 1;
@@ -627,7 +629,10 @@ function stepIai(f, combat) {
           const r = segToCollider(B, tip, col);
           if (r <= SECRET.instantTouch && (!best || r < best.r)) best = { h, info, col, r };
         }
-        if (best) {
+        if (best && I.cover) {
+          I.blocked = true; // gnsEnterBlock 2 (10/25 16:0x 시험): 가운데를 겨눈 칼이 앞을 가림 — 상처 없이 이 자리에서 멈춤 · 굳음 그대로
+          I.uEnd = Math.max(I.ab, u - (1 - w) * (dt / I.T));
+        } else if (best) {
           const prevW = Math.max(0, w - 1 / subs);
           const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
           I.hit = best;

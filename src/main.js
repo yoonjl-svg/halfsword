@@ -31,7 +31,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, savedFoeWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS } from './weapons.js';
 import { attachAura, AURA_VIEW } from './aura.js';
@@ -206,7 +206,9 @@ if (params.has('gnsEnterAI')) CONFIG.SECRET.gnsEnterAI = +params.get('gnsEnterAI
 if (params.has('gnsLong')) CONFIG.SECRET.gnsLong = +params.get('gnsLong') ? 1 : 0; // 고노센 긴 칼 상대 규칙 (10/25 08:0x 사장님 결정 — 기본 1, `?gnsLong=0` = 끔: 상대 칼 거리 ≥ 내 발도가 닿는 거리면 준비가 그 사이에서 안 풀림)
 if (params.has('gnsWary')) CONFIG.SECRET.gnsWary = +params.get('gnsWary') ? 1 : 0; // AI 고노센 경계 (10/25 08:0x 사장님 '⑤' — 기본 1, `?gnsWary=0` = 01:3x 판 AI 걸음)
 if (params.has('gnsEnterWindow')) CONFIG.SECRET.gnsEnterWindow = Math.max(0, +params.get('gnsEnterWindow') || 0); // 여쭘 A: 들어옴 창 길이 (기본 0 = playerWindow 그대로 · `?gnsEnterWindow=0.4`)
-if (params.has('gnsEnterBlock')) CONFIG.SECRET.gnsEnterBlock = +params.get('gnsEnterBlock') ? 1 : 0; // 여쭘 B: 들어옴 창 발도는 상대 칼에 막힐 수 있음 (기본 0 · `?gnsEnterBlock=1`)
+if (params.has('gnsEnterBlock')) CONFIG.SECRET.gnsEnterBlock = [0, 1, 2].includes(+params.get('gnsEnterBlock')) ? +params.get('gnsEnterBlock') : 2; // B: 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (10/25 16:0x 사장님 결정 — 기본 1 · `?gnsEnterBlock=0` 끔 · `=2` 칼끝 겨눔도 막음 — 시험)
+if (params.has('foeChargeAvg')) CONFIG.SECRET.foeChargeAvg = +params.get('foeChargeAvg') ? 1 : 0; // 달려듦 빠르기를 최근 0.6 s 평균으로 (10/25 16:0x — 기본 1 · `?foeChargeAvg=0` = 한 스텝)
+if (params.has('foeChargeSpeed') && +params.get('foeChargeSpeed') > 0) CONFIG.SECRET.foeChargeSpeed = +params.get('foeChargeSpeed'); // 비기 '달려듦' 빠르기 (10/25 16:1x 사장님 결정 — 기본 1.2 · `?foeChargeSpeed=0.9` 옛 판)
 if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnterOpen') ? 1 : 0; // 여쭘 C: 들어옴 창은 상대 칼끝이 나를 겨누지 않을 때만 (기본 0 · `?gnsEnterOpen=1`)
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
@@ -1704,7 +1706,7 @@ function validJourney() {
   const out = { stage: saved.stage, foe: null, foeWeapon: null, weapon: null, cards: null, lastWeapon: pool.has(saved.lastWeapon) ? saved.lastWeapon : null };
   if (saved.foe && foes.includes(saved.foe) && CHARACTERS_BY_ID[saved.foe] && known(saved.foeWeapon)) {
     out.foe = saved.foe;
-    out.foeWeapon = saved.foeWeapon;
+    out.foeWeapon = savedFoeWeapon(CHARACTERS_BY_ID[saved.foe], saved.foeWeapon); // 시트 무기가 바뀐 뒤의 옛 저장이면 지금 시트 무기 (10/25 광기의 하인리히 — characters.js)
     if (saved.weapon && pool.has(saved.weapon)) out.weapon = saved.weapon;
     else if (saved.cards?.every((id) => pool.has(id)) && saved.cards[0] !== saved.cards[1]) out.cards = saved.cards.slice();
   }
@@ -1741,6 +1743,7 @@ function openWanderRound() {
   } else if (!resume) resetWanderLoadout(); // 재대결 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 방랑'은 새 판)
   const run = ensureWanderRun(drawWanderEncounter, validWanderRun);
   if (!run) throw new Error('방랑이 잠겨 있음');
+  run.foeWeapon = savedFoeWeapon(CHARACTERS_BY_ID[run.foe], run.foeWeapon); // 진행 판도 여정과 같게 (10/25)
   // 저장된 내 무기 · 카드가 지금 뽑기 목록에 없으면 카드부터 (여정 validJourney 와 같게)
   const pool = new Set(PLAYER_WEAPON_POOL);
   if (run.weapon && !pool.has(run.weapon)) run.weapon = null;
