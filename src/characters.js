@@ -590,6 +590,13 @@ function finishAI(c) {
 }
 for (const c of CHARACTERS) finishAI(c);
 /** 변형의 ai: 원본 ai 깊은 복사 + 숙련도 +1 (실력 숫자·유파 표는 finishAI 가 변형 시트에서 채운다) */
+/** 얼터 AI: madVariantAI + 시트 무기를 바꾼 얼터는 유파 꾸러미(persona.school)도 그 무기로 (10/25 — 얼터 브론 팔쉬온: 옛 꾸러미 'tree_branch' 가 남아
+ *  유파 없음 · 찌르기 없음 · 나뭇가지 간격으로 싸우던 것. 본 브론이 10 % 로 팔쉬온을 들 때는 main.js 가 꾸러미를 무기로 바꿔 독일로 싸움 — 둘을 맞춤) */
+function alterAI(base, id) {
+  const ai = madVariantAI(base);
+  if (id === 'bran') ai.persona = { ...ai.persona, school: 'falchion' };
+  return ai;
+}
 function madVariantAI(base) {
   const ai = JSON.parse(JSON.stringify(base.ai));
   ai.proficiency = Math.min(AI_PROFICIENCY.max, base.ai.proficiency + VARIANT_PLUS);
@@ -676,7 +683,7 @@ export const CHARACTER_VARIANTS = [
     const base = CHARACTERS.find((c) => c.id === id);
     return { ...base, ...(id === 'bran' ? { weapon: 'falchion', weaponAlt: null } : {}), // 얼터 브론은 늘 팔쉬온 (사장님 10/20 00:4x)
       id: `${id}_mad`, variantOf: id, mad: true, appearanceOnly: true,
-      name: `광기의 ${base.name}`, ai: madVariantAI(base), // 숙련도 +1 (사장님 10/16 22:3x — 모든 얼터)
+      name: `광기의 ${base.name}`, ai: alterAI(base, id), // 숙련도 +1 (사장님 10/16 22:3x — 모든 얼터) · 얼터 브론은 팔쉬온 꾸러미(독일 — 10/25 · 전엔 나뭇가지 꾸러미가 남아 무유파로 싸움)
       look: alterLook(base.look, id), lookVersion: `${base.lookVersion}-alter${id==='isolde'?3:['margarethe','tome','bran'].includes(id)?2:1}`,
       eyes: id === 'liao' ? 'clothGlow' : 'madGlow',
     };
