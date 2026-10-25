@@ -644,7 +644,15 @@ const ITALIAN_RISOLUTO = {
   name: 'andareRisoluto',
   nameKo: '안다레 리솔루토', orig: 'andare risoluto', // 10/23 원어 독음 (전 '거침없이 나아가 찌르기 (…)')
   when: 'risoluto', // secret.js PlayerSecretWatch → italian_risoluto.js RisolutoWatch (덮인 채 나아가기)
-  do: { risoluto: true, tapOnly: true, power: 'power' }, // tapOnly: 창 안의 탭(찌르기 입력)만 비기 — 끌기(베기)는 보통 베기로 (main.js) · 내가 베기를 시작하면 창이 닫힘
+  do: {
+    risoluto: true,
+    // tapOnly: 창 안의 탭(찌르기 입력)만 비기 — 끌기(베기)는 보통 베기로 (main.js secSwipe). 10/25 21:0x 사장님 '찌르기(탭)로 발동 -> 공격하면 발동' 뒤 기본 거짓(탭 · 끌기 모두 같은 런지) —
+    //  SECRET.risolutoTap 1(`?risoTap=1`)이면 전처럼 탭만. 읽을 때 정함(주소 스위치가 모듈을 읽은 뒤 바뀌므로)
+    get tapOnly() {
+      return !!SECRET.risolutoTap;
+    },
+    power: 'power',
+  },
   src: 'Fabris 1606 둘째 책 [153] 「andare di risolutione」 · [155] 「che quando la nimica si moue para essere legata dalla propria … che siano sempre unite」 · [156] 「tenendo fermo il braccio andare scorrendo il filo di detta nimica sino al corpo auerso senza mai abbandonarla」 [원문 — Wiktenauer 전사 · A. F. Johnson 영역] · 덮음을 칼 모양으로 재기 · 상대 팔 늦춤 [해석] · 수 [추정]',
 };
 // 이베리아 v4 (10/10 04:4x — 10/11 부터 옛 판, SECRET.iberianSecret 'v4' · 주소 `?ibSecret=v4`): 호 안쪽에서 비켜 서며 크게 가로베기 (휩쓸기 secret_instant.js sweepPose)
