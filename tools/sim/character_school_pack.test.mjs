@@ -28,3 +28,9 @@ test('광기의 브론 = 팔쉬온을 들되 무유파 (사장님 10/25 20:0x)',
   assert.equal(b.ai.persona.school, 'tree_branch');
   assert.equal(schoolOf(b.ai.persona.school).tradition, 'none');
 });
+
+test('브론(낮 · 광기)은 검술 없음 — 칼을 주워 들어도 꾸러미 그대로 (사장님 10/25 20:1x)', () => {
+  assert.equal(CHARACTERS_BY_ID.bran.noSwordsmanship, true);
+  assert.equal(CHARACTERS_BY_ID.bran_mad.noSwordsmanship, true);
+  assert.equal(CHARACTERS_BY_ID.bran.ai.persona.school, 'tree_branch');
+});

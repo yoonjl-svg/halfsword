@@ -203,7 +203,7 @@ async function child() {
     const gapE = block === 'passive' ? L.PROGRAMME.passive.gapM : ARENA.startGap;
     player = new Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: '나', x: xP, heading: 0, look: LOOKS.player, weapon: foeWeapon });
     enemy = new Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: foe ? foe.name : '상대', x: xP + gapE, heading: Math.PI, look: foe ? foe.look : LOOKS.enemy, weapon: foeWeapon, revive: foe?.revive });
-    const persona = foe && foeWeapon !== foe.weapon ? { ...foe.ai.persona, school: foeWeapon } : foe?.ai.persona;
+    const persona = foe && foeWeapon !== foe.weapon && !foe.noSwordsmanship ? { ...foe.ai.persona, school: foeWeapon } : foe?.ai.persona;
     ai = foe ? new AI(enemy, player, foe.ai.level, persona) : new AI(enemy, player, 'normal');
     playerEmo = new Emotions({ fearful: 0.3, angry: 0.3, dogged: 0.3 });
     playerEv = { hurt: false, parried: false, landed: false };
