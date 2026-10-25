@@ -404,6 +404,7 @@ export class Fighter {
     this.mordGrip = null; // 칼날을 거꾸로 쥔 동안 { g, gOff } (죽음의 일격 — reverseGrip · 사람 독일 비기만). null = 원래 쥠
     this.mordAim = false; // 칼자루로 치는 동안 겨눔 뒤집기 (죽음의 일격 — driveSword)
     this.mordHold = null; // 그 준비 동안 칼자루 겨눔 [앞, 위, 옆] (몸 틀 — 시작 자세 패드의 칼끝 겨눔) · null = 패드 그대로
+    this.techPlan = null; // 기술 길 덧칸 { tilt rad, reach m, turn rad } (10/25 곁눈 베기 다시 그린 길 — ai.js techPlanStep 이 적고 driveSword 가 읽음) · null = 없음
     this.secretHit = 1; // 결정타 판정 배율 (유파 비기 — 비기 베기 동안 SECRET.hitMul, combat.js 가 상처 에너지에 곱한다). 1 = 그대로
     this.gaitPhase = 0;
     this.gaitWeight = 0; // 0 = 서 있음, 1 = 걷는 중 (부드럽게 바뀜)
@@ -3147,6 +3148,10 @@ export class Fighter {
     hb[2] = handLocal.z;
     const th = this.skill.thrustPose;
     if (th.w > 0) handLocal.lerp(_v6.set(th.hand[0], th.hand[1], th.hand[2]), th.w);
+    // 기술 길 덧칸 (10/25 08:0x 사장님 '셸하우 3번' — ai.js techPlanStep · 지금은 AI 곁눈 베기만 · 없으면 null): 손 뻗기 = 손 목표를 앞(몸 틀 x)으로 — 팔이 펴져 아래팔이 눕는다.
+    //  바짝 붙음 접기(아래 closeReach) 앞이라 붙은 거리에서는 그대로 접힌다
+    const tplan = this.techPlan;
+    if (tplan?.reach) handLocal.x += tplan.reach;
     // 바짝 붙으면 손을 접는다 (closeReach). 근접 밀치기 중엔 접기를 lift 만큼 푼다: x' = 접은 x + (x − 접은 x)·lift.
     //  lift 0 이면 오늘 줄 그대로 (같은 float). 손이 자세 깊이에 남아 코등이·칼 팔뚝이 상대 몸통에 닿는다
     //  손잡이 찍기(skill.pom, 시제품) 동안은 덧씌운 정도(th.w)만큼도 푼다 — 붙은 거리에서 폼멜을 앞으로 내지르는 동작이라. 찍기가 없으면 오늘 줄 그대로
@@ -3213,6 +3218,15 @@ export class Fighter {
       aim.lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), gw);
       if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
       aim.normalize();
+    }
+    if (tplan?.tilt) {
+      // 기술 길 덧칸 칼끝 들기 (+ 들기 · − 내리기): 칼 겨눔의 높이각만 (수평 방향 그대로 — 아래 vertLead 와 같은 식). 손이 먼저 내려 뻗는 동안 칼끝을 들고 있다가 끝 점에서 떨어뜨린다
+      const h = Math.hypot(aim.x, aim.z);
+      if (h > 1e-3) {
+        const el = Math.atan2(aim.y, h) + tplan.tilt;
+        const c = Math.cos(el);
+        aim.set((aim.x / h) * c, Math.sin(el), (aim.z / h) * c);
+      }
     }
     if (FINISH.vital) vitalAim(this, aim); // 약한 자세 겨눔: 칼 기울기 (높이만, 수평 방향 그대로)
     if (th.w > 0) {
@@ -3374,6 +3388,12 @@ export class Fighter {
         if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
         flatTarget.normalize();
       }
+      if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
+    }
+    if (tplan?.turn) {
+      // 기술 길 덧칸 손 돌리기: 날 세우기가 고른 칼 면을 칼 축 둘레로 (칼 든 쪽 + = 엎침 — 곁눈 베기 '손을 뒤집어 뒷날로'). 날 세우기 판정 문턱(STRIKE.edgeAlign 0.6) 안에서
+      //  칼 면을 아래팔 굴림 쪽으로 미리 돌려, 아래팔이 선 채 맞는 때 손목 치우침이 굽힘 몫으로 간다 (아래팔 굴림 한도는 손목 밧줄 HUMAN.forearmRoll 그대로)
+      flatTarget.applyAxisAngle(blade, this.side * tplan.turn).normalize();
       if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
     }
     if (erLatch) {

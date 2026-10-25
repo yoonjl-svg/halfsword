@@ -19,6 +19,10 @@
 //              상대 AI 는 그대로 싸우고(나는 손을 떼고 자세만 · 둘 다 상처 끔) 싸움 FIGHT_T(기본 3,5,7,9 s)마다 멈춰 게임 화면 · 옆 (<판>_fight_<초>_{game,side}) — 상대 팔꿈치 위 각을 기록 ·
 //              상대 공격의 따라 베기(follow) 첫 스텝도 FIGHT_ATK(기본 2) 번 (<판>_fight_atk<n>_{game,side} — 뻗어 휘두른 끝) ·
 //              FIGHT_UP(° · 기본 끔)이면 상대 팔꿈치가 어깨 → 손목 줄보다 그만큼 넘게 위로 간 첫 스텝(<판>_fight_up) — FIGHT_UP_T(기본 20 s)까지 없으면 그때 멈추고 그동안 최대를 기록(<판>_fight_upmax)
+//   10/25 08:0x 곁눈 베기 길 다시 그림 (사장님 '셸하우 3번' — 기록 §13 · 그림 docs/handoff/schielhau_2026-10-25/):
+//   schiel   — 상대(이졸데 · 롱소드 · 숙련 4 `&foeProficiency=4` — 독일 곁눈 베기가 열림)가 곁눈 베기만 고르고(속임수 · 패시브 · 비기 없이) 나는 칼을 아래 [0, −0.5] 에 둔 채 서 있다(둘 다 상처 끔) →
+//              상대 곁눈 베기 칼이 내 몸에 처음 닿은 스텝(공격마다 한 번)에 멈춰 게임 화면 · 옆 · 상대 손 가까이 (<판>_schiel_<n>_{game,side,hand}) · SCHIEL_N(기본 2) 번 · 상대 손목 값 기록 ·
+//              판 = TAGS (예 'pre:&elbowSwivel=0&wristGuard=0&swivelThrust=0&schielPath=0,old:&schielPath=0,new:')
 //  npx vite build --outDir <tmp>/dist && node tools/pwa/build.mjs <tmp>/dist && npx vite preview --outDir <tmp>/dist --port 5567 --strictPort &
 //  node tools/browser/wrist_audit_shots.mjs http://127.0.0.1:5567 <그림 폴더> [lunge|guards|pair|tap|gyeoksal|close|ghost]   (SHOT_WAIT=ms — 장면 기다림, 기계가 바쁠 때 늘림)
 import { chromium } from 'playwright';
@@ -79,11 +83,13 @@ async function shot(page, file, view) {
       g.camera.position.set(a.x + fx * 0.3 + cx * 2.4, 1.2, a.z + fz * 0.3 + cz * 2.4);
       g.camera.lookAt(a.x + fx * 0.3, 0.95, a.z + fz * 0.3);
     } else {
-      // 손 가까이: 칼 손(칼 원점)과 팔꿈치 사이 · 칼자루 쪽을 옆(같은 가로 방향)에서 1.0 m · 조금 위
-      const sw = p.sword.translation();
-      const fa = p.bodies.farmS.translation();
+      // 손 가까이: 칼 손(칼 원점)과 팔꿈치 사이 · 칼자루 쪽을 옆(같은 가로 방향)에서 1.0 m · 조금 위 (ehand = 상대 칼 손 — 상대 칼 든 쪽에서)
+      const f = view === 'ehand' ? g.enemy : p;
+      const k = view === 'ehand' ? -1 : 1;
+      const sw = f.sword.translation();
+      const fa = f.bodies.farmS.translation();
       const C = new T.Vector3((sw.x * 2 + fa.x) / 3, (sw.y * 2 + fa.y) / 3, (sw.z * 2 + fa.z) / 3);
-      g.camera.position.set(C.x + cx * 1.0, C.y + 0.18, C.z + cz * 1.0);
+      g.camera.position.set(C.x + k * cx * 1.0, C.y + 0.18, C.z + k * cz * 1.0);
       g.camera.lookAt(C);
     }
   }, view);
@@ -194,6 +200,96 @@ async function fightScene(pf, extra) {
       window.drv.want = null;
       window.game.config.PHYSICS.maxStepsPerFrame = 8;
     }, k);
+  }
+  await ctx.close();
+}
+
+/** 상대 칼 팔 손목 (wrist_audit.mjs wristSample 과 같은 식 — 손 면 dev · 굽힘 · 폄 fe · 아래팔 굴림 · 팔꿈치 굽힘 · 아래팔 섬 up) · 범위 밖(° — 손 면 안 각 [−30, 135] 밖 · 굽힘 · 폄 70 안일 때만) */
+const READ_EW = () => {
+  const g = window.game, T = g.THREE, f = g.enemy;
+  const Q = (r) => new T.Quaternion(r.x, r.y, r.z, r.w);
+  const qf = Q(f.bodies.farmS.rotation());
+  const fx = new T.Vector3(1, 0, 0).applyQuaternion(qf), zF = new T.Vector3(0, 0, 1).applyQuaternion(qf);
+  const qs = Q(f.sword.rotation());
+  const xS = new T.Vector3(1, 0, 0).applyQuaternion(qs), yS = new T.Vector3(0, 1, 0).applyQuaternion(qs), zS = new T.Vector3(0, 0, 1).applyQuaternion(qs);
+  let dev = 90 - (Math.atan2(fx.dot(yS), fx.dot(xS)) * 180) / Math.PI;
+  if (dev > 180) dev -= 360;
+  const fe = (Math.asin(Math.max(-1, Math.min(1, fx.dot(zS)))) * 180) / Math.PI;
+  const roll = (Math.acos(Math.max(-1, Math.min(1, zF.dot(zS)))) * 180) / Math.PI;
+  const ux = new T.Vector3(1, 0, 0).applyQuaternion(Q(f.bodies.uarmS.rotation()));
+  const elbow = (Math.acos(Math.max(-1, Math.min(1, ux.dot(fx)))) * 180) / Math.PI;
+  const a = (((dev - 135) % 360) + 360) % 360, span = 360 - 165;
+  const oor = Math.abs(fe) > g.config.JOINTS.wristFE || a === 0 || a >= span ? 0 : Math.min(a, span - a);
+  return { dev: +dev.toFixed(0), fe: +fe.toFixed(0), roll: +roll.toFixed(0), elbow: +elbow.toFixed(0), up: +fx.y.toFixed(2), oor: +oor.toFixed(0), fix: +(f.wristFixDeg ?? 0).toFixed(1), gap: +f.foeDistance().toFixed(2), plan: f.techPlan ? { tilt: +((f.techPlan.tilt * 180) / Math.PI).toFixed(0), reach: +f.techPlan.reach.toFixed(2), turn: +((f.techPlan.turn * 180) / Math.PI).toFixed(0) } : null };
+};
+
+/** 곁눈 베기 맞는 순간 (10/25 08:0x 사장님 '셸하우 3번' — 기록 §13): 상대가 곁눈 베기만 · 나는 칼 아래로 서 있음 · 상대 칼이 내 몸에 처음 닿은 스텝(공격마다 한 번)에 멈춤 */
+async function schielScene(pf, extra) {
+  const n = +(process.env.SCHIEL_N ?? 2);
+  const { ctx, page } = await open('longsword', `&foeProficiency=4${extra}`, { foe: process.env.SCHIEL_FOE || 'isolde', foeWeapon: 'longsword', keepAI: true });
+  const ok = await page.evaluate((n) => {
+    const g = window.game, p = g.player, ai = g.ai, ps = g.playerSecret, orig = ps.update.bind(ps);
+    const t = ai.school.tech.find((x) => x.name === 'schielhau');
+    if (!t) return false;
+    ai.school = { ...ai.school, tech: [t], feints: [] };
+    ai.passives = [];
+    ai.secret = null;
+    ai.press = null;
+    ai.binds = null;
+    const D = (window.drv = { want: null, done: {}, k: 0, atk: 0, shotAtk: -1, prevPh: null, n });
+    // 기다리는 동안은 그리기를 1 fps 로 묶고 프레임마다 스텝 상한 12(0.1 s — main.js dt 자름)로 — 소프트 GPU 에서 싸움이 너무 느리지 않게 (멈출 때 그리기를 다시 켬)
+    g.settings.fpsCap = true;
+    g.config.RENDER.fpsCap = 1;
+    g.config.PHYSICS.maxStepsPerFrame = 12;
+    ps.update = (dt, busy) => {
+      orig(dt, busy);
+      p.move.set(0, 0);
+      p.stickX = p.stickY = 0;
+      p.handOffset.set(0, -0.5);
+      for (const k of ['prev', 'aim', 'aimRaw', 'anchor']) p.skill[k]?.set?.(0, -0.5);
+      const ph = ai.mode === 'attack' ? ai.phase : null;
+      if (ph === 'strike' && D.prevPh !== 'strike') D.atk++;
+      D.prevPh = ph;
+    };
+    const hk = g.combat.hooks, ow = hk.onWound;
+    hk.onWound = (att, vic, r, ...rest) => {
+      ow?.(att, vic, r, ...rest);
+      if (att !== g.enemy || vic !== g.player || D.want || D.k >= D.n || D.shotAtk === D.atk) return;
+      if (ai.mode !== 'attack' || ai.tech?.name !== 'schielhau') return;
+      D.shotAtk = D.atk;
+      D.hit = { type: r.type, zone: r.zone, E: +r.energy.toFixed(0), sev: +(r.severity ?? 0).toFixed(2) };
+      D.want = `${++D.k}`;
+      g.config.PHYSICS.maxStepsPerFrame = 0;
+      g.settings.fpsCap = false;
+    };
+    return true;
+  }, n);
+  if (!ok) {
+    console.log(`곁눈 베기 없음 ${pf} (숙련도?)`);
+    await ctx.close();
+    return;
+  }
+  for (let i = 0; i < n; i++) {
+    let k;
+    try {
+      k = await page.waitForFunction(() => window.drv.want, null, { timeout: Math.max(240000, +(process.env.SHOT_WAIT || 0)) }).then((h) => h.jsonValue());
+    } catch {
+      console.log(`곁눈 베기 장면 시간 넘김 ${pf} ${i}`);
+      break;
+    }
+    await page.waitForTimeout(250);
+    const v = { ...(await page.evaluate(READ_EW)), hit: await page.evaluate(() => window.drv.hit) };
+    await shot(page, `${pf}_schiel_${k}_game`, 'game');
+    await shot(page, `${pf}_schiel_${k}_side`, 'side');
+    await shot(page, `${pf}_schiel_${k}_hand`, 'ehand');
+    log.push(`${pf} schiel ${k} ${JSON.stringify(v)}`);
+    console.log(`SHOT ${pf} schiel ${k} ${JSON.stringify(v)}`);
+    await page.evaluate(() => {
+      const g = window.game;
+      window.drv.want = null;
+      g.settings.fpsCap = true;
+      g.config.PHYSICS.maxStepsPerFrame = 12;
+    });
   }
   await ctx.close();
 }
@@ -406,6 +502,7 @@ if (what.includes('tguards') || what.includes('fight')) {
     if (what.includes('fight')) await fightScene(pf, ex);
   }
 }
+if (what.includes('schiel')) for (const [pf, ex] of TAGS) await schielScene(pf, ex);
 if (what.includes('pair')) {
   const spec = (process.env.GUARDS || 'rapier:프리마,rapier:세콘다,longsword:황소,qinggang:황소,sabre:왼 황소,uchigatana:흘려 받기,zweihander:어깨 메기,tizona:허리 뒤').split(',');
   const by = new Map();

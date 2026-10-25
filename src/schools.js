@@ -459,7 +459,14 @@ const GERMAN_UNIQUE = [
   // 굽은 베기: 오른 어깨에서 팔을 엇걸어 왼쪽 아래로 — 칼끝을 상대 손 위로 던진다(몸통보다 가까운 손을 노려 reach +0.2). 황소를 깬다
   { name: 'krumphau', nameKo: '굽은 베기 (크룸프하우)', orig: 'Krumphau', from: G.tagR, path: [[0.3, 0.3], [0.0, 0.05], G.pflugL], open: 'UL', kind: 'cut', reach: 0.2, base: 0.6, fit: { online: 2.0, high: 1.3 }, src: 'Zettel 「Krump auf behende, wirf den Ort auf die Hände」 · Ringeck 주해 42절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/krumphau_*.json 출처] · 길의 수 [추정]' },
   // 사팔뜨기 베기: 오른 어깨에서 손을 뒤집어 뒷날로 위에서 상대 칼·오른 어깨를 치고, 팔을 뻗어 칼끝으로 겨눈 채 끝낸다(긴 자세). 쟁기·찌르기를 깬다
-  { name: 'schielhau', nameKo: '곁눈 베기 (실하우)', orig: 'Schielhau', from: G.tagR, path: [[0.22, 0.36], [0.06, 0.2], G.langort], open: 'UR', kind: 'cut', reach: 0.05, base: 0.7, presses: true, fit: { online: 2.2 }, src: 'Zettel 「Schieler bricht, was Büffel schlägt oder sticht」 · Ringeck 주해 58~59절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/schielhau_*.json 출처] · 길의 수 [추정]' },
+  //  10/25 08:0x 사장님 '셸하우 3번 — 길 다시 그림'(config UNIQUE_ASSIST.schielPath 1 · 0 = 아래 from · path 그대로): AI 는 redraw 의 길 점과 길 덧칸(plan)으로 친다 (sword_art.js applySchoolArt).
+  //   까닭: 전 길은 손이 아직 높고 팔꿈치가 굽은 채(아래팔 30 ~ 45° 섬) 칼이 곧장 아래로 내려와 맞아, 맞는 순간 손목이 새끼 쪽 −60°(사람 −30 의 두 배) — 손목 교정이 그 칼끝을 굴림 0 손 면 둘레로
+  //   들어 올리며 옆으로 돌려 긋는 줄이 머리 옆으로 비꼈다(기록 wrist_audit §11). 새 길: 손이 먼저 앞 · 아래로 뻗고(손 뻗기 — 팔이 펴져 아래팔이 누움) 그동안 칼끝은 들고 있다가(칼끝 들기)
+  //   끝에서 떨어지며, 손을 엎쳐(손 돌리기 — 원전 '손을 뒤집어 뒷날로') 칼날이 왼쪽 아래로 긋는 줄에 맞게 — 맞는 순간 손목이 사람 범위 안 · 교정이 건드릴 것이 없다. 길 끝은 왼 긴 자세 쪽(가슴 높이)
+  //   plan 칸 = [from, ...path] 점마다 [칼끝 들기 °(칼 겨눔 높이각 + · 들기), 손 뻗기 m(손 목표 앞으로), 손 돌리기 °(칼 면을 칼 축 둘레로 — 엎침 쪽 +)] · 점 사이는 손이 간 몫만큼 섞음 · 수는 [추정] 사장님 확인 전 (확인표 2502 ~ 2504)
+  { name: 'schielhau', nameKo: '곁눈 베기 (실하우)', orig: 'Schielhau', from: G.tagR, path: [[0.22, 0.36], [0.06, 0.2], G.langort], open: 'UR', kind: 'cut', reach: 0.05, base: 0.7, presses: true, fit: { online: 2.2 },
+    redraw: { path: [[0.215, 0.295], [0.035, 0.11], [-0.045, -0.1]], plan: [[0, 0, 0], [20, 0.15, 20], [25, 0.2, 20], [0, 0.2, 10]] },
+    src: 'Zettel 「Schieler bricht, was Büffel schlägt oder sticht」 · Ringeck 주해 58~59절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/schielhau_*.json 출처] · 길의 수 [추정] · 10/25 다시 그린 길: Ringeck 58절 「팔을 곧게 뻗어 뒷날로」 [원전 2차] · 수 [추정]' },
   // 거듭 치기(Duplieren): 분노의 베기가 맺힌 자리(긴 자세 위)에서 멈추지 않고 칼자루를 들어 엇걸어, 상대 칼 뒤(칼과 사람 사이)로 머리를 다시 친다
   { name: 'duplieren', nameKo: '겹치기 (두플리렌)', orig: 'Duplieren', from: G.tagR, path: [[0.12, 0.14], [-0.08, 0.3], [0.12, 0.22], G.pflugL], open: 'UL', kind: 'cut', reach: 0, base: 0.8, presses: true, chain: 2, fit: { parried: 1.5 }, src: 'Ringeck 주해 Duplieren(분노의 베기 뒤 맺음이 단단하면 칼과 사람 사이로 머리를 친다) [원전 2차] · 길 [해석] · 수 [추정]' },
   // 비껴 가로베기 Zwerch mit Abtritt (10/9 — 사장님 '대각선 옆으로 빠르게 살짝 돌아 걸어 들어가면서 옆에서 베기', docs/strike/school_step_2026-10-09.md): 가로베기 길 + step 칸 하나 —

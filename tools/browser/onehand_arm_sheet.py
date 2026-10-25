@@ -15,6 +15,10 @@ LABEL = {
     'now': '10/24 판 (swivelHuman 0)',
     'after': 'dbf2120 판 (사람 팔 범위 돌림만 — wristPronate 0)',
     'new': '지금 (엎친 손 + 손목 굽힘 · 1번 자세 손 뻗음)',
+    # 10/25 08:0x 곁눈 베기 길 다시 그림 (wrist_audit_shots.mjs schiel · 기록 §13) — 판 이름 앞에 schiel- 을 붙여 부름
+    'schiel-pre': '손목 교정 전 (옛 길 · 교정 끔)',
+    'schiel-old': '10/25 전 (옛 길 · 교정 켬 — 칼끝이 옆으로)',
+    'schiel-new': '다시 그린 길 (손 뻗음 · 칼끝 들었다 떨굼 · 손 돌림)',
 }
 
 
