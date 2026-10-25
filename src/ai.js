@@ -318,9 +318,11 @@ export class AI {
       this.pendingPassive = null;
       this.me.secretStiff = false;
       this.me.move.set(0, 0); this.me.stickX = this.me.stickY = 0;
+      this.techPlanStep(dt);
       return;
     }
     this.updateCombat(dt);
+    this.techPlanStep(dt); // 기술 길 덧칸 (10/25 곁눈 베기 다시 그린 길 — 덧칸 없는 기술이면 아무것도 안 함)
     const ds = this.drySense;
     if (ds) this.dryRouteSide(ds);
     routeAroundStageObstacle(this);
@@ -2880,6 +2882,49 @@ export class AI {
     off.y += this.tremor.y - this.tremorApplied.y;
     this.tremorApplied.copy(this.tremor);
     if (off.length() > 0.62) off.setLength(0.62);
+  }
+
+  /**
+   * 기술 길 덧칸 (10/25 08:0x 사장님 '셸하우 3번 — 길 다시 그림' · 지금은 곁눈 베기만 — schools.js schielhau redraw.plan · config UNIQUE_ASSIST.schielPath):
+   *  패드 길 점은 손 자리와 칼 겨눔(guardDir)을 함께 정해 '손은 높고 칼은 앞' · '손이 먼저 뻗고 칼은 늦게' 같은 꼴을 못 그린다 → 기술이 점마다 덧칸을 갖는다:
+   *  [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °] (plan 칸 = [from, ...path] 점마다). 베기 · 따라 베기 동안 지금 가는 토막(앞 점 → 다음 점)에서 손이 간 몫(남은 거리 ÷ 토막 길이)만큼
+   *  두 점 값을 섞어 me.techPlan { tilt rad, reach m, turn rad } 에 둔다(fighter.js driveSword 가 읽음 — 손 목표 앞으로 · 칼 겨눔 높이각 · 날 세우기 칼 면을 칼 축 둘레로).
+   *  따라 베기 동안은 끝 점 값 그대로. 공격 꼴이 끝나면(또는 덧칸 없는 기술 · 속임수 · 비기) 그때 값을 UNIQUE_ASSIST.planRelease 초에 걸쳐 0 으로. 덧칸 없는 기술만 쓰면 늘 null — 난수 · 다른 길 그대로
+   */
+  techPlanStep(dt) {
+    const me = this.me;
+    const t = this.tech;
+    const P = this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow') && !this.feint && !this.secretRun && t?.plan ? t.plan : null;
+    if (P) {
+      const n = t.path.length;
+      const done = this.phase === 'follow' ? n : n - this.path.length; // 지나온 길 점 수 (0 = from → path[0] 토막)
+      const a = P[Math.min(done, n)];
+      let tilt = a[0];
+      let reach = a[1];
+      let turn = a[2] ?? 0;
+      if (done < n) {
+        const A = done === 0 ? t.from : t.path[done - 1];
+        const B = this.path[0] ?? t.path[done]; // 지금 가는 점 (서툰 손 빗나감 · 옆 비낌을 받은 그 점)
+        const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+        const r = Math.hypot(B[0] - me.handOffset.x, B[1] - me.handOffset.y);
+        const u = L > 1e-6 ? clamp(1 - r / L, 0, 1) : 1; // 이 토막에서 손이 간 몫
+        const b = P[done + 1];
+        tilt += (b[0] - tilt) * u;
+        reach += (b[1] - reach) * u;
+        turn += ((b[2] ?? 0) - turn) * u;
+      }
+      me.techPlan = { tilt: (tilt * Math.PI) / 180, reach, turn: (turn * Math.PI) / 180 };
+      this.planFade = null;
+    } else if (me.techPlan) {
+      // 놓음: 손 목표가 한 스텝에 손 뻗기만큼 튀지 않게 그때 값을 planRelease 초에 걸쳐 0 으로
+      const F = (this.planFade ??= { tilt: me.techPlan.tilt, reach: me.techPlan.reach, turn: me.techPlan.turn, t: 0 });
+      F.t += dt;
+      const k = 1 - F.t / UA.planRelease;
+      if (k <= 0) {
+        me.techPlan = null;
+        this.planFade = null;
+      } else me.techPlan = { tilt: F.tilt * k, reach: F.reach * k, turn: F.turn * k };
+    }
   }
 
   /** 발놀림: 간격 조절, 옆으로 돌기, 베며 내딛기, 물러나기 */

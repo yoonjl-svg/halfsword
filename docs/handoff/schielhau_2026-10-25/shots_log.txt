@@ -1,0 +1,6 @@
+schiel-pre schiel 1 {"dev":-71,"fe":-74,"roll":74,"elbow":91,"up":0.59,"oor":0,"fix":0,"gap":1.68,"plan":null,"hit":{"type":"cut","zone":"arm","E":75,"sev":0.59}}
+schiel-pre schiel 2 {"dev":-47,"fe":-63,"roll":66,"elbow":72,"up":0.57,"oor":17,"fix":0,"gap":1.76,"plan":null,"hit":{"type":"cut","zone":"chest","E":66,"sev":0.22}}
+schiel-old schiel 1 {"dev":-44,"fe":-14,"roll":26,"elbow":74,"up":0.75,"oor":14,"fix":17.3,"gap":1.66,"plan":null,"hit":{"type":"blunt","zone":"head","E":32,"sev":0}}
+schiel-old schiel 2 {"dev":-50,"fe":-18,"roll":19,"elbow":80,"up":0.71,"oor":20,"fix":17.6,"gap":1.67,"plan":null,"hit":{"type":"blunt","zone":"chest","E":19,"sev":0}}
+schiel-new schiel 1 {"dev":-2,"fe":-58,"roll":73,"elbow":49,"up":0.41,"oor":0,"fix":0,"gap":1.61,"plan":{"tilt":0,"reach":0.2,"turn":10},"hit":{"type":"blunt","zone":"chest","E":47,"sev":0}}
+schiel-new schiel 2 {"dev":-8,"fe":-50,"roll":57,"elbow":56,"up":0.46,"oor":0,"fix":0,"gap":1.66,"plan":{"tilt":0,"reach":0.2,"turn":10},"hit":{"type":"blunt","zone":"head","E":72,"sev":0}}
