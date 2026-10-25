@@ -17,6 +17,8 @@ import { classifyStroke } from './attack_stroke.js';
 //   · 끝 힘 — 긋기 뒷몫(손 목표가 그 몫 길이의 powerAt 넘게 간 뒤)에 팔 서보 힘을 조금 올린다(비기 힘 창 SECRET.power 와 같은 칸 f.powerMul)
 //   · 날 세우기 — 손 목표가 손가락 그대로라 플레이어 날 세우기(fighter.js inputEdgeLead)가 읽는 손 목표는 실제 칼 움직임과 같다. 덧씌운 몸 돌림 몫만 날이 늦게 따라가서
 //          그 빠르기(uniqBody.yawRate)를 날 세우기 앞당김에 더했다(10/14 탐침 — 문서)
+//   · 길 덧칸 (10/25 18:0x 사장님 '같은 길 입혀' — 지금은 곁눈 베기만 · config UNIQUE_ASSIST.schielPlayer): AI 다시 그린 길과 같은 칼끝 들기 · 손 뻗기 · 손 돌리기(사장님 10/25 20:2x '칼끝 들기 빼지 마' · schielPlayerTip 0 은 시험용)를
+//          손가락이 그 길 위 어디쯤인지로 섞어 얹는다(planStep → fighter.techPlan → fighter.js driveSword). 손 목표는 그대로 손가락 — 덧칸이 손 목표를 몸 앞으로 미는 몫은 driveSword 안
 //  잇는 동작(chain 칸 — 머리 위 돌려 베기·겹치기 · 10/21 통폐합 전엔 코코 연타·위아래 사슬·번갈아 올려베기도)은 플레이어가 박자 창(chainWait) 안에 실제로 이어 그을 때만 그 긋기에 뒷몫 강화를 얹는다.
 //   자동으로 두 번째 칼을 내지 않는다. 앞 긋기 조건으로 여는 것(츠바메가에시·카바치오네·염시·자→격)은 그 긋기 자체가 이어 그은 것이다.
 //  비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌고 있으면 발동하지 않고, 강화 중에 그것들이 시작되면 곧장 물러난다.
@@ -164,12 +166,14 @@ function closest(A, B, p) {
   return [A[0] + ex * t, A[1] + ey * t];
 }
 
-/** 표 항목의 고유 동작 (schools.js 그 유파 unique 에서): 이름 · 알림 이름 · 칼 종류 · 길 점 · 걸음. 없으면 null */
+/** 표 항목의 고유 동작 (schools.js 그 유파 unique 에서): 이름 · 알림 이름 · 칼 종류 · 길 점 · 걸음 (· 길 덧칸 plan — 있을 때만). 없으면 null */
 export function uniqueDef(tradition, e) {
   const list = TRADITIONS[tradition]?.unique ?? [];
   const key = e.path ?? e.name;
-  const u = list.find((x) => x.name === key);
+  let u = list.find((x) => x.name === key);
   if (!u) return null;
+  // 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — config UNIQUE_ASSIST.schielPlayer · 지금은 곁눈 베기만): redraw 칸이 있으면 AI 와 같은 다시 그린 길 점 · 길 덧칸(plan — 아래 planStep)
+  if (u.redraw && UA.schielPath && UA.schielPlayer) u = { ...u, ...u.redraw };
   if (u.feint) {
     const fk = TECH_BY_NAME[u.feint.fake];
     if (!fk) return null;
@@ -178,7 +182,9 @@ export function uniqueDef(tradition, e) {
     return { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.feint.name, orig: e.orig ?? u.orig ?? null, kind: u.feint.open === 'C' ? 'thrust' : 'cut', pts: [p0, ...u.feint.then.map((p) => p.slice())], step: null };
   }
   if (!u.path?.length) return null; // 길 없는 것(맞받아치기 목록 등)은 플레이어 몫이 아니다
-  return { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, orig: e.orig ?? u.orig ?? null, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: e.step ?? u.step ?? null }; // step = 표 칸이 있으면 그것(플레이어만 — 10/21 체보요격)
+  const def = { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, orig: e.orig ?? u.orig ?? null, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: e.step ?? u.step ?? null }; // step = 표 칸이 있으면 그것(플레이어만 — 10/21 체보요격)
+  if (u.plan) def.plan = u.plan; // [from, ...path] 점마다 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °] (10/25 18:0x)
+  return def;
 }
 
 // 해금은 이 파일 밖 — 플레이어에게 무엇이 열리는지는 스킬트리 하나(10/21 — skill_tree_store.js playerKit → 칸마다 기술 하나 · 아래 PlayerUniqueAssist 의 names).
@@ -220,6 +226,7 @@ export class PlayerUniqueAssist {
     this.fIdle = 0;
     this.body = [0, 0, 0, 0]; // 지금 얹은 몸 [골반 돌림 rad, 가슴 돌림 rad, 숙임 rad, 낮춤 m] (덧씌우기 칸 몸 값과 같은 부호 — fighter.js updateBodyPose)
     this.powV = 0; // 내가 둔 끝 힘 배율 (f.powerMul 이 아직 이 값일 때만 되돌린다)
+    this.planFade = null; // 길 덧칸 놓기 { tilt, reach, turn, t } (planStep — 10/25 18:0x)
     this.stats = { strokes: 0, techs: {}, fired: {}, ends: {}, steps: 0, power: 0 };
     f.uniqueCue = null;
     f.skill.uniqBody = null;
@@ -514,6 +521,60 @@ export class PlayerUniqueAssist {
         this.powV = pv;
       }
     } else this.dropPower();
+    this.planStep(dt);
+  }
+
+  /**
+   * ④ 길 덧칸 (사장님 10/25 18:0x '같은 길 입혀' — 지금은 곁눈 베기만 · uniqueDef plan · config UNIQUE_ASSIST.schielPlayer): AI(ai.js techPlanStep)와 같은 덧칸을 사람 강화동작에도.
+   *  손 목표는 손가락 그대로 — 손 목표를 다시 그린 길(U.pts)에 비춘 자리(길 처음부터 잰 길이 · 뒤로 가지 않음)로 지금 토막 두 점의 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °]를 섞어
+   *  f.techPlan { tilt rad, reach m, turn rad } 에 둔다(fighter.js driveSword — 손 목표 앞으로 · 칼 겨눔 높이각 · 날 세우기 칼 면). 길 끝을 지나면 끝 점 값 · 크기 × min(1, enhance).
+   *  칼끝 들기는 UNIQUE_ASSIST.schielPlayerTip 일 때만(기본 1 — 사장님 10/25 20:2x 결정 · 0 = 시험용 · wrist_audit §15-6).
+   *  강화가 끝나면(쉼 · 꺾음 · 다른 동작에 내줌) 그때 값을 UNIQUE_ASSIST.planRelease 초에 걸쳐 0 으로. 덧칸 없는 동작 · 스위치 끔이면 아무것도 안 함(techPlan 그대로 null)
+   */
+  planStep(dt) {
+    const f = this.f;
+    const r = this.r;
+    const P = r && r.part === 1 && UA.enhance > 0 ? r.U.plan : null;
+    if (P) {
+      const pts = r.U.pts;
+      const hx = f.handOffset.x;
+      const hy = f.handOffset.y;
+      let best = Infinity;
+      let s = 0;
+      let acc = 0;
+      const cum = [0];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const J = closest(pts[i], pts[i + 1], [hx, hy]);
+        const d = hyp(hx - J[0], hy - J[1]);
+        if (d < best - 1e-9) {
+          best = d;
+          s = acc + hyp(J[0] - pts[i][0], J[1] - pts[i][1]);
+        }
+        acc += hyp(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+        cum.push(acc);
+      }
+      r.planS = Math.max(r.planS ?? 0, s);
+      let i = 0;
+      while (i < pts.length - 2 && r.planS > cum[i + 1]) i++;
+      const L = cum[i + 1] - cum[i];
+      const u = L > 1e-6 ? THREE.MathUtils.clamp((r.planS - cum[i]) / L, 0, 1) : 1;
+      const a = P[i];
+      const b = P[i + 1];
+      const k = Math.min(1, UA.enhance);
+      const mix = (j) => ((a[j] ?? 0) + ((b[j] ?? 0) - (a[j] ?? 0)) * u) * k;
+      // 칼끝 들기는 UNIQUE_ASSIST.schielPlayerTip 일 때만 (기본 1 — 사장님 10/25 20:2x '칼끝 들기 빼지 마' · 0 = 시험용: 길 끝을 지나 계속 긋는 손가락에서 칼끝을 채찍처럼 떨구는 몫을 뺌)
+      f.techPlan = { tilt: UA.schielPlayerTip ? mix(0) * D2R : 0, reach: mix(1), turn: mix(2) * D2R };
+      this.planFade = null;
+    } else if (f.techPlan) {
+      // 놓음 (ai.js techPlanStep 과 같음): 손 목표가 한 스텝에 손 뻗기만큼 튀지 않게 그때 값을 planRelease 초에 걸쳐 0 으로
+      const F = (this.planFade ??= { tilt: f.techPlan.tilt, reach: f.techPlan.reach, turn: f.techPlan.turn, t: 0 });
+      F.t += dt;
+      const q = 1 - F.t / UA.planRelease;
+      if (q <= 0) {
+        f.techPlan = null;
+        this.planFade = null;
+      } else f.techPlan = { tilt: F.tilt * q, reach: F.reach * q, turn: F.turn * q };
+    }
   }
 
   /** 내가 둔 끝 힘을 걷는다 (다른 동작이 바꿔 놓았으면 그대로 둔다) */
