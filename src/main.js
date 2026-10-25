@@ -274,6 +274,8 @@ if (params.has('schielPath')) CONFIG.UNIQUE_ASSIST.schielPath = +params.get('sch
 if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get('schielPlayer') ? 1 : 0; // 사람 곁눈 베기 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — 기본 1 · `?schielPlayer=0` = 사람은 옛 길 잣대 · 덧칸 없음 · unique_assist.js uniqueDef · planStep)
 if (params.has('schielPlayerK') && Number.isFinite(+params.get('schielPlayerK'))) CONFIG.UNIQUE_ASSIST.schielPlayerK = +params.get('schielPlayerK'); // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 20:2x 결정 — 기본 1 = 세기 100 % · `?schielPlayerK=0.5` = 시험용 50 % · combat.js analyze)
 if (params.has('schielPlayerTip')) CONFIG.UNIQUE_ASSIST.schielPlayerTip = +params.get('schielPlayerTip') ? 1 : 0; // 사람 곁눈 베기 칼끝 들기 (사장님 10/25 20:2x 결정 '칼끝 들기 빼지 마' — 기본 1 = AI 와 같은 덧칸 셋 · `?schielPlayerTip=0` = 시험용 칼끝 들기 없음 · unique_assist.js planStep)
+for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js)
+if (params.has('tsuSnapShare') && +params.get('tsuSnapShare') > 0) CONFIG.UNIQUE_ASSIST.tsuSnapShare = +params.get('tsuSnapShare'); // 제비 베기 되돌림 칼끝 빠르기 몫 (기본 0.6 — 고노센 발도 칼끝 빠르기의 몫)
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)
