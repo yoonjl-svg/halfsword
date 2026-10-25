@@ -196,6 +196,7 @@ function duel(wSpec, oppId, seed, dur) {
     strokes: strokes.length, blocked: strokes.filter((s) => s.blocked).length,
     feel: strokes.filter((s) => s.recT != null && s.tipV != null).map((s) => [+s.swingT.toFixed(3), +s.tipV.toFixed(1), +s.recT.toFixed(3)]), // 손맛 [긋기 시작 → 칼끝 가장 빠름 s · 그 빠르기 m/s · 손 뗀 뒤 회수 s] (끝난 획만)
     hitJ: dealt.map((x) => Math.round(x.energy)),
+    byType: Object.fromEntries(['cut', 'stab', 'blunt'].map((k) => { const D = dealt.filter((x) => x.type === k); return [k, [D.length, +D.reduce((a, x) => a + (x.severity ?? 0), 0).toFixed(3), Math.round(D.reduce((a, x) => a + x.energy, 0)), D.filter((x) => x.severity > 0).length]]; })), // (10/25) 맞음 갈래별 [판정 수 · 심각도 합 · J 합 · 상처 수] — 베기 · 찌르기 손맛 견줌 (docs/import/pappenheimer_import_2026-10-25.md)
     pGrip: grip.P[0] ? +(grip.P[1] / grip.P[0]).toFixed(3) : null, eGrip: grip.E[0] ? +(grip.E[1] / grip.E[0]).toFixed(3) : null, nan, // 두 손 쥔 몫 (나 · 상대) · NaN kneels: log.filter((x) => x.hit && x.att === 0).length, rolls: log.filter((x) => x.att === 0).length,
     aiKneels: log.filter((x) => x.hit && x.att === 1).length, rekneel, chainMax, kneelT: +kneelT.toFixed(1),
     heads: dealt.filter((x) => x.zone === 'head' || x.zone === 'neck').length, sits: sits - log.filter((x) => x.hit && x.att === 0).length,
@@ -244,6 +245,14 @@ for (const w of W) {
   const col = (i) => F.map((f) => f[i]);
   const gp = (A, k) => { const v = A.map((r) => r[k]).filter((x) => x != null); return v.length ? `${(100 * avg(v)).toFixed(1)} %` : '-'; };
   console.log(`| ${w}${LABEL} | ${n} | ${R.filter((r) => r.win).length} · ${R.filter((r) => r.loss).length} · ${R.filter((r) => !r.win && !r.loss).length} | ${f1(J.length / n)} | ${f1(avg(J))} | ${Math.max(0, ...J)} (${f1(avg(R.map((r) => r.maxJ)))}) | ${F.length} | ${med(col(0)).toFixed(3)} · ${avg(col(0)).toFixed(3)} | ${med(col(1)).toFixed(1)} | ${med(col(2)).toFixed(3)} · ${avg(col(2)).toFixed(3)} | ${gp(R, 'pGrip')} · ${gp(R, 'eGrip')} | ${R.filter((r) => r.nan).length} |`);
+}
+// 베기 · 찌르기 묶음 (10/25 — 파펜하이머 손맛 견줌): 맞음 갈래(cut 베기 · stab 찌르기)마다 판정 / 판 · 판정 하나 J 평균 · 판정 하나 심각도 평균 · 상처 낸 몫
+console.log('\n| 무기 | 판 | 베기 판정 / 판 | 베기 하나 J | 베기 하나 심각도 | 베기 상처 몫 | 찌르기 판정 / 판 | 찌르기 하나 J | 찌르기 하나 심각도 | 찌르기 상처 몫 | 준 심각도 / 판 (베기 · 찌르기) |');
+console.log('|---|---|---|---|---|---|---|---|---|---|---|');
+for (const w of W) {
+  const R = rows.filter((r) => r.w === w), n = R.length, T = (k, i) => R.reduce((a, r) => a + r.byType[k][i], 0);
+  const one = (k) => { const c = T(k, 0); return `${(c / n).toFixed(2)} | ${c ? (T(k, 2) / c).toFixed(1) : '-'} | ${c ? (T(k, 1) / c).toFixed(3) : '-'} | ${c ? Math.round((100 * T(k, 3)) / c) + ' %' : '-'}`; };
+  console.log(`| ${w}${LABEL} | ${n} | ${one('cut')} | ${one('stab')} | ${(T('cut', 1) / n).toFixed(2)} · ${(T('stab', 1) / n).toFixed(2)} |`);
 }
 if (DIAG) { // 획 진단 묶음: 몸 닿음 · 칼만 · 둘 다 아님 — 몫 · 그 획 시작 때 가슴 사이 거리 · 덩굴 끝이 상대 쪽으로 간 가장 먼 거리 · 마디와 상대 몸통 · 머리의 가장 가까운 거리 (가운데 값)
   const med = (a) => (a.length ? [...a].sort((x, y) => x - y)[a.length >> 1].toFixed(2) : '-');

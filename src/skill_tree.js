@@ -13,8 +13,8 @@
 //   편지는 뿌리와 같은 줄 왼쪽(사장님 10/22 02:1x) — 뿌리 원 왼쪽 가장자리 → 편지 원 오른쪽 가장자리 수평 점선 ·
 //   앞 칸을 '모두' 익혀야 하는 칸은 원 위에 금색 점 · 독일 2단계 관문은 두 줄 사이 가로 띠 하나.
 //  칸을 누르면 상세 카드(유파 탭까지 덮음): 그림 · 이름(원어는 여기서만 — 화면 글 지침 §1) · 검술서 오의(lore) · 출처(src) · 효과 한 줄(작게) · 갈래 · 유파 · 상태 · 먼저 익힐 칸(잠김일 때) · 값 · '배우기' ·
-//   맨 아래 조작 줄(칸 cmd — 정해진 입력으로 내는 칸만 · 온 폭 한 줄 '조작 …' — 사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어').
-//   화면 읽기 차례 = 이름 · 오의 · 출처 · 효과 · 조작 (사장님 10/22 00:5x '검술서나 참고 문헌에서의 오의를 밝힌 예전 방식이 더 나았던 거 같아' — 갈래 줄은 보이기만 위, 읽기는 효과 · 조작 뒤).
+//   맨 아래 입력 줄(칸 cmd — 정해진 입력으로 내는 칸만 · 온 폭 한 줄 '입력: …' — 사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어' · 10/25 17:3x 도식 · ''커맨드'는 '입력'으로').
+//   화면 읽기 차례 = 이름 · 오의 · 출처 · 효과 · 입력 (사장님 10/22 00:5x '검술서나 참고 문헌에서의 오의를 밝힌 예전 방식이 더 나았던 거 같아' — 갈래 줄은 보이기만 위, 읽기는 효과 · 입력 뒤).
 //  유파 초기화: 판 맨 위 오른쪽(뿌리 칸 줄 · 판과 함께 내려감) 둥근 단추 — 칸과 같은 원 꼴(머리 그림 + 1 에 맞춘 원 · 1 = 값 알약 글자) · 원 밑 '초기화'(칸 이름과 같은 글자 크기 · 굵기 · 색) ·
 //   누르는 자리 40 px 이상 (10/22 '너무 낮아 누르기 힘듭니다' · '초기화도 원형으로' · 02:0x '초기화만 글자가 더 크네. 스킬과 같게') ·
 //   머리 1 · 확인 단계 · 익힌 칸이 없거나 머리 0 이면 못 누름.
@@ -155,7 +155,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
       <img class="detail-icon" id="nodeIcon" alt="" aria-hidden="true" draggable="false"><b id="nodeTitle" class="detail-title" tabindex="-1"></b>
       <figure class="detail-lore" id="nodeLoreBox"><blockquote id="nodeLore"></blockquote><figcaption id="nodeSrc"></figcaption></figure>
       <div class="detail-body"><p id="nodeEffect" class="detail-effect"></p><p id="nodePre" class="detail-pre"></p><p id="nodeState" class="detail-state" role="status"></p></div>
-      <p id="nodeCmd" class="detail-cmd" hidden><b class="detail-cmd-label">조작</b> <span id="nodeCmdText"></span></p>
+      <p id="nodeCmd" class="detail-cmd" hidden><b class="detail-cmd-label">입력:</b> <span id="nodeCmdText"></span></p>
       <small id="nodeMeta" class="detail-meta"></small>
       <div class="detail-act"><p id="nodePrice" class="detail-price"></p><div class="detail-actions start-actions"><button type="button" id="learnNode">배우기</button></div></div>
     </section>`;
@@ -310,7 +310,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     $('#nodeLoreBox').hidden = !lore;
     box.dataset.lore = lore ? 'y' : '';
     $('#nodeEffect').textContent = st === 'closed' ? '준비 중입니다.' : nodeEff(school, n);
-    // 조작 줄 (사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어' — 칸 cmd · skill_tree_data.js NODE_CMD): 카드 맨 아래 온 폭 한 줄 · 없거나 준비 중이면 숨김
+    // 입력 줄 (사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어' · 10/25 17:3x 도식 '입력: …' — 칸 cmd · skill_tree_data.js NODE_CMD): 카드 맨 아래 온 폭 한 줄 · 없거나 준비 중이면 숨김
     const cmd = st === 'closed' ? '' : n.cmd ?? '';
     $('#nodeCmdText').textContent = cmd;
     $('#nodeCmd').hidden = !cmd;

@@ -28,7 +28,7 @@ export class ItalianOpposition {
   /** 이 몸이 막아찌르기를 쓸 수 있는 꼴인가 (유파 · 책 · 몸 상태) — 이어 가기 조건. 시작은 여기에 막기 단추 새 누름을 더한다 */
   eligible() {
     const f = this.f, sk = f.skill, g = this.guard;
-    return SKILL.itOpposition && f.swordArt?.tradition === 'italian' // 10/21 사장님 '이탈리아 유파 전체로 넓히는 거 맞아' — 무기 이름 조건 없음(지금 이탈리아 무기 = 레이피어 · 달타냥 · 발리사르다)
+    return SKILL.itOpposition && f.swordArt?.tradition === 'italian' // 10/21 사장님 '이탈리아 유파 전체로 넓히는 거 맞아' — 무기 이름 조건 없음(지금 이탈리아 무기 = 레이피어 · 달타냥 · 발리사르다 · 10/25 파펜하이머)
       && f.schoolParry !== false && !kitOff(f, 'opposition') && !g.broken && f.alive && this.foe.alive
       && f.armed && !f.stamina.exhausted && ['stand', 'kneel'].includes(f.state)
       && !sk.tap && !sk.sec && !sk.pom && !f.secretStiff;

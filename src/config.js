@@ -65,7 +65,7 @@ export const STAMINA = {
 export const WEAPON_ABILITY = { aweDrain: 0, aweGap: 1.5, aweStart: 15 };
 // 달타냥 '총사의 결투' — 사장님 10/25 결정 (01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대): 칼 주인이 한손검(weapons.js isOneHandSword —
 //  한손 쥠 · 날 있음)을 쥔 상대를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율, 와신상담과 같은 자리 · combat.js duelOneHandMult)이 × duelOneHand.
-//  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 10/25 결정 — 11 개 그대로 (확인표 2491 · 2492)
+//  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 10/25 결정 — 가름 규칙 그대로 (확인표 2491 · 2492 · 10/25 파펜하이머가 들며 11 → 12 개)
 WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
 // 드루이드의 채찍 무릎 꿇리기 (사장님 10/23 01:5x '특수효과 넣어서 채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘.(모든 종류의 타격 대상) 곁눈베기 맞았을 때처럼' — 확인표 2255 ~ 2257 사장님 확인 전)
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
@@ -1179,6 +1179,17 @@ export const SECRET = {
   holdDepth: 0, // 시험 (기본 끔 · `?holdDepth=1` — 10/24 17:2x 뒤 감독 'holdGhost 로 칼이 상대 몸을 뚫고 나간 것처럼 보이는지'): 맞힌 겨눈 찌름의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 — 등 뒤로 나온 칼 p50 0.60 → 0.41 m 이나 몸이 붙으며 팔이 접혀 손목이 꺾여 권하지 않음 (fighter.js holdDepthHand · 기록 §9-9) [사장님 결정 전]
   thrustSweep: 1, // 1 = 겨눈 찌름(comboPlanAim thrust — 격살 허파 찌르기)이 한 스텝에 겨눔 토막에서 찌르는 토막으로 넘어오면 맞음의 쓸린 방향을 찌르는 토막 첫 자리부터 (secret_instant.js stepCombo) · 0 = 전(지난 스텝 자리부터 — 겨눔의 옆 움직임이 섞여 맞닿기 언저리 찌름이 베기로 셈됨) — 새 수 없음 (10/24 17:2x 뒤 · 기록 §9-9)
   risolutoGlide: 1, // 1 = 런지가 처음 붙어 있던 상대 칼을 따라 미끄러지는 동안은 막힘으로 치지 않는다(원전 [156] '칼날을 놓지 말고 따라 미끄러져 몸까지') — 두 칼이 한 번 떨어진 뒤 다시 닿으면 막힘(같은 거리 iberianBlockDist) · 0 = 연환과 같은 막힘 [사장님 확인 전 — 확인표 2410]
+  // 런지 연출 (사장님 10/25 14:0x '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 결정 · 문서 §15 · 그림 docs/handoff/risoluto_fx_2026-10-25 · 화면만 — 물리 · 판정 무관):
+  //  ① 카메라가 런지를 따라 앞으로 (main.js updateCamera — 이베리아 camSwing 과 같은 꼴 · 사람 런지만) ② 찌르는 줄 빛줄기 · 끝 반짝임 (sword_trail.js lunges — 누구의 런지든)
+  risoCam: 0.6, // 카메라 밀어 넣기 (m): 런지를 낸 순간 내 가슴 → 상대 가슴 방향(수평)으로 카메라와 바라보는 점을 함께 이만큼 · 0 = 끔 (`?risoCam=0`) [사장님 확인 전 — 확인표 2519]
+  risoCamIn: 0.2, // 밀어 넣는 시간 (s, 실시간 — 시간 사다리 0.2) · 그 뒤 risoCamOut 동안 제자리로 (camSwing 과 같은 smoothstep) [사장님 확인 전 — 확인표 2520]
+  risoCamOut: 0.6, // 되돌아오는 시간 (s, 실시간 — 시간 사다리 0.6) [사장님 확인 전 — 확인표 2520]
+  risoStreak: 1, // 1 = 런지 빛줄기: 런지를 시작한 스텝의 칼날 밑동 → 가장 멀리 간 칼끝 곧은 줄을 화면 쪽으로 펼친 띠(창끝 꼴 · 가운데 짙고 가장자리 0) — 몸 = 비기 잔상 색 · 밝기(바닥 secretArcMin) ·
+  //  심 = 흰 빛(더하기) · 끝(칼끝)에 흰 반짝임 별(화면 가로 · 세로 — 깊이 안 봄). 0 = 10/23 마주 보는 띠 'line' 그대로 (`?risoStreak=0`) [사장님 확인 전 — 확인표 2521]
+  risoStreakWidth: 0.12, // 빛줄기 반 폭 (m — 가장 굵은 곳 · 레이피어 칼날 0.95 m 의 1/8 남짓 — 마주 보는 띠 반 폭(칼자루 → 끝의 8 %)과 비슷한 크기) [사장님 확인 전 — 확인표 2522]
+  risoGlintK: 4, // 끝 반짝임 가로 팔 = 빛줄기 반 폭 × 이 배 (0.48 m — 뒤 카메라에서 상대 몸통 밖으로 나와 보이게 · 세로 팔은 0.6 배) [사장님 확인 전 — 확인표 2522]
+  risoStreakLife: 0.6, // 빛줄기 남는 시간 (s, 화면 시간 — 다 그린 때부터 옅어짐 · 시간 사다리 0.6) [사장님 확인 전 — 확인표 2523]
+  risoGlintLife: 0.4, // 끝 반짝임 남는 시간 (s, 화면 시간 — 칼끝이 처음 찌르는 토막에 든 때부터 · 시간 사다리 0.4) · 0 = 반짝임만 끔 (`?risoGlint=0`) [사장님 확인 전 — 확인표 2523]
   cnParryWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 1.0 → 0.6 (이어짐 · 입력 칸) · 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
   // 중국 막기 연환 사람이 쓰게 (사장님 10/12 01:1x 플레이 시험 — docs/strike/cn_combo_play_2026-10-12.md) [모두 사장님 확인 전 — 확인표 970~]
   cnBongdu: 1, // 1 = 봉두세(highL) 막기도 정한 자세 (schools.js CHINESE_SECRET_PARRY cond.slots — 오는 줄 25 %), 0 = 전 두 자리(거정세·표두세). `?cnBongdu=0`
@@ -1379,7 +1390,7 @@ export const THRUST = {
   bindRest: 0.7,
   bindAim: 180, // 칼끝이 목표 방향과 이 각도(도) 안일 때만 칼 길을 잡는다. 180 = 거르지 않음
   // 이탈리아 찌르기 — 팔 → 몸 → 발 (10/25 08:0x 사장님 '이탈리아 찌르기 손봐' — docs/strike/italian_thrust_2026-10-25.md · 확인표 2513 ~ 2516 · 사장님 확인 전):
-  //  이탈리아 유파 몸(swordArt.tradition 'italian' — 레이피어 · 달타냥 · 발리사르다)의 보통 탭 찌르기와 AI 찌르기 기술(찌르기 무기 AI 는 같은 탭 길 — ai.js startStrike)만.
+  //  이탈리아 유파 몸(swordArt.tradition 'italian' — 레이피어 · 달타냥 · 발리사르다 · 10/25 파펜하이머)의 보통 탭 찌르기와 AI 찌르기 기술(찌르기 무기 AI 는 같은 탭 길 — ai.js startStrike)만.
   //  쓰러진 상대 찍기 · 약한 자세 겨눔 · 막아찌르기 · 비기(리솔루토 런지는 운동학 길 — 그대로) · 다른 유파(에스톡 포함)는 그대로.
   //  ① 과녁 = 몸통(가슴) — 높은 자세(1 · 2번 — headPad 위)에서도 머리 대신: 임브로카타 「dalla spalla sinistra dell'avversario fino al suo ginocchio dritto」 ·
   //     찌르기 「nel petto」 · 「verso il petto」 (Capo Ferro 1610 — schools.js 이탈리아 기술 src) [원문]
@@ -1437,6 +1448,14 @@ export const SOUND = {
   whipLashGain: 1, // C2 맞음 녹음 한 겹 음량 (event 음량은 칼 둔타와 같은 눈금 그대로 · 파일 최고 −1 dBFS 는 다른 채찍 녹음과 같음) — 확인표 2443 · 사장님 확인 전
   whipLashGap: 0.2, // s: C2 맞음 뒤 이 시간 안의 끝 '딱' · 다른 C2 맞음은 내지 않음 (한 맞음이 두 번 터지지 않게) — 확인표 2444 · 사장님 확인 전
   whipFlam: 0.06, // s: 끝 '딱' 뒤 이 시간 안의 C2 맞음은 내지 않음 (거의 같은 때 — 이미 난 '딱'이 대신) — 확인표 2444 · 사장님 확인 전
+  // 비기 소리 (10/25 사장님 '샛별이 비기 소리 보낸 거 입혀' — 샛별 저장소 2fa0b2ae · src/secret_sfx.js · src/sound.js secretSfx · docs/import/secret_audio_import_2026-10-25.md):
+  //  비기가 실제로 터진 순간(낸 전투자의 터뜨림 수가 오름 — 결정타 화면 늦춤과 같은 수) 그 전투자 유파의 녹음 한 번 · 사람 · AI 같음. 준비 · 창 · 실패 · 여러 타격 비기의 다음 칼에는 안 냄
+  secretSfx: 1, // 1 = 켬 · 0 = 끔 (주소 `?secretSfx=0` — 녹음도 받지 않음) — 확인표 2545 · 사장님 확인 전
+  secretSfxGain: 1, // 이벤트 음량 (녹음 한 겹 · 파일 최고 −8 dBFS 받은 그대로 · 쇳소리 묶음 · 재생 빠르기 1) — 사장님 10/25 18:4x '음량 1.0으로 하고' (확인표 2543)
+  // 파일마다 크기 맞춤 (사장님 10/25 18:4x 'g1과 g2 소리 크기 맞춰' — 받은 MP3 바이트는 그대로, 녹음 한 겹 음량으로만): dB. EBU R128 순간 크기(400 ms) 최고 g1 −20.53 · g2 −23.79 LUFS →
+  //  g2 +3.3 dB 면 −20.49 (차 0.04 dB). g2 최고 −8.0 dBTP + 3.3 = −4.7 · 전체 음량 0.8 을 거쳐 약 −6.6 dBTP — 리미터(−6 dB) 아래 · 깎임 없음. 맞춘다 = 사장님 결정 · 3.3 값 = 사장님 확인 전 (확인표 2543)
+  secretSfxTrimDb: { 'secret/g1-clank': 0, 'secret/g2-dry': 3.3 },
+  secretSfxFiles: { japanese: 'secret/g1-clank', italian: 'secret/g1-clank', chinese: 'secret/g1-clank', iberian: 'secret/g2-dry', german: 'secret/g2-dry' }, // 유파 → public/sfx 파일 (확장자 없음) — 사장님 10/25 결정 (확인표 2542)
   fleshHit: 'drawn', // 10/7 사장님 지시로 샛별 일반판의 사용자 선택을 그대로: 'drawn' = A2 단축 약베기(.26 s)/B2 단축 강베기(.35 s, 112 J 경계), 찌르기는 samsho 유지 (샛별 7cbac07, 사용자 선택 10/2·'15 % 크게' 10/3). 'samsho' = 10/1 21:10 사장님 선택(35차 강베기)이던 전 기본값, sounds.html 에 그대로
 };
 

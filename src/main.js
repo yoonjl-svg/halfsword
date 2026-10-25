@@ -38,6 +38,7 @@ import { attachAura, AURA_VIEW } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
 import { whipTipStep, whipHitMode } from './whip_sound.js'; // 드루이드의 채찍 휙 · 딱 걸쇠 (10/24 — 아래 whipWhoosh 에서 옮김) · 맞음 소리 주소 스위치
+import { SecretSfxWatch, secretSfxMode } from './secret_sfx.js'; // 비기 소리 (10/25 — 샛별 저장소 2fa0b2ae): 낸 전투자 · 유파 소리 한 번 · 주소 스위치
 import { Combat, woundDegree, woundRageMult, COMBAT_HOOKS } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_ORDER, STAGE_FOE, STAGE_FOE_EXTRA, stageFoeId, stageLabel, STAGE_NAME_KO } from './stages.js';
 import { WANDER, WANDER_NAME, WANDER_EXCLUSIVE, WANDER_HEAD, WANDER_BONUS_LABEL, WANDER_NOTICE_TEXT, chooseWanderEncounter } from './wander_rules.js'; // 방랑 (10/23 — 대기실 '방랑' 단추, docs/import/wander_heroes_import_2026-10-23.md)
@@ -73,6 +74,7 @@ await RAPIER.init();
 //  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도(…?r2p=1?weapon=…) 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
 if (params.has('stamina')) CONFIG.STAMINA.on = params.get('stamina') !== '0'; // 기력(10/15 — 샛별 저장소 구현, docs/strike/stamina_import_2026-10-15.md): 기본 켬, `?stamina=0` = 기력 없음(막대·비용·지침·탈진 모두 없음 — 지금 본판 그대로)
+CONFIG.SOUND.secretSfx = secretSfxMode(params, CONFIG.SOUND.secretSfx); // 비기 소리 (10/25 사장님 '샛별이 비기 소리 보낸 거 입혀'): 기본 켬 · `?secretSfx=0` = 끔 (녹음도 안 받음)
 CONFIG.SOUND.whipHit = whipHitMode(params, CONFIG.SOUND.whipHit); // 드루이드의 채찍 살 · 옷 맞음 소리(10/24): 기본 C2 채찍 녹음 · `?whipHit=old` = 10/23 판(Thwack — 겹침 막기도 없음)
 // 레전드 기운 보기 손잡이 (재기 · 견줌 사진용 — 그림만, aura.js AURA_VIEW): `?aura=0` = 기운 끔 · `?auraTune={"durandal":{"gain":1}}` = 판을 세울 때 프로필 일부를 덮어씀 (docs/strike/legend_glow_2026-10-24.md)
 if (params.get('aura') === '0') AURA_VIEW.on = false;
@@ -246,6 +248,10 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.get('risoRecover') === '0') CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 }; // 10/24 14:0x 전 걸음 = 디딘 뒤 뒷발 끌어붙임 (몸 따라감 배율 · 몸 가속 · 앞발 거둠은 없음)
   if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
   if (params.has('risoTouch')) CONFIG.SECRET.risolutoTouch = +params.get('risoTouch') ? 1 : 0; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
+  // 10/25 14:0x 런지 연출 (사장님 '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 — 화면만): `?risoCam=0` 카메라 밀어 넣기 끔(`?risoCam=0.9` 처럼 m 로 견주기) · `?risoStreak=0` 빛줄기 · 끝 반짝임 끔(10/23 마주 보는 띠 'line' 그대로) · `?risoGlint=0` 끝 반짝임만 끔
+  if (params.has('risoCam')) CONFIG.SECRET.risoCam = Math.max(0, +params.get('risoCam') || 0);
+  if (params.has('risoStreak')) CONFIG.SECRET.risoStreak = +params.get('risoStreak') ? 1 : 0;
+  if (params.has('risoGlint')) CONFIG.SECRET.risoGlintLife = Math.max(0, +params.get('risoGlint') || 0); // 빛줄기 끝 반짝임만: 0 = 끔 · `?risoGlint=0.2` 처럼 s 로 견주기
   if (params.has('thrustArm')) CONFIG.SECRET.thrustArm = +params.get('thrustArm') ? 1 : 0; // 10/24 15:5x 운동학 겨눈 찌름(런지 · 격살 허파 찌르기) — 0 = 전 손 자리(어깨 가까이 · 칼이 새끼 쪽으로 꺾여 거꾸로 쥔 꼴)
   if (params.has('holdDepth')) CONFIG.SECRET.holdDepth = +params.get('holdDepth') ? 1 : 0; // 시험 (10/24 17:2x 뒤 · 기본 끔): 1 = 맞힌 겨눈 찌름(런지 · 격살 허파 찌르기)의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 (fighter.js holdDepthHand — 끄면 런지 앞발을 따라 칼이 상대 등 뒤로 나옴)
 }
@@ -843,10 +849,21 @@ function newRound(weaponId) {
   uniqueCueSeen = null;
   secretSlow = 0;
   secretBurstsSeen = 0;
+  {
+    // 비기 소리 (10/25 — src/secret_sfx.js): 사람(검술 층) · AI(AI 실행부) 터뜨림 수를 따로 본다 — 지금 수가 바탕이라 지난 판 수가 판 시작에 터지지 않는다.
+    //  AI 몸의 검술 층 수(enemy.skill.secretBursts)는 보지 않는다 (싱지르 · 모르트슐라크 AI 는 둘 다 세어 한 비기에 두 번이 된다)
+    const P = player, E = enemy, A = ai;
+    secretSfx = new SecretSfxWatch([
+      { who: 'player', fighter: P, count: () => P.skill.secretBursts, run: () => P.skill.sec },
+      { who: 'ai', fighter: E, count: () => A.secretBursts, run: () => A.secretRun },
+    ], (file) => sound.secretSfx(file));
+  }
   secretOpenSeen = 0;
   secretArcSeen[0] = player?.instantArc?.id ?? 0;
   secretArcSeen[1] = enemy?.instantArc?.id ?? 0;
   camSwing.t = -1;
+  camPush.t = -1;
+  camPush.run = null;
   // 플레이어 감정 (emotions.js): 상대 AI와 같은 규칙으로 겁먹고 화내고 물고 늘어진다. ?emo=0 이면 끔, ?emo=0.5 면 문턱값 셋 다 0.5
   const emoParam = params.get('emo');
   const emoTh = emoParam === '0' ? 0 : emoParam ? +emoParam || 0.3 : 0.3;
@@ -892,10 +909,13 @@ let uniqueCueSeen = null;
 const parryHold = { btn: null, key: false }; // btn = 단추를 누른 포인터 id
 let secretSlow = 0;
 let secretBurstsSeen = 0;
+let secretSfx = null; // 비기 소리 걸쇠 (10/25 — 판마다 새로, src/secret_sfx.js)
 let secretOpenSeen = 0;
 // 비기 화면 연출 (10/10 발도 섬광 · 이베리아 카메라): 본 잔상 수 · 카메라 돌림 { t, sign }
 const secretArcSeen = [0, 0];
 const camSwing = { t: -1, sign: 1 };
+// 런지 카메라 (10/25 14:0x 사장님 '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 — SECRET.risoCam): 시계 t · 런지 방향 (dx, dz — 수평 단위) · 본 런지(skill.sec 한 덩이)
+const camPush = { t: -1, dx: 0, dz: 0, run: null };
 const flashEl = document.createElement('div');
 flashEl.id = 'secretFlash';
 flashEl.style.cssText = 'position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:5;transition:opacity .12s ease-out';
@@ -921,6 +941,16 @@ function watchSecretFx() {
       camSwing.t = 0;
     }
   });
+  // 런지 카메라 (10/25 — SECRET.risoCam): 내 안다레 리솔루토 런지(skill.sec.lunge — 비기를 낸 그 덩이)를 본 첫 프레임에 내 가슴 → 상대 가슴(수평) 쪽으로 밀기 시작.
+  //  사람 런지만 — AI 런지(지금은 없음 · 생기면 빛줄기만 sword_trail.js)는 카메라를 움직이지 않는다: 상대 비기에 화면이 상대 쪽으로 쏠리면 막고 물러날 내 조작 화면이 흔들림
+  const run = player?.skill?.sec;
+  if (run?.lunge && run !== camPush.run) {
+    camPush.run = run;
+    const a = player.bodies.chest.translation();
+    const b = enemy.bodies.chest.translation();
+    const L = Math.hypot(b.x - a.x, b.z - a.z);
+    if (CONFIG.SECRET.risoCam > 0 && L > 1e-3) Object.assign(camPush, { t: 0, dx: (b.x - a.x) / L, dz: (b.z - a.z) / L });
+  }
 }
 
 // 디버그용 통계 (브라우저 콘솔에서 game.stats 로 확인)
@@ -2372,11 +2402,27 @@ function updateCamera(dt) {
   }
   // 최소 거리 (CAMERA.minDist): 몸이 카메라 쪽으로 밀려 와도 카메라가 그 자리에서 바로 물러난다 — 지금 몸 자리(거르기 전) 기준, 수평 (camera_rig.keepDistance)
   if (!CAM_OLD) keepDistance(camTarget, src, CAMERA.minDist);
+  // 런지 카메라 (10/25 14:0x — SECRET.risoCam · watchSecretFx): 카메라와 바라보는 점을 런지 방향으로 함께 risoCam m — risoCamIn 초에 밀고 risoCamOut 초에 되돌림 (camSwing 과 같은 smoothstep).
+  //  최소 거리 뒤에 더한다 (앞에 더하면 minDist 가 밀어 넣은 몫을 거의 다 되돌린다 — 서 있을 때 3.04 → 2.8 m 까지만)
+  let push = 0;
+  if (camPush.t >= 0) {
+    camPush.t += dt;
+    const S = CONFIG.SECRET;
+    const ti = S.risoCamIn;
+    const to = S.risoCamOut;
+    if (camPush.t > ti + to) camPush.t = -1;
+    else {
+      push = S.risoCam * (camPush.t < ti ? THREE.MathUtils.smoothstep(camPush.t, 0, ti) : 1 - THREE.MathUtils.smoothstep(camPush.t, ti, ti + to));
+      camTarget.x += camPush.dx * push;
+      camTarget.z += camPush.dz * push;
+    }
+  }
   // 경기장 바깥 돌벽을 뚫고 나가지 않게
   const r = Math.hypot(camTarget.x, camTarget.z);
   if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
   clampStageCamera(a, camTarget, arenaStone?.navigation); // 잠든 습지: 카메라가 석상을 가로지르거나 안으로 들어가지 않게 (석상 없으면 그대로)
   const look = _cl.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1 + terrainY);
+  if (push) look.set(look.x + camPush.dx * push, look.y, look.z + camPush.dz * push); // 런지 카메라: 바라보는 점도 같이 (밀어 넣기 — 보는 각은 그대로)
   camOpen.endPos.copy(camTarget);
   camOpen.endLook.copy(look);
   // 판 시작: 무대 훑기(그 무대 첫 판) · 내려앉기(다시 겨루기 · `?openSweep=0`) — 끝(u = 1)에서 평소 자리와 같아 이어 붙는 곳에서 튀지 않는다 (src/camera_rig.js)
@@ -2800,6 +2846,7 @@ function frame(now) {
       steps++;
     }
     if (steps === PHYSICS.maxStepsPerFrame) acc = 0;
+    secretSfx?.tick(); // 비기 소리 (10/25 — src/secret_sfx.js): 위 화면 늦춤과 같은 수(터뜨림 수)를 사람 · AI 따로 봐, 오른 전투자 유파의 녹음을 한 번 — 이번 화면 물리 스텝 뒤라 그 스텝 끝 실행이 못 걸린 비기는 거른다 (준비 · 창 · 실패 · 다음 칼은 수가 안 오름)
     camSteps = steps; // 카메라 따라가기: 이번 화면에 몸이 나아간 게임 시간 (빠르기 = 옮긴 거리 ÷ 스텝 시간)
     watchOpening(); // 무대 훑기 판: 훑기 시작 introAt 초 뒤 알림·소개·안내
     if (perf) {
@@ -2904,6 +2951,7 @@ window.game = {
   draw, // 무기 뽑기 상태 (stage, ids = [내 카드, 내 카드, 상대 무기], pick). 스크린샷용으로 game.draw.hold = true 면 순서가 멈춘다
   // 판 시작 카메라 (10/15): mode 'sweep'|'settle'|'old' · params(무대 길 — 바꾸면 그 판부터) · swept(훑은 무대) · u(스크린샷용 고정 자리, null = 시계대로) · endPos/endLook(지금 평소 자리)
   camOpen,
+  camPush, // 런지 카메라 (10/25 — t 시계 · dx dz 방향 · SECRET.risoCam) — tools/browser/risoluto_fx_shots.mjs 가 읽는다
   get camRig() {
     return { follow: camFollow.clone(), vel: { ...camRig.vel }, lift: camRig.lift, look: camLook.clone(), dir: camDir.clone() }; // 따라가기 상태 (tools/browser/cam_follow_browser.mjs 가 잰다)
   },

@@ -1,0 +1,33 @@
+{
+ "report": {
+  "game": {
+   "weapon": "pappenheimer",
+   "mass": 1.34,
+   "school": "italian",
+   "foe": "rapier",
+   "t": 6.5
+  },
+  "card_844x390": {
+   "name": "파펜하이머",
+   "tier": "레어",
+   "desc": "롱소드와 레이피어의 장점을 흡수한 결투용 검.\n구멍 뚫린 두 방호판이 손을 감싸 지킨다.",
+   "thumb": true,
+   "overflow": false
+  },
+  "card_568x320": {
+   "name": "파펜하이머",
+   "tier": "레어",
+   "desc": "롱소드와 레이피어의 장점을 흡수한 결투용 검.\n구멍 뚫린 두 방호판이 손을 감싸 지킨다.",
+   "thumb": true,
+   "overflow": false
+  },
+  "card_1280x800": {
+   "name": "파펜하이머",
+   "tier": "레어",
+   "desc": "롱소드와 레이피어의 장점을 흡수한 결투용 검.\n구멍 뚫린 두 방호판이 손을 감싸 지킨다.",
+   "thumb": true,
+   "overflow": false
+  }
+ },
+ "errors": []
+}
