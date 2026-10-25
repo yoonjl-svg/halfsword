@@ -23,7 +23,7 @@ import { FLAMBERGE_GAME, FLAMBERGE_HILT, FLAMBERGE_COLORS, flambergePartMesh, fl
 import { GOUJIAN_COLORS, goujianPartMesh, goujianDecorate } from './goujian_details.js'; // 월왕구천검 겉모습 (샛별 저장소 7684c732 에서 가져옴 — 바이트 그대로)
 import { KUSANAGI_COLORS, kusanagiPartMesh, kusanagiDecorate } from './kusanagi_details.js';
 import { DURANDAL_COLORS, durandalPartMesh } from './durandal_details.js'; // 뒤랑달 겉모습 (샛별 저장소 c039bcc7 에서 가져옴 — 10/24)
-import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
+import { TIZONA_COLORS, TIZONA_TAPER, tizonaPartMesh } from './tizona_details.js'; // 티소나 겉모습 (샛별 저장소 f9aea01a 에서 가져옴 — 10/21)
 import { WHIP, WHIP_NOW, druidParts, drawDruidWhip } from './druid_whip.js'; // 드루이드의 채찍 몸 · 겉모습 (샛별 저장소 69ef7dac8 에서 가져옴 — 10/23)
 import { BALISARDA_COLORS, balisardaPartMesh } from './balisarda_details.js'; // 발리사르다 겉모습 (샛별 저장소 c89e827c6 — 10/21)
 import { MURAMASA_COLORS, MURAMASA_PROFILE, muramasaPartMesh, muramasaDecorate } from './muramasa_details.js'; // 무라마사 겉모습 (샛별 저장소 29e543555 · d46e09b96 · 82818cc3d — 10/21)
@@ -1697,12 +1697,28 @@ const sain = finalizeSpec('sain', {
 //       전체 164.9 → 160.9 cm · 오른손 · 날밑 자리 · 손 사이 0.24 · 칼날 · 코등이 그대로. 자루 0.314 → 0.281 kg(길이 비 0.40/0.44 = 0.286 에서 줄어든 0.029 kg 를 칼날로 옮기면 손 기준 관성이 0.6806 — 롱소드 0.2724 의 2.499 배로 2.5 배에 모자라
 //       5 g 를 더 칼날로) · 칼날 1.756 → 1.789 kg · 합 3.0 그대로 → 무게중심 0.250 → 0.263 m · 손 기준 관성 0.684 → 0.682(롱소드의 2.51 → 2.50 배 이상 — 사장님 10/21 결정 지킴). ② 칼자루 충돌체(자루 상자 밑 · 폼멜 공)는 손에서 FL_HILT_CUT 까지만 —
 //       부품 질량의 자리는 무게중심(comY)으로 그대로 두어 질량 · 관성은 ① 그대로, 겉모습도 그대로(partMesh 가 충돌체 자리 표로 그려 그림이 제자리). 그림 폼멜 끝(−0.36)이 제 배에 조금 묻힐 수 있다(획 중앙 1.6 cm · 최대 4 cm — §8-9).
+//      손맛 (사장님 10/25 22:5x 결정 '이베리아 무기는 손맛이 달라야 하지만 확실히 묵직한 대검 느낌이 사라지면 안돼' — 네 대검 묵직함 넷 · 확인표 2610 ~ 2619 ·
+//       docs/strike/iberian_feel_2026-10-25.md): 플랑베르주 = '가장 길고 가장 무거워 세우기 어려운 칼'. ① 칼날 1.162 → 1.30 m(물결 날 칼끝 쪽 +13.8 cm —
+//       리카소 · 손잡이 · 날밑 · 쥠 그대로 · 물결 한 주기 길이 그대로라 물결 수만 는다) → 전체 160.9 → 174.7 cm · 손 ~ 칼끝 1.247 → 1.385 m(츠바이핸더 1.335 보다 길다) ·
+//       ② 늘린 토막 0.2 kg [I](같은 칼몸이 칼끝 쪽으로 이어진 꼴 — 길이당 1.45 kg/m, 10/22 칼날 평균 1.54 의 0.94 배: 칼끝 쪽이 좁다) → 합 3.0 → 3.2 kg ·
+//       칼날 질량 분포는 10/22 칼날(1.789 kg · 무게중심 비 0.353 · 회전 반경 비 0.272)에 그 토막을 이어 붙여 셈(extendBlade — 1.989 kg · 0.379 · 0.299) →
+//       무게중심 0.263 → 0.329 m · 손 기준 관성 0.682 → 1.03(× 1.51 · 롱소드의 3.8 배) · ③ 손목 서보 상한 26 → 22 (헛친 뒤 더 처지고 더 지나가는 칼 — 가장 큰 운동량)
 // ═════════════════════════════════════════════════════════════
 const FL_MASS = { grip: 0.325 * (0.4 / 0.455) - 0.005, pommel: 0.35, guard: 0.58 }; // 자루: 길이 비 0.286 에서 5 g 를 칼날로 더 (손 기준 관성 롱소드의 2.5 배 이상 — 아래 머리말)
+/** 칼날 끝에 고른 토막을 이어 붙인 칼날의 질량 분포 — b = { L 길이 m, m 질량 kg, com 무게중심 비, gyr 그 둘레 회전 반경 비 } (비는 칼날 밑동 쪽 0) → 새 길이 L 의 { m, com, gyr } */
+function extendBlade(b, L, mExt) {
+  const dL = L - b.L, m = b.m + mExt;
+  const c0 = b.com * b.L, c1 = b.L + dL / 2;
+  const c = (b.m * c0 + mExt * c1) / m;
+  const Ic = b.m * ((b.gyr * b.L) ** 2 + (c0 - c) ** 2) + mExt * ((dL * dL) / 12 + (c1 - c) ** 2);
+  return { m, com: c / L, gyr: Math.sqrt(Ic / m) / L };
+}
+// 10/22 칼날(날 1.162 m · 1.789 kg = 3.0 − 자루 · 폼멜 · 날밑 · 무게중심 비 0.353 · 회전 반경 비 0.272) + 칼끝 쪽 토막 0.2 kg (10/25 손맛 — 위 머리말)
+const FL_BLADE = extendBlade({ L: 1.162, m: 3.0 - FL_MASS.grip - FL_MASS.pommel - FL_MASS.guard, com: 0.353, gyr: 0.272 }, FLAMBERGE_GAME.blade, 0.2);
 const FL = {
-  // 부품 질량 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.330(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.162 m
+  // 부품 질량 자리 (칼 원점 = 오른손 주먹 가운데, y): 자루 상자 0.070(날밑 덩이 안) ~ −0.330(폼멜 가운데) · 폼멜 · 코등이 상자 0.067~0.127 · 칼날 밑동 0.085 부터 1.30 m
   y: [-0.13, -0.33, 0.097, FLAMBERGE_HILT + FLAMBERGE_GAME.blade / 2],
-  mass: { ...FL_MASS, blade: 3.0 - FL_MASS.grip - FL_MASS.pommel - FL_MASS.guard }, // 칼날 1.789 kg (위 머리말 — 합 3.000)
+  mass: { ...FL_MASS, blade: FL_BLADE.m }, // 칼날 1.989 kg (위 머리말 — 합 3.2)
 };
 const FL_GRIP_TOP = FL.y[0] + 0.2; // 자루 상자 위 끝 0.070 (날밑 덩이 안)
 const FL_HILT_CUT = -0.28; // 칼자루 충돌체 끝 (손에서 m — 자루 상자 밑 · 폼멜 공 충돌체 자리) — 사장님 10/22 03:3x 'a로'. −0.25(츠바이핸더 mid 폼멜 자리)는 그림 폼멜이 제 배에 획 중앙 3 cm 묻혀 −0.28 로(중앙 1.6 cm · 칼 면 몫은 잡음 안 — §8-9)
@@ -1714,7 +1730,8 @@ const flamberge = finalizeSpec('flamberge', {
   grip: 'two-hand', material: 'steel', tier: 'rare', // 10/21 사장님 결정: 에픽 → 레어 (보정 없음 — 위 머리말)
   hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_GAME.blade, gripAlong: -0.24,
   mCut: 1.1, mThrust: 0.85, mBlunt: 1.15,
-  // 손목 서보 상한: 두 손 쥠 기본값 26 (츠바이핸더와 같다)
+  // 손목 서보 상한 22 (10/25 손맛 — 위 머리말 ③ · 전: 두 손 쥠 기본값 26, 츠바이핸더와 같다)
+  controlOverrides: { maxAimTorque: 22 },
   // 그림은 충돌체 자리 표로 그린다 — fighter.js 가 부품 그림을 충돌체 자리에 놓으므로 그림이 제자리(질량 자리)에 남는다
   partMesh: flambergePartMesh(FL_COL_Y), decorate: flambergeDecorate,
   buildParts() {
@@ -1724,7 +1741,7 @@ const flamberge = finalizeSpec('flamberge', {
     const grip = boxInertia(M.grip, 0.019, 0.2, 0.0165); // 관성은 손잡이 자루 상자 그대로 (0.40 m)
     const pommel = sphereInertia(M.pommel, 0.03);
     const guard = boxInertia(M.guard, 0.2525, 0.03, 0.0155);
-    const blade = bladeInertia(M.blade, L, 0.353, 0.272, 0.04, 0.009);
+    const blade = bladeInertia(M.blade, L, FL_BLADE.com, FL_BLADE.gyr, 0.04, 0.009); // 10/25 늘린 칼날 분포 (전 0.353 · 0.272)
     return [
       partTuple(['box', 0.019, gripHy, 0.0165], FL_COL_Y[0], M.grip, FL.y[0] - FL_COL_Y[0], grip.Ie, grip.It, FLAMBERGE_COLORS.leather),
       partTuple(['ball', 0.03], FL_COL_Y[1], M.pommel, FL.y[1] - FL_COL_Y[1], pommel.Ie, pommel.It, FLAMBERGE_COLORS.bronze),
@@ -1868,12 +1885,36 @@ const kriegsmesser = finalizeSpec('kriegsmesser', {
 //      배율은 츠바이핸더 그대로(베기 1.1 · 찌르기 0.85 · 둔타 1.15). 간격은 다시 잼(weapon_measured.js) · 막기 자리(frames.js LIB_PARRY — 기본 끔)는 츠바이핸더 값을 빌림.
 //      특수 능력 '위세' (사장님 10/21 23:xx — 값 config.js WEAPON_ABILITY · 샛별 저장소 제안 값): 이 칼의 공격이 상대 칼에 막히면 막은 쪽 기력 − 8 ·
 //       한 공격에 한 번 · 1.5 s 에 한 번 (stamina.js spendAweDrain — 사람 · AI 같이)
+//      손맛 (사장님 10/25 22:5x 결정 — 네 대검 묵직함 넷 · 확인표 2610 ~ 2619 · docs/strike/iberian_feel_2026-10-25.md): 티소나 = '앞무게 내리치는 칼'.
+//       ① 칼날 꼴: 칼끝 쪽까지 넓고 두껍게(tizona_details.js TIZONA_TAPER — 칼끝 뾰족 전까지 폭 줄어듦 0.28 → 0.05 · 두께 0.45 → 0.15).
+//        칼날 무게중심 · 회전 반경 비는 츠바이핸더 비(리카소가 있는 칼 — 0.3644 · 0.2436)를 빌리지 않고 티소나 칼날 그림의 단면 넓이 꼴(폭 × 두께 —
+//        taperMoments) 그대로 [D]: 0.452 · 0.270 (전 꼴이었다면 0.403 · 0.264) ·
+//       ② 폼멜 0.351 → 0.25 kg 의 0.101 kg 를 칼날로(1.62 → 1.721 kg — 손 쪽이 가볍고 칼끝 쪽이 무겁다) · 합 2.3 kg · 칼날 길이 · 쥠 · 손목 서보(26) 그대로 →
+//       무게중심 0.339 → 0.442 m · 손 기준 관성 0.586 → 0.82(× 1.40 — 츠바이핸더 0.749 보다 크다: 짧지만 칼끝이 무거워 돌리기 어렵다) ·
+//       중력이 칼을 당기는 힘(m·g·무게중심 10.0 N·m — 츠바이핸더 8.2 · 전 7.6)이 무거운 츠바이핸더보다 커 내려 벨 때는 무게가 칼을 끌어 주고 올려 · 가로 벨 때는 굼뜨다
+//       (사람 손가락 길 재기 — 위 문서)
 // ═════════════════════════════════════════════════════════════
+/** 칼날 단면 넓이 A(t) = (1 − 폭 몫 · t)(1 − 두께 몫 · t)(칼끝 10 % 뾰족 (1 − u)²) 의 무게중심 비 · 회전 반경 비 (t = 칼날 밑동 0 ~ 칼끝 1 — tizona_details.js blade 와 같은 꼴) */
+function taperMoments({ width, thick }) {
+  let m = 0, m1 = 0, m2 = 0;
+  const N = 400;
+  for (let i = 0; i < N; i++) {
+    const t = (i + 0.5) / N, u = Math.max(0, (t - 0.9) / 0.1);
+    const a = (1 - width * t) * (1 - thick * t) * (1 - u) ** 2;
+    m += a; m1 += a * t; m2 += a * t * t;
+  }
+  const com = m1 / m;
+  return { com, gyr: Math.sqrt(m2 / m - com * com) };
+}
 const TZ_GRIP = ZW_FORMS.mid; // 츠바이핸더 기본 쥠 꼴의 자루 · 폼멜 · 날밑 자리 (칼날 칸은 쓰지 않는다)
+const TZ_SHAPE = taperMoments(TIZONA_TAPER); // 10/25 칼날 꼴 (위 머리말 ①)
 const TZ = {
   hilt: 0.145, blade: 1.05, // 손 → 칼날 밑동 · 칼날 (손 ~ 칼끝 1.195 m)
-  com: (0.19 + 0.34 * 1.17 - 0.145) / (1.36 - 0.145), gyr: (0.253 * 1.17) / (1.36 - 0.145), // 칼날 무게중심 · 회전 반경 비 (0.3644 · 0.2436 — 위 머리말)
-  mass: { grip: 0.26 * (0.68 / 1.2), pommel: 0.62 * (0.68 / 1.2), cross: 0.32 * (0.68 / 1.2), blade: 1.62 }, // 합 2.30 kg
+  // 칼날 무게중심 · 회전 반경 비 = 칼날 그림 단면 꼴 (10/25 — 0.452 · 0.270 · 전 10/21 ~ 10/25 츠바이핸더 비 0.3644 · 0.2436)
+  com: TZ_SHAPE.com,
+  gyr: TZ_SHAPE.gyr,
+  // 합 2.30 kg — 자루 · 날밑은 10/21 값(츠바이핸더 질량 × 0.68/1.2) 그대로 · 폼멜 0.351 → 0.25 · 칼날 1.62 → 1.721 (10/25 위 머리말 ②)
+  mass: { grip: 0.26 * (0.68 / 1.2), pommel: 0.25, cross: 0.32 * (0.68 / 1.2), blade: 1.62 + 0.62 * (0.68 / 1.2) - 0.25 },
 };
 const tizona = finalizeSpec('tizona', {
   nameKo: '티소나', nameEn: 'Tizona', tier: 'epic', school: 'iberian',
@@ -1931,14 +1972,18 @@ Object.defineProperty(druidWhip, 'bladeLength', { get: () => WHIP.lash, enumerab
 //    → 손 기준 무게중심 0.286 → 0.241 m · 손 관성 0.523 → 0.480 kg·m² · 손 ~ 칼끝 1.289 m 그대로 (부품 관성은 같은 도우미로 다시 셈)
 //    대검 가운데 츠바이핸더 다음으로 길지만 손에서 가장 빨리 돈다 (티소나 0.586 / 1.195 m · 플랑베르주 0.68 / 1.247 m · 츠바이핸더 0.749 / 1.335 m)
 //   베기 1.15 → 1.1 (사장님 10/24 '베기는 1.1로 하자') · 찌르기 0.90 · 둔타 1.05 는 전달본 그대로 · 힘 1.2 · 파손 0 은 레전드 등급 값
+//   손맛 (사장님 10/25 22:5x 결정 — 네 대검 묵직함 넷 · 확인표 2610 ~ 2619 · docs/strike/iberian_feel_2026-10-25.md): 뒤랑달 = '무겁지만 말을 듣는 칼'.
+//    ① 칼날 0.05 kg 를 성물함 폼멜로(칼날 1.17 → 1.12 · 폼멜 0.55 → 0.60 — 합 2.2 kg · 모양 · 치수 그대로) → 무게중심 0.241 → 0.223 m · 손 관성 0.480 → 0.464
+//     (롱소드 0.272 의 1.7 배 — 여전히 대검) · ② 손목 서보 상한 26 → 30 — 대검 가운데 가장 잘 세우고 가장 빨리 돌아오는 칼
 // ═════════════════════════════════════════════════════════════
-const DD = { grip: 0.24, pommel: 0.55, cross: 0.24, blade: 1.17 }; // 부품 질량 kg (전달본 0.24 · 0.42 · 0.24 · 1.30)
+const DD = { grip: 0.24, pommel: 0.60, cross: 0.24, blade: 1.12 }; // 부품 질량 kg (10/25 손맛 — 10/24 0.24 · 0.55 · 0.24 · 1.17 · 전달본 0.24 · 0.42 · 0.24 · 1.30)
 const durandal = finalizeSpec('durandal', {
   nameKo: '뒤랑달', nameEn: 'Durandal', tier: 'legend', school: 'iberian',
   desc: '롤랑이 바위에 내리쳐도 부서지지 않았다는 성검.\n금빛 자루에는 성인들의 유물이 봉해져 있다.', // 전달본 글 그대로 (역사 + 생김새 — 편집 지침에 맞음)
   grip: 'two-hand', material: 'steel', frame: 'heavy', style: 'cut',
   hiltLength: 0.13, bladeLength: 1.159, gripAlong: -0.22,
   mCut: 1.1, mThrust: 0.9, mBlunt: 1.05, // 베기 1.1 = 사장님 10/24 (전달본 1.15)
+  controlOverrides: { maxAimTorque: 30 }, // 손목 서보 상한 (10/25 손맛 — 위 머리말 ② · 전: 두 손 쥠 기본값 26)
   partMesh: durandalPartMesh,
   buildParts() {
     const L = this.bladeLength;
