@@ -245,7 +245,7 @@ export const HAND_GRIPS = {
   monohoshizao: { a: 0, b: 20, t: 0, off: 'grip' },
   uchigatana: { a: 0, b: 20, t: 0, off: 'grip' }, // 打刀 (제안 가지): 모노호시자오와 같은 츠카 쥠
   muramasa: { a: 0, b: 20, t: 0, off: 'grip' }, // 우치가타나와 같은 일본 양손 쥠 (샛별 저장소 29e543555)
-  kusanagi: { a: 0, b: 20, t: 0, off: 'grip' }, // 기존 일본 유파 양손 쥠을 재사용.
+  kusanagi: { a: 0, b: 20, t: 0, off: 'grip' }, // 기존 일본 유파 양손 쥠을 재사용. 10/25 한 손 반 쥠(손 간격 0.17 — 뒷손이 자루 끝 · 머리 구슬)도 같은 손 모양
   frozen_tuna: { a: 0, b: 0, t: 0, off: 'grip' }, // 몽둥이 망치 쥠
   sabre: { a: 0, b: 15, t: 60, off: 'fist' }, // 엄지를 칼등에
   falchion: { a: 0, b: 5, t: 0, off: 'fist' },
