@@ -1,5 +1,5 @@
 // 일본 고노센 들어옴 사건 (10/25 01:3x 사장님 '이 경우에 창이 안 열리고 천천히 다가와서 가까이 붙어 버리던데?' — docs/strike/school_secret_2026-10-09.md §16):
-//  발도 대기인 채 상대가 내 발도가 닿는 거리(gnsEnterLine)를 다가오며 넘어 들면 창 한 번 · ?gnsEnter=0 = 옛 판(창 없음) · 내가 걸어 들어간 것은 아님 · AI 는 스위치(기본 끔).
+//  발도 대기인 채 상대가 내 발도가 닿는 거리(gnsEnterLine)를 다가오며 넘어 들면 창 한 번 · ?gnsEnter=0 = 옛 판(창 없음) · 내가 걸어 들어간 것은 아님 · AI 도 같은 사건(10/25 08:0x 기본 켬).
 //  node --test tools/sim/gonosen_enter.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,10 +10,10 @@ import { playerSecretDef } from '../../src/schools.js';
 const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
 
-test('기본값 · 정의: 사람 켬 · AI 끔 · 긴 칼 상대 규칙 끔 · 들어옴 선 = 발도 창 위 끝 · 새 문턱 없음', () => {
+test('기본값 · 정의: 사람 켬 · AI 켬 · 긴 칼 상대 규칙 켬(10/25 08:0x 사장님 ②③ — gonosen_risk.test.mjs) · 들어옴 선 = 발도 창 위 끝 · 새 문턱 없음', () => {
   assert.equal(SECRET.gnsEnter, 1);
-  assert.equal(SECRET.gnsEnterAI, 0);
-  assert.equal(SECRET.gnsLong, 0);
+  assert.equal(SECRET.gnsEnterAI, 1);
+  assert.equal(SECRET.gnsLong, 1);
   assert.equal(SECRET.gnsEnterClosing, undefined); // 다가옴은 상대 ↔ 나 견줌 — 문턱 수 없음
   const S = playerSecretDef('japanese');
   assert.ok([].concat(S.when).includes('foeEnter'));

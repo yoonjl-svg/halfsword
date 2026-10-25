@@ -229,8 +229,33 @@ function enterEvent(s0, c, d0, ex, me) {
   st.gnsOutT = 0;
   if (prev == null || !(prev > B) || st.gnsEnter === 'done') return { on: false, ctx: null };
   if (!(st.gnsFoeIn > 0 && st.gnsFoeIn > st.gnsMeIn)) return { on: false, ctx: null }; // 내가 들어가 넘음 (또는 둘 다 서 있음)
+  if (SECRET.gnsEnterOpen && foeOnline(s0, c)) return { on: false, ctx: null }; // 여쭘 C (10/25 08:0x · 기본 끔): 칼끝을 내 몸에 겨눈 채 들어옴은 빈틈이 아님 — 이 넘음은 창 없음
   st.gnsEnter = 'done';
   return { on: true, ctx: { ev: 'enter', closing: st.gnsFoeIn, meIn: st.gnsMeIn } };
+}
+
+/**
+ * 상대 칼끝이 내 몸을 겨누나 — ai.js foeClass 의 online 과 같은 셈(상대 손 → 칼끝 방향과 상대 손 → 내 가슴 방향의 cos > 0.88 — 그 수 그대로). AI 가 '걸어 들어오는 상대'를
+ *  치는 기회(opportunity 'stepin')는 칼끝이 비켰을 때만이다 — 여쭘 C(SECRET.gnsEnterOpen · 10/25 08:0x)가 들어옴 창에 같은 셈을 쓴다. s = 상대 지금 모습 · c = 내 가슴. 굴림 없음
+ */
+export function foeOnline(s, c) {
+  const bx = s.tx - s.mx;
+  const by = s.ty - s.my;
+  const bz = s.tz - s.mz;
+  const qx = c.x - s.mx;
+  const qy = c.y - s.my;
+  const qz = c.z - s.mz;
+  return (bx * qx + by * qy + bz * qz) / (Math.hypot(bx, by, bz) * Math.hypot(qx, qy, qz) + 1e-6) > 0.88;
+}
+
+/**
+ * 이 몸이 고노센을 쓰나 (AI 고노센 경계 — ai.js gnsWatch · 10/25 08:0x 사장님 '⑤'): AI 몸 = 그 AI 의 비기가 고노센(숙련도 5 · aiOpenSchools — ai.js this.secret) ·
+ *  사람 몸 = 손에 든 무기 유파 비기가 고노센(열린 유파 · 사람 비기 스위치 — playerSecretOf)이고 비기 칸을 익힘(skillKit.secret — 몸에 skillKit 이 없으면 켬, skill_kit.js kitOff 와 같은 규칙)
+ */
+export function gnsUser(f) {
+  if (!f) return false;
+  if (f.aiControlled) return f.aiCtl?.secret?.name === 'goNoSen' && !!f.aiCtl.iaiArm;
+  return SECRET.openSchools.includes(f.swordArt?.tradition) && playerSecretOf(f)?.name === 'goNoSen' && !kitOff(f, 'secret');
 }
 
 /** 고노센 들어옴 선 = 내 발도가 닿는 거리 — secretCond 의 발도 창 위 끝 그대로(맞닿기 + iaiStep + iaiMargin) · iai 0 이면 옛 창 위 끝(reach + japaneseReach + japaneseFar). view = { reach, contact } */
@@ -731,7 +756,7 @@ export class PlayerSecretWatch {
       this.gilArm.consume(); // 한 번 준비에 한 번 기회 — 창을 놓치면 다시 간격 밖에서 준비해야 한다
       this.gilWins++;
     }
-    this.openWindow(ctx);
+    this.openWindow(ctx, ctx?.ev === 'enter' && SECRET.gnsEnterWindow > 0 ? SECRET.gnsEnterWindow : SECRET.playerWindow); // 여쭘 A (10/25 08:0x · 기본 0 = 다른 창과 같은 playerWindow): 들어옴 창만 짧게
   }
 
   /**

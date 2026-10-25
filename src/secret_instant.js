@@ -388,9 +388,10 @@ const D2R = Math.PI / 180;
 const ARM_PARTS = ['uarmS', 'farmS'];
 const OFF_PARTS = ['uarmO', 'farmO'];
 
-/** 발도를 걸어 둔다 (다음 combat.afterStep 이 시작). opt.player: 플레이어(지금 손에서 왼 허리를 거쳐 — 전체 iaiPlayerTime) */
+/** 발도를 걸어 둔다 (다음 combat.afterStep 이 시작). opt.player: 플레이어(지금 손에서 왼 허리를 거쳐 — 전체 iaiPlayerTime) ·
+ *  opt.block: 막힐 수 있는 발도 — 칼이 몸보다 먼저 상대 칼에 닿으면 막힘(이베리아 휩쓸기 · 연환과 같은 거리 iberianBlockDist · 밀어냄 없음). 고노센 여쭘 B(SECRET.gnsEnterBlock — 들어옴 창에서 낸 것만 · 10/25 08:0x) */
 export function requestIai(f, opt = {}) {
-  f.iaiReq = { player: !!opt.player };
+  f.iaiReq = { player: !!opt.player, block: !!opt.block };
   f.instantResult = null;
 }
 
@@ -573,6 +574,7 @@ function startIai(f, combat) {
   const rise = !!SECRET.iaiRise;
   const oneHand = rise && !!f.weaponCfg.twoHand && f.weapon?.frame !== 'heavy';
   f.iai = { kind: 'iai', K: rise ? SECRET.iaiPathRise : SECRET.iaiPath, oneHand, J: SECRET.instantJ, body: SECRET.iaiPath.E.body, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
+  if (req.block) f.iai.block = true; // 고노센 여쭘 B (SECRET.gnsEnterBlock — 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
   setKinematic(f, true);
   if (f.gait?.active && SECRET.iaiDrawStep > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.iaiDrawStep, duration: 0.3 }); // 발도 순간 앞발을 크게 (10/10 04:2x)
   f.instantGhost = Math.ceil((T + SECRET.instantNoCollide) / (combat.dt || 1 / 120)) + 1;
@@ -614,7 +616,7 @@ function stepIai(f, combat) {
       if (I.block && !I.hit && !I.blocked && foe.armed && foe.sword && segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist) {
         I.blocked = true;
         I.uEnd = Math.max(I.ab, u - (1 - w) * (dt / I.T));
-        sweepShove(f, foe);
+        if (I.kind === 'sweep') sweepShove(f, foe); // 발도(고노센 여쭘 B)는 막힌 자리에서 멈추기만 — 연환 · 격살 · 런지 막힘과 같음
       }
       if (!I.hit && !I.blocked && foe.alive && foe.state !== 'dead') {
         let best = null;

@@ -658,7 +658,7 @@ export class Skill {
       run.stage = 'instant';
       run.instant = true;
       run.end = D.tech.path[D.tech.path.length - 1];
-      if (SECRET.iai) requestIai(f, { player: true }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime)
+      if (SECRET.iai) requestIai(f, { player: true, block: !!SECRET.gnsEnterBlock && run.ctx?.ev === 'enter' }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime) · 여쭘 B(10/25 — 기본 끔): 들어옴 창 발도는 상대 칼에 막힐 수 있음
       else requestInstant(f, { endPad: run.end });
       this.secretBursts++;
     } else if (D.back) {

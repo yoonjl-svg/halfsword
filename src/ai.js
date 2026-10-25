@@ -39,8 +39,8 @@ import { gunAI } from './gun.js';
 import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
-import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -453,6 +453,7 @@ export class AI {
       if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin' && this.secretRun?.stage !== 'mord') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
     this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * 0.03; // 천천히 원래 생각으로
+    if (SECRET.gnsWary) this.gnsWatch(dt, d, hurt); // 고노센 경계 (10/25 08:0x 사장님 '⑤'): 상대가 고노센 쓰는 몸이 아니면 아무 일 없음 · 끄면 이 줄을 안 타 옛 판 그대로
 
     // 인내심: 시간이 지나면 줄어든다 → 판이 늘어지지 않는다
     const hurry = this.hurry();
@@ -696,6 +697,7 @@ export class AI {
     if (this.passives.length && this.passiveWatch(s, d, opp, reachOut)) return; // 패시브 (standoff·foeStepIn) — 목록이 비면 건너뜀
     if (opp.score >= need && d < this.holdDist() + reachOut) {
       if (this.press && !SECRET.mordNear && this.mordPressGo('watch')) return; // 모르트슐라크 (10/24 12:0x 판 — SECRET.mordNear 0 일 때만): 칠 때를 본 순간 인물 밀치기 확률로 베는 대신 몸을 붙여 민다 · 14:2x 부터는 보통 AI 대로 친다
+      if (this.gnsW?.ready && this.gnsAct(s, opp)) return; // 고노센 경계 (10/25): 준비된 고노센 상대 — 결행 또는 속임
       this.startAttack(this.pickTech(s, opp.kind), opp.kind);
     }
   }
@@ -732,8 +734,79 @@ export class AI {
     m += (1 - this.me.vigor) * 0.3; // 다쳐서 힘이 빠지면 더 조심스럽게 선다
     if (!this.me.armed) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
-    if (this.gilArm?.armed && !this.chasing) return Math.max(this.foeReach + Math.max(0.08, m), gilmokLine(this.me, this.M.reach, this.secret.do) + 0.08); // 이베리아 길목 준비 (10/11): 내 칼끝 거리 선 밖에 선다 (여유 0.08 = 위 최소 여유 그대로)
-    return (this.chasing ? this.M.contact : this.foeReach) + Math.max(0.08, m);
+    const W = this.gnsW;
+    const wary = !!W && (W.ready || W.cut) && !this.chasing; // 고노센 경계 (10/25): 준비된 고노센 상대(또는 그 발도에 막 베임)면 상대 발도 선 밖에 선다 — 여유는 위와 같은 m (최소 0.08)
+    if (this.gilArm?.armed && !this.chasing) {
+      const g = Math.max(this.foeReach + Math.max(0.08, m), gilmokLine(this.me, this.M.reach, this.secret.do) + 0.08); // 이베리아 길목 준비 (10/11): 내 칼끝 거리 선 밖에 선다 (여유 0.08 = 위 최소 여유 그대로)
+      return wary ? Math.max(g, W.line + Math.max(0.08, m)) : g;
+    }
+    const h = (this.chasing ? this.M.contact : this.foeReach) + Math.max(0.08, m);
+    return wary ? Math.max(h, W.line + Math.max(0.08, m)) : h;
+  }
+
+  /**
+   * 고노센 경계 (10/25 08:0x 사장님 '⑤ AI 쪽 — 서 있는 사람에게 같은 걸음으로 거듭 걸어 드는 것' · SECRET.gnsWary — docs/strike/school_secret_2026-10-09.md §17):
+   *  상대가 고노센을 쓰는 몸(secret.js gnsUser)일 때만 일한다 — 아니면 첫 스텝에 W.user 거짓으로 끝(난수 · 값 그대로).
+   *  준비 읽기: AI 상대 = 그 AI 의 발도 대기(iaiArm — 웅크린 자세로 보임) · 사람 상대 = 사람 창(PlayerSecretWatch)과 같은 셈(IaiArm · gnsOutside — 상대 칼 거리 밖에
+   *   iaiArmTime 서서 휘두르지 않음)을 상대 자리에서 쌓음(d = 내가 본 두 가슴 사이). 선 = 상대 발도가 닿는 거리(gnsEnterLine — 상대의 맞닿기 + iaiStep + iaiMargin).
+   *  준비된 동안: ① 기다림 — holdDist 가 선 + 여유(있는 m) · 선 언저리 잔걸음이 선 안으로 들지 않음(moveFeet) ② 칠 때(watch 의 기회 — 참을성 · 빈틈 그대로)면 gnsAct(결행 · 속임) ·
+   *  ③ 그 발도에 베이면(hurt · iaiBusy(상대)) 선 밖까지 물러남(W.cut — holdDist) · 참을성 되채움(주고받은 뒤와 같은 셈 — afterStrike). 재기 W.n (판정에는 안 씀)
+   *  (첫 꼴 '꾀기' — 기는 빠르기로 선을 넘었다가 곧장 물러남 — 는 뺐다: 걸음 한 디딤이 끝나기 전엔 몸이 돌아서지 못해(스틱 −1 뒤 0.3 s 동안도 0.1 ~ 0.2 m/s 로 다가옴) 발도가 늘 닿았다 — §17)
+   */
+  gnsWatch(dt, d, hurt) {
+    const foe = this.foe;
+    const W = (this.gnsW ??= { user: gnsUser(foe), arm: null, line: 0, ready: false, cut: false, plan: null, feinted: false, n: { commit: 0, feint: 0, cut: 0 } });
+    if (!W.user) return;
+    if (foe.aiControlled) {
+      W.line = gnsEnterLine(foe.aiCtl.M);
+      W.ready = !!SECRET.iai && !!foe.aiCtl.iaiArm?.armed;
+    } else {
+      const art = foe.swordArt;
+      const V = { reach: art.measure.reach, contact: art.measure.contact, foeReach: art.measureFor(this.me.weapon).reach + 0.05 }; // 사람 창 view() 와 같은 수
+      W.line = gnsEnterLine(V);
+      const A = (W.arm ??= new IaiArm());
+      A.tick(dt, gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), !foe.alive || !foe.armed || foe.state !== 'stand' || !!foe.skill?.swinging || !!foe.skill?.sec);
+      W.ready = !!SECRET.iai && A.armed;
+    }
+    if (hurt && iaiBusy(foe)) {
+      W.cut = true;
+      W.n.cut++;
+      W.plan = null;
+      this.patience = Math.max(this.patience, rand(0.45, 0.75) * (1 - 0.7 * this.anger)); // 주고받은 뒤와 같은 셈 (afterStrike)
+    }
+    if (W.cut && this.mode === 'watch' && d > W.line) W.cut = false;
+    if (!W.ready) W.feinted = false; // 속임은 준비 한 번에 한 번 (상대가 준비를 풀면 다시)
+    if (W.plan && this.mode !== 'attack') W.plan = null; // 결행 · 속임은 그 공격 꼴 동안만
+  }
+
+  /**
+   * 고노센 경계 — 칠 때 (watch 의 기회가 찬 순간 · 상대 준비됨): 성격 pers.vor(달려드는 상대를 맞받는 쪽 1 · 물러나 헛치게 하는 쪽 0 — 있는 값)로 한 번 굴림.
+   *  결행(Vor): 빠른 준비(fastChamber)로 공격 — 준비 · 다가가는 걸음이 스틱 끝(기어 들지 않음)이고 내 칼끝 거리(M.reach)에서 벤다(attack · moveFeet) — 긴 칼이면 상대 발도 선 밖에서 친다.
+   *  속임: 선 밖에 선 채 칼을 준비 자세로 들었다가(보통 준비 빠르기 — 읽히는 들기) 거둔다(attack — 들기가 끝나면 abortAttack). 선 밖이라 상대 창은 안 열린다 —
+   *   사람이 그 들기에 먼저 휘두르면 준비가 풀린다. 속임은 준비 한 번에 한 번 — 다음 칠 때는 결행. 돌려줌: 이번 기회를 가져갔나
+   */
+  gnsAct(s, opp) {
+    const W = this.gnsW;
+    const commit = W.feinted || Math.random() < this.pers.vor;
+    if (!this.startAttack(commit ? this.pickTech(s, opp.kind) : this.gnsFeintTech(), opp.kind, commit ? { fastChamber: true } : { noFeint: true })) return false;
+    if (this.mode !== 'attack' || this.secretRun) return true; // 미룬 패시브 · 비기가 이 기회를 가져감 — 그대로
+    W.plan = { kind: commit ? 'commit' : 'feint' };
+    W.n[W.plan.kind]++;
+    W.feinted = !commit;
+    return true;
+  }
+
+  /** 고노센 경계 속임의 들기: 베기 기술 가운데 준비 자세가 지금 손에서 가장 먼 것 (크게 드는 것이 보이는 위협 — 굴림 없음) */
+  gnsFeintTech() {
+    const hand = [this.me.handOffset.x, this.me.handOffset.y];
+    let best = null;
+    let bd = -1;
+    for (const t of this.school.tech) {
+      if (t.kind === 'thrust') continue;
+      const cd = padDist(hand, t.from);
+      if (cd > bd) (bd = cd), (best = t);
+    }
+    return best ?? this.school.tech[0];
   }
 
   /**
@@ -1128,17 +1201,20 @@ export class AI {
         return;
       }
       if (!LP?.length && padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
+        if (this.gnsW?.plan?.kind === 'feint') return this.abortAttack(); // 고노센 경계 속임 (10/25): 들기를 마치면 거둔다 (선 밖 — 상대 창 없음)
         this.phase = 'approach';
         this.timer = this.quick ? 0 : L.windup * 0.25; // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
       }
       if (this.attackT > 1.2 + (this.secretRun?.S.do.release ? 2 : 0)) this.abortAttack(); // 터뜨림 창 비기는 붙잡는 몫만큼 더 (maxHold 가 먼저 끝낸다)
     } else if (this.phase === 'approach') {
+      if (this.gnsW?.plan?.kind === 'feint') return this.abortAttack(); // 고노센 경계 속임 (10/25): 이미 준비 자세였으면 들기 없이 거둠
       this.hand.set(t.from[0], t.from[1]);
       this.timer -= dt;
       // 닿을 거리까지 다가간다. 베는 동안(0.3초) 서로 좁혀지는 거리까지 생각해서 미리 친다
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
       if (this.secretRun?.S.do.lead) this.need += this.secretVal(this.secretRun.S.do.lead); // 비기 앞당김: 긴 길(脇 → 上段 → 真向)이 닿기까지 다가오는 상대를 셈 — 그만큼 일찍 친다
+      if (this.gnsW?.plan?.kind === 'commit') this.need = Math.max(this.need, this.M.reach); // 고노센 경계 결행 (10/25): 내 칼끝 거리(간격 끝)에서 벤다 — 긴 칼은 상대 발도 선 밖에서
       // 기술 걸음 'approach'(유파 고유 동작 step 칸): 닿기 조금 전에 먼저 비껴 딛고, 발이 닿으면 곧장 친다 (step 칸 없는 기술은 이 줄을 지나치기만 한다)
       if (t.step?.when === 'approach' && !this.feint && !this.drillAtk && this.approachStep(dt, s, th, d)) return;
       if (this.timer <= 0 && (this.drillAtk || this.contactDist() <= this.need)) { // 헛스윙 연습 공격은 닿는 거리를 기다리지 않는다 (그 자리에서 — 허공)
@@ -2160,7 +2236,7 @@ export class AI {
         run.instant = true;
         run.t = 0;
         const end = D.tech.path[D.tech.path.length - 1];
-        if (SECRET.iai) requestIai(this.me); // 10/10 발도: 대기 자세(왼 허리)에서 곧장 가로로 (secret_instant.js)
+        if (SECRET.iai) requestIai(this.me, SECRET.gnsEnterBlock && ctx.th?.ev === 'enter' ? { block: true } : undefined); // 10/10 발도: 대기 자세(왼 허리)에서 곧장 가로로 (secret_instant.js) · 여쭘 B(10/25 — 기본 끔): 들어옴 창 발도는 상대 칼에 막힐 수 있음 (사람과 같은 규칙)
         else requestInstant(this.me, { endPad: end });
         this.hand.set(end[0], end[1]);
         this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
@@ -2818,6 +2894,9 @@ export class AI {
         //  저절로 앞으로 내딛지 않게 (AI는 발을 스스로 정한다)
         const want = this.chasing ? this.M.contact : this.M.reach + 0.2;
         fwd = d > want && this.foeClosing < 0.5 ? clamp((d - want) * 1.5, 0.25, this.chasing ? 1 : 0.8) : -0.21;
+        const GP = this.gnsW?.plan?.kind;
+        if (GP === 'commit' && d > want) fwd = 1; // 고노센 경계 결행 (10/25): 선 사이를 기어 들지 않고 스틱 끝으로
+        else if (GP === 'feint') fwd = -0.21; // 고노센 경계 속임: 선 밖 제자리에서 든다 (위 '제자리'와 같은 당김)
         if (this.secretRun?.S.do.release) fwd = this.secretHoldFeet(); // 비기 터뜨림 창: 고리를 돌며 간격을 맞춘다
       } else if (this.phase === 'approach') {
         // 성큼성큼이 아니라 미끄러지듯 (빨리 달려들면 베는 동안 멈추지 못하고 상대 몸에 부딪친다).
@@ -2825,6 +2904,7 @@ export class AI {
         const gap = this.contactDist() - (this.need ?? this.M.contact);
         fwd = this.foeClosing > 0.5 || gap <= 0 ? -0.21 : clamp(gap * 3, 0.25, 0.45);
         if (this.chasing) fwd = d > this.M.contact ? 1 : -0.21; // 도망치는 빈손 상대는 뛰어서 쫓는다
+        else if (this.gnsW?.plan?.kind === 'commit' && gap > 0) fwd = 1; // 고노센 경계 결행 (10/25): 스틱 끝으로 들어가 칼끝 거리에서 벤다
         if (this.sideStepT != null) {
           // 비껴 딛는 중: 스틱도 그쪽으로 (gait 의 몸 목표가 옆으로도 가게), 뒤로는 당기지 않는다
           side = Math.sign(this.tech.step.lat);
@@ -2884,6 +2964,8 @@ export class AI {
         }
         v = this.shuffle;
       }
+      const GW = this.gnsW;
+      if (GW && (GW.ready || GW.cut) && !this.chasing && d <= GW.line + 0.08) v = Math.min(v, 0); // 고노센 경계 (10/25): 준비된 고노센 상대의 선 언저리(최소 여유 0.08 안)에선 앞으로 안 감 — 잔걸음이 선 안으로 기어 들지 않게
       fwd = toStick(v);
       // 옆으로 돌기 (가끔 방향을 바꾸고 가끔 멈춘다)
       this.circleTimer -= dt;
