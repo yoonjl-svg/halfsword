@@ -468,7 +468,7 @@ function setKinematic(f, on) {
 const _wz = new THREE.Vector3(); // placeIai 손목 교정 (칼 면 · 날)
 const _wx = new THREE.Vector3();
 /** 손 자리 H·칼날 D(몸 기준)로 팔·칼(·빈팔)을 놓는다 — now: 지금 자리로(첫 스텝), 아니면 다음 스텝 운동학 목표. 칼날 선분 { B, D, tip } (월드) */
-function placeIai(f, H, D, now, turn = 0, edgeHint = null) {
+function placeIai(f, H, D, now, turn = 0, edgeHint = null, rollCap = false) {
   const J = f.jointByName;
   const chest = f.bodies.chest;
   const qc = tq(chest.rotation(), new THREE.Quaternion());
@@ -507,6 +507,33 @@ function placeIai(f, H, D, now, turn = 0, edgeHint = null) {
   const edge = M ? new THREE.Vector3(0, 0, 1).applyQuaternion(yaw).cross(yAx) : edgeHint ? edgeHint.clone().addScaledVector(Dw, -edgeHint.dot(Dw)) : new THREE.Vector3().crossVectors(Dw, new THREE.Vector3(0, 1, 0));
   if (turn && !M) edge.applyAxisAngle(Dw, f.side * turn); // 길 덧칸 손 돌리기 (제비 베기 되돌림 칼 — 10/25): 칼 면을 칼 축 둘레로 (칼 든 쪽 + = 엎침 · fighter.js driveSword techPlan.turn 과 같은 식)
   const qs = swordQuat(yAx, new THREE.Quaternion(), edge.lengthSq() > 1e-6 ? edge.normalize() : null);
+  // 굴림 묶음 (rollCap — 제비 베기 되돌림 칼 몸통 띠 판 · 10/25 23:1x): 운동학 칼은 손목 밧줄(HUMAN.forearmRoll — 아래팔 z ↔ 칼 면 z 각)이 못 막으므로
+  //  놓을 아래팔(qf)과 칼 면이 그 한도 밖이면 칼 면을 칼 축 둘레로 아래팔 쪽에 한도까지만 돌린다(가장 작은 돌림 · 칼끝 · 손 자리 그대로 · 새 수 없음 — 반으로 나눠 찾기 14 번)
+  if (rollCap && !M && f.rollMax) {
+    const lim = Math.cos(f.rollMax() * D2R);
+    const zF = new THREE.Vector3(0, 0, 1).applyQuaternion(qf);
+    const zS = new THREE.Vector3(0, 0, 1).applyQuaternion(qs);
+    //  날 세우기 두 쪽(날 = 칼끝이 가는 쪽 · 그 반대 — 칼 면을 칼 축 둘레로 180°: 칼 줄 · 칼끝 그대로 · 판정의 날 맞춤 |cos| 같음) 가운데 아래팔에 덜 돈 쪽 —
+    //   전엔 늘 가는 쪽이라 올려 긋는 칼 면이 손에 대해 164° 돌았다(사람 밖 · 손목 교정이 손 면 각을 잃어 칼 줄이 스텝마다 튐)
+    if (edgeHint && zF.dot(zS) < 0) {
+      edge.negate();
+      swordQuat(yAx, qs, edge);
+      zS.negate();
+    }
+    if (zF.dot(zS) < lim) {
+      const w = new THREE.Vector3().crossVectors(Dw, zS); // 칼 면 z 를 칼 축 둘레로 +90°
+      const full = Math.atan2(zF.dot(w), zF.dot(zS)); // 아래팔 z 에 가장 가까워지는 돌림
+      let lo = 0;
+      let hi = 1;
+      for (let i = 0; i < 14; i++) {
+        const t = (lo + hi) / 2;
+        if (zF.dot(zS.clone().multiplyScalar(Math.cos(full * t)).addScaledVector(w, Math.sin(full * t))) >= lim) hi = t;
+        else lo = t;
+      }
+      edge.applyAxisAngle(Dw, full * hi);
+      swordQuat(yAx, qs, edge.normalize());
+    }
+  }
   // 비정상 손목 교정 (JOINTS.wristGuard — driveSword 와 같은 wristClamp): 놓을 아래팔(qf)과 칼날이 사람 손목 범위 밖이면 칼날을 칼 면 안에서 범위 끝으로. 손 자리 · 팔 · 칼 면 그대로
   //  겨눈 찌름(comboPlanAim thrust · SECRET.thrustArm — 런지 · 격살 허파 찌르기)은 칼이 어깨 → 겨눈 곳 줄 위라 건드리지 않는다: 칼끝을 줄에서 비키면 찌름이 베기가 된다(탭 찌르기와 같은 원칙 — 손목은 팔이 맡음)
   const thrustSeg = SECRET.thrustArm && f.iai.kind === 'combo' && f.iai.moves?.[f.iai.mi]?.dyn?.thrust;
@@ -1115,16 +1142,80 @@ function comboNext(f, I) {
 function comboPlanPad(f, I, m, A) {
   const segs = [];
   let cur = A;
-  [m.from, ...m.path].forEach((p, k) => {
-    const B = { H: new THREE.Vector3(), D: new THREE.Vector3(), px: p[0], pad: p };
-    f.padPose(p[0], p[1], B.H, B.D);
-    if (m.plan?.[k]) comboPlanAdd(B, m.plan[k]); // 길 덧칸 ([from, ...path] 점마다 — 제비 베기 되돌림 칼만)
+  // 패드 → 손 자리 · 칼날 (dy: 몸통 띠 겨눔이 패드 높이를 옮긴 몫 — 자세 지도가 손 · 칼끝을 함께 정함)
+  const build = (dy = 0) =>
+    [m.from, ...m.path].map((p0, k) => {
+      const p = dy ? [p0[0], p0[1] + dy] : p0;
+      const B = { H: new THREE.Vector3(), D: new THREE.Vector3(), px: p[0], pad: p };
+      f.padPose(p[0], p[1], B.H, B.D);
+      if (m.plan?.[k]) comboPlanAdd(B, m.plan[k]); // 길 덧칸 ([from, ...path] 점마다 — 제비 베기 되돌림 칼만)
+      return B;
+    });
+  const poses = m.band ? comboBandShift(f, I, build) : build(); // 몸통 띠 겨눔 (제비 베기 되돌림 칼 — 10/25 23:1x)
+  poses.forEach((B, k) => {
     const sg = { cut: k > 0, A: cur, B };
     sg.T = comboSegLen(f, sg) / I.v;
     segs.push(sg);
     cur = B;
   });
   return segs;
+}
+
+const BAND_LEG = new Set(['thighF', 'thighB', 'shinF', 'shinB', 'footF', 'footB']);
+/** 길 poses(몸 틀 — [from, ...path])의 베는 토막을 따라 칼날이 상대 몸(칼 · 떨어진 조각 빼고)에 처음 닿는 곳 { part, y(월드 높이) } · 없으면 null */
+function bandFirst(f, I, poses) {
+  const foe = f.foe;
+  const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const HL = f.weaponCfg.hiltLength;
+  const BL = f.weaponCfg.bladeLength;
+  for (let k = 1; k < poses.length; k++) {
+    for (let i = 1; i <= 12; i++) {
+      const Q = comboLerp({ A: poses[k - 1], B: poses[k] }, i / 12);
+      const Dw = Q.D.applyQuaternion(I.yaw).normalize();
+      const a = Q.H.applyQuaternion(I.yaw).add(c).addScaledVector(Dw, HL);
+      const b = a.clone().addScaledVector(Dw, BL);
+      let best = null;
+      for (const [h, info] of f.colliderInfo) {
+        if (info.fighter !== foe || info.kind === 'weapon' || info.detached) continue;
+        const col = f.world.getCollider(h);
+        if (!col) continue;
+        const r = segToCollider(a, b, col);
+        if (r <= SECRET.instantTouch && (!best || r < best.r)) best = { r, info, col };
+      }
+      if (best) {
+        const p = tv(best.col.translation(), new THREE.Vector3());
+        return { part: best.info.part, y: segPointT(a, b, p).t * (b.y - a.y) + a.y };
+      }
+    }
+  }
+  return null;
+}
+/**
+ * 몸통 띠 겨눔 (사장님 10/25 23:1x '제비베기는 위팔·가슴을 노리기보다 자연스럽게 몸통 전체(다리 위 골반부터 목 아래 가슴까지)를 노리게' — config UNIQUE_ASSIST.tsuBand):
+ *  올려 긋는 길(꺾은 자리 = 내려간 칼이 멈춘 자리부터)이 상대 몸에 처음 닿을 곳을 지금 상대 자세로 재고 — 몸통 띠(골반 · 배 · 가슴 · 앞을 막은 팔) 안이면 그대로,
+ *  다리면 위로 · 목 · 머리면 아래로 가장 적게(패드 높이 0.025 씩 0.4 까지 — 띠 끝: 다리 위 = 골반 · 목 아래 = 가슴 몸체 가운데 0.11 m 위 combat.js zoneOf 목 경계) 길 점 모두의 패드 높이를 옮긴다
+ *  (죽음의 일격 pull · 격살 겨눔처럼 길 점 모두를 옮김 — 손 자리만 옮기면 칼끝이 손에 대해 사람 손목 밖으로 꺾여 손목 교정이 켜졌다 꺼졌다 칼 줄이 스텝마다 튐: 자세 지도가 손 · 칼끝을 함께 정하게 패드로).
+ *  닿는 곳이 없으면(멀리) 그대로. build(dy) = 그 높이의 몸 틀 길 · 옮긴 패드 높이 I.bandDy · 옮기기 전 처음 닿을 곳 I.bandFrom (재기)
+ */
+function comboBandShift(f, I, build) {
+  const poses = build(0);
+  if (!f.foe?.bodies?.chest) return poses;
+  const neckY = f.foe.bodies.chest.translation().y + 0.11;
+  const bad = (h) => (h ? (BAND_LEG.has(h.part) ? 1 : h.part === 'head' || (h.part === 'chest' && h.y > neckY) ? -1 : 0) : 0);
+  const h0 = bandFirst(f, I, poses);
+  const s = bad(h0);
+  I.bandDy = 0;
+  I.bandFrom = h0?.part ?? null;
+  if (!s) return poses;
+  for (let k = 1; k <= 16; k++) {
+    const P = build(s * 0.025 * k);
+    const h = bandFirst(f, I, P);
+    if (h && !bad(h)) {
+      I.bandDy = s * 0.025 * k;
+      return P;
+    }
+  }
+  return poses;
 }
 
 /**
@@ -1467,7 +1558,7 @@ function stepCombo(f, combat) {
     }
     if (I.si < I.segs.length) break;
     if (!comboNext(f, I)) {
-      placeIai(f, I.cur.H, I.cur.D, false, I.cur.turn ?? 0, I.edgeHint ?? null);
+      placeIai(f, I.cur.H, I.cur.D, false, I.cur.turn ?? 0, I.edgeHint ?? null, !!I.moves[I.mi]?.band);
       if (I.moves[I.mi]?.lunge) lungeSweep(f, I, combat, t0, I.t); // 런지: 이 스텝에 남은 토막(찌름 · 뽑음)을 지났으면 그 길도 본다
       return endCombo(f, combat);
     }
@@ -1505,7 +1596,7 @@ function stepCombo(f, combat) {
     const hint = P.H.clone().applyQuaternion(I.yaw).add(tv(f.bodies.chest.translation(), new THREE.Vector3())).addScaledVector(Dw, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength).sub(I.prev.tip);
     if (hint.lengthSq() > 1e-8) I.edgeHint = hint;
   }
-  const cur = placeIai(f, P.H, P.D, false, P.turn, I.moves[I.mi]?.cutSweep ? I.edgeHint ?? null : null);
+  const cur = placeIai(f, P.H, P.D, false, P.turn, I.moves[I.mi]?.cutSweep ? I.edgeHint ?? null : null, !!I.moves[I.mi]?.band);
   const subs = I.moves[I.mi]?.lunge ? 0 : 3; // 런지는 아래 lungeSweep (지나온 토막 길을 따라)
   // 제비 베기 되돌림 칼(10/25 — requestArtSnap 의 cutSweep): 꺾은 자리로 거두는 준비 토막(맞힘 없음)에서 베는 토막으로 넘어온 스텝은 맞힘을 보지 않는다 —
   //  그 스텝 쓸린 자리가 준비 토막(내려간 칼 자리 — 상대 다리 곁)부터 베기로 셈됐다 (겨눈 찌름 thrustSweep 과 같은 까닭 · 길 점 자리는 팔이 다 닿지 않아 실제 놓인 칼과 달라 그 자리부터 재지 않음)
@@ -1738,9 +1829,9 @@ export function requestArtReturn(f, from, path, SB) {
  *  꺾는 순간 from(손가락이 꺾은 자리 — 패드) → path(올려 긋는 길 패드들)를 진 · 츠바메가에시와 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1)로 끌고 간다.
  *  칼끝 빠르기 = 고노센 발도 칼끝 빠르기 × share · 시간 상한 maxT · 끝 자세 붙잡기 없음(곧장 0.2 s 에 손가락으로). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null }) {
+export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false }) {
   if (f.iai || f.iaiReq || !path?.length || !(share > 0)) return false;
-  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true }], share, hold: 0, hitMul: 1, tech, maxT }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart)
+  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band }], share, hold: 0, hitMul: 1, tech, maxT }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai)
   return true;
 }
 export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)

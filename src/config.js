@@ -508,7 +508,7 @@ export const SCHOOL_PASSIVE = {
   at: 4,
   iberian: { on: true, wrist: 1.3 },
   italian: { on: true, tipMax: 12, tipRate: 60, aiK: 0.5 }, // 사장님 10/21 '최대 12° · 초당 60° · AI는 약하게'(절반)
-  japanese: { on: true, full: 1.5, gain: 0.3 }, // 사장님 10/21 '1.5초에 +30%' · 곧은 오름은 감독
+  japanese: { on: true, full: 2.0, gain: 0.3 }, // 사장님 10/21 '1.5초에 +30%' → 10/25 23:1x '켄타이는 공격하지 않는 동안 1.5초에 걸쳐-> 2초에 걸쳐'(확인표 2588) · 곧은 오름은 감독
   german: { on: true, gain: 0.3, aiK: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리)
   chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
 };
@@ -1294,6 +1294,10 @@ export const UNIQUE_ASSIST = {
   //  ③ tsuAim: 올려 긋는 길 끝을 다리에서 상대 아래팔 · 겨드랑이 · 가슴 높이로 (PLAYER_UNIQUE tsubameGaeshi aim 칸 — 사람 표만 · schools.js AI 길 그대로) + 손 돌리기 덧칸(곁눈 베기 같은 길 덧칸 planStep)으로
   //   손목을 사람 범위 안에. 0 = 전 판 `?tsuAim=0`
   tsuAim: 1,
+  //  ③ 몸통 띠 (사장님 10/25 23:1x '제비베기는 위팔·가슴을 노리기보다 자연스럽게 몸통 전체(다리 위 골반부터 목 아래 가슴까지)를 노리게' · 확인표 2586 · 2587): 1 = 가슴 높이 끝 점 하나 대신
+  //   올려 긋는 길이 지금 상대에게 처음 닿을 곳을 재어 몸통 띠(다리 위 골반 ~ 목 아래 가슴) 밖이면 띠 안으로 가장 적게 옮김(secret_instant.js comboBandShift — 내려간 칼이 멈춘 자리 · 상대 자세에 따라
+  //   배 · 옆구리 · 가슴으로 흩어짐) + 운동학 칼 굴림 묶음(손목 밧줄 HUMAN.forearmRoll). 0 = 10/25 21:1x 판(가슴 높이 끝 점 · `?tsuBand=0`). tsuAim 0 이면 읽지 않음
+  tsuBand: 1,
   // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈을 파고드는 값(combat.js THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 (레이피어 기본 0.3 · 사장님 10/21 '파고드는 값 0.6으로 해' · 확인표 2107)
   imbroccataGap: 0.6,
   // 요격(동방 강화동작) 깊은 출혈 (10/21 사장님 '요격에 출혈 보너스를 줘. 너무 밸런스 붕괴가 되진 않도록 적정 값' · 확인표 2111): 요격 칼날이 몸통(가슴 · 배 · 허리)에 들면

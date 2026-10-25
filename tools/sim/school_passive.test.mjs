@@ -48,7 +48,7 @@ test('book off / wrong school / low proficiency: no passive', () => {
 test('switches: SCHOOL_PASSIVE.on and per-school on turn it off', () => {
   const fx = fixture('uchigatana');
   try {
-    tick(fx, 1.5);
+    tick(fx, SP.japanese.full + 0.1);
     assert.ok(Math.abs(fx.sp.charge - SP.japanese.gain) < 1e-9);
     SP.on = false; assert.equal(fx.sp.charge, 0);
     SP.on = true; SP.japanese.on = false; assert.equal(fx.sp.charge, 0);
@@ -106,12 +106,14 @@ test('italian: no correction for parry-thrust (opposition), secret, or non-thrus
 });
 
 // ── 일본 켄타이 ──
-test('kentai: linear ramp to +30% over 1.5 s of no attack, capped', () => {
+test('kentai: linear ramp to +30% over SP.japanese.full (2 s — 사장님 10/25 23:1x) of no attack, capped', () => {
+  assert.equal(SP.japanese.full, 2.0);
   const fx = fixture('uchigatana');
   try {
     const { sp } = fx;
-    tick(fx, 0.75); assert.ok(Math.abs(sp.charge - 0.15) < 0.01, `half ${sp.charge}`);
-    tick(fx, 0.75); assert.ok(Math.abs(sp.charge - 0.3) < 0.01, `full ${sp.charge}`);
+    const half = SP.japanese.full / 2;
+    tick(fx, half); assert.ok(Math.abs(sp.charge - 0.15) < 0.01, `half ${sp.charge}`);
+    tick(fx, half); assert.ok(Math.abs(sp.charge - 0.3) < 0.01, `full ${sp.charge}`);
     tick(fx, 2); assert.ok(Math.abs(sp.charge - SP.japanese.gain) < 1e-9, 'capped');
   } finally { fx.g.world.free(); }
 });
@@ -120,7 +122,7 @@ test('kentai: stroke start locks the charge and resets the build; no build while
   const fx = fixture('uchigatana');
   try {
     const { f, sp } = fx;
-    tick(fx, 2);
+    tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 2 s — 10/25 23:1x)
     startTapThrust(f);
     assert.ok(Math.abs(sp.lock.ken - 0.3) < 1e-9, 'locked');
     assert.equal(sp.charge, 0, 'build reset');
@@ -137,7 +139,7 @@ test('kentai: missed charge carries to tsubame-gaeshi started within 0.6 s, else
     const fx = fixture('uchigatana');
     try {
       const { f, sp } = fx;
-      tick(fx, 2);
+      tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 2 s — 10/25 23:1x)
       startTapThrust(f); // 1: 묶임 0.3
       f.skill.tap = null; f.skill.thrustPush = false; // 못 맞히고 끝남
       tick(fx, gap);
@@ -156,7 +158,7 @@ test('kentai: never on secret strikes', () => {
   const fx = fixture('uchigatana');
   try {
     const { f, sp } = fx;
-    tick(fx, 2);
+    tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 2 s — 10/25 23:1x)
     f.skill.sec = { fake: true };
     f.stamina.attack('cut', true); // 비기 수 (skill.js secretNextMove 와 같은 청구)
     assert.equal(sp.lock.ken, 0);

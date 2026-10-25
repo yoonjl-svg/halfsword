@@ -15,13 +15,15 @@
 //   제비 베기 견줌(10/25 20:3x): player --move=tsubame [--w=uchigatana] [--trad=japanese] [--ghostDown 아래 칼 빗나감 치기] — 한 벌 = 정수리 내려베기 → 곧장 위로(tsubameRun) · player --w=uchigatana --trad=german = 打刀로 곁눈 베기
 //   제비 베기 세 해법(10/25 21:1x '해법 1~3 좋아' — docs/strike/tsubame_snap_2026-10-25.md): 끄기 --set=UNIQUE_ASSIST.tsuRuler=0 · tsuSnap=0 · tsuAim=0 · 시험 길 --tsuPath='x,y;…'(꺾은 자리 다음 점부터) · --tsuPlan='들기,뻗기,돌리기;…'([꺾은 자리, ...길])
 //            묶음 snapHits = 위 칼 첫 맞음 가운데 끌고 가는 칼(운동학 — f.iai)이 낸 것
+//            10/25 23:1x 몸통 띠(tsuBand): 시험 길 --bandPath · --bandPlan(TSU_AIM.band) · 묶음 edgeShare = 첫 맞음 때 놓인 칼의 날이 맞은 점 움직임과 STRIKE.edgeAlign(0.6) 넘게 맞는 몫(%) ·
+//            edgeP50 · band = 끌고 간 칼이 띠로 옮긴 몫 { up, down, keep } · bandFrom = 옮기기 전 처음 닿을 곳
 //   duel · fights · player 묶음에 rollT = 맞는 스텝 앞뒤(−8 ~ +8 스텝) 아래팔 굴림 ≥ 78 몫 · plan = 맞는 순간 길 덧칸
 //  사용법: node tools/sim/schielhau_strike.mjs duel|fights|player [--set=JOINTS.wristGuard=0,…] [--seeds=6] [--seed0=1] [--dur=40] [--foe=ai|still] [--schools=italian,japanese,german,chinese] [--json=파일]
 //          시험 길: --path='x,y;x,y;…'(from 부터) · --plan='들기,뻗기,돌리기;…'(점마다) · --reach= · --tech=zornhau(다른 기술만 — 견줌)
 //   견줌: 전(손목 교정 전) = --set=JOINTS.elbowSwivel=0,JOINTS.wristGuard=0,JOINTS.swivelThrust=0,UNIQUE_ASSIST.schielPath=0 · 옛 길(10/25 전 판) = --set=UNIQUE_ASSIST.schielPath=0 · 지금 = 인자 없음
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
-import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
+import { newRound, DT, CONFIG, AI, THREE } from './harness_m.mjs';
 import { applyWeaponMeasure } from './weapon_measures.mjs';
 import { wristSample, outOfRange, REV, FE_IN, OOR_EPS, OOR_X, ROLL_AT, ELBOW_UP_X } from './wrist_audit.mjs';
 import { strokeTechOf, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
@@ -407,7 +409,7 @@ export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit 
     if (att !== P || vic !== D || !open()) return;
     const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
     cur.sevAll += sv;
-    const rec = { type: r.type, zone: r.zone, part: rest[1]?.v?.part ?? null, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: null, ...hitPhys(r, P) };
+    const rec = { type: r.type, zone: r.zone, part: rest[1]?.v?.part ?? null, edge: edgeOf(P), bandDy: P.iai?.bandDy ?? null, bandFrom: P.iai?.bandFrom ?? null, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: null, ...hitPhys(r, P) };
     if (strokeTechOf(P) === 'tsubameGaeshi') {
       cur.fired = true;
       cur.sevUp += sv;
@@ -436,6 +438,18 @@ export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit 
     G.world.free();
   }
 }
+/** 맞는 순간 놓인 칼의 날 맞춤: 칼 틀 x(날) · 맞은 점(칼날 0.7) 움직임의 칼 축에 수직인 몫 사이 |cos| (combat.js analyze 의 edgeAlign 과 같은 식 · 움직임이 없으면 null) */
+function edgeOf(f) {
+  const v = f.hitPointVel;
+  if (!v || !f.sword) return null;
+  const r = f.sword.rotation();
+  const q = new THREE.Quaternion(r.x, r.y, r.z, r.w);
+  const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+  const ed = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+  const p = v.clone().addScaledVector(ax, -v.dot(ax));
+  const pl = p.length();
+  return pl > 1e-3 ? Math.abs(p.dot(ed)) / pl : null;
+}
 /** 제비 베기 묶음: duelSummary(위 칼 = 제비 베기 첫 맞음) + 한 벌 몫 — 강화된 벌 · 아래 칼 맞음 · 아래 / 위 / 합 상처 공격당 */
 export function tsubameSummary(runs) {
   const R = runs.flatMap((r) => r.rows);
@@ -443,7 +457,17 @@ export function tsubameSummary(runs) {
   const sum = (f) => R.reduce((a, r) => a + f(r), 0);
   const parts = {};
   for (const r of R) if (r.hit?.part) parts[r.hit.part] = (parts[r.hit.part] ?? 0) + 1;
-  return { ...duelSummary(runs), snapHits: R.filter((r) => r.hit?.snap).length, parts, combos: R.length, firedCombos: R.filter((r) => r.fired).length, downContacts: R.filter((r) => r.down).length, downPerAtk: +(sum((r) => r.down?.sev ?? 0) / n).toFixed(3), downSevPerAtk: +(sum((r) => r.sevDown) / n).toFixed(3), upSevPerAtk: +(sum((r) => r.sevUp) / n).toFixed(3), comboSevPerAtk: +(sum((r) => r.sevAll) / n).toFixed(3), downPhys: physP50(R.map((r) => r.down).filter(Boolean)) };
+  const E = R.map((r) => r.hit?.edge).filter((x) => x != null);
+  const band = { up: 0, down: 0, keep: 0 };
+  const bandFrom = {};
+  for (const r of R) {
+    const d = r.hit?.bandDy;
+    if (d == null) continue;
+    band[d > 0 ? 'up' : d < 0 ? 'down' : 'keep']++;
+    const k = r.hit.bandFrom ?? '-';
+    bandFrom[k] = (bandFrom[k] ?? 0) + 1;
+  }
+  return { ...duelSummary(runs), snapHits: R.filter((r) => r.hit?.snap).length, parts, edgeShare: E.length ? +((100 * E.filter((x) => x > CONFIG.STRIKE.edgeAlign).length) / E.length).toFixed(0) : null, edgeP50: E.length ? +p50(E).toFixed(2) : null, band, bandFrom, combos: R.length, firedCombos: R.filter((r) => r.fired).length, downContacts: R.filter((r) => r.down).length, downPerAtk: +(sum((r) => r.down?.sev ?? 0) / n).toFixed(3), downSevPerAtk: +(sum((r) => r.sevDown) / n).toFixed(3), upSevPerAtk: +(sum((r) => r.sevUp) / n).toFixed(3), comboSevPerAtk: +(sum((r) => r.sevAll) / n).toFixed(3), downPhys: physP50(R.map((r) => r.down).filter(Boolean)) };
 }
 
 /**
@@ -594,7 +618,7 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
     if (!cur) return;
     cur.sevAll += sv;
     if (cur.hit) return;
-    cur.hit = { type: r.type, zone: r.zone, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), tip: cur.tip, s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: planOf(P), ...hitPhys(r, P), ...rollPre(cur) };
+    cur.hit = { type: r.type, zone: r.zone, part: rest[1]?.v?.part ?? null, edge: edgeOf(P), snap: !!P.iai, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), tip: cur.tip, s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: planOf(P), ...hitPhys(r, P), ...rollPre(cur) };
   };
   let end = dur;
   try {
@@ -799,6 +823,9 @@ if (isMain(import.meta.url)) {
   if (args.tsuPath) TSU_AIM.path = String(args.tsuPath).split(';').map((p) => p.split(',').map(Number));
   if (args.tsuPlan) TSU_AIM.plan = String(args.tsuPlan).split(';').map((p) => p.split(',').map(Number));
   if (args.tsuPath && !args.tsuPlan) TSU_AIM.plan = Array.from({ length: TSU_AIM.path.length + 1 }, () => [0, 0, 0]);
+  if (args.bandPath) TSU_AIM.band.path = String(args.bandPath).split(';').map((p) => p.split(',').map(Number));
+  if (args.bandPlan) TSU_AIM.band.plan = String(args.bandPlan).split(';').map((p) => p.split(',').map(Number));
+  if (args.bandPath && !args.bandPlan) TSU_AIM.band.plan = Array.from({ length: TSU_AIM.band.path.length + 1 }, () => [0, 0, -40]);
   const mode = args._[0] ?? 'duel';
   let res;
   if (mode === 'duel') {
@@ -836,7 +863,11 @@ if (isMain(import.meta.url)) {
     const runs = [];
     for (const opp of opps) for (const seed of seeds) for (const delay of delays) runs.push(playerFight(seed, opp, { delay, prof: +(args.prof ?? 3), dur: +(args.dur ?? 30), share: +(args.share ?? 0.5), move: args.move ?? 'schielhau' }));
     const sum = (f) => +runs.reduce((a, r) => a + f(r), 0).toFixed(2);
-    res = { ...duelSummary(runs.map((r) => ({ rows: r.rows, dead: r.win }))), n: runs.length, win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length, schielSev: sum((r) => r.schielSev), downSev: sum((r) => r.downSev), combos: sum((r) => r.combos), dealt: sum((r) => r.dealt), recv: sum((r) => r.recv), fired: sum((r) => r.fired) };
+    const FH = runs.flatMap((r) => r.rows).map((x) => x.hit).filter(Boolean);
+    const fParts = {};
+    for (const h of FH) if (h.part) fParts[h.part] = (fParts[h.part] ?? 0) + 1;
+    const FE = FH.map((h) => h.edge).filter((x) => x != null);
+    res = { ...duelSummary(runs.map((r) => ({ rows: r.rows, dead: r.win }))), parts: fParts, snapHits: FH.filter((h) => h.snap).length, edgeShare: FE.length ? +((100 * FE.filter((x) => x > CONFIG.STRIKE.edgeAlign).length) / FE.length).toFixed(0) : null, edgeP50: FE.length ? +p50(FE).toFixed(2) : null, n: runs.length, win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length, schielSev: sum((r) => r.schielSev), downSev: sum((r) => r.downSev), combos: sum((r) => r.combos), dealt: sum((r) => r.dealt), recv: sum((r) => r.recv), fired: sum((r) => r.fired) };
     const byOpp = {};
     for (const r of runs) {
       const o = (byOpp[r.opp] ??= { n: 0, win: 0, lose: 0, schielSev: 0, atk: 0, sev: 0 });
