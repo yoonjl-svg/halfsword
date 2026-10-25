@@ -89,12 +89,35 @@ export function createSwordTrails(scene) {
   fmesh.visible = false;
   scene.add(fmesh);
   const FLASH_MS = 80;
+  const LUNGE_SEG = 8; // 런지 빛줄기 토막 수 (창끝 꼴 폭을 부드럽게)
+  // 런지 빛줄기 끝 반짝임 (10/25 — 아래 lunges 머리말): 흰 별(가로 · 세로 팔 + 가운데 빛) · 더하기 섞기 · 깊이 안 봄(끝 E 는 상대 몸 안 — 몸 겉에 가리지 않게) · 런지당 한 번 SECRET.risoGlintLife 초
+  const GL_MAX = MAX_FIGHTERS * 48;
+  const gpos = new Float32Array(GL_MAX * 3);
+  const gcol = new Float32Array(GL_MAX * 4);
+  const ggeo = new THREE.BufferGeometry();
+  ggeo.setAttribute('position', new THREE.BufferAttribute(gpos, 3).setUsage(THREE.DynamicDrawUsage));
+  ggeo.setAttribute('color', new THREE.BufferAttribute(gcol, 4).setUsage(THREE.DynamicDrawUsage));
+  ggeo.setDrawRange(0, 0);
+  const gmesh = new THREE.Mesh(ggeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  gmesh.name = 'secretGlint';
+  gmesh.frustumCulled = false;
+  gmesh.renderOrder = 6;
+  gmesh.visible = false;
+  scene.add(gmesh);
   const arcs = Array.from({ length: MAX_FIGHTERS }, () => ({ id: 0, pts: null, t0: 0 }));
+  // 런지 빛줄기 (사장님 10/25 14:0x '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 결정 · SECRET.risoStreak · docs/strike/italian_risoluto_2026-10-22.md §15):
+  //  안다레 리솔루토 런지는 칼이 제 축을 따라 나가 뒤 카메라에서 호 · 마주 보는 띠('line')가 선 하나로 줄었다(그림 docs/handoff/risoluto_fx_2026-10-25 before) →
+  //  런지 잔상(f.instantArc 에 lunge = 런지를 시작한 스텝의 칼날 밑동 — secret_instant.js startCombo)이 오면 그 점 S → 가장 멀리 간 칼끝 E 곧은 줄을 화면 쪽으로 펼친 띠로 그린다:
+  //  반 폭 SECRET.risoStreakWidth(칼끝 쪽으로 굵어지다 E 에서 모임 — 창끝 꼴) · 몸 = 비기 잔상과 같은 칼날 색 · 같은 밝기(0.95 × max(빠르기 몫, secretArcMin)) · 보통 섞기 ·
+  //  심 = 가운데 흰 빛(더하기 섞기 — 섬광과 같은 흰빛 · 처음 FLASH_MS 동안 더 밝게) · 다 그린 때부터 SECRET.risoStreakLife 동안 옅어짐. 이 줄을 그리는 런지는 'line' 띠를 그리지 않는다(겹침).
+  //  뒤 카메라에서 찌르는 줄은 카메라에서 멀어지는 쪽이라 화면에 짧다(폰 가로 36 ~ 39 px · 상대 몸통 안 — 그림) → 끝 E 에 화면 가로 · 세로로 펼친 흰 반짝임 별(SECRET.risoGlintLife · risoGlintK)을 더한다
+  const lunges = Array.from({ length: MAX_FIGHTERS }, () => ({ A: null, S: null, E: null, d: -1, n: 0, t0: 0, tf: 0, share: 1 }));
   let cam = null; // 마주 보는 띠가 바라볼 카메라 (그려질 때 받아 둔 같은 물체 — 자리는 그때그때 읽는다)
   const grab = (r, sc, c) => void (cam = c);
   mesh.onBeforeRender = grab;
   amesh.onBeforeRender = grab;
   fmesh.onBeforeRender = grab;
+  gmesh.onBeforeRender = grab;
 
   const slots = Array.from({ length: MAX_FIGHTERS }, makeSlot);
   let now = 0; // 게임 시간 (스텝 합)
@@ -109,7 +132,10 @@ export function createSwordTrails(scene) {
         arcs[k].pts = A.pts;
         arcs[k].share = Math.max(A.share ?? 1, A.min ?? 0); // 잔상 세기 몫 (중국 빠른 연환 — SECRET.cnFastShare: 빠르기와 같은 비율, 사장님 10/12 01:2x). 그 밖 비기는 1 · min = 결정타 잔상 바닥 (10/23 SECRET.secretArcMin — 사람 비기)
         arcs[k].width = A.width ?? 1; // 잔상 굵기 몫 (격살 시험 스위치 SECRET.gyeoksal.trailWidth — 칼끝에서 칼날 쪽으로 덮는 몫 · 기본 1 = 칼날 전부, 그대로)
-        arcs[k].face = A.face || null; // 마주 보는 띠 'path' | 'line' (10/23 — 위 머리말)
+        const L = lunges[k];
+        L.A = A.lunge && SECRET.risoStreak ? A : null; // 런지 빛줄기 (10/25 — 위)
+        if (L.A) Object.assign(L, { S: A.lunge, E: null, d: -1, n: 0, t0: performance.now(), tf: performance.now(), share: arcs[k].share });
+        arcs[k].face = (!L.A && A.face) || null; // 마주 보는 띠 'path' | 'line' (10/23 — 위 머리말) · 빛줄기를 그리는 런지는 빼고
         arcs[k].t0 = arcs[k].tf = performance.now();
         arcs[k].n = A.pts.length;
       } else if (A && A.kind === 'combo' && arcs[k].pts === A.pts && A.pts.length !== arcs[k].n) {
@@ -357,6 +383,107 @@ export function createSwordTrails(scene) {
         aput(b[0], b[1], b[2], h);
       }
     }
+    // 런지 빛줄기 (10/25 — 위 lunges 머리말): S → E 를 LUNGE_SEG 토막으로 · 옆 방향 = 줄 방향 × 카메라 쪽 (토막마다) · 가운데 짙고 가장자리 0
+    const sLife = (SECRET.risoStreakLife ?? 0.6) * 1000;
+    let gn = 0;
+    const sHw = SECRET.risoStreakWidth ?? 0.12;
+    const ribbon = (S, E, put, a, hw, max, count) => {
+      const tx = E[0] - S[0], ty = E[1] - S[1], tz = E[2] - S[2];
+      if (Math.hypot(tx, ty, tz) < 1e-4) return;
+      let px = 0, py = 0, pz = 0, pw = 0, pa = 0, qx = 0, qy = 0, qz = 0;
+      for (let i = 0; i <= LUNGE_SEG; i++) {
+        const u = i / LUNGE_SEG;
+        const x = S[0] + tx * u, y = S[1] + ty * u, z = S[2] + tz * u;
+        let vx = 0, vy = 1, vz = 0;
+        if (cam) [vx, vy, vz] = [cam.position.x - x, cam.position.y - y, cam.position.z - z];
+        let nx = ty * vz - tz * vy, ny = tz * vx - tx * vz, nz = tx * vy - ty * vx;
+        let nl = Math.hypot(nx, ny, nz);
+        if (nl < 1e-9) [nx, ny, nz, nl] = i > 0 ? [qx, qy, qz, 1] : [-tz, 0, tx, Math.hypot(tx, tz) || 1]; // 카메라 쪽으로 곧장 — 앞 옆 방향 그대로 (처음이면 수평 옆)
+        [nx, ny, nz] = [nx / nl, ny / nl, nz / nl];
+        const w = hw * (u < 0.8 ? 0.3 + 0.7 * (u / 0.8) : 1 - 0.85 * ((u - 0.8) / 0.2)); // 창끝 꼴: S 0.3 → 0.8 에서 1 → E 0.15
+        const al = a * (0.35 + 0.65 * u); // S 쪽은 호의 칼자루 쪽처럼 0.35 배
+        if (i > 0 && count() + 12 <= max) {
+          for (const sgn of [-1, 1]) {
+            put(px + qx * pw * sgn, py + qy * pw * sgn, pz + qz * pw * sgn, 0);
+            put(px, py, pz, pa);
+            put(x, y, z, al);
+            put(px + qx * pw * sgn, py + qy * pw * sgn, pz + qz * pw * sgn, 0);
+            put(x, y, z, al);
+            put(x + nx * w * sgn, y + ny * w * sgn, z + nz * w * sgn, 0);
+          }
+        }
+        [px, py, pz, pw, pa, qx, qy, qz] = [x, y, z, w, al, nx, ny, nz];
+      }
+    };
+    for (let k = 0; k < lunges.length; k++) {
+      const L = lunges[k];
+      if (!L.A) continue;
+      const P = L.A.pts;
+      if (P.length !== L.n) {
+        // 새 조각: 가장 멀리 간 칼끝 (S 에서) · 다 그린 때부터 옅어지게 시계를 다시
+        for (let i = L.n; i < P.length; i++) {
+          const q = P[i];
+          const d = (q[3] - L.S[0]) ** 2 + (q[4] - L.S[1]) ** 2 + (q[5] - L.S[2]) ** 2;
+          if (d > L.d) [L.d, L.E] = [d, [q[3], q[4], q[5]]];
+        }
+        L.n = P.length;
+        L.t0 = nowMs;
+        L.share = Math.max(L.A.share ?? 1, L.A.min ?? 0);
+      }
+      const age = nowMs - L.t0;
+      if (age >= sLife) {
+        L.A = null;
+        continue;
+      }
+      if (!L.E) continue;
+      ac = slots[k].tone ?? slots[k].base;
+      const fade = 1 - age / sLife;
+      const ageF = nowMs - L.tf;
+      ribbon(L.S, L.E, aput, 0.95 * L.share * fade, sHw, ARC_MAX, () => an); // 몸: 칼날 색 (비기 잔상과 같은 밝기)
+      ribbon(L.S, L.E, fput, L.share * (fade + (ageF < FLASH_MS ? 0.5 * (1 - ageF / FLASH_MS) : 0)), sHw * 0.45, FL_MAX, () => fn); // 심: 흰 빛 (더하기)
+      // 끝 반짝임: E 에 화면 가로 · 세로로 펼친 흰 별 (가로 팔 = 반 폭 × risoGlintK · 세로 0.6 배) — 처음 risoGlintLife 초 동안 옅어짐
+      const gk = SECRET.risoGlintLife > 0 ? 1 - ageF / (SECRET.risoGlintLife * 1000) : 0;
+      if (gk > 0 && cam && gn + 48 <= GL_MAX) {
+        const e = cam.matrixWorld.elements;
+        const g = L.share * gk ** 1.5;
+        const Lg = sHw * (SECRET.risoGlintK ?? 4);
+        const c = L.E;
+        const gput = (x, y, z, a) => {
+          const o = gn * 3;
+          gpos[o] = x;
+          gpos[o + 1] = y;
+          gpos[o + 2] = z;
+          const q = gn * 4;
+          gcol[q] = gcol[q + 1] = gcol[q + 2] = gcol[q + 3] = a;
+          gn++;
+        };
+        // 팔: 축 ax(길이 len) · 옆 px(가운데 두께 th) — 가운데 g · 끝 0 인 마름모 (삼각형 넷)
+        const arm = (ax, ay, az, len, px, py, pz, th) => {
+          for (const s1 of [-1, 1])
+            for (const s2 of [-1, 1]) {
+              gput(c[0], c[1], c[2], g);
+              gput(c[0] + px * th * s2, c[1] + py * th * s2, c[2] + pz * th * s2, 0);
+              gput(c[0] + ax * len * s1, c[1] + ay * len * s1, c[2] + az * len * s1, 0);
+            }
+        };
+        arm(e[0], e[1], e[2], Lg, e[4], e[5], e[6], Lg * 0.08); // 가로 (카메라 오른쪽)
+        arm(e[4], e[5], e[6], Lg * 0.6, e[0], e[1], e[2], Lg * 0.08); // 세로 (카메라 위)
+        // 가운데 빛: 팔각 부채 (반지름 = 가로 팔의 0.25)
+        const r = Lg * 0.25;
+        for (let j = 0; j < 8; j++) {
+          const a0 = (j / 8) * Math.PI * 2, a1 = ((j + 1) / 8) * Math.PI * 2;
+          gput(c[0], c[1], c[2], g);
+          gput(c[0] + (e[0] * Math.cos(a0) + e[4] * Math.sin(a0)) * r, c[1] + (e[1] * Math.cos(a0) + e[5] * Math.sin(a0)) * r, c[2] + (e[2] * Math.cos(a0) + e[6] * Math.sin(a0)) * r, 0);
+          gput(c[0] + (e[0] * Math.cos(a1) + e[4] * Math.sin(a1)) * r, c[1] + (e[1] * Math.cos(a1) + e[5] * Math.sin(a1)) * r, c[2] + (e[2] * Math.cos(a1) + e[6] * Math.sin(a1)) * r, 0);
+        }
+      }
+    }
+    ggeo.setDrawRange(0, gn);
+    gmesh.visible = gn > 0;
+    if (gn > 0) {
+      ggeo.attributes.position.needsUpdate = true;
+      ggeo.attributes.color.needsUpdate = true;
+    }
     fgeo.setDrawRange(0, fn);
     fmesh.visible = fn > 0;
     if (fn > 0) {
@@ -389,6 +516,7 @@ export function createSwordTrails(scene) {
       s.tone = null;
       s.on = trailFor(f?.weapon);
       arcs[i].pts = null;
+      lunges[i].A = null;
       arcs[i].id = f?.instantArc?.id ?? 0;
       // 띠 색: 그 칼날 재질 색 × dim (청강검이면 그 색조) — 늘 칼보다 어둡다
       const bc = f?.bladeMesh?.material?.color;
@@ -397,11 +525,14 @@ export function createSwordTrails(scene) {
     }
     geo.setDrawRange(0, 0);
     mesh.visible = false;
+    ggeo.setDrawRange(0, 0);
+    gmesh.visible = false;
     return handles;
   };
   const clear = () => {
     for (const s of slots) s.n = 0;
     for (const A of arcs) A.pts = null;
+    for (const L of lunges) L.A = null;
     geo.setDrawRange(0, 0);
     mesh.visible = false;
   };

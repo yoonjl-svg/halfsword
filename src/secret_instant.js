@@ -1018,6 +1018,15 @@ function comboBody(px) {
   return { pelvisYaw: ch * 0.5, chestYaw: ch, pitch: 0, drop: 0 };
 }
 
+/**
+ * 런지 빛줄기의 처음 점 (사장님 10/25 14:0x 리솔루토 연출 — sword_trail.js 런지 빛줄기): 런지를 시작하는 스텝의 칼날 밑동(칼자루 쪽 끝 — bladePoint 0, 월드 [x, y, z]) · 읽기만.
+ *  칼끝이 아니라 밑동: 런지 칼끝은 0.24 m 남짓만 나가(가슴 사이 1.58 m — 탐침 · 몸 미끄러짐 한도 0.6 m 를 다 써도 1 m 안) 뒤 카메라에서 점에 가깝다 → 칼이 지나간 찌르는 줄 전체(처음 밑동 → 가장 멀리 간 칼끝)를 빛줄기로
+ */
+function lungeFrom(f) {
+  const t = f.bladePoint(0, new THREE.Vector3());
+  return [t.x, t.y, t.z];
+}
+
 function startCombo(f, combat, req) {
   const yaw = f.yaw.clone();
   const inv = yaw.clone().invert();
@@ -1042,7 +1051,7 @@ function startCombo(f, combat, req) {
     kind: 'combo', moves: req.moves, segs: [], si: 0, ts: 0, t: 0, v, yaw, mi: -1, moveName: null, cutting: false, cur: { H: AH, D: AD, px: f.handOffset.x }, last: null,
     body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, effMul: req.effMul ?? null, tech: req.tech ?? null,
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
-    arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [], ...(req.width > 0 && req.width < 1 ? { width: req.width } : {}), ...(req.face ? { face: req.face } : {}), ...(req.min > 0 ? { min: req.min } : {}) }, slide: null, mord: req.mord ?? null, arcCut: !!req.arcCut,
+    arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [], ...(req.width > 0 && req.width < 1 ? { width: req.width } : {}), ...(req.face ? { face: req.face } : {}), ...(req.min > 0 ? { min: req.min } : {}), ...(req.moves.some((m) => m.lunge) ? { lunge: lungeFrom(f) } : {}) }, slide: null, mord: req.mord ?? null, arcCut: !!req.arcCut,
   };
   if (!req.arcCut) f.instantArc = f.iai.arc; // 베는 토막만(arcCut)이면 첫 베는 점에서 건다 (stepCombo — 섬광 · 남는 시간이 베는 순간부터)
   f.artTech = req.tech ?? null; // 이 끌고 가는 칼이 어떤 기술인가 (unique_assist.js strokeTechOf — 진 · 츠바메가에시 피해 × 3)
