@@ -1368,6 +1368,19 @@ export const THRUST = {
   //  칼을 맞댄 채 느끼고(Fühlen) 밀어 넣는 찌르기는 서두른 연타로는 안 된다. 한 번 숨을 고르고 찌른 탭만 칼 길을 잡는다
   bindRest: 0.7,
   bindAim: 180, // 칼끝이 목표 방향과 이 각도(도) 안일 때만 칼 길을 잡는다. 180 = 거르지 않음
+  // 이탈리아 찌르기 — 팔 → 몸 → 발 (10/25 08:0x 사장님 '이탈리아 찌르기 손봐' — docs/strike/italian_thrust_2026-10-25.md · 확인표 2513 ~ 2516 · 사장님 확인 전):
+  //  이탈리아 유파 몸(swordArt.tradition 'italian' — 레이피어 · 달타냥 · 발리사르다)의 보통 탭 찌르기와 AI 찌르기 기술(찌르기 무기 AI 는 같은 탭 길 — ai.js startStrike)만.
+  //  쓰러진 상대 찍기 · 약한 자세 겨눔 · 막아찌르기 · 비기(리솔루토 런지는 운동학 길 — 그대로) · 다른 유파(에스톡 포함)는 그대로.
+  //  ① 과녁 = 몸통(가슴) — 높은 자세(1 · 2번 — headPad 위)에서도 머리 대신: 임브로카타 「dalla spalla sinistra dell'avversario fino al suo ginocchio dritto」 ·
+  //     찌르기 「nel petto」 · 「verso il petto」 (Capo Ferro 1610 — schools.js 이탈리아 기술 src) [원문]
+  //  ② 팔을 먼저 — 칼 선 뒤로 손을 당기지 않는다(chamber 0 — 1번 자세처럼 이미 뻗은 팔은 당겼다 뻗어도 칼끝이 제자리로 돌아올 뿐 · 당김은 상대에게 박자를 줌) [해석]
+  //  ③ 거리를 재고 몸 · 발이 뒤따름 — 칼끝 → 겨눈 몸 가운데 거리에서 팔이 더 펼 수 있는 몫을 뺀 만큼만 런지(찌르기 무기 런지 덧씌우기 frames.js OVERLAY.thrust 0.6 m ·
+  //     AI 찌르기 걸음 0.6 m 까지 — 팔만으로 닿으면 걸음 없음 · skill.js itMeasure) · 그 걸음에 몸이 실림(SECRET.stepPush 2.0 · GAIT.burstAccel — 안다레 리솔루토 런지 ·
+  //     고노센 걸음과 같은 걸음 장치 · 새 수 없음) · AI 도 팔만으로 안 닿으면 그 런지로 딛음(ai.js STEP_T 그대로)
+  //  ④ 닿거나 몸이 다 실릴 때까지 뻗은 채 — 뻗고 버티기(hold)가 끝나도 런지가 안 끝났으면(걷던 발이 디디기를 기다리는 런지 부탁 gait.req · 몸 가속 gait.lungeBrake) 그 자리에 머묾 ·
+  //     칼이 상대 몸에 판정을 내면(combat.js strike) 곧장 자세로 (시간 값 없음)
+  //  1 = 켬 · 0 = 10/25 아침 판 (`?itThrust=0` — 판 해시 바이트 같음)
+  itLunge: 1,
 };
 
 // 손잡이 찍기(Knaufschlag, 시제품 — 사장님 아이디어 3] 10/9 "근접 상황에서 칼 손잡이로 찍기", docs/strike/pommel_strike_2026-10-09.md).

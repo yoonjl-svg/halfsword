@@ -122,6 +122,12 @@ function padStar(f, out) {
   return out;
 }
 
+/** 이탈리아 찌르기 ④ (THRUST.itLunge): 런지가 아직 안 끝났나 — 몸이 실리는 런지 걸음(accel) 부탁이 딛기를 기다리거나(걷던 발이 아직 떠 있음 — gait.req) 그 몸 가속(gait.lungeBrake — 앞발이 나가는 동안 · 디딘 뒤 몸이 따라잡을 때까지)이 안 끝남 */
+export function itLungeOn(f) {
+  const g = f.gait;
+  return !!g && (!!g.lungeBrake || (g.req?.kind === 'lunge' && !!g.req.accel && g.req.fwd > 0));
+}
+
 /** 두 선분(p1–q1, p2–q2) 사이 가장 가까운 거리 (칼날끼리 맞닿았나 — 칼 길 잡기 · 플레이어 비기 창의 맞물림 secret.js) */
 export function segDist(p1, q1, p2, q2) {
   _d1.subVectors(q1, p1);
@@ -243,7 +249,10 @@ export class Skill {
     }
     const h0 = rangeCommit && this.thrustPose.w > 0 ? this.thrustPose.hand.slice() : g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12];
     if (!f.aiControlled) f.stamina.attack('thrust');
-    this.tap = { t: 0, h0, down, head: !down && !V && this.aimRaw.y > THRUST.headPad, K };
+    // 이탈리아 찌르기 (THRUST.itLunge — 10/25 · config 머리말 ①~④): 몸통을 겨누고 · 당기지 않고 · 거리만큼 몸이 실린 런지로 · 닿거나 몸이 다 실릴 때까지 뻗은 채
+    const it = !!THRUST.itLunge && f.swordArt?.tradition === 'italian' && !down && !V;
+    this.tap = { t: 0, h0, down, head: !down && !V && this.aimRaw.y > THRUST.headPad && !it, K };
+    if (it) this.tap.it = { hold: 0, fwd: this.itMeasure(f, h0) }; // fwd = 이 찌르기의 런지 걸음 (재기 — 0 이면 팔만) · hold = 런지 몸이 실리는 동안 뻗은 채 머문 시간 (재기만)
     if (rangeCommit) this.tap.w0 = this.thrustPose.w; // 간격 맞추기 자세에서 곧장 이어 간다 (덧씌우기를 0 으로 떨어뜨리지 않는다)
     if (V) {
       this.tap.vital = { target: V.target.toArray(), zone: V.zone, foe: f.foe };
@@ -268,10 +277,27 @@ export class Skill {
       if (tp.walkOk && (tp.cleave ? cleaveReach(f.finish).walk : lowEntry ? f.finish.plunge.walk || f.finish.plunge.surfaceWalk : f.finish.plunge.walk)) tp.walking = true;
     } else if (step && f.state === 'stand' && !rangeCommit) {
       // 한 걸음 내딛으며 찌른다 (약한 자세 간격 맞추기 뒤엔 이미 걸었다 — 내딛지 않는다)
-      if (f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
-      else this.lunge = SKILL.lungeTime;
+      const il = this.tap.it;
+      if (f.gait?.active) {
+        if (!il) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
+        else if (il.fwd > 0) f.gait.requestStep({ kind: 'lunge', fwd: il.fwd, duration: 0.3, push: SECRET.stepPush, accel: true }); // 이탈리아 찌르기 ③: 거리만큼 런지 · 몸이 앞발을 따라 실림 (거리 안이면 걸음 없이 팔만)
+      } else this.lunge = SKILL.lungeTime;
     }
     return true;
+  }
+
+  /**
+   * 이탈리아 찌르기 ③ 런지 걸음 길이 (THRUST.itLunge — 10/25): 칼끝 → 겨눈 몸 가운데 거리에서 팔이 아직 더 펼 수 있는 몫(팔 길이 − 어깨 → 손 — updateThrust 와 같은 어깨 어림)을 뺀 만큼,
+   *  런지 걸음 THRUST.step(찌르기 무기 런지 덧씌우기 0.6 m)까지 — 거리 안이면 0(팔만 · 걸음 없음). 원전: 거리(misura)를 잰 뒤 닿을 만큼만 내딛는다 [해석]. 새 수 없음
+   */
+  itMeasure(f, h0) {
+    const c = f.bodies.chest.translation();
+    _c.set(c.x, c.y, c.z);
+    _yawInv.copy(f.yaw).invert();
+    const P = this.thrustTarget(_p);
+    const tip = f.bladePoint(1, _u).sub(_c).applyQuaternion(_yawInv);
+    const room = Math.max(0, ARM.upper + ARM.fore - ARM.slack - Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2));
+    return THREE.MathUtils.clamp(P.distanceTo(tip) - room, 0, THRUST.step);
   }
 
   /**
@@ -394,7 +420,14 @@ export class Skill {
     const f = this.f;
     const T = THRUST;
     const K = tp?.K; // 이번 찌르기의 시간·뻗는 거리 (무기의 찌르기 장점 반영)
-    if (tp) tp.t += dt * f.stamina.attackSpeed;
+    if (tp) {
+      tp.t += dt * f.stamina.attackSpeed;
+      // 이탈리아 찌르기 ④: 뻗고 버티기가 끝나도 런지가 안 끝났으면(걷던 발이 디디기를 기다리는 런지 부탁 · 몸 가속 lungeBrake — gait.js) 뻗은 채 머문다 — 몸이 따라잡거나 칼이 상대 몸에 닿으면(landed — combat.js strike) 자세로
+      if (tp.it && !tp.it.landed && tp.t >= K.aim + K.extend + K.hold && itLungeOn(f)) {
+        tp.t = K.aim + K.extend + K.hold - 1e-6;
+        tp.it.hold += dt;
+      }
+    }
     this.thrustPush = false;
     // 찍기(tp.down)의 끝은 시간이 아니라 몸의 일(plungePose 의 tEnd): 끝난 뒤 자세로 돌아오는 시간만 잰다
     if (!tp || tp.t >= (tp.down ? (tp.tEnd ?? Infinity) + K.recover : K.aim + K.extend + K.hold + K.recover) || !f.alive || !f.armed || !f.foe) {
@@ -440,7 +473,7 @@ export class Skill {
     //  팔이 이미 굽어 있으면(황소처럼 손이 머리 옆) 당길 필요가 없다 — 어깨에서 손까지 거리로 가늠한다.
     //  (칼이 맞닿았으면 당기지 않고 곧게 민다. 쓰러진 상대는 plungePose)
     const ext = Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2); // 어깨(가슴 기준 [0, 0.1, 0.2])에서 손까지
-    const ch = bd ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1);
+    const ch = bd || tp.it ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1); // 이탈리아 찌르기 ②: 당기지 않는다
     const a = THREE.MathUtils.clamp(t / K.aim, 0, 1);
     const s = THREE.MathUtils.clamp((t - K.aim) / K.extend, 0, 1);
     const e = -ch * a * a * (3 - 2 * a) + (ch + K.reach) * s * s * (3 - 2 * s);
