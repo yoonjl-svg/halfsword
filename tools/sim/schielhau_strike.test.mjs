@@ -2,6 +2,7 @@
 //   UNIQUE_ASSIST.schielPath 1(기본): AI 곁눈 베기 = schools.js schielhau redraw(길 점 + 길 덧칸 — 칼끝 들기 · 손 뻗기 · 손 돌리기) · 0 = 10/25 전 길(옛 꼴이 다시 보여야 시험이 산다).
 //   사람 쪽(10/25 18:0x 사장님 '같은 길 입혀' — UNIQUE_ASSIST.schielPlayer 1(기본)): 강화동작 곁눈 베기의 잣대 길(uniqueDef)이 다시 그린 길 · 같은 덧칸(PlayerUniqueAssist.planStep —
 //    손가락이 그 길 위 어디쯤인지로 섞음) · 0 = 옛 길 잣대 · 덧칸 없음(18:0x 전 판). 덧칸 없는 기술은 techPlan 이 늘 null.
+//   사람 곁눈 베기 세기 손잡이 UNIQUE_ASSIST.schielPlayerK (18:5x '50% 세기' 조건부 — 기본 1): 같은 길인 사람 곁눈 베기의 칼날 상처 심각도만 × k — 물리 · 손목 그대로 · AI 그대로.
 //  node --test tools/sim/schielhau_strike.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -34,6 +35,7 @@ const schielOf = (ai) => ai.school.tech.find((t) => t.name === 'schielhau');
 test('값 · 자료 꼴 (기본 켬 · 놓는 시간 0.2 s — 시간 사다리 · 덧칸은 [from, ...path] 점마다 셋 · from 은 0)', () => {
   assert.equal(UA.schielPath, 1);
   assert.equal(UA.schielPlayer, 1);
+  assert.equal(UA.schielPlayerK, 1); // 사장님 10/25 18:5x '50% 세기' 조건부 — 고른 견줌이 × 1.4 라 기본은 걸지 않음(1) · 손잡이만 (wrist_audit §15)
   assert.equal(UA.planRelease, 0.2);
   const u = TRADITIONS.german.unique.find((x) => x.name === 'schielhau');
   assert.ok(u.redraw?.path?.length && u.redraw.plan?.length);
@@ -184,4 +186,31 @@ test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 
   assert.ok(neu.rev <= 0.05 * neu.contacts, `같은 길 거꾸로 ${neu.rev} / ${neu.contacts}`);
   assert.ok(old.oor >= 0.25 * old.contacts, `전 판 범위 밖 ${old.oor} / ${old.contacts} (옛 꼴이 보여야 시험이 산다)`);
   assert.ok(neu.perAtk > old.perAtk, `공격당 심각도 같은 길 ${neu.perAtk} · 전 판 ${old.perAtk}`);
+});
+
+test('사람 곁눈 베기 세기 손잡이 (schielPlayerK — 18:5x 50 % 조건부): 0.5 면 첫 맞음 심각도만 × k · 맞는 빠르기 · 에너지 · 손목 그대로 · AI 곁눈 베기 그대로 · schielPlayer 0 이면 안 걸림', () => {
+  const K0 = UA.schielPlayerK;
+  const firstHit = (k, fn) => {
+    UA.schielPlayerK = k;
+    try {
+      return fn();
+    } finally {
+      UA.schielPlayerK = K0;
+    }
+  };
+  const pl = () => playerRun(1, { foe: 'still', dur: 12 }).rows.find((x) => x.hit).hit;
+  const a = firstHit(1, pl);
+  const b = firstHit(0.5, pl);
+  assert.ok(a.sev > 0);
+  assert.ok(Math.abs(b.sev - 0.5 * a.sev) < 1e-12, `심각도 ${b.sev} · ${a.sev}`);
+  assert.equal(b.energy, a.energy);
+  assert.equal(b.speed, a.speed);
+  assert.equal(b.s.dev, a.s.dev);
+  // 끔: 같은 길이 아니면 세기 값이 안 걸림
+  const c = withPlayer(0, () => firstHit(1, pl));
+  const d = withPlayer(0, () => firstHit(0.5, pl));
+  assert.equal(d.sev, c.sev);
+  // AI 곁눈 베기는 그대로
+  const ai = (k) => firstHit(k, () => duelRun(2, { foe: 'still', dur: 12 }).rows.map((x) => x.hit?.sev ?? null));
+  assert.deepEqual(ai(0.5), ai(1));
 });
