@@ -1433,6 +1433,11 @@ export const SOUND = {
   whipLashGain: 1, // C2 맞음 녹음 한 겹 음량 (event 음량은 칼 둔타와 같은 눈금 그대로 · 파일 최고 −1 dBFS 는 다른 채찍 녹음과 같음) — 확인표 2443 · 사장님 확인 전
   whipLashGap: 0.2, // s: C2 맞음 뒤 이 시간 안의 끝 '딱' · 다른 C2 맞음은 내지 않음 (한 맞음이 두 번 터지지 않게) — 확인표 2444 · 사장님 확인 전
   whipFlam: 0.06, // s: 끝 '딱' 뒤 이 시간 안의 C2 맞음은 내지 않음 (거의 같은 때 — 이미 난 '딱'이 대신) — 확인표 2444 · 사장님 확인 전
+  // 비기 소리 (10/25 사장님 '샛별이 비기 소리 보낸 거 입혀' — 샛별 저장소 2fa0b2ae · src/secret_sfx.js · src/sound.js secretSfx · docs/import/secret_audio_import_2026-10-25.md):
+  //  비기가 실제로 터진 순간(낸 전투자의 터뜨림 수가 오름 — 결정타 화면 늦춤과 같은 수) 그 전투자 유파의 녹음 한 번 · 사람 · AI 같음. 준비 · 창 · 실패 · 여러 타격 비기의 다음 칼에는 안 냄
+  secretSfx: 1, // 1 = 켬 · 0 = 끔 (주소 `?secretSfx=0` — 녹음도 받지 않음) — 확인표 2545 · 사장님 확인 전
+  secretSfxGain: 0.8, // 이벤트 음량 (녹음 한 겹 1 · 파일 최고 −8 dBFS 받은 그대로 · 쇳소리 묶음 · 재생 빠르기 1): 뒤따르는 센 베기(순간 약 −17.5 LUFS)보다 g1 약 5 dB · g2 약 8 dB 작게 — 확인표 2543 · 사장님 확인 전
+  secretSfxFiles: { japanese: 'secret/g1-clank', italian: 'secret/g1-clank', chinese: 'secret/g1-clank', iberian: 'secret/g2-dry', german: 'secret/g2-dry' }, // 유파 → public/sfx 파일 (확장자 없음) — 사장님 10/25 결정 (확인표 2542)
   fleshHit: 'drawn', // 10/7 사장님 지시로 샛별 일반판의 사용자 선택을 그대로: 'drawn' = A2 단축 약베기(.26 s)/B2 단축 강베기(.35 s, 112 J 경계), 찌르기는 samsho 유지 (샛별 7cbac07, 사용자 선택 10/2·'15 % 크게' 10/3). 'samsho' = 10/1 21:10 사장님 선택(35차 강베기)이던 전 기본값, sounds.html 에 그대로
 };
 

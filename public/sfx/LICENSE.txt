@@ -352,3 +352,16 @@ Exact ranges, filters, gains and SHA-256 of every source and output: whip/proven
     12 kHz low-pass, 1 ms in / 80 ms out:
       whip/lash1.mp3 <- C2-hq-preview.mp3 0.210+0.300 s, gain +3.0 dB (sha256 deeeb2d8ce671525…)
     The earlier hit sounds whip/hit1-3.mp3 (Thwack) stay on disk; the URL switch ?whipHit=old plays them instead.
+
+-------------------------------------------------------------------------------
+secret/  — 2026-10-25, secret-activation sounds (one short sound when a school secret fires), received from the
+Saetbyeol repository (commit 2fa0b2ae) in reply to our request MSG-S-015. The owner picked G1 for Japanese · Italian ·
+Eastern (chinese) and G2 for Iberian · German. Full source notice (kept as received): secret/LICENSE.txt.
+  secret/g1-clank.mp3 (0.34 s, sha256 46c496a05a1b9e4d…) and secret/g2-dry.mp3 (0.32 s, sha256 f82fb61b07b41b22…),
+  48 kHz mono, designed from three CC0 1.0 recordings (cut, mono average, filtering, time compression, layering, fades):
+    SamsterBirdies, "Sword draw unsheathe" — https://freesound.org/people/SamsterBirdies/sounds/581594/ (HQ preview)
+    hushless, "Sword Unsheath" — https://freesound.org/people/hushless/sounds/772113/ (HQ preview)
+    Vehicle / Jan Schupke, "Fantasy Weapons and Apparel SFX Library" (seax-unsheathe-02.wav)
+      https://opengameart.org/content/fantasy-weapons-and-apparel-sfx-library
+    https://creativecommons.org/publicdomain/zero/1.0/  (no attribution required; kept here for the record)
+  Sources, evidence, reproducible code and the WAV masters: docs/import/secret_audio_20261025/.
