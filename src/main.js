@@ -31,7 +31,7 @@ import { InputTrail } from './trail.js';
 import { Input, attachStick } from './input.js';
 import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
-import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
+import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, savedFoeWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS } from './weapons.js';
 import { attachAura, AURA_VIEW } from './aura.js';
@@ -1702,7 +1702,7 @@ function validJourney() {
   const out = { stage: saved.stage, foe: null, foeWeapon: null, weapon: null, cards: null, lastWeapon: pool.has(saved.lastWeapon) ? saved.lastWeapon : null };
   if (saved.foe && foes.includes(saved.foe) && CHARACTERS_BY_ID[saved.foe] && known(saved.foeWeapon)) {
     out.foe = saved.foe;
-    out.foeWeapon = saved.foeWeapon;
+    out.foeWeapon = savedFoeWeapon(CHARACTERS_BY_ID[saved.foe], saved.foeWeapon); // 시트 무기가 바뀐 뒤의 옛 저장이면 지금 시트 무기 (10/25 광기의 하인리히 — characters.js)
     if (saved.weapon && pool.has(saved.weapon)) out.weapon = saved.weapon;
     else if (saved.cards?.every((id) => pool.has(id)) && saved.cards[0] !== saved.cards[1]) out.cards = saved.cards.slice();
   }
@@ -1739,6 +1739,7 @@ function openWanderRound() {
   } else if (!resume) resetWanderLoadout(); // 재대결 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 방랑'은 새 판)
   const run = ensureWanderRun(drawWanderEncounter, validWanderRun);
   if (!run) throw new Error('방랑이 잠겨 있음');
+  run.foeWeapon = savedFoeWeapon(CHARACTERS_BY_ID[run.foe], run.foeWeapon); // 진행 판도 여정과 같게 (10/25)
   // 저장된 내 무기 · 카드가 지금 뽑기 목록에 없으면 카드부터 (여정 validJourney 와 같게)
   const pool = new Set(PLAYER_WEAPON_POOL);
   if (run.weapon && !pool.has(run.weapon)) run.weapon = null;

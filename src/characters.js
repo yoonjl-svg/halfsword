@@ -542,7 +542,7 @@ export const CHARACTERS = [
     weaknesses: '칼끝 안쪽으로 깊게 붙는 압박.',
     weapon: 'rapier', // 이탈리아 유파
     voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 아르토리아와 같이) — 10/12 사장님 지시로 샛별 저장소 77db8c5 배정을 가져옴 (전 'isolde')
-    ai: { proficiency: 2, persona: {
+    ai: { proficiency: 3, persona: { // 숙련도 3 (사장님 10/25 18:5x '투야나 숙련도 1 올려' — 전 2) = 실력 숫자 hard · 이탈리아 고유 동작 셋(칼끝 돌려 빼기 더함). 광기의 투야나는 얼터 규칙대로 4 (패시브 칸 곧은 선)
       school: 'rapier',
       level: { skill: 0.78, discipline: 0.88, strength: 1, aggression: 0.75 },
       pers: { precision: 0.85, guardStick: 3.2, fearful: 0.25, angry: 0.1, dogged: 0.3, rhythm: 3.2, aggr: 0.78, vor: 0.35,
@@ -636,10 +636,15 @@ function scaledLevel(ai, scale) {
   }
   return out;
 }
-// 성격(pers)·유파(school)는 하인리히 그대로 깊은 복사하고(madVariantAI — 숙련도 2 → 3), persona.level 은 변형 시트를 읽을 때 finishAI 가 바꿔 끼운다.
+// 성격(pers)은 하인리히 그대로 깊은 복사하고(madVariantAI — 숙련도 2 → 3), persona.level 은 변형 시트를 읽을 때 finishAI 가 바꿔 끼운다.
 //  지금 값 (숙련도 3 = hard 위에 하인리히 persona.level, ×1.2 — 10/13 전엔 normal 위): docs/strike/ai_proficiency_2026-10-13.md 표.
 //  strikeSpeed·chamberSpeed·parrySpeed·strength는 손 목표 필터·관절 속도 한계에 막혀 체감은 +20%보다 작다 (docs/characters.md)
+//  무기 · 유파 (사장님 10/25 18:5x "파펜하이머 들어오면 광기의 하인리히가 파펜하이머를 들고 이탈리아 유파로 싸우게 해"): 아래 시트 weapon 'pappenheimer' →
+//   숙련도 표 { italian: 3 }(aiAtProficiency — 시트 무기의 유파) · 꾸러미 = 무기 id 꾸러미 SCHOOLS.pappenheimer(이탈리아 자세 · 기술 · 막기 + 파펜하이머 실측 간격).
+//   이탈리아 숙련도 3 = 비껴서며 찌르기 · 위에서 내려 찌르기 · 칼끝 돌려 빼기(속임수) · 패시브 칸(4)·비기(5)는 없음. 성격(guardPref · techPref 포함)은 낮의 하인리히 그대로 —
+//   이탈리아 자세 목록에 없는 자세 취향(어깨 지붕 · 옆 자세)은 읽히지 않고, 큰 베기 취향(분노의 베기 · 정수리 베기 = 이탈리아 이름 사선 · 곧게 내려베기)은 남는다 (확인표 2547 · 2549)
 const HEINRICH_MAD_AI = madVariantAI(HEINRICH);
+HEINRICH_MAD_AI.persona.school = 'pappenheimer'; // 전 'excalibur_replica'(낮의 하인리히 복제품 꾸러미 — 독일)
 // 온몸 타격 기질(초안, 캐릭터 PM): 낮보다 더 싣고 더 자주 감고, 물러날 줄을 모른다 — 비켜서기 대신 맞받는다
 HEINRICH_MAD_AI.persona.whole = { sPref: 0.9, sSpread: 0.1, windRate: 0.8, windLen: [0.25, 0.5], punish: { windup: 0.5, overrun: 0.65, thrown: 0.6 }, evade: 0.15 };
 HEINRICH_MAD_AI.persona.idle = { guard: 'langort', gesture: 'still' }; // 시작 2초: 칼끝을 겨눈 채 흔들림 없음
@@ -648,11 +653,13 @@ export const CHARACTER_VARIANTS = [
   // 4b. 광기의 하인리히 도른 — 밤의 포세이돈 신전에 다시 나타나는 하인리히 (사장 요청, 디렉터 14:08).
   //  붉은 눈·안광 아우라는 외형 담당 몫이고, 여기서는 eyes 표식만 둔다.
   //  사장 확정(2026-09-28): 대사는 우선 등장·승리 1종씩, 실력 숫자는 낮의 하인리히 +20% (HEINRICH_MAD_AI). 별칭은 10/14 부터 본캐와 같은 '미치광이'(얼터 에고 규칙 — 전 '밤의 왕').
-  //  성격(pers)·유파·감정 문턱·외형·무기·목소리(variantOf)는 낮의 하인리히 그대로다. 설정은 docs/character_lore.md §4b
+  //  성격(pers)·감정 문턱·외형·목소리(variantOf)는 낮의 하인리히 그대로다. 무기 · 유파만 다르다 — 파펜하이머 · 이탈리아(사장님 10/25 18:5x · 위 HEINRICH_MAD_AI). 설정은 docs/character_lore.md §4b
+  //  (10/25 무기가 바뀌며 어긋나는 글 — 서사의 '왕의 검' · 물려받은 school · favoriteGuards(마이어식 롱소드 · 큰 자세) — 은 고치지 않았다: 바꿀 줄은 사장님 확인 전 · docs/decisions.md 10/25 18:5x)
   {
     ...HEINRICH,
     id: 'heinrich_mad',
     variantOf: 'heinrich',
+    weapon: 'pappenheimer', // 파펜하이머 (레어 · 이탈리아 한손 — 사장님 10/25 18:5x). 낮의 하인리히는 엑스칼리버 복제품 그대로
     mad: true, // 변형 표시 (10/13 일반 규칙): 숙련도 +1 · 실력 숫자 +20% — aiAtProficiency
     name: '광기의 하인리히 도른',
     // 칭호는 본캐와 같다 — '미치광이'(...HEINRICH 그대로). 사장님 10/14 12:4x "'광기의'는 모든 캐릭터에게 붙일 거고 얼터 에고 컨셉이야. 칭호는 본캐랑 같음" (전 '밤의 왕' 9/28)
@@ -985,6 +992,14 @@ export function pickCharacterWeapon(char, rnd = Math.random) {
     if (pool.length) return pool.reduce((a, b) => (b.bladeLength < a.bladeLength ? b : a)).id;
   }
   return alt.pick in WEAPONS ? alt.pick : char.weapon;
+}
+
+/**
+ * 저장된 판(여정 이어하기 · 방랑 진행 판)의 상대 무기를 지금 시트에 맞춘다: 대체 무기(weaponAlt)가 없는 인물이 시트와 다른 무기로 저장돼 있으면
+ *  시트 무기가 바뀐 뒤의 옛 저장이다(10/25 광기의 하인리히 엑스칼리버 복제품 → 파펜하이머) → 지금 시트 무기. 그 밖엔 저장 그대로(브론이 주워 온 칼 등)
+ */
+export function savedFoeWeapon(char, id) {
+  return !char || char.weaponAlt || id === char.weapon ? id : char.weapon;
 }
 
 /**

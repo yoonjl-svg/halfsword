@@ -1,0 +1,30 @@
+{
+ "url": "/?stage=poseidon_night&foe=heinrich_mad&cards=longsword,sabre&emo=0 (상대 무기는 주소에 안 적음 — 시트 무기)",
+ "viewport": "844x390 @2 · 터치",
+ "draw_ids": [
+  "longsword",
+  "sabre",
+  "pappenheimer"
+ ],
+ "fight": {
+  "foe": "광기의 하인리히 도른",
+  "foeWeapon": "pappenheimer",
+  "foeSchool": "italian",
+  "aiSchool": "pappenheimer",
+  "proficiency": 3,
+  "level": "hard",
+  "unique": [
+   "imbroccata",
+   "칼끝 돌려 빼기 (카바치오네)",
+   "inquartata"
+  ],
+  "me": "longsword",
+  "simTime": 9.03
+ },
+ "files": {
+  "draw_cards.webp": "카드 셋 — 상대 무기 칸 파펜하이머 (레어)",
+  "fight_game.webp": "싸움 화면 9 s (게임 카메라)",
+  "fight_close.webp": "같은 순간 물리 멈춤 · 광기의 하인리히 앞 3/4 (화면 글 감춤)"
+ },
+ "errors": 0
+}
