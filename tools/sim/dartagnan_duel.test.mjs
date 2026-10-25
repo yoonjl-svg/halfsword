@@ -10,7 +10,7 @@ import { newRound, THREE } from './harness_m.mjs';
 
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} ≠ ${b}`);
 const withK = (k, fn) => { const was = WEAPON_ABILITY.duelOneHand; WEAPON_ABILITY.duelOneHand = k; try { return fn(); } finally { WEAPON_ABILITY.duelOneHand = was; } };
-const ONE_HAND_SWORDS = ['sabre', 'rapier', 'falchion', 'qinggang', 'ganjiang', 'moye', 'sain', 'goujian', 'dartagnan', 'hwando', 'balisarda'];
+const ONE_HAND_SWORDS = ['sabre', 'rapier', 'falchion', 'qinggang', 'ganjiang', 'moye', 'sain', 'goujian', 'dartagnan', 'hwando', 'balisarda', 'pappenheimer']; // 10/25 파펜하이머가 들며 11 → 12 (가름 규칙 그대로 — 사장님 10/25 결정)
 
 test('값 · 스펙 · 글: 1.15(사장님 10/25) · 달타냥에만 능력 · 능력 줄 \'별칭: 효과\' · 설명 두 줄 그대로', () => {
   assert.equal(WEAPON_ABILITY.duelOneHand, 1.15);

@@ -65,7 +65,7 @@ export const STAMINA = {
 export const WEAPON_ABILITY = { aweDrain: 0, aweGap: 1.5, aweStart: 15 };
 // 달타냥 '총사의 결투' — 사장님 10/25 결정 (01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대): 칼 주인이 한손검(weapons.js isOneHandSword —
 //  한손 쥠 · 날 있음)을 쥔 상대를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율, 와신상담과 같은 자리 · combat.js duelOneHandMult)이 × duelOneHand.
-//  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 10/25 결정 — 11 개 그대로 (확인표 2491 · 2492)
+//  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 10/25 결정 — 가름 규칙 그대로 (확인표 2491 · 2492 · 10/25 파펜하이머가 들며 11 → 12 개)
 WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
 // 드루이드의 채찍 무릎 꿇리기 (사장님 10/23 01:5x '특수효과 넣어서 채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘.(모든 종류의 타격 대상) 곁눈베기 맞았을 때처럼' — 확인표 2255 ~ 2257 사장님 확인 전)
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
@@ -1386,7 +1386,7 @@ export const THRUST = {
   bindRest: 0.7,
   bindAim: 180, // 칼끝이 목표 방향과 이 각도(도) 안일 때만 칼 길을 잡는다. 180 = 거르지 않음
   // 이탈리아 찌르기 — 팔 → 몸 → 발 (10/25 08:0x 사장님 '이탈리아 찌르기 손봐' — docs/strike/italian_thrust_2026-10-25.md · 확인표 2513 ~ 2516 · 사장님 확인 전):
-  //  이탈리아 유파 몸(swordArt.tradition 'italian' — 레이피어 · 달타냥 · 발리사르다)의 보통 탭 찌르기와 AI 찌르기 기술(찌르기 무기 AI 는 같은 탭 길 — ai.js startStrike)만.
+  //  이탈리아 유파 몸(swordArt.tradition 'italian' — 레이피어 · 달타냥 · 발리사르다 · 10/25 파펜하이머)의 보통 탭 찌르기와 AI 찌르기 기술(찌르기 무기 AI 는 같은 탭 길 — ai.js startStrike)만.
   //  쓰러진 상대 찍기 · 약한 자세 겨눔 · 막아찌르기 · 비기(리솔루토 런지는 운동학 길 — 그대로) · 다른 유파(에스톡 포함)는 그대로.
   //  ① 과녁 = 몸통(가슴) — 높은 자세(1 · 2번 — headPad 위)에서도 머리 대신: 임브로카타 「dalla spalla sinistra dell'avversario fino al suo ginocchio dritto」 ·
   //     찌르기 「nel petto」 · 「verso il petto」 (Capo Ferro 1610 — schools.js 이탈리아 기술 src) [원문]

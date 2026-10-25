@@ -27,6 +27,7 @@ import { TIZONA_COLORS, tizonaPartMesh } from './tizona_details.js'; // 티소�
 import { WHIP, WHIP_NOW, druidParts, drawDruidWhip } from './druid_whip.js'; // 드루이드의 채찍 몸 · 겉모습 (샛별 저장소 69ef7dac8 에서 가져옴 — 10/23)
 import { BALISARDA_COLORS, balisardaPartMesh } from './balisarda_details.js'; // 발리사르다 겉모습 (샛별 저장소 c89e827c6 — 10/21)
 import { MURAMASA_COLORS, MURAMASA_PROFILE, muramasaPartMesh, muramasaDecorate } from './muramasa_details.js'; // 무라마사 겉모습 (샛별 저장소 29e543555 · d46e09b96 · 82818cc3d — 10/21)
+import { PAPPENHEIMER_COLORS, PAPPENHEIMER_DIM, pappenheimerPartMesh } from './pappenheimer_details.js'; // 파펜하이머 겉모습 (샛별 저장소 e3e1f144 — 10/25 · 코등이 밝은 테 · 칼날 밑동 금 상감은 우리 고침)
 
 // 재질별 되튐(반발 계수). 칼끼리 부딪히면 곱해진다(Multiply 규칙) → 강철끼리 0.7² 정도,
 //  고무 대 강철처럼 하나가 낮으면 거의 튕기지 않는다(고무 닭이 칼에 그냥 맞고 만다).
@@ -71,7 +72,7 @@ const KIND_KO = {
   monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '양손검',
   tree_branch: '한손 둔기', rubber_chicken: '한손 둔기', frozen_tuna: '양손 둔기', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
   moye: '한손 양날검', sain: '한손 양날검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손 둔기',
-  druid_whip: '한손 채찍',
+  druid_whip: '한손 채찍', pappenheimer: '한손 찌르기검',
 };
 /** '종류, 길이 cm, 무게 kg' (예: '한손 양날검, 95 cm, 0.95 kg') — 자료가 없으면 '' */
 export function weaponSpecText(spec) {
@@ -785,6 +786,42 @@ const balisarda = finalizeSpec('balisarda', {
       partTuple(['ball', 0.018], -0.07, 0.09, 0, pommel.Ie, pommel.It, BALISARDA_COLORS.hilt),
       partTuple(['ball', 0.05], 0.06, 0.55, 0, cup.Ie, cup.It, BALISARDA_COLORS.hilt),
       partTuple(['box', 0.009, L / 2, 0.006], 0.1 + L / 2, bladeMass, blade.comY, blade.Ie, blade.It, BALISARDA_COLORS.blade, true),
+    ];
+  },
+});
+
+// 파펜하이머 (레어 · 이탈리아 — 10/25 샛별 저장소 e3e1f144 에서 들여옴 · 사장님 10/25 결정 · docs/import/pappenheimer_import_2026-10-25.md):
+//  바탕 실물 클리블랜드 미술관 1916.697 [M]: 전체 111.1 cm · 칼날 89.2 cm · 코등이 21.3 cm · 1.34 kg (약 1620 ~ 30 년 솔링겐 칼날 — 독일계 실물을 게임의 이탈리아 검술로 쓰는 분류).
+//  부품 질량 · 무게중심 · 두께는 샛별 저장소 [I] 추정 그대로: 자루 0.09 · 폼멜 0.24 · 방호판과 고리 0.37 · 칼날 0.54(무게중심 36 % · 회전 반경 25 %) · 가로대 0.10 = 1.34 kg.
+//   방호판 구멍마다 물리를 풀지 않는다 — 방호판은 다른 컵 힐트와 같은 공 근사(반지름 5.5 cm) · 가로대는 실폭 21.3 cm 숨은 상자(색 null — 그림은 부품 2 가 그린다).
+//  손맛 (사장님 10/25 16:4x '신규 무기를 도입할 때는, 언제나 같은 계열 기존 무기들과 다른 손맛을 주는 걸 목표로 해' · '전형적인 레이피어라기보다는 베기도 잘 할 수 있는 검'
+//   → 17:0x '파펜하이머는 달타냥과 다르게 베기 0.85 찌르기 1.10으로'): 베기 0.60 → 0.85 · 찌르기 1.30 → 1.10 (전달본 → 사장님 10/25 결정) · 둔타 0.70 그대로.
+//   이탈리아 넷 가운데 베기가 가장 세고 찌르기가 가장 약하며(레이피어 · 발리사르다 0.5 / 1.3 · 달타냥 0.8 / 1.15) 가장 무겁다(1.34 kg — 레이피어 1.10 · 달타냥 1.00).
+//   배율이 자동 판정 경계를 넘어(weapon_class.js — 찌르기 1.25 미만 · 베기 0.6 초과면 '두루' · 독일) 달타냥처럼 school 'italian' · style 'thrust' 를 적는다 —
+//   이탈리아 찌르기 몸놀림(런지 · 기술 가중치 · 비기 안다레 리솔루토)과 탭 찌르기 장점(thrustStyle 레이피어)은 그대로.
+//  한손 날 있는 칼이라 달타냥 '총사의 결투'의 한손검(isOneHandSword)에 저절로 든다 — 11 → 12 개.
+const PAPPENHEIMER_MASS = { grip: 0.09, pommel: 0.24, shell: 0.37, blade: 0.54, cross: 0.1 }; // 합 1.34 kg
+const pappenheimer = finalizeSpec('pappenheimer', {
+  nameKo: '파펜하이머', nameEn: 'Pappenheimer', tier: 'rare', school: 'italian', style: 'thrust',
+  desc: '롱소드와 레이피어의 장점을 흡수한 결투용 검.\n구멍 뚫린 두 방호판이 손을 감싸 지킨다.', // 사장님 10/25 글 — 고치지 않는다 (전달본 글은 기록에만)
+  grip: 'one-hand', material: 'steel',
+  hiltLength: PAPPENHEIMER_DIM.bladeBase, bladeLength: PAPPENHEIMER_DIM.blade,
+  mCut: 0.85, mThrust: 1.1, mBlunt: 0.7, // 사장님 10/25 결정 (전달본 0.60 · 1.30)
+  thrustStyle: THRUST_STYLE.rapier,
+  partMesh: pappenheimerPartMesh,
+  buildParts() {
+    const L = this.bladeLength, C = PAPPENHEIMER_COLORS, M = PAPPENHEIMER_MASS;
+    const grip = boxInertia(M.grip, 0.014, 0.056, 0.013);
+    const pommel = sphereInertia(M.pommel, 0.0255);
+    const shell = sphereInertia(M.shell, 0.055); // 방호판 둘 + 받침 고리: 공 근사
+    const cross = boxInertia(M.cross, 0.1065, 0.0035, 0.004);
+    const blade = bladeInertia(M.blade, L, 0.36, 0.25, 0.026, 0.0084);
+    return [
+      partTuple(['box', 0.014, 0.056, 0.013], -0.006, M.grip, 0, grip.Ie, grip.It, C.grip),
+      partTuple(['ball', 0.0255], PAPPENHEIMER_DIM.pommelY, M.pommel, 0, pommel.Ie, pommel.It, C.hilt),
+      partTuple(['ball', 0.055], PAPPENHEIMER_DIM.guardY, M.shell, 0, shell.Ie, shell.It, C.hilt),
+      partTuple(['box', 0.013, L / 2, 0.0042], PAPPENHEIMER_DIM.bladeBase + L / 2, M.blade, blade.comY, blade.Ie, blade.It, C.blade, true),
+      partTuple(['box', 0.1065, 0.0035, 0.004], 0.05, M.cross, 0, cross.Ie, cross.It, null), // 가로대 실폭 콜라이더 (안 그림)
     ];
   },
 });
@@ -1934,6 +1971,7 @@ export const WEAPONS = {
   tizona, // 사장님 10/21(샛별 저장소 경유): 이베리아 에픽 · 능력 '위세'
   druid_whip: druidWhip, // 10/23 샛별 저장소에서 들여옴: ??? · 휘는 마디 채찍 — 같은 까닭으로 끝에 둔다
   durandal, // 10/24 샛별 저장소에서 들여옴: 이베리아 레전드 · 롤랑의 성검 — 같은 까닭으로 끝에 둔다
+  pappenheimer, // 10/25 샛별 저장소에서 들여옴: 이탈리아 레어 (사장님 10/25 결정 — 베기 0.85 · 찌르기 1.10 · 사장님 글) — 같은 까닭으로 끝에 둔다
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
