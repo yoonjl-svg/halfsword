@@ -263,6 +263,7 @@ if (params.get('whipKneelAi') === '1') CONFIG.WHIP_KNEEL.ai = true; // AI 가 �
 if (params.get('dartagnanAbility') === '0') CONFIG.WEAPON_ABILITY.duelOneHand = 1; // 달타냥 '총사의 결투' 끔 (10/25 — 판 값 1.15 · 시험용 · combat.js duelOneHandMult)
 if (params.has('buckle')) CONFIG.UNIQUE_ASSIST.buckle.p = +params.get('buckle') || 0; // 곁눈 베기 무릎 꺾기 확률(10/21 — 판 값 0.15 · `?buckle=0` 끔)
 if (params.has('schielPath')) CONFIG.UNIQUE_ASSIST.schielPath = +params.get('schielPath') ? 1 : 0; // 곁눈 베기 AI 길 (사장님 10/25 08:0x '셸하우 3번' — 기본 1 = 다시 그린 길 · `?schielPath=0` = 10/25 전 길 · sword_art.js applySchoolArt · ai.js techPlanStep)
+if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get('schielPlayer') ? 1 : 0; // 사람 곁눈 베기 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — 기본 1 · `?schielPlayer=0` = 사람은 옛 길 잣대 · 덧칸 없음 · unique_assist.js uniqueDef · planStep)
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)

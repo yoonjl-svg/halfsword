@@ -1248,8 +1248,12 @@ export const UNIQUE_ASSIST = {
   buckle: { p: 0.5, kneel: 0.4, cool: 0, /* 10/21 14:0x 사장님 '다시 무릎 안 꿇음 제한은 아예 없애자' — 5 → 0(없음) */ parts: ['head', 'chest', 'uarmS', 'uarmO'] },
   // 곁눈 베기 길 다시 그림 (사장님 10/25 08:0x '셸하우 3번 — 맞는 순간 손목이 사람 범위 안이면서 손목 교정 전처럼 세게' · 기록 docs/strike/wrist_audit_2026-10-24.md §13 · 확인표 2501 ~ 2505):
   //  1 = 다시 그린 길(schools.js GERMAN_UNIQUE schielhau 의 redraw — AI 길 점 + 길 덧칸 plan: 칼끝 들기 · 손 뻗기 · 손 돌리기, ai.js techPlanStep → fighter.js driveSword) ·
-  //  0 = 10/25 전 길(`?schielPath=0` — 손목 교정이 맞는 순간 칼끝을 옆으로 돌리던 판, 바이트 같음). AI 만(sword_art.js applySchoolArt 가 꾸러미에 넣을 때) — 사람 곁눈 베기는 손가락 길 그대로
+  //  0 = 10/25 전 길(`?schielPath=0` — 손목 교정이 맞는 순간 칼끝을 옆으로 돌리던 판, 바이트 같음 · AI · 사람 둘 다). AI 는 sword_art.js applySchoolArt 가 꾸러미에 넣을 때 · 사람은 아래 schielPlayer
   schielPath: 1,
+  // 사람 곁눈 베기에도 같은 길 (사장님 10/25 18:0x '같은 길 입혀' · 기록 wrist_audit §14 · 확인표 2538): 1 = 강화동작 곁눈 베기가 다시 그린 길을 잣대로(끝 힘 잣대 길 · 손가락이 그 길 위 어디쯤인지)
+  //  같은 길 덧칸(칼끝 들기 · 손 뻗기 · 손 돌리기)을 얹음(unique_assist.js uniqueDef · PlayerUniqueAssist.planStep → fighter.js driveSword) — 궤적은 그대로 손가락(10/14 강화 방식).
+  //  0 = 10/25 18:0x 전 판(`?schielPlayer=0` — 사람은 옛 길 잣대 · 덧칸 없음, 바이트 같음). schielPath 0 이면 이것도 꺼짐
+  schielPlayer: 1,
   // 길 덧칸을 놓는 시간(s): 덧칸 있는 공격 꼴(베기 · 따라 베기)이 끝나면 그때 덧칸(칼끝 들기 · 손 뻗기 · 손 돌리기)을 이 시간에 걸쳐 0 으로 (시간 사다리 0.2 — 손 목표가 한 스텝에 0.2 m 튀지 않게 · 확인표 2505)
   planRelease: 0.2,
   // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈을 파고드는 값(combat.js THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 (레이피어 기본 0.3 · 사장님 10/21 '파고드는 값 0.6으로 해' · 확인표 2107)

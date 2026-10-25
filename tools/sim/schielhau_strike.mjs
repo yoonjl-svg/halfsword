@@ -7,7 +7,10 @@
 //   fights = 유파 대 롱소드 (school_passive_duel 과 같은 판 — 유파 무기 AI 대 롱소드 AI · 숙련 4 · 자리 둘 · 씨앗 1001… · 2001… · 30 s · 패시브 켬 · SEEDS 12 = 유파마다 24 판) —
 //            기술별 칼날 상처 심각도 합(셸하우는 두 자리 합 — 독일 유파 무기도 롱소드) · 판을 끝낸 상처(죽은 쪽이 마지막으로 받은 칼날 상처)의 기술 · 승 / 패 / 무 ·
 //            셸하우 공격마다 첫 몸 맞음과 그 스텝 손목(strike — 싸움 속 '맞는 순간 손목')
-//  사용법: node tools/sim/schielhau_strike.mjs duel|fights [--set=JOINTS.wristGuard=0,…] [--seeds=6] [--seed0=1] [--dur=40] [--foe=ai|still] [--schools=italian,japanese,german,chinese] [--json=파일]
+//   player = 사람 곁눈 베기 (10/25 18:0x '같은 길 입혀'): 0 번 자리 사람 몸을 손가락 봇이 긋는다(playerRun — 분노의 베기 길 = 강화동작 곁눈 베기) · 맞는 쪽 duel 과 같음(--foe=still 기본)
+//            --finger=zornhau|schiel|redraw · --spd=3,5.5(긋기 빠르기 패드 m/s) · --jit=0.04(점 흔들림 m)
+//   duel · fights · player 묶음에 rollT = 맞는 스텝 앞뒤(−8 ~ +8 스텝) 아래팔 굴림 ≥ 78 몫 · plan = 맞는 순간 길 덧칸
+//  사용법: node tools/sim/schielhau_strike.mjs duel|fights|player [--set=JOINTS.wristGuard=0,…] [--seeds=6] [--seed0=1] [--dur=40] [--foe=ai|still] [--schools=italian,japanese,german,chinese] [--json=파일]
 //          시험 길: --path='x,y;x,y;…'(from 부터) · --plan='들기,뻗기,돌리기;…'(점마다) · --reach= · --tech=zornhau(다른 기술만 — 견줌)
 //   견줌: 전(손목 교정 전) = --set=JOINTS.elbowSwivel=0,JOINTS.wristGuard=0,JOINTS.swivelThrust=0,UNIQUE_ASSIST.schielPath=0 · 옛 길(10/25 전 판) = --set=UNIQUE_ASSIST.schielPath=0 · 지금 = 인자 없음
 // ─────────────────────────────────────────────────────────────
@@ -15,9 +18,10 @@ import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
 import { applyWeaponMeasure } from './weapon_measures.mjs';
 import { wristSample, outOfRange, REV, FE_IN, OOR_EPS, OOR_X, ROLL_AT, ELBOW_UP_X } from './wrist_audit.mjs';
-import { strokeTechOf } from '../../src/unique_assist.js';
-import { TECH_BY_NAME } from '../../src/ai_techniques.js';
+import { strokeTechOf, PlayerUniqueAssist } from '../../src/unique_assist.js';
+import { TECH_BY_NAME, G as PAD } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
+import { MEASURED } from '../../src/weapon_measured.js';
 import { isMain } from './is_main.mjs';
 
 const p50 = (a) => {
@@ -25,6 +29,52 @@ const p50 = (a) => {
   const s = [...a].sort((x, y) => x - y);
   return s[Math.floor((s.length - 1) / 2)];
 };
+
+// 굴림 때 (10/25 18:0x 사장님 '맞는 순간 23 %(아래팔 엎침 끝 ≥ 78°)는 타격에 의한 일시적인 일그러짐인가?'): 맞는 스텝 앞 PRE 스텝 · 뒤 POST 스텝의 손목을 함께 적는다 (1 스텝 = 1/120 s)
+const PRE = 8;
+const POST = 8;
+export const ROLL_OFFS = [-8, -4, -2, -1, 0, 1, 2, 4, 8];
+/** 공격 기록 rec 에 이 스텝(G.step 뒤) 손목: 맞기 전이면 앞 고리(PRE) · 맞은 뒤면 post (맞은 스텝 자체는 hit.s — 같은 자세라 건너뜀) */
+function rollTrack(rec, f) {
+  const h = rec.hit;
+  if (!h) {
+    (rec.ring ??= []).push(wristSample(f));
+    if (rec.ring.length > PRE) rec.ring.shift();
+  } else if (!h.postStarted) h.postStarted = true;
+  else if (h.post.length < POST) h.post.push(wristSample(f));
+}
+/** 첫 맞음 기록에 앞 고리를 붙임 */
+const rollPre = (rec) => ({ pre: [...(rec.ring ?? [])], post: [], postStarted: false });
+/** 맞음 h 의 스텝 차 k 손목 (0 = 맞은 스텝) */
+function rollAt(h, k) {
+  if (k === 0) return h.s;
+  if (k < 0) return h.pre?.[h.pre.length + k] ?? null;
+  return h.post?.[k - 1] ?? null;
+}
+/** 굴림 때 묶음: 스텝 차마다 굴림 ≥ 78 몫(%) · 굴림 p50 · 맞는 순간 ≥ 78 인 맞음(end) 가운데 2 · 4 · 8 스텝 앞에도 ≥ 78 · 4 · 8 스텝 뒤에도 ≥ 78 (%) · 굴림 변화(0 − (−2) 스텝) p50 */
+export function rollTiming(H) {
+  const by = {};
+  for (const k of ROLL_OFFS) {
+    const S = H.map((h) => rollAt(h, k)).filter(Boolean);
+    by[k] = { n: S.length, r78: S.length ? +((100 * S.filter((s) => s.roll >= ROLL_AT).length) / S.length).toFixed(1) : null, roll: S.length ? +p50(S.map((s) => s.roll)).toFixed(0) : null };
+  }
+  const E = H.filter((h) => h.s && h.s.roll >= ROLL_AT);
+  const share = (k) => {
+    const S = E.map((h) => rollAt(h, k)).filter(Boolean);
+    return S.length ? +((100 * S.filter((s) => s.roll >= ROLL_AT).length) / S.length).toFixed(0) : null;
+  };
+  const jump = (L) => L.map((h) => (h.s && rollAt(h, -2) ? h.s.roll - rollAt(h, -2).roll : null)).filter((x) => x != null);
+  const dE = jump(E);
+  const dA = jump(H);
+  return { by, end: E.length, endPre2: share(-2), endPre4: share(-4), endPre8: share(-8), endPost4: share(4), endPost8: share(8), endJump2: dE.length ? +p50(dE).toFixed(1) : null, allJump2: dA.length ? +p50(dA).toFixed(1) : null };
+}
+/** 맞는 순간 길 덧칸 p50 [들기, 뻗기, 돌리기] (덧칸 있던 맞음 수 n) */
+function planP50(H) {
+  const P = H.map((h) => h.plan).filter(Boolean);
+  return P.length ? { n: P.length, tilt: p50(P.map((p) => p[0])), reach: p50(P.map((p) => p[1])), turn: p50(P.map((p) => p[2])) } : null;
+}
+/** 맞는 순간 길 덧칸 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °] (없으면 null) */
+const planOf = (f) => (f.techPlan ? [+((f.techPlan.tilt * 180) / Math.PI).toFixed(1), +f.techPlan.reach.toFixed(3), +((f.techPlan.turn * 180) / Math.PI).toFixed(1)] : null);
 
 function holdLow(f, xy) {
   f.handOffset.set(xy[0], xy[1]);
@@ -89,7 +139,7 @@ export function duelRun(seed, { dur = 40, low = LOW, foe = 'ai' } = {}) {
     cur.sevAll += r.type === 'blunt' ? 0 : r.severity ?? 0;
     if (cur.hit) return;
     const s = wristSample(A);
-    cur.hit = { type: r.type, zone: r.zone, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), tip: cur.tip, s, fix: A.wristFixDeg ?? 0 };
+    cur.hit = { type: r.type, zone: r.zone, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), tip: cur.tip, s, fix: A.wristFixDeg ?? 0, plan: planOf(A), ...rollPre(cur) };
   };
   try {
     while (G.t < dur && D.alive && A.alive) {
@@ -101,9 +151,131 @@ export function duelRun(seed, { dur = 40, low = LOW, foe = 'ai' } = {}) {
         rows.push(cur);
       }
       if (cur && striking) cur.tip = Math.max(cur.tip, A.tipVel.length());
+      if (cur) rollTrack(cur, A);
       lastPhase = ai.mode === 'attack' ? ai.phase : null;
     }
     return { rows, dead: !D.alive, t: G.t };
+  } finally {
+    G.world.free();
+  }
+}
+
+// ── 사람 곁눈 베기 (10/25 18:0x 사장님 '같은 길 입혀' — 손가락 봇) ──
+//  손가락 길(사람이 긋는 꼴): zornhau = 분노의 베기 기본 동작 길(곁눈 베기 강화동작을 여는 긋기 — 오른 지붕 → 왼 아래 끝까지) · schiel = 옛 곁눈 베기 길 · redraw = 다시 그린 길
+const FINGER = (() => {
+  const z = TECH_BY_NAME.zornhau;
+  const u = TRADITIONS.german.unique.find((x) => x.name === 'schielhau');
+  return { zornhau: { from: z.from, path: z.path }, schiel: { from: u.from, path: u.path }, redraw: { from: u.from, path: u.redraw?.path ?? u.path } };
+})();
+/**
+ * 사람 한 판: 0 번 자리(G.player — 사람 몸 · 고유 공격 강화 PlayerUniqueAssist 곁눈 베기 칸만 · main.js 와 같은 보정 · 자세 돌아가기)를 손가락 봇이 긋는다.
+ *  긋기 = 시작 자리로 1.6 패드 m/s(손 뗌) → 4 프레임 멈춤 → 손가락 길 점마다 빠르기 spd(긋기마다 고르게 뽑음) · 점마다 ± jit 흔들림(손 댐) → 6 프레임 멈춤 (kote_drop_duel 손가락 봇과 같은 프레임 꼴 — 프레임 = 2 스텝)
+ *  걸음: 내 무기 간격(weapon_measured 롱소드 맞닿기 · 칼끝 거리) 띠 — 긋는 동안 맞닿기 밖이면 앞으로 · 맞닿기 + 0.1 안이면 뒤로 · 칼끝 거리 + 0.25 밖이면 앞으로
+ *  칠 때: 칼끝 거리 + 0.3 안 · 1.0 ~ 1.6 s 마다. 맞는 쪽 = 1 번 자리(duelRun 과 같은 몸 — foe 'still' 서 있음 · 'ai' 칼을 아래에 둔 채 걷는 AI)
+ *  공격 = 곁눈 베기 강화가 열린 긋기(uniq.r — 손가락 긋기 가운데 곁눈 베기로 읽힌 것) · 첫 몸 맞음 · 그 스텝 손목 · 앞뒤 굴림 (duelRun 과 같은 기록 — duelSummary 로 묶음)
+ */
+export function playerRun(seed, { dur = 40, foe = 'still', finger = 'zornhau', spd = [3, 5.5], jit = 0.04, low = LOW } = {}) {
+  const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2: 'longsword', AIClass: foe === 'ai' ? LowFoe : AI, persona: { proficiency: 4 } });
+  const P = G.player;
+  const D = G.enemy;
+  if (foe !== 'ai') G.ai.update = () => {};
+  P.skill.corr = CONFIG.SKILL.corr;
+  P.skill.corrTip = CONFIG.SKILL.corrTip;
+  P.skill.autoGuard = true;
+  const uq = new PlayerUniqueAssist(P, { names: new Set(['schielhau']) });
+  const FR = FINGER[finger];
+  if (!FR) throw new Error(`손가락 길 ${finger}?`);
+  let rs = (seed * 7919 + 17) >>> 0;
+  const rnd = () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296;
+  const [CONTACT, REACH] = MEASURED.longsword;
+  const FRAME = 2 * DT;
+  let queue = [];
+  let fx = P.handOffset.x;
+  let fy = P.handOffset.y;
+  let nextAtk = 1.5;
+  let stepN = 0;
+  let drawn = 0;
+  const to = (p, vel, held) => {
+    const fr = [];
+    let x = fx;
+    let y = fy;
+    for (let k = 0; k < 400; k++) {
+      const dx = p[0] - x;
+      const dy = p[1] - y;
+      const d = Math.hypot(dx, dy);
+      if (d < 1e-6) break;
+      const st = Math.min(d, vel * FRAME);
+      x += (dx / d) * st;
+      y += (dy / d) * st;
+      fr.push([(dx / d) * st, (dy / d) * st, held]);
+    }
+    fx = x;
+    fy = y;
+    return fr;
+  };
+  const stroke = () => {
+    const v = spd[0] + rnd() * (spd[1] - spd[0]);
+    const j = () => (rnd() * 2 - 1) * jit;
+    const fr = to(FR.from, 1.6, false);
+    fr.push(...Array(4).fill([0, 0, false]));
+    for (const p of FR.path) fr.push(...to([p[0] + j(), p[1] + j()], v, true));
+    fr.push(...Array(6).fill([0, 0, false]));
+    return fr;
+  };
+  G.before = () => {
+    const t = G.t;
+    const dist = P.foeDistance();
+    if (!queue.length && t >= nextAtk && dist < REACH + 0.3 && P.alive && P.armed && !P.stamina.exhausted) {
+      queue = stroke();
+      drawn++;
+      nextAtk = t + 1.0 + rnd() * 0.6;
+    }
+    if ((stepN++ & 1) === 0) {
+      const f = queue.shift() ?? [0, 0, false];
+      const u = P.skill.uniq;
+      u?.feed(f[0], f[1], FRAME, false);
+      if (!(u ? (u.holdsHand ?? u.running) : false)) {
+        P.handOffset.x += f[0];
+        P.handOffset.y += f[1];
+      }
+      P.handHeld = f[2];
+      if (Math.abs(f[0]) + Math.abs(f[1]) > 1e-5) P.inputActive = true;
+      if (!queue.length) {
+        fx = P.handOffset.x;
+        fy = P.handOffset.y;
+      }
+    }
+    const fwd = P.stamina.exhausted || !P.alive ? 0 : queue.length && dist > CONTACT ? 0.6 : dist < CONTACT + 0.1 ? -0.55 : dist > REACH + 0.25 ? 0.45 : 0;
+    P.move.set(0, fwd);
+    P.stickX = 0;
+    P.stickY = fwd;
+  };
+  const rows = [];
+  let cur = null;
+  let wasR = false;
+  const pw = G.combat.hooks.onWound;
+  G.combat.hooks.onWound = (att, vic, r, ...rest) => {
+    pw?.(att, vic, r, ...rest);
+    if (att !== P || vic !== D || !cur) return;
+    if (strokeTechOf(P) !== 'schielhau') return;
+    cur.sevAll += r.type === 'blunt' ? 0 : r.severity ?? 0;
+    if (cur.hit) return;
+    cur.hit = { type: r.type, zone: r.zone, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), tip: cur.tip, s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: planOf(P), ...rollPre(cur) };
+  };
+  try {
+    while (G.t < dur && D.alive && P.alive) {
+      if (foe !== 'ai') holdLow(D, low);
+      G.step();
+      const isR = uq.r?.e.name === 'schielhau' && uq.r.part === 1;
+      if (isR && !wasR) {
+        cur = { t0: G.t, tip: 0, hit: null, sevAll: 0 };
+        rows.push(cur);
+      }
+      wasR = isR;
+      if (cur && strokeTechOf(P) === 'schielhau') cur.tip = Math.max(cur.tip, P.tipVel.length());
+      if (cur) rollTrack(cur, P);
+    }
+    return { rows, dead: !D.alive, t: G.t, drawn, fired: uq.stats.fired.schielhau ?? 0, power: uq.stats.power };
   } finally {
     G.world.free();
   }
@@ -155,6 +327,8 @@ export function duelSummary(runs) {
     ...arm,
     zones,
     dead: runs.filter((r) => r.dead).length,
+    plan: planP50(H),
+    rollT: rollTiming(H),
   };
 }
 
@@ -182,7 +356,7 @@ export function fightRun(school, seed, side, { dur = 30, prof = 4 } = {}) {
   G.combat.hooks.onWound = (att, vic, r, ...rest) => {
     pw?.(att, vic, r, ...rest);
     const cs = curS.get(att);
-    if (cs && !cs.hit && strokeTechOf(att) === 'schielhau') cs.hit = { type: r.type, zone: r.zone, sev: r.type === 'blunt' ? 0 : r.severity ?? 0, s: wristSample(att), fix: att.wristFixDeg ?? 0, t: +(G.t - cs.t0).toFixed(3), touch: !!att.feel?.touching };
+    if (cs && !cs.hit && strokeTechOf(att) === 'schielhau') cs.hit = { type: r.type, zone: r.zone, sev: r.type === 'blunt' ? 0 : r.severity ?? 0, s: wristSample(att), fix: att.wristFixDeg ?? 0, t: +(G.t - cs.t0).toFixed(3), touch: !!att.feel?.touching, plan: planOf(att), ...rollPre(cs) };
     if (r.type === 'blunt' || !(r.severity > 0)) return;
     const tn = strokeTechOf(att) ?? (att.skill?.tap ? 'tap' : '-');
     const key = `${att === O ? 'L' : 'S'}:${tn}`;
@@ -190,6 +364,7 @@ export function fightRun(school, seed, side, { dur = 30, prof = 4 } = {}) {
     last.set(vic, key);
   };
   let end = null;
+  const trk = new Map(); // 싸움꾼 → 굴림 때를 적는 셸하우 공격 기록 (맞기 전 고리 · 맞은 뒤 POST 스텝)
   try {
     const lastPh = new Map();
     for (let i = 0; i < Math.round(dur / DT); i++) {
@@ -200,8 +375,16 @@ export function fightRun(school, seed, side, { dur = 30, prof = 4 } = {}) {
           const cs = { side: a.me === O ? 'L' : 'S', hit: null, t0: G.t, gap0: +a.me.foeDistance().toFixed(2) };
           strikes.push(cs);
           curS.set(a.me, cs);
+          trk.set(a.me, cs);
         } else if (!(a.mode === 'attack' && a.tech?.name === 'schielhau')) curS.delete(a.me);
         lastPh.set(a, ph);
+      }
+      for (const [f, rec] of trk) {
+        if (!rec.hit && curS.get(f) !== rec) trk.delete(f);
+        else {
+          rollTrack(rec, f);
+          if (rec.hit && rec.hit.post.length >= POST) trk.delete(f);
+        }
       }
       if (!T.alive || !O.alive) {
         end = +G.t.toFixed(1);
@@ -244,6 +427,8 @@ export function fightSummary(out) {
     ...contactStats(S),
     fix: +(p50(H.map((h) => Math.abs(h.fix))) ?? 0).toFixed(1),
     fixN: H.filter((h) => Math.abs(h.fix) > 0.5).length,
+    plan: planP50(H),
+    rollT: rollTiming(H),
   };
   return { n: out.length, schielBoth: +((tech['L:schielhau'] ?? 0) + (tech['S:schielhau'] ?? 0)).toFixed(1), schielKillsBoth: (kills['L:schielhau'] ?? 0) + (kills['S:schielhau'] ?? 0), strike, schiel: +(tech['L:schielhau'] ?? 0).toFixed(1), schielKills: kills['L:schielhau'] ?? 0, draws: Object.values(wld).reduce((a, w) => a + w[2], 0), wld, tech: Object.fromEntries(Object.entries(tech).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, +v.toFixed(1)])), kills };
 }
@@ -280,6 +465,19 @@ if (isMain(import.meta.url)) {
     res = duelSummary(runs);
     console.log(`셸하우 duel${args.set ? ` · set ${args.set}` : ''}${args.path ? ` · 길 ${args.path}` : ''}${args.plan ? ` · 덧칸 ${args.plan}` : ''}: ${JSON.stringify(res)}`);
     if (args.rows) for (const r of runs.flatMap((x) => x.rows)) console.log(JSON.stringify({ t0: +r.t0.toFixed(2), tip: +r.tip.toFixed(1), ...(r.hit ? { type: r.hit.type, zone: r.hit.zone, sev: +r.hit.sev.toFixed(3), E: +r.hit.energy.toFixed(0), dev: r.hit.s ? +r.hit.s.dev.toFixed(0) : null, fe: r.hit.s ? +r.hit.s.fe.toFixed(0) : null, roll: r.hit.s ? +r.hit.s.roll.toFixed(0) : null, fix: +r.hit.fix.toFixed(1) } : { miss: 1 }) }));
+  } else if (mode === 'player') {
+    if (PATCH) {
+      // 시험 길 · 덧칸: 사람 곁눈 베기가 읽는 자리(unique_assist.js uniqueDef — 다시 그린 길을 쓰는 판이면 redraw 칸)를 덮는다
+      const u = TRADITIONS.german.unique.find((x) => x.name === 'schielhau');
+      Object.assign(CONFIG.UNIQUE_ASSIST.schielPath && CONFIG.UNIQUE_ASSIST.schielPlayer && u.redraw ? u.redraw : u, PATCH);
+    }
+    const seeds = +(args.seeds ?? 6);
+    const S0 = +(args.seed0 ?? 1);
+    const spd = args.spd ? String(args.spd).split(',').map(Number) : [3, 5.5];
+    const runs = [];
+    for (let s = S0; s < S0 + seeds; s++) runs.push(playerRun(s, { dur: +(args.dur ?? 40), foe: args.foe ?? 'still', finger: args.finger ?? 'zornhau', spd, jit: args.jit != null ? +args.jit : 0.04 }));
+    res = { ...duelSummary(runs), drawn: runs.reduce((a, r) => a + r.drawn, 0), fired: runs.reduce((a, r) => a + r.fired, 0), power: runs.reduce((a, r) => a + r.power, 0) };
+    console.log(`사람 곁눈 베기 (손가락 ${args.finger ?? 'zornhau'} · 상대 ${args.foe ?? 'still'})${args.set ? ` · set ${args.set}` : ''}${args.plan ? ` · 덧칸 ${args.plan}` : ''}: ${JSON.stringify(res)}`);
   } else if (mode === 'fights') {
     if (PATCH) {
       // 시험 길 (AI 꾸러미를 만들기 전에): 다시 그린 길을 쓰는 판(UNIQUE_ASSIST.schielPath 1)이면 redraw 칸을 · 아니면 원래 칸을 덮는다 (sword_art.js applySchoolArt 가 읽는 자리)
