@@ -7,6 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
 import { coverDist, RisolutoWatch, lungeGap, lungeGapOk } from '../../src/italian_risoluto.js';
+import { MEASURED, risolutoContact } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 THRUST.itMeasure (old 기본 · contact · full — IT_MEASURE=…)
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -384,9 +385,11 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
     } finally { g.world.free(); }
   };
   // 최소 간격 = 무기 실측 맞닿기 거리 measure.contact (13:4x 대안 ③ '맞닿는 거리만 막기' — 13:2x 첫 식 clinch + 앞발은 버림) — 새 수 없음
-  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) at(w, 2.5, (p) => assert.equal(lungeGap(p), p.swordArt.measure.contact, w));
-  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.54) < 0.01, `레이피어 ${lungeGap(p)}`));
-  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.39) < 0.01, `달타냥 ${lungeGap(p)}`));
+  // 'contact' 판(맞닿음만 찌르기 잣대 값)은 리솔루토만 지금 맞닿음 그대로(risolutoContact) · 'full' 판은 새 맞닿음 1.72 · 1.64 를 따름
+  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) at(w, 2.5, (p) => assert.equal(lungeGap(p), risolutoContact(w) ?? p.swordArt.measure.contact, w));
+  const C = CONFIG.THRUST.itMeasure === 'full' ? { rapier: 1.72, dartagnan: 1.64 } : { rapier: 1.54, dartagnan: 1.39 };
+  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.rapier) < 0.01, `레이피어 ${lungeGap(p)}`));
+  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.dartagnan) < 0.01, `달타냥 ${lungeGap(p)}`));
   // 가까움(1.3 m — 맞닿기 1.54 안): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
   at('rapier', 1.3, (p, ps) => {
     assert.equal(lungeGapOk(p), false);
@@ -500,7 +503,8 @@ test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿�
 // 10/24 14:0x 런지 자세 (사장님 '런지할 때 런지 자세가 되려면 앞무릎을 굽히면서 자세 낮춰야 하는데 지금 그렇게 보여?'): 앞무릎 굽힘 · 뒷다리 펴짐 · 골반 낮춤 — 무릎 굽힘 = 넓적다리(엉덩이 → 무릎)와 정강이(무릎 → 발목) 사이 각
 function lungePose(cfg) {
   return withCfg(cfg, () => {
-    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 2.2, seed: 9 });
+    // 가슴 사이 2.2 m = 맞닿기 1.54 + 0.66(몸 미끄러짐이 한도 0.6 를 다 나가는 거리) — 'full' 판(맞닿기 1.72)은 같은 자리로 맞닿기 + 0.66
+    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: CONFIG.THRUST.itMeasure === 'full' ? MEASURED.rapier[0] + 0.66 : 2.2, seed: 9 });
     const p = g.player, e = g.enemy;
     g.ai.update = () => {}; p.foe = e; e.foe = p;
     const V = (t) => new THREE.Vector3(t.x, t.y, t.z);
