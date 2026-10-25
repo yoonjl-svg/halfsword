@@ -17,7 +17,7 @@ import { classifyStroke } from './attack_stroke.js';
 //   · 끝 힘 — 긋기 뒷몫(손 목표가 그 몫 길이의 powerAt 넘게 간 뒤)에 팔 서보 힘을 조금 올린다(비기 힘 창 SECRET.power 와 같은 칸 f.powerMul)
 //   · 날 세우기 — 손 목표가 손가락 그대로라 플레이어 날 세우기(fighter.js inputEdgeLead)가 읽는 손 목표는 실제 칼 움직임과 같다. 덧씌운 몸 돌림 몫만 날이 늦게 따라가서
 //          그 빠르기(uniqBody.yawRate)를 날 세우기 앞당김에 더했다(10/14 탐침 — 문서)
-//   · 길 덧칸 (10/25 18:0x 사장님 '같은 길 입혀' — 지금은 곁눈 베기만 · config UNIQUE_ASSIST.schielPlayer): AI 다시 그린 길과 같은 칼끝 들기 · 손 뻗기 · 손 돌리기를
+//   · 길 덧칸 (10/25 18:0x 사장님 '같은 길 입혀' — 지금은 곁눈 베기만 · config UNIQUE_ASSIST.schielPlayer): AI 다시 그린 길과 같은 칼끝 들기 · 손 뻗기 · 손 돌리기(사장님 10/25 20:2x '칼끝 들기 빼지 마' · schielPlayerTip 0 은 시험용)를
 //          손가락이 그 길 위 어디쯤인지로 섞어 얹는다(planStep → fighter.techPlan → fighter.js driveSword). 손 목표는 그대로 손가락 — 덧칸이 손 목표를 몸 앞으로 미는 몫은 driveSword 안
 //  잇는 동작(chain 칸 — 머리 위 돌려 베기·겹치기 · 10/21 통폐합 전엔 코코 연타·위아래 사슬·번갈아 올려베기도)은 플레이어가 박자 창(chainWait) 안에 실제로 이어 그을 때만 그 긋기에 뒷몫 강화를 얹는다.
 //   자동으로 두 번째 칼을 내지 않는다. 앞 긋기 조건으로 여는 것(츠바메가에시·카바치오네·염시·자→격)은 그 긋기 자체가 이어 그은 것이다.
@@ -528,6 +528,7 @@ export class PlayerUniqueAssist {
    * ④ 길 덧칸 (사장님 10/25 18:0x '같은 길 입혀' — 지금은 곁눈 베기만 · uniqueDef plan · config UNIQUE_ASSIST.schielPlayer): AI(ai.js techPlanStep)와 같은 덧칸을 사람 강화동작에도.
    *  손 목표는 손가락 그대로 — 손 목표를 다시 그린 길(U.pts)에 비춘 자리(길 처음부터 잰 길이 · 뒤로 가지 않음)로 지금 토막 두 점의 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °]를 섞어
    *  f.techPlan { tilt rad, reach m, turn rad } 에 둔다(fighter.js driveSword — 손 목표 앞으로 · 칼 겨눔 높이각 · 날 세우기 칼 면). 길 끝을 지나면 끝 점 값 · 크기 × min(1, enhance).
+   *  칼끝 들기는 UNIQUE_ASSIST.schielPlayerTip 일 때만(기본 1 — 사장님 10/25 20:2x 결정 · 0 = 시험용 · wrist_audit §15-6).
    *  강화가 끝나면(쉼 · 꺾음 · 다른 동작에 내줌) 그때 값을 UNIQUE_ASSIST.planRelease 초에 걸쳐 0 으로. 덧칸 없는 동작 · 스위치 끔이면 아무것도 안 함(techPlan 그대로 null)
    */
   planStep(dt) {
@@ -561,7 +562,8 @@ export class PlayerUniqueAssist {
       const b = P[i + 1];
       const k = Math.min(1, UA.enhance);
       const mix = (j) => ((a[j] ?? 0) + ((b[j] ?? 0) - (a[j] ?? 0)) * u) * k;
-      f.techPlan = { tilt: mix(0) * D2R, reach: mix(1), turn: mix(2) * D2R };
+      // 칼끝 들기는 UNIQUE_ASSIST.schielPlayerTip 일 때만 (기본 1 — 사장님 10/25 20:2x '칼끝 들기 빼지 마' · 0 = 시험용: 길 끝을 지나 계속 긋는 손가락에서 칼끝을 채찍처럼 떨구는 몫을 뺌)
+      f.techPlan = { tilt: UA.schielPlayerTip ? mix(0) * D2R : 0, reach: mix(1), turn: mix(2) * D2R };
       this.planFade = null;
     } else if (f.techPlan) {
       // 놓음 (ai.js techPlanStep 과 같음): 손 목표가 한 스텝에 손 뻗기만큼 튀지 않게 그때 값을 planRelease 초에 걸쳐 0 으로

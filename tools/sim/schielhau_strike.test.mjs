@@ -3,6 +3,7 @@
 //   사람 쪽(10/25 18:0x 사장님 '같은 길 입혀' — UNIQUE_ASSIST.schielPlayer 1(기본)): 강화동작 곁눈 베기의 잣대 길(uniqueDef)이 다시 그린 길 · 같은 덧칸(PlayerUniqueAssist.planStep —
 //    손가락이 그 길 위 어디쯤인지로 섞음) · 0 = 옛 길 잣대 · 덧칸 없음(18:0x 전 판). 덧칸 없는 기술은 techPlan 이 늘 null.
 //   사람 곁눈 베기 세기 손잡이 UNIQUE_ASSIST.schielPlayerK (18:5x '50% 세기' 조건부 — 기본 1): 같은 길인 사람 곁눈 베기의 칼날 상처 심각도만 × k — 물리 · 손목 그대로 · AI 그대로.
+//   사람 칼끝 들기 UNIQUE_ASSIST.schielPlayerTip (사장님 10/25 20:2x 결정 — 기본 1 = AI 와 같은 셋): 0 = 시험용 — 사람 덧칸은 손 뻗기 · 손 돌리기만.
 //  node --test tools/sim/schielhau_strike.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -35,7 +36,8 @@ const schielOf = (ai) => ai.school.tech.find((t) => t.name === 'schielhau');
 test('값 · 자료 꼴 (기본 켬 · 놓는 시간 0.2 s — 시간 사다리 · 덧칸은 [from, ...path] 점마다 셋 · from 은 0)', () => {
   assert.equal(UA.schielPath, 1);
   assert.equal(UA.schielPlayer, 1);
-  assert.equal(UA.schielPlayerK, 1); // 사장님 10/25 18:5x '50% 세기' 조건부 — 고른 견줌이 × 1.4 라 기본은 걸지 않음(1) · 손잡이만 (wrist_audit §15)
+  assert.equal(UA.schielPlayerK, 1); // 사장님 10/25 20:2x 결정 — 세기 100 % (0.5 는 시험용 · wrist_audit §15)
+  assert.equal(UA.schielPlayerTip, 1); // 사장님 10/25 20:2x '칼끝 들기 빼지 말란 얘기야' — 같은 길 그대로(덧칸 셋) · 0 은 시험용
   assert.equal(UA.planRelease, 0.2);
   const u = TRADITIONS.german.unique.find((x) => x.name === 'schielhau');
   assert.ok(u.redraw?.path?.length && u.redraw.plan?.length);
@@ -87,8 +89,17 @@ test('사람 덧칸 셈: 손 목표를 다시 그린 길에 비춘 자리로 섞
     P.handOffset.set((U.pts[0][0] + U.pts[1][0]) / 2, (U.pts[0][1] + U.pts[1][1]) / 2);
     uq.planStep(DT);
     assert.ok(Math.abs(P.techPlan.reach - (L[0][1] + L[1][1]) / 2) < 1e-9);
-    assert.ok(Math.abs(P.techPlan.tilt - ((L[0][0] + L[1][0]) / 2) * HD) < 1e-9);
+    assert.ok(Math.abs(P.techPlan.tilt - ((L[0][0] + L[1][0]) / 2) * HD) < 1e-9); // 기본: AI 와 같은 덧칸 셋
     assert.ok(Math.abs(P.techPlan.turn - ((L[0][2] + L[1][2]) / 2) * HD) < 1e-9);
+    const tip0 = UA.schielPlayerTip;
+    UA.schielPlayerTip = 0; // 세 갈래 3: 사람은 칼끝 들기 없음
+    try {
+      uq.planStep(DT);
+      assert.equal(P.techPlan.tilt, 0);
+      assert.ok(Math.abs(P.techPlan.reach - (L[0][1] + L[1][1]) / 2) < 1e-9);
+    } finally {
+      UA.schielPlayerTip = tip0;
+    }
     // 길 끝 너머(손가락은 분노의 베기처럼 더 긋는다) = 끝 점 값 · 손이 되돌아가도 그대로
     const z = U.pts[U.pts.length - 1];
     P.handOffset.set(z[0] - 0.3, z[1] - 0.3);
@@ -177,15 +188,28 @@ test('맞는 순간 손목 · 세기 (서 있는 상대 · 셸하우만 · 씨�
   assert.ok(neu.perAtk >= 3 * old.perAtk, `공격당 심각도 새 ${neu.perAtk} · 옛 ${old.perAtk}`);
 });
 
-test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 · 서 있는 상대 · 씨앗 다섯 — 같은 길은 상대가 일찍 쓰러져 맞음이 적다): 같은 길 = 손목 범위 밖 ≤ 15 % · 거꾸로 ≤ 5 % · 공격당 심각도가 18:0x 전 판보다 큼 / 전 판은 범위 밖 ≥ 25 %', () => {
-  const run = (v) => withPlayer(v, () => duelSummary([1, 2, 3, 4, 5].map((s) => playerRun(s, { foe: 'still', dur: 30 }))));
-  const neu = run(1);
-  const old = run(0);
-  assert.ok(neu.contacts >= 15 && old.contacts >= 15, `맞음 ${neu.contacts} · ${old.contacts}`);
-  assert.ok(neu.oor <= 0.15 * neu.contacts, `같은 길 범위 밖 ${neu.oor} / ${neu.contacts}`);
-  assert.ok(neu.rev <= 0.05 * neu.contacts, `같은 길 거꾸로 ${neu.rev} / ${neu.contacts}`);
+test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 · 고른 견줌 — 상대 상처 끔 · 씨앗 여섯 × 앞 다섯 칼): 같은 길(기본 · 덧칸 셋)과 3(칼끝 들기 없음) 모두 손목 범위 밖 ≤ 15 % · 거꾸로 ≤ 5 % · 3 은 공격당 심각도가 18:0x 전 판의 ± 25 % 안 · 같은 길은 더 셈 / 전 판은 범위 밖 ≥ 25 %', () => {
+  const fair = () => duelSummary([1, 2, 3, 4, 5, 6].map((s) => playerRun(s, { foe: 'still', dur: 14, immortal: true })).map((r) => ({ ...r, rows: r.rows.slice(0, 5) })));
+  const withTip = (v, fn) => {
+    const old = UA.schielPlayerTip;
+    UA.schielPlayerTip = v;
+    try {
+      return fn();
+    } finally {
+      UA.schielPlayerTip = old;
+    }
+  };
+  const full = fair();
+  const opt3 = withTip(0, fair);
+  const old = withPlayer(0, fair);
+  assert.ok(full.contacts >= 15 && opt3.contacts >= 15 && old.contacts >= 15, `맞음 ${full.contacts} · ${opt3.contacts} · ${old.contacts}`);
+  for (const [nm, d] of [['같은 길', full], ['3', opt3]]) {
+    assert.ok(d.oor <= 0.15 * d.contacts, `${nm} 범위 밖 ${d.oor} / ${d.contacts}`);
+    assert.ok(d.rev <= 0.05 * d.contacts, `${nm} 거꾸로 ${d.rev} / ${d.contacts}`);
+  }
   assert.ok(old.oor >= 0.25 * old.contacts, `전 판 범위 밖 ${old.oor} / ${old.contacts} (옛 꼴이 보여야 시험이 산다)`);
-  assert.ok(neu.perAtk > old.perAtk, `공격당 심각도 같은 길 ${neu.perAtk} · 전 판 ${old.perAtk}`);
+  assert.ok(Math.abs(opt3.perAtk / old.perAtk - 1) <= 0.25, `3 공격당 심각도 ${opt3.perAtk} · 전 판 ${old.perAtk} (손목 고침으로 세지지도 약해지지도 않게)`);
+  assert.ok(full.perAtk > opt3.perAtk, `같은 길 ${full.perAtk} · 3 ${opt3.perAtk} (칼끝 들기가 세기 몫)`);
 });
 
 test('사람 곁눈 베기 세기 손잡이 (schielPlayerK — 18:5x 50 % 조건부): 0.5 면 첫 맞음 심각도만 × k · 맞는 빠르기 · 에너지 · 손목 그대로 · AI 곁눈 베기 그대로 · schielPlayer 0 이면 안 걸림', () => {

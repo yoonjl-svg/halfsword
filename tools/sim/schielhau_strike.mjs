@@ -9,7 +9,8 @@
 //            셸하우 공격마다 첫 몸 맞음과 그 스텝 손목(strike — 싸움 속 '맞는 순간 손목')
 //   player = 사람 곁눈 베기 (10/25 18:0x '같은 길 입혀'): 0 번 자리 사람 몸을 손가락 봇이 긋는다(playerRun — 분노의 베기 길 = 강화동작 곁눈 베기) · 맞는 쪽 duel 과 같음(--foe=still 기본)
 //            --finger=zornhau|schiel|redraw · --spd=3,5.5(긋기 빠르기 패드 m/s) · --jit=0.04(점 흔들림 m) · --sjit=(시작 자리 흔들림 m) · --foeW=(맞는 쪽 무기)
-//            --immortal = 맞는 쪽 상처 끔(duel · player — 판정은 재고 몸에 안 검: 공격마다 같은 몸이라 세기 견줌이 고름)
+//            --immortal = 맞는 쪽 상처 끔(duel · player — 판정은 재고 몸에 안 검: 공격마다 같은 몸이라 세기 견줌이 고름) · --first=N 씨앗마다 앞 N 칼만(지치기 전)
+//            고른 견줌(10/25 18:5x — §15): --immortal --dur=14 --first=5 --seeds=18
 //   fight  = 사람 싸움 (playerFight — 손가락 봇 대 치고 막는 AI · --opps · --fseeds · --delays · --prof · --share)
 //   duel · fights · player 묶음에 rollT = 맞는 스텝 앞뒤(−8 ~ +8 스텝) 아래팔 굴림 ≥ 78 몫 · plan = 맞는 순간 길 덧칸
 //  사용법: node tools/sim/schielhau_strike.mjs duel|fights|player [--set=JOINTS.wristGuard=0,…] [--seeds=6] [--seed0=1] [--dur=40] [--foe=ai|still] [--schools=italian,japanese,german,chinese] [--json=파일]
@@ -175,11 +176,12 @@ export function duelRun(seed, { dur = 40, low = LOW, foe = 'ai', immortal = fals
 }
 
 // ── 사람 곁눈 베기 (10/25 18:0x 사장님 '같은 길 입혀' — 손가락 봇) ──
-//  손가락 길(사람이 긋는 꼴): zornhau = 분노의 베기 기본 동작 길(곁눈 베기 강화동작을 여는 긋기 — 오른 지붕 → 왼 아래 끝까지) · schiel = 옛 곁눈 베기 길 · redraw = 다시 그린 길
+//  손가락 길(사람이 긋는 꼴): zornhau = 분노의 베기 기본 동작 길(곁눈 베기 강화동작을 여는 긋기 — 오른 지붕 → 왼 아래 끝까지) · zornhauL = 왼 분노의 베기(거울 — 곁눈 베기를 안 엶) · schiel = 옛 곁눈 베기 길 · redraw = 다시 그린 길
 const FINGER = (() => {
   const z = TECH_BY_NAME.zornhau;
   const u = TRADITIONS.german.unique.find((x) => x.name === 'schielhau');
-  return { zornhau: { from: z.from, path: z.path }, schiel: { from: u.from, path: u.path }, redraw: { from: u.from, path: u.redraw?.path ?? u.path } };
+  const zl = TECH_BY_NAME.zornhauL;
+  return { zornhau: { from: z.from, path: z.path }, zornhauL: { from: zl.from, path: zl.path }, schiel: { from: u.from, path: u.path }, redraw: { from: u.from, path: u.redraw?.path ?? u.path } };
 })();
 /**
  * 사람 한 판: 0 번 자리(G.player — 사람 몸 · 고유 공격 강화 PlayerUniqueAssist 곁눈 베기 칸만 · main.js 와 같은 보정 · 자세 돌아가기)를 손가락 봇이 긋는다.
@@ -632,7 +634,8 @@ if (isMain(import.meta.url)) {
     const seeds = +(args.seeds ?? 6);
     const runs = [];
     for (let s = 1; s <= seeds; s++) runs.push(duelRun(s, { dur: +(args.dur ?? 40), foe: args.foe ?? 'ai', immortal: !!args.immortal }));
-    res = duelSummary(runs);
+    const first = args.first ? +args.first : 0; // 씨앗마다 앞 N 칼만 (지치기 전 · 고른 견줌 — --immortal 과 같이)
+    res = duelSummary(first ? runs.map((r) => ({ ...r, rows: r.rows.slice(0, first) })) : runs);
     console.log(`셸하우 duel${args.set ? ` · set ${args.set}` : ''}${args.path ? ` · 길 ${args.path}` : ''}${args.plan ? ` · 덧칸 ${args.plan}` : ''}: ${JSON.stringify(res)}`);
     if (args.rows) for (const r of runs.flatMap((x) => x.rows)) console.log(JSON.stringify({ t0: +r.t0.toFixed(2), tip: +r.tip.toFixed(1), ...(r.hit ? { type: r.hit.type, zone: r.hit.zone, sev: +r.hit.sev.toFixed(3), E: +r.hit.energy.toFixed(0), dev: r.hit.s ? +r.hit.s.dev.toFixed(0) : null, fe: r.hit.s ? +r.hit.s.fe.toFixed(0) : null, roll: r.hit.s ? +r.hit.s.roll.toFixed(0) : null, fix: +r.hit.fix.toFixed(1) } : { miss: 1 }) }));
   } else if (mode === 'player') {
@@ -646,7 +649,8 @@ if (isMain(import.meta.url)) {
     const spd = args.spd ? String(args.spd).split(',').map(Number) : [3, 5.5];
     const runs = [];
     for (let s = S0; s < S0 + seeds; s++) runs.push(playerRun(s, { dur: +(args.dur ?? 40), foe: args.foe ?? 'still', finger: args.finger ?? 'zornhau', spd, jit: args.jit != null ? +args.jit : 0.04, sjit: +(args.sjit ?? 0), foeW: args.foeW ?? 'longsword', immortal: !!args.immortal }));
-    res = { ...duelSummary(runs), drawn: runs.reduce((a, r) => a + r.drawn, 0), fired: runs.reduce((a, r) => a + r.fired, 0), power: runs.reduce((a, r) => a + r.power, 0) };
+    const first = args.first ? +args.first : 0;
+    res = { ...duelSummary(first ? runs.map((r) => ({ ...r, rows: r.rows.slice(0, first) })) : runs), drawn: runs.reduce((a, r) => a + r.drawn, 0), fired: runs.reduce((a, r) => a + r.fired, 0), power: runs.reduce((a, r) => a + r.power, 0) };
     console.log(`사람 곁눈 베기 (손가락 ${args.finger ?? 'zornhau'} · 상대 ${args.foe ?? 'still'})${args.set ? ` · set ${args.set}` : ''}${args.plan ? ` · 덧칸 ${args.plan}` : ''}: ${JSON.stringify(res)}`);
   } else if (mode === 'fight') {
     if (PATCH) {

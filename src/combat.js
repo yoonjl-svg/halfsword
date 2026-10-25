@@ -385,7 +385,7 @@ export class Combat {
     // 무기 비검 (10/21 — weapons.js secretBlade, 모노호시자오: 츠바메가에시 되돌려 올려 벤 칼 피해 × k): 그 기술을 긋는 중이고 칼이 위로 움직일 때만
     const SB = att.weapon?.secretBlade;
     if (SB && dir.y > SB.upY && strokeTechOf(att) === SB.tech) { if (type === 'blunt') energy *= SB.k; else severity *= SB.k; }
-    // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 18:5x '플레이어의 쉴하우가 50% 세기로' 조건부 — config UNIQUE_ASSIST.schielPlayerK 기본 1 = 안 걸림 · 같은 길(schielPlayer)일 때만 · 사람 강화(skill.uniq)가 긋는 곁눈 베기):
+    // 사람 곁눈 베기 세기 손잡이 (config UNIQUE_ASSIST.schielPlayerK — 사장님 10/25 20:2x 결정 기본 1 = 안 걸림 · 0.5 는 시험용 · 같은 길(schielPlayer)일 때만 · 사람 강화(skill.uniq)가 긋는 곁눈 베기):
     //  칼날 상처 심각도 · 둔타 에너지 × k. 물리(빠르기 · 가르나 튕기나) · 길 · 손목은 그대로 · AI 곁눈 베기 · 다른 기술은 그대로
     const spl = UA.schielPlayerK;
     if (spl !== 1 && UA.schielPath && UA.schielPlayer && att.skill?.uniq && strokeTechOf(att) === 'schielhau') { if (type === 'blunt') energy *= spl; else severity *= spl; }
