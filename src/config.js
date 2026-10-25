@@ -1285,6 +1285,18 @@ export const UNIQUE_ASSIST = {
   schielPlayerK: 1,
   // 길 덧칸을 놓는 시간(s): 덧칸 있는 공격 꼴(베기 · 따라 베기)이 끝나면 그때 덧칸(칼끝 들기 · 손 뻗기 · 손 돌리기)을 이 시간에 걸쳐 0 으로 (시간 사다리 0.2 — 손 목표가 한 스텝에 0.2 m 튀지 않게 · 확인표 2505)
   planRelease: 0.2,
+  // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — "제비베기는 지금보다 최소 10배 이상 세져야 해 … 의도적으로 중력과 관성을 역행해서 상대의 허를 찌르는 기술인데
+  //  지금은 중력과 관성의 영향을 고스란히 받고 있어" · 기록 docs/strike/tsubame_snap_2026-10-25.md · 확인표 2570 ~ 2576). 사람 강화(unique_assist.js — PLAYER_UNIQUE japanese tsubameGaeshi)만 · AI 제비 베기는 그대로.
+  //  ① tsuRuler: 끝 힘 잣대 길이를 꺾은 자리부터(올려 긋는 길 길이) — 전엔 내려베기 몫 길이라 짧은 올려 긋기가 그만큼 못 가고 맞아 끝 힘이 0 ~ 3 % 만 켜졌다. 0 = 전 판 `?tsuRuler=0`
+  tsuRuler: 1,
+  //  ② tsuSnap: 꺾는 순간 내려가던 칼의 기세를 지우고 올려 긋는 길을 고노센 발도 칼끝 빠르기(secret_instant.js iaiTipSpeed)의 tsuSnapShare 몫으로 tsuSnapTime 초까지 끌고 간다 —
+  //   비기 · 진 · 츠바메가에시와 같은 운동학 틀(requestCombo — 맞음은 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 끝 자세 붙잡기 없이 곧장 손가락에 돌려줌). 무기 비검 kin(모노호시자오 진)이 있으면 그것이 먼저. 0 = 전 판 `?tsuSnap=0`
+  tsuSnap: 1,
+  tsuSnapShare: 0.6, // 격살(SECRET.gyeoksal.share)과 같은 몫 — 사장님 10/25 결정 · `?tsuSnapShare=`
+  tsuSnapTime: 0.2, // 끌고 가는 시간 상한 (s — 시간 사다리 0.2 반응) — 사장님 10/25 결정. 길이 먼저 끝나면 거기서 끝
+  //  ③ tsuAim: 올려 긋는 길 끝을 다리에서 상대 아래팔 · 겨드랑이 · 가슴 높이로 (PLAYER_UNIQUE tsubameGaeshi aim 칸 — 사람 표만 · schools.js AI 길 그대로) + 손 돌리기 덧칸(곁눈 베기 같은 길 덧칸 planStep)으로
+  //   손목을 사람 범위 안에. 0 = 전 판 `?tsuAim=0`
+  tsuAim: 1,
   // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈을 파고드는 값(combat.js THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 (레이피어 기본 0.3 · 사장님 10/21 '파고드는 값 0.6으로 해' · 확인표 2107)
   imbroccataGap: 0.6,
   // 요격(동방 강화동작) 깊은 출혈 (10/21 사장님 '요격에 출혈 보너스를 줘. 너무 밸런스 붕괴가 되진 않도록 적정 값' · 확인표 2111): 요격 칼날이 몸통(가슴 · 배 · 허리)에 들면
