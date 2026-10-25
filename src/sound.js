@@ -2304,7 +2304,7 @@ export class Sound {
   /**
    * 비기 소리 (10/25 사장님 '샛별이 비기 소리 보낸 거 입혀' — 샛별 저장소 2fa0b2ae · public/sfx/secret/ · 확인표 2542 ~ 2545).
    *  언제 · 누구 · 어느 파일은 src/secret_sfx.js (main.js — 비기가 실제로 터진 순간 한 번, 낸 사람의 유파 파일). 여기서는 내기만:
-   *  녹음 한 겹 1 · 쇳소리 묶음(칼 부딪힘 · 채찍 딱과 같은 묶음 — 무대 울림도 같게) · 이벤트 음량 SOUND.secretSfxGain ·
+   *  녹음 한 겹(파일마다 크기 맞춤 SOUND.secretSfxTrimDb — 10/25 18:4x g1 · g2 같은 크기) · 쇳소리 묶음(칼 부딪힘 · 채찍 딱과 같은 묶음 — 무대 울림도 같게) · 이벤트 음량 SOUND.secretSfxGain ·
    *  재생 빠르기 1 (비기 화면 늦춤 0.4 배와 상관없음 — 소리 시계는 실제 시간) · 음소거(on) · 전체 음량은 다른 소리와 같은 master 를 거친다.
    *  녹음이 아직 안 읽혔거나 끈 판(SOUND.secretSfx 0)이면 소리 없음(합성으로 대신하지 않음). 냈으면 그 이벤트
    */
@@ -2313,7 +2313,7 @@ export class Sound {
     const buf = this.pickSample(`secret:${file}`);
     if (!buf) return null;
     const ev = this.event({ bus: this.metalBus, gain: SOUND.secretSfxGain, prio: 2.5 }); // 우선 2.5: 칼 부딪힘(1 ~ 2) · 베기(2)가 몰려도 먼저 끊기지 않게 (흘림 3 보다는 낮게)
-    this.layer(ev, buf, { gain: 1, rate: 1 });
+    this.layer(ev, buf, { gain: 10 ** ((SOUND.secretSfxTrimDb?.[file] ?? 0) / 20), rate: 1 });
     this._secretEv = ev;
     return ev;
   }

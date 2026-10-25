@@ -96,12 +96,12 @@ function firePlayer(key) {
 }
 
 for (const [key, C] of Object.entries(CASES)) {
-  test(`사람 ${key} (${C.tr}): 낸 순간 한 번 · ${C.file} · 쇳소리 묶음 · 빠르기 1 · 비기가 끝날 때까지 더 없음`, () => {
+  test(`사람 ${key} (${C.tr}): 낸 순간 한 번 · ${C.file} · 쇳소리 묶음 · 음량 1 · 파일 크기 맞춤 · 빠르기 1 · 비기가 끝날 때까지 더 없음`, () => {
     const { reqs, played } = firePlayer(key);
     assert.equal(reqs.length, 1, JSON.stringify(reqs));
     assert.deepEqual([reqs[0].who, reqs[0].school, reqs[0].file, reqs[0].sounded], ['player', C.tr, C.file, 1]);
     assert.equal(played.length, 1);
-    assert.deepEqual(played[0], { file: C.file, bus: 'metal', gain: SOUND.secretSfxGain, layer: 1, rate: 1, prio: 2.5 });
+    assert.deepEqual(played[0], { file: C.file, bus: 'metal', gain: 1, layer: 10 ** (SOUND.secretSfxTrimDb[C.file] / 20), rate: 1, prio: 2.5 });
   });
 }
 
@@ -327,7 +327,7 @@ test('연결표 = 사장님 10/25 결정 · 주소 스위치 ?secretSfx=0 · 소
   assert.deepEqual(SOUND.secretSfxFiles, { japanese: G1, italian: G1, chinese: G1, iberian: G2, german: G2 });
   assert.deepEqual(['japanese', 'italian', 'chinese', 'iberian', 'german', 'none', null].map((k) => secretSfxFile(k)), [G1, G1, G1, G2, G2, null, null]);
   assert.equal(SOUND.secretSfx, 1);
-  assert.ok(SOUND.secretSfxGain > 0 && SOUND.secretSfxGain <= 1);
+  assert.equal(SOUND.secretSfxGain, 1); // 사장님 10/25 18:4x '음량 1.0으로'
   const q = (x) => secretSfxMode(new URLSearchParams(x), 1);
   assert.deepEqual(['', 'secretSfx=0', 'secretSfx=1', 'weapon=rapier&secretSfx=0'].map(q), [1, 0, 1, 0]);
   const a = fakeSound();
@@ -354,6 +354,26 @@ test('연결표 = 사장님 10/25 결정 · 주소 스위치 ?secretSfx=0 · 소
   } finally {
     SOUND.secretSfx = keep;
   }
+});
+
+test('g1 · g2 크기 맞춤 (사장님 10/25 18:4x \'g1과 g2 소리 크기 맞춰\'): 받은 MP3 바이트 그대로 · 녹음 한 겹 음량만 · 맞춘 뒤 순간 크기 차 0.1 dB 안 · 키운 최고도 리미터(−6 dB) 아래', () => {
+  // 순간 크기(EBU R128 · BS.1770 K 가중 · 400 ms 창 최고 — LUFS)는 받은 MP3 를 48 kHz 로 풀어 잰 값 (docs/import/secret_audio_import_2026-10-25.md §5)
+  const LOUD = { [G1]: -20.53, [G2]: -23.79 };
+  const T = SOUND.secretSfxTrimDb;
+  assert.deepEqual(T, { [G1]: 0, [G2]: 3.3 });
+  assert.ok(Math.abs(LOUD[G1] + T[G1] - (LOUD[G2] + T[G2])) < 0.1, '맞춘 뒤 크기 차');
+  // 최고(받은 measurements 의 4 배 오버샘플 최고 dBTP) + 맞춤 + 이벤트 음량 + 전체 음량 → 리미터(sound.js build — 문턱 −6 dB) 아래
+  const M = JSON.parse(fs.readFileSync(root('docs/import/secret_audio_20261025/measurements.json'), 'utf8'));
+  const db = (x) => 20 * Math.log10(x);
+  for (const [name, f] of [['g1-clank', G1], ['g2-dry', G2]]) {
+    const peak = Math.max(M[name].files.mp3.truePeak4xDbFS, M[name].pcmPeakDbFS) + T[f] + db(SOUND.secretSfxGain) + db(SOUND.volume);
+    assert.ok(peak < -6.5, `${name} 최고 ${peak.toFixed(2)} dBTP`);
+  }
+  // 소리 카드 가짜: 파일마다 녹음 한 겹 음량
+  const a = fakeSound();
+  a.s.secretSfx(G1);
+  a.s.secretSfx(G2);
+  assert.deepEqual(a.played.map((p) => [p.file, p.gain, +p.layer.toFixed(4)]), [[G1, 1, 1], [G2, 1, +(10 ** (3.3 / 20)).toFixed(4)]]);
 });
 
 test('일시정지 · 새 판: 울리던 비기 소리를 줄여 끔 (다른 싸움 소리는 그대로)', () => {

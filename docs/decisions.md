@@ -1839,3 +1839,8 @@
   - 음량 0.8 · 쇳소리 묶음 · 재생 빠르기 1 · 일시정지 · 새 판에 줄여 끔 · `?secretSfx=0` 끔 — 사장님 확인 전(확인표 2543 · 2545). 들인 것: MP3 둘 + `LICENSE.txt`(받은 그대로) · 기록 폴더 `docs/import/secret_audio_20261025/`(WAV 원본 · 원료 · 코드 — README 가지 이름 · 주소만 지움) · OGG 안 들임.
   - 판 fights12 · live_battery · finish_thrust · weapon_smoke · corr_s0 그대로 · 시험 `tools/sim/secret_sfx.test.mjs`(모든 시험 391 / 391) · 공지 없음. 기록 `docs/import/secret_audio_import_2026-10-25.md`. **여쭐 것**: 음량 0.8(1.0 이면 더 또렷) · g2 가 g1 보다 약 3.3 dB 작게 들림 — 그대로 둘지.
 
+### 10/25 18:4x 사장님 — 비기 소리 음량 1.0 · g1 · g2 크기 맞춤 (작업자)
+  - "음량 1.0으로 하고 g1과 g2 소리 크기 맞춰" → `SOUND.secretSfxGain` 0.8 → **1.0** · 파일마다 녹음 한 겹 음량 `SOUND.secretSfxTrimDb` g1 0 · **g2 +3.3 dB**(받은 MP3 바이트는 그대로 · EBU R128 순간 크기 g1 −20.53 · g2 −23.79 → −20.49 LUFS · 차 0.04 dB). 1.0 · 맞춤 = 사장님 결정 · 3.3 값 = 사장님 확인 전(확인표 2543).
+  - 둘 다 뒤따르는 센 맞음(140 J 넘음 — 베기 −17.8 · 찌르기 −17.7)보다 **약 2.8 dB 작음**(전 판 g1 4.7 · g2 8.0 dB) · B2 경계 112 J 맞음보다 1.9 dB 작음. 키운 g2 최고 약 −6.6 dBTP(전체 음량 0.8 거침) — 리미터 −6 dB 아래 · 깎임 없음. 100 ms 창으로는 g1 첫머리가 아직 2.3 dB 큼(기록 §7).
+  - 시험 `tools/sim/secret_sfx.test.mjs` 16 개(크기 맞춤 · 최고 머리 공간 더함 · 모든 시험 392 / 392) · 판 그대로 · 기록 `docs/import/secret_audio_import_2026-10-25.md` §5.
+
