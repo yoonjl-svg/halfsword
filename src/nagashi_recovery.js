@@ -2,7 +2,8 @@
 //  판 값 · 스위치는 config.js FLOW_RECOVERY (사장님 10/18 22:1x — 0.36 s · 바닥 0.25).
 //  흘림이 일어나면 흘림당한 쪽(공격한 쪽)의 두 팔 근육 · 손목 힘이 seconds 동안 줄었다 돌아온다(fighter.js flowArmScale): 처음 1/3 은 floor · 남은 2/3 에 부드럽게 1 로.
 //   빠르기 초기화 · 손 순간이동 · 입력 지움 · 걸음 잠금 없음. 같은 공격으로는 한 번 · 돌아오는 중 다시 늘이지 않음.
-import { FLOW_RECOVERY } from './config.js';
+import { FLOW_RECOVERY, realS } from './config.js';
+const REGAP = realS(0.12); // 돌아오는 중(끝 + 이만큼) 다시 걸지 않음 — 실제 초 (표준 시간 10/25)
 export { FLOW_RECOVERY };
 
 /** seconds: 이 늦춤만의 시간 (없으면 FLOW_RECOVERY 그대로 — 흘림). 안다레 리솔루토 런지는 SECRET.risolutoArmSlow 0.6 (사장님 10/24) · 바닥 · 꼴은 같음 */
@@ -13,7 +14,7 @@ export function beginFlowRecovery(f, defender, seconds = null) {
   const now = f.stamina.time, id = f.stamina.attackId;
   const old = f.flowRecovery;
   // 공격 하나에 한 번 · 돌아오는 중(끝 + 0.12 s 안)에는 다시 걸지 않는다
-  if (old && (now < old.until + 0.12 || (id > 0 && id === old.attackId))) return false;
+  if (old && (now < old.until + REGAP || (id > 0 && id === old.attackId))) return false;
   f.flowRecovery = { start: now, until: now + duration, duration, attackId: id,
     defender: defender.index, floor: FLOW_RECOVERY.floor, hold: hold ?? null, recover: recover ?? 0 };
   return true;

@@ -7,6 +7,7 @@
 import { Sound, VOICES } from './sound.js';
 import { CHARACTERS } from './characters.js';
 import { GUN, gunshotSound, gateOpenSound, loadRoundSound, reloadSound } from './gun.js';
+import { TIME } from './config.js'; // 표준 시간 (10/25): GUN 시간은 게임 초 — 실제 초 = ÷ TIME.k
 
 /** 10/13 에 목소리 묶음 자체가 바뀐 인물의 옛 목소리 id (마야만 — 이졸데 묶음에서 나옴) */
 const BEFORE = { samira: 'isolde' };
@@ -151,15 +152,17 @@ async function playGun(kind, button) {
     }
     // 장전: gun.js updateGun 과 같은 시각 (열기 0 s, 넣기 = 닫기 구간 앞으로 reloadInsertInterval 간격, 닫기 = GUN.reload)
     gateOpenSound(sound, null);
-    const lastInsert = GUN.reload - GUN.reloadClose;
-    const iv = Math.min(GUN.reloadInsertInterval, (lastInsert - GUN.reloadOpen) / Math.max(1, GUN.rounds - 1));
+    const K = TIME.k; // 게임 초 → 실제 초 (옛 판 1)
+    const reload = GUN.reload / K;
+    const lastInsert = (GUN.reload - GUN.reloadClose) / K;
+    const iv = Math.min(GUN.reloadInsertInterval / K, (lastInsert - GUN.reloadOpen / K) / Math.max(1, GUN.rounds - 1));
     for (let i = 0; i < GUN.rounds; i++) {
       const at = lastInsert - iv * (GUN.rounds - 1 - i);
       timers.push(setTimeout(() => request === revision && loadRoundSound(sound, null, i + 1), at * 1000));
     }
-    timers.push(setTimeout(() => request === revision && reloadSound(sound, null), GUN.reload * 1000));
-    status.textContent = `장전 재생 중 (${GUN.reload} 초: 열기 → 여섯 발 → 닫기)`;
-    finishLater(request, button, '장전 · 다 들었어요', GUN.reload * 1000 + 400);
+    timers.push(setTimeout(() => request === revision && reloadSound(sound, null), reload * 1000));
+    status.textContent = `장전 재생 중 (${+reload.toFixed(2)} 초: 열기 → 여섯 발 → 닫기)`;
+    finishLater(request, button, '장전 · 다 들었어요', reload * 1000 + 400);
   } catch {
     if (request !== revision) return;
     stopAudio();

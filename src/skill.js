@@ -26,7 +26,7 @@ import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — �
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { STAMINA, SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST } from './config.js';
+import { STAMINA, SKILL, WEAPON, THRUST, BODY, GAIT, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS } from './config.js';
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드루이드의 채찍)의 톡 = 손목 튕기기 (10/23)
 import { FINISH, armRay, updateFinish, finishHands, cleaveFinish, cleaveRaise, cleaveReach, cleaveAnyHeight } from './finish.js';
@@ -67,7 +67,7 @@ const gyeoksalReq = (D) => {
   return { ...(pw === 'hit' ? { hitMul: SECRET.hitMul } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
 };
 /** 안다레 리솔루토 굳음 (s): 10/24 런지 risolutoStiff 0.6 (사장님) · null 이면 이탈리아 비기 굳음 stiff.italian (10/23 판) */
-const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? 0.3;
+const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? realS(0.3); // 굳음은 실제 초 (표준 시간 10/25 — config 값도 realS)
 /**
  * 안다레 리솔루토 런지 (10/24 사장님 '런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어' — docs/strike/italian_risoluto_2026-10-22.md §10): requestCombo 칸.
  *  한 수 = 격살 허파 찌르기와 같은 길(dyn 'aim' · thrust — secret_instant.js comboPlanAim): 어깨 → 상대 가슴(가슴 몸체 가운데 0.05 m 위) 줄 위로 칼을 눕혀(맞힘 없음 — 칼끝은 그 앞 0.35 m)
@@ -907,7 +907,7 @@ export class Skill {
       f.secretHit = 1;
       run.stage = 'stiff';
       run.t = 0;
-      run.stiffT = run.lunge ? risolutoStiff() : SECRET.stiff[run.tr] ?? 0.3; // 런지 뒤 굳음 0.6 s (사장님 10/24)
+      run.stiffT = run.lunge ? risolutoStiff() : SECRET.stiff[run.tr] ?? realS(0.3); // 런지 뒤 굳음 0.6 s (사장님 10/24)
       return;
     }
     if (run.stage === 'spin') {
@@ -1038,7 +1038,7 @@ export class Skill {
         }
         run.stage = 'stiff';
         run.t = 0;
-        run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+        run.stiffT = SECRET.stiff[run.tr] ?? realS(0.3);
       }
       return;
     }
@@ -1049,7 +1049,7 @@ export class Skill {
         mordEnd(f);
         run.stage = 'stiff';
         run.t = 0;
-        run.stiffT = SECRET.stiff[run.tr] ?? 0.3;
+        run.stiffT = SECRET.stiff[run.tr] ?? realS(0.3);
       }
       return;
     }

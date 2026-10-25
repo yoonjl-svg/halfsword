@@ -28,7 +28,9 @@
 //   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL, ARENA } from './config.js';
+import { AI_LEVELS, SKILL, ARENA, realS } from './config.js';
+const DEF_T = realS(0.65); // 막기 한 번의 길이 (실제 초 — ai.js defend 와 같은 수 · 표준 시간 10/25)
+const DEF_MIN = realS(0.35); // 공격이 지나갔으면 남은 시간이 이 밑일 때 놓는다
 import { Senses } from './ai_sense.js';
 import { threatNow } from './secret.js';
 import { TRADITIONS } from './schools.js';
@@ -159,7 +161,7 @@ export class PlayerParryGuard {
     if (th && this.threatId !== this.threatSeen) {
       this.threatSeen = this.threatId;
       this.defLine = th.line;
-      this.timer = 0.65;
+      this.timer = DEF_T;
       this.stats.threats++;
       this.stats.lines[th.line] = (this.stats.lines[th.line] ?? 0) + 1;
       if (SKILL.itRetreat || SKILL.itParryBeat) this.beatOnThreat(th, d);
@@ -182,7 +184,7 @@ export class PlayerParryGuard {
       // ai.js defend 의 끝: 공격이 지나갔다 (칼끝이 더는 오지 않고 손이 멈췄다) · 막기 시간이 다 됐다
       this.timer -= dt;
       const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
-      if ((swingOver && this.timer < 0.35) || this.timer <= 0) this.defLine = null;
+      if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) this.defLine = null;
     }
     // 물러서는 한 짝 (10/17 연구 — SKILL.itRetreat): 박자 걸음이 짧은 디딤으로 센 두 디딤(뒷발 → 앞발 — gait.js shortPair)을 다 디딜 때까지 스틱을 뒤로 쥔다 · maxT 안에 못 하면 놓음.
     //  둘째 짧은 디딤을 뗀 때(shortPair 0)의 디딤 수 z 를 적고, 그 뒤 처음 디딘 때 끝. 걸 때 자세 고치던 발이 떠 있으면 그 발은 걷는 걸음으로 바뀌어(셈 밖) 한 디딤 더 물러선다

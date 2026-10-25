@@ -19,7 +19,7 @@ test('기본값: ② 긴 칼 상대 켬 · ③ AI 들어옴 켬 · ⑤ AI 경계
   assert.equal(SECRET.gnsWary, 1);
   assert.equal(SECRET.gnsEnterWindow, 0);
   assert.equal(SECRET.gnsEnterBlock, 2); // 10/25 19:4x 사장님 위임 — B 2 기본 (확인표 2526)
-  assert.equal(SECRET.foeChargeSpeed, 1.2);
+  assert.equal(SECRET.foeChargeSpeed, CONFIG.realV(1.2)); // 실제 1.2 m/s (사장님 10/25 22:3x — 표준 시간 · 옛 판 게임 1.2)
   assert.equal(SECRET.gnsEnterOpen, 0);
 });
 

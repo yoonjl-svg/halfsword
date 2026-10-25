@@ -13,10 +13,11 @@
 //   새 three.js 객체(UUID 에 Math.random)를 만드는 곳은 spawnDebris 의 회전 중심 그룹뿐이라 부르는 쪽이 isolatedVisual 로 감싼다
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { realS } from './config.js'; // 표준 시간 (10/25): 조각이 사라지는 시간은 실제 초
 
 export const DEBRIS = {
-  life: 1.6, // 초: 칼 조각이 이만큼 지나면 사라진다
-  fade: 0.5, // 초: 칼 조각이 마지막 이만큼 동안 흐려진다
+  life: realS(1.6), // 초(실제): 칼 조각이 이만큼 지나면 사라진다
+  fade: realS(0.5), // 초(실제): 칼 조각이 마지막 이만큼 동안 흐려진다
   gravity: 9.81,
   floorY: 0, // 경기장 바닥 높이
   terrain: null, // 지형 무대(화산섬)만 main.js 가 땅 계약을 넣는다 — 그러면 바닥은 그 자리 땅 높이(조각마다 띄운 몫은 그대로)

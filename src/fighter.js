@@ -11,7 +11,8 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
+const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기다림 (실제 초 — 표준 시간 10/25 · 곁눈 베기 꿇음은 UNIQUE_ASSIST.buckle.kneel)
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -348,7 +349,7 @@ export class Fighter {
     this.physiology = o.physiology ? Object.freeze({ ...HUMAN_BODY, ...o.physiology }) : HUMAN_BODY; // 몸 규칙 (캐릭터 시트 physiology — 병마용, 위 HUMAN_BODY). 없으면 사람
     this.daze = 0;
     this.downTime = BODY.fallDuration;
-    this.kneelTime = 1.1;
+    this.kneelTime = KNEEL_T;
     this.riseTime = 0.9;
     // 투구: ARMOR.on 이면 look.helmet 에 무엇이든 적혀 있으면 막아 주는 투구다(종류별 값은 ARMOR.helmets).
     //  끄면 예전처럼 플레이어 케틀햇만 막는다
@@ -1423,7 +1424,7 @@ export class Fighter {
     const tilt = this.tiltDeg();
     const leg = Math.max(0.3, this.legHealth);
     // 일어나는 데 걸리는 시간: 다리가 다칠수록, 피를 흘릴수록 오래
-    this.kneelTime = ((this.buckleKneel ?? 1.1) / leg) / Math.max(0.5, this.vigor); // buckleKneel: 곁눈 베기 무릎 꺾기는 꿇는 시간만 그 값 꼴(10/21 — 0.4 s)
+    this.kneelTime = ((this.buckleKneel ?? KNEEL_T) / leg) / Math.max(0.5, this.vigor); // 무릎 꿇은 채 기다림 = 실제 초 (KNEEL_T · buckleKneel 은 config 에서 실제 초) · 일어서는 몸놀림 riseTime 0.9 은 그대로 // buckleKneel: 곁눈 베기 무릎 꺾기는 꿇는 시간만 그 값 꼴(10/21 — 0.4 s)
     this.riseTime = (0.9 / leg) / Math.max(0.5, this.vigor);
     if (this.revival) reviveTick(this, dt); // 부활: 쓰러져 누웠다가 정한 때에 일어난다 (revive.js)
     if (this.state === 'stand') {

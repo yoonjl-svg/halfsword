@@ -12,7 +12,7 @@
 //  끄면(FINISH.vital false) 어느 줄도 타지 않는다 — 난수·명령 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { ARM, THRUST } from './config.js';
+import { ARM, THRUST, realS } from './config.js';
 import { guardAt } from './guards.js';
 import { FINISH } from './finish.js';
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js';
@@ -38,7 +38,7 @@ export const VITAL = {
   fastInput: 2, // 플레이어: 손 목표가 이보다 빠르면 준비를 기다리지 않고 곧장 친다 (m/s)
   commitAngularSpeed: 1.5, // 플레이어: 칼이 이만큼 돌기 시작하면 친 것 (rad/s)
   prepareWindow: 0.4, // 플레이어: 느린 준비 시간 (s) — 0.24 m ÷ 0.75 m/s = 0.32 s + 여유
-  quietReset: 0.12, // 플레이어: 친 뒤 손이 이만큼 쉬면 보정을 푼다 (s)
+  quietReset: realS(0.12), // (실제 초 — 표준 시간 10/25) 플레이어: 친 뒤 손이 이만큼 쉬면 보정을 푼다 (s)
   readyHeightChange: 0.06, // 플레이어: 준비 뒤 손 높이를 이만큼 바꾸면 새 뜻 — 보정을 푼다 (패드 m)
   // 물리 길 (샛별 fdc6a4ed): 지금 칼이 명령보다 처진·들린 몫의 절반을 더 보정한다 (예산 안)
   trackingShare: 0.5,
@@ -46,7 +46,7 @@ export const VITAL = {
   pitchTrim: 0.28 * 0.25,
   // 무기별 간격 (샛별 8bbee803, 플레이어 탭 찌르기): 칼끝이 목표 바로 앞에 오도록 걸어 맞춘 뒤 찌른다
   rangeTravel: 1, // 목표가 닿는 거리보다 이만큼(m) 멀어도 겨눈다 (걸어 들어간다)
-  rangeTimeout: 2, // 간격 맞추기 최대 (s)
+  rangeTimeout: realS(2), // (실제 초 — 표준 시간 10/25) 간격 맞추기 최대 (s)
   rangeAlignCos: Math.cos((20 * Math.PI) / 180), // 칼 축이 목표 쪽 20° 안
   rangeLineMiss: 0.07, // 칼 선이 목표를 비껴가는 거리 한도 (m)
   manualDead: 0.15, // 조이스틱을 이만큼 넘게 밀면 간격 맞추기를 거둔다

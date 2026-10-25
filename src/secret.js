@@ -9,7 +9,7 @@
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SKILL, BIND } from './config.js';
+import { SECRET, SKILL, BIND, realS } from './config.js';
 import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
@@ -22,6 +22,9 @@ const clamp = THREE.MathUtils.clamp;
 const _r = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
+// 표준 시간 (10/25 22:3x — config.js TIME): 아래 규칙 시간은 실제 초로 적고 한 번 게임 초로 바꾼다
+const RECENT = realS(0.6); // '방금' — 상대가 방금 휘둘렀나 · 방금 베였나 · 최근 빠르기 평균 (실제 0.6 s)
+const EV_REARM = realS(0.3); // 상대 사건이 이만큼 그치면 다시 건다 (실제 0.3 s — ai.js secretScan · preThreat 와 같은 수)
 
 /** 칸 값: 문자열이면 SECRET 의 열쇠 (schools.js 는 수를 갖지 않는다) */
 export function secretVal(v) {
@@ -155,8 +158,8 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
   if (on && S.cond?.commit && !charging && Math.hypot(s0.hvx, s0.hvy) < secretVal(S.cond.commit)) on = false;
   if (on) return { on, ctx: { ev: 'raise', charge: charging && !raising } }; // charge: 달려듦만으로 열림 (재기 — 판정에는 안 씀)
   // seize 의 recovering 과 같은 꼴(방금 크게 휘두르고 손이 멎음) — 늦지 않게 지금 모습으로 (일본은 들어 올림 다음 차례의 보조 사건)
-  if (W.includes('foeRecover') && sense.recentHandSpeed(0, 0.6) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8) {
-    return { on: true, ctx: { ev: 'recover', tipE: foeRecentTipE(sense, foe, 0.6) } }; // 진짜 헛스윙인가 — 그 휘두름의 칼끝 추정 에너지 (cond.whiff)
+  if (W.includes('foeRecover') && sense.recentHandSpeed(0, RECENT) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8) {
+    return { on: true, ctx: { ev: 'recover', tipE: foeRecentTipE(sense, foe, RECENT) } }; // 진짜 헛스윙인가 — 그 휘두름의 칼끝 추정 에너지 (cond.whiff)
   }
   return { on: false, ctx: null };
 }
@@ -208,7 +211,7 @@ function gilmokEvent(s0, c, d0, ex) {
  *  근거: 出端(데바나) — 상대가 나서는 때를 친다(兵法家伝書 p16/15 「一ッ上れば、つけて打」 [원문] — 유령 패시브 debana 와 같은 출처) · 그 때를 '내 간격 선을 넘는 때'로 읽음 [해석]
  *  ex = { enterLine, iaiArmed, st, dt } · me = 나(가슴 빠르기 — 없으면 0) — st 에 지난 거리 gnsPrevD · 최근 빠르기 gnsFoeIn · gnsMeIn · 넘음 gnsEnter · 선 밖 시간 gnsOutT. 굴림 없음
  */
-const GNS_RECENT = 0.6;
+const GNS_RECENT = RECENT; // 실제 0.6 s (표준 시간 10/25)
 function enterEvent(s0, c, d0, ex, me) {
   const st = ex.st;
   const prev = st.gnsPrevD;
@@ -769,7 +772,7 @@ export class PlayerSecretWatch {
     const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed, ...enter }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비) · 일본 들어옴
     if (!on) {
       E.off += dt;
-      if (E.off > 0.3) E.armed = true;
+      if (E.off > EV_REARM) E.armed = true;
       return;
     }
     E.off = 0;
@@ -967,11 +970,11 @@ export class PlayerSecretWatch {
     if (!start) return;
     P.edges = (P.edges ?? 0) + 1; // 재기: 새 맞닿음 · 그때 내가 휘두르던 중 · 상대 칼이 느림 · 상처 0.6 s 안
     if (attacking || busy) return void (P.rejAtk = (P.rejAtk ?? 0) + 1);
-    if (!(foeRecentTipSp(this.sense, 0.6) >= 3.5)) return void (P.rejSlow = (P.rejSlow ?? 0) + 1);
-    if (P.woundAge < 0.6) return void (P.rejHurt = (P.rejHurt ?? 0) + 1);
+    if (!(foeRecentTipSp(this.sense, RECENT) >= 3.5)) return void (P.rejSlow = (P.rejSlow ?? 0) + 1);
+    if (P.woundAge < RECENT) return void (P.rejHurt = (P.rejHurt ?? 0) + 1);
     P.ok++;
     P.inParry = true;
-    const slot = parrySlotOf(S, null, [me.handOffset.x, me.handOffset.y], me.swordArt?.school?.parry, P.lineAge < 0.6 ? P.line : null);
+    const slot = parrySlotOf(S, null, [me.handOffset.x, me.handOffset.y], me.swordArt?.school?.parry, P.lineAge < RECENT ? P.line : null);
     if (!slot) return;
     P.slot++;
     P.pend = { slot, t: 0 };
@@ -1029,8 +1032,8 @@ export class PlayerSecretWatch {
     if (!held || G.broken) return void K.noPress++;
     if (!(P.pressAge <= SECRET.gyeoksal.press)) return void K.late++;
     if (!(me.stickY > Math.abs(me.stickX))) return void K.notFwd++;
-    if (!(foeRecentTipSp(this.sense, 0.6) >= 3.5)) return void K.slow++;
-    if (P.woundAge < 0.6) return void K.hurt++;
+    if (!(foeRecentTipSp(this.sense, RECENT) >= 3.5)) return void K.slow++;
+    if (P.woundAge < RECENT) return void K.hurt++;
     const st = this.gyeoksalStance(G);
     if (!st) return void K.noStance++;
     K.pend++;

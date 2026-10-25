@@ -8,9 +8,10 @@
 // ─────────────────────────────────────────────────────────────
 
 import { FINISH } from './finish.js';
+import { TIME } from './config.js';
 import { captureVitalPose } from './vital_target.js';
 
-const N = 96; // 기록 개수 (1/120초마다 → 0.8초)
+const N = Math.round(96 * TIME.k); // 기록 개수 (1/120초마다 → 게임 0.8초 × std = 실제 0.8 초 — 표준 시간 10/25 · 옛 판 96)
 
 function snap() {
   return {

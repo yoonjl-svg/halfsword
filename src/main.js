@@ -127,7 +127,7 @@ if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = p
 // 독일 죽음의 일격 (10/22 — 사람 독일 비기, src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md): `?deMord=0` = 옛 판(deSecret) · `?mordPress=0.6` 누르기 시간 비교 ·
 //  `?mordGrip=hilt` 쥠 그대로 폼멜 판 · `?mordOver=1` 넘어 들어감 규칙 (사장님 확인 전)
 if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
-if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = +params.get('mordPress');
+if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = CONFIG.realS(+params.get('mordPress')); // 주소 값 = 실제 초 (표준 시간 10/25 — 아래 시간 · 빠르기 주소 인자도 같음)
 if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1 : 0; // AI 몸 붙이기 자연스럽게 가까울 때만 (10/24 14:2x 사장님 · 0 = 멀리서 붙이러 걸어가는 옛 판)
 if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
@@ -165,12 +165,12 @@ if (params.has('cnParryCut') && +params.get('cnParryCut') >= 0 && +params.get('c
 if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0'; // `?flowJudge=0` = 옛 흘림 판정(내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
 if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.8) — `?flowDmgCut=0` = 끔
 if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
-if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm') <= 2) FLOW_RECOVERY.seconds = +params.get('flowArm'); // `?flowArm=0` = 팔 늦춤 끔 · `?flowArm=0.18` = 0.18 s
+if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm') <= 2) FLOW_RECOVERY.seconds = CONFIG.realS(+params.get('flowArm')); // `?flowArm=0` = 팔 늦춤 끔 · `?flowArm=0.18` = 0.18 s
 if (params.has('ibBeat') && +params.get('ibBeat') >= 0 && +params.get('ibBeat') <= 3) Object.assign(CONFIG.IB_PARRY_BEAT, { on: +params.get('ibBeat') > 0, k: +params.get('ibBeat') || CONFIG.IB_PARRY_BEAT.k }); // 이베리아 탈류 · 레베스 쳐내기 튕김 세기 k (판 값 1.6 — 사장님 10/20) · `?ibBeat=0` = 끔
 if (params.has('swingTurn') && +params.get('swingTurn') >= 0 && +params.get('swingTurn') <= 180) Object.assign(CONFIG.SWING_TURN, { on: +params.get('swingTurn') > 0, rate: +params.get('swingTurn') || CONFIG.SWING_TURN.rate }); // 휘두르는 동안 몸 돌림 묶기 °/s (시험 — 기본 끔 · 10/21) · `?swingTurn=30`
 if (params.has('burstWalkSide')) CONFIG.GAIT.burstWalkSide = params.get('burstWalkSide') === '0' ? 0 : 1; // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 — 기본 켬) · `?burstWalkSide=0` = 전 판(서 있다 걷기 시작 때만)
 if (params.has('burstFwdDeg') && +params.get('burstFwdDeg') >= 0 && +params.get('burstFwdDeg') <= 60) CONFIG.GAIT.burstFwdDeg = +params.get('burstFwdDeg'); // 비스듬히 앞으로 박차기 각(°, 판 값 30 · 0 = 곧장 옆)
-if (params.has('aiReact') && +params.get('aiReact') >= 0 && +params.get('aiReact') <= 0.6) Object.assign(CONFIG.AI_REACT, { on: +params.get('aiReact') > 0, face: +params.get('aiReact') || CONFIG.AI_REACT.face }); // AI 반응 시간 s (판 값 0.2 · 0 = 끔)
+if (params.has('aiReact') && +params.get('aiReact') >= 0 && +params.get('aiReact') <= 0.6) Object.assign(CONFIG.AI_REACT, { on: +params.get('aiReact') > 0, face: CONFIG.realS(+params.get('aiReact')) || CONFIG.AI_REACT.face }); // AI 반응 시간 s (판 값 0.2 · 0 = 끔)
 if (['strike', 'approach', 'windup'].includes(params.get('swingTurnFrom'))) CONFIG.SWING_TURN.from = params.get('swingTurnFrom'); // 묶기 시작: windup(기본 — 칼 드는 때부터) · approach(들어오는 단계부터) · strike(긋기부터)
 if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
 if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)
@@ -205,10 +205,10 @@ if (params.has('gnsEnter')) CONFIG.SECRET.gnsEnter = +params.get('gnsEnter') ? 1
 if (params.has('gnsEnterAI')) CONFIG.SECRET.gnsEnterAI = +params.get('gnsEnterAI') ? 1 : 0; // AI 고노센도 들어옴 사건 (10/25 08:0x 사장님 결정 — 기본 1, `?gnsEnterAI=0` = 01:3x 판)
 if (params.has('gnsLong')) CONFIG.SECRET.gnsLong = +params.get('gnsLong') ? 1 : 0; // 고노센 긴 칼 상대 규칙 (10/25 08:0x 사장님 결정 — 기본 1, `?gnsLong=0` = 끔: 상대 칼 거리 ≥ 내 발도가 닿는 거리면 준비가 그 사이에서 안 풀림)
 if (params.has('gnsWary')) CONFIG.SECRET.gnsWary = +params.get('gnsWary') ? 1 : 0; // AI 고노센 경계 (10/25 08:0x 사장님 '⑤' — 기본 1, `?gnsWary=0` = 01:3x 판 AI 걸음)
-if (params.has('gnsEnterWindow')) CONFIG.SECRET.gnsEnterWindow = Math.max(0, +params.get('gnsEnterWindow') || 0); // 여쭘 A: 들어옴 창 길이 (기본 0 = playerWindow 그대로 · `?gnsEnterWindow=0.4`)
+if (params.has('gnsEnterWindow')) CONFIG.SECRET.gnsEnterWindow = CONFIG.realS(Math.max(0, +params.get('gnsEnterWindow') || 0)); // 여쭘 A: 들어옴 창 길이 (기본 0 = playerWindow 그대로 · `?gnsEnterWindow=0.4`)
 if (params.has('gnsEnterBlock')) CONFIG.SECRET.gnsEnterBlock = [0, 1, 2].includes(+params.get('gnsEnterBlock')) ? +params.get('gnsEnterBlock') : 2; // B: 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (10/25 16:0x 사장님 결정 — 기본 1 · `?gnsEnterBlock=0` 끔 · `=2` 칼끝 겨눔도 막음 — 시험)
 if (params.has('foeChargeAvg')) CONFIG.SECRET.foeChargeAvg = +params.get('foeChargeAvg') ? 1 : 0; // 달려듦 빠르기를 최근 0.6 s 평균으로 (10/25 16:0x — 기본 1 · `?foeChargeAvg=0` = 한 스텝)
-if (params.has('foeChargeSpeed') && +params.get('foeChargeSpeed') > 0) CONFIG.SECRET.foeChargeSpeed = +params.get('foeChargeSpeed'); // 비기 '달려듦' 빠르기 (10/25 16:1x 사장님 결정 — 기본 1.2 · `?foeChargeSpeed=0.9` 옛 판)
+if (params.has('foeChargeSpeed') && +params.get('foeChargeSpeed') > 0) CONFIG.SECRET.foeChargeSpeed = CONFIG.realV(+params.get('foeChargeSpeed')); // 실제 m/s // 비기 '달려듦' 빠르기 (10/25 16:1x 사장님 결정 — 기본 1.2 · `?foeChargeSpeed=0.9` 옛 판)
 if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnterOpen') ? 1 : 0; // 여쭘 C: 들어옴 창은 상대 칼끝이 나를 겨누지 않을 때만 (기본 0 · `?gnsEnterOpen=1`)
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
@@ -230,9 +230,9 @@ if (IB_TABLE === 'v2') useIberianTableV2();
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
-  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: 0.6, risolutoTouch: 0 }); // 10/23 넓은 판정 전 10/22 판 (아래 낱낱 스위치가 덮을 수 있게 먼저)
+  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: CONFIG.realS(0.6), risolutoTouch: 0 }); // 10/23 넓은 판정 전 10/22 판 (아래 낱낱 스위치가 덮을 수 있게 먼저)
   if (['risoluto', 'contratempo'].includes(its)) CONFIG.SECRET.itSecret = its;
-  if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = +params.get('risoHold');
+  if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = CONFIG.realS(+params.get('risoHold'));
   if (params.has('risoBeat')) CONFIG.SECRET.risolutoBeat = +params.get('risoBeat') ? 1 : 0;
   if (params.has('risoCover') && +params.get('risoCover') > 0) CONFIG.SECRET.risolutoCover = +params.get('risoCover');
   if (params.has('risoClose')) CONFIG.SECRET.risolutoClose = +params.get('risoClose') ? 1 : 0; // 시험: '다 붙었을 때' 창
@@ -240,7 +240,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoGuard')) CONFIG.SECRET.risolutoGuard = +params.get('risoGuard') ? 1 : 0; // 시험: 막기 단추를 누른 채 나아가기도 셈
   // 10/23 넓은 판정 (사장님 '칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게'): `?risoWide=0` = 10/22 판(손 쪽 ↔ 칼끝 쪽만 · 끊김 너그러움 없음 · 가슴 사이 줄어듦 · 다 붙음 · 상대 박자 끔) · 낱낱이 `?risoAny=0|1` · `?risoGrace=0.2` · `?risoClosing=0|1`
   if (params.has('risoAny')) CONFIG.SECRET.risolutoAnyPart = +params.get('risoAny') ? 1 : 0;
-  if (params.has('risoGrace') && +params.get('risoGrace') >= 0) CONFIG.SECRET.risolutoGrace = +params.get('risoGrace');
+  if (params.has('risoGrace') && +params.get('risoGrace') >= 0) CONFIG.SECRET.risolutoGrace = CONFIG.realS(+params.get('risoGrace'));
   if (params.has('risoClosing')) CONFIG.SECRET.risolutoClosing = +params.get('risoClosing') ? 1 : 0;
   // 10/24 런지 (사장님 '런지로 진행해 … 고노센처럼 빠르게 … 0.6초 내 경직도 0.6초'): `?risoLunge=0` = 10/23 판(탭 찌르기 · 팔 늦춤 FLOW_RECOVERY 0.4 · 굳음 stiff.italian 0.4) · `?risoShare=0.6` 칼끝 빠르기 몫 비교 · `?risoRoom=1` · `?risoGlide=0`
   if (params.get('risoLunge') === '0') Object.assign(CONFIG.SECRET, { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null });
@@ -303,7 +303,7 @@ if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = pa
 if (['0', '1'].includes(params.get('finishCleave'))) FINISH_SWITCH.cleave.player = params.get('finishCleave') === '1';
 if (params.get('whip') === 'src') setWhipPreset('src'); // 10/23 드루이드의 채찍: 샛별 저장소 덩굴 값 그대로(손맛 고치기 전 — 견줌용 · docs/import/druid_whip_2026-10-23.md)
 if (['0', '1'].includes(params.get('finishCleaveAi'))) FINISH_SWITCH.cleave.ai = params.get('finishCleaveAi') === '1';
-if (params.has('finishCleaveCharge') && Number.isFinite(+params.get('finishCleaveCharge'))) FINISH_SWITCH.cleave.charge = Math.max(0, +params.get('finishCleaveCharge'));
+if (params.has('finishCleaveCharge') && Number.isFinite(+params.get('finishCleaveCharge'))) FINISH_SWITCH.cleave.charge = CONFIG.realS(Math.max(0, +params.get('finishCleaveCharge')));
 if (['0', '1'].includes(params.get('finishCleaveLow'))) FINISH_SWITCH.cleave.anyHeight = params.get('finishCleaveLow') === '1'; // 10/22 23:0x 꿇기 이하 어떤 높이든(상태로 열기) · 땅까지 — 0 = 첫 판(찍기와 같은 문 · 몸 점까지)
 if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
 if (params.has('strideRule')) CONFIG.GAIT.strideRule = +params.get('strideRule') ? 1 : 0; // 보폭 규칙(10/15 20:3x 사장님 — 유파 보폭 상한 0.62 × k · 박자 2.05 ÷ k, 최고 빠르기 같음 · docs/strike/stride_rule_2026-10-15.md): 기본 1, `?strideRule=0` = 옛 유파 값
@@ -324,7 +324,7 @@ if (params.has('burstDe')) CONFIG.GAIT.burstDe = +params.get('burstDe') ? 1 : 0;
 if (params.has('stepBurst')) CONFIG.GAIT.stepBurst = +params.get('stepBurst') ? 1 : 0; // 첫 걸음 박차기(10/15 — 서 있다가 뒤·옆으로 떼는 첫 걸음만 빠름, 플레이어만 · 이탈리아 빼고 · 옆은 이베리아만(10/15 15:1x), docs/strike/step_burst_2026-10-15.md): 기본 1, `?stepBurst=0` = 끔
 // 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
 //  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다
-const TEMPO = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1.1) || 1.1)); // 기본 1.1 (사장님 10/10 05:1x '기본 템포 1.1로'), 전 값 `?tempo=1` // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
+const TEMPO = CONFIG.TIME.tempo; // = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1.1) || 1.1)) — config.js TIME 한 곳(표준 시간 std 가 이 템포를 따라감 · 10/25 22:3x) · 기본 1.1 (사장님 10/10 05:1x '기본 템포 1.1로'), 전 값 `?tempo=1` // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
 // 판 시작 카메라 · 따라가기 (10/15 사장님 — docs/strike/camera_open_2026-10-15.md, 확인표 1560~1579): `?openSweep=0` = 9/30 판 시작(정지 2 s · 조금 높고 먼 자리에서 내려오기 — 다시 겨루기도 같음)
 //  `?camFollow=old` = 예전 따라가기(무게중심 follow 5 → 카메라 자리 6 두 번 거름 · 최소 거리·물러날 때 올리기 없음). 둘 다 쓰면 10/15 오전 판과 거의 같다
 const OPEN_SWEEP = params.get('openSweep') !== '0';
@@ -903,6 +903,7 @@ let playerEv = { hurt: false, parried: false, landed: false }; // 이번 프레�
 const playerTremor = { x: 0, y: 0, ax: 0, ay: 0, t: 0 }; // 공포 손 떨림 (지금 얹혀 있는 값·시계)
 let clashCooldown = 0;
 let clashStopCooldown = 0; // 칼끼리 부딪혀 멈칫한 뒤 다시 멈칫하기까지 (초)
+const CLASH_GAP = CONFIG.realS(0.12); // 부딪힘 불꽃 · 소리 간격 (물리 스텝 시계 — 실제 초로 적음 · 표준 시간 10/25)
 let slowMo = 0; // 결정타 슬로모션 남은 시간
 // 플레이어 비기 (10/9 23:5x — docs/strike/player_secret_2026-10-09.md): 창(PlayerSecretWatch — 판마다 새로) · 결정타 연출 시계 · 본 터뜨림 수 · 본 창 수
 let playerSecret = null;
@@ -1058,7 +1059,7 @@ function onClash(point, speed, touch) {
     sound.flow(Math.max(touch.vn ?? 0, 3));
     particles.flowSparks(point, combat?.lastNagashi?.dir);
     hitStop = Math.max(hitStop, 0.035);
-    clashCooldown = Math.max(clashCooldown, 0.12);
+    clashCooldown = Math.max(clashCooldown, CLASH_GAP);
     haptic(0.5);
     return;
   }
@@ -1078,18 +1079,18 @@ function onClash(point, speed, touch) {
   if (impact < 2.5) {
     // 세게 부딪히진 않았지만 칼날을 따라 빠르게 긁으면 불꽃만 조금
     if (touch && touch.vt > 5) {
-      clashCooldown = 0.12;
+      clashCooldown = CLASH_GAP;
       particles.sparks(point, touch.vt * 0.4);
     }
     return;
   }
-  clashCooldown = 0.09;
+  clashCooldown = CONFIG.realS(0.09);
   stats.clashes++;
   particles.sparks(point, impact);
   // 세게 부딪힐 때만 잠깐 멈칫 (칼끼리 맞대고 밀 때마다 멈추면 끊겨 보인다)
   if (impact > 6 && clashStopCooldown <= 0) {
     hitStop = Math.max(hitStop, Math.min(0.08, impact / 200));
-    clashStopCooldown = 0.5;
+    clashStopCooldown = CONFIG.realS(0.5);
   }
   kickCamera(new THREE.Vector3((Math.random() - 0.5), 0.3, (Math.random() - 0.5)).normalize(), Math.min(0.6, impact / 25));
   haptic(Math.min(1, impact / 15));
@@ -1276,7 +1277,7 @@ function showFoeIntro(ch) {
   { const line = randomLine(ch, ch.lines?.introStray && foeWeaponId !== ch.weapon ? 'introStray' : 'intro'); el.querySelector('span').textContent = line ? `“${line}”` : ''; el.querySelector('small').textContent = lineSourceOf(ch, line); } // 시작 대사 3종 중 하나 (대사가 없는 인물은 빈칸) · 출처는 대사 아래 줄 (병마용)
   el.classList.add('show');
   if (camOpen.mode === 'sweep') return; // 훑기 판: 카메라가 내 어깨 자리에 닿는 순간(발이 풀릴 때) watchOpening 이 걷는다 — 느린 기기에서 게임 시간이 늦게 흘러도 닿을 때까지
-  hudLater('foeIntro', camOpen.mode === 'old' ? ARENA.startHold : CAMERA.open.introSec, () => el.classList.remove('show')); // 화면 글자 시계(일시정지·메뉴면 멈춘다)
+  hudLater('foeIntro', camOpen.mode === 'old' ? ARENA.startHold / CONFIG.TIME.k : CAMERA.open.introSec, /* 글자 시계는 실제 초 — 정지(게임 초)를 실제 초로 (표준 시간 10/25 · 옛 판 k 1 그대로) */ () => el.classList.remove('show')); // 화면 글자 시계(일시정지·메뉴면 멈춘다)
 }
 function hideFoeIntro() {
   hudLater('foeIntro');
