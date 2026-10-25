@@ -234,9 +234,11 @@ function comboPhase(p) {
 }
 
 // ── 런지 (안다레 리솔루토) ──
-export function lungeRun(weapon, { gap = 2.2, seed = 9, trace = null } = {}) {
+// measure (10/25): 사람 몸 간격(swordArt.measure)을 이 값으로 덮음 — 옛 판 재현 시험이 그때 간격 줄로 (이탈리아 간격 줄 다시 잼 — docs/strike/italian_measure_2026-10-25.md · 없으면 그대로)
+export function lungeRun(weapon, { gap = 2.2, seed = 9, trace = null, measure = null } = {}) {
   const g = stillRound(weapon, { gap, seed });
   const p = g.player;
+  if (measure) Object.defineProperty(p.swordArt, 'measure', { value: { ...p.swordArt.measure, ...measure }, writable: true, configurable: true, enumerable: true });
   const e = g.enemy;
   const T = new WristTally();
   let hit = null;

@@ -12,6 +12,7 @@ import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { iaiTipSpeed, stanceSpread } from '../../src/secret_instant.js';
+import { MEASURED } from '../../src/weapon_measured.js';
 
 const { SECRET } = CONFIG;
 const keep = (o, k, v, fn) => { const old = o[k]; o[k] = v; try { return fn(); } finally { o[k] = old; } };
@@ -187,7 +188,7 @@ test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력�
 
 
 // 10/24 런지 — 상대는 멈춤 · 판 시작 발 묶임(ARENA.startHold) 뒤 · 창을 열어 탭 하나
-// 10/24 13:2x · 13:4x 간격 조건: 런지는 가슴 사이 ≥ 맞닿기 거리(레이피어 1.54 · 달타냥 1.39 m)에서만 — 시험 판은 그 밖 2.2 m 에서 연다
+// 10/24 13:2x · 13:4x 간격 조건: 런지는 가슴 사이 ≥ 맞닿기 거리(레이피어 1.72 · 달타냥 1.64 m — 10/25 찌르기 잣대 · 전 1.54 · 1.39)에서만 — 시험 판은 그 밖 2.2 m 에서 연다
 function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {}) {
   return withCfg(cfg, () => {
     const g = newRound({ weapon: w, weapon2: foeW, gap, seed });
@@ -385,9 +386,11 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
   };
   // 최소 간격 = 무기 실측 맞닿기 거리 measure.contact (13:4x 대안 ③ '맞닿는 거리만 막기' — 13:2x 첫 식 clinch + 앞발은 버림) — 새 수 없음
   for (const w of ['rapier', 'dartagnan', 'balisarda']) at(w, 2.5, (p) => assert.equal(lungeGap(p), p.swordArt.measure.contact, w));
-  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.54) < 0.01, `레이피어 ${lungeGap(p)}`));
-  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.39) < 0.01, `달타냥 ${lungeGap(p)}`));
-  // 가까움(1.3 m — 맞닿기 1.54 안): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
+  // 10/25 이탈리아 간격 줄 다시 잼(찌르기 잣대 — docs/strike/italian_measure_2026-10-25.md): 1.72 · 1.64 — `IT_MEASURE=old` 면 전 줄 1.54 · 1.39
+  const C = CONFIG.THRUST.itMeasure === 'old' ? { rapier: 1.54, dartagnan: 1.39 } : { rapier: 1.72, dartagnan: 1.64 };
+  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.rapier) < 0.01, `레이피어 ${lungeGap(p)}`));
+  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.dartagnan) < 0.01, `달타냥 ${lungeGap(p)}`));
+  // 가까움(1.3 m — 맞닿기 안): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
   at('rapier', 1.3, (p, ps) => {
     assert.equal(lungeGapOk(p), false);
     ps.risoTick(DT, false);
@@ -500,7 +503,8 @@ test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿�
 // 10/24 14:0x 런지 자세 (사장님 '런지할 때 런지 자세가 되려면 앞무릎을 굽히면서 자세 낮춰야 하는데 지금 그렇게 보여?'): 앞무릎 굽힘 · 뒷다리 펴짐 · 골반 낮춤 — 무릎 굽힘 = 넓적다리(엉덩이 → 무릎)와 정강이(무릎 → 발목) 사이 각
 function lungePose(cfg) {
   return withCfg(cfg, () => {
-    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 2.2, seed: 9 });
+    // 가슴 사이 = 맞닿기 + 0.66 (전 줄 1.54 에서 2.2 m — 런지 몸 미끄러짐이 한도 0.6 를 다 나가는 거리 · 미끄러짐은 맞닿기에서 멈춤이라 10/25 다시 잰 줄(1.72)에선 같은 자리로 2.38 m)
+    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: MEASURED.rapier[0] + 0.66, seed: 9 });
     const p = g.player, e = g.enemy;
     g.ai.update = () => {}; p.foe = e; e.foe = p;
     const V = (t) => new THREE.Vector3(t.x, t.y, t.z);
