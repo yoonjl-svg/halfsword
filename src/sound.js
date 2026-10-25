@@ -1662,6 +1662,9 @@ const SAMPLES = {
   whipArmor: nums('whip/armor', 3), // 투구 · 판금을 치는 "탱" (Kenney impactPlate_light · CC0)
   whipClash: nums('whip/clash', 3), // 칼에 감기며 부딪는 "칭" (Kenney impactMetal_light · CC0)
 };
+// 비기 소리 (10/25 — 샛별 저장소 2fa0b2ae · 출처 public/sfx/secret/LICENSE.txt): 이름 'secret:<파일>' 하나에 녹음 하나 (SOUND.secretSfxFiles — 연결표 사장님 10/25 결정).
+//  끈 판(SOUND.secretSfx 0 — 주소 ?secretSfx=0)은 loadSamples 가 받지 않는다. 내는 곳 secretSfx · 언제는 src/secret_sfx.js
+for (const f of new Set(Object.values(SOUND.secretSfxFiles ?? {}))) SAMPLES[`secret:${f}`] = [f];
 
 // 배경(스테이지)마다 다른 것: 발소리 녹음(step), 쓰러질 때 바닥 알갱이(grit), 전투 소리가 벽에 되울리는 방(room).
 // room: reverbIR 모양 + 쇳소리(metal)·몸 소리(flesh)를 울림으로 보내는 양. 바깥(포세이돈·산사)은 울림 없음
@@ -1724,6 +1727,7 @@ export class Sound {
   /** Only the new stage ambience/details pause here; existing combat buses are unchanged. */
   setPaused(paused) {
     this._stagePaused = !!paused;
+    if (this._stagePaused) this.stopSecretSfx(); // 비기 소리(10/25)는 멈춘 화면에 남지 않게 줄여 끈다 (울리고 있을 때만 — 다른 싸움 소리는 그대로)
     this._stageDetails?.setPaused(this._stagePaused);
   }
 
@@ -1936,7 +1940,7 @@ export class Sound {
   async loadSamples() {
     // 한꺼번에 받는다 (하나씩 받으면 발소리처럼 판 시작부터 필요한 소리가 몇 초 늦는다). 순서는 목록 순서로 맞춘다
     const jobs = [];
-    for (const [name, files] of Object.entries(SAMPLES)) files.forEach((f, i) => jobs.push(this.decodeSample(f).then((buf) => buf && (((this.samples[name] = this.samples[name] || [])[i] = buf)))));
+    for (const [name, files] of Object.entries(SAMPLES)) if (SOUND.secretSfx || !name.startsWith('secret:')) files.forEach((f, i) => jobs.push(this.decodeSample(f).then((buf) => buf && (((this.samples[name] = this.samples[name] || [])[i] = buf)))));
     await Promise.all(jobs);
     for (const name of Object.keys(SAMPLES)) if (this.samples[name]) this.samples[name] = this.samples[name].filter(Boolean);
   }
@@ -2295,6 +2299,40 @@ export class Sound {
       const ev = this.event({ bus: this.metalBus, gain: 0.15 + 0.55 * e, prio: 1 + e });
       this.layer(ev, buf, { gain: 0.8, rate: between(R, 0.95, 1.08) });
     }
+  }
+
+  /**
+   * 비기 소리 (10/25 사장님 '샛별이 비기 소리 보낸 거 입혀' — 샛별 저장소 2fa0b2ae · public/sfx/secret/ · 확인표 2542 ~ 2545).
+   *  언제 · 누구 · 어느 파일은 src/secret_sfx.js (main.js — 비기가 실제로 터진 순간 한 번, 낸 사람의 유파 파일). 여기서는 내기만:
+   *  녹음 한 겹(파일마다 크기 맞춤 SOUND.secretSfxTrimDb — 10/25 18:4x g1 · g2 같은 크기) · 쇳소리 묶음(칼 부딪힘 · 채찍 딱과 같은 묶음 — 무대 울림도 같게) · 이벤트 음량 SOUND.secretSfxGain ·
+   *  재생 빠르기 1 (비기 화면 늦춤 0.4 배와 상관없음 — 소리 시계는 실제 시간) · 음소거(on) · 전체 음량은 다른 소리와 같은 master 를 거친다.
+   *  녹음이 아직 안 읽혔거나 끈 판(SOUND.secretSfx 0)이면 소리 없음(합성으로 대신하지 않음). 냈으면 그 이벤트
+   */
+  secretSfx(file) {
+    if (!this._on || !this.ctx || !SOUND.secretSfx) return null;
+    const buf = this.pickSample(`secret:${file}`);
+    if (!buf) return null;
+    const ev = this.event({ bus: this.metalBus, gain: SOUND.secretSfxGain, prio: 2.5 }); // 우선 2.5: 칼 부딪힘(1 ~ 2) · 베기(2)가 몰려도 먼저 끊기지 않게 (흘림 3 보다는 낮게)
+    this.layer(ev, buf, { gain: 10 ** ((SOUND.secretSfxTrimDb?.[file] ?? 0) / 20), rate: 1 });
+    this._secretEv = ev;
+    return ev;
+  }
+  /** 울리고 있는 비기 소리를 줄여 끈다 (일시정지 · 새 판 — 남은 꼬리가 멈춘 화면 · 다음 판 시작에 들리지 않게). 끝난 소리는 건드리지 않는다 */
+  stopSecretSfx() {
+    const ev = this._secretEv;
+    if (!ev) return;
+    this._secretEv = null;
+    const now = this.ctx?.currentTime ?? 0;
+    if (ev.end <= now) return;
+    ev.out.gain.setTargetAtTime(0, now, 0.01);
+    for (const s of ev.srcs) {
+      try {
+        s.stop(now + 0.06);
+      } catch {
+        /* 옛 사파리: stop 을 두 번 부르면 오류 */
+      }
+    }
+    ev.end = Math.min(ev.end, now + 0.06);
   }
 
   /**
@@ -3467,6 +3505,7 @@ export class Sound {
   /** 새 판: 먹먹함을 푼다 (지난 판 플레이어 죽음 날숨이 남아 있으면 끊는다) */
   resetRound() {
     if (!this.ctx) return;
+    this.stopSecretSfx(); // 비기 소리 (10/25): 지난 판 끝에 낸 것이 새 판 시작에 남지 않게
     const t = this.ctx.currentTime;
     if (this.playerDeathVoice) {
       this.playerDeathVoice.out.gain.cancelScheduledValues(t);
