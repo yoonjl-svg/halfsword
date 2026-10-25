@@ -508,7 +508,7 @@ export const SCHOOL_PASSIVE = {
   at: 4,
   iberian: { on: true, wrist: 1.3 },
   italian: { on: true, tipMax: 12, tipRate: 60, aiK: 0.5 }, // 사장님 10/21 '최대 12° · 초당 60° · AI는 약하게'(절반)
-  japanese: { on: true, full: 1.5, gain: 0.3 }, // 사장님 10/21 '1.5초에 +30%' · 곧은 오름은 감독
+  japanese: { on: true, full: 2.0, gain: 0.3 }, // 사장님 10/25 23:1x '1.5초에 걸쳐 -> 2초에 걸쳐' (전 10/21 '1.5초에 +30%') · 곧은 오름은 감독
   german: { on: true, gain: 0.3, aiK: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리)
   chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
 };
