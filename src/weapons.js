@@ -967,7 +967,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
 //   고훈 시대 철검(이나리야마 고분 철검 73.5 cm)처럼 곧은 양날. 칼몸 꼴(창포 잎 폭 · 양날 · 창끝)은 kusanagi_details.js 그대로 — 처음부터 휨이 없었다.
 //   한 손 반 쥠(에스톡과 같은 'hand-and-half' — 두 손으로 쥐되 뒷손은 자루 끝 · 머리 구슬에 걸침): 자루 30 → 25 cm · 손 간격 0.20 → 0.17 ·
 //    머리 구슬 0.10 → 0.15 kg(고훈 시대 칼의 둥근 머리 頭椎 처럼 — 무게를 손 뒤로 조금 받침). 서보 상한은 쥠 기본값(GRIP_TORQUE 'hand-and-half' 22 — 전 두 손 26)
-//   → 손 기준 관성 0.128 → 0.18 · 무게중심 손에서 0.18 → 0.24 m (weaponPhysics — 부품 가운데만 센 Σm·y² 로는 0.144 → 0.20 · 0.23 → 0.29) [사장님 확인 전 — 확인표 2600 ~]
+//   → 손 기준 관성 0.128 → 0.18 · 무게중심 손에서 0.18 → 0.24 m (weaponPhysics — 부품 가운데만 센 Σm·y² 로는 0.144 → 0.20 · 0.23 → 0.29) [방향 · 목표값 사장님 10/25 결정 · 자루 길이 · 손 간격 · 구슬은 사장님 확인 전 — 확인표 2600 ~ 2605]
 //   베기 · 찌르기 · 둔타 배율은 그대로(사장님 '계수는 나중에 따로')
 const kusanagi = finalizeSpec('kusanagi', {
   nameKo: '쿠사나기', nameEn: 'Kusanagi',
@@ -1065,6 +1065,11 @@ const uchigatana = finalizeSpec('uchigatana', UCHIGATANA_SPEC);
 //  날 0.68 m(등 밑동~칼끝 직선 — 사장님 10/21 23:3x, 샛별 쪽 0.70 에서 2 cm 짧게) · 휨 2 cm(그대로 — 그림만 휘고 콜라이더는 반폭 2.4 cm 상자가 덮는다) ·
 //  총 1.05 kg(사장님 10/21 23:4x — 샛별 쪽 1.12 에서 내림). 덜어 낸 몫은 모두 칼날이 진다(샛별 massRatio 방식): 칼날 0.66 → 0.61 kg, 칼날의 무게중심 비 · 회전 반경 비는 우치가타나 그대로.
 //  → 손~칼끝 0.755 m(우치 0.785) · 전체 1.014 m · 무게중심 손에서 0.175 m(우치 0.190) · 손 기준 관성 0.101(우치 0.116). 베기 · 찌르기 배율은 우치가타나 그대로, 레어 공통 계수만 다르다. 특수 능력 없음.
+//  10/25 일본 유파 손맛 개편 (사장님 10/25 22:4x '유파별 손맛이 … 커먼-레어인 경우 너무 높은 확률로 같은 손맛' · '핵심은 손맛 · 특히 휘두를 때의 감각' — 무라마사 = 가볍고 빠르게):
+//   날 길이는 그대로(0.68 m — 사장님 10/25 '짧은 날은 고노센 발도 거리를 크게 해친다' · 감독 전달) · 가벼움은 질량 배분으로:
+//   총 1.05 → 0.85 kg · 칼날 0.61 → 0.43 kg(얇고 좁은 칼몸 — 끝으로 더 가늘어져 칼날 무게중심 비 0.40 → 0.38) · 손 쪽(츠카 0.23 · 카시라 0.06 · 츠바 + 하바키 0.13) 0.42 kg = 총의 49 %(우치가타나 40 %)
+//   → 손 기준 관성 0.101 → 0.069(우치가타나 0.116 의 60 %) · 무게중심 손에서 0.175 → 0.139 m (부품 가운데만 센 Σm·y² 로는 0.111 → 0.080 · 0.214 → 0.18) [사장님 10/25 23:2x 결정 '무라마사는 길이 그대로, 무게만 가볍게 해' · 부품 나눔은 사장님 확인 전 — 확인표 2606 · 2607]
+//   쥠(츠카 30 cm · 손 간격 0.20) · 휨 2 cm · 콜라이더 상자 · 베기 · 찌르기 배율 그대로
 const muramasa = finalizeSpec('muramasa', {
   ...UCHIGATANA_SPEC,
   nameKo: '무라마사', nameEn: 'Muramasa', tier: 'rare',
@@ -1072,20 +1077,25 @@ const muramasa = finalizeSpec('muramasa', {
   bladeLength: MURAMASA_PROFILE.length,
   partMesh: muramasaPartMesh,
   decorate: muramasaDecorate,
-  buildParts(look) {
-    const parts = UCHIGATANA_SPEC.buildParts.call(this, { ...look, ...MURAMASA_COLORS });
-    const blade = parts[3];
-    blade[3] = MURAMASA_COLORS.blade;
-    // 총질량은 칼날이 맞춘다: 칼날 = 총 1.05 − (츠카 + 카시라 + 츠바). 관성 둘은 질량에 비례하므로 같은 비로 (무게중심 자리는 그대로)
-    const bladeMass = MURAMASA_PROFILE.mass - parts.slice(0, 3).reduce((sum, p) => sum + p[2][0], 0);
-    const massRatio = bladeMass / blade[2][0];
-    blade[2][0] = bladeMass;
-    blade[2][2] *= massRatio;
-    blade[2][3] *= massRatio;
-    // 휜 칼날이 상자에서 1 cm 안에 들도록 기존 상자 근사의 반폭만 넓힌다. 질량 축은 가운데에 둔다 —
-    //  상자를 비켜 놓으면 Rapier 의 주관성 축이 돌아가는데, 지금 두 손 서보가 그것을 안정하게 다루지 못한다.
-    blade[0][1] = MURAMASA_PROFILE.colliderHalfWidth;
-    return parts;
+  buildParts() {
+    // 부품 자리 · 콜라이더 상자는 우치가타나 그대로(츠카 0.065 ~ −0.235 · 카시라 −0.245 · 츠바 0.07 · 칼날 0.075 부터) — 질량 배분만 다르다 (위 10/25 머리말).
+    //  칼날 = 총 0.85 − (츠카 + 카시라 + 츠바 · 하바키). 칼날 관성은 얇고 좁은 단면(0.027 × 0.006)으로 셈
+    //  (전 10/21: 우치가타나 부품을 그대로 쓰고 칼날 질량만 1.05 kg 에 맞춰 비례로 줄임 — 칼날 0.61 kg)
+    const L = this.bladeLength;
+    const M = MURAMASA_PROFILE.parts;
+    const bladeMass = MURAMASA_PROFILE.mass - M.grip - M.kashira - M.tsuba;
+    const grip = boxInertia(M.grip, 0.014, 0.15, 0.017);
+    const pommel = sphereInertia(M.kashira, 0.014);
+    const cross = boxInertia(M.tsuba, 0.04, 0.005, 0.04);
+    const blade = bladeInertia(bladeMass, L, 0.38, 0.26, 0.027, 0.006);
+    return [
+      partTuple(['box', 0.014, 0.15, 0.017], -0.085, M.grip, 0, grip.Ie, grip.It, MURAMASA_COLORS.grip),
+      partTuple(['ball', 0.014], -0.245, M.kashira, 0, pommel.Ie, pommel.It, MURAMASA_COLORS.hilt),
+      partTuple(['box', 0.04, 0.005, 0.04], 0.07, M.tsuba, 0, cross.Ie, cross.It, MURAMASA_COLORS.hilt),
+      // 휜 칼날이 상자에서 1 cm 안에 들도록 기존 상자 근사의 반폭만 넓힌다(colliderHalfWidth). 질량 축은 가운데에 둔다 —
+      //  상자를 비켜 놓으면 Rapier 의 주관성 축이 돌아가는데, 지금 두 손 서보가 그것을 안정하게 다루지 못한다.
+      partTuple(['box', MURAMASA_PROFILE.colliderHalfWidth, L / 2, 0.0035], this.hiltLength + L / 2, bladeMass, blade.comY, blade.Ie, blade.It, MURAMASA_COLORS.blade, true),
+    ];
   },
 });
 

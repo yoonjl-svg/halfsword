@@ -7,9 +7,11 @@ import { swordKit, metalMat } from './weapon_looks.js';
 export const MURAMASA_COLORS = { grip: 0x28272a, hilt: 0x28272b, blade: 0xaeb5bd };
 // 사장님 확정: 날 길이는 등 밑동~칼끝의 직선, 소리(휨)는 그 직선~등의 최대 수직 거리.
 //  10/21 23:3x 날 0.70 → 0.68 m(휨 2 cm 그대로) · 23:4x 총 1.12 → 1.05 kg (덜어 낸 몫은 칼날 — weapons.js muramasa)
-export const MURAMASA_PROFILE = { length: .68, sori: .020, mass: 1.05, colliderHalfWidth: .024 };
+//  10/25 손맛 개편(가볍고 빠르게 — 날 길이 · 휨 그대로): 총 1.05 → 0.85 kg · 손 쪽 부품 질량 parts(츠카 · 카시라 · 츠바 + 하바키 kg) · 칼날 = 나머지 0.43 kg ·
+//   칼날 그림도 얇고 좁게(두께 3.5 → 3 mm · 반폭 15 → 13.5 mm) — 사장님 10/25 23:2x '무라마사는 길이 그대로, 무게만 가볍게 해' (부품 나눔 · 그림 두께는 사장님 확인 전)
+export const MURAMASA_PROFILE = { length: .68, sori: .020, mass: .85, parts: { grip: .23, kashira: .06, tsuba: .13 }, colliderHalfWidth: .024, drawHalfWidth: .0135 };
 const kit = swordKit({
-  blade: { edge: 'single', width: t => 1-.28*t, thick: .0035, ridge: .3,
+  blade: { edge: 'single', width: t => 1-.28*t, thick: .003, ridge: .3,
     hamon: true, hamonWave: (_t,y) => .31+.105*Math.sin(y*51)+.045*Math.sin(y*123+.8)+.023*Math.sin(y*89),
     curve: 0, tip: 'kissaki', tipLen: .05, overshoot: 0, segs: 52 },
   grip: { style: 'plain', color: MURAMASA_COLORS.grip },
@@ -29,8 +31,8 @@ function tsuba() {
 }
 export function muramasaPartMesh(...args){
   if(args[0]===2&&!args[1])return tsuba();
-  // 칼날 그림은 우치가타나 칼날 반폭(.015)으로 그린다 — 콜라이더 상자만 휨을 덮으려고 넓혔다(weapons.js colliderHalfWidth).
-  if(args[1])args[2]=[...args[2].slice(0,1),.015,...args[2].slice(2)];
+  // 칼날 그림은 drawHalfWidth(10/25 13.5 mm — 전 우치가타나 칼날 반폭 15 mm)로 그린다 — 콜라이더 상자만 휨을 덮으려고 넓혔다(weapons.js colliderHalfWidth).
+  if(args[1])args[2]=[...args[2].slice(0,1),MURAMASA_PROFILE.drawHalfWidth,...args[2].slice(2)];
   const m=kit(...args);
   if(args[1]){
     // 이 칼날만 휜다. 단면 · 하몬은 그대로 두고, 휨은 칼끝 어긋남 설정이나 가운데 줄이 아니라
