@@ -136,7 +136,7 @@ test('사람 길만: 이탈리아 무기 사람 비기 = 거침없이 나아가 
   assert.equal(keep(SECRET, 'itSecret', 'contratempo', () => playerSecretDef('italian').name), 'passataContratempo');
   assert.equal(playerSecretDef('japanese'), TRADITIONS.japanese.secret);
   const C = CHARACTERS_BY_ID.tome;
-  for (const w of ['rapier', 'dartagnan', 'balisarda']) {
+  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) {
     const g = newRound({ weapon: w, weapon2: C.weapon, seed: 3, difficulty: C.ai.level, persona: { ...C.ai.persona, proficiency: { italian: 5 } } });
     try {
       assert.equal(playerSecretOf(g.player)?.name, 'andareRisoluto', w);
@@ -384,7 +384,7 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
     } finally { g.world.free(); }
   };
   // 최소 간격 = 무기 실측 맞닿기 거리 measure.contact (13:4x 대안 ③ '맞닿는 거리만 막기' — 13:2x 첫 식 clinch + 앞발은 버림) — 새 수 없음
-  for (const w of ['rapier', 'dartagnan', 'balisarda']) at(w, 2.5, (p) => assert.equal(lungeGap(p), p.swordArt.measure.contact, w));
+  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) at(w, 2.5, (p) => assert.equal(lungeGap(p), p.swordArt.measure.contact, w));
   at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.54) < 0.01, `레이피어 ${lungeGap(p)}`));
   at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.39) < 0.01, `달타냥 ${lungeGap(p)}`));
   // 가까움(1.3 m — 맞닿기 1.54 안): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
