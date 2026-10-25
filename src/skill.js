@@ -35,7 +35,7 @@ import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 �
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg, stanceSpread } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
 import { requestSpin, spinAbort, spinCutPose, spinCap, spinHandRest, spinLid } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
-import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
+import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
 
@@ -658,7 +658,7 @@ export class Skill {
       run.stage = 'instant';
       run.instant = true;
       run.end = D.tech.path[D.tech.path.length - 1];
-      if (SECRET.iai) requestIai(f, { player: true, block: !!SECRET.gnsEnterBlock && run.ctx?.ev === 'enter' }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime) · 여쭘 B(10/25 — 기본 끔): 들어옴 창 발도는 상대 칼에 막힐 수 있음
+      if (SECRET.iai) requestIai(f, { player: true, block: gnsBlockOf(run.ctx, f) }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime) · B(10/25 16:0x 사장님 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (달려듦 빠르기로 넘은 것 · 칼을 듦 · 달려듦 · 헛침 창은 그대로)
       else requestInstant(f, { endPad: run.end });
       this.secretBursts++;
     } else if (D.back) {

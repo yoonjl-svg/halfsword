@@ -13,6 +13,7 @@
 //   GNS_DUMP=1 창 · 들어옴 한 줄씩
 //  10/25 08:0x (§17): GNS_WARY=0 AI 고노센 경계 끔(?gnsWary=0) · 여쭘 GNS_EWIN=0.4 들어옴 창 길이 A(?gnsEnterWindow=) · GNS_BLOCK=1 들어옴 발도 막힐 수 있음 B(?gnsEnterBlock=1) ·
 //   GNS_OPEN=1 들어옴은 상대 칼끝이 비켰을 때만 C(?gnsEnterOpen=1) — 놓침을 헛침 · 막힘으로 나눔 · AI 경계 셈(결행 · 속임 · 발도에 베여 물러남)
+//  10/25 16:0x (§18): CHARGE=0.9 달려듦 빠르기 옛 판(?foeChargeSpeed=0.9 — 기본 1.2) · B 기본 켬(GNS_BLOCK=0 = 끔) — 들어옴 창 가운데 빠르게(달려듦 빠르기로 넘음 — 막힘 없음) · 듦 창 가운데 달려듦만으로 열린 것
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -28,8 +29,10 @@ if (E.GNS_LONG != null && 'gnsLong' in S0) S0.gnsLong = +E.GNS_LONG ? 1 : 0;
 if (E.GNS_AI != null && 'gnsEnterAI' in S0) S0.gnsEnterAI = +E.GNS_AI ? 1 : 0;
 if (E.GNS_WARY != null && 'gnsWary' in S0) S0.gnsWary = +E.GNS_WARY ? 1 : 0;
 if (E.GNS_EWIN != null && 'gnsEnterWindow' in S0) S0.gnsEnterWindow = +E.GNS_EWIN;
-if (E.GNS_BLOCK != null && 'gnsEnterBlock' in S0) S0.gnsEnterBlock = +E.GNS_BLOCK ? 1 : 0;
+if (E.GNS_BLOCK != null && 'gnsEnterBlock' in S0) S0.gnsEnterBlock = [0, 1, 2].includes(+E.GNS_BLOCK) ? +E.GNS_BLOCK : 1; // 2 = 앞을 가린 상대도 막음 (10/25 16:0x 시험)
 if (E.GNS_OPEN != null && 'gnsEnterOpen' in S0) S0.gnsEnterOpen = +E.GNS_OPEN ? 1 : 0;
+if (E.CHARGE != null && +E.CHARGE > 0 && 'foeChargeSpeed' in S0) S0.foeChargeSpeed = +E.CHARGE; // 10/25 16:0x 달려듦 빠르기 (?foeChargeSpeed=)
+if (E.CHARGE_AVG != null && 'foeChargeAvg' in S0) S0.foeChargeAvg = +E.CHARGE_AVG ? 1 : 0; // 최근 0.6 s 평균 (?foeChargeAvg=)
 const SEEDS = +seedsArg, SIM = +simArg, REACT = +rArg, DRIVE = driveArg;
 const weapons = wArg.split(','), foes = fArg.split(',');
 // 발도가 닿는 거리 (secretCond 의 발도 창 위 끝 — iai 1) · 들어옴 선 (있으면 판 함수)
@@ -37,9 +40,9 @@ const strikeLine = (V) => (SEC.gnsEnterLine ? SEC.gnsEnterLine(V) : S0.iai ? V.c
 const armLine = (V) => V.foeReach; // 준비가 쌓이는 선 (상대 칼 거리)
 const q = (a, f) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(f * s.length))] : NaN; };
 const f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-'), f1 = (x) => (Number.isFinite(x) ? x.toFixed(1) : '-');
-const KEYS = ['rounds', 'live', 'entries', 'entArmed', 'entShort', 'entBusy', 'periods', 'pWin', 'pNoEv', 'pEvFar', 'pOther', 'endGrace', 'endBusy', 'endFired', 'endState', 'graceNoWin', 'crossArmed', 'crossWin', 'crossLeft', 'crossGrace', 'win', 'wRaise', 'wRecover', 'wEnter', 'wCharge', 'fired', 'landed', 'kill1', 'missWhiff', 'missBlock', 'unfired', 'foeFirst', 'pDead', 'fDead', 'dealt', 'taken', 'evUnarmed', 'aiCommit', 'aiFeint', 'aiCut', 'stiffHit'];
+const KEYS = ['rounds', 'live', 'entries', 'entArmed', 'entShort', 'entBusy', 'periods', 'pWin', 'pNoEv', 'pEvFar', 'pOther', 'endGrace', 'endBusy', 'endFired', 'endState', 'graceNoWin', 'crossArmed', 'crossWin', 'crossLeft', 'crossGrace', 'win', 'wRaise', 'wRecover', 'wEnter', 'wCharge', 'fired', 'landed', 'kill1', 'missWhiff', 'missBlock', 'unfired', 'foeFirst', 'pDead', 'fDead', 'dealt', 'taken', 'evUnarmed', 'aiCommit', 'aiFeint', 'aiCut', 'stiffHit', 'wFast', 'wChg'];
 const rows = [];
-const LG = { enterClose: [], reachClose: [], winGap: [], evFarBy: [] };
+const LG = { enterClose: [], reachClose: [], winGap: [], evFarBy: [], commitClose: [], otherClose: [], commitAvg: [], otherAvg: [] };
 for (const w of weapons) for (const id of foes) {
   const C = CHARACTERS_BY_ID[id];
   if (!C) throw new Error(`인물 없음: ${id}`);
@@ -54,6 +57,7 @@ for (const w of weapons) for (const id of foes) {
     if (ps.S?.name !== 'goNoSen') throw new Error(`${w}: 고노센이 아님 (${ps.S?.name})`);
     const V = ps.view();
     R.L = strikeLine(V); R.foeReach = V.foeReach; R.band = R.L - armLine(V);
+    let emaC = 0;
     let cross = null, seenOpen = 0, due = null, openT = null, run = null, lastHurt = -1, prevD = null, prevArmed = false, period = null, lastReset = 'short', evPrev = false, unfiredOpen = null;
     const diagSt = { armed: true, off: 0 }; // 사건 읽기 전용 칸 (창의 칸과 따로)
     G.onWound = (att, vic, r) => {
@@ -68,6 +72,8 @@ for (const w of weapons) for (const id of foes) {
           due = t + REACT; openT = t; unfiredOpen = ps.open;
           const ev = ps.open.ctx?.ev ?? '-';
           R.win++; R[{ raise: 'wRaise', recover: 'wRecover', enter: 'wEnter' }[ev] ?? 'wCharge']++;
+          if (ps.open.ctx?.fast) R.wFast++; // 들어옴 · 빠르게 (달려듦 빠르기로 넘음)
+          if (ps.open.ctx?.charge) R.wChg++; // 듦 창 가운데 달려듦만으로
           LG.winGap.push(p.foeDistance());
           if (period) period.win = true;
           if (cross) { R.crossWin++; cross = null; } // 준비된 채 발도가 닿는 거리 안으로 든 뒤 창
@@ -100,6 +106,7 @@ for (const w of weapons) for (const id of foes) {
       const s0 = ps.sense.seen(0);
       const d0 = Math.max(0.01, Math.hypot(s0.cx - c.x, s0.cz - c.z));
       const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0); // 상대 가슴이 나 쪽으로 (m/s)
+      emaC += (-(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0 - emaC) * Math.min(1, DT / 0.6); // 최근 0.6 s 평균 (secret.js foeInAvg 와 같은 셈 — 10/25 16:0x)
       const armed = ps.iaiArm.armed;
       if (armed && !prevArmed) { period = { win: false, ev: false, evFar: false }; R.periods++; }
       if (!armed && prevArmed && period) {
@@ -123,6 +130,8 @@ for (const w of weapons) for (const id of foes) {
         // 상대가 들어옴: 발도가 닿는 거리 · 상대 칼 거리를 안으로 넘는 순간의 상대 다가옴 빠르기
         if (prevD != null && prevD > R.L && d0 <= R.L) {
           LG.enterClose.push(closing);
+          (G.ai.gnsW?.plan?.kind === 'commit' ? LG.commitClose : LG.otherClose).push(closing); // AI 경계 결행으로 넘음 · 그 밖
+          (G.ai.gnsW?.plan?.kind === 'commit' ? LG.commitAvg : LG.otherAvg).push(emaC);
           if (armed) { R.crossArmed++; cross = {}; } // 준비된 채 발도가 닿는 거리 안으로 듦 — 그 안에 머무는 동안 창이 열렸나
           if (E.GNS_DUMP === '1') console.log(`ENTER ${w} ${id} t ${t.toFixed(2)} d ${d0.toFixed(2)} closing ${closing.toFixed(2)} armed ${armed}`);
         }
@@ -158,7 +167,7 @@ for (const w of weapons) for (const id of foes) {
   rows.push(R);
 }
 const S = CONFIG.SECRET;
-console.log(`[고노센 겨눔 기다림] 들어옴 사건 ${S.gnsEnter ? '켬' : S.gnsEnter === 0 ? '끔' : '없음(옛 판)'} · 긴 칼 상대 규칙 ${S.gnsLong ? '켬' : '끔'} · AI 들어옴 ${S.gnsEnterAI ? '켬' : '끔'} · AI 경계 ${S.gnsWary ? '켬' : '끔'} · 여쭘 A 창 ${S.gnsEnterWindow > 0 ? S.gnsEnterWindow : S.playerWindow} s · B 막힘 ${S.gnsEnterBlock ? '켬' : '끔'} · C 칼끝 ${S.gnsEnterOpen ? '켬' : '끔'} · 운전 ${DRIVE} · 씨앗 ${SEEDS} × ${SIM} s · 탭 반응 ${REACT} s`);
+console.log(`[고노센 겨눔 기다림] 들어옴 사건 ${S.gnsEnter ? '켬' : S.gnsEnter === 0 ? '끔' : '없음(옛 판)'} · 긴 칼 상대 규칙 ${S.gnsLong ? '켬' : '끔'} · AI 들어옴 ${S.gnsEnterAI ? '켬' : '끔'} · AI 경계 ${S.gnsWary ? '켬' : '끔'} · 여쭘 A 창 ${S.gnsEnterWindow > 0 ? S.gnsEnterWindow : S.playerWindow} s · B 막힘 ${['끔', '켬', '켬 + 앞 가림'][S.gnsEnterBlock]} · C 칼끝 ${S.gnsEnterOpen ? '켬' : '끔'} · 달려듦 ${S.foeChargeSpeed} m/s (${S.foeChargeAvg ? "0.6 s 평균" : "한 스텝"}) · 운전 ${DRIVE} · 씨앗 ${SEEDS} × ${SIM} s · 탭 반응 ${REACT} s`);
 console.log('| 무기 | 상대 (칼) | 띠 m | 판 | 서 있는 때 s | 상대 칼 거리 안으로 듦 (준비 · 짧음 · 휘두름) | 준비 (창 · 사건 없음 · 사건 거리 밖) | 끝남 (유예 · 냄 · 넘어짐) | 창 없이 걸어 들어옴 | 창 (든·달려듦 · 헛침 · 들어옴 · 그 밖) | 창 / 30 s | 탭 · 맞힘 · 그 칼로 죽임 | 놓침 (헛침 · 막힘) | 상대 칼 먼저 | 준 · 입은 심각도 | 내 죽음 · 상대 죽음 |');
 console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 const T = { band: NaN };
@@ -175,5 +184,11 @@ console.log(`띠가 빈 짝 (발도가 닿는 거리 ≤ 준비 선 — 긴 칼 
 console.log(`상대 다가옴 빠르기 (m/s) — 발도가 닿는 거리를 넘을 때 p10 ${f2(q(LG.enterClose, 0.1))} · p50 ${f2(q(LG.enterClose, 0.5))} · p90 ${f2(q(LG.enterClose, 0.9))} (${LG.enterClose.length} 번, 0.3 넘음 ${LG.enterClose.filter((x) => x > 0.3).length}) · 상대 칼 거리를 넘을 때 p50 ${f2(q(LG.reachClose, 0.5))} (${LG.reachClose.length})`);
 console.log(`창이 열린 때 가슴 사이 p50 ${f2(q(LG.winGap, 0.5))} (${f2(q(LG.winGap, 0))} ~ ${f2(q(LG.winGap, 1))}) m · 사건 거리 밖일 때 발도가 닿는 거리보다 p10 ${f2(q(LG.evFarBy, 0.1))} · p50 ${f2(q(LG.evFarBy, 0.5))} m 멂 (${LG.evFarBy.length}) · 창 안 냄 ${T.unfired} · 상대 사건이 났는데 준비 아님 ${T.evUnarmed}`);
 console.log(`준비된 채 발도가 닿는 거리 안으로 든 수 ${T.crossArmed} · 그 안에 머무는 동안 창이 열린 수 ${T.crossWin} · 창 없이 상대가 선 밖으로 나감 ${T.crossLeft} · 창 없이 준비가 유예로 풀림 ${T.crossGrace} · 나머지(넘어짐 · 판 끝) ${T.crossArmed - T.crossWin - T.crossLeft - T.crossGrace}`);
+{
+  const dist = (a) => `p10 ${f2(q(a, 0.1))} · p50 ${f2(q(a, 0.5))} · p90 ${f2(q(a, 0.9))} · 최고 ${f2(q(a, 1))} (${a.length} 번, > ${S.foeChargeSpeed} ${a.filter((x) => x > S.foeChargeSpeed).length})`;
+  console.log(`발도 선을 넘는 스텝의 상대 다가옴 — AI 결행 ${dist(LG.commitClose)} · 그 밖 ${dist(LG.otherClose)}`);
+  console.log(`  같은 스텝의 최근 0.6 s 평균 — AI 결행 ${dist(LG.commitAvg)} · 그 밖 ${dist(LG.otherAvg)}`);
+}
+console.log(`창 가운데 들어옴 빠르게 ${T.wFast} · 달려듦 ${T.wChg} (달려듦 빠르기 ${S.foeChargeSpeed} m/s)`);
 console.log(`놓침 헛침 ${T.missWhiff} · 막힘 ${T.missBlock} · 낸 뒤 굳음 동안 베임 ${T.stiffHit} · AI 경계: 결행 ${T.aiCommit} · 속임 ${T.aiFeint} · 발도에 베여 물러남 ${T.aiCut}`);
 console.log(`맞힘 ${T.landed} / ${T.fired} 탭 (${T.fired ? Math.round((100 * T.landed) / T.fired) : '-'} %) · 그 칼로 죽임 ${T.kill1} · 판당 창 ${f2(T.win / T.rounds)} · 서 있는 30 s 당 창 ${f2(per30(T.win, T.live))} · 탭 ${f2(per30(T.fired, T.live))} · 맞힘 ${f2(per30(T.landed, T.live))}`);

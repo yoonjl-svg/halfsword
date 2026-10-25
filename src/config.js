@@ -1102,9 +1102,15 @@ export const SECRET = {
   //  ③ 고노센에 베이면 선 밖까지 물러나 참을성을 되채움(주고받은 뒤와 같은 셈). 새 수 없음 — 모두 있는 AI 값
   gnsWary: 1, // 1 = 켬 · 0 = 10/25 01:3x 판 AI (같은 걸음으로 거듭 걸어 듦 — 끄면 AI 판 바이트 그대로) `?gnsWary=0` [사장님 10/25 결정 — 확인표 2508]
   // 여쭘 (10/25 08:0x 사장님 '지금은 발동이 너무 쉬운데' — 고르실 거리 · 기본 = 지금 판 · §17):
-  gnsEnterWindow: 0, // A: 들어옴 창 길이(s) — 0 = playerWindow(0.6) 그대로 · 0.4 = 짧게(시간 사다리) `?gnsEnterWindow=0.4` [사장님 확인 전 — 확인표 2510]
-  gnsEnterBlock: 0, // B: 들어옴 창에서 낸 발도는 막힐 수 있음 — 칼이 몸보다 먼저 상대 칼에 닿으면 막힘(연환 · 격살 · 런지와 같은 막힘 · iberianBlockDist · 밀어냄 없음). 칼을 들거나 달려들거나 헛친 상대에게 낸 것은 그대로 `?gnsEnterBlock=1` [사장님 확인 전 — 확인표 2511]
-  gnsEnterOpen: 0, // C: 들어옴 창은 상대 칼끝이 내 몸을 겨누지 않을 때만 — AI 가 '걸어 들어오는 상대'를 칠 때 보는 칼끝 겨눔(ai.js foeClass online · 같은 셈 secret.js foeOnline)과 같음 `?gnsEnterOpen=1` [사장님 확인 전 — 확인표 2512]
+  gnsEnterWindow: 0, // A: 들어옴 창 길이(s) — 0 = playerWindow(0.6) 그대로 · 0.4 = 짧게(시간 사다리) `?gnsEnterWindow=0.4` [안 함 — 사장님 10/25 16:0x B 선택 · 확인표 2510]
+  gnsEnterBlock: 1, // B (10/25 16:0x 사장님 'B 켬'): 들어옴 창에서 낸 발도는 막힐 수 있음 — 칼이 몸보다 먼저 상대 칼에 닿으면 막힘(연환 · 격살 · 런지와 같은 막힘 · iberianBlockDist · 밀어냄 없음). 달려듦 빠르기(foeChargeSpeed)로 넘은 들어옴 · 칼을 들거나 달려들거나 헛친 상대에게 낸 것은 그대로(막힘 없음) `?gnsEnterBlock=0` [사장님 10/25 결정 — 확인표 2511] ·
+  //  2 = 그에 더해 낼 때 상대가 앞을 가리고 있으면(사람 = 막기 단추를 누름 · AI = 막기 꼴 · 또는 칼끝이 내 몸을 겨눔 — secret.js foeOnline, AI 'stepin' 의 칼끝 겨눔과 같은 셈) 몸에 닿는 자리에서 그 칼에 막힘 `?gnsEnterBlock=2` (secret.js gnsBlockOf) [시험 · 사장님 확인 전 — 확인표 2526]
+  // 달려듦 (상대 사건 foeCharge — 일본 고노센 · 이탈리아 옛 박자 밑 찌르기): 상대 골반이 나 쪽으로 이 빠르기(m/s, 지금 모습 한 스텝)를 넘으면 '빠르게 걸어 들어옴' (secret.js secretEvent · 들어옴 fast).
+  //  10/25 16:0x 사장님 '지금은 대부분의 걸음걸이가 다 적용되는 거라 고노센을 천천히 걸어들어와서 파훼할 수 있어야 해. 최고 속도 기준으로 상위 30% 정도를' (앞걸음 최고 GAIT.moveSpeed 1.8 × 0.7 = 1.26)
+  //  → 16:1x '빠르게 달려들기의 속도는 1.2m를 기준으로 하자' → 1.2. AI 의 낌새 읽기(ai.js preThreat '달려든다' 0.9)는 비기 창이 아니라 그대로
+  foeChargeSpeed: 1.2, // 전 0.9 `?foeChargeSpeed=0.9` [사장님 10/25 결정 — 확인표 2524]
+  foeChargeAvg: 1, // 1 = 위 빠르기를 최근 0.6 s 평균(들어옴 판정과 같은 지수 평균)으로 봄 — 걸음마다 출렁이는 한 스텝 최고가 아니라 걸음 빠르기 · 0 = 한 스텝 지금 모습(전) `?foeChargeAvg=0` [사장님 확인 전 — 확인표 2525]
+  gnsEnterOpen: 0, // C: 들어옴 창은 상대 칼끝이 내 몸을 겨누지 않을 때만 — AI 가 '걸어 들어오는 상대'를 칠 때 보는 칼끝 겨눔(ai.js foeClass online · 같은 셈 secret.js foeOnline)과 같음 `?gnsEnterOpen=1` [안 함 — 사장님 10/25 16:0x B 선택 · 확인표 2512]
   // 이베리아 길목 지키기 준비 (10/11 v6 — secret.js IaiArm 같은 셈, 열쇠만 다름) [사장님 확인 전 — 확인표 870·871]: 상대 가슴이 내 칼끝 거리(reach) 밖에 이 초 이상 계속 머물고
   //  내가 공격·막기 중이 아니면 준비(armed). 시작값은 일본 iaiArmTime·iaiArmGrace 와 같은 수 — 일본 값을 바꿔도 따라 바뀌지 않게 새 열쇠
   gilmokArmTime: 1.5,

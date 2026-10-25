@@ -136,6 +136,9 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
     return { on: !!ctx, ctx };
   }
   if (!(W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge'))) return { on: false, ctx: null };
+  // 달려듦 빠르기의 최근 평균 (10/25 16:0x — SECRET.foeChargeAvg): 상대 골반 빠르기의 나 쪽 몫은 걸음마다 출렁인다(스틱 0.5 걸음 p50 0.86 m/s 에 한 스텝 최고 1.75 · 스틱 1 은 넘는 스텝 4 / 15 가 1.2 아래 —
+  //  §18) → 들어옴 판정과 같은 최근 0.6 s 지수 평균(GNS_RECENT)으로 '빠르게 걸어 들어옴'을 본다. ex.st 가 없으면(시험 · 옛 부름) 지금 모습 그대로. 아래 달려듦 · 들어옴 fast 가 읽는다
+  if (ex?.st) ex.st.foeInAvg = (ex.st.foeInAvg ?? 0) + (-(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0 - (ex.st.foeInAvg ?? 0)) * Math.min(1, (ex.dt ?? 0) / GNS_RECENT);
   // 일본 들어옴 (10/25 — enterEvent): 다른 사건보다 먼저 본다(지난 거리를 스텝마다 적어야 넘음을 안다). ex.enterLine 이 있을 때만 — 사람 SECRET.gnsEnter · AI SECRET.gnsEnterAI
   if (W.includes('foeEnter') && ex?.enterLine > 0) {
     const en = enterEvent(s0, c, d0, ex, me);
@@ -146,11 +149,11 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
   // preThreat 의 raising·charging 과 같은 꼴 — 지금 모습으로. 거리 창(cond.window)이 있는 비기(일본)는 preThreat 의 '가까움' 문턱 대신 그 창이 거리를 맡는다
   const closing = Math.max(0, -(s0.vx * dx + s0.vz * dz) / d0);
   const raising = W.includes('foeRaise') && s0.hvy > 1.6 && s0.hy > 0.05;
-  const charging = W.includes('foeCharge') && closing > 0.9;
+  const charging = W.includes('foeCharge') && (SECRET.foeChargeAvg && ex?.st ? ex.st.foeInAvg : closing) > SECRET.foeChargeSpeed; // 달려듦 (10/25 16:0x 사장님 '최고 속도 기준으로 상위 30% 정도를 빠르게 걸어들어오는 것으로' — 0.9 → 1.2 (16:1x '1.2m를 기준으로') · `?foeChargeSpeed=0.9` 옛 판)
   let on = (raising || charging) && (!!S.cond?.window || d0 < foeReach + closing * 0.4 + 0.3);
   // 결심한 공격만 (cond.commit — 10/9 사장님 '발동은 좀 줄되'): 들어 올림이면 손이 commit 패드 m/s 이상으로 움직일 때만(달려듦은 그대로)
   if (on && S.cond?.commit && !charging && Math.hypot(s0.hvx, s0.hvy) < secretVal(S.cond.commit)) on = false;
-  if (on) return { on, ctx: { ev: 'raise' } };
+  if (on) return { on, ctx: { ev: 'raise', charge: charging && !raising } }; // charge: 달려듦만으로 열림 (재기 — 판정에는 안 씀)
   // seize 의 recovering 과 같은 꼴(방금 크게 휘두르고 손이 멎음) — 늦지 않게 지금 모습으로 (일본은 들어 올림 다음 차례의 보조 사건)
   if (W.includes('foeRecover') && sense.recentHandSpeed(0, 0.6) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8) {
     return { on: true, ctx: { ev: 'recover', tipE: foeRecentTipE(sense, foe, 0.6) } }; // 진짜 헛스윙인가 — 그 휘두름의 칼끝 추정 에너지 (cond.whiff)
@@ -231,7 +234,9 @@ function enterEvent(s0, c, d0, ex, me) {
   if (!(st.gnsFoeIn > 0 && st.gnsFoeIn > st.gnsMeIn)) return { on: false, ctx: null }; // 내가 들어가 넘음 (또는 둘 다 서 있음)
   if (SECRET.gnsEnterOpen && foeOnline(s0, c)) return { on: false, ctx: null }; // 여쭘 C (10/25 08:0x · 기본 끔): 칼끝을 내 몸에 겨눈 채 들어옴은 빈틈이 아님 — 이 넘음은 창 없음
   st.gnsEnter = 'done';
-  return { on: true, ctx: { ev: 'enter', closing: st.gnsFoeIn, meIn: st.gnsMeIn } };
+  // fast: 상대가 달려듦 빠르기(foeChargeSpeed — secretEvent 의 달려듦과 같은 셈)로 들어와 넘음 — 이 창은 달려듦과 같은 몫이라 B 의 막힘이 안 걸림 (10/25 16:0x)
+  const fast = (SECRET.foeChargeAvg ? st.gnsFoeIn : -(s0.vx * ux + s0.vz * uz)) > SECRET.foeChargeSpeed; // foeChargeAvg: 넘음 판정의 최근 0.6 s 평균 그대로
+  return { on: true, ctx: { ev: 'enter', closing: st.gnsFoeIn, meIn: st.gnsMeIn, fast } };
 }
 
 /**
@@ -256,6 +261,25 @@ export function gnsUser(f) {
   if (!f) return false;
   if (f.aiControlled) return f.aiCtl?.secret?.name === 'goNoSen' && !!f.aiCtl.iaiArm;
   return SECRET.openSchools.includes(f.swordArt?.tradition) && playerSecretOf(f)?.name === 'goNoSen' && !kitOff(f, 'secret');
+}
+
+/**
+ * 고노센 B 의 발도 막힘 꼴 (10/25 — SECRET.gnsEnterBlock): 이 창(ctx)에서 낸 발도가 막힐 수 있나 → requestIai 의 block 값.
+ *  천천히 걸어 든 들어옴 창(ev 'enter' · fast 아님)만 — 1 = 칼이 몸보다 먼저 상대 칼에 닿으면 막힘 · 2 = 그에 더해 낼 때 상대가 앞을 가리고 있으면 몸에 닿는 자리에서 막힘('cover'):
+ *  상대가 막고 있음(사람 = 막기 단추를 누름 · 깨지지 않음 — parry_button.js · AI = 막기 꼴 mode 'defend') 또는 상대 칼끝이 내 몸을 겨눔(foeOnline — 상대 몸의 지금 칼 자리).
+ *  그 밖 창 · 0 = false. me = 내는 몸 (사람 skill.js · AI ai.js 같은 함수). 새 수 없음
+ */
+export function gnsBlockOf(ctx, me) {
+  const B = SECRET.gnsEnterBlock;
+  if (!B || ctx?.ev !== 'enter' || ctx.fast) return false;
+  if (B !== 2) return true;
+  const foe = me.foe;
+  const G = foe?.parryGuard;
+  if ((G?.held && !G.broken) || foe?.aiCtl?.mode === 'defend') return 'cover';
+  const t = foe?.tipPrev;
+  const m = foe?.hitPointPrev;
+  if (t && m && foeOnline({ tx: t.x, ty: t.y, tz: t.z, mx: m.x, my: m.y, mz: m.z }, me.bodies.chest.translation())) return 'cover';
+  return true;
 }
 
 /** 고노센 들어옴 선 = 내 발도가 닿는 거리 — secretCond 의 발도 창 위 끝 그대로(맞닿기 + iaiStep + iaiMargin) · iai 0 이면 옛 창 위 끝(reach + japaneseReach + japaneseFar). view = { reach, contact } */

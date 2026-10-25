@@ -1,10 +1,10 @@
-// 일본 고노센 — 10/25 08:0x 사장님 ②③⑤ 결정 · 여쭘 A · B · C 스위치 (docs/strike/school_secret_2026-10-09.md §17):
+// 일본 고노센 — 10/25 08:0x 사장님 ②③⑤ 결정 · 여쭘 A · B · C 스위치 (docs/strike/school_secret_2026-10-09.md §17) · 10/25 16:0x B 켬 · 달려듦 1.2 m/s (§18):
 //  ② 긴 칼 상대 규칙 켬 · ③ AI 들어옴 켬 · ⑤ AI 고노센 경계(선 밖 기다림 · 결행 · 속임 · 베이면 물러남) · A 들어옴 창 길이 · B 들어옴 발도 막힘 · C 칼끝 겨눈 들어옴은 창 없음.
 //  node --test tools/sim/gonosen_risk.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
-import { PlayerSecretWatch, secretEvent, gnsEnterLine, foeOnline, gnsUser } from '../../src/secret.js';
+import { PlayerSecretWatch, secretEvent, gnsEnterLine, foeOnline, gnsUser, gnsBlockOf } from '../../src/secret.js';
 import { playerSecretDef } from '../../src/schools.js';
 import { requestIai } from '../../src/secret_instant.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
@@ -12,13 +12,14 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
 
-test('기본값: ② 긴 칼 상대 켬 · ③ AI 들어옴 켬 · ⑤ AI 경계 켬 · 여쭘 A · B · C 는 지금 판(끔)', () => {
+test('기본값: ② 긴 칼 상대 켬 · ③ AI 들어옴 켬 · ⑤ AI 경계 켬 · B 켬(10/25 16:0x) · A · C 끔 · 달려듦 1.2 m/s', () => {
   assert.equal(SECRET.gnsEnter, 1);
   assert.equal(SECRET.gnsEnterAI, 1);
   assert.equal(SECRET.gnsLong, 1);
   assert.equal(SECRET.gnsWary, 1);
   assert.equal(SECRET.gnsEnterWindow, 0);
-  assert.equal(SECRET.gnsEnterBlock, 0);
+  assert.equal(SECRET.gnsEnterBlock, 1);
+  assert.equal(SECRET.foeChargeSpeed, 1.2);
   assert.equal(SECRET.gnsEnterOpen, 0);
 });
 
@@ -74,23 +75,81 @@ test('A 들어옴 창 길이: 기본(0) = playerWindow · 0.4 이면 들어옴 �
   withCfg({ gnsEnterWindow: 0.4 }, () => assert.ok(Math.abs(firstEnterWindow() - 0.4) < 1e-9));
 });
 
-test('B 들어옴 발도 막힘: 켜면 들어옴 창에서 낸 발도만 막힐 수 있음(block) — 칼을 든 상대에게 낸 것 · 끄면 그대로 · 휩쓸기만 밀어냄', () => {
+test('B 들어옴 발도 막힘 (10/25 16:0x 켬): 천천히 걸어 든 들어옴 창에서 낸 발도만 막힐 수 있음 — 빠르게(달려듦 빠르기로) 넘은 들어옴 · 칼을 듦 · 헛침 창은 그대로 · 끄면 그대로 · 휩쓸기만 밀어냄', () => {
   const G = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 1 });
   const p = G.player;
   const S = playerSecretDef('japanese');
   for (let i = 0; i < 10; i++) G.step(); // 몸이 상대를 알게 (p.foe)
   const req = (ctx) => { p.skill.sec = null; p.iaiReq = null; p.skill.secret({ S, ctx }); const b = !!p.iaiReq?.block; p.iaiReq = null; p.skill.sec = null; return b; };
-  assert.equal(req({ ev: 'enter' }), false);
-  withCfg({ gnsEnterBlock: 1 }, () => {
-    assert.equal(req({ ev: 'enter' }), true);
-    assert.equal(req({ ev: 'raise' }), false);
-    assert.equal(req({ ev: 'recover' }), false);
-  });
+  assert.equal(req({ ev: 'enter' }), true);
+  assert.equal(req({ ev: 'enter', fast: true }), false);
+  assert.equal(req({ ev: 'raise' }), false);
+  assert.equal(req({ ev: 'raise', charge: true }), false);
+  assert.equal(req({ ev: 'recover' }), false);
+  withCfg({ gnsEnterBlock: 0 }, () => assert.equal(req({ ev: 'enter' }), false));
   requestIai(p, { player: true, block: true });
   assert.equal(p.iaiReq.block, true);
   requestIai(p, { player: true });
   assert.equal(p.iaiReq.block, false);
+  requestIai(p, { player: true, block: 'cover' });
+  assert.equal(p.iaiReq.block, 'cover');
   G.world.free();
+});
+
+test('B 2 (시험 — 앞을 가린 상대도 막음): 낼 때 상대가 막기 단추를 누르거나 막는 중이거나 칼끝이 내 몸을 겨누면 cover · 아니면 칼 닿음만 · 1 이면 늘 칼 닿음만', () => {
+  const chest = { x: 0, y: 1.3, z: 0 };
+  const me = (online) => ({ bodies: { chest: { translation: () => chest } }, foe: { hitPointPrev: { x: 1.6, y: 1.3, z: 0 }, tipPrev: online ? { x: 1.1, y: 1.3, z: 0 } : { x: 1.6, y: 1.9, z: 0 } } });
+  assert.equal(gnsBlockOf({ ev: 'enter' }, me(true)), true);
+  withCfg({ gnsEnterBlock: 2 }, () => {
+    assert.equal(gnsBlockOf({ ev: 'enter' }, me(true)), 'cover');
+    assert.equal(gnsBlockOf({ ev: 'enter' }, me(false)), true);
+    const g = me(false);
+    g.foe.parryGuard = { held: true, broken: false }; // 막기 단추를 누른 채 (칼끝은 비킴)
+    assert.equal(gnsBlockOf({ ev: 'enter' }, g), 'cover');
+    g.foe.parryGuard.broken = true;
+    assert.equal(gnsBlockOf({ ev: 'enter' }, g), true);
+    g.foe.parryGuard = null;
+    g.foe.aiCtl = { mode: 'defend' }; // AI 막기 꼴
+    assert.equal(gnsBlockOf({ ev: 'enter' }, g), 'cover');
+    assert.equal(gnsBlockOf({ ev: 'enter', fast: true }, me(true)), false);
+    assert.equal(gnsBlockOf({ ev: 'raise' }, me(true)), false);
+  });
+});
+
+test('달려듦 1.2 m/s (10/25 16:1x) · 최근 0.6 s 평균(foeChargeAvg): 1.1 m/s 로 다가오면 달려듦 창 아님 · 1.3 이면 달려듦 · 옛 0.9 면 1.1 도 · 걸음마다 0.6 ↔ 1.4 로 출렁이는 평균 1.0 걸음은 평균 판이면 아님(한 스텝 판이면 달려듦) · 들어옴 fast', () => {
+  assert.equal(SECRET.foeChargeAvg, 1);
+  const S = playerSecretDef('japanese');
+  const view = { reach: 1.87, contact: 1.58, clinch: 1.22, foeReach: 1.85, armed: true };
+  const L = gnsEnterLine(view);
+  /** 선 안 한 자리에서 2.5 s 동안 (빠르기 v 또는 스텝마다 v(i)) — 한 번이라도 사건이 났나 (평균이 차오르는 데 0.6 s 의 몇 배) */
+  const ev = (v) => {
+    const st = { armed: true, off: 0 };
+    let on = null;
+    for (let i = 0; i < 2.5 / DT; i++) {
+      const vi = typeof v === 'function' ? v(i) : v;
+      const e = secretEvent(S, sense, {}, s0At(L - 0.1, vi, false), c, r, L - 0.1, view.foeReach, meAt(0), { reach: view.reach, dt: DT, st, armed: false });
+      if (e.on) on ??= e.ctx;
+    }
+    return on;
+  };
+  assert.equal(ev(1.1), null);
+  assert.equal(ev(1.3)?.charge, true);
+  withCfg({ foeChargeSpeed: 0.9 }, () => assert.equal(ev(1.1)?.charge, true));
+  const wobble = (i) => (Math.floor(i / 30) % 2 ? 1.4 : 0.6); // 0.25 s 마다 0.6 ↔ 1.4 (평균 1.0)
+  assert.equal(ev(wobble), null);
+  withCfg({ foeChargeAvg: 0 }, () => assert.equal(ev(wobble)?.charge, true)); // 한 스텝 판: 출렁임 꼭대기에서 달려듦
+  const cross = (v) => {
+    const st = { armed: true, off: 0 };
+    for (let d = L + 3; d > view.foeReach; d -= v * DT) {
+      const e = secretEvent(S, sense, {}, s0At(d, v, false), c, r, d, view.foeReach, meAt(0), { reach: view.reach, dt: DT, st, armed: false, enterLine: L, iaiArmed: true });
+      if (e.on && d <= L) return e.ctx; // 선 밖의 달려듦은 창 조건(secretCond — 발도가 닿는 거리)에서 걸러짐 · 넘는 스텝은 들어옴이 먼저
+    }
+    return null;
+  };
+  assert.equal(cross(0.8)?.ev, 'enter');
+  assert.equal(cross(0.8).fast, false);
+  assert.equal(cross(1.5)?.ev, 'enter');
+  assert.equal(cross(1.5).fast, true);
 });
 
 test('⑤ 고노센 쓰는 몸 (gnsUser): 사람 = 일본 칼 · 비기 칸 (skillKit 없으면 켬) · AI = 숙련도 5 일본만', () => {
