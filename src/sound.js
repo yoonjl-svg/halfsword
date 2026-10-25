@@ -16,7 +16,7 @@
 //
 //  들어보기: 메뉴의 "소리 들어보기" (sounds.html)
 // ─────────────────────────────────────────────────────────────
-import { SOUND, VITALS, STAMINA } from './config.js';
+import { SOUND, VITALS, STAMINA, IMPACT_FX } from './config.js';
 import { whipCrackGate } from './whip_sound.js'; // 드루이드의 채찍 C2 맞음 · 끝 딱 겹침 막기 (10/24)
 import { drawnSlash, DRAWN_SLASH } from './slash_draw.js';
 import { StageDetailSound, hasStageDetails } from './stage_detail_sound.js';
@@ -2248,6 +2248,32 @@ export class Sound {
     this.layer(ev, this.pick('wet'), { gain: (mode === 'legacy' ? 1 : 0.65) * (0.5 + 0.4 * e) * (1 + 0.3 * w), rate: low * between(Math.random, 0.7, 0.85), delay: 0.008 });
     if (mode === 'legacy') this.layer(ev, this.pick('slice'), { gain: 0.3, rate: 1.3, delay: 0.004 }); // 천을 뚫는 짧은 "틱" (새 안에서는 뺀다 — "지직"의 한 원인)
     if (w > 0) this.layer(ev, this.pick('thump'), { gain: 0.8 * w, rate: 0.7 * low, delay: 0.004 }); // 무게(200 J 위): 묵직한 저음 한 겹
+  }
+
+  /**
+   * 무게 소리 한 겹 (10/25 타격감 — config IMPACT_FX.sound · src/impact_fx.js · main.js onWound · onClash): 맞은 순간의 무게만큼 낮고 둥근 "쿵"을 기존 타격음 위에 더한다.
+   *  기존 타격음(베기 · 찌르기 · 둔타 · 투구 · 판금 · 칼 부딪힘 — 사장님이 고른 소리)은 그대로 두고 이 겹만 무게를 따라 커지고(gain) · 낮아지고(rate) · 어두워진다(낮은 통과).
+   *  재료는 이미 있는 소리만: 합성 'thump'(몸통 쿵) · 녹음 soft(Kenney impactSoft_heavy · CC0) · punch(Kenney impactPunch_heavy · CC0) / 쇠(metal)면 합성 'clashSoft' 를 느리게.
+   *  gain = 이 겹의 음량(impact_fx 가 x^pow 로 정함) · x = 세기 0 ~ 1 (음 높이 · 밝기). 아주 짧은 사이에 거듭 오면(한 칼이 두 부위) 더 센 것만 (칼 부딪힘과 같은 0.06 s)
+   */
+  heft(gain, x, { metal = false } = {}) {
+    if (!this._on || !this.ctx || !(gain > 0.02)) return;
+    const now = this.ctx.currentTime;
+    const last = (this._lastHeft ??= { t: -1, g: 0 });
+    if (now - last.t < 0.06 && gain <= last.g) return;
+    this._lastHeft = { t: now, g: gain };
+    const S = IMPACT_FX.sound;
+    const k = clamp01(x);
+    const rate = 1 - (1 - S.rate) * k; // 무거울수록 낮게
+    const lp = S.lpLight + (S.lpHeavy - S.lpLight) * k; // 무거울수록 어둡게
+    const R = Math.random;
+    const ev = this.event({ bus: metal ? this.metalBus : this.fleshBus, gain, bright: lp, prio: 1 + k }); // 우선은 타격음(2)보다 낮게 — 소리가 몰리면 이 겹이 먼저 빠진다
+    this.layer(ev, this.pick('thump'), { gain: 1, rate: rate * between(R, 0.95, 1.05) });
+    const soft = this.pickSample('soft');
+    if (soft) this.layer(ev, soft, { gain: 0.8, rate: rate * 0.9 * between(R, 0.95, 1.05), delay: 0.003 });
+    const punch = this.pickSample('punch');
+    if (punch) this.layer(ev, punch, { gain: 0.5, rate: rate * 0.8 * between(R, 0.95, 1.05), delay: 0.002 });
+    if (metal) this.layer(ev, this.pick('clashSoft'), { gain: 0.35, rate: rate * 0.6, delay: 0.002, dur: 0.5 });
   }
 
   /** 둔기(칼 면, 손잡이, 막힌 베기): "퍽" + 칼 면이 몸을 때리는 둔한 쇳소리 */
