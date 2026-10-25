@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS } from './config.js';
+import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 리솔루토 런지 미끄러짐은 지금 맞닿음 그대로
 const GAIT_REACH = GAIT.reachMax;
 
 const _qc = new THREE.Quaternion();
@@ -1403,7 +1404,9 @@ function comboMoveStart(f, I, mi) {
   const d = Math.max(1e-3, Math.hypot(dx, dz));
   dx /= d;
   dz /= d;
-  let slide = fwd > 0 ? Math.min(clamp(d - M.contact, 0, fwd), Math.max(0, d - M.clinch)) : fwd; // 앞 = 발도 미끄러짐과 같은 한도 · 뒤(물러남 — 10/12 3 연격) = 반걸음 그대로
+  // 안다레 리솔루토 런지(앞발 st.foot 이 있는 수 — SECRET.risolutoStep 만)는 이탈리아 간격 줄 'contact' 판에서 지금 맞닿음으로 멈춤 (weapon_measured.js risolutoContact · 없으면 몸 간격 그대로)
+  const contact = (st.foot != null && risolutoContact(f.weapon?.id)) || M.contact;
+  let slide = fwd > 0 ? Math.min(clamp(d - contact, 0, fwd), Math.max(0, d - M.clinch)) : fwd; // 앞 = 발도 미끄러짐과 같은 한도 · 뒤(물러남 — 10/12 3 연격) = 반걸음 그대로
   if (slide < 0) {
     // 물러남은 경기장 테두리(ARENA.radius — 이미 있는 값)를 넘지 않게: 끝 자리 가슴이 반지름 밖이면 그 안까지만
     const ex = c.x + dx * slide;

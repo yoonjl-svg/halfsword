@@ -36,6 +36,9 @@ export function applyWeaponMeasure(ai, weaponId) {
 //   휘두르기 시작에 머리 높이를 '올라가며' 지나는 순간을 닿는 순간으로 세지 않게 (docs/strike/weapon_measures_review_2026-10-09.md)
 //   마지막 칸은 손 표의 CUT_TIME_30 을 손 표의 날것으로 다시 셈한 값(0.30 × 날것 ÷ 롱소드 날것, 둘째 자리)과 견준다
 //   휘는 무기(채찍 — 10/23): 3 s 를 다 보므로 베기 뒤 한 바퀴 돌아 머리 높이를 다시 지나는 덩굴을 센다(걸으면 reach 3.07 처럼 닿을 수 없는 값). 거리는 flex_reach.mjs 로 잰다
+//   --ruler=auto|zornhau|thrust (10/25 — docs/strike/italian_measure_2026-10-25.md): auto(기본) = 이탈리아 유파 무기는 찌르기 잣대(weapon_measure.mjs measureThrust — 3번 자세 탭 찌르기 ·
+//    칼날 70 % 지점 · 같은 실행 롱소드 찌르기 비율을 이 생성의 롱소드 줄에 붙임). 분노의 베기 잣대는 그 무기들을 못 잰다(사람 팔 범위 swivelHuman 뒤 0.83 처럼 깨지고, 전 팔에서도 띠를 스친 값).
+//    zornhau = 모두 전과 같음 · thrust = 모두 찌르기(맞춰 봄). 줄 끝 칸 '잣대'
 if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const fs = await import('node:fs');
   const path = await import('node:path');
@@ -49,20 +52,23 @@ if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const out = path.resolve(root, outArg ? outArg.slice(6) : 'data/weapon_measured.gen.json');
   const ids = args.filter((a) => !a.startsWith('--'));
   const down = args.includes('--down');
-  const res = measureAll(ids.length ? ids : Object.keys(WEAPONS), { down });
+  const rulerArg = args.find((a) => a.startsWith('--ruler='));
+  const ruler = rulerArg ? rulerArg.slice(8) : 'auto';
+  const res = measureAll(ids.length ? ids : Object.keys(WEAPONS), { down, ruler });
   const f2 = (v) => (v == null ? '-' : v.toFixed(2));
   const cell = (hand, gen) => (hand == null ? `- / ${f2(gen)}` : `${f2(hand)} / ${f2(gen)}${Math.abs(hand - gen) >= 0.005 ? ' ≠' : ''}`);
   const diffs = [];
   const rows = {};
   for (const r of res.rows) {
     const h = MEASURED[r.id] ?? null;
-    rows[r.id] = { contact: r.contact, reach: r.reach, clinch: r.clinch, cutTime: r.cutTime };
+    rows[r.id] = { contact: r.contact, reach: r.reach, clinch: r.clinch, cutTime: r.cutTime, ...(r.ruler === 'thrust' ? { ruler: 'thrust', thrust: r.thrust } : {}) };
     if (h) for (const [k, i] of [['contact', 0], ['reach', 1], ['clinch', 2], ['cutTime', 3]]) if (Math.abs(h[i] - r[k]) >= 0.005) diffs.push(`${r.id}.${k} ${h[i]} → ${r[k]}`);
   }
   const file = {
     note: '생성 측정값 (비교란 — 게임은 src/weapon_measured.js 손 표를 읽는다). node tools/sim/weapon_measures.mjs --gen',
     method: 'weapon_measure.mjs measureAll: zornhau 0.35 s 를 혼자 휘둘러 칼날 70% 가 머리 높이(1.45~1.75 m)를 지나는 가장 먼 앞 거리 × (1.62 / 롱소드 raw), reach 는 같은 베기 + 앞으로 걷기, clinch = contact × 1.25/1.62, cutTime 날것',
-    conditions: down ? { 'ARENA.startHold': ARENA.startHold, down: true } : { 'ARENA.startHold': ARENA.startHold },
+    conditions: { 'ARENA.startHold': ARENA.startHold, ...(down ? { down: true } : {}), ruler },
+    thrustRuler: res.thrustRef ? { note: '이탈리아 유파 무기 (ruler auto): 3번 자세 탭 찌르기 · 칼날 70 % 지점이 몸 높이 0.9 ~ 1.75 m 에서 간 가장 먼 앞 거리 ÷ 같은 실행 롱소드 찌르기 → × 이 생성의 롱소드 contact 1.62 · reach · cutTime (시간은 그때까지 걸린 시간의 비)', longsword: res.thrustRef } : undefined,
     longswordRaw: +res.longswordRaw.toFixed(4),
     calibration: +res.calibration.toFixed(4),
     rows: '__ROWS__',
@@ -72,14 +78,15 @@ if (isMain(import.meta.url) && process.argv.includes('--gen')) {
   const rowsText = `{\n${Object.entries(rows).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(',\n')}\n }`;
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(file, null, 1).replace('"__ROWS__"', rowsText) + '\n');
-  console.log(`생성 측정값 → ${path.relative(root, out)} (보정 배율 ${res.calibration.toFixed(4)}, 롱소드 raw ${res.longswordRaw.toFixed(3)} m, 시작 정지 ${ARENA.startHold} s${down ? ', 내려오는 동안만' : ''})`);
-  console.log('| 무기 | contact 손 / 생성 | reach 손 / 생성 | clinch 손 / 생성 | 베는 시간 날것 손 / 생성 | 0.30 기준 손 / 날것으로 셈 |');
-  console.log('|---|---|---|---|---|---|');
+  console.log(`생성 측정값 → ${path.relative(root, out)} (보정 배율 ${res.calibration.toFixed(4)}, 롱소드 raw ${res.longswordRaw.toFixed(3)} m, 시작 정지 ${ARENA.startHold} s${down ? ', 내려오는 동안만' : ''}, 잣대 ${ruler})`);
+  if (res.thrustRef) console.log(`찌르기 잣대 (이탈리아 유파 무기): 같은 실행 롱소드 탭 찌르기 70 % 지점 ${res.thrustRef.p70.toFixed(3)} m · 칼끝 ${res.thrustRef.tip.toFixed(3)} m · ${res.thrustRef.t.toFixed(3)} s`);
+  console.log('| 무기 | contact 손 / 생성 | reach 손 / 생성 | clinch 손 / 생성 | 베는 시간 날것 손 / 생성 | 0.30 기준 손 / 날것으로 셈 | 잣대 |');
+  console.log('|---|---|---|---|---|---|---|');
   for (const r of res.rows) {
     const h = MEASURED[r.id];
     const c30 = CUT_TIME_30[r.id];
     const c30calc = h ? +(0.3 * (h[3] / MEASURED.longsword[3])).toFixed(2) : null;
-    console.log(`| ${r.id} | ${cell(h?.[0], r.contact)} | ${cell(h?.[1], r.reach)} | ${cell(h?.[2], r.clinch)} | ${cell(h?.[3], r.cutTime)} | ${c30 == null ? '-' : `${f2(c30)} / ${f2(c30calc)}${Math.abs(c30 - c30calc) >= 0.005 ? ' ≠' : ''}`} |`);
+    console.log(`| ${r.id} | ${cell(h?.[0], r.contact)} | ${cell(h?.[1], r.reach)} | ${cell(h?.[2], r.clinch)} | ${cell(h?.[3], r.cutTime)} | ${c30 == null ? '-' : `${f2(c30)} / ${f2(c30calc)}${Math.abs(c30 - c30calc) >= 0.005 ? ' ≠' : ''}`} | ${r.ruler === 'thrust' ? `찌르기 (70 % ${r.thrust.p70.toFixed(3)} · 칼끝 ${r.thrust.tip.toFixed(3)} m · ${r.thrust.t.toFixed(3)} s)` : '분노의 베기'} |`);
   }
   console.log(`손 표와 다른 칸 ${diffs.length} 개 (≠, 0.005 이상) — 비교란: 손 표는 바꾸지 않는다`);
 }

@@ -16,6 +16,7 @@ import { HUMAN, wristClamp } from '../../src/fighter.js';
 import { mordGripOf } from '../../src/mordschlag.js';
 import { standTrial } from './tap_thrust.mjs';
 import { TRADITIONS } from '../../src/schools.js';
+import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
 
 const { SECRET, JOINTS } = CONFIG;
 /** 여러 값을 잠깐 바꿔 fn — [[객체, 열쇠, 값], …] */
@@ -67,9 +68,11 @@ test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어�
 });
 
 test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로: 굳음 동안 손이 어깨 앞 팔 길이 0.5 아래 · 칼이 새끼 쪽으로 75° 안팎 (거꾸로 쥔 꼴) — 손목 교정만 켜면 같은 굽은 팔에서 범위 안', () => {
+  // 옛 판 재현 = 그때 간격 줄로 (THRUST.itMeasure 'full' — 런지 몸 미끄러짐은 맞닿기에서 멈춰 새 줄에선 끝 자리가 0.18 ~ 0.25 m 멀어 옛 꼴이 안 남 · 'old' · 'contact' 는 지금 맞닿음 그대로라 덮지 않음)
+  const old = (w) => (CONFIG.THRUST.itMeasure === 'full' ? { contact: ITALIAN_NOW.MEASURED[w][0], reach: ITALIAN_NOW.MEASURED[w][1], clinch: ITALIAN_NOW.MEASURED[w][2], cutTime: ITALIAN_NOW.CUT_TIME_30[w] } : null);
   withSets([[SECRET, 'thrustArm', 0], ...OLD], () => {
     for (const w of ['rapier', 'dartagnan']) {
-      const r = lungeRun(w, { gap: 2.2 });
+      const r = lungeRun(w, { gap: 2.2, measure: old(w) });
       assert.ok(r.fired && r.res?.ok && r.res.hit, `${w} 런지 · 맞힘`);
       const S = ph(r.T, 'stiff');
       assert.ok(S.aSum / S.n < 0.5, `${w} 옛 굳음 손 앞 평균 ${(S.aSum / S.n).toFixed(2)}`);
@@ -78,7 +81,7 @@ test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로
     }
   });
   withSets([[SECRET, 'thrustArm', 0]], () => {
-    const r = lungeRun('rapier', { gap: 2.2 });
+    const r = lungeRun('rapier', { gap: 2.2, measure: old('rapier') });
     assert.ok(r.fired && r.res?.ok && r.res.hit, '교정 켬 · 옛 팔 길 런지 맞힘');
     const S = ph(r.T, 'stiff');
     assert.ok(S.aSum / S.n < 0.5, `팔은 그대로 굽음 (팔을 펴게 하지 않음) ${(S.aSum / S.n).toFixed(2)}`);

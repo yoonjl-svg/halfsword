@@ -20,7 +20,10 @@
 //  생성기: `node tools/sim/weapon_measures.mjs --gen` 이 같은 측정으로 전 무기를 한 번에 재어 data/weapon_measured.gen.json 에 쓰고
 //   이 표와 나란히 찍는다(비교란 — 이 표를 바꾸지 않는다).
 //   휘는 무기(채찍)는 생성기가 바로 못 잰다(덩굴이 한 바퀴 돌아 다시 지나는 때를 센다) — `node tools/sim/flex_reach.mjs` 로 잰다(채찍 줄 주석 · 10/23)
+//  10/25 이탈리아 유파 무기(레이피어 · 달타냥 · 발리사르다 · 파펜하이머)는 생성기의 찌르기 잣대(--ruler auto — 3번 자세 탭 찌르기)로도 잰 줄이 있다 — 아래 ITALIAN_THRUST ·
+//   판 스위치 THRUST.itMeasure 'old'(기본 — 아래 표 그대로) · 'contact' · 'full' (docs/strike/italian_measure_2026-10-25.md · 확인표 2556 ~ 2560 · 사장님 확인 전)
 // ─────────────────────────────────────────────────────────────
+import { THRUST } from './config.js';
 
 export const MEASURED = {
   // 10/21 환도 · 크리그스메서(샛별 저장소 들여옴): 판 시작 정지 0 · 같은 실행의 롱소드 잰 값에 대한 비율로 맞춘 값.
@@ -147,6 +150,42 @@ export const CUT_TIME_30 = {
   durandal: 0.32, // 0.30 × 0.30/0.28 (10/24 — 위 MEASURED 와 같은 생성 · 이베리아 자세표 끔 · 전달본 몸 0.34 = 0.30 × 0.32/0.28)
   pappenheimer: 0.19, // 0.30 × 0.18/0.28 (10/25 — 위 MEASURED 와 같은 실행 · 한손 팔 고침 두 스위치 끔 · 전달본 0.18). 이 '베는 시간'은 칼날 70 % 가 머리 높이에서 가장 앞에 간 때라 휘두름 빠르기가 아니다 — 같은 실행 달타냥 0.17 · 레이피어 0.20 사이(칼끝 빠르기는 기록 §4)
 };
+
+// ── 이탈리아 유파 무기 간격 세 판 (10/25 — THRUST.itMeasure · docs/strike/italian_measure_2026-10-25.md · 확인표 2556 ~ 2560 · 사장님 확인 전) ──
+//  분노의 베기 생성기(0.35 s 대본 베기)는 이탈리아 자세표(칼끝이 늘 상대 쪽) 무기를 못 잰다 — 10/25 한손 팔 고침 뒤 0.83 · 0.94 · 0.83 · 0.52 처럼 깨지고,
+//   전 팔에서도 칼끝을 앞으로 둔 채 머리 높이 띠를 스친 값이라 휘두르는 시간만 바꿔도 −∞ ~ 1.64 로 갈렸다(기록 §2). 위 표의 이탈리아 넷은 그 전 팔 줄이다.
+//  ITALIAN_THRUST = 찌르기 잣대 줄: `with_config ARENA.startHold=0 weapon_measures.mjs --gen --down`(잣대 auto) 한 실행 — 같은 실행 롱소드 탭 찌르기 칼날 70 % 지점 1.3328 m · 0.375 s ·
+//   레이피어 1.4624 · 달타냥 1.3919 · 발리사르다 1.4919 · 파펜하이머 1.4339 m · 넷 다 0.375 s → 롱소드 손 값(1.57/1.8/1.25/0.41)에 비율(1.0972 · 1.0443 · 1.1194 · 1.0759)로 붙임.
+//   베는 시간은 탭 시간(THRUST.aim · extend 고정 — 무기마다 같음)이라 롱소드와 같은 0.41 · 0.30 (맞춰 볼 수 없는 칸 — 기록 §3)
+const IT_IDS = ['rapier', 'dartagnan', 'balisarda', 'pappenheimer'];
+export const ITALIAN_NOW = {
+  MEASURED: Object.fromEntries(IT_IDS.map((id) => [id, [...MEASURED[id]]])),
+  CUT_TIME_30: Object.fromEntries(IT_IDS.map((id) => [id, CUT_TIME_30[id]])),
+};
+export const ITALIAN_THRUST = {
+  MEASURED: { rapier: [1.72, 1.98, 1.37, 0.41], dartagnan: [1.64, 1.88, 1.31, 0.41], balisarda: [1.76, 2.01, 1.40, 0.41], pappenheimer: [1.69, 1.94, 1.34, 0.41] },
+  CUT_TIME_30: { rapier: 0.30, dartagnan: 0.30, balisarda: 0.30, pappenheimer: 0.30 },
+};
+/** 판(mode)마다 이탈리아 넷의 손 표 줄 { id: { row, cut } } — 'old' = 지금 · 'contact' = 맞닿음만 찌르기 잣대(나머지 지금) · 'full' = 찌르기 잣대 줄 통째 */
+export function italianMeasureRows(mode) {
+  return Object.fromEntries(IT_IDS.map((id) => {
+    const now = ITALIAN_NOW.MEASURED[id], thr = ITALIAN_THRUST.MEASURED[id];
+    if (mode === 'full') return [id, { row: [...thr], cut: ITALIAN_THRUST.CUT_TIME_30[id] }];
+    if (mode === 'contact') return [id, { row: [thr[0], now[1], now[2], now[3]], cut: ITALIAN_NOW.CUT_TIME_30[id] }];
+    return [id, { row: [...now], cut: ITALIAN_NOW.CUT_TIME_30[id] }];
+  }));
+}
+// 판을 만들기 전, 이 모듈을 읽을 때 한 번 (꾸러미 간격 · 쓰러진 상대 마무리 배율이 이 표를 읽는다)
+if (THRUST.itMeasure !== 'old') {
+  for (const [id, v] of Object.entries(italianMeasureRows(THRUST.itMeasure))) {
+    MEASURED[id] = v.row;
+    CUT_TIME_30[id] = v.cut;
+  }
+}
+/** 안다레 리솔루토가 쓸 맞닿음 (m — 'contact' 판에서만 지금 맞닿음으로 묶음: 창 최소 간격 italian_risoluto.js lungeGap · 다 붙음 창 RisolutoWatch.tick · 런지 미끄러짐 secret_instant.js comboMoveStart). 그 밖은 null(몸 간격 그대로) */
+export function risolutoContact(id, mode = THRUST.itMeasure) {
+  return mode === 'contact' ? (ITALIAN_NOW.MEASURED[id]?.[0] ?? null) : null;
+}
 
 /** 유파 꾸러미에 넣는 간격 한 벌 (새 객체): 거리 셋은 MEASURED, 베는 시간은 CUT_TIME_30. 표에 없는 무기는 null */
 export function schoolMeasure(id) {

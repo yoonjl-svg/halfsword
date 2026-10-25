@@ -1417,6 +1417,11 @@ export const THRUST = {
   //     칼이 상대 몸에 판정을 내면(combat.js strike) 곧장 자세로 (시간 값 없음)
   //  1 = 켬 · 0 = 10/25 아침 판 (`?itThrust=0` — 판 해시 바이트 같음)
   itLunge: 1,
+  // 이탈리아 유파 무기 간격 줄 세 판 (10/25 — 파펜하이머 들임 중 간격 생성기가 이탈리아 무기를 못 잼 · docs/strike/italian_measure_2026-10-25.md · 확인표 2556 ~ 2560 · 사장님 확인 전 — 고르실 때까지 기본 'old'):
+  //  'old' = 지금 판(10/8 ~ 10/25 분노의 베기 줄 — 판 바이트 같음) · 'contact' = 맞닿음(contact)만 찌르기 잣대 값(한 걸음 · 맞붙음 · 베는 시간은 지금 그대로) + 안다레 리솔루토 창 최소 간격 · 런지 미끄러짐은 지금 맞닿음 그대로 ·
+  //  'full' = 찌르기 잣대 줄 통째(contact · reach · clinch · 베는 시간 — 파펜하이머 포함 · 리솔루토도 새 맞닿음을 따름). 찌르기 잣대 = 3번 자세 탭 찌르기의 칼날 70 % 지점 ÷ 같은 실행 롱소드 찌르기 × 롱소드 손 값(weapon_measured.js ITALIAN_THRUST).
+  //  판을 만들기 전에 읽는다(꾸러미 간격이 weapon_measured.js 를 읽을 때 정해짐) — 주소 `?itMeasure=old|contact|full` · 시뮬 `IT_MEASURE=…` (with_config 로는 늦음)
+  itMeasure: ((v) => (['old', 'contact', 'full'].includes(v) ? v : 'full'))((typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('itMeasure')) || (typeof process !== 'undefined' && process.env?.IT_MEASURE) || 'full'), // 기본 'full' (사장님 10/25 22:1x '전부 새 값으로 적용해. ai의 밸런스 문제는 나중에 따로 개선하자' · 확인표 2556)
 };
 
 // 손잡이 찍기(Knaufschlag, 시제품 — 사장님 아이디어 3] 10/9 "근접 상황에서 칼 손잡이로 찍기", docs/strike/pommel_strike_2026-10-09.md).
