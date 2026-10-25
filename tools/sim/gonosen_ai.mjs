@@ -1,7 +1,8 @@
 // 일본 고노센 — AI 쪽 들어옴 사건(SECRET.gnsEnterAI — 기본 끔) 효과 재기 (10/25 — docs/strike/school_secret_2026-10-09.md §16). 판정 · 실행은 게임 함수 그대로(읽기만).
 //  일본 AI(숙련도 5 — 시트 그대로) 대 ① 인물 AI(AI 끼리) ② 걸어 들어오는 사람 봇(스틱 앞으로 걸어 내 칼끝 거리에 들면 0.6 s 마다 톡 찌르기 — 고노센을 모르는 사람 흉내).
 //  실행: node tools/sim/gonosen_ai.mjs [씨앗 4] [초 30] [일본 인물 minami,white_scale] [상대 isolde,artoria,ratna,tome,roland,chanda,walker:longsword,walker:rapier] [걷기 스틱 0.5]
-//  스위치: GNS_AI=1 AI 들어옴 사건 켬 · GNS_LONG=1 긴 칼 상대 규칙(AI 들어옴과 함께)
+//  스위치: GNS_AI=0|1 AI 들어옴 사건 · GNS_LONG=0|1 긴 칼 상대 규칙(AI 들어옴과 함께) · GNS_WARY=0|1 AI 고노센 경계(상대 AI 가 일본 AI 를 보고 — 10/25 08:0x ⑤) · GNS_BLOCK=1 여쭘 B · GNS_OPEN=1 여쭘 C
+//   (10/25 08:0x 부터 기본 = AI 들어옴 · 긴 칼 · 경계 모두 켬 — 끄면 01:3x 판)
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
@@ -9,6 +10,9 @@ const [seedsArg = '4', simArg = '30', jArg = 'minami,white_scale', fArg = 'isold
 const E = process.env;
 if (E.GNS_AI != null) CONFIG.SECRET.gnsEnterAI = +E.GNS_AI ? 1 : 0;
 if (E.GNS_LONG != null) CONFIG.SECRET.gnsLong = +E.GNS_LONG ? 1 : 0;
+if (E.GNS_WARY != null) CONFIG.SECRET.gnsWary = +E.GNS_WARY ? 1 : 0;
+if (E.GNS_BLOCK != null) CONFIG.SECRET.gnsEnterBlock = +E.GNS_BLOCK ? 1 : 0;
+if (E.GNS_OPEN != null) CONFIG.SECRET.gnsEnterOpen = +E.GNS_OPEN ? 1 : 0;
 const SEEDS = +seedsArg, SIM = +simArg, GO = +goArg;
 const f1 = (x) => (Number.isFinite(x) ? x.toFixed(1) : '-'), f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-');
 const rows = [];
@@ -57,7 +61,7 @@ for (const jid of jArg.split(',')) for (const fid of fArg.split(',')) {
   rows.push(R);
 }
 const S = CONFIG.SECRET;
-console.log(`[AI 고노센] AI 들어옴 ${S.gnsEnterAI ? '켬' : '끔'} · 긴 칼 상대 규칙 ${S.gnsLong ? '켬' : '끔'} · 씨앗 ${SEEDS} × ${SIM} s · 걷는 봇 스틱 ${GO}`);
+console.log(`[AI 고노센] AI 들어옴 ${S.gnsEnterAI ? '켬' : '끔'} · 긴 칼 상대 규칙 ${S.gnsLong ? '켬' : '끔'} · 상대 AI 경계 ${S.gnsWary ? '켬' : '끔'} · B 막힘 ${S.gnsEnterBlock ? '켬' : '끔'} · C 칼끝 ${S.gnsEnterOpen ? '켬' : '끔'} · 씨앗 ${SEEDS} × ${SIM} s · 걷는 봇 스틱 ${GO}`);
 console.log('| 일본 AI | 상대 | 판 | 고노센 낸 · 맞힘 | 30 s 당 낸 | 고노센 동안 상대 죽음 | 일본 이김 · 상대 이김 | 준 · 입은 심각도 (일본) |');
 console.log('|---|---|---|---|---|---|---|---|');
 const T = { rounds: 0, t: 0, fired: 0, landed: 0, jWin: 0, fWin: 0, jDealt: 0, fDealt: 0, kill: 0 };

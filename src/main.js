@@ -200,8 +200,12 @@ if (['all', 'cut', '0'].includes(params.get('ibTrail'))) CONFIG.SECRET.ibSpin.tr
 if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
 if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
 if (params.has('gnsEnter')) CONFIG.SECRET.gnsEnter = +params.get('gnsEnter') ? 1 : 0; // 고노센 들어옴 사건(10/25 01:3x — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 들면 창): 기본 1, `?gnsEnter=0` = 옛 판
-if (params.has('gnsEnterAI')) CONFIG.SECRET.gnsEnterAI = +params.get('gnsEnterAI') ? 1 : 0; // AI 고노센도 들어옴 사건 (10/25 — 기본 0, `?gnsEnterAI=1`)
-if (params.has('gnsLong')) CONFIG.SECRET.gnsLong = +params.get('gnsLong') ? 1 : 0; // 고노센 긴 칼 상대 규칙 (10/25 제안 — 기본 0, `?gnsLong=1`: 상대 칼 거리 ≥ 내 발도가 닿는 거리면 준비가 그 사이에서 안 풀림)
+if (params.has('gnsEnterAI')) CONFIG.SECRET.gnsEnterAI = +params.get('gnsEnterAI') ? 1 : 0; // AI 고노센도 들어옴 사건 (10/25 08:0x 사장님 결정 — 기본 1, `?gnsEnterAI=0` = 01:3x 판)
+if (params.has('gnsLong')) CONFIG.SECRET.gnsLong = +params.get('gnsLong') ? 1 : 0; // 고노센 긴 칼 상대 규칙 (10/25 08:0x 사장님 결정 — 기본 1, `?gnsLong=0` = 끔: 상대 칼 거리 ≥ 내 발도가 닿는 거리면 준비가 그 사이에서 안 풀림)
+if (params.has('gnsWary')) CONFIG.SECRET.gnsWary = +params.get('gnsWary') ? 1 : 0; // AI 고노센 경계 (10/25 08:0x 사장님 '⑤' — 기본 1, `?gnsWary=0` = 01:3x 판 AI 걸음)
+if (params.has('gnsEnterWindow')) CONFIG.SECRET.gnsEnterWindow = Math.max(0, +params.get('gnsEnterWindow') || 0); // 여쭘 A: 들어옴 창 길이 (기본 0 = playerWindow 그대로 · `?gnsEnterWindow=0.4`)
+if (params.has('gnsEnterBlock')) CONFIG.SECRET.gnsEnterBlock = +params.get('gnsEnterBlock') ? 1 : 0; // 여쭘 B: 들어옴 창 발도는 상대 칼에 막힐 수 있음 (기본 0 · `?gnsEnterBlock=1`)
+if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnterOpen') ? 1 : 0; // 여쭘 C: 들어옴 창은 상대 칼끝이 나를 겨누지 않을 때만 (기본 0 · `?gnsEnterOpen=1`)
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
 // 이베리아 날 세우기 시험 (10/22 — 기본 끔 · 사장님 확인 전, config IB_EDGE · docs/strike/iberian_flat_hits_2026-10-22.md): `?ibEdge=motor` · `?ibEdge=ff` · `?ibEdge=pre` = 이베리아 유파만 그 날 세우기 방식
