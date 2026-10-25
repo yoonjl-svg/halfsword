@@ -1,6 +1,6 @@
 // 화면 글꼴 빠진 글자 점검 (10/14 웹폰트 프리텐다드 + Cinzel — docs/ui/webfont_2026-10-14.md. 앞선 갈무리 판은 docs/ui/pixel_font_2026-10-14.md)
 //  화면 글(texts.mjs collectTexts — 유파·자세표·무기·인물·main.js·index.html 글 + 무대 이름 + test.html·test_pick.js·test_route.js 글
-//  + main.js 의 한글 없는 기호 글(독일 감아 들기 칸의 ▮▯ 등))을 index.html 의 @font-face 와 대조한다.
+//  + main.js 의 한글 없는 기호 글(독일 감아 들기 칸의 ▮▯ 등) + 대기실 스킬 칸 글(skill_tree_data.js — 이름 · 효과 · 오의 · 출처 · 입력 줄의 화살표 ←→↑↓↖↗↙↘ · 10/25))을 index.html 의 @font-face 와 대조한다.
 //   글꼴 줄(--font-ui) 차례대로: 그 글꼴의 unicode-range 안이고 파일 글자표(cmap)에 있으면 우리 글꼴로 그려진다 —
 //   범위 안인데 파일에 없으면 브라우저가 다음 글꼴로 넘어가므로 같은 차례로 넘어간다. 끝까지 없으면 '빠진 글자'(시스템 글꼴로 그려짐).
 //   한 글꼴에 굵기가 여럿이면(프리텐다드 400 · 600 · 700) 굵기 파일 모두에 있어야 그 글꼴로 친다 — 어느 굵기로 그려도 같은 글꼴이게.
@@ -123,6 +123,9 @@ for (const m of nameKo.matchAll(/'([^']+)'/g)) parts.push({ text: `스테이지 
 for (const t of htmlTexts(html)) if (!/[가-힣]/.test(t.text)) parts.push({ text: t.text, loc: `index.html:${t.line}` });
 // main.js 의 한글 없는 기호 글 (독일 감아 들기 칸 ▮▯ 등 — collectTexts 는 한글 있는 글만 모은다)
 for (const s of jsStrings(fs.readFileSync(path.join(ROOT, 'src/main.js'), 'utf8'))) if (/[^\x00-\x7f]/.test(s.text) && !/[가-힣]/.test(s.text)) parts.push({ text: s.text, loc: `src/main.js:${s.line}` });
+// 대기실 스킬 칸 글 (10/25 입력 줄 도식 — 화살표 · 느낌표가 프리텐다드에 있는지. 원어 칸 orig 는 뺀다 — 스킬 화면 제목의 원어 글자는 따로)
+const { TREE_SCHOOLS, nodesOf } = await import('../../src/skill_tree_data.js');
+for (const sc of TREE_SCHOOLS) for (const n of nodesOf(sc)) for (const k of ['name', 'title', 'eff', 'lore', 'src', 'cmd']) if (n[k]) parts.push({ text: n[k], loc: `src/skill_tree_data.js ${n.id}.${k}` });
 // 테스트 고르기 화면: test.html 글 · test_pick.js · test_route.js 글
 for (const t of htmlTexts(fs.readFileSync(path.join(ROOT, 'test.html'), 'utf8'))) parts.push({ text: t.text, loc: `test.html:${t.line}` });
 for (const f of ['src/test_pick.js', 'src/test_route.js']) for (const s of jsStrings(fs.readFileSync(path.join(ROOT, f), 'utf8'))) if (/[^\x00-\x7f]/.test(s.text)) parts.push({ text: s.text, loc: `${f}:${s.line}` });
