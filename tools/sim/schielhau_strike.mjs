@@ -11,7 +11,8 @@
 //            --finger=zornhau|schiel|redraw · --spd=3,5.5(긋기 빠르기 패드 m/s) · --jit=0.04(점 흔들림 m) · --sjit=(시작 자리 흔들림 m) · --foeW=(맞는 쪽 무기)
 //            --immortal = 맞는 쪽 상처 끔(duel · player — 판정은 재고 몸에 안 검: 공격마다 같은 몸이라 세기 견줌이 고름) · --first=N 씨앗마다 앞 N 칼만(지치기 전)
 //            고른 견줌(10/25 18:5x — §15): --immortal --dur=14 --first=5 --seeds=18
-//   fight  = 사람 싸움 (playerFight — 손가락 봇 대 치고 막는 AI · --opps · --fseeds · --delays · --prof · --share)
+//   fight  = 사람 싸움 (playerFight — 손가락 봇 대 치고 막는 AI · --opps · --fseeds · --delays · --prof · --share · --move=tsubame 제비 베기 판(打刀))
+//   제비 베기 견줌(10/25 20:3x): player --move=tsubame [--w=uchigatana] [--trad=japanese] [--ghostDown 아래 칼 빗나감 치기] — 한 벌 = 정수리 내려베기 → 곧장 위로(tsubameRun) · player --w=uchigatana --trad=german = 打刀로 곁눈 베기
 //   duel · fights · player 묶음에 rollT = 맞는 스텝 앞뒤(−8 ~ +8 스텝) 아래팔 굴림 ≥ 78 몫 · plan = 맞는 순간 길 덧칸
 //  사용법: node tools/sim/schielhau_strike.mjs duel|fights|player [--set=JOINTS.wristGuard=0,…] [--seeds=6] [--seed0=1] [--dur=40] [--foe=ai|still] [--schools=italian,japanese,german,chinese] [--json=파일]
 //          시험 길: --path='x,y;x,y;…'(from 부터) · --plan='들기,뻗기,돌리기;…'(점마다) · --reach= · --tech=zornhau(다른 기술만 — 견줌)
@@ -190,8 +191,8 @@ const FINGER = (() => {
  *  칠 때: 칼끝 거리 + 0.3 안 · 1.0 ~ 1.6 s 마다. 맞는 쪽 = 1 번 자리(duelRun 과 같은 몸 — foe 'still' 서 있음 · 'ai' 칼을 아래에 둔 채 걷는 AI)
  *  공격 = 곁눈 베기 강화가 열린 긋기(uniq.r — 손가락 긋기 가운데 곁눈 베기로 읽힌 것) · 첫 몸 맞음 · 그 스텝 손목 · 앞뒤 굴림 (duelRun 과 같은 기록 — duelSummary 로 묶음)
  */
-export function playerRun(seed, { dur = 40, foe = 'still', finger = 'zornhau', spd = [3, 5.5], jit = 0.04, sjit = 0, foeW = 'longsword', low = LOW, immortal = false } = {}) {
-  const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2: foeW, AIClass: foe === 'ai' ? LowFoe : AI, persona: { proficiency: 4 } });
+export function playerRun(seed, { dur = 40, foe = 'still', finger = 'zornhau', spd = [3, 5.5], jit = 0.04, sjit = 0, foeW = 'longsword', low = LOW, immortal = false, weapon = 'longsword', trad = null } = {}) {
+  const G = newRound({ walls: true, seed, weapon, weapon2: foeW, AIClass: foe === 'ai' ? LowFoe : AI, persona: { proficiency: 4 } });
   const P = G.player;
   const D = G.enemy;
   if (foe !== 'ai') G.ai.update = () => {};
@@ -199,12 +200,12 @@ export function playerRun(seed, { dur = 40, foe = 'still', finger = 'zornhau', s
   P.skill.corr = CONFIG.SKILL.corr;
   P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
-  const uq = new PlayerUniqueAssist(P, { names: new Set(['schielhau']) });
+  const uq = new PlayerUniqueAssist(P, { names: new Set(['schielhau']), ...(trad ? { tradition: trad } : {}) }); // trad: 다른 무기로 곁눈 베기(견줌 — 기술과 무기 가르기)
   const FR = FINGER[finger];
   if (!FR) throw new Error(`손가락 길 ${finger}?`);
   let rs = (seed * 7919 + 17) >>> 0;
   const rnd = () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296;
-  const [CONTACT, REACH] = MEASURED.longsword;
+  const [CONTACT, REACH] = MEASURED[weapon] ?? MEASURED.longsword;
   const FRAME = 2 * DT;
   let queue = [];
   let fx = P.handOffset.x;
@@ -299,6 +300,143 @@ export function playerRun(seed, { dur = 40, foe = 'still', finger = 'zornhau', s
   }
 }
 
+// ── 사람 제비 베기 (10/25 20:3x 사장님 '플레이어의 제비베기랑 비교하면 뭐가 얼마나 더 센가?' — 견줌) ──
+//  사람 제비 베기(J9 이어 긋기 tsubameGaeshi — unique_assist.js PLAYER_UNIQUE japanese): 정수리 · 사선 내려베기가 빗나가거나 막힌 뒤(앞 긋기가 상대 아픔을 0.05 넘게 올리지 못함)
+//  0.6 s 안에 위로 그은 긋기가 제비 베기(강화 — 몸 · 끝 힘)가 된다. 손가락 봇 한 벌(combo) = 정수리 내려베기(오른 지붕 위 [0.02, 0.52] → [0, 0.14] → 아래 [0, −0.5]) 뒤
+//  멈추지 않고 곧장 위로(→ [0.06, −0.15] → 오른 황소 [0.22, 0.26] — schools.js 제비 베기 길과 같은 점). 180° 꺾임이라 새 긋기로 읽히고 앞 긋기가 빗나갔으면 제비 베기로 강화
+//  (--immortal 이면 상대 아픔이 안 올라 앞 긋기가 늘 '빗나감' — 기술 자체의 세기). 판 기본 무기 = 打刀(uchigatana · 일본) · trad 로 다른 무기에서도
+const COMBO = (() => {
+  const u = TRADITIONS.japanese.unique.find((x) => x.name === 'tsubameGaeshi');
+  return { from: u.from, path: u.path }; // [from, 내려 두 점, 올려 두 점]
+})();
+/**
+ * 사람 제비 베기 한 판 (playerRun 과 같은 꼴 — 공격 = 한 벌): 아래 칼(내려베기 — 제비 베기가 아직 아님) 첫 몸 맞음 · 위 칼(제비 베기로 강화된 긋기) 첫 몸 맞음 · 두 칼 상처 합.
+ *  rows[].hit = 위 칼 첫 맞음(duelSummary 의 공격당 · 맞음 · 빠르기 · 에너지) · down = 아래 칼 첫 맞음 · sevDown · sevUp · sevAll(= 둘 합) · fired = 위 칼이 제비 베기로 강화됨
+ */
+export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit = 0.04, foeW = 'longsword', low = LOW, immortal = false, weapon = 'uchigatana', trad = null, ghostDown = false } = {}) {
+  const G = newRound({ walls: true, seed, weapon, weapon2: foeW, AIClass: foe === 'ai' ? LowFoe : AI, persona: { proficiency: 4 } });
+  const P = G.player;
+  const D = G.enemy;
+  if (foe !== 'ai') G.ai.update = () => {};
+  if (immortal) D.applyWound = () => {};
+  P.skill.corr = CONFIG.SKILL.corr;
+  P.skill.corrTip = CONFIG.SKILL.corrTip;
+  P.skill.autoGuard = true;
+  const uq = new PlayerUniqueAssist(P, { names: new Set(['tsubameGaeshi']), ...(trad ? { tradition: trad } : {}) });
+  if (!uq.list.length) throw new Error('제비 베기가 열리지 않음 (유파?)');
+  let rs = (seed * 7919 + 17) >>> 0;
+  const rnd = () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296;
+  const [CONTACT, REACH] = MEASURED[weapon] ?? MEASURED.longsword;
+  const FRAME = 2 * DT;
+  let queue = [];
+  let fx = P.handOffset.x;
+  let fy = P.handOffset.y;
+  let nextAtk = 1.5;
+  let stepN = 0;
+  let drawn = 0;
+  const to = (p, vel, held) => {
+    const fr = [];
+    let x = fx;
+    let y = fy;
+    for (let k = 0; k < 400; k++) {
+      const dx = p[0] - x;
+      const dy = p[1] - y;
+      const d = Math.hypot(dx, dy);
+      if (d < 1e-6) break;
+      const st = Math.min(d, vel * FRAME);
+      x += (dx / d) * st;
+      y += (dy / d) * st;
+      fr.push([(dx / d) * st, (dy / d) * st, held]);
+    }
+    fx = x;
+    fy = y;
+    return fr;
+  };
+  const combo = () => {
+    const v = spd[0] + rnd() * (spd[1] - spd[0]);
+    const j = () => (rnd() * 2 - 1) * jit;
+    const fr = to(COMBO.from, 1.6, false);
+    fr.push(...Array(4).fill([0, 0, false]));
+    for (const p of COMBO.path) fr.push(...to([p[0] + j(), p[1] + j()], v, true)); // 내려 두 점 → (꺾여) 올려 두 점 — 멈추지 않음
+    fr.push(...Array(6).fill([0, 0, false]));
+    return fr;
+  };
+  const rows = [];
+  let cur = null;
+  let closeT = null;
+  G.before = () => {
+    const t = G.t;
+    const dist = P.foeDistance();
+    if (!queue.length && t >= nextAtk && dist < REACH + 0.3 && P.alive && P.armed && !P.stamina.exhausted) {
+      queue = combo();
+      drawn++;
+      nextAtk = t + 1.4 + rnd() * 0.6;
+      cur = { t0: t, tip: 0, hit: null, down: null, sevDown: 0, sevUp: 0, sevAll: 0, fired: false };
+      rows.push(cur);
+      closeT = null;
+    }
+    if ((stepN++ & 1) === 0) {
+      const f = queue.shift() ?? [0, 0, false];
+      const u = P.skill.uniq;
+      u?.feed(f[0], f[1], FRAME, false);
+      if (!(u ? (u.holdsHand ?? u.running) : false)) {
+        P.handOffset.x += f[0];
+        P.handOffset.y += f[1];
+      }
+      P.handHeld = f[2];
+      if (Math.abs(f[0]) + Math.abs(f[1]) > 1e-5) P.inputActive = true;
+      if (!queue.length) {
+        fx = P.handOffset.x;
+        fy = P.handOffset.y;
+      }
+    }
+    const fwd = P.stamina.exhausted || !P.alive ? 0 : queue.length && dist > CONTACT ? 0.6 : dist < CONTACT + 0.1 ? -0.55 : dist > REACH + 0.25 ? 0.45 : 0;
+    P.move.set(0, fwd);
+    P.stickX = 0;
+    P.stickY = fwd;
+    // ghostDown: 아래 칼이 '빗나갔다' 고 치고 상대 몸을 지나가게(instantGhost — 순간 베기와 같은 칸, 재기 도구만) — 제비 베기가 실제로 나는 조건(앞 칼 빗나감 · 막힘).
+    //  안 끄면 아래 칼이 맞은 부위는 맞음 쿨다운(STRIKE.hitCooldown) 동안 위 칼 상처가 안 남 (상대 상처 끔 판은 아래 칼이 늘 '빗나감' 으로 읽혀 제비 베기가 나므로)
+    if (ghostDown && cur && !cur.fired && queue.length && uq.r?.e.name !== 'tsubameGaeshi') P.instantGhost = Math.max(P.instantGhost ?? 0, 2);
+  };
+  const open = () => cur && (queue.length || closeT == null || G.t - closeT < 0.3);
+  const pw = G.combat.hooks.onWound;
+  G.combat.hooks.onWound = (att, vic, r, ...rest) => {
+    pw?.(att, vic, r, ...rest);
+    if (att !== P || vic !== D || !open()) return;
+    const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
+    cur.sevAll += sv;
+    const rec = { type: r.type, zone: r.zone, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: null, ...hitPhys(r, P) };
+    if (strokeTechOf(P) === 'tsubameGaeshi') {
+      cur.fired = true;
+      cur.sevUp += sv;
+      if (!cur.hit) cur.hit = { ...rec, tip: cur.tip, ...rollPre(cur) };
+    } else {
+      cur.sevDown += sv;
+      if (!cur.down) cur.down = rec;
+    }
+  };
+  try {
+    while (G.t < dur && D.alive && P.alive) {
+      if (foe !== 'ai') holdLow(D, low);
+      G.step();
+      if (cur && uq.r?.e.name === 'tsubameGaeshi') cur.fired = true;
+      if (cur && strokeTechOf(P) === 'tsubameGaeshi') cur.tip = Math.max(cur.tip, P.tipVel.length());
+      if (cur && !queue.length && closeT == null) closeT = G.t;
+      if (cur) rollTrack(cur, P);
+    }
+    return { rows, dead: !D.alive, t: G.t, drawn, fired: uq.stats.fired.tsubameGaeshi ?? 0 };
+  } finally {
+    G.world.free();
+  }
+}
+/** 제비 베기 묶음: duelSummary(위 칼 = 제비 베기 첫 맞음) + 한 벌 몫 — 강화된 벌 · 아래 칼 맞음 · 아래 / 위 / 합 상처 공격당 */
+export function tsubameSummary(runs) {
+  const R = runs.flatMap((r) => r.rows);
+  const n = R.length || 1;
+  const sum = (f) => R.reduce((a, r) => a + f(r), 0);
+  return { ...duelSummary(runs), combos: R.length, firedCombos: R.filter((r) => r.fired).length, downContacts: R.filter((r) => r.down).length, downPerAtk: +(sum((r) => r.down?.sev ?? 0) / n).toFixed(3), downSevPerAtk: +(sum((r) => r.sevDown) / n).toFixed(3), upSevPerAtk: +(sum((r) => r.sevUp) / n).toFixed(3), comboSevPerAtk: +(sum((r) => r.sevAll) / n).toFixed(3), downPhys: physP50(R.map((r) => r.down).filter(Boolean)) };
+}
+
 /**
  * 사람 곁눈 베기 — 싸움 (10/25 18:5x 사장님 '특수한 일부 상황이 아니라 일반적인 상황인가' — 손가락 봇 싸움 · kote_drop_duel 손가락 봇 꼴):
  *  0 번 자리 사람 롱소드(독일 · 고유 공격 강화 단계 4 — 곁눈 베기 · 비껴 딛는 가로베기 · 겹치기) 대 AI(숙련 PROF · 무기 opp — 치고 막는 보통 AI).
@@ -307,8 +445,11 @@ export function playerRun(seed, { dur = 40, foe = 'still', finger = 'zornhau', s
  *   걸음: 롱소드 간격 띠(맞닿기 + 0.1 ~ 칼끝 거리 + 0.25 · 긋는 동안 맞닿기 밖이면 앞으로). 판 dur 초(먼저 쓰러지면 0.5 s 뒤 끝).
  *  센다: 곁눈 베기 공격(강화가 열린 긋기)마다 첫 몸 맞음 · 손목(duelRun 과 같은 기록) · 곁눈 베기 칼날 상처 합 · 모든 칼날 상처 합(준 · 받은) · 판 결과
  */
-export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share = 0.5, counter = 0.5 } = {}) {
-  const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2: opp, persona: { proficiency: prof } });
+export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share = 0.5, counter = 0.5, move = 'schielhau' } = {}) {
+  const tsu = move === 'tsubame'; // 10/25 20:3x 견줌: 제비 베기 판 = 打刀(일본 · 단계 4) · 칠 때 SHARE 몫은 정수리 내려베기 → 곧장 위로(한 벌 — COMBO)
+  const NAME = tsu ? 'tsubameGaeshi' : 'schielhau';
+  const WPN = tsu ? 'uchigatana' : 'longsword';
+  const G = newRound({ walls: true, seed, weapon: WPN, weapon2: opp, persona: { proficiency: prof } });
   applyWeaponMeasure(G.ai, opp);
   const P = G.player;
   const A = G.enemy;
@@ -320,10 +461,10 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
   const uq = new PlayerUniqueAssist(P, { stage: 4 });
   let rs = (seed * 7919 + Math.round(delay * 1000)) >>> 0;
   const rnd = () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296;
-  const [CONTACT, REACH] = MEASURED.longsword;
+  const [CONTACT, REACH] = MEASURED[WPN] ?? MEASURED.longsword;
   const FRAME = 2 * DT;
-  const Z = FINGER.zornhau;
-  const OTHER = TECH.filter((t) => t.name !== 'zornhau').map((t) => ({ from: t.from, path: t.path }));
+  const Z = tsu ? COMBO : FINGER.zornhau;
+  const OTHER = TECH.filter((t) => t.name !== (tsu ? 'oberhau' : 'zornhau')).map((t) => ({ from: t.from, path: t.path }));
   let queue = [];
   let fx = P.handOffset.x;
   let fy = P.handOffset.y;
@@ -377,6 +518,10 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
       due = Infinity;
       if (P.armed && !P.stamina.exhausted && rnd() < counter) {
         queue = stroke(Z, false);
+        if (tsu) {
+          queue.isCombo = true;
+          combos++;
+        }
         nextAtk = t + 1.0 + rnd() * 0.6;
       } else heldUntil = t + 0.6 + rnd() * 0.4;
     }
@@ -385,7 +530,15 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
     if (!guard.held && !queue.length && t >= nextAtk && dist < REACH + 0.3 && P.alive && P.armed && !P.stamina.exhausted) {
       const z = rnd() < share;
       if (!z && rnd() < 0.15) P.skill.thrust();
-      else queue = stroke(z ? Z : OTHER[Math.floor(rnd() * OTHER.length)], rnd() < 0.3);
+      else {
+        const b = z ? Z : OTHER[Math.floor(rnd() * OTHER.length)];
+        const back = rnd() < 0.3; // 난수 차례는 곁눈 베기 판과 같게
+        queue = stroke(b, back && !(tsu && z));
+        if (tsu && z) {
+          queue.isCombo = true;
+          combos++;
+        }
+      }
       nextAtk = t + 1.0 + rnd() * 0.6;
     }
     guard.step(DT);
@@ -413,7 +566,10 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
   const rows = [];
   let cur = null;
   let wasR = false;
-  let schielSev = 0;
+  let schielSev = 0; // 그 기술(곁눈 베기 · 제비 베기) 칼날 상처 합
+  let downSev = 0; // 제비 베기 한 벌의 아래 칼 상처 합
+  let combos = 0;
+  let comboOpen = false;
   let dealt = 0;
   let recv = 0;
   const pw = G.combat.hooks.onWound;
@@ -423,7 +579,8 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
     if (att === A && vic === P) recv += sv;
     if (att !== P || vic !== A) return;
     dealt += sv;
-    if (strokeTechOf(P) !== 'schielhau') return;
+    if (tsu && comboOpen && strokeTechOf(P) !== NAME) downSev += sv; // 제비 베기 한 벌의 아래 칼(아직 제비 베기가 아님)
+    if (strokeTechOf(P) !== NAME) return;
     schielSev += sv;
     if (!cur) return;
     cur.sevAll += sv;
@@ -434,18 +591,19 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
   try {
     for (let i = 0; i < Math.round(dur / DT); i++) {
       G.step();
-      const isR = uq.r?.e.name === 'schielhau' && uq.r.part === 1;
+      const isR = uq.r?.e.name === NAME && uq.r.part === 1;
       if (isR && !wasR) {
         cur = { t0: G.t, tip: 0, hit: null, sevAll: 0 };
         rows.push(cur);
       }
       wasR = isR;
-      if (cur && strokeTechOf(P) === 'schielhau') cur.tip = Math.max(cur.tip, P.tipVel.length());
+      if (cur && strokeTechOf(P) === NAME) cur.tip = Math.max(cur.tip, P.tipVel.length());
       if (cur) rollTrack(cur, P);
+      comboOpen = tsu && queue.length > 0 && queue.isCombo;
       if ((!P.alive || !A.alive) && end === dur) end = G.t + 0.5;
       if (G.t >= end) break;
     }
-    return { rows, opp, seed, delay, win: !A.alive && P.alive, lose: !P.alive && A.alive, schielSev, dealt, recv, fired: uq.stats.fired.schielhau ?? 0, t: G.t };
+    return { rows, opp, seed, delay, win: !A.alive && P.alive, lose: !P.alive && A.alive, schielSev, downSev, combos, dealt, recv, fired: uq.stats.fired[NAME] ?? 0, t: G.t };
   } finally {
     G.world.free();
   }
@@ -648,9 +806,11 @@ if (isMain(import.meta.url)) {
     const S0 = +(args.seed0 ?? 1);
     const spd = args.spd ? String(args.spd).split(',').map(Number) : [3, 5.5];
     const runs = [];
-    for (let s = S0; s < S0 + seeds; s++) runs.push(playerRun(s, { dur: +(args.dur ?? 40), foe: args.foe ?? 'still', finger: args.finger ?? 'zornhau', spd, jit: args.jit != null ? +args.jit : 0.04, sjit: +(args.sjit ?? 0), foeW: args.foeW ?? 'longsword', immortal: !!args.immortal }));
+    const o = { dur: +(args.dur ?? 40), foe: args.foe ?? 'still', spd, jit: args.jit != null ? +args.jit : 0.04, foeW: args.foeW ?? 'longsword', immortal: !!args.immortal, ...(args.w ? { weapon: String(args.w) } : {}), ...(args.trad ? { trad: String(args.trad) } : {}), ...(args.ghostDown ? { ghostDown: true } : {}) };
+    for (let s = S0; s < S0 + seeds; s++) runs.push(args.move === 'tsubame' ? tsubameRun(s, o) : playerRun(s, { ...o, finger: args.finger ?? 'zornhau', sjit: +(args.sjit ?? 0) }));
     const first = args.first ? +args.first : 0;
-    res = { ...duelSummary(first ? runs.map((r) => ({ ...r, rows: r.rows.slice(0, first) })) : runs), drawn: runs.reduce((a, r) => a + r.drawn, 0), fired: runs.reduce((a, r) => a + r.fired, 0), power: runs.reduce((a, r) => a + r.power, 0) };
+    const cut = first ? runs.map((r) => ({ ...r, rows: r.rows.slice(0, first) })) : runs;
+    res = { ...(args.move === 'tsubame' ? tsubameSummary(cut) : duelSummary(cut)), drawn: runs.reduce((a, r) => a + r.drawn, 0), fired: runs.reduce((a, r) => a + r.fired, 0), power: runs.reduce((a, r) => a + r.power, 0) };
     console.log(`사람 곁눈 베기 (손가락 ${args.finger ?? 'zornhau'} · 상대 ${args.foe ?? 'still'})${args.set ? ` · set ${args.set}` : ''}${args.plan ? ` · 덧칸 ${args.plan}` : ''}: ${JSON.stringify(res)}`);
   } else if (mode === 'fight') {
     if (PATCH) {
@@ -661,9 +821,9 @@ if (isMain(import.meta.url)) {
     const seeds = String(args.fseeds ?? '901,902,903').split(',').map(Number);
     const delays = String(args.delays ?? '0.12,0.22').split(',').map(Number);
     const runs = [];
-    for (const opp of opps) for (const seed of seeds) for (const delay of delays) runs.push(playerFight(seed, opp, { delay, prof: +(args.prof ?? 3), dur: +(args.dur ?? 30), share: +(args.share ?? 0.5) }));
+    for (const opp of opps) for (const seed of seeds) for (const delay of delays) runs.push(playerFight(seed, opp, { delay, prof: +(args.prof ?? 3), dur: +(args.dur ?? 30), share: +(args.share ?? 0.5), move: args.move ?? 'schielhau' }));
     const sum = (f) => +runs.reduce((a, r) => a + f(r), 0).toFixed(2);
-    res = { ...duelSummary(runs.map((r) => ({ rows: r.rows, dead: r.win }))), n: runs.length, win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length, schielSev: sum((r) => r.schielSev), dealt: sum((r) => r.dealt), recv: sum((r) => r.recv), fired: sum((r) => r.fired) };
+    res = { ...duelSummary(runs.map((r) => ({ rows: r.rows, dead: r.win }))), n: runs.length, win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length, schielSev: sum((r) => r.schielSev), downSev: sum((r) => r.downSev), combos: sum((r) => r.combos), dealt: sum((r) => r.dealt), recv: sum((r) => r.recv), fired: sum((r) => r.fired) };
     const byOpp = {};
     for (const r of runs) {
       const o = (byOpp[r.opp] ??= { n: 0, win: 0, lose: 0, schielSev: 0, atk: 0, sev: 0 });

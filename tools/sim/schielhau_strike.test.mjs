@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
-import { duelRun, duelSummary, playerRun } from './schielhau_strike.mjs';
+import { duelRun, duelSummary, playerRun, tsubameRun, tsubameSummary } from './schielhau_strike.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist } from '../../src/unique_assist.js';
 
@@ -237,4 +237,13 @@ test('사람 곁눈 베기 세기 손잡이 (schielPlayerK — 18:5x 50 % 조건
   // AI 곁눈 베기는 그대로
   const ai = (k) => firstHit(k, () => duelRun(2, { foe: 'still', dur: 12 }).rows.map((x) => x.hit?.sev ?? null));
   assert.deepEqual(ai(0.5), ai(1));
+});
+
+test('제비 베기 견줌 판 (10/25 20:3x — 재기 도구만): 정수리 내려베기 → 곧장 위로 한 벌이 제비 베기로 강화됨 · ghostDown 이면 아래 칼 맞음 없음 · 게임 값 그대로', () => {
+  const r = tsubameRun(1, { immortal: true, dur: 14, ghostDown: true });
+  const d = tsubameSummary([r]);
+  assert.ok(d.combos >= 2, `한 벌 ${d.combos}`);
+  assert.ok(d.firedCombos >= 1, `제비 베기 ${d.firedCombos} / ${d.combos}`);
+  assert.equal(d.downContacts, 0);
+  assert.equal(UA.schielPlayerTip, 1);
 });
