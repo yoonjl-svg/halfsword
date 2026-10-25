@@ -19,6 +19,9 @@
 //  10/25 칼끝 얽힘 창 (사장님 10/25 01:0x '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — 기본 · 10/24 판은 `?risoTouch=0` · 문서 §14):
 //   덮인 채 나아가기가 새로 선 그 스텝(칼끼리 어느 부위든 실제 맞닿음 · 0.07 m — 칼끝끼리 · 칼끝이 상대 칼 몸에 엇걸림도)에 곧장 창 · 셈 시간 없음 · 덮인 채 나아가기 한 번에 한 번.
 //   10/24 판에서 첫 닿음을 늦춘 것 = 이어짐 0.6 s(risolutoHold) 하나 — 부위 · 가슴 사이 조건은 10/23 에 이미 풂 · 다 붙음 창은 13:4x 간격 조건(맞닿기 거리)과 같은 자리라 늘 막힘.
+//  10/25 21:0x 사장님 조건 셋 (기본 — 문서 §16 · 확인표 2563 ~ 2569): ① 스틱 앞이나 뒤(SECRET.risolutoStick 'both' · `?risoStick=fwd` = 앞만) ·
+//   ② 창 안의 공격 입력이면 탭 · 끌기 모두(SECRET.risolutoTap 0 · `?risoTap=1` = 탭만 — schools.js tapOnly) · ③ 덮음 거리 0.07 → 0.15 m(SECRET.risolutoCover — 칼 어느 부위든 · 손 쪽 ↔ 칼끝 쪽 둘 다) ·
+//   그리고 사람 비기 창은 열리면 0.6 s 지킴(SECRET.secretHold — secret.js PlayerSecretWatch.holding · 간격 조건이 열린 창을 닫지 않음).
 //  AI 는 쓰지 않는다(SECRET.aiOpenSchools — ai.js 는 TRADITIONS.italian.secret 옛 비기를 보고, 그마저 닫힘). 시뮬 도구엔 PlayerSecretWatch 가 없어 AI 끼리 판 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -83,7 +86,7 @@ export function lineCover(me, foe) {
 
 /**
  * 칼끼리 어느 부위든 (10/23 넓은 판정 — SECRET.risolutoAnyPart · 사장님 '칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게'):
- *  실제 칼끼리 맞닿음(combat.js 가 적는 feel.touching — 접촉 사건) 이거나, 두 칼날 전체(0 ~ 1) 선분 가장 가까운 거리 ≤ SECRET.risolutoCover(0.07 m — 덮음과 같은 수 · 새 문턱 없음)
+ *  실제 칼끼리 맞닿음(combat.js 가 적는 feel.touching — 접촉 사건) 이거나, 두 칼날 전체(0 ~ 1) 선분 가장 가까운 거리 ≤ SECRET.risolutoCover(덮음과 같은 수 — 10/25 21:0x 사장님 0.07 → 0.15 m · 리솔루토만 읽음)
  */
 export function bladesNear(me, foe) {
   if (!me?.armed || !foe?.armed || me.weaponBroken || foe.weaponBroken || me.weapon?.gun || foe.weapon?.gun) return false;
@@ -103,6 +106,19 @@ export function meFree(me) {
 /** 스틱이 앞 (상대 쪽 90° 부채꼴 — fighter.js closeStep 밂 걸쇠와 같은 기하) */
 export function stickForward(me) {
   return (me.stickY ?? 0) > Math.abs(me.stickX ?? 0);
+}
+
+/** 스틱이 뒤 (상대 반대쪽 90° 부채꼴 — 앞 부채꼴을 뒤집은 기하) */
+export function stickBack(me) {
+  return -(me.stickY ?? 0) > Math.abs(me.stickX ?? 0);
+}
+
+/**
+ * 덮인 채 나아가기의 스틱 (사장님 10/25 21:0x '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때' — SECRET.risolutoStick):
+ *  'both'(기본) = 앞 또는 뒤 90° 부채꼴 · 옆 · 놓음은 아님 · 'fwd' = 전(앞만 — `?risoStick=fwd`)
+ */
+export function stickOk(me) {
+  return stickForward(me) || (SECRET.risolutoStick !== 'fwd' && stickBack(me));
 }
 
 /**
@@ -164,7 +180,7 @@ export class RisolutoWatch {
       this.lineSteps++;
     }
     const mine = meFree(me);
-    const fwd = stickForward(me);
+    const fwd = stickOk(me); // 10/25 21:0x 앞이나 뒤 (SECRET.risolutoStick — 'fwd' = 전 앞만)
     const foeFree = !swingingNow(foe);
     const on = cover && mine && foeFree && fwd && (closing || !SECRET.risolutoClosing);
     if (on) {
