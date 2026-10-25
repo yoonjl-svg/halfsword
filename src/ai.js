@@ -1326,7 +1326,11 @@ export class AI {
       this.stats.vital = (this.stats.vital ?? 0) + 1;
       this.vitalStrike = { t: this.sense.t, kind: V.kind, zone: V.zone, tech: t.name };
     }
-    if (t.kind === 'thrust' && !this.feint && (this.me.weaponCfg.thrustStyle || V?.kind === 'thrust')) this.me.skill.thrust({ step: false, vital: V?.kind === 'thrust' ? V : null });
+    if (t.kind === 'thrust' && !this.feint && (this.me.weaponCfg.thrustStyle || V?.kind === 'thrust')) {
+      this.me.skill.thrust({ step: false, vital: V?.kind === 'thrust' ? V : null });
+      // 이탈리아 찌르기 ③ (config THRUST.itLunge — 10/25): 팔만으로 안 닿으면(skill.js itMeasure > 0) 팔을 뻗은 뒤 몸 · 발이 따라가는 런지로 딛는다 — stepTime 이 0 이어도 (기술 걸음 'strike' 와 같은 STEP_T · 걸음은 gaitStep)
+      if (this.me.skill.tap?.it?.fwd > 0) this.stepT = Math.max(this.stepT, STEP_T);
+    }
     // 10/22 대검 마무리 (finish.js FINISH.cleave.ai, 기본 끔 — 끄면 이 줄은 아무것도 하지 않는다): 쓰러진 · 낮은 상대를 마무리하는 칼이면 플레이어 탭과 같은
     //  쪼개 내려치기 (skill.cleavePose). 마무리가 안 열리면(finishOnly) 그대로 기술 길만 간다
     else if (FINISH.cleave.ai && this.why === 'finish' && !this.feint && cleaveFinish(this.me)) this.me.skill.thrust({ step: false, finishOnly: true });
@@ -2959,7 +2963,8 @@ export class AI {
       if (g.requestStep({ kind: cs.kind, fwd: fw, hold: 0.3, leg, draw: !!cs.draw, tech: this.tech?.name })) this.requestedStep = true; // tech: 기술 이름(중국 활 자세가 표두격 oberhau 에서 더 오래 버팀 — gait P.bow.tech)
       return;
     }
-    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: 0.6, hold: 0.3, leg })) this.requestedStep = true;
+    const itl = this.tech?.kind === 'thrust' ? this.me.skill.tap?.it : null; // 이탈리아 찌르기 ③: 거리만큼(0.6 m 까지) · 몸이 앞발을 따라 실리는 런지 (skill.js 탭 찌르기와 같은 걸음 장치)
+    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: itl?.fwd > 0 ? Math.min(0.6, itl.fwd) : 0.6, hold: 0.3, leg, ...(itl?.fwd > 0 ? { push: SECRET.stepPush, accel: true } : {}) })) this.requestedStep = true;
   }
 
   // ───────────────────────── 기술 걸음 (10/9 — 사장님 '비껴 들어가 베기', docs/strike/school_step_2026-10-09.md) ─────────────────────────

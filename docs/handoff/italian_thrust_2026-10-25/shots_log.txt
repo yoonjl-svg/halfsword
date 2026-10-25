@@ -1,0 +1,4 @@
+before_tap {"hit":null,"gap":2.11,"d0":2.09,"lunge":null,"t":0.3}
+before_imb {"hit":{"part":"chest","type":"blunt","e":7.2,"sp":5.3},"gap":1.61,"has":true,"d0":1.73,"lunge":null,"head":true,"t":0.17}
+after_tap {"hit":null,"gap":1.8,"d0":2.09,"lunge":0.441253926199093,"t":0.92}
+after_imb {"hit":null,"gap":1.43,"has":true,"d0":1.7,"lunge":0.1085380629592859,"head":false,"t":0.54}

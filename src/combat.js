@@ -875,6 +875,7 @@ export class Combat {
     }
     const r = this.analyze(pr, point, S, P);
     if (!r || r.energy < STRIKE.minEnergy) return null;
+    if (att.skill?.tap?.it && vic === att.foe) att.skill.tap.it.landed = true; // 이탈리아 찌르기 ④ (config THRUST.itLunge — 10/25): 칼이 상대 몸에 판정을 냄 = 찌르기가 닿음 — 런지로 뻗은 채 머물기를 거둠 (skill.js updateThrust)
     att.stamina.contactAttack(r.type === 'stab' ? 'thrust' : 'cut');
     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
