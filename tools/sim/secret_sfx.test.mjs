@@ -211,8 +211,10 @@ test('AI 고노센 (일본 숙련도 5 · AI 실행부 secretGo): 한 번 · g1 
       }
       if (A.secretGo(A.secret, {})) fired++;
     }
-    const before = reqs.length;
     g.before = null;
+    g.step(); // 발도는 다음 afterStep 에 시작해 그때 소리를 부른다 (10/25 22:3x 부터 천천히 걸어 듦 창이 꺼져 저절로 낸 고노센이 앞서 소리를 내 두지 않음)
+    W.tick();
+    const before = reqs.length;
     for (let i = 0; i < 120 * 3; i++) { g.step(); W.tick(); }
     const firedAll = Object.values(A.stats.secrets ?? {}).reduce((n, x) => n + x.fired, 0);
     assert.ok(fired === 1 && firedAll >= 1, `낸 수 ${fired} / ${firedAll}`);

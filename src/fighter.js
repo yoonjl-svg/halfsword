@@ -1246,6 +1246,9 @@ export class Fighter {
    *  누르기 동안 다리 밀기(CLOSE.legDrive) 하나를 더하고, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword).
    *  넘어짐은 상대 균형이 정한다.
    *  발사 = 걸쇠 && 밂 && 준비. 1단계(step) 딛기 → req 다리 착지 → 2단계(press) 누르기 → 물리 사건으로 끝 → lift·closeW 되돌림.
+   *  10/25 23:3x 사장님 '밀치기는 붙은 거리 안에서 스틱을 한 번 놓았다가 다시 밀어야 시작됩니다 -> 이 걸쇠 없애. 밀치기의 도입 취지와도 맞지 않아.' (CLOSE.latch 0):
+   *   발사 = 닿는 거리 안 && 밂 && 준비 — 놓았다 밀 것 없음. 밀치는 동안은 새로 안 붙음(barge 가 있으면 이 칸을 안 탐) · 끝나면 그대로 밀고 있으면 곧장 다음 밀치기 ·
+   *   다른 걸음 요청(gait.req)이 걸려 있는 동안은 기다림(새 수 없음 — 찌르기 · 베기 걸음 위에 밀치기 걸음을 덮어 거듭 내지 않게). AI 는 CLOSE.latchAI(사람과 따로 — 아래)
    */
   closeStep() {
     const dt = this.lastDt;
@@ -1283,11 +1286,13 @@ export class Fighter {
       }
     }
     if (!b) {
-      // 걸쇠: 밀치는 중엔 건드리지 않는다 (1단계 중 엄지가 가운데를 지나도 재발사 없음)
+      // 걸쇠: 밀치는 중엔 건드리지 않는다 (1단계 중 엄지가 가운데를 지나도 재발사 없음) — 걸쇠 판(CLOSE.latch · AI 는 latchAI)만 발사에 씀 · closeArmed 는 늘 같은 셈(AI moveFeet 이 읽는다)
+      // 탈진으로 풀린 누르기(stamina.js stepClinch — '누르기 해제')는 걸쇠 판처럼 스틱을 한 번 놓아야 다시 — 걸쇠 없는 판이 같은 스텝에 곧장 다시 눌러 풀림이 사라지지 않게 (새 수 없음)
+      const latch = (this.aiControlled ? CLOSE.latchAI : CLOSE.latch) || this.bargeEnd === 'exhausted';
       if (!(d <= reach)) this.closeArmed = false;
       else if (idle) this.closeArmed = true;
-      else if (push && this.closeArmed) {
-        // 밀면 걸쇠를 쓴다 (준비가 안 된 밂 — 베는 중·찌르는 중·발 묶임 등 — 이 나중에 저절로 밀치기가 되지 않게)
+      else if (push && (this.closeArmed || (!latch && !g?.req))) {
+        // 밀면 걸쇠를 쓴다 (준비가 안 된 밂 — 베는 중·찌르는 중·발 묶임 등 — 이 나중에 저절로 밀치기가 되지 않게) · 걸쇠 없는 판은 준비가 되는 스텝에 곧장
         this.closeArmed = false;
         const ready =
           this.state === 'stand' && g?.active && !this.feetHeld && !(this.armed && this.weapon?.gun) && foeUp && !this.revival && !sk.swinging && !sk.tap;

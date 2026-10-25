@@ -4,6 +4,7 @@
 //      수직 긋기 제비 베기(J9 — 잠김) · 막기 + 스틱 격살(C9 — 익힘) · 740 × 360 싱지르(B7 — 잠김 · 그 화면에서 가장 빠듯한 카드).
 //      보는 것: 입력 줄 글 = '입력: ' + 칸 cmd · 한 줄 · 카드 맨 아래(보이는 것 가운데 가장 아래) · 없는 칸은 숨김 ·
 //      그 줄을 그린 글꼴(크롬 개발 도구 CSS.getPlatformFontsForNode — 화살표 · 느낌표까지 프리텐다드여야, 시스템 글꼴로 넘어가면 실패)
+//   10/25 22:3x · 23:1x: 비기 칸(사장님 글 — 33 자 넘음)은 두 줄까지 받음 · 그림에 J5 · I4(844 × 390) · J5(680 × 360) 더함
 //   ② 모든 칸(다섯 유파 × 11) × 화면 여섯(폰 가로 844 × 390 · 740 × 360 · 844 × 340 · 680 × 360 · 작은 가로 568 × 320 · PC 1280 × 720): 입력 줄 한 줄 · 줄 끝 남는 폭 · 카드 넘침.
 //      넘침은 844 × 390 · 740 × 360 · 568 × 320 · PC 에서 0 이어야(걸리면 실패) · 844 × 340 · 680 × 360 은 적어만 둔다(값 · '배우기'가 있는 안 배운 칸 몇이 원래 빠듯 — 문서 §4)
 //  실행: vite build(+ tools/pwa/build.mjs) → vite preview 를 띄운 뒤  node tools/browser/skill_cmd_shots.mjs http://127.0.0.1:5528 [출력 폴더(기본 docs/handoff/skill_input_2026-10-25)]
@@ -23,10 +24,10 @@ const toWebp = (png, name) => { execFileSync('python3', ['-I', '-c', "import sys
 const learned = { german: ['G1', 'G2', 'G5', 'G8', 'G3'], iberian: ['B1', 'B10'], chinese: ['C1', 'C3', 'C7', 'C6', 'C8', 'C9'] };
 const SAVE = { version: 1, coins: 640, heads: 12, titles: [], title: '', acquisitions: Object.entries(learned).flatMap(([s, ids]) => ids.map((id) => ({ receipt: `skill:${s}:${id}`, kind: 'skill', paid: { coins: 100, heads: 0 } }))) };
 const SIZES = [
-  { w: 844, h: 390, must: true, shots: [['german', 'G10', 'locked'], ['italian', 'I2', 'locked'], ['japanese', 'J9', 'locked'], ['chinese', 'C9', 'learned']] },
+  { w: 844, h: 390, must: true, shots: [['german', 'G10', 'locked'], ['italian', 'I2', 'locked'], ['japanese', 'J9', 'locked'], ['chinese', 'C9', 'learned'], ['japanese', 'J5', 'locked'], ['italian', 'I4', 'locked']] }, // J5 · I4 — 10/25 22:3x 사장님 비기 글(두 줄)
   { w: 740, h: 360, must: true, shots: [['iberian', 'B7', 'locked']] },
   { w: 844, h: 340, must: false, shots: [] },
-  { w: 680, h: 360, must: false, shots: [['german', 'G10', 'locked']] },
+  { w: 680, h: 360, must: false, shots: [['german', 'G10', 'locked'], ['japanese', 'J5', 'locked']] },
   { w: 568, h: 320, must: true, shots: [] },
   { w: 1280, h: 720, must: true, shots: [] },
 ];
@@ -109,7 +110,9 @@ for (const { w, h, must, shots } of SIZES) {
       await p.evaluate((nid) => document.querySelector('#gameEntrance').shadowRoot.querySelector(`.tree-node[data-node="${nid}"]`).click(), n.id);
       const C = await p.evaluate(readCard);
       rows.push({ id: n.id, ...C });
-      if (n.cmd && C.state !== 'closed' && (C.cmd !== `입력: ${n.cmd}` || C.lines !== 1 || C.wide || C.room < 0 || !C.last)) errors.push(`${size} ${n.id} 입력 줄 ${C.lines} 줄 · 남는 폭 ${C.room}px · 맨 아래 ${C.last} · ${JSON.stringify(C.cmd)}`);
+      // 비기 칸은 10/25 22:3x · 23:1x 사장님 글(33 자 넘음 — 카드에서 두 줄까지 · docs/text/editing_guide.md 입력 줄) · 그 밖은 한 줄
+      const maxLines = n.cat === 'secret' ? 2 : 1;
+      if (n.cmd && C.state !== 'closed' && (C.cmd !== `입력: ${n.cmd}` || C.lines > maxLines || C.wide || (C.lines === 1 && C.room < 0) || !C.last)) errors.push(`${size} ${n.id} 입력 줄 ${C.lines} 줄 · 남는 폭 ${C.room}px · 맨 아래 ${C.last} · ${JSON.stringify(C.cmd)}`);
       if (!n.cmd && C.cmd !== null) errors.push(`${size} ${n.id} 입력 줄이 없어야`);
       if (must && C.over > 1) errors.push(`${size} ${n.id} 카드 넘침 +${C.over}px`);
       await p.evaluate(() => document.querySelector('#gameEntrance').shadowRoot.querySelector('.detail-close').click());

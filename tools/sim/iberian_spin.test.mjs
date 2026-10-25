@@ -36,7 +36,7 @@ test('도는 진행: 0 → 1 · 빠르기 끝 0 · 가운데 1 · 한 바퀴 시
   const { time: T, ramp: r } = SECRET.ibSpin;
   assert.equal(T, 0.6);
   assert.equal(r, 0.2);
-  assert.equal(SECRET.ibSpin.armTime, 1.5);
+  assert.equal(SECRET.ibSpin.armTime, 2); // 10/25 22:3x 사장님 '이베리아 비기도 기다리는 시간 2초로' (전 1.5)
   assert.equal(spinProgress(0, T, r), 0);
   assert.equal(spinProgress(T, T, r), 1);
   let prev = 0;
@@ -70,7 +70,7 @@ test('열림: 사람 · AI (10/24 사장님 \'싱지르 ai에게도 열어\' —
   G2.world.free();
 });
 
-test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르면 풀림 · 무장 동안 상처 나면 풀림(hurtDisarm) · 창을 쓰면 한 번', () => {
+test('무장: 칼끝 거리 밖 armTime(2 s) → 끝 없는 창(금색 !) · 휘두르면 풀림 · 무장 동안 상처 나면 풀림(hurtDisarm) · 창을 쓰면 한 번', () => {
   const G = newRound({ seed: 2, weapon: 'zweihander', weapon2: 'longsword', gap: 3.4 });
   const P = G.player, E = G.enemy;
   setup(P);
@@ -95,7 +95,7 @@ test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르�
   for (let i = 0; i < Math.round(SECRET.playerWindow / DT); i++) G.step();
   assert.equal(W.open, null);
   busy = false;
-  for (let i = 0; i < Math.round(1.6 / DT); i++) G.step();
+  for (let i = 0; i < Math.round((SECRET.ibSpin.armTime + 0.1) / DT); i++) G.step();
   assert.equal(W.open?.ctx?.ev, 'spin');
   // 상처 → 풀림
   P.wounds.push({ part: 'farmO', severity: 0.1 });
@@ -104,7 +104,7 @@ test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르�
   // 끄면(0) 발도 대기처럼 상처로는 안 풀림
   SECRET.ibSpin.hurtDisarm = 0;
   try {
-    for (let i = 0; i < Math.round(1.6 / DT); i++) G.step();
+    for (let i = 0; i < Math.round((SECRET.ibSpin.armTime + 0.1) / DT); i++) G.step();
     assert.equal(W.spinArm.armed, true);
     P.wounds.push({ part: 'farmO', severity: 0.1 });
     G.step();
@@ -339,10 +339,12 @@ test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 �
 test('땅은 막힘 아님 (10/24 floor): 원을 아래에서 끝내 감기 첫 스텝에 칼끝이 땅을 스친 판 — 고친 판은 한 바퀴 · 끄면 막힘(진행 ≈ 0)', async () => {
   const { runCircle } = await import('./iberian_spin_circle.mjs');
   const c = { r: 50, T: 0.8, a0: 0, dir: 'ccw', close: 380 };
-  const r = runCircle('zweihander', 'langort', 'circle', c);
+  // 장면 = 10/24 기록 그대로: 원은 무장 0.3 s 뒤에 긋는다 — 무장 시간이 바뀌면(10/25 22:3x 1.5 → 2 s) 원을 긋는 때의 몸 · 칼 자리가 달라져 옛 결함(땅 스침)이 안 날 수 있어 그때 시간(1.5)으로 고정
+  const at = { armTime: 1.5 };
+  const r = await withSpin(at, () => runCircle('zweihander', 'langort', 'circle', c));
   assert.equal(r.why, 'done');
   assert.equal(r.q, 1);
-  const b = await withJoints(WRIST_OLD, () => withSpin({ floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c))); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
+  const b = await withJoints(WRIST_OLD, () => withSpin({ ...at, floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c))); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
   assert.equal(b.why, 'blocked');
   assert.ok(b.q < 0.05, `진행 ${b.q}`);
 });

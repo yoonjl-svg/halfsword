@@ -30,9 +30,10 @@ const wristGap = (P) => {
   return w.distanceTo(gp);
 };
 
-test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
+test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 2 s — 10/25 23:1x · 끊김 너그러움 0.2 s · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
   assert.equal(SECRET.deMord, 1);
-  assert.equal(SECRET.mordPress, 1.5);
+  assert.equal(SECRET.mordPress, 2); // 10/25 23:1x 사장님 '1초 말고 2초로 하고, 대신 리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세.' (전 1.5)
+  assert.equal(SECRET.mordGrace, 0.2);
   assert.equal(SECRET.playerWindow, 0.6);
   assert.equal(SECRET.stiff.german, 0.4);
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
@@ -63,35 +64,46 @@ test('사람 · AI 몫: 플레이어 독일 무기 = 죽음의 일격 · deMord 
   } finally { g.world.free(); }
 });
 
-test('조건: 밀치기 누르기가 끊기지 않고 1.5 s 이어지면 창 · 누르기가 끝나면 셈 0 · 창을 열면 셈 0 · 0.6 s 판도', () => {
+test('조건: 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨도 mordGrace(0.2 s) 안에 다시 누르면 셈을 이어감(그동안은 안 셈) · 더 끊기면 셈 0 · 창을 열면 셈 0 · 0.6 s 판도', () => {
   const { g, P, E } = fixture();
   try {
     const w = new PlayerSecretWatch(P, E);
     assert.equal(w.S.name, 'mordschlag');
     const steps = (sec) => Math.round(sec / DT);
+    const N = steps(SECRET.mordPress);
     const press = (n, on = true) => { for (let i = 0; i < n; i++) { P.barge = on ? { phase: 'press' } : null; w.update(DT, false); } };
-    press(steps(1.5) - 2);
-    assert.equal(w.open, null, '1.5 s 전에는 창 없음');
-    press(1, false); // 끊김
-    press(steps(1.5) - 2);
-    assert.equal(w.open, null, '끊긴 뒤 다시 1.5 s 전');
-    press(4);
-    assert.ok(w.open, '1.5 s 이어지면 창');
+    press(N - 2);
+    assert.equal(w.open, null, 'mordPress 전에는 창 없음');
+    press(steps(SECRET.mordGrace) + 2, false); // 너그러움보다 길게 끊김 → 셈 0
+    assert.equal(w.pressT, 0);
+    press(N - 2);
+    assert.equal(w.open, null, '끊긴 뒤 다시 mordPress 전');
+    press(steps(SECRET.mordGrace) - 2, false); // 너그러움 안의 끊김 → 셈을 쥔 채 (안 셈)
+    assert.ok(Math.abs(w.pressT - (N - 2) * DT) < 1e-9, `쥔 셈 ${w.pressT}`);
+    assert.equal(w.open, null);
+    press(3);
+    assert.ok(w.open, '이어 센 누르기가 mordPress 넘으면 창');
     assert.equal(w.open.ctx.ev, 'press');
     assert.equal(w.opened, 1);
     assert.ok(Math.abs(w.open.t - SECRET.playerWindow) < 3 * DT);
     P.barge = { phase: 'step' }; // 딛는 동안은 누르기가 아님
     w.update(DT, false);
     assert.equal(w.pressT, 0);
-    SECRET.mordPress = 0.6;
+    const old = { mordPress: SECRET.mordPress, mordGrace: SECRET.mordGrace };
     try {
+      SECRET.mordPress = 0.6;
       const w2 = new PlayerSecretWatch(P, E);
-      press.call(null, 0);
       for (let i = 0; i < steps(0.6) + 2; i++) { P.barge = { phase: 'press' }; w2.update(DT, false); }
       assert.ok(w2.open, '0.6 s 판');
-    } finally { SECRET.mordPress = 1.5; }
+      SECRET.mordGrace = 0; // 전 판: 끊기면 곧장 셈 0
+      const w4 = new PlayerSecretWatch(P, E);
+      for (let i = 0; i < steps(0.4); i++) { P.barge = { phase: 'press' }; w4.update(DT, false); }
+      P.barge = null;
+      w4.update(DT, false);
+      assert.equal(w4.pressT, 0, 'mordGrace 0 — 한 스텝 끊겨도 셈 0');
+    } finally { Object.assign(SECRET, old); }
     const w3 = new PlayerSecretWatch(P, E);
-    for (let i = 0; i < steps(2); i++) { P.barge = { phase: 'press' }; w3.update(DT, true); } // 비기 실행 · 굳음 동안은 세지 않음
+    for (let i = 0; i < steps(SECRET.mordPress + 0.5); i++) { P.barge = { phase: 'press' }; w3.update(DT, true); } // 비기 실행 · 굳음 동안은 세지 않음
     assert.equal(w3.open, null);
   } finally { P.barge = null; g.world.free(); }
 });
@@ -233,7 +245,7 @@ test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠
   }
 });
 
-test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 1.5 s → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄', () => {
+test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄', () => {
   const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
   const P = g.player, E = g.enemy, ai = g.ai;
   try {
@@ -246,13 +258,13 @@ test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누�
     assert.equal(mordHeadReach(E), true, '가슴 0.7 m — 머리가 칼자루 길 안');
     E.barge = { phase: 'press' };
     for (let i = 0; i < steps(1.0); i++) g.step();
-    E.barge = null; // 끊김 → 셈 0
-    g.step();
+    E.barge = null; // 너그러움(mordGrace)보다 길게 끊김 → 셈 0
+    for (let i = 0; i < steps(SECRET.mordGrace) + 2; i++) g.step();
     assert.equal(ai.press.pressT, 0);
     E.barge = { phase: 'press' };
     let opened = null, fired = null, ended = null;
     const c0 = E.stamina.counts.secret ?? 0;
-    for (let i = 0; i < steps(3.0); i++) {
+    for (let i = 0; i < steps(SECRET.mordPress + 1.5); i++) {
       g.step();
       if (opened == null && ai.press.wins > 0) opened = ai.press.pressMax;
       if (fired == null && ai.secretRun?.stage === 'mord') fired = g.t;

@@ -70,9 +70,12 @@ function firstEnterWindow() {
   return t0;
 }
 
-test('A 들어옴 창 길이: 기본(0) = playerWindow · 0.4 이면 들어옴 창만 0.4 s', () => {
-  assert.ok(Math.abs(firstEnterWindow() - SECRET.playerWindow) < 1e-9);
-  withCfg({ gnsEnterWindow: 0.4 }, () => assert.ok(Math.abs(firstEnterWindow() - 0.4) < 1e-9));
+test('A 들어옴 창 길이 (들어옴 창 gnsWalkIn 1 일 때 — 10/25 22:3x 부터 기본 끔): 기본(0) = playerWindow · 0.4 이면 들어옴 창만 0.4 s', () => {
+  withCfg({ gnsWalkIn: 1 }, () => {
+    assert.ok(Math.abs(firstEnterWindow() - SECRET.playerWindow) < 1e-9);
+    withCfg({ gnsEnterWindow: 0.4 }, () => assert.ok(Math.abs(firstEnterWindow() - 0.4) < 1e-9));
+  });
+  assert.equal(firstEnterWindow(), null); // 기본(gnsWalkIn 0): 천천히 걸어 드는 상대에게 들어옴 창 없음
 });
 
 test('B 들어옴 발도 막힘 (10/25 16:0x 켬): 천천히 걸어 든 들어옴 창에서 낸 발도만 막힐 수 있음 — 빠르게(달려듦 빠르기로) 넘은 들어옴 · 칼을 듦 · 헛침 창은 그대로 · 끄면 그대로 · 휩쓸기만 밀어냄', () => {

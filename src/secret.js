@@ -17,6 +17,7 @@ import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동
 import { RisolutoWatch, lungeGapOk } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
 import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
+import { iaiReadyPosePlayer } from './secret_instant.js'; // 사람 고노센 준비 웅크림 (10/25 23:0x — SECRET.gnsCrouch)
 
 const clamp = THREE.MathUtils.clamp;
 const _r = new THREE.Vector3();
@@ -288,7 +289,7 @@ export function gnsEnterLine(view) {
 }
 
 /**
- * 고노센 준비가 쌓이고 이어지는 '밖' (사람 · AI 같은 셈 — IaiArm.tick 의 outside): 상대 칼 거리(view.foeReach) 밖.
+ * 고노센 준비가 쌓이고 이어지는 '밖' (사람 · AI 같은 셈 — IaiArm.tick 의 outside — 10/25 22:3x 부터 SECRET.gnsReady 'dist' 판에서만 · 아래 gnsArmTick): 상대 칼 거리(view.foeReach) 밖.
  *  긴 칼 상대 규칙(long — SECRET.gnsLong, 제안 · 기본 끔): 상대 칼 거리 ≥ 내 발도가 닿는 거리(띠가 빈 짝 — 상대 칼 거리 밖에서는 발도가 안 닿음)면,
  *  이미 준비된 채로는 상대 가슴이 내 발도가 닿는 거리 밖에 있는 동안도 밖으로 친다 — 유예(iaiArmGrace)가 그 사이에서 다 지나 버리지 않고 들어옴 사건까지 이어짐.
  *  새로 준비를 쌓는 것은 그대로 상대 칼 거리 밖에서만. long 끔이면 d0 > foeReach 그대로(옛 셈)
@@ -298,6 +299,34 @@ export function gnsOutside(d0, view, armed, long) {
   if (!long || !armed) return false;
   const L = gnsEnterLine(view);
   return view.foeReach >= L && d0 > L;
+}
+
+/**
+ * 고노센 준비 한 스텝 (10/25 22:3x 사장님 '2] … 거리와 상관없이 '1.5초 동안 치지도 막지도 않고 침착하게 있으면 준비'로 바꾸는 것 이것도 좋다. 그렇게 바꿔.' ·
+ *  '3] 시간도 1.5초에서 2초로' · 22:5x(감독 전달) '아무 행동 없이 2초' = 이동 입력도 없이 · '고노센은 일단 준비가 활성화되면 걸어도 준비가 유지돼' —
+ *  SECRET.gnsReady · docs/strike/school_secret_2026-10-09.md §19). 사람 창(PlayerSecretWatch) · AI(ai.js) · AI 가 읽는 사람 준비(gnsWatch)가 같이 부른다.
+ *  'idle'(기본): 거리와 상관없이 — unsettled(공격 · 막기 · 맞음 · 비기 — 부르는 쪽이 그 몸에 맞게 셈)면 곧장 풀림(유예 없음) · 준비가 아직이면 moving(이동 입력 — gnsMoving)도 셈을 0 으로 ·
+ *   그 밖엔 iaiArmTime 초 쌓여 준비 · 준비된 뒤엔 걸어도(moving) 유지.
+ *  'dist'(10/25 전 판 `?gnsReady=dist`): old = { outside, busy } 그대로 — 상대 칼 거리 밖(gnsOutside)에서 쌓이고 간격 안이면 iaiArmGrace 뒤 풀림 · 풀림은 그 판 몫(휘두름 · 비기 / AI 공격 · 막기 꼴)만.
+ *  A = IaiArm (열쇠 iaiArmTime · iaiArmGrace). 굴림 없음
+ */
+export function gnsArmTick(A, dt, unsettled, moving, old) {
+  if (SECRET.gnsReady === 'dist') return A.tick(dt, old.outside, old.busy);
+  A.tick(dt, true, !!unsettled || (!A.armed && !!moving));
+}
+
+/** 걷는 중인가 (고노센 준비 'idle' — 쌓는 동안만 셈을 0 으로): 이동 스틱 원값(사람 main.js · AI moveFeet 의 걸음 뜻 — 둘 다 stickX · stickY)이 0 이 아님. 새 문턱 없음 */
+export function gnsMoving(f) {
+  return Math.hypot(f?.stickX || 0, f?.stickY || 0) > 0;
+}
+
+/**
+ * 사람 몸이 침착하지 않나 (고노센 준비 'idle' 의 unsettled — 사람 창 · AI 가 읽는 사람 준비 gnsWatch 같은 셈): 휘두름(skill.swinging) · 탭 찌르기 · 손잡이 찍기 · 비기 실행 ·
+ *  막기 단추를 누름(parry_button.js held) · 맞음(hurt — 부르는 쪽이 아픔 +0.05 로 셈: AI '맞았나' 와 같은 수). 걷기는 gnsMoving 이 따로(쌓는 동안만). 새 수 없음
+ */
+export function gnsHumanUnsettled(f, hurt) {
+  const sk = f.skill;
+  return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec) || !!f.parryGuard?.held || !!hurt;
 }
 
 /** 비기 조건 (cond) — 굴림 없음. view = { reach, foeReach, clinch } */
@@ -366,6 +395,7 @@ export class BindCount {
 //  10/11 이베리아 길목 지키기(v6)도 같은 셈을 쓴다 — 열쇠만 다르다(new IaiArm('gilmokArmTime', 'gilmokArmGrace'), outside = 내 칼끝 거리 reach 밖). 일본은 열쇠 없이 부르니 전과 같다.
 //  ons = 준비가 켜진 수 (재기 — 판정에는 안 씀) · consume() = 창을 열었거나 비기를 냄 → 준비가 풀림 (길목: 한 번 준비에 한 번 기회)
 //  10/22 이베리아 휘감아 돌기도 같은 셈 — 값 칸이 SECRET.ibSpin 안이라 group 'ibSpin' 으로 연다(new IaiArm('armTime', 'armGrace', 'ibSpin')). 열쇠 없이 부르면 전과 같다.
+//  10/25 22:3x 일본 고노센 준비는 거리를 안 본다(SECRET.gnsReady 'idle' — gnsArmTick 이 outside 를 늘 참으로 · 풀림만 봄). 'dist' 판 · 길목 · 싱지르는 위 그대로.
 export class IaiArm {
   constructor(timeKey = 'iaiArmTime', graceKey = 'iaiArmGrace', group = null) {
     this.t = 0;
@@ -639,16 +669,19 @@ export function foeRecentTipSp(sense, span) {
 }
 
 /**
- * 독일 모르트슐라크 누르기 셈 (10/22 사람 — PlayerSecretWatch.pressTick · 10/24 AI — ai.js mordTick, 같은 셈): st 의 pressT(지금 셈) · pressHeld(이 누르기 길이) ·
+ * 독일 모르트슐라크 누르기 셈 (10/22 사람 — PlayerSecretWatch.pressTick · 10/24 AI — ai.js mordTick, 같은 셈 · 10/25 23:1x 끊김 너그러움 SECRET.mordGrace): st 의 pressT(지금 셈) · pressHeld(이 누르기 길이 — 너그러움으로 이은 것 포함) ·
  *  pressMax(가장 긴 누르기) · pressRuns(창까지 이어진 수)를 고친다. pressing = 밀치기 누르기(fighter.barge phase 'press') · busy = 비기 실행 · 굳음(셈 0) ·
  *  open = 창이 열려 있음(새 창 없음 — 셈은 이어짐) · need = 창까지 초(SECRET.mordPress). 창을 열 때면 셈 0 으로 하고 true
  */
 export function pressStep(st, dt, pressing, busy, open, need) {
   if (pressing) {
+    st.pressOff = 0;
     st.pressT = (st.pressT ?? 0) + dt;
     st.pressHeld = (st.pressHeld ?? 0) + dt;
     if (st.pressHeld > (st.pressMax ?? 0)) st.pressMax = st.pressHeld;
-  } else st.pressT = st.pressHeld = 0;
+  } else if ((st.pressHeld ?? 0) > 0 && (st.pressOff = (st.pressOff ?? 0) + dt) <= (SECRET.mordGrace ?? 0)) {
+    // 너그러움 (10/25 23:1x 사장님 '리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세' — SECRET.mordGrace · risolutoGrace 와 같은 틀): 끊긴 지 mordGrace 초 안이면 셈을 쥔 채 기다림(그동안은 안 셈)
+  } else st.pressT = st.pressHeld = st.pressOff = 0;
   if (busy) st.pressT = 0; // 비기 실행 · 굳음 동안은 세지 않는다 (끝난 뒤 다시 need 초)
   if (busy || open || !(st.pressT >= need)) return false;
   st.pressT = 0;
@@ -712,12 +745,15 @@ export class PlayerSecretWatch {
     const S = this.S;
     const painUp = foe.pain > this.prevFoePain + 0.05;
     this.prevFoePain = foe.pain;
+    const hurt = me.pain > (this.prevMyPain ?? me.pain) + 0.05; // 내가 맞음 (고노센 준비 'idle' 풀림 — AI '맞았나' 와 같은 셈 · 10/25 22:3x)
+    this.prevMyPain = me.pain;
     if (!S || !me.alive || !foe.alive || !me.armed || me.state !== 'stand') {
       this.open = null; // 몸이 비기를 낼 수 없음(skill.secret 이 받지 않는 몸 — 내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음) — secretHold 도 지키지 않음
       this.queued = null;
       this.swing = null;
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
+      if (S?.do?.instant && SECRET.gnsCrouch) iaiReadyPosePlayer(me, false, true, dt); // 웅크림도 풀림 (손 · 칼은 곧장 · 몸은 gnsCrouchOut)
       this.gilArm.tick(0, false, true);
       this.spinArm.tick(0, false, true);
       if (this.pc) this.pc.pend = this.pc.buf = null;
@@ -741,7 +777,12 @@ export class PlayerSecretWatch {
     if (S.when === 'parry') this.parryTick(dt, BIND.natural ? bindTouch(me, foe) : touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11) · 자연 바인드 실험이면 넓은 맞부딪힘도 (bindTouch)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.when === 'press') this.pressTick(dt, busy);
-    if (S.do?.instant) this.iaiArm.tick(dt, gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), sw || busy); // 긴 칼 상대 규칙(제안 · 기본 끔)이 아니면 d0 > foeReach 그대로
+    // 고노센 준비 (10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' — gnsArmTick 'idle'): 휘두름 · 탭 · 손잡이 찍기 · 비기 · 막기 단추 · 맞음이면 풀림 ·
+    //  준비 전엔 이동 입력도 셈을 0 으로 · 'dist'(10/25 전 판) = 상대 칼 거리 밖(긴 칼 상대 규칙 gnsLong 이 아니면 d0 > foeReach 그대로) · 휘두름 · 비기만 풀림
+    if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: sw || busy });
+    // 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch · secret_instant.js iaiReadyPosePlayer): 준비된 동안 AI 와 같은 발도 대기 자세 ·
+    //  칼을 쥐면(손가락 움직임 · 막기 단추 · 휘두름) 손 · 칼은 곧장 사람 것 — 몸 웅크림은 그대로 · 0 이면 '고노센 준비' 표시만(전 판)
+    if (S.do?.instant && SECRET.iai && SECRET.gnsCrouch) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!me.inputActive || !!me.parryGuard?.held || sw, dt);
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
@@ -768,7 +809,7 @@ export class PlayerSecretWatch {
     // 상대 사건 (AI secretScan 과 같은 꼴: 사건 한 번에 한 번, 0.3 s 그치면 다시 건다)
     const r = me.right(_r);
     const E = this.ev;
-    const enter = SECRET.gnsEnter && S.do?.instant ? { enterLine: gnsEnterLine(V), iaiArmed: V.armed } : null; // 일본 들어옴 (10/25 — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 듦)
+    const enter = SECRET.gnsWalkIn && SECRET.gnsEnter && S.do?.instant ? { enterLine: gnsEnterLine(V), iaiArmed: V.armed } : null; // 일본 들어옴 (10/25 — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 듦) · 10/25 22:3x 들어옴 창 gnsWalkIn 0(기본 — 사장님 입력 글에 없음)이면 안 봄
     const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed, ...enter }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비) · 일본 들어옴
     if (!on) {
       E.off += dt;
