@@ -50,12 +50,12 @@ test('질량 배분 (샛별 저장소 값 그대로): 자루 0.09 · 폼멜 0.24
   near(parts[3][2][1], (0.36 - 0.5) * 0.892, 1e-12); // bladeInertia comY
 });
 
-test('다른 손맛 (사장님 10/25 \'같은 계열 기존 무기들과 다른 손맛\' · \'베기도 잘 할 수 있는 검\'): 이탈리아 넷 가운데 베기 가장 셈 · 찌르기 가장 약함 · 가장 무겁고 손에서 가장 묵직하게 돎 · 손 ~ 칼끝은 달타냥과 레이피어 사이', () => {
+test('다른 손맛 (사장님 10/25 \'같은 계열 기존 무기들과 다른 손맛\' · \'베기도 잘 할 수 있는 검\'): 이탈리아 넷 가운데 베기 가장 셈 · 찌르기는 가장 약한 쪽(달타냥과 같은 1.15 — 사장님 10/25 19:0x) · 가장 무겁고 손에서 가장 묵직하게 돎 · 손 ~ 칼끝은 달타냥과 레이피어 사이', () => {
   const w = W(), p = weaponPhysics(w);
   for (const id of ITALIAN) {
     const o = getWeapon(id), q = weaponPhysics(o);
     assert.ok(w.mCut > o.mCut, `${id} 베기 ${o.mCut}`);
-    assert.ok(w.mThrust < o.mThrust, `${id} 찌르기 ${o.mThrust}`);
+    assert.ok(w.mThrust <= o.mThrust, `${id} 찌르기 ${o.mThrust}`); // 19:0x 1.15 = 달타냥과 같음
     assert.ok(p.mass > q.mass && p.I > q.I, `${id} 질량 ${q.mass} · 관성 ${q.I}`);
   }
   const reach = (id) => getWeapon(id).hiltLength + getWeapon(id).bladeLength;
