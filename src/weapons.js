@@ -678,7 +678,7 @@ const RAPIER_SPEC = {
   grip: 'one-hand', material: 'steel',
   tier: 'common', // 사장님 10/21(샛별 저장소 경유): 기본 레이피어 커먼 — 커먼 등급 계수(힘 · 내구 · 파손). 전 감독 판정 레어
   hiltLength: 0.1, bladeLength: 0.95,
-  mCut: 0.5, mThrust: 1.3, mBlunt: 0.7,
+  mCut: 0.6, mThrust: 1.3, mBlunt: 0.7, // 베기 0.5 → 0.6 (사장님 10/25 21:3x — 잘 친 베기만 겨우 벰: 0.5 는 가장 빠를 때도 실효 27 J < 벰 문턱 30 J 라 늘 둔 · 발리사르다도 물려받음 · 확인표 2577)
   thrustStyle: THRUST_STYLE.rapier,
   // 가늘고 뻣뻣한 다이아몬드(마름모) 단면 — 찌르기 전용 칼답게 폭이 좁고 끝으로 갈수록 더 가늘어진다.
   partMesh: swordKit({
