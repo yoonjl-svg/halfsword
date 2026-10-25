@@ -994,7 +994,10 @@
 
 ### 15-7. 그림 (`docs/handoff/it_downcut_2026-10-25/` — 폰 가로 844 × 390 · 배율 2 · WebP · 상대(이졸데 · 롱소드)를 세워 둠 · 둘 다 상처 끔 시연)
 
-- `strip_<무기>_zornhau_{side,game}.webp`: 레이피어 · 파펜하이머 · 세이버 분노의 베기 — 가슴 사이 1.4 m 까지 걸어 들어가 0.8 s 쉰 뒤 봇 획(1.6 감기 · 4.5 긋기) · 칸 = 긋기 시작 뒤 0 · 80 · 160 · 240 · 320 · 400 ms · 줄 = 전(`?cutPronate=0`) · 후. 낱장 `<판>_<무기>_zornhau_<ms>_{side,game}.webp` · 잰 값 `shots_log.txt`.
+- `strip_<무기>_<기술>_{side,game}.webp`: 레이피어 · 세이버 × 분노의 베기(`zornhau`) · 수평 베기(`zwerch` — 10/25 20:4x 이탈리아 베기 조사 `docs/strike/italian_cut_2026-10-25.md`) — 가슴 사이 1.75 m 를 노려 걸어 들어가(멈춘 뒤 1.4 ~ 1.5 m) 0.8 s 쉰 뒤 봇 획(1.6 감기 · 4.5 긋기) · 칸 = 긋기 시작 뒤 0 · 80 · 160 · 240 · 320 · 400 ms · 줄 = 전(`?cutPronate=0`) · 후. 낱장 `<판>_<무기>_<기술>_<ms>_{side,game}.webp` · 잰 값 `shots_log.txt`(콘솔 오류 8 = 미리 보기 서버에 `sw.js` 가 없어 서비스 워커 등록이 막힌 것 — 게임과 무관).
+  - 레이피어 분노의 베기: 전 — 감는 동안 칼끝이 늦게 들려(0 ms 70 % 지점 1.28 m) 80 ~ 160 ms 에 2.1 ~ 2.2 m 로 머리 위 · 320 ms 에 몸 앞 0.36 m 로 떨어짐 / 후 — 0 ms 에 이미 2.2 m 로 감기고 160 ms 에 앞 1.18 m · 1.59 m(상대 머리 높이)를 지남.
+  - 레이피어 수평 베기: 전 — 80 ~ 160 ms 에 70 % 지점 2.06 ~ 2.12 m(칼끝 2.29 ~ 2.37 m · 칼이 섬)로 상대 머리 위 / 후 — 80 ~ 240 ms 에 앞 0.96 ~ 1.14 m · 1.57 ~ 1.71 m(머리 높이).
+  - (10/25 처음 찍은 판은 1.4 m 를 노려 1.22 m 까지 붙어, 레이피어 · 파펜하이머 칼이 상대 몸에 끼어 긋기가 안 나간 그림이라 버림 — 끼임은 `italian_cut_2026-10-25.md` §1)
 - 찍기: `npx vite build --outDir <폴더>/dist && npx vite preview --outDir <폴더>/dist --port 5589 --strictPort &` → `node tools/browser/it_downcut_shots.mjs http://127.0.0.1:5589 docs/handoff/it_downcut_2026-10-25` → `python3 -I tools/browser/it_downcut_sheet.py docs/handoff/it_downcut_2026-10-25`.
 
 ### 15-8. 여쭐 것
