@@ -1,4 +1,4 @@
-// 파펜하이머 시험 (10/25 — 샛별 저장소 e3e1f144 에서 들여옴 · 사장님 10/25 결정 베기 0.85 · 찌르기 1.10 · 사장님 글 · docs/import/pappenheimer_import_2026-10-25.md)
+// 파펜하이머 시험 (10/25 — 샛별 저장소 e3e1f144 에서 들여옴 · 사장님 10/25 결정 베기 0.9 · 찌르기 1.15 (19:0x — 전 0.85 · 1.10) · 사장님 글 · docs/import/pappenheimer_import_2026-10-25.md)
 //  스펙 · 질량 배분 · 이탈리아 넷과 다른 손맛(배율 · 무게 — 사장님 10/25 신규 무기 원칙) · 글 · 겉모습(밝은 테 · 피 묻는 칼날 · 썸네일) · 이탈리아 꾸러미 · AI 간격 줄 ·
 //  총사의 결투 한손검 · 사람 카드 칸 · 짧은 판
 //  node --test tools/sim/pappenheimer.test.mjs
@@ -19,7 +19,7 @@ const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≠ $
 const W = () => getWeapon('pappenheimer');
 const ITALIAN = ['rapier', 'dartagnan', 'balisarda'];
 
-test('스펙: 레어 · 이탈리아 · 한손 · 찌르기 틀 · 베기 0.85 · 찌르기 1.10(사장님 10/25) · 둔타 0.70 · 레어 계수 · 레이피어 찌르기 장점 · 111 cm · 1.34 kg', () => {
+test('스펙: 레어 · 이탈리아 · 한손 · 찌르기 틀 · 베기 0.9 · 찌르기 1.15(사장님 10/25 19:0x) · 둔타 0.70 · 레어 계수 · 레이피어 찌르기 장점 · 111 cm · 1.34 kg', () => {
   const w = W();
   assert.equal(w.id, 'pappenheimer');
   assert.equal(w.nameKo, '파펜하이머');
@@ -28,7 +28,7 @@ test('스펙: 레어 · 이탈리아 · 한손 · 찌르기 틀 · 베기 0.85 �
   assert.equal(w.grip, 'one-hand');
   assert.equal(w.frame, 'one');
   assert.equal(w.style, 'thrust');
-  near(w.mCut, 0.85); near(w.mThrust, 1.1); near(w.mBlunt, 0.7);
+  near(w.mCut, 0.9); near(w.mThrust, 1.15); near(w.mBlunt, 0.7);
   near(w.power, 1.05);
   assert.equal(w.fragility, TIER_FRAGILITY.rare);
   assert.equal(w.thrustStyle, THRUST_STYLE.rapier);
