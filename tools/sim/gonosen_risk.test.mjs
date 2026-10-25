@@ -96,10 +96,10 @@ test('B 들어옴 발도 막힘 (10/25 16:0x 켬): 천천히 걸어 든 들어�
   G.world.free();
 });
 
-test('B 2 (시험 — 앞을 가린 상대도 막음): 낼 때 상대가 막기 단추를 누르거나 막는 중이거나 칼끝이 내 몸을 겨누면 cover · 아니면 칼 닿음만 · 1 이면 늘 칼 닿음만', () => {
+test('B 2 (10/25 19:4x 기본 — 앞을 가린 상대도 막음): 낼 때 상대가 막기 단추를 누르거나 막는 중이거나 칼끝이 내 몸을 겨누면 cover · 아니면 칼 닿음만 · 1 이면 늘 칼 닿음만', () => {
   const chest = { x: 0, y: 1.3, z: 0 };
   const me = (online) => ({ bodies: { chest: { translation: () => chest } }, foe: { hitPointPrev: { x: 1.6, y: 1.3, z: 0 }, tipPrev: online ? { x: 1.1, y: 1.3, z: 0 } : { x: 1.6, y: 1.9, z: 0 } } });
-  assert.equal(gnsBlockOf({ ev: 'enter' }, me(true)), true);
+  withCfg({ gnsEnterBlock: 1 }, () => assert.equal(gnsBlockOf({ ev: 'enter' }, me(true)), true));
   withCfg({ gnsEnterBlock: 2 }, () => {
     assert.equal(gnsBlockOf({ ev: 'enter' }, me(true)), 'cover');
     assert.equal(gnsBlockOf({ ev: 'enter' }, me(false)), true);
