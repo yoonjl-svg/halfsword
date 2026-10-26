@@ -121,7 +121,7 @@ test('총사의 결투: 한손 날 있는 칼이라 한손검 — 달타냥이 �
   assert.equal(isOneHandSword(W()), true);
   near(duelOneHandMult(f('dartagnan'), f('pappenheimer')), 1.15);
   assert.equal(duelOneHandMult(f('pappenheimer'), f('dartagnan')), 1); // 파펜하이머는 능력 없음
-  assert.equal(Object.values(WEAPONS).filter(isOneHandSword).length, 12);
+  assert.equal(Object.values(WEAPONS).filter(isOneHandSword).length, 13);
 });
 
 test('사람 카드: 뽑기 목록에 있음 · 레어 칸 다섯째(이탈리아 레어 빈칸을 채움) · 편지 없으면 첫 장 5.2 %', () => {

@@ -1,0 +1,4 @@
+using deprecated parameters for the initialization function; pass a single object instead
+chixiao [mid] 패드 6 m/s (7 획): 칼끝 최고 평균 13.18 · 최대 16.95 m/s · 닿기(긋기 → 최고) 0.192 s · 최고 때 칼 운동 에너지 48.2 J · 되돌림 p50 0.283 s (7) · 멈춤 p50 0.35 s (5) · (긋기 전 칼끝 1.82 m/s)
+chixiao [mid] 패드 10 m/s (7 획): 칼끝 최고 평균 11.65 · 최대 14.64 m/s · 닿기(긋기 → 최고) 0.15 s · 최고 때 칼 운동 에너지 37.9 J · 되돌림 p50 0.283 s (7) · 멈춤 p50 0.417 s (7) · (긋기 전 칼끝 1.82 m/s)
+chixiao [mid] 패드 14 m/s (7 획): 칼끝 최고 평균 12.5 · 최대 15.23 m/s · 닿기(긋기 → 최고) 0.15 s · 최고 때 칼 운동 에너지 42.5 J · 되돌림 p50 0.275 s (7) · 멈춤 p50 0.425 s (7) · (긋기 전 칼끝 1.82 m/s)

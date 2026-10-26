@@ -1,0 +1,48 @@
+{
+  "results": [
+    {
+      "weapon": "chixiao",
+      "held": {
+        "weapon": "chixiao",
+        "mass": 1.2999999523162842,
+        "bladeLength": 0.8,
+        "school": "chinese",
+        "aura": {
+          "weapon": "chixiao",
+          "tone": "crimson",
+          "strength": 0.5,
+          "look": {
+            "gain": 0.45,
+            "fall": 0.022,
+            "halfW": 0.11,
+            "rim": null,
+            "rimA": 0,
+            "rimAt": 0.05,
+            "rimW": 0.02,
+            "motes": null,
+            "glow": 0.18,
+            "lightGain": 0.25,
+            "tone": "crimson",
+            "color": [
+              0.64,
+              0.43,
+              0.4
+            ],
+            "light": 10586492,
+            "emissive": 7098701
+          }
+        },
+        "bladeMesh": true,
+        "frame": "one",
+        "held": true,
+        "stamina": 100
+      },
+      "release": true,
+      "attackDrag": true,
+      "storageUnchanged": true,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "scope": "Chromium mobile emulation; built game"
+}

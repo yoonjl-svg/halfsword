@@ -178,7 +178,7 @@ test('북부 대공의 검 지움: 무기 목록에 없음 · 옛 id ice = 츠�
   assert.equal(schoolOf('zweihander').tradition, 'iberian');
   const F = getWeapon('flamberge');
   assert.equal(F.tier, 'rare'); near(F.power, 1.05); near(F.fragility, 0.032); assert.ok(!F.ability);
-  assert.equal(Object.keys(WEAPONS).length, 33); // 28 (+ 티소나 − 북부 대공의 검) + 발리사르다 · 무라마사 (dev 가지 e3b1532) + 드루이드의 채찍 (10/23) + 뒤랑달 (10/24) + 파펜하이머 (10/25)
+  assert.equal(Object.keys(WEAPONS).length, 34); // 28 (+ 티소나 − 북부 대공의 검) + 발리사르다 · 무라마사 (dev 가지 e3b1532) + 드루이드의 채찍 (10/23) + 뒤랑달 (10/24) + 파펜하이머 (10/25) + 적소검 (10/27)
 });
 
 test('몸 길이 (사장님 10/21 23:5x): 츠바이핸더 손 ~ 칼끝 1.335 m · 2.865 kg · 플랑베르주 전체 −4 cm · 3.0 kg(폼멜 0.35) · 티소나는 그대로', async () => {

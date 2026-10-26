@@ -13,6 +13,8 @@ import { historicalPartMesh, historicalDecorate } from './historical_weapon_deta
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import { classifyWeapon } from './weapon_class.js';
+import { CHIXIAO_COLORS, chixiaoPartMesh } from './chixiao_details.js';
+import { chixiaoCollider, chixiaoBladeMass } from './chixiao_profile.js';
 import { drawBrothersSword } from './renji_sword_wrap.js'; // 황약사의 검(형의 칼)의 흰 천 감싼 겉모습 (샛별 저장소에서 가져옴 10/17)
 import { MONTANTE } from './config.js';
 import * as THREE from 'three';
@@ -72,7 +74,7 @@ const KIND_KO = {
   monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '양손검',
   tree_branch: '한손 둔기', rubber_chicken: '한손 둔기', frozen_tuna: '양손 둔기', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
   moye: '한손 양날검', sain: '한손 양날검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손 둔기',
-  druid_whip: '한손 채찍', pappenheimer: '한손 찌르기검',
+  druid_whip: '한손 채찍', pappenheimer: '한손 찌르기검', chixiao: '한손 양날검',
 };
 /** '종류, 길이 cm, 무게 kg' (예: '한손 양날검, 95 cm, 0.95 kg') — 자료가 없으면 '' */
 export function weaponSpecText(spec) {
@@ -1965,6 +1967,32 @@ const durandal = finalizeSpec('durandal', {
   },
 });
 
+// 적소검 — 10/27 사용자 자체 리뷰·직접 적용 승인. 날 80 cm · 총 1.30 kg 유지.
+// 새 테이퍼 날은 실제 면을 적분해 중심·관성을 구한다. 밑동 두께8.2mm, 날1kg은 강철 밀도 약7.86g/cm³. 자루·슴베/옥·금동 부품은 게임 추정.
+// 기존 목표(손 중심42 cm / 관성.26) 역산을 대신하며, 더 빠르게 회수해도 동방 한손검 중 묵직한 편을 유지한다.
+const CHIXIAO_MASS = { grip: 0.10, pommel: 0.10, cross: 0.10, blade: 1.00 };
+const chixiao = finalizeSpec('chixiao', {
+  nameKo: '적소검', nameEn: 'Chixiao', tier: 'legend', school: 'chinese', style: 'versatile',
+  desc: '한 고조 유방이 길을 막은 흰 뱀을 두 동강 낸 붉은 검.\n한나라를 세운 신화의 시작입니다.',
+  grip: 'one-hand', material: 'steel', enterParry: true,
+  hiltLength: .085, bladeLength: .80, gripAlong: -.10,
+  // 기존 한손검 범위의 베기/찌르기 계수. 레전드 공통 배율 1.2는 finalizeSpec에서 적용.
+  mCut: 1.10, mThrust: .85, mBlunt: 1.0,
+  partMesh: chixiaoPartMesh, partCollider: chixiaoCollider,
+  buildParts() {
+    const L=this.bladeLength, { grip: gm, pommel: pm, cross: cm, blade: bm }=CHIXIAO_MASS;
+    const gy=-.005, py=-.098, cy=.078;
+    const grip=boxInertia(gm,.014,.072,.012),pommel=boxInertia(pm,.023,.023,.0105),cross=boxInertia(cm,.067,.020,.015);
+    const blade=chixiaoBladeMass(bm,['box',.0225,L/2,.0041]);
+    return [
+      partTuple(['box',.014,.072,.012],gy,gm,0,grip.Ie,grip.It,CHIXIAO_COLORS.grip),
+      partTuple(['box',.023,.023,.0105],py,pm,0,pommel.Ie,pommel.It,CHIXIAO_COLORS.gold),
+      partTuple(['box',.067,.020,.015],cy,cm,0,cross.Ie,cross.It,CHIXIAO_COLORS.gold),
+      partTuple(['box',.0225,L/2,.0041],this.hiltLength+L/2,bm,blade.comY,blade.Ie,blade.It,CHIXIAO_COLORS.blade,true),
+    ];
+  },
+});
+
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
@@ -1982,6 +2010,7 @@ export const WEAPONS = {
   druid_whip: druidWhip, // 10/23 샛별 저장소에서 들여옴: ??? · 휘는 마디 채찍 — 같은 까닭으로 끝에 둔다
   durandal, // 10/24 샛별 저장소에서 들여옴: 이베리아 레전드 · 롤랑의 성검 — 같은 까닭으로 끝에 둔다
   pappenheimer, // 10/25 샛별 저장소에서 들여옴: 이탈리아 레어 (사장님 10/25 결정 — 베기 0.85 · 찌르기 1.10 · 사장님 글) — 같은 까닭으로 끝에 둔다
+  chixiao, // 새 무기는 끝에 추가하여 기존 목록 순서 보존.
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
