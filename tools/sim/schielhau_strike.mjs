@@ -16,7 +16,7 @@
 //   제비 베기 세 해법(10/25 21:1x '해법 1~3 좋아' — docs/strike/tsubame_snap_2026-10-25.md): 끄기 --set=UNIQUE_ASSIST.tsuRuler=0 · tsuSnap=0 · tsuAim=0 · 시험 길 --tsuPath='x,y;…'(꺾은 자리 다음 점부터) · --tsuPlan='들기,뻗기,돌리기;…'([꺾은 자리, ...길])
 //            묶음 snapHits = 위 칼 첫 맞음 가운데 끌고 가는 칼(운동학 — f.iai)이 낸 것
 //            10/25 23:1x 몸통 띠(tsuBand): 시험 길 --bandPath · --bandPlan(TSU_AIM.band) · 묶음 edgeShare = 첫 맞음 때 놓인 칼의 날이 맞은 점 움직임과 STRIKE.edgeAlign(0.6) 넘게 맞는 몫(%) ·
-//            edgeP50 · band = 끌고 간 칼이 띠로 옮긴 몫 { up, down, keep } · bandFrom = 옮기기 전 처음 닿을 곳
+//            edgeP50 · frontEdge = 날 쪽(외날의 날)이 앞장선 몫(%) · band = 끌고 간 칼이 띠로 옮긴 몫 { up, down, keep } · bandFrom = '옮기기 전 > 옮긴 뒤(셈) > 실제 맞은' 곳 · bandDy = 옮긴 패드 높이 { p50, max }
 //   duel · fights · player 묶음에 rollT = 맞는 스텝 앞뒤(−8 ~ +8 스텝) 아래팔 굴림 ≥ 78 몫 · plan = 맞는 순간 길 덧칸
 //  사용법: node tools/sim/schielhau_strike.mjs duel|fights|player [--set=JOINTS.wristGuard=0,…] [--seeds=6] [--seed0=1] [--dur=40] [--foe=ai|still] [--schools=italian,japanese,german,chinese] [--json=파일]
 //          시험 길: --path='x,y;x,y;…'(from 부터) · --plan='들기,뻗기,돌리기;…'(점마다) · --reach= · --tech=zornhau(다른 기술만 — 견줌)
@@ -409,7 +409,7 @@ export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit 
     if (att !== P || vic !== D || !open()) return;
     const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
     cur.sevAll += sv;
-    const rec = { type: r.type, zone: r.zone, part: rest[1]?.v?.part ?? null, edge: edgeOf(P), bandDy: P.iai?.bandDy ?? null, bandFrom: P.iai?.bandFrom ?? null, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: null, ...hitPhys(r, P) };
+    const rec = { type: r.type, zone: r.zone, part: rest[1]?.v?.part ?? null, edge: edgeOf(P), bandDy: P.iai?.bandDy ?? null, bandFrom: P.iai?.bandFrom ?? null, bandTo: P.iai?.bandTo ?? null, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: null, ...hitPhys(r, P) };
     if (strokeTechOf(P) === 'tsubameGaeshi') {
       cur.fired = true;
       cur.sevUp += sv;
@@ -438,7 +438,8 @@ export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit 
     G.world.free();
   }
 }
-/** 맞는 순간 놓인 칼의 날 맞춤: 칼 틀 x(날) · 맞은 점(칼날 0.7) 움직임의 칼 축에 수직인 몫 사이 |cos| (combat.js analyze 의 edgeAlign 과 같은 식 · 움직임이 없으면 null) */
+/** 맞는 순간 놓인 칼의 날 맞춤: 칼 틀 x(날 — 외날 무기의 날 쪽 weapon_looks.js) · 맞은 점(칼날 0.7) 움직임의 칼 축에 수직인 몫 사이 cos (부호 있음 — + = 날 쪽이 앞장 · − = 등 쪽 ·
+ *  combat.js analyze 의 edgeAlign 은 |cos| · 움직임이 없으면 null) */
 function edgeOf(f) {
   const v = f.hitPointVel;
   if (!v || !f.sword) return null;
@@ -448,7 +449,14 @@ function edgeOf(f) {
   const ed = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
   const p = v.clone().addScaledVector(ax, -v.dot(ax));
   const pl = p.length();
-  return pl > 1e-3 ? Math.abs(p.dot(ed)) / pl : null;
+  return pl > 1e-3 ? p.dot(ed) / pl : null;
+}
+/** 날 맞춤 묶음: edgeShare = |cos| > STRIKE.edgeAlign 몫(%) · edgeP50 = |cos| 가운데 · frontEdge = 날 쪽이 앞장(cos > 문턱) 몫(%) — 외날(打刀)에서 등으로 베지 않는가 */
+function edgeStats(E) {
+  if (!E.length) return { edgeShare: null, edgeP50: null, frontEdge: null };
+  const k = CONFIG.STRIKE.edgeAlign;
+  const pc = (n) => +((100 * n) / E.length).toFixed(0);
+  return { edgeShare: pc(E.filter((x) => Math.abs(x) > k).length), edgeP50: +p50(E.map(Math.abs)).toFixed(2), frontEdge: pc(E.filter((x) => x > k).length) };
 }
 /** 제비 베기 묶음: duelSummary(위 칼 = 제비 베기 첫 맞음) + 한 벌 몫 — 강화된 벌 · 아래 칼 맞음 · 아래 / 위 / 합 상처 공격당 */
 export function tsubameSummary(runs) {
@@ -464,10 +472,11 @@ export function tsubameSummary(runs) {
     const d = r.hit?.bandDy;
     if (d == null) continue;
     band[d > 0 ? 'up' : d < 0 ? 'down' : 'keep']++;
-    const k = r.hit.bandFrom ?? '-';
+    const k = `${r.hit.bandFrom ?? '-'}>${r.hit.bandTo ?? '-'}>${r.hit.part ?? '-'}`; // 옮기기 전 > 옮긴 뒤(셈) > 실제 맞은 곳
     bandFrom[k] = (bandFrom[k] ?? 0) + 1;
   }
-  return { ...duelSummary(runs), snapHits: R.filter((r) => r.hit?.snap).length, parts, edgeShare: E.length ? +((100 * E.filter((x) => x > CONFIG.STRIKE.edgeAlign).length) / E.length).toFixed(0) : null, edgeP50: E.length ? +p50(E).toFixed(2) : null, band, bandFrom, combos: R.length, firedCombos: R.filter((r) => r.fired).length, downContacts: R.filter((r) => r.down).length, downPerAtk: +(sum((r) => r.down?.sev ?? 0) / n).toFixed(3), downSevPerAtk: +(sum((r) => r.sevDown) / n).toFixed(3), upSevPerAtk: +(sum((r) => r.sevUp) / n).toFixed(3), comboSevPerAtk: +(sum((r) => r.sevAll) / n).toFixed(3), downPhys: physP50(R.map((r) => r.down).filter(Boolean)) };
+  const DY = R.map((r) => r.hit?.bandDy).filter((d) => d != null && d !== 0).map(Math.abs);
+  return { ...duelSummary(runs), snapHits: R.filter((r) => r.hit?.snap).length, parts, ...edgeStats(E), band, bandFrom, bandDy: DY.length ? { p50: +p50(DY).toFixed(3), max: +Math.max(...DY).toFixed(3) } : null, combos: R.length, firedCombos: R.filter((r) => r.fired).length, downContacts: R.filter((r) => r.down).length, downPerAtk: +(sum((r) => r.down?.sev ?? 0) / n).toFixed(3), downSevPerAtk: +(sum((r) => r.sevDown) / n).toFixed(3), upSevPerAtk: +(sum((r) => r.sevUp) / n).toFixed(3), comboSevPerAtk: +(sum((r) => r.sevAll) / n).toFixed(3), downPhys: physP50(R.map((r) => r.down).filter(Boolean)) };
 }
 
 /**
@@ -632,6 +641,7 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
       wasR = isR;
       if (cur && strokeTechOf(P) === NAME) cur.tip = Math.max(cur.tip, P.tipVel.length());
       if (cur) rollTrack(cur, P);
+      if (cur && P.iai?.kind === 'combo' && P.iai.tech === NAME) cur.snapI = { from: P.iai.bandFrom ?? null, to: P.iai.bandTo ?? null, dy: P.iai.bandDy ?? null, blocked: P.iai.blocked, hits: P.iai.hits }; // 끌고 간 칼 (10/27 몸통 띠 재기)
       comboOpen = tsu && queue.length > 0 && queue.isCombo;
       if ((!P.alive || !A.alive) && end === dur) end = G.t + 0.5;
       if (G.t >= end) break;
@@ -825,7 +835,7 @@ if (isMain(import.meta.url)) {
   if (args.tsuPath && !args.tsuPlan) TSU_AIM.plan = Array.from({ length: TSU_AIM.path.length + 1 }, () => [0, 0, 0]);
   if (args.bandPath) TSU_AIM.band.path = String(args.bandPath).split(';').map((p) => p.split(',').map(Number));
   if (args.bandPlan) TSU_AIM.band.plan = String(args.bandPlan).split(';').map((p) => p.split(',').map(Number));
-  if (args.bandPath && !args.bandPlan) TSU_AIM.band.plan = Array.from({ length: TSU_AIM.band.path.length + 1 }, () => [0, 0, -40]);
+  if (args.bandPath && !args.bandPlan) TSU_AIM.band.plan = Array.from({ length: TSU_AIM.band.path.length + 1 }, () => [0, 0, 0]);
   const mode = args._[0] ?? 'duel';
   let res;
   if (mode === 'duel') {
@@ -867,7 +877,10 @@ if (isMain(import.meta.url)) {
     const fParts = {};
     for (const h of FH) if (h.part) fParts[h.part] = (fParts[h.part] ?? 0) + 1;
     const FE = FH.map((h) => h.edge).filter((x) => x != null);
-    res = { ...duelSummary(runs.map((r) => ({ rows: r.rows, dead: r.win }))), parts: fParts, snapHits: FH.filter((h) => h.snap).length, edgeShare: FE.length ? +((100 * FE.filter((x) => x > CONFIG.STRIKE.edgeAlign).length) / FE.length).toFixed(0) : null, edgeP50: FE.length ? +p50(FE).toFixed(2) : null, n: runs.length, win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length, schielSev: sum((r) => r.schielSev), downSev: sum((r) => r.downSev), combos: sum((r) => r.combos), dealt: sum((r) => r.dealt), recv: sum((r) => r.recv), fired: sum((r) => r.fired) };
+    const SI = runs.flatMap((r) => r.rows).map((x) => x.snapI).filter(Boolean);
+    const snapOut = { n: SI.length, hit: SI.filter((x) => x.hits > 0).length, blocked: SI.filter((x) => x.blocked > 0).length, oorSnap: FH.filter((h) => h.snap && h.s && outOfRange(h.s) > OOR_EPS).length, oorFinger: FH.filter((h) => !h.snap && h.s && outOfRange(h.s) > OOR_EPS).length, from: {} }; // 끌고 간 칼: 맞힘 · 상대 칼에 막힘 · 첫 맞음 손목 범위 밖(끌고 간 칼 · 손가락) · 셈한 처음 닿을 곳(옮기기 전 > 뒤)
+    for (const x of SI) snapOut.from[`${x.from ?? '-'}>${x.to ?? '-'}`] = (snapOut.from[`${x.from ?? '-'}>${x.to ?? '-'}`] ?? 0) + 1;
+    res = { ...duelSummary(runs.map((r) => ({ rows: r.rows, dead: r.win }))), parts: fParts, snapHits: FH.filter((h) => h.snap).length, snapOut, ...edgeStats(FE), n: runs.length, win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length, schielSev: sum((r) => r.schielSev), downSev: sum((r) => r.downSev), combos: sum((r) => r.combos), dealt: sum((r) => r.dealt), recv: sum((r) => r.recv), fired: sum((r) => r.fired) };
     const byOpp = {};
     for (const r of runs) {
       const o = (byOpp[r.opp] ??= { n: 0, win: 0, lose: 0, schielSev: 0, atk: 0, sev: 0 });

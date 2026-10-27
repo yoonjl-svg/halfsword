@@ -67,10 +67,17 @@ export const RETIRED_UNIQUE = new Set(['krumphau', 'passataSotto', 'altibaixo', 
 //  (전 길 = schools.js 의 [0.06, −0.15] → 오른 황소 [0.22, 0.26] — 내려간 칼이 상대 다리 · 골반을 먼저 지남). 손 돌리기 −40° = 날이 앞장선 칼 면에서 뒤침 쪽으로 40°
 //  (날 세우기 문턱 STRIKE.edgeAlign 0.6 안 — 날이 앞장선 그대로면 아래팔 굴림이 손목 밧줄 끝 80° 가까이). 손 뻗기는 0(손을 몸 쪽으로 거두면 끌고 가는 팔이 상대 칼 · 내 몸에 박혀 몸이 튕김 — 기록).
 //  수는 [추정] — 사장님 확인 전 (확인표 2575 · 2576). 도구가 시험 길로 덮어쓸 수 있게 따로 둔다 (tools/sim/schielhau_strike.mjs --tsuPath · --tsuPlan)
-//  band (사장님 10/25 23:1x '위팔·가슴을 노리기보다 자연스럽게 몸통 전체(다리 위 골반부터 목 아래 가슴까지)를' — config UNIQUE_ASSIST.tsuBand 1): 가슴 높이 끝 점 하나 대신
-//   자연스러운 올려 긋기 길(band.path · band.plan)을 끌고 가되, 그 길이 지금 상대에게 처음 닿을 곳이 몸통 띠 밖(다리 · 목 · 머리)이면 띠 안으로 가장 적게 옮긴다(secret_instant.js comboBandShift)
-//   + 운동학 칼의 굴림 묶음(손목 밧줄 HUMAN.forearmRoll — placeIai). 수는 [추정] — 사장님 확인 전 (확인표 2587). tsuBand 0 = 위 path · plan (10/25 21:1x 판)
-export const TSU_AIM = { path: [[0.2, -0.2], [0, 0.1]], plan: [[-30, 0, -40], [-10, 0, -40], [0, 0, -40]], band: { path: [[0.06, -0.15], [0.22, 0.26]], plan: [[0, 0, 0], [0, 0, 0], [0, 0, 0]] } };
+//  band (사장님 10/25 23:1x '위팔·가슴을 노리기보다 자연스럽게 몸통 전체(다리 위 골반부터 목 아래 가슴까지)를' — config UNIQUE_ASSIST.tsuBand 1): 가슴 높이 끝 점에 맞춘 덧칸 대신
+//   위와 같은 길(앞으로 뻗어 상대에 닿는 길 — 오른 황소 쪽 AI 길은 뒤로 거둬 싸움에서 끌고 간 칼 셋에 둘이 아무 데도 안 닿음)을 끌고 가되, 그 길이 지금 상대에게 처음 닿을 곳이
+//   몸통 띠(골반 · 배 · 목 아래 가슴) 밖이면 길 높이를 가장 적게 옮긴다(secret_instant.js comboBandShift — 다리면 위로 · 목 · 머리면 아래로 · 팔이면 가까운 쪽 먼저).
+//   칼끝 떨굼은 옮긴 높이의 자세 지도가 손 · 칼끝을 함께 정하고, 손 돌리기는 날이 앞장서게 두되 사람 손목(손목 밧줄 HUMAN.forearmRoll)이 못 하면 한도까지만(placeIai 굴림 묶음) —
+//   끌고 가는 칼 덧칸은 0 · 끌고 간 칼이 끝난 뒤 손가락 몫 덧칸(planStep)은 위 plan 그대로. 길은 2575 그대로 · 띠 규칙 사장님 10/25 결정(확인표 2586) ·
+//   옮김 칸 수 [추정] 사장님 확인 전(2587). tsuBand 0 = 위 path · plan (10/25 21:1x 판)
+export const TSU_AIM = {
+  path: [[0.2, -0.2], [0, 0.1]],
+  plan: [[-30, 0, -40], [-10, 0, -40], [0, 0, -40]],
+  band: { path: [[0.2, -0.2], [0, 0.1]], plan: [[0, 0, 0], [0, 0, 0], [0, 0, 0]] },
+};
 export const PLAYER_UNIQUE = {
   german: [
     { stage: 1, name: 'zwerchAbtritt', role: 'step', stick: 'side', hint: '옆으로 걸으며 가로 긋기', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 옆 + 가로베기
@@ -200,10 +207,17 @@ export function uniqueDef(tradition, e) {
   // 사람 제비 베기 올려 긋는 길 (사장님 10/25 21:1x 해법 ③ — config UNIQUE_ASSIST.tsuAim · 표의 aim 칸): 꺾는 자리(chain.at 점)까지는 그대로 · 그 뒤 점을 aim.path 로 · 덧칸 = 앞 몫 0 + aim.plan
   if (e.aim && UA.tsuAim && e.chain) {
     const at = Math.min(e.chain.at, def.pts.length - 1);
-    const A = UA.tsuBand && e.aim.band ? e.aim.band : e.aim; // 몸통 띠 판(10/25 23:1x — tsuBand)이면 band 길 · 덧칸
+    const band = UA.tsuBand && e.aim.band ? e.aim.band : null; // 몸통 띠 판(10/25 23:1x — tsuBand)
+    const lead = (P) => [...Array.from({ length: at }, () => [0, 0, 0]), ...P.map((p) => p.slice())];
+    const A = band ?? e.aim;
     def.pts = [...def.pts.slice(0, at + 1), ...A.path.map((p) => p.slice())];
-    if (A.plan) def.plan = [...Array.from({ length: at }, () => [0, 0, 0]), ...A.plan.map((p) => p.slice())];
-    if (A === e.aim.band) def.band = true;
+    //  덧칸: 손가락 몫(planStep)은 21:1x 덧칸 그대로(길이 같을 때 — 끌고 간 칼이 끝난 뒤 손가락 긋기의 손목) · 끌고 가는 칼은 band 덧칸(snapPlan — 몸통 띠 · 굴림 묶음이 맡음)
+    const finger = band && band.path.length !== e.aim.path.length ? band.plan : e.aim.plan;
+    if (finger) def.plan = lead(finger);
+    if (band) {
+      def.band = true;
+      def.snapPlan = lead(band.plan);
+    }
   }
   return def;
 }
@@ -504,7 +518,7 @@ export class PlayerUniqueAssist {
       //  강화(몸 · 끝 힘 · 덧칸)는 그대로 둔다 — 끌고 가는 칼이 끝나면 손가락이 이어 긋는다
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: UA.tsuSnapShare, maxT: UA.tsuSnapTime, tech: e.name, plan: U.plan ? U.plan.slice(at) : null, band: !!U.band })) this.stats.snap = (this.stats.snap ?? 0) + 1;
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: UA.tsuSnapShare, maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band })) this.stats.snap = (this.stats.snap ?? 0) + 1;
     }
   }
 
