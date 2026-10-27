@@ -3,6 +3,7 @@
 //  ① 셈: 이동 입력 · 공격 · 막기 · 맞음 · 비기 없이 iaiArmTime 초 → 준비 · 준비 전 이동 입력은 셈 0 · 준비된 뒤 걸어도 유지 · 공격 · 막기 · 맞음 · 비기는 곧장 풀림 · 'dist' = 옛 셈(상대 칼 거리 밖 · 유예)
 //  ② 실제 몸(사람 창): 상대 칼 거리 안에 서 있어도 준비 · 막기 단추 · 탭 · 맞음 → 풀림 · 준비된 뒤 걸어도 유지 · ?gnsReady=dist 면 거리 안에선 준비 안 됨
 //  ③ AI: 같은 함수 — 걸음 뜻(moveFeet 의 스틱 원값)이 있으면 쌓이지 않음
+//  ⑤ 10/27 21:4x AI 낮게 치기(SECRET.gnsCrouchAim — ai.js crouchLow): 웅크린 사람만 · 내 가슴 − 상대 가슴
 //  node --test tools/sim/gonosen_ready.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -199,4 +200,16 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   assert.equal(O.ps.iaiArm.armed, true);
   assert.ok(!(O.p.iaiReadyW > 0) && O.p.skill.thrustPose.w === 0, '?gnsCrouch=0 — 자세 그대로');
   O.G.world.free();
+});
+
+test('⑤ 10/27 21:4x AI 가 웅크린 사람에게 낮게 침 (SECRET.gnsCrouchAim): 늦게 본 모습이 웅크림 · 상대가 사람이면 내 가슴 − 상대 가슴 · 서 있음 · AI 상대 · 끔이면 0', async () => {
+  const { AI } = await import('../../src/ai.js');
+  const me = { bodies: { chest: { translation: () => ({ x: 0, y: 1.3, z: 0 }) } } };
+  const low = (seen, foe = {}) => AI.prototype.crouchLow.call({ lastSeen: seen, foe, me });
+  assert.ok(Math.abs(low({ crouch: 0.6, cy: 1.0 }) - 0.3) < 1e-9, '웅크린 사람 — 가슴 높이 차');
+  assert.equal(low({ crouch: 0, cy: 1.0 }), 0, '서 있음(웅크림 무게 0) — 그대로');
+  assert.equal(low({ crouch: 1, cy: 1.0 }, { aiControlled: true }), 0, 'AI 상대 — 그대로');
+  assert.equal(low({ crouch: 1, cy: 1.4 }), 0, '상대가 더 높으면 0 (내리기만)');
+  assert.equal(low(null), 0);
+  withCfg({ gnsCrouchAim: 0 }, () => assert.equal(low({ crouch: 1, cy: 1.0 }), 0, '끔 = 7b02877 판'));
 });

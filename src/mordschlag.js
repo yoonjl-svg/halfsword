@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  독일 비기 '죽음의 일격 (모르트슐라크 · Mordschlag)' — 사람 먼저 (사장님 10/22 저녁 — docs/strike/german_mordschlag_2026-10-22.md)
-//   조건 (secret.js PlayerSecretWatch · when 'press'): 밀치기 누르기(fighter.barge phase 'press')가 SECRET.mordPress(10/25 23:1x 2 s · 끊겨도 mordGrace 0.2 s 안에 다시 누르면 이어 셈) 이어지면
+//   조건 (secret.js PlayerSecretWatch · when 'press'): 밀치기 누르기(fighter.barge phase 'press')가 SECRET.mordPress(10/25 23:1x 2 s · 끊겨도 mordGrace 0.4 s(10/27 21:4x) 안에 다시 누르면 이어 셈) 이어지면
 //    창(SECRET.playerWindow 0.6 s · 금색 '!' — 고노센과 같은 창 · 표시) — 그 안의 공격 입력 하나가 죽음의 일격.
 //   동작: 다른 비기와 같은 길 틀(skill.js secret — 준비 chamber → 베기 길 strike → 따라 지나감 follow → 굳음 stiff)에 칸 셋을 더한다.
 //    판 'reverse'(기본): ① 쥠 바꿈 — 공격 입력 스텝에 칼날을 거꾸로 쥔다(fighter.reverseGrip — 두 손이 칼날 가운데쯤, 칼자루가 위, 칼끝이 손 아래)

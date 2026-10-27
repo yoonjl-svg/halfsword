@@ -29,6 +29,7 @@ function snap() {
     balance: 100,
     armed: true,
     vigor: 1,
+    crouch: 0, // 고노센 웅크림 무게 (f.iaiReadyW — 10/27 21:4x 웅크린 사람에게 낮게 치기 · ai.js crouchLow)
   };
 }
 
@@ -83,6 +84,7 @@ export class Senses {
     s.balance = f.balance;
     s.armed = f.armed;
     s.vigor = f.vigor;
+    s.crouch = f.iaiReadyW ?? 0; // 웅크림 (몸이 낮아진 것 — 눈으로 보이는 것)
     // 약한 자세 겨눔 (FINISH.vital, 10/12): 머리·목·가슴·칼 자리 사본 — AI 는 이것도 반응 시간만큼 늦게 본다 (끄면 기록하지 않는다)
     s.vital = FINISH.vital ? captureVitalPose(f) : null;
   }

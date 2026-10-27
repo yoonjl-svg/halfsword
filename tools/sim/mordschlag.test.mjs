@@ -30,10 +30,10 @@ const wristGap = (P) => {
   return w.distanceTo(gp);
 };
 
-test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 2 s — 10/25 23:1x · 끊김 너그러움 0.2 s · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
+test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 2 s — 10/25 23:1x · 끊김 너그러움 0.4 s — 10/27 21:4x · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
   assert.equal(SECRET.deMord, 1);
   assert.equal(SECRET.mordPress, 2); // 10/25 23:1x 사장님 '1초 말고 2초로 하고, 대신 리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세.' (전 1.5)
-  assert.equal(SECRET.mordGrace, 0.2);
+  assert.equal(SECRET.mordGrace, 0.4); // 10/27 21:4x 사장님 '0.2초 간격을 0.4초로 늘려' (전 0.2)
   assert.equal(SECRET.playerWindow, 0.6);
   assert.equal(SECRET.stiff.german, 0.4);
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
@@ -64,7 +64,7 @@ test('사람 · AI 몫: 플레이어 독일 무기 = 죽음의 일격 · deMord 
   } finally { g.world.free(); }
 });
 
-test('조건: 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨도 mordGrace(0.2 s) 안에 다시 누르면 셈을 이어감(그동안은 안 셈) · 더 끊기면 셈 0 · 창을 열면 셈 0 · 0.6 s 판도', () => {
+test('조건: 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨도 mordGrace(0.4 s) 안에 다시 누르면 셈을 이어감(그동안은 안 셈) · 더 끊기면 셈 0 · 창을 열면 셈 0 · 0.6 s 판도', () => {
   const { g, P, E } = fixture();
   try {
     const w = new PlayerSecretWatch(P, E);

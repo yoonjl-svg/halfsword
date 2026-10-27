@@ -128,7 +128,7 @@ if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = p
 //  `?mordGrip=hilt` 쥠 그대로 폼멜 판 · `?mordOver=1` 넘어 들어감 규칙 (사장님 확인 전)
 if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
 if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = +params.get('mordPress');
-if (params.has('mordGrace') && +params.get('mordGrace') >= 0) CONFIG.SECRET.mordGrace = +params.get('mordGrace'); // 모르트슐라크 누르기 끊김 너그러움 (10/25 23:1x 사장님 — 기본 0.2 s · `?mordGrace=0` = 끊기면 셈 0)
+if (params.has('mordGrace') && +params.get('mordGrace') >= 0) CONFIG.SECRET.mordGrace = +params.get('mordGrace'); // 모르트슐라크 누르기 끊김 너그러움 (10/25 23:1x 사장님 · 10/27 21:4x 0.4 s — 기본 0.4 s · `?mordGrace=0` = 끊기면 셈 0)
 if (params.has('closeLatch')) CONFIG.CLOSE.latch = +params.get('closeLatch') ? 1 : 0; // 밀치기 걸쇠 (10/25 23:3x 사장님 '이 걸쇠 없애' — 기본 0 · `?closeLatch=1` = 놓았다 다시 밀어야)
 if (params.has('closeLatchAI')) CONFIG.CLOSE.latchAI = +params.get('closeLatchAI') ? 1 : 0; // AI 밀치기 걸쇠 (기본 = config CLOSE.latchAI)
 if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1 : 0; // AI 몸 붙이기 자연스럽게 가까울 때만 (10/24 14:2x 사장님 · 0 = 멀리서 붙이러 걸어가는 옛 판)
@@ -216,6 +216,7 @@ if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnt
 if (['idle', 'dist'].includes(params.get('gnsReady'))) CONFIG.SECRET.gnsReady = params.get('gnsReady'); // 고노센 준비 (10/25 22:3x · 22:5x 사장님 — 기본 'idle' = 거리와 상관없이 아무 행동 없이 2 s · 준비된 뒤엔 걸어도 유지 · `?gnsReady=dist` = 상대 칼 거리 밖 옛 판)
 if (params.has('gnsCrouch')) CONFIG.SECRET.gnsCrouch = +params.get('gnsCrouch') ? 1 : 0; // 사람 고노센 준비 웅크림 (10/25 23:0x 사장님 결정 — 기본 1 · `?gnsCrouch=0` = '고노센 준비' 표시만)
 if (params.has('gnsCrouchOut') && +params.get('gnsCrouchOut') > 0) CONFIG.SECRET.gnsCrouchOut = +params.get('gnsCrouchOut'); // 웅크림 풀림 시간 (s — 기본 0.2 · 사장님 확인 전)
+if (params.has('gnsCrouchAim')) CONFIG.SECRET.gnsCrouchAim = +params.get('gnsCrouchAim') ? 1 : 0; // AI 가 웅크린 사람을 칠 때 길을 낮춤 (10/27 21:4x 사장님 결정 — 기본 1 · `?gnsCrouchAim=0` = 7b02877 판)
 if (params.has('gnsAiSettle')) CONFIG.SECRET.gnsAiSettle = +params.get('gnsAiSettle') ? 1 : 0; // 고노센 AI 가 준비 전이면 간 보기 동안 제자리에 섬 (10/25 22:5x 규칙의 AI 쪽 — 기본 1 · `?gnsAiSettle=0` · 사장님 확인 전)
 if (params.has('gnsWalkIn')) CONFIG.SECRET.gnsWalkIn = +params.get('gnsWalkIn') ? 1 : 0; // 고노센 들어옴 창 (기본 0 = 천천히 걸어 듦은 창 없음 — 사장님 10/25 22:3x 입력 글 · 22:5x 끈 채로 · `?gnsWalkIn=1` = 01:3x 판)
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')

@@ -680,7 +680,7 @@ export function pressStep(st, dt, pressing, busy, open, need) {
     st.pressHeld = (st.pressHeld ?? 0) + dt;
     if (st.pressHeld > (st.pressMax ?? 0)) st.pressMax = st.pressHeld;
   } else if ((st.pressHeld ?? 0) > 0 && (st.pressOff = (st.pressOff ?? 0) + dt) <= (SECRET.mordGrace ?? 0)) {
-    // 너그러움 (10/25 23:1x 사장님 '리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세' — SECRET.mordGrace · risolutoGrace 와 같은 틀): 끊긴 지 mordGrace 초 안이면 셈을 쥔 채 기다림(그동안은 안 셈)
+    // 너그러움 (10/25 23:1x 사장님 '리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세' · 10/27 21:4x '0.2초 간격을 0.4초로 늘려' — SECRET.mordGrace · risolutoGrace 와 같은 틀): 끊긴 지 mordGrace 초 안이면 셈을 쥔 채 기다림(그동안은 안 셈)
   } else st.pressT = st.pressHeld = st.pressOff = 0;
   if (busy) st.pressT = 0; // 비기 실행 · 굳음 동안은 세지 않는다 (끝난 뒤 다시 need 초)
   if (busy || open || !(st.pressT >= need)) return false;
@@ -830,7 +830,7 @@ export class PlayerSecretWatch {
   /**
    * 독일 죽음의 일격 (10/22 사장님 '막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' · '1.5로 해' — mordschlag.js):
    *  밀치기 누르기(fighter.closeStep 의 barge phase 'press' — 가슴 사이 CLOSE.reach 안에서 상대 쪽으로 미는 동안 · 10/25 23:3x 부터 놓았다 밀 것 없음 CLOSE.latch 0)가 cond.press 초(SECRET.mordPress — 10/25 23:1x 2 s)
-   *  이어지면 창(playerWindow)을 연다. 누르기가 끝나면(떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 베기 · 넘어짐) SECRET.mordGrace(0.2 s) 안에 다시 누르면 셈을 이어감 · 넘으면 셈 0 · 창을 열면 셈 0(계속 누르면 다시 cond.press 초 뒤 또 창).
+   *  이어지면 창(playerWindow)을 연다. 누르기가 끝나면(떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 베기 · 넘어짐) SECRET.mordGrace(10/27 21:4x 0.4 s) 안에 다시 누르면 셈을 이어감 · 넘으면 셈 0 · 창을 열면 셈 0(계속 누르면 다시 cond.press 초 뒤 또 창).
    *  비기 실행 · 굳음 동안은 셈 0. 상대가 막는 중이든 몸만 붙었든 같다. 새 값 없음(누르기 판정은 밀치기 그대로). 재기: pressT(지금 셈) · pressRuns(창까지 이어진 수) · pressMax(가장 긴 누르기)
    *  셈은 pressStep(위 — 10/24 AI 와 같이 씀 · ai.js mordTick)
    */

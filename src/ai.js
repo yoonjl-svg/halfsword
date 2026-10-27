@@ -415,6 +415,7 @@ export class AI {
 
     // ── 보기 (반응 시간만큼 늦게) ──
     const s = this.sense.seen(L.reaction + 0.04 * this.anger); // 화나면 눈이 조금 늦다
+    this.lastSeen = s; // 늦게 본 모습 (startStrike 의 crouchLow 가 읽음 — 10/27)
     // 약한 자세 겨눔 (FINISH.vital, 10/12 — vital_target.js): 늦게 본 모습을 기술 고르기·공격 준비가 읽고, 손 높이·칼 기울기 보정을 한 스텝 옮긴다
     if (FINISH.vital) {
       this.vitalS = s;
@@ -1387,6 +1388,9 @@ export class AI {
         q[1] = clamp(q[1] + ey, -0.6, 0.6);
       }
     }
+    // 웅크린 사람 (10/27 21:4x 사장님 — SECRET.gnsCrouchAim): 길을 그 몸 높이로 내린다 (난수 없음 · 서 있는 상대면 0 이라 그대로)
+    const low = this.crouchLow();
+    if (low > 0) for (const q of this.path) q[1] = clamp(q[1] - low, -0.6, 0.6);
     if (this.secretRun) this.secretRun.pathN = this.path.length; // 비기 서보 힘 창의 길 점 세기 (이베리아 powerFrom)
     if (this.secretRun && !this.secretRun.burst) {
       // 결정타 연출 (10/9 23:5x): 비기가 터뜨려지는 순간(그 비기의 첫 칼이 나감) — main.js 가 이 수가 바뀌면 화면 시간을 잠깐 늦춘다. 물리·난수와 상관없음
@@ -1418,6 +1422,17 @@ export class AI {
     // 10/22 대검 마무리 (finish.js FINISH.cleave.ai, 기본 끔 — 끄면 이 줄은 아무것도 하지 않는다): 쓰러진 · 낮은 상대를 마무리하는 칼이면 플레이어 탭과 같은
     //  쪼개 내려치기 (skill.cleavePose). 마무리가 안 열리면(finishOnly) 그대로 기술 길만 간다
     else if (FINISH.cleave.ai && this.why === 'finish' && !this.feint && cleaveFinish(this.me)) this.me.skill.thrust({ step: false, finishOnly: true });
+  }
+
+  /**
+   * 웅크린 사람을 칠 때 길을 내리는 몫 (패드 y — 손 높이 1 m 당 1 · fighter.js rawHand) (10/27 21:4x 사장님 '다른 건 네 말대로 하고' — SECRET.gnsCrouchAim):
+   *  상대가 사람이고 반응 시간만큼 늦게 본 모습(lastSeen)이 고노센 웅크림(crouch = f.iaiReadyW > 0)이면 내 가슴과 그 상대 가슴의 높이 차(m — 낮을 때만).
+   *  새 수 없음(실제 몸 높이). 서 있는 상대 · AI 끼리 · 끄면 0 (그대로)
+   */
+  crouchLow() {
+    const s = this.lastSeen;
+    if (!SECRET.gnsCrouchAim || !s || !(s.crouch > 0) || this.foe.aiControlled) return 0;
+    return Math.max(0, this.me.bodies.chest.translation().y - s.cy);
   }
 
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */

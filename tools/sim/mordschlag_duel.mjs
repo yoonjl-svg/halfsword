@@ -9,6 +9,7 @@
 //  실행: node tools/sim/mordschlag_duel.mjs [플레이어 무기=longsword] [누르기 초 — 없으면 SECRET.mordPress] [판 수=3]
 //   10/25 23:3x: DRIVE=hold — 걸어 들어와 스틱을 앞으로 쥔 채 계속 밂(놓았다 밀지 않음 — 밀치기 걸쇠 CLOSE.latch 0 판 · 옛 판에선 밀치기가 안 남) · 끝에 합 줄(창 / 30 s · 낸 · 맞힘 · 막힘 · 헛침 · 낼 때 가슴 사이)
 //    DRIVE=wobble — hold 와 같고 닿는 거리 안에서 1 s 마다 0.1 s 스틱이 가운데로 빠짐(엄지가 미끄러지는 사람 — 끊김 너그러움 SECRET.mordGrace 견줌)
+//    DRIVE=reshove — hold 와 같고 닿는 거리 안에서 1 s 마다 0.1 s 스틱을 뒤로(떨어졌다 다시 밀치기 — 새 밀치기는 걸음 단계를 먼저 거침) · 합 줄에 누르기 끊김 틈(0.2 · 0.4 s 안 수 · p50)
 //   환경 변수: FOES=german,italian,iberian,japanese,chinese(유파별 첫 인물 — 인물표 차례) · MORD_JSON='{"tech":"zornhau"}' · OVER=1 · GRIP=hilt · DUR=30 · JSON=1(판마다 한 줄)
 //   10/22 밤 고칠 안 (문서 §11): MORD_JSON='{"kin":0.6,"aim":"pull","at":0.5,"power":"finish"}' · HELM=kettle|horned(상대 머리에 그 투구를 씌움 — ARMOR.helmets) ·
 //    SUM=1(끝에 일격 하나하나의 셈 한 줄 JSON — 입력 → 굳음 끝 s · 머리 맞음 J(투구 배율 곱한 값) · 45 J 넘는 몫 · 넘어짐 · 비틀거림 · 기절 · 막힘)
@@ -38,6 +39,7 @@ const out = [];
 const hitsAll = [];
 const fires = []; // 일격 하나하나 (SUM)
 const fireD = []; // 낼 때 가슴 사이 (m)
+const pressGaps = []; // 누르기 끊김 틈 (s — 다시 누른 것만)
 let simT = 0;
 for (const school of FOES) {
   const ch = foeOf(school);
@@ -52,7 +54,7 @@ for (const school of FOES) {
     let rs = (seed * 2654435761) >>> 0;
     const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
     const r = { foe: ch.name, school, seed, windows: 0, fired: 0, landed: 0, hiltHead: 0, bladeHead: 0, over: 0, blocked: 0, falls: 0, stagger: 0, sev: 0, bluntJ: 0, maxPress: 0, presses: 0, end: '' };
-    let phase = 'approach', tRel = 0, fireAt = null, run = null, lastBarge = null;
+    let phase = 'approach', tRel = 0, fireAt = null, run = null, lastBarge = null, wasPress = false, pressEnd = null;
     G.combat.hooks.onWound = (att, vic, w, pt, pr) => {
       if (att !== P || !run) return;
       run.sev += w.severity ?? 0;
@@ -74,6 +76,11 @@ for (const school of FOES) {
       const t = G.t;
       watch.update(DT, !!P.skill.sec);
       if (P.barge?.phase === 'press' && lastBarge !== P.barge) { r.presses++; lastBarge = P.barge; }
+      // 누르기 끊김 틈 (10/27 — 끊긴 뒤 다시 누르기까지 · 비기 실행 · 굳음 동안 끊긴 것은 안 셈): 너그러움 SECRET.mordGrace 견줌
+      const pr = P.barge?.phase === 'press';
+      if (pr && !wasPress && pressEnd != null) pressGaps.push(t - pressEnd);
+      if (!pr && wasPress) pressEnd = P.skill.sec ? null : t;
+      wasPress = pr;
       // 창 → 반응 지연 뒤 공격 입력 (main.js: 창이 열려 있고 비기 실행 중이 아니면 fire → skill.secret)
       if (watch.open && fireAt == null) fireAt = t + 0.12 + 0.18 * rnd();
       if (!watch.open) fireAt = null;
@@ -92,6 +99,7 @@ for (const school of FOES) {
       let y = 0;
       if (!P.alive || P.skill.sec?.stage === 'stiff') y = 0;
       else if (DRIVE === 'hold') y = 1; // 쥔 채 계속 밂
+      else if (DRIVE === 'reshove') y = d <= reach && t % 1.0 < 0.1 ? -1 : 1; // 닿는 거리 안에서 1 s 마다 0.1 s 스틱을 뒤로 — 떨어졌다 다시 밀치기 (운전 값 · 게임 값 아님)
       else if (DRIVE === 'wobble') y = d <= reach && t % 1.0 < 0.1 ? 0 : 1; // 쥔 채 밀다 닿는 거리 안에서 1 s 마다 0.1 s 엄지가 빠짐 (너그러움 mordGrace 견줌 — 운전 값 · 게임 값 아님)
       else if (d > reach) { phase = 'approach'; y = 1; }
       else if (phase === 'approach' || (phase === 'push' && !P.barge && t > tRel + REL + 0.05)) { phase = 'release'; tRel = t; y = 0; }
@@ -167,7 +175,7 @@ console.log('상대 | 판 | 누르기 시작/판 | 창/판 | 낸 수/판 | 맞�
 {
   const T = out.reduce((a, r) => { for (const k of ['windows', 'fired', 'landed', 'blocked', 'presses']) a[k] = (a[k] ?? 0) + r[k]; return a; }, {});
   const q = (a, p) => (a.length ? a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(p * a.length))].toFixed(2) : '-');
-  console.log(`합 (운전 ${DRIVE} · 걸쇠 ${CLOSE.latch ?? 1} · 누르기 ${PRESS} s · 너그러움 ${SECRET.mordGrace ?? 0} s): 판 ${out.length} · ${simT.toFixed(0)} s · 누르기 시작 ${T.presses} · 창 ${T.windows} (30 s 당 ${((30 * T.windows) / simT).toFixed(2)}) · 낸 ${T.fired} · 맞힘 ${T.landed} · 막힘 ${T.blocked} · 헛침(안 맞고 안 막힘) ${T.fired - T.landed - T.blocked} · 낼 때 가슴 사이 p10 ${q(fireD, 0.1)} · p50 ${q(fireD, 0.5)} · p90 ${q(fireD, 0.9)} m (닿는 거리 ${CLOSE.reach(WEAPONS[W]).toFixed(2)})`);
+  console.log(`합 (운전 ${DRIVE} · 걸쇠 ${CLOSE.latch ?? 1} · 누르기 ${PRESS} s · 너그러움 ${SECRET.mordGrace ?? 0} s): 판 ${out.length} · ${simT.toFixed(0)} s · 누르기 시작 ${T.presses} · 창 ${T.windows} (30 s 당 ${((30 * T.windows) / simT).toFixed(2)}) · 낸 ${T.fired} · 맞힘 ${T.landed} · 막힘 ${T.blocked} · 헛침(안 맞고 안 막힘) ${T.fired - T.landed - T.blocked} · 낼 때 가슴 사이 p10 ${q(fireD, 0.1)} · p50 ${q(fireD, 0.5)} · p90 ${q(fireD, 0.9)} m (닿는 거리 ${CLOSE.reach(WEAPONS[W]).toFixed(2)}) · 누르기 끊김 틈 ${pressGaps.length} 번 (0.2 s 안 ${pressGaps.filter((g) => g <= 0.2 + 1e-9).length} · 0.4 s 안 ${pressGaps.filter((g) => g <= 0.4 + 1e-9).length} · p10 ${q(pressGaps, 0.1)} · p25 ${q(pressGaps, 0.25)} · p50 ${q(pressGaps, 0.5)} · p75 ${q(pressGaps, 0.75)} s)`);
 }
 for (const S of Object.values(sum)) {
   const f = (k) => (S[k] / S.n).toFixed(2);

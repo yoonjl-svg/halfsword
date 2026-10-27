@@ -195,7 +195,7 @@ const NODE_CMD = {
   G5: '사선 긋기(↙)', // 곁눈 베기 ← 분노의 베기(어깨 지붕 → 왼 아래 — ai_techniques.js zornhau)
   G8: '좌우 이동(←/→)과 동시에 수평 긋기(←)', // 걸음 명령 stick 'side'(옆 몫 ≥ 0.5 · 어느 쪽이든) + 가로베기(zwerch — 옆 자세 → 왼 옆)
   G7: '긋기가 상대 칼에 닿으면 바로 다시 긋기', // 이어 긋기 — 앞 긋기(kind 'cut' — 찌르기 길 긋기는 안 셈) 맞물림 뒤 afterWindow 안의 긋기(길 · 쪽 없음 · 탭은 안 셈 — unique_assist.js busy)
-  G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x 사장님 확정 글(감독 전달 — 글 속 시간 = SECRET.mordPress 2 · 걸쇠 없앰 CLOSE.latch 0) — secret.js pressTick 밀치기 누르기(fighter.js closeStep — 닿는 거리 안에서 스틱 앞 · 끊겨도 mordGrace 0.2 s 안에 다시 누르면 이어 셈) mordPress 초 → 창(비기 활성화) → 탭 · 긋기 둘 다(main.js) · 전 '붙은 채 멈췄다 앞으로 이동(↑), 느낌표(!)가 뜨면 공격'
+  G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x 사장님 확정 글(감독 전달 — 글 속 시간 = SECRET.mordPress 2 · 걸쇠 없앰 CLOSE.latch 0) — secret.js pressTick 밀치기 누르기(fighter.js closeStep — 닿는 거리 안에서 스틱 앞 · 끊겨도 mordGrace 0.4 s(10/27 21:4x — 전 0.2) 안에 다시 누르면 이어 셈) mordPress 초 → 창(비기 활성화) → 탭 · 긋기 둘 다(main.js) · 전 '붙은 채 멈췄다 앞으로 이동(↑), 느낌표(!)가 뜨면 공격'
   // 이탈리아
   I2: '좌우 이동(←/→)과 동시에 사선 긋기(↖/↗)', // 걸음 명령 stick 'side' + 쟁기 찌르기 긋기(stichPflug ↖ · stichPflugL ↗ — 허리 옆 → 가운데 · 탭은 안 됨)
   I7: '머리 높이에서 사선 긋기(↙)', // 위에서 내려 찌르기 ← 황소 찌르기 긋기(stichOchs — 머리 오른쪽 → 가운데 · 탭은 안 됨)
