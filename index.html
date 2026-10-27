@@ -27,7 +27,7 @@
       html[data-start-open] body > :not(#gameEntrance):not(#rotate):not(script) { visibility: hidden; }
       /* ── 화면 글꼴: Cinzel = 라틴 글자에만(unicode-range = 두 조각에 실제로 든 글자 — 숫자·기호·빈칸은 프리텐다드로). 굵기 축 400–900 한 파일.
          프리텐다드 = 한글·숫자·기호 (만든 이의 KS X 1001 서브셋 그대로 — 쓰는 굵기 셋 400 · 600 · 700, 그 밖의 굵기는 가까운 파일로 그린다).
-         보충 = 프리텐다드에 없는 글자만: 중국 유파 원어의 한자 43 자 + Ⅰ·Ⅱ (Noto Sans TC 조각) · ▮▯↻ (Noto Sans Math 조각). 한 굵기 파일이라 굵기 범위로 적어 흉내 굵기를 막는다 ── */
+         보충 = 프리텐다드에 없는 글자만: 중국 유파 원어의 한자 43 자 + Ⅰ·Ⅱ (Noto Sans TC 조각) · ▮▯↻↺ (Noto Sans Math 조각 — ↺ 10/25 싱지르 입력 줄). 한 굵기 파일이라 굵기 범위로 적어 흉내 굵기를 막는다 ── */
       @font-face { font-family: 'Cinzel'; src: url('/fonts/Cinzel-latin.woff2') format('woff2'); font-weight: 400 900; font-style: normal; font-display: swap;
         unicode-range: U+0041-005A, U+0061-007A, U+00C0-00D6, U+00D8-00F6, U+00F8-00FF, U+0102, U+0131, U+0152-0153; }
       @font-face { font-family: 'Cinzel'; src: url('/fonts/Cinzel-latin-ext.woff2') format('woff2'); font-weight: 400 900; font-style: normal; font-display: swap;
@@ -38,7 +38,7 @@
       @font-face { font-family: 'Noto Sans TC'; src: url('/fonts/NotoSansTC-hanja.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap;
         unicode-range: U+2160-2161, U+4E09, U+523A, U+528D, U+52E2, U+53E3, U+53F3, U+5766, U+593E, U+5B88, U+5DE6, U+5FA1, U+6380, U+63A0, U+63A3, U+6492, U+64A9, U+64CA, U+6582, U+66F8, U+6B65, U+74B0, U+76F4, U+770B, U+7B26, U+7FC5, U+7FFC, U+8170, U+8179, U+82B1, U+84CB, U+864E, U+8C79, U+8DE8, U+8E72, U+8ECA, U+9001, U+9006, U+9023, U+9802, U+982D, U+9C57, U+9CF3, U+9EDE; }
       @font-face { font-family: 'Noto Sans Math'; src: url('/fonts/NotoSansMath-symbols.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap;
-        unicode-range: U+21BB, U+25AE-25AF; }
+        unicode-range: U+21BA-21BB, U+25AE-25AF; }
       :root {
         /* ── 글자 규칙 (10/14 — docs/ui/hud_type_system_2026-10-10.md §16 · docs/ui/webfont_2026-10-14.md): 글꼴 하나 · 크기 세 단계 + 큰 글자 예외 둘 · 굵기 셋 · 글자 색 넷 ──
            사장님 10/14 10:3x '폰트 크기 규칙을 다시 · 다소 커 · 굵은 건 조금 얇게' · 10:4x '프리텐다드 + 킨젤' · 10:5x '굵기 한 단계만 · 색도 몇 개 규칙 이내 · 크기 다이내믹 절제' ·

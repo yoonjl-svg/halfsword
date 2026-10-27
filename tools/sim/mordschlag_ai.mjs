@@ -9,7 +9,7 @@
 //    사람 자리 봇(롱소드 · 용사의 눈물 = 기력 무한 · 칼은 기본 자세 · 막기 단추 · 스틱만 — 사람 반응 0.12 ~ 0.30 s, mordschlag_duel.mjs 와 같은 수):
 //    human = 기본 AI 'normal'(무작위 성격 — fights12 의 사람 자리와 같은 몸) + 기력 무한 · still = 아무 입력 없음 · block = 막기 단추를 늘 쥠 ·
 //    back = 누르기를 느끼면(상대 밀치기 누르기가 시작되고 반응 시간 뒤) 스틱 뒤로 — 누르기가 끝날 때까지 · backblock = block + back
-//   판마다: 이긴 쪽(먼저 죽은 쪽이 짐 · 같은 스텝이거나 끝까지 살면 무) · 영웅 누르기 시작 수 · 1.5 s(SECRET.mordPress) 넘게 이어진 누르기 수 · 가장 긴 누르기 · 누르기 끝 까닭 ·
+//   판마다: 이긴 쪽(먼저 죽은 쪽이 짐 · 같은 스텝이거나 끝까지 살면 무) · 영웅 누르기 시작 수 · SECRET.mordPress(10/25 23:1x 부터 2 s — 전 1.5) 넘게 이어진 누르기 수 · 가장 긴 누르기 · 누르기 끝 까닭 ·
 //    몸 붙이기로 간 수(ai.js mordPressGo) · 창 수 · 낸 수 · 맞힘(그 비기 동안 상대 아픔 +0.05 — 검술 층 run.landed) · 머리 맞음 · 머리 J(투구 배율 곱함 — 일격 ~ 끝 + 1.5 s) · 넘어짐(일격 ~ 끝 + 1.5 s 안 무릎 · 쓰러짐 · 일어나기) ·
 //    기절 · 죽음(같은 창 — 의식 0) · 막힘(운동학 길 상대 칼 먼저) · 준 · 받은 상처 심각도 합 · 판 길이 ·
 //    걸어 들어간 덩이(ai.js mordWalking — 붙이러 간 뒤 밀치기 전) 하나하나 [초, 끝: barge 밀치기 · attack 걸어가며 침 · 그 밖 꼴(defend · withdraw …)]
@@ -259,12 +259,12 @@ for (const h of HEROES)
     for (const s of SEEDS) {
       const r = fight(h, o, s);
       all.push(r);
-      if (!args.quiet) console.error(`… ${h} vs ${o} ${s}: ${r.win ? '이김' : r.lose ? '짐' : '무'} · 붙이기 ${r.goes} · 누르기 ${r.presses} (1.5 s ${r.press15} · 최장 ${r.maxPress}) · 창 ${r.windows} · 낸 ${r.fired} · 맞힘 ${r.landed} · 머리 ${r.headHits} [${r.headJ.join(',')}] · 넘어짐 ${r.falls} · 기절 ${r.ko} · ${r.t} s · 끝 ${JSON.stringify(r.ends)}`);
+      if (!args.quiet) console.error(`… ${h} vs ${o} ${s}: ${r.win ? '이김' : r.lose ? '짐' : '무'} · 붙이기 ${r.goes} · 누르기 ${r.presses} (${CONFIG.SECRET.mordPress} s ${r.press15} · 최장 ${r.maxPress}) · 창 ${r.windows} · 낸 ${r.fired} · 맞힘 ${r.landed} · 머리 ${r.headHits} [${r.headJ.join(',')}] · 넘어짐 ${r.falls} · 기절 ${r.ko} · ${r.t} s · 끝 ${JSON.stringify(r.ends)}`);
     }
 const f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-');
 const med = (a) => (a.length ? a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)] : '-');
 console.log(`설정: aiOpenSchools ${JSON.stringify(SECRET.aiOpenSchools)} · ${DUR} s · 시드 ${SEEDS.join(',')}`);
-console.log('| 영웅 | 맞수 | 판 | 이김 · 짐 · 무 | 붙이기/판 | 누르기 시작/판 | 1.5 s 누르기/판 | 창/판 | 낸 수 | 맞힘 | 머리 맞음 | 머리 J 가운데 / 최대 | 넘어짐 | 기절 · 죽음 | 막힘 | 준 심각도/판 | 받은 심각도/판 | 판 길이 s |');
+console.log(`| 영웅 | 맞수 | 판 | 이김 · 짐 · 무 | 붙이기/판 | 누르기 시작/판 | ${CONFIG.SECRET.mordPress} s 누르기/판 | 창/판 | 낸 수 | 맞힘 | 머리 맞음 | 머리 J 가운데 / 최대 | 넘어짐 | 기절 · 죽음 | 막힘 | 준 심각도/판 | 받은 심각도/판 | 판 길이 s ||`);
 console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 const groups = new Map();
 for (const r of all) for (const k of [`${r.hero}|${r.opp}`]) (groups.get(k) ?? groups.set(k, []).get(k)).push(r);
@@ -279,5 +279,5 @@ const ends = {};
 for (const r of all) for (const [k, v] of Object.entries(r.ends)) ends[k] = (ends[k] ?? 0) + v;
 console.log(`누르기 끝 까닭 (모두): ${JSON.stringify(ends)}`);
 const sumBy = (k) => all.reduce((o, r) => { for (const [a, v] of Object.entries(r[k] ?? {})) o[a] = (o[a] ?? 0) + v; return o; }, {});
-console.log(`붙이기 사건별 (간 수 · 1.5 s 누르기 · 낸 수): ${JSON.stringify(sumBy('goBy'))} · ${JSON.stringify(sumBy('p15By'))} · ${JSON.stringify(sumBy('firedBy'))}`);
+console.log(`붙이기 사건별 (간 수 · ${CONFIG.SECRET.mordPress} s 누르기 · 낸 수): ${JSON.stringify(sumBy('goBy'))} · ${JSON.stringify(sumBy('p15By'))} · ${JSON.stringify(sumBy('firedBy'))}`);
 if (args.json) writeFileSync(args.json, JSON.stringify(all));

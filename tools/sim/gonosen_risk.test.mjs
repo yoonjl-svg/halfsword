@@ -70,9 +70,12 @@ function firstEnterWindow() {
   return t0;
 }
 
-test('A 들어옴 창 길이: 기본(0) = playerWindow · 0.4 이면 들어옴 창만 0.4 s', () => {
-  assert.ok(Math.abs(firstEnterWindow() - SECRET.playerWindow) < 1e-9);
-  withCfg({ gnsEnterWindow: 0.4 }, () => assert.ok(Math.abs(firstEnterWindow() - 0.4) < 1e-9));
+test('A 들어옴 창 길이 (들어옴 창 gnsWalkIn 1 일 때 — 10/25 22:3x 부터 기본 끔): 기본(0) = playerWindow · 0.4 이면 들어옴 창만 0.4 s', () => {
+  withCfg({ gnsWalkIn: 1 }, () => {
+    assert.ok(Math.abs(firstEnterWindow() - SECRET.playerWindow) < 1e-9);
+    withCfg({ gnsEnterWindow: 0.4 }, () => assert.ok(Math.abs(firstEnterWindow() - 0.4) < 1e-9));
+  });
+  assert.equal(firstEnterWindow(), null); // 기본(gnsWalkIn 0): 천천히 걸어 드는 상대에게 들어옴 창 없음
 });
 
 test('B 들어옴 발도 막힘 (10/25 16:0x 켬): 천천히 걸어 든 들어옴 창에서 낸 발도만 막힐 수 있음 — 빠르게(달려듦 빠르기로) 넘은 들어옴 · 칼을 듦 · 헛침 창은 그대로 · 끄면 그대로 · 휩쓸기만 밀어냄', () => {
@@ -182,14 +185,17 @@ function standoff(id, vals) {
     const ps = new PlayerSecretWatch(p, G.enemy);
     const L = gnsEnterLine(ps.view());
     const out = { creep: 0, ready: 0, W: null };
-    let prev = null;
+    let prev = null, pending = false;
     G.before = () => {
       ps.update(DT, !!p.skill.sec);
       p.move.set(0, 0);
       const W = G.ai.gnsW;
       if (W?.ready) out.ready++;
       const d = p.foeDistance();
-      if (prev != null && prev > L - DEEP && d <= L - DEEP && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') out.creep++;
+      // 10/27 (무장 시계를 판 시작 정지 뒤부터 — 사장님 23:0x): 간 보기(watch)로 선을 넘어 든 뒤 DEEP 넘게 들어감(그 사이 꼴이 공격으로 바뀌어도) — 선 끝을 mm 로 오가는 것 · 들자마자 공격으로 바꾼 것은 깊이로 거름
+      if (prev != null && prev > L && d <= L && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') pending = true;
+      if (d > L) pending = false;
+      else if (pending && d <= L - DEEP) (out.creep++, (pending = false));
       prev = d;
     };
     for (let i = 0; i < 16 / DT && p.alive && G.enemy.alive; i++) G.step();
@@ -217,7 +223,7 @@ test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발
 test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => {
   const G = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 1, difficulty: 'normal' });
   const ai = G.ai;
-  for (let i = 0; i < 2 / DT; i++) G.step();
+  for (let i = 0; i < (CONFIG.ARENA.startHold + SECRET.iaiArmTime + 0.1) / DT; i++) G.step(); // 사람 준비가 켜질 때까지 (무장 시계는 판 시작 정지 뒤부터 — 10/27 23:0x · 실제 2 s)
   ai.gnsWatch(DT, ai.d, false);
   const W = ai.gnsW;
   assert.equal(W.user, true);

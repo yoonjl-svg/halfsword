@@ -23,7 +23,7 @@ for (const jid of jArg.split(',')) for (const fid of fArg.split(',')) {
   const walker = fid.startsWith('walker:');
   const F = walker ? null : CHARACTERS_BY_ID[fid];
   const fw = walker ? fid.slice(7) : F.weapon;
-  const R = { jid, fid, fw, rounds: 0, t: 0, fired: 0, landed: 0, jWin: 0, fWin: 0, jDealt: 0, fDealt: 0, kill: 0 };
+  const R = { jid, fid, fw, rounds: 0, t: 0, fired: 0, landed: 0, jWin: 0, fWin: 0, jDealt: 0, fDealt: 0, kill: 0, ons: 0, armedT: 0 };
   for (let seed = 1; seed <= SEEDS; seed++) {
     // 자리: 사람 자리(player) = 상대 · AI 자리(enemy) = 일본 인물
     const G = newRound({ weapon: fw, weapon2: J.weapon, seed, difficulty: J.ai.level, persona: J.ai.persona, revive: J.revive, walls: true, ...(walker ? {} : { AI2Class: AI, persona2: F.ai.persona, difficulty2: F.ai.level, revive2: F.revive }) });
@@ -49,6 +49,7 @@ for (const jid of jArg.split(',')) for (const fid of fArg.split(',')) {
     for (; i < SIM / DT; i++) {
       const pa = p.alive;
       G.step();
+      if (G.ai.iaiArm?.armed) R.armedT += DT; // 준비(발도 대기) 동안 (10/25 22:3x 재기)
       if (pa && !p.alive && G.ai.secretRun) R.kill++; // 고노센 실행 · 굳음 동안 상대가 죽음
       if (!p.alive || !e.alive) break;
     }
@@ -58,18 +59,21 @@ for (const jid of jArg.split(',')) for (const fid of fArg.split(',')) {
     if (!e.alive && p.alive) R.fWin++;
     const st = G.ai.stats.secrets?.goNoSen ?? { fired: 0, landed: 0 };
     R.fired += st.fired; R.landed += st.landed;
+    R.ons += G.ai.iaiArm?.ons ?? 0; // 준비가 켜진 수 (secret.js IaiArm.ons — 판정에는 안 씀)
     G.world.free();
   }
   rows.push(R);
 }
 const S = CONFIG.SECRET;
 console.log(`[AI 고노센] AI 들어옴 ${S.gnsEnterAI ? '켬' : '끔'} · 긴 칼 상대 규칙 ${S.gnsLong ? '켬' : '끔'} · 상대 AI 경계 ${S.gnsWary ? '켬' : '끔'} · B 막힘 ${['끔', '켬', '켬 + 앞 가림'][S.gnsEnterBlock]} · 달려듦 ${S.foeChargeSpeed} m/s (${S.foeChargeAvg ? "0.6 s 평균" : "한 스텝"}) · C 칼끝 ${S.gnsEnterOpen ? '켬' : '끔'} · 씨앗 ${SEEDS} × ${SIM} s · 걷는 봇 스틱 ${GO}`);
-console.log('| 일본 AI | 상대 | 판 | 고노센 낸 · 맞힘 | 30 s 당 낸 | 고노센 동안 상대 죽음 | 일본 이김 · 상대 이김 | 준 · 입은 심각도 (일본) |');
-console.log('|---|---|---|---|---|---|---|---|');
-const T = { rounds: 0, t: 0, fired: 0, landed: 0, jWin: 0, fWin: 0, jDealt: 0, fDealt: 0, kill: 0 };
+console.log(`  고노센 준비 ${S.gnsReady ?? 'dist'} · 준비 ${S.iaiArmTime} s · 들어옴 창 ${S.gnsWalkIn ?? 1 ? '켬' : '끔'} (10/25 22:3x)`);
+console.log('| 일본 AI | 상대 | 판 | 준비 켜짐 / 30 s · 준비 시간 몫 | 고노센 낸 · 맞힘 | 30 s 당 낸 | 고노센 동안 상대 죽음 | 일본 이김 · 상대 이김 | 준 · 입은 심각도 (일본) |');
+console.log('|---|---|---|---|---|---|---|---|---|');
+const T = { rounds: 0, t: 0, fired: 0, landed: 0, jWin: 0, fWin: 0, jDealt: 0, fDealt: 0, kill: 0, ons: 0, armedT: 0 };
+const armCell = (R) => `${f2((30 * R.ons) / R.t)} · ${Math.round((100 * R.armedT) / R.t)} %`;
 for (const R of rows) {
   const who = R.fid.startsWith('walker:') ? `걷는 봇 (${R.fw})` : `${CHARACTERS_BY_ID[R.fid].name} (${R.fw})`;
-  console.log(`| ${CHARACTERS_BY_ID[R.jid].name} | ${who} | ${R.rounds} | ${R.fired} · ${R.landed} | ${f2((30 * R.fired) / R.t)} | ${R.kill} | ${R.jWin} · ${R.fWin} | ${f1(R.jDealt)} · ${f1(R.fDealt)} |`);
+  console.log(`| ${CHARACTERS_BY_ID[R.jid].name} | ${who} | ${R.rounds} | ${armCell(R)} | ${R.fired} · ${R.landed} | ${f2((30 * R.fired) / R.t)} | ${R.kill} | ${R.jWin} · ${R.fWin} | ${f1(R.jDealt)} · ${f1(R.fDealt)} |`);
   for (const k of Object.keys(T)) T[k] += R[k];
 }
-console.log(`| 합 | | ${T.rounds} | ${T.fired} · ${T.landed} | ${f2((30 * T.fired) / T.t)} | ${T.kill} | ${T.jWin} · ${T.fWin} | ${f1(T.jDealt)} · ${f1(T.fDealt)} |`);
+console.log(`| 합 | | ${T.rounds} | ${armCell(T)} | ${T.fired} · ${T.landed} | ${f2((30 * T.fired) / T.t)} | ${T.kill} | ${T.jWin} · ${T.fWin} | ${f1(T.jDealt)} · ${f1(T.fDealt)} |`);

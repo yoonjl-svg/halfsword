@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { stickTurnState, stickTurnStep, STICK_DEAD } from '../../src/stick_turn.js';
-import { SECRET, SKILL } from '../../src/config.js';
+import { SECRET, SKILL, ARENA } from '../../src/config.js';
 
 const F = 1 / 60; // 표본 간격 (60 fps 프레임)
 const R = Math.PI / 180;
@@ -122,7 +122,7 @@ test('사람 몸: 무장 창이 열린 동안 스틱 반 바퀴 → 참 (공격 
   G.before = () => W.update(DT, !!P.skill.sec);
   // 창 전: 돌려도 거짓 (셈 없음)
   assert.equal(W.spinStick(F, { x: 1, y: 0 }, true), false);
-  while (G.t < 3 && W.open?.ctx?.ev !== 'spin') G.step();
+  while (G.t < ARENA.startHold + SECRET.ibSpin.armTime + 0.5 && W.open?.ctx?.ev !== 'spin') G.step(); // 무장 시계는 판 시작 정지가 끝나야 감 (10/27 23:0x)
   assert.equal(W.open?.ctx?.ev, 'spin');
   assert.equal(W.stickOwns(), true);
   const turn = (can = true) => {

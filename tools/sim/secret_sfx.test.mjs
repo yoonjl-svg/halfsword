@@ -126,7 +126,7 @@ test('사람 준비 · 창은 0: 고노센 준비(발도 대기) · 싱지르 �
     const PS = new PlayerSecretWatch(g.player, g.enemy);
     try {
       let ready = false;
-      for (let i = 0; i < Math.round(4 / DT); i++) {
+      for (let i = 0; i < Math.round((CONFIG.ARENA.startHold + Math.max(CONFIG.SECRET.iaiArmTime, CONFIG.SECRET.ibSpin.armTime) + 0.4) / DT); i++) { // 무장 시계는 판 시작 정지 뒤부터 (10/27 23:0x)
         g.step();
         PS.update(DT, !!g.player.skill.sec);
         ready ||= key === 'gonosen' ? PS.iaiArm.armed : !!PS.open;
@@ -211,8 +211,10 @@ test('AI 고노센 (일본 숙련도 5 · AI 실행부 secretGo): 한 번 · g1 
       }
       if (A.secretGo(A.secret, {})) fired++;
     }
-    const before = reqs.length;
     g.before = null;
+    g.step(); // 발도는 다음 afterStep 에 시작해 그때 소리를 부른다 (10/25 22:3x 부터 천천히 걸어 듦 창이 꺼져 저절로 낸 고노센이 앞서 소리를 내 두지 않음)
+    W.tick();
+    const before = reqs.length;
     for (let i = 0; i < 120 * 3; i++) { g.step(); W.tick(); }
     const firedAll = Object.values(A.stats.secrets ?? {}).reduce((n, x) => n + x.fired, 0);
     assert.ok(fired === 1 && firedAll >= 1, `낸 수 ${fired} / ${firedAll}`);
@@ -234,13 +236,13 @@ test('AI 싱지르 (롤랑 — 이베리아 숙련도 6 · spinGo 가 skill.secr
     assert.equal(g.ai.secret?.name, 'ibSpin');
     let fired = null, armedSeen = false, back = false, enemySkill0 = g.enemy.skill.secretBursts, ai0 = g.ai.secretBursts ?? 0;
     g.before = () => {
-      P.move.set(0, g.t > 3 ? 0.7 : 0);
+      P.move.set(0, g.t > CONFIG.ARENA.startHold + CONFIG.SECRET.ibSpin.armTime + 0.3 ? 0.7 : 0); // 무장(판 시작 정지 뒤 armTime — 10/27 23:0x) 뒤 다가감
       if (g.ai.spinArm?.armed && fired == null) armedSeen = true;
       if (g.ai.secretRun?.stage === 'spin' && fired == null) fired = g.t;
       if (fired != null && !g.ai.secretRun && g.ai.mode !== 'secret') back = true;
     };
     let quietWhileArmed = true;
-    while (g.t < 9 && !back) {
+    while (g.t < CONFIG.ARENA.startHold + 9 && !back) {
       g.step();
       W.tick();
       if (fired == null && reqs.length) quietWhileArmed = false;
@@ -271,7 +273,7 @@ test('AI 모르트슐라크 (독일 숙련도 5 · mordTick → mordGo): 누르�
     for (let i = 0; i < Math.round(0.3 / DT); i++) { g.step(); W.tick(); }
     E.barge = { phase: 'press' };
     let opened = null, fired = null, ended = null, quietBeforeFire = true;
-    for (let i = 0; i < Math.round(3.0 / DT); i++) {
+    for (let i = 0; i < Math.round((CONFIG.SECRET.mordPress + 1.5) / DT); i++) { // 누르기 mordPress(실제 2 s · 게임 2.2) 뒤 창 · 냄 · 끝까지
       g.step();
       W.tick();
       if (opened == null && ai.press.wins > 0) opened = g.t;

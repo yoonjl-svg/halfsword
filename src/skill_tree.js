@@ -312,7 +312,8 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     $('#nodeEffect').textContent = st === 'closed' ? '준비 중입니다.' : nodeEff(school, n);
     // 입력 줄 (사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어' · 10/25 17:3x 도식 '입력: …' — 칸 cmd · skill_tree_data.js NODE_CMD): 카드 맨 아래 온 폭 한 줄 · 없거나 준비 중이면 숨김
     const cmd = st === 'closed' ? '' : n.cmd ?? '';
-    $('#nodeCmdText').textContent = cmd;
+    // 괄호 화살표가 붙은 낱말(예 '긋기(↻/↺)로' · '움직이면(↑/↓)')은 줄을 나누지 않음 — 10/25 사장님 비기 글이 두 줄이 되며 '(↻/' · '↺)' 로 갈라지던 것(글은 그대로 · textContent 같음)
+    $('#nodeCmdText').replaceChildren(...cmd.split(/(\S*\([^)]*\)\S*)/).filter(Boolean).map((t) => (t.includes('(') ? Object.assign(document.createElement('span'), { className: 'cmd-nb', textContent: t }) : document.createTextNode(t))));
     $('#nodeCmd').hidden = !cmd;
     $('#nodeMeta').textContent = `${kind} · ${TRADITIONS[school].nameKo} 유파${test ? '' : ` · ${STATE_KO[st]}`}`;
     $('#nodeMeta').dataset.tier = cat.tier;

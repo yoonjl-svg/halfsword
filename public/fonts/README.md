@@ -11,7 +11,7 @@
 | `Cinzel-latin.woff2` | Cinzel (판 2.000, 굵기 축 400–900 한 파일) — 구글 폰트의 라틴 조각 | https://fonts.gstatic.com/s/cinzel/v26/8vIJ7ww63mVu7gt79mT7.woff2 | 25 904 | `09941fb1c169c38fd414536b37690057fc01b3117a5c63dd6571186540c8f370` |
 | `Cinzel-latin-ext.woff2` | 같음 — 라틴 확장 조각 | https://fonts.gstatic.com/s/cinzel/v26/8vIJ7ww63mVu7gt7-GT7LEc.woff2 | 14 540 | `8fc2606f8ae6c569f444e138dba052d9a6e3f0657f9031796503bbb94eced600` |
 | `NotoSansTC-hanja.woff2` | Noto Sans TC Regular (판 2.004) — **프리텐다드에 없는 글자 보충**: 중국 유파 원어의 한자 43 자 + 로마 숫자 Ⅰ·Ⅱ (45 자 — 글자표는 빈칸 하나 더해 46) | 구글 폰트가 그 글자만 담아 준 파일(`text=`) — 아래 '다시 받기' | 9 384 | `0ada276de9deb429b168656049c4ea1f3a93b104066680b443005b94e6305323` |
-| `NotoSansMath-symbols.woff2` | Noto Sans Math Regular (판 3.000) — 보충: ▮ ▯(독일 감아 들기 칸) · ↻(돌려 달라는 안내) | 같은 방법 | 3 000 | `c6a6a3f26cb0697cee967f12c12939cbc581c776ce49f6dedb1408391d1425cd` |
+| `NotoSansMath-symbols.woff2` | Noto Sans Math Regular (판 3.000) — 보충: ▮ ▯(독일 감아 들기 칸) · ↻(돌려 달라는 안내) · ↺(10/25 싱지르 입력 줄 '원을 그리며 긋기(↻/↺)' — 같은 방법으로 다시 받음) | 같은 방법 | 3 144 | `0e7673a865f42318780a8dcfe7ad1213b170fbb28d4f5718b84008f1421af443` |
 
 - 받은 때: 2026-10-14 01:41–01:51 UTC (한국 시간 10:41–10:51). 받은 뒤 `file` 로 WOFF2 임을 확인했다. 프리텐다드 세 파일과 라이선스의 해시는 jsDelivr 꾸러미 목록(`data.jsdelivr.com/v1/packages/npm/pretendard@1.3.9`)이 적은 해시와 같다.
 - **프리텐다드**: 만든 이 길형진(Kil Hyung-jin) · Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard), **with Reserved Font Name Pretendard** · **SIL Open Font License 1.1** — 원문 `Pretendard-OFL.txt`(꾸러미의 `dist/LICENSE.txt` 그대로). 예약 글꼴 이름이 있어 **우리가 고친 판(덜어 낸 서브셋 등)에는 'Pretendard' 이름을 쓸 수 없다** — 그래서 만든 이가 꾸러미에 함께 낸 서브셋을 그대로 싣는다(게임 글만 뽑은 서브셋을 만들지 않은 까닭).

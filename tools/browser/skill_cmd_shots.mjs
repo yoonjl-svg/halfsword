@@ -4,8 +4,10 @@
 //      수직 긋기 제비 베기(J9 — 잠김) · 막기 + 스틱 격살(C9 — 익힘) · 740 × 360 싱지르(B7 — 잠김 · 그 화면에서 가장 빠듯한 카드).
 //      보는 것: 입력 줄 글 = '입력: ' + 칸 cmd · 한 줄 · 카드 맨 아래(보이는 것 가운데 가장 아래) · 없는 칸은 숨김 ·
 //      그 줄을 그린 글꼴(크롬 개발 도구 CSS.getPlatformFontsForNode — 화살표 · 느낌표까지 프리텐다드여야, 시스템 글꼴로 넘어가면 실패)
+//   10/25 22:3x · 23:1x: 비기 칸(사장님 글 — 33 자 넘음)은 두 줄까지 받음 · 그림에 J5 · I4(844 × 390) · J5(680 × 360) 더함
 //   ② 모든 칸(다섯 유파 × 11) × 화면 여섯(폰 가로 844 × 390 · 740 × 360 · 844 × 340 · 680 × 360 · 작은 가로 568 × 320 · PC 1280 × 720): 입력 줄 한 줄 · 줄 끝 남는 폭 · 카드 넘침.
 //      넘침은 844 × 390 · 740 × 360 · 568 × 320 · PC 에서 0 이어야(걸리면 실패) · 844 × 340 · 680 × 360 은 적어만 둔다(값 · '배우기'가 있는 안 배운 칸 몇이 원래 빠듯 — 문서 §4)
+//      10/27: 낮은 화면에서 카드가 '스킬' 제목 줄까지 덮어(src/lobby.css) 844 × 340 · 680 × 360 도 0 이어야 · 그림에 B7(844 × 340 · 680 × 360) 더함
 //  실행: vite build(+ tools/pwa/build.mjs) → vite preview 를 띄운 뒤  node tools/browser/skill_cmd_shots.mjs http://127.0.0.1:5528 [출력 폴더(기본 docs/handoff/skill_input_2026-10-25)]
 //  출력(WebP · 화면 배율 2): card_G10_844x390 · card_I2_844x390 · card_J9_844x390 · card_C9_844x390 · card_B7_740x360 · card_G10_680x360. 크롬 경로 PW_CHROMIUM (기본 /opt/pw-browsers/chromium) · 끝 코드 0 = 모두 맞음 · 콘솔 오류 0
 import { chromium } from 'playwright';
@@ -23,10 +25,10 @@ const toWebp = (png, name) => { execFileSync('python3', ['-I', '-c', "import sys
 const learned = { german: ['G1', 'G2', 'G5', 'G8', 'G3'], iberian: ['B1', 'B10'], chinese: ['C1', 'C3', 'C7', 'C6', 'C8', 'C9'] };
 const SAVE = { version: 1, coins: 640, heads: 12, titles: [], title: '', acquisitions: Object.entries(learned).flatMap(([s, ids]) => ids.map((id) => ({ receipt: `skill:${s}:${id}`, kind: 'skill', paid: { coins: 100, heads: 0 } }))) };
 const SIZES = [
-  { w: 844, h: 390, must: true, shots: [['german', 'G10', 'locked'], ['italian', 'I2', 'locked'], ['japanese', 'J9', 'locked'], ['chinese', 'C9', 'learned']] },
+  { w: 844, h: 390, must: true, shots: [['german', 'G10', 'locked'], ['italian', 'I2', 'locked'], ['japanese', 'J9', 'locked'], ['chinese', 'C9', 'learned'], ['japanese', 'J5', 'locked'], ['italian', 'I4', 'locked']] }, // J5 · I4 — 10/25 22:3x 사장님 비기 글(두 줄)
   { w: 740, h: 360, must: true, shots: [['iberian', 'B7', 'locked']] },
-  { w: 844, h: 340, must: false, shots: [] },
-  { w: 680, h: 360, must: false, shots: [['german', 'G10', 'locked']] },
+  { w: 844, h: 340, must: true, shots: [['iberian', 'B7', 'locked']] }, // 10/27 — 카드가 제목 줄까지 덮어 넘침 0 이어야(전 적어만 둠)
+  { w: 680, h: 360, must: true, shots: [['german', 'G10', 'locked'], ['japanese', 'J5', 'locked'], ['iberian', 'B7', 'locked']] }, // 10/27 — 넘침 0 이어야(전 적어만 둠)
   { w: 568, h: 320, must: true, shots: [] },
   { w: 1280, h: 720, must: true, shots: [] },
 ];
@@ -36,8 +38,9 @@ const readCard = () => {
   const shown = [...box.querySelectorAll('*')].filter((k) => !k.closest('[hidden]') && !k.classList.contains('detail-close') && k.getBoundingClientRect().height > 0);
   const lowest = shown.reduce((a, k) => (k.getBoundingClientRect().bottom > (a?.getBoundingClientRect().bottom ?? -1) + 0.5 ? k : a), null);
   // room = 한 줄일 때 글 끝에서 줄 오른쪽 끝까지 남는 폭(px) — 가장 긴 줄이 어느 화면에서 얼마나 남는지
+  // lines = 줄 수 — 조각 사각형의 서로 다른 윗변 수(10/25 괄호 화살표 낱말을 한 덩이 span 으로 감싸며 한 줄에도 사각형이 여럿 — skill_tree.js cmd-nb)
   const room = cmd.hidden ? null : Math.round(cmd.getBoundingClientRect().right - parseFloat(getComputedStyle(cmd).paddingRight) - txt.getBoundingClientRect().right);
-  return { state: box.dataset.state, title: r.getElementById('nodeTitle').textContent, cmd: cmd.hidden ? null : cmd.textContent, text: txt.textContent, lines: cmd.hidden ? 0 : txt.getClientRects().length, room, wide: cmd.scrollWidth > cmd.clientWidth + 0.5, last: !cmd.hidden && (lowest === cmd || cmd.contains(lowest)), over: box.scrollHeight - box.clientHeight };
+  return { state: box.dataset.state, title: r.getElementById('nodeTitle').textContent, cmd: cmd.hidden ? null : cmd.textContent, text: txt.textContent, lines: cmd.hidden ? 0 : new Set([...txt.getClientRects()].map((q) => Math.round(q.top))).size, room, wide: cmd.scrollWidth > cmd.clientWidth + 0.5, last: !cmd.hidden && (lowest === cmd || cmd.contains(lowest)), over: box.scrollHeight - box.clientHeight };
 };
 // 입력 줄을 실제로 그린 글꼴 (크롬 개발 도구 — 글자 수 · 글꼴 이름). 화살표 · 느낌표가 프리텐다드에 있어 시스템 글꼴(두부 상자 · 다른 꼴)로 넘어가지 않는지 본다
 const platformFonts = async (p, cdp, id) => {
@@ -86,7 +89,8 @@ for (const { w, h, must, shots } of SIZES) {
       await p.evaluate(() => document.fonts.ready);
       await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
       C.fonts = await platformFonts(p, cdp, id);
-      const other = Object.keys(C.fonts).filter((k) => !/^Pretendard/.test(k));
+      // ↻ · ↺ 는 프리텐다드에 없어 보충 조각 Noto Sans Math 가 그린다(10/25 싱지르 입력 줄 — index.html 글꼴 줄 · docs/ui/webfont_2026-10-14.md) — 그 글자가 있는 줄만 받음
+      const other = Object.keys(C.fonts).filter((k) => !/^Pretendard/.test(k) && !(k === 'Noto Sans Math' && /[↻↺]/.test(C.cmd ?? '')));
       if (other.length) errors.push(`${size} ${id} 입력 줄을 프리텐다드 밖 글꼴로 그림: ${JSON.stringify(C.fonts)}`);
     }
     report.push({ size, id, ...C });
@@ -109,7 +113,9 @@ for (const { w, h, must, shots } of SIZES) {
       await p.evaluate((nid) => document.querySelector('#gameEntrance').shadowRoot.querySelector(`.tree-node[data-node="${nid}"]`).click(), n.id);
       const C = await p.evaluate(readCard);
       rows.push({ id: n.id, ...C });
-      if (n.cmd && C.state !== 'closed' && (C.cmd !== `입력: ${n.cmd}` || C.lines !== 1 || C.wide || C.room < 0 || !C.last)) errors.push(`${size} ${n.id} 입력 줄 ${C.lines} 줄 · 남는 폭 ${C.room}px · 맨 아래 ${C.last} · ${JSON.stringify(C.cmd)}`);
+      // 비기 칸은 10/25 22:3x · 23:1x 사장님 글(33 자 넘음 — 카드에서 두 줄까지 · docs/text/editing_guide.md 입력 줄) · 그 밖은 한 줄
+      const maxLines = n.cat === 'secret' ? 2 : 1;
+      if (n.cmd && C.state !== 'closed' && (C.cmd !== `입력: ${n.cmd}` || C.lines > maxLines || C.wide || (C.lines === 1 && C.room < 0) || !C.last)) errors.push(`${size} ${n.id} 입력 줄 ${C.lines} 줄 · 남는 폭 ${C.room}px · 맨 아래 ${C.last} · ${JSON.stringify(C.cmd)}`);
       if (!n.cmd && C.cmd !== null) errors.push(`${size} ${n.id} 입력 줄이 없어야`);
       if (must && C.over > 1) errors.push(`${size} ${n.id} 카드 넘침 +${C.over}px`);
       await p.evaluate(() => document.querySelector('#gameEntrance').shadowRoot.querySelector('.detail-close').click());

@@ -14,6 +14,7 @@ test('기본값 · 정의: 사람 켬 · AI 켬 · 긴 칼 상대 규칙 켬(10/
   assert.equal(SECRET.gnsEnter, 1);
   assert.equal(SECRET.gnsEnterAI, 1);
   assert.equal(SECRET.gnsLong, 1);
+  assert.equal(SECRET.gnsWalkIn, 0); // 10/25 22:3x 사장님 입력 글(천천히 걸어 듦 없음) · 22:5x '끈 채로' — 들어옴 사건은 gnsWalkIn 1 일 때만 (아래 실제 몸 시험은 켜고 봄)
   assert.equal(SECRET.gnsEnterClosing, undefined); // 다가옴은 상대 ↔ 나 견줌 — 문턱 수 없음
   const S = playerSecretDef('japanese');
   assert.ok([].concat(S.when).includes('foeEnter'));
@@ -121,19 +122,20 @@ function walkIn(vals, { meWalks = false } = {}) {
   });
 }
 
-test('실제 몸: 준비된 채 상대가 걸어 들어오면 창이 한 번 (들어옴) · ?gnsEnter=0 이면 창 없음 (옛 판 그대로)', () => {
-  const on = walkIn({});
-  assert.ok(on.armedAt != null && on.armedAt <= SECRET.iaiArmTime + 0.1, `준비 ${on.armedAt}`);
+test('실제 몸: (gnsWalkIn 1) 준비된 채 상대가 걸어 들어오면 창이 한 번 (들어옴) · ?gnsEnter=0 이면 창 없음 (옛 판 그대로) · 기본(gnsWalkIn 0)도 창 없음', () => {
+  const on = walkIn({ gnsWalkIn: 1 });
+  assert.ok(on.armedAt != null && on.armedAt <= CONFIG.ARENA.startHold + SECRET.iaiArmTime + 0.1, `준비 ${on.armedAt}`); // 판 시작 정지 뒤부터 셈 (10/27 23:0x)
   assert.equal(on.wins[0]?.ev, 'enter', JSON.stringify(on.wins)); // 첫 창 = 선을 넘을 때
   assert.equal(on.wins.filter((w) => w.ev === 'enter').length, 1, JSON.stringify(on.wins)); // 한 번만
   assert.ok(on.wins[0].d <= on.L + 0.05 && on.wins[0].d > on.L - 0.2, `${on.wins[0].d} L ${on.L}`);
-  const off = walkIn({ gnsEnter: 0 });
-  assert.equal(off.wins.filter((w) => w.ev === 'enter' || w.d > on.foeReach).length, 0, JSON.stringify(off.wins)); // 상대 칼 거리 밖에선 창 없음 — 들어온 뒤(멈추며 칼이 흔들려 '든' 사건) 말고는
-  assert.ok(off.end <= 1.45); // 창 없이 가까이 붙음 (사장님이 본 그대로)
+  for (const off of [walkIn({ gnsWalkIn: 1, gnsEnter: 0 }), walkIn({})]) {
+    assert.equal(off.wins.filter((w) => w.ev === 'enter' || w.d > on.foeReach).length, 0, JSON.stringify(off.wins)); // 상대 칼 거리 밖에선 창 없음 — 들어온 뒤(멈추며 칼이 흔들려 '든' 사건) 말고는
+    assert.ok(off.end <= 1.45); // 창 없이 가까이 붙음 (10/25 01:3x 사장님이 본 그대로 — 22:3x 사장님 입력 글은 천천히 걸어 듦에 창이 없음)
+  }
 });
 
 test('실제 몸: 내가 걸어 들어가 선을 넘은 것은 들어옴이 아님 (상대는 서 있음)', () => {
-  const me = walkIn({}, { meWalks: true });
+  const me = walkIn({ gnsWalkIn: 1 }, { meWalks: true });
   assert.ok(me.armedAt != null);
   assert.equal(me.wins.filter((w) => w.ev === 'enter').length, 0, JSON.stringify(me.wins));
 });

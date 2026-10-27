@@ -385,7 +385,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
 //   · 맞음은 쓸린 자리(스텝마다 칼날 선분 + 그 사이 조각)로, 상처는 instantWound(에너지 instantJ × hitMul). 운동학 칼·팔 ↔ 상대 몸·칼 충돌은 끈다(instantGhost).
 //   · 끝나면 dynamic 으로 되돌리고(속도 = 가슴, 각속도 0) 경직 동안 덧씌우기 칸(skill.thrustPose)으로 따라 베기 끝 자세를 붙잡는다(앞으로 뻗은 채 굳음).
 //   · 잔상: f.instantArc(kind 'iai')를 sword_trail.js 가 청백색 초승달 + 0.08 s 흰 섬광 선으로 그리고 main.js 가 화면을 아주 짧게 번쩍인다.
-//  대기 자세(10/10 02:4x 사장님 수정): 일본 AI 가 상대 간격 밖에 SECRET.iaiArmTime 초 머물면 웅크린 발도 대기(iaiReadyPose — 덧씌우기 칸)로 들어가고,
+//  대기 자세(10/10 02:4x 사장님 수정): 일본 AI 가 상대 간격 밖에 SECRET.iaiArmTime 초 머물면(10/25 22:3x 부터 거리와 상관없이 침착하게 — secret.js gnsArmTick) 웅크린 발도 대기(iaiReadyPose — 덧씌우기 칸)로 들어가고,
 //   고노센은 그 자세에서만 나간다(secret.js IaiArm · cond.armed). 플레이어는 자세를 바꾸지 않고 '고노센 준비' 표시만.
 // ─────────────────────────────────────────────────────────────
 const D2R = Math.PI / 180;
@@ -792,6 +792,48 @@ export function iaiReadyPose(f, on, dt) {
   const R = SECRET.iaiReady;
   const th = f.skill.thrustPose;
   th.w = w;
+  th.hand[0] = R.hand[0];
+  th.hand[1] = R.hand[1];
+  th.hand[2] = R.hand[2];
+  const D = dirOf(R.yaw, R.el);
+  th.dir[0] = D.x;
+  th.dir[1] = D.y;
+  th.dir[2] = D.z;
+  th.pelvisYaw = R.body.pelvisYaw * D2R;
+  th.chestYaw = R.body.chestYaw * D2R;
+  th.pitch = R.body.pitch * D2R;
+  th.drop = R.body.drop;
+}
+
+/**
+ * 사람 고노센 준비 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch · AI iaiReadyPose 와 같은 자세 SECRET.iaiReady · 비기 자세 stance.iai):
+ *  on = 준비됨(PlayerSecretWatch iaiArm.armed) · handFree = 사람이 칼을 쥐고 있음(손가락 움직임 inputActive · 막기 단추 · 휘두름).
+ *  ① 몸 웅크림 = f.iaiReadyW(stanceTick 의 골반 낮춤 · 몸통 숙임 — AI 와 같은 칸): 켜짐 0.35 s(AI 와 같음) · 풀림 SECRET.gnsCrouchOut 초(시간 사다리 — 공격 · 막기 · 맞음 · 비기로 준비가 풀릴 때).
+ *   준비된 채 걸어도 그대로(AI 도 웅크린 채 걷는다).
+ *  ② 손 · 칼 · 몸 비틂(왼 허리 발도 대기 — 덧씌우기 칸 thrustPose)은 손이 쉴 때만: 칼을 쥐면 곧장 0(입력을 잠그지 않음 — 손가락이 칼을 그대로 끔) · 놓으면 0.35 s 에 다시.
+ *   그래서 손을 쉬고 기다리다 낸 발도는 그 자세(왼 허리)에서 나간다(requestIai player 길 — 지금 손 → 왼 허리 → 가로, iaiPlayerTime 그대로).
+ *  ③ 탭 · 손잡이 찍기 · 비기 · 약한 자세 간격 맞추기가 덧씌우기 칸을 쓰는 동안은 칸을 건드리지 않음(그 동작이 칸을 가짐) · 발도 중이면 0(AI 와 같음).
+ *  AI 와 다른 것: 들어갈 때 앞발 내딛기(stance.iai.step)는 안 함 — 사람 발은 스틱만 움직임(2 s 서 있다가 몸이 저절로 상대 쪽으로 나가지 않게).
+ */
+export function iaiReadyPosePlayer(f, on, handFree, dt) {
+  const sk = f.skill;
+  const own = !sk.tap && !sk.pom && !sk.sec && !sk.vitalRange && !sk.vitalRelease;
+  if (iaiBusy(f)) {
+    f.iaiReadyW = 0;
+    f.iaiHandW = 0;
+    return;
+  }
+  const w0 = f.iaiReadyW ?? 0;
+  const h0 = f.iaiHandW ?? 0;
+  if (!on && w0 <= 0 && h0 <= 0) return;
+  const w = on ? Math.min(1, w0 + dt / 0.35) : Math.max(0, w0 - dt / SECRET.gnsCrouchOut);
+  const h = handFree || !on ? (handFree ? 0 : Math.min(h0, w)) : Math.min(w, h0 + dt / 0.35);
+  f.iaiReadyW = w;
+  f.iaiHandW = h;
+  if (!own) return;
+  const R = SECRET.iaiReady;
+  const th = sk.thrustPose;
+  th.w = h;
   th.hand[0] = R.hand[0];
   th.hand[1] = R.hand[1];
   th.hand[2] = R.hand[2];

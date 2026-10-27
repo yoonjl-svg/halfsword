@@ -108,16 +108,16 @@
     "family": "Noto Sans Math",
     "weight": 400,
     "version": "3.000",
-    "subset": "Google Fonts text= subset: U+21BB, U+25AE-25AF",
-    "source": "https://fonts.googleapis.com/css2?family=Noto+Sans+Math&text=%E2%96%AE%E2%96%AF%E2%86%BB",
-    "fontUrl": "https://fonts.gstatic.com/l/font?kit=7Aump_cpkSecTWaHRlH2hyV5UHkD4VDSd1ZXUN5hMZ0&skey=27a26f5b3f2d5ea1&v=v19",
+    "subset": "Google Fonts text= subset: U+21BA-21BB, U+25AE-25AF",
+    "source": "https://fonts.googleapis.com/css2?family=Noto+Sans+Math&text=%E2%96%AE%E2%96%AF%E2%86%BB%E2%86%BA",
+    "fontUrl": "https://fonts.gstatic.com/l/font?kit=7Aump_cpkSecTWaHRlH2hyV5UHkD4VXSd1dXQMthMZyalFs&skey=27a26f5b3f2d5ea1&v=v19",
     "license": "OFL-1.1",
     "licenseFile": "public/fonts/NotoSansMath-OFL.txt",
     "licenseSource": "google/fonts ofl/notosansmath/OFL.txt",
     "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/math)",
-    "retrievedUtc": "2026-10-14T01:51Z",
-    "bytes": 3000,
-    "sha256": "c6a6a3f26cb0697cee967f12c12939cbc581c776ce49f6dedb1408391d1425cd",
+    "retrievedUtc": "2026-10-25T13:46Z",
+    "bytes": 3144,
+    "sha256": "0e7673a865f42318780a8dcfe7ad1213b170fbb28d4f5718b84008f1421af443",
     "unitsPerEm": 1000
   }
 ]

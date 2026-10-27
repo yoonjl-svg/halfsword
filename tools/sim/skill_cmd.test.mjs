@@ -9,13 +9,14 @@
 //  ③ 글이 코드와 맞는지: 기본 동작 길(ai_techniques.js TECH — 길 방향 → 화살표 · 긋기 꼴(수평 · 수직 · 사선)) · 고유 공격 표(unique_assist.js PLAYER_UNIQUE — 스틱 쪽 · 기본 동작 · 앞 동작 조건) ·
 //     비기 조건(schools.js playerSecretDef · config SECRET 기본값) · 걸음 스위치(config GAIT) · 받는 입력(탭도 긋기도 되면 '공격', 긋기만이면 '긋기', 탭만이면 '탭' — unique_assist.js · fighter.js · main.js 자리).
 //     조작이 바뀌면 여기가 먼저 깨진다 → 글(NODE_CMD)과 docs/text/skill_cmd_2026-10-24.md 를 함께 고친다
+//  ④ 10/25 22:3x · 23:1x 사장님 확정 비기 글 다섯(I4 · B7 · J5 · C9 · G10 — OWNER): 글 그대로 · 창이 열림 = '비기 활성화' · 기다리는 시간 숫자 = config 값 · '움직이면(↑/↓)' 등 — ② 의 33 자 · 숫자 · 기호 규칙 밖(두 줄 · docs/text/editing_guide.md 입력 줄)
 //  node --test tools/sim/skill_cmd.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const D = await import('../../src/skill_tree_data.js');
-const { SECRET, GAIT, SKILL } = await import('../../src/config.js');
+const { SECRET, GAIT, SKILL, realS } = await import('../../src/config.js'); // realS: 글 속 초 = 실제 초 (표준 시간 10/25 — 게임 값 × 1.1)
 const { PLAYER_UNIQUE } = await import('../../src/unique_assist.js');
 const { TECH_BY_NAME, G } = await import('../../src/ai_techniques.js');
 const { playerSecretDef } = await import('../../src/schools.js');
@@ -25,6 +26,15 @@ const all = () => D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).map((n) => ({ s, n 
 const cmdOf = (school, id) => D.nodeOf(school, id).cmd;
 // 정해진 입력으로 내는 칸 (나머지는 cmd 없음)
 const WITH_CMD = ['G1', 'G2', 'G5', 'G8', 'G7', 'G10', 'I2', 'I7', 'I6', 'I9', 'I4', 'B2', 'B3', 'B4', 'B5', 'B7', 'J6', 'J7', 'J9', 'J5', 'C3', 'C5', 'C6', 'C9'];
+// 10/25 22:3x 사장님 확정 비기 글 (감독 전달 — 사장님 원문 '아무 행동 없이 2초 기다리면 준비 활성화, …' · '4] 이베리아와 이탈리아 비기도 활성화 앞에 '비기'를 붙여줘' · '5] 이베리아 비기도 기다리는 시간 2초로'):
+//  글 그대로 — ② 의 도식 규칙(33 자 · 숫자 없음 · 기호 · 낱말) 밖. 코드 조건은 아래 비기 시험이 본다. G10 은 23:1x
+const OWNER = {
+  I4: '칼 길이 바깥에서 칼을 맞대고 움직이면(↑/↓) 비기 활성화',
+  B7: '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 원을 그리며 긋기(↻/↺)로 발동',
+  J5: '아무 행동 없이 2초 기다리면 준비 활성화, 상대가 내 간격에서 공격을 시도하거나 빠르게 움직이면 비기 활성화',
+  C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동',
+  G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x (감독 전달) — 글 속 시간 = SECRET.mordPress
+};
 
 // ── 도식 낱말 ──
 const ARROWS = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘']; // 화면 쪽 (손가락 · 스틱) — 0° 부터 45° 씩 (x 오른쪽 · y 위 = 손 목표 handOffset · 자세 패드 G 와 같은 축)
@@ -68,13 +78,19 @@ test("화면 이름표 = '입력:' (사장님 ''커맨드'는 '입력'으로') �
   assert.ok(!/detail-cmd-label">(조작|커맨드)/.test(t), '옛 이름표 없음');
 });
 
-test("글 꼴: 한 줄(33 자 안) · 숫자 · 원어 글자 없음 · 쓰는 기호(화살표 · / · 괄호 · 쉼표 · !)만 · 손 낱말(긋기 · 탭 — '베기' · '찌르기' 없음) · 화살표 꼴 = 긋기 꼴 · 효과 글(eff)과 다름", () => {
+test("글 꼴: 한 줄(33 자 안) · 숫자 · 원어 글자 없음 · 쓰는 기호(화살표 · / · 괄호 · 쉼표 · !)만 · 손 낱말(긋기 · 탭 — '베기' · '찌르기' 없음) · 화살표 꼴 = 긋기 꼴 · 효과 글(eff)과 다름 (사장님 확정 비기 글 넷은 글 그대로 — 아래)", () => {
   for (const { n } of all()) {
     if (n.cmd === undefined) continue;
     const c = n.cmd, id = `${n.id} ${c}`;
     assert.equal(typeof c, 'string', n.id);
     assert.equal(c, c.trim(), `${id} — 앞뒤 빈칸`);
     assert.ok(!/\s{2}/.test(c), `${id} — 겹 빈칸`);
+    assert.notEqual(c, n.eff, n.id);
+    if (OWNER[n.id]) {
+      assert.equal(c, OWNER[n.id], `${n.id} — 사장님 확정 글 그대로 (10/25 22:3x)`);
+      assert.ok(!/[\p{Script=Latin}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(c), `${id} — 원어 글자`);
+      continue;
+    }
     assert.ok([...c].length <= 33, `${id} — ${[...c].length} 자 (680 × 360 카드에서 '입력:' 과 한 줄 — tools/browser/skill_cmd_shots.mjs 가 실제 폭을 잰다)`);
     assert.ok(!/[0-9０-９]/u.test(c), `${id} — 숫자`);
     assert.ok(!/[\p{Script=Latin}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(c), `${id} — 원어 글자`);
@@ -99,7 +115,6 @@ test("글 꼴: 한 줄(33 자 안) · 숫자 · 원어 글자 없음 · 쓰는 �
       assert.ok(m[2].split('/').every((a) => CUT_OF_ARROW[a] === m[1]), `${id} — ${m[1]} 긋기(${m[2]}): 화살표 꼴이 다름`);
     }
     for (const m of c.matchAll(/(사선|수직|수평)(.{0,4})/g)) assert.ok(m[2].startsWith(' 긋기('), `${id} — ${m[1]} 뒤엔 ' 긋기(화살표)'`);
-    assert.notEqual(c, n.eff, n.id);
   }
 });
 
@@ -198,47 +213,55 @@ test('걸음 · 막기 칸 글 = 코드 스위치: 뒤 박차기(독일 보법) 
   assert.equal(cmdOf('italian', 'I6'), '막기');
 });
 
-test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · config SECRET 기본값) · 창에서 받는 입력: 탭도 긋기도 → '공격' · 탭만 → '탭' · 원 긋기 → '긋기' · 저절로 → 없음", () => {
+test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · config SECRET 기본값) · 10/25 22:3x · 23:1x 사장님 확정 글 다섯(I4 · B7 · J5 · C9 · G10)은 글 속 시간 · 스틱 · 받는 입력이 코드와 맞는지", async () => {
   // 비기 창: 탭(taps) 또는 긋기(secSwipe — tapOnly 면 긋기는 보통 공격) · 이베리아 원 판은 원 긋기만(atkWin 이 circleOwns 를 뺌) (main.js)
   const main = src('main.js');
   assert.ok(main.includes('const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly;'), 'main.js — 긋기는 tapOnly 가 아닐 때만 비기');
   assert.ok(main.includes('((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo)'), 'main.js — 비기 창 = 탭 · 긋기 · (스틱 · 원)');
   assert.ok(main.includes('!playerSecret.circleOwns()'), 'main.js — 원 판은 탭 · 긋기 하나로 안 남');
-  const slot = (def) => (def.do?.tapOnly ? '탭' : def.do?.spin && SECRET.ibSpin.input === 'attackCircle' ? '원을 그리며 긋기' : '공격');
   const sec = (school) => D.nodesOf(school).find((n) => n.cat === 'secret');
+  /** 글 속 'n초' = 그 기다림 값 (s) */
+  const secs = (c) => +/(\d+(?:\.\d+)?)초/.exec(c)?.[1];
   const de = playerSecretDef('german');
   assert.ok(SECRET.deMord && de.when === 'press' && SECRET.mordPress > 0, '독일 = 밀치기 누르기 (모르트슐라크)');
-  // 밀치기 걸쇠: 붙은 거리에서 스틱을 놓아야(멈춤 — stickY ≤ 0) 걸리고, 그 뒤 앞으로 밀어야 밀치기 (fighter.js closeStep) → '멈췄다 앞으로 이동(↑)'
-  const fighter = src('fighter.js');
-  assert.ok(fighter.includes('const idle = this.stickY <= 0;') && fighter.includes('else if (idle) this.closeArmed = true;'), 'fighter.js closeStep 걸쇠 = 붙은 거리에서 멈춤');
-  assert.equal(sec('german').cmd, `붙은 채 멈췄다 앞으로 이동(↑), 느낌표(!)가 뜨면 ${slot(de)}`);
+  // 10/25 23:3x 밀치기 걸쇠 없앰(CLOSE.latch 0 — 닿는 거리 안에서 밀면 곧장 · fighter.js closeStep) → '붙은 채 … 밀치면(↑)' · 글 속 시간 = mordPress
+  const { CLOSE } = await import('../../src/config.js');
+  assert.equal(CLOSE.latch, 0, "G10 '붙은 채 밀치면' = 놓았다 밀 것 없음");
+  assert.ok(src('fighter.js').includes('push && (this.closeArmed || (!latch && !g?.req))'), 'fighter.js closeStep — 걸쇠 없는 판은 밂이 곧 발사');
+  assert.equal(realS(secs(OWNER.G10)), SECRET.mordPress, 'G10 글 속 시간(실제 초) = SECRET.mordPress');
+  assert.equal(sec('german').cmd, OWNER.G10);
+  // 이탈리아 (10/25 21:0x 조건 · 22:3x 글): 칼끼리 risolutoCover 안에 댄 채(맞대고) 스틱 앞이나 뒤(움직이면(↑/↓)) · 가슴 사이 ≥ 맞닿기 거리(칼 길이 바깥 — lungeGapOk) → 창(비기 활성화) → 공격(탭 · 긋기)
   const it = playerSecretDef('italian');
-  // 10/25 21:0x 사장님 '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때' · '찌르기(탭)로 발동 -> 공격하면 발동' → 조건은 바뀜(SECRET.risolutoStick 'both' · risolutoTap 0 — 끌기도 비기).
-  //  I4 글(NODE_CMD)은 사장님 확인 전이라 옛 글 그대로 — 옛 조건(?risoStick=fwd · ?risoTap=1)에 맞는 글. 새 글 제안 = 확인표 2569 (사장님이 고르시면 이 두 줄을 새 조건 · 새 글로)
-  assert.ok(SECRET.itSecret === 'risoluto' && it.when === 'risoluto' && !it.do.tapOnly && SECRET.risolutoStick === 'both', '이탈리아 = 덮인 채(스틱 앞이나 뒤) 나아가기 → 공격(탭 · 끌기)');
-  const old = { ...SECRET };
-  try {
-    Object.assign(SECRET, { risolutoTap: 1, risolutoStick: 'fwd' });
-    assert.equal(sec('italian').cmd, `칼을 맞댄 채 앞으로 이동(↑), 느낌표(!)가 뜨면 ${slot(it)}`, 'I4 글 = 옛 조건 (사장님 확인 전 — 확인표 2569)');
-  } finally {
-    Object.assign(SECRET, { risolutoTap: old.risolutoTap, risolutoStick: old.risolutoStick });
-  }
+  assert.ok(SECRET.itSecret === 'risoluto' && it.when === 'risoluto' && !it.do.tapOnly && !SECRET.risolutoTap, '이탈리아 = 덮인 채 나아가기 → 공격(탭 · 끌기)');
+  assert.equal(SECRET.risolutoStick, 'both', "I4 '움직이면(↑/↓)' = 스틱 앞이나 뒤");
+  assert.ok(SECRET.risolutoLunge && SECRET.risolutoGap, "I4 '칼 길이 바깥에서' = 런지 간격 조건(가슴 사이 ≥ 맞닿기 거리 — italian_risoluto.js lungeGapOk)");
+  assert.equal(sec('italian').cmd, OWNER.I4);
+  // 이베리아: 칼끝 거리 밖 ibSpin.armTime 초 무장(비기 활성화) → 공격으로 원 한 바퀴(어느 쪽이든 — ↻/↺)
   const ib = playerSecretDef('iberian');
   assert.ok(SECRET.iberianSecret === 'spin' && ib.do.spin && SECRET.ibSpin.input === 'attackCircle', '이베리아 = 무장 → 긋기로 원 한 바퀴');
-  assert.equal(sec('iberian').cmd, `거리 밖에서 버티다 느낌표(!)가 뜨면 ${slot(ib)}`);
+  assert.ok(src('secret.js').includes('this.spinArm.tick(dt, d0 > V.reach,'), "B7 '칼 길이 바깥' = 내 칼끝 거리(reach) 밖에서 무장");
+  assert.equal(realS(secs(OWNER.B7)), SECRET.ibSpin.armTime, 'B7 글 속 시간(실제 초) = SECRET.ibSpin.armTime');
+  assert.equal(sec('iberian').cmd, OWNER.B7);
+  // 일본 (10/25 22:3x · 22:5x): 거리와 상관없이 iaiArmTime 초 이동 입력 · 공격 · 막기 · 맞음 · 비기 없음(아무 행동 없이 — gnsReady 'idle' · 준비된 뒤엔 걸어도 유지) → 준비 → 상대가 칼을 듦 · 헛침(공격을 시도) · 빠르게 움직임(foeCharge) + 내 발도가 닿는 거리(내 간격) → 창(비기 활성화)
   const jp = playerSecretDef('japanese');
-  assert.ok(jp.cond.armed && jp.do.instant && SECRET.iai && !jp.do.tapOnly, '일본 = 발도 대기(상대 칼 거리 밖) → 상대가 칠 때 창 · 탭도 긋기도');
-  assert.equal(sec('japanese').cmd, `거리 밖에서 기다리다 느낌표(!)가 뜨면 ${slot(jp)}`);
+  assert.ok(jp.cond.armed && jp.do.instant && SECRET.iai && !jp.do.tapOnly, '일본 = 발도 대기 → 상대가 칠 때 창 · 탭도 긋기도');
+  assert.equal(SECRET.gnsReady, 'idle', "J5 '아무 행동 없이' = 거리와 상관없이 이동 입력도 없이 (gnsReady 'idle')");
+  assert.equal(realS(secs(OWNER.J5)), SECRET.iaiArmTime, 'J5 글 속 시간(실제 초) = SECRET.iaiArmTime');
+  assert.ok(['foeRaise', 'foeRecover', 'foeCharge'].every((w) => jp.when.includes(w)), "J5 '공격을 시도하거나 빠르게 움직이면' = 칼을 듦 · 헛침 · 달려듦");
+  assert.ok(!SECRET.gnsWalkIn, "J5 글에 '천천히 걸어 들어옴' 없음 = 들어옴 창 끔 (gnsWalkIn 0)");
+  assert.equal(sec('japanese').cmd, OWNER.J5);
+  // 동방: 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음(정확한 타이밍) · 그때 스틱 앞(앞으로 움직이며(↑)) · 받아 내면 저절로(자동 발동)
   const cn = playerSecretDef('chinese');
   assert.ok(SECRET.gyeoksal.on && cn.when === 'gyeoksal' && SECRET.gyeoksal.auto && SECRET.gyeoksal.press > 0, '동방 = 때맞춰 막기 · 스틱 앞 → 저절로');
-  assert.equal(sec('chinese').cmd, '앞으로 이동(↑)과 동시에, 칼이 닿기 직전 막기');
-  assert.ok(!/공격|긋기|탭/.test(sec('chinese').cmd), '격살은 받아 내면 저절로 — 공격 입력 없음');
+  assert.equal(sec('chinese').cmd, OWNER.C9);
+  assert.ok(!/긋기|탭/.test(sec('chinese').cmd) && sec('chinese').cmd.endsWith('자동 발동'), '격살은 받아 내면 저절로 — 내 공격 입력 없음');
 });
 
-test("'공격' = 탭도 긋기도 받는 자리만 · '탭' = 탭을 받는(또는 앞 칼로 세는) 자리만 (사장님 17:5x · 18:3x)", () => {
+test("'공격' = 탭도 긋기도 받는 자리만 · '탭' = 탭을 받는(또는 앞 칼로 세는) 자리만 (사장님 17:5x · 18:3x · 10/25 22:3x 확정 글의 '상대 공격' 은 상대 쪽 말)", () => {
   const withWord = (re) => all().filter(({ n }) => n.cmd && re.test(n.cmd)).map(({ n }) => n.id).sort();
-  assert.deepEqual(withWord(/공격/), ['G10', 'J5'], '공격 = 독일 · 일본 비기 창(탭 · 긋기)');
-  assert.deepEqual(withWord(/탭$/), ['I4'], '탭(받는 입력) = 이탈리아 비기 창(탭만)');
-  assert.deepEqual(withWord(/탭/), ['I4', 'I9'], "탭 = 이탈리아 비기 창 · 칼끝 돌려 빼기 앞 칼(prev 'thrust' — 탭 포함)");
+  assert.deepEqual(withWord(/공격$/), [], "받는 입력을 '공격' 으로 끝맺는 칸 없음 (10/25 비기 글은 '비기 활성화' 꼴)");
+  assert.deepEqual(withWord(/공격/), ['C9', 'J5'], "'공격' 낱말 = 일본 · 동방 확정 글의 상대 공격");
+  assert.deepEqual(withWord(/탭$/), [], '탭만 받는 비기 창 없음 (10/25 21:0x 리솔루토 공격하면)');
+  assert.deepEqual(withWord(/탭/), ['I9'], "탭 = 칼끝 돌려 빼기 앞 칼(prev 'thrust' — 탭 포함)");
   assert.deepEqual(withWord(/찌르는 긋기/), ['I9'], "찌르는 긋기(앞 칼 조건) = 칼끝 돌려 빼기(prev 'thrust' — 찌르기 길 긋기 포함)");
 });
