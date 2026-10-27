@@ -9,7 +9,8 @@ export const MURAMASA_COLORS = { grip: 0x28272a, hilt: 0x28272b, blade: 0xaeb5bd
 //  10/21 23:3x 날 0.70 → 0.68 m(휨 2 cm 그대로) · 23:4x 총 1.12 → 1.05 kg (덜어 낸 몫은 칼날 — weapons.js muramasa)
 //  10/25 손맛 개편(가볍고 빠르게 — 날 길이 · 휨 그대로): 총 1.05 → 0.85 kg · 손 쪽 부품 질량 parts(츠카 · 카시라 · 츠바 + 하바키 kg) · 칼날 = 나머지 0.43 kg ·
 //   칼날 그림도 얇고 좁게(두께 3.5 → 3 mm · 반폭 15 → 13.5 mm) — 사장님 10/25 23:2x '무라마사는 길이 그대로, 무게만 가볍게 해' (부품 나눔 · 그림 두께는 사장님 확인 전)
-export const MURAMASA_PROFILE = { length: .68, sori: .020, mass: .85, parts: { grip: .23, kashira: .06, tsuba: .13 }, colliderHalfWidth: .024, drawHalfWidth: .0135 };
+//  10/27 21:1x 사장님 '맞을 때 칼 힘이 너무 약한데? 좀만 더 무겁게 · 휘두름 관성 0.09 ~ 0.095 · 칼 힘 10 ~ 20 % 크게': 총 0.85 → 0.92 kg — 더한 70 g 은 칼날(0.43 → 0.50 kg) · 손 쪽 그대로
+export const MURAMASA_PROFILE = { length: .68, sori: .020, mass: .92, parts: { grip: .23, kashira: .06, tsuba: .13 }, colliderHalfWidth: .024, drawHalfWidth: .0135 };
 const kit = swordKit({
   blade: { edge: 'single', width: t => 1-.28*t, thick: .003, ridge: .3,
     hamon: true, hamonWave: (_t,y) => .31+.105*Math.sin(y*51)+.045*Math.sin(y*123+.8)+.023*Math.sin(y*89),
