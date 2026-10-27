@@ -20,7 +20,7 @@
 //          이베리아 Molinete altibaixo · 일본 後の先(가칭) · 중국 連環三擊(가칭). 무유파는 없음. 버릇보다 먼저 본다
 //       ㉢ 동작 — 공용 동작(TECH 12 + 라이브러리 셋, 이름만 유파 말 techNames) + 고유 동작(unique)
 //   ② SCHOOLS — AI 가 쥐는 꾸러미 (옛 계약 그대로: 유파 내용 + 그 꾸러미를 잰 무기 weapon + 간격 measure). 열쇠도 옛 그대로:
-//      인물 꾸러미(longsword 기본·tree_branch 브란·qinggang/jian 랴오·excalibur_replica 하인리히 — 캐릭터 PM, 지금처럼 유지)와
+//      인물 꾸러미(longsword 기본·tree_branch 브론·qinggang/jian 랴오·excalibur_replica 하인리히 — 캐릭터 PM, 지금처럼 유지)와
 //      무기 id 꾸러미(weaponSchool: 무기의 유파 + 그 무기 간격 + 무기 예외). 도구가 SCHOOLS[id]·schoolOf(id) 로 읽고 새 열쇠를 끼운다.
 //  AI 는 이 파일을 직접 고르지 않는다: sword_art.js resolveSwordArt 가 인물(persona.school, 없으면 롱소드)로 꾸러미를 고르고
 //   동작 라이브러리 몫을 더하고 간격을 무기에 맞춘다.
@@ -1543,7 +1543,7 @@ export const SCHOOLS = {
   // 기본 AI·이졸데·마르그레테: 독일식 롱소드 (간격 1.57/1.8/1.25/0.30 — 10/8 16:35 두 손 서보 상한 26 뒤 AI 박자 재조정, 확인표 192)
   longsword: pack('longsword', 'longsword', schoolMeasure('longsword'), TRADITIONS.german, 'german'),
 };
-// 나뭇가지 (브란 — 유파 없음, 자기 흐름. 쓰레기 등급): 날이 없어 찌르기가 안 된다 → 찌르기 기술·찌르기 속임수 제거. 가볍고 짧아 간격이 좁다.
+// 나뭇가지 (브론 — 유파 없음, 자기 흐름. 쓰레기 등급): 날이 없어 찌르기가 안 된다 → 찌르기 기술·찌르기 속임수 제거. 가볍고 짧아 간격이 좁다.
 //  기술별 reach 보정은 나뭇가지 실측 (간격 1.46/1.61/1.13/0.21 — 10라운드 hybrid 재실측, 전 1.44/1.64/1.11/0.33)
 const branchTech = withReach(noThrust, { zornhau: 0, unterhau: -0.06, zornhauL: 0.01, unterhauL: 0.09 });
 SCHOOLS.tree_branch = pack('tree_branch', 'tree_branch', schoolMeasure('tree_branch'), { ...TRADITIONS.none, tech: branchTech, techByName: byName(branchTech), feints: noThrustFeints }, 'none');
@@ -1557,7 +1557,7 @@ const replicaTech = withReach(TECH, { zornhau: 0, unterhau: -0.04, zornhauL: -0.
 SCHOOLS.excalibur_replica = pack('excalibur_replica', 'excalibur_replica', schoolMeasure('excalibur_replica'), { ...TRADITIONS.german, tech: replicaTech, techByName: byName(replicaTech) }, 'german');
 
 // 무기 꾸러미: 간격 실측(weapon_measured.js)이 있는 나머지 무기 — 그 무기의 유파 + 그 무기 간격.
-//  브란이 주워 온 커먼 단검(10%, 지금은 팔쉬온), ?foeWeapon= 으로 들려 준 무기가 롱소드 간격으로 헛베지 않게 한다 (main.js: 인물이 평소와 다른 무기를 들면
+//  브론이 주워 온 커먼 단검(10%, 지금은 팔쉬온), ?foeWeapon= 으로 들려 준 무기가 롱소드 간격으로 헛베지 않게 한다 (main.js: 인물이 평소와 다른 무기를 들면
 //  persona.school = 그 무기 id). 기술별 reach 보정은 자료가 없어 롱소드 값. 총은 간격 실측이 없어 꾸러미가 없다(롱소드 꾸러미로)
 for (const [id, spec] of Object.entries(WEAPONS)) if (!SCHOOLS[id] && schoolMeasure(id)) SCHOOLS[id] = weaponSchool(spec);
 

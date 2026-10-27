@@ -1,10 +1,10 @@
 // 기준 하니스 (디렉터 10라운드 A6) — 실제 게임과 같은 성격으로 무기 승률을 잰다. 기본은 hybrid(게임 기본: 다리로 체중 받치기)
 //  vs    : 무기 X 대 롱소드 (목표 승률표의 기준)
-//          X 가 캐릭터 무기면 그 캐릭터가 쥔다(난이도·성격·근력 그대로): 나뭇가지 → 브란, 청강검 → 랴오, 복제품 → 하인리히.
+//          X 가 캐릭터 무기면 그 캐릭터가 쥔다(난이도·성격·근력 그대로): 나뭇가지 → 브론, 청강검 → 랴오, 복제품 → 하인리히.
 //          아니면 '주인공 대리'가 쥔다: 기본 AI(normal) + 그 무기의 유파 꾸러미(persona.school — main.js 가 대체 무기에 쓰는 방식).
 //          롱소드는 주인공 대리가 쥔다. (X = longsword 면 주인공 대리끼리 — 대조군)
 //  field : '주인공이 쥔 경우' — 주인공 대리가 무기 X 로 캐릭터 다섯을 돌아가며 상대한다.
-//          캐릭터는 게임처럼 제 무기·난이도·성격이고, 브란의 대체 무기(10%)도 판 시드로 굴린다.
+//          캐릭터는 게임처럼 제 무기·난이도·성격이고, 브론의 대체 무기(10%)도 판 시드로 굴린다.
 //  두 모드 모두 자리를 바꿔 가며 붙인다: 시드 1000+s 는 X 가 player 자리, 2000+s 는 enemy 자리. 판마다 40초, 벽 있음.
 //  간격 표는 게임 그대로(ai.js 가 무기로 정함) — 하니스용 applyWeaponMeasure 는 쓰지 않는다.
 //  찍는 것: 승·패·무(시간 끝·둘 다 죽음 = 무), 승률(무는 승이 아님)과 윌슨 95% 구간, 평균 종료 시간, 파손 판
@@ -28,7 +28,7 @@ let HERO_ALL = false; // --hero
 const hero = (w) => (PROXY_LS ? { level: 'normal', persona: null, who: '주인공 대리(롱소드 유파)' } : { level: 'normal', persona: { school: w }, who: '주인공 대리' });
 const charSide = (c, w) => ({ level: c.ai.level, persona: w !== c.weapon && !c.noSwordsmanship ? { ...c.ai.persona, school: w } : c.ai.persona, who: c.id, revive: c.revive }); // revive: 이졸데의 부활
 
-/** 판 시드로 굴리는 작은 난수 (브란의 대체 무기 뽑기용 — Math.random 을 건드리지 않는다) */
+/** 판 시드로 굴리는 작은 난수 (브론의 대체 무기 뽑기용 — Math.random 을 건드리지 않는다) */
 function rng(seed) {
   let s = seed >>> 0;
   return () => {

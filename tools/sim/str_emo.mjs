@@ -1,5 +1,5 @@
 // 근력·감정 옵션 (측정 도구 공용) — tap_thrust.mjs · down_hits.mjs · down_ai.mjs 가 쓴다
-//  --str=0.85      플레이어 근력 (캐릭터 근력은 characters.js level.strength: 이졸데 0.85 … 브란 1.3, 기본 1)
+//  --str=0.85      플레이어 근력 (캐릭터 근력은 characters.js level.strength: 이졸데 0.85 … 브론 1.3, 기본 1)
 //  --foeStr=1.3    상대(적) 근력
 //  --emo=off       감정 고유 능력을 끈다 (EMO_ABILITY.enabled = false — 게임의 ?emo=0 과 같다)
 //  --emoP=anger:1  플레이어 감정을 고정한다 (감정:세기 0~1). 하네스의 플레이어는 감정 판정이 없다
